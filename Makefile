@@ -37,6 +37,6 @@ clean:
 qthread: $(LINK_OBJECTS)
 	$(CC) -o qthread $(LINK_OBJECTS) $(LINKFLAGS)
 
-main.o: main.c 
+main.o: main.c qthread.h
 
 redblack.o: redblack.c redblack.h
