@@ -6,13 +6,7 @@
 #include <stdarg.h>
 #include "redblack.h"
 
-#define QTHREAD_NEW             0
-#define QTHREAD_RUNNING         1
-#define QTHREAD_TERM_SHEPHERD   2
-
-#define QTHREAD_MAX_STACK       8192
-
-#define QTHREAD_DEBUG 1
+//#define QTHREAD_DEBUG 1
 
 /* for debugging */
 #ifdef QTHREAD_DEBUG
@@ -35,74 +29,101 @@
         #define qthread_debug(format, ...) ((void)0)
 #endif 
 
+#define QTHREAD_DEFAULT_STACK_SIZE      8192
+
+#define QTHREAD_THREAD_NEW              0
+#define QTHREAD_THREAD_RUNNING          1
+#define QTHREAD_THREAD_TERM_SHEP        2
+
 typedef struct qthread_s {
     unsigned thread_id;
     unsigned thread_type;
 
-    void (*f)(struct qthread_s *, void *);     /* the function to call */
-    void *arg;                          /* its argument */
+    void (*f)(struct qthread_s *);              /* the function to call */
+    void *arg;                                  /* user defined data */
 
-    ucontext_t *context;
-    void *stack;
+    ucontext_t *context;                        /* the context switch info */
+    void *stack;                                /* the thread's stack */
 
     struct qthread_s *next;
 } qthread_t;
 
 typedef struct {
-    void *address;
-    unsigned owner;
-    unsigned locked;
-    qthread_t *waiting;
-} qthread_lock_t;
+    pthread_t kthread;
+    qthread_t *ready_head;
+    qthread_t *ready_tail;
+    pthread_mutex_t ready_lock;
+    pthread_cond_t ready_notempty;
+} qthread_shepherd_t;
 
 typedef struct {
+    int nkthreads;
+    qthread_shepherd_t *kthreads;
+
+    unsigned stack_size;
+    
+    /* assigns a unique thread_id mostly for debugging! */
     unsigned max_thread_id;
-    unsigned nthreads;
-    pthread_mutex_t nthreads_lock;
-    unsigned nkthreads;
-    pthread_mutex_t nkthreads_lock;
-    size_t stack_size;
-    unsigned done;
-
-    qthread_t *main_thread;
-
-    pthread_t *kthreads;
-    unsigned *kthread_id;
-
-    pthread_mutex_t ready_lock;
-    qthread_t *ready;
-
-    pthread_mutex_t lock_lock;          /* rcm - get rid of me! */
-    struct rbtree *locks;
-} qthread_lib_t;
+    pthread_mutex_t max_thread_id_lock;
+    
+    /* round robin scheduler - can probably be smarter */
+    unsigned sched_kthread;
+    pthread_mutex_t sched_kthread_lock;
+} qlib_t;
 
 /* public functions */
-qthread_t *qthread_init(int nkthreads);
+
+int qthread_init(int nkthreads);
 void qthread_finalize(void);
+qthread_t *qthread_fork(void (*f)(qthread_t *), void *arg);
 
-qthread_t *qthread_fork(void (*f)(qthread_t *, void *), void *arg);
-void qthread_yield();
+static inline void *qthread_get_arg(qthread_t *t) { return (t->arg); }
 
-void qthread_lock(qthread_t *t, void *a);
-void qthread_unlock(qthread_t *t, void *a);
+/* private functions */
 
-unsigned qthread_get_id(qthread_t *t);
+void qthread_enqueue(qthread_t **head, qthread_t **tail, pthread_mutex_t *lock, 
+                     pthread_cond_t *notempty, qthread_t *t);
+qthread_t *qthread_dequeue(qthread_t **head, qthread_t **tail, 
+                           pthread_mutex_t *lock, pthread_cond_t *notempty);
 
-/* internals and candidates for inlining */
-qthread_t *qthread_new_thread(void (*f)(), void *arg);
-void qthread_new_stack(qthread_t *t);
+qthread_t *qthread_new_thread(void (*f)(qthread_t *), void *arg);
 void qthread_free_thread(qthread_t *t);
+void qthread_new_stack(qthread_t *t);
+void qthread_free_stack(qthread_t *t);
 
-void qthread_enqueue(qthread_t **queue, pthread_mutex_t *lock, qthread_t *t);
-qthread_t *qthread_dequeue(qthread_t **queue, pthread_mutex_t *lock);
+/* private functions that need to be inlined! */
+static inline unsigned qthread_atomic_inc(unsigned *x, pthread_mutex_t *lock, 
+                                         int inc)
+{
+    unsigned r;
+    pthread_mutex_lock(lock);
+    r = *x;
+    *x = *x + inc;
+    pthread_mutex_unlock(lock);
+    return(r);
+}
 
-void qthread_exec(qthread_t *t);
+static inline unsigned qthread_atomic_inc_mod(unsigned *x, pthread_mutex_t *lock,
+                                             int inc, int mod)
+{
+    unsigned r;
+    pthread_mutex_lock(lock);
+    r = *x;
+    *x = (*x + inc) % mod;
+    pthread_mutex_unlock(lock);
+    return(r);
+}
 
-void qthread_print_locks();
-void qthread_print_queue();
+static inline unsigned qthread_atomic_check(unsigned *x, pthread_mutex_t *lock)
+{
+    unsigned r;
 
-void qthread_atomic_add(unsigned *x, pthread_mutex_t *lock, int value);
-unsigned qthread_atomic_check(unsigned *x, pthread_mutex_t *lock);
+    pthread_mutex_lock(lock);
+    r = *x;
+    pthread_mutex_unlock(lock);
+
+    return(r);
+}
 
 
 #endif /* _QTHREAD_H_ */

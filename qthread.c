@@ -2,184 +2,208 @@
 #include <assert.h>
 #include "qthread.h"
 
-static qthread_lib_t *qlib = NULL;
+static qlib_t *qlib=NULL;
 
 static void *qthread_shepherd(void *arg)
 {
-    unsigned *id = (unsigned *)arg;
-    qthread_debug("qthread_shepherd(): %d\n", *id);
+    qthread_shepherd_t *me = (qthread_shepherd_t *)arg;
     qthread_t *t;
     int done=0;
+    
+    qthread_debug("qthread_shepherd(%p): forked\n", me);
 
     while(!done) {
-        if((t = qthread_dequeue(&qlib->ready, &qlib->ready_lock)) != NULL) {
-            if(t->thread_type == QTHREAD_TERM_SHEPHERD) {
-                qthread_debug("qthread_shepherd(): returned QTHREAD_TERM_SHEPHERD\n");
+        t = qthread_dequeue(&me->ready_head, &me->ready_tail, &me->ready_lock, 
+                            &me->ready_notempty);
+
+        qthread_debug("qthread_shepherd(%p): dequeued thread id %d/type %d\n", me, t->thread_id, t->thread_type);
+
+        switch(t->thread_type) {
+            case QTHREAD_THREAD_NEW:
+            case QTHREAD_THREAD_RUNNING:
+                assert(t->f != NULL);
+                (*t->f)(t);
+                break;
+            case QTHREAD_THREAD_TERM_SHEP:
                 done = 1;
-            } else {
-                qthread_exec(t);
-            }
+                break;
+            default:
+                fprintf(stderr, "qthread_shepherd(): unknown type %d/%d\n",
+                        t->thread_id, t->thread_type);
+                abort();
         }
+
+        /* thread is done */
+        qthread_free_thread(t);
     }
 
-    qthread_atomic_add(&qlib->nkthreads, &qlib->nkthreads_lock, -1);
-
-    qthread_debug("qthread_shepherd(%p): finished\n", arg);
-
-    pthread_exit(NULL);
+    qthread_debug("qthread_shepherd(%p): finished\n", me);
 }
 
-void qthread_atomic_add(unsigned *x, pthread_mutex_t *lock, int value)
+/* PUBLIC FUNCTIONS */
+
+int qthread_init(int nkthreads)
 {
-    pthread_mutex_lock(lock);
-    *x = *x + value;
-    pthread_mutex_unlock(lock);
-}
+    int i, r;
 
-unsigned qthread_atomic_check(unsigned *x, pthread_mutex_t *lock)
-{
-    unsigned r;
+    qthread_debug("qthread_init(): began.\n");
 
-    pthread_mutex_lock(lock);
-    r = *x;
-    pthread_mutex_unlock(lock);
-
-    return(r);
-}
-
-static int qthread_lock_cmp(const void *p1, const void *p2, const void *conf)
-{
-    qthread_lock_t *l1, *l2;
-
-    l1 = (qthread_lock_t *)p1;
-    l2 = (qthread_lock_t *)p2;
-    if(l1->address < l2->address)
-        return(-1);
-    if(l1->address > l2->address)
-        return(1);
-    return(0);
-}
-
-qthread_t *qthread_init(int nkthreads)
-{
-    unsigned i;
-
-    if((qlib = (qthread_lib_t *)malloc(sizeof(qthread_lib_t))) == NULL) {
+    if((qlib = (qlib_t *)malloc(sizeof(qlib_t))) == NULL) {
         perror("qthread_init()");
         abort();
     }
 
-    qlib->ready = NULL;
-    qlib->max_thread_id = 0;
-    qlib->nthreads = 0;
-    qlib->stack_size = QTHREAD_MAX_STACK;
-
-    qlib->main_thread = qthread_new_thread(NULL, NULL);
-
-    if((qlib->locks = rbinit(qthread_lock_cmp, NULL)) == NULL) {
+    qlib->nkthreads = nkthreads;
+    if((qlib->kthreads = (qthread_shepherd_t *)
+        malloc(sizeof(qthread_shepherd_t)*nkthreads)) == NULL) {
         perror("qthread_init()");
         abort();
     }
 
-    if(pthread_mutex_init(&qlib->nthreads_lock, NULL)) {
-        perror("qthread_init()");
-        abort();
-    }
-
-    if(pthread_mutex_init(&qlib->nkthreads_lock, NULL)) {
-        perror("qthread_init()");
-        abort();
-    }
-
-    if(pthread_mutex_init(&qlib->ready_lock, NULL)) {
-        perror("qthread_init()");
-        abort();
-    }
-
-    if(pthread_mutex_init(&qlib->lock_lock, NULL)) {
-        perror("qthread_init()");
-        abort();
-    }
-
-    qlib->nkthreads = 0;
-    if((qlib->kthreads = (pthread_t *)malloc(sizeof(pthread_t) * nkthreads)) 
-       == NULL) {
-        perror("qthread_init()");
-        abort();
-    }
-
-    if((qlib->kthread_id = (unsigned *)malloc(sizeof(unsigned) * nkthreads)) 
-       == NULL) {
-        perror("qthread_init()");
-        abort();
-    }
+    qlib->stack_size = QTHREAD_DEFAULT_STACK_SIZE;
+    qlib->sched_kthread = 0;
+    assert(pthread_mutex_init(&qlib->sched_kthread_lock, NULL) == 0);
 
     for(i=0; i<nkthreads; i++) {
-        qlib->kthread_id[i] = i;
-        qthread_atomic_add(&qlib->nkthreads, &qlib->nkthreads_lock, 1);
-        if(pthread_create(&qlib->kthreads[i], NULL, qthread_shepherd, (void *)&qlib->kthread_id[i]) != 0) {
-            perror("qthread_init(): could not create new thread");
+        qlib->kthreads[i].ready_head = NULL;
+        qlib->kthreads[i].ready_tail = NULL;
+        assert(pthread_mutex_init(&qlib->kthreads[i].ready_lock, NULL) == 0);
+        assert(pthread_cond_init(&qlib->kthreads[i].ready_notempty, NULL) == 0);
+
+        qthread_debug("qthread_init(): forking thread %p\n", &qlib->kthreads[i]);
+
+        if((r = pthread_create(&qlib->kthreads[i].kthread, NULL, 
+                               qthread_shepherd, &qlib->kthreads[i])) != 0) {
+            fprintf(stderr, "qthread_init: pthread_create() failed (%d)\n", r);
             abort();
         }
     }
-
-    return(qlib->main_thread);
+    
+    qthread_debug("qthread_init(): finished.\n");
 }
 
 void qthread_finalize(void)
 {
     int i, r;
     qthread_t *t;
-    unsigned nterm;
 
     assert(qlib != NULL);
 
-    /* the user must ensure that the qthread_fork() function will NOT be called
-     * after this point
+    qthread_debug("qthread_finalize(): began.\n");
+
+    /* rcm - probably need to put a "turn off the library flag" here, but,
+     * the programmer can ensure that no further threads are forked for now
      */
 
-    nterm = qthread_atomic_check(&qlib->nkthreads, &qlib->nkthreads_lock);
-
-    for(i=0; i<nterm; i++) {
+    /* enqueue the termination thread sentinal */
+    for(i=0; i<qlib->nkthreads; i++) {
         t = qthread_new_thread(NULL, NULL);
-        t->thread_type = QTHREAD_TERM_SHEPHERD;
-        qthread_enqueue(&qlib->ready, &qlib->ready_lock, t);
+        t->thread_type = QTHREAD_THREAD_TERM_SHEP;
+        qthread_enqueue(&qlib->kthreads[i].ready_head, 
+                        &qlib->kthreads[i].ready_tail, 
+                        &qlib->kthreads[i].ready_lock, 
+                        &qlib->kthreads[i].ready_notempty, t);
     }
 
-    while(qthread_atomic_check(&qlib->nkthreads, &qlib->nkthreads_lock) != 0)
-        ;
-
-    if(pthread_mutex_destroy(&qlib->nthreads_lock)) {
-        perror("qthread_finalize()");
-        abort();
+    /* wait for each thread to drain it's queue! */
+    for(i=0; i<qlib->nkthreads; i++) {
+        if((r = pthread_join(qlib->kthreads[i].kthread, NULL)) != 0) {
+            fprintf(stderr, "qthread_finalize: pthread_join() failed (%d)\n",r);
+            abort();
+        }
     }
 
-    if(pthread_mutex_destroy(&qlib->nkthreads_lock)) {
-        perror("qthread_finalize()");
-        abort();
-    }
-
-    if(pthread_mutex_destroy(&qlib->ready_lock)) {
-        perror("qthread_finalize()");
-        abort();
-    }
-
-    if(pthread_mutex_destroy(&qlib->lock_lock)) {
-        perror("qthread_finalize()");
-        abort();
-    }
-
-    rbdestroy(qlib->locks);
-
-    qthread_free_thread(qlib->main_thread);
-
+    free(qlib->kthreads);
     free(qlib);
     qlib = NULL;
+
+    qthread_debug("qthread_finalize(): finished.\n");
 }
+
+qthread_t *qthread_fork(void (*f)(qthread_t *), void *arg)
+{
+    qthread_t *t;
+    unsigned shep;
+
+    t = qthread_new_thread(f, arg);
+    qthread_new_stack(t);
+    
+    /* figure out which queue to put the thread into */
+    shep = qthread_atomic_inc_mod(&qlib->sched_kthread, 
+                                  &qlib->sched_kthread_lock, 1, 
+                                  qlib->nkthreads);
+
+    qthread_enqueue(&qlib->kthreads[shep].ready_head, 
+                    &qlib->kthreads[shep].ready_tail, 
+                    &qlib->kthreads[shep].ready_lock, 
+                    &qlib->kthreads[shep].ready_notempty, t);
+
+    return(t);
+}
+
+
+/* PRIVATE FUNCTIONS  */
+
+/* functions to manage the thread queues */
+
+void qthread_enqueue(qthread_t **head, qthread_t **tail, pthread_mutex_t *lock, 
+                     pthread_cond_t *notempty, qthread_t *t)
+{
+    assert(t != NULL);
+    assert(pthread_mutex_lock(lock) == 0);
+
+    t->next = NULL;
+
+    if((*head == NULL) && (*tail == NULL)) {
+        *head = t;
+        *tail = t;
+        assert(pthread_cond_signal(notempty) == 0);
+    } else {
+        (*tail)->next = t;
+        *tail = t;
+    }
+
+    assert(pthread_mutex_unlock(lock) == 0);
+}
+
+qthread_t *qthread_dequeue(qthread_t **head, qthread_t **tail, 
+                           pthread_mutex_t *lock, pthread_cond_t *notempty)
+{
+    qthread_t *t;
+
+    assert(pthread_mutex_lock(lock) == 0);
+
+    while((*head == NULL) && (*tail == NULL)) {
+        assert(pthread_cond_wait(notempty, lock) == 0);
+    }
+
+    assert(*head != NULL);
+
+    if(*head != *tail) {
+        t = *head;
+        *head = (*head)->next;
+        t->next = NULL;
+    } else {
+        t = *head;
+        *head = (*head)->next;
+        t->next = NULL;
+        *tail = NULL;
+    }
+
+    assert(pthread_mutex_unlock(lock) == 0);
+
+    return(t);
+}
+
+/* functions to manage thread state allocation/deallocation */
 
 qthread_t *qthread_new_thread(void (*f)(), void *arg)
 {
     qthread_t *t;
+
+    /* rcm - note: in the future we REALLY want to reuse thread and 
+     * stack allocations! 
+     */
 
     if((t = (qthread_t *)malloc(sizeof(qthread_t))) == NULL) {
         perror("qthread_new_thread()");
@@ -191,9 +215,9 @@ qthread_t *qthread_new_thread(void (*f)(), void *arg)
         abort();
     }
 
-    qlib->max_thread_id++;
-    t->thread_id = qlib->max_thread_id;
-    t->thread_type = QTHREAD_NEW;
+    t->thread_id = qthread_atomic_inc(&qlib->max_thread_id, 
+                                      &qlib->max_thread_id_lock, 1);
+    t->thread_type = QTHREAD_THREAD_NEW;
     t->f = f;
     t->arg = arg;
     t->stack = NULL;
@@ -201,240 +225,36 @@ qthread_t *qthread_new_thread(void (*f)(), void *arg)
     return(t);
 }
 
+void qthread_free_thread(qthread_t *t)
+{
+    /* rcm - note: in the future we REALLY want to reuse thread and 
+     * stack allocations! 
+     */
+
+    free(t->context);
+    qthread_free_stack(t);
+ 
+    free(t);
+}
+
 void qthread_new_stack(qthread_t *t)
 {
+    /* rcm - note: in the future we REALLY want to reuse thread and 
+     * stack allocations! 
+     */
+
     if((t->stack = (void *)malloc(qlib->stack_size)) == NULL) {
         perror("qthread_new_thread()");
         abort();
     }
 }
 
-void qthread_free_thread(qthread_t *t)
+void qthread_free_stack(qthread_t *t)
 {
-    free(t->context);
+    /* rcm - note: in the future we REALLY want to reuse thread and 
+     * stack allocations! 
+     */
     if(t->stack != NULL)
         free(t->stack);
- 
-    free(t);
 }
-
-void qthread_enqueue(qthread_t **queue, pthread_mutex_t *lock, qthread_t *t)
-{
-    qthread_t *p;
-
-    if(lock != NULL)
-        pthread_mutex_lock(lock);
-
-    qthread_debug("qthread_enqueue(%p, %p, %p)\n", queue, lock, t);
-
-    if(*queue == NULL) {
-        *queue = t;
-    } else {
-        for(p=*queue; p->next != NULL; p = p->next)
-            ;
-        p->next = t;
-        t->next = NULL;
-    }
-
-    if(lock != NULL)
-        pthread_mutex_unlock(lock);
-}
-
-qthread_t *qthread_dequeue(qthread_t **queue, pthread_mutex_t *lock)
-{
-    qthread_t *t;
-
-    if(lock != NULL) 
-        pthread_mutex_lock(lock);
-
-    if(*queue == NULL) {
-        if(lock != NULL)
-            pthread_mutex_unlock(lock);
-        return(NULL);
-    }
-
-    t = *queue;
-    *queue = (*queue)->next;
-    t->next = NULL;
-
-    if(lock != NULL)
-        pthread_mutex_unlock(lock);
-
-    qthread_debug("qthread_dequeue(%p, %p): returned %p\n", queue, lock, t);
-
-    return(t);
-}
-
-qthread_t *qthread_fork(void (*f)(qthread_t *, void *), void *arg)
-{
-    qthread_t *t;
-
-    qthread_atomic_add(&qlib->nthreads, &qlib->nthreads_lock, 1);
-    t = qthread_new_thread(f, arg);
-    qthread_new_stack(t);
-    qthread_enqueue(&qlib->ready, &qlib->ready_lock, t);
-    return(t);
-}
-
-void qthread_exec(qthread_t *t)
-{
-    ucontext_t c;
-    int wasnew;
-
-    qthread_debug("qthread_exec(%p): started\n", t);
-
-    if(t->thread_type == QTHREAD_NEW) {
-        t->thread_type = QTHREAD_RUNNING;
-        wasnew = 1;
-
-        getcontext(t->context);
-        t->context->uc_stack.ss_sp = t->stack;
-        t->context->uc_stack.ss_size = qlib->stack_size;
-        t->context->uc_link = &c;
-        makecontext(t->context, t->f, 2, (void *)t, (void *)t->arg);
-    }
-     
-    /* rcm - maybe this shouldn't return! */
-
-    swapcontext(&c, t->context);
-
-    if(wasnew)
-        qthread_free_thread(t);
-
-    qthread_atomic_add(&qlib->nthreads, &qlib->nthreads_lock, -1);
-    qthread_debug("qthread_exec(%p): finished\n", t);
-}
-
-void qthread_yield()
-{
-    qthread_t *t;
-
-    if((t = qthread_dequeue(&qlib->ready, &qlib->ready_lock)) == NULL)
-        return;
-
-    if(t->thread_type == QTHREAD_TERM_SHEPHERD) {
-        qthread_enqueue(&qlib->ready, &qlib->ready_lock, t);
-        return;
-    }
-    qthread_exec(t);
-}
-
-void qthread_print_locks()
-{
-    RBLIST *ptr;
-    qthread_lock_t *l;
-
-    assert(qlib != NULL);
-
-    pthread_mutex_lock(&qlib->lock_lock);
-
-    printf("Current Locks:\n");
-    if((ptr = rbopenlist(qlib->locks)) != NULL) {
-        while((l = (qthread_lock_t *)rbreadlist(ptr)) != NULL)
-            printf("\t%p\n", l->address);
-        rbcloselist(ptr);
-    }
-    pthread_mutex_unlock(&qlib->lock_lock);
-}
-
-void qthread_print_queue()
-{
-    qthread_t *t;
-
-    pthread_mutex_lock(&qlib->ready_lock);
-
-    printf("Queue:\n");
-    for(t=qlib->ready; t!=NULL; t=t->next) {
-        printf("\t%d: type=%d %p\n", t->thread_id, t->thread_type, t->f);
-    }
-
-    pthread_mutex_unlock(&qlib->ready_lock);
-}
-
-unsigned qthread_get_id(qthread_t *t)
-{
-    return(t->thread_id);
-}
-
-void qthread_lock(qthread_t *t, void *a)
-{
-    static qthread_lock_t *l=NULL;
-    qthread_lock_t *m;
-
-    pthread_mutex_lock(&qlib->lock_lock);
-
-    m = NULL;
-
-    if(l == NULL) {
-        if((l = (qthread_lock_t *)malloc(sizeof(qthread_lock_t))) == NULL) {
-            perror("qthread_lock()");
-            abort();
-        }
-        l->locked = 0;
-    }
-
-    l->address = a;
-
-    m = (qthread_lock_t *)rbsearch((void *)l, qlib->locks);
-
-    assert(m != NULL);
-    if(l == m)
-        l = NULL;
-
-    /* now that we know which lock to test, try it */
-    if(!m->locked) {
-        m->owner = t->thread_id;
-        qthread_debug("qthread_lock(%p, %p): returned (not locked)\n", t, a);
-
-        pthread_mutex_unlock(&qlib->lock_lock);
-        return;
-    }
-
-    /* failure, dequeue this thread and yield */
-    qthread_enqueue(&m->waiting, NULL, t);
-
-    pthread_mutex_unlock(&qlib->lock_lock);
-    qthread_debug("qthread_lock(%p, %p): executing qthread_yield()\n", t, a);
-    qthread_yield();
-    /* note: when the thread runs again, it has the lock! */
-    m->owner = t->thread_id;
-
-    qthread_debug("qthread_lock(%p, %p): returned (was locked)\n", t, a);
-
-}
-
-void qthread_unlock(qthread_t *t, void *a)
-{
-    qthread_lock_t l, *m;
-    qthread_t *u;
-
-    pthread_mutex_lock(&qlib->lock_lock);
-
-    l.address = a;
-    qthread_debug("qthread_unlock(%p, %p): started\n", t, a);
-
-    m = (qthread_lock_t *)rbfind((void *)&l, qlib->locks);
-    if(m == NULL) {
-        return;
-        /* rcm below might be the right behavior! */
-        fqthread_debug(stderr, "qthread_lock(): attempt by thread %d to unlock a "
-                "non-existent lock (%p)\n", t->thread_id, a);
-        abort();
-    }
-
-    /* rcm - the mutex is already locked and doesn't care who unlocks it, so... */
-
-    u = qthread_dequeue(&m->waiting, NULL);
-    if(u != NULL) {
-        m->owner = t->thread_id;
-        qthread_enqueue(&qlib->ready, &qlib->ready_lock, u);
-    } else {
-        rbdelete(m, qlib->locks);
-    }
-    pthread_mutex_unlock(&qlib->lock_lock);
-
-    qthread_debug("qthread_unlock(%p, %p): returned\n", t, a);
-}
-
-
 

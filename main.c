@@ -1,37 +1,29 @@
 #include <stdio.h>
-#include <stdlib.h>
+#include <assert.h>
 #include "qthread.h"
 
-static int x=0;
+#define NKTHREAD        3
+#define NTHREAD         10
 
-void thread(qthread_t *t, void *arg)
+void thread(qthread_t *t)
 {
-    printf("THREAD(%p, %p): running\n", t, arg);
-    qthread_lock(t, &x);
-    x++;
-    printf("THREAD(%p, %p): tid=%d x=%d\n", t, arg, qthread_get_id(t), x);
-    qthread_unlock(t, &x);
-    printf("THREAD(%p, %p): finished\n", t, arg);
+    int *arg;
+
+    arg = (int *)qthread_get_arg(t);
+    printf("thread(%p/%d): arg 0x%p = %d forked\n", t, t->thread_id, arg, *arg);
 }
 
 int main(int argc, char *argv[])
 {
-    qthread_t *me;
+    int i, shep, args[NTHREAD];
+    qthread_t *t;
 
-    me = qthread_init(2);
+    qthread_init(NKTHREAD);
 
-    qthread_lock(me, &x);
-
-    qthread_fork(thread, NULL);
-    qthread_fork(thread, NULL);
-    qthread_fork(thread, NULL);
-
-    printf("Threads forked!\n");
-
-    printf("Releasing lock on x!\n");
-    qthread_unlock(me, &x);
+    for(i=0; i<NTHREAD; i++) {
+        args[i] = i;
+        qthread_fork(thread, (void *)&args[i]);
+    }
 
     qthread_finalize();
-
-    printf("x=%d\n", x);
 }

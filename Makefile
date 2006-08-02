@@ -39,4 +39,6 @@ qthread: $(LINK_OBJECTS)
 
 main.o: main.c qthread.h
 
+qthread.o: qthread.c qthread.h redblack.h
+
 redblack.o: redblack.c redblack.h
