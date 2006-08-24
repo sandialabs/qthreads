@@ -2,28 +2,35 @@
 #include <assert.h>
 #include "qthread.h"
 
-#define NKTHREAD        3
-#define NTHREAD         10
+static int x=0;
 
 void thread(qthread_t *t)
 {
-    int *arg;
+    int y;
 
-    arg = (int *)qthread_get_arg(t);
-    printf("thread(%p/%d): arg 0x%p = %d forked\n", t, t->thread_id, arg, *arg);
+    qthread_lock(t, &x);
+    printf("thread(%p): x=%d\n", t, x);
+    x++;
+    qthread_unlock(t, &x);
 }
 
 int main(int argc, char *argv[])
 {
-    int i, shep, args[NTHREAD];
-    qthread_t *t;
+    qthread_t *a, *b, *c, *d;
 
-    qthread_init(NKTHREAD);
+    qthread_init(3);
 
-    for(i=0; i<NTHREAD; i++) {
-        args[i] = i;
-        qthread_fork(thread, (void *)&args[i]);
-    }
+    a=qthread_fork(thread, NULL);
+    b=qthread_fork(thread, NULL);
+    c=qthread_fork(thread, NULL);
+    d=qthread_fork(thread, NULL);
+
+    qthread_join(a);
+    qthread_join(b);
+    qthread_join(c);
+    qthread_join(d);
 
     qthread_finalize();
+    
+    printf("Final value of x=%d\n", x);
 }
