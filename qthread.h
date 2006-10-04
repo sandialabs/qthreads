@@ -6,7 +6,7 @@
 #include <stdarg.h>
 #include "redblack.h"
 
-#define QTHREAD_DEBUG 1
+//#define QTHREAD_DEBUG 1
 
 /* for debugging */
 #ifdef QTHREAD_DEBUG

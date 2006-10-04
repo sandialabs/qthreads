@@ -10,8 +10,6 @@ static void qthread_wrapper(void *arg);
 static int qthread_lock_cmp(const void *p1, const void *p2, const void *conf);
 static qthread_lock_t *qthread_lock_locate(void *a);
 
-static pthread_mutexattr_t qthread_default_mutex_attr;
-
 /* the qthread_shepherd() is the pthread responsible for actually
  * executing the work units
  */
@@ -52,9 +50,9 @@ static void *qthread_shepherd(void *arg)
 
             if(t->thread_state == QTHREAD_STATE_BLOCKED) {     /* put it in the blocked queue */
                 qthread_enqueue((qthread_queue_t *)t->queue, t);
-
                 assert(pthread_mutex_unlock(&qlib->lock_lock) == 0);
             }
+
             if(t->thread_state == QTHREAD_STATE_TERMINATED) {
                 qthread_debug("qthread_shepherd(): thread %p is in state terminated.\n", t);
                 t->thread_state = QTHREAD_STATE_DONE;
@@ -83,10 +81,7 @@ int qthread_init(int nkthreads)
         abort();
     }
 
-    assert(pthread_mutexattr_init(&qthread_default_mutex_attr) == 0);
-    assert(pthread_mutexattr_settype(&qthread_default_mutex_attr, PTHREAD_MUTEX_ERRORCHECK) == 0);
-
-    assert(pthread_mutex_init(&qlib->lock_lock, &qthread_default_mutex_attr)==0);
+    assert(pthread_mutex_init(&qlib->lock_lock, NULL)==0);
 
     /* initialize the kernel threads and scheduler */
     qlib->nkthreads = nkthreads;
@@ -98,7 +93,7 @@ int qthread_init(int nkthreads)
 
     qlib->stack_size = QTHREAD_DEFAULT_STACK_SIZE;
     qlib->sched_kthread = 0;
-    assert(pthread_mutex_init(&qlib->sched_kthread_lock, &qthread_default_mutex_attr) == 0);
+    assert(pthread_mutex_init(&qlib->sched_kthread_lock, NULL) == 0);
 
     for(i=0; i<nkthreads; i++) {
         qlib->kthreads[i].kthread_index = i;
@@ -154,8 +149,6 @@ void qthread_finalize(void)
     free(qlib->kthreads);
     free(qlib);
     qlib = NULL;
-
-    assert(pthread_mutexattr_destroy(&qthread_default_mutex_attr) == 0);
 
     qthread_debug("qthread_finalize(): finished.\n");
 }
@@ -238,7 +231,7 @@ qthread_queue_t *qthread_queue_new()
 
     q->head = NULL;
     q->tail = NULL;
-    assert(pthread_mutex_init(&q->lock, &qthread_default_mutex_attr) == 0);
+    assert(pthread_mutex_init(&q->lock, NULL) == 0);
     assert(pthread_cond_init(&q->notempty, NULL) == 0);
     return(q);
 }
@@ -358,13 +351,13 @@ void qthread_exec(qthread_t *t, ucontext_t *c)
         t->context->uc_stack.ss_sp = t->stack;
         t->context->uc_stack.ss_size = qlib->stack_size;
         t->context->uc_stack.ss_flags = 0;
-        t->context->uc_link = c;                               /* NULL pthread_exit() */
         qthread_debug("qthread_exec(): context is {%p, %d, %p}\n", t->context->uc_stack.ss_sp,
                       t->context->uc_stack.ss_size, t->context->uc_link);
         
         makecontext(t->context, qthread_wrapper, 1, t);
     }
 
+    t->context->uc_link = c;                               /* NULL pthread_exit() */
     t->return_context = c;
 
     qthread_debug("qthread_exec(%p): executing swapcontext()...\n", t);
