@@ -6,30 +6,8 @@
 #include <stdarg.h>
 #include "redblack.h"
 
-//#define QTHREAD_DEBUG 1
-
-/* for debugging */
-#ifdef QTHREAD_DEBUG
-        static inline void qthread_debug(char *format, ...)
-{
-            static pthread_mutex_t output_lock = PTHREAD_MUTEX_INITIALIZER;
-            va_list args;
-
-            pthread_mutex_lock(&output_lock);
-            
-            fprintf(stderr, "qthread_debug(): ");
-
-            va_start(args, format);
-            vfprintf(stderr, format, args);
-            va_end(args);
-
-            pthread_mutex_unlock(&output_lock);
-}
-#else
-        #define qthread_debug(format, ...) ((void)0)
-#endif 
-
-#define QTHREAD_DEFAULT_STACK_SIZE      8192
+//#define QTHREAD_DEFAULT_STACK_SIZE      8192
+#define QTHREAD_DEFAULT_STACK_SIZE      (8192*1024)
 
 #define QTHREAD_STATE_NEW               0
 #define QTHREAD_STATE_RUNNING           1
@@ -120,7 +98,7 @@ void qthread_exec(qthread_t *t, ucontext_t *c);
 void qthread_yield(qthread_t *t);
 
 qthread_t *qthread_fork(void (*f)(qthread_t *), void *arg);
-void qthread_join(qthread_t *t);
+void qthread_join(volatile qthread_t *t);
 
 void qthread_lock(qthread_t *t, void *a);
 void qthread_unlock(qthread_t *t, void *a);
