@@ -4,9 +4,9 @@
 #include <ucontext.h>
 #include <pthread.h>
 #include <stdarg.h>
+#include <cprops/hashtable.h>
 #include "redblack.h"
 
-//#define QTHREAD_DEFAULT_STACK_SIZE      8192
 #define QTHREAD_DEFAULT_STACK_SIZE      (8192*1024)
 
 #define QTHREAD_STATE_NEW               0
@@ -33,6 +33,8 @@ typedef struct qthread_s {
     ucontext_t *context;                        /* the context switch info */
     void *stack;                                /* the thread's stack */
     ucontext_t *return_context;                 /* context of parent kthread */
+
+    pthread_mutex_t done_lock;                  /* for qthread_join() */
 
     struct qthread_s *next;
 } qthread_t;
@@ -76,7 +78,11 @@ typedef struct {
      * lower-order bits of the lock address to improve performance
      */
     pthread_mutex_t lock_lock;
+#ifdef RBTREE
     struct rbtree *locks;
+#else
+    cp_hashtable *locks;
+#endif
 } qlib_t;
 
 int qthread_init(int nkthreads);
@@ -98,10 +104,10 @@ void qthread_exec(qthread_t *t, ucontext_t *c);
 void qthread_yield(qthread_t *t);
 
 qthread_t *qthread_fork(void (*f)(qthread_t *), void *arg);
-void qthread_join(volatile qthread_t *t);
+void qthread_join(qthread_t *t);
 
-void qthread_lock(qthread_t *t, void *a);
-void qthread_unlock(qthread_t *t, void *a);
+int qthread_lock(qthread_t *t, void *a);
+int qthread_unlock(qthread_t *t, void *a);
 
 /* functions that need to be inlined! */
 static inline unsigned qthread_atomic_inc(unsigned *x, pthread_mutex_t *lock, 

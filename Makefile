@@ -1,10 +1,10 @@
 CC=cc
 OBJECTS=qthread
-LINK_OBJECTS=main.o qthread.o redblack.o
+LINK_OBJECTS=test.o qthread.o redblack.o
 
 #CFLAGS=-g -D__MAKECONTEXT_V2_SOURCE
-CFLAGS=-O3 -g -D__MAKECONTEXT_V2_SOURCE
-LINKFLAGS=-lpthread
+CFLAGS=-O3 -g -D__MAKECONTEXT_V2_SOURCE -D_GNU_SOURCE -std=c99 -DRBTREE
+LINKFLAGS=-lpthread -lcprops -ldl
 
 .SUFFIXES:.c .cc .o .l .y
 

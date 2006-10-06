@@ -14,13 +14,13 @@ static qthread_lock_t *qthread_lock_locate(void *a);
  * executing the work units
  */
 
-//#define QTHREAD_DEBUG 1
+/* #define QTHREAD_DEBUG 1 */
 /* for debugging */
 #ifdef QTHREAD_DEBUG
         static void qthread_debug(char *format, ...)
 {
             static pthread_mutex_t output_lock;
-	    static inited = 0;
+	    static int inited = 0;
             va_list args;
 
 	    if (inited == 0) {
@@ -34,12 +34,12 @@ static qthread_lock_t *qthread_lock_locate(void *a);
             va_start(args, format);
             vfprintf(stderr, format, args);
             va_end(args);
-	    fflush(stderr); // KBW: helps keep things straight
+	    fflush(stderr); /* KBW: helps keep things straight */
 
             pthread_mutex_unlock(&output_lock);
 }
 #else
-        #define qthread_debug(format, ...) ((void)0)
+        #define qthread_debug(format, ...) do{ }while(0)
 #endif
 
 
@@ -55,7 +55,7 @@ static void *qthread_shepherd(void *arg)
     while(!done) {
         t = qthread_dequeue(me->ready);
 
-        qthread_debug("qthread_shepherd(%u): dequeued thread id %d/state %d\n", me->kthread_index, t->thread_id, t->thread_state);
+        printf("qthread_shepherd(%u): dequeued thread id %d/state %d\n", me->kthread_index, t->thread_id, t->thread_state);
 
         if(t->thread_state == QTHREAD_STATE_TERM_SHEP)
             done=1;
@@ -72,22 +72,23 @@ static void *qthread_shepherd(void *arg)
 
             t->shepherd = me->kthread_index;
             qthread_exec(t, &my_context);
-	    qthread_debug("qthread_shepherd(%u): back from qthread_exec\n", me->kthread_index);
+	    printf("qthread_shepherd(%u): back from qthread_exec\n", me->kthread_index);
             if(t->thread_state == QTHREAD_STATE_YIELDED) {     /* reschedule it */
-		qthread_debug("qthread_shepherd(%u): rescheduling thread %p\n", me->kthread_index, t);
+		printf("qthread_shepherd(%u): rescheduling thread %p\n", me->kthread_index, t);
                 t->thread_state = QTHREAD_STATE_RUNNING;
                 qthread_enqueue(qlib->kthreads[t->shepherd].ready, t);
             }
 
             if(t->thread_state == QTHREAD_STATE_BLOCKED) {     /* put it in the blocked queue */
-		qthread_debug("qthread_shepherd(%u): adding blocked thread %p to blocked queue\n", me->kthread_index, t);
+		printf("qthread_shepherd(%u): adding blocked thread %p to blocked queue\n", me->kthread_index, t);
                 qthread_enqueue((qthread_queue_t *)t->queue, t);
                 assert(pthread_mutex_unlock(&qlib->lock_lock) == 0);
             }
 
             if(t->thread_state == QTHREAD_STATE_TERMINATED) {
-                qthread_debug("qthread_shepherd(%u): thread %p is in state terminated.\n", me->kthread_index, t);
+                printf("qthread_shepherd(%u): thread %p is in state terminated.\n", me->kthread_index, t);
                 t->thread_state = QTHREAD_STATE_DONE;
+		assert(pthread_mutex_unlock(&(t->done_lock)) == 0);
             }
         }
     }
@@ -108,7 +109,12 @@ int qthread_init(int nkthreads)
 
     /* initialize the FEB-like locking structures */
 
+#ifdef RBTREE
     if((qlib->locks = rbinit(qthread_lock_cmp, NULL)) == NULL) {
+#else
+    /* this is synchronized with read/write locks by default */
+    if ((qlib->locks = cp_hashtable_create(4, cp_hash_addr, cp_hash_compare_addr)) == NULL) {
+#endif
         perror("qthread_init()");
         abort();
     }
@@ -173,7 +179,11 @@ void qthread_finalize(void)
     }
 
     assert(pthread_mutex_lock(&qlib->lock_lock) == 0);
+#ifdef RBTREE
     rbdestroy(qlib->locks);
+#else
+    cp_hashtable_destroy(qlib->locks);
+#endif
     assert(pthread_mutex_unlock(&qlib->lock_lock) == 0);
     pthread_mutex_destroy(&qlib->lock_lock);
 
@@ -227,6 +237,7 @@ void qthread_thread_free(qthread_t *t)
 
     free(t->context);
     qthread_stack_free(t);
+    pthread_mutex_destroy(&(t->done_lock));
 
     free(t);
 }/*}}}*/
@@ -383,17 +394,17 @@ void qthread_exec(qthread_t *t, ucontext_t *c)
         qthread_debug("qthread_exec(%p, %p): type is QTHREAD_THREAD_NEW!\n", t, c);
         t->thread_state = QTHREAD_STATE_RUNNING;
 
-        getcontext(t->context); // puts the current context into t->contextq
+        getcontext(t->context); /* puts the current context into t->contextq */
         t->context->uc_stack.ss_sp = t->stack;
         t->context->uc_stack.ss_size = qlib->stack_size;
         t->context->uc_stack.ss_flags = 0;
-	// the makecontext man page says: set the uc_link FIRST
-	// why? no idea
+	/* the makecontext man page (Linux) says: set the uc_link FIRST
+	 * why? no idea */
 	t->context->uc_link = c;                               /* NULL pthread_exit() */
 
         qthread_debug("qthread_exec(): context is {%p, %d, %p}\n", t->context->uc_stack.ss_sp,
                       t->context->uc_stack.ss_size, t->context->uc_link);
-        makecontext(t->context, (void(*)(void))qthread_wrapper, 1, t); // the casting shuts gcc up
+        makecontext(t->context, (void(*)(void))qthread_wrapper, 1, t); /* the casting shuts gcc up */
     } else {
 	t->context->uc_link = c;                               /* NULL pthread_exit() */
     }
@@ -401,7 +412,7 @@ void qthread_exec(qthread_t *t, ucontext_t *c)
     t->return_context = c;
 
     qthread_debug("qthread_exec(%p): executing swapcontext()...\n", t);
-    // return_context (aka "c") is being written over with the current context
+    /* return_context (aka "c") is being written over with the current context */
     if(swapcontext(t->return_context, t->context) != 0) {
         perror("qthread_exec: swapcontext() failed");
         abort();
@@ -435,8 +446,8 @@ qthread_t *qthread_fork(void (*f)(qthread_t *), void *arg)
     qthread_t *t;
     unsigned shep, tid;
 
-    t = qthread_thread_new(f, arg); // new thread struct sans stack
-    qthread_stack_new(t,qlib->stack_size); // fill in stack
+    t = qthread_thread_new(f, arg); /* new thread struct sans stack */
+    qthread_stack_new(t,qlib->stack_size); /* fill in stack */
 
     qthread_debug("qthread_fork(): creating qthread %p with stack %p\n", t, t->stack);
 
@@ -451,17 +462,22 @@ qthread_t *qthread_fork(void (*f)(qthread_t *), void *arg)
 
     qthread_debug("qthread_fork(): tid %u shep %u\n", tid, shep);
 
+    assert(pthread_mutex_init(&(t->done_lock), NULL) == 0);
+    assert(pthread_mutex_lock(&(t->done_lock)) == 0);
+
     qthread_enqueue(qlib->kthreads[shep].ready, t);
 
     return(t);
 }
 
-void qthread_join(volatile qthread_t *t)
+void qthread_join(qthread_t *t)
 {
+    assert(pthread_mutex_lock(&t->done_lock)==0);
+#if 0
     /* this is extremely inefficient! */
     while(t->thread_state != QTHREAD_STATE_DONE)
         ;
-
+#endif
     qthread_thread_free((qthread_t *)t);
     return;
 }
@@ -486,7 +502,7 @@ static int qthread_lock_cmp(const void *p1, const void *p2, const void *conf)
 }
 
 /* the lock data structure needs to be locked before calling this function */
-
+/* the qthread_lock_t structure is the one associated with the address a */
 static qthread_lock_t *qthread_lock_locate(void *a)
 {
     static qthread_lock_t *l=NULL;
@@ -505,7 +521,22 @@ static qthread_lock_t *qthread_lock_locate(void *a)
 
     l->address = a;
 
+#ifdef RBTREE
     m = (qthread_lock_t *)rbsearch((void *)l, qlib->locks);
+#else
+    /* these are two separate functions because we're assuming
+     * that the common case is that the address is already in
+     * the hashtable, thus we can get away with just an rdlock in
+     * the get, because "put" obviously requires a wrlock. If
+     * the common case is that things will need to be put, add a
+     * cp_hashtable_wrlock(qlib->locks) before this, and ...
+     */
+    m = (qthread_lock_t *)cp_hashtable_get(qlib->locks, a);
+    if (m == NULL) {
+	m = (qthread_lock_t *)cp_hashtable_put(qlib->locks, a, l);
+    }
+    /* ... a cp_hashtable_unlock(qlib->locks) right here */
+#endif
 
     assert(m != NULL);
     if(l == m)
@@ -514,7 +545,7 @@ static qthread_lock_t *qthread_lock_locate(void *a)
     return (m);
 }
 
-void qthread_lock(qthread_t *t, void *a)
+int qthread_lock(qthread_t *t, void *a)
 {
     qthread_lock_t *m;
 
@@ -546,9 +577,10 @@ void qthread_lock(qthread_t *t, void *a)
         /* once I return to this context, I own the lock! */
         qthread_debug("qthread_lock(%p, %p): returned (was locked)\n", t, a);
     }
+    return 1;
 }
 
-void qthread_unlock(qthread_t *t, void *a)
+int qthread_unlock(qthread_t *t, void *a)
 {/*{{{*/
     qthread_lock_t *m;
     qthread_t *u;
@@ -560,7 +592,7 @@ void qthread_unlock(qthread_t *t, void *a)
     m = qthread_lock_locate(a);
     if(m->locked == 0) {
         fprintf(stderr, "qthread_unlock(%p,%p): attempt to unlock an address "
-                "that is not locked!\n");
+                "that is not locked!\n", t, a);
         abort();
     }
 
@@ -578,7 +610,11 @@ void qthread_unlock(qthread_t *t, void *a)
         assert(pthread_mutex_unlock(&m->waiting->lock) == 0);
 
         qthread_queue_free(m->waiting);
+#ifdef RBTREE
         rbdelete(m, qlib->locks);
+#else
+	cp_hashtable_remove(qlib->locks, a);
+#endif
     } else {
         qthread_debug("qthread_unlock(%p,%p): pulling thread from queue (%p)\n",t,a,u);
         u->thread_state = QTHREAD_STATE_RUNNING;
@@ -596,4 +632,5 @@ void qthread_unlock(qthread_t *t, void *a)
     assert(pthread_mutex_unlock(&qlib->lock_lock) == 0);
 
     qthread_debug("qthread_unlock(%p, %p): returned\n", t, a);
+    return 1;
 }/*}}}*/
