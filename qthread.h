@@ -58,7 +58,6 @@ typedef struct {
 typedef struct qthread_lock_s {
     void *address;
     unsigned owner;
-    unsigned locked;
     pthread_mutex_t lock;
     qthread_queue_t *waiting;
 } qthread_lock_t;
