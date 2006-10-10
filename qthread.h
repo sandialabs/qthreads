@@ -1,11 +1,14 @@
 #ifndef _QTHREAD_H_
 #define _QTHREAD_H_
 
+#ifdef MEMWATCH
+#include "memwatch.h"
+#endif
+
 #include <ucontext.h>
 #include <pthread.h>
 #include <stdarg.h>
 #include <cprops/hashtable.h>
-#include "redblack.h"
 
 #define QTHREAD_DEFAULT_STACK_SIZE      (8192*1024)
 
@@ -17,11 +20,13 @@
 #define QTHREAD_STATE_DONE              5
 #define QTHREAD_STATE_TERM_SHEP         0xFFFFFFFF
 
+struct qthread_lock_s;
+
 typedef struct qthread_s {
     unsigned thread_id;
     unsigned thread_state;
 
-    void *queue;                                /* when yielding because blocked
+    struct qthread_lock_s *blockedon;                  /* when yielding because blocked
                                                  * this is the waiting queue
                                                  */
 
@@ -33,8 +38,6 @@ typedef struct qthread_s {
     ucontext_t *context;                        /* the context switch info */
     void *stack;                                /* the thread's stack */
     ucontext_t *return_context;                 /* context of parent kthread */
-
-    pthread_mutex_t done_lock;                  /* for qthread_join() */
 
     struct qthread_s *next;
 } qthread_t;
@@ -56,6 +59,7 @@ typedef struct qthread_lock_s {
     void *address;
     unsigned owner;
     unsigned locked;
+    pthread_mutex_t lock;
     qthread_queue_t *waiting;
 } qthread_lock_t;
 
@@ -104,7 +108,8 @@ void qthread_exec(qthread_t *t, ucontext_t *c);
 void qthread_yield(qthread_t *t);
 
 qthread_t *qthread_fork(void (*f)(qthread_t *), void *arg);
-void qthread_join(qthread_t *t);
+void qthread_join(qthread_t *me, qthread_t *waitfor);
+void qthread_busy_join(volatile qthread_t *waitfor);
 
 int qthread_lock(qthread_t *t, void *a);
 int qthread_unlock(qthread_t *t, void *a);
