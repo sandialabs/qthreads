@@ -5,6 +5,9 @@
 static int x = 0;
 static int id = 0;
 static int up[4] = { 1, 0, 0, 0 };
+static int id2 = 0;
+
+static pthread_mutex_t alldone = PTHREAD_MUTEX_INITIALIZER;
 
 void thread(qthread_t * t)
 {
@@ -18,42 +21,87 @@ void thread(qthread_t * t)
     next = (me + 1) % 4;
     printf("thread(%p): me %i next %i\n", t, me, next);
 
-    for (i = 0; i < 10; i++) {
-	while (1) {
-	    qthread_lock(t, &(up[me]));
-	    if (up[me] != 0) {
-		up[me] = 0;
-		qthread_unlock(t, &(up[me]));
-		break;
-	    }
-	    qthread_unlock(t, &(up[me]));
-	}
+    for (i = 0; i < 1000; i++) {
+	/* is it my turn? */
+	qthread_lock(t, &(up[me]));
+
 	qthread_lock(t, &x);
 	printf("thread(%i): x=%d\n", me, x);
 	x++;
 	qthread_unlock(t, &x);
-	qthread_lock(t, &(up[next]));
-	up[next]++;
-	printf("{%i,%i,%i,%i}\n", up[0], up[1], up[2], up[3]);
+	/* set up the next guy's turn */
 	qthread_unlock(t, &(up[next]));
     }
 }
 
-int main(int argc, char *argv[])
+void thread2(qthread_t * t)
+{
+    int me = 0;
+    int next = 0;
+    int i;
+
+    qthread_lock(t, &id2);
+    me = id2++;
+    qthread_unlock(t, &id2);
+    next = (me + 1) % 4;
+    printf("thread(%p): me %i next %i\n", t, me, next);
+
+    for (i = 0; i < 1000; i++) {
+	/* is it my turn? */
+	qthread_lock(t, &(up[me]));
+
+	qthread_lock(t, &x);
+	printf("thread(%i): x=%d\n", me, x);
+	x++;
+	qthread_unlock(t, &x);
+	/* set up the next guy's turn */
+	qthread_unlock(t, &(up[next]));
+    }
+}
+
+void realmain(qthread_t *t)
 {
     qthread_t *a, *b, *c, *d;
+    qthread_t *a2, *b2, *c2, *d2;
 
-    qthread_init(1);
+    qthread_lock(t, &(up[1]));
+    qthread_lock(t, &(up[2]));
+    qthread_lock(t, &(up[3]));
+    /*
+    qthread_lock(t, &(up2[1]));
+    qthread_lock(t, &(up2[2]));
+    qthread_lock(t, &(up2[3]));
+    */
 
     a = qthread_fork(thread, NULL);
     b = qthread_fork(thread, NULL);
     c = qthread_fork(thread, NULL);
     d = qthread_fork(thread, NULL);
+    a2 = qthread_fork(thread2, NULL);
+    b2 = qthread_fork(thread2, NULL);
+    c2 = qthread_fork(thread2, NULL);
+    d2 = qthread_fork(thread2, NULL);
 
-    qthread_join(a);
-    qthread_join(b);
-    qthread_join(c);
-    qthread_join(d);
+    qthread_join(t, a);
+    qthread_join(t, b);
+    qthread_join(t, c);
+    qthread_join(t, d);
+    qthread_join(t, a2);
+    qthread_join(t, b2);
+    qthread_join(t, c2);
+    qthread_join(t, d2);
+    pthread_mutex_unlock(&alldone);
+}
+
+int main(int argc, char *argv[])
+{
+    qthread_init(1);
+
+    pthread_mutex_lock(&alldone);
+
+    qthread_fork(realmain, NULL);
+
+    pthread_mutex_lock(&alldone);
 
     qthread_finalize();
 

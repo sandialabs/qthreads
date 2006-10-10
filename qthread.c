@@ -2,6 +2,9 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <cprops/mempool.h>
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 #include "qthread.h"
 
 static qlib_t *qlib=NULL;

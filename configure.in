@@ -1,0 +1,44 @@
+#                                               -*- Autoconf -*-
+# Process this file with autoconf to produce a configure script.
+
+AC_PREREQ(2.50)
+AC_INIT(qthread, 0.1, rcmurph@sandia.gov)
+AM_INIT_AUTOMAKE(qthread, 0.1)
+AC_CONFIG_SRCDIR([main.c])
+AM_CONFIG_HEADER([config.h])
+
+AC_CANONICAL_HOST
+
+case "$host" in
+	*-solaris*)
+	CFLAGS="$CFLAGS -D__MAKECONTEXT_V2_SOURCE"
+	;;
+esac
+
+CFLAGS="$CFLAGS -D_GNU_SOURCE"
+
+# Checks for programs.
+AC_PROG_CC
+AC_PROG_LIBTOOL
+
+# Checks for libraries.
+# FIXME: Replace `main' with a function in `-ldl':
+AC_CHECK_LIB([dl], [main])
+AC_CHECK_LIB([pthread], [pthread_create], , AC_MSG_ERROR([Need pthreads]))
+AC_CHECK_LIB([cprops], [cp_hashtable_create], , AC_MSG_ERROR([Need libcprops 0.1.6 or better. See http://cprops.sf.ne/]))
+
+# Checks for header files.
+AC_HEADER_STDC
+AC_CHECK_HEADERS([stdlib.h])
+
+# Checks for typedefs, structures, and compiler characteristics.
+AC_C_CONST
+AC_C_INLINE
+AC_C_VOLATILE
+
+# Checks for library functions.
+AC_FUNC_MALLOC
+AC_FUNC_VPRINTF
+
+AC_CONFIG_FILES([Makefile])
+AC_OUTPUT
