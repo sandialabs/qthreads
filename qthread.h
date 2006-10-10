@@ -88,6 +88,9 @@ typedef struct {
 #endif
 } qlib_t;
 
+/* for convenient arguments to qthread_fork */
+typedef void (*qthread_f)(qthread_t * t);
+
 int qthread_init(int nkthreads);
 void qthread_finalize(void);
 
@@ -106,7 +109,7 @@ qthread_t *qthread_dequeue_nonblocking(qthread_queue_t *q);
 void qthread_exec(qthread_t *t, ucontext_t *c);
 void qthread_yield(qthread_t *t);
 
-qthread_t *qthread_fork(void (*f)(qthread_t *), void *arg);
+qthread_t *qthread_fork(qthread_f f, void *arg);
 void qthread_join(qthread_t *me, qthread_t *waitfor);
 void qthread_busy_join(volatile qthread_t *waitfor);
 

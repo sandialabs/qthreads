@@ -451,7 +451,7 @@ void qthread_yield(qthread_t *t)
  * NOTE: scheduling happens here
  */
 
-qthread_t *qthread_fork(void (*f)(qthread_t *), void *arg)
+qthread_t *qthread_fork(qthread_f f, void *arg)
 {/*{{{*/
     qthread_t *t;
     unsigned shep, tid;
