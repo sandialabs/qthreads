@@ -51,8 +51,6 @@ static cp_mempool *lock_pool = NULL;
         #define qthread_debug(format, ...) do{ }while(0)
 #endif
 
-static unsigned int *qthread_shepstat = NULL;
-
 static void *qthread_shepherd(void *arg)
 {/*{{{*/
     qthread_shepherd_t *me = (qthread_shepherd_t *)arg;         /* rcm -- not used */
