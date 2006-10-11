@@ -1,11 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-/* for get/set-rlimit */
-#include <sys/types.h>
-#include <sys/time.h>
-#include <sys/resource.h>
-
+#ifdef NEED_RLIMIT
+# include <sys/time.h>
+# include <sys/resource.h>
+#endif
 #include <cprops/mempool.h>
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -114,7 +113,9 @@ static void *qthread_shepherd(void *arg)
 int qthread_init(int nkthreads)
 {/*{{{*/
     int i, r;
+#ifdef NEED_RLIMIT
     struct rlimit rlp;
+#endif
 
     qthread_debug("qthread_init(): began.\n");
 
@@ -144,10 +145,12 @@ int qthread_init(int nkthreads)
     assert(pthread_mutex_init(&qlib->sched_kthread_lock, NULL) == 0);
     assert(pthread_mutex_init(&qlib->max_thread_id_lock, NULL) == 0);
 
+#ifdef NEED_RLIMIT
     assert(getrlimit(RLIMIT_STACK, &rlp) == 0);
     qthread_debug("stack sizes ... cur: %u max: %u\n", rlp.rlim_cur, rlp.rlim_max);
     qlib->master_stack_size = rlp.rlim_cur;
     qlib->max_stack_size = rlp.rlim_max;
+#endif
 
     /* set up the memory pools */
     qthread_pool = cp_mempool_create_by_option(0, sizeof(qthread_t), 100);
@@ -409,7 +412,9 @@ static void qthread_wrapper(void *arg)
 
 void qthread_exec(qthread_t *t, ucontext_t *c)
 {/*{{{*/
+#ifdef NEED_RLIMIT
     struct rlimit rlp;
+#endif
 
     assert(t != NULL);
     assert(c != NULL);
@@ -436,10 +441,12 @@ void qthread_exec(qthread_t *t, ucontext_t *c)
 
     t->return_context = c;
 
+#ifdef NEED_RLIMIT
     qthread_debug("qthread_exec(%p): setting stack size limits... hopefully we don't currently exceed them!\n", t);
     rlp.rlim_cur = qlib->qthread_stack_size;
     rlp.rlim_max = qlib->max_stack_size;
     assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
+#endif
 
     qthread_debug("qthread_exec(%p): executing swapcontext()...\n", t);
     /* return_context (aka "c") is being written over with the current context */
@@ -448,9 +455,11 @@ void qthread_exec(qthread_t *t, ucontext_t *c)
         abort();
     }
 
+#ifdef NEED_RLIMIT
     qthread_debug("qthread_exec(%p): setting stack size limits back to normal...\n", t);
     rlp.rlim_cur = qlib->master_stack_size;
     assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
+#endif
 
     assert(t != NULL);
     assert(c != NULL);
@@ -462,23 +471,28 @@ void qthread_exec(qthread_t *t, ucontext_t *c)
 
 void qthread_yield(qthread_t *t)
 {/*{{{*/
+#ifdef NEED_RLIMIT
     struct rlimit rlp;
+#endif
 
     qthread_debug("qthread_yield(): thread %p yielding.\n", t);
     t->thread_state = QTHREAD_STATE_YIELDED;
-
+#ifdef NEED_RLIMIT
     qthread_debug("qthread_yield(%p): setting stack size limits for master thread...\n", t);
     rlp.rlim_cur = qlib->master_stack_size;
     rlp.rlim_max = qlib->max_stack_size;
     assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
+#endif
     /* back to your regularly scheduled master thread */
     if(swapcontext(t->context, t->return_context) != 0) {
         perror("qthread_yield(): swapcontext() failed");
         abort();
     }
+#ifdef NEED_RLIMIT
     qthread_debug("qthread_yield(%p): setting stack size limits back to qthread size...\n", t);
     rlp.rlim_cur = qlib->qthread_stack_size;
     assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
+#endif
     qthread_debug("qthread_yield(): thread %p resumed.\n", t);
 }/*}}}*/
 
@@ -539,7 +553,9 @@ void qthread_busy_join(volatile qthread_t *waitfor)
 int qthread_lock(qthread_t *t, void *a)
 {/*{{{*/
     qthread_lock_t *m;
+#ifdef NEED_RLIMIT
     struct rlimit rlp;
+#endif
 
     cp_hashtable_wrlock(qlib->locks);
     m = (qthread_lock_t *)cp_hashtable_get(qlib->locks, a);
@@ -574,18 +590,22 @@ int qthread_lock(qthread_t *t, void *a)
 	t->thread_state = QTHREAD_STATE_BLOCKED;
 	t->blockedon = m;
 
+#ifdef NEED_RLIMIT
 	qthread_debug("qthread_lock(%p): setting stack size limits for master thread...\n", t);
 	rlp.rlim_cur = qlib->master_stack_size;
 	rlp.rlim_max = qlib->max_stack_size;
 	assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
+#endif
 	/* now back to your regularly scheduled the master thread */
 	if (swapcontext(t->context, t->return_context) != 0) {
 	    perror("qthread_lock(): swapcontext() failed!");
 	    abort();
 	}
+#ifdef NEED_RLIMIT
 	qthread_debug("qthread_lock(%p): setting stack size limits back to qthread size...\n", t);
 	rlp.rlim_cur = qlib->qthread_stack_size;
 	assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
+#endif
 
         /* once I return to this context, I own the lock! */
 	/* conveniently, whoever unlocked me already set up everything too */

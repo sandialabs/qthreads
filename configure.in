@@ -13,13 +13,22 @@ case "$host" in
 	*-solaris*)
 	CFLAGS="$CFLAGS -D__MAKECONTEXT_V2_SOURCE"
 	;;
+	*-linux-*)
+	AC_DEFINE(NEED_RLIMIT, 1, [whether the library should use get/set-rlimit functions])
+	;;
 esac
 
 CFLAGS="$CFLAGS -D_GNU_SOURCE"
 
 # Checks for programs.
 AC_PROG_CC
+AC_PROG_CPP
+AC_PROG_CXX
+AC_PROG_INSTALL
+AC_PROG_LN_S
+AC_PROG_MAKE_SET
 AC_PROG_LIBTOOL
+AC_PROG_RANLIB
 
 # Checks for libraries.
 # FIXME: Replace `main' with a function in `-ldl':
@@ -31,6 +40,13 @@ AC_CHECK_LIB([cprops], [cp_hashtable_create], , AC_MSG_ERROR([Need libcprops 0.1
 AC_HEADER_STDC
 AC_CHECK_HEADERS([stdlib.h])
 
+case "$host" in
+    *-linux-*)
+    AC_CHECK_HEADERS([sys/time.h sys/resource.h], , AC_MSG_ERROR([These headers required for efficient threads]))
+    AC_CHECK_FUNCS([getrlimit setrlimit], , AC_MSG_ERROR([These functions required for efficient threads]))
+    ;;
+esac
+
 # Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
 AC_C_INLINE
@@ -39,6 +55,7 @@ AC_C_VOLATILE
 # Checks for library functions.
 AC_FUNC_MALLOC
 AC_FUNC_VPRINTF
+AC_CHECK_FUNCS([strtol])
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
