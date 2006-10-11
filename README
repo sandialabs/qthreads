@@ -1,0 +1,7 @@
+On a machine with approximately 2GB of RAM, this library was able to spawn and
+handle 350,000 qthreads. It may be able to do more, but swapping will become an
+issue, and you may start to run out of address space. There is no theoretical
+reason why this library could not work on a 64-bit machine. It may be possible
+to shrink the stack size of qthreads even further (currently 8k), and thus
+handle more threads. Currently, the only real limiting factor on the number of
+threads is the amount of memory and address space you have available.
