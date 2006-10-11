@@ -16,7 +16,6 @@ static qlib_t *qlib=NULL;
 
 static void *qthread_shepherd(void *arg);
 static void qthread_wrapper(void *arg);
-static int qthread_lock_cmp(const void *p1, const void *p2, const void *conf);
 
 static cp_mempool *qthread_pool = NULL;
 static cp_mempool *context_pool = NULL;
@@ -109,6 +108,7 @@ static void *qthread_shepherd(void *arg)
     }
 
     qthread_debug("qthread_shepherd(%u): finished\n", me->kthread_index);
+    return NULL;
 }/*}}}*/
 
 int qthread_init(int nkthreads)
@@ -145,7 +145,7 @@ int qthread_init(int nkthreads)
     assert(pthread_mutex_init(&qlib->max_thread_id_lock, NULL) == 0);
 
     assert(getrlimit(RLIMIT_STACK, &rlp) == 0);
-    printf("cur: %u max: %u\n", rlp.rlim_cur, rlp.rlim_max);
+    qthread_debug("stack sizes ... cur: %u max: %u\n", rlp.rlim_cur, rlp.rlim_max);
     qlib->master_stack_size = rlp.rlim_cur;
     qlib->max_stack_size = rlp.rlim_max;
 
@@ -171,6 +171,7 @@ int qthread_init(int nkthreads)
     }
 
     qthread_debug("qthread_init(): finished.\n");
+    return 0;
 }/*}}}*/
 
 void qthread_finalize(void)
@@ -605,7 +606,7 @@ int qthread_unlock(qthread_t *t, void *a)
 
     if (m == NULL) {
         fprintf(stderr, "qthread_unlock(%p,%p): attempt to unlock an address "
-                "that is not locked!\n", t, a);
+                "that is not locked!\n", (void*)t, a);
         abort();
     }
     assert(pthread_mutex_lock(&m->lock) == 0);
