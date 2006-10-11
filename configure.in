@@ -56,6 +56,7 @@ AC_C_VOLATILE
 AC_FUNC_MALLOC
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([strtol])
+AC_CHECK_FUNCS([getcontext setcontext swapcontext], , AC_MSG_ERROR([These functions are absolutely critical.]))
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
