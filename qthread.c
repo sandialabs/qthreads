@@ -1,3 +1,6 @@
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -6,15 +9,34 @@
 # include <sys/resource.h>
 #endif
 #include <cprops/mempool.h>
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
 #include "qthread.h"
 
-static qlib_t *qlib = NULL;
+/* internal data structures */
+typedef struct
+{
+    qthread_t *head;
+    qthread_t *tail;
+    pthread_mutex_t lock;
+    pthread_cond_t notempty;
+} qthread_queue_t;
 
-static void *qthread_shepherd(void *arg);
-static void qthread_wrapper(void *arg);
+typedef struct qthread_shepherd_s
+{
+    pthread_t kthread;
+    unsigned kthread_index;
+    qthread_queue_t *ready;
+} qthread_shepherd_t;
+
+typedef struct qthread_lock_s
+{
+    void *address;
+    unsigned owner;
+    pthread_mutex_t lock;
+    qthread_queue_t *waiting;
+} qthread_lock_t;
+
+/* internal globals */
+static qlib_t *qlib = NULL;
 
 static cp_mempool *qthread_pool = NULL;
 static cp_mempool *context_pool = NULL;
@@ -23,6 +45,9 @@ static cp_mempool *queue_pool = NULL;
 static cp_mempool *lock_pool = NULL;
 
 /* Internal functions */
+static void *qthread_shepherd(void *arg);
+static void qthread_wrapper(void *arg);
+
 static inline qthread_t *qthread_thread_new(void (*f) (), void *arg);
 static inline void qthread_thread_free(qthread_t * t);
 static inline void qthread_stack_new(qthread_t * t, unsigned stack_size);
@@ -40,7 +65,7 @@ static inline void qthread_exec(qthread_t * t, ucontext_t * c);
 static inline unsigned qthread_internal_atomic_inc(unsigned *x,
 						   pthread_mutex_t * lock,
 						   int inc)
-{
+{				       /*{{{ */
     unsigned r;
 
     pthread_mutex_lock(lock);
@@ -48,12 +73,12 @@ static inline unsigned qthread_internal_atomic_inc(unsigned *x,
     *x = *x + inc;
     pthread_mutex_unlock(lock);
     return (r);
-}
+}				       /*}}} */
 
 static inline unsigned qthread_internal_atomic_inc_mod(unsigned *x,
 						       pthread_mutex_t * lock,
 						       int inc, int mod)
-{
+{				       /*{{{ */
     unsigned r;
 
     pthread_mutex_lock(lock);
@@ -61,11 +86,11 @@ static inline unsigned qthread_internal_atomic_inc_mod(unsigned *x,
     *x = (*x + inc) % mod;
     pthread_mutex_unlock(lock);
     return (r);
-}
+}				       /*}}} */
 
 static inline unsigned qthread_internal_atomic_check(unsigned *x,
 						     pthread_mutex_t * lock)
-{
+{				       /*{{{ */
     unsigned r;
 
     pthread_mutex_lock(lock);
@@ -73,7 +98,7 @@ static inline unsigned qthread_internal_atomic_check(unsigned *x,
     pthread_mutex_unlock(lock);
 
     return (r);
-}
+}				       /*}}} */
 
 /* the qthread_shepherd() is the pthread responsible for actually
  * executing the work units
@@ -766,3 +791,14 @@ int qthread_unlock(qthread_t * t, void *a)
     qthread_debug("qthread_unlock(%p, %p): returned\n", t, a);
     return 1;
 }				       /*}}} */
+
+/* These are just accessor functions, in case we ever decide to make the qthread_t data structure opaque */
+unsigned qthread_id(qthread_t *t)
+{
+    return t->shepherd;
+}
+
+void * qthread_arg(qthread_t *t)
+{
+    return t->arg;
+}

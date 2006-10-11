@@ -19589,8 +19589,8 @@ if test `eval echo '${'$as_ac_Header'}'` = yes; then
 _ACEOF
 
 else
-  { { echo "$as_me:$LINENO: error: The headers sys/time.h and sys/resource.h are required for efficient threads on Linux." >&5
-echo "$as_me: error: The headers sys/time.h and sys/resource.h are required for efficient threads on Linux." >&2;}
+  { { echo "$as_me:$LINENO: error: \"The headers sys/time.h and sys/resource.h are required for efficient threads on Linux.\"" >&5
+echo "$as_me: error: \"The headers sys/time.h and sys/resource.h are required for efficient threads on Linux.\"" >&2;}
    { (exit 1); exit 1; }; }
 fi
 
@@ -19696,8 +19696,8 @@ if test `eval echo '${'$as_ac_var'}'` = yes; then
 _ACEOF
 
 else
-  { { echo "$as_me:$LINENO: error: The functions getrlimit and setrlimit required for efficient threads on Linux." >&5
-echo "$as_me: error: The functions getrlimit and setrlimit required for efficient threads on Linux." >&2;}
+  { { echo "$as_me:$LINENO: error: \"The functions getrlimit and setrlimit required for efficient threads on Linux.\"" >&5
+echo "$as_me: error: \"The functions getrlimit and setrlimit required for efficient threads on Linux.\"" >&2;}
    { (exit 1); exit 1; }; }
 fi
 done
@@ -20577,7 +20577,9 @@ if test `eval echo '${'$as_ac_var'}'` = yes; then
 _ACEOF
 
 else
-  { { echo "$as_me:$LINENO: error: The functions getcontext
+  { { echo "$as_me:$LINENO: error: \"The functions get/set/swapcontext are critical to this library.\"" >&5
+echo "$as_me: error: \"The functions get/set/swapcontext are critical to this library.\"" >&2;}
+   { (exit 1); exit 1; }; }
 fi
 done
 

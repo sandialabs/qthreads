@@ -3,7 +3,7 @@
 #include <assert.h>
 #include "qthread.h"
 
-static int x = 0;
+static volatile int x = 0;
 static int id = 0;
 
 void thread(qthread_t * t)
@@ -13,10 +13,10 @@ void thread(qthread_t * t)
     qthread_lock(t, &id);
     me = id++;
     qthread_unlock(t, &id);
-    printf("thread(%p): me %i\n", (void*) t, me);
+    //printf("thread(%p): me %i\n", (void*) t, me);
 
     qthread_lock(t, &x);
-    printf("thread(%i): x=%d\n", me, x);
+    //printf("thread(%i): x=%d\n", me, x);
     x++;
     qthread_unlock(t, &x);
 }

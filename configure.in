@@ -42,8 +42,8 @@ AC_CHECK_HEADERS([stdlib.h])
 
 case "$host" in
     *-linux-*)
-    AC_CHECK_HEADERS([sys/time.h sys/resource.h], , AC_MSG_ERROR([The headers sys/time.h and sys/resource.h are required for efficient threads on Linux.]))
-    AC_CHECK_FUNCS([getrlimit setrlimit], , AC_MSG_ERROR([The functions getrlimit and setrlimit required for efficient threads on Linux.]))
+    AC_CHECK_HEADERS([sys/time.h sys/resource.h], , AC_MSG_ERROR(["The headers sys/time.h and sys/resource.h are required for efficient threads on Linux."]))
+    AC_CHECK_FUNCS([getrlimit setrlimit], , AC_MSG_ERROR(["The functions getrlimit and setrlimit required for efficient threads on Linux."]))
     ;;
 esac
 
@@ -56,7 +56,7 @@ AC_C_VOLATILE
 AC_FUNC_MALLOC
 AC_FUNC_VPRINTF
 AC_CHECK_FUNCS([strtol])
-AC_CHECK_FUNCS([getcontext setcontext swapcontext], , AC_MSG_ERROR([The functions getcontext, setcontext, and swapcontext are absolutely critical to this library.]))
+AC_CHECK_FUNCS([getcontext setcontext swapcontext], , AC_MSG_ERROR(["The functions get/set/swapcontext are critical to this library."]))
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
