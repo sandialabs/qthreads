@@ -30,7 +30,7 @@ static cp_mempool *lock_pool = NULL;
 /*#define QTHREAD_DEBUG 1*/
 /* for debugging */
 #ifdef QTHREAD_DEBUG
-        static void qthread_debug(char *format, ...)
+        static inline void qthread_debug(char *format, ...)
 {/*{{{*/
             static pthread_mutex_t output_lock;
 	    static int inited = 0;
@@ -52,7 +52,7 @@ static cp_mempool *lock_pool = NULL;
             pthread_mutex_unlock(&output_lock);
 }/*}}}*/
 #else
-        #define qthread_debug(format, ...) do{ }while(0)
+        #define qthread_debug(...) do{ }while(0)
 #endif
 
 static void *qthread_shepherd(void *arg)
