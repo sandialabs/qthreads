@@ -10,7 +10,7 @@
 #include <stdarg.h>
 #include <cprops/hashtable.h>
 
-#define QTHREAD_DEFAULT_STACK_SIZE 8192
+#define QTHREAD_DEFAULT_STACK_SIZE 2048
 
 #define QTHREAD_STATE_NEW               0
 #define QTHREAD_STATE_RUNNING           1
@@ -96,19 +96,6 @@ typedef void (*qthread_f)(qthread_t * t);
 int qthread_init(int nkthreads);
 void qthread_finalize(void);
 
-qthread_t *qthread_thread_new(void (*f)(), void *arg);
-void qthread_thread_free(qthread_t *t);
-void qthread_stack_new(qthread_t *t, unsigned stack_size);
-void qthread_stack_free(qthread_t *t);
-
-qthread_queue_t *qthread_queue_new();
-void qthread_queue_free(qthread_queue_t *q);
-
-void qthread_enqueue(qthread_queue_t *q, qthread_t *t);
-qthread_t *qthread_dequeue(qthread_queue_t *q);
-qthread_t *qthread_dequeue_nonblocking(qthread_queue_t *q);
-
-void qthread_exec(qthread_t *t, ucontext_t *c);
 void qthread_yield(qthread_t *t);
 
 qthread_t *qthread_fork(qthread_f f, void *arg);
@@ -117,40 +104,6 @@ void qthread_busy_join(volatile qthread_t *waitfor);
 
 int qthread_lock(qthread_t *t, void *a);
 int qthread_unlock(qthread_t *t, void *a);
-
-/* functions that need to be inlined! */
-static inline unsigned qthread_atomic_inc(unsigned *x, pthread_mutex_t *lock, 
-                                         int inc)
-{
-    unsigned r;
-    pthread_mutex_lock(lock);
-    r = *x;
-    *x = *x + inc;
-    pthread_mutex_unlock(lock);
-    return(r);
-}
-
-static inline unsigned qthread_atomic_inc_mod(unsigned *x, pthread_mutex_t *lock,
-                                             int inc, int mod)
-{
-    unsigned r;
-    pthread_mutex_lock(lock);
-    r = *x;
-    *x = (*x + inc) % mod;
-    pthread_mutex_unlock(lock);
-    return(r);
-}
-
-static inline unsigned qthread_atomic_check(unsigned *x, pthread_mutex_t *lock)
-{
-    unsigned r;
-
-    pthread_mutex_lock(lock);
-    r = *x;
-    pthread_mutex_unlock(lock);
-
-    return(r);
-}
 
 #endif /* _QTHREAD_H_ */
 
