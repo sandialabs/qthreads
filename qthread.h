@@ -10,7 +10,7 @@
 #include <stdarg.h>
 #include <cprops/hashtable.h>
 
-#define QTHREAD_DEFAULT_STACK_SIZE      (8192*1024)
+#define QTHREAD_DEFAULT_STACK_SIZE 8192
 
 #define QTHREAD_STATE_NEW               0
 #define QTHREAD_STATE_RUNNING           1
@@ -66,12 +66,14 @@ typedef struct {
     int nkthreads;
     qthread_shepherd_t *kthreads;
 
-    unsigned stack_size;
-    
+    unsigned qthread_stack_size;
+    unsigned master_stack_size;
+    unsigned max_stack_size;
+
     /* assigns a unique thread_id mostly for debugging! */
     unsigned max_thread_id;
     pthread_mutex_t max_thread_id_lock;
-    
+
     /* round robin scheduler - can probably be smarter */
     unsigned sched_kthread;
     pthread_mutex_t sched_kthread_lock;

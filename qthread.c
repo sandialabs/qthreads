@@ -1,6 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+/* for get/set-rlimit */
+#include <sys/types.h>
+#include <sys/time.h>
+#include <sys/resource.h>
+
 #include <cprops/mempool.h>
 #ifdef HAVE_CONFIG_H
 # include "config.h"
@@ -109,6 +114,7 @@ static void *qthread_shepherd(void *arg)
 int qthread_init(int nkthreads)
 {/*{{{*/
     int i, r;
+    struct rlimit rlp;
 
     qthread_debug("qthread_init(): began.\n");
 
@@ -125,13 +131,6 @@ int qthread_init(int nkthreads)
         abort();
     }
 
-    /* set up the memory pools */
-    qthread_pool = cp_mempool_create_by_option(0, sizeof(qthread_t), 100);
-    context_pool = cp_mempool_create_by_option(0, sizeof(ucontext_t), 100);
-    stack_pool = cp_mempool_create_by_option(0, QTHREAD_DEFAULT_STACK_SIZE, 100);
-    queue_pool = cp_mempool_create_by_option(0, sizeof(qthread_queue_t), 10);
-    lock_pool = cp_mempool_create_by_option(0, sizeof(qthread_lock_t), 10);
-
     /* initialize the kernel threads and scheduler */
     qlib->nkthreads = nkthreads;
     if((qlib->kthreads = (qthread_shepherd_t *)
@@ -140,10 +139,22 @@ int qthread_init(int nkthreads)
         abort();
     }
 
-    qlib->stack_size = QTHREAD_DEFAULT_STACK_SIZE;
+    qlib->qthread_stack_size = QTHREAD_DEFAULT_STACK_SIZE;
     qlib->sched_kthread = 0;
     assert(pthread_mutex_init(&qlib->sched_kthread_lock, NULL) == 0);
     assert(pthread_mutex_init(&qlib->max_thread_id_lock, NULL) == 0);
+
+    assert(getrlimit(RLIMIT_STACK, &rlp) == 0);
+    printf("cur: %u max: %u\n", rlp.rlim_cur, rlp.rlim_max);
+    qlib->master_stack_size = rlp.rlim_cur;
+    qlib->max_stack_size = rlp.rlim_max;
+
+    /* set up the memory pools */
+    qthread_pool = cp_mempool_create_by_option(0, sizeof(qthread_t), 100);
+    context_pool = cp_mempool_create_by_option(0, sizeof(ucontext_t), 100);
+    stack_pool = cp_mempool_create_by_option(0, qlib->qthread_stack_size, 100);
+    queue_pool = cp_mempool_create_by_option(0, sizeof(qthread_queue_t), 10);
+    lock_pool = cp_mempool_create_by_option(0, sizeof(qthread_lock_t), 10);
 
     /* spawn the number of shepherd threads that were specified */
     for(i=0; i<nkthreads; i++) {
@@ -397,6 +408,8 @@ static void qthread_wrapper(void *arg)
 
 void qthread_exec(qthread_t *t, ucontext_t *c)
 {/*{{{*/
+    struct rlimit rlp;
+
     assert(t != NULL);
     assert(c != NULL);
 
@@ -407,7 +420,7 @@ void qthread_exec(qthread_t *t, ucontext_t *c)
 
         getcontext(t->context); /* puts the current context into t->contextq */
         t->context->uc_stack.ss_sp = t->stack;
-        t->context->uc_stack.ss_size = qlib->stack_size;
+        t->context->uc_stack.ss_size = qlib->qthread_stack_size;
         t->context->uc_stack.ss_flags = 0;
 	/* the makecontext man page (Linux) says: set the uc_link FIRST
 	 * why? no idea */
@@ -422,12 +435,21 @@ void qthread_exec(qthread_t *t, ucontext_t *c)
 
     t->return_context = c;
 
+    qthread_debug("qthread_exec(%p): setting stack size limits... hopefully we don't currently exceed them!\n", t);
+    rlp.rlim_cur = qlib->qthread_stack_size;
+    rlp.rlim_max = qlib->max_stack_size;
+    assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
+
     qthread_debug("qthread_exec(%p): executing swapcontext()...\n", t);
     /* return_context (aka "c") is being written over with the current context */
     if(swapcontext(t->return_context, t->context) != 0) {
         perror("qthread_exec: swapcontext() failed");
         abort();
     }
+
+    qthread_debug("qthread_exec(%p): setting stack size limits back to normal...\n", t);
+    rlp.rlim_cur = qlib->master_stack_size;
+    assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
 
     assert(t != NULL);
     assert(c != NULL);
@@ -439,12 +461,23 @@ void qthread_exec(qthread_t *t, ucontext_t *c)
 
 void qthread_yield(qthread_t *t)
 {/*{{{*/
+    struct rlimit rlp;
+
     qthread_debug("qthread_yield(): thread %p yielding.\n", t);
     t->thread_state = QTHREAD_STATE_YIELDED;
+
+    qthread_debug("qthread_yield(%p): setting stack size limits for master thread...\n", t);
+    rlp.rlim_cur = qlib->master_stack_size;
+    rlp.rlim_max = qlib->max_stack_size;
+    assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
+    /* back to your regularly scheduled master thread */
     if(swapcontext(t->context, t->return_context) != 0) {
-        perror("qthread_exec: swapcontext() failed");
+        perror("qthread_yield(): swapcontext() failed");
         abort();
     }
+    qthread_debug("qthread_yield(%p): setting stack size limits back to qthread size...\n", t);
+    rlp.rlim_cur = qlib->qthread_stack_size;
+    assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
     qthread_debug("qthread_yield(): thread %p resumed.\n", t);
 }/*}}}*/
 
@@ -458,7 +491,7 @@ qthread_t *qthread_fork(qthread_f f, void *arg)
     unsigned shep, tid;
 
     t = qthread_thread_new(f, arg); /* new thread struct sans stack */
-    qthread_stack_new(t,qlib->stack_size); /* fill in stack */
+    qthread_stack_new(t,qlib->qthread_stack_size); /* fill in stack */
 
     qthread_debug("qthread_fork(): creating qthread %p with stack %p\n", t, t->stack);
 
@@ -505,6 +538,7 @@ void qthread_busy_join(volatile qthread_t *waitfor)
 int qthread_lock(qthread_t *t, void *a)
 {/*{{{*/
     qthread_lock_t *m;
+    struct rlimit rlp;
 
     cp_hashtable_wrlock(qlib->locks);
     m = (qthread_lock_t *)cp_hashtable_get(qlib->locks, a);
@@ -538,11 +572,19 @@ int qthread_lock(qthread_t *t, void *a)
 
 	t->thread_state = QTHREAD_STATE_BLOCKED;
 	t->blockedon = m;
+
+	qthread_debug("qthread_lock(%p): setting stack size limits for master thread...\n", t);
+	rlp.rlim_cur = qlib->master_stack_size;
+	rlp.rlim_max = qlib->max_stack_size;
+	assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
 	/* now back to your regularly scheduled the master thread */
 	if (swapcontext(t->context, t->return_context) != 0) {
 	    perror("qthread_lock(): swapcontext() failed!");
 	    abort();
 	}
+	qthread_debug("qthread_lock(%p): setting stack size limits back to qthread size...\n", t);
+	rlp.rlim_cur = qlib->qthread_stack_size;
+	assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
 
         /* once I return to this context, I own the lock! */
 	/* conveniently, whoever unlocked me already set up everything too */

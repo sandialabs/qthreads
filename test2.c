@@ -2,7 +2,7 @@
 #include <assert.h>
 #include "qthread.h"
 
-static volatile int x = 0;
+static int x = 0;
 static int id = 0;
 
 void thread(qthread_t * t)
@@ -23,7 +23,14 @@ void thread(qthread_t * t)
 
 int main(int argc, char *argv[])
 {
-    int i, target = 128;
+    int i, target;
+
+    if (argc != 2) {
+	printf("usage: %s num_threads\n", argv[0]);
+	return -1;
+    } else {
+	target = atoi(argv[1]);
+    }
 
     qthread_init(3);
 
