@@ -16,8 +16,9 @@
 #define QTHREAD_STATE_RUNNING           1
 #define QTHREAD_STATE_YIELDED           2
 #define QTHREAD_STATE_BLOCKED           3
-#define QTHREAD_STATE_TERMINATED        4
-#define QTHREAD_STATE_DONE              5
+#define QTHREAD_STATE_FEB_BLOCKED       4
+#define QTHREAD_STATE_TERMINATED        5
+#define QTHREAD_STATE_DONE              6
 #define QTHREAD_STATE_TERM_SHEP         0xFFFFFFFF
 
 struct qthread_lock_s;
@@ -66,6 +67,9 @@ typedef struct
      * multiple hashtables to improve performance
      */
     cp_hashtable *locks;
+    /* these are separated out for memory reasons: if you can get away with simple
+     * locks, then you can use less memory */
+    cp_hashtable *FEBs;
 } qlib_t;
 
 /* for convenient arguments to qthread_fork */

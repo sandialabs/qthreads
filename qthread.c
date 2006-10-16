@@ -9,6 +9,7 @@
 # include <sys/resource.h>
 #endif
 #include <cprops/mempool.h>
+#include <cprops/linked_list.h>
 #include "qthread.h"
 
 /* internal data structures */
@@ -29,11 +30,28 @@ typedef struct qthread_shepherd_s
 
 typedef struct qthread_lock_s
 {
-    void *address;
     unsigned owner;
     pthread_mutex_t lock;
     qthread_queue_t *waiting;
 } qthread_lock_t;
+
+typedef struct qthread_addrstat_s
+{
+    pthread_mutex_t lock;
+    cp_list *EFQ;
+    cp_list *FEQ;
+    cp_list *FFQ;
+    unsigned int full:1;
+} qthread_addrstat_t;
+
+typedef struct qthread_addrres_s
+{
+    void *data;
+    void *beginning;
+    size_t ctr;
+    pthread_mutex_t ctr_lock;
+    qthread_t *waiter;
+} qthread_addrres_t;
 
 /* internal globals */
 static qlib_t *qlib = NULL;
@@ -99,6 +117,11 @@ static inline unsigned qthread_internal_atomic_check(unsigned *x,
 
     return (r);
 }				       /*}}} */
+
+static void qthread_internal_unlock_locks(void * a)
+{/*{{{*/
+    assert(pthread_mutex_unlock((pthread_mutex_t*)a) == 0);
+}/*}}}*/
 
 /* the qthread_shepherd() is the pthread responsible for actually
  * executing the work units
@@ -174,6 +197,17 @@ static void *qthread_shepherd(void *arg)
 		    qthread_enqueue(qlib->kthreads[t->shepherd].ready, t);
 		    break;
 
+		case QTHREAD_STATE_FEB_BLOCKED: /* unlock the related FEB address locks, and re-arrange memory to be correct */
+		    qthread_debug("qthread_shepherd(%u): unlocking FEB address locks\n", me->kthread_index);
+		    {
+			qthread_addrres_t *X = (qthread_addrres_t*)(t->blockedon);
+			cp_list * locks = (cp_list*)(X->waiter);
+			X->waiter = t;
+			t->blockedon = NULL;
+			cp_list_destroy_custom(locks, qthread_internal_unlock_locks);
+		    }
+		    break;
+
 		case QTHREAD_STATE_BLOCKED:	/* put it in the blocked queue */
 		    qthread_debug
 			("qthread_shepherd(%u): adding blocked thread %p to blocked queue\n",
@@ -217,8 +251,12 @@ int qthread_init(int nkthreads)
 
     /* this is synchronized with read/write locks by default */
     if ((qlib->locks =
-	 cp_hashtable_create(4, cp_hash_addr,
+	 cp_hashtable_create(100, cp_hash_addr,
 			     cp_hash_compare_addr)) == NULL) {
+	perror("qthread_init()");
+	abort();
+    }
+    if ((qlib->FEBs = cp_hashtable_create(100, cp_hash_addr, cp_hash_compare_addr)) == NULL) {
 	perror("qthread_init()");
 	abort();
     }
@@ -635,10 +673,37 @@ qthread_t *qthread_fork(qthread_f f, void *arg)
 
     qthread_debug("qthread_fork(): tid %u shep %u\n", tid, shep);
 
+    /* this is for qthread_join() */
     qthread_lock(t, t);
-
     qthread_enqueue(qlib->kthreads[shep].ready, t);
 
+    return (t);
+}				       /*}}} */
+
+qthread_t *qthread_fork_to(qthread_f f, void *arg, unsigned shepherd)
+{				       /*{{{ */
+    qthread_t *t;
+    unsigned tid;
+
+    t = qthread_thread_new(f, arg);    /* new thread struct sans stack */
+    qthread_stack_new(t, qlib->qthread_stack_size);	/* fill in stack */
+
+    qthread_debug("qthread_fork_to(): creating qthread %p with stack %p\n", t,
+		  t->stack);
+
+    /* figure out which queue to put the thread into */
+    tid =
+	qthread_internal_atomic_inc(&qlib->max_thread_id,
+				    &qlib->max_thread_id_lock, 1);
+    t->thread_id = tid;
+    if (shepherd > qlib->nkthreads) {
+	return NULL;
+    }
+    qthread_debug("qthread_fork_to(): tid %u shep %u\n", tid, shepherd);
+
+    /* this is for qthread_join() */
+    qthread_lock(t, t);
+    qthread_enqueue(qlib->kthreads[shepherd].ready, t);
     return (t);
 }				       /*}}} */
 
@@ -654,7 +719,34 @@ void qthread_busy_join(volatile qthread_t * waitfor)
 {				       /*{{{ */
     /* this is extremely inefficient! */
     while (waitfor->thread_state != QTHREAD_STATE_DONE) ;
+    qthread_thread_free((qthread_t *) waitfor);
     return;
+}				       /*}}} */
+
+static inline int qthread_back_to_master(qthread_t * t)
+{				       /*{{{ */
+#ifdef NEED_RLIMIT
+    struct rlimit rlp;
+
+    qthread_debug
+	("qthread_back_to_master(%p): setting stack size limits for master thread...\n",
+	 t);
+    rlp.rlim_cur = qlib->master_stack_size;
+    rlp.rlim_max = qlib->max_stack_size;
+    assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
+#endif
+    /* now back to your regularly scheduled master thread */
+    if (swapcontext(t->context, t->return_context) != 0) {
+	perror("qthread_back_to_master(): swapcontext() failed!");
+	abort();
+    }
+#ifdef NEED_RLIMIT
+    qthread_debug
+	("qthread_back_to_master(%p): setting stack size limits back to qthread size...\n",
+	 t);
+    rlp.rlim_cur = qlib->qthread_stack_size;
+    assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
+#endif
 }				       /*}}} */
 
 /* functions to implement FEB locking/unlocking 
@@ -663,13 +755,100 @@ void qthread_busy_join(volatile qthread_t * waitfor)
  * (e.g. multiple hash tables, shortening critical section, etc.)
  */
 
+/* The lock ordering in these functions is very particular, and is designed to
+ * reduce the impact of having only one hashtable. Don't monkey with it unless
+ * you REALLY know what you're doing! If one hashtable becomes a problem, we
+ * may need to move to a new mechanism.
+ */
+
+qthread_addrstat_t * qthread_addrstat_new()
+{
+    qthread_addrstat_t * ret = malloc(sizeof(qthread_addrstat_t));
+    assert(pthread_mutex_init(&ret->lock, NULL) == 0);
+    ret->full = 1;
+    ret->EFQ = NULL;
+    ret->FEQ = NULL;
+    ret->FFQ = NULL;
+    return NULL;
+}
+
+void qthread_writeEF(qthread_t * t, char *dest, const char *src, const size_t bytes)
+{
+    size_t i;
+    qthread_addrstat_t **m;
+    qthread_addrres_t *X = NULL;
+    cp_list *queuedlocks;
+
+    m = malloc(sizeof(qthread_queue_t *) * bytes);
+    cp_hashtable_wrlock(qlib->FEBs); {
+	for (i = 0; i < bytes; ++i) {
+	    m[i] = cp_hashtable_get(qlib->FEBs, dest + i);
+	    if (!m[i]) {
+		m[i] = qthread_addrstat_new();
+		cp_hashtable_put(qlib->FEBs, dest + i, m[i]);
+	    }
+	    assert(pthread_mutex_lock(&(m[i]->lock)) == 0);
+	}
+    }
+    cp_hashtable_unlock(qlib->FEBs);
+    queuedlocks = cp_list_create_nosync();
+    /* by this point, all the address data structures (m's) are locked */
+    for (i = 0; i < bytes; i++) {
+	if (m[i]->full) {
+	    if (!X) {
+		X = malloc(sizeof(qthread_addrres_t));
+		pthread_mutex_init(&X->ctr_lock, NULL);
+		X->waiter = t;
+	    }
+	    cp_list_append(m[i]->EFQ, X);
+	    X->ctr++;
+	    cp_list_append(queuedlocks, &(m[i]->lock));
+	} else {
+	    dest[i] = src[i];
+	    gotlock_fill(m[i]);
+	}
+    }
+    /* now all the addresses are either written or queued */
+    free(m);
+    if (X) {
+	t->thread_state = QTHREAD_STATE_FEB_BLOCKED;
+	/* these are a bit screwey, to save on memory */
+	t->blockedon = (struct qthread_lock_s *) X;
+	X->waiter = (qthread_t *) queuedlocks;
+	qthread_back_to_master(t);
+    }
+}
+
+void qthread_empty(qthread_t * t, const char * dest, size_t bytes)
+{
+    cp_list * list = cp_list_create_nosync();
+    cp_list_iterator *it;
+    qthread_addrstat_t *m;
+    size_t i;
+
+    cp_hashtable_wrlock(qlib->FEBs); {
+	for (i = 0; i < bytes; ++i) {
+	    m = cp_hashtable_get(qlib->FEBs, (void*)(dest+i));
+	    if (! m) {
+		m = qthread_addrstat_new();
+		m->full = 0;
+		cp_hashtable_put(qlib->FEBs, (void*)(dest+i), m);
+	    } else {
+		assert(pthread_mutex_lock(&m->lock) == 0);
+		cp_list_append(list, m);
+	    }
+	}
+    } cp_hashtable_unlock(qlib->FEBs);
+    it = cp_list_create_iterator(list, COLLECTION_LOCK_NONE);
+    while ((m = cp_list_iterator_next(it)) != NULL) {
+	qthread_gotlock_empty(t, m);
+    }
+}
+
 int qthread_lock(qthread_t * t, void *a)
 {				       /*{{{ */
     qthread_lock_t *m;
 
-#ifdef NEED_RLIMIT
-    struct rlimit rlp;
-#endif
 
     cp_hashtable_wrlock(qlib->locks);
     m = (qthread_lock_t *) cp_hashtable_get(qlib->locks, a);
@@ -705,26 +884,7 @@ int qthread_lock(qthread_t * t, void *a)
 	t->thread_state = QTHREAD_STATE_BLOCKED;
 	t->blockedon = m;
 
-#ifdef NEED_RLIMIT
-	qthread_debug
-	    ("qthread_lock(%p): setting stack size limits for master thread...\n",
-	     t);
-	rlp.rlim_cur = qlib->master_stack_size;
-	rlp.rlim_max = qlib->max_stack_size;
-	assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
-#endif
-	/* now back to your regularly scheduled the master thread */
-	if (swapcontext(t->context, t->return_context) != 0) {
-	    perror("qthread_lock(): swapcontext() failed!");
-	    abort();
-	}
-#ifdef NEED_RLIMIT
-	qthread_debug
-	    ("qthread_lock(%p): setting stack size limits back to qthread size...\n",
-	     t);
-	rlp.rlim_cur = qlib->qthread_stack_size;
-	assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
-#endif
+	qthread_back_to_master(t);
 
 	/* once I return to this context, I own the lock! */
 	/* conveniently, whoever unlocked me already set up everything too */
@@ -793,12 +953,12 @@ int qthread_unlock(qthread_t * t, void *a)
 }				       /*}}} */
 
 /* These are just accessor functions, in case we ever decide to make the qthread_t data structure opaque */
-unsigned qthread_id(qthread_t *t)
-{
+unsigned qthread_id(qthread_t * t)
+{				       /*{{{ */
     return t->shepherd;
-}
+}				       /*}}} */
 
-void * qthread_arg(qthread_t *t)
-{
+void *qthread_arg(qthread_t * t)
+{				       /*{{{ */
     return t->arg;
-}
+}				       /*}}} */
