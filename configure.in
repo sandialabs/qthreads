@@ -18,7 +18,7 @@ case "$host" in
 	;;
 esac
 
-AC_DEFINE(_GNU_SOURCE, 1, [make it build correctly])
+AC_DEFINE(_GNU_SOURCE, 1, [make pthreads build correctly])
 
 # Checks for programs.
 AC_PROG_CC

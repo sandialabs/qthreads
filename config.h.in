@@ -100,7 +100,7 @@
 /* Version number of package */
 #undef VERSION
 
-/* make it build correctly */
+/* make pthreads build correctly */
 #undef _GNU_SOURCE
 
 /* force the Sun makecontext to behave correctly */
