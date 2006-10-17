@@ -1,39 +1,85 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
-#include <stdio.h>
-#include <stdlib.h>
-#include <assert.h>
+#include <stdlib.h>		       /* for malloc() and abort() */
+#include <assert.h>		       /* for assert() */
+#include <ucontext.h>		       /* for make/get/swap-context functions */
+#include <stdarg.h>		       /* for va_start and va_end */
 #ifdef NEED_RLIMIT
 # include <sys/time.h>
 # include <sys/resource.h>
 #endif
+
 #include <cprops/mempool.h>
+#include <cprops/hashtable.h>
 #include <cprops/linked_list.h>
 #include "qthread.h"
 
+#ifdef QTHREAD_DEBUG
+/* for the vprintf in qthread_debug() */
+# define QTHREAD_DEFAULT_STACK_SIZE 8192*1024
+#else
+# define QTHREAD_DEFAULT_STACK_SIZE 2048
+#endif
+
+/* internal constants */
+#define QTHREAD_STATE_NEW               0
+#define QTHREAD_STATE_RUNNING           1
+#define QTHREAD_STATE_YIELDED           2
+#define QTHREAD_STATE_BLOCKED           3
+#define QTHREAD_STATE_FEB_BLOCKED       4
+#define QTHREAD_STATE_TERMINATED        5
+#define QTHREAD_STATE_DONE              6
+#define QTHREAD_STATE_TERM_SHEP         0xFFFFFFFF
+
 /* internal data structures */
-typedef struct
+typedef struct qthread_lock_s qthread_lock_t;
+typedef struct qthread_shepherd_s qthread_shepherd_t;
+typedef struct qthread_queue_s qthread_queue_t;
+
+struct qthread_s
+{
+    unsigned thread_id;
+    unsigned thread_state;
+
+    /* a pointer used for passing information back to the shepherd when
+     * becoming blocked */
+    struct qthread_lock_s *blockedon;
+    /* the pthread we run on */
+    unsigned shepherd;
+
+    /* the function to call (that defines this thread) */
+    void (*f) (struct qthread_s *);
+    void *arg;			/* user defined data */
+
+    ucontext_t *context;	/* the context switch info */
+    void *stack;		/* the thread's stack */
+    ucontext_t *return_context;	/* context of parent kthread */
+
+    struct qthread_s *next;
+};
+
+struct qthread_queue_s
 {
     qthread_t *head;
     qthread_t *tail;
     pthread_mutex_t lock;
     pthread_cond_t notempty;
-} qthread_queue_t;
+};
 
-typedef struct qthread_shepherd_s
+struct qthread_shepherd_s
 {
     pthread_t kthread;
     unsigned kthread_index;
     qthread_queue_t *ready;
-} qthread_shepherd_t;
+};
 
-typedef struct qthread_lock_s
+struct qthread_lock_s
 {
     unsigned owner;
     pthread_mutex_t lock;
     qthread_queue_t *waiting;
-} qthread_lock_t;
+};
 
 typedef struct qthread_addrstat_s
 {
@@ -58,6 +104,35 @@ typedef struct qthread_addrres_s
     qthread_t *waiter;
 } qthread_addrres_t;
 
+typedef struct
+{
+    int nkthreads;
+    struct qthread_shepherd_s *kthreads;
+
+    unsigned qthread_stack_size;
+    unsigned master_stack_size;
+    unsigned max_stack_size;
+
+    /* assigns a unique thread_id mostly for debugging! */
+    unsigned max_thread_id;
+    pthread_mutex_t max_thread_id_lock;
+
+    /* round robin scheduler - can probably be smarter */
+    unsigned sched_kthread;
+    pthread_mutex_t sched_kthread_lock;
+
+    /* this is how we manage FEB-type locks
+     * NOTE: this can be a major bottleneck and we should probably create
+     * multiple hashtables to improve performance
+     */
+    cp_hashtable *locks;
+    /* these are separated out for memory reasons: if you can get away with
+     * simple locks, then you can use less memory. Subject to the same
+     * bottleneck concerns as the above hashtable, though these are slightly
+     * better at shrinking their critical section. */
+    cp_hashtable *FEBs;
+} qlib_t;
+
 /* internal globals */
 static qlib_t *qlib = NULL;
 
@@ -79,14 +154,11 @@ static inline qthread_t *qthread_thread_new(void (*f) (), void *arg);
 static inline void qthread_thread_free(qthread_t * t);
 static inline void qthread_stack_new(qthread_t * t, unsigned stack_size);
 static inline void qthread_stack_free(qthread_t * t);
-
 static inline qthread_queue_t *qthread_queue_new();
 static inline void qthread_queue_free(qthread_queue_t * q);
-
 static inline void qthread_enqueue(qthread_queue_t * q, qthread_t * t);
 static inline qthread_t *qthread_dequeue(qthread_queue_t * q);
 static inline qthread_t *qthread_dequeue_nonblocking(qthread_queue_t * q);
-
 static inline void qthread_exec(qthread_t * t, ucontext_t * c);
 
 static inline unsigned qthread_internal_atomic_inc(unsigned *x,
@@ -159,6 +231,8 @@ static inline void qthread_debug(char *format, ...)
 #define qthread_debug(...) do{ }while(0)
 #endif
 
+/* this function is the workhorse of the library: this is the function that
+ * gets spawned several times. */
 static void *qthread_shepherd(void *arg)
 {				       /*{{{ */
     qthread_shepherd_t *me = (qthread_shepherd_t *) arg;	/* rcm -- not used */
@@ -374,6 +448,10 @@ void qthread_finalize(void)
     cp_mempool_destroy(stack_pool);
     cp_mempool_destroy(queue_pool);
     cp_mempool_destroy(lock_pool);
+    cp_mempool_destroy(list_pool);
+    cp_mempool_destroy(addrres_pool);
+    cp_mempool_destroy(addrstat_pool);
+    cp_mempool_destroy(addrstat2_pool);
     free(qlib->kthreads);
     free(qlib);
     qlib = NULL;
@@ -449,7 +527,9 @@ static inline void qthread_stack_free(qthread_t * t)
 	cp_mempool_free(stack_pool, t->stack);
 }				       /*}}} */
 
+/*****************************************/
 /* functions to manage the thread queues */
+/*****************************************/
 
 static inline qthread_queue_t *qthread_queue_new()
 {				       /*{{{ */
@@ -560,7 +640,6 @@ static inline qthread_t *qthread_dequeue_nonblocking(qthread_queue_t * q)
 }				       /*}}} */
 
 /* this function runs a thread until it completes or yields */
-
 static void qthread_wrapper(void *arg)
 {				       /*{{{ */
     qthread_t *t = (qthread_t *) arg;
@@ -637,7 +716,6 @@ static inline void qthread_exec(qthread_t * t, ucontext_t * c)
 }				       /*}}} */
 
 /* this function yields thread t to the master kernel thread */
-
 void qthread_yield(qthread_t * t)
 {				       /*{{{ */
 #ifdef NEED_RLIMIT
@@ -672,7 +750,6 @@ void qthread_yield(qthread_t * t)
 /* fork a thread by putting it in somebody's work queue
  * NOTE: scheduling happens here
  */
-
 qthread_t *qthread_fork(qthread_f f, void *arg)
 {				       /*{{{ */
     qthread_t *t;
@@ -938,7 +1015,7 @@ void qthread_empty(qthread_t * t, char *dest, const size_t bytes)
     cp_list_iterator_release(&it);
 }				       /*}}} */
 
-void qthread_fill(qthread_t * t, const char *dest, const size_t bytes)
+void qthread_fill(qthread_t * t, char *dest, const size_t bytes)
 {				       /*{{{ */
     struct qthread_addrstat2_s *m_better;
     qthread_addrstat_t *m;

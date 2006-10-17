@@ -1,109 +1,116 @@
 #ifndef _QTHREAD_H_
 #define _QTHREAD_H_
 
-#ifdef MEMWATCH
-#include "memwatch.h"
-#endif
+#include <pthread.h>		       /* included here only as a convenience */
 
-#include <ucontext.h>
-#include <pthread.h>
-#include <stdarg.h>
-#include <cprops/hashtable.h>
-
-#ifdef QTHREAD_DEBUG
-/* for the vprintf in qthread_debug() */
-# define QTHREAD_DEFAULT_STACK_SIZE 8192*1024
-#else
-# define QTHREAD_DEFAULT_STACK_SIZE 2048
-#endif
-
-#define QTHREAD_STATE_NEW               0
-#define QTHREAD_STATE_RUNNING           1
-#define QTHREAD_STATE_YIELDED           2
-#define QTHREAD_STATE_BLOCKED           3
-#define QTHREAD_STATE_FEB_BLOCKED       4
-#define QTHREAD_STATE_TERMINATED        5
-#define QTHREAD_STATE_DONE              6
-#define QTHREAD_STATE_TERM_SHEP         0xFFFFFFFF
-
-struct qthread_lock_s;
-struct qthread_shepherd_s;
-
-typedef struct qthread_s
-{
-    unsigned thread_id;
-    unsigned thread_state;
-
-    struct qthread_lock_s *blockedon;	/* when yielding because blocked
-					 * this is the waiting queue
-					 */
-
-    unsigned shepherd;		/* the pthread we run on */
-
-    void (*f) (struct qthread_s *);	/* the function to call */
-    void *arg;			/* user defined data */
-
-    ucontext_t *context;	/* the context switch info */
-    void *stack;		/* the thread's stack */
-    ucontext_t *return_context;	/* context of parent kthread */
-
-    struct qthread_s *next;
-} qthread_t;
-
-typedef struct
-{
-    int nkthreads;
-    struct qthread_shepherd_s *kthreads;
-
-    unsigned qthread_stack_size;
-    unsigned master_stack_size;
-    unsigned max_stack_size;
-
-    /* assigns a unique thread_id mostly for debugging! */
-    unsigned max_thread_id;
-    pthread_mutex_t max_thread_id_lock;
-
-    /* round robin scheduler - can probably be smarter */
-    unsigned sched_kthread;
-    pthread_mutex_t sched_kthread_lock;
-
-    /* this is how we manage FEB-type locks
-     * NOTE: this can be a major bottleneck and we should probably create
-     * multiple hashtables to improve performance
-     */
-    cp_hashtable *locks;
-    /* these are separated out for memory reasons: if you can get away with simple
-     * locks, then you can use less memory */
-    cp_hashtable *FEBs;
-} qlib_t;
+typedef struct qthread_s qthread_t;
 
 /* for convenient arguments to qthread_fork */
 typedef void (*qthread_f) (qthread_t * t);
 
+/* use this function to initialize the qthreads environment before spawning any
+ * qthreads. The argument to this function specifies the number of pthreads
+ * that will be spawned to shepherd the qthreads. */
 int qthread_init(int nkthreads);
+
+/* use this function to clean up the qthreads environment after execution of
+ * the program is finished. This function will terminate any currently running
+ * qthreads, so only use it when you are certain that execution has completed.
+ * For examples of how to do this, look at the included test programs. */
 void qthread_finalize(void);
 
+/* this function allows a qthread to specifically give up control of the
+ * processor even though it has not blocked. This is useful for things like
+ * busy-waits or cooperative multitasking. Without this function, threads will
+ * only ever allow other threads assigned to the same pthread to execute when
+ * they block. */
 void qthread_yield(qthread_t * t);
 
+/* this is the function for generating a new qthread. The specified function
+ * will be run to completion. */
 qthread_t *qthread_fork(qthread_f f, void *arg);
+
+/* these are accessor functions for use by the qthreads to retrieve information
+ * about themselves */
+unsigned qthread_id(qthread_t * t);
+void *qthread_arg(qthread_t * t);
+
+/* These are the join functions, which will only return once the specified
+ * thread has finished executing.
+ *
+ * The standard qthread_join() only works from within a qthread; it uses
+ * qthread_lock/unlock, so it's a blocking join that will not take processing
+ * time. The thread will be queued and will allow other threads to execute.
+ *
+ * The qthread_busy_join() function will work from a non-qthread thread
+ * (including the main thread), however since it cannot queue itself (there is
+ * no qthread context), it must keep checking for the return value in a tight
+ * loop. (Note: this could be accomplished using a pthread_mutex_t for every thread,
+ * but that would inflate the qthread_t memory requirements unnecessarily.)
+ */
 void qthread_join(qthread_t * me, qthread_t * waitfor);
 void qthread_busy_join(volatile qthread_t * waitfor);
 
-void qthread_writeEF(qthread_t * t, int * dest, int src);
-void qthread_writeEF_size(qthread_t * t, char * dest, char * src, const size_t bytes);
+/* functions to implement FEB locking/unlocking
+ *
+ * These are the FEB functions. All but empty/fill have the potential of
+ * blocking until the corresponding precondition is met. All FEB blocking is
+ * done on a byte-by-byte basis, which means that every single address *could*
+ * have a lock associated with it. Memory is assumed to be full unless
+ * otherwise asserted, and as such memory that is full and does not have
+ * dependencies (i.e. no threads are waiting for it to become empty) does not
+ * require state data to be stored. It is expected that while there may be
+ * locks instantiated at one time or another for a very large number of
+ * addresses in the system, relatively few will be in a non-default (full, no
+ * waiters) state at any one time.
+ */
 
-void qthread_readFF(qthread_t *t, int * dest, int src);
-void qthread_readFF_size(qthread_t *t, char * dest, char * src, const size_t bytes);
+/* The empty/fill functions merely assert the empty or full state of the given
+ * range of addresses */
+void qthread_empty(qthread_t * t, char *dest, const size_t bytes);
+void qthread_fill(qthread_t * t, char *dest, const size_t bytes);
 
-void qthread_readFE(qthread_t *t, int * dest, int src);
-void qthread_readFE_size(qthread_t *t, char * dest, char * src, const size_t bytes);
+/* These functions wait for memory to become empty, and then fill it. When
+ * memory becomes empty, only one thread blocked like this will be awoken. Data
+ * is read from src and written to dest.
+ *	writeEF(t, &dest, src)
+ * is roughly equivalent to
+ *	writeEF_size(t, &dest, &src, sizeof(int))
+ */
+void qthread_writeEF(qthread_t * t, int *dest, int src);
+void qthread_writeEF_size(qthread_t * t, char *dest, char *src,
+			  const size_t bytes);
 
-void qthread_empty(qthread_t *t, char * dest, const size_t bytes);
+/* These functions wait for memory to become full, and then read it and leave
+ * the memory as full. When memory becomes full, all threads waiting for it to
+ * become full with a readFF will receive the value at once and will be queued
+ * to run. Data is read from src and stored in dest.
+ *	readFF(t, &dest, src)
+ * is roughly equivalent to
+ *	readFF_size(t, &dest, &src, sizeof(int))
+ */
+void qthread_readFF(qthread_t * t, int *dest, int src);
+void qthread_readFF_size(qthread_t * t, char *dest, char *src,
+			 const size_t bytes);
 
+/* These functions wait for memory to become full, and then empty it. When
+ * memory becomes full, only one thread blocked like this will be awoken. Data
+ * is read from src and written to dest.
+ *	readFE(t, &dest, src)
+ * is roughly equivalent to
+ *	readFE_size(t, &dest, &src, sizeof(int))
+ */
+void qthread_readFE(qthread_t * t, int *dest, int src);
+void qthread_readFE_size(qthread_t * t, char *dest, char *src,
+			 const size_t bytes);
+
+/* functions to implement FEB-ish locking/unlocking
+ *
+ * These are atomic and functional, but do not have the same semantics as full
+ * FEB locking/unlocking (for example, unlocking cannot block, and lock ranges
+ * are not supported), however because of this, they have lower overhead.
+ */
 int qthread_lock(qthread_t * t, void *a);
 int qthread_unlock(qthread_t * t, void *a);
-
-unsigned qthread_id(qthread_t *t);
-void * qthread_arg(qthread_t *t);
 
 #endif /* _QTHREAD_H_ */

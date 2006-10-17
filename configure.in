@@ -11,14 +11,14 @@ AC_CANONICAL_HOST
 
 case "$host" in
 	*-solaris*)
-	CFLAGS="$CFLAGS -D__MAKECONTEXT_V2_SOURCE"
+	AC_DEFINE(__MAKECONTEXT_V2_SOURCE, 1, [force the Sun makecontext to behave correctly])
 	;;
 	*-linux-*)
 	AC_DEFINE(NEED_RLIMIT, 1, [whether the library should use get/set-rlimit functions])
 	;;
 esac
 
-CFLAGS="$CFLAGS -D_GNU_SOURCE"
+AC_DEFINE(_GNU_SOURCE, 1, [make it build correctly])
 
 # Checks for programs.
 AC_PROG_CC

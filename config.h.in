@@ -100,6 +100,12 @@
 /* Version number of package */
 #undef VERSION
 
+/* make it build correctly */
+#undef _GNU_SOURCE
+
+/* force the Sun makecontext to behave correctly */
+#undef __MAKECONTEXT_V2_SOURCE
+
 /* Define to empty if `const' does not conform to ANSI C. */
 #undef const
 
