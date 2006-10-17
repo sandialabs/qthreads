@@ -10,7 +10,12 @@
 #include <stdarg.h>
 #include <cprops/hashtable.h>
 
-#define QTHREAD_DEFAULT_STACK_SIZE 2048
+#ifdef QTHREAD_DEBUG
+/* for the vprintf in qthread_debug() */
+# define QTHREAD_DEFAULT_STACK_SIZE 8192*1024
+#else
+# define QTHREAD_DEFAULT_STACK_SIZE 2048
+#endif
 
 #define QTHREAD_STATE_NEW               0
 #define QTHREAD_STATE_RUNNING           1
@@ -83,6 +88,17 @@ void qthread_yield(qthread_t * t);
 qthread_t *qthread_fork(qthread_f f, void *arg);
 void qthread_join(qthread_t * me, qthread_t * waitfor);
 void qthread_busy_join(volatile qthread_t * waitfor);
+
+void qthread_writeEF(qthread_t * t, int * dest, int src);
+void qthread_writeEF_size(qthread_t * t, char * dest, char * src, const size_t bytes);
+
+void qthread_readFF(qthread_t *t, int * dest, int src);
+void qthread_readFF_size(qthread_t *t, char * dest, char * src, const size_t bytes);
+
+void qthread_readFE(qthread_t *t, int * dest, int src);
+void qthread_readFE_size(qthread_t *t, char * dest, char * src, const size_t bytes);
+
+void qthread_empty(qthread_t *t, char * dest, const size_t bytes);
 
 int qthread_lock(qthread_t * t, void *a);
 int qthread_unlock(qthread_t * t, void *a);
