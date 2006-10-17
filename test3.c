@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <unistd.h>
-#include <pthread.h>
 #include "qthread.h"
 
 static volatile int x = 0;
