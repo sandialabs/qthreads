@@ -910,9 +910,11 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m,
     qthread_addrres_t *X = NULL;
     int removeable = 1;
 
+    qthread_debug("qthread_gotlock_fill(%p, %p)\n", m, maddr);
     m->full = 1;
     if (cp_list_item_count(m->FFQ) > 0) {
 	/* dequeue all FFQ, do their operation, and schedule them */
+	qthread_debug("qthread_gotlock_fill(): dQ all FFQ\n");
 	while (!cp_list_is_empty(m->FFQ)) {
 	    /* dQ */
 	    X = cp_list_remove_head(m->FFQ);
@@ -935,6 +937,7 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m,
     }
     if (cp_list_item_count(m->FEQ) > 0) {
 	/* dequeue one FEQ, do their operation, and schedule them */
+	qthread_debug("qthread_gotlock_fill(): dQ 1 FEQ\n");
 	X = cp_list_remove_head(m->FEQ);
 	/* op */
 	X->data[maddr - X->beginning] = *maddr;
@@ -958,6 +961,7 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m,
     }
     assert(pthread_mutex_unlock(&m->lock) == 0);
     if (removeable) {
+	qthread_debug("qthread_gotlock_fill(): removeable\n");
 	cp_hashtable_wrlock(qlib->FEBs); {
 	    m = cp_hashtable_get(qlib->FEBs, (void *)maddr);
 	    if (m) {
@@ -1154,7 +1158,9 @@ void qthread_readFF_size(qthread_t * t, char *dest, char *src,
 		cp_list_use_mempool(queuedlocks, list_pool);
 	    }
 	    cp_list_append(m_better->m->FFQ, X);
-	    qthread_internal_atomic_inc(&X->ctr, &X->ctr_lock, 1);
+	    assert(pthread_mutex_lock(&X->ctr_lock) == 0);
+	    X->ctr ++;
+	    assert(pthread_mutex_unlock(&X->ctr_lock) == 0);
 	    cp_list_append(queuedlocks, &(m_better->m->lock));
 	} else {
 	    int offset = m_better->addr - src;
