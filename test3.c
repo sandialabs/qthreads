@@ -53,13 +53,13 @@ int main(int argc, char *argv[])
 
     qthread_init(1);
 
-    qthread_fork(conditioner, NULL);
+    qthread_fork_detach(conditioner, NULL);
 
     pthread_mutex_lock(&alldone);
     printf("current value of x: %i\n", x);
 
-    qthread_fork(consumer, NULL);
-    qthread_fork(producer, NULL);
+    qthread_fork_detach(consumer, NULL);
+    qthread_fork_detach(producer, NULL);
 
     pthread_mutex_lock(&alldone);
 
