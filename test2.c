@@ -2,9 +2,13 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "qthread.h"
+#include "memwatch.h"
 
-static volatile int x = 0;
+static int target;
+static int x = 0;
 static int id = 0;
+
+pthread_mutex_t alldone = PTHREAD_MUTEX_INITIALIZER;
 
 void thread(qthread_t * t)
 {
@@ -18,12 +22,13 @@ void thread(qthread_t * t)
     qthread_lock(t, &x);
     //printf("thread(%i): x=%d\n", me, x);
     x++;
+    if (x == target) pthread_mutex_unlock(&alldone);
     qthread_unlock(t, &x);
 }
 
 int main(int argc, char *argv[])
 {
-    long int i, target;
+    long int i;
 
     if (argc != 2) {
 	printf("usage: %s num_threads\n", argv[0]);
@@ -32,13 +37,14 @@ int main(int argc, char *argv[])
 	target = strtol(argv[1], NULL, 0);
     }
 
-    qthread_init(3);
+    qthread_init(2);
+
+    pthread_mutex_lock(&alldone);
 
     for (i=0;i<target;i++)
-	qthread_fork(thread, NULL);
+	qthread_fork_detach(thread, NULL);
 
-    while (x != target)
-	;
+    pthread_mutex_lock(&alldone);
 
     qthread_finalize();
 

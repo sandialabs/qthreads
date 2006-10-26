@@ -15,16 +15,13 @@
 #include <cprops/hashtable.h>
 #include <cprops/linked_list.h>
 #include "qthread.h"
+#include "memwatch.h"
 
 #ifdef QTHREAD_DEBUG
 /* for the vprintf in qthread_debug() */
 # define QTHREAD_DEFAULT_STACK_SIZE 8192*1024
 #else
 # define QTHREAD_DEFAULT_STACK_SIZE 2048
-#endif
-
-#ifndef POOLED
-#define cp_list_use_mempool(list, list_pool) do{ } while(0)
 #endif
 
 /* internal constants */
@@ -143,17 +140,17 @@ typedef struct
 /* internal globals */
 static qlib_t *qlib = NULL;
 
-#ifdef POOLED
-static cp_mempool *qthread_pool = NULL;
+#ifdef POOLED_DANGEROUSLY
 static cp_mempool *context_pool = NULL;
 static cp_mempool *stack_pool = NULL;
+#endif
+static cp_mempool *qthread_pool = NULL;
 static cp_mempool *queue_pool = NULL;
 static cp_mempool *lock_pool = NULL;
 static cp_mempool *list_pool = NULL;
 static cp_mempool *addrres_pool = NULL;
 static cp_mempool *addrstat_pool = NULL;
 static cp_mempool *addrstat2_pool = NULL;
-#endif
 
 /* Internal functions */
 static void *qthread_shepherd(void *arg);
@@ -333,7 +330,7 @@ static void *qthread_shepherd(void *arg)
 
 int qthread_init(int nkthreads)
 {				       /*{{{ */
-    int i, r;
+    int i, r, poolflags = 0;
 
 #ifdef NEED_RLIMIT
     struct rlimit rlp;
@@ -386,23 +383,26 @@ int qthread_init(int nkthreads)
 #endif
 
     /* set up the memory pools */
-#ifdef POOLED
-    qthread_pool = cp_mempool_create_by_option(0, sizeof(qthread_t), 1000);
+#ifdef POOLED_DANGEROUSLY
     context_pool = cp_mempool_create_by_option(0, sizeof(ucontext_t), 1000);
     stack_pool =
 	cp_mempool_create_by_option(0, qlib->qthread_stack_size, 1000);
-    queue_pool = cp_mempool_create_by_option(0, sizeof(qthread_queue_t), 0);
-    lock_pool = cp_mempool_create_by_option(0, sizeof(qthread_lock_t), 0);
+#endif
+    qthread_pool = cp_mempool_create_by_option(0, sizeof(qthread_t), 1000);
+    if (nkthreads == 1) {
+	poolflags = COLLECTION_MODE_NOSYNC;
+    }
+    queue_pool = cp_mempool_create_by_option(poolflags, sizeof(qthread_queue_t), 0);
+    lock_pool = cp_mempool_create_by_option(poolflags, sizeof(qthread_lock_t), 0);
+    list_pool = cp_mempool_create_by_option(poolflags, sizeof(cp_list_entry), 0);
     addrres_pool =
-	cp_mempool_create_by_option(0, sizeof(qthread_addrres_t), 0);
+	cp_mempool_create_by_option(poolflags, sizeof(qthread_addrres_t), 0);
     addrstat_pool =
-	cp_mempool_create_by_option(0, sizeof(qthread_addrstat_t), 0);
+	cp_mempool_create_by_option(poolflags, sizeof(qthread_addrstat_t), 0);
     addrstat2_pool =
-	cp_mempool_create_by_option(0, sizeof(struct qthread_addrstat2_s), 0);
-    list_pool = cp_mempool_create_by_option(0, sizeof(cp_list_entry), 0);
+	cp_mempool_create_by_option(poolflags, sizeof(struct qthread_addrstat2_s), 0);
 
     cp_mempool_inc_refcount(list_pool);
-#endif
 
     /* spawn the number of shepherd threads that were specified */
     for (i = 0; i < nkthreads; i++) {
@@ -462,17 +462,17 @@ void qthread_finalize(void)
     assert(pthread_mutex_destroy(&qlib->sched_kthread_lock) == 0);
     assert(pthread_mutex_destroy(&qlib->max_thread_id_lock) == 0);
 
-#ifdef POOLED
-    cp_mempool_destroy(qthread_pool);
+#ifdef POOLED_DANGEROUSLY
     cp_mempool_destroy(context_pool);
     cp_mempool_destroy(stack_pool);
+#endif
+    cp_mempool_destroy(qthread_pool);
     cp_mempool_destroy(queue_pool);
     cp_mempool_destroy(lock_pool);
     cp_mempool_destroy(list_pool);
     cp_mempool_destroy(addrres_pool);
     cp_mempool_destroy(addrstat_pool);
     cp_mempool_destroy(addrstat2_pool);
-#endif
     free(qlib->kthreads);
     free(qlib);
     qlib = NULL;
@@ -493,18 +493,14 @@ static inline qthread_t *qthread_thread_new(void (*f) (), void *arg)
      */
 
     if ((t = (qthread_t *)
-#ifdef POOLED
 	 cp_mempool_alloc(qthread_pool)
-#else
-	 malloc(sizeof(qthread_t))
-#endif
 	) == NULL) {
 	perror("qthread_thread_new()");
 	abort();
     }
 
     if (((t->context) =
-#ifdef POOLED
+#ifdef POOLED_DANGEROUSLY
 	 (ucontext_t *) cp_mempool_alloc(context_pool)
 #else
 	 (ucontext_t *) malloc(sizeof(ucontext_t))
@@ -531,19 +527,18 @@ static inline void qthread_thread_free(qthread_t * t)
 
     assert(t != NULL);
 
-#ifdef POOLED
+#ifdef POOLED_DANGEROUSLY
     cp_mempool_free(context_pool, t->context);
     if (t->stack != NULL) {
 	cp_mempool_free(stack_pool, t->stack);
     }
-    cp_mempool_free(qthread_pool, t);
 #else
     free(t->context);
     if (t->stack != NULL) {
 	free(t->stack);
     }
-    free(t);
 #endif
+    cp_mempool_free(qthread_pool, t);
 }				       /*}}} */
 
 
@@ -554,7 +549,7 @@ static inline void qthread_stack_new(qthread_t * t, unsigned stack_size)
      */
 
     if ((t->stack = (void *)
-#ifdef POOLED
+#ifdef POOLED_DANGEROUSLY
 	 cp_mempool_alloc(stack_pool)
 #else
 	 malloc(stack_size)
@@ -574,11 +569,7 @@ static inline qthread_queue_t *qthread_queue_new()
     qthread_queue_t *q;
 
     if ((q = (qthread_queue_t *)
-#ifdef POOLED
 	 cp_mempool_alloc(queue_pool)
-#else
-	 malloc(sizeof(qthread_queue_t))
-#endif
 	) == NULL) {
 	perror("qthread_queue_new()");
 	abort();
@@ -596,11 +587,7 @@ static inline void qthread_queue_free(qthread_queue_t * q)
     assert((q->head == NULL) && (q->tail == NULL));
     assert(pthread_mutex_destroy(&q->lock) == 0);
     assert(pthread_cond_destroy(&q->notempty) == 0);
-#ifdef POOLED
     cp_mempool_free(queue_pool, q);
-#else
-    free(q);
-#endif
 }				       /*}}} */
 
 static inline void qthread_enqueue(qthread_queue_t * q, qthread_t * t)
@@ -694,11 +681,7 @@ static void qthread_FEBlock_delete(qthread_addrstat_t * m)
     cp_list_destroy(m->EFQ);
     cp_list_destroy(m->FEQ);
     cp_list_destroy(m->FFQ);
-#ifdef POOLED
     cp_mempool_free(addrstat_pool, m);
-#else
-    free(m);
-#endif
 }/*}}}*/
 
 /* this function runs a thread until it completes or yields */
@@ -731,9 +714,12 @@ static inline void qthread_exec(qthread_t * t, ucontext_t * c)
 	t->thread_state = QTHREAD_STATE_RUNNING;
 
 	getcontext(t->context);	       /* puts the current context into t->contextq */
-	t->context->uc_stack.ss_sp = t->stack;
-	t->context->uc_stack.ss_size = qlib->qthread_stack_size;
-	t->context->uc_stack.ss_flags = 0;
+	/* Several other libraries that do this reserve a few words on either
+	 * end of the stack for some reason. To avoid problems, I'll also do
+	 * this. */
+	t->context->uc_stack.ss_sp = t->stack+8;
+	t->context->uc_stack.ss_size = qlib->qthread_stack_size-64;
+	//t->context->uc_stack.ss_flags = 0;
 	/* the makecontext man page (Linux) says: set the uc_link FIRST
 	 * why? no idea */
 	t->context->uc_link = c;       /* NULL pthread_exit() */
@@ -963,22 +949,16 @@ static inline void qthread_back_to_master(qthread_t * t)
 
 static inline qthread_addrstat_t *qthread_addrstat_new()
 {				       /*{{{ */
-#ifdef POOLED
     qthread_addrstat_t *ret = cp_mempool_alloc(addrstat_pool);
-#else
-    qthread_addrstat_t *ret = malloc(sizeof(qthread_addrstat_t));
-#endif
 
     assert(pthread_mutex_init(&ret->lock, NULL) == 0);
     ret->full = 1;
     ret->EFQ = cp_list_create_nosync();
     ret->FEQ = cp_list_create_nosync();
     ret->FFQ = cp_list_create_nosync();
-#ifdef POOLED
     cp_list_use_mempool(ret->EFQ, list_pool);
     cp_list_use_mempool(ret->FEQ, list_pool);
     cp_list_use_mempool(ret->FFQ, list_pool);
-#endif
     return ret;
 }				       /*}}} */
 
@@ -1000,11 +980,7 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, char *maddr)
 			    X->waiter);
 	    assert(pthread_mutex_unlock(&X->ctr_lock) == 0);
 	    assert(pthread_mutex_destroy(&X->ctr_lock) == 0);
-#ifdef POOLED
 	    cp_mempool_free(addrres_pool, X);
-#else
-	    free(X);
-#endif
 	} else {
 	    assert(pthread_mutex_unlock(&X->ctr_lock) == 0);
 	}
@@ -1038,11 +1014,7 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m,
 				X->waiter);
 		assert(pthread_mutex_unlock(&X->ctr_lock) == 0);
 		assert(pthread_mutex_destroy(&X->ctr_lock) == 0);
-#ifdef POOLED
 		cp_mempool_free(addrres_pool, X);
-#else
-		free(X);
-#endif
 	    } else {
 		assert(pthread_mutex_unlock(&X->ctr_lock) == 0);
 	    }
@@ -1062,11 +1034,7 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m,
 			    X->waiter);
 	    assert(pthread_mutex_unlock(&X->ctr_lock) == 0);
 	    assert(pthread_mutex_destroy(&X->ctr_lock) == 0);
-#ifdef POOLED
 	    cp_mempool_free(addrres_pool, X);
-#else
-	    free(X);
-#endif
 	} else {
 	    assert(pthread_mutex_unlock(&X->ctr_lock) == 0);
 	}
@@ -1096,11 +1064,7 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m,
 		cp_list_destroy(m->EFQ);
 		cp_list_destroy(m->FFQ);
 		assert(pthread_mutex_destroy(&m->lock) == 0);
-#ifdef POOLED
 		cp_mempool_free(addrstat_pool, m);
-#else
-		free(m);
-#endif
 	    }
 	} cp_hashtable_unlock(qlib->FEBs);
     }
@@ -1125,11 +1089,7 @@ void qthread_empty(qthread_t * t, char *dest, const size_t bytes)
 		cp_hashtable_put(qlib->FEBs, (void *)(dest + i), m);
 	    } else {
 		assert(pthread_mutex_lock(&m->lock) == 0);
-#ifdef POOLED
 		m_better = cp_mempool_alloc(addrstat2_pool);
-#else
-		m_better = malloc(sizeof(struct qthread_addrstat2_s));
-#endif
 		m_better->m = m;
 		m_better->addr = dest + i;
 		cp_list_append(list, m_better);
@@ -1140,11 +1100,7 @@ void qthread_empty(qthread_t * t, char *dest, const size_t bytes)
     cp_list_iterator_init(&it, list, COLLECTION_LOCK_NONE);
     while ((m_better = cp_list_iterator_next(&it)) != NULL) {
 	qthread_gotlock_empty(m_better->m, m_better->addr);
-#ifdef POOLED
 	cp_mempool_free(addrstat2_pool, m_better);
-#else
-	free(m_better);
-#endif
     }
     cp_list_iterator_release(&it);
 }				       /*}}} */
@@ -1164,11 +1120,7 @@ void qthread_fill(qthread_t * t, char *dest, const size_t bytes)
 	    m = cp_hashtable_get(qlib->FEBs, (void *)(dest + i));
 	    if (m) {
 		assert(pthread_mutex_lock(&m->lock) == 0);
-#ifdef POOLED
 		m_better = cp_mempool_alloc(addrstat2_pool);
-#else
-		m_better = malloc(sizeof(struct qthread_addrstat2_s));
-#endif
 		m_better->m = m;
 		m_better->addr = (char *)(dest + i);
 		cp_list_append(list, m_better);
@@ -1178,11 +1130,7 @@ void qthread_fill(qthread_t * t, char *dest, const size_t bytes)
     cp_list_iterator_init(&it, list, COLLECTION_LOCK_NONE);
     while ((m_better = cp_list_iterator_next(&it)) != NULL) {
 	qthread_gotlock_fill(m_better->m, m_better->addr);
-#ifdef POOLED
 	cp_mempool_free(addrstat2_pool, m_better);
-#else
-	free(m_better);
-#endif
     }
     cp_list_iterator_release(&it);
 }				       /*}}} */
@@ -1216,11 +1164,7 @@ void qthread_writeEF_size(qthread_t * t, char *dest, char *src,
 		      m[i]->full);
 	if (m[i]->full) {
 	    if (!X) {
-#ifdef POOLED
 		X = cp_mempool_alloc(addrres_pool);
-#else
-		X = malloc(sizeof(qthread_addrres_t));
-#endif
 		pthread_mutex_init(&X->ctr_lock, NULL);
 		X->waiter = t;
 		X->data = src;
@@ -1276,11 +1220,7 @@ void qthread_readFF_size(qthread_t * t, char *dest, char *src,
 	    if (!m) {
 		dest[i] = src[i];
 	    } else {
-#ifdef POOLED
 		m_better = cp_mempool_alloc(addrstat2_pool);
-#else
-		m_better = malloc(sizeof(struct qthread_addrstat2_s));
-#endif
 		m_better->m = m;
 		m_better->addr = (char *)(src + i);
 		cp_list_append(list, m_better);
@@ -1294,11 +1234,7 @@ void qthread_readFF_size(qthread_t * t, char *dest, char *src,
     while ((m_better = cp_list_iterator_remove(&it)) != NULL) {
 	if (!m_better->m->full) {
 	    if (!X) {
-#ifdef POOLED
 		X = cp_mempool_alloc(addrres_pool);
-#else
-		X = malloc(sizeof(qthread_addrres_t));
-#endif
 		assert(pthread_mutex_init(&X->ctr_lock, NULL) == 0);
 		X->waiter = t;
 		X->ctr = 0;
@@ -1318,11 +1254,7 @@ void qthread_readFF_size(qthread_t * t, char *dest, char *src,
 	    dest[offset] = src[offset];
 	    assert(pthread_mutex_unlock(&m->lock) == 0);
 	}
-#ifdef POOLED
 	cp_mempool_free(addrstat2_pool, m_better);
-#else
-	free(m_better);
-#endif
     }
     cp_list_iterator_release(&it);
     cp_list_destroy(list);
@@ -1368,11 +1300,7 @@ void qthread_readFE_size(qthread_t * t, char *dest, char *src,
     for (i = 0; i < bytes; ++i) {
 	if (!m[i]->full) {
 	    if (!X) {
-#ifdef POOLED
 		X = cp_mempool_alloc(addrres_pool);
-#else
-		X = malloc(sizeof(qthread_addrres_t));
-#endif
 		pthread_mutex_init(&X->ctr_lock, NULL);
 		X->waiter = t;
 		X->data = dest;
@@ -1429,11 +1357,7 @@ int qthread_lock(qthread_t * t, void *a)
     m = (qthread_lock_t *) cp_hashtable_get(qlib->locks, a);
     if (m == NULL) {
 	if ((m = (qthread_lock_t *)
-#ifdef POOLED
 	     cp_mempool_alloc(lock_pool)
-#else
-	     malloc(sizeof(qthread_lock_t))
-#endif
 	    ) == NULL) {
 	    perror("qthread_lock()");
 	    abort();
@@ -1513,11 +1437,7 @@ int qthread_unlock(qthread_t * t, void *a)
 
 	assert(pthread_mutex_unlock(&m->lock) == 0);
 	assert(pthread_mutex_destroy(&m->lock) == 0);
-#ifdef POOLED
 	cp_mempool_free(lock_pool, m);
-#else
-	free(m);
-#endif
     } else {
 	cp_hashtable_unlock(qlib->locks);
 	qthread_debug
