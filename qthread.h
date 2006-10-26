@@ -26,9 +26,15 @@ void qthread_finalize(void);
  * they block. */
 void qthread_yield(qthread_t * t);
 
-/* this is the function for generating a new qthread. The specified function
- * will be run to completion. */
+/* these are the functions for generating a new qthread. The specified function
+ * will be run to completion. The difference between them is that a detached
+ * qthread cannot be joined, but an un-detached qthread MUST be joined
+ * (otherwise its memory will not be free'd). The qthread_fork_to* functions
+ * spawn the thread to a specific shepherd */
 qthread_t *qthread_fork(qthread_f f, void *arg);
+qthread_t *qthread_fork_to(qthread_f f, void *arg, const unsigned int shepherd);
+void qthread_fork_detach(qthread_f f, void *arg);
+void qthread_fork_to_detach(qthread_f f, void *arg, const unsigned int shepherd);
 
 /* these are accessor functions for use by the qthreads to retrieve information
  * about themselves */
