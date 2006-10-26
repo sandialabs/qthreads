@@ -19,6 +19,7 @@ case "$host" in
 esac
 
 AC_DEFINE(_GNU_SOURCE, 1, [make pthreads build correctly])
+AC_DEFINE(_FILE_OFFSET_BITS, 64, [allow big files])
 
 # Checks for programs.
 AC_PROG_CC
@@ -38,7 +39,7 @@ AC_CHECK_LIB([cprops], [cp_hashtable_create], , AC_MSG_ERROR([Need libcprops 0.1
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([stdlib.h])
+AC_CHECK_HEADERS([stdlib.h fcntl.h])
 
 case "$host" in
     *-linux-*)
@@ -51,11 +52,19 @@ esac
 AC_C_CONST
 AC_C_INLINE
 AC_C_VOLATILE
+AC_TYPE_OFF_T
+AC_TYPE_SIZE_T
+headers='
+#include <pthread.h>
+'
+AC_COMPILE_CHECK_SIZEOF(pthread_mutex_t, $headers, 24 40 44 64)
+AC_DEFINE(PTHREAD_MUTEX_SMALL_ENOUGH, 1, [this signifies that pthread_mutex_t is small enough to fit in the existing data structures])
 
 # Checks for library functions.
 AC_FUNC_MALLOC
 AC_FUNC_VPRINTF
-AC_CHECK_FUNCS([strtol])
+AC_FUNC_MMAP
+AC_CHECK_FUNCS([strtol floor memset munmap])
 AC_CHECK_FUNCS([getcontext setcontext swapcontext], , AC_MSG_ERROR(["The functions get/set/swapcontext are critical to this library."]))
 
 AC_CONFIG_FILES([Makefile])

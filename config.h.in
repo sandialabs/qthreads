@@ -6,8 +6,17 @@
 /* Define to 1 if you don't have `vprintf' but do have `_doprnt.' */
 #undef HAVE_DOPRNT
 
+/* Define to 1 if you have the <fcntl.h> header file. */
+#undef HAVE_FCNTL_H
+
+/* Define to 1 if you have the `floor' function. */
+#undef HAVE_FLOOR
+
 /* Define to 1 if you have the `getcontext' function. */
 #undef HAVE_GETCONTEXT
+
+/* Define to 1 if you have the `getpagesize' function. */
+#undef HAVE_GETPAGESIZE
 
 /* Define to 1 if you have the `getrlimit' function. */
 #undef HAVE_GETRLIMIT
@@ -30,6 +39,15 @@
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
+
+/* Define to 1 if you have the `memset' function. */
+#undef HAVE_MEMSET
+
+/* Define to 1 if you have a working `mmap' system call. */
+#undef HAVE_MMAP
+
+/* Define to 1 if you have the `munmap' function. */
+#undef HAVE_MUNMAP
 
 /* Define to 1 if you have the `setcontext' function. */
 #undef HAVE_SETCONTEXT
@@ -94,11 +112,21 @@
 /* Define to the version of this package. */
 #undef PACKAGE_VERSION
 
+/* this signifies that pthread_mutex_t is small enough to fit in the existing
+   data structures */
+#undef PTHREAD_MUTEX_SMALL_ENOUGH
+
+/* The number of bytes in type pthread_mutex_t */
+#undef SIZEOF_PTHREAD_MUTEX_T
+
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
 /* Version number of package */
 #undef VERSION
+
+/* allow big files */
+#undef _FILE_OFFSET_BITS
 
 /* make pthreads build correctly */
 #undef _GNU_SOURCE
@@ -117,6 +145,12 @@
 
 /* Define to rpl_malloc if the replacement function should be used. */
 #undef malloc
+
+/* Define to `long' if <sys/types.h> does not define. */
+#undef off_t
+
+/* Define to `unsigned' if <sys/types.h> does not define. */
+#undef size_t
 
 /* Define to empty if the keyword `volatile' does not work. Warning: valid
    code using `volatile' can become incorrect without. Disable with care. */

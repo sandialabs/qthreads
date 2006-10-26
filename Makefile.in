@@ -44,7 +44,8 @@ DIST_COMMON = README $(am__configure_deps) $(pkginclude_HEADERS) \
 	install-sh ltmain.sh missing
 subdir = .
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
-am__aclocal_m4_deps = $(top_srcdir)/configure.in
+am__aclocal_m4_deps = $(top_srcdir)/acinclude.m4 \
+	$(top_srcdir)/configure.in
 am__configure_deps = $(am__aclocal_m4_deps) $(CONFIGURE_DEPENDENCIES) \
 	$(ACLOCAL_M4)
 am__CONFIG_DISTCLEAN_FILES = config.status config.cache config.log \
@@ -62,7 +63,7 @@ am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(pkgincludedir)"
 libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
 libqthread_la_LIBADD =
-am_libqthread_la_OBJECTS = qthread.lo
+am_libqthread_la_OBJECTS = qthread.lo qalloc.lo
 libqthread_la_OBJECTS = $(am_libqthread_la_OBJECTS)
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I.
 depcomp = $(SHELL) $(top_srcdir)/depcomp
@@ -189,8 +190,8 @@ sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 lib_LTLIBRARIES = libqthread.la
-pkginclude_HEADERS = qthread.h
-libqthread_la_SOURCES = qthread.c
+pkginclude_HEADERS = qthread.h qalloc.h
+libqthread_la_SOURCES = qthread.c qalloc.c
 libqthread_la_LDFLAGS = -version-info 1:0:0 -no-undefined
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
@@ -283,6 +284,7 @@ mostlyclean-compile:
 distclean-compile:
 	-rm -f *.tab.c
 
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qalloc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qthread.Plo@am__quote@
 
 .c.o:
