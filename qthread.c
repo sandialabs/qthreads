@@ -6,6 +6,7 @@
 #include <ucontext.h>		       /* for make/get/swap-context functions */
 #include <stdarg.h>		       /* for va_start and va_end */
 #include <stdint.h>		       /* for UINT8_MAX */
+#include <string.h> /* for memset() */
 #ifdef NEED_RLIMIT
 # include <sys/time.h>
 # include <sys/resource.h>
@@ -75,6 +76,12 @@ struct qthread_shepherd_s
     pthread_t kthread;
     unsigned kthread_index;
     qthread_queue_t *ready;
+#ifndef POOLED_DANGEROUSLY
+    pthread_mutex_t oldstacks_lock;
+    void * oldstacks;
+    pthread_mutex_t oldcontexts_lock;
+    void * oldcontexts;
+#endif
 };
 
 struct qthread_lock_s
@@ -157,7 +164,7 @@ static void *qthread_shepherd(void *arg);
 static void qthread_wrapper(void *arg);
 
 static void qthread_FEBlock_delete(qthread_addrstat_t * m);
-static inline qthread_t *qthread_thread_new(void (*f) (), void *arg);
+static inline qthread_t *qthread_thread_new(void (*f) (), void *arg, unsigned char shepherd);
 static inline void qthread_thread_free(qthread_t * t);
 static inline void qthread_stack_new(qthread_t * t, unsigned stack_size);
 static inline qthread_queue_t *qthread_queue_new();
@@ -269,7 +276,7 @@ static void *qthread_shepherd(void *arg)
 	     * more complex 
 	     */
 
-	    t->shepherd = me->kthread_index;
+	    assert(t->shepherd == me->kthread_index);
 	    qthread_exec(t, &my_context);
 	    qthread_debug("qthread_shepherd(%u): back from qthread_exec\n",
 			  me->kthread_index);
@@ -402,7 +409,13 @@ int qthread_init(int nkthreads)
     addrstat2_pool =
 	cp_mempool_create_by_option(poolflags, sizeof(struct qthread_addrstat2_s), 0);
 
-    cp_mempool_inc_refcount(list_pool);
+    //cp_mempool_inc_refcount(list_pool);
+
+    for (i = 0; i < nkthreads; i++) {
+	assert(pthread_mutex_init(&(qlib->kthreads[i].oldstacks_lock), NULL) == 0);
+	assert(pthread_mutex_init(&(qlib->kthreads[i].oldcontexts_lock), NULL) == 0);
+	qlib->kthreads[i].oldstacks = NULL;
+    }
 
     /* spawn the number of shepherd threads that were specified */
     for (i = 0; i < nkthreads; i++) {
@@ -440,7 +453,7 @@ void qthread_finalize(void)
 
     /* enqueue the termination thread sentinal */
     for (i = 0; i < qlib->nkthreads; i++) {
-	t = qthread_thread_new(NULL, NULL);
+	t = qthread_thread_new(NULL, NULL, i);
 	t->thread_state = QTHREAD_STATE_TERM_SHEP;
 	t->thread_id = -1;
 	qthread_enqueue(qlib->kthreads[i].ready, t);
@@ -484,9 +497,10 @@ void qthread_finalize(void)
 /* functions to manage thread stack allocation/deallocation */
 /************************************************************/
 
-static inline qthread_t *qthread_thread_new(void (*f) (), void *arg)
+static inline qthread_t *qthread_thread_new(void (*f) (), void *arg, unsigned char shepherd)
 {				       /*{{{ */
     qthread_t *t;
+    ucontext_t * uc;
 
     /* rcm - note: in the future we REALLY want to reuse thread and 
      * stack allocations! 
@@ -499,22 +513,31 @@ static inline qthread_t *qthread_thread_new(void (*f) (), void *arg)
 	abort();
     }
 
-    if (((t->context) =
 #ifdef POOLED_DANGEROUSLY
-	 (ucontext_t *) cp_mempool_alloc(context_pool)
+    uc = (ucontext_t *) cp_mempool_alloc(context_pool);
 #else
-	 (ucontext_t *) malloc(sizeof(ucontext_t))
+    assert(pthread_mutex_lock(&(qlib->kthreads[t->shepherd].oldcontexts_lock)) == 0);
+    if (qlib->kthreads[t->shepherd].oldcontexts) {
+	uc = qlib->kthreads[t->shepherd].oldcontexts;
+	qlib->kthreads[t->shepherd].oldcontexts = *(void **)uc;
+	assert(pthread_mutex_unlock(&(qlib->kthreads[t->shepherd].oldcontexts_lock)) == 0);
+    } else {
+	assert(pthread_mutex_unlock(&(qlib->kthreads[t->shepherd].oldcontexts_lock)) == 0);
+	uc = (ucontext_t *) malloc(sizeof(ucontext_t));
+    }
 #endif
-	) == NULL) {
+    if (uc == NULL) {
 	perror("qthread_thread_new()");
 	abort();
     }
+    t->context = uc;
 
     t->thread_state = QTHREAD_STATE_NEW;
     t->f = f;
     t->arg = arg;
     t->stack = NULL;
     t->blockedon = NULL;
+    t->shepherd = shepherd;
 
     return (t);
 }				       /*}}} */
@@ -533,9 +556,17 @@ static inline void qthread_thread_free(qthread_t * t)
 	cp_mempool_free(stack_pool, t->stack);
     }
 #else
-    free(t->context);
+    assert(pthread_mutex_lock(&(qlib->kthreads[t->shepherd].oldcontexts_lock)) == 0);
+    *(void **)(t->context) = qlib->kthreads[t->shepherd].oldcontexts;
+    qlib->kthreads[t->shepherd].oldcontexts = t->context;
+    assert(pthread_mutex_unlock(&(qlib->kthreads[t->shepherd].oldcontexts_lock)) == 0);
+    //free(t->context);
     if (t->stack != NULL) {
-	free(t->stack);
+	assert(pthread_mutex_lock(&(qlib->kthreads[t->shepherd].oldstacks_lock)) == 0);
+	*(void**)(t->stack) = qlib->kthreads[t->shepherd].oldstacks;
+	qlib->kthreads[t->shepherd].oldstacks = t->stack;
+	assert(pthread_mutex_unlock(&(qlib->kthreads[t->shepherd].oldstacks_lock)) == 0);
+	//free(t->stack);
     }
 #endif
     cp_mempool_free(qthread_pool, t);
@@ -547,17 +578,27 @@ static inline void qthread_stack_new(qthread_t * t, unsigned stack_size)
     /* rcm - note: in the future we REALLY want to reuse thread and 
      * stack allocations! 
      */
+    void * s;
 
-    if ((t->stack = (void *)
 #ifdef POOLED_DANGEROUSLY
-	 cp_mempool_alloc(stack_pool)
+    s = cp_mempool_alloc(stack_pool);
 #else
-	 malloc(stack_size)
+    /* because of alignment issues (I think), we MUST use malloc'd stacks here, we cannot use cp_mempool_alloc stacks */
+    assert(pthread_mutex_lock(&(qlib->kthreads[t->shepherd].oldstacks_lock)) == 0);
+    if (qlib->kthreads[t->shepherd].oldstacks) {
+	s = qlib->kthreads[t->shepherd].oldstacks;
+	qlib->kthreads[t->shepherd].oldstacks = *(void**)s;
+	assert(pthread_mutex_unlock(&(qlib->kthreads[t->shepherd].oldstacks_lock)) == 0);
+    } else {
+	assert(pthread_mutex_unlock(&(qlib->kthreads[t->shepherd].oldstacks_lock)) == 0);
+	s = malloc(stack_size);
+    }
 #endif
-	) == NULL) {
+    if (s == NULL) {
 	perror("qthread_thread_new()");
 	abort();
     }
+    t->stack = s;
 }				       /*}}} */
 
 /*****************************************/
@@ -795,11 +836,11 @@ void qthread_yield(qthread_t * t)
     qthread_debug("qthread_yield(): thread %p resumed.\n", t);
 }				       /*}}} */
 
-static inline qthread_t *qthread_fork_internal(qthread_f f, void *arg)
+static inline qthread_t *qthread_fork_internal(qthread_f f, void *arg, unsigned char shepherd)
 {				       /*{{{ */
     qthread_t *t;
 
-    t = qthread_thread_new(f, arg);    /* new thread struct sans stack */
+    t = qthread_thread_new(f, arg, shepherd);    /* new thread struct sans stack */
     qthread_stack_new(t, qlib->qthread_stack_size);	/* fill in stack */
 
     qthread_debug
@@ -822,12 +863,12 @@ qthread_t *qthread_fork(qthread_f f, void *arg)
     qthread_t *t;
     unsigned int shep;
 
-    t = qthread_fork_internal(f, arg);
-
     shep =
 	qthread_internal_atomic_inc_mod(&qlib->sched_kthread,
 					&qlib->sched_kthread_lock, 1,
 					qlib->nkthreads);
+    t = qthread_fork_internal(f, arg, shep);
+
 
     qthread_debug("qthread_fork(): tid %u shep %u\n", t->thread_id, shep);
 
@@ -844,12 +885,12 @@ void qthread_fork_detach(qthread_f f, void *arg)
     qthread_t *t;
     unsigned int shep;
 
-    t = qthread_fork_internal(f, arg);
-
     shep =
 	qthread_internal_atomic_inc_mod(&qlib->sched_kthread,
 					&qlib->sched_kthread_lock, 1,
 					qlib->nkthreads);
+
+    t = qthread_fork_internal(f, arg, shep);
 
     qthread_debug("qthread_fork_detach(): tid %u shep %u\n", t->thread_id,
 		  shep);
@@ -866,7 +907,7 @@ qthread_t *qthread_fork_to(qthread_f f, void *arg, unsigned shepherd)
     if (shepherd > qlib->nkthreads) {
 	return NULL;
     }
-    t = qthread_fork_internal(f, arg);
+    t = qthread_fork_internal(f, arg, shepherd);
     qthread_debug("qthread_fork_to(): tid %u shep %u\n", t->thread_id,
 		  shepherd);
 
@@ -884,7 +925,7 @@ void qthread_fork_to_detach(qthread_f f, void *arg, unsigned shepherd)
     if (shepherd > qlib->nkthreads) {
 	return;
     }
-    t = qthread_fork_internal(f, arg);
+    t = qthread_fork_internal(f, arg, shepherd);
     qthread_debug("qthread_fork_to_detach(): tid %u shep %u\n", t->thread_id,
 		  shepherd);
 
