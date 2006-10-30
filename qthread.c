@@ -16,7 +16,6 @@
 #include <cprops/hashtable.h>
 #include <cprops/linked_list.h>
 #include "qthread.h"
-#include "memwatch.h"
 
 #ifdef QTHREAD_DEBUG
 /* for the vprintf in qthread_debug() */
