@@ -745,6 +745,7 @@ static inline void qthread_exec(qthread_t * t, ucontext_t * c)
 		      t, c);
 	t->thread_state = QTHREAD_STATE_RUNNING;
 
+	getcontext(t->context);	       /* puts the current context into t->contextq */
 	/* Several other libraries that do this reserve a few words on either
 	 * end of the stack for some reason. To avoid problems, I'll also do
 	 * this. */
