@@ -1,7 +1,19 @@
 On a machine with approximately 2GB of RAM, this library was able to spawn and
-handle 350,000 qthreads. It may be able to do more, but swapping will become an
-issue, and you may start to run out of address space. There is no theoretical
-reason why this library could not work on a 64-bit machine. It may be possible
-to shrink the stack size of qthreads even further (currently 8k), and thus
-handle more threads. Currently, the only real limiting factor on the number of
-threads is the amount of memory and address space you have available.
+handle 350,000 qthreads. With some modifications (mostly in stack-size), it was
+able to handle 1,000,000 qthreads. It may be able to do more, but swapping will
+become an issue, and you may start to run out of address space.
+
+This library has been tested, and runs well, on a 64-bit machine, with some
+alignment concerns.
+
+On many machines, the stack is required to be page-aligned and there are
+usually strict requirements for the alignment of the ucontext_t structure
+(particularly on a 64-bit machine). Thus, the stack and context generally take
+at least 2 pages (8k). The stack can be limited even further (it has been
+tested with a 2k stack on a 32-bit machine, which is how it handled 1,000,000
+threads).
+
+Currently, the only real limiting factor on the number of threads is the amount
+of memory and address space you have available. For more than 2^32 threads, the
+thread_id value will need to be made larger (or eliminated, as it is not
+required by the library itself).
