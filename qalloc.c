@@ -707,13 +707,13 @@ void *qalloc_dynmalloc(struct dynmapinfo_s *m, size_t size)
 }				       /*}}} */
 
 void *qalloc_malloc(void *mapinfo, size_t size)
-{
+{				       /*{{{ */
     if (((struct mapinfo_s *)mapinfo)->dynflag == 0) {
 	return qalloc_statmalloc(mapinfo);
     } else {
 	return qalloc_dynmalloc(mapinfo, size);
     }
-}
+}				       /*}}} */
 
 void qalloc_statfree(void *block, struct mapinfo_s *m)
 {				       /*{{{ */
@@ -804,13 +804,13 @@ void qalloc_dynfree(void *block, struct dynmapinfo_s *m)
 }				       /*}}} */
 
 void qalloc_free(void *block, void *mapinfo)
-{
+{				       /*{{{ */
     if (((struct mapinfo_s *)mapinfo)->dynflag == 0) {
 	qalloc_statfree(block, mapinfo);
     } else {
 	qalloc_dynfree(block, mapinfo);
     }
-}
+}				       /*}}} */
 
 void qalloc_checkpoint()
 {				       /*{{{ */
