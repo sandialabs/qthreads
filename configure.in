@@ -25,11 +25,14 @@ AC_DEFINE(_FILE_OFFSET_BITS, 64, [allow big files])
 AC_PROG_CC
 AC_PROG_CPP
 AC_PROG_CXX
+AM_PROG_AS
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_LIBTOOL
 AC_PROG_RANLIB
+
+QTHREAD_EXTRA_OBJS=""
 
 # Checks for libraries.
 # FIXME: Replace `main' with a function in `-ldl':
@@ -39,7 +42,7 @@ AC_CHECK_LIB([cprops], [cp_hashtable_create], , AC_MSG_ERROR([Need libcprops 0.1
 
 # Checks for header files.
 AC_HEADER_STDC
-AC_CHECK_HEADERS([stdlib.h fcntl.h])
+AC_CHECK_HEADERS([stdlib.h fcntl.h ucontext.h])
 
 case "$host" in
     *-linux-*)
@@ -65,7 +68,18 @@ AC_FUNC_MALLOC
 AC_FUNC_VPRINTF
 AC_FUNC_MMAP
 AC_CHECK_FUNCS([strtol floor memset munmap])
-AC_CHECK_FUNCS([getcontext setcontext swapcontext], , AC_MSG_ERROR(["The functions get/set/swapcontext are critical to this library."]))
+AC_CHECK_FUNCS([getcontext swapcontext makecontext], ac_cv_context_funcs=yes, ac_cv_context_funcs=no)
+
+if test "$ac_cv_context_funcs" == "yes" ; then
+	AC_DEFINE(HAVE_CONTEXT_FUNCS, 1, [the system hsas its own getcontext functions])
+else
+	QTHREAD_EXTRA_OBJS="$QTHREAD_EXTRA_OBJS context.lo asm.lo"
+	AC_CHECK_FUNCS([memmove], , AC_MSG_ERROR(["A functional memmove is required if you do not have the get/swap/make-context functions."]))
+	AC_HEADER_SYS_WAIT
+	AC_TYPE_PID_T
+fi
+
+AC_SUBST(QTHREAD_EXTRA_OBJS)
 
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT
