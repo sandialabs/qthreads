@@ -3,7 +3,11 @@
 #endif
 #include <stdlib.h>		       /* for malloc() and abort() */
 #include <assert.h>		       /* for assert() */
-#include <ucontext.h>		       /* for make/get/swap-context functions */
+#if defined(HAVE_UCONTEXT_H) && defined(HAVE_CONTEXT_FUNCS)
+# include <ucontext.h>		       /* for make/get/swap-context functions */
+#else
+# include "taskimpl.h"
+#endif
 #include <stdarg.h>		       /* for va_start and va_end */
 #include <stdint.h>		       /* for UINT8_MAX */
 #include <string.h>		       /* for memset() */
@@ -173,6 +177,7 @@ static inline void qthread_enqueue(qthread_queue_t * q, qthread_t * t);
 static inline qthread_t *qthread_dequeue(qthread_queue_t * q);
 static inline qthread_t *qthread_dequeue_nonblocking(qthread_queue_t * q);
 static inline void qthread_exec(qthread_t * t, ucontext_t * c);
+static inline void qthread_back_to_master(qthread_t * t);
 
 static inline unsigned qthread_internal_atomic_inc(unsigned *x,
 						   pthread_mutex_t * lock,
@@ -337,7 +342,7 @@ static void *qthread_shepherd(void *arg)
 
 int qthread_init(int nkthreads)
 {				       /*{{{ */
-    int i, r, poolflags = 0;
+    int i, r;
 
 #ifdef NEED_RLIMIT
     struct rlimit rlp;
@@ -640,8 +645,8 @@ static inline void qthread_enqueue(qthread_queue_t * q, qthread_t * t)
 	q->tail = t;
     }
 
-    assert(pthread_mutex_unlock(&q->lock) == 0);
     qthread_debug("qthread_enqueue(%p,%p): finished\n", q, t);
+    assert(pthread_mutex_unlock(&q->lock) == 0);
 }				       /*}}} */
 
 static inline qthread_t *qthread_dequeue(qthread_queue_t * q)
@@ -728,6 +733,14 @@ static void qthread_wrapper(void *arg)
 
     qthread_debug("qthread_wrapper(): f=%p arg=%p completed.\n", t->f,
 		  t->arg);
+#ifndef HAVE_CONTEXT_FUNCS
+    /* without a built-in make/get/swapcontext, we're relying on the portable
+     * one in context.c (stolen from libtask). unfortunately, this home-made
+     * context stuff does not allow us to set up a uc_link pointer that will be
+     * returned to once qthread_wrapper returns, so we have to do it by hand:
+     */
+    qthread_back_to_master(t);
+#endif
 }				       /*}}} */
 
 static inline void qthread_exec(qthread_t * t, ucontext_t * c)
@@ -751,17 +764,23 @@ static inline void qthread_exec(qthread_t * t, ucontext_t * c)
 	 * this. */
 	t->context->uc_stack.ss_sp = t->stack + 8;
 	t->context->uc_stack.ss_size = qlib->qthread_stack_size - 64;
-	//t->context->uc_stack.ss_flags = 0;
+#ifdef HAVE_CONTEXT_FUNCS
 	/* the makecontext man page (Linux) says: set the uc_link FIRST
 	 * why? no idea */
 	t->context->uc_link = c;       /* NULL pthread_exit() */
-
 	qthread_debug("qthread_exec(): context is {%p, %d, %p}\n",
 		      t->context->uc_stack.ss_sp,
 		      t->context->uc_stack.ss_size, t->context->uc_link);
+#else
+	qthread_debug("qthread_exec(): context is {%p, %d}\n",
+		      t->context->uc_stack.ss_sp,
+		      t->context->uc_stack.ss_size);
+#endif
 	makecontext(t->context, (void (*)(void))qthread_wrapper, 1, t);	/* the casting shuts gcc up */
+#ifdef HAVE_CONTEXT_FUNCS
     } else {
 	t->context->uc_link = c;       /* NULL pthread_exit() */
+#endif
     }
 
     t->return_context = c;
@@ -798,32 +817,9 @@ static inline void qthread_exec(qthread_t * t, ucontext_t * c)
 /* this function yields thread t to the master kernel thread */
 void qthread_yield(qthread_t * t)
 {				       /*{{{ */
-#ifdef NEED_RLIMIT
-    struct rlimit rlp;
-#endif
-
     qthread_debug("qthread_yield(): thread %p yielding.\n", t);
     t->thread_state = QTHREAD_STATE_YIELDED;
-#ifdef NEED_RLIMIT
-    qthread_debug
-	("qthread_yield(%p): setting stack size limits for master thread...\n",
-	 t);
-    rlp.rlim_cur = qlib->master_stack_size;
-    rlp.rlim_max = qlib->max_stack_size;
-    assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
-#endif
-    /* back to your regularly scheduled master thread */
-    if (swapcontext(t->context, t->return_context) != 0) {
-	perror("qthread_yield(): swapcontext() failed");
-	abort();
-    }
-#ifdef NEED_RLIMIT
-    qthread_debug
-	("qthread_yield(%p): setting stack size limits back to qthread size...\n",
-	 t);
-    rlp.rlim_cur = qlib->qthread_stack_size;
-    assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
-#endif
+    qthread_back_to_master(t);
     qthread_debug("qthread_yield(): thread %p resumed.\n", t);
 }				       /*}}} */
 
