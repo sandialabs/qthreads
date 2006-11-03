@@ -9,7 +9,7 @@
 # include "taskimpl.h"
 #endif
 #include <stdarg.h>		       /* for va_start and va_end */
-#include <qthread-int.h>	       /* for UINT8_MAX */
+#include <stdint.h>	       /* for UINT8_MAX */
 #include <string.h>		       /* for memset() */
 #ifdef NEED_RLIMIT
 # include <sys/time.h>
