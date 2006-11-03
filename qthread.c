@@ -557,6 +557,9 @@ qthread_t *qthread_self(void)
     printf("calc stack pointer is: %p\n", ((size_t)(&ret) & ~ mask));
     printf("top is then: 0x%lx\n", ((size_t)(&ret) & ~ mask) + qlib->qthread_stack_size);
 #endif
+    /* see this double-cast? yeah, that's because gcc is wonky that way. ret is
+     * a pointer, and gcc doesn't want to cast it directly to something smaller
+     * (like an unsigned char). */
     t = qlib->kthreads[((shepherd_id_t) (size_t) ret) - 1].current;
     /* printf("stack pointer should be %p\n", t->stack);*/
     return t;
