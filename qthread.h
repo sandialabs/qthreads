@@ -26,6 +26,10 @@ void qthread_finalize(void);
  * they block. */
 void qthread_yield(qthread_t * t);
 
+/* this function allows a qthread to retrive it's qthread_t pointer if it has
+ * been lost for some reason */
+qthread_t *qthread_self(void);
+
 /* these are the functions for generating a new qthread. The specified function
  * will be run to completion. The difference between them is that a detached
  * qthread cannot be joined, but an un-detached qthread MUST be joined
