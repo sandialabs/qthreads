@@ -103,7 +103,7 @@ void qthread_writeEF_size(qthread_t * t, char *dest, char *src,
  * is roughly equivalent to
  *	readFF_size(t, &dest, &src, sizeof(int))
  */
-void qthread_readFF(qthread_t * t, int *dest, int src);
+void qthread_readFF(qthread_t * t, int *dest, int *src);
 void qthread_readFF_size(qthread_t * t, char *dest, char *src,
 			 const size_t bytes);
 
