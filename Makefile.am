@@ -13,7 +13,6 @@ libqthread_la_DEPENDENCIES = @QTHREAD_EXTRA_OBJS@
 distclean-local:
 	find . -name .DS_Store -exec $(RM) {} \;
 	find . -name .cvsignore -exec $(RM) {} \;
-	find . -name CVS -exec $(RM) -r {} \;
 	$(RM) .gdb_history
 	$(RM) -rf autom4te.cache
 	$(RM) *~

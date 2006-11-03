@@ -498,7 +498,6 @@ uninstall-am: uninstall-info-am uninstall-libLTLIBRARIES \
 distclean-local:
 	find . -name .DS_Store -exec $(RM) {} \;
 	find . -name .cvsignore -exec $(RM) {} \;
-	find . -name CVS -exec $(RM) -r {} \;
 	$(RM) .gdb_history
 	$(RM) -rf autom4te.cache
 	$(RM) *~
