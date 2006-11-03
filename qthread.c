@@ -86,6 +86,7 @@ struct qthread_shepherd_s
 {
     pthread_t kthread;
     unsigned kthread_index;
+    qthread_t *current;
     qthread_queue_t *ready;
     cp_mempool *qthread_pool;
     cp_mempool *list_pool;
@@ -157,6 +158,8 @@ typedef struct
      * better at shrinking their critical section. */
     cp_hashtable *FEBs;
 } qlib_t;
+
+static cp_hashtable *p_to_shep = NULL;
 
 /* internal globals */
 static qlib_t *qlib = NULL;
@@ -282,7 +285,9 @@ static void *qthread_shepherd(void *arg)
 	     */
 
 	    assert(t->shepherd == me->kthread_index);
+	    me->current = t;
 	    qthread_exec(t, &my_context);
+	    me->current = NULL;
 	    qthread_debug("qthread_shepherd(%u): back from qthread_exec\n",
 			  me->kthread_index);
 	    switch (t->thread_state) {
@@ -395,6 +400,11 @@ int qthread_init(int nkthreads)
     qlib->max_stack_size = rlp.rlim_max;
 #endif
 
+    /* set up the lookup table */
+    p_to_shep =
+	cp_hashtable_create_by_mode(COLLECTION_MODE_NOSYNC, nkthreads,
+				    cp_hash_addr, cp_hash_compare_addr);
+
     /* set up the memory pools */
     for (i = 0; i < nkthreads; i++) {
 	/* the first three pools (qthread_pool, stack_pool, and context_pool)
@@ -406,7 +416,7 @@ int qthread_init(int nkthreads)
 	/* this prevents an alignment problem. With most mallocs there's
 	 * actually no difference in memory consumption between these two sizes
 	 */
-	if (QTHREAD_DEFAULT_STACK_SIZE < 4096) {
+	if (qlib->qthread_stack_size < 4096) {
 	    qlib->kthreads[i].stack_pool =
 		cp_mempool_create_by_option(0, 4096, 1000);
 	} else {
@@ -462,6 +472,8 @@ int qthread_init(int nkthreads)
 		    r);
 	    abort();
 	}
+	cp_hashtable_put(p_to_shep, (void *)(qlib->kthreads[i].kthread),
+			 (void *)(i + 1));
     }
 
     qthread_debug("qthread_init(): finished.\n");
@@ -501,6 +513,7 @@ void qthread_finalize(void)
 
     cp_hashtable_destroy(qlib->locks);
     cp_hashtable_destroy(qlib->FEBs);
+    cp_hashtable_destroy(p_to_shep);
 
     assert(pthread_mutex_destroy(&qlib->sched_kthread_lock) == 0);
     assert(pthread_mutex_destroy(&qlib->max_thread_id_lock) == 0);
@@ -522,6 +535,31 @@ void qthread_finalize(void)
     qlib = NULL;
 
     qthread_debug("qthread_finalize(): finished.\n");
+}				       /*}}} */
+
+qthread_t *qthread_self(void)
+{				       /*{{{ */
+    void *ret;
+    /*size_t mask;*/
+    qthread_t *t;
+
+    ret = cp_hashtable_get(p_to_shep, (void *)pthread_self());
+    if (ret == NULL) {
+	return NULL;
+    }
+#if 0
+    printf("stack size: %lu\n", qlib->qthread_stack_size);
+    printf("ret is at %p\n", &ret);
+    mask = qlib->qthread_stack_size - 1; /* assuming the stack is a power of two */
+    printf("mask is: %p\n", ((size_t)(qlib->qthread_stack_size)-1));
+    printf("low order bits: 0x%lx\n", ((size_t)(&ret) % (size_t)(qlib->qthread_stack_size)));
+    printf("low order bits: 0x%lx\n", (size_t)(&ret) & mask);
+    printf("calc stack pointer is: %p\n", ((size_t)(&ret) & ~ mask));
+    printf("top is then: 0x%lx\n", ((size_t)(&ret) & ~ mask) + qlib->qthread_stack_size);
+#endif
+    t = qlib->kthreads[((shepherd_id_t) (size_t) ret) - 1].current;
+    /* printf("stack pointer should be %p\n", t->stack);*/
+    return t;
 }				       /*}}} */
 
 /************************************************************/
