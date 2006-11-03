@@ -9,7 +9,7 @@
 # include "taskimpl.h"
 #endif
 #include <stdarg.h>		       /* for va_start and va_end */
-#include <stdint.h>		       /* for UINT8_MAX */
+#include <qthread-int.h>	       /* for UINT8_MAX */
 #include <string.h>		       /* for memset() */
 #ifdef NEED_RLIMIT
 # include <sys/time.h>
@@ -20,6 +20,10 @@
 #include <cprops/hashtable.h>
 #include <cprops/linked_list.h>
 #include "qthread.h"
+
+#ifndef UINT8_MAX
+#define UINT8_MAX (255)
+#endif
 
 #ifdef QTHREAD_DEBUG
 /* for the vprintf in qthread_debug() */
@@ -115,11 +119,11 @@ typedef struct qthread_addrstat_s
     unsigned int full:1;
 } qthread_addrstat_t;
 
-struct qthread_addrstat2_s
+typedef struct qthread_addrstat2_s
 {
     qthread_addrstat_t *m;
     char *addr;
-};
+} qthread_addrstat2_t;
 
 typedef struct qthread_addrres_s
 {
@@ -169,7 +173,7 @@ static void *qthread_shepherd(void *arg);
 static void qthread_wrapper(void *arg);
 
 static void qthread_FEBlock_delete(qthread_addrstat_t * m);
-static inline qthread_t *qthread_thread_new(void (*f) (), void *arg,
+static inline qthread_t *qthread_thread_new(qthread_f f, void *arg,
 					    shepherd_id_t shepherd);
 static inline void qthread_thread_free(qthread_t * t);
 static inline void qthread_stack_new(qthread_t * t, unsigned stack_size);
@@ -208,6 +212,7 @@ static inline unsigned qthread_internal_atomic_inc_mod(unsigned *x,
     return (r);
 }				       /*}}} */
 
+#if 0				       /* currently not used */
 static inline unsigned qthread_internal_atomic_check(unsigned *x,
 						     pthread_mutex_t * lock)
 {				       /*{{{ */
@@ -219,6 +224,7 @@ static inline unsigned qthread_internal_atomic_check(unsigned *x,
 
     return (r);
 }				       /*}}} */
+#endif
 
 static void qthread_internal_unlock_locks(void *a)
 {				       /*{{{ */
@@ -453,8 +459,7 @@ int qthread_init(int nkthreads)
 					sizeof(qthread_addrstat_t), 0);
 	qlib->kthreads[i].addrstat2_pool =
 	    cp_mempool_create_by_option(COLLECTION_MODE_NOSYNC,
-					sizeof(struct qthread_addrstat2_s),
-					0);
+					sizeof(qthread_addrstat2_t), 0);
     }
 
     /* spawn the number of shepherd threads that were specified */
@@ -497,7 +502,7 @@ void qthread_finalize(void)
     for (i = 0; i < qlib->nkthreads; i++) {
 	t = qthread_thread_new(NULL, NULL, i);
 	t->thread_state = QTHREAD_STATE_TERM_SHEP;
-	t->thread_id = -1;
+	t->thread_id = (unsigned int)-1;
 	qthread_enqueue(qlib->kthreads[i].ready, t);
     }
 
@@ -540,7 +545,8 @@ void qthread_finalize(void)
 qthread_t *qthread_self(void)
 {				       /*{{{ */
     void *ret;
-    /*size_t mask;*/
+
+    /*size_t mask; */
     qthread_t *t;
 
     ret = cp_hashtable_get(p_to_shep, (void *)pthread_self());
@@ -550,18 +556,20 @@ qthread_t *qthread_self(void)
 #if 0
     printf("stack size: %lu\n", qlib->qthread_stack_size);
     printf("ret is at %p\n", &ret);
-    mask = qlib->qthread_stack_size - 1; /* assuming the stack is a power of two */
-    printf("mask is: %p\n", ((size_t)(qlib->qthread_stack_size)-1));
-    printf("low order bits: 0x%lx\n", ((size_t)(&ret) % (size_t)(qlib->qthread_stack_size)));
-    printf("low order bits: 0x%lx\n", (size_t)(&ret) & mask);
-    printf("calc stack pointer is: %p\n", ((size_t)(&ret) & ~ mask));
-    printf("top is then: 0x%lx\n", ((size_t)(&ret) & ~ mask) + qlib->qthread_stack_size);
+    mask = qlib->qthread_stack_size - 1;	/* assuming the stack is a power of two */
+    printf("mask is: %p\n", ((size_t) (qlib->qthread_stack_size) - 1));
+    printf("low order bits: 0x%lx\n",
+	   ((size_t) (&ret) % (size_t) (qlib->qthread_stack_size)));
+    printf("low order bits: 0x%lx\n", (size_t) (&ret) & mask);
+    printf("calc stack pointer is: %p\n", ((size_t) (&ret) & ~mask));
+    printf("top is then: 0x%lx\n",
+	   ((size_t) (&ret) & ~mask) + qlib->qthread_stack_size);
 #endif
     /* see this double-cast? yeah, that's because gcc is wonky that way. ret is
      * a pointer, and gcc doesn't want to cast it directly to something smaller
      * (like an unsigned char). */
     t = qlib->kthreads[((shepherd_id_t) (size_t) ret) - 1].current;
-    /* printf("stack pointer should be %p\n", t->stack);*/
+    /* printf("stack pointer should be %p\n", t->stack); */
     return t;
 }				       /*}}} */
 
@@ -569,7 +577,7 @@ qthread_t *qthread_self(void)
 /* functions to manage thread stack allocation/deallocation */
 /************************************************************/
 
-static inline qthread_t *qthread_thread_new(void (*f) (), void *arg,
+static inline qthread_t *qthread_thread_new(qthread_f f, void *arg,
 					    shepherd_id_t shepherd)
 {				       /*{{{ */
     qthread_t *t;
@@ -636,7 +644,7 @@ static inline qthread_queue_t *qthread_queue_new(shepherd_id_t shepherd)
     qthread_queue_t *q;
 
     if (shepherd == (shepherd_id_t) - 1) {
-	q = malloc(sizeof(qthread_queue_t));
+	q = (qthread_queue_t *) malloc(sizeof(qthread_queue_t));
     } else {
 	q = (qthread_queue_t *) cp_mempool_alloc(qlib->kthreads[shepherd].
 						 queue_pool);
@@ -802,8 +810,9 @@ static inline void qthread_exec(qthread_t * t, ucontext_t * c)
 	getcontext(t->context);	       /* puts the current context into t->contextq */
 	/* Several other libraries that do this reserve a few words on either
 	 * end of the stack for some reason. To avoid problems, I'll also do
-	 * this. */
-	t->context->uc_stack.ss_sp = t->stack + 8;
+	 * this (even though I have no idea why they would do this). */
+	/* t is cast here ONLY because the PGI compiler is idiotic about typedef's */
+	t->context->uc_stack.ss_sp = ((struct qthread_s *)t)->stack + 8;
 	t->context->uc_stack.ss_size = qlib->qthread_stack_size - 64;
 #ifdef HAVE_CONTEXT_FUNCS
 	/* the makecontext man page (Linux) says: set the uc_link FIRST
@@ -1020,7 +1029,8 @@ static inline void qthread_back_to_master(qthread_t * t)
 static inline qthread_addrstat_t *qthread_addrstat_new(shepherd_id_t shepherd)
 {				       /*{{{ */
     qthread_addrstat_t *ret =
-	cp_mempool_alloc(qlib->kthreads[shepherd].addrstat_pool);
+	(qthread_addrstat_t *) cp_mempool_alloc(qlib->kthreads[shepherd].
+						addrstat_pool);
     cp_mempool *lp = qlib->kthreads[shepherd].list_pool;
 
     assert(pthread_mutex_init(&ret->lock, NULL) == 0);
@@ -1040,7 +1050,7 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, char *maddr)
 
     m->full = 0;
     if (!cp_list_is_empty(m->EFQ)) {
-	X = cp_list_remove_head(m->EFQ);
+	X = (qthread_addrres_t *) cp_list_remove_head(m->EFQ);
 	qthread_debug("gotlock_emtpy: X->data:%p X->beginning:%p maddr:%p\n",
 		      X->data, X->beginning, maddr);
 	*maddr = X->data[maddr - X->beginning];
@@ -1076,7 +1086,7 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m,
 	qthread_debug("qthread_gotlock_fill(): dQ all FFQ\n");
 	while (!cp_list_is_empty(m->FFQ)) {
 	    /* dQ */
-	    X = cp_list_remove_head(m->FFQ);
+	    X = (qthread_addrres_t *) cp_list_remove_head(m->FFQ);
 	    /* op */
 	    X->data[maddr - X->beginning] = *maddr;
 	    assert(pthread_mutex_lock(&X->ctr_lock) == 0);
@@ -1097,7 +1107,7 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m,
     if (cp_list_item_count(m->FEQ) > 0) {
 	/* dequeue one FEQ, do their operation, and schedule them */
 	qthread_debug("qthread_gotlock_fill(): dQ 1 FEQ\n");
-	X = cp_list_remove_head(m->FEQ);
+	X = (qthread_addrres_t *) cp_list_remove_head(m->FEQ);
 	/* op */
 	X->data[maddr - X->beginning] = *maddr;
 	assert(pthread_mutex_lock(&X->ctr_lock) == 0);
@@ -1121,12 +1131,13 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m,
     assert(pthread_mutex_unlock(&m->lock) == 0);
     /* now, remove it if it needs to be removed */
     if (removeable) {
+	int removed = 0;
+
 	qthread_debug("qthread_gotlock_fill(): removeable\n");
 	cp_hashtable_wrlock(qlib->FEBs); {
-	    m = cp_hashtable_get(qlib->FEBs, (void *)maddr);
+	    m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
+							(void *)maddr);
 	    if (m) {
-		int removed = 0;
-
 		assert(pthread_mutex_lock(&(m->lock)) == 0);
 		if (cp_list_is_empty(m->FEQ) && cp_list_is_empty(m->EFQ) &&
 		    cp_list_is_empty(m->FFQ) && m->full == 1) {
@@ -1134,13 +1145,15 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m,
 		    removed = 1;
 		}
 		assert(pthread_mutex_unlock(&m->lock) == 0);
-		cp_list_destroy(m->FEQ);
-		cp_list_destroy(m->EFQ);
-		cp_list_destroy(m->FFQ);
-		assert(pthread_mutex_destroy(&m->lock) == 0);
-		cp_mempool_free(qlib->kthreads[shepherd].addrstat_pool, m);
 	    }
 	} cp_hashtable_unlock(qlib->FEBs);
+	if (removed == 1) {
+	    cp_list_destroy(m->FEQ);
+	    cp_list_destroy(m->EFQ);
+	    cp_list_destroy(m->FFQ);
+	    assert(pthread_mutex_destroy(&m->lock) == 0);
+	    cp_mempool_free(qlib->kthreads[shepherd].addrstat_pool, m);
+	}
     }
 }				       /*}}} */
 
@@ -1149,14 +1162,15 @@ void qthread_empty(qthread_t * t, char *dest, const size_t bytes)
     cp_list *list;
     cp_list_iterator it;
     qthread_addrstat_t *m;
-    struct qthread_addrstat2_s *m_better;
+    qthread_addrstat2_t *m_better;
     size_t i;
 
     list = cp_list_create_nosync();
     cp_list_use_mempool(list, qlib->kthreads[t->shepherd].list_pool);
     cp_hashtable_wrlock(qlib->FEBs); {
 	for (i = 0; i < bytes; ++i) {
-	    m = cp_hashtable_get(qlib->FEBs, (void *)(dest + i));
+	    m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
+							(void *)(dest + i));
 	    if (!m) {
 		m = qthread_addrstat_new(t->shepherd);
 		m->full = 0;
@@ -1164,8 +1178,10 @@ void qthread_empty(qthread_t * t, char *dest, const size_t bytes)
 	    } else {
 		assert(pthread_mutex_lock(&m->lock) == 0);
 		m_better =
-		    cp_mempool_alloc(qlib->kthreads[t->shepherd].
-				     addrstat2_pool);
+		    (qthread_addrstat2_t *) cp_mempool_alloc(qlib->
+							     kthreads[t->
+								      shepherd].
+							     addrstat2_pool);
 		m_better->m = m;
 		m_better->addr = dest + i;
 		cp_list_append(list, m_better);
@@ -1174,7 +1190,8 @@ void qthread_empty(qthread_t * t, char *dest, const size_t bytes)
     }
     cp_hashtable_unlock(qlib->FEBs);
     cp_list_iterator_init(&it, list, COLLECTION_LOCK_NONE);
-    while ((m_better = cp_list_iterator_next(&it)) != NULL) {
+    while ((m_better =
+	    (qthread_addrstat2_t *) cp_list_iterator_next(&it)) != NULL) {
 	qthread_gotlock_empty(m_better->m, m_better->addr);
 	cp_mempool_free(qlib->kthreads[t->shepherd].addrstat2_pool, m_better);
     }
@@ -1183,7 +1200,7 @@ void qthread_empty(qthread_t * t, char *dest, const size_t bytes)
 
 void qthread_fill(qthread_t * t, char *dest, const size_t bytes)
 {				       /*{{{ */
-    struct qthread_addrstat2_s *m_better;
+    qthread_addrstat2_t *m_better;
     qthread_addrstat_t *m;
     cp_list *list;
     cp_list_iterator it;
@@ -1193,12 +1210,15 @@ void qthread_fill(qthread_t * t, char *dest, const size_t bytes)
     cp_list_use_mempool(list, qlib->kthreads[t->shepherd].list_pool);
     cp_hashtable_wrlock(qlib->FEBs); {
 	for (i = 0; i < bytes; ++i) {
-	    m = cp_hashtable_get(qlib->FEBs, (void *)(dest + i));
+	    m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
+							(void *)(dest + i));
 	    if (m) {
 		assert(pthread_mutex_lock(&m->lock) == 0);
 		m_better =
-		    cp_mempool_alloc(qlib->kthreads[t->shepherd].
-				     addrstat2_pool);
+		    (qthread_addrstat2_t *) cp_mempool_alloc(qlib->
+							     kthreads[t->
+								      shepherd].
+							     addrstat2_pool);
 		m_better->m = m;
 		m_better->addr = (char *)(dest + i);
 		cp_list_append(list, m_better);
@@ -1206,13 +1226,19 @@ void qthread_fill(qthread_t * t, char *dest, const size_t bytes)
 	}
     } cp_hashtable_unlock(qlib->FEBs);
     cp_list_iterator_init(&it, list, COLLECTION_LOCK_NONE);
-    while ((m_better = cp_list_iterator_next(&it)) != NULL) {
+    while ((m_better =
+	    (qthread_addrstat2_t *) cp_list_iterator_next(&it)) != NULL) {
 	qthread_gotlock_fill(m_better->m, m_better->addr);
 	cp_mempool_free(qlib->kthreads[t->shepherd].addrstat2_pool, m_better);
     }
     cp_list_iterator_release(&it);
 }				       /*}}} */
 
+/* the way this works is that:
+ * 1 - destination's FEB state must be "empty"
+ * 2 - data is copied from src to destination
+ * 3 - the destination's FEB state get changed from empty to full
+ */
 void qthread_writeEF_size(qthread_t * t, char *dest, char *src,
 			  const size_t bytes)
 {				       /*{{{ */
@@ -1223,10 +1249,11 @@ void qthread_writeEF_size(qthread_t * t, char *dest, char *src,
 
     qthread_debug("qthread_writeEF_size(%p, %p, %p, %u): init\n", t, dest,
 		  src, (unsigned)bytes);
-    m = malloc(sizeof(qthread_queue_t *) * bytes);
+    m = (qthread_addrstat_t **) malloc(sizeof(qthread_addrstat_t *) * bytes);
     cp_hashtable_wrlock(qlib->FEBs); {
 	for (i = 0; i < bytes; ++i) {
-	    m[i] = cp_hashtable_get(qlib->FEBs, dest + i);
+	    m[i] =
+		(qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs, dest + i);
 	    if (!m[i]) {
 		m[i] = qthread_addrstat_new(t->shepherd);
 		cp_hashtable_put(qlib->FEBs, dest + i, m[i]);
@@ -1242,8 +1269,10 @@ void qthread_writeEF_size(qthread_t * t, char *dest, char *src,
 		      m[i]->full);
 	if (m[i]->full) {
 	    if (!X) {
-		X = cp_mempool_alloc(qlib->kthreads[t->shepherd].
-				     addrres_pool);
+		X = (qthread_addrres_t *) cp_mempool_alloc(qlib->
+							   kthreads[t->
+								    shepherd].
+							   addrres_pool);
 		pthread_mutex_init(&X->ctr_lock, NULL);
 		X->waiter = t;
 		X->data = src;
@@ -1282,11 +1311,15 @@ void qthread_writeEF(qthread_t * t, int *dest, int src)
     qthread_writeEF_size(t, (char *)dest, (char *)&src, sizeof(int));
 }				       /*}}} */
 
+/* the way this works is that:
+ * 1 - src's FEB state must be "full"
+ * 2 - data is copied from src to destination
+ */
 void qthread_readFF_size(qthread_t * t, char *dest, char *src,
 			 const size_t bytes)
 {				       /*{{{ */
     size_t i;
-    struct qthread_addrstat2_s *m_better;
+    qthread_addrstat2_t *m_better;
     qthread_addrstat_t *m;
     qthread_addrres_t *X = NULL;
     cp_list *list, *queuedlocks = NULL;
@@ -1296,13 +1329,16 @@ void qthread_readFF_size(qthread_t * t, char *dest, char *src,
     cp_list_use_mempool(list, qlib->kthreads[t->shepherd].list_pool);
     cp_hashtable_wrlock(qlib->FEBs); {
 	for (i = 0; i < bytes; ++i) {
-	    m = cp_hashtable_get(qlib->FEBs, (void *)(src + i));
+	    m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
+							(void *)(src + i));
 	    if (!m) {
 		dest[i] = src[i];
 	    } else {
 		m_better =
-		    cp_mempool_alloc(qlib->kthreads[t->shepherd].
-				     addrstat2_pool);
+		    (qthread_addrstat2_t *) cp_mempool_alloc(qlib->
+							     kthreads[t->
+								      shepherd].
+							     addrstat2_pool);
 		m_better->m = m;
 		m_better->addr = (char *)(src + i);
 		cp_list_append(list, m_better);
@@ -1313,11 +1349,14 @@ void qthread_readFF_size(qthread_t * t, char *dest, char *src,
     } cp_hashtable_unlock(qlib->FEBs);
     /* by this point, all the unread address data structures (m's) are locked */
     cp_list_iterator_init(&it, list, COLLECTION_LOCK_NONE);
-    while ((m_better = cp_list_iterator_remove(&it)) != NULL) {
+    while ((m_better =
+	    (qthread_addrstat2_t *) cp_list_iterator_remove(&it)) != NULL) {
 	if (!m_better->m->full) {
 	    if (!X) {
-		X = cp_mempool_alloc(qlib->kthreads[t->shepherd].
-				     addrres_pool);
+		X = (qthread_addrres_t *) cp_mempool_alloc(qlib->
+							   kthreads[t->
+								    shepherd].
+							   addrres_pool);
 		assert(pthread_mutex_init(&X->ctr_lock, NULL) == 0);
 		X->waiter = t;
 		X->ctr = 0;
@@ -1353,11 +1392,16 @@ void qthread_readFF_size(qthread_t * t, char *dest, char *src,
     }
 }				       /*}}} */
 
-void qthread_readFF(qthread_t * t, int *dest, int src)
+void qthread_readFF(qthread_t * t, int *dest, int *src)
 {				       /*{{{ */
     qthread_readFF_size(t, (char *)dest, (char *)&src, sizeof(int));
 }				       /*}}} */
 
+/* the way this works is that:
+ * 1 - src's FEB state must be "full"
+ * 2 - data is copied from src to destination
+ * 3 - the src's FEB bits get changed from full to empty
+ */
 void qthread_readFE_size(qthread_t * t, char *dest, char *src,
 			 const size_t bytes)
 {				       /*{{{ */
@@ -1368,10 +1412,11 @@ void qthread_readFE_size(qthread_t * t, char *dest, char *src,
 
     qthread_debug("qthread_readFE_size(%p, %p, %p, %u): init\n", t, dest, src,
 		  (unsigned)bytes);
-    m = malloc(sizeof(qthread_queue_t *) * bytes);
+    m = (qthread_addrstat_t **) malloc(sizeof(qthread_addrstat_t *) * bytes);
     cp_hashtable_wrlock(qlib->FEBs); {
 	for (i = 0; i < bytes; ++i) {
-	    m[i] = cp_hashtable_get(qlib->FEBs, src + i);
+	    m[i] =
+		(qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs, src + i);
 	    if (!m[i]) {
 		m[i] = qthread_addrstat_new(t->shepherd);
 		cp_hashtable_put(qlib->FEBs, src + i, m[i]);
@@ -1384,8 +1429,10 @@ void qthread_readFE_size(qthread_t * t, char *dest, char *src,
     for (i = 0; i < bytes; ++i) {
 	if (!m[i]->full) {
 	    if (!X) {
-		X = cp_mempool_alloc(qlib->kthreads[t->shepherd].
-				     addrres_pool);
+		X = (qthread_addrres_t *) cp_mempool_alloc(qlib->
+							   kthreads[t->
+								    shepherd].
+							   addrres_pool);
 		pthread_mutex_init(&X->ctr_lock, NULL);
 		X->waiter = t;
 		X->data = dest;
@@ -1414,9 +1461,9 @@ void qthread_readFE_size(qthread_t * t, char *dest, char *src,
     }
 }				       /*}}} */
 
-void qthread_readFE(qthread_t * t, int *dest, int src)
+void qthread_readFE(qthread_t * t, int *dest, int *src)
 {				       /*{{{ */
-    qthread_readFE_size(t, (char *)dest, (char *)&src, sizeof(int));
+    qthread_readFE_size(t, (char *)dest, (char *)src, sizeof(int));
 }				       /*}}} */
 
 /* functions to implement FEB-ish locking/unlocking
