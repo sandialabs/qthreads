@@ -3,6 +3,10 @@
 
 #include <pthread.h>		       /* included here only as a convenience */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct qthread_s qthread_t;
 
 /* for convenient arguments to qthread_fork */
@@ -110,7 +114,7 @@ void qthread_readFF_size(qthread_t * t, char *dest, char *src,
  * is roughly equivalent to
  *	readFE_size(t, &dest, &src, sizeof(int))
  */
-void qthread_readFE(qthread_t * t, int *dest, int src);
+void qthread_readFE(qthread_t * t, int *dest, int *src);
 void qthread_readFE_size(qthread_t * t, char *dest, char *src,
 			 const size_t bytes);
 
@@ -122,5 +126,9 @@ void qthread_readFE_size(qthread_t * t, char *dest, char *src,
  */
 int qthread_lock(qthread_t * t, void *a);
 int qthread_unlock(qthread_t * t, void *a);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* _QTHREAD_H_ */
