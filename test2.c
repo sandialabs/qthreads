@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "qthread.h"
-#include "memwatch.h"
 
 static int target;
 static int x = 0;
