@@ -9,7 +9,7 @@
 # include "taskimpl.h"
 #endif
 #include <stdarg.h>		       /* for va_start and va_end */
-#include <stdint.h>	       /* for UINT8_MAX */
+#include <stdint.h>		       /* for UINT8_MAX */
 #include <string.h>		       /* for memset() */
 #ifdef NEED_RLIMIT
 # include <sys/time.h>
@@ -540,7 +540,7 @@ void qthread_finalize(void)
 
     cp_hashtable_destroy(qlib->locks);
     cp_hashtable_destroy_custom(qlib->FEBs, NULL, (cp_destructor_fn)
-	    qthread_FEBlock_delete);
+				qthread_FEBlock_delete);
     cp_hashtable_destroy(p_to_shep);
 
     assert(pthread_mutex_destroy(&qlib->sched_kthread_lock) == 0);
@@ -831,7 +831,8 @@ static inline void qthread_exec(qthread_t * t, ucontext_t * c)
 	 * end of the stack for some reason. To avoid problems, I'll also do
 	 * this (even though I have no idea why they would do this). */
 	/* t is cast here ONLY because the PGI compiler is idiotic about typedef's */
-	t->context->uc_stack.ss_sp = (char*)(((struct qthread_s *)t)->stack) + 8;
+	t->context->uc_stack.ss_sp =
+	    (char *)(((struct qthread_s *)t)->stack) + 8;
 	t->context->uc_stack.ss_size = qlib->qthread_stack_size - 64;
 #ifdef HAVE_CONTEXT_FUNCS
 	/* the makecontext man page (Linux) says: set the uc_link FIRST
@@ -1081,8 +1082,7 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, char *maddr)
 			    X->waiter);
 	    assert(pthread_mutex_unlock(&X->ctr_lock) == 0);
 	    assert(pthread_mutex_destroy(&X->ctr_lock) == 0);
-	    FREE(qlib->kthreads[X->waiter->shepherd].addrres_pool,
-			    X);
+	    FREE(qlib->kthreads[X->waiter->shepherd].addrres_pool, X);
 	} else {
 	    assert(pthread_mutex_unlock(&X->ctr_lock) == 0);
 	}
@@ -1160,7 +1160,8 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m,
 		assert(pthread_mutex_lock(&(m->lock)) == 0);
 		if (cp_list_is_empty(m->FEQ) && cp_list_is_empty(m->EFQ) &&
 		    cp_list_is_empty(m->FFQ) && m->full == 1) {
-		    qthread_debug("qthread_gotlock_fill(): all lists are empty, and status is full\n");
+		    qthread_debug
+			("qthread_gotlock_fill(): all lists are empty, and status is full\n");
 		    cp_hashtable_remove(qlib->FEBs, (void *)maddr);
 		    removed = 1;
 		}
