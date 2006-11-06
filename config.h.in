@@ -128,8 +128,23 @@
    data structures */
 #undef PTHREAD_MUTEX_SMALL_ENOUGH
 
+/* The size of a `char', as computed by sizeof. */
+#undef SIZEOF_CHAR
+
+/* The size of a `int', as computed by sizeof. */
+#undef SIZEOF_INT
+
+/* The size of a `long', as computed by sizeof. */
+#undef SIZEOF_LONG
+
 /* The number of bytes in type pthread_mutex_t */
 #undef SIZEOF_PTHREAD_MUTEX_T
+
+/* The size of a `short', as computed by sizeof. */
+#undef SIZEOF_SHORT
+
+/* The size of a `void*', as computed by sizeof. */
+#undef SIZEOF_VOIDP
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
