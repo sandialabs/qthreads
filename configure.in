@@ -38,7 +38,7 @@ QTHREAD_EXTRA_OBJS=""
 # FIXME: Replace `main' with a function in `-ldl':
 AC_CHECK_LIB([dl], [main])
 AC_CHECK_LIB([pthread], [pthread_create], , AC_MSG_ERROR([Need pthreads]))
-AC_CHECK_LIB([cprops], [cp_hashtable_create], , AC_MSG_ERROR([Need libcprops 0.1.6 or better. See http://cprops.sf.ne/]))
+AC_CHECK_LIB([cprops], [cp_hashtable_create], , AC_MSG_ERROR([Need libcprops 0.1.6 or better. See http://cprops.sf.net/]))
 
 # Checks for header files.
 AC_HEADER_STDC

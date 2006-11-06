@@ -19225,8 +19225,8 @@ _ACEOF
   LIBS="-lcprops $LIBS"
 
 else
-  { { echo "$as_me:$LINENO: error: Need libcprops 0.1.6 or better. See http://cprops.sf.ne/" >&5
-echo "$as_me: error: Need libcprops 0.1.6 or better. See http://cprops.sf.ne/" >&2;}
+  { { echo "$as_me:$LINENO: error: Need libcprops 0.1.6 or better. See http://cprops.sf.net/" >&5
+echo "$as_me: error: Need libcprops 0.1.6 or better. See http://cprops.sf.net/" >&2;}
    { (exit 1); exit 1; }; }
 fi
 
