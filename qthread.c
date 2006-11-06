@@ -49,26 +49,68 @@
 #define QTHREAD_STATE_DONE              6
 #define QTHREAD_STATE_TERM_SHEP         UINT8_MAX
 
-#ifdef POOLED
+#ifndef UNPOOLED_QTHREAD_T
 #define ALLOC_QTHREAD(shep)             (qthread_t *) cp_mempool_alloc(shep.qthread_pool)
-#define ALLOC_QUEUE(shep)         (qthread_queue_t *) cp_mempool_alloc(qlib->kthreads[shep].queue_pool)
-#define ALLOC_LOCK(shep)           (qthread_lock_t *) cp_mempool_alloc(qlib->kthreads[shep].lock_pool)
-#define ALLOC_ADDRRES(shep)     (qthread_addrres_t *) cp_mempool_alloc(qlib->kthreads[shep].addrres_pool)
-#define ALLOC_ADDRSTAT(shep)   (qthread_addrstat_t *) cp_mempool_alloc(qlib->kthreads[shep].addrstat_pool)
-#define ALLOC_ADDRSTAT2(shep) (qthread_addrstat2_t *) cp_mempool_alloc(qlib->kthreads[shep].addrstat2_pool)
-#define ALLOC_STACK(shep)                             cp_mempool_alloc(qlib->kthreads[shep].stack_pool)
-#define ALLOC_CONTEXT(shep)            (ucontext_t *) cp_mempool_alloc(qlib->kthreads[shep].context_pool)
-#define FREE(pool, t) cp_mempool_free(pool, t)
+#define FREE_QTHREAD(shep, t) cp_mempool_free(shep->qthread_pool, t)
 #else
 #define ALLOC_QTHREAD(shep)             (qthread_t *) malloc(sizeof(qthread_t))
-#define ALLOC_QUEUE(shep)         (qthread_queue_t *) malloc(sizeof(qthread_queue_t))
-#define ALLOC_LOCK(shep)           (qthread_lock_t *) malloc(sizeof(qthread_lock_t))
-#define ALLOC_ADDRRES(shep)     (qthread_addrres_t *) malloc(sizeof(qthread_addrres_t))
-#define ALLOC_ADDRSTAT(shep)   (qthread_addrstat_t *) malloc(sizeof(qthread_addrstat_t))
+#define FREE_QTHREAD(shep, t) free(t)
+#endif
+
+#ifndef UNPOOLED_STACKS
+#define ALLOC_STACK(shep) cp_mempool_alloc(qlib->kthreads[shep].stack_pool)
+#define FREE_STACK(shep, t) cp_mempool_free(shep->stack_pool, t)
+#else
+#define ALLOC_STACK(shep) malloc(stack_size)
+#define FREE_STACK(shep, t) free(t)
+#endif
+
+#ifndef UNPOOLED_CONTEXTS
+#define ALLOC_CONTEXT(shep) (ucontext_t *) cp_mempool_alloc(qlib->kthreads[shep].context_pool)
+#define FREE_CONTEXT(shep, t) cp_mempool_free(shep->context_pool, t)
+#else
+#define ALLOC_CONTEXT(shep) (ucontext_t *) malloc(sizeof(ucontext_t))
+#define FREE_CONTEXT(shep, t) free(t)
+#endif
+
+#ifndef UNPOOLED_QUEUES
+#define ALLOC_QUEUE(shep) (qthread_queue_t *) cp_mempool_alloc(qlib->kthreads[shep].queue_pool)
+#define FREE_QUEUE(shep, t) cp_mempool_free(qlib->kthreads[shep].queue_pool, t)
+#else
+#define ALLOC_QUEUE(shep) (qthread_queue_t *) malloc(sizeof(qthread_queue_t))
+#define FREE_QUEUE(shep, t) free(t)
+#endif
+
+#ifndef UNPOOLED_LOCKS
+#define ALLOC_LOCK(shep) (qthread_lock_t *) cp_mempool_alloc(qlib->kthreads[shep].lock_pool)
+#define FREE_LOCK(shep, t) cp_mempool_free(qlib->kthreads[shep].lock_pool, t)
+#else
+#define ALLOC_LOCK(shep) (qthread_lock_t *) malloc(sizeof(qthread_lock_t))
+#define FREE_LOCK(shep, t) free(t)
+#endif
+
+#ifndef UNPOOLED_ADDRRES
+#define ALLOC_ADDRRES(shep) (qthread_addrres_t *) cp_mempool_alloc(qlib->kthreads[shep].addrres_pool)
+#define FREE_ADDRRES(shep, t) cp_mempool_free(qlib->kthreads[shep].addrres_pool, t)
+#else
+#define ALLOC_ADDRRES(shep) (qthread_addrres_t *) malloc(sizeof(qthread_addrres_t))
+#define FREE_ADDRRES(shep, t) free(t)
+#endif
+
+#ifndef UNPOOLED_ADDRSTAT
+#define ALLOC_ADDRSTAT(shep) (qthread_addrstat_t *) cp_mempool_alloc(qlib->kthreads[shep].addrstat_pool)
+#define FREE_ADDRSTAT(shep, t) cp_mempool_free(qlib->kthreads[shep].addrstat_pool, t)
+#else
+#define ALLOC_ADDRSTAT(shep) (qthread_addrstat_t *) malloc(sizeof(qthread_addrstat_t))
+#define FREE_ADDRSTAT(shep, t) free(t)
+#endif
+
+#ifndef UNPOOLED_ADDRSTAT2
+#define ALLOC_ADDRSTAT2(shep) (qthread_addrstat2_t *) cp_mempool_alloc(qlib->kthreads[shep].addrstat2_pool)
+#define FREE_ADDRSTAT2(shep, t) cp_mempool_free(qlib->kthreads[shep].addrstat2_pool, t)
+#else
 #define ALLOC_ADDRSTAT2(shep) (qthread_addrstat2_t *) malloc(sizeof(qthread_addrstat2_t))
-#define ALLOC_STACK(shep)                             malloc(stack_size)
-#define ALLOC_CONTEXT(shep)            (ucontext_t *) malloc(sizeof(ucontext_t))
-#define FREE(pool, t) free(t)
+#define FREE_ADDRSTAT2(shep, t) free(t)
 #endif
 
 /* internal data structures */
@@ -635,11 +677,11 @@ static inline void qthread_thread_free(qthread_t * t)
     assert(t != NULL);
 
     shep = &(qlib->kthreads[t->shepherd]);
-    FREE(shep->context_pool, t->context);
+    FREE_CONTEXT(shep, t->context);
     if (t->stack != NULL) {
-	FREE(shep->stack_pool, t->stack);
+	FREE_STACK(shep, t->stack);
     }
-    FREE(shep->qthread_pool, t);
+    FREE_QTHREAD(shep, t);
 }				       /*}}} */
 
 
@@ -689,7 +731,7 @@ static inline void qthread_queue_free(qthread_queue_t * q,
     if (shepherd == (shepherd_id_t) - 1) {
 	free(q);
     } else {
-	FREE(qlib->kthreads[shepherd].queue_pool, q);
+	FREE_QUEUE(shepherd, q);
     }
 }				       /*}}} */
 
@@ -786,7 +828,7 @@ static void qthread_FEBlock_delete(qthread_addrstat_t * m)
     cp_list_destroy(m->FFQ);
     /* NOTE! This is only safe if this function (as part of destroying the FEB
      * hash table) is ONLY called once all other pthreads have been joined */
-    FREE(qlib->kthreads[0].addrstat_pool, m);
+    FREE_ADDRSTAT(0, m);
 }				       /*}}} */
 
 /* this function runs a thread until it completes or yields */
@@ -1049,7 +1091,9 @@ static inline void qthread_back_to_master(qthread_t * t)
 static inline qthread_addrstat_t *qthread_addrstat_new(shepherd_id_t shepherd)
 {				       /*{{{ */
     qthread_addrstat_t *ret = ALLOC_ADDRSTAT(shepherd);
+#ifdef POOLED
     cp_mempool *lp = qlib->kthreads[shepherd].list_pool;
+#endif
 
     assert(pthread_mutex_init(&ret->lock, NULL) == 0);
     ret->full = 1;
@@ -1064,7 +1108,7 @@ static inline qthread_addrstat_t *qthread_addrstat_new(shepherd_id_t shepherd)
     return ret;
 }				       /*}}} */
 
-static inline void qthread_gotlock_empty(qthread_addrstat_t * m, char *maddr)
+static inline void qthread_gotlock_empty(qthread_addrstat_t * m, char *maddr, const shepherd_id_t threadshep)
 {				       /*{{{ */
     qthread_addrres_t *X = NULL;
 
@@ -1082,7 +1126,11 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, char *maddr)
 			    X->waiter);
 	    assert(pthread_mutex_unlock(&X->ctr_lock) == 0);
 	    assert(pthread_mutex_destroy(&X->ctr_lock) == 0);
-	    FREE(qlib->kthreads[X->waiter->shepherd].addrres_pool, X);
+	    /* XXX: Note that this may not be the same mempool that this memory
+	     * originally came from. This shouldn't be a big problem, but if it is,
+	     * we will have to make the addrres_pool synchronized, and use the commented-out line. */
+	    /* FREE_ADDRRES(X->waiter->shepherd, X); */
+	    FREE_ADDRRES(threadshep, X);
 	} else {
 	    assert(pthread_mutex_unlock(&X->ctr_lock) == 0);
 	}
@@ -1092,7 +1140,7 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, char *maddr)
 }				       /*}}} */
 
 static inline void qthread_gotlock_fill(qthread_addrstat_t * m,
-					const char *maddr)
+					const char *maddr, const shepherd_id_t threadshep)
 {				       /*{{{ */
     qthread_addrres_t *X = NULL;
     int removeable = 1;
@@ -1117,7 +1165,11 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m,
 		qthread_enqueue(qlib->kthreads[shepherd].ready, X->waiter);
 		assert(pthread_mutex_unlock(&X->ctr_lock) == 0);
 		assert(pthread_mutex_destroy(&X->ctr_lock) == 0);
-		FREE(qlib->kthreads[shepherd].addrres_pool, X);
+		/* XXX: Note that this may not be the same mempool that this memory
+		 * originally came from. This shouldn't be a big problem, but if it is,
+		 * we will have to make the addrres_pool synchronized, and use the commented-out line. */
+		/* FREE_ADDRRES(shepherd, X); */
+		FREE_ADDRRES(threadshep, X);
 	    } else {
 		assert(pthread_mutex_unlock(&X->ctr_lock) == 0);
 	    }
@@ -1137,7 +1189,11 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m,
 	    qthread_enqueue(qlib->kthreads[shepherd].ready, X->waiter);
 	    assert(pthread_mutex_unlock(&X->ctr_lock) == 0);
 	    assert(pthread_mutex_destroy(&X->ctr_lock) == 0);
-	    FREE(qlib->kthreads[shepherd].addrres_pool, X);
+	    /* XXX: Note that this may not be the same mempool that this memory
+	     * originally came from. This shouldn't be a big problem, but if it is,
+	     * we will have to make the addrres_pool synchronized, and use the commented-out line. */
+	    /* FREE_ADDRRES(shepherd, X); */
+	    FREE_ADDRRES(threadshep, X);
 	} else {
 	    assert(pthread_mutex_unlock(&X->ctr_lock) == 0);
 	}
@@ -1173,7 +1229,7 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m,
 	    cp_list_destroy(m->EFQ);
 	    cp_list_destroy(m->FFQ);
 	    assert(pthread_mutex_destroy(&m->lock) == 0);
-	    FREE(qlib->kthreads[shepherd].addrstat_pool, m);
+	    FREE_ADDRSTAT(threadshep, m);
 	}
     }
 }				       /*}}} */
@@ -1211,8 +1267,8 @@ void qthread_empty(qthread_t * t, char *dest, const size_t bytes)
     cp_list_iterator_init(&it, list, COLLECTION_LOCK_NONE);
     while ((m_better =
 	    (qthread_addrstat2_t *) cp_list_iterator_next(&it)) != NULL) {
-	qthread_gotlock_empty(m_better->m, m_better->addr);
-	FREE(qlib->kthreads[t->shepherd].addrstat2_pool, m_better);
+	qthread_gotlock_empty(m_better->m, m_better->addr, t->shepherd);
+	FREE_ADDRSTAT2(t->shepherd, m_better);
     }
     cp_list_iterator_release(&it);
 }				       /*}}} */
@@ -1245,8 +1301,8 @@ void qthread_fill(qthread_t * t, char *dest, const size_t bytes)
     cp_list_iterator_init(&it, list, COLLECTION_LOCK_NONE);
     while ((m_better =
 	    (qthread_addrstat2_t *) cp_list_iterator_next(&it)) != NULL) {
-	qthread_gotlock_fill(m_better->m, m_better->addr);
-	FREE(qlib->kthreads[t->shepherd].addrstat2_pool, m_better);
+	qthread_gotlock_fill(m_better->m, m_better->addr, t->shepherd);
+	FREE_ADDRSTAT2(t->shepherd, m_better);
     }
     cp_list_iterator_release(&it);
 }				       /*}}} */
@@ -1306,7 +1362,7 @@ void qthread_writeEF_size(qthread_t * t, char *dest, char *src,
 	    cp_list_append(queuedlocks, &(m[i]->lock));
 	} else {
 	    dest[i] = src[i];
-	    qthread_gotlock_fill(m[i], dest + i);
+	    qthread_gotlock_fill(m[i], dest + i, t->shepherd);
 	}
     }
     /* now all the addresses are either written or queued */
@@ -1390,7 +1446,7 @@ void qthread_readFF_size(qthread_t * t, char *dest, char *src,
 	    dest[offset] = src[offset];
 	    assert(pthread_mutex_unlock(&m->lock) == 0);
 	}
-	FREE(qlib->kthreads[t->shepherd].addrstat2_pool, m_better);
+	FREE_ADDRSTAT2(t->shepherd, m_better);
     }
     cp_list_iterator_release(&it);
     cp_list_destroy(list);
@@ -1459,7 +1515,7 @@ void qthread_readFE_size(qthread_t * t, char *dest, char *src,
 	    cp_list_append(queuedlocks, &(m[i]->lock));
 	} else {
 	    dest[i] = src[i];
-	    qthread_gotlock_empty(m[i], src + i);
+	    qthread_gotlock_empty(m[i], src + i, t->shepherd);
 	}
     }
     /* now all the addresses are either written or queued */
@@ -1576,11 +1632,17 @@ int qthread_unlock(qthread_t * t, void *a)
 	cp_hashtable_unlock(qlib->locks);
 
 	assert(pthread_mutex_unlock(&m->waiting->lock) == 0);
+	/* XXX: Note that this may not be the same mempool that this memory
+	 * originally came from. This shouldn't be a big problem, but if it is,
+	 * we may have to get creative */
 	qthread_queue_free(m->waiting, t->shepherd);
 
 	assert(pthread_mutex_unlock(&m->lock) == 0);
 	assert(pthread_mutex_destroy(&m->lock) == 0);
-	FREE(qlib->kthreads[t->shepherd].lock_pool, m);
+	/* XXX: Note that this may not be the same mempool that this memory
+	 * originally came from. This shouldn't be a big problem, but if it is,
+	 * we may have to get creative */
+	FREE_LOCK(t->shepherd, m);
     } else {
 	cp_hashtable_unlock(qlib->locks);
 	qthread_debug
