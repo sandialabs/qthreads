@@ -13,7 +13,7 @@ extern "C"
 typedef struct qthread_s qthread_t;
 
 /* for convenient arguments to qthread_fork */
-typedef void (*qthread_f) (qthread_t * t);
+typedef void (*qthread_f) (qthread_t * self);
 
 /* FEB locking only works on aligned addresses. On 32-bit architectures, this
  * isn't too much of an inconvenience. On 64-bit architectures, it's a pain in
@@ -88,7 +88,10 @@ void qthread_join(qthread_t * me, qthread_t * waitfor);
  */
 
 /* The empty/fill functions merely assert the empty or full state of the given
- * range of addresses */
+ * range of addresses. You may be wondering why they require a qthread_t
+ * argument. The reason for this is memory pooling; memory is allocated on a
+ * per-shepherd basis (to avoid needing to lock the memory pool). Anyway, if
+ * you pass it a NULL qthread_t, it will still work. */
 void qthread_empty(qthread_t * me, void *dest, const size_t bytes);
 void qthread_fill(qthread_t * me, void *dest, const size_t bytes);
 
@@ -100,6 +103,11 @@ void qthread_fill(qthread_t * me, void *dest, const size_t bytes);
  * 1 - destination's FEB state must be "empty"
  * 2 - data is copied from src to destination
  * 3 - the destination's FEB state get changed from empty to full
+ *
+ * This function takes a qthread_t pointer as an argument. If this is called
+ * from somewhere other than a qthread, use NULL for the me argument. If you
+ * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
+ * (which, conveniently, returns NULL if you aren't a qthread).
  */
 void qthread_writeEF(qthread_t * me, void *dest, const void *src);
 
@@ -111,6 +119,11 @@ void qthread_writeEF(qthread_t * me, void *dest, const void *src);
  * The semantics of readFF are:
  * 1 - src's FEB state must be "full"
  * 2 - data is copied from src to destination
+ *
+ * This function takes a qthread_t pointer as an argument. If this is called
+ * from somewhere other than a qthread, use NULL for the me argument. If you
+ * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
+ * (which, conveniently, returns NULL if you aren't a qthread).
  */
 void qthread_readFF(qthread_t * me, void *dest, void *src);
 
@@ -122,6 +135,11 @@ void qthread_readFF(qthread_t * me, void *dest, void *src);
  * 1 - src's FEB state must be "full"
  * 2 - data is copied from src to destination
  * 3 - the src's FEB bits get changed from full to empty when the data is copied
+ *
+ * This function takes a qthread_t pointer as an argument. If this is called
+ * from somewhere other than a qthread, use NULL for the me argument. If you
+ * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
+ * (which, conveniently, returns NULL if you aren't a qthread).
  */
 void qthread_readFE(qthread_t * me, void *dest, void *src);
 
@@ -132,7 +150,7 @@ void qthread_readFE(qthread_t * me, void *dest, void *src);
  * this, they have lower overhead.
  *
  * These functions take a qthread_t pointer as an argument. If this is called
- * from somewhere other than a qthread, use NULL for the t argument. If you
+ * from somewhere other than a qthread, use NULL for the me argument. If you
  * have lost your qthread_t pointer, it can be reclaimed using qthread_self().
  */
 int qthread_lock(qthread_t * me, void *a);

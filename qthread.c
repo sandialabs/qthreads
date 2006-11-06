@@ -1099,6 +1099,13 @@ static inline void qthread_back_to_master(qthread_t * t)
  * may need to move to a new mechanism.
  */
 
+struct qthread_FEB_sub_args
+{
+    void *src;
+    void *dest;
+    pthread_mutex_t alldone;
+};
+
 static inline qthread_addrstat_t *qthread_addrstat_new(shepherd_id_t shepherd)
 {				       /*{{{ */
     qthread_addrstat_t *ret = ALLOC_ADDRSTAT(shepherd);
@@ -1242,84 +1249,128 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m, void *maddr,
     }
 }				       /*}}} */
 
+static void qthread_empty_sub(qthread_t * me)
+{				       /*{{{ */
+    struct qthread_FEB_sub_args *args = qthread_arg(me);
+
+    qthread_empty(me, args->dest, (size_t) (args->src));
+    pthread_mutex_unlock(&args->alldone);
+}				       /*}}} */
+
 void qthread_empty(qthread_t * me, void *dest, const size_t count)
 {				       /*{{{ */
-    qthread_addrstat_t *m;
-    qthread_addrstat2_t *m_better;
-    qthread_addrstat2_t *list = NULL;
-    size_t i;
-    aligned_t *startaddr;
+    if (me != NULL) {
+	qthread_addrstat_t *m;
+	qthread_addrstat2_t *m_better;
+	qthread_addrstat2_t *list = NULL;
+	size_t i;
+	aligned_t *startaddr;
 
-    startaddr = (aligned_t *) (((size_t) dest) & MACHINEMASK);
-    if (startaddr != dest) {
-	fprintf(stderr,
-		"WARNING: emptying unaligned address %p ... assuming %p\n",
-		dest, startaddr);
-    }
-    cp_hashtable_wrlock(qlib->FEBs); {
-	for (i = 0; i < count; ++i) {
-	    m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
-							(void *)(startaddr +
-								 i));
-	    if (!m) {
-		m = qthread_addrstat_new(me->shepherd);
-		m->full = 0;
-		cp_hashtable_put(qlib->FEBs, (void *)(startaddr + i), m);
-	    } else {
-		assert(pthread_mutex_lock(&m->lock) == 0);
-		m_better = ALLOC_ADDRSTAT2(me->shepherd);
-		m_better->m = m;
-		m_better->addr = startaddr + i;
-		m_better->next = list;
-		list = m_better;
+	startaddr = (aligned_t *) (((size_t) dest) & MACHINEMASK);
+	if (startaddr != dest) {
+	    fprintf(stderr,
+		    "WARNING: emptying unaligned address %p ... assuming %p\n",
+		    dest, startaddr);
+	}
+	cp_hashtable_wrlock(qlib->FEBs); {
+	    for (i = 0; i < count; ++i) {
+		m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
+							    (void *)(startaddr
+								     + i));
+		if (!m) {
+		    m = qthread_addrstat_new(me->shepherd);
+		    m->full = 0;
+		    cp_hashtable_put(qlib->FEBs, (void *)(startaddr + i), m);
+		} else {
+		    assert(pthread_mutex_lock(&m->lock) == 0);
+		    m_better = ALLOC_ADDRSTAT2(me->shepherd);
+		    m_better->m = m;
+		    m_better->addr = startaddr + i;
+		    m_better->next = list;
+		    list = m_better;
+		}
 	    }
 	}
+	cp_hashtable_unlock(qlib->FEBs);
+	while (list != NULL) {
+	    m_better = list;
+	    list = list->next;
+	    qthread_gotlock_empty(m_better->m, m_better->addr, me->shepherd,
+				  0);
+	    FREE_ADDRSTAT2(me->shepherd, m_better);
+	}
+    } else {
+	struct qthread_FEB_sub_args args;
+
+	args.dest = dest;
+	args.src = (void *)count;
+	assert(pthread_mutex_init(&args.alldone, NULL) == 0);
+	assert(pthread_mutex_lock(&args.alldone) == 0);
+	qthread_fork(qthread_empty_sub, &args);
+	assert(pthread_mutex_lock(&args.alldone) == 0);
+	assert(pthread_mutex_unlock(&args.alldone) == 0);
+	assert(pthread_mutex_destroy(&args.alldone) == 0);
     }
-    cp_hashtable_unlock(qlib->FEBs);
-    while (list != NULL) {
-	m_better = list;
-	list = list->next;
-	qthread_gotlock_empty(m_better->m, m_better->addr, me->shepherd, 0);
-	FREE_ADDRSTAT2(me->shepherd, m_better);
-    }
+}				       /*}}} */
+
+static void qthread_fill_sub(qthread_t * me)
+{				       /*{{{ */
+    struct qthread_FEB_sub_args *args = qthread_arg(me);
+
+    qthread_fill(me, args->dest, (size_t) (args->src));
+    pthread_mutex_unlock(&args->alldone);
 }				       /*}}} */
 
 void qthread_fill(qthread_t * me, void *dest, const size_t count)
 {				       /*{{{ */
-    qthread_addrstat2_t *m_better;
-    qthread_addrstat_t *m;
-    qthread_addrstat2_t *list = NULL;
-    size_t i;
-    aligned_t *startaddr;
+    if (me != NULL) {
+	qthread_addrstat2_t *m_better;
+	qthread_addrstat_t *m;
+	qthread_addrstat2_t *list = NULL;
+	size_t i;
+	aligned_t *startaddr;
 
-    startaddr = (aligned_t *) (((size_t) dest) & MACHINEMASK);
-    if (startaddr != dest) {
-	fprintf(stderr,
-		"WARNING: filling unaligned address %p ... assuming %p\n",
-		dest, startaddr);
-    }
-    /* lock hash */
-    cp_hashtable_wrlock(qlib->FEBs); {
-	for (i = 0; i < count; ++i) {
-	    m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
-							(void *)(startaddr +
-								 i));
-	    if (m) {
-		assert(pthread_mutex_lock(&m->lock) == 0);
-		m_better = ALLOC_ADDRSTAT2(me->shepherd);
-		m_better->m = m;
-		m_better->addr = startaddr + i;
-		m_better->next = list;
-		list = m_better;
+	startaddr = (aligned_t *) (((size_t) dest) & MACHINEMASK);
+	if (startaddr != dest) {
+	    fprintf(stderr,
+		    "WARNING: filling unaligned address %p ... assuming %p\n",
+		    dest, startaddr);
+	}
+	/* lock hash */
+	cp_hashtable_wrlock(qlib->FEBs); {
+	    for (i = 0; i < count; ++i) {
+		m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
+							    (void *)(startaddr
+								     + i));
+		if (m) {
+		    assert(pthread_mutex_lock(&m->lock) == 0);
+		    m_better = ALLOC_ADDRSTAT2(me->shepherd);
+		    m_better->m = m;
+		    m_better->addr = startaddr + i;
+		    m_better->next = list;
+		    list = m_better;
+		}
 	    }
 	}
-    }
-    cp_hashtable_unlock(qlib->FEBs);   /* unlock hash */
-    while (list != NULL) {
-	m_better = list;
-	list = list->next;
-	qthread_gotlock_fill(m_better->m, m_better->addr, me->shepherd, 0);
-	FREE_ADDRSTAT2(me->shepherd, m_better);
+	cp_hashtable_unlock(qlib->FEBs);	/* unlock hash */
+	while (list != NULL) {
+	    m_better = list;
+	    list = list->next;
+	    qthread_gotlock_fill(m_better->m, m_better->addr, me->shepherd,
+				 0);
+	    FREE_ADDRSTAT2(me->shepherd, m_better);
+	}
+    } else {
+	struct qthread_FEB_sub_args args;
+
+	args.dest = dest;
+	args.src = (void *)count;
+	assert(pthread_mutex_init(&args.alldone, NULL) == 0);
+	assert(pthread_mutex_lock(&args.alldone) == 0);
+	qthread_fork(qthread_fill_sub, &args);
+	assert(pthread_mutex_lock(&args.alldone) == 0);
+	assert(pthread_mutex_unlock(&args.alldone) == 0);
+	assert(pthread_mutex_destroy(&args.alldone) == 0);
     }
 }				       /*}}} */
 
@@ -1328,50 +1379,72 @@ void qthread_fill(qthread_t * me, void *dest, const size_t count)
  * 2 - data is copied from src to destination
  * 3 - the destination's FEB state get changed from empty to full
  */
+
+static void qthread_writeEF_sub(qthread_t * me)
+{				       /*{{{ */
+    struct qthread_FEB_sub_args *args = qthread_arg(me);
+
+    qthread_writeEF(me, args->dest, args->src);
+    pthread_mutex_unlock(&args->alldone);
+}				       /*}}} */
+
 void qthread_writeEF(qthread_t * me, void *dest, const void *src)
 {				       /*{{{ */
-    qthread_addrstat_t *m;
-    qthread_addrres_t *X = NULL;
-    aligned_t *alignedaddr;
+    if (me != NULL) {
+	qthread_addrstat_t *m;
+	qthread_addrres_t *X = NULL;
+	aligned_t *alignedaddr;
 
-    qthread_debug("qthread_writeEF(%p, %p, %p): init\n", me, dest, src);
-    alignedaddr = (aligned_t *) (((size_t) dest) & MACHINEMASK);
-    qthread_debug("aligned: %p\n", alignedaddr);
-    if (alignedaddr != dest) {
-	fprintf(stderr,
-		"WARNING: filling unaligned address %p ... assuming %p\n",
-		dest, alignedaddr);
-    }
-    cp_hashtable_wrlock(qlib->FEBs); {
-	m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
-						    (void *)alignedaddr);
-	if (!m) {
-	    m = qthread_addrstat_new(me->shepherd);
-	    cp_hashtable_put(qlib->FEBs, alignedaddr, m);
+	qthread_debug("qthread_writeEF(%p, %p, %p): init\n", me, dest, src);
+	alignedaddr = (aligned_t *) (((size_t) dest) & MACHINEMASK);
+	qthread_debug("aligned: %p\n", alignedaddr);
+	if (alignedaddr != dest) {
+	    fprintf(stderr,
+		    "WARNING: filling unaligned address %p ... assuming %p\n",
+		    dest, alignedaddr);
 	}
-	assert(pthread_mutex_lock(&(m->lock)) == 0);
-    }
-    cp_hashtable_unlock(qlib->FEBs);
-    qthread_debug("qthread_writeEF(): data structure locked\n");
-    /* by this point m is locked */
-    qthread_debug("qthread_writeEF(): m->full == %i\n", m->full);
-    if (m->full == 1) {		       /* full, thus, we must block */
-	X = ALLOC_ADDRRES(me->shepherd);
-	X->addr = (aligned_t *) src;
-	X->waiter = me;
-	X->next = m->EFQ;
-	m->EFQ = X;
+	cp_hashtable_wrlock(qlib->FEBs); {
+	    m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
+							(void *)alignedaddr);
+	    if (!m) {
+		m = qthread_addrstat_new(me->shepherd);
+		cp_hashtable_put(qlib->FEBs, alignedaddr, m);
+	    }
+	    assert(pthread_mutex_lock(&(m->lock)) == 0);
+	}
+	cp_hashtable_unlock(qlib->FEBs);
+	qthread_debug("qthread_writeEF(): data structure locked\n");
+	/* by this point m is locked */
+	qthread_debug("qthread_writeEF(): m->full == %i\n", m->full);
+	if (m->full == 1) {	       /* full, thus, we must block */
+	    X = ALLOC_ADDRRES(me->shepherd);
+	    X->addr = (aligned_t *) src;
+	    X->waiter = me;
+	    X->next = m->EFQ;
+	    m->EFQ = X;
+	} else {
+	    memcpy(dest, src, WORDSIZE);
+	    qthread_gotlock_fill(m, alignedaddr, me->shepherd, 0);
+	}
+	/* now all the addresses are either written or queued */
+	qthread_debug("qthread_writeEF(): all written/queued\n");
+	if (X) {
+	    qthread_debug("qthread_writeEF(): back to parent\n");
+	    me->thread_state = QTHREAD_STATE_FEB_BLOCKED;
+	    me->blockedon = (struct qthread_lock_s *)m;
+	    qthread_back_to_master(me);
+	}
     } else {
-	memcpy(dest, src, WORDSIZE);
-	qthread_gotlock_fill(m, alignedaddr, me->shepherd, 0);
-    }
-    /* now all the addresses are either written or queued */
-    qthread_debug("qthread_writeEF(): all written/queued\n");
-    if (X) {
-	qthread_debug("qthread_writeEF(): back to parent\n");
-	me->thread_state = QTHREAD_STATE_FEB_BLOCKED;
-	me->blockedon = (struct qthread_lock_s *)m;
-	qthread_back_to_master(me);
+	struct qthread_FEB_sub_args args;
+
+	args.dest = dest;
+	args.src = (void *)src;
+	assert(pthread_mutex_init(&args.alldone, NULL) == 0);
+	assert(pthread_mutex_lock(&args.alldone) == 0);
+	qthread_fork(qthread_writeEF_sub, &args);
+	assert(pthread_mutex_lock(&args.alldone) == 0);
+	assert(pthread_mutex_unlock(&args.alldone) == 0);
+	assert(pthread_mutex_destroy(&args.alldone) == 0);
     }
 }				       /*}}} */
 
@@ -1379,50 +1452,72 @@ void qthread_writeEF(qthread_t * me, void *dest, const void *src)
  * 1 - src's FEB state must be "full"
  * 2 - data is copied from src to destination
  */
+
+static void qthread_readFF_sub(qthread_t * me)
+{				       /*{{{ */
+    struct qthread_FEB_sub_args *args = qthread_arg(me);
+
+    qthread_readFF(me, args->dest, args->src);
+    pthread_mutex_unlock(&args->alldone);
+}				       /*}}} */
+
 void qthread_readFF(qthread_t * me, void *dest, void *src)
 {				       /*{{{ */
-    qthread_addrstat_t *m = NULL;
-    qthread_addrres_t *X = NULL;
-    aligned_t *alignedaddr;
+    if (me != NULL) {
+	qthread_addrstat_t *m = NULL;
+	qthread_addrres_t *X = NULL;
+	aligned_t *alignedaddr;
 
-    qthread_debug("qthread_readFF(%p, %p, %p): init\n", me, dest, src);
-    alignedaddr = (aligned_t *) (((size_t) src) & MACHINEMASK);
-    qthread_debug("aligned: %p\n", alignedaddr);
-    if (alignedaddr != src) {
-	fprintf(stderr,
-		"WARNING: filling unaligned address %p ... assuming %p\n",
-		src, alignedaddr);
-    }
-    cp_hashtable_wrlock(qlib->FEBs); {
-	m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
-						    (void *)alignedaddr);
-	if (!m) {
-	    memcpy(dest, src, WORDSIZE);
-	} else {
-	    assert(pthread_mutex_lock(&m->lock) == 0);
+	qthread_debug("qthread_readFF(%p, %p, %p): init\n", me, dest, src);
+	alignedaddr = (aligned_t *) (((size_t) src) & MACHINEMASK);
+	qthread_debug("aligned: %p\n", alignedaddr);
+	if (alignedaddr != src) {
+	    fprintf(stderr,
+		    "WARNING: filling unaligned address %p ... assuming %p\n",
+		    src, alignedaddr);
 	}
-    }
-    cp_hashtable_unlock(qlib->FEBs);
-    qthread_debug("qthread_readFF(): data structure locked\n");
-    /* now m, if it exists, is locked - if m is NULL, then we're done! */
-    if (m == NULL)
-	return;
-    if (m->full != 1) {
-	X = ALLOC_ADDRRES(me->shepherd);
-	X->addr = (aligned_t *) & dest;
-	X->waiter = me;
-	X->next = m->FFQ;
-	m->FFQ = X;
+	cp_hashtable_wrlock(qlib->FEBs); {
+	    m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
+							(void *)alignedaddr);
+	    if (!m) {
+		memcpy(dest, src, WORDSIZE);
+	    } else {
+		assert(pthread_mutex_lock(&m->lock) == 0);
+	    }
+	}
+	cp_hashtable_unlock(qlib->FEBs);
+	qthread_debug("qthread_readFF(): data structure locked\n");
+	/* now m, if it exists, is locked - if m is NULL, then we're done! */
+	if (m == NULL)
+	    return;
+	if (m->full != 1) {
+	    X = ALLOC_ADDRRES(me->shepherd);
+	    X->addr = (aligned_t *) & dest;
+	    X->waiter = me;
+	    X->next = m->FFQ;
+	    m->FFQ = X;
+	} else {
+	    memcpy(dest, src, WORDSIZE);
+	    assert(pthread_mutex_unlock(&m->lock) == 0);
+	}
+	/* if X exists, we are queued, and need to block (i.e. go back to the shepherd) */
+	if (X) {
+	    qthread_debug("qthread_readFF(): back to parent\n");
+	    me->thread_state = QTHREAD_STATE_FEB_BLOCKED;
+	    me->blockedon = (struct qthread_lock_s *)m;
+	    qthread_back_to_master(me);
+	}
     } else {
-	memcpy(dest, src, WORDSIZE);
-	assert(pthread_mutex_unlock(&m->lock) == 0);
-    }
-    /* if X exists, we are queued, and need to block (i.e. go back to the shepherd) */
-    if (X) {
-	qthread_debug("qthread_readFF(): back to parent\n");
-	me->thread_state = QTHREAD_STATE_FEB_BLOCKED;
-	me->blockedon = (struct qthread_lock_s *)m;
-	qthread_back_to_master(me);
+	struct qthread_FEB_sub_args args;
+
+	args.dest = dest;
+	args.src = src;
+	assert(pthread_mutex_init(&args.alldone, NULL) == 0);
+	assert(pthread_mutex_lock(&args.alldone) == 0);
+	qthread_fork(qthread_readFF_sub, &args);
+	assert(pthread_mutex_lock(&args.alldone) == 0);
+	assert(pthread_mutex_unlock(&args.alldone) == 0);
+	assert(pthread_mutex_destroy(&args.alldone) == 0);
     }
 }				       /*}}} */
 
@@ -1431,47 +1526,70 @@ void qthread_readFF(qthread_t * me, void *dest, void *src)
  * 2 - data is copied from src to destination
  * 3 - the src's FEB bits get changed from full to empty
  */
+
+static void qthread_readFE_sub(qthread_t * me)
+{				       /*{{{ */
+    struct qthread_FEB_sub_args *args = qthread_arg(me);
+
+    qthread_readFE(me, args->dest, args->src);
+    pthread_mutex_unlock(&args->alldone);
+}				       /*}}} */
+
 void qthread_readFE(qthread_t * me, void *dest, void *src)
 {				       /*{{{ */
-    qthread_addrstat_t *m;
-    qthread_addrres_t *X = NULL;
-    aligned_t *alignedaddr;
+    if (me != NULL) {
+	qthread_addrstat_t *m;
+	qthread_addrres_t *X = NULL;
+	aligned_t *alignedaddr;
 
-    qthread_debug("qthread_readFE(%p, %p, %p): init\n", me, dest, src);
-    alignedaddr = (aligned_t *) (((size_t) src) & MACHINEMASK);
-    qthread_debug("aligned: %p\n", alignedaddr);
-    if (alignedaddr != src) {
-	fprintf(stderr,
-		"WARNING: filling unaligned address %p ... assuming %p\n",
-		src, alignedaddr);
-    }
-    cp_hashtable_wrlock(qlib->FEBs); {
-	m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs, alignedaddr);
-	if (!m) {
-	    m = qthread_addrstat_new(me->shepherd);
-	    cp_hashtable_put(qlib->FEBs, alignedaddr, m);
+	qthread_debug("qthread_readFE(%p, %p, %p): init\n", me, dest, src);
+	alignedaddr = (aligned_t *) (((size_t) src) & MACHINEMASK);
+	qthread_debug("aligned: %p\n", alignedaddr);
+	if (alignedaddr != src) {
+	    fprintf(stderr,
+		    "WARNING: filling unaligned address %p ... assuming %p\n",
+		    src, alignedaddr);
 	}
-	assert(pthread_mutex_lock(&(m->lock)) == 0);
-    }
-    cp_hashtable_unlock(qlib->FEBs);
-    qthread_debug("qthread_readFE(): data structure locked\n");
-    /* by this point m is locked */
-    if (m->full == 0) {		       /* empty, thus, we must block */
-	X = ALLOC_ADDRRES(me->shepherd);
-	X->addr = (aligned_t *) & dest;
-	X->waiter = me;
-	X->next = m->FEQ;
-	m->FEQ = X;
+	cp_hashtable_wrlock(qlib->FEBs); {
+	    m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
+							alignedaddr);
+	    if (!m) {
+		m = qthread_addrstat_new(me->shepherd);
+		cp_hashtable_put(qlib->FEBs, alignedaddr, m);
+	    }
+	    assert(pthread_mutex_lock(&(m->lock)) == 0);
+	}
+	cp_hashtable_unlock(qlib->FEBs);
+	qthread_debug("qthread_readFE(): data structure locked\n");
+	/* by this point m is locked */
+	if (m->full == 0) {	       /* empty, thus, we must block */
+	    X = ALLOC_ADDRRES(me->shepherd);
+	    X->addr = (aligned_t *) & dest;
+	    X->waiter = me;
+	    X->next = m->FEQ;
+	    m->FEQ = X;
+	} else {
+	    memcpy(dest, src, WORDSIZE);
+	    qthread_gotlock_empty(m, alignedaddr, me->shepherd, 0);
+	}
+	/* now all the addresses are either written or queued */
+	if (X) {
+	    qthread_debug("qthread_readFE(): back to parent\n");
+	    me->thread_state = QTHREAD_STATE_FEB_BLOCKED;
+	    me->blockedon = (struct qthread_lock_s *)m;
+	    qthread_back_to_master(me);
+	}
     } else {
-	memcpy(dest, src, WORDSIZE);
-	qthread_gotlock_empty(m, alignedaddr, me->shepherd, 0);
-    }
-    /* now all the addresses are either written or queued */
-    if (X) {
-	qthread_debug("qthread_readFE(): back to parent\n");
-	me->thread_state = QTHREAD_STATE_FEB_BLOCKED;
-	me->blockedon = (struct qthread_lock_s *)m;
-	qthread_back_to_master(me);
+	struct qthread_FEB_sub_args args;
+
+	args.dest = dest;
+	args.src = src;
+	assert(pthread_mutex_init(&args.alldone, NULL) == 0);
+	assert(pthread_mutex_lock(&args.alldone) == 0);
+	qthread_fork(qthread_readFE_sub, &args);
+	assert(pthread_mutex_lock(&args.alldone) == 0);
+	assert(pthread_mutex_unlock(&args.alldone) == 0);
+	assert(pthread_mutex_destroy(&args.alldone) == 0);
     }
 }				       /*}}} */
 
