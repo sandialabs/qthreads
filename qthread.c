@@ -25,6 +25,14 @@
 #define UINT8_MAX (255)
 #endif
 
+/* If __USE_FILE_OFFSET64, and NEED_RLIMIT, and we don't have __REDIRECT, we
+ * #define rlimit to rlimit64, and its prototype returns a 'struct rlimit64 *',
+ * but the user's code expects to be able to designate it by 'struct rlimit *'.
+ */
+#if defined(__USE_FILE_OFFSET64) && defined(NEED_RLIMIT) && ! defined(__REDIRECT)
+# define rlimit rlimit64
+#endif
+
 #ifdef QTHREAD_DEBUG
 /* for the vprintf in qthread_debug() */
 /* 8MB stack */
