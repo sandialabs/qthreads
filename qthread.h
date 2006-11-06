@@ -13,7 +13,7 @@ extern "C"
 typedef struct qthread_s qthread_t;
 
 /* for convenient arguments to qthread_fork */
-typedef void (*qthread_f) (qthread_t * self);
+typedef void (*qthread_f) (qthread_t * me);
 
 /* FEB locking only works on aligned addresses. On 32-bit architectures, this
  * isn't too much of an inconvenience. On 64-bit architectures, it's a pain in
@@ -40,17 +40,18 @@ void qthread_finalize(void);
  * busy-waits or cooperative multitasking. Without this function, threads will
  * only ever allow other threads assigned to the same pthread to execute when
  * they block. */
-void qthread_yield(qthread_t * t);
+void qthread_yield(qthread_t * me);
 
 /* this function allows a qthread to retrive it's qthread_t pointer if it has
  * been lost for some reason */
 qthread_t *qthread_self(void);
 
 /* these are the functions for generating a new qthread. The specified function
+ * (the first argument; note that it is a qthread_f and not a qthread_t)
  * will be run to completion. The difference between them is that a detached
  * qthread cannot be joined, but an un-detached qthread MUST be joined
- * (otherwise its memory will not be free'd). The qthread_fork_to* functions
- * spawn the thread to a specific shepherd */
+ * (otherwise not all of its memory will be free'd). The qthread_fork_to*
+ * functions spawn the thread to a specific shepherd */
 qthread_t *qthread_fork(qthread_f f, void *arg);
 qthread_t *qthread_fork_to(qthread_f f, void *arg,
 			   const unsigned int shepherd);
@@ -74,7 +75,9 @@ void *qthread_arg(qthread_t * t);
  */
 void qthread_join(qthread_t * me, qthread_t * waitfor);
 
-/* functions to implement FEB locking/unlocking
+/****************************************************************************
+ * functions to implement FEB locking/unlocking
+ ****************************************************************************
  *
  * These are the FEB functions. All but empty/fill have the potential of
  * blocking until the corresponding precondition is met. All FEB
@@ -94,6 +97,19 @@ void qthread_join(qthread_t * me, qthread_t * waitfor);
  * you pass it a NULL qthread_t, it will still work. */
 void qthread_empty(qthread_t * me, void *dest, const size_t bytes);
 void qthread_fill(qthread_t * me, void *dest, const size_t bytes);
+
+/* NOTE!!!!!!!!!!!
+ * Reads and writes operate on machine-word-size segments of memory. That is,
+ * on a 32-bit architecture, it will read/write 4 bytes at a time, and on a
+ * 64-bit architecture, it will read/write 8 bytes at a time. For correct
+ * operation, you will probably want to use someting like
+ * __attribute__((alignment(8))) on your variables.
+ */
+#ifdef __LP64__
+#define WORDSIZE (8)
+#else
+#define WORDSIZE (4)
+#endif
 
 /* This function waits for memory to become empty, and then fills it. When
  * memory becomes empty, only one thread blocked like this will be awoken. Data

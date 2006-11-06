@@ -29,11 +29,6 @@
 #define UINT8_MAX (255)
 #endif
 
-#ifdef __LP64__
-#define WORDSIZE (8)
-#else
-#define WORDSIZE (4)
-#endif
 #define MACHINEMASK (~(WORDSIZE-1))
 
 /* If __USE_FILE_OFFSET64, and NEED_RLIMIT, and we don't have __REDIRECT, we
