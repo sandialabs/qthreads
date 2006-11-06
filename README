@@ -17,3 +17,10 @@ Currently, the only real limiting factor on the number of threads is the amount
 of memory and address space you have available. For more than 2^32 threads, the
 thread_id value will need to be made larger (or eliminated, as it is not
 required by the library itself).
+
+For information on how to use qthread or qalloc, there is A LOT of information
+in the header files (qthread.h and qalloc.h).
+
+NOTE FOR PGI USERS
+pgcc seems unable to correctly process fancy #define's, so you will need to run
+./configure with CC=pgCC instead.
