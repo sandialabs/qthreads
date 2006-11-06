@@ -7,8 +7,6 @@ static int id = 0;
 static int up[4] = { 1, 0, 0, 0 };
 static int id2 = 0;
 
-static pthread_mutex_t alldone = PTHREAD_MUTEX_INITIALIZER;
-
 void thread(qthread_t * t)
 {
     int me = 0;
@@ -59,19 +57,16 @@ void thread2(qthread_t * t)
     }
 }
 
-void realmain(qthread_t *t)
+int main(int argc, char *argv[])
 {
     qthread_t *a, *b, *c, *d;
     qthread_t *a2, *b2, *c2, *d2;
 
-    qthread_lock(t, &(up[1]));
-    qthread_lock(t, &(up[2]));
-    qthread_lock(t, &(up[3]));
-    /*
-    qthread_lock(t, &(up2[1]));
-    qthread_lock(t, &(up2[2]));
-    qthread_lock(t, &(up2[3]));
-    */
+    qthread_init(3);
+
+    qthread_lock(NULL, &(up[1]));
+    qthread_lock(NULL, &(up[2]));
+    qthread_lock(NULL, &(up[3]));
 
     a = qthread_fork(thread, NULL);
     b = qthread_fork(thread, NULL);
@@ -82,26 +77,14 @@ void realmain(qthread_t *t)
     c2 = qthread_fork(thread2, NULL);
     d2 = qthread_fork(thread2, NULL);
 
-    qthread_join(t, a);
-    qthread_join(t, b);
-    qthread_join(t, c);
-    qthread_join(t, d);
-    qthread_join(t, a2);
-    qthread_join(t, b2);
-    qthread_join(t, c2);
-    qthread_join(t, d2);
-    pthread_mutex_unlock(&alldone);
-}
-
-int main(int argc, char *argv[])
-{
-    qthread_init(1);
-
-    pthread_mutex_lock(&alldone);
-
-    qthread_fork(realmain, NULL);
-
-    pthread_mutex_lock(&alldone);
+    qthread_join(NULL, a);
+    qthread_join(NULL, b);
+    qthread_join(NULL, c);
+    qthread_join(NULL, d);
+    qthread_join(NULL, a2);
+    qthread_join(NULL, b2);
+    qthread_join(NULL, c2);
+    qthread_join(NULL, d2);
 
     qthread_finalize();
 
