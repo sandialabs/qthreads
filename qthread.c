@@ -1099,6 +1099,7 @@ static inline void qthread_back_to_master(qthread_t * t)
 static inline qthread_addrstat_t *qthread_addrstat_new(shepherd_id_t shepherd)
 {				       /*{{{ */
     qthread_addrstat_t *ret = ALLOC_ADDRSTAT(shepherd);
+
 #ifdef POOLED
     cp_mempool *lp = qlib->kthreads[shepherd].list_pool;
 #endif
@@ -1116,7 +1117,8 @@ static inline qthread_addrstat_t *qthread_addrstat_new(shepherd_id_t shepherd)
     return ret;
 }				       /*}}} */
 
-static inline void qthread_gotlock_empty(qthread_addrstat_t * m, char *maddr, const shepherd_id_t threadshep)
+static inline void qthread_gotlock_empty(qthread_addrstat_t * m, char *maddr,
+					 const shepherd_id_t threadshep)
 {				       /*{{{ */
     qthread_addrres_t *X = NULL;
 
@@ -1148,7 +1150,8 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, char *maddr, co
 }				       /*}}} */
 
 static inline void qthread_gotlock_fill(qthread_addrstat_t * m,
-					const char *maddr, const shepherd_id_t threadshep)
+					const char *maddr,
+					const shepherd_id_t threadshep)
 {				       /*{{{ */
     qthread_addrres_t *X = NULL;
     int removeable = 1;
@@ -1557,53 +1560,83 @@ void qthread_readFE(qthread_t * t, int *dest, int *src)
  * may need to move to a new mechanism.
  */
 
+struct qthread_lock_sub_args {
+    pthread_mutex_t alldone;
+    void * addr;
+};
+
+static void qthread_lock_sub(qthread_t *t)
+{/*{{{*/
+    struct qthread_lock_sub_args *args = qthread_arg(t);
+    qthread_lock(t, args->addr);
+    pthread_mutex_unlock(&(args->alldone));
+}/*}}}*/
+
 int qthread_lock(qthread_t * t, void *a)
 {				       /*{{{ */
     qthread_lock_t *m;
 
+    if (t != NULL) {
+	cp_hashtable_wrlock(qlib->locks);
+	m = (qthread_lock_t *) cp_hashtable_get(qlib->locks, a);
+	if (m == NULL) {
+	    if ((m = ALLOC_LOCK(t->shepherd)) == NULL) {
+		perror("qthread_lock()");
+		abort();
+	    }
+	    m->waiting = qthread_queue_new(t->shepherd);
+	    pthread_mutex_init(&m->lock, NULL);
+	    cp_hashtable_put(qlib->locks, a, m);
+	    /* since we just created it, we own it */
+	    assert(pthread_mutex_lock(&m->lock) == 0);
+	    /* can only unlock the hash after we've locked the address, because
+	     * otherwise there's a race condition: the address could be removed
+	     * before we have a chance to add ourselves to it */
+	    cp_hashtable_unlock(qlib->locks);
 
-    cp_hashtable_wrlock(qlib->locks);
-    m = (qthread_lock_t *) cp_hashtable_get(qlib->locks, a);
-    if (m == NULL) {
-	if ((m = ALLOC_LOCK(t->shepherd)) == NULL) {
-	    perror("qthread_lock()");
-	    abort();
+	    m->owner = t->thread_id;
+	    assert(pthread_mutex_unlock(&m->lock) == 0);
+	    qthread_debug("qthread_lock(%p, %p): returned (wasn't locked)\n",
+			  t, a);
+	} else {
+	    /* success==failure: because it's in the hash, someone else owns the
+	     * lock; dequeue this thread and yield.
+	     * NOTE: it's up to the master thread to enqueue this thread and unlock
+	     * the address
+	     */
+	    assert(pthread_mutex_lock(&m->lock) == 0);
+	    /* for an explanation of the lock/unlock ordering here, see above */
+	    cp_hashtable_unlock(qlib->locks);
+
+	    t->thread_state = QTHREAD_STATE_BLOCKED;
+	    t->blockedon = m;
+
+	    qthread_back_to_master(t);
+
+	    /* once I return to this context, I own the lock! */
+	    /* conveniently, whoever unlocked me already set up everything too */
+	    qthread_debug("qthread_lock(%p, %p): returned (was locked)\n", t,
+			  a);
 	}
-	m->waiting = qthread_queue_new(t->shepherd);
-	pthread_mutex_init(&m->lock, NULL);
-	cp_hashtable_put(qlib->locks, a, m);
-	/* since we just created it, we own it */
-	assert(pthread_mutex_lock(&m->lock) == 0);
-	/* can only unlock the hash after we've locked the address, because
-	 * otherwise there's a race condition: the address could be removed
-	 * before we have a chance to add ourselves to it */
-	cp_hashtable_unlock(qlib->locks);
-
-	m->owner = t->thread_id;
-	assert(pthread_mutex_unlock(&m->lock) == 0);
-	qthread_debug("qthread_lock(%p, %p): returned (wasn't locked)\n", t,
-		      a);
+	return 1;
     } else {
-	/* success==failure: because it's in the hash, someone else owns the
-	 * lock; dequeue this thread and yield.
-	 * NOTE: it's up to the master thread to enqueue this thread and unlock
-	 * the address
-	 */
-	assert(pthread_mutex_lock(&m->lock) == 0);
-	/* for an explanation of the lock/unlock ordering here, see above */
-	cp_hashtable_unlock(qlib->locks);
-
-	t->thread_state = QTHREAD_STATE_BLOCKED;
-	t->blockedon = m;
-
-	qthread_back_to_master(t);
-
-	/* once I return to this context, I own the lock! */
-	/* conveniently, whoever unlocked me already set up everything too */
-	qthread_debug("qthread_lock(%p, %p): returned (was locked)\n", t, a);
+	struct qthread_lock_sub_args args;
+	args.addr = a;
+	assert(pthread_mutex_init(&args.alldone, NULL) == 0);
+	assert(pthread_mutex_lock(&args.alldone) == 0);
+	qthread_fork(qthread_lock_sub, &args);
+	assert(pthread_mutex_lock(&args.alldone) == 0);
+	assert(pthread_mutex_unlock(&args.alldone) == 0);
+	assert(pthread_mutex_destroy(&args.alldone) == 0);
     }
-    return 1;
 }				       /*}}} */
+
+static void qthread_unlock_sub(qthread_t *t)
+{/*{{{*/
+    struct qthread_lock_sub_args *args = qthread_arg(t);
+    qthread_unlock(t, args->addr);
+    pthread_mutex_unlock(&(args->alldone));
+}/*}}}*/
 
 int qthread_unlock(qthread_t * t, void *a)
 {				       /*{{{ */
@@ -1612,61 +1645,72 @@ int qthread_unlock(qthread_t * t, void *a)
 
     qthread_debug("qthread_unlock(%p, %p): started\n", t, a);
 
-    cp_hashtable_wrlock(qlib->locks);
-    m = (qthread_lock_t *) cp_hashtable_get(qlib->locks, a);
+    if (t != NULL) {
+	cp_hashtable_wrlock(qlib->locks);
+	m = (qthread_lock_t *) cp_hashtable_get(qlib->locks, a);
 
-    if (m == NULL) {
+	if (m == NULL) {
 #if 0
-	fprintf(stderr,
-		"qthread_unlock(%p,%p): attempt to unlock an address "
-		"that is not locked!\n", (void *)t, a);
-	abort();
+	    fprintf(stderr,
+		    "qthread_unlock(%p,%p): attempt to unlock an address "
+		    "that is not locked!\n", (void *)t, a);
+	    abort();
 #endif
-	return 1;
-    }
-    assert(pthread_mutex_lock(&m->lock) == 0);
+	    return 1;
+	}
+	assert(pthread_mutex_lock(&m->lock) == 0);
 
-    /* unlock the address... if anybody's waiting for it, give them the lock
-     * and put them in a ready queue.  If not, delete the lock structure.
-     */
-
-    assert(pthread_mutex_lock(&m->waiting->lock) == 0);
-
-    u = qthread_dequeue_nonblocking(m->waiting);
-    if (u == NULL) {
-	qthread_debug("qthread_unlock(%p,%p): deleting waiting queue\n", t,
-		      a);
-	cp_hashtable_remove(qlib->locks, a);
-	cp_hashtable_unlock(qlib->locks);
-
-	assert(pthread_mutex_unlock(&m->waiting->lock) == 0);
-	/* XXX: Note that this may not be the same mempool that this memory
-	 * originally came from. This shouldn't be a big problem, but if it is,
-	 * we may have to get creative */
-	qthread_queue_free(m->waiting, t->shepherd);
-
-	assert(pthread_mutex_unlock(&m->lock) == 0);
-	assert(pthread_mutex_destroy(&m->lock) == 0);
-	/* XXX: Note that this may not be the same mempool that this memory
-	 * originally came from. This shouldn't be a big problem, but if it is,
-	 * we may have to get creative */
-	FREE_LOCK(t->shepherd, m);
-    } else {
-	cp_hashtable_unlock(qlib->locks);
-	qthread_debug
-	    ("qthread_unlock(%p,%p): pulling thread from queue (%p)\n", t, a,
-	     u);
-	u->thread_state = QTHREAD_STATE_RUNNING;
-	m->owner = u->thread_id;
-
-	/* NOTE: because of the use of getcontext()/setcontext(), threads
-	 * return to the shepherd that setcontext()'d into them, so they
-	 * must remain in that queue.
+	/* unlock the address... if anybody's waiting for it, give them the lock
+	 * and put them in a ready queue.  If not, delete the lock structure.
 	 */
-	qthread_enqueue(qlib->kthreads[u->shepherd].ready, u);
 
-	assert(pthread_mutex_unlock(&m->waiting->lock) == 0);
-	assert(pthread_mutex_unlock(&m->lock) == 0);
+	assert(pthread_mutex_lock(&m->waiting->lock) == 0);
+
+	u = qthread_dequeue_nonblocking(m->waiting);
+	if (u == NULL) {
+	    qthread_debug("qthread_unlock(%p,%p): deleting waiting queue\n", t,
+		    a);
+	    cp_hashtable_remove(qlib->locks, a);
+	    cp_hashtable_unlock(qlib->locks);
+
+	    assert(pthread_mutex_unlock(&m->waiting->lock) == 0);
+	    /* XXX: Note that this may not be the same mempool that this memory
+	     * originally came from. This shouldn't be a big problem, but if it is,
+	     * we may have to get creative */
+	    qthread_queue_free(m->waiting, t->shepherd);
+
+	    assert(pthread_mutex_unlock(&m->lock) == 0);
+	    assert(pthread_mutex_destroy(&m->lock) == 0);
+	    /* XXX: Note that this may not be the same mempool that this memory
+	     * originally came from. This shouldn't be a big problem, but if it is,
+	     * we may have to get creative */
+	    FREE_LOCK(t->shepherd, m);
+	} else {
+	    cp_hashtable_unlock(qlib->locks);
+	    qthread_debug
+		("qthread_unlock(%p,%p): pulling thread from queue (%p)\n", t, a,
+		 u);
+	    u->thread_state = QTHREAD_STATE_RUNNING;
+	    m->owner = u->thread_id;
+
+	    /* NOTE: because of the use of getcontext()/setcontext(), threads
+	     * return to the shepherd that setcontext()'d into them, so they
+	     * must remain in that queue.
+	     */
+	    qthread_enqueue(qlib->kthreads[u->shepherd].ready, u);
+
+	    assert(pthread_mutex_unlock(&m->waiting->lock) == 0);
+	    assert(pthread_mutex_unlock(&m->lock) == 0);
+	}
+    } else {
+	struct qthread_lock_sub_args args;
+	args.addr = a;
+	assert(pthread_mutex_init(&args.alldone, NULL) == 0);
+	assert(pthread_mutex_lock(&args.alldone) == 0);
+	qthread_fork(qthread_unlock_sub, &args);
+	assert(pthread_mutex_lock(&args.alldone) == 0);
+	assert(pthread_mutex_unlock(&args.alldone) == 0);
+	assert(pthread_mutex_destroy(&args.alldone) == 0);
     }
 
     qthread_debug("qthread_unlock(%p, %p): returned\n", t, a);

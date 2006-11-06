@@ -49,21 +49,16 @@ void qthread_fork_to_detach(qthread_f f, void *arg, const unsigned int shepherd)
 unsigned qthread_id(qthread_t * t);
 void *qthread_arg(qthread_t * t);
 
-/* These are the join functions, which will only return once the specified
- * thread has finished executing.
+/* This is the join function, which will only return once the specified thread
+ * has finished executing.
  *
- * The standard qthread_join() only works from within a qthread; it uses
- * qthread_lock/unlock, so it's a blocking join that will not take processing
- * time. The thread will be queued and will allow other threads to execute.
- *
- * The qthread_busy_join() function will work from a non-qthread thread
- * (including the main thread), however since it cannot queue itself (there is
- * no qthread context), it must keep checking for the return value in a tight
- * loop. (Note: this could be accomplished using a pthread_mutex_t for every thread,
- * but that would inflate the qthread_t memory requirements unnecessarily.)
+ * qthread_join() only works whether within a qthread or not (if not, pass it
+ * NULL for the "me" argument). It relies on qthread_lock/unlock of the
+ * qthread_t data-structure address (the user CAN muck with that, but it's not
+ * recommended), so it's a blocking join that will not take processing
+ * time.
  */
 void qthread_join(qthread_t * me, qthread_t * waitfor);
-void qthread_busy_join(volatile qthread_t * waitfor);
 
 /* functions to implement FEB locking/unlocking
  *
@@ -81,8 +76,8 @@ void qthread_busy_join(volatile qthread_t * waitfor);
 
 /* The empty/fill functions merely assert the empty or full state of the given
  * range of addresses */
-void qthread_empty(qthread_t * t, char *dest, const size_t bytes);
-void qthread_fill(qthread_t * t, char *dest, const size_t bytes);
+void qthread_empty(qthread_t * me, char *dest, const size_t bytes);
+void qthread_fill(qthread_t * me, char *dest, const size_t bytes);
 
 /* These functions wait for memory to become empty, and then fill it. When
  * memory becomes empty, only one thread blocked like this will be awoken. Data
@@ -96,8 +91,8 @@ void qthread_fill(qthread_t * t, char *dest, const size_t bytes);
  * 2 - data is copied from src to destination
  * 3 - the destination's FEB state get changed from empty to full
  */
-void qthread_writeEF(qthread_t * t, int *dest, int src);
-void qthread_writeEF_size(qthread_t * t, char *dest, char *src,
+void qthread_writeEF(qthread_t * me, int *dest, int src);
+void qthread_writeEF_size(qthread_t * me, char *dest, char *src,
 			  const size_t bytes);
 
 /* These functions wait for memory to become full, and then read it and leave
@@ -112,8 +107,8 @@ void qthread_writeEF_size(qthread_t * t, char *dest, char *src,
  * 1 - src's FEB state must be "full"
  * 2 - data is copied from src to destination
  */
-void qthread_readFF(qthread_t * t, int *dest, int *src);
-void qthread_readFF_size(qthread_t * t, char *dest, char *src,
+void qthread_readFF(qthread_t * me, int *dest, int *src);
+void qthread_readFF_size(qthread_t * me, char *dest, char *src,
 			 const size_t bytes);
 
 /* These functions wait for memory to become full, and then empty it. When
@@ -126,9 +121,9 @@ void qthread_readFF_size(qthread_t * t, char *dest, char *src,
  * The semantics of readFE are:
  * 1 - src's FEB state must be "full"
  * 2 - data is copied from src to destination
- * 3 - the src's FEB bits get changed from full to empty
+ * 3 - the src's FEB bits get changed from full to empty when the data is copied
  */
-void qthread_readFE(qthread_t * t, int *dest, int *src);
+void qthread_readFE(qthread_t * me, int *dest, int *src);
 void qthread_readFE_size(qthread_t * t, char *dest, char *src,
 			 const size_t bytes);
 
@@ -137,9 +132,13 @@ void qthread_readFE_size(qthread_t * t, char *dest, char *src,
  * These are atomic and functional, but do not have the same semantics as full
  * FEB locking/unlocking (for example, unlocking cannot block, and lock ranges
  * are not supported), however because of this, they have lower overhead.
+ *
+ * These functions take a qthread_t pointer as an argument. If this is called
+ * from somewhere other than a qthread, use NULL for the t argument. If you
+ * have lost your qthread_t pointer, it can be reclaimed using qthread_self().
  */
-int qthread_lock(qthread_t * t, void *a);
-int qthread_unlock(qthread_t * t, void *a);
+int qthread_lock(qthread_t * me, void *a);
+int qthread_unlock(qthread_t * me, void *a);
 
 #ifdef __cplusplus
 }
