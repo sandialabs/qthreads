@@ -90,6 +90,11 @@ void qthread_fill(qthread_t * t, char *dest, const size_t bytes);
  *	writeEF(t, &dest, src)
  * is roughly equivalent to
  *	writeEF_size(t, &dest, &src, sizeof(int))
+ *
+ * The semantics of writeEF are:
+ * 1 - destination's FEB state must be "empty"
+ * 2 - data is copied from src to destination
+ * 3 - the destination's FEB state get changed from empty to full
  */
 void qthread_writeEF(qthread_t * t, int *dest, int src);
 void qthread_writeEF_size(qthread_t * t, char *dest, char *src,
@@ -102,6 +107,10 @@ void qthread_writeEF_size(qthread_t * t, char *dest, char *src,
  *	readFF(t, &dest, src)
  * is roughly equivalent to
  *	readFF_size(t, &dest, &src, sizeof(int))
+ *
+ * The semantics of readFF are:
+ * 1 - src's FEB state must be "full"
+ * 2 - data is copied from src to destination
  */
 void qthread_readFF(qthread_t * t, int *dest, int *src);
 void qthread_readFF_size(qthread_t * t, char *dest, char *src,
@@ -113,6 +122,11 @@ void qthread_readFF_size(qthread_t * t, char *dest, char *src,
  *	readFE(t, &dest, src)
  * is roughly equivalent to
  *	readFE_size(t, &dest, &src, sizeof(int))
+ *
+ * The semantics of readFE are:
+ * 1 - src's FEB state must be "full"
+ * 2 - data is copied from src to destination
+ * 3 - the src's FEB bits get changed from full to empty
  */
 void qthread_readFE(qthread_t * t, int *dest, int *src);
 void qthread_readFE_size(qthread_t * t, char *dest, char *src,
