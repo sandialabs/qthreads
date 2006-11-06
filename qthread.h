@@ -9,6 +9,7 @@
 extern "C"
 {
 #endif
+
 typedef struct qthread_s qthread_t;
 
 /* for convenient arguments to qthread_fork */
@@ -76,15 +77,14 @@ void qthread_join(qthread_t * me, qthread_t * waitfor);
 /* functions to implement FEB locking/unlocking
  *
  * These are the FEB functions. All but empty/fill have the potential of
- * blocking until the corresponding precondition is met. All FEB blocking is
- * done on a byte-by-byte basis, which means that every single address *could*
- * have a lock associated with it. Memory is assumed to be full unless
- * otherwise asserted, and as such memory that is full and does not have
- * dependencies (i.e. no threads are waiting for it to become empty) does not
- * require state data to be stored. It is expected that while there may be
- * locks instantiated at one time or another for a very large number of
- * addresses in the system, relatively few will be in a non-default (full, no
- * waiters) state at any one time.
+ * blocking until the corresponding precondition is met. All FEB
+ * blocking/reading/writing is done on a machine-word basis. Memory is assumed
+ * to be full unless otherwise asserted, and as such memory that is full and
+ * does not have dependencies (i.e. no threads are waiting for it to become
+ * empty) does not require state data to be stored. It is expected that while
+ * there may be locks instantiated at one time or another for a very large
+ * number of addresses in the system, relatively few will be in a non-default
+ * (full, no waiters) state at any one time.
  */
 
 /* The empty/fill functions merely assert the empty or full state of the given
@@ -92,54 +92,44 @@ void qthread_join(qthread_t * me, qthread_t * waitfor);
 void qthread_empty(qthread_t * me, void *dest, const size_t bytes);
 void qthread_fill(qthread_t * me, void *dest, const size_t bytes);
 
-/* These functions wait for memory to become empty, and then fill it. When
+/* This function waits for memory to become empty, and then fills it. When
  * memory becomes empty, only one thread blocked like this will be awoken. Data
  * is read from src and written to dest.
- *	writeEF(t, &dest, src)
- * is roughly equivalent to
- *	writeEF_size(t, &indent: Standard input:148: Error:Stmt nesting error.
-dest, &src, sizeof(int))
  *
  * The semantics of writeEF are:
  * 1 - destination's FEB state must be "empty"
  * 2 - data is copied from src to destination
  * 3 - the destination's FEB state get changed from empty to full
  */
-void qthread_writeEF(qthread_t * me, void * dest, const void * src);
+void qthread_writeEF(qthread_t * me, void *dest, const void *src);
 
-/* These functions wait for memory to become full, and then read it and leave
+/* This function waits for memory to become full, and then reads it and leaves
  * the memory as full. When memory becomes full, all threads waiting for it to
  * become full with a readFF will receive the value at once and will be queued
  * to run. Data is read from src and stored in dest.
- *	readFF(t, &dest, src)
- * is roughly equivalent to
- *	readFF_size(t, &dest, &src, sizeof(int))
  *
  * The semantics of readFF are:
  * 1 - src's FEB state must be "full"
  * 2 - data is copied from src to destination
  */
-void qthread_readFF(qthread_t * me, void * dest, void * src);
+void qthread_readFF(qthread_t * me, void *dest, void *src);
 
 /* These functions wait for memory to become full, and then empty it. When
  * memory becomes full, only one thread blocked like this will be awoken. Data
  * is read from src and written to dest.
- *	readFE(t, &dest, src)
- * is roughly equivalent to
- *	readFE_size(t, &dest, &src, sizeof(int))
  *
  * The semantics of readFE are:
  * 1 - src's FEB state must be "full"
  * 2 - data is copied from src to destination
  * 3 - the src's FEB bits get changed from full to empty when the data is copied
  */
-void qthread_readFE(qthread_t * me, void * dest, void * src);
+void qthread_readFE(qthread_t * me, void *dest, void *src);
 
 /* functions to implement FEB-ish locking/unlocking
  *
  * These are atomic and functional, but do not have the same semantics as full
- * FEB locking/unlocking (for example, unlocking cannot block, and lock ranges
- * are not supported), however because of this, they have lower overhead.
+ * FEB locking/unlocking (namely, unlocking cannot block), however because of
+ * this, they have lower overhead.
  *
  * These functions take a qthread_t pointer as an argument. If this is called
  * from somewhere other than a qthread, use NULL for the t argument. If you
