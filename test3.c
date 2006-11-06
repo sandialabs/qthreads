@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include "qthread.h"
 
-static int x = 0;
+static int x __attribute__ ((aligned(8)));
 static int id = 1;
 static int readout = 0;
 
@@ -16,7 +16,7 @@ void consumer(qthread_t * t)
     me = id++;
     qthread_unlock(t, &id);
 
-    qthread_readFE_size(t, (char*)&readout, (char*)&x, sizeof(me));
+    qthread_readFE(t, &readout, &x);
 }
 
 void producer(qthread_t * t)
@@ -28,13 +28,14 @@ void producer(qthread_t * t)
     me = id++;
     qthread_unlock(t, &id);
 
-    qthread_writeEF_size(t, (char*)&x, (char*)&data, sizeof(me));
+    qthread_writeEF(t, &x, &data);
 }
 
 int main(int argc, char *argv[])
 {
     qthread_t *t;
 
+    x = 0;
     qthread_init(3);
 
     printf("Initial value of x: %i\n", x);

@@ -68,7 +68,7 @@ AC_DEFINE(PTHREAD_MUTEX_SMALL_ENOUGH, 1, [this signifies that pthread_mutex_t is
 AC_FUNC_MALLOC
 AC_FUNC_VPRINTF
 AC_FUNC_MMAP
-AC_CHECK_FUNCS([strtol floor memset munmap])
+AC_CHECK_FUNCS([strtol floor memset munmap memcpy])
 AC_CHECK_FUNCS([getcontext swapcontext makecontext], ac_cv_context_funcs=yes, ac_cv_context_funcs=no)
 
 if test "$ac_cv_context_funcs" == "yes" ; then

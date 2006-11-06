@@ -1,5 +1,5 @@
 lib_LTLIBRARIES = libqthread.la
-pkginclude_HEADERS = qthread.h qalloc.h
+pkginclude_HEADERS = qthread.h qalloc.h qthread-int.h
 
 libqthread_la_SOURCES = qthread.c qalloc.c
 libqthread_la_LDFLAGS = -version-info 1:1:0 -no-undefined

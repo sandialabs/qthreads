@@ -3,14 +3,25 @@
 
 #include <pthread.h>		       /* included here only as a convenience */
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <qthread-int.h>	       /* for uint32_t and uint64_t */
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 typedef struct qthread_s qthread_t;
 
 /* for convenient arguments to qthread_fork */
 typedef void (*qthread_f) (qthread_t * t);
+
+/* FEB locking only works on aligned addresses. On 32-bit architectures, this
+ * isn't too much of an inconvenience. On 64-bit architectures, it's a pain in
+ * the BUT! This is here to try and help a little bit. */
+#ifdef __LP64__
+typedef uint64_t aligned_t;
+#else
+typedef uint32_t aligned_t;
+#endif
 
 /* use this function to initialize the qthreads environment before spawning any
  * qthreads. The argument to this function specifies the number of pthreads
@@ -40,9 +51,11 @@ qthread_t *qthread_self(void);
  * (otherwise its memory will not be free'd). The qthread_fork_to* functions
  * spawn the thread to a specific shepherd */
 qthread_t *qthread_fork(qthread_f f, void *arg);
-qthread_t *qthread_fork_to(qthread_f f, void *arg, const unsigned int shepherd);
+qthread_t *qthread_fork_to(qthread_f f, void *arg,
+			   const unsigned int shepherd);
 void qthread_fork_detach(qthread_f f, void *arg);
-void qthread_fork_to_detach(qthread_f f, void *arg, const unsigned int shepherd);
+void qthread_fork_to_detach(qthread_f f, void *arg,
+			    const unsigned int shepherd);
 
 /* these are accessor functions for use by the qthreads to retrieve information
  * about themselves */
@@ -76,24 +89,23 @@ void qthread_join(qthread_t * me, qthread_t * waitfor);
 
 /* The empty/fill functions merely assert the empty or full state of the given
  * range of addresses */
-void qthread_empty(qthread_t * me, char *dest, const size_t bytes);
-void qthread_fill(qthread_t * me, char *dest, const size_t bytes);
+void qthread_empty(qthread_t * me, void *dest, const size_t bytes);
+void qthread_fill(qthread_t * me, void *dest, const size_t bytes);
 
 /* These functions wait for memory to become empty, and then fill it. When
  * memory becomes empty, only one thread blocked like this will be awoken. Data
  * is read from src and written to dest.
  *	writeEF(t, &dest, src)
  * is roughly equivalent to
- *	writeEF_size(t, &dest, &src, sizeof(int))
+ *	writeEF_size(t, &indent: Standard input:148: Error:Stmt nesting error.
+dest, &src, sizeof(int))
  *
  * The semantics of writeEF are:
  * 1 - destination's FEB state must be "empty"
  * 2 - data is copied from src to destination
  * 3 - the destination's FEB state get changed from empty to full
  */
-void qthread_writeEF(qthread_t * me, int *dest, int src);
-void qthread_writeEF_size(qthread_t * me, char *dest, char *src,
-			  const size_t bytes);
+void qthread_writeEF(qthread_t * me, void * dest, const void * src);
 
 /* These functions wait for memory to become full, and then read it and leave
  * the memory as full. When memory becomes full, all threads waiting for it to
@@ -107,9 +119,7 @@ void qthread_writeEF_size(qthread_t * me, char *dest, char *src,
  * 1 - src's FEB state must be "full"
  * 2 - data is copied from src to destination
  */
-void qthread_readFF(qthread_t * me, int *dest, int *src);
-void qthread_readFF_size(qthread_t * me, char *dest, char *src,
-			 const size_t bytes);
+void qthread_readFF(qthread_t * me, void * dest, void * src);
 
 /* These functions wait for memory to become full, and then empty it. When
  * memory becomes full, only one thread blocked like this will be awoken. Data
@@ -123,9 +133,7 @@ void qthread_readFF_size(qthread_t * me, char *dest, char *src,
  * 2 - data is copied from src to destination
  * 3 - the src's FEB bits get changed from full to empty when the data is copied
  */
-void qthread_readFE(qthread_t * me, int *dest, int *src);
-void qthread_readFE_size(qthread_t * t, char *dest, char *src,
-			 const size_t bytes);
+void qthread_readFE(qthread_t * me, void * dest, void * src);
 
 /* functions to implement FEB-ish locking/unlocking
  *
