@@ -11,6 +11,7 @@ extern "C"
 #endif
 
 typedef struct qthread_s qthread_t;
+typedef unsigned char shepherd_id_t;	/* doubt we'll run more than 255 shepherds */
 
 /* for convenient arguments to qthread_fork */
 typedef void (*qthread_f) (qthread_t * me);
@@ -54,15 +55,16 @@ qthread_t *qthread_self(void);
  * functions spawn the thread to a specific shepherd */
 qthread_t *qthread_fork(qthread_f f, void *arg);
 qthread_t *qthread_fork_to(qthread_f f, void *arg,
-			   const unsigned int shepherd);
+			   const shepherd_id_t shepherd);
 void qthread_fork_detach(qthread_f f, void *arg);
 void qthread_fork_to_detach(qthread_f f, void *arg,
-			    const unsigned int shepherd);
+			    const shepherd_id_t shepherd);
 
 /* these are accessor functions for use by the qthreads to retrieve information
  * about themselves */
 unsigned qthread_id(qthread_t * t);
 void *qthread_arg(qthread_t * t);
+shepherd_id_t qthread_shep(qthread_t * t);
 
 /* This is the join function, which will only return once the specified thread
  * has finished executing.

@@ -131,7 +131,6 @@
 typedef struct qthread_lock_s qthread_lock_t;
 typedef struct qthread_shepherd_s qthread_shepherd_t;
 typedef struct qthread_queue_s qthread_queue_t;
-typedef unsigned char shepherd_id_t;	/* doubt we'll run more than 255 shepherds */
 
 struct qthread_s
 {
@@ -246,7 +245,6 @@ static cp_hashtable *p_to_shep = NULL;
 static qlib_t *qlib = NULL;
 
 /* Internal functions */
-static void *qthread_shepherd(void *arg);
 static void qthread_wrapper(void *arg);
 
 static void qthread_FEBlock_delete(qthread_addrstat_t * m);
@@ -309,10 +307,6 @@ static inline unsigned qthread_internal_atomic_check(unsigned *x,
 }				       /*}}} */
 #endif
 
-/* the qthread_shepherd() is the pthread responsible for actually
- * executing the work units
- */
-
 /*#define QTHREAD_DEBUG 1*/
 /* for debugging */
 #ifdef QTHREAD_DEBUG
@@ -336,7 +330,10 @@ static inline void qthread_debug(char *format, ...)
 #define qthread_debug(...) do{ }while(0)
 #endif
 
-/* this function is the workhorse of the library: this is the function that
+/* the qthread_shepherd() is the pthread responsible for actually
+ * executing the work units
+ *
+ * this function is the workhorse of the library: this is the function that
  * gets spawned several times. */
 static void *qthread_shepherd(void *arg)
 {				       /*{{{ */
@@ -1778,4 +1775,9 @@ unsigned qthread_id(qthread_t * t)
 void *qthread_arg(qthread_t * t)
 {				       /*{{{ */
     return t->arg;
+}				       /*}}} */
+
+shepherd_id_t qthread_shep(qthread_t * t)
+{				       /*{{{ */
+    return t->shepherd;
 }				       /*}}} */
