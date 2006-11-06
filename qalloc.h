@@ -6,6 +6,10 @@
 #include <sys/types.h>
 #include <unistd.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct mapinfo_s;
 struct dynmapinfo_s;
 
@@ -59,5 +63,9 @@ void *qalloc_malloc(void *map, size_t size);
 void qalloc_statfree(void *block, struct mapinfo_s *m);
 void qalloc_dynfree(void *block, struct dynmapinfo_s *m);
 void qalloc_free(void *block, void *m);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

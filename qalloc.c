@@ -20,7 +20,7 @@
 #warning The pthread_mutex_t structure is either too big or hasn't been checked. If you're compiling by hand, you can probably ignore this warning, or define PTHREAD_MUTEX_SMALL_ENOUGH to make it go away.
 #endif
 #if defined(__linux__) && !defined(_GNU_SOURCE)
-#error On Linux you must compile this code with _GNU_SOURCE defined! You will probably see several errors about fstat64 and/or O_NOATIME and such, otherwise.
+#error On Linux you must compile this code with _GNU_SOURCE defined! You will probably see several errors about fstat64 and such, otherwise.
 #endif
 
 /* The pads and bitmaps in these two datastructures are where they are (namely,
@@ -32,11 +32,11 @@
 
 #define SMALLBLOCK_SLICE_SIZE 64
 #define SMALLBLOCK_SLICE_COUNT (1920/SMALLBLOCK_SLICE_SIZE)
-#define SMALLBLOCK_BITMAP_LEN ((int)ceil((SMALLBLOCK_SLICE_COUNT)/8.0))
+#define SMALLBLOCK_BITMAP_LEN (SMALLBLOCK_SLICE_COUNT/8)+(((SMALLBLOCK_SLICE_COUNT%8)>0)?1:0)
 typedef char smallslice_t[SMALLBLOCK_SLICE_SIZE];
 typedef struct smallblock_s
 {
-    void *next;
+    struct smallblock_s *next;
     pthread_mutex_t lock __attribute__ ((packed));
     unsigned char bitmap[SMALLBLOCK_BITMAP_LEN] __attribute__ ((packed));
     char pad[128 - SMALLBLOCK_BITMAP_LEN - sizeof(void *) -
@@ -46,10 +46,10 @@ typedef struct smallblock_s
 smallblock_t;
 
 #define BIGBLOCK_ENTRY_COUNT (1920/(sizeof(void*)+sizeof(unsigned int)))
-#define BIGBLOCK_BITMAP_LEN ((int)ceil((BIGBLOCK_ENTRY_COUNT)/8.0))
+#define BIGBLOCK_BITMAP_LEN (BIGBLOCK_ENTRY_COUNT/8)+(((BIGBLOCK_ENTRY_COUNT%8)>0)?1:0)
 typedef struct bigblock_header_s
 {
-    void *next;
+    struct bigblock_header_s *next;
     pthread_mutex_t lock __attribute__ ((packed));
     unsigned char bitmap[BIGBLOCK_BITMAP_LEN] __attribute__ ((packed));
     char pad[128 - BIGBLOCK_BITMAP_LEN - sizeof(void *) -
@@ -95,11 +95,12 @@ static struct dynmapinfo_s *dynmmaps = NULL;
 # define fstat fstat64
 # define lseek lseek64
 typedef struct stat64 statstruct_t;
-
 #elif defined(__APPLE__)
-# define O_NOATIME 0
 typedef struct stat statstruct_t;
+#endif
 
+#ifndef O_NOATIME
+# define O_NOATIME 0
 #endif
 
 static inline void *qalloc_getfile(const off_t filesize, void *addr,
@@ -140,9 +141,14 @@ static inline void *qalloc_getfile(const off_t filesize, void *addr,
 	    abort();
 	}
     } else if (st.st_size != filesize) {
+#ifdef PRIuMAX
 	fprintf(stderr,
 		"file is the wrong size! Wanted %" PRIuMAX " but got %"
 		PRIuMAX "\n", (uintmax_t) filesize, (uintmax_t) st.st_size);
+#else
+	fprintf(stderr, "file is the wrong size! Wanted %lu but got %lu\n",
+		(unsigned long)filesize, (unsigned long)st.st_size);
+#endif
 	abort();
     }
     rcount = read(fd, set, sizeof(void *));
@@ -180,7 +186,7 @@ void *qalloc_makestatmap(const off_t filesize, void *addr,
 	void ***strms;
 	struct mapinfo_s *mi;
 
-	mi = malloc(sizeof(struct mapinfo_s));
+	mi = (struct mapinfo_s *)malloc(sizeof(struct mapinfo_s));
 	mi->dynflag = 0;
 	/* never mmapped anything before */
 	mi->map = ptr[0] = ret;
@@ -188,7 +194,7 @@ void *qalloc_makestatmap(const off_t filesize, void *addr,
 	itemsize = (((itemsize - 1) / 4) + 1) * 4;
 	ptr[1] = (void *)itemsize;
 	ptr[2] = (void *)streams;
-	strms = malloc(sizeof(void **) * streams);
+	strms = (void ***)malloc(sizeof(void **) * streams);
 	mi->size = (size_t) filesize;
 	mi->streams = (void ***)(ptr + 3);
 	mi->stream_locks = (pthread_mutex_t *) (ptr + 3 + streams);
@@ -198,21 +204,24 @@ void *qalloc_makestatmap(const off_t filesize, void *addr,
 	/* initialize the streams */
 	i = 0;
 	for (i = 0; i < streams; ++i) {
-	    strms[i] = ptr[3 + i] = (void *)(base + (itemsize * i));
+	    ptr[3 + i] = (void *)(base + (itemsize * i));
+	    strms[i] = (void **)(base + (itemsize * i));
 	    assert(pthread_mutex_init(mi->stream_locks + i, NULL) == 0);
 	}
 	base += itemsize * streams;
 	/* now fill in the free lists */
 	while (base + (itemsize * streams) < ((char *)ret) + filesize) {
 	    for (i = 0; i < streams; ++i) {
-		strms[i] = *strms[i] = base + (itemsize * i);
+		*strms[i] = base + (itemsize * i);
+		strms[i] = (void **)(base + (itemsize * i));
 	    }
 	    base += itemsize * streams;
 	}
 	for (i = 0; i < streams; ++i) {
 	    if (base + (itemsize * i) >= ((char *)ret) + filesize)
 		break;
-	    strms[i] = *strms[i] = base + (itemsize * i);
+	    *strms[i] = base + (itemsize * i);
+	    strms[i] = (void **)(base + (itemsize * i));
 	}
 	free(strms);
 	/* and just for safety's sake, let's sync it to disk */
@@ -229,7 +238,7 @@ void *qalloc_makestatmap(const off_t filesize, void *addr,
     } else {
 	/* reloading an existing file in the correct place */
 	struct mapinfo_s *m;
-	m = malloc(sizeof(struct mapinfo_s));
+	m = (struct mapinfo_s *)malloc(sizeof(struct mapinfo_s));
 	m->dynflag = 0;
 	m->map = ret;
 	m->size = (size_t) filesize;
@@ -240,6 +249,8 @@ void *qalloc_makestatmap(const off_t filesize, void *addr,
 	mmaps = m;
 	return m;
     }
+    /* this will never happen, it's just to make pgCC shut up */
+    return NULL;
 }				       /*}}} */
 
 void *qalloc_makedynmap(const off_t filesize, void *addr,
@@ -255,7 +266,7 @@ void *qalloc_makedynmap(const off_t filesize, void *addr,
 	size_t i;
 	struct dynmapinfo_s *mi;
 
-	mi = malloc(sizeof(struct dynmapinfo_s));
+	mi = (struct dynmapinfo_s *)malloc(sizeof(struct dynmapinfo_s));
 	mi->dynflag = 1;
 	/* save the base address, so relocation can be detected (or corrected) */
 	ptr[0] = mi->map = ret;
@@ -289,7 +300,7 @@ void *qalloc_makedynmap(const off_t filesize, void *addr,
     } else {
 	/* reloading an existing file in the correct place */
 	struct dynmapinfo_s *m;
-	m = malloc(sizeof(struct dynmapinfo_s));
+	m = (struct dynmapinfo_s *)malloc(sizeof(struct dynmapinfo_s));
 	m->dynflag = 1;
 	m->map = ret;
 	m->size = (size_t) filesize;
@@ -306,6 +317,8 @@ void *qalloc_makedynmap(const off_t filesize, void *addr,
 	dynmmaps = m;
 	return m;
     }
+    /* this will never happen, it's just to make pgCC shut up */
+    return NULL;
 }				       /*}}} */
 
 void *qalloc_loadmap(const char *filename)
@@ -384,7 +397,7 @@ void *qalloc_statmalloc(struct mapinfo_s *m)
     while (ret == NULL) {
 	assert(pthread_mutex_lock(m->stream_locks + stream) == 0);
 	ret = m->streams[stream];
-	m->streams[stream] = *(m->streams[stream]);
+	m->streams[stream] = (void **)(*(m->streams[stream]));
 	assert(pthread_mutex_unlock(m->stream_locks + stream) == 0);
 	if (ret == NULL) {
 	    /* no more memory left in this stream */
@@ -495,7 +508,7 @@ static inline size_t qalloc_findmark_bits(unsigned char *array, size_t a_len,
 					  size_t count)
 {				       /*{{{ */
     size_t byte = 0;
-    size_t startbit = -1;
+    size_t startbit = (size_t) - 1;	/* all FF's, no matter what size architecture */
 
     if (count < 8) {
 	for (byte = 0; byte < a_len; ++byte) {
@@ -503,9 +516,9 @@ static inline size_t qalloc_findmark_bits(unsigned char *array, size_t a_len,
 	    char bit = 0;
 
 	    while (!mask & 0x1) {
-		char xor = mask ^ array[byte];
+		char xorbyte = mask ^ array[byte];
 
-		if ((array[byte] & xor) == array[byte]) {
+		if ((array[byte] & xorbyte) == array[byte]) {
 		    startbit = byte * 8 + bit;
 		    qalloc_markbits(array, startbit, startbit + count - 1);
 		    return startbit;
@@ -514,7 +527,7 @@ static inline size_t qalloc_findmark_bits(unsigned char *array, size_t a_len,
 		bit++;
 	    }
 	}
-	return -1;
+	return (size_t) - 1;	       /* all FF's, no matter what size architecture */
     } else {
 	long int left_to_find;
 
@@ -557,7 +570,7 @@ static inline size_t qalloc_findmark_bits(unsigned char *array, size_t a_len,
 		}
 	    }
 	}
-	return -1;
+	return (size_t) -1;/* all FF's, no matter what size architecture */
       stagetwo:
 	byte++;
 	/* step 2: make sure we have enough blank bytes next */
@@ -571,7 +584,7 @@ static inline size_t qalloc_findmark_bits(unsigned char *array, size_t a_len,
 		goto stageone;
 	    }
 	}
-	return -1;
+	return (size_t)-1;/* all FF's, no matter what size architecture */
       stagethree:
 	byte++;
 	/* step 3: make sure the last byte has enough blanks */
@@ -586,9 +599,9 @@ static inline size_t qalloc_findmark_bits(unsigned char *array, size_t a_len,
     }
 }				       /*}}} */
 
-static inline smallblock_t *qalloc_find_smallblock_entry(struct dynmapinfo_s *m,
-						   size_t stream,
-						   size_t * offset)
+static inline smallblock_t *qalloc_find_smallblock_entry(struct dynmapinfo_s
+							 *m, size_t stream,
+							 size_t * offset)
 {				       /*{{{ */
     smallblock_t *sb;
 
@@ -764,9 +777,9 @@ void *qalloc_dynmalloc(struct dynmapinfo_s *m, size_t size)
 void *qalloc_malloc(void *mapinfo, size_t size)
 {				       /*{{{ */
     if (((struct mapinfo_s *)mapinfo)->dynflag == 0) {
-	return qalloc_statmalloc(mapinfo);
+	return qalloc_statmalloc((struct mapinfo_s *)mapinfo);
     } else {
-	return qalloc_dynmalloc(mapinfo, size);
+	return qalloc_dynmalloc((struct dynmapinfo_s *)mapinfo, size);
     }
 }				       /*}}} */
 
@@ -861,9 +874,9 @@ void qalloc_dynfree(void *block, struct dynmapinfo_s *m)
 void qalloc_free(void *block, void *mapinfo)
 {				       /*{{{ */
     if (((struct mapinfo_s *)mapinfo)->dynflag == 0) {
-	qalloc_statfree(block, mapinfo);
+	qalloc_statfree(block, (struct mapinfo_s *)mapinfo);
     } else {
-	qalloc_dynfree(block, mapinfo);
+	qalloc_dynfree(block, (struct dynmapinfo_s *)mapinfo);
     }
 }				       /*}}} */
 
