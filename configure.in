@@ -43,6 +43,7 @@ AC_CHECK_LIB([cprops], [cp_hashtable_create], , AC_MSG_ERROR([Need libcprops 0.1
 # Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([stdlib.h fcntl.h ucontext.h])
+AX_CREATE_STDINT_H(qthread-int.h)
 
 case "$host" in
     *-linux-*)
