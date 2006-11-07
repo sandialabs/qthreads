@@ -11,7 +11,7 @@ extern "C"
 #endif
 
 typedef struct qthread_s qthread_t;
-typedef unsigned char shepherd_id_t;	/* doubt we'll run more than 255 shepherds */
+typedef unsigned char qthread_shepherd_id_t;	/* doubt we'll run more than 255 shepherds */
 
 /* for convenient arguments to qthread_fork */
 typedef void (*qthread_f) (qthread_t * me);
@@ -28,7 +28,7 @@ typedef uint32_t aligned_t;
 /* use this function to initialize the qthreads environment before spawning any
  * qthreads. The argument to this function specifies the number of pthreads
  * that will be spawned to shepherd the qthreads. */
-int qthread_init(int nkthreads);
+int qthread_init(const int nkthreads);
 
 /* use this function to clean up the qthreads environment after execution of
  * the program is finished. This function will terminate any currently running
@@ -53,18 +53,18 @@ qthread_t *qthread_self(void);
  * qthread cannot be joined, but an un-detached qthread MUST be joined
  * (otherwise not all of its memory will be free'd). The qthread_fork_to*
  * functions spawn the thread to a specific shepherd */
-qthread_t *qthread_fork(qthread_f f, void *arg);
-qthread_t *qthread_fork_to(qthread_f f, void *arg,
-			   const shepherd_id_t shepherd);
-void qthread_fork_detach(qthread_f f, void *arg);
-void qthread_fork_to_detach(qthread_f f, void *arg,
-			    const shepherd_id_t shepherd);
+qthread_t *qthread_fork(const qthread_f f, const void *arg);
+qthread_t *qthread_fork_to(const qthread_f f, const void *arg,
+			   const qthread_shepherd_id_t shepherd);
+void qthread_fork_detach(const qthread_f f, const void *arg);
+void qthread_fork_to_detach(const qthread_f f, const void *arg,
+			    const qthread_shepherd_id_t shepherd);
 
 /* these are accessor functions for use by the qthreads to retrieve information
  * about themselves */
-unsigned qthread_id(qthread_t * t);
-void *qthread_arg(qthread_t * t);
-shepherd_id_t qthread_shep(qthread_t * t);
+unsigned qthread_id(const qthread_t * t);
+void *qthread_arg(const qthread_t * t);
+qthread_shepherd_id_t qthread_shep(const qthread_t * t);
 
 /* This is the join function, which will only return once the specified thread
  * has finished executing.
@@ -97,8 +97,8 @@ void qthread_join(qthread_t * me, qthread_t * waitfor);
  * argument. The reason for this is memory pooling; memory is allocated on a
  * per-shepherd basis (to avoid needing to lock the memory pool). Anyway, if
  * you pass it a NULL qthread_t, it will still work. */
-void qthread_empty(qthread_t * me, void *dest, const size_t bytes);
-void qthread_fill(qthread_t * me, void *dest, const size_t bytes);
+void qthread_empty(qthread_t * me, const void *dest, const size_t bytes);
+void qthread_fill(qthread_t * me, const void *dest, const size_t bytes);
 
 /* NOTE!!!!!!!!!!!
  * Reads and writes operate on machine-word-size segments of memory. That is,
@@ -128,6 +128,7 @@ void qthread_fill(qthread_t * me, void *dest, const size_t bytes);
  * (which, conveniently, returns NULL if you aren't a qthread).
  */
 void qthread_writeEF(qthread_t * me, void *dest, const void *src);
+void qthread_writeEF_const(qthread_t * me, void *dest, const aligned_t src);
 
 /* This function waits for memory to become full, and then reads it and leaves
  * the memory as full. When memory becomes full, all threads waiting for it to
@@ -171,8 +172,8 @@ void qthread_readFE(qthread_t * me, void *dest, void *src);
  * from somewhere other than a qthread, use NULL for the me argument. If you
  * have lost your qthread_t pointer, it can be reclaimed using qthread_self().
  */
-int qthread_lock(qthread_t * me, void *a);
-int qthread_unlock(qthread_t * me, void *a);
+int qthread_lock(qthread_t * me, const void *a);
+int qthread_unlock(qthread_t * me, const void *a);
 
 #ifdef __cplusplus
 }
