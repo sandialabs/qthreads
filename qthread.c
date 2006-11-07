@@ -410,11 +410,11 @@ static void *qthread_shepherd(void *arg)
 		    if (t->detached == 0) {
 			/* we can remove the stack and the context... */
 			if (t->context) {
-			    FREE_CONTEXT(shep, t->context);
+			    FREE_CONTEXT(me, t->context);
 			    t->context = NULL;
 			}
 			if (t->stack != NULL) {
-			    FREE_STACK(shep, t->stack);
+			    FREE_STACK(me, t->stack);
 			    t->stack = NULL;
 			}
 			/* but we rely on the joiner to clean up the structure
