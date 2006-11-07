@@ -857,11 +857,14 @@ static void qthread_wrapper(void *arg)
 
     qthread_debug("qthread_wrapper(): f=%p arg=%p completed.\n", t->f,
 		  t->arg);
-#ifndef HAVE_CONTEXT_FUNCS
+#if !defined(HAVE_CONTEXT_FUNCS) || defined(NEED_RLIMIT)
     /* without a built-in make/get/swapcontext, we're relying on the portable
      * one in context.c (stolen from libtask). unfortunately, this home-made
      * context stuff does not allow us to set up a uc_link pointer that will be
-     * returned to once qthread_wrapper returns, so we have to do it by hand:
+     * returned to once qthread_wrapper returns, so we have to do it by hand.
+     *
+     * We also have to do it by hand if the context switch requires a
+     * stack-size modification.
      */
     qthread_back_to_master(t);
 #endif
