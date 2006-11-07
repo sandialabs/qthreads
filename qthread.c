@@ -408,7 +408,18 @@ static void *qthread_shepherd(void *arg)
 			 me->kthread_index, t);
 		    t->thread_state = QTHREAD_STATE_DONE;
 		    if (t->detached == 0) {
-			/* rely on the joiner to clean up this memory */
+			/* we can remove the stack and the context... */
+			if (t->context) {
+			    FREE_CONTEXT(shep, t->context);
+			    t->context = NULL;
+			}
+			if (t->stack != NULL) {
+			    FREE_STACK(shep, t->stack);
+			    t->stack = NULL;
+			}
+			/* but we rely on the joiner to clean up the structure
+			 * itself (why? because there's a qthread_t handle out
+			 * there that the user is responsible for) */
 			qthread_unlock(t, t);
 		    } else {
 			qthread_thread_free(t);
@@ -692,7 +703,9 @@ static inline void qthread_thread_free(qthread_t * t)
     assert(t != NULL);
 
     shep = &(qlib->kthreads[t->shepherd]);
-    FREE_CONTEXT(shep, t->context);
+    if (t->context) {
+	FREE_CONTEXT(shep, t->context);
+    }
     if (t->stack != NULL) {
 	FREE_STACK(shep, t->stack);
     }
