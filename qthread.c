@@ -132,7 +132,7 @@
     if (s != d) { \
 	fprintf(stderr, \
 		"WARNING: " f ": unaligned address %p ... assuming %p\n", \
-		d, s); \
+		(void *) d, (void *) s); \
     } \
 } while(0)
 
@@ -145,7 +145,7 @@ struct qthread_s
 {
     unsigned int thread_id;
     unsigned char thread_state;
-    unsigned char detached:1;
+    unsigned int detached:1;
 
     /* the pthread we run on */
     qthread_shepherd_id_t shepherd;

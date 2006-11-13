@@ -669,7 +669,7 @@ void *qalloc_dynmalloc(struct dynmapinfo_s *m, size_t size)
 
     original_stream = stream;
     if (size <= 64) {
-	size_t offset;
+	size_t offset = 0;
 	smallblock_t *sb = NULL;
 
 	sb = qalloc_find_smallblock_entry(m, stream, &offset);
@@ -823,7 +823,7 @@ void qalloc_dynfree(void *block, struct dynmapinfo_s *m)
 	pthread_t me = pthread_self();
 	size_t stream = (size_t) me & m->streamcount;
 	bigblock_header_t *bbh;
-	size_t blocks;
+	size_t blocks = 0;
 	int stillLooking = 1;
 
 	assert(pthread_mutex_lock(m->stream_locks + stream) == 0);
