@@ -22,5 +22,7 @@ For information on how to use qthread or qalloc, there is A LOT of information
 in the header files (qthread.h and qalloc.h).
 
 NOTE FOR PGI USERS
-pgcc seems unable to correctly process fancy #define's, so you will need to run
-./configure with CC=pgCC instead.
+pgcc needs the -c9x flag in order to correctly process variadic macros (which
+are used in qthread.c) and the PRIuMAX format definitions (used in qalloc.c).
+Use the CFLAGS variable to add this flag. Note that pgcc's support for the full
+C90/C99 standards is lousy, so most features that COULD be used are avoided.
