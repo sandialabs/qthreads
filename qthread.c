@@ -127,6 +127,15 @@
 #define FREE_ADDRSTAT2(shep, t) free(t)
 #endif
 
+#define ALIGN(d, s, f) do { \
+    s = (aligned_t *) (((size_t) d) & MACHINEMASK); \
+    if (s != d) { \
+	fprintf(stderr, \
+		"WARNING: " f ": unaligned address %p ... assuming %p\n", \
+		dest, startaddr); \
+    } \
+} while(0)
+
 /* internal data structures */
 typedef struct qthread_lock_s qthread_lock_t;
 typedef struct qthread_shepherd_s qthread_shepherd_t;
@@ -1281,12 +1290,7 @@ void qthread_empty(qthread_t * me, const void *dest, const size_t count)
 	size_t i;
 	aligned_t *startaddr;
 
-	startaddr = (aligned_t *) (((size_t) dest) & MACHINEMASK);
-	if (startaddr != dest) {
-	    fprintf(stderr,
-		    "WARNING: emptying unaligned address %p ... assuming %p\n",
-		    dest, startaddr);
-	}
+	ALIGN(dest, startaddr, "qthread_empty()");
 	cp_hashtable_wrlock(qlib->FEBs); {
 	    for (i = 0; i < count; ++i) {
 		m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
@@ -1344,12 +1348,7 @@ void qthread_fill(qthread_t * me, const void *dest, const size_t count)
 	size_t i;
 	aligned_t *startaddr;
 
-	startaddr = (aligned_t *) (((size_t) dest) & MACHINEMASK);
-	if (startaddr != dest) {
-	    fprintf(stderr,
-		    "WARNING: filling unaligned address %p ... assuming %p\n",
-		    dest, startaddr);
-	}
+	ALIGN(dest, startaddr, "qthread_fill()");
 	/* lock hash */
 	cp_hashtable_wrlock(qlib->FEBs); {
 	    for (i = 0; i < count; ++i) {
@@ -1409,13 +1408,7 @@ void qthread_writeEF(qthread_t * me, void *dest, const void *src)
 	aligned_t *alignedaddr;
 
 	qthread_debug("qthread_writeEF(%p, %p, %p): init\n", me, dest, src);
-	alignedaddr = (aligned_t *) (((size_t) dest) & MACHINEMASK);
-	qthread_debug("aligned: %p\n", alignedaddr);
-	if (alignedaddr != dest) {
-	    fprintf(stderr,
-		    "WARNING: filling unaligned address %p ... assuming %p\n",
-		    dest, alignedaddr);
-	}
+	ALIGN(dest, alignedaddr, "qthread_writeEF()");
 	cp_hashtable_wrlock(qlib->FEBs); {
 	    m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
 							(void *)alignedaddr);
@@ -1486,13 +1479,7 @@ void qthread_readFF(qthread_t * me, void *dest, void *src)
 	aligned_t *alignedaddr;
 
 	qthread_debug("qthread_readFF(%p, %p, %p): init\n", me, dest, src);
-	alignedaddr = (aligned_t *) (((size_t) src) & MACHINEMASK);
-	qthread_debug("aligned: %p\n", alignedaddr);
-	if (alignedaddr != src) {
-	    fprintf(stderr,
-		    "WARNING: filling unaligned address %p ... assuming %p\n",
-		    src, alignedaddr);
-	}
+	ALIGN(src, alignedaddr, "qthread_readFF()");
 	cp_hashtable_wrlock(qlib->FEBs); {
 	    m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
 							(void *)alignedaddr);
@@ -1559,13 +1546,7 @@ void qthread_readFE(qthread_t * me, void *dest, void *src)
 	aligned_t *alignedaddr;
 
 	qthread_debug("qthread_readFE(%p, %p, %p): init\n", me, dest, src);
-	alignedaddr = (aligned_t *) (((size_t) src) & MACHINEMASK);
-	qthread_debug("aligned: %p\n", alignedaddr);
-	if (alignedaddr != src) {
-	    fprintf(stderr,
-		    "WARNING: filling unaligned address %p ... assuming %p\n",
-		    src, alignedaddr);
-	}
+	ALIGN(src, alignedaddr, "qthread_readFE()");
 	cp_hashtable_wrlock(qlib->FEBs); {
 	    m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
 							alignedaddr);
