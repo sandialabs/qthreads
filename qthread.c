@@ -1547,7 +1547,7 @@ void qthread_readFF(qthread_t * me, void *dest, void *src)
 	    return;
 	if (m->full != 1) {
 	    X = ALLOC_ADDRRES(me->shepherd);
-	    X->addr = (aligned_t *) & dest;
+	    X->addr = (aligned_t *) dest;
 	    X->waiter = me;
 	    X->next = m->FFQ;
 	    m->FFQ = X;
@@ -1612,7 +1612,7 @@ void qthread_readFE(qthread_t * me, void *dest, void *src)
 	/* by this point m is locked */
 	if (m->full == 0) {	       /* empty, thus, we must block */
 	    X = ALLOC_ADDRRES(me->shepherd);
-	    X->addr = (aligned_t *) & dest;
+	    X->addr = (aligned_t *) dest;
 	    X->waiter = me;
 	    X->next = m->FEQ;
 	    m->FEQ = X;
