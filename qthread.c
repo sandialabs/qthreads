@@ -132,7 +132,7 @@
     if (s != d) { \
 	fprintf(stderr, \
 		"WARNING: " f ": unaligned address %p ... assuming %p\n", \
-		dest, startaddr); \
+		d, s); \
     } \
 } while(0)
 
@@ -1386,9 +1386,60 @@ void qthread_fill(qthread_t * me, const void *dest, const size_t count)
 }				       /*}}} */
 
 /* the way this works is that:
+ * 1 - data is copies from src to destination
+ * 2 - the destination's FEB state gets changed from empty to full
+ */
+
+void qthread_writeF_sub(qthread_t * me)
+{				       /*{{{ */
+    struct qthread_FEB_sub_args *args =
+	(struct qthread_FEB_sub_args *)qthread_arg(me);
+
+    qthread_writeF(me, args->dest, args->src);
+    pthread_mutex_unlock(&args->alldone);
+}				       /*}}} */
+
+void qthread_writeF(qthread_t * me, void *dest, const void *src)
+{				       /*{{{ */
+    if (me != NULL) {
+	qthread_addrstat_t *m;
+	aligned_t *alignedaddr;
+
+	ALIGN(dest, alignedaddr, "qthread_fill_with()");
+	cp_hashtable_wrlock(qlib->FEBs); {	/* lock hash */
+	    m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
+							(void *)alignedaddr);
+	    if (!m) {
+		m = qthread_addrstat_new(me->shepherd);
+		cp_hashtable_put(qlib->FEBs, alignedaddr, m);
+	    }
+	    assert(pthread_mutex_lock(&m->lock) == 0);
+	}
+	cp_hashtable_unlock(qlib->FEBs);	/* unlock hash */
+	/* we have the lock on m, so... */
+	memcpy(dest, src, WORDSIZE);
+	qthread_gotlock_fill(m, alignedaddr, me->shepherd, 0);
+    } else {
+	struct qthread_FEB_sub_args args =
+	    { (void *)src, dest, PTHREAD_MUTEX_INITIALIZER };
+
+	assert(pthread_mutex_lock(&args.alldone) == 0);
+	qthread_fork_detach(qthread_writeF_sub, &args);
+	assert(pthread_mutex_lock(&args.alldone) == 0);
+	assert(pthread_mutex_unlock(&args.alldone) == 0);
+	assert(pthread_mutex_destroy(&args.alldone) == 0);
+    }
+}				       /*}}} */
+
+void qthread_writeF_const(qthread_t * me, void *dest, const aligned_t src)
+{				       /*{{{ */
+    qthread_writeF(me, dest, &src);
+}				       /*}}} */
+
+/* the way this works is that:
  * 1 - destination's FEB state must be "empty"
  * 2 - data is copied from src to destination
- * 3 - the destination's FEB state get changed from empty to full
+ * 3 - the destination's FEB state gets changed from empty to full
  */
 
 static void qthread_writeEF_sub(qthread_t * me)

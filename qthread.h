@@ -120,7 +120,7 @@ void qthread_fill(qthread_t * me, const void *dest, const size_t bytes);
  * The semantics of writeEF are:
  * 1 - destination's FEB state must be "empty"
  * 2 - data is copied from src to destination
- * 3 - the destination's FEB state get changed from empty to full
+ * 3 - the destination's FEB state gets changed from empty to full
  *
  * This function takes a qthread_t pointer as an argument. If this is called
  * from somewhere other than a qthread, use NULL for the me argument. If you
@@ -129,6 +129,24 @@ void qthread_fill(qthread_t * me, const void *dest, const size_t bytes);
  */
 void qthread_writeEF(qthread_t * me, void *dest, const void *src);
 void qthread_writeEF_const(qthread_t * me, void *dest, const aligned_t src);
+
+/* This function is a cross between qthread_fill() and qthread_writeEF(). It
+ * does not wait for memory to become empty, but performs the write and sets
+ * the state to full atomically with respect to other FEB-based actions. Data
+ * is read from src and written to dest.
+ *
+ * The semantics of writeF are:
+ * 1 - data is copied from src to destination
+ * 2 - the destination's FEB state gets set to full
+ *
+ * This function takes a qthread_t pointer as an argument. If this is called
+ * from somewhere other than a qthread, use NULL for the me argument. If you
+ * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
+ * (which, conveniently, returns NULL if you aren't a qthread).
+ */
+
+void qthread_writeF(qthread_t *me, void *dest, const void *src);
+void qthread_writeF_const(qthread_t *me, void *dest, const aligned_t src);
 
 /* This function waits for memory to become full, and then reads it and leaves
  * the memory as full. When memory becomes full, all threads waiting for it to
