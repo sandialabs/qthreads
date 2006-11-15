@@ -299,28 +299,27 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
 #endif
 
 static inline unsigned qthread_internal_atomic_inc(unsigned *x,
-						   pthread_mutex_t * lock,
-						   int inc)
+						   pthread_mutex_t * lock)
 {				       /*{{{ */
     unsigned r;
 
     QTHREAD_LOCK(lock);
     r = *x;
-    *x = *x + inc;
+    *x++;
     QTHREAD_UNLOCK(lock);
     return (r);
 }				       /*}}} */
 
 static inline unsigned qthread_internal_atomic_inc_mod(unsigned *x,
 						       pthread_mutex_t * lock,
-						       int inc, int mod)
+						       int mod)
 {				       /*{{{ */
     unsigned r;
 
     QTHREAD_LOCK(lock);
     r = *x;
-    if (*x + inc < mod) {
-	*x += inc;
+    if (*x + 1 < mod) {
+	*x++;
     } else {
 	*x = 0;
     }
@@ -806,7 +805,7 @@ static inline void qthread_enqueue(qthread_queue_t * q, qthread_t * t)
 
     t->next = NULL;
 
-    if (q->head == NULL) { /* surely then tail is also null; no need to check */
+    if (q->head == NULL) {	       /* surely then tail is also null; no need to check */
 	q->head = t;
 	q->tail = t;
 	QTHREAD_SIGNAL(&q->notempty);
@@ -827,7 +826,7 @@ static inline qthread_t *qthread_dequeue(qthread_queue_t * q)
 
     QTHREAD_LOCK(&q->lock);
 
-    while (q->head == NULL) { /* if head is null, then surely tail is also null */
+    while (q->head == NULL) {	       /* if head is null, then surely tail is also null */
 	QTHREAD_CONDWAIT(&q->notempty, &q->lock);
     }
 
@@ -1013,7 +1012,7 @@ static inline qthread_t *qthread_fork_internal(const qthread_f f,
     /* figure out which queue to put the thread into */
     t->thread_id =
 	qthread_internal_atomic_inc(&qlib->max_thread_id,
-				    &qlib->max_thread_id_lock, 1);
+				    &qlib->max_thread_id_lock);
 
     return t;
 }				       /*}}} */
@@ -1031,7 +1030,7 @@ qthread_t *qthread_fork(const qthread_f f, const void *arg)
 
     shep =
 	qthread_internal_atomic_inc_mod(&qlib->sched_kthread,
-					&qlib->sched_kthread_lock, 1,
+					&qlib->sched_kthread_lock,
 					qlib->nkthreads);
     t = qthread_fork_internal(f, arg, shep);
 
@@ -1053,7 +1052,7 @@ void qthread_fork_detach(const qthread_f f, const void *arg)
 
     shep =
 	qthread_internal_atomic_inc_mod(&qlib->sched_kthread,
-					&qlib->sched_kthread_lock, 1,
+					&qlib->sched_kthread_lock,
 					qlib->nkthreads);
 
     t = qthread_fork_internal(f, arg, shep);
