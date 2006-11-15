@@ -859,23 +859,21 @@ static inline qthread_t *qthread_dequeue_nonblocking(qthread_queue_t * q)
     /* NOTE: it's up to the caller to lock/unlock the queue! */
     qthread_debug("qthread_dequeue_nonblocking(%p,%p): started\n", q, t);
 
-    if ((q->head == NULL) && (q->tail == NULL)) {
+    if (q->head == NULL) {
 	qthread_debug
 	    ("qthread_dequeue_nonblocking(%p,%p): finished (nobody in list)\n",
 	     q, t);
 	return (NULL);
     }
 
+    t = q->head;
     if (q->head != q->tail) {
-	t = q->head;
 	q->head = q->head->next;
-	t->next = NULL;
     } else {
-	t = q->head;
-	q->head = q->head->next;
-	t->next = NULL;
+	q->head = NULL;
 	q->tail = NULL;
     }
+    t->next = NULL;
 
     qthread_debug("qthread_dequeue_nonblocking(%p,%p): finished\n", q, t);
     return (t);
