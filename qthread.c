@@ -806,7 +806,7 @@ static inline void qthread_enqueue(qthread_queue_t * q, qthread_t * t)
 
     t->next = NULL;
 
-    if ((q->head == NULL) && (q->tail == NULL)) {
+    if (q->head == NULL) { /* surely then tail is also null; no need to check */
 	q->head = t;
 	q->tail = t;
 	QTHREAD_SIGNAL(&q->notempty);
@@ -821,13 +821,13 @@ static inline void qthread_enqueue(qthread_queue_t * q, qthread_t * t)
 
 static inline qthread_t *qthread_dequeue(qthread_queue_t * q)
 {				       /*{{{ */
-    qthread_t *t = NULL;
+    qthread_t *t;
 
-    qthread_debug("qthread_dequeue(%p,%p): started\n", q, t);
+    qthread_debug("qthread_dequeue(%p): started\n", q);
 
     QTHREAD_LOCK(&q->lock);
 
-    while ((q->head == NULL) && (q->tail == NULL)) {
+    while (q->head == NULL) { /* if head is null, then surely tail is also null */
 	QTHREAD_CONDWAIT(&q->notempty, &q->lock);
     }
 
@@ -835,16 +835,14 @@ static inline qthread_t *qthread_dequeue(qthread_queue_t * q)
     assert(q->head != NULL);
 #endif
 
+    t = q->head;
     if (q->head != q->tail) {
-	t = q->head;
 	q->head = q->head->next;
-	t->next = NULL;
     } else {
-	t = q->head;
-	q->head = q->head->next;
-	t->next = NULL;
+	q->head = NULL;
 	q->tail = NULL;
     }
+    t->next = NULL;
 
     QTHREAD_UNLOCK(&q->lock);
 
