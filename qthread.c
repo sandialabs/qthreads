@@ -1795,6 +1795,7 @@ int qthread_unlock(qthread_t * t, const void *a)
 		    "that is not locked!\n", (void *)t, a);
 	    abort();
 #endif
+	    cp_hashtable_unlock(qlib->locks);
 	    return 1;
 	}
 	QTHREAD_LOCK(&m->lock);
