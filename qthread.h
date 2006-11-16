@@ -47,18 +47,40 @@ void qthread_yield(qthread_t * me);
  * been lost for some reason */
 qthread_t *qthread_self(void);
 
-/* these are the functions for generating a new qthread. The specified function
- * (the first argument; note that it is a qthread_f and not a qthread_t)
- * will be run to completion. The difference between them is that a detached
- * qthread cannot be joined, but an un-detached qthread MUST be joined
- * (otherwise not all of its memory will be free'd). The qthread_fork_to*
- * functions spawn the thread to a specific shepherd */
+/* these are the functions for generating a new qthread.
+ *
+ * Using qthread_fork() and variants:
+ *
+ *     The specified function (the first argument; note that it is a qthread_f
+ *     and not a qthread_t) will be run to completion. The difference between
+ *     them is that a detached qthread cannot be joined, but an un-detached
+ *     qthread MUST be joined (otherwise not all of its memory will be
+ *     free'd). The qthread_fork_to* functions spawn the thread to a specific
+ *     shepherd.
+ */
 qthread_t *qthread_fork(const qthread_f f, const void *arg);
 qthread_t *qthread_fork_to(const qthread_f f, const void *arg,
 			   const qthread_shepherd_id_t shepherd);
 void qthread_fork_detach(const qthread_f f, const void *arg);
 void qthread_fork_to_detach(const qthread_f f, const void *arg,
 			    const qthread_shepherd_id_t shepherd);
+/* Using qthread_prepare()/qthread_schedule() and variants:
+ *
+ *     The combination of these two functions works like qthread_fork().
+ *     First, qthread_prepare() creates a qthread_t object that is ready to be
+ *     run (almost), but has not been scheduled. Next, qthread_schedule puts
+ *     the finishing touches on the qthread_t structure and places it into an
+ *     active queue.
+ */
+qthread_t *qthread_prepare(const qthread_f f, const void *arg);
+qthread_t *qthread_prepare_detached(const qthread_f f, const void *arg);
+qthread_t *qthread_prepare_for(const qthread_f f, const void *arg, const
+        qthread_shepherd_id_t shepherd);
+qthread_t *qthread_prepare_detached_for(const qthread_f f, const void *arg,
+        const qthread_shepherd_id_t shepherd);
+
+void qthread_schedule(qthread_t *t);
+void qthread_schedule_on(qthread_t *t, const qthread_shepherd_id_t shepherd);
 
 /* these are accessor functions for use by the qthreads to retrieve information
  * about themselves */

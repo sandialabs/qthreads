@@ -559,19 +559,20 @@ int qthread_init(const int nkthreads)
 	 */
 	if (qlib->qthread_stack_size < 4096) {
 	    qlib->kthreads[i].stack_pool =
-		cp_mempool_create_by_option(0, 4096, 4096*1000);
+		cp_mempool_create_by_option(0, 4096, 4096 * 1000);
 	} else {
 	    qlib->kthreads[i].stack_pool =
 		cp_mempool_create_by_option(0, qlib->qthread_stack_size,
-					    qlib->qthread_stack_size*1000);
+					    qlib->qthread_stack_size * 1000);
 	}
 	/* this prevents an alignment problem. */
 	if (sizeof(ucontext_t) < 2048) {
 	    qlib->kthreads[i].context_pool =
-		cp_mempool_create_by_option(0, 2048, 2048*1000);
+		cp_mempool_create_by_option(0, 2048, 2048 * 1000);
 	} else {
 	    qlib->kthreads[i].context_pool =
-		cp_mempool_create_by_option(0, sizeof(ucontext_t), sizeof(ucontext_t)*1000);
+		cp_mempool_create_by_option(0, sizeof(ucontext_t),
+					    sizeof(ucontext_t) * 1000);
 	}
 
 	/* the following SHOULD only be accessed by one thread at a time, so
@@ -716,6 +717,53 @@ qthread_t *qthread_self(void)
 /* functions to manage thread stack allocation/deallocation */
 /************************************************************/
 
+static inline qthread_t *qthread_thread_bare(const qthread_f f,
+					     const void *arg,
+					     const qthread_shepherd_id_t
+					     shepherd)
+{				       /*{{{ */
+    qthread_t *t;
+
+    t = ALLOC_QTHREAD((qlib->kthreads[shepherd]));
+    if (t == NULL) {
+	perror("qthread_prepare()");
+	abort();
+    }
+    /* give the thread an ID number */
+    ATOMIC_INC(t->thread_id, &qlib->max_thread_id, &qlib->max_thread_id_lock);
+    t->thread_state = QTHREAD_STATE_NEW;
+    t->f = f;
+    t->arg = (void *)arg;
+    t->blockedon = NULL;
+    t->shepherd = shepherd;
+
+    return t;
+}				       /*}}} */
+
+static inline void qthread_thread_plush(qthread_t * t,
+					const qthread_shepherd_id_t shepherd)
+{				       /*{{{ */
+    ucontext_t *uc;
+    void *stack;
+
+    uc = ALLOC_CONTEXT(shepherd);
+    stack = ALLOC_STACK(shepherd);
+
+    if (uc == NULL) {
+	perror("qthread_thread_new()");
+	abort();
+    }
+    t->context = uc;
+    if (stack == NULL) {
+	perror("qthread_thread_new()");
+	abort();
+    }
+    t->stack = stack;
+}				       /*}}} */
+
+/* this could be reduced to a qthread_thread_bare() and qthread_thread_plush(),
+ * but I *think* doing it this way makes it faster. maybe not, I haven't tested
+ * it. */
 static inline qthread_t *qthread_thread_new(const qthread_f f,
 					    const void *arg,
 					    const qthread_shepherd_id_t
@@ -751,6 +799,9 @@ static inline qthread_t *qthread_thread_new(const qthread_f f,
 	abort();
     }
     t->stack = stack;
+
+    /* give the thread an ID number */
+    ATOMIC_INC(t->thread_id, &qlib->max_thread_id, &qlib->max_thread_id_lock);
 
     return (t);
 }				       /*}}} */
@@ -1019,25 +1070,6 @@ void qthread_yield(qthread_t * t)
     qthread_debug("qthread_yield(): thread %p resumed.\n", t);
 }				       /*}}} */
 
-static inline qthread_t *qthread_fork_internal(const qthread_f f,
-					       const void *arg,
-					       const qthread_shepherd_id_t
-					       shepherd)
-{				       /*{{{ */
-    qthread_t *t;
-
-    t = qthread_thread_new(f, arg, shepherd);	/* new thread struct sans stack */
-
-    qthread_debug
-	("qthread_fork_internal(): creating qthread %p with stack %p\n", t,
-	 t->stack);
-
-    /* figure out which queue to put the thread into */
-    ATOMIC_INC(t->thread_id, &qlib->max_thread_id, &qlib->max_thread_id_lock);
-
-    return t;
-}				       /*}}} */
-
 /***********************************************
  * FORKING                                     *
  ***********************************************/
@@ -1047,15 +1079,16 @@ static inline qthread_t *qthread_fork_internal(const qthread_f f,
 qthread_t *qthread_fork(const qthread_f f, const void *arg)
 {				       /*{{{ */
     qthread_t *t;
-    unsigned int shep;
+    qthread_shepherd_id_t shep;
 
     /*
-    shep =
-	qthread_internal_atomic_inc_mod(&qlib->sched_kthread,
-					&qlib->sched_kthread_lock,
-					qlib->nkthreads);*/
-    ATOMIC_INC_MOD(shep, &qlib->sched_kthread, &qlib->sched_kthread_lock, qlib->nkthreads);
-    t = qthread_fork_internal(f, arg, shep);
+     * shep =
+     * qthread_internal_atomic_inc_mod(&qlib->sched_kthread,
+     * &qlib->sched_kthread_lock,
+     * qlib->nkthreads); */
+    ATOMIC_INC_MOD(shep, &qlib->sched_kthread, &qlib->sched_kthread_lock,
+		   qlib->nkthreads);
+    t = qthread_thread_new(f, arg, shep);
 
 
     qthread_debug("qthread_fork(): tid %u shep %u\n", t->thread_id, shep);
@@ -1071,15 +1104,16 @@ qthread_t *qthread_fork(const qthread_f f, const void *arg)
 void qthread_fork_detach(const qthread_f f, const void *arg)
 {				       /*{{{ */
     qthread_t *t;
-    unsigned int shep;
+    qthread_shepherd_id_t shep;
 
     /* shep =
-	qthread_internal_atomic_inc_mod(&qlib->sched_kthread,
-					&qlib->sched_kthread_lock,
-					qlib->nkthreads);*/
-    ATOMIC_INC_MOD(shep, &qlib->sched_kthread, &qlib->sched_kthread_lock, qlib->nkthreads);
+     * qthread_internal_atomic_inc_mod(&qlib->sched_kthread,
+     * &qlib->sched_kthread_lock,
+     * qlib->nkthreads); */
+    ATOMIC_INC_MOD(shep, &qlib->sched_kthread, &qlib->sched_kthread_lock,
+		   qlib->nkthreads);
 
-    t = qthread_fork_internal(f, arg, shep);
+    t = qthread_thread_new(f, arg, shep);
 
     qthread_debug("qthread_fork_detach(): tid %u shep %u\n", t->thread_id,
 		  shep);
@@ -1097,7 +1131,7 @@ qthread_t *qthread_fork_to(const qthread_f f, const void *arg,
     if (shepherd > qlib->nkthreads) {
 	return NULL;
     }
-    t = qthread_fork_internal(f, arg, shepherd);
+    t = qthread_thread_new(f, arg, shepherd);
     qthread_debug("qthread_fork_to(): tid %u shep %u\n", t->thread_id,
 		  shepherd);
 
@@ -1116,7 +1150,7 @@ void qthread_fork_to_detach(const qthread_f f, const void *arg,
     if (shepherd > qlib->nkthreads) {
 	return;
     }
-    t = qthread_fork_internal(f, arg, shepherd);
+    t = qthread_thread_new(f, arg, shepherd);
     qthread_debug("qthread_fork_to_detach(): tid %u shep %u\n", t->thread_id,
 		  shepherd);
 
@@ -1157,6 +1191,70 @@ static inline void qthread_back_to_master(qthread_t * t)
     rlp.rlim_cur = qlib->qthread_stack_size;
     assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
 #endif
+}				       /*}}} */
+
+qthread_t *qthread_prepare(const qthread_f f, const void *arg)
+{				       /*{{{ */
+    qthread_t *t;
+    qthread_shepherd_id_t shep;
+
+    ATOMIC_INC_MOD(shep, &qlib->sched_kthread, &qlib->sched_kthread_lock,
+		   qlib->nkthreads);
+
+    t = qthread_thread_bare(f, arg, shep);
+    /* this is for qthread_join() */
+    t->detached = 0;
+    qthread_lock(t, t);
+
+    return t;
+}				       /*}}} */
+
+qthread_t *qthread_prepare_detached(const qthread_f f, const void *arg)
+{				       /*{{{ */
+    qthread_t *t;
+    qthread_shepherd_id_t shep;
+
+    ATOMIC_INC_MOD(shep, &qlib->sched_kthread, &qlib->sched_kthread_lock,
+		   qlib->nkthreads);
+
+    t = qthread_thread_bare(f, arg, shep);
+    t->detached = 1;
+
+    return t;
+}				       /*}}} */
+
+qthread_t *qthread_prepare_for(const qthread_f f, const void *arg,
+			       const qthread_shepherd_id_t shepherd)
+{				       /*{{{ */
+    qthread_t *t = qthread_thread_bare(f, arg, shepherd);
+
+    /* this is for qthread_join() */
+    t->detached = 0;
+    qthread_lock(t, t);
+
+    return t;
+}				       /*}}} */
+
+qthread_t *qthread_prepare_detached_for(const qthread_f f, const void *arg,
+					const qthread_shepherd_id_t shepherd)
+{				       /*{{{ */
+    qthread_t *t = qthread_thread_bare(f, arg, shepherd);
+
+    t->detached = 1;
+
+    return t;
+}				       /*}}} */
+
+void qthread_schedule(qthread_t * t)
+{				       /*{{{ */
+    qthread_thread_plush(t, t->shepherd);
+    qthread_enqueue(qlib->kthreads[t->shepherd].ready, t);
+}				       /*}}} */
+
+void qthread_schedule_on(qthread_t * t, const qthread_shepherd_id_t shepherd)
+{				       /*{{{ */
+    qthread_thread_plush(t, shepherd);
+    qthread_enqueue(qlib->kthreads[shepherd].ready, t);
 }				       /*}}} */
 
 /* functions to implement FEB locking/unlocking 
