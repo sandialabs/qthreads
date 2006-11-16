@@ -278,7 +278,7 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
 					 const qthread_shepherd_id_t
 					 threadshep, const char recursive);
 
-#ifndef QTHREAD_DEBUG
+#ifdef QTHREAD_NO_ASSERTS
 #define QTHREAD_LOCK(l) pthread_mutex_lock(l)
 #define QTHREAD_UNLOCK(l) pthread_mutex_unlock(l)
 #define QTHREAD_INITLOCK(l) pthread_mutex_init(l, NULL)
@@ -298,6 +298,25 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
 #define QTHREAD_CONDWAIT(c, l) assert(pthread_cond_wait(c, l) == 0)
 #endif
 
+#define ATOMIC_INC(r, x, l) do { \
+    QTHREAD_LOCK(l); \
+    r = *(x); \
+    *(x) += 1; \
+    QTHREAD_UNLOCK(l); \
+} while (0)
+
+#define ATOMIC_INC_MOD(r, x, l, m) do {\
+    QTHREAD_LOCK(l); \
+    r = *(x); \
+    if (*(x) + 1 < (m)) { \
+	*(x) += 1; \
+    } else { \
+	*(x) = 0; \
+    } \
+    QTHREAD_UNLOCK(l); \
+} while (0)
+
+#if 0				       /* currently not used */
 static inline unsigned qthread_internal_atomic_inc(unsigned *x,
 						   pthread_mutex_t * lock)
 {				       /*{{{ */
@@ -327,7 +346,6 @@ static inline unsigned qthread_internal_atomic_inc_mod(unsigned *x,
     return (r);
 }				       /*}}} */
 
-#if 0				       /* currently not used */
 static inline unsigned qthread_internal_atomic_check(unsigned *x,
 						     pthread_mutex_t * lock)
 {				       /*{{{ */
@@ -389,7 +407,7 @@ static void *qthread_shepherd(void *arg)
 	    done = 1;
 	    qthread_thread_free(t);
 	} else {
-#ifdef QTHREAD_DEBUG
+#ifndef QTHREAD_NO_ASSERTS
 	    assert((t->thread_state == QTHREAD_STATE_NEW) ||
 		   (t->thread_state == QTHREAD_STATE_RUNNING));
 
@@ -541,19 +559,19 @@ int qthread_init(const int nkthreads)
 	 */
 	if (qlib->qthread_stack_size < 4096) {
 	    qlib->kthreads[i].stack_pool =
-		cp_mempool_create_by_option(0, 4096, 1000);
+		cp_mempool_create_by_option(0, 4096, 4096*1000);
 	} else {
 	    qlib->kthreads[i].stack_pool =
 		cp_mempool_create_by_option(0, qlib->qthread_stack_size,
-					    1000);
+					    qlib->qthread_stack_size*1000);
 	}
 	/* this prevents an alignment problem. */
 	if (sizeof(ucontext_t) < 2048) {
 	    qlib->kthreads[i].context_pool =
-		cp_mempool_create_by_option(0, 2048, 1000);
+		cp_mempool_create_by_option(0, 2048, 2048*1000);
 	} else {
 	    qlib->kthreads[i].context_pool =
-		cp_mempool_create_by_option(0, sizeof(ucontext_t), 1000);
+		cp_mempool_create_by_option(0, sizeof(ucontext_t), sizeof(ucontext_t)*1000);
 	}
 
 	/* the following SHOULD only be accessed by one thread at a time, so
@@ -608,7 +626,7 @@ void qthread_finalize(void)
     int i, r;
     qthread_t *t;
 
-#ifdef QTHREAD_DEBUG
+#ifndef QTHREAD_NO_ASSERTS
     assert(qlib != NULL);
 #endif
 
@@ -705,29 +723,34 @@ static inline qthread_t *qthread_thread_new(const qthread_f f,
 {				       /*{{{ */
     qthread_t *t;
     ucontext_t *uc;
+    void *stack;
 
     t = ALLOC_QTHREAD((qlib->kthreads[shepherd]));
+    uc = ALLOC_CONTEXT(shepherd);
+    stack = ALLOC_STACK(shepherd);
+
     if (t == NULL) {
 	perror("qthread_thread_new()");
 	abort();
     }
 
-    uc = ALLOC_CONTEXT(shepherd);
+    t->thread_state = QTHREAD_STATE_NEW;
+    t->f = f;
+    t->arg = (void *)arg;
+    t->blockedon = NULL;
+    t->shepherd = shepherd;
+
+    /* re-ordered the checks to help optimization */
     if (uc == NULL) {
 	perror("qthread_thread_new()");
 	abort();
     }
     t->context = uc;
-
-    t->thread_state = QTHREAD_STATE_NEW;
-    t->f = f;
-    t->arg = (void *)arg;
-    if ((t->stack = ALLOC_STACK(shepherd)) == NULL) {
-	perror("qthread_fork_internal()");
+    if (stack == NULL) {
+	perror("qthread_thread_new()");
 	abort();
     }
-    t->blockedon = NULL;
-    t->shepherd = shepherd;
+    t->stack = stack;
 
     return (t);
 }				       /*}}} */
@@ -736,7 +759,7 @@ static inline void qthread_thread_free(qthread_t * t)
 {				       /*{{{ */
     qthread_shepherd_t *shep;
 
-#ifdef QTHREAD_DEBUG
+#ifndef QTHREAD_NO_ASSERTS
     assert(t != NULL);
 #endif
 
@@ -780,7 +803,7 @@ static inline qthread_queue_t *qthread_queue_new(qthread_shepherd_id_t
 static inline void qthread_queue_free(qthread_queue_t * q,
 				      qthread_shepherd_id_t shepherd)
 {				       /*{{{ */
-#ifdef QTHREAD_DEBUG
+#ifndef QTHREAD_NO_ASSERTS
     assert((q->head == NULL) && (q->tail == NULL));
 #endif
     QTHREAD_DESTROYLOCK(&q->lock);
@@ -794,12 +817,12 @@ static inline void qthread_queue_free(qthread_queue_t * q,
 
 static inline void qthread_enqueue(qthread_queue_t * q, qthread_t * t)
 {				       /*{{{ */
-#ifdef QTHREAD_DEBUG
+#ifndef QTHREAD_NO_ASSERTS
     assert(t != NULL);
     assert(q != NULL);
+#endif
 
     qthread_debug("qthread_enqueue(%p,%p): started\n", q, t);
-#endif
 
     QTHREAD_LOCK(&q->lock);
 
@@ -830,7 +853,7 @@ static inline qthread_t *qthread_dequeue(qthread_queue_t * q)
 	QTHREAD_CONDWAIT(&q->notempty, &q->lock);
     }
 
-#ifdef QTHREAD_DEBUG
+#ifndef QTHREAD_NO_ASSERTS
     assert(q->head != NULL);
 #endif
 
@@ -916,7 +939,7 @@ static inline void qthread_exec(qthread_t * t, ucontext_t * c)
     struct rlimit rlp;
 #endif
 
-#ifdef QTHREAD_DEBUG
+#ifndef QTHREAD_NO_ASSERTS
     assert(t != NULL);
     assert(c != NULL);
 #endif
@@ -979,7 +1002,7 @@ static inline void qthread_exec(qthread_t * t, ucontext_t * c)
     assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
 #endif
 
-#ifdef QTHREAD_DEBUG
+#ifndef QTHREAD_NO_ASSERTS
     assert(t != NULL);
     assert(c != NULL);
 #endif
@@ -1010,9 +1033,7 @@ static inline qthread_t *qthread_fork_internal(const qthread_f f,
 	 t->stack);
 
     /* figure out which queue to put the thread into */
-    t->thread_id =
-	qthread_internal_atomic_inc(&qlib->max_thread_id,
-				    &qlib->max_thread_id_lock);
+    ATOMIC_INC(t->thread_id, &qlib->max_thread_id, &qlib->max_thread_id_lock);
 
     return t;
 }				       /*}}} */
@@ -1028,10 +1049,12 @@ qthread_t *qthread_fork(const qthread_f f, const void *arg)
     qthread_t *t;
     unsigned int shep;
 
+    /*
     shep =
 	qthread_internal_atomic_inc_mod(&qlib->sched_kthread,
 					&qlib->sched_kthread_lock,
-					qlib->nkthreads);
+					qlib->nkthreads);*/
+    ATOMIC_INC_MOD(shep, &qlib->sched_kthread, &qlib->sched_kthread_lock, qlib->nkthreads);
     t = qthread_fork_internal(f, arg, shep);
 
 
@@ -1050,10 +1073,11 @@ void qthread_fork_detach(const qthread_f f, const void *arg)
     qthread_t *t;
     unsigned int shep;
 
-    shep =
+    /* shep =
 	qthread_internal_atomic_inc_mod(&qlib->sched_kthread,
 					&qlib->sched_kthread_lock,
-					qlib->nkthreads);
+					qlib->nkthreads);*/
+    ATOMIC_INC_MOD(shep, &qlib->sched_kthread, &qlib->sched_kthread_lock, qlib->nkthreads);
 
     t = qthread_fork_internal(f, arg, shep);
 

@@ -1,0 +1,462 @@
+2006-11-15 18:19  kbwheel
+
+	* qthread.c: removed extraneous arguments to atomic functions
+
+2006-11-15 18:14  kbwheel
+
+	* qthread.c: removed extraneous memory references in other queue
+	  operations
+
+2006-11-15 18:04  kbwheel
+
+	* qthread.c: removed extraneous memory references in nonblocking dq
+
+2006-11-15 17:55  kbwheel
+
+	* qthread.c: fixing a major problem in unlocking things that were
+	  never locked in the first place (would lock the hashtable and
+	  never unlock it)
+
+2006-11-15 17:54  kbwheel
+
+	* qthread.c: speeding up all the locks
+
+2006-11-13 14:03  kbwheel
+
+	* README: PGI comments
+
+2006-11-13 13:51  kbwheel
+
+	* qalloc.c, qthread.c: gcc -pedantic warnings eliminated for c99
+
+2006-11-13 13:45  kbwheel
+
+	* qthread.c: corrected qthread_readFF and qthread_readFE
+
+2006-11-13 13:45  kbwheel
+
+	* qthread.c, qthread.h: added qthread_writeF()
+
+2006-11-13 12:47  kbwheel
+
+	* qthread.c: tidy up aligning
+
+2006-11-07 18:21  kbwheel
+
+	* qthread.c: oops, Im an idiot
+
+2006-11-07 12:53  kbwheel
+
+	* qthread.c: a correction for the end of the qthread_wrapper
+
+2006-11-07 12:48  kbwheel
+
+	* qthread.c: more memory efficiency for delayed joins (does this
+	  actually affect many things? I doubt it, but you never know, and
+	  it doesnt hurt anything)
+
+2006-11-07 12:41  kbwheel
+
+	* qthread.c: fix pgCC compile errors (one warning remains, because
+	  C++ structs are really classes)
+
+2006-11-06 19:03  kbwheel
+
+	* Makefile.am, Makefile.in: this api is definitely binary
+	  incompatible with the previous
+
+2006-11-06 19:02  kbwheel
+
+	* qthread.c: made many things const, to help with optimization.
+	  also changed the locking "sub" helpers to be detached (as they
+	  should be)
+
+2006-11-06 19:01  kbwheel
+
+	* qthread.h: made many things const to help with optimization
+
+2006-11-06 18:16  kbwheel
+
+	* qthread.c, qthread.h: added qthread_shep() to find out my current
+	  shepherd id
+
+2006-11-06 18:01  kbwheel
+
+	* qthread.c, qthread.h: more helpful comments, and moved WORDSIZE
+	  to the .h file
+
+2006-11-06 17:55  kbwheel
+
+	* qthread.c, qthread.h: added the ability to proxy FEB locking
+	  commands
+
+2006-11-06 17:18  kbwheel
+
+	* qthread.h: corrected the comments
+
+2006-11-06 17:12  kbwheel
+
+	* Makefile.am, Makefile.in, config.h.in, configure, configure.in,
+	  qthread.c, qthread.h, test3.c: 64-bit safe, works with new FEB
+	  locking semantics
+
+2006-11-06 13:34  kbwheel
+
+	* test.c, test3.c: because qthread_lock and _unlock now function,
+	  now I can use qthread_join() directly, and avoid nonsense that I
+	  had previously had to go through to wait for things to finish.
+
+2006-11-06 13:34  kbwheel
+
+	* qthread.c, qthread.h: qthread_lock and _unlock now will function
+	  correctly if passed a NULL thread
+
+2006-11-06 12:16  kbwheel
+
+	* configure, configure.in: correct cprops url
+
+2006-11-06 12:14  kbwheel
+
+	* Makefile.am, Makefile.in, aclocal.m4, config.h.in, configure:
+	  updates from the new acinclude and configure.in
+
+2006-11-06 12:09  kbwheel
+
+	* acinclude.m4, configure.in: need stdint... would like to have
+	  inttypes, but...
+
+2006-11-06 12:07  kbwheel
+
+	* qthread.c: fixed struct rlimit on non-gcc compilers
+
+2006-11-06 12:06  kbwheel
+
+	* README: PGI compilation notes
+
+2006-11-06 12:05  kbwheel
+
+	* qalloc.c, qalloc.h: PGI compilation fixes (i.e. portability) and
+	  made it usable by C++ applications
+
+2006-11-06 11:20  kbwheel
+
+	* qthread.h: better descriptions
+
+2006-11-06 11:17  kbwheel
+
+	* qthread.c: pooling is fixed again. realized that addrres's were
+	  being fed to other thread's pools, which will obviously cause
+	  problems in unsynch'd pools. However, what this does is puts
+	  memory back in a pool that it did not come from. This *shouldn't*
+	  be a problem, because the size is right, but I mention it because
+	  you never know.
+
+2006-11-03 19:07  kbwheel
+
+	* qthread.c: spacing
+
+2006-11-03 19:03  kbwheel
+
+	* qthread.c: pooling is broken again... not sure why. trimmed the
+	  critical section in FEB table removal (unnecessary, but then, why
+	  not?)
+
+2006-11-03 17:17  kbwheel
+
+	* qthread.c: dont have private int file yet
+
+2006-11-03 17:16  kbwheel
+
+	* qthread.h: correct semantics
+
+2006-11-03 17:15  kbwheel
+
+	* qthread.h: play nicely with C++
+
+2006-11-03 17:13  kbwheel
+
+	* qthread.c: comments, many compilation fixes for non-gcc compilers
+	  (not all finished), and some semantic fixes for the readFE/readFF
+	  functions
+
+2006-11-03 14:21  kbwheel
+
+	* qthread.c: explain double-casting
+
+2006-11-03 14:21  kbwheel
+
+	* test2.c: none of that memwatch stuff
+
+2006-11-03 12:20  kbwheel
+
+	* Makefile.am, Makefile.in: removing CVS files is a little much
+
+2006-11-03 10:22  kbwheel
+
+	* qthread.h: qthread_self support
+
+2006-11-03 10:22  kbwheel
+
+	* qthread.c: qthread_self support (theres got to be a faster way)
+
+2006-11-01 15:19  kbwheel
+
+	* qalloc.c: better compatability and warning messages
+
+2006-10-31 19:13  kbwheel
+
+	* 386-ucontext.h, COPYRIGHT, Makefile.am, Makefile.in, aclocal.m4,
+	  asm.S, config.h.in, configure, configure.in, context.c,
+	  mkinstalldirs, power-ucontext.h, taskimpl.h: it now works on OSX
+	  as well as linux and solaris -- pulled in parts from libtask (by
+	  Russ Cox)
+
+2006-10-31 19:12  kbwheel
+
+	* qthread.c: works with the portable makecontext stuff, also
+	  cleaned up the code some
+
+2006-10-31 14:40  rcmurph
+
+	* AUTHORS: updated names/affiliations
+
+2006-10-31 12:36  kbwheel
+
+	* qthread.c: no, on some architectures (dunno which ones) this
+	  getcontext is required (it is used by most other similar
+	  coroutine libraries)
+
+2006-10-31 12:35  kbwheel
+
+	* README: accuracy and completeness
+
+2006-10-31 12:27  kbwheel
+
+	* qalloc.c: folding markers
+
+2006-10-31 12:27  kbwheel
+
+	* qalloc.h: comments
+
+2006-10-30 18:14  kbwheel
+
+	* qthread.c: did not need the extraneous getcontext
+
+2006-10-30 18:06  kbwheel
+
+	* qthread.c: ooops, left debugging #include in there
+
+2006-10-30 15:17  kbwheel
+
+	* testq.c: dynmap
+
+2006-10-30 15:17  kbwheel
+
+	* qthread.c: per-pthread memory pooling eliminates a bunch of
+	  unnecessary locking (some still needed)
+
+2006-10-30 13:44  kbwheel
+
+	* qthread.c: pooling stacks and contexts now. also assigning
+	  shepherd ID much earlier (preparing for per-shepherd pools)
+
+2006-10-26 13:44  kbwheel
+
+	* qthread.c, test2.c: the pooling seems a bit better now...
+
+2006-10-26 10:16  kbwheel
+
+	* qalloc.c, qalloc.h: added the dynamically-sized stuff
+
+2006-10-26 10:16  kbwheel
+
+	* Makefile.am, Makefile.in, acinclude.m4, aclocal.m4, config.h.in,
+	  configure, configure.in: added qalloc
+
+2006-10-26 10:15  kbwheel
+
+	* test3.c: test detached threads
+
+2006-10-26 10:14  kbwheel
+
+	* qthread.c, qthread.h: Added detached threads (i.e. threads that
+	  clean up after themselves when they exit), and made it possible
+	  to toggle mempooling on and off (currently, mempools seem to be
+	  broken when compiled for 64-bit architectures).
+
+2006-10-18 17:13  kbwheel
+
+	* qthread.c: minor touches
+
+2006-10-18 17:13  kbwheel
+
+	* qalloc.c, qalloc.h, testq.c: not tied to the qthreads library
+	  yet, but interesting and useful
+
+2006-10-17 14:42  kbwheel
+
+	* test3.c: [no log message]
+
+2006-10-17 14:41  kbwheel
+
+	* config.h.in, configure.in: minor cleanup for packaging
+
+2006-10-17 14:38  kbwheel
+
+	* config.h.in, configure, configure.in, qthread.c, qthread.h:
+	  cleanup for packaging
+
+2006-10-17 14:38  kbwheel
+
+	* test3.c: FEB example
+
+2006-10-17 13:35  kbwheel
+
+	* qthread.c: oops - extraneous debugging code
+
+2006-10-17 13:34  kbwheel
+
+	* qthread.c, qthread.h: full FEB support is now functionally
+	  complete. also, unlocking unlocked memory wont cause the program
+	  to abort anymore.
+
+2006-10-16 11:28  kbwheel
+
+	* config.h.in: [no log message]
+
+2006-10-16 11:28  kbwheel
+
+	* qthread.c, qthread.h: beginning of full FEB support
+
+2006-10-11 19:06  kbwheel
+
+	* config.h.in, configure, configure.in, qthread.c, qthread.h,
+	  test2.c: minor fixes, accessor functions
+
+2006-10-11 17:35  kbwheel
+
+	* qthread.c, qthread.h: moved internal functions out of the public
+	  header file, did a little reformatting
+
+2006-10-11 13:07  kbwheel
+
+	* README: a little quick info
+
+2006-10-11 12:46  kbwheel
+
+	* configure, configure.in: better error messages
+
+2006-10-11 12:44  kbwheel
+
+	* config.h.in, configure, configure.in: OSX does not have
+	  get/set/swapcontext, so should detect that and complain bitterly
+
+2006-10-11 12:39  kbwheel
+
+	* COPYING, INSTALL, config.guess, config.sub, depcomp, install-sh,
+	  ltmain.sh, missing: all the automake files
+
+2006-10-11 12:37  kbwheel
+
+	* config.h.in, configure, configure.in, qthread.c: better
+	  autoconfing
+
+2006-10-11 12:13  kbwheel
+
+	* qthread.c: fixed preproc warning messages
+
+2006-10-11 12:04  kbwheel
+
+	* qthread.c, test2.c: some compiler warnings and other tidying
+
+2006-10-11 11:43  kbwheel
+
+	* qthread.c, qthread.h, test2.c: fixed the giant stack size!
+
+2006-10-10 15:09  kbwheel
+
+	* qthread.c: excise shepstat
+
+2006-10-10 14:04  kbwheel
+
+	* AUTHORS, ChangeLog, Makefile, Makefile.am, Makefile.in, NEWS,
+	  README, aclocal.m4, config.h.in, configure, configure.in,
+	  pthread_comparison_test.c, qthread.c, test.c, test2.c:
+	  autoconf/automake
+
+2006-10-10 13:27  kbwheel
+
+	* redblack.c, redblack.h: using cprops now
+
+2006-10-10 13:26  kbwheel
+
+	* qthread.c, qthread.h: minor tidying
+
+2006-10-10 13:10  kbwheel
+
+	* qthread.c, qthread.h: removed the FEB race condition, and shrunk
+	  the memory requirements
+
+2006-10-10 11:54  kbwheel
+
+	* qthread.c, qthread.h: memory pooling
+
+2006-10-06 11:57  kbwheel
+
+	* Makefile, qthread.c, qthread.h, test.c: why does test.c not work?
+
+2006-10-05 17:28  kbwheel
+
+	* qthread.c, qthread.h: fixed qthread_join, added comments,
+	  folding, and made the qthread_debug function local
+
+2006-10-04 15:13  rcmurph
+
+	* qthread.c, qthread.h: working version
+
+2006-08-24 16:48  rcmurph
+
+	* Makefile, main.c, qthread.c, qthread.h: runs correctly on solaris
+	  with solaris compilers
+
+2006-08-02 14:07  rcmurph
+
+	* Makefile, main.c, qthread.c, qthread.h: this actually works
+
+2006-08-02 11:09  rcmurph
+
+	* Makefile, main.c, qthread.c, qthread.h: updated thread library -
+	  nearly functional
+
+2006-06-28 19:29  rcmurph
+
+	* main.c, qthread.c: Initial revision
+
+2006-06-28 19:29  rcmurph
+
+	* main.c, qthread.c: initial import
+
+2006-06-28 19:16  rcmurph
+
+	* qthread.h: Initial revision
+
+2006-06-28 19:16  rcmurph
+
+	* qthread.h: initial import
+
+2006-06-28 15:22  rcmurph
+
+	* Makefile: Initial revision
+
+2006-06-28 15:22  rcmurph
+
+	* Makefile: initial import
+
+2006-06-22 15:15  rcmurph
+
+	* redblack.c, redblack.h: Initial revision
+
+2006-06-22 15:15  rcmurph
+
+	* redblack.c, redblack.h: initial import
+
