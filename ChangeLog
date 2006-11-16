@@ -1,3 +1,29 @@
+2006-11-16 17:03  kbwheel
+
+	* Makefile.am, Makefile.in, test.c, test2.c, test3.c, testq.c:
+	  implemented "make check"
+
+2006-11-16 17:03  kbwheel
+
+	* qalloc.c: fixed an idiotic locking error in dynmalloc() (note to
+	  self: theres only one bitmap, not one per stream)
+
+2006-11-16 13:54  kbwheel
+
+	* Makefile.am, Makefile.in, configure, configure.in: bumped the
+	  version to be more release-oriented ;)
+
+2006-11-16 13:53  kbwheel
+
+	* qthread.c, qthread.h: created the prepare() and run() functions
+	  for Megan
+
+2006-11-16 12:59  kbwheel
+
+	* ChangeLog, Makefile.in, aclocal.m4, config.h.in, configure,
+	  qthread.c: some speed improvements, decoupled asserts and
+	  debugging
+
 2006-11-15 18:19  kbwheel
 
 	* qthread.c: removed extraneous arguments to atomic functions
