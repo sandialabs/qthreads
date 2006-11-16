@@ -17,14 +17,14 @@ void thread(qthread_t * t)
     me = id++;
     qthread_unlock(t, &id);
     next = (me + 1) % 4;
-    printf("thread(%p): me %i next %i\n", t, me, next);
+    /*printf("thread(%p): me %i next %i\n", t, me, next);*/
 
     for (i = 0; i < 1000; i++) {
 	/* is it my turn? */
 	qthread_lock(t, &(up[me]));
 
 	qthread_lock(t, &x);
-	printf("thread(%i): x=%d\n", me, x);
+	/*printf("thread(%i): x=%d\n", me, x);*/
 	x++;
 	qthread_unlock(t, &x);
 	/* set up the next guy's turn */
@@ -42,14 +42,14 @@ void thread2(qthread_t * t)
     me = id2++;
     qthread_unlock(t, &id2);
     next = (me + 1) % 4;
-    printf("thread(%p): me %i next %i\n", t, me, next);
+    /*printf("thread(%p): me %i next %i\n", t, me, next);*/
 
     for (i = 0; i < 1000; i++) {
 	/* is it my turn? */
 	qthread_lock(t, &(up[me]));
 
 	qthread_lock(t, &x);
-	printf("thread(%i): x=%d\n", me, x);
+	/*printf("thread(%i): x=%d\n", me, x);*/
 	x++;
 	qthread_unlock(t, &x);
 	/* set up the next guy's turn */
@@ -88,5 +88,10 @@ int main(int argc, char *argv[])
 
     qthread_finalize();
 
-    printf("Final value of x=%d\n", x);
+    if (x == 8000) {
+	return 0;
+    } else {
+	fprintf(stderr, "Final value of x=%d\n", x);
+	return -1;
+    }
 }

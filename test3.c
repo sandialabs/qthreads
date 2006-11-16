@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
     x = 0;
     qthread_init(3);
 
-    printf("Initial value of x: %i\n", x);
+    /*printf("Initial value of x: %i\n", x);*/
 
     qthread_fork_detach(consumer, NULL);
     t = qthread_fork(producer, NULL);
@@ -46,7 +46,10 @@ int main(int argc, char *argv[])
 
     qthread_finalize();
 
-    fprintf(stderr, "Final value of x=%d\n", x);
-
-    return 0;
+    if (x == 55)
+	return 0;
+    else {
+	fprintf(stderr, "Final value of x=%d\n", x);
+	return -1;
+    }
 }

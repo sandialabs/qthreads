@@ -28,12 +28,14 @@ void thread(qthread_t * t)
 int main(int argc, char *argv[])
 {
     long int i;
+    int interactive;
 
     if (argc != 2) {
-	printf("usage: %s num_threads\n", argv[0]);
-	return -1;
+	target = 1000;
+	interactive = 0;
     } else {
 	target = strtol(argv[1], NULL, 0);
+	interactive = 1;
     }
 
     qthread_init(2);
@@ -47,7 +49,12 @@ int main(int argc, char *argv[])
 
     qthread_finalize();
 
-    fprintf(stderr, "Final value of x=%d\n", x);
+    if (interactive == 1) {
+	fprintf(stderr, "Final value of x=%d\n", x);
+    }
 
-    return 0;
+    if (x == target)
+	return 0;
+    else
+	return -1;
 }
