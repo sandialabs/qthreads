@@ -2,8 +2,8 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.50)
-AC_INIT(qthread, 0.1, rcmurph@sandia.gov)
-AM_INIT_AUTOMAKE(qthread, 0.1)
+AC_INIT(qthread, 0.1.2, rcmurph@sandia.gov)
+AM_INIT_AUTOMAKE(qthread, 0.1.2)
 AC_CONFIG_SRCDIR([main.c])
 AM_CONFIG_HEADER([config.h])
 
