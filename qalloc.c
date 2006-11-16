@@ -14,6 +14,7 @@
 #include <inttypes.h>		       /* for funky print statements */
 #include <math.h>		       /* for ceil() and floor() */
 #include <string.h>		       /* for memset() */
+#include <errno.h>
 #include <assert.h>
 
 #ifndef PTHREAD_MUTEX_SMALL_ENOUGH
@@ -101,6 +102,14 @@ typedef struct stat statstruct_t;
 
 #ifndef O_NOATIME
 # define O_NOATIME 0
+#endif
+
+#ifdef QTHREAD_NO_ASSERTS
+#define QALLOC_LOCK(l) pthread_mutex_lock(l)
+#define QALLOC_UNLOCK(l) pthread_mutex_unlock(l)
+#else
+#define QALLOC_LOCK(l) assert(pthread_mutex_lock(l) == 0)
+#define QALLOC_UNLOCK(l) assert(pthread_mutex_unlock(l) == 0)
 #endif
 
 static inline void *qalloc_getfile(const off_t filesize, void *addr,
@@ -395,10 +404,10 @@ void *qalloc_statmalloc(struct mapinfo_s *m)
     void **ret = NULL;
 
     while (ret == NULL) {
-	assert(pthread_mutex_lock(m->stream_locks + stream) == 0);
+	QALLOC_LOCK(m->stream_locks + stream);
 	ret = m->streams[stream];
 	m->streams[stream] = (void **)(*(m->streams[stream]));
-	assert(pthread_mutex_unlock(m->stream_locks + stream) == 0);
+	QALLOC_UNLOCK(m->stream_locks + stream);
 	if (ret == NULL) {
 	    /* no more memory left in this stream */
 	    stream = (stream + 1) % m->streamcount;
@@ -605,11 +614,11 @@ static inline smallblock_t *qalloc_find_smallblock_entry(struct dynmapinfo_s
 {				       /*{{{ */
     smallblock_t *sb;
 
-    assert(pthread_mutex_lock(m->stream_locks + stream) == 0);
+    QALLOC_LOCK(m->stream_locks + stream);
     sb = m->smallblocks[stream];
     if (sb)
-	assert(pthread_mutex_lock(&sb->lock) == 0);
-    assert(pthread_mutex_unlock(m->stream_locks + stream) == 0);
+	QALLOC_LOCK(&sb->lock);
+    QALLOC_UNLOCK(m->stream_locks + stream);
     /* chase down a smallblock slice */
     while (sb != NULL &&
 	   ((*offset =
@@ -620,9 +629,9 @@ static inline smallblock_t *qalloc_find_smallblock_entry(struct dynmapinfo_s
 
 	sb = sb->next;
 	if (sb) {
-	    assert(pthread_mutex_lock(&sb->lock) == 0);
+	    QALLOC_LOCK(&sb->lock);
 	}
-	assert(pthread_mutex_unlock(&sb_prev->lock) == 0);
+	QALLOC_UNLOCK(&sb_prev->lock);
     }
     return sb;
 }				       /*}}} */
@@ -637,12 +646,12 @@ static inline bigblock_header_t *qalloc_find_bigblock_header_entry(struct
 {				       /*{{{ */
     bigblock_header_t *bbh;
 
-    assert(pthread_mutex_lock(m->stream_locks + stream) == 0); {
+    QALLOC_LOCK(m->stream_locks + stream); {
 	bbh = m->bigblocks[stream];
 	if (bbh)
-	    assert(pthread_mutex_lock(&bbh->lock) == 0);
+	    QALLOC_LOCK(&bbh->lock);
     }
-    assert(pthread_mutex_unlock(m->stream_locks + stream) == 0);
+    QALLOC_UNLOCK(m->stream_locks + stream);
     /* chase down a block entry */
     while (bbh != NULL &&
 	   ((*offset =
@@ -653,9 +662,9 @@ static inline bigblock_header_t *qalloc_find_bigblock_header_entry(struct
 
 	bbh = bbh->next;
 	if (bbh) {
-	    assert(pthread_mutex_lock(&bbh->lock) == 0);
+	    QALLOC_LOCK(&bbh->lock);
 	}
-	assert(pthread_mutex_unlock(&bbh_prev->lock) == 0);
+	QALLOC_UNLOCK(&bbh_prev->lock);
     }
     return bbh;
 }				       /*}}} */
@@ -675,9 +684,9 @@ void *qalloc_dynmalloc(struct dynmapinfo_s *m, size_t size)
 	sb = qalloc_find_smallblock_entry(m, stream, &offset);
 	while (sb == NULL) {
 	    /* allocate a new smallblock */
-	    assert(pthread_mutex_lock(m->bitmap_lock) == 0);
+	    QALLOC_LOCK(m->bitmap_lock);
 	    offset = qalloc_findmark_bit(m->bitmap, m->bitmaplength * 8);
-	    assert(pthread_mutex_unlock(m->bitmap_lock) == 0);
+	    QALLOC_UNLOCK(m->bitmap_lock);
 	    if (offset > m->bitmaplength * 8) {
 		/* could not allocate a new smallblock... */
 		if (m->streamcount > 1 &&
@@ -696,11 +705,11 @@ void *qalloc_dynmalloc(struct dynmapinfo_s *m, size_t size)
 		sb->bitmap[0] = 0;
 		sb->bitmap[1] = 0;
 		assert(pthread_mutex_init(&sb->lock, NULL) == 0);
-		assert(pthread_mutex_lock(m->stream_locks + stream) == 0);
+		QALLOC_LOCK(m->stream_locks + stream);
 		sb->next = m->smallblocks[stream];
 		m->smallblocks[stream] = sb;
-		assert(pthread_mutex_lock(&sb->lock) == 0);
-		assert(pthread_mutex_unlock(m->stream_locks + stream) == 0);
+		QALLOC_LOCK(&sb->lock);
+		QALLOC_UNLOCK(m->stream_locks + stream);
 		/* we just created it, so we can do a shortcut: we know none of the
 		 * slices are taken, we'll just take the first one */
 		sb->bitmap[0] = 0x80;
@@ -708,14 +717,14 @@ void *qalloc_dynmalloc(struct dynmapinfo_s *m, size_t size)
 	    }
 	}
 	ret = sb->slices + offset;
-	assert(pthread_mutex_unlock(&sb->lock) == 0);
+	QALLOC_UNLOCK(&sb->lock);
     } else {
 	/* a BIG allocation */
 	size_t offset, blocks = (size_t) ceil(size / 2048.0);
 	bigblock_header_t *bbh = NULL;
 
 	/* lock the bitmap */
-	assert(pthread_mutex_lock(m->bitmap_lock + stream) == 0); {
+	QALLOC_LOCK(m->bitmap_lock); {
 	    /* find the necessary free block(s) and mark them in-use */
 	    if (blocks > 1) {
 		offset =
@@ -724,7 +733,7 @@ void *qalloc_dynmalloc(struct dynmapinfo_s *m, size_t size)
 		offset = qalloc_findmark_bit(m->bitmap, m->bitmaplength * 8);
 	    }
 	}
-	assert(pthread_mutex_unlock(m->bitmap_lock + stream) == 0);
+	QALLOC_UNLOCK(m->bitmap_lock);
 	if (offset > m->bitmaplength * 8) {
 	    /* trying other streams won't help, because the bitmap isn't
 	     * stream-specific (bottleneck!) */
@@ -736,9 +745,9 @@ void *qalloc_dynmalloc(struct dynmapinfo_s *m, size_t size)
 	    size_t newoffset;
 
 	    /* allocate a new bigblock header */
-	    assert(pthread_mutex_lock(m->bitmap_lock) == 0);
+	    QALLOC_LOCK(m->bitmap_lock);
 	    newoffset = qalloc_findmark_bit(m->bitmap, m->bitmaplength * 8);
-	    assert(pthread_mutex_unlock(m->bitmap_lock) == 0);
+	    QALLOC_UNLOCK(m->bitmap_lock);
 	    if (newoffset > m->bitmaplength * 8) {
 		/* could not allocate a new bigblock header... */
 		if (m->streamcount > 1 &&
@@ -758,18 +767,18 @@ void *qalloc_dynmalloc(struct dynmapinfo_s *m, size_t size)
 		bbh = ((bigblock_header_t *) (m->base)) + newoffset;
 		memset(bbh->bitmap, 0, BIGBLOCK_BITMAP_LEN);
 		assert(pthread_mutex_init(&bbh->lock, NULL) == 0);
-		assert(pthread_mutex_lock(m->stream_locks + stream) == 0);
+		QALLOC_LOCK(m->stream_locks + stream);
 		bbh->next = m->bigblocks[stream];
 		m->bigblocks[stream] = bbh;
-		assert(pthread_mutex_lock(&bbh->lock) == 0);
-		assert(pthread_mutex_unlock(m->stream_locks + stream) == 0);
+		QALLOC_LOCK(&bbh->lock);
+		QALLOC_UNLOCK(m->stream_locks + stream);
 		offset =
 		    qalloc_findmark_bit(bbh->bitmap, BIGBLOCK_ENTRY_COUNT);
 	    }
 	}
 	bbh->entries[offset].entry = ret;
 	bbh->entries[offset].block_count = blocks;
-	assert(pthread_mutex_unlock(&bbh->lock) == 0);
+	QALLOC_UNLOCK(&bbh->lock);
     }
     return ret;
 }				       /*}}} */
@@ -789,10 +798,10 @@ void qalloc_statfree(void *block, struct mapinfo_s *m)
     size_t stream = (size_t) me % m->streamcount;
     void **b = (void **)block;
 
-    assert(pthread_mutex_lock(m->stream_locks + stream) == 0);
+    QALLOC_LOCK(m->stream_locks + stream);
     *b = m->streams[stream];
     m->streams[stream] = b;
-    assert(pthread_mutex_unlock(m->stream_locks + stream) == 0);
+    QALLOC_UNLOCK(m->stream_locks + stream);
 }				       /*}}} */
 
 void qalloc_dynfree(void *block, struct dynmapinfo_s *m)
@@ -815,9 +824,9 @@ void qalloc_dynfree(void *block, struct dynmapinfo_s *m)
 	/* which bit in that byte? */
 	slot -= (slot / 8) * 8;
 	/* QUICK! before anyone notices! */
-	assert(pthread_mutex_lock(&sb->lock) == 0);
+	QALLOC_LOCK(&sb->lock);
 	*byte &= ~(0x80 >> slot);
-	assert(pthread_mutex_unlock(&sb->lock) == 0);
+	QALLOC_UNLOCK(&sb->lock);
     } else {			       /* aligned */
 	/* must be big */
 	pthread_t me = pthread_self();
@@ -826,11 +835,11 @@ void qalloc_dynfree(void *block, struct dynmapinfo_s *m)
 	size_t blocks = 0;
 	int stillLooking = 1;
 
-	assert(pthread_mutex_lock(m->stream_locks + stream) == 0);
+	QALLOC_LOCK(m->stream_locks + stream);
 	bbh = m->bigblocks[stream];
 	if (bbh)
-	    assert(pthread_mutex_lock(&bbh->lock) == 0);
-	assert(pthread_mutex_unlock(m->stream_locks + stream) == 0);
+	    QALLOC_LOCK(&bbh->lock);
+	QALLOC_UNLOCK(m->stream_locks + stream);
 	/* chase down the bigblock header containing this ptr */
 	while (bbh && stillLooking) {
 	    size_t slot;
@@ -854,18 +863,18 @@ void qalloc_dynfree(void *block, struct dynmapinfo_s *m)
 	    }
 	    next = bbh->next;
 	    if (next) {
-		assert(pthread_mutex_lock(&next->lock) == 0);
+		QALLOC_LOCK(&next->lock);
 	    }
-	    assert(pthread_mutex_unlock(&bbh->lock) == 0);
+	    QALLOC_UNLOCK(&bbh->lock);
 	    bbh = next;
 	}
 	if (blocks > 0 && !stillLooking) {
 	    /* lock the bitmap and unmark the corresponding bits */
-	    assert(pthread_mutex_lock(m->bitmap_lock) == 0);
+	    QALLOC_LOCK(m->bitmap_lock);
 	    qalloc_unmarkbits(m->bitmap,
 			      ((size_t) block - (size_t) (m->base)) / 2048,
 			      blocks);
-	    assert(pthread_mutex_unlock(m->bitmap_lock) == 0);
+	    QALLOC_UNLOCK(m->bitmap_lock);
 	}
     }
     /* XXX: consider freeing unused smallblocks or bigblock header blocks */
