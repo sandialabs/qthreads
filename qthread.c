@@ -401,11 +401,11 @@ static inline qthread_shepherd_id_t qthread_internal_myshepherd(void)
 {
     void *ret;
 
-    ret = cp_hashtable_get(p_to_shep, (void*)pthread_self());
+    ret = cp_hashtable_get(p_to_shep, (void *)pthread_self());
     if (ret == NULL) {
 	return NO_SHEPHERD;
     } else {
-	return ((qthread_shepherd_id_t)(size_t)ret)-1;
+	return ((qthread_shepherd_id_t) (size_t) ret) - 1;
     }
 }
 
@@ -581,10 +581,13 @@ int qthread_init(const int nkthreads)
 	 * well. however, by putting one on each pthread, there's less
 	 * contention for those locks. */
 	qlib->kthreads[i].qthread_pool =
-	    cp_mempool_create_by_option(COLLECTION_MODE_NOSYNC, sizeof(qthread_t), sizeof(qthread_t)*100);
+	    cp_mempool_create_by_option(COLLECTION_MODE_NOSYNC,
+					sizeof(qthread_t),
+					sizeof(qthread_t) * 100);
 	qlib->kthreads[i].stack_pool =
-	    cp_mempool_create_by_option(COLLECTION_MODE_NOSYNC, qlib->qthread_stack_size,
-		    qlib->qthread_stack_size * 100);
+	    cp_mempool_create_by_option(COLLECTION_MODE_NOSYNC,
+					qlib->qthread_stack_size,
+					qlib->qthread_stack_size * 100);
 #if ALIGNMENT_PROBLEMS_RETURN
 	if (sizeof(ucontext_t) < 2048) {
 	    qlib->kthreads[i].context_pool =
@@ -596,8 +599,9 @@ int qthread_init(const int nkthreads)
 	}
 #else
 	qlib->kthreads[i].context_pool =
-	    cp_mempool_create_by_option(COLLECTION_MODE_NOSYNC, sizeof(ucontext_t),
-		    sizeof(ucontext_t) * 100);
+	    cp_mempool_create_by_option(COLLECTION_MODE_NOSYNC,
+					sizeof(ucontext_t),
+					sizeof(ucontext_t) * 100);
 #endif
 
 	/* the following SHOULD only be accessed by one thread at a time, so
@@ -625,11 +629,19 @@ int qthread_init(const int nkthreads)
     /* these are used when qthread_fork() is called from a non-qthread. they
      * are protected by a mutex so that things don't get wonky (note: that
      * means qthread_fork is WAY faster if you called it from a qthread) */
-    generic_qthread_pool = cp_mempool_create_by_option(0, sizeof(qthread_t), sizeof(qthread_t)*100);
-    generic_stack_pool = cp_mempool_create_by_option(0, qlib->qthread_stack_size, qlib->qthread_stack_size * 100);
-    generic_context_pool = cp_mempool_create_by_option(0, sizeof(ucontext_t), sizeof(ucontext_t)*100);
-    generic_queue_pool = cp_mempool_create_by_option(0, sizeof(qthread_queue_t), 0);
-    generic_lock_pool = cp_mempool_create_by_option(0, sizeof(qthread_lock_t), 0);
+    generic_qthread_pool =
+	cp_mempool_create_by_option(0, sizeof(qthread_t),
+				    sizeof(qthread_t) * 100);
+    generic_stack_pool =
+	cp_mempool_create_by_option(0, qlib->qthread_stack_size,
+				    qlib->qthread_stack_size * 100);
+    generic_context_pool =
+	cp_mempool_create_by_option(0, sizeof(ucontext_t),
+				    sizeof(ucontext_t) * 100);
+    generic_queue_pool =
+	cp_mempool_create_by_option(0, sizeof(qthread_queue_t), 0);
+    generic_lock_pool =
+	cp_mempool_create_by_option(0, sizeof(qthread_lock_t), 0);
 
     /* spawn the number of shepherd threads that were specified */
     for (i = 0; i < nkthreads; i++) {
@@ -724,6 +736,7 @@ qthread_t *qthread_self(void)
 {				       /*{{{ */
     void *ret;
     qthread_t *t;
+
     /*size_t mask; */
 
     ret = cp_hashtable_get(p_to_shep, (void *)pthread_self());
@@ -760,6 +773,7 @@ static inline qthread_t *qthread_thread_bare(const qthread_f f,
 					     shepherd)
 {				       /*{{{ */
     qthread_t *t;
+
 #ifndef UNPOOLED
     qthread_shepherd_id_t myshep = qthread_internal_myshepherd();
 #endif
@@ -812,6 +826,7 @@ static inline qthread_t *qthread_thread_new(const qthread_f f,
     qthread_t *t;
     ucontext_t *uc;
     void *stack;
+
 #ifndef UNPOOLED
     qthread_shepherd_id_t myshep = qthread_internal_myshepherd();
 #endif
@@ -1875,6 +1890,7 @@ int qthread_lock(qthread_t * t, const void *a)
 	     * Theoretically, this might be bad on some architectures. 99 times
 	     * out of 100, though, this is a win for overall throughput. */
 	    qthread_shepherd_id_t myshep = qthread_internal_myshepherd();
+
 	    if ((m = ALLOC_LOCK(myshep)) == NULL) {
 		perror("qthread_lock()");
 		abort();
@@ -2030,5 +2046,5 @@ void *qthread_arg(const qthread_t * t)
 
 qthread_shepherd_id_t qthread_shep(const qthread_t * t)
 {				       /*{{{ */
-    return t?t->shepherd:NO_SHEPHERD;
+    return t ? t->shepherd : NO_SHEPHERD;
 }				       /*}}} */
