@@ -1,3 +1,26 @@
+2006-11-17 13:29  kbwheel
+
+	* qthread.c, qthread.h: make NO_SHEPHERD available to the user
+
+2006-11-17 12:57  kbwheel
+
+	* qthread.c: more formatting, corrected qthread_id()
+
+2006-11-17 12:51  kbwheel
+
+	* qthread.c: formatting
+
+2006-11-17 12:42  kbwheel
+
+	* qthread.c: fixed more memory pooling issues, and added a pretty
+	  sizeable speedup by avoiding mutexes in cases where
+	  qthread_fork() is called from a qthread (i.e. in MTGL code, 99%
+	  of the time)
+
+2006-11-16 17:35  kbwheel
+
+	* ChangeLog: release
+
 2006-11-16 17:03  kbwheel
 
 	* Makefile.am, Makefile.in, test.c, test2.c, test3.c, testq.c:
