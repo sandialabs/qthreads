@@ -63,68 +63,68 @@
 #define QTHREAD_STATE_DONE              6
 #define QTHREAD_STATE_TERM_SHEP         UINT8_MAX
 
-#ifndef UNPOOLED_QTHREAD_T
-#define ALLOC_QTHREAD(shep)             (qthread_t *) cp_mempool_alloc(shep.qthread_pool)
-#define FREE_QTHREAD(shep, t) cp_mempool_free(shep->qthread_pool, t)
-#else
-#define ALLOC_QTHREAD(shep)             (qthread_t *) malloc(sizeof(qthread_t))
+#if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED)
+#define ALLOC_QTHREAD(shep) (qthread_t *) malloc(sizeof(qthread_t))
 #define FREE_QTHREAD(shep, t) free(t)
+#else
+#define ALLOC_QTHREAD(shep) (qthread_t *) cp_mempool_alloc((shep==NO_SHEPHERD)?generic_qthread_pool:(qlib->kthreads[shep].qthread_pool))
+#define FREE_QTHREAD(shep, t) cp_mempool_free((shep==NO_SHEPHERD)?generic_qthread_pool:(qlib->kthreads[shep].qthread_pool), t)
 #endif
 
-#ifndef UNPOOLED_STACKS
-#define ALLOC_STACK(shep) cp_mempool_alloc(qlib->kthreads[shep].stack_pool)
-#define FREE_STACK(shep, t) cp_mempool_free(shep->stack_pool, t)
-#else
-#define ALLOC_STACK(shep) malloc(stack_size)
+#if defined(UNPOOLED_STACKS) || defined(UNPOOLED)
+#define ALLOC_STACK(shep) malloc(qlib->qthread_stack_size)
 #define FREE_STACK(shep, t) free(t)
+#else
+#define ALLOC_STACK(shep) cp_mempool_alloc((shep==NO_SHEPHERD)?generic_stack_pool:(qlib->kthreads[shep].stack_pool))
+#define FREE_STACK(shep, t) cp_mempool_free((shep==NO_SHEPHERD)?generic_stack_pool:(qlib->kthreads[shep].stack_pool), t)
 #endif
 
-#ifndef UNPOOLED_CONTEXTS
-#define ALLOC_CONTEXT(shep) (ucontext_t *) cp_mempool_alloc(qlib->kthreads[shep].context_pool)
-#define FREE_CONTEXT(shep, t) cp_mempool_free(shep->context_pool, t)
-#else
+#if defined(UNPOOLED_CONTEXTS) || defined(UNPOOLED)
 #define ALLOC_CONTEXT(shep) (ucontext_t *) malloc(sizeof(ucontext_t))
 #define FREE_CONTEXT(shep, t) free(t)
+#else
+#define ALLOC_CONTEXT(shep) (ucontext_t *) cp_mempool_alloc((shep==NO_SHEPHERD)?generic_context_pool:(qlib->kthreads[shep].context_pool))
+#define FREE_CONTEXT(shep, t) cp_mempool_free((shep==NO_SHEPHERD)?generic_context_pool:(qlib->kthreads[shep].context_pool), t)
 #endif
 
-#ifndef UNPOOLED_QUEUES
-#define ALLOC_QUEUE(shep) (qthread_queue_t *) cp_mempool_alloc(qlib->kthreads[shep].queue_pool)
-#define FREE_QUEUE(shep, t) cp_mempool_free(qlib->kthreads[shep].queue_pool, t)
-#else
+#if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
 #define ALLOC_QUEUE(shep) (qthread_queue_t *) malloc(sizeof(qthread_queue_t))
 #define FREE_QUEUE(shep, t) free(t)
+#else
+#define ALLOC_QUEUE(shep) (qthread_queue_t *) cp_mempool_alloc((shep==NO_SHEPHERD)?generic_queue_pool:(qlib->kthreads[shep].queue_pool))
+#define FREE_QUEUE(shep, t) cp_mempool_free((shep==NO_SHEPHERD)?generic_queue_pool:(qlib->kthreads[shep].queue_pool), t)
 #endif
 
-#ifndef UNPOOLED_LOCKS
-#define ALLOC_LOCK(shep) (qthread_lock_t *) cp_mempool_alloc(qlib->kthreads[shep].lock_pool)
-#define FREE_LOCK(shep, t) cp_mempool_free(qlib->kthreads[shep].lock_pool, t)
-#else
+#if defined(UNPOOLED_LOCKS) || defined(UNPOOLED)
 #define ALLOC_LOCK(shep) (qthread_lock_t *) malloc(sizeof(qthread_lock_t))
 #define FREE_LOCK(shep, t) free(t)
+#else
+#define ALLOC_LOCK(shep) (qthread_lock_t *) cp_mempool_alloc((shep==NO_SHEPHERD)?generic_lock_pool:(qlib->kthreads[shep].lock_pool))
+#define FREE_LOCK(shep, t) cp_mempool_free((shep==NO_SHEPHERD)?generic_lock_pool:(qlib->kthreads[shep].lock_pool), t)
 #endif
 
-#ifndef UNPOOLED_ADDRRES
-#define ALLOC_ADDRRES(shep) (qthread_addrres_t *) cp_mempool_alloc(qlib->kthreads[shep].addrres_pool)
-#define FREE_ADDRRES(shep, t) cp_mempool_free(qlib->kthreads[shep].addrres_pool, t)
-#else
+#if defined(UNPOOLED_ADDRRES) || defined(UNPOOLED)
 #define ALLOC_ADDRRES(shep) (qthread_addrres_t *) malloc(sizeof(qthread_addrres_t))
 #define FREE_ADDRRES(shep, t) free(t)
+#else
+#define ALLOC_ADDRRES(shep) (qthread_addrres_t *) cp_mempool_alloc(qlib->kthreads[shep].addrres_pool)
+#define FREE_ADDRRES(shep, t) cp_mempool_free(qlib->kthreads[shep].addrres_pool, t)
 #endif
 
-#ifndef UNPOOLED_ADDRSTAT
-#define ALLOC_ADDRSTAT(shep) (qthread_addrstat_t *) cp_mempool_alloc(qlib->kthreads[shep].addrstat_pool)
-#define FREE_ADDRSTAT(shep, t) cp_mempool_free(qlib->kthreads[shep].addrstat_pool, t)
-#else
+#if defined(UNPOOLED_ADDRSTAT) || defined(UNPOOLED)
 #define ALLOC_ADDRSTAT(shep) (qthread_addrstat_t *) malloc(sizeof(qthread_addrstat_t))
 #define FREE_ADDRSTAT(shep, t) free(t)
+#else
+#define ALLOC_ADDRSTAT(shep) (qthread_addrstat_t *) cp_mempool_alloc(qlib->kthreads[shep].addrstat_pool)
+#define FREE_ADDRSTAT(shep, t) cp_mempool_free(qlib->kthreads[shep].addrstat_pool, t)
 #endif
 
-#ifndef UNPOOLED_ADDRSTAT2
-#define ALLOC_ADDRSTAT2(shep) (qthread_addrstat2_t *) cp_mempool_alloc(qlib->kthreads[shep].addrstat2_pool)
-#define FREE_ADDRSTAT2(shep, t) cp_mempool_free(qlib->kthreads[shep].addrstat2_pool, t)
-#else
+#if defined(UNPOOLED_ADDRSTAT2) || defined(UNPOOLED)
 #define ALLOC_ADDRSTAT2(shep) (qthread_addrstat2_t *) malloc(sizeof(qthread_addrstat2_t))
 #define FREE_ADDRSTAT2(shep, t) free(t)
+#else
+#define ALLOC_ADDRSTAT2(shep) (qthread_addrstat2_t *) cp_mempool_alloc(qlib->kthreads[shep].addrstat2_pool)
+#define FREE_ADDRSTAT2(shep, t) cp_mempool_free(qlib->kthreads[shep].addrstat2_pool, t)
 #endif
 
 #define ALIGN(d, s, f) do { \
@@ -252,6 +252,11 @@ static cp_hashtable *p_to_shep = NULL;
 
 /* internal globals */
 static qlib_t *qlib = NULL;
+static cp_mempool *generic_qthread_pool = NULL;
+static cp_mempool *generic_stack_pool = NULL;
+static cp_mempool *generic_context_pool = NULL;
+static cp_mempool *generic_queue_pool = NULL;
+static cp_mempool *generic_lock_pool = NULL;
 
 /* Internal functions */
 static void qthread_wrapper(void *arg);
@@ -277,6 +282,8 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m, void *maddr,
 static inline void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
 					 const qthread_shepherd_id_t
 					 threadshep, const char recursive);
+
+#define NO_SHEPHERD ((qthread_shepherd_id_t)-1)
 
 #ifdef QTHREAD_NO_ASSERTS
 #define QTHREAD_LOCK(l) pthread_mutex_lock(l)
@@ -382,6 +389,27 @@ static inline void qthread_debug(char *format, ...)
 #define qthread_debug(...) do{ }while(0)
 #endif
 
+/* this is a utility function that is used ALOT.
+ *
+ * generally, this is used to determine which memory pools to use. it is FASTER
+ * (I tested it) to use this and find the correct memory pool than it is to
+ * protect all memory pools with a mutex (which would be necessary for
+ * correctness) EVEN THOUGH pthread_self() MAY go into the kernel. (It may not
+ * go into the kernel, depending on the implementation of pthreads; some
+ * OS/compiler combos store the pthread_self() value in a high register.) */
+static inline qthread_shepherd_id_t qthread_internal_myshepherd(void)
+{
+    void *ret;
+
+    ret = cp_hashtable_get(p_to_shep, (void*)pthread_self());
+    if (ret == NULL) {
+	return NO_SHEPHERD;
+    } else {
+	return ((qthread_shepherd_id_t)(size_t)ret)-1;
+    }
+}
+
+
 /* the qthread_shepherd() is the pthread responsible for actually
  * executing the work units
  *
@@ -462,11 +490,11 @@ static void *qthread_shepherd(void *arg)
 		    if (t->detached == 0) {
 			/* we can remove the stack and the context... */
 			if (t->context) {
-			    FREE_CONTEXT(me, t->context);
+			    FREE_CONTEXT(me->kthread_index, t->context);
 			    t->context = NULL;
 			}
 			if (t->stack != NULL) {
-			    FREE_STACK(me, t->stack);
+			    FREE_STACK(me->kthread_index, t->stack);
 			    t->stack = NULL;
 			}
 			/* but we rely on the joiner to clean up the structure
@@ -553,27 +581,24 @@ int qthread_init(const int nkthreads)
 	 * well. however, by putting one on each pthread, there's less
 	 * contention for those locks. */
 	qlib->kthreads[i].qthread_pool =
-	    cp_mempool_create_by_option(0, sizeof(qthread_t), 1000);
-	/* this prevents an alignment problem. With most mallocs there's
-	 * actually no difference in memory consumption between these two sizes
-	 */
-	if (qlib->qthread_stack_size < 4096) {
-	    qlib->kthreads[i].stack_pool =
-		cp_mempool_create_by_option(0, 4096, 4096 * 1000);
-	} else {
-	    qlib->kthreads[i].stack_pool =
-		cp_mempool_create_by_option(0, qlib->qthread_stack_size,
-					    qlib->qthread_stack_size * 1000);
-	}
-	/* this prevents an alignment problem. */
+	    cp_mempool_create_by_option(COLLECTION_MODE_NOSYNC, sizeof(qthread_t), sizeof(qthread_t)*100);
+	qlib->kthreads[i].stack_pool =
+	    cp_mempool_create_by_option(COLLECTION_MODE_NOSYNC, qlib->qthread_stack_size,
+		    qlib->qthread_stack_size * 100);
+#if ALIGNMENT_PROBLEMS_RETURN
 	if (sizeof(ucontext_t) < 2048) {
 	    qlib->kthreads[i].context_pool =
-		cp_mempool_create_by_option(0, 2048, 2048 * 1000);
+		cp_mempool_create_by_option(0, 2048, 2048 * 100);
 	} else {
 	    qlib->kthreads[i].context_pool =
 		cp_mempool_create_by_option(0, sizeof(ucontext_t),
-					    sizeof(ucontext_t) * 1000);
+					    sizeof(ucontext_t) * 100);
 	}
+#else
+	qlib->kthreads[i].context_pool =
+	    cp_mempool_create_by_option(COLLECTION_MODE_NOSYNC, sizeof(ucontext_t),
+		    sizeof(ucontext_t) * 100);
+#endif
 
 	/* the following SHOULD only be accessed by one thread at a time, so
 	 * should be quite safe unsynchronized. If things fail, though...
@@ -597,6 +622,14 @@ int qthread_init(const int nkthreads)
 	    cp_mempool_create_by_option(COLLECTION_MODE_NOSYNC,
 					sizeof(qthread_addrstat2_t), 0);
     }
+    /* these are used when qthread_fork() is called from a non-qthread. they
+     * are protected by a mutex so that things don't get wonky (note: that
+     * means qthread_fork is WAY faster if you called it from a qthread) */
+    generic_qthread_pool = cp_mempool_create_by_option(0, sizeof(qthread_t), sizeof(qthread_t)*100);
+    generic_stack_pool = cp_mempool_create_by_option(0, qlib->qthread_stack_size, qlib->qthread_stack_size * 100);
+    generic_context_pool = cp_mempool_create_by_option(0, sizeof(ucontext_t), sizeof(ucontext_t)*100);
+    generic_queue_pool = cp_mempool_create_by_option(0, sizeof(qthread_queue_t), 0);
+    generic_lock_pool = cp_mempool_create_by_option(0, sizeof(qthread_lock_t), 0);
 
     /* spawn the number of shepherd threads that were specified */
     for (i = 0; i < nkthreads; i++) {
@@ -675,6 +708,11 @@ void qthread_finalize(void)
 	cp_mempool_destroy(qlib->kthreads[i].stack_pool);
 	cp_mempool_destroy(qlib->kthreads[i].context_pool);
     }
+    cp_mempool_destroy(generic_qthread_pool);
+    cp_mempool_destroy(generic_stack_pool);
+    cp_mempool_destroy(generic_context_pool);
+    cp_mempool_destroy(generic_queue_pool);
+    cp_mempool_destroy(generic_lock_pool);
     free(qlib->kthreads);
     free(qlib);
     qlib = NULL;
@@ -685,9 +723,8 @@ void qthread_finalize(void)
 qthread_t *qthread_self(void)
 {				       /*{{{ */
     void *ret;
-
-    /*size_t mask; */
     qthread_t *t;
+    /*size_t mask; */
 
     ret = cp_hashtable_get(p_to_shep, (void *)pthread_self());
     if (ret == NULL) {
@@ -723,8 +760,11 @@ static inline qthread_t *qthread_thread_bare(const qthread_f f,
 					     shepherd)
 {				       /*{{{ */
     qthread_t *t;
+#ifndef UNPOOLED
+    qthread_shepherd_id_t myshep = qthread_internal_myshepherd();
+#endif
 
-    t = ALLOC_QTHREAD((qlib->kthreads[shepherd]));
+    t = ALLOC_QTHREAD(myshep);
     if (t == NULL) {
 	perror("qthread_prepare()");
 	abort();
@@ -772,10 +812,13 @@ static inline qthread_t *qthread_thread_new(const qthread_f f,
     qthread_t *t;
     ucontext_t *uc;
     void *stack;
+#ifndef UNPOOLED
+    qthread_shepherd_id_t myshep = qthread_internal_myshepherd();
+#endif
 
-    t = ALLOC_QTHREAD((qlib->kthreads[shepherd]));
-    uc = ALLOC_CONTEXT(shepherd);
-    stack = ALLOC_STACK(shepherd);
+    t = ALLOC_QTHREAD(myshep);
+    uc = ALLOC_CONTEXT(myshep);
+    stack = ALLOC_STACK(myshep);
 
     if (t == NULL) {
 	perror("qthread_thread_new()");
@@ -808,20 +851,21 @@ static inline qthread_t *qthread_thread_new(const qthread_f f,
 
 static inline void qthread_thread_free(qthread_t * t)
 {				       /*{{{ */
-    qthread_shepherd_t *shep;
+#ifndef UNPOOLED
+    qthread_shepherd_id_t myshep = qthread_internal_myshepherd();
+#endif
 
 #ifndef QTHREAD_NO_ASSERTS
     assert(t != NULL);
 #endif
 
-    shep = &(qlib->kthreads[t->shepherd]);
     if (t->context) {
-	FREE_CONTEXT(shep, t->context);
+	FREE_CONTEXT(myshep, t->context);
     }
     if (t->stack != NULL) {
-	FREE_STACK(shep, t->stack);
+	FREE_STACK(myshep, t->stack);
     }
-    FREE_QTHREAD(shep, t);
+    FREE_QTHREAD(myshep, t);
 }				       /*}}} */
 
 
@@ -834,11 +878,7 @@ static inline qthread_queue_t *qthread_queue_new(qthread_shepherd_id_t
 {				       /*{{{ */
     qthread_queue_t *q;
 
-    if (shepherd == (qthread_shepherd_id_t) - 1) {
-	q = (qthread_queue_t *) malloc(sizeof(qthread_queue_t));
-    } else {
-	q = ALLOC_QUEUE(shepherd);
-    }
+    q = ALLOC_QUEUE(shepherd);
     if (q == NULL) {
 	perror("qthread_queue_new()");
 	abort();
@@ -859,11 +899,7 @@ static inline void qthread_queue_free(qthread_queue_t * q,
 #endif
     QTHREAD_DESTROYLOCK(&q->lock);
     QTHREAD_DESTROYCOND(&q->notempty);
-    if (shepherd == (qthread_shepherd_id_t) - 1) {
-	free(q);
-    } else {
-	FREE_QUEUE(shepherd, q);
-    }
+    FREE_QUEUE(shepherd, q);
 }				       /*}}} */
 
 static inline void qthread_enqueue(qthread_queue_t * q, qthread_t * t)
@@ -1247,7 +1283,7 @@ qthread_t *qthread_prepare_detached_for(const qthread_f f, const void *arg,
 
 void qthread_schedule(qthread_t * t)
 {				       /*{{{ */
-    qthread_thread_plush(t, t->shepherd);
+    qthread_thread_plush(t, qthread_internal_myshepherd());
     qthread_enqueue(qlib->kthreads[t->shepherd].ready, t);
 }				       /*}}} */
 
@@ -1834,11 +1870,21 @@ int qthread_lock(qthread_t * t, const void *a)
 	cp_hashtable_wrlock(qlib->locks);
 	m = (qthread_lock_t *) cp_hashtable_get(qlib->locks, (void *)a);
 	if (m == NULL) {
-	    if ((m = ALLOC_LOCK(t->shepherd)) == NULL) {
+	    /* by doing this lookup (which MAY go into the kernel), we avoid
+	     * needing to lock a pthread_mutex on all memory pool accesses.
+	     * Theoretically, this might be bad on some architectures. 99 times
+	     * out of 100, though, this is a win for overall throughput. */
+	    qthread_shepherd_id_t myshep = qthread_internal_myshepherd();
+	    if ((m = ALLOC_LOCK(myshep)) == NULL) {
 		perror("qthread_lock()");
 		abort();
 	    }
-	    m->waiting = qthread_queue_new(t->shepherd);
+	    /* If we have a shepherd, use it... note that we are ignoring the
+	     * qthread_t that got passed in, because that is inherently
+	     * untrustworthy. I tested it, actually, and this is faster than
+	     * trying to guess whether the qthread_t is accurate or not.
+	     */
+	    m->waiting = qthread_queue_new(myshep);
 	    QTHREAD_INITLOCK(&m->lock);
 	    cp_hashtable_put(qlib->locks, (void *)a, m);
 	    /* since we just created it, we own it */
@@ -1904,14 +1950,8 @@ int qthread_unlock(qthread_t * t, const void *a)
     if (t != NULL) {
 	cp_hashtable_wrlock(qlib->locks);
 	m = (qthread_lock_t *) cp_hashtable_get(qlib->locks, (void *)a);
-
 	if (m == NULL) {
-#if 0
-	    fprintf(stderr,
-		    "qthread_unlock(%p,%p): attempt to unlock an address "
-		    "that is not locked!\n", (void *)t, a);
-	    abort();
-#endif
+	    /* unlocking an address that's already locked */
 	    cp_hashtable_unlock(qlib->locks);
 	    return 1;
 	}
@@ -1922,26 +1962,27 @@ int qthread_unlock(qthread_t * t, const void *a)
 	 */
 
 	QTHREAD_LOCK(&m->waiting->lock);
-
 	u = qthread_dequeue_nonblocking(m->waiting);
 	if (u == NULL) {
+	    /* by doing this lookup (which MAY go into the kernel), we avoid
+	     * needing to lock a pthread_mutex on all memory pool accesses.
+	     * Theoretically, this might be bad on some architectures. 99 times
+	     * out of 100, though, this is a win for overall throughput. */
+	    qthread_shepherd_id_t myshep = qthread_internal_myshepherd();
+
 	    qthread_debug("qthread_unlock(%p,%p): deleting waiting queue\n",
 			  t, a);
 	    cp_hashtable_remove(qlib->locks, (void *)a);
 	    cp_hashtable_unlock(qlib->locks);
 
 	    QTHREAD_UNLOCK(&m->waiting->lock);
-	    /* XXX: Note that this may not be the same mempool that this memory
-	     * originally came from. This shouldn't be a big problem, but if it is,
-	     * we may have to get creative */
-	    qthread_queue_free(m->waiting, t->shepherd);
-
+	    qthread_queue_free(m->waiting, myshep);
 	    QTHREAD_UNLOCK(&m->lock);
 	    QTHREAD_DESTROYLOCK(&m->lock);
 	    /* XXX: Note that this may not be the same mempool that this memory
 	     * originally came from. This shouldn't be a big problem, but if it is,
 	     * we may have to get creative */
-	    FREE_LOCK(t->shepherd, m);
+	    FREE_LOCK(myshep, m);
 	} else {
 	    cp_hashtable_unlock(qlib->locks);
 	    qthread_debug
@@ -1989,5 +2030,5 @@ void *qthread_arg(const qthread_t * t)
 
 qthread_shepherd_id_t qthread_shep(const qthread_t * t)
 {				       /*{{{ */
-    return t->shepherd;
+    return t?t->shepherd:NO_SHEPHERD;
 }				       /*}}} */
