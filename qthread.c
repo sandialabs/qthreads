@@ -283,8 +283,6 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
 					 const qthread_shepherd_id_t
 					 threadshep, const char recursive);
 
-#define NO_SHEPHERD ((qthread_shepherd_id_t)-1)
-
 #ifdef QTHREAD_NO_ASSERTS
 #define QTHREAD_LOCK(l) pthread_mutex_lock(l)
 #define QTHREAD_UNLOCK(l) pthread_mutex_unlock(l)
@@ -576,10 +574,9 @@ int qthread_init(const int nkthreads)
 
     /* set up the memory pools */
     for (i = 0; i < nkthreads; i++) {
-	/* the first three pools (qthread_pool, stack_pool, and context_pool)
-	 * must be synchronized, because forking is done by the main thread as
-	 * well. however, by putting one on each pthread, there's less
-	 * contention for those locks. */
+	/* the following SHOULD only be accessed by one thread at a time, so
+	 * should be quite safe unsynchronized. If things fail, though...
+	 * resynchronize them and see if that fixes it. */
 	qlib->kthreads[i].qthread_pool =
 	    cp_mempool_create_by_option(COLLECTION_MODE_NOSYNC,
 					sizeof(qthread_t),
@@ -603,10 +600,6 @@ int qthread_init(const int nkthreads)
 					sizeof(ucontext_t),
 					sizeof(ucontext_t) * 100);
 #endif
-
-	/* the following SHOULD only be accessed by one thread at a time, so
-	 * should be quite safe unsynchronized. If things fail, though...
-	 * resynchronize them and see if that fixes it. */
 	qlib->kthreads[i].list_pool =
 	    cp_mempool_create_by_option(COLLECTION_MODE_NOSYNC,
 					sizeof(cp_list_entry), 0);
@@ -2046,5 +2039,5 @@ void *qthread_arg(const qthread_t * t)
 
 qthread_shepherd_id_t qthread_shep(const qthread_t * t)
 {				       /*{{{ */
-    return t ? t->shepherd : NO_SHEPHERD;
+    return t ? t->shepherd : qthread_internal_myshepherd();
 }				       /*}}} */

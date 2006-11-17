@@ -25,6 +25,8 @@ typedef uint64_t aligned_t;
 typedef uint32_t aligned_t;
 #endif
 
+#define NO_SHEPHERD ((qthread_shepherd_id_t)-1)
+
 /* use this function to initialize the qthreads environment before spawning any
  * qthreads. The argument to this function specifies the number of pthreads
  * that will be spawned to shepherd the qthreads. */
