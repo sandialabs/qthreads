@@ -398,7 +398,7 @@ static inline void qthread_debug(char *format, ...)
  * go into the kernel, depending on the implementation of pthreads; some
  * OS/compiler combos store the pthread_self() value in a high register.) */
 static inline qthread_shepherd_id_t qthread_internal_myshepherd(void)
-{
+{				       /*{{{ */
     void *ret;
 
     ret = cp_hashtable_get(p_to_shep, (void *)pthread_self());
@@ -407,7 +407,7 @@ static inline qthread_shepherd_id_t qthread_internal_myshepherd(void)
     } else {
 	return ((qthread_shepherd_id_t) (size_t) ret) - 1;
     }
-}
+}				       /*}}} */
 
 
 /* the qthread_shepherd() is the pthread responsible for actually
@@ -2036,12 +2036,12 @@ int qthread_unlock(qthread_t * t, const void *a)
 /* These are just accessor functions, in case we ever decide to make the qthread_t data structure opaque */
 unsigned qthread_id(const qthread_t * t)
 {				       /*{{{ */
-    return t->shepherd;
+    return t ? t->thread_id : (unsigned int)-1;
 }				       /*}}} */
 
 void *qthread_arg(const qthread_t * t)
 {				       /*{{{ */
-    return t->arg;
+    return t ? t->arg : NULL;
 }				       /*}}} */
 
 qthread_shepherd_id_t qthread_shep(const qthread_t * t)
