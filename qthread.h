@@ -5,6 +5,20 @@
 
 #include <qthread-int.h>	       /* for uint32_t and uint64_t */
 
+/*****************************************************************************
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *
+ * !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!  NOTE  !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! *
+ *                                                                           *
+ *    The most complete documentaton is going to be in the man pages. The    *
+ *    documentation here is just to give you a general idea of what each     *
+ *    function does.                                                         *
+ *                                                                           *
+ *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *
+ * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ *****************************************************************************/
+
+
 #ifdef __cplusplus
 extern "C"
 {
