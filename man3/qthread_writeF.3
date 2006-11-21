@@ -1,0 +1,48 @@
+.TH qthread_writeF 3 "NOVEMBER 2006" libqthread "libqthread"
+.SH NAME
+qthread_writeF \- fills an address with data
+.SH SYNOPSIS
+.B #include <qthread/qthread.h>
+
+.I void
+.br
+\fBqthread_writeF\fR(qthread_t *\fIme\fR, void *\fIdest\fR, const void *\fIsrc\fR);
+.br
+.I void
+.br
+\fBqthread_writeF_const\fR(qthread_t *\fIme\fR, void *\fIdest\fR, const aligned_t \fIsrc\fR);
+.SH DESCRIPTION
+These functions are a cross between \fBqthread_fill\fR() and
+\fBqthread_writeEF\fR(). They do not wait for memory to become empty, but
+perform the write and set the state to full atomically (with respect to other
+FEB-based actions). Data is read from \fIsrc\fR and written to \fIdest\fR.
+.PP
+The semantics of writeF are:
+.RS
+.PP
+1 - data is copied from \fIsrc\fR to \fIdest\fR
+.br
+2 - \fIdest\fR's FEB state gets set to "full"
+.RE
+.PP
+This function takes a qthread_t pointer as an argument (\fIme\fR), which is
+supposed to point to the qthread_t relating to the currently executing qthread.
+If this is called from somewhere other than a qthread, use NULL for the
+\fIme\fR argument. If the qthread_t pointer has been lost, it can be reclaimed
+using \fBqthread_self\fR() (which, conveniently, returns NULL if run from a
+non-qthread).
+.SH WARNING
+This, and all other FEB-related functions currently operate exclusively on
+aligned data. This is to simulate the behavior of the MTA as closely as
+possible. If the library was compiled for a 32-bit architecture, it will
+require 4-byte alignment and reads/writes will operate on four bytes at a time;
+if the library was compiled for a 64-bit architecture, it will require 8-byte
+alignment and reads/writes will operate on eight bytes at a time.
+.SH "SEE ALSO"
+.BR qthread_empty (3),
+.BR qthread_fill (3),
+.BR qthread_writeEF (3),
+.BR qthread_readFF (3),
+.BR qthread_readFE (3),
+.BR qthread_lock (3),
+.BR qthread_unlock (3)

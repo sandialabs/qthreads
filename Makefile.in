@@ -61,7 +61,8 @@ am__vpath_adj = case $$p in \
     *) f=$$p;; \
   esac;
 am__strip_dir = `echo $$p | sed -e 's|^.*/||'`;
-am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(pkgincludedir)"
+am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(man3dir)" \
+	"$(DESTDIR)$(pkgincludedir)"
 libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
 am_libqthread_la_OBJECTS = qthread.lo qalloc.lo
@@ -98,6 +99,9 @@ SOURCES = $(libqthread_la_SOURCES) $(EXTRA_libqthread_la_SOURCES) \
 DIST_SOURCES = $(libqthread_la_SOURCES) $(EXTRA_libqthread_la_SOURCES) \
 	$(test1_SOURCES) $(test2_SOURCES) $(test3_SOURCES) \
 	$(testq_SOURCES)
+man3dir = $(mandir)/man3
+NROFF = nroff
+MANS = $(man_MANS)
 pkgincludeHEADERS_INSTALL = $(INSTALL_HEADER)
 HEADERS = $(pkginclude_HEADERS)
 ETAGS = etags
@@ -220,10 +224,39 @@ target_alias = @target_alias@
 lib_LTLIBRARIES = libqthread.la
 pkginclude_HEADERS = qthread.h qalloc.h qthread-int.h
 libqthread_la_SOURCES = qthread.c qalloc.c
-libqthread_la_LDFLAGS = -version-info 3:0:0 -no-undefined
+libqthread_la_LDFLAGS = -version-info 4:0:0 -no-undefined
 EXTRA_libqthread_la_SOURCES = context.c asm.S
 libqthread_la_LIBADD = @QTHREAD_EXTRA_OBJS@
 libqthread_la_DEPENDENCIES = @QTHREAD_EXTRA_OBJS@
+man_MANS = man3/qthread_empty.3 \
+		   man3/qthread_feb_status.3 \
+		   man3/qthread_fill.3 \
+		   man3/qthread_finalize.3 \
+		   man3/qthread_fork.3 \
+		   man3/qthread_fork_detach.3 \
+		   man3/qthread_fork_to.3 \
+		   man3/qthread_fork_to_detach.3 \
+		   man3/qthread_id.3 \
+		   man3/qthread_init.3 \
+		   man3/qthread_join.3 \
+		   man3/qthread_lock.3 \
+		   man3/qthread_prepare.3 \
+		   man3/qthread_prepare_detached.3 \
+		   man3/qthread_prepare_for.3 \
+		   man3/qthread_prepare_for_detached.3 \
+		   man3/qthread_readFE.3 \
+		   man3/qthread_readFF.3 \
+		   man3/qthread_schedule.3 \
+		   man3/qthread_schedule_on.3 \
+		   man3/qthread_self.3 \
+		   man3/qthread_shep.3 \
+		   man3/qthread_unlock.3 \
+		   man3/qthread_writeEF.3 \
+		   man3/qthread_writeEF_const.3 \
+		   man3/qthread_writeF.3 \
+		   man3/qthread_writeF_const.3 \
+		   man3/qthread_yield.3
+
 TESTS = test1 test2 test3 testq
 test1_SOURCES = test.c
 test1_LDADD = -lqthread
@@ -390,6 +423,51 @@ clean-libtool:
 distclean-libtool:
 	-rm -f libtool
 uninstall-info-am:
+install-man3: $(man3_MANS) $(man_MANS)
+	@$(NORMAL_INSTALL)
+	test -z "$(man3dir)" || $(mkdir_p) "$(DESTDIR)$(man3dir)"
+	@list='$(man3_MANS) $(dist_man3_MANS) $(nodist_man3_MANS)'; \
+	l2='$(man_MANS) $(dist_man_MANS) $(nodist_man_MANS)'; \
+	for i in $$l2; do \
+	  case "$$i" in \
+	    *.3*) list="$$list $$i" ;; \
+	  esac; \
+	done; \
+	for i in $$list; do \
+	  if test -f $(srcdir)/$$i; then file=$(srcdir)/$$i; \
+	  else file=$$i; fi; \
+	  ext=`echo $$i | sed -e 's/^.*\\.//'`; \
+	  case "$$ext" in \
+	    3*) ;; \
+	    *) ext='3' ;; \
+	  esac; \
+	  inst=`echo $$i | sed -e 's/\\.[0-9a-z]*$$//'`; \
+	  inst=`echo $$inst | sed -e 's/^.*\///'`; \
+	  inst=`echo $$inst | sed '$(transform)'`.$$ext; \
+	  echo " $(INSTALL_DATA) '$$file' '$(DESTDIR)$(man3dir)/$$inst'"; \
+	  $(INSTALL_DATA) "$$file" "$(DESTDIR)$(man3dir)/$$inst"; \
+	done
+uninstall-man3:
+	@$(NORMAL_UNINSTALL)
+	@list='$(man3_MANS) $(dist_man3_MANS) $(nodist_man3_MANS)'; \
+	l2='$(man_MANS) $(dist_man_MANS) $(nodist_man_MANS)'; \
+	for i in $$l2; do \
+	  case "$$i" in \
+	    *.3*) list="$$list $$i" ;; \
+	  esac; \
+	done; \
+	for i in $$list; do \
+	  ext=`echo $$i | sed -e 's/^.*\\.//'`; \
+	  case "$$ext" in \
+	    3*) ;; \
+	    *) ext='3' ;; \
+	  esac; \
+	  inst=`echo $$i | sed -e 's/\\.[0-9a-z]*$$//'`; \
+	  inst=`echo $$inst | sed -e 's/^.*\///'`; \
+	  inst=`echo $$inst | sed '$(transform)'`.$$ext; \
+	  echo " rm -f '$(DESTDIR)$(man3dir)/$$inst'"; \
+	  rm -f "$(DESTDIR)$(man3dir)/$$inst"; \
+	done
 install-pkgincludeHEADERS: $(pkginclude_HEADERS)
 	@$(NORMAL_INSTALL)
 	test -z "$(pkgincludedir)" || $(mkdir_p) "$(DESTDIR)$(pkgincludedir)"
@@ -659,9 +737,9 @@ check-am: all-am
 	$(MAKE) $(AM_MAKEFLAGS) $(check_PROGRAMS)
 	$(MAKE) $(AM_MAKEFLAGS) check-TESTS
 check: check-am
-all-am: Makefile $(LTLIBRARIES) $(HEADERS) config.h
+all-am: Makefile $(LTLIBRARIES) $(MANS) $(HEADERS) config.h
 installdirs:
-	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(pkgincludedir)"; do \
+	for dir in "$(DESTDIR)$(libdir)" "$(DESTDIR)$(man3dir)" "$(DESTDIR)$(pkgincludedir)"; do \
 	  test -z "$$dir" || $(mkdir_p) "$$dir"; \
 	done
 install: install-am
@@ -710,13 +788,13 @@ info: info-am
 
 info-am:
 
-install-data-am: install-pkgincludeHEADERS
+install-data-am: install-man install-pkgincludeHEADERS
 
 install-exec-am: install-libLTLIBRARIES
 
 install-info: install-info-am
 
-install-man:
+install-man: install-man3
 
 installcheck-am:
 
@@ -740,8 +818,10 @@ ps: ps-am
 
 ps-am:
 
-uninstall-am: uninstall-info-am uninstall-libLTLIBRARIES \
+uninstall-am: uninstall-info-am uninstall-libLTLIBRARIES uninstall-man \
 	uninstall-pkgincludeHEADERS
+
+uninstall-man: uninstall-man3
 
 .PHONY: CTAGS GTAGS all all-am am--refresh check check-TESTS check-am \
 	clean clean-checkPROGRAMS clean-generic clean-libLTLIBRARIES \
@@ -753,12 +833,13 @@ uninstall-am: uninstall-info-am uninstall-libLTLIBRARIES \
 	html-am info info-am install install-am install-data \
 	install-data-am install-exec install-exec-am install-info \
 	install-info-am install-libLTLIBRARIES install-man \
-	install-pkgincludeHEADERS install-strip installcheck \
-	installcheck-am installdirs maintainer-clean \
+	install-man3 install-pkgincludeHEADERS install-strip \
+	installcheck installcheck-am installdirs maintainer-clean \
 	maintainer-clean-generic mostlyclean mostlyclean-compile \
 	mostlyclean-generic mostlyclean-libtool pdf pdf-am ps ps-am \
 	tags uninstall uninstall-am uninstall-info-am \
-	uninstall-libLTLIBRARIES uninstall-pkgincludeHEADERS
+	uninstall-libLTLIBRARIES uninstall-man uninstall-man3 \
+	uninstall-pkgincludeHEADERS
 
 
 #test2: test2.c

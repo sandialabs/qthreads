@@ -1,0 +1,42 @@
+.TH qthread_empty/fill 3 "NOVEMBER 2006" libqthread "libqthread"
+.SH NAME
+qthread_empty/fill \- sets the given address to either "empty" or "full"
+.SH SYNOPSIS
+.B #include <qthread/qthread.h>
+
+.I void
+.br
+\fBqthread_empty\fR(qthread_t *\fIme\fR, const void *\fIdest\fR, const size_t \fIbytes\fR);
+.br
+.I void
+.br
+\fBqthread_fill\fR(qthread_t *\fIme\fR, const void *\fIdest\fR, const size_t \fIbytes\fR);
+.SH DESCRIPTION
+The \fBqthread_empty\fR() and \fBqthread_fill\fR() functions assert the empty
+or full state of the given range of addresses. They do not wait for the
+addresses to be in any particular state.
+.PP
+The \fIme\fR argument is used for memory pooling purposes. Memory is allocated
+on a per-shepherd basis (to avoid needing to protect the memory pool), thus it
+needs to know which shepherd it is currently on. HOWEVER, this argument is
+merely an optimization; these functions CAN figure out which pools to use
+without this information (i.e. if the \fIme\fR argument is \fBNULL\fR).
+.PP
+Note that
+.RS
+.PP
+\fBqthread_empty\fR(\fBNULL\fR, \fIaddr\fR)
+.RE
+.PP
+is faster than
+.RS
+.PP
+\fBqthread_empty\fR(\fBqthread_self\fR(), \fIaddr\fR)
+.RE
+.SH "SEE ALSO"
+.BR qthread_writeF (3),
+.BR qthread_writeEF (3),
+.BR qthread_readFF (3),
+.BR qthread_readFE (3),
+.BR qthread_lock (3),
+.BR qthread_unlock (3)

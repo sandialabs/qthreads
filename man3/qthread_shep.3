@@ -1,0 +1,14 @@
+.TH qthread_shep 3 "NOVEMBER 2006" libqthread "libqthread"
+.SH NAME
+qthread_shep \- returns the qthread's shepherd ID
+.SH SYNOPSIS
+.B #include <qthread/qthread.h>
+
+.I qthread_shepherd_id_t
+.br
+\fBqthread_shep\fR(qthread_t *\fIt\fR);
+.SH DESCRIPTION
+This function returns the shepherd identifier of the qthread \fIt\fR.
+.SH "SEE ALSO"
+.BR qthread_self (3),
+.BR qthread_id (3)

@@ -1,0 +1,22 @@
+.TH qthread_yield 3 "NOVEMBER 2006" libqthread "libqthread"
+.SH NAME
+qthread_yield \- release the CPU, allow other qthreads to run
+.SH SYNOPSIS
+.B #include <qthread/qthread.h>
+
+.I void
+.br
+\fBqthread_yield\fR(qthread_t *\fIme\fR);
+.SH DESCRIPTION
+This function allows a qthread to specifically give up control of the processor
+(aka. "shepherd") even though it has not blocked. This is useful for things
+like busy-waits or cooperative multitasking. Without this function, threads
+will only ever allow other threads assigned to the same shepherd to execute
+when they block.
+.PP
+The argument, \fIme\fR, should be a pointer to the qthread_t structure for the
+currently running qthread. If it has been lost, \fBqthread_self\fR() can be
+used to recover this pointer.
+.SH "SEE ALSO"
+.BR qthread_join (3),
+.BR qthread_self (3)

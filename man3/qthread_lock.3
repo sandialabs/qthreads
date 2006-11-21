@@ -1,0 +1,28 @@
+.TH qthread_lock/unlock 3 "NOVEMBER 2006" libqthread "libqthread"
+.SH NAME
+qthread_lock \- locks an address, and may block
+.br
+qthread_unlock \- unlocks an address
+.SH SYNOPSIS
+.B #include <qthread/qthread.h>
+
+.I void
+.br
+\fBqthread_lock\fR(qthread_t *\fIme\fR, void *\fIaddr\fR);
+.br
+.I void
+.br
+\fBqthread_unlock\fR(qthread_t *\fIme\fR, void *\fIaddr\fR);
+.SH DESCRIPTION
+These functions are designed to implement FEB-like locking and unlocking that behaves much more like a mutex.
+.PP
+These are atomic and functional, but do not have the same semantics as full FEB locking/unlocking (namely, unlocking cannot block), however because of this, they have lower overhead.
+.PP
+This function takes a qthread_t pointer as an argument (\fIme\fR), which is supposed to point to the qthread_t relating to the currently executing qthread. If this is called from somewhere other than a qthread, use NULL for the \fIme\fR argument. If the qthread_t pointer has been lost, it can be reclaimed using \fBqthread_self\fR() (which, conveniently, returns NULL if run from a non-qthread).
+.SH "SEE ALSO"
+.BR qthread_empty (3),
+.BR qthread_fill (3),
+.BR qthread_writeFE (3),
+.BR qthread_writeF (3),
+.BR qthread_readFF (3),
+.BR qthread_readFE (3),

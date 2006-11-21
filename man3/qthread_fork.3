@@ -1,0 +1,70 @@
+.TH qthread_fork 3 "NOVEMBER 2006" libqthread "libqthread"
+.SH NAME
+qthread_fork \- spawn a qthread
+.br
+qthread_fork_to \- spawn a qthread on a given shepherd
+.br
+qthread_fork_detach \- spawn a detached qthread
+.br
+qthread_fork_to_detach \- spawn a detached qthread on a given shepherd
+.SH SYNOPSIS
+.B #include <qthread/qthread.h>
+
+.I qthread_t *
+.br
+\fBqthread_fork\fR(const qthread_f *\fIf\fR, const void *\fIarg\fR);
+.br
+.I qthread_t *
+.br
+\fBqthread_fork_to\fR(const qthread_f *\fIf\fR, const void *\fIarg\fR,
+.ti +16n
+const qthread_shepherd_id_t \fIshepherd\fR);
+.br
+.I void
+.br
+\fBqthread_fork_detach\fR(const qthread_f *\fIf\fR, const void *\fIarg\fR);
+.br
+.I void
+.br
+\fBqthread_fork_to_detach\fR(const qthread_f *\fIf\fR, const void *\fIarg\fR,
+.ti +23n
+const qthread_shepherd_id_t \fIshepherd\fR);
+.SH DESCRIPTION
+These are the functions for generating new qthreads.
+.PP
+The first argument to these functions, \fIf\fR, is a function that will be run
+to completion by the created qthread. (Note that \fIf\fR is a qthread_f and not
+a qthread_t.) The second argument to these functions, \fIarg\fR, is an argument
+that will be passed to the specified function.
+.PP
+The qthread_f function must have a prototype like this:
+.RS
+.PP
+void function(qthread_t *me, void *arg);
+.RE
+.PP
+The \fBqthread_fork_to\fR() and \fBqthread_fork_to_detached\fR()
+functions spawn the qthread to a specific shepherd.
+.PP
+The \fBqthread_fork_detach\fR() and \fBqthread_fork_to_detach\fR() functions
+spawn "detached" qthreads. A detached qthread will clean up after itself when
+it exits, and is un-joinable (meaning that \fBqthread_join\fR() cannot be run
+on it). However, un-detached threads \fBMUST\fR be joined in order for them to
+clean up their related resources. In short: detached qthreads CANNOT be joined,
+and un-detached qthreads MUST be joined.
+.PP
+When a qthread is spawned, it is immediately scheduled to be run, and may be
+executed by its shepherd at any time.
+.SH "RETURN VALUE"
+\fBqthread_fork\fR() and \fBqthread_fork_to\fR() both return pointers to a
+qthread_t structure, which is a handle to the qthread that was just spawned.
+This qthread MUST be \fBqthread_join\fR()'d in order to properly release that
+the memory associated with that handle.
+.SH "SEE ALSO"
+.BR qthread_join (3),
+.BR qthread_prepare (3),
+.BR qthread_prepare_detached (3),
+.BR qthread_prepare_for (3),
+.BR qthread_prepare_detached_for (3),
+.BR qthread_schedule (3),
+.BR qthread_shedule_on (3)
