@@ -135,9 +135,13 @@ void qthread_fill(qthread_t * me, const void *dest, const size_t bytes);
  * __attribute__((alignment(8))) on your variables.
  */
 #ifdef __LP64__
-#define WORDSIZE (8)
+# ifndef WORDSIZE
+#  define WORDSIZE (8)
+# endif
 #else
-#define WORDSIZE (4)
+# ifndef WORDSIZE
+#  define WORDSIZE (4)
+# endif
 #endif
 
 /* These functions wait for memory to become empty, and then fill it. When
