@@ -7,7 +7,7 @@ static int id = 0;
 static int up[4] = { 1, 0, 0, 0 };
 static int id2 = 0;
 
-void thread(qthread_t * t)
+void thread(qthread_t * t, void *arg)
 {
     int me = 0;
     int next = 0;
@@ -32,7 +32,7 @@ void thread(qthread_t * t)
     }
 }
 
-void thread2(qthread_t * t)
+void thread2(qthread_t * t, void *arg)
 {
     int me = 0;
     int next = 0;

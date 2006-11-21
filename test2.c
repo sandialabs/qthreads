@@ -9,7 +9,7 @@ static int id = 0;
 
 pthread_mutex_t alldone = PTHREAD_MUTEX_INITIALIZER;
 
-void thread(qthread_t * t)
+void thread(qthread_t * t, void *arg)
 {
     int me = 0;
 

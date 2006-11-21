@@ -8,7 +8,7 @@ static int x __attribute__ ((aligned(8)));
 static int id = 1;
 static int readout = 0;
 
-void consumer(qthread_t * t)
+void consumer(qthread_t * t, void *arg)
 {
     int me = 0;
 
@@ -19,7 +19,7 @@ void consumer(qthread_t * t)
     qthread_readFE(t, &readout, &x);
 }
 
-void producer(qthread_t * t)
+void producer(qthread_t * t, void *arg)
 {
     int me = 0;
     int data = 55;
