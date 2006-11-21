@@ -1329,6 +1329,25 @@ struct qthread_FEB_ef_sub_args
     pthread_mutex_t alldone;
 };
 
+/* This is just a little function that should help in debugging */
+int qthread_feb_status(const void *addr)
+{				       /*{{{ */
+    qthread_addrstat_t *m;
+    aligned_t *alignedaddr;
+    int status = 1;		/* full */
+
+    ALIGN(addr, alignedaddr, "qthread_feb_status()");
+    cp_hashtable_rdlock(qlib->FEBs); {
+	m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
+						    (void *)alignedaddr);
+	if (m) {
+	    status = m->full;
+	}
+    }
+    cp_hashtable_unlock(qlib->FEBs);
+    return status;
+}				       /*}}} */
+
 static inline qthread_addrstat_t *qthread_addrstat_new(const
 						       qthread_shepherd_id_t
 						       shepherd)

@@ -116,6 +116,10 @@ void qthread_join(qthread_t * me, qthread_t * waitfor);
  * (full, no waiters) state at any one time.
  */
 
+/* This function is just to assist with debugging; it returns 1 if the address
+ * is full, and 0 if the address is empty */
+int qthread_feb_status(const void *addr);
+
 /* The empty/fill functions merely assert the empty or full state of the given
  * range of addresses. You may be wondering why they require a qthread_t
  * argument. The reason for this is memory pooling; memory is allocated on a
