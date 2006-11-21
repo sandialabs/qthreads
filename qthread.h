@@ -14,7 +14,7 @@ typedef struct qthread_s qthread_t;
 typedef unsigned char qthread_shepherd_id_t;	/* doubt we'll run more than 255 shepherds */
 
 /* for convenient arguments to qthread_fork */
-typedef void (*qthread_f) (qthread_t * me);
+typedef void (*qthread_f) (qthread_t * me, void *arg);
 
 /* FEB locking only works on aligned addresses. On 32-bit architectures, this
  * isn't too much of an inconvenience. On 64-bit architectures, it's a pain in
@@ -30,7 +30,7 @@ typedef uint32_t aligned_t;
 /* use this function to initialize the qthreads environment before spawning any
  * qthreads. The argument to this function specifies the number of pthreads
  * that will be spawned to shepherd the qthreads. */
-int qthread_init(const int nkthreads);
+int qthread_init(const int nshepherds);
 
 /* use this function to clean up the qthreads environment after execution of
  * the program is finished. This function will terminate any currently running
@@ -45,7 +45,7 @@ void qthread_finalize(void);
  * they block. */
 void qthread_yield(qthread_t * me);
 
-/* this function allows a qthread to retrive it's qthread_t pointer if it has
+/* this function allows a qthread to retrieve its qthread_t pointer if it has
  * been lost for some reason */
 qthread_t *qthread_self(void);
 
@@ -76,28 +76,27 @@ void qthread_fork_to_detach(const qthread_f f, const void *arg,
  */
 qthread_t *qthread_prepare(const qthread_f f, const void *arg);
 qthread_t *qthread_prepare_detached(const qthread_f f, const void *arg);
-qthread_t *qthread_prepare_for(const qthread_f f, const void *arg, const
-        qthread_shepherd_id_t shepherd);
+qthread_t *qthread_prepare_for(const qthread_f f, const void *arg,
+			       const qthread_shepherd_id_t shepherd);
 qthread_t *qthread_prepare_detached_for(const qthread_f f, const void *arg,
-        const qthread_shepherd_id_t shepherd);
+					const qthread_shepherd_id_t shepherd);
 
-void qthread_schedule(qthread_t *t);
-void qthread_schedule_on(qthread_t *t, const qthread_shepherd_id_t shepherd);
+void qthread_schedule(qthread_t * t);
+void qthread_schedule_on(qthread_t * t, const qthread_shepherd_id_t shepherd);
 
 /* these are accessor functions for use by the qthreads to retrieve information
  * about themselves */
 unsigned qthread_id(const qthread_t * t);
-void *qthread_arg(const qthread_t * t);
 qthread_shepherd_id_t qthread_shep(const qthread_t * t);
 
 /* This is the join function, which will only return once the specified thread
  * has finished executing.
  *
- * qthread_join() only works whether within a qthread or not (if not, pass it
- * NULL for the "me" argument). It relies on qthread_lock/unlock of the
- * qthread_t data-structure address (the user CAN muck with that, but it's not
- * recommended), so it's a blocking join that will not take processing
- * time.
+ * qthread_join() will work whether within a qthread or not. If not called from
+ * withing a qthread, pass it NULL for the "me" argument. It relies on
+ * qthread_lock/unlock of the qthread_t data-structure address (the user CAN
+ * muck with that, but it's not recommended), so it's a blocking join that will
+ * not take processing time.
  */
 void qthread_join(qthread_t * me, qthread_t * waitfor);
 
@@ -141,7 +140,7 @@ void qthread_fill(qthread_t * me, const void *dest, const size_t bytes);
 #define WORDSIZE (4)
 #endif
 
-/* This function waits for memory to become empty, and then fills it. When
+/* These functions wait for memory to become empty, and then fill it. When
  * memory becomes empty, only one thread blocked like this will be awoken. Data
  * is read from src and written to dest.
  *
@@ -173,11 +172,12 @@ void qthread_writeEF_const(qthread_t * me, void *dest, const aligned_t src);
  * (which, conveniently, returns NULL if you aren't a qthread).
  */
 
-void qthread_writeF(qthread_t *me, void *dest, const void *src);
-void qthread_writeF_const(qthread_t *me, void *dest, const aligned_t src);
+void qthread_writeF(qthread_t * me, void *dest, const void *src);
+void qthread_writeF_const(qthread_t * me, void *dest, const aligned_t src);
 
 /* This function waits for memory to become full, and then reads it and leaves
- * the memory as full. When memory becomes full, all threads waiting for it to
+ * the memory as full. When memory becomes full, all threads waiting for itindent: Standard input:225: Error:Stmt nesting error.
+ to
  * become full with a readFF will receive the value at once and will be queued
  * to run. Data is read from src and stored in dest.
  *

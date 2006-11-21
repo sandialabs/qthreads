@@ -1010,7 +1010,7 @@ static void qthread_wrapper(void *arg)
 
     qthread_debug("qthread_wrapper(): executing f=%p arg=%p.\n", t->f,
 		  t->arg);
-    (t->f) (t);
+    (t->f) (t, t->arg);
     t->thread_state = QTHREAD_STATE_TERMINATED;
 
     qthread_debug("qthread_wrapper(): f=%p arg=%p completed.\n", t->f,
@@ -1492,13 +1492,11 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m, void *maddr,
     }
 }				       /*}}} */
 
-static void qthread_empty_sub(qthread_t * me)
+static void qthread_empty_sub(qthread_t * me, void *arg)
 {				       /*{{{ */
-    struct qthread_FEB_ef_sub_args *args =
-	(struct qthread_FEB_ef_sub_args *)qthread_arg(me);
-
-    qthread_empty(me, args->dest, args->count);
-    pthread_mutex_unlock(&args->alldone);
+    qthread_empty(me, ((struct qthread_FEB_ef_sub_args *)arg)->dest,
+		  ((struct qthread_FEB_ef_sub_args *)arg)->count);
+    pthread_mutex_unlock(&((struct qthread_FEB_ef_sub_args *)arg)->alldone);
 }				       /*}}} */
 
 void qthread_empty(qthread_t * me, const void *dest, const size_t count)
@@ -1550,13 +1548,11 @@ void qthread_empty(qthread_t * me, const void *dest, const size_t count)
     }
 }				       /*}}} */
 
-static void qthread_fill_sub(qthread_t * me)
+static void qthread_fill_sub(qthread_t * me, void *arg)
 {				       /*{{{ */
-    struct qthread_FEB_ef_sub_args *args =
-	(struct qthread_FEB_ef_sub_args *)qthread_arg(me);
-
-    qthread_fill(me, args->dest, args->count);
-    pthread_mutex_unlock(&args->alldone);
+    qthread_fill(me, ((struct qthread_FEB_ef_sub_args *)arg)->dest,
+		 ((struct qthread_FEB_ef_sub_args *)arg)->count);
+    pthread_mutex_unlock(&((struct qthread_FEB_ef_sub_args *)arg)->alldone);
 }				       /*}}} */
 
 void qthread_fill(qthread_t * me, const void *dest, const size_t count)
@@ -1610,13 +1606,11 @@ void qthread_fill(qthread_t * me, const void *dest, const size_t count)
  * 2 - the destination's FEB state gets changed from empty to full
  */
 
-void qthread_writeF_sub(qthread_t * me)
+void qthread_writeF_sub(qthread_t * me, void *arg)
 {				       /*{{{ */
-    struct qthread_FEB_sub_args *args =
-	(struct qthread_FEB_sub_args *)qthread_arg(me);
-
-    qthread_writeF(me, args->dest, args->src);
-    pthread_mutex_unlock(&args->alldone);
+    qthread_writeF(me, ((struct qthread_FEB_sub_args *)arg)->dest,
+		   ((struct qthread_FEB_sub_args *)arg)->src);
+    pthread_mutex_unlock(&((struct qthread_FEB_sub_args *)arg)->alldone);
 }				       /*}}} */
 
 void qthread_writeF(qthread_t * me, void *dest, const void *src)
@@ -1662,13 +1656,11 @@ void qthread_writeF_const(qthread_t * me, void *dest, const aligned_t src)
  * 3 - the destination's FEB state gets changed from empty to full
  */
 
-static void qthread_writeEF_sub(qthread_t * me)
+static void qthread_writeEF_sub(qthread_t * me, void *arg)
 {				       /*{{{ */
-    struct qthread_FEB_sub_args *args =
-	(struct qthread_FEB_sub_args *)qthread_arg(me);
-
-    qthread_writeEF(me, args->dest, args->src);
-    pthread_mutex_unlock(&args->alldone);
+    qthread_writeEF(me, ((struct qthread_FEB_sub_args *)arg)->dest,
+		    ((struct qthread_FEB_sub_args *)arg)->src);
+    pthread_mutex_unlock(&((struct qthread_FEB_sub_args *)arg)->alldone);
 }				       /*}}} */
 
 void qthread_writeEF(qthread_t * me, void *dest, const void *src)
@@ -1733,13 +1725,11 @@ void qthread_writeEF_const(qthread_t * me, void *dest, const aligned_t src)
  * 2 - data is copied from src to destination
  */
 
-static void qthread_readFF_sub(qthread_t * me)
+static void qthread_readFF_sub(qthread_t * me, void *arg)
 {				       /*{{{ */
-    struct qthread_FEB_sub_args *args =
-	(struct qthread_FEB_sub_args *)qthread_arg(me);
-
-    qthread_readFF(me, args->dest, args->src);
-    pthread_mutex_unlock(&args->alldone);
+    qthread_readFF(me, ((struct qthread_FEB_sub_args *)arg)->dest,
+		   ((struct qthread_FEB_sub_args *)arg)->src);
+    pthread_mutex_unlock(&((struct qthread_FEB_sub_args *)arg)->alldone);
 }				       /*}}} */
 
 void qthread_readFF(qthread_t * me, void *dest, void *src)
@@ -1800,13 +1790,11 @@ void qthread_readFF(qthread_t * me, void *dest, void *src)
  * 3 - the src's FEB bits get changed from full to empty
  */
 
-static void qthread_readFE_sub(qthread_t * me)
+static void qthread_readFE_sub(qthread_t * me, void *arg)
 {				       /*{{{ */
-    struct qthread_FEB_sub_args *args =
-	(struct qthread_FEB_sub_args *)qthread_arg(me);
-
-    qthread_readFE(me, args->dest, args->src);
-    pthread_mutex_unlock(&args->alldone);
+    qthread_readFE(me, ((struct qthread_FEB_sub_args *)arg)->dest,
+		   ((struct qthread_FEB_sub_args *)arg)->src);
+    pthread_mutex_unlock(&((struct qthread_FEB_sub_args *)arg)->alldone);
 }				       /*}}} */
 
 void qthread_readFE(qthread_t * me, void *dest, void *src)
@@ -1880,13 +1868,10 @@ struct qthread_lock_sub_args
     const void *addr;
 };
 
-static void qthread_lock_sub(qthread_t * t)
+static void qthread_lock_sub(qthread_t * t, void *arg)
 {				       /*{{{ */
-    struct qthread_lock_sub_args *args =
-	(struct qthread_lock_sub_args *)qthread_arg(t);
-
-    qthread_lock(t, args->addr);
-    pthread_mutex_unlock(&(args->alldone));
+    qthread_lock(t, ((struct qthread_lock_sub_args *)arg)->addr);
+    pthread_mutex_unlock(&(((struct qthread_lock_sub_args *)arg)->alldone));
 }				       /*}}} */
 
 int qthread_lock(qthread_t * t, const void *a)
@@ -1959,13 +1944,10 @@ int qthread_lock(qthread_t * t, const void *a)
     }
 }				       /*}}} */
 
-static void qthread_unlock_sub(qthread_t * t)
+static void qthread_unlock_sub(qthread_t * t, void *arg)
 {				       /*{{{ */
-    struct qthread_lock_sub_args *args =
-	(struct qthread_lock_sub_args *)qthread_arg(t);
-
-    qthread_unlock(t, args->addr);
-    pthread_mutex_unlock(&(args->alldone));
+    qthread_unlock(t, ((struct qthread_lock_sub_args *)arg)->addr);
+    pthread_mutex_unlock(&(((struct qthread_lock_sub_args *)arg)->alldone));
 }				       /*}}} */
 
 int qthread_unlock(qthread_t * t, const void *a)
@@ -2049,11 +2031,6 @@ int qthread_unlock(qthread_t * t, const void *a)
 unsigned qthread_id(const qthread_t * t)
 {				       /*{{{ */
     return t ? t->thread_id : (unsigned int)-1;
-}				       /*}}} */
-
-void *qthread_arg(const qthread_t * t)
-{				       /*{{{ */
-    return t ? t->arg : NULL;
 }				       /*}}} */
 
 qthread_shepherd_id_t qthread_shep(const qthread_t * t)
