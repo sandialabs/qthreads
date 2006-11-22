@@ -1,29 +1,23 @@
 .TH qthread_prepare 3 "NOVEMBER 2006" libqthread "libqthread"
 .SH NAME
-qthread_prepare \- create an unscheduled qthread
-.br
-qthread_prepare_for \- create an unscheduled qthread for a given shepherd
-.br
-qthread_prepare_detached \- create an unscheduled detached qthread
-.br
-qthread_prepare_detached_for \- create an unsheduled detached qthread for a given shepherd
+\fBqthread_prepare\fR, \fBqthread_prepare_for\fR, \fBqthread_prepare_detached\fR, \fBqthread_prepare_detached_for\fR \- create an unscheduled qthread
 .SH SYNOPSIS
 .B #include <qthread/qthread.h>
 
 .I qthread_t *
 .br
 \fBqthread_prepare\fR(qthread_f *\fIf\fR, const void *\fIarg\fR);
-.br
+.PP
 .I qthread_t *
 .br
 \fBqthread_prepare_for\fR(qthread_f *\fIf\fR, const void *\fIarg\fR,
 .ti +20n
 const qthread_shepherd_id_t \fIshepherd\fR);
-.br
+.PP
 .I qthread_t *
 .br
 \fBqthread_prepare_detached\fR(qthread_f *\fIf\fR, const void *\fIarg\fR);
-.br
+.PP
 .I qthread_t *
 .br
 \fBqthread_prepare_detached_for\fR(qthread_f *\fIf\fR, const void *\fIarg\fR,

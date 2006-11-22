@@ -1,29 +1,23 @@
 .TH qthread_fork 3 "NOVEMBER 2006" libqthread "libqthread"
 .SH NAME
-qthread_fork \- spawn a qthread
-.br
-qthread_fork_to \- spawn a qthread on a given shepherd
-.br
-qthread_fork_detach \- spawn a detached qthread
-.br
-qthread_fork_to_detach \- spawn a detached qthread on a given shepherd
+\fBqthread_fork\fR, \fBqthread_fork_to\fR, \fBqthread_fork_detach\fR, \fBqthread_fork_to_detach\fR \- spawn a qthread
 .SH SYNOPSIS
 .B #include <qthread/qthread.h>
 
 .I qthread_t *
 .br
 \fBqthread_fork\fR(const qthread_f *\fIf\fR, const void *\fIarg\fR);
-.br
+.PP
 .I qthread_t *
 .br
 \fBqthread_fork_to\fR(const qthread_f *\fIf\fR, const void *\fIarg\fR,
 .ti +16n
 const qthread_shepherd_id_t \fIshepherd\fR);
-.br
+.PP
 .I void
 .br
 \fBqthread_fork_detach\fR(const qthread_f *\fIf\fR, const void *\fIarg\fR);
-.br
+.PP
 .I void
 .br
 \fBqthread_fork_to_detach\fR(const qthread_f *\fIf\fR, const void *\fIarg\fR,

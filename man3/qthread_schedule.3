@@ -1,15 +1,13 @@
 .TH qthread_schedule 3 "NOVEMBER 2006" libqthread "libqthread"
 .SH NAME
-qthread_schedule \- enqueue a prepared but unscheduled qthread to run
-.br
-qthread_schedule_on \- enqueue a prepared but unscheduled qthread to run on a given shepherd
+\fBqthread_schedule\fR, \fBqthread_schedule_on\fR \- enqueue a prepared but unscheduled qthread to run
 .SH SYNOPSIS
 .B #include <qthread/qthread.h>
 
 .I void
 .br
 \fBqthread_schedule\fR(qthread_t *\fIt\fR);
-.br
+.PP
 .I void
 .br
 \fBqthread_schedule_on\fR(qthread_t *\fIt\fR,

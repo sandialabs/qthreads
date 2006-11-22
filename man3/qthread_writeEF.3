@@ -1,13 +1,13 @@
 .TH qthread_writeEF 3 "NOVEMBER 2006" libqthread "libqthread"
 .SH NAME
-qthread_writeEF \- waits for the dest to be empty, then fills it
+\fBqthread_writeEF\fR, \fBqthread_writeEF_const\fR \- waits for the dest to be empty, then fills it
 .SH SYNOPSIS
 .B #include <qthread/qthread.h>
 
 .I void
 .br
 \fBqthread_writeEF\fR(qthread_t *\fIme\fR, void *\fIdest\fR, const void *\fIsrc\fR);
-.br
+.PP
 .I void
 .br
 \fBqthread_writeEF_const\fR(qthread_t *\fIme\fR, void *\fIdest\fR, const aligned_t \fIsrc\fR);

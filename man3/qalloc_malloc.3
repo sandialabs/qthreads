@@ -1,0 +1,32 @@
+.TH qalloc_malloc 3 "NOVEMBER 2006" libqthread "libqthread"
+.SH NAME
+\fBqalloc_malloc\fR, \fBqalloc_statmalloc\fR, \fBqalloc_dynmalloc\fR \- allocates memory from the specified map
+.SH SYNOPSIS
+.B #include <qthread/qalloc.h>
+
+.I void *
+.br
+\fBqalloc_malloc\fR(void *\fImap\fR, size_t \fIsize\fR);
+.PP
+.I void *
+.br
+\fBqalloc_statmalloc\fR(struct mapinfo_s *\fImap\fR);
+.PP
+.I void *
+.br
+\fBqalloc_dynmalloc\fR(struct dynmapinfo_s *\fImap\fR, size_t \fIsize\fR);
+.SH DESCRIPTION
+These are the allocation functions. They return a pointer to an allocated
+memory block from the specified qalloc \fImap\fR. The \fBqalloc_statmalloc\fR()
+function only needs a pointer to the \fImap\fR itself, as the size of the
+returned block is the same for all allocations from that map.
+\fBqalloc_dynmalloc\fR() on the other hand also takes a \fIsize\fR argument,
+since by definition, a dynamic map allows for any size allocation.
+\fBqalloc_malloc\fR() will use whichever of the other two functions is
+appropriate for the map it is passed; however, if the map is a static map, the
+\fIsize\fR argument is ignored.
+.SH "SEE ALSO"
+.BR qalloc_cleanup (3),
+.BR qalloc_checkpoint (3),
+.BR qalloc_free (3),
+.BR qalloc_loadmap (3)

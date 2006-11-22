@@ -1,0 +1,17 @@
+.TH qalloc_checkpoint 3 "NOVEMBER 2006" libqthread "libqthread"
+.SH NAME
+\fBqalloc_checkpoint\fR \- locks an address, and may block
+.SH SYNOPSIS
+.B #include <qthread/qalloc.h>
+
+.I void
+.br
+\fBqalloc_checkpoint\fR(void);
+.SH DESCRIPTION
+This function sync's the maps to disk. This can be done at any time, and is as
+efficient as \fBmsync\fR().
+.SH "SEE ALSO"
+.BR qalloc_cleanup (3),
+.BR qalloc_free (3),
+.BR qalloc_loadmap (3),
+.BR qalloc_malloc (3)

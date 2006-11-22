@@ -1,0 +1,17 @@
+.TH qalloc_cleanup 3 "NOVEMBER 2006" libqthread "libqthread"
+.SH NAME
+\fBqalloc_cleanup\fR \- unmaps all memory maps
+.SH SYNOPSIS
+.B #include <qthread/qalloc.h>
+
+.I void
+.br
+\fBqalloc_cleanup\fR(void);
+.SH DESCRIPTION
+This function performs a checkpoint, with \fBqalloc_checkpoint\fR(), and then
+un-maps all of the currently mapped memory maps.
+.SH "SEE ALSO"
+.BR qalloc_checkpoint (3),
+.BR qalloc_free (3),
+.BR qalloc_loadmap (3),
+.BR qalloc_malloc (3)
