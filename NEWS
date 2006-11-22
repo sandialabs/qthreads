@@ -1,0 +1,33 @@
+--- 0.4 ---
+New Features:
+ - man pages for all major functions
+ - added qthread_feb_status()
+
+Improvements:
+ - changed the qthread_f prototype to be easier to use
+--- 0.3 ---
+New Features:
+ - added qthread_writeF(), which as the same arguments and effect as writeEF,
+   but does not block
+ - added qthread_prepare(), qthread_schedule(), and associated functions to
+   decouple thread creation from thread scheduling
+
+Improvements:
+ - added information about compiling with the PGI compiler
+ - added support for "make check" to test most of the major functionality in
+   the library
+ - made qthread_fork() (and related functions) significantly faster if called
+   from within a qthread by making it possible to avoid using mutexes to
+   protect memory pools
+ - qthread_shep() may now take a NULL if you don't have a qthread_t handy
+   (qthread_shep(NULL) is faster than qthread_shep(qthread_self()))
+
+Bug fixes:
+ - corrected the behavior of qthread_readFF() and readFE() (they were
+   dereferencing things too many times)
+ - qthread_unlock() will now function correctly if unlocking something that's
+   already unlocked (it could get into a deadlock situation before, because it
+   wasn't cleaning up after itself)
+ - fixed a typo in qalloc_dynmalloc() that could cause deadlock on some
+   architectures
+ - corrected memory pooling to eliminate assertion failures

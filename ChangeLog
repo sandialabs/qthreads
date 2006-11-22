@@ -1,3 +1,71 @@
+2006-11-22 13:10  kbwheel
+
+	* qalloc.h: match the manpages
+
+2006-11-22 13:10  kbwheel
+
+	* Makefile.am: forgot qalloc
+
+2006-11-22 13:07  kbwheel
+
+	* man3/: qalloc_checkpoint.3, qalloc_cleanup.3, qalloc_dynfree.3,
+	  qalloc_dynmalloc.3, qalloc_free.3, qalloc_loadmap.3,
+	  qalloc_makedynmap.3, qalloc_makestatmap.3, qalloc_malloc.3,
+	  qalloc_statfree.3, qalloc_statmalloc.3, qthread_empty.3,
+	  qthread_feb_status.3, qthread_finalize.3, qthread_fork.3,
+	  qthread_id.3, qthread_init.3, qthread_join.3, qthread_lock.3,
+	  qthread_prepare.3, qthread_readFE.3, qthread_readFF.3,
+	  qthread_schedule.3, qthread_self.3, qthread_shep.3,
+	  qthread_writeEF.3, qthread_writeF.3, qthread_yield.3: forgot
+	  qalloc, changed the formatting slightly, to be more useful with
+	  apropos and other such tools
+
+2006-11-21 17:05  kbwheel
+
+	* qthread.h: disclaimer
+
+2006-11-21 17:00  kbwheel
+
+	* man3/qthread_shep.3: NO_SHEPHERD documentation
+
+2006-11-21 16:59  kbwheel
+
+	* qthread.h: wrap WORDSIZE in an ifndef
+
+2006-11-21 16:51  kbwheel
+
+	* Makefile.am, Makefile.in, man3/qthread_empty.3,
+	  man3/qthread_feb_status.3, man3/qthread_fill.3,
+	  man3/qthread_finalize.3, man3/qthread_fork.3,
+	  man3/qthread_fork_detach.3, man3/qthread_fork_to.3,
+	  man3/qthread_fork_to_detach.3, man3/qthread_id.3,
+	  man3/qthread_init.3, man3/qthread_join.3, man3/qthread_lock.3,
+	  man3/qthread_prepare.3, man3/qthread_prepare_detached.3,
+	  man3/qthread_prepare_for.3, man3/qthread_prepare_for_detached.3,
+	  man3/qthread_readFE.3, man3/qthread_readFF.3,
+	  man3/qthread_schedule.3, man3/qthread_schedule_on.3,
+	  man3/qthread_self.3, man3/qthread_shep.3, man3/qthread_unlock.3,
+	  man3/qthread_writeEF.3, man3/qthread_writeEF_const.3,
+	  man3/qthread_writeF.3, man3/qthread_writeF_const.3,
+	  man3/qthread_yield.3: added man pages
+
+2006-11-21 15:07  kbwheel
+
+	* test.c, test2.c, test3.c: use the new qthread_f prototype
+
+2006-11-21 15:03  kbwheel
+
+	* qthread.c, qthread.h: removed the arg abstraction, make it
+	  actually an arg (for speed purposes)
+
+2006-11-21 12:05  kbwheel
+
+	* qthread.c, qthread.h: added qthread_feb_status(void*)
+
+2006-11-17 13:29  kbwheel
+
+	* ChangeLog: release
+
 2006-11-17 13:29  kbwheel
 
 	* qthread.c, qthread.h: make NO_SHEPHERD available to the user
