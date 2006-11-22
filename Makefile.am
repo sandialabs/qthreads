@@ -34,7 +34,18 @@ man_MANS = man3/qthread_empty.3 \
 		   man3/qthread_writeEF_const.3 \
 		   man3/qthread_writeF.3 \
 		   man3/qthread_writeF_const.3 \
-		   man3/qthread_yield.3
+		   man3/qthread_yield.3 \
+		   man3/qalloc_checkpoint.3 \
+		   man3/qalloc_cleanup.3 \
+		   man3/qalloc_dynfree.3 \
+		   man3/qalloc_dynmalloc.3 \
+		   man3/qalloc_free.3 \
+		   man3/qalloc_loadmap.3 \
+		   man3/qalloc_makedynmap.3 \
+		   man3/qalloc_makestatmap.3 \
+		   man3/qalloc_malloc.3 \
+		   man3/qalloc_statfree.3 \
+		   man3/qalloc_statmalloc.3
 
 TESTS = test1 test2 test3 testq
 check_PROGRAMS = test1 test2 test3 testq
