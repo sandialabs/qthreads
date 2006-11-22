@@ -60,9 +60,9 @@ void *qalloc_malloc(void *map, size_t size);
  * The dynfree() function returns a dynamic-size chunk to its map.
  * The free() function is a merging of the above two.
  */
-void qalloc_statfree(void *block, struct mapinfo_s *m);
-void qalloc_dynfree(void *block, struct dynmapinfo_s *m);
-void qalloc_free(void *block, void *m);
+void qalloc_statfree(void *block, struct mapinfo_s *map);
+void qalloc_dynfree(void *block, struct dynmapinfo_s *map);
+void qalloc_free(void *block, void *map);
 
 #ifdef __cplusplus
 }
