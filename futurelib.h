@@ -1,7 +1,7 @@
 #ifndef FUTURES_H
 #define FUTURES_H
 
-#include "qthread.h"
+#include "qthread/qthread.h"
 
 #ifdef __cplusplus
 extern "C" {
