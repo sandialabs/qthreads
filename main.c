@@ -1,10 +1,10 @@
 #include <stdio.h>
 #include <assert.h>
-#include "qthread.h"
+#include <qthread/qthread.h>
 
-static int x=0;
+static int x = 0;
 
-void thread(qthread_t *t)
+void thread(qthread_t * t)
 {
     int y;
 
@@ -20,10 +20,10 @@ int main(int argc, char *argv[])
 
     qthread_init(3);
 
-    a=qthread_fork(thread, NULL);
-    b=qthread_fork(thread, NULL);
-    c=qthread_fork(thread, NULL);
-    d=qthread_fork(thread, NULL);
+    a = qthread_fork(thread, NULL);
+    b = qthread_fork(thread, NULL);
+    c = qthread_fork(thread, NULL);
+    d = qthread_fork(thread, NULL);
 
     qthread_join(a);
     qthread_join(b);
@@ -31,6 +31,6 @@ int main(int argc, char *argv[])
     qthread_join(d);
 
     qthread_finalize();
-    
+
     printf("Final value of x=%d\n", x);
 }

@@ -20630,7 +20630,7 @@ done
 # ------ AX CREATE STDINT H -------------------------------------
 { echo "$as_me:$LINENO: checking for stdint types" >&5
 echo $ECHO_N "checking for stdint types... $ECHO_C" >&6; }
-ac_stdint_h=`echo qthread-int.h`
+ac_stdint_h=`echo qthread/qthread-int.h`
 # try to shortcircuit - if the default include path of the compiler
 # can find a "stdint.h" header then we assume that all compilers can.
 if test "${ac_cv_header_stdint_t+set}" = set; then

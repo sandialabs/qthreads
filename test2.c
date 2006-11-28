@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "qthread.h"
+#include <qthread/qthread.h>
 
 static int target;
 static int x = 0;
@@ -21,7 +21,8 @@ void thread(qthread_t * t, void *arg)
     qthread_lock(t, &x);
     //printf("thread(%i): x=%d\n", me, x);
     x++;
-    if (x == target) pthread_mutex_unlock(&alldone);
+    if (x == target)
+	pthread_mutex_unlock(&alldone);
     qthread_unlock(t, &x);
 }
 
@@ -42,7 +43,7 @@ int main(int argc, char *argv[])
 
     pthread_mutex_lock(&alldone);
 
-    for (i=0;i<target;i++)
+    for (i = 0; i < target; i++)
 	qthread_fork_detach(thread, NULL);
 
     pthread_mutex_lock(&alldone);

@@ -38,7 +38,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 check_PROGRAMS = test1$(EXEEXT) test2$(EXEEXT) test3$(EXEEXT) \
-	testq$(EXEEXT)
+	testq$(EXEEXT) testloop$(EXEEXT)
 DIST_COMMON = README $(am__configure_deps) $(pkginclude_HEADERS) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(srcdir)/config.h.in $(top_srcdir)/configure AUTHORS COPYING \
@@ -65,7 +65,7 @@ am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(man3dir)" \
 	"$(DESTDIR)$(pkgincludedir)"
 libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
-am_libqthread_la_OBJECTS = qthread.lo qalloc.lo
+am_libqthread_la_OBJECTS = qthread.lo qalloc.lo futurelib.lo
 libqthread_la_OBJECTS = $(am_libqthread_la_OBJECTS)
 am_test1_OBJECTS = test.$(OBJEXT)
 test1_OBJECTS = $(am_test1_OBJECTS)
@@ -76,6 +76,9 @@ test2_DEPENDENCIES =
 am_test3_OBJECTS = test3.$(OBJEXT)
 test3_OBJECTS = $(am_test3_OBJECTS)
 test3_DEPENDENCIES =
+am_testloop_OBJECTS = testloop.$(OBJEXT)
+testloop_OBJECTS = $(am_testloop_OBJECTS)
+testloop_DEPENDENCIES =
 am_testq_OBJECTS = testq.$(OBJEXT)
 testq_OBJECTS = $(am_testq_OBJECTS)
 testq_DEPENDENCIES =
@@ -93,12 +96,20 @@ LTCOMPILE = $(LIBTOOL) --tag=CC --mode=compile $(CC) $(DEFS) \
 CCLD = $(CC)
 LINK = $(LIBTOOL) --tag=CC --mode=link $(CCLD) $(AM_CFLAGS) $(CFLAGS) \
 	$(AM_LDFLAGS) $(LDFLAGS) -o $@
+CXXCOMPILE = $(CXX) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) \
+	$(AM_CPPFLAGS) $(CPPFLAGS) $(AM_CXXFLAGS) $(CXXFLAGS)
+LTCXXCOMPILE = $(LIBTOOL) --tag=CXX --mode=compile $(CXX) $(DEFS) \
+	$(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) $(CPPFLAGS) \
+	$(AM_CXXFLAGS) $(CXXFLAGS)
+CXXLD = $(CXX)
+CXXLINK = $(LIBTOOL) --tag=CXX --mode=link $(CXXLD) $(AM_CXXFLAGS) \
+	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(libqthread_la_SOURCES) $(EXTRA_libqthread_la_SOURCES) \
 	$(test1_SOURCES) $(test2_SOURCES) $(test3_SOURCES) \
-	$(testq_SOURCES)
+	$(testloop_SOURCES) $(testq_SOURCES)
 DIST_SOURCES = $(libqthread_la_SOURCES) $(EXTRA_libqthread_la_SOURCES) \
 	$(test1_SOURCES) $(test2_SOURCES) $(test3_SOURCES) \
-	$(testq_SOURCES)
+	$(testloop_SOURCES) $(testq_SOURCES)
 man3dir = $(mandir)/man3
 NROFF = nroff
 MANS = $(man_MANS)
@@ -222,9 +233,13 @@ sharedstatedir = @sharedstatedir@
 sysconfdir = @sysconfdir@
 target_alias = @target_alias@
 lib_LTLIBRARIES = libqthread.la
-pkginclude_HEADERS = qthread.h qalloc.h qthread-int.h
-libqthread_la_SOURCES = qthread.c qalloc.c
-libqthread_la_LDFLAGS = -version-info 4:0:0 -no-undefined
+pkginclude_HEADERS = qthread/qthread.h \
+					 qthread/qalloc.h \
+					 qthread/qthread-int.h \
+					 qthread/futurelib.h
+
+libqthread_la_SOURCES = qthread.c qalloc.c futurelib.c
+libqthread_la_LDFLAGS = -version-info 4:1:0 -no-undefined
 EXTRA_libqthread_la_SOURCES = context.c asm.S
 libqthread_la_LIBADD = @QTHREAD_EXTRA_OBJS@
 libqthread_la_DEPENDENCIES = @QTHREAD_EXTRA_OBJS@
@@ -268,7 +283,7 @@ man_MANS = man3/qthread_empty.3 \
 		   man3/qalloc_statfree.3 \
 		   man3/qalloc_statmalloc.3
 
-TESTS = test1 test2 test3 testq
+TESTS = test1 test2 test3 testq testloop
 test1_SOURCES = test.c
 test1_LDADD = -lqthread
 test2_SOURCES = test2.c
@@ -277,11 +292,13 @@ test3_SOURCES = test3.c
 test3_LDADD = -lqthread
 testq_SOURCES = testq.c
 testq_LDADD = -lqthread
+testloop_SOURCES = testloop.cpp
+testloop_LDADD = -lqthread
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
 .SUFFIXES:
-.SUFFIXES: .S .c .lo .o .obj
+.SUFFIXES: .S .c .cpp .lo .o .obj
 am--refresh:
 	@:
 $(srcdir)/Makefile.in:  $(srcdir)/Makefile.am  $(am__configure_deps)
@@ -377,6 +394,9 @@ test2$(EXEEXT): $(test2_OBJECTS) $(test2_DEPENDENCIES)
 test3$(EXEEXT): $(test3_OBJECTS) $(test3_DEPENDENCIES) 
 	@rm -f test3$(EXEEXT)
 	$(LINK) $(test3_LDFLAGS) $(test3_OBJECTS) $(test3_LDADD) $(LIBS)
+testloop$(EXEEXT): $(testloop_OBJECTS) $(testloop_DEPENDENCIES) 
+	@rm -f testloop$(EXEEXT)
+	$(CXXLINK) $(testloop_LDFLAGS) $(testloop_OBJECTS) $(testloop_LDADD) $(LIBS)
 testq$(EXEEXT): $(testq_OBJECTS) $(testq_DEPENDENCIES) 
 	@rm -f testq$(EXEEXT)
 	$(LINK) $(testq_LDFLAGS) $(testq_OBJECTS) $(testq_LDADD) $(LIBS)
@@ -388,11 +408,13 @@ distclean-compile:
 	-rm -f *.tab.c
 
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/context.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/futurelib.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qalloc.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qthread.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test2.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test3.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testloop.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testq.Po@am__quote@
 
 .S.o:
@@ -424,6 +446,27 @@ distclean-compile:
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
 @AMDEP_TRUE@@am__fastdepCC_FALSE@	DEPDIR=$(DEPDIR) $(CCDEPMODE) $(depcomp) @AMDEPBACKSLASH@
 @am__fastdepCC_FALSE@	$(LTCOMPILE) -c -o $@ $<
+
+.cpp.o:
+@am__fastdepCXX_TRUE@	if $(CXXCOMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ $<; \
+@am__fastdepCXX_TRUE@	then mv -f "$(DEPDIR)/$*.Tpo" "$(DEPDIR)/$*.Po"; else rm -f "$(DEPDIR)/$*.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXXCOMPILE) -c -o $@ $<
+
+.cpp.obj:
+@am__fastdepCXX_TRUE@	if $(CXXCOMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ `$(CYGPATH_W) '$<'`; \
+@am__fastdepCXX_TRUE@	then mv -f "$(DEPDIR)/$*.Tpo" "$(DEPDIR)/$*.Po"; else rm -f "$(DEPDIR)/$*.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$<' object='$@' libtool=no @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(CXXCOMPILE) -c -o $@ `$(CYGPATH_W) '$<'`
+
+.cpp.lo:
+@am__fastdepCXX_TRUE@	if $(LTCXXCOMPILE) -MT $@ -MD -MP -MF "$(DEPDIR)/$*.Tpo" -c -o $@ $<; \
+@am__fastdepCXX_TRUE@	then mv -f "$(DEPDIR)/$*.Tpo" "$(DEPDIR)/$*.Plo"; else rm -f "$(DEPDIR)/$*.Tpo"; exit 1; fi
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	source='$<' object='$@' libtool=yes @AMDEPBACKSLASH@
+@AMDEP_TRUE@@am__fastdepCXX_FALSE@	DEPDIR=$(DEPDIR) $(CXXDEPMODE) $(depcomp) @AMDEPBACKSLASH@
+@am__fastdepCXX_FALSE@	$(LTCXXCOMPILE) -c -o $@ $<
 
 mostlyclean-libtool:
 	-rm -f *.lo
@@ -621,6 +664,7 @@ check-TESTS: $(TESTS)
 distdir: $(DISTFILES)
 	$(am__remove_distdir)
 	mkdir $(distdir)
+	$(mkdir_p) $(distdir)/qthread
 	@srcdirstrip=`echo "$(srcdir)" | sed 's|.|.|g'`; \
 	topsrcdirstrip=`echo "$(top_srcdir)" | sed 's|.|.|g'`; \
 	list='$(DISTFILES)'; for file in $$list; do \

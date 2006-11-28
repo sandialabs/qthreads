@@ -23,7 +23,7 @@
 #include <cprops/mempool.h>
 #include <cprops/hashtable.h>
 #include <cprops/linked_list.h>
-#include "qthread.h"
+#include "qthread/qthread.h"
 
 #ifndef UINT8_MAX
 #define UINT8_MAX (255)

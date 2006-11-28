@@ -1,5 +1,8 @@
-#include "futurelib.h"
-#include "qthread.h"
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+#include "qthread/qthread.h"
+#include "qthread/futurelib.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>

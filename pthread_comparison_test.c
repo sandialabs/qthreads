@@ -7,10 +7,12 @@ pthread_mutex_t x_lock = PTHREAD_MUTEX_INITIALIZER;
 int id = 0;
 pthread_mutex_t id_lock = PTHREAD_MUTEX_INITIALIZER;
 
-int up[4] = {1,0,0,0};
-pthread_mutex_t up_locks[4] = {PTHREAD_MUTEX_INITIALIZER,PTHREAD_MUTEX_INITIALIZER,PTHREAD_MUTEX_INITIALIZER,PTHREAD_MUTEX_INITIALIZER};
+int up[4] = { 1, 0, 0, 0 };
+pthread_mutex_t up_locks[4] =
+    { PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER,
+PTHREAD_MUTEX_INITIALIZER, PTHREAD_MUTEX_INITIALIZER };
 
-void *thread(void * arg)
+void *thread(void *arg)
 {
     int me = 0;
     int next = 0;
@@ -20,9 +22,10 @@ void *thread(void * arg)
     me = id++;
     pthread_mutex_unlock(&id_lock);
     next = (me + 1) % 4;
-    printf("thread(%i): next %i\n", me, next); fflush(stdout);
+    printf("thread(%i): next %i\n", me, next);
+    fflush(stdout);
 
-    for (i = 0; i< 10; i++) {
+    for (i = 0; i < 10; i++) {
 	while (1) {
 	    pthread_mutex_lock(&(up_locks[me]));
 	    if (up[me] != 0) {
@@ -42,7 +45,7 @@ void *thread(void * arg)
     }
 }
 
-int main (int argc, char *argv[])
+int main(int argc, char *argv[])
 {
     pthread_t a, b, c, d;
 

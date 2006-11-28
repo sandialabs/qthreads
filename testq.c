@@ -1,4 +1,4 @@
-#include "qalloc.h"
+#include <qthread/qalloc.h>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,7 +27,7 @@ int main()
     }
     /* making maps */
     r2 = qalloc_makedynmap(size, NULL, filedyn, 3);
-    /*r2 = qalloc_loadmap("test2.img");*/
+    /*r2 = qalloc_loadmap("test2.img"); */
     if (r2 == NULL) {
 	fprintf(stderr, "makedynmap returned NULL!\n");
 	return -1;
@@ -43,7 +43,7 @@ int main()
 	fprintf(stderr, "statmalloc returned NULL!\n");
 	return -1;
     }
-    ts2 = qalloc_dynmalloc(r2, strlen("012345678901")+1);
+    ts2 = qalloc_dynmalloc(r2, strlen("012345678901") + 1);
     if (ts2 == NULL) {
 	fprintf(stderr, "dynmalloc returned NULL!\n");
 	return -1;

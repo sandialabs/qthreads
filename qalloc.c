@@ -1,7 +1,7 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-#include "qalloc.h"
+#include "qthread/qalloc.h"
 
 #include <pthread.h>
 #include <stdio.h>		       /* for perror() */
@@ -579,7 +579,7 @@ static inline size_t qalloc_findmark_bits(unsigned char *array, size_t a_len,
 		}
 	    }
 	}
-	return (size_t) -1;/* all FF's, no matter what size architecture */
+	return (size_t) - 1;	       /* all FF's, no matter what size architecture */
       stagetwo:
 	byte++;
 	/* step 2: make sure we have enough blank bytes next */
@@ -593,7 +593,7 @@ static inline size_t qalloc_findmark_bits(unsigned char *array, size_t a_len,
 		goto stageone;
 	    }
 	}
-	return (size_t)-1;/* all FF's, no matter what size architecture */
+	return (size_t) - 1;	       /* all FF's, no matter what size architecture */
       stagethree:
 	byte++;
 	/* step 3: make sure the last byte has enough blanks */

@@ -1,4 +1,4 @@
-#include "futurelib.h"
+#include <qthread/futurelib.h>
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
@@ -44,7 +44,7 @@ void hello (int i, char* msg, char c) {
 }
 
 void incr(int& i) {
-  qthread_t *me;
+  qthread_t *me = qthread_self();
   qthread_lock(me, &i);
   i++;
   printf ("incr i (%p) = %d\n", &i, i);
