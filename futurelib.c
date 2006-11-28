@@ -11,9 +11,9 @@
 #define DBprintf(...) ;
 #endif
 
-#define INIT_LOCK(qqq,xxx) qthread_unlock(qqq,xxx)
-#define LOCK(qqq,xxx) qthread_lock(qqq,xxx)
-#define UNLOCK(qqq,xxx) qthread_unlock(qqq,xxx)
+#define INIT_LOCK(qqq,xxx) qthread_unlock(qqq, (void*)(xxx))
+#define LOCK(qqq,xxx) qthread_lock(qqq, (void*)(xxx))
+#define UNLOCK(qqq,xxx) qthread_unlock(qqq, (void*)(xxx))
 
 #define THREAD_LOC(qqq) qthread_shep(qqq)
 
