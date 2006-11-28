@@ -44,7 +44,7 @@ void hello (int i, char* msg, char c) {
 }
 
 void incr(int& i) {
-  qthread_t *me = qthread_self();
+  qthread_t *me;
   qthread_lock(me, &i);
   i++;
   printf ("incr i (%p) = %d\n", &i, i);
@@ -86,23 +86,44 @@ public:
   }
 };
 
+class UserArray {
+  int *ptr;
+public:
+  UserArray (int size) { ptr = new int[size]; }
+  int& operator[](int index) { return ptr[index]; }
+};
+
 int BigData::copy_count = 0;
 
 #define ALIGN_ATTR __attribute__ ((aligned (8)))
+
+template <class ArrayT>
+void genericArraySet (ArrayT& arr, int size, char* name) {
+  printf (">>>>>>  Array setting %s <<<<<<<\n", name);
+  ParVoidLoop<Iterator, ArrayPtr<ArrayT>, loop::Par> (set, NULL, arr, 0, size);
+};
+
+template <class ArrayT>
+void genericArrayPrint (ArrayT& arr, int size, char *name) {
+  printf (">>>>>>  Array printing %s <<<<<<<\n", name);
+  ParVoidLoop<ArrayPtr<ArrayT>, loop::Par> (output, arr, 0, size);
+  printf (">>>>>>  Array printing double by value %s <<<<<<<\n", name);
+  ParVoidLoop<ArrayPtr<ArrayT>, loop::Par> (output_double, arr, 0, size);
+};
 
 void my_main() {
   printf ("Hello main\n");
 
   char *msg = "Hello Thread!";
 
-  const int size = 100;
+  const int size = 20;
   int *arr = new int[size];
-  printf (">>>>>>  Array setting <<<<<<<\n");
-  ParVoidLoop<Iterator, ArrayPtr<int*>, loop::Par> (set, NULL, arr, 0, size);
-  printf (">>>>>>  Array printing <<<<<<<\n");
-  ParVoidLoop<ArrayPtr<int*>, loop::Par> (output, arr, 0, size);
-  printf (">>>>>>  Array printing double by value <<<<<<<\n");
-  ParVoidLoop<ArrayPtr<int*>, loop::Par> (output_double, arr, 0, size);
+  genericArraySet(arr, size, "Plain old Pointer");
+  genericArrayPrint(arr, size, "Plain old Pointer");
+
+  UserArray usr_arr(size);
+  genericArraySet(usr_arr, size, "User Array Class");
+  genericArrayPrint(usr_arr, size, "User Array Class");
 
   printf (">>>>>>  Msg printing <<<<<<<\n");
   ParVoidLoop<Iterator, char*, ArrayPtr<char*>, loop::Par> 

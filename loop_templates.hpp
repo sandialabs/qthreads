@@ -28,8 +28,14 @@ template<class PtrT>
 class Value< ArrayPtr<PtrT> > {
 public:
   static PtrT sample;
-  typedef typeof(sample[0]) EleT;
-  static EleT& value(PtrT arg, int& iteration) { return arg[iteration]; }
+  typedef typeof (sample.operator[](0)) ele_t;
+  static ele_t& value(PtrT arg, int& iteration) { return arg[iteration]; }
+};
+
+template<class T>
+class Value< ArrayPtr<T*> > {
+public:
+  static T& value(T* arg, int& iteration) { return arg[iteration]; }
 };
 
 template<class T>
