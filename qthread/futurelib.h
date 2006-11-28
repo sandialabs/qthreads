@@ -23,7 +23,7 @@ void future_acquire(qthread_t * qthr);
 
 #ifdef __cplusplus
 }
-#include "loop_templates.hpp"
+#include <qthread/loop_templates.hpp>
 #endif
 
 #endif

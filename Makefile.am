@@ -2,7 +2,10 @@ lib_LTLIBRARIES = libqthread.la
 pkginclude_HEADERS = qthread/qthread.h \
 					 qthread/qalloc.h \
 					 qthread/qthread-int.h \
-					 qthread/futurelib.h
+					 qthread/futurelib.h \
+					 qthread/loop_templates.hpp \
+					 qthread/loop_iter.hpp \
+					 qthread/loop.hpp
 
 libqthread_la_SOURCES = qthread.c qalloc.c futurelib.c
 libqthread_la_LDFLAGS = -version-info 4:1:0 -no-undefined
