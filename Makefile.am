@@ -1,7 +1,7 @@
 lib_LTLIBRARIES = libqthread.la
-pkginclude_HEADERS = qthread.h qalloc.h qthread-int.h
+pkginclude_HEADERS = qthread.h qalloc.h qthread-int.h futurelib.h
 
-libqthread_la_SOURCES = qthread.c qalloc.c
+libqthread_la_SOURCES = qthread.c qalloc.c futurelib.c
 libqthread_la_LDFLAGS = -version-info 4:0:0 -no-undefined
 EXTRA_libqthread_la_SOURCES = context.c asm.S
 libqthread_la_LIBADD = @QTHREAD_EXTRA_OBJS@
@@ -47,8 +47,8 @@ man_MANS = man3/qthread_empty.3 \
 		   man3/qalloc_statfree.3 \
 		   man3/qalloc_statmalloc.3
 
-TESTS = test1 test2 test3 testq
-check_PROGRAMS = test1 test2 test3 testq
+TESTS = test1 test2 test3 testq testloop
+check_PROGRAMS = test1 test2 test3 testq testloop
 test1_SOURCES = test.c
 test1_LDADD = -lqthread
 test2_SOURCES = test2.c
@@ -57,6 +57,8 @@ test3_SOURCES = test3.c
 test3_LDADD = -lqthread
 testq_SOURCES = testq.c
 testq_LDADD = -lqthread
+testloop_SOURCES = testloop.cpp
+testloop_LDADD = -lqthread
 
 #test2: test2.c
 #	$(CC) -I. $(CFLAGS) -L.libs/libqthread.a -o $< $^
