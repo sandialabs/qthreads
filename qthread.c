@@ -730,7 +730,7 @@ qthread_t *qthread_self(void)
     void *ret;
     qthread_t *t;
 
-    /*size_t mask; */
+    /* size_t mask; */
 
     ret = cp_hashtable_get(p_to_shep, (void *)pthread_self());
     if (ret == NULL) {
@@ -754,6 +754,15 @@ qthread_t *qthread_self(void)
     t = qlib->kthreads[((qthread_shepherd_id_t) (size_t) ret) - 1].current;
     /* printf("stack pointer should be %p\n", t->stack); */
     return t;
+}				       /*}}} */
+
+size_t qthread_stackleft(qthread_t * t)
+{				       /*{{{ */
+    if (t != NULL) {
+	return (size_t) (&t) - (size_t) (t->stack);
+    } else {
+	return 0;
+    }
 }				       /*}}} */
 
 /************************************************************/

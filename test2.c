@@ -11,12 +11,10 @@ pthread_mutex_t alldone = PTHREAD_MUTEX_INITIALIZER;
 
 void thread(qthread_t * t, void *arg)
 {
-    int me = 0;
+    int me = qthread_id(qthread_self());
 
-    qthread_lock(t, &id);
-    me = id++;
-    qthread_unlock(t, &id);
     //printf("thread(%p): me %i\n", (void*) t, me);
+    printf("%i bytes left\n", (int)qthread_stackleft(t));
 
     qthread_lock(t, &x);
     //printf("thread(%i): x=%d\n", me, x);

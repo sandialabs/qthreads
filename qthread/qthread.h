@@ -102,6 +102,7 @@ void qthread_schedule_on(qthread_t * t, const qthread_shepherd_id_t shepherd);
  * about themselves */
 unsigned qthread_id(const qthread_t * t);
 qthread_shepherd_id_t qthread_shep(const qthread_t * t);
+size_t qthread_stackleft(qthread_t * t);
 
 /* This is the join function, which will only return once the specified thread
  * has finished executing.
