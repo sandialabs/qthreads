@@ -44,7 +44,7 @@ void hello (int i, char* msg, char c) {
 }
 
 void incr(int& i) {
-  qthread_t *me;
+  qthread_t *me = qthread_self();
   qthread_lock(me, &i);
   i++;
   printf ("incr i (%p) = %d\n", &i, i);
@@ -121,9 +121,9 @@ void my_main() {
   genericArraySet(arr, size, "Plain old Pointer");
   genericArrayPrint(arr, size, "Plain old Pointer");
 
-  UserArray usr_arr(size);
-  genericArraySet(usr_arr, size, "User Array Class");
-  genericArrayPrint(usr_arr, size, "User Array Class");
+  //UserArray usr_arr(size);
+  //genericArraySet(usr_arr, size, "User Array Class");
+  //genericArrayPrint(usr_arr, size, "User Array Class");
 
   printf (">>>>>>  Msg printing <<<<<<<\n");
   ParVoidLoop<Iterator, char*, ArrayPtr<char*>, loop::Par> 
