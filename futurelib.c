@@ -123,7 +123,7 @@ future_create (qthread_t *qthr,
 	       void (*fptr)(qthread_t*, void*),
 	       void *arg) {
 
-  qthread_t *new_thr = qthread_prepare(fptr, arg);
+  qthread_t *new_thr = (qthread_t*)qthread_prepare(fptr, arg);
 
   int rr = THREAD_LOC(new_thr);
   location_t *loc = all_locs[rr];
