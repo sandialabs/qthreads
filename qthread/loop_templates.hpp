@@ -89,7 +89,7 @@ struct ArgInType< ArrayPtr<PtrT> > {
 
 #define IN(ttt) typename ArgInType< ttt >::RefResult
 
-#include "loop_iter.hpp"
+#include <qthread/loop_iter.hpp>
 
 #undef DBprintf
 #if 0
