@@ -1,0 +1,59 @@
+.TH future_create 3 "NOVEMBER 2006" libqthread "libqthread"
+.SH NAME
+\fBfuture_create\fR \- spawn a qthread as a future
+.SH SYNOPSIS
+.B #include <qthread/futurelib.h>
+
+.I future_t *
+.br
+\fBfuture_create\fR(qthread_t *\fIme\fR, const qthread_f *\fIf\fR, const void *\fIarg\fR);
+.PP
+
+.SH DESCRIPTION
+This is a blocking function that will create a qthread on some location when the number
+of currently active threads on that location is below a certain threshold. If the
+number of currently active threads is too high, the function will block until
+some threads complete.
+.PP
+The first argument is a pointer to the qthread creating the future computation.
+This may be a NULL pointer if futures are created by a non-qthread.
+The second argument, \fIf\fR, is a function that will be run
+to completion by the created qthread. (Note that \fIf\fR is a qthread_f and not
+a qthread_t.) The last argument, \fIarg\fR, is an argument
+that will be passed to the specified function.
+.PP
+The qthread_f function must have a prototype like this:
+.RS
+.PP
+void function(qthread_t *me, void *arg);
+.RE
+.PP
+Threads which are spawned with \fBfuture_create\fR() must call
+\fBfuture_exit\fR() as the final action of the thread in order
+to free memory and yeild up status as an active thread.
+.PP
+When a thread creates future computations, the action may block, waiting
+for the number of active threads to drop. Deadlock may result if many active
+threads try to create futures. Therefore, when a thread attempts to create
+futures, it must explicitly declare itself inactive using the  
+\fBfuture_yeild\fR() function, then reactivate itself using the
+\fBfuture_acquire\fR() function.
+.PP
+The typical sequence for creating futures is: 
+.PP
+1) yeild 
+.PP
+2) loop creating futures
+.PP 
+3) [optional: join with futures]
+.PP
+4) acquire
+.SH "RETURN VALUE"
+\fBfuture_create\fR() returns a pointer to the future computation which can
+be joined with by the creating thread. Joining with created futures is optional.
+.SH "SEE ALSO"
+.BR future_join_all (3),
+.BR future_init (3),
+.BR future_exit (3),
+.BR future_yeild (3),
+.BR future_acquire (3)

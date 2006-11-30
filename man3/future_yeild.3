@@ -1,0 +1,45 @@
+.TH future_yeild 3 "NOVEMBER 2006" libqthread "libqthread"
+.SH NAME
+\fBfuture_yeild\fR \- explicitly declare the calling thread inactive
+.SH SYNOPSIS
+.B #include <qthread/futurelib.h>
+
+.I int
+.br
+\fBfuture_yeild\fR(qthread_t *\fIme\fR);
+.PP
+
+.SH DESCRIPTION
+In order to prevent deadlocks over resource acquisition, threads should
+make a call to yeild before attempting to create or join with futures.
+.PP
+The argument is a pointer to the thread attempting to yeild.
+This can be found out with a call to \fBqthread_self\fR()
+.PP
+If a thread calls the yeild function with an argument which
+is not a qthread \fBwhich was created as a future\fR, the
+yeild function do nothing. This is acceptable behavior and
+it is generally expected that threads will attempt to yeild
+before creating or joining with futures in the chance that
+yeilding is necessary.
+.PP
+The typical sequence for creating futures is: 
+.PP
+1) yeild 
+.PP
+2) loop creating futures
+.PP 
+3) [optional: join with futures]
+.PP
+4) acquire
+.SH "RETURN VALUE"
+\fBfuture_yeild\fR() returns nonzero when the yeild resulted in the
+active future count decreasing, i.e. if the calling thread was a
+future itself. Otherwise, the function returns zero, i.e. no yeild
+could be performed.
+.SH "SEE ALSO"
+.BR future_join_all (3),
+.BR future_init (3),
+.BR future_exit (3),
+.BR future_yeild (3),
+.BR future_acquire (3)
