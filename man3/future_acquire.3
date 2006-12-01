@@ -1,6 +1,6 @@
 .TH future_acquire 3 "NOVEMBER 2006" libqthread "libqthread"
 .SH NAME
-\fBfuture_yeild\fR \- reactivate the calling thread
+\fBfuture_acquire\fR \- reactivate the calling thread
 .SH SYNOPSIS
 .B #include <qthread/futurelib.h>
 
@@ -11,7 +11,7 @@
 
 .SH DESCRIPTION
 In order to prevent deadlocks over resource acquisition, threads must
-yeild active status before attempting to create or join with futures.
+yield active status before attempting to create or join with futures.
 After completing these actions, the thread reactivates itself with a
 call to \fBfuture_acquire\fR() which blocks until the number of
 active threads on its location is below a set threshold.
@@ -29,7 +29,7 @@ acquisition is necessary.
 .PP
 The typical sequence for creating futures is: 
 .PP
-1) yeild 
+1) yield 
 .PP
 2) loop creating futures
 .PP 
@@ -40,5 +40,5 @@ The typical sequence for creating futures is:
 .BR future_join_all (3),
 .BR future_init (3),
 .BR future_exit (3),
-.BR future_yeild (3),
+.BR future_yield (3),
 .BR future_acquire (3)

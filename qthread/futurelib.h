@@ -18,7 +18,7 @@ void future_init(qthread_t * qthr, int vp_per_loc, int loc_count);
 
 void future_exit(qthread_t * qthr);
 
-int future_yeild(qthread_t * qthr);
+int future_yield(qthread_t * qthr);
 void future_acquire(qthread_t * qthr);
 
 #ifdef __cplusplus

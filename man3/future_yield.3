@@ -1,31 +1,31 @@
-.TH future_yeild 3 "NOVEMBER 2006" libqthread "libqthread"
+.TH future_yield 3 "NOVEMBER 2006" libqthread "libqthread"
 .SH NAME
-\fBfuture_yeild\fR \- explicitly declare the calling thread inactive
+\fBfuture_yield\fR \- explicitly declare the calling thread inactive
 .SH SYNOPSIS
 .B #include <qthread/futurelib.h>
 
 .I int
 .br
-\fBfuture_yeild\fR(qthread_t *\fIme\fR);
+\fBfuture_yield\fR(qthread_t *\fIme\fR);
 .PP
 
 .SH DESCRIPTION
 In order to prevent deadlocks over resource acquisition, threads should
-make a call to yeild before attempting to create or join with futures.
+make a call to yield before attempting to create or join with futures.
 .PP
-The argument is a pointer to the thread attempting to yeild.
+The argument is a pointer to the thread attempting to yield.
 This can be found out with a call to \fBqthread_self\fR()
 .PP
-If a thread calls the yeild function with an argument which
+If a thread calls the yield function with an argument which
 is not a qthread \fBwhich was created as a future\fR, the
-yeild function do nothing. This is acceptable behavior and
-it is generally expected that threads will attempt to yeild
+yield function do nothing. This is acceptable behavior and
+it is generally expected that threads will attempt to yield
 before creating or joining with futures in the chance that
-yeilding is necessary.
+yielding is necessary.
 .PP
 The typical sequence for creating futures is: 
 .PP
-1) yeild 
+1) yield 
 .PP
 2) loop creating futures
 .PP 
@@ -33,13 +33,13 @@ The typical sequence for creating futures is:
 .PP
 4) acquire
 .SH "RETURN VALUE"
-\fBfuture_yeild\fR() returns nonzero when the yeild resulted in the
+\fBfuture_yield\fR() returns nonzero when the yield resulted in the
 active future count decreasing, i.e. if the calling thread was a
-future itself. Otherwise, the function returns zero, i.e. no yeild
+future itself. Otherwise, the function returns zero, i.e. no yield
 could be performed.
 .SH "SEE ALSO"
 .BR future_join_all (3),
 .BR future_init (3),
 .BR future_exit (3),
-.BR future_yeild (3),
+.BR future_yield (3),
 .BR future_acquire (3)

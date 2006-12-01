@@ -22,7 +22,7 @@ The second argument, \fIvp_per_loc\fR, specifies how many
 futures may be active on each location. This does not include qthreads
 which were not created as futures since futurelib is not aware of how
 many of these exists. Active threads include all created futures which
-are currently running and have not explicitly yeilded. Inactive futures
+are currently running and have not explicitly yielded. Inactive futures
 are not limited, as this could easily lead to deadlock.
 .PP
 The last argument, \fIloc_count\fR, describes how many
@@ -33,5 +33,5 @@ was passed to \fBqthread_init\fR().
 .BR future_join_all (3),
 .BR future_init (3),
 .BR future_exit (3),
-.BR future_yeild (3),
+.BR future_yield (3),
 .BR future_acquire (3)

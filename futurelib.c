@@ -52,7 +52,7 @@ init_loc_hash() {
 
    -map_to is used once when the future computation is initiated
    -unmap is used once when the future computation exits
-   -ft_loc is used for acquire, yeild, and exit and will only
+   -ft_loc is used for acquire, yield, and exit and will only
    look up the location of the calling thread
 
    These basically fulfill a function something like:
@@ -139,13 +139,13 @@ future_create (qthread_t *qthr,
 }
 
 int
-future_yeild(qthread_t *qthr) {
+future_yield(qthread_t *qthr) {
   location_t *loc = ft_loc(qthr);
-  DBprintf ("Thread %p yeild on loc %p\n", qthr, loc);
-  //Non-futures do not have a vproc to yeild
+  DBprintf ("Thread %p yield on loc %p\n", qthr, loc);
+  //Non-futures do not have a vproc to yield
   if (loc != NULL) {
-    //yeild vproc
-    DBprintf ("Thread %p yeild loc %d vps %d\n", 
+    //yield vproc
+    DBprintf ("Thread %p yield loc %d vps %d\n", 
 	      qthr, loc->id, loc->vp_count);
     LOCK(qthr, &(loc->vp_count));
     (loc->vp_count)--;
@@ -182,7 +182,7 @@ future_exit(qthread_t *qthr) {
 #endif
 
   DBprintf ("Thread %p exit on loc %d\n", qthr, THREAD_LOC(qthr));
-  future_yeild(qthr);
+  future_yield(qthr);
   unmap_from_loc(qthr);
 }
 

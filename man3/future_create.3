@@ -30,18 +30,18 @@ void function(qthread_t *me, void *arg);
 .PP
 Threads which are spawned with \fBfuture_create\fR() must call
 \fBfuture_exit\fR() as the final action of the thread in order
-to free memory and yeild up status as an active thread.
+to free memory and yield up status as an active thread.
 .PP
 When a thread creates future computations, the action may block, waiting
 for the number of active threads to drop. Deadlock may result if many active
 threads try to create futures. Therefore, when a thread attempts to create
 futures, it must explicitly declare itself inactive using the  
-\fBfuture_yeild\fR() function, then reactivate itself using the
+\fBfuture_yield\fR() function, then reactivate itself using the
 \fBfuture_acquire\fR() function.
 .PP
 The typical sequence for creating futures is: 
 .PP
-1) yeild 
+1) yield 
 .PP
 2) loop creating futures
 .PP 
@@ -55,5 +55,5 @@ be joined with by the creating thread. Joining with created futures is optional.
 .BR future_join_all (3),
 .BR future_init (3),
 .BR future_exit (3),
-.BR future_yeild (3),
+.BR future_yield (3),
 .BR future_acquire (3)
