@@ -1,95 +1,80 @@
 #ifndef FUTURE_TEMP_HPP
 #define FUTURE_TEMP_HPP
 
+namespace loop {
+  const int Par = 1;
+  const int ParNoJoin = 2;
+  const int Future = 3;
+  const int FutureNoJoin = 4;
+
+  const int Add = 0;
+  const int Sub = 1;
+  const int Mult = 2;
+  const int Div = 3;
+
+  const int identity[] = { 0, 0, 1, 1 };
+};
+
 class Iterator {
 };
 
-template <class PtrT>
 class ArrayPtr {
 };
 
-template <class T>
 class Ref {
 };
 
-template <class ArgT>
-class Value {
+class Val {
+};
+
+template <int opC>
+class Collect {
 public:
-  static const ArgT& value(ArgT& arg, int& iteration) { return arg; }
+  template <class T>
+  static void update (T& total, T part) { 
+    qthread_t *me = qthread_self();
+    qthread_lock (me, &total);
+    switch (opC) {
+    case loop::Sub:
+    case loop::Add: total += part; break;
+    case loop::Div:
+    case loop::Mult: total *= part; break;
+    };
+    qthread_unlock (me, &total);
+  }
 };
 
-template<>
-class Value<Iterator> {
- public:
-  static int value(void *arg, int& iteration) { return iteration; }
-};
-
-template<class PtrT>
-class Value< ArrayPtr<PtrT> > {
+template <int opC, class VarT> 
+class Partial {
 public:
-  static PtrT sample;
-  typedef typeof (sample.operator[](0)) ele_t;
-  static ele_t& value(PtrT arg, int& iteration) { return arg[iteration]; }
+  static const void update( int Operator_Type_Undefined_Error ) {;}
 };
 
-template<class T>
-class Value< ArrayPtr<T*> > {
+template <class VarT>
+class Partial < loop::Add, VarT > {
 public:
-  static T& value(T* arg, int& iteration) { return arg[iteration]; }
+  static void update (VarT& part, VarT update) { part += update;}
 };
 
-template<class T>
-class Value< Ref<T> > {
+template <class VarT>
+class Partial < loop::Sub, VarT > {
 public:
-  static T& value( T& arg, int& iteration) { return arg; }
+  static void update (VarT& part, VarT update) { part -= update;}
 };
 
-template <class T>
-struct RemoveRef {
-  typedef T Result;
+template <class VarT>
+class Partial < loop::Mult, VarT > {
+public:
+  static void update (VarT& part, VarT update) { part *= update;}
 };
 
-template <class T>
-struct RemoveRef<T&> {
-  typedef T Result;
+template <class VarT>
+class Partial < loop::Div, VarT > {
+public:
+  static void update (VarT& part, VarT update) { part /= update;}
 };
 
-template <class ArgT>
-struct ArgInType {
-  typedef typename RemoveRef<ArgT>::Result ArgTT;
-  typedef const ArgTT& RefResult;
-  typedef ArgTT Result;
-};
-
-template <class T>
-struct ArgInType < Ref<T> >{
-  typedef typename RemoveRef<T>::Result TT;
-  typedef TT& RefResult;
-  typedef TT Result;
-};
-
-template<>
-struct ArgInType<void> {
-  typedef void* RefResult;
-  typedef void* Result;
-};
-
-template<>
-struct ArgInType< Iterator > {
-  typedef Iterator* RefResult;
-  typedef Iterator* Result;
-};
-
-template <class PtrT>
-struct ArgInType< ArrayPtr<PtrT> > {
-  typedef typename RemoveRef<PtrT>::Result PtrTT;
-  typedef PtrTT& RefResult;
-  typedef PtrTT Result;
-};
-
-#define IN(ttt) typename ArgInType< ttt >::RefResult
-
-#include <qthread/loop_iter.hpp>
+#include "loop_iter.hpp"
 
 #undef DBprintf
 #if 0
@@ -99,15 +84,9 @@ struct ArgInType< ArrayPtr<PtrT> > {
 #define DBprintf(...) ;
 #endif
 
-namespace loop {
-  const int Par = 1;
-  const int ParNoJoin = 2;
-  const int Future = 3;
-  const int FutureNoJoin = 4;
-};
-
-#define ITER(start__,step__,count__) \
-  new IterArg<ObjT,RetT,FptrT,Arg1T,Arg2T,Arg3T,Arg4T,Arg5T>		\
+#define ITER(start__,step__,count__)					\
+  new IterArg<ObjT,RetB,FptrT,Arg1B,Arg2B,Arg3B,Arg4B,Arg5B,		\
+	      RetV,Arg1V,Arg2V,Arg3V,Arg4V,Arg5V>			\
   (obj,ret,fptr,arg1,arg2,arg3,arg4,arg5,start__,step__,count__)
 
 #define SCALE_TD_POW2(iterc,pow2) \
@@ -127,126 +106,137 @@ namespace loop {
     pow2 = 9;
 
 
-template <class ObjT, class RetT, class Arg1T, class Arg2T, class Arg3T, 
-	  class Arg4T, class Arg5T, int TypeC, class FptrT>
+template <class ObjT, class RetB, 
+	  class Arg1B, class Arg2B, class Arg3B, class Arg4B, class Arg5B, 
+	  int TypeC, class FptrT, class RetV,
+	  class Arg1V, class Arg2V, class Arg3V, class Arg4V, class Arg5V >
+class DoLoop {
+public:
+  static void Run (ObjT *obj, const RetV& ret,
+		   FptrT fptr,
+		   const Arg1V& arg1, const Arg2V& arg2, const Arg3V& arg3, 
+		   const Arg4V& arg4, const Arg5V& arg5, 
+		   int start, int stop, int step=1) {
 
-void ParMemberLoop (ObjT *obj, RetT *ret,
-		    FptrT fptr,
-		    IN(Arg1T) arg1, IN(Arg2T) arg2, IN(Arg3T) arg3, 
-		    IN(Arg4T) arg4, IN(Arg5T) arg5, 
-		    int start, int stop, int step=1) {
-
-  qthread_t *me = qthread_self();  
-  bool join = true;
-
-  int total, steptd, tdc, tdc_pow2, round_total, base_count;
-  
-  if (step == 1)
-    total = (stop - start);
-  else {
-    total = (stop - start) / step;
-    if (((stop - start) % step) != 0)
-      total++;
-  }
-
-  SCALE_TD_POW2(total,tdc_pow2);
-
-  tdc = 1 << tdc_pow2;
-  steptd = step << tdc_pow2;
-  base_count = total >> tdc_pow2;
-  round_total = base_count << tdc_pow2;
-
-  DBprintf ("Given start %d stop %d step %d: \n", start, stop, step);
-  DBprintf ("Total is %d, tdc_pow2 is %d (tdc %d)\n", total, tdc_pow2, 1<<tdc_pow2);
-  DBprintf ("Tdc is %d steptd is %d round_total %d base_count %d\n", 
-	  tdc, steptd, round_total, base_count);
-
-  switch (TypeC) {
-  case loop::ParNoJoin:
-    join = false;
-  case loop::Par: {
-    qthread_t **thr = new qthread_t*[tdc];
-    for (int i = 0; i < tdc; i++) {
-      int count = base_count + ( ((round_total + i) < total) ? 1 : 0 );
-      thr[i] = qthread_fork(run_qtd<Iter>, ITER(start, steptd, count));
-
-      DBprintf ("Thread %d %p start %d step %d count %d\n", 
-		i, thr[i], start, steptd, count);
-      start += step;
+    qthread_t *me = qthread_self();  
+    bool join = true;
+    
+    int total, steptd, tdc, tdc_pow2, round_total, base_count;
+    
+    if (step == 1)
+      total = (stop - start);
+    else {
+      total = (stop - start) / step;
+      if (((stop - start) % step) != 0)
+	total++;
     }
     
-    if (join) {
-      for (int i = 0; i < tdc; i++)
-	qthread_join(me, thr[i]);
-    }
-    delete thr;
-  } break;
+    SCALE_TD_POW2(total,tdc_pow2);
     
-  case loop::FutureNoJoin:
-    join = false;
-  case loop::Future: {
-    future_t **ft = new future_t*[total];
-    int yielded = future_yield(me);
-
-    for (int i = 0; i < tdc; i++) {
-      int count = base_count + ( ((round_total + i) < total) ? 1 : 0 );
-      ft[i] = future_create (me, run_ft<Iter>, ITER(start,steptd,count));
-      start += step;
+    tdc = 1 << tdc_pow2;
+    steptd = step << tdc_pow2;
+    base_count = total >> tdc_pow2;
+    round_total = base_count << tdc_pow2;
+    
+    DBprintf ("Given start %d stop %d step %d: \n", start, stop, step);
+    DBprintf ("Total is %d, tdc_pow2 is %d (tdc %d)\n", total, tdc_pow2, 1<<tdc_pow2);
+    DBprintf ("Tdc is %d steptd is %d round_total %d base_count %d\n", 
+	      tdc, steptd, round_total, base_count);
+    
+    switch (TypeC) {
+    case loop::ParNoJoin:
+      join = false;
+    case loop::Par: {
+      qthread_t **thr = new qthread_t*[tdc];
+      for (int i = 0; i < tdc; i++) {
+	int count = base_count + ( ((round_total + i) < total) ? 1 : 0 );
+	thr[i] = qthread_fork(run_qtd<Iter>, ITER(start, steptd, count));
+	
+	DBprintf ("Thread %d %p start %d step %d count %d\n", 
+		  i, thr[i], start, steptd, count);
+	start += step;
+      }
+      
+      if (join) {
+	for (int i = 0; i < tdc; i++)
+	  qthread_join(me, thr[i]);
+      }
+      delete thr;
+    } break;
+      
+    case loop::FutureNoJoin:
+      join = false;
+    case loop::Future: {
+      future_t **ft = new future_t*[total];
+      int yeilded = future_yeild(me);
+      
+      for (int i = 0; i < tdc; i++) {
+	int count = base_count + ( ((round_total + i) < total) ? 1 : 0 );
+	ft[i] = future_create (me, run_ft<Iter>, ITER(start,steptd,count));
+	start += step;
+      }
+      
+      if (join)
+	future_join_all (me, ft, tdc);
+      if (yeilded)
+	future_acquire(me);
+      
+      delete ft;
+    } break;
+      
     }
-
-    if (join)
-      future_join_all (me, ft, tdc);
-    if (yielded)
-      future_acquire(me);
-
-    delete ft;
-  } break;
-
   }
-}
+};
 
-//C_LIST = class list
-//T_LIST = type list
+//BC_LIST = behavior class list
+//VC_LIST = variable type class list
+//B_LIST = behavior list
+//V_LIST = variable type list
 //A_LIST = args list
 //P_LIST = params list
 
 #define PAR_LOOP()							\
-  template <class RetT, C_LIST int TypeC, class FptrT>			\
-  void ParLoop ( RetT *ret,						\
+  template <class RetB, BC_LIST int TypeC, class FptrT, class RetV VC_LIST> \
+  void ParLoop ( const RetV& ret,					\
 		 FptrT fptr,						\
 		 A_LIST							\
 		 int start, int stop, int step = 1 ) {			\
-    ParMemberLoop <void, RetT, T_LIST, TypeC, FptrT>			\
-      (NULL, ret, fptr, P_LIST, start, stop, step);			\
+    void* my_null = NULL;						\
+    DoLoop <void, RetB, B_LIST, TypeC, FptrT, RetV, V_LIST>::Run	\
+      (my_null, ret, fptr, P_LIST, start, stop, step);			\
   }									
 
 #define PAR_VOID_LOOP()							\
-  template <C_LIST int TypeC, class FptrT>				\
+  template <BC_LIST int TypeC, class FptrT VC_LIST>			\
   void ParVoidLoop ( FptrT fptr,					\
 		     A_LIST						\
 		     int start, int stop, int step = 1 ) {		\
-    ParMemberLoop <void, void, T_LIST, TypeC, FptrT>			\
-      (NULL, NULL, fptr, P_LIST, start, stop, step);			\
+    void* my_null = NULL;						\
+    DoLoop <void, void, B_LIST, TypeC, FptrT, void*, V_LIST>::Run	\
+      (my_null, my_null, fptr, P_LIST, start, stop, step);			\
   }
 
 #define PAR_MEMBER_LOOP()						\
-  template <class ObjT, class RetT, C_LIST int TypeC, class FptrT>	\
-  void ParMemberLoop ( ObjT *obj, RetT *ret,				\
+  template <class ObjT, class RetB, BC_LIST int TypeC, class FptrT,	\
+	    class RetV VC_LIST>						\
+  void ParMemberLoop ( ObjT *obj, const RetV& ret,			\
 		       FptrT fptr,					\
 		       A_LIST						\
 		       int start, int stop, int step = 1 ) {		\
-    ParMemberLoop <ObjT, RetT, T_LIST, TypeC, FptrT>				\
+    void* my_null = NULL;						\
+    DoLoop <ObjT, RetB, B_LIST, TypeC, FptrT, RetV, V_LIST>::Run	\
       (obj, ret, fptr, P_LIST, start, stop, step);			\
   }
 
 #define PAR_VOID_MEMBER_LOOP()						\
-  template <class ObjT, C_LIST int TypeC, class FptrT>			\
+  template <class ObjT, BC_LIST int TypeC, class FptrT VC_LIST>		\
   void ParVoidMemberLoop ( ObjT *obj,					\
 			   FptrT fptr,					\
 			   A_LIST					\
 			   int start, int stop, int step = 1 ) {	\
-    ParMemberLoop <ObjT, void, T_LIST, TypeC, FptrT>				\
-      (obj, NULL, fptr, P_LIST, start, stop, step);			\
+    void* my_null = NULL;						\
+    DoLoop <ObjT, void, B_LIST, TypeC, FptrT, void*, V_LIST>::Run	\
+      (obj, my_null, fptr, P_LIST, start, stop, step);			\
   }
 
 #define ALL_LOOPS()				\
@@ -255,72 +245,95 @@ void ParMemberLoop (ObjT *obj, RetT *ret,
   PAR_VOID_MEMBER_LOOP()			\
   PAR_MEMBER_LOOP()				
 
-#define T_LIST Arg1T, Arg2T, Arg3T, Arg4T, Arg5T
-#define C_LIST class Arg1T, class Arg2T, class Arg3T, class Arg4T, class Arg5T,
-#define A_LIST IN(Arg1T) arg1, IN(Arg2T) arg2, IN(Arg3T) arg3, IN(Arg4T) arg4, IN(Arg5T) arg5,
+#define B_LIST Arg1B, Arg2B, Arg3B, Arg4B, Arg5B
+#define V_LIST Arg1V, Arg2V, Arg3V, Arg4V, Arg5V
+#define BC_LIST class Arg1B, class Arg2B, class Arg3B, class Arg4B, class Arg5B,
+#define VC_LIST ,class Arg1V, class Arg2V, class Arg3V, class Arg4V, class Arg5V
+#define A_LIST const Arg1V& arg1, const Arg2V& arg2, const Arg3V& arg3, const Arg4V& arg4, const Arg5V& arg5,
 #define P_LIST arg1, arg2, arg3, arg4, arg5
 
-PAR_VOID_LOOP();
-PAR_LOOP();
-PAR_VOID_MEMBER_LOOP();
+ALL_LOOPS();
 
-#undef T_LIST
-#undef C_LIST
+#undef B_LIST
+#undef V_LIST
+#undef BC_LIST
+#undef VC_LIST
 #undef A_LIST
 #undef P_LIST
-#define T_LIST Arg1T, Arg2T, Arg3T, Arg4T, void
-#define C_LIST class Arg1T, class Arg2T, class Arg3T, class Arg4T,
-#define A_LIST IN(Arg1T) arg1, IN(Arg2T) arg2, IN(Arg3T) arg3, IN(Arg4T) arg4,
-#define P_LIST arg1, arg2, arg3, arg4, NULL
+#define B_LIST Arg1B, Arg2B, Arg3B, Arg4B, void
+#define V_LIST Arg1V, Arg2V, Arg3V, Arg4V, void*
+#define BC_LIST class Arg1B, class Arg2B, class Arg3B, class Arg4B,
+#define VC_LIST ,class Arg1V, class Arg2V, class Arg3V, class Arg4V
+#define A_LIST const Arg1V& arg1, const Arg2V& arg2, const Arg3V& arg3, const Arg4V& arg4,
+#define P_LIST arg1, arg2, arg3, arg4, my_null
 
 ALL_LOOPS();
 
-#undef T_LIST
-#undef C_LIST
+#undef B_LIST
+#undef V_LIST
+#undef BC_LIST
+#undef VC_LIST
 #undef A_LIST
 #undef P_LIST
-#define T_LIST Arg1T, Arg2T, Arg3T, void, void
-#define C_LIST class Arg1T, class Arg2T, class Arg3T,
-#define A_LIST IN(Arg1T) arg1, IN(Arg2T) arg2, IN(Arg3T) arg3,
-#define P_LIST arg1, arg2, arg3, NULL, NULL
+#define B_LIST Arg1B, Arg2B, Arg3B, void, void
+#define V_LIST Arg1V, Arg2V, Arg3V, void*, void*
+#define BC_LIST class Arg1B, class Arg2B, class Arg3B,
+#define VC_LIST ,class Arg1V, class Arg2V, class Arg3V
+#define A_LIST const Arg1V& arg1, const Arg2V& arg2, const Arg3V& arg3,
+#define P_LIST arg1, arg2, arg3, my_null, my_null
+
 
 ALL_LOOPS();
 
-#undef T_LIST
-#undef C_LIST
+#undef B_LIST
+#undef V_LIST
+#undef BC_LIST
+#undef VC_LIST
 #undef A_LIST
 #undef P_LIST
-#define T_LIST Arg1T, Arg2T, void, void, void
-#define C_LIST class Arg1T, class Arg2T,
-#define A_LIST IN(Arg1T) arg1, IN(Arg2T) arg2,
-#define P_LIST arg1, arg2, NULL, NULL, NULL
+#define B_LIST Arg1B, Arg2B, void, void, void
+#define V_LIST Arg1V, Arg2V, void*, void*, void*
+#define BC_LIST class Arg1B, class Arg2B,
+#define VC_LIST ,class Arg1V, class Arg2V
+#define A_LIST const Arg1V& arg1, const Arg2V& arg2,
+#define P_LIST arg1, arg2, my_null, my_null, my_null
 
 ALL_LOOPS();
 
-#undef T_LIST
-#undef C_LIST
+#undef B_LIST
+#undef V_LIST
+#undef BC_LIST
+#undef VC_LIST
 #undef A_LIST
 #undef P_LIST
-#define T_LIST Arg1T, void, void, void, void
-#define C_LIST class Arg1T,
-#define A_LIST IN(Arg1T) arg1,
-#define P_LIST arg1, NULL, NULL, NULL, NULL
+#define B_LIST Arg1B, void, void, void, void
+#define V_LIST Arg1V, void*, void*, void*, void*
+#define BC_LIST class Arg1B,
+#define VC_LIST ,class Arg1V
+#define A_LIST const Arg1V& arg1,
+#define P_LIST arg1, my_null, my_null, my_null, my_null
 
 ALL_LOOPS();
 
-#undef T_LIST
-#undef C_LIST
+#undef B_LIST
+#undef V_LIST
+#undef BC_LIST
+#undef VC_LIST
 #undef A_LIST
 #undef P_LIST
-#define T_LIST void, void, void, void, void
-#define C_LIST 
+#define B_LIST void, void, void, void, void
+#define V_LIST void*, void*, void*, void*, void*
+#define BC_LIST 
+#define VC_LIST 
 #define A_LIST 
-#define P_LIST NULL, NULL, NULL, NULL, NULL
+#define P_LIST my_null, my_null, my_null, my_null, my_null
 
 ALL_LOOPS();
 
-#undef T_LIST
-#undef C_LIST
+#undef B_LIST
+#undef V_LIST
+#undef BC_LIST
+#undef VC_LIST
 #undef A_LIST
 #undef P_LIST
 #undef PAR_VOID_LOOP
