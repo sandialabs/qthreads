@@ -168,7 +168,7 @@ public:
       join = false;
     case loop::Future: {
       future_t **ft = new future_t*[total];
-      int yeilded = future_yeild(me);
+      int yielded = future_yield(me);
       
       for (int i = 0; i < tdc; i++) {
 	int count = base_count + ( ((round_total + i) < total) ? 1 : 0 );
@@ -178,7 +178,7 @@ public:
       
       if (join)
 	future_join_all (me, ft, tdc);
-      if (yeilded)
+      if (yielded)
 	future_acquire(me);
       
       delete ft;

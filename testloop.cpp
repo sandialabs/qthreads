@@ -1,4 +1,4 @@
-#include "futurelib.h"
+#include <qthread/futurelib.h>
 #include <stdio.h>
 #include <pthread.h>
 #include <stdlib.h>
