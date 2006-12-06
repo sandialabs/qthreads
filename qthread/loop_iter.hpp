@@ -325,7 +325,7 @@ class IterArg : public Iter,
 		public RunFunc< FptrT,ObjT,RetB,Arg1B,Arg2B,Arg3B,Arg4B,Arg5B,
 				RetV,Arg1V,Arg2V,Arg3V,Arg4V,Arg5V >
 {
-  int cur_, count_, step_;
+  int cur_, step_, count_;
 
   typedef RunFunc< FptrT,ObjT,RetB,Arg1B,Arg2B,Arg3B,Arg4B,Arg5B,
 		   RetV,Arg1V,Arg2V,Arg3V,Arg4V,Arg5V > runner;
