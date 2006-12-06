@@ -136,6 +136,14 @@
     } \
 } while(0)
 
+#ifdef DEBUG_DEADLOCK
+#define REPORTLOCK(m) printf("%i:%i LOCKED %p's LOCK!\n", qthread_shep(NULL), __LINE__, m)
+#define REPORTUNLOCK(m) printf("%i:%i UNLOCKED %p's LOCK!\n", qthread_shep(NULL), __LINE__, m)
+#else
+#define REPORTLOCK(m)
+#define REPORTUNLOCK(m)
+#endif
+
 /* internal data structures */
 typedef struct qthread_lock_s qthread_lock_t;
 typedef struct qthread_shepherd_s qthread_shepherd_t;
@@ -465,10 +473,11 @@ static void *qthread_shepherd(void *arg)
 			("qthread_shepherd(%u): unlocking FEB address locks of thread %p\n",
 			 me->kthread_index, t);
 		    t->thread_state = QTHREAD_STATE_BLOCKED;
-		    pthread_mutex_unlock(&
+		    QTHREAD_UNLOCK(&
 					 (((qthread_addrstat_t *) (t->
 								   blockedon))->
 					  lock));
+		    REPORTUNLOCK(t->blockedon);
 		    break;
 
 		case QTHREAD_STATE_BLOCKED:	/* put it in the blocked queue */
@@ -1381,12 +1390,16 @@ static inline void qthread_FEB_remove(void *maddr,
 	m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs, maddr);
 	if (m) {
 	    QTHREAD_LOCK(&(m->lock));
+	    REPORTLOCK(m);
 	    if (m->FEQ == NULL && m->EFQ == NULL && m->FFQ == NULL &&
 		m->full == 1) {
 		qthread_debug
 		    ("qthread_FEB_remove(): all lists are empty, and status is full\n");
 		cp_hashtable_remove(qlib->FEBs, maddr);
 	    } else {
+		QTHREAD_UNLOCK(&(m->lock));
+		REPORTUNLOCK(m);
+		qthread_debug("qthread_FEB_remove(): address cannot be removed; in use\n");
 		m = NULL;
 	    }
 	}
@@ -1394,6 +1407,7 @@ static inline void qthread_FEB_remove(void *maddr,
     cp_hashtable_unlock(qlib->FEBs);
     if (m != NULL) {
 	QTHREAD_UNLOCK(&m->lock);
+	REPORTUNLOCK(m);
 	QTHREAD_DESTROYLOCK(&m->lock);
 	FREE_ADDRSTAT(threadshep, m);
     }
@@ -1429,8 +1443,9 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
 	removeable = 1;
     else
 	removeable = 0;
-    if (!recursive) {
+    if (recursive == 0) {
 	QTHREAD_UNLOCK(&m->lock);
+	REPORTUNLOCK(m);
 	if (removeable) {
 	    qthread_FEB_remove(maddr, threadshep);
 	}
@@ -1492,8 +1507,9 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m, void *maddr,
 	removeable = 1;
     else
 	removeable = 1;
-    if (!recursive) {
+    if (recursive == 0) {
 	QTHREAD_UNLOCK(&m->lock);
+	REPORTUNLOCK(m);
 	/* now, remove it if it needs to be removed */
 	if (removeable) {
 	    qthread_FEB_remove(maddr, threadshep);
@@ -1529,6 +1545,7 @@ void qthread_empty(qthread_t * me, const void *dest, const size_t count)
 		    cp_hashtable_put(qlib->FEBs, (void *)(startaddr + i), m);
 		} else {
 		    QTHREAD_LOCK(&m->lock);
+		    REPORTLOCK(m);
 		    m_better = ALLOC_ADDRSTAT2(me->shepherd);
 		    m_better->m = m;
 		    m_better->addr = startaddr + i;
@@ -1582,6 +1599,7 @@ void qthread_fill(qthread_t * me, const void *dest, const size_t count)
 								     + i));
 		if (m) {
 		    QTHREAD_LOCK(&m->lock);
+		    REPORTLOCK(m);
 		    m_better = ALLOC_ADDRSTAT2(me->shepherd);
 		    m_better->m = m;
 		    m_better->addr = startaddr + i;
@@ -1637,6 +1655,7 @@ void qthread_writeF(qthread_t * me, void *dest, const void *src)
 		cp_hashtable_put(qlib->FEBs, alignedaddr, m);
 	    }
 	    QTHREAD_LOCK(&m->lock);
+	    REPORTLOCK(m);
 	}
 	cp_hashtable_unlock(qlib->FEBs);	/* unlock hash */
 	/* we have the lock on m, so... */
@@ -1689,6 +1708,7 @@ void qthread_writeEF(qthread_t * me, void *dest, const void *src)
 		cp_hashtable_put(qlib->FEBs, alignedaddr, m);
 	    }
 	    QTHREAD_LOCK(&(m->lock));
+	    REPORTLOCK(m);
 	}
 	cp_hashtable_unlock(qlib->FEBs);
 	qthread_debug("qthread_writeEF(): data structure locked\n");
@@ -1757,6 +1777,7 @@ void qthread_readFF(qthread_t * me, void *dest, void *src)
 		memcpy(dest, src, WORDSIZE);
 	    } else {
 		QTHREAD_LOCK(&m->lock);
+		REPORTLOCK(m);
 	    }
 	}
 	cp_hashtable_unlock(qlib->FEBs);
@@ -1773,6 +1794,7 @@ void qthread_readFF(qthread_t * me, void *dest, void *src)
 	} else {
 	    memcpy(dest, src, WORDSIZE);
 	    QTHREAD_UNLOCK(&m->lock);
+	    REPORTUNLOCK(m);
 	}
 	/* if X exists, we are queued, and need to block (i.e. go back to the shepherd) */
 	if (X) {
@@ -1823,6 +1845,7 @@ void qthread_readFE(qthread_t * me, void *dest, void *src)
 		cp_hashtable_put(qlib->FEBs, alignedaddr, m);
 	    }
 	    QTHREAD_LOCK(&(m->lock));
+	    REPORTLOCK(m);
 	}
 	cp_hashtable_unlock(qlib->FEBs);
 	qthread_debug("qthread_readFE(): data structure locked\n");
