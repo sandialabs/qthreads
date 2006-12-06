@@ -9,7 +9,7 @@ class Storage <C, Val, VarT> {
   VarT t_;
 protected:
   Storage(VarT t) : t_(t) {;}
-  VarT& value(int& iteration) { return t_; }
+  VarT& value(const int& iteration) { return t_; }
 };
 
 template <int C, class VarT>
@@ -18,7 +18,7 @@ class Storage <C, Ref, VarT > {
   VarT* tp_;
 protected:
   Storage(VarT& t) : tp_(&t) {;}
-  VarT& value(int& iteration) { return *tp_; }
+  VarT& value(const int& iteration) { return *tp_; }
 };
 
 template <int C, class VarT, int opC>
@@ -137,11 +137,10 @@ protected:
   RunFunc (FptrT fptr, ObjT *obj, RetV& ret, 
 	   Arg1V& arg1, Arg2V& arg2, Arg3V& arg3,
 	   Arg4V& arg4, Arg5V& arg5) :
-    fptr_(fptr), 
     Storage<-1,Val,ObjT*>(obj), Storage<0,RetB,RetV>(ret),
     Storage<1,Arg1B,Arg1V>(arg1), Storage<2,Arg2B,Arg2V>(arg2),
     Storage<3,Arg3B,Arg3V>(arg3), Storage<4,Arg4B,Arg4V>(arg4),
-    Storage<5,Arg5B,Arg5V>(arg5) {;}
+    Storage<5,Arg5B,Arg5V>(arg5), fptr_(fptr) {;}
 
   C_RUN_OBJ(5);
 };
@@ -161,11 +160,10 @@ protected:
   RunFunc (FptrT fptr, ooo *obj, RRR& ret,				\
 	   r1& arg1, r2& arg2, r3& arg3,				\
 	   r4& arg4, r5& arg5) :					\
-    fptr_(fptr),							\
     Storage<-1,Val,ooo*>(obj), Storage<0,rrr,RRR>(ret),			\
     Storage<1,a1,r1>(arg1), Storage<2,a2,r2>(arg2),			\
     Storage<3,a3,r3>(arg3), Storage<4,a4,r4>(arg4),			\
-    Storage<5,a5,r5>(arg5) {;}						
+    Storage<5,a5,r5>(arg5), fptr_(fptr) {;}						
 
 
 
