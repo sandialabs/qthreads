@@ -2,13 +2,14 @@ lib_LTLIBRARIES = libqthread.la
 pkginclude_HEADERS = qthread/qthread.h \
 					 qthread/qalloc.h \
 					 qthread/qthread-int.h \
+					 qthread/qutil.h \
 					 qthread/futurelib.h \
 					 qthread/loop_templates.hpp \
 					 qthread/loop_iter.hpp \
 					 qthread/loop.hpp
 
-libqthread_la_SOURCES = qthread.c qalloc.c futurelib.c
-libqthread_la_LDFLAGS = -version-info 4:2:0 -no-undefined
+libqthread_la_SOURCES = qthread.c qalloc.c qutil.c futurelib.c
+libqthread_la_LDFLAGS = -version-info 5:0:0 -no-undefined
 EXTRA_libqthread_la_SOURCES = context.c asm.S
 libqthread_la_LIBADD = @QTHREAD_EXTRA_OBJS@
 libqthread_la_DEPENDENCIES = @QTHREAD_EXTRA_OBJS@
@@ -52,7 +53,13 @@ man_MANS = man3/qthread_empty.3 \
 		   man3/qalloc_makestatmap.3 \
 		   man3/qalloc_malloc.3 \
 		   man3/qalloc_statfree.3 \
-		   man3/qalloc_statmalloc.3
+		   man3/qalloc_statmalloc.3 \
+		   man3/future_acquire.3 \
+		   man3/future_create.3 \
+		   man3/future_exit.3 \
+		   man3/future_init.3 \
+		   man3/future_join_all.3 \
+		   man3/future_yield.3
 
 TESTS = test1 test2 test3 testq testloop
 check_PROGRAMS = test1 test2 test3 testq testloop
