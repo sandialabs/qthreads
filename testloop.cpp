@@ -70,7 +70,7 @@ void ref(int& i) {
 
 template <class T>
 void recvData( const T& t ) {
-  printf ("Got data reference @ %p\n", &t);
+  //printf ("Got data reference @ %p\n", &t);
 }
 
 class BigData {
@@ -209,11 +209,44 @@ void big_data_stuff() {
   printf ("Made %d copies for %d iterations\n", bd.copy_count, N);
 }
 
+class add {
+  int a_;
+public:
+  add(int a) : a_(a) {;}
+  int operator()(int b) { return b + a_; }
+};
+
+class sub {
+  int s_;
+public:
+  sub(int s) : s_(s) {;}
+  int operator()(int b) { return b - s_; }
+};
+
+template <class OpT>
+void class_stuff (int value, OpT op, int times) {
+  int results[3];
+  ParMemberLoop<ArrayPtr, Val, loop::Par>
+    (&op, (int*)results, &OpT::operator(), value, 0, 3);
+
+  for (int i = 0; i < 3; i++) {
+    printf ("Result = %d\n", results[i]);
+  }
+
+  int sum = 0;
+  ParMemberLoop<Collect<loop::Add>, Val, loop::Par>
+    (&op, sum, &OpT::operator(), value, 0, times);
+
+  printf ("Sum of Result (%d times) %d\n", times, sum);
+}
+
 void my_main() {
   printf ("Hello main\n");
 
-  array_stuff();
-  message_stuff();
-  vanilla_stuff();
-  big_data_stuff();
+  //array_stuff();
+  //message_stuff();
+  //vanilla_stuff();
+  //big_data_stuff();
+  class_stuff<add>(10, 4, 3);
+  class_stuff<sub>(10, 4, 7);
 }

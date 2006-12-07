@@ -9,7 +9,7 @@ class Storage <C, Val, VarT> {
   VarT t_;
 protected:
   Storage(VarT t) : t_(t) {;}
-  VarT& value(const int& iteration) { return t_; }
+  VarT& value(int iteration) { return t_; }
 };
 
 template <int C, class VarT>
@@ -18,7 +18,7 @@ class Storage <C, Ref, VarT > {
   VarT* tp_;
 protected:
   Storage(VarT& t) : tp_(&t) {;}
-  VarT& value(const int& iteration) { return *tp_; }
+  VarT& value(int iteration) { return *tp_; }
 };
 
 template <int C, class VarT, int opC>
@@ -29,7 +29,7 @@ protected:
   Storage(VarT& t) : total_(&t), part_(loop::identity[opC]) {;}
   ~Storage() { Collect<opC>::update (*total_, part_); }
   template <class U>
-  void update (int& iteration, U update) { 
+  void update (int iteration, U update) { 
     Partial<opC,VarT>::update(part_, (VarT)update); }
 };
 
@@ -40,9 +40,9 @@ class Storage<C, ArrayPtr, PtrT > {
   typedef typeof(sptr_.operator[](0)) ele_t;
 protected:
   Storage(PtrT ptr) : ptr_(ptr) {;}
-  ele_t& value(int& iteration) { return ptr_[iteration]; }
+  ele_t& value(int iteration) { return ptr_[iteration]; }
   template <class U>
-  void update (int& iteration, U update) { ptr_[iteration] = (ele_t)update; }
+  void update (int iteration, U update) { ptr_[iteration] = (ele_t)update; }
 };
 
 template <int C, class VarT>
@@ -50,16 +50,16 @@ class Storage<C, ArrayPtr, VarT* > {
   VarT *ptr_;
 protected:
   Storage(VarT *ptr) : ptr_(ptr) {;}
-  VarT& value(int& iteration) { return ptr_[iteration]; }
+  VarT& value(int iteration) { return ptr_[iteration]; }
   template <class U>
-  void update (int& iteration, U update) { ptr_[iteration] = (VarT)update; }
+  void update (int iteration, U update) { ptr_[iteration] = (VarT)update; }
 };
 
 template <int C, class VarT>
 class Storage<C,Iterator,VarT> {
 protected:
   Storage(VarT v) {;}
-  int value(int& iteration) { return iteration; } 
+  int value(int iteration) { return iteration; } 
 };
 
 template <int C, class VarT>

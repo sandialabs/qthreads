@@ -217,8 +217,8 @@ public:
   }
 
 #define PAR_MEMBER_LOOP()						\
-  template <class ObjT, class RetB, BC_LIST int TypeC, class FptrT,	\
-	    class RetV VC_LIST>						\
+  template <class RetB, BC_LIST int TypeC, class FptrT,			\
+	    class RetV VC_LIST, class ObjT>				\
   void ParMemberLoop ( ObjT *obj, const RetV& ret,			\
 		       FptrT fptr,					\
 		       A_LIST						\
@@ -229,7 +229,7 @@ public:
   }
 
 #define PAR_VOID_MEMBER_LOOP()						\
-  template <class ObjT, BC_LIST int TypeC, class FptrT VC_LIST>		\
+  template <BC_LIST int TypeC, class FptrT VC_LIST, class ObjT>		\
   void ParVoidMemberLoop ( ObjT *obj,					\
 			   FptrT fptr,					\
 			   A_LIST					\
