@@ -26,7 +26,7 @@ class Storage <C, Collect<opC>, VarT > {
   VarT* total_;
   VarT part_;
 protected:
-  Storage(VarT& t) : total_(&t), part_(loop::identity[opC]) {;}
+  Storage(VarT& t) : total_(&t), part_(mt_loop_traits::identity[opC]) {;}
   ~Storage() { Collect<opC>::update (*total_, part_); }
   template <class U>
   void update (int iteration, U update) { 

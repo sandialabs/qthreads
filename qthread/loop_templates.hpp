@@ -1,7 +1,7 @@
 #ifndef FUTURE_TEMP_HPP
 #define FUTURE_TEMP_HPP
 
-namespace loop {
+namespace mt_loop_traits {
   const int Par = 1;
   const int ParNoJoin = 2;
   const int Future = 3;
@@ -35,10 +35,10 @@ public:
     qthread_t *me = qthread_self();
     qthread_lock (me, &total);
     switch (opC) {
-    case loop::Sub:
-    case loop::Add: total += part; break;
-    case loop::Div:
-    case loop::Mult: total *= part; break;
+    case mt_loop_traits::Sub:
+    case mt_loop_traits::Add: total += part; break;
+    case mt_loop_traits::Div:
+    case mt_loop_traits::Mult: total *= part; break;
     };
     qthread_unlock (me, &total);
   }
@@ -51,25 +51,25 @@ public:
 };
 
 template <class VarT>
-class Partial < loop::Add, VarT > {
+class Partial < mt_loop_traits::Add, VarT > {
 public:
   static void update (VarT& part, VarT update) { part += update;}
 };
 
 template <class VarT>
-class Partial < loop::Sub, VarT > {
+class Partial < mt_loop_traits::Sub, VarT > {
 public:
   static void update (VarT& part, VarT update) { part -= update;}
 };
 
 template <class VarT>
-class Partial < loop::Mult, VarT > {
+class Partial < mt_loop_traits::Mult, VarT > {
 public:
   static void update (VarT& part, VarT update) { part *= update;}
 };
 
 template <class VarT>
-class Partial < loop::Div, VarT > {
+class Partial < mt_loop_traits::Div, VarT > {
 public:
   static void update (VarT& part, VarT update) { part /= update;}
 };
@@ -144,9 +144,9 @@ public:
 	      tdc, steptd, round_total, base_count);
     
     switch (TypeC) {
-    case loop::ParNoJoin:
+    case mt_loop_traits::ParNoJoin:
       join = false;
-    case loop::Par: {
+    case mt_loop_traits::Par: {
       qthread_t **thr = new qthread_t*[tdc];
       for (int i = 0; i < tdc; i++) {
 	int count = base_count + ( ((round_total + i) < total) ? 1 : 0 );
@@ -164,9 +164,9 @@ public:
       delete thr;
     } break;
       
-    case loop::FutureNoJoin:
+    case mt_loop_traits::FutureNoJoin:
       join = false;
-    case loop::Future: {
+    case mt_loop_traits::Future: {
       future_t **ft = new future_t*[total];
       int yielded = future_yield(me);
       
@@ -197,7 +197,7 @@ public:
 
 #define PAR_LOOP()							\
   template <class RetB, BC_LIST int TypeC, class FptrT, class RetV VC_LIST> \
-  void ParLoop ( const RetV& ret,					\
+  void mt_loop_returns ( const RetV& ret,					\
 		 FptrT fptr,						\
 		 A_LIST							\
 		 int start, int stop, int step = 1 ) {			\
@@ -208,7 +208,7 @@ public:
 
 #define PAR_VOID_LOOP()							\
   template <BC_LIST int TypeC, class FptrT VC_LIST>			\
-  void ParVoidLoop ( FptrT fptr,					\
+  void mt_loop ( FptrT fptr,					\
 		     A_LIST						\
 		     int start, int stop, int step = 1 ) {		\
     void* my_null = NULL;						\
@@ -219,7 +219,7 @@ public:
 #define PAR_MEMBER_LOOP()						\
   template <class RetB, BC_LIST int TypeC, class FptrT,			\
 	    class RetV VC_LIST, class ObjT>				\
-  void ParMemberLoop ( ObjT *obj, const RetV& ret,			\
+  void mt_mfun_loop_returns ( ObjT *obj, const RetV& ret,			\
 		       FptrT fptr,					\
 		       A_LIST						\
 		       int start, int stop, int step = 1 ) {		\
@@ -230,7 +230,7 @@ public:
 
 #define PAR_VOID_MEMBER_LOOP()						\
   template <BC_LIST int TypeC, class FptrT VC_LIST, class ObjT>		\
-  void ParVoidMemberLoop ( ObjT *obj,					\
+  void mt_mfun_loop ( ObjT *obj,					\
 			   FptrT fptr,					\
 			   A_LIST					\
 			   int start, int stop, int step = 1 ) {	\

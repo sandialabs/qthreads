@@ -100,16 +100,16 @@ int BigData::copy_count = 0;
 template <class ArrayT>
 int genericArraySet (ArrayT& arr, int size, char* name) {
   printf (">>>>>>  Array setting %s <<<<<<<\n", name);
-  ParVoidLoop<Iterator, ArrayPtr, loop::Par> (set, 0, arr, 0, size);
+  mt_loop<Iterator, ArrayPtr, mt_loop_traits::Par> (set, 0, arr, 0, size);
   return 1;
 };
 
 template <class ArrayT>
 void genericArrayPrint (ArrayT& arr, int size, char *name) {
   printf (">>>>>>  Array printing %s <<<<<<<\n", name);
-  ParVoidLoop<ArrayPtr, loop::Par> (output, arr, 0, size);
+  mt_loop<ArrayPtr, mt_loop_traits::Par> (output, arr, 0, size);
   printf (">>>>>>  Array printing double by value %s <<<<<<<\n", name);
-  ParVoidLoop<ArrayPtr, loop::Par> (output_double, arr, 0, size);
+  mt_loop<ArrayPtr, mt_loop_traits::Par> (output_double, arr, 0, size);
 };
 
 double assign (double val) {
@@ -130,31 +130,31 @@ void array_stuff() {
 
   printf (">>>>> Copy Array <<<<<\n");
   int *new_arr = new int[size];
-  ParLoop <ArrayPtr, ArrayPtr, loop::Par>
+  mt_loop_returns <ArrayPtr, ArrayPtr, mt_loop_traits::Par>
     (new_arr, assign, arr, 0, size);
   genericArrayPrint(new_arr, size, "Array Copy");
 
   int sum = 0;
   printf (">>>>> Adding Array <<<<<\n");
-  ParLoop <Collect<loop::Add>, ArrayPtr, loop::Par>
+  mt_loop_returns <Collect<mt_loop_traits::Add>, ArrayPtr, mt_loop_traits::Par>
     (sum, assign, arr, 0, size);
   printf ("Sum = %d\n", sum);
 
   sum = 0;
   printf (">>>>> Subbing Array <<<<<\n");
-  ParLoop <Collect<loop::Sub>, ArrayPtr, loop::Par>
+  mt_loop_returns <Collect<mt_loop_traits::Sub>, ArrayPtr, mt_loop_traits::Par>
     (sum, assign, arr, 0, size);
   printf ("Diff = %d\n", sum);
 
   double product = 1;
   printf (">>>>> Multiplying first 10 in Array <<<<<\n");
-  ParLoop <Collect<loop::Mult>, ArrayPtr, loop::Par>
+  mt_loop_returns <Collect<mt_loop_traits::Mult>, ArrayPtr, mt_loop_traits::Par>
     (product, assign, arr, 0, 10);
   printf ("Product = %f\n", product);
 
   product = 1;
   printf (">>>>> Dividing by first 5 in Array <<<<<\n");
-  ParLoop <Collect<loop::Div>, ArrayPtr, loop::Par>
+  mt_loop_returns <Collect<mt_loop_traits::Div>, ArrayPtr, mt_loop_traits::Par>
     (product, assign, arr, 0, 5);
   printf ("Quotient = %.8f\n", product);
 }
@@ -164,7 +164,7 @@ void message_stuff() {
   const char *msg = "Hello Thread!";
 
   printf (">>>>>>  Msg printing <<<<<<<\n");
-  ParVoidLoop<Iterator, Val, ArrayPtr, loop::Par> 
+  mt_loop<Iterator, Val, ArrayPtr, mt_loop_traits::Par> 
     (hello, 0, msg, msg, 0, strlen(msg) - 1);
 };
 
@@ -172,27 +172,27 @@ void vanilla_stuff () {
   int i = 7;
   printf ("i (%p) = %d\n", &i, i);
   printf (">>>>>>  Incrementing i <<<<<<<\n");
-  ParVoidLoop<Ref, loop::Par>  (incr, i, 0, 5);
+  mt_loop<Ref, mt_loop_traits::Par>  (incr, i, 0, 5);
   printf ("i (%p) = %d\n", &i, i);
 
   printf (">>>>>>  Setting i <<<<<<<\n");
-  ParVoidLoop<Iterator, Ref, loop::Par>  (set, 0, i, 0, 5);
+  mt_loop<Iterator, Ref, mt_loop_traits::Par>  (set, 0, i, 0, 5);
   printf ("i (%p) = %d\n", &i, i);
 
   //This will not compile
-  //ParVoidLoop<Iterator, Val, loop::Par>  (set, 0, i, 0, 5);
+  //mt_loop<Iterator, Val, mt_loop_traits::Par>  (set, 0, i, 0, 5);
 
   printf (">>>>>>  Printing constant int <<<<<<<\n");
-  ParVoidLoop<Val, loop::Par> (output, 3, 0, 3);
+  mt_loop<Val, mt_loop_traits::Par> (output, 3, 0, 3);
 
   //This will not compile
-  //ParVoidLoop<Val, loop::Par> (ref, 3, 0, 3);
+  //mt_loop<Val, mt_loop_traits::Par> (ref, 3, 0, 3);
 
   printf (">>>>>>  Printing Iterator <<<<<<<\n");
-  ParVoidLoop<Iterator, loop::Par> (output, 0, 0, 3);
+  mt_loop<Iterator, mt_loop_traits::Par> (output, 0, 0, 3);
 
   //This will not compile
-  //ParVoidLoop<Iterator, loop::Par> (ref, 0, 0, 3);
+  //mt_loop<Iterator, mt_loop_traits::Par> (ref, 0, 0, 3);
 }
 
 void big_data_stuff() {
@@ -200,12 +200,12 @@ void big_data_stuff() {
   printf (">>>>> Pass Big Data by Value %d iterations <<<<\n", N);
   BigData bd;
   bd.copy_count = 0;
-  ParVoidLoop<Val, loop::Par> (recvData<BigData>, bd, 0, N);
+  mt_loop<Val, mt_loop_traits::Par> (recvData<BigData>, bd, 0, N);
   printf ("Made %d copies for %d iterations\n", bd.copy_count, N);
 
   printf (">>>>> Pass Big Data by Reference %d iterations <<<<\n", N);
   bd.copy_count = 0;
-  ParVoidLoop<Ref, loop::Par> (recvData<BigData>, bd, 0, N);
+  mt_loop<Ref, mt_loop_traits::Par> (recvData<BigData>, bd, 0, N);
   printf ("Made %d copies for %d iterations\n", bd.copy_count, N);
 }
 
@@ -226,7 +226,7 @@ public:
 template <class OpT>
 void class_stuff (int value, OpT op, int times) {
   int results[3];
-  ParMemberLoop<ArrayPtr, Val, loop::Par>
+  mt_mfun_loop_returns<ArrayPtr, Val, mt_loop_traits::Par>
     (&op, (int*)results, &OpT::operator(), value, 0, 3);
 
   for (int i = 0; i < 3; i++) {
@@ -234,7 +234,7 @@ void class_stuff (int value, OpT op, int times) {
   }
 
   int sum = 0;
-  ParMemberLoop<Collect<loop::Add>, Val, loop::Par>
+  mt_mfun_loop_returns<Collect<mt_loop_traits::Add>, Val, mt_loop_traits::Par>
     (&op, sum, &OpT::operator(), value, 0, times);
 
   printf ("Sum of Result (%d times) %d\n", times, sum);

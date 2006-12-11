@@ -14,7 +14,7 @@
 
       Example:
       #define VOID_LOOP
-      #define LOOP_TYPE loop::Future
+      #define LOOP_TYPE mt_loop_traits::Future
       #define FUNC_PTR foo
       #define ARG_TYPES Iterator, int
       #define PARAM_LIST NULL, my_int
@@ -69,15 +69,15 @@
 
    LOOP_TYPE: A supported loop type
    Current options are:
-   loop::Par - a regular fork and join type loop
-   loop::Future - a resource constrained loop, good
+   mt_loop_traits::Par - a regular fork and join type loop
+   mt_loop_traits::Future - a resource constrained loop, good
                   for recursive calls.
 		  What does this mean? "Resource Constrained"?
 		  It means the loop will not create new threads
 		  freely, but waits for threads to finish
 		  before spawning more.
-   loop::ParNoJoin,
-   loop::FutureNoJoin - 
+   mt_loop_traits::ParNoJoin,
+   mt_loop_traits::FutureNoJoin - 
    There are versions of the same loops that do
    not wait for the iterations to finish before
    moving onto the next instruction...
@@ -99,28 +99,28 @@ These are happy eyes: ^_^
 
 #ifdef LOOP
 
-#define CALL_LOOP() ParLoop<RET_TYPE,ARG_TYPES,LOOP_TYPE> \
+#define CALL_LOOP() mt_loop_returns<RET_TYPE,ARG_TYPES,LOOP_TYPE> \
   (RET_PTR, FUNC_PTR, PARAM_LIST, LOOP_START, LOOP_STOP, LOOP_STEP)
 
 #undef LOOP
 
 #elif (defined VOID_LOOP)
 
-#define CALL_LOOP() ParVoidLoop<ARG_TYPES,LOOP_TYPE> \
+#define CALL_LOOP() mt_loop<ARG_TYPES,LOOP_TYPE> \
   (FUNC_PTR, PARAM_LIST, LOOP_START, LOOP_STOP, LOOP_STEP)
 
 #undef VOID_LOOP
 
 #elif (defined MEMBER_LOOP)
 
-#define CALL_LOOP() ParMemberLoop<CLASS_NAME,RET_TYPE,ARG_TYPES,LOOP_TYPE> \
+#define CALL_LOOP() mt_mfun_loop_returns<CLASS_NAME,RET_TYPE,ARG_TYPES,LOOP_TYPE> \
   (OBJ_PTR, RET_PTR, FUNC_PTR, PARAM_LIST, LOOP_START, LOOP_STOP, LOOP_STEP)
 
 #undef MEMBER_LOOP
 
 #elif (defined VOID_MEMBER_LOOP)
 
-#define CALL_LOOP() ParVoidMemberLoop<CLASS_NAME,ARG_TYPES,LOOP_TYPE>	\
+#define CALL_LOOP() mt_mfun_loop<CLASS_NAME,ARG_TYPES,LOOP_TYPE>	\
   (OBJ_PTR, FUNC_PTR, PARAM_LIST, LOOP_START, LOOP_STOP, LOOP_STEP)
 
 #undef VOID_MEMBER_LOOP
