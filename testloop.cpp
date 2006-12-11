@@ -180,13 +180,13 @@ void vanilla_stuff () {
   printf ("i (%p) = %d\n", &i, i);
 
   //This will not compile
-  //ParVoidLoop<Iterator, int, loop::Par>  (set, 0, i, 0, 5);
+  //ParVoidLoop<Iterator, Val, loop::Par>  (set, 0, i, 0, 5);
 
   printf (">>>>>>  Printing constant int <<<<<<<\n");
   ParVoidLoop<Val, loop::Par> (output, 3, 0, 3);
 
   //This will not compile
-  //ParVoidLoop<int, loop::Par> (ref, 3, 0, 3);
+  //ParVoidLoop<Val, loop::Par> (ref, 3, 0, 3);
 
   printf (">>>>>>  Printing Iterator <<<<<<<\n");
   ParVoidLoop<Iterator, loop::Par> (output, 0, 0, 3);
