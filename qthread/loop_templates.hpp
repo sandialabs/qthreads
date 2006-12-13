@@ -345,4 +345,18 @@ ALL_LOOPS();
 #undef SCALE_TD_POW2
 #undef IN
 
+template <typename T>
+void mt_assign_loop(T* array, int size, T init_val)
+{
+	struct func {
+		static void apply(T& loc, T init_val)
+		{
+			loc = init_val;
+		}
+	};
+
+	mt_loop<ArrayPtr, Val,mt_loop_traits::Par>(func::apply, array, init_val,
+					     0, size);
+}
+
 #endif /* FUTURE_TEMP_HPP */
