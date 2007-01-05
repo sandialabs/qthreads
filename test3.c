@@ -8,7 +8,7 @@ static int x __attribute__ ((aligned(8)));
 static int id = 1;
 static int readout = 0;
 
-void consumer(qthread_t * t, void *arg)
+aligned_t consumer(qthread_t * t, void *arg)
 {
     int me = 0;
 
@@ -19,7 +19,7 @@ void consumer(qthread_t * t, void *arg)
     qthread_readFE(t, &readout, &x);
 }
 
-void producer(qthread_t * t, void *arg)
+aligned_t producer(qthread_t * t, void *arg)
 {
     int me = 0;
     int data = 55;
@@ -33,16 +33,16 @@ void producer(qthread_t * t, void *arg)
 
 int main(int argc, char *argv[])
 {
-    qthread_t *t;
+    aligned_t t;
 
     x = 0;
     qthread_init(3);
 
     /*printf("Initial value of x: %i\n", x); */
 
-    qthread_fork_detach(consumer, NULL);
-    t = qthread_fork(producer, NULL);
-    qthread_join(NULL, t);
+    qthread_fork(consumer, NULL, NULL);
+    qthread_fork(producer, NULL, &t);
+    qthread_readFF(qthread_self(), &t, &t);
 
     qthread_finalize();
 

@@ -19,17 +19,13 @@ man_MANS = man3/qthread_empty.3 \
 		   man3/qthread_fill.3 \
 		   man3/qthread_finalize.3 \
 		   man3/qthread_fork.3 \
-		   man3/qthread_fork_detach.3 \
 		   man3/qthread_fork_to.3 \
-		   man3/qthread_fork_to_detach.3 \
 		   man3/qthread_id.3 \
 		   man3/qthread_init.3 \
-		   man3/qthread_join.3 \
 		   man3/qthread_lock.3 \
 		   man3/qthread_prepare.3 \
-		   man3/qthread_prepare_detached.3 \
 		   man3/qthread_prepare_for.3 \
-		   man3/qthread_prepare_for_detached.3 \
+		   man3/qthread_retloc.3 \
 		   man3/qthread_readFE.3 \
 		   man3/qthread_readFF.3 \
 		   man3/qthread_schedule.3 \

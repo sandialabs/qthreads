@@ -147,19 +147,19 @@ public:
     case mt_loop_traits::ParNoJoin:
       join = false;
     case mt_loop_traits::Par: {
-      qthread_t **thr = new qthread_t*[tdc];
+      aligned_t *thr = new aligned_t[tdc];
       for (int i = 0; i < tdc; i++) {
 	int count = base_count + ( ((round_total + i) < total) ? 1 : 0 );
-	thr[i] = qthread_fork(run_qtd<Iter>, ITER(start, steptd, count));
+	qthread_fork(run_qtd<Iter>, ITER(start, steptd, count), thr+i);
 	
 	DBprintf ("Thread %d %p start %d step %d count %d\n", 
-		  i, thr[i], start, steptd, count);
+		  i, thr+i, start, steptd, count);
 	start += step;
       }
       
       if (join) {
 	for (int i = 0; i < tdc; i++)
-	  qthread_join(me, thr[i]);
+	  qthread_readFF(me, thr+i, thr+i);
       }
       delete thr;
     } break;
@@ -167,12 +167,12 @@ public:
     case mt_loop_traits::FutureNoJoin:
       join = false;
     case mt_loop_traits::Future: {
-      future_t **ft = new future_t*[total];
+      aligned_t *ft = new aligned_t[total];
       int yielded = future_yield(me);
       
       for (int i = 0; i < tdc; i++) {
 	int count = base_count + ( ((round_total + i) < total) ? 1 : 0 );
-	ft[i] = future_create (me, run_ft<Iter>, ITER(start,steptd,count));
+	future_create (me, run_ft<Iter>, ITER(start,steptd,count), ft+i);
 	start += step;
       }
       

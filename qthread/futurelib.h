@@ -9,10 +9,10 @@ extern "C"
 #endif
 typedef qthread_t future_t;
 
-future_t *future_create(qthread_t * qthr, void (*fptr) (qthread_t *, void *),
-			void *arg);
+void future_create(qthread_t * qthr, aligned_t (*fptr) (qthread_t *, void *),
+			void *arg, aligned_t *retval);
 
-void future_join_all(qthread_t * qthr, future_t ** fta, int ftc);
+void future_join_all(qthread_t * qthr, aligned_t * fta, int ftc);
 
 void future_init(qthread_t * qthr, int vp_per_loc, int loc_count);
 

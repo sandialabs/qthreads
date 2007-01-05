@@ -12,7 +12,7 @@ struct qsi_args
     size_t start, stop;
 };
 
-static void qutil_double_sum_inner(qthread_t *me, struct qsi_args *args)
+static aligned_t qutil_double_sum_inner(qthread_t *me, struct qsi_args *args)
 {
     if (args->start == args->stop) {
 	args->ret = args->array[args->start];
@@ -27,14 +27,14 @@ static void qutil_double_sum_inner(qthread_t *me, struct qsi_args *args)
 
 	if (left_args.start != left_args.stop) {
 	    qthread_empty(me, &left_args.ret, 1);
-	    qthread_fork_detach((qthread_f)qutil_double_sum_inner, &left_args);
+	    qthread_fork((qthread_f)qutil_double_sum_inner, &left_args, NULL);
 	} else {
 	    left_args.ret = args->array[left_args.start];
 	    leftset = 1;
 	}
 	if (right_args.start != right_args.stop) {
 	    qthread_empty(me, &right_args.ret, 1);
-	    qthread_fork_detach((qthread_f)qutil_double_sum_inner, &right_args);
+	    qthread_fork((qthread_f)qutil_double_sum_inner, &right_args, NULL);
 	} else {
 	    right_args.ret = args->array[right_args.start];
 	    rightset = 1;
@@ -48,6 +48,7 @@ static void qutil_double_sum_inner(qthread_t *me, struct qsi_args *args)
 	args->ret = left_args.ret+right_args.ret;
 	qthread_fill(me, &args->ret, 1);
     }
+    return 0;
 }
 
 double qutil_double_sum(qthread_t *me, double * array, size_t length)
@@ -58,7 +59,7 @@ double qutil_double_sum(qthread_t *me, double * array, size_t length)
     return args.ret;
 }
 
-static void qutil_double_FF_sum_inner(qthread_t *me, struct qsi_args *args)
+static aligned_t qutil_double_FF_sum_inner(qthread_t *me, struct qsi_args *args)
 {
     if (args->start == args->stop) {
 	args->ret = args->array[args->start];
@@ -73,7 +74,7 @@ static void qutil_double_FF_sum_inner(qthread_t *me, struct qsi_args *args)
 
 	if (left_args.start != left_args.stop) {
 	    qthread_empty(me, &left_args.ret, 1);
-	    qthread_fork_detach((qthread_f)qutil_double_FF_sum_inner, &left_args);
+	    qthread_fork((qthread_f)qutil_double_FF_sum_inner, &left_args, NULL);
 	} else {
 	    qthread_readFF(me, &left_args.ret, &(args->array[left_args.start]));
 	    left_args.ret = args->array[left_args.start];
@@ -81,7 +82,7 @@ static void qutil_double_FF_sum_inner(qthread_t *me, struct qsi_args *args)
 	}
 	if (right_args.start != right_args.stop) {
 	    qthread_empty(me, &right_args.ret, 1);
-	    qthread_fork_detach((qthread_f)qutil_double_FF_sum_inner, &right_args);
+	    qthread_fork((qthread_f)qutil_double_FF_sum_inner, &right_args, NULL);
 	} else {
 	    qthread_readFF(me, &right_args.ret, &(args->array[right_args.start]));
 	    right_args.ret = args->array[right_args.start];
@@ -96,6 +97,7 @@ static void qutil_double_FF_sum_inner(qthread_t *me, struct qsi_args *args)
 	args->ret = left_args.ret + right_args.ret;
 	qthread_fill(me, &args->ret, 1);
     }
+    return 0;
 }
 
 double qutil_double_FF_sum(qthread_t *me, double *array, size_t length)
@@ -126,14 +128,14 @@ static void qutil_uint_sum_inner(qthread_t *me, struct quisi_args *args)
 
 	if (left_args.start != left_args.stop) {
 	    qthread_empty(me, &left_args.ret, 1);
-	    qthread_fork_detach((qthread_f)qutil_uint_sum_inner, &left_args);
+	    qthread_fork((qthread_f)qutil_uint_sum_inner, &left_args, NULL);
 	} else {
 	    left_args.ret = args->array[left_args.start];
 	    leftset = 1;
 	}
 	if (right_args.start != right_args.stop) {
 	    qthread_empty(me, &right_args.ret, 1);
-	    qthread_fork_detach((qthread_f)qutil_uint_sum_inner, &right_args);
+	    qthread_fork((qthread_f)qutil_uint_sum_inner, &right_args, NULL);
 	} else {
 	    right_args.ret = args->array[right_args.start];
 	    rightset = 1;
@@ -146,6 +148,7 @@ static void qutil_uint_sum_inner(qthread_t *me, struct quisi_args *args)
 	}
 	qthread_writeF_const(me, &args->ret, left_args.ret+right_args.ret);
     }
+    return 0;
 }/*}}}*/
 
 unsigned int qutil_uint_sum(qthread_t *me, unsigned int * array, size_t length)
@@ -188,7 +191,7 @@ double qutil_runloop_sum_double(qthread_t *me, double (*func)(qthread_t*, const 
 	args[i].iteration = i+loopstart;
 	args[i].func = func;
 	args[i].ret = retvals+i;
-	qthread_fork_detach((qthread_f)qutil_threadwrapper, args+i);
+	qthread_fork((qthread_f)qutil_threadwrapper, args+i, NULL);
     }
     sum = qutil_double_FF_sum(me, retvals, iterations);
     free(retvals);

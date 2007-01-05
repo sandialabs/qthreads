@@ -9,12 +9,13 @@ static int id = 0;
 
 pthread_mutex_t alldone = PTHREAD_MUTEX_INITIALIZER;
 
-void thread(qthread_t * t, void *arg)
+aligned_t thread(qthread_t * t, void *arg)
 {
     int me = qthread_id(qthread_self());
 
     //printf("thread(%p): me %i\n", (void*) t, me);
-    printf("%i bytes left\n", (int)qthread_stackleft(t));
+    int foo = qthread_stackleft(t);
+    //printf("%i bytes left\n", (int)qthread_stackleft(t));
 
     qthread_lock(t, &x);
     //printf("thread(%i): x=%d\n", me, x);
@@ -22,6 +23,7 @@ void thread(qthread_t * t, void *arg)
     if (x == target)
 	pthread_mutex_unlock(&alldone);
     qthread_unlock(t, &x);
+    return 0;
 }
 
 int main(int argc, char *argv[])
@@ -42,7 +44,7 @@ int main(int argc, char *argv[])
     pthread_mutex_lock(&alldone);
 
     for (i = 0; i < target; i++)
-	qthread_fork_detach(thread, NULL);
+	qthread_fork(thread, NULL, NULL);
 
     pthread_mutex_lock(&alldone);
 

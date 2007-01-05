@@ -16,7 +16,7 @@ struct main_args_s {
 
 void my_main();
 
-void qmain(qthread_t *qthr, void *arg) {
+aligned_t qmain(qthread_t *qthr, void *arg) {
   main_args_s *a = (main_args_s*)arg;
   int argc = a->argc;
   char **argv = a->argv;
@@ -25,6 +25,8 @@ void qmain(qthread_t *qthr, void *arg) {
   my_main();
 
   pthread_mutex_unlock(&all_done);
+
+  return 0;
 }
 
 int main (int argc, char **argv) {
@@ -34,7 +36,7 @@ int main (int argc, char **argv) {
   a.argv = argv;
   
   pthread_mutex_lock(&all_done);
-  qthread_fork(qmain, &a);
+  qthread_fork(qmain, &a, NULL);
   pthread_mutex_lock(&all_done);
   qthread_finalize();
 }

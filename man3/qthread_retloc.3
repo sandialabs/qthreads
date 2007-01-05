@@ -1,0 +1,19 @@
+.TH qthread_retloc 3 "NOVEMBER 2006" libqthread "libqthread"
+.SH NAME
+\fBqthread_retloc\fR \- returns the qthread's unique ID number
+.SH SYNOPSIS
+.B #include <qthread/qthread.h>
+
+.I size_t
+.br
+\fBqthread_retloc\fR(qthread_t *\fIt\fR);
+.SH DESCRIPTION
+This function returns the location that the return value of the qthread_t
+\fIr\fR will be stored into.
+.SH "RETURN VALUE"
+If \fIt\fR is non-null, it returns a pointer to the location that the return value of the thread will be stored in. If \fIt\fR is NULL, \fBqthread_retloc\fR() returns a pointer to the location that the return value of the currently running thread will be stored in.
+.SH "SEE ALSO"
+.BR qthread_id (3),
+.BR qthread_self (3),
+.BR qthread_shep (3),
+.BR qthread_stackleft (3)

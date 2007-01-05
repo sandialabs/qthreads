@@ -27,9 +27,6 @@ extern "C"
 typedef struct qthread_s qthread_t;
 typedef unsigned char qthread_shepherd_id_t;	/* doubt we'll run more than 255 shepherds */
 
-/* for convenient arguments to qthread_fork */
-typedef void (*qthread_f) (qthread_t * me, void *arg);
-
 /* FEB locking only works on aligned addresses. On 32-bit architectures, this
  * isn't too much of an inconvenience. On 64-bit architectures, it's a pain in
  * the BUT! This is here to try and help a little bit. */
@@ -38,6 +35,9 @@ typedef uint64_t aligned_t;
 #else
 typedef uint32_t aligned_t;
 #endif
+
+/* for convenient arguments to qthread_fork */
+typedef aligned_t (*qthread_f) (qthread_t * me, void *arg);
 
 #define NO_SHEPHERD ((qthread_shepherd_id_t)-1)
 
@@ -74,12 +74,10 @@ qthread_t *qthread_self(void);
  *     free'd). The qthread_fork_to* functions spawn the thread to a specific
  *     shepherd.
  */
-qthread_t *qthread_fork(const qthread_f f, const void *arg);
-qthread_t *qthread_fork_to(const qthread_f f, const void *arg,
+void qthread_fork(const qthread_f f, const void *arg, aligned_t *ret);
+void qthread_fork_to(const qthread_f f, const void *arg, aligned_t *ret,
 			   const qthread_shepherd_id_t shepherd);
-void qthread_fork_detach(const qthread_f f, const void *arg);
-void qthread_fork_to_detach(const qthread_f f, const void *arg,
-			    const qthread_shepherd_id_t shepherd);
+
 /* Using qthread_prepare()/qthread_schedule() and variants:
  *
  *     The combination of these two functions works like qthread_fork().
@@ -88,12 +86,9 @@ void qthread_fork_to_detach(const qthread_f f, const void *arg,
  *     the finishing touches on the qthread_t structure and places it into an
  *     active queue.
  */
-qthread_t *qthread_prepare(const qthread_f f, const void *arg);
-qthread_t *qthread_prepare_detached(const qthread_f f, const void *arg);
-qthread_t *qthread_prepare_for(const qthread_f f, const void *arg,
+qthread_t *qthread_prepare(const qthread_f f, const void *arg, aligned_t *ret);
+qthread_t *qthread_prepare_for(const qthread_f f, const void *arg, aligned_t *ret,
 			       const qthread_shepherd_id_t shepherd);
-qthread_t *qthread_prepare_detached_for(const qthread_f f, const void *arg,
-					const qthread_shepherd_id_t shepherd);
 
 void qthread_schedule(qthread_t * t);
 void qthread_schedule_on(qthread_t * t, const qthread_shepherd_id_t shepherd);
@@ -103,17 +98,7 @@ void qthread_schedule_on(qthread_t * t, const qthread_shepherd_id_t shepherd);
 unsigned qthread_id(const qthread_t * t);
 qthread_shepherd_id_t qthread_shep(const qthread_t * t);
 size_t qthread_stackleft(qthread_t * t);
-
-/* This is the join function, which will only return once the specified thread
- * has finished executing.
- *
- * qthread_join() will work whether within a qthread or not. If not called from
- * withing a qthread, pass it NULL for the "me" argument. It relies on
- * qthread_lock/unlock of the qthread_t data-structure address (the user CAN
- * muck with that, but it's not recommended), so it's a blocking join that will
- * not take processing time.
- */
-void qthread_join(qthread_t * me, qthread_t * waitfor);
+aligned_t *qthread_retloc(qthread_t * t);
 
 /****************************************************************************
  * functions to implement FEB locking/unlocking

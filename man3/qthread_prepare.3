@@ -1,52 +1,51 @@
 .TH qthread_prepare 3 "NOVEMBER 2006" libqthread "libqthread"
 .SH NAME
-\fBqthread_prepare\fR, \fBqthread_prepare_for\fR, \fBqthread_prepare_detached\fR, \fBqthread_prepare_detached_for\fR \- create an unscheduled qthread
+\fBqthread_prepare\fR, \fBqthread_prepare_for\fR \- create an unscheduled qthread
 .SH SYNOPSIS
 .B #include <qthread/qthread.h>
 
 .I qthread_t *
 .br
-\fBqthread_prepare\fR(qthread_f *\fIf\fR, const void *\fIarg\fR);
+\fBqthread_prepare\fR(qthread_f *\fIf\fR, const void *\fIarg\fR, aligned_t *\fIret\fR);
 .PP
 .I qthread_t *
 .br
-\fBqthread_prepare_for\fR(qthread_f *\fIf\fR, const void *\fIarg\fR,
+\fBqthread_prepare_for\fR(qthread_f *\fIf\fR, const void *\fIarg\fR, aligned_t *\fIret\fR,
 .ti +20n
 const qthread_shepherd_id_t \fIshepherd\fR);
-.PP
-.I qthread_t *
-.br
-\fBqthread_prepare_detached\fR(qthread_f *\fIf\fR, const void *\fIarg\fR);
-.PP
-.I qthread_t *
-.br
-\fBqthread_prepare_detached_for\fR(qthread_f *\fIf\fR, const void *\fIarg\fR,
-.ti +29n
-const qthread_shepherd_id_t \fIshepherd\fR);
-.br
 .SH DESCRIPTION
-These are functions for preparing new qthreads, but not actually scheduling them.
+These are functions for preparing new qthreads, but not actually scheduling
+them.
 .PP
-The first argument to these functions, \fIf\fR, is a function that will be run to completion by the created qthread. (Note that \fIf\fR is a qthread_f and not a qthread_t.) The second argument to these functions, \fIarg\fB, is an argument that will be passed to the specified function.
+The first argument to these functions, \fIf\fR, is a function that will be run
+to completion by the created qthread. (Note that \fIf\fR is a qthread_f and not
+a qthread_t.) The second argument to these functions, \fIarg\fR, is an argument
+that will be passed to the specified function. Finally, \fIret\fR is a pointer to the location that the return value of \fIf\fR will be placed into.
 .PP
 The qthread_f function must have a prototype like this:
 .RS
 .PP
-void function(qthread_t *me, void *arg);
+aligned_t function(qthread_t *me, void *arg);
 .RE
 .PP
-The \fBqthread_prepare_for\fR() and \fBqthread_prepare_for_detached\fR() functions prepare the qthread for the specified shepherd.
+The \fBqthread_prepare_for\fR() function prepares the qthread for the specified
+shepherd.
 .PP
-The \fBqthread_prepare_detached\fR() and \fBqthread_prepare_for_detached\fR() functions prepare "detached" qthreads. A detached qthread will clean up after itself when it exits, and is un-joinable (meaning that \fBqthread_join\fR() cannot be run on it). However, un-detached threads \fBMUST\fR be joined in order for them to clean up their related resources. In short: detached qthreads CANNOT be joined, and un-detached qthreads MUST be joined.
+When a qthread_t is returned, it is not scheduled to run, and must be passed to
+either \fBqthread_schedule\fR() or \fBqthread_schedule_on\fR().
 .PP
-When a qthread_t is returned, it is not scheduled to run, and must be passed to either \fBqthread_schedule\fR() or \fBqthread_schedule_on\fR().
+The return value of the function \fIf\fR will be placed into the memory pointed
+to by \fIret\fR, in accordance with the full-empty bits. When
+\fBqthread_fork\fR() or \fBqthread_fork_to\fR() is called, \fIret\fR will be
+emptied (as if it had been passed to \fBqthread_empty\fR()). When the function
+\fIf\fR returns, the returned value will be stored into \fIret\fR and \fIret\fR
+will be filled. The way to block until a function has finished is to use
+\fBqthread_readFF\fR() on the \fIret\fR pointer.
 .SH "RETURN VALUE"
-These functions all return pointers to a qthread_t structure, which is a handle to the qthread that was just prepared.
+These functions all return pointers to a qthread_t structure, which is a handle
+to the qthread that was just prepared.
 .SH "SEE ALSO"
-.BR qthread_join (3),
 .BR qthread_fork (3),
-.BR qthread_fork_detached (3),
 .BR qthread_fork_for (3),
-.BR qthread_fork_detached_for (3),
 .BR qthread_schedule (3),
-.BR qthread_shedule_on (3)
+.BR qthread_schedule_on (3)
