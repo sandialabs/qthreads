@@ -1,3 +1,18 @@
+--- 0.5 ---
+New Features:
+ - Threads can have return values, which obey FEB semantics
+ - qthread_stackleft() returns the number of bytes left in the stack (with some
+   inaccuracy)
+
+Improvements:
+ - Functions are now anonymous, and there is no major distinction between
+   detached and undetached threads
+ - Removed qthread_join(); use qthread_readFF on a thread's return value
+   instead
+ - FutureLib uses behavior-templates rather than type-templates
+
+Bugfixes:
+ - Corrected a race condition in the FEB handling that could lead to deadlock
 --- 0.4 ---
 New Features:
  - man pages for all major functions

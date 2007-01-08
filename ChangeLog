@@ -1,3 +1,148 @@
+2007-01-04 19:37  kbwheel
+
+	* Makefile.am, Makefile.in, futurelib.c, qthread.c, qutil.c,
+	  test2.c, test3.c, testloop.cpp, man3/qthread_fork.3,
+	  man3/qthread_fork_detach.3, man3/qthread_fork_to_detach.3,
+	  man3/qthread_id.3, man3/qthread_join.3, man3/qthread_prepare.3,
+	  man3/qthread_retloc.3, man3/qthread_schedule.3,
+	  man3/qthread_shep.3, man3/qthread_stackleft.3,
+	  man3/qthread_yield.3, qthread/futurelib.h, qthread/loop_iter.hpp,
+	  qthread/loop_templates.hpp, qthread/qthread.h: changed the
+	  qthread_fork semantics to make qthreads anonymous
+
+2006-12-19 12:57  kbwheel
+
+	* qthread/qthread.h: name change
+
+2006-12-13 10:15  mlvance
+
+	* qthread/loop_templates.hpp: [no log message]
+
+2006-12-11 14:33  mlvance
+
+	* testloop.cpp, qthread/loop.hpp, qthread/loop_iter.hpp,
+	  qthread/loop_templates.hpp: [no log message]
+
+2006-12-11 10:27  mlvance
+
+	* testloop.cpp: [no log message]
+
+2006-12-07 18:39  mlvance
+
+	* testloop.cpp, qthread/loop_iter.hpp, qthread/loop_templates.hpp:
+	  [no log message]
+
+2006-12-07 17:28  kbwheel
+
+	* Makefile.am, Makefile.in, qutil.c, test.c, qthread/qutil.h: added
+	  qutil functions... they are not yet documented, because I suspect
+	  them of subtle bugs when adding up large arrays
+
+2006-12-06 16:20  mlvance
+
+	* qthread/: loop_iter.hpp: [no log message]
+
+2006-12-06 16:00  kbwheel
+
+	* qthread.c: fixed a race condition in the FEB handling that could
+	  lead to deadlock, and added some notation to make debugging
+	  future deadlocks easier
+
+2006-12-05 11:59  kbwheel
+
+	* testloop.cpp, qthread/loop_templates.hpp: changed to behaviors
+	  rather than types
+
+2006-12-01 18:29  mlvance
+
+	* testloop.cpp, qthread/loop_iter.hpp, qthread/loop_templates.hpp:
+	  [no log message]
+
+2006-12-01 15:55  kbwheel
+
+	* man3/qthread_id.3: formatting
+
+2006-12-01 14:13  kbwheel
+
+	* futurelib.c, man3/future_acquire.3, man3/future_create.3,
+	  man3/future_exit.3, man3/future_init.3, man3/future_join_all.3,
+	  man3/future_yeild.3, man3/future_yield.3, qthread/futurelib.h,
+	  qthread/loop_templates.hpp: The word "yield" was misspelled
+	  "yeild".
+
+2006-11-30 16:34  mlvance
+
+	* man3/: future_acquire.3, future_create.3, future_exit.3,
+	  future_init.3, future_join_all.3, future_yeild.3: [no log
+	  message]
+
+2006-11-29 15:16  kbwheel
+
+	* Makefile.am, Makefile.in, qthread.c, test2.c,
+	  man3/qthread_stackleft.3, qthread/qthread.h: added
+	  qthread_stackleft()
+
+2006-11-29 13:28  kbwheel
+
+	* futurelib.c: PGI wants this to be cast
+
+2006-11-29 13:27  kbwheel
+
+	* testloop.cpp: Attempting to solve an intractable problem. The
+	  deal is that we want to make this template only accept array-ish
+	  types (i.e. objects that have operator[] defined), but have no
+	  real way of doing that in a cross-compiler compatable way.
+	  Suggestions are very welcome.
+
+2006-11-28 19:02  kbwheel
+
+	* qthread/loop_templates.hpp: when installed, it needs to be able
+	  to find the loop_iter.hpp file
+
+2006-11-28 19:02  kbwheel
+
+	* README: note libtool fubar-ness
+
+2006-11-28 18:46  kbwheel
+
+	* Makefile.am, Makefile.in, loop.hpp, loop_iter.hpp,
+	  loop_templates.hpp, qthread/.cvsignore, qthread/futurelib.h,
+	  qthread/loop.hpp, qthread/loop_iter.hpp,
+	  qthread/loop_templates.hpp: moved .hpp files as well
+
+2006-11-28 18:19  kbwheel
+
+	* loop_templates.hpp, testloop.cpp: new changes
+
+2006-11-28 17:49  kbwheel
+
+	* Makefile.am, Makefile.in, configure, configure.in, futurelib.c,
+	  futurelib.h, main.c, pthread_comparison_test.c, qalloc.c,
+	  qalloc.h, qthread.c, qthread.h, test.c, test2.c, test3.c,
+	  testloop.cpp, testq.c, qthread/futurelib.h, qthread/qalloc.h,
+	  qthread/qthread.h: rearranged, tidied
+
+2006-11-28 14:37  kbwheel
+
+	* futurelib.h: make it work with the "standard" install
+
+2006-11-28 14:34  kbwheel
+
+	* futurelib.c: removed pointer casting warnings
+
+2006-11-28 13:48  mlvance
+
+	* Makefile.am, futurelib.c, futurelib.h, loop.hpp, loop_iter.hpp,
+	  loop_templates.hpp, testloop.cpp: [no log message]
+
+2006-11-22 13:15  kbwheel
+
+	* Makefile.in, configure, configure.in: version bump
+
+2006-11-22 13:11  kbwheel
+
+	* ChangeLog, NEWS: release
+
 2006-11-22 13:10  kbwheel
 
 	* qalloc.h: match the manpages
