@@ -1462,6 +1462,7 @@ static aligned_t qthread_empty_sub(qthread_t * me, void *arg)
     qthread_empty(me, ((struct qthread_FEB_ef_sub_args *)arg)->dest,
 		  ((struct qthread_FEB_ef_sub_args *)arg)->count);
     pthread_mutex_unlock(&((struct qthread_FEB_ef_sub_args *)arg)->alldone);
+    return 0;
 }				       /*}}} */
 
 void qthread_empty(qthread_t * me, const void *dest, const size_t count)
@@ -1519,6 +1520,7 @@ static aligned_t qthread_fill_sub(qthread_t * me, void *arg)
     qthread_fill(me, ((struct qthread_FEB_ef_sub_args *)arg)->dest,
 		 ((struct qthread_FEB_ef_sub_args *)arg)->count);
     pthread_mutex_unlock(&((struct qthread_FEB_ef_sub_args *)arg)->alldone);
+    return 0;
 }				       /*}}} */
 
 void qthread_fill(qthread_t * me, const void *dest, const size_t count)
@@ -1578,6 +1580,7 @@ static aligned_t qthread_writeF_sub(qthread_t * me, void *arg)
     qthread_writeF(me, ((struct qthread_FEB_sub_args *)arg)->dest,
 		   ((struct qthread_FEB_sub_args *)arg)->src);
     pthread_mutex_unlock(&((struct qthread_FEB_sub_args *)arg)->alldone);
+    return 0;
 }				       /*}}} */
 
 void qthread_writeF(qthread_t * me, void *dest, const void *src)
@@ -1629,6 +1632,7 @@ static aligned_t qthread_writeEF_sub(qthread_t * me, void *arg)
     qthread_writeEF(me, ((struct qthread_FEB_sub_args *)arg)->dest,
 		    ((struct qthread_FEB_sub_args *)arg)->src);
     pthread_mutex_unlock(&((struct qthread_FEB_sub_args *)arg)->alldone);
+    return 0;
 }				       /*}}} */
 
 void qthread_writeEF(qthread_t * me, void *dest, const void *src)
@@ -1699,6 +1703,7 @@ static aligned_t qthread_readFF_sub(qthread_t * me, void *arg)
     qthread_readFF(me, ((struct qthread_FEB_sub_args *)arg)->dest,
 		   ((struct qthread_FEB_sub_args *)arg)->src);
     pthread_mutex_unlock(&((struct qthread_FEB_sub_args *)arg)->alldone);
+    return 0;
 }				       /*}}} */
 
 void qthread_readFF(qthread_t * me, void *dest, void *src)
@@ -1766,6 +1771,7 @@ static aligned_t qthread_readFE_sub(qthread_t * me, void *arg)
     qthread_readFE(me, ((struct qthread_FEB_sub_args *)arg)->dest,
 		   ((struct qthread_FEB_sub_args *)arg)->src);
     pthread_mutex_unlock(&((struct qthread_FEB_sub_args *)arg)->alldone);
+    return 0;
 }				       /*}}} */
 
 void qthread_readFE(qthread_t * me, void *dest, void *src)
@@ -1844,6 +1850,7 @@ static aligned_t qthread_lock_sub(qthread_t * t, void *arg)
 {				       /*{{{ */
     qthread_lock(t, ((struct qthread_lock_sub_args *)arg)->addr);
     pthread_mutex_unlock(&(((struct qthread_lock_sub_args *)arg)->alldone));
+    return 0;
 }				       /*}}} */
 
 int qthread_lock(qthread_t * t, const void *a)
@@ -1920,6 +1927,7 @@ static aligned_t qthread_unlock_sub(qthread_t * t, void *arg)
 {				       /*{{{ */
     qthread_unlock(t, ((struct qthread_lock_sub_args *)arg)->addr);
     pthread_mutex_unlock(&(((struct qthread_lock_sub_args *)arg)->alldone));
+    return 0;
 }				       /*}}} */
 
 int qthread_unlock(qthread_t * t, const void *a)
