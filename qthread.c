@@ -292,15 +292,9 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
 					 threadshep, const char recursive);
 
 #ifdef QTHREAD_NO_ASSERTS
-#define QTHREAD_LOCK(l) pthread_mutex_lock(l)
-#define QTHREAD_UNLOCK(l) pthread_mutex_unlock(l)
-#define QTHREAD_INITLOCK(l) pthread_mutex_init(l, NULL)
-#define QTHREAD_DESTROYLOCK(l) pthread_mutex_destroy(l)
-#define QTHREAD_INITCOND(l) pthread_cond_init(l, NULL)
-#define QTHREAD_DESTROYCOND(l) pthread_cond_destroy(l)
-#define QTHREAD_SIGNAL(l) pthread_cond_signal(l)
-#define QTHREAD_CONDWAIT(c, l) pthread_cond_wait(c, l)
-#else
+#define assert(me)
+#endif
+
 #define QTHREAD_LOCK(l) assert(pthread_mutex_lock(l) == 0)
 #define QTHREAD_UNLOCK(l) assert(pthread_mutex_unlock(l) == 0)
 #define QTHREAD_INITLOCK(l) assert(pthread_mutex_init(l, NULL) == 0)
@@ -309,7 +303,6 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
 #define QTHREAD_DESTROYCOND(l) assert(pthread_cond_destroy(l) == 0)
 #define QTHREAD_SIGNAL(l) assert(pthread_cond_signal(l) == 0)
 #define QTHREAD_CONDWAIT(c, l) assert(pthread_cond_wait(c, l) == 0)
-#endif
 
 #define ATOMIC_INC(r, x, l) do { \
     QTHREAD_LOCK(l); \
