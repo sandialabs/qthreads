@@ -4,7 +4,6 @@
 #include <qthread/qthread.h>
 #include <qthread/qutil.h>
 
-
 int main(int argc, char *argv[])
 {
     double array[3] = { 1.0, 2.0, 3.0 };
