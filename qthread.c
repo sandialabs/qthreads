@@ -2,7 +2,9 @@
 # include "config.h"
 #endif
 #include <stdlib.h>		       /* for malloc() and abort() */
-#include <assert.h>		       /* for assert() */
+#ifndef QTHREAD_NO_ASSERTS
+# include <assert.h>		       /* for assert() */
+#endif
 #if defined(HAVE_UCONTEXT_H) && defined(HAVE_CONTEXT_FUNCS)
 # include <ucontext.h>		       /* for make/get/swap-context functions */
 #else
@@ -292,17 +294,20 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
 					 threadshep, const char recursive);
 
 #ifdef QTHREAD_NO_ASSERTS
-#define assert(me)
+#define qassert(op, val) op
+#define assert(foo)
+#else
+#define qassert(op, val) assert(op == val)
 #endif
 
-#define QTHREAD_LOCK(l) assert(pthread_mutex_lock(l) == 0)
-#define QTHREAD_UNLOCK(l) assert(pthread_mutex_unlock(l) == 0)
-#define QTHREAD_INITLOCK(l) assert(pthread_mutex_init(l, NULL) == 0)
-#define QTHREAD_DESTROYLOCK(l) assert(pthread_mutex_destroy(l) == 0)
-#define QTHREAD_INITCOND(l) assert(pthread_cond_init(l, NULL) == 0)
-#define QTHREAD_DESTROYCOND(l) assert(pthread_cond_destroy(l) == 0)
-#define QTHREAD_SIGNAL(l) assert(pthread_cond_signal(l) == 0)
-#define QTHREAD_CONDWAIT(c, l) assert(pthread_cond_wait(c, l) == 0)
+#define QTHREAD_LOCK(l) qassert(pthread_mutex_lock(l), 0)
+#define QTHREAD_UNLOCK(l) qassert(pthread_mutex_unlock(l), 0)
+#define QTHREAD_INITLOCK(l) qassert(pthread_mutex_init(l, NULL), 0)
+#define QTHREAD_DESTROYLOCK(l) qassert(pthread_mutex_destroy(l), 0)
+#define QTHREAD_INITCOND(l) qassert(pthread_cond_init(l, NULL), 0)
+#define QTHREAD_DESTROYCOND(l) qassert(pthread_cond_destroy(l), 0)
+#define QTHREAD_SIGNAL(l) qassert(pthread_cond_signal(l), 0)
+#define QTHREAD_CONDWAIT(c, l) qassert(pthread_cond_wait(c, l), 0)
 
 #define ATOMIC_INC(r, x, l) do { \
     QTHREAD_LOCK(l); \
@@ -434,7 +439,6 @@ static void *qthread_shepherd(void *arg)
 	    done = 1;
 	    qthread_thread_free(t);
 	} else {
-#ifndef QTHREAD_NO_ASSERTS
 	    assert((t->thread_state == QTHREAD_STATE_NEW) ||
 		   (t->thread_state == QTHREAD_STATE_RUNNING));
 
@@ -446,7 +450,6 @@ static void *qthread_shepherd(void *arg)
 	     */
 
 	    assert(t->shepherd == me->kthread_index);
-#endif
 	    me->current = t;
 	    qthread_exec(t, &my_context);
 	    me->current = NULL;
@@ -554,7 +557,7 @@ int qthread_init(const int nkthreads)
     QTHREAD_INITLOCK(&qlib->max_thread_id_lock);
 
 #ifdef NEED_RLIMIT
-    assert(getrlimit(RLIMIT_STACK, &rlp) == 0);
+    qassert(getrlimit(RLIMIT_STACK, &rlp), 0);
     qthread_debug("stack sizes ... cur: %u max: %u\n", rlp.rlim_cur,
 		  rlp.rlim_max);
     qlib->master_stack_size = rlp.rlim_cur;
@@ -659,9 +662,7 @@ void qthread_finalize(void)
     int i, r;
     qthread_t *t;
 
-#ifndef QTHREAD_NO_ASSERTS
     assert(qlib != NULL);
-#endif
 
     qthread_debug("qthread_finalize(): began.\n");
 
@@ -882,9 +883,7 @@ static inline void qthread_thread_free(qthread_t * t)
     qthread_shepherd_id_t myshep = qthread_internal_myshepherd();
 #endif
 
-#ifndef QTHREAD_NO_ASSERTS
     assert(t != NULL);
-#endif
 
     if (t->context) {
 	FREE_CONTEXT(myshep, t->context);
@@ -921,9 +920,7 @@ static inline qthread_queue_t *qthread_queue_new(qthread_shepherd_id_t
 static inline void qthread_queue_free(qthread_queue_t * q,
 				      qthread_shepherd_id_t shepherd)
 {				       /*{{{ */
-#ifndef QTHREAD_NO_ASSERTS
     assert((q->head == NULL) && (q->tail == NULL));
-#endif
     QTHREAD_DESTROYLOCK(&q->lock);
     QTHREAD_DESTROYCOND(&q->notempty);
     FREE_QUEUE(shepherd, q);
@@ -931,10 +928,8 @@ static inline void qthread_queue_free(qthread_queue_t * q,
 
 static inline void qthread_enqueue(qthread_queue_t * q, qthread_t * t)
 {				       /*{{{ */
-#ifndef QTHREAD_NO_ASSERTS
     assert(t != NULL);
     assert(q != NULL);
-#endif
 
     qthread_debug("qthread_enqueue(%p,%p): started\n", q, t);
 
@@ -967,9 +962,7 @@ static inline qthread_t *qthread_dequeue(qthread_queue_t * q)
 	QTHREAD_CONDWAIT(&q->notempty, &q->lock);
     }
 
-#ifndef QTHREAD_NO_ASSERTS
     assert(q->head != NULL);
-#endif
 
     t = q->head;
     if (q->head != q->tail) {
@@ -1056,10 +1049,8 @@ static inline void qthread_exec(qthread_t * t, ucontext_t * c)
     struct rlimit rlp;
 #endif
 
-#ifndef QTHREAD_NO_ASSERTS
     assert(t != NULL);
     assert(c != NULL);
-#endif
 
     if (t->thread_state == QTHREAD_STATE_NEW) {
 
@@ -1102,7 +1093,7 @@ static inline void qthread_exec(qthread_t * t, ucontext_t * c)
 	 t);
     rlp.rlim_cur = qlib->qthread_stack_size;
     rlp.rlim_max = qlib->max_stack_size;
-    assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
+    qassert(setrlimit(RLIMIT_STACK, &rlp), 0);
 #endif
 
     qthread_debug("qthread_exec(%p): executing swapcontext()...\n", t);
@@ -1116,13 +1107,11 @@ static inline void qthread_exec(qthread_t * t, ucontext_t * c)
 	("qthread_exec(%p): setting stack size limits back to normal...\n",
 	 t);
     rlp.rlim_cur = qlib->master_stack_size;
-    assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
+    qassert(setrlimit(RLIMIT_STACK, &rlp), 0);
 #endif
 
-#ifndef QTHREAD_NO_ASSERTS
     assert(t != NULL);
     assert(c != NULL);
-#endif
 
     qthread_debug("qthread_exec(%p): finished\n", t);
 }				       /*}}} */
@@ -1193,7 +1182,7 @@ static inline void qthread_back_to_master(qthread_t * t)
 	 t);
     rlp.rlim_cur = qlib->master_stack_size;
     rlp.rlim_max = qlib->max_stack_size;
-    assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
+    qassert(setrlimit(RLIMIT_STACK, &rlp), 0);
 #endif
     /* now back to your regularly scheduled master thread */
     if (swapcontext(t->context, t->return_context) != 0) {
@@ -1205,7 +1194,7 @@ static inline void qthread_back_to_master(qthread_t * t)
 	("qthread_back_to_master(%p): setting stack size limits back to qthread size...\n",
 	 t);
     rlp.rlim_cur = qlib->qthread_stack_size;
-    assert(setrlimit(RLIMIT_STACK, &rlp) == 0);
+    qassert(setrlimit(RLIMIT_STACK, &rlp), 0);
 #endif
 }				       /*}}} */
 
