@@ -250,7 +250,7 @@ typedef struct
      * NOTE: this can be a major bottleneck and we should probably create
      * multiple hashtables to improve performance
      */
-    cp_hashtable *locks;
+    cp_hashtable *locks[32];
     /* these are separated out for memory reasons: if you can get away with
      * simple locks, then you can use less memory. Subject to the same
      * bottleneck concerns as the above hashtable, though these are slightly
@@ -528,11 +528,13 @@ int qthread_init(const int nkthreads)
     /* initialize the FEB-like locking structures */
 
     /* this is synchronized with read/write locks by default */
-    if ((qlib->locks =
-	 cp_hashtable_create(100, cp_hash_addr,
-			     cp_hash_compare_addr)) == NULL) {
-	perror("qthread_init()");
-	abort();
+    for (i = 0; i < 32; i++) {
+	if ((qlib->locks[i] =
+		    cp_hashtable_create(100, cp_hash_addr,
+			cp_hash_compare_addr)) == NULL) {
+	    perror("qthread_init()");
+	    abort();
+	}
     }
     if ((qlib->FEBs =
 	 cp_hashtable_create_by_option(COLLECTION_MODE_DEEP, 100,
@@ -689,7 +691,9 @@ void qthread_finalize(void)
 			   (qthread_shepherd_id_t) - 1);
     }
 
-    cp_hashtable_destroy(qlib->locks);
+    for (i = 0; i < 32; i++) {
+	cp_hashtable_destroy(qlib->locks[i]);
+    }
     cp_hashtable_destroy_custom(qlib->FEBs, NULL, (cp_destructor_fn)
 				qthread_FEBlock_delete);
     cp_hashtable_destroy(p_to_shep);
@@ -1840,8 +1844,9 @@ int qthread_lock(qthread_t * t, const void *a)
     qthread_lock_t *m;
 
     if (t != NULL) {
-	cp_hashtable_wrlock(qlib->locks);
-	m = (qthread_lock_t *) cp_hashtable_get(qlib->locks, (void *)a);
+	const int lockbin = (((const size_t)a)>>5)&0x1f; /* guaranteed to be between 0 and 32 */
+	cp_hashtable_wrlock(qlib->locks[lockbin]);
+	m = (qthread_lock_t *) cp_hashtable_get(qlib->locks[lockbin], (void *)a);
 	if (m == NULL) {
 	    /* by doing this lookup (which MAY go into the kernel), we avoid
 	     * needing to lock a pthread_mutex on all memory pool accesses.
@@ -1860,13 +1865,13 @@ int qthread_lock(qthread_t * t, const void *a)
 	     */
 	    m->waiting = qthread_queue_new(myshep);
 	    QTHREAD_INITLOCK(&m->lock);
-	    cp_hashtable_put(qlib->locks, (void *)a, m);
+	    cp_hashtable_put(qlib->locks[lockbin], (void *)a, m);
 	    /* since we just created it, we own it */
 	    QTHREAD_LOCK(&m->lock);
 	    /* can only unlock the hash after we've locked the address, because
 	     * otherwise there's a race condition: the address could be removed
 	     * before we have a chance to add ourselves to it */
-	    cp_hashtable_unlock(qlib->locks);
+	    cp_hashtable_unlock(qlib->locks[lockbin]);
 
 	    m->owner = t->thread_id;
 	    QTHREAD_UNLOCK(&m->lock);
@@ -1880,7 +1885,7 @@ int qthread_lock(qthread_t * t, const void *a)
 	     */
 	    QTHREAD_LOCK(&m->lock);
 	    /* for an explanation of the lock/unlock ordering here, see above */
-	    cp_hashtable_unlock(qlib->locks);
+	    cp_hashtable_unlock(qlib->locks[lockbin]);
 
 	    t->thread_state = QTHREAD_STATE_BLOCKED;
 	    t->blockedon = m;
@@ -1920,11 +1925,12 @@ int qthread_unlock(qthread_t * t, const void *a)
     qthread_debug("qthread_unlock(%p, %p): started\n", t, a);
 
     if (t != NULL) {
-	cp_hashtable_wrlock(qlib->locks);
-	m = (qthread_lock_t *) cp_hashtable_get(qlib->locks, (void *)a);
+	const int lockbin = (((const size_t)a)>>5)&0x1f; /* guaranteed to be between 0 and 32 */
+	cp_hashtable_wrlock(qlib->locks[lockbin]);
+	m = (qthread_lock_t *) cp_hashtable_get(qlib->locks[lockbin], (void *)a);
 	if (m == NULL) {
 	    /* unlocking an address that's already locked */
-	    cp_hashtable_unlock(qlib->locks);
+	    cp_hashtable_unlock(qlib->locks[lockbin]);
 	    return 1;
 	}
 	QTHREAD_LOCK(&m->lock);
@@ -1944,8 +1950,8 @@ int qthread_unlock(qthread_t * t, const void *a)
 
 	    qthread_debug("qthread_unlock(%p,%p): deleting waiting queue\n",
 			  t, a);
-	    cp_hashtable_remove(qlib->locks, (void *)a);
-	    cp_hashtable_unlock(qlib->locks);
+	    cp_hashtable_remove(qlib->locks[lockbin], (void *)a);
+	    cp_hashtable_unlock(qlib->locks[lockbin]);
 
 	    QTHREAD_UNLOCK(&m->waiting->lock);
 	    qthread_queue_free(m->waiting, myshep);
@@ -1956,7 +1962,7 @@ int qthread_unlock(qthread_t * t, const void *a)
 	     * we may have to get creative */
 	    FREE_LOCK(myshep, m);
 	} else {
-	    cp_hashtable_unlock(qlib->locks);
+	    cp_hashtable_unlock(qlib->locks[lockbin]);
 	    qthread_debug
 		("qthread_unlock(%p,%p): pulling thread from queue (%p)\n", t,
 		 a, u);
