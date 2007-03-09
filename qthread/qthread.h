@@ -97,8 +97,8 @@ void qthread_schedule_on(qthread_t * t, const qthread_shepherd_id_t shepherd);
  * about themselves */
 unsigned qthread_id(const qthread_t * t);
 qthread_shepherd_id_t qthread_shep(const qthread_t * t);
-size_t qthread_stackleft(qthread_t * t);
-aligned_t *qthread_retloc(qthread_t * t);
+size_t qthread_stackleft(const qthread_t * t);
+aligned_t *qthread_retloc(const qthread_t * t);
 
 /****************************************************************************
  * functions to implement FEB locking/unlocking
