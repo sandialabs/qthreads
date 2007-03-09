@@ -114,15 +114,15 @@ class DoLoop {
 public:
   static void Run (ObjT *obj, const RetV& ret,
 		   FptrT fptr,
-		   const Arg1V& arg1, const Arg2V& arg2, const Arg3V& arg3, 
-		   const Arg4V& arg4, const Arg5V& arg5, 
+		   const Arg1V& arg1, const Arg2V& arg2, const Arg3V& arg3,
+		   const Arg4V& arg4, const Arg5V& arg5,
 		   int start, int stop, int step=1) {
 
-    qthread_t *me = qthread_self();  
+    qthread_t *me = qthread_self();
     bool join = true;
-    
+
     int total, steptd, tdc, tdc_pow2, round_total, base_count;
-    
+
     if (step == 1)
       total = (stop - start);
     else {
@@ -130,60 +130,61 @@ public:
       if (((stop - start) % step) != 0)
 	total++;
     }
-    
+
     SCALE_TD_POW2(total,tdc_pow2);
-    
+
     tdc = 1 << tdc_pow2;
     steptd = step << tdc_pow2;
     base_count = total >> tdc_pow2;
     round_total = base_count << tdc_pow2;
-    
+
     DBprintf ("Given start %d stop %d step %d: \n", start, stop, step);
     DBprintf ("Total is %d, tdc_pow2 is %d (tdc %d)\n", total, tdc_pow2, 1<<tdc_pow2);
     DBprintf ("Tdc is %d steptd is %d round_total %d base_count %d\n", 
 	      tdc, steptd, round_total, base_count);
-    
+
     switch (TypeC) {
     case mt_loop_traits::ParNoJoin:
       join = false;
     case mt_loop_traits::Par: {
-      aligned_t *thr = new aligned_t[tdc];
+      aligned_t *thr;
+      if (join) thr = new aligned_t[tdc];
       for (int i = 0; i < tdc; i++) {
 	int count = base_count + ( ((round_total + i) < total) ? 1 : 0 );
-	qthread_fork(run_qtd<Iter>, ITER(start, steptd, count), thr+i);
-	
+	qthread_fork(run_qtd<Iter>, ITER(start, steptd, count), join?(thr+i):NULL);
+
 	DBprintf ("Thread %d %p start %d step %d count %d\n", 
 		  i, thr+i, start, steptd, count);
 	start += step;
       }
-      
+
       if (join) {
 	for (int i = 0; i < tdc; i++)
 	  qthread_readFF(me, thr+i, thr+i);
+	delete thr;
       }
-      delete thr;
     } break;
-      
+
     case mt_loop_traits::FutureNoJoin:
       join = false;
     case mt_loop_traits::Future: {
       aligned_t *ft = new aligned_t[total];
       int yielded = future_yield(me);
-      
+
       for (int i = 0; i < tdc; i++) {
 	int count = base_count + ( ((round_total + i) < total) ? 1 : 0 );
 	future_create (me, run_ft<Iter>, ITER(start,steptd,count), ft+i);
 	start += step;
       }
-      
+
       if (join)
 	future_join_all (me, ft, tdc);
       if (yielded)
 	future_acquire(me);
-      
+
       delete ft;
     } break;
-      
+
     }
   }
 };
