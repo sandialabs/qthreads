@@ -64,6 +64,8 @@
 #define QTHREAD_STATE_TERMINATED        5
 #define QTHREAD_STATE_DONE              6
 #define QTHREAD_STATE_TERM_SHEP         UINT8_MAX
+#define QTHREAD_THREAD                  0
+#define QTHREAD_FUTURE                  1
 
 #if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED)
 #define ALLOC_QTHREAD(shep) (qthread_t *) malloc(sizeof(qthread_t))
@@ -155,6 +157,7 @@ struct qthread_s
 {
     unsigned int thread_id;
     unsigned char thread_state;
+    unsigned char future_flags;
 
     /* the pthread we run on */
     qthread_shepherd_id_t shepherd;
@@ -530,8 +533,8 @@ int qthread_init(const int nkthreads)
     /* this is synchronized with read/write locks by default */
     for (i = 0; i < 32; i++) {
 	if ((qlib->locks[i] =
-		    cp_hashtable_create(100, cp_hash_addr,
-			cp_hash_compare_addr)) == NULL) {
+	     cp_hashtable_create(100, cp_hash_addr,
+				 cp_hash_compare_addr)) == NULL) {
 	    perror("qthread_init()");
 	    abort();
 	}
@@ -755,7 +758,7 @@ qthread_t *qthread_self(void)
     return t;
 }				       /*}}} */
 
-size_t qthread_stackleft(qthread_t * t)
+size_t qthread_stackleft(const qthread_t * t)
 {				       /*{{{ */
     if (t != NULL) {
 	return (size_t) (&t) - (size_t) (t->stack);
@@ -765,18 +768,19 @@ size_t qthread_stackleft(qthread_t * t)
 }				       /*}}} */
 
 aligned_t *qthread_retlock(const qthread_t * t)
-{/*{{{*/
+{				       /*{{{ */
     if (t) {
 	return t->ret;
     } else {
-	qthread_t * me = qthread_self();
+	qthread_t *me = qthread_self();
+
 	if (me) {
 	    return me->ret;
 	} else {
 	    return NULL;
 	}
     }
-}/*}}}*/
+}				       /*}}} */
 
 /************************************************************/
 /* functions to manage thread stack allocation/deallocation */
@@ -857,6 +861,7 @@ static inline qthread_t *qthread_thread_new(const qthread_f f,
     }
 
     t->thread_state = QTHREAD_STATE_NEW;
+    t->future_flags = 0;
     t->f = f;
     t->arg = (void *)arg;
     t->blockedon = NULL;
@@ -1019,6 +1024,17 @@ static void qthread_FEBlock_delete(qthread_addrstat_t * m)
     FREE_ADDRSTAT(0, m);
 }				       /*}}} */
 
+typedef struct location_s location_t;
+
+struct location_s
+{
+    aligned_t vp_count;
+    aligned_t vp_sleep;
+    pthread_mutex_t waiting_futures;
+    unsigned int vp_max;
+    unsigned int id;
+};
+
 /* this function runs a thread until it completes or yields */
 static void qthread_wrapper(void *arg)
 {				       /*{{{ */
@@ -1026,6 +1042,30 @@ static void qthread_wrapper(void *arg)
 
     qthread_debug("qthread_wrapper(): executing f=%p arg=%p.\n", t->f,
 		  t->arg);
+#if 0
+    if (t->future_flags & QTHREAD_FUTURE) {
+	extern pthread_key_t future_bookkeeping;
+	location_t *loc;
+
+	if ((loc =
+	     (location_t *) pthread_getspecific(future_bookkeeping)) ==
+	    NULL) {
+	    printf("could not find bookkeeping for %i\n", qthread_shep(t));
+	    abort();
+	}
+	/*while (1) {
+	 * qthread_lock(t, &(loc->vp_count));
+	 * if (loc->vp_count >= loc->vp_max) {
+	 * qthread_unlock(t, &(loc->vp_count));
+	 * qthread_lock(t, &(loc->vp_sleep));
+	 * } else {
+	 * (loc->vp_count)++;
+	 * qthread_unlock(t, &(loc->vp_count));
+	 * return;
+	 * }
+	 * } */
+    }
+#endif
     if (t->ret)
 	qthread_writeEF_const(t, t->ret, (t->f) (t, t->arg));
     else
@@ -1163,11 +1203,31 @@ void qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
 {				       /*{{{ */
     qthread_t *t;
 
-    if (shepherd > qlib->nkthreads) {
+    if (shepherd > qlib->nkthreads || f == NULL) {
 	return;
     }
     t = qthread_thread_new(f, arg, ret, shepherd);
     qthread_debug("qthread_fork_to(): tid %u shep %u\n", t->thread_id,
+		  shepherd);
+
+    if (ret) {
+	qthread_empty(qthread_self(), ret, 1);
+    }
+    qthread_enqueue(qlib->kthreads[shepherd].ready, t);
+}				       /*}}} */
+
+void qthread_fork_future_to(const qthread_f f, const void *arg,
+			    aligned_t * ret,
+			    const qthread_shepherd_id_t shepherd)
+{				       /*{{{ */
+    qthread_t *t;
+
+    if (shepherd > qlib->nkthreads) {
+	return;
+    }
+    t = qthread_thread_new(f, arg, ret, shepherd);
+    t->future_flags |= QTHREAD_FUTURE;
+    qthread_debug("qthread_fork_future_to(): tid %u shep %u\n", t->thread_id,
 		  shepherd);
 
     if (ret) {
@@ -1844,9 +1904,11 @@ int qthread_lock(qthread_t * t, const void *a)
     qthread_lock_t *m;
 
     if (t != NULL) {
-	const int lockbin = (((const size_t)a)>>5)&0x1f; /* guaranteed to be between 0 and 32 */
+	const int lockbin = (((const size_t)a) >> 5) & 0x1f;	/* guaranteed to be between 0 and 32 */
+
 	cp_hashtable_wrlock(qlib->locks[lockbin]);
-	m = (qthread_lock_t *) cp_hashtable_get(qlib->locks[lockbin], (void *)a);
+	m = (qthread_lock_t *) cp_hashtable_get(qlib->locks[lockbin],
+						(void *)a);
 	if (m == NULL) {
 	    /* by doing this lookup (which MAY go into the kernel), we avoid
 	     * needing to lock a pthread_mutex on all memory pool accesses.
@@ -1925,9 +1987,11 @@ int qthread_unlock(qthread_t * t, const void *a)
     qthread_debug("qthread_unlock(%p, %p): started\n", t, a);
 
     if (t != NULL) {
-	const int lockbin = (((const size_t)a)>>5)&0x1f; /* guaranteed to be between 0 and 32 */
+	const int lockbin = (((const size_t)a) >> 5) & 0x1f;	/* guaranteed to be between 0 and 32 */
+
 	cp_hashtable_wrlock(qlib->locks[lockbin]);
-	m = (qthread_lock_t *) cp_hashtable_get(qlib->locks[lockbin], (void *)a);
+	m = (qthread_lock_t *) cp_hashtable_get(qlib->locks[lockbin],
+						(void *)a);
 	if (m == NULL) {
 	    /* unlocking an address that's already locked */
 	    cp_hashtable_unlock(qlib->locks[lockbin]);
@@ -2005,3 +2069,20 @@ qthread_shepherd_id_t qthread_shep(const qthread_t * t)
 {				       /*{{{ */
     return t ? t->shepherd : qthread_internal_myshepherd();
 }				       /*}}} */
+
+/* these two functions are helper functions for futurelib
+ * (nobody else gets to have 'em!) */
+unsigned int qthread_isfuture(const qthread_t * t)
+{				       /*{{{ */
+    return t ? (t->future_flags & QTHREAD_FUTURE) : 0;
+}				       /*}}} */
+
+void qthread_assertfuture(qthread_t * t)
+{
+    t->future_flags |= QTHREAD_FUTURE;
+}
+
+void qthread_assertnotfuture(qthread_t * t)
+{
+    t->future_flags &= ~QTHREAD_FUTURE;
+}
