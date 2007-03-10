@@ -44,7 +44,7 @@ typedef aligned_t (*qthread_f) (qthread_t * me, void *arg);
 /* use this function to initialize the qthreads environment before spawning any
  * qthreads. The argument to this function specifies the number of pthreads
  * that will be spawned to shepherd the qthreads. */
-int qthread_init(const int nshepherds);
+int qthread_init(const qthread_shepherd_id_t nshepherds);
 
 /* use this function to clean up the qthreads environment after execution of
  * the program is finished. This function will terminate any currently running
