@@ -99,22 +99,34 @@ void future_init(qthread_t * me, int vp_per_loc, int loc_count)
 /* This is the heart and soul of the futurelib. This function has two purposes:
  * first, it checks for (and grabs, if it exists) an available thread-execution
  * slot. second, if there is no available slot, it adds itself to the waiter
- * queue to get one. */
+ * queue to get one.
+ *
+ * NOTE: Because this function is ONLY ever run by the shepherd whose loc we
+ * are mucking with, no mutexes are needed to protect data. The only locking
+ * required is for waiting when there are too many futures. */
 void blocking_vp_incr(qthread_t * me, location_t * loc)
 {
+#ifdef __PIM__
     pthread_mutex_lock(&(loc->vp_count_lock));
+#endif
     DBprintf("Thread %p try blocking increment on loc %d vps %d\n", me,
 	     loc->id, loc->vp_count);
 
     while (loc->vp_count >= loc->vp_max) {
+#ifdef __PIM__
 	pthread_mutex_unlock(&(loc->vp_count_lock));
+#endif
 	qthread_lock(me, &(loc->vp_count));
+#ifdef __PIM__
 	pthread_mutex_lock(&(loc->vp_count_lock));
+#endif
     }
     (loc->vp_count)++;
     DBprintf("Thread %p incr loc %d to %d vps\n", me, loc->id,
 	    loc->vp_count);
+#ifdef __PIM__
     pthread_mutex_unlock(&(loc->vp_count_lock));
+#endif
 }
 
 /* creates a qthread, on a location defined by the qthread library, and
