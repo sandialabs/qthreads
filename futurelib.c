@@ -21,29 +21,15 @@
 #define MALLOC(sss) malloc(sss)
 #define FREE(sss) free(sss)
 
-typedef struct location_s location_t;
+#include "futurelib_innards.h"
+#include "qthread_innards.h"
 
-struct location_s
-{
-    aligned_t vp_count;
-    aligned_t vp_sleep;
-    pthread_mutex_t waiting_futures;
-    unsigned int vp_max;
-    unsigned int id;
-};
-
+/* GLOBAL DATA (copy everywhere) */
 static qthread_shepherd_id_t num_locs = 0;
-static location_t **all_locs;
+pthread_key_t future_bookkeeping;
+/* this doesn't *need* to be global */
 static qthread_shepherd_id_t shep_for_new_futures = 0;
 static pthread_mutex_t sfnf_lock;
-
-/* These are our own private stash of secret qthread functions. */
-unsigned int qthread_isfuture(const qthread_t * t);
-void qthread_assertfuture(qthread_t * t);
-void qthread_assertnotfuture(qthread_t * t);
-void qthread_fork_future_to(const qthread_f f, const void *arg,
-			    aligned_t * ret,
-			    const qthread_shepherd_id_t shepherd);
 
 /* This function is critical to futurelib, and as such must be as fast as
  * possible.
@@ -53,24 +39,22 @@ void qthread_fork_future_to(const qthread_f f, const void *arg,
  * shepherd. */
 inline location_t *ft_loc(qthread_t * qthr)
 {
-    return qthread_isfuture(qthr) ? all_locs[qthread_shep(qthr)] : NULL;
+    return qthread_isfuture(qthr) ? (location_t*) pthread_getspecific(future_bookkeeping) : NULL;
 }
 
 #ifdef CLEANUP
 void future_cleanup(void)
 {
-    unsigned int i;
-
-    for (i = 0; i < num_locs; i++) {
-	free(all_locs[i]);
-    }
-    free(all_locs);
+    pthread_mutex_destroy(&sfnf_lock);
+    pthread_key_delete(&future_bookkeeping);
 }
 #endif
 
-#if 0
-pthread_key_t future_bookkeeping;
-
+/* this function is used as a qthread; it is run by each shepherd so that each
+ * shepherd will get some thread-local data associated with it. This works
+ * better in the case of big machines (like massive SMP's) with intelligent
+ * pthreads implementations than on PIM, but that's mostly because PIM's libc
+ * doesn't support PIM-local data (yet). Better PIM support is coming. */
 aligned_t future_shep_init(qthread_t * me, void *arg)
 {
     location_t *ptr = (location_t *) pthread_getspecific(future_bookkeeping);
@@ -80,16 +64,16 @@ aligned_t future_shep_init(qthread_t * me, void *arg)
 	ptr->vp_count = 0;
 	ptr->vp_max = (unsigned int)arg;
 	ptr->id = qthread_shep(me);
-	pthread_mutex_init(&(ptr->waiting_futures), NULL);
-	INIT_LOCK(me, &(ptr->vp_count));
-	INIT_LOCK(me, &(ptr->vp_sleep));
+	pthread_mutex_init(&(ptr->vp_count_lock), NULL);
+	// vp_count is *always* locked. This establishes the waiting queue.
+	qthread_lock(me, &(ptr->vp_count));
+
 	pthread_setspecific(future_bookkeeping, ptr);
     } else {
 	abort();
     }
     return 0;
 }
-#endif
 
 void future_init(qthread_t * me, int vp_per_loc, int loc_count)
 {
@@ -97,26 +81,16 @@ void future_init(qthread_t * me, int vp_per_loc, int loc_count)
     aligned_t *rets;
 
     pthread_mutex_init(&sfnf_lock, NULL);
-#if 0
     pthread_key_create(&future_bookkeeping, NULL);
-#endif
     num_locs = loc_count;
-    all_locs = (location_t **) MALLOC(sizeof(location_t *) * loc_count);
     rets = (aligned_t *) MALLOC(sizeof(aligned_t) * loc_count);
     for (i = 0; i < loc_count; i++) {
-#if 0
 	qthread_fork_to(future_shep_init, (void *)vp_per_loc, rets + i, i);
-#endif
-	all_locs[i] = (location_t *) MALLOC(sizeof(location_t));
-	all_locs[i]->vp_count = 0;
-	all_locs[i]->vp_max = vp_per_loc;
-	all_locs[i]->id = i;
-	INIT_LOCK(me, &(all_locs[i]->vp_count));
-	INIT_LOCK(me, &(all_locs[i]->vp_sleep));
     }
     for (i = 0; i < loc_count; i++) {
 	qthread_readFF(me, rets + i, rets + i);
     }
+    free(rets);
 #ifdef CLEANUP
     atexit(future_cleanup);
 #endif
@@ -126,24 +100,21 @@ void future_init(qthread_t * me, int vp_per_loc, int loc_count)
  * first, it checks for (and grabs, if it exists) an available thread-execution
  * slot. second, if there is no available slot, it adds itself to the waiter
  * queue to get one. */
-inline void blocking_vp_incr(qthread_t * me, location_t * loc)
+void blocking_vp_incr(qthread_t * me, location_t * loc)
 {
+    pthread_mutex_lock(&(loc->vp_count_lock));
     DBprintf("Thread %p try blocking increment on loc %d vps %d\n", me,
 	     loc->id, loc->vp_count);
 
-    while (1) {
-	LOCK(me, &(loc->vp_count));
-	if (loc->vp_count >= loc->vp_max) {
-	    UNLOCK(me, &(loc->vp_count));
-	    LOCK(me, &(loc->vp_sleep));
-	} else {
-	    (loc->vp_count)++;
-	    DBprintf("Thread %p incr loc %d to %d vps\n", me, loc->id,
-		     loc->vp_count);
-	    UNLOCK(me, &(loc->vp_count));
-	    return;
-	}
+    while (loc->vp_count >= loc->vp_max) {
+	pthread_mutex_unlock(&(loc->vp_count_lock));
+	qthread_lock(me, &(loc->vp_count));
+	pthread_mutex_lock(&(loc->vp_count_lock));
     }
+    (loc->vp_count)++;
+    DBprintf("Thread %p incr loc %d to %d vps\n", me, loc->id,
+	    loc->vp_count);
+    pthread_mutex_unlock(&(loc->vp_count_lock));
 }
 
 /* creates a qthread, on a location defined by the qthread library, and
@@ -155,9 +126,7 @@ inline void blocking_vp_incr(qthread_t * me, location_t * loc)
 void future_create(qthread_t * me, aligned_t(*fptr) (qthread_t *, void *),
 		   void *arg, aligned_t * retval)
 {
-    qthread_t *new_thr;
     qthread_shepherd_id_t rr;
-    location_t *loc;
 
     pthread_mutex_lock(&sfnf_lock); {
 	rr = shep_for_new_futures;
@@ -168,13 +137,6 @@ void future_create(qthread_t * me, aligned_t(*fptr) (qthread_t *, void *),
 	}
     }
     pthread_mutex_unlock(&sfnf_lock);
-
-    loc = all_locs[rr];
-
-    DBprintf("Try add future on rr %d loc %d v procs %d\n", rr, loc->id,
-	     loc->vp_count);
-
-    blocking_vp_incr(me, loc);
     qthread_fork_future_to(fptr, arg, retval, rr);
 }
 
@@ -189,10 +151,10 @@ int future_yield(qthread_t * me)
 	//yield vproc
 	DBprintf("Thread %p yield loc %d vps %d\n", me, loc->id,
 		 loc->vp_count);
-	LOCK(me, &(loc->vp_count));
+	pthread_mutex_lock(&(loc->vp_count_lock));
 	(loc->vp_count)--;
-	UNLOCK(me, &(loc->vp_count));
-	UNLOCK(me, &(loc->vp_sleep));
+	pthread_mutex_unlock(&(loc->vp_count_lock));
+	qthread_unlock(me, &(loc->vp_count));
 	return 1;
     }
     return 0;
@@ -220,17 +182,10 @@ void future_join(qthread_t * me, aligned_t * ft)
     qthread_readFF(me, ft, ft);
 }
 
-/* this makes me not a future. Once exited, there's no way to become a future
- * again. */
+/* this makes me not a future. Once a future exits, the thread may not
+ * terminate, but there's no way for it to become a future again. */
 void future_exit(qthread_t * me)
 {
-#if 0
-    if (ft_loc(me) == NULL) {
-	perror("Null loc qthread try to exit");
-	abort();
-    }
-#endif
-
     DBprintf("Thread %p exit on loc %d\n", me, qthread_shep(me));
     future_yield(me);
     qthread_assertnotfuture(me);
