@@ -1,3 +1,13 @@
+--- 0.6 ---
+Improvements:
+ - Threads now use pthread thread-local (TSD) memory instead of doing lookups
+   into bottleneck data-structures
+ - Futurelib and qthreads are now more tightly coupled, which obviates some
+   bottleneck data-structures
+ - Removed locks when spawning qthreads and/or futures from a qthread (locks
+   are now only needed in special cases)
+ - qthread_lock() and qthread_unlock() are more parallel
+ - Better futurelib documentation (see README)
 --- 0.5 ---
 New Features:
  - Threads can have return values, which obey FEB semantics
