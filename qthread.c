@@ -275,6 +275,13 @@ static cp_mempool *generic_stack_pool = NULL;
 static cp_mempool *generic_context_pool = NULL;
 static cp_mempool *generic_queue_pool = NULL;
 static cp_mempool *generic_lock_pool = NULL;
+#ifdef QTHREAD_COUNT_THREADS
+static unsigned long threadcount = 0;
+static pthread_mutex_t threadcount_lock = PTHREAD_MUTEX_INITIALIZER;
+static unsigned long maxconcurrentthreads = 0;
+static unsigned long concurrentthreads = 0;
+static pthread_mutex_t concurrentthreads_lock = PTHREAD_MUTEX_INITIALIZER;
+#endif
 
 /* Internal functions */
 static void qthread_wrapper(void *arg);
@@ -681,6 +688,12 @@ void qthread_finalize(void)
     cp_hashtable_destroy_custom(qlib->FEBs, NULL, (cp_destructor_fn)
 				qthread_FEBlock_delete);
 
+#ifdef QTHREAD_COUNT_THREADS
+    printf("spawned %lu threads, max concurrency %lu\n", threadcount, maxconcurrentthreads);
+    QTHREAD_DESTROYLOCK(&threadcount_lock);
+    QTHREAD_DESTROYLOCK(&concurrentthreads_lock);
+#endif
+
     QTHREAD_DESTROYLOCK(&qlib->max_thread_id_lock);
     QTHREAD_DESTROYLOCK(&qlib->sched_kthread_lock);
 
@@ -1018,6 +1031,14 @@ static void qthread_wrapper(void *arg)
 
     qthread_debug("qthread_wrapper(): executing f=%p arg=%p.\n", t->f,
 		  t->arg);
+#ifdef QTHREAD_COUNT_THREADS
+    ATOMIC_INC(threadcount, &threadcount, &threadcount_lock);
+    qassert(pthread_mutex_lock(&concurrentthreads_lock), 0);
+    concurrentthreads ++;
+    if (concurrentthreads > maxconcurrentthreads)
+	maxconcurrentthreads = concurrentthreads;
+    qassert(pthread_mutex_unlock(&concurrentthreads_lock), 0);
+#endif
     if (t->future_flags & QTHREAD_FUTURE) {
 	extern pthread_key_t future_bookkeeping;
 	location_t *loc;
@@ -1039,6 +1060,11 @@ static void qthread_wrapper(void *arg)
 
     qthread_debug("qthread_wrapper(): f=%p arg=%p completed.\n", t->f,
 		  t->arg);
+#ifdef QTHREAD_COUNT_THREADS
+    qassert(pthread_mutex_lock(&concurrentthreads_lock), 0);
+    concurrentthreads--;
+    qassert(pthread_mutex_unlock(&concurrentthreads_lock), 0);
+#endif
 #if !defined(HAVE_CONTEXT_FUNCS) || defined(NEED_RLIMIT)
     /* without a built-in make/get/swapcontext, we're relying on the portable
      * one in context.c (stolen from libtask). unfortunately, this home-made
