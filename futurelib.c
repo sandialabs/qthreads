@@ -14,10 +14,6 @@
 #define DBprintf(...) ;
 #endif
 
-#define INIT_LOCK(qqq,xxx) qthread_unlock(qqq, (void*)(xxx))
-#define LOCK(qqq,xxx) qthread_lock(qqq, (void*)(xxx))
-#define UNLOCK(qqq,xxx) qthread_unlock(qqq, (void*)(xxx))
-
 #define MALLOC(sss) malloc(sss)
 #define FREE(sss) free(sss)
 
@@ -27,6 +23,7 @@
 /* GLOBAL DATA (copy everywhere) */
 static qthread_shepherd_id_t num_locs = 0;
 pthread_key_t future_bookkeeping;
+
 /* this doesn't *need* to be global */
 static qthread_shepherd_id_t shep_for_new_futures = 0;
 static pthread_mutex_t sfnf_lock;
@@ -39,12 +36,36 @@ static pthread_mutex_t sfnf_lock;
  * shepherd. */
 inline location_t *ft_loc(qthread_t * qthr)
 {
-    return qthread_isfuture(qthr) ? (location_t*) pthread_getspecific(future_bookkeeping) : NULL;
+    return qthread_isfuture(qthr) ? (location_t *)
+	pthread_getspecific(future_bookkeeping) : NULL;
 }
 
 #ifdef CLEANUP
+/* this requires that qthreads haven't been finalized yet */
+aligned_t future_shep_cleanup(qthread_t * me, void *arg)
+{
+    location_t *ptr = (location_t *) pthread_getspecific(future_bookkeeping);
+
+    if (ptr != NULL) {
+	pthread_setspecific(future_bookkeeping, NULL);
+	pthread_mutex_destroy(&(ptr->vp_count_lock));
+	FREE(ptr);
+    }
+}
+
 void future_cleanup(void)
 {
+    int i;
+    aligned_t *rets;
+
+    rets = (aligned_t *) MALLOC(sizeof(aligned_t) * num_locs);
+    for (i = 0; i < num_locs; i++) {
+	qthread_fork_to(future_shep_cleanup, NULL, rets + i, i);
+    }
+    for (i = 0; i < num_locs; i++) {
+	qthread_readFF(NULL, rets + i, rets + i);
+    }
+    FREE(rets);
     pthread_mutex_destroy(&sfnf_lock);
     pthread_key_delete(&future_bookkeeping);
 }
@@ -90,7 +111,7 @@ void future_init(qthread_t * me, int vp_per_loc, int loc_count)
     for (i = 0; i < loc_count; i++) {
 	qthread_readFF(me, rets + i, rets + i);
     }
-    free(rets);
+    FREE(rets);
 #ifdef CLEANUP
     atexit(future_cleanup);
 #endif
@@ -122,8 +143,7 @@ void blocking_vp_incr(qthread_t * me, location_t * loc)
 #endif
     }
     (loc->vp_count)++;
-    DBprintf("Thread %p incr loc %d to %d vps\n", me, loc->id,
-	    loc->vp_count);
+    DBprintf("Thread %p incr loc %d to %d vps\n", me, loc->id, loc->vp_count);
 #ifdef __PIM__
     pthread_mutex_unlock(&(loc->vp_count_lock));
 #endif
