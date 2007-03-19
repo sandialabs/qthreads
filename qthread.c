@@ -25,6 +25,7 @@
 #include <cprops/mempool.h>
 #include <cprops/hashtable.h>
 #include <cprops/linked_list.h>
+
 #include "qthread/qthread.h"
 #include "futurelib_innards.h"
 
@@ -65,8 +66,8 @@
 #define QTHREAD_STATE_TERMINATED        5
 #define QTHREAD_STATE_DONE              6
 #define QTHREAD_STATE_TERM_SHEP         UINT8_MAX
-#define QTHREAD_THREAD                  0
 #define QTHREAD_FUTURE                  1
+#define QTHREAD_GENERIC                 2
 
 #if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED)
 #define ALLOC_QTHREAD(shep) (qthread_t *) malloc(sizeof(qthread_t))
@@ -158,7 +159,7 @@ struct qthread_s
 {
     unsigned int thread_id;
     unsigned char thread_state;
-    unsigned char future_flags;
+    unsigned char flags;
 
     /* the shepherd (pthread) we run on */
     qthread_shepherd_t * shepherd_ptr;
@@ -291,7 +292,7 @@ static inline qthread_t *qthread_thread_new(const qthread_f f,
 					    const void *arg, aligned_t * ret,
 					    const qthread_shepherd_id_t
 					    shepherd);
-static inline void qthread_thread_free(qthread_t * t);
+static inline void qthread_thread_free(qthread_shepherd_t * shep, qthread_t * t);
 static inline qthread_queue_t *qthread_queue_new(qthread_shepherd_t *
 						 shepherd);
 static inline void qthread_queue_free(qthread_queue_t * q,
@@ -433,7 +434,7 @@ static void *qthread_shepherd(void *arg)
 
 	if (t->thread_state == QTHREAD_STATE_TERM_SHEP) {
 	    done = 1;
-	    qthread_thread_free(t);
+	    qthread_thread_free(me, t);
 	} else {
 	    assert((t->thread_state == QTHREAD_STATE_NEW) ||
 		   (t->thread_state == QTHREAD_STATE_RUNNING));
@@ -486,15 +487,7 @@ static void *qthread_shepherd(void *arg)
 			 me->kthread_index, t);
 		    t->thread_state = QTHREAD_STATE_DONE;
 		    /* we can remove the stack and the context... */
-		    if (t->context) {
-			FREE_CONTEXT(me, t->context);
-			t->context = NULL;
-		    }
-		    if (t->stack != NULL) {
-			FREE_STACK(me, t->stack);
-			t->stack = NULL;
-		    }
-		    qthread_thread_free(t);
+		    qthread_thread_free(me, t);
 		    break;
 	    }
 	}
@@ -855,12 +848,17 @@ static inline qthread_t *qthread_thread_new(const qthread_f f,
     }
 
     t->thread_state = QTHREAD_STATE_NEW;
-    t->future_flags = 0;
     t->f = f;
     t->arg = (void *)arg;
     t->blockedon = NULL;
     t->shepherd_ptr = &(qlib->kthreads[shepherd]);
     t->ret = ret;
+
+    if (myshep == NULL) {
+	t->flags = QTHREAD_GENERIC;
+    } else {
+	t->flags = 0;
+    }
 
     /* re-ordered the checks to help optimization */
     if (uc == NULL) {
@@ -884,23 +882,20 @@ static inline qthread_t *qthread_thread_new(const qthread_f f,
     return (t);
 }				       /*}}} */
 
-static inline void qthread_thread_free(qthread_t * t)
+static inline void qthread_thread_free(qthread_shepherd_t * shep, qthread_t * t)
 {				       /*{{{ */
-#ifndef UNPOOLED
-    qthread_shepherd_t * myshep = (qthread_shepherd_t*) pthread_getspecific(shepherd_structs);
-#else
-    qthread_shepherd_t * myshep = NULL;
-#endif
-
     assert(t != NULL);
 
+    if (t->flags & QTHREAD_GENERIC) {
+	shep = NULL;
+    }
     if (t->context) {
-	FREE_CONTEXT(myshep, t->context);
+	FREE_CONTEXT(shep, t->context);
     }
     if (t->stack != NULL) {
-	FREE_STACK(myshep, t->stack);
+	FREE_STACK(shep, t->stack);
     }
-    FREE_QTHREAD(myshep, t);
+    FREE_QTHREAD(shep, t);
 }				       /*}}} */
 
 
@@ -1039,7 +1034,7 @@ static void qthread_wrapper(void *arg)
 	maxconcurrentthreads = concurrentthreads;
     qassert(pthread_mutex_unlock(&concurrentthreads_lock), 0);
 #endif
-    if (t->future_flags & QTHREAD_FUTURE) {
+    if (t->flags & QTHREAD_FUTURE) {
 	extern pthread_key_t future_bookkeeping;
 	location_t *loc;
 
@@ -1222,7 +1217,7 @@ void qthread_fork_future_to(const qthread_f f, const void *arg,
 	return;
     }
     t = qthread_thread_new(f, arg, ret, shepherd);
-    t->future_flags |= QTHREAD_FUTURE;
+    t->flags |= QTHREAD_FUTURE;
     qthread_debug("qthread_fork_future_to(): tid %u shep %u\n", t->thread_id,
 		  shepherd);
 
@@ -2100,15 +2095,15 @@ qthread_shepherd_id_t qthread_shep(const qthread_t * t)
  * (nobody else gets to have 'em!) */
 unsigned int qthread_isfuture(const qthread_t * t)
 {				       /*{{{ */
-    return t ? (t->future_flags & QTHREAD_FUTURE) : 0;
+    return t ? (t->flags & QTHREAD_FUTURE) : 0;
 }				       /*}}} */
 
 void qthread_assertfuture(qthread_t * t)
 {
-    t->future_flags |= QTHREAD_FUTURE;
+    t->flags |= QTHREAD_FUTURE;
 }
 
 void qthread_assertnotfuture(qthread_t * t)
 {
-    t->future_flags &= ~QTHREAD_FUTURE;
+    t->flags &= ~QTHREAD_FUTURE;
 }
