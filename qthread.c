@@ -1909,7 +1909,7 @@ int qthread_lock(qthread_t * t, const void *a)
     qthread_lock_t *m;
 
     if (t != NULL) {
-	const int lockbin = (((const size_t)a) >> 5) & 0x1f;	/* guaranteed to be between 0 and 32 */
+	const int lockbin = (((size_t)a) >> 5) & 0x1f;	/* guaranteed to be between 0 and 32 */
 
 	cp_hashtable_wrlock(qlib->locks[lockbin]);
 	m = (qthread_lock_t *) cp_hashtable_get(qlib->locks[lockbin],
@@ -1995,7 +1995,7 @@ int qthread_unlock(qthread_t * t, const void *a)
     qthread_debug("qthread_unlock(%p, %p): started\n", t, a);
 
     if (t != NULL) {
-	const int lockbin = (((const size_t)a) >> 5) & 0x1f;	/* guaranteed to be between 0 and 32 */
+	const int lockbin = (((size_t)a) >> 5) & 0x1f;	/* guaranteed to be between 0 and 32 */
 
 	cp_hashtable_wrlock(qlib->locks[lockbin]);
 	m = (qthread_lock_t *) cp_hashtable_get(qlib->locks[lockbin],
