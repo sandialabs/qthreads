@@ -1,3 +1,74 @@
+2007-03-09 19:38  kbwheel
+
+	* futurelib.c: no locks needed in blocking_vp_incr when running on
+	  an SMP
+
+2007-03-09 19:10  kbwheel
+
+	* Makefile.am, Makefile.in: note binary incompatibility
+
+2007-03-09 19:10  kbwheel
+
+	* futurelib.c, qthread.c: Extensive use of pthread_getspecific()
+	  and related thread-local memory pieces.  In theory, this allows
+	  us to be a bit faster on very large systems with intelligently
+	  implemented pthreads libraries (in practice on smaller systems,
+	  it doesn't hurt). Also removed a bunch of locks from thread
+	  spawning, namely deciding which shepherd to send it to and
+	  generating a thread ID. Now (unless QTHREAD_NONLAZY_THREADIDS is
+	  defined) thread ID's are only generated if you ASK for them (via
+	  qthread_id()), and which shepherd to send a thread to is done via
+	  a per-shepherd round-robin (thus, no locks). This shouldn't
+	  result in imbalanced code for sufficiently large numbers of
+	  threads.
+
+2007-03-09 19:06  kbwheel
+
+	* qthread/qthread.h: trying to be consistent with types
+
+2007-03-08 19:20  kbwheel
+
+	* futurelib.c, qthread.c: killed the big central hashtable in
+	  futurelib by adding a status bit to every qthread_t
+
+2007-03-08 19:20  kbwheel
+
+	* qthread/qthread.h: const makes the world happier
+
+2007-03-08 19:19  kbwheel
+
+	* qthread/loop_templates.hpp: formatting
+
+2007-03-07 18:34  kbwheel
+
+	* qthread.c: basic lock parallelism (could expand to using the same
+	  for FEBs, but havent yet)
+
+2007-02-28 13:24  kbwheel
+
+	* qthread.c: better assert handling
+
+2007-02-27 14:39  kbwheel
+
+	* test.c: pointless removal of space
+
+2007-02-27 14:39  kbwheel
+
+	* qthread.c: cleaner asserts
+
+2007-02-21 17:00  kbwheel
+
+	* README: futurelib
+
+2007-01-25 13:17  kbwheel
+
+	* qthread.c: return values on sub functions
+
+2007-01-08 12:46  kbwheel
+
+	* ChangeLog, Makefile.am, Makefile.in, NEWS, configure,
+	  configure.in: 0.5
+
 2007-01-04 19:37  kbwheel
 
 	* Makefile.am, Makefile.in, futurelib.c, qthread.c, qutil.c,

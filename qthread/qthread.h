@@ -30,7 +30,7 @@ typedef unsigned char qthread_shepherd_id_t;	/* doubt we'll run more than 255 sh
 /* FEB locking only works on aligned addresses. On 32-bit architectures, this
  * isn't too much of an inconvenience. On 64-bit architectures, it's a pain in
  * the BUT! This is here to try and help a little bit. */
-#ifdef __LP64__
+#ifdef __ILP64__
 typedef uint64_t aligned_t;
 #else
 typedef uint32_t aligned_t;
@@ -134,7 +134,7 @@ void qthread_fill(qthread_t * me, const void *dest, const size_t count);
  * operation, you will probably want to use someting like
  * __attribute__((alignment(8))) on your variables.
  */
-#ifdef __LP64__
+#ifdef __ILP64__
 # ifndef WORDSIZE
 #  define WORDSIZE (8)
 # endif

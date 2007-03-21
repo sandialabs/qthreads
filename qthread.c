@@ -52,6 +52,8 @@
 #else
 # ifdef REALLY_SMALL_STACKS
 #  define QTHREAD_DEFAULT_STACK_SIZE 2048
+# elif defined(FULL_SIZE_STACKS)
+#  define QTHREAD_DEFAULT_STACK_SIZE 4096*2048
 # else
 #  define QTHREAD_DEFAULT_STACK_SIZE 4096
 # endif
@@ -611,7 +613,7 @@ int qthread_init(const qthread_shepherd_id_t nkthreads)
 				    sizeof(qthread_t) * 100);
     generic_stack_pool =
 	cp_mempool_create_by_option(0, qlib->qthread_stack_size,
-				    qlib->qthread_stack_size * 100);
+				    0);
     generic_context_pool =
 	cp_mempool_create_by_option(0, sizeof(ucontext_t),
 				    sizeof(ucontext_t) * 100);
