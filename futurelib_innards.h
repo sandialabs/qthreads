@@ -11,4 +11,6 @@ struct location_s
     unsigned int id;
 };
 
+void blocking_vp_incr(qthread_t * me, location_t * loc);
+
 #endif
