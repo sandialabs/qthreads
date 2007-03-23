@@ -127,14 +127,6 @@
 #define FREE_ADDRSTAT(shep, t) cp_mempool_free(shep->addrstat_pool, t)
 #endif
 
-#if defined(UNPOOLED_ADDRSTAT2) || defined(UNPOOLED)
-#define ALLOC_ADDRSTAT2(shep) (qthread_addrstat2_t *) malloc(sizeof(qthread_addrstat2_t))
-#define FREE_ADDRSTAT2(shep, t) free(t)
-#else
-#define ALLOC_ADDRSTAT2(shep) (qthread_addrstat2_t *) cp_mempool_alloc(shep->addrstat2_pool)
-#define FREE_ADDRSTAT2(shep, t) cp_mempool_free(shep->addrstat2_pool, t)
-#endif
-
 #ifndef QTHREAD_NOALIGNCHECK
 #define ALIGN(d, s, f) do { \
     s = (aligned_t *) (((size_t) d) & MACHINEMASK); \
@@ -205,7 +197,6 @@ struct qthread_shepherd_s
     cp_mempool *lock_pool;
     cp_mempool *addrres_pool;
     cp_mempool *addrstat_pool;
-    cp_mempool *addrstat2_pool;
     cp_mempool *stack_pool;
     cp_mempool *context_pool;
     /* round robin scheduler - can probably be smarter */
@@ -236,13 +227,6 @@ typedef struct qthread_addrstat_s
     qthread_addrres_t *FFQ;
     unsigned int full:1;
 } qthread_addrstat_t;
-
-typedef struct qthread_addrstat2_s
-{
-    qthread_addrstat_t *m;
-    aligned_t *addr;
-    struct qthread_addrstat2_s *next;
-} qthread_addrstat2_t;
 
 typedef struct
 {
@@ -612,9 +596,6 @@ int qthread_init(const qthread_shepherd_id_t nkthreads)
 	qlib->kthreads[i].addrstat_pool =
 	    cp_mempool_create_by_option(COLLECTION_MODE_NOSYNC,
 					sizeof(qthread_addrstat_t), 0);
-	qlib->kthreads[i].addrstat2_pool =
-	    cp_mempool_create_by_option(COLLECTION_MODE_NOSYNC,
-					sizeof(qthread_addrstat2_t), 0);
     }
     /* these are used when qthread_fork() is called from a non-qthread. they
      * are protected by a mutex so that things don't get wonky (note: that
@@ -708,7 +689,6 @@ void qthread_finalize(void)
 	cp_mempool_destroy(qlib->kthreads[i].lock_pool);
 	cp_mempool_destroy(qlib->kthreads[i].addrres_pool);
 	cp_mempool_destroy(qlib->kthreads[i].addrstat_pool);
-	cp_mempool_destroy(qlib->kthreads[i].addrstat2_pool);
 	cp_mempool_destroy(qlib->kthreads[i].stack_pool);
 	cp_mempool_destroy(qlib->kthreads[i].context_pool);
     }
