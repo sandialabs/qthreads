@@ -26511,9 +26511,9 @@ _ACEOF
 
 fi
 
-# Check whether --with-threadcount was given.
-if test "${with_threadcount+set}" = set; then
-  withval=$with_threadcount; ac_cv_threadcount=$withval
+# Check whether --with-thread-count was given.
+if test "${with_thread_count+set}" = set; then
+  withval=$with_thread_count; ac_cv_threadcount=$withval
 else
   ac_cv_threadcount=no
 fi

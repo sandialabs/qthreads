@@ -108,7 +108,7 @@ AC_ARG_WITH(unpooled-memory,AC_HELP_STRING(--with-unpooled-memory,[prevents qthr
 if test "$ac_cv_unpooled" = "yes" ; then
     AC_DEFINE(UNPOOLED, 1, [prevents the use of memory pools (mostly)])
 fi
-AC_ARG_WITH(threadcount,AC_HELP_STRING(--with-thread-count,[counts the number of threads and the number of concurrent threads and prints it out when qthread_finalize() is run; slows down computation]),
+AC_ARG_WITH(thread-count,AC_HELP_STRING(--with-thread-count,[counts the number of threads and the number of concurrent threads and prints it out when qthread_finalize() is run; slows down computation]),
 	    ac_cv_threadcount=$withval, ac_cv_threadcount=no)
 if test "$ac_cv_threadcount" = "yes"; then
     AC_DEFINE(QTHREAD_COUNT_THREADS, 1, [keeps track of the number of threads])
