@@ -1470,6 +1470,23 @@ Optional Packages:
   --with-pic              try to use only PIC/non-PIC objects [default=use
                           both]
   --with-tags[=TAGS]      include additional configurations [automatic]
+  --without-aligncheck    check the alignment of synchronization addresses
+  --with-fullsize-stacks  use 8MB stacks for every thread
+  --with-very-small-stacks
+                          use 2k stacks for every thread (dangerous)
+  --with-debug-trace      prints out debugging information as programs run,
+                          tracing their qthread-related behavior
+  --with-unpooled-memory  prevents qthreads from (in most cases) using memory
+                          pools, which is sometimes more compatible with
+                          machines that have unusual alignment issues
+  --with-thread-count     counts the number of threads and the number of
+                          concurrent threads and prints it out when
+                          qthread_finalize() is run; slows down computation
+  --with-asserts          adds sanity checks to most qthread functions
+  --without-lazy-threadids
+                          makes qthread assign thread IDs at spawning time,
+                          rather than as necessary; this ensures every thread
+                          gets a unique thread id
 
 Some influential environment variables:
   CC          C compiler command
@@ -5301,7 +5318,7 @@ ia64-*-hpux*)
   ;;
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 5304 "configure"' > conftest.$ac_ext
+  echo '#line 5321 "configure"' > conftest.$ac_ext
   if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -7466,11 +7483,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:7469: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:7486: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:7473: \$? = $ac_status" >&5
+   echo "$as_me:7490: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -7744,11 +7761,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:7747: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:7764: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:7751: \$? = $ac_status" >&5
+   echo "$as_me:7768: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -7848,11 +7865,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:7851: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:7868: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:7855: \$? = $ac_status" >&5
+   echo "$as_me:7872: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -10305,7 +10322,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 10308 "configure"
+#line 10325 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -10405,7 +10422,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 10408 "configure"
+#line 10425 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -12804,11 +12821,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:12807: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:12824: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:12811: \$? = $ac_status" >&5
+   echo "$as_me:12828: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -12908,11 +12925,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:12911: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:12928: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:12915: \$? = $ac_status" >&5
+   echo "$as_me:12932: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -14479,11 +14496,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:14482: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:14499: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:14486: \$? = $ac_status" >&5
+   echo "$as_me:14503: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -14583,11 +14600,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:14586: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:14603: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:14590: \$? = $ac_status" >&5
+   echo "$as_me:14607: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -16818,11 +16835,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:16821: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:16838: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:16825: \$? = $ac_status" >&5
+   echo "$as_me:16842: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -17096,11 +17113,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:17099: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:17116: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:17103: \$? = $ac_status" >&5
+   echo "$as_me:17120: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -17200,11 +17217,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:17203: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:17220: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:17207: \$? = $ac_status" >&5
+   echo "$as_me:17224: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -26416,6 +26433,128 @@ fi
 fi
 
 
+
+
+# Check whether --with-aligncheck was given.
+if test "${with_aligncheck+set}" = set; then
+  withval=$with_aligncheck; ac_cv_aligncheck=$withval
+else
+  ac_cv_aligncheck=yes
+fi
+
+if test "$ac_cv_aligncheck" = "no" ; then
+
+cat >>confdefs.h <<\_ACEOF
+#define QTHREAD_NOALIGNCHECK 1
+_ACEOF
+
+fi
+
+# Check whether --with-fullsize-stacks was given.
+if test "${with_fullsize_stacks+set}" = set; then
+  withval=$with_fullsize_stacks; ac_cv_fullsizestack=$withval
+else
+  ac_cv_fullsizestack=no
+fi
+
+if test "$ac_cv_fullsizestack" = "yes" ; then
+
+cat >>confdefs.h <<\_ACEOF
+#define QTHREAD_FULL_SIZE_STACKS 1
+_ACEOF
+
+else
+
+# Check whether --with-very-small-stacks was given.
+if test "${with_very_small_stacks+set}" = set; then
+  withval=$with_very_small_stacks; ac_cv_verysmallstacks=$withval
+else
+  ac_cv_verysmallstacks=no
+fi
+
+    if test "$ac_cv_verysmallstacks" = "yes" ; then
+
+cat >>confdefs.h <<\_ACEOF
+#define QTHREAD_REALLY_SMALL_STACKS 1
+_ACEOF
+
+    fi
+fi
+
+# Check whether --with-debug-trace was given.
+if test "${with_debug_trace+set}" = set; then
+  withval=$with_debug_trace; ac_cv_debugtrace=$withval
+else
+  ac_cv_debugtrace=no
+fi
+
+if test "$ac_cv_debugtrace" = "yes" ; then
+
+cat >>confdefs.h <<\_ACEOF
+#define QTHREAD_DEBUG 1
+_ACEOF
+
+fi
+
+# Check whether --with-unpooled-memory was given.
+if test "${with_unpooled_memory+set}" = set; then
+  withval=$with_unpooled_memory; ac_cv_unpooled=$withval
+else
+  ac_cv_unpooled=no
+fi
+
+if test "$ac_cv_unpooled" = "yes" ; then
+
+cat >>confdefs.h <<\_ACEOF
+#define UNPOOLED 1
+_ACEOF
+
+fi
+
+# Check whether --with-threadcount was given.
+if test "${with_threadcount+set}" = set; then
+  withval=$with_threadcount; ac_cv_threadcount=$withval
+else
+  ac_cv_threadcount=no
+fi
+
+if test "$ac_cv_threadcount" = "yes"; then
+
+cat >>confdefs.h <<\_ACEOF
+#define QTHREAD_COUNT_THREADS 1
+_ACEOF
+
+fi
+
+# Check whether --with-asserts was given.
+if test "${with_asserts+set}" = set; then
+  withval=$with_asserts; ac_cv_asserts=$withval
+else
+  ac_cv_threadcount=no
+fi
+
+if test "$ac_cv_asserts" = "no" ; then
+
+cat >>confdefs.h <<\_ACEOF
+#define QTHREAD_NO_ASSERTS 1
+_ACEOF
+
+fi
+
+# Check whether --with-lazy-threadids was given.
+if test "${with_lazy_threadids+set}" = set; then
+  withval=$with_lazy_threadids; ac_cv_lazythreadids=$withval
+else
+  ac_cv_lazythreadids=yes
+fi
+
+if test "$ac_cv_lazythreadids" = "no" ; then
+
+cat >>confdefs.h <<\_ACEOF
+#define QTHREAD_NONLAZY_THREADIDS 1
+_ACEOF
+
+fi
 
 ac_config_files="$ac_config_files Makefile"
 

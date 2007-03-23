@@ -82,5 +82,47 @@ fi
 
 AC_SUBST(QTHREAD_EXTRA_OBJS)
 
+AC_ARG_WITH(aligncheck,AC_HELP_STRING(--without-aligncheck,check the alignment of synchronization addresses),
+	    ac_cv_aligncheck=$withval, ac_cv_aligncheck=yes)
+if test "$ac_cv_aligncheck" = "no" ; then
+    AC_DEFINE(QTHREAD_NOALIGNCHECK, 1, [dont check the alignment of synchronization addressses])
+fi
+AC_ARG_WITH(fullsize-stacks,AC_HELP_STRING(--with-fullsize-stacks,use 8MB stacks for every thread),
+	    ac_cv_fullsizestack=$withval, ac_cv_fullsizestack=no)
+if test "$ac_cv_fullsizestack" = "yes" ; then
+    AC_DEFINE(QTHREAD_FULL_SIZE_STACKS, 1, [use 8MB stacks for every thread])
+else
+    AC_ARG_WITH(very-small-stacks,AC_HELP_STRING(--with-very-small-stacks,[use 2k stacks for every thread (dangerous)]),
+		ac_cv_verysmallstacks=$withval, ac_cv_verysmallstacks=no)
+    if test "$ac_cv_verysmallstacks" = "yes" ; then
+	AC_DEFINE(QTHREAD_REALLY_SMALL_STACKS, 1, [use 2k stacks for every thread])
+    fi
+fi
+AC_ARG_WITH(debug-trace,AC_HELP_STRING(--with-debug-trace,[prints out debugging information as programs run, tracing their qthread-related behavior]),
+	    ac_cv_debugtrace=$withval, ac_cv_debugtrace=no)
+if test "$ac_cv_debugtrace" = "yes" ; then
+    AC_DEFINE(QTHREAD_DEBUG, 1, [prints out debugging information at runtime])
+fi
+AC_ARG_WITH(unpooled-memory,AC_HELP_STRING(--with-unpooled-memory,[prevents qthreads from (in most cases) using memory pools, which is sometimes more compatible with machines that have unusual alignment issues]),
+	    ac_cv_unpooled=$withval, ac_cv_unpooled=no)
+if test "$ac_cv_unpooled" = "yes" ; then
+    AC_DEFINE(UNPOOLED, 1, [prevents the use of memory pools (mostly)])
+fi
+AC_ARG_WITH(threadcount,AC_HELP_STRING(--with-thread-count,[counts the number of threads and the number of concurrent threads and prints it out when qthread_finalize() is run; slows down computation]),
+	    ac_cv_threadcount=$withval, ac_cv_threadcount=no)
+if test "$ac_cv_threadcount" = "yes"; then
+    AC_DEFINE(QTHREAD_COUNT_THREADS, 1, [keeps track of the number of threads])
+fi
+AC_ARG_WITH(asserts,AC_HELP_STRING(--with-asserts,[adds sanity checks to most qthread functions]),
+	    ac_cv_asserts=$withval, ac_cv_threadcount=no)
+if test "$ac_cv_asserts" = "no" ; then
+    AC_DEFINE(QTHREAD_NO_ASSERTS, 1, [removes sanity checks from most qthread functions])
+fi
+AC_ARG_WITH(lazy-threadids,AC_HELP_STRING(--without-lazy-threadids,[makes qthread assign thread IDs at spawning time, rather than as necessary; this ensures every thread gets a unique thread id]),
+	    ac_cv_lazythreadids=$withval, ac_cv_lazythreadids=yes)
+if test "$ac_cv_lazythreadids" = "no" ; then
+    AC_DEFINE(QTHREAD_NONLAZY_THREADIDS, 1, [makes sure every thread gets an id at creation time])
+fi
+
 AC_CONFIG_FILES([Makefile])
 AC_OUTPUT

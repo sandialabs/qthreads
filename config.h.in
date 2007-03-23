@@ -131,6 +131,27 @@
    data structures */
 #undef PTHREAD_MUTEX_SMALL_ENOUGH
 
+/* keeps track of the number of threads */
+#undef QTHREAD_COUNT_THREADS
+
+/* prints out debugging information at runtime */
+#undef QTHREAD_DEBUG
+
+/* use 8MB stacks for every thread */
+#undef QTHREAD_FULL_SIZE_STACKS
+
+/* dont check the alignment of synchronization addressses */
+#undef QTHREAD_NOALIGNCHECK
+
+/* makes sure every thread gets an id at creation time */
+#undef QTHREAD_NONLAZY_THREADIDS
+
+/* removes sanity checks from most qthread functions */
+#undef QTHREAD_NO_ASSERTS
+
+/* use 2k stacks for every thread */
+#undef QTHREAD_REALLY_SMALL_STACKS
+
 /* The size of `char', as computed by sizeof. */
 #undef SIZEOF_CHAR
 
@@ -151,6 +172,9 @@
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
+
+/* prevents the use of memory pools (mostly) */
+#undef UNPOOLED
 
 /* Version number of package */
 #undef VERSION
