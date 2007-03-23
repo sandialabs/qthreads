@@ -9,7 +9,7 @@ pkginclude_HEADERS = qthread/qthread.h \
 					 qthread/loop.hpp
 
 libqthread_la_SOURCES = qthread.c qalloc.c qutil.c futurelib.c
-libqthread_la_LDFLAGS = -version-info 7:0:0 -no-undefined
+libqthread_la_LDFLAGS = -version-info 8:0:0 -no-undefined
 EXTRA_libqthread_la_SOURCES = context.c asm.S
 libqthread_la_LIBADD = @QTHREAD_EXTRA_OBJS@
 libqthread_la_DEPENDENCIES = @QTHREAD_EXTRA_OBJS@
