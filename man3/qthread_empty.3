@@ -6,11 +6,11 @@
 
 .I void
 .br
-\fBqthread_empty\fR(qthread_t *\fIme\fR, const void *\fIdest\fR, const size_t \fIbytes\fR);
+\fBqthread_empty\fR(qthread_t *\fIme\fR, const void *\fIdest\fR);
 .PP
 .I void
 .br
-\fBqthread_fill\fR(qthread_t *\fIme\fR, const void *\fIdest\fR, const size_t \fIbytes\fR);
+\fBqthread_fill\fR(qthread_t *\fIme\fR, const void *\fIdest\fR);
 .SH DESCRIPTION
 The \fBqthread_empty\fR() and \fBqthread_fill\fR() functions assert the empty
 or full state of the given range of addresses. They do not wait for the

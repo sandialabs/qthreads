@@ -120,12 +120,12 @@ aligned_t *qthread_retloc(const qthread_t * t);
 int qthread_feb_status(const void *addr);
 
 /* The empty/fill functions merely assert the empty or full state of the given
- * range of addresses. You may be wondering why they require a qthread_t
- * argument. The reason for this is memory pooling; memory is allocated on a
- * per-shepherd basis (to avoid needing to lock the memory pool). Anyway, if
- * you pass it a NULL qthread_t, it will still work. */
-void qthread_empty(qthread_t * me, const void *dest, const size_t count);
-void qthread_fill(qthread_t * me, const void *dest, const size_t count);
+ * address. You may be wondering why they require a qthread_t argument. The
+ * reason for this is memory pooling; memory is allocated on a per-shepherd
+ * basis (to avoid needing to lock the memory pool). Anyway, if you pass it a
+ * NULL qthread_t, it will still work, it just won't be as fast. */
+void qthread_empty(qthread_t * me, const void *dest);
+void qthread_fill(qthread_t * me, const void *dest);
 
 /* NOTE!!!!!!!!!!!
  * Reads and writes operate on machine-word-size segments of memory. That is,
