@@ -529,6 +529,7 @@ int qthread_init(const qthread_shepherd_id_t nkthreads)
 	    perror("qthread_init()");
 	    abort();
 	}
+	cp_hashtable_set_min_fill_factor(qlib->locks[i], 0);
     }
     if ((qlib->FEBs =
 	 cp_hashtable_create_by_option(COLLECTION_MODE_DEEP, 10000,
@@ -537,6 +538,7 @@ int qthread_init(const qthread_shepherd_id_t nkthreads)
 	perror("qthread_init()");
 	abort();
     }
+    cp_hashtable_set_min_fill_factor(qlib->FEBs, 0);
 
     /* initialize the kernel threads and scheduler */
     pthread_key_create(&shepherd_structs, NULL);
@@ -1191,7 +1193,7 @@ void qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
     qthread_debug("qthread_fork(): tid %u shep %u\n", t->thread_id, shep);
 
     if (ret) {
-	qthread_empty(qthread_self(), ret, 1);
+	qthread_empty(qthread_self(), ret);
     }
     qthread_enqueue(qlib->kthreads[shep].ready, t);
 }				       /*}}} */
@@ -1209,7 +1211,7 @@ void qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
 		  shepherd);
 
     if (ret) {
-	qthread_empty(qthread_self(), ret, 1);
+	qthread_empty(qthread_self(), ret);
     }
     qthread_enqueue(qlib->kthreads[shepherd].ready, t);
 }				       /*}}} */
@@ -1229,7 +1231,7 @@ void qthread_fork_future_to(const qthread_f f, const void *arg,
 		  shepherd);
 
     if (ret) {
-	qthread_empty(qthread_self(), ret, 1);
+	qthread_empty(qthread_self(), ret);
     }
     qthread_enqueue(qlib->kthreads[shepherd].ready, t);
 }				       /*}}} */
@@ -1282,7 +1284,7 @@ qthread_t *qthread_prepare(const qthread_f f, const void *arg,
 
     t = qthread_thread_bare(f, arg, ret, shep);
     if (ret) {
-	qthread_empty(qthread_self(), ret, 1);
+	qthread_empty(qthread_self(), ret);
     }
 
     return t;
@@ -1295,7 +1297,7 @@ qthread_t *qthread_prepare_for(const qthread_f f, const void *arg,
     qthread_t *t = qthread_thread_bare(f, arg, ret, shepherd);
 
     if (ret) {
-	qthread_empty(qthread_self(), ret, 1);
+	qthread_empty(qthread_self(), ret);
     }
 
     return t;
@@ -1336,7 +1338,6 @@ struct qthread_FEB_sub_args
  * optimization to have those consts */
 struct qthread_FEB_ef_sub_args
 {
-    const size_t count;
     const void *dest;
     pthread_mutex_t alldone;
 };
@@ -1420,7 +1421,9 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
 	X = m->EFQ;
 	m->EFQ = X->next;
 	/* op */
-	memcpy(maddr, X->addr, WORDSIZE);
+	if (maddr && maddr != X->addr) {
+	    memcpy(maddr, X->addr, WORDSIZE);
+	}
 	m->full = 1;
 	/* requeue */
 	X->waiter->thread_state = QTHREAD_STATE_RUNNING;
@@ -1429,7 +1432,6 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
 	 * originally came from. This shouldn't be a big problem, but if it is,
 	 * we will have to make the addrres_pool synchronized, and use the
 	 * commented-out line. */
-	/* FREE_ADDRRES(X->waiter->shepherd_ptr, X); */
 	FREE_ADDRRES(threadshep, X);
 	qthread_gotlock_fill(m, maddr, threadshep, 1);
     }
@@ -1462,7 +1464,9 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m, void *maddr,
 	X = m->FFQ;
 	m->FFQ = X->next;
 	/* op */
-	memcpy(X->addr, maddr, WORDSIZE);
+	if (X->addr && X->addr != maddr) {
+	    memcpy(X->addr, maddr, WORDSIZE);
+	}
 	/* schedule */
 	X->waiter->thread_state = QTHREAD_STATE_RUNNING;
 	qthread_enqueue(X->waiter->shepherd_ptr->ready, X->waiter);
@@ -1481,7 +1485,9 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m, void *maddr,
 	X = m->FEQ;
 	m->FEQ = X->next;
 	/* op */
-	memcpy(X->addr, maddr, WORDSIZE);
+	if (X->addr && X->addr != maddr) {
+	    memcpy(X->addr, maddr, WORDSIZE);
+	}
 	waiter = X->waiter;
 	waiter->thread_state = QTHREAD_STATE_RUNNING;
 	m->full = 0;
@@ -1510,53 +1516,41 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m, void *maddr,
 
 static aligned_t qthread_empty_sub(qthread_t * me, void *arg)
 {				       /*{{{ */
-    qthread_empty(me, ((struct qthread_FEB_ef_sub_args *)arg)->dest,
-		  ((struct qthread_FEB_ef_sub_args *)arg)->count);
+    qthread_empty(me, ((struct qthread_FEB_ef_sub_args *)arg)->dest);
     pthread_mutex_unlock(&((struct qthread_FEB_ef_sub_args *)arg)->alldone);
     return 0;
 }				       /*}}} */
 
-void qthread_empty(qthread_t * me, const void *dest, const size_t count)
+void qthread_empty(qthread_t * me, const void *dest)
 {				       /*{{{ */
     if (me != NULL) {
 	qthread_addrstat_t *m;
-	qthread_addrstat2_t *m_better;
-	qthread_addrstat2_t *list = NULL;
-	size_t i;
 	aligned_t *startaddr;
 
 	ALIGN(dest, startaddr, "qthread_empty()");
-	cp_hashtable_wrlock(qlib->FEBs); {
-	    for (i = 0; i < count; ++i) {
-		m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
-							    (void *)(startaddr
-								     + i));
-		if (!m) {
-		    m = qthread_addrstat_new(me->shepherd_ptr);
-		    m->full = 0;
-		    cp_hashtable_put(qlib->FEBs, (void *)(startaddr + i), m);
-		} else {
-		    QTHREAD_LOCK(&m->lock);
-		    REPORTLOCK(m);
-		    m_better = ALLOC_ADDRSTAT2(me->shepherd_ptr);
-		    m_better->m = m;
-		    m_better->addr = startaddr + i;
-		    m_better->next = list;
-		    list = m_better;
-		}
+	cp_hashtable_wrlock(qlib->FEBs);
+	{ /* BEGIN CRITICAL SECTION */
+	    m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
+		    (void *)startaddr);
+	    if (!m) {
+		/* currently full, and must be added to the hash to empty */
+		m = qthread_addrstat_new(me->shepherd_ptr);
+		m->full = 0;
+		cp_hashtable_put(qlib->FEBs, (void *)startaddr, m);
+		m = NULL;
+	    } else {
+		/* it could be either full or not, don't know */
+		QTHREAD_LOCK(&m->lock);
+		REPORTLOCK(m);
 	    }
-	}
+	} /* END CRITICAL SECTION */
 	cp_hashtable_unlock(qlib->FEBs);
-	while (list != NULL) {
-	    m_better = list;
-	    list = list->next;
-	    qthread_gotlock_empty(m_better->m, m_better->addr,
-				  me->shepherd_ptr, 0);
-	    FREE_ADDRSTAT2(me->shepherd_ptr, m_better);
+	if (m) {
+	    qthread_gotlock_empty(m, (void*)dest, me->shepherd_ptr, 0);
 	}
     } else {
 	struct qthread_FEB_ef_sub_args args =
-	    { count, dest, PTHREAD_MUTEX_INITIALIZER };
+	    { dest, PTHREAD_MUTEX_INITIALIZER };
 
 	QTHREAD_LOCK(&args.alldone);
 	qthread_fork(qthread_empty_sub, &args, NULL);
@@ -1568,50 +1562,37 @@ void qthread_empty(qthread_t * me, const void *dest, const size_t count)
 
 static aligned_t qthread_fill_sub(qthread_t * me, void *arg)
 {				       /*{{{ */
-    qthread_fill(me, ((struct qthread_FEB_ef_sub_args *)arg)->dest,
-		 ((struct qthread_FEB_ef_sub_args *)arg)->count);
+    qthread_fill(me, ((struct qthread_FEB_ef_sub_args *)arg)->dest);
     pthread_mutex_unlock(&((struct qthread_FEB_ef_sub_args *)arg)->alldone);
     return 0;
 }				       /*}}} */
 
-void qthread_fill(qthread_t * me, const void *dest, const size_t count)
+void qthread_fill(qthread_t * me, const void *dest)
 {				       /*{{{ */
     if (me != NULL) {
-	qthread_addrstat2_t *m_better;
 	qthread_addrstat_t *m;
-	qthread_addrstat2_t *list = NULL;
-	size_t i;
 	aligned_t *startaddr;
 
 	ALIGN(dest, startaddr, "qthread_fill()");
 	/* lock hash */
-	cp_hashtable_wrlock(qlib->FEBs); {
-	    for (i = 0; i < count; ++i) {
-		m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
-							    (void *)(startaddr
-								     + i));
-		if (m) {
-		    QTHREAD_LOCK(&m->lock);
-		    REPORTLOCK(m);
-		    m_better = ALLOC_ADDRSTAT2(me->shepherd_ptr);
-		    m_better->m = m;
-		    m_better->addr = startaddr + i;
-		    m_better->next = list;
-		    list = m_better;
-		}
+	cp_hashtable_wrlock(qlib->FEBs);
+	{			       /* BEGIN CRITICAL SECTION */
+	    m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
+							(void *)startaddr);
+	    if (m) {
+		QTHREAD_LOCK(&m->lock);
+		REPORTLOCK(m);
 	    }
-	}
+	}			       /* END CRITICAL SECTION */
 	cp_hashtable_unlock(qlib->FEBs);	/* unlock hash */
-	while (list != NULL) {
-	    m_better = list;
-	    list = list->next;
-	    qthread_gotlock_fill(m_better->m, m_better->addr,
-				 me->shepherd_ptr, 0);
-	    FREE_ADDRSTAT2(me->shepherd_ptr, m_better);
+	if (m) {
+	    /* if dest wasn't in the hash, it was already full. Since it was,
+	     * we need to fill it. */
+	    qthread_gotlock_fill(m, (void*)dest, me->shepherd_ptr, 0);
 	}
     } else {
 	struct qthread_FEB_ef_sub_args args =
-	    { count, dest, PTHREAD_MUTEX_INITIALIZER };
+	    { dest, PTHREAD_MUTEX_INITIALIZER };
 
 	QTHREAD_LOCK(&args.alldone);
 	qthread_fork(qthread_fill_sub, &args, NULL);
@@ -1653,7 +1634,9 @@ void qthread_writeF(qthread_t * me, void *dest, const void *src)
 	}
 	cp_hashtable_unlock(qlib->FEBs);	/* unlock hash */
 	/* we have the lock on m, so... */
-	memcpy(dest, src, WORDSIZE);
+	if (dest && dest != src) {
+	    memcpy(dest, src, WORDSIZE);
+	}
 	qthread_gotlock_fill(m, alignedaddr, me->shepherd_ptr, 0);
     } else {
 	struct qthread_FEB_sub_args args =
@@ -1716,7 +1699,9 @@ void qthread_writeEF(qthread_t * me, void *dest, const void *src)
 	    X->next = m->EFQ;
 	    m->EFQ = X;
 	} else {
-	    memcpy(dest, src, WORDSIZE);
+	    if (dest && dest != src) {
+		memcpy(dest, src, WORDSIZE);
+	    }
 	    qthread_gotlock_fill(m, alignedaddr, me->shepherd_ptr, 0);
 	}
 	/* now all the addresses are either written or queued */
@@ -1770,7 +1755,9 @@ void qthread_readFF(qthread_t * me, void *dest, void *src)
 	    m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs,
 							(void *)alignedaddr);
 	    if (!m) {
-		memcpy(dest, src, WORDSIZE);
+		if (dest && dest != src) {
+		    memcpy(dest, src, WORDSIZE);
+		}
 	    } else {
 		QTHREAD_LOCK(&m->lock);
 		REPORTLOCK(m);
@@ -1788,7 +1775,9 @@ void qthread_readFF(qthread_t * me, void *dest, void *src)
 	    X->next = m->FFQ;
 	    m->FFQ = X;
 	} else {
-	    memcpy(dest, src, WORDSIZE);
+	    if (dest && dest != src) {
+		memcpy(dest, src, WORDSIZE);
+	    }
 	    QTHREAD_UNLOCK(&m->lock);
 	    REPORTUNLOCK(m);
 	}
@@ -1854,7 +1843,9 @@ void qthread_readFE(qthread_t * me, void *dest, void *src)
 	    X->next = m->FEQ;
 	    m->FEQ = X;
 	} else {
-	    memcpy(dest, src, WORDSIZE);
+	    if (dest && dest != src) {
+		memcpy(dest, src, WORDSIZE);
+	    }
 	    qthread_gotlock_empty(m, alignedaddr, me->shepherd_ptr, 0);
 	}
 	/* now all the addresses are either written or queued */
@@ -1909,7 +1900,7 @@ int qthread_lock(qthread_t * t, const void *a)
     qthread_lock_t *m;
 
     if (t != NULL) {
-	const int lockbin = (((size_t)a) >> 5) & 0x1f;	/* guaranteed to be between 0 and 32 */
+	const int lockbin = (((size_t) a) >> 5) & 0x1f;	/* guaranteed to be between 0 and 32 */
 
 	cp_hashtable_wrlock(qlib->locks[lockbin]);
 	m = (qthread_lock_t *) cp_hashtable_get(qlib->locks[lockbin],
@@ -1919,7 +1910,7 @@ int qthread_lock(qthread_t * t, const void *a)
 	     * needing to lock a pthread_mutex on all memory pool accesses.
 	     * Theoretically, this might be bad on some architectures. 99 times
 	     * out of 100, though, this is a win for overall throughput. */
-	    qthread_shepherd_t *myshep =
+	    qthread_shepherd_t *myshep = (qthread_shepherd_t *)
 		pthread_getspecific(shepherd_structs);
 
 	    if ((m = ALLOC_LOCK(myshep)) == NULL) {
@@ -1995,7 +1986,7 @@ int qthread_unlock(qthread_t * t, const void *a)
     qthread_debug("qthread_unlock(%p, %p): started\n", t, a);
 
     if (t != NULL) {
-	const int lockbin = (((size_t)a) >> 5) & 0x1f;	/* guaranteed to be between 0 and 32 */
+	const int lockbin = (((size_t) a) >> 5) & 0x1f;	/* guaranteed to be between 0 and 32 */
 
 	cp_hashtable_wrlock(qlib->locks[lockbin]);
 	m = (qthread_lock_t *) cp_hashtable_get(qlib->locks[lockbin],
@@ -2018,7 +2009,7 @@ int qthread_unlock(qthread_t * t, const void *a)
 	     * needing to lock a pthread_mutex on all memory pool accesses.
 	     * Theoretically, this might be bad on some architectures. 99 times
 	     * out of 100, though, this is a win for overall throughput. */
-	    qthread_shepherd_t *myshep =
+	    qthread_shepherd_t *myshep = (qthread_shepherd_t *)
 		pthread_getspecific(shepherd_structs);
 
 	    qthread_debug("qthread_unlock(%p,%p): deleting waiting queue\n",
@@ -2095,7 +2086,7 @@ qthread_shepherd_id_t qthread_shep(const qthread_t * t)
     if (t) {
 	return t->shepherd_ptr->kthread_index;
     }
-    ret = pthread_getspecific(shepherd_structs);
+    ret = (qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
     if (ret == NULL) {
 	return NO_SHEPHERD;
     } else {
@@ -2111,11 +2102,11 @@ unsigned int qthread_isfuture(const qthread_t * t)
 }				       /*}}} */
 
 void qthread_assertfuture(qthread_t * t)
-{
+{				       /*{{{ */
     t->flags |= QTHREAD_FUTURE;
-}
+}				       /*}}} */
 
 void qthread_assertnotfuture(qthread_t * t)
-{
+{				       /*{{{ */
     t->flags &= ~QTHREAD_FUTURE;
-}
+}				       /*}}} */
