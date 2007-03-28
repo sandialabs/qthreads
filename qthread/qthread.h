@@ -32,8 +32,10 @@ typedef unsigned char qthread_shepherd_id_t;	/* doubt we'll run more than 255 sh
  * the BUT! This is here to try and help a little bit. */
 #ifdef __ILP64__
 typedef uint64_t aligned_t;
+typedef int64_t saligned_t;
 #else
 typedef uint32_t aligned_t;
+typedef int32_t saligned_t;
 #endif
 
 /* for convenient arguments to qthread_fork */
@@ -194,7 +196,7 @@ void qthread_writeF_const(qthread_t * me, void *dest, const aligned_t src);
  * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
  * (which, conveniently, returns NULL if you aren't a qthread).
  */
-void qthread_readFF(qthread_t * me, void *dest, void *src);
+void qthread_readFF(qthread_t * me, void *dest, const void *src);
 
 /* These functions wait for memory to become full, and then empty it. When
  * memory becomes full, only one thread blocked like this will be awoken. Data
