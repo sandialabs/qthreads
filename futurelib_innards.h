@@ -8,7 +8,8 @@ struct location_s
     aligned_t vp_count;
     pthread_mutex_t vp_count_lock;
     unsigned int vp_max;
-    unsigned int id;
+    qthread_shepherd_id_t id;
+    qthread_shepherd_id_t sched_shep;
 };
 
 void blocking_vp_incr(qthread_t * me, location_t * loc);
