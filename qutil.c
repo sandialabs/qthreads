@@ -1,224 +1,128 @@
 #include <qthread/qutil.h>
 #include <qthread/qthread.h>
+#include <qthread/futurelib.h>
 
 #include <stdlib.h>
 #include <stdio.h>		       /* debugging only */
 #include <string.h>
+#include <assert.h>
 
-struct qsi_args
-{
-    double *array;
-    double ret;
-    size_t start, stop;
+#ifndef MT_LOOP_CHUNK
+#define MT_LOOP_CHUNK 1000
+#endif
+
+#define STRUCT(_structname_, _rtype_) struct _structname_ \
+{ \
+    const _rtype_ *array; \
+    _rtype_ ret; \
+    size_t start, stop; \
+    const _rtype_ *addlast; \
+    struct _structname_ *backptr; \
 };
-
-/* note that double != aligned_t, and so we can't rely on qthread_writeF */
-static aligned_t qutil_double_sum_inner(qthread_t * me, struct qsi_args *args)
-{				       /*{{{ */
-    if (args->start == args->stop) {
-	args->ret = args->array[args->start];
-	qthread_fill(me, &args->ret);
-    } else if (args->start == (args->stop - 1)) {
-	args->ret = args->array[args->start] + args->array[args->stop];
-	qthread_fill(me, &args->ret);
-    } else {
-	int leftset = 0, rightset = 0;
-	struct qsi_args left_args = { args->array, 0.0, args->start,
-	    (args->start + args->stop) >> 1
-	};
-	struct qsi_args right_args =
-	    { args->array, 0.0, ((args->start + args->stop) >> 1) + 1,
-	    args->stop
-	};
-
-	if (left_args.start != left_args.stop) {
-	    qthread_empty(me, &left_args.ret);
-	    qthread_fork((qthread_f) qutil_double_sum_inner, &left_args,
-			 NULL);
-	} else {
-	    left_args.ret = args->array[left_args.start];
-	    leftset = 1;
-	}
-	if (right_args.start != right_args.stop) {
-	    qthread_empty(me, &right_args.ret);
-	    qthread_fork((qthread_f) qutil_double_sum_inner, &right_args,
-			 NULL);
-	} else {
-	    right_args.ret = args->array[right_args.start];
-	    rightset = 1;
-	}
-	if (!leftset) {
-	    qthread_readFF(me, &left_args.ret, &left_args.ret);
-	}
-	if (!rightset) {
-	    qthread_readFF(me, &right_args.ret, &right_args.ret);
-	}
-	args->ret = left_args.ret + right_args.ret;
-	qthread_fill(me, &args->ret);
-    }
-    return 0;
-}				       /*}}} */
-
-/* This will sum the numbers in an array of doubles */
-double qutil_double_sum(qthread_t * me, double *array, size_t length)
-{				       /*{{{ */
-    struct qsi_args args = { array, 0.0, 0, length - 1 };
-    qthread_empty(me, &args.ret);
-    qutil_double_sum_inner(me, &args);
-    return args.ret;
-}				       /*}}} */
-
-static aligned_t qutil_double_FF_sum_inner(qthread_t * me,
-					   struct qsi_args *args)
-{
-    if (args->start == args->stop) {
-	args->ret = args->array[args->start];
-	qthread_fill(me, &args->ret);
-    } else if (args->start == (args->stop - 1)) {
-	args->ret = args->array[args->start] + args->array[args->stop];
-	qthread_fill(me, &args->ret);
-    } else {
-	int leftset = 0, rightset = 0;
-	struct qsi_args left_args = { args->array, 0.0, args->start,
-	    (args->start + args->stop) >> 1
-	};
-	struct qsi_args right_args =
-	    { args->array, 0.0, ((args->start + args->stop) >> 1) + 1,
-	    args->stop
-	};
-
-	if (left_args.start != left_args.stop) {
-	    qthread_empty(me, &left_args.ret);
-	    qthread_fork((qthread_f) qutil_double_FF_sum_inner, &left_args,
-			 NULL);
-	} else {
-	    qthread_readFF(me, NULL, &(args->array[left_args.start]));
-	    left_args.ret = args->array[left_args.start];
-	    leftset = 1;
-	}
-	if (right_args.start != right_args.stop) {
-	    qthread_empty(me, &right_args.ret);
-	    qthread_fork((qthread_f) qutil_double_FF_sum_inner, &right_args,
-			 NULL);
-	} else {
-	    qthread_readFF(me, NULL, &(args->array[right_args.start]));
-	    right_args.ret = args->array[right_args.start];
-	    rightset = 1;
-	}
-	if (!leftset) {
-	    qthread_readFF(me, &left_args.ret, &left_args.ret);
-	}
-	if (!rightset) {
-	    qthread_readFF(me, &right_args.ret, &right_args.ret);
-	}
-	args->ret = left_args.ret + right_args.ret;
-	qthread_fill(me, &args->ret);
-    }
-    return 0;
+#define INNER_LOOP(_fname_,_structtype_,_op_) static aligned_t _fname_(qthread_t *me, struct _structtype_ *args) \
+{ \
+    size_t i; \
+    args->ret = args->array[args->start]; \
+    for (i = args->start + 1; i < args->stop; i++) { \
+	args->ret _op_ args->array[i]; \
+    } \
+    if (args->addlast) { \
+	qthread_readFF(me, NULL, args->addlast); \
+	args->ret _op_ *(args->addlast); \
+	free(args->backptr); \
+    } \
+    qthread_fill(me, &(args->ret)); \
+    return 0; \
+}
+#define INNER_LOOP_FF(_fname_,_structtype_,_op_) static aligned_t _fname_(qthread_t *me, struct _structtype_ *args) \
+{ \
+    size_t i; \
+    qthread_readFF(me, NULL, args->array + args->start); \
+    args->ret = args->array[args->start]; \
+    for (i = args->start + 1; i < args->stop; i++) { \
+	qthread_readFF(me, NULL, args->array + i); \
+	args->ret _op_ args->array[i]; \
+    } \
+    if (args->addlast) { \
+	qthread_readFF(me, NULL, args->addlast); \
+	args->ret _op_ *(args->addlast); \
+	free(args->backptr); \
+    } \
+    qthread_fill(me, &(args->ret)); \
+    return 0; \
+}
+#define OUTER_LOOP(_fname_,_structtype_,_op_,_rtype_,_innerfunc_,_innerfuncff_) \
+_rtype_ _fname_(qthread_t *me, _rtype_ *array, size_t length, int checkfeb) \
+{ \
+    size_t i, start = 0; \
+    _rtype_ *waitfor = NULL, myret = 0; \
+    struct _structtype_ *bkptr = NULL; \
+    \
+    while (start + MT_LOOP_CHUNK < length) { \
+	/* spawn off an MT_LOOP_CHUNK-sized segment of the first part of the array */ \
+	struct _structtype_ *left_args = \
+	    malloc(sizeof(struct _structtype_)); \
+	\
+	left_args->array = array; \
+	left_args->start = start; \
+	left_args->stop = start + MT_LOOP_CHUNK; \
+	start += MT_LOOP_CHUNK; \
+	left_args->backptr = bkptr; \
+	bkptr = left_args; \
+	left_args->addlast = waitfor; \
+	waitfor = &(left_args->ret); \
+	qthread_empty(me, &(left_args->ret)); \
+	if (checkfeb) { \
+	    future_fork((qthread_f) _innerfuncff_, left_args, NULL); \
+	} else { \
+	    future_fork((qthread_f) _innerfunc_, left_args, NULL); \
+	} \
+    } \
+    if (checkfeb) { \
+	qthread_readFF(me, NULL, array + start); \
+	myret = array[start]; \
+	for (i = start + 1; i < length; i++) { \
+	    qthread_readFF(me, NULL, array + i); \
+	    myret _op_ array[i]; \
+	} \
+    } else { \
+	myret = array[start]; \
+	for (i = start + 1; i < length; i++) { \
+	    myret _op_ array[i]; \
+	} \
+    } \
+    if (waitfor) { \
+	qthread_readFF(me, NULL, waitfor); \
+	myret _op_ *waitfor; \
+	free(bkptr); \
+    } \
+    return myret; \
 }
 
-double qutil_double_FF_sum(qthread_t * me, double *array, size_t length)
-{				       /*{{{ */
-    struct qsi_args args = { array, 0.0, 0, length - 1 };
-    qthread_empty(me, &args.ret);
-    qutil_double_FF_sum_inner(me, &args);
-    return args.ret;
-}				       /*}}} */
+STRUCT(qutil_ds_args, double)
+INNER_LOOP   (qutil_double_sum_inner,    qutil_ds_args, +=)
+INNER_LOOP_FF(qutil_double_FF_sum_inner, qutil_ds_args, +=)
+OUTER_LOOP(qutil_double_sum, qutil_ds_args, +=, double, qutil_double_sum_inner, qutil_double_FF_sum_inner)
 
-struct quisi_args
-{
-    unsigned int *array;
-    size_t start, stop;
-};
+INNER_LOOP   (qutil_double_mult_inner,    qutil_ds_args, *=)
+INNER_LOOP_FF(qutil_double_FF_mult_inner, qutil_ds_args, *=)
+OUTER_LOOP(qutil_double_mult, qutil_ds_args, *=, double, qutil_double_mult_inner, qutil_double_FF_mult_inner)
 
-static aligned_t qutil_uint_sum_inner(qthread_t * me, struct quisi_args *args)
-{				       /*{{{ */
-    if (args->start == args->stop) {
-	return args->array[args->start];
-    } else if (args->start == (args->stop - 1)) {
-	return args->array[args->start] + args->array[args->stop];
-    } else {
-	char rightset = 0, leftset = 0;
-	aligned_t leftret, rightret;
-	struct quisi_args left_args =
-	    { args->array, args->start, (args->start + args->stop) >> 1 };
-	struct quisi_args right_args =
-	    { args->array, ((args->start + args->stop) >> 1) + 1,
-	    args->stop
-	};
+STRUCT(qutil_uis_args, unsigned int)
+INNER_LOOP   (qutil_uint_sum_inner,    qutil_uis_args, +=)
+INNER_LOOP_FF(qutil_uint_FF_sum_inner, qutil_uis_args, +=)
+OUTER_LOOP(qutil_uint_sum, qutil_uis_args, +=, unsigned int, qutil_uint_sum_inner, qutil_uint_FF_sum_inner)
 
-	if (left_args.start != left_args.stop) {
-	    qthread_fork((qthread_f) qutil_uint_sum_inner, &left_args,
-			 &leftret);
-	} else {
-	    leftret = args->array[left_args.start];
-	    leftset = 1;
-	}
-	if (right_args.start != right_args.stop) {
-	    qthread_fork((qthread_f) qutil_uint_sum_inner, &right_args,
-			 &rightret);
-	} else {
-	    rightret = args->array[right_args.start];
-	    rightset = 1;
-	}
-	if (!leftset) {
-	    qthread_readFF(me, NULL, &leftret);
-	}
-	if (!rightset) {
-	    qthread_readFF(me, NULL, &rightret);
-	}
-	return leftret + rightret;
-    }
-}				       /*}}} */
+INNER_LOOP   (qutil_uint_mult_inner,    qutil_uis_args, *=)
+INNER_LOOP_FF(qutil_uint_FF_mult_inner, qutil_uis_args, *=)
+OUTER_LOOP(qutil_uint_mult, qutil_uis_args, *=, unsigned int, qutil_uint_mult_inner, qutil_uint_FF_mult_inner)
 
-unsigned int qutil_uint_sum(qthread_t * me, unsigned int *array,
-			    size_t length)
-{				       /*{{{ */
-    struct quisi_args args = { array, 0, length - 1 };
-    return (unsigned int)qutil_uint_sum_inner(me, &args);
-}				       /*}}} */
+STRUCT(qutil_is_args, int)
+INNER_LOOP   (qutil_int_sum_inner,    qutil_is_args, +=)
+INNER_LOOP_FF(qutil_int_FF_sum_inner, qutil_is_args, +=)
+OUTER_LOOP(qutil_int_sum, qutil_is_args, +=, int, qutil_int_sum_inner, qutil_int_FF_sum_inner)
 
-struct qutil_argstruct
-{
-    int iteration;
-    void *userargs;
-    double (*func) (qthread_t *, const int, void *);
-    double *ret;
-};
+INNER_LOOP   (qutil_int_mult_inner,    qutil_is_args, *=)
+INNER_LOOP_FF(qutil_int_FF_mult_inner, qutil_is_args, *=)
+OUTER_LOOP(qutil_int_mult, qutil_is_args, *=, int, qutil_int_mult_inner, qutil_int_FF_mult_inner)
 
-void qutil_threadwrapper(qthread_t * me, struct qutil_argstruct *arg)
-{
-    double ret;
-
-    ret = arg->func(me, arg->iteration, arg->userargs);
-    memcpy(arg->ret, &ret, sizeof(double));
-    qthread_writeF(me, arg->ret, &ret);
-}
-
-double qutil_runloop_sum_double(qthread_t * me,
-				double (*func) (qthread_t *, const int,
-						void *), void *argstruct,
-				const int loopstart, const int loopend,
-				const int step)
-{
-    const int iterations = abs(loopend - loopstart);
-    double *retvals = malloc(sizeof(double) * iterations);
-    int i;
-    double sum;
-    struct qutil_argstruct *args =
-	malloc(sizeof(struct qutil_argstruct) * iterations);
-
-    for (i = 0; i < iterations; i += step) {
-	qthread_empty(me, retvals + i);
-    }
-    for (i = 0; i < iterations; i += step) {
-	args[i].userargs = argstruct;
-	args[i].iteration = i + loopstart;
-	args[i].func = func;
-	args[i].ret = retvals + i;
-	qthread_fork((qthread_f) qutil_threadwrapper, args + i, NULL);
-    }
-    sum = qutil_double_FF_sum(me, retvals, iterations);
-    free(retvals);
-    return sum;
-}
