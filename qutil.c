@@ -188,11 +188,11 @@ void qutil_oetsort(qthread_t *me, double *array, size_t length, int checkfeb)
 	args[i].start = chunksize * i;
 	if ((chunksize+2)*i > length) {
 	    /* the last thread's chunk might have to be bigger than the others */
-	    args[i].end = length;
+	    args[i].stop = length;
 	} else {
-	    args[i].end = (chunksize+1) * i;
+	    args[i].stop = (chunksize+1) * i;
 	}
-	qthread_fork(qutil_oetsort_inner, args+i, rets+i);
+	qthread_fork((qthread_f)qutil_oetsort_inner, args+i, rets+i);
     }
     for (i=0;i<numthreads;i++) {
 	qthread_readFF(me, NULL, rets+i);
