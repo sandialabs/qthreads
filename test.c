@@ -34,7 +34,7 @@ aligned_t qmain(qthread_t * me, void *junk)
     double *d_array;
     double d_out, d_sum_authoritative = 0.0, d_mult_authoritative =
 	1.0, d_max_authoritative = DBL_MIN, d_min_authoritative = DBL_MAX;
-    size_t d_len = 100000000;
+    size_t d_len = 1000000;
 
     size_t i;
     struct timeval start, stop;
