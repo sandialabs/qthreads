@@ -168,7 +168,7 @@ void future_fork(qthread_f fptr, void *arg, aligned_t * retval)
     }
     DBprintf("Thread %p decided future will go to %i\n", me, rr);
     /* steps 2&3 (slow) */
-    blocking_vp_incr(qthread_self(), &(future_bookkeeping_array[rr]));
+    blocking_vp_incr(me, &(future_bookkeeping_array[rr]));
     qthread_fork_future_to(fptr, arg, retval, rr);
 }
 
