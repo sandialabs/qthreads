@@ -35,6 +35,8 @@ int qutil_int_mult(qthread_t * me, int *array, size_t length, int checkfeb);
 int qutil_int_max(qthread_t * me, int *array, size_t length, int checkfeb);
 int qutil_int_min(qthread_t * me, int *array, size_t length, int checkfeb);
 
+void qutil_mergesort(qthread_t *me, double *array, size_t length, int checkfeb);
+void qutil_qsort(qthread_t *me, double *array, size_t length);
 #ifdef __cplusplus
 }
 #endif
