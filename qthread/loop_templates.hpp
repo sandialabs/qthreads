@@ -168,21 +168,33 @@ public:
     case mt_loop_traits::FutureNoJoin:
       join = false;
     case mt_loop_traits::Future: {
-      aligned_t *ft = new aligned_t[total];
+      aligned_t *ft;
+      /* create an array of return values so we can join with the qthreads */
+      if (join) ft = new aligned_t[total];
+      /* try to yield. This will return 1 if me is a future. Only futures can
+       * succesfully yield, everybody else just falls through the function */
       int yielded = future_yield(me);
 
+      /* for each future I want to create -- for tdc = the total number of
+       * threads that will be created */
       for (int i = 0; i < tdc; i++) {
+	/* This figures out how to do iterations... which doesn't really matter
+	 * if you are doing it by hand */
 	int count = base_count + ( ((round_total + i) < total) ? 1 : 0 );
 	future_create (me, run_ft<Iter>, ITER(start,steptd,count), ft+i);
+	/* more iteration assignment stuff */
 	start += step;
       }
 
-      if (join)
+      if (join) /* this waits for the futures to finish */
 	future_join_all (me, ft, tdc);
       if (yielded)
+	/* Aquire back a virtual processor. It is actually fine to call this
+	 * even if the thread is not a future, the if is there to save a
+	 * function call and twiddling with the global future data */
 	future_acquire(me);
 
-      delete ft;
+      if (join) delete ft;
     } break;
 
     }
