@@ -14,9 +14,12 @@
  * This file tests the qutil functions
  *
  */
-static int dcmp(const void* a, const void* b) {
-    if ((*(double*)a) < (*(double*)b)) return -1;
-    if ((*(double*)a) > (*(double*)b)) return 1;
+static int dcmp(const void *a, const void *b)
+{
+    if ((*(double *)a) < (*(double *)b))
+	return -1;
+    if ((*(double *)a) > (*(double *)b))
+	return 1;
     return 0;
 }
 
@@ -38,6 +41,7 @@ aligned_t qmain(qthread_t * me, void *junk)
 
     size_t i;
     struct timeval start, stop;
+
 
     ui_array = calloc(ui_len, sizeof(unsigned int));
     for (i = 0; i < ui_len; i++) {
@@ -96,22 +100,23 @@ aligned_t qmain(qthread_t * me, void *junk)
 	    d_min_authoritative = d_array[i];
     }
     d_out = qutil_double_sum(me, d_array, d_len, 0);
-    if (fabs(d_out - d_sum_authoritative) > (fabs(d_out+d_sum_authoritative)*FLT_EPSILON)) {
+    if (fabs(d_out - d_sum_authoritative) >
+	(fabs(d_out + d_sum_authoritative) * FLT_EPSILON)) {
 	printf("unexpectedly large sum delta: %g (EPSILON = %g)\n",
-	       fabs(d_out - d_sum_authoritative), (fabs(d_out+d_sum_authoritative)*FLT_EPSILON/2));
-	/*printf("d_out = %g\nd_sum_authoritative = %g\n", d_out,
-	       d_sum_authoritative);*/
+	       fabs(d_out - d_sum_authoritative),
+	       (fabs(d_out + d_sum_authoritative) * FLT_EPSILON));
     }
     d_out = qutil_double_mult(me, d_array, d_len, 0);
-    if (fabs(d_out - d_mult_authoritative) > fabs(d_out+d_mult_authoritative)*FLT_EPSILON) {
-	printf("unexpectedly large mult. delta: %g\n",
-	       fabs(d_out - d_mult_authoritative));
+    if (fabs(d_out - d_mult_authoritative) >
+	fabs(d_out + d_mult_authoritative) * FLT_EPSILON) {
+	printf("unexpectedly large mult. delta: %g (EPSILON = %g)\n",
+	       fabs(d_out - d_mult_authoritative),
+	       fabs(d_out + d_mult_authoritative) * FLT_EPSILON);
     }
     d_out = qutil_double_max(me, d_array, d_len, 0);
     assert(d_out == d_max_authoritative);
     d_out = qutil_double_min(me, d_array, d_len, 0);
     assert(d_out == d_min_authoritative);
-
     /*qutil_mergesort(me, d_array, d_len, 0);
      * for (i = 0; i < d_len-1; i++) {
      * if (d_array[i] > d_array[i+1]) {
@@ -127,14 +132,16 @@ aligned_t qmain(qthread_t * me, void *junk)
     gettimeofday(&stop, NULL);
     for (i = 0; i < d_len - 1; i++) {
 	if (d_array[i] > d_array[i + 1]) {
-	    size_t j;
-
-	    for (j = 0; j < d_len; j++) {
-		if (j % 10 == 0)
-		    printf("\n");
-		printf("[%4u]=%2.5f ", j, d_array[j]);
-	    }
-	    printf("\n");
+	    /*
+	     * size_t j;
+	     * 
+	     * for (j = i-20; j < i+20; j++) {
+	     * if (j % 8 == 0)
+	     * printf("\n");
+	     * printf("[%6u]=%2.5f ", j, d_array[j]);
+	     * }
+	     * printf("\n");
+	     */
 	    printf("out of order at %i: %f > %f\n", i, d_array[i],
 		   d_array[i + 1]);
 	    abort();
