@@ -2083,13 +2083,14 @@ aligned_t qthread_incr(aligned_t * operand, int incr)
 #if __PPC__ || _ARCH_PPC || __powerpc__
     asm volatile (
 	    "loop:\n\t" /* repeat until this succeeds */
-	    "lwarx  %3,0,%1\n\t" /* fetch memory pointed to by %1 */
-	    "add    %0,%3,%2\n\t" /* add the increment */
-	    "stwcx. %0,0,%1\n\t" /* put r6 back into %1 */
-	    "bne-   loop"	/* if it failed, try again */
-	    : "=a" (retval) /* =a means it's also an input */
-	    : "r" (operand), "r" (incr), "0" (retval)
-	    );
+	    "lwarx  %0,0,%1\n\t"
+	    "add    %0,%0,%2\n\t"
+	    "stwcx. %0,0,%1\n\t"
+	    "bne-   loop\n\t"	/* if it failed, try again */
+	    "isync" /* make sure it wasn't all a dream */
+	    : "=&r" (retval)
+	    : "r" (operand), "r" (incr)
+	    : "cc", "memory");
 #elif __ia64 || __ia64__
     int64_t res;
     if (incr == 1) {
@@ -2123,13 +2124,13 @@ aligned_t qthread_incr(aligned_t * operand, int incr)
     asm volatile (
 	    "lock xaddl %1,%0" /* atomically add incr to operand */
 	    : /* no output */
-	    : "m" (*operand), "r" (incr)
+	    : "m" (*operand), "ir" (incr)
 	    );
 #elif i386 || __i386 || __i386__
     asm volatile (
 	    "lock addl %1,%0"
 	    : "=m" (*operand)
-	    : "r" (incr), "m" (*operand)
+	    : "ir" (incr), "m" (*operand)
 	    );
 #else
 #warning falling back to save but very slow increments
