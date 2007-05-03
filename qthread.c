@@ -2076,3 +2076,68 @@ void qthread_assertnotfuture(qthread_t * t)
 {				       /*{{{ */
     t->flags &= ~QTHREAD_FUTURE;
 }				       /*}}} */
+
+aligned_t qthread_incr(aligned_t * operand, int incr)
+{
+    aligned_t retval;
+#if __PPC__ || _ARCH_PPC || __powerpc__
+    asm volatile (
+	    "loop:\n\t" /* repeat until this succeeds */
+	    "lwarx  %3,0,%1\n\t" /* fetch memory pointed to by %1 */
+	    "add    %0,%3,%2\n\t" /* add the increment */
+	    "stwcx. %0,0,%1\n\t" /* put r6 back into %1 */
+	    "bne-   loop"	/* if it failed, try again */
+	    : "=a" (retval) /* =a means it's also an input */
+	    : "r" (operand), "r" (incr), "0" (retval)
+	    );
+#elif __ia64 || __ia64__
+    int64_t res;
+    if (incr == 1) {
+	asm volatile (
+		"fetchadd8.rel %0=%1,%2"
+		: "=r" (res)
+		: "m" (*operand), "i" (1)
+		);
+	retval = res;
+    } else {
+	int64_t old, new;
+	do {
+	    old = *operand; /* atomic, because operand is aligned */
+	    new = old + incr;
+	    asm volatile (
+		    "mov ar.ccv=%0;;"
+		    : /* no output */
+		    : "rO" (old)
+		    );
+	    /* separate so the compiler can insert its junk */
+	    asm volatile (
+		    "cmpxchg8.acq %0=[%1],%2,ar.ccv"
+		    : "=r" (res)
+		    : "r" (operand), "r" (new)
+		    : "memory"
+		    );
+	} while (res != old); /* if res==old, the calc is out of date */
+	retval = new;
+    }
+#elif __i486 || __i486__
+    asm volatile (
+	    "lock xaddl %1,%0" /* atomically add incr to operand */
+	    : /* no output */
+	    : "m" (*operand), "r" (incr)
+	    );
+#elif i386 || __i386 || __i386__
+    asm volatile (
+	    "lock addl %1,%0"
+	    : "=m" (*operand)
+	    : "r" (incr), "m" (*operand)
+	    );
+#else
+#warning falling back to save but very slow increments
+    qthread_t *me = qthread_self();
+    qthread_lock(me, operand);
+    *operand += incr;
+    res = *operand;
+    qthread_unlock(me, operand);
+#endif
+    return retval;
+}

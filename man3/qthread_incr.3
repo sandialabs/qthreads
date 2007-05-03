@@ -1,0 +1,23 @@
+.TH qthread_incr 3 "NOVEMBER 2006" libqthread "libqthread"
+.SH NAME
+\fBqthread_incr\fR \- atomically increment an aligned_t counter
+.SH SYNOPSIS
+.B #include <qthread/qthread.h>
+
+.I aligned_t
+.br
+\fBqthread_incr\fR(aligned_t *\fIoperand\fR, int \fIincr\fR);
+.SH DESCRIPTION
+This function atomically increments the variable pointed to by \fIoperand\fR by \fIincr\fR. In short, this is a thread-safe version of:
+.RS
+.PP
+*\fIoperand\fR += \fIincr\fR;
+.RE
+.PP
+This function uses architecture-specific assembly to achieve this, but on
+unrecognized hardware will fall back to using \fBqthread_lock\fR() and
+\fBqthread_unlock\fR() to be thread-safe. Ordinarily, however, it does not use
+any of the available address locking mechanisms.
+.SH RETURN VALUE
+This function will return the value of the counter after the increment was
+performed.

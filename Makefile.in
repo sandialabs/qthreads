@@ -38,7 +38,7 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 check_PROGRAMS = test1$(EXEEXT) test2$(EXEEXT) test3$(EXEEXT) \
-	testq$(EXEEXT) testloop$(EXEEXT)
+	testq$(EXEEXT) testloop$(EXEEXT) testincr$(EXEEXT)
 DIST_COMMON = README $(am__configure_deps) $(pkginclude_HEADERS) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(srcdir)/config.h.in $(top_srcdir)/configure AUTHORS COPYING \
@@ -76,6 +76,9 @@ test2_DEPENDENCIES =
 am_test3_OBJECTS = test3.$(OBJEXT)
 test3_OBJECTS = $(am_test3_OBJECTS)
 test3_DEPENDENCIES =
+am_testincr_OBJECTS = testincr.$(OBJEXT)
+testincr_OBJECTS = $(am_testincr_OBJECTS)
+testincr_DEPENDENCIES =
 am_testloop_OBJECTS = testloop.$(OBJEXT)
 testloop_OBJECTS = $(am_testloop_OBJECTS)
 testloop_DEPENDENCIES =
@@ -106,10 +109,10 @@ CXXLINK = $(LIBTOOL) --tag=CXX --mode=link $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(libqthread_la_SOURCES) $(EXTRA_libqthread_la_SOURCES) \
 	$(test1_SOURCES) $(test2_SOURCES) $(test3_SOURCES) \
-	$(testloop_SOURCES) $(testq_SOURCES)
+	$(testincr_SOURCES) $(testloop_SOURCES) $(testq_SOURCES)
 DIST_SOURCES = $(libqthread_la_SOURCES) $(EXTRA_libqthread_la_SOURCES) \
 	$(test1_SOURCES) $(test2_SOURCES) $(test3_SOURCES) \
-	$(testloop_SOURCES) $(testq_SOURCES)
+	$(testincr_SOURCES) $(testloop_SOURCES) $(testq_SOURCES)
 man3dir = $(mandir)/man3
 NROFF = nroff
 MANS = $(man_MANS)
@@ -290,7 +293,7 @@ man_MANS = man3/qthread_empty.3 \
 		   man3/future_join_all.3 \
 		   man3/future_yield.3
 
-TESTS = test1 test2 test3 testq testloop
+TESTS = test1 test2 test3 testq testloop testincr
 test1_SOURCES = test.c
 test1_LDADD = -lqthread
 test2_SOURCES = test2.c
@@ -301,6 +304,8 @@ testq_SOURCES = testq.c
 testq_LDADD = -lqthread
 testloop_SOURCES = testloop.cpp
 testloop_LDADD = -lqthread
+testincr_SOURCES = testincr.c
+testincr_LDADD = -lqthread
 all: config.h
 	$(MAKE) $(AM_MAKEFLAGS) all-am
 
@@ -401,6 +406,9 @@ test2$(EXEEXT): $(test2_OBJECTS) $(test2_DEPENDENCIES)
 test3$(EXEEXT): $(test3_OBJECTS) $(test3_DEPENDENCIES) 
 	@rm -f test3$(EXEEXT)
 	$(LINK) $(test3_LDFLAGS) $(test3_OBJECTS) $(test3_LDADD) $(LIBS)
+testincr$(EXEEXT): $(testincr_OBJECTS) $(testincr_DEPENDENCIES) 
+	@rm -f testincr$(EXEEXT)
+	$(LINK) $(testincr_LDFLAGS) $(testincr_OBJECTS) $(testincr_LDADD) $(LIBS)
 testloop$(EXEEXT): $(testloop_OBJECTS) $(testloop_DEPENDENCIES) 
 	@rm -f testloop$(EXEEXT)
 	$(CXXLINK) $(testloop_LDFLAGS) $(testloop_OBJECTS) $(testloop_LDADD) $(LIBS)
@@ -422,6 +430,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test2.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test3.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testincr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testloop.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testq.Po@am__quote@
 

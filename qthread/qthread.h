@@ -227,6 +227,11 @@ void qthread_readFE(qthread_t * me, void *dest, void *src);
 int qthread_lock(qthread_t * me, const void *a);
 int qthread_unlock(qthread_t * me, const void *a);
 
+/* this implements an atomic increment. It is done with architecture-specific
+ * assembly and does NOT use FEB's or lock/unlock (except in the slow fallback
+ * for unrecognized architectures)... but usually that's not the issue. */
+aligned_t qthread_incr(aligned_t * operand, int incr);
+
 #ifdef __cplusplus
 }
 #endif

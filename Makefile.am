@@ -57,8 +57,8 @@ man_MANS = man3/qthread_empty.3 \
 		   man3/future_join_all.3 \
 		   man3/future_yield.3
 
-TESTS = test1 test2 test3 testq testloop
-check_PROGRAMS = test1 test2 test3 testq testloop
+TESTS = test1 test2 test3 testq testloop testincr
+check_PROGRAMS = test1 test2 test3 testq testloop testincr
 test1_SOURCES = test.c
 test1_LDADD = -lqthread
 test2_SOURCES = test2.c
@@ -69,6 +69,8 @@ testq_SOURCES = testq.c
 testq_LDADD = -lqthread
 testloop_SOURCES = testloop.cpp
 testloop_LDADD = -lqthread
+testincr_SOURCES = testincr.c
+testincr_LDADD = -lqthread
 
 #test2: test2.c
 #	$(CC) -I. $(CFLAGS) -L.libs/libqthread.a -o $< $^

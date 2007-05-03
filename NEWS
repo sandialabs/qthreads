@@ -1,3 +1,6 @@
+--- 0.7 ---
+New Features:
+ - qthread_incr() can be used for atomic increments
 --- 0.6 ---
 Improvements:
  - Threads now use pthread thread-local (TSD) memory instead of doing lookups
