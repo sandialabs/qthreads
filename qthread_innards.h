@@ -17,7 +17,7 @@ typedef struct qlib_s
     pthread_mutex_t max_thread_id_lock;
 
     /* round robin scheduler - can probably be smarter */
-    qthread_shepherd_id_t sched_shepherd;
+    aligned_t sched_shepherd;
     pthread_mutex_t sched_shepherd_lock;
 
     /* this is how we manage FEB-type locks

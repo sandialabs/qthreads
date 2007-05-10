@@ -23,7 +23,6 @@
 extern "C"
 {
 #endif
-
 typedef struct qthread_s qthread_t;
 typedef unsigned char qthread_shepherd_id_t;	/* doubt we'll run more than 255 shepherds */
 
@@ -39,7 +38,7 @@ typedef int32_t saligned_t;
 #endif
 
 /* for convenient arguments to qthread_fork */
-typedef aligned_t (*qthread_f) (qthread_t * me, void *arg);
+typedef aligned_t(*qthread_f) (qthread_t * me, void *arg);
 
 #define NO_SHEPHERD ((qthread_shepherd_id_t)-1)
 
@@ -76,9 +75,9 @@ qthread_t *qthread_self(void);
  *     free'd). The qthread_fork_to* functions spawn the thread to a specific
  *     shepherd.
  */
-void qthread_fork(const qthread_f f, const void *arg, aligned_t *ret);
-void qthread_fork_to(const qthread_f f, const void *arg, aligned_t *ret,
-			   const qthread_shepherd_id_t shepherd);
+void qthread_fork(const qthread_f f, const void *arg, aligned_t * ret);
+void qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
+		     const qthread_shepherd_id_t shepherd);
 
 /* Using qthread_prepare()/qthread_schedule() and variants:
  *
@@ -88,8 +87,10 @@ void qthread_fork_to(const qthread_f f, const void *arg, aligned_t *ret,
  *     the finishing touches on the qthread_t structure and places it into an
  *     active queue.
  */
-qthread_t *qthread_prepare(const qthread_f f, const void *arg, aligned_t *ret);
-qthread_t *qthread_prepare_for(const qthread_f f, const void *arg, aligned_t *ret,
+qthread_t *qthread_prepare(const qthread_f f, const void *arg,
+			   aligned_t * ret);
+qthread_t *qthread_prepare_for(const qthread_f f, const void *arg,
+			       aligned_t * ret,
 			       const qthread_shepherd_id_t shepherd);
 
 void qthread_schedule(qthread_t * t);
@@ -230,7 +231,69 @@ int qthread_unlock(qthread_t * me, const void *a);
 /* this implements an atomic increment. It is done with architecture-specific
  * assembly and does NOT use FEB's or lock/unlock (except in the slow fallback
  * for unrecognized architectures)... but usually that's not the issue. */
-aligned_t qthread_incr(aligned_t * operand, int incr);
+static inline aligned_t qthread_incr(aligned_t * operand, const int incr)
+{/*{{{*/
+    aligned_t retval;
+
+#if __PPC__ || _ARCH_PPC || __powerpc__
+    asm volatile (
+	    "1:\tlwarx  %0,0,%1\n\t"
+	    "add    %0,%0,%2\n\t"
+	    "stwcx. %0,0,%1\n\t"
+	    "bne-   1b\n\t"	/* if it failed, try again */
+	    "isync"	/* make sure it wasn't all a dream */
+	    :"=&r"   (retval)
+	    :"r"     (operand), "r"(incr)
+	    :"cc", "memory");
+#elif __ia64 || __ia64__
+    int64_t res;
+
+    if (incr == 1) {
+	asm volatile (
+		"fetchadd8.rel %0=%1,1"
+		:"=r" (res)
+		:"m" (*operand));
+	retval = res;
+    } else {
+	int64_t old, new;
+	do {
+	    old = *operand;	       /* atomic, because operand is aligned */
+	    new = old + incr;
+	    asm volatile (
+		    "mov ar.ccv=%0;;"
+		    : /* no output */
+		    :"rO"    (old));
+	    /* separate so the compiler can insert its junk */
+	    asm volatile (
+		    "cmpxchg8.acq %0=[%1],%2,ar.ccv"
+		    :"=r" (res)
+		    :"r"     (operand), "r"(new)
+		    :"memory");
+	} while (res != old);	       /* if res==old, the calc is out of date */
+	retval = new;
+    }
+#elif __i486 || __i486__
+    asm volatile (
+	    "lock xaddl %1,%0"	/* atomically add incr to operand */
+	    : /* no output */
+	    :"m"     (*operand), "ir"(incr));
+#elif i386 || __i386 || __i386__
+    asm volatile (
+	    "lock addl %1,%0"
+	    :"=m" (*operand)
+	    :"ir"    (incr), "m"(*operand));
+#else
+#warning unrecognized architecture
+#warning falling back to safe but very slow increment implementation
+    qthread_t *me = qthread_self();
+
+    qthread_lock(me, operand);
+    *operand += incr;
+    res = *operand;
+    qthread_unlock(me, operand);
+#endif
+    return retval;
+}/*}}}*/
 
 #ifdef __cplusplus
 }

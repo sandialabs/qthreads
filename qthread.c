@@ -202,7 +202,7 @@ struct qthread_shepherd_s
     cp_mempool *stack_pool;
     cp_mempool *context_pool;
     /* round robin scheduler - can probably be smarter */
-    qthread_shepherd_id_t sched_shepherd;
+    aligned_t sched_shepherd;
     /* imported from futurelib */
     aligned_t threadcount;
     pthread_mutex_t threadcount_lock;
@@ -296,21 +296,10 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
 #define QTHREAD_SIGNAL(l) qassert(pthread_cond_signal(l), 0)
 #define QTHREAD_CONDWAIT(c, l) qassert(pthread_cond_wait(c, l), 0)
 
-#define ATOMIC_INC(r, x, l) do { \
-    QTHREAD_LOCK(l); \
-    r = *(x); \
-    *(x) += 1; \
-    QTHREAD_UNLOCK(l); \
-} while (0)
-
 #define ATOMIC_INC_MOD(r, x, l, m) do {\
     QTHREAD_LOCK(l); \
-    r = *(x); \
-    if (*(x) + 1 < (m)) { \
-	*(x) += 1; \
-    } else { \
-	*(x) = 0; \
-    } \
+    r = (x)++; \
+    x *= (x <= (m)); \
     QTHREAD_UNLOCK(l); \
 } while (0)
 
@@ -356,6 +345,104 @@ static inline unsigned qthread_internal_atomic_check(unsigned *x,
     return (r);
 }				       /*}}} */
 #endif
+
+static inline aligned_t qthread_internal_incr(aligned_t * operand, pthread_mutex_t * lock)
+{/*{{{*/
+    aligned_t retval;
+
+#if __PPC__ || _ARCH_PPC || __powerpc__
+    asm volatile (
+	    "1:\n\t"
+	    "lwarx  %0,0,%1\n\t"
+	    "addi   %0,%0,1\n\t"
+	    "stwcx. %0,0,%1\n\t"
+	    "bne-   1b\n\t"	/* if it failed, try again */
+	    "isync"	/* make sure it wasn't all a dream */
+	    :"=&r"   (retval)
+	    :"r"     (operand)
+	    :"cc", "memory");
+#elif __ia64 || __ia64__
+    int64_t res;
+
+    asm volatile (
+	    "fetchadd8.rel %0=%1,1"
+	    :"=r" (res)
+	    :"m" (*operand));
+    retval = res;
+#elif __i486 || __i486__
+    retval = 1;
+    asm volatile (
+	    ".section .smp_locks,\"a\"\n"
+	    "  .align 4\n"
+	    "  .long 661f\n"
+	    ".previous\n"
+	    "661:\n\tlock; " /* the above is stolen from the Linux kernel */
+	    "xaddl %0, %1"
+	    :"=r" (retval),
+	    :"m"(*operand),"0"(retval));
+#else
+#warning unrecognized architecture
+#warning falling back to safe but very slow increment implementation
+    pthread_mutex_lock(lock);
+    retval = *operand ++;
+    pthread_mutex_unlock(lock);
+#endif
+    return retval;
+}/*}}}*/
+
+static inline aligned_t qthread_internal_incr_mod(aligned_t * operand, const int max, pthread_mutex_t *lock)
+{/*{{{*/
+    aligned_t retval;
+
+#if __PPC__ || _ARCH_PPC || __powerpc__
+    register unsigned int incrd;
+    register unsigned int compd;
+    /* the minus in bne- means "this bne is unlikely to be taken" */
+    asm volatile (
+	    "1:\n\t"		    /* local label */
+	    "lwarx  %0,0,%1\n\t"    /* load operand */
+	    "addi   %3,%0,1\n\t"    /* increment it into incrd */
+	    "cmplw  7,%3,%2\n\t"    /* compare incrd to the max */
+	    "mfcr   %4\n\t"	    /* move the result into compd */
+	    "rlwinm %4,%4,29,1\n\t" /* isolate the result bit */
+	    "mullw  %3,%4,%3\n\t"   /* incrd *= compd */
+	    "stwcx. %3,0,%1\n\t"    /* *operand = incrd */
+	    "bne-   1b\n\t"	    /* if it failed, go to label 1 back */
+	    "isync"	/* make sure it wasn't all a dream */
+	    :"=&r"   (retval)
+	    :"r"     (operand), "r"(max), "r"(incrd), "r"(compd)
+	    :"cc", "memory");
+#elif __ia64 || __ia64__
+    int64_t res;
+    int64_t old, new;
+    do {
+	old = *operand;	       /* atomic, because operand is aligned */
+	new = old + 1;
+	if (new > max) {
+	    new = 0;
+	}
+	asm volatile (
+		"mov ar.ccv=%0;;"
+		: /* no output */
+		:"rO"    (old));
+	/* separate so the compiler can insert its junk */
+	asm volatile (
+		"cmpxchg8.acq %0=[%1],%2,ar.ccv"
+		:"=r" (res)
+		:"r"     (operand), "r"(new)
+		:"memory");
+    } while (res != old);	       /* if res==old, the calc is out of date */
+    retval = old;
+#else
+#warning unsupported architecture
+#warning falling back to safe but slow increment-mod implementation
+    pthread_mutex_lock(lock);
+    res = *operand ++;
+    *operand *= (*operand < max);
+    qthread_unlock(me, operand);
+#endif
+    return retval;
+}/*}}}*/
 
 /*#define QTHREAD_DEBUG 1*/
 /* for debugging */
@@ -756,7 +843,7 @@ static inline qthread_t *qthread_thread_bare(const qthread_f f,
     }
 #ifdef QTHREAD_NONLAZY_THREADIDS
     /* give the thread an ID number */
-    ATOMIC_INC(t->thread_id, &qlib->max_thread_id, &qlib->max_thread_id_lock);
+    t->thread_id = qthread_internal_incr(&(qlib->max_thread_id), &qlib->max_thread_id_lock);
 #else
     t->thread_id = (unsigned int)-1;
 #endif
@@ -847,7 +934,7 @@ static inline qthread_t *qthread_thread_new(const qthread_f f,
 
 #ifdef QTHREAD_NONLAZY_THREADIDS
     /* give the thread an ID number */
-    ATOMIC_INC(t->thread_id, &qlib->max_thread_id, &qlib->max_thread_id_lock);
+    t->thread_id = qthread_internal_incr(&(qlib->max_thread_id), &qlib->max_thread_id_lock);
 #else
     t->thread_id = (unsigned int)-1;
 #endif
@@ -1001,7 +1088,7 @@ static void qthread_wrapper(void *arg)
     qthread_debug("qthread_wrapper(): executing f=%p arg=%p.\n", t->f,
 		  t->arg);
 #ifdef QTHREAD_COUNT_THREADS
-    ATOMIC_INC(threadcount, &threadcount, &threadcount_lock);
+    qthread_internal_incr(&threadcount, &threadcount_lock);
     qassert(pthread_mutex_lock(&concurrentthreads_lock), 0);
     concurrentthreads++;
     if (concurrentthreads > maxconcurrentthreads)
@@ -1138,8 +1225,25 @@ void qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
 	    myshep->sched_shepherd = 0;
 	}
     } else {
-	ATOMIC_INC_MOD(shep, &qlib->sched_shepherd, &qlib->sched_shepherd_lock,
-		       qlib->nshepherds);
+	shep = qthread_internal_incr_mod(&qlib->sched_shepherd,
+					 qlib->nshepherds,
+					 &qlib->sched_shepherd_lock);
+	/*register unsigned int incrd;
+	register unsigned int compresult;
+	asm volatile (
+		"loop: \t"
+		"lwarx	%0,0,%1\n\t"	// load sched_shepherd
+		"addi	%3,%0,1\n\t"	// increment it into incrd
+		"cmplw	7,%3,%2\n\t"	// compare incrd to the max
+		"mfcr	%4\n\t"		// move the result into compresult
+		"rlwinm	%4,%4,29,1\n\t"	// isolate the result bit
+		"mullw	%3,%4,%3\n\t"	// multiply incrd by compresult
+		"stwcx. %3,0,%1\n\t"	// store it back
+		"bne-	loop\n\t"	// loop back if it failed
+		"isync"			// make sure it commits
+		:"=&r"(shep)
+		:"r"(&qlib->sched_shepherd), "r"(qlib->nshepherds),
+		 "r"(incrd), "r"(compresult));*/
     }
     t = qthread_thread_new(f, arg, ret, shep);
 
@@ -1230,8 +1334,7 @@ qthread_t *qthread_prepare(const qthread_f f, const void *arg,
 	    myshep->sched_shepherd = 0;
 	}
     } else {
-	ATOMIC_INC_MOD(shep, &qlib->sched_shepherd, &qlib->sched_shepherd_lock,
-		       qlib->nshepherds);
+	shep = qthread_internal_incr_mod(&qlib->sched_shepherd, qlib->nshepherds, &qlib->sched_shepherd_lock);
     }
 
     t = qthread_thread_bare(f, arg, ret, shep);
@@ -2039,8 +2142,7 @@ unsigned qthread_id(const qthread_t * t)
     if (t->thread_id != (unsigned int)-1) {
 	return t->thread_id;
     }
-    ATOMIC_INC(((qthread_t *) t)->thread_id, &qlib->max_thread_id,
-	       &qlib->max_thread_id_lock);
+    ((qthread_t *) t)->thread_id = qthread_internal_incr(&(qlib->max_thread_id), &qlib->max_thread_id_lock);
     return t->thread_id;
 #endif
 }				       /*}}} */
@@ -2076,69 +2178,3 @@ void qthread_assertnotfuture(qthread_t * t)
 {				       /*{{{ */
     t->flags &= ~QTHREAD_FUTURE;
 }				       /*}}} */
-
-aligned_t qthread_incr(aligned_t * operand, int incr)
-{
-    aligned_t retval;
-#if __PPC__ || _ARCH_PPC || __powerpc__
-    asm volatile (
-	    "loop:\n\t" /* repeat until this succeeds */
-	    "lwarx  %0,0,%1\n\t"
-	    "add    %0,%0,%2\n\t"
-	    "stwcx. %0,0,%1\n\t"
-	    "bne-   loop\n\t"	/* if it failed, try again */
-	    "isync" /* make sure it wasn't all a dream */
-	    : "=&r" (retval)
-	    : "r" (operand), "r" (incr)
-	    : "cc", "memory");
-#elif __ia64 || __ia64__
-    int64_t res;
-    if (incr == 1) {
-	asm volatile (
-		"fetchadd8.rel %0=%1,%2"
-		: "=r" (res)
-		: "m" (*operand), "i" (1)
-		);
-	retval = res;
-    } else {
-	int64_t old, new;
-	do {
-	    old = *operand; /* atomic, because operand is aligned */
-	    new = old + incr;
-	    asm volatile (
-		    "mov ar.ccv=%0;;"
-		    : /* no output */
-		    : "rO" (old)
-		    );
-	    /* separate so the compiler can insert its junk */
-	    asm volatile (
-		    "cmpxchg8.acq %0=[%1],%2,ar.ccv"
-		    : "=r" (res)
-		    : "r" (operand), "r" (new)
-		    : "memory"
-		    );
-	} while (res != old); /* if res==old, the calc is out of date */
-	retval = new;
-    }
-#elif __i486 || __i486__
-    asm volatile (
-	    "lock xaddl %1,%0" /* atomically add incr to operand */
-	    : /* no output */
-	    : "m" (*operand), "ir" (incr)
-	    );
-#elif i386 || __i386 || __i386__
-    asm volatile (
-	    "lock addl %1,%0"
-	    : "=m" (*operand)
-	    : "ir" (incr), "m" (*operand)
-	    );
-#else
-#warning falling back to save but very slow increments
-    qthread_t *me = qthread_self();
-    qthread_lock(me, operand);
-    *operand += incr;
-    res = *operand;
-    qthread_unlock(me, operand);
-#endif
-    return retval;
-}
