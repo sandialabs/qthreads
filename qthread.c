@@ -296,56 +296,6 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
 #define QTHREAD_SIGNAL(l) qassert(pthread_cond_signal(l), 0)
 #define QTHREAD_CONDWAIT(c, l) qassert(pthread_cond_wait(c, l), 0)
 
-#define ATOMIC_INC_MOD(r, x, l, m) do {\
-    QTHREAD_LOCK(l); \
-    r = (x)++; \
-    x *= (x <= (m)); \
-    QTHREAD_UNLOCK(l); \
-} while (0)
-
-#if 0				       /* currently not used */
-static inline unsigned qthread_internal_atomic_inc(unsigned *x,
-						   pthread_mutex_t * lock)
-{				       /*{{{ */
-    unsigned r;
-
-    QTHREAD_LOCK(lock);
-    r = *x;
-    *x++;
-    QTHREAD_UNLOCK(lock);
-    return (r);
-}				       /*}}} */
-
-static inline unsigned qthread_internal_atomic_inc_mod(unsigned *x,
-						       pthread_mutex_t * lock,
-						       int mod)
-{				       /*{{{ */
-    unsigned r;
-
-    QTHREAD_LOCK(lock);
-    r = *x;
-    if (*x + 1 < mod) {
-	*x++;
-    } else {
-	*x = 0;
-    }
-    QTHREAD_UNLOCK(lock);
-    return (r);
-}				       /*}}} */
-
-static inline unsigned qthread_internal_atomic_check(unsigned *x,
-						     pthread_mutex_t * lock)
-{				       /*{{{ */
-    unsigned r;
-
-    QTHREAD_LOCK(lock);
-    r = *x;
-    QTHREAD_UNLOCK(lock);
-
-    return (r);
-}				       /*}}} */
-#endif
-
 static inline aligned_t qthread_internal_incr(aligned_t * operand, pthread_mutex_t * lock)
 {/*{{{*/
     aligned_t retval;
