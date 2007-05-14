@@ -11,7 +11,9 @@
 #include <sys/stat.h>		       /* for open() */
 #include <fcntl.h>		       /* for open() */
 #include <unistd.h>		       /* for fstat() */
+#ifdef HAVE_INTTYPES_H
 #include <inttypes.h>		       /* for funky print statements */
+#endif
 #include <math.h>		       /* for ceil() and floor() */
 #include <string.h>		       /* for memset() */
 #include <errno.h>
@@ -39,10 +41,10 @@ typedef struct smallblock_s
 {
     struct smallblock_s *next;
     pthread_mutex_t lock __attribute__ ((packed));
-    unsigned char bitmap[SMALLBLOCK_BITMAP_LEN] __attribute__ ((packed));
+    unsigned char bitmap[SMALLBLOCK_BITMAP_LEN] /*__attribute__ ((packed))*/;
     char pad[128 - SMALLBLOCK_BITMAP_LEN - sizeof(void *) -
-	     sizeof(pthread_mutex_t)] __attribute__ ((packed));
-    smallslice_t slices[SMALLBLOCK_SLICE_COUNT] __attribute__ ((packed));
+	     sizeof(pthread_mutex_t)] /*__attribute__ ((packed))*/;
+    smallslice_t slices[SMALLBLOCK_SLICE_COUNT] /*__attribute__ ((packed))*/;
 }
 smallblock_t;
 
@@ -52,14 +54,14 @@ typedef struct bigblock_header_s
 {
     struct bigblock_header_s *next;
     pthread_mutex_t lock __attribute__ ((packed));
-    unsigned char bitmap[BIGBLOCK_BITMAP_LEN] __attribute__ ((packed));
+    unsigned char bitmap[BIGBLOCK_BITMAP_LEN] /*__attribute__ ((packed))*/;
     char pad[128 - BIGBLOCK_BITMAP_LEN - sizeof(void *) -
-	     sizeof(pthread_mutex_t)] __attribute__ ((packed));
+	     sizeof(pthread_mutex_t)] /*__attribute__ ((packed))*/;
     struct
     {
 	void *entry __attribute__ ((packed));
 	unsigned int block_count __attribute__ ((packed));
-    } entries[BIGBLOCK_ENTRY_COUNT] __attribute__ ((packed));
+    } entries[BIGBLOCK_ENTRY_COUNT] /*__attribute__ ((packed))*/;
 } bigblock_header_t;
 
 struct dynmapinfo_s
@@ -96,7 +98,7 @@ static struct dynmapinfo_s *dynmmaps = NULL;
 # define fstat fstat64
 # define lseek lseek64
 typedef struct stat64 statstruct_t;
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__CYGWIN__)
 typedef struct stat statstruct_t;
 #endif
 
@@ -579,7 +581,7 @@ static inline size_t qalloc_findmark_bits(unsigned char *array, size_t a_len,
 		}
 	    }
 	}
-	return (size_t) - 1;	       /* all FF's, no matter what size architecture */
+	return (size_t) -1;	       /* all FF's, no matter what size architecture */
       stagetwo:
 	byte++;
 	/* step 2: make sure we have enough blank bytes next */
@@ -593,7 +595,7 @@ static inline size_t qalloc_findmark_bits(unsigned char *array, size_t a_len,
 		goto stageone;
 	    }
 	}
-	return (size_t) - 1;	       /* all FF's, no matter what size architecture */
+	return (size_t) -1;	       /* all FF's, no matter what size architecture */
       stagethree:
 	byte++;
 	/* step 3: make sure the last byte has enough blanks */
