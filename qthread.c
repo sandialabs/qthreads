@@ -311,7 +311,8 @@ static inline aligned_t qthread_internal_incr(aligned_t * operand, pthread_mutex
 	    :"=&r"   (retval)
 	    :"r"     (operand)
 	    :"cc", "memory");
-#elif __ia64 || __ia64__
+#elif ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
+# ifdef __ILP64__
     int64_t res;
 
     asm volatile (
@@ -319,7 +320,16 @@ static inline aligned_t qthread_internal_incr(aligned_t * operand, pthread_mutex
 	    :"=r" (res)
 	    :"m" (*operand));
     retval = res;
-#elif __i486 || __i486__
+# else
+    int32_t res;
+
+    asm volatile (
+	    "fetchadd4.rel %0=%1,1"
+	    :"=r" (res)
+	    :"m" (*operand));
+    retval = res;
+# endif
+#elif QTHREAD_XEON || __i486 || __i486__
     retval = 1;
     asm volatile (
 	    ".section .smp_locks,\"a\"\n"
@@ -328,7 +338,7 @@ static inline aligned_t qthread_internal_incr(aligned_t * operand, pthread_mutex
 	    ".previous\n"
 	    "661:\n\tlock; " /* the above is stolen from the Linux kernel */
 	    "xaddl %0, %1"
-	    :"=r" (retval),
+	    :"=r" (retval)
 	    :"m"(*operand),"0"(retval));
 #else
 #warning unrecognized architecture
@@ -362,15 +372,13 @@ static inline aligned_t qthread_internal_incr_mod(aligned_t * operand, const int
 	    :"=&r"   (retval)
 	    :"r"     (operand), "r"(max), "r"(incrd), "r"(compd)
 	    :"cc", "memory");
-#elif __ia64 || __ia64__
-    int64_t res;
-    int64_t old, new;
+#elif ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
+# ifdef __ILP64__
+    int64_t res, old, new;
     do {
 	old = *operand;	       /* atomic, because operand is aligned */
 	new = old + 1;
-	if (new > max) {
-	    new = 0;
-	}
+	new *= (new < max);
 	asm volatile (
 		"mov ar.ccv=%0;;"
 		: /* no output */
@@ -381,15 +389,48 @@ static inline aligned_t qthread_internal_incr_mod(aligned_t * operand, const int
 		:"=r" (res)
 		:"r"     (operand), "r"(new)
 		:"memory");
-    } while (res != old);	       /* if res==old, the calc is out of date */
+    } while (res != old);	       /* if res==old, new is out of date */
     retval = old;
+# else /* 32-bit integers */
+    int32_t res, old, new;
+    do {
+	old = *operand;	       /* atomic, because operand is aligned */
+	new = old + 1;
+	new *= (new < max);
+	asm volatile (
+		"mov ar.ccv=%0;;"
+		: /* no output */
+		:"rO"    (old));
+	/* separate so the compiler can insert its junk */
+	asm volatile (
+		"cmpxchg4.acq %0=[%1],%2,ar.ccv"
+		:"=r" (res)
+		:"r"     (operand), "r"(new)
+		:"memory");
+    } while (res != old);	       /* if res==old, new is out of date */
+    retval = old;
+# endif
+#elif QTHREAD_XEON || __i486 || __i486__
+    unsigned long prev;
+    unsigned int old, new;
+    do {
+	old = *operand;
+	new = old + 1;
+	new *= (new < max);
+	asm volatile (
+		"lock\n\t"
+		"cmpxchgl %1, %2"
+		: "=a"(retval)
+		: "r"(new), "m"(*operand), "0" (old)
+		: "memory");
+    } while (retval != old);
 #else
 #warning unsupported architecture
 #warning falling back to safe but slow increment-mod implementation
     pthread_mutex_lock(lock);
-    res = *operand ++;
+    retval = *operand ++;
     *operand *= (*operand < max);
-    qthread_unlock(me, operand);
+    pthread_mutex_unlock(lock);
 #endif
     return retval;
 }/*}}}*/
@@ -1178,22 +1219,6 @@ void qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
 	shep = qthread_internal_incr_mod(&qlib->sched_shepherd,
 					 qlib->nshepherds,
 					 &qlib->sched_shepherd_lock);
-	/*register unsigned int incrd;
-	register unsigned int compresult;
-	asm volatile (
-		"loop: \t"
-		"lwarx	%0,0,%1\n\t"	// load sched_shepherd
-		"addi	%3,%0,1\n\t"	// increment it into incrd
-		"cmplw	7,%3,%2\n\t"	// compare incrd to the max
-		"mfcr	%4\n\t"		// move the result into compresult
-		"rlwinm	%4,%4,29,1\n\t"	// isolate the result bit
-		"mullw	%3,%4,%3\n\t"	// multiply incrd by compresult
-		"stwcx. %3,0,%1\n\t"	// store it back
-		"bne-	loop\n\t"	// loop back if it failed
-		"isync"			// make sure it commits
-		:"=&r"(shep)
-		:"r"(&qlib->sched_shepherd), "r"(qlib->nshepherds),
-		 "r"(incrd), "r"(compresult));*/
     }
     t = qthread_thread_new(f, arg, ret, shep);
 
