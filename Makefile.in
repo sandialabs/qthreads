@@ -287,7 +287,7 @@ man_MANS = man3/qthread_empty.3 \
 		   man3/qalloc_statfree.3 \
 		   man3/qalloc_statmalloc.3 \
 		   man3/future_acquire.3 \
-		   man3/future_create.3 \
+		   man3/future_fork.3 \
 		   man3/future_exit.3 \
 		   man3/future_init.3 \
 		   man3/future_join_all.3 \
