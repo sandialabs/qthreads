@@ -27,12 +27,6 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
-/* Define to 1 if you have the `cprops' library (-lcprops). */
-#undef HAVE_LIBCPROPS
-
-/* Define to 1 if you have the `dl' library (-ldl). */
-#undef HAVE_LIBDL
-
 /* Define to 1 if you have the `pthread' library (-lpthread). */
 #undef HAVE_LIBPTHREAD
 
@@ -151,6 +145,9 @@
 
 /* use 2k stacks for every thread */
 #undef QTHREAD_REALLY_SMALL_STACKS
+
+/* this is a Xeon CPU */
+#undef QTHREAD_XEON
 
 /* The size of `char', as computed by sizeof. */
 #undef SIZEOF_CHAR
