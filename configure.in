@@ -2,8 +2,8 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.50)
-AC_INIT(qthread, 0.5, rcmurph@sandia.gov)
-AM_INIT_AUTOMAKE(qthread, 0.5)
+AC_INIT(qthread, 0.8, rcmurph@sandia.gov)
+AM_INIT_AUTOMAKE(qthread, 0.8)
 AC_CONFIG_SRCDIR([main.c])
 AM_CONFIG_HEADER([config.h])
 
@@ -32,13 +32,25 @@ AC_PROG_MAKE_SET
 AC_PROG_LIBTOOL
 AC_PROG_RANLIB
 
+if test "$CC" != "xlc" ; then
+# Find out if GCC understands -fno-gcse
+AC_MSG_CHECKING([if $CC understands -fno-gcse])
+CFLAGS_1="$CFLAGS"
+CFLAGS="$CFLAGS -fno-gcse"
+AC_TRY_COMPILE(,,ac_nogcse=yes,ac_nogcse=no)
+if test "$ac_nogcse" == "no" ; then
+	CFLAGS="$CFLAGS_1"
+fi
+AC_MSG_RESULT($ac_nogcse)
+fi
+
 QTHREAD_EXTRA_OBJS=""
 
 # Checks for libraries.
-# FIXME: Replace `main' with a function in `-ldl':
-AC_CHECK_LIB([dl], [main])
 AC_CHECK_LIB([pthread], [pthread_create], , AC_MSG_ERROR([Need pthreads]))
-AC_CHECK_LIB([cprops], [cp_hashtable_create], , AC_MSG_ERROR([Need libcprops 0.1.6 or better. See http://cprops.sf.net/]))
+AC_SEARCH_LIBS([cp_hashtable_create], [cprops "cprops -ldl"], ,
+	       AC_MSG_ERROR([Need libcprops 0.1.6 or better. See http://cprops.sf.net/]))
+AC_SEARCH_LIBS([ceil],[m], ,AC_MSG_ERROR(["Can't seem to find ceil()"]))
 
 # Checks for header files.
 AC_HEADER_STDC
@@ -81,6 +93,12 @@ else
 fi
 
 AC_SUBST(QTHREAD_EXTRA_OBJS)
+
+AC_ARG_WITH(xeon,AC_HELP_STRING(--with-xeon,["enable Xeon-specific optimizations (since Xeons do not have the 486 #defines)"]),
+	    ac_cv_xeon=$withval, ac_cv_xeon=no)
+if test "$ac_cv_xeon" = "yes" ; then
+    AC_DEFINE(QTHREAD_XEON, 1, [this is a Xeon CPU])
+fi
 
 AC_ARG_WITH(aligncheck,AC_HELP_STRING(--without-aligncheck,check the alignment of synchronization addresses),
 	    ac_cv_aligncheck=$withval, ac_cv_aligncheck=yes)
