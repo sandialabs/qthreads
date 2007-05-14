@@ -4,7 +4,7 @@
 #include <qthread/qthread.h>
 
 static int target;
-static int x = 0;
+static aligned_t x = 0;
 static int id = 0;
 
 pthread_mutex_t alldone = PTHREAD_MUTEX_INITIALIZER;
