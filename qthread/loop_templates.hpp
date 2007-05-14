@@ -181,7 +181,7 @@ public:
 	/* This figures out how to do iterations... which doesn't really matter
 	 * if you are doing it by hand */
 	int count = base_count + ( ((round_total + i) < total) ? 1 : 0 );
-	future_create (me, run_ft<Iter>, ITER(start,steptd,count), ft+i);
+	future_fork (run_ft<Iter>, ITER(start,steptd,count), ft+i);
 	/* more iteration assignment stuff */
 	start += step;
       }
