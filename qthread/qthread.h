@@ -30,11 +30,11 @@ typedef unsigned char qthread_shepherd_id_t;	/* doubt we'll run more than 255 sh
  * isn't too much of an inconvenience. On 64-bit architectures, it's a pain in
  * the BUT! This is here to try and help a little bit. */
 #ifdef __ILP64__
-typedef uint64_t aligned_t;
-typedef int64_t saligned_t;
+typedef uint64_t __attribute__((aligned(8))) aligned_t;
+typedef  int64_t __attribute__((aligned(8))) saligned_t;
 #else
-typedef uint32_t aligned_t;
-typedef int32_t saligned_t;
+typedef uint32_t __attribute__((aligned(4))) aligned_t;
+typedef  int32_t __attribute__((aligned(4))) saligned_t;
 #endif
 
 /* for convenient arguments to qthread_fork */
@@ -255,10 +255,10 @@ static inline aligned_t qthread_incr(aligned_t * operand, const int incr)
 		:"m" (*operand));
 	retval = res;
     } else {
-	int64_t old, new;
+	int64_t old, newval;
 	do {
 	    old = *operand;	       /* atomic, because operand is aligned */
-	    new = old + incr;
+	    newval = old + incr;
 	    asm volatile (
 		    "mov ar.ccv=%0;;"
 		    : /* no output */
@@ -267,10 +267,10 @@ static inline aligned_t qthread_incr(aligned_t * operand, const int incr)
 	    asm volatile (
 		    "cmpxchg8.acq %0=[%1],%2,ar.ccv"
 		    :"=r" (res)
-		    :"r"     (operand), "r"(new)
+		    :"r" (operand), "r"(newval)
 		    :"memory");
 	} while (res != old);	       /* if res==old, the calc is out of date */
-	retval = new;
+	retval = newval;
     }
 #elif __i486 || __i486__
     asm volatile (
@@ -289,7 +289,7 @@ static inline aligned_t qthread_incr(aligned_t * operand, const int incr)
 
     qthread_lock(me, operand);
     *operand += incr;
-    res = *operand;
+    retval = *operand;
     qthread_unlock(me, operand);
 #endif
     return retval;
