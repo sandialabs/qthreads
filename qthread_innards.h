@@ -13,7 +13,7 @@ typedef struct qlib_s
     unsigned max_stack_size;
 
     /* assigns a unique thread_id mostly for debugging! */
-    unsigned max_thread_id;
+    aligned_t max_thread_id;
     pthread_mutex_t max_thread_id_lock;
 
     /* round robin scheduler - can probably be smarter */
