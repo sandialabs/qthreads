@@ -20,10 +20,12 @@ int main()
 {
     int i;
     aligned_t rets[30];
+
+    qthread_init(7);
+
     qthread_incr(&master, 1);
     assert(master == 1);
     master = 0;
-    qthread_init(7);
     for (i=0; i<30; i++) {
 	qthread_fork(incr, NULL, &(rets[i]));
     }
@@ -45,4 +47,8 @@ int main()
 	printf("master is %lu rather than 150\n", master);
     }
     assert (master == 150);
+
+    qthread_finalize();
+
+    return 0;
 }
