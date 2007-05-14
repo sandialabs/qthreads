@@ -134,7 +134,7 @@ aligned_t qmain(qthread_t * me, void *junk)
 	if (d_array[i] > d_array[i + 1]) {
 	    /*
 	     * size_t j;
-	     * 
+	     *
 	     * for (j = i-20; j < i+20; j++) {
 	     * if (j % 8 == 0)
 	     * printf("\n");
@@ -142,7 +142,7 @@ aligned_t qmain(qthread_t * me, void *junk)
 	     * }
 	     * printf("\n");
 	     */
-	    printf("out of order at %i: %f > %f\n", i, d_array[i],
+	    printf("out of order at %lu: %f > %f\n", (unsigned long)i, d_array[i],
 		   d_array[i + 1]);
 	    abort();
 	}

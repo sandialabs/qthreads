@@ -17,6 +17,8 @@ aligned_t consumer(qthread_t * t, void *arg)
     qthread_unlock(t, &id);
 
     qthread_readFE(t, &readout, &x);
+
+    return 0;
 }
 
 aligned_t producer(qthread_t * t, void *arg)
@@ -29,6 +31,8 @@ aligned_t producer(qthread_t * t, void *arg)
     qthread_unlock(t, &id);
 
     qthread_writeEF(t, &x, &data);
+
+    return 0;
 }
 
 int main(int argc, char *argv[])
