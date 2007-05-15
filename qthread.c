@@ -190,7 +190,7 @@ struct qthread_queue_s
 struct qthread_shepherd_s
 {
     pthread_t shepherd;
-    qthread_shepherd_id_t shepherd_id; /* whoami */
+    qthread_shepherd_id_t shepherd_id;	/* whoami */
     qthread_t *current;
     qthread_queue_t *ready;
     cp_mempool *qthread_pool;
@@ -296,144 +296,132 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
 #define QTHREAD_SIGNAL(l) qassert(pthread_cond_signal(l), 0)
 #define QTHREAD_CONDWAIT(c, l) qassert(pthread_cond_wait(c, l), 0)
 
-static inline aligned_t qthread_internal_incr(aligned_t * operand, pthread_mutex_t * lock)
-{/*{{{*/
+static inline aligned_t qthread_internal_incr(aligned_t * operand,
+					      pthread_mutex_t * lock)
+{				       /*{{{ */
     aligned_t retval;
 
 #if __PPC__ || _ARCH_PPC || __powerpc__
-    asm volatile (
-	    "1:\n\t"
-	    "lwarx  %0,0,%1\n\t"
-	    "addi   %0,%0,1\n\t"
-	    "stwcx. %0,0,%1\n\t"
-	    "bne-   1b\n\t"	/* if it failed, try again */
-	    "isync"	/* make sure it wasn't all a dream */
-	    :"=&r"   (retval)
-	    :"r"     (operand)
-	    :"cc", "memory");
+    asm volatile ("1:\n\t"	/* the tag */
+		  "lwarx  %0,0,%1\n\t"	/* reserve operand into retval */
+		  "addi   %0,%0,1\n\t"	/* increment */
+		  "stwcx. %0,0,%1\n\t"	/* un-reserve opernd */
+		  "bne-   1b\n\t"	/* if it failed, try again */
+		  "isync"	/* make sure it wasn't all a dream */
+		  :"=&r"   (retval)
+		  :"r"     (operand)
+		  :"cc", "memory");
 #elif ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
 # ifdef __ILP64__
     int64_t res;
 
-    asm volatile (
-	    "fetchadd8.rel %0=%1,1"
-	    :"=r" (res)
-	    :"m" (*operand));
+    asm volatile ("fetchadd8.rel %0=%1,1":"=r" (res)
+		  :"m"     (*operand));
+
     retval = res;
 # else
     int32_t res;
 
-    asm volatile (
-	    "fetchadd4.rel %0=%1,1"
-	    :"=r" (res)
-	    :"m" (*operand));
+    asm volatile ("fetchadd4.rel %0=%1,1":"=r" (res)
+		  :"m"     (*operand));
+
     retval = res;
 # endif
 #elif QTHREAD_XEON || __i486 || __i486__
     retval = 1;
-    asm volatile (
-	    ".section .smp_locks,\"a\"\n"
-	    "  .align 4\n"
-	    "  .long 661f\n"
-	    ".previous\n"
-	    "661:\n\tlock; " /* the above is stolen from the Linux kernel */
-	    "xaddl %0, %1"
-	    :"=r" (retval)
-	    :"m"(*operand),"0"(retval));
+    asm volatile (".section .smp_locks,\"a\"\n" "  .align 4\n" "  .long 661f\n" ".previous\n" "661:\n\tlock; "	/* this is stolen from the Linux kernel */
+		  "xaddl %0, %1":"=r" (retval)
+		  :"m"     (*operand), "0"(retval));
 #else
 #warning unrecognized architecture
 #warning falling back to safe but very slow increment implementation
     pthread_mutex_lock(lock);
-    retval = *operand ++;
+    retval = (*operand)++;
     pthread_mutex_unlock(lock);
 #endif
     return retval;
-}/*}}}*/
+}				       /*}}} */
 
-static inline aligned_t qthread_internal_incr_mod(aligned_t * operand, const int max, pthread_mutex_t *lock)
-{/*{{{*/
+static inline aligned_t qthread_internal_incr_mod(aligned_t * operand,
+						  const int max,
+						  pthread_mutex_t * lock)
+{				       /*{{{ */
     aligned_t retval;
 
 #if __PPC__ || _ARCH_PPC || __powerpc__
     register unsigned int incrd;
     register unsigned int compd;
+
     /* the minus in bne- means "this bne is unlikely to be taken" */
-    asm volatile (
-	    "1:\n\t"		    /* local label */
-	    "lwarx  %0,0,%1\n\t"    /* load operand */
-	    "addi   %3,%0,1\n\t"    /* increment it into incrd */
-	    "cmplw  7,%3,%2\n\t"    /* compare incrd to the max */
-	    "mfcr   %4\n\t"	    /* move the result into compd */
-	    "rlwinm %4,%4,29,1\n\t" /* isolate the result bit */
-	    "mullw  %3,%4,%3\n\t"   /* incrd *= compd */
-	    "stwcx. %3,0,%1\n\t"    /* *operand = incrd */
-	    "bne-   1b\n\t"	    /* if it failed, go to label 1 back */
-	    "isync"	/* make sure it wasn't all a dream */
-	    :"=&r"   (retval)
-	    :"r"     (operand), "r"(max), "r"(incrd), "r"(compd)
-	    :"cc", "memory");
+    asm volatile ("1:\n\t"	/* local label */
+		  "lwarx  %0,0,%1\n\t"	/* load operand */
+		  "addi   %3,%0,1\n\t"	/* increment it into incrd */
+		  "cmplw  7,%3,%2\n\t"	/* compare incrd to the max */
+		  "mfcr   %4\n\t"	/* move the result into compd */
+		  "rlwinm %4,%4,29,1\n\t"	/* isolate the result bit */
+		  "mullw  %3,%4,%3\n\t"	/* incrd *= compd */
+		  "stwcx. %3,0,%1\n\t"	/* *operand = incrd */
+		  "bne-   1b\n\t"	/* if it failed, go to label 1 back */
+		  "isync"	/* make sure it wasn't all a dream */
+		  :"=&r"   (retval)
+		  :"r"     (operand), "r"(max), "r"(incrd), "r"(compd)
+		  :"cc", "memory");
 #elif ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
 # ifdef __ILP64__
     int64_t res, old, new;
+
     do {
-	old = *operand;	       /* atomic, because operand is aligned */
+	old = *operand;		       /* atomic, because operand is aligned */
 	new = old + 1;
 	new *= (new < max);
-	asm volatile (
-		"mov ar.ccv=%0;;"
-		: /* no output */
-		:"rO"    (old));
+	asm volatile ("mov ar.ccv=%0;;":	/* no output */
+		      :"rO"    (old));
+
 	/* separate so the compiler can insert its junk */
-	asm volatile (
-		"cmpxchg8.acq %0=[%1],%2,ar.ccv"
-		:"=r" (res)
-		:"r"     (operand), "r"(new)
-		:"memory");
+	asm volatile ("cmpxchg8.acq %0=[%1],%2,ar.ccv":"=r" (res)
+		      :"r"     (operand), "r"(new)
+		      :"memory");
     } while (res != old);	       /* if res==old, new is out of date */
     retval = old;
 # else /* 32-bit integers */
     int32_t res, old, new;
+
     do {
-	old = *operand;	       /* atomic, because operand is aligned */
+	old = *operand;		       /* atomic, because operand is aligned */
 	new = old + 1;
 	new *= (new < max);
-	asm volatile (
-		"mov ar.ccv=%0;;"
-		: /* no output */
-		:"rO"    (old));
+	asm volatile ("mov ar.ccv=%0;;":	/* no output */
+		      :"rO"    (old));
+
 	/* separate so the compiler can insert its junk */
-	asm volatile (
-		"cmpxchg4.acq %0=[%1],%2,ar.ccv"
-		:"=r" (res)
-		:"r"     (operand), "r"(new)
-		:"memory");
+	asm volatile ("cmpxchg4.acq %0=[%1],%2,ar.ccv":"=r" (res)
+		      :"r"     (operand), "r"(new)
+		      :"memory");
     } while (res != old);	       /* if res==old, new is out of date */
     retval = old;
 # endif
 #elif QTHREAD_XEON || __i486 || __i486__
     unsigned long prev;
     unsigned int old, new;
+
     do {
 	old = *operand;
 	new = old + 1;
 	new *= (new < max);
-	asm volatile (
-		"lock\n\t"
-		"cmpxchgl %1, %2"
-		: "=a"(retval)
-		: "r"(new), "m"(*operand), "0" (old)
-		: "memory");
+	asm volatile ("lock\n\t" "cmpxchgl %1, %2":"=a" (retval)
+		      :"r"     (new), "m"(*operand), "0"(old)
+		      :"memory");
     } while (retval != old);
 #else
 #warning unsupported architecture
 #warning falling back to safe but slow increment-mod implementation
     pthread_mutex_lock(lock);
-    retval = *operand ++;
+    retval = (*operand)++;
     *operand *= (*operand < max);
     pthread_mutex_unlock(lock);
 #endif
     return retval;
-}/*}}}*/
+}				       /*}}} */
 
 /*#define QTHREAD_DEBUG 1*/
 /* for debugging */
@@ -572,16 +560,16 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
     /* this is synchronized with read/write locks by default */
     for (i = 0; i < 32; i++) {
 	if ((qlib->locks[i] =
-		    cp_hashtable_create(10000, cp_hash_addr,
-			cp_hash_compare_addr)) == NULL) {
+	     cp_hashtable_create(10000, cp_hash_addr,
+				 cp_hash_compare_addr)) == NULL) {
 	    perror("qthread_init()");
 	    abort();
 	}
 	cp_hashtable_set_min_fill_factor(qlib->locks[i], 0);
 	if ((qlib->FEBs[i] =
-		    cp_hashtable_create_by_option(COLLECTION_MODE_DEEP, 10000,
-			cp_hash_addr, cp_hash_compare_addr,
-			NULL, NULL, NULL, NULL)) == NULL) {
+	     cp_hashtable_create_by_option(COLLECTION_MODE_DEEP, 10000,
+					   cp_hash_addr, cp_hash_compare_addr,
+					   NULL, NULL, NULL, NULL)) == NULL) {
 	    perror("qthread_init()");
 	    abort();
 	}
@@ -717,7 +705,8 @@ void qthread_finalize(void)
     /* wait for each thread to drain it's queue! */
     for (i = 0; i < qlib->nshepherds; i++) {
 	if ((r = pthread_join(qlib->shepherds[i].shepherd, NULL)) != 0) {
-	    fprintf(stderr, "qthread_finalize: pthread_join() of shep %i failed (%d)\n",
+	    fprintf(stderr,
+		    "qthread_finalize: pthread_join() of shep %i failed (%d)\n",
 		    i, r);
 	    abort();
 	}
@@ -727,12 +716,12 @@ void qthread_finalize(void)
     for (i = 0; i < 32; i++) {
 	cp_hashtable_destroy(qlib->locks[i]);
 	cp_hashtable_destroy_custom(qlib->FEBs[i], NULL, (cp_destructor_fn)
-				qthread_FEBlock_delete);
+				    qthread_FEBlock_delete);
     }
 
 #ifdef QTHREAD_COUNT_THREADS
-    printf("spawned %lu threads, max concurrency %lu\n", threadcount,
-	   maxconcurrentthreads);
+    printf("spawned %lu threads, max concurrency %lu\n",
+	   (unsigned long)threadcount, (unsigned long)maxconcurrentthreads);
     QTHREAD_DESTROYLOCK(&threadcount_lock);
     QTHREAD_DESTROYLOCK(&concurrentthreads_lock);
 #endif
@@ -834,7 +823,9 @@ static inline qthread_t *qthread_thread_bare(const qthread_f f,
     }
 #ifdef QTHREAD_NONLAZY_THREADIDS
     /* give the thread an ID number */
-    t->thread_id = qthread_internal_incr(&(qlib->max_thread_id), &qlib->max_thread_id_lock);
+    t->thread_id =
+	qthread_internal_incr(&(qlib->max_thread_id),
+			      &qlib->max_thread_id_lock);
 #else
     t->thread_id = (unsigned int)-1;
 #endif
@@ -925,7 +916,9 @@ static inline qthread_t *qthread_thread_new(const qthread_f f,
 
 #ifdef QTHREAD_NONLAZY_THREADIDS
     /* give the thread an ID number */
-    t->thread_id = qthread_internal_incr(&(qlib->max_thread_id), &qlib->max_thread_id_lock);
+    t->thread_id =
+	qthread_internal_incr(&(qlib->max_thread_id),
+			      &qlib->max_thread_id_lock);
 #else
     t->thread_id = (unsigned int)-1;
 #endif
@@ -1216,9 +1209,9 @@ void qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
 	    myshep->sched_shepherd = 0;
 	}
     } else {
-	shep = qthread_internal_incr_mod(&qlib->sched_shepherd,
-					 qlib->nshepherds,
-					 &qlib->sched_shepherd_lock);
+	shep =
+	    qthread_internal_incr_mod(&qlib->sched_shepherd, qlib->nshepherds,
+				      &qlib->sched_shepherd_lock);
     }
     t = qthread_thread_new(f, arg, ret, shep);
 
@@ -1309,7 +1302,9 @@ qthread_t *qthread_prepare(const qthread_f f, const void *arg,
 	    myshep->sched_shepherd = 0;
 	}
     } else {
-	shep = qthread_internal_incr_mod(&qlib->sched_shepherd, qlib->nshepherds, &qlib->sched_shepherd_lock);
+	shep =
+	    qthread_internal_incr_mod(&qlib->sched_shepherd, qlib->nshepherds,
+				      &qlib->sched_shepherd_lock);
     }
 
     t = qthread_thread_bare(f, arg, ret, shep);
@@ -1419,7 +1414,8 @@ static inline void qthread_FEB_remove(void *maddr,
 
     qthread_debug("qthread_FEB_remove(): attempting removal\n");
     cp_hashtable_wrlock(qlib->FEBs[lockbin]); {
-	m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs[lockbin], maddr);
+	m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs[lockbin],
+						    maddr);
 	if (m) {
 	    QTHREAD_LOCK(&(m->lock));
 	    REPORTLOCK(m);
@@ -1568,9 +1564,9 @@ void qthread_empty(qthread_t * me, const void *dest)
 
 	ALIGN(dest, alignedaddr, "qthread_empty()");
 	cp_hashtable_wrlock(qlib->FEBs[lockbin]);
-	{ /* BEGIN CRITICAL SECTION */
+	{			       /* BEGIN CRITICAL SECTION */
 	    m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs[lockbin],
-		    (void *)alignedaddr);
+							(void *)alignedaddr);
 	    if (!m) {
 		/* currently full, and must be added to the hash to empty */
 		m = qthread_addrstat_new(me->shepherd_ptr);
@@ -1582,10 +1578,11 @@ void qthread_empty(qthread_t * me, const void *dest)
 		QTHREAD_LOCK(&m->lock);
 		REPORTLOCK(m);
 	    }
-	} /* END CRITICAL SECTION */
+	}			       /* END CRITICAL SECTION */
 	cp_hashtable_unlock(qlib->FEBs[lockbin]);
 	if (m) {
-	    qthread_gotlock_empty(m, (void*)alignedaddr, me->shepherd_ptr, 0);
+	    qthread_gotlock_empty(m, (void *)alignedaddr, me->shepherd_ptr,
+				  0);
 	}
     } else {
 	struct qthread_FEB_ef_sub_args args =
@@ -1628,7 +1625,7 @@ void qthread_fill(qthread_t * me, const void *dest)
 	if (m) {
 	    /* if dest wasn't in the hash, it was already full. Since it was,
 	     * we need to fill it. */
-	    qthread_gotlock_fill(m, (void*)alignedaddr, me->shepherd_ptr, 0);
+	    qthread_gotlock_fill(m, (void *)alignedaddr, me->shepherd_ptr, 0);
 	}
     } else {
 	struct qthread_FEB_ef_sub_args args =
@@ -2117,7 +2114,9 @@ unsigned qthread_id(const qthread_t * t)
     if (t->thread_id != (unsigned int)-1) {
 	return t->thread_id;
     }
-    ((qthread_t *) t)->thread_id = qthread_internal_incr(&(qlib->max_thread_id), &qlib->max_thread_id_lock);
+    ((qthread_t *) t)->thread_id =
+	qthread_internal_incr(&(qlib->max_thread_id),
+			      &qlib->max_thread_id_lock);
     return t->thread_id;
 #endif
 }				       /*}}} */
