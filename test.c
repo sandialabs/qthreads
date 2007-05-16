@@ -142,8 +142,8 @@ aligned_t qmain(qthread_t * me, void *junk)
 	     * }
 	     * printf("\n");
 	     */
-	    printf("out of order at %lu: %f > %f\n", (unsigned long)i, d_array[i],
-		   d_array[i + 1]);
+	    printf("out of order at %lu: %f > %f\n", (unsigned long)i,
+		   d_array[i], d_array[i + 1]);
 	    abort();
 	}
     }
