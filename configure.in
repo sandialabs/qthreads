@@ -132,7 +132,7 @@ if test "$ac_cv_threadcount" = "yes"; then
     AC_DEFINE(QTHREAD_COUNT_THREADS, 1, [keeps track of the number of threads])
 fi
 AC_ARG_WITH(asserts,AC_HELP_STRING(--with-asserts,[adds sanity checks to most qthread functions]),
-	    ac_cv_asserts=$withval, ac_cv_threadcount=no)
+	    ac_cv_asserts=$withval, ac_cv_asserts=no)
 if test "$ac_cv_asserts" = "no" ; then
     AC_DEFINE(QTHREAD_NO_ASSERTS, 1, [removes sanity checks from most qthread functions])
 fi

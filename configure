@@ -25028,7 +25028,7 @@ fi
 if test "${with_asserts+set}" = set; then
   withval=$with_asserts; ac_cv_asserts=$withval
 else
-  ac_cv_threadcount=no
+  ac_cv_asserts=no
 fi
 
 if test "$ac_cv_asserts" = "no" ; then
