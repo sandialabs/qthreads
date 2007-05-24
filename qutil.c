@@ -252,8 +252,7 @@ aligned_t qutil_mergesort_inner(qthread_t * me,
     return 0;
 }
 
-void qutil_mergesort(qthread_t * me, double *array, size_t length,
-		     int checkfeb)
+void qutil_mergesort(qthread_t * me, double *array, size_t length)
 {
     /* first, decide how much of the array each thread gets */
     size_t chunksize = MT_LOOP_CHUNK;
