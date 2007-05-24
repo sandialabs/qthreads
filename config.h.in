@@ -100,6 +100,10 @@
 /* Define to 1 if you have the `vprintf' function. */
 #undef HAVE_VPRINTF
 
+/* use mutexes when incrementing, rather than architecture-specific assembly
+   */
+#undef MUTEX_INCREMENT
+
 /* whether the library should use get/set-rlimit functions */
 #undef NEED_RLIMIT
 

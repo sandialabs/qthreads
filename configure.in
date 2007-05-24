@@ -13,9 +13,6 @@ case "$host" in
 	*-solaris*)
 	AC_DEFINE(__MAKECONTEXT_V2_SOURCE, 1, [force the Sun makecontext to behave correctly])
 	;;
-	*-linux-*)
-	AC_DEFINE(NEED_RLIMIT, 1, [whether the library should use get/set-rlimit functions])
-	;;
 esac
 
 AC_DEFINE(_GNU_SOURCE, 1, [make pthreads build correctly])
@@ -57,10 +54,15 @@ AC_HEADER_STDC
 AC_CHECK_HEADERS([stdlib.h fcntl.h ucontext.h])
 AX_CREATE_STDINT_H(qthread/qthread-int.h)
 
+ac_cv_setrlimit=no
 case "$host" in
+	ia64-*-linux-*)
+	# this does not need get/setrlimit
+	;;
     *-linux-*)
     AC_CHECK_HEADERS([sys/time.h sys/resource.h], , AC_MSG_ERROR(["The headers sys/time.h and sys/resource.h are required for efficient threads on Linux."]))
     AC_CHECK_FUNCS([getrlimit setrlimit], , AC_MSG_ERROR(["The functions getrlimit and setrlimit required for efficient threads on Linux."]))
+	ac_cv_setrlimit=yes
     ;;
 esac
 
@@ -94,10 +96,22 @@ fi
 
 AC_SUBST(QTHREAD_EXTRA_OBJS)
 
-AC_ARG_WITH(xeon,AC_HELP_STRING(--with-xeon,["enable Xeon-specific optimizations (since Xeons do not have the 486 #defines)"]),
+AC_ARG_WITH(xeon,AC_HELP_STRING(--with-xeon,[enable Xeon-specific optimizations (since Xeons do not have the 486 #defines)]),
 	    ac_cv_xeon=$withval, ac_cv_xeon=no)
 if test "$ac_cv_xeon" = "yes" ; then
     AC_DEFINE(QTHREAD_XEON, 1, [this is a Xeon CPU])
+fi
+
+AC_ARG_WITH(setrlimit,AC_HELP_STRING(--without-setrlimit,[don't use setrlimit to limit the stack (which is normally used only on Linux systems)]),
+		ac_cv_setrlimit=$withval);
+if test "$ac_cv_setrlimit" = "yes" ; then
+	AC_DEFINE(NEED_RLIMIT, 1, [whether the library should use get/set-rlimit functions])
+fi
+
+AC_ARG_WITH(software-increments,AC_HELP_STRING(--with-software-increments,[use mutexes to do the internal increments; possibly faster in some cases. Use -DQTHREAD_SOFTWARE_INCREMENT to when compiling your own code to force qthread_incr() do something similar.]),
+		ac_cv_software_increments=$withval, ac_cv_software_increments=no)
+if test "$ac_cv_software_increments" = "yes" ; then
+	AC_DEFINE(MUTEX_INCREMENT, 1, [use mutexes when incrementing, rather than architecture-specific assembly])
 fi
 
 AC_ARG_WITH(aligncheck,AC_HELP_STRING(--without-aligncheck,check the alignment of synchronization addresses),

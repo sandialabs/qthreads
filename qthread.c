@@ -301,7 +301,7 @@ static inline aligned_t qthread_internal_incr(aligned_t * operand,
 {				       /*{{{ */
     aligned_t retval;
 
-#if __PPC__ || _ARCH_PPC || __powerpc__
+#if !defined(MUTEX_INCREMENT) && ( __PPC__ || _ARCH_PPC || __powerpc__ )
     asm volatile ("1:\n\t"	/* the tag */
 		  "lwarx  %0,0,%1\n\t"	/* reserve operand into retval */
 		  "addi   %0,%0,1\n\t"	/* increment */
@@ -311,7 +311,7 @@ static inline aligned_t qthread_internal_incr(aligned_t * operand,
 		  :"=&r"   (retval)
 		  :"r"     (operand)
 		  :"cc", "memory");
-#elif ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
+#elif !defined(MUTEX_INCREMENT) && ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
 # ifdef __ILP64__
     int64_t res;
 
@@ -327,14 +327,15 @@ static inline aligned_t qthread_internal_incr(aligned_t * operand,
 
     retval = res;
 # endif
-#elif QTHREAD_XEON || __i486 || __i486__
+#elif !defined(MUTEX_INCREMENT) && ( QTHREAD_XEON || __i486 || __i486__ )
     retval = 1;
     asm volatile (".section .smp_locks,\"a\"\n" "  .align 4\n" "  .long 661f\n" ".previous\n" "661:\n\tlock; "	/* this is stolen from the Linux kernel */
 		  "xaddl %0, %1":"=r" (retval)
 		  :"m"     (*operand), "0"(retval));
 #else
-#warning unrecognized architecture
-#warning falling back to safe but very slow increment implementation
+#ifndef MUTEX_INCREMENT
+#warning unrecognized architecture: falling back to safe but very slow increment implementation
+#endif
     pthread_mutex_lock(lock);
     retval = (*operand)++;
     pthread_mutex_unlock(lock);
@@ -348,7 +349,7 @@ static inline aligned_t qthread_internal_incr_mod(aligned_t * operand,
 {				       /*{{{ */
     aligned_t retval;
 
-#if __PPC__ || _ARCH_PPC || __powerpc__
+#if !defined(MUTEX_INCREMENT) && ( __PPC__ || _ARCH_PPC || __powerpc__ )
     register unsigned int incrd;
     register unsigned int compd;
 
@@ -366,7 +367,7 @@ static inline aligned_t qthread_internal_incr_mod(aligned_t * operand,
 		  :"=&r"   (retval)
 		  :"r"     (operand), "r"(max), "r"(incrd), "r"(compd)
 		  :"cc", "memory");
-#elif ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
+#elif !defined(MUTEX_INCREMENT) && ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
 # ifdef __ILP64__
     int64_t res, old, new;
 
@@ -400,7 +401,7 @@ static inline aligned_t qthread_internal_incr_mod(aligned_t * operand,
     } while (res != old);	       /* if res==old, new is out of date */
     retval = old;
 # endif
-#elif QTHREAD_XEON || __i486 || __i486__
+#elif !defined(MUTEX_INCREMENT) && ( QTHREAD_XEON || __i486 || __i486__ )
     unsigned long prev;
     unsigned int old, new;
 
@@ -413,8 +414,6 @@ static inline aligned_t qthread_internal_incr_mod(aligned_t * operand,
 		      :"memory");
     } while (retval != old);
 #else
-#warning unsupported architecture
-#warning falling back to safe but slow increment-mod implementation
     pthread_mutex_lock(lock);
     retval = (*operand)++;
     *operand *= (*operand < max);
