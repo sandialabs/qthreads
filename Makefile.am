@@ -50,6 +50,20 @@ man_MANS = man3/qthread_empty.3 \
 		   man3/qalloc_malloc.3 \
 		   man3/qalloc_statfree.3 \
 		   man3/qalloc_statmalloc.3 \
+		   man3/qutil_double_sum.3 \
+		   man3/qutil_double_mult.3 \
+		   man3/qutil_double_max.3 \
+		   man3/qutil_double_min.3 \
+		   man3/qutil_uint_sum.3 \
+		   man3/qutil_uint_mult.3 \
+		   man3/qutil_uint_max.3 \
+		   man3/qutil_uint_min.3 \
+		   man3/qutil_int_sum.3 \
+		   man3/qutil_int_mult.3 \
+		   man3/qutil_int_max.3 \
+		   man3/qutil_int_min.3 \
+		   man3/qutil_qsort.3 \
+		   man3/qutil_mergesort.3 \
 		   man3/future_acquire.3 \
 		   man3/future_fork.3 \
 		   man3/future_exit.3 \

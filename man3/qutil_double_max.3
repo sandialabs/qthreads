@@ -1,0 +1,45 @@
+.TH qutil_double_max 3 "MAY 2007" libqthread "libqthread"
+.SH NAME
+\fBqutil_double_max\fR, \fBqutil_uint_max\fR, \fBqutil_int_max\fR \- finds the
+maximum value within an array of doubles in parallel
+.SH SYNOPSIS
+.B #include <qthread/qthread.h>
+.br
+.B #include <qthread/qutil.h>
+
+.I double
+.br
+\fBqutil_double_max\fR(qthread_t *\fIme\fR, double *\fIarray\fR, size_t \fIlength\fR, int \fIcheckfeb\fR);
+.PP
+.I unsigned int
+.br
+\fBqutil_uint_max\fR(qthread_t *\fIme\fR, unsigned int *\fIarray\fR, size_t
+\fIlength\fR, int \fIcheckfeb\fR);
+.PP
+.I int
+.br
+\fBqutil_int_max\fR(qthread_t *\fIme\fR, int *\fIarray\fR, size_t \fIlength\fR,
+int \fIcheckfeb\fR);
+.SH DESCRIPTION
+These functions take as input an \fIarray\fR of \fIlength\fR numbers and will
+return the maximum value within those numbers. This value is computed in
+parallel by using a lagging-loop structure, using futures to restrict the
+parallelism to the available limits.
+.PP
+If \fIcheckfeb\fR is non-zero, these functions will wait for the entries in the
+array to be full before comparing them. They \fBDO NOT\fR check whether the
+array entries are properly aligned.
+.SH RETURN VALUE
+The maximum value of the first \fIlength\fR entries of \fIarray\fR.
+.SH SEE ALSO
+.BR qutil_double_mult (3),
+.BR qutil_double_sum (3),
+.BR qutil_double_min (3),
+.BR qutil_uint_mult (3),
+.BR qutil_uint_sum (3),
+.BR qutil_uint_min (3),
+.BR qutil_int_mult (3),
+.BR qutil_int_sum (3),
+.BR qutil_int_min (3),
+.BR qutil_mergesort (3),
+.BR qutil_qsort (3)
