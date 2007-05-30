@@ -85,7 +85,7 @@ AC_FUNC_MMAP
 AC_CHECK_FUNCS([strtol floor memset munmap memcpy])
 AC_CHECK_FUNCS([getcontext swapcontext makecontext], ac_cv_context_funcs=yes, ac_cv_context_funcs=no)
 
-if test "$ac_cv_context_funcs" == "yes" ; then
+if test "$ac_cv_context_funcs" = "yes" ; then
 	AC_DEFINE(HAVE_CONTEXT_FUNCS, 1, [the system hsas its own getcontext functions])
 else
 	QTHREAD_EXTRA_OBJS="$QTHREAD_EXTRA_OBJS context.lo asm.lo"
@@ -103,7 +103,7 @@ if test "$ac_cv_xeon" = "yes" ; then
 fi
 
 AC_ARG_WITH(setrlimit,AC_HELP_STRING(--without-setrlimit,[don't use setrlimit to limit the stack (which is normally used only on Linux systems)]),
-		ac_cv_setrlimit=$withval);
+		ac_cv_setrlimit=$withval)
 if test "$ac_cv_setrlimit" = "yes" ; then
 	AC_DEFINE(NEED_RLIMIT, 1, [whether the library should use get/set-rlimit functions])
 fi

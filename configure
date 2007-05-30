@@ -24682,7 +24682,7 @@ fi
 done
 
 
-if test "$ac_cv_context_funcs" == "yes" ; then
+if test "$ac_cv_context_funcs" = "yes" ; then
 
 cat >>confdefs.h <<\_ACEOF
 #define HAVE_CONTEXT_FUNCS 1
@@ -24943,7 +24943,7 @@ fi
 if test "${with_setrlimit+set}" = set; then
   withval=$with_setrlimit; ac_cv_setrlimit=$withval
 fi
-;
+
 if test "$ac_cv_setrlimit" = "yes" ; then
 
 cat >>confdefs.h <<\_ACEOF
