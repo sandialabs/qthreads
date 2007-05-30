@@ -10,6 +10,9 @@
 
 #include <qthread/qutil.h>
 
+//#define ARRAYLEN 1000000000
+#define ARRAYLEN 500000000
+
 /*
  * This file tests the qutil functions
  *
@@ -56,20 +59,21 @@ aligned_t qmain(qthread_t * me, void *junk)
     unsigned int *ui_array;
     unsigned int ui_out, ui_sum_authoritative = 0, ui_mult_authoritative =
 	1, ui_max_authoritative = 0, ui_min_authoritative = UINT_MAX;
-    const size_t ui_len = 1000000000;
+    const size_t ui_len = ARRAYLEN;
     int *i_array;
     int i_out, i_sum_authoritative = 0, i_mult_authoritative =
 	1, i_max_authoritative = INT_MIN, i_min_authoritative = INT_MAX;
-    const size_t i_len = 1000000000;
+    const size_t i_len = ARRAYLEN;
     double *d_array;
     double d_out, d_sum_authoritative = 0.0, d_mult_authoritative =
 	1.0, d_max_authoritative = DBL_MIN, d_min_authoritative = DBL_MAX;
-    const size_t d_len = 1000000000;
+    const size_t d_len = ARRAYLEN;
 
     size_t i;
     struct timeval start, stop;
 
     ui_array = calloc(ui_len, sizeof(unsigned int));
+    assert(ui_array != NULL);
     for (i = 0; i < ui_len; i++) {
 	ui_array[i] = random();
 	ui_sum_authoritative += ui_array[i];
@@ -78,7 +82,6 @@ aligned_t qmain(qthread_t * me, void *junk)
 	    ui_max_authoritative = ui_array[i];
 	if (ui_min_authoritative > ui_array[i])
 	    ui_min_authoritative = ui_array[i];
-	if (i % 10000000 == 0) { printf("."); fflush(stdout); }
     }
 
     ui_out = 0;
@@ -97,6 +100,7 @@ aligned_t qmain(qthread_t * me, void *junk)
     free(ui_array);
 
     i_array = calloc(i_len, sizeof(int));
+    assert(i_array != NULL);
     for (i = 0; i < i_len; i++) {
 	i_array[i] = random() * ((random() > (RAND_MAX/2))?-1:1);
 	i_sum_authoritative += i_array[i];
