@@ -11,7 +11,7 @@
 #include <qthread/qutil.h>
 
 //#define ARRAYLEN 1000000000
-#define ARRAYLEN 500000000
+#define ARRAYLEN 200000000
 
 /*
  * This file tests the qutil functions
@@ -128,6 +128,7 @@ aligned_t qmain(qthread_t * me, void *junk)
 
     d_array = calloc(d_len, sizeof(double));
     assert(d_array != NULL);
+    srandom(0xdeadbeef);
     for (i = 0; i < d_len; i++) {
 	d_array[i] = random() / (double)RAND_MAX *10;
 
@@ -184,7 +185,6 @@ aligned_t qmain(qthread_t * me, void *junk)
     printf("[test1] sorting...\n");
     gettimeofday(&start, NULL);
     qutil_qsort(me, d_array, d_len);
-    //qsort(d_array, d_len, sizeof(double), dcmp);
     gettimeofday(&stop, NULL);
     for (i = 0; i < d_len - 1; i++) {
 	if (d_array[i] > d_array[i + 1]) {
@@ -198,12 +198,33 @@ aligned_t qmain(qthread_t * me, void *junk)
 	     * }
 	     * printf("\n");
 	     */
-	    printf("out of order at %lu: %f > %f\n", (unsigned long)i, d_array[i],
-		   d_array[i + 1]);
+	    printf("out of order at %lu: %f > %f\n", (unsigned long)i,
+		   d_array[i], d_array[i + 1]);
 	    abort();
 	}
     }
     printf("[test1] sorting %lu numbers took: %f seconds\n",
+	   (unsigned long)d_len,
+	   (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
+						      (start.tv_usec *
+						       1.0e-6)));
+    printf("[test1] resetting random array\n");
+    srandom(0xdeadbeef);
+    for (i = 0; i < d_len; i++) {
+	d_array[i] = random() / (double)RAND_MAX *10;
+    }
+    printf("[test1] libc sorting...\n");
+    gettimeofday(&start, NULL);
+    qsort(d_array, d_len, sizeof(double), dcmp);
+    gettimeofday(&stop, NULL);
+    for (i = 0; i < d_len - 1; i++) {
+	if (d_array[i] > d_array[i + 1]) {
+	    printf("out of order at %lu: %f > %f\n", (unsigned long)i,
+		    d_array[i], d_array[i + 1]);
+	    abort();
+	}
+    }
+    printf("[test1] libc-sorting %lu numbers took: %f seconds\n",
 	   (unsigned long)d_len,
 	   (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 						      (start.tv_usec *
@@ -229,6 +250,7 @@ int main(int argc, char *argv[])
     future_init(128);
     qthread_fork(qmain, NULL, &ret);
     qthread_readFF(NULL, NULL, &ret);
+    printf("[test1] now, to finalize\n"); fflush(stdout);
     qthread_finalize();
     return 0;
 }
