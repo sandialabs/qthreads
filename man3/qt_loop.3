@@ -1,0 +1,52 @@
+.TH qt_loop 3 "JUNE 2007" libqthread "libqthread"
+.SH NAME
+\fBqt_loop\fR \- a simple implementation of a threaded loop
+.SH SYNOPSIS
+.B #include <qthread/qloop.h>
+
+.I void
+.br
+\fBqt_loop\fR(const size_t \fIstart\fR,
+const size_t \fIstop\fR,
+const size_t \fIstride\fR,
+.ti +8
+const qthread_f \fIfunc\fR,
+void *\fIargptr\fR);
+.SH DESCRIPTION
+This function provides a simple C implementation of a threaded loop. This is
+similar to \fBmt_loop\fR, but does not provide much of the convenience and
+isomorphism that a C++ implementation can provide. On the other hand, it is
+more portable, and more predictable.
+.PP
+This function can be thought of as akin to the following code:
+.RS
+.PP
+unsigned int i;
+.br
+for (i = \fIstart\fR; i < \fIstop\fR; i += \fIstride\fR) {
+.RS
+.br
+\fIfunc\fR(NULL, \fIargptr\fR);
+.RE
+.br
+}
+.RE
+.PP
+A qthread is spawned for every iteration of the above loop. Thus, if start is
+50, stop is 100, and stride is 1, there will be 50 qthreads. But, if start is
+50, stop is 100, and stride is 2, there will be 25 qthreads.
+.PP
+The \fIfunc\fR argument must be a function pointer with a \fBqthread_f\fR prototype, such as:
+.RS
+.PP
+aligned_t \fIfunc\fR(qthread_t *me, void *arg);
+.RE
+.PP
+The return value of this function is ignored. However, \fBqt_loop\fR will not
+return until all of the qthreads it spawns have returned.
+.SH SEE ALSO
+.BR qt_loop_future (3),
+.BR qt_loop_balance (3),
+.BR qt_loop_balance_future (3),
+.BR qt_loopaccum_balance (3),
+.BR qt_loopaccum_balance_future (3)

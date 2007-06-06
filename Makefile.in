@@ -38,7 +38,8 @@ POST_UNINSTALL = :
 build_triplet = @build@
 host_triplet = @host@
 check_PROGRAMS = test1$(EXEEXT) test2$(EXEEXT) test3$(EXEEXT) \
-	testq$(EXEEXT) testloop$(EXEEXT) testincr$(EXEEXT)
+	testq$(EXEEXT) testloop$(EXEEXT) testincr$(EXEEXT) \
+	testqloop$(EXEEXT)
 DIST_COMMON = README $(am__configure_deps) $(pkginclude_HEADERS) \
 	$(srcdir)/Makefile.am $(srcdir)/Makefile.in \
 	$(srcdir)/config.h.in $(top_srcdir)/configure AUTHORS COPYING \
@@ -65,7 +66,8 @@ am__installdirs = "$(DESTDIR)$(libdir)" "$(DESTDIR)$(man3dir)" \
 	"$(DESTDIR)$(pkgincludedir)"
 libLTLIBRARIES_INSTALL = $(INSTALL)
 LTLIBRARIES = $(lib_LTLIBRARIES)
-am_libqthread_la_OBJECTS = qthread.lo qalloc.lo qutil.lo futurelib.lo
+am_libqthread_la_OBJECTS = qthread.lo qalloc.lo qutil.lo futurelib.lo \
+	qloop.lo
 libqthread_la_OBJECTS = $(am_libqthread_la_OBJECTS)
 am_test1_OBJECTS = test.$(OBJEXT)
 test1_OBJECTS = $(am_test1_OBJECTS)
@@ -85,6 +87,9 @@ testloop_DEPENDENCIES =
 am_testq_OBJECTS = testq.$(OBJEXT)
 testq_OBJECTS = $(am_testq_OBJECTS)
 testq_DEPENDENCIES =
+am_testqloop_OBJECTS = testqloop.$(OBJEXT)
+testqloop_OBJECTS = $(am_testqloop_OBJECTS)
+testqloop_DEPENDENCIES =
 DEFAULT_INCLUDES = -I. -I$(srcdir) -I.
 depcomp = $(SHELL) $(top_srcdir)/depcomp
 am__depfiles_maybe = depfiles
@@ -109,10 +114,12 @@ CXXLINK = $(LIBTOOL) --tag=CXX --mode=link $(CXXLD) $(AM_CXXFLAGS) \
 	$(CXXFLAGS) $(AM_LDFLAGS) $(LDFLAGS) -o $@
 SOURCES = $(libqthread_la_SOURCES) $(EXTRA_libqthread_la_SOURCES) \
 	$(test1_SOURCES) $(test2_SOURCES) $(test3_SOURCES) \
-	$(testincr_SOURCES) $(testloop_SOURCES) $(testq_SOURCES)
+	$(testincr_SOURCES) $(testloop_SOURCES) $(testq_SOURCES) \
+	$(testqloop_SOURCES)
 DIST_SOURCES = $(libqthread_la_SOURCES) $(EXTRA_libqthread_la_SOURCES) \
 	$(test1_SOURCES) $(test2_SOURCES) $(test3_SOURCES) \
-	$(testincr_SOURCES) $(testloop_SOURCES) $(testq_SOURCES)
+	$(testincr_SOURCES) $(testloop_SOURCES) $(testq_SOURCES) \
+	$(testqloop_SOURCES)
 man3dir = $(mandir)/man3
 NROFF = nroff
 MANS = $(man_MANS)
@@ -240,12 +247,13 @@ pkginclude_HEADERS = qthread/qthread.h \
 					 qthread/qalloc.h \
 					 qthread/qthread-int.h \
 					 qthread/qutil.h \
+					 qthread/qloop.h \
 					 qthread/futurelib.h \
 					 qthread/loop_templates.hpp \
 					 qthread/loop_iter.hpp \
 					 qthread/loop.hpp
 
-libqthread_la_SOURCES = qthread.c qalloc.c qutil.c futurelib.c
+libqthread_la_SOURCES = qthread.c qalloc.c qutil.c futurelib.c qloop.c
 libqthread_la_LDFLAGS = -version-info 8:0:0 -no-undefined
 EXTRA_libqthread_la_SOURCES = context.c asm.S
 libqthread_la_LIBADD = @QTHREAD_EXTRA_OBJS@
@@ -300,6 +308,24 @@ man_MANS = man3/qthread_empty.3 \
 		   man3/qutil_int_min.3 \
 		   man3/qutil_qsort.3 \
 		   man3/qutil_mergesort.3 \
+		   man3/qt_double_max.3 \
+		   man3/qt_double_min.3 \
+		   man3/qt_double_prod.3 \
+		   man3/qt_double_sum.3 \
+		   man3/qt_int_max.3 \
+		   man3/qt_int_min.3 \
+		   man3/qt_int_prod.3 \
+		   man3/qt_int_sum.3 \
+		   man3/qt_uint_max.3 \
+		   man3/qt_uint_min.3 \
+		   man3/qt_uint_prod.3 \
+		   man3/qt_uint_sum.3 \
+		   man3/qt_loop.3 \
+		   man3/qt_loop_future.3 \
+		   man3/qt_loop_balance.3 \
+		   man3/qt_loop_balance_future.3 \
+		   man3/qt_loopaccum_balance.3 \
+		   man3/qt_loopaccum_balance_future.3 \
 		   man3/future_acquire.3 \
 		   man3/future_fork.3 \
 		   man3/future_exit.3 \
@@ -307,7 +333,7 @@ man_MANS = man3/qthread_empty.3 \
 		   man3/future_join_all.3 \
 		   man3/future_yield.3
 
-TESTS = test1 test2 test3 testq testloop testincr
+TESTS = test1 test2 test3 testq testloop testincr testqloop
 test1_SOURCES = test.c
 test1_LDADD = -lqthread
 test2_SOURCES = test2.c
@@ -318,6 +344,8 @@ testq_SOURCES = testq.c
 testq_LDADD = -lqthread
 testloop_SOURCES = testloop.cpp
 testloop_LDADD = -lqthread
+testqloop_SOURCES = testqloop.c
+testqloop_LDADD = -lqthread
 testincr_SOURCES = testincr.c
 testincr_LDADD = -lqthread
 all: config.h
@@ -429,6 +457,9 @@ testloop$(EXEEXT): $(testloop_OBJECTS) $(testloop_DEPENDENCIES)
 testq$(EXEEXT): $(testq_OBJECTS) $(testq_DEPENDENCIES) 
 	@rm -f testq$(EXEEXT)
 	$(LINK) $(testq_LDFLAGS) $(testq_OBJECTS) $(testq_LDADD) $(LIBS)
+testqloop$(EXEEXT): $(testqloop_OBJECTS) $(testqloop_DEPENDENCIES) 
+	@rm -f testqloop$(EXEEXT)
+	$(LINK) $(testqloop_LDFLAGS) $(testqloop_OBJECTS) $(testqloop_LDADD) $(LIBS)
 
 mostlyclean-compile:
 	-rm -f *.$(OBJEXT)
@@ -439,6 +470,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/context.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/futurelib.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qalloc.Plo@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qloop.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qthread.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/qutil.Plo@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/test.Po@am__quote@
@@ -447,6 +479,7 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testincr.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testloop.Po@am__quote@
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testq.Po@am__quote@
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/testqloop.Po@am__quote@
 
 .S.o:
 	$(CCASCOMPILE) -c $<

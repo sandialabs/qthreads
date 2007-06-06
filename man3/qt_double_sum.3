@@ -1,0 +1,48 @@
+.TH qt_double_sum 3 "JUNE 2007" libqthread "libqthread"
+.SH NAME
+\fBqt_double_sum\fR, \fBqt_uint_sum\fR, \fBqt_int_sum\fR \- add up an
+array in parallel
+.SH SYNOPSIS
+.B #include <qthread/qloop.h>
+
+.I double
+.br
+\fBqt_double_sum\fR(double *\fIarray\fR, size_t
+\fIlength\fR, int \fIcheckfeb\fR);
+.PP
+.I unsigned int
+.br
+\fBqt_uint_sum\fR(unsigned int *\fIarray\fR, size_t
+\fIlength\fR, int \fIcheckfeb\fR);
+.PP
+.I int
+.br
+\fBqt_int_sum\fR(int *\fIarray\fR, size_t \fIlength\fR,
+int \fIcheckfeb\fR);
+.SH DESCRIPTION
+These functions take as input an \fIarray\fR of \fIlength\fR numbers and will
+return the sum of those numbers. This sum is computed in parallel by
+dividing the iterations evenly among the shepherds, using futures to restrict
+the parallelism to the available limits.
+.PP
+If \fIcheckfeb\fR is non-zero, these functions will wait for the entries in the
+array to be full before adding them. They \fBDO NOT\fR check whether the array
+entries are properly aligned.
+.SH RETURN VALUE
+The sum of the first \fIlength\fR entries of \fIarray\fR.
+.SH SEE ALSO
+.BR qt_double_mult (3),
+.BR qt_double_max (3),
+.BR qt_double_min (3),
+.BR qt_uint_mult (3),
+.BR qt_uint_max (3),
+.BR qt_uint_min (3),
+.BR qt_int_mult (3),
+.BR qt_int_max (3),
+.BR qt_int_min (3),
+.BR qt_loop (3),
+.BR qt_loop_future (3),
+.BR qt_loop_balance (3),
+.BR qt_loop_balance_future (3),
+.BR qt_loopaccum_balance (3),
+.BR qt_loopaccum_balance_future (3)
