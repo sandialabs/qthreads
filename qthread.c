@@ -349,8 +349,8 @@ static inline aligned_t qthread_internal_incr_mod(aligned_t * operand,
     aligned_t retval;
 
 #if !defined(MUTEX_INCREMENT) && ( __PPC__ || _ARCH_PPC || __powerpc__ )
-    register unsigned int incrd;
-    register unsigned int compd;
+    register unsigned int incrd = incrd; /* these don't need to be initialized */
+    register unsigned int compd = compd; /* they're just tmp variables */
 
     /* the minus in bne- means "this bne is unlikely to be taken" */
     asm volatile ("1:\n\t"	/* local label */
@@ -808,13 +808,10 @@ static inline qthread_t *qthread_thread_bare(const qthread_f f,
     qthread_t *t;
 
 #ifndef UNPOOLED
-    qthread_shepherd_t *myshep = &(qlib->shepherds[shepherd]);
+    t = ALLOC_QTHREAD((&(qlib->shepherds[shepherd])));
 #else
-    qthread_shepherd_t *myshep = NULL;
+    t = ALLOC_QTHREAD(NULL);
 #endif
-
-    t = ALLOC_QTHREAD(myshep);
-
     assert(t != NULL);
 #ifdef QTHREAD_NONLAZY_THREADIDS
     /* give the thread an ID number */
@@ -1884,16 +1881,14 @@ int qthread_lock(qthread_t * t, const void *a)
 	m = (qthread_lock_t *) cp_hashtable_get(qlib->locks[lockbin],
 						(void *)a);
 	if (m == NULL) {
-	    qthread_shepherd_t *myshep = t->shepherd_ptr;
-
-	    m = ALLOC_LOCK(myshep);
+	    m = ALLOC_LOCK(t->shepherd_ptr);
 	    assert(m != NULL);
 	    /* If we have a shepherd, use it... note that we are ignoring the
 	     * qthread_t that got passed in, because that is inherently
 	     * untrustworthy. I tested it, actually, and this is faster than
 	     * trying to guess whether the qthread_t is accurate or not.
 	     */
-	    m->waiting = qthread_queue_new(myshep);
+	    m->waiting = qthread_queue_new(t->shepherd_ptr);
 	    QTHREAD_INITLOCK(&m->lock);
 	    cp_hashtable_put(qlib->locks[lockbin], (void *)a, m);
 	    /* since we just created it, we own it */
@@ -1976,8 +1971,6 @@ int qthread_unlock(qthread_t * t, const void *a)
 	QTHREAD_LOCK(&m->waiting->lock);
 	u = qthread_dequeue_nonblocking(m->waiting);
 	if (u == NULL) {
-	    qthread_shepherd_t *myshep = t->shepherd_ptr;
-
 	    qthread_debug("qthread_unlock(%p,%p): deleting waiting queue\n",
 			  t, a);
 	    cp_hashtable_remove(qlib->locks[lockbin], (void *)a);
