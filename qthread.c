@@ -76,7 +76,7 @@
 #define ALLOC_QTHREAD(shep) (qthread_t *) malloc(sizeof(qthread_t))
 #define FREE_QTHREAD(shep, t) free(t)
 #else
-#define ALLOC_QTHREAD(shep) ({qthread_t *foo = (qthread_t *) cp_mempool_alloc(shep?(shep->qthread_pool):generic_qthread_pool); assert(foo != NULL); foo->creator_ptr = shep; foo;})
+#define ALLOC_QTHREAD(shep) __extension__ ({qthread_t *foo = (qthread_t *) cp_mempool_alloc(shep?(shep->qthread_pool):generic_qthread_pool); assert(foo != NULL); foo->creator_ptr = shep; foo;})
 #define FREE_QTHREAD(shep, t) cp_mempool_free(shep?(shep->qthread_pool):generic_qthread_pool, t)
 #endif
 
@@ -100,7 +100,7 @@
 #define ALLOC_QUEUE(shep) (qthread_queue_t *) malloc(sizeof(qthread_queue_t))
 #define FREE_QUEUE(t) free(t)
 #else
-#define ALLOC_QUEUE(shep) ({qthread_queue_t *foo = (qthread_queue_t *) cp_mempool_alloc(shep?(shep->queue_pool):generic_queue_pool); assert(foo != NULL); foo->creator_ptr = shep; foo;})
+#define ALLOC_QUEUE(shep) __extension__ ({qthread_queue_t *foo = (qthread_queue_t *) cp_mempool_alloc(shep?(shep->queue_pool):generic_queue_pool); assert(foo != NULL); foo->creator_ptr = shep; foo;})
 #define FREE_QUEUE(t) cp_mempool_free(t->creator_ptr?(t->creator_ptr->queue_pool):generic_queue_pool, t)
 #endif
 
@@ -108,7 +108,7 @@
 #define ALLOC_LOCK(shep) (qthread_lock_t *) malloc(sizeof(qthread_lock_t))
 #define FREE_LOCK(t) free(t)
 #else
-#define ALLOC_LOCK(shep) ({qthread_lock_t *foo = (qthread_lock_t *) cp_mempool_alloc(shep?(shep->lock_pool):generic_lock_pool); assert(foo != NULL); foo->creator_ptr = shep; foo;})
+#define ALLOC_LOCK(shep) __extension__ ({qthread_lock_t *foo = (qthread_lock_t *) cp_mempool_alloc(shep?(shep->lock_pool):generic_lock_pool); assert(foo != NULL); foo->creator_ptr = shep; foo;})
 #define FREE_LOCK(t) cp_mempool_free(t->creator_ptr->lock_pool, t)
 #endif
 
@@ -116,7 +116,7 @@
 #define ALLOC_ADDRRES(shep) (qthread_addrres_t *) malloc(sizeof(qthread_addrres_t))
 #define FREE_ADDRRES(t) free(t)
 #else
-#define ALLOC_ADDRRES(shep) ({qthread_addrres_t *foo = (qthread_addrres_t *) cp_mempool_alloc(shep->addrres_pool); assert(foo != NULL); foo->creator_ptr = shep; foo;})
+#define ALLOC_ADDRRES(shep) __extension__ ({qthread_addrres_t *foo = (qthread_addrres_t *) cp_mempool_alloc(shep->addrres_pool); assert(foo != NULL); foo->creator_ptr = shep; foo;})
 #define FREE_ADDRRES(t) cp_mempool_free(t->creator_ptr->addrres_pool, t)
 #endif
 
@@ -124,7 +124,7 @@
 #define ALLOC_ADDRSTAT(shep) (qthread_addrstat_t *) malloc(sizeof(qthread_addrstat_t))
 #define FREE_ADDRSTAT(t) free(t)
 #else
-#define ALLOC_ADDRSTAT(shep) ({qthread_addrstat_t *foo = (qthread_addrstat_t *) cp_mempool_alloc(shep->addrstat_pool); assert(foo != NULL); foo->creator_ptr = shep; foo;})
+#define ALLOC_ADDRSTAT(shep) __extension__ ({qthread_addrstat_t *foo = (qthread_addrstat_t *) cp_mempool_alloc(shep->addrstat_pool); assert(foo != NULL); foo->creator_ptr = shep; foo;})
 #define FREE_ADDRSTAT(t) cp_mempool_free(t->creator_ptr->addrstat_pool, t)
 #endif
 
@@ -263,6 +263,10 @@ static inline qthread_t *qthread_thread_new(const qthread_f f,
 					    const void *arg, aligned_t * ret,
 					    const qthread_shepherd_id_t
 					    shepherd);
+static inline qthread_t *qthread_thread_bare(const qthread_f f,
+					     const void *arg, aligned_t * ret,
+					     const qthread_shepherd_id_t
+					     shepherd);
 static inline void qthread_thread_free(qthread_t * t);
 static inline qthread_queue_t *qthread_queue_new(qthread_shepherd_t *
 						 shepherd);
@@ -693,7 +697,7 @@ void qthread_finalize(void)
 
     /* enqueue the termination thread sentinal */
     for (i = 0; i < qlib->nshepherds; i++) {
-	t = qthread_thread_new(NULL, NULL, (aligned_t *) NULL, i);
+	t = qthread_thread_bare(NULL, NULL, (aligned_t *) NULL, i);
 	t->thread_state = QTHREAD_STATE_TERM_SHEP;
 	t->thread_id = (unsigned int)-1;
 	qthread_enqueue(qlib->shepherds[i].ready, t);
@@ -827,6 +831,8 @@ static inline qthread_t *qthread_thread_bare(const qthread_f f,
     t->blockedon = NULL;
     t->shepherd_ptr = &(qlib->shepherds[shepherd]);
     t->ret = ret;
+    t->context = NULL;
+    t->stack = NULL;
 
     return t;
 }				       /*}}} */
