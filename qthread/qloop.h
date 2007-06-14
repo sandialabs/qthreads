@@ -4,6 +4,11 @@
 #ifndef QTHREAD_QLOOP
 #define QTHREAD_QLOOP
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
+
 /* for convenient arguments to qt_loop_future */
 typedef void (*qt_loop_f) (qthread_t * me, const size_t startat,
 			   const size_t stopat, void *arg);
@@ -41,4 +46,65 @@ unsigned int qt_uint_sum(unsigned int *array, size_t length, int checkfeb);
 unsigned int qt_uint_prod(unsigned int *array, size_t length, int checkfeb);
 unsigned int qt_uint_max(unsigned int *array, size_t length, int checkfeb);
 unsigned int qt_uint_min(unsigned int *array, size_t length, int checkfeb);
+
+/* These are some utility accumulator functions */
+static void qt_dbl_add_acc (void *a, void *b)
+{
+    *(double *)a += *(double *)b;
+}
+static void qt_int_add_acc (void *a, void *b)
+{
+    *(int *)a += *(int *)b;
+}
+static void qt_uint_add_acc (void *a, void *b)
+{
+    *(unsigned int *)a += *(unsigned int *)b;
+}
+static void qt_dbl_prod_acc (void *a, void *b)
+{
+    *(double *)a *= *(double *)b;
+}
+static void qt_int_prod_acc (void *a, void *b)
+{
+    *(int *)a *= *(int *)b;
+}
+static void qt_uint_prod_acc (void *a, void *b)
+{
+    *(unsigned int *)a *= *(unsigned int *)b;
+}
+static void qt_dbl_max_acc (void *a, void *b)
+{
+    if (*(double*)b > *(double*)a)
+	*(double *)a = *(double *)b;
+}
+static void qt_int_max_acc (void *a, void *b)
+{
+    if (*(int*)b > *(int*)a)
+	*(int *)a = *(int *)b;
+}
+static void qt_uint_max_acc (void *a, void *b)
+{
+    if (*(unsigned int*)b > *(unsigned int*)a)
+	*(unsigned int *)a = *(unsigned int *)b;
+}
+static void qt_dbl_min_acc (void *a, void *b)
+{
+    if (*(double*)b < *(double*)a)
+	*(double *)a = *(double *)b;
+}
+static void qt_int_min_acc (void *a, void *b)
+{
+    if (*(int*)b < *(int*)a)
+	*(int *)a = *(int *)b;
+}
+static void qt_uint_min_acc (void *a, void *b)
+{
+    if (*(unsigned int*)b < *(unsigned int*)a)
+	*(unsigned int *)a = *(unsigned int *)b;
+}
+
+#ifdef __cplusplus
+}
+#endif
+
 #endif
