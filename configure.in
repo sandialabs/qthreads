@@ -108,10 +108,10 @@ if test "$ac_cv_setrlimit" = "yes" ; then
 	AC_DEFINE(NEED_RLIMIT, 1, [whether the library should use get/set-rlimit functions])
 fi
 
-AC_ARG_WITH(software-increments,AC_HELP_STRING(--with-software-increments,[use mutexes to do the internal increments; possibly faster in some cases. Use -DQTHREAD_SOFTWARE_INCREMENT to when compiling your own code to force qthread_incr() do something similar.]),
+AC_ARG_WITH(software-increments,AC_HELP_STRING(--with-software-increments,[use mutexes to do the internal increments; possibly faster in some cases, and compatible with more compilers (I'm looking at you, Intel). Use -DQTHREAD_MUTEX_INCREMENT to when compiling your own code to force qthread_incr() do something similar.]),
 		ac_cv_software_increments=$withval, ac_cv_software_increments=no)
 if test "$ac_cv_software_increments" = "yes" ; then
-	AC_DEFINE(MUTEX_INCREMENT, 1, [use mutexes when incrementing, rather than architecture-specific assembly])
+	AC_DEFINE(QTHREAD_MUTEX_INCREMENT, 1, [use mutexes when incrementing, rather than architecture-specific assembly])
 fi
 
 AC_ARG_WITH(aligncheck,AC_HELP_STRING(--without-aligncheck,check the alignment of synchronization addresses),

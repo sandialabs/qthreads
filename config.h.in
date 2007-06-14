@@ -100,10 +100,6 @@
 /* Define to 1 if you have the `vprintf' function. */
 #undef HAVE_VPRINTF
 
-/* use mutexes when incrementing, rather than architecture-specific assembly
-   */
-#undef MUTEX_INCREMENT
-
 /* whether the library should use get/set-rlimit functions */
 #undef NEED_RLIMIT
 
@@ -137,6 +133,10 @@
 
 /* use 8MB stacks for every thread */
 #undef QTHREAD_FULL_SIZE_STACKS
+
+/* use mutexes when incrementing, rather than architecture-specific assembly
+   */
+#undef QTHREAD_MUTEX_INCREMENT
 
 /* dont check the alignment of synchronization addressses */
 #undef QTHREAD_NOALIGNCHECK

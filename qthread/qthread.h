@@ -235,7 +235,7 @@ static inline aligned_t qthread_incr(aligned_t * operand, const int incr)
 {/*{{{*/
     aligned_t retval;
 
-#if !defined(QTHREAD_SOFTWARE_INCREMENT) && ( __PPC__ || _ARCH_PPC || __powerpc__ )
+#if !defined(QTHREAD_MUTEX_INCREMENT) && ( __PPC__ || _ARCH_PPC || __powerpc__ )
     asm volatile (
 	    "1:\tlwarx  %0,0,%1\n\t"
 	    "add    %0,%0,%2\n\t"
@@ -245,7 +245,7 @@ static inline aligned_t qthread_incr(aligned_t * operand, const int incr)
 	    :"=&r"   (retval)
 	    :"r"     (operand), "r"(incr)
 	    :"cc", "memory");
-#elif !defined(QTHREAD_SOFTWARE_INCREMENT) && ( __ia64 || __ia64__ )
+#elif !defined(QTHREAD_MUTEX_INCREMENT) && ( __ia64 || __ia64__ )
     int64_t res;
 
     if (incr == 1) {
@@ -272,18 +272,18 @@ static inline aligned_t qthread_incr(aligned_t * operand, const int incr)
 	} while (res != old);	       /* if res==old, the calc is out of date */
 	retval = newval;
     }
-#elif !defined(QTHREAD_SOFTWARE_INCREMENT) && ( __i486 || __i486__ )
+#elif !defined(QTHREAD_MUTEX_INCREMENT) && ( __i486 || __i486__ )
     asm volatile (
 	    "lock xaddl %1,%0"	/* atomically add incr to operand */
 	    : /* no output */
 	    :"m"     (*operand), "ir"(incr));
-#elif !defined(QTHREAD_SOFTWARE_INCREMENT) && ( i386 || __i386 || __i386__ )
+#elif !defined(QTHREAD_MUTEX_INCREMENT) && ( i386 || __i386 || __i386__ )
     asm volatile (
 	    "lock addl %1,%0"
 	    :"=m" (*operand)
 	    :"ir"    (incr), "m"(*operand));
 #else
-#ifndef QTHREAD_SOFTWARE_INCREMENT
+#ifndef QTHREAD_MUTEX_INCREMENT
 #warning unrecognized architecture: falling back to safe but very slow increment implementation
 #endif
     qthread_t *me = qthread_self();
