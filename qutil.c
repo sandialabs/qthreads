@@ -1,3 +1,6 @@
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 #include <qthread/qutil.h>
 #include <qthread/qthread.h>
 #include <qthread/futurelib.h>
