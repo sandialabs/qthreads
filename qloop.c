@@ -10,7 +10,13 @@ void qt_loop(const size_t start, const size_t stop, const size_t stride,
 {
     size_t i, threadct = 0;
     qthread_t *me = qthread_self();
-    aligned_t *rets = malloc(sizeof(aligned_t) * qlib->nshepherds);
+    aligned_t *rets;
+    size_t steps = (stop - start)/stride;
+
+    if ((steps * stride) + start < stop) {
+	steps ++;
+    }
+    rets = malloc(sizeof(aligned_t) * steps);
 
     for (i = start; i < stop; i += stride) {
 	qthread_fork_to(func, argptr, rets + threadct,
@@ -29,7 +35,13 @@ void qt_loop_future(const size_t start, const size_t stop,
 {
     size_t i, threadct = 0;
     qthread_t *me = qthread_self();
-    aligned_t *rets = malloc(sizeof(aligned_t) * qlib->nshepherds);
+    aligned_t *rets;
+    size_t steps = (stop - start)/stride;
+
+    if ((steps * stride) + start < stop) {
+	steps ++;
+    }
+    rets = malloc(sizeof(aligned_t) * steps);
 
     for (i = start; i < stop; i += stride) {
 	qthread_fork_future_to(func, argptr, rets + threadct,
@@ -154,7 +166,7 @@ static inline void qt_loopaccum_balance_inner(const size_t start,
     struct qloopaccum_wrapper_args *qwa =
 	malloc(sizeof(struct qloopaccum_wrapper_args) * qlib->nshepherds);
     aligned_t *rets = malloc(sizeof(aligned_t) * qlib->nshepherds);
-    char *realrets = malloc((size - 1) * qlib->nshepherds);
+    char *realrets = malloc(size * (qlib->nshepherds - 1));
     size_t len = stop - start;
     size_t each = len / qlib->nshepherds;
     size_t extra = len - (each * qlib->nshepherds);
