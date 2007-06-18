@@ -1478,6 +1478,35 @@ Optional Features:
   --enable-fast-install[=PKGS]
                           optimize for fast installation [default=yes]
   --disable-libtool-lock  avoid locking (might break parallel builds)
+  --enable-xeon           enable Xeon-specific optimizations (since Xeons do
+                          not have the 486 #defines)
+  --disable-setrlimit     don't use setrlimit to limit the stack (which is
+                          normally used only on Linux systems)
+  --enable-software-increments
+                          use mutexes to do the internal increments; possibly
+                          faster in some cases, and compatible with more
+                          compilers (I'm looking at you, Intel). Use
+                          -DQTHREAD_MUTEX_INCREMENT to when compiling your own
+                          code to force qthread_incr() do something similar.
+  --disable-aligncheck    check the alignment of synchronization addresses
+  --enable-fullsize-stacks
+                          use 8MB stacks for every thread
+  --enable-very-small-stacks
+                          use 2k stacks for every thread (dangerous)
+  --enable-debug-trace    prints out debugging information as programs run,
+                          tracing their qthread-related behavior
+  --enable-unpooled-memory
+                          prevents qthreads from (in most cases) using memory
+                          pools, which is sometimes more compatible with
+                          machines that have unusual alignment issues
+  --enable-thread-count   counts the number of threads and the number of
+                          concurrent threads and prints it out when
+                          qthread_finalize() is run; slows down computation
+  --enable-asserts        adds sanity checks to most qthread functions
+  --disable-lazy-threadids
+                          makes qthread assign thread IDs at spawning time,
+                          rather than as necessary; this ensures every thread
+                          gets a unique thread id
 
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
@@ -1486,33 +1515,6 @@ Optional Packages:
   --with-pic              try to use only PIC/non-PIC objects [default=use
                           both]
   --with-tags[=TAGS]      include additional configurations [automatic]
-  --with-xeon             enable Xeon-specific optimizations (since Xeons do
-                          not have the 486 #defines)
-  --without-setrlimit     don't use setrlimit to limit the stack (which is
-                          normally used only on Linux systems)
-  --with-software-increments
-                          use mutexes to do the internal increments; possibly
-                          faster in some cases, and compatible with more
-                          compilers (I'm looking at you, Intel). Use
-                          -DQTHREAD_MUTEX_INCREMENT to when compiling your own
-                          code to force qthread_incr() do something similar.
-  --without-aligncheck    check the alignment of synchronization addresses
-  --with-fullsize-stacks  use 8MB stacks for every thread
-  --with-very-small-stacks
-                          use 2k stacks for every thread (dangerous)
-  --with-debug-trace      prints out debugging information as programs run,
-                          tracing their qthread-related behavior
-  --with-unpooled-memory  prevents qthreads from (in most cases) using memory
-                          pools, which is sometimes more compatible with
-                          machines that have unusual alignment issues
-  --with-thread-count     counts the number of threads and the number of
-                          concurrent threads and prints it out when
-                          qthread_finalize() is run; slows down computation
-  --with-asserts          adds sanity checks to most qthread functions
-  --without-lazy-threadids
-                          makes qthread assign thread IDs at spawning time,
-                          rather than as necessary; this ensures every thread
-                          gets a unique thread id
 
 Some influential environment variables:
   CC          C compiler command
@@ -5161,7 +5163,7 @@ ia64-*-hpux*)
   ;;
 *-*-irix6*)
   # Find out which ABI we are using.
-  echo '#line 5164 "configure"' > conftest.$ac_ext
+  echo '#line 5166 "configure"' > conftest.$ac_ext
   if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
@@ -7190,11 +7192,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:7193: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:7195: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:7197: \$? = $ac_status" >&5
+   echo "$as_me:7199: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -7468,11 +7470,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:7471: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:7473: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:7475: \$? = $ac_status" >&5
+   echo "$as_me:7477: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -7572,11 +7574,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:7575: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:7577: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:7579: \$? = $ac_status" >&5
+   echo "$as_me:7581: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -9885,7 +9887,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 9888 "configure"
+#line 9890 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -9985,7 +9987,7 @@ else
   lt_dlunknown=0; lt_dlno_uscore=1; lt_dlneed_uscore=2
   lt_status=$lt_dlunknown
   cat > conftest.$ac_ext <<EOF
-#line 9988 "configure"
+#line 9990 "configure"
 #include "confdefs.h"
 
 #if HAVE_DLFCN_H
@@ -12352,11 +12354,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:12355: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:12357: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:12359: \$? = $ac_status" >&5
+   echo "$as_me:12361: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -12456,11 +12458,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:12459: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:12461: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:12463: \$? = $ac_status" >&5
+   echo "$as_me:12465: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -14027,11 +14029,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:14030: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:14032: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:14034: \$? = $ac_status" >&5
+   echo "$as_me:14036: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -14131,11 +14133,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:14134: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:14136: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:14138: \$? = $ac_status" >&5
+   echo "$as_me:14140: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -16334,11 +16336,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:16337: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:16339: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:16341: \$? = $ac_status" >&5
+   echo "$as_me:16343: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -16612,11 +16614,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:16615: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:16617: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>conftest.err)
    ac_status=$?
    cat conftest.err >&5
-   echo "$as_me:16619: \$? = $ac_status" >&5
+   echo "$as_me:16621: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s "$ac_outfile"; then
      # The compiler can only warn and ignore the option if not recognized
      # So say no if there are warnings other than the usual output.
@@ -16716,11 +16718,11 @@ else
    -e 's:.*FLAGS}\{0,1\} :&$lt_compiler_flag :; t' \
    -e 's: [^ ]*conftest\.: $lt_compiler_flag&:; t' \
    -e 's:$: $lt_compiler_flag:'`
-   (eval echo "\"\$as_me:16719: $lt_compile\"" >&5)
+   (eval echo "\"\$as_me:16721: $lt_compile\"" >&5)
    (eval "$lt_compile" 2>out/conftest.err)
    ac_status=$?
    cat out/conftest.err >&5
-   echo "$as_me:16723: \$? = $ac_status" >&5
+   echo "$as_me:16725: \$? = $ac_status" >&5
    if (exit $ac_status) && test -s out/conftest2.$ac_objext
    then
      # The compiler can only warn and ignore the option if not recognized
@@ -24922,10 +24924,9 @@ fi
 
 
 
-
-# Check whether --with-xeon was given.
-if test "${with_xeon+set}" = set; then
-  withval=$with_xeon; ac_cv_xeon=$withval
+# Check whether --enable-xeon was given.
+if test "${enable_xeon+set}" = set; then
+  enableval=$enable_xeon; ac_cv_xeon=$withval
 else
   ac_cv_xeon=no
 fi
@@ -24938,10 +24939,9 @@ _ACEOF
 
 fi
 
-
-# Check whether --with-setrlimit was given.
-if test "${with_setrlimit+set}" = set; then
-  withval=$with_setrlimit; ac_cv_setrlimit=$withval
+# Check whether --enable-setrlimit was given.
+if test "${enable_setrlimit+set}" = set; then
+  enableval=$enable_setrlimit; ac_cv_setrlimit=$withval
 fi
 
 if test "$ac_cv_setrlimit" = "yes" ; then
@@ -24952,10 +24952,9 @@ _ACEOF
 
 fi
 
-
-# Check whether --with-software-increments was given.
-if test "${with_software_increments+set}" = set; then
-  withval=$with_software_increments; ac_cv_software_increments=$withval
+# Check whether --enable-software-increments was given.
+if test "${enable_software_increments+set}" = set; then
+  enableval=$enable_software_increments; ac_cv_software_increments=$withval
 else
   ac_cv_software_increments=no
 fi
@@ -24968,10 +24967,9 @@ _ACEOF
 
 fi
 
-
-# Check whether --with-aligncheck was given.
-if test "${with_aligncheck+set}" = set; then
-  withval=$with_aligncheck; ac_cv_aligncheck=$withval
+# Check whether --enable-aligncheck was given.
+if test "${enable_aligncheck+set}" = set; then
+  enableval=$enable_aligncheck; ac_cv_aligncheck=$withval
 else
   ac_cv_aligncheck=yes
 fi
@@ -24983,10 +24981,9 @@ cat >>confdefs.h <<\_ACEOF
 _ACEOF
 
 fi
-
-# Check whether --with-fullsize-stacks was given.
-if test "${with_fullsize_stacks+set}" = set; then
-  withval=$with_fullsize_stacks; ac_cv_fullsizestack=$withval
+# Check whether --enable-fullsize-stacks was given.
+if test "${enable_fullsize_stacks+set}" = set; then
+  enableval=$enable_fullsize_stacks; ac_cv_fullsizestack=$withval
 else
   ac_cv_fullsizestack=no
 fi
@@ -24998,10 +24995,9 @@ cat >>confdefs.h <<\_ACEOF
 _ACEOF
 
 else
-
-# Check whether --with-very-small-stacks was given.
-if test "${with_very_small_stacks+set}" = set; then
-  withval=$with_very_small_stacks; ac_cv_verysmallstacks=$withval
+    # Check whether --enable-very-small-stacks was given.
+if test "${enable_very_small_stacks+set}" = set; then
+  enableval=$enable_very_small_stacks; ac_cv_verysmallstacks=$withval
 else
   ac_cv_verysmallstacks=no
 fi
@@ -25014,10 +25010,9 @@ _ACEOF
 
     fi
 fi
-
-# Check whether --with-debug-trace was given.
-if test "${with_debug_trace+set}" = set; then
-  withval=$with_debug_trace; ac_cv_debugtrace=$withval
+# Check whether --enable-debug-trace was given.
+if test "${enable_debug_trace+set}" = set; then
+  enableval=$enable_debug_trace; ac_cv_debugtrace=$withval
 else
   ac_cv_debugtrace=no
 fi
@@ -25029,10 +25024,9 @@ cat >>confdefs.h <<\_ACEOF
 _ACEOF
 
 fi
-
-# Check whether --with-unpooled-memory was given.
-if test "${with_unpooled_memory+set}" = set; then
-  withval=$with_unpooled_memory; ac_cv_unpooled=$withval
+# Check whether --enable-unpooled-memory was given.
+if test "${enable_unpooled_memory+set}" = set; then
+  enableval=$enable_unpooled_memory; ac_cv_unpooled=$withval
 else
   ac_cv_unpooled=no
 fi
@@ -25044,10 +25038,9 @@ cat >>confdefs.h <<\_ACEOF
 _ACEOF
 
 fi
-
-# Check whether --with-thread-count was given.
-if test "${with_thread_count+set}" = set; then
-  withval=$with_thread_count; ac_cv_threadcount=$withval
+# Check whether --enable-thread-count was given.
+if test "${enable_thread_count+set}" = set; then
+  enableval=$enable_thread_count; ac_cv_threadcount=$withval
 else
   ac_cv_threadcount=no
 fi
@@ -25059,10 +25052,9 @@ cat >>confdefs.h <<\_ACEOF
 _ACEOF
 
 fi
-
-# Check whether --with-asserts was given.
-if test "${with_asserts+set}" = set; then
-  withval=$with_asserts; ac_cv_asserts=$withval
+# Check whether --enable-asserts was given.
+if test "${enable_asserts+set}" = set; then
+  enableval=$enable_asserts; ac_cv_asserts=$withval
 else
   ac_cv_asserts=no
 fi
@@ -25074,10 +25066,9 @@ cat >>confdefs.h <<\_ACEOF
 _ACEOF
 
 fi
-
-# Check whether --with-lazy-threadids was given.
-if test "${with_lazy_threadids+set}" = set; then
-  withval=$with_lazy_threadids; ac_cv_lazythreadids=$withval
+# Check whether --enable-lazy-threadids was given.
+if test "${enable_lazy_threadids+set}" = set; then
+  enableval=$enable_lazy_threadids; ac_cv_lazythreadids=$withval
 else
   ac_cv_lazythreadids=yes
 fi
