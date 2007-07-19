@@ -1,10 +1,34 @@
+QTHREADS!
+
+The qthreads API is designed to make using large numbers of threads convenient
+and easy. The API maps well to both MTA-style threading and PIM-style
+threading, and is still quite useful in a standard SMP context. The qthreads
+API also provides access to full/empty-bit (FEB) semantics, where every word of
+memory can be marked either full or empty, and a thread can wait for any word
+to attain either state.
+
+The qthreads library on an SMP is essentially a library for spawning and
+controlling coroutines: threads with small (4k) stacks. The threads are
+entirely in user-space and use their locked/unlocked status as part of their
+scheduling.
+
+The library's metaphor is that there are many qthreads and several "shepherds".
+Shepherds generally map to specific processors or memory regions, but this is
+not an explicit part of the API. Qthreads are assigned to specific shepherds
+and do not migrate (yet).
+
+The API includes utility functions for making threaded loops, sorting, and
+similar operations convenient.
+
+*****************************************
+Performance
+
 On a machine with approximately 2GB of RAM, this library was able to spawn and
 handle 350,000 qthreads. With some modifications (mostly in stack-size), it was
 able to handle 1,000,000 qthreads. It may be able to do more, but swapping will
 become an issue, and you may start to run out of address space.
 
-This library has been tested, and runs well, on a 64-bit machine, with some
-alignment concerns.
+This library has been tested, and runs well, on a 64-bit machine.
 
 On many machines, the stack is required to be page-aligned and there are
 usually strict requirements for the alignment of the ucontext_t structure
