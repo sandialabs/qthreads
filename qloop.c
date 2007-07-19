@@ -1,3 +1,6 @@
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 #include <stdlib.h>
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
