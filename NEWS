@@ -1,3 +1,19 @@
+--- 0.8 ---
+New Features:
+ - Added qloop functions to provide precisely balanced loop spawning. Still
+   relatively primitive, but the interface allows for bare-minimum overhead (in
+   terms of context-swaps and memory footprint) with more advanced scheduling.
+ - Configurable setrlimit and atomic increment use
+Improvements:
+ - Atomic increments are more widely used throughout library.
+ - Added qutil documentation
+ - Improved futurelib documentation
+ - Added workaround for GCC's broken gcse
+ - Bugfixes and portability improvements on architectures/environments where
+   atomic increments are unsupported
+ - Minor improvements to qalloc (from Vitus)
+ - Eliminated memory imbalancing by reintroducing locks. (Basic testing shows
+   it does not dramatically increase overhead.)
 --- 0.7 ---
 New Features:
  - qthread_incr() can be used for atomic increments
