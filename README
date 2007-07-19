@@ -153,3 +153,11 @@ xlc++. The other wrapper scripts (e.g. test1/test2/test3/testq) all have the
 correct arguments, and if you modify testloop so that $relink_command uses the
 "-Wl,--rpath -Wl,directory" syntax rather than the "-rpath,directory" syntax,
 it would work just fine.
+
+************************************************
+NOTE FOR MACOS X USERS
+Avoid using optimization when compiling qthreads with gcc 4.0.1; there is an
+optimization bug that will cause gcc to generate incorrect assembly. Sometimes
+this incorrect assembly will not even compile, sometimes it will compile but
+will cause a bus error. Either way, if you're using gcc 4.0.1, you should make
+sure CFLAGS is set so that default -O2 optimization is not applied.
