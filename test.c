@@ -23,25 +23,23 @@ static int dcmp(const void *a, const void *b)
     return 0;
 }
 
+unsigned int *ui_array;
+unsigned int ui_out, ui_sum_authoritative = 0, ui_mult_authoritative =
+1, ui_max_authoritative = 0, ui_min_authoritative = UINT_MAX;
+size_t ui_len = 1000000;
+int *i_array;
+int i_out, i_sum_authoritative = 0, i_mult_authoritative =
+1, i_max_authoritative = INT_MIN, i_min_authoritative = INT_MAX;
+size_t i_len = 1000000;
+double *d_array;
+double d_out, d_sum_authoritative = 0.0, d_mult_authoritative =
+1.0, d_max_authoritative = DBL_MIN, d_min_authoritative = DBL_MAX;
+size_t d_len = 1000000;
+struct timeval start, stop;
 
 aligned_t qmain(qthread_t * me, void *junk)
 {
-    unsigned int *ui_array;
-    unsigned int ui_out, ui_sum_authoritative = 0, ui_mult_authoritative =
-	1, ui_max_authoritative = 0, ui_min_authoritative = UINT_MAX;
-    size_t ui_len = 1000000;
-    int *i_array;
-    int i_out, i_sum_authoritative = 0, i_mult_authoritative =
-	1, i_max_authoritative = INT_MIN, i_min_authoritative = INT_MAX;
-    size_t i_len = 1000000;
-    double *d_array;
-    double d_out, d_sum_authoritative = 0.0, d_mult_authoritative =
-	1.0, d_max_authoritative = DBL_MIN, d_min_authoritative = DBL_MAX;
-    size_t d_len = 1000000;
-
     size_t i;
-    struct timeval start, stop;
-
 
     ui_array = calloc(ui_len, sizeof(unsigned int));
     for (i = 0; i < ui_len; i++) {
