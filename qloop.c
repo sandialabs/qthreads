@@ -135,14 +135,12 @@ struct qloopaccum_wrapper_args
     qt_loopr_f func;
     size_t startat, stopat;
     void * restrict arg;
-    volatile aligned_t *donecount;
     void * restrict ret;
 };
 
 static aligned_t qloopaccum_wrapper(qthread_t * me, const struct qloopaccum_wrapper_args *arg)
 {
     arg->func(me, arg->startat, arg->stopat, arg->arg, arg->ret);
-    qthread_incr((aligned_t*)arg->donecount, 1);
     return 0;
 }
 
@@ -160,7 +158,6 @@ static inline void qt_loopaccum_balance_inner(const size_t start,
 	malloc(sizeof(struct qloopaccum_wrapper_args) * qlib->nshepherds);
     aligned_t *rets = malloc(sizeof(aligned_t) * qlib->nshepherds);
     char *realrets = malloc(size * (qlib->nshepherds - 1));
-    volatile aligned_t donecount = 0;
     size_t len = stop - start;
     size_t each = len / qlib->nshepherds;
     size_t extra = len - (each * qlib->nshepherds);
@@ -177,7 +174,6 @@ static inline void qt_loopaccum_balance_inner(const size_t start,
 	}
 	qwa[i].startat = iterend;
 	qwa[i].stopat = iterend + each;
-	qwa[i].donecount = &donecount;
 	if (extra > 0) {
 	    qwa[i].stopat++;
 	    extra--;
@@ -189,31 +185,12 @@ static inline void qt_loopaccum_balance_inner(const size_t start,
 	    qthread_fork_to((qthread_f)qloopaccum_wrapper, qwa + i, rets + i, i);
 	}
     }
-#if 0
-    while (donecount != qlib->nshepherds) {
-	qthread_yield(me);
-    }
-    for (i=1; i<qlib->nshepherds; i++) {
-	acc(out, realrets + ((i - 1) * size));
-    }
-#else
-    if (donecount == qlib->nshepherds) {
-	for (i = 1; i < qlib->nshepherds; i++) {
-quickdone:
+    for (i = 0; i < qlib->nshepherds; i++) {
+	qthread_readFF(me, NULL, rets + i);
+	if (i > 0) {
 	    acc(out, realrets + ((i - 1) * size));
 	}
-    } else {
-	for (i = 0; i < qlib->nshepherds; i++) {
-	    qthread_readFF(me, NULL, rets + i);
-	    if (donecount == qlib->nshepherds) {
-		goto quickdone;
-	    }
-	    if (i > 0) {
-		acc(out, realrets + ((i - 1) * size));
-	    }
-	}
     }
-#endif
 }
 void qt_loopaccum_balance(const size_t start, const size_t stop,
 			  const size_t size, void * restrict out, const
