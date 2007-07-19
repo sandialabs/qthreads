@@ -1,3 +1,172 @@
+2007-07-19 14:53  kbwheel
+
+	* qloop.c: those optimizations were both pointless and logically
+	  flawed
+
+2007-07-19 11:06  kbwheel
+
+	* README: document OSX's broken-ness
+
+2007-07-19 11:06  kbwheel
+
+	* qthread.c: put the stupid & back... it needs to be there. turns
+	  out, MacOS X's 4.0.1 compiler has an optimization bug in it that
+	  can cause it to generate assembly that it cannot compile.
+
+2007-07-19 10:04  kbwheel
+
+	* qloop.c: qt_qsort
+
+2007-07-19 10:02  kbwheel
+
+	* qthread.c: this seems to make OSX happier (turning =&r into =r)
+
+2007-07-19 10:01  kbwheel
+
+	* qutil.c: minor formatting
+
+2007-07-19 09:59  kbwheel
+
+	* test.c: reduce stack load
+
+2007-07-19 09:58  kbwheel
+
+	* README: a bit more of a high-level description, in case someone
+	  wants one
+
+2007-07-19 09:56  kbwheel
+
+	* Makefile.in, acinclude.m4, aclocal.m4, config.h.in, configure,
+	  configure.in: backporting to be compatible with autoconf 2.59
+
+2007-06-18 15:13  kbwheel
+
+	* configure, configure.in: using enable/disable instead of
+	  with/without
+
+2007-06-18 15:13  kbwheel
+
+	* man3/future_init.3: made it reflect the current interface
+
+2007-06-18 15:13  kbwheel
+
+	* qloop.c: fixed an off-by-one bug
+
+2007-06-14 17:13  kbwheel
+
+	* man3/qt_loopaccum_balance.3: typos
+
+2007-06-14 17:13  kbwheel
+
+	* qthread/qloop.h: c++ compatability and some utility accumulator
+	  functions
+
+2007-06-14 17:13  kbwheel
+
+	* qutil.c: include config.h
+
+2007-06-14 17:12  kbwheel
+
+	* qthread.c, qthread/qthread.h, configure, config.h.in,
+	  configure.in: consistency in mutex-based incrementing flags
+
+2007-06-06 14:43  kbwheel
+
+	* Makefile.am, Makefile.in, qloop.c, testqloop.c,
+	  man3/qt_double_max.3, man3/qt_double_min.3,
+	  man3/qt_double_prod.3, man3/qt_double_sum.3, man3/qt_int_max.3,
+	  man3/qt_int_min.3, man3/qt_int_prod.3, man3/qt_int_sum.3,
+	  man3/qt_loop.3, man3/qt_loop_balance.3,
+	  man3/qt_loop_balance_future.3, man3/qt_loop_future.3,
+	  man3/qt_loopaccum_balance.3, man3/qt_loopaccum_balance_future.3,
+	  man3/qt_uint_max.3, man3/qt_uint_min.3, man3/qt_uint_prod.3,
+	  man3/qt_uint_sum.3, qthread/qloop.h: added qloop section of
+	  library
+
+2007-06-06 14:42  kbwheel
+
+	* futurelib.c: removed pedantic warnings
+
+2007-06-06 14:42  kbwheel
+
+	* qthread.c: no need to allocate stacks and contexts when
+	  finalizing, plus add __extension__ to clean up pedantic warnings
+
+2007-06-06 12:38  kbwheel
+
+	* qthread.c: minor changes, making a few things simpler and
+	  removing a compilation warning
+
+2007-06-06 12:22  kbwheel
+
+	* man3/: qutil_double_max.3, qutil_double_min.3,
+	  qutil_double_mult.3, qutil_double_sum.3: minor typos
+
+2007-06-01 12:51  kbwheel
+
+	* benchmark.c: both sorts
+
+2007-05-30 09:45  kbwheel
+
+	* benchmark.c: [no log message]
+
+2007-05-30 09:44  kbwheel
+
+	* qthread.c: fixed memory imbalancing by reinstituting locks
+	  everywhere and adding creator pointers. added some minor
+	  optimizations based on this. in some basic testing, this doesnt
+	  appear to add significant amounts of overhead, so... maybe we're
+	  getting away with murder here. keep your fingers crossed.
+
+2007-05-30 09:41  kbwheel
+
+	* configure.in, configure: fixed minor syntax errors
+
+2007-05-29 10:42  kbwheel
+
+	* benchmark.c: [no log message]
+
+2007-05-24 16:00  kbwheel
+
+	* qutil.c, qthread/qutil.h: remove extraneous argument from
+	  qutil_mergesort
+
+2007-05-24 15:58  kbwheel
+
+	* man3/qutil_double_max.3, man3/qutil_double_min.3,
+	  man3/qutil_double_mult.3, man3/qutil_double_sum.3,
+	  man3/qutil_int_max.3, man3/qutil_int_min.3,
+	  man3/qutil_int_mult.3, man3/qutil_int_sum.3,
+	  man3/qutil_mergesort.3, man3/qutil_qsort.3,
+	  man3/qutil_uint_max.3, man3/qutil_uint_min.3,
+	  man3/qutil_uint_mult.3, man3/qutil_uint_sum.3, Makefile.am,
+	  Makefile.in: document qutil
+
+2007-05-24 15:20  kbwheel
+
+	* configure.in, qthread.c, config.h.in, configure,
+	  qthread/qthread.h: added the ability to do without setrlimit if
+	  you want on linux, and the ability to force it to avoid using
+	  assembly for fast locks (e.g. if they arent as fast as one would
+	  think)
+
+2007-05-16 10:27  kbwheel
+
+	* configure, configure.in: fixed bug in asserts/threadcount
+
+2007-05-16 10:27  kbwheel
+
+	* test.c: formatting
+
+2007-05-15 16:51  kbwheel
+
+	* qthread.c: minor fix to work with Intels compiler on Itanium, and
+	  some formatting
+
+2007-05-14 15:41  kbwheel
+
+	* ChangeLog: updated, preparing for 0.8 release
+
 2007-05-14 15:40  kbwheel
 
 	* qthread.c: lots of atomic increment-mod portability fixes, and a
