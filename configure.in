@@ -1,7 +1,7 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_PREREQ(2.50)
+AC_PREREQ(2.59)
 AC_INIT(qthread, 0.8, rcmurph@sandia.gov)
 AM_INIT_AUTOMAKE(qthread, 0.8)
 AC_CONFIG_SRCDIR([main.c])
@@ -20,6 +20,7 @@ AC_DEFINE(_FILE_OFFSET_BITS, 64, [allow big files])
 
 # Checks for programs.
 AC_PROG_CC
+QTHREAD_PROG_CC_C99 # a copy of autoconf 2.60's AC_PROG_CC_C99
 AC_PROG_CPP
 AC_PROG_CXX
 AM_PROG_AS
@@ -28,6 +29,10 @@ AC_PROG_LN_S
 AC_PROG_MAKE_SET
 AC_PROG_LIBTOOL
 AC_PROG_RANLIB
+
+if test "$ac_cv_prog_cc_c99" != "no" ; then
+    AC_DEFINE(C99_ACCEPTED, 1, [if $CC understands C99 syntax])
+fi
 
 if test "$CC" != "xlc" ; then
 # Find out if GCC understands -fno-gcse
