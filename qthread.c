@@ -367,7 +367,7 @@ static inline aligned_t qthread_internal_incr_mod(aligned_t * operand,
 		  "stwcx. %3,0,%1\n\t"	/* *operand = incrd */
 		  "bne-   1b\n\t"	/* if it failed, go to label 1 back */
 		  "isync"	/* make sure it wasn't all a dream */
-		  :"=&r"   (retval)
+		  :"=r"    (retval)
 		  :"r"     (operand), "r"(max), "r"(incrd), "r"(compd)
 		  :"cc", "memory");
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
