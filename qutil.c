@@ -199,14 +199,14 @@ INNER_LOOP_FF(qutil_int_FF_sum_inner, qutil_is_args,
 							   qutil_int_min_inner,
 							   qutil_int_FF_min_inner)
 
-    struct qutil_mergesort_args
-    {
-	double *array;
-	size_t first_start, first_stop;
-	size_t second_start, second_stop;
-    };
+struct qutil_mergesort_args
+{
+    double *array;
+    size_t first_start, first_stop;
+    size_t second_start, second_stop;
+};
 
-    static int dcmp(const void *a, const void *b)
+static int dcmp(const void *a, const void *b)
 {
     if ((*(double *)a) < (*(double *)b))
 	return -1;
@@ -421,23 +421,23 @@ struct qutil_qsort_iprets
 struct qutil_qsort_iprets qutil_qsort_inner_partitioner(qthread_t * me,
 							double *array,
 							const size_t length,
-							double pivot)
+							const double pivot)
 {
+    const size_t chunksize = 10;
+    /* choose the number of threads to use */
+    const size_t numthreads = length / MT_LOOP_CHUNK + ((length % MT_LOOP_CHUNK) ? 1 : 0);
+    /* calculate the megachunk information for determining the array lengths
+     * each thread will be fed. */
+    const size_t megachunk_size = chunksize * numthreads;
+    /* just used as a boolean test */
+    const size_t extra_chunks = length % megachunk_size;
+
+    size_t megachunks = length / (chunksize * numthreads);
     struct qutil_qsort_iprets retval = { ((size_t) - 1), 0 };
     aligned_t *rets;
     struct qutil_qsort_args *args;
-    size_t numthreads;
-    size_t chunksize = 10;
-    size_t megachunk_size, megachunks, extra_chunks;
     size_t i;
 
-    /* choose the number of threads to use */
-    numthreads = length / MT_LOOP_CHUNK + ((length % MT_LOOP_CHUNK) ? 1 : 0);
-    /* calculate the megachunk information for determining the array lengths
-     * each thread will be fed. */
-    megachunk_size = chunksize * numthreads;
-    megachunks = length / (chunksize * numthreads);
-    extra_chunks = length % megachunk_size;	/* just used as a boolean test */
     rets = malloc(sizeof(aligned_t) * numthreads);
     args = malloc(sizeof(struct qutil_qsort_args) * numthreads);
     /* spawn threads to do the partitioning */
