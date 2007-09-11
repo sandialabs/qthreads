@@ -339,8 +339,9 @@ static inline aligned_t qthread_internal_incr(aligned_t * operand,
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && ( QTHREAD_XEON || __i486 || __i486__ )
     retval = 1;
     asm volatile (".section .smp_locks,\"a\"\n" "  .align 4\n" "  .long 661f\n" ".previous\n" "661:\n\tlock; "	/* this is stolen from the Linux kernel */
-		  "xaddl %0, %1":"=r" (retval)
-		  :"m"     (*operand), "0"(retval));
+		  "xaddl %0, %1"
+		  :"=r" (retval)
+		  :"m"  (*operand), "0"(retval));
 #else
 #ifndef QTHREAD_MUTEX_INCREMENT
 #warning unrecognized architecture: falling back to safe but very slow increment implementation
@@ -1370,6 +1371,8 @@ static inline qthread_addrstat_t *qthread_addrstat_new(qthread_shepherd_t *
     return ret;
 }				       /*}}} */
 
+/* this function removes the FEB data structure for the address maddr from the
+ * hash table */
 static inline void qthread_FEB_remove(void *maddr)
 {				       /*{{{ */
     qthread_addrstat_t *m;
