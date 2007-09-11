@@ -237,14 +237,15 @@ static inline aligned_t qthread_incr(aligned_t * operand, const int incr)
     aligned_t retval;
 
 #if !defined(QTHREAD_MUTEX_INCREMENT) && ( __PPC__ || _ARCH_PPC || __powerpc__ )
+    register unsigned int incrd = incrd; /* no initializing */
     asm volatile (
 	    "1:\tlwarx  %0,0,%1\n\t"
-	    "add    %0,%0,%2\n\t"
-	    "stwcx. %0,0,%1\n\t"
+	    "add    %3,%0,%2\n\t"
+	    "stwcx. %3,0,%1\n\t"
 	    "bne-   1b\n\t"	/* if it failed, try again */
 	    "isync"	/* make sure it wasn't all a dream */
 	    :"=&r"   (retval)
-	    :"r"     (operand), "r"(incr)
+	    :"r"     (operand), "r"(incr), "r"(incrd)
 	    :"cc", "memory");
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
 # ifdef __ILP64__
