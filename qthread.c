@@ -305,14 +305,15 @@ static inline aligned_t qthread_internal_incr(aligned_t * operand,
     aligned_t retval;
 
 #if !defined(QTHREAD_MUTEX_INCREMENT) && ( __PPC__ || _ARCH_PPC || __powerpc__ )
+    register unsigned int incrd = incrd; /* this doesn't need to be initialized */
     asm volatile ("1:\n\t"	/* the tag */
 		  "lwarx  %0,0,%1\n\t"	/* reserve operand into retval */
-		  "addi   %0,%0,1\n\t"	/* increment */
-		  "stwcx. %0,0,%1\n\t"	/* un-reserve opernd */
+		  "addi   %2,%0,1\n\t"	/* increment */
+		  "stwcx. %2,0,%1\n\t"	/* un-reserve opernd */
 		  "bne-   1b\n\t"	/* if it failed, try again */
 		  "isync"	/* make sure it wasn't all a dream */
 		  :"=&r"   (retval)
-		  :"r"     (operand)
+		  :"r"     (operand), "r" (incrd)
 		  :"cc", "memory");
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
 # ifdef __ILP64__
