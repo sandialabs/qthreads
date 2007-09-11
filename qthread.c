@@ -331,6 +331,11 @@ static inline aligned_t qthread_internal_incr(aligned_t * operand,
 
     retval = res;
 # endif
+#elif !defined(QTHREAD_MUTEX_INCREMENT) && ( __x86_64 || __x86_64__ )
+    retval = 1;
+    asm volatile ("lock xaddl %0, %1;"
+	    :"=r" (retval)
+	    :"m" (*operand), "0"(retval));
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && ( QTHREAD_XEON || __i486 || __i486__ )
     retval = 1;
     asm volatile (".section .smp_locks,\"a\"\n" "  .align 4\n" "  .long 661f\n" ".previous\n" "661:\n\tlock; "	/* this is stolen from the Linux kernel */
@@ -405,7 +410,7 @@ static inline aligned_t qthread_internal_incr_mod(aligned_t * operand,
     } while (res != old);	       /* if res==old, new is out of date */
     retval = old;
 # endif
-#elif !defined(QTHREAD_MUTEX_INCREMENT) && ( QTHREAD_XEON || __i486 || __i486__ )
+#elif !defined(QTHREAD_MUTEX_INCREMENT) && ( QTHREAD_XEON || __i486 || __i486__ || __x86_64 || __x86_64__ )
     unsigned long prev;
     unsigned int old, new;
 
