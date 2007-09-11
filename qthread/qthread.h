@@ -230,7 +230,8 @@ int qthread_unlock(qthread_t * me, const void *a);
 
 /* this implements an atomic increment. It is done with architecture-specific
  * assembly and does NOT use FEB's or lock/unlock (except in the slow fallback
- * for unrecognized architectures)... but usually that's not the issue. */
+ * for unrecognized architectures)... but usually that's not the issue.
+ * It returns the value of the contents of operand before incrementing. */
 static inline aligned_t qthread_incr(aligned_t * operand, const int incr)
 {/*{{{*/
     aligned_t retval;
@@ -245,7 +246,8 @@ static inline aligned_t qthread_incr(aligned_t * operand, const int incr)
 	    :"=&r"   (retval)
 	    :"r"     (operand), "r"(incr)
 	    :"cc", "memory");
-#elif !defined(QTHREAD_MUTEX_INCREMENT) && ( __ia64 || __ia64__ )
+#elif !defined(QTHREAD_MUTEX_INCREMENT) && ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
+# ifdef __ILP64__
     int64_t res;
 
     if (incr == 1) {
@@ -270,18 +272,53 @@ static inline aligned_t qthread_incr(aligned_t * operand, const int incr)
 		    :"r" (operand), "r"(newval)
 		    :"memory");
 	} while (res != old);	       /* if res==old, the calc is out of date */
-	retval = newval;
+	retval = old;
     }
-#elif !defined(QTHREAD_MUTEX_INCREMENT) && ( __i486 || __i486__ )
+# else
+    int32_t res;
+
+    if (incr == 1) {
+	asm volatile (
+		"fetchadd4.rel %0=%1,1"
+		:"=r" (res)
+		:"m" (*operand));
+	retval = res;
+    } else {
+	int32_t old, newval;
+	do {
+	    old = *operand;	       /* atomic, because operand is aligned */
+	    newval = old + incr;
+	    asm volatile (
+		    "mov ar.ccv=%0;;"
+		    : /* no output */
+		    :"rO"    (old));
+	    /* separate so the compiler can insert its junk */
+	    asm volatile (
+		    "cmpxchg4.acq %0=[%1],%2,ar.ccv"
+		    :"=r" (res)
+		    :"r" (operand), "r"(newval)
+		    :"memory");
+	} while (res != old);	       /* if res==old, the calc is out of date */
+	retval = old;
+    }
+# endif
+#elif !defined(QTHREAD_MUTEX_INCREMENT) && ( __x86_64 || __x86_64__ )
+    retval = incr;
     asm volatile (
+	    "lock xaddl %0, %1;"
+	    :"=r" (retval)
+	    :"m" (*operand), "0" (retval));
+#elif !defined(QTHREAD_MUTEX_INCREMENT) && ( __i486 || __i486__ )
+    retval = incr;
+    asm volatile (
+	    ".section .smp_locks,\"a\"\n"
+	    "  .align 4\n"
+	    "  .long 661f\n"
+	    ".previous\n"
+	    "661:\n" /* the preceeding gobbledygook is stolen from the Linux kernel */
 	    "lock xaddl %1,%0"	/* atomically add incr to operand */
 	    : /* no output */
-	    :"m"     (*operand), "ir"(incr));
-#elif !defined(QTHREAD_MUTEX_INCREMENT) && ( i386 || __i386 || __i386__ )
-    asm volatile (
-	    "lock addl %1,%0"
-	    :"=m" (*operand)
-	    :"ir"    (incr), "m"(*operand));
+	    :"m"     (*operand), "ir"(retval));
 #else
 #ifndef QTHREAD_MUTEX_INCREMENT
 #warning unrecognized architecture: falling back to safe but very slow increment implementation
