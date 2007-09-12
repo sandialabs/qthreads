@@ -124,8 +124,8 @@
 #define ALLOC_ADDRSTAT(shep) (qthread_addrstat_t *) malloc(sizeof(qthread_addrstat_t))
 #define FREE_ADDRSTAT(t) free(t)
 #else
-#define ALLOC_ADDRSTAT(shep) __extension__ ({qthread_addrstat_t *foo = (qthread_addrstat_t *) cp_mempool_alloc(shep->addrstat_pool); assert(foo != NULL); foo->creator_ptr = shep; foo;})
-#define FREE_ADDRSTAT(t) cp_mempool_free(t->creator_ptr->addrstat_pool, t)
+#define ALLOC_ADDRSTAT(shep) __extension__ ({qthread_addrstat_t *foo = (qthread_addrstat_t *) cp_mempool_alloc(shep?(shep->addrstat_pool):generic_addrstat_pool); assert(foo != NULL); foo->creator_ptr = shep; foo;})
+#define FREE_ADDRSTAT(t) cp_mempool_free(t->creator_ptr?(t->creator_ptr->addrstat_pool):generic_addrstat_pool, t)
 #endif
 
 #ifndef QTHREAD_NOALIGNCHECK
@@ -246,6 +246,7 @@ static cp_mempool *generic_stack_pool = NULL;
 static cp_mempool *generic_context_pool = NULL;
 static cp_mempool *generic_queue_pool = NULL;
 static cp_mempool *generic_lock_pool = NULL;
+static cp_mempool *generic_addrstat_pool = NULL;
 
 #ifdef QTHREAD_COUNT_THREADS
 static unsigned long threadcount = 0;
@@ -299,6 +300,10 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
 #define QTHREAD_SIGNAL(l) qassert(pthread_cond_signal(l), 0)
 #define QTHREAD_CONDWAIT(c, l) qassert(pthread_cond_wait(c, l), 0)
 
+/* guaranteed to be between 0 and 32, using the first parts of addr that are
+ * significant */
+#define QTHREAD_CHOOSE_BIN(addr) (((size_t)addr >> 4) & 0x1f)
+
 static inline aligned_t qthread_internal_incr(aligned_t * operand,
 					      pthread_mutex_t * lock)
 {				       /*{{{ */
@@ -338,7 +343,12 @@ static inline aligned_t qthread_internal_incr(aligned_t * operand,
 	    :"m" (*operand), "0"(retval));
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && ( QTHREAD_XEON || __i486 || __i486__ )
     retval = 1;
-    asm volatile (".section .smp_locks,\"a\"\n" "  .align 4\n" "  .long 661f\n" ".previous\n" "661:\n\tlock; "	/* this is stolen from the Linux kernel */
+    asm volatile (
+	    ".section .smp_locks,\"a\"\n"
+	    "  .align 4\n"
+	    "  .long 661f\n"
+	    ".previous\n"
+	    "661:\n\tlock; "	/* this is stolen from the Linux kernel */
 		  "xaddl %0, %1"
 		  :"=r" (retval)
 		  :"m"  (*operand), "0"(retval));
@@ -665,6 +675,8 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	cp_mempool_create_by_option(0, sizeof(qthread_queue_t), 0);
     generic_lock_pool =
 	cp_mempool_create_by_option(0, sizeof(qthread_lock_t), 0);
+    generic_addrstat_pool =
+	cp_mempool_create_by_option(0, sizeof(qthread_addrstat_t), 0);
 
     /* spawn the number of shepherd threads that were specified */
     for (i = 0; i < nshepherds; i++) {
@@ -753,6 +765,7 @@ void qthread_finalize(void)
     cp_mempool_destroy(generic_context_pool);
     cp_mempool_destroy(generic_queue_pool);
     cp_mempool_destroy(generic_lock_pool);
+    cp_mempool_destroy(generic_addrstat_pool);
     free(qlib->shepherds);
     free(qlib);
     qlib = NULL;
@@ -1344,7 +1357,7 @@ int qthread_feb_status(const void *addr)
     qthread_addrstat_t *m;
     aligned_t *alignedaddr;
     int status = 1;		/* full */
-    const int lockbin = (((size_t) addr) >> 5) & 0x1f;	/* guaranteed to be between 0 and 32 */
+    const int lockbin = QTHREAD_CHOOSE_BIN(addr);
 
     ALIGN(addr, alignedaddr, "qthread_feb_status()");
     cp_hashtable_rdlock(qlib->FEBs[lockbin]); {
@@ -1358,6 +1371,9 @@ int qthread_feb_status(const void *addr)
     return status;
 }				       /*}}} */
 
+/* This allocates a new, initialized addrstat structure, which is used for
+ * keeping track of the FEB status of an address. It expects a shepherd pointer
+ * to use to find the right memory pool to use. */
 static inline qthread_addrstat_t *qthread_addrstat_new(qthread_shepherd_t *
 						       shepherd)
 {				       /*{{{ */
@@ -1376,7 +1392,7 @@ static inline qthread_addrstat_t *qthread_addrstat_new(qthread_shepherd_t *
 static inline void qthread_FEB_remove(void *maddr)
 {				       /*{{{ */
     qthread_addrstat_t *m;
-    const int lockbin = (((size_t) maddr) >> 5) & 0x1f;	/* guaranteed to be between 0 and 32 */
+    const int lockbin = QTHREAD_CHOOSE_BIN(maddr);
 
     qthread_debug("qthread_FEB_remove(): attempting removal\n");
     cp_hashtable_wrlock(qlib->FEBs[lockbin]); {
@@ -1507,41 +1523,30 @@ static aligned_t qthread_empty_sub(qthread_t * me, void *arg)
 
 void qthread_empty(qthread_t * me, const void *dest)
 {				       /*{{{ */
-    if (me != NULL) {
-	qthread_addrstat_t *m;
-	aligned_t *alignedaddr;
-	const int lockbin = (((size_t) dest) >> 5) & 0x1f;	/* guaranteed to be between 0 and 32 */
+    qthread_addrstat_t *m;
+    aligned_t *alignedaddr;
+    const int lockbin = QTHREAD_CHOOSE_BIN(dest);
 
-	ALIGN(dest, alignedaddr, "qthread_empty()");
-	cp_hashtable_wrlock(qlib->FEBs[lockbin]);
-	{			       /* BEGIN CRITICAL SECTION */
-	    m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs[lockbin],
-							(void *)alignedaddr);
-	    if (!m) {
-		/* currently full, and must be added to the hash to empty */
-		m = qthread_addrstat_new(me->shepherd_ptr);
-		m->full = 0;
-		cp_hashtable_put(qlib->FEBs[lockbin], (void *)alignedaddr, m);
-		m = NULL;
-	    } else {
-		/* it could be either full or not, don't know */
-		QTHREAD_LOCK(&m->lock);
-		REPORTLOCK(m);
-	    }
-	}			       /* END CRITICAL SECTION */
-	cp_hashtable_unlock(qlib->FEBs[lockbin]);
-	if (m) {
-	    qthread_gotlock_empty(m, (void *)alignedaddr, 0);
+    ALIGN(dest, alignedaddr, "qthread_empty()");
+    cp_hashtable_wrlock(qlib->FEBs[lockbin]);
+    {			       /* BEGIN CRITICAL SECTION */
+	m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs[lockbin],
+		(void *)alignedaddr);
+	if (!m) {
+	    /* currently full, and must be added to the hash to empty */
+	    m = qthread_addrstat_new(me?(me->shepherd_ptr):NULL);
+	    m->full = 0;
+	    cp_hashtable_put(qlib->FEBs[lockbin], (void *)alignedaddr, m);
+	    m = NULL;
+	} else {
+	    /* it could be either full or not, don't know */
+	    QTHREAD_LOCK(&m->lock);
+	    REPORTLOCK(m);
 	}
-    } else {
-	struct qthread_FEB_ef_sub_args args =
-	    { dest, PTHREAD_MUTEX_INITIALIZER };
-
-	QTHREAD_LOCK(&args.alldone);
-	qthread_fork(qthread_empty_sub, &args, NULL);
-	QTHREAD_LOCK(&args.alldone);
-	QTHREAD_UNLOCK(&args.alldone);
-	QTHREAD_DESTROYLOCK(&args.alldone);
+    }			       /* END CRITICAL SECTION */
+    cp_hashtable_unlock(qlib->FEBs[lockbin]);
+    if (m) {
+	qthread_gotlock_empty(m, (void *)alignedaddr, 0);
     }
 }				       /*}}} */
 
@@ -1554,37 +1559,26 @@ static aligned_t qthread_fill_sub(qthread_t * me, void *arg)
 
 void qthread_fill(qthread_t * me, const void *dest)
 {				       /*{{{ */
-    if (me != NULL) {
-	qthread_addrstat_t *m;
-	aligned_t *alignedaddr;
-	const int lockbin = (((size_t) dest) >> 5) & 0x1f;	/* guaranteed to be between 0 and 32 */
+    qthread_addrstat_t *m;
+    aligned_t *alignedaddr;
+    const int lockbin = QTHREAD_CHOOSE_BIN(dest);
 
-	ALIGN(dest, alignedaddr, "qthread_fill()");
-	/* lock hash */
-	cp_hashtable_wrlock(qlib->FEBs[lockbin]);
-	{			       /* BEGIN CRITICAL SECTION */
-	    m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs[lockbin],
-							(void *)alignedaddr);
-	    if (m) {
-		QTHREAD_LOCK(&m->lock);
-		REPORTLOCK(m);
-	    }
-	}			       /* END CRITICAL SECTION */
-	cp_hashtable_unlock(qlib->FEBs[lockbin]);	/* unlock hash */
+    ALIGN(dest, alignedaddr, "qthread_fill()");
+    /* lock hash */
+    cp_hashtable_wrlock(qlib->FEBs[lockbin]);
+    {			       /* BEGIN CRITICAL SECTION */
+	m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs[lockbin],
+		(void *)alignedaddr);
 	if (m) {
-	    /* if dest wasn't in the hash, it was already full. Since it was,
-	     * we need to fill it. */
-	    qthread_gotlock_fill(m, (void *)alignedaddr, 0);
+	    QTHREAD_LOCK(&m->lock);
+	    REPORTLOCK(m);
 	}
-    } else {
-	struct qthread_FEB_ef_sub_args args =
-	    { dest, PTHREAD_MUTEX_INITIALIZER };
-
-	QTHREAD_LOCK(&args.alldone);
-	qthread_fork(qthread_fill_sub, &args, NULL);
-	QTHREAD_LOCK(&args.alldone);
-	QTHREAD_UNLOCK(&args.alldone);
-	QTHREAD_DESTROYLOCK(&args.alldone);
+    }			       /* END CRITICAL SECTION */
+    cp_hashtable_unlock(qlib->FEBs[lockbin]);	/* unlock hash */
+    if (m) {
+	/* if dest wasn't in the hash, it was already full. Since it was,
+	 * we need to fill it. */
+	qthread_gotlock_fill(m, (void *)alignedaddr, 0);
     }
 }				       /*}}} */
 
@@ -1606,7 +1600,7 @@ void qthread_writeF(qthread_t * me, void *dest, const void *src)
     if (me != NULL) {
 	qthread_addrstat_t *m;
 	aligned_t *alignedaddr;
-	const int lockbin = (((size_t) dest) >> 5) & 0x1f;	/* guaranteed to be between 0 and 32 */
+	const int lockbin = QTHREAD_CHOOSE_BIN(dest);
 
 	ALIGN(dest, alignedaddr, "qthread_fill_with()");
 	cp_hashtable_wrlock(qlib->FEBs[lockbin]); {	/* lock hash */
@@ -1662,7 +1656,7 @@ void qthread_writeEF(qthread_t * me, void *dest, const void *src)
 	qthread_addrstat_t *m;
 	qthread_addrres_t *X = NULL;
 	aligned_t *alignedaddr;
-	const int lockbin = (((size_t) dest) >> 5) & 0x1f;	/* guaranteed to be between 0 and 32 */
+	const int lockbin = QTHREAD_CHOOSE_BIN(dest);
 
 	qthread_debug("qthread_writeEF(%p, %p, %p): init\n", me, dest, src);
 	ALIGN(dest, alignedaddr, "qthread_writeEF()");
@@ -1736,7 +1730,7 @@ void qthread_readFF(qthread_t * me, void *dest, const void *src)
 	qthread_addrstat_t *m = NULL;
 	qthread_addrres_t *X = NULL;
 	aligned_t *alignedaddr;
-	const int lockbin = (((size_t) src) >> 5) & 0x1f;	/* guaranteed to be between 0 and 32 */
+	const int lockbin = QTHREAD_CHOOSE_BIN(src);
 
 	qthread_debug("qthread_readFF(%p, %p, %p): init\n", me, dest, src);
 	ALIGN(src, alignedaddr, "qthread_readFF()");
@@ -1809,7 +1803,7 @@ void qthread_readFE(qthread_t * me, void *dest, void *src)
 	qthread_addrstat_t *m;
 	qthread_addrres_t *X = NULL;
 	aligned_t *alignedaddr;
-	const int lockbin = (((size_t) src) >> 5) & 0x1f;	/* guaranteed to be between 0 and 32 */
+	const int lockbin = QTHREAD_CHOOSE_BIN(src);
 
 	qthread_debug("qthread_readFE(%p, %p, %p): init\n", me, dest, src);
 	ALIGN(src, alignedaddr, "qthread_readFE()");
@@ -1890,7 +1884,7 @@ int qthread_lock(qthread_t * t, const void *a)
     qthread_lock_t *m;
 
     if (t != NULL) {
-	const int lockbin = (((size_t) a) >> 5) & 0x1f;	/* guaranteed to be between 0 and 32 */
+	const int lockbin = QTHREAD_CHOOSE_BIN(a);
 
 	cp_hashtable_wrlock(qlib->locks[lockbin]);
 	m = (qthread_lock_t *) cp_hashtable_get(qlib->locks[lockbin],
@@ -1967,7 +1961,7 @@ int qthread_unlock(qthread_t * t, const void *a)
     qthread_debug("qthread_unlock(%p, %p): started\n", t, a);
 
     if (t != NULL) {
-	const int lockbin = (((size_t) a) >> 5) & 0x1f;	/* guaranteed to be between 0 and 32 */
+	const int lockbin = QTHREAD_CHOOSE_BIN(a);
 
 	cp_hashtable_wrlock(qlib->locks[lockbin]);
 	m = (qthread_lock_t *) cp_hashtable_get(qlib->locks[lockbin],
