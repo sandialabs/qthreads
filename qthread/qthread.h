@@ -2,6 +2,7 @@
 #define _QTHREAD_H_
 
 #include <pthread.h>		       /* included here only as a convenience */
+#include <errno.h>		       /* for ENOMEM */
 
 #include <qthread/qthread-int.h>       /* for uint32_t and uint64_t */
 
@@ -18,6 +19,11 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *****************************************************************************/
 
+/* Return Codes */
+#define QTHREAD_REDUNDANT	1
+#define QTHREAD_SUCCESS		0
+#define QTHREAD_MALLOC_ERROR	ENOMEM
+#define QTHREAD_PTHREAD_ERROR	-2
 
 #ifdef __cplusplus
 extern "C"
@@ -75,8 +81,8 @@ qthread_t *qthread_self(void);
  *     free'd). The qthread_fork_to* functions spawn the thread to a specific
  *     shepherd.
  */
-void qthread_fork(const qthread_f f, const void *arg, aligned_t * ret);
-void qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
+int qthread_fork(const qthread_f f, const void *arg, aligned_t * ret);
+int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
 		     const qthread_shepherd_id_t shepherd);
 
 /* Using qthread_prepare()/qthread_schedule() and variants:
@@ -93,8 +99,8 @@ qthread_t *qthread_prepare_for(const qthread_f f, const void *arg,
 			       aligned_t * ret,
 			       const qthread_shepherd_id_t shepherd);
 
-void qthread_schedule(qthread_t * t);
-void qthread_schedule_on(qthread_t * t, const qthread_shepherd_id_t shepherd);
+int qthread_schedule(qthread_t * t);
+int qthread_schedule_on(qthread_t * t, const qthread_shepherd_id_t shepherd);
 
 /* these are accessor functions for use by the qthreads to retrieve information
  * about themselves */
@@ -127,8 +133,8 @@ int qthread_feb_status(const void *addr);
  * reason for this is memory pooling; memory is allocated on a per-shepherd
  * basis (to avoid needing to lock the memory pool). Anyway, if you pass it a
  * NULL qthread_t, it will still work, it just won't be as fast. */
-void qthread_empty(qthread_t * me, const void *dest);
-void qthread_fill(qthread_t * me, const void *dest);
+int qthread_empty(qthread_t * me, const void *dest);
+int qthread_fill(qthread_t * me, const void *dest);
 
 /* NOTE!!!!!!!!!!!
  * Reads and writes operate on machine-word-size segments of memory. That is,
@@ -161,8 +167,8 @@ void qthread_fill(qthread_t * me, const void *dest);
  * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
  * (which, conveniently, returns NULL if you aren't a qthread).
  */
-void qthread_writeEF(qthread_t * me, void *dest, const void *src);
-void qthread_writeEF_const(qthread_t * me, void *dest, const aligned_t src);
+int qthread_writeEF(qthread_t * me, void *dest, const void *src);
+int qthread_writeEF_const(qthread_t * me, void *dest, const aligned_t src);
 
 /* This function is a cross between qthread_fill() and qthread_writeEF(). It
  * does not wait for memory to become empty, but performs the write and sets
@@ -179,8 +185,8 @@ void qthread_writeEF_const(qthread_t * me, void *dest, const aligned_t src);
  * (which, conveniently, returns NULL if you aren't a qthread).
  */
 
-void qthread_writeF(qthread_t * me, void *dest, const void *src);
-void qthread_writeF_const(qthread_t * me, void *dest, const aligned_t src);
+int qthread_writeF(qthread_t * me, void *dest, const void *src);
+int qthread_writeF_const(qthread_t * me, void *dest, const aligned_t src);
 
 /* This function waits for memory to become full, and then reads it and leaves
  * the memory as full. When memory becomes full, all threads waiting for itindent: Standard input:225: Error:Stmt nesting error.
@@ -197,7 +203,7 @@ void qthread_writeF_const(qthread_t * me, void *dest, const aligned_t src);
  * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
  * (which, conveniently, returns NULL if you aren't a qthread).
  */
-void qthread_readFF(qthread_t * me, void *dest, const void *src);
+int qthread_readFF(qthread_t * me, void *dest, const void *src);
 
 /* These functions wait for memory to become full, and then empty it. When
  * memory becomes full, only one thread blocked like this will be awoken. Data
@@ -213,7 +219,7 @@ void qthread_readFF(qthread_t * me, void *dest, const void *src);
  * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
  * (which, conveniently, returns NULL if you aren't a qthread).
  */
-void qthread_readFE(qthread_t * me, void *dest, void *src);
+int qthread_readFE(qthread_t * me, void *dest, void *src);
 
 /* functions to implement FEB-ish locking/unlocking
  *
