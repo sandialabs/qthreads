@@ -10,7 +10,7 @@ pkginclude_HEADERS = qthread/qthread.h \
 					 qthread/loop.hpp
 
 libqthread_la_SOURCES = qthread.c qalloc.c qutil.c futurelib.c qloop.c
-libqthread_la_LDFLAGS = -version-info 8:0:0 -no-undefined
+libqthread_la_LDFLAGS = -version-info 9:0:0 -no-undefined
 EXTRA_libqthread_la_SOURCES = context.c asm.S
 libqthread_la_LIBADD = @QTHREAD_EXTRA_OBJS@
 libqthread_la_DEPENDENCIES = @QTHREAD_EXTRA_OBJS@
@@ -22,6 +22,7 @@ man_MANS = man3/qthread_empty.3 \
 		   man3/qthread_fork.3 \
 		   man3/qthread_fork_to.3 \
 		   man3/qthread_id.3 \
+		   man3/qthread_incr.3 \
 		   man3/qthread_init.3 \
 		   man3/qthread_lock.3 \
 		   man3/qthread_prepare.3 \
