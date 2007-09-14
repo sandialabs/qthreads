@@ -72,62 +72,6 @@
 #define QTHREAD_STATE_TERM_SHEP         UINT8_MAX
 #define QTHREAD_FUTURE                  1
 
-#if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED)
-#define ALLOC_QTHREAD(shep) (qthread_t *) malloc(sizeof(qthread_t))
-#define FREE_QTHREAD(shep, t) free(t)
-#else
-#define ALLOC_QTHREAD(shep) __extension__ ({qthread_t *foo = (qthread_t *) cp_mempool_alloc(shep?(shep->qthread_pool):generic_qthread_pool); assert(foo != NULL); foo->creator_ptr = shep; foo;})
-#define FREE_QTHREAD(shep, t) cp_mempool_free(shep?(shep->qthread_pool):generic_qthread_pool, t)
-#endif
-
-#if defined(UNPOOLED_STACKS) || defined(UNPOOLED)
-#define ALLOC_STACK(shep) malloc(qlib->qthread_stack_size)
-#define FREE_STACK(shep, t) free(t)
-#else
-#define ALLOC_STACK(shep) cp_mempool_alloc(shep?(shep->stack_pool):generic_stack_pool)
-#define FREE_STACK(shep, t) cp_mempool_free(shep?(shep->stack_pool):generic_stack_pool, t)
-#endif
-
-#if defined(UNPOOLED_CONTEXTS) || defined(UNPOOLED)
-#define ALLOC_CONTEXT(shep) (ucontext_t *) malloc(sizeof(ucontext_t))
-#define FREE_CONTEXT(shep, t) free(t)
-#else
-#define ALLOC_CONTEXT(shep) (ucontext_t *) cp_mempool_alloc(shep?(shep->context_pool):generic_context_pool)
-#define FREE_CONTEXT(shep, t) cp_mempool_free(shep?(shep->context_pool):generic_context_pool, t)
-#endif
-
-#if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
-#define ALLOC_QUEUE(shep) (qthread_queue_t *) malloc(sizeof(qthread_queue_t))
-#define FREE_QUEUE(t) free(t)
-#else
-#define ALLOC_QUEUE(shep) __extension__ ({qthread_queue_t *foo = (qthread_queue_t *) cp_mempool_alloc(shep?(shep->queue_pool):generic_queue_pool); assert(foo != NULL); foo->creator_ptr = shep; foo;})
-#define FREE_QUEUE(t) cp_mempool_free(t->creator_ptr?(t->creator_ptr->queue_pool):generic_queue_pool, t)
-#endif
-
-#if defined(UNPOOLED_LOCKS) || defined(UNPOOLED)
-#define ALLOC_LOCK(shep) (qthread_lock_t *) malloc(sizeof(qthread_lock_t))
-#define FREE_LOCK(t) free(t)
-#else
-#define ALLOC_LOCK(shep) __extension__ ({qthread_lock_t *foo = (qthread_lock_t *) cp_mempool_alloc(shep?(shep->lock_pool):generic_lock_pool); assert(foo != NULL); foo->creator_ptr = shep; foo;})
-#define FREE_LOCK(t) cp_mempool_free(t->creator_ptr->lock_pool, t)
-#endif
-
-#if defined(UNPOOLED_ADDRRES) || defined(UNPOOLED)
-#define ALLOC_ADDRRES(shep) (qthread_addrres_t *) malloc(sizeof(qthread_addrres_t))
-#define FREE_ADDRRES(t) free(t)
-#else
-#define ALLOC_ADDRRES(shep) __extension__ ({qthread_addrres_t *foo = (qthread_addrres_t *) cp_mempool_alloc(shep->addrres_pool); assert(foo != NULL); foo->creator_ptr = shep; foo;})
-#define FREE_ADDRRES(t) cp_mempool_free(t->creator_ptr->addrres_pool, t)
-#endif
-
-#if defined(UNPOOLED_ADDRSTAT) || defined(UNPOOLED)
-#define ALLOC_ADDRSTAT(shep) (qthread_addrstat_t *) malloc(sizeof(qthread_addrstat_t))
-#define FREE_ADDRSTAT(t) free(t)
-#else
-#define ALLOC_ADDRSTAT(shep) __extension__ ({qthread_addrstat_t *foo = (qthread_addrstat_t *) cp_mempool_alloc(shep?(shep->addrstat_pool):generic_addrstat_pool); assert(foo != NULL); foo->creator_ptr = shep; foo;})
-#define FREE_ADDRSTAT(t) cp_mempool_free(t->creator_ptr?(t->creator_ptr->addrstat_pool):generic_addrstat_pool, t)
-#endif
-
 #ifndef QTHREAD_NOALIGNCHECK
 #define ALIGN(d, s, f) do { \
     s = (aligned_t *) (((size_t) d) & MACHINEMASK); \
@@ -299,6 +243,126 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
 #define QTHREAD_DESTROYCOND(l) qassert(pthread_cond_destroy(l), 0)
 #define QTHREAD_SIGNAL(l) qassert(pthread_cond_signal(l), 0)
 #define QTHREAD_CONDWAIT(c, l) qassert(pthread_cond_wait(c, l), 0)
+
+#if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED)
+#define ALLOC_QTHREAD(shep) (qthread_t *) malloc(sizeof(qthread_t))
+#define FREE_QTHREAD(t) free(t)
+#else
+static inline qthread_t * ALLOC_QTHREAD(qthread_shepherd_t *shep)
+{
+    qthread_t *tmp =
+	(qthread_t *) cp_mempool_alloc(shep ? (shep->qthread_pool) :
+				       generic_qthread_pool);
+    if (tmp != NULL) {
+	tmp->creator_ptr = shep;
+    }
+    return tmp;
+}
+static inline void FREE_QTHREAD(qthread_t *t)
+{
+    cp_mempool_free(t->creator_ptr ? (t->creator_ptr->qthread_pool) :
+		    generic_qthread_pool, t);
+}
+#endif
+
+#if defined(UNPOOLED_STACKS) || defined(UNPOOLED)
+#define ALLOC_STACK(shep) malloc(qlib->qthread_stack_size)
+#define FREE_STACK(shep, t) free(t)
+#else
+#define ALLOC_STACK(shep) cp_mempool_alloc(shep?(shep->stack_pool):generic_stack_pool)
+#define FREE_STACK(shep, t) cp_mempool_free(shep?(shep->stack_pool):generic_stack_pool, t)
+#endif
+
+#if defined(UNPOOLED_CONTEXTS) || defined(UNPOOLED)
+#define ALLOC_CONTEXT(shep) (ucontext_t *) malloc(sizeof(ucontext_t))
+#define FREE_CONTEXT(shep, t) free(t)
+#else
+#define ALLOC_CONTEXT(shep) (ucontext_t *) cp_mempool_alloc(shep?(shep->context_pool):generic_context_pool)
+#define FREE_CONTEXT(shep, t) cp_mempool_free(shep?(shep->context_pool):generic_context_pool, t)
+#endif
+
+#if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
+#define ALLOC_QUEUE(shep) (qthread_queue_t *) malloc(sizeof(qthread_queue_t))
+#define FREE_QUEUE(t) free(t)
+#else
+static inline qthread_queue_t * ALLOC_QUEUE(qthread_shepherd_t * shep)
+{
+    qthread_queue_t *tmp =
+	(qthread_queue_t *) cp_mempool_alloc(shep ? (shep->queue_pool) :
+					     generic_queue_pool);
+    if (tmp != NULL) {
+	tmp->creator_ptr = shep;
+    }
+    return tmp;
+}
+static inline void FREE_QUEUE(qthread_queue_t * t)
+{
+    cp_mempool_free(t->creator_ptr ?
+		    (t->creator_ptr->queue_pool) : generic_queue_pool, t);
+}
+#endif
+
+#if defined(UNPOOLED_LOCKS) || defined(UNPOOLED)
+#define ALLOC_LOCK(shep) (qthread_lock_t *) malloc(sizeof(qthread_lock_t))
+#define FREE_LOCK(t) free(t)
+#else
+static inline qthread_lock_t * ALLOC_LOCK(qthread_shepherd_t * shep)
+{
+    qthread_lock_t *tmp =
+	(qthread_lock_t *) cp_mempool_alloc(shep ? (shep->lock_pool) :
+					    generic_lock_pool);
+    if (tmp != NULL) {
+	tmp->creator_ptr = shep;
+    }
+    return tmp;
+}
+static inline void FREE_LOCK(qthread_lock_t *t)
+{
+    cp_mempool_free(t->creator_ptr ?
+		    (t->creator_ptr->lock_pool) : generic_lock_pool, t);
+}
+#endif
+
+#if defined(UNPOOLED_ADDRRES) || defined(UNPOOLED)
+#define ALLOC_ADDRRES(shep) (qthread_addrres_t *) malloc(sizeof(qthread_addrres_t))
+#define FREE_ADDRRES(t) free(t)
+#else
+static inline qthread_addrres_t * ALLOC_ADDRRES(qthread_shepherd_t * shep)
+{
+    qthread_addrres_t *tmp =
+	(qthread_addrres_t *) cp_mempool_alloc(shep->addrres_pool);
+    if (tmp != NULL) {
+	tmp->creator_ptr = shep;
+    }
+    return tmp;
+}
+static inline void FREE_ADDRRES(qthread_shepherd_t * t)
+{
+    cp_mempool_free(t->creator_ptr->addrres_pool, t);
+}
+#endif
+
+#if defined(UNPOOLED_ADDRSTAT) || defined(UNPOOLED)
+#define ALLOC_ADDRSTAT(shep) (qthread_addrstat_t *) malloc(sizeof(qthread_addrstat_t))
+#define FREE_ADDRSTAT(t) free(t)
+#else
+static inline qthread_addrstat_t * ALLOC_ADDRSTAT(qthread_shepherd_t * shep)
+{
+    qthread_addrstat_t *tmp =
+	(qthread_addrstat_t *) cp_mempool_alloc(shep ? (shep->addrstat_pool) :
+						generic_addrstat_pool);
+    if (tmp != NULL) {
+	tmp->creator_ptr = shep;
+    }
+    return tmp;
+}
+static inline void FREE_ADDRSTAT(qthread_addrstat_t * t)
+{
+    cp_mempool_free(t->creator_ptr ?
+		    (t->creator_ptr->addrstat_pool) : generic_addrstat_pool, t);
+}
+#endif
+
 
 /* guaranteed to be between 0 and 32, using the first parts of addr that are
  * significant */
@@ -570,7 +634,9 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
     qthread_debug("qthread_init(): began.\n");
 
     qlib = (qlib_t) malloc(sizeof(struct qlib_s));
-    assert(qlib != NULL);
+    if (qlib == NULL) {
+	return QTHREAD_MALLOC_ERROR;
+    }
 
     /* initialize the FEB-like locking structures */
 
@@ -579,16 +645,14 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	if ((qlib->locks[i] =
 	     cp_hashtable_create(10000, cp_hash_addr,
 				 cp_hash_compare_addr)) == NULL) {
-	    perror("qthread_init()");
-	    abort();
+	    return QTHREAD_MALLOC_ERROR;
 	}
 	cp_hashtable_set_min_fill_factor(qlib->locks[i], 0);
 	if ((qlib->FEBs[i] =
 	     cp_hashtable_create_by_option(COLLECTION_MODE_DEEP, 10000,
 					   cp_hash_addr, cp_hash_compare_addr,
 					   NULL, NULL, NULL, NULL)) == NULL) {
-	    perror("qthread_init()");
-	    abort();
+	    return QTHREAD_MALLOC_ERROR;
 	}
 	cp_hashtable_set_min_fill_factor(qlib->FEBs[i], 0);
     }
@@ -598,8 +662,7 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
     qlib->nshepherds = nshepherds;
     if ((qlib->shepherds = (qthread_shepherd_t *)
 	 malloc(sizeof(qthread_shepherd_t) * nshepherds)) == NULL) {
-	perror("qthread_init()");
-	abort();
+	return QTHREAD_MALLOC_ERROR;
     }
 
     qlib->qthread_stack_size = QTHREAD_DEFAULT_STACK_SIZE;
@@ -683,6 +746,10 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	qlib->shepherds[i].sched_shepherd = 0;
 	qlib->shepherds[i].shepherd_id = i;
 	qlib->shepherds[i].ready = qthread_queue_new(NULL);
+	if (qlib->shepherds[i].ready == NULL) {
+	    perror("qthread_init creating shepherd queue");
+	    return QTHREAD_MALLOC_ERROR;
+	}
 
 	qthread_debug("qthread_init(): forking shepherd thread %p\n",
 		      &qlib->shepherds[i]);
@@ -692,13 +759,13 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 			    qthread_shepherd, &qlib->shepherds[i])) != 0) {
 	    fprintf(stderr, "qthread_init: pthread_create() failed (%d)\n",
 		    r);
-	    perror("qthread_init");
-	    abort();
+	    perror("qthread_init spawning shepherd");
+	    return r;
 	}
     }
 
     qthread_debug("qthread_init(): finished.\n");
-    return 0;
+    return QTHREAD_SUCCESS;
 }				       /*}}} */
 
 void qthread_finalize(void)
@@ -717,6 +784,7 @@ void qthread_finalize(void)
     /* enqueue the termination thread sentinal */
     for (i = 0; i < qlib->nshepherds; i++) {
 	t = qthread_thread_bare(NULL, NULL, (aligned_t *) NULL, i);
+	assert(t != NULL); /* what else can we do? */
 	t->thread_state = QTHREAD_STATE_TERM_SHEP;
 	t->thread_id = (unsigned int)-1;
 	qthread_enqueue(qlib->shepherds[i].ready, t);
@@ -836,28 +904,28 @@ static inline qthread_t *qthread_thread_bare(const qthread_f f,
 #else
     t = ALLOC_QTHREAD(NULL);
 #endif
-    assert(t != NULL);
+    if (t != NULL) {
 #ifdef QTHREAD_NONLAZY_THREADIDS
-    /* give the thread an ID number */
-    t->thread_id =
-	qthread_internal_incr(&(qlib->max_thread_id),
-			      &qlib->max_thread_id_lock);
+	/* give the thread an ID number */
+	t->thread_id =
+	    qthread_internal_incr(&(qlib->max_thread_id),
+		    &qlib->max_thread_id_lock);
 #else
-    t->thread_id = (unsigned int)-1;
+	t->thread_id = (unsigned int)-1;
 #endif
-    t->thread_state = QTHREAD_STATE_NEW;
-    t->f = f;
-    t->arg = (void *)arg;
-    t->blockedon = NULL;
-    t->shepherd_ptr = &(qlib->shepherds[shepherd]);
-    t->ret = ret;
-    t->context = NULL;
-    t->stack = NULL;
-
+	t->thread_state = QTHREAD_STATE_NEW;
+	t->f = f;
+	t->arg = (void *)arg;
+	t->blockedon = NULL;
+	t->shepherd_ptr = &(qlib->shepherds[shepherd]);
+	t->ret = ret;
+	t->context = NULL;
+	t->stack = NULL;
+    }
     return t;
 }				       /*}}} */
 
-static inline void qthread_thread_plush(qthread_t * t)
+static inline int qthread_thread_plush(qthread_t * t)
 {				       /*{{{ */
     ucontext_t *uc;
     void *stack;
@@ -865,13 +933,16 @@ static inline void qthread_thread_plush(qthread_t * t)
 	(qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
 
     uc = ALLOC_CONTEXT(shepherd);
-    assert(uc != NULL);
-
-    stack = ALLOC_STACK(shepherd);
-    assert(stack != NULL);
-
-    t->context = uc;
-    t->stack = stack;
+    if (uc != NULL) {
+	stack = ALLOC_STACK(shepherd);
+	if (stack != NULL) {
+	    t->context = uc;
+	    t->stack = stack;
+	    return QTHREAD_SUCCESS;
+	}
+	FREE_CONTEXT(shepherd, uc);
+    }
+    return QTHREAD_MALLOC_ERROR;
 }				       /*}}} */
 
 /* this could be reduced to a qthread_thread_bare() and qthread_thread_plush(),
@@ -893,12 +964,20 @@ static inline qthread_t *qthread_thread_new(const qthread_f f,
 #endif
 
     t = ALLOC_QTHREAD(myshep);
+    if (t == NULL) {
+	return NULL;
+    }
     uc = ALLOC_CONTEXT(myshep);
+    if (uc == NULL) {
+	FREE_QTHREAD(t);
+	return NULL;
+    }
     stack = ALLOC_STACK(myshep);
-
-    assert(t != NULL);
-    assert(uc != NULL);
-    assert(stack != NULL);
+    if (stack == NULL) {
+	FREE_QTHREAD(t);
+	FREE_CONTEXT(myshep, uc);
+	return NULL;
+    }
 
     t->thread_state = QTHREAD_STATE_NEW;
     t->f = f;
@@ -919,7 +998,7 @@ static inline qthread_t *qthread_thread_new(const qthread_f f,
     t->thread_id = (unsigned int)-1;
 #endif
 
-    return (t);
+    return t;
 }				       /*}}} */
 
 static inline void qthread_thread_free(qthread_t * t)
@@ -927,12 +1006,17 @@ static inline void qthread_thread_free(qthread_t * t)
     assert(t != NULL);
 
     if (t->context) {
+	if (t->creator_ptr != NULL) {
+	    printf("non-generic context\n");
+	} else {
+	    printf("generic context\n");
+	}
 	FREE_CONTEXT(t->creator_ptr, t->context);
     }
     if (t->stack != NULL) {
 	FREE_STACK(t->creator_ptr, t->stack);
     }
-    FREE_QTHREAD(t->creator_ptr, t);
+    FREE_QTHREAD(t);
 }				       /*}}} */
 
 
@@ -946,11 +1030,13 @@ static inline qthread_queue_t *qthread_queue_new(qthread_shepherd_t *
     qthread_queue_t *q;
 
     q = ALLOC_QUEUE(shepherd);
-    q->head = NULL;
-    q->tail = NULL;
-    QTHREAD_INITLOCK(&q->lock);
-    QTHREAD_INITCOND(&q->notempty);
-    return (q);
+    if (q != NULL) {
+	q->head = NULL;
+	q->tail = NULL;
+	QTHREAD_INITLOCK(&q->lock);
+	QTHREAD_INITCOND(&q->notempty);
+    }
+    return q;
 }				       /*}}} */
 
 static inline void qthread_queue_free(qthread_queue_t * q)
@@ -1063,10 +1149,12 @@ static void qthread_wrapper(void *arg)
 	maxconcurrentthreads = concurrentthreads;
     qassert(pthread_mutex_unlock(&concurrentthreads_lock), 0);
 #endif
-    if (t->ret)
+    if (t->ret) {
+	/* XXX: if this fails, we should probably do something */
 	qthread_writeEF_const(t, t->ret, (t->f) (t, t->arg));
-    else
+    } else {
 	(t->f) (t, t->arg);
+    }
     t->thread_state = QTHREAD_STATE_TERMINATED;
 
     qthread_debug("qthread_wrapper(): f=%p arg=%p completed.\n", t->f,
@@ -1177,7 +1265,7 @@ void qthread_yield(qthread_t * t)
 /* fork a thread by putting it in somebody's work queue
  * NOTE: scheduling happens here
  */
-void qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
+int qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
 {				       /*{{{ */
     qthread_t *t;
     qthread_shepherd_id_t shep;
@@ -1195,17 +1283,23 @@ void qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
 				      &qlib->sched_shepherd_lock);
     }
     t = qthread_thread_new(f, arg, ret, shep);
+    if (t) {
+	qthread_debug("qthread_fork(): tid %u shep %u\n", t->thread_id, shep);
 
-
-    qthread_debug("qthread_fork(): tid %u shep %u\n", t->thread_id, shep);
-
-    if (ret) {
-	qthread_empty(qthread_self(), ret);
+	if (ret) {
+	    int test = qthread_empty(qthread_self(), ret);
+	    if (test != QTHREAD_SUCCESS) {
+		qthread_thread_free(t);
+		return test;
+	    }
+	}
+	qthread_enqueue(qlib->shepherds[shep].ready, t);
+	return QTHREAD_SUCCESS;
     }
-    qthread_enqueue(qlib->shepherds[shep].ready, t);
+    return QTHREAD_MALLOC_ERROR;
 }				       /*}}} */
 
-void qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
+int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
 		     const qthread_shepherd_id_t shepherd)
 {				       /*{{{ */
     qthread_t *t;
@@ -1214,16 +1308,24 @@ void qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
 	return;
     }
     t = qthread_thread_new(f, arg, ret, shepherd);
-    qthread_debug("qthread_fork_to(): tid %u shep %u\n", t->thread_id,
-		  shepherd);
+    if (t) {
+	qthread_debug("qthread_fork_to(): tid %u shep %u\n", t->thread_id,
+		shepherd);
 
-    if (ret) {
-	qthread_empty(qthread_self(), ret);
+	if (ret) {
+	    int test = qthread_empty(qthread_self(), ret);
+	    if (test != QTHREAD_SUCCESS) {
+		qthread_thread_free(t);
+		return test;
+	    }
+	}
+	qthread_enqueue(qlib->shepherds[shepherd].ready, t);
+	return QTHREAD_SUCCESS;
     }
-    qthread_enqueue(qlib->shepherds[shepherd].ready, t);
+    return QTHREAD_MALLOC_ERROR;
 }				       /*}}} */
 
-void qthread_fork_future_to(const qthread_f f, const void *arg,
+int qthread_fork_future_to(const qthread_f f, const void *arg,
 			    aligned_t * ret,
 			    const qthread_shepherd_id_t shepherd)
 {				       /*{{{ */
@@ -1233,14 +1335,22 @@ void qthread_fork_future_to(const qthread_f f, const void *arg,
 	return;
     }
     t = qthread_thread_new(f, arg, ret, shepherd);
-    t->flags |= QTHREAD_FUTURE;
-    qthread_debug("qthread_fork_future_to(): tid %u shep %u\n", t->thread_id,
-		  shepherd);
+    if (t) {
+	t->flags |= QTHREAD_FUTURE;
+	qthread_debug("qthread_fork_future_to(): tid %u shep %u\n", t->thread_id,
+		shepherd);
 
-    if (ret) {
-	qthread_empty(qthread_self(), ret);
+	if (ret) {
+	    int test = qthread_empty(qthread_self(), ret);
+	    if (test != QTHREAD_SUCCESS) {
+		qthread_thread_free(t);
+		return test;
+	    }
+	}
+	qthread_enqueue(qlib->shepherds[shepherd].ready, t);
+	return QTHREAD_SUCCESS;
     }
-    qthread_enqueue(qlib->shepherds[shepherd].ready, t);
+    return QTHREAD_MALLOC_ERROR;
 }				       /*}}} */
 
 static inline void qthread_back_to_master(qthread_t * t)
@@ -1286,10 +1396,12 @@ qthread_t *qthread_prepare(const qthread_f f, const void *arg,
     }
 
     t = qthread_thread_bare(f, arg, ret, shep);
-    if (ret) {
-	qthread_empty(qthread_self(), ret);
+    if (t && ret) {
+	if (qthread_empty(qthread_self(), ret) != QTHREAD_SUCCESS) {
+	    qthread_thread_free(t);
+	    return NULL;
+	}
     }
-
     return t;
 }				       /*}}} */
 
@@ -1299,23 +1411,31 @@ qthread_t *qthread_prepare_for(const qthread_f f, const void *arg,
 {				       /*{{{ */
     qthread_t *t = qthread_thread_bare(f, arg, ret, shepherd);
 
-    if (ret) {
-	qthread_empty(qthread_self(), ret);
+    if (t && ret) {
+	if (qthread_empty(qthread_self(), ret) != QTHREAD_SUCCESS) {
+	    qthread_thread_free(t);
+	    return NULL;
+	}
     }
-
     return t;
 }				       /*}}} */
 
-void qthread_schedule(qthread_t * t)
+int qthread_schedule(qthread_t * t)
 {				       /*{{{ */
-    qthread_thread_plush(t);
-    qthread_enqueue(t->shepherd_ptr->ready, t);
+    int ret = qthread_thread_plush(t);
+    if (ret == QTHREAD_SUCCESS) {
+	qthread_enqueue(t->shepherd_ptr->ready, t);
+    }
+    return ret;
 }				       /*}}} */
 
-void qthread_schedule_on(qthread_t * t, const qthread_shepherd_id_t shepherd)
+int qthread_schedule_on(qthread_t * t, const qthread_shepherd_id_t shepherd)
 {				       /*{{{ */
-    qthread_thread_plush(t);
-    qthread_enqueue(qlib->shepherds[shepherd].ready, t);
+    int ret = qthread_thread_plush(t);
+    if (ret == QTHREAD_SUCCESS) {
+	qthread_enqueue(qlib->shepherds[shepherd].ready, t);
+    }
+    return ret;
 }				       /*}}} */
 
 /* functions to implement FEB locking/unlocking 
@@ -1334,12 +1454,14 @@ struct qthread_FEB_sub_args
 {
     void *src;
     void *dest;
+    int ret;
     pthread_mutex_t alldone;
 };
 struct qthread_FEB2_sub_args
 {
     const void *src;
     void *dest;
+    int ret;
     pthread_mutex_t alldone;
 };
 
@@ -1348,6 +1470,7 @@ struct qthread_FEB2_sub_args
 struct qthread_FEB_ef_sub_args
 {
     const void *dest;
+    int ret;
     pthread_mutex_t alldone;
 };
 
@@ -1364,7 +1487,11 @@ int qthread_feb_status(const void *addr)
 	m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs[lockbin],
 						    (void *)alignedaddr);
 	if (m) {
+	    QTHREAD_LOCK(&m->lock);
+	    REPORTLOCK(m);
 	    status = m->full;
+	    QTHREAD_UNLOCK(&m->lock);
+	    REPORTUNLOCK(m);
 	}
     }
     cp_hashtable_unlock(qlib->FEBs[lockbin]);
@@ -1379,11 +1506,13 @@ static inline qthread_addrstat_t *qthread_addrstat_new(qthread_shepherd_t *
 {				       /*{{{ */
     qthread_addrstat_t *ret = ALLOC_ADDRSTAT(shepherd);
 
-    QTHREAD_INITLOCK(&ret->lock);
-    ret->full = 1;
-    ret->EFQ = NULL;
-    ret->FEQ = NULL;
-    ret->FFQ = NULL;
+    if (ret != NULL) {
+	QTHREAD_INITLOCK(&ret->lock);
+	ret->full = 1;
+	ret->EFQ = NULL;
+	ret->FEQ = NULL;
+	ret->FFQ = NULL;
+    }
     return ret;
 }				       /*}}} */
 
@@ -1514,14 +1643,7 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m, void *maddr,
     }
 }				       /*}}} */
 
-static aligned_t qthread_empty_sub(qthread_t * me, void *arg)
-{				       /*{{{ */
-    qthread_empty(me, ((struct qthread_FEB_ef_sub_args *)arg)->dest);
-    pthread_mutex_unlock(&((struct qthread_FEB_ef_sub_args *)arg)->alldone);
-    return 0;
-}				       /*}}} */
-
-void qthread_empty(qthread_t * me, const void *dest)
+int qthread_empty(qthread_t * me, const void *dest)
 {				       /*{{{ */
     qthread_addrstat_t *m;
     aligned_t *alignedaddr;
@@ -1535,6 +1657,10 @@ void qthread_empty(qthread_t * me, const void *dest)
 	if (!m) {
 	    /* currently full, and must be added to the hash to empty */
 	    m = qthread_addrstat_new(me?(me->shepherd_ptr):NULL);
+	    if (!m) {
+		cp_hashtable_unlock(qlib->FEBs[lockbin]);
+		return QTHREAD_MALLOC_ERROR;
+	    }
 	    m->full = 0;
 	    cp_hashtable_put(qlib->FEBs[lockbin], (void *)alignedaddr, m);
 	    m = NULL;
@@ -1548,16 +1674,10 @@ void qthread_empty(qthread_t * me, const void *dest)
     if (m) {
 	qthread_gotlock_empty(m, (void *)alignedaddr, 0);
     }
+    return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-static aligned_t qthread_fill_sub(qthread_t * me, void *arg)
-{				       /*{{{ */
-    qthread_fill(me, ((struct qthread_FEB_ef_sub_args *)arg)->dest);
-    pthread_mutex_unlock(&((struct qthread_FEB_ef_sub_args *)arg)->alldone);
-    return 0;
-}				       /*}}} */
-
-void qthread_fill(qthread_t * me, const void *dest)
+int qthread_fill(qthread_t * me, const void *dest)
 {				       /*{{{ */
     qthread_addrstat_t *m;
     aligned_t *alignedaddr;
@@ -1580,6 +1700,7 @@ void qthread_fill(qthread_t * me, const void *dest)
 	 * we need to fill it. */
 	qthread_gotlock_fill(m, (void *)alignedaddr, 0);
     }
+    return QTHREAD_SUCCESS;
 }				       /*}}} */
 
 /* the way this works is that:
@@ -1589,13 +1710,14 @@ void qthread_fill(qthread_t * me, const void *dest)
 
 static aligned_t qthread_writeF_sub(qthread_t * me, void *arg)
 {				       /*{{{ */
-    qthread_writeF(me, ((struct qthread_FEB_sub_args *)arg)->dest,
-		   ((struct qthread_FEB_sub_args *)arg)->src);
+    ((struct qthread_FEB_sub_args *)arg)->ret =
+	qthread_writeF(me, ((struct qthread_FEB_sub_args *)arg)->dest,
+		       ((struct qthread_FEB_sub_args *)arg)->src);
     pthread_mutex_unlock(&((struct qthread_FEB_sub_args *)arg)->alldone);
-    return 0;
+    return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-void qthread_writeF(qthread_t * me, void *dest, const void *src)
+int qthread_writeF(qthread_t * me, void *dest, const void *src)
 {				       /*{{{ */
     if (me != NULL) {
 	qthread_addrstat_t *m;
@@ -1608,6 +1730,10 @@ void qthread_writeF(qthread_t * me, void *dest, const void *src)
 							(void *)alignedaddr);
 	    if (!m) {
 		m = qthread_addrstat_new(me->shepherd_ptr);
+		if (!m) {
+		    cp_hashtable_unlock(qlib->FEBs[lockbin]);
+		    return QTHREAD_MALLOC_ERROR;
+		}
 		cp_hashtable_put(qlib->FEBs[lockbin], alignedaddr, m);
 	    }
 	    QTHREAD_LOCK(&m->lock);
@@ -1621,19 +1747,26 @@ void qthread_writeF(qthread_t * me, void *dest, const void *src)
 	qthread_gotlock_fill(m, alignedaddr, 0);
     } else {
 	struct qthread_FEB_sub_args args =
-	    { (void *)src, dest, PTHREAD_MUTEX_INITIALIZER };
+	    { (void *)src, dest, 0 };
+	int ret;
 
+	QTHREAD_INITLOCK(&args.alldone);
 	QTHREAD_LOCK(&args.alldone);
-	qthread_fork(qthread_writeF_sub, &args, NULL);
-	QTHREAD_LOCK(&args.alldone);
+	ret = qthread_fork(qthread_writeF_sub, &args, NULL);
+	if (ret == QTHREAD_SUCCESS) {
+	    QTHREAD_LOCK(&args.alldone);
+	} else {
+	    args.ret = ret;
+	}
 	QTHREAD_UNLOCK(&args.alldone);
 	QTHREAD_DESTROYLOCK(&args.alldone);
+	return args.ret;
     }
 }				       /*}}} */
 
-void qthread_writeF_const(qthread_t * me, void *dest, const aligned_t src)
+int qthread_writeF_const(qthread_t * me, void *dest, const aligned_t src)
 {				       /*{{{ */
-    qthread_writeF(me, dest, &src);
+    return qthread_writeF(me, dest, &src);
 }				       /*}}} */
 
 /* the way this works is that:
@@ -1644,13 +1777,14 @@ void qthread_writeF_const(qthread_t * me, void *dest, const aligned_t src)
 
 static aligned_t qthread_writeEF_sub(qthread_t * me, void *arg)
 {				       /*{{{ */
-    qthread_writeEF(me, ((struct qthread_FEB_sub_args *)arg)->dest,
-		    ((struct qthread_FEB_sub_args *)arg)->src);
+    ((struct qthread_FEB_sub_args *)arg)->ret =
+	qthread_writeEF(me, ((struct qthread_FEB_sub_args *)arg)->dest,
+			((struct qthread_FEB_sub_args *)arg)->src);
     pthread_mutex_unlock(&((struct qthread_FEB_sub_args *)arg)->alldone);
-    return 0;
+    return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-void qthread_writeEF(qthread_t * me, void *dest, const void *src)
+int qthread_writeEF(qthread_t * me, void *dest, const void *src)
 {				       /*{{{ */
     if (me != NULL) {
 	qthread_addrstat_t *m;
@@ -1665,6 +1799,10 @@ void qthread_writeEF(qthread_t * me, void *dest, const void *src)
 							(void *)alignedaddr);
 	    if (!m) {
 		m = qthread_addrstat_new(me->shepherd_ptr);
+		if (!m) {
+		    cp_hashtable_unlock(qlib->FEBs[lockbin]);
+		    return QTHREAD_MALLOC_ERROR;
+		}
 		cp_hashtable_put(qlib->FEBs[lockbin], alignedaddr, m);
 	    }
 	    QTHREAD_LOCK(&(m->lock));
@@ -1676,6 +1814,11 @@ void qthread_writeEF(qthread_t * me, void *dest, const void *src)
 	qthread_debug("qthread_writeEF(): m->full == %i\n", m->full);
 	if (m->full == 1) {	       /* full, thus, we must block */
 	    X = ALLOC_ADDRRES(me->shepherd_ptr);
+	    if (X == NULL) {
+		QTHREAD_UNLOCK(&(m->lock));
+		REPORTUNLOCK(m);
+		return QTHREAD_MALLOC_ERROR;
+	    }
 	    X->addr = (aligned_t *) src;
 	    X->waiter = me;
 	    X->next = m->EFQ;
@@ -1694,21 +1837,29 @@ void qthread_writeEF(qthread_t * me, void *dest, const void *src)
 	    me->blockedon = (struct qthread_lock_s *)m;
 	    qthread_back_to_master(me);
 	}
+	return QTHREAD_SUCCESS;
     } else {
 	struct qthread_FEB_sub_args args =
-	    { (void *)src, dest, PTHREAD_MUTEX_INITIALIZER };
+	    { (void *)src, dest, 0 };
+	int ret;
 
+	QTHREAD_INITLOCK(&args.alldone);
 	QTHREAD_LOCK(&args.alldone);
-	qthread_fork(qthread_writeEF_sub, &args, NULL);
-	QTHREAD_LOCK(&args.alldone);
+	ret = qthread_fork(qthread_writeEF_sub, &args, NULL);
+	if (ret == QTHREAD_SUCCESS) {
+	    QTHREAD_LOCK(&args.alldone);
+	} else {
+	    args.ret = ret;
+	}
 	QTHREAD_UNLOCK(&args.alldone);
 	QTHREAD_DESTROYLOCK(&args.alldone);
+	return args.ret;
     }
 }				       /*}}} */
 
-void qthread_writeEF_const(qthread_t * me, void *dest, const aligned_t src)
+int qthread_writeEF_const(qthread_t * me, void *dest, const aligned_t src)
 {				       /*{{{ */
-    qthread_writeEF(me, dest, &src);
+    return qthread_writeEF(me, dest, &src);
 }				       /*}}} */
 
 /* the way this works is that:
@@ -1718,13 +1869,14 @@ void qthread_writeEF_const(qthread_t * me, void *dest, const aligned_t src)
 
 static aligned_t qthread_readFF_sub(qthread_t * me, void *arg)
 {				       /*{{{ */
-    qthread_readFF(me, ((struct qthread_FEB2_sub_args *)arg)->dest,
-		   ((struct qthread_FEB2_sub_args *)arg)->src);
+    ((struct qthread_FEB2_sub_args *)arg)->ret =
+	qthread_readFF(me, ((struct qthread_FEB2_sub_args *)arg)->dest,
+		       ((struct qthread_FEB2_sub_args *)arg)->src);
     pthread_mutex_unlock(&((struct qthread_FEB2_sub_args *)arg)->alldone);
-    return 0;
+    return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-void qthread_readFF(qthread_t * me, void *dest, const void *src)
+int qthread_readFF(qthread_t * me, void *dest, const void *src)
 {				       /*{{{ */
     if (me != NULL) {
 	qthread_addrstat_t *m = NULL;
@@ -1750,9 +1902,14 @@ void qthread_readFF(qthread_t * me, void *dest, const void *src)
 	qthread_debug("qthread_readFF(): data structure locked\n");
 	/* now m, if it exists, is locked - if m is NULL, then we're done! */
 	if (m == NULL)
-	    return;
+	    return QTHREAD_SUCCESS;
 	if (m->full != 1) {
 	    X = ALLOC_ADDRRES(me->shepherd_ptr);
+	    if (X == NULL) {
+		QTHREAD_UNLOCK(&m->lock);
+		REPORTUNLOCK(m);
+		return QTHREAD_MALLOC_ERROR;
+	    }
 	    X->addr = (aligned_t *) dest;
 	    X->waiter = me;
 	    X->next = m->FFQ;
@@ -1771,15 +1928,23 @@ void qthread_readFF(qthread_t * me, void *dest, const void *src)
 	    me->blockedon = (struct qthread_lock_s *)m;
 	    qthread_back_to_master(me);
 	}
+	return QTHREAD_SUCCESS;
     } else {
 	struct qthread_FEB2_sub_args args =
-	    { src, dest, PTHREAD_MUTEX_INITIALIZER };
+	    { src, dest, 0 };
+	int ret;
 
+	QTHREAD_INITLOCK(&args.alldone);
 	QTHREAD_LOCK(&args.alldone);
-	qthread_fork(qthread_readFF_sub, &args, NULL);
-	QTHREAD_LOCK(&args.alldone);
+	ret = qthread_fork(qthread_readFF_sub, &args, NULL);
+	if (ret == QTHREAD_SUCCESS) {
+	    QTHREAD_LOCK(&args.alldone);
+	} else {
+	    args.ret = ret;
+	}
 	QTHREAD_UNLOCK(&args.alldone);
 	QTHREAD_DESTROYLOCK(&args.alldone);
+	return args.ret;
     }
 }				       /*}}} */
 
@@ -1791,13 +1956,14 @@ void qthread_readFF(qthread_t * me, void *dest, const void *src)
 
 static aligned_t qthread_readFE_sub(qthread_t * me, void *arg)
 {				       /*{{{ */
-    qthread_readFE(me, ((struct qthread_FEB_sub_args *)arg)->dest,
-		   ((struct qthread_FEB_sub_args *)arg)->src);
+    ((struct qthread_FEB_sub_args *)arg)->ret =
+	qthread_readFE(me, ((struct qthread_FEB_sub_args *)arg)->dest,
+		       ((struct qthread_FEB_sub_args *)arg)->src);
     pthread_mutex_unlock(&((struct qthread_FEB_sub_args *)arg)->alldone);
-    return 0;
+    return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-void qthread_readFE(qthread_t * me, void *dest, void *src)
+int qthread_readFE(qthread_t * me, void *dest, void *src)
 {				       /*{{{ */
     if (me != NULL) {
 	qthread_addrstat_t *m;
@@ -1812,6 +1978,10 @@ void qthread_readFE(qthread_t * me, void *dest, void *src)
 							alignedaddr);
 	    if (!m) {
 		m = qthread_addrstat_new(me->shepherd_ptr);
+		if (!m) {
+		    cp_hashtable_unlock(qlib->FEBs[lockbin]);
+		    return QTHREAD_MALLOC_ERROR;
+		}
 		cp_hashtable_put(qlib->FEBs[lockbin], alignedaddr, m);
 	    }
 	    QTHREAD_LOCK(&(m->lock));
@@ -1822,6 +1992,11 @@ void qthread_readFE(qthread_t * me, void *dest, void *src)
 	/* by this point m is locked */
 	if (m->full == 0) {	       /* empty, thus, we must block */
 	    X = ALLOC_ADDRRES(me->shepherd_ptr);
+	    if (X == NULL) {
+		QTHREAD_UNLOCK(&m->lock);
+		REPORTUNLOCK(m);
+		return QTHREAD_MALLOC_ERROR;
+	    }
 	    X->addr = (aligned_t *) dest;
 	    X->waiter = me;
 	    X->next = m->FEQ;
@@ -1839,15 +2014,23 @@ void qthread_readFE(qthread_t * me, void *dest, void *src)
 	    me->blockedon = (struct qthread_lock_s *)m;
 	    qthread_back_to_master(me);
 	}
+	return QTHREAD_SUCCESS;
     } else {
 	struct qthread_FEB_sub_args args =
-	    { src, dest, PTHREAD_MUTEX_INITIALIZER };
+	    { src, dest, 0 };
+	int ret;
 
+	QTHREAD_INITLOCK(&args.alldone);
 	QTHREAD_LOCK(&args.alldone);
-	qthread_fork(qthread_readFE_sub, &args, NULL);
-	QTHREAD_LOCK(&args.alldone);
+	ret = qthread_fork(qthread_readFE_sub, &args, NULL);
+	if (ret == QTHREAD_SUCCESS) {
+	    QTHREAD_LOCK(&args.alldone);
+	} else {
+	    args.ret = ret;
+	}
 	QTHREAD_UNLOCK(&args.alldone);
 	QTHREAD_DESTROYLOCK(&args.alldone);
+	return args.ret;
     }
 }				       /*}}} */
 
@@ -1869,14 +2052,16 @@ void qthread_readFE(qthread_t * me, void *dest, void *src)
 struct qthread_lock_sub_args
 {
     pthread_mutex_t alldone;
+    int ret;
     const void *addr;
 };
 
 static aligned_t qthread_lock_sub(qthread_t * t, void *arg)
 {				       /*{{{ */
-    qthread_lock(t, ((struct qthread_lock_sub_args *)arg)->addr);
+    ((struct qthread_lock_sub_args *)arg)->ret =
+	qthread_lock(t, ((struct qthread_lock_sub_args *)arg)->addr);
     pthread_mutex_unlock(&(((struct qthread_lock_sub_args *)arg)->alldone));
-    return 0;
+    return QTHREAD_SUCCESS;
 }				       /*}}} */
 
 int qthread_lock(qthread_t * t, const void *a)
@@ -1891,13 +2076,21 @@ int qthread_lock(qthread_t * t, const void *a)
 						(void *)a);
 	if (m == NULL) {
 	    m = ALLOC_LOCK(t->shepherd_ptr);
-	    assert(m != NULL);
+	    if (m == NULL) {
+		cp_hashtable_unlock(qlib->locks[lockbin]);
+		return QTHREAD_MALLOC_ERROR;
+	    }
 	    /* If we have a shepherd, use it... note that we are ignoring the
 	     * qthread_t that got passed in, because that is inherently
 	     * untrustworthy. I tested it, actually, and this is faster than
 	     * trying to guess whether the qthread_t is accurate or not.
 	     */
 	    m->waiting = qthread_queue_new(t->shepherd_ptr);
+	    if (m->waiting == NULL) {
+		FREE_LOCK(m);
+		cp_hashtable_unlock(qlib->locks[lockbin]);
+		return QTHREAD_MALLOC_ERROR;
+	    }
 	    QTHREAD_INITLOCK(&m->lock);
 	    cp_hashtable_put(qlib->locks[lockbin], (void *)a, m);
 	    /* since we just created it, we own it */
@@ -1914,10 +2107,10 @@ int qthread_lock(qthread_t * t, const void *a)
 	    qthread_debug("qthread_lock(%p, %p): returned (wasn't locked)\n",
 			  t, a);
 	} else {
-	    /* success==failure: because it's in the hash, someone else owns the
-	     * lock; dequeue this thread and yield.
-	     * NOTE: it's up to the master thread to enqueue this thread and unlock
-	     * the address
+	    /* success==failure: because it's in the hash, someone else owns
+	     * the lock; dequeue this thread and yield.
+	     * NOTE: it's up to the master thread to enqueue this thread and
+	     * unlock the address
 	     */
 	    QTHREAD_LOCK(&m->lock);
 	    /* for an explanation of the lock/unlock ordering here, see above */
@@ -1933,24 +2126,30 @@ int qthread_lock(qthread_t * t, const void *a)
 	    qthread_debug("qthread_lock(%p, %p): returned (was locked)\n", t,
 			  a);
 	}
-	return 1;
+	return QTHREAD_SUCCESS;
     } else {
-	struct qthread_lock_sub_args args = { PTHREAD_MUTEX_INITIALIZER, a };
+	struct qthread_lock_sub_args args = { PTHREAD_MUTEX_INITIALIZER, 0, a };
+	int ret;
 
 	QTHREAD_LOCK(&args.alldone);
-	qthread_fork(qthread_lock_sub, &args, NULL);
-	QTHREAD_LOCK(&args.alldone);
+	ret = qthread_fork(qthread_lock_sub, &args, NULL);
+	if (ret == QTHREAD_SUCCESS) {
+	    QTHREAD_LOCK(&args.alldone);
+	} else {
+	    args.ret = ret;
+	}
 	QTHREAD_UNLOCK(&args.alldone);
 	QTHREAD_DESTROYLOCK(&args.alldone);
-	return 2;
+	return args.ret;
     }
 }				       /*}}} */
 
 static aligned_t qthread_unlock_sub(qthread_t * t, void *arg)
 {				       /*{{{ */
-    qthread_unlock(t, ((struct qthread_lock_sub_args *)arg)->addr);
+    ((struct qthread_lock_sub_args *)arg)->ret =
+	qthread_unlock(t, ((struct qthread_lock_sub_args *)arg)->addr);
     pthread_mutex_unlock(&(((struct qthread_lock_sub_args *)arg)->alldone));
-    return 0;
+    return QTHREAD_SUCCESS;
 }				       /*}}} */
 
 int qthread_unlock(qthread_t * t, const void *a)
@@ -1969,7 +2168,7 @@ int qthread_unlock(qthread_t * t, const void *a)
 	if (m == NULL) {
 	    /* unlocking an address that's already locked */
 	    cp_hashtable_unlock(qlib->locks[lockbin]);
-	    return 1;
+	    return QTHREAD_REDUNDANT;
 	}
 	QTHREAD_LOCK(&m->lock);
 
@@ -2011,18 +2210,22 @@ int qthread_unlock(qthread_t * t, const void *a)
 	}
 
 	qthread_debug("qthread_unlock(%p, %p): returned\n", t, a);
-	return 1;
+	return QTHREAD_SUCCESS;
     } else {
-	struct qthread_lock_sub_args args = { PTHREAD_MUTEX_INITIALIZER, a };
+	struct qthread_lock_sub_args args = { PTHREAD_MUTEX_INITIALIZER, 0, a };
+	int ret;
 
 	QTHREAD_LOCK(&args.alldone);
-	qthread_fork(qthread_unlock_sub, &args, NULL);
-	QTHREAD_LOCK(&args.alldone);
+	ret = qthread_fork(qthread_unlock_sub, &args, NULL);
+	if (ret == QTHREAD_SUCCESS) {
+	    QTHREAD_LOCK(&args.alldone);
+	} else {
+	    args.ret = ret;
+	}
 	QTHREAD_UNLOCK(&args.alldone);
 	QTHREAD_DESTROYLOCK(&args.alldone);
-
 	qthread_debug("qthread_unlock(%p, %p): returned\n", t, a);
-	return 2;
+	return args.ret;
     }
 }				       /*}}} */
 
