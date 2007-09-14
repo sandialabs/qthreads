@@ -34,7 +34,7 @@ if test "$ac_cv_prog_cc_c99" != "no" ; then
     AC_DEFINE(C99_ACCEPTED, 1, [if $CC understands C99 syntax])
 fi
 
-if test "$CC" != "xlc" ; then
+if test "$CC" == "gcc" ; then
 # Find out if GCC understands -fno-gcse
 AC_MSG_CHECKING([if $CC understands -fno-gcse])
 CFLAGS_1="$CFLAGS"

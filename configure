@@ -19661,7 +19661,7 @@ _ACEOF
 
 fi
 
-if test "$CC" != "xlc" ; then
+if test "$CC" == "gcc" ; then
 # Find out if GCC understands -fno-gcse
 { echo "$as_me:$LINENO: checking if $CC understands -fno-gcse" >&5
 echo $ECHO_N "checking if $CC understands -fno-gcse... $ECHO_C" >&6; }
