@@ -41,10 +41,10 @@ emptied (as if it had been passed to \fBqthread_empty\fR()). When the function
 \fIf\fR returns, the returned value will be stored into \fIret\fR and \fIret\fR
 will be filled. The way to block until a function has finished is to use
 \fBqthread_readFF\fR() on the \fIret\fR pointer.
-.SH "RETURN VALUE"
+.SH RETURN VALUE
 These functions all return pointers to a qthread_t structure, which is a handle
-to the qthread that was just prepared.
-.SH "SEE ALSO"
+to the qthread that was just prepared. On error, NULL is returned.
+.SH SEE ALSO
 .BR qthread_fork (3),
 .BR qthread_fork_for (3),
 .BR qthread_schedule (3),

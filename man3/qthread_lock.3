@@ -4,11 +4,11 @@
 .SH SYNOPSIS
 .B #include <qthread/qthread.h>
 
-.I void
+.I int
 .br
 \fBqthread_lock\fR(qthread_t *\fIme\fR, void *\fIaddr\fR);
 .PP
-.I void
+.I int
 .br
 \fBqthread_unlock\fR(qthread_t *\fIme\fR, void *\fIaddr\fR);
 .SH DESCRIPTION
@@ -25,6 +25,15 @@ If this is called from somewhere other than a qthread, use NULL for the
 \fIme\fR argument. If the qthread_t pointer has been lost, it can be reclaimed
 using \fBqthread_self\fR() (which, conveniently, returns NULL if run from a
 non-qthread).
+.SH RETURN VALUE
+On success, the memory address \fIaddr\fR is marked locked or unlocked
+appropriately and 0 is returned. If unlocking an address that is already
+unlocked, QTHREAD_REDUNDANT will be returned. On error, a non-zero error code
+is returned.
+.SH ERRORS
+.TP 12
+ENOMEM
+Not enough memory could be allocated for bookkeeping structures.
 .SH "SEE ALSO"
 .BR qthread_empty (3),
 .BR qthread_fill (3),

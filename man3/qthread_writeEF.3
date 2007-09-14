@@ -4,11 +4,11 @@
 .SH SYNOPSIS
 .B #include <qthread/qthread.h>
 
-.I void
+.I int
 .br
 \fBqthread_writeEF\fR(qthread_t *\fIme\fR, void *\fIdest\fR, const void *\fIsrc\fR);
 .PP
-.I void
+.I int
 .br
 \fBqthread_writeEF_const\fR(qthread_t *\fIme\fR, void *\fIdest\fR, const aligned_t \fIsrc\fR);
 .SH DESCRIPTION
@@ -39,6 +39,14 @@ possible. If the library was compiled for a 32-bit architecture, it will
 require 4-byte alignment and reads/writes will operate on four bytes at a time;
 if the library was compiled for a 64-bit architecture, it will require 8-byte
 alignment and reads/writes will operate on eight bytes at a time.
+.SH RETURN VALUE
+On success, the memory address \fIdest\fR is marked full, the address
+\fIdest\fR is filled with the contents of \fIsrc\fR and 0 is returned. On
+error, a non-zero error code is returned.
+.SH ERRORS
+.TP 12
+ENOMEM
+Not enough memory could be allocated for bookkeeping structures.
 .SH "SEE ALSO"
 .BR qthread_empty (3),
 .BR qthread_fill (3),

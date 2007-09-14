@@ -4,11 +4,11 @@
 .SH SYNOPSIS
 .B #include <qthread/qthread.h>
 
-.I void
+.I int
 .br
 \fBqthread_fork\fR(const qthread_f *\fIf\fR, const void *\fIarg\fR, aligned_t *\fIret\fR);
 .PP
-.I void
+.I int
 .br
 \fBqthread_fork_to\fR(const qthread_f *\fIf\fR, const void *\fIarg\fR, aligned_t *\fIret\fR,
 .ti +16n
@@ -40,6 +40,13 @@ emptied (as if it had been passed to \fBqthread_empty\fR()). When the function
 \fIf\fR returns, the returned value will be stored into \fIret\fR and \fIret\fR
 will be filled. The way to block until a function has finished is to use
 \fBqthread_readFF\fR() on the \fIret\fR pointer.
+.SH RETURN VALUE
+On success, the thread is spawned and 0 is returned. On error, a non-zero
+error code is returned.
+.SH ERRORS
+.TP 12
+ENOMEM
+Not enough memory could be allocated.
 .SH "SEE ALSO"
 .BR qthread_prepare (3),
 .BR qthread_prepare_for (3),

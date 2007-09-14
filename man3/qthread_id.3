@@ -10,7 +10,11 @@
 .SH DESCRIPTION
 This function returns the unique identifier associated with the qthread
 \fIt\fR. This is used mostly for debugging, as the qthread_t pointer itself is
-a valid unique identifier.
+a valid unique identifier. Unless otherwise configured, the qthread library
+assigns unique identifiers only when they are asked for. Generally they are
+monotonically increasing values, but this cannot be relied upon.
+.SH RETURN VALUE
+On success, the thread's identifying number is returned.
 .SH "SEE ALSO"
 .BR qthread_retloc (3),
 .BR qthread_self (3),

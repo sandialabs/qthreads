@@ -4,7 +4,7 @@
 .SH SYNOPSIS
 .B #include <qthread/qthread.h>
 
-.I void
+.I int
 .br
 \fBqthread_init\fR(const int \fInshepherds\fR);
 .SH DESCRIPTION
@@ -12,5 +12,12 @@ Use this function to initialize the qthreads environment before spawning any
 qthreads or using any of the qthreads locking/FEB functions. The number of
 shepherd pthreads that will execute qthreads is specified with
 \fInshepherds\fR.
+.SH RETURN VALUE
+On success, the system is ready to fork threads and 0 is returned. On error, an
+non-zero error code is returned.
+.SH ERRORS
+.TP 12
+ENOMEM
+Not enough memory could be allocated.
 .SH "SEE ALSO"
 .BR qthread_finalize (3)
