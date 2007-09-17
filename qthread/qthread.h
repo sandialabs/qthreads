@@ -22,8 +22,9 @@
 /* Return Codes */
 #define QTHREAD_REDUNDANT	1
 #define QTHREAD_SUCCESS		0
-#define QTHREAD_MALLOC_ERROR	ENOMEM
+#define QTHREAD_BADARGS		-1
 #define QTHREAD_PTHREAD_ERROR	-2
+#define QTHREAD_MALLOC_ERROR	ENOMEM
 
 #ifdef __cplusplus
 extern "C"

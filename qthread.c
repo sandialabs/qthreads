@@ -8,7 +8,7 @@
 #if defined(HAVE_UCONTEXT_H) && defined(HAVE_CONTEXT_FUNCS)
 # include <ucontext.h>		       /* for make/get/swap-context functions */
 #else
-# include "taskimpl.h"
+# include "osx_compat/taskimpl.h"
 #endif
 #include <stdarg.h>		       /* for va_start and va_end */
 #include <stdint.h>		       /* for UINT8_MAX */
@@ -336,7 +336,7 @@ static inline qthread_addrres_t * ALLOC_ADDRRES(qthread_shepherd_t * shep)
     }
     return tmp;
 }
-static inline void FREE_ADDRRES(qthread_shepherd_t * t)
+static inline void FREE_ADDRRES(qthread_addrres_t * t)
 {
     cp_mempool_free(t->creator_ptr->addrres_pool, t);
 }
@@ -378,10 +378,20 @@ static inline aligned_t qthread_internal_incr(aligned_t * operand,
     asm volatile ("1:\n\t"	/* the tag */
 		  "lwarx  %0,0,%1\n\t"	/* reserve operand into retval */
 		  "addi   %2,%0,1\n\t"	/* increment */
-		  "stwcx. %2,0,%1\n\t"	/* un-reserve opernd */
+		  "stwcx. %2,0,%1\n\t"	/* un-reserve operand */
 		  "bne-   1b\n\t"	/* if it failed, try again */
 		  "isync"	/* make sure it wasn't all a dream */
+		  /* = means this operand is write-only (previous value is discarded)
+		   * & means this operand is an earlyclobber (i.e. cannot use the same register as any of the input operands) */
+# ifdef __APPLE_CC__
+		  /* Apple's gcc has *issues*. Specifically, it puts retval
+		   * into r0, and then complains about having done so. Changing
+		   * this is the only way to fix it, but could cause problems
+		   * in future compilers. */
+		  :"=r"    (retval)
+# else
 		  :"=&r"   (retval)
+# endif
 		  :"r"     (operand), "r" (incrd)
 		  :"cc", "memory");
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
@@ -448,7 +458,17 @@ static inline aligned_t qthread_internal_incr_mod(aligned_t * operand,
 		  "stwcx. %3,0,%1\n\t"	/* *operand = incrd */
 		  "bne-   1b\n\t"	/* if it failed, go to label 1 back */
 		  "isync"	/* make sure it wasn't all a dream */
+		  /* = means this operand is write-only (previous value is discarded)
+		   * & means this operand is an earlyclobber (i.e. cannot use the same register as any of the input operands) */
+# ifdef __APPLE_CC__
+		  /* Apple's gcc has *issues*. Specifically, it puts retval
+		   * into r0, and then complains about having done so. Changing
+		   * this is the only way to fix it, but could cause problems
+		   * in future compilers. */
+		  :"=r"    (retval)
+# else
 		  :"=&r"   (retval)
+# endif
 		  :"r"     (operand), "r"(max), "r"(incrd), "r"(compd)
 		  :"cc", "memory");
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
@@ -1305,7 +1325,7 @@ int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
     qthread_t *t;
 
     if (shepherd > qlib->nshepherds || f == NULL) {
-	return;
+	return QTHREAD_BADARGS;
     }
     t = qthread_thread_new(f, arg, ret, shepherd);
     if (t) {
@@ -1332,7 +1352,7 @@ int qthread_fork_future_to(const qthread_f f, const void *arg,
     qthread_t *t;
 
     if (shepherd > qlib->nshepherds) {
-	return;
+	return QTHREAD_BADARGS;
     }
     t = qthread_thread_new(f, arg, ret, shepherd);
     if (t) {
