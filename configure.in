@@ -34,7 +34,14 @@ if test "$ac_cv_prog_cc_c99" != "no" ; then
     AC_DEFINE(C99_ACCEPTED, 1, [if $CC understands C99 syntax])
 fi
 
-if test "$CC" == "gcc" ; then
+AC_MSG_CHECKING([if $CC is gcc])
+if echo "$CC" | grep '^gcc' >/dev/null ; then
+    AC_MSG_RESULT(yes)
+else
+    AC_MSG_RESULT(no)
+fi
+
+if echo "$CC" | grep '^gcc' >/dev/null ; then
 # Find out if GCC understands -fno-gcse
 AC_MSG_CHECKING([if $CC understands -fno-gcse])
 CFLAGS_1="$CFLAGS"
@@ -93,7 +100,7 @@ AC_CHECK_FUNCS([getcontext swapcontext makecontext], ac_cv_context_funcs=yes, ac
 if test "$ac_cv_context_funcs" = "yes" ; then
 	AC_DEFINE(HAVE_CONTEXT_FUNCS, 1, [the system hsas its own getcontext functions])
 else
-	QTHREAD_EXTRA_OBJS="$QTHREAD_EXTRA_OBJS context.lo asm.lo"
+	QTHREAD_EXTRA_OBJS="$QTHREAD_EXTRA_OBJS osx_compat/libosx_compat.la"
 	AC_CHECK_FUNCS([memmove], , AC_MSG_ERROR(["A functional memmove is required if you do not have the get/swap/make-context functions."]))
 	AC_HEADER_SYS_WAIT
 	AC_TYPE_PID_T
@@ -161,5 +168,5 @@ if test "$ac_cv_lazythreadids" = "no" ; then
     AC_DEFINE(QTHREAD_NONLAZY_THREADIDS, 1, [makes sure every thread gets an id at creation time])
 fi
 
-AC_CONFIG_FILES([Makefile])
+AC_CONFIG_FILES([Makefile osx_compat/Makefile])
 AC_OUTPUT

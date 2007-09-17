@@ -1,3 +1,7 @@
+## Process this file with automake to produce Makefile.in
+
+SUBDIRS = osx_compat .
+
 lib_LTLIBRARIES = libqthread.la
 pkginclude_HEADERS = qthread/qthread.h \
 					 qthread/qalloc.h \
@@ -11,7 +15,7 @@ pkginclude_HEADERS = qthread/qthread.h \
 
 libqthread_la_SOURCES = qthread.c qalloc.c qutil.c futurelib.c qloop.c
 libqthread_la_LDFLAGS = -version-info 9:0:0 -no-undefined
-EXTRA_libqthread_la_SOURCES = context.c asm.S
+#EXTRA_libqthread_la_SOURCES = osx_compat/context.c osx_compat/asm.S
 libqthread_la_LIBADD = @QTHREAD_EXTRA_OBJS@
 libqthread_la_DEPENDENCIES = @QTHREAD_EXTRA_OBJS@
 
