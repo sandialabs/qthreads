@@ -585,14 +585,15 @@ static void *qthread_shepherd(void *arg)
 
 	    assert(t->f != NULL);
 
-	    /* note: there's a good argument that the following should
-	     * be: (*t->f)(t), however the state management would be
-	     * more complex 
-	     */
-
 	    assert(t->shepherd_ptr == me);
 	    me->current = t;
+
+	    /* note: there's a good argument that the following should
+	     * be: (*t->f)(t), however the state management would be
+	     * more complex
+	     */
 	    qthread_exec(t, &my_context);
+
 	    me->current = NULL;
 	    qthread_debug("qthread_shepherd(%u): back from qthread_exec\n",
 			  me->shepherd_id);
@@ -1026,11 +1027,6 @@ static inline void qthread_thread_free(qthread_t * t)
     assert(t != NULL);
 
     if (t->context) {
-	if (t->creator_ptr != NULL) {
-	    printf("non-generic context\n");
-	} else {
-	    printf("generic context\n");
-	}
 	FREE_CONTEXT(t->creator_ptr, t->context);
     }
     if (t->stack != NULL) {
