@@ -1,3 +1,10 @@
+--- 1.0 ---
+New Features:
+ - Added error handling.
+Improvements:
+ - Reorganized osx_compat stuff
+ - Released under BSD OSS license with Sandia's blessing!
+ - Fixed some portability issues with increment functions.
 --- 0.8 ---
 New Features:
  - Added qloop functions to provide precisely balanced loop spawning. Still
