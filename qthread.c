@@ -383,11 +383,11 @@ static inline aligned_t qthread_internal_incr(aligned_t * operand,
 		  "isync"	/* make sure it wasn't all a dream */
 		  /* = means this operand is write-only (previous value is discarded)
 		   * & means this operand is an earlyclobber (i.e. cannot use the same register as any of the input operands) */
-# ifdef __APPLE_CC__
-		  /* Apple's gcc has *issues*. Specifically, it puts retval
-		   * into r0, and then complains about having done so. Changing
-		   * this is the only way to fix it, but could cause problems
-		   * in future compilers. */
+# if __APPLE_CC__ < 5341
+		  /* Apple's older gcc has *issues*. Specifically, it puts
+		   * retval into r0, and then complains about having done so.
+		   * Changing this is the only way to fix it, but could cause
+		   * problems in future compilers. */
 		  :"=r"    (retval)
 # else
 		  :"=&r"   (retval)
@@ -460,11 +460,11 @@ static inline aligned_t qthread_internal_incr_mod(aligned_t * operand,
 		  "isync"	/* make sure it wasn't all a dream */
 		  /* = means this operand is write-only (previous value is discarded)
 		   * & means this operand is an earlyclobber (i.e. cannot use the same register as any of the input operands) */
-# ifdef __APPLE_CC__
-		  /* Apple's gcc has *issues*. Specifically, it puts retval
-		   * into r0, and then complains about having done so. Changing
-		   * this is the only way to fix it, but could cause problems
-		   * in future compilers. */
+# if __APPLE_CC__ < 5341
+		  /* Apple's older gcc has *issues*. Specifically, it puts
+		   * retval into r0, and then complains about having done so.
+		   * Changing this is the only way to fix it, but could cause
+		   * problems in future compilers. */
 		  :"=r"    (retval)
 # else
 		  :"=&r"   (retval)
