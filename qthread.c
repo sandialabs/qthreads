@@ -382,16 +382,9 @@ static inline aligned_t qthread_internal_incr(aligned_t * operand,
 		  "bne-   1b\n\t"	/* if it failed, try again */
 		  "isync"	/* make sure it wasn't all a dream */
 		  /* = means this operand is write-only (previous value is discarded)
-		   * & means this operand is an earlyclobber (i.e. cannot use the same register as any of the input operands) */
-# if __APPLE_CC__ < 5341
-		  /* Apple's older gcc has *issues*. Specifically, it puts
-		   * retval into r0, and then complains about having done so.
-		   * Changing this is the only way to fix it, but could cause
-		   * problems in future compilers. */
-		  :"=r"    (retval)
-# else
-		  :"=&r"   (retval)
-# endif
+		   * & means this operand is an earlyclobber (i.e. cannot use the same register as any of the input operands)
+		   * b means this operand must not be r0 */
+		  :"=&b"   (retval)
 		  :"r"     (operand), "r" (incrd)
 		  :"cc", "memory");
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
@@ -459,16 +452,9 @@ static inline aligned_t qthread_internal_incr_mod(aligned_t * operand,
 		  "bne-   1b\n\t"	/* if it failed, go to label 1 back */
 		  "isync"	/* make sure it wasn't all a dream */
 		  /* = means this operand is write-only (previous value is discarded)
-		   * & means this operand is an earlyclobber (i.e. cannot use the same register as any of the input operands) */
-# if __APPLE_CC__ < 5341
-		  /* Apple's older gcc has *issues*. Specifically, it puts
-		   * retval into r0, and then complains about having done so.
-		   * Changing this is the only way to fix it, but could cause
-		   * problems in future compilers. */
-		  :"=r"    (retval)
-# else
-		  :"=&r"   (retval)
-# endif
+		   * & means this operand is an earlyclobber (i.e. cannot use the same register as any of the input operands)
+		   * b means this is a register but must not be r0 */
+		  :"=&b"   (retval)
 		  :"r"     (operand), "r"(max), "r"(incrd), "r"(compd)
 		  :"cc", "memory");
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
