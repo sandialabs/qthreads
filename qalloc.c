@@ -98,7 +98,7 @@ static struct dynmapinfo_s *dynmmaps = NULL;
 # define fstat fstat64
 # define lseek lseek64
 typedef struct stat64 statstruct_t;
-#elif defined(__APPLE__) || defined(__CYGWIN__)
+#elif defined(__APPLE__) || defined(__CYGWIN__) || defined(__sun__)
 typedef struct stat statstruct_t;
 #endif
 
