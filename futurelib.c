@@ -8,6 +8,7 @@
 #include <string.h>
 #include <cprops/hashtable.h>
 
+#undef DBprintf
 #if defined(QTHREAD_DEBUG) || defined(FUTURE_DEBUG)
 #define DBprintf printf
 #else
