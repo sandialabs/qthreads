@@ -2,20 +2,33 @@
 if NEED_OSX_COMPAT
 MAYBE_OSX_COMPAT = osx_compat
 endif
+
+ALL_THE_HDRS = qthread/qthread.h \
+			   qthread/qalloc.h \
+			   qthread/qthread-int.h \
+			   qthread/common.h \
+			   qthread/qutil.h \
+			   qthread/qloop.h \
+			   qthread/futurelib.h \
+			   qthread/loop_templates.hpp \
+			   qthread/loop_iter.hpp \
+			   qthread/loop.hpp
+
 SUBDIRS = $(MAYBE_OSX_COMPAT) .
 
 lib_LTLIBRARIES = libqthread.la
-pkginclude_HEADERS = qthread/qthread.h \
-					 qthread/qalloc.h \
-					 qthread/qthread-int.h \
-					 qthread/qutil.h \
-					 qthread/qloop.h \
-					 qthread/futurelib.h \
-					 qthread/loop_templates.hpp \
-					 qthread/loop_iter.hpp \
-					 qthread/loop.hpp
+pkginclude_HEADERS = $(ALL_THE_HDRS)
 
-libqthread_la_SOURCES = qthread.c qalloc.c qutil.c futurelib.c qloop.c
+AM_CPPFLAGS = @SST_INCLUDE@
+AM_LDFLAGS = @SST_LIBS@
+if COMPILE_FOR_SST
+libqthread_la_SOURCES = sst/qthread/qthread.h \
+						sst/qthread-sst.c qalloc.c qutil.c \
+						sst/futurelib-sst.c
+else
+libqthread_la_SOURCES = $(ALL_THE_HDRS) \
+						qthread.c qalloc.c qutil.c futurelib.c qloop.c
+endif
 libqthread_la_LDFLAGS = -version-info 9:0:0 -no-undefined
 libqthread_la_LIBADD = @QTHREAD_EXTRA_OBJS@
 libqthread_la_DEPENDENCIES = @QTHREAD_EXTRA_OBJS@
@@ -112,9 +125,6 @@ testqloop_SOURCES = testqloop.c
 testqloop_LDADD = -lqthread
 testincr_SOURCES = testincr.c
 testincr_LDADD = -lqthread
-
-#test2: test2.c
-#	$(CC) -I. $(CFLAGS) -L.libs/libqthread.a -o $< $^
 
 distclean-local:
 	find . -name .DS_Store -exec $(RM) {} \;

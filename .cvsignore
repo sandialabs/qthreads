@@ -1,0 +1,10 @@
+*.lo
+*.la
+config.h
+config.log
+config.status
+libtool
+stamp-h1
+.DS_Store
+.deps
+.libs

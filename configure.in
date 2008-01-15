@@ -105,69 +105,139 @@ else
 	AC_HEADER_SYS_WAIT
 	AC_TYPE_PID_T
 fi
-AM_CONDITIONAL([NEED_OSX_COMPAT], [test "$ac_cv_context_funcs" = no])
 
 AC_SUBST(QTHREAD_EXTRA_OBJS)
 
 AC_ARG_ENABLE(xeon,AC_HELP_STRING(--enable-xeon,[enable Xeon-specific optimizations (since Xeons do not have the 486 #defines)]),
-		ac_cv_xeon=$withval, ac_cv_xeon=no)
+		ac_cv_xeon=$enableval, ac_cv_xeon=no)
 if test "$ac_cv_xeon" = "yes" ; then
     AC_DEFINE(QTHREAD_XEON, 1, [this is a Xeon CPU])
 fi
 
 AC_ARG_ENABLE(setrlimit,AC_HELP_STRING(--disable-setrlimit,[don't use setrlimit to limit the stack (which is normally used only on Linux systems)]),
-		ac_cv_setrlimit=$withval)
+		ac_cv_setrlimit=$enableval)
 if test "$ac_cv_setrlimit" = "yes" ; then
 	AC_DEFINE(NEED_RLIMIT, 1, [whether the library should use get/set-rlimit functions])
 fi
 
-AC_ARG_ENABLE(software-increments,AC_HELP_STRING(--enable-software-increments,[use mutexes to do the internal increments; possibly faster in some cases, and compatible with more compilers (I'm looking at you, Intel). Use -DQTHREAD_MUTEX_INCREMENT to when compiling your own code to force qthread_incr() do something similar.]),
-		ac_cv_software_increments=$withval, ac_cv_software_increments=no)
+AC_ARG_ENABLE(software-increments,AC_HELP_STRING(--enable-software-increments,[use mutexes to do the internal increments; possibly faster in some cases, and compatible with more compilers (I'm looking at you, Intel).]),
+		ac_cv_software_increments=$enableval, ac_cv_software_increments=no)
 if test "$ac_cv_software_increments" = "yes" ; then
 	AC_DEFINE(QTHREAD_MUTEX_INCREMENT, 1, [use mutexes when incrementing, rather than architecture-specific assembly])
 fi
 
 AC_ARG_ENABLE(aligncheck,AC_HELP_STRING(--disable-aligncheck,check the alignment of synchronization addresses),
-	    ac_cv_aligncheck=$withval, ac_cv_aligncheck=yes)
+	    ac_cv_aligncheck=$enableval, ac_cv_aligncheck=yes)
 if test "$ac_cv_aligncheck" = "no" ; then
     AC_DEFINE(QTHREAD_NOALIGNCHECK, 1, [dont check the alignment of synchronization addressses])
 fi
 AC_ARG_ENABLE(fullsize-stacks,AC_HELP_STRING(--enable-fullsize-stacks,use 8MB stacks for every thread),
-	    ac_cv_fullsizestack=$withval, ac_cv_fullsizestack=no)
+	    ac_cv_fullsizestack=$enableval, ac_cv_fullsizestack=no)
 if test "$ac_cv_fullsizestack" = "yes" ; then
     AC_DEFINE(QTHREAD_FULL_SIZE_STACKS, 1, [use 8MB stacks for every thread])
 else
     AC_ARG_ENABLE(very-small-stacks,AC_HELP_STRING(--enable-very-small-stacks,[use 2k stacks for every thread (dangerous)]),
-		ac_cv_verysmallstacks=$withval, ac_cv_verysmallstacks=no)
+		ac_cv_verysmallstacks=$enableval, ac_cv_verysmallstacks=no)
     if test "$ac_cv_verysmallstacks" = "yes" ; then
 	AC_DEFINE(QTHREAD_REALLY_SMALL_STACKS, 1, [use 2k stacks for every thread])
     fi
 fi
 AC_ARG_ENABLE(debug-trace,AC_HELP_STRING(--enable-debug-trace,[prints out debugging information as programs run, tracing their qthread-related behavior]),
-	    ac_cv_debugtrace=$withval, ac_cv_debugtrace=no)
+	    ac_cv_debugtrace=$enableval, ac_cv_debugtrace=no)
 if test "$ac_cv_debugtrace" = "yes" ; then
     AC_DEFINE(QTHREAD_DEBUG, 1, [prints out debugging information at runtime])
 fi
 AC_ARG_ENABLE(unpooled-memory,AC_HELP_STRING(--enable-unpooled-memory,[prevents qthreads from (in most cases) using memory pools, which is sometimes more compatible with machines that have unusual alignment issues]),
-	    ac_cv_unpooled=$withval, ac_cv_unpooled=no)
+	    ac_cv_unpooled=$enableval, ac_cv_unpooled=no)
 if test "$ac_cv_unpooled" = "yes" ; then
     AC_DEFINE(UNPOOLED, 1, [prevents the use of memory pools (mostly)])
 fi
 AC_ARG_ENABLE(thread-count,AC_HELP_STRING(--enable-thread-count,[counts the number of threads and the number of concurrent threads and prints it out when qthread_finalize() is run; slows down computation]),
-	    ac_cv_threadcount=$withval, ac_cv_threadcount=no)
+	    ac_cv_threadcount=$enableval, ac_cv_threadcount=no)
 if test "$ac_cv_threadcount" = "yes"; then
     AC_DEFINE(QTHREAD_COUNT_THREADS, 1, [keeps track of the number of threads])
 fi
 AC_ARG_ENABLE(asserts,AC_HELP_STRING(--enable-asserts,[adds sanity checks to most qthread functions]),
-	    ac_cv_asserts=$withval, ac_cv_asserts=no)
+	    ac_cv_asserts=$enableval, ac_cv_asserts=no)
 if test "$ac_cv_asserts" = "no" ; then
     AC_DEFINE(QTHREAD_NO_ASSERTS, 1, [removes sanity checks from most qthread functions])
 fi
 AC_ARG_ENABLE(lazy-threadids,AC_HELP_STRING(--disable-lazy-threadids,[makes qthread assign thread IDs at spawning time, rather than as necessary; this ensures every thread gets a unique thread id]),
-	    ac_cv_lazythreadids=$withval, ac_cv_lazythreadids=yes)
+	    ac_cv_lazythreadids=$enableval, ac_cv_lazythreadids=yes)
 if test "$ac_cv_lazythreadids" = "no" ; then
     AC_DEFINE(QTHREAD_NONLAZY_THREADIDS, 1, [makes sure every thread gets an id at creation time])
 fi
 
+ac_cv_qthreads_implementation=unix
+
+################################################################################################
+# THIS IS THE SST STUFF
+################################################################################################
+AC_ARG_WITH(sst,AC_HELP_STRING(--with-sst=<path_to_SST>,[compiles the SST version of qthreads, relying on the SST includes being in the specified directory. If 'yes', then the includes are assumed to be specified in the CPPFLAGS.]),
+	ac_cv_sst=$withval, ac_cv_sst="")
+AC_ARG_WITH(statlibs,AC_HELP_STRING(--with-statlibs=<path_to_static_libs>,[option for compiling with static libraries, only needed for compiling the test programs for use with SST]),
+	ac_cv_statlibs=$withval, ac_cv_statlibs="")
+if test "$ac_cv_sst" ; then
+	SST_INCLUDE=""
+	SST_LIBS=""
+	CPPFLAG_SAVE="$CPPFLAGS"
+	test "$ac_cv_sst" == "yes" || SST_INCLUDE="-I$ac_cv_sst/Struct_Simulator/serialProto/ -I$ac_cv_sst/Struct_Simulator/serialProto/ssFrontEnd/ -I$ac_cv_sst/Struct_Simulator/pimSrc/ppc/"
+	CPPFLAGS="$CPPFLAGS $SST_INCLUDE"
+	AC_CHECK_HEADERS([ppcPimCalls.h pimSysCallDefs.h pimSysCallTypes.h], , AC_MSG_ERROR(["Is your SST setup complete and specified with --with-sst=<path_to_SST>?"]))
+	CPPFLAGS="$CPPFLAGS"
+	test "$ac_cv_statlibs" && SST_LIBS="-L$ac_cv_statlibs"
+	ac_cv_qthreads_implementation=sst
+	AC_DEFINE(SST, 1, [compile for the SST])
+fi
+
+AM_CONDITIONAL([COMPILE_FOR_SST], [test "$ac_cv_qthreads_implementation" == "sst"])
+AM_CONDITIONAL([NEED_OSX_COMPAT], [test "$ac_cv_context_funcs" = no && test "$ac_cv_qthreads_implementation" == "unix"])
+AC_SUBST(SST_INCLUDE)
+AC_SUBST(SST_LIBS)
+
 AC_CONFIG_FILES([Makefile osx_compat/Makefile])
+AC_CONFIG_COMMANDS([qthread/common.h],
+[
+cat > "qthread/common.h" << _EOF_
+/*  -*- Mode: C -*-
+ * ------------------------------------------------------------------
+ * DO NOT EDIT THIS FILE!  It has been automatically generated
+ * from: configure.in
+ * on host: `( hostname || uname -n ) 2>/dev/null | sed 1q`
+ * ------------------------------------------------------------------
+ */
+#ifndef QTHREAD_COMMON_H
+#define QTHREAD_COMMON_H
+_EOF_
+if test "x$ac_cv_software_increments" = xyes ; then
+	echo "#define QTHREAD_MUTEX_INCREMENT 1" >> "qthread/common.h"
+fi
+if test "x$ac_cv_qthreads_implementation" = "xsst" ; then
+	echo "#define SST 1" >> "qthread/common.h"
+fi
+echo "#endif /* QTHREAD_COMMON_H */" >> "qthread/common.h"
+],[
+   ac_cv_software_increments=$ac_cv_software_increments
+   ac_cv_qthreads_implementation=$ac_cv_software_increments
+])
 AC_OUTPUT
+
+echo ""
+echo    "           Target Style: $ac_cv_qthreads_implementation"
+echo    "        Lazy Thread IDs: $ac_cv_lazythreadids"
+echo    "  Sanity assert() Calls: $ac_cv_asserts"
+echo    "        Thread Counting: $ac_cv_threadcount"
+echo    "        Use setrlimit(): $ac_cv_setrlimit"
+echo    " Mutex-based Increments: $ac_cv_software_increments"
+echo    "Check address alignment: $ac_cv_aligncheck"
+echo -n "             Stack size: "
+if test "$ac_cv_fullsizestack" = "yes" ; then
+	echo "8MB"
+elif test "$ac_cv_verysmallstacks" = "yes" ; then
+	echo "2kB"
+else
+	echo "4kB"
+fi
+echo    " Debugging Trace Output: $ac_cv_debugtrace"
+echo    "        Unpooled Memory: $ac_cv_unpooled"
+echo ""
