@@ -57,7 +57,7 @@ QTHREAD_EXTRA_OBJS=""
 
 # Checks for libraries.
 AC_CHECK_LIB([pthread], [pthread_create], , AC_MSG_ERROR([Need pthreads]))
-AC_SEARCH_LIBS([cp_hashtable_create], [cprops "cprops -ldl"], ,
+AC_SEARCH_LIBS([cp_hashtable_create], [cprops "cprops -ldl" "cprops -lsocket -lnsl" "cprops -lsocket -lnsl -ldl"], ,
 	       AC_MSG_ERROR([Need libcprops 0.1.6 or better. See http://cprops.sf.net/]))
 AC_SEARCH_LIBS([ceil],[m], ,AC_MSG_ERROR(["Can't seem to find ceil()"]))
 
