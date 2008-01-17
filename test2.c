@@ -17,12 +17,12 @@ aligned_t thread(qthread_t * t, void *arg)
     int foo = qthread_stackleft(t);
     //printf("%i bytes left\n", (int)qthread_stackleft(t));
 
-    qthread_lock(t, &x);
+    assert(qthread_lock(t, &x) == 0);
     //printf("thread(%i): x=%d\n", me, x);
     x++;
     if (x == target)
 	pthread_mutex_unlock(&alldone);
-    qthread_unlock(t, &x);
+    assert(qthread_unlock(t, &x) == 0);
     return 0;
 }
 
@@ -39,12 +39,12 @@ int main(int argc, char *argv[])
 	interactive = 1;
     }
 
-    qthread_init(2);
+    assert(qthread_init(2) == 0);
 
     pthread_mutex_lock(&alldone);
 
     for (i = 0; i < target; i++)
-	qthread_fork(thread, NULL, NULL);
+	assert(qthread_fork(thread, NULL, NULL) == 0);
 
     pthread_mutex_lock(&alldone);
 
