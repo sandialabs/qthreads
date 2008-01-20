@@ -215,7 +215,7 @@ AC_CACHE_CHECK([for stdint uintptr_t], [ac_cv_header_stdint_x],[
    unset ac_cv_type_uint64_t
    AC_CHECK_TYPE(uintptr_t,[ac_cv_header_stdint_x=$i],continue,[#include <$i>])
    AC_CHECK_TYPE(uint64_t,[and64="/uint64_t"],[and64=""],[#include<$i>])
-   m4_ifvaln([$1],[$1]) break
+   m4_ifvaln([$2],[$2]) break
   done
   AC_MSG_CHECKING([for stdint uintptr_t])
  ])
@@ -231,7 +231,7 @@ AC_CACHE_CHECK([for stdint uint32_t], [ac_cv_header_stdint_o],[
    unset ac_cv_type_uint64_t
    AC_CHECK_TYPE(uint32_t,[ac_cv_header_stdint_o=$i],continue,[#include <$i>])
    AC_CHECK_TYPE(uint64_t,[and64="/uint64_t"],[and64=""],[#include<$i>])
-   m4_ifvaln([$1],[$1]) break
+   m4_ifvaln([$2],[$2]) break
    break;
   done
   AC_MSG_CHECKING([for stdint uint32_t])
@@ -247,7 +247,7 @@ AC_CACHE_CHECK([for stdint u_int32_t], [ac_cv_header_stdint_u],[
    unset ac_cv_type_u_int64_t
    AC_CHECK_TYPE(u_int32_t,[ac_cv_header_stdint_u=$i],continue,[#include <$i>])
    AC_CHECK_TYPE(u_int64_t,[and64="/u_int64_t"],[and64=""],[#include<$i>])
-   m4_ifvaln([$1],[$1]) break
+   m4_ifvaln([$2],[$2]) break
    break;
   done
   AC_MSG_CHECKING([for stdint u_int32_t])
