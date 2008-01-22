@@ -94,11 +94,11 @@ struct mapinfo_s
 static struct mapinfo_s *mmaps = NULL;
 static struct dynmapinfo_s *dynmmaps = NULL;
 
-#ifdef __linux__
+#ifdef QTHREAD_64STATS
 # define fstat fstat64
 # define lseek lseek64
 typedef struct stat64 statstruct_t;
-#elif defined(__APPLE__) || defined(__CYGWIN__) || defined(__sun__)
+#else
 typedef struct stat statstruct_t;
 #endif
 
