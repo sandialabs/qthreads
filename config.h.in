@@ -18,6 +18,9 @@
 /* Define to 1 if you have the `floor' function. */
 #undef HAVE_FLOOR
 
+/* Define to 1 if you have the `fstat64' function. */
+#undef HAVE_FSTAT64
+
 /* Define to 1 if you have the `getcontext' function. */
 #undef HAVE_GETCONTEXT
 
@@ -32,6 +35,9 @@
 
 /* Define to 1 if you have the `pthread' library (-lpthread). */
 #undef HAVE_LIBPTHREAD
+
+/* Define to 1 if you have the `lseek64' function. */
+#undef HAVE_LSEEK64
 
 /* Define to 1 if you have the `makecontext' function. */
 #undef HAVE_MAKECONTEXT
@@ -112,6 +118,10 @@
 /* Define to 1 if you have the `vprintf' function. */
 #undef HAVE_VPRINTF
 
+/* make the ss_sp member of uc_stack be the high-address of the stack, rather
+   than the low-address of the stack (which is the usual behavior) */
+#undef INVERSE_STACK_POINTER
+
 /* whether the library should use get/set-rlimit functions */
 #undef NEED_RLIMIT
 
@@ -136,6 +146,9 @@
 /* this signifies that pthread_mutex_t is small enough to fit in the existing
    data structures */
 #undef PTHREAD_MUTEX_SMALL_ENOUGH
+
+/* define if using fstat64 and friends */
+#undef QTHREAD_64STATS
 
 /* keeps track of the number of threads */
 #undef QTHREAD_COUNT_THREADS
@@ -189,17 +202,23 @@
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
 
+/* work around a bug that seems to exist in Sun's compiler */
+#undef SUN_CC_BUG_1
+
 /* prevents the use of memory pools (mostly) */
 #undef UNPOOLED
 
 /* Version number of package */
 #undef VERSION
 
-/* allow big files */
+/* Number of bits in a file offset, on hosts where this is settable. */
 #undef _FILE_OFFSET_BITS
 
 /* make pthreads build correctly */
 #undef _GNU_SOURCE
+
+/* Define for large files, on AIX-style hosts. */
+#undef _LARGE_FILES
 
 /* force the Sun makecontext to behave correctly */
 #undef __MAKECONTEXT_V2_SOURCE
