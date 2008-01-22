@@ -37,10 +37,19 @@ template <int C, class PtrT>
 class Storage<C, ArrayPtr, PtrT > {
   PtrT ptr_;
   static PtrT sptr_;
+#ifdef __GNUC__
+  typedef typeof(sptr_.operator[](0)) ele_t;
+#else
   typedef typename typeof(sptr_.operator[](0)) ele_t;
+#endif
 protected:
   Storage(PtrT ptr) : ptr_(ptr) {;}
-  (typename ele_t)& value(int iteration) { return ptr_[iteration]; }
+#ifdef __GNUC__
+  ele_t&
+#else
+  (typename ele_t)&
+#endif
+  value(int iteration) { return ptr_[iteration]; }
   template <class U>
   void update (int iteration, U update) { ptr_[iteration] = (ele_t)update; }
 };
