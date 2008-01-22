@@ -81,7 +81,7 @@
 		(void *) d, (void *) s); \
     } \
 } while(0)
-#else
+#else /* QTHREAD_NOALIGNCHECK */
 #define ALIGN(d, s, f) (s)=(d)
 #endif
 
@@ -387,6 +387,17 @@ static inline aligned_t qthread_internal_incr(aligned_t * operand,
 		  :"=&b"   (retval)
 		  :"r"     (operand), "r" (incrd)
 		  :"cc", "memory");
+/*#elif !defined(QTHREAD_MUTEX_INCREMENT) && ( __sun__ )
+    register unsigned int incrd = incrd; // no initializing
+    asm volatile ("1: "
+	    "lduw   [%1], %0\n\t"  // retval = *operand
+	    "add    %0, 1, %2\n\t" // incrd = retval + 1
+	    "cas    [%1], %0, %2\n\t" // swap incrd into *operand if still retval
+	    "cmp    %0, %2\n\t" // see if swap succeeded (= means success)
+	    "bne,pn %icc, 1b" // branch if icc is set, predict not set
+	    :"=&r" (retval)
+	    :"r" (operand), "r" (incrd)
+	    :"icc", "memory");*/
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
 # ifdef __ILP64__
     int64_t res;
