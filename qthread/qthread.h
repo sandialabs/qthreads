@@ -45,7 +45,10 @@ typedef unsigned char qthread_shepherd_id_t;	/* doubt we'll run more than 255 sh
 
 /* FEB locking only works on aligned addresses. On 32-bit architectures, this
  * isn't too much of an inconvenience. On 64-bit architectures, it's a pain in
- * the BUT! This is here to try and help a little bit. */
+ * the BUTT! This is here to try and help a little bit. */
+#ifdef SUN_CC_BUG_1
+# define __attribute__(x)
+#endif
 #ifdef __ILP64__
 typedef uint64_t __attribute__ ((aligned(8))) aligned_t;
 typedef int64_t __attribute__ ((aligned(8))) saligned_t;
@@ -404,6 +407,17 @@ static inline aligned_t qthread_incr(aligned_t * operand, const int incr)
 		  :"=&b"   (retval)
 		  :"r"     (operand), "r"(incr), "r"(incrd)
 		  :"cc", "memory");
+/*#elif !defined(QTHREAD_MUTEX_INCREMENT) && ( __sun__ )
+    register unsigned int incrd = incrd; // no initializing
+    __asm__ __volatile__ (
+	    "1: lduw   [%1], %0\n\t"
+	    "add    %0, %3, %2\n\t"
+	    "cas    [%1], %0, %2\n\t"
+	    "cmp    %0, %2\n\t"
+	    "bne,pn %icc, 1b\n\t"
+	    :"=&r" (retval)
+	    :"r" (operand), "r" (incrd), "r" (incr)
+	    :"icc", "memory");*/
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
 # ifdef __ILP64__
     int64_t res;
