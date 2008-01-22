@@ -10,6 +10,9 @@ AM_CONFIG_HEADER([config.h])
 AC_CANONICAL_HOST
 
 case "$host" in
+	*-solaris2.8)
+	AC_DEFINE(INVERSE_STACK_POINTER, 1, [make the ss_sp member of uc_stack be the high-address of the stack, rather than the low-address of the stack (which is the usual behavior)])
+	;;
 	*-solaris*)
 	AC_DEFINE(__MAKECONTEXT_V2_SOURCE, 1, [force the Sun makecontext to behave correctly])
 	;;
