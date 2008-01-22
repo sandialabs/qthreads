@@ -11,7 +11,7 @@
 # include "osx_compat/taskimpl.h"
 #endif
 #include <stdarg.h>		       /* for va_start and va_end */
-#include <stdint.h>		       /* for UINT8_MAX */
+#include <qthread/qthread-int.h>       /* for UINT8_MAX */
 #include <string.h>		       /* for memset() */
 #if !HAVE_MEMCPY
 # define memcpy(d, s, n) bcopy((s), (d), (n))
@@ -1208,13 +1208,18 @@ static inline void qthread_exec(qthread_t * t, ucontext_t * c)
 		      t, c);
 	t->thread_state = QTHREAD_STATE_RUNNING;
 
-	getcontext(t->context);	       /* puts the current context into t->contextq */
+	qassert(getcontext(t->context), 0);	       /* puts the current context into t->contextq */
 	/* Several other libraries that do this reserve a few words on either
 	 * end of the stack for some reason. To avoid problems, I'll also do
 	 * this (even though I have no idea why they would do this). */
 	/* t is cast here ONLY because the PGI compiler is idiotic about typedef's */
+#ifdef INVERSE_STACK_POINTER
+	t->context->uc_stack.ss_sp =
+	    (char *)(((qthread_t *)t)->stack) + qlib->qthread_stack_size - 8;
+#else
 	t->context->uc_stack.ss_sp =
 	    (char *)(((qthread_t *)t)->stack) + 8;
+#endif
 	t->context->uc_stack.ss_size = qlib->qthread_stack_size - 64;
 #ifdef HAVE_CONTEXT_FUNCS
 	/* the makecontext man page (Linux) says: set the uc_link FIRST
