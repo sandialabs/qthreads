@@ -34,7 +34,7 @@ static pthread_mutex_t sfnf_lock;
  * If the qthread is not a future, it returns NULL; otherwise, it returns
  * a pointer to the bookkeeping structure associated with that future's
  * shepherd. */
-inline location_t *ft_loc(qthread_t * qthr)
+location_t *ft_loc(qthread_t * qthr)
 {
     return qthread_isfuture(qthr) ? (location_t *)
 	pthread_getspecific(future_bookkeeping) : NULL;
