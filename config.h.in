@@ -150,6 +150,9 @@
 /* define if using fstat64 and friends */
 #undef QTHREAD_64STATS
 
+/* forces aligned_t to be 64 bits */
+#undef QTHREAD_64_BIT_ALIGN
+
 /* keeps track of the number of threads */
 #undef QTHREAD_COUNT_THREADS
 
