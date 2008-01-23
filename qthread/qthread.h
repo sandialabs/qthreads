@@ -49,7 +49,7 @@ typedef unsigned char qthread_shepherd_id_t;	/* doubt we'll run more than 255 sh
 #ifdef SUN_CC_BUG_1
 # define __attribute__(x)
 #endif
-#ifdef __ILP64__
+#if defined(__ILP64__) || QTHREAD_64_BIT_ALIGNMENT
 typedef uint64_t __attribute__ ((aligned(8))) aligned_t;
 typedef int64_t __attribute__ ((aligned(8))) saligned_t;
 #else

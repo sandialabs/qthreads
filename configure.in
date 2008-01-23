@@ -185,6 +185,11 @@ AC_ARG_ENABLE(lazy-threadids,AC_HELP_STRING(--disable-lazy-threadids,[makes qthr
 if test "$ac_cv_lazythreadids" = "no" ; then
     AC_DEFINE(QTHREAD_NONLAZY_THREADIDS, 1, [makes sure every thread gets an id at creation time])
 fi
+AC_ARG_ENABLE(64bit-alignment,AC_HELP_STRING(--enable-64bit-alignment,[forces the aligned_t type to be 64-bits]),
+		ac_cv_64bit_align=$enableval, ac_cv_64bit_align=no)
+if test "$ac_cv_64bit_align" = "yes" ; then
+	AC_DEFINE(QTHREAD_64_BIT_ALIGN, 1, [forces aligned_t to be 64 bits])
+fi
 
 ac_cv_qthreads_implementation=unix
 
@@ -237,6 +242,9 @@ fi
 if test "x$sun_bug_defined" = "x1" ; then
 	echo "#define SUN_CC_BUG_1 1" >> $tmpfile
 fi
+if test "x$ac_cv_64bit_align" = "xyes" ; then
+	echo "#define QTHREAD_64_BIT_ALIGN 1" >> $tmpfile
+fi
 echo "#endif /* QTHREAD_COMMON_H */" >> $tmpfile
 if diff $tmpfile "qthread/common.h" >/dev/null ; then
 	rm "$tmpfile"
@@ -247,6 +255,7 @@ fi
    ac_cv_software_increments=$ac_cv_software_increments
    ac_cv_qthreads_implementation=$ac_cv_software_increments
    sun_bug_defined=$sun_bug_defined
+   ac_cv_64bit_align=$ac_cv_64bit_align
 ])
 AC_OUTPUT
 
