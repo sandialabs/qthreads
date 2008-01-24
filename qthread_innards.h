@@ -44,4 +44,13 @@ int qthread_fork_future_to(const qthread_f f, const void *arg,
 			    aligned_t * ret,
 			    const qthread_shepherd_id_t shepherd);
 
+#ifdef QTHREAD_NO_ASSERTS
+# define qassert(op, val) op
+# define qassertnot(op, val) op
+# define assert(foo)
+#else
+# define qassert(op, val) assert(op == val)
+# define qassertnot(op, val) assert(op != val)
+#endif
+
 #endif

@@ -226,15 +226,6 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m, void *maddr,
 static inline void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
 					 const char recursive);
 
-#ifdef QTHREAD_NO_ASSERTS
-#define qassert(op, val) op
-#define qassertnot(op, val) op
-#define assert(foo)
-#else
-#define qassert(op, val) assert(op == val)
-#define qassertnot(op, val) assert(op != val)
-#endif
-
 #define QTHREAD_LOCK(l) qassert(pthread_mutex_lock(l), 0)
 #define QTHREAD_UNLOCK(l) qassert(pthread_mutex_unlock(l), 0)
 #define QTHREAD_INITLOCK(l) qassert(pthread_mutex_init(l, NULL), 0)
@@ -387,7 +378,7 @@ static inline aligned_t qthread_internal_incr(aligned_t * operand,
 		  :"=&b"   (retval)
 		  :"r"     (operand), "r" (incrd)
 		  :"cc", "memory");
-#elif !defined(QTHREAD_MUTEX_INCREMENT) && (defined(__sparc) || defined(__sparc__)) && defined(SUN_ASSEMBLY)
+#elif !defined(QTHREAD_MUTEX_INCREMENT) && (defined(__sparc) || defined(__sparc__)) && ! (defined(__SUNPRO_C) || defined(__SUNPRO_CC))
     register aligned_t oldval, newval;
     oldval = *operand;
     do {
