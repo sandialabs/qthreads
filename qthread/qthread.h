@@ -411,17 +411,29 @@ static inline aligned_t qthread_incr(aligned_t * operand, const int incr)
 	    :"=&b"   (retval)
 	    :"r"     (operand), "r"(incr), "r"(incrd)
 	    :"cc", "memory");
-/*#elif !defined(QTHREAD_MUTEX_INCREMENT) && ( __sun__ )
-    register unsigned int incrd = incrd; // no initializing
-    __asm__ __volatile__ (
-	    "1: lduw   [%1], %0\n\t"
-	    "add    %0, %3, %2\n\t"
-	    "cas    [%1], %0, %2\n\t"
-	    "cmp    %0, %2\n\t"
-	    "bne,pn %icc, 1b\n\t"
-	    :"=&r" (retval)
-	    :"r" (operand), "r" (incrd), "r" (incr)
-	    :"icc", "memory");*/
+#elif !defined(QTHREAD_MUTEX_INCREMENT) && (defined(__sparc) || defined(__sparc__)) && defined(SUN_ASSEMBLY)
+    register aligned_t oldval, newval;
+    oldval = *operand;
+    do {
+        retval = oldval;
+        newval = oldval + incr;
+        /* casa [r1] %asi r2, rd
+           if (r2 == *r1) 
+             swap(*r1, rd)
+           else
+             rd = *r1
+
+           if (oldval == *operand)
+             swap(*operand, newval)
+           else
+             newval = *operand
+        */
+        __asm__ __volatile__ ("casa [%1] 0x80 , %2, %0"
+                              : "+r" (newval)
+                              : "r" (operand), "r"(oldval)
+                              : "cc", "memory");
+        oldval = newval;
+    } while (retval != newval);
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
 # ifdef __ILP64__
     int64_t res;

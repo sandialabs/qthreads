@@ -387,17 +387,23 @@ static inline aligned_t qthread_internal_incr(aligned_t * operand,
 		  :"=&b"   (retval)
 		  :"r"     (operand), "r" (incrd)
 		  :"cc", "memory");
-/*#elif !defined(QTHREAD_MUTEX_INCREMENT) && ( __sun__ )
-    register unsigned int incrd = incrd; // no initializing
-    asm volatile ("1: "
-	    "lduw   [%1], %0\n\t"  // retval = *operand
-	    "add    %0, 1, %2\n\t" // incrd = retval + 1
-	    "cas    [%1], %0, %2\n\t" // swap incrd into *operand if still retval
-	    "cmp    %0, %2\n\t" // see if swap succeeded (= means success)
-	    "bne,pn %icc, 1b" // branch if icc is set, predict not set
-	    :"=&r" (retval)
-	    :"r" (operand), "r" (incrd)
-	    :"icc", "memory");*/
+#elif !defined(QTHREAD_MUTEX_INCREMENT) && (defined(__sparc) || defined(__sparc__)) && defined(SUN_ASSEMBLY)
+    register aligned_t oldval, newval;
+    oldval = *operand;
+    do {
+        retval = oldval;
+        newval = oldval++;
+        /* if (*operand == oldval)
+             swap(newval, *operand)
+           else
+             newval = *operand
+        */
+        __asm__ __volatile__ ("casa [%1] 0x80 , %2, %0"
+                              : "+r" (newval)
+                              : "r" (operand), "r"(oldval)
+                              : "cc", "memory");
+        oldval = newval;
+    } while (retval != newval);
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
 # ifdef __ILP64__
     int64_t res;
