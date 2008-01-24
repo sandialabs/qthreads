@@ -389,7 +389,7 @@ int qthread_unlock(qthread_t * me, const void *a);
 /* this implements an atomic increment. It is done with architecture-specific
  * assembly and does NOT use FEB's or lock/unlock (except in the slow fallback
  * for unrecognized architectures)... but usually that's not the issue.
- * It returns the value of the contents of operand before incrementing. */
+ * It returns the value of the contents of operand after incrementing. */
 #ifdef SST
 static inline aligned_t qthread_incr(aligned_t * operand, const int incr)
 {
