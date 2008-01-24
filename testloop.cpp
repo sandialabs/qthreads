@@ -16,7 +16,7 @@ struct main_args_s {
 
 void my_main();
 
-aligned_t qmain(qthread_t *qthr, void *arg) {
+extern "C" aligned_t qmain(qthread_t *qthr, void *arg) {
   main_args_s *a = (main_args_s*)arg;
   int argc = a->argc;
   char **argv = a->argv;
@@ -100,21 +100,21 @@ int BigData::copy_count = 0;
 #define ALIGN_ATTR __attribute__ ((aligned (8)))
 
 template <class ArrayT>
-int genericArraySet (ArrayT& arr, int size, char* name) {
+int genericArraySet (ArrayT& arr, int size, const char* const name) {
   printf (">>>>>>  Array setting %s <<<<<<<\n", name);
   mt_loop<Iterator, ArrayPtr, mt_loop_traits::Par> (set, 0, arr, 0, size);
   return 1;
 };
 
 template <class ArrayT>
-void genericArrayPrint (ArrayT& arr, int size, char *name) {
+void genericArrayPrint (ArrayT& arr, int size, const char* const name) {
   printf (">>>>>>  Array printing %s <<<<<<<\n", name);
   mt_loop<ArrayPtr, mt_loop_traits::Par> (output, arr, 0, size);
   printf (">>>>>>  Array printing double by value %s <<<<<<<\n", name);
   mt_loop<ArrayPtr, mt_loop_traits::Par> (output_double, arr, 0, size);
 };
 
-double assign (double val) {
+extern "C" double assign (double val) {
   return val;
 }
 
