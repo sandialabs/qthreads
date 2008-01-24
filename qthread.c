@@ -359,7 +359,7 @@ static inline void FREE_ADDRSTAT(qthread_addrstat_t * t)
  * significant */
 #define QTHREAD_CHOOSE_BIN(addr) (((size_t)addr >> 4) & 0x1f)
 
-static inline aligned_t qthread_internal_incr(aligned_t * operand,
+static inline aligned_t qthread_internal_incr(volatile aligned_t * operand,
 					      pthread_mutex_t * lock)
 {				       /*{{{ */
     aligned_t retval;
@@ -437,7 +437,7 @@ static inline aligned_t qthread_internal_incr(aligned_t * operand,
     return retval;
 }				       /*}}} */
 
-static inline aligned_t qthread_internal_incr_mod(aligned_t * operand,
+static inline aligned_t qthread_internal_incr_mod(volatile aligned_t * operand,
 						  const int max,
 						  pthread_mutex_t * lock)
 {				       /*{{{ */

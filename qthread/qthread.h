@@ -391,12 +391,12 @@ int qthread_unlock(qthread_t * me, const void *a);
  * for unrecognized architectures)... but usually that's not the issue.
  * It returns the value of the contents of operand after incrementing. */
 #ifdef SST
-static inline aligned_t qthread_incr(aligned_t * operand, const int incr)
+static inline aligned_t qthread_incr(volatile aligned_t * operand, const int incr)
 {
     return PIM_atomicIncrement(operand, incr);
 }
 #else
-static inline aligned_t qthread_incr(aligned_t * operand, const int incr)
+static inline aligned_t qthread_incr(volatile aligned_t * operand, const int incr)
 {				       /*{{{ */
     aligned_t retval;
 
