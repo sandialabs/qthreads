@@ -3,6 +3,9 @@
 #endif
 #include "qthread/qthread.h"
 #include "qthread/futurelib.h"
+#ifndef QTHREAD_NO_ASSERTS
+# include <assert.h>
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -47,8 +50,8 @@ aligned_t future_shep_cleanup(qthread_t * me, void *arg)
     location_t *ptr = (location_t *) pthread_getspecific(future_bookkeeping);
 
     if (ptr != NULL) {
-	pthread_setspecific(future_bookkeeping, NULL);
-	pthread_mutex_destroy(&(ptr->vp_count_lock));
+	qassert(pthread_setspecific(future_bookkeeping, NULL), 0);
+	qassert(pthread_mutex_destroy(&(ptr->vp_count_lock), 0));
 	FREE(ptr);
     }
 }
@@ -66,8 +69,8 @@ void future_cleanup(void)
 	qthread_readFF(NULL, rets + i, rets + i);
     }
     FREE(rets);
-    pthread_mutex_destroy(&sfnf_lock);
-    pthread_key_delete(&future_bookkeeping);
+    qassert(pthread_mutex_destroy(&sfnf_lock), 0);
+    qassert(pthread_key_delete(&future_bookkeeping), 0);
 }
 #endif
 
@@ -84,7 +87,7 @@ aligned_t future_shep_init(qthread_t * me, void *arg)
     // vp_count is *always* locked. This establishes the waiting queue.
     qthread_lock(me, &(ptr->vp_count));
 
-    pthread_setspecific(future_bookkeeping, ptr);
+    qassert(pthread_setspecific(future_bookkeeping, ptr), 0);
     return 0;
 }
 
@@ -94,8 +97,8 @@ void future_init(int vp_per_loc)
     aligned_t *rets;
     qthread_t *me = qthread_self();
 
-    pthread_mutex_init(&sfnf_lock, NULL);
-    pthread_key_create(&future_bookkeeping, NULL);
+    qassert(pthread_mutex_init(&sfnf_lock, NULL), 0);
+    qassert(pthread_key_create(&future_bookkeeping, NULL), 0);
     future_bookkeeping_array =
 	(location_t *) MALLOC(sizeof(location_t) * qlib->nshepherds);
     rets = (aligned_t *) MALLOC(sizeof(aligned_t) * qlib->nshepherds);
@@ -103,8 +106,8 @@ void future_init(int vp_per_loc)
 	future_bookkeeping_array[i].vp_count = 0;
 	future_bookkeeping_array[i].vp_max = vp_per_loc;
 	future_bookkeeping_array[i].id = i;
-	pthread_mutex_init(&(future_bookkeeping_array[i].vp_count_lock),
-			   NULL);
+	qassert(pthread_mutex_init(&(future_bookkeeping_array[i].vp_count_lock),
+			   NULL), 0);
 	qthread_fork_to(future_shep_init, NULL, rets + i, i);
     }
     for (i = 0; i < qlib->nshepherds; i++) {
@@ -124,19 +127,19 @@ void future_init(int vp_per_loc)
  */
 void blocking_vp_incr(qthread_t * me, location_t * loc)
 {
-    pthread_mutex_lock(&(loc->vp_count_lock));
+    qassert(pthread_mutex_lock(&(loc->vp_count_lock)), 0);
     DBprintf("Thread %p try blocking increment on loc %d vps %d\n", (void*)me,
 	     loc->id, loc->vp_count);
 
     while (loc->vp_count >= loc->vp_max) {
-	pthread_mutex_unlock(&(loc->vp_count_lock));
+	qassert(pthread_mutex_unlock(&(loc->vp_count_lock)), 0);
 	DBprintf("Thread %p found too many futures in %d; waiting for vp_count\n", (void*)me, loc->id);
 	qthread_lock(me, &(loc->vp_count));
-	pthread_mutex_lock(&(loc->vp_count_lock));
+	qassert(pthread_mutex_lock(&(loc->vp_count_lock)), 0);
     }
     loc->vp_count++;
     DBprintf("Thread %p incr loc %d to %d vps\n", (void*)me, loc->id, loc->vp_count);
-    pthread_mutex_unlock(&(loc->vp_count_lock));
+    qassert(pthread_mutex_unlock(&(loc->vp_count_lock)), 0);
 }
 
 /* creates a qthread, on a location defined by the qthread library, and
@@ -160,12 +163,12 @@ void future_fork(qthread_f fptr, void *arg, aligned_t * retval)
 	    ptr->sched_shep = 0;
 	}
     } else {
-	pthread_mutex_lock(&sfnf_lock);
+	qassert(pthread_mutex_lock(&sfnf_lock), 0);
 	rr = shep_for_new_futures++;
 	if (shep_for_new_futures == qlib->nshepherds) {
 	    shep_for_new_futures = 0;
 	}
-	pthread_mutex_unlock(&sfnf_lock);
+	qassert(pthread_mutex_unlock(&sfnf_lock), 0);
     }
     DBprintf("Thread %p decided future will go to %i\n", (void*)me, rr);
     /* steps 2&3 (slow) */
@@ -185,9 +188,9 @@ int future_yield(qthread_t * me)
 	//yield vproc
 	DBprintf("Thread %p yield loc %d vps %d\n", (void*)me, loc->id,
 		 loc->vp_count);
-	pthread_mutex_lock(&(loc->vp_count_lock));
+	qassert(pthread_mutex_lock(&(loc->vp_count_lock)), 0);
 	unlockit = (loc->vp_count-- == loc->vp_max);
-	pthread_mutex_unlock(&(loc->vp_count_lock));
+	qassert(pthread_mutex_unlock(&(loc->vp_count_lock)), 0);
 	if (unlockit) {
 	    qthread_unlock(me, &(loc->vp_count));
 	}
