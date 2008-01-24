@@ -433,6 +433,7 @@ static inline aligned_t qthread_incr(aligned_t * operand, const int incr)
                               : "r" (operand), "r"(oldval)
                               : "cc", "memory");
     } while (retval != newval);
+    retval += incr;
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
 # ifdef __ILP64__
     int64_t res;
