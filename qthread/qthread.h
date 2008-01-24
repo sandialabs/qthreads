@@ -411,11 +411,11 @@ static inline aligned_t qthread_incr(aligned_t * operand, const int incr)
 	    :"=&b"   (retval)
 	    :"r"     (operand), "r"(incr), "r"(incrd)
 	    :"cc", "memory");
-#elif !defined(QTHREAD_MUTEX_INCREMENT) && (defined(__sparc) || defined(__sparc__)) && defined(SUN_ASSEMBLY)
+#elif !defined(QTHREAD_MUTEX_INCREMENT) && (defined(__sparc) || defined(__sparc__)) &&  ! (defined(__SUNPRO_C) || defined(__SUNPRO_CC))
     register aligned_t oldval, newval;
-    oldval = *operand;
+    newval = *operand;
     do {
-        retval = oldval;
+        retval = oldval = newval;
         newval = oldval + incr;
         /* casa [r1] %asi r2, rd
            if (r2 == *r1) 
@@ -432,7 +432,6 @@ static inline aligned_t qthread_incr(aligned_t * operand, const int incr)
                               : "+r" (newval)
                               : "r" (operand), "r"(oldval)
                               : "cc", "memory");
-        oldval = newval;
     } while (retval != newval);
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
 # ifdef __ILP64__

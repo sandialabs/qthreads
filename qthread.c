@@ -380,10 +380,10 @@ static inline aligned_t qthread_internal_incr(aligned_t * operand,
 		  :"cc", "memory");
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && (defined(__sparc) || defined(__sparc__)) && ! (defined(__SUNPRO_C) || defined(__SUNPRO_CC))
     register aligned_t oldval, newval;
-    oldval = *operand;
+    newval = *operand;
     do {
-        retval = oldval;
-        newval = oldval++;
+        retval = oldval = newval;
+        newval = oldval + 1;
         /* if (*operand == oldval)
              swap(newval, *operand)
            else
@@ -393,7 +393,6 @@ static inline aligned_t qthread_internal_incr(aligned_t * operand,
                               : "+r" (newval)
                               : "r" (operand), "r"(oldval)
                               : "cc", "memory");
-        oldval = newval;
     } while (retval != newval);
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
 # ifdef __ILP64__
@@ -465,6 +464,23 @@ static inline aligned_t qthread_internal_incr_mod(aligned_t * operand,
 		  :"=&b"   (retval)
 		  :"r"     (operand), "r"(max), "r"(incrd), "r"(compd)
 		  :"cc", "memory");
+#elif !defined(QTHREAD_MUTEX_INCREMENT) && (defined(__sparc) || defined(__sparc__)) && ! (defined(__SUNPRO_C) || defined(__SUNPRO_CC))
+    register aligned_t oldval, newval;
+    newval = *operand;
+    do {
+        retval = oldval = newval;
+        newval = oldval + 1;
+        newval *= (newval < max);
+        /* if (*operand == oldval)
+             swap(newval, *operand)
+           else
+             newval = *operand
+        */
+        __asm__ __volatile__ ("casa [%1] 0x80 , %2, %0"
+                              : "+r" (newval)
+                              : "r" (operand), "r"(oldval)
+                              : "cc", "memory");
+    } while (retval != newval);
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
 # ifdef __ILP64__
     int64_t res, old, new;
