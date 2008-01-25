@@ -68,7 +68,7 @@ typedef aligned_t(*qthread_f) (qthread_t * me, void *arg);
 #ifdef SST
 #define qthread_init(x) PIM_quickPrint(0xbeefee,x,PIM_readSpecial(PIM_CMD_LOC_COUNT))
 #else
-int qthread_init(const qthread_shepherd_id_t nshepherds);
+int qthread_init(const unsigned int nshepherds);
 #endif
 
 /* use this function to clean up the qthreads environment after execution of
@@ -486,8 +486,11 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
 # endif
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && ( __x86_64 || __x86_64__ )
     retval = incr;
-    asm volatile ("lock xaddl %0, %1;":"=r" (retval)
-		  :"m"     (*operand), "0"(retval));
+    asm volatile ("lock xaddl %0, %1;"
+		  :"=r"(retval)
+		  :"m"(*operand), "0"(retval)
+		  : "memory");
+    retval += incr;
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && ( __i486 || __i486__ )
     retval = incr;
     asm volatile (".section .smp_locks,\"a\"\n" "  .align 4\n" "  .long 661f\n" ".previous\n" "661:\n"	/* the preceeding gobbledygook is stolen from the Linux kernel */
