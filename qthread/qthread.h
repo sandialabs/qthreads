@@ -68,7 +68,7 @@ typedef aligned_t(*qthread_f) (qthread_t * me, void *arg);
 #ifdef SST
 #define qthread_init(x) PIM_quickPrint(0xbeefee,x,PIM_readSpecial(PIM_CMD_LOC_COUNT))
 #else
-int qthread_init(const unsigned int nshepherds);
+int qthread_init(const qthread_shepherd_id_t nshepherds);
 #endif
 
 /* use this function to clean up the qthreads environment after execution of
