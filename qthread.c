@@ -201,7 +201,11 @@ static pthread_mutex_t concurrentthreads_lock = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 /* Internal functions */
-static void qthread_wrapper(void *arg);
+#ifdef QTHREAD_MAKECONTEXT_SPLIT
+static void qthread_wrapper(unsigned int high, unsigned int low);
+#else
+static void qthread_wrapper(void *ptr);
+#endif
 
 static void qthread_FEBlock_delete(qthread_addrstat_t * m);
 static inline qthread_t *qthread_thread_new(const qthread_f f,
@@ -1161,9 +1165,15 @@ static void qthread_FEBlock_delete(qthread_addrstat_t * m)
 }				       /*}}} */
 
 /* this function runs a thread until it completes or yields */
-static void qthread_wrapper(void *arg)
+#ifdef QTHREAD_MAKECONTEXT_SPLIT
+static void qthread_wrapper(unsigned int high, unsigned int low)
 {				       /*{{{ */
-    qthread_t *t = (qthread_t *) arg;
+    qthread_t *t = (((qthread_t *)(high)) << 32) | low;
+#else
+static void qthread_wrapper(void *ptr)
+{
+    qthread_t *t = (qthread_t *) ptr;
+#endif
 
     qthread_debug("qthread_wrapper(): executing f=%p arg=%p.\n", t->f,
 		  t->arg);
@@ -1246,7 +1256,15 @@ static inline void qthread_exec(qthread_t * t, ucontext_t * c)
 		      t->context->uc_stack.ss_sp,
 		      t->context->uc_stack.ss_size);
 #endif
+#ifdef QTHREAD_MAKECONTEXT_SPLIT
+	{
+	    const unsigned int high = t >> 32;
+	    const unsigned int lwo  = t & 0xffffffff;
+	    makecontext(t->context, (void (*)(void))qthread_wrapper, 2, high, low);
+	}
+#else
 	makecontext(t->context, (void (*)(void))qthread_wrapper, 1, t);	/* the casting shuts gcc up */
+#endif
 #ifdef HAVE_CONTEXT_FUNCS
     } else {
 	t->context->uc_link = c;       /* NULL pthread_exit() */
