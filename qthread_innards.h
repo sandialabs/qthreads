@@ -26,12 +26,20 @@ typedef struct qlib_s
      * of a hack, but improves the bottleneck a bit
      */
     cp_hashtable *locks[32];
+#ifdef QTHREAD_COUNT_THREADS
+    aligned_t locks_stripes[32];
+    pthread_mutex_t locks_stripes_locks[32];
+#endif
     /* these are separated out for memory reasons: if you can get away with
      * simple locks, then you can use a little less memory. Subject to the same
      * bottleneck concerns as the above hashtable, though these are slightly
      * better at shrinking their critical section. FEBs have more memory
      * overhead, though. */
     cp_hashtable *FEBs[32];
+#ifdef QTHREAD_COUNT_THREADS
+    aligned_t febs_stripes[32];
+    pthread_mutex_t febs_stripes_locks[32];
+#endif
 } *qlib_t;
 
 extern qlib_t qlib;

@@ -193,10 +193,10 @@ static cp_mempool *generic_lock_pool = NULL;
 static cp_mempool *generic_addrstat_pool = NULL;
 
 #ifdef QTHREAD_COUNT_THREADS
-static unsigned long threadcount = 0;
+static aligned_t threadcount = 0;
 static pthread_mutex_t threadcount_lock = PTHREAD_MUTEX_INITIALIZER;
-static unsigned long maxconcurrentthreads = 0;
-static unsigned long concurrentthreads = 0;
+static aligned_t maxconcurrentthreads = 0;
+static aligned_t concurrentthreads = 0;
 static pthread_mutex_t concurrentthreads_lock = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
@@ -521,16 +521,16 @@ static inline aligned_t qthread_internal_incr_mod(volatile aligned_t * operand,
 # endif
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && ( QTHREAD_XEON || __i486 || __i486__ || __x86_64 || __x86_64__ )
     unsigned long prev;
-    unsigned int old, new;
+    unsigned int oldval, newval;
 
     do {
-	old = *operand;
-	new = old + 1;
-	new *= (new < max);
+	oldval = *operand;
+	newval = oldval + 1;
+	newval *= (newval < max);
 	asm volatile ("lock\n\t" "cmpxchgl %1, %2":"=a" (retval)
-		      :"r"     (new), "m"(*operand), "0"(old)
+		      :"r"     (newval), "m"(*operand), "0"(oldval)
 		      :"memory");
-    } while (retval != old);
+    } while (retval != oldval);
 #else
     pthread_mutex_lock(lock);
     retval = (*operand)++;
@@ -602,6 +602,7 @@ static void *qthread_shepherd(void *arg)
 	    assert(t->shepherd_ptr == me);
 	    me->current = t;
 
+	    getcontext(&my_context);
 	    /* note: there's a good argument that the following should
 	     * be: (*t->f)(t), however the state management would be
 	     * more complex
@@ -677,6 +678,14 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 
     /* this is synchronized with read/write locks by default */
     for (i = 0; i < 32; i++) {
+#ifdef QTHREAD_COUNT_THREADS
+	qlib->locks_stripes[i] = 0;
+	qlib->febs_stripes[i] = 0;
+# ifdef QTHREAD_MUTEX_INCREMENT
+	qassert(pthread_mutex_init(qlib->locks_stripes_locks[i], NULL), 0);
+	qassert(pthread_mutex_init(qlib->febs_stripes_locks[i], NULL), 0);
+# endif
+#endif
 	if ((qlib->locks[i] =
 	     cp_hashtable_create(10000, cp_hash_addr,
 				 cp_hash_compare_addr)) == NULL) {
@@ -841,6 +850,13 @@ void qthread_finalize(void)
 	cp_hashtable_destroy(qlib->locks[i]);
 	cp_hashtable_destroy_custom(qlib->FEBs[i], NULL, (cp_destructor_fn)
 				    qthread_FEBlock_delete);
+#ifdef QTHREAD_COUNT_THREADS
+	printf("QTHREADS: bin %i used %i/%i times\n",i,qlib->locks_stripes[i],qlib->febs_stripes[i]);
+# ifdef QTHREAD_MUTEX_INCREMENT
+	QTHREAD_DESTROYLOCK(&qlib->locks_stripes_locks[i]);
+	QTHREAD_DESTROYLOCK(&qlib->febs_stripes_locks[i]);
+# endif
+#endif
     }
 
 #ifdef QTHREAD_COUNT_THREADS
@@ -1168,7 +1184,7 @@ static void qthread_FEBlock_delete(qthread_addrstat_t * m)
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
 static void qthread_wrapper(unsigned int high, unsigned int low)
 {				       /*{{{ */
-    qthread_t *t = (((qthread_t *)(high)) << 32) | low;
+    qthread_t *t = (qthread_t*)((((uintptr_t)high) << 32) | low);
 #else
 static void qthread_wrapper(void *ptr)
 {
@@ -1258,12 +1274,20 @@ static inline void qthread_exec(qthread_t * t, ucontext_t * c)
 #endif
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
 	{
-	    const unsigned int high = t >> 32;
-	    const unsigned int lwo  = t & 0xffffffff;
+	    const unsigned int high = ((uintptr_t)t) >> 32;
+	    const unsigned int low  = ((uintptr_t)t) & 0xffffffff;
+#ifdef EXTRA_MAKECONTEXT_ARGC
+	    makecontext(t->context, (void (*)(void))qthread_wrapper, 3, high, low);
+#else
 	    makecontext(t->context, (void (*)(void))qthread_wrapper, 2, high, low);
+#endif
 	}
 #else
-	makecontext(t->context, (void (*)(void))qthread_wrapper, 1, t);	/* the casting shuts gcc up */
+#ifdef EXTRA_MAKECONTEXT_ARGC
+	makecontext(t->context, (void (*)(void))qthread_wrapper, 2, t);
+#else
+	makecontext(t->context, (void (*)(void))qthread_wrapper, 1, t);
+#endif
 #endif
 #ifdef HAVE_CONTEXT_FUNCS
     } else {
@@ -1532,6 +1556,9 @@ int qthread_feb_status(const void *addr)
     const int lockbin = QTHREAD_CHOOSE_BIN(addr);
 
     ALIGN(addr, alignedaddr, "qthread_feb_status()");
+#ifdef QTHREAD_COUNT_THREADS
+    qthread_internal_incr(&qlib->febs_stripes[lockbin], &qlib->febs_stripes_locks[lockbin]);
+#endif
     cp_hashtable_rdlock(qlib->FEBs[lockbin]); {
 	m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs[lockbin],
 						    (void *)alignedaddr);
@@ -1573,6 +1600,9 @@ static inline void qthread_FEB_remove(void *maddr)
     const int lockbin = QTHREAD_CHOOSE_BIN(maddr);
 
     qthread_debug("qthread_FEB_remove(): attempting removal\n");
+#ifdef QTHREAD_COUNT_THREADS
+    qthread_internal_incr(&qlib->febs_stripes[lockbin], &qlib->febs_stripes_locks[lockbin]);
+#endif
     cp_hashtable_wrlock(qlib->FEBs[lockbin]); {
 	m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs[lockbin],
 						    maddr);
@@ -1699,6 +1729,9 @@ int qthread_empty(qthread_t * me, const void *dest)
     const int lockbin = QTHREAD_CHOOSE_BIN(dest);
 
     ALIGN(dest, alignedaddr, "qthread_empty()");
+#ifdef QTHREAD_COUNT_THREADS
+    qthread_internal_incr(&qlib->febs_stripes[lockbin], &qlib->febs_stripes_locks[lockbin]);
+#endif
     cp_hashtable_wrlock(qlib->FEBs[lockbin]);
     {			       /* BEGIN CRITICAL SECTION */
 	m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs[lockbin],
@@ -1734,6 +1767,9 @@ int qthread_fill(qthread_t * me, const void *dest)
 
     ALIGN(dest, alignedaddr, "qthread_fill()");
     /* lock hash */
+#ifdef QTHREAD_COUNT_THREADS
+    qthread_internal_incr(&qlib->febs_stripes[lockbin], &qlib->febs_stripes_locks[lockbin]);
+#endif
     cp_hashtable_wrlock(qlib->FEBs[lockbin]);
     {			       /* BEGIN CRITICAL SECTION */
 	m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs[lockbin],
@@ -1774,6 +1810,9 @@ int qthread_writeF(qthread_t * me, void *dest, const void *src)
 	const int lockbin = QTHREAD_CHOOSE_BIN(dest);
 
 	ALIGN(dest, alignedaddr, "qthread_fill_with()");
+#ifdef QTHREAD_COUNT_THREADS
+    qthread_internal_incr(&qlib->febs_stripes[lockbin], &qlib->febs_stripes_locks[lockbin]);
+#endif
 	cp_hashtable_wrlock(qlib->FEBs[lockbin]); {	/* lock hash */
 	    m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs[lockbin],
 							(void *)alignedaddr);
@@ -1843,6 +1882,9 @@ int qthread_writeEF(qthread_t * me, void *dest, const void *src)
 
 	qthread_debug("qthread_writeEF(%p, %p, %p): init\n", me, dest, src);
 	ALIGN(dest, alignedaddr, "qthread_writeEF()");
+#ifdef QTHREAD_COUNT_THREADS
+    qthread_internal_incr(&qlib->febs_stripes[lockbin], &qlib->febs_stripes_locks[lockbin]);
+#endif
 	cp_hashtable_wrlock(qlib->FEBs[lockbin]); {
 	    m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs[lockbin],
 							(void *)alignedaddr);
@@ -1935,6 +1977,9 @@ int qthread_readFF(qthread_t * me, void *dest, const void *src)
 
 	qthread_debug("qthread_readFF(%p, %p, %p): init\n", me, dest, src);
 	ALIGN(src, alignedaddr, "qthread_readFF()");
+#ifdef QTHREAD_COUNT_THREADS
+    qthread_internal_incr(&qlib->febs_stripes[lockbin], &qlib->febs_stripes_locks[lockbin]);
+#endif
 	cp_hashtable_wrlock(qlib->FEBs[lockbin]); {
 	    m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs[lockbin],
 							(void *)alignedaddr);
@@ -2022,6 +2067,9 @@ int qthread_readFE(qthread_t * me, void *dest, void *src)
 
 	qthread_debug("qthread_readFE(%p, %p, %p): init\n", me, dest, src);
 	ALIGN(src, alignedaddr, "qthread_readFE()");
+#ifdef QTHREAD_COUNT_THREADS
+    qthread_internal_incr(&qlib->febs_stripes[lockbin], &qlib->febs_stripes_locks[lockbin]);
+#endif
 	cp_hashtable_wrlock(qlib->FEBs[lockbin]); {
 	    m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs[lockbin],
 							alignedaddr);
@@ -2120,6 +2168,9 @@ int qthread_lock(qthread_t * t, const void *a)
     if (t != NULL) {
 	const int lockbin = QTHREAD_CHOOSE_BIN(a);
 
+#ifdef QTHREAD_COUNT_THREADS
+    qthread_internal_incr(&qlib->locks_stripes[lockbin], &qlib->locks_stripes_locks[lockbin]);
+#endif
 	cp_hashtable_wrlock(qlib->locks[lockbin]);
 	m = (qthread_lock_t *) cp_hashtable_get(qlib->locks[lockbin],
 						(void *)a);
@@ -2211,6 +2262,9 @@ int qthread_unlock(qthread_t * t, const void *a)
     if (t != NULL) {
 	const int lockbin = QTHREAD_CHOOSE_BIN(a);
 
+#ifdef QTHREAD_COUNT_THREADS
+    qthread_internal_incr(&qlib->locks_stripes[lockbin], &qlib->locks_stripes_locks[lockbin]);
+#endif
 	cp_hashtable_wrlock(qlib->locks[lockbin]);
 	m = (qthread_lock_t *) cp_hashtable_get(qlib->locks[lockbin],
 						(void *)a);
