@@ -3,6 +3,9 @@
 /* if $CC understands C99 syntax */
 #undef C99_ACCEPTED
 
+/* solaris 8 requires argc be one larger than the actual count of arguments */
+#undef EXTRA_MAKECONTEXT_ARGC
+
 /* the system has its own getcontext functions */
 #undef HAVE_CONTEXT_FUNCS
 
@@ -161,6 +164,10 @@
 
 /* use 8MB stacks for every thread */
 #undef QTHREAD_FULL_SIZE_STACKS
+
+/* makecontext() sometimes can only pass int-sized variables, which is a
+   problem on systems where sizeof(void*) > sizeof(int) */
+#undef QTHREAD_MAKECONTEXT_SPLIT
 
 /* use mutexes when incrementing, rather than architecture-specific assembly
    */
