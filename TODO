@@ -3,7 +3,7 @@ These are ideas for things to add (in no particular order):
 1. Change the futurelib spawner to use up existing concurrency limits before
    blocking
 
-2. Add a qthread_replace(me, func, arg) function to enable convenient
+2. Add a qthread_replace(me, func, arg, argsize) function to enable convenient
    tail-recursion algorithms
 
 3. Add a qthread_forker(func, ret, ...) that accepts multiple arguments. How
