@@ -4,21 +4,21 @@ class Storage {
   static const void update( int Behavior_Type_Undefined_Error ) {;}
 };
 
-template <int C, class VarT>
-class Storage <C, Val, VarT> {
-  VarT t_;
+template <int C, class VarT1>
+class Storage <C, Val, VarT1> {
+  VarT1 t_;
 protected:
-  Storage(VarT t) : t_(t) {;}
-  VarT& value(int iteration) { return t_; }
+  Storage(VarT1 t) : t_(t) {;}
+  VarT1& value(int iteration) { return t_; }
 };
 
-template <int C, class VarT>
-class Storage <C, Ref, VarT > {
+template <int C, class VarT2>
+class Storage <C, Ref, VarT2 > {
   //Using pointers to avoid confusion when qthread switches stack frame pointers
-  VarT* tp_;
+  VarT2* tp_;
 protected:
-  Storage(VarT& t) : tp_(&t) {;}
-  VarT& value(int iteration) { return *tp_; }
+  Storage(VarT2& t) : tp_(&t) {;}
+  VarT2& value(int iteration) { return *tp_; }
 };
 
 template <int C, class VarT, int opC>
@@ -54,27 +54,27 @@ protected:
   void update (int iteration, U update) { ptr_[iteration] = (ele_t)update; }
 };
 
-template <int C, class VarT>
-class Storage<C, ArrayPtr, VarT* > {
-  VarT *ptr_;
+template <int C, class VarT3>
+class Storage<C, ArrayPtr, VarT3* > {
+  VarT3 *ptr_;
 protected:
-  Storage(VarT *ptr) : ptr_(ptr) {;}
-  VarT& value(int iteration) { return ptr_[iteration]; }
+  Storage(VarT3 *ptr) : ptr_(ptr) {;}
+  VarT3& value(int iteration) { return ptr_[iteration]; }
   template <class U>
-  void update (int iteration, U update) { ptr_[iteration] = (VarT)update; }
+  void update (int iteration, U update) { ptr_[iteration] = (VarT3)update; }
 };
 
-template <int C, class VarT>
-class Storage<C,Iterator,VarT> {
+template <int C, class VarT4>
+class Storage<C,Iterator,VarT4> {
 protected:
-  Storage(VarT v) {;}
+  Storage(VarT4 v) {;}
   int value(int iteration) { return iteration; } 
 };
 
-template <int C, class VarT>
-class Storage<C,void,VarT> {
+template <int C, class VarT5>
+class Storage<C,void,VarT5> {
 protected:
-  Storage(VarT v) {;}
+  Storage(VarT5 v) {;}
 };
 
 #define CALL_5_ARG(fff) fff(Storage<1, Arg1B, Arg1V>::value(cur),	\
