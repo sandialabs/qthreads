@@ -11,6 +11,7 @@ AC_CANONICAL_HOST
 
 case "$host" in
 	*-solaris2.8)
+	AC_DEFINE(EXTRA_MAKECONTEXT_ARGC, 1, [solaris 8 requires argc be one larger than the actual count of arguments])
 	AC_DEFINE(INVERSE_STACK_POINTER, 1, [make the ss_sp member of uc_stack be the high-address of the stack, rather than the low-address of the stack (which is the usual behavior)])
 	;;
 	*-solaris*)
@@ -115,8 +116,66 @@ AC_FUNC_MMAP
 AC_CHECK_FUNCS([strtol floor memset munmap memcpy])
 AC_CHECK_FUNCS([getcontext swapcontext makecontext], ac_cv_context_funcs=yes, ac_cv_context_funcs=no)
 
+if test "x$ac_cv_sizeof_int" == x ; then
+	AC_CHECK_SIZEOF(int, [4 8 16 2])
+fi
+if test "x$ac_cv_sizeof_voidp" == x ; then
+	AC_CHECK_SIZEOF(void*, [4 8 16 2])
+fi
+
 if test "$ac_cv_context_funcs" = "yes" ; then
 	AC_DEFINE(HAVE_CONTEXT_FUNCS, 1, [the system has its own getcontext functions])
+	if test "$ac_cv_sizeof_int" -ne "$ac_cv_sizeof_voidp" ; then
+		AC_MSG_CHECKING(whether makecontext needs split arguments)
+		AC_TRY_RUN([
+#include <assert.h>
+#include <stdlib.h>
+#include <ucontext.h>
+
+void func(void * msg)
+{
+	long expected = 0;
+	expected = (1L << 16);
+	expected = expected << 16;
+	expected += 1L;
+
+	((long)msg == expected) ? exit(0) : exit(1);
+}
+
+int main()
+{
+	if (sizeof(int) == sizeof(void*)) {
+		return 0;
+	} else {
+		ucontext_t c, d;
+		/* big enough to ignore stack direction */
+		char * stack = malloc(1024*1024*16);
+		long msg = 0;
+
+		if (sizeof(long) != sizeof(void*)) return 3;
+		getcontext(&c);
+		getcontext(&d);
+		c.uc_stack.ss_sp = stack + 1024*1024*8;
+		c.uc_stack.ss_size = 1024*1024*8 - 64;
+		c.uc_link = &d;
+		/* keep compiler quiet */
+		msg = (1L << 16);
+		msg = msg << 16;
+		msg += 1L;
+
+		makecontext(&c, (void (*)(void))func, 1, msg);
+		swapcontext(&d, &c);
+
+		return 2;
+	}
+}], ac_cv_contextret="safe", ac_cv_contextret="split")
+		if test "$ac_cv_contextret" == "split" ; then
+			AC_MSG_RESULT(yes)
+			AC_DEFINE(QTHREAD_MAKECONTEXT_SPLIT, 1, [makecontext() sometimes can only pass int-sized variables, which is a problem on systems where sizeof(void*) > sizeof(int)])
+		else
+			AC_MSG_RESULT(no)
+		fi
+	fi
 else
 	QTHREAD_EXTRA_OBJS="$QTHREAD_EXTRA_OBJS osx_compat/libosx_compat.la"
 	AC_CHECK_FUNCS([memmove], , AC_MSG_ERROR(["A functional memmove is required if you do not have the get/swap/make-context functions."]))
