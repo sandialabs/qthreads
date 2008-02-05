@@ -1,3 +1,14 @@
+--- 1.1 ---
+New Features:
+ - Can now force 64-bit alignment
+Improvements:
+ - Better Apple PPC support
+ - Documentation fixes
+ - Detects more makecontext() irregularities
+ - Better C++ portability/compatibility
+ - Better compatibility with unusual compilers
+ - Fixed atomic increment volatility declaration
+ - Thread counting also checks hash stripe balance
 --- 1.0 ---
 New Features:
  - Added error handling.

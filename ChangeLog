@@ -1,3 +1,215 @@
+2008-02-04 17:47  kbwheel
+
+	* configure, Makefile.in, config.h.in: autoreconf
+
+2008-02-04 17:28  kbwheel
+
+	* configure.in: detect weird makecontext problems
+
+2008-02-04 17:27  kbwheel
+
+	* qthread/loop_iter.hpp: easier debugging
+
+2008-02-04 17:24  kbwheel
+
+	* qthread.c, qthread_innards.h: more than just counting threads,
+	  plus some minor c++ compatibility
+
+2008-02-04 17:21  kbwheel
+
+	* qloop.c: c++ compatability
+
+2008-02-04 17:20  kbwheel
+
+	* TODO: [no log message]
+
+2008-02-04 16:36  kbwheel
+
+	* TODO: [no log message]
+
+2008-01-25 13:24  kbwheel
+
+	* qthread.c: split makecontext
+
+2008-01-25 13:23  kbwheel
+
+	* qthread/qthread.h: minor nit in the qthread_init declaration
+
+2008-01-25 11:32  bwbarre
+
+	* qthread/qthread.h: update to match proper semantics
+
+2008-01-24 16:39  bwbarre
+
+	* testincr.c: CHeck for proper return code from qhtread_incr
+
+2008-01-24 16:38  bwbarre
+
+	* qthread.c, qthread/qthread.h: Atomic functions should have their
+	  memory pointer marked as volatile
+
+2008-01-24 16:12  bwbarre
+
+	* qthread/qthread.h: wrong comments are worse than no comments!
+
+2008-01-24 15:32  kbwheel
+
+	* qthread/qthread.h: corrected the semantics of the Sparc assembly
+
+2008-01-24 13:39  bwbarre
+
+	* qthread.c, qthread/qthread.h: * Implement assembly for
+	  internal_incr_mod * Fix error in incrementing oldval in the wrong
+	  place with internal_incr * Minor optimization found by Kyle
+
+2008-01-24 12:55  kbwheel
+
+	* qthread.c, qthread_innards.h: moved asserts into
+	  qthread_innards.h and altered the #defs around the sun assembly
+
+2008-01-24 12:53  kbwheel
+
+	* futurelib.c: added asserts that can be enabled with
+	  --enable-asserts
+
+2008-01-24 10:53  bwbarre
+
+	* qthread.c, qthread/qthread.h: Implement SPARC assembly.  Due to a
+	  bug in the Sun studio compiler, only use if SUN_ASSEMBLY is
+	  manually defined
+
+2008-01-24 10:51  kbwheel
+
+	* testloop.cpp: a few obscure warnings on Solaris fixed
+
+2008-01-23 11:21  kbwheel
+
+	* config.h.in, configure, test_id.c: test_id and autoreconf
+
+2008-01-23 09:32  kbwheel
+
+	* qthread/qthread.h: formatting
+
+2008-01-23 09:31  kbwheel
+
+	* configure.in, qthread/qthread.h: added option to force 64-bit
+	  alignment
+
+2008-01-22 13:26  kbwheel
+
+	* .cvsignore: [no log message]
+
+2008-01-22 13:26  kbwheel
+
+	* qthread/loop_iter.hpp: gcc doesnt seem to like that typename
+	  keyword... there HAS to be a right way to do this
+
+2008-01-22 12:45  kbwheel
+
+	* config.h.in, configure: autoreconf
+
+2008-01-22 12:43  kbwheel
+
+	* qthread.c: fixed the stdint.h compatability, added an assert on
+	  getcontext(), and made it possible to have an inverse stack (for
+	  Solaris 8)
+
+2008-01-22 12:40  kbwheel
+
+	* configure.in: inverse-stack detection for solaris 8 (needs to be
+	  extended to earlier solarises too, but... get me a machine!)
+
+2008-01-22 12:39  kbwheel
+
+	* qthread.c: preliminary assembly for sparc
+
+2008-01-22 12:38  kbwheel
+
+	* qthread/loop_iter.hpp: using typename keyword helps this stuff
+
+2008-01-22 12:36  kbwheel
+
+	* testloop.cpp: kind of an important omission, eh?
+
+2008-01-22 12:33  kbwheel
+
+	* qalloc.c: more portable #defs
+
+2008-01-22 12:27  kbwheel
+
+	* futurelib.c: this inline is an optimization, and can cause
+	  trouble if its taken as "static inline", as some compilers like
+	  doing
+
+2008-01-22 12:25  kbwheel
+
+	* configure.in: sun fixes
+
+2008-01-22 12:21  kbwheel
+
+	* qthread/qthread.h: hypnotoad/Solaris fixes
+
+2008-01-20 17:17  kbwheel
+
+	* acinclude.m4: typo?
+
+2008-01-17 01:00  kbwheel
+
+	* test2.c: check return values
+
+2008-01-15 14:29  kbwheel
+
+	* configure.in: sun compatability with cprops and sockets
+
+2008-01-15 14:28  kbwheel
+
+	* qalloc.c: compatability with sun ... should really move this to
+	  configure.in
+
+2008-01-15 14:27  kbwheel
+
+	* futurelib.c: cleaner compile by undeffing DBprintf
+
+2008-01-14 19:59  kbwheel
+
+	* .cvsignore, Makefile.am, Makefile.in, aclocal.m4, config.h.in,
+	  configure, configure.in, osx_compat/.cvsignore,
+	  osx_compat/Makefile.in, qthread/.cvsignore, qthread/qthread.h,
+	  sst/futurelib-sst.c, sst/qthread-sst.c: merged the sst code, and
+	  created common.h to contain crucial configuration info
+
+2008-01-11 17:21  kbwheel
+
+	* qthread/qthread.h: avoid using base register accidentally
+
+2008-01-11 17:13  kbwheel
+
+	* qthread.c: FINALLY found what I think is a portable solution to
+	  the stupid r0 problem
+
+2007-12-20 15:53  kbwheel
+
+	* man3/: qt_double_max.3, qt_double_min.3, qt_double_sum.3,
+	  qt_int_prod.3, qt_uint_prod.3, qthread_fork.3, qthread_lock.3,
+	  qthread_readFE.3, qthread_readFF.3, qthread_schedule.3,
+	  qthread_self.3: minor corrections
+
+2007-11-27 19:43  kbwheel
+
+	* qthread.c: Apple fixed their gcc
+
+2007-11-01 11:24  kbwheel
+
+	* aclocal.m4: [no log message]
+
+2007-09-17 13:51  kbwheel
+
+	* NEWS: 1.0
+
+2007-09-17 13:48  kbwheel
+
+	* ChangeLog: [no log message]
+
 2007-09-17 13:46  kbwheel
 
 	* Makefile.in, aclocal.m4, config.h.in, configure,
