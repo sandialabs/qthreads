@@ -305,7 +305,9 @@ if test "x$ac_cv_64bit_align" = "xyes" ; then
 	echo "#define QTHREAD_64_BIT_ALIGN 1" >> $tmpfile
 fi
 echo "#endif /* QTHREAD_COMMON_H */" >> $tmpfile
-if diff $tmpfile "qthread/common.h" >/dev/null ; then
+if test ! -f "qthread/common.h" ; then
+	mv $tmpfile "qthread/common.h"
+elif diff $tmpfile "qthread/common.h" >/dev/null ; then
 	rm "$tmpfile"
 else
 	mv $tmpfile "qthread/common.h"
