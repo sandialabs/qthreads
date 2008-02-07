@@ -14,25 +14,6 @@ ALL_THE_HDRS = qthread/qthread.h \
 			   qthread/loop_iter.hpp \
 			   qthread/loop.hpp
 
-SUBDIRS = $(MAYBE_OSX_COMPAT) .
-
-lib_LTLIBRARIES = libqthread.la
-pkginclude_HEADERS = $(ALL_THE_HDRS)
-
-AM_CPPFLAGS = @SST_INCLUDE@
-AM_LDFLAGS = @SST_LIBS@
-if COMPILE_FOR_SST
-libqthread_la_SOURCES = sst/qthread/qthread.h \
-						sst/qthread-sst.c qalloc.c qutil.c \
-						sst/futurelib-sst.c
-else
-libqthread_la_SOURCES = $(ALL_THE_HDRS) \
-						qthread.c qalloc.c qutil.c futurelib.c qloop.c
-endif
-libqthread_la_LDFLAGS = -version-info 9:0:0 -no-undefined
-libqthread_la_LIBADD = @QTHREAD_EXTRA_OBJS@
-libqthread_la_DEPENDENCIES = @QTHREAD_EXTRA_OBJS@
-
 man_MANS = man3/qthread_empty.3 \
 		   man3/qthread_feb_status.3 \
 		   man3/qthread_fill.3 \
@@ -109,8 +90,27 @@ man_MANS = man3/qthread_empty.3 \
 		   man3/future_join_all.3 \
 		   man3/future_yield.3
 
-TESTS = test1 test2 test3 testq testloop testincr testqloop
-check_PROGRAMS = test1 test2 test3 testq testloop testincr testqloop
+SUBDIRS = $(MAYBE_OSX_COMPAT) .
+
+lib_LTLIBRARIES = libqthread.la
+pkginclude_HEADERS = $(ALL_THE_HDRS)
+
+AM_CPPFLAGS = @SST_INCLUDE@
+AM_LDFLAGS = @SST_LIBS@
+if COMPILE_FOR_SST
+libqthread_la_SOURCES = sst/qthread/qthread.h \
+						sst/qthread-sst.c qalloc.c qutil.c \
+						sst/futurelib-sst.c
+else
+libqthread_la_SOURCES = $(ALL_THE_HDRS) \
+						qthread.c qalloc.c qutil.c futurelib.c qloop.c
+endif
+libqthread_la_LDFLAGS = -version-info 9:0:0 -no-undefined
+libqthread_la_LIBADD = @QTHREAD_EXTRA_OBJS@
+libqthread_la_DEPENDENCIES = @QTHREAD_EXTRA_OBJS@
+
+TESTS = test1 test2 test3 testq testloop testincr testqloop testid
+check_PROGRAMS = $(TESTS)
 test1_SOURCES = test.c
 test1_LDADD = -lqthread
 test2_SOURCES = test2.c
@@ -125,6 +125,8 @@ testqloop_SOURCES = testqloop.c
 testqloop_LDADD = -lqthread
 testincr_SOURCES = testincr.c
 testincr_LDADD = -lqthread
+testid_SOURCES = test_id.c
+testid_LDADD = -lqthread
 
 distclean-local:
 	find . -name .DS_Store -exec $(RM) {} \;
