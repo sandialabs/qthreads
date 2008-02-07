@@ -503,10 +503,10 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
 #endif
     qthread_t *me = qthread_self();
 
-    qthread_lock(me, operand);
+    qthread_lock(me, (void *)operand);
     *operand += incr;
     retval = *operand;
-    qthread_unlock(me, operand);
+    qthread_unlock(me, (void *)operand);
 #endif
     return retval;
 }				       /*}}} */
