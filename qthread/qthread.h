@@ -404,12 +404,12 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
     register unsigned int incrd = incrd;	/* no initializing */
     asm volatile (
 	    "1:\tlwarx  %0,0,%1\n\t"
-	    "add    %3,%0,%2\n\t"
-	    "stwcx. %3,0,%1\n\t"
+	    "add    %0,%0,%2\n\t"
+	    "stwcx. %0,0,%1\n\t"
 	    "bne-   1b\n\t"	/* if it failed, try again */
 	    "isync"	/* make sure it wasn't all a dream */
 	    :"=&b"   (retval)
-	    :"r"     (operand), "r"(incr), "r"(incrd)
+	    :"r"     (operand), "r"(incr)
 	    :"cc", "memory");
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && (defined(__sparc) || defined(__sparc__)) &&  ! (defined(__SUNPRO_C) || defined(__SUNPRO_CC))
     register aligned_t oldval, newval;
