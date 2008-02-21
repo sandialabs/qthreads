@@ -167,7 +167,7 @@ int main()
 
 		return 2;
 	}
-}], ac_cv_contextret="safe", ac_cv_contextret="split")
+}], ac_cv_contextret="safe", ac_cv_contextret="split", ac_cv_contextret="split")
 		if test "$ac_cv_contextret" == "split" ; then
 			AC_MSG_RESULT(yes)
 			AC_DEFINE(QTHREAD_MAKECONTEXT_SPLIT, 1, [makecontext() sometimes can only pass int-sized variables, which is a problem on systems where sizeof(void*) > sizeof(int)])
