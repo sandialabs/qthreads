@@ -2,6 +2,9 @@
 if NEED_OSX_COMPAT
 MAYBE_OSX_COMPAT = osx_compat
 endif
+if NEED_QTIMER
+MAYBE_QTIMER = qtimer
+endif
 
 ALL_THE_HDRS = qthread/qthread.h \
 			   qthread/qalloc.h \
@@ -90,7 +93,7 @@ man_MANS = man3/qthread_empty.3 \
 		   man3/future_join_all.3 \
 		   man3/future_yield.3
 
-SUBDIRS = $(MAYBE_OSX_COMPAT) .
+SUBDIRS = $(MAYBE_OSX_COMPAT) $(MAYBE_QTIMER) .
 
 lib_LTLIBRARIES = libqthread.la
 pkginclude_HEADERS = $(ALL_THE_HDRS)
