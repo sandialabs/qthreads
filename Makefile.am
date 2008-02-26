@@ -1,7 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 AUTOMAKE_OPTIONS = check-news dist-bzip2
 
-SUBDIRS = man/man3 include/qthread test src
+SUBDIRS = man include test src
 
 distclean-local:
 	find . -name .DS_Store -exec $(RM) {} \;
