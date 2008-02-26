@@ -182,72 +182,72 @@ else
 	AC_TYPE_PID_T
 fi
 
-AC_ARG_ENABLE(xeon,AC_HELP_STRING(--enable-xeon,[enable Xeon-specific optimizations (since Xeons do not have the 486 #defines)]),
+AC_ARG_ENABLE(xeon,AS_HELP_STRING([--enable-xeon],[enable Xeon-specific optimizations (since Xeons do not have the 486 #defines)]),
 		ac_cv_xeon=$enableval, ac_cv_xeon=no)
 if test "$ac_cv_xeon" = "yes" ; then
     AC_DEFINE(QTHREAD_XEON, 1, [this is a Xeon CPU])
 fi
 
-AC_ARG_ENABLE(setrlimit,AC_HELP_STRING(--disable-setrlimit,[don't use setrlimit to limit the stack (which is normally used only on Linux systems)]),
+AC_ARG_ENABLE(setrlimit,AS_HELP_STRING([--disable-setrlimit],[don't use setrlimit to limit the stack (which is normally used only on Linux systems)]),
 		ac_cv_setrlimit=$enableval)
 if test "$ac_cv_setrlimit" = "yes" ; then
 	AC_DEFINE(NEED_RLIMIT, 1, [whether the library should use get/set-rlimit functions])
 fi
 
-AC_ARG_ENABLE(software-increments,AC_HELP_STRING(--enable-software-increments,[use mutexes to do the internal increments; possibly faster in some cases, and compatible with more compilers (I'm looking at you, Intel).]),
+AC_ARG_ENABLE(software-increments,AS_HELP_STRING([--enable-software-increments],[use mutexes to do the internal increments; possibly faster in some cases, and compatible with more compilers (I'm looking at you, Intel).]),
 		ac_cv_software_increments=$enableval, ac_cv_software_increments=no)
 if test "$ac_cv_software_increments" = "yes" ; then
 	AC_DEFINE(QTHREAD_MUTEX_INCREMENT, 1, [use mutexes when incrementing, rather than architecture-specific assembly])
 fi
 
-AC_ARG_ENABLE(aligncheck,AC_HELP_STRING(--disable-aligncheck,check the alignment of synchronization addresses),
+AC_ARG_ENABLE(aligncheck,AS_HELP_STRING([--disable-aligncheck],check the alignment of synchronization addresses),
 	    ac_cv_aligncheck=$enableval, ac_cv_aligncheck=yes)
 if test "$ac_cv_aligncheck" = "no" ; then
     AC_DEFINE(QTHREAD_NOALIGNCHECK, 1, [dont check the alignment of synchronization addressses])
 fi
-AC_ARG_ENABLE(fullsize-stacks,AC_HELP_STRING(--enable-fullsize-stacks,use 8MB stacks for every thread),
+AC_ARG_ENABLE(fullsize-stacks,AS_HELP_STRING([--enable-fullsize-stacks],use 8MB stacks for every thread),
 	    ac_cv_fullsizestack=$enableval, ac_cv_fullsizestack=no)
 if test "$ac_cv_fullsizestack" = "yes" ; then
     AC_DEFINE(QTHREAD_FULL_SIZE_STACKS, 1, [use 8MB stacks for every thread])
 else
-    AC_ARG_ENABLE(very-small-stacks,AC_HELP_STRING(--enable-very-small-stacks,[use 2k stacks for every thread (dangerous)]),
+    AC_ARG_ENABLE(very-small-stacks,AS_HELP_STRING([--enable-very-small-stacks],[use 2k stacks for every thread (dangerous)]),
 		ac_cv_verysmallstacks=$enableval, ac_cv_verysmallstacks=no)
     if test "$ac_cv_verysmallstacks" = "yes" ; then
 	AC_DEFINE(QTHREAD_REALLY_SMALL_STACKS, 1, [use 2k stacks for every thread])
     fi
 fi
-AC_ARG_ENABLE(debug-trace,AC_HELP_STRING(--enable-debug-trace,[prints out debugging information as programs run, tracing their qthread-related behavior]),
+AC_ARG_ENABLE(debug-trace,AS_HELP_STRING([--enable-debug-trace],[prints out debugging information as programs run, tracing their qthread-related behavior]),
 	    ac_cv_debugtrace=$enableval, ac_cv_debugtrace=no)
 if test "$ac_cv_debugtrace" = "yes" ; then
     AC_DEFINE(QTHREAD_DEBUG, 1, [prints out debugging information at runtime])
 fi
-AC_ARG_ENABLE(unpooled-memory,AC_HELP_STRING(--enable-unpooled-memory,[prevents qthreads from (in most cases) using memory pools, which is sometimes more compatible with machines that have unusual alignment issues]),
+AC_ARG_ENABLE(unpooled-memory,AS_HELP_STRING([--enable-unpooled-memory],[prevents qthreads from (in most cases) using memory pools, which is sometimes more compatible with machines that have unusual alignment issues]),
 	    ac_cv_unpooled=$enableval, ac_cv_unpooled=no)
 if test "$ac_cv_unpooled" = "yes" ; then
     AC_DEFINE(UNPOOLED, 1, [prevents the use of memory pools (mostly)])
 fi
-AC_ARG_ENABLE(thread-count,AC_HELP_STRING(--enable-thread-count,[counts the number of threads and the number of concurrent threads and prints it out when qthread_finalize() is run; slows down computation]),
+AC_ARG_ENABLE(thread-count,AS_HELP_STRING([--enable-thread-count],[counts the number of threads and the number of concurrent threads and prints it out when qthread_finalize() is run; slows down computation]),
 	    ac_cv_threadcount=$enableval, ac_cv_threadcount=no)
 if test "$ac_cv_threadcount" = "yes"; then
     AC_DEFINE(QTHREAD_COUNT_THREADS, 1, [keeps track of the number of threads])
 fi
-AC_ARG_ENABLE(shepherd-profiling,AC_HELP_STRING(--enable-shepherd-profiling,[counts the amount of time that each shepherd spends idle; based on gettimeofday, so it's vulnerable to interference]),
+AC_ARG_ENABLE(shepherd-profiling,AS_HELP_STRING([--enable-shepherd-profiling],[counts the amount of time that each shepherd spends idle; based on gettimeofday, so it's vulnerable to interference]),
 		ac_cv_shep_profile=$enableval, ac_cv_shep_profile=no)
 if test "$ac_cv_shep_profile" = "yes" ; then
 	ac_cv_need_qtimer="yes";
 	AC_DEFINE(QTHREAD_SHEPHERD_PROFILING, 1, [adds code to monitor how much time shepherds spend idle])
 fi
-AC_ARG_ENABLE(asserts,AC_HELP_STRING(--enable-asserts,[adds sanity checks to most qthread functions]),
+AC_ARG_ENABLE(asserts,AS_HELP_STRING([--enable-asserts],[adds sanity checks to most qthread functions]),
 	    ac_cv_asserts=$enableval, ac_cv_asserts=no)
 if test "$ac_cv_asserts" = "no" ; then
     AC_DEFINE(QTHREAD_NO_ASSERTS, 1, [removes sanity checks from most qthread functions])
 fi
-AC_ARG_ENABLE(lazy-threadids,AC_HELP_STRING(--disable-lazy-threadids,[makes qthread assign thread IDs at spawning time, rather than as necessary; this ensures every thread gets a unique thread id]),
+AC_ARG_ENABLE(lazy-threadids,AS_HELP_STRING([--disable-lazy-threadids],[makes qthread assign thread IDs at spawning time, rather than as necessary; this ensures every thread gets a unique thread id]),
 	    ac_cv_lazythreadids=$enableval, ac_cv_lazythreadids=yes)
 if test "$ac_cv_lazythreadids" = "no" ; then
     AC_DEFINE(QTHREAD_NONLAZY_THREADIDS, 1, [makes sure every thread gets an id at creation time])
 fi
-AC_ARG_ENABLE(64bit-alignment,AC_HELP_STRING(--enable-64bit-alignment,[forces the aligned_t type to be 64-bits]),
+AC_ARG_ENABLE(64bit-alignment,AS_HELP_STRING([--enable-64bit-alignment],[forces the aligned_t type to be 64-bits]),
 		ac_cv_64bit_align=$enableval, ac_cv_64bit_align=no)
 if test "$ac_cv_64bit_align" = "yes" ; then
 	AC_DEFINE(QTHREAD_64_BIT_ALIGN, 1, [forces aligned_t to be 64 bits])
@@ -277,9 +277,9 @@ ac_cv_qthreads_implementation=unix
 ################################################################################
 # THIS IS THE SST STUFF                                                        #
 ################################################################################
-AC_ARG_WITH(sst,AC_HELP_STRING(--with-sst=<path_to_SST>,[compiles the SST version of qthreads, relying on the SST includes being in the specified directory. If 'yes', then the includes are assumed to be specified in the CPPFLAGS.]),
+AC_ARG_WITH(sst,AS_HELP_STRING([--with-sst=<path_to_SST>],[compiles the SST version of qthreads, relying on the SST includes being in the specified directory. If 'yes', then the includes are assumed to be specified in the CPPFLAGS.]),
 	ac_cv_sst=$withval, ac_cv_sst="")
-AC_ARG_WITH(statlibs,AC_HELP_STRING(--with-statlibs=<path_to_static_libs>,[option for compiling with static libraries, only needed for compiling the test programs for use with SST]),
+AC_ARG_WITH(statlibs,AS_HELP_STRING([--with-statlibs=<path_to_static_libs>],[option for compiling with static libraries, only needed for compiling the test programs for use with SST]),
 	ac_cv_statlibs=$withval, ac_cv_statlibs="")
 if test "$ac_cv_sst" ; then
 	SST_INCLUDE=""
