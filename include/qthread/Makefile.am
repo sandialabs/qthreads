@@ -14,3 +14,7 @@ qthread_HEADERS = $(headers)
 
 uninstall-local:
 	test -d "$(qthreaddir)" && rmdir $(qthreaddir) || true
+
+# These are generated files, and so should be removed by distclean
+distclean-local:
+	$(RM) common.h qthread-int.h

@@ -73,3 +73,4 @@ man_MANS = qthread_empty.3 \
 		   future_init.3 \
 		   future_join_all.3 \
 		   future_yield.3
+EXTRA_DIST = $(man_MANS)
