@@ -1,6 +1,6 @@
 ## Process this file with automake to produce Makefile.in
 
-SUBDIRS = man/man3 qthread test src .
+SUBDIRS = man/man3 include/qthread test src
 
 distclean-local:
 	find . -name .DS_Store -exec $(RM) {} \;

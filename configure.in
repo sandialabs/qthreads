@@ -5,7 +5,7 @@ AC_PREREQ(2.59)
 AC_INIT(qthread, 0.8, rcmurph@sandia.gov)
 AM_INIT_AUTOMAKE(qthread, 0.8)
 AC_CONFIG_SRCDIR([src/qthread.c])
-AM_CONFIG_HEADER([config.h])
+AM_CONFIG_HEADER([include/config.h])
 
 AC_CANONICAL_HOST
 
@@ -77,7 +77,7 @@ AC_SEARCH_LIBS([ceil],[m], ,AC_MSG_ERROR(["Can't seem to find ceil()"]))
 # Checks for header files.
 AC_HEADER_STDC
 AC_CHECK_HEADERS([stdlib.h fcntl.h ucontext.h])
-AX_CREATE_STDINT_H(qthread/qthread-int.h)
+AX_CREATE_STDINT_H(include/qthread/qthread-int.h)
 AC_SYS_LARGEFILE
 AC_CHECK_FUNCS([fstat64 lseek64], ac_cv_64stat=yes, ac_cv_64stat=no)
 if test "$ac_cv_64stat" == "yes" ; then
@@ -300,10 +300,11 @@ AM_CONDITIONAL([NEED_QTIMER], [test "$ac_cv_need_qtimer" = "yes"])
 AC_SUBST(SST_INCLUDE)
 AC_SUBST(SST_LIBS)
 
-AC_CONFIG_FILES([Makefile src/Makefile src/osx_compat/Makefile src/qtimer/Makefile man/man3/Makefile qthread/Makefile test/Makefile])
-AC_CONFIG_COMMANDS([qthread/common.h],
+AC_CONFIG_FILES([Makefile src/Makefile src/osx_compat/Makefile src/qtimer/Makefile man/man3/Makefile include/qthread/Makefile test/Makefile])
+AC_CONFIG_COMMANDS([include/qthread/common.h],
 [
-tmpfile="qthread/common.hT"
+hdrfile="include/qthread/common.h"
+tmpfile="${hdrfile}T"
 cat > $tmpfile << _EOF_
 /*  -*- Mode: C -*-
  * ------------------------------------------------------------------
@@ -328,12 +329,12 @@ if test "x$ac_cv_64bit_align" = "xyes" ; then
 	echo "#define QTHREAD_64_BIT_ALIGN 1" >> $tmpfile
 fi
 echo "#endif /* QTHREAD_COMMON_H */" >> $tmpfile
-if test ! -f "qthread/common.h" ; then
-	mv $tmpfile "qthread/common.h"
-elif diff $tmpfile "qthread/common.h" >/dev/null ; then
+if test ! -f $hdrfile ; then
+	mv "$tmpfile" "$hdrfile"
+elif diff "$tmpfile" "$hdrfile" >/dev/null ; then
 	rm "$tmpfile"
 else
-	mv $tmpfile "qthread/common.h"
+	mv "$tmpfile" "$hdrfile"
 fi
 ],[
    ac_cv_software_increments=$ac_cv_software_increments

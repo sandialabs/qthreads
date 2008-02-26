@@ -12,3 +12,5 @@ headers = qthread.h \
 qthreaddir = $(includedir)/qthread
 qthread_HEADERS = $(headers)
 
+uninstall-local:
+	test -d "$(qthreaddir)" && rmdir $(qthreaddir) || true
