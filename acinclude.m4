@@ -167,6 +167,7 @@ AC_DEFINE_UNQUOTED(AC_TYPE_NAME, $AC_CV_NAME, [The number of bytes in type $1])
 undefine([AC_TYPE_NAME])dnl
 undefine([AC_CV_NAME])dnl
 ])
+dnl I got the following from http://autoconf-archive.cryp.to/ax_create_stdint_h.html
 AC_DEFUN([AX_CHECK_DATA_MODEL],[
    AC_CHECK_SIZEOF(char)
    AC_CHECK_SIZEOF(short)
