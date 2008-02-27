@@ -1,7 +1,5 @@
 headers = qthread.h \
 		  qalloc.h \
-		  qthread-int.h \
-		  common.h \
 		  qutil.h \
 		  qloop.h \
 		  futurelib.h \
@@ -10,11 +8,10 @@ headers = qthread.h \
 		  loop.hpp
 
 qthreaddir = $(includedir)/qthread
-qthread_HEADERS = $(headers)
+dist_qthread_HEADERS = $(headers)
+nodist_qthread_HEADERS = \
+	common.h \
+	qthread-int.h
 
 uninstall-local:
 	test -d "$(qthreaddir)" && rmdir $(qthreaddir) || true
-
-# These are generated files, and so should be removed by distclean
-distclean-local:
-	$(RM) common.h qthread-int.h
