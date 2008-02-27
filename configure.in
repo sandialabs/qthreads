@@ -314,6 +314,10 @@ AC_SUBST(SST_LIBS)
 
 AC_SUBST(EXTRA_DISTCHECK_OPTIONS)
 
+# clean some extra things...
+CLEANFILES="*~ .\#* .gdb_history"
+AC_SUBST(CLEANFILES)
+
 AC_CONFIG_FILES([
     Makefile
     src/Makefile
