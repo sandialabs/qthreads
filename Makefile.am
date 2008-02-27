@@ -1,5 +1,7 @@
 ## Process this file with automake to produce Makefile.in
 
+EXTRA_DIST = autogen.sh
+
 SUBDIRS = man include test src
 
 distclean-local:

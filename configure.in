@@ -4,7 +4,6 @@
 AC_INIT([qthread], [1.1], [kbwheel@sandia.gov])
 AC_PREREQ(2.59)
 AC_CONFIG_AUX_DIR([config])
-AC_CONFIG_MACRO_DIR([config])
 
 AM_INIT_AUTOMAKE([foreign check-news dist-bzip2 no-define])
 
@@ -29,7 +28,7 @@ AC_DEFINE(_GNU_SOURCE, 1, [make pthreads build correctly])
 
 # Checks for programs.
 AC_PROG_CC
-QTHREAD_PROG_CC_C99 # a copy of autoconf 2.60's AC_PROG_CC_C99
+AC_PROG_CC_C99
 AC_PROG_CPP
 AC_PROG_CXX
 AM_PROG_AS
