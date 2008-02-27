@@ -13,5 +13,8 @@ nodist_qthread_HEADERS = \
 	common.h \
 	qthread-int.h
 
+distclean-local:
+	$(RM) -f qthread-int.h
+
 uninstall-local:
 	test -d "$(qthreaddir)" && rmdir $(qthreaddir) || true
