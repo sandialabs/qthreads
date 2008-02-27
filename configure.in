@@ -80,6 +80,7 @@ AC_ARG_WITH([cprops],
 if test ! -z "$with_cprops" -a "$with_cprops" != "yes" ; then
   CPPFLAGS="${CPPFLAGS} -I$with_cprops/include"
   LDFLAGS="${LDFLAGS} -L$with_cprops/lib"
+  EXTRA_DISTCHECK_OPTIONS="${EXTRA_DISTCHECK_OPTIONS} --with-cprops=$with_cprops"
 fi
 AC_SEARCH_LIBS([cp_hashtable_create], [cprops "cprops -ldl" "cprops -lsocket -lnsl" "cprops -lsocket -lnsl -ldl"], ,
 	       AC_MSG_ERROR([Need libcprops 0.1.6 or better. See http://cprops.sf.net/]))
@@ -310,6 +311,8 @@ AM_CONDITIONAL([NEED_OSX_COMPAT], [test "$ac_cv_context_funcs" = no && test "$ac
 AM_CONDITIONAL([NEED_QTIMER], [test "$ac_cv_need_qtimer" = "yes"])
 AC_SUBST(SST_INCLUDE)
 AC_SUBST(SST_LIBS)
+
+AC_SUBST(EXTRA_DISTCHECK_OPTIONS)
 
 AC_CONFIG_FILES([
     Makefile

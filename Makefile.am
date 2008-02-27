@@ -10,3 +10,5 @@ distclean-local:
 	$(RM) .gdb_history
 	$(RM) -rf autom4te.cache
 	$(RM) *~
+
+DISTCHECK_CONFIGURE_FLAGS = $(EXTRA_DISTCHECK_OPTIONS)
