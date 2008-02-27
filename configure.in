@@ -72,7 +72,7 @@ QTHREAD_EXTRA_OBJS=""
 AC_CHECK_LIB([pthread], [pthread_create], , AC_MSG_ERROR([Need pthreads]))
 
 AC_ARG_WITH([cprops],
-            [AC_HELP_STRING([--with-cpropos],
+            [AC_HELP_STRING([--with-cprops],
                             [Location of libcprops library])])
 if test ! -z "$with_cprops" -a "$with_cprops" != "yes" ; then
   CPPFLAGS="${CPPFLAGS} -I$with_cprops/include"
