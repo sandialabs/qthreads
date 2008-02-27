@@ -1,5 +1,4 @@
 ## Process this file with automake to produce Makefile.in
-AUTOMAKE_OPTIONS = check-news dist-bzip2
 
 SUBDIRS = man include test src
 

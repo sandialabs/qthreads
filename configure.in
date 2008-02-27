@@ -1,12 +1,12 @@
 #                                               -*- Autoconf -*-
 # Process this file with autoconf to produce a configure script.
 
-AC_INIT([qthread],[1.1],[kbwheel@sandia.gov])
+AC_INIT([qthread], [1.1], [kbwheel@sandia.gov])
 AC_PREREQ(2.59)
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 
-AM_INIT_AUTOMAKE(qthread, 1.1)
+AM_INIT_AUTOMAKE([foreign check-news dist-bzip2 no-define])
 
 AC_CONFIG_SRCDIR([src/qthread.c])
 AC_CONFIG_HEADERS([include/config.h include/qthread/common.h])
