@@ -5,7 +5,7 @@
 #ifndef QTHREAD_NO_ASSERTS
 # include <assert.h>		       /* for assert() */
 #endif
-#if defined(HAVE_UCONTEXT_H) && defined(HAVE_CONTEXT_FUNCS)
+#if defined(HAVE_UCONTEXT_H) && defined(HAVE_NATIVE_MAKECONTEXT)
 # include <ucontext.h>		       /* for make/get/swap-context functions */
 #else
 # include "osx_compat/taskimpl.h"
@@ -1255,7 +1255,7 @@ static void qthread_wrapper(void *ptr)
     if (t->flags & QTHREAD_FUTURE) {
 	future_exit(t);
     }
-#if !defined(HAVE_CONTEXT_FUNCS) || defined(NEED_RLIMIT)
+#if !defined(HAVE_NATIVE_MAKECONTEXT) || defined(NEED_RLIMIT)
     /* without a built-in make/get/swapcontext, we're relying on the portable
      * one in context.c (stolen from libtask). unfortunately, this home-made
      * context stuff does not allow us to set up a uc_link pointer that will be
@@ -1295,7 +1295,7 @@ static inline void qthread_exec(qthread_t * t, ucontext_t * c)
 	t->context->uc_stack.ss_sp = (char *)(((qthread_t *) t)->stack) + 8;
 #endif
 	t->context->uc_stack.ss_size = qlib->qthread_stack_size - 64;
-#ifdef HAVE_CONTEXT_FUNCS
+#ifdef HAVE_NATIVE_MAKECONTEXT
 	/* the makecontext man page (Linux) says: set the uc_link FIRST
 	 * why? no idea */
 	t->context->uc_link = c;       /* NULL pthread_exit() */
@@ -1327,7 +1327,7 @@ static inline void qthread_exec(qthread_t * t, ucontext_t * c)
 	makecontext(t->context, (void (*)(void))qthread_wrapper, 1, t);
 #endif
 #endif
-#ifdef HAVE_CONTEXT_FUNCS
+#ifdef HAVE_NATIVE_MAKECONTEXT
     } else {
 	t->context->uc_link = c;       /* NULL pthread_exit() */
 #endif

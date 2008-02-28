@@ -1,4 +1,7 @@
-## Process this file with automake to produce Makefile.in
+# -*- Makefile -*-
+#
+# Copyright (c)      2008  Sandia Corporation
+#
 
 EXTRA_DIST = autogen.sh
 

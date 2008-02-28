@@ -6,10 +6,6 @@
 #include <qthread/qloop.h>
 #include "qthread_innards.h"
 
-#ifndef C99_ACCEPTED
-# define restrict
-#endif
-
 /* So, the idea here is that this is a (braindead) C version of Megan's
  * mt_loop. */
 void qt_loop(const size_t start, const size_t stop, const size_t stride,

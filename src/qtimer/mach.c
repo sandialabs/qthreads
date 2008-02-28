@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include "qtimer.h"
 
 #include <stdlib.h> /* calloc() & free()*/

@@ -1,3 +1,8 @@
+# -*- Makefile -*-
+#
+# Copyright (c)      2008  Sandia Corporation
+#
+
 TESTS = test1 test2 test3 testq testloop testincr testqloop testid
 check_PROGRAMS = $(TESTS)
 

@@ -94,7 +94,7 @@ struct mapinfo_s
 static struct mapinfo_s *mmaps = NULL;
 static struct dynmapinfo_s *dynmmaps = NULL;
 
-#ifdef QTHREAD_64STATS
+#if defined(HAVE_FSTAT64) && defined(HAVE_LSEEK64)
 # define fstat fstat64
 # define lseek lseek64
 typedef struct stat64 statstruct_t;

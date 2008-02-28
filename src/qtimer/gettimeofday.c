@@ -1,3 +1,5 @@
+#include "config.h"
+
 #include "qtimer.h"
 
 #if TIME_WITH_SYS_TIME

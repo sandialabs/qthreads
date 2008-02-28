@@ -1,3 +1,8 @@
+# -*- Makefile -*-
+#
+# Copyright (c)      2008  Sandia Corporation
+#
+
 man_MANS = qthread_empty.3 \
 		   qthread_feb_status.3 \
 		   qthread_fill.3 \
