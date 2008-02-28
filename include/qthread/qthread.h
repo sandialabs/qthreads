@@ -46,7 +46,7 @@ typedef unsigned char qthread_shepherd_id_t;	/* doubt we'll run more than 255 sh
 /* FEB locking only works on aligned addresses. On 32-bit architectures, this
  * isn't too much of an inconvenience. On 64-bit architectures, it's a pain in
  * the BUTT! This is here to try and help a little bit. */
-#ifdef SUN_CC_BUG_1
+#ifndef HAVE_ATTRIBUTE_ALIGNED
 # define __attribute__(x)
 #endif
 #if defined(__ILP64__) || QTHREAD_64_BIT_ALIGNMENT
