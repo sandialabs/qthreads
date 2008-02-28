@@ -16,8 +16,11 @@ AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 AC_CONFIG_SRCDIR([src/qthread.c])
 
-# require at least v1.9 for now.  Look at older versions once stable.
-AM_INIT_AUTOMAKE([foreign check-news dist-bzip2 no-define 1.9])
+dnl Require at least AM 1.7.  Prior versions require AM_CONFIG_HEADER
+dnl and have no equivalent to AC_CONFIG_HEADERS (the plural version),
+dnl which is a pain.  AM 1.7 also added support for putting target
+dnl information in AM_CONDITIONAL blocks and using the += modifier.
+AM_INIT_AUTOMAKE([foreign check-news dist-bzip2 no-define 1.7])
 
 # clean some extra things...
 CLEANFILES="*~ .\#* .gdb_history"
