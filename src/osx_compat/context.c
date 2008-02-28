@@ -3,6 +3,7 @@
 #include "taskimpl.h"
 
 #include <stdarg.h> /* for va_start() and va_end() */
+#include <string.h>
 
 #if defined(__APPLE__) && defined(__i386__)
 #define NEEDX86MAKECONTEXT
