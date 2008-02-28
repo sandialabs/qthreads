@@ -12,6 +12,9 @@
 #  include <time.h>
 # endif
 #endif
+#ifdef HAVE_STDLIB_H
+#include <stdlib.h>
+#endif
 
 struct qtimer_s
 {

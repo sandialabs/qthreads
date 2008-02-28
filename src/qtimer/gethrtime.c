@@ -1,36 +1,42 @@
 #include "config.h"
 
+#include <stdlib.h>
+
 #include "qtimer.h"
 
-#error "Need to be implemented"
-
 struct qtimer_s {
-    int time;
+    hrtime_t start;
+    hrtime_t stop;
 };
 
 void
 qtimer_start(qtimer_t q)
 {
+    q->start = gethrtime();
 }
 
 void
 qtimer_stop(qtimer_t q)
 {
+    q->stop = gethrtime();
 }
 
 double
 qtimer_secs(qtimer_t q)
 {
+    return ((double)(q->stop - q->start)) * 10e-9;
 }
 
 qtimer_t
 qtimer_new()
 {
+    return calloc(1, sizeof(struct qtimer_s));
 }
 
 void
 qtimer_free(qtimer_t q)
 {
+    free(q);
 }
 
 

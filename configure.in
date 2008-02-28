@@ -274,9 +274,9 @@ AM_CONDITIONAL([QTHREAD_NEED_OSX_MAKECONTEXT], [test "$qthread_makecontext_type"
 
 # Which timer do we want to use
 qthread_timer_type=gettimeofday
-AS_IF([test "qthread_timer_type" = "gettimeofday"],
+AS_IF([test "$qthread_timer_type" = "gettimeofday"],
       [AC_CHECK_FUNC([mach_absolute_time], [qthread_timer_type=mach])])
-AS_IF([test "qthread_timer_type" = "gettimeofday"],
+AS_IF([test "$qthread_timer_type" = "gettimeofday"],
       [AC_CHECK_FUNC([gethrtime], [qthread_timer_type=gethrtime])])
 AC_MSG_CHECKING([for high resolution timer type])
 AC_MSG_RESULT([$qthread_timer_type])
