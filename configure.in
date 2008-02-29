@@ -272,6 +272,7 @@ AS_IF([test "$qthread_implementation" = "unix"], [
 ])
 AM_CONDITIONAL([QTHREAD_NEED_OSX_MAKECONTEXT], [test "$qthread_makecontext_type" = "osx"])
 
+if test "$enable_shepherd_profiling" = "yes" ; then
 # Which timer do we want to use
 qthread_timer_type=gettimeofday
 AS_IF([test "$qthread_timer_type" = "gettimeofday"],
@@ -280,9 +281,11 @@ AS_IF([test "$qthread_timer_type" = "gettimeofday"],
       [AC_CHECK_FUNC([gethrtime], [qthread_timer_type=gethrtime])])
 AC_MSG_CHECKING([for high resolution timer type])
 AC_MSG_RESULT([$qthread_timer_type])
+fi
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_MACH], [test "$qthread_timer_type" = "mach"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETHRTIME], [test "$qthread_timer_type" = "gethrtime"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIMEOFDAY], [test "$qthread_timer_type" = "gettimeofday"])
+AM_CONDITIONAL([QTHREAD_NEED_QTIMER], [test "$qthread_timer_type" != ""])
 
 AC_CACHE_SAVE
 

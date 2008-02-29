@@ -34,3 +34,7 @@ endif
 if QTHREAD_NEED_OSX_MAKECONTEXT
 libqthread_la_LIBADD += osx_compat/libosx_compat.la
 endif
+
+if QTHREAD_NEED_QTIMER
+libqthread_la_LIBADD += qtimer/libqtimer.la
+endif
