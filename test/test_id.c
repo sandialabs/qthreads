@@ -12,7 +12,7 @@ aligned_t thread (qthread_t *me, void *arg)
     int ret;
     int ret2;
     //printf("first id = %i\n", id);
-    assert(id == 0);
+    assert(id == 1);
 
     ret = qthread_incr(&counter, 1);
     //printf("first inc = %i\n", ret);

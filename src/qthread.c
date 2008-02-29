@@ -375,76 +375,26 @@ static inline void FREE_ADDRSTAT(qthread_addrstat_t * t)
  * significant */
 #define QTHREAD_CHOOSE_BIN(addr) (((size_t)addr >> 4) & 0x1f)
 
+#if !defined(QTHREAD_MUTEX_INCREMENT) && \
+    ( __PPC__ || _ARCH_PPC || __powerpc__ || \
+    ((defined(__sparc) || defined(__sparc__)) && \
+     !(defined(__SUNPRO_C) || defined(__SUNPRO_CC))) || \
+    (! defined(__INTEL_COMPILER) && ( __ia6 || __ia64__ )) || \
+    __x86_64 || __x86_64__ || \
+    QTHREAD_XEON || __i486 || __i486__)
+#define qthread_internal_incr(op,lock) qthread_incr(op, 1)
+#else
 static inline aligned_t qthread_internal_incr(volatile aligned_t * operand,
 					      pthread_mutex_t * lock)
 {				       /*{{{ */
     aligned_t retval;
 
-#if !defined(QTHREAD_MUTEX_INCREMENT) && ( __PPC__ || _ARCH_PPC || __powerpc__ )
-    register unsigned int incrd = incrd;	/* this doesn't need to be initialized */
-    asm volatile ("1:\n\t"	/* the tag */
-		  "lwarx  %0,0,%1\n\t"	/* reserve operand into retval */
-		  "addi   %2,%0,1\n\t"	/* increment */
-		  "stwcx. %2,0,%1\n\t"	/* un-reserve operand */
-		  "bne-   1b\n\t"	/* if it failed, try again */
-		  "isync"	/* make sure it wasn't all a dream */
-		  /* = means this operand is write-only (previous value is discarded)
-		   * & means this operand is an earlyclobber (i.e. cannot use the same register as any of the input operands)
-		   * b means this operand must not be r0 */
-		  :"=&b"   (retval)
-		  :"r"     (operand), "r"(incrd)
-		  :"cc", "memory");
-#elif !defined(QTHREAD_MUTEX_INCREMENT) && (defined(__sparc) || defined(__sparc__)) && ! (defined(__SUNPRO_C) || defined(__SUNPRO_CC))
-    register aligned_t oldval, newval;
-
-    newval = *operand;
-    do {
-	retval = oldval = newval;
-	newval = oldval + 1;
-	/* if (*operand == oldval)
-	 * swap(newval, *operand)
-	 * else
-	 * newval = *operand
-	 */
-	__asm__ __volatile__("casa [%1] 0x80 , %2, %0":"+r"(newval)
-			     :"r"    (operand), "r"(oldval)
-			     :"cc", "memory");
-    } while (retval != newval);
-#elif !defined(QTHREAD_MUTEX_INCREMENT) && ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
-# ifdef __ILP64__
-    int64_t res;
-
-    asm volatile ("fetchadd8.rel %0=%1,1":"=r" (res)
-		  :"m"     (*operand));
-
-    retval = res;
-# else
-    int32_t res;
-
-    asm volatile ("fetchadd4.rel %0=%1,1":"=r" (res)
-		  :"m"     (*operand));
-
-    retval = res;
-# endif
-#elif !defined(QTHREAD_MUTEX_INCREMENT) && ( __x86_64 || __x86_64__ )
-    retval = 1;
-    asm volatile ("lock xaddl %0, %1;":"=r" (retval)
-		  :"m"     (*operand), "0"(retval));
-#elif !defined(QTHREAD_MUTEX_INCREMENT) && ( QTHREAD_XEON || __i486 || __i486__ )
-    retval = 1;
-    asm volatile (".section .smp_locks,\"a\"\n" "  .align 4\n" "  .long 661f\n" ".previous\n" "661:\n\tlock; "	/* this is stolen from the Linux kernel */
-		  "xaddl %0, %1":"=r" (retval)
-		  :"m"     (*operand), "0"(retval));
-#else
-#ifndef QTHREAD_MUTEX_INCREMENT
-#warning unrecognized architecture: falling back to safe but very slow increment implementation
-#endif
     pthread_mutex_lock(lock);
     retval = (*operand)++;
     pthread_mutex_unlock(lock);
-#endif
     return retval;
 }				       /*}}} */
+#endif
 
 static inline aligned_t qthread_internal_incr_mod(volatile aligned_t *
 						  operand, const int max,
