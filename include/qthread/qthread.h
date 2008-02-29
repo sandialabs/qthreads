@@ -442,7 +442,7 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
 	asm volatile ("fetchadd8.rel %0=%1,1":"=r" (res)
 		      :"m"     (*operand));
 
-	retval = res;
+	retval = res+1;
     } else {
 	int64_t old, newval;
 
@@ -457,7 +457,6 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
 			  :"r"     (operand), "r"(newval)
 			  :"memory");
 	} while (res != old);	       /* if res==old, the calc is out of date */
-	retval = old;
     }
 # else
     int32_t res;
@@ -466,7 +465,7 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
 	asm volatile ("fetchadd4.rel %0=%1,1":"=r" (res)
 		      :"m"     (*operand));
 
-	retval = res;
+	retval = res+1;
     } else {
 	int32_t old, newval;
 
@@ -481,7 +480,6 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
 			  :"r"     (operand), "r"(newval)
 			  :"memory");
 	} while (res != old);	       /* if res==old, the calc is out of date */
-	retval = old;
     }
 # endif
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && ( __x86_64 || __x86_64__ )
