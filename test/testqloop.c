@@ -15,9 +15,11 @@ int main(int argc, char *argv[])
     size_t i;
     struct timeval start, stop;
     unsigned int threads = 3;
+    unsigned int interactive = 0;
 
     if (argc > 1) {
 	threads = atoi(argv[1]);
+	interactive = 1;
     }
     qthread_init(threads);
     future_init(128);
@@ -35,18 +37,20 @@ int main(int argc, char *argv[])
 	for (i = 0; i < BIGLEN; i++)
 	    uisum += uia[i];
 	gettimeofday(&stop, NULL);
-	printf("[testqloop] summing-serial   %u uints took %g seconds (%u)\n", BIGLEN,
-	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
-							  (start.tv_usec *
-							   1.0e-6)), uisum);
+	if (interactive) {
+	    printf("[testqloop] summing-serial   %u uints took %g seconds\n",
+		    BIGLEN, (stop.tv_sec + (stop.tv_usec * 1.0e-6)) -
+		    (start.tv_sec + (start.tv_usec * 1.0e-6)));
+	}
 	fflush(stdout);
 	gettimeofday(&start, NULL);
 	uitmp = qt_uint_sum(uia, BIGLEN, 0);
 	gettimeofday(&stop, NULL);
-	printf("[testqloop] summing-parallel %u uints took %g seconds (%u)\n", BIGLEN,
-	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
-							  (start.tv_usec *
-							   1.0e-6)), uitmp);
+	if (interactive) {
+	    printf("[testqloop] summing-parallel %u uints took %g seconds\n",
+		    BIGLEN, (stop.tv_sec + (stop.tv_usec * 1.0e-6)) -
+		    (start.tv_sec + (start.tv_usec * 1.0e-6)));
+	}
 	fflush(stdout);
 	assert(uitmp == uisum);
 
@@ -54,18 +58,22 @@ int main(int argc, char *argv[])
 	for (i = 0; i < BIGLEN; i++)
 	    uiprod *= uia[i];
 	gettimeofday(&stop, NULL);
+	if (interactive) {
 	printf("[testqloop] multiplying-serial   %u uints took %g seconds\n", BIGLEN,
 	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 							  (start.tv_usec *
 							   1.0e-6)));
+	}
 	fflush(stdout);
 	gettimeofday(&start, NULL);
 	uitmp = qt_uint_prod(uia, BIGLEN, 0);
 	gettimeofday(&stop, NULL);
+	if (interactive) {
 	printf("[testqloop] multiplying-parallel %u uints took %g seconds\n", BIGLEN,
 	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 							  (start.tv_usec *
 							   1.0e-6)));
+	}
 	fflush(stdout);
 	assert(uitmp == uiprod);
 
@@ -74,18 +82,22 @@ int main(int argc, char *argv[])
 	    if (uia[i] > uimax)
 		uimax = uia[i];
 	gettimeofday(&stop, NULL);
+	if (interactive) {
 	printf("[testqloop] findmax-serial   %u uints took %g seconds\n", BIGLEN,
 	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 							  (start.tv_usec *
 							   1.0e-6)));
+	}
 	fflush(stdout);
 	gettimeofday(&start, NULL);
 	uitmp = qt_uint_max(uia, BIGLEN, 0);
 	gettimeofday(&stop, NULL);
+	if (interactive) {
 	printf("[testqloop] findmax-parallel %u uints took %g seconds\n", BIGLEN,
 	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 							  (start.tv_usec *
 							   1.0e-6)));
+	}
 	fflush(stdout);
 	assert(uimax == uitmp);
 
@@ -94,18 +106,22 @@ int main(int argc, char *argv[])
 	    if (uia[i] < uimin)
 		uimin = uia[i];
 	gettimeofday(&stop, NULL);
+	if (interactive) {
 	printf("[testqloop] findmin-serial   %u uints took %g seconds\n", BIGLEN,
 	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 							  (start.tv_usec *
 							   1.0e-6)));
+	}
 	fflush(stdout);
 	gettimeofday(&start, NULL);
 	uitmp = qt_uint_min(uia, BIGLEN, 0);
 	gettimeofday(&stop, NULL);
+	if (interactive) {
 	printf("[testqloop] findmin-parallel %u uints took %g seconds\n", BIGLEN,
 	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 							  (start.tv_usec *
 							   1.0e-6)));
+	}
 	fflush(stdout);
 	assert(uitmp == uimin);
 	free(uia);
@@ -123,18 +139,22 @@ int main(int argc, char *argv[])
 	for (i = 0; i < BIGLEN; i++)
 	    isum += ia[i];
 	gettimeofday(&stop, NULL);
+	if (interactive) {
 	printf("[testqloop] summing-serial   %u ints took %g seconds\n", BIGLEN,
 	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 							  (start.tv_usec *
 							   1.0e-6)));
+	}
 	fflush(stdout);
 	gettimeofday(&start, NULL);
 	itmp = qt_int_sum(ia, BIGLEN, 0);
 	gettimeofday(&stop, NULL);
+	if (interactive) {
 	printf("[testqloop] summing-parallel %u ints took %g seconds\n", BIGLEN,
 	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 							  (start.tv_usec *
 							   1.0e-6)));
+	}
 	fflush(stdout);
 	assert(itmp == isum);
 
@@ -142,18 +162,22 @@ int main(int argc, char *argv[])
 	for (i = 0; i < BIGLEN; i++)
 	    iprod *= ia[i];
 	gettimeofday(&stop, NULL);
+	if (interactive) {
 	printf("[testqloop] multiplying-serial   %u ints took %g seconds\n", BIGLEN,
 	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 							  (start.tv_usec *
 							   1.0e-6)));
+	}
 	fflush(stdout);
 	gettimeofday(&start, NULL);
 	itmp = qt_int_prod(ia, BIGLEN, 0);
 	gettimeofday(&stop, NULL);
+	if (interactive) {
 	printf("[testqloop] multiplying-parallel %u ints took %g seconds\n", BIGLEN,
 	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 							  (start.tv_usec *
 							   1.0e-6)));
+	}
 	fflush(stdout);
 	assert(itmp == iprod);
 
@@ -162,18 +186,22 @@ int main(int argc, char *argv[])
 	    if (ia[i] > imax)
 		imax = ia[i];
 	gettimeofday(&stop, NULL);
+	if (interactive) {
 	printf("[testqloop] findmax-serial   %u ints took %g seconds\n", BIGLEN,
 	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 							  (start.tv_usec *
 							   1.0e-6)));
+	}
 	fflush(stdout);
 	gettimeofday(&start, NULL);
 	itmp = qt_int_max(ia, BIGLEN, 0);
 	gettimeofday(&stop, NULL);
+	if (interactive) {
 	printf("[testqloop] findmax-parallel %u ints took %g seconds\n", BIGLEN,
 	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 							  (start.tv_usec *
 							   1.0e-6)));
+	}
 	fflush(stdout);
 	assert(imax == itmp);
 
@@ -182,18 +210,22 @@ int main(int argc, char *argv[])
 	    if (ia[i] < imin)
 		imin = ia[i];
 	gettimeofday(&stop, NULL);
+	if (interactive) {
 	printf("[testqloop] findmin-serial   %u ints took %g seconds\n", BIGLEN,
 	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 							  (start.tv_usec *
 							   1.0e-6)));
+	}
 	fflush(stdout);
 	gettimeofday(&start, NULL);
 	itmp = qt_int_min(ia, BIGLEN, 0);
 	gettimeofday(&stop, NULL);
+	if (interactive) {
 	printf("[testqloop] findmin-parallel %u ints took %g seconds\n", BIGLEN,
 	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 							  (start.tv_usec *
 							   1.0e-6)));
+	}
 	fflush(stdout);
 	assert(itmp == imin);
 	free(ia);
@@ -213,53 +245,69 @@ int main(int argc, char *argv[])
 	for (i = 0; i < BIGLEN; i++)
 	    dsum += da[i];
 	gettimeofday(&stop, NULL);
-	printf("[testqloop] summing-serial   %u doubles took %g seconds (%g)\n", BIGLEN,
+	if (interactive) {
+	printf("[testqloop] summing-serial   %u doubles took %g seconds\n", BIGLEN,
 	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 							  (start.tv_usec *
-							   1.0e-6)), dsum);
+							   1.0e-6)));
+	}
+	assert(dsum > 0);
 	fflush(stdout);
 	gettimeofday(&start, NULL);
 	dtmp = qt_double_sum(da, BIGLEN, 0);
 	gettimeofday(&stop, NULL);
-	printf("[testqloop] summing-parallel %u doubles took %g seconds (%g)\n", BIGLEN,
+	if (interactive) {
+	printf("[testqloop] summing-parallel %u doubles took %g second\n", BIGLEN,
 	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 							  (start.tv_usec *
-							   1.0e-6)), dtmp);
+							   1.0e-6)));
+	}
+	assert(dtmp > 0);
 	fflush(stdout);
 	gettimeofday(&start, NULL);
 	for (i = 0; i < BIGLEN; i++)
 	    dprod *= da[i];
 	gettimeofday(&stop, NULL);
-	printf("[testqloop] multiplying-serial   %u doubles took %g seconds (%g)\n", BIGLEN,
+	if (interactive) {
+	printf("[testqloop] multiplying-serial   %u doubles took %g seconds\n", BIGLEN,
 	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 							  (start.tv_usec *
-							   1.0e-6)), dprod);
+							   1.0e-6)));
+	}
+	assert(dprod > 0);
 	fflush(stdout);
 	gettimeofday(&start, NULL);
 	dtmp = qt_double_prod(da, BIGLEN, 0);
 	gettimeofday(&stop, NULL);
-	printf("[testqloop] multiplying-parallel %u doubles took %g seconds (%g)\n", BIGLEN,
+	if (interactive) {
+	printf("[testqloop] multiplying-parallel %u doubles took %g seconds\n", BIGLEN,
 	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 							  (start.tv_usec *
-							   1.0e-6)), dtmp);
+							   1.0e-6)));
+	}
+	assert(dtmp > 0);
 	fflush(stdout);
 	gettimeofday(&start, NULL);
 	for (i = 0; i < BIGLEN; i++)
 	    if (da[i] > dmax)
 		dmax = da[i];
 	gettimeofday(&stop, NULL);
+	if (interactive) {
 	printf("[testqloop] findmax-serial   %u doubles took %g seconds\n", BIGLEN,
 	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 							  (start.tv_usec *
 							   1.0e-6)));
+	}
 	fflush(stdout);
 	gettimeofday(&start, NULL);
 	dtmp = qt_double_max(da, BIGLEN, 0);
 	gettimeofday(&stop, NULL);
+	if (interactive) {
 	printf("[testqloop] findmax-parallel %u doubles took %g seconds\n", BIGLEN,
 	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 							  (start.tv_usec *
 							   1.0e-6)));
+	}
 	fflush(stdout);
 	assert(dmax == dtmp);
 
@@ -268,18 +316,22 @@ int main(int argc, char *argv[])
 	    if (da[i] < dmin)
 		dmin = da[i];
 	gettimeofday(&stop, NULL);
+	if (interactive) {
 	printf("[testqloop] findmin-serial   %u doubles took %g seconds\n", BIGLEN,
 	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 							  (start.tv_usec *
 							   1.0e-6)));
+	}
 	fflush(stdout);
 	gettimeofday(&start, NULL);
 	dtmp = qt_double_min(da, BIGLEN, 0);
 	gettimeofday(&stop, NULL);
+	if (interactive) {
 	printf("[testqloop] findmin-parallel %u doubles took %g seconds\n", BIGLEN,
 	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 							  (start.tv_usec *
 							   1.0e-6)));
+	}
 	fflush(stdout);
 	assert(dtmp == dmin);
 	free(da);
