@@ -123,7 +123,7 @@ aligned_t qmain(qthread_t * me, void *junk)
      * }
      * } */
 
-    printf("[test1] sorting...\n");
+    //printf("[test1] sorting...\n");
     gettimeofday(&start, NULL);
     qutil_qsort(me, d_array, d_len);
     //qsort(d_array, d_len, sizeof(double), dcmp);
@@ -145,11 +145,11 @@ aligned_t qmain(qthread_t * me, void *junk)
 	    abort();
 	}
     }
-    printf("[test1] sorting %lu numbers took: %f seconds\n",
+    /*printf("[test1] sorting %lu numbers took: %f seconds\n",
 	   (unsigned long)d_len,
 	   (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 						      (start.tv_usec *
-						       1.0e-6)));
+						       1.0e-6)));*/
     free(d_array);
     return 0;
 }

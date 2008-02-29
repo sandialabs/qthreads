@@ -231,19 +231,19 @@ void class_stuff (int value, OpT op, int times) {
   mt_mfun_loop_returns<ArrayPtr, Val, mt_loop_traits::Par>
     (&op, (int*)results, &OpT::operator(), value, 0, 3);
 
-  for (int i = 0; i < 3; i++) {
+  /*for (int i = 0; i < 3; i++) {
     printf ("[testq] Result = %d\n", results[i]);
-  }
+  }*/
 
   int sum = 0;
   mt_mfun_loop_returns<Collect<mt_loop_traits::Add>, Val, mt_loop_traits::Par>
     (&op, sum, &OpT::operator(), value, 0, times);
 
-  printf ("[testq] Sum of Result (%d times) %d\n", times, sum);
+  //printf ("[testq] Sum of Result (%d times) %d\n", times, sum);
 }
 
 void my_main() {
-  printf ("[testq] Hello main\n");
+  //printf ("[testq] Hello main\n");
 
   //array_stuff();
   //message_stuff();
