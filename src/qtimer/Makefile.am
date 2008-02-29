@@ -3,6 +3,8 @@
 # Copyright (c)      2008  Sandia Corporation
 #
 
+if QTHREAD_NEED_QTIMER
+
 noinst_LTLIBRARIES = libqtimer.la
 libqtimer_la_SOURCES = qtimer.h
 
@@ -18,3 +20,4 @@ if QTHREAD_TIMER_TYPE_GETTIMEOFDAY
 libqtimer_la_SOURCES += gettimeofday.c
 endif
 
+endif
