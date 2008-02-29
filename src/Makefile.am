@@ -12,7 +12,8 @@ lib_LTLIBRARIES = libqthread.la
 
 libqthread_la_SOURCES = \
 	qalloc.c \
-	qutil.c
+	qutil.c \
+	qloop.c
 libqthread_la_LDFLAGS = -version-info 9:0:0 -no-undefined
 libqthread_la_LIBADD =
 libqthread_la_DEPENDENCIES =
@@ -26,8 +27,7 @@ endif
 if COMPILE_TARGET_UNIX
 libqthread_la_SOURCES += \
 	qthread.c \
-	futurelib.c \
-	qloop.c
+	futurelib.c
 endif
 
 
