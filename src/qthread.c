@@ -824,10 +824,10 @@ void qthread_finalize(void)
 	}
 	qthread_queue_free(qlib->shepherds[i].ready);
 #ifdef QTHREAD_SHEPHERD_PROFILING
-	printf("Shepherd %i spent %f%% of the time idle (%f:%f) handling %i threads\n", i,
+	printf("Shepherd %i spent %f%% of the time idle (%f:%f) handling %lu threads\n", i,
 		qlib->shepherds[i].idle_time/qlib->shepherds[i].total_time *
 		100.0, qlib->shepherds[i].total_time,
-		qlib->shepherds[i].idle_time, qlib->shepherds[i].num_threads);
+		qlib->shepherds[i].idle_time, (unsigned long)qlib->shepherds[i].num_threads);
 #endif
     }
 
