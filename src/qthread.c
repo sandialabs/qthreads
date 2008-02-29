@@ -1831,6 +1831,7 @@ int qthread_writeF(qthread_t * me, void *dest, const void *src)
 	    memcpy(dest, src, WORDSIZE);
 	}
 	qthread_gotlock_fill(m, alignedaddr, 0);
+	return QTHREAD_SUCCESS;
     } else {
 	struct qthread_FEB_sub_args args = { (void *)src, dest, 0 };
 	int ret;
