@@ -13,3 +13,4 @@ m4_if(m4_version_compare(m4_defn([m4_PACKAGE_VERSION]), [2.60]), -1,
 m4_include([config/qthread_check_makecontext.m4])
 m4_include([config/qthread_check_sst.m4])
 m4_include([config/qthread_check_attribute_aligned.m4])
+m4_include([config/qthread_check_altix_timer.m4])
