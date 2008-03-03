@@ -32,9 +32,11 @@ endif
 
 
 if QTHREAD_NEED_OSX_MAKECONTEXT
+libqthread_la_DEPENDENCIES += osx_compat/libosx_compat.la
 libqthread_la_LIBADD += osx_compat/libosx_compat.la
 endif
 
 if QTHREAD_NEED_QTIMER
+libqthread_la_DEPENDENCIES += qtimer/libqtimer.la
 libqthread_la_LIBADD += qtimer/libqtimer.la
 endif
