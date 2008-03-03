@@ -2,6 +2,7 @@
 
 #include "qtimer.h"
 
+#include <stdlib.h> /* for calloc() */
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>

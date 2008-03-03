@@ -20,4 +20,8 @@ if QTHREAD_TIMER_TYPE_GETTIMEOFDAY
 libqtimer_la_SOURCES += gettimeofday.c
 endif
 
+if QTHREAD_TIMER_TYPE_ALTIX
+libqtimer_la_SOURCES += altix.c
+endif
+
 endif
