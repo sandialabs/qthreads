@@ -288,7 +288,7 @@ AM_CONDITIONAL([QTHREAD_TIMER_TYPE_MACH], [test "$qthread_timer_type" = "mach"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETHRTIME], [test "$qthread_timer_type" = "gethrtime"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_ALTIX], [test "$qthread_timer_type" = "altix"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIMEOFDAY], [test "$qthread_timer_type" = "gettimeofday"])
-AM_CONDITIONAL([QTHREAD_NEED_QTIMER], [test "$qthread_timer_type" != ""])
+AM_CONDITIONAL([QTHREAD_NEED_QTIMER], [test -n "$qthread_timer_type"])
 
 AC_CACHE_SAVE
 
