@@ -482,6 +482,12 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
 	} while (res != old);	       /* if res==old, the calc is out of date */
     }
 # endif
+#elif !defined(QTHREAD_MUTEX_INCREMENT) && __APPLE__ && ( __i386__ || __i386 || i386 )
+    retval = incr;
+    asm volatile ("lock; xaddl %0, %1"
+		  :"=r"(retval),"=m"(*operand)
+		  ::"memory");
+    retval += incr;
 #elif !defined(QTHREAD_MUTEX_INCREMENT) && ( __x86_64 || __x86_64__ )
     retval = incr;
     asm volatile ("lock xaddl %0, %1;"
