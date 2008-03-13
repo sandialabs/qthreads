@@ -50,11 +50,6 @@ typedef unsigned char qthread_shepherd_id_t;	/* doubt we'll run more than 255 sh
 # define __attribute__(x)
 #endif
 
-/* BWB - FIX ME - These will be independent in a future commit */
-#if defined(QTHREAD_64_BIT_ALIGN) || defined(__ILP64__)
-#define QTHREAD_64_BIT_ALIGN_T 1
-#endif
-
 #ifdef QTHREAD_64_BIT_ALIGN_T
 typedef uint64_t __attribute__ ((aligned(8))) aligned_t;
 typedef int64_t __attribute__ ((aligned(8))) saligned_t;

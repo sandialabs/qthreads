@@ -119,9 +119,13 @@ AS_IF([test "$enable_lazy_threadids" = "no"],
       [AC_DEFINE([QTHREAD_NONLAZY_THREADIDS], [1], [makes sure every thread gets an id at creation time])])
 
 AC_ARG_ENABLE([64bit-alignment],
-  [AS_HELP_STRING([--enable-64bit-alignment], [forces the aligned_t type to be 64-bits])])
+  [AS_HELP_STRING([--enable-64bit-alignment], [Align aligned_t to 8 byte boundry, even if it is 4 bytes long])])
 AS_IF([test "$enable_64bit_alignment" = "yes"],
-      [AC_DEFINE([QTHREAD_64_BIT_ALIGN], [1], [forces aligned_t to be 64 bits])])
+      [AC_DEFINE([QTHREAD_64_BIT_ALIGN], [1], [forces aligned_t to be aligned to 64 bits])])
+
+AC_ARG_ENABLE([64bit-aligned_t],
+  [AS_HELP_STRING([--enable-64bit-aligned_t], [Make aligned_t 64 bits (normally it is sizeof(int))])])
+dnl deal with result once we figure out sizeof(int)
 
 ## ------------------- ##
 ## Checks for programs ##
@@ -180,6 +184,9 @@ AC_TYPE_PID_T
 
 AC_CHECK_SIZEOF([int])
 AC_CHECK_SIZEOF([void*])
+
+AS_IF([test "$enable_64bit_aligned_t" = "yes" -o "$ac_c_sizeof_int" = "8"],
+      [AC_DEFINE([QTHREAD_64_BIT_ALIGN_T], [1], [aligned_t should be 64 bits])])
 
 AC_CACHE_SAVE
 
