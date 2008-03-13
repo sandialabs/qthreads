@@ -223,13 +223,11 @@ QTHREAD_CHECK_ATTRIBUTE_ALIGNED([AC_DEFINE([HAVE_ATTRIBUTE_ALIGNED], [1],
        [Whether the compiler supports the attribute aligned property])])
 
 QTHREAD_CHECK_ASSEMBLY([have_assembly=1], [have_assembly=0])
-if test $have_assembly -eq 0 ; then
-  if test -z $enable_software_increments ; then
-    enable_software_increments=yes
-  elif $enable_software_increments = "no" ; then
-    AC_MSG_ERROR([No assembly available and software increments disabled.])
-  fi
-fi
+AS_IF([test $have_assembly -eq 0],
+	  AS_IF([test -z "$enable_software_increments"],
+			[enable_software_increments=yes],
+			AS_IF([test "$enable_software_increments" = "no"],
+				  AC_MSG_ERROR([No assembly available and software increments disabled.]))))
 AS_IF([test "$enable_software_increments" = "yes"],
       [AC_DEFINE([QTHREAD_MUTEX_INCREMENT], [1],
          [Use mutexes instead of assembly for atomic increment])])
@@ -241,7 +239,7 @@ AC_CACHE_SAVE
 ## --------------------------- ##
 AC_FUNC_VPRINTF
 AC_FUNC_MMAP
-AC_CHECK_FUNCS([strtol floor memset memmove munmap memcpy getrlimit setrlimit fstat64 lseak64 getcontext swapcontext makecontext])
+AC_CHECK_FUNCS([strtol floor memset memmove munmap memcpy getrlimit setrlimit fstat64 lseek64 getcontext swapcontext makecontext])
 
 AC_CACHE_SAVE
 
@@ -333,17 +331,18 @@ echo    "        Lazy Thread IDs: $enable_lazy_threadids"
 echo    "  Sanity assert() Calls: $enable_asserts"
 echo    "        Thread Counting: $enable_thread_count"
 echo    "        Use setrlimit(): $enable_setrlimit"
-echo    " Mutex-based Increments: $enable_software_increments"
 echo    "Check address alignment: $enable_aligncheck"
 echo    "     Shepherd profiling: $enable_shepherd_profiling"
+echo -n "             Increments: "
+AS_IF([test "$enable_software_increments" = "yes"],
+	  [echo "Mutex (software)"],
+	  [echo "$qthread_cv_asm_arch"])
 echo -n "             Stack size: "
-if test "$enable_fullsize_stacks" = "yes" ; then
-	echo "8MB"
-elif test "$enable_very_small_stacks" = "yes" ; then
-	echo "2kB"
-else
-	echo "4kB"
-fi
+AS_IF([test "$enable_fullsize_stacks" = "yes"],
+	  [echo "8MB"],
+	  AS_IF([test "$enable_very_small_stacks" = "yes"],
+			[echo "2kB"],
+			[echo "4kB"]))
 echo    " Debugging Trace Output: $enable_debug_trace"
 echo    "        Unpooled Memory: $enable_unpooled_memory"
 echo ""
