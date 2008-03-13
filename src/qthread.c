@@ -410,7 +410,7 @@ static inline aligned_t qthread_internal_incr_mod(volatile aligned_t *
 		  "cmplw  7,%3,%2\n\t"	/* compare incrd to the max */
 		  "mfcr   %4\n\t"	/* move the result into compd */
 		  "rlwinm %4,%4,29,1\n\t"	/* isolate the result bit */
-		  "mullw  %3,%4,%3\n\t"	/* incrd *= compd */
+		  "mullw  %3,%3,%4\n\t"	/* incrd *= compd */
 		  "stwcx. %3,0,%1\n\t"	/* *operand = incrd */
 		  "bne-   1b\n\t"	/* if it failed, go to label 1 back */
 		  "isync"	/* make sure it wasn't all a dream */
@@ -423,7 +423,22 @@ static inline aligned_t qthread_internal_incr_mod(volatile aligned_t *
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
 
-#error "Unsupported implementation for incr_mod"
+    register uint64_t incrd = incrd;
+    register uint64_t compd = compd;
+    asm volatile ("1:\n\t"
+		  "ldarx  %0,0,%1\n\t"
+		  "addi   %3,%0,1\n\t"
+		  "cmpl   7,1,%3,%2\n\t"
+		  "mfcr   %4\n\t"
+		  "rlwinm %4,%4,29,1\n\t"
+		  "mulld  %3,%3,%4\n\t"
+		  "stdcx. %3,0,%1\n\t"
+		  "bne-   1b\n\t"
+		  "isync"
+		  :"=&b" (retval)
+		  :"r" (operand),"r"(max),"r"(incrd),"r"(compd)
+		  :"cc","memory");
+#warning "The PPC64 mod assembly needs to be tested. Please remove this warning when its been tested."
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32) || \
       ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) && !defined(QTHREAD_64_BIT_ALIGN_T))
