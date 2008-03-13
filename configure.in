@@ -53,13 +53,11 @@ AS_IF([test -z "$enable_setrlimit"], [
       enable_setrlimit="no"
   esac])
 
+dnl Logic for dealing with this argument in compiler characteristics section, as it
+dnl somewhat depends on assembly behavior
 AC_ARG_ENABLE([software-increments],
   [AS_HELP_STRING([--enable-software-increments],
-     [use mutexes to do the internal increments; possibly faster in some cases, and compatible with more compilers.])],
-  [], [enable_software_increments="no"])
-AS_IF([test "$enable_software_increments" = "yes"],
-      [AC_DEFINE([QTHREAD_MUTEX_INCREMENT], [1],
-         [Use mutexes instead of assembly for atomic increment])])
+     [use mutexes to do the internal increments; possibly faster in some cases, and compatible with more compilers.])])
 
 AC_ARG_ENABLE([aligncheck],
   [AS_HELP_STRING([--disable-aligncheck], [check the alignment of synchronization addresses])],
@@ -216,6 +214,18 @@ AC_C_VOLATILE
 
 QTHREAD_CHECK_ATTRIBUTE_ALIGNED([AC_DEFINE([HAVE_ATTRIBUTE_ALIGNED], [1],
        [Whether the compiler supports the attribute aligned property])])
+
+QTHREAD_CHECK_ASSEMBLY([have_assembly=1], [have_assembly=0])
+if test $have_assembly -eq 0 ; then
+  if test -z $enable_software_increments ; then
+    enable_software_increments=yes
+  elif $enable_software_increments = "no" ; then
+    AC_MSG_ERROR([No assembly available and software increments disabled.])
+  fi
+fi
+AS_IF([test "$enable_software_increments" = "yes"],
+      [AC_DEFINE([QTHREAD_MUTEX_INCREMENT], [1],
+         [Use mutexes instead of assembly for atomic increment])])
 
 AC_CACHE_SAVE
 

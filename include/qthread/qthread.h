@@ -49,12 +49,23 @@ typedef unsigned char qthread_shepherd_id_t;	/* doubt we'll run more than 255 sh
 #ifndef HAVE_ATTRIBUTE_ALIGNED
 # define __attribute__(x)
 #endif
-#if defined(__ILP64__) || QTHREAD_64_BIT_ALIGNMENT
+
+/* BWB - FIX ME - These will be independent in a future commit */
+#if defined(QTHREAD_64_BIT_ALIGN) || defined(__ILP64__)
+#define QTHREAD_64_BIT_ALIGN_T 1
+#endif
+
+#ifdef QTHREAD_64_BIT_ALIGN_T
 typedef uint64_t __attribute__ ((aligned(8))) aligned_t;
 typedef int64_t __attribute__ ((aligned(8))) saligned_t;
 #else
+#ifdef QTHREAD_64_BIT_ALIGN
+typedef uint32_t __attribute__ ((aligned(8))) aligned_t;
+typedef int32_t __attribute__ ((aligned(8))) saligned_t;
+#else
 typedef uint32_t __attribute__ ((aligned(4))) aligned_t;
 typedef int32_t __attribute__ ((aligned(4))) saligned_t;
+#endif
 #endif
 
 /* for convenient arguments to qthread_fork */
@@ -386,6 +397,7 @@ int qthread_lock(qthread_t * me, const void *a);
 int qthread_unlock(qthread_t * me, const void *a);
 #endif
 
+
 /* this implements an atomic increment. It is done with architecture-specific
  * assembly and does NOT use FEB's or lock/unlock (except in the slow fallback
  * for unrecognized architectures)... but usually that's not the issue.
@@ -395,12 +407,17 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
 {
     return PIM_atomicIncrement(operand, incr);
 }
+
 #else
+
 static inline aligned_t qthread_incr(volatile aligned_t * operand, const int incr)
 {				       /*{{{ */
     aligned_t retval;
+#if defined(HAVE_GCC_INLINE_ASSEMBLY)
 
-#if !defined(QTHREAD_MUTEX_INCREMENT) && ( __PPC__ || _ARCH_PPC || __powerpc__ )
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
+    ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) && !defined(QTHREAD_64_BIT_ALIGN_T))
+
     register unsigned int incrd = incrd;	/* no initializing */
     asm volatile (
 	    "1:\tlwarx  %0,0,%1\n\t"
@@ -411,7 +428,23 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
 	    :"=&b"   (retval)
 	    :"r"     (operand), "r"(incr)
 	    :"cc", "memory");
-#elif !defined(QTHREAD_MUTEX_INCREMENT) && (defined(__sparc) || defined(__sparc__)) &&  ! (defined(__SUNPRO_C) || defined(__SUNPRO_CC))
+
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
+
+    register unsigned long incrd = incrd;	/* no initializing */
+    asm volatile (
+	    "1:\tldarx  %0,0,%1\n\t"
+	    "add    %0,%0,%2\n\t"
+	    "stdcx. %0,0,%1\n\t"
+	    "bne-   1b\n\t"	/* if it failed, try again */
+	    "isync"	/* make sure it wasn't all a dream */
+	    :"=&b"   (retval)
+	    :"r"     (operand), "r"(incr)
+	    :"cc", "memory");
+
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32) || \
+      ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) && !defined(QTHREAD_64_BIT_ALIGN_T))
+
     register aligned_t oldval, newval;
     newval = *operand;
     do {
@@ -434,31 +467,35 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
                               : "cc", "memory");
     } while (retval != newval);
     retval += incr;
-#elif !defined(QTHREAD_MUTEX_INCREMENT) && ! defined(__INTEL_COMPILER) && ( __ia64 || __ia64__ )
-# ifdef __ILP64__
-    int64_t res;
 
-    if (incr == 1) {
-	asm volatile ("fetchadd8.rel %0=%1,1":"=r" (res)
-		      :"m"     (*operand));
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
 
-	retval = res+1;
-    } else {
-	int64_t old, newval;
+    register aligned_t oldval, newval;
+    newval = *operand;
+    do {
+        retval = oldval = newval;
+        newval = oldval + incr;
+        /* casa [r1] %asi r2, rd
+           if (r2 == *r1) 
+             swap(*r1, rd)
+           else
+             rd = *r1
 
-	do {
-	    old = *operand;	       /* atomic, because operand is aligned */
-	    newval = old + incr;
-	    asm volatile ("mov ar.ccv=%0;;":	/* no output */
-			  :"rO"    (old));
+           if (oldval == *operand)
+             swap(*operand, newval)
+           else
+             newval = *operand
+        */
+        __asm__ __volatile__ ("casxa [%1] 0x80 , %2, %0"
+                              : "+r" (newval)
+                              : "r" (operand), "r"(oldval)
+                              : "cc", "memory");
+    } while (retval != newval);
+    retval += incr;
 
-	    /* separate so the compiler can insert its junk */
-	    asm volatile ("cmpxchg8.acq %0=[%1],%2,ar.ccv":"=r" (res)
-			  :"r"     (operand), "r"(newval)
-			  :"memory");
-	} while (res != old);	       /* if res==old, the calc is out of date */
-    }
-# else
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
+
+# if !defined(QTHREAD_64_BIT_ALIGNED_T)
     int32_t res;
 
     if (incr == 1) {
@@ -481,36 +518,69 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
 			  :"memory");
 	} while (res != old);	       /* if res==old, the calc is out of date */
     }
+# else
+    int64_t res;
+
+    if (incr == 1) {
+	asm volatile ("fetchadd8.rel %0=%1,1":"=r" (res)
+		      :"m"     (*operand));
+
+	retval = res+1;
+    } else {
+	int64_t old, newval;
+
+	do {
+	    old = *operand;	       /* atomic, because operand is aligned */
+	    newval = old + incr;
+	    asm volatile ("mov ar.ccv=%0;;":	/* no output */
+			  :"rO"    (old));
+
+	    /* separate so the compiler can insert its junk */
+	    asm volatile ("cmpxchg8.acq %0=[%1],%2,ar.ccv":"=r" (res)
+			  :"r"     (operand), "r"(newval)
+			  :"memory");
+	} while (res != old);	       /* if res==old, the calc is out of date */
+    }
 # endif
-#elif !defined(QTHREAD_MUTEX_INCREMENT) && __APPLE__ && ( __i386__ || __i386 || i386 )
+
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
+      ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) && !defined(QTHREAD_64_BIT_ALIGN_T))
+
     retval = incr;
-    asm volatile ("lock; xaddl %0, %1"
-		  :"=r"(retval),"=m"(*operand)
-		  ::"memory");
-    retval += incr;
-#elif !defined(QTHREAD_MUTEX_INCREMENT) && ( __x86_64 || __x86_64__ )
-    retval = incr;
-    asm volatile ("lock xaddl %0, %1;"
+    asm volatile ("lock ;  xaddl %0, %1;"
 		  :"=r"(retval)
 		  :"m"(*operand), "0"(retval)
 		  : "memory");
     retval += incr;
-#elif !defined(QTHREAD_MUTEX_INCREMENT) && ( __i486 || __i486__ )
+
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
+
     retval = incr;
-    asm volatile (".section .smp_locks,\"a\"\n" "  .align 4\n" "  .long 661f\n" ".previous\n" "661:\n"	/* the preceeding gobbledygook is stolen from the Linux kernel */
-		  "lock xaddl %1,%0"	/* atomically add incr to operand */
-		  :		/* no output */
-		  :"m"     (*operand), "ir"(retval));
+    asm volatile ("lock xaddq; %0, %1;"
+		  :"=r"(retval)
+		  :"m"(*operand), "0"(retval)
+		  : "memory");
+    retval += incr;
+
 #else
-#ifndef QTHREAD_MUTEX_INCREMENT
-#warning unrecognized architecture: falling back to safe but very slow increment implementation
+
+#error "Unimplemented assembly architecture"
+
 #endif
+
+#elif defined(QTHREAD_MUTEX_INCREMENT)
+
     qthread_t *me = qthread_self();
 
     qthread_lock(me, (void *)operand);
     *operand += incr;
     retval = *operand;
     qthread_unlock(me, (void *)operand);
+
+#else
+
+#error "Neither atomic or mutex increment enabled"
+
 #endif
     return retval;
 }				       /*}}} */
