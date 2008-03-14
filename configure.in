@@ -41,17 +41,10 @@ AC_ARG_ENABLE([setrlimit],
   [AS_HELP_STRING([--disable-setrlimit],
      [don't use setrlimit to limit the stack (which is normally used only on Linux systems)])])
 AS_IF([test -z "$enable_setrlimit"], [
-  case "$host" in
-    ia64-*-linux-*)
-      # this does not need get/setrlimit
-      enable_setrlimit="no"
-    ;;
-    *-linux-*)
-      enable_setrlimit="yes"
-    ;;
-    *)
-      enable_setrlimit="no"
-  esac])
+  AS_CASE("$host",
+		  [ia64-*-linux-*], [enable_setrlimit="no"],
+		  [*-linux-*], [enable_setrlimit="yes"],
+		  [enable_setrlimit="no"])])
 
 dnl Logic for dealing with this argument in compiler characteristics section, as it
 dnl somewhat depends on assembly behavior
@@ -108,7 +101,7 @@ AS_IF([test "$enable_shepherd_profiling" = "yes"],
 AC_ARG_ENABLE([asserts],
   [AS_HELP_STRING([--enable-asserts], [adds sanity checks to most qthread functions])],
   [], [enable_asserts="no"])
-AS_IF([test "$enable_asserts" = "no"]
+AS_IF([test "$enable_asserts" = "no"],
       [AC_DEFINE([QTHREAD_NO_ASSERTS], [1], [removes sanity checks from most qthread functions])])
 
 AC_ARG_ENABLE([lazy-threadids],
@@ -224,10 +217,10 @@ QTHREAD_CHECK_ATTRIBUTE_ALIGNED([AC_DEFINE([HAVE_ATTRIBUTE_ALIGNED], [1],
 
 QTHREAD_CHECK_ASSEMBLY([have_assembly=1], [have_assembly=0])
 AS_IF([test $have_assembly -eq 0],
-	  AS_IF([test -z "$enable_software_increments"],
-			[enable_software_increments=yes],
-			AS_IF([test "$enable_software_increments" = "no"],
-				  AC_MSG_ERROR([No assembly available and software increments disabled.]))))
+	  [AS_IF([test -z "$enable_software_increments"],
+			 	  [enable_software_increments=yes],
+			 [test "$enable_software_increments" = "no"],
+				  [AC_MSG_ERROR([No assembly available and software increments disabled.])])])
 AS_IF([test "$enable_software_increments" = "yes"],
       [AC_DEFINE([QTHREAD_MUTEX_INCREMENT], [1],
          [Use mutexes instead of assembly for atomic increment])])
@@ -262,17 +255,14 @@ AS_IF([test "$enable_setrlimit" != "no" -a "$qthread_implementation" = "unix"], 
 # Figure out if we need makecontext
 qthread_makecontext_type="none"
 AS_IF([test "$qthread_implementation" = "unix"], [
-  case "$host" in
-    *-solaris2.8)
+  AS_CASE("$host",
+    [*-solaris2.8], [
       AC_DEFINE([EXTRA_MAKECONTEXT_ARGC], [1], 
          [solaris 8 requires argc be one larger than the actual count of arguments])
       AC_DEFINE([INVERSE_STACK_POINTER], [1], 
-         [make the ss_sp member of uc_stack be the high-address of the stack, rather than the low-address of the stack])
-    ;;
-    *-solaris2.9)
-      AC_DEFINE([__MAKECONTEXT_V2_SOURCE], [1], [force the Sun makecontext to behave correctly])
-    ;;
-  esac
+         [make the ss_sp member of uc_stack be the high-address of the stack, rather than the low-address of the stack])],
+    [*-solaris2.9], [
+      AC_DEFINE([__MAKECONTEXT_V2_SOURCE], [1], [force the Sun makecontext to behave correctly])])
   AS_IF([test "$ac_cv_func_getcontext" = "yes"], [
     AC_DEFINE([HAVE_NATIVE_MAKECONTEXT], [1], [The system provides native (proper) make/swap/get-contect functions])
     QTHREAD_CHECK_MAKECONTEXT_SPLIT_ARGS(
@@ -294,8 +284,8 @@ AS_IF([test "$enable_shepherd_profiling" = "yes"],
 			 [AC_CHECK_FUNC([mach_absolute_time], [qthread_timer_type=mach])])
 	   AS_IF([test "$qthread_timer_type" = "gettimeofday"],
 			 [AC_CHECK_FUNC([gethrtime], [qthread_timer_type=gethrtime])])
-           AS_IF([test "$qthread_timer_type" = "gettimeofday"],
-                 [QTHREAD_CHECK_ALTIX_TIMER([qthread_timer_type=altix])])
+	   AS_IF([test "$qthread_timer_type" = "gettimeofday"],
+			 [QTHREAD_CHECK_ALTIX_TIMER([qthread_timer_type=altix])])
 	   AC_MSG_CHECKING([for high resolution timer type])
 	   AC_MSG_RESULT([$qthread_timer_type])
 ])
@@ -334,15 +324,12 @@ echo    "        Use setrlimit(): $enable_setrlimit"
 echo    "Check address alignment: $enable_aligncheck"
 echo    "     Shepherd profiling: $enable_shepherd_profiling"
 echo -n "             Increments: "
-AS_IF([test "$enable_software_increments" = "yes"],
-	  [echo "Mutex (software)"],
+AS_IF([test "$enable_software_increments" = "yes"], [echo "Mutex (software)"],
 	  [echo "$qthread_cv_asm_arch"])
 echo -n "             Stack size: "
-AS_IF([test "$enable_fullsize_stacks" = "yes"],
-	  [echo "8MB"],
-	  AS_IF([test "$enable_very_small_stacks" = "yes"],
-			[echo "2kB"],
-			[echo "4kB"]))
+AS_IF([test "$enable_fullsize_stacks" = "yes"], [echo "8MB"],
+	  [test "$enable_very_small_stacks" = "yes"], [echo "2kB"],
+	  [echo "4kB"])
 echo    " Debugging Trace Output: $enable_debug_trace"
 echo    "        Unpooled Memory: $enable_unpooled_memory"
 echo ""
