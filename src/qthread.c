@@ -48,22 +48,6 @@
 # define rlimit rlimit64
 #endif
 
-#ifdef QTHREAD_DEBUG
-/* for the vprintf in qthread_debug() */
-/* 8MB stack */
-/* unless you're doing some limit testing with very small stacks, the stack
- * size MUST be a multiple of the page size */
-# define QTHREAD_DEFAULT_STACK_SIZE 4096*2048
-#else
-# ifdef QTHREAD_REALLY_SMALL_STACKS
-#  define QTHREAD_DEFAULT_STACK_SIZE 2048
-# elif QTHREAD_FULL_SIZE_STACKS
-#  define QTHREAD_DEFAULT_STACK_SIZE 4096*2048
-# else
-#  define QTHREAD_DEFAULT_STACK_SIZE 4096
-# endif
-#endif
-
 /* internal constants */
 #define QTHREAD_STATE_NEW               0
 #define QTHREAD_STATE_RUNNING           1
@@ -104,7 +88,7 @@ typedef struct qthread_queue_s qthread_queue_t;
 struct qthread_s
 {
     unsigned int thread_id;
-    unsigned char thread_state;
+    uint8_t thread_state;
     unsigned char flags;
 
     /* the shepherd (pthread) we run on */

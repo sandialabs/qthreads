@@ -66,23 +66,30 @@ AS_IF([test "$enable_aligncheck" = "no"],
       [AC_DEFINE([QTHREAD_NOALIGNCHECK], [1],
          [Do not check the alignment of synchronization addresses])])
 
-AC_ARG_ENABLE([fullsize-stacks],
-  [AS_HELP_STRING([--enable-fullsize-stacks], [use 8MB stacks for every thread])],
-  [], [enable_fullsize_stacks="no"])
-AC_ARG_ENABLE([very-small-stacks],
-  [AS_HELP_STRING([--enable-very-small-stacks], [use 2k stacks for every thread (dangerous)])],
-  [], [enable_very_small_stacks="no"])
-AS_IF([test "$enable_fullsize_stacks" = "yes"],
-      [AC_DEFINE([QTHREAD_FULL_SIZE_STACKS], [1], [use 8MB stacks for every thread])],
-      [AS_IF([test "$enable_very_small_stacks" = "yes"],
-             [AC_DEFINE([QTHREAD_REALLY_SMALL_STACKS], [1], [use 2k stacks for every thread])])])
-
 AC_ARG_ENABLE([debug-trace],
   [AS_HELP_STRING([--enable-debug-trace],
      [prints out debugging information as programs run, tracing their qthread-related behavior])],
   [], [enable_debug_trace="no"])
 AS_IF([test "$enable_debug_trace" = "yes"],
       [AC_DEFINE([QTHREAD_DEBUG], [1], [prints out debugging information at runtime])])
+
+AC_ARG_ENABLE([fullsize-stacks],
+  [AS_HELP_STRING([--enable-fullsize-stacks], [use 8MB stacks for every thread])],
+  [], [enable_fullsize_stacks="no"])
+AC_ARG_ENABLE([very-small-stacks],
+  [AS_HELP_STRING([--enable-very-small-stacks], [use 2k stacks for every thread (dangerous)])],
+  [], [enable_very_small_stacks="no"])
+AS_IF([test "$enable_debug_trace" = "yes" -a "$enable_very_small_stacks"],
+	  [AC_MSG_ERROR([Debug tracing cannot be done with very small stacks])])
+dnl keep in mind, if the stack size is not a multiple of the page size,
+dnl alignment issues may become dicey, depending on the architecture
+AS_IF([test "$enable_fullsize_stacks" = "yes"],   [qthread_cv_stack_size=8388608],
+	  dnl debug tracing requires a big stack for doing vprintf
+	  [test "$enable_debug_trace" = "yes"],       [qthread_cv_stack_size=8388608],
+	  [test "$enable_very_small_stacks" = "yes"], [qthread_cv_stack_size=2048],
+	  [qthread_cv_stack_size=4096])
+AC_DEFINE_UNQUOTED([QTHREAD_DEFAULT_STACK_SIZE],[$qthread_cv_stack_size],
+				   [What size stacks to use])
 
 AC_ARG_ENABLE([unpooled-memory],
   [AS_HELP_STRING([--enable-unpooled-memory],
@@ -337,9 +344,10 @@ echo -n "             Increments: "
 AS_IF([test "$enable_software_increments" = "yes"], [echo "Mutex (software)"],
 	  [echo "$qthread_cv_asm_arch"])
 echo -n "             Stack size: "
-AS_IF([test "$enable_fullsize_stacks" = "yes"], [echo "8MB"],
-	  [test "$enable_very_small_stacks" = "yes"], [echo "2kB"],
-	  [echo "4kB"])
+AS_IF([test "$qthread_cv_stack_size" = "8388608"], [echo "8MB"],
+	  [test "$qthread_cv_stack_size" = "2096"],    [echo "2kB"],
+	  [test "$qthread_cv_stack_size" = "4096"],    [echo "4kB"],
+	  [echo "$qthread_cv_stack_size bytes"])
 echo    " Debugging Trace Output: $enable_debug_trace"
 echo    "        Unpooled Memory: $enable_unpooled_memory"
 echo ""
