@@ -34,10 +34,6 @@
 #include "qthread_innards.h"
 #include "futurelib_innards.h"
 
-#ifndef UINT8_MAX
-#define UINT8_MAX (255)
-#endif
-
 #define MACHINEMASK (~(WORDSIZE-1))
 
 /* internal constants */
