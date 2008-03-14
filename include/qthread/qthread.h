@@ -24,13 +24,6 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *****************************************************************************/
 
-/* Return Codes */
-#define QTHREAD_REDUNDANT	1
-#define QTHREAD_SUCCESS		0
-#define QTHREAD_BADARGS		-1
-#define QTHREAD_PTHREAD_ERROR	-2
-#define QTHREAD_MALLOC_ERROR	ENOMEM
-
 #ifdef __cplusplus
 extern "C"
 {
@@ -40,10 +33,23 @@ typedef int qthread_t;
 typedef unsigned int qthread_shepherd_id_t;
 #else
 typedef struct qthread_s qthread_t;
-typedef unsigned char qthread_shepherd_id_t;	/* doubt we'll run more than 255 shepherds */
+typedef unsigned short qthread_shepherd_id_t;	/* doubt we'll run more than 65k shepherds */
 #endif
 
-/* FEB locking only works on aligned addresses. On 32-bit architectures, this
+/* Return Codes */
+#define QTHREAD_REDUNDANT	1
+#define QTHREAD_SUCCESS		0
+#define QTHREAD_BADARGS		-1
+#define QTHREAD_PTHREAD_ERROR	-2
+#define QTHREAD_MALLOC_ERROR	ENOMEM
+#define NO_SHEPHERD ((qthread_shepherd_id_t)-1)
+
+/* NOTE!!!!!!!!!!!
+ * Reads and writes operate on aligned_t-size segments of memory. That is,
+ * it will read/write 4 bytes at a time, unless you've configured it to use a
+ * 64-bit aligned_t so that it will read/write 8 bytes at a time.
+ *
+ * FEB locking only works on aligned addresses. On 32-bit architectures, this
  * isn't too much of an inconvenience. On 64-bit architectures, it's a pain in
  * the BUTT! This is here to try and help a little bit. */
 #ifndef HAVE_ATTRIBUTE_ALIGNED
@@ -66,8 +72,6 @@ typedef int32_t __attribute__ ((aligned(4))) saligned_t;
 /* for convenient arguments to qthread_fork */
 typedef aligned_t(*qthread_f) (qthread_t * me, void *arg);
 
-#define NO_SHEPHERD ((qthread_shepherd_id_t)-1)
-
 /* use this function to initialize the qthreads environment before spawning any
  * qthreads. The argument to this function specifies the number of pthreads
  * that will be spawned to shepherd the qthreads. */
@@ -81,11 +85,11 @@ int qthread_init(const qthread_shepherd_id_t nshepherds);
  * the program is finished. This function will terminate any currently running
  * qthreads, so only use it when you are certain that execution has completed.
  * For examples of how to do this, look at the included test programs. */
-#ifndef SST
-void qthread_finalize(void);
-#else
+#ifdef SST
 /* XXX: not sure how to handle this in a truly multithreaded environment */
 #define qthread_finalize()
+#else
+void qthread_finalize(void);
 #endif
 
 /* this function allows a qthread to specifically give up control of the
@@ -93,19 +97,19 @@ void qthread_finalize(void);
  * busy-waits or cooperative multitasking. Without this function, threads will
  * only ever allow other threads assigned to the same pthread to execute when
  * they block. */
-#ifndef SST
-void qthread_yield(qthread_t * me);
-#else
+#ifdef SST
 /* means nothing in a truly multithreaded environment */
 #define qthread_yield(x)
+#else
+void qthread_yield(qthread_t * me);
 #endif
 
 /* this function allows a qthread to retrieve its qthread_t pointer if it has
  * been lost for some reason */
-#ifndef SST
-qthread_t *qthread_self(void);
-#else
+#ifdef SST
 #define qthread_self() (qthread_t*)PIM_readSpecial(PIM_CMD_THREAD_SEQ)
+#else
+qthread_t *qthread_self(void);
 #endif
 
 /* these are the functions for generating a new qthread.
@@ -119,10 +123,10 @@ qthread_t *qthread_self(void);
  *     free'd). The qthread_fork_to function spawns the thread to a specific
  *     shepherd.
  */
-#ifndef SST
-int qthread_fork(const qthread_f f, const void *arg, aligned_t * ret);
-#else
+#ifdef SST
 #define qthread_fork(f, arg, ret) qthread_fork_to((f), (arg), (ret), NO_SHEPHERD)
+#else
+int qthread_fork(const qthread_f f, const void *arg, aligned_t * ret);
 #endif
 int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
 		    const qthread_shepherd_id_t shepherd);
@@ -224,23 +228,6 @@ static inline int qthread_fill(qthread_t * me, const void *dest)
 #else
 int qthread_empty(qthread_t * me, const void *dest);
 int qthread_fill(qthread_t * me, const void *dest);
-#endif
-
-/* NOTE!!!!!!!!!!!
- * Reads and writes operate on machine-word-size segments of memory. That is,
- * on a 32-bit architecture, it will read/write 4 bytes at a time, and on a
- * 64-bit architecture, it will read/write 8 bytes at a time. For correct
- * operation, you will probably want to use someting like
- * __attribute__((alignment(8))) on your variables.
- */
-#ifdef __ILP64__
-# ifndef WORDSIZE
-#  define WORDSIZE (8)
-# endif
-#else
-# ifndef WORDSIZE
-#  define WORDSIZE (4)
-# endif
 #endif
 
 /* These functions wait for memory to become empty, and then fill it. When

@@ -34,8 +34,6 @@
 #include "qthread_innards.h"
 #include "futurelib_innards.h"
 
-#define MACHINEMASK (~(WORDSIZE-1))
-
 /* internal constants */
 #define QTHREAD_STATE_NEW               0
 #define QTHREAD_STATE_RUNNING           1
@@ -49,7 +47,7 @@
 
 #ifndef QTHREAD_NOALIGNCHECK
 #define ALIGN(d, s, f) do { \
-    s = (aligned_t *) (((size_t) d) & MACHINEMASK); \
+    s = (aligned_t *) (((size_t) d) & (~(sizeof(aligned_t)-1))); \
     if (s != d) { \
 	fprintf(stderr, \
 		"WARNING: " f ": unaligned address %p ... assuming %p\n", \
@@ -1681,7 +1679,7 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
 	m->EFQ = X->next;
 	/* op */
 	if (maddr && maddr != X->addr) {
-	    memcpy(maddr, X->addr, WORDSIZE);
+	    memcpy(maddr, X->addr, sizeof(aligned_t));
 	}
 	m->full = 1;
 	/* requeue */
@@ -1719,7 +1717,7 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m, void *maddr,
 	m->FFQ = X->next;
 	/* op */
 	if (X->addr && X->addr != maddr) {
-	    memcpy(X->addr, maddr, WORDSIZE);
+	    memcpy(X->addr, maddr, sizeof(aligned_t));
 	}
 	/* schedule */
 	X->waiter->thread_state = QTHREAD_STATE_RUNNING;
@@ -1735,7 +1733,7 @@ static inline void qthread_gotlock_fill(qthread_addrstat_t * m, void *maddr,
 	m->FEQ = X->next;
 	/* op */
 	if (X->addr && X->addr != maddr) {
-	    memcpy(X->addr, maddr, WORDSIZE);
+	    memcpy(X->addr, maddr, sizeof(aligned_t));
 	}
 	waiter = X->waiter;
 	waiter->thread_state = QTHREAD_STATE_RUNNING;
@@ -1869,7 +1867,7 @@ int qthread_writeF(qthread_t * me, void *dest, const void *src)
 	cp_hashtable_unlock(qlib->FEBs[lockbin]);	/* unlock hash */
 	/* we have the lock on m, so... */
 	if (dest && dest != src) {
-	    memcpy(dest, src, WORDSIZE);
+	    memcpy(dest, src, sizeof(aligned_t));
 	}
 	qthread_gotlock_fill(m, alignedaddr, 0);
 	return QTHREAD_SUCCESS;
@@ -1956,7 +1954,7 @@ int qthread_writeEF(qthread_t * me, void *dest, const void *src)
 	    m->EFQ = X;
 	} else {
 	    if (dest && dest != src) {
-		memcpy(dest, src, WORDSIZE);
+		memcpy(dest, src, sizeof(aligned_t));
 	    }
 	    qthread_gotlock_fill(m, alignedaddr, 0);
 	}
@@ -2025,7 +2023,7 @@ int qthread_readFF(qthread_t * me, void *dest, const void *src)
 							(void *)alignedaddr);
 	    if (!m) {
 		if (dest && dest != src) {
-		    memcpy(dest, src, WORDSIZE);
+		    memcpy(dest, src, sizeof(aligned_t));
 		}
 	    } else {
 		QTHREAD_LOCK(&m->lock);
@@ -2050,7 +2048,7 @@ int qthread_readFF(qthread_t * me, void *dest, const void *src)
 	    m->FFQ = X;
 	} else {
 	    if (dest && dest != src) {
-		memcpy(dest, src, WORDSIZE);
+		memcpy(dest, src, sizeof(aligned_t));
 	    }
 	    QTHREAD_UNLOCK(&m->lock);
 	    REPORTUNLOCK(m);
@@ -2140,7 +2138,7 @@ int qthread_readFE(qthread_t * me, void *dest, void *src)
 	    m->FEQ = X;
 	} else {
 	    if (dest && dest != src) {
-		memcpy(dest, src, WORDSIZE);
+		memcpy(dest, src, sizeof(aligned_t));
 	    }
 	    qthread_gotlock_empty(m, alignedaddr, 0);
 	}
