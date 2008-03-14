@@ -1409,6 +1409,7 @@ int qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
 	shep =
 	    qthread_internal_incr_mod(&qlib->sched_shepherd, qlib->nshepherds,
 				      &qlib->sched_shepherd_lock);
+	assert(shep < qlib->nshepherds);
     }
     t = qthread_thread_new(f, arg, ret, shep);
     if (t) {
@@ -1524,6 +1525,7 @@ qthread_t *qthread_prepare(const qthread_f f, const void *arg,
 	shep =
 	    qthread_internal_incr_mod(&qlib->sched_shepherd, qlib->nshepherds,
 				      &qlib->sched_shepherd_lock);
+	assert(shep < qlib->nshepherds);
     }
 
     t = qthread_thread_bare(f, arg, ret, shep);
