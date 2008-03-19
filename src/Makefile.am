@@ -5,6 +5,7 @@
 
 AM_CPPFLAGS = $(SST_INCLUDE) -I$(top_srcdir)/include
 AM_LDFLAGS = $(SST_LIBS)
+AM_CFLAGS = @SST_CFLAGS@
 
 SUBDIRS = osx_compat qtimer .
 
