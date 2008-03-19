@@ -42,7 +42,9 @@ typedef struct qlib_s
 #endif
 } *qlib_t;
 
+#ifndef SST
 extern qlib_t qlib;
+#endif
 
 /* These are the internal functions that futurelib should be allowed to get at */
 unsigned int qthread_isfuture(const qthread_t * t);
@@ -51,6 +53,11 @@ void qthread_assertnotfuture(qthread_t * t);
 int qthread_fork_future_to(const qthread_f f, const void *arg,
 			    aligned_t * ret,
 			    const qthread_shepherd_id_t shepherd);
+#ifdef SST
+# define qthread_shepherd_count() PIM_readSpecial(PIM_CMD_LOC_COUNT)
+#else
+# define qthread_shepherd_count() (qlib->nshepherds)
+#endif
 
 #ifdef QTHREAD_NO_ASSERTS
 # define qassert(op, val) op
