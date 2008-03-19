@@ -203,7 +203,7 @@ aligned_t *qthread_retloc(const qthread_t * t);
 #ifdef SST
 static inline int qthread_feb_status(const void *addr)
 {
-    return PIM_feb_is_full((void *)addr);
+    return PIM_feb_is_full((unsigned int*)addr);
 }
 #else
 int qthread_feb_status(const void *addr);
@@ -217,12 +217,12 @@ int qthread_feb_status(const void *addr);
 #ifdef SST
 static inline int qthread_empty(qthread_t * me, const void *dest)
 {
-    PIM_feb_empty((void *)dest);
+    PIM_feb_empty((unsigned int*)dest);
     return 0;
 }
 static inline int qthread_fill(qthread_t * me, const void *dest)
 {
-    PIM_feb_fill((void *)dest);
+    PIM_feb_fill((unsigned int*)dest);
     return 0;
 }
 #else
@@ -246,15 +246,15 @@ int qthread_fill(qthread_t * me, const void *dest);
  */
 #ifdef SST
 static inline int qthread_writeEF(qthread_t * me, void *dest,
-				  const aligned_t * src)
+				  const void * src)
 {
-    PIM_feb_writeef(dest, *(src));
+    PIM_feb_writeef((unsigned int*)dest, *(aligned_t *)src);
     return 0;
 }
 static inline int qthread_writeEF_const(qthread_t * me, void *dest,
 					const aligned_t src)
 {
-    PIM_feb_writeef(dest, src);
+    PIM_feb_writeef((unsigned int*)dest, src);
     return 0;
 }
 #else
@@ -280,14 +280,14 @@ int qthread_writeEF_const(qthread_t * me, void *dest, const aligned_t src);
 static inline int qthread_writeF(qthread_t * me, void *dest, const void *src)
 {
     *(aligned_t *) dest = *(aligned_t *) src;
-    PIM_feb_fill(dest);
+    PIM_feb_fill((unsigned int*)dest);
     return 0;
 }
 static inline int qthread_writeF_const(qthread_t * me, void *dest,
 				       const aligned_t src)
 {
     *(aligned_t *) dest = src;
-    PIM_feb_fill(dest);
+    PIM_feb_fill((unsigned int*)dest);
     return 0;
 }
 #else
@@ -343,9 +343,9 @@ int qthread_readFF(qthread_t * me, void *dest, const void *src);
 static inline int qthread_readFE(qthread_t * me, void *dest, void *src)
 {
     if (dest != NULL && dest != src) {
-	*(aligned_t *) dest = PIM_feb_readfe(src);
+	*(aligned_t *) dest = PIM_feb_readfe((unsigned int*)src);
     } else {
-	PIM_feb_readfe(src);
+	PIM_feb_readfe((unsigned int*)src);
     }
     return 0;
 }
@@ -387,7 +387,7 @@ int qthread_unlock(qthread_t * me, const void *a);
 #ifdef SST
 static inline aligned_t qthread_incr(volatile aligned_t * operand, const int incr)
 {
-    return PIM_atomicIncrement(operand, incr);
+    return PIM_atomicIncrement(operand, incr) + incr;
 }
 
 #else
