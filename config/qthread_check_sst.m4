@@ -19,7 +19,7 @@ AC_ARG_WITH([sst-std-libs],
     [DIR contains the standard run-time libraries necessary for linking SST applications])])
 AC_ARG_WITH([statlibs],
   [AS_HELP_STRING([--with-statlibs=DIR],
-    [Same as --with-sst-std-libts, for backward compatibility])],
+    [Same as --with-sst-std-libs, for backward compatibility])],
   [AS_IF([test -z "$with_sst_std_libs"], [with_sst_std_libs="$with_statlibs"])])
 
 if test "$with_sst" != "no" ; then
