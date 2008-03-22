@@ -33,7 +33,7 @@ if test "$with_sst" != "no" ; then
     [AC_MSG_ERROR(["Is your SST setup complete and specified with --with-sst=<path_to_SST>?"])])
   CPPFLAGS="$CPPFLAGS"
   if test ! -z "$with_sst_std_libs" ; then
-    SST_LIBS="-L$with_sst_std_libs"
+    SST_LIBS="-L$with_sst_std_libs -static -lc_static -lgcc_static -lstdc++"
   fi
   
   dnl this avoids the problems with __TEXT,pic* sections

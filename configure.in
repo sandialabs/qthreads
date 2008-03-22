@@ -134,6 +134,8 @@ AC_ARG_ENABLE([64bit-alignment],
 AS_IF([test "$enable_64bit_alignment" = "yes" -o "$enable_64bit_aligned_t" = "yes"],
       [AC_DEFINE([QTHREAD_64_BIT_ALIGN], [1], [forces aligned_t to be aligned to 64 bits])])
 
+AC_CACHE_SAVE
+
 ## ------------------- ##
 ## Checks for programs ##
 ## ------------------- ##
@@ -151,22 +153,34 @@ AC_PROG_LIBTOOL
 
 AC_CACHE_SAVE
 
+# Figure out if we're targeting SST or Unix implementation.  Will add
+# MTA here when the time comes.
+QTHREAD_CHECK_SST([qthread_implementation="sst"], [qthread_implementation="unix"])
+AM_CONDITIONAL([COMPILE_TARGET_SST], [test "$qthread_implementation" = "sst"])
+AM_CONDITIONAL([COMPILE_TARGET_UNIX], [test "$qthread_implementation" = "unix"])
+
 ## -------------------- ##
 ## Checks for libraries ##
 ## -------------------- ##
-AC_CHECK_LIB([pthread], [pthread_create], , [AC_MSG_ERROR([Need pthreads])])
+AC_SEARCH_LIBS([pthread_create], [pthread])
+AS_IF([test "$qthread_implementation" = "sst"],
+	  [
+	   LDFLAGS="$LDFLAGS $SST_LIBS"
+	   AC_SEARCH_LIBS([ceil],[m_ppc],[],[AC_MSG_ERROR([Can't seem to find ceil()])])
+	   ],
+	  [test "$qthread_implementation" = "unix"],[
+	  AC_SEARCH_LIBS([ceil],[m],[],[AC_MSG_ERROR([Can't seem to find ceil()])])
+	  AC_ARG_WITH([cprops],
+				  [AC_HELP_STRING([--with-cprops],
+								  [Location of libcprops library])])
+	  AS_IF([test ! -z "$with_cprops" -a "$with_cprops" != "yes"], [
+			 CPPFLAGS="${CPPFLAGS} -I$with_cprops/include"
+			 LDFLAGS="${LDFLAGS} -L$with_cprops/lib"
+			 EXTRA_DISTCHECK_OPTIONS="${EXTRA_DISTCHECK_OPTIONS} --with-cprops=$with_cprops"])
+	  AC_SEARCH_LIBS([cp_hashtable_create], [cprops "cprops -ldl" "cprops -lsocket -lnsl"], ,
+					 [AC_MSG_ERROR([Need libcprops 0.1.6 or better. See http://cprops.sf.net/])])
 
-AC_ARG_WITH([cprops],
-            [AC_HELP_STRING([--with-cprops],
-                            [Location of libcprops library])])
-AS_IF([test ! -z "$with_cprops" -a "$with_cprops" != "yes"], [
-      CPPFLAGS="${CPPFLAGS} -I$with_cprops/include"
-      LDFLAGS="${LDFLAGS} -L$with_cprops/lib"
-      EXTRA_DISTCHECK_OPTIONS="${EXTRA_DISTCHECK_OPTIONS} --with-cprops=$with_cprops"])
-AC_SEARCH_LIBS([cp_hashtable_create], [cprops "cprops -ldl" "cprops -lsocket -lnsl"], ,
-	       [AC_MSG_ERROR([Need libcprops 0.1.6 or better. See http://cprops.sf.net/])])
-
-AC_SEARCH_LIBS([ceil], [m], [], [AC_MSG_ERROR(["Can't seem to find ceil()"])])
+	  ])
 
 AC_CACHE_SAVE
 
@@ -253,12 +267,6 @@ AC_CACHE_SAVE
 ## ------------------------- ##
 ## Check for system services ##
 ## ------------------------- ##
-
-# Figure out if we're targeting SST or Unix implementation.  Will add
-# MTA here when the time comes.
-QTHREAD_CHECK_SST([qthread_implementation="sst"], [qthread_implementation="unix"])
-AM_CONDITIONAL([COMPILE_TARGET_SST], [test "$qthread_implementation" = "sst"])
-AM_CONDITIONAL([COMPILE_TARGET_UNIX], [test "$qthread_implementation" = "unix"])
 
 # Figure out if we need rlimit...
 AS_IF([test "$enable_setrlimit" != "no" -a "$qthread_implementation" = "unix"], [
