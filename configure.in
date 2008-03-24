@@ -168,7 +168,7 @@ AS_IF([test "$qthread_implementation" = "sst"],
 	   LDFLAGS="$LDFLAGS $SST_LIBS"
 	   AC_SEARCH_LIBS([ceil],[m_ppc],[],[AC_MSG_ERROR([Can't seem to find ceil()])])
 	   ],
-	  [test "$qthread_implementation" = "unix"],[
+	  [AS_IF([test "$qthread_implementation" = "unix"],[
 	  AC_SEARCH_LIBS([ceil],[m],[],[AC_MSG_ERROR([Can't seem to find ceil()])])
 	  AC_ARG_WITH([cprops],
 				  [AC_HELP_STRING([--with-cprops],
@@ -180,7 +180,7 @@ AS_IF([test "$qthread_implementation" = "sst"],
 	  AC_SEARCH_LIBS([cp_hashtable_create], [cprops "cprops -ldl" "cprops -lsocket -lnsl"], ,
 					 [AC_MSG_ERROR([Need libcprops 0.1.6 or better. See http://cprops.sf.net/])])
 
-	  ])
+	  ])])
 
 AC_CACHE_SAVE
 
