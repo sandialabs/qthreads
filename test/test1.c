@@ -55,8 +55,10 @@ aligned_t qmain(qthread_t * me, void *junk)
     assert(ui_out == ui_sum_authoritative);
     /* testing with FEB just for full coverage; if it's good for uints, it's
      * good for everyone else */
-    ui_out = qutil_uint_sum(me, ui_array, ui_len, 1);
-    assert(ui_out == ui_sum_authoritative);
+    if (sizeof(unsigned int) >= sizeof(aligned_t)) {
+	ui_out = qutil_uint_sum(me, ui_array, ui_len, 1);
+	assert(ui_out == ui_sum_authoritative);
+    }
     ui_out = qutil_uint_mult(me, ui_array, ui_len, 0);
     assert(ui_out == ui_mult_authoritative);
     ui_out = qutil_uint_max(me, ui_array, ui_len, 0);

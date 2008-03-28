@@ -28,7 +28,8 @@ the available limits.
 .PP
 If \fIcheckfeb\fR is non-zero, these functions will wait for the entries in the
 array to be full before multiplying them. They \fBDO NOT\fR check whether the
-array entries are properly aligned.
+array entries are properly aligned. If the datatype is too small to do a FEB
+operation on, \fBthey will abort\fR.
 .SH RETURN VALUE
 The product of the first \fIlength\fR entries of \fIarray\fR.
 .SH SEE ALSO

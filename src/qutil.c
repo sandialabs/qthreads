@@ -4,9 +4,9 @@
 #include <qthread/qutil.h>
 #include <qthread/qthread.h>
 #include <qthread/futurelib.h>
+#include <qthread_innards.h>           /* for assert() toggling */
 
 #include <stdlib.h>
-#include <stdio.h>		       /* debugging only */
 #include <string.h>
 #include <assert.h>
 
@@ -17,11 +17,11 @@
 #define STRUCT(_structname_, _rtype_) struct _structname_ \
 { \
     const _rtype_ *array; \
-    _rtype_ ret; \
+    _rtype_ __attribute__((aligned(8))) ret; \
     size_t start, stop; \
     const _rtype_ *addlast; \
     struct _structname_ *backptr; \
-};
+}
 #define INNER_LOOP(_fname_,_structtype_,_opmacro_) static aligned_t _fname_(qthread_t *me, struct _structtype_ *args) \
 { \
     size_t i; \
@@ -61,6 +61,7 @@ _rtype_ _fname_(qthread_t *me, _rtype_ *array, size_t length, int checkfeb) \
     _rtype_ *waitfor = NULL, myret = 0; \
     struct _structtype_ *bkptr = NULL; \
     \
+    assert(checkfeb && sizeof(aligned_t) <= sizeof(_rtype_)); \
     while (start + MT_LOOP_CHUNK < length) { \
 	/* spawn off an MT_LOOP_CHUNK-sized segment of the first part of the array */ \
 	struct _structtype_ *left_args = \
@@ -108,99 +109,60 @@ _rtype_ _fname_(qthread_t *me, _rtype_ *array, size_t length, int checkfeb) \
 #define MIN_MACRO(max, contender) if (max > (contender)) max = (contender)
 
 /* These are the functions for computing things about doubles */
-STRUCT(qutil_ds_args, double) INNER_LOOP(qutil_double_sum_inner,
-					 qutil_ds_args,
-					 SUM_MACRO)
-INNER_LOOP_FF(qutil_double_FF_sum_inner, qutil_ds_args,
-	      SUM_MACRO) OUTER_LOOP(qutil_double_sum, qutil_ds_args,
-				    SUM_MACRO, double, qutil_double_sum_inner,
-				    qutil_double_FF_sum_inner)
- INNER_LOOP(qutil_double_mult_inner, qutil_ds_args,
-	    MULT_MACRO) INNER_LOOP_FF(qutil_double_FF_mult_inner,
-				      qutil_ds_args,
-				      MULT_MACRO)
+STRUCT(qutil_ds_args, double);
+INNER_LOOP(qutil_double_sum_inner, qutil_ds_args, SUM_MACRO)
+INNER_LOOP_FF(qutil_double_FF_sum_inner, qutil_ds_args, SUM_MACRO)
+OUTER_LOOP(qutil_double_sum, qutil_ds_args, SUM_MACRO, double,
+	qutil_double_sum_inner, qutil_double_FF_sum_inner)
+INNER_LOOP(qutil_double_mult_inner, qutil_ds_args, MULT_MACRO)
+INNER_LOOP_FF(qutil_double_FF_mult_inner, qutil_ds_args, MULT_MACRO)
 OUTER_LOOP(qutil_double_mult, qutil_ds_args, MULT_MACRO, double,
 	   qutil_double_mult_inner, qutil_double_FF_mult_inner)
- INNER_LOOP(qutil_double_max_inner, qutil_ds_args,
-	    MAX_MACRO) INNER_LOOP_FF(qutil_double_FF_max_inner, qutil_ds_args,
-				     MAX_MACRO) OUTER_LOOP(qutil_double_max,
-							   qutil_ds_args,
-							   MAX_MACRO, double,
-							   qutil_double_max_inner,
-							   qutil_double_FF_max_inner)
- INNER_LOOP(qutil_double_min_inner, qutil_ds_args,
-	    MIN_MACRO) INNER_LOOP_FF(qutil_double_FF_min_inner, qutil_ds_args,
-				     MIN_MACRO) OUTER_LOOP(qutil_double_min,
-							   qutil_ds_args,
-							   MIN_MACRO, double,
-							   qutil_double_min_inner,
-							   qutil_double_FF_min_inner)
-
+INNER_LOOP(qutil_double_max_inner, qutil_ds_args, MAX_MACRO)
+INNER_LOOP_FF(qutil_double_FF_max_inner, qutil_ds_args, MAX_MACRO)
+OUTER_LOOP(qutil_double_max, qutil_ds_args, MAX_MACRO, double,
+	qutil_double_max_inner, qutil_double_FF_max_inner)
+INNER_LOOP(qutil_double_min_inner, qutil_ds_args, MIN_MACRO)
+INNER_LOOP_FF(qutil_double_FF_min_inner, qutil_ds_args, MIN_MACRO)
+OUTER_LOOP(qutil_double_min, qutil_ds_args, MIN_MACRO, double,
+	qutil_double_min_inner, qutil_double_FF_min_inner)
 /* These are the functions for computing things about unsigned ints */
-STRUCT(qutil_uis_args, unsigned int) INNER_LOOP(qutil_uint_sum_inner,
-						qutil_uis_args,
-						SUM_MACRO)
-INNER_LOOP_FF(qutil_uint_FF_sum_inner, qutil_uis_args,
-	      SUM_MACRO) OUTER_LOOP(qutil_uint_sum, qutil_uis_args, SUM_MACRO,
-				    unsigned int, qutil_uint_sum_inner,
-				    qutil_uint_FF_sum_inner)
- INNER_LOOP(qutil_uint_mult_inner, qutil_uis_args,
-	    MULT_MACRO) INNER_LOOP_FF(qutil_uint_FF_mult_inner,
-				      qutil_uis_args,
-				      MULT_MACRO) OUTER_LOOP(qutil_uint_mult,
-							     qutil_uis_args,
-							     MULT_MACRO,
-							     unsigned int,
-							     qutil_uint_mult_inner,
-							     qutil_uint_FF_mult_inner)
- INNER_LOOP(qutil_uint_max_inner, qutil_uis_args,
-	    MAX_MACRO) INNER_LOOP_FF(qutil_uint_FF_max_inner, qutil_uis_args,
-				     MAX_MACRO) OUTER_LOOP(qutil_uint_max,
-							   qutil_uis_args,
-							   MAX_MACRO,
-							   unsigned int,
-							   qutil_uint_max_inner,
-							   qutil_uint_FF_max_inner)
- INNER_LOOP(qutil_uint_min_inner, qutil_uis_args,
-	    MIN_MACRO) INNER_LOOP_FF(qutil_uint_FF_min_inner, qutil_uis_args,
-				     MIN_MACRO) OUTER_LOOP(qutil_uint_min,
-							   qutil_uis_args,
-							   MIN_MACRO,
-							   unsigned int,
-							   qutil_uint_min_inner,
-							   qutil_uint_FF_min_inner)
-
+STRUCT(qutil_uis_args, unsigned int);
+INNER_LOOP(qutil_uint_sum_inner, qutil_uis_args, SUM_MACRO)
+INNER_LOOP_FF(qutil_uint_FF_sum_inner, qutil_uis_args, SUM_MACRO)
+OUTER_LOOP(qutil_uint_sum, qutil_uis_args, SUM_MACRO, unsigned int,
+	qutil_uint_sum_inner, qutil_uint_FF_sum_inner)
+INNER_LOOP(qutil_uint_mult_inner, qutil_uis_args, MULT_MACRO)
+INNER_LOOP_FF(qutil_uint_FF_mult_inner, qutil_uis_args, MULT_MACRO)
+OUTER_LOOP(qutil_uint_mult, qutil_uis_args, MULT_MACRO, unsigned int,
+	qutil_uint_mult_inner, qutil_uint_FF_mult_inner)
+INNER_LOOP(qutil_uint_max_inner, qutil_uis_args, MAX_MACRO)
+INNER_LOOP_FF(qutil_uint_FF_max_inner, qutil_uis_args, MAX_MACRO)
+OUTER_LOOP(qutil_uint_max, qutil_uis_args, MAX_MACRO, unsigned int,
+	qutil_uint_max_inner, qutil_uint_FF_max_inner)
+INNER_LOOP(qutil_uint_min_inner, qutil_uis_args, MIN_MACRO)
+INNER_LOOP_FF(qutil_uint_FF_min_inner, qutil_uis_args, MIN_MACRO)
+OUTER_LOOP(qutil_uint_min, qutil_uis_args, MIN_MACRO, unsigned int,
+	qutil_uint_min_inner, qutil_uint_FF_min_inner)
 /* These are the functions for computing things about signed ints */
-STRUCT(qutil_is_args, int) INNER_LOOP(qutil_int_sum_inner, qutil_is_args,
-				      SUM_MACRO)
-INNER_LOOP_FF(qutil_int_FF_sum_inner, qutil_is_args,
-	      SUM_MACRO) OUTER_LOOP(qutil_int_sum, qutil_is_args, SUM_MACRO,
-				    int, qutil_int_sum_inner,
-				    qutil_int_FF_sum_inner)
- INNER_LOOP(qutil_int_mult_inner, qutil_is_args,
-	    MULT_MACRO) INNER_LOOP_FF(qutil_int_FF_mult_inner, qutil_is_args,
-				      MULT_MACRO) OUTER_LOOP(qutil_int_mult,
-							     qutil_is_args,
-							     MULT_MACRO, int,
-							     qutil_int_mult_inner,
-							     qutil_int_FF_mult_inner)
- INNER_LOOP(qutil_int_max_inner, qutil_is_args,
-	    MAX_MACRO) INNER_LOOP_FF(qutil_int_FF_max_inner, qutil_is_args,
-				     MAX_MACRO) OUTER_LOOP(qutil_int_max,
-							   qutil_is_args,
-							   MAX_MACRO, int,
-							   qutil_int_max_inner,
-							   qutil_int_FF_max_inner)
- INNER_LOOP(qutil_int_min_inner, qutil_is_args,
-	    MIN_MACRO) INNER_LOOP_FF(qutil_int_FF_min_inner, qutil_is_args,
-				     MIN_MACRO) OUTER_LOOP(qutil_int_min,
-							   qutil_is_args,
-							   MIN_MACRO, int,
-							   qutil_int_min_inner,
-							   qutil_int_FF_min_inner)
-
-struct qutil_mergesort_args
-{
+STRUCT(qutil_is_args, int);
+INNER_LOOP(qutil_int_sum_inner, qutil_is_args, SUM_MACRO)
+INNER_LOOP_FF(qutil_int_FF_sum_inner, qutil_is_args, SUM_MACRO)
+OUTER_LOOP(qutil_int_sum, qutil_is_args, SUM_MACRO, int, qutil_int_sum_inner,
+	qutil_int_FF_sum_inner)
+INNER_LOOP(qutil_int_mult_inner, qutil_is_args, MULT_MACRO)
+INNER_LOOP_FF(qutil_int_FF_mult_inner, qutil_is_args, MULT_MACRO)
+OUTER_LOOP(qutil_int_mult, qutil_is_args, MULT_MACRO, int,
+	qutil_int_mult_inner, qutil_int_FF_mult_inner)
+INNER_LOOP(qutil_int_max_inner, qutil_is_args, MAX_MACRO)
+INNER_LOOP_FF(qutil_int_FF_max_inner, qutil_is_args, MAX_MACRO)
+OUTER_LOOP(qutil_int_max, qutil_is_args, MAX_MACRO, int, qutil_int_max_inner,
+	qutil_int_FF_max_inner)
+INNER_LOOP(qutil_int_min_inner, qutil_is_args, MIN_MACRO)
+INNER_LOOP_FF(qutil_int_FF_min_inner, qutil_is_args, MIN_MACRO)
+OUTER_LOOP(qutil_int_min, qutil_is_args, MIN_MACRO, int, qutil_int_min_inner,
+	qutil_int_FF_min_inner)
+struct qutil_mergesort_args {
     double *array;
     size_t first_start, first_stop;
     size_t second_start, second_stop;
@@ -234,10 +196,9 @@ aligned_t qutil_mergesort_inner(qthread_t * me,
 	    args->first_start++;
 	} else {
 	    /* XXX: I want a faster in-place merge!!!! */
-	    /* The next element comes from the second list,
-	     * move the array[second_start] element into the next
-	     * position and move all the other elements up
-	     */
+	    /* The next element comes from the second list, move the
+	     * array[second_start] element into the next position and move
+	     * all the other elements up */
 	    double temp = array[args->second_start];
 	    size_t k;
 
@@ -328,8 +289,7 @@ void qutil_mergesort(qthread_t * me, double *array, size_t length)
 
 #define SWAP(a, m, n) temp=a[m]; a[m]=a[n]; a[n]=temp
 
-struct qutil_qsort_args
-{
+struct qutil_qsort_args {
     double *array;
     double pivot;
     size_t length, chunksize, jump, offset;
@@ -395,7 +355,7 @@ aligned_t qutil_qsort_partition(qthread_t * me, struct qutil_qsort_args *args)
 	    break;
 	SWAP(a, leftwall, rightwall);
     }
-  quickexit:
+quickexit:
     qthread_lock(me, args->furthest_leftwall);
     if (leftwall + args->offset < *args->furthest_leftwall) {
 	*args->furthest_leftwall = leftwall + args->offset;
@@ -407,14 +367,12 @@ aligned_t qutil_qsort_partition(qthread_t * me, struct qutil_qsort_args *args)
     return 0;
 }
 
-struct qutil_qsort_iargs
-{
+struct qutil_qsort_iargs {
     double *array;
     size_t length;
 };
 
-struct qutil_qsort_iprets
-{
+struct qutil_qsort_iprets {
     size_t leftwall, rightwall;
 };
 
@@ -507,7 +465,8 @@ aligned_t qutil_qsort_inner(qthread_t * me, struct qutil_qsort_iargs * a)
 	furthest.leftwall += offset;
 	furthest.rightwall += offset;
     }
-    /* data between furthest.leftwall and furthest.rightwall is unlikely to be partitioned correctly */
+    /* data between furthest.leftwall and furthest.rightwall is unlikely to
+     * be partitioned correctly */
     {
 	size_t leftwall = furthest.leftwall, rightwall = furthest.rightwall;
 
@@ -534,6 +493,7 @@ aligned_t qutil_qsort_inner(qthread_t * me, struct qutil_qsort_iargs * a)
 	{
 	    struct qutil_qsort_iargs na[2];
 	    aligned_t rets[2] = { 1, 1 };
+
 	    na[0].array = array;
 	    na[0].length = rightwall;
 	    na[1].array = array + rightwall;
