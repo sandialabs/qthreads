@@ -60,8 +60,8 @@ _rtype_ _fname_(qthread_t *me, _rtype_ *array, size_t length, int checkfeb) \
     size_t i, start = 0; \
     _rtype_ *waitfor = NULL, myret = 0; \
     struct _structtype_ *bkptr = NULL; \
-    \
-    assert(checkfeb && sizeof(aligned_t) <= sizeof(_rtype_)); \
+    /* abort if checkfeb == 1 && aligned_t is too big */ \
+    assert(checkfeb == 0 || sizeof(aligned_t) <= sizeof(_rtype_)); \
     while (start + MT_LOOP_CHUNK < length) { \
 	/* spawn off an MT_LOOP_CHUNK-sized segment of the first part of the array */ \
 	struct _structtype_ *left_args = \
