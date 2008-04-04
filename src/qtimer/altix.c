@@ -1,4 +1,6 @@
+#ifdef HAVE_CONFIG_H
 #include "config.h"
+#endif
 
 #include "qtimer.h"
 
@@ -40,7 +42,7 @@ qtimer_init(void)
     /* find the frequency of the timer */
     ret = ioctl(fd, MMTIMER_GETFREQ, &val);
     if (ret == -ENOSYS) return -1;
-    timer_freq_conv = 1.0 / (val * 1000000.0);
+    timer_freq_conv = 1.0 / val;
 
     /* find the address of the counter */
     ret = ioctl(fd, MMTIMER_GETOFFSET, 0);
