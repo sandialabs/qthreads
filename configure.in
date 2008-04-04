@@ -348,6 +348,7 @@ echo    "        Thread Counting: $enable_thread_count"
 echo    "        Use setrlimit(): $enable_setrlimit"
 echo    "Check address alignment: $enable_aligncheck"
 echo    "     Shepherd profiling: $enable_shepherd_profiling"
+echo    "            Qtimer type: ${qthread_timer_type:-none}"
 echo -n "             Increments: "
 AS_IF([test "$enable_software_increments" = "yes"], [echo "Mutex (software)"],
 	  [echo "$qthread_cv_asm_arch"])
