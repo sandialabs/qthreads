@@ -55,7 +55,7 @@ aligned_t qmain(qthread_t * me, void *junk)
     assert(ui_out == ui_sum_authoritative);
     /* testing with FEB just for full coverage; if it's good for uints, it's
      * good for everyone else */
-    if (sizeof(unsigned int) >= sizeof(aligned_t)) {
+    if (sizeof(aligned_t) <= sizeof(unsigned int)) {
 	ui_out = qutil_uint_sum(me, ui_array, ui_len, 1);
 	assert(ui_out == ui_sum_authoritative);
     }
