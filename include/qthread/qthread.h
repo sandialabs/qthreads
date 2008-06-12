@@ -7,6 +7,8 @@
 #include <qthread/qthread-int.h>       /* for uint32_t and uint64_t */
 #include <qthread/common.h>	       /* important configuration options */
 
+#include <string.h>		       /* for memcpy() */
+
 #ifdef SST
 # include <ppcPimCalls.h>
 #endif
@@ -382,34 +384,47 @@ int qthread_unlock(qthread_t * me, const void *a);
 static inline double qthread_dincr(volatile double * operand, const double incr)
 {/*{{{*/
 #if defined(HAVE_GCC_INLINE_ASSEMBLY)
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-#warning "The PPC32 dincr assembly is nonexistent. Please add some!"
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
     register uint64_t incrd = incrd;
-    register uint64_t compd = compd;
-    uint64_t retval;
+    register double incrf = incrf;
+    union {
+	uint64_t i;
+	double d;
+    } retval;
+    uint64_t scratch = scratch;
     __asm__ __volatile__ ("1:\n\t"
 	    "ldarx %0,0,%1\n\t"
-/* do stuff! */
-	    "stdcx. %3,0,%1\n\t"
+	    /*convert from integer to floating point*/
+	    "std   %0,%3\n\t" // %3 is scratch memory (NOT a register)
+	    "lfd   %4,%3\n\t" // %4 is a scratch floating point register
+	    /* do the addition */
+	    "fadd  %4,%5,%4\n\t" // %5 is the increment floating point register
+	    /* convert from floating point to integer */
+	    "stfd   %4,%3\n\t"
+	    "ld     %2,%3\n\t"
+	    /* store back to original location */
+	    "stdcx. %2,0,%1\n\t"
 	    "bne-   1b\n\t"
 	    "isync"
-	    :"=&b" (retval)
-	    :"r"(operand),"r"(compd),"r"(incrd)
+	    :"=&b" (retval.i)
+	    :"r"(operand),"r"(incrd),"m"(scratch),"f"(incrf),"f"(incr)
 	    :"cc","memory");
-#warning "The PPC64 dincr assembly is blatantly wrong. Please fix it!"
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
-    double oldval, newval;
-    newval = *operand;
+    return retval.d + incr;
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
+    union {
+	uint64_t i;
+	double d;
+    } oldval, newval;
+    newval.d = *operand;
     do {
         oldval = newval;
-        newval = oldval + incr;
+        newval.d = oldval.d + incr;
         __asm__ __volatile__ ("casx [%1], %2, %0"
-                              : "+r" (*((uint64_t*)&newval))
-                              : "r" (operand), "r"(*((uint64_t*)&oldval))
+                              : "+r" (newval.i)
+                              : "r" (operand), "r"(oldval.i)
                               : "cc", "memory");
     } while (oldval != newval);
-    return oldval + incr;
+    return oldval.d + incr;
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
     double res;
     double oldval, newval;
@@ -441,7 +456,7 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
 #else
 #error "Unimplemented assembly architecture"
 #endif
-#elif defined (QTHREAD_MUTEX_INCREMENT)
+#elif defined (QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
 
     double retval;
     qthread_lock(qthread_self(), (void*)operand);
