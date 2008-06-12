@@ -383,7 +383,7 @@ int qthread_unlock(qthread_t * me, const void *a);
 
 static inline double qthread_dincr(volatile double * operand, const double incr)
 {/*{{{*/
-#if defined(HAVE_GCC_INLINE_ASSEMBLY)
+#if defined(HAVE_GCC_INLINE_ASSEMBLY) && (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
     register uint64_t incrd = incrd;
     register double incrf = incrf;
