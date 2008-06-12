@@ -43,8 +43,13 @@ int main(int argc, char *argv[])
 
     pthread_mutex_lock(&alldone);
 
-    for (i = 0; i < target; i++)
-	assert(qthread_fork(thread, NULL, NULL) == 0);
+    for (i = 0; i < target; i++) {
+	int res = qthread_fork(thread, NULL, NULL);
+	if (res != 0) {
+	    printf("res = %i\n", res);
+	}
+	assert(res == 0);
+    }
 
     pthread_mutex_lock(&alldone);
 
