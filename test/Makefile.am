@@ -3,7 +3,7 @@
 # Copyright (c)      2008  Sandia Corporation
 #
 
-TESTS = test1 test2 test3 testq testloop testincr testqloop testid
+TESTS = test1 test2 test3 testq testloop testincr testdincr testqloop testid
 check_PROGRAMS = $(TESTS)
 
 INCLUDES = -I$(top_srcdir)/include
@@ -37,6 +37,10 @@ testqloop_DEPENDENCIES = $(QTHREADLIB)
 testincr_SOURCES = testincr.c
 testincr_LDADD = $(QTHREADLIB)
 testincr_DEPENDENCIES = $(QTHREADLIB)
+
+testdincr_SOURCES = testdincr.c
+testdincr_LDADD = $(QTHREADLIB)
+testdincr_DEPENDENCIES = $(QTHREADLIB)
 
 testid_SOURCES = test_id.c
 testid_LDADD = $(QTHREADLIB)
