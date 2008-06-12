@@ -12,7 +12,13 @@
 #define GET _getmcontext
 #endif
 
-#if defined(__APPLE__) && !defined(__i386__)
+#if defined(__APPLE__) && defined(__ppc64__)
+#define NEEDPOWER64CONTEXT 1
+#define SET __setmcontext
+#define GET __getmcontext
+#endif
+
+#if defined(__APPLE__) && !defined(__i386__) && !defined(__ppc64__)
 #define NEEDPOWERCONTEXT 1
 #define SET __setmcontext
 #define GET __getmcontext
@@ -152,6 +158,90 @@ SET:
 	mtxer	r0
 
 	lwz	r3,	6*4(r3)
+	blr
+#endif
+
+#ifdef NEEDPOWER64CONTEXT
+/* get FPR and VR use flags with sc 0x7FF3 */
+/* get vsave with mfspr reg, 256 */
+
+.text
+.align 2
+
+.globl GET
+GET:				/* xxx: instruction scheduling */
+	mflr	r0
+	mfcr	r5
+	mfctr	r6
+	mfxer	r7
+	std	r0, 0*8(r3)
+	std	r5, 1*8(r3)
+	std	r6, 2*8(r3)
+	std	r7, 3*8(r3)
+
+	std	r1, 4*8(r3)
+	std	r2, 5*8(r3)
+	li	r5, 1			/* return value for setmcontext */
+	std	r5, 6*8(r3)
+
+	std	r13, (0+7)*8(r3)	/* callee-save GPRs */
+	std	r14, (1+7)*8(r3)	/* xxx: block move */
+	std	r15, (2+7)*8(r3)
+	std	r16, (3+7)*8(r3)
+	std	r17, (4+7)*8(r3)
+	std	r18, (5+7)*8(r3)
+	std	r19, (6+7)*8(r3)
+	std	r20, (7+7)*8(r3)
+	std	r21, (8+7)*8(r3)
+	std	r22, (9+7)*8(r3)
+	std	r23, (10+7)*8(r3)
+	std	r24, (11+7)*8(r3)
+	std	r25, (12+7)*8(r3)
+	std	r26, (13+7)*8(r3)
+	std	r27, (14+7)*8(r3)
+	std	r28, (15+7)*8(r3)
+	std	r29, (16+7)*8(r3)
+	std	r30, (17+7)*8(r3)
+	std	r31, (18+7)*8(r3)
+
+	li	r3, 0			/* return */
+	blr
+
+.globl SET
+SET:
+	ld	r13, (0+7)*8(r3)	/* callee-save GPRs */
+	ld	r14, (1+7)*8(r3)	/* xxx: block move */
+	ld	r15, (2+7)*8(r3)
+	ld	r16, (3+7)*8(r3)
+	ld	r17, (4+7)*8(r3)
+	ld	r18, (5+7)*8(r3)
+	ld	r19, (6+7)*8(r3)
+	ld	r20, (7+7)*8(r3)
+	ld	r21, (8+7)*8(r3)
+	ld	r22, (9+7)*8(r3)
+	ld	r23, (10+7)*8(r3)
+	ld	r24, (11+7)*8(r3)
+	ld	r25, (12+7)*8(r3)
+	ld	r26, (13+7)*8(r3)
+	ld	r27, (14+7)*8(r3)
+	ld	r28, (15+7)*8(r3)
+	ld	r29, (16+7)*8(r3)
+	ld	r30, (17+7)*8(r3)
+	ld	r31, (18+7)*8(r3)
+
+	ld	r1, 4*8(r3)
+	ld	r2, 5*8(r3)
+
+	ld	r0, 0*8(r3)
+	mtlr	r0
+	ld	r0, 1*8(r3)
+	mtcr	r0			/* mtcrf 0xFF, r0 */
+	ld	r0, 2*8(r3)
+	mtctr	r0
+	ld	r0, 3*8(r3)
+	mtxer	r0
+
+	ld	r3,	6*8(r3)
 	blr
 #endif
 

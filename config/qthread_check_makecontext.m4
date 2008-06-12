@@ -67,8 +67,7 @@ AC_CACHE_CHECK([for OS X compatibility makecontext],
   [qthread_cv_osx_makecontext="no"
    case "$host" in
      *-darwin*)
-      # currently no 64 bit makecontext support
-      AS_IF([test $ac_cv_sizeof_voidp -eq 4], [qthread_cv_osx_makecontext="yes"])
+	  qthread_cv_osx_makecontext="yes"
      ;;
    esac])
 
