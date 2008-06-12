@@ -447,7 +447,7 @@ static inline aligned_t qthread_internal_incr_mod(volatile aligned_t *
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
 
-# if !defined(QTHREAD_64_BIT_ALIGNED_T)
+# if defined(QTHREAD_64_BIT_ALIGNED_T)
 
     int64_t res, old, new;
     do {
