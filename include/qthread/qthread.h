@@ -379,6 +379,79 @@ int qthread_lock(qthread_t * me, const void *a);
 int qthread_unlock(qthread_t * me, const void *a);
 #endif
 
+static inline double qthread_dincr(volatile double * operand, const double incr)
+{/*{{{*/
+#if defined(HAVE_GCC_INLINE_ASSEMBLY)
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
+#warning "The PPC32 dincr assembly is nonexistent. Please add some!"
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
+    register uint64_t incrd = incrd;
+    register uint64_t compd = compd;
+    uint64_t retval;
+    __asm__ __volatile__ ("1:\n\t"
+	    "ldarx %0,0,%1\n\t"
+/* do stuff! */
+	    "stdcx. %3,0,%1\n\t"
+	    "bne-   1b\n\t"
+	    "isync"
+	    :"=&b" (retval)
+	    :"r"(operand),"r"(compd),"r"(incrd)
+	    :"cc","memory");
+#warning "The PPC64 dincr assembly is blatantly wrong. Please fix it!"
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
+    double oldval, newval;
+    newval = *operand;
+    do {
+        oldval = newval;
+        newval = oldval + incr;
+        __asm__ __volatile__ ("casx [%1], %2, %0"
+                              : "+r" (*((uint64_t*)&newval))
+                              : "r" (operand), "r"(*((uint64_t*)&oldval))
+                              : "cc", "memory");
+    } while (oldval != newval);
+    return oldval + incr;
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
+    double res;
+    double oldval, newval;
+    do {
+	oldval = *operand;
+	newval = oldval + incr;
+	__asm__ __volatile__ ("mov ar.ccv=%0;;": :"rO" (*((uint64_t*)&oldval)));
+	__asm__ __volatile__ ("cmpxchg8.acq %0=[%i],%2,ar.ccv"
+		:"=r"(*((uint64_t*)&res))
+		:"r"(operand), "r"(*((uint64_t*)&newval))
+		:"memory");
+    } while (res != oldval); /* if res!=old, the calc is out of date */
+    return res+incr;
+
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
+      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
+
+    double oldval, newval, retval;
+    do {
+	oldval = *operand;
+	newval = oldval + incr;
+	__asm__ __volatile__ ("lock; cmpxchgq %1, %2"
+		:"=a"(*((uint64_t*)&retval))
+		:"r"(*((uint64_t*)&newval)),"m"(*((uint64_t*)operand)),"0"(*((uint64_t*)&oldval))
+		:"memory");
+    } while (retval != oldval); /* if res!=oldval, newval is out of date */
+    return retval;
+
+#else
+#error "Unimplemented assembly architecture"
+#endif
+#elif defined (QTHREAD_MUTEX_INCREMENT)
+
+    double retval;
+    qthread_lock(qthread_self(), (void*)operand);
+    retval = *operand += incr;
+    qthread_unlock(qthread_self(), (void*)operand);
+    return retval;
+#else
+#error "Neither atomic nor mutex increment enabled"
+#endif
+}/*}}}*/
 
 /* this implements an atomic increment. It is done with architecture-specific
  * assembly and does NOT use FEB's or lock/unlock (except in the slow fallback
@@ -427,53 +500,35 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32) || \
       ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) && !defined(QTHREAD_64_BIT_ALIGN_T))
 
-    register aligned_t oldval, newval;
+    register uint32_t oldval, newval;
     newval = *operand;
     do {
-        retval = oldval = newval;
+        oldval = newval;
         newval = oldval + incr;
-        /* casa [r1] %asi r2, rd
-           if (r2 == *r1) 
-             swap(*r1, rd)
-           else
-             rd = *r1
-
-           if (oldval == *operand)
-             swap(*operand, newval)
-           else
-             newval = *operand
-        */
-        __asm__ __volatile__ ("casa [%1] 0x80 , %2, %0"
+	/* newval always gets the value of *operand; if it's
+	 * the same as oldval, then the swap was successful */
+        __asm__ __volatile__ ("cas [%1] , %2, %0"
                               : "+r" (newval)
                               : "r" (operand), "r"(oldval)
                               : "cc", "memory");
-    } while (retval != newval);
-    retval += incr;
+    } while (oldval != newval);
+    retval = oldval + incr;
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
 
     register aligned_t oldval, newval;
     newval = *operand;
     do {
-        retval = oldval = newval;
+        oldval = newval;
         newval = oldval + incr;
-        /* casa [r1] %asi r2, rd
-           if (r2 == *r1) 
-             swap(*r1, rd)
-           else
-             rd = *r1
-
-           if (oldval == *operand)
-             swap(*operand, newval)
-           else
-             newval = *operand
-        */
-        __asm__ __volatile__ ("casxa [%1] 0x80 , %2, %0"
+	/* newval always gets the value of *operand; if it's
+	 * the same as oldval, then the swap was successful */
+        __asm__ __volatile__ ("casx [%1] , %2, %0"
                               : "+r" (newval)
                               : "r" (operand), "r"(oldval)
                               : "cc", "memory");
-    } while (retval != newval);
-    retval += incr;
+    } while (oldval != newval);
+    retval = oldval + incr;
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
 
@@ -498,7 +553,8 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
 	    asm volatile ("cmpxchg4.acq %0=[%1],%2,ar.ccv":"=r" (res)
 			  :"r"     (operand), "r"(newval)
 			  :"memory");
-	} while (res != old);	       /* if res==old, the calc is out of date */
+	} while (res != old);	       /* if res!=old, the calc is out of date */
+	retval = res+incr;
     }
 # else
     int64_t res;
@@ -521,7 +577,8 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
 	    asm volatile ("cmpxchg8.acq %0=[%1],%2,ar.ccv":"=r" (res)
 			  :"r"     (operand), "r"(newval)
 			  :"memory");
-	} while (res != old);	       /* if res==old, the calc is out of date */
+	} while (res != old);	       /* if res!=old, the calc is out of date */
+	retval = res+incr;
     }
 # endif
 
