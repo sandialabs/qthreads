@@ -349,15 +349,15 @@ echo    "        Use setrlimit(): $enable_setrlimit"
 echo    "Check address alignment: $enable_aligncheck"
 echo    "     Shepherd profiling: $enable_shepherd_profiling"
 echo    "            Qtimer type: ${qthread_timer_type:-none}"
-echo -n "             Increments: "
-AS_IF([test "$enable_software_increments" = "yes"], [echo "Mutex (software)"],
-	  [echo "$qthread_cv_asm_arch"])
-echo -n "             Stack size: "
+qthread_incprefix="             Increments: "
+AS_IF([test "$enable_software_increments" = "yes"], [echo "${qthread_incprefix}Mutex (software)"],
+	  [echo "${qthread_incprefix}$qthread_cv_asm_arch"])
+qthread_stackprefix="             Stack size: "
 case "$qthread_cv_stack_size" in
-	8388608) echo "8MB" ;;
-	2096)    echo "2kB" ;;
-	4096)    echo "4kB" ;;
-	*)       echo "$qthread_cv_stack_size bytes" ;;
+	8388608) echo "${qthread_stackprefix}8MB" ;;
+	2096)    echo "${qthread_stackprefix}2kB" ;;
+	4096)    echo "${qthread_stackprefix}4kB" ;;
+	*)       echo "${qthread_stackprefix}${qthread_cv_stack_size} bytes" ;;
 esac
 echo    " Debugging Trace Output: $enable_debug_trace"
 echo    "        Unpooled Memory: $enable_unpooled_memory"
