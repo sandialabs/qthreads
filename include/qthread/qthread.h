@@ -423,7 +423,7 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
                               : "+r" (newval.i)
                               : "r" (operand), "r"(oldval.i)
                               : "cc", "memory");
-    } while (oldval != newval);
+    } while (oldval.i != newval.i);
     return oldval.d + incr;
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
     double res;
