@@ -441,17 +441,39 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
-
-    double oldval, newval, retval;
+    /* this is *horribly* ugly, because cmpxchg8b has really unusual semantics */
+    union {
+	double d;
+	uint64_t i;
+	struct {
+	    uint32_t h;
+	    uint32_t l;
+	} s;
+    } oldval, newval;
+    int picsave;
     do {
-	oldval = *operand;
-	newval = oldval + incr;
-	__asm__ __volatile__ ("lock; cmpxchgq %1, %2"
-		:"=a"(*((uint64_t*)&retval))
-		:"r"(*((uint64_t*)&newval)),"m"(*((uint64_t*)operand)),"0"(*((uint64_t*)&oldval))
-		:"memory");
-    } while (retval != oldval); /* if res!=oldval, newval is out of date */
-    return retval;
+	oldval.d = *operand;
+	newval.d = oldval.d + incr;
+	__asm__ __volatile__ (
+		"movl %%ebx, %5\n\t" /* we save off %ebx to make PIC code happy */
+		"movl %1, %%eax\n\t"
+		"movl %2, %%edx\n\t"
+		"movl %3, %%ebx\n\t"
+		"movl %4, %%ecx\n\t"
+		/* compare edx:eax to *operand
+		 * if equal, set *operand to ecx:ebx
+		 * else set edx:eax to *operand */
+		"lock; cmpxchg8b %0\n\t"
+		"movl %%eax, %3\n\t" /* copy out current value of *operand */
+		"movl %%edx, %4\n\t"
+		"movl %5, %%ebx\n\t" /* restore PIC ptr */
+		:"=o"(*(volatile uint64_t*)operand)
+		:"m"(oldval.s.h),"m"(oldval.s.l),
+		 "m"(newval.s.h),"m"(newval.s.l),
+		 "m"(picsave)
+		:"memory","ecx","eax","edx","cc");
+    } while (newval.i != oldval.i); /* if newval!=oldval, the calculation is out of date */
+    return newval.d + incr;
 
 #else
 #error "Unimplemented assembly architecture"
