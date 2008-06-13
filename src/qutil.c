@@ -55,10 +55,10 @@
     return 0; \
 }
 #define OUTER_LOOP(_fname_,_structtype_,_opmacro_,_rtype_,_innerfunc_,_innerfuncff_) \
-_rtype_ _fname_(qthread_t *me, _rtype_ *array, size_t length, int checkfeb) \
+_rtype_ _fname_(qthread_t *me, const _rtype_ *array, size_t length, int checkfeb) \
 { \
     size_t i, start = 0; \
-    _rtype_ *waitfor = NULL, myret = 0; \
+    _rtype_ *waitfor = NULL, myret; \
     struct _structtype_ *bkptr = NULL; \
     /* abort if checkfeb == 1 && aligned_t is too big */ \
     assert(checkfeb == 0 || sizeof(aligned_t) <= sizeof(_rtype_)); \
