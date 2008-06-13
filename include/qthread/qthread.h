@@ -426,18 +426,20 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
     } while (oldval.i != newval.i);
     return oldval.d + incr;
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
-    double res;
-    double oldval, newval;
+    union {
+	uint64_t i;
+	double d;
+    } oldval, newval, res;
     do {
-	oldval = *operand;
-	newval = oldval + incr;
-	__asm__ __volatile__ ("mov ar.ccv=%0;;": :"rO" (*((uint64_t*)&oldval)));
-	__asm__ __volatile__ ("cmpxchg8.acq %0=[%i],%2,ar.ccv"
-		:"=r"(*((uint64_t*)&res))
-		:"r"(operand), "r"(*((uint64_t*)&newval))
+	oldval.d = *operand;
+	newval.d = oldval.d + incr;
+	__asm__ __volatile__ ("mov ar.ccv=%0;;": :"rO" (oldval.i));
+	__asm__ __volatile__ ("cmpxchg8.acq %0=[%1],%2,ar.ccv"
+		:"=r"(res.i)
+		:"r"(operand), "r"(newval.i)
 		:"memory");
-    } while (res != oldval); /* if res!=old, the calc is out of date */
-    return res+incr;
+    } while (res.i != oldval.i); /* if res!=old, the calc is out of date */
+    return res.d+incr;
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
