@@ -441,41 +441,66 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
     } while (res.i != oldval.i); /* if res!=old, the calc is out of date */
     return res.d+incr;
 
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
-      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
-    /* this is *horribly* ugly, because cmpxchg8b has really unusual semantics */
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
+    union {
+	double d;
+	uint64_t i;
+    } oldval, newval, retval;
+    do {
+	oldval.d = *operand;
+	newval.d = oldval.d + incr;
+	__asm__ __volatile__ ("lock; cmpxchgq %1, %2":"=a"(retval.i)
+		:"r"(newval.i), "m"(*(uint64_t*)operand), "0"(oldval.i)
+		:"memory");
+    } while (retval.i != oldval.i);
+    return retval.d;
+
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
     union {
 	double d;
 	uint64_t i;
 	struct {
-	    uint32_t h;
+	    /* note: the ordering of these is both important and
+	     * counter-intuitive; welcome to little-endian! */
 	    uint32_t l;
+	    uint32_t h;
 	} s;
     } oldval, newval;
-    int picsave;
+    register char test;
     do {
 	oldval.d = *operand;
 	newval.d = oldval.d + incr;
+	/* Yeah, this is weird looking, but it really makes sense when you
+	 * understand the instruction's semantics (which make sense when you
+	 * consider that it's doing a 64-bit op on a 32-bit proc):
+	 *
+	 *    Compares the 64-bit value in EDX:EAX with the operand
+	 *    (destination operand). If the values are equal, the 64-bit value
+	 *    in ECX:EBX is stored in the destination operand. Otherwise, the
+	 *    value in the destination operand is loaded into EDX:EAX."
+	 *
+	 * So what happens is the oldval is loaded into EDX:EAX and the newval
+	 * is loaded into ECX:EBX to start with (i.e. as inputs). Then
+	 * CMPXCHG8B does its business, after which EDX:EAX is guaranteed to
+	 * contain the value of *operand when the instruction executed. We test
+	 * the ZF field to see if the operation succeeded. We *COULD* save
+	 * EDX:EAX back into oldval to save ourselves a step when the loop
+	 * fails, but that's a waste when the loop succeeds (i.e. in the common
+	 * case). Optimizing for the common case, in this situation, means
+	 * minimizing our extra write-out to the one-byte test variable.
+	 */
 	__asm__ __volatile__ (
-		"movl %%ebx, %5\n\t" /* we save off %ebx to make PIC code happy */
-		"movl %1, %%eax\n\t"
-		"movl %2, %%edx\n\t"
-		"movl %3, %%ebx\n\t"
-		"movl %4, %%ecx\n\t"
-		/* compare edx:eax to *operand
-		 * if equal, set *operand to ecx:ebx
-		 * else set edx:eax to *operand */
-		"lock; cmpxchg8b %0\n\t"
-		"movl %%eax, %3\n\t" /* copy out current value of *operand */
-		"movl %%edx, %4\n\t"
-		"movl %5, %%ebx\n\t" /* restore PIC ptr */
-		:"=o"(*(volatile uint64_t*)operand)
-		:"m"(oldval.s.h),"m"(oldval.s.l),
-		 "m"(newval.s.h),"m"(newval.s.l),
-		 "m"(picsave)
-		:"memory","ecx","eax","edx","cc");
-    } while (newval.i != oldval.i); /* if newval!=oldval, the calculation is out of date */
-    return newval.d + incr;
+		"lock; cmpxchg8b %1\n\t"
+		"setne %0" /* test = (ZF==0) */
+		:"=r"(test)
+		:"m"(*operand),
+		/*EAX*/"a"(oldval.s.l),
+		/*EDX*/"d"(oldval.s.h),
+		/*EBX*/"b"(newval.s.l),
+		/*ECX*/"c"(newval.s.h)
+		:"memory");
+    } while (test); /* if ZF was cleared, the calculation is out of date */
+    return newval.d;
 
 #else
 #error "Unimplemented assembly architecture"
