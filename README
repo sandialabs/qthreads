@@ -155,9 +155,17 @@ correct arguments, and if you modify testloop so that $relink_command uses the
 it would work just fine.
 
 ************************************************
-NOTE FOR MACOS X USERS
-Avoid using optimization when compiling qthreads with gcc 4.0.1; there is an
-optimization bug that will cause gcc to generate incorrect assembly. Sometimes
-this incorrect assembly will not even compile, sometimes it will compile but
-will cause a bus error. Either way, if you're using gcc 4.0.1, you should make
-sure CFLAGS is set so that default -O2 optimization is not applied.
+NOTE FOR SST USERS
+make check doesn't work (surprise!)
+
+Also, here's the way you probably need to configure it (yes, it's convoluted
+and some of the settings might be autodetectable... but we're leaving this open
+for the glorious day when SST gets its own cross-platform compiling
+environment):
+
+	./configure --build=powerpc-apple-darwin8.11.0 \
+			    --host=powerpc-sst-darwin8.11.0 \
+				CC=gcc-3.3 CXX=g++-3.3 \
+				--enable-static --disable-shared \
+				--with-sst=/path/to/PIMTools \
+				--with-sst-std-libs=/path/to/allStatLibs
