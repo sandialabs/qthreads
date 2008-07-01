@@ -1,0 +1,26 @@
+.TH qthread_dincr 3 "NOVEMBER 2006" libqthread "libqthread"
+.SH NAME
+\fBqthread_dincr\fR \- atomically increment a double-precision floating point counter
+.SH SYNOPSIS
+.B #include <qthread/qthread.h>
+
+.I aligned_t
+.br
+\fBqthread_dincr\fR(double *\fIoperand\fR, int \fIincr\fR);
+.SH DESCRIPTION
+This function atomically increments the variable pointed to by \fIoperand\fR by \fIincr\fR. In short, this is a thread-safe version of:
+.RS
+.PP
+*\fIoperand\fR += \fIincr\fR;
+.RE
+.PP
+This function uses architecture-specific assembly to achieve this, but on
+unrecognized hardware will fall back to using \fBqthread_lock\fR() and
+\fBqthread_unlock\fR() to be thread-safe. Ordinarily, however, it does not use
+any of the available address locking mechanisms. The exception is 32-bit
+PowerPC, which has 64-bit doubles but does not have a 64-bit atomic
+load-and-reserve-word instruction. On this architecture we're forced to use
+\fBqthread_lock\fR() and \fBqthread_unlock\fR().
+.SH RETURN VALUE
+This function will return the value of the counter after the increment was
+performed.
