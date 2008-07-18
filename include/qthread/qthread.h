@@ -447,7 +447,7 @@ static inline float qthread_fincr(volatile float * operand, const float incr)
 		:"memory");
     } while (res.i != oldval.i); /* if res!=old, the calc is out of date */
     return res.f + incr;
-# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
     union {
 	float f;
 	uint32_t i;
