@@ -456,8 +456,9 @@ static inline float qthread_fincr(volatile float * operand, const float incr)
 	oldval.f = *operand;
 	newval.f = oldval.f + incr;
 	__asm__ __volatile__ ("lock; cmpxchg %1, %2"
-		:"=a"(retval.i) /* load into EAX */
-		:"r"(newval.i), "m"(*(uint64_t*)operand), "0"(oldval.i)
+		:"=a"(retval.i) /* store into EAX */
+		:"r"(newval.i), "m"(*(uint64_t*)operand),
+		    "0"(oldval.i) /* load into EAX */
 		:"cc","memory");
     } while (retval.i != oldval.i);
     return newval.f;
