@@ -432,6 +432,21 @@ static inline float qthread_fincr(volatile float * operand, const float incr)
 			      : "cc", "memory");
     } while (oldval.i != newval.i);
     return oldval.f + incr;
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
+    union {
+	float f;
+	uint32_t i;
+    } oldval, newval, res;
+    do {
+	oldval.f = *operand;
+	newval.f = oldval.f + incr;
+	__asm__ __volatile__ ("mov ar.ccv=%0;;": :"rO" (oldval.i));
+	__asm__ __volatile__ ("cmpxchg4.acq %0=[%1],%2,ar.ccv"
+		:"=r" (res.i)
+		:"r"(operand), "r"(newval.i)
+		:"memory");
+    } while (res.i != oldval.i); /* if res!=old, the calc is out of date */
+    return res.d+incr;
 # endif
 #elif defined (QTHREAD_MUTEX_INCREMENT)
 
