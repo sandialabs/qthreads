@@ -466,7 +466,7 @@ static inline float qthread_fincr(volatile float * operand, const float incr)
 #elif defined (QTHREAD_MUTEX_INCREMENT)
 
     float retval;
-    qthread_t me = qthread_self();
+    qthread_t *me = qthread_self();
     qthread_lock(me, (void*)operand);
     retval = *operand += incr;
     qthread_unlock(me, (void*)operand);
@@ -616,9 +616,10 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
 #elif defined (QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
 
     double retval;
-    qthread_lock(qthread_self(), (void*)operand);
+    qthread_t *me = qthread_self();
+    qthread_lock(me, (void*)operand);
     retval = *operand += incr;
-    qthread_unlock(qthread_self(), (void*)operand);
+    qthread_unlock(me, (void*)operand);
     return retval;
 #else
 #error "Neither atomic nor mutex increment enabled; needed for qthread_dincr"
