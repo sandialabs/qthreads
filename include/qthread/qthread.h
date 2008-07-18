@@ -78,7 +78,7 @@ typedef aligned_t(*qthread_f) (qthread_t * me, void *arg);
  * qthreads. The argument to this function specifies the number of pthreads
  * that will be spawned to shepherd the qthreads. */
 #ifdef SST
-#define qthread_init(x) PIM_quickPrint(0xbeefee,x,PIM_readSpecial(PIM_CMD_LOC_COUNT))
+#define qthread_init(x) PIM_quickPrint(0x5ca1ab1e,x,PIM_readSpecial(PIM_CMD_LOC_COUNT))
 #else
 int qthread_init(const qthread_shepherd_id_t nshepherds);
 #endif
@@ -381,6 +381,71 @@ int qthread_lock(qthread_t * me, const void *a);
 int qthread_unlock(qthread_t * me, const void *a);
 #endif
 
+/* the following three functions implement variations on atomic increment. It
+ * is done with architecture-specific assembly (on supported architectures,
+ * when possible) and does NOT use FEB's or lock/unlock unless the architecture
+ * is unsupported or cannot perform atomic operations at the right granularity.
+ * All of these functions return the value of the contents of the operand
+ * *after* incrementing.
+ */
+
+static inline float qthread_fincr(volatile float * operand, const float incr)
+{
+#if defined(HAVE_GCC_INLINE_ASSEMBLY)
+# if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
+    union {
+	float f;
+	uint32_t i;
+    } retval;
+    register float incrd = incrd;
+    uint32_t scratch;
+    __asm__ __volatile__ ("1:\n\t"
+	    "lwarx  %0,0,%1\n\t"
+	    // convert from int to float
+	    "stw    %0,%4\n\t"
+	    "lfs    %3,%4\n\t"
+	    // do the addition
+	    "fadds  %3,%3,%2\n\t"
+	    // convert from float to int
+	    "stfs   %3,%4\n\t"
+	    "lwz    %0,%4\n\t"
+	    // store back to original location
+	    "stwcx. %0,0,%1\n\t"
+	    "bne-   1b\n\t"
+	    "isync"
+	    :"=&b" (retval.i)
+	    :"r" (operand), "f"(incr), "f"(incrd), "m"(scratch)
+	    :"cc","memory");
+    return retval.f;
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
+    union {
+	float f;
+	uint32_t i;
+    } oldval, newval;
+    newval.f = *operand;
+    do {
+	oldval = newval;
+	oldval.d = oldval.d + incr;
+	__asm__ __volatile__ ("cas [%1], %2, %0"
+			      : "+r" (newval.i)
+			      : "r" (operand), "r"(oldval.i)
+			      : "cc", "memory");
+    } while (oldval.i != newval.i);
+    return oldval.d + incr;
+# endif
+#elif defined (QTHREAD_MUTEX_INCREMENT)
+
+    float retval;
+    qthread_t me = qthread_self();
+    qthread_lock(me, (void*)operand);
+    retval = *operand += incr;
+    qthread_unlock(me, (void*)operand);
+    return retval;
+#else
+#error "Neither atomic nor mutex increment enabled; needed for qthread_fincr"
+#endif
+}
+
 static inline double qthread_dincr(volatile double * operand, const double incr)
 {/*{{{*/
 #if defined(HAVE_GCC_INLINE_ASSEMBLY) && (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
@@ -526,14 +591,10 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
     qthread_unlock(qthread_self(), (void*)operand);
     return retval;
 #else
-#error "Neither atomic nor mutex increment enabled"
+#error "Neither atomic nor mutex increment enabled; needed for qthread_dincr"
 #endif
 }/*}}}*/
 
-/* this implements an atomic increment. It is done with architecture-specific
- * assembly and does NOT use FEB's or lock/unlock (except in the slow fallback
- * for unrecognized architectures)... but usually that's not the issue.
- * It returns the value of the contents of operand after incrementing. */
 #ifdef SST
 static inline aligned_t qthread_incr(volatile aligned_t * operand, const int incr)
 {
