@@ -2,17 +2,17 @@
 #include <assert.h>
 #include <qthread/qthread.h>
 
-float master = 0.0;
+volatile float master[3] = {0};
 
 aligned_t incr(qthread_t * me, void *arg)
 {
-    qthread_fincr(&master, 1.0);
+    qthread_fincr(master+1, 1.0);
     return 0;
 }
 
 aligned_t incr5(qthread_t * me, void *arg)
 {
-    qthread_fincr(&master, 5.0);
+    qthread_fincr(master+1, 5.0);
     return 0;
 }
 
@@ -24,31 +24,33 @@ int main()
 
     qthread_init(7);
 
-    ret_test = qthread_fincr(&master, 1);
-    assert(master == 1.0);
+    ret_test = qthread_fincr(master+1, 1);
+    assert(master[1] == 1.0);
     assert(ret_test == 1.0);
-    master = 0;
+    master[1] = 0;
     for (i = 0; i < 30; i++) {
 	qthread_fork(incr, NULL, &(rets[i]));
     }
     for (i = 0; i < 30; i++) {
 	qthread_readFF(NULL, NULL, rets + i);
     }
-    if (master != 30.0) {
-	printf("master is %f rather than 30\n", master);
+    if (master[1] != 30.0) {
+	printf("master is %f rather than 30\n", master[1]);
+	printf("master[0]:%f master[1]:%f master[2]:%f\n", master[0], master[1], master[2]);
     }
-    assert(master == 30.0);
-    master = 0.0;
+    assert(master[1] == 30.0);
+    master[1] = 0.0;
     for (i = 0; i < 30; i++) {
 	qthread_fork(incr5, NULL, &(rets[i]));
     }
     for (i = 0; i < 30; i++) {
 	qthread_readFF(NULL, NULL, rets + i);
     }
-    if (master != 150.0) {
-	printf("master is %f rather than 150\n", master);
+    if (master[1] != 150.0) {
+	printf("master is %f rather than 150\n", master[1]);
+	printf("master[0]:%f master[1]:%f master[2]:%f\n", master[0], master[1], master[2]);
     }
-    assert(master == 150.0);
+    assert(master[1] == 150.0);
 
     qthread_finalize();
 
