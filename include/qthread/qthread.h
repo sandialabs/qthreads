@@ -388,6 +388,7 @@ int qthread_unlock(qthread_t * me, const void *a);
  * All of these functions return the value of the contents of the operand
  * *after* incrementing.
  */
+#include <stdio.h>
 
 static inline float qthread_fincr(volatile float * operand, const float incr)
 {
@@ -400,21 +401,21 @@ static inline float qthread_fincr(volatile float * operand, const float incr)
     register float incrd = incrd;
     uint32_t scratch;
     __asm__ __volatile__ ("1:\n\t"
-	    "lwarx  %0,0,%1\n\t"
+	    "lwarx  %0,0,%3\n\t"
 	    // convert from int to float
-	    "stw    %0,%4\n\t"
-	    "lfs    %3,%4\n\t"
+	    "stw    %0,%2\n\t"
+	    "lfs    %1,%2\n\t"
 	    // do the addition
-	    "fadds  %3,%3,%2\n\t"
+	    "fadds  %1,%1,%4\n\t"
 	    // convert from float to int
-	    "stfs   %3,%4\n\t"
-	    "lwz    %0,%4\n\t"
+	    "stfs   %1,%2\n\t"
+	    "lwz    %0,%2\n\t"
 	    // store back to original location
-	    "stwcx. %0,0,%1\n\t"
+	    "stwcx. %0,0,%3\n\t"
 	    "bne-   1b\n\t"
 	    "isync"
-	    :"=&b" (retval.i)
-	    :"r" (operand), "f"(incr), "f"(incrd), "m"(scratch)
+	    :"=&b" (retval.i), "=f"(incrd), "=m"(scratch)
+	    :"r" (operand), "f"(incr)
 	    :"cc","memory");
     return retval.f;
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
