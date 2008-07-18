@@ -425,13 +425,13 @@ static inline float qthread_fincr(volatile float * operand, const float incr)
     newval.f = *operand;
     do {
 	oldval = newval;
-	oldval.d = oldval.d + incr;
+	newval.f = oldval.f + incr;
 	__asm__ __volatile__ ("cas [%1], %2, %0"
 			      : "+r" (newval.i)
 			      : "r" (operand), "r"(oldval.i)
 			      : "cc", "memory");
     } while (oldval.i != newval.i);
-    return oldval.d + incr;
+    return oldval.f + incr;
 # endif
 #elif defined (QTHREAD_MUTEX_INCREMENT)
 
