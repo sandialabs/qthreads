@@ -446,7 +446,7 @@ static inline float qthread_fincr(volatile float * operand, const float incr)
 		:"r"(operand), "r"(newval.i)
 		:"memory");
     } while (res.i != oldval.i); /* if res!=old, the calc is out of date */
-    return res.d+incr;
+    return res.f + incr;
 # endif
 #elif defined (QTHREAD_MUTEX_INCREMENT)
 
