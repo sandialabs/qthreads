@@ -456,11 +456,11 @@ static inline float qthread_fincr(volatile float * operand, const float incr)
 	oldval.f = *operand;
 	newval.f = oldval.f + incr;
 	__asm__ __volatile__ ("lock; cmpxchg %1, %2"
-		:"=a"(retval.i)
+		:"=a"(retval.i) /* load into EAX */
 		:"r"(newval.i), "m"(*(uint64_t*)operand), "0"(oldval.i)
-		:"memory");
+		:"cc","memory");
     } while (retval.i != oldval.i);
-    return retval.d;
+    return newval.f;
 # endif
 #elif defined (QTHREAD_MUTEX_INCREMENT)
 
@@ -547,7 +547,7 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
 		:"r"(newval.i), "m"(*(uint64_t*)operand), "0"(oldval.i)
 		:"memory");
     } while (retval.i != oldval.i);
-    return retval.d;
+    return newval.d;
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
     union {
