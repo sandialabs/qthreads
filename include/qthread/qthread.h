@@ -388,7 +388,6 @@ int qthread_unlock(qthread_t * me, const void *a);
  * All of these functions return the value of the contents of the operand
  * *after* incrementing.
  */
-#include <stdio.h>
 
 static inline float qthread_fincr(volatile float * operand, const float incr)
 {
