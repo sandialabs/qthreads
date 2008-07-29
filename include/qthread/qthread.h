@@ -390,7 +390,7 @@ int qthread_unlock(qthread_t * me, const void *a);
  */
 
 static inline float qthread_fincr(volatile float * operand, const float incr)
-{
+{/*{{{*/
 #if defined(HAVE_GCC_INLINE_ASSEMBLY)
 # if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
     union {
@@ -474,7 +474,7 @@ static inline float qthread_fincr(volatile float * operand, const float incr)
 #else
 #error "Neither atomic nor mutex increment enabled; needed for qthread_fincr"
 #endif
-}
+}/*}}}*/
 
 static inline double qthread_dincr(volatile double * operand, const double incr)
 {/*{{{*/
