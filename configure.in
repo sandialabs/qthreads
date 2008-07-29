@@ -233,7 +233,10 @@ AC_CACHE_CHECK([if $CC understands -fno-gcse],
                       [qthread_cv_cc_fno_gcse=yes],
                       [qthread_cv_cc_fno_gcse=no])
     CFLAGS="${CFLAGS_save}"])
-AS_IF([test "$qthread_cv_cc_fno_gcse" = "yes"], [CFLAGS="${CFLAGS} -fno-gcse"])
+GCSE_CFLAGS=""
+AS_IF([test "$qthread_cv_cc_fno_gcse" = "yes"],
+	  [GCSE_CFLAGS="-fno-gcse"])
+AC_SUBST([GCSE_CFLAGS])
 
 AC_C_CONST
 AC_C_INLINE
