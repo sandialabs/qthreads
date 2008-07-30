@@ -29,6 +29,7 @@ void qt_loop(const size_t start, const size_t stop, const size_t stride,
     for (i = 0; i < threadct; i++) {
 	qthread_readFF(me, NULL, rets + i);
     }
+    free(rets);
 }
 
 /* So, the idea here is that this is a (braindead) C version of Megan's
@@ -54,6 +55,7 @@ void qt_loop_future(const size_t start, const size_t stop,
     for (i = 0; i < threadct; i++) {
 	qthread_readFF(me, NULL, rets + i);
     }
+    free(rets);
 }
 
 /* So, the idea here is that this is a C version of Megan's mt_loop (note: not
@@ -121,6 +123,8 @@ static inline void qt_loop_balance_inner(const size_t start,
     for (i = 0; donecount < qthread_shepherd_count(); i++) {
 	qthread_readFF(me, NULL, rets + i);
     }
+    free(qwa);
+    free(rets);
 }
 void qt_loop_balance(const size_t start, const size_t stop,
 		     const qt_loop_f func, void *argptr)
@@ -198,6 +202,9 @@ static inline void qt_loopaccum_balance_inner(const size_t start,
 	    acc(out, realrets + ((i - 1) * size));
 	}
     }
+    free(rets);
+    free(realrets);
+    free(qwa);
 }
 void qt_loopaccum_balance(const size_t start, const size_t stop,
 			  const size_t size, void *restrict out,
