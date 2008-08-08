@@ -107,10 +107,27 @@ AS_IF([test "$enable_thread_count" = "yes"],
 
 AC_ARG_ENABLE([shepherd-profiling],
   [AS_HELP_STRING([--enable-shepherd-profiling],
-     [counts the amount of time that each shepherd spends idle; based on gettimeofday, so it's vulnerable to interference])],
+     [counts the amount of wall-clock time that each shepherd spends idle])],
   [], [enable_shepherd_profiling="no"])
 AS_IF([test "$enable_shepherd_profiling" = "yes"],
-      [AC_DEFINE([QTHREAD_SHEPHERD_PROFILING], [1], [adds code to monitor how much time shepherds spend idle])])
+      [AC_DEFINE([QTHREAD_SHEPHERD_PROFILING], [1], [adds code to monitor how much time shepherds spend idle])
+	  need_qtimer=yes])
+
+AC_ARG_ENABLE([lock-profiling],
+  [AS_HELP_STRING([--enable-lock-profiling],
+	 [counts the amount of wall-clock time that is spent aquiring locks])],
+  [], [enable_lock_profiling="no"])
+AS_IF([test "$enable_lock_profiling" = "yes"],
+	  [AC_DEFINE([QTHREAD_LOCK_PROFILING], [1], [adds code to monitor how much time is spent aquiring locks])
+	  need_qtimer=yes])
+
+AC_ARG_ENABLE([timer-progs],
+  [AS_HELP_STRING([--enable-timer-progs],
+     [enables a few test programs that report some system-specific statistics (context-swap time, etc.)])],
+  [], [enable_timer_progs="no"])
+AS_IF([test "$enable_timer_progs" = "yes"],
+	  [need_qtimer=yes])
+AM_CONDITIONAL([ENABLE_TIMER_PROGS], [test "$enable_timer_progs" = "yes"])
 
 AC_ARG_ENABLE([asserts],
   [AS_HELP_STRING([--enable-asserts], [adds sanity checks to most qthread functions])],
@@ -305,7 +322,7 @@ AS_IF([test "$qthread_implementation" = "unix"], [
 ])
 AM_CONDITIONAL([QTHREAD_NEED_OSX_MAKECONTEXT], [test "$qthread_makecontext_type" = "osx"])
 
-AS_IF([test "$enable_shepherd_profiling" = "yes"],
+AS_IF([test "$need_qtimer" = "yes"],
 	  [# Which timer do we want to use
 	   qthread_timer_type=gettimeofday
 	   AS_IF([test "$qthread_timer_type" = "gettimeofday"],
