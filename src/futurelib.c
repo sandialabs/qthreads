@@ -157,17 +157,14 @@ void future_fork(qthread_f fptr, void *arg, aligned_t * retval)
 
     DBprintf("Thread %p forking a future\n", (void*)me);
     /* step 1: future out where to go (fast) */
+    /* XXX: should merge with qthread.c to use qthread_internal_incr_mod */
     if (ptr) {
 	rr = ptr->sched_shep++;
-	if (ptr->sched_shep == qlib->nshepherds) {
-	    ptr->sched_shep = 0;
-	}
+	ptr->sched_shep *= (ptr->sched_shep < qlib->nshepherds);
     } else {
 	qassert(pthread_mutex_lock(&sfnf_lock), 0);
 	rr = shep_for_new_futures++;
-	if (shep_for_new_futures == qlib->nshepherds) {
-	    shep_for_new_futures = 0;
-	}
+	shep_for_new_futures *= (shep_for_new_futures < qlib->nshepherds);
 	qassert(pthread_mutex_unlock(&sfnf_lock), 0);
     }
     DBprintf("Thread %p decided future will go to %i\n", (void*)me, rr);
