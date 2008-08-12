@@ -670,6 +670,7 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
       ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) && !defined(QTHREAD_64_BIT_ALIGN_T))
 
     register uint32_t oldval, newval;
+    /* newval = *operand; */
     do {
 	/* you *should* be able to move the *operand reference outside the
 	 * loop and use the output of the CAS (namely, newval) instead.
@@ -693,6 +694,7 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
 
     register aligned_t oldval, newval;
+    /* newval = *operand; */
     do {
 	/* you *should* be able to move the *operand reference outside the
 	 * loop and use the output of the CAS (namely, newval) instead.
