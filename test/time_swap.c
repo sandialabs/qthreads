@@ -83,10 +83,11 @@ int main()
 	total_single_time += qtimer_secs(timer);
     }
 
-    printf("  Total in-out time: %g secs\n", total_inout_time);
-    printf("Average in-out time: %g secs\n", total_inout_time/ITERATIONS);
-    printf("  Total single time: %g secs\n", total_single_time);
-    printf("Average single time: %g secs\n", total_single_time/(ITERATIONS*2));
+    printf("Testing swap time (average over %lu iterations)\n", (unsigned long int)ITERATIONS);
+    printf("\t  Total in-out time: %g secs\n", total_inout_time);
+    printf("\tAverage in-out time: %g secs\n", total_inout_time/ITERATIONS);
+    printf("\t  Total single time: %g secs\n", total_single_time);
+    printf("\tAverage single time: %g secs\n", total_single_time/(ITERATIONS*2));
 
     qtimer_free(timer);
     return 0;
