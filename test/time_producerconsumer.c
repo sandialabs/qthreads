@@ -142,7 +142,7 @@ int main(int argc, char *argv[])
     double rate;
 
     /* setup */
-    qthread_init(3);
+    qthread_init(16);
     qthread_empty(NULL, &FEBbuffer);
     qthread_empty(NULL, FEBtable);
     qthread_empty(NULL, FEBtable + 1);
@@ -242,6 +242,7 @@ int main(int argc, char *argv[])
 	}
     }
     qtimer_stop(timer);
+    assert(incrementme == ITERATIONS*16);
 
     printf("competing increment loop: %13g secs\n", qtimer_secs(timer));
     printf(" + average increment time: %12g secs\n",
