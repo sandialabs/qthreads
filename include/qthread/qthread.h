@@ -670,15 +670,22 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
       ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) && !defined(QTHREAD_64_BIT_ALIGN_T))
 
     register uint32_t oldval, newval;
-    newval = *operand;
     do {
-        oldval = newval;
+	/* you *should* be able to move the *operand reference outside the
+	 * loop and use the output of the CAS (namely, newval) instead.
+	 * However, there seems to be a bug in gcc 4.0.4 wherein, if you do
+	 * that, the while() comparison uses a temporary register value for
+	 * newval that has nothing to do with the output of the CAS
+	 * instruction. (See how obviously wrong that is?) For some reason that
+	 * I haven't been able to figure out, moving the *operand reference
+	 * inside the loop fixes that problem, even at -O2 optimization. */
+	oldval = *operand;
         newval = oldval + incr;
 	/* newval always gets the value of *operand; if it's
 	 * the same as oldval, then the swap was successful */
         __asm__ __volatile__ ("cas [%1] , %2, %0"
-                              : "+r" (newval)
-                              : "r" (operand), "r"(oldval)
+                              : "=&r" (newval)
+                              : "r" (operand), "r"(oldval), "0"(newval)
                               : "cc", "memory");
     } while (oldval != newval);
     retval = oldval + incr;
@@ -686,15 +693,22 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
 
     register aligned_t oldval, newval;
-    newval = *operand;
     do {
-        oldval = newval;
+	/* you *should* be able to move the *operand reference outside the
+	 * loop and use the output of the CAS (namely, newval) instead.
+	 * However, there seems to be a bug in gcc 4.0.4 wherein, if you do
+	 * that, the while() comparison uses a temporary register value for
+	 * newval that has nothing to do with the output of the CAS
+	 * instruction. (See how obviously wrong that is?) For some reason that
+	 * I haven't been able to figure out, moving the *operand reference
+	 * inside the loop fixes that problem, even at -O2 optimization. */
+	oldval = *operand;
         newval = oldval + incr;
 	/* newval always gets the value of *operand; if it's
 	 * the same as oldval, then the swap was successful */
         __asm__ __volatile__ ("casx [%1] , %2, %0"
-                              : "+r" (newval)
-                              : "r" (operand), "r"(oldval)
+                              : "=&r" (newval)
+                              : "r" (operand), "r"(oldval), "0"(newval)
                               : "cc", "memory");
     } while (oldval != newval);
     retval = oldval + incr;
