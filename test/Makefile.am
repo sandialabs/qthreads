@@ -61,8 +61,8 @@ testid_DEPENDENCIES = $(QTHREADLIB)
 
 time_swap_SOURCES = time_swap.c
 time_swap_CPPFLAGS = -I$(top_srcdir)/src/
-time_swap_LDADD = $(QTIMERLIB) $(CONTEXTLIB)
-time_swap_DEPENDENCIES = $(QTIMERLIB) $(CONTEXTLIB)
+time_swap_LDADD = $(QTIMERLIB)
+time_swap_DEPENDENCIES = $(QTIMERLIB)
 if QTHREAD_NEED_OSX_MAKECONTEXT
 time_swap_LDADD += $(CONTEXTLIB)
 time_swap_DEPENDENCIES += $(CONTEXTLIB)
