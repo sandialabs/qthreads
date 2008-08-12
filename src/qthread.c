@@ -657,7 +657,7 @@ static inline int qthread_unique_collect(void *key, void *value, void *id)
 #else
 # define QTHREAD_WAIT_TIMER_DECLARATION
 # define QTHREAD_WAIT_TIMER_START() do{ }while(0)
-# define QTHREAD_WAIT_TIMER_STOP(ME) do{ }while(0)
+# define QTHREAD_WAIT_TIMER_STOP(ME, TYPE) do{ }while(0)
 # define QTHREAD_LOCK_TIMER_DECLARATION(TYPE)
 # define QTHREAD_LOCK_TIMER_START(TYPE) do{ }while(0)
 # define QTHREAD_LOCK_TIMER_STOP(TYPE, ME) do{ }while(0)
