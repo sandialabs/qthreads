@@ -10,7 +10,7 @@ aligned_t FEBbuffer[MAXPARALLELISM] = { 0 };
 aligned_t FEBtable[MAXPARALLELISM][2] = { { 0 } };
 
 qtimer_t sending[MAXPARALLELISM][2];
-double total_sending_time[MAXPARALLELISM] = { 0.0 };
+double total_sending_time[MAXPARALLELISM];
 double total_roundtrip_time[MAXPARALLELISM] = { 0.0 };
 double total_p1_sending_time[MAXPARALLELISM] = { 0.0 };
 double total_p2_sending_time[MAXPARALLELISM] = { 0.0 };
@@ -136,6 +136,8 @@ char *human_readable_rate(double rate)
 	snprintf(readable_string, 100, "(%'.1f MB/s)", rate / MB);
     } else if (rate > kB) {
 	snprintf(readable_string, 100, "(%'.1f kB/s)", rate / kB);
+    } else {
+	memset(readable_string, 0, 100*sizeof(char));
     }
     return readable_string;
 }
@@ -186,6 +188,8 @@ int main(int argc, char *argv[])
     printf("\t = throughput: %29g bytes/sec %s\n", rate,
 	   human_readable_rate(rate));
 
+    memset(total_sending_time, 0, sizeof(double)*MAXPARALLELISM);
+
     /* FEB PRODUCER/CONSUMER LOOP */
     qtimer_start(timer);
     qthread_fork(FEB_consumerloop, NULL, rets);
@@ -204,6 +208,8 @@ int main(int argc, char *argv[])
     rate = (ITERATIONS * sizeof(aligned_t)) / total_sending_time[0];
     printf("\t = data throughput: %24g bytes/sec %s\n", rate,
 	   human_readable_rate(rate));
+
+    memset(total_sending_time, 0, sizeof(double)*MAXPARALLELISM);
 
     /* PARALLEL FEB PRODUCER/CONSUMER LOOPS */
     qtimer_start(timer);
@@ -232,6 +238,10 @@ int main(int argc, char *argv[])
     rate = (ITERATIONS*MAXPARALLELISM * sizeof(aligned_t)) / qtimer_secs(timer);
     printf("\t = data throughput: %24g bytes/sec %s\n", rate,
 	   human_readable_rate(rate));
+
+    memset(total_p1_sending_time, 0, sizeof(double)*MAXPARALLELISM);
+    memset(total_p2_sending_time, 0, sizeof(double)*MAXPARALLELISM);
+    memset(total_roundtrip_time, 0, sizeof(double)*MAXPARALLELISM);
 
     /* FEB PING-PONG LOOP */
     qtimer_start(timer);
@@ -274,6 +284,10 @@ int main(int argc, char *argv[])
 						total_p2_sending_time[0]);
     printf("\t = data hop throughput: %20g bytes/sec %s\n", rate,
 	   human_readable_rate(rate));
+
+    memset(total_p1_sending_time, 0, sizeof(double)*MAXPARALLELISM);
+    memset(total_p2_sending_time, 0, sizeof(double)*MAXPARALLELISM);
+    memset(total_roundtrip_time, 0, sizeof(double)*MAXPARALLELISM);
 
     /* PARALLEL FEB PING-PONG LOOP */
     qtimer_start(timer);
