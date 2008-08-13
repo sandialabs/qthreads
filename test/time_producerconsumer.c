@@ -339,7 +339,7 @@ int main(int argc, char *argv[])
     qtimer_stop(timer);
     assert(incrementme == ITERATIONS*MAXPARALLELISM);
 
-    printf("\tcompeting increment loop: %18g secs\n", qtimer_secs(timer));
+    printf("\tCompeting increment loop: %18g secs (%u-way %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, ITERATIONS);
     printf("\t + average increment time: %17g secs\n",
 	   qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
     printf("\t + increment speed: %'24f increments/sec\n",
