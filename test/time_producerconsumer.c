@@ -1,4 +1,5 @@
 #include <stdio.h>		       /* for printf() */
+#include <stdlib.h> /* for strtol() */
 #include <assert.h>		       /* for assert() */
 #include <qthread/qthread.h>
 #include "qtimer/qtimer.h"
@@ -148,9 +149,16 @@ int main(int argc, char *argv[])
     double rate;
     unsigned int i;
     aligned_t rets[MAXPARALLELISM];
+    int shepherds;
+
+    if (argc != 2) {
+	shepherds = 64;
+    } else {
+	shepherds = strtol(argv[1], NULL, 0);
+    }
 
     /* setup */
-    qthread_init(64);
+    qthread_init(shepherds);
     for (i=0;i<MAXPARALLELISM;i++) {
 	qthread_empty(NULL, FEBbuffer+i);
 	sending[i][0] = qtimer_new();
