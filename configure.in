@@ -31,11 +31,6 @@ AC_SUBST(CLEANFILES)
 ## -------------------------- ##
 AC_CANONICAL_HOST
 
-AC_ARG_ENABLE([xeon],
-  [AS_HELP_STRING([--enable-xeon],
-     [enable Xeon-specific optimizations (since Xeons do not have the 486 #defines)])],
-  [AC_DEFINE([QTHREAD_XEON], [1], [Build assuming a Xeon CPU])])
-
 dnl Logic for this argument happens in system services section
 AC_ARG_ENABLE([setrlimit],
   [AS_HELP_STRING([--disable-setrlimit],
@@ -310,6 +305,7 @@ AS_IF([test "$qthread_implementation" = "unix"], [
   esac
   AS_IF([test "$ac_cv_func_getcontext" = "yes"], [
     AC_DEFINE([HAVE_NATIVE_MAKECONTEXT], [1], [The system provides native (proper) make/swap/get-contect functions])
+    QTHREAD_CHECK_UCSTACK_SSFLAGS([AC_DEFINE([QTHREAD_UCSTACK_HAS_SSFLAGS],[1],[the uc_stack structure in ucontext_t has an ss_flags structure that needs to be initialized])])
     QTHREAD_CHECK_MAKECONTEXT_SPLIT_ARGS(
       [AC_DEFINE([QTHREAD_MAKECONTEXT_SPLIT], [1], [makecontext() passes args as int-sized, not long-sized])])
     qthread_makecontext_type="native"

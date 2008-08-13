@@ -1530,6 +1530,9 @@ static inline void qthread_exec(qthread_t * t, ucontext_t * c)
 	t->context->uc_stack.ss_sp = (char *)(((qthread_t *) t)->stack) + 8;
 #endif
 	t->context->uc_stack.ss_size = qlib->qthread_stack_size - 64;
+#ifdef UCSTACK_HAS_SSFLAGS
+	t->context->uc_stack.ss_flags = 0;
+#endif
 #ifdef HAVE_NATIVE_MAKECONTEXT
 	/* the makecontext man page (Linux) says: set the uc_link FIRST
 	 * why? no idea */
