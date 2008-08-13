@@ -26,7 +26,7 @@ qtimer_stop(qtimer_t q)
 double
 qtimer_secs(qtimer_t q)
 {
-    return ((double)(q->stop - q->start)) * 10e-9;
+    return ((double)(q->stop - q->start)) * 1e-9;
 }
 
 qtimer_t
