@@ -4,7 +4,7 @@
 #include "qtimer/qtimer.h"
 
 #define ITERATIONS 1000000
-#define MAXPARALLELISM 64
+#define MAXPARALLELISM 256
 
 aligned_t FEBbuffer[MAXPARALLELISM] = { 0 };
 aligned_t FEBtable[MAXPARALLELISM][2] = { { 0 } };
@@ -39,7 +39,7 @@ aligned_t FEB_producer(qthread_t * me, void *arg)
 
 aligned_t FEB_producerloop(qthread_t * me, void *arg)
 {
-    unsigned int offset = (unsigned int) arg;
+    unsigned int offset = (unsigned int)(intptr_t) arg;
     aligned_t timer = 0;
     unsigned int i;
 
@@ -53,7 +53,7 @@ aligned_t FEB_producerloop(qthread_t * me, void *arg)
 
 aligned_t FEB_consumerloop(qthread_t * me, void *arg)
 {
-    unsigned int offset = (unsigned int) arg;
+    unsigned int offset = (unsigned int)(intptr_t) arg;
     aligned_t timer = 0;
     unsigned int i;
 
@@ -67,7 +67,7 @@ aligned_t FEB_consumerloop(qthread_t * me, void *arg)
 
 aligned_t FEB_player2(qthread_t * me, void *arg)
 {
-    unsigned int offset = (unsigned int) arg;
+    unsigned int offset = (unsigned int)(intptr_t) arg;
     aligned_t paddle = 0;
     unsigned int i;
 
@@ -85,7 +85,7 @@ aligned_t FEB_player2(qthread_t * me, void *arg)
 
 aligned_t FEB_player1(qthread_t * me, void *arg)
 {
-    unsigned int offset = (unsigned int) arg;
+    unsigned int offset = (unsigned int)(intptr_t) arg;
     aligned_t paddle = 1;
     unsigned int i;
     qtimer_t roundtrip_timer = qtimer_new();
@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
     aligned_t rets[MAXPARALLELISM];
 
     /* setup */
-    qthread_init(MAXPARALLELISM);
+    qthread_init(64);
     for (i=0;i<MAXPARALLELISM;i++) {
 	qthread_empty(NULL, FEBbuffer+i);
 	sending[i][0] = qtimer_new();
@@ -208,10 +208,10 @@ int main(int argc, char *argv[])
     /* PARALLEL FEB PRODUCER/CONSUMER LOOPS */
     qtimer_start(timer);
     for (i=0; i<MAXPARALLELISM; i++) {
-	qthread_fork(FEB_consumerloop, (void*)i, rets+i);
+	qthread_fork(FEB_consumerloop, (void*)(intptr_t)i, rets+i);
     }
     for (i=0; i<MAXPARALLELISM; i++) {
-	qthread_fork(FEB_producerloop, (void*)i, NULL);
+	qthread_fork(FEB_producerloop, (void*)(intptr_t)i, NULL);
     }
     for (i=0; i<MAXPARALLELISM; i++) {
 	qthread_readFF(NULL, NULL, rets+i);
@@ -278,10 +278,10 @@ int main(int argc, char *argv[])
     /* PARALLEL FEB PING-PONG LOOP */
     qtimer_start(timer);
     for (i=0; i<MAXPARALLELISM; i++) {
-	qthread_fork(FEB_player2, (void*)i, rets+i);
+	qthread_fork(FEB_player2, (void*)(intptr_t)i, rets+i);
     }
     for (i=0; i<MAXPARALLELISM; i++) {
-	qthread_fork(FEB_player1, (void*)i, NULL);
+	qthread_fork(FEB_player1, (void*)(intptr_t)i, NULL);
     }
     for (i=0; i<MAXPARALLELISM; i++) {
 	qthread_readFF(NULL, NULL, rets+i);
