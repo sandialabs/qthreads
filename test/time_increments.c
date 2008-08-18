@@ -59,7 +59,7 @@ aligned_t addloop_nocompete(qthread_t *me, void *arg)
     aligned_t *myinc = increments+offset;
 
     for (i = 0; i < ITERATIONS; i++) {
-	*myinc ++;
+	(*myinc) ++;
     }
     return *myinc;
 }
