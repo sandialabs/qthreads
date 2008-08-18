@@ -422,13 +422,21 @@ static inline float qthread_fincr(volatile float * operand, const float incr)
 	float f;
 	uint32_t i;
     } oldval, newval;
-    newval.f = *operand;
+    /* newval.f = *operand; */
     do {
-	oldval = newval;
+	/* you *should* be able to move the *operand reference outside the
+	 * loop and use the output of the CAS (namely, newval) instead.
+	 * However, there seems to be a bug in gcc 4.0.4 wherein, if you do
+	 * that, the while() comparison uses a temporary register value for
+	 * newval that has nothing to do with the output of the CAS
+	 * instruction. (See how obviously wrong that is?) For some reason that
+	 * I haven't been able to figure out, moving the *operand reference
+	 * inside the loop fixes that problem, even at -O2 optimization. */
+	oldval.f = *operand;
 	newval.f = oldval.f + incr;
 	__asm__ __volatile__ ("cas [%1], %2, %0"
 			      : "+r" (newval.i)
-			      : "r" (operand), "r"(oldval.i)
+			      : "r" (operand), "r"(oldval.i), "0" (newval.i)
 			      : "cc", "memory");
     } while (oldval.i != newval.i);
     return oldval.f + incr;
@@ -510,13 +518,21 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
 	uint64_t i;
 	double d;
     } oldval, newval;
-    newval.d = *operand;
+    /*newval.d = *operand;*/
     do {
-        oldval = newval;
+	/* you *should* be able to move the *operand reference outside the
+	 * loop and use the output of the CAS (namely, newval) instead.
+	 * However, there seems to be a bug in gcc 4.0.4 wherein, if you do
+	 * that, the while() comparison uses a temporary register value for
+	 * newval that has nothing to do with the output of the CAS
+	 * instruction. (See how obviously wrong that is?) For some reason that
+	 * I haven't been able to figure out, moving the *operand reference
+	 * inside the loop fixes that problem, even at -O2 optimization. */
+        oldval.d = *operand;
         newval.d = oldval.d + incr;
         __asm__ __volatile__ ("casx [%1], %2, %0"
                               : "+r" (newval.i)
-                              : "r" (operand), "r"(oldval.i)
+                              : "r" (operand), "r"(oldval.i), "0" (newval.i)
                               : "cc", "memory");
     } while (oldval.i != newval.i);
     return oldval.d + incr;
