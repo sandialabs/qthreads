@@ -733,12 +733,12 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
 
-# if !defined(QTHREAD_64_BIT_ALIGNED_T)
+# if !defined(QTHREAD_64_BIT_ALIGN_T)
     int32_t res;
 
     if (incr == 1) {
-	asm volatile ("fetchadd4.rel %0=%1,1":"=r" (res)
-		      :"m"     (*operand));
+	asm volatile ("fetchadd4.rel %0=[%1],1":"=r" (res)
+		      :"r"     (operand));
 
 	retval = res+1;
     } else {
