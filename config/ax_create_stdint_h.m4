@@ -117,15 +117,19 @@ AC_DEFUN([AX_CHECK_DATA_MODEL],[
                  ac_cv_data_model="iDSP"  ; n="unusual dsptype" ;;
      *)          ac_cv_data_model="none"  ; n="very unusual model" ;;
    esac
-   AC_MSG_RESULT([$ac_cv_data_model ($ac_cv_long_data_model, $n)])
+   AC_MSG_RESULT([$ac_cv_data_model ($ac_cv_char_data_model/$ac_cv_long_data_model, $n)])
+   AC_CACHE_SAVE
 ])
 
 dnl AX_CHECK_HEADER_STDINT_X([HEADERLIST][,ACTION-IF])
 AC_DEFUN([AX_CHECK_HEADER_STDINT_X],[
 AC_CACHE_CHECK([for stdint uintptr_t], [ac_cv_header_stdint_x],[
  ac_cv_header_stdint_x="" # the 1997 typedefs (inttypes.h)
+ ac_cv_availableheaders=""
+ AC_CHECK_HEADERS([stdint.h inttypes.h sys/inttypes.h sys/types.h],
+                  [ac_cv_availableheaders="$ac_cv_availableheaders $ac_header"])
   AC_MSG_RESULT([(..)])
-  for i in m4_ifval([$1],[$1],[stdint.h inttypes.h sys/inttypes.h sys/types.h])
+  for i in m4_ifval([$1],[$1],[$ac_cv_availableheaders])
   do
    unset ac_cv_type_uintptr_t
    unset ac_cv_type_uint64_t
@@ -134,14 +138,18 @@ AC_CACHE_CHECK([for stdint uintptr_t], [ac_cv_header_stdint_x],[
    m4_ifvaln([$2],[$2]) break
   done
   AC_MSG_CHECKING([for stdint uintptr_t])
+ unset ac_cv_availableheaders
  ])
 ])
 
 AC_DEFUN([AX_CHECK_HEADER_STDINT_O],[
 AC_CACHE_CHECK([for stdint uint32_t], [ac_cv_header_stdint_o],[
  ac_cv_header_stdint_o="" # the 1995 typedefs (sys/inttypes.h)
+ ac_cv_availableheaders=""
+ AC_CHECK_HEADERS([inttypes.h sys/inttypes.h sys/types.h stdint.h],
+                  [ac_cv_availableheaders="$ac_cv_availableheaders $ac_header"])
   AC_MSG_RESULT([(..)])
-  for i in m4_ifval([$1],[$1],[inttypes.h sys/inttypes.h sys/types.h stdint.h])
+  for i in m4_ifval([$1],[$1],[$ac_cv_availableheaders])
   do
    unset ac_cv_type_uint32_t
    unset ac_cv_type_uint64_t
@@ -151,14 +159,18 @@ AC_CACHE_CHECK([for stdint uint32_t], [ac_cv_header_stdint_o],[
    break;
   done
   AC_MSG_CHECKING([for stdint uint32_t])
+ unset ac_cv_availableheaders
  ])
 ])
 
 AC_DEFUN([AX_CHECK_HEADER_STDINT_U],[
 AC_CACHE_CHECK([for stdint u_int32_t], [ac_cv_header_stdint_u],[
  ac_cv_header_stdint_u="" # the BSD typedefs (sys/types.h)
+ ac_cv_availableheaders=""
+ AC_CHECK_HEADERS([sys/types.h inttypes.h sys/inttypes.h],
+                  [ac_cv_availableheaders="$ac_cv_availableheaders $ac_header"])
   AC_MSG_RESULT([(..)])
-  for i in m4_ifval([$1],[$1],[sys/types.h inttypes.h sys/inttypes.h]) ; do
+  for i in m4_ifval([$1],[$1],[$ac_cv_availableheaders]) ; do
    unset ac_cv_type_u_int32_t
    unset ac_cv_type_u_int64_t
    AC_CHECK_TYPE(u_int32_t,[ac_cv_header_stdint_u=$i],continue,[#include <$i>])
@@ -167,6 +179,7 @@ AC_CACHE_CHECK([for stdint u_int32_t], [ac_cv_header_stdint_u],[
    break;
   done
   AC_MSG_CHECKING([for stdint u_int32_t])
+ unset ac_cv_availableheaders
  ])
 ])
 
