@@ -22,19 +22,17 @@ AC_ARG_WITH([statlibs],
     [Same as --with-sst-std-libs, for backward compatibility])],
   [AS_IF([test -z "$with_sst_std_libs"], [with_sst_std_libs="$with_statlibs"])])
 
-if test "$with_sst" != "no" ; then
+AS_IF([test "$with_sst" != "no"],[
   CPPFLAG_SAVE="$CPPFLAGS"
-  if test "with_sst" != "yes" ; then
-    SST_INCLUDE="-I$with_sst/Struct_Simulator/serialProto/ -I$with_sst/Struct_Simulator/serialProto/ssFrontEnd/ -I$with_sst/Struct_Simulator/pimSrc/ppc/"
-  fi
+  AS_IF([test "with_sst" != "yes"],
+    [SST_INCLUDE="-I$with_sst/Struct_Simulator/serialProto/ -I$with_sst/Struct_Simulator/serialProto/ssFrontEnd/ -I$with_sst/Struct_Simulator/pimSrc/ppc/"])
 
   CPPFLAGS="$CPPFLAGS $SST_INCLUDE"
   AC_CHECK_HEADERS([ppcPimCalls.h pimSysCallDefs.h pimSysCallTypes.h], [],
     [AC_MSG_ERROR(["Is your SST setup complete and specified with --with-sst=<path_to_SST>?"])])
   CPPFLAGS="$CPPFLAGS"
-  if test ! -z "$with_sst_std_libs" ; then
-    SST_LIBS="-L$with_sst_std_libs -static -lc_static -lgcc_static -lstdc++"
-  fi
+  AS_IF([test ! -z "$with_sst_std_libs"],
+    [SST_LIBS="-L$with_sst_std_libs -static -lc_static -lgcc_static -lstdc++"])
   
   dnl this avoids the problems with __TEXT,pic* sections
   SST_CFLAGS="-fno-pic"
@@ -42,7 +40,7 @@ if test "$with_sst" != "no" ; then
   SST_INCLUDE="$SST_INCLUDE -D__LDBL_MANT_DIG__=53"
 
   AC_DEFINE([SST], [1], [Use SST to implement qthreads API])
-fi
+])
 
 AC_SUBST(SST_INCLUDE)
 AC_SUBST(SST_LIBS)
