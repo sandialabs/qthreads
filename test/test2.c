@@ -1,3 +1,6 @@
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -7,7 +10,9 @@ static int target;
 static aligned_t x = 0;
 static int id = 0;
 
-pthread_mutex_t alldone = PTHREAD_MUTEX_INITIALIZER;
+//pthread_mutex_t alldone = PTHREAD_MUTEX_INITIALIZER;
+
+static aligned_t alldone;
 
 aligned_t thread(qthread_t * t, void *arg)
 {
@@ -15,13 +20,13 @@ aligned_t thread(qthread_t * t, void *arg)
 
     //printf("thread(%p): me %i\n", (void*) t, me);
     int foo = qthread_stackleft(t);
-    //printf("%i bytes left\n", (int)qthread_stackleft(t));
+    //printf("%i bytes left\n", foo);
 
     assert(qthread_lock(t, &x) == 0);
     //printf("thread(%i): x=%d\n", me, x);
     x++;
     if (x == target)
-	pthread_mutex_unlock(&alldone);
+	qthread_unlock(t, &alldone);
     assert(qthread_unlock(t, &x) == 0);
     return 0;
 }
@@ -41,7 +46,7 @@ int main(int argc, char *argv[])
 
     assert(qthread_init(2) == 0);
 
-    pthread_mutex_lock(&alldone);
+    qthread_lock(qthread_self(), &alldone);
 
     for (i = 0; i < target; i++) {
 	int res = qthread_fork(thread, NULL, NULL);
@@ -51,7 +56,7 @@ int main(int argc, char *argv[])
 	assert(res == 0);
     }
 
-    pthread_mutex_lock(&alldone);
+    qthread_lock(qthread_self(), &alldone);
 
     qthread_finalize();
 

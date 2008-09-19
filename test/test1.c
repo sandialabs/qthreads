@@ -163,7 +163,7 @@ int main(int argc, char *argv[])
     qthread_init(3);
     future_init(128);
     qthread_fork(qmain, NULL, &ret);
-    qthread_readFF(NULL, NULL, &ret);
+    qthread_readFF(qthread_self(), NULL, &ret);
     qthread_finalize();
     return 0;
 }

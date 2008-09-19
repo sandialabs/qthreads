@@ -3,9 +3,9 @@
 # Copyright (c)      2008  Sandia Corporation
 #
 
-TESTS = test1 test2 test3 testq testloop \
+TESTS = test1 test2 test3 testq \
 		testincr testdincr testfincr \
-		testqloop testid
+		testqloop testid testloop
 
 if ENABLE_TIMER_PROGS
 TESTS += time_swap time_producerconsumer time_increments

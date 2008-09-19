@@ -29,7 +29,7 @@ int main()
     aligned_t ret;
     qthread_init(1);
     qthread_fork(thread, NULL, &ret);
-    qthread_readFF(NULL, NULL, &ret);
+    qthread_readFF(qthread_self(), NULL, &ret);
     qthread_finalize();
     return 0;
 }

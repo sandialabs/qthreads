@@ -21,8 +21,10 @@ int main()
     int i;
     aligned_t rets[30];
     double ret_test;
+    qthread_t *me;
 
     qthread_init(7);
+    me = qthread_self();
 
     ret_test = qthread_dincr(&master, 1);
     assert(master == 1.0);
@@ -32,7 +34,7 @@ int main()
 	qthread_fork(incr, NULL, &(rets[i]));
     }
     for (i = 0; i < 30; i++) {
-	qthread_readFF(NULL, NULL, rets + i);
+	qthread_readFF(me, NULL, rets + i);
     }
     if (master != 30.0) {
 	printf("master is %f rather than 30\n", master);
@@ -43,7 +45,7 @@ int main()
 	qthread_fork(incr5, NULL, &(rets[i]));
     }
     for (i = 0; i < 30; i++) {
-	qthread_readFF(NULL, NULL, rets + i);
+	qthread_readFF(me, NULL, rets + i);
     }
     if (master != 150.0) {
 	printf("master is %f rather than 150\n", master);

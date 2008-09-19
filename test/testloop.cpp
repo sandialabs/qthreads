@@ -7,37 +7,15 @@
 #define NUM_LOCS() 3
 #define FUTURE_PER_LOC() 128
 
-static pthread_mutex_t all_done = PTHREAD_MUTEX_INITIALIZER;
-
-struct main_args_s {
-  int argc;
-  char **argv;
-};
-
 void my_main();
 
-extern "C" aligned_t qmain(qthread_t *qthr, void *arg) {
-  main_args_s *a = (main_args_s*)arg;
-  int argc = a->argc;
-  char **argv = a->argv;
+int main (int argc, char **argv) {
+  aligned_t ret;
+  qthread_init(NUM_LOCS());
   future_init(FUTURE_PER_LOC());
 
   my_main();
 
-  pthread_mutex_unlock(&all_done);
-
-  return 0;
-}
-
-int main (int argc, char **argv) {
-  qthread_init(NUM_LOCS());
-  main_args_s a;
-  a.argc = argc;
-  a.argv = argv;
-  
-  pthread_mutex_lock(&all_done);
-  qthread_fork(qmain, &a, NULL);
-  pthread_mutex_lock(&all_done);
   qthread_finalize();
 }
 
