@@ -8,15 +8,14 @@
 .br
 \fBqthread_self\fR(void);
 .SH DESCRIPTION
-This function allows a qthread to retrieve its qthread_t pointer, usually if
-the pointer has been lost for some reason.
+This function allows a qthread to retrieve its qthread_t pointer.
 .PP
-This currently relies on \fBpthread_self\fR(), and so on some architectures may
-cause a context-switch into the kernel.
+This often relies on \fBpthread_getspecific\fR(), which may be slow. On some
+architectures may cause a context-switch into the kernel.
 .SH "RETURN VALUE"
 \fBqthread_self\fR() will return either a pointer to the qthread_t structure
-associated with the calling qthread, or if called from a non-qthread, will
-return NULL.
+associated with the calling qthread, or if called from a non-qthread (i.e. a
+pthread or before \fBqthread_init\fR() has been called), will return NULL.
 .SH "SEE ALSO"
 .BR qthread_id (3),
 .BR qthread_shep (3)

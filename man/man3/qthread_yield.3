@@ -8,14 +8,14 @@
 .br
 \fBqthread_yield\fR(qthread_t *\fIme\fR);
 .SH DESCRIPTION
-This function allows a qthread to specifically give up control of the processor
-(aka. "shepherd") even though it has not blocked. This is useful for things
-like busy-waits or cooperative multitasking. Without this function, threads
-will only ever allow other threads assigned to the same shepherd to execute
-when they block.
+This function allows a qthread to explicitly interrupt computation and give
+other qthreads the chance to execute even though it has not blocked. This can
+be useful for things like busy-waits or cooperative multitasking. Without using
+this function, there is no guarantee that other qthreads will have a chance to
+execute until the currently running qthread performs a synchronization
+operation.
 .PP
 The argument, \fIme\fR, should be a pointer to the qthread_t structure for the
-currently running qthread. If it has been lost, \fBqthread_self\fR() can be
-used to recover this pointer.
+currently running qthread, or NULL. If \fIme\fR is NULL, the qthread_t pointer will be looked up via \fBqthread_self\fR(). If this function is called from a non-qthread or before the \fBqthread_init\fR() has been run, it does nothing.
 .SH "SEE ALSO"
 .BR qthread_self (3)

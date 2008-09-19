@@ -8,7 +8,19 @@
 .br
 \fBqthread_shep\fR(qthread_t *\fIt\fR);
 .SH DESCRIPTION
-This function returns the shepherd identifier of the qthread \fIt\fR.
+This function returns the shepherd identifier of the qthread \fIt\fR. If \fIt\fR is NULL, the shepherd identifier is looked up using an internal mechanism; usually \fBpthread_getspecific\fR().
+.PP
+Note that
+.RS
+.PP
+\fBqthread_shep\fR(\fBNULL\fR)
+.RE
+.PP
+is slightly more efficient than
+.RS
+.PP
+\fBqthread_shep\fR(\fBqthread_self\fR())
+.RE
 .SH "RETURN VALUE"
 This function either returns the ID number of the shepherd of the calling function, or returns NO_SHEPHERD.
 .SH "SEE ALSO"

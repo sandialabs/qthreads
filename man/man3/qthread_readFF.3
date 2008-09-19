@@ -23,10 +23,8 @@ The semantics of readFF are:
 .PP
 This function takes a qthread_t pointer as an argument (\fIme\fR), which is
 supposed to point to the qthread_t relating to the currently executing qthread.
-If this is called from somewhere other than a qthread, use NULL for the
-\fIme\fR argument. If the qthread_t pointer has been lost, it can be reclaimed
-using \fBqthread_self\fR() (which, conveniently, returns NULL if run from a
-non-qthread).
+If \fIme\fR is NULL, the current qthread will be discovered using
+\fBqthread_self\fR().
 .SH WARNING
 This, and all other FEB-related functions currently operate exclusively on
 aligned data. This is to simulate the behavior of the MTA as closely as
