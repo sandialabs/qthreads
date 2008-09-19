@@ -20,7 +20,7 @@ int main()
 {
     int i;
     aligned_t rets[30];
-    aligned_t me;
+    qthread_t *me;
 
     qthread_init(7);
     me = qthread_self();
