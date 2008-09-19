@@ -83,7 +83,7 @@ struct qthread_s
     uint8_t thread_state;
     unsigned char flags;
 
-    /* the shepherd (pthread) we run on */
+    /* the shepherd we run on */
     qthread_shepherd_t *shepherd_ptr;
     /* the shepherd our memory comes from */
     qthread_shepherd_t *creator_ptr;
