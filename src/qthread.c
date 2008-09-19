@@ -1660,10 +1660,15 @@ static inline void qthread_exec(qthread_t * t, ucontext_t * c)
 /* this function yields thread t to the master kernel thread */
 void qthread_yield(qthread_t * t)
 {				       /*{{{ */
-    qthread_debug("qthread_yield(): thread %p yielding.\n", t);
-    t->thread_state = QTHREAD_STATE_YIELDED;
-    qthread_back_to_master(t);
-    qthread_debug("qthread_yield(): thread %p resumed.\n", t);
+    if (t == NULL) {
+	t = qthread_self();
+    }
+    if (t != NULL) {
+	qthread_debug("qthread_yield(): thread %p yielding.\n", t);
+	t->thread_state = QTHREAD_STATE_YIELDED;
+	qthread_back_to_master(t);
+	qthread_debug("qthread_yield(): thread %p resumed.\n", t);
+    }
 }				       /*}}} */
 
 /***********************************************
@@ -2040,9 +2045,6 @@ int qthread_empty(qthread_t * me, const void *dest)
     aligned_t *alignedaddr;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
 
-    if (me == NULL) {
-	me = qthread_self();
-    }
     ALIGN(dest, alignedaddr, "qthread_empty()");
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     cp_hashtable_wrlock(qlib->FEBs[lockbin]);
@@ -2051,7 +2053,7 @@ int qthread_empty(qthread_t * me, const void *dest)
 						    (void *)alignedaddr);
 	if (!m) {
 	    /* currently full, and must be added to the hash to empty */
-	    m = qthread_addrstat_new(me->shepherd_ptr);
+	    m = qthread_addrstat_new(me ? (me->shepherd_ptr) : pthread_getspecific(shepherd_structs));
 	    if (!m) {
 		cp_hashtable_unlock(qlib->FEBs[lockbin]);
 		return QTHREAD_MALLOC_ERROR;
