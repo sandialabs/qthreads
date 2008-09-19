@@ -101,7 +101,7 @@ GET:				/* xxx: instruction scheduling */
 	stw	r5, 6*4(r3)
 
 	stw	r13, (0+7)*4(r3)	/* callee-save GPRs */
-	stw	r14, (1+7)*4(r3)	/* xxx: block move */
+	stw	r14, (1+7)*4(r3)	/* not a block move b/c that could be slower */
 	stw	r15, (2+7)*4(r3)
 	stw	r16, (3+7)*4(r3)
 	stw	r17, (4+7)*4(r3)
@@ -120,13 +120,34 @@ GET:				/* xxx: instruction scheduling */
 	stw	r30, (17+7)*4(r3)
 	stw	r31, (18+7)*4(r3)
 
+	/* skip 4 bytes for pad... 19+7 = 26 */
+
+	stfd f14, (0)*8+(26*4)(r3)	/* callee-save FPRs */
+	stfd f15, (1)*8+(26*4)(r3)
+	stfd f16, (2)*8+(26*4)(r3)
+	stfd f17, (3)*8+(26*4)(r3)
+	stfd f18, (4)*8+(26*4)(r3)
+	stfd f19, (5)*8+(26*4)(r3)
+	stfd f20, (6)*8+(26*4)(r3)
+	stfd f21, (7)*8+(26*4)(r3)
+	stfd f22, (8)*8+(26*4)(r3)
+	stfd f23, (9)*8+(26*4)(r3)
+	stfd f24, (10)*8+(26*4)(r3)
+	stfd f25, (11)*8+(26*4)(r3)
+	stfd f26, (12)*8+(26*4)(r3)
+	stfd f27, (13)*8+(26*4)(r3)
+	stfd f28, (14)*8+(26*4)(r3)
+	stfd f29, (15)*8+(26*4)(r3)
+	stfd f30, (16)*8+(26*4)(r3)
+	stfd f31, (17)*8+(26*4)(r3)
+
 	li	r3, 0			/* return */
 	blr
 
 .globl SET
 SET:
 	lwz	r13, (0+7)*4(r3)	/* callee-save GPRs */
-	lwz	r14, (1+7)*4(r3)	/* xxx: block move */
+	lwz	r14, (1+7)*4(r3)	/* not a block move b/c that could be slower */
 	lwz	r15, (2+7)*4(r3)
 	lwz	r16, (3+7)*4(r3)
 	lwz	r17, (4+7)*4(r3)
@@ -145,6 +166,27 @@ SET:
 	lwz	r30, (17+7)*4(r3)
 	lwz	r31, (18+7)*4(r3)
 
+	/* skip 4 bytes for pad... 19+7 = 26 */
+
+	lfd f14, (0)*8+(26*4)(r3)	/* callee-save FPRs */
+	lfd f15, (1)*8+(26*4)(r3)
+	lfd f16, (2)*8+(26*4)(r3)
+	lfd f17, (3)*8+(26*4)(r3)
+	lfd f18, (4)*8+(26*4)(r3)
+	lfd f19, (5)*8+(26*4)(r3)
+	lfd f20, (6)*8+(26*4)(r3)
+	lfd f21, (7)*8+(26*4)(r3)
+	lfd f22, (8)*8+(26*4)(r3)
+	lfd f23, (9)*8+(26*4)(r3)
+	lfd f24, (10)*8+(26*4)(r3)
+	lfd f25, (11)*8+(26*4)(r3)
+	lfd f26, (12)*8+(26*4)(r3)
+	lfd f27, (13)*8+(26*4)(r3)
+	lfd f28, (14)*8+(26*4)(r3)
+	lfd f29, (15)*8+(26*4)(r3)
+	lfd f30, (16)*8+(26*4)(r3)
+	lfd f31, (17)*8+(26*4)(r3)
+
 	lwz	r1, 4*4(r3)
 	lwz	r2, 5*4(r3)
 
@@ -162,7 +204,7 @@ SET:
 #endif
 
 #ifdef NEEDPOWER64CONTEXT
-/* get FPR and VR use flags with sc 0x7FF3 */
+/* get VR use flags with sc 0x7FF3 */
 /* get vsave with mfspr reg, 256 */
 
 .text
@@ -204,6 +246,27 @@ GET:				/* xxx: instruction scheduling */
 	std	r30, (17+7)*8(r3)
 	std	r31, (18+7)*8(r3)
 
+	/* the pad is unnecessary in 64 bit mode ... (minor bug!) */
+
+	stfd f14, (0+26)*8(r3) /* callee-save FPRs */
+	stfd f15, (1+26)*8(r3)
+	stfd f16, (2+26)*8(r3)
+	stfd f17, (3+26)*8(r3)
+	stfd f18, (4+26)*8(r3)
+	stfd f19, (5+26)*8(r3)
+	stfd f20, (6+26)*8(r3)
+	stfd f21, (7+26)*8(r3)
+	stfd f22, (8+26)*8(r3)
+	stfd f23, (9+26)*8(r3)
+	stfd f24, (10+26)*8(r3)
+	stfd f25, (11+26)*8(r3)
+	stfd f26, (12+26)*8(r3)
+	stfd f27, (13+26)*8(r3)
+	stfd f28, (14+26)*8(r3)
+	stfd f29, (15+26)*8(r3)
+	stfd f30, (16+26)*8(r3)
+	stfd f31, (17+26)*8(r3)
+
 	li	r3, 0			/* return */
 	blr
 
@@ -228,6 +291,25 @@ SET:
 	ld	r29, (16+7)*8(r3)
 	ld	r30, (17+7)*8(r3)
 	ld	r31, (18+7)*8(r3)
+
+	lfd f14, (0+26)*8(r3) /* callee-save FPRs */
+	lfd f15, (1+26)*8(r3)
+	lfd f16, (2+26)*8(r3)
+	lfd f17, (3+26)*8(r3)
+	lfd f18, (4+26)*8(r3)
+	lfd f19, (5+26)*8(r3)
+	lfd f20, (6+26)*8(r3)
+	lfd f21, (7+26)*8(r3)
+	lfd f22, (8+26)*8(r3)
+	lfd f23, (9+26)*8(r3)
+	lfd f24, (10+26)*8(r3)
+	lfd f25, (11+26)*8(r3)
+	lfd f26, (12+26)*8(r3)
+	lfd f27, (13+26)*8(r3)
+	lfd f28, (14+26)*8(r3)
+	lfd f29, (15+26)*8(r3)
+	lfd f30, (16+26)*8(r3)
+	lfd f31, (17+26)*8(r3)
 
 	ld	r1, 4*8(r3)
 	ld	r2, 5*8(r3)
