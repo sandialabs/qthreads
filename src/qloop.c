@@ -8,28 +8,64 @@
 
 /* So, the idea here is that this is a (braindead) C version of Megan's
  * mt_loop. */
-void qt_loop(const size_t start, const size_t stop, const size_t stride,
-	     const qthread_f func, void *argptr)
+struct qt_loop_wrapper_args
+{
+    qthread_f func;
+    void *arg;
+    volatile aligned_t *donecount;
+};
+
+static aligned_t qt_loop_wrapper(qthread_t * me,
+				 const struct qt_loop_wrapper_args *arg)
+{
+    arg->func(me, arg->arg);
+    qthread_incr(arg->donecount, 1);
+    return 0;
+}
+static void qt_loop_inner(const size_t start, const size_t stop,
+			  const size_t stride, const qthread_f func,
+			  void *argptr, int future)
 {
     size_t i, threadct = 0;
     qthread_t *me = qthread_self();
     aligned_t *rets;
     size_t steps = (stop - start) / stride;
+    volatile aligned_t donecount = 0;
+    struct qt_loop_wrapper_args *qwa;
 
     if ((steps * stride) + start < stop) {
 	steps++;
     }
     rets = (aligned_t *) malloc(sizeof(aligned_t) * steps);
+    qwa =
+	(struct qt_loop_wrapper_args *)
+	malloc(sizeof(struct qt_loop_wrapper_args) * steps);
 
     for (i = start; i < stop; i += stride) {
-	qthread_fork_to(func, argptr, rets + threadct,
-			threadct % qthread_shepherd_count());
+	qwa[threadct].func = func;
+	qwa[threadct].arg = argptr;
+	qwa[threadct].donecount = &donecount;
+	if (future) {
+	    qthread_fork_future_to((qthread_f) qt_loop_wrapper,
+				   qwa + threadct, rets + threadct,
+				   threadct % qthread_shepherd_count());
+	} else {
+	    qthread_fork_to((qthread_f) qt_loop_wrapper, qwa + threadct,
+			    rets + threadct,
+			    threadct % qthread_shepherd_count());
+	}
 	threadct++;
     }
-    for (i = 0; i < threadct; i++) {
+    for (i = 0; donecount < steps; i++) {
 	qthread_readFF(me, NULL, rets + i);
     }
+    free(qwa);
     free(rets);
+}
+void qt_loop(const size_t start, const size_t stop, const size_t stride,
+	     const qthread_f func, void *argptr)
+{
+    qt_loop_inner(start, stop, stride, func, argptr, 0);
 }
 
 /* So, the idea here is that this is a (braindead) C version of Megan's
@@ -37,25 +73,7 @@ void qt_loop(const size_t start, const size_t stop, const size_t stride,
 void qt_loop_future(const size_t start, const size_t stop,
 		    const size_t stride, const qthread_f func, void *argptr)
 {
-    size_t i, threadct = 0;
-    qthread_t *me = qthread_self();
-    aligned_t *rets;
-    size_t steps = (stop - start) / stride;
-
-    if ((steps * stride) + start < stop) {
-	steps++;
-    }
-    rets = (aligned_t *) malloc(sizeof(aligned_t) * steps);
-
-    for (i = start; i < stop; i += stride) {
-	qthread_fork_future_to(func, argptr, rets + threadct,
-			       threadct % qthread_shepherd_count());
-	threadct++;
-    }
-    for (i = 0; i < threadct; i++) {
-	qthread_readFF(me, NULL, rets + i);
-    }
-    free(rets);
+    qt_loop_inner(start, stop, stride, func, argptr, 1);
 }
 
 /* So, the idea here is that this is a C version of Megan's mt_loop (note: not
@@ -163,7 +181,8 @@ static inline void qt_loopaccum_balance_inner(const size_t start,
 {
     qthread_shepherd_id_t i;
     struct qloopaccum_wrapper_args *qwa = (struct qloopaccum_wrapper_args *)
-	malloc(sizeof(struct qloopaccum_wrapper_args) * qthread_shepherd_count());
+	malloc(sizeof(struct qloopaccum_wrapper_args) *
+	       qthread_shepherd_count());
     aligned_t *rets =
 	(aligned_t *) malloc(sizeof(aligned_t) * qthread_shepherd_count());
     char *realrets = (char *)malloc(size * (qthread_shepherd_count() - 1));
@@ -267,26 +286,20 @@ type qt_##shorttype##_##category (type *array, size_t length, int checkfeb) \
 #define MAX(a,b) (a>b)?a:b
 #define MIN(a,b) (a<b)?a:b
 
-PARALLEL_FUNC(sum, uis, ADD, unsigned int, uint) PARALLEL_FUNC(prod, uip,
-							       MULT,
-							       unsigned int,
-							       uint)
-PARALLEL_FUNC(max, uimax, MAX, unsigned int, uint) PARALLEL_FUNC(min, uimin,
-								 MIN,
-								 unsigned int,
-								 uint)
-PARALLEL_FUNC(sum, is, ADD, int, int) PARALLEL_FUNC(prod, ip, MULT, int,
-						    int) PARALLEL_FUNC(max,
-								       imax,
-								       MAX,
-								       int,
-								       int)
-PARALLEL_FUNC(min, imin, MIN, int, int) PARALLEL_FUNC(sum, ds, ADD, double,
-						      double)
-PARALLEL_FUNC(prod, dp, MULT, double, double) PARALLEL_FUNC(max, dmax, MAX,
-							    double,
-							    double)
-PARALLEL_FUNC(min, dmin, MIN, double, double)
+PARALLEL_FUNC(sum, uis, ADD, unsigned int, uint);
+PARALLEL_FUNC(prod, uip, MULT, unsigned int, uint);
+PARALLEL_FUNC(max, uimax, MAX, unsigned int, uint);
+PARALLEL_FUNC(min, uimin, MIN, unsigned int, uint);
+
+PARALLEL_FUNC(sum, is, ADD, int, int);
+PARALLEL_FUNC(prod, ip, MULT, int, int);
+PARALLEL_FUNC(max, imax, MAX, int, int);
+PARALLEL_FUNC(min, imin, MIN, int, int);
+
+PARALLEL_FUNC(sum, ds, ADD, double, double);
+PARALLEL_FUNC(prod, dp, MULT, double, double);
+PARALLEL_FUNC(max, dmax, MAX, double, double);
+PARALLEL_FUNC(min, dmin, MIN, double, double);
 
 /* The next idea is to implement it in a memory-bound kind of way. And I don't
  * mean memory-bound in that it spends its time waiting for memory; I mean in
@@ -312,7 +325,7 @@ PARALLEL_FUNC(min, dmin, MIN, double, double)
  * fashion every time.
  */
 #define SWAP(a, m, n) temp=a[m]; a[m]=a[n]; a[n]=temp
-    static int dcmp(const void *restrict a, const void *restrict b)
+static int dcmp(const void *restrict a, const void *restrict b)
 {
     if ((*(double *)a) < (*(double *)b))
 	return -1;
