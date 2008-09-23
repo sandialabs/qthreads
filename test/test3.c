@@ -38,11 +38,20 @@ aligned_t producer(qthread_t * t, void *arg)
 int main(int argc, char *argv[])
 {
     aligned_t t;
+    int threads = 1;
+    int interactive = 0;
 
     x = 0;
-    qthread_init(3);
+    if (argc == 2) {
+	threads = strtol(argv[1], NULL, 0);
+	interactive = 1;
+    }
+    qthread_init(threads);
 
-    /*printf("Initial value of x: %i\n", x); */
+    if (interactive == 1) {
+	printf("%i threads...\n", threads);
+	printf("Initial value of x: %i\n", x);
+    }
 
     qthread_fork(consumer, NULL, NULL);
     qthread_fork(producer, NULL, &t);
@@ -50,9 +59,12 @@ int main(int argc, char *argv[])
 
     qthread_finalize();
 
-    if (x == 55)
+    if (x == 55) {
+	if (interactive == 1) {
+	    printf("Success! x==55\n");
+	}
 	return 0;
-    else {
+    } else {
 	fprintf(stderr, "Final value of x=%d\n", x);
 	return -1;
     }

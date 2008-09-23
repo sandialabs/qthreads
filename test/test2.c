@@ -6,7 +6,7 @@
 #include <assert.h>
 #include <qthread/qthread.h>
 
-static int target;
+static int target = 1000;
 static aligned_t x = 0;
 static int id = 0;
 
@@ -34,17 +34,18 @@ aligned_t thread(qthread_t * t, void *arg)
 int main(int argc, char *argv[])
 {
     long int i;
-    int interactive;
+    int interactive = 0;
+    int threads = 1;
 
-    if (argc != 2) {
-	target = 1000;
-	interactive = 0;
-    } else {
-	target = strtol(argv[1], NULL, 0);
+    if (argc >= 3) {
+	target = strtol(argv[2], NULL, 0);
+    }
+    if (argc >= 2) {
+	threads = strtol(argv[1], NULL, 0);
 	interactive = 1;
     }
 
-    assert(qthread_init(2) == 0);
+    assert(qthread_init(threads) == 0);
 
     qthread_lock(qthread_self(), &alldone);
 
