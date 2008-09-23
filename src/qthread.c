@@ -821,6 +821,7 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
     size_t i;
     ucontext_t *shep0 = NULL;
     void *shepstack = NULL;
+    int syncmode = COLLECTION_MODE_PLAIN;
 
 #ifdef NEED_RLIMIT
     struct rlimit rlp;
@@ -828,6 +829,12 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 
     qthread_debug("qthread_init(): began.\n");
 
+    switch (nshepherds) {
+	case 0:
+	    return QTHREAD_BADARGS;
+	case 1:
+	    syncmode |= COLLECTION_MODE_NOSYNC;
+    }
     qlib = (qlib_t) malloc(sizeof(struct qlib_s));
     if (qlib == NULL) {
 	return QTHREAD_MALLOC_ERROR;
@@ -846,15 +853,14 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 # endif
 #endif
 	if ((qlib->locks[i] =
-	     cp_hashtable_create(10000, cp_hash_addr,
-				 cp_hash_compare_addr)) == NULL) {
+	     cp_hashtable_create_by_mode(syncmode, 10000, cp_hash_addr,
+					 cp_hash_compare_addr)) == NULL) {
 	    return QTHREAD_MALLOC_ERROR;
 	}
 	cp_hashtable_set_min_fill_factor(qlib->locks[i], 0);
 	if ((qlib->FEBs[i] =
-	     cp_hashtable_create_by_option(COLLECTION_MODE_DEEP, 10000,
-					   cp_hash_addr, cp_hash_compare_addr,
-					   NULL, NULL, NULL, NULL)) == NULL) {
+	     cp_hashtable_create_by_mode(syncmode, 10000, cp_hash_addr,
+					 cp_hash_compare_addr)) == NULL) {
 	    return QTHREAD_MALLOC_ERROR;
 	}
 	cp_hashtable_set_min_fill_factor(qlib->FEBs[i], 0);
@@ -887,53 +893,53 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	 * should be quite safe unsynchronized. If things fail, though...
 	 * resynchronize them and see if that fixes it. */
 	qlib->shepherds[i].qthread_pool =
-	    cp_mempool_create_by_option(0, sizeof(qthread_t),
+	    cp_mempool_create_by_option(syncmode, sizeof(qthread_t),
 					sizeof(qthread_t) * 100);
 	qlib->shepherds[i].stack_pool =
-	    cp_mempool_create_by_option(0, qlib->qthread_stack_size,
+	    cp_mempool_create_by_option(syncmode, qlib->qthread_stack_size,
 					qlib->qthread_stack_size * 100);
 #if ALIGNMENT_PROBLEMS_RETURN
 	if (sizeof(ucontext_t) < 2048) {
 	    qlib->shepherds[i].context_pool =
-		cp_mempool_create_by_option(0, 2048, 2048 * 100);
+		cp_mempool_create_by_option(syncmode, 2048, 2048 * 100);
 	} else {
 	    qlib->shepherds[i].context_pool =
-		cp_mempool_create_by_option(0, sizeof(ucontext_t),
+		cp_mempool_create_by_option(syncmode, sizeof(ucontext_t),
 					    sizeof(ucontext_t) * 100);
 	}
 #else
 	qlib->shepherds[i].context_pool =
-	    cp_mempool_create_by_option(0, sizeof(ucontext_t),
+	    cp_mempool_create_by_option(syncmode, sizeof(ucontext_t),
 					sizeof(ucontext_t) * 100);
 #endif
 	qlib->shepherds[i].list_pool =
-	    cp_mempool_create_by_option(0, sizeof(cp_list_entry), 0);
+	    cp_mempool_create_by_option(syncmode, sizeof(cp_list_entry), 0);
 	qlib->shepherds[i].queue_pool =
-	    cp_mempool_create_by_option(0, sizeof(qthread_queue_t), 0);
+	    cp_mempool_create_by_option(syncmode, sizeof(qthread_queue_t), 0);
 	qlib->shepherds[i].lock_pool =
-	    cp_mempool_create_by_option(0, sizeof(qthread_lock_t), 0);
+	    cp_mempool_create_by_option(syncmode, sizeof(qthread_lock_t), 0);
 	qlib->shepherds[i].addrres_pool =
-	    cp_mempool_create_by_option(0, sizeof(qthread_addrres_t), 0);
+	    cp_mempool_create_by_option(syncmode, sizeof(qthread_addrres_t),
+					0);
 	qlib->shepherds[i].addrstat_pool =
-	    cp_mempool_create_by_option(0, sizeof(qthread_addrstat_t), 0);
+	    cp_mempool_create_by_option(syncmode, sizeof(qthread_addrstat_t),
+					0);
     }
-    /* these are used when qthread_fork() is called from a non-qthread. they
-     * are protected by a mutex so that things don't get wonky (note: that
-     * means qthread_fork is WAY faster if you called it from a qthread) */
+    /* these are used when qthread_fork() is called from a non-qthread. */
     generic_qthread_pool =
-	cp_mempool_create_by_option(0, sizeof(qthread_t),
+	cp_mempool_create_by_option(syncmode, sizeof(qthread_t),
 				    sizeof(qthread_t) * 100);
     generic_stack_pool =
-	cp_mempool_create_by_option(0, qlib->qthread_stack_size, 0);
+	cp_mempool_create_by_option(syncmode, qlib->qthread_stack_size, 0);
     generic_context_pool =
-	cp_mempool_create_by_option(0, sizeof(ucontext_t),
+	cp_mempool_create_by_option(syncmode, sizeof(ucontext_t),
 				    sizeof(ucontext_t) * 100);
     generic_queue_pool =
-	cp_mempool_create_by_option(0, sizeof(qthread_queue_t), 0);
+	cp_mempool_create_by_option(syncmode, sizeof(qthread_queue_t), 0);
     generic_lock_pool =
-	cp_mempool_create_by_option(0, sizeof(qthread_lock_t), 0);
+	cp_mempool_create_by_option(syncmode, sizeof(qthread_lock_t), 0);
     generic_addrstat_pool =
-	cp_mempool_create_by_option(0, sizeof(qthread_addrstat_t), 0);
+	cp_mempool_create_by_option(syncmode, sizeof(qthread_addrstat_t), 0);
 
     /* spawn the number of shepherd threads that were specified */
     for (i = 0; i < nshepherds; i++) {
@@ -2053,7 +2059,8 @@ int qthread_empty(qthread_t * me, const void *dest)
 						    (void *)alignedaddr);
 	if (!m) {
 	    /* currently full, and must be added to the hash to empty */
-	    m = qthread_addrstat_new(me ? (me->shepherd_ptr) : pthread_getspecific(shepherd_structs));
+	    m = qthread_addrstat_new(me ? (me->shepherd_ptr) :
+				     pthread_getspecific(shepherd_structs));
 	    if (!m) {
 		cp_hashtable_unlock(qlib->FEBs[lockbin]);
 		return QTHREAD_MALLOC_ERROR;
