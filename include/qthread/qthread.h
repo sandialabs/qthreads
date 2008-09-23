@@ -1,7 +1,6 @@
 #ifndef _QTHREAD_H_
 #define _QTHREAD_H_
 
-#include <pthread.h>		       /* included here only as a convenience */
 #include <errno.h>		       /* for ENOMEM */
 
 #include <qthread/qthread-int.h>       /* for uint32_t and uint64_t */
