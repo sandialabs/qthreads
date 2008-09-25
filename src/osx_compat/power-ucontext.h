@@ -5,9 +5,9 @@ typedef struct ucontext ucontext_t;
 struct mcontext
 {
 	unsigned long	pc;		/* lr */
-	unsigned long	cr;		/* mfcr */
-	unsigned long	ctr;		/* mfcr */
-	unsigned long	xer;		/* mfcr */
+	unsigned long	cr;		/* condition register (mfcr) */
+	unsigned long	ctr;		/* count register, for branching (mfcr) */
+	unsigned long	xer;		/* xer register, an optional-condition register (mfcr) */
 	unsigned long	sp;		/* callee saved: r1 */
 	unsigned long	toc;		/* callee saved: r2 */
 	unsigned long	r3;		/* first arg to function, return register: r3 */
@@ -30,6 +30,7 @@ struct ucontext
 	} uc_stack;
 	sigset_t uc_sigmask;
 	mcontext_t mc;
+	struct ucontext * uc_link; /* unused */
 };
 
 void makecontext(ucontext_t*, void(*)(void), int, ...);

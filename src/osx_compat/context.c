@@ -2,33 +2,14 @@
 
 #include "taskimpl.h"
 
-#include <stdarg.h> /* for va_start() and va_end() */
-#include <string.h>
-
-#if defined(__APPLE__) && defined(__i386__)
-#define NEEDX86MAKECONTEXT
-#define NEEDSWAPCONTEXT
-#endif
-
-#if defined(__APPLE__) && !defined(__i386__)
-#define NEEDPOWERMAKECONTEXT
-#define NEEDSWAPCONTEXT
-#endif
-
-#if defined(__FreeBSD__) && defined(__i386__) && __FreeBSD__ < 5
-#define NEEDX86MAKECONTEXT
-#define NEEDSWAPCONTEXT
-#endif
-
 #ifdef NEEDPOWERMAKECONTEXT
-void
-makecontext(ucontext_t *ucp, void (*func)(void), int argc, ...)
+void makecontext(ucontext_t *ucp, void (*func)(void), int argc, ...)
 {
 	unsigned long *sp, *tos;
 	va_list arg;
 
-	tos = (unsigned long*)ucp->uc_stack.ss_sp+ucp->uc_stack.ss_size/sizeof(unsigned long);
-	sp = tos - 16;	
+	tos = (unsigned long*)ucp->uc_stack.ss_sp + ucp->uc_stack.ss_size / sizeof(unsigned long);
+	sp = tos - 16;
 	ucp->mc.pc = (long)func;
 	ucp->mc.sp = (long)sp;
 	va_start(arg, argc);
@@ -38,25 +19,23 @@ makecontext(ucontext_t *ucp, void (*func)(void), int argc, ...)
 #endif
 
 #ifdef NEEDX86MAKECONTEXT
-void
-makecontext(ucontext_t *ucp, void (*func)(void), int argc, ...)
+void makecontext(ucontext_t *ucp, void (*func)(void), int argc, ...)
 {
-	int *sp;
+	uintptr_t *sp;
 
-	sp = (int*)ucp->uc_stack.ss_sp+ucp->uc_stack.ss_size/4;
+	sp = (uintptr_t *)ucp->uc_stack.ss_sp + ucp->uc_stack.ss_size / sizeof(void *);
 	sp -= argc;
-	sp = (void*)((uintptr_t)sp - (uintptr_t)sp%16);	/* 16-align for OS X */
-	memmove(sp, &argc+1, argc*sizeof(int));
+	sp = (void*)((uintptr_t)sp - (uintptr_t)sp % 16);	/* 16-align for OS X */
+	memmove(sp, &argc + 1, argc * sizeof(uintptr_t));
 
 	*--sp = 0;		/* return address */
 	ucp->uc_mcontext.mc_eip = (long)func;
-	ucp->uc_mcontext.mc_esp = (int)sp;
+	ucp->uc_mcontext.mc_esp = (long)sp;
 }
 #endif
 
 #ifdef NEEDSWAPCONTEXT
-int
-swapcontext(ucontext_t *oucp, ucontext_t *ucp)
+int swapcontext(ucontext_t *oucp, ucontext_t *ucp)
 {
 	if(getcontext(oucp) == 0)
 		setcontext(ucp);

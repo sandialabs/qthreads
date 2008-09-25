@@ -90,15 +90,15 @@ GET:				/* xxx: instruction scheduling */
 	mfcr	r5
 	mfctr	r6
 	mfxer	r7
-	stw	r0, 0*4(r3)
-	stw	r5, 1*4(r3)
-	stw	r6, 2*4(r3)
-	stw	r7, 3*4(r3)
+	stw	r0, 0*4(r3) /* pc - program counter */
+	stw	r5, 1*4(r3) /* cr - condition register */
+	stw	r6, 2*4(r3) /* ctr - count register */
+	stw	r7, 3*4(r3) /* xer */
 
-	stw	r1, 4*4(r3)
-	stw	r2, 5*4(r3)
+	stw	r1, 4*4(r3) /* sp */
+	stw	r2, 5*4(r3) /* toc */
 	li	r5, 1			/* return value for setmcontext */
-	stw	r5, 6*4(r3)
+	stw	r5, 6*4(r3) /* arg1 & return-value */
 
 	stw	r13, (0+7)*4(r3)	/* callee-save GPRs */
 	stw	r14, (1+7)*4(r3)	/* not a block move b/c that could be slower */
@@ -370,3 +370,8 @@ SET:
 	ldr	r0, [r0]
 	mov	pc, lr
 #endif
+
+#ifdef __ELF__
+.section .note.GNU-stack,"",%progbits
+#endif
+

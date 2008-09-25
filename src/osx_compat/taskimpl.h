@@ -1,16 +1,72 @@
 /* Copyright (c) 2005-2006 Russ Cox, MIT; see COPYRIGHT */
+#ifndef TASKIMPL_H
+#define TASKIMPL_H
 
-#if defined(__sun__)
-#	define __EXTENSIONS__ 1 /* SunOS */
-#	if defined(__SunOS5_6__) || defined(__SunOS5_7__) || defined(__SunOS5_8__)
-		/* NOT USING #define __MAKECONTEXT_V2_SOURCE 1 / * SunOS */
-#	else
-#		define __MAKECONTEXT_V2_SOURCE 1
-#	endif
+#ifdef HAVE_CONFIG_H
+# include <config.h>
 #endif
 
-#include <sys/types.h>
-#include <ucontext.h>
+/* HAS_UCONTEXT affects the include files on some systems (I think) */
+//#if defined(__APPLE__) || defined(linux) || defined(__NetBSD__) || defined(__FreeBSD__) || (defined(__SVR4) && defined (__sun))
+#if defined(linux) || defined(__NetBSD__) || defined(__FreeBSD__) || (defined(__SVR4) && defined (__sun))
+#define HAS_UCONTEXT 1
+#endif
+
+#if defined(__APPLE__)
+#if !defined(_BSD_PPC_SETJMP_H_)
+#include <setjmp.h>
+#define HAS_UCONTEXT 1
+#endif
+#endif
+
+#if defined(__FreeBSD__) ||  defined(__APPLE__)
+
+#ifdef HAVE_STDARG_H
+# include <stdarg.h>
+#endif
+#include <errno.h>
+#ifdef HAVE_STDLIB_H
+# include <stdlib.h>
+#endif
+#ifdef HAVE_UNISTD_H
+# include <unistd.h>
+#endif
+#ifdef HAVE_STRING_H
+# include <string.h>
+#endif
+#include <assert.h>
+#if TIME_WITH_SYS_TIME
+# include <sys/time.h>
+# include <time.h>
+#else
+# if HAVE_SYS_TIME_H
+#  include <sys/time.h>
+# else
+#  include <time.h>
+# endif
+#endif
+#ifdef HAVE_SYS_TYPES_H
+# include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_WAIT_H
+# include <sys/wait.h>
+#endif
+#ifdef HAVE_SCHED_H
+# include <sched.h>
+#endif
+#ifdef HAVE_SIGNAL_H
+# include <signal.h>
+#endif
+#ifdef HAVE_SYS_UTSNAME_H
+# include <sys/utsname.h>
+#endif
+#ifdef HAVE_INTTYPES_H
+# include <inttypes.h>
+#endif
+#ifdef HAVE_SYS_UCONTEXT_H
+# include <sys/ucontext.h>
+#endif
+typedef unsigned long ulong;
 
 #if defined(__FreeBSD__) && __FreeBSD__ < 5
 extern	int		getmcontext(mcontext_t*);
@@ -30,7 +86,7 @@ extern	void		makecontext(ucontext_t*, void(*)(), int, ...);
 #		include "386-ucontext.h"
 #	else
 #		include "power-ucontext.h"
-#	endif	
+#	endif
 #endif
 
 #if defined(__OpenBSD__)
@@ -60,3 +116,25 @@ void setmcontext(const mcontext_t*);
 #define	setcontext(u)	setmcontext(&(u)->uc_mcontext)
 #define	getcontext(u)	getmcontext(&(u)->uc_mcontext)
 #endif
+
+// --------------------------
+
+#if defined(__APPLE__) && defined(__i386__)
+#define NEEDX86MAKECONTEXT
+#define NEEDSWAPCONTEXT
+#endif
+
+#if defined(__APPLE__) && !defined(__i386__)
+#define NEEDPOWERMAKECONTEXT
+#define NEEDSWAPCONTEXT
+#endif
+
+#if defined(__FreeBSD__) && defined(__i386__) && __FreeBSD__ < 5
+#define NEEDX86MAKECONTEXT
+#define NEEDSWAPCONTEXT
+#endif
+
+
+#endif
+#endif
+
