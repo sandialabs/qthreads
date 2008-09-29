@@ -829,12 +829,17 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 
     qthread_debug("qthread_init(): began.\n");
 
+#ifdef QTHREAD_USE_PTHREADS
     switch (nshepherds) {
 	case 0:
 	    return QTHREAD_BADARGS;
 	case 1:
 	    syncmode |= COLLECTION_MODE_NOSYNC;
     }
+#else
+    nshepherds = 1;
+    syncmode |= COLLECTION_MODE_NOSYNC;
+#endif
     qlib = (qlib_t) malloc(sizeof(struct qlib_s));
     if (qlib == NULL) {
 	return QTHREAD_MALLOC_ERROR;
