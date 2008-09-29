@@ -174,7 +174,15 @@ AM_CONDITIONAL([COMPILE_TARGET_UNIX], [test "$qthread_implementation" = "unix"])
 ## -------------------- ##
 ## Checks for libraries ##
 ## -------------------- ##
-AC_SEARCH_LIBS([pthread_create], [pthread])
+AC_ARG_ENABLE([pthreads],
+			  [AC_HELP_STRING([--disable-pthreads],
+							  [Link with pthreads. Without pthreads, no more than one shepherd can be created. Not using pthreads is still considered EXPERIMENTAL, and is technically impossible unless cprops is no longer needed. But someday, this will happen. (default: enabled)])],
+			  [],
+			  [ac_cv_pthreads_enable="yes"])
+AS_IF([test "$ac_cv_pthreads_enable" == "yes"],
+	  [AC_SEARCH_LIBS([pthread_create], [pthread])
+	   AS_IF([test "$ac_cv_search_pthread_create" != "no"],
+			 [AC_DEFINE([QTHREAD_USE_PTHREADS], [1], [allowed to spawn worker threads])])])
 AS_IF([test "$qthread_implementation" = "sst"],
 	  [
 	   LDFLAGS="$LDFLAGS $SST_LIBS"
