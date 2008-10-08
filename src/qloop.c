@@ -185,12 +185,16 @@ static inline void qt_loopaccum_balance_inner(const size_t start,
 	       qthread_shepherd_count());
     aligned_t *rets =
 	(aligned_t *) malloc(sizeof(aligned_t) * qthread_shepherd_count());
-    char *realrets = (char *)malloc(size * (qthread_shepherd_count() - 1));
+    char *realrets = NULL;
     size_t len = stop - start;
     size_t each = len / qthread_shepherd_count();
     size_t extra = len - (each * qthread_shepherd_count());
     size_t iterend = start;
     qthread_t *me = qthread_self();
+
+    if (qthread_shepherd_count() > 1) {
+	realrets = (char *)malloc(size * (qthread_shepherd_count() - 1));
+    }
 
     for (i = 0; i < qthread_shepherd_count(); i++) {
 	qwa[i].func = func;
