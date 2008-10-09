@@ -698,8 +698,15 @@ static inline int qthread_unique_collect(void *key, void *value, void *id)
  *
  * this function is the workhorse of the library: this is the function that
  * gets spawned several times and runs all the qthreads. */
-static void *qthread_shepherd(void *arg)
+#ifdef QTHREAD_MAKECONTEXT_SPLIT
+static void *qthread_shepherd_wrapper(unsigned int high, unsigned int low)
 {				       /*{{{ */
+    qthread_shepherd_t *me = (qthread_shepherd_t *) ((((uintptr_t) high) << 32) | low);
+    qthread_shepherd(me);
+}
+#endif
+static void *qthread_shepherd(void *arg)
+{
     qthread_shepherd_t *me = (qthread_shepherd_t *) arg;
     ucontext_t my_context;
     qthread_t *t;
@@ -822,6 +829,7 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
     ucontext_t *shep0 = NULL;
     void *shepstack = NULL;
     int syncmode = COLLECTION_MODE_PLAIN;
+    void (*qthread_shepherd_func)(void);
 
 #ifdef NEED_RLIMIT
     struct rlimit rlp;
@@ -1024,8 +1032,13 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	qthread_enqueue(qlib->shepherds[0].ready, t);
 	qassert(getcontext(t->context), 0);
 	qassert(getcontext(shep0), 0);
+#ifdef QTHREAD_MAKECONTEXT_SPLIT
+	qthread_shepherd_func = qthread_shepherd_wrapper;
+#else
+	qthread_shepherd_func = (void (*)(void))qthread_shepherd;
+#endif
 	qthread_makecontext(shep0, shepstack, 1024 * 1024 * 8,
-			    (void (*)(void))qthread_shepherd,
+			    qthread_shepherd_func,
 			    &(qlib->shepherds[0]), t->context);
 	/* this launches shepherd 0 */
 	qthread_debug("qthread_init(): launching shepherd 0\n");
