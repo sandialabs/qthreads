@@ -86,12 +86,13 @@ AS_IF([test "$enable_fullsize_stacks" = "yes"],   [qthread_cv_stack_size=8388608
 AC_DEFINE_UNQUOTED([QTHREAD_DEFAULT_STACK_SIZE],[$qthread_cv_stack_size],
 				   [What size stacks to use])
 
-AC_ARG_ENABLE([unpooled-memory],
-  [AS_HELP_STRING([--enable-unpooled-memory],
+AC_ARG_ENABLE([pooled-memory],
+  [AS_HELP_STRING([--disable-pooled-memory],
       [prevents qthreads from (in most cases) using memory pools, which is sometimes more compatible with machines that have unusual alignment issues])],
-  [], [enable_unpooled_memory="no"])
-AS_IF([test "$enable_unpooled_memory" = "yes"],
+  [], [enable_pooled_memory="yes"])
+AS_IF([test "$enable_pooled_memory" = "no"],
       [AC_DEFINE([UNPOOLED], [1], [prevents most uses of memory pools])])
+AM_CONDITIONAL([COMPILE_POOLED_MEMORY], [test "$enable_pooled_memory" = "yes"])
 
 AC_ARG_ENABLE([thread-count],
   [AS_HELP_STRING([--enable-thread-count],
@@ -414,5 +415,5 @@ case "$qthread_cv_stack_size" in
 	*)       echo "${qthread_stackprefix}${qthread_cv_stack_size} bytes" ;;
 esac
 echo    " Debugging Trace Output: $enable_debug_trace"
-echo    "        Unpooled Memory: $enable_unpooled_memory"
+echo    "          Pooled Memory: $enable_pooled_memory"
 echo ""

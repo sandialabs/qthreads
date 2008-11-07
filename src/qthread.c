@@ -22,7 +22,7 @@
 # include <sys/resource.h>
 #endif
 #if (QTHREAD_SHEPHERD_PROFILING || QTHREAD_LOCK_PROFILING)
-# include "qtimer/qtimer.h"
+# include "qtimer.h"
 #endif
 #ifdef QTHREAD_USE_PTHREADS
 # include <pthread.h>
@@ -901,6 +901,7 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
     qlib->max_stack_size = rlp.rlim_max;
 #endif
 
+#ifndef UNPOOLED
     /* set up the memory pools */
     for (i = 0; i < nshepherds; i++) {
 	/* the following SHOULD only be accessed by one thread at a time, so
@@ -941,6 +942,7 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	qt_mpool_create(syncmode, sizeof(qthread_lock_t));
     generic_addrstat_pool =
 	qt_mpool_create(syncmode, sizeof(qthread_addrstat_t));
+#endif
 
     /* spawn the number of shepherd threads that were specified */
     for (i = 0; i < nshepherds; i++) {
@@ -1240,6 +1242,7 @@ void qthread_finalize(void)
     QTHREAD_DESTROYLOCK(&qlib->max_thread_id_lock);
     QTHREAD_DESTROYLOCK(&qlib->sched_shepherd_lock);
 
+#ifndef UNPOOLED
     for (i = 0; i < qlib->nshepherds; ++i) {
 	qt_mpool_destroy(qlib->shepherds[i].qthread_pool);
 	qt_mpool_destroy(qlib->shepherds[i].queue_pool);
@@ -1255,6 +1258,7 @@ void qthread_finalize(void)
     qt_mpool_destroy(generic_queue_pool);
     qt_mpool_destroy(generic_lock_pool);
     qt_mpool_destroy(generic_addrstat_pool);
+#endif
     free(qlib->shepherds);
     free(qlib);
     qlib = NULL;

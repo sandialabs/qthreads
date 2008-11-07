@@ -5,8 +5,9 @@
 
 if QTHREAD_NEED_QTIMER
 
+AM_CPPFLAGS = -I$(top_srcdir)/include
 noinst_LTLIBRARIES = libqtimer.la
-libqtimer_la_SOURCES = qtimer.h
+libqtimer_la_SOURCES = 
 
 if QTHREAD_TIMER_TYPE_MACH
 libqtimer_la_SOURCES += mach.c
