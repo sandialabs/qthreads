@@ -412,7 +412,7 @@ static inline float qthread_fincr(volatile float * operand, const float incr)
 	    "stwcx. %0,0,%3\n\t"
 	    "bne-   1b\n\t"
 	    "isync"
-	    :"=&b" (retval.i), "=f"(incrd), "=m"(scratch)
+	    :"=&b" (retval.i), "=&f"(incrd), "=m"(scratch)
 	    :"r" (operand), "f"(incr)
 	    :"cc","memory");
     return retval.f-incr;
