@@ -511,7 +511,7 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
 	    :"=&b" (retval.i)
 	    :"r"(operand),"r"(incrd),"m"(scratch),"f"(incrf),"f"(incr)
 	    :"cc","memory");
-    return retval.d + incr;
+    return retval.d;
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
     union {
 	uint64_t i;
@@ -534,7 +534,7 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
                               : "r" (operand), "r"(oldval.i), "0" (newval.i)
                               : "cc", "memory");
     } while (oldval.i != newval.i);
-    return oldval.d + incr;
+    return oldval.d;
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
     union {
 	uint64_t i;
@@ -549,7 +549,7 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
 		:"r"(operand), "r"(newval.i)
 		:"memory");
     } while (res.i != oldval.i); /* if res!=old, the calc is out of date */
-    return res.d+incr;
+    return oldval.d;
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
     union {
@@ -563,7 +563,7 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
 		:"r"(newval.i), "m"(*(uint64_t*)operand), "0"(oldval.i)
 		:"memory");
     } while (retval.i != oldval.i);
-    return newval.d;
+    return oldval.d;
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
     union {
@@ -623,7 +623,7 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
 		/*ECX*/"c"(newval.s.h)
 		:"memory");
     } while (test); /* if ZF was cleared, the calculation is out of date */
-    return newval.d;
+    return oldval.d;
 
 #else
 #error "Unimplemented assembly architecture"
@@ -633,7 +633,8 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
     double retval;
     qthread_t *me = qthread_self();
     qthread_lock(me, (void*)operand);
-    retval = *operand += incr;
+    retval = *operand;
+    *operand += incr;
     qthread_unlock(me, (void*)operand);
     return retval;
 #else
