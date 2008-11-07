@@ -27,11 +27,13 @@ endif
 
 if COMPILE_TARGET_UNIX
 libqthread_la_SOURCES += \
-	qt_mpool.c \
 	qthread.c \
 	futurelib.c
 endif
 
+if COMPILE_POOLED_MEMORY
+libqthread_la_SOURCES += qt_mpool.c
+endif
 
 if QTHREAD_NEED_OSX_MAKECONTEXT
 libqthread_la_DEPENDENCIES += osx_compat/libosx_compat.la
