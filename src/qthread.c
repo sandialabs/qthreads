@@ -399,7 +399,7 @@ static inline aligned_t qthread_internal_incr(volatile aligned_t * operand,
     aligned_t retval;
 
     pthread_mutex_lock(lock);
-    retval = ++(*operand);
+    retval = (*operand)++;
     pthread_mutex_unlock(lock);
     return retval;
 }				       /*}}} */

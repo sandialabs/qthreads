@@ -644,7 +644,7 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
 #ifdef SST
 static inline aligned_t qthread_incr(volatile aligned_t * operand, const int incr)
 {
-    return PIM_atomicIncrement(operand, incr) + incr;
+    return PIM_atomicIncrement(operand, incr);
 }
 
 #else
@@ -660,12 +660,12 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
     register unsigned int incrd = incrd;	/* no initializing */
     asm volatile (
 	    "1:\tlwarx  %0,0,%1\n\t"
-	    "add    %0,%0,%2\n\t"
-	    "stwcx. %0,0,%1\n\t"
+	    "add    %3,%0,%2\n\t"
+	    "stwcx. %3,0,%1\n\t"
 	    "bne-   1b\n\t"	/* if it failed, try again */
 	    "isync"	/* make sure it wasn't all a dream */
 	    :"=&b"   (retval)
-	    :"r"     (operand), "r"(incr)
+	    :"r"     (operand), "r"(incr), "r"(incrd)
 	    :"cc", "memory");
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
@@ -673,12 +673,12 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
     register unsigned long incrd = incrd;	/* no initializing */
     asm volatile (
 	    "1:\tldarx  %0,0,%1\n\t"
-	    "add    %0,%0,%2\n\t"
-	    "stdcx. %0,0,%1\n\t"
+	    "add    %3,%0,%2\n\t"
+	    "stdcx. %3,0,%1\n\t"
 	    "bne-   1b\n\t"	/* if it failed, try again */
 	    "isync"	/* make sure it wasn't all a dream */
 	    :"=&b"   (retval)
-	    :"r"     (operand), "r"(incr)
+	    :"r"     (operand), "r"(incr), "r"(incrd)
 	    :"cc", "memory");
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32) || \
@@ -704,7 +704,7 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
                               : "r" (operand), "r"(oldval), "0"(newval)
                               : "cc", "memory");
     } while (oldval != newval);
-    retval = oldval + incr;
+    retval = oldval;
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
 
@@ -728,7 +728,7 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
                               : "r" (operand), "r"(oldval), "0"(newval)
                               : "cc", "memory");
     } while (oldval != newval);
-    retval = oldval + incr;
+    retval = oldval;
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
 
@@ -738,8 +738,6 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
     if (incr == 1) {
 	asm volatile ("fetchadd4.rel %0=[%1],1":"=r" (res)
 		      :"r"     (operand));
-
-	retval = res+1;
     } else {
 	int32_t old, newval;
 
@@ -754,16 +752,14 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
 			  :"r"     (operand), "r"(newval)
 			  :"memory");
 	} while (res != old);	       /* if res!=old, the calc is out of date */
-	retval = res+incr;
     }
+    retval = res;
 # else
     int64_t res;
 
     if (incr == 1) {
 	asm volatile ("fetchadd8.rel %0=%1,1":"=r" (res)
 		      :"m"     (*operand));
-
-	retval = res+1;
     } else {
 	int64_t old, newval;
 
@@ -778,8 +774,8 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
 			  :"r"     (operand), "r"(newval)
 			  :"memory");
 	} while (res != old);	       /* if res!=old, the calc is out of date */
-	retval = res+incr;
     }
+    retval = res;
 # endif
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
@@ -790,7 +786,6 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
 		  :"=r"(retval)
 		  :"m"(*operand), "0"(retval)
 		  : "memory");
-    retval += incr;
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 
@@ -799,7 +794,6 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
 		  :"=r"(retval)
 		  :"m"(*operand), "0"(retval)
 		  : "memory");
-    retval += incr;
 
 #else
 
@@ -812,8 +806,8 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
     qthread_t *me = qthread_self();
 
     qthread_lock(me, (void *)operand);
-    *operand += incr;
     retval = *operand;
+    *operand += incr;
     qthread_unlock(me, (void *)operand);
 
 #else
