@@ -24,14 +24,16 @@
 #if (QTHREAD_SHEPHERD_PROFILING || QTHREAD_LOCK_PROFILING)
 # include "qtimer/qtimer.h"
 #endif
+#ifdef QTHREAD_USE_PTHREADS
+# include <pthread.h>
+#endif
 
 #ifdef QTHREAD_LOCK_PROFILING
 #include <cprops/hashlist.h>
 #endif
 
-#include <cprops/mempool.h>
+#include "qt_mpool.h"
 #include <cprops/hashtable.h>
-#include <cprops/linked_list.h>
 
 #include "qthread/qthread.h"
 #include "qthread/futurelib.h"
@@ -118,14 +120,13 @@ struct qthread_shepherd_s
     qthread_shepherd_id_t shepherd_id;	/* whoami */
     qthread_t *current;
     qthread_queue_t *ready;
-    cp_mempool *qthread_pool;
-    cp_mempool *list_pool;
-    cp_mempool *queue_pool;
-    cp_mempool *lock_pool;
-    cp_mempool *addrres_pool;
-    cp_mempool *addrstat_pool;
-    cp_mempool *stack_pool;
-    cp_mempool *context_pool;
+    qt_mpool qthread_pool;
+    qt_mpool queue_pool;
+    qt_mpool lock_pool;
+    qt_mpool addrres_pool;
+    qt_mpool addrstat_pool;
+    qt_mpool stack_pool;
+    qt_mpool context_pool;
     /* round robin scheduler - can probably be smarter */
     aligned_t sched_shepherd;
 #ifdef QTHREAD_SHEPHERD_PROFILING
@@ -199,12 +200,12 @@ pthread_key_t shepherd_structs;
 qlib_t qlib = NULL;
 
 /* internal globals */
-static cp_mempool *generic_qthread_pool = NULL;
-static cp_mempool *generic_stack_pool = NULL;
-static cp_mempool *generic_context_pool = NULL;
-static cp_mempool *generic_queue_pool = NULL;
-static cp_mempool *generic_lock_pool = NULL;
-static cp_mempool *generic_addrstat_pool = NULL;
+static qt_mpool generic_qthread_pool = NULL;
+static qt_mpool generic_stack_pool = NULL;
+static qt_mpool generic_context_pool = NULL;
+static qt_mpool generic_queue_pool = NULL;
+static qt_mpool generic_lock_pool = NULL;
+static qt_mpool generic_addrstat_pool = NULL;
 
 #ifdef QTHREAD_COUNT_THREADS
 static aligned_t threadcount = 0;
@@ -268,7 +269,7 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
 static inline qthread_t *ALLOC_QTHREAD(qthread_shepherd_t * shep)
 {
     qthread_t *tmp =
-	(qthread_t *) cp_mempool_alloc(shep ? (shep->qthread_pool) :
+	(qthread_t *) qt_mpool_alloc(shep ? (shep->qthread_pool) :
 				       generic_qthread_pool);
     if (tmp != NULL) {
 	tmp->creator_ptr = shep;
@@ -277,7 +278,7 @@ static inline qthread_t *ALLOC_QTHREAD(qthread_shepherd_t * shep)
 }
 static inline void FREE_QTHREAD(qthread_t * t)
 {
-    cp_mempool_free(t->
+    qt_mpool_free(t->
 		    creator_ptr ? (t->creator_ptr->
 				   qthread_pool) : generic_qthread_pool, t);
 }
@@ -287,16 +288,16 @@ static inline void FREE_QTHREAD(qthread_t * t)
 #define ALLOC_STACK(shep) malloc(qlib->qthread_stack_size)
 #define FREE_STACK(shep, t) free(t)
 #else
-#define ALLOC_STACK(shep) cp_mempool_alloc(shep?(shep->stack_pool):generic_stack_pool)
-#define FREE_STACK(shep, t) cp_mempool_free(shep?(shep->stack_pool):generic_stack_pool, t)
+#define ALLOC_STACK(shep) qt_mpool_alloc(shep?(shep->stack_pool):generic_stack_pool)
+#define FREE_STACK(shep, t) qt_mpool_free(shep?(shep->stack_pool):generic_stack_pool, t)
 #endif
 
 #if defined(UNPOOLED_CONTEXTS) || defined(UNPOOLED)
 #define ALLOC_CONTEXT(shep) (ucontext_t *) malloc(sizeof(ucontext_t))
 #define FREE_CONTEXT(shep, t) free(t)
 #else
-#define ALLOC_CONTEXT(shep) (ucontext_t *) cp_mempool_alloc(shep?(shep->context_pool):generic_context_pool)
-#define FREE_CONTEXT(shep, t) cp_mempool_free(shep?(shep->context_pool):generic_context_pool, t)
+#define ALLOC_CONTEXT(shep) (ucontext_t *) qt_mpool_alloc(shep?(shep->context_pool):generic_context_pool)
+#define FREE_CONTEXT(shep, t) qt_mpool_free(shep?(shep->context_pool):generic_context_pool, t)
 #endif
 
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
@@ -306,7 +307,7 @@ static inline void FREE_QTHREAD(qthread_t * t)
 static inline qthread_queue_t *ALLOC_QUEUE(qthread_shepherd_t * shep)
 {
     qthread_queue_t *tmp =
-	(qthread_queue_t *) cp_mempool_alloc(shep ? (shep->queue_pool) :
+	(qthread_queue_t *) qt_mpool_alloc(shep ? (shep->queue_pool) :
 					     generic_queue_pool);
     if (tmp != NULL) {
 	tmp->creator_ptr = shep;
@@ -315,7 +316,7 @@ static inline qthread_queue_t *ALLOC_QUEUE(qthread_shepherd_t * shep)
 }
 static inline void FREE_QUEUE(qthread_queue_t * t)
 {
-    cp_mempool_free(t->
+    qt_mpool_free(t->
 		    creator_ptr ? (t->creator_ptr->
 				   queue_pool) : generic_queue_pool, t);
 }
@@ -328,7 +329,7 @@ static inline void FREE_QUEUE(qthread_queue_t * t)
 static inline qthread_lock_t *ALLOC_LOCK(qthread_shepherd_t * shep)
 {
     qthread_lock_t *tmp =
-	(qthread_lock_t *) cp_mempool_alloc(shep ? (shep->lock_pool) :
+	(qthread_lock_t *) qt_mpool_alloc(shep ? (shep->lock_pool) :
 					    generic_lock_pool);
     if (tmp != NULL) {
 	tmp->creator_ptr = shep;
@@ -337,7 +338,7 @@ static inline qthread_lock_t *ALLOC_LOCK(qthread_shepherd_t * shep)
 }
 static inline void FREE_LOCK(qthread_lock_t * t)
 {
-    cp_mempool_free(t->
+    qt_mpool_free(t->
 		    creator_ptr ? (t->creator_ptr->
 				   lock_pool) : generic_lock_pool, t);
 }
@@ -350,7 +351,7 @@ static inline void FREE_LOCK(qthread_lock_t * t)
 static inline qthread_addrres_t *ALLOC_ADDRRES(qthread_shepherd_t * shep)
 {
     qthread_addrres_t *tmp =
-	(qthread_addrres_t *) cp_mempool_alloc(shep->addrres_pool);
+	(qthread_addrres_t *) qt_mpool_alloc(shep->addrres_pool);
     if (tmp != NULL) {
 	tmp->creator_ptr = shep;
     }
@@ -358,7 +359,7 @@ static inline qthread_addrres_t *ALLOC_ADDRRES(qthread_shepherd_t * shep)
 }
 static inline void FREE_ADDRRES(qthread_addrres_t * t)
 {
-    cp_mempool_free(t->creator_ptr->addrres_pool, t);
+    qt_mpool_free(t->creator_ptr->addrres_pool, t);
 }
 #endif
 
@@ -369,7 +370,7 @@ static inline void FREE_ADDRRES(qthread_addrres_t * t)
 static inline qthread_addrstat_t *ALLOC_ADDRSTAT(qthread_shepherd_t * shep)
 {
     qthread_addrstat_t *tmp =
-	(qthread_addrstat_t *) cp_mempool_alloc(shep ? (shep->addrstat_pool) :
+	(qthread_addrstat_t *) qt_mpool_alloc(shep ? (shep->addrstat_pool) :
 						generic_addrstat_pool);
     if (tmp != NULL) {
 	tmp->creator_ptr = shep;
@@ -378,7 +379,7 @@ static inline qthread_addrstat_t *ALLOC_ADDRSTAT(qthread_shepherd_t * shep)
 }
 static inline void FREE_ADDRSTAT(qthread_addrstat_t * t)
 {
-    cp_mempool_free(t->
+    qt_mpool_free(t->
 		    creator_ptr ? (t->creator_ptr->
 				   addrstat_pool) : generic_addrstat_pool, t);
 }
@@ -906,53 +907,40 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	 * should be quite safe unsynchronized. If things fail, though...
 	 * resynchronize them and see if that fixes it. */
 	qlib->shepherds[i].qthread_pool =
-	    cp_mempool_create_by_option(syncmode, sizeof(qthread_t),
-					sizeof(qthread_t) * 100);
+	    qt_mpool_create(syncmode, sizeof(qthread_t));
 	qlib->shepherds[i].stack_pool =
-	    cp_mempool_create_by_option(syncmode, qlib->qthread_stack_size,
-					qlib->qthread_stack_size * 100);
+	    qt_mpool_create(syncmode, qlib->qthread_stack_size);
 #if ALIGNMENT_PROBLEMS_RETURN
 	if (sizeof(ucontext_t) < 2048) {
 	    qlib->shepherds[i].context_pool =
-		cp_mempool_create_by_option(syncmode, 2048, 2048 * 100);
+		qt_mpool_create(syncmode, 2048);
 	} else {
 	    qlib->shepherds[i].context_pool =
-		cp_mempool_create_by_option(syncmode, sizeof(ucontext_t),
-					    sizeof(ucontext_t) * 100);
+		qt_mpool_create(syncmode, sizeof(ucontext_t));
 	}
 #else
 	qlib->shepherds[i].context_pool =
-	    cp_mempool_create_by_option(syncmode, sizeof(ucontext_t),
-					sizeof(ucontext_t) * 100);
+	    qt_mpool_create(syncmode, sizeof(ucontext_t));
 #endif
-	qlib->shepherds[i].list_pool =
-	    cp_mempool_create_by_option(syncmode, sizeof(cp_list_entry), 0);
 	qlib->shepherds[i].queue_pool =
-	    cp_mempool_create_by_option(syncmode, sizeof(qthread_queue_t), 0);
+	    qt_mpool_create(syncmode, sizeof(qthread_queue_t));
 	qlib->shepherds[i].lock_pool =
-	    cp_mempool_create_by_option(syncmode, sizeof(qthread_lock_t), 0);
+	    qt_mpool_create(syncmode, sizeof(qthread_lock_t));
 	qlib->shepherds[i].addrres_pool =
-	    cp_mempool_create_by_option(syncmode, sizeof(qthread_addrres_t),
-					0);
+	    qt_mpool_create(syncmode, sizeof(qthread_addrres_t));
 	qlib->shepherds[i].addrstat_pool =
-	    cp_mempool_create_by_option(syncmode, sizeof(qthread_addrstat_t),
-					0);
+	    qt_mpool_create(syncmode, sizeof(qthread_addrstat_t));
     }
     /* these are used when qthread_fork() is called from a non-qthread. */
-    generic_qthread_pool =
-	cp_mempool_create_by_option(syncmode, sizeof(qthread_t),
-				    sizeof(qthread_t) * 100);
-    generic_stack_pool =
-	cp_mempool_create_by_option(syncmode, qlib->qthread_stack_size, 0);
-    generic_context_pool =
-	cp_mempool_create_by_option(syncmode, sizeof(ucontext_t),
-				    sizeof(ucontext_t) * 100);
+    generic_qthread_pool = qt_mpool_create(syncmode, sizeof(qthread_t));
+    generic_stack_pool = qt_mpool_create(syncmode, qlib->qthread_stack_size);
+    generic_context_pool = qt_mpool_create(syncmode, sizeof(ucontext_t));
     generic_queue_pool =
-	cp_mempool_create_by_option(syncmode, sizeof(qthread_queue_t), 0);
+	qt_mpool_create(syncmode, sizeof(qthread_queue_t));
     generic_lock_pool =
-	cp_mempool_create_by_option(syncmode, sizeof(qthread_lock_t), 0);
+	qt_mpool_create(syncmode, sizeof(qthread_lock_t));
     generic_addrstat_pool =
-	cp_mempool_create_by_option(syncmode, sizeof(qthread_addrstat_t), 0);
+	qt_mpool_create(syncmode, sizeof(qthread_addrstat_t));
 
     /* spawn the number of shepherd threads that were specified */
     for (i = 0; i < nshepherds; i++) {
@@ -1253,21 +1241,20 @@ void qthread_finalize(void)
     QTHREAD_DESTROYLOCK(&qlib->sched_shepherd_lock);
 
     for (i = 0; i < qlib->nshepherds; ++i) {
-	cp_mempool_destroy(qlib->shepherds[i].qthread_pool);
-	cp_mempool_destroy(qlib->shepherds[i].list_pool);
-	cp_mempool_destroy(qlib->shepherds[i].queue_pool);
-	cp_mempool_destroy(qlib->shepherds[i].lock_pool);
-	cp_mempool_destroy(qlib->shepherds[i].addrres_pool);
-	cp_mempool_destroy(qlib->shepherds[i].addrstat_pool);
-	cp_mempool_destroy(qlib->shepherds[i].stack_pool);
-	cp_mempool_destroy(qlib->shepherds[i].context_pool);
+	qt_mpool_destroy(qlib->shepherds[i].qthread_pool);
+	qt_mpool_destroy(qlib->shepherds[i].queue_pool);
+	qt_mpool_destroy(qlib->shepherds[i].lock_pool);
+	qt_mpool_destroy(qlib->shepherds[i].addrres_pool);
+	qt_mpool_destroy(qlib->shepherds[i].addrstat_pool);
+	qt_mpool_destroy(qlib->shepherds[i].stack_pool);
+	qt_mpool_destroy(qlib->shepherds[i].context_pool);
     }
-    cp_mempool_destroy(generic_qthread_pool);
-    cp_mempool_destroy(generic_stack_pool);
-    cp_mempool_destroy(generic_context_pool);
-    cp_mempool_destroy(generic_queue_pool);
-    cp_mempool_destroy(generic_lock_pool);
-    cp_mempool_destroy(generic_addrstat_pool);
+    qt_mpool_destroy(generic_qthread_pool);
+    qt_mpool_destroy(generic_stack_pool);
+    qt_mpool_destroy(generic_context_pool);
+    qt_mpool_destroy(generic_queue_pool);
+    qt_mpool_destroy(generic_lock_pool);
+    qt_mpool_destroy(generic_addrstat_pool);
     free(qlib->shepherds);
     free(qlib);
     qlib = NULL;

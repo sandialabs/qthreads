@@ -27,6 +27,7 @@ endif
 
 if COMPILE_TARGET_UNIX
 libqthread_la_SOURCES += \
+	qt_mpool.c \
 	qthread.c \
 	futurelib.c
 endif
