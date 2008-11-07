@@ -415,7 +415,7 @@ static inline float qthread_fincr(volatile float * operand, const float incr)
 	    :"=&b" (retval.i), "=f"(incrd), "=m"(scratch)
 	    :"r" (operand), "f"(incr)
 	    :"cc","memory");
-    return retval.f;
+    return retval.f-incr;
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
     union {
 	float f;
@@ -438,7 +438,7 @@ static inline float qthread_fincr(volatile float * operand, const float incr)
 			      : "r" (operand), "r"(oldval.i), "0" (newval.i)
 			      : "cc", "memory");
     } while (oldval.i != newval.i);
-    return oldval.f + incr;
+    return oldval.f;
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
     union {
 	float f;
@@ -453,7 +453,7 @@ static inline float qthread_fincr(volatile float * operand, const float incr)
 		:"r"(operand), "r"(newval.i)
 		:"memory");
     } while (res.i != oldval.i); /* if res!=old, the calc is out of date */
-    return res.f + incr;
+    return oldval.f;
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
     union {
 	float f;
@@ -468,14 +468,15 @@ static inline float qthread_fincr(volatile float * operand, const float incr)
 		    "0"(oldval.i) /* load into EAX */
 		:"cc","memory");
     } while (retval.i != oldval.i);
-    return newval.f;
+    return oldval.f;
 # endif
 #elif defined (QTHREAD_MUTEX_INCREMENT)
 
     float retval;
     qthread_t *me = qthread_self();
     qthread_lock(me, (void*)operand);
-    retval = *operand += incr;
+    retval = *operand;
+    *operand += incr;
     qthread_unlock(me, (void*)operand);
     return retval;
 #else

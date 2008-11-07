@@ -26,7 +26,7 @@ int main()
 
     ret_test = qthread_fincr(master+1, 1);
     assert(master[1] == 1.0);
-    assert(ret_test == 1.0);
+    assert(ret_test == 0.0);
     master[1] = 0;
     for (i = 0; i < 30; i++) {
 	qthread_fork(incr, NULL, &(rets[i]));
