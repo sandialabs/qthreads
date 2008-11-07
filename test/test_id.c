@@ -12,15 +12,15 @@ aligned_t thread (qthread_t *me, void *arg)
     int ret;
     int ret2;
     //printf("first id = %i\n", id);
-    assert(id == 1);
+    assert(id == 0);
 
     ret = qthread_incr(&counter, 1);
     //printf("first inc = %i\n", ret);
-    assert(ret == 1);
+    assert(ret == 0);
 
     ret2 = qthread_incr(&counter, 1);
     //printf("second inc = %i\n", ret2);
-    assert(ret2 == 2);
+    assert(ret2 == 1);
     return 0;
 }
 
