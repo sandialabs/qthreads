@@ -20,6 +20,9 @@
    */
 #undef QTHREAD_MUTEX_INCREMENT
 
+/* use inlined functions */
+#undef QTHREAD_INLINE
+
 /* compile for the SST */
 #undef SST
 
