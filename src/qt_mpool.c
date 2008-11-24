@@ -11,6 +11,19 @@
 #include <pthread.h>
 #endif
 
+/* these are copied from qthread_innards.h */
+#ifdef QTHREAD_NO_ASSERTS
+# define qassert(op, val) op
+# define qassertnot(op, val) op
+# ifdef assert
+#  undef assert
+# endif
+# define assert(foo)
+#else
+# define qassert(op, val) assert(op == val)
+# define qassertnot(op, val) assert(op != val)
+#endif
+
 #ifdef HAVE_GETPAGESIZE
 #include <unistd.h>
 #else
@@ -59,17 +72,20 @@ qt_mpool qt_mpool_create(int sync, size_t item_size)
 {
     qt_mpool pool = (qt_mpool) calloc(1, sizeof(struct qt_mpool_s));
     size_t alloc_size = 0;
+    assert(pool != NULL);
     if (pool == NULL) {
 	return NULL;
     }
 #ifdef QTHREAD_USE_PTHREADS
     if (sync) {
 	pool->lock = (pthread_mutex_t*) malloc(sizeof(pthread_mutex_t));
+	assert(pool->lock != NULL);
 	if (pool->lock == NULL) {
 	    free(pool);
 	    return NULL;
 	}
 	if (pthread_mutex_init(pool->lock, NULL) != 0) {
+	    assert(0);
 	    free(pool->lock);
 	    free(pool);
 	    return NULL;
@@ -101,9 +117,10 @@ qt_mpool qt_mpool_create(int sync, size_t item_size)
 	} else {
 	    alloc_size = pagesize;
 	}
-    }
-    while (alloc_size/item_size < 10) {
-	alloc_size *= 2;
+    } else {
+	while (alloc_size/item_size < 10) {
+	    alloc_size *= 2;
+	}
     }
     pool->alloc_size = alloc_size;
 
@@ -111,6 +128,7 @@ qt_mpool qt_mpool_create(int sync, size_t item_size)
 
     pool->reuse_pool = NULL;
     pool->alloc_block = (char *) malloc(alloc_size);
+    assert(pool->alloc_block != NULL);
     if (pool->alloc_block == NULL) {
 #ifdef QTHREAD_USE_PTHREADS
 	if (sync) {
@@ -123,6 +141,7 @@ qt_mpool qt_mpool_create(int sync, size_t item_size)
     }
     /* this assumes that pagesize is a multiple of sizeof(void*) */
     pool->alloc_list = calloc(1, pagesize);
+    assert(pool->alloc_list != NULL);
     if (pool->alloc_list == NULL) {
 	free(pool->alloc_block);
 #ifdef QTHREAD_USE_PTHREADS
@@ -155,6 +174,7 @@ void * qt_mpool_alloc(qt_mpool pool)
 	if (pool->alloc_block_pos == pool->items_per_alloc) {
 	    if (pool->alloc_list_pos == (pagesize/sizeof(void*) - 1)) {
 		void ** tmp = calloc(1, pagesize);
+		assert(tmp != NULL);
 		if (tmp == NULL) {
 		    goto alloc_exit;
 		}
@@ -163,6 +183,7 @@ void * qt_mpool_alloc(qt_mpool pool)
 		pool->alloc_list_pos = 0;
 	    }
 	    p = malloc(pool->alloc_size);
+	    assert(p != NULL);
 	    if (p == NULL) {
 		goto alloc_exit;
 	    }
