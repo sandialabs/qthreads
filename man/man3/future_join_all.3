@@ -6,15 +6,15 @@
 
 .I void
 .br
-\fBfuture_join_all\fR(qthread_t *\fIme\fR, future_t **\fIfta\fR, int \fIftc\fR);
+\fBfuture_join_all\fR(qthread_t *\fIme\fR, aligned_t *\fIfta\fR, int \fIftc\fR);
 .PP
 
 .SH DESCRIPTION
 This is a function which blocks until each one of an array of futures terminates.
 .PP
 The first argument is a pointer to the qthread executing the join.
-The second argument, \fIfta\fR, is an array of future pointers to which
-the calling thread will join. The final argument, \fIftc\fR, indicates 
+The second argument, \fIfta\fR, is an array of the return locations of the
+futures the calling thread will join. The final argument, \fIftc\fR, indicates
 the number of futures in the array.
 .PP
 When a thread attempts to join with future computations, the action may block, 
