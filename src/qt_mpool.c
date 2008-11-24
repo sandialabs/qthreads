@@ -14,7 +14,7 @@
 #ifdef HAVE_GETPAGESIZE
 #include <unistd.h>
 #else
-static inline int getpagesize() { return 4096; }
+static QINLINE int getpagesize() { return 4096; }
 #endif
 
 struct qt_mpool_s {
@@ -37,7 +37,7 @@ struct qt_mpool_s {
 static size_t pagesize = 0;
 
 /* local funcs */
-static inline size_t mpool_gcd(size_t a, size_t b)
+static QINLINE size_t mpool_gcd(size_t a, size_t b)
 {
     while (1) {
 	if (a == 0) return b;
@@ -46,9 +46,9 @@ static inline size_t mpool_gcd(size_t a, size_t b)
 	a %= b;
     }
 }
-static inline size_t mpool_lcm(size_t a, size_t b)
+static QINLINE size_t mpool_lcm(size_t a, size_t b)
 {
-    int tmp = mpool_gcd(a,b);
+    size_t tmp = mpool_gcd(a,b);
     return (tmp!=0)?(a*b/tmp):0;
 }
 
@@ -95,6 +95,13 @@ qt_mpool qt_mpool_create(int sync, size_t item_size)
      * that the allocation size will be a multiple of pagesize (fast!
      * efficient!). */
     alloc_size = mpool_lcm(item_size, pagesize);
+    if (alloc_size == 0) { /* degenerative case */
+	if (item_size > pagesize) {
+	    alloc_size = item_size;
+	} else {
+	    alloc_size = pagesize;
+	}
+    }
     while (alloc_size/item_size < 10) {
 	alloc_size *= 2;
     }
