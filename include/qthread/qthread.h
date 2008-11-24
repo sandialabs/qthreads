@@ -57,10 +57,6 @@ typedef uint32_t __attribute__ ((aligned(4))) aligned_t;
 typedef int32_t __attribute__ ((aligned(4))) saligned_t;
 #endif
 #endif
-
-/* for convenient arguments to qthread_fork */
-typedef aligned_t(*qthread_f) (qthread_t * me, void *arg);
-
 #ifdef __cplusplus
 }
 #endif
@@ -74,6 +70,9 @@ extern "C"
 #endif
 typedef struct qthread_s qthread_t;
 typedef unsigned short qthread_shepherd_id_t;	/* doubt we'll run more than 65k shepherds */
+
+/* for convenient arguments to qthread_fork */
+typedef aligned_t(*qthread_f) (qthread_t * me, void *arg);
 
 /* use this function to initialize the qthreads environment before spawning any
  * qthreads. The argument to this function specifies the number of pthreads

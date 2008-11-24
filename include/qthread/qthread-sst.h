@@ -29,6 +29,9 @@ extern "C"
 typedef int qthread_t;
 typedef unsigned int qthread_shepherd_id_t;
 
+/* for convenient arguments to qthread_fork */
+typedef aligned_t(*qthread_f) (qthread_t * me, void *arg);
+
 /* While this function is *required* for UNIX, in a PIM environment, it serves
  * primarily to prove that qthreads are being used (thus the quickPrint call
  * with the "scalable" argument) */
