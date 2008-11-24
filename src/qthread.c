@@ -226,32 +226,32 @@ static void qthread_wrapper(unsigned int high, unsigned int low);
 static void qthread_wrapper(void *ptr);
 #endif
 
-static inline void qthread_makecontext(ucontext_t *, void *, size_t,
+static QINLINE void qthread_makecontext(ucontext_t *, void *, size_t,
 				       void (*)(void), const void *,
 				       ucontext_t *);
-static inline qthread_addrstat_t *qthread_addrstat_new(qthread_shepherd_t *
+static QINLINE qthread_addrstat_t *qthread_addrstat_new(qthread_shepherd_t *
 						       shepherd);
 static void qthread_addrstat_delete(qthread_addrstat_t * m);
-static inline qthread_t *qthread_thread_new(const qthread_f f,
+static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
 					    const void *arg, aligned_t * ret,
 					    const qthread_shepherd_id_t
 					    shepherd);
-static inline qthread_t *qthread_thread_bare(const qthread_f f,
+static QINLINE qthread_t *qthread_thread_bare(const qthread_f f,
 					     const void *arg, aligned_t * ret,
 					     const qthread_shepherd_id_t
 					     shepherd);
-static inline void qthread_thread_free(qthread_t * t);
-static inline qthread_queue_t *qthread_queue_new(qthread_shepherd_t *
+static QINLINE void qthread_thread_free(qthread_t * t);
+static QINLINE qthread_queue_t *qthread_queue_new(qthread_shepherd_t *
 						 shepherd);
-static inline void qthread_queue_free(qthread_queue_t * q);
-static inline void qthread_enqueue(qthread_queue_t * q, qthread_t * t);
-static inline qthread_t *qthread_dequeue(qthread_queue_t * q);
-static inline qthread_t *qthread_dequeue_nonblocking(qthread_queue_t * q);
-static inline void qthread_exec(qthread_t * t, ucontext_t * c);
-static inline void qthread_back_to_master(qthread_t * t);
-static inline void qthread_gotlock_fill(qthread_addrstat_t * m, void *maddr,
+static QINLINE void qthread_queue_free(qthread_queue_t * q);
+static QINLINE void qthread_enqueue(qthread_queue_t * q, qthread_t * t);
+static QINLINE qthread_t *qthread_dequeue(qthread_queue_t * q);
+static QINLINE qthread_t *qthread_dequeue_nonblocking(qthread_queue_t * q);
+static QINLINE void qthread_exec(qthread_t * t, ucontext_t * c);
+static QINLINE void qthread_back_to_master(qthread_t * t);
+static QINLINE void qthread_gotlock_fill(qthread_addrstat_t * m, void *maddr,
 					const char recursive);
-static inline void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
+static QINLINE void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
 					 const char recursive);
 
 #define QTHREAD_INITLOCK(l) do { if (pthread_mutex_init(l, NULL) != 0) { return QTHREAD_PTHREAD_ERROR; } } while(0)
@@ -266,7 +266,7 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
 #define ALLOC_QTHREAD(shep) (qthread_t *) malloc(sizeof(qthread_t))
 #define FREE_QTHREAD(t) free(t)
 #else
-static inline qthread_t *ALLOC_QTHREAD(qthread_shepherd_t * shep)
+static QINLINE qthread_t *ALLOC_QTHREAD(qthread_shepherd_t * shep)
 {
     qthread_t *tmp =
 	(qthread_t *) qt_mpool_alloc(shep ? (shep->qthread_pool) :
@@ -276,7 +276,7 @@ static inline qthread_t *ALLOC_QTHREAD(qthread_shepherd_t * shep)
     }
     return tmp;
 }
-static inline void FREE_QTHREAD(qthread_t * t)
+static QINLINE void FREE_QTHREAD(qthread_t * t)
 {
     qt_mpool_free(t->
 		    creator_ptr ? (t->creator_ptr->
@@ -304,7 +304,7 @@ static inline void FREE_QTHREAD(qthread_t * t)
 #define ALLOC_QUEUE(shep) (qthread_queue_t *) malloc(sizeof(qthread_queue_t))
 #define FREE_QUEUE(t) free(t)
 #else
-static inline qthread_queue_t *ALLOC_QUEUE(qthread_shepherd_t * shep)
+static QINLINE qthread_queue_t *ALLOC_QUEUE(qthread_shepherd_t * shep)
 {
     qthread_queue_t *tmp =
 	(qthread_queue_t *) qt_mpool_alloc(shep ? (shep->queue_pool) :
@@ -314,7 +314,7 @@ static inline qthread_queue_t *ALLOC_QUEUE(qthread_shepherd_t * shep)
     }
     return tmp;
 }
-static inline void FREE_QUEUE(qthread_queue_t * t)
+static QINLINE void FREE_QUEUE(qthread_queue_t * t)
 {
     qt_mpool_free(t->
 		    creator_ptr ? (t->creator_ptr->
@@ -326,7 +326,7 @@ static inline void FREE_QUEUE(qthread_queue_t * t)
 #define ALLOC_LOCK(shep) (qthread_lock_t *) malloc(sizeof(qthread_lock_t))
 #define FREE_LOCK(t) free(t)
 #else
-static inline qthread_lock_t *ALLOC_LOCK(qthread_shepherd_t * shep)
+static QINLINE qthread_lock_t *ALLOC_LOCK(qthread_shepherd_t * shep)
 {
     qthread_lock_t *tmp =
 	(qthread_lock_t *) qt_mpool_alloc(shep ? (shep->lock_pool) :
@@ -336,7 +336,7 @@ static inline qthread_lock_t *ALLOC_LOCK(qthread_shepherd_t * shep)
     }
     return tmp;
 }
-static inline void FREE_LOCK(qthread_lock_t * t)
+static QINLINE void FREE_LOCK(qthread_lock_t * t)
 {
     qt_mpool_free(t->
 		    creator_ptr ? (t->creator_ptr->
@@ -348,7 +348,7 @@ static inline void FREE_LOCK(qthread_lock_t * t)
 #define ALLOC_ADDRRES(shep) (qthread_addrres_t *) malloc(sizeof(qthread_addrres_t))
 #define FREE_ADDRRES(t) free(t)
 #else
-static inline qthread_addrres_t *ALLOC_ADDRRES(qthread_shepherd_t * shep)
+static QINLINE qthread_addrres_t *ALLOC_ADDRRES(qthread_shepherd_t * shep)
 {
     qthread_addrres_t *tmp =
 	(qthread_addrres_t *) qt_mpool_alloc(shep->addrres_pool);
@@ -357,7 +357,7 @@ static inline qthread_addrres_t *ALLOC_ADDRRES(qthread_shepherd_t * shep)
     }
     return tmp;
 }
-static inline void FREE_ADDRRES(qthread_addrres_t * t)
+static QINLINE void FREE_ADDRRES(qthread_addrres_t * t)
 {
     qt_mpool_free(t->creator_ptr->addrres_pool, t);
 }
@@ -367,7 +367,7 @@ static inline void FREE_ADDRRES(qthread_addrres_t * t)
 #define ALLOC_ADDRSTAT(shep) (qthread_addrstat_t *) malloc(sizeof(qthread_addrstat_t))
 #define FREE_ADDRSTAT(t) free(t)
 #else
-static inline qthread_addrstat_t *ALLOC_ADDRSTAT(qthread_shepherd_t * shep)
+static QINLINE qthread_addrstat_t *ALLOC_ADDRSTAT(qthread_shepherd_t * shep)
 {
     qthread_addrstat_t *tmp =
 	(qthread_addrstat_t *) qt_mpool_alloc(shep ? (shep->addrstat_pool) :
@@ -377,7 +377,7 @@ static inline qthread_addrstat_t *ALLOC_ADDRSTAT(qthread_shepherd_t * shep)
     }
     return tmp;
 }
-static inline void FREE_ADDRSTAT(qthread_addrstat_t * t)
+static QINLINE void FREE_ADDRSTAT(qthread_addrstat_t * t)
 {
     qt_mpool_free(t->
 		    creator_ptr ? (t->creator_ptr->
@@ -394,7 +394,7 @@ static inline void FREE_ADDRSTAT(qthread_addrstat_t * t)
 #if defined(HAVE_GCC_INLINE_ASSEMBLY)
 #define qthread_internal_incr(op,lock) qthread_incr(op, 1)
 #else
-static inline aligned_t qthread_internal_incr(volatile aligned_t * operand,
+static QINLINE aligned_t qthread_internal_incr(volatile aligned_t * operand,
 					      pthread_mutex_t * lock)
 {				       /*{{{ */
     aligned_t retval;
@@ -406,7 +406,7 @@ static inline aligned_t qthread_internal_incr(volatile aligned_t * operand,
 }				       /*}}} */
 #endif
 
-static inline aligned_t qthread_internal_incr_mod(volatile aligned_t *
+static QINLINE aligned_t qthread_internal_incr_mod(volatile aligned_t *
 						  operand, const int max,
 						  pthread_mutex_t * lock)
 {				       /*{{{ */
@@ -606,7 +606,7 @@ static inline aligned_t qthread_internal_incr_mod(volatile aligned_t *
 /*#define QTHREAD_DEBUG 1*/
 /* for debugging */
 #ifdef QTHREAD_DEBUG
-static inline void qthread_debug(char *format, ...)
+static QINLINE void qthread_debug(char *format, ...)
 {				       /*{{{ */
     static pthread_mutex_t output_lock = PTHREAD_MUTEX_INITIALIZER;
     va_list args;
@@ -672,7 +672,7 @@ static inline void qthread_debug(char *format, ...)
     ret->empty_time += secs; \
     ret->empty_count ++; } while (0)
 # define QTHREAD_LOCK_UNIQUERECORD(TYPE, ADDR, ME) cp_hashlist_insert((ME)->shepherd_ptr->unique##TYPE##addrs, (void*)(ADDR), (void*)(ADDR))
-static inline int qthread_unique_collect(void *key, void *value, void *id)
+static QINLINE int qthread_unique_collect(void *key, void *value, void *id)
 {
     cp_hashtable_put((cp_hashtable *) id, key, value);
     return 0;
@@ -888,7 +888,14 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	return QTHREAD_MALLOC_ERROR;
     }
 
-    qlib->qthread_stack_size = QTHREAD_DEFAULT_STACK_SIZE;
+    {
+	char *stacksize = getenv("QTHREAD_STACK_SIZE");
+	if (stacksize && atoi(stacksize)) {
+	    qlib->qthread_stack_size = atoi(stacksize);
+	} else {
+	    qlib->qthread_stack_size = QTHREAD_DEFAULT_STACK_SIZE;
+	}
+    }
     qlib->max_thread_id = 0;
     qlib->sched_shepherd = 0;
     QTHREAD_INITLOCK(&qlib->max_thread_id_lock);
@@ -1041,7 +1048,7 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 /* This initializes a context (c) to run the function (func) with a single
  * argument (arg). This is just a wrapper around makecontext that isolates some
  * of the portability garbage. */
-static inline void qthread_makecontext(ucontext_t * c, void *stack,
+static QINLINE void qthread_makecontext(ucontext_t * c, void *stack,
 				       size_t stacksize, void (*func) (void),
 				       const void *arg, ucontext_t * returnc)
 {
@@ -1317,7 +1324,7 @@ aligned_t *qthread_retlock(const qthread_t * t)
 /* functions to manage thread stack allocation/deallocation */
 /************************************************************/
 
-static inline qthread_t *qthread_thread_bare(const qthread_f f,
+static QINLINE qthread_t *qthread_thread_bare(const qthread_f f,
 					     const void *arg, aligned_t * ret,
 					     const qthread_shepherd_id_t
 					     shepherd)
@@ -1350,7 +1357,7 @@ static inline qthread_t *qthread_thread_bare(const qthread_f f,
     return t;
 }				       /*}}} */
 
-static inline int qthread_thread_plush(qthread_t * t)
+static QINLINE int qthread_thread_plush(qthread_t * t)
 {				       /*{{{ */
     ucontext_t *uc;
     void *stack;
@@ -1373,7 +1380,7 @@ static inline int qthread_thread_plush(qthread_t * t)
 /* this could be reduced to a qthread_thread_bare() and qthread_thread_plush(),
  * but I *think* doing it this way makes it faster. maybe not, I haven't tested
  * it. */
-static inline qthread_t *qthread_thread_new(const qthread_f f,
+static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
 					    const void *arg, aligned_t * ret,
 					    const qthread_shepherd_id_t
 					    shepherd)
@@ -1426,7 +1433,7 @@ static inline qthread_t *qthread_thread_new(const qthread_f f,
     return t;
 }				       /*}}} */
 
-static inline void qthread_thread_free(qthread_t * t)
+static QINLINE void qthread_thread_free(qthread_t * t)
 {				       /*{{{ */
     assert(t != NULL);
 
@@ -1444,7 +1451,7 @@ static inline void qthread_thread_free(qthread_t * t)
 /* functions to manage the thread queues */
 /*****************************************/
 
-static inline qthread_queue_t *qthread_queue_new(qthread_shepherd_t *
+static QINLINE qthread_queue_t *qthread_queue_new(qthread_shepherd_t *
 						 shepherd)
 {				       /*{{{ */
     qthread_queue_t *q;
@@ -1466,7 +1473,7 @@ static inline qthread_queue_t *qthread_queue_new(qthread_shepherd_t *
     return q;
 }				       /*}}} */
 
-static inline void qthread_queue_free(qthread_queue_t * q)
+static QINLINE void qthread_queue_free(qthread_queue_t * q)
 {				       /*{{{ */
     assert((q->head == NULL) && (q->tail == NULL));
     QTHREAD_DESTROYLOCK(&q->lock);
@@ -1474,7 +1481,7 @@ static inline void qthread_queue_free(qthread_queue_t * q)
     FREE_QUEUE(q);
 }				       /*}}} */
 
-static inline void qthread_enqueue(qthread_queue_t * q, qthread_t * t)
+static QINLINE void qthread_enqueue(qthread_queue_t * q, qthread_t * t)
 {				       /*{{{ */
     assert(t != NULL);
     assert(q != NULL);
@@ -1498,7 +1505,7 @@ static inline void qthread_enqueue(qthread_queue_t * q, qthread_t * t)
     QTHREAD_UNLOCK(&q->lock);
 }				       /*}}} */
 
-static inline qthread_t *qthread_dequeue(qthread_queue_t * q)
+static QINLINE qthread_t *qthread_dequeue(qthread_queue_t * q)
 {				       /*{{{ */
     qthread_t *t;
 
@@ -1527,7 +1534,7 @@ static inline qthread_t *qthread_dequeue(qthread_queue_t * q)
     return (t);
 }				       /*}}} */
 
-static inline qthread_t *qthread_dequeue_nonblocking(qthread_queue_t * q)
+static QINLINE qthread_t *qthread_dequeue_nonblocking(qthread_queue_t * q)
 {				       /*{{{ */
     qthread_t *t = NULL;
 
@@ -1619,7 +1626,7 @@ static void qthread_wrapper(void *ptr)
 
 /* This function means "run thread t". The second argument (c) is a pointer
  * to the current context. */
-static inline void qthread_exec(qthread_t * t, ucontext_t * c)
+static QINLINE void qthread_exec(qthread_t * t, ucontext_t * c)
 {				       /*{{{ */
 #ifdef NEED_RLIMIT
     struct rlimit rlp;
@@ -1783,7 +1790,7 @@ int qthread_fork_future_to(const qthread_f f, const void *arg,
     return QTHREAD_MALLOC_ERROR;
 }				       /*}}} */
 
-static inline void qthread_back_to_master(qthread_t * t)
+static QINLINE void qthread_back_to_master(qthread_t * t)
 {				       /*{{{ */
 #ifdef NEED_RLIMIT
     struct rlimit rlp;
@@ -1907,7 +1914,7 @@ int qthread_feb_status(const void *addr)
 /* This allocates a new, initialized addrstat structure, which is used for
  * keeping track of the FEB status of an address. It expects a shepherd pointer
  * to use to find the right memory pool to use. */
-static inline qthread_addrstat_t *qthread_addrstat_new(qthread_shepherd_t *
+static QINLINE qthread_addrstat_t *qthread_addrstat_new(qthread_shepherd_t *
 						       shepherd)
 {				       /*{{{ */
     qthread_addrstat_t *ret = ALLOC_ADDRSTAT(shepherd);
@@ -1928,7 +1935,7 @@ static inline qthread_addrstat_t *qthread_addrstat_new(qthread_shepherd_t *
 
 /* this function removes the FEB data structure for the address maddr from the
  * hash table */
-static inline void qthread_FEB_remove(void *maddr)
+static QINLINE void qthread_FEB_remove(void *maddr)
 {				       /*{{{ */
     qthread_addrstat_t *m;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(maddr);
@@ -1963,7 +1970,7 @@ static inline void qthread_FEB_remove(void *maddr)
     }
 }				       /*}}} */
 
-static inline void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
+static QINLINE void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
 					 const char recursive)
 {				       /*{{{ */
     qthread_addrres_t *X = NULL;
@@ -1998,7 +2005,7 @@ static inline void qthread_gotlock_empty(qthread_addrstat_t * m, void *maddr,
     }
 }				       /*}}} */
 
-static inline void qthread_gotlock_fill(qthread_addrstat_t * m, void *maddr,
+static QINLINE void qthread_gotlock_fill(qthread_addrstat_t * m, void *maddr,
 					const char recursive)
 {				       /*{{{ */
     qthread_addrres_t *X = NULL;

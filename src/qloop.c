@@ -102,7 +102,7 @@ static aligned_t qloop_wrapper(qthread_t * me,
     return 0;
 }
 
-static inline void qt_loop_balance_inner(const size_t start,
+static QINLINE void qt_loop_balance_inner(const size_t start,
 					 const size_t stop,
 					 const qt_loop_f func, void *argptr,
 					 const int future)
@@ -170,7 +170,7 @@ static aligned_t qloopaccum_wrapper(qthread_t * me,
     return 0;
 }
 
-static inline void qt_loopaccum_balance_inner(const size_t start,
+static QINLINE void qt_loopaccum_balance_inner(const size_t start,
 					      const size_t stop,
 					      const size_t size,
 					      void *restrict out,
