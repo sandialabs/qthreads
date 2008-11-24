@@ -1,5 +1,5 @@
-#ifndef _QTHREAD_H_
-#define _QTHREAD_H_
+#ifndef _QTHREAD_SST_H_
+#define _QTHREAD_SST_H_
 
 #include <errno.h>		       /* for ENOMEM */
 
@@ -7,6 +7,7 @@
 #include <qthread/common.h>	       /* important configuration options */
 
 #include <string.h>		       /* for memcpy() */
+#include <ppcPimCalls.h>
 
 /*****************************************************************************
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
@@ -21,81 +22,29 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *****************************************************************************/
 
-/* Return Codes */
-#define QTHREAD_REDUNDANT	1
-#define QTHREAD_SUCCESS		0
-#define QTHREAD_BADARGS		-1
-#define QTHREAD_PTHREAD_ERROR	-2
-#define QTHREAD_MALLOC_ERROR	ENOMEM
-#define NO_SHEPHERD ((qthread_shepherd_id_t)-1)
-
-/* NOTE!!!!!!!!!!!
- * Reads and writes operate on aligned_t-size segments of memory. That is,
- * it will read/write 4 bytes at a time, unless you've configured it to use a
- * 64-bit aligned_t so that it will read/write 8 bytes at a time.
- *
- * FEB locking only works on aligned addresses. On 32-bit architectures, this
- * isn't too much of an inconvenience. On 64-bit architectures, it's a pain in
- * the BUTT! This is here to try and help a little bit. */
-#ifndef HAVE_ATTRIBUTE_ALIGNED
-# define __attribute__(x)
-#endif
-
 #ifdef __cplusplus
 extern "C"
 {
 #endif
-#ifdef QTHREAD_64_BIT_ALIGN_T
-typedef uint64_t __attribute__ ((aligned(8))) aligned_t;
-typedef int64_t __attribute__ ((aligned(8))) saligned_t;
-#else
-#ifdef QTHREAD_64_BIT_ALIGN
-typedef uint32_t __attribute__ ((aligned(8))) aligned_t;
-typedef int32_t __attribute__ ((aligned(8))) saligned_t;
-#else
-typedef uint32_t __attribute__ ((aligned(4))) aligned_t;
-typedef int32_t __attribute__ ((aligned(4))) saligned_t;
-#endif
-#endif
+typedef int qthread_t;
+typedef unsigned int qthread_shepherd_id_t;
 
-/* for convenient arguments to qthread_fork */
-typedef aligned_t(*qthread_f) (qthread_t * me, void *arg);
+/* While this function is *required* for UNIX, in a PIM environment, it serves
+ * primarily to prove that qthreads are being used (thus the quickPrint call
+ * with the "scalable" argument) */
+#define qthread_init(x) PIM_quickPrint(0x5ca1ab1e,x,PIM_readSpecial(PIM_CMD_LOC_COUNT))
 
-#ifdef __cplusplus
-}
-#endif
+/* XXX: not sure how to handle this in a truly multithreaded environment */
+#define qthread_finalize()
 
-#ifdef SST
-# include <qthread/qthread-sst.h>
-#else
-#ifdef __cplusplus
-extern "C"
-{
-#endif
-typedef struct qthread_s qthread_t;
-typedef unsigned short qthread_shepherd_id_t;	/* doubt we'll run more than 65k shepherds */
-
-/* use this function to initialize the qthreads environment before spawning any
- * qthreads. The argument to this function specifies the number of pthreads
- * that will be spawned to shepherd the qthreads. */
-int qthread_init(const qthread_shepherd_id_t nshepherds);
-
-/* use this function to clean up the qthreads environment after execution of
- * the program is finished. This function will terminate any currently running
- * qthreads, so only use it when you are certain that execution has completed.
- * For examples of how to do this, look at the included test programs. */
-void qthread_finalize(void);
-
-/* this function allows a qthread to specifically give up control of the
- * processor even though it has not blocked. This is useful for things like
- * busy-waits or cooperative multitasking. Without this function, threads will
- * only ever allow other threads assigned to the same pthread to execute when
- * they block. */
-void qthread_yield(qthread_t * me);
+/* means nothing in a truly multithreaded environment */
+#define qthread_yield(x)
 
 /* this function allows a qthread to retrieve its qthread_t pointer if it has
  * been lost for some reason */
-qthread_t *qthread_self(void);
+static inline qthread_t *qthread_self(void) {
+    return (qthread_t*)PIM_readSpecial(PIM_CMD_THREAD_SEQ);
+}
 
 /* these are the functions for generating a new qthread.
  *
@@ -106,8 +55,10 @@ qthread_t *qthread_self(void);
  *     thread has finished by specifying a location to store the return value
  *     (which will be stored with a qthread_writeF call). The qthread_fork_to
  *     function spawns the thread to a specific shepherd.
+ *
+ * In the SST PIM environment, the shepherd is the CPU ID number.
  */
-int qthread_fork(const qthread_f f, const void *arg, aligned_t * ret);
+#define qthread_fork(f, arg, ret) qthread_fork_to((f), (arg), (ret), NO_SHEPHERD)
 int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
 		    const qthread_shepherd_id_t shepherd);
 
@@ -119,21 +70,32 @@ int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
  *     the finishing touches on the qthread_t structure and places it into an
  *     active queue.
  */
-qthread_t *qthread_prepare(const qthread_f f, const void *arg,
-			   aligned_t * ret);
+#define qthread_prepare(f, arg, ret) qthread_prepare_for((f), (arg), (ret), NO_SHEPHERD)
 qthread_t *qthread_prepare_for(const qthread_f f, const void *arg,
 			       aligned_t * ret,
 			       const qthread_shepherd_id_t shepherd);
 
-int qthread_schedule(qthread_t * t);
-int qthread_schedule_on(qthread_t * t, const qthread_shepherd_id_t shepherd);
+#define qthread_schedule(t) qthread_schedule_on(t, NO_SHEPHERD)
+#define qthread_schedule_on(t,shep) PIM_startStoppedThread((int)t,(int)shep)
 
 /* these are accessor functions for use by the qthreads to retrieve information
  * about themselves */
-unsigned qthread_id(const qthread_t * t);
-qthread_shepherd_id_t qthread_shep(const qthread_t * t);
-size_t qthread_stackleft(const qthread_t * t);
-aligned_t *qthread_retloc(const qthread_t * t);
+static inline unsigned qthread_id(const qthread_t * t)
+{
+    return PIM_readSpecial(PIM_CMD_THREAD_SEQ);
+}
+static inline qthread_shepherd_id_t qthread_shep(const qthread_t * t)
+{
+    return PIM_readSpecial(PIM_CMD_PROC_NUM);
+}
+static inline size_t qthread_stackleft(const qthread_t * t)
+{
+    return 0;			       /* XXX: this is a bug! */
+}
+static inline size_t qthread_retloc(const qthread_t * t)
+{
+    return 0;			       /* XXX: this is a bug! */
+}
 
 /****************************************************************************
  * functions to implement FEB locking/unlocking
@@ -152,15 +114,23 @@ aligned_t *qthread_retloc(const qthread_t * t);
 
 /* This function is just to assist with debugging; it returns 1 if the address
  * is full, and 0 if the address is empty */
-int qthread_feb_status(const void *addr);
+static inline int qthread_feb_status(const void *addr)
+{
+    return PIM_feb_is_full((unsigned int*)addr);
+}
 
 /* The empty/fill functions merely assert the empty or full state of the given
- * address. You may be wondering why they require a qthread_t argument. The
- * reason for this is memory pooling; memory is allocated on a per-shepherd
- * basis (to avoid needing to lock the memory pool). Anyway, if you pass it a
- * NULL qthread_t, it will still work, it just won't be as fast. */
-int qthread_empty(qthread_t * me, const void *dest);
-int qthread_fill(qthread_t * me, const void *dest);
+ * address. */
+static inline int qthread_empty(qthread_t * me, const void *dest)
+{
+    PIM_feb_empty((unsigned int*)dest);
+    return 0;
+}
+static inline int qthread_fill(qthread_t * me, const void *dest)
+{
+    PIM_feb_fill((unsigned int*)dest);
+    return 0;
+}
 
 /* These functions wait for memory to become empty, and then fill it. When
  * memory becomes empty, only one thread blocked like this will be awoken. Data
@@ -176,8 +146,18 @@ int qthread_fill(qthread_t * me, const void *dest);
  * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
  * (which, conveniently, returns NULL if you aren't a qthread).
  */
-int qthread_writeEF(qthread_t * me, void *dest, const void *src);
-int qthread_writeEF_const(qthread_t * me, void *dest, const aligned_t src);
+static inline int qthread_writeEF(qthread_t * me, void *dest,
+				  const void * src)
+{
+    PIM_feb_writeef((unsigned int*)dest, *(aligned_t *)src);
+    return 0;
+}
+static inline int qthread_writeEF_const(qthread_t * me, void *dest,
+					const aligned_t src)
+{
+    PIM_feb_writeef((unsigned int*)dest, src);
+    return 0;
+}
 
 /* This function is a cross between qthread_fill() and qthread_writeEF(). It
  * does not wait for memory to become empty, but performs the write and sets
@@ -193,8 +173,19 @@ int qthread_writeEF_const(qthread_t * me, void *dest, const aligned_t src);
  * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
  * (which, conveniently, returns NULL if you aren't a qthread).
  */
-int qthread_writeF(qthread_t * me, void *dest, const void *src);
-int qthread_writeF_const(qthread_t * me, void *dest, const aligned_t src);
+static inline int qthread_writeF(qthread_t * me, void *dest, const void *src)
+{
+    *(aligned_t *) dest = *(aligned_t *) src;
+    PIM_feb_fill((unsigned int*)dest);
+    return 0;
+}
+static inline int qthread_writeF_const(qthread_t * me, void *dest,
+				       const aligned_t src)
+{
+    *(aligned_t *) dest = src;
+    PIM_feb_fill((unsigned int*)dest);
+    return 0;
+}
 
 /* This function waits for memory to become full, and then reads it and leaves
  * the memory as full. When memory becomes full, all threads waiting for itindent: Standard input:225: Error:Stmt nesting error.
@@ -211,7 +202,16 @@ int qthread_writeF_const(qthread_t * me, void *dest, const aligned_t src);
  * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
  * (which, conveniently, returns NULL if you aren't a qthread).
  */
-int qthread_readFF(qthread_t * me, void *dest, const void *src);
+static inline int qthread_readFF(qthread_t * me, void * dest,
+				 const void * src)
+{
+    if (dest != NULL && dest != src) {
+	*(aligned_t*)dest = PIM_feb_readff((aligned_t *) src);
+    } else {
+	PIM_feb_readff((aligned_t *) src);
+    }
+    return 0;
+}
 
 /* These functions wait for memory to become full, and then empty it. When
  * memory becomes full, only one thread blocked like this will be awoken. Data
@@ -227,7 +227,15 @@ int qthread_readFF(qthread_t * me, void *dest, const void *src);
  * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
  * (which, conveniently, returns NULL if you aren't a qthread).
  */
-int qthread_readFE(qthread_t * me, void *dest, void *src);
+static inline int qthread_readFE(qthread_t * me, void *dest, void *src)
+{
+    if (dest != NULL && dest != src) {
+	*(aligned_t *) dest = PIM_feb_readfe((unsigned int*)src);
+    } else {
+	PIM_feb_readfe((unsigned int*)src);
+    }
+    return 0;
+}
 
 /* functions to implement FEB-ish locking/unlocking
  *
@@ -239,8 +247,16 @@ int qthread_readFE(qthread_t * me, void *dest, void *src);
  * from somewhere other than a qthread, use NULL for the me argument. If you
  * have lost your qthread_t pointer, it can be reclaimed using qthread_self().
  */
-int qthread_lock(qthread_t * me, const void *a);
-int qthread_unlock(qthread_t * me, const void *a);
+static inline int qthread_lock(qthread_t * me, const void *a)
+{
+    PIM_feb_readfe((aligned_t *) a);
+    return 0;
+}
+static inline int qthread_unlock(qthread_t * me, const void *a)
+{
+    PIM_feb_fill((aligned_t *) a);
+    return 0;
+}
 
 /* the following three functions implement variations on atomic increment. It
  * is done with architecture-specific assembly (on supported architectures,
@@ -274,7 +290,7 @@ static inline float qthread_fincr(volatile float * operand, const float incr)
 	    "stwcx. %0,0,%3\n\t"
 	    "bne-   1b\n\t"
 	    "isync"
-	    :"=&b" (retval.i), "=&f"(incrd), "=m"(scratch)
+	    :"=&b" (retval.i), "=f"(incrd), "=m"(scratch)
 	    :"r" (operand), "f"(incr)
 	    :"cc","memory");
     return retval.f-incr;
@@ -506,178 +522,13 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
 }/*}}}*/
 
 static inline aligned_t qthread_incr(volatile aligned_t * operand, const int incr)
-{				       /*{{{ */
-    aligned_t retval;
-#if defined(HAVE_GCC_INLINE_ASSEMBLY)
+{
+    return PIM_atomicIncrement(operand, incr) + incr;
+}
 
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
-    ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) && !defined(QTHREAD_64_BIT_ALIGN_T))
-
-    register unsigned int incrd = incrd;	/* no initializing */
-    asm volatile (
-	    "1:\tlwarx  %0,0,%1\n\t"
-	    "add    %3,%0,%2\n\t"
-	    "stwcx. %3,0,%1\n\t"
-	    "bne-   1b\n\t"	/* if it failed, try again */
-	    "isync"	/* make sure it wasn't all a dream */
-	    :"=&b"   (retval)
-	    :"r"     (operand), "r"(incr), "r"(incrd)
-	    :"cc", "memory");
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
-
-    register unsigned long incrd = incrd;	/* no initializing */
-    asm volatile (
-	    "1:\tldarx  %0,0,%1\n\t"
-	    "add    %3,%0,%2\n\t"
-	    "stdcx. %3,0,%1\n\t"
-	    "bne-   1b\n\t"	/* if it failed, try again */
-	    "isync"	/* make sure it wasn't all a dream */
-	    :"=&b"   (retval)
-	    :"r"     (operand), "r"(incr), "r"(incrd)
-	    :"cc", "memory");
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32) || \
-      ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) && !defined(QTHREAD_64_BIT_ALIGN_T))
-
-    register uint32_t oldval, newval;
-    /* newval = *operand; */
-    do {
-	/* you *should* be able to move the *operand reference outside the
-	 * loop and use the output of the CAS (namely, newval) instead.
-	 * However, there seems to be a bug in gcc 4.0.4 wherein, if you do
-	 * that, the while() comparison uses a temporary register value for
-	 * newval that has nothing to do with the output of the CAS
-	 * instruction. (See how obviously wrong that is?) For some reason that
-	 * I haven't been able to figure out, moving the *operand reference
-	 * inside the loop fixes that problem, even at -O2 optimization. */
-	oldval = *operand;
-        newval = oldval + incr;
-	/* newval always gets the value of *operand; if it's
-	 * the same as oldval, then the swap was successful */
-        __asm__ __volatile__ ("cas [%1] , %2, %0"
-                              : "=&r" (newval)
-                              : "r" (operand), "r"(oldval), "0"(newval)
-                              : "cc", "memory");
-    } while (oldval != newval);
-    retval = oldval;
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
-
-    register aligned_t oldval, newval;
-    /* newval = *operand; */
-    do {
-	/* you *should* be able to move the *operand reference outside the
-	 * loop and use the output of the CAS (namely, newval) instead.
-	 * However, there seems to be a bug in gcc 4.0.4 wherein, if you do
-	 * that, the while() comparison uses a temporary register value for
-	 * newval that has nothing to do with the output of the CAS
-	 * instruction. (See how obviously wrong that is?) For some reason that
-	 * I haven't been able to figure out, moving the *operand reference
-	 * inside the loop fixes that problem, even at -O2 optimization. */
-	oldval = *operand;
-        newval = oldval + incr;
-	/* newval always gets the value of *operand; if it's
-	 * the same as oldval, then the swap was successful */
-        __asm__ __volatile__ ("casx [%1] , %2, %0"
-                              : "=&r" (newval)
-                              : "r" (operand), "r"(oldval), "0"(newval)
-                              : "cc", "memory");
-    } while (oldval != newval);
-    retval = oldval;
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
-
-# if !defined(QTHREAD_64_BIT_ALIGN_T)
-    int32_t res;
-
-    if (incr == 1) {
-	asm volatile ("fetchadd4.rel %0=[%1],1":"=r" (res)
-		      :"r"     (operand));
-    } else {
-	int32_t old, newval;
-
-	do {
-	    old = *operand;	       /* atomic, because operand is aligned */
-	    newval = old + incr;
-	    asm volatile ("mov ar.ccv=%0;;":	/* no output */
-			  :"rO"    (old));
-
-	    /* separate so the compiler can insert its junk */
-	    asm volatile ("cmpxchg4.acq %0=[%1],%2,ar.ccv":"=r" (res)
-			  :"r"     (operand), "r"(newval)
-			  :"memory");
-	} while (res != old);	       /* if res!=old, the calc is out of date */
-    }
-    retval = res;
-# else
-    int64_t res;
-
-    if (incr == 1) {
-	asm volatile ("fetchadd8.rel %0=%1,1":"=r" (res)
-		      :"m"     (*operand));
-    } else {
-	int64_t old, newval;
-
-	do {
-	    old = *operand;	       /* atomic, because operand is aligned */
-	    newval = old + incr;
-	    asm volatile ("mov ar.ccv=%0;;":	/* no output */
-			  :"rO"    (old));
-
-	    /* separate so the compiler can insert its junk */
-	    asm volatile ("cmpxchg8.acq %0=[%1],%2,ar.ccv":"=r" (res)
-			  :"r"     (operand), "r"(newval)
-			  :"memory");
-	} while (res != old);	       /* if res!=old, the calc is out of date */
-    }
-    retval = res;
-# endif
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
-      ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) && !defined(QTHREAD_64_BIT_ALIGN_T))
-
-    retval = incr;
-    asm volatile ("lock ;  xaddl %0, %1;"
-		  :"=r"(retval)
-		  :"m"(*operand), "0"(retval)
-		  : "memory");
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
-
-    retval = incr;
-    asm volatile ("lock xaddq; %0, %1;"
-		  :"=r"(retval)
-		  :"m"(*operand), "0"(retval)
-		  : "memory");
-
-#else
-
-#error "Unimplemented assembly architecture"
-
-#endif
-
-#elif defined(QTHREAD_MUTEX_INCREMENT)
-
-    qthread_t *me = qthread_self();
-
-    qthread_lock(me, (void *)operand);
-    retval = *operand;
-    *operand += incr;
-    qthread_unlock(me, (void *)operand);
-
-#else
-
-#error "Neither atomic or mutex increment enabled"
-
-#endif
-    return retval;
-}				       /*}}} */
 
 #ifdef __cplusplus
 }
-#endif
-
 #endif
 
 #endif /* _QTHREAD_H_ */

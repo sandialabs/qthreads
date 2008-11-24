@@ -17,6 +17,10 @@ nodist_qthread_HEADERS = \
 	common.h \
 	qthread-int.h
 
+if COMPILE_TARGET_SST
+dist_qthread_HEADERS += qthread-sst.h
+endif
+
 distclean-local:
 	$(RM) -f qthread-int.h
 
