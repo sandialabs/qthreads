@@ -751,10 +751,12 @@ static void *qthread_shepherd(void *arg)
 	    done = 1;
 	    qthread_thread_free(t);
 	} else {
+	    /* yielded only happens for the first thread */
 	    assert((t->thread_state == QTHREAD_STATE_NEW) ||
-		   (t->thread_state == QTHREAD_STATE_RUNNING));
+		   (t->thread_state == QTHREAD_STATE_RUNNING) ||
+		   (t->thread_state == QTHREAD_STATE_YIELDED && t->flags & QTHREAD_REAL_MCCOY));
 
-	    assert(t->f != NULL);
+	    assert(t->f != NULL || t->flags & QTHREAD_REAL_MCCOY);
 #ifdef QTHREAD_SHEPHERD_PROFILING
 	    if (t->thread_state == QTHREAD_STATE_NEW) {
 		me->num_threads++;
