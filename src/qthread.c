@@ -1139,6 +1139,19 @@ void qthread_finalize(void)
 	qthread_enqueue(qlib->shepherds[i].ready, t);
     }
 
+#ifdef QTHREAD_SHEPHERD_PROFILING
+#warning FIXME: total_time is always 0 on shepherd 0
+    printf
+	("QTHREADS: Shepherd 0 spent %f%% of the time idle (%f:%f) handling %lu threads\n",
+	 qlib->shepherds[0].idle_time / qlib->shepherds[0].total_time *
+	 100.0, qlib->shepherds[0].total_time,
+	 qlib->shepherds[0].idle_time,
+	 (unsigned long)qlib->shepherds[0].num_threads);
+    printf
+	("QTHREADS: Shepherd 0 averaged %g secs to find a new thread, max %g secs\n",
+	 qlib->shepherds[0].idle_time / qlib->shepherds[0].idle_count,
+	 qlib->shepherds[0].idle_maxtime);
+#endif
     /* wait for each SPAWNED shepherd to drain it's queue
      * (note: not shepherd 0, because that one wasn't spawned) */
     for (i = 1; i < qlib->nshepherds; i++) {
@@ -1209,8 +1222,8 @@ void qthread_finalize(void)
     printf("QTHREADS: Locks held an average of %g seconds, max %g seconds\n",
 	   (aquirelock_count == 0) ? 0 : (hold_time / aquirelock_count),
 	   hold_maxtime);
-    printf("QTHREADS: %ld unique addresses used with FEB\n",
-	   cp_hashtable_count(uniquefebaddrs));
+    printf("QTHREADS: %ld unique addresses used with FEB, blocked %g secs\n",
+	   cp_hashtable_count(uniquefebaddrs), (febblock_count == 0) ? 0 : febblock_time);
     printf
 	("QTHREADS: %llu potentially-blocking FEB operations, average %g secs, max %g secs\n",
 	 (unsigned long long)febblock_count,
