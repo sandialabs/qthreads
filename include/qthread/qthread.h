@@ -295,7 +295,7 @@ static inline float qthread_fincr(volatile float * operand, const float incr)
 	oldval.f = *operand;
 	newval.f = oldval.f + incr;
 	__asm__ __volatile__ ("cas [%1], %2, %0"
-			      : "+r" (newval.i)
+			      : "=&r" (newval.i)
 			      : "r" (operand), "r"(oldval.i), "0" (newval.i)
 			      : "cc", "memory");
     } while (oldval.i != newval.i);
@@ -392,10 +392,10 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
         oldval.d = *operand;
         newval.d = oldval.d + incr;
         __asm__ __volatile__ ("casx [%1], %2, %0"
-                              : "+r" (newval.i)
+                              : "=&r" (newval.i)
                               : "r" (operand), "r"(oldval.i), "0" (newval.i)
                               : "cc", "memory");
-    } while (oldval.i != newval.i);
+    } while (oldval.d != newval.d);
     return oldval.d;
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
     union {
