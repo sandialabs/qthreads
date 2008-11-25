@@ -42,6 +42,9 @@ int main(int argc, char *argv[])
     }
     if (argc >= 2) {
 	threads = strtol(argv[1], NULL, 0);
+	if (threads <= 0) {
+	    threads = 1;
+	}
 	interactive = 1;
     }
 

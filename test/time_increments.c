@@ -95,6 +95,7 @@ int main(int argc, char *argv[])
 	shepherds = 64;
     } else {
 	shepherds = strtol(argv[1], NULL, 0);
+	if (shepherds <= 0) shepherds = 1;
     }
 
     /* setup */

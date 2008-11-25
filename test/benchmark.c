@@ -240,6 +240,7 @@ int main(int argc, char *argv[])
 
     if (argc == 2) {
 	tcount = strtoul(argv[1], NULL, 10);
+	if (tcount <= 0) tcount=1;
 	printf("[test1] using %lu threads\n", tcount);
     } else {
 	fprintf(stderr, "Usage: %s [numthreads]\n", argv[0]);

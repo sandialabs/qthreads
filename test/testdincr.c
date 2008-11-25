@@ -27,6 +27,9 @@ int main()
     me = qthread_self();
 
     ret_test = qthread_dincr(&master, 1);
+    if (master != 1.0) {
+	printf("master = %f\n", master);
+    }
     assert(master == 1.0);
     assert(ret_test == 0.0);
     master = 0;
