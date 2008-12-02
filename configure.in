@@ -70,11 +70,11 @@ AS_IF([test "$enable_aligncheck" = "no"],
       [AC_DEFINE([QTHREAD_NOALIGNCHECK], [1],
          [Do not check the alignment of synchronization addresses])])
 
-AC_ARG_ENABLE([debug-trace],
-  [AS_HELP_STRING([--enable-debug-trace],
-     [prints out debugging information as programs run, tracing their qthread-related behavior])],
-  [], [enable_debug_trace="no"])
-AS_IF([test "$enable_debug_trace" = "yes"],
+AC_ARG_ENABLE([debug],
+  [AS_HELP_STRING([--enable-debug],
+     [prints out debugging information as programs run, tracing their qthread-related behavior. Uses the environment variable QTHREAD_DEBUG_LEVEL. The higher the level, the greater the detail])],
+  [enable_debug_trace="yes"], [enable_debug_trace="no"])
+AS_IF([test "$enable_debug_trace" == "yes"],
       [AC_DEFINE([QTHREAD_DEBUG], [1], [prints out debugging information at runtime])])
 
 AC_ARG_ENABLE([fullsize-stacks],

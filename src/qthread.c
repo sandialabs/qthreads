@@ -606,21 +606,24 @@ static QINLINE aligned_t qthread_internal_incr_mod(volatile aligned_t *
 /*#define QTHREAD_DEBUG 1*/
 /* for debugging */
 #ifdef QTHREAD_DEBUG
-static QINLINE void qthread_debug(char *format, ...)
+static int debuglevel = 0;
+static QINLINE void qthread_debug(int level, char *format, ...)
 {				       /*{{{ */
     static pthread_mutex_t output_lock = PTHREAD_MUTEX_INITIALIZER;
     va_list args;
 
-    QTHREAD_LOCK(&output_lock);
+    if (level <= debuglevel) {
+	QTHREAD_LOCK(&output_lock);
 
-    fprintf(stderr, "qthread_debug(): ");
+	fprintf(stderr, "QDEBUG: ");
 
-    va_start(args, format);
-    vfprintf(stderr, format, args);
-    va_end(args);
-    fflush(stderr);		       /* KBW: helps keep things straight */
+	va_start(args, format);
+	vfprintf(stderr, format, args);
+	va_end(args);
+	fflush(stderr);		       /* helps keep things straight */
 
-    QTHREAD_UNLOCK(&output_lock);
+	QTHREAD_UNLOCK(&output_lock);
+    }
 }				       /*}}} */
 
 #define QTHREAD_NONLAZY_THREADIDS
@@ -719,7 +722,7 @@ static void *qthread_shepherd(void *arg)
     qtimer_t idle = qtimer_new();
 #endif
 
-    qthread_debug("qthread_shepherd(%u): forked\n", me->shepherd_id);
+    qthread_debug(2, "qthread_shepherd(%u): forked\n", me->shepherd_id);
 
     /* Initialize myself */
     pthread_setspecific(shepherd_structs, arg);
@@ -740,7 +743,7 @@ static void *qthread_shepherd(void *arg)
 #endif
 
 	qthread_debug
-	    ("qthread_shepherd(%u): dequeued thread id %d/state %d\n",
+	    (2, "qthread_shepherd(%u): dequeued thread id %d/state %d\n",
 	     me->shepherd_id, t->thread_id, t->thread_state);
 
 	if (t->thread_state == QTHREAD_STATE_TERM_SHEP) {
@@ -774,12 +777,12 @@ static void *qthread_shepherd(void *arg)
 	    qthread_exec(t, &my_context);
 
 	    me->current = NULL;
-	    qthread_debug("qthread_shepherd(%u): back from qthread_exec\n",
+	    qthread_debug(2, "qthread_shepherd(%u): back from qthread_exec\n",
 			  me->shepherd_id);
 	    switch (t->thread_state) {
 		case QTHREAD_STATE_YIELDED:	/* reschedule it */
 		    qthread_debug
-			("qthread_shepherd(%u): rescheduling thread %p\n",
+			(1, "qthread_shepherd(%u): thread %p yielded; rescheduling\n",
 			 me->shepherd_id, t);
 		    t->thread_state = QTHREAD_STATE_RUNNING;
 		    qthread_enqueue(t->shepherd_ptr->ready, t);
@@ -787,7 +790,7 @@ static void *qthread_shepherd(void *arg)
 
 		case QTHREAD_STATE_FEB_BLOCKED:	/* unlock the related FEB address locks, and re-arrange memory to be correct */
 		    qthread_debug
-			("qthread_shepherd(%u): unlocking FEB address locks of thread %p\n",
+			(1, "qthread_shepherd(%u): thread %p blocked on FEB\n",
 			 me->shepherd_id, t);
 		    t->thread_state = QTHREAD_STATE_BLOCKED;
 		    QTHREAD_UNLOCK(&
@@ -798,7 +801,7 @@ static void *qthread_shepherd(void *arg)
 
 		case QTHREAD_STATE_BLOCKED:	/* put it in the blocked queue */
 		    qthread_debug
-			("qthread_shepherd(%u): adding blocked thread %p to blocked queue\n",
+			(1, "qthread_shepherd(%u): thread %p blocked on LOCK\n",
 			 me->shepherd_id, t);
 		    qthread_enqueue((qthread_queue_t *) t->blockedon->waiting,
 				    t);
@@ -807,7 +810,7 @@ static void *qthread_shepherd(void *arg)
 
 		case QTHREAD_STATE_TERMINATED:
 		    qthread_debug
-			("qthread_shepherd(%u): thread %p is in state terminated.\n",
+			(1, "qthread_shepherd(%u): thread %p terminated\n",
 			 me->shepherd_id, t);
 		    t->thread_state = QTHREAD_STATE_DONE;
 		    /* we can remove the stack and the context... */
@@ -821,7 +824,7 @@ static void *qthread_shepherd(void *arg)
     qtimer_free(total);
     qtimer_free(idle);
 #endif
-    qthread_debug("qthread_shepherd(%u): finished\n", me->shepherd_id);
+    qthread_debug(2, "qthread_shepherd(%u): finished\n", me->shepherd_id);
     pthread_exit(NULL);
     return NULL;
 }				       /*}}} */
@@ -838,7 +841,14 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
     struct rlimit rlp;
 #endif
 
-    qthread_debug("qthread_init(): began.\n");
+#ifdef QTHREAD_DEBUG
+    {
+	char * qdl = getenv("QTHREAD_DEBUG_LEVEL");
+	debuglevel = qdl?atoi(qdl):0;
+    }
+#endif
+
+    qthread_debug(2, "qthread_init(): began.\n");
 
 #ifdef QTHREAD_USE_PTHREADS
     switch (nshepherds) {
@@ -904,7 +914,7 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
     QTHREAD_INITLOCK(&qlib->sched_shepherd_lock);
 #ifdef NEED_RLIMIT
     qassert(getrlimit(RLIMIT_STACK, &rlp), 0);
-    qthread_debug("stack sizes ... cur: %u max: %u\n", rlp.rlim_cur,
+    qthread_debug(2, "stack sizes ... cur: %u max: %u\n", rlp.rlim_cur,
 		  rlp.rlim_max);
     qlib->master_stack_size = rlp.rlim_cur;
     qlib->max_stack_size = rlp.rlim_max;
@@ -969,8 +979,8 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 				       cp_hash_addr, cp_hash_compare_addr);
 #endif
 
-	qthread_debug("qthread_init(): forking shepherd thread %p\n",
-		      &qlib->shepherds[i]);
+	qthread_debug(2, "qthread_init(): forking shepherd %i thread %p\n",
+		      i, &qlib->shepherds[i]);
 
 	if (i > 0) {
 	    if ((r =
@@ -1039,11 +1049,11 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 #endif
 			    &(qlib->shepherds[0]), t->context);
 	/* this launches shepherd 0 */
-	qthread_debug("qthread_init(): launching shepherd 0\n");
+	qthread_debug(2, "qthread_init(): launching shepherd 0\n");
 	qassert(swapcontext(t->context, shep0), 0);
     }
 
-    qthread_debug("qthread_init(): finished.\n");
+    qthread_debug(2, "qthread_init(): finished.\n");
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
@@ -1124,7 +1134,7 @@ void qthread_finalize(void)
 
     assert(qlib != NULL);
 
-    qthread_debug("qthread_finalize(): began.\n");
+    qthread_debug(2, "qthread_finalize(): began.\n");
 
     /* rcm - probably need to put a "turn off the library flag" here, but,
      * the programmer can ensure that no further threads are forked for now
@@ -1285,7 +1295,7 @@ void qthread_finalize(void)
     free(qlib);
     qlib = NULL;
 
-    qthread_debug("qthread_finalize(): finished.\n");
+    qthread_debug(2, "qthread_finalize(): finished.\n");
 }				       /*}}} */
 
 qthread_t *qthread_self(void)
@@ -1501,7 +1511,7 @@ static QINLINE void qthread_enqueue(qthread_queue_t * q, qthread_t * t)
     assert(t != NULL);
     assert(q != NULL);
 
-    qthread_debug("qthread_enqueue(%p,%p): started\n", q, t);
+    qthread_debug(3, "qthread_enqueue(%p,%p): started\n", q, t);
 
     QTHREAD_LOCK(&q->lock);
 
@@ -1516,7 +1526,7 @@ static QINLINE void qthread_enqueue(qthread_queue_t * q, qthread_t * t)
 	q->tail = t;
     }
 
-    qthread_debug("qthread_enqueue(%p,%p): finished\n", q, t);
+    qthread_debug(3, "qthread_enqueue(%p,%p): finished\n", q, t);
     QTHREAD_UNLOCK(&q->lock);
 }				       /*}}} */
 
@@ -1524,7 +1534,7 @@ static QINLINE qthread_t *qthread_dequeue(qthread_queue_t * q)
 {				       /*{{{ */
     qthread_t *t;
 
-    qthread_debug("qthread_dequeue(%p): started\n", q);
+    qthread_debug(3, "qthread_dequeue(%p): started\n", q);
 
     QTHREAD_LOCK(&q->lock);
 
@@ -1545,7 +1555,7 @@ static QINLINE qthread_t *qthread_dequeue(qthread_queue_t * q)
 
     QTHREAD_UNLOCK(&q->lock);
 
-    qthread_debug("qthread_dequeue(%p,%p): finished\n", q, t);
+    qthread_debug(3, "qthread_dequeue(%p,%p): finished\n", q, t);
     return (t);
 }				       /*}}} */
 
@@ -1554,11 +1564,11 @@ static QINLINE qthread_t *qthread_dequeue_nonblocking(qthread_queue_t * q)
     qthread_t *t = NULL;
 
     /* NOTE: it's up to the caller to lock/unlock the queue! */
-    qthread_debug("qthread_dequeue_nonblocking(%p,%p): started\n", q, t);
+    qthread_debug(3, "qthread_dequeue_nonblocking(%p,%p): started\n", q, t);
 
     if (q->head == NULL) {
 	qthread_debug
-	    ("qthread_dequeue_nonblocking(%p,%p): finished (nobody in list)\n",
+	    (3, "qthread_dequeue_nonblocking(%p,%p): finished (nobody in list)\n",
 	     q, t);
 	return (NULL);
     }
@@ -1572,7 +1582,7 @@ static QINLINE qthread_t *qthread_dequeue_nonblocking(qthread_queue_t * q)
     }
     t->next = NULL;
 
-    qthread_debug("qthread_dequeue_nonblocking(%p,%p): finished\n", q, t);
+    qthread_debug(3, "qthread_dequeue_nonblocking(%p,%p): finished\n", q, t);
     return (t);
 }				       /*}}} */
 
@@ -1598,7 +1608,7 @@ static void qthread_wrapper(void *ptr)
     qthread_t *t = (qthread_t *) ptr;
 #endif
 
-    qthread_debug("qthread_wrapper(): executing f=%p arg=%p.\n", t->f,
+    qthread_debug(2, "qthread_wrapper(): executing f=%p arg=%p.\n", t->f,
 		  t->arg);
 #ifdef QTHREAD_COUNT_THREADS
     qthread_internal_incr(&threadcount, &threadcount_lock);
@@ -1616,7 +1626,7 @@ static void qthread_wrapper(void *ptr)
     }
     t->thread_state = QTHREAD_STATE_TERMINATED;
 
-    qthread_debug("qthread_wrapper(): f=%p arg=%p completed.\n", t->f,
+    qthread_debug(2, "qthread_wrapper(): f=%p arg=%p completed.\n", t->f,
 		  t->arg);
 #ifdef QTHREAD_COUNT_THREADS
     qassert(pthread_mutex_lock(&concurrentthreads_lock), 0);
@@ -1652,7 +1662,7 @@ static QINLINE void qthread_exec(qthread_t * t, ucontext_t * c)
 
     if (t->thread_state == QTHREAD_STATE_NEW) {
 
-	qthread_debug("qthread_exec(%p, %p): type is QTHREAD_THREAD_NEW!\n",
+	qthread_debug(3, "qthread_exec(%p, %p): type is QTHREAD_THREAD_NEW!\n",
 		      t, c);
 	t->thread_state = QTHREAD_STATE_RUNNING;
 
@@ -1669,19 +1679,19 @@ static QINLINE void qthread_exec(qthread_t * t, ucontext_t * c)
 
 #ifdef NEED_RLIMIT
     qthread_debug
-	("qthread_exec(%p): setting stack size limits... hopefully we don't currently exceed them!\n",
+	(3, "qthread_exec(%p): setting stack size limits... hopefully we don't currently exceed them!\n",
 	 t);
     rlp.rlim_cur = qlib->qthread_stack_size;
     rlp.rlim_max = qlib->max_stack_size;
     qassert(setrlimit(RLIMIT_STACK, &rlp), 0);
 #endif
 
-    qthread_debug("qthread_exec(%p): executing swapcontext()...\n", t);
+    qthread_debug(3, "qthread_exec(%p): executing swapcontext()...\n", t);
     /* return_context (aka "c") is being written over with the current context */
     qassert(swapcontext(t->return_context, t->context), 0);
 #ifdef NEED_RLIMIT
     qthread_debug
-	("qthread_exec(%p): setting stack size limits back to normal...\n",
+	(3, "qthread_exec(%p): setting stack size limits back to normal...\n",
 	 t);
     rlp.rlim_cur = qlib->master_stack_size;
     qassert(setrlimit(RLIMIT_STACK, &rlp), 0);
@@ -1690,7 +1700,7 @@ static QINLINE void qthread_exec(qthread_t * t, ucontext_t * c)
     assert(t != NULL);
     assert(c != NULL);
 
-    qthread_debug("qthread_exec(%p): finished\n", t);
+    qthread_debug(3, "qthread_exec(%p): finished\n", t);
 }				       /*}}} */
 
 /* this function yields thread t to the master kernel thread */
@@ -1700,10 +1710,10 @@ void qthread_yield(qthread_t * t)
 	t = qthread_self();
     }
     if (t != NULL) {
-	qthread_debug("qthread_yield(): thread %p yielding.\n", t);
+	qthread_debug(1, "qthread_yield(): thread %p yielding.\n", t);
 	t->thread_state = QTHREAD_STATE_YIELDED;
 	qthread_back_to_master(t);
-	qthread_debug("qthread_yield(): thread %p resumed.\n", t);
+	qthread_debug(1, "qthread_yield(): thread %p resumed.\n", t);
     }
 }				       /*}}} */
 
@@ -1733,7 +1743,7 @@ int qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
     }
     t = qthread_thread_new(f, arg, ret, shep);
     if (t) {
-	qthread_debug("qthread_fork(): tid %u shep %u\n", t->thread_id, shep);
+	qthread_debug(2, "qthread_fork(): tid %u shep %u\n", t->thread_id, shep);
 
 	if (ret) {
 	    int test = qthread_empty(qthread_self(), ret);
@@ -1759,7 +1769,7 @@ int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
     }
     t = qthread_thread_new(f, arg, ret, shepherd);
     if (t) {
-	qthread_debug("qthread_fork_to(): tid %u shep %u\n", t->thread_id,
+	qthread_debug(2, "qthread_fork_to(): tid %u shep %u\n", t->thread_id,
 		      shepherd);
 
 	if (ret) {
@@ -1788,7 +1798,7 @@ int qthread_fork_future_to(const qthread_f f, const void *arg,
     t = qthread_thread_new(f, arg, ret, shepherd);
     if (t) {
 	t->flags |= QTHREAD_FUTURE;
-	qthread_debug("qthread_fork_future_to(): tid %u shep %u\n",
+	qthread_debug(2, "qthread_fork_future_to(): tid %u shep %u\n",
 		      t->thread_id, shepherd);
 
 	if (ret) {
@@ -1811,7 +1821,7 @@ static QINLINE void qthread_back_to_master(qthread_t * t)
     struct rlimit rlp;
 
     qthread_debug
-	("qthread_back_to_master(%p): setting stack size limits for master thread...\n",
+	(3, "qthread_back_to_master(%p): setting stack size limits for master thread...\n",
 	 t);
     rlp.rlim_cur = qlib->master_stack_size;
     rlp.rlim_max = qlib->max_stack_size;
@@ -1821,7 +1831,7 @@ static QINLINE void qthread_back_to_master(qthread_t * t)
     qassert(swapcontext(t->context, t->return_context), 0);
 #ifdef NEED_RLIMIT
     qthread_debug
-	("qthread_back_to_master(%p): setting stack size limits back to qthread size...\n",
+	(3, "qthread_back_to_master(%p): setting stack size limits back to qthread size...\n",
 	 t);
     rlp.rlim_cur = qlib->qthread_stack_size;
     qassert(setrlimit(RLIMIT_STACK, &rlp), 0);
@@ -1955,7 +1965,7 @@ static QINLINE void qthread_FEB_remove(void *maddr)
     qthread_addrstat_t *m;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(maddr);
 
-    qthread_debug("qthread_FEB_remove(): attempting removal\n");
+    qthread_debug(2, "qthread_FEB_remove(): attempting removal\n");
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     cp_hashtable_wrlock(qlib->FEBs[lockbin]); {
 	m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs[lockbin],
@@ -1966,13 +1976,13 @@ static QINLINE void qthread_FEB_remove(void *maddr)
 	    if (m->FEQ == NULL && m->EFQ == NULL && m->FFQ == NULL &&
 		m->full == 1) {
 		qthread_debug
-		    ("qthread_FEB_remove(): all lists are empty, and status is full\n");
+		    (2,"qthread_FEB_remove(): all lists are empty, and status is full\n");
 		cp_hashtable_remove(qlib->FEBs[lockbin], maddr);
 	    } else {
 		QTHREAD_UNLOCK(&(m->lock));
 		REPORTUNLOCK(m);
 		qthread_debug
-		    ("qthread_FEB_remove(): address cannot be removed; in use\n");
+		    (2,"qthread_FEB_remove(): address cannot be removed; in use\n");
 		m = NULL;
 	    }
 	}
@@ -2026,11 +2036,11 @@ static QINLINE void qthread_gotlock_fill(qthread_addrstat_t * m, void *maddr,
     qthread_addrres_t *X = NULL;
     int removeable;
 
-    qthread_debug("qthread_gotlock_fill(%p, %p)\n", m, maddr);
+    qthread_debug(2, "qthread_gotlock_fill(%p, %p)\n", m, maddr);
     m->full = 1;
     QTHREAD_EMPTY_TIMER_STOP(m);
     /* dequeue all FFQ, do their operation, and schedule them */
-    qthread_debug("qthread_gotlock_fill(): dQ all FFQ\n");
+    qthread_debug(2, "qthread_gotlock_fill(): dQ all FFQ\n");
     while (m->FFQ != NULL) {
 	/* dQ */
 	X = m->FFQ;
@@ -2048,7 +2058,7 @@ static QINLINE void qthread_gotlock_fill(qthread_addrstat_t * m, void *maddr,
 	/* dequeue one FEQ, do their operation, and schedule them */
 	qthread_t *waiter;
 
-	qthread_debug("qthread_gotlock_fill(): dQ 1 FEQ\n");
+	qthread_debug(2, "qthread_gotlock_fill(): dQ 1 FEQ\n");
 	X = m->FEQ;
 	m->FEQ = X->next;
 	/* op */
@@ -2204,7 +2214,7 @@ int qthread_writeEF(qthread_t * me, void *dest, const void *src)
     }
     QTHREAD_LOCK_UNIQUERECORD(feb, dest, me);
     QTHREAD_LOCK_TIMER_START(febblock);
-    qthread_debug("qthread_writeEF(%p, %p, %p): init\n", me, dest, src);
+    qthread_debug(1, "qthread_writeEF(%p, %p, %p): init\n", me, dest, src);
     ALIGN(dest, alignedaddr, "qthread_writeEF()");
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     cp_hashtable_wrlock(qlib->FEBs[lockbin]); {
@@ -2222,9 +2232,9 @@ int qthread_writeEF(qthread_t * me, void *dest, const void *src)
 	REPORTLOCK(m);
     }
     cp_hashtable_unlock(qlib->FEBs[lockbin]);
-    qthread_debug("qthread_writeEF(): data structure locked\n");
+    qthread_debug(3, "qthread_writeEF(): data structure locked\n");
     /* by this point m is locked */
-    qthread_debug("qthread_writeEF(): m->full == %i\n", m->full);
+    qthread_debug(3, "qthread_writeEF(): m->full == %i\n", m->full);
     if (m->full == 1) {		       /* full, thus, we must block */
 	QTHREAD_WAIT_TIMER_DECLARATION;
 	X = ALLOC_ADDRRES(me->shepherd_ptr);
@@ -2237,7 +2247,7 @@ int qthread_writeEF(qthread_t * me, void *dest, const void *src)
 	X->waiter = me;
 	X->next = m->EFQ;
 	m->EFQ = X;
-	qthread_debug("qthread_writeEF(): back to parent\n");
+	qthread_debug(3, "qthread_writeEF(): back to parent\n");
 	me->thread_state = QTHREAD_STATE_FEB_BLOCKED;
 	me->blockedon = (struct qthread_lock_s *)m;
 	QTHREAD_WAIT_TIMER_START();
@@ -2277,7 +2287,7 @@ int qthread_readFF(qthread_t * me, void *dest, const void *src)
     }
     QTHREAD_LOCK_UNIQUERECORD(feb, src, me);
     QTHREAD_LOCK_TIMER_START(febblock);
-    qthread_debug("qthread_readFF(%p, %p, %p): init\n", me, dest, src);
+    qthread_debug(1, "qthread_readFF(%p, %p, %p): init\n", me, dest, src);
     ALIGN(src, alignedaddr, "qthread_readFF()");
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     cp_hashtable_wrlock(qlib->FEBs[lockbin]); {
@@ -2293,7 +2303,7 @@ int qthread_readFF(qthread_t * me, void *dest, const void *src)
 	}
     }
     cp_hashtable_unlock(qlib->FEBs[lockbin]);
-    qthread_debug("qthread_readFF(): data structure locked\n");
+    qthread_debug(3, "qthread_readFF(): data structure locked\n");
     /* now m, if it exists, is locked - if m is NULL, then we're done! */
     if (m == NULL) {		       /* already full! */
 	if (dest && dest != src) {
@@ -2311,7 +2321,7 @@ int qthread_readFF(qthread_t * me, void *dest, const void *src)
 	X->waiter = me;
 	X->next = m->FFQ;
 	m->FFQ = X;
-	qthread_debug("qthread_readFF(): back to parent\n");
+	qthread_debug(3, "qthread_readFF(): back to parent\n");
 	me->thread_state = QTHREAD_STATE_FEB_BLOCKED;
 	me->blockedon = (struct qthread_lock_s *)m;
 	QTHREAD_WAIT_TIMER_START();
@@ -2347,7 +2357,7 @@ int qthread_readFE(qthread_t * me, void *dest, void *src)
     }
     QTHREAD_LOCK_UNIQUERECORD(feb, src, me);
     QTHREAD_LOCK_TIMER_START(febblock);
-    qthread_debug("qthread_readFE(%p, %p, %p): init\n", me, dest, src);
+    qthread_debug(1, "qthread_readFE(%p, %p, %p): init\n", me, dest, src);
     ALIGN(src, alignedaddr, "qthread_readFE()");
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     cp_hashtable_wrlock(qlib->FEBs[lockbin]); {
@@ -2365,7 +2375,7 @@ int qthread_readFE(qthread_t * me, void *dest, void *src)
 	REPORTLOCK(m);
     }
     cp_hashtable_unlock(qlib->FEBs[lockbin]);
-    qthread_debug("qthread_readFE(): data structure locked\n");
+    qthread_debug(3, "qthread_readFE(): data structure locked\n");
     /* by this point m is locked */
     if (m->full == 0) {		       /* empty, thus, we must block */
 	QTHREAD_WAIT_TIMER_DECLARATION;
@@ -2380,7 +2390,7 @@ int qthread_readFE(qthread_t * me, void *dest, void *src)
 	X->waiter = me;
 	X->next = m->FEQ;
 	m->FEQ = X;
-	qthread_debug("qthread_readFE(): back to parent\n");
+	qthread_debug(3, "qthread_readFE(): back to parent\n");
 	me->thread_state = QTHREAD_STATE_FEB_BLOCKED;
 	/* so that the shepherd will unlock it */
 	me->blockedon = (struct qthread_lock_s *)m;
@@ -2460,7 +2470,7 @@ int qthread_lock(qthread_t * me, const void *a)
 	m->owner = me->thread_id;
 #endif
 	QTHREAD_UNLOCK(&m->lock);
-	qthread_debug("qthread_lock(%p, %p): returned (wasn't locked)\n", me,
+	qthread_debug(1, "qthread_lock(%p, %p): returned (wasn't locked)\n", me,
 		      a);
     } else {
 	QTHREAD_WAIT_TIMER_DECLARATION;
@@ -2483,7 +2493,7 @@ int qthread_lock(qthread_t * me, const void *a)
 
 	/* once I return to this context, I own the lock! */
 	/* conveniently, whoever unlocked me already set up everything too */
-	qthread_debug("qthread_lock(%p, %p): returned (was locked)\n", me, a);
+	qthread_debug(1, "qthread_lock(%p, %p): returned (was locked)\n", me, a);
     }
     QTHREAD_LOCK_TIMER_STOP(aquirelock, me);
     QTHREAD_HOLD_TIMER_START(m);
@@ -2496,7 +2506,7 @@ int qthread_unlock(qthread_t * me, const void *a)
     qthread_t *u;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(a);
 
-    qthread_debug("qthread_unlock(%p, %p): started\n", me, a);
+    qthread_debug(1, "qthread_unlock(%p, %p): started\n", me, a);
 
     QTHREAD_COUNT_THREADS_BINCOUNTER(locks, lockbin);
     cp_hashtable_wrlock(qlib->locks[lockbin]);
@@ -2517,7 +2527,7 @@ int qthread_unlock(qthread_t * me, const void *a)
     QTHREAD_LOCK(&m->waiting->lock);
     u = qthread_dequeue_nonblocking(m->waiting);
     if (u == NULL) {
-	qthread_debug("qthread_unlock(%p,%p): deleting waiting queue\n", me,
+	qthread_debug(3, "qthread_unlock(%p,%p): deleting waiting queue\n", me,
 		      a);
 	cp_hashtable_remove(qlib->locks[lockbin], (void *)a);
 	cp_hashtable_unlock(qlib->locks[lockbin]);
@@ -2530,7 +2540,7 @@ int qthread_unlock(qthread_t * me, const void *a)
     } else {
 	cp_hashtable_unlock(qlib->locks[lockbin]);
 	qthread_debug
-	    ("qthread_unlock(%p,%p): pulling thread from queue (%p)\n", me, a,
+	    (3, "qthread_unlock(%p,%p): pulling thread from queue (%p)\n", me, a,
 	     u);
 	u->thread_state = QTHREAD_STATE_RUNNING;
 #ifdef QTHREAD_DEBUG
