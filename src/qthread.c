@@ -27,6 +27,9 @@
 #ifdef QTHREAD_USE_PTHREADS
 # include <pthread.h>
 #endif
+#ifdef QTHREAD_DEBUG
+# include <unistd.h> /* for write() */
+#endif
 
 #ifdef QTHREAD_LOCK_PROFILING
 #include <cprops/hashlist.h>
@@ -613,14 +616,80 @@ static QINLINE void qthread_debug(int level, char *format, ...)
     va_list args;
 
     if (level <= debuglevel) {
+	static char buf[1024]; // protected by the output_lock
+	char *head = buf;
+	char ch;
+	uintptr_t *nums;
+
 	QTHREAD_LOCK(&output_lock);
 
-	fprintf(stderr, "QDEBUG: ");
+	//fprintf(stderr, "QDEBUG: ");
+	write(1, "QDEBUG: ",8);
 
 	va_start(args, format);
-	vfprintf(stderr, format, args);
+	nums = (uintptr_t*)args;
+	/* avoiding the obvious method, to save on memory
+	vfprintf(stderr, format, args);*/
+	while (ch = *format++) {
+	    if (ch == '%') {
+		ch = *format++;
+		switch (ch) {
+		    case 's':
+			{
+			    char * str = (char*)(*nums++);
+			    write(2, buf, head - buf);
+			    head = buf;
+			    write(2, str, strlen(str));
+			    break;
+			}
+		    case 'p':
+		    case 'x':
+			{
+			    uintptr_t num;
+			    unsigned base;
+			    *head++ = '0';
+			    *head++ = 'x';
+			    case 'u':
+			    case 'd':
+			    case 'i':
+			    num = *nums++;
+			    base = (ch == 'p')?16:10;
+			    if (!num) {
+				*head++ = '0';
+			    } else {
+				/* count places */
+				uintptr_t tmp = num;
+				unsigned places = 0;
+				while (tmp >= base) {
+				    tmp /= base;
+				    places++;
+				}
+				head += places;
+				places = 0;
+				while (num >= base) {
+				    tmp = num%base;
+				    *(head-places) = (tmp<10)?('0'+tmp):('a'+tmp-10);
+				    num /= base;
+				    places++;
+				}
+				num %= base;
+				*(head-places) = (num<10)?('0'+num):('a'+num-10);
+				head++;
+			    }
+			}
+			break;
+		    default:
+			*head++ = '%';
+			*head++ = ch;
+		}
+	    } else {
+		*head++ = ch;
+	    }
+	}
+	/* XXX: not checking for extra long values of head */
+	write(2, buf, head - buf);
 	va_end(args);
-	fflush(stderr);		       /* helps keep things straight */
+	/*fflush(stderr);*/
 
 	QTHREAD_UNLOCK(&output_lock);
     }
