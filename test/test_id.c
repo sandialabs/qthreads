@@ -1,3 +1,6 @@
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,7 +15,13 @@ aligned_t thread (qthread_t *me, void *arg)
     int ret;
     int ret2;
     //printf("first id = %i\n", id);
+    /* Normally this is the first thread to get an ID, but in debug mode, the
+     * very first thread gets an id too */
+#ifdef QTHREAD_DEBUG
+    assert(id == 2);
+#else
     assert(id == 0);
+#endif
 
     ret = qthread_incr(&counter, 1);
     //printf("first inc = %i\n", ret);
