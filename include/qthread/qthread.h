@@ -504,14 +504,13 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
 #endif
 }/*}}}*/
 
-static inline aligned_t qthread_incr(volatile aligned_t * operand, const int incr)
+static inline uint32_t qthread_incr32(volatile uint32_t * operand, const int incr)
 {				       /*{{{ */
-    aligned_t retval;
+    uint32_t retval;
 #if defined(HAVE_GCC_INLINE_ASSEMBLY)
 
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
-    ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) && !defined(QTHREAD_64_BIT_ALIGN_T))
-
+    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
     register unsigned int incrd = incrd;	/* no initializing */
     asm volatile (
 	    "1:\tlwarx  %0,0,%1\n\t"
@@ -523,21 +522,8 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
 	    :"r"     (operand), "r"(incr), "r"(incrd)
 	    :"cc", "memory");
 
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
-
-    register unsigned long incrd = incrd;	/* no initializing */
-    asm volatile (
-	    "1:\tldarx  %0,0,%1\n\t"
-	    "add    %3,%0,%2\n\t"
-	    "stdcx. %3,0,%1\n\t"
-	    "bne-   1b\n\t"	/* if it failed, try again */
-	    "isync"	/* make sure it wasn't all a dream */
-	    :"=&b"   (retval)
-	    :"r"     (operand), "r"(incr), "r"(incrd)
-	    :"cc", "memory");
-
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32) || \
-      ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) && !defined(QTHREAD_64_BIT_ALIGN_T))
+      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
 
     register uint32_t oldval, newval;
     /* newval = *operand; */
@@ -561,33 +547,8 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
     } while (oldval != newval);
     retval = oldval;
 
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
-
-    register aligned_t oldval, newval;
-    /* newval = *operand; */
-    do {
-	/* you *should* be able to move the *operand reference outside the
-	 * loop and use the output of the CAS (namely, newval) instead.
-	 * However, there seems to be a bug in gcc 4.0.4 wherein, if you do
-	 * that, the while() comparison uses a temporary register value for
-	 * newval that has nothing to do with the output of the CAS
-	 * instruction. (See how obviously wrong that is?) For some reason that
-	 * I haven't been able to figure out, moving the *operand reference
-	 * inside the loop fixes that problem, even at -O2 optimization. */
-	oldval = *operand;
-        newval = oldval + incr;
-	/* newval always gets the value of *operand; if it's
-	 * the same as oldval, then the swap was successful */
-        __asm__ __volatile__ ("casx [%1] , %2, %0"
-                              : "=&r" (newval)
-                              : "r" (operand), "r"(oldval), "0"(newval)
-                              : "cc", "memory");
-    } while (oldval != newval);
-    retval = oldval;
-
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
 
-# if !defined(QTHREAD_64_BIT_ALIGN_T)
     int32_t res;
 
     if (incr == 1) {
@@ -609,43 +570,12 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
 	} while (res != old);	       /* if res!=old, the calc is out of date */
     }
     retval = res;
-# else
-    int64_t res;
-
-    if (incr == 1) {
-	asm volatile ("fetchadd8.rel %0=%1,1":"=r" (res)
-		      :"m"     (*operand));
-    } else {
-	int64_t old, newval;
-
-	do {
-	    old = *operand;	       /* atomic, because operand is aligned */
-	    newval = old + incr;
-	    asm volatile ("mov ar.ccv=%0;;":	/* no output */
-			  :"rO"    (old));
-
-	    /* separate so the compiler can insert its junk */
-	    asm volatile ("cmpxchg8.acq %0=[%1],%2,ar.ccv":"=r" (res)
-			  :"r"     (operand), "r"(newval)
-			  :"memory");
-	} while (res != old);	       /* if res!=old, the calc is out of date */
-    }
-    retval = res;
-# endif
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
-      ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) && !defined(QTHREAD_64_BIT_ALIGN_T))
+      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 
     retval = incr;
     asm volatile ("lock ;  xaddl %0, %1;"
-		  :"=r"(retval)
-		  :"m"(*operand), "0"(retval)
-		  : "memory");
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
-
-    retval = incr;
-    asm volatile ("lock xaddq; %0, %1;"
 		  :"=r"(retval)
 		  :"m"(*operand), "0"(retval)
 		  : "memory");
@@ -672,6 +602,196 @@ static inline aligned_t qthread_incr(volatile aligned_t * operand, const int inc
 #endif
     return retval;
 }				       /*}}} */
+
+static inline uint64_t qthread_incr64(volatile uint64_t * operand, const int incr)
+{				       /*{{{ */
+    uint64_t retval;
+
+#if defined(HAVE_GCC_INLINE_ASSEMBLY)
+
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
+
+    register unsigned long incrd = incrd;	/* no initializing */
+    asm volatile (
+	    "1:\tldarx  %0,0,%1\n\t"
+	    "add    %3,%0,%2\n\t"
+	    "stdcx. %3,0,%1\n\t"
+	    "bne-   1b\n\t"	/* if it failed, try again */
+	    "isync"	/* make sure it wasn't all a dream */
+	    :"=&b"   (retval)
+	    :"r"     (operand), "r"(incr), "r"(incrd)
+	    :"cc", "memory");
+
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
+
+    register uint64_t oldval, newval;
+    /* newval = *operand; */
+    do {
+	/* you *should* be able to move the *operand reference outside the
+	 * loop and use the output of the CAS (namely, newval) instead.
+	 * However, there seems to be a bug in gcc 4.0.4 wherein, if you do
+	 * that, the while() comparison uses a temporary register value for
+	 * newval that has nothing to do with the output of the CAS
+	 * instruction. (See how obviously wrong that is?) For some reason that
+	 * I haven't been able to figure out, moving the *operand reference
+	 * inside the loop fixes that problem, even at -O2 optimization. */
+	oldval = *operand;
+        newval = oldval + incr;
+	/* newval always gets the value of *operand; if it's
+	 * the same as oldval, then the swap was successful */
+        __asm__ __volatile__ ("casx [%1] , %2, %0"
+                              : "=&r" (newval)
+                              : "r" (operand), "r"(oldval), "0"(newval)
+                              : "cc", "memory");
+    } while (oldval != newval);
+    retval = oldval;
+
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
+    int64_t res;
+
+    if (incr == 1) {
+	asm volatile ("fetchadd8.rel %0=%1,1":"=r" (res)
+		      :"m"     (*operand));
+    } else {
+	int64_t old, newval;
+
+	do {
+	    old = *operand;	       /* atomic, because operand is aligned */
+	    newval = old + incr;
+	    asm volatile ("mov ar.ccv=%0;;":	/* no output */
+			  :"rO"    (old));
+
+	    /* separate so the compiler can insert its junk */
+	    asm volatile ("cmpxchg8.acq %0=[%1],%2,ar.ccv":"=r" (res)
+			  :"r"     (operand), "r"(newval)
+			  :"memory");
+	} while (res != old);	       /* if res!=old, the calc is out of date */
+    }
+    retval = res;
+
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
+
+    union {
+	uint64_t i;
+	struct {
+	    /* note: the ordering of these is both important and
+	     * counter-intuitive; welcome to little-endian! */
+	    uint32_t l;
+	    uint32_t h;
+	} s;
+    } oldval, newval;
+    register char test;
+    do {
+#ifdef __PIC__
+	/* this saves off %ebx to make PIC code happy :P */
+# define QTHREAD_PIC_PREFIX "pushl %%ebx\n\tmovl %4, %%ebx\n\t"
+	/* this restores it */
+# define QTHREAD_PIC_SUFFIX "\n\tpopl %%ebx"
+# define QTHREAD_PIC_REG "m"
+#else
+# define QTHREAD_PIC_PREFIX
+# define QTHREAD_PIC_SUFFIX
+# define QTHREAD_PIC_REG "b"
+#endif
+	oldval.i = *operand;
+	newval.i = oldval.i + incr;
+	/* Yeah, this is weird looking, but it really makes sense when you
+	 * understand the instruction's semantics (which make sense when you
+	 * consider that it's doing a 64-bit op on a 32-bit proc):
+	 *
+	 *    Compares the 64-bit value in EDX:EAX with the operand
+	 *    (destination operand). If the values are equal, the 64-bit value
+	 *    in ECX:EBX is stored in the destination operand. Otherwise, the
+	 *    value in the destination operand is loaded into EDX:EAX."
+	 *
+	 * So what happens is the oldval is loaded into EDX:EAX and the newval
+	 * is loaded into ECX:EBX to start with (i.e. as inputs). Then
+	 * CMPXCHG8B does its business, after which EDX:EAX is guaranteed to
+	 * contain the value of *operand when the instruction executed. We test
+	 * the ZF field to see if the operation succeeded. We *COULD* save
+	 * EDX:EAX back into oldval to save ourselves a step when the loop
+	 * fails, but that's a waste when the loop succeeds (i.e. in the common
+	 * case). Optimizing for the common case, in this situation, means
+	 * minimizing our extra write-out to the one-byte test variable.
+	 */
+	__asm__ __volatile__ (
+		QTHREAD_PIC_PREFIX
+		"lock; cmpxchg8b %1\n\t"
+		"setne %0" /* test = (ZF==0) */
+		QTHREAD_PIC_SUFFIX
+		:"=r"(test)
+		:"m"(*operand),
+		/*EAX*/"a"(oldval.s.l),
+		/*EDX*/"d"(oldval.s.h),
+		/*EBX*/QTHREAD_PIC_REG(newval.s.l),
+		/*ECX*/"c"(newval.s.h)
+		:"memory");
+    } while (test); /* if ZF was cleared, the calculation is out of date */
+    return oldval.i;
+
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
+
+    retval = incr;
+    asm volatile ("lock xaddq; %0, %1;"
+		  :"=r"(retval)
+		  :"m"(*operand), "0"(retval)
+		  : "memory");
+
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||
+      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
+
+
+    /* In general, RISC doesn't provide a way to do 64 bit
+    operations from 32 bit code.  Sorry. */
+    qthread_t *me = qthread_self();
+
+    qthread_lock(me, (void *)operand);
+    retval = *operand;
+    *operand += incr;
+    qthread_unlock(me, (void *)operand);
+
+#else
+
+#error "Unimplemented assembly architecture"
+
+#endif
+
+#elif defined(QTHREAD_MUTEX_INCREMENT)
+
+    qthread_t *me = qthread_self();
+
+    qthread_lock(me, (void *)operand);
+    retval = *operand;
+    *operand += incr;
+    qthread_unlock(me, (void *)operand);
+
+#else
+
+#error "Neither atomic or mutex increment enabled"
+
+#endif
+    return retval;
+}				       /*}}} */
+
+#define qthread_incr( ADDR, INCVAL )                  \
+   qthread_incr_xx( (volatile void*)(ADDR), (int)(INCVAL), sizeof(*(ADDR)) )
+
+static inline unsigned long
+qthread_incr_xx(volatile void* addr, int incr, size_t length)
+{
+    switch( length ) {
+    case 4:
+        return qthread_incr32((volatile uint32_t*) addr, incr);
+   case 8:
+        return qthread_incr64((volatile uint64_t*) addr, incr);
+   default:
+      /* This should never happen, so deliberately cause a seg fault
+         for corefile analysis */
+      *(int*)(0) = 0;
+   }
+   return 0;  /* compiler check */
+}
+
 
 #ifdef __cplusplus
 }
