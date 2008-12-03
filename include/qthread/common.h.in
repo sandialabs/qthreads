@@ -26,11 +26,11 @@
 /* compile for the SST */
 #undef SST
 
-/* forces aligned_t to be aligned to 64 bits */
-#undef QTHREAD_64_BIT_ALIGN
+/* alignment of align_t */
+#undef QTHREAD_ALIGNMENT_ALIGN_T
 
-/* aligned_t should be 64 bits */
-#undef QTHREAD_64_BIT_ALIGN_T
+/* size of align_t */
+#undef QTHREAD_SIZEOF_ALIGN_T
 
 /* Architecture defines */
 #define QTHREAD_UNSUPPORTED 0

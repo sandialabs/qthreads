@@ -45,17 +45,14 @@
 extern "C"
 {
 #endif
-#ifdef QTHREAD_64_BIT_ALIGN_T
-typedef uint64_t __attribute__ ((aligned(8))) aligned_t;
-typedef int64_t __attribute__ ((aligned(8))) saligned_t;
+#if QTHREAD_SIZEOF_ALIGN_T == 4
+typedef uint32_t __attribute__ ((aligned(QTHREAD_ALIGNMENT_ALIGN_T))) aligned_t;
+typedef int32_t __attribute__ ((aligned(QTHREAD_ALIGNMENT_ALIGN_T))) saligned_t;
+#elif QTHREAD_SIZEOF_ALIGN_T == 8
+typedef uint64_t __attribute__ ((aligned(QTHREAD_ALIGNMENT_ALIGN_T))) aligned_t;
+typedef int64_t __attribute__ ((aligned(QTHREAD_ALIGNMENT_ALIGN_T))) saligned_t;
 #else
-#ifdef QTHREAD_64_BIT_ALIGN
-typedef uint32_t __attribute__ ((aligned(8))) aligned_t;
-typedef int32_t __attribute__ ((aligned(8))) saligned_t;
-#else
-typedef uint32_t __attribute__ ((aligned(4))) aligned_t;
-typedef int32_t __attribute__ ((aligned(4))) saligned_t;
-#endif
+#error "Don't know type for sizeof align_t"
 #endif
 #ifdef __cplusplus
 }
