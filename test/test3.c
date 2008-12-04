@@ -24,13 +24,12 @@ aligned_t consumer(qthread_t * t, void *arg)
 aligned_t producer(qthread_t * t, void *arg)
 {
     int me = 0;
-    int data = 55;
 
     qthread_lock(t, &id);
     me = id++;
     qthread_unlock(t, &id);
 
-    qthread_writeEF(t, &x, &data);
+    qthread_writeEF_const(t, &x, 55);
 
     return 0;
 }

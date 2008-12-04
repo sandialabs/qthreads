@@ -170,8 +170,8 @@ int qthread_fill(qthread_t * me, const aligned_t *dest);
  * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
  * (which, conveniently, returns NULL if you aren't a qthread).
  */
-int qthread_writeEF(qthread_t * me, void *dest, const void *src);
-int qthread_writeEF_const(qthread_t * me, void *dest, const aligned_t src);
+int qthread_writeEF(qthread_t * me, aligned_t * const dest, const aligned_t * const src);
+int qthread_writeEF_const(qthread_t * me, aligned_t * const dest, const aligned_t src);
 
 /* This function is a cross between qthread_fill() and qthread_writeEF(). It
  * does not wait for memory to become empty, but performs the write and sets

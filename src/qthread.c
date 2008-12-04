@@ -2274,7 +2274,7 @@ int qthread_writeF_const(qthread_t * me, aligned_t * const dest, const aligned_t
  * 3 - the destination's FEB state gets changed from empty to full
  */
 
-int qthread_writeEF(qthread_t * me, void *dest, const void *src)
+int qthread_writeEF(qthread_t * me, aligned_t * const dest, const aligned_t * const src)
 {				       /*{{{ */
     qthread_addrstat_t *m;
     qthread_addrres_t *X = NULL;
@@ -2337,7 +2337,7 @@ int qthread_writeEF(qthread_t * me, void *dest, const void *src)
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-int qthread_writeEF_const(qthread_t * me, void *dest, const aligned_t src)
+int qthread_writeEF_const(qthread_t * me, aligned_t * const dest, const aligned_t src)
 {				       /*{{{ */
     return qthread_writeEF(me, dest, &src);
 }				       /*}}} */
