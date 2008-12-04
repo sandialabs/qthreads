@@ -448,7 +448,7 @@ struct qt_qsort_iprets qt_qsort_inner_partitioner(qthread_t * me,
 
     /* non-consts */
     size_t megachunks = length / (chunksize * numthreads);
-    struct qt_qsort_iprets retval = { ((size_t) - 1), 0 };
+    struct qt_qsort_iprets retval = { ((aligned_t) - 1), 0 };
     aligned_t *rets;
     struct qt_qsort_args *args;
     size_t i;
