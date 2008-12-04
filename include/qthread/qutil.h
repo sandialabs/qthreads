@@ -20,20 +20,20 @@ double qutil_double_max(qthread_t * me, const double *array, size_t length,
 			int checkfeb);
 double qutil_double_min(qthread_t * me, const double *array, size_t length,
 			int checkfeb);
-/* This computes the sum/product of all the unsigned ints in an array */
-unsigned int qutil_uint_sum(qthread_t * me, const unsigned int *array,
+/* This computes the sum/product of all the aligned_ts in an array */
+aligned_t qutil_uint_sum(qthread_t * me, const aligned_t *array,
 			    size_t length, int checkfeb);
-unsigned int qutil_uint_mult(qthread_t * me, const unsigned int *array,
+aligned_t qutil_uint_mult(qthread_t * me, const aligned_t *array,
 			     size_t length, int checkfeb);
-unsigned int qutil_uint_max(qthread_t * me, const unsigned int *array,
+aligned_t qutil_uint_max(qthread_t * me, const aligned_t *array,
 			    size_t length, int checkfeb);
-unsigned int qutil_uint_min(qthread_t * me, const unsigned int *array,
+aligned_t qutil_uint_min(qthread_t * me, const aligned_t *array,
 			    size_t length, int checkfeb);
 /* This computes the sum/product of all the ints in an array */
-int qutil_int_sum(qthread_t * me, const int *array, size_t length, int checkfeb);
-int qutil_int_mult(qthread_t * me, const int *array, size_t length, int checkfeb);
-int qutil_int_max(qthread_t * me, const int *array, size_t length, int checkfeb);
-int qutil_int_min(qthread_t * me, const int *array, size_t length, int checkfeb);
+saligned_t qutil_int_sum(qthread_t * me, const saligned_t *array, size_t length, int checkfeb);
+saligned_t qutil_int_mult(qthread_t * me, const saligned_t *array, size_t length, int checkfeb);
+saligned_t qutil_int_max(qthread_t * me, const saligned_t *array, size_t length, int checkfeb);
+saligned_t qutil_int_min(qthread_t * me, const saligned_t *array, size_t length, int checkfeb);
 
 void qutil_mergesort(qthread_t *me, double *array, size_t length);
 void qutil_qsort(qthread_t *me, double *array, size_t length);
