@@ -25,12 +25,12 @@ static int dcmp(const void *a, const void *b)
     return 0;
 }
 
-unsigned int *ui_array;
-unsigned int ui_out, ui_sum_authoritative = 0, ui_mult_authoritative =
+aligned_t *ui_array;
+aligned_t ui_out, ui_sum_authoritative = 0, ui_mult_authoritative =
 1, ui_max_authoritative = 0, ui_min_authoritative = UINT_MAX;
 size_t ui_len = 1000000;
-int *i_array;
-int i_out, i_sum_authoritative = 0, i_mult_authoritative =
+saligned_t *i_array;
+saligned_t i_out, i_sum_authoritative = 0, i_mult_authoritative =
 1, i_max_authoritative = INT_MIN, i_min_authoritative = INT_MAX;
 size_t i_len = 1000000;
 double *d_array;
@@ -43,7 +43,7 @@ aligned_t qmain(qthread_t * me, void *junk)
 {
     size_t i;
 
-    ui_array = calloc(ui_len, sizeof(unsigned int));
+    ui_array = calloc(ui_len, sizeof(aligned_t));
     for (i = 0; i < ui_len; i++) {
 	ui_array[i] = random();
 	ui_sum_authoritative += ui_array[i];
@@ -91,7 +91,7 @@ aligned_t qmain(qthread_t * me, void *junk)
     }
     return 0;
 
-    i_array = calloc(i_len, sizeof(int));
+    i_array = calloc(i_len, sizeof(saligned_t));
     for (i = 0; i < i_len; i++) {
 	i_array[i] = random();
 	i_sum_authoritative += i_array[i];
