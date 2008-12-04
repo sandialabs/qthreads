@@ -10,7 +10,6 @@
 void my_main();
 
 int main (int argc, char **argv) {
-  aligned_t ret;
   qthread_init(NUM_LOCS());
   future_init(FUTURE_PER_LOC());
 
