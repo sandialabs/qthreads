@@ -425,6 +425,7 @@ AC_OUTPUT
 
 echo ""
 echo    "           Target Style: $qthread_implementation"
+echo    "          Pooled Memory: $enable_pooled_memory"
 echo    "        Lazy Thread IDs: $enable_lazy_threadids"
 echo    "  Sanity assert() Calls: $enable_asserts"
 echo    "        Thread Counting: $enable_thread_count"
@@ -443,5 +444,6 @@ case "$qthread_cv_stack_size" in
 	*)       echo "${qthread_stackprefix}${qthread_cv_stack_size} bytes" ;;
 esac
 echo    " Debugging Trace Output: $enable_debug_trace"
-echo    "          Pooled Memory: $enable_pooled_memory"
+echo    "         Aligned_t size: $sizeof_aligned_t"
+echo    "    Aligned_t alignment: $align_aligned_t"
 echo ""
