@@ -37,15 +37,15 @@ double qt_double_prod(double *array, size_t length, int checkfeb);
 double qt_double_max(double *array, size_t length, int checkfeb);
 double qt_double_min(double *array, size_t length, int checkfeb);
 
-int qt_int_sum(int *array, size_t length, int checkfeb);
-int qt_int_prod(int *array, size_t length, int checkfeb);
-int qt_int_max(int *array, size_t length, int checkfeb);
-int qt_int_min(int *array, size_t length, int checkfeb);
+saligned_t qt_int_sum(saligned_t *array, size_t length, int checkfeb);
+saligned_t qt_int_prod(saligned_t *array, size_t length, int checkfeb);
+saligned_t qt_int_max(saligned_t *array, size_t length, int checkfeb);
+saligned_t qt_int_min(saligned_t *array, size_t length, int checkfeb);
 
-unsigned int qt_uint_sum(unsigned int *array, size_t length, int checkfeb);
-unsigned int qt_uint_prod(unsigned int *array, size_t length, int checkfeb);
-unsigned int qt_uint_max(unsigned int *array, size_t length, int checkfeb);
-unsigned int qt_uint_min(unsigned int *array, size_t length, int checkfeb);
+aligned_t qt_uint_sum(aligned_t *array, size_t length, int checkfeb);
+aligned_t qt_uint_prod(aligned_t *array, size_t length, int checkfeb);
+aligned_t qt_uint_max(aligned_t *array, size_t length, int checkfeb);
+aligned_t qt_uint_min(aligned_t *array, size_t length, int checkfeb);
 
 /* These are some utility accumulator functions */
 static void qt_dbl_add_acc (void *a, void *b)

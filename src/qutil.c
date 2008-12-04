@@ -30,7 +30,7 @@
 	_opmacro_(args->ret, args->array[i]); \
     } \
     if (args->addlast) { \
-	qthread_readFF(me, NULL, args->addlast); \
+	qthread_readFF(me, NULL, (aligned_t*)args->addlast); \
 	_opmacro_(args->ret, *(args->addlast)); \
 	free(args->backptr); \
     } \
@@ -40,14 +40,14 @@
 #define INNER_LOOP_FF(_fname_,_structtype_,_opmacro_) static aligned_t _fname_(qthread_t *me, struct _structtype_ *args) \
 { \
     size_t i; \
-    qthread_readFF(me, NULL, args->array + args->start); \
+    qthread_readFF(me, NULL, (aligned_t*)(args->array + args->start)); \
     args->ret = args->array[args->start]; \
     for (i = args->start + 1; i < args->stop; i++) { \
-	qthread_readFF(me, NULL, args->array + i); \
+	qthread_readFF(me, NULL, (aligned_t*)(args->array + i)); \
 	_opmacro_(args->ret, args->array[i]); \
     } \
     if (args->addlast) { \
-	qthread_readFF(me, NULL, args->addlast); \
+	qthread_readFF(me, NULL, (aligned_t*)args->addlast); \
 	_opmacro_(args->ret, *(args->addlast)); \
 	free(args->backptr); \
     } \
@@ -83,10 +83,10 @@ _rtype_ _fname_(qthread_t *me, const _rtype_ *array, size_t length, int checkfeb
 	} \
     } \
     if (checkfeb) { \
-	qthread_readFF(me, NULL, array + start); \
+	qthread_readFF(me, NULL, (aligned_t*)(array + start)); \
 	myret = array[start]; \
 	for (i = start + 1; i < length; i++) { \
-	    qthread_readFF(me, NULL, array + i); \
+	    qthread_readFF(me, NULL, (aligned_t*)(array + i)); \
 	    _opmacro_(myret, array[i]); \
 	} \
     } else { \
@@ -96,7 +96,7 @@ _rtype_ _fname_(qthread_t *me, const _rtype_ *array, size_t length, int checkfeb
 	} \
     } \
     if (waitfor) { \
-	qthread_readFF(me, NULL, waitfor); \
+	qthread_readFF(me, NULL, (aligned_t*)waitfor); \
 	_opmacro_(myret, *waitfor); \
 	free(bkptr); \
     } \

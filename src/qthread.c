@@ -2347,7 +2347,7 @@ int qthread_writeEF_const(qthread_t * me, void *dest, const aligned_t src)
  * 2 - data is copied from src to destination
  */
 
-int qthread_readFF(qthread_t * me, void *dest, const void *src)
+int qthread_readFF(qthread_t * me, aligned_t * const dest, const aligned_t * const src)
 {				       /*{{{ */
     qthread_addrstat_t *m = NULL;
     qthread_addrres_t *X = NULL;
