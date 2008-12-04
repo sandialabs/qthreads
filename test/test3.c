@@ -4,9 +4,9 @@
 #include <unistd.h>
 #include <qthread/qthread.h>
 
-static int x __attribute__ ((aligned(8)));
-static int id = 1;
-static int readout = 0;
+static aligned_t x;
+static aligned_t id = 1;
+static aligned_t readout = 0;
 
 aligned_t consumer(qthread_t * t, void *arg)
 {

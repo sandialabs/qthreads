@@ -2495,7 +2495,7 @@ int qthread_readFE(qthread_t * me, void *dest, void *src)
  * unless you REALLY know what you're doing!
  */
 
-int qthread_lock(qthread_t * me, const void *a)
+int qthread_lock(qthread_t * me, const aligned_t *a)
 {				       /*{{{ */
     qthread_lock_t *m;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(a);
@@ -2574,7 +2574,7 @@ int qthread_lock(qthread_t * me, const void *a)
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-int qthread_unlock(qthread_t * me, const void *a)
+int qthread_unlock(qthread_t * me, const aligned_t *a)
 {				       /*{{{ */
     qthread_lock_t *m;
     qthread_t *u;

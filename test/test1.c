@@ -89,6 +89,7 @@ aligned_t qmain(qthread_t * me, void *junk)
     if (interactive) {
 	printf(" - qutil_uint_min is correct\n");
     }
+    return 0;
 
     i_array = calloc(i_len, sizeof(int));
     for (i = 0; i < i_len; i++) {

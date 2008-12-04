@@ -116,14 +116,14 @@ protected:
   }
 
 #define C_VOID_RUN_OBJ(nnn)				\
-  void run (int cur) {					\
+  void run (const unsigned int cur) {			\
     ObjT *obj = Storage<-1,Val,ObjT*>::value(0);	\
     CALL_N_ARG((obj->*(fptr_)), nnn);			\
   }							
 
 
 #define C_VOID_RUN(nnn)					\
-  void run (int cur) {					\
+  void run (const unsigned int cur) {			\
     CALL_N_ARG(fptr_, nnn);				\
   }							
 

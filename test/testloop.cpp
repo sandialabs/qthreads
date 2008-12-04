@@ -25,10 +25,10 @@ void hello (int i, const char* msg, char c) {
 
 void incr(int& i) {
   qthread_t *me = qthread_self();
-  qthread_lock(me, &i);
+  qthread_lock(me, (aligned_t*)&i);
   i++;
   printf ("incr i (%p) = %d\n", &i, i);
-  qthread_unlock(me, &i);
+  qthread_unlock(me, (aligned_t*)&i);
 }
 
 void set(int val, int& i) { 

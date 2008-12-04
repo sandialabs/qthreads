@@ -343,7 +343,7 @@ struct qt_qsort_args
     double *array;
     double pivot;
     size_t length, chunksize, jump, offset;
-    size_t *restrict furthest_leftwall, *restrict furthest_rightwall;
+    aligned_t *restrict furthest_leftwall, *restrict furthest_rightwall;
 };
 
 aligned_t qt_qsort_partition(qthread_t * me, struct qt_qsort_args *args)
@@ -425,7 +425,7 @@ struct qt_qsort_iargs
 
 struct qt_qsort_iprets
 {
-    size_t leftwall, rightwall;
+    aligned_t leftwall, rightwall;
 };
 
 struct qt_qsort_iprets qt_qsort_inner_partitioner(qthread_t * me,
