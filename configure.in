@@ -192,6 +192,7 @@ AS_IF([test "$qthread_implementation" = "sst"],
 	   AC_SEARCH_LIBS([ceil],[m_ppc],[],[AC_MSG_ERROR([Can't seem to find ceil()])])
 	   ],
 	  [AS_IF([test "$qthread_implementation" = "unix"],[
+	   AC_CHECK_HEADERS([math.h])
 	  AC_SEARCH_LIBS([ceil],[m],[],[AC_MSG_ERROR([Can't seem to find ceil()])])
 	  AC_ARG_WITH([cprops],
 				  [AC_HELP_STRING([--with-cprops],

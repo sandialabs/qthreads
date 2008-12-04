@@ -12,9 +12,11 @@
 #include <fcntl.h>		       /* for open() */
 #include <unistd.h>		       /* for fstat() */
 #ifdef HAVE_INTTYPES_H
-#include <inttypes.h>		       /* for funky print statements */
+# include <inttypes.h>		       /* for funky print statements */
 #endif
-#include <math.h>		       /* for ceil() and floor() */
+#ifdef HAVE_MATH_H
+# include <math.h>		       /* for ceil() and floor() */
+#endif
 #include <string.h>		       /* for memset() */
 #include <errno.h>
 #include <assert.h>
