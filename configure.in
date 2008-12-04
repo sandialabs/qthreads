@@ -249,7 +249,7 @@ AS_IF([test "$enable_64bit_aligned_t" == "yes"],
 			 [sizeof_aligned_t="$ac_cv_sizeof_int"
 			  align_aligned_t="$ac_cv_sizeof_int"])])
 AS_IF([test "$enable_64bit_alignment" == "yes"],
-	  [align_aligned_t=8]
+	  [align_aligned_t=8])
 
 AC_DEFINE_UNQUOTED([QTHREAD_SIZEOF_ALIGNED_T], [$sizeof_aligned_t], [size of aligned_t])
 AC_DEFINE_UNQUOTED([QTHREAD_ALIGNMENT_ALIGNED_T], [$align_aligned_t], [alignment of aligned_t])
