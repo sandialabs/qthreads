@@ -257,10 +257,10 @@ static void qt##initials##_worker(qthread_t * me, const size_t startat, \
     size_t i; \
     type acc; \
     if (((struct qt##initials *)arg)->feb) { \
-	qthread_readFF(me, NULL, ((struct qt##initials *)arg)->a); \
+	qthread_readFF(me, NULL, (aligned_t*)(((struct qt##initials *)arg)->a)); \
 	acc = ((struct qt##initials *)arg)->a[startat]; \
 	for (i = startat + 1; i < stopat; i++) { \
-	    qthread_readFF(me, NULL, ((struct qt##initials *)arg)->a + i); \
+	    qthread_readFF(me, NULL, (aligned_t*)(((struct qt##initials *)arg)->a + i)); \
 	    acc = _op_(acc, ((struct qt##initials *)arg)->a[i]); \
 	} \
     } else { \
@@ -290,15 +290,15 @@ type qt_##shorttype##_##category (type *array, size_t length, int checkfeb) \
 #define MAX(a,b) (a>b)?a:b
 #define MIN(a,b) (a<b)?a:b
 
-PARALLEL_FUNC(sum, uis, ADD, unsigned int, uint);
-PARALLEL_FUNC(prod, uip, MULT, unsigned int, uint);
-PARALLEL_FUNC(max, uimax, MAX, unsigned int, uint);
-PARALLEL_FUNC(min, uimin, MIN, unsigned int, uint);
+PARALLEL_FUNC(sum, uis, ADD, aligned_t, uint);
+PARALLEL_FUNC(prod, uip, MULT, aligned_t, uint);
+PARALLEL_FUNC(max, uimax, MAX, aligned_t, uint);
+PARALLEL_FUNC(min, uimin, MIN, aligned_t, uint);
 
-PARALLEL_FUNC(sum, is, ADD, int, int);
-PARALLEL_FUNC(prod, ip, MULT, int, int);
-PARALLEL_FUNC(max, imax, MAX, int, int);
-PARALLEL_FUNC(min, imin, MIN, int, int);
+PARALLEL_FUNC(sum, is, ADD, saligned_t, int);
+PARALLEL_FUNC(prod, ip, MULT, saligned_t, int);
+PARALLEL_FUNC(max, imax, MAX, saligned_t, int);
+PARALLEL_FUNC(min, imin, MIN, saligned_t, int);
 
 PARALLEL_FUNC(sum, ds, ADD, double, double);
 PARALLEL_FUNC(prod, dp, MULT, double, double);

@@ -2418,7 +2418,7 @@ int qthread_readFF(qthread_t * me, aligned_t * const dest, const aligned_t * con
  * 3 - the src's FEB bits get changed from full to empty
  */
 
-int qthread_readFE(qthread_t * me, void *dest, void *src)
+int qthread_readFE(qthread_t * me, aligned_t * const dest, const aligned_t * const src)
 {				       /*{{{ */
     qthread_addrstat_t *m;
     aligned_t *alignedaddr;

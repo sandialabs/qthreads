@@ -220,7 +220,7 @@ int qthread_readFF(qthread_t * me, aligned_t * const dest, const aligned_t * con
  * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
  * (which, conveniently, returns NULL if you aren't a qthread).
  */
-int qthread_readFE(qthread_t * me, void *dest, void *src);
+int qthread_readFE(qthread_t * me, aligned_t * const dest, const aligned_t * const src);
 
 /* functions to implement FEB-ish locking/unlocking
  *

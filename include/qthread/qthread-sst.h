@@ -230,12 +230,12 @@ static inline int qthread_readFF(qthread_t * me, aligned_t * const dest,
  * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
  * (which, conveniently, returns NULL if you aren't a qthread).
  */
-static inline int qthread_readFE(qthread_t * me, void *dest, void *src)
+static inline int qthread_readFE(qthread_t * me, aligned_t * const dest, const aligned_t * const src)
 {
     if (dest != NULL && dest != src) {
-	*(aligned_t *) dest = PIM_feb_readfe((unsigned int*)src);
+	*dest = PIM_feb_readfe(src);
     } else {
-	PIM_feb_readfe((unsigned int*)src);
+	PIM_feb_readfe(src);
     }
     return 0;
 }
