@@ -250,14 +250,14 @@ static inline int qthread_readFE(qthread_t * me, void *dest, void *src)
  * from somewhere other than a qthread, use NULL for the me argument. If you
  * have lost your qthread_t pointer, it can be reclaimed using qthread_self().
  */
-static inline int qthread_lock(qthread_t * me, const void *a)
+static inline int qthread_lock(qthread_t * me, const aligned_t *a)
 {
-    PIM_feb_readfe((aligned_t *) a);
+    PIM_feb_readfe(a);
     return 0;
 }
-static inline int qthread_unlock(qthread_t * me, const void *a)
+static inline int qthread_unlock(qthread_t * me, const aligned_t *a)
 {
-    PIM_feb_fill((aligned_t *) a);
+    PIM_feb_fill(a);
     return 0;
 }
 
@@ -355,10 +355,10 @@ static inline float qthread_fincr(volatile float * operand, const float incr)
 
     float retval;
     qthread_t *me = qthread_self();
-    qthread_lock(me, (void*)operand);
+    qthread_lock(me, (aligned_t*)operand);
     retval = *operand;
     *operand += incr;
-    qthread_unlock(me, (void*)operand);
+    qthread_unlock(me, (aligned_t*)operand);
     return retval;
 #else
 #error "Neither atomic nor mutex increment enabled; needed for qthread_fincr"
@@ -514,10 +514,10 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
 
     double retval;
     qthread_t *me = qthread_self();
-    qthread_lock(me, (void*)operand);
+    qthread_lock(me, (aligned_t*)operand);
     retval = *operand;
     *operand += incr;
-    qthread_unlock(me, (void*)operand);
+    qthread_unlock(me, (aligned_t*)operand);
     return retval;
 #else
 #error "Neither atomic nor mutex increment enabled; needed for qthread_dincr"
