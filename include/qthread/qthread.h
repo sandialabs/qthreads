@@ -769,6 +769,8 @@ static inline uint64_t qthread_incr64(volatile uint64_t * operand, const int inc
 		  :"m"(*operand), "0"(retval)
 		  : "memory");
 
+    return retval;
+
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
 
