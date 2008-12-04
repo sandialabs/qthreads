@@ -764,7 +764,7 @@ static inline uint64_t qthread_incr64(volatile uint64_t * operand, const int inc
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
     uint64_t retval = incr;
 
-    asm volatile ("lock xaddq; %0, %1;"
+    asm volatile ("lock ; xaddq %0, %1;"
 		  :"=r"(retval)
 		  :"m"(*operand), "0"(retval)
 		  : "memory");
