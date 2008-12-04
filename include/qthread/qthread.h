@@ -191,8 +191,7 @@ int qthread_writeF(qthread_t * me, void *dest, const void *src);
 int qthread_writeF_const(qthread_t * me, void *dest, const aligned_t src);
 
 /* This function waits for memory to become full, and then reads it and leaves
- * the memory as full. When memory becomes full, all threads waiting for itindent: Standard input:225: Error:Stmt nesting error.
- to
+ * the memory as full. When memory becomes full, all threads waiting for it to
  * become full with a readFF will receive the value at once and will be queued
  * to run. Data is read from src and stored in dest.
  *
