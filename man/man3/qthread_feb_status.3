@@ -6,7 +6,7 @@
 
 .I int
 .br
-\fBqthread_feb_status\fR(const void *\fIaddr\fR);
+\fBqthread_feb_status\fR(const aligned_t *\fIaddr\fR);
 .SH DESCRIPTION
 This function is just to assist with debugging. It returns 1 if the address is
 full, and 0 if the address is empty. It is thread-safe, and should be very

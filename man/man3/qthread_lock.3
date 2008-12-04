@@ -6,11 +6,11 @@
 
 .I int
 .br
-\fBqthread_lock\fR(qthread_t *\fIme\fR, void *\fIaddr\fR);
+\fBqthread_lock\fR(qthread_t *\fIme\fR, aligned_t *\fIaddr\fR);
 .PP
 .I int
 .br
-\fBqthread_unlock\fR(qthread_t *\fIme\fR, void *\fIaddr\fR);
+\fBqthread_unlock\fR(qthread_t *\fIme\fR, aligned_t *\fIaddr\fR);
 .SH DESCRIPTION
 These functions are designed to implement FEB-like locking and unlocking that
 behaves much more like a mutex.

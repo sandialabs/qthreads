@@ -6,11 +6,11 @@
 
 .I int
 .br
-\fBqthread_writeF\fR(qthread_t *\fIme\fR, void *\fIdest\fR, const void *\fIsrc\fR);
+\fBqthread_writeF\fR(qthread_t *\fIme\fR, aligned_t *\fIdest\fR, const aligned_t *\fIsrc\fR);
 .PP
 .I int
 .br
-\fBqthread_writeF_const\fR(qthread_t *\fIme\fR, void *\fIdest\fR, const aligned_t \fIsrc\fR);
+\fBqthread_writeF_const\fR(qthread_t *\fIme\fR, aligned_t *\fIdest\fR, const aligned_t \fIsrc\fR);
 .SH DESCRIPTION
 These functions are a cross between \fBqthread_fill\fR() and
 \fBqthread_writeEF\fR(). They do not wait for memory to become empty, but

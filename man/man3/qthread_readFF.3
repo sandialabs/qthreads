@@ -6,7 +6,7 @@
 
 .I int
 .br
-\fBqthread_readFF\fR(qthread_t *\fIme\fR, void *\fIdest\fR, void *\fIsrc\fR);
+\fBqthread_readFF\fR(qthread_t *\fIme\fR, aligned_t *\fIdest\fR, const aligned_t *\fIsrc\fR);
 .SH DESCRIPTION
 This function waits for memory to become full, and then reads it and leaves the
 memory as full. When memory becomes full, all threads waiting for it to become
