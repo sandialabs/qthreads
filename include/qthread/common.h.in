@@ -26,11 +26,11 @@
 /* compile for the SST */
 #undef SST
 
-/* alignment of align_t */
-#undef QTHREAD_ALIGNMENT_ALIGN_T
+/* alignment of aligned_t */
+#undef QTHREAD_ALIGNMENT_ALIGNED_T
 
-/* size of align_t */
-#undef QTHREAD_SIZEOF_ALIGN_T
+/* size of aligned_t */
+#undef QTHREAD_SIZEOF_ALIGNED_T
 
 /* Architecture defines */
 #define QTHREAD_UNSUPPORTED 0

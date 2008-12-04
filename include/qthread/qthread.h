@@ -30,9 +30,7 @@
 #define NO_SHEPHERD ((qthread_shepherd_id_t)-1)
 
 /* NOTE!!!!!!!!!!!
- * Reads and writes operate on aligned_t-size segments of memory. That is,
- * it will read/write 4 bytes at a time, unless you've configured it to use a
- * 64-bit aligned_t so that it will read/write 8 bytes at a time.
+ * Reads and writes operate on aligned_t-size segments of memory.
  *
  * FEB locking only works on aligned addresses. On 32-bit architectures, this
  * isn't too much of an inconvenience. On 64-bit architectures, it's a pain in
@@ -45,14 +43,14 @@
 extern "C"
 {
 #endif
-#if QTHREAD_SIZEOF_ALIGN_T == 4
-typedef uint32_t __attribute__ ((aligned(QTHREAD_ALIGNMENT_ALIGN_T))) aligned_t;
-typedef int32_t __attribute__ ((aligned(QTHREAD_ALIGNMENT_ALIGN_T))) saligned_t;
-#elif QTHREAD_SIZEOF_ALIGN_T == 8
-typedef uint64_t __attribute__ ((aligned(QTHREAD_ALIGNMENT_ALIGN_T))) aligned_t;
-typedef int64_t __attribute__ ((aligned(QTHREAD_ALIGNMENT_ALIGN_T))) saligned_t;
+#if QTHREAD_SIZEOF_ALIGNED_T == 4
+typedef uint32_t __attribute__ ((aligned(QTHREAD_ALIGNMENT_ALIGNED_T))) aligned_t;
+typedef int32_t __attribute__ ((aligned(QTHREAD_ALIGNMENT_ALIGNED_T))) saligned_t;
+#elif QTHREAD_SIZEOF_ALIGNED_T == 8
+typedef uint64_t __attribute__ ((aligned(QTHREAD_ALIGNMENT_ALIGNED_T))) aligned_t;
+typedef int64_t __attribute__ ((aligned(QTHREAD_ALIGNMENT_ALIGNED_T))) saligned_t;
 #else
-#error "Don't know type for sizeof align_t"
+#error "Don't know type for sizeof aligned_t"
 #endif
 #ifdef __cplusplus
 }

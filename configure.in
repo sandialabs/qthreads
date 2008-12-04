@@ -143,12 +143,12 @@ AS_IF([test "$enable_lazy_threadids" = "no"],
       [AC_DEFINE([QTHREAD_NONLAZY_THREADIDS], [1], [makes sure every thread gets an id at creation time])])
 
 AC_ARG_ENABLE([64bit-aligned_t],
-  [AS_HELP_STRING([--enable-64bit-aligned_t], [If enabled, aligned_t defaults to sizeof(long).  If disabled, aligned_t defaults to sizeof(int).])])
-dnl deal with result once we figure out sizeof(int)
+  [AS_HELP_STRING([--enable-64bit-aligned_t], [If enabled, aligned_t is sizeof(long).  If disabled, aligned_t is sizeof(int). By default, aligned_t is sizeof(void*)])])
+dnl deal with result once we figure out the hardware sizes
 
 AC_ARG_ENABLE([64bit-alignment],
-  [AS_HELP_STRING([--enable-64bit-alignment], [Align aligned_t to 8 byte boundry, even if it is 4 bytes long.  Default is to align to sizeof(aligned_t).])])
-dnl deal with result once we figure out sizeof(int)
+  [AS_HELP_STRING([--enable-64bit-alignment], [Align aligned_t to 8 byte boundry, even if it is 4 bytes long.  Default is to align to sizeof(aligned_t). Alignment cannot be smaller than aligned_t.])])
+dnl deal with result once we figure out the hardware sizes
 
 AC_CACHE_SAVE
 
@@ -200,7 +200,7 @@ AS_IF([test "$qthread_implementation" = "sst"],
 			 CPPFLAGS="${CPPFLAGS} -I$with_cprops/include"
 			 LDFLAGS="${LDFLAGS} -L$with_cprops/lib"
 			 EXTRA_DISTCHECK_OPTIONS="${EXTRA_DISTCHECK_OPTIONS} --with-cprops=$with_cprops"])
-	  AC_SEARCH_LIBS([cp_hashtable_create], [cprops "cprops -ldl" "cprops -lsocket -lnsl"], ,
+	  AC_SEARCH_LIBS([cp_hashtable_create], [cprops "cprops -ldl" "cprops -lsocket -lnsl" "cprops -lsocket -lnsl -ldl"], ,
 					 [AC_MSG_ERROR([Need libcprops 0.1.6 or better. See http://cprops.sf.net/])])
 
 	  ])])
@@ -229,31 +229,30 @@ AC_TYPE_PID_T
 AC_CHECK_SIZEOF([int])
 AC_CHECK_SIZEOF([void*])
 
+# Default behavior:
+#   sizeof(aligned_t)    = sizeof(void*)
+#   alignment(aligned_t) = sizeof(void*)
+# If user specified 64bit aligned_t:
+#   sizeof(aligned_t)    = 8 (or should this be sizeof(long)?)
+#   alignment(aligned_t) = 8
+# else if user forbids 64bit aligned_t:
+#   sizeof(aligned_t)    = sizeof(int)
+#   alignment(aligned_t) = sizeof(int)
+# If user specified 64bit alignment:
+#   alignment(aligned_t) = 8
+sizeof_aligned_t="$ac_cv_sizeof_voidp"
+align_aligned_t="$ac_cv_sizeof_voidp"
+AS_IF([test "$enable_64bit_aligned_t" == "yes"],
+	  [sizeof_aligned_t="$ac_cv_sizeof_long"
+	   align_aligned_t="$ac_cv_sizeof_long"],
+	  [AS_IF([test "$enable_64bit_aligned_t" == "no"],
+			 [sizeof_aligned_t="$ac_cv_sizeof_int"
+			  align_aligned_t="$ac_cv_sizeof_int"])])
+AS_IF([test "$enable_64bit_alignment" == "yes"],
+	  [align_aligned_t=8]
 
-# If void* is 4 bytes, sizeof(align_t) = 4, alignment(align_t) = 4
-# If int is 8 bytes,   sizeof(align_t) = 8, alignment(align_t) = 8
-# If void is 8 bytes:
-#   and user didn't disable 64bit aligned_t, sizeof(align_t) = 8, alignment(align_t) = 8
-#   and user disabled 64bit aligned_t, but wants 64 bit alignment, 
-#      sizeof(align_t) = 4, alignment(align_t) = 8
-#   else, sizeof(align_t) = 4, alignment(align_t) = 8
-AS_IF([test "$ac_cv_sizeof_voidp" = "4"],
-  [sizeof_align_t=4
-   align_align_t=4],
-  [AS_IF([test "$ac_cv_sizeof_int" = "8"],
-     [sizeof_align_t=8
-      align_align_t=8],
-     [AS_IF([test "$enable_64bit_aligned_t" != "no"],
-        [sizeof_align_t=8
-         align_align_t=8],
-        [AS_IF([test "$enable_64bit_alignment" = "yes"],
-           [sizeof_align_t=4
-            align_align_t=8],
-           [sizeof_align_t=4
-            align_align_t=4])])])])
-
-AC_DEFINE_UNQUOTED([QTHREAD_SIZEOF_ALIGN_T], [$sizeof_align_t], [size of align_t])
-AC_DEFINE_UNQUOTED([QTHREAD_ALIGNMENT_ALIGN_T], [$align_align_t], [alignment of align_t])
+AC_DEFINE_UNQUOTED([QTHREAD_SIZEOF_ALIGNED_T], [$sizeof_aligned_t], [size of aligned_t])
+AC_DEFINE_UNQUOTED([QTHREAD_ALIGNMENT_ALIGNED_T], [$align_aligned_t], [alignment of aligned_t])
 
 AC_CACHE_SAVE
 

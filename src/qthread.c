@@ -418,7 +418,7 @@ static QINLINE aligned_t qthread_internal_incr_mod(volatile aligned_t *
 #if defined(HAVE_GCC_INLINE_ASSEMBLY)
 
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
-    ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) && (QTHREAD_SIZEOF_ALIGN_T == 4))
+    ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) && (QTHREAD_SIZEOF_ALIGNED_T == 4))
 
     register unsigned int incrd = incrd;	/* these don't need to be initialized */
     register unsigned int compd = compd;	/* they're just tmp variables */
@@ -462,7 +462,7 @@ static QINLINE aligned_t qthread_internal_incr_mod(volatile aligned_t *
 #warning "The PPC64 mod assembly needs to be tested. Please remove this warning when its been tested."
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32) || \
-      ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) && (QTHREAD_SIZEOF_ALIGN_T == 4))
+      ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) && (QTHREAD_SIZEOF_ALIGNED_T == 4))
 
     register uint32_t oldval, newval;
 
@@ -519,7 +519,7 @@ static QINLINE aligned_t qthread_internal_incr_mod(volatile aligned_t *
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
 
-# if QTHREAD_SIZEOF_ALIGN_T == 8
+# if QTHREAD_SIZEOF_ALIGNED_T == 8
 
     int64_t res, old, new;
 
@@ -558,7 +558,7 @@ static QINLINE aligned_t qthread_internal_incr_mod(volatile aligned_t *
 # endif
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
-      ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) && (QTHREAD_SIZEOF_ALIGN_T == 4))
+      ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) && (QTHREAD_SIZEOF_ALIGNED_T == 4))
 
     unsigned int oldval, newval;
 
