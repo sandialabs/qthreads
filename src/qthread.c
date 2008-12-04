@@ -28,7 +28,9 @@
 # include <pthread.h>
 #endif
 #ifdef QTHREAD_DEBUG
-# include <unistd.h> /* for write() */
+# ifdef HAVE_UNISTD_H
+#  include <unistd.h> /* for write() */
+# endif
 #endif
 
 #ifdef QTHREAD_LOCK_PROFILING
