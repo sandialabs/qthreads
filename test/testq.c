@@ -14,17 +14,20 @@ int main()
     char filedyn[30] = "/tmp/testqallocdynXXXXXX";
     char *ts, *ts2;
     off_t size = 4;
+    int fd;
 
     size *= 1024;
     size *= 1024;
-    if (mktemp(filestat) == NULL) {
+    if ((fd = mkstemp(filestat)) == -1) {
 	perror("mktemp filestat");
 	return -1;
     }
-    if (mktemp(filedyn) == NULL) {
+    close(fd);
+    if ((fd = mkstemp(filedyn)) == -1) {
 	perror("mktemp filedyn");
 	return -1;
     }
+    close(fd);
     /* making maps */
     r2 = qalloc_makedynmap(size, NULL, filedyn, 3);
     /*r2 = qalloc_loadmap("test2.img"); */
