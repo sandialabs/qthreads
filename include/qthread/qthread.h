@@ -101,8 +101,8 @@ qthread_t *qthread_self(void);
  *     (which will be stored with a qthread_writeF call). The qthread_fork_to
  *     function spawns the thread to a specific shepherd.
  */
-int qthread_fork(const qthread_f f, const void *arg, aligned_t * ret);
-int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
+int qthread_fork(const qthread_f f, const void * const arg, aligned_t * ret);
+int qthread_fork_to(const qthread_f f, const void * const arg, aligned_t * ret,
 		    const qthread_shepherd_id_t shepherd);
 
 /* Using qthread_prepare()/qthread_schedule() and variants:
@@ -113,9 +113,9 @@ int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
  *     the finishing touches on the qthread_t structure and places it into an
  *     active queue.
  */
-qthread_t *qthread_prepare(const qthread_f f, const void *arg,
+qthread_t *qthread_prepare(const qthread_f f, const void * const arg,
 			   aligned_t * ret);
-qthread_t *qthread_prepare_for(const qthread_f f, const void *arg,
+qthread_t *qthread_prepare_for(const qthread_f f, const void * const arg,
 			       aligned_t * ret,
 			       const qthread_shepherd_id_t shepherd);
 
@@ -146,15 +146,15 @@ aligned_t *qthread_retloc(const qthread_t * t);
 
 /* This function is just to assist with debugging; it returns 1 if the address
  * is full, and 0 if the address is empty */
-int qthread_feb_status(const void *addr);
+int qthread_feb_status(const aligned_t *addr);
 
 /* The empty/fill functions merely assert the empty or full state of the given
  * address. You may be wondering why they require a qthread_t argument. The
  * reason for this is memory pooling; memory is allocated on a per-shepherd
  * basis (to avoid needing to lock the memory pool). Anyway, if you pass it a
  * NULL qthread_t, it will still work, it just won't be as fast. */
-int qthread_empty(qthread_t * me, const void *dest);
-int qthread_fill(qthread_t * me, const void *dest);
+int qthread_empty(qthread_t * me, const aligned_t *dest);
+int qthread_fill(qthread_t * me, const aligned_t *dest);
 
 /* These functions wait for memory to become empty, and then fill it. When
  * memory becomes empty, only one thread blocked like this will be awoken. Data

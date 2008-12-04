@@ -1986,7 +1986,7 @@ int qthread_schedule_on(qthread_t * t, const qthread_shepherd_id_t shepherd)
  */
 
 /* This is just a little function that should help in debugging */
-int qthread_feb_status(const void *addr)
+int qthread_feb_status(const aligned_t *addr)
 {				       /*{{{ */
     qthread_addrstat_t *m;
     aligned_t *alignedaddr;
@@ -2159,7 +2159,7 @@ static QINLINE void qthread_gotlock_fill(qthread_addrstat_t * m, void *maddr,
     }
 }				       /*}}} */
 
-int qthread_empty(qthread_t * me, const void *dest)
+int qthread_empty(qthread_t * me, const aligned_t *dest)
 {				       /*{{{ */
     qthread_addrstat_t *m;
     aligned_t *alignedaddr;
@@ -2196,7 +2196,7 @@ int qthread_empty(qthread_t * me, const void *dest)
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-int qthread_fill(qthread_t * me, const void *dest)
+int qthread_fill(qthread_t * me, const aligned_t *dest)
 {				       /*{{{ */
     qthread_addrstat_t *m;
     aligned_t *alignedaddr;

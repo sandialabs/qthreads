@@ -117,19 +117,19 @@ static inline size_t qthread_retloc(const qthread_t * t)
 
 /* This function is just to assist with debugging; it returns 1 if the address
  * is full, and 0 if the address is empty */
-static inline int qthread_feb_status(const void *addr)
+static inline int qthread_feb_status(const aligned_t *addr)
 {
     return PIM_feb_is_full((unsigned int*)addr);
 }
 
 /* The empty/fill functions merely assert the empty or full state of the given
  * address. */
-static inline int qthread_empty(qthread_t * me, const void *dest)
+static inline int qthread_empty(qthread_t * me, const aligned_t *dest)
 {
     PIM_feb_empty((unsigned int*)dest);
     return 0;
 }
-static inline int qthread_fill(qthread_t * me, const void *dest)
+static inline int qthread_fill(qthread_t * me, const aligned_t *dest)
 {
     PIM_feb_fill((unsigned int*)dest);
     return 0;
