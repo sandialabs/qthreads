@@ -29,7 +29,7 @@ aligned_t qutil_uint_max(qthread_t * me, const aligned_t *array,
 			    size_t length, int checkfeb);
 aligned_t qutil_uint_min(qthread_t * me, const aligned_t *array,
 			    size_t length, int checkfeb);
-/* This computes the sum/product of all the ints in an array */
+/* This computes the sum/product of all the saligned_ts in an array */
 saligned_t qutil_int_sum(qthread_t * me, const saligned_t *array, size_t length, int checkfeb);
 saligned_t qutil_int_mult(qthread_t * me, const saligned_t *array, size_t length, int checkfeb);
 saligned_t qutil_int_max(qthread_t * me, const saligned_t *array, size_t length, int checkfeb);
