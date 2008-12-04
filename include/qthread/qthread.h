@@ -371,7 +371,29 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
 	    :"r"(operand),"r"(incrd),"m"(scratch),"f"(incrf),"f"(incr)
 	    :"cc","memory");
     return retval.d;
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
+    double oldval, newval;
+    newval = *operand;
+    do {
+	/* this allows the compiler to be as flexible as possible with register
+	 * assignments */
+	register uint64_t tmp1=tmp1;
+	register uint64_t tmp2=tmp2;
+	oldval = newval;
+        newval = oldval + incr;
+        __asm__ __volatile__ (
+		"ldx %0, %1\n\t"
+		"ldx %4, %2\n\t"
+		"casx [%3], %2, %1\n\t"
+		"stx %1, %0"
+		/* h means 64-BIT REGISTER
+		 * (probably unnecessary, but why take chances?) */
+			      : "=m" (newval), "=&h"(tmp1), "=&h"(tmp2)
+                              : "r" (operand), "m"(oldval)
+                              : "memory");
+    } while (oldval != newval);
+    return oldval;
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
     union {
 	uint64_t i;
 	double d;
@@ -391,7 +413,7 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
         __asm__ __volatile__ ("casx [%1], %2, %0"
                               : "=&r" (newval.i)
                               : "r" (operand), "r"(oldval.i), "0" (newval.i)
-                              : "cc", "memory");
+                              : "memory");
     } while (oldval.d != newval.d);
     return oldval.d;
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
@@ -503,11 +525,11 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
 
 static inline uint32_t qthread_incr32(volatile uint32_t * operand, const int incr)
 {				       /*{{{ */
-    uint32_t retval;
 #if defined(HAVE_GCC_INLINE_ASSEMBLY)
 
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
+    uint32_t retval;
     register unsigned int incrd = incrd;	/* no initializing */
     asm volatile (
 	    "1:\tlwarx  %0,0,%1\n\t"
@@ -518,10 +540,9 @@ static inline uint32_t qthread_incr32(volatile uint32_t * operand, const int inc
 	    :"=&b"   (retval)
 	    :"r"     (operand), "r"(incr), "r"(incrd)
 	    :"cc", "memory");
-
+    return retval;
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32) || \
       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
-
     register uint32_t oldval, newval;
     /* newval = *operand; */
     do {
@@ -542,17 +563,15 @@ static inline uint32_t qthread_incr32(volatile uint32_t * operand, const int inc
                               : "r" (operand), "r"(oldval), "0"(newval)
                               : "cc", "memory");
     } while (oldval != newval);
-    retval = oldval;
-
+    return oldval;
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
-
-    int32_t res;
+    uint32_t res;
 
     if (incr == 1) {
 	asm volatile ("fetchadd4.rel %0=[%1],1":"=r" (res)
 		      :"r"     (operand));
     } else {
-	int32_t old, newval;
+	uint32_t old, newval;
 
 	do {
 	    old = *operand;	       /* atomic, because operand is aligned */
@@ -566,17 +585,16 @@ static inline uint32_t qthread_incr32(volatile uint32_t * operand, const int inc
 			  :"memory");
 	} while (res != old);	       /* if res!=old, the calc is out of date */
     }
-    retval = res;
-
+    return res;
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 
-    retval = incr;
+    uint32_t retval = incr;
     asm volatile ("lock ;  xaddl %0, %1;"
 		  :"=r"(retval)
 		  :"m"(*operand), "0"(retval)
 		  : "memory");
-
+    return retval;
 #else
 
 #error "Unimplemented assembly architecture"
@@ -584,31 +602,29 @@ static inline uint32_t qthread_incr32(volatile uint32_t * operand, const int inc
 #endif
 
 #elif defined(QTHREAD_MUTEX_INCREMENT)
-
+    uint32_t retval;
     qthread_t *me = qthread_self();
 
     qthread_lock(me, (void *)operand);
     retval = *operand;
     *operand += incr;
     qthread_unlock(me, (void *)operand);
-
+    return retval;
 #else
 
-#error "Neither atomic or mutex increment enabled"
+#error "Architecture unsupported for 32-bit atomic ops, and FEB increment not enabled"
 
 #endif
-    return retval;
 }				       /*}}} */
 
 static inline uint64_t qthread_incr64(volatile uint64_t * operand, const int incr)
 {				       /*{{{ */
-    uint64_t retval;
-
 #if defined(HAVE_GCC_INLINE_ASSEMBLY)
 
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
+    uint64_t retval;
+    register uint64_t incrd = incrd;	/* no initializing */
 
-    register unsigned long incrd = incrd;	/* no initializing */
     asm volatile (
 	    "1:\tldarx  %0,0,%1\n\t"
 	    "add    %3,%0,%2\n\t"
@@ -618,10 +634,34 @@ static inline uint64_t qthread_incr64(volatile uint64_t * operand, const int inc
 	    :"=&b"   (retval)
 	    :"r"     (operand), "r"(incr), "r"(incrd)
 	    :"cc", "memory");
+    return retval;
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
+    uint64_t oldval, newval = *operand;
 
+    do {
+	/* this allows the compiler to be as flexible as possible with register
+	 * assignments */
+	register uint64_t tmp1=tmp1;
+	register uint64_t tmp2=tmp2;
+	oldval = newval;
+        newval += incr;
+	/* newval always gets the value of *operand; if it's
+	 * the same as oldval, then the swap was successful */
+        __asm__ __volatile__ (
+		"ldx %0, %1\n\t"
+		"ldx %4, %2\n\t"
+		"casx [%3] , %2, %1\n\t"
+		"stx %1, %0"
+		/* h means 64-BIT REGISTER
+		 * (probably unnecessary, but why take chances?) */
+                              : "=m" (newval), "=&h"(tmp1), "=&h"(tmp2)
+                              : "r" (operand), "m"(oldval)
+                              : "cc", "memory");
+    } while (oldval != newval);
+    return oldval;
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
-
     register uint64_t oldval, newval;
+
     /* newval = *operand; */
     do {
 	/* you *should* be able to move the *operand reference outside the
@@ -641,16 +681,15 @@ static inline uint64_t qthread_incr64(volatile uint64_t * operand, const int inc
                               : "r" (operand), "r"(oldval), "0"(newval)
                               : "cc", "memory");
     } while (oldval != newval);
-    retval = oldval;
-
+    return oldval;
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
-    int64_t res;
+    uint64_t res;
 
     if (incr == 1) {
 	asm volatile ("fetchadd8.rel %0=%1,1":"=r" (res)
 		      :"m"     (*operand));
     } else {
-	int64_t old, newval;
+	uint64_t old, newval;
 
 	do {
 	    old = *operand;	       /* atomic, because operand is aligned */
@@ -664,10 +703,8 @@ static inline uint64_t qthread_incr64(volatile uint64_t * operand, const int inc
 			  :"memory");
 	} while (res != old);	       /* if res!=old, the calc is out of date */
     }
-    retval = res;
-
+    return res;
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
-
     union {
 	uint64_t i;
 	struct {
@@ -678,8 +715,10 @@ static inline uint64_t qthread_incr64(volatile uint64_t * operand, const int inc
 	} s;
     } oldval, newval;
     register char test;
+
     do {
 #ifdef __PIC__
+	/* should share this code with the dincr stuff */
 	/* this saves off %ebx to make PIC code happy :P */
 # define QTHREAD_PIC_PREFIX "pushl %%ebx\n\tmovl %4, %%ebx\n\t"
 	/* this restores it */
@@ -725,27 +764,27 @@ static inline uint64_t qthread_incr64(volatile uint64_t * operand, const int inc
 		:"memory");
     } while (test); /* if ZF was cleared, the calculation is out of date */
     return oldval.i;
-
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
+    uint64_t retval = incr;
 
-    retval = incr;
     asm volatile ("lock xaddq; %0, %1;"
 		  :"=r"(retval)
 		  :"m"(*operand), "0"(retval)
 		  : "memory");
 
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) ||
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
-
 
     /* In general, RISC doesn't provide a way to do 64 bit
     operations from 32 bit code.  Sorry. */
+    uint64_t retval;
     qthread_t *me = qthread_self();
 
     qthread_lock(me, (void *)operand);
     retval = *operand;
     *operand += incr;
     qthread_unlock(me, (void *)operand);
+    return retval;
 
 #else
 
@@ -755,19 +794,20 @@ static inline uint64_t qthread_incr64(volatile uint64_t * operand, const int inc
 
 #elif defined(QTHREAD_MUTEX_INCREMENT)
 
+    uint64_t retval;
     qthread_t *me = qthread_self();
 
     qthread_lock(me, (void *)operand);
     retval = *operand;
     *operand += incr;
     qthread_unlock(me, (void *)operand);
+    return retval;
 
 #else
 
-#error "Neither atomic or mutex increment enabled"
+#error "Architecture unsupported for 64-bit atomic ops, and FEB increment not enabled"
 
 #endif
-    return retval;
 }				       /*}}} */
 
 #define qthread_incr( ADDR, INCVAL )                  \
