@@ -8,7 +8,6 @@
 
 static int target = 1000;
 static aligned_t x = 0;
-static int id = 0;
 
 //pthread_mutex_t alldone = PTHREAD_MUTEX_INITIALIZER;
 
@@ -28,7 +27,7 @@ aligned_t thread(qthread_t * t, void *arg)
     if (x == target)
 	qthread_unlock(t, &alldone);
     assert(qthread_unlock(t, &x) == 0);
-    return 0;
+    return foo + me; /* to force them to be used */
 }
 
 int main(int argc, char *argv[])
