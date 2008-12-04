@@ -906,7 +906,8 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
     size_t i;
     ucontext_t *shep0 = NULL;
     void *shepstack = NULL;
-    int syncmode = COLLECTION_MODE_PLAIN;
+    int cp_syncmode = COLLECTION_MODE_PLAIN;
+    int need_sync = 1;
 
 #ifdef NEED_RLIMIT
     struct rlimit rlp;
@@ -926,11 +927,13 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	case 0:
 	    return QTHREAD_BADARGS;
 	case 1:
-	    syncmode |= COLLECTION_MODE_NOSYNC;
+	    cp_syncmode |= COLLECTION_MODE_NOSYNC;
+            need_sync = 0;
     }
 #else
     nshepherds = 1;
     syncmode |= COLLECTION_MODE_NOSYNC;
+    need_sync = 0;
 #endif
     qlib = (qlib_t) malloc(sizeof(struct qlib_s));
     if (qlib == NULL) {
@@ -950,13 +953,13 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 # endif
 #endif
 	if ((qlib->locks[i] =
-	     cp_hashtable_create_by_mode(syncmode, 10000, cp_hash_addr,
+	     cp_hashtable_create_by_mode(cp_syncmode, 10000, cp_hash_addr,
 					 cp_hash_compare_addr)) == NULL) {
 	    return QTHREAD_MALLOC_ERROR;
 	}
 	cp_hashtable_set_min_fill_factor(qlib->locks[i], 0);
 	if ((qlib->FEBs[i] =
-	     cp_hashtable_create_by_mode(syncmode, 10000, cp_hash_addr,
+	     cp_hashtable_create_by_mode(cp_syncmode, 10000, cp_hash_addr,
 					 cp_hash_compare_addr)) == NULL) {
 	    return QTHREAD_MALLOC_ERROR;
 	}
@@ -998,40 +1001,40 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	 * should be quite safe unsynchronized. If things fail, though...
 	 * resynchronize them and see if that fixes it. */
 	qlib->shepherds[i].qthread_pool =
-	    qt_mpool_create(syncmode, sizeof(qthread_t));
+	    qt_mpool_create(need_sync, sizeof(qthread_t));
 	qlib->shepherds[i].stack_pool =
-	    qt_mpool_create(syncmode, qlib->qthread_stack_size);
+	    qt_mpool_create(need_sync, qlib->qthread_stack_size);
 #if ALIGNMENT_PROBLEMS_RETURN
 	if (sizeof(ucontext_t) < 2048) {
 	    qlib->shepherds[i].context_pool =
-		qt_mpool_create(syncmode, 2048);
+		qt_mpool_create(need_sync, 2048);
 	} else {
 	    qlib->shepherds[i].context_pool =
-		qt_mpool_create(syncmode, sizeof(ucontext_t));
+		qt_mpool_create(need_sync, sizeof(ucontext_t));
 	}
 #else
 	qlib->shepherds[i].context_pool =
-	    qt_mpool_create(syncmode, sizeof(ucontext_t));
+	    qt_mpool_create(need_sync, sizeof(ucontext_t));
 #endif
 	qlib->shepherds[i].queue_pool =
-	    qt_mpool_create(syncmode, sizeof(qthread_queue_t));
+	    qt_mpool_create(need_sync, sizeof(qthread_queue_t));
 	qlib->shepherds[i].lock_pool =
-	    qt_mpool_create(syncmode, sizeof(qthread_lock_t));
+	    qt_mpool_create(need_sync, sizeof(qthread_lock_t));
 	qlib->shepherds[i].addrres_pool =
-	    qt_mpool_create(syncmode, sizeof(qthread_addrres_t));
+	    qt_mpool_create(need_sync, sizeof(qthread_addrres_t));
 	qlib->shepherds[i].addrstat_pool =
-	    qt_mpool_create(syncmode, sizeof(qthread_addrstat_t));
+	    qt_mpool_create(need_sync, sizeof(qthread_addrstat_t));
     }
     /* these are used when qthread_fork() is called from a non-qthread. */
-    generic_qthread_pool = qt_mpool_create(syncmode, sizeof(qthread_t));
-    generic_stack_pool = qt_mpool_create(syncmode, qlib->qthread_stack_size);
-    generic_context_pool = qt_mpool_create(syncmode, sizeof(ucontext_t));
+    generic_qthread_pool = qt_mpool_create(need_sync, sizeof(qthread_t));
+    generic_stack_pool = qt_mpool_create(need_sync, qlib->qthread_stack_size);
+    generic_context_pool = qt_mpool_create(need_sync, sizeof(ucontext_t));
     generic_queue_pool =
-	qt_mpool_create(syncmode, sizeof(qthread_queue_t));
+	qt_mpool_create(need_sync, sizeof(qthread_queue_t));
     generic_lock_pool =
-	qt_mpool_create(syncmode, sizeof(qthread_lock_t));
+	qt_mpool_create(need_sync, sizeof(qthread_lock_t));
     generic_addrstat_pool =
-	qt_mpool_create(syncmode, sizeof(qthread_addrstat_t));
+	qt_mpool_create(need_sync, sizeof(qthread_addrstat_t));
 #endif
 
     /* spawn the number of shepherd threads that were specified */
