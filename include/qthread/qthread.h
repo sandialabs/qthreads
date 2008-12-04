@@ -187,8 +187,8 @@ int qthread_writeEF_const(qthread_t * me, void *dest, const aligned_t src);
  * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
  * (which, conveniently, returns NULL if you aren't a qthread).
  */
-int qthread_writeF(qthread_t * me, void *dest, const void *src);
-int qthread_writeF_const(qthread_t * me, void *dest, const aligned_t src);
+int qthread_writeF(qthread_t * me, aligned_t * const dest, const aligned_t * const src);
+int qthread_writeF_const(qthread_t * me, aligned_t * const dest, const aligned_t src);
 
 /* This function waits for memory to become full, and then reads it and leaves
  * the memory as full. When memory becomes full, all threads waiting for it to

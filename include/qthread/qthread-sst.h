@@ -176,17 +176,17 @@ static inline int qthread_writeEF_const(qthread_t * me, void *dest,
  * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
  * (which, conveniently, returns NULL if you aren't a qthread).
  */
-static inline int qthread_writeF(qthread_t * me, void *dest, const void *src)
+static inline int qthread_writeF(qthread_t * me, aligned_t * const dest, const aligned_t * const src)
 {
-    *(aligned_t *) dest = *(aligned_t *) src;
-    PIM_feb_fill((unsigned int*)dest);
+    *dest = *src;
+    PIM_feb_fill(dest);
     return 0;
 }
-static inline int qthread_writeF_const(qthread_t * me, void *dest,
+static inline int qthread_writeF_const(qthread_t * me, aligned_t * const dest,
 				       const aligned_t src)
 {
-    *(aligned_t *) dest = src;
-    PIM_feb_fill((unsigned int*)dest);
+    *dest = src;
+    PIM_feb_fill(dest);
     return 0;
 }
 
