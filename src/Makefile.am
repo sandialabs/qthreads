@@ -19,9 +19,9 @@ libqthread_la_LDFLAGS = -version-info 10:0:0 -no-undefined
 libqthread_la_LIBADD =
 libqthread_la_DEPENDENCIES =
 
-if COMPILE_EXPERIMENTAL_HASH
-libqthread_la_SOURCES += qt_hash.c
-endif
+#if COMPILE_EXPERIMENTAL_HASH
+#libqthread_la_SOURCES += qt_hash.c
+#endif
 
 if COMPILE_TARGET_SST
 libqthread_la_SOURCES += \
