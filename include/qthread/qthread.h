@@ -809,9 +809,6 @@ static inline uint64_t qthread_incr64(volatile uint64_t * operand, const int inc
 #endif
 }				       /*}}} */
 
-#define qthread_incr( ADDR, INCVAL )                  \
-   qthread_incr_xx( (volatile void*)(ADDR), (int)(INCVAL), sizeof(*(ADDR)) )
-
 static inline unsigned long
 qthread_incr_xx(volatile void* addr, int incr, size_t length)
 {
@@ -828,9 +825,15 @@ qthread_incr_xx(volatile void* addr, int incr, size_t length)
    return 0;  /* compiler check */
 }
 
+#ifndef __cplusplus
 
-#ifdef __cplusplus
+#define qthread_incr( ADDR, INCVAL )                  \
+   qthread_incr_xx( (volatile void*)(ADDR), (int)(INCVAL), sizeof(*(ADDR)) )
+
+#else
 }
+
+#include "qthread.hpp"
 #endif
 
 #endif

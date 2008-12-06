@@ -6,7 +6,7 @@
 #undef qthread_incr
 #endif
 
-#include <qthread.h>
+#include <qthread/qthread.h>
 
 template <bool> class OnlyTrue;
 template <> class OnlyTrue<true> {};
@@ -121,26 +121,26 @@ inline int qthread_readFE(qthread_t *me, T * const dest, const T * const src)
 }
 
 template <typename T>
-inline int qthread_lock(const T* a);
+inline int qthread_lock(const T* a)
 {
     QTHREAD_CHECKSIZE(T);
     return qthread_lock(qthread_self(), (aligned_t*) a);
 }
 template <typename T>
-inline int qthread_lock(qthread_t *me, const T* a);
+inline int qthread_lock(qthread_t *me, const T* a)
 {
     QTHREAD_CHECKSIZE(T);
     return qthread_lock(me, (aligned_t*) a);
 }
 
 template <typename T>
-inline int qthread_unlock(const T* a);
+inline int qthread_unlock(const T* a)
 {
     QTHREAD_CHECKSIZE(T);
     return qthread_unlock(qthread_self(), (aligned_t*) a);
 }
 template <typename T>
-inline int qthread_unlock(qthread_t *me, const T* a);
+inline int qthread_unlock(qthread_t *me, const T* a)
 {
     QTHREAD_CHECKSIZE(T);
     return qthread_unlock(me, (aligned_t*) a);
@@ -155,14 +155,14 @@ inline double qthread_incr(volatile double *operand, const double incr)
     return qthread_dincr(operand, incr);
 }
 // BWB: FIX ME: need to restrict T to integer values...
-template <typename T>
-inline T qthread_incr(volatile T *operand, const T incr)
+template <typename T, typename T2>
+inline T qthread_incr(volatile T *operand, const T2 incr)
 {
     switch (sizeof(T)) {
     case 4:
         return qthread_incr32((volatile uint32_t*) operand, incr);
     case 8:
-        return qthread_incr32((volatile uint32_t*) operand, incr);
+        return qthread_incr64((volatile uint64_t*) operand, incr);
     default:
         *(int*)(0) = 0;
     }
