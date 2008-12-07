@@ -243,7 +243,7 @@ int qthread_unlock(qthread_t * me, const aligned_t *a);
  * *after* incrementing.
  */
 
-static inline float qthread_fincr(volatile float * operand, const float incr)
+static QINLINE float qthread_fincr(volatile float * operand, const float incr)
 {/*{{{*/
 #if defined(HAVE_GCC_INLINE_ASSEMBLY)
 # if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
@@ -339,7 +339,7 @@ static inline float qthread_fincr(volatile float * operand, const float incr)
 #endif
 }/*}}}*/
 
-static inline double qthread_dincr(volatile double * operand, const double incr)
+static QINLINE double qthread_dincr(volatile double * operand, const double incr)
 {/*{{{*/
 #if defined(HAVE_GCC_INLINE_ASSEMBLY) && (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
@@ -520,7 +520,7 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
 #endif
 }/*}}}*/
 
-static inline uint32_t qthread_incr32(volatile uint32_t * operand, const int incr)
+static QINLINE uint32_t qthread_incr32(volatile uint32_t * operand, const int incr)
 {				       /*{{{ */
 #if defined(HAVE_GCC_INLINE_ASSEMBLY)
 
@@ -614,7 +614,7 @@ static inline uint32_t qthread_incr32(volatile uint32_t * operand, const int inc
 #endif
 }				       /*}}} */
 
-static inline uint64_t qthread_incr64(volatile uint64_t * operand, const int incr)
+static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand, const int incr)
 {				       /*{{{ */
 #if defined(HAVE_GCC_INLINE_ASSEMBLY)
 
@@ -809,7 +809,7 @@ static inline uint64_t qthread_incr64(volatile uint64_t * operand, const int inc
 #endif
 }				       /*}}} */
 
-static inline unsigned long
+static QINLINE unsigned long
 qthread_incr_xx(volatile void* addr, int incr, size_t length)
 {
     switch( length ) {
