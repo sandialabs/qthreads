@@ -23,6 +23,9 @@
 /* use inlined functions */
 #undef QTHREAD_INLINE
 
+/* Allow functions to be inlined */
+#undef QINLINE
+
 /* compile for the SST */
 #undef SST
 
