@@ -230,6 +230,9 @@ int main(int argc, char *argv[])
     if (argc >= 3) {
 	futurelimit = strtol(argv[2], NULL, 0);
     }
+    if (argc >= 4) {
+	d_len = i_len = ui_len = strtol(argv[3], NULL, 0);
+    }
 
     qthread_init(threads);
     future_init(futurelimit);
