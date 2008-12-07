@@ -56,17 +56,17 @@ inline int qthread_writeEF(qthread_t *me, T * const dest, const T * const src)
     QTHREAD_CHECKSIZE(T);
     return qthread_writeEF(me, (aligned_t*) dest, (aligned_t*) src);
 }
-template <typename T>
-inline int qthread_writeEF_const(T * const dest, const T src)
+template <typename T, typename T2>
+inline int qthread_writeEF_const(T * const dest, const T2 src)
 {
     QTHREAD_CHECKSIZE(T);
-    return qthread_writeEF(qthread_self(), (aligned_t*) dest, (aligned_t) src);
+    return qthread_writeEF_const(qthread_self(), (aligned_t*) dest, (aligned_t) src);
 }
-template <typename T>
-inline int qthread_writeEF_const(qthread_t *me, T * const dest, const T src)
+template <typename T, typename T2>
+inline int qthread_writeEF_const(qthread_t *me, T * const dest, const T2 src)
 {
     QTHREAD_CHECKSIZE(T);
-    return qthread_writeEF(me, (aligned_t*) dest, (aligned_t) src);
+    return qthread_writeEF_const(me, (aligned_t*) dest, (aligned_t) src);
 }
 
 template <typename T>
@@ -81,17 +81,17 @@ inline int qthread_writeF(qthread_t *me, T * const dest, const T * const src)
     QTHREAD_CHECKSIZE(T);
     return qthread_writeF(me, (aligned_t*) dest, (aligned_t*) src);
 }
-template <typename T>
-inline int qthread_writeF_const(T * const dest, const T src)
+template <typename T, typename T2>
+inline int qthread_writeF_const(T * const dest, const T2 src)
 {
     QTHREAD_CHECKSIZE(T);
-    return qthread_writeF(qthread_self(), (aligned_t*) dest, (aligned_t) src);
+    return qthread_writeF_const(qthread_self(), (aligned_t*) dest, (aligned_t) src);
 }
-template <typename T>
-inline int qthread_writeF_const(qthread_t *me, T * const dest, const T src)
+template <typename T, typename T2>
+inline int qthread_writeF_const(qthread_t *me, T * const dest, const T2 src)
 {
     QTHREAD_CHECKSIZE(T);
-    return qthread_writeF(me, (aligned_t*) dest, (aligned_t) src);
+    return qthread_writeF_const(me, (aligned_t*) dest, (aligned_t) src);
 }
 
 template <typename T>
