@@ -82,7 +82,7 @@ extern	void		makecontext(ucontext_t*, void(*)(), int, ...);
 #	define mcontext_t libthread_mcontext_t
 #	define ucontext libthread_ucontext
 #	define ucontext_t libthread_ucontext_t
-#	if defined(__i386__)
+#	if defined(__i386__) || defined(__x86_64__)
 #		include "386-ucontext.h"
 #	else
 #		include "power-ucontext.h"
@@ -94,7 +94,7 @@ extern	void		makecontext(ucontext_t*, void(*)(), int, ...);
 #	define mcontext_t libthread_mcontext_t
 #	define ucontext libthread_ucontext
 #	define ucontext_t libthread_ucontext_t
-#	if defined __i386__
+#	if defined(__i386__) || defined(__x86_64__)
 #		include "386-ucontext.h"
 #	else
 #		include "power-ucontext.h"
@@ -119,12 +119,15 @@ void setmcontext(const mcontext_t*);
 
 // --------------------------
 
-#if defined(__APPLE__) && defined(__i386__)
-#define NEEDX86MAKECONTEXT
-#define NEEDSWAPCONTEXT
+#if defined(__APPLE__) && (defined(__i386__) || defined(__x86_64__))
+# define NEEDX86MAKECONTEXT
+# define NEEDSWAPCONTEXT
+# if defined(__x86_64__)
+#  define NEEDX86REGISTERARGS
+# endif
 #endif
 
-#if defined(__APPLE__) && !defined(__i386__)
+#if defined(__APPLE__) && (defined(__ppc__) || defined(__ppc64__))
 #define NEEDPOWERMAKECONTEXT
 #define NEEDSWAPCONTEXT
 #endif

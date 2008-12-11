@@ -12,13 +12,21 @@
 #define GET _getmcontext
 #endif
 
+#if defined(__APPLE__) && defined(__x86_64__)
+#define NEEDX86_64CONTEXT 1
+#define SET _setmcontext
+#define GET _getmcontext
+#endif
+
 #if defined(__APPLE__) && defined(__ppc64__)
 #define NEEDPOWER64CONTEXT 1
 #define SET __setmcontext
 #define GET __getmcontext
 #endif
 
-#if defined(__APPLE__) && !defined(__i386__) && !defined(__ppc64__)
+#if defined(__APPLE__) && \
+   !defined(__i386__) && !defined(__x86_64__) && \
+   !defined(__ppc64__)
 #define NEEDPOWERCONTEXT 1
 #define SET __setmcontext
 #define GET __getmcontext
@@ -53,7 +61,7 @@ SET:
 
 .globl GET
 GET:
-	movl	4(%esp), %eax
+	movl	4(%esp), %eax /* load arg0 from stack */
 
 	movl	%fs, 8(%eax)
 	movl	%es, 12(%eax)
@@ -74,6 +82,78 @@ GET:
 
 	movl	44(%eax), %ecx	/* restore %ecx */
 	movl	$0, %eax
+	ret
+#endif
+
+#ifdef NEEDX86_64CONTEXT
+.globl SET
+/*.type SET, @function*/
+SET:
+	/* the argument is %rdi, so we do not need to load it from the stack */
+
+	/* why are these wrong? */
+	/*movl	(2*8)(%rdi), %fs
+	movl	(3*8)(%rdi), %es
+	movl	(4*8)(%rdi), %ds
+	movl	(19*8)(%rdi), %ss*/
+	movq	(6*8)(%rdi), %rsi /* 2nd int arg (arg passing) */
+	movq	(7*8)(%rdi), %rbp /* frame pointer */
+	movq	(9*8)(%rdi), %rbx /* base pointer */
+	movq	(10*8)(%rdi), %rdx /* 3rd int arg (arg passing) */
+	movq	(11*8)(%rdi), %rcx /* 4th int arg (arg passing) */
+	movq	(12*8)(%rdi), %rax /* return value (allows us to escape the swapcontext loop) */
+	/* extra registers in AMD (arg passing) */
+	movq	((20+28+0)*8)(%rdi), %r12 /* store 'em in the __spare__ area */
+	movq	((20+28+1)*8)(%rdi), %r13
+	movq	((20+28+2)*8)(%rdi), %r14
+	movq	((20+28+3)*8)(%rdi), %r15
+
+	movq	(18*8)(%rdi), %rsp /* stack pointer */
+	pushq	(15*8)(%rdi) /* push new $pc onto stack for `ret` */
+	movq	(5*8)(%rdi), %rdi /* 1st int arg (arg passing) */
+	ret
+
+.globl GET
+/*.type GET, @function*/
+GET:
+	/* arg0 is in %rdi, DO NOT load from stack */
+	movl	%fs,  ( 2*8)(%rdi)
+	movl	%es,  ( 3*8)(%rdi)
+	movl	%ds,  ( 4*8)(%rdi)
+	movl	%ss,  (19*8)(%rdi)
+	movq	%rdi, ( 5*8)(%rdi) /* unnecessary */
+	movq	%rsi, ( 6*8)(%rdi) /* unnecessary */
+	movq	%rbp, ( 7*8)(%rdi) /* frame pointer */
+	movq	%rbx, ( 9*8)(%rdi) /* base pointer */
+	movq	%rdx, (10*8)(%rdi) /* unnecessary */
+	movq	%rcx, (11*8)(%rdi) /* unnecessary */
+	/* extra registers in AMD - callee saved */
+	movq	%r12, ((20+28+0)*8)(%rdi) /* in the __spare__ area */
+	movq	%r13, ((20+28+1)*8)(%rdi)
+	movq	%r14, ((20+28+2)*8)(%rdi)
+	movq	%r15, ((20+28+3)*8)(%rdi)
+	
+	movq	$1, (12*8)(%rdi)	/* %rax (aka, my return value) */
+	/* the return value is 1 here in order to avoid getting into a
+	 * swapcontext loop. If this isn't zero, what will happen is
+	 * that every time we swap back to the parent, it will think
+	 * we just finished the getcontext, and will immediately swap
+	 * back to the child. */
+
+	/* the following is broken into two instructions
+	 * because we can only dereference one memory op at a time */
+	movq	(%rsp), %rcx	/* return address, storing in %eip */
+	movq	%rcx, (15*8)(%rdi)
+
+	/* I don't entirely understand why this is correct */
+	leaq	8(%rsp), %rcx	 /* %rsp */
+	movq	%rcx, (18*8)(%rdi)
+
+	/* put %rcx back the way it should be, after the
+	 * previous shenanigans */
+	movq	(11*8)(%rdi), %rcx	/* restore %rcx */
+
+	mov		$0, %rax /* set return value - success! */
 	ret
 #endif
 
