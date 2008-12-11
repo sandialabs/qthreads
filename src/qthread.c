@@ -967,7 +967,7 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
     }
 
     /* initialize the kernel threads and scheduler */
-    pthread_key_create(&shepherd_structs, NULL);
+    qassert(pthread_key_create(&shepherd_structs, NULL), 0);
     qlib->nshepherds = nshepherds;
     if ((qlib->shepherds = (qthread_shepherd_t *)
 	 calloc(nshepherds, sizeof(qthread_shepherd_t))) == NULL) {
