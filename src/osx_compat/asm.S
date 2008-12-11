@@ -91,11 +91,6 @@ GET:
 SET:
 	/* the argument is %rdi, so we do not need to load it from the stack */
 
-	/* why are these wrong? */
-	/*movl	(2*8)(%rdi), %fs
-	movl	(3*8)(%rdi), %es
-	movl	(4*8)(%rdi), %ds
-	movl	(19*8)(%rdi), %ss*/
 	movq	(6*8)(%rdi), %rsi /* 2nd int arg (arg passing) */
 	movq	(7*8)(%rdi), %rbp /* frame pointer */
 	movq	(9*8)(%rdi), %rbx /* base pointer */
@@ -117,10 +112,6 @@ SET:
 /*.type GET, @function*/
 GET:
 	/* arg0 is in %rdi, DO NOT load from stack */
-	movl	%fs,  ( 2*8)(%rdi)
-	movl	%es,  ( 3*8)(%rdi)
-	movl	%ds,  ( 4*8)(%rdi)
-	movl	%ss,  (19*8)(%rdi)
 	movq	%rdi, ( 5*8)(%rdi) /* unnecessary */
 	movq	%rsi, ( 6*8)(%rdi) /* unnecessary */
 	movq	%rbp, ( 7*8)(%rdi) /* frame pointer */
