@@ -1,6 +1,16 @@
 #ifndef QTHREAD_INNARDS_H
 #define QTHREAD_INNARDS_H
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
+#ifdef QTHREAD_DEBUG
+# ifdef HAVE_UNISTD_H
+#  include <unistd.h> /* for write() */
+# endif
+# include <stdarg.h>		       /* for va_start and va_end */
+#endif
 #include <cprops/hashtable.h>
 
 typedef struct qlib_s
@@ -69,6 +79,96 @@ int qthread_fork_future_to(const qthread_f f, const void *arg,
 #else
 # define qassert(op, val) assert(op == val)
 # define qassertnot(op, val) assert(op != val)
+#endif
+
+/*#define QTHREAD_DEBUG 1*/
+/* for debugging */
+#ifdef QTHREAD_DEBUG
+extern int debuglevel;
+extern pthread_mutex_t output_lock;
+
+static QINLINE void qthread_debug(int level, char *format, ...)
+{				       /*{{{ */
+    va_list args;
+
+    if (level <= debuglevel) {
+	static char buf[1024]; // protected by the output_lock
+	char *head = buf;
+	char ch;
+
+	qassert(pthread_mutex_lock(&output_lock), 0);
+
+	write(2, "QDEBUG: ",8);
+
+	va_start(args, format);
+	/* avoiding the obvious method, to save on memory
+	vfprintf(stderr, format, args);*/
+	while (ch = *format++) {
+	    if (ch == '%') {
+		ch = *format++;
+		switch (ch) {
+		    case 's':
+			{
+			    char * str = va_arg(args, char*);
+			    write(2, buf, head - buf);
+			    head = buf;
+			    write(2, str, strlen(str));
+			    break;
+			}
+		    case 'p':
+		    case 'x':
+			{
+			    uintptr_t num;
+			    unsigned base;
+			    *head++ = '0';
+			    *head++ = 'x';
+			    case 'u':
+			    case 'd':
+			    case 'i':
+			    num = va_arg(args, uintptr_t);
+			    base = (ch == 'p')?16:10;
+			    if (!num) {
+				*head++ = '0';
+			    } else {
+				/* count places */
+				uintptr_t tmp = num;
+				unsigned places = 0;
+				while (tmp >= base) {
+				    tmp /= base;
+				    places++;
+				}
+				head += places;
+				places = 0;
+				while (num >= base) {
+				    tmp = num%base;
+				    *(head-places) = (tmp<10)?('0'+tmp):('a'+tmp-10);
+				    num /= base;
+				    places++;
+				}
+				num %= base;
+				*(head-places) = (num<10)?('0'+num):('a'+num-10);
+				head++;
+			    }
+			}
+			break;
+		    default:
+			*head++ = '%';
+			*head++ = ch;
+		}
+	    } else {
+		*head++ = ch;
+	    }
+	}
+	/* XXX: not checking for extra long values of head */
+	write(2, buf, head - buf);
+	va_end(args);
+	/*fflush(stderr);*/
+
+	qassert(pthread_mutex_unlock(&output_lock), 0);
+    }
+}				       /*}}} */
+#else
+#define qthread_debug(...) do{ }while(0)
 #endif
 
 #endif

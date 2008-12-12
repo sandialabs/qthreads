@@ -10,7 +10,6 @@
 #else
 # include "osx_compat/taskimpl.h"
 #endif
-#include <stdarg.h>		       /* for va_start and va_end */
 #include <qthread/qthread-int.h>       /* for UINT8_MAX */
 #include <string.h>		       /* for memset() */
 #if !HAVE_MEMCPY
@@ -26,11 +25,6 @@
 #endif
 #ifdef QTHREAD_USE_PTHREADS
 # include <pthread.h>
-#endif
-#ifdef QTHREAD_DEBUG
-# ifdef HAVE_UNISTD_H
-#  include <unistd.h> /* for write() */
-# endif
 #endif
 
 #ifdef QTHREAD_LOCK_PROFILING
@@ -608,95 +602,9 @@ static QINLINE aligned_t qthread_internal_incr_mod(volatile aligned_t *
     return retval;
 }				       /*}}} */
 
-/*#define QTHREAD_DEBUG 1*/
-/* for debugging */
 #ifdef QTHREAD_DEBUG
-static int debuglevel = 0;
-static QINLINE void qthread_debug(int level, char *format, ...)
-{				       /*{{{ */
-    static pthread_mutex_t output_lock = PTHREAD_MUTEX_INITIALIZER;
-    va_list args;
-
-    if (level <= debuglevel) {
-	static char buf[1024]; // protected by the output_lock
-	char *head = buf;
-	char ch;
-
-	QTHREAD_LOCK(&output_lock);
-
-	write(2, "QDEBUG: ",8);
-
-	va_start(args, format);
-	/* avoiding the obvious method, to save on memory
-	vfprintf(stderr, format, args);*/
-	while (ch = *format++) {
-	    if (ch == '%') {
-		ch = *format++;
-		switch (ch) {
-		    case 's':
-			{
-			    char * str = va_arg(args, char*);
-			    write(2, buf, head - buf);
-			    head = buf;
-			    write(2, str, strlen(str));
-			    break;
-			}
-		    case 'p':
-		    case 'x':
-			{
-			    uintptr_t num;
-			    unsigned base;
-			    *head++ = '0';
-			    *head++ = 'x';
-			    case 'u':
-			    case 'd':
-			    case 'i':
-			    num = va_arg(args, uintptr_t);
-			    base = (ch == 'p')?16:10;
-			    if (!num) {
-				*head++ = '0';
-			    } else {
-				/* count places */
-				uintptr_t tmp = num;
-				unsigned places = 0;
-				while (tmp >= base) {
-				    tmp /= base;
-				    places++;
-				}
-				head += places;
-				places = 0;
-				while (num >= base) {
-				    tmp = num%base;
-				    *(head-places) = (tmp<10)?('0'+tmp):('a'+tmp-10);
-				    num /= base;
-				    places++;
-				}
-				num %= base;
-				*(head-places) = (num<10)?('0'+num):('a'+num-10);
-				head++;
-			    }
-			}
-			break;
-		    default:
-			*head++ = '%';
-			*head++ = ch;
-		}
-	    } else {
-		*head++ = ch;
-	    }
-	}
-	/* XXX: not checking for extra long values of head */
-	write(2, buf, head - buf);
-	va_end(args);
-	/*fflush(stderr);*/
-
-	QTHREAD_UNLOCK(&output_lock);
-    }
-}				       /*}}} */
-
-#define QTHREAD_NONLAZY_THREADIDS
-#else
-#define qthread_debug(...) do{ }while(0)
+int debuglevel = 0;
+pthread_mutex_t output_lock = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 #ifdef QTHREAD_LOCK_PROFILING

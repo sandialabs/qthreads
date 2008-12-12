@@ -11,13 +11,6 @@
 #include <string.h>
 #include <cprops/hashtable.h>
 
-#undef DBprintf
-#if defined(QTHREAD_DEBUG) || defined(FUTURE_DEBUG)
-#define DBprintf printf
-#else
-#define DBprintf(...) ;
-#endif
-
 #define MALLOC(sss) malloc(sss)
 #define FREE(sss) free(sss)
 
@@ -106,8 +99,8 @@ void future_init(int vp_per_loc)
 	future_bookkeeping_array[i].vp_count = 0;
 	future_bookkeeping_array[i].vp_max = vp_per_loc;
 	future_bookkeeping_array[i].id = i;
-	qassert(pthread_mutex_init(&(future_bookkeeping_array[i].vp_count_lock),
-			   NULL), 0);
+	qassert(pthread_mutex_init
+		(&(future_bookkeeping_array[i].vp_count_lock), NULL), 0);
 	qthread_fork_to(future_shep_init, NULL, rets + i, i);
     }
     for (i = 0; i < qlib->nshepherds; i++) {
@@ -128,17 +121,21 @@ void future_init(int vp_per_loc)
 void blocking_vp_incr(qthread_t * me, location_t * loc)
 {
     qassert(pthread_mutex_lock(&(loc->vp_count_lock)), 0);
-    DBprintf("Thread %p try blocking increment on loc %d vps %d\n", (void*)me,
-	     loc->id, loc->vp_count);
+    qthread_debug(2,
+		  "thread %p attempting a blocking increment on loc %d vps %d\n",
+		  (void *)me, loc->id, loc->vp_count);
 
     while (loc->vp_count >= loc->vp_max) {
 	qassert(pthread_mutex_unlock(&(loc->vp_count_lock)), 0);
-	DBprintf("Thread %p found too many futures in %d; waiting for vp_count\n", (void*)me, loc->id);
+	qthread_debug(3,
+		      "Thread %p found too many futures in %d; waiting for vp_count\n",
+		      (void *)me, loc->id);
 	qthread_lock(me, &(loc->vp_count));
 	qassert(pthread_mutex_lock(&(loc->vp_count_lock)), 0);
     }
     loc->vp_count++;
-    DBprintf("Thread %p incr loc %d to %d vps\n", (void*)me, loc->id, loc->vp_count);
+    qthread_debug(3, "Thread %p incr loc %d to %d vps\n", (void *)me, loc->id,
+		  loc->vp_count);
     qassert(pthread_mutex_unlock(&(loc->vp_count_lock)), 0);
 }
 
@@ -155,7 +152,7 @@ void future_fork(qthread_f fptr, void *arg, aligned_t * retval)
     location_t *ptr = (location_t *) pthread_getspecific(future_bookkeeping);
     qthread_t *me = qthread_self();
 
-    DBprintf("Thread %p forking a future\n", (void*)me);
+    qthread_debug(2, "Thread %p forking a future\n", (void *)me);
     /* step 1: future out where to go (fast) */
     /* XXX: should merge with qthread.c to use qthread_internal_incr_mod */
     if (ptr) {
@@ -167,7 +164,8 @@ void future_fork(qthread_f fptr, void *arg, aligned_t * retval)
 	shep_for_new_futures *= (shep_for_new_futures < qlib->nshepherds);
 	qassert(pthread_mutex_unlock(&sfnf_lock), 0);
     }
-    DBprintf("Thread %p decided future will go to %i\n", (void*)me, rr);
+    qthread_debug(3, "Thread %p decided future will go to %i\n", (void *)me,
+		  rr);
     /* steps 2&3 (slow) */
     blocking_vp_incr(me, &(future_bookkeeping_array[rr]));
     qthread_fork_future_to(fptr, arg, retval, rr);
@@ -178,13 +176,14 @@ int future_yield(qthread_t * me)
 {
     location_t *loc = ft_loc(me);
 
-    DBprintf("Thread %p yield on loc %p\n", (void*)me, (void*)loc);
+    qthread_debug(2, "Thread %p yield on loc %p\n", (void *)me, (void *)loc);
     //Non-futures do not have a vproc to yield
     if (loc != NULL) {
 	char unlockit = 0;
+
 	//yield vproc
-	DBprintf("Thread %p yield loc %d vps %d\n", (void*)me, loc->id,
-		 loc->vp_count);
+	qthread_debug(3, "Thread %p yield loc %d vps %d\n", (void *)me,
+		      loc->id, loc->vp_count);
 	qassert(pthread_mutex_lock(&(loc->vp_count_lock)), 0);
 	unlockit = (loc->vp_count-- == loc->vp_max);
 	qassert(pthread_mutex_unlock(&(loc->vp_count_lock)), 0);
@@ -203,7 +202,8 @@ void future_acquire(qthread_t * me)
 {
     location_t *loc = ft_loc(me);
 
-    DBprintf("Thread %p acquire on loc %p\n", (void*)me, (void*)loc);
+    qthread_debug(2, "Thread %p acquire on loc %p\n", (void *)me,
+		  (void *)loc);
     //Non-futures need not acquire a v proc
     if (loc != NULL) {
 	blocking_vp_incr(me, loc);
@@ -214,7 +214,7 @@ void future_acquire(qthread_t * me)
  * to be a thread/future's return value. */
 void future_join(qthread_t * me, aligned_t * ft)
 {
-    DBprintf("Qthread %p join to future %p\n", (void*)me, (void*)ft);
+    qthread_debug(2, "Thread %p join to future %p\n", (void *)me, (void *)ft);
     qthread_readFF(me, ft, ft);
 }
 
@@ -222,7 +222,8 @@ void future_join(qthread_t * me, aligned_t * ft)
  * terminate, but there's no way for it to become a future again. */
 void future_exit(qthread_t * me)
 {
-    DBprintf("Thread %p exit on loc %d\n", (void*)me, qthread_shep(me));
+    qthread_debug(2, "Thread %p exit on loc %d\n", (void *)me,
+		  qthread_shep(me));
     future_yield(me);
     qthread_assertnotfuture(me);
 }
@@ -232,7 +233,8 @@ void future_join_all(qthread_t * qthr, aligned_t * fta, int ftc)
 {
     int i;
 
-    DBprintf("Qthread %p join all to %d futures\n", (void*)qthr, ftc);
+    qthread_debug(2, "Qthread %p join all to %d futures\n", (void *)qthr,
+		  ftc);
     for (i = 0; i < ftc; i++)
 	future_join(qthr, fta + i);
 }
