@@ -421,20 +421,20 @@ static QINLINE aligned_t qthread_internal_incr_mod(volatile aligned_t *
 
     /* the minus in bne- means "this bne is unlikely to be taken" */
     asm volatile ("1:\n\t"	/* local label */
-		  "lwarx  %0,0,%1\n\t"	/* load operand */
-		  "addi   %3,%0,1\n\t"	/* increment it into incrd */
-		  "cmplw  7,%3,%2\n\t"	/* compare incrd to the max */
-		  "mfcr   %4\n\t"	/* move the result into compd */
-		  "rlwinm %4,%4,29,1\n\t"	/* isolate the result bit */
-		  "mullw  %3,%3,%4\n\t"	/* incrd *= compd */
-		  "stwcx. %3,0,%1\n\t"	/* *operand = incrd */
+		  "lwarx  %0,0,%3\n\t"	/* load operand */
+		  "addi   %2,%0,1\n\t"	/* increment it into incrd */
+		  "cmplw  7,%2,%4\n\t"	/* compare incrd to the max */
+		  "mfcr   %1\n\t"	/* move the result into compd */
+		  "rlwinm %1,%1,29,1\n\t"	/* isolate the result bit */
+		  "mullw  %2,%2,%1\n\t"	/* incrd *= compd */
+		  "stwcx. %2,0,%3\n\t"	/* *operand = incrd */
 		  "bne-   1b\n\t"	/* if it failed, go to label 1 back */
 		  "isync"	/* make sure it wasn't all a dream */
 		  /* = means this operand is write-only (previous value is discarded)
 		   * & means this operand is an earlyclobber (i.e. cannot use the same register as any of the input operands)
 		   * b means this is a register but must not be r0 */
-		  :"=&b"   (retval)
-		  :"r"     (operand), "r"(max), "r"(incrd), "r"(compd)
+		  :"=&b"   (retval), "=&r" (compd), "=&r" (incrd)
+		  :"r"     (operand), "r"(max)
 		  :"cc", "memory");
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
@@ -442,20 +442,18 @@ static QINLINE aligned_t qthread_internal_incr_mod(volatile aligned_t *
     register uint64_t incrd = incrd;
     register uint64_t compd = compd;
     asm volatile ("1:\n\t"	/* local label */
-		  "ldarx  %0,0,%1\n\t"	/* load operand */
-		  "addi   %3,%0,1\n\t"	/* increment it into incrd */
-		  "cmpl   7,1,%3,%2\n\t"	/* compare incrd to the max */
-		  "mfcr   %4\n\t"	/* move the result into compd */
-		  "rlwinm %4,%4,29,1\n\t"	/* isolate the result bit */
-		  "mulld  %3,%3,%4\n\t"	/* incrd *= compd */
-		  "stdcx. %3,0,%1\n\t"	/* *operand = incrd */
+		  "ldarx  %0,0,%3\n\t"	/* load operand */
+		  "addi   %2,%0,1\n\t"	/* increment it into incrd */
+		  "cmpl   7,1,%2,%4\n\t"	/* compare incrd to the max */
+		  "mfcr   %1\n\t"	/* move the result into compd */
+		  "rlwinm %1,%1,29,1\n\t"	/* isolate the result bit */
+		  "mulld  %2,%2,%1\n\t"	/* incrd *= compd */
+		  "stdcx. %2,0,%3\n\t"	/* *operand = incrd */
 		  "bne-   1b\n\t"	/* if it failed, to to label 1 back */
 		  "isync"	/* make sure it wasn't all just a dream */
-		  :"=&b"   (retval)
-		  :"r"     (operand), "r"(max), "r"(incrd), "r"(compd)
+		  :"=&b"   (retval), "=&r" (compd), "=&r" (incrd)
+		  :"r"     (operand), "r"(max)
 		  :"cc", "memory");
-
-#warning "The PPC64 mod assembly needs to be tested. Please remove this warning when its been tested."
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32) || \
       ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) && (QTHREAD_SIZEOF_ALIGNED_T == 4))
@@ -483,7 +481,7 @@ static QINLINE aligned_t qthread_internal_incr_mod(volatile aligned_t *
 	__asm__ __volatile__("cas [%1] , %2, %0"	/* */
 			     :"=&r"  (newval)
 			     :"r"    (operand), "r"(oldval), "0"(newval)
-			     :"cc", "memory");
+			     :"memory");
     } while (oldval != newval);
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
@@ -510,7 +508,7 @@ static QINLINE aligned_t qthread_internal_incr_mod(volatile aligned_t *
 	 */
 	__asm__ __volatile__("casx [%1] , %2, %0":"=&r"(newval)
 			     :"r"    (operand), "r"(oldval), "0"(newval)
-			     :"cc", "memory");
+			     :"memory");
     } while (oldval != newval);
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
