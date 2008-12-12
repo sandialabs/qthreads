@@ -5,7 +5,8 @@
 
 TESTS = test1 test2 test3 test_qalloc \
 		testincr testdincr testfincr \
-		testqloop testid testloop
+		testqloop testid testloop \
+		test_internal_mod
 
 if ENABLE_TIMER_PROGS
 TESTS += time_swap time_producerconsumer time_increments
@@ -59,6 +60,10 @@ testdincr_DEPENDENCIES = $(QTHREADLIB)
 testid_SOURCES = test_id.c
 testid_LDADD = $(QTHREADLIB)
 testid_DEPENDENCIES = $(QTHREADLIB)
+
+test_internal_mod_SOURCES = test_internal_mod.c
+test_internal_mod_LDADD = $(QTHREADLIB)
+test_internal_mod_DEPENDENCIES = $(QTHREADLIB)
 
 time_swap_SOURCES = time_swap.c
 time_swap_CPPFLAGS = $(QTIMERINC)
