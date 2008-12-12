@@ -621,15 +621,12 @@ static QINLINE void qthread_debug(int level, char *format, ...)
 	static char buf[1024]; // protected by the output_lock
 	char *head = buf;
 	char ch;
-	uintptr_t *nums;
 
 	QTHREAD_LOCK(&output_lock);
 
-	//fprintf(stderr, "QDEBUG: ");
-	write(1, "QDEBUG: ",8);
+	write(2, "QDEBUG: ",8);
 
 	va_start(args, format);
-	nums = (uintptr_t*)args;
 	/* avoiding the obvious method, to save on memory
 	vfprintf(stderr, format, args);*/
 	while (ch = *format++) {
@@ -638,7 +635,7 @@ static QINLINE void qthread_debug(int level, char *format, ...)
 		switch (ch) {
 		    case 's':
 			{
-			    char * str = (char*)(*nums++);
+			    char * str = va_arg(args, char*);
 			    write(2, buf, head - buf);
 			    head = buf;
 			    write(2, str, strlen(str));
@@ -654,7 +651,7 @@ static QINLINE void qthread_debug(int level, char *format, ...)
 			    case 'u':
 			    case 'd':
 			    case 'i':
-			    num = *nums++;
+			    num = va_arg(args, uintptr_t);
 			    base = (ch == 'p')?16:10;
 			    if (!num) {
 				*head++ = '0';
