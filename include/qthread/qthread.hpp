@@ -10,8 +10,8 @@
 
 template <bool> class OnlyTrue;
 template <> class OnlyTrue<true> {};
-#define QTHREAD_CHECKSIZE(X) sizeof(OnlyTrue<(bool)(sizeof(X) == sizeof(aligned_t))>)
-#define QTHREAD_STATIC_ASSERT(X) sizeof(OnlyTrue<(bool)(X)>)
+#define QTHREAD_CHECKSIZE(X) (void)sizeof(OnlyTrue<(bool)(sizeof(X) == sizeof(aligned_t))>)
+#define QTHREAD_STATIC_ASSERT(X) (void)sizeof(OnlyTrue<(bool)(X)>)
 
 template <typename T>
 inline int qthraed_feb_status(const T* addr) 
