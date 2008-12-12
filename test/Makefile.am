@@ -3,7 +3,7 @@
 # Copyright (c)      2008  Sandia Corporation
 #
 
-TESTS = test1 test2 test3 testq \
+TESTS = test1 test2 test3 test_qalloc \
 		testincr testdincr testfincr \
 		testqloop testid testloop
 
@@ -32,9 +32,9 @@ test3_SOURCES = test3.c
 test3_LDADD = $(QTHREADLIB)
 test3_DEPENDENCIES = $(QTHREADLIB)
 
-testq_SOURCES = testq.c
-testq_LDADD = $(QTHREADLIB)
-testq_DEPENDENCIES = $(QTHREADLIB)
+test_qalloc_SOURCES = testq.c
+test_qalloc_LDADD = $(QTHREADLIB)
+test_qalloc_DEPENDENCIES = $(QTHREADLIB)
 
 testloop_SOURCES = testloop.cpp
 testloop_LDADD = $(QTHREADLIB)
