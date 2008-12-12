@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <qthread/qthread.h>
+#include <qthread_innards.h> /* for qthread_debug() */
 
 aligned_t counter = 0;
 
@@ -15,13 +16,11 @@ aligned_t thread (qthread_t *me, void *arg)
     int ret;
     int ret2;
     //printf("first id = %i\n", id);
-    /* Normally this is the first thread to get an ID, but in debug mode, the
-     * very first thread gets an id too */
 #ifdef QTHREAD_DEBUG
-    assert(id == 2);
-#else
-    assert(id == 0);
+    if (id != 1)
+	qthread_debug(0, "id == %i\n", id);
 #endif
+    assert(id == 1);
 
     ret = qthread_incr(&counter, 1);
     //printf("first inc = %i\n", ret);
@@ -36,9 +35,15 @@ aligned_t thread (qthread_t *me, void *arg)
 int main()
 {
     aligned_t ret;
+    qthread_t *me;
+    int my_id;
+
     qthread_init(1);
+    me = qthread_self();
+    my_id = qthread_id(me);
+    assert(my_id == 0);
     qthread_fork(thread, NULL, &ret);
     qthread_readFF(qthread_self(), NULL, &ret);
     qthread_finalize();
-    return 0;
+    return my_id;
 }
