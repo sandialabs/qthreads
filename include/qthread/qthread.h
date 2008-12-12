@@ -251,26 +251,31 @@ static QINLINE float qthread_fincr(volatile float * operand, const float incr)
 	float f;
 	uint32_t i;
     } retval;
-    register float incrd = incrd;
-    uint32_t scratch;
+    register float incremented_value;
+    register uint32_t scratch_int;
+    uint32_t conversion_memory = conversion_memory;
     __asm__ __volatile__ ("1:\n\t"
-	    "lwarx  %0,0,%3\n\t"
+	    "lwarx  %0,0,%4\n\t"
 	    // convert from int to float
 	    "stw    %0,%2\n\t"
 	    "lfs    %1,%2\n\t"
 	    // do the addition
-	    "fadds  %1,%1,%4\n\t"
+	    "fadds  %1,%1,%5\n\t"
 	    // convert from float to int
 	    "stfs   %1,%2\n\t"
-	    "lwz    %0,%2\n\t"
+	    "lwz    %3,%2\n\t"
 	    // store back to original location
-	    "stwcx. %0,0,%3\n\t"
+	    "stwcx. %3,0,%4\n\t"
 	    "bne-   1b\n\t"
 	    "isync"
-	    :"=&b" (retval.i), "=&f"(incrd), "=m"(scratch)
-	    :"r" (operand), "f"(incr)
+	    :"=&b" (retval.i),          /* %0 */
+	     "=&f" (incremented_value), /* %1 */
+	     "=m"  (conversion_memory), /* %2 */
+	     "=r"  (scratch_int)        /* %3 */
+	    :"r" (operand),             /* %4 */
+	     "f" (incr)                 /* %5 */
 	    :"cc","memory");
-    return retval.f-incr;
+    return retval.f;
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
     union {
 	float f;
@@ -343,29 +348,33 @@ static QINLINE double qthread_dincr(volatile double * operand, const double incr
 {/*{{{*/
 #if defined(HAVE_GCC_INLINE_ASSEMBLY) && (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
-    register uint64_t incrd = incrd;
-    register double incrf = incrf;
+    register uint64_t scratch_int;
+    register double incremented_value;
     union {
 	uint64_t i;
 	double d;
     } retval;
-    uint64_t scratch = scratch;
+    uint64_t conversion_memory = conversion_memory;
     __asm__ __volatile__ ("1:\n\t"
-	    "ldarx %0,0,%1\n\t"
+	    "ldarx %0,0,%4\n\t"
 	    /*convert from integer to floating point*/
-	    "std   %0,%3\n\t" // %3 is scratch memory (NOT a register)
-	    "lfd   %4,%3\n\t" // %4 is a scratch floating point register
+	    "std   %0,%2\n\t" // %2 is scratch memory (NOT a register)
+	    "lfd   %1,%2\n\t" // %1 is a scratch floating point register
 	    /* do the addition */
-	    "fadd  %4,%5,%4\n\t" // %5 is the increment floating point register
+	    "fadd  %1,%1,%5\n\t" // %4 is the input increment
 	    /* convert from floating point to integer */
-	    "stfd   %4,%3\n\t"
-	    "ld     %2,%3\n\t"
+	    "stfd   %1,%2\n\t"
+	    "ld     %3,%2\n\t"
 	    /* store back to original location */
-	    "stdcx. %2,0,%1\n\t"
+	    "stdcx. %3,0,%4\n\t"
 	    "bne-   1b\n\t"
 	    "isync"
-	    :"=&b" (retval.i)
-	    :"r"(operand),"r"(incrd),"m"(scratch),"f"(incrf),"f"(incr)
+	    :"=&b" (retval.i),          /* %0 */
+	     "=&f" (incremented_value), /* %1 */
+	     "=m"  (conversion_memory), /* %2 */
+	     "=r"  (scratch_int)        /* %3 */
+	    :"r"(operand),              /* %4 */
+	     "f"(incr)                  /* %5 */
 	    :"cc","memory");
     return retval.d;
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
