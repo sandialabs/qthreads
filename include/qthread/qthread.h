@@ -271,7 +271,7 @@ static QINLINE float qthread_fincr(volatile float * operand, const float incr)
 	    :"=&b" (retval.i),          /* %0 */
 	     "=&f" (incremented_value), /* %1 */
 	     "=m"  (conversion_memory), /* %2 */
-	     "=r"  (scratch_int)        /* %3 */
+	     "=&r" (scratch_int)        /* %3 */
 	    :"r" (operand),             /* %4 */
 	     "f" (incr)                 /* %5 */
 	    :"cc","memory");
@@ -372,7 +372,7 @@ static QINLINE double qthread_dincr(volatile double * operand, const double incr
 	    :"=&b" (retval.i),          /* %0 */
 	     "=&f" (incremented_value), /* %1 */
 	     "=m"  (conversion_memory), /* %2 */
-	     "=r"  (scratch_int)        /* %3 */
+	     "=r&" (scratch_int)        /* %3 */
 	    :"r"(operand),              /* %4 */
 	     "f"(incr)                  /* %5 */
 	    :"cc","memory");
