@@ -41,7 +41,7 @@
 #ifdef NEEDX86CONTEXT
 .globl SET
 SET:
-	movl	4(%esp), %eax
+	movl	4(%esp), %eax /* technically doesn't need to be saved? */
 
 	movl	8(%eax), %fs
 	movl	12(%eax), %es
@@ -86,8 +86,33 @@ GET:
 #endif
 
 #ifdef NEEDX86_64CONTEXT
+/* Register Usage:
+ *
+ * %rax			temp register, 1st return reg
+ * %rbx			callee-saved, sometimes "base ptr"		PRESERVED
+ * %rcx			4th argument
+ * %rdx			3rd argument, 2nd return
+ * %rsp			stack pointer							PRESERVED
+ * %rbp			optional frame pointer					PRESERVED
+ * %rsi			2nd argument
+ * %rdi			1st argument
+ * %r8			5th argument
+ * %r9			6th argument
+ * %r10			temp register, static chain pointer
+ * %r11			temp register
+ * %r12-r15		saved									PRESERVED
+ * %xmm0-xmm1	floating point args, float return
+ * %xmm2-xmm7	floating point args
+ * %xmm8-xmm15	temp registers
+ * %mmx0-mmx7	temp registers
+ * %st0,%st1	temp registers, for returning long doubles
+ * %st2-st7		temp registers
+ * %fs			reserved for system (thread-specific data)
+ * mxcsr		status...
+ *  x87 SW		status word
+ *  x87 CW		control word							PRESERVED
+ */
 .globl SET
-/*.type SET, @function*/
 SET:
 	/* the argument is %rdi, so we do not need to load it from the stack */
 
@@ -109,7 +134,6 @@ SET:
 	ret
 
 .globl GET
-/*.type GET, @function*/
 GET:
 	/* arg0 is in %rdi, DO NOT load from stack */
 	movq	%rdi, ( 5*8)(%rdi) /* unnecessary */
