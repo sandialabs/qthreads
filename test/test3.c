@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 
     if (interactive == 1) {
 	printf("%i threads...\n", threads);
-	printf("Initial value of x: %i\n", x);
+	printf("Initial value of x: %lu\n", (unsigned long)x);
     }
 
     qthread_fork(consumer, NULL, NULL);
@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
 	}
 	return 0;
     } else {
-	fprintf(stderr, "Final value of x=%d\n", x);
+	fprintf(stderr, "Final value of x=%lu\n", (unsigned long)x);
 	return -1;
     }
 }

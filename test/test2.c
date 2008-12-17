@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
     qthread_finalize();
 
     if (interactive == 1) {
-	fprintf(stderr, "Final value of x=%d\n", x);
+	fprintf(stderr, "Final value of x=%lu\n", (unsigned long)x);
     }
 
     if (x == target)
