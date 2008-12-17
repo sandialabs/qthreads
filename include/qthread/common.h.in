@@ -35,6 +35,9 @@
 /* size of aligned_t */
 #undef QTHREAD_SIZEOF_ALIGNED_T
 
+/* builtins supported */
+#undef QTHREAD_ATOMIC_BUILTINS
+
 /* Architecture defines */
 #define QTHREAD_UNSUPPORTED 0
 #define QTHREAD_IA32        1

@@ -293,7 +293,12 @@ static QINLINE float qthread_fincr(volatile float * operand, const float incr)
 	 * inside the loop fixes that problem, even at -O2 optimization. */
 	oldval.f = *operand;
 	newval.f = oldval.f + incr;
-	__asm__ __volatile__ ("cas [%1], %2, %0"
+#if !defined(GCC_VERSION) && defined(__cplusplus)
+	asm volatile
+#else
+	__asm__ __volatile__
+#endif
+	    ("cas [%1], %2, %0"
 			      : "=&r" (newval.i)
 			      : "r" (operand), "r"(oldval.i), "0" (newval.i)
 			      : "cc", "memory");
@@ -416,7 +421,12 @@ static QINLINE double qthread_dincr(volatile double * operand, const double incr
 	 * inside the loop fixes that problem, even at -O2 optimization. */
         oldval.d = *operand;
         newval.d = oldval.d + incr;
-        __asm__ __volatile__ ("casx [%1], %2, %0"
+#if !defined(GCC_VERSION) && defined(__cplusplus)
+	asm volatile
+#else
+	__asm__ __volatile__
+#endif
+                             ("casx [%1], %2, %0"
                               : "=&r" (newval.i)
                               : "r" (operand), "r"(oldval.i), "0" (newval.i)
                               : "memory");
@@ -564,7 +574,12 @@ static QINLINE uint32_t qthread_incr32(volatile uint32_t * operand, const int in
         newval = oldval + incr;
 	/* newval always gets the value of *operand; if it's
 	 * the same as oldval, then the swap was successful */
-        __asm__ __volatile__ ("cas [%1] , %2, %0"
+#if !defined(GCC_VERSION) && defined(__cplusplus)
+	asm volatile
+#else
+	__asm__ __volatile__
+#endif
+                             ("cas [%1] , %2, %0"
                               : "=&r" (newval)
                               : "r" (operand), "r"(oldval), "0"(newval)
                               : "cc", "memory");
@@ -682,7 +697,12 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand, const int in
         newval = oldval + incr;
 	/* newval always gets the value of *operand; if it's
 	 * the same as oldval, then the swap was successful */
-        __asm__ __volatile__ ("casx [%1] , %2, %0"
+#if !defined(GCC_VERSION) && defined(__cplusplus)
+	asm volatile
+#else
+	__asm__ __volatile__
+#endif
+                             ("casx [%1] , %2, %0"
                               : "=&r" (newval)
                               : "r" (operand), "r"(oldval), "0"(newval)
                               : "cc", "memory");
@@ -836,8 +856,13 @@ qthread_incr_xx(volatile void* addr, int incr, size_t length)
 
 #ifndef __cplusplus
 
-#define qthread_incr( ADDR, INCVAL )                  \
+#ifdef QTHREAD_ATOMIC_BUILTINS
+# define qthread_incr( ADDR, INCVAL ) \
+    __sync_fetch_and_add(ADDR, INCVAL)
+#else
+# define qthread_incr( ADDR, INCVAL )                  \
    qthread_incr_xx( (volatile void*)(ADDR), (int)(INCVAL), sizeof(*(ADDR)) )
+#endif
 
 #else
 }

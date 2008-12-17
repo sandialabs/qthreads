@@ -173,6 +173,9 @@ AC_CACHE_SAVE
 # MTA here when the time comes.
 QTHREAD_CHECK_SST([qthread_implementation="sst"], [qthread_implementation="unix"])
 
+# Figure out whether the compiler has builtin atomic operations
+QTHREAD_CHECK_ATOMICS
+
 ## -------------------- ##
 ## Checks for libraries ##
 ## -------------------- ##
