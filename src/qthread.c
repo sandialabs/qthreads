@@ -812,10 +812,6 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
     int cp_syncmode = COLLECTION_MODE_PLAIN;
     int need_sync = 1;
 
-#ifdef NEED_RLIMIT
-    struct rlimit rlp;
-#endif
-
 #ifdef QTHREAD_DEBUG
     {
 	char * qdl = getenv("QTHREAD_DEBUG_LEVEL");
@@ -889,13 +885,15 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
     qlib->sched_shepherd = 0;
     QTHREAD_INITLOCK(&qlib->max_thread_id_lock);
     QTHREAD_INITLOCK(&qlib->sched_shepherd_lock);
-#ifdef NEED_RLIMIT
-    qassert(getrlimit(RLIMIT_STACK, &rlp), 0);
-    qthread_debug(2, "stack sizes ... cur: %u max: %u\n", rlp.rlim_cur,
-		  rlp.rlim_max);
-    qlib->master_stack_size = rlp.rlim_cur;
-    qlib->max_stack_size = rlp.rlim_max;
-#endif
+    {
+	struct rlimit rlp;
+
+	qassert(getrlimit(RLIMIT_STACK, &rlp), 0);
+	qthread_debug(2, "stack sizes ... cur: %u max: %u\n", rlp.rlim_cur,
+		rlp.rlim_max);
+	qlib->master_stack_size = rlp.rlim_cur;
+	qlib->max_stack_size = rlp.rlim_max;
+    }
 
 #ifndef UNPOOLED
     /* set up the memory pools */
