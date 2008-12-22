@@ -111,8 +111,6 @@ static QINLINE void qt_loop_balance_inner(const size_t start,
     struct qloop_wrapper_args *qwa =
 	(struct qloop_wrapper_args *)malloc(sizeof(struct qloop_wrapper_args)
 					    * qthread_shepherd_count());
-    aligned_t *rets =
-	(aligned_t *) malloc(sizeof(aligned_t) * qthread_shepherd_count());
     volatile aligned_t donecount = 0;
     size_t len = stop - start;
     size_t each = len / qthread_shepherd_count();
@@ -133,16 +131,16 @@ static QINLINE void qt_loop_balance_inner(const size_t start,
 	iterend = qwa[i].stopat;
 	if (future) {
 	    qthread_fork_future_to((qthread_f) qloop_wrapper, qwa + i,
-				   rets + i, i);
+				   NULL, i);
 	} else {
-	    qthread_fork_to((qthread_f) qloop_wrapper, qwa + i, rets + i, i);
+	    qthread_fork_to((qthread_f) qloop_wrapper, qwa + i, NULL, i);
 	}
     }
-    for (i = 0; donecount < qthread_shepherd_count(); i++) {
-	qthread_readFF(me, NULL, rets + i);
+    /* turning this into a spinlock :P */
+    while (donecount < qthread_shepherd_count()) {
+	qthread_yield(me);
     }
     free(qwa);
-    free(rets);
 }
 void qt_loop_balance(const size_t start, const size_t stop,
 		     const qt_loop_f func, void *argptr)
