@@ -973,12 +973,18 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
     }
 
     /* now, transform the current main context into a qthread,
-     * and make the main thread a shepherd (shepherd 0) */
+     * and make the main thread a shepherd (shepherd 0).
+     * What will happen is this:
+     * shep0 and shepstack are used for shepherd0; the shepstack is
+     *   huge, because the shepherd expects a "standard" size stack. The
+     * qthread_t is for the *current* thread, which also expects a full-size
+     *   stack, but is generated so that the current thread can block the same
+     *   way that a qthread can. */
     if ((shep0 = ALLOC_CONTEXT((&qlib->shepherds[0]))) == NULL) {
 	perror("qthread_init allocating shepherd context");
 	return QTHREAD_MALLOC_ERROR;
     }
-    if ((shepstack = malloc(1024 * 1024 * 8)) == NULL) {
+    if ((shepstack = malloc(qlib->master_stack_size)) == NULL) {
 	perror("qthread_init allocating shepherd stack");
 	return QTHREAD_MALLOC_ERROR;
     }
@@ -990,13 +996,16 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	    return QTHREAD_MALLOC_ERROR;
 	}
 
+	/* the context will have its own stack ptr */
+	FREE_STACK(t->creator_ptr, t->stack);
+	t->stack = NULL;
 	t->thread_state = QTHREAD_STATE_YIELDED; /* avoid re-launching */
 	t->flags = QTHREAD_REAL_MCCOY; /* i.e. this is THE parent thread */
 
 	qthread_enqueue(qlib->shepherds[0].ready, t);
 	qassert(getcontext(t->context), 0);
 	qassert(getcontext(shep0), 0);
-	qthread_makecontext(shep0, shepstack, 1024 * 1024 * 8,
+	qthread_makecontext(shep0, shepstack, qlib->master_stack_size,
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
 	(void (*)(void))qthread_shepherd_wrapper,
 #else
@@ -1278,7 +1287,7 @@ qthread_t *qthread_self(void)
 
 size_t qthread_stackleft(const qthread_t * t)
 {				       /*{{{ */
-    if (t != NULL) {
+    if (t != NULL && t->stack != NULL) {
 	return (size_t) (&t) - (size_t) (t->stack);
     } else {
 	return 0;
@@ -1636,7 +1645,11 @@ static QINLINE void qthread_exec(qthread_t * t, ucontext_t * c)
     qthread_debug
 	(3, "qthread_exec(%p): setting stack size limits... hopefully we don't currently exceed them!\n",
 	 t);
-    rlp.rlim_cur = qlib->qthread_stack_size;
+    if (t->flags & QTHREAD_REAL_MCCOY) {
+	rlp.rlim_cur = qlib->master_stack_size;
+    } else {
+	rlp.rlim_cur = qlib->qthread_stack_size;
+    }
     rlp.rlim_max = qlib->max_stack_size;
     qassert(setrlimit(RLIMIT_STACK, &rlp), 0);
 #endif
@@ -1648,8 +1661,10 @@ static QINLINE void qthread_exec(qthread_t * t, ucontext_t * c)
     qthread_debug
 	(3, "qthread_exec(%p): setting stack size limits back to normal...\n",
 	 t);
-    rlp.rlim_cur = qlib->master_stack_size;
-    qassert(setrlimit(RLIMIT_STACK, &rlp), 0);
+    if (!(t->flags & QTHREAD_REAL_MCCOY)) {
+	rlp.rlim_cur = qlib->master_stack_size;
+	qassert(setrlimit(RLIMIT_STACK, &rlp), 0);
+    }
 #endif
 
     assert(t != NULL);
@@ -1778,9 +1793,11 @@ static QINLINE void qthread_back_to_master(qthread_t * t)
     qthread_debug
 	(3, "qthread_back_to_master(%p): setting stack size limits for master thread...\n",
 	 t);
-    rlp.rlim_cur = qlib->master_stack_size;
-    rlp.rlim_max = qlib->max_stack_size;
-    qassert(setrlimit(RLIMIT_STACK, &rlp), 0);
+    if (!(t->flags & QTHREAD_REAL_MCCOY)) {
+	rlp.rlim_cur = qlib->master_stack_size;
+	rlp.rlim_max = qlib->max_stack_size;
+	qassert(setrlimit(RLIMIT_STACK, &rlp), 0);
+    }
 #endif
     /* now back to your regularly scheduled master thread */
     qassert(swapcontext(t->context, t->return_context), 0);
@@ -1788,8 +1805,10 @@ static QINLINE void qthread_back_to_master(qthread_t * t)
     qthread_debug
 	(3, "qthread_back_to_master(%p): setting stack size limits back to qthread size...\n",
 	 t);
-    rlp.rlim_cur = qlib->qthread_stack_size;
-    qassert(setrlimit(RLIMIT_STACK, &rlp), 0);
+    if (!(t->flags & QTHREAD_REAL_MCCOY)) {
+	rlp.rlim_cur = qlib->qthread_stack_size;
+	qassert(setrlimit(RLIMIT_STACK, &rlp), 0);
+    }
 #endif
 }				       /*}}} */
 
