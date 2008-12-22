@@ -384,7 +384,12 @@ int main() {
         [AC_MSG_ERROR([Can not find working makecontext.])])
 ])
 
+AC_ARG_ENABLE([hardware-timer],
+  [AS_HELP_STRING([--disable-hardware-timer],
+				  [force the use of gettimeofday even if there is a better timer available])],
+  [], [enable_hardware_timer="yes"])
 AS_IF([test "$need_qtimer" = "yes"],
+  [AS_IF([test "$enable_hardware_timer" = "yes"],
 	  [# Which timer do we want to use
 	   qthread_timer_type=gettimeofday
 	   AS_IF([test "$qthread_timer_type" = "gettimeofday"],
@@ -395,7 +400,7 @@ AS_IF([test "$need_qtimer" = "yes"],
 			 [QTHREAD_CHECK_ALTIX_TIMER([qthread_timer_type=altix])])
 	   AC_MSG_CHECKING([for high resolution timer type])
 	   AC_MSG_RESULT([$qthread_timer_type])
-])
+  ],[qthread_timer_type=gettimeofday])])
 
 AC_CACHE_SAVE
 

@@ -3,8 +3,12 @@
 
 #include <qthread/common.h>
 
-#ifdef QTHREAD_QTOMIC_BUILTINS
-#define qt_cas(P,O,N) __sync_val_comare_and_swap((P),(O),(N))
+#if (HAVE_IA64INTRIN_H && QTHREAD_NEEDS_IA64INTRIN)
+# include <ia64intrin.h>
+#endif
+
+#ifdef QTHREAD_ATOMIC_CAS
+#define qt_cas(P,O,N) (void*)__sync_val_compare_and_swap((P),(O),(N))
 #else
 static QINLINE void* qt_cas(volatile void** ptr, void* oldv, void* newv)
 {
@@ -64,7 +68,7 @@ static QINLINE void* qt_cas(volatile void** ptr, void* oldv, void* newv)
 #   error "Don't have a qt_cas implementation for this architecture"
 #  endif
 # else
-#  error "Don't have a qt_cas implementation for this architecture"
+#  error "CAS needs inline assembly OR __sync_val_compare_and_swap"
 # endif
 }
 #endif

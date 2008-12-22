@@ -16,10 +16,8 @@
 # define memcpy(d, s, n) bcopy((s), (d), (n))
 # define memmove(d, s, n) bcopy((s), (d), (n))
 #endif
-#ifdef NEED_RLIMIT
-# include <sys/time.h>
-# include <sys/resource.h>
-#endif
+#include <sys/time.h>
+#include <sys/resource.h>
 #if (QTHREAD_SHEPHERD_PROFILING || QTHREAD_LOCK_PROFILING)
 # include "qtimer.h"
 #endif

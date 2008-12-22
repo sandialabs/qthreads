@@ -8,6 +8,10 @@
 
 #include <string.h>		       /* for memcpy() */
 
+#if (HAVE_IA64INTRIN_H && QTHREAD_NEEDS_IA64INTRIN)
+# include <ia64intrin.h>
+#endif
+
 /*****************************************************************************
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *
@@ -856,7 +860,7 @@ qthread_incr_xx(volatile void* addr, int incr, size_t length)
 
 #ifndef __cplusplus
 
-#ifdef QTHREAD_ATOMIC_BUILTINS
+#ifdef QTHREAD_ATOMIC_INCR
 # define qthread_incr( ADDR, INCVAL ) \
     __sync_fetch_and_add(ADDR, INCVAL)
 #else
