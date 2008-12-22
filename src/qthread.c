@@ -985,36 +985,9 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
     {
 	qthread_t *t = qthread_thread_new(NULL, NULL, NULL, 0);
 
-	if ((t = ALLOC_QTHREAD((&qlib->shepherds[0]))) == NULL) {
-	    perror("qthread_init allocating qthread");
-	    return QTHREAD_MALLOC_ERROR;
-	}
-	if ((t->context = ALLOC_CONTEXT((&qlib->shepherds[0]))) == NULL) {
-	    perror("qthread_init allocating context");
-	    FREE_QTHREAD(t);
-	    return QTHREAD_MALLOC_ERROR;
-	}
-	if ((t->stack = ALLOC_STACK((&qlib->shepherds[0]))) == NULL) {
-	    perror("qthread_init allocating stack");
-	    FREE_CONTEXT((&qlib->shepherds[0]), t->context);
-	    FREE_QTHREAD(t);
-	    return QTHREAD_MALLOC_ERROR;
-	}
-	t->thread_state = QTHREAD_STATE_YIELDED;
-	t->f = NULL;
-	t->arg = NULL;
-	t->blockedon = NULL;
-	t->shepherd_ptr = &qlib->shepherds[0];
-	t->ret = NULL;
-	t->flags = QTHREAD_REAL_MCCOY;
-#ifdef QTHREAD_NONLAZY_THREADIDS
-	/* give the thread an ID number */
-	t->thread_id =
-	    qthread_internal_incr(&(qlib->max_thread_id),
-				  &qlib->max_thread_id_lock);
-#else
-	t->thread_id = (unsigned int)-1;
-#endif
+	t->thread_state = QTHREAD_STATE_YIELDED; /* avoid re-launching */
+	t->flags = QTHREAD_REAL_MCCOY; /* i.e. this is THE parent thread */
+
 	qthread_enqueue(qlib->shepherds[0].ready, t);
 	qassert(getcontext(t->context), 0);
 	qassert(getcontext(shep0), 0);
