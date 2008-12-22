@@ -1,9 +1,7 @@
 #ifndef QT_ATOMICS_H
 #define QT_ATOMICS_H
 
-#ifdef HAVE_CONFIG_H
-# include "config.h"
-#endif
+#include <qthread/common.h>
 
 #ifdef QTHREAD_QTOMIC_BUILTINS
 #define qt_cas(P,O,N) __sync_val_comare_and_swap((P),(O),(N))
