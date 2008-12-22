@@ -985,6 +985,11 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
     {
 	qthread_t *t = qthread_thread_new(NULL, NULL, NULL, 0);
 
+	if (!t) {
+	    perror("qthread_init allocating qthread");
+	    return QTHREAD_MALLOC_ERROR;
+	}
+
 	t->thread_state = QTHREAD_STATE_YIELDED; /* avoid re-launching */
 	t->flags = QTHREAD_REAL_MCCOY; /* i.e. this is THE parent thread */
 
