@@ -13,9 +13,10 @@ template <> class OnlyTrue<true> {};
 #define QTHREAD_STATIC_ASSERT(X) (void)sizeof(OnlyTrue<(bool)(X)>)
 #define QTHREAD_CHECKSIZE(X) QTHREAD_STATIC_ASSERT(sizeof(X) == sizeof(aligned_t))
 #define QTHREAD_CHECKUNSIGNED(X) QTHREAD_STATIC_ASSERT((X)-1 > 0)
+#define QTHREAD_CHECKINTEGER(X) QTHREAD_STATIC_ASSERT((X)1.1 == (X)1)
 
 template <typename T>
-inline int qthraed_feb_status(const T* addr) 
+inline int qthread_feb_status(const T* addr) 
 {
     return qthread_feb_status((aligned_t*) addr);
 }
@@ -156,12 +157,13 @@ inline double qthread_incr(volatile double *operand, const double incr)
 {
     return qthread_dincr(operand, incr);
 }
-// BWB: FIX ME: need to restrict T to integer values...
+
 template <typename T, typename T2>
 inline T qthread_incr(volatile T *operand, const T2 incr)
 {
     QTHREAD_STATIC_ASSERT(sizeof(T) == 4 || sizeof(T) == 8);
     QTHREAD_CHECKUNSIGNED(T);
+    QTHREAD_CHECKINTEGER(T);
     switch (sizeof(T)) {
     case 4:
         return qthread_incr32((volatile uint32_t*) operand, incr);
