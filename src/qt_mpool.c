@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <stdio.h> /* debugging */
 #include "qt_mpool.h"
+#include "qt_atomics.h"
 #include <stddef.h> /* for size_t (according to C89) */
 #include <stdlib.h> /* for calloc() and malloc() */
 
@@ -35,7 +36,7 @@ struct qt_mpool_s {
     size_t alloc_size;
     size_t items_per_alloc;
 
-    char * reuse_pool;
+    volatile void * reuse_pool;
     char * alloc_block;
     size_t alloc_block_pos;
     void ** alloc_list;
@@ -160,17 +161,22 @@ qt_mpool qt_mpool_create(int sync, size_t item_size)
 
 void * qt_mpool_alloc(qt_mpool pool)
 {
-    void *p = NULL;
+    void *p = (void *)(pool->reuse_pool);
 
-#ifdef QTHREAD_USE_PTHREADS
-    if (pool->lock) {
-	pthread_mutex_lock(pool->lock);
+    if (p) {
+	void *old, *new;
+	do {
+	    old = (void*)(pool->reuse_pool);
+	    new = *(void**)old;
+	    p = qt_cas(&(pool->reuse_pool), old, new);
+	} while (p != old);
     }
+    if (!p) { /* this is not an else on purpose */
+#ifdef QTHREAD_USE_PTHREADS
+	if (pool->lock) {
+	    pthread_mutex_lock(pool->lock);
+	}
 #endif
-    if (pool->reuse_pool) {
-	p = pool->reuse_pool;
-	pool->reuse_pool = *(void**)p;
-    } else {
 	if (pool->alloc_block_pos == pool->items_per_alloc) {
 	    if (pool->alloc_list_pos == (pagesize/sizeof(void*) - 1)) {
 		void ** tmp = calloc(1, pagesize);
@@ -195,30 +201,24 @@ void * qt_mpool_alloc(qt_mpool pool)
 	    p = pool->alloc_block + (pool->item_size * pool->alloc_block_pos);
 	    pool->alloc_block_pos ++;
 	}
+#ifdef QTHREAD_USE_PTHREADS
+	if (pool->lock) {
+	    pthread_mutex_unlock(pool->lock);
+	}
+#endif
     }
 alloc_exit:
-#ifdef QTHREAD_USE_PTHREADS
-    if (pool->lock) {
-	pthread_mutex_unlock(pool->lock);
-    }
-#endif
     return p;
 }
 
 void qt_mpool_free(qt_mpool pool, void * mem)
 {
-#ifdef QTHREAD_USE_PTHREADS
-    if (pool->lock) {
-	pthread_mutex_lock(pool->lock);
-    }
-#endif
-    *(void**) mem = pool->reuse_pool;
-    pool->reuse_pool = mem;
-#ifdef QTHREAD_USE_PTHREADS
-    if (pool->lock) {
-	pthread_mutex_unlock(pool->lock);
-    }
-#endif
+    void *p, *old, *new;
+    do {
+	*(void**) mem = old = (void*)(pool->reuse_pool);
+	new = mem;
+	p = qt_cas(&(pool->reuse_pool), old, new);
+    } while (p != old);
 }
 
 void qt_mpool_destroy(qt_mpool pool)
