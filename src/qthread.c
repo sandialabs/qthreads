@@ -388,7 +388,10 @@ static QINLINE void FREE_ADDRSTAT(qthread_addrstat_t * t)
 #define QTHREAD_CHOOSE_STRIPE(addr) (((size_t)addr >> 4) & 0x1f)
 #define QTHREAD_LOCKING_STRIPES 32
 
-#if defined(HAVE_GCC_INLINE_ASSEMBLY)
+#if defined(HAVE_GCC_INLINE_ASSEMBLY) && \
+    (QTHREAD_SIZEOF_ALIGNED_T == 4 || \
+     (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32 && \
+      QTHREAD_ASSEMBLY_ARCH != QTHREAD_SPARCV9_32))
 #define qthread_internal_incr(op,lock) qthread_incr(op, 1)
 #else
 static QINLINE aligned_t qthread_internal_incr(volatile aligned_t * operand,
