@@ -27,7 +27,7 @@ static QINLINE void* qt_cas(volatile void** ptr, void* oldv, void* newv)
 	    :"cc", "memory");
     return result;
 #  elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
-#   if !defined(GCC_VERSION) && defined(__cplusplus)
+#   if defined(__SUNPRO_CC)
     asm volatile
 #   else
     __asm__ __volatile__
@@ -38,7 +38,7 @@ static QINLINE void* qt_cas(volatile void** ptr, void* oldv, void* newv)
 	 : "cc", "memory");
     return newv;
 #  elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
-#   if !defined(GCC_VERSION) && defined(__cplusplus)
+#   if defined(__SUNPRO_CC)
     asm volatile
 #   else
     __asm__ __volatile__

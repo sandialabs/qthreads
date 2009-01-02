@@ -297,7 +297,7 @@ static QINLINE float qthread_fincr(volatile float * operand, const float incr)
 	 * inside the loop fixes that problem, even at -O2 optimization. */
 	oldval.f = *operand;
 	newval.f = oldval.f + incr;
-#if !defined(GCC_VERSION) && defined(__cplusplus)
+#if defined(__SUNPRO_CC)
 	asm volatile
 #else
 	__asm__ __volatile__
@@ -425,7 +425,7 @@ static QINLINE double qthread_dincr(volatile double * operand, const double incr
 	 * inside the loop fixes that problem, even at -O2 optimization. */
         oldval.d = *operand;
         newval.d = oldval.d + incr;
-#if !defined(GCC_VERSION) && defined(__cplusplus)
+#if defined(__SUNPRO_CC)
 	asm volatile
 #else
 	__asm__ __volatile__
@@ -578,7 +578,7 @@ static QINLINE uint32_t qthread_incr32(volatile uint32_t * operand, const int in
         newval = oldval + incr;
 	/* newval always gets the value of *operand; if it's
 	 * the same as oldval, then the swap was successful */
-#if !defined(GCC_VERSION) && defined(__cplusplus)
+#if defined(__SUNPRO_CC)
 	asm volatile
 #else
 	__asm__ __volatile__
@@ -701,7 +701,9 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand, const int in
         newval = oldval + incr;
 	/* newval always gets the value of *operand; if it's
 	 * the same as oldval, then the swap was successful */
-#if !defined(GCC_VERSION) && defined(__cplusplus)
+#if defined(__SUNPRO_CC)
+	/* Sun's C++ compiler doesn't do __asm__, but their C compiler does
+	 * :P */
 	asm volatile
 #else
 	__asm__ __volatile__
