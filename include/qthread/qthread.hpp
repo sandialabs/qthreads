@@ -162,7 +162,6 @@ template <typename T, typename T2>
 inline T qthread_incr(volatile T *operand, const T2 incr)
 {
     QTHREAD_STATIC_ASSERT(sizeof(T) == 4 || sizeof(T) == 8);
-    QTHREAD_CHECKUNSIGNED(T);
     QTHREAD_CHECKINTEGER(T);
     switch (sizeof(T)) {
     case 4:
