@@ -37,6 +37,7 @@ saligned_t qutil_int_min(qthread_t * me, const saligned_t *array, size_t length,
 
 void qutil_mergesort(qthread_t *me, double *array, size_t length);
 void qutil_qsort(qthread_t *me, double *array, size_t length);
+void qutil_aligned_qsort(qthread_t *me, aligned_t *array, size_t length);
 #ifdef __cplusplus
 }
 #endif

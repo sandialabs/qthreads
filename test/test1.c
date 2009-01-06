@@ -10,7 +10,7 @@
 
 #include <qthread/qutil.h>
 
-int interactive = 0;
+int interactive = 1;
 
 /*
  * This file tests the qutil functions
@@ -85,11 +85,40 @@ aligned_t qmain(qthread_t * me, void *junk)
     }
     ui_out = qutil_uint_min(me, ui_array, ui_len, 0);
     assert(ui_out == ui_min_authoritative);
-    free(ui_array);
     if (interactive) {
 	printf(" - qutil_uint_min is correct\n");
     }
-    return 0;
+    gettimeofday(&start, NULL);
+    qutil_aligned_qsort(me, ui_array, ui_len);
+    gettimeofday(&stop, NULL);
+    if (interactive == 1) {
+	printf("done sorting, checking correctness...\n");
+    }
+    for (i = 0; i < ui_len - 1; i++) {
+	if (ui_array[i] > ui_array[i + 1]) {
+	    /*
+	     * size_t j;
+	     *
+	     * for (j = i-20; j < i+20; j++) {
+	     * if (j % 8 == 0)
+	     * printf("\n");
+	     * printf("[%6u]=%2.5f ", j, d_array[j]);
+	     * }
+	     * printf("\n");
+	     */
+	    printf("out of order at %lu: %f > %f\n", (unsigned long)i,
+		   ui_array[i], ui_array[i + 1]);
+	    abort();
+	}
+    }
+    if (interactive == 1) {
+	printf("[test1] aligned_t sorting %lu numbers took: %f seconds\n",
+		(unsigned long)d_len,
+		(stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
+		    (start.tv_usec *
+		     1.0e-6)));
+    }
+    free(ui_array);
 
     i_array = calloc(i_len, sizeof(saligned_t));
     for (i = 0; i < i_len; i++) {
