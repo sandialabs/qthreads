@@ -18,7 +18,7 @@ aligned_t thread (qthread_t *me, void *arg)
     //printf("first id = %i\n", id);
 #ifdef QTHREAD_DEBUG
     if (id != 1)
-	qthread_debug(0, "id == %i\n", id);
+	qthread_debug(0, "id == %i (expected 1)\n", id);
 #endif
     assert(id == 1);
 
@@ -41,6 +41,8 @@ int main()
     qthread_init(1);
     me = qthread_self();
     my_id = qthread_id(me);
+    if (my_id != 0)
+	printf("my_id == %i (expected 0)\n", my_id);
     assert(my_id == 0);
     qthread_fork(thread, NULL, &ret);
     qthread_readFF(qthread_self(), NULL, &ret);
