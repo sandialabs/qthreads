@@ -27,15 +27,15 @@ static int dcmp(const void *a, const void *b)
 
 aligned_t *ui_array;
 aligned_t ui_out, ui_sum_authoritative = 0, ui_mult_authoritative =
-1, ui_max_authoritative = 0, ui_min_authoritative = UINT_MAX;
+    1, ui_max_authoritative = 0, ui_min_authoritative = UINT_MAX;
 size_t ui_len = 1000000;
 saligned_t *i_array;
 saligned_t i_out, i_sum_authoritative = 0, i_mult_authoritative =
-1, i_max_authoritative = INT_MIN, i_min_authoritative = INT_MAX;
+    1, i_max_authoritative = INT_MIN, i_min_authoritative = INT_MAX;
 size_t i_len = 1000000;
 double *d_array;
 double d_out, d_sum_authoritative = 0.0, d_mult_authoritative =
-1.0, d_max_authoritative = DBL_MIN, d_min_authoritative = DBL_MAX;
+    1.0, d_max_authoritative = DBL_MIN, d_min_authoritative = DBL_MAX;
 size_t d_len = 1000000;
 struct timeval start, stop;
 
@@ -106,17 +106,18 @@ aligned_t qmain(qthread_t * me, void *junk)
 	     * }
 	     * printf("\n");
 	     */
-	    printf("out of order at %lu: %f > %f\n", (unsigned long)i,
-		   ui_array[i], ui_array[i + 1]);
+	    printf("out of order at %lu: %lu > %lu\n", (unsigned long)i,
+		   (unsigned long)ui_array[i],
+		   (unsigned long)ui_array[i + 1]);
 	    abort();
 	}
     }
     if (interactive == 1) {
 	printf("[test1] aligned_t sorting %lu numbers took: %f seconds\n",
-		(unsigned long)d_len,
-		(stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
-		    (start.tv_usec *
-		     1.0e-6)));
+	       (unsigned long)d_len,
+	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
+							  (start.tv_usec *
+							   1.0e-6)));
     }
     free(ui_array);
 
@@ -235,10 +236,10 @@ aligned_t qmain(qthread_t * me, void *junk)
     }
     if (interactive == 1) {
 	printf("[test1] sorting %lu numbers took: %f seconds\n",
-		(unsigned long)d_len,
-		(stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
-		    (start.tv_usec *
-		     1.0e-6)));
+	       (unsigned long)d_len,
+	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
+							  (start.tv_usec *
+							   1.0e-6)));
     }
     free(d_array);
     return 0;
@@ -252,8 +253,9 @@ int main(int argc, char *argv[])
 
     if (argc >= 2) {
 	threads = strtol(argv[1], NULL, 0);
-	if (threads <= 0) threads = 1;
-	futurelimit = threads+1;
+	if (threads <= 0)
+	    threads = 1;
+	futurelimit = threads + 1;
 	interactive = 1;
     }
     if (argc >= 3) {
