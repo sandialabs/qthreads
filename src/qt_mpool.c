@@ -1,7 +1,9 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
-#include <assert.h>
+#ifndef QTHREAD_NO_ASSERTS
+# include <assert.h>
+#endif
 #include <stdio.h> /* debugging */
 #include "qt_mpool.h"
 #include "qt_atomics.h"
@@ -214,6 +216,7 @@ alloc_exit:
 void qt_mpool_free(qt_mpool pool, void * mem)
 {
     void *p, *old, *new;
+    assert(mem != NULL);
     do {
 	*(void**) mem = old = (void*)(pool->reuse_pool);
 	new = mem;
