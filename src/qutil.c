@@ -288,19 +288,19 @@ void qutil_mergesort(qthread_t * me, double *array, size_t length)
 }
 
 #define SWAP(t, a, m, n) do { register t temp=a[m]; a[m]=a[n]; a[n]=temp; } while (0)
+#define MT_CHUNKSIZE 10
 
 struct qutil_qsort_args {
     double *array;
     double pivot;
-    size_t length, chunksize, jump, offset;
+    size_t length, jump, offset;
     aligned_t *furthest_leftwall, *furthest_rightwall;
 };
 
-aligned_t qutil_qsort_partition(qthread_t * me, struct qutil_qsort_args *args)
+static inline aligned_t qutil_qsort_partition(qthread_t * me, struct qutil_qsort_args *args)
 {
     double *a = args->array;
     const double pivot = args->pivot;
-    const size_t chunksize = args->chunksize;
     const size_t length = args->length;
     const size_t jump = args->jump;
     size_t leftwall, rightwall;
@@ -309,7 +309,7 @@ aligned_t qutil_qsort_partition(qthread_t * me, struct qutil_qsort_args *args)
     rightwall = length - 1;
     /* adjust the edges; this is critical for this algorithm */
     while (a[leftwall] <= pivot) {
-	if ((leftwall + 1) % chunksize != 0) {
+	if ((leftwall + 1) % MT_CHUNKSIZE != 0) {
 	    leftwall++;
 	} else {
 	    leftwall += jump;
@@ -318,7 +318,7 @@ aligned_t qutil_qsort_partition(qthread_t * me, struct qutil_qsort_args *args)
 	    goto quickexit;
     }
     while (a[rightwall] > pivot) {
-	if (rightwall % chunksize != 0) {
+	if (rightwall % MT_CHUNKSIZE != 0) {
 	    if (rightwall == 0)
 		goto quickexit;
 	    rightwall--;
@@ -333,14 +333,14 @@ aligned_t qutil_qsort_partition(qthread_t * me, struct qutil_qsort_args *args)
     SWAP(double, a, leftwall, rightwall);
     while (1) {
 	do {
-	    leftwall += ((leftwall + 1) % chunksize != 0) ? 1 : jump;
+	    leftwall += ((leftwall + 1) % MT_CHUNKSIZE != 0) ? 1 : jump;
 	    if (rightwall < leftwall)
 		goto quickexit;
 	} while (a[leftwall] <= pivot);
 	if (rightwall <= leftwall)
 	    break;
 	do {
-	    if (rightwall % chunksize != 0) {
+	    if (rightwall % MT_CHUNKSIZE != 0) {
 		if (rightwall == 0)
 		    goto quickexit;
 		rightwall--;
@@ -375,21 +375,20 @@ struct qutil_qsort_iprets {
     aligned_t leftwall, rightwall;
 };
 
-struct qutil_qsort_iprets qutil_qsort_inner_partitioner(qthread_t * me,
+static inline struct qutil_qsort_iprets qutil_qsort_inner_partitioner(qthread_t * me,
 							double *array,
 							const size_t length,
 							const double pivot)
 {
-    const size_t chunksize = 10;
     /* choose the number of threads to use */
     const size_t numthreads = length / MT_LOOP_CHUNK + ((length % MT_LOOP_CHUNK) ? 1 : 0);
     /* calculate the megachunk information for determining the array lengths
      * each thread will be fed. */
-    const size_t megachunk_size = chunksize * numthreads;
+    const size_t megachunk_size = MT_CHUNKSIZE * numthreads;
     /* just used as a boolean test */
     const size_t extra_chunks = length % megachunk_size;
 
-    size_t megachunks = length / (chunksize * numthreads);
+    size_t megachunks = length / (MT_CHUNKSIZE * numthreads);
     struct qutil_qsort_iprets retval = { ((aligned_t) - 1), 0 };
     aligned_t *rets;
     struct qutil_qsort_args *args;
@@ -399,21 +398,20 @@ struct qutil_qsort_iprets qutil_qsort_inner_partitioner(qthread_t * me,
     args = malloc(sizeof(struct qutil_qsort_args) * numthreads);
     /* spawn threads to do the partitioning */
     for (i = 0; i < numthreads; i++) {
-	args[i].array = array + (i * chunksize);
-	args[i].offset = i * chunksize;
+	args[i].array = array + (i * MT_CHUNKSIZE);
+	args[i].offset = i * MT_CHUNKSIZE;
 	args[i].pivot = pivot;
-	args[i].chunksize = chunksize;
-	args[i].jump = (numthreads - 1) * chunksize + 1;
+	args[i].jump = (numthreads - 1) * MT_CHUNKSIZE + 1;
 	args[i].furthest_leftwall = &retval.leftwall;
 	args[i].furthest_rightwall = &retval.rightwall;
 	if (extra_chunks != 0) {
-	    args[i].length = megachunks * (megachunk_size) + chunksize;
+	    args[i].length = megachunks * (megachunk_size) + MT_CHUNKSIZE;
 	    if (args[i].length + args[i].offset >= length) {
 		args[i].length = length - args[i].offset;
 		megachunks--;
 	    }
 	} else {
-	    args[i].length = length - megachunk_size + chunksize;
+	    args[i].length = length - megachunk_size + MT_CHUNKSIZE;
 	}
 	/* qutil_qsort_partition(me, args+i); */
 	/* future_fork((qthread_f)qutil_qsort_partition, args+i, rets+i); */
@@ -428,7 +426,7 @@ struct qutil_qsort_iprets qutil_qsort_inner_partitioner(qthread_t * me,
     return retval;
 }
 
-aligned_t qutil_qsort_inner(qthread_t * me, struct qutil_qsort_iargs * a)
+static inline aligned_t qutil_qsort_inner(qthread_t * me, struct qutil_qsort_iargs * a)
 {
     double *array = a->array, pivot;
     struct qutil_qsort_iprets furthest;
@@ -532,19 +530,17 @@ void qutil_qsort(qthread_t * me, double *array, const size_t length)
     qutil_qsort_inner(me, &arg);
 }
 
-
 struct qutil_aligned_qsort_args {
     aligned_t *array;
     aligned_t pivot;
-    size_t length, chunksize, jump, offset;
+    size_t length, jump, offset;
     aligned_t *furthest_leftwall, *furthest_rightwall;
 };
 
-aligned_t qutil_aligned_qsort_partition(qthread_t * me, struct qutil_aligned_qsort_args *args)
+static inline aligned_t qutil_aligned_qsort_partition(qthread_t * me, struct qutil_aligned_qsort_args *args)
 {
     aligned_t *a = args->array;
     const aligned_t pivot = args->pivot;
-    const size_t chunksize = args->chunksize;
     const size_t length = args->length;
     const size_t jump = args->jump;
     size_t leftwall, rightwall;
@@ -553,7 +549,7 @@ aligned_t qutil_aligned_qsort_partition(qthread_t * me, struct qutil_aligned_qso
     rightwall = length - 1;
     /* adjust the edges; this is critical for this algorithm */
     while (a[leftwall] <= pivot) {
-	if ((leftwall + 1) % chunksize != 0) {
+	if ((leftwall + 1) % MT_CHUNKSIZE != 0) {
 	    leftwall++;
 	} else {
 	    leftwall += jump;
@@ -562,7 +558,7 @@ aligned_t qutil_aligned_qsort_partition(qthread_t * me, struct qutil_aligned_qso
 	    goto quickexit;
     }
     while (a[rightwall] > pivot) {
-	if (rightwall % chunksize != 0) {
+	if (rightwall % MT_CHUNKSIZE != 0) {
 	    if (rightwall == 0)
 		goto quickexit;
 	    rightwall--;
@@ -577,14 +573,14 @@ aligned_t qutil_aligned_qsort_partition(qthread_t * me, struct qutil_aligned_qso
     SWAP(aligned_t, a, leftwall, rightwall);
     while (1) {
 	do {
-	    leftwall += ((leftwall + 1) % chunksize != 0) ? 1 : jump;
+	    leftwall += ((leftwall + 1) % MT_CHUNKSIZE != 0) ? 1 : jump;
 	    if (rightwall < leftwall)
 		goto quickexit;
 	} while (a[leftwall] <= pivot);
 	if (rightwall <= leftwall)
 	    break;
 	do {
-	    if (rightwall % chunksize != 0) {
+	    if (rightwall % MT_CHUNKSIZE != 0) {
 		if (rightwall == 0)
 		    goto quickexit;
 		rightwall--;
@@ -625,21 +621,20 @@ struct qutil_aligned_qsort_iargs {
     size_t length;
 };
 
-struct qutil_qsort_iprets qutil_aligned_qsort_inner_partitioner(qthread_t * me,
+static inline struct qutil_qsort_iprets qutil_aligned_qsort_inner_partitioner(qthread_t * me,
 							aligned_t *array,
 							const size_t length,
 							const aligned_t pivot)
 {
-    const size_t chunksize = 10;
     /* choose the number of threads to use */
     const size_t numthreads = length / MT_LOOP_CHUNK + ((length % MT_LOOP_CHUNK) ? 1 : 0);
     /* calculate the megachunk information for determining the array lengths
      * each thread will be fed. */
-    const size_t megachunk_size = chunksize * numthreads;
+    const size_t megachunk_size = MT_CHUNKSIZE * numthreads;
     /* just used as a boolean test */
     const size_t extra_chunks = length % megachunk_size;
 
-    size_t megachunks = length / (chunksize * numthreads);
+    size_t megachunks = length / (MT_CHUNKSIZE * numthreads);
     struct qutil_qsort_iprets retval = { ((aligned_t) - 1), 0 };
     aligned_t *rets;
     struct qutil_aligned_qsort_args *args;
@@ -649,21 +644,20 @@ struct qutil_qsort_iprets qutil_aligned_qsort_inner_partitioner(qthread_t * me,
     args = malloc(sizeof(struct qutil_aligned_qsort_args) * numthreads);
     /* spawn threads to do the partitioning */
     for (i = 0; i < numthreads; i++) {
-	args[i].array = array + (i * chunksize);
-	args[i].offset = i * chunksize;
+	args[i].array = array + (i * MT_CHUNKSIZE);
+	args[i].offset = i * MT_CHUNKSIZE;
 	args[i].pivot = pivot;
-	args[i].chunksize = chunksize;
-	args[i].jump = (numthreads - 1) * chunksize + 1;
+	args[i].jump = (numthreads - 1) * MT_CHUNKSIZE + 1;
 	args[i].furthest_leftwall = &retval.leftwall;
 	args[i].furthest_rightwall = &retval.rightwall;
 	if (extra_chunks != 0) {
-	    args[i].length = megachunks * (megachunk_size) + chunksize;
+	    args[i].length = megachunks * (megachunk_size) + MT_CHUNKSIZE;
 	    if (args[i].length + args[i].offset >= length) {
 		args[i].length = length - args[i].offset;
 		megachunks--;
 	    }
 	} else {
-	    args[i].length = length - megachunk_size + chunksize;
+	    args[i].length = length - megachunk_size + MT_CHUNKSIZE;
 	}
 	/* qutil_aligned_qsort_partition(me, args+i); */
 	/* future_fork((qthread_f)qutil_aligned_qsort_partition, args+i, rets+i); */
@@ -678,7 +672,7 @@ struct qutil_qsort_iprets qutil_aligned_qsort_inner_partitioner(qthread_t * me,
     return retval;
 }
 
-aligned_t qutil_aligned_qsort_inner(qthread_t * me, struct qutil_aligned_qsort_iargs * a)
+static inline aligned_t qutil_aligned_qsort_inner(qthread_t * me, struct qutil_aligned_qsort_iargs * a)
 {
     aligned_t *array = a->array, pivot;
     struct qutil_qsort_iprets furthest;
