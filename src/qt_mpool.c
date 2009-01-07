@@ -220,7 +220,8 @@ void qt_mpool_free(qt_mpool pool, void * mem)
     assert(mem != NULL);
     assert(pool);
     do {
-	*(void**) mem = old = (void*)(pool->reuse_pool);
+	old = (void*)(pool->reuse_pool); // should be an atomic read
+	*(void**) mem = old;
 	new = mem;
 	p = qt_cas(&(pool->reuse_pool), old, new);
     } while (p != old);
