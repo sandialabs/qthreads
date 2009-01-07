@@ -287,7 +287,7 @@ void qutil_mergesort(qthread_t * me, double *array, size_t length)
     }
 }
 
-#define SWAP(a, m, n) temp=a[m]; a[m]=a[n]; a[n]=temp
+#define SWAP(t, a, m, n) do { register t temp=a[m]; a[m]=a[n]; a[n]=temp; } while (0)
 
 struct qutil_qsort_args {
     double *array;
@@ -299,7 +299,6 @@ struct qutil_qsort_args {
 aligned_t qutil_qsort_partition(qthread_t * me, struct qutil_qsort_args *args)
 {
     double *a = args->array;
-    double temp;
     const double pivot = args->pivot;
     const size_t chunksize = args->chunksize;
     const size_t length = args->length;
@@ -331,7 +330,7 @@ aligned_t qutil_qsort_partition(qthread_t * me, struct qutil_qsort_args *args)
 	if (rightwall < leftwall)
 	    goto quickexit;
     }
-    SWAP(a, leftwall, rightwall);
+    SWAP(double, a, leftwall, rightwall);
     while (1) {
 	do {
 	    leftwall += ((leftwall + 1) % chunksize != 0) ? 1 : jump;
@@ -353,7 +352,7 @@ aligned_t qutil_qsort_partition(qthread_t * me, struct qutil_qsort_args *args)
 	} while (a[rightwall] > pivot);
 	if (rightwall <= leftwall)
 	    break;
-	SWAP(a, leftwall, rightwall);
+	SWAP(double, a, leftwall, rightwall);
     }
 quickexit:
     qthread_lock(me, args->furthest_leftwall);
@@ -431,8 +430,7 @@ struct qutil_qsort_iprets qutil_qsort_inner_partitioner(qthread_t * me,
 
 aligned_t qutil_qsort_inner(qthread_t * me, struct qutil_qsort_iargs * a)
 {
-    double *array = a->array, temp, pivot;
-    size_t i;
+    double *array = a->array, pivot;
     struct qutil_qsort_iprets furthest;
 
     /* choose the number of threads to use */
@@ -443,17 +441,20 @@ aligned_t qutil_qsort_inner(qthread_t * me, struct qutil_qsort_iargs * a)
     furthest.leftwall = 0;
     furthest.rightwall = a->length - 1;
     /* tri-median pivot selection */
-    i = a->length / 2;
-    if (array[0] > array[i]) {
-	SWAP(array, 0, i);
+    {
+	size_t i;
+	i = a->length / 2;
+	if (array[0] > array[i]) {
+	    SWAP(double, array, 0, i);
+	}
+	if (array[0] > array[a->length - 1]) {
+	    SWAP(double, array, 0, a->length - 1);
+	}
+	if (array[i] > array[a->length - 1]) {
+	    SWAP(double, array, i, a->length - 1);
+	}
+	pivot = array[i];
     }
-    if (array[0] > array[a->length - 1]) {
-	SWAP(array, 0, a->length - 1);
-    }
-    if (array[i] > array[a->length - 1]) {
-	SWAP(array, i, a->length - 1);
-    }
-    pivot = array[i];
     while (furthest.rightwall > furthest.leftwall &&
 	   furthest.rightwall - furthest.leftwall > (2 * MT_LOOP_CHUNK)) {
 	size_t offset = furthest.leftwall;
@@ -475,7 +476,7 @@ aligned_t qutil_qsort_inner(qthread_t * me, struct qutil_qsort_iargs * a)
 	while (leftwall < rightwall && array[rightwall] > pivot)
 	    rightwall--;
 	if (leftwall < rightwall) {
-	    SWAP(array, leftwall, rightwall);
+	    SWAP(double, array, leftwall, rightwall);
 	    while (1) {
 		while (++leftwall < rightwall && array[leftwall] <= pivot) ;
 		if (rightwall < leftwall)
@@ -483,7 +484,7 @@ aligned_t qutil_qsort_inner(qthread_t * me, struct qutil_qsort_iargs * a)
 		while (leftwall < --rightwall && array[rightwall] > pivot) ;
 		if (rightwall < leftwall)
 		    break;
-		SWAP(array, leftwall, rightwall);
+		SWAP(double, array, leftwall, rightwall);
 	    }
 	}
 	if (array[rightwall] <= pivot) {
@@ -542,7 +543,6 @@ struct qutil_aligned_qsort_args {
 aligned_t qutil_aligned_qsort_partition(qthread_t * me, struct qutil_aligned_qsort_args *args)
 {
     aligned_t *a = args->array;
-    aligned_t temp;
     const aligned_t pivot = args->pivot;
     const size_t chunksize = args->chunksize;
     const size_t length = args->length;
@@ -574,7 +574,7 @@ aligned_t qutil_aligned_qsort_partition(qthread_t * me, struct qutil_aligned_qso
 	if (rightwall < leftwall)
 	    goto quickexit;
     }
-    SWAP(a, leftwall, rightwall);
+    SWAP(aligned_t, a, leftwall, rightwall);
     while (1) {
 	do {
 	    leftwall += ((leftwall + 1) % chunksize != 0) ? 1 : jump;
@@ -596,7 +596,7 @@ aligned_t qutil_aligned_qsort_partition(qthread_t * me, struct qutil_aligned_qso
 	} while (a[rightwall] > pivot);
 	if (rightwall <= leftwall)
 	    break;
-	SWAP(a, leftwall, rightwall);
+	SWAP(aligned_t, a, leftwall, rightwall);
     }
 quickexit:
     qthread_lock(me, args->furthest_leftwall);
@@ -680,8 +680,7 @@ struct qutil_qsort_iprets qutil_aligned_qsort_inner_partitioner(qthread_t * me,
 
 aligned_t qutil_aligned_qsort_inner(qthread_t * me, struct qutil_aligned_qsort_iargs * a)
 {
-    aligned_t *array = a->array, temp, pivot;
-    size_t i;
+    aligned_t *array = a->array, pivot;
     struct qutil_qsort_iprets furthest;
 
     /* choose the number of threads to use */
@@ -692,17 +691,20 @@ aligned_t qutil_aligned_qsort_inner(qthread_t * me, struct qutil_aligned_qsort_i
     furthest.leftwall = 0;
     furthest.rightwall = a->length - 1;
     /* tri-median pivot selection */
-    i = a->length / 2;
-    if (array[0] > array[i]) {
-	SWAP(array, 0, i);
+    {
+	size_t i;
+	i = a->length / 2;
+	if (array[0] > array[i]) {
+	    SWAP(aligned_t, array, 0, i);
+	}
+	if (array[0] > array[a->length - 1]) {
+	    SWAP(aligned_t, array, 0, a->length - 1);
+	}
+	if (array[i] > array[a->length - 1]) {
+	    SWAP(aligned_t, array, i, a->length - 1);
+	}
+	pivot = array[i];
     }
-    if (array[0] > array[a->length - 1]) {
-	SWAP(array, 0, a->length - 1);
-    }
-    if (array[i] > array[a->length - 1]) {
-	SWAP(array, i, a->length - 1);
-    }
-    pivot = array[i];
     while (furthest.rightwall > furthest.leftwall &&
 	   furthest.rightwall - furthest.leftwall > (2 * MT_LOOP_CHUNK)) {
 	size_t offset = furthest.leftwall;
@@ -724,7 +726,7 @@ aligned_t qutil_aligned_qsort_inner(qthread_t * me, struct qutil_aligned_qsort_i
 	while (leftwall < rightwall && array[rightwall] > pivot)
 	    rightwall--;
 	if (leftwall < rightwall) {
-	    SWAP(array, leftwall, rightwall);
+	    SWAP(aligned_t, array, leftwall, rightwall);
 	    while (1) {
 		while (++leftwall < rightwall && array[leftwall] <= pivot) ;
 		if (rightwall < leftwall)
@@ -732,7 +734,7 @@ aligned_t qutil_aligned_qsort_inner(qthread_t * me, struct qutil_aligned_qsort_i
 		while (leftwall < --rightwall && array[rightwall] > pivot) ;
 		if (rightwall < leftwall)
 		    break;
-		SWAP(array, leftwall, rightwall);
+		SWAP(aligned_t, array, leftwall, rightwall);
 	    }
 	}
 	if (array[rightwall] <= pivot) {
@@ -751,13 +753,13 @@ aligned_t qutil_aligned_qsort_inner(qthread_t * me, struct qutil_aligned_qsort_i
 		rets[0] = 0;
 		/* future_fork((qthread_f)qutil_aligned_qsort_inner, na, rets); */
 		/* qutil_aligned_qsort_inner(me, na); */
-		qthread_fork((qthread_f) qutil_aligned_qsort_inner, na, rets);
+		qthread_fork((qthread_f) qutil_aligned_qsort_inner, &na[0], &rets[0]);
 	    }
 	    if (na[1].length > 0 && a->length > rightwall) {
 		rets[1] = 0;
 		/* future_fork((qthread_f)qutil_aligned_qsort_inner, na+1, rets+1); */
 		/* qutil_aligned_qsort_inner(me, na+1); */
-		qthread_fork((qthread_f) qutil_aligned_qsort_inner, na + 1, rets + 1);
+		qthread_fork((qthread_f) qutil_aligned_qsort_inner, &na[1], &rets[1]);
 	    }
 	    if (rets[0] == 0) {
 		qthread_readFF(me, NULL, rets);
