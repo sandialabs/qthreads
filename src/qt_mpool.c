@@ -135,7 +135,7 @@ qt_mpool qt_mpool_create(int sync, size_t item_size)
     if (pool->alloc_block == NULL) {
 #ifdef QTHREAD_USE_PTHREADS
 	if (sync) {
-	    pthread_mutex_destroy(pool->lock);
+	    qassert(pthread_mutex_destroy(pool->lock), 0);
 	    free(pool->lock);
 	}
 #endif
@@ -149,7 +149,7 @@ qt_mpool qt_mpool_create(int sync, size_t item_size)
 	free(pool->alloc_block);
 #ifdef QTHREAD_USE_PTHREADS
 	if (sync) {
-	    pthread_mutex_destroy(pool->lock);
+	    qassert(pthread_mutex_destroy(pool->lock), 0);
 	    free(pool->lock);
 	}
 #endif
@@ -165,6 +165,7 @@ void * qt_mpool_alloc(qt_mpool pool)
 {
     void *p = (void *)(pool->reuse_pool);
 
+    assert(pool);
     if (p) {
 	void *old, *new;
 	do {
@@ -176,7 +177,7 @@ void * qt_mpool_alloc(qt_mpool pool)
     if (!p) { /* this is not an else on purpose */
 #ifdef QTHREAD_USE_PTHREADS
 	if (pool->lock) {
-	    pthread_mutex_lock(pool->lock);
+	    qassert(pthread_mutex_lock(pool->lock), 0);
 	}
 #endif
 	if (pool->alloc_block_pos == pool->items_per_alloc) {
@@ -205,7 +206,7 @@ void * qt_mpool_alloc(qt_mpool pool)
 	}
 #ifdef QTHREAD_USE_PTHREADS
 	if (pool->lock) {
-	    pthread_mutex_unlock(pool->lock);
+	    qassert(pthread_mutex_unlock(pool->lock), 0);
 	}
 #endif
     }
@@ -217,6 +218,7 @@ void qt_mpool_free(qt_mpool pool, void * mem)
 {
     void *p, *old, *new;
     assert(mem != NULL);
+    assert(pool);
     do {
 	*(void**) mem = old = (void*)(pool->reuse_pool);
 	new = mem;
@@ -226,6 +228,7 @@ void qt_mpool_free(qt_mpool pool, void * mem)
 
 void qt_mpool_destroy(qt_mpool pool)
 {
+    assert(pool);
     if (pool) {
 	while (pool->alloc_list) {
 	    unsigned int i=0;
@@ -241,7 +244,7 @@ void qt_mpool_destroy(qt_mpool pool)
 	}
 #ifdef QTHREAD_USE_PTHREADS
 	if (pool->lock) {
-	    pthread_mutex_destroy(pool->lock);
+	    qassert(pthread_mutex_destroy(pool->lock), 0);
 	    free(pool->lock);
 	}
 #endif
