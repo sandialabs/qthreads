@@ -10,13 +10,14 @@
 
 #include <qthread/qutil.h>
 
-int interactive = 1;
+int interactive = 0;
 struct timeval start, stop;
 
 int main(int argc, char *argv[])
 {
     aligned_t ret;
     aligned_t *ui_array;
+    double *d_array;
     int threads = 1;
     size_t len = 1000000, i;
 
@@ -64,13 +65,41 @@ int main(int argc, char *argv[])
 	}
     }
     if (interactive == 1) {
-	printf("[test1] aligned_t sorting %lu numbers took: %f seconds\n",
+	printf("sorting %lu aligned_ts took: %f seconds\n",
 	       (unsigned long)len,
 	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 							  (start.tv_usec *
 							   1.0e-6)));
     }
     free(ui_array);
+
+    d_array = calloc(len, sizeof(double));
+    for (i = 0; i<len; i++) {
+	d_array[i] = random() / (double)RAND_MAX *10;
+    }
+    if (interactive) {
+	printf("d_array generated...\n");
+    }
+    gettimeofday(&start, NULL);
+    qutil_qsort(qthread_self(), d_array, len);
+    gettimeofday(&stop, NULL);
+    if (interactive) {
+	printf("done sorting, checking correctness...\n");
+    }
+    for (i=0; i<len-1; i++) {
+	if (d_array[i] > d_array[i+1]) {
+	    printf("out of order at %lu: %f > %f\n", (unsigned long)i, d_array[i], d_array[i+1]);
+	    abort();
+	}
+    }
+    if (interactive == 1) {
+	printf("sorting %lu doubles took: %f seconds\n",
+	       (unsigned long)len,
+	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
+							  (start.tv_usec *
+							   1.0e-6)));
+    }
+    free(d_array);
 
     qthread_finalize();
     return 0;
