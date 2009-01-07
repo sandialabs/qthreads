@@ -10,7 +10,7 @@
 
 #include <qthread/qutil.h>
 
-int interactive = 1;
+int interactive = 0;
 
 /*
  * This file tests the qutil functions
