@@ -169,8 +169,8 @@ void * qt_mpool_alloc(qt_mpool pool)
     if (p) {
 	void *old, *new;
 	do {
-	    old = (void*)(pool->reuse_pool);
-	    new = *(void**)old;
+	    old = p;
+	    new = *(void**)p;
 	    p = qt_cas(&(pool->reuse_pool), old, new);
 	} while (p != old);
     }
