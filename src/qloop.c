@@ -46,7 +46,7 @@ static void qt_loop_inner(const size_t start, const size_t stop,
 	qwa[threadct].arg = argptr;
 	qwa[threadct].donecount = &donecount;
 	if (future) {
-	    qthread_fork_future_to((qthread_f) qt_loop_wrapper,
+	    qthread_fork_future_to(me, (qthread_f) qt_loop_wrapper,
 				   qwa + threadct, rets + threadct,
 				   threadct % qthread_shepherd_count());
 	} else {
@@ -130,7 +130,7 @@ static QINLINE void qt_loop_balance_inner(const size_t start,
 	}
 	iterend = qwa[i].stopat;
 	if (future) {
-	    qthread_fork_future_to((qthread_f) qloop_wrapper, qwa + i,
+	    qthread_fork_future_to(me, (qthread_f) qloop_wrapper, qwa + i,
 				   NULL, i);
 	} else {
 	    qthread_fork_to((qthread_f) qloop_wrapper, qwa + i, NULL, i);
@@ -210,7 +210,7 @@ static QINLINE void qt_loopaccum_balance_inner(const size_t start,
 	}
 	iterend = qwa[i].stopat;
 	if (future) {
-	    qthread_fork_future_to((qthread_f) qloopaccum_wrapper, qwa + i,
+	    qthread_fork_future_to(me, (qthread_f) qloopaccum_wrapper, qwa + i,
 				   rets + i, i);
 	} else {
 	    qthread_fork_to((qthread_f) qloopaccum_wrapper, qwa + i, rets + i,

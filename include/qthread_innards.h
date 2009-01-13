@@ -60,7 +60,7 @@ extern qlib_t qlib;
 unsigned int qthread_isfuture(const qthread_t * t);
 void qthread_assertfuture(qthread_t * t);
 void qthread_assertnotfuture(qthread_t * t);
-int qthread_fork_future_to(const qthread_f f, const void *arg,
+int qthread_fork_future_to(const qthread_t *me, const qthread_f f, const void *arg,
 			    aligned_t * ret,
 			    const qthread_shepherd_id_t shepherd);
 #ifdef SST

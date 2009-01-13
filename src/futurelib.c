@@ -168,7 +168,7 @@ void future_fork(qthread_f fptr, void *arg, aligned_t * retval)
 		  rr);
     /* steps 2&3 (slow) */
     blocking_vp_incr(me, &(future_bookkeeping_array[rr]));
-    qthread_fork_future_to(fptr, arg, retval, rr);
+    qthread_fork_future_to(me, fptr, arg, retval, rr);
 }
 
 /* This says: "I do not count toward future resource limits, temporarily." */
