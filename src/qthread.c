@@ -124,8 +124,8 @@ typedef struct _qt_lfqueue_node {
 #endif
 } qt_lfqueue_node_t;
 typedef struct {
-    qt_lfqueue_node_t *head;
-    qt_lfqueue_node_t *tail;
+    volatile qt_lfqueue_node_t * volatile head;
+    volatile qt_lfqueue_node_t * volatile tail;
     qthread_shepherd_t *creator_ptr;
 } qt_lfqueue_t;
 
@@ -1529,7 +1529,7 @@ static QINLINE void qthread_thread_free(qthread_t * t)
  * monotonically increasing counter associated with it. The counter doesn't
  * need to be huge, just big enough to avoid trouble. We'll
  * just claim 4, to be conservative. Thus, a qt_lfqueue_node_t must be at least 16 bytes. */
-#define QPTR(x) ((qt_lfqueue_node_t*)((((uintptr_t)(x))>>4)<<4))
+#define QPTR(x) ((volatile qt_lfqueue_node_t*)((((uintptr_t)(x))>>4)<<4))
 #define QCTR_MASK (15)
 #define QCTR(x) ((unsigned char)(((uintptr_t)(x))&QCTR_MASK))
 #define QCOMPOSE(x,y) (void*)(((uintptr_t)QPTR(x))|((QCTR(y)+1)&QCTR_MASK))
@@ -1556,13 +1556,14 @@ static QINLINE qt_lfqueue_t *qt_lfqueue_new(qthread_shepherd_t* shepherd)
 static QINLINE void qt_lfqueue_free(qt_lfqueue_t *q)
 {/*{{{*/
     assert(QPTR(q->head) == QPTR(q->tail));
-    FREE_LFQNODE(QPTR(q->head));
+    FREE_LFQNODE((qt_lfqueue_node_t*)QPTR(q->head));
     FREE_LFQUEUE(q);
 }/*}}}*/
 
 static QINLINE void qt_lfqueue_enqueue(qt_lfqueue_t * q, qthread_t* t, qthread_shepherd_t *shep)
 {				       /*{{{ */
-    qt_lfqueue_node_t *tail, *node;
+    qt_lfqueue_node_t *tail;
+    qt_lfqueue_node_t *node, *next;
     assert(t != NULL);
     assert(q != NULL);
 
@@ -1575,8 +1576,8 @@ static QINLINE void qt_lfqueue_enqueue(qt_lfqueue_t * q, qthread_t* t, qthread_s
     node->next = (qt_lfqueue_node_t*)(uintptr_t)QCTR(node->next);
 
     while (1) {
-	qt_lfqueue_node_t *tail = q->tail;
-	qt_lfqueue_node_t *next = QPTR(tail)->next;
+	tail = (qt_lfqueue_node_t*)(q->tail);
+	next = QPTR(tail)->next;
 	if (tail == q->tail) { // are tail and next consistent?
 	    if (QPTR(next) == NULL) { // was tail pointing to the last node?
 		if (qt_cas((volatile void**)&(QPTR(tail)->next), next, QCOMPOSE(node, next)) == next)
@@ -1584,21 +1585,19 @@ static QINLINE void qt_lfqueue_enqueue(qt_lfqueue_t * q, qthread_t* t, qthread_s
 	    } else { // tail not pointing to last node
 		tail = qt_cas((volatile void**)&(q->tail), tail, QCOMPOSE(next,tail));
 	    }
-	} else {
-	    tail = q->tail;
 	}
     }
-    qt_cas((volatile void**)&(q->tail), tail, QCOMPOSE(t, tail));
+    qt_cas((volatile void**)&(q->tail), tail, QCOMPOSE(node, tail));
 }				       /*}}} */
 
 static QINLINE qthread_t *qt_lfqueue_dequeue(qt_lfqueue_t * q)
 {				       /*{{{ */
     qthread_t *p = NULL;
-    qt_lfqueue_node_t *head, *tail, *next;
+    qt_lfqueue_node_t * volatile head, * volatile tail, * volatile next;
     assert(q != NULL);
     while(1) {
-	head = q->head;
-	tail = q->tail;
+	head = (qt_lfqueue_node_t*volatile)(q->head);
+	tail = (qt_lfqueue_node_t*volatile)(q->tail);
 	next = QPTR(head)->next;
 	if (head == q->head) { // are head, tail, and next consistent?
 	    if (QPTR(head) == QPTR(tail)) { // is queue empty or tail falling behind?
@@ -1616,7 +1615,7 @@ static QINLINE qthread_t *qt_lfqueue_dequeue(qt_lfqueue_t * q)
 	    }
 	}
     }
-    FREE_LFQNODE(QPTR(head));
+    FREE_LFQNODE((qt_lfqueue_node_t*)QPTR(head));
     //free(QPTR(head));
     return p;
 }				       /*}}} */
