@@ -98,9 +98,9 @@ qt_mpool qt_mpool_create(int sync, size_t item_size)
     if (pagesize == 0) {
 	pagesize = getpagesize();
     }
-    /* first, we ensure that item_size is a multiple of WORD_SIZE, and also
-     * that it is at least sizeof(void*). The first condition may imply the
-     * second on *most* platforms, but costs us very little to make sure. */
+    /* first, we ensure that item_size is at least sizeof(void*), and also that
+     * it is a multiple of sizeof(void*). The second condition technically
+     * implies the first, but it's not a big deal. */
     if (item_size < sizeof(void*)) {
 	item_size = sizeof(void*);
     }
