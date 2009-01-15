@@ -116,16 +116,13 @@ struct qthread_queue_s
 };
 /* queue declarations */
 typedef struct _qt_lfqueue_node {
-    void *value;
-    struct _qt_lfqueue_node *next;
+    qthread_t *value;
+    volatile struct _qt_lfqueue_node *next;
     qthread_shepherd_t * creator_ptr;
-#if (SIZEOF_VOIDP == 4)
-    uint32_t pad; // make sure we're at least 16 bytes
-#endif
 } qt_lfqueue_node_t;
 typedef struct {
-    volatile qt_lfqueue_node_t * volatile head;
-    volatile qt_lfqueue_node_t * volatile tail;
+    volatile qt_lfqueue_node_t * head;
+    volatile qt_lfqueue_node_t * tail;
     qthread_shepherd_t *creator_ptr;
 } qt_lfqueue_t;
 
@@ -875,6 +872,8 @@ static void *qthread_shepherd(void *arg)
     return NULL;
 }				       /*}}} */
 
+#define MULTIPLEOF(s,m) ((s%m)?(s+m-(s%m)):(s))
+
 int qthread_init(const qthread_shepherd_id_t nshepherds)
 {				       /*{{{ */
     int r;
@@ -994,7 +993,7 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	qlib->shepherds[i].lfqueue_pool =
 	    qt_mpool_create(need_sync, sizeof(qt_lfqueue_t));
 	qlib->shepherds[i].lfqueue_node_pool =
-	    qt_mpool_create(need_sync, sizeof(qt_lfqueue_node_t));
+	    qt_mpool_create(need_sync, MULTIPLEOF(sizeof(qt_lfqueue_node_t),16));
 	qlib->shepherds[i].lock_pool =
 	    qt_mpool_create(need_sync, sizeof(qthread_lock_t));
 	qlib->shepherds[i].addrres_pool =
@@ -1011,7 +1010,7 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
     generic_lfqueue_pool =
 	qt_mpool_create(need_sync, sizeof(qt_lfqueue_t));
     generic_lfqueue_node_pool =
-	qt_mpool_create(need_sync, sizeof(qt_lfqueue_t));
+	qt_mpool_create(need_sync, MULTIPLEOF(sizeof(qt_lfqueue_node_t),16));
     generic_lock_pool =
 	qt_mpool_create(need_sync, sizeof(qthread_lock_t));
     generic_addrstat_pool =
@@ -1079,6 +1078,7 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	t->stack = NULL;
 	t->thread_state = QTHREAD_STATE_YIELDED; /* avoid re-launching */
 	t->flags = QTHREAD_REAL_MCCOY; /* i.e. this is THE parent thread */
+	t->shepherd_ptr = &(qlib->shepherds[0]);
 
 	qt_lfqueue_enqueue(qlib->shepherds[0].ready, t, &(qlib->shepherds[0]));
 	qassert(getcontext(t->context), 0);
@@ -1529,7 +1529,7 @@ static QINLINE void qthread_thread_free(qthread_t * t)
  * monotonically increasing counter associated with it. The counter doesn't
  * need to be huge, just big enough to avoid trouble. We'll
  * just claim 4, to be conservative. Thus, a qt_lfqueue_node_t must be at least 16 bytes. */
-#define QPTR(x) ((volatile qt_lfqueue_node_t*)((((uintptr_t)(x))>>4)<<4))
+#define QPTR(x) ((qt_lfqueue_node_t*)((((uintptr_t)(x))>>4)<<4))
 #define QCTR_MASK (15)
 #define QCTR(x) ((unsigned char)(((uintptr_t)(x))&QCTR_MASK))
 #define QCOMPOSE(x,y) (void*)(((uintptr_t)QPTR(x))|((QCTR(y)+1)&QCTR_MASK))
@@ -1556,7 +1556,7 @@ static QINLINE qt_lfqueue_t *qt_lfqueue_new(qthread_shepherd_t* shepherd)
 static QINLINE void qt_lfqueue_free(qt_lfqueue_t *q)
 {/*{{{*/
     assert(QPTR(q->head) == QPTR(q->tail));
-    FREE_LFQNODE((qt_lfqueue_node_t*)QPTR(q->head));
+    FREE_LFQNODE(QPTR(q->head));
     FREE_LFQUEUE(q);
 }/*}}}*/
 
@@ -1577,37 +1577,36 @@ static QINLINE void qt_lfqueue_enqueue(qt_lfqueue_t * q, qthread_t* t, qthread_s
 
     while (1) {
 	tail = (qt_lfqueue_node_t*)(q->tail);
-	next = QPTR(tail)->next;
+	next = (qt_lfqueue_node_t*)(QPTR(tail)->next);
 	if (tail == q->tail) { // are tail and next consistent?
 	    if (QPTR(next) == NULL) { // was tail pointing to the last node?
 		if (qt_cas((volatile void**)&(QPTR(tail)->next), next, QCOMPOSE(node, next)) == next)
 		    break; // success!
 	    } else { // tail not pointing to last node
-		tail = qt_cas((volatile void**)&(q->tail), tail, QCOMPOSE(next,tail));
+		(void)qt_cas((volatile void**)&(q->tail), tail, QCOMPOSE(next,tail));
 	    }
 	}
     }
-    qt_cas((volatile void**)&(q->tail), tail, QCOMPOSE(node, tail));
+    (void)qt_cas((volatile void**)&(q->tail), tail, QCOMPOSE(node, tail));
 }				       /*}}} */
 
 static QINLINE qthread_t *qt_lfqueue_dequeue(qt_lfqueue_t * q)
 {				       /*{{{ */
     qthread_t *p = NULL;
-    qt_lfqueue_node_t * volatile head, * volatile tail, * volatile next;
+    qt_lfqueue_node_t *head, *tail, *next;
     assert(q != NULL);
     while(1) {
-	head = (qt_lfqueue_node_t*volatile)(q->head);
-	tail = (qt_lfqueue_node_t*volatile)(q->tail);
-	next = QPTR(head)->next;
+	head = (qt_lfqueue_node_t*)(q->head);
+	tail = (qt_lfqueue_node_t*)(q->tail);
+	next = (qt_lfqueue_node_t*)(QPTR(head)->next);
 	if (head == q->head) { // are head, tail, and next consistent?
 	    if (QPTR(head) == QPTR(tail)) { // is queue empty or tail falling behind?
 		if (QPTR(next) == NULL) { // is queue empty?
 		    return NULL;
 		}
-		qt_cas((volatile void**)&(q->tail), tail, QCOMPOSE(next, tail)); // advance tail ptr
+		(void)qt_cas((volatile void**)&(q->tail), tail, QCOMPOSE(next, tail)); // advance tail ptr
 	    } else { // no need to deal with tail
 		// read value before CAS, otherwise another dequeue might free the next node
-		// (?)
 		p = QPTR(next)->value;
 		if (qt_cas((volatile void**)&(q->head), head, QCOMPOSE(next,head)) == head) {
 		    break; // success!
@@ -1615,8 +1614,7 @@ static QINLINE qthread_t *qt_lfqueue_dequeue(qt_lfqueue_t * q)
 	    }
 	}
     }
-    FREE_LFQNODE((qt_lfqueue_node_t*)QPTR(head));
-    //free(QPTR(head));
+    FREE_LFQNODE(QPTR(head));
     return p;
 }				       /*}}} */
 
