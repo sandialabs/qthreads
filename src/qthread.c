@@ -320,12 +320,14 @@ static QINLINE void FREE_QTHREAD(qthread_t * t)
 #define FREE_CONTEXT(shep, t) qt_mpool_free(shep?(shep->context_pool):generic_context_pool, t)
 #endif
 
+#define MULTIPLEOF(s,m) ((s%m)?(s+m-(s%m)):(s))
+
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
 #define ALLOC_QUEUE(shep) (qthread_queue_t *) malloc(sizeof(qthread_queue_t))
 #define FREE_QUEUE(t) free(t)
 #define ALLOC_LFQUEUE(shep) (qt_lfqueue_t *) malloc(sizeof(qt_lfqueue_t))
 #define FREE_LFQUEUE(t) free(t)
-#define ALLOC_LFQNODE(shep) (qt_lfqueue_node_t *) malloc(sizeof(qt_lfqueue_node_t))
+#define ALLOC_LFQNODE(shep) (qt_lfqueue_node_t *) malloc(MULTIPLEOF(sizeof(qt_lfqueue_node_t),16))
 #define FREE_LFQNODE(t) free(t)
 #else
 static QINLINE qthread_queue_t *ALLOC_QUEUE(qthread_shepherd_t * shep)
@@ -876,8 +878,6 @@ static void *qthread_shepherd(void *arg)
     pthread_exit(NULL);
     return NULL;
 }				       /*}}} */
-
-#define MULTIPLEOF(s,m) ((s%m)?(s+m-(s%m)):(s))
 
 int qthread_init(const qthread_shepherd_id_t nshepherds)
 {				       /*{{{ */
