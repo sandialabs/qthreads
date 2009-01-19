@@ -5,6 +5,8 @@
 # include "config.h"
 #endif
 
+#include "qthread_asserts.h"
+
 #ifdef QTHREAD_DEBUG
 # ifdef HAVE_UNISTD_H
 #  include <unistd.h> /* for write() */
@@ -69,18 +71,6 @@ int qthread_fork_future_to(const qthread_t *me, const qthread_f f, const void *a
 # define qthread_shepherd_count() (qlib->nshepherds)
 #endif
 
-#ifdef QTHREAD_NO_ASSERTS
-# define qassert(op, val) op
-# define qassertnot(op, val) op
-# ifdef assert
-#  undef assert
-# endif
-# define assert(foo)
-#else
-# define qassert(op, val) assert(op == val)
-# define qassertnot(op, val) assert(op != val)
-#endif
-
 /*#define QTHREAD_DEBUG 1*/
 /* for debugging */
 #ifdef QTHREAD_DEBUG
@@ -103,7 +93,7 @@ static QINLINE void qthread_debug(int level, char *format, ...)
 	va_start(args, format);
 	/* avoiding the obvious method, to save on memory
 	vfprintf(stderr, format, args);*/
-	while (ch = *format++) {
+	while ((ch = *format++)) {
 	    if (ch == '%') {
 		ch = *format++;
 		switch (ch) {

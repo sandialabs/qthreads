@@ -4,11 +4,10 @@
 #include <qthread/qutil.h>
 #include <qthread/qthread.h>
 #include <qthread/futurelib.h>
-#include <qthread_innards.h>           /* for assert() toggling */
+#include <qthread_asserts.h>           /* for assert() toggling */
 
 #include <stdlib.h>
 #include <string.h>
-#include <assert.h>
 
 #ifndef MT_LOOP_CHUNK
 #define MT_LOOP_CHUNK 10000

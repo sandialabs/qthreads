@@ -3,9 +3,6 @@
 #endif
 #include "qthread/qthread.h"
 #include "qthread/futurelib.h"
-#ifndef QTHREAD_NO_ASSERTS
-# include <assert.h>
-#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
