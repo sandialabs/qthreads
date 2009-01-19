@@ -34,7 +34,6 @@
 #ifdef HAVE_STRING_H
 # include <string.h>
 #endif
-#include <assert.h>
 #if TIME_WITH_SYS_TIME
 # include <sys/time.h>
 # include <time.h>
