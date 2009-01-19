@@ -2,9 +2,6 @@
 # include "config.h"
 #endif
 #include <stdlib.h>		       /* for malloc() and abort() */
-#ifndef QTHREAD_NO_ASSERTS
-# include <assert.h>		       /* for assert() */
-#endif
 #if defined(HAVE_UCONTEXT_H) && defined(HAVE_NATIVE_MAKECONTEXT)
 # include <ucontext.h>		       /* for make/get/swap-context functions */
 #else
@@ -49,6 +46,7 @@
 #define QTHREAD_STATE_FEB_BLOCKED       4
 #define QTHREAD_STATE_TERMINATED        5
 #define QTHREAD_STATE_DONE              6
+#define QTHREAD_STATE_MIGRATING         7
 #define QTHREAD_STATE_TERM_SHEP         UINT8_MAX
 /* flags (must be different bits) */
 #define QTHREAD_FUTURE                  1
@@ -823,12 +821,19 @@ static void *qthread_shepherd(void *arg)
 	    qthread_debug(2, "qthread_shepherd(%u): back from qthread_exec\n",
 			  me->shepherd_id);
 	    switch (t->thread_state) {
+		case QTHREAD_STATE_MIGRATING:
+		    qthread_debug(1, "qthread_shepherd(%u): thread %p migrating to %i\n",
+			    me->shepherd_id, t, (qthread_shepherd_id_t)(intptr_t)t->blockedon);
+		    t->thread_state = QTHREAD_STATE_RUNNING;
+		    t->shepherd_ptr = &(qlib->shepherds[(qthread_shepherd_id_t)(intptr_t)t->blockedon]);
+		    qt_lfqueue_enqueue(t->shepherd_ptr->ready, t, me);
+		    break;
 		case QTHREAD_STATE_YIELDED:	/* reschedule it */
 		    qthread_debug
 			(1, "qthread_shepherd(%u): thread %p yielded; rescheduling\n",
 			 me->shepherd_id, t);
 		    t->thread_state = QTHREAD_STATE_RUNNING;
-		    qt_lfqueue_enqueue(t->shepherd_ptr->ready, t, me);
+		    qt_lfqueue_enqueue(me->ready, t, me);
 		    break;
 
 		case QTHREAD_STATE_FEB_BLOCKED:	/* unlock the related FEB address locks, and re-arrange memory to be correct */
@@ -2054,6 +2059,24 @@ int qthread_schedule_on(qthread_t * t, const qthread_shepherd_id_t shepherd)
     }
     return ret;
 }				       /*}}} */
+
+/* function to move a qthread from one shepherd to another */
+int qthread_migrate_to(qthread_t * const me, const qthread_shepherd_id_t shepherd)
+{
+    assert(me == qthread_self());
+    if (me && shepherd < qlib->nshepherds) {
+	qthread_debug(2, "qthread_migrate_to(): thread %p from shep %i to shep %i\n", me, me->shepherd_ptr->shepherd_id, shepherd);
+	me->thread_state = QTHREAD_STATE_MIGRATING;
+	me->blockedon = (struct qthread_lock_s*)(intptr_t)shepherd;
+	qthread_back_to_master(me);
+
+	qthread_debug(2, "qthread_migrate_to(): awake on new shepherd! %i\n", ((qthread_shepherd_t*)pthread_getspecific(shepherd_structs))->shepherd_id);
+	assert(((qthread_shepherd_t*)pthread_getspecific(shepherd_structs))->shepherd_id == shepherd);
+	return QTHREAD_SUCCESS;
+    } else {
+	return QTHREAD_BADARGS;
+    }
+}
 
 /* functions to implement FEB locking/unlocking */
 

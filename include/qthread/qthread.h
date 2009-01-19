@@ -126,6 +126,9 @@ qthread_t *qthread_prepare_for(const qthread_f f, const void * const arg,
 int qthread_schedule(qthread_t * t);
 int qthread_schedule_on(qthread_t * t, const qthread_shepherd_id_t shepherd);
 
+/* This is a function to move a thread from one shepherd to another. */
+int qthread_migrate_to(qthread_t * const me, const qthread_shepherd_id_t shepherd);
+
 /* these are accessor functions for use by the qthreads to retrieve information
  * about themselves */
 unsigned qthread_id(const qthread_t * t);

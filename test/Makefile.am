@@ -7,11 +7,13 @@ TESTS = test1 test2 test3 test_qalloc \
 		testincr testdincr testfincr \
 		testqloop testid testloop \
 		test_internal_mod \
+		test_migrate \
 		test_qutil_qsort
 
 if ENABLE_TIMER_PROGS
 TESTS += time_swap time_producerconsumer time_increments
 endif
+
 
 check_PROGRAMS = $(TESTS)
 
@@ -22,60 +24,52 @@ QTIMERLIB = $(OUTPUTDIR)/qtimer/libqtimer.la
 QTIMERINC = -I$(top_srcdir)/src/
 CONTEXTLIB = $(OUTPUTDIR)/osx_compat/libosx_compat.la
 
+LDADD = $(QTHREADLIB)
+
 test1_SOURCES = test1.c
-test1_LDADD = $(QTHREADLIB)
 test1_DEPENDENCIES = $(QTHREADLIB)
 
 test2_SOURCES = test2.c
-test2_LDADD = $(QTHREADLIB)
 test2_DEPENDENCIES = $(QTHREADLIB)
 
 test3_SOURCES = test3.c
-test3_LDADD = $(QTHREADLIB)
 test3_DEPENDENCIES = $(QTHREADLIB)
 
 test_qalloc_SOURCES = testq.c
-test_qalloc_LDADD = $(QTHREADLIB)
 test_qalloc_DEPENDENCIES = $(QTHREADLIB)
 
 testloop_SOURCES = testloop.cpp
-testloop_LDADD = $(QTHREADLIB)
 testloop_DEPENDENCIES = $(QTHREADLIB)
 
 testqloop_SOURCES = testqloop.c
-testqloop_LDADD = $(QTHREADLIB)
 testqloop_DEPENDENCIES = $(QTHREADLIB)
 
 testincr_SOURCES = testincr.c
-testincr_LDADD = $(QTHREADLIB)
 testincr_DEPENDENCIES = $(QTHREADLIB)
 
 testfincr_SOURCES = testfincr.c
-testfincr_LDADD = $(QTHREADLIB)
 testfincr_DEPENDENCIES = $(QTHREADLIB)
 
 testdincr_SOURCES = testdincr.c
-testdincr_LDADD = $(QTHREADLIB)
 testdincr_DEPENDENCIES = $(QTHREADLIB)
 
 testid_SOURCES = test_id.c
-testid_LDADD = $(QTHREADLIB)
 testid_DEPENDENCIES = $(QTHREADLIB)
 
 test_internal_mod_SOURCES = test_internal_mod.c
-test_internal_mod_LDADD = $(QTHREADLIB)
 test_internal_mod_DEPENDENCIES = $(QTHREADLIB)
 
+test_migrate_SOURCES = test_migrate.c
+test_migrate_DEPENDENCIES = $(QTHREADLIB)
+
 test_qutil_qsort_SOURCES = test_qutil_qsort.c
-test_qutil_qsort_LDADD = $(QTHREADLIB)
 test_qutil_qsort_DEPENDENCIES = $(QTHREADLIB)
 
 time_swap_SOURCES = time_swap.c
 time_swap_CPPFLAGS = $(QTIMERINC)
-time_swap_LDADD = $(QTIMERLIB)
 time_swap_DEPENDENCIES = $(QTIMERLIB)
 if QTHREAD_NEED_OSX_MAKECONTEXT
-time_swap_LDADD += $(CONTEXTLIB)
+time_swap_LDADD = $(CONTEXTLIB)
 time_swap_DEPENDENCIES += $(CONTEXTLIB)
 endif
 
