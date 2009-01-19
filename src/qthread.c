@@ -2062,8 +2062,14 @@ int qthread_schedule_on(qthread_t * t, const qthread_shepherd_id_t shepherd)
 
 /* function to move a qthread from one shepherd to another */
 int qthread_migrate_to(qthread_t * const me, const qthread_shepherd_id_t shepherd)
-{
+{/*{{{*/
+    if (me == NULL) {
+	me = qthread_self();
+    }
     assert(me == qthread_self());
+    if (me->shepherd_ptr->shepherd_id == shepherd) {
+	return QTHREAD_SUCCESS;
+    }
     if (me && shepherd < qlib->nshepherds) {
 	qthread_debug(2, "qthread_migrate_to(): thread %p from shep %i to shep %i\n", me, me->shepherd_ptr->shepherd_id, shepherd);
 	me->thread_state = QTHREAD_STATE_MIGRATING;
@@ -2076,7 +2082,7 @@ int qthread_migrate_to(qthread_t * const me, const qthread_shepherd_id_t shepher
     } else {
 	return QTHREAD_BADARGS;
     }
-}
+}/*}}}*/
 
 /* functions to implement FEB locking/unlocking */
 
