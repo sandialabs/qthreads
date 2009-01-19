@@ -19,7 +19,7 @@
 #endif
 #include <string.h>		       /* for memset() */
 #include <errno.h>
-#include <assert.h>
+#include "qthread_asserts.h"
 
 #ifndef PTHREAD_MUTEX_SMALL_ENOUGH
 #warning The pthread_mutex_t structure is either too big or hasn't been checked. If you're compiling by hand, you can probably ignore this warning, or define PTHREAD_MUTEX_SMALL_ENOUGH to make it go away.
@@ -108,13 +108,8 @@ typedef struct stat statstruct_t;
 # define O_NOATIME 0
 #endif
 
-#ifdef QTHREAD_NO_ASSERTS
-#define QALLOC_LOCK(l) pthread_mutex_lock(l)
-#define QALLOC_UNLOCK(l) pthread_mutex_unlock(l)
-#else
-#define QALLOC_LOCK(l) assert(pthread_mutex_lock(l) == 0)
-#define QALLOC_UNLOCK(l) assert(pthread_mutex_unlock(l) == 0)
-#endif
+#define QALLOC_LOCK(l) qassert(pthread_mutex_lock(l), 0)
+#define QALLOC_UNLOCK(l) qassert(pthread_mutex_unlock(l), 0)
 
 static inline void *qalloc_getfile(const off_t filesize, void *addr,
 				   const char *filename, void **set)
@@ -219,7 +214,7 @@ void *qalloc_makestatmap(const off_t filesize, void *addr,
 	for (i = 0; i < streams; ++i) {
 	    ptr[3 + i] = (void *)(base + (itemsize * i));
 	    strms[i] = (void **)(base + (itemsize * i));
-	    assert(pthread_mutex_init(mi->stream_locks + i, NULL) == 0);
+	    qassert(pthread_mutex_init(mi->stream_locks + i, NULL), 0);
 	}
 	base += itemsize * streams;
 	/* now fill in the free lists */
@@ -299,11 +294,11 @@ void *qalloc_makedynmap(const off_t filesize, void *addr,
 	for (i = 0; i < streams; ++i) {
 	    mi->smallblocks[i] = NULL; /* the smallblock pointer */
 	    mi->bigblocks[i] = NULL;   /* the bigblock pointer */
-	    assert(pthread_mutex_init(mi->stream_locks + i, NULL) == 0);
+	    qassert(pthread_mutex_init(mi->stream_locks + i, NULL), 0);
 	}
 	/* initialize the use bitmap */
 	memset(mi->bitmap, 0, mi->bitmaplength);
-	assert(pthread_mutex_init(mi->bitmap_lock, NULL) == 0);
+	qassert(pthread_mutex_init(mi->bitmap_lock, NULL), 0);
 	return mi;
     } else if (set != ret) {
 	/* asked for it somewhere that it didn't appear */
@@ -708,7 +703,7 @@ void *qalloc_dynmalloc(struct dynmapinfo_s *m, size_t size)
 		sb = ((smallblock_t *) (m->base)) + offset;
 		sb->bitmap[0] = 0;
 		sb->bitmap[1] = 0;
-		assert(pthread_mutex_init(&sb->lock, NULL) == 0);
+		qassert(pthread_mutex_init(&sb->lock, NULL), 0);
 		QALLOC_LOCK(m->stream_locks + stream);
 		sb->next = m->smallblocks[stream];
 		m->smallblocks[stream] = sb;
@@ -770,7 +765,7 @@ void *qalloc_dynmalloc(struct dynmapinfo_s *m, size_t size)
 	    } else {
 		bbh = ((bigblock_header_t *) (m->base)) + newoffset;
 		memset(bbh->bitmap, 0, BIGBLOCK_BITMAP_LEN);
-		assert(pthread_mutex_init(&bbh->lock, NULL) == 0);
+		qassert(pthread_mutex_init(&bbh->lock, NULL), 0);
 		QALLOC_LOCK(m->stream_locks + stream);
 		bbh->next = m->bigblocks[stream];
 		m->bigblocks[stream] = bbh;
