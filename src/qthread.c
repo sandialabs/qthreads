@@ -2061,7 +2061,7 @@ int qthread_schedule_on(qthread_t * t, const qthread_shepherd_id_t shepherd)
 }				       /*}}} */
 
 /* function to move a qthread from one shepherd to another */
-int qthread_migrate_to(qthread_t * const me, const qthread_shepherd_id_t shepherd)
+int qthread_migrate_to(qthread_t * me, const qthread_shepherd_id_t shepherd)
 {/*{{{*/
     if (me == NULL) {
 	me = qthread_self();
