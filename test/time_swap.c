@@ -9,7 +9,7 @@
 #else
 # include "osx_compat/taskimpl.h"
 #endif
-#include "qtimer/qtimer.h"
+#include "qtimer.h"
 
 #define ITERATIONS 1000000
 
