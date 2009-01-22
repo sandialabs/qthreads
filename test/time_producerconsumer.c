@@ -3,9 +3,9 @@
 #include <assert.h>		       /* for assert() */
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
-#include "qtimer/qtimer.h"
+#include "qtimer.h"
 
-#define ITERATIONS 1000000
+size_t ITERATIONS;
 #define MAXPARALLELISM 256
 
 aligned_t FEBbuffer[MAXPARALLELISM] = { 0 };
@@ -157,14 +157,18 @@ int main(int argc, char *argv[])
     double rate;
     unsigned int i;
     aligned_t rets[MAXPARALLELISM];
-    int shepherds;
+    int shepherds = 1;
+    int interactive = 0;
 
-    if (argc != 2) {
-	shepherds = 64;
-    } else {
+    if (argc == 2) {
 	shepherds = strtol(argv[1], NULL, 0);
-	if (shepherds <= 0) shepherds = 1;
+	interactive = 1;
+	if (shepherds <= 0) {
+	    shepherds = 1;
+	    interactive = 0;
+	}
     }
+    ITERATIONS = (interactive)?1000000:1000;
 
     /* setup */
     qthread_init(shepherds);
@@ -172,24 +176,26 @@ int main(int argc, char *argv[])
 	qthread_empty(NULL, FEBbuffer+i);
 	sending[i][0] = qtimer_new();
 	sending[i][1] = qtimer_new();
+	qthread_empty(NULL, &(FEBtable[i][0]));
+	qthread_empty(NULL, &(FEBtable[i][1]));
     }
-    qthread_empty(NULL, FEBtable);
-    qthread_empty(NULL, FEBtable + 1);
     printf("Testing producer/consumer:\n");
 
     /* SINGLE FEB SEND/RECEIVE TEST */
+    printf("\tSingle FEB send/receive: "); fflush(stdout);
     qtimer_start(timer);
     qthread_fork(FEB_consumer, FEBbuffer, rets);
     qthread_fork(FEB_producer, FEBbuffer, NULL);
     qthread_readFF(NULL, NULL, rets);
     qtimer_stop(timer);
 
-    printf("\tSingle FEB send/receive: %19g secs\n", qtimer_secs(timer));
+    printf("%19g secs\n", qtimer_secs(timer));
     rate = sizeof(aligned_t) / qtimer_secs(timer);
     printf("\t = throughput: %29g bytes/sec %s\n", rate,
 	   human_readable_rate(rate));
 
     /* PARALLEL SINGLE FEB SEND/RECEIVE TEST */
+    printf("\tParallel single FEB send/receive: "); fflush(stdout);
     qtimer_start(timer);
     for (i=0; i<MAXPARALLELISM; i++) {
 	qthread_fork(FEB_consumer, FEBbuffer+i, rets+i);
@@ -200,7 +206,7 @@ int main(int argc, char *argv[])
     }
     qtimer_stop(timer);
 
-    printf("\tParallel single FEB send/receive: %10g secs (%u parallel)\n", qtimer_secs(timer), MAXPARALLELISM);
+    printf("%10g secs (%u parallel)\n", qtimer_secs(timer), MAXPARALLELISM);
     rate = (MAXPARALLELISM*sizeof(aligned_t)) / qtimer_secs(timer);
     printf("\t = throughput: %29g bytes/sec %s\n", rate,
 	   human_readable_rate(rate));
@@ -208,13 +214,14 @@ int main(int argc, char *argv[])
     memset(total_sending_time, 0, sizeof(double)*MAXPARALLELISM);
 
     /* FEB PRODUCER/CONSUMER LOOP */
+    printf("\tFEB producer/consumer loop: "); fflush(stdout);
     qtimer_start(timer);
     qthread_fork(FEB_consumerloop, NULL, rets);
     qthread_fork(FEB_producerloop, NULL, NULL);
     qthread_readFF(NULL, NULL, rets);
     qtimer_stop(timer);
 
-    printf("\tFEB producer/consumer loop: %16g secs (%u iterations)\n", qtimer_secs(timer), (unsigned)ITERATIONS);
+    printf("%16g secs (%u iterations)\n", qtimer_secs(timer), (unsigned)ITERATIONS);
     printf("\t - total sending time: %21g secs\n", total_sending_time[0]);
     printf("\t + external average time: %18g secs\n",
 	   qtimer_secs(timer) / ITERATIONS);
@@ -229,6 +236,7 @@ int main(int argc, char *argv[])
     memset(total_sending_time, 0, sizeof(double)*MAXPARALLELISM);
 
     /* PARALLEL FEB PRODUCER/CONSUMER LOOPS */
+    printf("\tParallel FEB producer/consumer loop: "); fflush(stdout);
     qtimer_start(timer);
     for (i=0; i<MAXPARALLELISM; i++) {
 	qthread_fork(FEB_consumerloop, (void*)(intptr_t)i, rets+i);
@@ -244,7 +252,7 @@ int main(int argc, char *argv[])
     for (i=1;i<MAXPARALLELISM;i++) {
 	total_sending_time[0] += total_sending_time[i];
     }
-    printf("\tParallel FEB producer/consumer loop: %6g secs (%u-way %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, ITERATIONS);
+    printf("%6g secs (%u-way %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, ITERATIONS);
     printf("\t - total sending time: %21g secs\n", total_sending_time[0]);
     printf("\t + external average time: %18g secs\n",
 	   qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
@@ -261,13 +269,14 @@ int main(int argc, char *argv[])
     memset(total_roundtrip_time, 0, sizeof(double)*MAXPARALLELISM);
 
     /* FEB PING-PONG LOOP */
+    printf("\tFEB ping-pong loop: "); fflush(stdout);
     qtimer_start(timer);
     qthread_fork(FEB_player2, NULL, rets);
     qthread_fork(FEB_player1, NULL, NULL);
     qthread_readFF(NULL, NULL, rets);
     qtimer_stop(timer);
 
-    printf("\tFEB ping-pong loop: %24g secs (%u round trips)\n", qtimer_secs(timer), ITERATIONS);
+    printf("%24g secs (%u round trips)\n", qtimer_secs(timer), ITERATIONS);
     printf("\t - total rtts: %29g secs\n", total_roundtrip_time[0]);
     printf("\t - total sending time: %21g secs\n",
 	   total_p1_sending_time[0] + total_p2_sending_time[0]);
@@ -307,6 +316,7 @@ int main(int argc, char *argv[])
     memset(total_roundtrip_time, 0, sizeof(double)*MAXPARALLELISM);
 
     /* PARALLEL FEB PING-PONG LOOP */
+    printf("\tParallel FEB ping-pong loop: "); fflush(stdout);
     qtimer_start(timer);
     for (i=0; i<MAXPARALLELISM; i++) {
 	qthread_fork(FEB_player2, (void*)(intptr_t)i, rets+i);
@@ -324,7 +334,7 @@ int main(int argc, char *argv[])
 	total_p1_sending_time[0] += total_p1_sending_time[i];
 	total_p2_sending_time[0] += total_p2_sending_time[i];
     }
-    printf("\tParallel FEB ping-pong loop: %15g secs (%u-way %u rts)\n", qtimer_secs(timer), MAXPARALLELISM, ITERATIONS);
+    printf("%15g secs (%u-way %u rts)\n", qtimer_secs(timer), MAXPARALLELISM, ITERATIONS);
     printf("\t - total rtts: %29g secs\n", total_roundtrip_time[0]);
     printf("\t - total sending time: %21g secs\n",
 	   total_p1_sending_time[0] + total_p2_sending_time[0]);
@@ -360,6 +370,7 @@ int main(int argc, char *argv[])
 	   human_readable_rate(rate));
 
     /* COMPETING INCREMENT LOOP */
+    printf("\tCompeting increment loop: "); fflush(stdout);
     qtimer_start(timer);
     for (i = 0; i < MAXPARALLELISM; i++) {
 	qthread_fork(incrloop, NULL, rets+i);
@@ -370,7 +381,7 @@ int main(int argc, char *argv[])
     qtimer_stop(timer);
     assert(incrementme == ITERATIONS*MAXPARALLELISM);
 
-    printf("\tCompeting increment loop: %18g secs (%u-way %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, ITERATIONS);
+    printf("%18g secs (%u-way %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, ITERATIONS);
     printf("\t + average increment time: %17g secs\n",
 	   qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
     printf("\t + increment speed: %'24f increments/sec\n",
@@ -382,12 +393,13 @@ int main(int argc, char *argv[])
     incrementme = 0;
 
     /* A DIFFERENT INCREMENT LOOP */
+    printf("\tDifferent increment loop: "); fflush(stdout);
     qtimer_start(timer);
     qt_loop_balance(0, ITERATIONS*MAXPARALLELISM, qt_incrloop, NULL);
     qtimer_stop(timer);
     assert(incrementme == ITERATIONS*MAXPARALLELISM);
 
-    printf("\tDifferent increment loop: %18g secs (%u-way %u iters)\n", qtimer_secs(timer), shepherds, ITERATIONS*MAXPARALLELISM/shepherds);
+    printf("%18g secs (%u-way %u iters)\n", qtimer_secs(timer), shepherds, ITERATIONS*MAXPARALLELISM/shepherds);
     printf("\t + average increment time: %17g secs\n",
 	   qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
     printf("\t + increment speed: %'24f increments/sec\n",
@@ -396,9 +408,9 @@ int main(int argc, char *argv[])
     printf("\t = data throughput: %24g bytes/sec %s\n", rate,
 	   human_readable_rate(rate));
 
-    qthread_finalize();
-
     qtimer_free(timer);
+
+    qthread_finalize();
 
     return 0;
 }
