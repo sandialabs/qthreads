@@ -15,7 +15,6 @@ struct timeval start, stop;
 
 int main(int argc, char *argv[])
 {
-    aligned_t ret;
     aligned_t *ui_array;
     double *d_array;
     int threads = 1;
