@@ -252,7 +252,7 @@ int main(int argc, char *argv[])
     for (i=1;i<MAXPARALLELISM;i++) {
 	total_sending_time[0] += total_sending_time[i];
     }
-    printf("%6g secs (%u-way %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, ITERATIONS);
+    printf("%6g secs (%u-way %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
     printf("\t - total sending time: %21g secs\n", total_sending_time[0]);
     printf("\t + external average time: %18g secs\n",
 	   qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
@@ -276,7 +276,7 @@ int main(int argc, char *argv[])
     qthread_readFF(NULL, NULL, rets);
     qtimer_stop(timer);
 
-    printf("%24g secs (%u round trips)\n", qtimer_secs(timer), ITERATIONS);
+    printf("%24g secs (%u round trips)\n", qtimer_secs(timer), (unsigned)ITERATIONS);
     printf("\t - total rtts: %29g secs\n", total_roundtrip_time[0]);
     printf("\t - total sending time: %21g secs\n",
 	   total_p1_sending_time[0] + total_p2_sending_time[0]);
@@ -334,7 +334,7 @@ int main(int argc, char *argv[])
 	total_p1_sending_time[0] += total_p1_sending_time[i];
 	total_p2_sending_time[0] += total_p2_sending_time[i];
     }
-    printf("%15g secs (%u-way %u rts)\n", qtimer_secs(timer), MAXPARALLELISM, ITERATIONS);
+    printf("%15g secs (%u-way %u rts)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
     printf("\t - total rtts: %29g secs\n", total_roundtrip_time[0]);
     printf("\t - total sending time: %21g secs\n",
 	   total_p1_sending_time[0] + total_p2_sending_time[0]);
@@ -381,7 +381,7 @@ int main(int argc, char *argv[])
     qtimer_stop(timer);
     assert(incrementme == ITERATIONS*MAXPARALLELISM);
 
-    printf("%18g secs (%u-way %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, ITERATIONS);
+    printf("%18g secs (%u-way %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
     printf("\t + average increment time: %17g secs\n",
 	   qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
     printf("\t + increment speed: %'24f increments/sec\n",
@@ -399,7 +399,7 @@ int main(int argc, char *argv[])
     qtimer_stop(timer);
     assert(incrementme == ITERATIONS*MAXPARALLELISM);
 
-    printf("%18g secs (%u-way %u iters)\n", qtimer_secs(timer), shepherds, ITERATIONS*MAXPARALLELISM/shepherds);
+    printf("%18g secs (%u-way %u iters)\n", qtimer_secs(timer), shepherds, (unsigned)(ITERATIONS*MAXPARALLELISM/shepherds));
     printf("\t + average increment time: %17g secs\n",
 	   qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
     printf("\t + increment speed: %'24f increments/sec\n",

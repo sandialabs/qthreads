@@ -21,7 +21,6 @@ INCLUDES = -I$(top_srcdir)/include
 OUTPUTDIR = $(top_builddir)/src
 QTHREADLIB = $(OUTPUTDIR)/libqthread.la
 QTIMERLIB = $(OUTPUTDIR)/qtimer/libqtimer.la
-QTIMERINC = -I$(top_srcdir)/src/
 CONTEXTLIB = $(OUTPUTDIR)/osx_compat/libosx_compat.la
 
 LDADD = $(QTHREADLIB)
@@ -66,19 +65,18 @@ test_qutil_qsort_SOURCES = test_qutil_qsort.c
 test_qutil_qsort_DEPENDENCIES = $(QTHREADLIB)
 
 time_swap_SOURCES = time_swap.c
-time_swap_CPPFLAGS = $(QTIMERINC)
+time_swap_CPPFLAGS = -I$(top_srcdir)/src/ # for osx_compat
+time_swap_LDADD = $(QTIMERLIB)
 time_swap_DEPENDENCIES = $(QTIMERLIB)
 if QTHREAD_NEED_OSX_MAKECONTEXT
-time_swap_LDADD = $(CONTEXTLIB)
+time_swap_LDADD += $(CONTEXTLIB)
 time_swap_DEPENDENCIES += $(CONTEXTLIB)
 endif
 
 time_producerconsumer_SOURCES = time_producerconsumer.c
-time_producerconsumer_CPPFLAGS = $(QTIMERINC)
 time_producerconsumer_LDADD = $(QTIMERLIB) $(QTHREADLIB)
 time_producerconsumer_DEPENDENCIES = $(QTIMERLIB) $(QTHREADLIB)
 
 time_increments_SOURCES = time_increments.c
-time_increments_CPPFLAGS = $(QTIMERINC)
 time_increments_LDADD = $(QTIMERLIB) $(QTHREADLIB)
 time_increments_DEPENDENCIES = $(QTIMERLIB) $(QTHREADLIB)
