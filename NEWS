@@ -1,12 +1,28 @@
---- 1.1 ---
+--- 1.1.20090123 ---
 New Features:
  - Can now force 64-bit alignment
+ - Can now migrate threads between shepherds
+ - More atomic increments (floating point)
+ - Aligned_t qsort()
+ - C++ template wrappers to standard FEB functions
+ - Environment variable controls stack size
+ - SST support
+ - High-resolution timers for profiling
 Improvements:
- - Better Apple PPC support
+ - Lock-free internal memory pooling
+ - Lock-free thread queueing
+ - Better Apple PPC64/PPC/x86/x86_64 support
+ - Better Sparc support
+ - Better architecture detection
  - Documentation fixes
  - Detects more makecontext() irregularities
  - Better C++ portability/compatibility
  - Better compatibility with unusual compilers
+ - Better test cases
+ - Uses compiler-builtin atomic operations when available
+ - Better 64-bit support
+ - Real serial mode
+ - Faster qt_loop_balance synchronization
  - Fixed atomic increment volatility declaration
  - Thread counting also checks hash stripe balance
 --- 1.0 ---

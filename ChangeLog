@@ -1,3 +1,1193 @@
+2009-01-22 19:34  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_swap.c: qtimer fix
+
+2009-01-22 19:33  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_increments.c, test/time_producerconsumer.c: more
+	  friendly defaults for "make check"
+
+2009-01-20 22:04  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h, src/qthread.c: fix the const issue
+	  with qthread_migrate_to
+
+2009-01-19 23:34  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am, man/man3/qthread_migrate_to.3,
+	  src/qthread.c: document and clean up error handling in
+	  qthread_migrate_to
+
+2009-01-19 22:41  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: correct lfqueue node alignment/size issue when
+	  using unpooled memory
+
+2009-01-19 22:30  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qalloc.c: use the (newly standardized) assert magic
+
+2009-01-19 22:28  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/Makefile.am, include/qthread_asserts.h,
+	  include/qthread_innards.h, src/futurelib.c, src/qt_mpool.c,
+	  src/qutil.c: moving the assert magic into its own header
+
+2009-01-19 22:27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h, src/qthread.c, test, test/Makefile.am,
+	  test/test_migrate.c: qthread_migrate_to()
+
+2009-01-19 22:26  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/osx_compat/taskimpl.h: does not need to include assert.h
+
+2009-01-19 21:01  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test: update ignores for new tests
+
+2009-01-15 21:05  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_mpool.c: clarified the comment
+
+2009-01-15 21:04  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: fixing cross-platform lfqueue issues (mostly
+	  fixing data alignment for the ABA counters)
+
+2009-01-15 19:46  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: trying some stuff out with volatile
+
+2009-01-14 19:27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: these comments confuse some versions of autoconf
+
+2009-01-13 23:28  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, include/qthread_innards.h, src/futurelib.c,
+	  src/qloop.c, src/qthread.c: lock-free thread queueing, based on
+	  Maged M. Michael & Michael L. Scott's 1996 algorithm
+
+2009-01-09 19:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_mpool.c: minor efficiency improvement in a cas loop
+
+2009-01-09 19:32  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qloop.h: accumulator functions should be for
+	  aligned_t and friends
+
+2009-01-07 21:22  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test1.c: less verbosity
+
+2009-01-07 21:16  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_mpool.c: just to avoid ambiguity
+
+2009-01-07 19:15  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qutil.c: remove unnecessary variable
+
+2009-01-07 16:28  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_mpool.c: asserts
+
+2009-01-07 16:24  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_mpool.c: asserts
+
+2009-01-07 16:24  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_qutil_qsort.c: test both sorts
+
+2009-01-07 16:24  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qutil.c: minor efficiency fix
+
+2009-01-07 05:55  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am, test/test_qutil_qsort.c: extra test just for
+	  qsort
+
+2009-01-06 06:25  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_id.c: be more helpful in case of trouble
+
+2009-01-06 06:25  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test1.c: minor formatting and printf typechecking fixes
+
+2009-01-06 03:38  Brian Barrett <bwbarre@sandia.gov>
+
+	* include/qthread/qutil.h, src/qutil.c, test/test1.c: This is ugly,
+	  but add a qsort for aligned_t datatypes. We should reduce
+	  the amount of code duplicated, but there's a paper deadline :/.
+
+2009-01-05 14:47  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.hpp: unsigned/signed doesnt matter
+
+2009-01-02 21:57  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h, include/qthread/qthread.h: better SunPro
+	  C++ support (it doesnt understand "__asm__" but DOES understand
+	  "asm"). Note that SunPro C understands GCC assembly completely.
+	  <sigh>
+
+2008-12-27 03:32  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: fix internal incr on 32-bit architectures that
+	  dont have 64-bit incr assembly when aligned_t is forced to
+	  64-bits
+
+2008-12-22 23:21  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_atomics.m4, configure.in,
+	  include/qt_atomics.h, include/qthread/common.h.in,
+	  include/qthread/qthread.h, src/qthread.c: fixed icc intrinsic
+	  support
+
+2008-12-22 20:14  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: rely on getrlimit for shepherd0 stack size
+
+2008-12-22 20:08  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: fix weird handling of stack sizes and limits in
+	  the case of QTHREAD_REAL_MCCOY (i.e. the original thread, now
+	  qthread)
+
+2008-12-22 19:21  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: put the error checking back
+
+2008-12-22 19:20  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: skip redundant thread allocation
+
+2008-12-22 18:53  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/Makefile.am: fix the packaging
+
+2008-12-22 18:52  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h: fix architecture detection
+
+2008-12-22 18:41  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h: support all the other architectures
+	  (preliminiary)
+
+2008-12-22 17:02  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config: more autotool droppings
+
+2008-12-22 17:00  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h, src/qt_mpool.c: mostly lock-free mpools
+
+2008-12-22 16:59  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.hpp: add integer checking, and fix a typo
+
+2008-12-22 16:58  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: use a spinlock in the qt_loop_balance rather than
+	  FEBs <sigh>
+
+2008-12-17 23:07  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.hpp: ensure that qthread_incr operand is
+	  unsigned
+
+2008-12-17 19:09  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test2.c, test/test3.c: corrected the fprintf arguments
+
+2008-12-17 18:26  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* acinclude.m4, config/qthread_check_atomics.m4, configure.in,
+	  include/qthread/common.h.in, include/qthread/qthread.h: some
+	  compilers support builtin atomic operations
+
+2008-12-12 22:36  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_id.c: make the id test more resilient to configure
+	  options (specifically, --enable-debug)
+
+2008-12-12 21:42  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: more early clobbering on ppc (good
+	  thing we have plenty of registers!)
+
+2008-12-12 21:30  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: the ppc64 mod code is now tested; removed warning
+
+2008-12-12 21:18  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config: more autoconf droppings
+
+2008-12-12 21:17  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am, test/test_internal_mod.c: test internal
+	  atomic-mod implementation
+
+2008-12-12 20:59  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h, test/testdincr.c: fix dincr on ppc64
+
+2008-12-12 08:26  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am: rename testq to be more obvious
+
+2008-12-12 08:25  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.hpp: get rid of some -Wall warnings
+
+2008-12-12 08:24  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread_innards.h, src/futurelib.c, src/qthread.c: move
+	  qthread_debug so that it can be and is used by the futurelib
+	  stuff too
+
+2008-12-12 07:14  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/osx_compat/asm.S: good reference comments
+
+2008-12-12 06:58  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: use va_arg macro in debugging
+
+2008-12-11 20:50  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/osx_compat/asm.S: ignore segment registers... seems to cause
+	  problems on x86_64, despite their regular use on IA32, and
+	  besides, I don't think we have to callee-save them *anyway*
+
+2008-12-11 20:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/osx_compat/asm.S, src/osx_compat/context.c,
+	  src/osx_compat/taskimpl.h: OSX x86_64 support
+
+2008-12-11 20:42  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: another sanity assert
+
+2008-12-08 16:29  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.hpp: back to plain ol inline - per
+	  discussion with Brian
+
+2008-12-07 06:45  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test1.c: minor extension
+
+2008-12-07 06:44  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/common.h.in: QINLINE
+
+2008-12-07 06:44  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: QINLINE
+
+2008-12-07 06:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.hpp: tidy up a bit
+
+2008-12-07 03:26  Brian Barrett <bwbarre@sandia.gov>
+
+	* include/qthread/qthread.hpp: fix silly typo in _const wrappers
+	  -This line, and those below, will be ignored--
+	  
+	  M include/qthread/qthread.hpp
+
+2008-12-06 23:44  Brian Barrett <bwbarre@sandia.gov>
+
+	* include/qthread/Makefile.am, include/qthread/qthread.h,
+	  include/qthread/qthread.hpp: * Add C++ "bindings" for the FEBs.
+	  Just a template wrapper so that we can
+	  accept any pointer type that has an underlying type that is the
+	  same size
+	  as aligned_t. Also allows qthread_incr() to be called for all
+	  supported
+	  types, rather than having fincr() and dincr().
+
+2008-12-06 21:34  Brian Barrett <bwbarre@sandia.gov>
+
+	* include/qthread/qthread.hpp: checkpoint to switch machines. First
+	  take at the shell of a c++ wrapper to
+	  the qthreads api
+
+2008-12-05 08:17  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/Makefile.am: oops
+
+2008-12-05 04:39  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/Makefile.am: aligned_t requires a compatibility bump
+
+2008-12-04 22:53  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/qthread_empty.3, man/man3/qthread_feb_status.3,
+	  man/man3/qthread_lock.3, man/man3/qthread_readFE.3,
+	  man/man3/qthread_readFF.3, man/man3/qthread_writeEF.3,
+	  man/man3/qthread_writeF.3: these things all require aligned_t
+	  arguments now
+
+2008-12-04 22:46  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/testqloop.c: correct sizes in allocated memory
+
+2008-12-04 22:45  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test1.c: correct sizes in allocated memory
+
+2008-12-04 22:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qutil.h: correct noun in comment
+
+2008-12-04 22:34  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, src/qalloc.c: detect math.h
+
+2008-12-04 22:32  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: size_t != aligned_t
+
+2008-12-04 22:32  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/testloop.cpp: fix unused variable warnings
+
+2008-12-04 22:31  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test2.c: fix unused variable warnings
+
+2008-12-04 22:31  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/testq.c: avoid mktemp warning
+
+2008-12-04 22:11  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qutil.c: size_t != aligned_t
+
+2008-12-04 22:09  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread-sst.h, include/qthread/qthread.h,
+	  src/qthread.c, test/test3.c: qthread_writeFE and
+	  qthread_writeFE_const require aligned_t arguments
+
+2008-12-04 22:05  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread-sst.h, include/qthread/qthread.h,
+	  src/qthread.c: qthread_writeF and qthread_writeF_const require
+	  aligned_t arguments
+
+2008-12-04 22:01  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread-sst.h, include/qthread/qthread.h,
+	  src/qloop.c, src/qthread.c: qthread_readFE requires aligned_t
+	  arguments
+
+2008-12-04 21:58  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qloop.h, include/qthread/qthread-sst.h,
+	  include/qthread/qthread.h, src/qthread.c, src/qutil.c:
+	  qthread_readFF requires aligned_t arguments
+
+2008-12-04 21:49  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qutil.h: qutil now works on aligned_t types
+	  rather than ints and uints
+
+2008-12-04 21:47  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread-sst.h, include/qthread/qthread.h,
+	  src/qthread.c, src/qutil.c: qthread_feb_status and qthread_empty
+	  and qthread_fill all use aligned_t* arguments
+
+2008-12-04 21:38  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread-sst.h: qthread_lock and unlock now take
+	  aligned_t pointer arguments
+
+2008-12-04 21:34  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/loop_iter.hpp,
+	  include/qthread/loop_templates.hpp, include/qthread/qthread.h,
+	  src/qloop.c, src/qthread.c, src/qutil.c, test/test1.c,
+	  test/test3.c, test/testloop.cpp: qthread_lock and unlock now take
+	  aligned_t pointer arguments
+
+2008-12-04 21:25  Brian Barrett <bwbarre@sandia.gov>
+
+	* src/qthread.c: Fix race condition in the mpool. The variable
+	  syncmode was being used both
+	  to initialize cprops hash table and the mpool. Unfortunately, the
+	  default
+	  for multi-threaded codes, COLLECTION_MODE_PLAIN, is 0, which was
+	  disabling
+	  synchronization in the mpool. Split the meanings to be more
+	  obvious.
+
+2008-12-04 19:57  Brian Barrett <bwbarre@sandia.gov>
+
+	* include/qthread/qthread.h: sigh
+
+2008-12-04 18:50  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: obey the config detection of unistd.h
+
+2008-12-04 18:41  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: display the aligned_t info
+
+2008-12-04 18:23  Brian Barrett <bwbarre@sandia.gov>
+
+	* include/qthread/qthread.h: fix my dumb semicolon placement
+
+2008-12-04 18:10  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: remove indent-droppings
+
+2008-12-04 18:08  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: typo in the last commit :P
+
+2008-12-04 17:37  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, include/qthread/common.h.in,
+	  include/qthread/qthread.h, src/qthread.c: clarity in the
+	  aligned_t size/alignment logic... I think
+
+2008-12-04 17:05  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: better 64-bit handling on 32-bit
+	  sparc, plus minor cleanup to make inlining easier
+
+2008-12-03 23:56  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* Makefile.am: upon suggestion of libtoolize...
+
+2008-12-03 19:04  Brian Barrett <bwbarre@sandia.gov>
+
+	* configure.in, include/qthread/common.h.in,
+	  include/qthread/qthread.h, src/qthread.c: Change default on 64
+	  bit platforms to be an align_t that is 64 bits long and
+	  64 bits aligned. At the same time, make it a little bit more
+	  clear what
+	  size things are with the #defines
+
+2008-12-03 18:52  Brian Barrett <bwbarre@sandia.gov>
+
+	* include/qthread/qthread.h: add magic to allow qthread_incr to
+	  support both 32 and 64 bit math
+
+2008-12-02 22:07  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, src/qthread.c: lower-overhead debugging with a
+	  handwritten debug printf (no longer requires fullsize stacks)
+
+2008-12-02 22:05  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_id.c: in debug mode, more threads get ids
+
+2008-12-02 20:58  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, src/qthread.c: allow runtime debug-level control
+	  via QTHREAD_DEBUG_LEVEL envariable
+
+2008-11-25 19:33  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: shepherd profiling needs to not skip shepherd 0
+
+2008-11-25 03:21  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/benchmark.c, test/test1.c, test/test2.c, test/test3.c,
+	  test/testdincr.c, test/testqloop.c, test/time_increments.c,
+	  test/time_producerconsumer.c: sometimes the test harness feeds us
+	  garbage arguments... so be tolerant of nonsensical numbers of
+	  threads
+
+2008-11-25 03:15  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: use some more generic notation on the
+	  sparc ... suspect that dincr wont work on sparc 32 bits because
+	  the registers arent big enough
+
+2008-11-25 00:14  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: fix the asserts to be correct with the new
+	  single-threaded shepherd 0
+
+2008-11-24 19:37  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_mpool.c: sanity asserts
+
+2008-11-24 19:36  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread-sst.h, include/qthread/qthread.h: fix
+	  compiling issue (oops)
+
+2008-11-24 04:38  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/Makefile.am, include/qthread/qthread-sst.h,
+	  include/qthread/qthread.h: move the SST code into a separate
+	  (optional) header file
+
+2008-11-24 04:24  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/futurelib.h: tidying
+
+2008-11-24 04:24  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/common.h.in: support QINLINE (optional inlining)
+
+2008-11-24 04:23  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c, src/qthread.c: support QINLINE (optional inlining),
+	  and also allow the qthread stack size to be defined via
+	  environment variable (currently undocumented)
+
+2008-11-24 04:22  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: rearrange a little for sanity's sake, and also add
+	  the ability to disable (non-automatic) inlining for
+	  debugging/profiling purposes
+
+2008-11-24 04:20  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/future_join_all.3: fix description, update to current
+	  anonymouse qthread/future unification
+
+2008-11-24 04:19  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_mpool.c: fix handling very large memory pool sizes, also
+	  beginning support for the QINLINE keyword
+
+2008-11-07 23:26  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/Makefile.am: oop; missed this in the last commit
+
+2008-11-07 23:25  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, include/Makefile.am, include/qtimer.h,
+	  src/qthread.c, src/qtimer/Makefile.am, src/qtimer/qtimer.h:
+	  reorganizing a little
+
+2008-11-07 23:04  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/Makefile.am, include/qt_mpool.h, src/Makefile.am,
+	  src/qt_mpool.c, src/qthread.c: qt_mpool replaces cp_mempool;
+	  simpler, and less finicky
+
+2008-11-07 22:23  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: avoid register re-use in qthread_fincr
+
+2008-11-07 20:23  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h, test/testfincr.c: reversing the
+	  return-value of qthread_fincr
+
+2008-11-07 20:20  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h, man/man3/qthread_incr.3,
+	  test/testdincr.c: reversing the return-value of qthread_dincr
+
+2008-11-07 20:15  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_id.c, test/testincr.c: reversing the return-value of
+	  qthread_incr
+
+2008-11-07 20:11  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h, src/qthread.c: reversing the
+	  return-value of qthread_incr
+
+2008-10-09 21:25  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: slightly cleaner version of the previous fix
+
+2008-10-09 21:10  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: fixed on MAKECONTEXT_SPLIT systems, I think
+
+2008-10-08 15:17  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: avoid unnecessary malloc call if shepherd_count is 1
+
+2008-09-29 22:11  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_producerconsumer.c: another timer loop, just to see if
+	  theres a difference
+
+2008-09-29 22:08  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: without pthreads as a config option, with
+	  appropriate warnings
+
+2008-09-29 22:05  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: basic non-pthreads support... but REALLY basic
+	  (still uses mutexes for most stuff)
+
+2008-09-25 17:07  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_makecontext.m4,
+	  src/osx_compat/386-ucontext.h, src/osx_compat/asm.S,
+	  src/osx_compat/context.c, src/osx_compat/power-ucontext.h,
+	  src/osx_compat/taskimpl.h: updating to be compatable with OSX
+	  10.5.x - based on some changes to libcoroutine here:
+	  http://github.com/stevedekorte/io/tree/f8b0893a8317cbefd5cffe1cebe591ad6c12ae89/libs/coroutine/source
+
+2008-09-25 17:04  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: since OSX 10.5.x has non-functional swapcontext
+	  functions, we have to test whether swapcontext works before
+	  deciding whether we need to use the compatability library
+
+2008-09-25 16:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread_innards.h: remove an assert warning on osx 10.5
+
+2008-09-23 18:19  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: optimize serial execution a little by avoiding
+	  unnecessary pthread mutex locking when there's only one shepherd,
+	  and check the nshepherds argument
+
+2008-09-23 17:55  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: no more implicit pthreads
+
+2008-09-23 17:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test1.c, test/test2.c, test/test3.c: better interactive
+	  fallback
+
+2008-09-19 22:40  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/osx_compat/asm.S, src/osx_compat/power-ucontext.h: handle
+	  floating point registers correctly on ppc
+
+2008-09-19 21:48  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/testincr.c: fix typo
+
+2008-09-19 21:44  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: make qt_loop more efficient, using the incr trick
+
+2008-09-19 21:42  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: improve qthread_empty efficiency when me==NULL and
+	  make qthread_yield a little NULL-tolerant
+
+2008-09-19 20:05  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/qthread_id.3, man/man3/qthread_lock.3,
+	  man/man3/qthread_readFE.3, man/man3/qthread_readFF.3,
+	  man/man3/qthread_retloc.3, man/man3/qthread_self.3,
+	  man/man3/qthread_shep.3, man/man3/qthread_stackleft.3,
+	  man/man3/qthread_writeEF.3, man/man3/qthread_writeF.3,
+	  man/man3/qthread_yield.3: update documentation for serial
+	  qthreads
+
+2008-09-19 01:37  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: comment
+
+2008-09-19 01:23  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am, test/test1.c, test/test2.c, test/test_id.c,
+	  test/testdincr.c, test/testincr.c, test/testloop.cpp: remove
+	  pthreads, recognize that qthreads now works in serial
+	  (qthread_self() never returns NULL!!!)
+
+2008-09-19 01:21  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: qthreads can now run in SERIAL... removing the
+	  pthread requirement comes next?
+
+2008-09-09 21:27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/qthread_stackleft.3: fix copy/paste error
+
+2008-09-01 19:57  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_sst.m4: use AS_IF instead of plain ifs
+
+2008-09-01 19:56  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/ax_create_stdint_h.m4: avoid redundant checks when we know
+	  that certain headers dont exist
+
+2008-08-18 22:32  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: fix a typo and a syntax/optimizer
+	  problem
+
+2008-08-18 22:30  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h, src/qthread.c: pushing the sparc
+	  cas(x) fixes to all the places that its used
+
+2008-08-18 22:04  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_increments.c: stupid OoO confusion
+
+2008-08-18 21:44  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am, test/time_increments.c: added time_increments
+
+2008-08-13 19:01  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_producerconsumer.c: make it so you can tailor the test
+	  to the hardware
+
+2008-08-13 16:39  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_producerconsumer.c: make sure that our timers are reset
+	  between runs
+
+2008-08-13 15:40  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_producerconsumer.c: that'll shut up the warnings! :)
+
+2008-08-13 15:38  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qtimer/gethrtime.c: typo - multiplying by too big a number
+	  when converting to seconds
+
+2008-08-13 15:32  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* acinclude.m4, config/qthread_check_ucstack_ssflags.m4,
+	  configure.in, src/qthread.c: detect uc_stack.ss_flags
+
+2008-08-13 15:31  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_producerconsumer.c: another formatting fix
+
+2008-08-12 22:16  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_producerconsumer.c, test/time_swap.c: convenient
+	  formatting, added parallel producer/consumer loops
+
+2008-08-12 22:05  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: remind me of how it *should* be
+
+2008-08-12 17:58  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: gcc on sparc is being idiotic and
+	  buggy - work around it and leave a comment about whats going on
+
+2008-08-12 15:21  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_producerconsumer.c: sanity checking
+
+2008-08-12 05:52  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am: oops, delete CONTEXTLIB from time_swap
+	  dependencies
+
+2008-08-12 05:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: disabled QTHREAD_WAIT_TIMER_STOP needss second
+	  argument
+
+2008-08-11 23:49  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: whitespace fixes according to GNU indent
+
+2008-08-11 23:47  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: lock profiling, slightly improved shepherd
+	  profiling, and some small syntactic sugar improvements fro thread
+	  counting
+
+2008-08-11 23:35  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* Makefile.am: test comes last, for sanity reasons. sadly, this
+	  means the installation info is printed earlier, but ce est la vie
+
+2008-08-11 23:34  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/futurelib.c: minor speed improvement for futurelibs
+	  destination decision; based on qthread core
+
+2008-08-08 20:27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, test/Makefile.am, test/time_producerconsumer.c,
+	  test/time_swap.c: time_swap to time the length of swapcontext and
+	  time_producerconsumer to time lots of other things that qthreads
+	  can do; use --enable-timer-progs to turn them on
+
+2008-07-30 16:38  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: fixed memory leaks
+
+2008-07-29 19:13  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, src/Makefile.am: avoid manipulating CFLAGS directly
+
+2008-07-29 19:12  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: fold fincr
+
+2008-07-24 16:18  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: oops; left the stdio.h in there
+
+2008-07-21 16:51  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am, man/man3/qthread_dincr.3,
+	  man/man3/qthread_fincr.3, man/man3/qthread_incr.3: document the
+	  new increment functions
+
+2008-07-21 16:40  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: comment typo
+
+2008-07-18 22:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test:
+
+2008-07-18 22:51  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/testfincr.c: a little better debugging info if things go
+	  wrong
+
+2008-07-18 22:49  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: correcting some weird register re-use
+	  issues on ppc with fincr... rearranging inputs and outputs to try
+	  and make things sane again
+
+2008-07-18 18:18  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: minor change
+
+2008-07-18 15:56  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: asm64 should work form ia32 in fincr
+
+2008-07-18 15:55  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: better fincr comments on amd64
+
+2008-07-18 15:50  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: minor fincr logic error on amd64
+
+2008-07-18 15:42  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: amd64 fincr
+
+2008-07-18 15:37  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: ia64 typo in fincr
+
+2008-07-18 15:35  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: ia64 fincr
+
+2008-07-18 15:29  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: fix sparc typos in fincr
+
+2008-07-18 15:16  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h, test/Makefile.am, test/testfincr.c:
+	  adding qthread_fincr()
+
+2008-07-01 20:27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am, man/man3/qthread_dincr.3: document
+	  qthread_dincr
+
+2008-06-30 22:16  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* README: help with SST
+
+2008-06-16 18:20  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: support IA32 PIC code (e.g. MacOS X
+	  generates PIC code by default)
+
+2008-06-16 16:32  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: added AMD64-specific code, and rewrote
+	  the IA32 code so that it works on an Athlon, with lots of
+	  explanatory commenting. As a useful side-effect, the IA32 code is
+	  now much more elegant (and I understand gcc inlined ASM semantics
+	  more than I did before)
+
+2008-06-13 21:16  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test: ignore testdincr binary
+
+2008-06-13 21:06  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: fix the typo for IA64 and get it
+	  working with punned types
+
+2008-06-13 20:34  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: minor typo in SPARC type punning
+
+2008-06-13 18:49  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: IA32 (and maybe AMD64) assembly for
+	  dincr rewritten and tested
+
+2008-06-13 18:25  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qutil.c: qutil function args should be declared const
+
+2008-06-13 18:24  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: make configure work properly even when echo doesnt
+	  support the -n flag
+
+2008-06-13 18:23  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qutil.h: qutil function args should be declared
+	  const
+
+2008-06-12 20:49  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: PPC32 now compiles cleanly despite
+	  lack of dincr support
+
+2008-06-12 20:21  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am, test/testdincr.c: test the qthread_dincr
+	  function
+
+2008-06-12 20:20  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: qthread_dincr works on PPC64 now...
+	  testing type punning (read: unions)
+
+2008-06-12 20:20  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_makecontext.m4, src/osx_compat/asm.S: 64-bit
+	  PPC OSX makecontext support!
+
+2008-06-12 16:46  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test2.c: make error assertion a little more useful
+
+2008-06-12 16:45  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: fix the 64-bit test in the incr_mod function on
+	  ia64
+
+2008-06-12 16:42  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: add qthread_dincr
+
+2008-05-05 23:25  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: remove spurious error when enabling debug trace
+
+2008-05-05 23:23  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test1.c: fix the test (why does this matter?)
+
+2008-04-11 22:02  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: better error handling (less reliance on assert)
+
+2008-04-04 22:01  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qtimer/gethrtime.c, src/qtimer/mach.c: ifdef the config.h so
+	  I can use this code for other stuff
+
+2008-04-04 21:57  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* Makefile.am, test/Makefile.am: this should help build the src
+	  before the test when doing `make check` -- as long as
+	  check_SUBDIRS is supported by automake (otherwise its just as bad
+	  as before)
+
+2008-04-04 21:46  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: be more verbose about qtimer type
+
+2008-04-04 21:46  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qtimer/altix.c: MMTIMER_GETFREQ returns results in Hz, not
+	  micro-Hz
+
+2008-04-04 21:44  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qtimer/gettimeofday.c: ifdef the config.h so I can use this
+	  code for other stuff
+
+2008-04-02 18:45  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qutil.c: fix the sizeof assertion
+
+2008-03-28 18:37  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/qutil_double_max.3, man/man3/qutil_double_min.3,
+	  man/man3/qutil_double_mult.3, man/man3/qutil_double_sum.3: minor
+	  documentation change
+
+2008-03-28 18:33  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/qutil_double_max.3, man/man3/qutil_double_min.3,
+	  man/man3/qutil_double_mult.3, man/man3/qutil_double_sum.3,
+	  src/qutil.c, test/test1.c: if sizeof(int) < sizeof(aligned_t),
+	  avoid errors by aborting - DOCUMENT THIS
+
+2008-03-24 17:36  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: another AS_IF fix
+
+2008-03-24 17:31  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: AS_IF doesnt quite work as advertized on autoconf
+	  2.59
+
+2008-03-22 15:28  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_sst.m4, configure.in: trying to avoid excess
+	  flags
+
+2008-03-21 18:36  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_sst.m4: typo
+
+2008-03-21 18:28  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/sst/qthread-sst.c: fix the qthread_fork_to retval
+
+2008-03-19 04:46  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: fix a bunch of casts for SST (which
+	  corrects some compiler errors) and fix a problem with
+	  qthread_incr() returning the wrong value
+
+2008-03-19 04:44  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread_innards.h, src/qloop.c: on SST, we have no qlib
+	  object, so we need a new way of finding out how many shepherds
+	  there are
+
+2008-03-19 04:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_sst.m4, src/Makefile.am: a bunch of compiler
+	  flags are needed to compile a valid library for use with the SST
+
+2008-03-14 19:38  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h, src/qthread.c: fixed the WORDSIZE bug
+	  by replacing it with sizeof(aligned_t). also moved a few things
+	  around in qthread.h to make it a little tidier, and increased the
+	  size of qthread_shepherd_id_t (cuz these days you just never
+	  know)
+
+2008-03-14 19:13  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: theres no reason UINT8_MAX should need to be
+	  defined in the code (if the system is wonky, define it in the
+	  configure script)
+
+2008-03-14 19:10  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: not sure what system this was supposed to fix, but
+	  whatever it was, the test should go into the configure script
+	  instead of the code
+
+2008-03-14 19:08  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, src/qthread.c: moved default stack size
+	  determination into the configure script, and out of the code
+
+2008-03-14 18:36  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: rolled back the AS_CASE constructions. Apparently
+	  "too immature to be widely used" means "AS_CASE is not supported
+	  by autoconf 2.59"
+
+2008-03-14 00:21  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: fixed --enable-asserts (missing a comma),
+	  simplified a few AS_IF instances, and replaced the two case
+	  statements with AS_CASE constructions. The documentation for
+	  autoconf says the AS_IF and AS_CASE constructions are "too
+	  immature to be widely used"... Oh well.
+
+2008-03-14 00:19  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: should really check these things
+
+2008-03-13 23:47  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: 64-bit incr_mod implementation
+
+2008-03-13 23:10  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: tidy up the new asm changes a little
+
+2008-03-13 22:00  Brian Barrett <bwbarre@sandia.gov>
+
+	* configure.in: Also need to set alignment to 64 bit when using 64
+	  bit align_t
+
+2008-03-13 21:52  Brian Barrett <bwbarre@sandia.gov>
+
+	* configure.in, include/qthread/common.h.in,
+	  include/qthread/qthread.h: Differentiate between alignment and
+	  size for align_t type
+
+2008-03-13 21:44  Brian Barrett <bwbarre@sandia.gov>
+
+	* acinclude.m4, config/qthread_check_assembly.m4, configure.in,
+	  include/qthread/common.h.in, include/qthread/qthread.h,
+	  src/qthread.c: * Test to see if compiler can properly do gcc
+	  inline assembly
+	  * Fix IA-32 increment when optimizer enabled
+	  * Add better support for platforms that can have aligned_t be
+	  either
+	  32 or 64 bits
+
+2008-03-11 20:21  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: intel OSX boxes
+
+2008-03-03 22:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* autogen.sh: enough of cross-compiling warnings
+
+2008-03-03 19:31  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/Makefile.am: dependencies
+
+2008-03-03 19:30  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: simpler need-qtimer test
+
+2008-03-03 19:30  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qtimer/Makefile.am, src/qtimer/altix.c: altix qtimer fixes
+
+2008-03-01 19:04  Brian Barrett <bwbarre@sandia.gov>
+
+	* acinclude.m4, config/qthread_check_altix_timer.m4, configure.in,
+	  src/qtimer/altix.c: Add initial (untested) support for Altix
+	  timers
+
+2008-02-29 01:55  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* AUTHORS, ChangeLog: svn2cl stuff
+
 2008-02-29 01:36  Kyle Wheeler <kbwheel@sandia.gov>
 
 	* test/test1.c, test/testloop.cpp: silence garbage test output
@@ -56,8 +1246,8 @@
 
 	* config/qthread_check_attribute_aligned.m4,
 	  include/qthread/qthread.h: Hack for working around Sun's
-	  attribute aligned issue -- I can't seem to find a way to make a
-	  small testcase that shows the problem. Ugh.
+	  attribute aligned issue -- I can't seem to
+	  find a way to make a small testcase that shows the problem. Ugh.
 
 2008-02-28 21:08  Brian Barrett <bwbarre@sandia.gov>
 
@@ -66,13 +1256,15 @@
 2008-02-28 20:57  Brian Barrett <bwbarre@sandia.gov>
 
 	* configure.in, src/qtimer/gethrtime.c, src/qtimer/gettimeofday.c:
-	  - Find the right timer - Fix missing header in gettimeofday timer
+	  - Find the right timer
+	  - Fix missing header in gettimeofday timer
 	  - Implement Solaris gethrtime timer
 
 2008-02-28 20:20  Brian Barrett <bwbarre@sandia.gov>
 
 	* configure.in: Verified we could use AM 1.7. Added rational for
-	  not supporting 1.6.3 (which is what ships with Tiger)
+	  not supporting 1.6.3
+	  (which is what ships with Tiger)
 
 2008-02-28 20:08  Brian Barrett <bwbarre@sandia.gov>
 
@@ -90,24 +1282,28 @@
 	  src/qthread.c, src/qtimer/Makefile.am, src/qtimer/gethrtime.c,
 	  src/qtimer/gettimeofday.c, src/qtimer/mach.c, test/Makefile.am:
 	  Rather large rewrite of configure and build files to be a little
-	  bit more user friendly and fix up a couple of issues that were
-	  causing problems on some platforms. Also splits the big macros
-	  into their own .m4 files to make the top-level configure a bit
-	  easier to follow.
+	  bit
+	  more user friendly and fix up a couple of issues that were
+	  causing
+	  problems on some platforms. Also splits the big macros into their
+	  own .m4 files to make the top-level configure a bit easier to
+	  follow.
 
 2008-02-27 23:36  Brian Barrett <bwbarre@sandia.gov>
 
 	* Makefile.am, configure.in: Remove turd files during make clean.
-	  Don't need to be quite as aggressive as before, as we don't need
-	  quite as pristine a source tree now that "make dist" is used
-	  instead of tarring up the source...
+	  Don't need to be quite as aggressive
+	  as before, as we don't need quite as pristine a source tree now
+	  that
+	  "make dist" is used instead of tarring up the source...
 
 2008-02-27 23:31  Brian Barrett <bwbarre@sandia.gov>
 
 	* Makefile.am, configure.in: Ugly hack to pass in --with-cprops to
-	  configure during distcheck if it was passed to the initial
-	  configure, so that make distcheck will work if cprops isn't in
-	  the default search path.
+	  configure during distcheck if it was
+	  passed to the initial configure, so that make distcheck will work
+	  if
+	  cprops isn't in the default search path.
 
 2008-02-27 23:26  Brian Barrett <bwbarre@sandia.gov>
 
@@ -329,8 +1525,10 @@
 2008-01-24 19:39  Brian Barrett <bwbarre@sandia.gov>
 
 	* qthread.c, qthread/qthread.h: * Implement assembly for
-	  internal_incr_mod * Fix error in incrementing oldval in the wrong
-	  place with internal_incr * Minor optimization found by Kyle
+	  internal_incr_mod
+	  * Fix error in incrementing oldval in the wrong place with
+	  internal_incr
+	  * Minor optimization found by Kyle
 
 2008-01-24 18:55  Kyle Wheeler <kbwheel@sandia.gov>
 
@@ -345,8 +1543,8 @@
 2008-01-24 16:53  Brian Barrett <bwbarre@sandia.gov>
 
 	* qthread.c, qthread/qthread.h: Implement SPARC assembly. Due to a
-	  bug in the Sun studio compiler, only use if SUN_ASSEMBLY is
-	  manually defined
+	  bug in the Sun studio compiler,
+	  only use if SUN_ASSEMBLY is manually defined
 
 2008-01-24 16:51  Kyle Wheeler <kbwheel@sandia.gov>
 
@@ -1021,17 +2219,22 @@
 2007-03-10 00:10  Kyle Wheeler <kbwheel@sandia.gov>
 
 	* futurelib.c, qthread.c: Extensive use of pthread_getspecific()
-	  and related thread-local memory pieces. In theory, this allows us
-	  to be a bit faster on very large systems with intelligently
-	  implemented pthreads libraries (in practice on smaller systems,
+	  and related thread-local memory pieces.
+	  In theory, this allows us to be a bit faster on very large
+	  systems with
+	  intelligently implemented pthreads libraries (in practice on
+	  smaller systems,
 	  it doesn't hurt). Also removed a bunch of locks from thread
-	  spawning, namely deciding which shepherd to send it to and
-	  generating a thread ID. Now (unless QTHREAD_NONLAZY_THREADIDS is
-	  defined) thread ID's are only generated if you ASK for them (via
-	  qthread_id()), and which shepherd to send a thread to is done via
-	  a per-shepherd round-robin (thus, no locks). This shouldn't
-	  result in imbalanced code for sufficiently large numbers of
-	  threads.
+	  spawning, namely
+	  deciding which shepherd to send it to and generating a thread ID.
+	  Now (unless
+	  QTHREAD_NONLAZY_THREADIDS is defined) thread ID's are only
+	  generated if you
+	  ASK for them (via qthread_id()), and which shepherd to send a
+	  thread to is
+	  done via a per-shepherd round-robin (thus, no locks). This
+	  shouldn't result in
+	  imbalanced code for sufficiently large numbers of threads.
 
 2007-03-10 00:06  Kyle Wheeler <kbwheel@sandia.gov>
 
@@ -1175,10 +2378,12 @@
 2006-11-29 18:27  Kyle Wheeler <kbwheel@sandia.gov>
 
 	* testloop.cpp: Attempting to solve an intractable problem. The
-	  deal is that we want to make this template only accept array-ish
-	  types (i.e. objects that have operator[] defined), but have no
-	  real way of doing that in a cross-compiler compatable way.
-	  Suggestions are very welcome.
+	  deal is that we want to make
+	  this template only accept array-ish types (i.e. objects that have
+	  operator[]
+	  defined), but have no real way of doing that in a cross-compiler
+	  compatable
+	  way. Suggestions are very welcome.
 
 2006-11-29 00:02  Kyle Wheeler <kbwheel@sandia.gov>
 
@@ -1632,9 +2837,11 @@
 2006-10-26 14:14  Kyle Wheeler <kbwheel@sandia.gov>
 
 	* qthread.c, qthread.h: Added detached threads (i.e. threads that
-	  clean up after themselves when they exit), and made it possible
-	  to toggle mempooling on and off (currently, mempools seem to be
-	  broken when compiled for 64-bit architectures).
+	  clean up after themselves when they
+	  exit), and made it possible to toggle mempooling on and off
+	  (currently,
+	  mempools seem to be broken when compiled for 64-bit
+	  architectures).
 
 2006-10-18 21:13  Kyle Wheeler <kbwheel@sandia.gov>
 
@@ -1783,26 +2990,30 @@
 2006-06-28 23:32  Richard Murphy <rcmurph@sandia.gov>
 
 	* main.c, qthread.c: This commit was generated by cvs2svn to
-	  compensate for changes in r8, which included commits to RCS files
-	  with non-trunk default branches.
+	  compensate for changes in r8,
+	  which included commits to RCS files with non-trunk default
+	  branches.
 
 2006-06-28 23:16  Richard Murphy <rcmurph@sandia.gov>
 
 	* qthread.h: This commit was generated by cvs2svn to compensate for
-	  changes in r6, which included commits to RCS files with non-trunk
-	  default branches.
+	  changes in r6,
+	  which included commits to RCS files with non-trunk default
+	  branches.
 
 2006-06-28 19:22  Richard Murphy <rcmurph@sandia.gov>
 
 	* Makefile: This commit was generated by cvs2svn to compensate for
-	  changes in r4, which included commits to RCS files with non-trunk
-	  default branches.
+	  changes in r4,
+	  which included commits to RCS files with non-trunk default
+	  branches.
 
 2006-06-22 19:15  Richard Murphy <rcmurph@sandia.gov>
 
 	* redblack.c, redblack.h: This commit was generated by cvs2svn to
-	  compensate for changes in r2, which included commits to RCS files
-	  with non-trunk default branches.
+	  compensate for changes in r2,
+	  which included commits to RCS files with non-trunk default
+	  branches.
 
 2006-06-22 19:15  
 
