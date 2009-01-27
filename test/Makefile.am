@@ -8,6 +8,7 @@ TESTS = test1 test2 test3 test_qalloc \
 		testqloop testid testloop \
 		test_internal_mod \
 		test_migrate \
+		test_qarray \
 		test_qutil_qsort
 
 if ENABLE_TIMER_PROGS
@@ -63,6 +64,9 @@ test_migrate_DEPENDENCIES = $(QTHREADLIB)
 
 test_qutil_qsort_SOURCES = test_qutil_qsort.c
 test_qutil_qsort_DEPENDENCIES = $(QTHREADLIB)
+
+test_qarray_SOURCES = test_qarray.c
+test_qarray_DEPENDENCIES = $(QTHREADLIB)
 
 time_swap_SOURCES = time_swap.c
 time_swap_CPPFLAGS = -I$(top_srcdir)/src/ # for osx_compat
