@@ -12,7 +12,7 @@ TESTS = test1 test2 test3 test_qalloc \
 		test_qutil_qsort
 
 if ENABLE_TIMER_PROGS
-TESTS += time_swap time_producerconsumer time_increments
+TESTS += time_gcd time_swap time_producerconsumer time_increments
 endif
 
 
@@ -67,6 +67,10 @@ test_qutil_qsort_DEPENDENCIES = $(QTHREADLIB)
 
 test_qarray_SOURCES = test_qarray.c
 test_qarray_DEPENDENCIES = $(QTHREADLIB)
+
+time_gcd_SOURCES = time_gcd.c
+time_gcd_LDADD = $(QTIMERLIB)
+time_gcd_DEPENDENCIES = $(QTIMERLIB)
 
 time_swap_SOURCES = time_swap.c
 time_swap_CPPFLAGS = -I$(top_srcdir)/src/ # for osx_compat
