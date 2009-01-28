@@ -58,9 +58,14 @@ static QINLINE void* qt_cas(volatile void** ptr, void* oldv, void* newv)
     return retval;
 #  elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
     void ** retval;
+    /* note that this is GNU/Linux syntax (aka AT&T syntax), not Intel syntax.
+     * Thus, this instruction has the form:
+     * [lock] cmpxchg reg, reg/mem
+     *                src, dest
+     */
     __asm__ __volatile__ ("lock; cmpxchg %1,%2"
-	    : "=a"(retval) /* store from EAX */
-	    : "r"(newv), "m" (*(volatile void**)ptr),
+	    : "=&a"(retval) /* store from EAX */
+	    : "r"(newv), "m" (*ptr),
 	      "0"(oldv) /* load into EAX */
 	    :"cc","memory");
     return retval;
