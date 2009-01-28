@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
 	if (threads <= 0) threads = 1;
 	interactive = 1;
     }
-    qthread_init(threads);
+    assert(qthread_init(threads) == 0);
 
     if (interactive == 1) {
 	printf("%i threads...\n", threads);

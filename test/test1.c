@@ -265,9 +265,9 @@ int main(int argc, char *argv[])
 	d_len = i_len = ui_len = strtol(argv[3], NULL, 0);
     }
 
-    qthread_init(threads);
+    assert(qthread_init(threads) == 0);
     future_init(futurelimit);
-    qthread_fork(qmain, NULL, &ret);
+    assert(qthread_fork(qmain, NULL, &ret) == 0);
     qthread_readFF(qthread_self(), NULL, &ret);
     qthread_finalize();
     return 0;
