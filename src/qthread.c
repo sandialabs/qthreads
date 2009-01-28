@@ -320,15 +320,19 @@ static QINLINE void FREE_QTHREAD(qthread_t * t)
 #define FREE_CONTEXT(shep, t) qt_mpool_free(shep?(shep->context_pool):generic_context_pool, t)
 #endif
 
-#define MULTIPLEOF(s,m) ((s%m)?(s+m-(s%m)):(s))
-
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
-#define ALLOC_QUEUE(shep) (qthread_queue_t *) malloc(sizeof(qthread_queue_t))
-#define FREE_QUEUE(t) free(t)
-#define ALLOC_LFQUEUE(shep) (qt_lfqueue_t *) malloc(sizeof(qt_lfqueue_t))
-#define FREE_LFQUEUE(t) free(t)
-#define ALLOC_LFQNODE(shep) (qt_lfqueue_node_t *) malloc(MULTIPLEOF(sizeof(qt_lfqueue_node_t),16))
-#define FREE_LFQNODE(t) free(t)
+# define ALLOC_QUEUE(shep) (qthread_queue_t *) malloc(sizeof(qthread_queue_t))
+# define FREE_QUEUE(t) free(t)
+# define ALLOC_LFQUEUE(shep) (qt_lfqueue_t *) malloc(sizeof(qt_lfqueue_t))
+# define FREE_LFQUEUE(t) free(t)
+# ifdef HAVE_MEMALIGN
+#  define ALLOC_LFQNODE(ret,shep) (ret) = (qt_lfqueue_node_t *) memalign(16, sizeof(qt_lfqueue_node_t))
+# elif HAVE_POSIX_MEMALIGN
+#  define ALLOC_LFQNODE(ret,shep) posix_memalign(ret,16,sizeof(qt_lfqueue_node_t))
+# else
+#  define ALLOC_LFQNODE(ret,shep) (ret) = malloc(sizeof(qt_lfqueue_node_t));
+# endif
+# define FREE_LFQNODE(t) free(t)
 #else
 static QINLINE qthread_queue_t *ALLOC_QUEUE(qthread_shepherd_t * shep)
 {
@@ -362,15 +366,14 @@ static QINLINE void FREE_LFQUEUE(qt_lfqueue_t * t)
 	            creator_ptr ? (t->creator_ptr->
 				   lfqueue_pool) : generic_lfqueue_pool, t);
 }
-static QINLINE qt_lfqueue_node_t *ALLOC_LFQNODE(qthread_shepherd_t * shep)
+static QINLINE void ALLOC_LFQNODE(qt_lfqueue_node_t **ret, qthread_shepherd_t * shep)
 {
-    qt_lfqueue_node_t *tmp =
+    *ret =
 	(qt_lfqueue_node_t *) qt_mpool_alloc(shep ? (shep->lfqueue_node_pool) :
 						generic_lfqueue_node_pool);
-    if (tmp != NULL) {
-	tmp->creator_ptr = shep;
+    if (*ret != NULL) {
+	(*ret)->creator_ptr = shep;
     }
-    return tmp;
 }
 static QINLINE void FREE_LFQNODE(qt_lfqueue_node_t * t)
 {
@@ -967,7 +970,11 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	qassert(getrlimit(RLIMIT_STACK, &rlp), 0);
 	qthread_debug(2, "stack sizes ... cur: %u max: %u\n", rlp.rlim_cur,
 		rlp.rlim_max);
-	qlib->master_stack_size = rlp.rlim_cur;
+	if (rlp.rlim_cur == RLIM_INFINITY) {
+	    qlib->master_stack_size = 8 * 1024 * 1024;
+	} else {
+	    qlib->master_stack_size = (unsigned int)(rlp.rlim_cur);
+	}
 	qlib->max_stack_size = rlp.rlim_max;
     }
 
@@ -998,7 +1005,7 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	qlib->shepherds[i].lfqueue_pool =
 	    qt_mpool_create(need_sync, sizeof(qt_lfqueue_t));
 	qlib->shepherds[i].lfqueue_node_pool =
-	    qt_mpool_create(need_sync, MULTIPLEOF(sizeof(qt_lfqueue_node_t),16));
+	    qt_mpool_create_aligned(need_sync, sizeof(qt_lfqueue_node_t), 16);
 	qlib->shepherds[i].lock_pool =
 	    qt_mpool_create(need_sync, sizeof(qthread_lock_t));
 	qlib->shepherds[i].addrres_pool =
@@ -1015,7 +1022,7 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
     generic_lfqueue_pool =
 	qt_mpool_create(need_sync, sizeof(qt_lfqueue_t));
     generic_lfqueue_node_pool =
-	qt_mpool_create(need_sync, MULTIPLEOF(sizeof(qt_lfqueue_node_t),16));
+	qt_mpool_create_aligned(need_sync, sizeof(qt_lfqueue_node_t), 16);
     generic_lock_pool =
 	qt_mpool_create(need_sync, sizeof(qthread_lock_t));
     generic_addrstat_pool =
@@ -1534,8 +1541,8 @@ static QINLINE void qthread_thread_free(qthread_t * t)
  * monotonically increasing counter associated with it. The counter doesn't
  * need to be huge, just big enough to avoid trouble. We'll
  * just claim 4, to be conservative. Thus, a qt_lfqueue_node_t must be at least 16 bytes. */
-#define QPTR(x) ((qt_lfqueue_node_t*)((((uintptr_t)(x))>>4)<<4))
 #define QCTR_MASK (15)
+#define QPTR(x) ((qt_lfqueue_node_t*)(((uintptr_t)(x))&~(uintptr_t)QCTR_MASK))
 #define QCTR(x) ((unsigned char)(((uintptr_t)(x))&QCTR_MASK))
 #define QCOMPOSE(x,y) (void*)(((uintptr_t)QPTR(x))|((QCTR(y)+1)&QCTR_MASK))
 
@@ -1545,7 +1552,7 @@ static QINLINE qt_lfqueue_t *qt_lfqueue_new(qthread_shepherd_t* shepherd)
 
     if (q != NULL) {
 	q->creator_ptr = shepherd;
-	q->head = ALLOC_LFQNODE(shepherd);
+	ALLOC_LFQNODE(((qt_lfqueue_node_t**)&(q->head)), shepherd);
 	//q->head = malloc(sizeof(qt_lfqueue_node_t));
 	assert(q->head != NULL);
 	if (QPTR(q->head) == NULL) { // if we're not using asserts, fail nicely
@@ -1572,9 +1579,10 @@ static QINLINE void qt_lfqueue_enqueue(qt_lfqueue_t * q, qthread_t* t, qthread_s
     assert(t != NULL);
     assert(q != NULL);
 
-    node = ALLOC_LFQNODE(shep);
+    ALLOC_LFQNODE(&node, shep);
     //node = malloc(sizeof(qt_lfqueue_node_t));
     assert(node != NULL);
+    assert((((uintptr_t)node)&QCTR_MASK) == 0); // node MUST be aligned
 
     node->value = t;
     // set to null without disturbing the ctr

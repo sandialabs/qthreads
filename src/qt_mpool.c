@@ -6,6 +6,9 @@
 #include "qt_atomics.h"
 #include <stddef.h> /* for size_t (according to C89) */
 #include <stdlib.h> /* for calloc() and malloc() */
+#if (HAVE_MEMALIGN && HAVE_MALLOC_H)
+#include <malloc.h> /* for memalign() */
+#endif
 
 #ifdef QTHREAD_USE_PTHREADS
 #include <pthread.h>
@@ -23,6 +26,7 @@ struct qt_mpool_s {
     size_t item_size;
     size_t alloc_size;
     size_t items_per_alloc;
+    size_t alignment;
 
     volatile void * reuse_pool;
     char * alloc_block;
@@ -54,10 +58,34 @@ static QINLINE size_t mpool_lcm(size_t a, size_t b)
     return (tmp!=0)?(a*b/tmp):0;
 }
 
+static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size, size_t alignment)
+{
+#ifdef HAVE_MEMALIGN
+    if (alignment != 0) {
+	return memalign(alignment, alloc_size);
+    } else {
+	return malloc(alloc_size);
+    }
+#elif HAVE_PAGE_ALIGNED_MALLOC
+    return malloc(alloc_size);
+#elif HAVE_POSIX_MEMALIGN
+    if (alignment != 0) {
+	void *ret;
+	posix_memalign(&(ret), alignment, alloc_size);
+	return ret;
+    } else {
+	return malloc(alloc_size);
+    }
+#else
+#warning cross your fingers that this works! alignment issues abound...
+    return malloc(alloc_size); /* cross your fingers */
+#endif
+}
+
 // sync means pthread-protected
 // item_size is how many bytes to return
 // ...memory is always allocated in multiples of getpagesize()
-qt_mpool qt_mpool_create(int sync, size_t item_size)
+qt_mpool qt_mpool_create_aligned(int sync, size_t item_size, size_t alignment)
 {
     qt_mpool pool = (qt_mpool) calloc(1, sizeof(struct qt_mpool_s));
     size_t alloc_size = 0;
@@ -93,7 +121,11 @@ qt_mpool qt_mpool_create(int sync, size_t item_size)
     if (item_size % sizeof(void*)) {
 	item_size += (sizeof(void*)) - (item_size % sizeof(void*));
     }
+    if (alignment != 0 && item_size % alignment) {
+	item_size += alignment - (item_size % alignment);
+    }
     pool->item_size = item_size;
+    pool->alignment = alignment;
     /* next, we find the least-common-multiple in sizes between item_size and
      * pagesize. If this is less than ten items (an arbitrary number), we
      * increase the alloc_size until it is at least that big. This guarantees
@@ -116,7 +148,12 @@ qt_mpool qt_mpool_create(int sync, size_t item_size)
     pool->items_per_alloc = alloc_size/item_size;
 
     pool->reuse_pool = NULL;
-    pool->alloc_block = (char *) malloc(alloc_size);
+    if (alignment != 0) {
+	pool->alloc_block = (char *) qt_mpool_internal_aligned_alloc(alloc_size, alignment);
+	assert(((unsigned long)(pool->alloc_block) & (alignment - 1)) == 0);
+    } else {
+	pool->alloc_block = malloc(pool->alloc_size);
+    }
     assert(pool->alloc_block != NULL);
     if (pool->alloc_block == NULL) {
 #ifdef QTHREAD_USE_PTHREADS
@@ -145,6 +182,11 @@ qt_mpool qt_mpool_create(int sync, size_t item_size)
     pool->alloc_list[0] = pool->alloc_block;
     pool->alloc_list_pos = 1;
     return pool;
+}
+
+qt_mpool qt_mpool_create(int sync, size_t item_size)
+{
+    return qt_mpool_create_aligned(sync, item_size, 0);
 }
 
 void * qt_mpool_alloc(qt_mpool pool)
@@ -177,8 +219,13 @@ void * qt_mpool_alloc(qt_mpool pool)
 		pool->alloc_list = tmp;
 		pool->alloc_list_pos = 0;
 	    }
-	    p = malloc(pool->alloc_size);
+	    if (pool->alignment != 0) {
+		p = qt_mpool_internal_aligned_alloc(pool->alloc_size, pool->alignment);
+	    } else {
+		p = malloc(pool->alloc_size);
+	    }
 	    assert(p != NULL);
+	    assert(pool->alignment == 0 || (((unsigned long)p) & (pool->alignment - 1)) == 0);
 	    if (p == NULL) {
 		goto alloc_exit;
 	    }
@@ -195,6 +242,11 @@ void * qt_mpool_alloc(qt_mpool pool)
 	    qassert(pthread_mutex_unlock(pool->lock), 0);
 	}
 #endif
+	if (pool->alignment != 0 && (((unsigned long)p) & (pool->alignment - 1))) {
+	    printf("alloc_block = %p\n", pool->alloc_block);
+	    printf("item_size = %u\n", (unsigned)(pool->item_size));
+	    assert(pool->alignment == 0 || (((unsigned long)p) & (pool->alignment - 1)) == 0);
+	}
     }
 alloc_exit:
     return p;
