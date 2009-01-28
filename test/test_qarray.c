@@ -43,8 +43,7 @@ int main(int argc, char *argv[])
     int threads = 1;
     qthread_t *me;
     distribution_t disttypes[] = {
-	FIXED_HASH, ALL_SAME, DIST_RAND/*, DIST_REG_STRIPES, DIST_REG_FIELDS,
-	DIST_LEAST */
+	FIXED_HASH, ALL_RAND, DIST_RAND, DIST_REG_STRIPES, DIST_REG_FIELDS
     };
     int dt_index;
     int interactive = 0;
@@ -69,9 +68,11 @@ int main(int argc, char *argv[])
 	/* test a basic array of doubles */
 	count = 0;
 	a = qarray_create(ELEMENT_COUNT, sizeof(double), disttypes[dt_index]);
-	if (interactive) printf("type %i, created basic array of doubles\n", dt_index);
+	if (interactive)
+	    printf("type %i, created basic array of doubles\n", dt_index);
 	qarray_iter(me, a, assign1);
-	if (interactive) printf("type %i, iterated; now checking work...\n", dt_index);
+	if (interactive)
+	    printf("type %i, iterated; now checking work...\n", dt_index);
 	if (count != ELEMENT_COUNT) {
 	    printf("count = %lu, dt_index = %i\n", (unsigned long)count,
 		   dt_index);
@@ -91,15 +92,18 @@ int main(int argc, char *argv[])
 		}
 	    }
 	}
-	if (interactive) printf("type %i, correct result!\n", dt_index);
+	if (interactive)
+	    printf("type %i, correct result!\n", dt_index);
 	qarray_free(a);
 
 	/* now test an array of giant things */
 	count = 0;
 	a = qarray_create(ELEMENT_COUNT, sizeof(bigobj), disttypes[dt_index]);
-	if (interactive) printf("type %i, created array of big objects\n", dt_index);
+	if (interactive)
+	    printf("type %i, created array of big objects\n", dt_index);
 	qarray_iter(me, a, assignall1);
-	if (interactive) printf("type %i, iterated; now checking work...\n", dt_index);
+	if (interactive)
+	    printf("type %i, iterated; now checking work...\n", dt_index);
 	if (count != ELEMENT_COUNT) {
 	    printf("count = %lu, dt_index = %i\n", (unsigned long)count,
 		   dt_index);
@@ -123,15 +127,18 @@ int main(int argc, char *argv[])
 		}
 	    }
 	}
-	if (interactive) printf("type %i, correct result!\n", dt_index);
+	if (interactive)
+	    printf("type %i, correct result!\n", dt_index);
 	qarray_free(a);
 
 	/* now test an array of weird-sized things */
 	a = qarray_create(ELEMENT_COUNT, sizeof(offsize),
 			  disttypes[dt_index]);
-	if (interactive) printf("type %i, created array of odd-sized objects\n", dt_index);
+	if (interactive)
+	    printf("type %i, created array of odd-sized objects\n", dt_index);
 	qarray_iter_loop(me, a, assignoff1);
-	if (interactive) printf("type %i, iterated; now checking work...\n", dt_index);
+	if (interactive)
+	    printf("type %i, iterated; now checking work...\n", dt_index);
 	{
 	    size_t i;
 
@@ -150,7 +157,8 @@ int main(int argc, char *argv[])
 		}
 	    }
 	}
-	if (interactive) printf("type %i, correct result!\n", dt_index);
+	if (interactive)
+	    printf("type %i, correct result!\n", dt_index);
 	qarray_free(a);
     }
 
