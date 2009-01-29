@@ -77,8 +77,24 @@ static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size, size_t a
 	return malloc(alloc_size);
     }
 #else
-#warning cross your fingers that this works! alignment issues abound...
-    return malloc(alloc_size); /* cross your fingers */
+    if (alignment != 0) {
+	return valloc(alloc_size); /* cross your fingers */
+    } else {
+	return malloc(alloc_size);
+    }
+#endif
+}
+
+static QINLINE void qt_mpool_internal_aligned_free(void*freeme, size_t alignment)
+{
+#if (HAVE_MEMALIGN || HAVE_PAGE_ALIGNED_MALLOC || HAVE_POSIX_MEMALIGN)
+    free(freeme);
+#else
+    if (alignment != 0) {
+	free(freeme);
+    } else {
+	return; /* XXX: cannot necessarily free valloc'd memory */
+    }
 #endif
 }
 
@@ -169,7 +185,7 @@ qt_mpool qt_mpool_create_aligned(int sync, size_t item_size, size_t alignment)
     pool->alloc_list = calloc(1, pagesize);
     assert(pool->alloc_list != NULL);
     if (pool->alloc_list == NULL) {
-	free(pool->alloc_block);
+	qt_mpool_internal_aligned_free(pool->alloc_block, alignment);
 #ifdef QTHREAD_USE_PTHREADS
 	if (sync) {
 	    qassert(pthread_mutex_destroy(pool->lock), 0);
@@ -273,7 +289,7 @@ void qt_mpool_destroy(qt_mpool pool)
 	    unsigned int i=0;
 	    void *p = pool->alloc_list[0];
 	    while (p && i < (pagesize/sizeof(void*) - 1)) {
-		free(p);
+		qt_mpool_internal_aligned_free(p,pool->alignment);
 		i++;
 		p = pool->alloc_list[i];
 	    }
