@@ -315,6 +315,7 @@ AC_FUNC_VPRINTF
 AC_FUNC_MMAP
 AC_CHECK_FUNCS([strtol floor memalign posix_memalign memset memmove munmap memcpy getrlimit setrlimit fstat64 lseek64 getcontext swapcontext makecontext sched_yield])
 AX_CHECK_PAGE_ALIGNED_MALLOC
+AX_CHECK_16ALIGNED_MALLOC
 
 AC_CACHE_SAVE
 

@@ -4,6 +4,7 @@ dnl Copyright (c) 2008 Sandia Corporation
 
 m4_include([config/ax_create_stdint_h.m4])
 m4_include([config/ax_check_page_aligned_malloc.m4])
+m4_include([config/ax_check_16aligned_malloc.m4])
 m4_include([config/ac_compile_check_sizeof.m4])
 dnl Only include this if we're using an old Autoconf.  Remove when we
 dnl finally drop support for AC 2.59
