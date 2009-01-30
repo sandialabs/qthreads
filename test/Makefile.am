@@ -82,9 +82,9 @@ time_swap_DEPENDENCIES += $(CONTEXTLIB)
 endif
 
 time_producerconsumer_SOURCES = time_producerconsumer.c
-time_producerconsumer_LDADD = $(QTIMERLIB) $(QTHREADLIB)
-time_producerconsumer_DEPENDENCIES = $(QTIMERLIB) $(QTHREADLIB)
+time_producerconsumer_LDADD = $(QTHREADLIB)
+time_producerconsumer_DEPENDENCIES = $(QTHREADLIB)
 
 time_increments_SOURCES = time_increments.c
-time_increments_LDADD = $(QTIMERLIB) $(QTHREADLIB)
-time_increments_DEPENDENCIES = $(QTIMERLIB) $(QTHREADLIB)
+time_increments_LDADD = $(QTHREADLIB)
+time_increments_DEPENDENCIES = $(QTHREADLIB)
