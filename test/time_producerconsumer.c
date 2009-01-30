@@ -115,23 +115,6 @@ aligned_t FEB_player1(qthread_t * me, void *arg)
     return 0;
 }
 
-aligned_t incrloop(qthread_t * me, void *arg)
-{
-    unsigned int i;
-
-    for (i = 0; i < ITERATIONS; i++) {
-	qthread_incr(&incrementme, 1);
-    }
-    return 0;
-}
-
-void qt_incrloop(qthread_t *me, const size_t startat, const size_t stopat, void *arg)
-{
-    for (size_t i = startat; i < stopat; i++) {
-	qthread_incr(&incrementme, 1);
-    }
-}
-
 char *human_readable_rate(double rate)
 {
     static char readable_string[100] = { 0 };
@@ -367,45 +350,6 @@ int main(int argc, char *argv[])
 	(MAXPARALLELISM*ITERATIONS * 2 * sizeof(aligned_t)) / (total_p1_sending_time[0] +
 						total_p2_sending_time[0]);
     printf("\t = data hop throughput: %20g bytes/sec %s\n", rate,
-	   human_readable_rate(rate));
-
-    /* COMPETING INCREMENT LOOP */
-    printf("\tCompeting increment loop: "); fflush(stdout);
-    qtimer_start(timer);
-    for (i = 0; i < MAXPARALLELISM; i++) {
-	qthread_fork(incrloop, NULL, rets+i);
-    }
-    for (i = 0; i < MAXPARALLELISM; i++) {
-	qthread_readFF(NULL, NULL, rets+i);
-    }
-    qtimer_stop(timer);
-    assert(incrementme == ITERATIONS*MAXPARALLELISM);
-
-    printf("%18g secs (%u-way %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
-    printf("\t + average increment time: %17g secs\n",
-	   qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
-    printf("\t + increment speed: %'24f increments/sec\n",
-	   (ITERATIONS*MAXPARALLELISM) / qtimer_secs(timer));
-    rate = (ITERATIONS*MAXPARALLELISM * sizeof(aligned_t)) / qtimer_secs(timer);
-    printf("\t = data throughput: %24g bytes/sec %s\n", rate,
-	   human_readable_rate(rate));
-
-    incrementme = 0;
-
-    /* A DIFFERENT INCREMENT LOOP */
-    printf("\tDifferent increment loop: "); fflush(stdout);
-    qtimer_start(timer);
-    qt_loop_balance(0, ITERATIONS*MAXPARALLELISM, qt_incrloop, NULL);
-    qtimer_stop(timer);
-    assert(incrementme == ITERATIONS*MAXPARALLELISM);
-
-    printf("%18g secs (%u-way %u iters)\n", qtimer_secs(timer), shepherds, (unsigned)(ITERATIONS*MAXPARALLELISM/shepherds));
-    printf("\t + average increment time: %17g secs\n",
-	   qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
-    printf("\t + increment speed: %'24f increments/sec\n",
-	   (ITERATIONS*MAXPARALLELISM) / qtimer_secs(timer));
-    rate = (ITERATIONS*MAXPARALLELISM * sizeof(aligned_t)) / qtimer_secs(timer);
-    printf("\t = data throughput: %24g bytes/sec %s\n", rate,
 	   human_readable_rate(rate));
 
     qtimer_free(timer);
