@@ -554,7 +554,7 @@ static QINLINE uint32_t qthread_incr32(volatile uint32_t * operand, const int in
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
     uint32_t retval;
     register unsigned int incrd = incrd;	/* no initializing */
-    asm volatile (
+    __asm__ __volatile__ (
 	    "1:\tlwarx  %0,0,%1\n\t"
 	    "add    %3,%0,%2\n\t"
 	    "stwcx. %3,0,%1\n\t"
