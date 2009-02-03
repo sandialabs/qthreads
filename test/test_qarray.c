@@ -43,7 +43,8 @@ int main(int argc, char *argv[])
     int threads = 1;
     qthread_t *me;
     distribution_t disttypes[] = {
-	FIXED_HASH, ALL_RAND, DIST_RAND, DIST_REG_STRIPES, DIST_REG_FIELDS
+	FIXED_HASH, ALL_LOCAL, ALL_RAND, ALL_LEAST, DIST_RAND,
+	    DIST_REG_STRIPES, DIST_REG_FIELDS, DIST_LEAST
     };
     int dt_index;
     int interactive = 0;

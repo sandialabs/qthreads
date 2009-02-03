@@ -18,6 +18,7 @@ struct qarray_s
 };
 
 static unsigned short pageshift = 0;
+static aligned_t *chunk_distribution_tracker = NULL;
 
 /* local funcs */
 static QINLINE size_t qarray_gcd(size_t a, size_t b)
@@ -42,6 +43,7 @@ qarray *qarray_create(const size_t count, const size_t unit_size,
 		      const distribution_t d)
 {
     size_t pagesize;
+    size_t cluster_count;	/* number of clusters allocated */
     qarray *ret = calloc(1, sizeof(qarray));
 
     assert(count > 0);
@@ -56,6 +58,11 @@ qarray *qarray_create(const size_t count, const size_t unit_size,
     }
     pagesize = 1 << pageshift;
 
+    if (chunk_distribution_tracker == NULL) {
+	chunk_distribution_tracker =
+	    calloc(qthread_shepherd_count(), sizeof(aligned_t));
+    }
+
     ret->count = count;
 
     /* so, here's the idea: memory is assigned to shepherds in units I'm
@@ -66,6 +73,9 @@ qarray *qarray_create(const size_t count, const size_t unit_size,
      * benefits). In SOME cases, such as FIXED_HASH and ALL_SAME, this is
      * unnecessary, so we can be a little more efficient with things by NOT
      * storing a shepherd ID in the clusters. */
+    /***************************
+     * Choose allocation sizes *
+     ***************************/
     switch (d) {
 	case ALL_LOCAL:
 	case ALL_RAND:
@@ -105,6 +115,9 @@ qarray *qarray_create(const size_t count, const size_t unit_size,
 	    break;
     }
 
+    /*****************
+     * Set dist_type *
+     *****************/
     switch (d) {
 	case ALL_LOCAL:
 	case ALL_RAND:
@@ -125,79 +138,131 @@ qarray *qarray_create(const size_t count, const size_t unit_size,
 	    break;
     }
 
-    ret->base_ptr =
-	calloc(ret->cluster_bytes,
-	       count / ret->cluster_size +
-	       ((count % ret->cluster_size) ? 1 : 0));
+    cluster_count =
+	count / ret->cluster_size + ((count % ret->cluster_size) ? 1 : 0);
+
+    ret->base_ptr = calloc(cluster_count, ret->cluster_bytes);
     if (ret->base_ptr == NULL) {
 	free(ret);
 	ret = NULL;
     }
 
+    /********************************************
+     * Assign locations, maintain cluster_count *
+     ********************************************/
     switch (d) {
 	case ALL_SAME:
 	case ALL_LOCAL:
 	    ret->dist_shep = qthread_shep(NULL);
+	    qthread_incr(&chunk_distribution_tracker[ret->dist_shep],
+			 cluster_count);
+	    break;
 	case ALL_RAND:
 	    ret->dist_shep = random() % qthread_shepherd_count();
+	    qthread_incr(&chunk_distribution_tracker[ret->dist_shep],
+			 cluster_count);
 	    break;
 	case ALL_LEAST:
-#warning ALL_LEAST is unimplemented
-	    assert(0);		       /* unumplemented */
+	{
+	    qthread_shepherd_id_t i, least = 0;
+
+	    for (i = 1; i < qthread_shepherd_count(); i++) {
+		if (chunk_distribution_tracker[i] <
+		    chunk_distribution_tracker[least]) {
+		    least = i;
+		}
+	    }
+	    ret->dist_shep = least;
+	    qthread_incr(&chunk_distribution_tracker[least], cluster_count);
+	}
+	    break;
 	case FIXED_HASH:
 	default:
+	{
+	    size_t cluster;
+
+	    for (cluster = 0; cluster < cluster_count; cluster++) {
+		void *clusterhead =
+		    qarray_elem_nomigrate(ret, cluster * ret->cluster_size);
+		qthread_incr(&chunk_distribution_tracker
+			     [(((uintptr_t) clusterhead) >> pageshift) %
+			      qthread_shepherd_count()], 1);
+	    }
+	}
 	    break;
 	case DIST_REG_STRIPES:
 	{
-	    const size_t num_clusters = (count / ret->cluster_size);
 	    size_t cluster;
-	    qthread_shepherd_id_t max_sheps = qthread_shepherd_count();
+	    const qthread_shepherd_id_t max_sheps = qthread_shepherd_count();
 
-	    for (cluster = 0; cluster < num_clusters; cluster++) {
-		void *ptr =
+	    for (cluster = 0; cluster < cluster_count; cluster++) {
+		void *clusterhead =
 		    qarray_elem_nomigrate(ret, cluster * ret->cluster_size);
-		ptr += ret->cluster_size * unit_size;
-		*(qthread_shepherd_id_t *) ptr = cluster % max_sheps;
+		clusterhead += ret->cluster_size * unit_size;
+		*(qthread_shepherd_id_t *) clusterhead = cluster % max_sheps;
+		qthread_incr(&chunk_distribution_tracker[cluster % max_sheps],
+			     1);
 	    }
 	}
 	    break;
 	case DIST_REG_FIELDS:
 	{
-	    const size_t num_clusters = (count / ret->cluster_size);
 	    size_t cluster;
-	    qthread_shepherd_id_t max_sheps = qthread_shepherd_count();
-	    const size_t field_size = num_clusters / max_sheps;
+	    const qthread_shepherd_id_t max_sheps = qthread_shepherd_count();
+	    const size_t field_size = cluster_count / max_sheps;
 	    qthread_shepherd_id_t cur_shep = 0;
 
-	    for (cluster = 0; cluster < num_clusters; cluster++) {
+	    for (cluster = 0; cluster < cluster_count; cluster++) {
 		void *ptr =
 		    qarray_elem_nomigrate(ret, cluster * ret->cluster_size);
 		ptr += ret->cluster_size * unit_size;
 		*(qthread_shepherd_id_t *) ptr = cur_shep;
+		qthread_incr(&chunk_distribution_tracker[cur_shep], 1);
 		if ((cluster % max_sheps) == (max_sheps - 1)) {
 		    cur_shep++;
 		    cur_shep *= (cur_shep != max_sheps);
 		}
 	    }
 	}
+	    break;
 	case DIST:		       /* assumed equivalent to DIST_RAND */
 	case DIST_RAND:
 	{
-	    const size_t num_clusters = (count / ret->cluster_size);
 	    size_t cluster;
-	    qthread_shepherd_id_t max_sheps = qthread_shepherd_count();
+	    const qthread_shepherd_id_t max_sheps = qthread_shepherd_count();
 
-	    for (cluster = 0; cluster < num_clusters; cluster++) {
+	    for (cluster = 0; cluster < cluster_count; cluster++) {
 		void *ptr =
 		    qarray_elem_nomigrate(ret, cluster * ret->cluster_size);
 		ptr += ret->cluster_size * unit_size;
 		*(qthread_shepherd_id_t *) ptr = random() % max_sheps;
+		qthread_incr(&chunk_distribution_tracker
+			     [*(qthread_shepherd_id_t *) ptr], 1);
 	    }
 	}
 	    break;
 	case DIST_LEAST:
-#warning DIST_LEAST is unimplemented
-	    assert(0);
+	{
+	    size_t cluster;
+	    const qthread_shepherd_id_t max_sheps = qthread_shepherd_count();
+
+	    for (cluster = 0; cluster < cluster_count; cluster++) {
+		qthread_shepherd_id_t i, least = 0;
+		void *ptr =
+		    qarray_elem_nomigrate(ret, cluster * ret->cluster_size);
+		ptr += ret->cluster_size * unit_size;
+
+		for (i = 1; i < max_sheps; i++) {
+		    if (chunk_distribution_tracker[i] <
+			chunk_distribution_tracker[least]) {
+			least = i;
+		    }
+		}
+		*(qthread_shepherd_id_t *) ptr = least;
+		qthread_incr(&chunk_distribution_tracker[least], 1);
+	    }
+	}
+	    break;
     }
     return ret;
 }
@@ -217,6 +282,52 @@ void qarray_free(qarray * a)
     assert(a->base_ptr);
     if (a) {
 	if (a->base_ptr) {
+	    switch (a->dist_type) {
+		case DIST:
+		{
+		    size_t cluster;
+		    const size_t cluster_count =
+			a->count / a->cluster_size +
+			((a->count % a->cluster_size) ? 1 : 0);
+		    for (cluster = 0; cluster < cluster_count; cluster++) {
+			void *clusterhead = qarray_elem_nomigrate(a,
+								  cluster *
+								  a->
+								  cluster_size);
+			clusterhead += a->cluster_size * a->unit_size;
+			qthread_incr(&chunk_distribution_tracker
+				     [*(qthread_shepherd_id_t *) clusterhead],
+				     -1);
+		    }
+		}
+		    break;
+		default:
+		case FIXED_HASH:
+		{
+		    size_t cluster;
+		    const size_t cluster_count =
+			a->count / a->cluster_size +
+			((a->count % a->cluster_size) ? 1 : 0);
+		    const qthread_shepherd_id_t max_shep =
+			qthread_shepherd_count();
+		    for (cluster = 0; cluster < cluster_count; cluster++) {
+			void *clusterhead = qarray_elem_nomigrate(a,
+								  cluster *
+								  a->
+								  cluster_size);
+			qthread_incr(&chunk_distribution_tracker
+				     [(((uintptr_t) clusterhead) >> pageshift)
+				      % max_shep], -1);
+		    }
+		}
+		    break;
+		case ALL_SAME:
+		    qthread_incr(&chunk_distribution_tracker[a->dist_shep],
+				 -1 * (a->count / a->cluster_size +
+				       ((a->count %
+					 a->cluster_size) ? 1 : 0)));
+		    break;
+	    }
 	    free(a->base_ptr);
 	}
 	free(a);
