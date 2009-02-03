@@ -277,12 +277,19 @@ AC_CACHE_SAVE
 # Find out if GCC understands -fno-gcse
 AC_CACHE_CHECK([if $CC understands -fno-gcse],
    [qthread_cv_cc_fno_gcse],
-   [CFLAGS_save="${CFLAGS}"
-    CFLAGS="${CFLAGS} -fno-gcse"
-    AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[]])], 
-                      [qthread_cv_cc_fno_gcse=yes],
-                      [qthread_cv_cc_fno_gcse=no])
-    CFLAGS="${CFLAGS_save}"])
+   [case "$CC" in
+	icc*) dnl icc accepts it and spits out warnings about unknown flags
+		qthread_cv_cc_fno_gcse="no"
+		;;
+	*)
+		CFLAGS_save="${CFLAGS}"
+		CFLAGS="${CFLAGS} -fno-gcse"
+		AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[]])], 
+						  [qthread_cv_cc_fno_gcse=yes],
+						  [qthread_cv_cc_fno_gcse=no])
+		CFLAGS="${CFLAGS_save}"
+		;;
+	esac])
 GCSE_CFLAGS=""
 AS_IF([test "$qthread_cv_cc_fno_gcse" = "yes"],
 	  [GCSE_CFLAGS="-fno-gcse"])
