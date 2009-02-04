@@ -22,11 +22,26 @@ aligned_t assign1(qthread_t * me, void *arg)
     return 0;
 }
 
+void assign1_loop(qthread_t *me, const size_t startat, const size_t stopat, void *arg)
+{
+    for (size_t i = startat; i < stopat; i++) {
+	((double*)arg)[i] = 1.0;
+    }
+}
+
 aligned_t assignall1(qthread_t * me, void *arg)
 {
     memset(arg, 1, sizeof(bigobj));
     return 0;
 }
+
+void assignall1_loop(qthread_t *me, const size_t startat, const size_t stopat, void *arg)
+{
+    for (size_t i = startat; i < stopat; i++) {
+	memset(((char*)arg) + (sizeof(bigobj) * i), 1, sizeof(bigobj));
+    }
+}
+
 void assignoff1(qthread_t * me, const size_t startat, const size_t stopat,
 		void *arg)
 {
@@ -82,6 +97,9 @@ int main(int argc, char *argv[])
 		a[i] = 1.0;
 	    }
 	    qtimer_stop(timer);
+	    for (i=0; i<ELEMENT_COUNT; i++) {
+		assert(a[i] == 1.0);
+	    }
 	    free(a);
 	}
 	results[last_type][0] = qtimer_secs(timer);
@@ -117,21 +135,31 @@ int main(int argc, char *argv[])
 	/* test a basic array of doubles */
 	printf("%s:\n", distnames[dt_index]);
 	a = qarray_create(ELEMENT_COUNT, sizeof(double), disttypes[dt_index]);
-	qtimer_start(timer);
+	/*qtimer_start(timer);
 	qarray_iter(me, a, assign1);
 	qtimer_stop(timer);
-	qarray_free(a);
 	results[dt_index][0] = qtimer_secs(timer);
-	printf("\tIteration over doubles: %f secs\n", results[dt_index][0]);
+	printf("\tIteration over doubles: %f secs\n", results[dt_index][0]);*/
+	qtimer_start(timer);
+	qarray_iter_loop(me, a, assign1_loop);
+	qtimer_stop(timer);
+	results[dt_index][0] = qtimer_secs(timer);
+	printf("\tIteration over doubles: %f secs (loop)\n", results[dt_index][0]);
+	qarray_free(a);
 
 	/* now test an array of giant things */
 	a = qarray_create(ELEMENT_COUNT, sizeof(bigobj), disttypes[dt_index]);
-	qtimer_start(timer);
+	/*qtimer_start(timer);
 	qarray_iter(me, a, assignall1);
 	qtimer_stop(timer);
-	qarray_free(a);
 	results[dt_index][1] = qtimer_secs(timer);
-	printf("\tIteration over giants: %f secs\n", results[dt_index][1]);
+	printf("\tIteration over giants: %f secs\n", results[dt_index][1]);*/
+	qtimer_start(timer);
+	qarray_iter_loop(me, a, assignall1_loop);
+	qtimer_stop(timer);
+	results[dt_index][1] = qtimer_secs(timer);
+	printf("\tIteration over giants: %f secs (loop)\n", results[dt_index][1]);
+	qarray_free(a);
 
 	/* now test an array of weird-sized things */
 	a = qarray_create(ELEMENT_COUNT, sizeof(offsize),
