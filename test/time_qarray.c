@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
 	}
     }
     if (argc >= 3) {
-	ELEMENT_COUNT = strtol(argv[1], NULL, 0);
+	ELEMENT_COUNT = strtol(argv[2], NULL, 0);
     }
 
     qthread_init(threads);
