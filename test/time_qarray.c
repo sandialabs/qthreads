@@ -5,7 +5,7 @@
 #include <qthread/qarray.h>
 #include "qtimer.h"
 
-#define ELEMENT_COUNT 100000
+size_t ELEMENT_COUNT = 100000;
 
 typedef struct
 {
@@ -53,7 +53,7 @@ int main(int argc, char *argv[])
     int dt_index;
     int interactive = 0;
 
-    if (argc == 2) {
+    if (argc >= 2) {
 	threads = strtol(argv[1], NULL, 0);
 	if (threads <= 0) {
 	    threads = 1;
@@ -61,6 +61,9 @@ int main(int argc, char *argv[])
 	} else {
 	    interactive = 1;
 	}
+    }
+    if (argc >= 3) {
+	ELEMENT_COUNT = strtol(argv[1], NULL, 0);
     }
 
     qthread_init(threads);
