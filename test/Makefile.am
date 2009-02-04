@@ -5,11 +5,15 @@
 
 TESTS = test1 test2 test3 test_qalloc \
 		testincr testdincr testfincr \
-		testqloop testid testloop \
+		testqloop testid \
 		test_internal_mod \
 		test_migrate \
 		test_qarray \
 		test_qutil_qsort
+
+if ENABLE_CXX_TESTS
+TESTS += testloop
+endif
 
 if ENABLE_TIMER_PROGS
 TESTS += time_gcd time_swap time_producerconsumer time_increments
