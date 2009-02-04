@@ -2078,6 +2078,9 @@ int qthread_migrate_to(qthread_t * me, const qthread_shepherd_id_t shepherd)
     if (me->shepherd_ptr->shepherd_id == shepherd) {
 	return QTHREAD_SUCCESS;
     }
+    if (me->flags & QTHREAD_REAL_MCCOY) {
+	return QTHREAD_NOT_ALLOWED;
+    }
     if (me && shepherd < qlib->nshepherds) {
 	qthread_debug(2, "qthread_migrate_to(): thread %p from shep %i to shep %i\n", me, me->shepherd_ptr->shepherd_id, shepherd);
 	me->thread_state = QTHREAD_STATE_MIGRATING;
