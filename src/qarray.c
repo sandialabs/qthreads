@@ -12,7 +12,7 @@ struct qarray_s
     size_t count;
     size_t cluster_size;	/* units in a cluster */
     size_t cluster_bytes;	/* bytes per cluster (sometimes > unit_size*cluster_count) */
-    void *base_ptr;
+    char *base_ptr;
     distribution_t dist_type;
     qthread_shepherd_id_t dist_shep;	/* for ALL_SAME dist type */
 };
@@ -141,7 +141,7 @@ qarray *qarray_create(const size_t count, const size_t unit_size,
     cluster_count =
 	count / ret->cluster_size + ((count % ret->cluster_size) ? 1 : 0);
 
-    ret->base_ptr = calloc(cluster_count, ret->cluster_bytes);
+    ret->base_ptr = (char*) calloc(cluster_count, ret->cluster_bytes);
     if (ret->base_ptr == NULL) {
 	free(ret);
 	ret = NULL;
@@ -196,7 +196,7 @@ qarray *qarray_create(const size_t count, const size_t unit_size,
 	    const qthread_shepherd_id_t max_sheps = qthread_shepherd_count();
 
 	    for (cluster = 0; cluster < cluster_count; cluster++) {
-		void *clusterhead =
+		char *clusterhead =
 		    qarray_elem_nomigrate(ret, cluster * ret->cluster_size);
 		clusterhead += ret->cluster_size * unit_size;
 		*(qthread_shepherd_id_t *) clusterhead = cluster % max_sheps;
@@ -213,7 +213,7 @@ qarray *qarray_create(const size_t count, const size_t unit_size,
 	    qthread_shepherd_id_t cur_shep = 0;
 
 	    for (cluster = 0; cluster < cluster_count; cluster++) {
-		void *ptr =
+		char *ptr =
 		    qarray_elem_nomigrate(ret, cluster * ret->cluster_size);
 		ptr += ret->cluster_size * unit_size;
 		*(qthread_shepherd_id_t *) ptr = cur_shep;
@@ -232,7 +232,7 @@ qarray *qarray_create(const size_t count, const size_t unit_size,
 	    const qthread_shepherd_id_t max_sheps = qthread_shepherd_count();
 
 	    for (cluster = 0; cluster < cluster_count; cluster++) {
-		void *ptr =
+		char *ptr =
 		    qarray_elem_nomigrate(ret, cluster * ret->cluster_size);
 		ptr += ret->cluster_size * unit_size;
 		*(qthread_shepherd_id_t *) ptr = random() % max_sheps;
@@ -248,7 +248,7 @@ qarray *qarray_create(const size_t count, const size_t unit_size,
 
 	    for (cluster = 0; cluster < cluster_count; cluster++) {
 		qthread_shepherd_id_t i, least = 0;
-		void *ptr =
+		char *ptr =
 		    qarray_elem_nomigrate(ret, cluster * ret->cluster_size);
 		ptr += ret->cluster_size * unit_size;
 
@@ -272,7 +272,7 @@ static inline qthread_shepherd_id_t *qarray_internal_cluster_shep(const qarray
 								  const void
 								  *cluster_head)
 {
-    return (qthread_shepherd_id_t *) (cluster_head +
+    return (qthread_shepherd_id_t *) (((char*)cluster_head) +
 				      (a->cluster_size * a->unit_size));
 }
 
@@ -290,7 +290,7 @@ void qarray_free(qarray * a)
 			a->count / a->cluster_size +
 			((a->count % a->cluster_size) ? 1 : 0);
 		    for (cluster = 0; cluster < cluster_count; cluster++) {
-			void *clusterhead = qarray_elem_nomigrate(a,
+			char *clusterhead = qarray_elem_nomigrate(a,
 								  cluster *
 								  a->
 								  cluster_size);
@@ -401,7 +401,7 @@ void *qarray_elem(qthread_t * me, const qarray * a, const size_t index)
 	return NULL;
     } else {
 	const size_t cluster_num = index / a->cluster_size;	/* rounded down */
-	void *cluster_head = a->base_ptr + (cluster_num + a->cluster_bytes);
+	char *cluster_head = a->base_ptr + (cluster_num + a->cluster_bytes);
 
 	ret =
 	    cluster_head +
