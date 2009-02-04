@@ -38,6 +38,21 @@ static QINLINE size_t qarray_lcm(size_t a, size_t b)
 
     return (tmp != 0) ? (a * b / tmp) : 0;
 }				       /*}}} */
+static QINLINE qthread_shepherd_id_t *qarray_internal_cluster_shep(const qarray
+								  * a,
+								  const void
+								  *cluster_head)
+{
+    char *ptr =  (((char*)cluster_head) +
+				      (a->cluster_size * a->unit_size));
+    /* ensure that it's 4-byte aligned
+     * (mandatory on Sparc, good idea elsewhere) */
+    if (((uintptr_t)ptr) & 3) ptr += 4-(((uintptr_t)ptr)&3);
+    /* first, do we have the space? */
+    assert(((ptr+sizeof(qthread_shepherd_id_t)-1)-clusterhead) < ret->cluster_bytes);
+    return (qthread_shepherd_id_t*)ptr;
+}
+
 
 qarray *qarray_create(const size_t count, const size_t unit_size,
 		      const distribution_t d)
@@ -196,10 +211,10 @@ qarray *qarray_create(const size_t count, const size_t unit_size,
 	    const qthread_shepherd_id_t max_sheps = qthread_shepherd_count();
 
 	    for (cluster = 0; cluster < cluster_count; cluster++) {
-		char *clusterhead =
+		qthread_shepherd_id_t *ptr =
 		    qarray_elem_nomigrate(ret, cluster * ret->cluster_size);
-		clusterhead += ret->cluster_size * unit_size;
-		*(qthread_shepherd_id_t *) clusterhead = cluster % max_sheps;
+		ptr = qarray_internal_cluster_shep(ret, ptr);
+		*ptr = cluster % max_sheps;
 		qthread_incr(&chunk_distribution_tracker[cluster % max_sheps],
 			     1);
 	    }
@@ -213,10 +228,10 @@ qarray *qarray_create(const size_t count, const size_t unit_size,
 	    qthread_shepherd_id_t cur_shep = 0;
 
 	    for (cluster = 0; cluster < cluster_count; cluster++) {
-		char *ptr =
+		qthread_shepherd_id_t *ptr =
 		    qarray_elem_nomigrate(ret, cluster * ret->cluster_size);
-		ptr += ret->cluster_size * unit_size;
-		*(qthread_shepherd_id_t *) ptr = cur_shep;
+		ptr = qarray_internal_cluster_shep(ret, ptr);
+		*ptr = cur_shep;
 		qthread_incr(&chunk_distribution_tracker[cur_shep], 1);
 		if ((cluster % max_sheps) == (max_sheps - 1)) {
 		    cur_shep++;
@@ -232,10 +247,10 @@ qarray *qarray_create(const size_t count, const size_t unit_size,
 	    const qthread_shepherd_id_t max_sheps = qthread_shepherd_count();
 
 	    for (cluster = 0; cluster < cluster_count; cluster++) {
-		char *ptr =
+		qthread_shepherd_id_t *ptr =
 		    qarray_elem_nomigrate(ret, cluster * ret->cluster_size);
-		ptr += ret->cluster_size * unit_size;
-		*(qthread_shepherd_id_t *) ptr = random() % max_sheps;
+		ptr = qarray_internal_cluster_shep(ret, ptr);
+		*ptr = random() % max_sheps;
 		qthread_incr(&chunk_distribution_tracker
 			     [*(qthread_shepherd_id_t *) ptr], 1);
 	    }
@@ -248,9 +263,9 @@ qarray *qarray_create(const size_t count, const size_t unit_size,
 
 	    for (cluster = 0; cluster < cluster_count; cluster++) {
 		qthread_shepherd_id_t i, least = 0;
-		char *ptr =
+		qthread_shepherd_id_t *ptr =
 		    qarray_elem_nomigrate(ret, cluster * ret->cluster_size);
-		ptr += ret->cluster_size * unit_size;
+		ptr = qarray_internal_cluster_shep(ret, ptr);
 
 		for (i = 1; i < max_sheps; i++) {
 		    if (chunk_distribution_tracker[i] <
@@ -258,22 +273,13 @@ qarray *qarray_create(const size_t count, const size_t unit_size,
 			least = i;
 		    }
 		}
-		*(qthread_shepherd_id_t *) ptr = least;
+		*ptr = least;
 		qthread_incr(&chunk_distribution_tracker[least], 1);
 	    }
 	}
 	    break;
     }
     return ret;
-}
-
-static inline qthread_shepherd_id_t *qarray_internal_cluster_shep(const qarray
-								  * a,
-								  const void
-								  *cluster_head)
-{
-    return (qthread_shepherd_id_t *) (((char*)cluster_head) +
-				      (a->cluster_size * a->unit_size));
 }
 
 void qarray_free(qarray * a)
@@ -294,9 +300,8 @@ void qarray_free(qarray * a)
 								  cluster *
 								  a->
 								  cluster_size);
-			clusterhead += a->cluster_size * a->unit_size;
 			qthread_incr(&chunk_distribution_tracker
-				     [*(qthread_shepherd_id_t *) clusterhead],
+				     [*qarray_internal_cluster_shep(a,clusterhead)],
 				     -1);
 		    }
 		}
