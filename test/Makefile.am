@@ -16,7 +16,7 @@ TESTS += testloop
 endif
 
 if ENABLE_TIMER_PROGS
-TESTS += time_gcd time_swap time_producerconsumer time_increments
+TESTS += time_gcd time_swap time_producerconsumer time_increments time_qarray
 endif
 
 
@@ -92,3 +92,6 @@ time_producerconsumer_DEPENDENCIES = $(QTHREADLIB)
 time_increments_SOURCES = time_increments.c
 time_increments_LDADD = $(QTHREADLIB)
 time_increments_DEPENDENCIES = $(QTHREADLIB)
+
+time_qarray_SOURCES = time_qarray.c
+time_qarray_DEPENDENCIES = $(QTHREADLIB)

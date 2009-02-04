@@ -35,6 +35,7 @@ void assignoff1(qthread_t * me, const size_t startat, const size_t stopat,
     for (size_t i = startat; i < stopat; i++) {
 	memset(((char*)arg) + (sizeof(offsize) * i), 1, sizeof(offsize));
     }
+    qthread_incr(&count, stopat-startat);
 }
 
 int main(int argc, char *argv[])
@@ -133,6 +134,7 @@ int main(int argc, char *argv[])
 	qarray_free(a);
 
 	/* now test an array of weird-sized things */
+	count = 0;
 	a = qarray_create(ELEMENT_COUNT, sizeof(offsize),
 			  disttypes[dt_index]);
 	if (interactive)
@@ -140,6 +142,11 @@ int main(int argc, char *argv[])
 	qarray_iter_loop(me, a, assignoff1);
 	if (interactive)
 	    printf("type %i, iterated; now checking work...\n", dt_index);
+	if (count != ELEMENT_COUNT) {
+	    printf("count = %lu, dt_index = %i\n", (unsigned long)count,
+		   dt_index);
+	    assert(count == ELEMENT_COUNT);
+	}
 	{
 	    size_t i;
 
