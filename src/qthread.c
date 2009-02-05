@@ -131,6 +131,9 @@ typedef struct _qt_lfqueue_node {
 typedef struct {
     volatile qt_lfqueue_node_t * head;
     volatile qt_lfqueue_node_t * tail;
+    aligned_t fruitless;
+    pthread_mutex_t lock;
+    pthread_cond_t notempty;
     qthread_shepherd_t *creator_ptr;
 } qt_lfqueue_t;
 
@@ -270,6 +273,7 @@ static QINLINE qt_lfqueue_t *qt_lfqueue_new(qthread_shepherd_t * shepherd);
 static QINLINE void qt_lfqueue_free(qt_lfqueue_t * q);
 static QINLINE void qt_lfqueue_enqueue(qt_lfqueue_t * q, qthread_t * t, qthread_shepherd_t *shep);
 static QINLINE qthread_t *qt_lfqueue_dequeue(qt_lfqueue_t * q);
+static QINLINE qthread_t *qt_lfqueue_dequeue_blocking(qt_lfqueue_t * q);
 static QINLINE qthread_queue_t *qthread_queue_new(qthread_shepherd_t *
 						 shepherd);
 static QINLINE void qthread_queue_free(qthread_queue_t * q);
@@ -794,14 +798,7 @@ static void *qthread_shepherd(void *arg)
 #ifdef QTHREAD_SHEPHERD_PROFILING
 	qtimer_start(idle);
 #endif
-	while ((t = qt_lfqueue_dequeue(me->ready)) == NULL) {
-	    /* spinlock */
-#ifdef HAVE_PTHREAD_YIELD
-	    pthread_yield();
-#elif defined(HAVE_SHED_YIELD)
-	    sched_yield();
-#endif
-	}
+	t = qt_lfqueue_dequeue_blocking(me->ready);
 #ifdef QTHREAD_SHEPHERD_PROFILING
 	qtimer_stop(idle);
 	me->idle_count++;
@@ -1575,8 +1572,17 @@ static QINLINE qt_lfqueue_t *qt_lfqueue_new(qthread_shepherd_t* shepherd)
 
     if (q != NULL) {
 	q->creator_ptr = shepherd;
+	if (pthread_mutex_init(&q->lock, NULL) != 0) {
+	    FREE_LFQUEUE(q);
+	    return NULL;
+	}
+	if (pthread_cond_init(&q->notempty, NULL) != 0) {
+	    QTHREAD_DESTROYLOCK(&q->lock);
+	    FREE_LFQUEUE(q);
+	    return NULL;
+	}
+	q->fruitless = 0;
 	ALLOC_LFQNODE(((qt_lfqueue_node_t**)&(q->head)), shepherd);
-	//q->head = malloc(sizeof(qt_lfqueue_node_t));
 	assert(q->head != NULL);
 	if (QPTR(q->head) == NULL) { // if we're not using asserts, fail nicely
 	    FREE_LFQUEUE(q);
@@ -1591,6 +1597,8 @@ static QINLINE qt_lfqueue_t *qt_lfqueue_new(qthread_shepherd_t* shepherd)
 static QINLINE void qt_lfqueue_free(qt_lfqueue_t *q)
 {/*{{{*/
     assert(QPTR(q->head) == QPTR(q->tail));
+    QTHREAD_DESTROYLOCK(&q->lock);
+    QTHREAD_DESTROYCOND(&q->notempty);
     FREE_LFQNODE(QPTR(q->head));
     FREE_LFQUEUE(q);
 }/*}}}*/
@@ -1624,6 +1632,12 @@ static QINLINE void qt_lfqueue_enqueue(qt_lfqueue_t * q, qthread_t* t, qthread_s
 	}
     }
     (void)qt_cas((volatile void**)&(q->tail), tail, QCOMPOSE(node, tail));
+    if (q->fruitless) {
+	QTHREAD_LOCK(&q->lock);
+	QTHREAD_SIGNAL(&q->notempty);
+	QTHREAD_UNLOCK(&q->lock);
+	q->fruitless = 0;
+    }
 }				       /*}}} */
 
 static QINLINE qthread_t *qt_lfqueue_dequeue(qt_lfqueue_t * q)
@@ -1639,6 +1653,51 @@ static QINLINE qthread_t *qt_lfqueue_dequeue(qt_lfqueue_t * q)
 	    if (QPTR(head) == QPTR(tail)) { // is queue empty or tail falling behind?
 		if (QPTR(next) == NULL) { // is queue empty?
 		    return NULL;
+		}
+		(void)qt_cas((volatile void**)&(q->tail), tail, QCOMPOSE(next, tail)); // advance tail ptr
+	    } else { // no need to deal with tail
+		// read value before CAS, otherwise another dequeue might free the next node
+		p = QPTR(next)->value;
+		if (qt_cas((volatile void**)&(q->head), head, QCOMPOSE(next,head)) == head) {
+		    break; // success!
+		}
+	    }
+	}
+    }
+    FREE_LFQNODE(QPTR(head));
+    return p;
+}				       /*}}} */
+
+/* this function is amusing, but the point is to avoid unnecessary bus traffic
+ * by allowing idle shepherds to sit for a while while still allowing for
+ * low-overhead for busy shepherds. This is a hybrid approach: normally, it
+ * functions as a spinlock, but if it spins too much, it waits for a signal */
+static QINLINE qthread_t *qt_lfqueue_dequeue_blocking(qt_lfqueue_t * q)
+{				       /*{{{ */
+    qthread_t *p = NULL;
+    qt_lfqueue_node_t *head, *tail, *next;
+    assert(q != NULL);
+lfqueue_dequeue_restart:
+    while(1) {
+	head = (qt_lfqueue_node_t*)(q->head);
+	tail = (qt_lfqueue_node_t*)(q->tail);
+	next = (qt_lfqueue_node_t*)(QPTR(head)->next);
+	if (head == q->head) { // are head, tail, and next consistent?
+	    if (QPTR(head) == QPTR(tail)) { // is queue empty or tail falling behind?
+		if (QPTR(next) == NULL) { // is queue empty?
+		    if (qthread_incr(&q->fruitless, 1) > 10) {
+			QTHREAD_LOCK(&q->lock);
+			QTHREAD_CONDWAIT(&q->notempty, &q->lock);
+			q->fruitless = 0;
+			QTHREAD_UNLOCK(&q->lock);
+		    } else {
+#ifdef HAVE_PTHREAD_YIELD
+			pthread_yield();
+#elif HAVE_SHED_YIELD
+			sched_yield();
+#endif
+		    }
+		    goto lfqueue_dequeue_restart;
 		}
 		(void)qt_cas((volatile void**)&(q->tail), tail, QCOMPOSE(next, tail)); // advance tail ptr
 	    } else { // no need to deal with tail
