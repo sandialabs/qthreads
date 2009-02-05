@@ -156,7 +156,7 @@ qarray *qarray_create(const size_t count, const size_t unit_size,
     cluster_count =
 	count / ret->cluster_size + ((count % ret->cluster_size) ? 1 : 0);
 
-    ret->base_ptr = (char*) calloc(cluster_count, ret->cluster_bytes);
+    ret->base_ptr = (char*) valloc(cluster_count * ret->cluster_bytes);
     if (ret->base_ptr == NULL) {
 	free(ret);
 	ret = NULL;
