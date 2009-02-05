@@ -32,6 +32,12 @@
 #ifdef QTHREAD_USE_PLPA
 #include <plpa.h>
 #endif
+#ifdef HAVE_PROCESSOR_BIND
+# include <sys/types.h>
+# include <sys/processor.h>
+# include <sys/procset.h>
+# include <sys/lwp.h> /* for _lwp_self() */
+#endif
 
 #include "qt_mpool.h"
 #include "qt_atomics.h"
@@ -779,7 +785,7 @@ static void *qthread_shepherd(void *arg)
 	}
 	free(cpuset);
 #elif HAVE_PROCESSOR_BIND
-	processor_bind(P_PID, getpid(), me->shepherd_id, NULL);
+	processor_bind(P_LWPID, _lwp_self(), me->shepherd_id, NULL);
 #endif
     }
 
