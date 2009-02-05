@@ -49,7 +49,7 @@ static QINLINE qthread_shepherd_id_t *qarray_internal_cluster_shep(const qarray
      * (mandatory on Sparc, good idea elsewhere) */
     if (((uintptr_t)ptr) & 3) ptr += 4-(((uintptr_t)ptr)&3);
     /* first, do we have the space? */
-    assert(((ptr+sizeof(qthread_shepherd_id_t)-1)-clusterhead) < ret->cluster_bytes);
+    assert(((ptr+sizeof(qthread_shepherd_id_t)-1)-(const char*)cluster_head) < a->cluster_bytes);
     return (qthread_shepherd_id_t*)ptr;
 }
 
