@@ -13,7 +13,7 @@ typedef struct
 } bigobj;
 typedef struct
 {
-    char pad[40];
+    char pad[41];
 } offsize;
 
 aligned_t assign1(qthread_t * me, void *arg)
@@ -47,6 +47,10 @@ int main(int argc, char *argv[])
 	FIXED_HASH, ALL_LOCAL, ALL_RAND, ALL_LEAST, DIST_RAND,
 	    DIST_REG_STRIPES, DIST_REG_FIELDS, DIST_LEAST
     };
+    const char *distnames[] = {
+	"FIXED_HASH", "ALL_LOCAL", "ALL_RAND", "ALL_LEAST", "DIST_RAND",
+	    "DIST_REG_STRIPES", "DIST_REG_FIELDS", "DIST_LEAST"
+    };
     int dt_index;
     int interactive = 0;
 
@@ -71,10 +75,10 @@ int main(int argc, char *argv[])
 	count = 0;
 	a = qarray_create(ELEMENT_COUNT, sizeof(double), disttypes[dt_index]);
 	if (interactive)
-	    printf("type %i, created basic array of doubles\n", dt_index);
+	    printf("%s: created basic array of doubles\n", distnames[dt_index]);
 	qarray_iter(me, a, assign1);
 	if (interactive)
-	    printf("type %i, iterated; now checking work...\n", dt_index);
+	    printf("%s: iterated; now checking work...\n", distnames[dt_index]);
 	if (count != ELEMENT_COUNT) {
 	    printf("count = %lu, dt_index = %i\n", (unsigned long)count,
 		   dt_index);
@@ -88,24 +92,24 @@ int main(int argc, char *argv[])
 
 		if (elem != 1.0) {
 		    printf
-			("element %lu is %f instead of 1.0, dt_index = %i\n",
-			 (unsigned long)i, elem, dt_index);
+			("element %lu is %f instead of 1.0, disttype = %s\n",
+			 (unsigned long)i, elem, distnames[dt_index]);
 		    assert(elem == 1.0);
 		}
 	    }
 	}
 	if (interactive)
-	    printf("type %i, correct result!\n", dt_index);
+	    printf("%s: correct result!\n", distnames[dt_index]);
 	qarray_free(a);
 
 	/* now test an array of giant things */
 	count = 0;
 	a = qarray_create(ELEMENT_COUNT, sizeof(bigobj), disttypes[dt_index]);
 	if (interactive)
-	    printf("type %i, created array of big objects\n", dt_index);
+	    printf("%s: created array of big objects\n", distnames[dt_index]);
 	qarray_iter(me, a, assignall1);
 	if (interactive)
-	    printf("type %i, iterated; now checking work...\n", dt_index);
+	    printf("%s: iterated; now checking work...\n", distnames[dt_index]);
 	if (count != ELEMENT_COUNT) {
 	    printf("count = %lu, dt_index = %i\n", (unsigned long)count,
 		   dt_index);
@@ -130,7 +134,7 @@ int main(int argc, char *argv[])
 	    }
 	}
 	if (interactive)
-	    printf("type %i, correct result!\n", dt_index);
+	    printf("%s: correct result!\n", distnames[dt_index]);
 	qarray_free(a);
 
 	/* now test an array of weird-sized things */
@@ -138,10 +142,10 @@ int main(int argc, char *argv[])
 	a = qarray_create(ELEMENT_COUNT, sizeof(offsize),
 			  disttypes[dt_index]);
 	if (interactive)
-	    printf("type %i, created array of odd-sized objects\n", dt_index);
+	    printf("%s: created array of odd-sized objects\n", distnames[dt_index]);
 	qarray_iter_loop(me, a, assignoff1);
 	if (interactive)
-	    printf("type %i, iterated; now checking work...\n", dt_index);
+	    printf("%s: iterated; now checking work...\n", distnames[dt_index]);
 	if (count != ELEMENT_COUNT) {
 	    printf("count = %lu, dt_index = %i\n", (unsigned long)count,
 		   dt_index);
@@ -166,7 +170,7 @@ int main(int argc, char *argv[])
 	    }
 	}
 	if (interactive)
-	    printf("type %i, correct result!\n", dt_index);
+	    printf("%s: correct result!\n", distnames[dt_index]);
 	qarray_free(a);
     }
 
