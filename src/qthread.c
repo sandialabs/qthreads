@@ -29,6 +29,10 @@
 #include <cprops/hashlist.h>
 #endif
 
+#ifdef QTHREAD_USE_PLPA
+#include <plpa.h>
+#endif
+
 #include "qt_mpool.h"
 #include "qt_atomics.h"
 #include <cprops/hashtable.h>
@@ -765,6 +769,19 @@ static void *qthread_shepherd(void *arg)
 
     /* Initialize myself */
     pthread_setspecific(shepherd_structs, arg);
+    if (getenv("QTHREAD_AFFINITY")) {
+#ifdef QTHREAD_USE_PLPA
+	plpa_cpu_set_t *cpuset = (plpa_cpu_set_t*)malloc(sizeof(plpa_cpu_set_t));
+	PLPA_CPU_ZERO(cpuset);
+	PLPA_CPU_SET(me->shepherd_id, cpuset);
+	if (plpa_sched_setaffinity(0, sizeof(plpa_cpu_set_t), cpuset) < 0 && errno != EINVAL) {
+	    perror("plpa setaffinity");
+	}
+	free(cpuset);
+#elif HAVE_PROCESSOR_BIND
+	processor_bind(P_PID, getpid(), me->shepherd_id, NULL);
+#endif
+    }
 
     /* workhorse loop */
     while (!done) {
@@ -1117,7 +1134,7 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 static QINLINE void qthread_makecontext(ucontext_t * c, void *stack,
 				       size_t stacksize, void (*func) (void),
 				       const void *arg, ucontext_t * returnc)
-{
+{/*{{{*/
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
     const unsigned int high = ((uintptr_t) arg) >> 32;
     const unsigned int low = ((uintptr_t) arg) & 0xffffffff;
@@ -1153,7 +1170,7 @@ static QINLINE void qthread_makecontext(ucontext_t * c, void *stack,
     makecontext(c, func, 1, arg);
 #endif /* EXTRA_MAKECONTEXT_ARGC */
 #endif /* QTHREAD_MAKECONTEXT_SPLIT */
-}
+}/*}}}*/
 
 void qthread_finalize(void)
 {				       /*{{{ */
