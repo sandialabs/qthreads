@@ -789,7 +789,9 @@ static void *qthread_shepherd(void *arg)
 	}
 	free(cpuset);
 #elif HAVE_PROCESSOR_BIND
-	processor_bind(P_LWPID, _lwp_self(), (me->shepherd_id%8)*8 + (me->shepherd_id/8), NULL);
+	if (processor_bind(P_LWPID, _lwp_self(), (me->shepherd_id%8)*8 + (me->shepherd_id/8), NULL) < 0) {
+	    perror("processor_bind");
+	}
 #endif
     }
 
