@@ -156,7 +156,19 @@ qarray *qarray_create(const size_t count, const size_t unit_size,
     cluster_count =
 	count / ret->cluster_size + ((count % ret->cluster_size) ? 1 : 0);
 
+    /* For speed, we want page-aligned memory, if we can get it */
+#ifdef HAVE_WORKING_VALLOC
     ret->base_ptr = (char*) valloc(cluster_count * ret->cluster_bytes);
+#elif HAVE_MEMALIGN
+    ret->base_ptr = (char*) memalign(pagesize, cluster_count * ret->cluster_bytes);
+#elif HAVE_POSIX_MEMALIGN
+    posix_memalign(&(ret->base_ptr), pagesize, cluster_count * ret->cluster_bytes);
+#elif HAVE_PAGE_ALIGNED_MALLOC
+    ret->base_ptr = (char*) malloc(cluster_count * ret->cluster_bytes);
+#else
+    /* just don't free it */
+    ret->base_ptr = (char*) valloc(cluster_count * ret->cluster_bytes);
+#endif
     if (ret->base_ptr == NULL) {
 	free(ret);
 	ret = NULL;
@@ -333,7 +345,10 @@ void qarray_free(qarray * a)
 					 a->cluster_size) ? 1 : 0)));
 		    break;
 	    }
+#if (HAVE_WORKING_VALLOC || HAVE_MEMALIGN || HAVE_POSIX_MEMALIGN || HAVE_PAGE_ALIGNED_MALLOC)
+	    /* avoid freeing base ptr if we had to use a broken valloc */
 	    free(a->base_ptr);
+#endif
 	}
 	free(a);
     }
