@@ -125,7 +125,7 @@ qarray *qarray_create(const size_t count, const size_t unit_size,
 		ret->cluster_bytes *= 256;
 	    }
 	    ret->cluster_size = (ret->cluster_bytes / unit_size) - 1;
-	    assert(cluster_size > 0);
+	    assert(ret->cluster_size > 0);
 	    if (unit_size > (pagesize + sizeof(qthread_shepherd_id_t))) {
 		ret->cluster_bytes = ret->cluster_size * unit_size;
 		ret->cluster_bytes +=
