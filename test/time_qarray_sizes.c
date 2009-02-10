@@ -45,9 +45,8 @@ int main(int argc, char *argv[])
 	"DIST_REG_STRIPES", "DIST_REG_FIELDS", "DIST_LEAST", "SERIAL"
     };
     const size_t sizes[] =
-	{ 4, 8, 11, 16, 23, 32, 64, 65, 71/*, 100, 128, 256, 301, 333,
-512, 1024, 2048, 4096, 5000, 10000, 16384*/ };
-    double results[sizeof(sizes)/sizeof(size_t)][2] = { { 0 } };
+	{ 4, 8, 11, 16, 23, 32, 64, 65, 71, 100, 128, 256, 301, 333,
+512, 1024, 2048, 4096, 5000, 10000, 16384 };
     int dt_index;
     int interactive = 0;
 
@@ -79,8 +78,8 @@ int main(int argc, char *argv[])
     printf("SERIAL:\n");
     {
 	size_t size_i;
-	const size_t serial_type = (sizeof(disttypes) / sizeof(distribution_t));
 
+	printf("\tSize, Assignment, Reading\n");
 	for (size_i=0; size_i<(sizeof(sizes)/sizeof(size_t)); size_i++) {
 	    size_t i, size=sizes[size_i];
 	    char *a = calloc(ELEMENT_COUNT, size);
@@ -92,7 +91,8 @@ int main(int argc, char *argv[])
 		memset(a+(i*size), 1, size);
 	    }
 	    qtimer_stop(timer);
-	    results[size_i][0] = qtimer_secs(timer);
+	    printf("\t%lu, %f", (unsigned long)sizes[size_i], qtimer_secs(timer));
+	    fflush(stdout);
 	    qtimer_start(timer);
 	    for (i=0; i<ELEMENT_COUNT; i++) {
 		if (memcmp(a+(i*size), example, size) != 0) {
@@ -101,14 +101,12 @@ int main(int argc, char *argv[])
 		}
 	    }
 	    qtimer_stop(timer);
-	    results[size_i][1] = qtimer_secs(timer);
+	    printf(", %f\n", qtimer_secs(timer));
+	    fflush(stdout);
 	    free(a);
 	    free(example);
 	}
 	printf("\tSize, Assignment, Reading\n");
-	for (size_i=0; size_i<(sizeof(sizes)/sizeof(size_t)); size_i++) {
-	    printf("\t%lu, %f, %f\n", (unsigned long)sizes[size_i], results[size_i][0], results[size_i][1]);
-	}
 	for (size_i=0; size_i<(sizeof(sizes)/sizeof(size_t)); size_i++) {
 	    size_t i, size=sizes[size_i];
 	    char *example = malloc(size);
@@ -121,7 +119,8 @@ int main(int argc, char *argv[])
 		memset(a+(i*size), 1, size);
 	    }
 	    qtimer_stop(timer);
-	    results[size_i][0] = qtimer_secs(timer);
+	    printf("\t%lu, %f", (unsigned long)sizes[size_i], qtimer_secs(timer));
+	    fflush(stdout);
 	    qtimer_start(timer);
 	    for (i=0; i<count; i++) {
 		if (memcmp(a+(i*size), example, size) != 0) {
@@ -130,13 +129,10 @@ int main(int argc, char *argv[])
 		}
 	    }
 	    qtimer_stop(timer);
-	    results[size_i][1] = qtimer_secs(timer);
+	    printf(", %f\n", qtimer_secs(timer));
+	    fflush(stdout);
 	    free(a);
 	    free(example);
-	}
-	printf("\tSize, Assignment, Reading\n");
-	for (size_i=0; size_i<(sizeof(sizes)/sizeof(size_t)); size_i++) {
-	    printf("\t%lu, %f, %f\n", (unsigned long)sizes[size_i], results[size_i][0], results[size_i][1]);
 	}
     }
 
@@ -147,8 +143,8 @@ int main(int argc, char *argv[])
 	printf("%s:\n", distnames[dt_index]);
 	{
 	    size_t size_i;
-	    const size_t serial_type = (sizeof(disttypes) / sizeof(distribution_t));
 
+	    printf("\tSize, Assignment, Reading\n");
 	    for (size_i=0; size_i<(sizeof(sizes)/sizeof(size_t)); size_i++) {
 		const size_t size=sizes[size_i];
 		qarray *a = qarray_create(ELEMENT_COUNT, size, disttypes[dt_index]);
@@ -157,17 +153,16 @@ int main(int argc, char *argv[])
 		qtimer_start(timer);
 		qarray_iter_loop(me, a, assign1_loop);
 		qtimer_stop(timer);
-		results[size_i][0] = qtimer_secs(timer);
+		printf("\t%lu, %f", (unsigned long)sizes[size_i], qtimer_secs(timer));
+		fflush(stdout);
 		qtimer_start(timer);
 		qarray_iter_loop(me, a, assert1_loop);
 		qtimer_stop(timer);
-		results[size_i][1] = qtimer_secs(timer);
+		printf(", %f\n", qtimer_secs(timer));
+		fflush(stdout);
 		qarray_free(a);
 	    }
 	    printf("\tSize, Assignment, Reading\n");
-	    for (size_i=0; size_i<(sizeof(sizes)/sizeof(size_t)); size_i++) {
-		printf("\t%lu, %f, %f\n", (unsigned long)sizes[size_i], results[size_i][0], results[size_i][1]);
-	    }
 	    for (size_i=0; size_i<(sizeof(sizes)/sizeof(size_t)); size_i++) {
 		const size_t size=sizes[size_i];
 		const size_t count = constant_size/size; /* 1GB */
@@ -177,16 +172,15 @@ int main(int argc, char *argv[])
 		qtimer_start(timer);
 		qarray_iter_loop(me, a, assign1_loop);
 		qtimer_stop(timer);
-		results[size_i][0] = qtimer_secs(timer);
+		printf("\t%lu, %f", (unsigned long)sizes[size_i], qtimer_secs(timer));
+		fflush(stdout);
 		qtimer_start(timer);
 		qarray_iter_loop(me, a, assert1_loop);
 		qtimer_stop(timer);
 		results[size_i][1] = qtimer_secs(timer);
+		printf(", %f\n", qtimer_secs(timer));
+		fflush(stdout);
 		qarray_free(a);
-	    }
-	    printf("\tSize, Assignment, Reading\n");
-	    for (size_i=0; size_i<(sizeof(sizes)/sizeof(size_t)); size_i++) {
-		printf("\t%lu, %f, %f\n", (unsigned long)sizes[size_i], results[size_i][0], results[size_i][1]);
 	    }
 	}
     }
