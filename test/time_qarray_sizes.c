@@ -177,7 +177,6 @@ int main(int argc, char *argv[])
 		qtimer_start(timer);
 		qarray_iter_loop(me, a, assert1_loop);
 		qtimer_stop(timer);
-		results[size_i][1] = qtimer_secs(timer);
 		printf(", %f\n", qtimer_secs(timer));
 		fflush(stdout);
 		qarray_free(a);
