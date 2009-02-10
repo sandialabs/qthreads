@@ -10,9 +10,16 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
-#include <sn/mmtimer.h>
+#if HAVE_SN_MMTIMER_H
+# include <sn/mmtimer.h>
+#elif HAVE_LINUX_MMTIMER_H
+# include <linux/mmtimer.h>
+#endif
 #include <unistd.h>
 #include <errno.h>
+#ifndef MMTIMER_FULLNAME
+# define MMTIMER_FULLNAME "/dev/mmtimer"
+#endif
 
 static double timer_freq_conv;
 static volatile unsigned long *timer_address = NULL;

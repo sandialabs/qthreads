@@ -6,8 +6,9 @@
 # QTHREAD_CHECK_ALTIX_TIMER([action-if-found], [action-if-not-found])
 # ------------------------------------------------------------------------------
 AC_DEFUN([QTHREAD_CHECK_ALTIX_TIMER], [
-AC_CHECK_HEADER([sn/mmtimer.h],
-  [timer_altix_happy="yes"],
+AC_CHECK_HEADERS([sn/mmtimer.h linux/mmtimer.h],
+  [timer_altix_happy="yes"
+  break],
   [timer_altix_happy="no"])
 
 AS_IF([test "$timer_altix_happy" = "yes"],
@@ -22,7 +23,14 @@ AS_IF([test "$timer_altix_happy" = "yes"],
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
-#include <sn/mmtimer.h>
+#if HAVE_SN_MMTIMER_H
+# include <sn/mmtimer.h>
+#elif HAVE_LINUX_MMTIMER_H
+# include <linux/mmtimer.h>
+#endif
+#ifndef MMTIMER_FULLNAME
+# define MMTIMER_FULLNAME "/dev/mmtimer"
+#endif
 ], [
     int fd;
     fd = open(MMTIMER_FULLNAME, O_RDONLY);
