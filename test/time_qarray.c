@@ -26,7 +26,8 @@ void assign1_loop(qthread_t * me, const size_t startat, const size_t stopat,
 		  void *arg)
 {
     for (size_t i = startat; i < stopat; i++) {
-	((double *)arg)[i] = 1.0;
+	double * ptr = qarray_elem_nomigrate((qarray*)arg, i);
+	*ptr = 1.0;
     }
 }
 
@@ -40,7 +41,8 @@ void assignall1_loop(qthread_t * me, const size_t startat,
 		     const size_t stopat, void *arg)
 {
     for (size_t i = startat; i < stopat; i++) {
-	memset(((char *)arg) + (sizeof(bigobj) * i), 1, sizeof(bigobj));
+	char * ptr = qarray_elem_nomigrate((qarray*)arg, i);
+	memset(ptr, 1, sizeof(bigobj));
     }
 }
 
@@ -48,7 +50,8 @@ void assignoff1(qthread_t * me, const size_t startat, const size_t stopat,
 		void *arg)
 {
     for (size_t i = startat; i < stopat; i++) {
-	memset(((char *)arg) + (sizeof(offsize) * i), 1, sizeof(offsize));
+	char * ptr = qarray_elem_nomigrate((qarray*)arg, i);
+	memset(ptr, 1, sizeof(offsize));
     }
 }
 
@@ -87,10 +90,14 @@ int main(int argc, char *argv[])
     if (argc >= 4) {
 	enabled_tests = strtol(argv[3], NULL, 0);
     }
+    if (!interactive) {
+	return 0;
+    }
 
     qthread_init(threads);
     me = qthread_self();
 
+    printf("Using %i shepherds\n", threads);
     printf("Arrays of %lu objects...\n", (unsigned long)ELEMENT_COUNT);
 
     printf("SERIAL:\n");

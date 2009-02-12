@@ -11,22 +11,27 @@ size_t global_size = 0;
 
 void assign1_loop(qthread_t *me, const size_t startat, const size_t stopat, void *arg)
 {
-    size_t size = global_size;
-    for (size_t i = startat; i < stopat; i++) {
-	memset(((char *)arg)+(size * i), 1, size);
+    const size_t size = global_size;
+    size_t i;
+
+    for (i = startat; i < stopat; i++) {
+	void *ptr = qarray_elem_nomigrate((qarray*)arg, i);
+	memset(ptr, 1, size);
     }
 }
 
 void assert1_loop(qthread_t *me, const size_t startat, const size_t stopat, void *arg)
 {
-    size_t size = global_size;
-    char * example = malloc(size);
+    const size_t size = global_size;
+    size_t i;
 
-    memset(example, 1, size);
-    for (size_t i = startat; i < stopat; i++) {
-	if (memcmp(((char *)arg)+(size * i), example, size) != 0) {
-	    printf("...assignment failed! (%lu bytes)\n", (unsigned long)size);
-	    assert(0);
+    for (i = startat; i < stopat; i++) {
+	char *ptr = qarray_elem_nomigrate((qarray*)arg, i);
+	for (size_t j = 0; j < size; j++) {
+	    if (ptr[j] != 1) {
+		printf("...assignment failed! (%lu bytes)\n", (unsigned long)size);
+		assert(0);
+	    }
 	}
     }
 }

@@ -33,7 +33,8 @@ void assignoff1(qthread_t * me, const size_t startat, const size_t stopat,
 		void *arg)
 {
     for (size_t i = startat; i < stopat; i++) {
-	memset(((char*)arg) + (sizeof(offsize) * i), 1, sizeof(offsize));
+	void * ptr = qarray_elem_nomigrate((qarray*)arg, i);
+	memset(ptr, 1, sizeof(offsize));
     }
     qthread_incr(&count, stopat-startat);
 }
