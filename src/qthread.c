@@ -131,7 +131,7 @@ typedef struct _qt_lfqueue_node {
 typedef struct {
     volatile qt_lfqueue_node_t * head;
     volatile qt_lfqueue_node_t * tail;
-    aligned_t fruitless;
+    volatile aligned_t fruitless;
     pthread_mutex_t lock;
     pthread_cond_t notempty;
     qthread_shepherd_t *creator_ptr;
@@ -1638,7 +1638,6 @@ static QINLINE void qt_lfqueue_enqueue(qt_lfqueue_t * q, qthread_t* t, qthread_s
 	QTHREAD_LOCK(&q->lock);
 	QTHREAD_SIGNAL(&q->notempty);
 	QTHREAD_UNLOCK(&q->lock);
-	q->fruitless = 0;
     }
 }				       /*}}} */
 
@@ -1690,8 +1689,8 @@ lfqueue_dequeue_restart:
 		    if (qthread_incr(&q->fruitless, 1) > 10) {
 			QTHREAD_LOCK(&q->lock);
 			QTHREAD_CONDWAIT(&q->notempty, &q->lock);
-			q->fruitless = 0;
 			QTHREAD_UNLOCK(&q->lock);
+			q->fruitless = 0;
 		    } else {
 #ifdef HAVE_PTHREAD_YIELD
 			pthread_yield();
