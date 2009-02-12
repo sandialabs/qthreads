@@ -542,17 +542,19 @@ static aligned_t qarray_loop_strider(qthread_t * me,
 	    const size_t max_offset =
 		((max_count - count) >
 		 cluster_size) ? cluster_size : (max_count - count);
-	    void *ptr = qarray_elem_nomigrate(arg->a, count);
+	    /*void *ptr = qarray_elem_nomigrate(arg->a, count);
 
-	    assert(ptr != NULL);
-	    arg->func.ql(me, 0, max_offset, ptr);
+	    assert(ptr != NULL);*/
+	    arg->func.ql(me, count, count+max_offset, arg->a);
 	}
 	switch (dist_type) {
+	    default:
+		assert(0);
+		break;
 	    case ALL_SAME:
 		count += cluster_size;
 		break;
 	    case FIXED_HASH:
-	    default:
 		count += cluster_size * qthread_shepherd_count();
 		break;
 	    case DIST:		       /* XXX: this is awful - slow and bad for cache */
