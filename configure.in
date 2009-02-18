@@ -402,6 +402,21 @@ int main() {
         [AC_MSG_ERROR([Can not find working makecontext.])])
 ])
 
+AC_ARG_ENABLE([condwait-queue],
+  [AS_HELP_STRING([--enable-condwait-queue],
+				  [force the use of a pthread condwait queue, instead of a spin-based queue for inter-thread communication (important if spinning shepherds interfere with each other). Default enabled on sparc/solaris, but default disabled elsewhere.])],
+  [],
+  [case "$host" in
+	 sparc-sun-solaris*)
+	   enable_condwait_queue="yes"
+	   ;;
+	 *)
+   	   enable_condwait_queue="no"
+	   ;;
+   esac])
+AS_IF([test "x$enable_condwait_queue" = "xyes"],
+	  [AC_DEFINE([QTHREAD_CONDWAIT_BLOCKING_QUEUE], [1], [use pthread-based condwait for lf queue])])
+
 AC_ARG_ENABLE([hardware-timer],
   [AS_HELP_STRING([--disable-hardware-timer],
 				  [force the use of gettimeofday even if there is a better timer available])],

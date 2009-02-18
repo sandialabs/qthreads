@@ -1686,6 +1686,7 @@ lfqueue_dequeue_restart:
 	if (head == q->head) { // are head, tail, and next consistent?
 	    if (QPTR(head) == QPTR(tail)) { // is queue empty or tail falling behind?
 		if (QPTR(next) == NULL) { // is queue empty?
+#ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
 		    if (qthread_incr(&q->fruitless, 1) > 10) {
 			QTHREAD_LOCK(&q->lock);
 			QTHREAD_CONDWAIT(&q->notempty, &q->lock);
@@ -1698,6 +1699,7 @@ lfqueue_dequeue_restart:
 			sched_yield();
 #endif
 		    }
+#endif
 		    goto lfqueue_dequeue_restart;
 		}
 		(void)qt_cas((volatile void**)&(q->tail), tail, QCOMPOSE(next, tail)); // advance tail ptr
