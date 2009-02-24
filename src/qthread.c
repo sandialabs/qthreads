@@ -131,9 +131,11 @@ typedef struct _qt_lfqueue_node {
 typedef struct {
     volatile qt_lfqueue_node_t * head;
     volatile qt_lfqueue_node_t * tail;
+#ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     volatile aligned_t fruitless;
     pthread_mutex_t lock;
     pthread_cond_t notempty;
+#endif
     qthread_shepherd_t *creator_ptr;
 } qt_lfqueue_t;
 
@@ -1574,6 +1576,7 @@ static QINLINE qt_lfqueue_t *qt_lfqueue_new(qthread_shepherd_t* shepherd)
 
     if (q != NULL) {
 	q->creator_ptr = shepherd;
+#ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
 	if (pthread_mutex_init(&q->lock, NULL) != 0) {
 	    FREE_LFQUEUE(q);
 	    return NULL;
@@ -1584,6 +1587,7 @@ static QINLINE qt_lfqueue_t *qt_lfqueue_new(qthread_shepherd_t* shepherd)
 	    return NULL;
 	}
 	q->fruitless = 0;
+#endif
 	ALLOC_LFQNODE(((qt_lfqueue_node_t**)&(q->head)), shepherd);
 	assert(q->head != NULL);
 	if (QPTR(q->head) == NULL) { // if we're not using asserts, fail nicely
@@ -1599,8 +1603,10 @@ static QINLINE qt_lfqueue_t *qt_lfqueue_new(qthread_shepherd_t* shepherd)
 static QINLINE void qt_lfqueue_free(qt_lfqueue_t *q)
 {/*{{{*/
     assert(QPTR(q->head) == QPTR(q->tail));
+#ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     QTHREAD_DESTROYLOCK(&q->lock);
     QTHREAD_DESTROYCOND(&q->notempty);
+#endif
     FREE_LFQNODE(QPTR(q->head));
     FREE_LFQUEUE(q);
 }/*}}}*/
@@ -1634,11 +1640,13 @@ static QINLINE void qt_lfqueue_enqueue(qt_lfqueue_t * q, qthread_t* t, qthread_s
 	}
     }
     (void)qt_cas((volatile void**)&(q->tail), tail, QCOMPOSE(node, tail));
+#ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     if (q->fruitless) {
 	QTHREAD_LOCK(&q->lock);
 	QTHREAD_SIGNAL(&q->notempty);
 	QTHREAD_UNLOCK(&q->lock);
     }
+#endif
 }				       /*}}} */
 
 static QINLINE qthread_t *qt_lfqueue_dequeue(qt_lfqueue_t * q)
