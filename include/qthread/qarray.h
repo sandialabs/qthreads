@@ -21,10 +21,26 @@ typedef enum
 qarray *qarray_create(const size_t count, const size_t unit_size,
 		      const distribution_t d);
 qthread_shepherd_id_t qarray_shepof(const qarray * a, const size_t index);
-void *qarray_elem_nomigrate(const qarray * a, const size_t index);
 void *qarray_elem(qthread_t * me, const qarray * a, const size_t index);
 void qarray_iter(qthread_t * me, qarray * a, qthread_f func);
 void qarray_iter_loop(qthread_t * me, qarray * a, qt_loop_f func);
 void qarray_free(qarray * a);
+
+QINLINE void *qarray_elem_nomigrate(const qarray * a, const size_t index)
+{
+    assert(a);
+    if (index > a->count)
+	return NULL;
+
+    {
+	const size_t segment_num = index / a->segment_size;	/* rounded down */
+
+	return a->base_ptr + ((segment_num * a->segment_bytes) +
+			      ((index -
+				segment_num * a->segment_size) *
+			       a->unit_size));
+    }
+}
+
 
 #endif
