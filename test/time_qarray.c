@@ -5,6 +5,7 @@
 #include <qthread/qarray.h>
 #include "qtimer.h"
 
+#define ITERATIONS 10
 size_t ELEMENT_COUNT = 100000;
 
 typedef struct
@@ -26,8 +27,19 @@ void assign1_loop(qthread_t * me, const size_t startat, const size_t stopat,
 		  void *arg)
 {
     for (size_t i = startat; i < stopat; i++) {
-	double * ptr = qarray_elem_nomigrate((qarray*)arg, i);
+	double *ptr = qarray_elem_nomigrate((qarray *) arg, i);
+
 	*ptr = 1.0;
+    }
+}
+
+void assert1_loop(qthread_t * me, const size_t startat, const size_t stopat,
+		  void *arg)
+{
+    for (size_t i = startat; i < stopat; i++) {
+	double *ptr = qarray_elem_nomigrate((qarray *) arg, i);
+
+	assert(*ptr == 1.0);
     }
 }
 
@@ -41,18 +53,48 @@ void assignall1_loop(qthread_t * me, const size_t startat,
 		     const size_t stopat, void *arg)
 {
     for (size_t i = startat; i < stopat; i++) {
-	char * ptr = qarray_elem_nomigrate((qarray*)arg, i);
+	char *ptr = qarray_elem_nomigrate((qarray *) arg, i);
+
 	memset(ptr, 1, sizeof(bigobj));
     }
+}
+
+void assertall1_loop(qthread_t * me, const size_t startat,
+		     const size_t stopat, void *arg)
+{
+    bigobj *example = malloc(sizeof(bigobj));
+
+    memset(example, 1, sizeof(bigobj));
+    for (size_t i = startat; i < stopat; i++) {
+	char *ptr = qarray_elem_nomigrate((qarray *) arg, i);
+
+	assert(memcmp(ptr, example, sizeof(bigobj)) == 0);
+    }
+    free(example);
 }
 
 void assignoff1(qthread_t * me, const size_t startat, const size_t stopat,
 		void *arg)
 {
     for (size_t i = startat; i < stopat; i++) {
-	char * ptr = qarray_elem_nomigrate((qarray*)arg, i);
+	char *ptr = qarray_elem_nomigrate((qarray *) arg, i);
+
 	memset(ptr, 1, sizeof(offsize));
     }
+}
+
+void assertoff1(qthread_t * me, const size_t startat, const size_t stopat,
+		void *arg)
+{
+    offsize *example = malloc(sizeof(offsize));
+
+    memset(example, 1, sizeof(offsize));
+    for (size_t i = startat; i < stopat; i++) {
+	char *ptr = qarray_elem_nomigrate((qarray *) arg, i);
+
+	assert(memcmp(ptr, example, sizeof(offsize)) == 0);
+    }
+    free(example);
 }
 
 int main(int argc, char *argv[])
@@ -68,8 +110,6 @@ int main(int argc, char *argv[])
     const char *distnames[] = {
 	"FIXED_HASH", "ALL_LOCAL", /*"ALL_RAND", "ALL_LEAST", */ "DIST_RAND",
 	"DIST_REG_STRIPES", "DIST_REG_FIELDS", "DIST_LEAST", "SERIAL"
-    };
-    double results[(sizeof(disttypes) / sizeof(distribution_t)) + 1][3] = { {0}
     };
     int dt_index;
     int interactive = 0;
@@ -102,50 +142,96 @@ int main(int argc, char *argv[])
 
     printf("SERIAL:\n");
     {
-	size_t i;
 	const size_t last_type = (sizeof(disttypes) / sizeof(distribution_t));
 
 	if (enabled_tests & 1) {
+	    size_t i, j;
+	    double acctime = 0.0;
 	    double *a = calloc(ELEMENT_COUNT, sizeof(double));
 
-	    qtimer_start(timer);
-	    for (i = 0; i < ELEMENT_COUNT; i++) {
-		a[i] = 1.0;
+	    for (j = 0; j < ITERATIONS; j++) {
+		qtimer_start(timer);
+		for (i = 0; i < ELEMENT_COUNT; i++) {
+		    a[i] = 1.0;
+		}
+		qtimer_stop(timer);
+		acctime += qtimer_secs(timer);
 	    }
-	    qtimer_stop(timer);
-	    for (i = 0; i < ELEMENT_COUNT; i++) {
-		assert(a[i] == 1.0);
+	    printf("\tIteration over doubles: %f/", acctime / ITERATIONS);
+	    fflush(stdout);
+	    acctime = 0.0;
+	    for (j = 0; j < ITERATIONS; j++) {
+		qtimer_start(timer);
+		for (i = 0; i < ELEMENT_COUNT; i++) {
+		    assert(a[i] == 1.0);
+		}
+		qtimer_stop(timer);
+		acctime += qtimer_secs(timer);
 	    }
 	    free(a);
-	    results[last_type][0] = qtimer_secs(timer);
-	    printf("\tIteration over doubles: %f secs\n",
-		   results[last_type][0]);
+	    printf("%f secs\n", acctime / ITERATIONS);
 	}
 	if (enabled_tests & 2) {
 	    bigobj *a = calloc(ELEMENT_COUNT, sizeof(bigobj));
+	    bigobj *b = malloc(sizeof(bigobj));
+	    size_t i, j;
+	    double acc = 0.0;
 
-	    qtimer_start(timer);
-	    for (i = 0; i < ELEMENT_COUNT; i++) {
-		memset(&a[i], 1, sizeof(bigobj));
+	    memset(b, 1, sizeof(bigobj));
+	    for (j = 0; j < ITERATIONS; j++) {
+		qtimer_start(timer);
+		for (i = 0; i < ELEMENT_COUNT; i++) {
+		    memset(&a[i], 1, sizeof(bigobj));
+		}
+		qtimer_stop(timer);
+		acc += qtimer_secs(timer);
 	    }
-	    qtimer_stop(timer);
+	    printf("\tIteration over giants: %f/", acc / ITERATIONS);
+	    fflush(stdout);
+	    acc = 0.0;
+	    for (j = 0; j < ITERATIONS; j++) {
+		qtimer_start(timer);
+		for (i = 0; i < ELEMENT_COUNT; i++) {
+		    assert(memcmp(a, b, sizeof(bigobj)) == 0);
+		}
+		qtimer_stop(timer);
+		acc += qtimer_secs(timer);
+	    }
 	    free(a);
-	    results[last_type][1] = qtimer_secs(timer);
-	    printf("\tIteration over giants: %f secs\n",
-		   results[last_type][1]);
+	    free(b);
+	    printf("%f secs\n", acc / ITERATIONS);
+	    fflush(stdout);
 	}
 	if (enabled_tests & 4) {
 	    offsize *a = calloc(ELEMENT_COUNT, sizeof(offsize));
+	    offsize *b = malloc(sizeof(offsize));
+	    size_t i, j;
+	    double acc = 0.0;
 
-	    qtimer_start(timer);
-	    for (i = 0; i < ELEMENT_COUNT; i++) {
-		memset(&a[i], 1, sizeof(offsize));
+	    memset(b, 1, sizeof(offsize));
+	    for (j = 0; j < ITERATIONS; j++) {
+		qtimer_start(timer);
+		for (i = 0; i < ELEMENT_COUNT; i++) {
+		    memset(&a[i], 1, sizeof(offsize));
+		}
+		qtimer_stop(timer);
+		acc += qtimer_secs(timer);
 	    }
-	    qtimer_stop(timer);
+	    printf("\tIteration over weirds: %f/", acc / ITERATIONS);
+	    fflush(stdout);
+	    acc = 0.0;
+	    for (j = 0; j < ITERATIONS; j++) {
+		qtimer_start(timer);
+		for (i = 0; i < ELEMENT_COUNT; i++) {
+		    assert(memcmp(a, b, sizeof(offsize)) == 0);
+		}
+		qtimer_stop(timer);
+		acc += qtimer_secs(timer);
+	    }
+	    printf("%f secs\n", acc / ITERATIONS);
+	    fflush(stdout);
 	    free(a);
-	    results[last_type][2] = qtimer_secs(timer);
-	    printf("\tIteration over weirds: %f secs\n",
-		   results[last_type][2]);
+	    free(b);
 	}
     }
 
@@ -156,71 +242,82 @@ int main(int argc, char *argv[])
 	printf("%s:\n", distnames[dt_index]);
 	/* test a basic array of doubles */
 	if (enabled_tests & 1) {
+	    int j;
+	    double acc = 0.0;
 	    a = qarray_create(ELEMENT_COUNT, sizeof(double),
 			      disttypes[dt_index]);
-	    qtimer_start(timer);
-	    qarray_iter_loop(me, a, assign1_loop);
-	    qtimer_stop(timer);
-	    results[dt_index][0] = qtimer_secs(timer);
-	    printf("\tIteration over doubles: %f secs (loop)\n",
-		   results[dt_index][0]);
+	    for (j = 0; j < ITERATIONS; j++) {
+		qtimer_start(timer);
+		qarray_iter_loop(me, a, assign1_loop);
+		qtimer_stop(timer);
+		acc += qtimer_secs(timer);
+	    }
+	    printf("\tIteration over doubles: %f/", acc / ITERATIONS);
+	    fflush(stdout);
+	    acc = 0.0;
+	    for (j = 0; j < ITERATIONS; j++) {
+		qtimer_start(timer);
+		qarray_iter_loop(me, a, assert1_loop);
+		qtimer_stop(timer);
+		acc += qtimer_secs(timer);
+	    }
+	    printf("%f secs\n", acc / ITERATIONS);
+	    fflush(stdout);
 	    qarray_free(a);
 	}
 
 	/* now test an array of giant things */
 	if (enabled_tests & 2) {
+	    int j;
+	    double acc = 0.0;
+
 	    a = qarray_create(ELEMENT_COUNT, sizeof(bigobj),
 			      disttypes[dt_index]);
-	    qtimer_start(timer);
-	    qarray_iter_loop(me, a, assignall1_loop);
-	    qtimer_stop(timer);
-	    results[dt_index][1] = qtimer_secs(timer);
-	    printf("\tIteration over giants: %f secs (loop)\n",
-		   results[dt_index][1]);
+	    for (j = 0; j < ITERATIONS; j++) {
+		qtimer_start(timer);
+		qarray_iter_loop(me, a, assignall1_loop);
+		qtimer_stop(timer);
+		acc += qtimer_secs(timer);
+	    }
+	    printf("\tIteration over giants: %f/", acc / ITERATIONS);
+	    fflush(stdout);
+	    acc = 0.0;
+	    for (j = 0; j < ITERATIONS; j++) {
+		qtimer_start(timer);
+		qarray_iter_loop(me, a, assertall1_loop);
+		qtimer_stop(timer);
+		acc += qtimer_secs(timer);
+	    }
+	    printf("%f secs\n", acc / ITERATIONS);
+	    fflush(stdout);
 	    qarray_free(a);
 	}
 
 	/* now test an array of weird-sized things */
 	if (enabled_tests & 4) {
+	    int j;
+	    double acc = 0.0;
+
 	    a = qarray_create(ELEMENT_COUNT, sizeof(offsize),
 			      disttypes[dt_index]);
-	    qtimer_start(timer);
-	    qarray_iter_loop(me, a, assignoff1);
-	    qtimer_stop(timer);
-	    qarray_free(a);
-	    results[dt_index][2] = qtimer_secs(timer);
-	    printf("\tIteration over weirds: %f secs\n",
-		   results[dt_index][2]);
-	}
-    }
-
-    {
-	double fastest_time, average_time;
-	size_t fastest_type;
-	const char *types[] = { "double", "giant", "weird" };
-	int i;
-
-	for (i = 0; i < 3; i++) {
-	    if (enabled_tests & (1 << i)) {
-		fastest_time = results[0][i];
-		fastest_type = 0;
-		average_time = results[0][i];
-		for (dt_index = 1;
-		     dt_index <
-		     (sizeof(disttypes) / sizeof(distribution_t) + 1);
-		     dt_index++) {
-		    if (fastest_time > results[dt_index][i]) {
-			fastest_time = results[dt_index][i];
-			fastest_type = dt_index;
-		    }
-		    average_time += results[dt_index][i];
-		}
-		average_time /= (sizeof(disttypes) / sizeof(distribution_t) +
-				 1);
-		printf("Fastest %s iterator: %s (%f secs, avg %f secs)\n",
-		       types[i], distnames[fastest_type], fastest_time,
-		       average_time);
+	    for (j = 0; j < ITERATIONS; j++) {
+		qtimer_start(timer);
+		qarray_iter_loop(me, a, assignoff1);
+		qtimer_stop(timer);
+		acc += qtimer_secs(timer);
 	    }
+	    printf("\tIteration over weirds: %f/", acc / ITERATIONS);
+	    fflush(stdout);
+	    acc = 0.0;
+	    for (j = 0; j < ITERATIONS; j++) {
+		qtimer_start(timer);
+		qarray_iter_loop(me, a, assertoff1);
+		qtimer_stop(timer);
+		acc += qtimer_secs(timer);
+	    }
+	    printf("%f secs\n", acc / ITERATIONS);
+	    fflush(stdout);
+	    qarray_free(a);
 	}
     }
 
