@@ -148,6 +148,7 @@ int main(int argc, char *argv[])
 	    size_t i, j;
 	    double acctime = 0.0;
 	    double *a = calloc(ELEMENT_COUNT, sizeof(double));
+	    assert(a != NULL);
 
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
@@ -177,6 +178,8 @@ int main(int argc, char *argv[])
 	    size_t i, j;
 	    double acc = 0.0;
 
+	    assert(a != NULL);
+	    assert(b != NULL);
 	    memset(b, 1, sizeof(bigobj));
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
@@ -192,7 +195,7 @@ int main(int argc, char *argv[])
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
 		for (i = 0; i < ELEMENT_COUNT; i++) {
-		    assert(memcmp(a, b, sizeof(bigobj)) == 0);
+		    assert(memcmp(&a[i], b, sizeof(bigobj)) == 0);
 		}
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
@@ -208,6 +211,8 @@ int main(int argc, char *argv[])
 	    size_t i, j;
 	    double acc = 0.0;
 
+	    assert(a != NULL);
+	    assert(b != NULL);
 	    memset(b, 1, sizeof(offsize));
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
@@ -223,7 +228,7 @@ int main(int argc, char *argv[])
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
 		for (i = 0; i < ELEMENT_COUNT; i++) {
-		    assert(memcmp(a, b, sizeof(offsize)) == 0);
+		    assert(memcmp(&a[i], b, sizeof(offsize)) == 0);
 		}
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
@@ -246,6 +251,7 @@ int main(int argc, char *argv[])
 	    double acc = 0.0;
 	    a = qarray_create(ELEMENT_COUNT, sizeof(double),
 			      disttypes[dt_index]);
+	    assert(a != NULL);
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
 		qarray_iter_loop(me, a, assign1_loop);
@@ -273,6 +279,7 @@ int main(int argc, char *argv[])
 
 	    a = qarray_create(ELEMENT_COUNT, sizeof(bigobj),
 			      disttypes[dt_index]);
+	    assert(a != NULL);
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
 		qarray_iter_loop(me, a, assignall1_loop);
@@ -300,6 +307,7 @@ int main(int argc, char *argv[])
 
 	    a = qarray_create(ELEMENT_COUNT, sizeof(offsize),
 			      disttypes[dt_index]);
+	    assert(a != NULL);
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
 		qarray_iter_loop(me, a, assignoff1);
