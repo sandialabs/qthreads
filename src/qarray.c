@@ -6,17 +6,6 @@
 #include <qthread/qarray.h>
 #include "qthread_innards.h"	       /* for qthread_shepherd_count() */
 
-struct qarray_s
-{
-    size_t unit_size;
-    size_t count;
-    size_t segment_size;	/* units in a segment */
-    size_t segment_bytes;	/* bytes per segment (sometimes > unit_size*segment_count) */
-    char *base_ptr;
-    distribution_t dist_type;
-    qthread_shepherd_id_t dist_shep;	/* for ALL_SAME dist type */
-};
-
 static unsigned short pageshift = 0;
 static aligned_t *chunk_distribution_tracker = NULL;
 
@@ -110,8 +99,8 @@ qarray *qarray_create(const size_t count, const size_t obj_size,
 
     ret->count = count;
     /* make obj_size a multiple of 8 */
-    ret->unit_size = obj_size + ((obj_size&7)?(8-obj_size&7):0);
-    //ret->unit_size = obj_size;
+    //ret->unit_size = obj_size + ((obj_size&7)?(8-obj_size&7):0);
+    ret->unit_size = obj_size;
 
     /* so, here's the idea: memory is assigned to shepherds in units I'm
      * choosing to call "segments" (chunk would also work, but that's overused
