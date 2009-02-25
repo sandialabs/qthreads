@@ -11,10 +11,10 @@ AC_CHECK_HEADERS([sn/mmtimer.h linux/mmtimer.h],
   break],
   [timer_altix_happy="no"])
 
-AS_IF([test "$timer_altix_happy" = "yes"],
+AS_IF([test "x$timer_altix_happy" = "xyes"],
       [AC_CHECK_HEADERS([sys/ioctl.h sys/mman.h])])
 
-AS_IF([test "$timer_altix_happy" = "yes"],
+AS_IF([test "x$timer_altix_happy" = "xyes"],
       [AC_CACHE_CHECK([if MM timer can be opened],
          [qthread_cv_mm_timer_mmap],
          [AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
@@ -32,14 +32,23 @@ AS_IF([test "$timer_altix_happy" = "yes"],
 # define MMTIMER_FULLNAME "/dev/mmtimer"
 #endif
 ], [
-    int fd;
+    int fd, ret;
+	unsigned long val;
+	unsigned long *mmdev_map = NULL;
     fd = open(MMTIMER_FULLNAME, O_RDONLY);
-    if (-1 ==fd) return 1;])],
+    if (fd < 0) return -1;
+	ret = ioctl(fd, MMTIMER_GETFREQ, &val);
+	if (ret == -ENOSYS) return -1;
+	ret = ioctl(fd, MMTIMER_GETOFFSET, 0);
+	if (ret == -ENOSYS) return -1;
+	mmdev_map = mmap(0, getpagesize(), PROT_READ, MAP_SHARED, fd, 0);
+	if (NULL == mmdev_map) return -1;
+	return 0;])],
             [qthread_cv_mm_timer_mmap="yes"],
             [qthread_cv_mm_timer_mmap="no"])])
-AS_IF([test "$qthread_cv_mm_timer_mmap" = "yes"],
+AS_IF([test "x$qthread_cv_mm_timer_mmap" = "xyes"],
       [timer_altix_happy="yes"],
       [timer_altix_happy="no"])])
 
-AS_IF([test "$timer_altix_happy" = "yes"], [$1], [$2])
+AS_IF([test "x$timer_altix_happy" = "xyes"], [$1], [$2])
 ])
