@@ -500,7 +500,7 @@ static aligned_t qarray_loop_strider(qthread_t * me,
     }
     while (qarray_shepof(arg->a, count) != shep) {
 	count += segment_size;
-	if (count > max_count) {
+	if (count >= max_count) {
 	    goto qarray_loop_strider_exit;
 	}
     }
@@ -531,18 +531,18 @@ static aligned_t qarray_loop_strider(qthread_t * me,
 		break;
 	    case DIST:		       /* XXX: this is awful - slow and bad for cache */
 		count += segment_size;
-		if (count > max_count) {
+		if (count >= max_count) {
 		    goto qarray_loop_strider_exit;
 		}
 		while (qarray_shepof(arg->a, count) != shep) {
 		    count += segment_size;
-		    if (count > max_count) {
+		    if (count >= max_count) {
 			goto qarray_loop_strider_exit;
 		    }
 		}
 		break;
 	}
-	if (count > max_count) {
+	if (count >= max_count) {
 	    goto qarray_loop_strider_exit;
 	}
     }
