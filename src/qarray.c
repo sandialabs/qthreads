@@ -393,7 +393,7 @@ void *qarray_elem(qthread_t * me, const qarray * a, const size_t index)
 
     assert(a);
     assert(me);
-    if (index > a->count) {
+    if (index >= a->count) {
 	return NULL;
     } else {
 	const size_t segment_num = index / a->segment_size;	/* rounded down */
@@ -435,7 +435,7 @@ static aligned_t qarray_strider(qthread_t * me,
     }
     while (qarray_shepof(arg->a, count) != shep) {
 	count += segment_size;
-	if (count > max_count) {
+	if (count >= max_count) {
 	    goto qarray_strider_exit;
 	}
     }
@@ -465,18 +465,18 @@ static aligned_t qarray_strider(qthread_t * me,
 		break;
 	    case DIST:		       /* XXX: this is awful - slow and bad for cache */
 		count += segment_size;
-		if (count > max_count) {
+		if (count >= max_count) {
 		    goto qarray_strider_exit;
 		}
 		while (qarray_shepof(arg->a, count) != shep) {
 		    count += segment_size;
-		    if (count > max_count) {
+		    if (count >= max_count) {
 			goto qarray_strider_exit;
 		    }
 		}
 		break;
 	}
-	if (count > max_count) {
+	if (count >= max_count) {
 	    goto qarray_strider_exit;
 	}
     }
