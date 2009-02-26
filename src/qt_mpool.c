@@ -9,6 +9,9 @@
 #if (HAVE_MEMALIGN && HAVE_MALLOC_H)
 #include <malloc.h>		       /* for memalign() */
 #endif
+#ifdef QTHREAD_HAVE_LIBNUMA
+# include <numa.h>
+#endif
 
 #ifdef QTHREAD_USE_PTHREADS
 #include <pthread.h>
@@ -38,6 +41,7 @@ struct qt_mpool_s
     void **alloc_list;
     size_t alloc_list_pos;
 
+    int node;
 #ifdef QTHREAD_USE_PTHREADS
     pthread_mutex_t *lock;
 #endif
@@ -58,6 +62,7 @@ static QINLINE size_t mpool_gcd(size_t a, size_t b)
 	a %= b;
     }
 }
+
 static QINLINE size_t mpool_lcm(size_t a, size_t b)
 {
     size_t tmp = mpool_gcd(a, b);
@@ -66,8 +71,16 @@ static QINLINE size_t mpool_lcm(size_t a, size_t b)
 }
 
 static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
+						     int node,
 						     size_t alignment)
 {
+#if QTHREAD_HAVE_LIBNUMA
+    if (node == -1) {		       // guaranteed page alignment
+	return numa_alloc_interleaved(alloc_size);
+    } else {
+	return numa_alloc_onnode(alloc_size, node);
+    }
+#else
     switch (alignment) {
 	case 0:
 	    return malloc(alloc_size);
@@ -107,12 +120,16 @@ static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
 	    return valloc(alloc_size); /* cross your fingers */
 #endif
     }
+#endif
 }
 
 static QINLINE void qt_mpool_internal_aligned_free(void *freeme,
-						   size_t alignment)
+						   const size_t alloc_size,
+						   const size_t alignment)
 {
-#if (HAVE_MEMALIGN || HAVE_PAGE_ALIGNED_MALLOC || HAVE_POSIX_MEMALIGN)
+#if QTHREAD_HAVE_LIBNUMA
+    numa_free(freeme, alloc_size);
+#elif (HAVE_MEMALIGN || HAVE_PAGE_ALIGNED_MALLOC || HAVE_POSIX_MEMALIGN)
     free(freeme);
 #elif HAVE_16ALIGNED_MALLOC
     switch (alignment) {
@@ -125,7 +142,7 @@ static QINLINE void qt_mpool_internal_aligned_free(void *freeme,
     }
 #else
     if (alignment == 0) {
-	free(freeme);
+	free(freeme, alloc_size);
     } else {
 	return;			       /* XXX: cannot necessarily free valloc'd memory */
     }
@@ -135,15 +152,18 @@ static QINLINE void qt_mpool_internal_aligned_free(void *freeme,
 // sync means pthread-protected
 // item_size is how many bytes to return
 // ...memory is always allocated in multiples of getpagesize()
-qt_mpool qt_mpool_create_aligned(int sync, size_t item_size, size_t alignment)
+qt_mpool qt_mpool_create_aligned(const int sync, size_t item_size,
+				 const int node, const size_t alignment)
 {
-    qt_mpool pool = (qt_mpool) calloc(1, sizeof(struct qt_mpool_s));
+    qt_mpool pool = (qt_mpool)calloc(1, sizeof(struct qt_mpool_s));
+
     size_t alloc_size = 0;
 
     assert(pool != NULL);
     if (pool == NULL) {
 	return NULL;
     }
+    pool->node = node;
 #ifdef QTHREAD_USE_PTHREADS
     if (sync) {
 	pool->lock = (pthread_mutex_t *) malloc(sizeof(pthread_mutex_t));
@@ -190,7 +210,10 @@ qt_mpool qt_mpool_create_aligned(int sync, size_t item_size, size_t alignment)
 	    alloc_size = pagesize;
 	}
     } else {
-	while (alloc_size / item_size < 10) {
+	while (alloc_size / item_size < 128) {
+	    alloc_size *= 2;
+	}
+	while (alloc_size < pagesize * 16) {
 	    alloc_size *= 2;
 	}
     }
@@ -199,13 +222,9 @@ qt_mpool qt_mpool_create_aligned(int sync, size_t item_size, size_t alignment)
     pool->items_per_alloc = alloc_size / item_size;
 
     pool->reuse_pool = NULL;
-    if (alignment != 0) {
-	pool->alloc_block =
-	    (char *)qt_mpool_internal_aligned_alloc(alloc_size, alignment);
-	assert(((unsigned long)(pool->alloc_block) & (alignment - 1)) == 0);
-    } else {
-	pool->alloc_block = malloc(pool->alloc_size);
-    }
+    pool->alloc_block =
+	(char *)qt_mpool_internal_aligned_alloc(alloc_size, node, alignment);
+    assert(((unsigned long)(pool->alloc_block) & (alignment - 1)) == 0);
     assert(pool->alloc_block != NULL);
     if (pool->alloc_block == NULL) {
 #ifdef QTHREAD_USE_PTHREADS
@@ -221,7 +240,8 @@ qt_mpool qt_mpool_create_aligned(int sync, size_t item_size, size_t alignment)
     pool->alloc_list = calloc(1, pagesize);
     assert(pool->alloc_list != NULL);
     if (pool->alloc_list == NULL) {
-	qt_mpool_internal_aligned_free(pool->alloc_block, alignment);
+	qt_mpool_internal_aligned_free(pool->alloc_block, alloc_size,
+				       alignment);
 #ifdef QTHREAD_USE_PTHREADS
 	if (sync) {
 	    qassert(pthread_mutex_destroy(pool->lock), 0);
@@ -236,9 +256,9 @@ qt_mpool qt_mpool_create_aligned(int sync, size_t item_size, size_t alignment)
     return pool;
 }
 
-qt_mpool qt_mpool_create(int sync, size_t item_size)
+qt_mpool qt_mpool_create(int sync, size_t item_size, int node)
 {
-    return qt_mpool_create_aligned(sync, item_size, 0);
+    return qt_mpool_create_aligned(sync, item_size, node, 0);
 }
 
 void *qt_mpool_alloc(qt_mpool pool)
@@ -273,12 +293,8 @@ void *qt_mpool_alloc(qt_mpool pool)
 		pool->alloc_list = tmp;
 		pool->alloc_list_pos = 0;
 	    }
-	    if (pool->alignment != 0) {
-		p = qt_mpool_internal_aligned_alloc(pool->alloc_size,
-						    pool->alignment);
-	    } else {
-		p = malloc(pool->alloc_size);
-	    }
+	    p = qt_mpool_internal_aligned_alloc(pool->alloc_size, pool->node,
+						pool->alignment);
 	    assert(p != NULL);
 	    assert(pool->alignment == 0 ||
 		   (((unsigned long)p) & (pool->alignment - 1)) == 0);
@@ -330,9 +346,12 @@ void qt_mpool_destroy(qt_mpool pool)
     if (pool) {
 	while (pool->alloc_list) {
 	    unsigned int i = 0;
+
 	    void *p = pool->alloc_list[0];
+
 	    while (p && i < (pagesize / sizeof(void *) - 1)) {
-		qt_mpool_internal_aligned_free(p, pool->alignment);
+		qt_mpool_internal_aligned_free(p, pool->alloc_size,
+					       pool->alignment);
 		i++;
 		p = pool->alloc_list[i];
 	    }

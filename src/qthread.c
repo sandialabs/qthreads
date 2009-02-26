@@ -38,6 +38,9 @@
 # include <sys/procset.h>
 # include <sys/lwp.h> /* for _lwp_self() */
 #endif
+#ifdef QTHREAD_HAVE_LIBNUMA
+# include <numa.h>
+#endif
 
 #include "qt_mpool.h"
 #include "qt_atomics.h"
@@ -143,6 +146,9 @@ struct qthread_shepherd_s
 {
     pthread_t shepherd;
     qthread_shepherd_id_t shepherd_id;	/* whoami */
+#ifdef QTHREAD_HAVE_LIBNUMA
+    unsigned int node; /* whereami */
+#endif
     qthread_t *current;
     qt_lfqueue_t *ready;
     qt_mpool qthread_pool;
@@ -782,7 +788,10 @@ static void *qthread_shepherd(void *arg)
     /* Initialize myself */
     pthread_setspecific(shepherd_structs, arg);
     if (getenv("QTHREAD_AFFINITY")) {
-#ifdef QTHREAD_USE_PLPA
+#ifdef QTHREAD_HAVE_LIBNUMA
+	numa_run_on_node(me->node);
+	numa_set_preferred(me->node);
+#elif QTHREAD_USE_PLPA
 	plpa_cpu_set_t *cpuset = (plpa_cpu_set_t*)malloc(sizeof(plpa_cpu_set_t));
 	PLPA_CPU_ZERO(cpuset);
 	PLPA_CPU_SET(me->shepherd_id, cpuset);
@@ -1002,6 +1011,20 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	qlib->max_stack_size = rlp.rlim_max;
     }
 
+#ifdef QTHREAD_HAVE_LIBNUMA
+    {
+	struct bitmask *bmask = numa_bitmask_alloc(numa_max_node());
+	numa_bitmask_clearall(bmask);
+	/* assign nodes */
+	for (i = 0; i < nshepherds; i++) {
+	    qlib->shepherds[i].node = i % numa_max_node();
+	    numa_bitmask_setbit(bmask, i % numa_max_node());
+	}
+	numa_set_interleave_mask(bmask);
+	numa_bitmask_free(bmask);
+    }
+#endif
+
 #ifndef UNPOOLED
     /* set up the memory pools */
     for (i = 0; i < nshepherds; i++) {
@@ -1009,48 +1032,48 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	 * should be quite safe unsynchronized. If things fail, though...
 	 * resynchronize them and see if that fixes it. */
 	qlib->shepherds[i].qthread_pool =
-	    qt_mpool_create(need_sync, sizeof(qthread_t));
+	    qt_mpool_create(need_sync, sizeof(qthread_t), qlib->shepherds[i].node);
 	qlib->shepherds[i].stack_pool =
-	    qt_mpool_create(need_sync, qlib->qthread_stack_size);
+	    qt_mpool_create(need_sync, qlib->qthread_stack_size, qlib->shepherds[i].node);
 #if ALIGNMENT_PROBLEMS_RETURN
 	if (sizeof(ucontext_t) < 2048) {
 	    qlib->shepherds[i].context_pool =
-		qt_mpool_create(need_sync, 2048);
+		qt_mpool_create(need_sync, 2048, qlib->shepherds[i].node);
 	} else {
 	    qlib->shepherds[i].context_pool =
-		qt_mpool_create(need_sync, sizeof(ucontext_t));
+		qt_mpool_create(need_sync, sizeof(ucontext_t), qlib->shepherds[i].node);
 	}
 #else
 	qlib->shepherds[i].context_pool =
-	    qt_mpool_create(need_sync, sizeof(ucontext_t));
+	    qt_mpool_create(need_sync, sizeof(ucontext_t), qlib->shepherds[i].node);
 #endif
 	qlib->shepherds[i].queue_pool =
-	    qt_mpool_create(need_sync, sizeof(qthread_queue_t));
+	    qt_mpool_create(need_sync, sizeof(qthread_queue_t), qlib->shepherds[i].node);
 	qlib->shepherds[i].lfqueue_pool =
-	    qt_mpool_create(need_sync, sizeof(qt_lfqueue_t));
+	    qt_mpool_create(need_sync, sizeof(qt_lfqueue_t), qlib->shepherds[i].node);
 	qlib->shepherds[i].lfqueue_node_pool =
-	    qt_mpool_create_aligned(need_sync, sizeof(qt_lfqueue_node_t), 16);
+	    qt_mpool_create_aligned(need_sync, sizeof(qt_lfqueue_node_t), qlib->shepherds[i].node, 16);
 	qlib->shepherds[i].lock_pool =
-	    qt_mpool_create(need_sync, sizeof(qthread_lock_t));
+	    qt_mpool_create(need_sync, sizeof(qthread_lock_t), qlib->shepherds[i].node);
 	qlib->shepherds[i].addrres_pool =
-	    qt_mpool_create(need_sync, sizeof(qthread_addrres_t));
+	    qt_mpool_create(need_sync, sizeof(qthread_addrres_t), qlib->shepherds[i].node);
 	qlib->shepherds[i].addrstat_pool =
-	    qt_mpool_create(need_sync, sizeof(qthread_addrstat_t));
+	    qt_mpool_create(need_sync, sizeof(qthread_addrstat_t), qlib->shepherds[i].node);
     }
     /* these are used when qthread_fork() is called from a non-qthread. */
-    generic_qthread_pool = qt_mpool_create(need_sync, sizeof(qthread_t));
-    generic_stack_pool = qt_mpool_create(need_sync, qlib->qthread_stack_size);
-    generic_context_pool = qt_mpool_create(need_sync, sizeof(ucontext_t));
+    generic_qthread_pool = qt_mpool_create(need_sync, sizeof(qthread_t), -1);
+    generic_stack_pool = qt_mpool_create(need_sync, qlib->qthread_stack_size, -1);
+    generic_context_pool = qt_mpool_create(need_sync, sizeof(ucontext_t), -1);
     generic_queue_pool =
-	qt_mpool_create(need_sync, sizeof(qthread_queue_t));
+	qt_mpool_create(need_sync, sizeof(qthread_queue_t), -1);
     generic_lfqueue_pool =
-	qt_mpool_create(need_sync, sizeof(qt_lfqueue_t));
+	qt_mpool_create(need_sync, sizeof(qt_lfqueue_t), -1);
     generic_lfqueue_node_pool =
-	qt_mpool_create_aligned(need_sync, sizeof(qt_lfqueue_node_t), 16);
+	qt_mpool_create_aligned(need_sync, sizeof(qt_lfqueue_node_t), -1, 16);
     generic_lock_pool =
-	qt_mpool_create(need_sync, sizeof(qthread_lock_t));
+	qt_mpool_create(need_sync, sizeof(qthread_lock_t), -1);
     generic_addrstat_pool =
-	qt_mpool_create(need_sync, sizeof(qthread_addrstat_t));
+	qt_mpool_create(need_sync, sizeof(qthread_addrstat_t), -1);
 #endif
 
     /* spawn the number of shepherd threads that were specified */
