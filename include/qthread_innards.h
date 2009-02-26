@@ -65,6 +65,7 @@ void qthread_assertnotfuture(qthread_t * t);
 int qthread_fork_future_to(const qthread_t *me, const qthread_f f, const void *arg,
 			    aligned_t * ret,
 			    const qthread_shepherd_id_t shepherd);
+unsigned int qthread_internal_shep_to_node(const qthread_shepherd_id_t shep);
 #ifdef SST
 # define qthread_shepherd_count() PIM_readSpecial(PIM_CMD_LOC_COUNT)
 #else
