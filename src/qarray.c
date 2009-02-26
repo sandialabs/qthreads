@@ -5,6 +5,9 @@
 #include <unistd.h>		       /* for getpagesize() */
 #include <qthread/qarray.h>
 #include "qthread_innards.h"	       /* for qthread_shepherd_count() */
+#ifdef QTHREAD_HAVE_LIBNUMA
+# include <numa.h>
+#endif
 
 static unsigned short pageshift = 0;
 static aligned_t *chunk_distribution_tracker = NULL;
@@ -193,20 +196,42 @@ qarray *qarray_create(const size_t count, const size_t obj_size,
     segment_count =
 	count / ret->segment_size + ((count % ret->segment_size) ? 1 : 0);
 
+#ifdef QTHREAD_HAVE_LIBNUMA
+    switch (d) {
+	case ALL_LOCAL:
+	case ALL_RAND:
+	case ALL_LEAST:
+	case ALL_SAME:
+	default:
+	    ret->base_ptr = (char *)numa_alloc_onnode(segment_count *
+		    ret->segment_bytes, qthread_internal_shep_to_node(ret->dist_shep));
+	    break;
+	case DIST_REG_STRIPES:
+	case DIST_REG_FIELDS:
+	case DIST_RAND:
+	case DIST_LEAST:
+	case DIST:
+	case FIXED_HASH:
+	    ret->base_ptr = (char *)numa_alloc(segment_count *
+		    ret->segment_bytes);
+	    break;
+    }
+#else
     /* For speed, we want page-aligned memory, if we can get it */
-#ifdef HAVE_WORKING_VALLOC
+# ifdef HAVE_WORKING_VALLOC
     ret->base_ptr = (char *)valloc(segment_count * ret->segment_bytes);
-#elif HAVE_MEMALIGN
+# elif HAVE_MEMALIGN
     ret->base_ptr =
 	(char *)memalign(pagesize, segment_count * ret->segment_bytes);
-#elif HAVE_POSIX_MEMALIGN
+# elif HAVE_POSIX_MEMALIGN
     posix_memalign(&(ret->base_ptr), pagesize,
 		   segment_count * ret->segment_bytes);
-#elif HAVE_PAGE_ALIGNED_MALLOC
+# elif HAVE_PAGE_ALIGNED_MALLOC
     ret->base_ptr = (char *)malloc(segment_count * ret->segment_bytes);
-#else
+# else
     /* just don't free it */
     ret->base_ptr = (char *)valloc(segment_count * ret->segment_bytes);
+# endif
 #endif
     if (ret->base_ptr == NULL) {
 	free(ret);
@@ -248,6 +273,10 @@ qarray *qarray_create(const size_t count, const size_t obj_size,
 	    size_t segment;
 
 	    for (segment = 0; segment < segment_count; segment++) {
+#ifdef QTHREAD_HAVE_LIBNUMA
+		char * seghead = qarray_elem_nomigrate(ret, segment * ret->segment_size);
+		numa_tonode_memory(seghead, ret->segment_bytes, qthread_internal_shep_to_node(segment % qthread_shepherd_count()));
+#endif
 		qthread_incr(&chunk_distribution_tracker
 			     [qarray_internal_shepof_shi
 			      (ret, segment * ret->segment_size)], 1);
@@ -260,10 +289,12 @@ qarray *qarray_create(const size_t count, const size_t obj_size,
 	    const qthread_shepherd_id_t max_sheps = qthread_shepherd_count();
 
 	    for (segment = 0; segment < segment_count; segment++) {
-		qthread_shepherd_id_t *ptr =
-		    qarray_elem_nomigrate(ret, segment * ret->segment_size);
-		ptr = qarray_internal_segment_shep(ret, ptr);
+		char * seghead = qarray_elem_nomigrate(ret, segment * ret->segment_size);
+		qthread_shepherd_id_t *ptr = qarray_internal_segment_shep(ret, seghead);
 		*ptr = segment % max_sheps;
+#ifdef QTHREAD_HAVE_LIBNUMA
+		numa_tonode_memory(seghead, ret->segment_bytes, qthread_internal_shep_to_node(segment % max_sheps));
+#endif
 		qthread_incr(&chunk_distribution_tracker[segment % max_sheps],
 			     1);
 	    }
@@ -274,17 +305,22 @@ qarray *qarray_create(const size_t count, const size_t obj_size,
 	    size_t segment;
 	    const qthread_shepherd_id_t max_sheps = qthread_shepherd_count();
 	    const size_t field_size = segment_count / max_sheps;
+	    size_t field_count = 0;
 	    qthread_shepherd_id_t cur_shep = 0;
 
 	    for (segment = 0; segment < segment_count; segment++) {
-		qthread_shepherd_id_t *ptr =
-		    qarray_elem_nomigrate(ret, segment * ret->segment_size);
-		ptr = qarray_internal_segment_shep(ret, ptr);
+		char * seghead = qarray_elem_nomigrate(ret, segment * ret->segment_size);
+		qthread_shepherd_id_t *ptr = qarray_internal_segment_shep(ret, seghead);
 		*ptr = cur_shep;
+#ifdef QTHREAD_HAVE_LIBNUMA
+		numa_tonode_memory(seghead, ret->segment_bytes, qthread_internal_shep_to_node(cur_shep));
+#endif
 		qthread_incr(&chunk_distribution_tracker[cur_shep], 1);
-		if ((segment % max_sheps) == (max_sheps - 1)) {
+		field_count ++;
+		if (field_count == field_size) {
 		    cur_shep++;
 		    cur_shep *= (cur_shep != max_sheps);
+		    field_count = 0;
 		}
 	    }
 	}
@@ -296,12 +332,13 @@ qarray *qarray_create(const size_t count, const size_t obj_size,
 	    const qthread_shepherd_id_t max_sheps = qthread_shepherd_count();
 
 	    for (segment = 0; segment < segment_count; segment++) {
-		qthread_shepherd_id_t *ptr =
-		    qarray_elem_nomigrate(ret, segment * ret->segment_size);
-		ptr = qarray_internal_segment_shep(ret, ptr);
+		char * seghead = qarray_elem_nomigrate(ret, segment * ret->segment_size);
+		qthread_shepherd_id_t *ptr = qarray_internal_segment_shep(ret, seghead);
 		*ptr = random() % max_sheps;
-		qthread_incr(&chunk_distribution_tracker
-			     [*(qthread_shepherd_id_t *) ptr], 1);
+#ifdef QTHREAD_HAVE_LIBNUMA
+		numa_tonode_memory(seghead, ret->segment_bytes, qthread_internal_shep_to_node(*ptr));
+#endif
+		qthread_incr(&chunk_distribution_tracker[*ptr], 1);
 	    }
 	}
 	    break;
@@ -312,9 +349,8 @@ qarray *qarray_create(const size_t count, const size_t obj_size,
 
 	    for (segment = 0; segment < segment_count; segment++) {
 		qthread_shepherd_id_t i, least = 0;
-		qthread_shepherd_id_t *ptr =
-		    qarray_elem_nomigrate(ret, segment * ret->segment_size);
-		ptr = qarray_internal_segment_shep(ret, ptr);
+		char * seghead = qarray_elem_nomigrate(ret, segment * ret->segment_size);
+		qthread_shepherd_id_t *ptr = qarray_internal_segment_shep(ret, seghead);
 
 		for (i = 1; i < max_sheps; i++) {
 		    if (chunk_distribution_tracker[i] <
@@ -323,6 +359,9 @@ qarray *qarray_create(const size_t count, const size_t obj_size,
 		    }
 		}
 		*ptr = least;
+#ifdef QTHREAD_HAVE_LIBNUMA
+		numa_tonode_memory(seghead, ret->segment_bytes, qthread_internal_shep_to_node(least));
+#endif
 		qthread_incr(&chunk_distribution_tracker[least], 1);
 	    }
 	}
@@ -376,7 +415,9 @@ void qarray_free(qarray * a)
 					 a->segment_size) ? 1 : 0)));
 		    break;
 	    }
-#if (HAVE_WORKING_VALLOC || HAVE_MEMALIGN || HAVE_POSIX_MEMALIGN || HAVE_PAGE_ALIGNED_MALLOC)
+#ifdef QTHREAD_HAVE_LIBNUMA
+	    numa_free(a->base_ptr, (a->count/a->segment_size + ((a->count % a->segment_size)?1:0)));
+#elif (HAVE_WORKING_VALLOC || HAVE_MEMALIGN || HAVE_POSIX_MEMALIGN || HAVE_PAGE_ALIGNED_MALLOC)
 	    /* avoid freeing base ptr if we had to use a broken valloc */
 	    free(a->base_ptr);
 #endif
