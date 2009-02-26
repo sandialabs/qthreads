@@ -1039,12 +1039,13 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 #ifdef QTHREAD_HAVE_LIBNUMA
     {
 	struct bitmask *bmask = numa_bitmask_alloc(numa_max_node());
+	size_t max = numa_max_node()+1;
 
 	numa_bitmask_clearall(bmask);
 	/* assign nodes */
 	for (i = 0; i < nshepherds; i++) {
-	    qlib->shepherds[i].node = i % numa_max_node();
-	    numa_bitmask_setbit(bmask, i % numa_max_node());
+	    qlib->shepherds[i].node = i % max;
+	    numa_bitmask_setbit(bmask, i % max);
 	}
 	numa_set_interleave_mask(bmask);
 	numa_bitmask_free(bmask);
@@ -2976,6 +2977,11 @@ qthread_shepherd_id_t qthread_shep(const qthread_t * t)
 	return ret->shepherd_id;
     }
 }				       /*}}} */
+
+unsigned int qthread_internal_shep_to_node(const qthread_shepherd_id_t shep)
+{/*{{{*/
+    return qlib->shepherds[shep].node;
+}/*}}}*/
 
 /* these two functions are helper functions for futurelib
  * (nobody else gets to have 'em!) */
