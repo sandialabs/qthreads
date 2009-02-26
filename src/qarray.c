@@ -203,8 +203,10 @@ qarray *qarray_create(const size_t count, const size_t obj_size,
 	case ALL_LEAST:
 	case ALL_SAME:
 	default:
-	    ret->base_ptr = (char *)numa_alloc_onnode(segment_count *
-		    ret->segment_bytes, qthread_internal_shep_to_node(ret->dist_shep));
+	    ret->base_ptr =
+		(char *)numa_alloc_onnode(segment_count * ret->segment_bytes,
+					  qthread_internal_shep_to_node(ret->
+									dist_shep));
 	    break;
 	case DIST_REG_STRIPES:
 	case DIST_REG_FIELDS:
@@ -212,8 +214,8 @@ qarray *qarray_create(const size_t count, const size_t obj_size,
 	case DIST_LEAST:
 	case DIST:
 	case FIXED_HASH:
-	    ret->base_ptr = (char *)numa_alloc(segment_count *
-		    ret->segment_bytes);
+	    ret->base_ptr =
+		(char *)numa_alloc(segment_count * ret->segment_bytes);
 	    break;
     }
 #else
@@ -274,8 +276,12 @@ qarray *qarray_create(const size_t count, const size_t obj_size,
 
 	    for (segment = 0; segment < segment_count; segment++) {
 #ifdef QTHREAD_HAVE_LIBNUMA
-		char * seghead = qarray_elem_nomigrate(ret, segment * ret->segment_size);
-		numa_tonode_memory(seghead, ret->segment_bytes, qthread_internal_shep_to_node(segment % qthread_shepherd_count()));
+		char *seghead =
+		    qarray_elem_nomigrate(ret, segment * ret->segment_size);
+		numa_tonode_memory(seghead, ret->segment_bytes,
+				   qthread_internal_shep_to_node(segment %
+								 qthread_shepherd_count
+								 ()));
 #endif
 		qthread_incr(&chunk_distribution_tracker
 			     [qarray_internal_shepof_shi
@@ -289,11 +295,15 @@ qarray *qarray_create(const size_t count, const size_t obj_size,
 	    const qthread_shepherd_id_t max_sheps = qthread_shepherd_count();
 
 	    for (segment = 0; segment < segment_count; segment++) {
-		char * seghead = qarray_elem_nomigrate(ret, segment * ret->segment_size);
-		qthread_shepherd_id_t *ptr = qarray_internal_segment_shep(ret, seghead);
+		char *seghead =
+		    qarray_elem_nomigrate(ret, segment * ret->segment_size);
+		qthread_shepherd_id_t *ptr =
+		    qarray_internal_segment_shep(ret, seghead);
 		*ptr = segment % max_sheps;
 #ifdef QTHREAD_HAVE_LIBNUMA
-		numa_tonode_memory(seghead, ret->segment_bytes, qthread_internal_shep_to_node(segment % max_sheps));
+		numa_tonode_memory(seghead, ret->segment_bytes,
+				   qthread_internal_shep_to_node(segment %
+								 max_sheps));
 #endif
 		qthread_incr(&chunk_distribution_tracker[segment % max_sheps],
 			     1);
@@ -309,14 +319,17 @@ qarray *qarray_create(const size_t count, const size_t obj_size,
 	    qthread_shepherd_id_t cur_shep = 0;
 
 	    for (segment = 0; segment < segment_count; segment++) {
-		char * seghead = qarray_elem_nomigrate(ret, segment * ret->segment_size);
-		qthread_shepherd_id_t *ptr = qarray_internal_segment_shep(ret, seghead);
+		char *seghead =
+		    qarray_elem_nomigrate(ret, segment * ret->segment_size);
+		qthread_shepherd_id_t *ptr =
+		    qarray_internal_segment_shep(ret, seghead);
 		*ptr = cur_shep;
 #ifdef QTHREAD_HAVE_LIBNUMA
-		numa_tonode_memory(seghead, ret->segment_bytes, qthread_internal_shep_to_node(cur_shep));
+		numa_tonode_memory(seghead, ret->segment_bytes,
+				   qthread_internal_shep_to_node(cur_shep));
 #endif
 		qthread_incr(&chunk_distribution_tracker[cur_shep], 1);
-		field_count ++;
+		field_count++;
 		if (field_count == field_size) {
 		    cur_shep++;
 		    cur_shep *= (cur_shep != max_sheps);
@@ -332,11 +345,14 @@ qarray *qarray_create(const size_t count, const size_t obj_size,
 	    const qthread_shepherd_id_t max_sheps = qthread_shepherd_count();
 
 	    for (segment = 0; segment < segment_count; segment++) {
-		char * seghead = qarray_elem_nomigrate(ret, segment * ret->segment_size);
-		qthread_shepherd_id_t *ptr = qarray_internal_segment_shep(ret, seghead);
+		char *seghead =
+		    qarray_elem_nomigrate(ret, segment * ret->segment_size);
+		qthread_shepherd_id_t *ptr =
+		    qarray_internal_segment_shep(ret, seghead);
 		*ptr = random() % max_sheps;
 #ifdef QTHREAD_HAVE_LIBNUMA
-		numa_tonode_memory(seghead, ret->segment_bytes, qthread_internal_shep_to_node(*ptr));
+		numa_tonode_memory(seghead, ret->segment_bytes,
+				   qthread_internal_shep_to_node(*ptr));
 #endif
 		qthread_incr(&chunk_distribution_tracker[*ptr], 1);
 	    }
@@ -349,8 +365,10 @@ qarray *qarray_create(const size_t count, const size_t obj_size,
 
 	    for (segment = 0; segment < segment_count; segment++) {
 		qthread_shepherd_id_t i, least = 0;
-		char * seghead = qarray_elem_nomigrate(ret, segment * ret->segment_size);
-		qthread_shepherd_id_t *ptr = qarray_internal_segment_shep(ret, seghead);
+		char *seghead =
+		    qarray_elem_nomigrate(ret, segment * ret->segment_size);
+		qthread_shepherd_id_t *ptr =
+		    qarray_internal_segment_shep(ret, seghead);
 
 		for (i = 1; i < max_sheps; i++) {
 		    if (chunk_distribution_tracker[i] <
@@ -360,7 +378,8 @@ qarray *qarray_create(const size_t count, const size_t obj_size,
 		}
 		*ptr = least;
 #ifdef QTHREAD_HAVE_LIBNUMA
-		numa_tonode_memory(seghead, ret->segment_bytes, qthread_internal_shep_to_node(least));
+		numa_tonode_memory(seghead, ret->segment_bytes,
+				   qthread_internal_shep_to_node(least));
 #endif
 		qthread_incr(&chunk_distribution_tracker[least], 1);
 	    }
@@ -386,8 +405,7 @@ void qarray_free(qarray * a)
 		    for (segment = 0; segment < segment_count; segment++) {
 			char *segmenthead = qarray_elem_nomigrate(a,
 								  segment *
-								  a->
-								  segment_size);
+								  a->segment_size);
 			qthread_incr(&chunk_distribution_tracker
 				     [*qarray_internal_segment_shep
 				      (a, segmenthead)], -1);
@@ -416,7 +434,9 @@ void qarray_free(qarray * a)
 		    break;
 	    }
 #ifdef QTHREAD_HAVE_LIBNUMA
-	    numa_free(a->base_ptr, (a->count/a->segment_size + ((a->count % a->segment_size)?1:0)));
+	    numa_free(a->base_ptr,
+		      (a->count / a->segment_size +
+		       ((a->count % a->segment_size) ? 1 : 0)));
 #elif (HAVE_WORKING_VALLOC || HAVE_MEMALIGN || HAVE_POSIX_MEMALIGN || HAVE_PAGE_ALIGNED_MALLOC)
 	    /* avoid freeing base ptr if we had to use a broken valloc */
 	    free(a->base_ptr);
