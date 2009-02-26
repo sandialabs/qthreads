@@ -1,0 +1,31 @@
+# -*- Autoconf -*-
+#
+# Copyright (c)      2008  Sandia Corporation
+#
+
+# QTHREAD_CHECK_LIBNUMA([action-if-found], [action-if-not-found])
+# ------------------------------------------------------------------------------
+AC_DEFUN([QTHREAD_CHECK_LIBNUMA], [
+AC_CHECK_HEADERS([numa.h],
+				 [libnuma_happy=yes
+				  break],
+				 [libnuma_happy=no])
+AS_IF([test "x$libnuma_happy" = "xyes"],
+  [AC_SEARCH_LIBS([numa_available],[numa],[libnuma_happy=yes],[libnuma_happy=no])])
+AS_IF([test "x$libnuma_happy" = "xyes"],
+  [AC_MSG_CHECKING(if NUMA is available)
+   AC_TRY_RUN([
+#include <numa.h>
+int main() { return numa_available(); }
+  ],
+  [libnuma_happy=yes],
+  [libnuma_happy=no],
+  [libnuma_happy=no])
+  AC_MSG_RESULT($libnuma_happy)
+  ])
+  
+AS_IF([test "x$libnuma_happy" = "xyes"],
+  [AC_DEFINE([QTHREAD_HAVE_LIBNUMA],[1],[if the machine has libnuma working])
+		 $1],
+		[$2])
+])
