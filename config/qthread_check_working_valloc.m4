@@ -31,8 +31,7 @@ int main()
      [qthread_cv_working_valloc=no],
      [qthread_cv_working_valloc=no])
   ])
-if test "$qthread_cv_working_valloc" = yes ; then
-  AC_DEFINE([HAVE_WORKING_VALLOC], [1],
-    [Define if `valloc'ed memory can be `free'd.])
-fi
+AS_IF([test "x$qthread_cv_working_valloc" = xyes],
+  [AC_DEFINE([HAVE_WORKING_VALLOC], [1],
+    [Define if `valloc'ed memory can be `free'd.])])
 ])
