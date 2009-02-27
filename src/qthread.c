@@ -145,9 +145,7 @@ typedef struct {
 struct qthread_shepherd_s {
     pthread_t shepherd;
     qthread_shepherd_id_t shepherd_id;	/* whoami */
-#ifdef QTHREAD_HAVE_LIBNUMA
-    unsigned int node;		/* whereami */
-#endif
+    unsigned int node;		/* libnuma: whereami */
     qthread_t *current;
     qt_lfqueue_t *ready;
     qt_mpool qthread_pool;
