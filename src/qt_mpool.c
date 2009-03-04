@@ -224,7 +224,7 @@ qt_mpool qt_mpool_create_aligned(const int sync, size_t item_size,
     pool->reuse_pool = NULL;
     pool->alloc_block =
 	(char *)qt_mpool_internal_aligned_alloc(alloc_size, node, alignment);
-    assert(((unsigned long)(pool->alloc_block) & (alignment - 1)) == 0);
+    assert(alignment == 0 || ((unsigned long)(pool->alloc_block) & (alignment - 1)) == 0);
     assert(pool->alloc_block != NULL);
     if (pool->alloc_block == NULL) {
 #ifdef QTHREAD_USE_PTHREADS
