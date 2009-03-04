@@ -408,7 +408,7 @@ AC_ARG_ENABLE([condwait-queue],
   [],
   [case "$host" in
 	 sparc-sun-solaris*)
-	   enable_condwait_queue="yes"
+	   enable_condwait_queue="no"
 	   ;;
 	 *)
    	   enable_condwait_queue="no"
