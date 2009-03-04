@@ -1091,22 +1091,24 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	qlib->max_stack_size = rlp.rlim_max;
     }
 
+    if (getenv("QTHREAD_AFFINITY")) {
 #ifdef QTHREAD_HAVE_LIBNUMA
-    if (numa_available()) {
-	size_t max = numa_max_node();
-	struct bitmask *bmask = numa_bitmask_alloc(max);
+	if (numa_available()) {
+	    size_t max = numa_max_node();
+	    struct bitmask *bmask = numa_bitmask_alloc(max);
 
-	numa_bitmask_clearall(bmask);
-	/* assign nodes */
-	for (i = 0; i < nshepherds; i++) {
-	    qlib->shepherds[i].node = i % max;
-	    numa_bitmask_setbit(bmask, i % max);
+	    numa_bitmask_clearall(bmask);
+	    /* assign nodes */
+	    for (i = 0; i < nshepherds; i++) {
+		qlib->shepherds[i].node = i % max;
+		numa_bitmask_setbit(bmask, i % max);
+	    }
+	    numa_set_interleave_mask(bmask);
+	    numa_bitmask_free(bmask);
+	} else {
+	    goto noaffinity;
 	}
-	numa_set_interleave_mask(bmask);
-	numa_bitmask_free(bmask);
-    }
 #elif HAVE_SYS_LGRP_USER_H
-    {
 	lgrp_cookie_t lgrp_cookie = lgrp_init(LGRP_VIEW_OS);
 	lgrp_id_t lgrp;
 	int lgrp_count_grps;
@@ -1154,8 +1156,13 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	    free(cpus[i]);
 	}
 	free(cpus);
-    }
 #endif
+    } else {
+noaffinity:
+	for (i = 0; i < nshepherds; i++) {
+	    qlib->shepherds[i].node = -1;
+	}
+    }
 
 #ifndef UNPOOLED
     /* set up the memory pools */
@@ -1818,7 +1825,10 @@ static QINLINE void qt_lfqueue_enqueue(qt_lfqueue_t * q, qthread_t * t,
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     if (q->fruitless) {
 	QTHREAD_LOCK(&q->lock);
-	QTHREAD_SIGNAL(&q->notempty);
+	if (q->fruitless) {
+	    q->fruitless = 0;
+	    QTHREAD_SIGNAL(&q->notempty);
+	}
 	QTHREAD_UNLOCK(&q->lock);
     }
 #endif
@@ -1874,11 +1884,12 @@ static QINLINE qthread_t *qt_lfqueue_dequeue_blocking(qt_lfqueue_t * q)
 	    if (QPTR(head) == QPTR(tail)) {	// is queue empty or tail falling behind?
 		if (QPTR(next) == NULL) {	// is queue empty?
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-		    if (qthread_incr(&q->fruitless, 1) > 10) {
+		    if (qthread_incr(&q->fruitless, 1) > 1000) {
 			QTHREAD_LOCK(&q->lock);
-			QTHREAD_CONDWAIT(&q->notempty, &q->lock);
+			while (q->fruitless > 1000) {
+			    QTHREAD_CONDWAIT(&q->notempty, &q->lock);
+			}
 			QTHREAD_UNLOCK(&q->lock);
-			q->fruitless = 0;
 		    } else {
 #ifdef HAVE_PTHREAD_YIELD
 			pthread_yield();
