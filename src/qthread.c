@@ -1092,9 +1092,9 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
     }
 
 #ifdef QTHREAD_HAVE_LIBNUMA
-    {
-	struct bitmask *bmask = numa_bitmask_alloc(numa_max_node());
-	size_t max = numa_max_node() + 1;
+    if (numa_available()) {
+	size_t max = numa_max_node();
+	struct bitmask *bmask = numa_bitmask_alloc(max);
 
 	numa_bitmask_clearall(bmask);
 	/* assign nodes */
