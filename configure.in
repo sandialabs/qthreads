@@ -439,7 +439,9 @@ AC_CACHE_SAVE
 
 ## External libraries that help on some architectures
 AS_IF([test "x$qthread_implementation" = "xunix"],
-	  [QTHREAD_CHECK_LIBNUMA([],
+	  [AC_CHECK_HEADERS([sys/lgrp_user.h],
+						[AC_SEARCH_LIBS([lgrp_init], [lgrp])])
+	   QTHREAD_CHECK_LIBNUMA([],
 							 [QTHREAD_CHECK_PLPA])
 	  ])
 
