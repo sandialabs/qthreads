@@ -327,7 +327,13 @@ AC_CACHE_SAVE
 ## --------------------------- ##
 AC_FUNC_VPRINTF
 AC_FUNC_MMAP
-AC_CHECK_FUNCS([strtol floor memalign posix_memalign memset memmove munmap memcpy getrlimit setrlimit fstat64 lseek64 getcontext swapcontext makecontext sched_yield processor_bind])
+AC_CHECK_FUNCS([strtol floor memalign posix_memalign memset memmove munmap memcpy getrlimit setrlimit fstat64 lseek64 getcontext swapcontext makecontext sched_yield processor_bind madvise])
+AC_TRY_LINK([#include <sys/types.h>
+#include <sys/mman.h>
+],[int testma (void) { return MADV_ACCESS_LWP; }],[qt_cv_malwp=yes
+   AC_DEFINE([HAVE_MADV_ACCESS_LWP], [1], [if MADV_ACCESS_LWP exists])],[qt_cv_malwp=no])
+AC_MSG_CHECKING(for MADV_ACCESS_LWP)
+AC_MSG_RESULT($qt_cv_malwp)
 AX_CHECK_PAGE_ALIGNED_MALLOC
 AX_CHECK_16ALIGNED_MALLOC
 QTHREAD_CHECK_WORKING_VALLOC

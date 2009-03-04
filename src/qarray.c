@@ -7,6 +7,12 @@
 #include "qthread_innards.h"	       /* for qthread_shepherd_count() */
 #ifdef QTHREAD_HAVE_LIBNUMA
 # include <numa.h>
+#elif HAVE_SYS_LGRP_USER_H
+# ifdef HAVE_MADV_ACCESS_LWP
+#  include <sys/types.h>
+#  include <sys/mman.h>
+# endif
+# include <sys/lgrp_user.h>
 #endif
 
 static unsigned short pageshift = 0;
@@ -386,6 +392,9 @@ qarray *qarray_create(const size_t count, const size_t obj_size,
 	}
 	    break;
     }
+#if ( HAVE_MADVISE && HAVE_MADV_ACCESS_LWP )
+    madvise(ret->base_ptr, segment_count * ret->segment_bytes, MADV_ACCESS_LWP);
+#endif
     return ret;
 }				       /*}}} */
 
