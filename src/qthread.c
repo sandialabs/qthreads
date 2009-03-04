@@ -1119,7 +1119,7 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	    case ENOMEM:
 		return QTHREAD_THIRD_PARTY_ERROR;
 	}
-	lgrp_count_grps = lgrp_walk(lgrp_cookie, 0, &cpus, 0);
+	lgrp_count_grps = lgrp_walk(lgrp_cookie, lgrp_root(lgrp_cookie), &cpus, 0);
 	if (lgrp_count_grps <= 0) {
 	    return QTHREAD_THIRD_PARTY_ERROR;
 	}
