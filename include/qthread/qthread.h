@@ -32,6 +32,7 @@
 #define QTHREAD_PTHREAD_ERROR	-2
 #define QTHREAD_NOT_ALLOWED     -3
 #define QTHREAD_MALLOC_ERROR	ENOMEM
+#define QTHREAD_THIRD_PARTY_ERROR -4
 #define NO_SHEPHERD ((qthread_shepherd_id_t)-1)
 
 /* NOTE!!!!!!!!!!!
