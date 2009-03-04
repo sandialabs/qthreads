@@ -36,7 +36,9 @@
 # include <sys/types.h>
 # include <sys/processor.h>
 # include <sys/procset.h>
-# include <sys/lwp.h>		       /* for _lwp_self() */
+# ifdef HAVE_SYS_LGRP_USER_H
+#  include <sys/lgrp_user.h>
+# endif
 #endif
 #ifdef QTHREAD_HAVE_LIBNUMA
 # include <numa.h>
@@ -768,6 +770,43 @@ static QINLINE int qthread_unique_collect(void *key, void *value, void *id)
 # define QTHREAD_LOCK_UNIQUERECORD(TYPE, ADDR, ME) do{ }while(0)
 #endif
 
+#ifdef HAVE_SYS_LGRP_USER_H
+static int lgrp_walk(lgrp_cookie_t cookie, lgrp_id_t lgrp, processorid_t ***cpus, int lgrp_count_grps)
+{
+    int nchildren, ncpus = lgrp_cpus(cookie, lgrp, NULL, 0, LGRP_CONTENT_DIRECT);
+
+    if (ncpus == -1) {
+	return lgrp_count_grps;
+    } else if (ncpus > 0) {
+	processorid_t *cpuids = malloc((ncpus+1) * sizeof(processorid_t));
+	ncpus = lgrp_cpus(cookie, lgrp, cpuids, ncpus, LGRP_CONTENT_DIRECT);
+	if (ncpus == -1) {
+	    free(cpuids);
+	    return lgrp_count_grps;
+	}
+	cpuids[ncpus] = -1;
+	*cpus = realloc(*cpus, sizeof(processorid_t*)*(lgrp_count_grps+1));
+	(*cpus)[lgrp_count_grps++] = cpuids;
+    }
+    nchildren = lgrp_children(cookie, lgrp, NULL, 0);
+    if (nchildren == -1) {
+	return lgrp_count_grps;
+    } else if (nchildren > 0) {
+	int i;
+	lgrp_id_t *children = malloc(nchildren * sizeof(lgrp_id_t));
+	nchildren = lgrp_children(cookie, lgrp, children, nchildren);
+	if (nchildren == -1) {
+	    free(children);
+	    return lgrp_count_grps;
+	}
+	for (i=0; i<nchildren; i++) {
+	    lgrp_count_grps = lgrp_walk(cookie, children[i], lgrp_count_grps);
+	}
+    }
+    return lgrp_count_grps;
+}
+#endif
+
 /* the qthread_shepherd() is the pthread responsible for actually
  * executing the work units
  *
@@ -794,6 +833,7 @@ static void *qthread_shepherd(void *arg)
     qtimer_t idle = qtimer_new();
 #endif
 
+    assert(me != NULL);
     qthread_debug(2, "qthread_shepherd(%u): forked\n", me->shepherd_id);
 
     /* Initialize myself */
@@ -813,10 +853,18 @@ static void *qthread_shepherd(void *arg)
 	}
 	free(cpuset);
 #elif HAVE_PROCESSOR_BIND
-	if (processor_bind
-	    (P_LWPID, _lwp_self(),
-	     (me->shepherd_id % 8) * 8 + (me->shepherd_id / 8), NULL) < 0) {
-	    perror("processor_bind");
+	if (me->node != -1) {
+	    if (processor_bind(P_LWPID, P_MYID, me->node, NULL) < 0) {
+		perror("processor_bind");
+	    }
+# if HAVE_SYS_LGRP_USER_H
+	    {
+		lgrp_id_t home = lgrp_home(P_LWPID, P_MYID);
+		if (lgrp_affinity_set(P_LWPID, P_MYID, home, LGRP_AFF_STRONG) != 0) {
+		    perror("lgrp_affinity_set");
+		}
+	    }
+# endif
 	}
 #endif
     }
@@ -1047,6 +1095,53 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	}
 	numa_set_interleave_mask(bmask);
 	numa_bitmask_free(bmask);
+    }
+#elif HAVE_SYS_LGRP_USER_H
+    {
+	lgrp_cookie_t lgrp_cookie = lgrp_init(LGRP_VIEW_OS);
+	lgrp_id_t lgrp;
+	int lgrp_count_grps;
+	processorid_t **cpus = NULL;
+
+	switch(lgrp_cookie) {
+	    case EINVAL: case ENOMEM:
+		return QTHREAD_THIRD_PARTY_ERROR;
+	}
+	lgrp_count_grps = lgrp_walk(lgrp_cookie, 0, &cpus, 0);
+	if (lgrp_count_grps <= 0) {
+	    return QTHREAD_THIRD_PARTY_ERROR;
+	}
+	for (i=0; i<nshepherds; i++) {
+	    /* first, pick a lgrp/node */
+	    int cpu;
+	    lgrp_id_t first;
+	    first = lgrp = i % lgrp_count_grps;
+	    qlib->shepherds[i].node = -1;
+	    /* now pick an available CPU */
+	    while (1) {
+		cpu = 0;
+		/* find an unused one */
+		while (cpus[lgrp][cpu] != -1) cpu++;
+		if (cpu == 0) {
+		    /* if no unused ones... try the next lgrp */
+		    lgrp ++;
+		    lgrp *= (lgrp < lgrp_count_grps);
+		    if (lgrp == first) {
+			break;
+		    }
+		} else {
+		    /* found one! */
+		    cpu--;
+		    qlib->shepherds[i].node = cpus[lgrp][cpu];
+		    cpus[lgrp][cpu] = -1;
+		    break;
+		}
+	    }
+	}
+	for (i=0; i<lgrp_count_grps; i++) {
+	    free(cpus[i]);
+	}
+	free(cpus);
     }
 #endif
 
