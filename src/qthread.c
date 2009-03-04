@@ -771,21 +771,25 @@ static QINLINE int qthread_unique_collect(void *key, void *value, void *id)
 #endif
 
 #ifdef HAVE_SYS_LGRP_USER_H
-static int lgrp_walk(lgrp_cookie_t cookie, lgrp_id_t lgrp, processorid_t ***cpus, int lgrp_count_grps)
-{
-    int nchildren, ncpus = lgrp_cpus(cookie, lgrp, NULL, 0, LGRP_CONTENT_DIRECT);
+static int lgrp_walk(const lgrp_cookie_t cookie, const lgrp_id_t lgrp,
+		     processorid_t *** cpus, int lgrp_count_grps)
+{				       /*{{{ */
+    int nchildren, ncpus =
+	lgrp_cpus(cookie, lgrp, NULL, 0, LGRP_CONTENT_DIRECT);
 
     if (ncpus == -1) {
 	return lgrp_count_grps;
     } else if (ncpus > 0) {
-	processorid_t *cpuids = malloc((ncpus+1) * sizeof(processorid_t));
+	processorid_t *cpuids = malloc((ncpus + 1) * sizeof(processorid_t));
+
 	ncpus = lgrp_cpus(cookie, lgrp, cpuids, ncpus, LGRP_CONTENT_DIRECT);
 	if (ncpus == -1) {
 	    free(cpuids);
 	    return lgrp_count_grps;
 	}
 	cpuids[ncpus] = -1;
-	*cpus = realloc(*cpus, sizeof(processorid_t*)*(lgrp_count_grps+1));
+	*cpus =
+	    realloc(*cpus, sizeof(processorid_t *) * (lgrp_count_grps + 1));
 	(*cpus)[lgrp_count_grps++] = cpuids;
     }
     nchildren = lgrp_children(cookie, lgrp, NULL, 0);
@@ -794,17 +798,19 @@ static int lgrp_walk(lgrp_cookie_t cookie, lgrp_id_t lgrp, processorid_t ***cpus
     } else if (nchildren > 0) {
 	int i;
 	lgrp_id_t *children = malloc(nchildren * sizeof(lgrp_id_t));
+
 	nchildren = lgrp_children(cookie, lgrp, children, nchildren);
 	if (nchildren == -1) {
 	    free(children);
 	    return lgrp_count_grps;
 	}
-	for (i=0; i<nchildren; i++) {
-	    lgrp_count_grps = lgrp_walk(cookie, children[i], lgrp_count_grps);
+	for (i = 0; i < nchildren; i++) {
+	    lgrp_count_grps =
+		lgrp_walk(cookie, children[i], cpus, lgrp_count_grps);
 	}
     }
     return lgrp_count_grps;
-}
+}				       /*}}} */
 #endif
 
 /* the qthread_shepherd() is the pthread responsible for actually
@@ -860,7 +866,9 @@ static void *qthread_shepherd(void *arg)
 # if HAVE_SYS_LGRP_USER_H
 	    {
 		lgrp_id_t home = lgrp_home(P_LWPID, P_MYID);
-		if (lgrp_affinity_set(P_LWPID, P_MYID, home, LGRP_AFF_STRONG) != 0) {
+
+		if (lgrp_affinity_set(P_LWPID, P_MYID, home, LGRP_AFF_STRONG)
+		    != 0) {
 		    perror("lgrp_affinity_set");
 		}
 	    }
@@ -931,8 +939,9 @@ static void *qthread_shepherd(void *arg)
 				  t->blockedon);
 		    t->thread_state = QTHREAD_STATE_RUNNING;
 		    t->shepherd_ptr =
-			&(qlib->shepherds
-			  [(qthread_shepherd_id_t) (intptr_t) t->blockedon]);
+			&(qlib->
+			  shepherds[(qthread_shepherd_id_t) (intptr_t) t->
+				    blockedon]);
 		    qt_lfqueue_enqueue(t->shepherd_ptr->ready, t, me);
 		    break;
 		case QTHREAD_STATE_YIELDED:	/* reschedule it */
@@ -1085,7 +1094,7 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 #ifdef QTHREAD_HAVE_LIBNUMA
     {
 	struct bitmask *bmask = numa_bitmask_alloc(numa_max_node());
-	size_t max = numa_max_node()+1;
+	size_t max = numa_max_node() + 1;
 
 	numa_bitmask_clearall(bmask);
 	/* assign nodes */
@@ -1103,28 +1112,31 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	int lgrp_count_grps;
 	processorid_t **cpus = NULL;
 
-	switch(lgrp_cookie) {
-	    case EINVAL: case ENOMEM:
+	switch (lgrp_cookie) {
+	    case EINVAL:
+	    case ENOMEM:
 		return QTHREAD_THIRD_PARTY_ERROR;
 	}
 	lgrp_count_grps = lgrp_walk(lgrp_cookie, 0, &cpus, 0);
 	if (lgrp_count_grps <= 0) {
 	    return QTHREAD_THIRD_PARTY_ERROR;
 	}
-	for (i=0; i<nshepherds; i++) {
+	for (i = 0; i < nshepherds; i++) {
 	    /* first, pick a lgrp/node */
 	    int cpu;
 	    lgrp_id_t first;
+
 	    first = lgrp = i % lgrp_count_grps;
 	    qlib->shepherds[i].node = -1;
 	    /* now pick an available CPU */
 	    while (1) {
 		cpu = 0;
 		/* find an unused one */
-		while (cpus[lgrp][cpu] != -1) cpu++;
+		while (cpus[lgrp][cpu] != -1)
+		    cpu++;
 		if (cpu == 0) {
 		    /* if no unused ones... try the next lgrp */
-		    lgrp ++;
+		    lgrp++;
 		    lgrp *= (lgrp < lgrp_count_grps);
 		    if (lgrp == first) {
 			break;
@@ -1138,7 +1150,7 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 		}
 	    }
 	}
-	for (i=0; i<lgrp_count_grps; i++) {
+	for (i = 0; i < lgrp_count_grps; i++) {
 	    free(cpus[i]);
 	}
 	free(cpus);
@@ -3072,9 +3084,9 @@ qthread_shepherd_id_t qthread_shep(const qthread_t * t)
 }				       /*}}} */
 
 unsigned int qthread_internal_shep_to_node(const qthread_shepherd_id_t shep)
-{/*{{{*/
+{				       /*{{{ */
     return qlib->shepherds[shep].node;
-}/*}}}*/
+}				       /*}}} */
 
 /* these two functions are helper functions for futurelib
  * (nobody else gets to have 'em!) */
