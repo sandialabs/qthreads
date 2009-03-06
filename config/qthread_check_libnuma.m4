@@ -14,13 +14,17 @@ AS_IF([test "x$libnuma_happy" = "xyes"],
   [AC_SEARCH_LIBS([numa_available],[numa],[libnuma_happy=yes],[libnuma_happy=no])])
 AS_IF([test "x$libnuma_happy" = "xyes"],
   [AC_MSG_CHECKING(if NUMA is available)
+   QT_OLDLIBS="$LIBS"
+   LIBS="$LIBS -lnuma"
    AC_TRY_RUN([
 #include <numa.h>
-int main() { return numa_available(); }
+int main() { return ( numa_available() != -1 ) ? 0 : 1; }
   ],
   [libnuma_happy=yes],
-  [libnuma_happy=no],
-  [libnuma_happy=no])
+  [libnuma_happy=no
+   LIBS="$QT_OLDLIBS"],
+  [libnuma_happy=no
+   LIBS="$QT_OLDLIBS"])
   AC_MSG_RESULT($libnuma_happy)
   ])
   
