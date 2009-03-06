@@ -18,6 +18,8 @@ AS_IF([test "x$timer_altix_happy" = "xyes"],
       [AC_CACHE_CHECK([if MM timer can be opened],
          [qthread_cv_mm_timer_mmap],
          [AC_COMPILE_IFELSE([AC_LANG_PROGRAM([
+#include <stdlib.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
