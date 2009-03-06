@@ -114,6 +114,7 @@ int main(int argc, char *argv[])
     int dt_index;
     int interactive = 0;
     int enabled_tests = 7;
+    int enabled_types = 255;
 
     if (argc >= 2) {
 	threads = strtol(argv[1], NULL, 0);
@@ -130,6 +131,9 @@ int main(int argc, char *argv[])
     if (argc >= 4) {
 	enabled_tests = strtol(argv[3], NULL, 0);
     }
+    if (argc >= 5) {
+	enabled_types = strtol(argv[4], NULL, 0);
+    }
     if (!interactive) {
 	return 0;
     }
@@ -140,10 +144,10 @@ int main(int argc, char *argv[])
     printf("Using %i shepherds\n", threads);
     printf("Arrays of %lu objects...\n", (unsigned long)ELEMENT_COUNT);
 
-    printf("SERIAL:\n");
-    {
+    if (enabled_types & 0x1) {
 	const size_t last_type = (sizeof(disttypes) / sizeof(distribution_t));
 
+	printf("SERIAL:\n");
 	if (enabled_tests & 1) {
 	    size_t i, j;
 	    double acctime = 0.0;
@@ -244,6 +248,7 @@ int main(int argc, char *argv[])
     for (dt_index = 0;
 	 dt_index < (sizeof(disttypes) / sizeof(distribution_t));
 	 dt_index++) {
+	if ((enabled_types & 1<<(dt_index+1)) == 0) continue;
 	printf("%s:\n", distnames[dt_index]);
 	/* test a basic array of doubles */
 	if (enabled_tests & 1) {
