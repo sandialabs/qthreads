@@ -326,7 +326,7 @@ PARALLEL_FUNC(min, dmin, MIN, double, double);
  * repeated operations on the same array will divide the array in the same
  * fashion every time.
  */
-#define SWAP(a, m, n) temp=a[m]; a[m]=a[n]; a[n]=temp
+#define SWAP(a, m, n) do { register double temp=a[m]; a[m]=a[n]; a[n]=temp; } while (0)
 static int dcmp(const void *restrict a, const void *restrict b)
 {
     if ((*(double *)a) < (*(double *)b))
@@ -347,7 +347,6 @@ struct qt_qsort_args
 aligned_t qt_qsort_partition(qthread_t * me, struct qt_qsort_args *args)
 {
     double *a = args->array;
-    double temp;
     const double pivot = args->pivot;
     const size_t chunksize = args->chunksize;
     const size_t length = args->length;
@@ -489,7 +488,7 @@ struct qt_qsort_iprets qt_qsort_inner_partitioner(qthread_t * me,
 aligned_t qt_qsort_inner(qthread_t * me, const struct qt_qsort_iargs * a)
 {
     const size_t len = a->length;
-    double *array = a->array, temp;
+    double *array = a->array;
     size_t i;
     struct qt_qsort_iprets furthest;
     const size_t thread_chunk = len / qthread_shepherd_count();
