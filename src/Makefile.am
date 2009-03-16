@@ -13,6 +13,7 @@ lib_LTLIBRARIES = libqthread.la
 
 libqthread_la_SOURCES = \
 	qarray.c \
+	qlfqueue.c \
 	qalloc.c \
 	qutil.c \
 	qloop.c

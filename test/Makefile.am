@@ -9,6 +9,7 @@ TESTS = test1 test2 test3 test_qalloc \
 		test_internal_mod \
 		test_migrate \
 		test_qarray \
+		test_qlfqueue \
 		test_qutil_qsort
 
 if ENABLE_CXX_TESTS
@@ -72,6 +73,9 @@ test_qutil_qsort_DEPENDENCIES = $(QTHREADLIB)
 
 test_qarray_SOURCES = test_qarray.c
 test_qarray_DEPENDENCIES = $(QTHREADLIB)
+
+test_qlfqueue_SOURCES = test_qlfqueue.c
+test_qlfqueue_DEPENDENCIES = $(QTHREADLIB)
 
 time_gcd_SOURCES = time_gcd.c
 time_gcd_LDADD = $(QTIMERLIB)
