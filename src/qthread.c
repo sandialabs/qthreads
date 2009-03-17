@@ -650,7 +650,7 @@ static QINLINE aligned_t qthread_internal_incr_mod(volatile aligned_t *
 
 # endif
 
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
+#elif ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) && (QTHREAD_SIZEOF_ALIGNED_T == 4)) || \
       ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) && (QTHREAD_SIZEOF_ALIGNED_T == 4))
 
     unsigned int oldval, newval;
@@ -659,10 +659,52 @@ static QINLINE aligned_t qthread_internal_incr_mod(volatile aligned_t *
 	oldval = *operand;
 	newval = oldval + 1;
 	newval *= (newval < max);
-	asm volatile ("lock; cmpxchgl %1, %2":"=a" (retval)
+	asm volatile ("lock; cmpxchgl %1, %2":"=&a" (retval)
 		      :"r"     (newval), "m"(*operand), "0"(oldval)
 		      :"memory");
     } while (retval != oldval);
+
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
+
+    union {
+	uint64_t i;
+	struct {
+	    /* note: the ordering of these is important and counter-intuitive; welcome to little-endian! */
+	    uint32_t l;
+	    uint32_t h;
+	} s;
+    } oldval, newval;
+    register char test;
+
+    do {
+# ifdef __PIC__
+	/* this saves off %ebx to make PIC code happy :P */
+#  define QTHREAD_PIC_PREFIX "pushl %%ebx\n\tmovl %4, %%ebx\n\t"
+	/* this restores it */
+#  define QTHREAD_PIC_SUFFIX "\n\tpopl %%ebx"
+#  define QTHREAD_PIC_REG "m"
+# else
+#  define QTHREAD_PIC_PREFIX
+#  define QTHREAD_PIC_SUFFIX
+#  define QTHREAD_PIC_REG "b"
+# endif
+	oldval.i = *operand;
+	newval.i = oldval.i + 1;
+	newval.i *= (newval.i < max);
+	__asm__ __volatile__ (
+		QTHREAD_PIC_PREFIX
+		"lock; cmpxchg8b %1\n\t"
+		"setne %0" /* test = (ZF==0) */
+		QTHREAD_PIC_SUFFIX
+		:"=r"(test)
+		:"m"(*operand),
+		/*EAX*/"a"(oldval.s.l),
+		/*EDX*/"d"(oldval.s.h),
+		/*EBX*/QTHREAD_PIC_REG(newval.s.l),
+		/*ECX*/"c"(newval.s.h)
+		:"memory");
+    } while (test);
+    retval = oldval.i;
 
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 
