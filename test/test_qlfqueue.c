@@ -5,6 +5,7 @@
 #include <qthread/qlfqueue.h>
 
 #define ELEMENT_COUNT 10000
+#define THREAD_COUNT 128
 
 aligned_t queued = 0;
 aligned_t dequeued = 0;
@@ -12,10 +13,13 @@ aligned_t dequeued = 0;
 aligned_t queuer (qthread_t *me, void *arg)
 {
     qlfqueue_t *q = (qlfqueue_t*)arg;
+    size_t i;
 
-    if (qlfqueue_enqueue(q, (void*)me) != QTHREAD_SUCCESS) {
-	fprintf(stderr, "qlfqueue_enqueue(q, %p) failed!\n", me);
-	exit(-2);
+    for (i = 0; i < ELEMENT_COUNT; i++) {
+	if (qlfqueue_enqueue(q, (void*)me) != QTHREAD_SUCCESS) {
+	    fprintf(stderr, "qlfqueue_enqueue(q, %p) failed!\n", me);
+	    exit(-2);
+	}
     }
     return 0;
 }
@@ -24,12 +28,12 @@ aligned_t dequeuer (qthread_t *me, void *arg)
 {
     qlfqueue_t *q = (qlfqueue_t*)arg;
     void *ret;
+    size_t i;
 
-    while (qlfqueue_empty(q)) {
-	qthread_yield(me);
-    }
-    while (qlfqueue_dequeue(q) == NULL) {
-	qthread_yield(me);
+    for (i = 0; i < ELEMENT_COUNT; i++) {
+	while (qlfqueue_dequeue(q) == NULL) {
+	    qthread_yield(me);
+	}
     }
     return 0;
 }
@@ -39,7 +43,7 @@ int main(int argc, char *argv[])
     qlfqueue_t *q;
     int threads = 1, interactive = 0;
     qthread_t *me;
-    int i;
+    size_t i;
     aligned_t *rets;
 
     if (argc == 2) {
@@ -70,33 +74,45 @@ int main(int argc, char *argv[])
 	exit(-1);
     }
 
-    for (i = 1; i < 100; i++) {
-	if (qlfqueue_enqueue(q, (void*)(intptr_t)i) != 0) {
+    for (i = 0; i < ELEMENT_COUNT; i++) {
+	if (qlfqueue_enqueue(q, (void*)(intptr_t)(i+1)) != 0) {
 	    fprintf(stderr, "qlfqueue_enqueue(q,%i) failed!\n", i);
 	    exit(-1);
 	}
     }
-    for (i = 1; i < 100; i++) {
-	if (qlfqueue_dequeue(q) != (void*)(intptr_t)i) {
+    for (i = 0; i < ELEMENT_COUNT; i++) {
+	if (qlfqueue_dequeue(q) != (void*)(intptr_t)(i+1)) {
 	    fprintf(stderr, "qlfqueue_dequeue() failed, didn't equal %i!\n", i);
 	    exit(-1);
 	}
     }
+    if (!qlfqueue_empty(q)) {
+	fprintf(stderr, "qlfqueue not empty after ordering test!\n");
+	exit(-1);
+    }
+    if (interactive) {
+	printf("ordering test succeeded\n");
+    }
 
-    rets = calloc(ELEMENT_COUNT, sizeof(aligned_t));
+    rets = calloc(THREAD_COUNT, sizeof(aligned_t));
     assert(rets != NULL);
-    for (i = 0; i < ELEMENT_COUNT; i++) {
+    for (i = 0; i < THREAD_COUNT; i++) {
 	assert(qthread_fork(dequeuer, q, &(rets[i])) == QTHREAD_SUCCESS);
     }
-    printf("forked all dequeuers\n");
-    for (i = 0; i < ELEMENT_COUNT; i++) {
+    for (i = 0; i < THREAD_COUNT; i++) {
 	assert(qthread_fork(queuer, q, NULL) == QTHREAD_SUCCESS);
     }
-    printf("forked all queuers\n");
-    for (i = 0; i < ELEMENT_COUNT; i++) {
+    for (i = 0; i < THREAD_COUNT; i++) {
 	assert(qthread_readFF(me, NULL, &(rets[i])) == QTHREAD_SUCCESS);
     }
     free(rets);
+    if (!qlfqueue_empty(q)) {
+	fprintf(stderr, "qlfqueue not empty after threaded test!\n");
+	exit(-2);
+    }
+    if (interactive) {
+	printf("threaded test succeeded\n");
+    }
 
     if (qlfqueue_free(q) != QTHREAD_SUCCESS) {
 	fprintf(stderr, "qlfqueue_free() failed!\n");
