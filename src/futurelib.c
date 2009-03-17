@@ -146,10 +146,22 @@ void blocking_vp_incr(qthread_t * me, location_t * loc)
 void future_fork(qthread_f fptr, void *arg, aligned_t * retval)
 {
     qthread_shepherd_id_t rr;
-    location_t *ptr = (location_t *) pthread_getspecific(future_bookkeeping);
-    qthread_t *me = qthread_self();
+    location_t *ptr;
+    qthread_t *me;
+
+    assert(future_bookkeeping_array != NULL);
+    if (future_bookkeeping_array == NULL) {
+	/* futures weren't initialized properly... */
+	qthread_fork(fptr, arg, retval);
+	return;
+    }
+
+    ptr = (location_t *) pthread_getspecific(future_bookkeeping);
+    me = qthread_self();
 
     qthread_debug(2, "Thread %p forking a future\n", (void *)me);
+    assert(me != NULL);
+    assert(future_bookkeeping_array != NULL);
     /* step 1: future out where to go (fast) */
     /* XXX: should merge with qthread.c to use qthread_internal_incr_mod */
     if (ptr) {
@@ -168,11 +180,36 @@ void future_fork(qthread_f fptr, void *arg, aligned_t * retval)
     qthread_fork_future_to(me, fptr, arg, retval, rr);
 }
 
+void future_fork_to(qthread_f fptr, void *arg, aligned_t *retval, qthread_shepherd_id_t shep)
+{
+    location_t *ptr;
+    qthread_t *me;
+
+    assert(future_bookkeeping_array != NULL);
+    if (future_bookkeeping_array == NULL) {
+	/* futures weren't initialized properly... */
+	qthread_fork_to(fptr, arg, retval, shep);
+	return;
+    }
+
+    ptr = (location_t *) pthread_getspecific(future_bookkeeping);
+    me = qthread_self();
+
+    qthread_debug(2, "Thread %p forking a future\n", (void *)me);
+    assert(me != NULL);
+    /* steps 2&3 (slow) */
+    blocking_vp_incr(me, &(future_bookkeeping_array[shep]));
+    qthread_fork_future_to(me, fptr, arg, retval, shep);
+}
+
 /* This says: "I do not count toward future resource limits, temporarily." */
 int future_yield(qthread_t * me)
 {
-    location_t *loc = ft_loc(me);
+    location_t *loc;
 
+    assert(me != NULL);
+    assert(future_bookkeeping_array != NULL);
+    loc = ft_loc(me);
     qthread_debug(2, "Thread %p yield on loc %p\n", (void *)me, (void *)loc);
     //Non-futures do not have a vproc to yield
     if (loc != NULL) {
@@ -197,8 +234,11 @@ int future_yield(qthread_t * me)
  */
 void future_acquire(qthread_t * me)
 {
-    location_t *loc = ft_loc(me);
+    location_t *loc;
 
+    assert(me != NULL);
+    assert(future_bookkeeping_array != NULL);
+    loc = ft_loc(me);
     qthread_debug(2, "Thread %p acquire on loc %p\n", (void *)me,
 		  (void *)loc);
     //Non-futures need not acquire a v proc
@@ -211,6 +251,8 @@ void future_acquire(qthread_t * me)
  * to be a thread/future's return value. */
 void future_join(qthread_t * me, aligned_t * ft)
 {
+    assert(me != NULL);
+    assert(future_bookkeeping_array != NULL);
     qthread_debug(2, "Thread %p join to future %p\n", (void *)me, (void *)ft);
     qthread_readFF(me, ft, ft);
 }
@@ -219,6 +261,8 @@ void future_join(qthread_t * me, aligned_t * ft)
  * terminate, but there's no way for it to become a future again. */
 void future_exit(qthread_t * me)
 {
+    assert(me != NULL);
+    assert(future_bookkeeping_array != NULL);
     qthread_debug(2, "Thread %p exit on loc %d\n", (void *)me,
 		  qthread_shep(me));
     future_yield(me);
@@ -230,6 +274,10 @@ void future_join_all(qthread_t * qthr, aligned_t * fta, int ftc)
 {
     int i;
 
+    assert(qthr != NULL);
+    assert(future_bookkeeping_array != NULL);
+    assert(fta != NULL);
+    assert(ftc > 0);
     qthread_debug(2, "Qthread %p join all to %d futures\n", (void *)qthr,
 		  ftc);
     for (i = 0; i < ftc; i++)
