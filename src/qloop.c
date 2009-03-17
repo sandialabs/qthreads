@@ -279,7 +279,7 @@ type qt_##shorttype##_##category (type *array, size_t length, int checkfeb) \
     type ret; \
     qt_loopaccum_balance_inner(0, length, sizeof(type), &ret, \
 			 qt##initials##_worker, \
-			 &arg, qt##initials##_acc, 1 ); \
+			 &arg, qt##initials##_acc, 0 ); \
     return ret; \
 }
 
