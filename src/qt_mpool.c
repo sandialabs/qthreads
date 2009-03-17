@@ -142,9 +142,12 @@ static QINLINE void qt_mpool_internal_aligned_free(void *freeme,
     }
 #else
     if (alignment == 0) {
-	free(freeme, alloc_size);
+	free(freeme);
     } else {
-	return;			       /* XXX: cannot necessarily free valloc'd memory */
+# ifdef HAVE_WORKING_VALLOC
+	free(freeme);
+# endif
+	return;
     }
 #endif
 }
