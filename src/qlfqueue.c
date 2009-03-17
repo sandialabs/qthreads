@@ -19,7 +19,7 @@ typedef struct _qlfqueue_node
     volatile struct _qlfqueue_node *next;
 } qlfqueue_node_t;
 
-struct qlfqueue_s /* typedef'd to qlfqueue_t */
+struct qlfqueue_s		/* typedef'd to qlfqueue_t */
 {
     volatile qlfqueue_node_t *head;
     volatile qlfqueue_node_t *tail;
@@ -142,8 +142,8 @@ void *qlfqueue_dequeue(qlfqueue_t * q)
     return p;
 }				       /*}}} */
 
-int qlfqueue_empty(qlfqueue_t *q)
-{/*{{{*/
+int qlfqueue_empty(qlfqueue_t * q)
+{				       /*{{{ */
     qlfqueue_node_t *head, *tail, *next;
 
     assert(q != NULL);
@@ -155,11 +155,11 @@ int qlfqueue_empty(qlfqueue_t *q)
 	head = (qlfqueue_node_t *) (q->head);
 	tail = (qlfqueue_node_t *) (q->tail);
 	next = (qlfqueue_node_t *) (QPTR(head)->next);
-	if (head == q->head) { // are head, tail, and next consistent?
-	    if (QPTR(head) == QPTR(tail)) { // is queue empty or tail falling behind?
-		if (QPTR(next) == NULL) { // queue is empty!
+	if (head == q->head) {	       // are head, tail, and next consistent?
+	    if (QPTR(head) == QPTR(tail)) {	// is queue empty or tail falling behind?
+		if (QPTR(next) == NULL) {	// queue is empty!
 		    return 1;
-		} else { // tail falling behind (queue NOT empty)
+		} else {	       // tail falling behind (queue NOT empty)
 		    return 0;
 		}
 	    } else {		       // queue is NOT empty and tail is NOT falling behind
@@ -167,4 +167,4 @@ int qlfqueue_empty(qlfqueue_t *q)
 	    }
 	}
     }
-}/*}}}*/
+}				       /*}}} */
