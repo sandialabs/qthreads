@@ -148,7 +148,7 @@ int qlfqueue_empty(qlfqueue_t * q)
 
     assert(q != NULL);
     if (q == NULL) {
-	return NULL;
+	return 1;
     }
 
     while (1) {
