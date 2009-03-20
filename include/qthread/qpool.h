@@ -9,7 +9,7 @@ typedef struct qpool_s *qpool;
 
 void *qpool_alloc(qthread_t * me, qpool pool);
 
-void qpool_free(qpool pool, void *mem);
+void qpool_free(qthread_t *me, qpool pool, void *mem);
 
 qpool qpool_create(qthread_t * me, const size_t item_size);
 

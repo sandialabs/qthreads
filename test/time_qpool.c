@@ -34,7 +34,7 @@ void pool_deallocator(qthread_t * me, const size_t startat,
     qpool p = (qpool) arg;
 
     for (i = startat; i < stopat; i++) {
-	qpool_free(p, allthat[i]);
+	qpool_free(me, p, allthat[i]);
     }
 }
 
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
     }
     for (i = 0; i < iterations; i++) {
 	assert(allthat[i][0] == i);
-	qpool_free(qp, allthat[i]);
+	qpool_free(me, qp, allthat[i]);
     }
     qtimer_stop(timer);
     printf("Time to set up the pool with %lu elements serially: %f\n", iterations,
@@ -122,7 +122,7 @@ int main(int argc, char *argv[])
     }
     for (i = 0; i < iterations; i++) {
 	assert(allthat[i][0] == i);
-	qpool_free(qp, allthat[i]);
+	qpool_free(me, qp, allthat[i]);
     }
     qtimer_stop(timer);
     printf("Time to alloc/free %lu pooled blocks serially: %f\n", iterations,
@@ -144,6 +144,8 @@ int main(int argc, char *argv[])
     printf("Time to alloc/free %lu malloc blocks: %f\n", iterations,
 	   qtimer_secs(timer));
 
+    qt_loop_balance(0, iterations, pool_allocator, qp);
+    qt_loop_balance(0, iterations, pool_deallocator, qp);
     qtimer_start(timer);
     qt_loop_balance(0, iterations, pool_allocator, qp);
     qtimer_stop(timer);

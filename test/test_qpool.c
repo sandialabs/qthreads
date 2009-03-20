@@ -11,7 +11,7 @@ qpool qp = NULL;
 
 aligned_t allocator(qthread_t * me, void *arg)
 {
-    aligned_t **block[5];
+    aligned_t *block[5];
     int i;
     qpool p = (qpool) arg;
 
@@ -25,7 +25,7 @@ aligned_t allocator(qthread_t * me, void *arg)
 	block[i][0] = i;
     }
     for (i = 0; i < 5; i++) {
-	qpool_free(p, block[i]);
+	qpool_free(me, p, block[i]);
     }
     return 0;
 }
@@ -70,7 +70,7 @@ int main(int argc, char *argv[])
 	exit(-1);
     }
 
-    qpool_free(qp, rets);
+    qpool_free(me, qp, rets);
 
     allthat = malloc(sizeof(aligned_t *) * ELEMENT_COUNT);
     assert(allthat != NULL);
@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
 	}
     }
     for (i = 0; i < ELEMENT_COUNT; i++) {
-	qpool_free(qp, allthat[i]);
+	qpool_free(me, qp, allthat[i]);
     }
     free(allthat);
 
