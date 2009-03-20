@@ -12,7 +12,7 @@ qpool qp = NULL;
 aligned_t allocator(qthread_t * me, void *arg)
 {
     aligned_t *block[5];
-    int i;
+    aligned_t i;
     qpool p = (qpool) arg;
 
     for (i = 0; i < 5; i++) {
