@@ -73,12 +73,10 @@ static QINLINE void *qpool_internal_aligned_alloc(size_t alloc_size,
 						  size_t alignment)
 {				       /*{{{ */
 #if QTHREAD_HAVE_LIBNUMA
-    if (node == QTHREAD_NO_NODE) {     // guaranteed page alignment
-	return numa_alloc_interleaved(alloc_size);
-    } else {
+    if (node != QTHREAD_NO_NODE) {     // guaranteed page alignment
 	return numa_alloc_onnode(alloc_size, node);
     }
-#else
+#endif
     switch (alignment) {
 	case 0:
 	    return malloc(alloc_size);
@@ -118,7 +116,6 @@ static QINLINE void *qpool_internal_aligned_alloc(size_t alloc_size,
 	    return valloc(alloc_size); /* cross your fingers */
 #endif
     }
-#endif
 }				       /*}}} */
 
 static QINLINE void qpool_internal_aligned_free(void *freeme,
