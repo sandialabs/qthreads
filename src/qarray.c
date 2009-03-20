@@ -7,6 +7,7 @@
 #include "qthread_innards.h"	       /* for qthread_shepherd_count() */
 #ifdef QTHREAD_HAVE_LIBNUMA
 # include <numa.h>
+# include <sys/mman.h>
 #elif HAVE_SYS_LGRP_USER_H
 # ifdef HAVE_MADV_ACCESS_LWP
 #  include <sys/types.h>
@@ -141,7 +142,7 @@ qarray *qarray_create(const size_t count, const size_t obj_size,
 	case ALL_SAME:		       /* assumed equivalent to ALL_LOCAL */
 	case FIXED_HASH:
 	default:
-	    ret->segment_bytes = 16 * 4 * pagesize;
+	    ret->segment_bytes = 64 * pagesize;
 	    /*if (ret->unit_size > pagesize) {
 	     * ret->segment_bytes = qarray_lcm(ret->unit_size, pagesize);
 	     * } else {
@@ -159,7 +160,7 @@ qarray *qarray_create(const size_t count, const size_t obj_size,
 	     * The way we'll do this is that we'll just reduce the segment_size
 	     * by 1 (thus providing space for the shepherd identifier, as long
 	     * as the unit-size is bigger than a shepherd identifier). */
-	    ret->segment_bytes = 16 * 4 * pagesize;
+	    ret->segment_bytes = 64 * pagesize;
 	    ret->segment_size = ret->segment_bytes / ret->unit_size;
 	    if ((ret->segment_bytes - (ret->segment_size * ret->unit_size)) <
 		4) {
@@ -607,6 +608,7 @@ static aligned_t qarray_loop_strider(qthread_t * me,
     const distribution_t dist_type = arg->a->dist_type;
     size_t count = 0;
     qthread_shepherd_id_t shep = qthread_shep(me);
+    const qt_loop_f ql = arg->func.ql;
 
     if (dist_type == ALL_SAME && shep != arg->a->dist_shep) {
 	goto qarray_loop_strider_exit;
@@ -622,6 +624,10 @@ static aligned_t qarray_loop_strider(qthread_t * me,
      * 1. cursor points to the first element of the array associated with this CPU
      * 2. count is the index of that element
      */
+    if (dist_type == ALL_SAME) {
+	ql(me, count, max_count, arg->a);
+	goto qarray_loop_strider_exit;
+    }
     while (1) {
 	{
 	    const size_t max_offset =
@@ -630,7 +636,7 @@ static aligned_t qarray_loop_strider(qthread_t * me,
 	    /*void *ptr = qarray_elem_nomigrate(arg->a, count);
 	     * 
 	     * assert(ptr != NULL); */
-	    arg->func.ql(me, count, count + max_offset, arg->a);
+	    ql(me, count, count + max_offset, arg->a);
 	}
 	switch (dist_type) {
 	    default:
