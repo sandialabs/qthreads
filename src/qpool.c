@@ -9,9 +9,6 @@
 #if (HAVE_MEMALIGN && HAVE_MALLOC_H)
 #include <malloc.h>		       /* for memalign() */
 #endif
-#ifdef QTHREAD_HAVE_LIBNUMA
-# include <numa.h>
-#endif
 
 #include "qthread_innards.h"
 #include "qthread_asserts.h"
@@ -72,11 +69,6 @@ static QINLINE void *qpool_internal_aligned_alloc(size_t alloc_size,
 						  unsigned int node,
 						  size_t alignment)
 {				       /*{{{ */
-#if QTHREAD_HAVE_LIBNUMA
-    if (node != QTHREAD_NO_NODE) {     // guaranteed page alignment
-	return numa_alloc_onnode(alloc_size, node);
-    }
-#endif
     switch (alignment) {
 	case 0:
 	    return malloc(alloc_size);
@@ -122,9 +114,7 @@ static QINLINE void qpool_internal_aligned_free(void *freeme,
 						const size_t alloc_size,
 						const size_t alignment)
 {				       /*{{{ */
-#if QTHREAD_HAVE_LIBNUMA
-    numa_free(freeme, alloc_size);
-#elif (HAVE_MEMALIGN || HAVE_PAGE_ALIGNED_MALLOC || HAVE_POSIX_MEMALIGN)
+#if (HAVE_MEMALIGN || HAVE_PAGE_ALIGNED_MALLOC || HAVE_POSIX_MEMALIGN)
     free(freeme);
 #elif HAVE_16ALIGNED_MALLOC
     switch (alignment) {
