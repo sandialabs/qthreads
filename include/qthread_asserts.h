@@ -20,7 +20,7 @@
 #else
 # define qassert(op, val) assert(op == val)
 # define qassertnot(op, val) assert(op != val)
-# define qargnonull(arg) qassertnot(op, NULL)
+# define qargnonull(arg) qassertnot(arg, NULL)
 #endif
 
 #endif
