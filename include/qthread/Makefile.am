@@ -10,6 +10,7 @@ dist_qthread_HEADERS = \
 	qalloc.h \
 	qarray.h \
 	qlfqueue.h \
+	qpool.h \
 	qutil.h \
 	qloop.h \
 	futurelib.h \

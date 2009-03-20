@@ -10,6 +10,7 @@ TESTS = test1 test2 test3 test_qalloc \
 		test_migrate \
 		test_qarray \
 		test_qlfqueue \
+		test_qpool \
 		test_qutil_qsort
 
 if ENABLE_CXX_TESTS
@@ -17,8 +18,11 @@ TESTS += testloop
 endif
 
 if ENABLE_TIMER_PROGS
-TESTS += time_gcd time_swap time_producerconsumer time_increments \
-	 time_qarray time_qarray_sizes
+TESTS += time_swap time_producerconsumer time_increments \
+	 time_qarray \
+	 time_qarray_sizes \
+	 time_qpool \
+	 time_gcd
 endif
 
 
@@ -77,6 +81,9 @@ test_qarray_DEPENDENCIES = $(QTHREADLIB)
 test_qlfqueue_SOURCES = test_qlfqueue.c
 test_qlfqueue_DEPENDENCIES = $(QTHREADLIB)
 
+test_qpool_SOURCES = test_qpool.c
+test_qpool_DEPENDENCIES = $(QTHREADLIB)
+
 time_gcd_SOURCES = time_gcd.c
 time_gcd_LDADD = $(QTIMERLIB)
 time_gcd_DEPENDENCIES = $(QTIMERLIB)
@@ -103,3 +110,6 @@ time_qarray_DEPENDENCIES = $(QTHREADLIB)
 
 time_qarray_sizes_SOURCES = time_qarray_sizes.c
 time_qarray_sizes_DEPENDENCIES = $(QTHREADLIB)
+
+time_qpool_SOURCES = time_qpool.c
+time_qpool_DEPENDENCIES = $(QTHREADLIB)
