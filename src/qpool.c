@@ -75,7 +75,6 @@ static QINLINE void *qpool_internal_aligned_alloc(size_t alloc_size,
 #else
     switch (alignment) {
 	case 0:
-	    printf("alloc_size: %lu\n", (unsigned long)alloc_size);
 	    return malloc(alloc_size);
 	case 16:
 #ifdef HAVE_16ALIGNED_MALLOC
@@ -247,9 +246,7 @@ void *qpool_alloc(qthread_t *me, qpool pool)
 	} while (p != old);
     }
     if (!p) {			       /* this is not an else on purpose */
-	if (pool->lock) {
-	    qassert(qthread_lock(me, &pool->lock), 0);
-	}
+	qassert(qthread_lock(me, &pool->lock), 0);
 	if (pool->alloc_block_pos == pool->items_per_alloc) {
 	    if (pool->alloc_list_pos == (pagesize / sizeof(void *) - 1)) {
 		void **tmp = calloc(1, pagesize);
@@ -278,9 +275,7 @@ void *qpool_alloc(qthread_t *me, qpool pool)
 	    p = pool->alloc_block + (pool->item_size * pool->alloc_block_pos);
 	    pool->alloc_block_pos++;
 	}
-	if (pool->lock) {
-	    qassert(qthread_unlock(me, &pool->lock), 0);
-	}
+	qassert(qthread_unlock(me, &pool->lock), 0);
 	if (pool->alignment != 0 &&
 	    (((unsigned long)p) & (pool->alignment - 1))) {
 	    printf("alloc_block = %p\n", pool->alloc_block);
