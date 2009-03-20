@@ -43,14 +43,24 @@ void malloc_allocator(qthread_t * me, const size_t startat,
 {
     size_t i;
     qpool p = (qpool) arg;
-    void * rets;
 
     for (i = startat; i < stopat; i++) {
-	if ((rets = malloc(44)) == NULL) {
+	if ((allthat[i] = malloc(44)) == NULL) {
 	    fprintf(stderr, "qpool_alloc() failed!\n");
 	    exit(-1);
 	}
-	free(rets);
+	allthat[i][0] = i;
+    }
+}
+
+void malloc_deallocator(qthread_t * me, const size_t startat,
+			 const size_t stopat, void *arg)
+{
+    size_t i;
+    qpool p = (qpool) arg;
+
+    for (i = startat; i < stopat; i++) {
+	free(allthat[i]);
     }
 }
 
@@ -88,23 +98,47 @@ int main(int argc, char *argv[])
 
     qtimer_start(timer);
     for (i = 0; i < iterations; i++) {
-	if ((rets = qpool_alloc(me, qp)) == NULL) {
+	if ((allthat[i] = qpool_alloc(me, qp)) == NULL) {
 	    fprintf(stderr, "qpool_alloc() failed!\n");
 	    exit(-1);
 	}
-	qpool_free(qp, rets);
+	allthat[i][0] = i;
+    }
+    for (i = 0; i < iterations; i++) {
+	assert(allthat[i][0] == i);
+	qpool_free(qp, allthat[i]);
     }
     qtimer_stop(timer);
-    printf("Time to alloc/free %lu pooled blocks: %f\n", iterations,
+    printf("Time to set up the pool with %lu elements serially: %f\n", iterations,
 	   qtimer_secs(timer));
 
     qtimer_start(timer);
     for (i = 0; i < iterations; i++) {
-	if ((rets = malloc(44)) == NULL) {
+	if ((allthat[i] = qpool_alloc(me, qp)) == NULL) {
+	    fprintf(stderr, "qpool_alloc() failed!\n");
+	    exit(-1);
+	}
+	allthat[i][0] = i;
+    }
+    for (i = 0; i < iterations; i++) {
+	assert(allthat[i][0] == i);
+	qpool_free(qp, allthat[i]);
+    }
+    qtimer_stop(timer);
+    printf("Time to alloc/free %lu pooled blocks serially: %f\n", iterations,
+	   qtimer_secs(timer));
+
+    qtimer_start(timer);
+    for (i = 0; i < iterations; i++) {
+	if ((allthat[i] = malloc(44)) == NULL) {
 	    perror("malloc failed!");
 	    exit(-1);
 	}
-	free(rets);
+	allthat[i][0] = i;
+    }
+    for (i = 0; i < iterations; i++) {
+	assert(allthat[i][0] == i);
+	free(allthat[i]);
     }
     qtimer_stop(timer);
     printf("Time to alloc/free %lu malloc blocks: %f\n", iterations,
@@ -120,10 +154,16 @@ int main(int argc, char *argv[])
     qtimer_stop(timer);
     printf("Time to free %lu pooled blocks in parallel: %f\n",
 	   iterations, qtimer_secs(timer));
+
     qtimer_start(timer);
     qt_loop_balance(0, iterations, malloc_allocator, qp);
     qtimer_stop(timer);
-    printf("Time to alloc/free %lu malloc blocks in parallel: %f\n",
+    printf("Time to alloc %lu malloc blocks in parallel: %f\n",
+	   iterations, qtimer_secs(timer));
+    qtimer_start(timer);
+    qt_loop_balance(0, iterations, malloc_deallocator, qp);
+    qtimer_stop(timer);
+    printf("Time to free %lu malloc blocks in parallel: %f\n",
 	   iterations, qtimer_secs(timer));
 
     free(allthat);
