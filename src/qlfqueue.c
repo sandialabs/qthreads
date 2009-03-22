@@ -9,7 +9,7 @@
 #include <qthread/qlfqueue.h>
 
 #include "qthread_innards.h"	       /* for qthread_shepherd_count(), to determine whether locking is needed, and for asserts */
-#include "qt_mpool.h"
+#include <qthread/qpool.h>
 #include "qt_atomics.h"		       /* for qt_cas() */
 
 /* queue declarations */
@@ -25,7 +25,7 @@ struct qlfqueue_s		/* typedef'd to qlfqueue_t */
     volatile qlfqueue_node_t *tail;
 };
 
-static qt_mpool qlfqueue_node_pool = NULL;
+static qpool qlfqueue_node_pool = NULL;
 
 /* to avoid ABA reinsertion trouble, each pointer in the queue needs to have a
  * monotonically increasing counter associated with it. The counter doesn't
@@ -36,20 +36,19 @@ static qt_mpool qlfqueue_node_pool = NULL;
 #define QCTR(x) ((unsigned char)(((uintptr_t)(x))&QCTR_MASK))
 #define QCOMPOSE(x,y) (void*)(((uintptr_t)QPTR(x))|((QCTR(y)+1)&QCTR_MASK))
 
-qlfqueue_t *qlfqueue_new()
+qlfqueue_t *qlfqueue_new(qthread_t *me)
 {				       /*{{{ */
     qlfqueue_t *q;
 
     if (qlfqueue_node_pool == NULL) {
 	qlfqueue_node_pool =
-	    qt_mpool_create_aligned((qthread_shepherd_count() > 0),
-				    sizeof(qlfqueue_node_t), -1, 16);
+	    qpool_create_aligned(me, sizeof(qlfqueue_node_t), 16);
     }
     assert(qlfqueue_node_pool != NULL);
 
     q = malloc(sizeof(struct qlfqueue_s));
     if (q != NULL) {
-	q->head = (qlfqueue_node_t *) qt_mpool_alloc(qlfqueue_node_pool);
+	q->head = (qlfqueue_node_t *) qpool_alloc(me, qlfqueue_node_pool);
 	assert(q->head != NULL);
 	if (QPTR(q->head) == NULL) {   // if we're not using asserts, fail nicely
 	    free(q);
@@ -61,26 +60,27 @@ qlfqueue_t *qlfqueue_new()
     return q;
 }				       /*}}} */
 
-int qlfqueue_free(qlfqueue_t * q)
+int qlfqueue_destroy(qthread_t *me, qlfqueue_t * q)
 {				       /*{{{ */
     qargnonull(q);
     while (QPTR(q->head) != QPTR(q->tail)) {
-	qlfqueue_dequeue(q);
+	qlfqueue_dequeue(me, q);
     }
-    qt_mpool_free(qlfqueue_node_pool, QPTR(q->head));
+    qpool_free(me, qlfqueue_node_pool, QPTR(q->head));
     free(q);
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-int qlfqueue_enqueue(qlfqueue_t * q, void *elem)
+int qlfqueue_enqueue(qthread_t *me, qlfqueue_t * q, void *elem)
 {				       /*{{{ */
     qlfqueue_node_t *tail;
     qlfqueue_node_t *node, *next;
 
     qargnonull(elem);
     qargnonull(q);
+    qargnonull(me);
 
-    node = (qlfqueue_node_t *) qt_mpool_alloc(qlfqueue_node_pool);
+    node = (qlfqueue_node_t *) qpool_alloc(me, qlfqueue_node_pool);
     // these asserts should be redundant
     assert(node != NULL);
     assert((((uintptr_t) node) & QCTR_MASK) == 0);	// node MUST be aligned
@@ -108,7 +108,7 @@ int qlfqueue_enqueue(qlfqueue_t * q, void *elem)
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-void *qlfqueue_dequeue(qlfqueue_t * q)
+void *qlfqueue_dequeue(qthread_t *me, qlfqueue_t * q)
 {				       /*{{{ */
     void *p = NULL;
     qlfqueue_node_t *head, *tail, *next;
@@ -138,7 +138,7 @@ void *qlfqueue_dequeue(qlfqueue_t * q)
 	    }
 	}
     }
-    qt_mpool_free(qlfqueue_node_pool, QPTR(head));
+    qpool_free(me, qlfqueue_node_pool, QPTR(head));
     return p;
 }				       /*}}} */
 
