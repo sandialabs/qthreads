@@ -272,6 +272,12 @@ void *qt_mpool_alloc(qt_mpool pool)
     if (p) {
 	void *old, *new;
 
+	/* note that this is only "safe" as long as there is no chance that the
+	 * pool has been destroyed. There's a small chance that p was allocated
+	 * and popped back into the queue so that the CAS works but "new" is
+	 * the wrong value... (also known among lock-free wonks as The ABA
+	 * Problem) fixing it would require the QPTR stuff that qlfqueue uses.
+	 * */
 	do {
 	    old = p;
 	    new = *(void **)p;
