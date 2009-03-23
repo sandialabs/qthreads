@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <cprops/linked_list.h>
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
 #include <qthread/qlfqueue.h>
@@ -8,6 +9,35 @@
 
 #define ELEMENT_COUNT 10000
 #define THREAD_COUNT 128
+
+aligned_t cpqueuer (qthread_t *me, void *arg)
+{
+    cp_list *q = (cp_list*)arg;
+    size_t i;
+
+    for (i = 0; i < ELEMENT_COUNT; i++) {
+	if (cp_list_append(q, (void*)me) == NULL) {
+	    fprintf(stderr, "%i'th cp_list_append(q, %p) failed!\n", (int)i, me);
+	    perror("cp_list_append");
+	    exit(-2);
+	}
+    }
+    return 0;
+}
+
+aligned_t cpdequeuer (qthread_t *me, void *arg)
+{
+    cp_list *q = (cp_list*)arg;
+    void *ret;
+    size_t i;
+
+    for (i = 0; i < ELEMENT_COUNT; i++) {
+	while (cp_list_remove_head(q) == NULL) {
+	    qthread_yield(me);
+	}
+    }
+    return 0;
+}
 
 aligned_t queuer (qthread_t *me, void *arg)
 {
@@ -35,6 +65,32 @@ aligned_t dequeuer (qthread_t *me, void *arg)
 	}
     }
     return 0;
+}
+
+void loop_cpqueuer (qthread_t *me, const size_t startat, const size_t stopat, void *arg)
+{
+    size_t i;
+    cp_list *q = (cp_list *)arg;
+
+    for (i=startat; i<stopat; i++) {
+	if (cp_list_append(q, (void*)me) == NULL) {
+	    fprintf(stderr, "cp_list_append(q, %p) failed!\n", me);
+	    exit(-2);
+	}
+    }
+}
+
+void loop_cpdequeuer (qthread_t *me, const size_t startat, const size_t stopat, void *arg)
+{
+    size_t i;
+    cp_list *q = (cp_list *)arg;
+
+    for (i=startat; i<stopat; i++) {
+	if (cp_list_remove_head(q) == NULL) {
+	    fprintf(stderr, "cp_list_remove_head(q, %p) failed!\n", me);
+	    exit(-2);
+	}
+    }
 }
 
 void loop_queuer (qthread_t *me, const size_t startat, const size_t stopat, void *arg)
@@ -71,6 +127,7 @@ int main(int argc, char *argv[])
     size_t i;
     aligned_t *rets;
     qtimer_t timer = qtimer_new();
+    cp_list *cpq;
 
     if (argc == 2) {
 	threads = strtol(argv[1], NULL, 0);
@@ -111,6 +168,16 @@ int main(int argc, char *argv[])
 	exit(-2);
     }
 
+    cpq = cp_list_create();
+    qtimer_start(timer);
+    qt_loop_balance(0, THREAD_COUNT * ELEMENT_COUNT, loop_cpqueuer, cpq);
+    qtimer_stop(timer);
+    printf("loop balance cp enqueue: %f secs\n", qtimer_secs(timer));
+    qtimer_start(timer);
+    qt_loop_balance(0, THREAD_COUNT * ELEMENT_COUNT, loop_cpdequeuer, cpq);
+    qtimer_stop(timer);
+    printf("loop balance cp dequeue: %f secs\n", qtimer_secs(timer));
+
     rets = calloc(THREAD_COUNT, sizeof(aligned_t));
     assert(rets != NULL);
     qtimer_start(timer);
@@ -124,12 +191,27 @@ int main(int argc, char *argv[])
 	assert(qthread_readFF(me, NULL, &(rets[i])) == QTHREAD_SUCCESS);
     }
     qtimer_stop(timer);
-    free(rets);
     if (!qlfqueue_empty(q)) {
 	fprintf(stderr, "qlfqueue not empty after threaded test!\n");
 	exit(-2);
     }
-    printf("threaded test: %f secs\n", qtimer_secs(timer));
+    printf("threaded lf test: %f secs\n", qtimer_secs(timer));
+
+    qtimer_start(timer);
+    for (i = 0; i < THREAD_COUNT; i++) {
+	assert(qthread_fork(cpdequeuer, cpq, &(rets[i])) == QTHREAD_SUCCESS);
+    }
+    for (i = 0; i < THREAD_COUNT; i++) {
+	assert(qthread_fork(cpqueuer, cpq, NULL) == QTHREAD_SUCCESS);
+    }
+    for (i = 0; i < THREAD_COUNT; i++) {
+	assert(qthread_readFF(me, NULL, &(rets[i])) == QTHREAD_SUCCESS);
+    }
+    qtimer_stop(timer);
+    free(rets);
+    printf("threaded cp test: %f secs\n", qtimer_secs(timer));
+
+    cp_list_destroy(cpq);
 
     if (qlfqueue_destroy(me, q) != QTHREAD_SUCCESS) {
 	fprintf(stderr, "qlfqueue_destroy() failed!\n");
