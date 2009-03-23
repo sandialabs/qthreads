@@ -281,6 +281,9 @@ void *qpool_alloc(qthread_t * me, qpool pool)
 	} while (p != old);
     }
     if (!p) {			       /* this is not an else on purpose */
+	/* XXX: *SHOULD* pull from other pools that are "nearby" - at minimum, any
+	 * pools from the same node, but different shepherd */
+
 	/* on a single-threaded shepherd, locking is unnecessary */
 	//qassert(qthread_lock(me, &mypool->lock), 0);
 	if (mypool->alloc_block_pos == pool->items_per_alloc) {
