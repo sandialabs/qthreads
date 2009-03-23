@@ -121,7 +121,7 @@ qarray *qarray_create(const size_t count, const size_t obj_size,
 
     ret->count = count;
     /* make obj_size a multiple of 8 */
-    ret->unit_size = obj_size + ((obj_size & 7) ? (8 - obj_size & 7) : 0);
+    ret->unit_size = obj_size + ((obj_size & 7) ? (8 - (obj_size & 7)) : 0);
     //ret->unit_size = obj_size;
 
     /* so, here's the idea: memory is assigned to shepherds in units I'm
