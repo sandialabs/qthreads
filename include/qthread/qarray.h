@@ -30,6 +30,8 @@ typedef struct qarray_s
 
 qarray *qarray_create(const size_t count, const size_t unit_size,
 		      const distribution_t d);
+qarray *qarray_create_tight(const size_t count, const size_t unit_size,
+		      const distribution_t d);
 qthread_shepherd_id_t qarray_shepof(const qarray * a, const size_t index);
 void *qarray_elem(qthread_t * me, const qarray * a, const size_t index);
 void qarray_iter(qthread_t * me, qarray * a, qthread_f func);

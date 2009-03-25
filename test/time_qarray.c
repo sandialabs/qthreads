@@ -23,23 +23,24 @@ aligned_t assign1(qthread_t * me, void *arg)
     return 0;
 }
 
+/* we can do this because we forced qarray to create tight segments */
 void assign1_loop(qthread_t * me, const size_t startat, const size_t stopat,
 		  void *arg)
 {
-    for (size_t i = startat; i < stopat; i++) {
-	double *ptr = qarray_elem_nomigrate((qarray *) arg, i);
-
-	*ptr = 1.0;
+    double *ptr = qarray_elem_nomigrate((qarray*)arg, startat);
+    const size_t max = stopat - startat;
+    for (size_t i = 0; i < max; i++) {
+	ptr[i] = 1.0;
     }
 }
 
 void assert1_loop(qthread_t * me, const size_t startat, const size_t stopat,
 		  void *arg)
 {
-    for (size_t i = startat; i < stopat; i++) {
-	double *ptr = qarray_elem_nomigrate((qarray *) arg, i);
-
-	assert(*ptr == 1.0);
+    const double *ptr = qarray_elem_nomigrate((qarray*)arg, startat);
+    size_t max = stopat - startat;
+    for (size_t i = 0; i < max; i++) {
+	assert(ptr[i] == 1.0);
     }
 }
 
@@ -254,7 +255,7 @@ int main(int argc, char *argv[])
 	if (enabled_tests & 1) {
 	    int j;
 	    double acc = 0.0;
-	    a = qarray_create(ELEMENT_COUNT, sizeof(double),
+	    a = qarray_create_tight(ELEMENT_COUNT, sizeof(double),
 			      disttypes[dt_index]);
 	    assert(a != NULL);
 	    for (j = 0; j < ITERATIONS; j++) {

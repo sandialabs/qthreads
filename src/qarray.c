@@ -95,8 +95,8 @@ static inline qthread_shepherd_id_t qarray_internal_shepof_shi(const qarray *
     }
 }				       /*}}} */
 
-qarray *qarray_create(const size_t count, const size_t obj_size,
-		      const distribution_t d)
+static qarray *qarray_create_internal(const size_t count, const size_t obj_size,
+		      const distribution_t d, const int allow_rounding)
 {				       /*{{{ */
     size_t pagesize;
     size_t segment_count;	/* number of segments allocated */
@@ -121,8 +121,11 @@ qarray *qarray_create(const size_t count, const size_t obj_size,
 
     ret->count = count;
     /* make obj_size a multiple of 8 */
-    ret->unit_size = obj_size + ((obj_size & 7) ? (8 - (obj_size & 7)) : 0);
-    //ret->unit_size = obj_size;
+    if (allow_rounding) {
+	ret->unit_size = obj_size + ((obj_size & 7) ? (8 - (obj_size & 7)) : 0);
+    } else {
+	ret->unit_size = obj_size;
+    }
 
     /* so, here's the idea: memory is assigned to shepherds in units I'm
      * choosing to call "segments" (chunk would also work, but that's overused
@@ -422,6 +425,18 @@ qarray *qarray_create(const size_t count, const size_t obj_size,
 #endif
     return ret;
 }				       /*}}} */
+
+qarray *qarray_create(const size_t count, const size_t obj_size,
+		      const distribution_t d)
+{
+    return qarray_create_internal(count, obj_size, d, 0);
+}
+
+qarray *qarray_create_tight(const size_t count, const size_t obj_size,
+		      const distribution_t d)
+{
+    return qarray_create_internal(count, obj_size, d, 1);
+}
 
 void qarray_free(qarray * a)
 {				       /*{{{ */
