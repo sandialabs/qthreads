@@ -8,6 +8,9 @@
 #include <qthread/qdqueue.h>
 #include <qthread_asserts.h>
 #include <qthread_innards.h>
+#ifdef HAVE_SYS_LGRP_USER_H
+# include <sys/lgrp_user.h>
+#endif
 #ifdef QTHREAD_HAVE_LIBNUMA
 # include <numa.h>
 #endif
@@ -157,7 +160,26 @@ static void qdqueue_internal_gensheparray(int **a)
 {				       /*{{{ */
     qthread_shepherd_id_t i, j;
 
-#ifdef QTHREAD_HAVE_LIBNUMA
+#ifdef HAVE_SYS_LGRP_USER_H
+    lgrp_cookie_t lcookie = lgrp_init(LGRP_VIEW_OS);
+    for (i=0; i<maxsheps; i++) {
+	for (j=0; j<maxsheps; j++) {
+	    unsigned int node_i = qthread_internal_shep_to_node(i);
+	    unsigned int node_j = qthread_internal_shep_to_node(j);
+
+	    if (node_i != QTHREAD_NO_NODE && node_j != QTHREAD_NO_NODE) {
+		a[i][j] = lgrp_latency_cookie(lcookie, node_i, node_j, LGRP_LAT_CPU_TO_MEM);
+		assert(a[i][j] != ESRCH);
+	    } else {
+		if (i == j) {
+		    a[i][j] = 10;
+		} else {
+		    a[i][j] = 20;      /* XXX too arbitrary */
+		}
+	    }
+	}
+    }
+#elif QTHREAD_HAVE_LIBNUMA
     for (i = 0; i < maxsheps; i++) {
 	for (j = 0; j < maxsheps; j++) {
 	    unsigned int node_i = qthread_internal_shep_to_node(i);
