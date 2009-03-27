@@ -170,6 +170,7 @@ static void qdqueue_internal_gensheparray(int **a)
 	    if (node_i != QTHREAD_NO_NODE && node_j != QTHREAD_NO_NODE) {
 		a[i][j] = lgrp_latency_cookie(lcookie, node_i, node_j, LGRP_LAT_CPU_TO_MEM);
 		assert(a[i][j] != ESRCH);
+		assert(a[i][j] >= 0);
 	    } else {
 		if (i == j) {
 		    a[i][j] = 10;
@@ -214,7 +215,7 @@ static void qdqueue_internal_sortedsheps(qthread_shepherd_id_t shep,
 					 int *distances)
 {				       /*{{{ */
     qthread_shepherd_id_t i;
-    int lastdist = 0, maxdist = 0;
+    int lastdist = INT_MIN, maxdist = 0;
 
     for (i = 0; i < maxsheps; i++) {
 	if (maxdist <= distances[i])
@@ -373,6 +374,7 @@ qdqueue_t *qdqueue_new(qthread_t * me)
 	    qdqueue_internal_getneighbors(curshep, ret->Qs,
 					  &(ret->Qs[curshep].nNeighbors),
 					  sheparray[curshep]);
+	printf("shep %i has %i neighbors\n", curshep, ret->Qs[curshep].nNeighbors);
 	ret->Qs[curshep].ads.heap =
 	    calloc(maxsheps, sizeof(struct qdqueue_adheap_elem_s));
 	ret->Qs[curshep].ads.heap[0].ad.shep = &(ret->Qs[curshep]);
