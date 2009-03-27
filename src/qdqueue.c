@@ -2,7 +2,7 @@
 # include "config.h"
 #endif
 #include <stdlib.h>		       /* for calloc() */
-#include <limits.h> /* for INT_MAX, per C89 */
+#include <limits.h>		       /* for INT_MAX, per C89 */
 #include <qthread/qthread.h>
 #include <qthread/qlfqueue.h>
 #include <qthread/qdqueue.h>
@@ -25,14 +25,14 @@ struct qdqueue_adheap_elem_s
 {
     int inheap;
     struct qdqueue_adstruct_s ad;
-    struct qdqueue_adheap_elem_s * prev;
-    struct qdqueue_adheap_elem_s * next;
+    struct qdqueue_adheap_elem_s *prev;
+    struct qdqueue_adheap_elem_s *next;
 };
 
 struct qdqueue_adheap_s
 {
-    struct qdqueue_adheap_elem_s * first; /* also, the gateway lock */
-    struct qdqueue_adheap_elem_s * heap;
+    struct qdqueue_adheap_elem_s *first;	/* also, the gateway lock */
+    struct qdqueue_adheap_elem_s *heap;
 };
 
 struct qdsubqueue_s
@@ -56,16 +56,19 @@ struct qdqueue_s
 
 qthread_shepherd_id_t maxsheps = 0;
 
-static struct qdqueue_adstruct_s qdqueue_adheap_pop(qthread_t *me, struct qdqueue_adheap_s * heap)
+static struct qdqueue_adstruct_s qdqueue_adheap_pop(qthread_t * me,
+						    struct qdqueue_adheap_s
+						    *heap)
 {
     struct qdqueue_adstruct_s ret;
 
     if (heap->first != NULL) {
-	struct qdqueue_adheap_elem_s * tmp;
-	qthread_lock(me, (aligned_t*)&(heap->first));
+	struct qdqueue_adheap_elem_s *tmp;
+
+	qthread_lock(me, (aligned_t *) & (heap->first));
 	/* pull off "first" */
 	if ((tmp = heap->first) == NULL) {
-	    qthread_unlock(me, (aligned_t*)&(heap->first));
+	    qthread_unlock(me, (aligned_t *) & (heap->first));
 	    goto emptyheap;
 	}
 	ret = tmp->ad;
@@ -73,9 +76,9 @@ static struct qdqueue_adstruct_s qdqueue_adheap_pop(qthread_t *me, struct qdqueu
 	    heap->first->prev = NULL;
 	}
 	tmp->inheap = 0;
-	qthread_unlock(me, (aligned_t*)&(heap->first));
+	qthread_unlock(me, (aligned_t *) & (heap->first));
     } else {
-emptyheap:
+      emptyheap:
 	ret.shep = NULL;
 	ret.generation = 0;
     }
@@ -89,17 +92,19 @@ emptyheap:
     printf("pushcond\n");
 }*/
 
-static void qdqueue_adheap_push(qthread_t *me, struct qdqueue_adheap_s * heap, void *shep, aligned_t gen)
+static void qdqueue_adheap_push(qthread_t * me, struct qdqueue_adheap_s *heap,
+				void *shep, aligned_t gen)
 {
     size_t i;
+
     /* search through the heap for a ptr matching shep */
-    for (i=0; i<maxsheps; i++) {
+    for (i = 0; i < maxsheps; i++) {
 	if (heap->heap[i].ad.shep == shep) {
 	    break;
 	}
     }
     assert(heap->heap[i].ad.shep == shep);
-    qthread_lock(me, (aligned_t*)&(heap->first));
+    qthread_lock(me, (aligned_t *) & (heap->first));
     /* update the gen record */
     if (heap->heap[i].ad.generation < gen || gen == 0) {
 	if (gen != 0) {
@@ -110,9 +115,9 @@ static void qdqueue_adheap_push(qthread_t *me, struct qdqueue_adheap_s * heap, v
 	}
 	heap->heap[i].inheap = 1;
 	if (heap->first == NULL) {
-		heap->heap[i].prev = NULL;
-		heap->heap[i].next = NULL;
-		heap->first = &(heap->heap[i]);
+	    heap->heap[i].prev = NULL;
+	    heap->heap[i].next = NULL;
+	    heap->first = &(heap->heap[i]);
 	} else {
 	    if (&(heap->heap[i]) < heap->first) {
 		/* adding *before* the first */
@@ -122,9 +127,10 @@ static void qdqueue_adheap_push(qthread_t *me, struct qdqueue_adheap_s * heap, v
 		heap->first = &(heap->heap[i]);
 	    } else if (&(heap->heap[i]) > heap->first) {
 		size_t j;
+
 		/* adding somewhere *after* the first
 		 * ... so we start here and work backwards until we find some part of the heap */
-		for (j=i-1; ; j--) {
+		for (j = i - 1;; j--) {
 		    if (heap->heap[j].inheap) {
 			heap->heap[i].next = heap->heap[j].next;
 			heap->heap[i].prev = &(heap->heap[j]);
@@ -135,14 +141,14 @@ static void qdqueue_adheap_push(qthread_t *me, struct qdqueue_adheap_s * heap, v
 			break;
 		    }
 		}
-	    } /* else it WAS the first already, and got re-pushed */
+	    }			       /* else it WAS the first already, and got re-pushed */
 	}
     }
-done_pushing:
-    qthread_unlock(me, (aligned_t*)&(heap->first));
+  done_pushing:
+    qthread_unlock(me, (aligned_t *) & (heap->first));
 }
 
-static int qdqueue_adheap_empty(struct qdqueue_adheap_s * heap)
+static int qdqueue_adheap_empty(struct qdqueue_adheap_s *heap)
 {
     return (heap->first == NULL);
 }
@@ -163,7 +169,7 @@ static void qdqueue_internal_gensheparray(int **a)
 		if (i == j) {
 		    a[i][j] = 10;
 		} else {
-		    a[i][j] = 20;	       /* XXX too arbitrary */
+		    a[i][j] = 20;      /* XXX too arbitrary */
 		}
 	    }
 	}
@@ -216,7 +222,8 @@ static void qdqueue_internal_sortedsheps(qthread_shepherd_id_t shep,
 	thisdist = malloc(count * sizeof(qthread_shepherd_id_t));
 	assert(thisdist);
 	for (j = k = 0; j < maxsheps && k < count; j++) {
-	    if (j == shep) continue;
+	    if (j == shep)
+		continue;
 	    if (distances[j] == mindist) {
 		thisdist[k++] = j;
 	    }
@@ -234,9 +241,10 @@ static void qdqueue_internal_sortedsheps(qthread_shepherd_id_t shep,
     }
 }				       /*}}} */
 
-static struct qdsubqueue_s **
-    qdqueue_internal_getneighbors(qthread_shepherd_id_t shep, struct qdsubqueue_s *Qs,
-				   size_t * numNeighbors, int *distances)
+static struct qdsubqueue_s
+    **qdqueue_internal_getneighbors(qthread_shepherd_id_t shep,
+				    struct qdsubqueue_s *Qs,
+				    size_t * numNeighbors, int *distances)
 {				       /*{{{ */
     struct qdsubqueue_s **ret;
     size_t i;
@@ -343,10 +351,12 @@ qdqueue_t *qdqueue_new(qthread_t * me)
 	    qdqueue_internal_getneighbors(curshep, ret->Qs,
 					  &(ret->Qs[curshep].nNeighbors),
 					  sheparray[curshep]);
-	ret->Qs[curshep].ads.heap = calloc(maxsheps, sizeof(struct qdqueue_adheap_elem_s));
+	ret->Qs[curshep].ads.heap =
+	    calloc(maxsheps, sizeof(struct qdqueue_adheap_elem_s));
 	ret->Qs[curshep].ads.heap[0].ad.shep = &(ret->Qs[curshep]);
-	for (size_t i=0; i<(maxsheps-1); i++) {
-	    ret->Qs[curshep].ads.heap[i+1].ad.shep = ret->Qs[curshep].allsheps[i];
+	for (size_t i = 0; i < (maxsheps - 1); i++) {
+	    ret->Qs[curshep].ads.heap[i + 1].ad.shep =
+		ret->Qs[curshep].allsheps[i];
 	}
 	ret->Qs[curshep].ads.first = NULL;
     }
@@ -413,7 +423,7 @@ int qdqueue_enqueue(qthread_t * me, qdqueue_t * q, void *elem)
     qlfqueue_enqueue(me, myq->theQ, elem);
     if (stat) {
 	/* the queue was empty, so we may have to wake up waiters */
-	/*qdqueue_adheap_pushcond(myq->ads, myq, 0);*/
+	/*qdqueue_adheap_pushcond(myq->ads, myq, 0); */
     } else {
 	aligned_t generation;
 	qthread_shepherd_id_t shep;
@@ -422,7 +432,7 @@ int qdqueue_enqueue(qthread_t * me, qdqueue_t * q, void *elem)
 	if (myq->last_ad_issued <= myq->last_ad_consumed) {
 	    /* only advertise if our existing ads are stale */
 	    generation = qthread_incr(&(myq->last_ad_issued), 1);
-	    for (shep=0; shep < myq->nNeighbors; shep++) {
+	    for (shep = 0; shep < myq->nNeighbors; shep++) {
 		struct qdsubqueue_s *neighbor = myq->neighbors[shep];
 
 		qdqueue_adheap_push(me, &(neighbor->ads), myq, generation);
@@ -461,6 +471,7 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
 
 	    while ((ad = qdqueue_adheap_pop(me, &myq->ads)).shep != NULL) {
 		struct qdsubqueue_s *lc = ad.shep->last_consumed;
+
 		if (lc == ad.shep) {
 		    /* it's working on its own queue */
 		    aligned_t last_ad = ad.shep->last_ad_consumed;
@@ -468,7 +479,8 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
 		    while (last_ad < ad.generation) {
 			last_ad =
 			    (aligned_t) qt_cas(&(ad.shep->last_ad_consumed),
-				    (void *)last_ad, ad.generation);
+					       (void *)last_ad,
+					       ad.generation);
 		    }
 		    if ((ret = qlfqueue_dequeue(me, ad.shep->theQ)) != NULL) {
 			myq->last_consumed = ad.shep;
@@ -483,7 +495,8 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
 	}
 	{
 	    qthread_shepherd_id_t shep;
-	    for (shep = 0; shep < (maxsheps-1); shep++) {
+
+	    for (shep = 0; shep < (maxsheps - 1); shep++) {
 		struct qdsubqueue_s *remoteshep = myq->allsheps[shep];
 		struct qdsubqueue_s *lc = remoteshep->last_consumed;
 
@@ -524,7 +537,8 @@ int qdqueue_empty(qthread_t * me, qdqueue_t * q)
 	return 0;
     } else {
 	qthread_shepherd_id_t shep;
-	for (shep = 0; shep < (maxsheps-1); shep++) {
+
+	for (shep = 0; shep < (maxsheps - 1); shep++) {
 	    struct qdsubqueue_s *remoteshep = myq->allsheps[shep];
 
 	    assert(remoteshep);
@@ -535,7 +549,7 @@ int qdqueue_empty(qthread_t * me, qdqueue_t * q)
 		}
 	    }
 	}
-	return 1; /* we searched everywhere, and every queue was empty */
+	return 1;		       /* we searched everywhere, and every queue was empty */
     }
   fail_dequeue:
     return 0;
