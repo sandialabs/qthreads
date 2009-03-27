@@ -272,7 +272,7 @@ static struct qdsubqueue_s
     struct qdsubqueue_s **ret;
     size_t i;
 
-#ifdef QTHREAD_HAVE_LIBNUMA
+#if (HAVE_SYS_LGRP_USER_H || QTHREAD_HAVE_LIBNUMA)
     /* we define a "neighbor" in terms of distance, because that's all we've
      * got, so, we find the shortest non-me distance (i.e. >10), and anything
      * that's less than 10 away from that is considered one of my neighbors */
@@ -293,7 +293,12 @@ static struct qdsubqueue_s
     for (i = 0; i < maxsheps; i++) {
 	if (i == shep)
 	    continue;
-	if (distances[i] < (mindist + 10)) {
+# ifdef HAVE_SYS_LGRP_USER_H
+	if (distances[i] < (mindist + 5))
+# else
+	if (distances[i] < (mindist + 10))
+# endif
+	{
 	    numN++;
 	}
     }
@@ -319,6 +324,7 @@ static struct qdsubqueue_s
 	}
     }
     free(temp);
+    *numNeighbors = numN;
 #else
     /* without a valid NUMA library, *ALL* shepherds are "neighbors" */
     size_t j;
