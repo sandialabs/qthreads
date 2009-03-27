@@ -2,7 +2,8 @@
 # include "config.h"
 #endif
 #include <stdlib.h>		       /* for calloc() */
-#include <qthread.h>
+#include <limits.h> /* for INT_MAX, per C89 */
+#include <qthread/qthread.h>
 #include <qthread/qlfqueue.h>
 #include <qthread/qdqueue.h>
 #include <qthread_asserts.h>
