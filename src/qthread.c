@@ -482,8 +482,8 @@ static QINLINE void FREE_ADDRSTAT(qthread_addrstat_t * t)
 
 /* guaranteed to be between 0 and 128, using the first parts of addr that are
  * significant */
-#define QTHREAD_CHOOSE_STRIPE(addr) (((size_t)addr >> 4) & 0x7f)
-#define QTHREAD_LOCKING_STRIPES 128
+#define QTHREAD_CHOOSE_STRIPE(addr) (((size_t)addr >> 4) & 0x1f)
+#define QTHREAD_LOCKING_STRIPES 32
 
 #if defined(HAVE_GCC_INLINE_ASSEMBLY) && \
     (QTHREAD_SIZEOF_ALIGNED_T == 4 || \
