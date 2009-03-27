@@ -160,7 +160,11 @@ static void qdqueue_internal_gensheparray(int **a)
 	    if (node_i != QTHREAD_NO_NODE && node_j != QTHREAD_NO_NODE) {
 		a[i][j] = numa_distance(node_i, node_j);
 	    } else {
-		a[i][j] = 20;	       /* XXX too arbitrary */
+		if (i == j) {
+		    a[i][j] = 10;
+		} else {
+		    a[i][j] = 20;	       /* XXX too arbitrary */
+		}
 	    }
 	}
     }
@@ -212,6 +216,7 @@ static void qdqueue_internal_sortedsheps(qthread_shepherd_id_t shep,
 	thisdist = malloc(count * sizeof(qthread_shepherd_id_t));
 	assert(thisdist);
 	for (j = k = 0; j < maxsheps && k < count; j++) {
+	    if (j == shep) continue;
 	    if (distances[j] == mindist) {
 		thisdist[k++] = j;
 	    }
