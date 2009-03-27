@@ -380,7 +380,6 @@ qdqueue_t *qdqueue_new(qthread_t * me)
 	    qdqueue_internal_getneighbors(curshep, ret->Qs,
 					  &(ret->Qs[curshep].nNeighbors),
 					  sheparray[curshep]);
-	printf("shep %i has %i neighbors\n", curshep, ret->Qs[curshep].nNeighbors);
 	ret->Qs[curshep].ads.heap =
 	    calloc(maxsheps, sizeof(struct qdqueue_adheap_elem_s));
 	ret->Qs[curshep].ads.heap[0].ad.shep = &(ret->Qs[curshep]);
