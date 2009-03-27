@@ -9,8 +9,9 @@ TESTS = test1 test2 test3 test_qalloc \
 		test_internal_mod \
 		test_migrate \
 		test_qarray \
-		test_qlfqueue \
 		test_qpool \
+		test_qlfqueue \
+		test_qdqueue \
 		test_qutil_qsort
 
 if ENABLE_CXX_TESTS
@@ -81,6 +82,9 @@ test_qarray_DEPENDENCIES = $(QTHREADLIB)
 
 test_qlfqueue_SOURCES = test_qlfqueue.c
 test_qlfqueue_DEPENDENCIES = $(QTHREADLIB)
+
+test_qdqueue_SOURCES = test_qdqueue.c
+test_qdqueue_DEPENDENCIES = $(QTHREADLIB)
 
 test_qpool_SOURCES = test_qpool.c
 test_qpool_DEPENDENCIES = $(QTHREADLIB)
