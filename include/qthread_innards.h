@@ -24,6 +24,8 @@ typedef struct qlib_s
     unsigned master_stack_size;
     unsigned max_stack_size;
 
+    void* shep0_stack; /* free the shep0 stack when exiting */
+
     /* assigns a unique thread_id mostly for debugging! */
     aligned_t max_thread_id;
     pthread_mutex_t max_thread_id_lock;
@@ -110,8 +112,8 @@ static QINLINE void qthread_debug(int level, char *format, ...)
 		    case 'p':
 		    case 'x':
 			{
-			    uintptr_t num;
-			    unsigned base;
+			    uintptr_t num = 0;
+			    unsigned base = 0;
 			    *head++ = '0';
 			    *head++ = 'x';
 			    case 'u':

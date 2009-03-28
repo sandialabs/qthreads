@@ -1041,7 +1041,6 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
     int r;
     size_t i;
     ucontext_t *shep0 = NULL;
-    void *shepstack = NULL;
     int cp_syncmode = COLLECTION_MODE_PLAIN;
     int need_sync = 1;
 
@@ -1305,7 +1304,7 @@ noaffinity:
     /* now, transform the current main context into a qthread,
      * and make the main thread a shepherd (shepherd 0).
      * What will happen is this:
-     * shep0 and shepstack are used for shepherd0; the shepstack is
+     * shep0 and shep0_stack are used for shepherd0; the shep0_stack is
      *   huge, because the shepherd expects a "standard" size stack. The
      * qthread_t is for the *current* thread, which also expects a full-size
      *   stack, but is generated so that the current thread can block the same
@@ -1314,7 +1313,7 @@ noaffinity:
 	perror("qthread_init allocating shepherd context");
 	return QTHREAD_MALLOC_ERROR;
     }
-    if ((shepstack = calloc(1, qlib->master_stack_size)) == NULL) {
+    if ((qlib->shep0_stack = calloc(1, qlib->master_stack_size)) == NULL) {
 	perror("qthread_init allocating shepherd stack");
 	return QTHREAD_MALLOC_ERROR;
     }
@@ -1337,7 +1336,7 @@ noaffinity:
 			   &(qlib->shepherds[0]));
 	qassert(getcontext(t->context), 0);
 	qassert(getcontext(shep0), 0);
-	qthread_makecontext(shep0, shepstack, qlib->master_stack_size,
+	qthread_makecontext(shep0, qlib->shep0_stack, qlib->master_stack_size,
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
 			    (void (*)(void))qthread_shepherd_wrapper,
 #else
@@ -1592,6 +1591,7 @@ void qthread_finalize(void)
     qt_mpool_destroy(generic_lock_pool);
     qt_mpool_destroy(generic_addrstat_pool);
 #endif
+    free(qlib->shep0_stack);
     free(qlib->shepherds);
     free(qlib);
     qlib = NULL;
