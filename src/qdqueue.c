@@ -62,7 +62,7 @@ qthread_shepherd_id_t maxsheps = 0;
 static struct qdqueue_adstruct_s qdqueue_adheap_pop(qthread_t * me,
 						    struct qdqueue_adheap_s
 						    *heap)
-{
+{				       /*{{{ */
     struct qdqueue_adstruct_s ret;
 
     if (heap->first != NULL) {
@@ -86,7 +86,7 @@ static struct qdqueue_adstruct_s qdqueue_adheap_pop(qthread_t * me,
 	ret.generation = 0;
     }
     return ret;
-}
+}				       /*}}} */
 
 /* only push if there are waiters...
  * this function is only used if we can *block* for waiting (not implemented yet) */
@@ -97,7 +97,7 @@ static struct qdqueue_adstruct_s qdqueue_adheap_pop(qthread_t * me,
 
 static void qdqueue_adheap_push(qthread_t * me, struct qdqueue_adheap_s *heap,
 				void *shep, aligned_t gen)
-{
+{				       /*{{{ */
     size_t i;
 
     /* search through the heap for a ptr matching shep */
@@ -149,12 +149,12 @@ static void qdqueue_adheap_push(qthread_t * me, struct qdqueue_adheap_s *heap,
     }
   done_pushing:
     qthread_unlock(me, (aligned_t *) & (heap->first));
-}
+}				       /*}}} */
 
 static int qdqueue_adheap_empty(struct qdqueue_adheap_s *heap)
-{
+{				       /*{{{ */
     return (heap->first == NULL);
-}
+}				       /*}}} */
 
 static void qdqueue_internal_gensheparray(int **a)
 {				       /*{{{ */
@@ -162,13 +162,16 @@ static void qdqueue_internal_gensheparray(int **a)
 
 #ifdef HAVE_SYS_LGRP_USER_H
     lgrp_cookie_t lcookie = lgrp_init(LGRP_VIEW_OS);
-    for (i=0; i<maxsheps; i++) {
-	for (j=0; j<maxsheps; j++) {
+
+    for (i = 0; i < maxsheps; i++) {
+	for (j = 0; j < maxsheps; j++) {
 	    unsigned int node_i = qthread_internal_shep_to_node(i);
 	    unsigned int node_j = qthread_internal_shep_to_node(j);
 
 	    if (node_i != QTHREAD_NO_NODE && node_j != QTHREAD_NO_NODE) {
-		a[i][j] = lgrp_latency_cookie(lcookie, node_i, node_j, LGRP_LAT_CPU_TO_MEM);
+		a[i][j] =
+		    lgrp_latency_cookie(lcookie, node_i, node_j,
+					LGRP_LAT_CPU_TO_MEM);
 		assert(a[i][j] != ESRCH);
 		assert(a[i][j] >= 0);
 	    } else {
@@ -439,7 +442,7 @@ int qdqueue_destroy(qthread_t * me, qdqueue_t * q)
 
 /* enqueue something in the queue */
 int qdqueue_enqueue(qthread_t * me, qdqueue_t * q, void *elem)
-{
+{				       /*{{{ */
     int stat;
     struct qdsubqueue_s *myq;
 
@@ -470,7 +473,7 @@ int qdqueue_enqueue(qthread_t * me, qdqueue_t * q, void *elem)
     }
 
     return QTHREAD_SUCCESS;
-}
+}				       /*}}} */
 
 /* dequeue something from the queue (returns NULL for an empty queue) */
 void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
@@ -551,7 +554,7 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
 
 /* returns 1 if the queue is empty, 0 otherwise */
 int qdqueue_empty(qthread_t * me, qdqueue_t * q)
-{
+{				       /*{{{ */
     struct qdsubqueue_s *myq;
     void *ret;
 
@@ -582,4 +585,4 @@ int qdqueue_empty(qthread_t * me, qdqueue_t * q)
     }
   fail_dequeue:
     return 0;
-}
+}				       /*}}} */
