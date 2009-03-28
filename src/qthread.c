@@ -1314,7 +1314,7 @@ noaffinity:
 	perror("qthread_init allocating shepherd context");
 	return QTHREAD_MALLOC_ERROR;
     }
-    if ((shepstack = malloc(qlib->master_stack_size)) == NULL) {
+    if ((shepstack = calloc(1, qlib->master_stack_size)) == NULL) {
 	perror("qthread_init allocating shepherd stack");
 	return QTHREAD_MALLOC_ERROR;
     }
@@ -1672,6 +1672,7 @@ static QINLINE qthread_t *qthread_thread_bare(const qthread_f f,
 #else
 	t->thread_id = (unsigned int)-1;
 #endif
+	t->flags = 0;
 	t->thread_state = QTHREAD_STATE_NEW;
 	t->f = f;
 	t->arg = (void *)arg;
