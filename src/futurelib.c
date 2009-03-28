@@ -8,9 +8,6 @@
 #include <string.h>
 #include <cprops/hashtable.h>
 
-#define MALLOC(sss) malloc(sss)
-#define FREE(sss) free(sss)
-
 #include "futurelib_innards.h"
 #include "qthread_innards.h"
 
@@ -42,7 +39,7 @@ aligned_t future_shep_cleanup(qthread_t * me, void *arg)
     if (ptr != NULL) {
 	qassert(pthread_setspecific(future_bookkeeping, NULL), 0);
 	qassert(pthread_mutex_destroy(&(ptr->vp_count_lock), 0));
-	FREE(ptr);
+	free(ptr);
     }
 }
 
@@ -51,14 +48,14 @@ void future_cleanup(void)
     int i;
     aligned_t *rets;
 
-    rets = (aligned_t *) MALLOC(sizeof(aligned_t) * qlib->nshepherds);
+    rets = (aligned_t *) calloc(qlib->nshepherds, sizeof(aligned_t));
     for (i = 0; i < qlib->nshepherds; i++) {
 	qthread_fork_to(future_shep_cleanup, NULL, rets + i, i);
     }
     for (i = 0; i < qlib->nshepherds; i++) {
 	qthread_readFF(NULL, rets + i, rets + i);
     }
-    FREE(rets);
+    free(rets);
     qassert(pthread_mutex_destroy(&sfnf_lock), 0);
     qassert(pthread_key_delete(&future_bookkeeping), 0);
 }
@@ -90,8 +87,8 @@ void future_init(int vp_per_loc)
     qassert(pthread_mutex_init(&sfnf_lock, NULL), 0);
     qassert(pthread_key_create(&future_bookkeeping, NULL), 0);
     future_bookkeeping_array =
-	(location_t *) MALLOC(sizeof(location_t) * qlib->nshepherds);
-    rets = (aligned_t *) MALLOC(sizeof(aligned_t) * qlib->nshepherds);
+	(location_t *) calloc(qlib->nshepherds, sizeof(location_t));
+    rets = (aligned_t *) calloc(qlib->nshepherds, sizeof(aligned_t));
     for (i = 0; i < qlib->nshepherds; i++) {
 	future_bookkeeping_array[i].vp_count = 0;
 	future_bookkeeping_array[i].vp_max = vp_per_loc;
@@ -103,7 +100,7 @@ void future_init(int vp_per_loc)
     for (i = 0; i < qlib->nshepherds; i++) {
 	qthread_readFF(me, rets + i, rets + i);
     }
-    FREE(rets);
+    free(rets);
 #ifdef CLEANUP
     atexit(future_cleanup);
 #endif
