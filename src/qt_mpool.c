@@ -74,53 +74,44 @@ static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
 						     int node,
 						     size_t alignment)
 {
-#if QTHREAD_HAVE_LIBNUMA
-    if (node == -1) {		       // guaranteed page alignment
-	return numa_alloc_interleaved(alloc_size);
-    } else {
-	return numa_alloc_onnode(alloc_size, node);
-    }
-#else
+    void *ret;
     switch (alignment) {
 	case 0:
-	    return malloc(alloc_size);
+	    return calloc(1, alloc_size);
 	case 16:
-#ifdef HAVE_16ALIGNED_MALLOC
+#ifdef HAVE_16ALIGNED_CALLOC
 	case 8:
 	case 4:
 	case 2:
-	    return malloc(alloc_size);
+	    return calloc(1, alloc_size);
+#elif HAVE_16ALIGNED_MALLOC
+	case 8:
+	case 4:
+	case 2:
+	    ret = malloc(alloc_size);
 #elif HAVE_MEMALIGN
-	    return memalign(16, alloc_size);
+	    ret = memalign(16, alloc_size);
 #elif HAVE_POSIX_MEMALIGN
-	{
-	    void *ret;
-
 	    posix_memalign(&(ret), 16, alloc_size);
-	    return ret;
-	}
 #elif HAVE_PAGE_ALIGNED_MALLOC
-	    return malloc(alloc_size);
+	    ret = malloc(alloc_size);
 #else
-	    return valloc(alloc_size);
+	    ret = valloc(alloc_size);
 #endif
+	    break;
 	default:
 #ifdef HAVE_MEMALIGN
-	    return memalign(alignment, alloc_size);
+	    ret = memalign(alignment, alloc_size);
 #elif HAVE_POSIX_MEMALIGN
-	{
-	    void *ret;
-
 	    posix_memalign(&(ret), alignment, alloc_size);
-	    return ret;
-	}
 #elif HAVE_PAGE_ALIGNED_MALLOC
-	    return malloc(alloc_size);
+	    ret = malloc(alloc_size);
 #else
-	    return valloc(alloc_size); /* cross your fingers */
+	    ret = valloc(alloc_size); /* cross your fingers */
 #endif
     }
-#endif
+    memset(ret, 0, alloc_size);
+    return ret;
 }
 
 static QINLINE void qt_mpool_internal_aligned_free(void *freeme,
