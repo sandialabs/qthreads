@@ -25,6 +25,7 @@ TESTS += time_swap time_producerconsumer time_increments \
 	 time_qpool \
 	 time_qlfqueue \
 	 time_qdqueue \
+	 time_qdqueue_sizes \
 	 time_gcd
 endif
 
