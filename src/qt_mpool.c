@@ -9,9 +9,6 @@
 #if (HAVE_MEMALIGN && HAVE_MALLOC_H)
 #include <malloc.h>		       /* for memalign() */
 #endif
-#ifdef QTHREAD_HAVE_LIBNUMA
-# include <numa.h>
-#endif
 
 #ifdef QTHREAD_USE_PTHREADS
 #include <pthread.h>
@@ -118,9 +115,7 @@ static QINLINE void qt_mpool_internal_aligned_free(void *freeme,
 						   const size_t alloc_size,
 						   const size_t alignment)
 {
-#if QTHREAD_HAVE_LIBNUMA
-    numa_free(freeme, alloc_size);
-#elif (HAVE_MEMALIGN || HAVE_PAGE_ALIGNED_MALLOC || HAVE_POSIX_MEMALIGN)
+#if (HAVE_MEMALIGN || HAVE_PAGE_ALIGNED_MALLOC || HAVE_POSIX_MEMALIGN)
     free(freeme);
 #elif HAVE_16ALIGNED_MALLOC
     switch (alignment) {
