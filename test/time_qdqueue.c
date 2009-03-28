@@ -111,26 +111,6 @@ int main(int argc, char *argv[])
 	exit(-2);
     }
 
-    for (i = 0; i < ELEMENT_COUNT; i++) {
-	if (qdqueue_enqueue(me, q, (void*)(intptr_t)(i+1)) != 0) {
-	    fprintf(stderr, "qdqueue_enqueue(q,%i) failed!\n", (int)i);
-	    exit(-1);
-	}
-    }
-    for (i = 0; i < ELEMENT_COUNT; i++) {
-	if (qdqueue_dequeue(me, q) != (void*)(intptr_t)(i+1)) {
-	    fprintf(stderr, "qdqueue_dequeue() failed, didn't equal %i!\n", (int)i);
-	    exit(-1);
-	}
-    }
-    if (!qdqueue_empty(me, q)) {
-	fprintf(stderr, "qdqueue not empty after ordering test!\n");
-	exit(-1);
-    }
-    if (interactive) {
-	printf("ordering test succeeded\n");
-    }
-
     rets = calloc(THREAD_COUNT, sizeof(aligned_t));
     assert(rets != NULL);
     qtimer_start(timer);
