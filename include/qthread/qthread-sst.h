@@ -81,6 +81,8 @@ qthread_t *qthread_prepare_for(const qthread_f f, const void *arg,
 #define qthread_schedule(t) qthread_schedule_on(t, NO_SHEPHERD)
 #define qthread_schedule_on(t,shep) PIM_startStoppedThread((int)t,(int)shep)
 
+#define qthread_migrate_to(me, shepherd)
+
 /* these are accessor functions for use by the qthreads to retrieve information
  * about themselves */
 static inline unsigned qthread_id(const qthread_t * t)
@@ -209,9 +211,9 @@ static inline int qthread_readFF(qthread_t * me, aligned_t * const dest,
 				 const aligned_t * const src)
 {
     if (dest != NULL && dest != src) {
-	*dest = PIM_feb_readff(src);
+	*dest = PIM_feb_readff((aligned_t*const)src);
     } else {
-	PIM_feb_readff(src);
+	PIM_feb_readff((aligned_t*const)src);
     }
     return 0;
 }
@@ -233,9 +235,9 @@ static inline int qthread_readFF(qthread_t * me, aligned_t * const dest,
 static inline int qthread_readFE(qthread_t * me, aligned_t * const dest, const aligned_t * const src)
 {
     if (dest != NULL && dest != src) {
-	*dest = PIM_feb_readfe(src);
+	*dest = PIM_feb_readfe((aligned_t*const)src);
     } else {
-	PIM_feb_readfe(src);
+	PIM_feb_readfe((aligned_t*const)src);
     }
     return 0;
 }
@@ -252,12 +254,12 @@ static inline int qthread_readFE(qthread_t * me, aligned_t * const dest, const a
  */
 static inline int qthread_lock(qthread_t * me, const aligned_t *a)
 {
-    PIM_feb_readfe(a);
+    PIM_feb_readfe((aligned_t*const)a);
     return 0;
 }
 static inline int qthread_unlock(qthread_t * me, const aligned_t *a)
 {
-    PIM_feb_fill(a);
+    PIM_feb_fill((aligned_t*const)a);
     return 0;
 }
 
