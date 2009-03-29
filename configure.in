@@ -203,7 +203,6 @@ AS_IF([test "x$qthread_implementation" = "xsst"],
 	   AC_SEARCH_LIBS([ceil],[m_ppc],[],[AC_MSG_ERROR([Can't seem to find ceil()])])
 	   ],
 	  [AS_IF([test "x$qthread_implementation" = "xunix"],[
-	   AC_CHECK_HEADERS([math.h])
 	  AC_SEARCH_LIBS([ceil],[m],[],[AC_MSG_ERROR([Can't seem to find ceil()])])
 	  AC_ARG_WITH([cprops],
 				  [AC_HELP_STRING([--with-cprops=DIR],
@@ -225,7 +224,7 @@ AC_CACHE_SAVE
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
 AC_HEADER_TIME
-AC_CHECK_HEADERS([stdlib.h fcntl.h ucontext.h sys/time.h sys/resource.h mach/mach_time.h malloc.h])
+AC_CHECK_HEADERS([stdlib.h fcntl.h ucontext.h sys/time.h sys/resource.h mach/mach_time.h malloc.h math.h])
 AX_CREATE_STDINT_H([include/qthread/qthread-int.h])
 AC_SYS_LARGEFILE
 
