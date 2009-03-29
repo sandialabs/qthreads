@@ -21,7 +21,7 @@ struct qdsubqueue_s;
 struct qdqueue_adstruct_s
 {
     struct qdsubqueue_s *shep;
-    aligned_t generation;
+    uintptr_t generation; /* XXX change to aligned_t when we have a CAS */
 };
 
 struct qdqueue_adheap_elem_s
@@ -44,8 +44,8 @@ struct qdsubqueue_s
     struct qdsubqueue_s *last_consumed;	/* should be atomically writable */
 
     struct qdqueue_adheap_s ads;
-    aligned_t last_ad_issued;
-    aligned_t last_ad_consumed;
+    uintptr_t last_ad_issued; /* using this datatype instead of aligned_t so they can be CAS'd */
+    uintptr_t last_ad_consumed; /* XXX change this when qthreads grows a CAS function */
 
     size_t nNeighbors;
     struct qdsubqueue_s **neighbors;	/* ordered by distance */
@@ -506,13 +506,13 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
 
 		if (lc == ad.shep) {
 		    /* it's working on its own queue */
-		    aligned_t last_ad = ad.shep->last_ad_consumed;
+		    uintptr_t last_ad = ad.shep->last_ad_consumed; /* XXX see note in struct definition */
 
 		    while (last_ad < ad.generation) {
 			last_ad =
-			    (aligned_t) qt_cas(&(ad.shep->last_ad_consumed),
-					       (void *)last_ad,
-					       ad.generation);
+			    (uintptr_t) qt_cas((volatile void**)&(ad.shep->last_ad_consumed),
+					       (void*)last_ad,
+					       (void*)ad.generation);
 		    }
 		    if ((ret = qlfqueue_dequeue(me, ad.shep->theQ)) != NULL) {
 			myq->last_consumed = ad.shep;
@@ -521,7 +521,8 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
 		} else if (lc != NULL) {
 		    /* it got work from somewhere! */
 		    qdqueue_adheap_push(me, &myq->ads, lc, 0);
-		    qt_cas(&(ad.shep->last_consumed), lc, NULL);
+		    /* reset the remote host's last_consumed counter, to avoid infinite loops */
+		    qt_cas((volatile void**)&(ad.shep->last_consumed), (void*)lc, NULL);
 		}
 	    }
 	}
