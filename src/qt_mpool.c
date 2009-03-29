@@ -9,6 +9,11 @@
 #if (HAVE_MEMALIGN && HAVE_MALLOC_H)
 #include <malloc.h>		       /* for memalign() */
 #endif
+#if STDC_HEADERS
+# include <string.h>
+#else
+# warning where is memset defined?
+#endif
 
 #ifdef QTHREAD_USE_PTHREADS
 #include <pthread.h>
