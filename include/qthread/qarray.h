@@ -5,6 +5,10 @@
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
 
+#ifdef __cplusplus
+extern "C"
+{
+#endif
 typedef enum
 {
     /* the default, used both as input and after creation */
@@ -53,5 +57,8 @@ QINLINE static void *qarray_elem_nomigrate(const qarray * a, const size_t index)
     }
 }
 
+#ifdef __cplusplus
+}
+#endif
 
 #endif
