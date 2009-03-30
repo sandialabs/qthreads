@@ -175,10 +175,10 @@ static void qdqueue_internal_gensheparray(int **a)
 		assert(a[i][j] != ESRCH);
 		assert(a[i][j] >= 0);
 	    } else {
-		if (i == j) {
-		    a[i][j] = 10;
+		if (node_i == node_j) {
+		    a[i][j] = 12;
 		} else {
-		    a[i][j] = 20;      /* XXX too arbitrary */
+		    a[i][j] = 18;      /* XXX too arbitrary */
 		}
 	    }
 	}
@@ -281,6 +281,11 @@ static struct qdsubqueue_s
      * that's less than 10 away from that is considered one of my neighbors */
     qthread_shepherd_id_t *temp;
     size_t j, numN = 0;
+# ifdef HAVE_SYS_LGRP_USER_H
+#  define NONME_DIST 5
+# else
+#  define NONME_DIST 10
+# endif
 
     /* find the smallest non-me distance */
     int mindist = INT_MAX;
@@ -296,11 +301,7 @@ static struct qdsubqueue_s
     for (i = 0; i < maxsheps; i++) {
 	if (i == shep)
 	    continue;
-# ifdef HAVE_SYS_LGRP_USER_H
-	if (distances[i] < (mindist + 5))
-# else
-	if (distances[i] < (mindist + 10))
-# endif
+	if (distances[i] < (mindist + NONME_DIST))
 	{
 	    numN++;
 	}
@@ -311,7 +312,7 @@ static struct qdsubqueue_s
     for (i = j = 0; i < maxsheps; i++) {
 	if (i == shep)
 	    continue;
-	if (distances[i] < (mindist + 10)) {
+	if (distances[i] < (mindist + NONME_DIST)) {
 	    temp[j++] = (qthread_shepherd_id_t) i;
 	}
     }
