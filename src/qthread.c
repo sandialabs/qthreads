@@ -1176,7 +1176,7 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	    while (1) {
 		cpu = 0;
 		/* find an unused one */
-		while (cpus[lgrp][cpu] != -1)
+		while (cpus[lgrp][cpu] != (processorid_t)(-1))
 		    cpu++;
 		if (cpu == 0) {
 		    /* if no unused ones... try the next lgrp */
