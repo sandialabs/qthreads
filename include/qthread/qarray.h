@@ -9,6 +9,7 @@
 extern "C"
 {
 #endif
+
 typedef enum
 {
     /* the default, used both as input and after creation */
@@ -31,6 +32,8 @@ typedef struct qarray_s
     qthread_shepherd_id_t dist_shep;	/* for ALL_SAME dist type */
 } qarray;
 
+typedef void (*qa_loop_f) (qthread_t * me, const size_t startat,
+			   const size_t stopat, qarray *array, void *arg);
 
 qarray *qarray_create(const size_t count, const size_t unit_size,
 		      const distribution_t d);
@@ -39,7 +42,7 @@ qarray *qarray_create_tight(const size_t count, const size_t unit_size,
 qthread_shepherd_id_t qarray_shepof(const qarray * a, const size_t index);
 void *qarray_elem(qthread_t * me, const qarray * a, const size_t index);
 void qarray_iter(qthread_t * me, qarray * a, qthread_f func);
-void qarray_iter_loop(qthread_t * me, qarray * a, qt_loop_f func);
+void qarray_iter_loop(qthread_t * me, qarray * a, qa_loop_f func, void* arg);
 void qarray_free(qarray * a);
 
 QINLINE static void *qarray_elem_nomigrate(const qarray * a, const size_t index)

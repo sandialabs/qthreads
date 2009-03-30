@@ -30,10 +30,10 @@ aligned_t assignall1(qthread_t * me, void *arg)
     return 0;
 }
 void assignoff1(qthread_t * me, const size_t startat, const size_t stopat,
-		void *arg)
+		qarray *q, void*arg)
 {
     for (size_t i = startat; i < stopat; i++) {
-	void * ptr = qarray_elem_nomigrate((qarray*)arg, i);
+	void * ptr = qarray_elem_nomigrate(q, i);
 	memset(ptr, 1, sizeof(offsize));
     }
     qthread_incr(&count, stopat-startat);
@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
 			  disttypes[dt_index]);
 	if (interactive)
 	    printf("%s: created array of odd-sized objects\n", distnames[dt_index]);
-	qarray_iter_loop(me, a, assignoff1);
+	qarray_iter_loop(me, a, assignoff1, NULL);
 	if (interactive)
 	    printf("%s: iterated; now checking work...\n", distnames[dt_index]);
 	if (count != ELEMENT_COUNT) {

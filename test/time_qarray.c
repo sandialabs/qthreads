@@ -25,9 +25,9 @@ aligned_t assign1(qthread_t * me, void *arg)
 
 /* we can do this because we forced qarray to create tight segments */
 void assign1_loop(qthread_t * me, const size_t startat, const size_t stopat,
-		  void *arg)
+		  qarray *qa, void *arg)
 {
-    double *ptr = qarray_elem_nomigrate((qarray*)arg, startat);
+    double *ptr = qarray_elem_nomigrate(qa, startat);
     const size_t max = stopat - startat;
     for (size_t i = 0; i < max; i++) {
 	ptr[i] = 1.0;
@@ -35,9 +35,9 @@ void assign1_loop(qthread_t * me, const size_t startat, const size_t stopat,
 }
 
 void assert1_loop(qthread_t * me, const size_t startat, const size_t stopat,
-		  void *arg)
+		  qarray *qa, void *arg)
 {
-    const double *ptr = qarray_elem_nomigrate((qarray*)arg, startat);
+    const double *ptr = qarray_elem_nomigrate(qa, startat);
     size_t max = stopat - startat;
     for (size_t i = 0; i < max; i++) {
 	assert(ptr[i] == 1.0);
@@ -51,23 +51,23 @@ aligned_t assignall1(qthread_t * me, void *arg)
 }
 
 void assignall1_loop(qthread_t * me, const size_t startat,
-		     const size_t stopat, void *arg)
+		     const size_t stopat, qarray *qa, void *arg)
 {
     for (size_t i = startat; i < stopat; i++) {
-	char *ptr = qarray_elem_nomigrate((qarray *) arg, i);
+	char *ptr = qarray_elem_nomigrate(qa, i);
 
 	memset(ptr, 1, sizeof(bigobj));
     }
 }
 
 void assertall1_loop(qthread_t * me, const size_t startat,
-		     const size_t stopat, void *arg)
+		     const size_t stopat, qarray *qa, void *arg)
 {
     bigobj *example = malloc(sizeof(bigobj));
 
     memset(example, 1, sizeof(bigobj));
     for (size_t i = startat; i < stopat; i++) {
-	char *ptr = qarray_elem_nomigrate((qarray *) arg, i);
+	char *ptr = qarray_elem_nomigrate(qa, i);
 
 	assert(memcmp(ptr, example, sizeof(bigobj)) == 0);
     }
@@ -75,23 +75,23 @@ void assertall1_loop(qthread_t * me, const size_t startat,
 }
 
 void assignoff1(qthread_t * me, const size_t startat, const size_t stopat,
-		void *arg)
+		qarray *qa, void *arg)
 {
     for (size_t i = startat; i < stopat; i++) {
-	char *ptr = qarray_elem_nomigrate((qarray *) arg, i);
+	char *ptr = qarray_elem_nomigrate(qa, i);
 
 	memset(ptr, 1, sizeof(offsize));
     }
 }
 
 void assertoff1(qthread_t * me, const size_t startat, const size_t stopat,
-		void *arg)
+		qarray *qa, void *arg)
 {
     offsize *example = malloc(sizeof(offsize));
 
     memset(example, 1, sizeof(offsize));
     for (size_t i = startat; i < stopat; i++) {
-	char *ptr = qarray_elem_nomigrate((qarray *) arg, i);
+	char *ptr = qarray_elem_nomigrate(qa, i);
 
 	assert(memcmp(ptr, example, sizeof(offsize)) == 0);
     }
@@ -260,7 +260,7 @@ int main(int argc, char *argv[])
 	    assert(a != NULL);
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
-		qarray_iter_loop(me, a, assign1_loop);
+		qarray_iter_loop(me, a, assign1_loop, NULL);
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
@@ -269,7 +269,7 @@ int main(int argc, char *argv[])
 	    acc = 0.0;
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
-		qarray_iter_loop(me, a, assert1_loop);
+		qarray_iter_loop(me, a, assert1_loop, NULL);
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
@@ -288,7 +288,7 @@ int main(int argc, char *argv[])
 	    assert(a != NULL);
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
-		qarray_iter_loop(me, a, assignall1_loop);
+		qarray_iter_loop(me, a, assignall1_loop, NULL);
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
@@ -297,7 +297,7 @@ int main(int argc, char *argv[])
 	    acc = 0.0;
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
-		qarray_iter_loop(me, a, assertall1_loop);
+		qarray_iter_loop(me, a, assertall1_loop, NULL);
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
@@ -316,7 +316,7 @@ int main(int argc, char *argv[])
 	    assert(a != NULL);
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
-		qarray_iter_loop(me, a, assignoff1);
+		qarray_iter_loop(me, a, assignoff1, NULL);
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
@@ -325,7 +325,7 @@ int main(int argc, char *argv[])
 	    acc = 0.0;
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
-		qarray_iter_loop(me, a, assertoff1);
+		qarray_iter_loop(me, a, assertoff1, NULL);
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }

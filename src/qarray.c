@@ -544,9 +544,10 @@ struct qarray_func_wrapper_args
     union
     {
 	qthread_f qt;
-	qt_loop_f ql;
+	qa_loop_f ql;
     } func;
     qarray *a;
+    void * arg;
     volatile aligned_t *donecount;
 };
 
@@ -623,7 +624,7 @@ static aligned_t qarray_loop_strider(qthread_t * me,
     const distribution_t dist_type = arg->a->dist_type;
     size_t count = 0;
     qthread_shepherd_id_t shep = qthread_shep(me);
-    const qt_loop_f ql = arg->func.ql;
+    const qa_loop_f ql = arg->func.ql;
 
     if (dist_type == ALL_SAME && shep != arg->a->dist_shep) {
 	goto qarray_loop_strider_exit;
@@ -640,7 +641,7 @@ static aligned_t qarray_loop_strider(qthread_t * me,
      * 2. count is the index of that element
      */
     if (dist_type == ALL_SAME) {
-	ql(me, count, max_count, arg->a);
+	ql(me, count, max_count, arg->a, arg->arg);
 	goto qarray_loop_strider_exit;
     }
     while (1) {
@@ -651,7 +652,7 @@ static aligned_t qarray_loop_strider(qthread_t * me,
 	    /*void *ptr = qarray_elem_nomigrate(arg->a, count);
 	     * 
 	     * assert(ptr != NULL); */
-	    ql(me, count, count + max_offset, arg->a);
+	    ql(me, count, count + max_offset, arg->a, arg->arg);
 	}
 	switch (dist_type) {
 	    default:
@@ -713,7 +714,7 @@ void qarray_iter(qthread_t * me, qarray * a, qthread_f func)
     }
 }				       /*}}} */
 
-void qarray_iter_loop(qthread_t * me, qarray * a, qt_loop_f func)
+void qarray_iter_loop(qthread_t * me, qarray * a, qa_loop_f func, void*arg)
 {				       /*{{{ */
     qthread_shepherd_id_t i;
     volatile aligned_t donecount = 0;
@@ -721,6 +722,7 @@ void qarray_iter_loop(qthread_t * me, qarray * a, qt_loop_f func)
 
     qfwa.func.ql = func;
     qfwa.a = a;
+    qfwa.arg = arg;
     qfwa.donecount = &donecount;
     switch (a->dist_type) {
 	case ALL_SAME:
