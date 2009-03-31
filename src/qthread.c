@@ -303,7 +303,7 @@ static int qthread_internal_shepcomp(void *src, const void *a, const void *b)
 {
     int a_dist = qthread_distance((qthread_shepherd_id_t)(intptr_t)src, *(qthread_shepherd_id_t*)a);
     int b_dist = qthread_distance((qthread_shepherd_id_t)(intptr_t)src, *(qthread_shepherd_id_t*)b);
-    return b-a;
+    return b_dist-a_dist;
 }
 #else
 static qthread_shepherd_id_t shepcomp_src;
@@ -311,7 +311,7 @@ static int qthread_internal_shepcomp(const void* a, const void* b)
 {
     int a_dist = qthread_distance(shepcomp_src, *(qthread_shepherd_id_t*)a);
     int b_dist = qthread_distance(shepcomp_src, *(qthread_shepherd_id_t*)b);
-    return b-a;
+    return b_dist-a_dist;
 }
 #endif
 
@@ -1166,20 +1166,20 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 		numa_bitmask_setbit(bmask, i % max);
 	    }
 	    for (i = 0; i < nshepherds; i++) {
-		const unsigned int node_i = qlib->shepherd[i].node;
-		size_t j;
+		const unsigned int node_i = qlib->shepherds[i].node;
+		size_t j, k;
 		qlib->shepherds[i].shep_dists = calloc(nshepherds, sizeof(unsigned int));
 		assert(qlib->shepherds[i].shep_dists);
 		for (j = 0; j < nshepherds; j++) {
-		    const unsigned int node_j = qlib->shepherd[j].node;
+		    const unsigned int node_j = qlib->shepherds[j].node;
 		    if (node_i != QTHREAD_NO_NODE && node_j != QTHREAD_NO_NODE) {
-			qlib->shepherd[i].shep_dists[j] = numa_distance(node_i, node_j);
+			qlib->shepherds[i].shep_dists[j] = numa_distance(node_i, node_j);
 		    } else {
 			/* XXX too arbitrary */
 			if (i == j) {
-			    qlib->shepherd[i].shep_dists[j] = 0;
+			    qlib->shepherds[i].shep_dists[j] = 0;
 			} else {
-			    qlib->shepherd[i].shep_dists[j] = 20;
+			    qlib->shepherds[i].shep_dists[j] = 20;
 			}
 		    }
 		}
@@ -1248,21 +1248,21 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	    }
 	}
 	for (i = 0; i < nshepherds; i++) {
-	    const unsigned int node_i = qlib->shepherd[i].node;
+	    const unsigned int node_i = qlib->shepherds[i].node;
 	    size_t j, k;
 	    qlib->shepherds[i].shep_dists = calloc(nshepherds, sizeof(unsigned int));
 	    assert(qlib->shepherds[i].shep_dists);
 	    for (j = 0; j < nshepherds; j++) {
-		const unsigned int node_j = qlib->shepherd[j].node;
+		const unsigned int node_j = qlib->shepherds[j].node;
 		if (node_i != QTHREAD_NO_NODE && node_j != QTHREAD_NO_NODE) {
-		    qlib->shepherd[i].shep_dists[j] = lgrp_latency_cookie(lgrp_cookie, node_i, node_j, LGRP_LAT_CPU_TO_MEM);
-		    assert(qlib->shepherd[i].shep_dists[j] >= 0);
+		    qlib->shepherds[i].shep_dists[j] = lgrp_latency_cookie(lgrp_cookie, node_i, node_j, LGRP_LAT_CPU_TO_MEM);
+		    assert(qlib->shepherds[i].shep_dists[j] >= 0);
 		} else {
 		    /* XXX too arbitrary */
 		    if (i == j) {
-			qlib->shepherd[i].shep_dists[j] = 12;
+			qlib->shepherds[i].shep_dists[j] = 12;
 		    } else {
-			qlib->shepherd[i].shep_dists[j] = 18;
+			qlib->shepherds[i].shep_dists[j] = 18;
 		    }
 		}
 	    }
