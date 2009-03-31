@@ -1194,7 +1194,7 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 #ifdef HAVE_QSORT_R
 		qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds-1, sizeof(qthread_shepherd_id_t), (void*)(intptr_t)i, &qthread_internal_shepcomp);
 #else
-		shepcomp_src = i;
+		shepcomp_src = (qthread_shepherd_id_t)i;
 		qsort(qlib->shepherds[i].sorted_sheplist, nshepherds-1, sizeof(qthread_shepherd_id_t), qthread_internal_shepcomp);
 #endif
 	    }
@@ -1249,7 +1249,7 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	}
 	for (i = 0; i < nshepherds; i++) {
 	    const unsigned int node_i = qlib->shepherds[i].node;
-	    size_t j, k;
+	    size_t j;
 	    qlib->shepherds[i].shep_dists = calloc(nshepherds, sizeof(unsigned int));
 	    assert(qlib->shepherds[i].shep_dists);
 	    for (j = 0; j < nshepherds; j++) {
@@ -1266,9 +1266,11 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 		    }
 		}
 	    }
+	}
+	for (i = 0; i < nshepherds; i++) {
+	    size_t j, k = 0;
 	    qlib->shepherds[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
 	    assert(qlib->shepherds[i].sorted_sheplist);
-	    k = 0;
 	    for (j=0;j<nshepherds;j++) {
 		if (j != i) {
 		    qlib->shepherds[i].sorted_sheplist[k++] = j;
@@ -1277,7 +1279,7 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 #ifdef HAVE_QSORT_R
 	    qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds-1, sizeof(qthread_shepherd_id_t), (void*)(intptr_t)i, &qthread_internal_shepcomp);
 #else
-	    shepcomp_src = i;
+	    shepcomp_src = (qthread_shepherd_id_t)i;
 	    qsort(qlib->shepherds[i].sorted_sheplist, nshepherds-1, sizeof(qthread_shepherd_id_t), qthread_internal_shepcomp);
 #endif
 	}
