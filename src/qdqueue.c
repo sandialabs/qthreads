@@ -331,7 +331,10 @@ qdqueue_t *qdqueue_new(qthread_t * me)
 	ret->Qs[curshep].theQ = qlfqueue_new(me);
 	ret->Qs[curshep].last_ad_issued = 1;
 	ret->Qs[curshep].last_ad_consumed = 1;
-	ret->Qs[curshep].allsheps = qthread_sorted_sheps(curshep);
+	ret->Qs[curshep].allsheps =
+	    calloc((maxsheps - 1), sizeof(struct qdsubqueue_s *));
+	qdqueue_internal_sortedsheps(curshep, ret->Qs[curshep].allsheps,
+				     ret->Qs, sheparray[curshep]);
 	ret->Qs[curshep].neighbors =
 	    qdqueue_internal_getneighbors(curshep, ret->Qs,
 					  &(ret->Qs[curshep].nNeighbors),
