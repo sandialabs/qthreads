@@ -303,7 +303,7 @@ static int qthread_internal_shepcomp(void *src, const void *a, const void *b)
 {
     int a_dist = qthread_distance((qthread_shepherd_id_t)(intptr_t)src, *(qthread_shepherd_id_t*)a);
     int b_dist = qthread_distance((qthread_shepherd_id_t)(intptr_t)src, *(qthread_shepherd_id_t*)b);
-    return b_dist-a_dist;
+    return a_dist-b_dist;
 }
 #else
 static qthread_shepherd_id_t shepcomp_src;
@@ -311,7 +311,7 @@ static int qthread_internal_shepcomp(const void* a, const void* b)
 {
     int a_dist = qthread_distance(shepcomp_src, *(qthread_shepherd_id_t*)a);
     int b_dist = qthread_distance(shepcomp_src, *(qthread_shepherd_id_t*)b);
-    return b_dist-a_dist;
+    return a_dist-b_dist;
 }
 #endif
 
