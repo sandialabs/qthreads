@@ -298,6 +298,22 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t * shep,
 static QINLINE void qthread_gotlock_empty(qthread_shepherd_t * shep,
 					  qthread_addrstat_t * m, void *maddr,
 					  const char recursive);
+#ifdef HAVE_QSORT_R
+static int qthread_internal_shepcomp(void *src, const void *a, const void *b)
+{
+    int a_dist = qthread_distance((qthread_shepherd_id_t)(intptr_t)src, *(qthread_shepherd_id_t*)a);
+    int b_dist = qthread_distance((qthread_shepherd_id_t)(intptr_t)src, *(qthread_shepherd_id_t*)b);
+    return b-a;
+}
+#else
+static qthread_shepherd_id_t shepcomp_src;
+static int qthread_internal_shepcomp(const void* a, const void* b)
+{
+    int a_dist = qthread_distance(shepcomp_src, *(qthread_shepherd_id_t*)a);
+    int b_dist = qthread_distance(shepcomp_src, *(qthread_shepherd_id_t*)b);
+    return b-a;
+}
+#endif
 
 #define QTHREAD_INITLOCK(l) do { if (pthread_mutex_init(l, NULL) != 0) { return QTHREAD_PTHREAD_ERROR; } } while(0)
 #define QTHREAD_LOCK(l) qassert(pthread_mutex_lock(l), 0)
@@ -1146,12 +1162,12 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	    numa_bitmask_clearall(bmask);
 	    /* assign nodes */
 	    for (i = 0; i < nshepherds; i++) {
-		size_t j;
 		qlib->shepherds[i].node = i % max;
 		numa_bitmask_setbit(bmask, i % max);
 	    }
 	    for (i = 0; i < nshepherds; i++) {
 		const unsigned int node_i = qlib->shepherd[i].node;
+		size_t j;
 		qlib->shepherds[i].shep_dists = calloc(nshepherds, sizeof(unsigned int));
 		assert(qlib->shepherds[i].shep_dists);
 		for (j = 0; j < nshepherds; j++) {
@@ -1167,6 +1183,20 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 			}
 		    }
 		}
+		qlib->shepherds[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
+		assert(qlib->shepherds[i].sorted_sheplist);
+		k = 0;
+		for (j=0;j<nshepherds;j++) {
+		    if (j != i) {
+			qlib->shepherds[i].sorted_sheplist[k++] = j;
+		    }
+		}
+#ifdef HAVE_QSORT_R
+		qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds-1, sizeof(qthread_shepherd_id_t), (void*)(intptr_t)i, &qthread_internal_shepcomp);
+#else
+		shepcomp_src = i;
+		qsort(qlib->shepherds[i].sorted_sheplist, nshepherds-1, sizeof(qthread_shepherd_id_t), qthread_internal_shepcomp);
+#endif
 	    }
 	    numa_set_interleave_mask(bmask);
 	    numa_bitmask_free(bmask);
@@ -1219,6 +1249,7 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	}
 	for (i = 0; i < nshepherds; i++) {
 	    const unsigned int node_i = qlib->shepherd[i].node;
+	    size_t j, k;
 	    qlib->shepherds[i].shep_dists = calloc(nshepherds, sizeof(unsigned int));
 	    assert(qlib->shepherds[i].shep_dists);
 	    for (j = 0; j < nshepherds; j++) {
@@ -1235,6 +1266,20 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 		    }
 		}
 	    }
+	    qlib->shepherds[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
+	    assert(qlib->shepherds[i].sorted_sheplist);
+	    k = 0;
+	    for (j=0;j<nshepherds;j++) {
+		if (j != i) {
+		    qlib->shepherds[i].sorted_sheplist[k++] = j;
+		}
+	    }
+#ifdef HAVE_QSORT_R
+	    qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds-1, sizeof(qthread_shepherd_id_t), (void*)(intptr_t)i, &qthread_internal_shepcomp);
+#else
+	    shepcomp_src = i;
+	    qsort(qlib->shepherds[i].sorted_sheplist, nshepherds-1, sizeof(qthread_shepherd_id_t), qthread_internal_shepcomp);
+#endif
 	}
 	for (i = 0; i < lgrp_count_grps; i++) {
 	    free(cpus[i]);
@@ -3201,6 +3246,29 @@ int qthread_distance(const qthread_shepherd_id_t src, const qthread_shepherd_id_
 	return qlib->shepherds[src].shep_dists[dest];
     }
 }
+
+/* returns a list of shepherds, sorted by their distance from this qthread;
+ * if NULL, then all sheps are equidistant */
+const qthread_shepherd_id_t *qthread_sorted_sheps(const qthread_t * t)
+{/*{{{*/
+    assert(t);
+    if (t == NULL) {
+	return NULL;
+    }
+    assert(t->shepherd_ptr);
+    return t->shepherd_ptr->sorted_sheplist;
+}/*}}}*/
+
+/* returns a list of shepherds, sorted by their distance from the specified shepherd;
+ * if NULL, then all sheps are equidistant */
+const qthread_shepherd_id_t *qthread_sorted_sheps_remote(const qthread_shepherd_id_t src)
+{/*{{{*/
+    assert(src < qlib->nshepherds);
+    if (src >= qlib->nshepherds) {
+	return NULL;
+    }
+    return qlib->shepherds[src].sorted_sheplist;
+}/*}}}*/
 
 /* returns the number of shepherds (i.e. one more than the largest valid shepherd id) */
 qthread_shepherd_id_t qthread_num_shepherds(void)

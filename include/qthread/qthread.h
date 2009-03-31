@@ -140,6 +140,10 @@ aligned_t *qthread_retloc(const qthread_t * t);
 
 /* returns the distance from one shepherd to another */
 int qthread_distance(const qthread_shepherd_id_t src, const qthread_shepherd_id_t dest);
+/* returns a list of shepherds, sorted by their distance from either this
+ * qthread or the specified shepherd */
+const qthread_shepherd_id_t *qthread_sorted_sheps(const qthread_t * t);
+const qthread_shepherd_id_t *qthread_sorted_sheps_remote(const qthread_shepherd_id_t src);
 /* returns the number of shepherds (i.e. one more than the largest valid shepherd id) */
 qthread_shepherd_id_t qthread_num_shepherds(void);
 
