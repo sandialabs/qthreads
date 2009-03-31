@@ -160,56 +160,11 @@ static void qdqueue_internal_gensheparray(int **a)
 {				       /*{{{ */
     qthread_shepherd_id_t i, j;
 
-#ifdef HAVE_SYS_LGRP_USER_H
-    lgrp_cookie_t lcookie = lgrp_init(LGRP_VIEW_OS);
-
     for (i = 0; i < maxsheps; i++) {
 	for (j = 0; j < maxsheps; j++) {
-	    unsigned int node_i = qthread_internal_shep_to_node(i);
-	    unsigned int node_j = qthread_internal_shep_to_node(j);
-
-	    if (node_i != QTHREAD_NO_NODE && node_j != QTHREAD_NO_NODE) {
-		a[i][j] =
-		    lgrp_latency_cookie(lcookie, node_i, node_j,
-					LGRP_LAT_CPU_TO_MEM);
-		assert(a[i][j] != ESRCH);
-		assert(a[i][j] >= 0);
-	    } else {
-		if (node_i == node_j) {
-		    a[i][j] = 12;
-		} else {
-		    a[i][j] = 18;      /* XXX too arbitrary */
-		}
-	    }
+	    a[i][j] = qthread_distance(i, j);
 	}
     }
-#elif QTHREAD_HAVE_LIBNUMA
-    for (i = 0; i < maxsheps; i++) {
-	for (j = 0; j < maxsheps; j++) {
-	    unsigned int node_i = qthread_internal_shep_to_node(i);
-	    unsigned int node_j = qthread_internal_shep_to_node(j);
-
-	    if (node_i != QTHREAD_NO_NODE && node_j != QTHREAD_NO_NODE) {
-		a[i][j] = numa_distance(node_i, node_j);
-	    } else {
-		if (i == j) {
-		    a[i][j] = 10;
-		} else {
-		    a[i][j] = 20;      /* XXX too arbitrary */
-		}
-	    }
-	}
-    }
-#else
-    for (i = 0; i < maxsheps; i++) {
-	for (j = 0; j < maxsheps; j++) {
-	    if (i == j)
-		a[i][j] = 10;
-	    else
-		a[i][j] = 20;
-	}
-    }
-#endif
 }				       /*}}} */
 
 static void qdqueue_internal_sortedsheps(qthread_shepherd_id_t shep,
@@ -376,10 +331,7 @@ qdqueue_t *qdqueue_new(qthread_t * me)
 	ret->Qs[curshep].theQ = qlfqueue_new(me);
 	ret->Qs[curshep].last_ad_issued = 1;
 	ret->Qs[curshep].last_ad_consumed = 1;
-	ret->Qs[curshep].allsheps =
-	    calloc((maxsheps - 1), sizeof(struct qdsubqueue_s *));
-	qdqueue_internal_sortedsheps(curshep, ret->Qs[curshep].allsheps,
-				     ret->Qs, sheparray[curshep]);
+	ret->Qs[curshep].allsheps = qthread_sorted_sheps(curshep);
 	ret->Qs[curshep].neighbors =
 	    qdqueue_internal_getneighbors(curshep, ret->Qs,
 					  &(ret->Qs[curshep].nNeighbors),

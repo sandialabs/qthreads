@@ -12,6 +12,7 @@ man_MANS = qthread_empty.3 \
 		   qthread_id.3 \
 		   qthread_incr.3 \
 		   qthread_dincr.3 \
+		   qthread_distance.3 \
 		   qthread_fincr.3 \
 		   qthread_init.3 \
 		   qthread_lock.3 \

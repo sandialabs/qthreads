@@ -138,6 +138,8 @@ qthread_shepherd_id_t qthread_shep(const qthread_t * t);
 size_t qthread_stackleft(const qthread_t * t);
 aligned_t *qthread_retloc(const qthread_t * t);
 
+/* returns the distance from one shepherd to another */
+int qthread_distance(const qthread_shepherd_id_t src, const qthread_shepherd_id_t dest);
 /* returns the number of shepherds (i.e. one more than the largest valid shepherd id) */
 qthread_shepherd_id_t qthread_num_shepherds(void);
 

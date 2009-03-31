@@ -147,7 +147,6 @@ typedef struct {
 struct qthread_shepherd_s {
     pthread_t shepherd;
     qthread_shepherd_id_t shepherd_id;	/* whoami */
-    unsigned int node;		/* libnuma: whereami */
     qthread_t *current;
     qt_lfqueue_t *ready;
     qt_mpool qthread_pool;
@@ -161,6 +160,10 @@ struct qthread_shepherd_s {
     qt_mpool context_pool;
     /* round robin scheduler - can probably be smarter */
     aligned_t sched_shepherd;
+    /* affinity information */
+    unsigned int node;		/* whereami */
+    unsigned int * shep_dists;
+    qthread_shepherd_id_t * sorted_sheplist;
 #ifdef QTHREAD_SHEPHERD_PROFILING
     double total_time;		/* how much time the shepherd spent running */
     double idle_maxtime;	/* max time the shepherd spent waiting for new threads */
@@ -1139,11 +1142,31 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	    size_t max = numa_max_node() + 1;
 	    struct bitmask *bmask = numa_allocate_nodemask();
 
+	    assert(bmask);
 	    numa_bitmask_clearall(bmask);
 	    /* assign nodes */
 	    for (i = 0; i < nshepherds; i++) {
+		size_t j;
 		qlib->shepherds[i].node = i % max;
 		numa_bitmask_setbit(bmask, i % max);
+	    }
+	    for (i = 0; i < nshepherds; i++) {
+		const unsigned int node_i = qlib->shepherd[i].node;
+		qlib->shepherds[i].shep_dists = calloc(nshepherds, sizeof(unsigned int));
+		assert(qlib->shepherds[i].shep_dists);
+		for (j = 0; j < nshepherds; j++) {
+		    const unsigned int node_j = qlib->shepherd[j].node;
+		    if (node_i != QTHREAD_NO_NODE && node_j != QTHREAD_NO_NODE) {
+			qlib->shepherd[i].shep_dists[j] = numa_distance(node_i, node_j);
+		    } else {
+			/* XXX too arbitrary */
+			if (i == j) {
+			    qlib->shepherd[i].shep_dists[j] = 0;
+			} else {
+			    qlib->shepherd[i].shep_dists[j] = 20;
+			}
+		    }
+		}
 	    }
 	    numa_set_interleave_mask(bmask);
 	    numa_bitmask_free(bmask);
@@ -1194,6 +1217,25 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 		}
 	    }
 	}
+	for (i = 0; i < nshepherds; i++) {
+	    const unsigned int node_i = qlib->shepherd[i].node;
+	    qlib->shepherds[i].shep_dists = calloc(nshepherds, sizeof(unsigned int));
+	    assert(qlib->shepherds[i].shep_dists);
+	    for (j = 0; j < nshepherds; j++) {
+		const unsigned int node_j = qlib->shepherd[j].node;
+		if (node_i != QTHREAD_NO_NODE && node_j != QTHREAD_NO_NODE) {
+		    qlib->shepherd[i].shep_dists[j] = lgrp_latency_cookie(lgrp_cookie, node_i, node_j, LGRP_LAT_CPU_TO_MEM);
+		    assert(qlib->shepherd[i].shep_dists[j] >= 0);
+		} else {
+		    /* XXX too arbitrary */
+		    if (i == j) {
+			qlib->shepherd[i].shep_dists[j] = 12;
+		    } else {
+			qlib->shepherd[i].shep_dists[j] = 18;
+		    }
+		}
+	    }
+	}
 	for (i = 0; i < lgrp_count_grps; i++) {
 	    free(cpus[i]);
 	}
@@ -1203,6 +1245,8 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 noaffinity:
 	for (i = 0; i < nshepherds; i++) {
 	    qlib->shepherds[i].node = -1;
+	    qlib->shepherds[i].shep_dists = NULL;
+	    qlib->shepherds[i].sorted_sheplist = NULL;
 	}
     }
 
@@ -3142,6 +3186,21 @@ unsigned int qthread_internal_shep_to_node(const qthread_shepherd_id_t shep)
 {				       /*{{{ */
     return qlib->shepherds[shep].node;
 }				       /*}}} */
+
+/* returns the distance between two shepherds */
+int qthread_distance(const qthread_shepherd_id_t src, const qthread_shepherd_id_t dest)
+{
+    assert(src < qlib->nshepherds);
+    assert(dest < qlib->nshepherds);
+    if (src >= qlib->nshepherds || dest >= qlib->nshepherds) {
+	return QTHREAD_BADARGS;
+    }
+    if (qlib->shepherds[src].shep_dists == NULL) {
+	return 0;
+    } else {
+	return qlib->shepherds[src].shep_dists[dest];
+    }
+}
 
 /* returns the number of shepherds (i.e. one more than the largest valid shepherd id) */
 qthread_shepherd_id_t qthread_num_shepherds(void)
