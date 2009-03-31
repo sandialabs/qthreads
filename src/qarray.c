@@ -4,8 +4,8 @@
 #include <stdlib.h>		       /* for calloc() */
 #include <unistd.h>		       /* for getpagesize() */
 #include <qthread/qarray.h>
-#include "qthread_asserts.h"
 #ifdef QTHREAD_HAVE_LIBNUMA
+# include "qthread_innards.h" /* for shep_to_node */
 # include <numa.h>
 # include <sys/mman.h>
 #elif HAVE_SYS_LGRP_USER_H
