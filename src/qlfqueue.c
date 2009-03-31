@@ -8,8 +8,8 @@
 #include <qthread/qthread.h>
 #include <qthread/qlfqueue.h>
 
-#include "qthread_innards.h"	       /* for qthread_shepherd_count(), to determine whether locking is needed, and for asserts */
 #include <qthread/qpool.h>
+#include "qthread_asserts.h"
 #include "qt_atomics.h"		       /* for qt_cas() */
 
 /* queue declarations */

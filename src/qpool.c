@@ -144,7 +144,7 @@ qpool qpool_create_aligned(qthread_t * me, const size_t isize,
     qpool pool;
     size_t item_size = isize;
     size_t alloc_size = 0;
-    const size_t numsheps = qthread_shepherd_count();
+    const size_t numsheps = qthread_num_shepherds();
     size_t pindex;
 
     assert(me != NULL);
@@ -351,7 +351,7 @@ void qpool_destroy(qpool pool)
 {				       /*{{{ */
     assert(pool);
     if (pool) {
-	qthread_shepherd_id_t max = qthread_shepherd_count();
+	qthread_shepherd_id_t max = qthread_num_shepherds();
 	qthread_shepherd_id_t i;
 
 	for (i = 0; i < max; i++) {

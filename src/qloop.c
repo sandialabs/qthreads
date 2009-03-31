@@ -4,7 +4,6 @@
 #include <stdlib.h>
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
-#include "qthread_innards.h"
 
 /* So, the idea here is that this is a (braindead) C version of Megan's
  * mt_loop. */
@@ -47,11 +46,11 @@ static void qt_loop_inner(const size_t start, const size_t stop,
 	qwa[threadct].donecount = &donecount;
 	if (future) {
 	    future_fork_to((qthread_f) qt_loop_wrapper, qwa + threadct, rets +
-		    threadct, threadct % qthread_shepherd_count());
+		    threadct, threadct % qthread_num_shepherds());
 	} else {
 	    qthread_fork_to((qthread_f) qt_loop_wrapper, qwa + threadct,
 			    rets + threadct,
-			    threadct % qthread_shepherd_count());
+			    threadct % qthread_num_shepherds());
 	}
 	threadct++;
     }
@@ -109,15 +108,15 @@ static QINLINE void qt_loop_balance_inner(const size_t start,
     qthread_shepherd_id_t i;
     struct qloop_wrapper_args *qwa =
 	(struct qloop_wrapper_args *)malloc(sizeof(struct qloop_wrapper_args)
-					    * qthread_shepherd_count());
+					    * qthread_num_shepherds());
     volatile aligned_t donecount = 0;
     size_t len = stop - start;
-    size_t each = len / qthread_shepherd_count();
-    size_t extra = len - (each * qthread_shepherd_count());
+    size_t each = len / qthread_num_shepherds();
+    size_t extra = len - (each * qthread_num_shepherds());
     size_t iterend = start;
     qthread_t *me = qthread_self();
 
-    for (i = 0; i < qthread_shepherd_count(); i++) {
+    for (i = 0; i < qthread_num_shepherds(); i++) {
 	qwa[i].func = func;
 	qwa[i].arg = argptr;
 	qwa[i].startat = iterend;
@@ -135,7 +134,7 @@ static QINLINE void qt_loop_balance_inner(const size_t start,
 	}
     }
     /* turning this into a spinlock :P */
-    while (donecount < qthread_shepherd_count()) {
+    while (donecount < qthread_num_shepherds()) {
 	qthread_yield(me);
     }
     free(qwa);
@@ -178,21 +177,21 @@ static QINLINE void qt_loopaccum_balance_inner(const size_t start,
     qthread_shepherd_id_t i;
     struct qloopaccum_wrapper_args *qwa = (struct qloopaccum_wrapper_args *)
 	malloc(sizeof(struct qloopaccum_wrapper_args) *
-	       qthread_shepherd_count());
+	       qthread_num_shepherds());
     aligned_t *rets =
-	(aligned_t *) malloc(sizeof(aligned_t) * qthread_shepherd_count());
+	(aligned_t *) malloc(sizeof(aligned_t) * qthread_num_shepherds());
     char *realrets = NULL;
     size_t len = stop - start;
-    size_t each = len / qthread_shepherd_count();
-    size_t extra = len - (each * qthread_shepherd_count());
+    size_t each = len / qthread_num_shepherds();
+    size_t extra = len - (each * qthread_num_shepherds());
     size_t iterend = start;
     qthread_t *me = qthread_self();
 
-    if (qthread_shepherd_count() > 1) {
-	realrets = (char *)malloc(size * (qthread_shepherd_count() - 1));
+    if (qthread_num_shepherds() > 1) {
+	realrets = (char *)malloc(size * (qthread_num_shepherds() - 1));
     }
 
-    for (i = 0; i < qthread_shepherd_count(); i++) {
+    for (i = 0; i < qthread_num_shepherds(); i++) {
 	qwa[i].func = func;
 	qwa[i].arg = argptr;
 	if (i == 0) {
@@ -215,7 +214,7 @@ static QINLINE void qt_loopaccum_balance_inner(const size_t start,
 			    i);
 	}
     }
-    for (i = 0; i < qthread_shepherd_count(); i++) {
+    for (i = 0; i < qthread_num_shepherds(); i++) {
 	qthread_readFF(me, NULL, rets + i);
 	if (i > 0) {
 	    acc(out, realrets + ((i - 1) * size));
@@ -431,7 +430,7 @@ struct qt_qsort_iprets qt_qsort_inner_partitioner(qthread_t * me,
     const size_t chunksize = 10;
 
     /* choose the number of threads to use */
-    const size_t numthreads = qthread_shepherd_count();
+    const size_t numthreads = qthread_num_shepherds();
 
     /* a "megachunk" is a set of numthreads chunks.
      * calculate the megachunk information for determining the array lengths
@@ -489,10 +488,10 @@ aligned_t qt_qsort_inner(qthread_t * me, const struct qt_qsort_iargs * a)
     double *array = a->array;
     size_t i;
     struct qt_qsort_iprets furthest;
-    const size_t thread_chunk = len / qthread_shepherd_count();
+    const size_t thread_chunk = len / qthread_num_shepherds();
 
     /* choose the number of threads to use */
-    if (qthread_shepherd_count() == 1 || len <= 10000) {	/* shortcut */
+    if (qthread_num_shepherds() == 1 || len <= 10000) {	/* shortcut */
 	qsort(array, len, sizeof(double), dcmp);
 	return 0;
     }

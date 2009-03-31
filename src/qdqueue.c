@@ -57,7 +57,7 @@ struct qdqueue_s
     struct qdsubqueue_s *Qs;
 };
 
-qthread_shepherd_id_t maxsheps = 0;
+static qthread_shepherd_id_t maxsheps = 0;
 
 static struct qdqueue_adstruct_s qdqueue_adheap_pop(qthread_t * me,
 						    struct qdqueue_adheap_s
@@ -353,7 +353,7 @@ qdqueue_t *qdqueue_new(qthread_t * me)
 
     assert(me);
     if (maxsheps == 0)
-	maxsheps = qthread_shepherd_count();
+	maxsheps = qthread_num_shepherds();
     ret = calloc(1, sizeof(struct qdqueue_s));
     assert(ret);
     if (ret == NULL) {

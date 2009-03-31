@@ -15,6 +15,7 @@ man_MANS = qthread_empty.3 \
 		   qthread_fincr.3 \
 		   qthread_init.3 \
 		   qthread_lock.3 \
+		   qthread_num_shepherds.3 \
 		   qthread_migrate_to.3 \
 		   qthread_prepare.3 \
 		   qthread_prepare_for.3 \

@@ -3143,6 +3143,12 @@ unsigned int qthread_internal_shep_to_node(const qthread_shepherd_id_t shep)
     return qlib->shepherds[shep].node;
 }				       /*}}} */
 
+/* returns the number of shepherds (i.e. one more than the largest valid shepherd id) */
+qthread_shepherd_id_t qthread_num_shepherds(void)
+{/*{{{*/
+    return (qthread_shepherd_id_t)(qlib->nshepherds);
+}/*}}}*/
+
 /* these two functions are helper functions for futurelib
  * (nobody else gets to have 'em!) */
 unsigned int qthread_isfuture(const qthread_t * t)
