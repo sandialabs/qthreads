@@ -182,6 +182,7 @@ QTHREAD_CHECK_SST([qthread_implementation="sst"], [qthread_implementation="unix"
 
 # Figure out whether the compiler has builtin atomic operations
 QTHREAD_CHECK_ATOMICS
+QTHREAD_BUILTIN_EXPECT
 
 ## -------------------- ##
 ## Checks for libraries ##
