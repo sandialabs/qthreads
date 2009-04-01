@@ -25,7 +25,7 @@ struct qlfqueue_s		/* typedef'd to qlfqueue_t */
     volatile qlfqueue_node_t *tail;
 };
 
-static qpool qlfqueue_node_pool = NULL;
+static qpool *qlfqueue_node_pool = NULL;
 
 /* to avoid ABA reinsertion trouble, each pointer in the queue needs to have a
  * monotonically increasing counter associated with it. The counter doesn't

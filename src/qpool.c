@@ -69,7 +69,8 @@ static QINLINE void *qpool_internal_aligned_alloc(size_t alloc_size,
 						  unsigned int node,
 						  size_t alignment)
 {				       /*{{{ */
-    void * ret;
+    void *ret;
+
     switch (alignment) {
 	case 0:
 	    return calloc(1, alloc_size);
@@ -102,7 +103,7 @@ static QINLINE void *qpool_internal_aligned_alloc(size_t alloc_size,
 #elif HAVE_PAGE_ALIGNED_MALLOC
 	    ret = malloc(alloc_size);
 #else
-	    ret = valloc(alloc_size); /* cross your fingers */
+	    ret = valloc(alloc_size);  /* cross your fingers */
 #endif
     }
     memset(ret, 0, alloc_size);
@@ -138,10 +139,10 @@ static QINLINE void qpool_internal_aligned_free(void *freeme,
 
 // item_size is how many bytes to return
 // ...memory is always allocated in multiples of getpagesize()
-qpool qpool_create_aligned(qthread_t * me, const size_t isize,
-			   const size_t alignment)
+qpool *qpool_create_aligned(qthread_t * me, const size_t isize,
+			    const size_t alignment)
 {				       /*{{{ */
-    qpool pool;
+    qpool *pool;
     size_t item_size = isize;
     size_t alloc_size = 0;
     const size_t numsheps = qthread_num_shepherds();
@@ -151,7 +152,7 @@ qpool qpool_create_aligned(qthread_t * me, const size_t isize,
     if (me == NULL) {
 	return NULL;
     }
-    pool = (qpool) calloc(1, sizeof(struct qpool_s));
+    pool = (qpool *) calloc(1, sizeof(struct qpool_s));
     assert(pool != NULL);
     if (pool == NULL) {
 	return NULL;
@@ -247,12 +248,12 @@ qpool qpool_create_aligned(qthread_t * me, const size_t isize,
     return NULL;
 }				       /*}}} */
 
-qpool qpool_create(qthread_t * me, const size_t item_size)
+qpool *qpool_create(qthread_t * me, const size_t item_size)
 {				       /*{{{ */
     return qpool_create_aligned(me, item_size, 0);
 }				       /*}}} */
 
-void *qpool_alloc(qthread_t * me, qpool pool)
+void *qpool_alloc(qthread_t * me, qpool * pool)
 {				       /*{{{ */
     void *p;
     qthread_shepherd_id_t shep;
@@ -327,7 +328,7 @@ void *qpool_alloc(qthread_t * me, qpool pool)
     return p;
 }				       /*}}} */
 
-void qpool_free(qthread_t * me, qpool pool, void *mem)
+void qpool_free(qthread_t * me, qpool * pool, void *mem)
 {				       /*{{{ */
     void *p, *old, *new;
     qthread_shepherd_id_t shep = qthread_shep(me);
@@ -347,7 +348,7 @@ void qpool_free(qthread_t * me, qpool pool, void *mem)
     } while (p != old);
 }				       /*}}} */
 
-void qpool_destroy(qpool pool)
+void qpool_destroy(qpool * pool)
 {				       /*{{{ */
     assert(pool);
     if (pool) {
