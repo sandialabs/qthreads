@@ -8,6 +8,7 @@ SUBDIRS = qthread
 noinst_HEADERS = \
 	qthread_innards.h \
 	qthread_asserts.h \
+	qthread_expect.h \
 	qt_atomics.h \
 	qtimer.h \
 	qt_mpool.h \

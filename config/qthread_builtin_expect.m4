@@ -14,9 +14,5 @@ int main()
 	[qthread_cv_builtin_expect="no"])
    CFLAGS="$SAVE_CFLAGS"])
  AS_IF([test "x$qthread_cv_builtin_expect" = "xyes"],
- 	   [expectfunc="__builtin_expect(!!(x),(y))"],
- 	   [expectfunc="(x)"])
- AC_DEFINE_UNQUOTED([QTHREAD_EXPECT(x,y)],
- 					[$expectfunc],
-					[The expect function, if it exists])
+ 	   [AC_DEFINE([QTHREAD_EXPECT_OKAY],[1],[If __builtin_expect can be used])])
 ])
