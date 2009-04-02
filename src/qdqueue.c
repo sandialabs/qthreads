@@ -299,7 +299,7 @@ static struct qdsubqueue_s
 }				       /*}}} */
 
 /* Create a new qdqueue */
-qdqueue_t *qdqueue_new(qthread_t * me)
+qdqueue_t *qdqueue_create(qthread_t * me)
 {				       /*{{{ */
     qdqueue_t *ret;
     qthread_shepherd_id_t curshep;

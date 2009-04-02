@@ -4,7 +4,7 @@
 typedef struct qdqueue_s qdqueue_t;
 
 /* Create a new qdqueue */
-qdqueue_t *qdqueue_new(qthread_t *me);
+qdqueue_t *qdqueue_create(qthread_t *me);
 
 /* destroy that queue */
 int qdqueue_destroy(qthread_t *me, qdqueue_t * q);
