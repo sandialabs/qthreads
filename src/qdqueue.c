@@ -327,7 +327,7 @@ qdqueue_t *qdqueue_new(qthread_t * me)
     }
     qdqueue_internal_gensheparray(sheparray);
     for (curshep = 0; curshep < maxsheps; curshep++) {
-	ret->Qs[curshep].theQ = qlfqueue_new(me);
+	ret->Qs[curshep].theQ = qlfqueue_create(me);
 	ret->Qs[curshep].last_ad_issued = 1;
 	ret->Qs[curshep].last_ad_consumed = 1;
 	ret->Qs[curshep].allsheps =

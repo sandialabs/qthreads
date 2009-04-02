@@ -36,7 +36,7 @@ static qpool *qlfqueue_node_pool = NULL;
 #define QCTR(x) ((unsigned char)(((uintptr_t)(x))&QCTR_MASK))
 #define QCOMPOSE(x,y) (void*)(((uintptr_t)QPTR(x))|((QCTR(y)+1)&QCTR_MASK))
 
-qlfqueue_t *qlfqueue_new(qthread_t *me)
+qlfqueue_t *qlfqueue_create(qthread_t *me)
 {				       /*{{{ */
     qlfqueue_t *q;
 
