@@ -6,8 +6,7 @@
 #include <qthread/qthread.h>
 #include <qthread/qlfqueue.h>
 #include <qthread/qdqueue.h>
-#include <qthread_asserts.h>
-#include <qthread_innards.h>
+#include "qthread_asserts.h"
 #ifdef HAVE_SYS_LGRP_USER_H
 # include <sys/lgrp_user.h>
 #endif
@@ -170,7 +169,7 @@ static void qdqueue_internal_gensheparray(int **a)
 static void qdqueue_internal_sortedsheps(qthread_shepherd_id_t shep,
 					 struct qdsubqueue_s **all,
 					 struct qdsubqueue_s *Qs,
-					 int *distances)
+					 const int *distances)
 {				       /*{{{ */
     qthread_shepherd_id_t i;
     int lastdist = INT_MIN, maxdist = 0;
@@ -333,6 +332,8 @@ qdqueue_t *qdqueue_new(qthread_t * me)
 	ret->Qs[curshep].last_ad_consumed = 1;
 	ret->Qs[curshep].allsheps =
 	    calloc((maxsheps - 1), sizeof(struct qdsubqueue_s *));
+	/* yes, I could get this information from qthreads, but I'm adding a
+	 * little bit of randomnes to the list when the distances are equal */
 	qdqueue_internal_sortedsheps(curshep, ret->Qs[curshep].allsheps,
 				     ret->Qs, sheparray[curshep]);
 	ret->Qs[curshep].neighbors =
