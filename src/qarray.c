@@ -439,7 +439,7 @@ qarray *qarray_create_tight(const size_t count, const size_t obj_size,
     return qarray_create_internal(count, obj_size, d, 1);
 }
 
-void qarray_free(qarray * a)
+void qarray_destroy(qarray * a)
 {				       /*{{{ */
     assert(a);
     assert(a->base_ptr);

@@ -43,7 +43,7 @@ qthread_shepherd_id_t qarray_shepof(const qarray * a, const size_t index);
 void *qarray_elem(qthread_t * me, const qarray * a, const size_t index);
 void qarray_iter(qthread_t * me, qarray * a, qthread_f func);
 void qarray_iter_loop(qthread_t * me, qarray * a, qa_loop_f func, void* arg);
-void qarray_free(qarray * a);
+void qarray_destroy(qarray * a);
 
 QINLINE static void *qarray_elem_nomigrate(const qarray * a, const size_t index)
 {

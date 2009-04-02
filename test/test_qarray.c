@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
 	}
 	if (interactive)
 	    printf("%s: correct result!\n", distnames[dt_index]);
-	qarray_free(a);
+	qarray_destroy(a);
 
 	/* now test an array of giant things */
 	count = 0;
@@ -136,7 +136,7 @@ int main(int argc, char *argv[])
 	}
 	if (interactive)
 	    printf("%s: correct result!\n", distnames[dt_index]);
-	qarray_free(a);
+	qarray_destroy(a);
 
 	/* now test an array of weird-sized things */
 	count = 0;
@@ -172,7 +172,7 @@ int main(int argc, char *argv[])
 	}
 	if (interactive)
 	    printf("%s: correct result!\n", distnames[dt_index]);
-	qarray_free(a);
+	qarray_destroy(a);
     }
 
     qthread_finalize();

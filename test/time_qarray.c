@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
 	    }
 	    printf("%f secs\n", acc / ITERATIONS);
 	    fflush(stdout);
-	    qarray_free(a);
+	    qarray_destroy(a);
 	}
 
 	/* now test an array of giant things */
@@ -303,7 +303,7 @@ int main(int argc, char *argv[])
 	    }
 	    printf("%f secs\n", acc / ITERATIONS);
 	    fflush(stdout);
-	    qarray_free(a);
+	    qarray_destroy(a);
 	}
 
 	/* now test an array of weird-sized things */
@@ -331,7 +331,7 @@ int main(int argc, char *argv[])
 	    }
 	    printf("%f secs\n", acc / ITERATIONS);
 	    fflush(stdout);
-	    qarray_free(a);
+	    qarray_destroy(a);
 	}
     }
 

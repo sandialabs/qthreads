@@ -182,7 +182,7 @@ int main(int argc, char *argv[])
 		qtimer_stop(timer);
 		printf(", %f\n", qtimer_secs(timer)/10.0);
 		fflush(stdout);
-		qarray_free(a);
+		qarray_destroy(a);
 	    }
 	    printf("\tSize, Assignment, Reading\n");
 	    for (size_i=0; size_i<(sizeof(sizes)/sizeof(size_t)); size_i++) {
@@ -203,7 +203,7 @@ int main(int argc, char *argv[])
 		qtimer_stop(timer);
 		printf(", %f\n", qtimer_secs(timer));
 		fflush(stdout);
-		qarray_free(a);
+		qarray_destroy(a);
 	    }
 	}
     }
