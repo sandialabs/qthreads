@@ -9,6 +9,9 @@
 #if (HAVE_MEMALIGN && HAVE_MALLOC_H)
 #include <malloc.h>		       /* for memalign() */
 #endif
+#ifdef QTHREAD_HAVE_LIBNUMA
+# include <numa.h>
+#endif
 
 #include "qthread_innards.h"
 #include "qthread_asserts.h"
@@ -71,6 +74,11 @@ static QINLINE void *qpool_internal_aligned_alloc(size_t alloc_size,
 {				       /*{{{ */
     void *ret;
 
+#ifdef QTHREAD_HAVE_LIBNUMA
+    if (node != QTHREAD_NO_NODE) { /* guaranteed page alignment */
+	ret = numa_alloc_onnnode(alloc_size, node);
+    } else
+#endif
     switch (alignment) {
 	case 0:
 	    return calloc(1, alloc_size);
@@ -112,8 +120,15 @@ static QINLINE void *qpool_internal_aligned_alloc(size_t alloc_size,
 
 static QINLINE void qpool_internal_aligned_free(void *freeme,
 						const size_t alloc_size,
-						const size_t alignment)
+						const size_t alignment,
+						const unsigned int node)
 {				       /*{{{ */
+#if QTHREAD_HAVE_LIBNUMA
+    if (node != QTHREAD_NO_NODE) {
+	numa_free(freeme, alloc_size);
+	return;
+    }
+#endif
 #if (HAVE_MEMALIGN || HAVE_PAGE_ALIGNED_MALLOC || HAVE_POSIX_MEMALIGN)
     free(freeme);
 #elif HAVE_16ALIGNED_MALLOC
@@ -238,7 +253,7 @@ qpool *qpool_create_aligned(qthread_t * me, const size_t isize,
 	    for (i = 0; i < numsheps; i++) {
 		if (pool->pools[i].alloc_block) {
 		    qpool_internal_aligned_free(pool->pools[i].alloc_block,
-						alloc_size, alignment);
+						alloc_size, alignment, pool->pools[i].node);
 		}
 	    }
 	    free(pool->pools);
@@ -365,7 +380,7 @@ void qpool_destroy(qpool * pool)
 
 		while (p && i < (pagesize / sizeof(void *) - 1)) {
 		    qpool_internal_aligned_free(p, pool->alloc_size,
-						pool->alignment);
+						pool->alignment, mypool->node);
 		    i++;
 		    p = mypool->alloc_list[i];
 		}
