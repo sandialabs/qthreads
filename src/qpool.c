@@ -76,7 +76,7 @@ static QINLINE void *qpool_internal_aligned_alloc(size_t alloc_size,
 
 #ifdef QTHREAD_HAVE_LIBNUMA
     if (node != QTHREAD_NO_NODE) { /* guaranteed page alignment */
-	ret = numa_alloc_onnnode(alloc_size, node);
+	ret = numa_alloc_onnode(alloc_size, node);
     } else
 #endif
     switch (alignment) {
