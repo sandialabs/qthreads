@@ -430,13 +430,13 @@ static qarray *qarray_create_internal(const size_t count, const size_t obj_size,
 qarray *qarray_create(const size_t count, const size_t obj_size,
 		      const distribution_t d)
 {
-    return qarray_create_internal(count, obj_size, d, 0);
+    return qarray_create_internal(count, obj_size, d, 1);
 }
 
 qarray *qarray_create_tight(const size_t count, const size_t obj_size,
 		      const distribution_t d)
 {
-    return qarray_create_internal(count, obj_size, d, 1);
+    return qarray_create_internal(count, obj_size, d, 0);
 }
 
 void qarray_destroy(qarray * a)
