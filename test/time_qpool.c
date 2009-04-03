@@ -1,3 +1,6 @@
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -5,18 +8,21 @@
 #include <qthread/qloop.h>
 #include <qthread/qpool.h>
 #include "qtimer.h"
+#ifdef QTHREAD_HAVE_LIBNUMA
+# include <numa.h>
+#endif
 
 #define ELEMENT_COUNT 10000
 #define THREAD_COUNT 128
 
-qpool qp = NULL;
+qpool *qp = NULL;
 size_t **allthat;
 
 void pool_allocator(qthread_t * me, const size_t startat,
 			 const size_t stopat, void *arg)
 {
     size_t i;
-    qpool p = (qpool) arg;
+    qpool *p = (qpool*) arg;
 
     for (i = startat; i < stopat; i++) {
 	if ((allthat[i] = qpool_alloc(me, p)) == NULL) {
@@ -31,7 +37,7 @@ void pool_deallocator(qthread_t * me, const size_t startat,
 			 const size_t stopat, void *arg)
 {
     size_t i;
-    qpool p = (qpool) arg;
+    qpool *p = (qpool*) arg;
 
     for (i = startat; i < stopat; i++) {
 	qpool_free(me, p, allthat[i]);
@@ -58,9 +64,35 @@ void malloc_deallocator(qthread_t * me, const size_t startat,
     size_t i;
 
     for (i = startat; i < stopat; i++) {
-	free(allthat[i]);
+	free(allthat[i], 44);
     }
 }
+
+#ifdef QTHREAD_HAVE_LIBNUMA
+void numa_allocator(qthread_t * me, const size_t startat,
+			 const size_t stopat, void *arg)
+{
+    size_t i;
+
+    for (i = startat; i < stopat; i++) {
+	if ((allthat[i] = numa_alloc(44)) == NULL) {
+	    fprintf(stderr, "numa_alloc() failed!\n");
+	    exit(-1);
+	}
+	allthat[i][0] = i;
+    }
+}
+
+void numa_deallocator(qthread_t * me, const size_t startat,
+			 const size_t stopat, void *arg)
+{
+    size_t i;
+
+    for (i = startat; i < stopat; i++) {
+	numa_free(allthat[i], 44);
+    }
+}
+#endif
 
 int main(int argc, char *argv[])
 {
@@ -119,6 +151,19 @@ int main(int argc, char *argv[])
     qtimer_stop(timer);
     printf("Time to free %lu malloc blocks in parallel: %f\n",
 	   iterations, qtimer_secs(timer));
+
+#ifdef QTHREAD_HAVE_LIBNUMA
+    qtimer_start(timer);
+    qt_loop_balance(0, iterations, numa_allocator, NULL);
+    qtimer_stop(timer);
+    printf("Time to alloc %lu numa blocks in parallel: %f\n",
+	   iterations, qtimer_secs(timer));
+    qtimer_start(timer);
+    qt_loop_balance(0, iterations, numa_deallocator, NULL);
+    qtimer_stop(timer);
+    printf("Time to free %lu numa blocks in parallel: %f\n",
+	   iterations, qtimer_secs(timer));
+#endif
 
     free(allthat);
 
