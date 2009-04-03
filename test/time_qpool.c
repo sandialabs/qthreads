@@ -18,11 +18,11 @@
 qpool *qp = NULL;
 size_t **allthat;
 
-void pool_allocator(qthread_t * me, const size_t startat,
-			 const size_t stopat, void *arg)
+void pool_allocator(qthread_t * me, const size_t startat, const size_t stopat,
+		    void *arg)
 {
     size_t i;
-    qpool *p = (qpool*) arg;
+    qpool *p = (qpool *) arg;
 
     for (i = startat; i < stopat; i++) {
 	if ((allthat[i] = qpool_alloc(me, p)) == NULL) {
@@ -34,10 +34,10 @@ void pool_allocator(qthread_t * me, const size_t startat,
 }
 
 void pool_deallocator(qthread_t * me, const size_t startat,
-			 const size_t stopat, void *arg)
+		      const size_t stopat, void *arg)
 {
     size_t i;
-    qpool *p = (qpool*) arg;
+    qpool *p = (qpool *) arg;
 
     for (i = startat; i < stopat; i++) {
 	qpool_free(me, p, allthat[i]);
@@ -45,7 +45,7 @@ void pool_deallocator(qthread_t * me, const size_t startat,
 }
 
 void malloc_allocator(qthread_t * me, const size_t startat,
-			 const size_t stopat, void *arg)
+		      const size_t stopat, void *arg)
 {
     size_t i;
 
@@ -59,7 +59,7 @@ void malloc_allocator(qthread_t * me, const size_t startat,
 }
 
 void malloc_deallocator(qthread_t * me, const size_t startat,
-			 const size_t stopat, void *arg)
+			const size_t stopat, void *arg)
 {
     size_t i;
 
@@ -69,8 +69,8 @@ void malloc_deallocator(qthread_t * me, const size_t startat,
 }
 
 #ifdef QTHREAD_HAVE_LIBNUMA
-void numa_allocator(qthread_t * me, const size_t startat,
-			 const size_t stopat, void *arg)
+void numa_allocator(qthread_t * me, const size_t startat, const size_t stopat,
+		    void *arg)
 {
     size_t i;
 
@@ -84,7 +84,7 @@ void numa_allocator(qthread_t * me, const size_t startat,
 }
 
 void numa_deallocator(qthread_t * me, const size_t startat,
-			 const size_t stopat, void *arg)
+		      const size_t stopat, void *arg)
 {
     size_t i;
 
@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
     assert(qthread_init(threads) == 0);
     me = qthread_self();
 
-    allthat = malloc(sizeof(void*)*iterations);
+    allthat = malloc(sizeof(void *) * iterations);
     assert(allthat != NULL);
     if ((qp = qpool_create(me, 44)) == NULL) {
 	fprintf(stderr, "qpool_create() failed!\n");
@@ -131,38 +131,38 @@ int main(int argc, char *argv[])
     qtimer_start(timer);
     qt_loop_balance(0, iterations, pool_allocator, qp);
     qtimer_stop(timer);
-    printf("Time to alloc %lu pooled blocks in parallel: %f\n",
-	   iterations, qtimer_secs(timer));
+    printf("Time to alloc %lu pooled blocks in parallel: %f\n", iterations,
+	   qtimer_secs(timer));
     qtimer_start(timer);
     qt_loop_balance(0, iterations, pool_deallocator, qp);
     qtimer_stop(timer);
-    printf("Time to free %lu pooled blocks in parallel: %f\n",
-	   iterations, qtimer_secs(timer));
+    printf("Time to free %lu pooled blocks in parallel: %f\n", iterations,
+	   qtimer_secs(timer));
 
     qpool_destroy(qp);
 
     qtimer_start(timer);
     qt_loop_balance(0, iterations, malloc_allocator, NULL);
     qtimer_stop(timer);
-    printf("Time to alloc %lu malloc blocks in parallel: %f\n",
-	   iterations, qtimer_secs(timer));
+    printf("Time to alloc %lu malloc blocks in parallel: %f\n", iterations,
+	   qtimer_secs(timer));
     qtimer_start(timer);
     qt_loop_balance(0, iterations, malloc_deallocator, NULL);
     qtimer_stop(timer);
-    printf("Time to free %lu malloc blocks in parallel: %f\n",
-	   iterations, qtimer_secs(timer));
+    printf("Time to free %lu malloc blocks in parallel: %f\n", iterations,
+	   qtimer_secs(timer));
 
 #ifdef QTHREAD_HAVE_LIBNUMA
     qtimer_start(timer);
     qt_loop_balance(0, iterations, numa_allocator, NULL);
     qtimer_stop(timer);
-    printf("Time to alloc %lu numa blocks in parallel: %f\n",
-	   iterations, qtimer_secs(timer));
+    printf("Time to alloc %lu numa blocks in parallel: %f\n", iterations,
+	   qtimer_secs(timer));
     qtimer_start(timer);
     qt_loop_balance(0, iterations, numa_deallocator, NULL);
     qtimer_stop(timer);
-    printf("Time to free %lu numa blocks in parallel: %f\n",
-	   iterations, qtimer_secs(timer));
+    printf("Time to free %lu numa blocks in parallel: %f\n", iterations,
+	   qtimer_secs(timer));
 #endif
 
     free(allthat);
