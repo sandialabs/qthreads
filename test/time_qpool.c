@@ -64,7 +64,7 @@ void malloc_deallocator(qthread_t * me, const size_t startat,
     size_t i;
 
     for (i = startat; i < stopat; i++) {
-	free(allthat[i], 44);
+	free(allthat[i]);
     }
 }
 
