@@ -1055,13 +1055,16 @@ static void *qthread_shepherd(void *arg)
     return NULL;
 }				       /*}}} */
 
-int qthread_init(const qthread_shepherd_id_t nshepherds)
+int qthread_init(qthread_shepherd_id_t nshepherds)
 {				       /*{{{ */
     int r;
     size_t i;
     ucontext_t *shep0 = NULL;
     int cp_syncmode = COLLECTION_MODE_PLAIN;
     int need_sync = 1;
+#ifdef HAVE_SYS_LGRP_USER_H
+    lgrp_cookie_t lgrp_cookie;
+#endif
 
 #ifdef QTHREAD_DEBUG
     {
@@ -1074,9 +1077,26 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
     qthread_debug(2, "qthread_init(): began.\n");
 
 #ifdef QTHREAD_USE_PTHREADS
+reinit_nsheps:
     switch (nshepherds) {
 	case 0:
-	    return QTHREAD_BADARGS;
+#ifdef QTHREAD_HAVE_LIBNUMA
+	    if (numa_available() != -1) {
+		nshepherds = numa_max_node() + 1;
+		if (nshepherds > 0) {
+		    goto reinit_nsheps;
+		}
+	    }
+#elif HAVE_SYS_LGRP_USER_H
+	    lgrp_cookie = lgrp_init(LGRP_VIEW_OS);
+	    nshepherds = lgrp_cpus(lgrp_cookie, lgrp_root(lgrp_cookie), NULL, 0, LGRP_CONTENT_ALL);
+	    if (nshepherds > 0) {
+		goto reinit_nsheps;
+	    }
+#endif
+	    nshepherds = 1;
+	    goto reinit_nsheps;
+	    break;
 	case 1:
 	    cp_syncmode |= COLLECTION_MODE_NOSYNC;
 	    need_sync = 0;
@@ -1204,7 +1224,6 @@ int qthread_init(const qthread_shepherd_id_t nshepherds)
 	    goto noaffinity;
 	}
 #elif HAVE_SYS_LGRP_USER_H
-	lgrp_cookie_t lgrp_cookie = lgrp_init(LGRP_VIEW_OS);
 	lgrp_id_t lgrp;
 	int lgrp_count_grps;
 	processorid_t **cpus = NULL;
