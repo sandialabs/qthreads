@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
     x = 0;
     if (argc == 2) {
 	threads = strtol(argv[1], NULL, 0);
-	if (threads <= 0) threads = 1;
+	if (threads < 0) threads = 1;
 	interactive = 1;
     }
     assert(qthread_init(threads) == 0);

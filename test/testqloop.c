@@ -19,7 +19,7 @@ int main(int argc, char *argv[])
 
     if (argc > 1) {
 	threads = atoi(argv[1]);
-	if (threads <= 0) threads = 1;
+	if (threads < 0) threads = 1;
 	interactive = 1;
     }
     qthread_init(threads);

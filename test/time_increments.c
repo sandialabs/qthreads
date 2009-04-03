@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
     if (argc == 2) {
 	shepherds = strtol(argv[1], NULL, 0);
 	interactive = 1;
-	if (shepherds <= 0) {
+	if (shepherds < 0) {
 	    shepherds = 1;
 	    interactive = 0;
 	}
