@@ -7,13 +7,13 @@
 #define ELEMENT_COUNT 10000
 #define THREAD_COUNT 128
 
-qpool qp = NULL;
+qpool *qp = NULL;
 
 aligned_t allocator(qthread_t * me, void *arg)
 {
     aligned_t *block[5];
     aligned_t i;
-    qpool p = (qpool) arg;
+    qpool *p = (qpool*) arg;
 
     for (i = 0; i < 5; i++) {
 	if ((block[i] = qpool_alloc(me, p)) == NULL) {
