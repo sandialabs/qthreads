@@ -184,6 +184,7 @@ int main(int argc, char *argv[])
 		fflush(stdout);
 		qarray_destroy(a);
 	    }
+	    if (constant_size == 0) continue;
 	    printf("\tSize, Assignment, Reading\n");
 	    for (size_i=0; size_i<(sizeof(sizes)/sizeof(size_t)); size_i++) {
 		const size_t size=sizes[size_i];
