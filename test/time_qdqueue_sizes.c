@@ -10,7 +10,7 @@
 #define ELEMENT_COUNT 10000
 #define THREAD_COUNT 128
 
-qpool memory;
+qpool *memory = NULL;
 size_t objsize = 8;
 
 aligned_t queuer (qthread_t *me, void *arg)
