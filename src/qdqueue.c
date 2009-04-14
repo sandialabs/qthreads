@@ -420,7 +420,7 @@ int qdqueue_enqueue(qthread_t * me, qdqueue_t * q, void *elem)
 	/* the queue had stuff in it already, so we advertise */
 	if (myq->last_ad_issued <= myq->last_ad_consumed) {
 	    /* only advertise if our existing ads are stale */
-	    generation = qthread_incr(&(myq->last_ad_issued), 1);
+	    generation = qthread_incr((aligned_t*)&(myq->last_ad_issued), 1);
 	    for (shep = 0; shep < myq->nNeighbors; shep++) {
 		struct qdsubqueue_s *neighbor = myq->neighbors[shep];
 
