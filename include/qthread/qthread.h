@@ -1068,6 +1068,30 @@ static QINLINE uint64_t qthread_cas64(volatile uint64_t * operand, const uint64_
 #endif
 }
 
+static QINLINE aligned_t
+qthread_cas_xx(volatile aligned_t* addr, const aligned_t oldval, const aligned_t newval, size_t length)
+{
+    switch( length ) {
+    case 4:
+        return qthread_cas32((volatile uint32_t*) addr, oldval, newval);
+   case 8:
+        return qthread_cas64((volatile uint64_t*) addr, oldval, newval);
+   default:
+      /* This should never happen, so deliberately cause a seg fault
+         for corefile analysis */
+      *(int*)(0) = 0;
+   }
+   return 0;  /* compiler check */
+}
+
+#ifdef QTHREAD_ATOMIC_CAS
+# define qthread_cas(ADDR, OLDV, NEWV) \
+    __sync_val_compare_and_swap((ADDR), (OLDV), (NEWV))
+#else
+# define qthread_cas(ADDR, OLDV, NEWV) \
+    qthread_cas((volatile void*)(ADDR), (aligned_t)(OLDV), (aligned_t)(NEWV), sizeof(*(ADDR)))
+#endif
+
 #ifndef __cplusplus
 
 #ifdef QTHREAD_ATOMIC_INCR
