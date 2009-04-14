@@ -1021,8 +1021,8 @@ static QINLINE uint64_t qthread_cas64(volatile uint64_t * operand, const uint64_
 	    "lock; cmpxchg8b %1"
 	    QTHREAD_PIC_SUFFIX
 	    :"=r"(test),
-	    /*EAX*/"a"(ret.s.l),
-	    /*EDX*/"d"(ret.s.h)
+	    /*EAX*/"=a"(ret.s.l),
+	    /*EDX*/"=d"(ret.s.h)
 	    :"m"(*operand),
 	    /*EAX*/"a"(oldv.s.l),
 	    /*EDX*/"d"(oldv.s.h),
