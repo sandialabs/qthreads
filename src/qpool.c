@@ -142,7 +142,7 @@ static QINLINE void qpool_internal_aligned_free(void *freeme,
     }
 #else
     if (alignment == 0) {
-	free(freeme, alloc_size);
+	free(freeme);
     } else {
 # ifdef HAVE_WORKING_VALLOC
 	free(freeme);
