@@ -102,6 +102,24 @@ static inline size_t qthread_retloc(const qthread_t * t)
     return 0;			       /* XXX: this is a bug! */
 }
 
+/* returns the distance from one shepherd to another */
+static inline int qthread_distance(const qthread_shepherd_id_t src, const qthread_shepherd_id_t dest)
+{
+    return 0; /* XXX: this is a bug! */
+}
+/* returns a list of shepherds, sorted by their distance from either this
+ * qthread or the specified shepherd */
+static inline const qthread_shepherd_id_t *qthread_sorted_sheps(const qthread_t * t)
+{
+    return NULL;
+}
+static inline const qthread_shepherd_id_t *qthread_sorted_sheps_remote(const qthread_shepherd_id_t src)
+{
+    return NULL;
+}
+/* returns the number of shepherds (i.e. one more than the largest valid shepherd id) */
+#define qthread_num_shepherds() ((qthread_shepherd_id_t) PIM_readSpecial(PIM_CMD_LOC_COUNT))
+
 /****************************************************************************
  * functions to implement FEB locking/unlocking
  ****************************************************************************
