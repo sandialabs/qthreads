@@ -5,6 +5,7 @@
 
 TESTS = test1 test2 test3 test_qalloc \
 		testincr testdincr testfincr \
+		test_cas \
 		testqloop testid \
 		test_internal_mod \
 		test_migrate \
@@ -66,6 +67,9 @@ testfincr_DEPENDENCIES = $(QTHREADLIB)
 
 testdincr_SOURCES = testdincr.c
 testdincr_DEPENDENCIES = $(QTHREADLIB)
+
+test_cas_SOURCES = test_cas.c
+test_cas_DEPENDENCIES = $(QTHREADLIB)
 
 testid_SOURCES = test_id.c
 testid_DEPENDENCIES = $(QTHREADLIB)
