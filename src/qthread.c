@@ -1176,14 +1176,30 @@ reinit_nsheps:
 #ifdef QTHREAD_HAVE_LIBNUMA
 	if (numa_available() != -1) {
 	    size_t max = numa_max_node() + 1;
-	    struct bitmask *bmask = numa_allocate_nodemask();
+	    {
+# ifdef QTHREAD_LIBNUMA_V2
+		struct bitmask *bmask = numa_allocate_nodemask();
 
-	    assert(bmask);
-	    numa_bitmask_clearall(bmask);
-	    /* assign nodes */
-	    for (i = 0; i < nshepherds; i++) {
-		qlib->shepherds[i].node = i % max;
-		numa_bitmask_setbit(bmask, i % max);
+		assert(bmask);
+		numa_bitmask_clearall(bmask);
+		/* assign nodes */
+		for (i = 0; i < nshepherds; i++) {
+		    qlib->shepherds[i].node = i % max;
+		    numa_bitmask_setbit(bmask, i % max);
+		}
+		numa_set_interleave_mask(bmask);
+		numa_bitmask_free(bmask);
+# else
+		nodemask_t bmask;
+
+		nodemask_zero(&bmask);
+		/* assign nodes */
+		for (i = 0; i < nshepherds; i++) {
+		    qlib->shepherds[i].node = i % max;
+		    nodemask_set(&bmask, i % max);
+		}
+		numa_set_interleave_mask(&bmask);
+# endif
 	    }
 	    for (i = 0; i < nshepherds; i++) {
 		const unsigned int node_i = qlib->shepherds[i].node;
@@ -1211,15 +1227,13 @@ reinit_nsheps:
 			qlib->shepherds[i].sorted_sheplist[k++] = j;
 		    }
 		}
-#ifdef HAVE_QSORT_R
+#  ifdef HAVE_QSORT_R
 		qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds-1, sizeof(qthread_shepherd_id_t), (void*)(intptr_t)i, &qthread_internal_shepcomp);
-#else
+#  else
 		shepcomp_src = (qthread_shepherd_id_t)i;
 		qsort(qlib->shepherds[i].sorted_sheplist, nshepherds-1, sizeof(qthread_shepherd_id_t), qthread_internal_shepcomp);
-#endif
+#  endif
 	    }
-	    numa_set_interleave_mask(bmask);
-	    numa_bitmask_free(bmask);
 	} else {
 	    goto noaffinity;
 	}
