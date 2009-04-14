@@ -75,6 +75,7 @@ int main(int argc, char *argv[])
 	/* test a basic array of doubles */
 	count = 0;
 	a = qarray_create(ELEMENT_COUNT, sizeof(double), disttypes[dt_index]);
+	assert(a);
 	if (interactive)
 	    printf("%s: created basic array of doubles\n", distnames[dt_index]);
 	qarray_iter(me, a, assign1);
