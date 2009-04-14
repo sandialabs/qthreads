@@ -925,10 +925,14 @@ static QINLINE uint32_t qthread_cas32(volatile uint32_t * operand, const uint32_
      * Thus, this instruction has the form:
      * [lock] cmpxchg reg, reg/mem
      *                src, dest
+     * The reason we use "m"(*operand) instead of "r"(operand) is because the
+     * memory-reference syntax is different on different architectures, and
+     * this is a cheap way to support whatever it is (some use parens, some use
+     * brackets).
      */
-    __asm__ __volatile__ ("lock; cmpxchg %1,[%2]"
+    __asm__ __volatile__ ("lock; cmpxchg %1,%2"
 	    : "=&a"(retval) /* store from EAX */
-	    : "r"(newval), "r" (operand),
+	    : "r"(newval), "m" (*operand),
 	      "0"(oldval) /* load into EAX */
 	    :"cc","memory");
     return retval;
@@ -1032,10 +1036,14 @@ static QINLINE uint64_t qthread_cas64(volatile uint64_t * operand, const uint64_
      * Thus, this instruction has the form:
      * [lock] cmpxchg reg, reg/mem
      *                src, dest
+     * The reason we use "m"(*operand) instead of "r"(operand) is because the
+     * memory-reference syntax is different on different architectures, and
+     * this is a cheap way to support whatever it is (some use parens, some use
+     * brackets).
      */
-    __asm__ __volatile__ ("lock; cmpxchg %1,[%2]"
+    __asm__ __volatile__ ("lock; cmpxchg %1,%2"
 	    : "=&a"(retval) /* store from EAX */
-	    : "r"(newval), "r" (operand),
+	    : "r"(newval), "m" (*operand),
 	      "0"(oldval) /* load into EAX */
 	    :"cc","memory");
     return retval;
