@@ -8,8 +8,12 @@
 
 #include <string.h>		       /* for memcpy() */
 
-#if (HAVE_IA64INTRIN_H && QTHREAD_NEEDS_IA64INTRIN)
-# include <ia64intrin.h>
+#if QTHREAD_NEEDS_IA64INTRIN
+# if HAVE_IA64INTRIN_H
+#  include <ia64intrin.h>
+# elif HAVE_IA32INTRIN_H
+#  include <ia32intrin.h>
+# endif
 #endif
 
 /*****************************************************************************

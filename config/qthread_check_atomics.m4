@@ -6,12 +6,14 @@
 # QTHREAD_CHECK_ATOMICS([action-if-found], [action-if-not-found])
 # ------------------------------------------------------------------------------
 AC_DEFUN([QTHREAD_CHECK_ATOMICS], [
-AC_CHECK_HEADERS([ia64intrin.h])
+AC_CHECK_HEADERS([ia64intrin.h ia32intrin.h])
 AC_CACHE_CHECK([whether compiler supports builtin atomic CAS],
   [qthread_cv_atomic_CAS],
   [AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #ifdef HAVE_IA64INTRIN_H
 # include <ia64intrin.h>
+#elif HAVE_IA32INTRIN_H
+# include <ia32intrin.h>
 #endif
 #include <stdlib.h>
 
@@ -28,6 +30,8 @@ AC_CACHE_CHECK([whether compiler supports builtin atomic incr],
   [AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #ifdef HAVE_IA64INTRIN_H
 # include <ia64intrin.h>
+#elif HAVE_IA32INTRIN_H
+# include <ia32intrin.h>
 #endif
 #include <stdlib.h>
 
