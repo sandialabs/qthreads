@@ -1,3 +1,6 @@
+#ifdef HAVE_CONFIG_H
+# include "config.h" /* for _GNU_SOURCE */
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <limits.h>		       /* for INT_MIN & friends (according to C89) */

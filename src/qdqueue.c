@@ -541,6 +541,5 @@ int qdqueue_empty(qthread_t * me, qdqueue_t * q)
 	}
 	return 1;		       /* we searched everywhere, and every queue was empty */
     }
-  fail_dequeue:
     return 0;
 }				       /*}}} */

@@ -1,3 +1,6 @@
+#ifdef HAVE_CONFIG_H
+# include "config.h" /* for _GNU_SOURCE */
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -14,12 +17,15 @@ int main(int argc, char *argv[])
 {
     size_t i;
     struct timeval start, stop;
-    unsigned int threads = 3;
+    long int threads = 3;
     unsigned int interactive = 0;
 
     if (argc > 1) {
-	threads = atoi(argv[1]);
-	if (threads < 0) threads = 1;
+	char * endptr = NULL;
+	threads = strtol(argv[1], &endptr, 10);
+	if (threads == LONG_MIN || threads == LONG_MAX || *endptr != 0) {
+	    threads = 1;
+	}
 	interactive = 1;
     }
     qthread_init(threads);
