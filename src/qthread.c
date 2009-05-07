@@ -241,6 +241,66 @@ static qt_mpool generic_lfqueue_node_pool = NULL;
 static qt_mpool generic_lock_pool = NULL;
 static qt_mpool generic_addrstat_pool = NULL;
 
+#ifdef QTHREAD_THREADSCOPE
+aligned_t qnow = 0;
+pthread_mutex_t qnow_lock = PTHREAD_MUTEX_INITIALIZER;
+# define QTHREAD_TS_SPAWNED(t) do { \
+    register unsigned long now = qthread_internal_incr(&qnow, &qnow_lock); \
+    t->thread_id = now; \
+    printf("SPAWNED now=%lu tid=%u frame=%p returnaddr=%p\n", \
+	    now, (unsigned)t->shepherd_ptr->shepherd_id, t, t->ret); \
+} while (0)
+# define QTHREAD_TS_ENDED(t) printf("ENDED now=%lu tid=%u threadid=%p.%u\n", (unsigned long)qthread_internal_incr(&qnow, &qnow_lock), (unsigned)t->shepherd_ptr->shepherd_id, t, t->thread_id)
+# define QTHREAD_TS_INIT(t, shep) printf("INIT now=%lu tid=%u frame=%p threadid=%p.%u\n", (unsigned long)qthread_internal_incr(&qnow, &qnow_lock), (unsigned)shep->shepherd_id, t, shep->current, (shep->current)?(shep->current->thread_id):0)
+# define QTHREAD_TS_LOCK_DECL() const unsigned long ts_started = (unsigned long)qthread_internal_incr(&qnow, &qnow_lock)
+# define QTHREAD_TS_READFF(shep, lock) printf("READFF now=%lu tid=%u lock=%p started=%lu threadid=%p.%lu\n", \
+	(unsigned long)qthread_internal_incr(&qnow, &qnow_lock), \
+	(unsigned)shep->shepherd_id, lock, ts_started, \
+	me, (unsigned long)me->thread_id);
+# define QTHREAD_TS_READFE(shep, lock) printf("READFE now=%lu tid=%u lock=%p started=%lu threadid=%p.%lu\n", \
+	(unsigned long)qthread_internal_incr(&qnow, &qnow_lock), \
+	(unsigned)shep->shepherd_id, lock, ts_started, \
+	me, (unsigned long)me->thread_id);
+# define QTHREAD_TS_WRITEEF(shep, lock) printf("WRITEEF now=%lu tid=%u lock=%p started=%lu threadid=%p.%lu\n", \
+	(unsigned long)qthread_internal_incr(&qnow, &qnow_lock), \
+	(unsigned)shep->shepherd_id, lock, ts_started, \
+	me, (unsigned long)me->thread_id);
+# define QTHREAD_TS_WRITEF(shep, lock) printf("WRITEF now=%lu tid=%u lock=%p started=%lu threadid=%p.%lu\n", \
+	(unsigned long)qthread_internal_incr(&qnow, &qnow_lock), \
+	(unsigned)shep->shepherd_id, lock, ts_started, \
+	me, (unsigned long)me->thread_id);
+# define QTHREAD_TS_LOCK(shep, lock) printf("LOCK now=%lu tid=%u lock=%p started=%lu threadid=%p.%lu\n", \
+	(unsigned long)qthread_internal_incr(&qnow, &qnow_lock), \
+	(unsigned)shep->shepherd_id, lock, ts_started, \
+	me, (unsigned long)me->thread_id);
+# define QTHREAD_TS_UNLOCK(shep, lock) printf("UNLOCK now=%lu tid=%u lock=%p threadid=%p.%lu\n", \
+	(unsigned long)qthread_internal_incr(&qnow, &qnow_lock), \
+	(unsigned)shep->shepherd_id, lock, \
+	me, (unsigned long)me->thread_id);
+# define QTHREAD_TS_EMPTY(shep, lock) printf("EMPTY now=%lu tid=%u lock=%p threadid=%p.%lu\n", \
+	(unsigned long)qthread_internal_incr(&qnow, &qnow_lock), \
+	(unsigned)shep->shepherd_id, lock, \
+	me, (unsigned long)me->thread_id);
+# define QTHREAD_TS_FILL(shep, lock) printf("FILL now=%lu tid=%u lock=%p threadid=%p.%lu\n", \
+	(unsigned long)qthread_internal_incr(&qnow, &qnow_lock), \
+	(unsigned)shep->shepherd_id, lock, \
+	me, (unsigned long)me->thread_id);
+#else
+# define QTHREAD_TS_SPAWNED(t)
+# define QTHREAD_TS_ENDED(t)
+# define QTHREAD_TS_INIT(t, shep)
+# define QTHREAD_TS_LOCK_DECL()
+# define QTHREAD_TS_READFF(shep, lock)
+# define QTHREAD_TS_READFE(shep, lock)
+# define QTHREAD_TS_WRITEEF(shep, lock)
+# define QTHREAD_TS_WRITEF(shep, lock)
+# define QTHREAD_TS_LOCK(shep, lock)
+# define QTHREAD_TS_UNLOCK(shep, lock)
+# define QTHREAD_TS_EMPTY(shep, lock)
+# define QTHREAD_TS_FILL(shep, lock)
+# define QTHREAD_TS_INCR(shep, lock)
+#endif
+
 #ifdef QTHREAD_COUNT_THREADS
 static aligned_t threadcount = 0;
 static pthread_mutex_t threadcount_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -1069,37 +1129,35 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 #ifdef QTHREAD_DEBUG
     {
 	char *qdl = getenv("QTHREAD_DEBUG_LEVEL");
+	char *qdle;
 
-	debuglevel = qdl ? atoi(qdl) : 0;
+	debuglevel = qdl ? strtol(qdl, &qdle, 0) : 0;
+	if (qdle == NULL || *qdle == 0) {
+	    debuglevel = 0;
+	}
     }
 #endif
 
     qthread_debug(2, "qthread_init(): began.\n");
 
 #ifdef QTHREAD_USE_PTHREADS
-reinit_nsheps:
-    switch (nshepherds) {
-	case 0:
+    if (nshepherds == 0) { /* try to guess the "right" number */
 #ifdef QTHREAD_HAVE_LIBNUMA
-	    if (numa_available() != -1) {
-		nshepherds = numa_max_node() + 1;
-		if (nshepherds > 0) {
-		    goto reinit_nsheps;
-		}
-	    }
+	if (numa_available() != -1) {
+	    nshepherds = numa_max_node() + 1;
+	}
 #elif HAVE_SYS_LGRP_USER_H
-	    lgrp_cookie = lgrp_init(LGRP_VIEW_OS);
-	    nshepherds = lgrp_cpus(lgrp_cookie, lgrp_root(lgrp_cookie), NULL, 0, LGRP_CONTENT_ALL);
-	    if (nshepherds > 0) {
-		goto reinit_nsheps;
-	    }
+	lgrp_cookie = lgrp_init(LGRP_VIEW_OS);
+	nshepherds = lgrp_cpus(lgrp_cookie, lgrp_root(lgrp_cookie), NULL, 0, LGRP_CONTENT_ALL);
 #endif
+	if (nshepherds <= 0) {
 	    nshepherds = 1;
-	    goto reinit_nsheps;
-	    break;
-	case 1:
-	    cp_syncmode |= COLLECTION_MODE_NOSYNC;
-	    need_sync = 0;
+	}
+    }
+
+    if (nshepherds == 1) {
+	cp_syncmode |= COLLECTION_MODE_NOSYNC;
+	need_sync = 0;
     }
 #else
     nshepherds = 1;
@@ -1172,7 +1230,7 @@ reinit_nsheps:
 	qlib->max_stack_size = rlp.rlim_max;
     }
 
-    if (getenv("QTHREAD_AFFINITY")) {
+    if (getenv("QTHREAD_AFFINITY")) {/*{{{*/
 #ifdef QTHREAD_HAVE_LIBNUMA
 	if (numa_available() != -1) {
 	    size_t max = numa_max_node() + 1;
@@ -1328,11 +1386,11 @@ noaffinity:
 	    qlib->shepherds[i].shep_dists = NULL;
 	    qlib->shepherds[i].sorted_sheplist = NULL;
 	}
-    }
+    }/*}}}*/
 
 #ifndef UNPOOLED
     /* set up the memory pools */
-    for (i = 0; i < nshepherds; i++) {
+    for (i = 0; i < nshepherds; i++) {/*{{{*/
 	/* the following SHOULD only be accessed by one thread at a time, so
 	 * should be quite safe unsynchronized. If things fail, though...
 	 * resynchronize them and see if that fixes it. */
@@ -1374,7 +1432,7 @@ noaffinity:
 	qlib->shepherds[i].addrstat_pool =
 	    qt_mpool_create(need_sync, sizeof(qthread_addrstat_t),
 			    qlib->shepherds[i].node);
-    }
+    }/*}}}*/
     /* these are used when qthread_fork() is called from a non-qthread. */
     generic_qthread_pool = qt_mpool_create(need_sync, sizeof(qthread_t), -1);
     generic_stack_pool =
@@ -1881,6 +1939,7 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
 #else
     t->thread_id = (unsigned int)-1;
 #endif
+    QTHREAD_TS_INIT(t, (&(qlib->shepherds[shepherd])));
 
     return t;
 }				       /*}}} */
@@ -2218,6 +2277,7 @@ static void qthread_wrapper(void *ptr)
 
     qthread_debug(2, "qthread_wrapper(): executing f=%p arg=%p.\n", t->f,
 		  t->arg);
+    QTHREAD_TS_SPAWNED(t);
 #ifdef QTHREAD_COUNT_THREADS
     qthread_internal_incr(&threadcount, &threadcount_lock);
     qassert(pthread_mutex_lock(&concurrentthreads_lock), 0);
@@ -2244,6 +2304,7 @@ static void qthread_wrapper(void *ptr)
     if (t->flags & QTHREAD_FUTURE) {
 	future_exit(t);
     }
+    QTHREAD_TS_ENDED(t);
 #if !defined(HAVE_NATIVE_MAKECONTEXT) || defined(NEED_RLIMIT)
     /* without a built-in make/get/swapcontext, we're relying on the portable
      * one in context.c (stolen from libtask). unfortunately, this home-made
@@ -2754,6 +2815,7 @@ int qthread_empty(qthread_t * me, const aligned_t * dest)
 
     ALIGN(dest, alignedaddr, "qthread_empty()");
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
+    QTHREAD_TS_EMPTY(me->shepherd_ptr, dest);
     cp_hashtable_wrlock(qlib->FEBs[lockbin]);
     {				       /* BEGIN CRITICAL SECTION */
 	m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs[lockbin],
@@ -2792,6 +2854,7 @@ int qthread_fill(qthread_t * me, const aligned_t * dest)
     ALIGN(dest, alignedaddr, "qthread_fill()");
     /* lock hash */
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
+    QTHREAD_TS_FILL(me->shepherd_ptr, dest);
     cp_hashtable_wrlock(qlib->FEBs[lockbin]);
     {				       /* BEGIN CRITICAL SECTION */
 	m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs[lockbin],
@@ -2822,6 +2885,8 @@ int qthread_writeF(qthread_t * me, aligned_t * const dest,
     aligned_t *alignedaddr;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
 
+    QTHREAD_TS_LOCK_DECL();
+
     if (me == NULL) {
 	me = qthread_self();
     }
@@ -2848,6 +2913,7 @@ int qthread_writeF(qthread_t * me, aligned_t * const dest,
 	memcpy(dest, src, sizeof(aligned_t));
     }
     qthread_gotlock_fill(me->shepherd_ptr, m, alignedaddr, 0);
+    QTHREAD_TS_WRITEF(me->shepherd_ptr, dest);
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
@@ -2872,6 +2938,7 @@ int qthread_writeEF(qthread_t * me, aligned_t * const dest,
     const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
 
     QTHREAD_LOCK_TIMER_DECLARATION(febblock);
+    QTHREAD_TS_LOCK_DECL();
 
     if (me == NULL) {
 	me = qthread_self();
@@ -2924,6 +2991,7 @@ int qthread_writeEF(qthread_t * me, aligned_t * const dest,
 	qthread_gotlock_fill(me->shepherd_ptr, m, alignedaddr, 0);
     }
     QTHREAD_LOCK_TIMER_STOP(febblock, me);
+    QTHREAD_TS_WRITEEF(me->shepherd_ptr, dest);
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
@@ -2947,6 +3015,7 @@ int qthread_readFF(qthread_t * me, aligned_t * const dest,
     const int lockbin = QTHREAD_CHOOSE_STRIPE(src);
 
     QTHREAD_LOCK_TIMER_DECLARATION(febblock);
+    QTHREAD_TS_LOCK_DECL();
 
     if (me == NULL) {
 	me = qthread_self();
@@ -3001,6 +3070,7 @@ int qthread_readFF(qthread_t * me, aligned_t * const dest,
 	REPORTUNLOCK(m);
     }
     QTHREAD_LOCK_TIMER_STOP(febblock, me);
+    QTHREAD_TS_READFF(me->shepherd_ptr, src)
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
@@ -3018,6 +3088,7 @@ int qthread_readFE(qthread_t * me, aligned_t * const dest,
     const int lockbin = QTHREAD_CHOOSE_STRIPE(src);
 
     QTHREAD_LOCK_TIMER_DECLARATION(febblock);
+    QTHREAD_TS_LOCK_DECL();
 
     if (me == NULL) {
 	me = qthread_self();
@@ -3071,6 +3142,7 @@ int qthread_readFE(qthread_t * me, aligned_t * const dest,
 	qthread_gotlock_empty(me->shepherd_ptr, m, alignedaddr, 0);
     }
     QTHREAD_LOCK_TIMER_STOP(febblock, me);
+    QTHREAD_TS_READFE(me->shepherd_ptr, src)
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
@@ -3094,6 +3166,7 @@ int qthread_lock(qthread_t * me, const aligned_t * a)
     const int lockbin = QTHREAD_CHOOSE_STRIPE(a);
 
     QTHREAD_LOCK_TIMER_DECLARATION(aquirelock);
+    QTHREAD_TS_LOCK_DECL();
 
     if (me == NULL) {
 	me = qthread_self();
@@ -3164,6 +3237,7 @@ int qthread_lock(qthread_t * me, const aligned_t * a)
 		      a);
     }
     QTHREAD_LOCK_TIMER_STOP(aquirelock, me);
+    QTHREAD_TS_LOCK(me->shepherd_ptr, a)
     QTHREAD_HOLD_TIMER_START(m);
     return QTHREAD_SUCCESS;
 }				       /*}}} */
@@ -3225,6 +3299,7 @@ int qthread_unlock(qthread_t * me, const aligned_t * a)
 	QTHREAD_UNLOCK(&m->lock);
     }
 
+    QTHREAD_TS_UNLOCK(me->shepherd_ptr, a)
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 

@@ -8,6 +8,10 @@
 
 #include <string.h>		       /* for memcpy() */
 
+#if QTHREAD_THREADSCOPE
+# include <stdio.h>
+#endif
+
 #if QTHREAD_NEEDS_IA64INTRIN
 # if HAVE_IA64INTRIN_H
 #  include <ia64intrin.h>
@@ -865,6 +869,16 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand, const int in
 static QINLINE unsigned long
 qthread_incr_xx(volatile void* addr, int incr, size_t length)
 {
+#if QTHREAD_THREADSCOPE
+    extern aligned_t qnow;
+    if (addr != &qnow) {
+	qthread_t *me = qthread_self();
+
+	printf("INCR tid=%u now=%lu lock=%p threadid=%p.%lu\n",
+		(unsigned)qthread_shep(me), (unsigned long)qnow, addr, me,
+		(unsigned long)qthread_id(me));
+    }
+#endif
     switch( length ) {
     case 4:
         return qthread_incr32((volatile uint32_t*) addr, incr);
@@ -880,7 +894,7 @@ qthread_incr_xx(volatile void* addr, int incr, size_t length)
 
 #ifndef __cplusplus
 
-#ifdef QTHREAD_ATOMIC_INCR
+#if QTHREAD_ATOMIC_INCR && ! QTHREAD_THREADSCOPE
 # define qthread_incr( ADDR, INCVAL ) \
     __sync_fetch_and_add(ADDR, INCVAL)
 #else
