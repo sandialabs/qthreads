@@ -7,6 +7,7 @@ qthreaddir = $(includedir)/qthread
 dist_qthread_HEADERS = \
 	qthread.h \
 	qthread.hpp \
+	allpairs.h \
 	qalloc.h \
 	qarray.h \
 	qlfqueue.h \

@@ -13,6 +13,7 @@ lib_LTLIBRARIES = libqthread.la
 
 libqthread_la_SOURCES = \
 	qarray.c \
+	allpairs.c \
 	qlfqueue.c \
 	qdqueue.c \
 	qpool.c \
