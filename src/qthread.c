@@ -1069,37 +1069,35 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 #ifdef QTHREAD_DEBUG
     {
 	char *qdl = getenv("QTHREAD_DEBUG_LEVEL");
+	char *qdle;
 
-	debuglevel = qdl ? atoi(qdl) : 0;
+	debuglevel = qdl ? strtol(qdl, &qdle, 0) : 0;
+	if (qdle == NULL || *qdle == 0) {
+	    debuglevel = 0;
+	}
     }
 #endif
 
     qthread_debug(2, "qthread_init(): began.\n");
 
 #ifdef QTHREAD_USE_PTHREADS
-reinit_nsheps:
-    switch (nshepherds) {
-	case 0:
+    if (nshepherds == 0) { /* try to guess the "right" number */
 #ifdef QTHREAD_HAVE_LIBNUMA
-	    if (numa_available() != -1) {
-		nshepherds = numa_max_node() + 1;
-		if (nshepherds > 0) {
-		    goto reinit_nsheps;
-		}
-	    }
+	if (numa_available() != -1) {
+	    nshepherds = numa_max_node() + 1;
+	}
 #elif HAVE_SYS_LGRP_USER_H
-	    lgrp_cookie = lgrp_init(LGRP_VIEW_OS);
-	    nshepherds = lgrp_cpus(lgrp_cookie, lgrp_root(lgrp_cookie), NULL, 0, LGRP_CONTENT_ALL);
-	    if (nshepherds > 0) {
-		goto reinit_nsheps;
-	    }
+	lgrp_cookie = lgrp_init(LGRP_VIEW_OS);
+	nshepherds = lgrp_cpus(lgrp_cookie, lgrp_root(lgrp_cookie), NULL, 0, LGRP_CONTENT_ALL);
 #endif
+	if (nshepherds <= 0) {
 	    nshepherds = 1;
-	    goto reinit_nsheps;
-	    break;
-	case 1:
-	    cp_syncmode |= COLLECTION_MODE_NOSYNC;
-	    need_sync = 0;
+	}
+    }
+
+    if (nshepherds == 1) {
+	cp_syncmode |= COLLECTION_MODE_NOSYNC;
+	need_sync = 0;
     }
 #else
     nshepherds = 1;
@@ -1172,7 +1170,7 @@ reinit_nsheps:
 	qlib->max_stack_size = rlp.rlim_max;
     }
 
-    if (getenv("QTHREAD_AFFINITY")) {
+    if (getenv("QTHREAD_AFFINITY")) {/*{{{*/
 #ifdef QTHREAD_HAVE_LIBNUMA
 	if (numa_available() != -1) {
 	    size_t max = numa_max_node() + 1;
@@ -1328,11 +1326,11 @@ noaffinity:
 	    qlib->shepherds[i].shep_dists = NULL;
 	    qlib->shepherds[i].sorted_sheplist = NULL;
 	}
-    }
+    }/*}}}*/
 
 #ifndef UNPOOLED
     /* set up the memory pools */
-    for (i = 0; i < nshepherds; i++) {
+    for (i = 0; i < nshepherds; i++) {/*{{{*/
 	/* the following SHOULD only be accessed by one thread at a time, so
 	 * should be quite safe unsynchronized. If things fail, though...
 	 * resynchronize them and see if that fixes it. */
@@ -1374,7 +1372,7 @@ noaffinity:
 	qlib->shepherds[i].addrstat_pool =
 	    qt_mpool_create(need_sync, sizeof(qthread_addrstat_t),
 			    qlib->shepherds[i].node);
-    }
+    }/*}}}*/
     /* these are used when qthread_fork() is called from a non-qthread. */
     generic_qthread_pool = qt_mpool_create(need_sync, sizeof(qthread_t), -1);
     generic_stack_pool =
