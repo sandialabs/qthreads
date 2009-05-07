@@ -50,6 +50,9 @@
 /* if ia64intrin is needed */
 #undef QTHREAD_NEEDS_IA64INTRIN
 
+/* if generating ThreadScope traces */
+#undef QTHREAD_THREADSCOPE
+
 /* Architecture defines */
 #define QTHREAD_UNSUPPORTED 0
 #define QTHREAD_IA32        1
