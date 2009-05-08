@@ -298,6 +298,7 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t * shep,
 static QINLINE void qthread_gotlock_empty(qthread_shepherd_t * shep,
 					  qthread_addrstat_t * m, void *maddr,
 					  const char recursive);
+#if HAVE_QTHREAD_LIBNUMA || HAVE_SYS_LGRP_USER_H
 #ifdef HAVE_QSORT_R
 static int qthread_internal_shepcomp(void *src, const void *a, const void *b)
 {
@@ -313,6 +314,7 @@ static int qthread_internal_shepcomp(const void* a, const void* b)
     int b_dist = qthread_distance(shepcomp_src, *(qthread_shepherd_id_t*)b);
     return a_dist-b_dist;
 }
+#endif
 #endif
 
 #define QTHREAD_INITLOCK(l) do { if (pthread_mutex_init(l, NULL) != 0) { return QTHREAD_PTHREAD_ERROR; } } while(0)
@@ -1320,7 +1322,7 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 	free(cpus);
 #endif
     } else {
-noaffinity:
+noaffinity: Q_UNUSED
 	for (i = 0; i < nshepherds; i++) {
 	    qlib->shepherds[i].node = -1;
 	    qlib->shepherds[i].shep_dists = NULL;
