@@ -11,6 +11,8 @@
 #include <sys/time.h>		       /* for gettimeofday() */
 #include <time.h>		       /* for gettimeofday() */
 
+#include <qthread/qthread.h>
+#include <qthread/futurelib.h>
 #include <qthread/qutil.h>
 
 int interactive = 0;
@@ -19,7 +21,7 @@ int interactive = 0;
  * This file tests the qutil functions
  *
  */
-static int dcmp(const void *a, const void *b)
+static Q_UNUSED int dcmp(const void *a, const void *b)
 {
     if ((*(double *)a) < (*(double *)b))
 	return -1;
