@@ -6,7 +6,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <qthread/qthread.h>
-#include <qthread_innards.h> /* for qthread_debug() */
+#ifdef QTHREAD_DEBUG
+# include <qthread_innards.h> /* for qthread_debug() */
+#endif
 
 aligned_t counter = 0;
 
