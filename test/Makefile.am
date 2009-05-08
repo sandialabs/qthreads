@@ -30,6 +30,8 @@ TESTS += time_swap time_producerconsumer time_increments \
 	 time_gcd
 endif
 
+buildall: $(TESTS)
+.PHONY: buildall
 
 check_PROGRAMS = $(TESTS)
 
