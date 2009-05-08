@@ -544,25 +544,45 @@ struct qarray_func_wrapper_args
 {
     union
     {
-	qthread_f qt;
 	qa_loop_f ql;
+	qthread_f qt;
     } func;
     qarray *a;
     void * arg;
     volatile aligned_t *donecount;
+    const size_t startat, stopat;
+};
+struct qarray_constfunc_wrapper_args
+{
+    const union
+    {
+	qa_cloop_f ql;
+	qthread_f qt;
+    } func;
+    const qarray *a;
+    void * arg;
+    volatile aligned_t *donecount;
+    const size_t startat, stopat;
 };
 
 static aligned_t qarray_strider(qthread_t * me,
 				const struct qarray_func_wrapper_args *arg)
 {				       /*{{{ */
-    const size_t max_count = arg->a->count;
+    const size_t max_count = arg->stopat;
     const size_t segment_size = arg->a->segment_size;
     const distribution_t dist_type = arg->a->dist_type;
-    size_t count = 0;
+    size_t count = arg->startat;
     qthread_shepherd_id_t shep = qthread_shep(me);
 
     if (dist_type == ALL_SAME && shep != arg->a->dist_shep) {
 	goto qarray_strider_exit;
+    }
+    if (count > 0 && qarray_shepof(arg->a, count) != shep) {
+	/* jump to the next segment boundary */
+	count += segment_size - (count % segment_size);
+	if (count >= max_count) {
+	    goto qarray_strider_exit;
+	}
     }
     while (qarray_shepof(arg->a, count) != shep) {
 	count += segment_size;
@@ -620,15 +640,22 @@ static aligned_t qarray_loop_strider(qthread_t * me,
 				     const struct qarray_func_wrapper_args
 				     *arg)
 {				       /*{{{ */
-    const size_t max_count = arg->a->count;
+    const size_t max_count = arg->stopat;
     const size_t segment_size = arg->a->segment_size;
     const distribution_t dist_type = arg->a->dist_type;
-    size_t count = 0;
+    size_t count = arg->startat;
     qthread_shepherd_id_t shep = qthread_shep(me);
     const qa_loop_f ql = arg->func.ql;
 
     if (dist_type == ALL_SAME && shep != arg->a->dist_shep) {
 	goto qarray_loop_strider_exit;
+    }
+    if (count > 0 && qarray_shepof(arg->a, count) != shep) {
+	/* jump to the next segment boundary */
+	count += segment_size - (count % segment_size);
+	if (count >= max_count) {
+	    goto qarray_loop_strider_exit;
+	}
     }
     while (qarray_shepof(arg->a, count) != shep) {
 	count += segment_size;
@@ -687,15 +714,13 @@ static aligned_t qarray_loop_strider(qthread_t * me,
     return 0;
 }				       /*}}} */
 
-void qarray_iter(qthread_t * me, qarray * a, qthread_f func)
+void qarray_iter(qthread_t * me, qarray * a, const size_t startat, const size_t stopat, qthread_f func)
 {				       /*{{{ */
     qthread_shepherd_id_t i;
     volatile aligned_t donecount = 0;
-    struct qarray_func_wrapper_args qfwa;
+    struct qarray_func_wrapper_args qfwa = {{NULL}, a, NULL, &donecount, startat, stopat};
 
     qfwa.func.qt = func;
-    qfwa.a = a;
-    qfwa.donecount = &donecount;
     switch (a->dist_type) {
 	case ALL_SAME:
 	    qthread_fork_to((qthread_f) qarray_strider, &qfwa, NULL,
@@ -705,26 +730,36 @@ void qarray_iter(qthread_t * me, qarray * a, qthread_f func)
 	    }
 	    break;
 	default:
-	    for (i = 0; i < qthread_num_shepherds(); i++) {
-		qthread_fork_to((qthread_f) qarray_strider, &qfwa, NULL, i);
-	    }
-	    while (donecount < qthread_num_shepherds()) {
-		qthread_yield(me);
+	    /* it'd be NICE to avoid spawning if not all sheps are represented
+	     * in the range (esp if the range is small), but because of
+	     * DIST_RAND, that's impossible to do without checking all the
+	     * ranges ahead of time. By spawning threads that check their own
+	     * ranges, we essentially parallelize the task of figuring out
+	     * which threads to spawn (bizarre way of thinking about it, I
+	     * know). */
+	    if (stopat - startat < a->segment_size) {
+		qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL, qarray_shepof(a, startat));
+		while (donecount == 0) {
+		    qthread_yield(me);
+		}
+	    } else {
+		for (i = 0; i < qthread_num_shepherds(); i++) {
+		    qthread_fork_to((qthread_f) qarray_strider, &qfwa, NULL, i);
+		}
+		while (donecount < qthread_num_shepherds()) {
+		    qthread_yield(me);
+		}
 	    }
 	    break;
     }
 }				       /*}}} */
 
-void qarray_iter_loop(qthread_t * me, qarray * a, qa_loop_f func, void*arg)
+void qarray_iter_loop(qthread_t * me, qarray * a, const size_t startat, const size_t stopat, qa_loop_f func, void*arg)
 {				       /*{{{ */
     qthread_shepherd_id_t i;
     volatile aligned_t donecount = 0;
-    struct qarray_func_wrapper_args qfwa;
+    struct qarray_func_wrapper_args qfwa = {{func}, a, arg, &donecount, startat, stopat};
 
-    qfwa.func.ql = func;
-    qfwa.a = a;
-    qfwa.arg = arg;
-    qfwa.donecount = &donecount;
     switch (a->dist_type) {
 	case ALL_SAME:
 	    qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL,
@@ -734,12 +769,66 @@ void qarray_iter_loop(qthread_t * me, qarray * a, qa_loop_f func, void*arg)
 	    }
 	    break;
 	default:
-	    for (i = 0; i < qthread_num_shepherds(); i++) {
-		qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL,
-				i);
+	    /* it'd be NICE to avoid spawning if not all sheps are represented
+	     * in the range (esp if the range is small), but because of
+	     * DIST_RAND, that's impossible to do without checking all the
+	     * ranges ahead of time. By spawning threads that check their own
+	     * ranges, we essentially parallelize the task of figuring out
+	     * which threads to spawn (bizarre way of thinking about it, I
+	     * know). */
+	    if (stopat - startat < a->segment_size) {
+		qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL, qarray_shepof(a, startat));
+		while (donecount == 0) {
+		    qthread_yield(me);
+		}
+	    } else {
+		for (i = 0; i < qthread_num_shepherds(); i++) {
+		    qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL,
+			    i);
+		}
+		while (donecount < qthread_num_shepherds()) {
+		    qthread_yield(me);
+		}
 	    }
-	    while (donecount < qthread_num_shepherds()) {
+	    break;
+    }
+}				       /*}}} */
+
+void qarray_iter_constloop(qthread_t * me, const qarray * a, const size_t startat, const size_t stopat, qa_cloop_f func, void*arg)
+{				       /*{{{ */
+    qthread_shepherd_id_t i;
+    volatile aligned_t donecount = 0;
+    const struct qarray_constfunc_wrapper_args qfwa = {{func}, a, arg, &donecount, startat, stopat};
+
+    switch (a->dist_type) {
+	case ALL_SAME:
+	    qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL,
+			    a->dist_shep);
+	    while (donecount == 0) {
 		qthread_yield(me);
+	    }
+	    break;
+	default:
+	    /* it'd be NICE to avoid spawning if not all sheps are represented
+	     * in the range (esp if the range is small), but because of
+	     * DIST_RAND, that's impossible to do without checking all the
+	     * ranges ahead of time. By spawning threads that check their own
+	     * ranges, we essentially parallelize the task of figuring out
+	     * which threads to spawn (bizarre way of thinking about it, I
+	     * know). */
+	    if (stopat - startat < a->segment_size) {
+		qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL, qarray_shepof(a, startat));
+		while (donecount == 0) {
+		    qthread_yield(me);
+		}
+	    } else {
+		for (i = 0; i < qthread_num_shepherds(); i++) {
+		    qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL,
+			    i);
+		}
+		while (donecount < qthread_num_shepherds()) {
+		    qthread_yield(me);
+		}
 	    }
 	    break;
     }

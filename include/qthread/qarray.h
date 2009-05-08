@@ -5,10 +5,7 @@
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
 
-#ifdef __cplusplus
-extern "C"
-{
-#endif
+Q_STARTCXX;
 
 typedef enum
 {
@@ -33,19 +30,28 @@ typedef struct qarray_s
 } qarray;
 
 typedef void (*qa_loop_f) (qthread_t * me, const size_t startat,
-			   const size_t stopat, qarray *array, void *arg);
+			   const size_t stopat, qarray * array, void *arg);
+typedef void (*qa_cloop_f) (qthread_t * me, const size_t startat,
+			    const size_t stopat, const qarray * array,
+			    void *arg);
 
 qarray *qarray_create(const size_t count, const size_t unit_size,
 		      const distribution_t d);
 qarray *qarray_create_tight(const size_t count, const size_t unit_size,
-		      const distribution_t d);
+			    const distribution_t d);
 qthread_shepherd_id_t qarray_shepof(const qarray * a, const size_t index);
 void *qarray_elem(qthread_t * me, const qarray * a, const size_t index);
-void qarray_iter(qthread_t * me, qarray * a, qthread_f func);
-void qarray_iter_loop(qthread_t * me, qarray * a, qa_loop_f func, void* arg);
+void qarray_iter(qthread_t * me, qarray * a, const size_t startat,
+		 const size_t stopat, qthread_f func);
+void qarray_iter_loop(qthread_t * me, qarray * a, const size_t startat,
+		      const size_t stopat, qa_loop_f func, void *arg);
+void qarray_iter_constloop(qthread_t * me, const qarray * a,
+			   const size_t startat, const size_t stopat,
+			   qa_cloop_f func, void *arg);
 void qarray_destroy(qarray * a);
 
-QINLINE static void *qarray_elem_nomigrate(const qarray * a, const size_t index)
+QINLINE static void *qarray_elem_nomigrate(const qarray * a,
+					   const size_t index)
 {
     if (a == NULL || index > a->count)
 	return NULL;
@@ -60,8 +66,5 @@ QINLINE static void *qarray_elem_nomigrate(const qarray * a, const size_t index)
     }
 }
 
-#ifdef __cplusplus
-}
-#endif
-
+Q_ENDCXX
 #endif

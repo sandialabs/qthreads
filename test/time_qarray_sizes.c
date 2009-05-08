@@ -170,14 +170,14 @@ int main(int argc, char *argv[])
 		global_size = size;
 		qtimer_start(timer);
 		for (unsigned i=0;i<10;i++) {
-		    qarray_iter_loop(me, a, assign1_loop, NULL);
+		    qarray_iter_loop(me, a, 0, ELEMENT_COUNT, assign1_loop, NULL);
 		}
 		qtimer_stop(timer);
 		printf("\t%lu, %f", (unsigned long)sizes[size_i], qtimer_secs(timer)/10.0);
 		fflush(stdout);
 		qtimer_start(timer);
 		for (unsigned i=0;i<10;i++) {
-		    qarray_iter_loop(me, a, assert1_loop, NULL);
+		    qarray_iter_loop(me, a, 0, ELEMENT_COUNT, assert1_loop, NULL);
 		}
 		qtimer_stop(timer);
 		printf(", %f\n", qtimer_secs(timer)/10.0);
@@ -194,14 +194,14 @@ int main(int argc, char *argv[])
 		global_size = size;
 		qtimer_start(timer);
 		for (unsigned i=0;i<10;i++) {
-		    qarray_iter_loop(me, a, assign1_loop, NULL);
+		    qarray_iter_loop(me, a, 0, count, assign1_loop, NULL);
 		}
 		qtimer_stop(timer);
 		printf("\t%lu, %f", (unsigned long)sizes[size_i], qtimer_secs(timer)/10.0);
 		fflush(stdout);
 		qtimer_start(timer);
 		for (unsigned i=0;i<10;i++) {
-		    qarray_iter_loop(me, a, assert1_loop, NULL);
+		    qarray_iter_loop(me, a, 0, count, assert1_loop, NULL);
 		}
 		qtimer_stop(timer);
 		printf(", %f\n", qtimer_secs(timer)/10.0);

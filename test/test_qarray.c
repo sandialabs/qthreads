@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 	a = qarray_create(ELEMENT_COUNT, sizeof(double), disttypes[dt_index]);
 	if (interactive)
 	    printf("%s: created basic array of doubles\n", distnames[dt_index]);
-	qarray_iter(me, a, assign1);
+	qarray_iter(me, a, 0, ELEMENT_COUNT, assign1);
 	if (interactive)
 	    printf("%s: iterated; now checking work...\n", distnames[dt_index]);
 	if (count != ELEMENT_COUNT) {
@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
 	a = qarray_create(ELEMENT_COUNT, sizeof(bigobj), disttypes[dt_index]);
 	if (interactive)
 	    printf("%s: created array of big objects\n", distnames[dt_index]);
-	qarray_iter(me, a, assignall1);
+	qarray_iter(me, a, 0, ELEMENT_COUNT, assignall1);
 	if (interactive)
 	    printf("%s: iterated; now checking work...\n", distnames[dt_index]);
 	if (count != ELEMENT_COUNT) {
@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
 			  disttypes[dt_index]);
 	if (interactive)
 	    printf("%s: created array of odd-sized objects\n", distnames[dt_index]);
-	qarray_iter_loop(me, a, assignoff1, NULL);
+	qarray_iter_loop(me, a, 0, ELEMENT_COUNT, assignoff1, NULL);
 	if (interactive)
 	    printf("%s: iterated; now checking work...\n", distnames[dt_index]);
 	if (count != ELEMENT_COUNT) {

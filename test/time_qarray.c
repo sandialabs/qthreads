@@ -260,7 +260,7 @@ int main(int argc, char *argv[])
 	    assert(a != NULL);
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
-		qarray_iter_loop(me, a, assign1_loop, NULL);
+		qarray_iter_loop(me, a, 0, ELEMENT_COUNT, assign1_loop, NULL);
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
@@ -269,7 +269,7 @@ int main(int argc, char *argv[])
 	    acc = 0.0;
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
-		qarray_iter_loop(me, a, assert1_loop, NULL);
+		qarray_iter_loop(me, a, 0, ELEMENT_COUNT, assert1_loop, NULL);
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
@@ -288,7 +288,7 @@ int main(int argc, char *argv[])
 	    assert(a != NULL);
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
-		qarray_iter_loop(me, a, assignall1_loop, NULL);
+		qarray_iter_loop(me, a, 0, ELEMENT_COUNT, assignall1_loop, NULL);
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
@@ -297,7 +297,7 @@ int main(int argc, char *argv[])
 	    acc = 0.0;
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
-		qarray_iter_loop(me, a, assertall1_loop, NULL);
+		qarray_iter_loop(me, a, 0, ELEMENT_COUNT, assertall1_loop, NULL);
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
@@ -316,7 +316,7 @@ int main(int argc, char *argv[])
 	    assert(a != NULL);
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
-		qarray_iter_loop(me, a, assignoff1, NULL);
+		qarray_iter_loop(me, a, 0, ELEMENT_COUNT, assignoff1, NULL);
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
@@ -325,7 +325,7 @@ int main(int argc, char *argv[])
 	    acc = 0.0;
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
-		qarray_iter_loop(me, a, assertoff1, NULL);
+		qarray_iter_loop(me, a, 0, ELEMENT_COUNT, assertoff1, NULL);
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
