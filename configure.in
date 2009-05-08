@@ -308,8 +308,9 @@ AC_C_INLINE
 AC_C_RESTRICT
 AC_C_VOLATILE
 
-QTHREAD_CHECK_ATTRIBUTE_ALIGNED([AC_DEFINE([HAVE_ATTRIBUTE_ALIGNED], [1],
-       [Whether the compiler supports the attribute aligned property])])
+QTHREAD_MALLOC_ATTRIBUTE
+QTHREAD_UNUSED_ATTRIBUTE
+QTHREAD_ALIGNED_ATTRIBUTE
 
 QTHREAD_CHECK_ASSEMBLY([have_assembly=1], [have_assembly=0])
 AS_IF([test "x$have_assembly" == "x0"],
