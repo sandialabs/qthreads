@@ -48,56 +48,56 @@ aligned_t qt_uint_max(aligned_t *array, size_t length, int checkfeb);
 aligned_t qt_uint_min(aligned_t *array, size_t length, int checkfeb);
 
 /* These are some utility accumulator functions */
-static void qt_dbl_add_acc (void *a, void *b)
+static Q_UNUSED void qt_dbl_add_acc (void *a, void *b)
 {
     *(double *)a += *(double *)b;
 }
-static void qt_int_add_acc (void *a, void *b)
+static Q_UNUSED void qt_int_add_acc (void *a, void *b)
 {
     *(saligned_t *)a += *(saligned_t *)b;
 }
-static void qt_uint_add_acc (void *a, void *b)
+static Q_UNUSED void qt_uint_add_acc (void *a, void *b)
 {
     *(aligned_t *)a += *(aligned_t *)b;
 }
-static void qt_dbl_prod_acc (void *a, void *b)
+static Q_UNUSED void qt_dbl_prod_acc (void *a, void *b)
 {
     *(double *)a *= *(double *)b;
 }
-static void qt_int_prod_acc (void *a, void *b)
+static Q_UNUSED void qt_int_prod_acc (void *a, void *b)
 {
     *(saligned_t *)a *= *(saligned_t *)b;
 }
-static void qt_uint_prod_acc (void *a, void *b)
+static Q_UNUSED void qt_uint_prod_acc (void *a, void *b)
 {
     *(aligned_t *)a *= *(aligned_t *)b;
 }
-static void qt_dbl_max_acc (void *a, void *b)
+static Q_UNUSED void qt_dbl_max_acc (void *a, void *b)
 {
     if (*(double*)b > *(double*)a)
 	*(double *)a = *(double *)b;
 }
-static void qt_int_max_acc (void *a, void *b)
+static Q_UNUSED void qt_int_max_acc (void *a, void *b)
 {
     if (*(saligned_t*)b > *(saligned_t*)a)
 	*(saligned_t *)a = *(saligned_t *)b;
 }
-static void qt_uint_max_acc (void *a, void *b)
+static Q_UNUSED void qt_uint_max_acc (void *a, void *b)
 {
     if (*(aligned_t*)b > *(aligned_t*)a)
 	*(aligned_t *)a = *(aligned_t *)b;
 }
-static void qt_dbl_min_acc (void *a, void *b)
+static Q_UNUSED void qt_dbl_min_acc (void *a, void *b)
 {
     if (*(double*)b < *(double*)a)
 	*(double *)a = *(double *)b;
 }
-static void qt_int_min_acc (void *a, void *b)
+static Q_UNUSED void qt_int_min_acc (void *a, void *b)
 {
     if (*(saligned_t*)b < *(saligned_t*)a)
 	*(saligned_t *)a = *(saligned_t *)b;
 }
-static void qt_uint_min_acc (void *a, void *b)
+static Q_UNUSED void qt_uint_min_acc (void *a, void *b)
 {
     if (*(aligned_t*)b < *(aligned_t*)a)
 	*(aligned_t *)a = *(aligned_t *)b;
