@@ -24,7 +24,6 @@ aligned_t queuer (qthread_t *me, void *arg)
 aligned_t dequeuer (qthread_t *me, void *arg)
 {
     qdqueue_t *q = (qdqueue_t*)arg;
-    void *ret;
     size_t i;
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
