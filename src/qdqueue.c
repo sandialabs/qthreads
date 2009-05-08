@@ -181,7 +181,7 @@ static void qdqueue_internal_sortedsheps(qthread_shepherd_id_t shep,
 
     i = 0;
     while (i < (maxsheps - 1)) {       /* -1 because we're not recording *self* */
-	qthread_shepherd_id_t j, minj = 0;
+	qthread_shepherd_id_t j;
 	int mindist = maxdist;
 	size_t count = 0, k;
 	qthread_shepherd_id_t *thisdist;
@@ -479,7 +479,7 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
 		    /* it got work from somewhere! */
 		    qdqueue_adheap_push(me, &myq->ads, lc, 0);
 		    /* reset the remote host's last_consumed counter, to avoid infinite loops */
-		    qt_cas((volatile void**)&(ad.shep->last_consumed), (void*)lc, NULL);
+		    (void)qt_cas((volatile void**)&(ad.shep->last_consumed), (void*)lc, NULL);
 		}
 	    }
 	}
@@ -514,7 +514,6 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
 int qdqueue_empty(qthread_t * me, qdqueue_t * q)
 {				       /*{{{ */
     struct qdsubqueue_s *myq;
-    void *ret;
 
     assert(me);
     assert(q);
