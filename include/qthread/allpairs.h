@@ -6,10 +6,11 @@
 
 Q_STARTCXX;
 
-typedef void (*dist_f) (const void *unit1, const void *unit2, void *outstore);
+typedef void (*dist_f) (const void *unit1, const void *unit2,
+			void *restrict outstore);
 
-void qt_allpairs(const qarray * array, const size_t count,
-		 const size_t unitsize, void **output, const size_t outsize,
+void qt_allpairs(const qarray * array1, const qarray * array2,
+		 void *restrict * restrict output, const size_t outsize,
 		 const dist_f distfunc);
 
 Q_ENDCXX;
