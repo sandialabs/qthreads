@@ -6,7 +6,7 @@
 #include <qthread/qarray.h>
 #include "qthread_asserts.h"
 #ifdef QTHREAD_HAVE_LIBNUMA
-# include "qthread_innards.h" /* for shep_to_node */
+# include "qthread_innards.h"	       /* for shep_to_node */
 # include <numa.h>
 # include <sys/mman.h>
 #elif HAVE_SYS_LGRP_USER_H
@@ -41,9 +41,11 @@ static QINLINE size_t qarray_lcm(size_t a, size_t b)
 }				       /*}}} */
 
 static QINLINE qthread_shepherd_id_t *qarray_internal_segment_shep(const
-								   qarray * a,
+								   qarray *
+								   restrict a,
 								   const void
-								   *segment_head)
+								   *restrict
+								   segment_head)
 {				       /*{{{ */
     char *ptr = (((char *)segment_head) + (a->segment_size * a->unit_size));
 
@@ -58,9 +60,10 @@ static QINLINE qthread_shepherd_id_t *qarray_internal_segment_shep(const
 }				       /*}}} */
 
 static inline qthread_shepherd_id_t qarray_internal_shepof_ch(const qarray *
-							      a,
+							      restrict a,
 							      const void
-							      *segment_head)
+							      *restrict
+							      segment_head)
 {				       /*{{{ */
     switch (a->dist_type) {
 	case ALL_SAME:
@@ -77,7 +80,7 @@ static inline qthread_shepherd_id_t qarray_internal_shepof_ch(const qarray *
 }				       /*}}} */
 
 static inline qthread_shepherd_id_t qarray_internal_shepof_shi(const qarray *
-							       a,
+							       restrict a,
 							       const size_t
 							       shi)
 {				       /*{{{ */
@@ -96,8 +99,10 @@ static inline qthread_shepherd_id_t qarray_internal_shepof_shi(const qarray *
     }
 }				       /*}}} */
 
-static qarray *qarray_create_internal(const size_t count, const size_t obj_size,
-		      const distribution_t d, const char tight, const int seg_pages)
+static qarray *qarray_create_internal(const size_t count,
+				      const size_t obj_size,
+				      const distribution_t d,
+				      const char tight, const int seg_pages)
 {				       /*{{{ */
     size_t pagesize;
     size_t segment_count;	/* number of segments allocated */
@@ -123,7 +128,8 @@ static qarray *qarray_create_internal(const size_t count, const size_t obj_size,
     ret->count = count;
     /* make obj_size a multiple of 8 */
     if (!tight) {
-	ret->unit_size = obj_size + ((obj_size & 7) ? (8 - (obj_size & 7)) : 0);
+	ret->unit_size =
+	    obj_size + ((obj_size & 7) ? (8 - (obj_size & 7)) : 0);
     } else {
 	ret->unit_size = obj_size;
     }
@@ -449,12 +455,13 @@ qarray *qarray_create_tight(const size_t count, const size_t obj_size)
     QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64
     return qarray_create_internal(count, obj_size, DIST_REG_STRIPES, 1, 0);
 #else
-    return qarray_create_internal(count, obj_size, FIXED_HASH, 1, 0);
+    return qarray_create_internal(count, obj_size, FIXED_HASH, 1, 1);
 #endif
 }
 
 qarray *qarray_create_configured(const size_t count, const size_t obj_size,
-		      const distribution_t d, const char tight, const int seg_pages)
+				 const distribution_t d, const char tight,
+				 const int seg_pages)
 {
     return qarray_create_internal(count, obj_size, d, tight, seg_pages);
 }
@@ -536,7 +543,7 @@ qthread_shepherd_id_t qarray_shepof(const qarray * a, const size_t index)
     }
 }				       /*}}} */
 
-void *qarray_elem(qthread_t * me, const qarray * a, const size_t index)
+void *qarray_elem(qthread_t * restrict me, const qarray * restrict a, const size_t index)
 {				       /*{{{ */
     void *ret;
     qthread_shepherd_id_t dest;
@@ -567,9 +574,9 @@ struct qarray_func_wrapper_args
 	qa_loop_f ql;
 	qthread_f qt;
     } func;
-    qarray *a;
-    void * arg;
-    volatile aligned_t *donecount;
+    qarray *restrict a;
+    void *restrict arg;
+    volatile aligned_t *restrict donecount;
     const size_t startat, stopat;
 };
 struct qarray_constfunc_wrapper_args
@@ -579,14 +586,15 @@ struct qarray_constfunc_wrapper_args
 	qa_cloop_f ql;
 	qthread_f qt;
     } func;
-    const qarray *a;
-    void * arg;
-    volatile aligned_t *donecount;
+    const qarray *restrict a;
+    void *restrict arg;
+    volatile aligned_t *restrict donecount;
     const size_t startat, stopat;
 };
 
-static aligned_t qarray_strider(qthread_t * me,
-				const struct qarray_func_wrapper_args *arg)
+static aligned_t qarray_strider(qthread_t * restrict me,
+				const struct qarray_func_wrapper_args
+				*restrict arg)
 {				       /*{{{ */
     const size_t max_count = arg->stopat;
     const size_t segment_size = arg->a->segment_size;
@@ -656,9 +664,9 @@ static aligned_t qarray_strider(qthread_t * me,
     return 0;
 }				       /*}}} */
 
-static aligned_t qarray_loop_strider(qthread_t * me,
+static aligned_t qarray_loop_strider(qthread_t * restrict me,
 				     const struct qarray_func_wrapper_args
-				     *arg)
+				     *restrict arg)
 {				       /*{{{ */
     const size_t max_count = arg->stopat;
     const size_t segment_size = arg->a->segment_size;
@@ -734,11 +742,12 @@ static aligned_t qarray_loop_strider(qthread_t * me,
     return 0;
 }				       /*}}} */
 
-void qarray_iter(qthread_t * me, qarray * a, const size_t startat, const size_t stopat, qthread_f func)
+void qarray_iter(qthread_t * restrict me, qarray * restrict a,
+		 const size_t startat, const size_t stopat, qthread_f func)
 {				       /*{{{ */
-    qthread_shepherd_id_t i;
     volatile aligned_t donecount = 0;
-    struct qarray_func_wrapper_args qfwa = {{NULL}, a, NULL, &donecount, startat, stopat};
+    struct qarray_func_wrapper_args qfwa =
+	{ {NULL}, a, NULL, &donecount, startat, stopat };
 
     qfwa.func.qt = func;
     switch (a->dist_type) {
@@ -758,13 +767,17 @@ void qarray_iter(qthread_t * me, qarray * a, const size_t startat, const size_t 
 	     * which threads to spawn (bizarre way of thinking about it, I
 	     * know). */
 	    if (stopat - startat < a->segment_size) {
-		qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL, qarray_shepof(a, startat));
+		qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL,
+				qarray_shepof(a, startat));
 		while (donecount == 0) {
 		    qthread_yield(me);
 		}
 	    } else {
+		qthread_shepherd_id_t i;
+
 		for (i = 0; i < qthread_num_shepherds(); i++) {
-		    qthread_fork_to((qthread_f) qarray_strider, &qfwa, NULL, i);
+		    qthread_fork_to((qthread_f) qarray_strider, &qfwa, NULL,
+				    i);
 		}
 		while (donecount < qthread_num_shepherds()) {
 		    qthread_yield(me);
@@ -774,11 +787,13 @@ void qarray_iter(qthread_t * me, qarray * a, const size_t startat, const size_t 
     }
 }				       /*}}} */
 
-void qarray_iter_loop(qthread_t * me, qarray * a, const size_t startat, const size_t stopat, qa_loop_f func, void*arg)
+void qarray_iter_loop(qthread_t * restrict me, qarray * restrict a,
+		      const size_t startat, const size_t stopat,
+		      qa_loop_f func, void *restrict arg)
 {				       /*{{{ */
-    qthread_shepherd_id_t i;
     volatile aligned_t donecount = 0;
-    struct qarray_func_wrapper_args qfwa = {{func}, a, arg, &donecount, startat, stopat};
+    struct qarray_func_wrapper_args qfwa =
+	{ {func}, a, arg, &donecount, startat, stopat };
 
     switch (a->dist_type) {
 	case ALL_SAME:
@@ -797,14 +812,17 @@ void qarray_iter_loop(qthread_t * me, qarray * a, const size_t startat, const si
 	     * which threads to spawn (bizarre way of thinking about it, I
 	     * know). */
 	    if (stopat - startat < a->segment_size) {
-		qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL, qarray_shepof(a, startat));
+		qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL,
+				qarray_shepof(a, startat));
 		while (donecount == 0) {
 		    qthread_yield(me);
 		}
 	    } else {
+		qthread_shepherd_id_t i;
+
 		for (i = 0; i < qthread_num_shepherds(); i++) {
-		    qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL,
-			    i);
+		    qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa,
+				    NULL, i);
 		}
 		while (donecount < qthread_num_shepherds()) {
 		    qthread_yield(me);
@@ -814,11 +832,13 @@ void qarray_iter_loop(qthread_t * me, qarray * a, const size_t startat, const si
     }
 }				       /*}}} */
 
-void qarray_iter_constloop(qthread_t * me, const qarray * a, const size_t startat, const size_t stopat, qa_cloop_f func, void*arg)
+void qarray_iter_constloop(qthread_t * restrict me, const qarray * restrict a,
+			   const size_t startat, const size_t stopat,
+			   qa_cloop_f func, void *restrict arg)
 {				       /*{{{ */
-    qthread_shepherd_id_t i;
     volatile aligned_t donecount = 0;
-    const struct qarray_constfunc_wrapper_args qfwa = {{func}, a, arg, &donecount, startat, stopat};
+    const struct qarray_constfunc_wrapper_args qfwa =
+	{ {func}, a, arg, &donecount, startat, stopat };
 
     switch (a->dist_type) {
 	case ALL_SAME:
@@ -837,14 +857,17 @@ void qarray_iter_constloop(qthread_t * me, const qarray * a, const size_t starta
 	     * which threads to spawn (bizarre way of thinking about it, I
 	     * know). */
 	    if (stopat - startat < a->segment_size) {
-		qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL, qarray_shepof(a, startat));
+		qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL,
+				qarray_shepof(a, startat));
 		while (donecount == 0) {
 		    qthread_yield(me);
 		}
 	    } else {
+		qthread_shepherd_id_t i;
+
 		for (i = 0; i < qthread_num_shepherds(); i++) {
-		    qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL,
-			    i);
+		    qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa,
+				    NULL, i);
 		}
 		while (donecount < qthread_num_shepherds()) {
 		    qthread_yield(me);
