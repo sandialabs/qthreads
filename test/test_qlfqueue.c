@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
     assert(qthread_init(threads) == 0);
     me = qthread_self();
 
-    if ((q = qlfqueue_create(me)) == NULL) {
+    if ((q = qlfqueue_create()) == NULL) {
 	fprintf(stderr, "qlfqueue_create() failed!\n");
 	exit(-1);
     }

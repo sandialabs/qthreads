@@ -13,10 +13,9 @@ void *qpool_alloc(qthread_t * me, qpool * pool);
 
 void qpool_free(qthread_t * me, qpool * pool, void *mem);
 
-qpool *qpool_create(qthread_t * me, const size_t item_size);
+qpool *qpool_create(const size_t item_size);
+qpool *qpool_create_aligned(const size_t item_size, const size_t alignment);
 
-qpool *qpool_create_aligned(qthread_t * me, const size_t item_size,
-			    const size_t alignment);
 void qpool_destroy(qpool * pool);
 
 Q_ENDCXX;

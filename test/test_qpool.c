@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
     assert(qthread_init(threads) == 0);
     me = qthread_self();
 
-    if ((qp = qpool_create(me, sizeof(aligned_t))) == NULL) {
+    if ((qp = qpool_create(sizeof(aligned_t))) == NULL) {
 	fprintf(stderr, "qpool_create() failed!\n");
 	exit(-1);
     }

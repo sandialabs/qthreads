@@ -36,19 +36,19 @@ static qpool *qlfqueue_node_pool = NULL;
 #define QCTR(x) ((unsigned char)(((uintptr_t)(x))&QCTR_MASK))
 #define QCOMPOSE(x,y) (void*)(((uintptr_t)QPTR(x))|((QCTR(y)+1)&QCTR_MASK))
 
-qlfqueue_t *qlfqueue_create(qthread_t *me)
+qlfqueue_t *qlfqueue_create(void)
 {				       /*{{{ */
     qlfqueue_t *q;
 
     if (qlfqueue_node_pool == NULL) {
 	qlfqueue_node_pool =
-	    qpool_create_aligned(me, sizeof(qlfqueue_node_t), 16);
+	    qpool_create_aligned(sizeof(qlfqueue_node_t), 16);
     }
     assert(qlfqueue_node_pool != NULL);
 
     q = malloc(sizeof(struct qlfqueue_s));
     if (q != NULL) {
-	q->head = (qlfqueue_node_t *) qpool_alloc(me, qlfqueue_node_pool);
+	q->head = (qlfqueue_node_t *) qpool_alloc(NULL, qlfqueue_node_pool);
 	assert(q->head != NULL);
 	if (QPTR(q->head) == NULL) {   // if we're not using asserts, fail nicely
 	    free(q);

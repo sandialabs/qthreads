@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
 #endif
     }
 
-    if ((qp = qpool_create(me, 44)) == NULL) {
+    if ((qp = qpool_create(44)) == NULL) {
 	fprintf(stderr, "qpool_create() failed!\n");
 	exit(-1);
     }

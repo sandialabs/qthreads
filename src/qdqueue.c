@@ -299,13 +299,12 @@ static struct qdsubqueue_s
 }				       /*}}} */
 
 /* Create a new qdqueue */
-qdqueue_t *qdqueue_create(qthread_t * me)
+qdqueue_t *qdqueue_create(void)
 {				       /*{{{ */
     qdqueue_t *ret;
     qthread_shepherd_id_t curshep;
     int **sheparray;
 
-    assert(me);
     if (maxsheps == 0)
 	maxsheps = qthread_num_shepherds();
     ret = calloc(1, sizeof(struct qdqueue_s));
@@ -327,7 +326,7 @@ qdqueue_t *qdqueue_create(qthread_t * me)
     }
     qdqueue_internal_gensheparray(sheparray);
     for (curshep = 0; curshep < maxsheps; curshep++) {
-	ret->Qs[curshep].theQ = qlfqueue_create(me);
+	ret->Qs[curshep].theQ = qlfqueue_create();
 	ret->Qs[curshep].last_ad_issued = 1;
 	ret->Qs[curshep].last_ad_consumed = 1;
 	ret->Qs[curshep].allsheps =
