@@ -16,7 +16,7 @@
 #define STRUCT(_structname_, _rtype_) struct _structname_ \
 { \
     const _rtype_ *array; \
-    _rtype_ __attribute__((aligned(8))) ret; \
+    _rtype_ Q_ALIGNED(8) ret; \
     size_t start, stop; \
     const _rtype_ *addlast; \
     struct _structname_ *backptr; \
