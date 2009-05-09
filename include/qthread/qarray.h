@@ -31,10 +31,10 @@ typedef struct qarray_s
 
 typedef void (*qa_loop_f) (qthread_t * me, const size_t startat,
 			   const size_t stopat, qarray * array,
-			   void *restrict arg);
+			   void * arg);
 typedef void (*qa_cloop_f) (qthread_t * me, const size_t startat,
 			    const size_t stopat, const qarray * array,
-			    void *restrict arg);
+			    void * arg);
 
 qarray *qarray_create(const size_t count, const size_t unit_size);
 qarray *qarray_create_tight(const size_t count, const size_t unit_size);
@@ -48,10 +48,10 @@ void qarray_iter(qthread_t * me, qarray * a, const size_t startat,
 		 const size_t stopat, qthread_f func);
 void qarray_iter_loop(qthread_t * me, qarray * a, const size_t startat,
 		      const size_t stopat, qa_loop_f func,
-		      void *restrict arg);
+		      void * arg);
 void qarray_iter_constloop(qthread_t * me, const qarray * a,
 			   const size_t startat, const size_t stopat,
-			   qa_cloop_f func, void *restrict arg);
+			   qa_cloop_f func, void * arg);
 
 qthread_shepherd_id_t qarray_shepof(const qarray * a, const size_t index);
 

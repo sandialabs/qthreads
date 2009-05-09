@@ -41,11 +41,9 @@ static QINLINE size_t qarray_lcm(size_t a, size_t b)
 }				       /*}}} */
 
 static QINLINE qthread_shepherd_id_t *qarray_internal_segment_shep(const
-								   qarray *
-								   restrict a,
+								   qarray * a,
 								   const void
-								   *restrict
-								   segment_head)
+								   *segment_head)
 {				       /*{{{ */
     char *ptr = (((char *)segment_head) + (a->segment_size * a->unit_size));
 
@@ -60,10 +58,9 @@ static QINLINE qthread_shepherd_id_t *qarray_internal_segment_shep(const
 }				       /*}}} */
 
 static inline qthread_shepherd_id_t qarray_internal_shepof_ch(const qarray *
-							      restrict a,
+							      a,
 							      const void
-							      *restrict
-							      segment_head)
+							      *segment_head)
 {				       /*{{{ */
     switch (a->dist_type) {
 	case ALL_SAME:
@@ -575,7 +572,7 @@ struct qarray_func_wrapper_args
 	qthread_f qt;
     } func;
     qarray *a;
-    void *restrict arg;
+    void *arg;
     volatile aligned_t *donecount;
     const size_t startat, stopat;
 };
@@ -587,7 +584,7 @@ struct qarray_constfunc_wrapper_args
 	qthread_f qt;
     } func;
     const qarray *a;
-    void *restrict arg;
+    void *arg;
     volatile aligned_t *donecount;
     const size_t startat, stopat;
 };
@@ -787,7 +784,7 @@ void qarray_iter(qthread_t * me, qarray * a, const size_t startat,
 }				       /*}}} */
 
 void qarray_iter_loop(qthread_t * me, qarray * a, const size_t startat,
-		      const size_t stopat, qa_loop_f func, void *restrict arg)
+		      const size_t stopat, qa_loop_f func, void *arg)
 {				       /*{{{ */
     volatile aligned_t donecount = 0;
     struct qarray_func_wrapper_args qfwa =
@@ -832,7 +829,7 @@ void qarray_iter_loop(qthread_t * me, qarray * a, const size_t startat,
 
 void qarray_iter_constloop(qthread_t * me, const qarray * a,
 			   const size_t startat, const size_t stopat,
-			   qa_cloop_f func, void *restrict arg)
+			   qa_cloop_f func, void *arg)
 {				       /*{{{ */
     volatile aligned_t donecount = 0;
     const struct qarray_constfunc_wrapper_args qfwa =
