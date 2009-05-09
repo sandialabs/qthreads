@@ -375,7 +375,6 @@ int qdqueue_destroy(qthread_t * me, qdqueue_t * q)
 {				       /*{{{ */
     qthread_shepherd_id_t i;
 
-    qargnonull(me);
     qargnonull(q);
     for (i = 0; i < maxsheps; i++) {
 	if (q->Qs[i].theQ) {
