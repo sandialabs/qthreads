@@ -165,7 +165,7 @@ int main(int argc, char *argv[])
 	    printf("\tSize, Assignment, Reading\n");
 	    for (size_i=0; size_i<(sizeof(sizes)/sizeof(size_t)); size_i++) {
 		const size_t size=sizes[size_i];
-		qarray *a = qarray_create(ELEMENT_COUNT, size, disttypes[dt_index]);
+		qarray *a = qarray_create_configured(ELEMENT_COUNT, size, disttypes[dt_index], 0, 0);
 
 		global_size = size;
 		qtimer_start(timer);
@@ -189,7 +189,7 @@ int main(int argc, char *argv[])
 	    for (size_i=0; size_i<(sizeof(sizes)/sizeof(size_t)); size_i++) {
 		const size_t size=sizes[size_i];
 		const size_t count = constant_size/size; /* 1GB */
-		qarray *a = qarray_create(count, size, disttypes[dt_index]);
+		qarray *a = qarray_create_configured(count, size, disttypes[dt_index], 0, 0);
 
 		global_size = size;
 		qtimer_start(timer);

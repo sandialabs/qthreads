@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
 	 dt_index++) {
 	/* test a basic array of doubles */
 	count = 0;
-	a = qarray_create(ELEMENT_COUNT, sizeof(double), disttypes[dt_index]);
+	a = qarray_create_configured(ELEMENT_COUNT, sizeof(double), disttypes[dt_index], 0, 0);
 	if (interactive)
 	    printf("%s: created basic array of doubles\n", distnames[dt_index]);
 	qarray_iter(me, a, 0, ELEMENT_COUNT, assign1);
@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
 
 	/* now test an array of giant things */
 	count = 0;
-	a = qarray_create(ELEMENT_COUNT, sizeof(bigobj), disttypes[dt_index]);
+	a = qarray_create_configured(ELEMENT_COUNT, sizeof(bigobj), disttypes[dt_index], 0, 0);
 	if (interactive)
 	    printf("%s: created array of big objects\n", distnames[dt_index]);
 	qarray_iter(me, a, 0, ELEMENT_COUNT, assignall1);
@@ -140,8 +140,8 @@ int main(int argc, char *argv[])
 
 	/* now test an array of weird-sized things */
 	count = 0;
-	a = qarray_create(ELEMENT_COUNT, sizeof(offsize),
-			  disttypes[dt_index]);
+	a = qarray_create_configured(ELEMENT_COUNT, sizeof(offsize),
+			  disttypes[dt_index], 0, 0);
 	if (interactive)
 	    printf("%s: created array of odd-sized objects\n", distnames[dt_index]);
 	qarray_iter_loop(me, a, 0, ELEMENT_COUNT, assignoff1, NULL);

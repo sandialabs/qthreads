@@ -35,10 +35,12 @@ typedef void (*qa_cloop_f) (qthread_t * me, const size_t startat,
 			    const size_t stopat, const qarray * array,
 			    void *arg);
 
-qarray *qarray_create(const size_t count, const size_t unit_size,
-		      const distribution_t d);
-qarray *qarray_create_tight(const size_t count, const size_t unit_size,
-			    const distribution_t d);
+qarray *qarray_create(const size_t count, const size_t unit_size);
+qarray *qarray_create_tight(const size_t count, const size_t unit_size);
+qarray *qarray_create_configured(const size_t count, const size_t unit_size,
+				 const distribution_t d, const char tight,
+				 const int seg_pages);
+
 qthread_shepherd_id_t qarray_shepof(const qarray * a, const size_t index);
 void *qarray_elem(qthread_t * me, const qarray * a, const size_t index);
 void qarray_iter(qthread_t * me, qarray * a, const size_t startat,

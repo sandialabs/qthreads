@@ -25,20 +25,22 @@ aligned_t assign1(qthread_t * me, void *arg)
 
 /* we can do this because we forced qarray to create tight segments */
 void assign1_loop(qthread_t * me, const size_t startat, const size_t stopat,
-		  qarray *qa, void *arg)
+		  qarray * qa, void *arg)
 {
     double *ptr = qarray_elem_nomigrate(qa, startat);
     const size_t max = stopat - startat;
+
     for (size_t i = 0; i < max; i++) {
 	ptr[i] = 1.0;
     }
 }
 
 void assert1_loop(qthread_t * me, const size_t startat, const size_t stopat,
-		  qarray *qa, void *arg)
+		  qarray * qa, void *arg)
 {
     const double *ptr = qarray_elem_nomigrate(qa, startat);
     size_t max = stopat - startat;
+
     for (size_t i = 0; i < max; i++) {
 	assert(ptr[i] == 1.0);
     }
@@ -51,7 +53,7 @@ aligned_t assignall1(qthread_t * me, void *arg)
 }
 
 void assignall1_loop(qthread_t * me, const size_t startat,
-		     const size_t stopat, qarray *qa, void *arg)
+		     const size_t stopat, qarray * qa, void *arg)
 {
     for (size_t i = startat; i < stopat; i++) {
 	char *ptr = qarray_elem_nomigrate(qa, i);
@@ -61,7 +63,7 @@ void assignall1_loop(qthread_t * me, const size_t startat,
 }
 
 void assertall1_loop(qthread_t * me, const size_t startat,
-		     const size_t stopat, qarray *qa, void *arg)
+		     const size_t stopat, qarray * qa, void *arg)
 {
     bigobj *example = malloc(sizeof(bigobj));
 
@@ -75,7 +77,7 @@ void assertall1_loop(qthread_t * me, const size_t startat,
 }
 
 void assignoff1(qthread_t * me, const size_t startat, const size_t stopat,
-		qarray *qa, void *arg)
+		qarray * qa, void *arg)
 {
     for (size_t i = startat; i < stopat; i++) {
 	char *ptr = qarray_elem_nomigrate(qa, i);
@@ -85,7 +87,7 @@ void assignoff1(qthread_t * me, const size_t startat, const size_t stopat,
 }
 
 void assertoff1(qthread_t * me, const size_t startat, const size_t stopat,
-		qarray *qa, void *arg)
+		qarray * qa, void *arg)
 {
     offsize *example = malloc(sizeof(offsize));
 
@@ -146,13 +148,12 @@ int main(int argc, char *argv[])
     printf("Arrays of %lu objects...\n", (unsigned long)ELEMENT_COUNT);
 
     if (enabled_types & 0x1) {
-	const size_t last_type = (sizeof(disttypes) / sizeof(distribution_t));
-
 	printf("SERIAL:\n");
 	if (enabled_tests & 1) {
 	    size_t i, j;
 	    double acctime = 0.0;
 	    double *a = calloc(ELEMENT_COUNT, sizeof(double));
+
 	    assert(a != NULL);
 
 	    for (j = 0; j < ITERATIONS; j++) {
@@ -249,14 +250,15 @@ int main(int argc, char *argv[])
     for (dt_index = 0;
 	 dt_index < (sizeof(disttypes) / sizeof(distribution_t));
 	 dt_index++) {
-	if ((enabled_types & 1<<(dt_index+1)) == 0) continue;
+	if ((enabled_types & 1 << (dt_index + 1)) == 0)
+	    continue;
 	printf("%s:\n", distnames[dt_index]);
 	/* test a basic array of doubles */
 	if (enabled_tests & 1) {
 	    int j;
 	    double acc = 0.0;
-	    a = qarray_create_tight(ELEMENT_COUNT, sizeof(double),
-			      disttypes[dt_index]);
+	    a = qarray_create_configured(ELEMENT_COUNT, sizeof(double),
+					 disttypes[dt_index], 1, 0);
 	    assert(a != NULL);
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
@@ -283,12 +285,13 @@ int main(int argc, char *argv[])
 	    int j;
 	    double acc = 0.0;
 
-	    a = qarray_create(ELEMENT_COUNT, sizeof(bigobj),
-			      disttypes[dt_index]);
+	    a = qarray_create_configured(ELEMENT_COUNT, sizeof(bigobj),
+					 disttypes[dt_index], 0, 0);
 	    assert(a != NULL);
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
-		qarray_iter_loop(me, a, 0, ELEMENT_COUNT, assignall1_loop, NULL);
+		qarray_iter_loop(me, a, 0, ELEMENT_COUNT, assignall1_loop,
+				 NULL);
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
@@ -297,7 +300,8 @@ int main(int argc, char *argv[])
 	    acc = 0.0;
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
-		qarray_iter_loop(me, a, 0, ELEMENT_COUNT, assertall1_loop, NULL);
+		qarray_iter_loop(me, a, 0, ELEMENT_COUNT, assertall1_loop,
+				 NULL);
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
@@ -311,8 +315,8 @@ int main(int argc, char *argv[])
 	    int j;
 	    double acc = 0.0;
 
-	    a = qarray_create(ELEMENT_COUNT, sizeof(offsize),
-			      disttypes[dt_index]);
+	    a = qarray_create_configured(ELEMENT_COUNT, sizeof(offsize),
+					 disttypes[dt_index], 0, 0);
 	    assert(a != NULL);
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
