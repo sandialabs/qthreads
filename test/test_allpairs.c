@@ -33,16 +33,14 @@ void mult(const int *inta, const int *intb, int *out)
 
 int main(int argc, char *argv[])
 {
-    int *a;
-    qarray *a2;
+    qarray *a1, *a2;
     int **out;
     size_t i;
 
     qthread_init(0);
-    a = malloc(sizeof(int) * ASIZE);
-    a2 = qarray_create_tight(ASIZE, sizeof(int), FIXED_HASH);
+    a1 = qarray_create_tight(ASIZE, sizeof(int));
+    a2 = qarray_create_tight(ASIZE, sizeof(int));
     for (i = 0; i < ASIZE; i++) {
-	a[i] = i;
 	*(int*)qarray_elem_nomigrate(a2, i) = i;
     }
     out = calloc(ASIZE, sizeof(int *));
@@ -58,11 +56,13 @@ int main(int argc, char *argv[])
 
     qt_allpairs(a2, ASIZE, sizeof(int), (void **)out, sizeof(int), (dist_f)mult);
     printout(out);
-    free(a);
     for (i = 0; i < ASIZE; i++) {
 	free(out[i]);
     }
     free(out);
+
+    qarray_destroy(a1);
+    qarray_destroy(a2);
 
     qthread_finalize();
     return 0;
