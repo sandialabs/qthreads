@@ -70,7 +70,7 @@ int main ()
     qtimer_stop(timer2);
     for (i=0;i<BIGNUM;i++) {
 	if (answer1[i] != answer2[i]) {
-	    printf("ERROR! %i\n", i);
+	    printf("ERROR! %lu\n", (unsigned long)i);
 	}
     }
     printf("new secs: %f\n", qtimer_secs(timer1));

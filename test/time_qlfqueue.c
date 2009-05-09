@@ -28,7 +28,6 @@ aligned_t cpqueuer (qthread_t *me, void *arg)
 aligned_t cpdequeuer (qthread_t *me, void *arg)
 {
     cp_list *q = (cp_list*)arg;
-    void *ret;
     size_t i;
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
@@ -56,7 +55,6 @@ aligned_t queuer (qthread_t *me, void *arg)
 aligned_t dequeuer (qthread_t *me, void *arg)
 {
     qlfqueue_t *q = (qlfqueue_t*)arg;
-    void *ret;
     size_t i;
 
     for (i = 0; i < ELEMENT_COUNT; i++) {

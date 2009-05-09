@@ -111,7 +111,6 @@ int main(int argc, char *argv[])
     qthread_t *me;
     size_t i;
     unsigned long iterations = 1000;
-    aligned_t *rets;
     qtimer_t timer = qtimer_new();
     void** numa_allocs;
     size_t numa_size;
