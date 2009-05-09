@@ -193,8 +193,8 @@ int qthread_fill(qthread_t * me, const aligned_t * dest);
  * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
  * (which, conveniently, returns NULL if you aren't a qthread).
  */
-int qthread_writeEF(qthread_t * me, aligned_t * const dest,
-		    const aligned_t * const src);
+int qthread_writeEF(qthread_t * me, aligned_t * restrict const dest,
+		    const aligned_t * restrict const src);
 int qthread_writeEF_const(qthread_t * me, aligned_t * const dest,
 			  const aligned_t src);
 
@@ -212,8 +212,8 @@ int qthread_writeEF_const(qthread_t * me, aligned_t * const dest,
  * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
  * (which, conveniently, returns NULL if you aren't a qthread).
  */
-int qthread_writeF(qthread_t * me, aligned_t * const dest,
-		   const aligned_t * const src);
+int qthread_writeF(qthread_t * me, aligned_t * restrict const dest,
+		   const aligned_t * restrict const src);
 int qthread_writeF_const(qthread_t * me, aligned_t * const dest,
 			 const aligned_t src);
 
@@ -231,8 +231,8 @@ int qthread_writeF_const(qthread_t * me, aligned_t * const dest,
  * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
  * (which, conveniently, returns NULL if you aren't a qthread).
  */
-int qthread_readFF(qthread_t * me, aligned_t * const dest,
-		   const aligned_t * const src);
+int qthread_readFF(qthread_t * me, aligned_t * restrict const dest,
+		   const aligned_t * restrict const src);
 
 /* These functions wait for memory to become full, and then empty it. When
  * memory becomes full, only one thread blocked like this will be awoken. Data
@@ -248,8 +248,8 @@ int qthread_readFF(qthread_t * me, aligned_t * const dest,
  * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
  * (which, conveniently, returns NULL if you aren't a qthread).
  */
-int qthread_readFE(qthread_t * me, aligned_t * const dest,
-		   const aligned_t * const src);
+int qthread_readFE(qthread_t * me, aligned_t * restrict const dest,
+		   const aligned_t * restrict const src);
 
 /* functions to implement FEB-ish locking/unlocking
  *

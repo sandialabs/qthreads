@@ -2815,8 +2815,8 @@ int qthread_fill(qthread_t * me, const aligned_t * dest)
  * 2 - the destination's FEB state gets changed from empty to full
  */
 
-int qthread_writeF(qthread_t * me, aligned_t * const dest,
-		   const aligned_t * const src)
+int qthread_writeF(qthread_t * me, aligned_t * restrict const dest,
+		   const aligned_t * restrict const src)
 {				       /*{{{ */
     qthread_addrstat_t *m;
     aligned_t *alignedaddr;
@@ -2863,8 +2863,8 @@ int qthread_writeF_const(qthread_t * me, aligned_t * const dest,
  * 3 - the destination's FEB state gets changed from empty to full
  */
 
-int qthread_writeEF(qthread_t * me, aligned_t * const dest,
-		    const aligned_t * const src)
+int qthread_writeEF(qthread_t * me, aligned_t * restrict const dest,
+		    const aligned_t * restrict const src)
 {				       /*{{{ */
     qthread_addrstat_t *m;
     qthread_addrres_t *X = NULL;
@@ -2938,8 +2938,8 @@ int qthread_writeEF_const(qthread_t * me, aligned_t * const dest,
  * 2 - data is copied from src to destination
  */
 
-int qthread_readFF(qthread_t * me, aligned_t * const dest,
-		   const aligned_t * const src)
+int qthread_readFF(qthread_t * me, aligned_t * restrict const dest,
+		   const aligned_t * restrict const src)
 {				       /*{{{ */
     qthread_addrstat_t *m = NULL;
     qthread_addrres_t *X = NULL;
@@ -3010,8 +3010,8 @@ int qthread_readFF(qthread_t * me, aligned_t * const dest,
  * 3 - the src's FEB bits get changed from full to empty
  */
 
-int qthread_readFE(qthread_t * me, aligned_t * const dest,
-		   const aligned_t * const src)
+int qthread_readFE(qthread_t * me, aligned_t * restrict const dest,
+		   const aligned_t * restrict const src)
 {				       /*{{{ */
     qthread_addrstat_t *m;
     aligned_t *alignedaddr;
