@@ -15,10 +15,8 @@ int f(int i) { foo = 1; return foo; }]])],
  [qt_cv_aligned_attr=yes],
  [qt_cv_aligned_attr=no])])
  AS_IF([test "x$qt_cv_aligned_attr" = xyes],
- 	   [alignedstr="__attribute__((aligned(x)))"],
-	   [alignedstr=""])
- AC_DEFINE_UNQUOTED([Q_ALIGNED(x)], [$alignedstr],
-		   [specify data alignment])
+ 	   [AC_DEFINE([QTHREAD_ALIGNEDDATA_ALLOWED], [1],
+		   [specifying data alignment is allowed])])
  AS_IF([test "x$qt_cv_aligned_attr" = xyes], [$1], [$2])
 ])
 

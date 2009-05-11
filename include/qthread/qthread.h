@@ -42,9 +42,14 @@
 #ifdef __cplusplus
 #define Q_STARTCXX extern "C" {
 #define Q_ENDCXX }
+#define restrict
 #else
 #define Q_STARTCXX
 #define Q_ENDCXX
+#endif
+
+#ifdef QTHREAD_ALIGNEDDATA_ALLOWED
+# define Q_ALIGNED(x) __attribute__((aligned(x)))
 #endif
 
 Q_STARTCXX /* */

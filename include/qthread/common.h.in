@@ -50,8 +50,8 @@
 /* if ia64intrin is needed */
 #undef QTHREAD_NEEDS_IA64INTRIN
 
-/* specify data alignment */
-#undef Q_ALIGNED
+/* specifying data alignment is allowed */
+#undef QTHREAD_ALIGNEDDATA_ALLOWED
 
 /* if the compiler supports __attribute__((malloc)) */
 #undef Q_MALLOC
