@@ -1075,7 +1075,7 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 #ifdef QTHREAD_DEBUG
     {
 	char *qdl = getenv("QTHREAD_DEBUG_LEVEL");
-	char *qdle;
+	char *qdle = NULL;
 
 	debuglevel = qdl ? strtol(qdl, &qdle, 0) : 0;
 	if (qdle == NULL || *qdle == 0) {
