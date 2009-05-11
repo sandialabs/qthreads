@@ -161,6 +161,7 @@ INNER_LOOP(qutil_int_min_inner, qutil_is_args, MIN_MACRO)
 INNER_LOOP_FF(qutil_int_FF_min_inner, qutil_is_args, MIN_MACRO)
 OUTER_LOOP(qutil_int_min, qutil_is_args, MIN_MACRO, saligned_t, qutil_int_min_inner,
 	qutil_int_FF_min_inner)
+
 struct qutil_mergesort_args {
     double *array;
     size_t first_start, first_stop;
@@ -176,7 +177,7 @@ static int dcmp(const void *a, const void *b)
     return 0;
 }
 
-aligned_t qutil_mergesort_presort(qthread_t * me,
+static aligned_t qutil_mergesort_presort(qthread_t * me,
 				  struct qutil_mergesort_args * args)
 {
     qsort(args->array + args->first_start,
@@ -184,7 +185,7 @@ aligned_t qutil_mergesort_presort(qthread_t * me,
     return 0;
 }
 
-aligned_t qutil_mergesort_inner(qthread_t * me,
+static aligned_t qutil_mergesort_inner(qthread_t * me,
 				struct qutil_mergesort_args * args)
 {
     double *array = args->array;

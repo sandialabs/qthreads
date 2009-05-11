@@ -24,7 +24,7 @@ static pthread_mutex_t sfnf_lock;
  * If the qthread is not a future, it returns NULL; otherwise, it returns
  * a pointer to the bookkeeping structure associated with that future's
  * shepherd. */
-location_t *ft_loc(qthread_t * qthr)
+static location_t *ft_loc(qthread_t * qthr)
 {
     return qthread_isfuture(qthr) ? (location_t *)
 	pthread_getspecific(future_bookkeeping) : NULL;
@@ -32,7 +32,7 @@ location_t *ft_loc(qthread_t * qthr)
 
 #ifdef CLEANUP
 /* this requires that qthreads haven't been finalized yet */
-aligned_t future_shep_cleanup(qthread_t * me, void *arg)
+static aligned_t future_shep_cleanup(qthread_t * me, void *arg)
 {
     location_t *ptr = (location_t *) pthread_getspecific(future_bookkeeping);
 
@@ -43,7 +43,7 @@ aligned_t future_shep_cleanup(qthread_t * me, void *arg)
     }
 }
 
-void future_cleanup(void)
+static void future_cleanup(void)
 {
     int i;
     aligned_t *rets;
@@ -66,7 +66,7 @@ void future_cleanup(void)
  * better in the case of big machines (like massive SMP's) with intelligent
  * pthreads implementations than on PIM, but that's mostly because PIM's libc
  * doesn't support PIM-local data (yet). Better PIM support is coming. */
-aligned_t future_shep_init(qthread_t * me, void *arg)
+static aligned_t future_shep_init(qthread_t * me, void *arg)
 {
     qthread_shepherd_id_t shep = qthread_shep(me);
     location_t *ptr = &(future_bookkeeping_array[shep]);
@@ -80,7 +80,7 @@ aligned_t future_shep_init(qthread_t * me, void *arg)
 
 void future_init(int vp_per_loc)
 {
-    int i;
+    qthread_shepherd_id_t i;
     aligned_t *rets;
     qthread_t *me = qthread_self();
 
@@ -177,9 +177,9 @@ void future_fork(qthread_f fptr, void *arg, aligned_t * retval)
     qthread_fork_future_to(me, fptr, arg, retval, rr);
 }
 
-void future_fork_to(qthread_f fptr, void *arg, aligned_t *retval, qthread_shepherd_id_t shep)
+void future_fork_to(qthread_f fptr, void *arg, aligned_t * retval,
+		    qthread_shepherd_id_t shep)
 {
-    location_t *ptr;
     qthread_t *me;
 
     assert(future_bookkeeping_array != NULL);
@@ -189,7 +189,6 @@ void future_fork_to(qthread_f fptr, void *arg, aligned_t *retval, qthread_shephe
 	return;
     }
 
-    ptr = (location_t *) pthread_getspecific(future_bookkeeping);
     me = qthread_self();
 
     qthread_debug(2, "Thread %p forking a future\n", (void *)me);
@@ -246,7 +245,7 @@ void future_acquire(qthread_t * me)
 
 /* this is pretty obvious: wait for a thread to finish (ft is supposed
  * to be a thread/future's return value. */
-void future_join(qthread_t * me, aligned_t * ft)
+static void future_join(qthread_t * me, aligned_t * ft)
 {
     assert(me != NULL);
     assert(future_bookkeeping_array != NULL);

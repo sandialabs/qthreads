@@ -36,8 +36,7 @@ static void qt_loop_inner(const size_t start, const size_t stop,
 	steps++;
     }
     rets = (aligned_t *) malloc(sizeof(aligned_t) * steps);
-    qwa =
-	(struct qt_loop_wrapper_args *)
+    qwa = (struct qt_loop_wrapper_args *)
 	malloc(sizeof(struct qt_loop_wrapper_args) * steps);
 
     for (i = start; i < stop; i += stride) {
@@ -45,12 +44,16 @@ static void qt_loop_inner(const size_t start, const size_t stop,
 	qwa[threadct].arg = argptr;
 	qwa[threadct].donecount = &donecount;
 	if (future) {
-	    future_fork_to((qthread_f) qt_loop_wrapper, qwa + threadct, rets +
-		    threadct, threadct % qthread_num_shepherds());
+	    future_fork_to((qthread_f) qt_loop_wrapper, qwa + threadct,
+			   rets + threadct,
+			   (qthread_shepherd_id_t) (threadct %
+						    qthread_num_shepherds()));
 	} else {
 	    qthread_fork_to((qthread_f) qt_loop_wrapper, qwa + threadct,
 			    rets + threadct,
-			    threadct % qthread_num_shepherds());
+			    (qthread_shepherd_id_t) (threadct %
+						     qthread_num_shepherds
+						     ()));
 	}
 	threadct++;
     }
@@ -101,22 +104,23 @@ static aligned_t qloop_wrapper(qthread_t * me,
 }
 
 static QINLINE void qt_loop_balance_inner(const size_t start,
-					 const size_t stop,
-					 const qt_loop_f func, void *argptr,
-					 const int future)
+					  const size_t stop,
+					  const qt_loop_f func, void *argptr,
+					  const int future)
 {
     qthread_shepherd_id_t i;
+    const qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
     struct qloop_wrapper_args *qwa =
 	(struct qloop_wrapper_args *)malloc(sizeof(struct qloop_wrapper_args)
-					    * qthread_num_shepherds());
+					    * maxsheps);
     volatile aligned_t donecount = 0;
     size_t len = stop - start;
-    size_t each = len / qthread_num_shepherds();
-    size_t extra = len - (each * qthread_num_shepherds());
+    size_t each = len / maxsheps;
+    size_t extra = len - (each * maxsheps);
     size_t iterend = start;
     qthread_t *me = qthread_self();
 
-    for (i = 0; i < qthread_num_shepherds(); i++) {
+    for (i = 0; i < maxsheps; i++) {
 	qwa[i].func = func;
 	qwa[i].arg = argptr;
 	qwa[i].startat = iterend;
@@ -134,7 +138,7 @@ static QINLINE void qt_loop_balance_inner(const size_t start,
 	}
     }
     /* turning this into a spinlock :P */
-    while (donecount < qthread_num_shepherds()) {
+    while (donecount < maxsheps) {
 	qthread_yield(me);
     }
     free(qwa);
@@ -166,13 +170,13 @@ static aligned_t qloopaccum_wrapper(qthread_t * me,
 }
 
 static QINLINE void qt_loopaccum_balance_inner(const size_t start,
-					      const size_t stop,
-					      const size_t size,
-					      void *restrict out,
-					      const qt_loopr_f func,
-					      void *restrict argptr,
-					      const qt_accum_f acc,
-					      const int future)
+					       const size_t stop,
+					       const size_t size,
+					       void *restrict out,
+					       const qt_loopr_f func,
+					       void *restrict argptr,
+					       const qt_accum_f acc,
+					       const int future)
 {
     qthread_shepherd_id_t i;
     struct qloopaccum_wrapper_args *qwa = (struct qloopaccum_wrapper_args *)
@@ -207,8 +211,8 @@ static QINLINE void qt_loopaccum_balance_inner(const size_t start,
 	}
 	iterend = qwa[i].stopat;
 	if (future) {
-	    future_fork_to((qthread_f) qloopaccum_wrapper, qwa + i,
-				   rets + i, i);
+	    future_fork_to((qthread_f) qloopaccum_wrapper, qwa + i, rets + i,
+			   i);
 	} else {
 	    qthread_fork_to((qthread_f) qloopaccum_wrapper, qwa + i, rets + i,
 			    i);
@@ -341,7 +345,8 @@ struct qt_qsort_args
     aligned_t *restrict furthest_leftwall, *restrict furthest_rightwall;
 };
 
-aligned_t qt_qsort_partition(qthread_t * me, struct qt_qsort_args *args)
+static aligned_t qt_qsort_partition(qthread_t * me,
+				    struct qt_qsort_args *args)
 {
     double *a = args->array;
     const double pivot = args->pivot;
@@ -422,10 +427,10 @@ struct qt_qsort_iprets
     aligned_t leftwall, rightwall;
 };
 
-struct qt_qsort_iprets qt_qsort_inner_partitioner(qthread_t * me,
-						  double *array,
-						  const size_t length,
-						  const double pivot)
+static struct qt_qsort_iprets qt_qsort_inner_partitioner(qthread_t * me,
+							 double *array,
+							 const size_t length,
+							 const double pivot)
 {
     const size_t chunksize = 10;
 
@@ -482,7 +487,7 @@ struct qt_qsort_iprets qt_qsort_inner_partitioner(qthread_t * me,
     return retval;
 }
 
-aligned_t qt_qsort_inner(qthread_t * me, const struct qt_qsort_iargs * a)
+static aligned_t qt_qsort_inner(qthread_t * me, const struct qt_qsort_iargs * a)
 {
     const size_t len = a->length;
     double *array = a->array;

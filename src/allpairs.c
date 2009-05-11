@@ -24,8 +24,8 @@ struct qt_ap_workunit
     size_t a1_start, a1_stop, a2_start, a2_stop;
 };
 
-aligned_t qt_ap_worker(qthread_t * restrict me,
-		       struct qt_ap_wargs *restrict args)
+static aligned_t qt_ap_worker(qthread_t * restrict me,
+			      struct qt_ap_wargs *restrict args)
 {
     while (1) {
 	struct qt_ap_workunit *restrict const wu =
@@ -46,7 +46,8 @@ aligned_t qt_ap_worker(qthread_t * restrict me,
 	    size_t a1_i;
 
 	    for (a1_i = 0; a1_i < (wu->a1_stop - wu->a1_start); a1_i++) {
-		const char *restrict const this_a1_base = a1_base + (a1_i * a1_usize);
+		const char *restrict const this_a1_base =
+		    a1_base + (a1_i * a1_usize);
 		char *restrict const this_outbase =
 		    args->output[a1_i + wu->a1_start];
 		size_t a2_i;
@@ -75,9 +76,9 @@ struct qt_ap_gargs2
     const size_t start, stop;
 };
 
-void qt_ap_genwork2(qthread_t * restrict me, const size_t startat,
-		    const size_t stopat, const qarray * restrict a,
-		    struct qt_ap_gargs2 *restrict gargs)
+static void qt_ap_genwork2(qthread_t * restrict me, const size_t startat,
+			   const size_t stopat, const qarray * restrict a,
+			   struct qt_ap_gargs2 *restrict gargs)
 {
     struct qt_ap_workunit *workunit = malloc(sizeof(struct qt_ap_workunit));
 
@@ -89,9 +90,9 @@ void qt_ap_genwork2(qthread_t * restrict me, const size_t startat,
     qdqueue_enqueue(me, gargs->wq, workunit);
 }
 
-void qt_ap_genwork(qthread_t * restrict me, const size_t startat,
-		   const size_t stopat, const qarray * restrict a,
-		   struct qt_ap_gargs *restrict gargs)
+static void qt_ap_genwork(qthread_t * restrict me, const size_t startat,
+			  const size_t stopat, const qarray * restrict a,
+			  struct qt_ap_gargs *restrict gargs)
 {
     struct qt_ap_gargs2 garg2 = { gargs->wq, startat, stopat };
 

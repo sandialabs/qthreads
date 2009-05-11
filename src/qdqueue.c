@@ -20,7 +20,7 @@ struct qdsubqueue_s;
 struct qdqueue_adstruct_s
 {
     struct qdsubqueue_s *shep;
-    uintptr_t generation; /* XXX change to aligned_t when we have a CAS */
+    uintptr_t generation;	/* XXX change to aligned_t when we have a CAS */
 };
 
 struct qdqueue_adheap_elem_s
@@ -43,8 +43,8 @@ struct qdsubqueue_s
     struct qdsubqueue_s *last_consumed;	/* should be atomically writable */
 
     struct qdqueue_adheap_s ads;
-    uintptr_t last_ad_issued; /* using this datatype instead of aligned_t so they can be CAS'd */
-    uintptr_t last_ad_consumed; /* XXX change this when qthreads grows a CAS function */
+    uintptr_t last_ad_issued;	/* using this datatype instead of aligned_t so they can be CAS'd */
+    uintptr_t last_ad_consumed;	/* XXX change this when qthreads grows a CAS function */
 
     size_t nNeighbors;
     struct qdsubqueue_s **neighbors;	/* ordered by distance */
@@ -201,7 +201,7 @@ static void qdqueue_internal_sortedsheps(qthread_shepherd_id_t shep,
 	/* now, create an array of all the sheps that are exactly that far away */
 	thisdist = malloc(count * sizeof(qthread_shepherd_id_t));
 	assert(thisdist);
-	for (j = k = 0; j < maxsheps && k < count; j++) {
+	for (j = 0, k = 0; j < maxsheps && k < count; j++) {
 	    if (j == shep)
 		continue;
 	    if (distances[j] == mindist) {
@@ -224,17 +224,19 @@ static void qdqueue_internal_sortedsheps(qthread_shepherd_id_t shep,
 static struct qdsubqueue_s
     **qdqueue_internal_getneighbors(qthread_shepherd_id_t shep,
 				    struct qdsubqueue_s *Qs,
-				    size_t * numNeighbors, int *distances)
+				    size_t * numNeighbors,
+				    int *Q_UNUSED distances)
 {				       /*{{{ */
     struct qdsubqueue_s **ret;
     size_t i;
 
-#if (HAVE_SYS_LGRP_USER_H || QTHREAD_HAVE_LIBNUMA)
+#if (defined(HAVE_SYS_LGRP_USER_H) || defined(QTHREAD_HAVE_LIBNUMA))
     /* we define a "neighbor" in terms of distance, because that's all we've
      * got, so, we find the shortest non-me distance (i.e. >10), and anything
      * that's less than 10 away from that is considered one of my neighbors */
     qthread_shepherd_id_t *temp;
     size_t j, numN = 0;
+
 # ifdef HAVE_SYS_LGRP_USER_H
 #  define NONME_DIST 5
 # else
@@ -255,8 +257,7 @@ static struct qdsubqueue_s
     for (i = 0; i < maxsheps; i++) {
 	if (i == shep)
 	    continue;
-	if (distances[i] < (mindist + NONME_DIST))
-	{
+	if (distances[i] < (mindist + NONME_DIST)) {
 	    numN++;
 	}
     }
@@ -461,13 +462,14 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
 
 		if (lc == ad.shep) {
 		    /* it's working on its own queue */
-		    uintptr_t last_ad = ad.shep->last_ad_consumed; /* XXX see note in struct definition */
+		    uintptr_t last_ad = ad.shep->last_ad_consumed;	/* XXX see note in struct definition */
 
 		    while (last_ad < ad.generation) {
 			last_ad =
-			    (uintptr_t) qt_cas((volatile void**)&(ad.shep->last_ad_consumed),
-					       (void*)last_ad,
-					       (void*)ad.generation);
+			    (uintptr_t) qt_cas((volatile void **)
+					       &(ad.shep->last_ad_consumed),
+					       (void *)last_ad,
+					       (void *)ad.generation);
 		    }
 		    if ((ret = qlfqueue_dequeue(me, ad.shep->theQ)) != NULL) {
 			myq->last_consumed = ad.shep;
@@ -477,7 +479,8 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
 		    /* it got work from somewhere! */
 		    qdqueue_adheap_push(me, &myq->ads, lc, 0);
 		    /* reset the remote host's last_consumed counter, to avoid infinite loops */
-		    (void)qt_cas((volatile void**)&(ad.shep->last_consumed), (void*)lc, NULL);
+		    (void)qt_cas((volatile void **)&(ad.shep->last_consumed),
+				 (void *)lc, NULL);
 		}
 	    }
 	}
@@ -538,5 +541,4 @@ int qdqueue_empty(qthread_t * me, qdqueue_t * q)
 	}
 	return 1;		       /* we searched everywhere, and every queue was empty */
     }
-    return 0;
 }				       /*}}} */

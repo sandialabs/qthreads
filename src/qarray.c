@@ -9,7 +9,7 @@
 # include "qthread_innards.h"	       /* for shep_to_node */
 # include <numa.h>
 # include <sys/mman.h>
-#elif HAVE_SYS_LGRP_USER_H
+#elif defined(HAVE_SYS_LGRP_USER_H)
 # ifdef HAVE_MADV_ACCESS_LWP
 #  include <sys/types.h>
 #  include <sys/mman.h>
@@ -67,9 +67,10 @@ static inline qthread_shepherd_id_t qarray_internal_shepof_ch(const qarray *
 	    return a->dist_shep;
 	case FIXED_HASH:
 	default:
-	    return ((((uintptr_t) segment_head) -
-		     ((uintptr_t) a->base_ptr)) / a->segment_bytes) %
-		qthread_num_shepherds();
+	    return (qthread_shepherd_id_t) (((((uintptr_t) segment_head) -
+					      ((uintptr_t) a->base_ptr)) /
+					     a->segment_bytes) %
+					    qthread_num_shepherds());
 	case DIST:
 	    return *qarray_internal_segment_shep(a, segment_head);
 	    break;
@@ -85,7 +86,8 @@ static inline qthread_shepherd_id_t qarray_internal_shepof_shi(const qarray *
 	case ALL_SAME:
 	    return a->dist_shep;
 	case FIXED_HASH:
-	    return (shi / a->segment_size) % qthread_num_shepherds();
+	    return (qthread_shepherd_id_t) ((shi / a->segment_size) %
+					    qthread_num_shepherds());
 	case DIST:
 	    return *qarray_internal_segment_shep(a,
 						 qarray_elem_nomigrate(a,
@@ -278,7 +280,8 @@ static qarray *qarray_create_internal(const size_t count,
 			 segment_count);
 	    break;
 	case ALL_RAND:
-	    ret->dist_shep = random() % qthread_num_shepherds();
+	    ret->dist_shep =
+		(qthread_shepherd_id_t) (random() % qthread_num_shepherds());
 	    qthread_incr(&chunk_distribution_tracker[ret->dist_shep],
 			 segment_count);
 	    break;
@@ -331,7 +334,7 @@ static qarray *qarray_create_internal(const size_t count,
 		    qarray_elem_nomigrate(ret, segment * ret->segment_size);
 		qthread_shepherd_id_t *ptr =
 		    qarray_internal_segment_shep(ret, seghead);
-		*ptr = segment % max_sheps;
+		*ptr = (qthread_shepherd_id_t) (segment % max_sheps);
 #ifdef QTHREAD_HAVE_LIBNUMA
 		if (qthread_internal_shep_to_node(segment % max_sheps) !=
 		    QTHREAD_NO_NODE) {
@@ -351,14 +354,14 @@ static qarray *qarray_create_internal(const size_t count,
 	    const qthread_shepherd_id_t max_sheps = qthread_num_shepherds();
 	    const size_t field_size = segment_count / max_sheps;
 	    size_t field_count = 0;
-	    qthread_shepherd_id_t cur_shep = 0;
+	    unsigned int cur_shep = 0;
 
 	    for (segment = 0; segment < segment_count; segment++) {
 		char *seghead =
 		    qarray_elem_nomigrate(ret, segment * ret->segment_size);
 		qthread_shepherd_id_t *ptr =
 		    qarray_internal_segment_shep(ret, seghead);
-		*ptr = cur_shep;
+		*ptr = (qthread_shepherd_id_t) cur_shep;
 #ifdef QTHREAD_HAVE_LIBNUMA
 		if (qthread_internal_shep_to_node(cur_shep) !=
 		    QTHREAD_NO_NODE) {
@@ -388,7 +391,7 @@ static qarray *qarray_create_internal(const size_t count,
 		    qarray_elem_nomigrate(ret, segment * ret->segment_size);
 		qthread_shepherd_id_t *ptr =
 		    qarray_internal_segment_shep(ret, seghead);
-		*ptr = random() % max_sheps;
+		*ptr = (qthread_shepherd_id_t) (random() % max_sheps);
 #ifdef QTHREAD_HAVE_LIBNUMA
 		if (qthread_internal_shep_to_node(*ptr) != QTHREAD_NO_NODE) {
 		    numa_tonode_memory(seghead, ret->segment_bytes,
@@ -770,12 +773,14 @@ void qarray_iter(qthread_t * me, qarray * a, const size_t startat,
 		}
 	    } else {
 		qthread_shepherd_id_t i;
+		const qthread_shepherd_id_t maxsheps =
+		    qthread_num_shepherds();
 
-		for (i = 0; i < qthread_num_shepherds(); i++) {
+		for (i = 0; i < maxsheps; i++) {
 		    qthread_fork_to((qthread_f) qarray_strider, &qfwa, NULL,
 				    i);
 		}
-		while (donecount < qthread_num_shepherds()) {
+		while (donecount < maxsheps) {
 		    qthread_yield(me);
 		}
 	    }
@@ -814,12 +819,14 @@ void qarray_iter_loop(qthread_t * me, qarray * a, const size_t startat,
 		}
 	    } else {
 		qthread_shepherd_id_t i;
+		const qthread_shepherd_id_t maxsheps =
+		    qthread_num_shepherds();
 
-		for (i = 0; i < qthread_num_shepherds(); i++) {
+		for (i = 0; i < maxsheps; i++) {
 		    qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa,
 				    NULL, i);
 		}
-		while (donecount < qthread_num_shepherds()) {
+		while (donecount < maxsheps) {
 		    qthread_yield(me);
 		}
 	    }
@@ -859,12 +866,14 @@ void qarray_iter_constloop(qthread_t * me, const qarray * a,
 		}
 	    } else {
 		qthread_shepherd_id_t i;
+		const qthread_shepherd_id_t maxsheps =
+		    qthread_num_shepherds();
 
-		for (i = 0; i < qthread_num_shepherds(); i++) {
+		for (i = 0; i < maxsheps; i++) {
 		    qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa,
 				    NULL, i);
 		}
-		while (donecount < qthread_num_shepherds()) {
+		while (donecount < maxsheps) {
 		    qthread_yield(me);
 		}
 	    }
