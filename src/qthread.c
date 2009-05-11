@@ -298,7 +298,7 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t * shep,
 static QINLINE void qthread_gotlock_empty(qthread_shepherd_t * shep,
 					  qthread_addrstat_t * m, void *maddr,
 					  const char recursive);
-#if defined(HAVE_QTHREAD_LIBNUMA) || defined(HAVE_SYS_LGRP_USER_H)
+#if defined(QTHREAD_HAVE_LIBNUMA) || defined(HAVE_SYS_LGRP_USER_H)
 #ifdef HAVE_QSORT_R
 static int qthread_internal_shepcomp(void *src, const void *a, const void *b)
 {
