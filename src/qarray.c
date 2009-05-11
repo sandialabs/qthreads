@@ -1,5 +1,5 @@
 #ifdef HAVE_CONFIG_H
-# include <config.h>
+# include "config.h"
 #endif
 #include <stdlib.h>		       /* for calloc() */
 #include <unistd.h>		       /* for getpagesize() */
