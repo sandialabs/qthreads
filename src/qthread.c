@@ -1591,9 +1591,8 @@ void qthread_finalize(void)
     for (i = 1; i < qlib->nshepherds; i++) {
 	if ((r = pthread_join(qlib->shepherds[i].shepherd, NULL)) != 0) {
 	    fprintf(stderr,
-		    "qthread_finalize: pthread_join() of shep %i failed (%d)\n",
-		    i, r);
-	    perror("qthread_finalize");
+		    "qthread_finalize: pthread_join() of shep %i failed (%d, or \"%s\")\n",
+		    i, r, strerror(r));
 	    abort();
 	}
 	qt_lfqueue_free(qlib->shepherds[i].ready);
