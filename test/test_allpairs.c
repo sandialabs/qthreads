@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
     }
 
     qt_allpairs(a1, a2, (void **)out, sizeof(int), (dist_f) mult);
-    printout(out);
+    //printout(out);
     for (i = 0; i < ASIZE; i++) {
 	free(out[i]);
     }
