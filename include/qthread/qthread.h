@@ -8,10 +8,10 @@
 
 #include <string.h>		       /* for memcpy() */
 
-#if QTHREAD_NEEDS_IA64INTRIN
-# if HAVE_IA64INTRIN_H
+#ifdef QTHREAD_NEEDS_IA64INTRIN
+# ifdef HAVE_IA64INTRIN_H
 #  include <ia64intrin.h>
-# elif HAVE_IA32INTRIN_H
+# elif defined(HAVE_IA32INTRIN_H)
 #  include <ia32intrin.h>
 # endif
 #endif
@@ -47,8 +47,7 @@
 #define Q_ENDCXX
 #endif
 
-Q_STARTCXX;
-
+Q_STARTCXX /* */
 /* NOTE!!!!!!!!!!!
  * Reads and writes operate on aligned_t-size segments of memory.
  *
@@ -64,13 +63,13 @@ typedef int64_t Q_ALIGNED(QTHREAD_ALIGNMENT_ALIGNED_T) saligned_t;
 #else
 #error "Don't know type for sizeof aligned_t"
 #endif
-Q_ENDCXX;
+Q_ENDCXX /* */
 
 #ifdef SST
 # include <qthread/qthread-sst.h>
 #else
 
-Q_STARTCXX;
+Q_STARTCXX /* */
 typedef struct qthread_s qthread_t;
 typedef unsigned short qthread_shepherd_id_t;	/* doubt we'll run more than 65k shepherds */
 
@@ -920,7 +919,7 @@ static QINLINE unsigned long qthread_incr_xx(volatile void *addr, int incr,
     return 0;			       /* compiler check */
 }
 
-Q_ENDCXX;
+Q_ENDCXX /* */
 
 #ifndef __cplusplus
 

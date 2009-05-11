@@ -3,10 +3,10 @@
 
 #include <qthread/common.h>
 
-#if QTHREAD_NEEDS_IA64INTRIN
-# if HAVE_IA64INTRIN_H
+#ifdef QTHREAD_NEEDS_IA64INTRIN
+# ifdef HAVE_IA64INTRIN_H
 #  include <ia64intrin.h>
-# elif HAVE_IA32INTRIN_H
+# elif defined(HAVE_IA32INTRIN_H)
 #  include <ia32intrin.h>
 # endif
 #endif
