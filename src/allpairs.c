@@ -37,17 +37,17 @@ aligned_t qt_ap_worker(qthread_t * restrict me,
 	    }
 	    qthread_yield(me);
 	} else {
-	    const void *a1_base =
+	    const char *a1_base =
 		qarray_elem_nomigrate(args->a1, wu->a1_start);
-	    const void *a2_base =
+	    const char *a2_base =
 		qarray_elem_nomigrate(args->a2, wu->a2_start);
 	    const size_t a1_usize = args->a1->unit_size;
 	    const size_t a2_usize = args->a2->unit_size;
 	    size_t a1_i;
 
 	    for (a1_i = 0; a1_i < (wu->a1_stop - wu->a1_start); a1_i++) {
-		const void *this_a1_base = a1_base + (a1_i * a1_usize);
-		void *restrict const this_outbase =
+		const char *restrict const this_a1_base = a1_base + (a1_i * a1_usize);
+		char *restrict const this_outbase =
 		    args->output[a1_i + wu->a1_start];
 		size_t a2_i;
 
@@ -68,6 +68,7 @@ struct qt_ap_gargs
     qdqueue_t *restrict wq;
     const qarray *restrict array2;
 };
+
 struct qt_ap_gargs2
 {
     qdqueue_t *restrict wq;
