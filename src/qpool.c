@@ -140,6 +140,7 @@ static QINLINE void qpool_internal_aligned_free(void *freeme,
 	    free(freeme);
 #endif
 	return;
+    }
 }				       /*}}} */
 
 // item_size is how many bytes to return
