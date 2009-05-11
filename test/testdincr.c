@@ -5,13 +5,13 @@
 double master = 0.0;
 double retvals[30];
 
-aligned_t incr(qthread_t * me, void *arg)
+static aligned_t incr(qthread_t * me, void *arg)
 {
-    retvals[(intptr_t)arg] = qthread_dincr(&master, 1.0);
+    retvals[(intptr_t) arg] = qthread_dincr(&master, 1.0);
     return 0;
 }
 
-aligned_t incr5(qthread_t * me, void *arg)
+static aligned_t incr5(qthread_t * me, void *arg)
 {
     qthread_dincr(&master, 5.0);
     return 0;
@@ -38,15 +38,17 @@ int main()
     assert(ret_test == 0.0);
     master = 2;
     for (i = 0; i < 30; i++) {
-	qthread_fork(incr, (void*)(intptr_t)i, &(rets[i]));
+	qthread_fork(incr, (void *)(intptr_t) i, &(rets[i]));
     }
     for (i = 0; i < 30; i++) {
 	qthread_readFF(me, NULL, rets + i);
     }
     if (master != 32.0) {
+	int j;
+
 	printf("master is %f rather than 32\n", master);
-	for (int i=0; i<30; i++) {
-	    printf("retvals[%i] = %f\n", i, retvals[i]);
+	for (j = 0; j < 30; j++) {
+	    printf("retvals[%i] = %f\n", j, retvals[j]);
 	}
     }
     assert(master == 32.0);

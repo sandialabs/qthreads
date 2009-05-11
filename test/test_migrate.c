@@ -4,7 +4,7 @@
 #include <unistd.h>
 #include <qthread/qthread.h>
 
-aligned_t migrant(qthread_t * me, void *arg)
+static aligned_t migrant(qthread_t * me, void *arg)
 {
     int myshep = qthread_shep(me);
 

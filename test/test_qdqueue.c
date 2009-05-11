@@ -7,13 +7,13 @@
 #define ELEMENT_COUNT 10000
 #define THREAD_COUNT 128
 
-aligned_t queuer (qthread_t *me, void *arg)
+static aligned_t queuer(qthread_t * me, void *arg)
 {
-    qdqueue_t *q = (qdqueue_t*)arg;
+    qdqueue_t *q = (qdqueue_t *) arg;
     size_t i;
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
-	if (qdqueue_enqueue(me, q, (void*)me) != QTHREAD_SUCCESS) {
+	if (qdqueue_enqueue(me, q, (void *)me) != QTHREAD_SUCCESS) {
 	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", me);
 	    exit(-2);
 	}
@@ -21,9 +21,9 @@ aligned_t queuer (qthread_t *me, void *arg)
     return 0;
 }
 
-aligned_t dequeuer (qthread_t *me, void *arg)
+static aligned_t dequeuer(qthread_t * me, void *arg)
 {
-    qdqueue_t *q = (qdqueue_t*)arg;
+    qdqueue_t *q = (qdqueue_t *) arg;
     size_t i;
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
@@ -60,12 +60,14 @@ int main(int argc, char *argv[])
 	exit(-1);
     }
 
-    if (qdqueue_enqueue(me, q, (void*)me) != 0) {
+    if (qdqueue_enqueue(me, q, (void *)me) != 0) {
 	fprintf(stderr, "qdqueue_enqueue() failed!\n");
 	exit(-1);
     }
 
-    {void* ret;
+    {
+	void *ret;
+
 	if ((ret = qdqueue_dequeue(me, q)) != me) {
 	    fprintf(stderr, "qdqueue_dequeue() failed! %p\n", ret);
 	    exit(-1);
@@ -73,14 +75,15 @@ int main(int argc, char *argv[])
     }
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
-	if (qdqueue_enqueue(me, q, (void*)(intptr_t)(i+1)) != 0) {
+	if (qdqueue_enqueue(me, q, (void *)(intptr_t) (i + 1)) != 0) {
 	    fprintf(stderr, "qdqueue_enqueue(q,%i) failed!\n", (int)i);
 	    exit(-1);
 	}
     }
     for (i = 0; i < ELEMENT_COUNT; i++) {
-	if (qdqueue_dequeue(me, q) != (void*)(intptr_t)(i+1)) {
-	    fprintf(stderr, "qdqueue_dequeue() failed, didn't equal %i!\n", (int)i);
+	if (qdqueue_dequeue(me, q) != (void *)(intptr_t) (i + 1)) {
+	    fprintf(stderr, "qdqueue_dequeue() failed, didn't equal %i!\n",
+		    (int)i);
 	    exit(-1);
 	}
     }

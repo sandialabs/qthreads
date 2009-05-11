@@ -1,5 +1,5 @@
 #ifdef HAVE_CONFIG_H
-#include <config.h>
+# include "config.h"
 #endif
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,7 +13,7 @@ static aligned_t x = 0;
 
 static aligned_t alldone;
 
-aligned_t thread(qthread_t * t, void *arg)
+static aligned_t thread(qthread_t * t, void *arg)
 {
     int me = qthread_id(qthread_self());
 

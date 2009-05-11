@@ -7,16 +7,17 @@
 #include <string.h>
 #include <qthread/qthread.h>
 #ifdef QTHREAD_DEBUG
-# include <qthread_innards.h> /* for qthread_debug() */
+# include <qthread_innards.h>	       /* for qthread_debug() */
 #endif
 
 aligned_t counter = 0;
 
-aligned_t thread (qthread_t *me, void *arg)
+static aligned_t thread(qthread_t * me, void *arg)
 {
     int id = qthread_id(me);
     int ret;
     int ret2;
+
     //printf("first id = %i\n", id);
 #ifdef QTHREAD_DEBUG
     if (id != 1)

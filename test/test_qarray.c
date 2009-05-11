@@ -16,27 +16,29 @@ typedef struct
     char pad[41];
 } offsize;
 
-aligned_t assign1(qthread_t * me, void *arg)
+static aligned_t assign1(qthread_t * me, void *arg)
 {
     *(double *)arg = 1.0;
     qthread_incr(&count, 1);
     return 0;
 }
 
-aligned_t assignall1(qthread_t * me, void *arg)
+static aligned_t assignall1(qthread_t * me, void *arg)
 {
     memset(arg, 1, sizeof(bigobj));
     qthread_incr(&count, 1);
     return 0;
 }
-void assignoff1(qthread_t * me, const size_t startat, const size_t stopat,
-		qarray *q, void*arg)
+
+static void assignoff1(qthread_t * me, const size_t startat,
+		       const size_t stopat, qarray * q, void *arg)
 {
     for (size_t i = startat; i < stopat; i++) {
-	void * ptr = qarray_elem_nomigrate(q, i);
+	void *ptr = qarray_elem_nomigrate(q, i);
+
 	memset(ptr, 1, sizeof(offsize));
     }
-    qthread_incr(&count, stopat-startat);
+    qthread_incr(&count, stopat - startat);
 }
 
 int main(int argc, char *argv[])
@@ -46,11 +48,11 @@ int main(int argc, char *argv[])
     qthread_t *me;
     distribution_t disttypes[] = {
 	FIXED_HASH, ALL_LOCAL, ALL_RAND, ALL_LEAST, DIST_RAND,
-	    DIST_REG_STRIPES, DIST_REG_FIELDS, DIST_LEAST
+	DIST_REG_STRIPES, DIST_REG_FIELDS, DIST_LEAST
     };
     const char *distnames[] = {
 	"FIXED_HASH", "ALL_LOCAL", "ALL_RAND", "ALL_LEAST", "DIST_RAND",
-	    "DIST_REG_STRIPES", "DIST_REG_FIELDS", "DIST_LEAST"
+	"DIST_REG_STRIPES", "DIST_REG_FIELDS", "DIST_LEAST"
     };
     int dt_index;
     int interactive = 0;
@@ -74,12 +76,15 @@ int main(int argc, char *argv[])
 	 dt_index++) {
 	/* test a basic array of doubles */
 	count = 0;
-	a = qarray_create_configured(ELEMENT_COUNT, sizeof(double), disttypes[dt_index], 0, 0);
+	a = qarray_create_configured(ELEMENT_COUNT, sizeof(double),
+				     disttypes[dt_index], 0, 0);
 	if (interactive)
-	    printf("%s: created basic array of doubles\n", distnames[dt_index]);
+	    printf("%s: created basic array of doubles\n",
+		   distnames[dt_index]);
 	qarray_iter(me, a, 0, ELEMENT_COUNT, assign1);
 	if (interactive)
-	    printf("%s: iterated; now checking work...\n", distnames[dt_index]);
+	    printf("%s: iterated; now checking work...\n",
+		   distnames[dt_index]);
 	if (count != ELEMENT_COUNT) {
 	    printf("count = %lu, dt_index = %i\n", (unsigned long)count,
 		   dt_index);
@@ -105,12 +110,14 @@ int main(int argc, char *argv[])
 
 	/* now test an array of giant things */
 	count = 0;
-	a = qarray_create_configured(ELEMENT_COUNT, sizeof(bigobj), disttypes[dt_index], 0, 0);
+	a = qarray_create_configured(ELEMENT_COUNT, sizeof(bigobj),
+				     disttypes[dt_index], 0, 0);
 	if (interactive)
 	    printf("%s: created array of big objects\n", distnames[dt_index]);
 	qarray_iter(me, a, 0, ELEMENT_COUNT, assignall1);
 	if (interactive)
-	    printf("%s: iterated; now checking work...\n", distnames[dt_index]);
+	    printf("%s: iterated; now checking work...\n",
+		   distnames[dt_index]);
 	if (count != ELEMENT_COUNT) {
 	    printf("count = %lu, dt_index = %i\n", (unsigned long)count,
 		   dt_index);
@@ -141,12 +148,14 @@ int main(int argc, char *argv[])
 	/* now test an array of weird-sized things */
 	count = 0;
 	a = qarray_create_configured(ELEMENT_COUNT, sizeof(offsize),
-			  disttypes[dt_index], 0, 0);
+				     disttypes[dt_index], 0, 0);
 	if (interactive)
-	    printf("%s: created array of odd-sized objects\n", distnames[dt_index]);
+	    printf("%s: created array of odd-sized objects\n",
+		   distnames[dt_index]);
 	qarray_iter_loop(me, a, 0, ELEMENT_COUNT, assignoff1, NULL);
 	if (interactive)
-	    printf("%s: iterated; now checking work...\n", distnames[dt_index]);
+	    printf("%s: iterated; now checking work...\n",
+		   distnames[dt_index]);
 	if (count != ELEMENT_COUNT) {
 	    printf("count = %lu, dt_index = %i\n", (unsigned long)count,
 		   dt_index);

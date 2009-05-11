@@ -6,7 +6,7 @@
 
 #define ASIZE 1026
 
-void printout(int *restrict * restrict out)
+static void printout(int *restrict * restrict out)
 {
     size_t i;
 
@@ -25,7 +25,7 @@ void printout(int *restrict * restrict out)
     }
 }
 
-void mult(const int *inta, const int *intb, int *restrict out)
+static void mult(const int *inta, const int *intb, int *restrict out)
 {
     assert(*out == -1);
     *out = (*inta) * (*intb);

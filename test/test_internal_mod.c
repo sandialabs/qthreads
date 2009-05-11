@@ -2,7 +2,7 @@
 #include <assert.h>
 #include <qthread/qthread.h>
 
-aligned_t whereami(qthread_t * me, void *arg)
+static aligned_t whereami(qthread_t * me, void *arg)
 {
     return qthread_shep(me);
 }
@@ -23,10 +23,10 @@ int main()
 	qthread_readFF(me, NULL, rets + i);
     }
     for (i = 0; i < 30; i++) {
-	if (rets[i] != i%7) {
-	    printf("rets[%i] = %u ->? %u\n", i, (unsigned int)rets[i], i%7);
+	if (rets[i] != i % 7) {
+	    printf("rets[%i] = %u ->? %i\n", i, (unsigned int)rets[i], i % 7);
 	}
-	assert(rets[i] == i%7);
+	assert(rets[i] == i % 7);
     }
 
     qthread_finalize();

@@ -4,13 +4,13 @@
 
 aligned_t master = 0;
 
-aligned_t incr(qthread_t * me, void *arg)
+static aligned_t incr(qthread_t * me, void *arg)
 {
     qthread_incr(&master, 1);
     return 0;
 }
 
-aligned_t incr5(qthread_t * me, void *arg)
+static aligned_t incr5(qthread_t * me, void *arg)
 {
     qthread_incr(&master, 5);
     return 0;

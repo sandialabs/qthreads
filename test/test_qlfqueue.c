@@ -7,7 +7,7 @@
 #define ELEMENT_COUNT 10000
 #define THREAD_COUNT 128
 
-aligned_t queuer (qthread_t *me, void *arg)
+static aligned_t queuer (qthread_t *me, void *arg)
 {
     qlfqueue_t *q = (qlfqueue_t*)arg;
     size_t i;
@@ -21,7 +21,7 @@ aligned_t queuer (qthread_t *me, void *arg)
     return 0;
 }
 
-aligned_t dequeuer (qthread_t *me, void *arg)
+static aligned_t dequeuer (qthread_t *me, void *arg)
 {
     qlfqueue_t *q = (qlfqueue_t*)arg;
     size_t i;

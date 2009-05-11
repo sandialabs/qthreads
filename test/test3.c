@@ -8,9 +8,9 @@ static aligned_t x;
 static aligned_t id = 1;
 static aligned_t readout = 0;
 
-aligned_t consumer(qthread_t * t, void *arg)
+static aligned_t consumer(qthread_t * t, void *arg)
 {
-    int me = 0;
+    int me;
 
     qthread_lock(t, &id);
     me = id++;
@@ -21,9 +21,9 @@ aligned_t consumer(qthread_t * t, void *arg)
     return 0;
 }
 
-aligned_t producer(qthread_t * t, void *arg)
+static aligned_t producer(qthread_t * t, void *arg)
 {
-    int me = 0;
+    int me;
 
     qthread_lock(t, &id);
     me = id++;
@@ -43,7 +43,8 @@ int main(int argc, char *argv[])
     x = 0;
     if (argc == 2) {
 	threads = strtol(argv[1], NULL, 0);
-	if (threads < 0) threads = 1;
+	if (threads < 0)
+	    threads = 1;
 	interactive = 1;
     }
     assert(qthread_init(threads) == 0);
