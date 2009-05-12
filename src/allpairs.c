@@ -10,7 +10,8 @@
 struct qt_ap_wargs
 {
     qdqueue_t *restrict work_queue;
-    const dist_f distfunc;
+    const void *distfunc;
+    const int outfunc_style;
     volatile aligned_t *restrict const no_more_work;
     volatile aligned_t *restrict const donecount;
     const qarray *a1;
@@ -37,25 +38,59 @@ static aligned_t qt_ap_worker(qthread_t * restrict me,
 	    }
 	    qthread_yield(me);
 	} else {
-	    const char *a1_base =
+	    const char *const a1_base =
 		qarray_elem_nomigrate(args->a1, wu->a1_start);
-	    const char *a2_base =
+	    const char *const a2_base =
 		qarray_elem_nomigrate(args->a2, wu->a2_start);
 	    const size_t a1_usize = args->a1->unit_size;
 	    const size_t a2_usize = args->a2->unit_size;
 	    size_t a1_i;
 
-	    for (a1_i = 0; a1_i < (wu->a1_stop - wu->a1_start); a1_i++) {
-		const char *restrict const this_a1_base =
-		    a1_base + (a1_i * a1_usize);
-		char *restrict const this_outbase =
-		    args->output[a1_i + wu->a1_start];
-		size_t a2_i;
+	    if (args->outfunc_style == 1) {
+		const dist_out_f f = (dist_out_f) (args->distfunc);
 
-		for (a2_i = 0; a2_i < (wu->a2_stop - wu->a2_start); a2_i++) {
-		    args->distfunc(this_a1_base, a2_base + (a2_i * a2_usize),
-				   this_outbase +
-				   ((a2_i + wu->a2_start) * args->outsize));
+		if (args->output == NULL) {
+		    for (a1_i = 0; a1_i < (wu->a1_stop - wu->a1_start);
+			 a1_i++) {
+			const char *restrict const this_a1_base =
+			    a1_base + (a1_i * a1_usize);
+			size_t a2_i;
+
+			for (a2_i = 0; a2_i < (wu->a2_stop - wu->a2_start);
+			     a2_i++) {
+			    f(this_a1_base, a2_base + (a2_i * a2_usize),
+			      NULL);
+			}
+		    }
+		} else {
+		    for (a1_i = 0; a1_i < (wu->a1_stop - wu->a1_start);
+			 a1_i++) {
+			const char *restrict const this_a1_base =
+			    a1_base + (a1_i * a1_usize);
+			char *restrict const this_outbase =
+			    args->output[a1_i + wu->a1_start];
+			size_t a2_i;
+
+			for (a2_i = 0; a2_i < (wu->a2_stop - wu->a2_start);
+			     a2_i++) {
+			    f(this_a1_base, a2_base + (a2_i * a2_usize),
+			      this_outbase +
+			      ((a2_i + wu->a2_start) * args->outsize));
+			}
+		    }
+		}
+	    } else {
+		const dist_f f = (dist_f) (args->distfunc);
+
+		for (a1_i = 0; a1_i < (wu->a1_stop - wu->a1_start); a1_i++) {
+		    const char *restrict const this_a1_base =
+			a1_base + (a1_i * a1_usize);
+		    size_t a2_i;
+
+		    for (a2_i = 0; a2_i < (wu->a2_stop - wu->a2_start);
+			 a2_i++) {
+			f(this_a1_base, a2_base + (a2_i * a2_usize));
+		    }
 		}
 	    }
 	    free(wu);
@@ -90,16 +125,16 @@ static void qt_ap_genwork2(qthread_t * me, const size_t startat,
     workunit->a2_stop = stopat;
 
     /* Find distance of gargs shep */
-    if (neighbors != NULL) { /* null means everyone is equidistant */
+    if (neighbors != NULL) {	       /* null means everyone is equidistant */
 	const qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
 	const qthread_shepherd_id_t shep = qthread_shep(me);
 	unsigned int i;
 
-	for (i=0; i < maxsheps; i++) {
+	for (i = 0; i < maxsheps; i++) {
 	    if (neighbors[i] == shep)
 		break;
 	}
-	i /= 2; /* halfway point */
+	i /= 2;			       /* halfway point */
 
 	qdqueue_enqueue_there(me, gargs->wq, workunit, neighbors[i]);
     } else {
@@ -111,7 +146,8 @@ static void qt_ap_genwork(qthread_t * restrict me, const size_t startat,
 			  const size_t stopat, const qarray * restrict a,
 			  struct qt_ap_gargs *restrict gargs)
 {
-    struct qt_ap_gargs2 garg2 = { gargs->wq, startat, stopat, qthread_shep(me) };
+    struct qt_ap_gargs2 garg2 =
+	{ gargs->wq, startat, stopat, qthread_shep(me) };
 
     qarray_iter_constloop(me, gargs->array2, 0, gargs->array2->count,
 			  (qa_cloop_f) qt_ap_genwork2, &garg2);
@@ -124,18 +160,21 @@ static void qt_ap_genwork(qthread_t * restrict me, const size_t startat,
  *
  * To make this faster...
  * 1. We use qarray to chunk the work up into bite-size pieces
- * 2. We feed the work chunks into a qdqueue (currently, into locations defined by the array2 distribution)
+ * 2. We feed the work chunks into a qdqueue (into locations defined by the average of the two input arrays)
  * 3. Per-shepherd worker threads pull out work and execute it, ideally near the data they work on.
  */
-void qt_allpairs(const qarray * array1, const qarray * array2,
-		 void *restrict * restrict output, const size_t outsize,
-		 const dist_f distfunc)
+static void qt_allpairs_internal(const qarray * array1, const qarray * array2,
+			const void * distfunc,
+			int funcstyle,
+			void *restrict * restrict output,
+			const size_t outsize)
 {
     const qthread_shepherd_id_t max_i = qthread_num_shepherds();
     volatile aligned_t no_more_work = 0;
     volatile aligned_t donecount = 0;
     struct qt_ap_wargs wargs =
-	{ qdqueue_create(), distfunc, &no_more_work, &donecount, array1, array2, output,
+	{ qdqueue_create(), distfunc, funcstyle, &no_more_work, &donecount, array1,
+	array2, output,
 	outsize
     };
     struct qt_ap_gargs gargs = { wargs.work_queue, array2 };
@@ -160,4 +199,18 @@ void qt_allpairs(const qarray * array1, const qarray * array2,
 	qthread_yield(me);
     }
     qdqueue_destroy(me, wargs.work_queue);
+}
+
+void qt_allpairs_output(const qarray * array1, const qarray * array2,
+			const dist_out_f distfunc,
+			void *restrict * restrict output,
+			const size_t outsize)
+{
+    qt_allpairs_internal(array1, array2, distfunc, 1, output, outsize);
+}
+
+void qt_allpairs(const qarray * array1, const qarray * array2,
+		 const dist_f distfunc)
+{
+    qt_allpairs_internal(array1, array2, distfunc, 0, NULL, 0);
 }
