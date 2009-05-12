@@ -3277,7 +3277,7 @@ unsigned int qthread_internal_shep_to_node(const qthread_shepherd_id_t shep)
 
 /* returns the distance between two shepherds */
 int qthread_distance(const qthread_shepherd_id_t src, const qthread_shepherd_id_t dest)
-{
+{/*{{{*/
     assert(src < qlib->nshepherds);
     assert(dest < qlib->nshepherds);
     if (src >= qlib->nshepherds || dest >= qlib->nshepherds) {
@@ -3288,7 +3288,7 @@ int qthread_distance(const qthread_shepherd_id_t src, const qthread_shepherd_id_
     } else {
 	return qlib->shepherds[src].shep_dists[dest];
     }
-}
+}/*}}}*/
 
 /* returns a list of shepherds, sorted by their distance from this qthread;
  * if NULL, then all sheps are equidistant */
