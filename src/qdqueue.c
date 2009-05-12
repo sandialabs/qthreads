@@ -431,6 +431,42 @@ int qdqueue_enqueue(qthread_t * me, qdqueue_t * q, void *elem)
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
+/* enqueue something in the queue at a given location */
+int qdqueue_enqueue_there(qthread_t * me, qdqueue_t * q, void *elem,
+			  qthread_shepherd_id_t there)
+{				       /*{{{ */
+    int stat;
+    struct qdsubqueue_s *myq;
+
+    qargnonull(me);
+    qargnonull(q);
+
+    myq = &(q->Qs[there]);
+
+    stat = qlfqueue_empty(myq->theQ);
+    qlfqueue_enqueue(me, myq->theQ, elem);
+    if (stat) {
+	/* the queue was empty, so we may have to wake up waiters */
+	/* qdqueue_adheap_pushcond(myq->ads, myq, 0); */
+    } else {
+	aligned_t generation;
+	qthread_shepherd_id_t shep;
+
+	/* the queue had stuff in it already, so we advertise */
+	if (myq->last_ad_issued <= myq->last_ad_consumed) {
+	    /* only advertise if our existing ads are stale */
+	    generation = qthread_incr(&(myq->last_ad_issued), 1);
+	    for (shep = 0; shep < myq->nNeighbors; shep++) {
+		struct qdsubqueue_s *neighbor = myq->neighbors[shep];
+
+		qdqueue_adheap_push(me, &(neighbor->ads), myq, generation);
+	    }
+	}
+    }
+
+    return QTHREAD_SUCCESS;
+}				       /*}}} */
+
 /* dequeue something from the queue (returns NULL for an empty queue) */
 void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
 {				       /*{{{ */
@@ -465,11 +501,11 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
 		    uintptr_t last_ad = ad.shep->last_ad_consumed;	/* XXX see note in struct definition */
 
 		    while (last_ad < ad.generation) {
-			last_ad =
-			    (uintptr_t) qt_cas((volatile void **)
-					       &(ad.shep->last_ad_consumed),
-					       (void *)last_ad,
-					       (void *)ad.generation);
+			last_ad = (uintptr_t) qt_cas((volatile void **)
+						     &(ad.shep->
+						       last_ad_consumed),
+						     (void *)last_ad,
+						     (void *)ad.generation);
 		    }
 		    if ((ret = qlfqueue_dequeue(me, ad.shep->theQ)) != NULL) {
 			myq->last_consumed = ad.shep;
