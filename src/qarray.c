@@ -440,31 +440,31 @@ static qarray *qarray_create_internal(const size_t count,
 }				       /*}}} */
 
 qarray *qarray_create(const size_t count, const size_t obj_size)
-{
+{				       /*{{{ */
 #if QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32 || \
     QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64
     return qarray_create_internal(count, obj_size, DIST_REG_STRIPES, 0, 0);
 #else
     return qarray_create_internal(count, obj_size, FIXED_HASH, 0, 0);
 #endif
-}
+}				       /*}}} */
 
 qarray *qarray_create_tight(const size_t count, const size_t obj_size)
-{
+{				       /*{{{ */
 #if QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32 || \
     QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64
     return qarray_create_internal(count, obj_size, DIST_REG_STRIPES, 1, 0);
 #else
     return qarray_create_internal(count, obj_size, FIXED_HASH, 1, 1);
 #endif
-}
+}				       /*}}} */
 
 qarray *qarray_create_configured(const size_t count, const size_t obj_size,
 				 const distribution_t d, const char tight,
 				 const int seg_pages)
-{
+{				       /*{{{ */
     return qarray_create_internal(count, obj_size, d, tight, seg_pages);
-}
+}				       /*}}} */
 
 void qarray_destroy(qarray * a)
 {				       /*{{{ */
