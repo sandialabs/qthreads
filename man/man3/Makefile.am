@@ -47,6 +47,16 @@ man_MANS = qthread_empty.3 \
 		   qalloc_malloc.3 \
 		   qalloc_statfree.3 \
 		   qalloc_statmalloc.3 \
+		   qarray_create.3 \
+		   qarray_create_configured.3 \
+		   qarray_create_tight.3 \
+		   qarray_destroy.3 \
+		   qarray_elem.3 \
+		   qarray_elem_nomigrate.3 \
+		   qarray_iter.3 \
+		   qarray_iter_constloop.3 \
+		   qarray_iter_loop.3 \
+		   qarray_shepof.3 \
 		   qutil_double_sum.3 \
 		   qutil_double_mult.3 \
 		   qutil_double_max.3 \
