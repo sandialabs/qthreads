@@ -766,7 +766,7 @@ void qarray_iter(qthread_t * me, qarray * a, const size_t startat,
 	     * which threads to spawn (bizarre way of thinking about it, I
 	     * know). */
 	    if (stopat - startat < a->segment_size) {
-		qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL,
+		qthread_fork_to((qthread_f) qarray_strider, &qfwa, NULL,
 				qarray_shepof(a, startat));
 		while (donecount == 0) {
 		    qthread_yield(me);
