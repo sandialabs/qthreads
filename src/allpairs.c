@@ -66,35 +66,52 @@ static aligned_t qt_ap_worker(qthread_t * restrict me,
 
 struct qt_ap_gargs
 {
-    qdqueue_t *restrict wq;
+    qdqueue_t *const wq;
     const qarray *restrict array2;
 };
 
 struct qt_ap_gargs2
 {
-    qdqueue_t *restrict wq;
+    qdqueue_t *const wq;
     const size_t start, stop;
+    const qthread_shepherd_id_t shep;
 };
 
-static void qt_ap_genwork2(qthread_t * restrict me, const size_t startat,
-			   const size_t stopat, const qarray * restrict a,
-			   struct qt_ap_gargs2 *restrict gargs)
+static void qt_ap_genwork2(qthread_t * me, const size_t startat,
+			   const size_t stopat, const qarray * a,
+			   struct qt_ap_gargs2 *gargs)
 {
     struct qt_ap_workunit *workunit = malloc(sizeof(struct qt_ap_workunit));
+    const qthread_shepherd_id_t *neighbors = qthread_sorted_sheps(me);
 
     workunit->a1_start = gargs->start;
     workunit->a1_stop = gargs->stop;
     workunit->a2_start = startat;
     workunit->a2_stop = stopat;
 
-    qdqueue_enqueue(me, gargs->wq, workunit);
+    /* Find distance of gargs shep */
+    if (neighbors != NULL) { /* null means everyone is equidistant */
+	const qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
+	const qthread_shepherd_id_t shep = qthread_shep(me);
+	unsigned int i;
+
+	for (i=0; i < maxsheps; i++) {
+	    if (neighbors[i] == shep)
+		break;
+	}
+	i /= 2; /* halfway point */
+
+	qdqueue_enqueue_there(me, gargs->wq, workunit, neighbors[i]);
+    } else {
+	qdqueue_enqueue(me, gargs->wq, workunit);
+    }
 }
 
 static void qt_ap_genwork(qthread_t * restrict me, const size_t startat,
 			  const size_t stopat, const qarray * restrict a,
 			  struct qt_ap_gargs *restrict gargs)
 {
-    struct qt_ap_gargs2 garg2 = { gargs->wq, startat, stopat };
+    struct qt_ap_gargs2 garg2 = { gargs->wq, startat, stopat, qthread_shep(me) };
 
     qarray_iter_constloop(me, gargs->array2, 0, gargs->array2->count,
 			  (qa_cloop_f) qt_ap_genwork2, &garg2);
@@ -118,10 +135,10 @@ void qt_allpairs(const qarray * array1, const qarray * array2,
     volatile aligned_t no_more_work = 0;
     volatile aligned_t donecount = 0;
     struct qt_ap_wargs wargs =
-	{ NULL, distfunc, &no_more_work, &donecount, array1, array2, output,
+	{ qdqueue_create(), distfunc, &no_more_work, &donecount, array1, array2, output,
 	outsize
     };
-    struct qt_ap_gargs gargs = { NULL, array2 };
+    struct qt_ap_gargs gargs = { wargs.work_queue, array2 };
     qthread_shepherd_id_t i;
     qthread_t *const me = qthread_self();
 
@@ -129,7 +146,7 @@ void qt_allpairs(const qarray * array1, const qarray * array2,
     assert(array2);
 
     /* step 1: set up work queue */
-    gargs.wq = wargs.work_queue = qdqueue_create();
+    /* -- work queue set up as part of initialization stuff, above */
     /* step 2: spawn workers */
     for (i = 0; i < max_i; i++) {
 	qthread_fork_to((qthread_f) qt_ap_worker, &wargs, NULL, i);
@@ -142,4 +159,5 @@ void qt_allpairs(const qarray * array1, const qarray * array2,
     while (donecount < max_i) {
 	qthread_yield(me);
     }
+    qdqueue_destroy(me, wargs.work_queue);
 }
