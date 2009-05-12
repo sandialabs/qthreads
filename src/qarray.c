@@ -432,7 +432,7 @@ static qarray *qarray_create_internal(const size_t count,
 	}
 	    break;
     }
-#if ( HAVE_MADVISE && HAVE_MADV_ACCESS_LWP )
+#if defined(HAVE_MADVISE) && defined(HAVE_MADV_ACCESS_LWP)
     madvise(ret->base_ptr, segment_count * ret->segment_bytes,
 	    MADV_ACCESS_LWP);
 #endif
