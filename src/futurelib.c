@@ -209,7 +209,7 @@ int future_yield(qthread_t * me)
     qthread_debug(2, "Thread %p yield on loc %p\n", (void *)me, (void *)loc);
     //Non-futures do not have a vproc to yield
     if (loc != NULL) {
-	char unlockit = 0;
+	int unlockit = 0;
 
 	//yield vproc
 	qthread_debug(3, "Thread %p yield loc %d vps %d\n", (void *)me,
