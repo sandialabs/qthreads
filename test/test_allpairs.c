@@ -6,13 +6,24 @@
 
 size_t ASIZE = 1026;
 
-aligned_t hamming = (aligned_t)-1;
+aligned_t hamming = (aligned_t) - 1;
 
-static void assignrand(qthread_t *me, const size_t startat, const size_t stopat, qarray * q, void *arg)
+static void assigni(qthread_t * me, const size_t startat, const size_t stopat,
+		    qarray * q, void *arg)
 {
     int *ptr = qarray_elem_nomigrate(q, startat);
 
-    for (size_t i = 0; i < (stopat-startat); i++) {
+    for (size_t i = 0; i < (stopat - startat); i++) {
+	ptr[i] = (i + startat);
+    }
+}
+
+static void assignrand(qthread_t * me, const size_t startat,
+		       const size_t stopat, qarray * q, void *arg)
+{
+    int *ptr = qarray_elem_nomigrate(q, startat);
+
+    for (size_t i = 0; i < (stopat - startat); i++) {
 	ptr[i] = random();
     }
 }
@@ -42,14 +53,14 @@ static void mult(const int *inta, const int *intb, int *restrict out)
     *out = (*inta) * (*intb);
 }
 
-static void hammingdist(const int *inta, const int * intb)
+static void hammingdist(const int *inta, const int *intb)
 {
     unsigned int ham = *inta ^ *intb;
     aligned_t hamdist = 0;
     qthread_t *me = qthread_self();
 
     while (ham != 0) {
-	hamdist += ham&1;
+	hamdist += ham & 1;
 	ham >>= 1;
     }
     if (hamming > hamdist) {
@@ -68,6 +79,7 @@ int main(int argc, char *argv[])
     size_t i;
     int threads = 0;
     int interactive = 0;
+    qthread_t *me;
 
     if (argc >= 2) {
 	threads = strtol(argv[1], NULL, 0);
@@ -83,12 +95,13 @@ int main(int argc, char *argv[])
     }
 
     qthread_init(threads);
+    me = qthread_self();
+
     a1 = qarray_create_tight(ASIZE, sizeof(int));
     a2 = qarray_create_tight(ASIZE, sizeof(int));
-    for (i = 0; i < ASIZE; i++) {
-	*(int *)qarray_elem_nomigrate(a1, i) = i;
-	*(int *)qarray_elem_nomigrate(a2, i) = i;
-    }
+    qarray_iter_loop(me, a1, 0, ASIZE, assigni, NULL);
+    qarray_iter_loop(me, a2, 0, ASIZE, assigni, NULL);
+
     out = calloc(ASIZE, sizeof(int *));
     assert(out);
     for (i = 0; i < ASIZE; i++) {
@@ -110,10 +123,10 @@ int main(int argc, char *argv[])
     free(out);
 
     /* trial #2 */
-    qarray_iter_loop(qthread_self(), a1, 0, ASIZE, assignrand, NULL);
-    qarray_iter_loop(qthread_self(), a2, 0, ASIZE, assignrand, NULL);
+    qarray_iter_loop(me, a1, 0, ASIZE, assignrand, NULL);
+    qarray_iter_loop(me, a2, 0, ASIZE, assignrand, NULL);
 
-    qt_allpairs(a1, a2, (dist_f)hammingdist);
+    qt_allpairs(a1, a2, (dist_f) hammingdist);
 
     if (interactive) {
 	printf("minimum hamming distance = %lu\n", (unsigned long)hamming);
