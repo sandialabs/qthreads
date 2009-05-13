@@ -118,6 +118,7 @@ static void qt_ap_genwork2(qthread_t * me, const size_t startat,
 {
     struct qt_ap_workunit *workunit = malloc(sizeof(struct qt_ap_workunit));
     const qthread_shepherd_id_t *neighbors = qthread_sorted_sheps(me);
+    const qthread_shepherd_id_t shep = gargs->shep;
 
     workunit->a1_start = gargs->start;
     workunit->a1_stop = gargs->stop;
@@ -125,20 +126,24 @@ static void qt_ap_genwork2(qthread_t * me, const size_t startat,
     workunit->a2_stop = stopat;
 
     /* Find distance of gargs shep */
-    if (neighbors != NULL) {	       /* null means everyone is equidistant */
+    if (neighbors == NULL || shep == qthread_shep(me)) {	       /* null means everyone is equidistant */
+	qdqueue_enqueue(me, gargs->wq, workunit);
+    } else {
 	const qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
-	const qthread_shepherd_id_t shep = qthread_shep(me);
 	unsigned int i;
 
 	for (i = 0; i < maxsheps; i++) {
 	    if (neighbors[i] == shep)
 		break;
 	}
-	i /= 2;			       /* halfway point */
-
-	qdqueue_enqueue_there(me, gargs->wq, workunit, neighbors[i]);
-    } else {
-	qdqueue_enqueue(me, gargs->wq, workunit);
+	if (i < maxsheps) {
+	    i /= 2;			       /* halfway point */
+	    qdqueue_enqueue_there(me, gargs->wq, workunit, neighbors[i]);
+	} else {
+	    /* this should never happen */
+	    assert(i < maxsheps);
+	    qdqueue_enqueue(me, gargs->wq, workunit);
+	}
     }
 }
 
