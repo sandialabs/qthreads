@@ -33,7 +33,7 @@ static qpool *qlfqueue_node_pool = NULL;
  * just claim 4, to be conservative. Thus, a qlfqueue_node_t must be aligned to 16 bytes. */
 #define QCTR_MASK (15)
 #define QPTR(x) ((qlfqueue_node_t*)(((uintptr_t)(x))&~(uintptr_t)QCTR_MASK))
-#define QCTR(x) ((unsigned char)(((uintptr_t)(x))&QCTR_MASK))
+#define QCTR(x) (((uintptr_t)(x))&QCTR_MASK)
 #define QCOMPOSE(x,y) (void*)(((uintptr_t)QPTR(x))|((QCTR(y)+1)&QCTR_MASK))
 
 qlfqueue_t *qlfqueue_create(void)
@@ -83,7 +83,7 @@ int qlfqueue_enqueue(qthread_t *me, qlfqueue_t * q, void *elem)
     node = (qlfqueue_node_t *) qpool_alloc(me, qlfqueue_node_pool);
     // these asserts should be redundant
     assert(node != NULL);
-    assert((((uintptr_t) node) & QCTR_MASK) == 0);	// node MUST be aligned
+    assert(QCTR(node) == 0);	// node MUST be aligned
 
     node->value = elem;
     // set to null without disturbing the ctr

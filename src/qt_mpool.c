@@ -254,7 +254,7 @@ qt_mpool qt_mpool_create(int sync, size_t item_size, int node)
  * of memory must be aligned to 16 bytes. */
 #define QCTR_MASK (15)
 #define QPTR(x) ((void*)(((uintptr_t)(x))&~(uintptr_t)QCTR_MASK))
-#define QCTR(x) ((unsigned char)(((uintptr_t)(x))&QCTR_MASK))
+#define QCTR(x) (((uintptr_t)(x))&QCTR_MASK)
 #define QCOMPOSE(x,y) (void*)(((uintptr_t)QPTR(x))|((QCTR(y)+1)&QCTR_MASK))
 
 void *qt_mpool_alloc(qt_mpool pool)
