@@ -186,7 +186,7 @@ void qt_wavefront(qarray * restrict const *const R, size_t cols, wave_f func)
 	qthread_yield(me);
     }
     qdqueue_destroy(me, wargs.work_queue);
-    free(wargs.colprogress);
+    free((void *)wargs.colprogress);
 }
 
 void qt_basic_wavefront(int *restrict const *const R, size_t cols,
