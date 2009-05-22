@@ -42,6 +42,21 @@ void emptyarray(qthread_t * me, const size_t startat, const size_t stopat,
 
 int main(int argc, char *argv[])
 {
+    int threads = 0;
+    int interactive = 0;
+
+    if (argc >= 2) {
+	threads = strtol(argv[1], NULL, 0);
+	if (threads < 0) {
+	    threads = 0;
+	} else {
+	    interactive = 1;
+	}
+    }
+    if (argc >= 3) {
+	ASIZE = strtol(argv[2], NULL, 0);
+    }
+    qthread_init(threads);
     {
 	int **R = calloc(ASIZE, sizeof(int *));
 	int i;
@@ -60,13 +75,15 @@ int main(int argc, char *argv[])
 	qt_basic_wavefront(R, ASIZE, ASIZE, sum);
 
 	/* prove it */
-	for (int row = (ASIZE - 1); row >= 0; row--) {
-	    for (int col = 0; col < ASIZE; col++) {
-		printf("%7i ", R[col][row]);
+	if (interactive) {
+	    for (int row = (ASIZE - 1); row >= 0; row--) {
+		for (int col = 0; col < ASIZE; col++) {
+		    printf("%7i ", R[col][row]);
+		}
+		printf("\n");
 	    }
 	    printf("\n");
 	}
-	printf("\n");
 
 	/* free it */
 	for (i = 0; i < ASIZE; i++) {
@@ -74,8 +91,6 @@ int main(int argc, char *argv[])
 	}
 	free(R);
     }
-    qthread_init(0);
-    ASIZE = 1026;
     {
 	qthread_t *me = qthread_self();
 	qarray **R = calloc(ASIZE, sizeof(qarray *));
@@ -95,13 +110,15 @@ int main(int argc, char *argv[])
 	qt_wavefront(R, ASIZE, sum);
 
 	/* prove it */
-	for (int row = (ASIZE - 1); row >= 0; row--) {
-	    for (int col = 0; col < ASIZE; col++) {
-		aligned_t *tmpint = qarray_elem_nomigrate(R[col], row);
+	if (interactive) {
+	    for (int row = (ASIZE - 1); row >= 0; row--) {
+		for (int col = 0; col < ASIZE; col++) {
+		    aligned_t *tmpint = qarray_elem_nomigrate(R[col], row);
 
-		printf("%10u ", (unsigned int)*tmpint);
+		    printf("%10u ", (unsigned int)*tmpint);
+		}
+		printf("\n");
 	    }
-	    printf("\n");
 	}
 	/* free it */
 	for (int col = 0; col < ASIZE; col++) {
