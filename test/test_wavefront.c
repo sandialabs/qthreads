@@ -29,17 +29,6 @@ void assign1(qthread_t * me, const size_t startat, const size_t stopat,
     }
 }
 
-void emptyarray(qthread_t * me, const size_t startat, const size_t stopat,
-		qarray * a, void *arg)
-{
-    aligned_t *ptr = qarray_elem_nomigrate(a, startat);
-    const size_t max = stopat - startat;
-
-    for (size_t i = 0; i < max; i++) {
-	qthread_empty(me, ptr + i);
-    }
-}
-
 int main(int argc, char *argv[])
 {
     int threads = 0;
@@ -104,7 +93,6 @@ int main(int argc, char *argv[])
 
 		*ptr = 1;
 	    }
-	    qarray_iter_loop(me, R[col], 0, ASIZE, emptyarray, NULL);
 	}
 	/* do stuff */
 	qt_wavefront(R, ASIZE, sum);
