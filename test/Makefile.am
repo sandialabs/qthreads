@@ -8,6 +8,7 @@ TESTS = test1 test2 test3 test_qalloc \
 		testqloop testid \
 		test_internal_mod \
 		test_allpairs \
+		test_wavefront \
 		test_migrate \
 		test_qarray \
 		test_qpool \
@@ -78,6 +79,9 @@ test_internal_mod_DEPENDENCIES = $(QTHREADLIB)
 
 test_allpairs_SOURCES = test_allpairs.c
 test_allpairs_DEPENDENCIES = $(QTHREADLIB)
+
+test_wavefront_SOURCES = test_wavefront.c
+test_wavefront_DEPENDENCIES = $(QTHREADLIB)
 
 test_migrate_SOURCES = test_migrate.c
 test_migrate_DEPENDENCIES = $(QTHREADLIB)
