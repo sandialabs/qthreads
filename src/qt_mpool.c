@@ -15,6 +15,7 @@
 #include <pthread.h>
 #endif
 
+#include <qthread/qthread-int.h>       /* for uintptr_t */
 #include "qthread_asserts.h"
 
 #ifdef HAVE_GETPAGESIZE
@@ -112,8 +113,7 @@ static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
 
 static QINLINE void qt_mpool_internal_aligned_free(void *freeme,
 						   /*const size_t alloc_size, */
-						   const size_t 
-						   alignment)
+						   const size_t alignment)
 {
     switch (alignment) {
 	case 0:
@@ -278,7 +278,7 @@ void *qt_mpool_alloc(qt_mpool pool)
 	    p = qt_cas(&(pool->reuse_pool), old, QCOMPOSE(new, p));
 	} while (p != old);
     }
-    if (QPTR(p) == NULL) {			       /* this is not an else on purpose */
+    if (QPTR(p) == NULL) {	       /* this is not an else on purpose */
 #ifdef QTHREAD_USE_PTHREADS
 	if (pool->lock) {
 	    qassert(pthread_mutex_lock(pool->lock), 0);
