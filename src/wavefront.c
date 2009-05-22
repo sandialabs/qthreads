@@ -18,7 +18,7 @@ struct qt_wave_wargs
     wave_f func;
     qarray *restrict const *const R;
     size_t maxcols;
-    int feb;
+    volatile aligned_t *restrict colprogress;
 };
 
 struct qt_wave_workunit
@@ -49,7 +49,13 @@ static void qt_wave_worker(qthread_t * me, struct qt_wave_wargs *const arg)
 		void *left = qarray_elem_nomigrate(R[col - 1], row);
 
 		/* check to see if the left is ready */
-		if (col == 1 || qthread_feb_status(left)) {
+		if (col == 1 ||
+#ifdef QTHREAD_FEBS_ARE_FAST
+		    qthread_feb_status(left)
+#else
+		    arg->colprogress[col - 1] >= row
+#endif
+		    ) {
 		    void *ptr = qarray_elem_nomigrate(R[col], row);
 
 		    /* we can assume that leftbelow is ready (because left is ready) */
@@ -61,7 +67,12 @@ static void qt_wave_worker(qthread_t * me, struct qt_wave_wargs *const arg)
 		    void *below = qarray_elem_nomigrate(R[col], row - 1);
 
 		    arg->func(left, leftbelow, below, ptr);
+#ifdef QTHREAD_FEBS_ARE_FAST
 		    qthread_fill(me, ptr);
+#else
+		    /* this is assumed to be atomic for a single thread */
+		    arg->colprogress[col]++;
+#endif
 		} else {
 		    /* re-queue the work unit */
 		    wu->startrow = row;
@@ -69,7 +80,7 @@ static void qt_wave_worker(qthread_t * me, struct qt_wave_wargs *const arg)
 		    qdqueue_enqueue(me, arg->work_queue, wu);
 		    break;
 		}
-		if (row == 1 && arg->feb && col + 1 != arg->maxcols) {
+		if (row == 1 && col + 1 != arg->maxcols) {
 		    /* queue work for the right (since they have at least a
 		     * LITTLE data) */
 		    struct qt_wave_workunit *wu2 =
@@ -90,25 +101,6 @@ static void qt_wave_worker(qthread_t * me, struct qt_wave_wargs *const arg)
 	    }
 	    if (requeued == 0 && row == wu->endrow) {
 		/* we're done with this array segment! Huzzah! */
-		/* if we aren't using FEBs, we may need to queue the guy to the right */
-		if (wu->origrow == 1 && !arg->feb && col + 1 != arg->maxcols) {
-		    /* queue work for the right (since they have at least a
-		     * LITTLE data) */
-		    struct qt_wave_workunit *wu2 =
-			malloc(sizeof(struct qt_wave_workunit));
-		    qarray *const right = R[col + 1];
-
-		    wu2->startrow = 1;
-		    wu2->origrow = 1;
-		    wu2->endrow =
-			(right->count >
-			 right->segment_size) ? (right->
-						 segment_size) : (right->
-								  count);
-		    wu2->col = col + 1;
-		    qdqueue_enqueue_there(me, arg->work_queue, wu2,
-					  qarray_shepof(right, 1));
-		}
 		/* now, we may need to queue the next guy up the chain... */
 		if (wu->endrow < R[col]->count) {
 		    /* queue next (reuse the work unit structure) */
@@ -149,16 +141,14 @@ static void qt_wave_worker(qthread_t * me, struct qt_wave_wargs *const arg)
  *  (segment size, unit size, etc.)
  *
  */
-void qt_wavefront_config(qarray * restrict const *const R, size_t cols,
-			 wave_f func, int feb)
+void qt_wavefront(qarray * restrict const *const R, size_t cols, wave_f func)
 {
     const qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
     qthread_shepherd_id_t shep;
     volatile aligned_t no_more_work = 0;
     volatile aligned_t donecount = 0;
     struct qt_wave_wargs wargs =
-	{ qdqueue_create(), &no_more_work, &donecount, func, R, cols, feb };
-    qarray *completed;
+	{ qdqueue_create(), &no_more_work, &donecount, func, R, cols, NULL };
     qthread_t *const me = qthread_self();
     struct qt_wave_workunit wu = { 0 };
 
@@ -166,8 +156,13 @@ void qt_wavefront_config(qarray * restrict const *const R, size_t cols,
     if (cols <= 1) {
 	return;
     }
-    /* step 1: create an array to record the right-most data completed in each row */
-    completed = qarray_create(cols, sizeof(aligned_t));
+#ifdef QTHREAD_FEBS_ARE_FAST
+    /* step 1: empty all the non-computed array areas */
+#error Implement array emptying
+#else
+    /* step 1: create an array to record the data completed in each column */
+    wargs.colprogress = calloc(cols, sizeof(aligned_t));
+#endif
 
     /* step 2: set up a qdqueue of work */
     /* -- work queue set up as part of initialization stuff, above */
@@ -191,6 +186,7 @@ void qt_wavefront_config(qarray * restrict const *const R, size_t cols,
 	qthread_yield(me);
     }
     qdqueue_destroy(me, wargs.work_queue);
+    free(wargs.colprogress);
 }
 
 void qt_basic_wavefront(int *restrict const *const R, size_t cols,
