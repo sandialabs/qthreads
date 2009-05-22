@@ -51,7 +51,7 @@ static size_t pagesize = 0;
 
 /* local funcs */
 static QINLINE size_t mpool_gcd(size_t a, size_t b)
-{
+{				       /*{{{ */
     while (1) {
 	if (a == 0)
 	    return b;
@@ -60,19 +60,19 @@ static QINLINE size_t mpool_gcd(size_t a, size_t b)
 	    return a;
 	a %= b;
     }
-}
+}				       /*}}} */
 
 static QINLINE size_t mpool_lcm(size_t a, size_t b)
-{
+{				       /*{{{ */
     size_t tmp = mpool_gcd(a, b);
 
     return (tmp != 0) ? (a * b / tmp) : 0;
-}
+}				       /*}}} */
 
 static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
 						     /*int node, */
 						     size_t alignment)
-{
+{				       /*{{{ */
     void *ret;
 
     switch (alignment) {
@@ -109,12 +109,12 @@ static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
     }
     memset(ret, 0, alloc_size);
     return ret;
-}
+}				       /*}}} */
 
 static QINLINE void qt_mpool_internal_aligned_free(void *freeme,
 						   /*const size_t alloc_size, */
 						   const size_t alignment)
-{
+{				       /*{{{ */
     switch (alignment) {
 	case 0:
 	    free(freeme);
@@ -130,14 +130,14 @@ static QINLINE void qt_mpool_internal_aligned_free(void *freeme,
 #endif
 	    return;
     }
-}
+}				       /*}}} */
 
 // sync means pthread-protected
 // item_size is how many bytes to return
 // ...memory is always allocated in multiples of getpagesize()
 qt_mpool qt_mpool_create_aligned(const int sync, size_t item_size,
 				 const int node, size_t alignment)
-{
+{				       /*{{{ */
     qt_mpool pool = (qt_mpool) calloc(1, sizeof(struct qt_mpool_s));
 
     size_t alloc_size = 0;
@@ -175,7 +175,7 @@ qt_mpool qt_mpool_create_aligned(const int sync, size_t item_size,
     if (item_size % sizeof(void *)) {
 	item_size += (sizeof(void *)) - (item_size % sizeof(void *));
     }
-    if (alignment <= 0) {
+    if (alignment <= 16) {
 	alignment = 16;
     }
     if (item_size % alignment) {
@@ -240,12 +240,12 @@ qt_mpool qt_mpool_create_aligned(const int sync, size_t item_size,
     pool->alloc_list[0] = pool->alloc_block;
     pool->alloc_list_pos = 1;
     return pool;
-}
+}				       /*}}} */
 
 qt_mpool qt_mpool_create(int sync, size_t item_size, int node)
-{
+{				       /*{{{ */
     return qt_mpool_create_aligned(sync, item_size, node, 0);
-}
+}				       /*}}} */
 
 /* to avoid ABA reinsertion trouble, each pointer in the pool needs to have a
  * monotonically increasing counter associated with it. The counter doesn't
@@ -258,7 +258,7 @@ qt_mpool qt_mpool_create(int sync, size_t item_size, int node)
 #define QCOMPOSE(x,y) (void*)(((uintptr_t)QPTR(x))|((QCTR(y)+1)&QCTR_MASK))
 
 void *qt_mpool_alloc(qt_mpool pool)
-{
+{				       /*{{{ */
     void *p = (void *)(pool->reuse_pool);
 
     assert(pool);
@@ -328,10 +328,10 @@ void *qt_mpool_alloc(qt_mpool pool)
     }
   alloc_exit:
     return QPTR(p);
-}
+}				       /*}}} */
 
 void qt_mpool_free(qt_mpool pool, void *mem)
-{
+{				       /*{{{ */
     void *p, *old, *new;
 
     assert(mem != NULL);
@@ -342,10 +342,10 @@ void qt_mpool_free(qt_mpool pool, void *mem)
 	new = QCOMPOSE(mem, old);
 	p = qt_cas(&(pool->reuse_pool), old, new);
     } while (p != old);
-}
+}				       /*}}} */
 
 void qt_mpool_destroy(qt_mpool pool)
-{
+{				       /*{{{ */
     assert(pool);
     if (pool) {
 	while (pool->alloc_list) {
@@ -372,4 +372,4 @@ void qt_mpool_destroy(qt_mpool pool)
 #endif
 	free(pool);
     }
-}
+}				       /*}}} */
