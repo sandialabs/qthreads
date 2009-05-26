@@ -92,11 +92,13 @@ int main(int argc, char *argv[])
 	    threads = 0;
 	    interactive = 0;
 	} else {
+	    printf("threads: %i\n", threads);
 	    interactive = 1;
 	}
     }
     if (argc >= 3) {
 	ASIZE = strtol(argv[2], NULL, 0);
+	printf("ASIZE: %i\n", (int)ASIZE);
     }
 
     qthread_init(threads);
@@ -137,6 +139,7 @@ int main(int argc, char *argv[])
 
     printf("hamming time: %f\n", qtimer_secs(timer));
     assert(hamming > 0);
+    qtimer_destroy(timer);
 
     qarray_destroy(a1);
     qarray_destroy(a2);
