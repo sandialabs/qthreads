@@ -28,6 +28,7 @@ TESTS += time_swap time_producerconsumer time_increments \
 	 time_qlfqueue \
 	 time_qdqueue \
 	 time_qdqueue_sizes \
+	 time_allpairs \
 	 time_gcd
 endif
 
@@ -136,3 +137,6 @@ time_qlfqueue_DEPENDENCIES = $(QTHREADLIB)
 
 time_qdqueue_SOURCES = time_qdqueue.c
 time_qdqueue_DEPENDENCIES = $(QTHREADLIB)
+
+time_allpairs_SOURCES = time_allpairs.c
+time_allpairs_DEPENDENCIES = $(QTHREADLIB)
