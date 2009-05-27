@@ -276,6 +276,9 @@ void *qt_mpool_alloc(qt_mpool pool)
 	    old = p;
 	    new = *(void **)QPTR(p);
 	    p = qt_cas(&(pool->reuse_pool), old, QCOMPOSE(new, p));
+	    if (QPTR(p) == NULL) {
+		break;
+	    }
 	} while (p != old);
     }
     if (QPTR(p) == NULL) {	       /* this is not an else on purpose */
