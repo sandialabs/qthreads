@@ -47,6 +47,7 @@ int main(int argc, char *argv[])
 	printf("ASIZE: %i\n", ASIZE);
     }
     qthread_init(threads);
+#if 0
     {
 	int **R = calloc(ASIZE, sizeof(int *));
 	int i;
@@ -72,6 +73,7 @@ int main(int argc, char *argv[])
 	}
 	free(R);
     }
+#endif
     {
 	qthread_t *me = qthread_self();
 	qarray **R = calloc(ASIZE, sizeof(qarray *));
@@ -89,11 +91,13 @@ int main(int argc, char *argv[])
 	}
 	/* do stuff */
 	qtimer_start(timer);
-	qt_wavefront(R, ASIZE, sum);
+	for (int i=0; i<10; i++) {
+	    qt_wavefront(R, ASIZE, sum);
+	}
 	qtimer_stop(timer);
 
 	/* prove it */
-	printf("wavefront secs: %f\n", qtimer_secs(timer));
+	printf("wavefront secs: %f\n", qtimer_secs(timer)/10.0);
 	/* free it */
 	for (int col = 0; col < ASIZE; col++) {
 	    qarray_destroy(R[col]);
