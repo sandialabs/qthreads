@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
 
     qt_allpairs_output(a1, a2, (dist_out_f) mult, (void **)out, sizeof(int));
     if (interactive) {
-	printout(out);
+	//printout(out);
     }
     for (i = 0; i < ASIZE; i++) {
 	free(out[i]);
@@ -134,7 +134,6 @@ int main(int argc, char *argv[])
     if (interactive) {
 	printf("minimum hamming distance = %lu\n", (unsigned long)hamming);
     }
-    assert(hamming > 0);
 
     qarray_destroy(a1);
     qarray_destroy(a2);
