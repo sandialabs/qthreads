@@ -105,6 +105,7 @@ int main(int argc, char *argv[])
 
     a1 = qarray_create_tight(ASIZE, sizeof(int));
     a2 = qarray_create_tight(ASIZE, sizeof(int));
+    printf("segments of %u elements\n", (unsigned int)a1.segment_size);
     qarray_iter_loop(me, a1, 0, ASIZE, assigni, NULL);
     qarray_iter_loop(me, a2, 0, ASIZE, assigni, NULL);
 
@@ -130,17 +131,6 @@ int main(int argc, char *argv[])
     }
     free(out);
 
-    /* trial #2 */
-    qarray_iter_loop(me, a1, 0, ASIZE, assignrand, NULL);
-    qarray_iter_loop(me, a2, 0, ASIZE, assignrand, NULL);
-
-    qtimer_start(timer);
-    for (int i=0; i<10; i++) {
-	qt_allpairs(a1, a2, (dist_f) hammingdist);
-    }
-    qtimer_stop(timer);
-
-    printf("hamming time: %f\n", qtimer_secs(timer)/10.0);
     qtimer_free(timer);
 
     qarray_destroy(a1);
