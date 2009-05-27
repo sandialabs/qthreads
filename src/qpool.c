@@ -290,10 +290,7 @@ void *qpool_alloc(qthread_t * me, qpool * pool)
 	    old = p;
 	    new = *(void **)QPTR(p);
 	    p = qt_cas(&(mypool->reuse_pool), old, QCOMPOSE(new, p));
-	    if (QPTR(p) == NULL) {
-		break;
-	    }
-	} while (p != old);
+	} while (p != old && QPTR(p) != NULL);
     }
     if (QPTR(p) == NULL) {	       /* this is not an else on purpose */
 	/* XXX: *SHOULD* pull from other pools that are "nearby" - at minimum, any
