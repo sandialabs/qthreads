@@ -53,7 +53,6 @@ static void printout(int *restrict * restrict out)
 
 static void mult(const int *inta, const int *intb, int *restrict out)
 {
-    assert(*out == -1);
     *out = (*inta) * (*intb);
 }
 
@@ -121,9 +120,11 @@ int main(int argc, char *argv[])
     }
 
     qtimer_start(timer);
-    qt_allpairs_output(a1, a2, (dist_out_f) mult, (void **)out, sizeof(int));
+    for (int i=0; i<10; i++) {
+	qt_allpairs_output(a1, a2, (dist_out_f) mult, (void **)out, sizeof(int));
+    }
     qtimer_stop(timer);
-    printf("mult time: %f\n", qtimer_secs(timer));
+    printf("mult time: %f\n", qtimer_secs(timer)/10.0);
     for (i = 0; i < ASIZE; i++) {
 	free(out[i]);
     }
@@ -134,11 +135,12 @@ int main(int argc, char *argv[])
     qarray_iter_loop(me, a2, 0, ASIZE, assignrand, NULL);
 
     qtimer_start(timer);
-    qt_allpairs(a1, a2, (dist_f) hammingdist);
+    for (int i=0; i<10; i++) {
+	qt_allpairs(a1, a2, (dist_f) hammingdist);
+    }
     qtimer_stop(timer);
 
-    printf("hamming time: %f\n", qtimer_secs(timer));
-    assert(hamming > 0);
+    printf("hamming time: %f\n", qtimer_secs(timer)/10.0);
     qtimer_free(timer);
 
     qarray_destroy(a1);
