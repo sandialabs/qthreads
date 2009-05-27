@@ -105,7 +105,7 @@ int main(int argc, char *argv[])
 
     a1 = qarray_create_tight(ASIZE, sizeof(int));
     a2 = qarray_create_tight(ASIZE, sizeof(int));
-    printf("segments of %u elements\n", (unsigned int)a1.segment_size);
+    printf("segments of %u elements\n", (unsigned int)a1->segment_size);
     qarray_iter_loop(me, a1, 0, ASIZE, assigni, NULL);
     qarray_iter_loop(me, a2, 0, ASIZE, assigni, NULL);
 
