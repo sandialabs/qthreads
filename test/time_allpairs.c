@@ -100,7 +100,10 @@ int main(int argc, char *argv[])
 	printf("ASIZE: %i\n", (int)ASIZE);
     }
 
-    qthread_init(threads);
+    if (qthread_init(threads) != QTHREAD_SUCCESS) {
+	fprintf(stderr, "qthread library could not be initialized!\n");
+	exit(EXIT_FAILURE);
+    }
     me = qthread_self();
 
     a1 = qarray_create_tight(ASIZE, sizeof(int));
