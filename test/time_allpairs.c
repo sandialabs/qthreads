@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
 
     printf("hamming time: %f\n", qtimer_secs(timer));
     assert(hamming > 0);
-    qtimer_destroy(timer);
+    qtimer_free(timer);
 
     qarray_destroy(a1);
     qarray_destroy(a2);

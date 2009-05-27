@@ -99,5 +99,6 @@ int main(int argc, char *argv[])
 	    qarray_destroy(R[col]);
 	}
 	free(R);
+	qtimer_free(timer);
     }
 }
