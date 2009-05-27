@@ -1069,7 +1069,7 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
     int cp_syncmode = COLLECTION_MODE_PLAIN;
     int need_sync = 1;
 #ifdef HAVE_SYS_LGRP_USER_H
-    lgrp_cookie_t lgrp_cookie;
+    lgrp_cookie_t lgrp_cookie = lgrp_init(LGRP_VIEW_OS);
 #endif
 
 #ifdef QTHREAD_DEBUG
@@ -1093,7 +1093,6 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 	    nshepherds = numa_max_node() + 1;
 	}
 #elif defined(HAVE_SYS_LGRP_USER_H)
-	lgrp_cookie = lgrp_init(LGRP_VIEW_OS);
 	nshepherds = lgrp_cpus(lgrp_cookie, lgrp_root(lgrp_cookie), NULL, 0, LGRP_CONTENT_ALL);
 #endif
 	if (nshepherds <= 0) {
