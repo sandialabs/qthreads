@@ -335,7 +335,8 @@ static QINLINE float qthread_fincr(volatile float *operand, const float incr)
 #else
 	__asm__ __volatile__
 #endif
-	        ("cas [%1], %2, %0"
+	        ("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
+		 "cas [%1], %2, %0"
 		 :"=&r"(newval.i)
 		 :"r"    (operand), "r"(oldval.i), "0"(newval.i)
 		 :"cc", "memory");
@@ -442,6 +443,7 @@ static QINLINE double qthread_dincr(volatile double *operand,
 	newval = oldval + incr;
 	__asm__ __volatile__("ldx %0, %1\n\t"
 			     "ldx %4, %2\n\t"
+			     "membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
 			     "casx [%3], %2, %1\n\t"
 			     "stx %1, %0"
 			     /* h means 64-BIT REGISTER
@@ -475,7 +477,8 @@ static QINLINE double qthread_dincr(volatile double *operand,
 #else
 	__asm__ __volatile__
 #endif
-	        ("casx [%1], %2, %0"
+	        ("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
+		 "casx [%1], %2, %0"
 		 :"=&r"(newval.i)
 		 :"r"(operand), "r"(oldval.i), "0"(newval.i)
 		 :"memory");
@@ -639,7 +642,8 @@ static QINLINE uint32_t qthread_incr32(volatile uint32_t * operand,
 #else
 	__asm__ __volatile__
 #endif
-	        ("cas [%1] , %2, %0"
+	        ("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
+		 "cas [%1] , %2, %0"
 		 :"=&r"  (newval)
 		 :"r"    (operand), "r"(oldval), "0"(newval)
 		 :"cc", "memory");
@@ -735,6 +739,7 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand,
 	 * the same as oldval, then the swap was successful */
 	__asm__ __volatile__("ldx %0, %1\n\t"
 			     "ldx %4, %2\n\t"
+			     "membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
 			     "casx [%3] , %2, %1\n\t"
 			     "stx %1, %0"
 			     /* h means 64-BIT REGISTER
@@ -768,7 +773,8 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand,
 #else
 	__asm__ __volatile__
 #endif
-	        ("casx [%1] , %2, %0"
+	        ("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
+		 "casx [%1] , %2, %0"
 		 :"=&r"(newval)
 		 :"r"    (operand), "r"(oldval), "0"(newval)
 		 :"cc", "memory");
