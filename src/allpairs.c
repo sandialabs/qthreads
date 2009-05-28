@@ -37,7 +37,6 @@ struct qt_ap_workunit
 static aligned_t qt_ap_worker(qthread_t * restrict me,
 			      struct qt_ap_wargs *restrict args)
 {
-    const qthread_shepherd_id_t shep = qthread_shep(me);
     while (1) {
 	struct qt_ap_workunit *restrict const wu =
 	    qdqueue_dequeue(me, args->work_queue);
@@ -57,8 +56,11 @@ static aligned_t qt_ap_worker(qthread_t * restrict me,
 	    size_t a1_i;
 
 #ifdef QTHREAD_TRACK_DISTANCES
-	    distances[shep].i += qthread_distance(shep, qarray_shepof(args->a1, wu->a1_start));
-	    distances[shep].i += qthread_distance(shep, qarray_shepof(args->a2, wu->a2_start));
+	    {
+		const qthread_shepherd_id_t shep = qthread_shep(me);
+		distances[shep].i += qthread_distance(shep, qarray_shepof(args->a1, wu->a1_start));
+		distances[shep].i += qthread_distance(shep, qarray_shepof(args->a2, wu->a2_start));
+	    }
 #endif
 	    if (args->outfunc_style == 1) {
 		const dist_out_f f = (dist_out_f) (args->distfunc);
