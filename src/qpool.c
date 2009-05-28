@@ -288,7 +288,7 @@ void *qpool_alloc(qthread_t * me, qpool * pool)
 	do {
 	    old = p;
 	    new = *(void **)QPTR(p);
-	    p = qthread_cas_ptr(&(mypool->reuse_pool), old, QCOMPOSE(new, p));
+	    p = (void*)qthread_cas_ptr(&(mypool->reuse_pool), old, QCOMPOSE(new, p));
 	} while (p != old && QPTR(p) != NULL);
     }
     if (QPTR(p) == NULL) {	       /* this is not an else on purpose */
@@ -356,7 +356,7 @@ void qpool_free(qthread_t * me, qpool * pool, void *mem)
 	old = (void *)(mypool->reuse_pool);	// should be an atomic read
 	*(void **)mem = old;
 	new = QCOMPOSE(mem, old);
-	p = qthread_cas_ptr(&(mypool->reuse_pool), old, new);
+	p = (void*)qthread_cas_ptr(&(mypool->reuse_pool), old, new);
     } while (p != old);
 }				       /*}}} */
 
