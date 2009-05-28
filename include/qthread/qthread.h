@@ -42,7 +42,6 @@
 #ifdef __cplusplus
 #define Q_STARTCXX extern "C" {
 #define Q_ENDCXX }
-#define restrict
 #else
 #define Q_STARTCXX
 #define Q_ENDCXX
@@ -914,8 +913,8 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand,
 #endif
 }				       /*}}} */
 
-static QINLINE unsigned long qthread_incr_xx(volatile void *addr, int incr,
-					     size_t length)
+static QINLINE unsigned long qthread_incr_xx(volatile void *addr, const int incr,
+					     const size_t length)
 {
     switch (length) {
 	case 4:
@@ -930,6 +929,255 @@ static QINLINE unsigned long qthread_incr_xx(volatile void *addr, int incr,
     return 0;			       /* compiler check */
 }
 
+static QINLINE uint32_t qthread_cas32(volatile uint32_t * operand, const uint32_t oldval, const uint32_t newval)
+{/*{{{*/
+#if defined(HAVE_GCC_INLINE_ASSEMBLY)
+# if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
+      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
+    register uint32_t result;
+    __asm__ __volatile__ ("1:\n\t"
+	    "lwarx  %0,0,%3\n\t"
+	    "cmpw   %0,%1\n\t"
+	    "bne    2f\n\t"
+	    "stwcx. %2,0,%3\n\t"
+	    "bne-   1b\n"
+	    "2:"
+	    "isync" /* make sure it wasn't all a dream */
+	    :"=&b" (result)
+	    :"r"(oldval), "r"(newval), "r"(operand)
+	    :"cc", "memory");
+    return result;
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32) || \
+	(QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
+    register uint32_t newv = newval;
+#  if defined(__SUNPRO_CC)
+    asm volatile
+#  else
+    __asm__ __volatile__
+#  endif
+	("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
+	 "cas [%1], %2, %0"
+	 : "=&r" (newv)
+	 : "r" (operand), "r"(oldval), "0"(newv)
+	 : "cc", "memory");
+    return newv;
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
+    register uint32_t retval;
+    __asm__ __volatile__ ("mov ar.ccv=%0;;": :"rO" (oldval));
+    __asm__ __volatile__ ("cmpxchg4.acq %0=[%1],%2,ar.ccv"
+	    :"=r"(retval)
+	    :"r"(operand), "r"(newval)
+	    :"memory");
+    return retval;
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || \
+        (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
+    uint32_t retval;
+    /* note that this is GNU/Linux syntax (aka AT&T syntax), not Intel syntax.
+     * Thus, this instruction has the form:
+     * [lock] cmpxchg reg, reg/mem
+     *                src, dest
+     * The reason we use "m"(*operand) instead of "r"(operand) is because the
+     * memory-reference syntax is different on different architectures, and
+     * this is a cheap way to support whatever it is (some use parens, some use
+     * brackets).
+     */
+    __asm__ __volatile__ ("lock; cmpxchg %1,%2"
+	    : "=&a"(retval) /* store from EAX */
+	    : "r"(newval), "m" (*operand),
+	      "0"(oldval) /* load into EAX */
+	    :"cc","memory");
+    return retval;
+# else
+#  error "Don't have a qthread_cas implementation for this architecture"
+# endif
+#else
+# error "CAS needs inline assembly OR __sync_val_compare_and_swap"
+#endif
+}/*}}}*/
+
+static QINLINE uint64_t qthread_cas64(volatile uint64_t * operand, const uint64_t oldval, const uint64_t newval)
+{/*{{{*/
+#if defined(HAVE_GCC_INLINE_ASSEMBLY)
+# if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
+    register uint64_t result;
+    __asm__ __volatile__ ("1:\n\t"
+	    "ldarx  %0,0,%3\n\t"
+	    "cmpw   %0,%1\n\t"
+	    "bne    2f\n\t"
+	    "stdcx. %2,0,%3\n\t"
+	    "bne-   1b\n"
+	    "2:"
+	    "isync" /* make sure it wasn't all a dream */
+	    :"=&b" (result)
+	    :"r"(oldval), "r"(newval), "r"(operand)
+	    :"cc", "memory");
+    return result;
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
+    register uint64_t tmp1=tmp1;
+    register uint64_t tmp2=tmp2;
+    uint64_t newv = newval;
+#  if defined(__SUNPRO_CC)
+    asm volatile
+#  else
+    __asm__ __volatile__
+#  endif
+	("ldx %0, %1\n\t"
+	 "ldx %4, %2\n\t"
+	 "membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
+	 "casx [%3], %2, %1\n\t"
+	 "stx %1, %0"
+	 /* h means 64-BIT REGISTER
+	  * (probably unneecessary, but why take chances?) */
+	 : "=m" (newv), "=&h" (tmp1), "=&h"(tmp2)
+	 : "r" (operand), "m"(oldval), "0"(newv)
+	 : "cc", "memory");
+    return newv;
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
+    register uint64_t newv = newval;
+#  if defined(__SUNPRO_CC)
+    asm volatile
+#  else
+    __asm__ __volatile__
+#  endif
+	("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
+	 "casx [%1], %2, %0"
+	 : "=&r" (newv)
+	 : "r" (operand), "r"(oldval), "0"(newv)
+	 : "cc", "memory");
+    return newv;
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
+    register uint32_t retval;
+    __asm__ __volatile__ ("mov ar.ccv=%0;;": :"rO" (oldval));
+    __asm__ __volatile__ ("cmpxchg8.acq %0=[%1],%2,ar.ccv"
+	    :"=r"(retval)
+	    :"r"(operand), "r"(newval)
+	    :"memory");
+    return retval;
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
+    union {
+	uint64_t i;
+	struct {
+	    /* note: the ordering of these is both important and
+	     * counter-intuitive; welcome to little-endian! */
+	    uint32_t l;
+	    uint32_t h;
+	} s;
+    } oldv, newv, ret;
+    register char test;
+    oldv.i = oldval;
+    newv.i = newval;
+    /* the PIC stuff is already defined above */
+    __asm__ __volatile__ (
+	    QTHREAD_PIC_PREFIX
+	    "lock; cmpxchg8b %1"
+	    QTHREAD_PIC_SUFFIX
+	    :"=r"(test),
+	    /*EAX*/"=a"(ret.s.l),
+	    /*EDX*/"=d"(ret.s.h)
+	    :"m"(*operand),
+	    /*EAX*/"a"(oldv.s.l),
+	    /*EDX*/"d"(oldv.s.h),
+	    /*EBX*/QTHREAD_PIC_REG(newv.s.l),
+	    /*ECX*/"c"(newv.s.h)
+	    :"memory");
+    return ret.i;
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
+    register uint64_t retval;
+    /* note that this is GNU/Linux syntax (aka AT&T syntax), not Intel syntax.
+     * Thus, this instruction has the form:
+     * [lock] cmpxchg reg, reg/mem
+     *                src, dest
+     * The reason we use "m"(*operand) instead of "r"(operand) is because the
+     * memory-reference syntax is different on different architectures, and
+     * this is a cheap way to support whatever it is (some use parens, some use
+     * brackets).
+     */
+    __asm__ __volatile__ ("lock; cmpxchg %1,%2"
+	    : "=&a"(retval) /* store from EAX */
+	    : "r"(newval), "m" (*operand),
+	      "0"(oldval) /* load into EAX */
+	    :"cc","memory");
+    return retval;
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
+    /* In general, RISC doesn't provide a way to do 64 bit operations from 32
+     * bit code. Sorry! */
+    uint64_t retval;
+    qthread_t *me = qthread_self();
+
+    qthread_lock(me, (aligned_t*)operand);
+    retval = *operand;
+    if (retval == oldval) {
+	*operand = newval;
+    }
+    qthread_unlock(me, (aligned_t*)operand);
+    return retval;
+# else
+#  error "Don't have a qthread_cas64 implementation for this architecture"
+# endif
+#else
+# error "CAS needs inline assembly OR __sync_val_compare_and_swap"
+#endif
+}/*}}}*/
+
+static QINLINE aligned_t qthread_cas_xx(volatile aligned_t * addr,
+					const aligned_t oldval,
+					const aligned_t newval, const size_t length)
+{
+    switch (length) {
+	case 4:
+	    return qthread_cas32((volatile uint32_t *)addr, oldval, newval);
+	case 8:
+	    return qthread_cas64((volatile uint64_t *)addr, oldval, newval);
+	default:
+	    /* This should never happen, so deliberately cause a seg fault
+	     * for corefile analysis */
+	    *(int *)(0) = 0;
+    }
+    return 0;			       /* compiler check */
+}
+
+static QINLINE void *qthread_cas_ptr_(volatile void **const addr,
+				     void *const oldval, void *const newval)
+{
+    switch (sizeof(void *)) {
+	case 4:
+	    return (void *)(uintptr_t) qthread_cas32((volatile uint32_t *)
+						     addr,
+						     (const
+						      uint32_t)(uintptr_t)
+						     oldval,
+						     (const
+						      uint32_t)(uintptr_t)
+						     newval);
+	case 8:
+	    return (void *)(uintptr_t) qthread_cas64((volatile uint64_t *)
+						     addr,
+						     (const
+						      uint64_t)(uintptr_t)
+						     oldval,
+						     (const
+						      uint64_t)(uintptr_t)
+						     newval);
+	default:
+	    /* This should never happen, so deliberately cause a seg fault for
+	     * corefile analysis */
+	    *(int *)(0) = 0;
+    }
+    return NULL;		       /* compiler check */
+}
+
+#ifdef QTHREAD_ATOMIC_CAS
+# define qthread_cas(ADDR, OLDV, NEWV) \
+    __sync_val_compare_and_swap((ADDR), (OLDV), (NEWV))
+# define qthread_cas_ptr(ADDR, OLDV, NEWV) \
+    __sync_val_compare_and_swap((ADDR), (OLDV), (NEWV))
+#else
+# define qthread_cas(ADDR, OLDV, NEWV) \
+    qthread_cas_xx((volatile aligned_t*)(ADDR), (aligned_t)(OLDV), (aligned_t)(NEWV), sizeof(*(ADDR)))
+# define qthread_cas_ptr(ADDR, OLDV, NEWV) \
+    qthread_cas_ptr_((ADDR), (OLDV), (NEWV))
+#endif
+
 Q_ENDCXX /* */
 
 #ifndef __cplusplus
@@ -942,7 +1190,7 @@ Q_ENDCXX /* */
    qthread_incr_xx( (volatile void*)(ADDR), (int)(INCVAL), sizeof(*(ADDR)) )
 # endif
 
-#else
+#else /* ifdef __cplusplus */
 # include "qthread.hpp"
 #endif /* __cplusplus */
 
