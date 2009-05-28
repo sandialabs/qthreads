@@ -455,7 +455,7 @@ qarray *qarray_create_tight(const size_t count, const size_t obj_size)
     QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64
     return qarray_create_internal(count, obj_size, DIST_REG_STRIPES, 1, 0);
 #else
-    return qarray_create_internal(count, obj_size, FIXED_HASH, 1, 1);
+    return qarray_create_internal(count, obj_size, FIXED_HASH, 1, 0);
 #endif
 }				       /*}}} */
 
