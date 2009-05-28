@@ -10,7 +10,6 @@
 
 #include <qthread/qpool.h>
 #include "qthread_asserts.h"
-#include "qt_atomics.h"		       /* for qt_cas() */
 
 /* queue declarations */
 typedef struct _qlfqueue_node
@@ -94,17 +93,17 @@ int qlfqueue_enqueue(qthread_t *me, qlfqueue_t * q, void *elem)
 	next = (qlfqueue_node_t *) (QPTR(tail)->next);
 	if (tail == q->tail) {	       // are tail and next consistent?
 	    if (QPTR(next) == NULL) {  // was tail pointing to the last node?
-		if (qt_cas
+		if (qthread_cas_ptr
 		    ((volatile void **)&(QPTR(tail)->next), next,
 		     QCOMPOSE(node, next)) == next)
 		    break;	       // success!
 	    } else {		       // tail not pointing to last node
-		(void)qt_cas((volatile void **)&(q->tail), tail,
+		(void)qthread_cas_ptr((volatile void **)&(q->tail), tail,
 			     QCOMPOSE(next, tail));
 	    }
 	}
     }
-    (void)qt_cas((volatile void **)&(q->tail), tail, QCOMPOSE(node, tail));
+    (void)qthread_cas_ptr((volatile void **)&(q->tail), tail, QCOMPOSE(node, tail));
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
@@ -126,11 +125,11 @@ void *qlfqueue_dequeue(qthread_t *me, qlfqueue_t * q)
 		if (QPTR(next) == NULL) {	// is queue empty?
 		    return NULL;
 		}
-		(void)qt_cas((volatile void **)&(q->tail), tail, QCOMPOSE(next, tail));	// advance tail ptr
+		(void)qthread_cas_ptr((volatile void **)&(q->tail), tail, QCOMPOSE(next, tail));	// advance tail ptr
 	    } else {		       // no need to deal with tail
 		// read value before CAS, otherwise another dequeue might free the next node
 		p = QPTR(next)->value;
-		if (qt_cas
+		if (qthread_cas_ptr
 		    ((volatile void **)&(q->head), head,
 		     QCOMPOSE(next, head)) == head) {
 		    break;	       // success!

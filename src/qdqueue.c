@@ -13,7 +13,6 @@
 #ifdef QTHREAD_HAVE_LIBNUMA
 # include <numa.h>
 #endif
-#include <qt_atomics.h>
 
 struct qdsubqueue_s;
 
@@ -37,14 +36,13 @@ struct qdqueue_adheap_s
     struct qdqueue_adheap_elem_s *heap;
 };
 
-struct qdsubqueue_s
-{
+struct qdsubqueue_s {
     qlfqueue_t *theQ;
-    struct qdsubqueue_s *last_consumed;	/* should be atomically writable */
+    struct qdsubqueue_s *volatile last_consumed;
 
     struct qdqueue_adheap_s ads;
-    uintptr_t last_ad_issued;	/* using this datatype instead of aligned_t so they can be CAS'd */
-    uintptr_t last_ad_consumed;	/* XXX change this when qthreads grows a CAS function */
+    aligned_t last_ad_issued;
+    aligned_t last_ad_consumed;
 
     size_t nNeighbors;
     struct qdsubqueue_s **neighbors;	/* ordered by distance */
@@ -498,14 +496,12 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
 
 		if (lc == ad.shep) {
 		    /* it's working on its own queue */
-		    uintptr_t last_ad = ad.shep->last_ad_consumed;	/* XXX see note in struct definition */
+		    aligned_t last_ad = ad.shep->last_ad_consumed;
 
 		    while (last_ad < ad.generation) {
-			last_ad = (uintptr_t) qt_cas((volatile void **)
-						     &(ad.shep->
-						       last_ad_consumed),
-						     (void *)last_ad,
-						     (void *)ad.generation);
+			last_ad =
+			    qthread_cas(&(ad.shep->last_ad_consumed), last_ad,
+					ad.generation);
 		    }
 		    if ((ret = qlfqueue_dequeue(me, ad.shep->theQ)) != NULL) {
 			myq->last_consumed = ad.shep;
@@ -515,8 +511,9 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
 		    /* it got work from somewhere! */
 		    qdqueue_adheap_push(me, &myq->ads, lc, 0);
 		    /* reset the remote host's last_consumed counter, to avoid infinite loops */
-		    (void)qt_cas((volatile void **)&(ad.shep->last_consumed),
-				 (void *)lc, NULL);
+		    (void)qthread_cas_ptr((volatile void **)
+					  &(ad.shep->last_consumed),
+					  (void *)lc, NULL);
 		}
 	    }
 	}
