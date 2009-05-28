@@ -7,6 +7,15 @@
 #include <stdlib.h>		       /* for malloc() */
 #include <stdio.h>		       /* for printf */
 
+#ifdef QTHREAD_TRACK_DISTANCES
+struct cacheline_s {
+    aligned_t i;
+    char block[128-sizeof(aligned_t)];
+} __attribute__((packed));
+
+struct cacheline_s *distances = NULL;
+#endif
+
 struct qt_ap_wargs
 {
     qdqueue_t *restrict work_queue;
@@ -28,6 +37,7 @@ struct qt_ap_workunit
 static aligned_t qt_ap_worker(qthread_t * restrict me,
 			      struct qt_ap_wargs *restrict args)
 {
+    const qthread_shepherd_id_t shep = qthread_shep(me);
     while (1) {
 	struct qt_ap_workunit *restrict const wu =
 	    qdqueue_dequeue(me, args->work_queue);
@@ -46,6 +56,10 @@ static aligned_t qt_ap_worker(qthread_t * restrict me,
 	    const size_t a2_usize = args->a2->unit_size;
 	    size_t a1_i;
 
+#ifdef QTHREAD_TRACK_DISTANCES
+	    distances[shep].i += qthread_distance(shep, qarray_shepof(args->a1, wu->a1_start));
+	    distances[shep].i += qthread_distance(shep, qarray_shepof(args->a2, wu->a2_start));
+#endif
 	    if (args->outfunc_style == 1) {
 		const dist_out_f f = (dist_out_f) (args->distfunc);
 
@@ -117,8 +131,9 @@ static void qt_ap_genwork2(qthread_t * me, const size_t startat,
 			   struct qt_ap_gargs2 *gargs)
 {
     struct qt_ap_workunit *workunit = malloc(sizeof(struct qt_ap_workunit));
-    const qthread_shepherd_id_t *neighbors = qthread_sorted_sheps(me);
+    //const qthread_shepherd_id_t *neighbors = qthread_sorted_sheps(me);
     const qthread_shepherd_id_t shep = gargs->shep;
+    const qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
 
     workunit->a1_start = gargs->start;
     workunit->a1_stop = gargs->stop;
@@ -126,24 +141,29 @@ static void qt_ap_genwork2(qthread_t * me, const size_t startat,
     workunit->a2_stop = stopat;
 
     /* Find distance of gargs shep */
-    if (neighbors == NULL || shep == qthread_shep(me)) {	       /* null means everyone is equidistant */
+    if (maxsheps == 1 || shep == qthread_shep(me) /* both remote and local on same place */) {
 	qdqueue_enqueue(me, gargs->wq, workunit);
     } else {
-	const qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
+#if 1
+	/* option 1: trivial, probably bad */
+	qdqueue_enqueue_there(me, gargs->wq, workunit, 0);
+#elif 0
+	/* option 2: random, probably bad */
+	qdqueue_enqueue_there(me, gargs->wq, workunit, random()%maxsheps);
+#elif 0
+	/* option 3: random selection of the two, maybe good */
+	qdqueue_enqueue_there(me, gargs->wq, workunit, (random()%2)?shep:qthread_shep(me));
+#else
+	/* option 4: the "halfway" idea */
 	unsigned int i;
-
-	for (i = 0; i < maxsheps; i++) {
+	const qthread_shepherd_id_t *neighbors = qthread_sorted_sheps(me);
+	for (i=0; i<maxsheps; i++) {
 	    if (neighbors[i] == shep)
 		break;
 	}
-	if (i < maxsheps) {
-	    i /= 2;			       /* halfway point */
-	    qdqueue_enqueue_there(me, gargs->wq, workunit, neighbors[i]);
-	} else {
-	    /* this should never happen */
-	    assert(i < maxsheps);
-	    qdqueue_enqueue(me, gargs->wq, workunit);
-	}
+	i /= 2;
+	qdqueue_enqueue_there(me, gargs->wq, workunit, neighbors[i]);
+#endif
     }
 }
 
@@ -189,6 +209,10 @@ static void qt_allpairs_internal(const qarray * array1, const qarray * array2,
     assert(array1);
     assert(array2);
 
+#ifdef QTHREAD_TRACK_DISTANCES
+    distances = calloc(max_i, sizeof(struct cacheline_s));
+#endif
+
     /* step 1: set up work queue */
     /* -- work queue set up as part of initialization stuff, above */
     /* step 2: spawn workers */
@@ -204,6 +228,13 @@ static void qt_allpairs_internal(const qarray * array1, const qarray * array2,
 	qthread_yield(me);
     }
     qdqueue_destroy(me, wargs.work_queue);
+#ifdef QTHREAD_TRACK_DISTANCES
+    for (i=1; i<max_i; i++) {
+	distances[0].i += distances[i].i;
+    }
+    printf("total distances: %lu\n", (unsigned long)(distances[0].i));
+    free(distances);
+#endif
 }
 
 void qt_allpairs_output(const qarray * array1, const qarray * array2,
