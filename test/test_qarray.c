@@ -78,6 +78,7 @@ int main(int argc, char *argv[])
 	count = 0;
 	a = qarray_create_configured(ELEMENT_COUNT, sizeof(double),
 				     disttypes[dt_index], 0, 0);
+	assert(a);
 	if (interactive)
 	    printf("%s: created basic array of doubles\n",
 		   distnames[dt_index]);
