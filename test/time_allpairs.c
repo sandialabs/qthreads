@@ -106,8 +106,8 @@ int main(int argc, char *argv[])
     }
     me = qthread_self();
 
-    a1 = qarray_create_tight(ASIZE, sizeof(int));
-    a2 = qarray_create_tight(ASIZE, sizeof(int));
+    a1 = qarray_create_configured(ASIZE, sizeof(int), FIXED_HASH, 1, 1);
+    a2 = qarray_create_configured(ASIZE, sizeof(int), FIXED_HASH, 1, 1);
     printf("segments of %u elements\n", (unsigned int)a1->segment_size);
     qarray_iter_loop(me, a1, 0, ASIZE, assigni, NULL);
     qarray_iter_loop(me, a2, 0, ASIZE, assigni, NULL);
@@ -118,10 +118,8 @@ int main(int argc, char *argv[])
 	size_t j;
 	out[i] = calloc(sizeof(int), ASIZE);
 	assert(out[i]);
-	for (j = 0; j < ASIZE; j++) {
-	    out[i][j] = -1;
-	}
     }
+    printf("all initialized\n");
 
     qtimer_start(timer);
     for (int i=0; i<10; i++) {
