@@ -15,6 +15,12 @@
 #endif
 #include <cprops/hashtable.h>
 
+#ifdef __SUN__
+# define STRIPECOUNT 128
+#else
+# define STRIPECOUNT 32
+#endif
+
 typedef struct qlib_s
 {
     unsigned int nshepherds;
@@ -39,20 +45,20 @@ typedef struct qlib_s
      * multiple hashtables to improve performance. The current hashing is a bit
      * of a hack, but improves the bottleneck a bit
      */
-    cp_hashtable *locks[32];
+    cp_hashtable *locks[STRIPECOUNT];
 #ifdef QTHREAD_COUNT_THREADS
-    aligned_t locks_stripes[32];
-    pthread_mutex_t locks_stripes_locks[32];
+    aligned_t locks_stripes[STRIPECOUNT];
+    pthread_mutex_t locks_stripes_locks[STRIPECOUNT];
 #endif
     /* these are separated out for memory reasons: if you can get away with
      * simple locks, then you can use a little less memory. Subject to the same
      * bottleneck concerns as the above hashtable, though these are slightly
      * better at shrinking their critical section. FEBs have more memory
      * overhead, though. */
-    cp_hashtable *FEBs[32];
+    cp_hashtable *FEBs[STRIPECOUNT];
 #ifdef QTHREAD_COUNT_THREADS
-    aligned_t febs_stripes[32];
-    pthread_mutex_t febs_stripes_locks[32];
+    aligned_t febs_stripes[STRIPECOUNT];
+    pthread_mutex_t febs_stripes_locks[STRIPECOUNT];
 #endif
 } *qlib_t;
 
