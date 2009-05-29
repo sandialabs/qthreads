@@ -7,6 +7,7 @@
 #include <stdlib.h>		       /* for malloc() */
 #include <stdio.h>		       /* for printf */
 
+#define QTHREAD_TRACK_DISTANCES
 #ifdef QTHREAD_TRACK_DISTANCES
 struct cacheline_s {
     aligned_t i;
@@ -14,6 +15,11 @@ struct cacheline_s {
 } __attribute__((packed));
 
 struct cacheline_s *distances = NULL;
+#endif
+
+#define QTHREAD_USE_HALFWAYARRAY
+#ifdef QTHREAD_USE_HALFWAYARRAY
+qthread_shepherd_id_t ** halfway = NULL;
 #endif
 
 struct qt_ap_wargs
@@ -146,7 +152,7 @@ static void qt_ap_genwork2(qthread_t * me, const size_t startat,
     if (maxsheps == 1 || shep == qthread_shep(me) /* both remote and local on same place */) {
 	qdqueue_enqueue(me, gargs->wq, workunit);
     } else {
-#if 1
+#if 0
 	/* option 1: trivial, probably bad */
 	qdqueue_enqueue_there(me, gargs->wq, workunit, 0);
 #elif 0
@@ -155,7 +161,7 @@ static void qt_ap_genwork2(qthread_t * me, const size_t startat,
 #elif 0
 	/* option 3: random selection of the two, maybe good */
 	qdqueue_enqueue_there(me, gargs->wq, workunit, (random()%2)?shep:qthread_shep(me));
-#else
+#elif 0
 	/* option 4: the "halfway" idea */
 	unsigned int i;
 	const qthread_shepherd_id_t *neighbors = qthread_sorted_sheps(me);
@@ -165,6 +171,9 @@ static void qt_ap_genwork2(qthread_t * me, const size_t startat,
 	}
 	i /= 2;
 	qdqueue_enqueue_there(me, gargs->wq, workunit, neighbors[i]);
+#elif defined(QTHREAD_USE_HALFWAYARRAY)
+	/* option 5: optimal "halfway" idea */
+	qdqueue_enqueue_there(me, gargs->wq, workunit, halfway[qthread_shep(me)][shep]);
 #endif
     }
 }
@@ -213,6 +222,33 @@ static void qt_allpairs_internal(const qarray * array1, const qarray * array2,
 
 #ifdef QTHREAD_TRACK_DISTANCES
     distances = calloc(max_i, sizeof(struct cacheline_s));
+#endif
+#ifdef QTHREAD_USE_HALFWAYARRAY
+    /* step 0: ensure halfway array is set up */
+    if (halfway == NULL) {
+	qthread_shepherd_id_t *equivs = calloc(max_i, sizeof(qthread_shepherd_id_t));
+	halfway = calloc(max_i, sizeof(qthread_shepherd_id_t*));
+	for (int s=0; s<max_i; s++) {
+	    halfway[s] = calloc(max_i, sizeof(qthread_shepherd_id_t));
+	    for (int d=0; d<s; d++) {
+		/* halfway[s][d] is the shep id with the lowest total distance to both */
+		unsigned int equiv_cnt = 0;
+		unsigned int dist = qthread_distance(0, s) + qthread_distance(0, d);
+		for (int h=1; h<max_i; h++) {
+		    unsigned int tmp = qthread_distance(h, s) + qthread_distance(h, d);
+		    if (tmp < dist) {
+			dist = tmp;
+			equiv_cnt = 1;
+			equivs[0] = h;
+		    } else if (tmp == dist) {
+			equivs[equiv_cnt++] = h;
+		    }
+		}
+		halfway[s][d] = equivs[random()%equiv_cnt];
+	    }
+	}
+	free(equivs);
+    }
 #endif
 
     /* step 1: set up work queue */
