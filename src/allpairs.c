@@ -20,6 +20,10 @@ struct cacheline_s *distances = NULL;
 #define QTHREAD_USE_HALFWAYARRAY
 #ifdef QTHREAD_USE_HALFWAYARRAY
 qthread_shepherd_id_t ** halfway = NULL;
+unsigned int ** halfway_dist = NULL;
+volatile aligned_t mindistances = 0;
+aligned_t stolen_work = 0;
+aligned_t stealing_penalty = 0;
 #endif
 
 struct qt_ap_wargs
@@ -64,8 +68,14 @@ static aligned_t qt_ap_worker(qthread_t * restrict me,
 #ifdef QTHREAD_TRACK_DISTANCES
 	    {
 		const qthread_shepherd_id_t shep = qthread_shep(me);
-		distances[shep].i += qthread_distance(shep, qarray_shepof(args->a1, wu->a1_start));
-		distances[shep].i += qthread_distance(shep, qarray_shepof(args->a2, wu->a2_start));
+		const qthread_shepherd_id_t a1_shep = qarray_shepof(args->a1, wu->a1_start);
+		const qthread_shepherd_id_t a2_shep = qarray_shepof(args->a2, wu->a2_start);
+		const unsigned int cur_dist = qthread_distance(shep, a1_shep) + qthread_distance(shep, a2_shep);
+		/*if (shep != halfway[a1_shep][a2_shep]) {
+		    qthread_incr(&stolen_work, 1);
+		    qthread_incr(&stealing_penalty, cur_dist - halfway_dist[a1_shep][a2_shep]);
+		}*/
+		distances[shep].i += cur_dist;
 	    }
 #endif
 	    if (args->outfunc_style == 1) {
@@ -151,6 +161,7 @@ static void qt_ap_genwork2(qthread_t * me, const size_t startat,
     /* Find distance of gargs shep */
     if (maxsheps == 1 || shep == qthread_shep(me) /* both remote and local on same place */) {
 	qdqueue_enqueue(me, gargs->wq, workunit);
+	//qthread_incr(&mindistances, halfway_dist[qthread_shep(me)][shep]);
     } else {
 #if 0
 	/* option 1: trivial, probably bad */
@@ -174,6 +185,7 @@ static void qt_ap_genwork2(qthread_t * me, const size_t startat,
 #elif defined(QTHREAD_USE_HALFWAYARRAY)
 	/* option 5: optimal "halfway" idea */
 	qdqueue_enqueue_there(me, gargs->wq, workunit, halfway[qthread_shep(me)][shep]);
+	//qthread_incr(&mindistances, halfway_dist[qthread_shep(me)][shep]);
 #endif
     }
 }
@@ -225,15 +237,22 @@ static void qt_allpairs_internal(const qarray * array1, const qarray * array2,
 #endif
 #ifdef QTHREAD_USE_HALFWAYARRAY
     /* step 0: ensure halfway array is set up */
+    mindistances = 0;
+    stolen_work = 0;
+    stealing_penalty = 0;
     if (halfway == NULL) {
 	qthread_shepherd_id_t *equivs = calloc(max_i, sizeof(qthread_shepherd_id_t));
 	halfway = calloc(max_i, sizeof(qthread_shepherd_id_t*));
+	halfway_dist = calloc(max_i, sizeof(unsigned int*));
 	for (int s=0; s<max_i; s++) {
 	    halfway[s] = calloc(max_i, sizeof(qthread_shepherd_id_t));
-	    for (int d=0; d<s; d++) {
+	    halfway_dist[s] = calloc(max_i, sizeof(unsigned int));
+	    for (int d=0; d<max_i; d++) {
 		/* halfway[s][d] is the shep id with the lowest total distance to both */
 		unsigned int equiv_cnt = 0;
 		unsigned int dist = qthread_distance(0, s) + qthread_distance(0, d);
+		equiv_cnt = 1;
+		equivs[0] = 0;
 		for (int h=1; h<max_i; h++) {
 		    unsigned int tmp = qthread_distance(h, s) + qthread_distance(h, d);
 		    if (tmp < dist) {
@@ -245,6 +264,8 @@ static void qt_allpairs_internal(const qarray * array1, const qarray * array2,
 		    }
 		}
 		halfway[s][d] = equivs[random()%equiv_cnt];
+		halfway_dist[s][d] = dist;
+		//printf("optimal [%i][%i]:%i from %i\n", (int)s, (int)d, (int)dist, equiv_cnt);
 	    }
 	}
 	free(equivs);
@@ -270,7 +291,7 @@ static void qt_allpairs_internal(const qarray * array1, const qarray * array2,
     for (i=1; i<max_i; i++) {
 	distances[0].i += distances[i].i;
     }
-    printf("total distances: %lu\n", (unsigned long)(distances[0].i));
+    printf("total distances: %lu/%lu (%lu steals, %lu penalty)\n", (unsigned long)(distances[0].i), (unsigned long)mindistances, (unsigned long)stolen_work, (unsigned long)stealing_penalty);
     free(distances);
 #endif
 }
