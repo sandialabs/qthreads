@@ -162,6 +162,9 @@ struct qthread_shepherd_s {
     aligned_t sched_shepherd;
     /* affinity information */
     unsigned int node;		/* whereami */
+#ifdef HAVE_SYS_LGRP_USER_H
+    unsigned int lgrp;
+#endif
     unsigned int * shep_dists;
     qthread_shepherd_id_t * sorted_sheplist;
 #ifdef QTHREAD_SHEPHERD_PROFILING
@@ -308,7 +311,11 @@ static int qthread_internal_shepcomp(void *src, const void *a, const void *b)
 }
 #else
 static qthread_shepherd_id_t shepcomp_src;
-static int qthread_internal_shepcomp(const void* a, const void* b)
+/* this cannot be static, because Sun's idiotic gccfss compiler sometimes (at
+ * optimization levels > -O3) refuses to compile it if it is - note that this
+ * doesn't seem to be something that can be detected with a configure script,
+ * because it WORKS on small programs */
+int qthread_internal_shepcomp(const void* a, const void* b)
 {
     int a_dist = qthread_distance(shepcomp_src, *(qthread_shepherd_id_t*)a);
     int b_dist = qthread_distance(shepcomp_src, *(qthread_shepherd_id_t*)b);
@@ -370,11 +377,11 @@ static QINLINE void FREE_QTHREAD(qthread_t * t)
 # define ALLOC_LFQUEUE(shep) (qt_lfqueue_t *) malloc(sizeof(qt_lfqueue_t))
 # define FREE_LFQUEUE(t) free(t)
 # ifdef HAVE_MEMALIGN
-#  define ALLOC_LFQNODE(ret,shep) (ret) = (qt_lfqueue_node_t *) memalign(16, sizeof(qt_lfqueue_node_t))
+#  define ALLOC_LFQNODE(ret,shep) *(ret) = (qt_lfqueue_node_t *) memalign(16, sizeof(qt_lfqueue_node_t))
 # elif HAVE_POSIX_MEMALIGN
-#  define ALLOC_LFQNODE(ret,shep) posix_memalign(ret,16,sizeof(qt_lfqueue_node_t))
+#  define ALLOC_LFQNODE(ret,shep) posix_memalign(*(ret),16,sizeof(qt_lfqueue_node_t))
 # else
-#  define ALLOC_LFQNODE(ret,shep) (ret) = malloc(sizeof(qt_lfqueue_node_t));
+#  define ALLOC_LFQNODE(ret,shep) *(ret) = malloc(sizeof(qt_lfqueue_node_t));
 # endif
 # define FREE_LFQNODE(t) free(t)
 #else
@@ -503,8 +510,13 @@ static QINLINE void FREE_ADDRSTAT(qthread_addrstat_t * t)
 
 /* guaranteed to be between 0 and 128, using the first parts of addr that are
  * significant */
+#ifdef __SUN__
+#define QTHREAD_CHOOSE_STRIPE(addr) (((size_t)addr >> 4) & 0x7f)
+#define QTHREAD_LOCKING_STRIPES 128
+#else
 #define QTHREAD_CHOOSE_STRIPE(addr) (((size_t)addr >> 4) & 0x1f)
 #define QTHREAD_LOCKING_STRIPES 32
+#endif
 
 #if defined(HAVE_GCC_INLINE_ASSEMBLY) && \
     (QTHREAD_SIZEOF_ALIGNED_T == 4 || \
@@ -839,29 +851,29 @@ static QINLINE int qthread_unique_collect(void *key, void *value, void *id)
 
 #ifdef HAVE_SYS_LGRP_USER_H
 static int lgrp_walk(const lgrp_cookie_t cookie, const lgrp_id_t lgrp,
-		     processorid_t *** cpus, int lgrp_count_grps)
+		     processorid_t ** cpus, lgrp_id_t * lgrp_ids, int cpu_grps)
 {				       /*{{{ */
     int nchildren, ncpus =
 	lgrp_cpus(cookie, lgrp, NULL, 0, LGRP_CONTENT_DIRECT);
 
     if (ncpus == -1) {
-	return lgrp_count_grps;
+	return cpu_grps;
     } else if (ncpus > 0) {
 	processorid_t *cpuids = malloc((ncpus + 1) * sizeof(processorid_t));
 
 	ncpus = lgrp_cpus(cookie, lgrp, cpuids, ncpus, LGRP_CONTENT_DIRECT);
 	if (ncpus == -1) {
 	    free(cpuids);
-	    return lgrp_count_grps;
+	    return cpu_grps;
 	}
 	cpuids[ncpus] = -1;
-	*cpus =
-	    realloc(*cpus, sizeof(processorid_t *) * (lgrp_count_grps + 1));
-	(*cpus)[lgrp_count_grps++] = cpuids;
+	cpus[cpu_grps] = cpuids;
+	lgrp_ids[cpu_grps] = lgrp;
+	cpu_grps++;
     }
     nchildren = lgrp_children(cookie, lgrp, NULL, 0);
     if (nchildren == -1) {
-	return lgrp_count_grps;
+	return cpu_grps;
     } else if (nchildren > 0) {
 	int i;
 	lgrp_id_t *children = malloc(nchildren * sizeof(lgrp_id_t));
@@ -869,14 +881,14 @@ static int lgrp_walk(const lgrp_cookie_t cookie, const lgrp_id_t lgrp,
 	nchildren = lgrp_children(cookie, lgrp, children, nchildren);
 	if (nchildren == -1) {
 	    free(children);
-	    return lgrp_count_grps;
+	    return cpu_grps;
 	}
 	for (i = 0; i < nchildren; i++) {
-	    lgrp_count_grps =
-		lgrp_walk(cookie, children[i], cpus, lgrp_count_grps);
+	    cpu_grps =
+		lgrp_walk(cookie, children[i], cpus, lgrp_ids, cpu_grps);
 	}
     }
-    return lgrp_count_grps;
+    return cpu_grps;
 }				       /*}}} */
 #endif
 
@@ -1241,58 +1253,76 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 	    goto noaffinity;
 	}
 #elif defined(HAVE_SYS_LGRP_USER_H)
-	lgrp_id_t lgrp;
+	unsigned int lgrp_offset;
 	int lgrp_count_grps;
 	processorid_t **cpus = NULL;
+	lgrp_id_t *lgrp_ids = NULL;
 
 	switch (lgrp_cookie) {
 	    case EINVAL:
 	    case ENOMEM:
 		return QTHREAD_THIRD_PARTY_ERROR;
 	}
-	lgrp_count_grps = lgrp_walk(lgrp_cookie, lgrp_root(lgrp_cookie), &cpus, 0);
+	{
+	    size_t max_lgrps = lgrp_nlgrps(lgrp_cookie);
+	    if (lgrp_count_grps <= 0) {
+		return QTHREAD_THIRD_PARTY_ERROR;
+	    }
+	    cpus = calloc(max_lgrps, sizeof(processorid_t*));
+	    assert(cpus);
+	    lgrp_ids = calloc(max_lgrps, sizeof(lgrp_id_t));
+	    assert(lgrp_ids);
+	}
+	lgrp_count_grps = lgrp_walk(lgrp_cookie, lgrp_root(lgrp_cookie), cpus, lgrp_ids, 0);
 	if (lgrp_count_grps <= 0) {
 	    return QTHREAD_THIRD_PARTY_ERROR;
 	}
 	for (i = 0; i < nshepherds; i++) {
 	    /* first, pick a lgrp/node */
 	    int cpu;
-	    lgrp_id_t first;
+	    unsigned int first_loff;
 
-	    first = lgrp = i % lgrp_count_grps;
+	    first_loff = lgrp_offset = i % lgrp_count_grps;
 	    qlib->shepherds[i].node = -1;
+	    qlib->shepherds[i].lgrp = -1;
 	    /* now pick an available CPU */
 	    while (1) {
 		cpu = 0;
 		/* find an unused one */
-		while (cpus[lgrp][cpu] != (processorid_t)(-1))
+		while (cpus[lgrp_offset][cpu] != (processorid_t)(-1))
 		    cpu++;
 		if (cpu == 0) {
 		    /* if no unused ones... try the next lgrp */
-		    lgrp++;
-		    lgrp *= (lgrp < lgrp_count_grps);
-		    if (lgrp == first) {
+		    lgrp_offset++;
+		    lgrp_offset *= (lgrp_offset < lgrp_count_grps);
+		    if (lgrp_offset == first_loff) {
 			break;
 		    }
 		} else {
 		    /* found one! */
 		    cpu--;
-		    qlib->shepherds[i].node = cpus[lgrp][cpu];
-		    cpus[lgrp][cpu] = -1;
+		    qlib->shepherds[i].node = cpus[lgrp_offset][cpu];
+		    qlib->shepherds[i].lgrp = lgrp_ids[lgrp_offset];
+		    cpus[lgrp_offset][cpu] = -1;
 		    break;
 		}
 	    }
 	}
 	for (i = 0; i < nshepherds; i++) {
-	    const unsigned int node_i = qlib->shepherds[i].node;
+	    const unsigned int node_i = qlib->shepherds[i].lgrp;
 	    size_t j;
 	    qlib->shepherds[i].shep_dists = calloc(nshepherds, sizeof(unsigned int));
 	    assert(qlib->shepherds[i].shep_dists);
 	    for (j = 0; j < nshepherds; j++) {
-		const unsigned int node_j = qlib->shepherds[j].node;
+		const unsigned int node_j = qlib->shepherds[j].lgrp;
 		if (node_i != QTHREAD_NO_NODE && node_j != QTHREAD_NO_NODE) {
-		    qlib->shepherds[i].shep_dists[j] = lgrp_latency_cookie(lgrp_cookie, node_i, node_j, LGRP_LAT_CPU_TO_MEM);
-		    assert(qlib->shepherds[i].shep_dists[j] >= 0);
+		    int ret = lgrp_latency_cookie(lgrp_cookie, node_i, node_j, LGRP_LAT_CPU_TO_MEM);
+		    if (ret < 0) {
+			assert(ret >= 0);
+			return QTHREAD_THIRD_PARTY_ERROR;
+		    } else {
+			qlib->shepherds[i].shep_dists[j] = (unsigned int)ret;
+		    }
 		} else {
 		    /* XXX too arbitrary */
 		    if (i == j) {
@@ -1319,10 +1349,15 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 	    qsort(qlib->shepherds[i].sorted_sheplist, nshepherds-1, sizeof(qthread_shepherd_id_t), qthread_internal_shepcomp);
 #endif
 	}
-	for (i = 0; i < lgrp_count_grps; i++) {
-	    free(cpus[i]);
+	if (cpus) {
+	    for (i = 0; i < lgrp_count_grps; i++) {
+		free(cpus[i]);
+	    }
+	    free(cpus);
 	}
-	free(cpus);
+	if (lgrp_ids) {
+	    free(lgrp_ids);
+	}
 #endif
     } else {
 noaffinity: Q_UNUSED
