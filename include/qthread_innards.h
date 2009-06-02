@@ -7,6 +7,12 @@
 
 #include "qthread_asserts.h"
 
+#if defined(HAVE_UCONTEXT_H) && defined(HAVE_NATIVE_MAKECONTEXT)
+# include <ucontext.h>		       /* for ucontext_t */
+#else
+# include "osx_compat/taskimpl.h"
+#endif
+
 #ifdef QTHREAD_DEBUG
 # ifdef HAVE_UNISTD_H
 #  include <unistd.h> /* for write() */
@@ -30,7 +36,13 @@ typedef struct qlib_s
     unsigned master_stack_size;
     unsigned max_stack_size;
 
-    void* shep0_stack; /* free the shep0 stack when exiting */
+    qthread_t *mccoy_thread; /* free when exiting */
+
+    void *master_stack;
+    ucontext_t *master_context;
+#ifdef QTHREAD_USE_VALGRIND
+    unsigned int valgrind_masterstack_id;
+#endif
 
     /* assigns a unique thread_id mostly for debugging! */
     aligned_t max_thread_id;
