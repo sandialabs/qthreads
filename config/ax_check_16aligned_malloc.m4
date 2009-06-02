@@ -17,6 +17,9 @@ int main()
   for (i=0; i<100; i++)
     if ((unsigned long)malloc(17) & (15))
       exit (1);
+  for (i=0; i<100; i++)
+    if ((unsigned long)malloc(1) & (15))
+      exit (1);
   exit (0);
 }
               ],
@@ -45,6 +48,9 @@ int main()
 
   for (i=0; i<100; i++)
     if ((unsigned long)calloc(1,17) & (15))
+      exit (1);
+  for (i=0; i<100; i++)
+    if ((unsigned long)calloc(1,1) & (15))
       exit (1);
   exit (0);
 }
