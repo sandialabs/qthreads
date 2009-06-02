@@ -91,10 +91,12 @@ int main(int argc, char *argv[])
 	    interactive = 0;
 	} else {
 	    interactive = 1;
+	    printf("%i threads\n", threads);
 	}
     }
     if (argc >= 3) {
 	ASIZE = strtol(argv[2], NULL, 0);
+	printf("ASIZE: %i\n", (int)ASIZE);
     }
 
     qthread_init(threads);
