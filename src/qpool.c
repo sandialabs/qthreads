@@ -12,8 +12,11 @@
 #ifdef QTHREAD_HAVE_LIBNUMA
 # include <numa.h>
 #endif
+#ifdef QTHREAD_USE_VALGRIND
+# include <valgrind/memcheck.h>
+#endif
 
-#include "qthread_innards.h"
+#include "qthread_innards.h"	/* for QTHREAD_NO_NODE */
 #include "qthread_asserts.h"
 
 #ifdef HAVE_GETPAGESIZE
@@ -159,6 +162,9 @@ qpool *qpool_create_aligned(const size_t isize, size_t alignment)
     if (pool == NULL) {
 	return NULL;
     }
+#ifdef QTHREAD_USE_VALGRIND
+    VALGRIND_CREATE_MEMPOOL(pool, 0, 0);
+#endif
     pool->pools =
 	(struct qpool_shepspec_s *)calloc(numsheps,
 					  sizeof(struct qpool_shepspec_s));
@@ -218,7 +224,11 @@ qpool *qpool_create_aligned(const size_t isize, size_t alignment)
 	    (char *)qpool_internal_aligned_alloc(alloc_size,
 						 pool->pools[pindex].node,
 						 alignment);
+#ifdef QTHREAD_USE_VALGRIND
+	VALGRIND_MAKE_MEM_NOACCESS(pool->pools[pindex].alloc_block, alloc_size);
+#endif
 	assert(pool->pools[pindex].alloc_block != NULL);
+	assert(alignment != 0);
 	assert(((unsigned long)(pool->pools[pindex].
 				alloc_block) & (alignment - 1)) == 0);
 	if (pool->pools[pindex].alloc_block == NULL) {
@@ -287,6 +297,9 @@ void *qpool_alloc(qthread_t * me, qpool * pool)
 
 	do {
 	    old = p;
+#ifdef QTHREAD_USE_VALGRIND
+	    VALGRIND_MAKE_MEM_DEFINED(QPTR(p), pool->itemsize);
+#endif
 	    new = *(void **)QPTR(p);
 	    p = (void*)qthread_cas_ptr(&(mypool->reuse_pool), old, QCOMPOSE(new, p));
 	} while (p != old && QPTR(p) != NULL);
@@ -311,6 +324,9 @@ void *qpool_alloc(qthread_t * me, qpool * pool)
 	    }
 	    p = qpool_internal_aligned_alloc(pool->alloc_size, mypool->node,
 					     pool->alignment);
+#ifdef QTHREAD_USE_VALGRIND
+	    VALGRIND_MAKE_MEM_NOACCESS(p, pool->alloc_size);
+#endif
 	    assert(p != NULL);
 	    assert(pool->alignment == 0 ||
 		   (((unsigned long)p) & (pool->alignment - 1)) == 0);
@@ -337,6 +353,9 @@ void *qpool_alloc(qthread_t * me, qpool * pool)
 	}
     }
   alloc_exit:
+#ifdef QTHREAD_USE_VALGRIND
+    VALGRIND_MEMPOOL_ALLOC(pool, QPTR(p), pool->item_size);
+#endif
     return QPTR(p);
 }				       /*}}} */
 
@@ -358,6 +377,9 @@ void qpool_free(qthread_t * me, qpool * pool, void *mem)
 	new = QCOMPOSE(mem, old);
 	p = (void*)qthread_cas_ptr(&(mypool->reuse_pool), old, new);
     } while (p != old);
+#ifdef QTHREAD_USE_VALGRIND
+    VALGRIND_MEMPOOL_FREE(pool, mem);
+#endif
 }				       /*}}} */
 
 void qpool_destroy(qpool * pool)
@@ -388,6 +410,9 @@ void qpool_destroy(qpool * pool)
 		free(p);
 	    }
 	}
+#ifdef QTHREAD_USE_VALGRIND
+	VALGRIND_DESTROY_MEMPOOL(pool);
+#endif
 	free(pool);
     }
 }				       /*}}} */
