@@ -2,6 +2,9 @@
 # include "config.h"
 #endif
 #include <stdlib.h>		       /* for malloc() and abort() */
+#ifdef HAVE_MALLOC_H
+# include <malloc.h>			/* for memalign() */
+#endif
 #if defined(HAVE_UCONTEXT_H) && defined(HAVE_NATIVE_MAKECONTEXT)
 # include <ucontext.h>		       /* for make/get/swap-context functions */
 #else
@@ -23,6 +26,9 @@
 #endif
 #ifdef HAVE_SCHED_H
 # include <sched.h>
+#endif
+#ifdef QTHREAD_USE_VALGRIND
+# include <valgrind/memcheck.h>
 #endif
 
 #ifdef QTHREAD_LOCK_PROFILING
@@ -114,6 +120,10 @@ struct qthread_s {
     ucontext_t *context;	/* the context switch info */
     void *stack;		/* the thread's stack */
     ucontext_t *return_context;	/* context of parent shepherd */
+
+#ifdef QTHREAD_USE_VALGRIND
+    unsigned int valgrind_stack_id;
+#endif
 
     struct qthread_s *next;
 };
@@ -364,7 +374,7 @@ static QINLINE void FREE_QTHREAD(qthread_t * t)
 #endif
 
 #if defined(UNPOOLED_CONTEXTS) || defined(UNPOOLED)
-#define ALLOC_CONTEXT(shep) (ucontext_t *) malloc(sizeof(ucontext_t))
+#define ALLOC_CONTEXT(shep) (ucontext_t *) calloc(1, sizeof(ucontext_t))
 #define FREE_CONTEXT(shep, t) free(t)
 #else
 #define ALLOC_CONTEXT(shep) (ucontext_t *) qt_mpool_alloc(shep?(shep->context_pool):generic_context_pool)
@@ -376,13 +386,19 @@ static QINLINE void FREE_QTHREAD(qthread_t * t)
 # define FREE_QUEUE(t) free(t)
 # define ALLOC_LFQUEUE(shep) (qt_lfqueue_t *) malloc(sizeof(qt_lfqueue_t))
 # define FREE_LFQUEUE(t) free(t)
-# ifdef HAVE_MEMALIGN
-#  define ALLOC_LFQNODE(ret,shep) *(ret) = (qt_lfqueue_node_t *) memalign(16, sizeof(qt_lfqueue_node_t))
-# elif HAVE_POSIX_MEMALIGN
-#  define ALLOC_LFQNODE(ret,shep) posix_memalign(*(ret),16,sizeof(qt_lfqueue_node_t))
+static QINLINE void ALLOC_LFQNODE(qt_lfqueue_node_t ** ret,
+				  qthread_shepherd_t * shep)
+{
+# ifdef HAVE_POSIX_MEMALIGN
+    qassert(posix_memalign((void **)ret, 16, sizeof(qt_lfqueue_node_t)), 0);
+# elif HAVE_MEMALIGN
+    *ret = (qt_lfqueue_node_t *) memalign(16, sizeof(qt_lfqueue_node_t));
 # else
-#  define ALLOC_LFQNODE(ret,shep) *(ret) = malloc(sizeof(qt_lfqueue_node_t));
+    *ret = calloc(1, sizeof(qt_lfqueue_node_t));
+    return;
 # endif
+    memset(*ret, 0, sizeof(qt_lfqueue_node_t));
+}
 # define FREE_LFQNODE(t) free(t)
 #else
 static QINLINE qthread_queue_t *ALLOC_QUEUE(qthread_shepherd_t * shep)
@@ -428,6 +444,7 @@ static QINLINE void ALLOC_LFQNODE(qt_lfqueue_node_t ** ret,
 	(qt_lfqueue_node_t *) qt_mpool_alloc(shep ? (shep->lfqueue_node_pool)
 					     : generic_lfqueue_node_pool);
     if (*ret != NULL) {
+	memset(*ret, 0, sizeof(qt_lfqueue_node_t));
 	(*ret)->creator_ptr = shep;
     }
 }
@@ -1077,7 +1094,6 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 {				       /*{{{ */
     int r;
     size_t i;
-    ucontext_t *shep0 = NULL;
     int cp_syncmode = COLLECTION_MODE_PLAIN;
     int need_sync = 1;
 #ifdef HAVE_SYS_LGRP_USER_H
@@ -1466,49 +1482,64 @@ noaffinity: Q_UNUSED
     /* now, transform the current main context into a qthread,
      * and make the main thread a shepherd (shepherd 0).
      * What will happen is this:
-     * shep0 and shep0_stack are used for shepherd0; the shep0_stack is
-     *   huge, because the shepherd expects a "standard" size stack. The
-     * qthread_t is for the *current* thread, which also expects a full-size
-     *   stack, but is generated so that the current thread can block the same
-     *   way that a qthread can. */
-    if ((shep0 = ALLOC_CONTEXT((&qlib->shepherds[0]))) == NULL) {
-	perror("qthread_init allocating shepherd context");
+     * qlib->mccoy_thread represents the original execution thread, and so will
+     * receive a context based on the current execution state.
+     * qlib->master_context is a context for the new shepherd that will be
+     * created (shepherd 0).
+     * qlib->master_stack is a stack for that shepherd, and is huge, because
+     * the shepherd expects a "standard" size stack. The mccoy_thread, as it is
+     * for the *current* thread, also expects a full-size stack. The point of
+     * this weirdness is so that the current thread can block the same way that
+     * a qthread can. */
+    qlib->mccoy_thread = qthread_thread_new(NULL, NULL, NULL, 0);
+    if (!qlib->mccoy_thread) {
+	perror("qthread_init allocating qthread");
 	return QTHREAD_MALLOC_ERROR;
     }
-    if ((qlib->shep0_stack = calloc(1, qlib->master_stack_size)) == NULL) {
-	perror("qthread_init allocating shepherd stack");
+
+    if ((qlib->master_context = ALLOC_CONTEXT((&qlib->shepherds[0]))) == NULL) {
+	perror("qthread_init allocating context for shepherd 0");
 	return QTHREAD_MALLOC_ERROR;
     }
-    {
-	qthread_t *t = qthread_thread_new(NULL, NULL, NULL, 0);
-
-	if (!t) {
-	    perror("qthread_init allocating qthread");
-	    return QTHREAD_MALLOC_ERROR;
-	}
-
-	/* the context will have its own stack ptr */
-	FREE_STACK(t->creator_ptr, t->stack);
-	t->stack = NULL;
-	t->thread_state = QTHREAD_STATE_YIELDED;	/* avoid re-launching */
-	t->flags = QTHREAD_REAL_MCCOY; /* i.e. this is THE parent thread */
-	t->shepherd_ptr = &(qlib->shepherds[0]);
-
-	qt_lfqueue_enqueue(qlib->shepherds[0].ready, t,
-			   &(qlib->shepherds[0]));
-	qassert(getcontext(t->context), 0);
-	qassert(getcontext(shep0), 0);
-	qthread_makecontext(shep0, qlib->shep0_stack, qlib->master_stack_size,
-#ifdef QTHREAD_MAKECONTEXT_SPLIT
-			    (void (*)(void))qthread_shepherd_wrapper,
-#else
-			    (void (*)(void))qthread_shepherd,
+    if ((qlib->master_stack = calloc(1, qlib->master_stack_size)) == NULL) {
+	perror("qthread_init allocating stack for shepherd 0");
+	return QTHREAD_MALLOC_ERROR;
+    }
+#ifdef QTHREAD_USE_VALGRIND
+    qlib->valgrind_masterstack_id = VALGRIND_STACK_REGISTER(qlib->master_stack, qlib->master_stack_size);
 #endif
-			    &(qlib->shepherds[0]), t->context);
-	/* this launches shepherd 0 */
-	qthread_debug(2, "qthread_init(): launching shepherd 0\n");
-	qassert(swapcontext(t->context, shep0), 0);
-    }
+
+    /* the context will have its own stack ptr */
+#ifdef QTHREAD_USE_VALGRIND
+    VALGRIND_STACK_DEREGISTER(qlib->mccoy_thread->valgrind_stack_id);
+#endif
+    FREE_STACK(qlib->mccoy_thread->creator_ptr, qlib->mccoy_thread->stack);
+    qlib->mccoy_thread->stack = NULL;
+    qlib->mccoy_thread->thread_state = QTHREAD_STATE_YIELDED;	/* avoid re-launching */
+    qlib->mccoy_thread->flags = QTHREAD_REAL_MCCOY; /* i.e. this is THE parent thread */
+    qlib->mccoy_thread->shepherd_ptr = &(qlib->shepherds[0]);
+
+    qt_lfqueue_enqueue(qlib->shepherds[0].ready, qlib->mccoy_thread,
+	    &(qlib->shepherds[0]));
+    qassert(getcontext(qlib->mccoy_thread->context), 0);
+    qassert(getcontext(qlib->master_context), 0);
+    /* now build the context for the shepherd 0 */
+    qthread_makecontext(qlib->master_context, qlib->master_stack, qlib->master_stack_size,
+#ifdef QTHREAD_MAKECONTEXT_SPLIT
+	    (void (*)(void))qthread_shepherd_wrapper,
+#else
+	    (void (*)(void))qthread_shepherd,
+#endif
+	    &(qlib->shepherds[0]), qlib->mccoy_thread->context);
+    /* this launches shepherd 0 */
+    qthread_debug(2, "qthread_init(): launching shepherd 0\n");
+#ifdef QTHREAD_USE_VALGRIND
+    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(qlib->mccoy_thread->context, sizeof(ucontext_t));
+    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(qlib->master_context, sizeof(ucontext_t));
+    VALGRIND_MAKE_MEM_DEFINED(qlib->mccoy_thread->context, sizeof(ucontext_t));
+    VALGRIND_MAKE_MEM_DEFINED(qlib->master_context, sizeof(ucontext_t));
+#endif
+    qassert(swapcontext(qlib->mccoy_thread->context, qlib->master_context), 0);
 
     qthread_debug(2, "qthread_init(): finished.\n");
     return QTHREAD_SUCCESS;
@@ -1599,7 +1630,7 @@ void qthread_finalize(void)
      */
 
     /* enqueue the termination thread sentinal */
-    for (i = 0; i < qlib->nshepherds; i++) {
+    for (i = 1; i < qlib->nshepherds; i++) {
 	t = qthread_thread_bare(NULL, NULL, (aligned_t *) NULL, i);
 	assert(t != NULL);	       /* what else can we do? */
 	t->thread_state = QTHREAD_STATE_TERM_SHEP;
@@ -1673,6 +1704,7 @@ void qthread_finalize(void)
 	cp_hashlist_destroy(qlib->shepherds[i].uniquefebaddrs);
 #endif
     }
+    qt_lfqueue_free(qlib->shepherds[0].ready);
 
 #ifdef QTHREAD_LOCK_PROFILING
     printf
@@ -1732,6 +1764,14 @@ void qthread_finalize(void)
     QTHREAD_DESTROYLOCK(&qlib->max_thread_id_lock);
     QTHREAD_DESTROYLOCK(&qlib->sched_shepherd_lock);
 
+    FREE_CONTEXT((&qlib->shepherds[0]), qlib->master_context);
+    FREE_CONTEXT((&qlib->shepherds[0]), qlib->mccoy_thread->context);
+#ifdef QTHREAD_USE_VALGRIND
+    VALGRIND_STACK_DEREGISTER(qlib->mccoy_thread->valgrind_stack_id);
+    VALGRIND_STACK_DEREGISTER(qlib->valgrind_masterstack_id);
+#endif
+    free(qlib->mccoy_thread->stack);
+    free(qlib->master_stack);
 #ifndef UNPOOLED
     for (i = 0; i < qlib->nshepherds; ++i) {
 	qt_mpool_destroy(qlib->shepherds[i].qthread_pool);
@@ -1753,10 +1793,10 @@ void qthread_finalize(void)
     qt_mpool_destroy(generic_lock_pool);
     qt_mpool_destroy(generic_addrstat_pool);
 #endif
-    free(qlib->shep0_stack);
     free(qlib->shepherds);
     free(qlib);
     qlib = NULL;
+    qassert(pthread_key_delete(shepherd_structs), 0);
 
     qthread_debug(2, "qthread_finalize(): finished.\n");
 }				       /*}}} */
@@ -1860,6 +1900,9 @@ static QINLINE int qthread_thread_plush(qthread_t * t)
 	if (stack != NULL) {
 	    t->context = uc;
 	    t->stack = stack;
+#ifdef QTHREAD_USE_VALGRIND
+	    t->valgrind_stack_id = VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
+#endif
 	    return QTHREAD_SUCCESS;
 	}
 	FREE_CONTEXT(shepherd, uc);
@@ -1900,6 +1943,9 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
 	FREE_CONTEXT(myshep, uc);
 	return NULL;
     }
+#ifdef QTHREAD_USE_VALGRIND
+    t->valgrind_stack_id = VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
+#endif
 
     t->thread_state = QTHREAD_STATE_NEW;
     t->f = f;
@@ -1931,6 +1977,9 @@ static QINLINE void qthread_thread_free(qthread_t * t)
 	FREE_CONTEXT(t->creator_ptr, t->context);
     }
     if (t->stack != NULL) {
+#ifdef QTHREAD_USE_VALGRIND
+	VALGRIND_STACK_DEREGISTER(t->valgrind_stack_id);
+#endif
 	FREE_STACK(t->creator_ptr, t->stack);
     }
     FREE_QTHREAD(t);
@@ -2343,6 +2392,12 @@ static QINLINE void qthread_exec(qthread_t * t, ucontext_t * c)
 
     qthread_debug(3, "qthread_exec(%p): executing swapcontext()...\n", t);
     /* return_context (aka "c") is being written over with the current context */
+#ifdef QTHREAD_USE_VALGRIND
+    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(t->context, sizeof(ucontext_t));
+    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(t->return_context, sizeof(ucontext_t));
+    VALGRIND_MAKE_MEM_DEFINED(t->context, sizeof(ucontext_t));
+    VALGRIND_MAKE_MEM_DEFINED(t->return_context, sizeof(ucontext_t));
+#endif
     qassert(swapcontext(t->return_context, t->context), 0);
 #ifdef NEED_RLIMIT
     qthread_debug(3,
@@ -2491,6 +2546,12 @@ static QINLINE void qthread_back_to_master(qthread_t * t)
     }
 #endif
     /* now back to your regularly scheduled master thread */
+#ifdef QTHREAD_USE_VALGRIND
+    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(t->context, sizeof(ucontext_t));
+    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(t->return_context, sizeof(ucontext_t));
+    VALGRIND_MAKE_MEM_DEFINED(t->context, sizeof(ucontext_t));
+    VALGRIND_MAKE_MEM_DEFINED(t->return_context, sizeof(ucontext_t));
+#endif
     qassert(swapcontext(t->context, t->return_context), 0);
 #ifdef NEED_RLIMIT
     qthread_debug(3,
