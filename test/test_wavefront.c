@@ -8,7 +8,11 @@ static size_t ASIZE = 10;
 void sum(const void *restrict left, const void *restrict leftdown,
 	 const void *restrict down, void *restrict out)
 {
-    *(int *)out = *(int *)left + *(int *)leftdown + *(int *)down;
+    if ((*(int*)left) + (*(int*)leftdown) + (*(int*)down) < 2)
+	*(int*)out = 1;
+    else
+	*(int*)out = 0;
+    //*(int *)out = *(int *)left + *(int *)leftdown + *(int *)down;
 }
 
 void suma(const void *restrict left, const void *restrict leftdown,
@@ -40,13 +44,15 @@ int main(int argc, char *argv[])
 	    threads = 0;
 	} else {
 	    interactive = 1;
+	    printf("%i threads\n", threads);
 	}
     }
     if (argc >= 3) {
 	ASIZE = strtol(argv[2], NULL, 0);
+	printf("ASIZE: %i\n", ASIZE);
     }
     qthread_init(threads);
-    {
+    if (interactive == 0) {
 	int **R = calloc(ASIZE, sizeof(int *));
 	int i;
 
