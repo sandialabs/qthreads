@@ -15,6 +15,10 @@
 #include <pthread.h>
 #endif
 
+#ifdef QTHREAD_USE_VALGRIND
+# include <valgrind/memcheck.h>
+#endif
+
 #include <qthread/qthread-int.h>       /* for uintptr_t */
 #include "qthread_asserts.h"
 
@@ -77,14 +81,18 @@ static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
 
     switch (alignment) {
 	case 0:
+#ifdef QTHREAD_USE_VALGRIND
+	    ret = calloc(1, alloc_size);
+	    VALGRIND_MAKE_MEM_NOACCESS(ret, alloc_size);
+	    return ret;
+#else
 	    return calloc(1, alloc_size);
+#endif
 	case 16:
 	case 8:
 	case 4:
 	case 2:
-#ifdef HAVE_16ALIGNED_CALLOC
-	    return calloc(1, alloc_size);
-#elif defined(HAVE_16ALIGNED_MALLOC)
+#ifdef HAVE_16ALIGNED_MALLOC
 	    ret = malloc(alloc_size);
 #elif defined(HAVE_MEMALIGN)
 	    ret = memalign(16, alloc_size);
@@ -108,6 +116,9 @@ static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
 #endif
     }
     memset(ret, 0, alloc_size);
+#ifdef QTHREAD_USE_VALGRIND
+    VALGRIND_MAKE_MEM_NOACCESS(ret, alloc_size);
+#endif
     return ret;
 }				       /*}}} */
 
@@ -146,6 +157,9 @@ qt_mpool qt_mpool_create_aligned(const int sync, size_t item_size,
     if (pool == NULL) {
 	return NULL;
     }
+#ifdef QTHREAD_USE_VALGRIND
+    VALGRIND_CREATE_MEMPOOL(pool, 0, 0);
+#endif
     pool->node = node;
 #ifdef QTHREAD_USE_PTHREADS
     if (sync) {
@@ -274,6 +288,9 @@ void *qt_mpool_alloc(qt_mpool pool)
 	 */
 	do {
 	    old = p;
+#ifdef QTHREAD_USE_VALGRIND
+	    VALGRIND_MAKE_MEM_DEFINED(QPTR(p), pool->item_size);
+#endif
 	    new = *(void **)QPTR(p);
 	    p = qt_cas(&(pool->reuse_pool), old, QCOMPOSE(new, p));
 	} while (p != old && QPTR(p) != NULL);
@@ -327,6 +344,9 @@ void *qt_mpool_alloc(qt_mpool pool)
 	}
     }
   alloc_exit:
+#ifdef QTHREAD_USE_VALGRIND
+    VALGRIND_MEMPOOL_ALLOC(pool, QPTR(p), pool->item_size);
+#endif
     return QPTR(p);
 }				       /*}}} */
 
@@ -342,6 +362,9 @@ void qt_mpool_free(qt_mpool pool, void *mem)
 	new = QCOMPOSE(mem, old);
 	p = qt_cas(&(pool->reuse_pool), old, new);
     } while (p != old);
+#ifdef QTHREAD_USE_VALGRIND
+    VALGRIND_MEMPOOL_FREE(pool, mem);
+#endif
 }				       /*}}} */
 
 void qt_mpool_destroy(qt_mpool pool)
@@ -369,6 +392,9 @@ void qt_mpool_destroy(qt_mpool pool)
 	    qassert(pthread_mutex_destroy(pool->lock), 0);
 	    free(pool->lock);
 	}
+#endif
+#ifdef QTHREAD_USE_VALGRIND
+	VALGRIND_DESTROY_MEMPOOL(pool);
 #endif
 	free(pool);
     }
