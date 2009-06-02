@@ -426,6 +426,15 @@ AC_ARG_ENABLE([condwait-queue],
 AS_IF([test "x$enable_condwait_queue" = "xyes"],
 	  [AC_DEFINE([QTHREAD_CONDWAIT_BLOCKING_QUEUE], [1], [use pthread-based condwait for lf queue])])
 
+AC_ARG_ENABLE([valgrind],
+			  [AS_HELP_STRING([--enable-valgrind],
+							  [compile with valgrind macros to assist with debugging])],
+			  [], [enable_valgrind="no"])
+AS_IF([test "x$enable_valgrind" = "xyes"],
+	  [AC_CHECK_HEADERS([valgrind/memcheck.h],
+						[AC_DEFINE([QTHREAD_USE_VALGRIND], [1],
+								   [Use Valgrind Macros])])])
+
 AC_ARG_ENABLE([hardware-timer],
   [AS_HELP_STRING([--disable-hardware-timer],
 				  [force the use of gettimeofday even if there is a better timer available])],
