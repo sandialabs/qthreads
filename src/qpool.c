@@ -298,7 +298,7 @@ void *qpool_alloc(qthread_t * me, qpool * pool)
 	do {
 	    old = p;
 #ifdef QTHREAD_USE_VALGRIND
-	    VALGRIND_MAKE_MEM_DEFINED(QPTR(p), pool->itemsize);
+	    VALGRIND_MAKE_MEM_DEFINED(QPTR(p), pool->item_size);
 #endif
 	    new = *(void **)QPTR(p);
 	    p = (void*)qthread_cas_ptr(&(mypool->reuse_pool), old, QCOMPOSE(new, p));
