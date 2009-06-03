@@ -288,7 +288,7 @@ void qutil_mergesort(qthread_t * me, double *array, size_t length)
 }
 
 #define SWAP(t, a, m, n) do { register t temp=a[m]; a[m]=a[n]; a[n]=temp; } while (0)
-#define MT_CHUNKSIZE 10
+#define MT_CHUNKSIZE 16
 
 struct qutil_qsort_args {
     double *array;
