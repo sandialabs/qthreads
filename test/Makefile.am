@@ -29,6 +29,7 @@ TESTS += time_swap time_producerconsumer time_increments \
 	 time_qlfqueue \
 	 time_qdqueue \
 	 time_qdqueue_sizes \
+	 time_qutil_qsort \
 	 time_allpairs \
 	 time_wavefront \
 	 time_gcd
@@ -94,6 +95,9 @@ test_migrate_DEPENDENCIES = $(QTHREADLIB)
 
 test_qutil_qsort_SOURCES = test_qutil_qsort.c
 test_qutil_qsort_DEPENDENCIES = $(QTHREADLIB)
+
+time_qutil_qsort_SOURCES = time_qutil_qsort.c
+time_qutil_qsort_DEPENDENCIES = $(QTHREADLIB)
 
 test_qarray_SOURCES = test_qarray.c
 test_qarray_DEPENDENCIES = $(QTHREADLIB)
