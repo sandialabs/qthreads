@@ -44,9 +44,13 @@ int main()
     }
 
     assert(qthread_cas(&four, 4, 5) == 4);
+#if (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
     assert(qthread_cas(&eight, 8, 9) == 8);
+#endif
     assert(four == 5);
+#if (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
     assert(eight == 9);
+#endif
 
     assert(qthread_cas_ptr(&ptr, NULL, &i) == NULL);
     assert(ptr == &i);
