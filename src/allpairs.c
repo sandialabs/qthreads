@@ -7,7 +7,7 @@
 #include <stdlib.h>		       /* for malloc() */
 #include <stdio.h>		       /* for printf */
 
-#define QTHREAD_TRACK_DISTANCES
+//#define QTHREAD_TRACK_DISTANCES
 #ifdef QTHREAD_TRACK_DISTANCES
 struct cacheline_s {
     aligned_t i;
@@ -17,13 +17,13 @@ struct cacheline_s {
 struct cacheline_s *distances = NULL;
 #endif
 
-#define QTHREAD_USE_HALFWAYARRAY
+//#define QTHREAD_USE_HALFWAYARRAY
 #ifdef QTHREAD_USE_HALFWAYARRAY
 qthread_shepherd_id_t ** halfway = NULL;
-unsigned int ** halfway_dist = NULL;
-volatile aligned_t mindistances = 0;
-aligned_t stolen_work = 0;
-aligned_t stealing_penalty = 0;
+//unsigned int ** halfway_dist = NULL;
+//volatile aligned_t mindistances = 0;
+//aligned_t stolen_work = 0;
+//aligned_t stealing_penalty = 0;
 #endif
 
 struct qt_ap_wargs
@@ -169,7 +169,7 @@ static void qt_ap_genwork2(qthread_t * me, const size_t startat,
 #elif 0
 	/* option 2: random, probably bad */
 	qdqueue_enqueue_there(me, gargs->wq, workunit, random()%maxsheps);
-#elif 0
+#elif 1
 	/* option 3: random selection of the two, maybe good */
 	qdqueue_enqueue_there(me, gargs->wq, workunit, (random()%2)?shep:qthread_shep(me));
 #elif 0
@@ -237,16 +237,16 @@ static void qt_allpairs_internal(const qarray * array1, const qarray * array2,
 #endif
 #ifdef QTHREAD_USE_HALFWAYARRAY
     /* step 0: ensure halfway array is set up */
-    mindistances = 0;
-    stolen_work = 0;
-    stealing_penalty = 0;
+    //mindistances = 0;
+    //stolen_work = 0;
+    //stealing_penalty = 0;
     if (halfway == NULL) {
 	qthread_shepherd_id_t *equivs = calloc(max_i, sizeof(qthread_shepherd_id_t));
 	halfway = calloc(max_i, sizeof(qthread_shepherd_id_t*));
-	halfway_dist = calloc(max_i, sizeof(unsigned int*));
+	//halfway_dist = calloc(max_i, sizeof(unsigned int*));
 	for (int s=0; s<max_i; s++) {
 	    halfway[s] = calloc(max_i, sizeof(qthread_shepherd_id_t));
-	    halfway_dist[s] = calloc(max_i, sizeof(unsigned int));
+	    //halfway_dist[s] = calloc(max_i, sizeof(unsigned int));
 	    for (int d=0; d<max_i; d++) {
 		/* halfway[s][d] is the shep id with the lowest total distance to both */
 		unsigned int equiv_cnt = 0;
@@ -264,7 +264,7 @@ static void qt_allpairs_internal(const qarray * array1, const qarray * array2,
 		    }
 		}
 		halfway[s][d] = equivs[random()%equiv_cnt];
-		halfway_dist[s][d] = dist;
+		//halfway_dist[s][d] = dist;
 		//printf("optimal [%i][%i]:%i from %i\n", (int)s, (int)d, (int)dist, equiv_cnt);
 	    }
 	}
