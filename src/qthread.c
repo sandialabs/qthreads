@@ -954,20 +954,24 @@ static void *qthread_shepherd(void *arg)
 	    perror("plpa setaffinity");
 	}
 	free(cpuset);
+#elif defined(HAVE_SYS_LGRP_USER_H)
+	if (me->node != -1) {
+	    if (lgrp_affinity_set(P_LWPID, P_MYID, me->lgrp, LGRP_AFF_STRONG)
+		    != 0) {
+		perror("lgrp_affinity_set");
+	    }
+	}
 #elif defined(HAVE_PROCESSOR_BIND)
 	if (me->node != -1) {
 	    if (processor_bind(P_LWPID, P_MYID, me->node, NULL) < 0) {
 		perror("processor_bind");
 	    }
 # ifdef HAVE_SYS_LGRP_USER_H
-	    {
-		lgrp_id_t home = lgrp_home(P_LWPID, P_MYID);
-
-		me->node = home;
-		if (lgrp_affinity_set(P_LWPID, P_MYID, home, LGRP_AFF_STRONG)
+	    /* using this to set preferred memory affinity (probably unnecessary);
+	     * this does NOT change the processor binding. */
+	    if (lgrp_affinity_set(P_LWPID, P_MYID, me->lgrp, LGRP_AFF_STRONG)
 		    != 0) {
-		    perror("lgrp_affinity_set");
-		}
+		perror("lgrp_affinity_set");
 	    }
 # endif
 	}
