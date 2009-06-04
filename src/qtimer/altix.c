@@ -31,6 +31,10 @@ struct qtimer_s
     unsigned long stop;
 };
 
+Q_NOINLINE static unsigned long vol_read_ul(volatile unsigned long *ptr)
+{
+    return *ptr;
+}
 
 int
 qtimer_init(void)
@@ -67,14 +71,14 @@ qtimer_init(void)
 void
 qtimer_start(qtimer_t q)
 {
-    q->start = *timer_address;
+    q->start = vol_read_ul(timer_address);
 }
 
 
 void
 qtimer_stop(qtimer_t q)
 {
-    q->stop = *timer_address;
+    q->stop = vol_read_ul(timer_address);
 }
 
 
