@@ -26,6 +26,21 @@ struct qt_wave_workunit
     size_t origrow, startrow, endrow, col;
 };
 
+/* to avoid compiler bugs regarding volatile... */
+static Q_NOINLINE volatile aligned_t *volatile*vol_id_ap(volatile aligned_t *volatile*ptr)
+{
+    return ptr;
+}
+static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t *ptr)
+{
+    return *ptr;
+}
+static Q_NOINLINE volatile aligned_t * vol_id_a(volatile aligned_t *ptr)
+{
+    return ptr;
+}
+#define _(x) (*vol_id_ap(&(x)))
+
 static void qt_wave_worker(qthread_t * me, struct qt_wave_wargs *const arg)
 {
     qarray *restrict const *const R = arg->R;
@@ -34,7 +49,7 @@ static void qt_wave_worker(qthread_t * me, struct qt_wave_wargs *const arg)
 	struct qt_wave_workunit *const wu =
 	    qdqueue_dequeue(me, arg->work_queue);
 	if (wu == NULL) {
-	    if (*(arg->no_more_work)) {
+	    if (vol_read_a(arg->no_more_work)) {
 		qthread_incr(arg->donecount, 1);
 		break;
 	    }
@@ -53,7 +68,7 @@ static void qt_wave_worker(qthread_t * me, struct qt_wave_wargs *const arg)
 #ifdef QTHREAD_FEBS_ARE_FAST
 		    qthread_feb_status(left)
 #else
-		    arg->colprogress[col - 1] >= row
+		    vol_read_a(&(arg->colprogress[col - 1])) >= row
 #endif
 		    ) {
 		    void *ptr = qarray_elem_nomigrate(R[col], row);
@@ -71,7 +86,7 @@ static void qt_wave_worker(qthread_t * me, struct qt_wave_wargs *const arg)
 		    qthread_fill(me, ptr);
 #else
 		    /* this is assumed to be atomic for a single thread */
-		    arg->colprogress[col]++;
+		    *vol_id_a(&(arg->colprogress[col])) += 1;
 #endif
 		} else {
 		    /* re-queue the work unit */
@@ -80,9 +95,11 @@ static void qt_wave_worker(qthread_t * me, struct qt_wave_wargs *const arg)
 		    qdqueue_enqueue(me, arg->work_queue, wu);
 		    break;
 		}
-		if (row == 1 && col + 1 != arg->maxcols) {
-		    /* queue work for the right (since they have at least a
-		     * LITTLE data) */
+	    }
+	    if (requeued == 0 && row == wu->endrow) {
+		/* we're done with this array segment! Huzzah! */
+		if (wu->origrow == 1 && col + 1 != arg->maxcols) {
+		    /* queue work for the right */
 		    struct qt_wave_workunit *wu2 =
 			malloc(sizeof(struct qt_wave_workunit));
 		    qarray *const right = R[col + 1];
@@ -98,9 +115,6 @@ static void qt_wave_worker(qthread_t * me, struct qt_wave_wargs *const arg)
 		    qdqueue_enqueue_there(me, arg->work_queue, wu2,
 					  qarray_shepof(right, 1));
 		}
-	    }
-	    if (requeued == 0 && row == wu->endrow) {
-		/* we're done with this array segment! Huzzah! */
 		/* now, we may need to queue the next guy up the chain... */
 		if (wu->endrow < R[col]->count) {
 		    /* queue next (reuse the work unit structure) */
@@ -120,7 +134,7 @@ static void qt_wave_worker(qthread_t * me, struct qt_wave_wargs *const arg)
 		    }
 		    if (col + 1 == arg->maxcols) {
 			/* ALL DONE */
-			*(arg->no_more_work) = 1;
+			*vol_id_a(arg->no_more_work) = 1;
 		    }
 		}
 	    }
@@ -182,7 +196,7 @@ void qt_wavefront(qarray * restrict const *const R, size_t cols, wave_f func)
     qdqueue_enqueue_there(me, wargs.work_queue, &wu, qarray_shepof(R[1], 1));
 
     /* step 5: wait for the workers to get done */
-    while (donecount < maxsheps) {
+    while (vol_read_a(&donecount) < maxsheps) {
 	qthread_yield(me);
     }
     qdqueue_destroy(me, wargs.work_queue);
