@@ -1,3 +1,4 @@
+#include <assert.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <qthread/qthread.h>
@@ -9,7 +10,7 @@ static size_t ASIZE = 10;
 void sum(const void *restrict left, const void *restrict leftdown,
 	 const void *restrict down, void *restrict out)
 {
-    *(int *)out = *(int *)left + *(int *)leftdown + *(int *)down;
+    //*(int *)out = *(int *)left + *(int *)leftdown + *(int *)down;
 }
 
 void suma(const void *restrict left, const void *restrict leftdown,
@@ -47,38 +48,13 @@ int main(int argc, char *argv[])
 	printf("ASIZE: %i\n", ASIZE);
     }
     qthread_init(threads);
-#if 0
-    {
-	int **R = calloc(ASIZE, sizeof(int *));
-	int i;
-
-	for (i = 0; i < ASIZE; i++) {
-	    R[i] = calloc(ASIZE, sizeof(int));
-	    R[i][0] = 1;
-	    if (i == 0) {
-		for (i = 0; i < ASIZE; i++) {
-		    R[0][i] = 1;
-		}
-		i = 0;
-	    }
-	}
-	/* do stuff */
-	qt_basic_wavefront(R, ASIZE, ASIZE, sum);
-
-	/* prove it */
-
-	/* free it */
-	for (i = 0; i < ASIZE; i++) {
-	    free(R[i]);
-	}
-	free(R);
-    }
-#endif
     {
 	qthread_t *me = qthread_self();
 	qarray **R = calloc(ASIZE, sizeof(qarray *));
 	qtimer_t timer = qtimer_new();
 
+	assert(R);
+	assert(timer);
 	R[0] = qarray_create_tight(ASIZE, sizeof(aligned_t));
 	qarray_iter_loop(me, R[0], 0, ASIZE, assign1, NULL);
 	for (int col = 1; col < ASIZE; col++) {
