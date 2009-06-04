@@ -14,6 +14,13 @@ struct qt_loop_wrapper_args
     volatile aligned_t *donecount;
 };
 
+/* avoid compiler bugs with volatile... */
+static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t *ptr)
+{
+    return *ptr;
+}
+#define _(x) vol_read_a(&(x))
+
 static aligned_t qt_loop_wrapper(qthread_t * me,
 				 const struct qt_loop_wrapper_args *arg)
 {
@@ -57,7 +64,7 @@ static void qt_loop_inner(const size_t start, const size_t stop,
 	}
 	threadct++;
     }
-    for (i = 0; donecount < steps; i++) {
+    for (i = 0; _(donecount) < steps; i++) {
 	qthread_readFF(me, NULL, rets + i);
     }
     free(qwa);
@@ -138,7 +145,7 @@ static QINLINE void qt_loop_balance_inner(const size_t start,
 	}
     }
     /* turning this into a spinlock :P */
-    while (donecount < maxsheps) {
+    while (_(donecount) < maxsheps) {
 	qthread_yield(me);
     }
     free(qwa);
