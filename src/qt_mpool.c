@@ -38,7 +38,7 @@ struct qt_mpool_s
     size_t items_per_alloc;
     size_t alignment;
 
-    volatile void *reuse_pool;
+    volatile void *volatile reuse_pool;
     char *alloc_block;
     size_t alloc_block_pos;
     void **alloc_list;
@@ -52,6 +52,13 @@ struct qt_mpool_s
 
 /* local constants */
 static size_t pagesize = 0;
+
+/* avoid compiler bugs with volatile... */
+static Q_NOINLINE volatile void *volatile* vol_id_void(volatile void*volatile*ptr)
+{/*{{{*/
+    return ptr;
+}/*}}}*/
+#define _(x) (*vol_id_void(&(x)))
 
 /* local funcs */
 static QINLINE size_t mpool_gcd(size_t a, size_t b)
@@ -221,7 +228,7 @@ qt_mpool qt_mpool_create_aligned(const int sync, size_t item_size,
 
     pool->items_per_alloc = alloc_size / item_size;
 
-    pool->reuse_pool = NULL;
+    _(pool->reuse_pool) = NULL;
     pool->alloc_block = (char *)qt_mpool_internal_aligned_alloc(alloc_size,	/*node, */
 								alignment);
     assert(((unsigned long)(pool->alloc_block) & (alignment - 1)) == 0);
@@ -266,14 +273,20 @@ qt_mpool qt_mpool_create(int sync, size_t item_size, int node)
  * need to be huge, just big enough to make the APA problem sufficiently
  * unlikely. We'll just claim 4, to be conservative. Thus, an allocated block
  * of memory must be aligned to 16 bytes. */
+#ifndef QTHREAD_USE_VALGRIND
 #define QCTR_MASK (15)
-#define QPTR(x) ((void*)(((uintptr_t)(x))&~(uintptr_t)QCTR_MASK))
+#define QPTR(x) ((void*volatile*volatile)(((volatile uintptr_t)(x))&~(uintptr_t)QCTR_MASK))
 #define QCTR(x) (((uintptr_t)(x))&QCTR_MASK)
 #define QCOMPOSE(x,y) (void*)(((uintptr_t)QPTR(x))|((QCTR(y)+1)&QCTR_MASK))
+#else
+# define QPTR(x) (x)
+# define QCTR(x) 0
+# define QCOMPOSE(x,y) (x)
+#endif
 
 void *qt_mpool_alloc(qt_mpool pool)
 {				       /*{{{ */
-    void *p = (void *)(pool->reuse_pool);
+    void **p = (void **)_(pool->reuse_pool);
 
     assert(pool);
     if (QPTR(p) != NULL) {
@@ -291,7 +304,7 @@ void *qt_mpool_alloc(qt_mpool pool)
 #ifdef QTHREAD_USE_VALGRIND
 	    VALGRIND_MAKE_MEM_DEFINED(QPTR(p), pool->item_size);
 #endif
-	    new = *(void **)QPTR(p);
+	    new = *(QPTR(p));
 	    p = qt_cas(&(pool->reuse_pool), old, QCOMPOSE(new, p));
 	} while (p != old && QPTR(p) != NULL);
     }
@@ -322,12 +335,12 @@ void *qt_mpool_alloc(qt_mpool pool)
 	    if (p == NULL) {
 		goto alloc_exit;
 	    }
-	    pool->alloc_block = p;
+	    pool->alloc_block = (void*)p;
 	    pool->alloc_block_pos = 1;
 	    pool->alloc_list[pool->alloc_list_pos] = pool->alloc_block;
 	    pool->alloc_list_pos++;
 	} else {
-	    p = pool->alloc_block + (pool->item_size * pool->alloc_block_pos);
+	    p = (void**)(pool->alloc_block + (pool->item_size * pool->alloc_block_pos));
 	    pool->alloc_block_pos++;
 	}
 #ifdef QTHREAD_USE_PTHREADS
@@ -347,7 +360,7 @@ void *qt_mpool_alloc(qt_mpool pool)
 #ifdef QTHREAD_USE_VALGRIND
     VALGRIND_MEMPOOL_ALLOC(pool, QPTR(p), pool->item_size);
 #endif
-    return QPTR(p);
+    return (void*)QPTR(p);
 }				       /*}}} */
 
 void qt_mpool_free(qt_mpool pool, void *mem)
@@ -357,8 +370,8 @@ void qt_mpool_free(qt_mpool pool, void *mem)
     assert(mem != NULL);
     assert(pool);
     do {
-	old = (void *)(pool->reuse_pool);	// should be an atomic read
-	*(void **)mem = old;
+	old = (void *)_(pool->reuse_pool);	// should be an atomic read
+	*(void *volatile*)mem = old;
 	new = QCOMPOSE(mem, old);
 	p = qt_cas(&(pool->reuse_pool), old, new);
     } while (p != old);
@@ -377,7 +390,7 @@ void qt_mpool_destroy(qt_mpool pool)
 	    void *p = pool->alloc_list[0];
 
 	    while (p && i < (pagesize / sizeof(void *) - 1)) {
-		qt_mpool_internal_aligned_free(QPTR(p),	/* pool->alloc_size, */
+		qt_mpool_internal_aligned_free((void*)QPTR(p),	/* pool->alloc_size, */
 					       pool->alignment);
 		i++;
 		p = pool->alloc_list[i];
