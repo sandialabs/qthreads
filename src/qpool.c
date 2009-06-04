@@ -16,7 +16,7 @@
 # include <valgrind/memcheck.h>
 #endif
 
-#include "qthread_innards.h"	/* for QTHREAD_NO_NODE */
+#include "qthread_innards.h"	       /* for QTHREAD_NO_NODE */
 #include "qthread_asserts.h"
 
 #ifdef HAVE_GETPAGESIZE
@@ -25,8 +25,7 @@
 # define getpagesize() 4096
 #endif
 
-struct qpool_shepspec_s
-{
+struct qpool_shepspec_s {
     volatile void *reuse_pool;
     char *alloc_block;
     size_t alloc_block_pos;
@@ -37,8 +36,7 @@ struct qpool_shepspec_s
     aligned_t lock;
 };
 
-struct qpool_s
-{
+struct qpool_s {
     size_t item_size;
     size_t alloc_size;
     size_t items_per_alloc;
@@ -225,7 +223,8 @@ qpool *qpool_create_aligned(const size_t isize, size_t alignment)
 						 pool->pools[pindex].node,
 						 alignment);
 #ifdef QTHREAD_USE_VALGRIND
-	VALGRIND_MAKE_MEM_NOACCESS(pool->pools[pindex].alloc_block, alloc_size);
+	VALGRIND_MAKE_MEM_NOACCESS(pool->pools[pindex].alloc_block,
+				   alloc_size);
 #endif
 	assert(pool->pools[pindex].alloc_block != NULL);
 	assert(alignment != 0);
@@ -307,7 +306,8 @@ void *qpool_alloc(qthread_t * me, qpool * pool)
 	    VALGRIND_MAKE_MEM_DEFINED(QPTR(p), pool->item_size);
 #endif
 	    new = *(void **)QPTR(p);
-	    p = (void*)qthread_cas_ptr(&(mypool->reuse_pool), old, QCOMPOSE(new, p));
+	    p = (void *)qthread_cas_ptr(&(mypool->reuse_pool), old,
+					QCOMPOSE(new, p));
 	} while (p != old && QPTR(p) != NULL);
     }
     if (QPTR(p) == NULL) {	       /* this is not an else on purpose */
@@ -381,7 +381,7 @@ void qpool_free(qthread_t * me, qpool * pool, void *mem)
 	old = (void *)(mypool->reuse_pool);	// should be an atomic read
 	*(void **)mem = old;
 	new = QCOMPOSE(mem, old);
-	p = (void*)qthread_cas_ptr(&(mypool->reuse_pool), old, new);
+	p = (void *)qthread_cas_ptr(&(mypool->reuse_pool), old, new);
     } while (p != old);
 #ifdef QTHREAD_USE_VALGRIND
     VALGRIND_MEMPOOL_FREE(pool, mem);
