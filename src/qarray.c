@@ -20,6 +20,13 @@
 static unsigned short pageshift = 0;
 static aligned_t *chunk_distribution_tracker = NULL;
 
+/* avoid compiler bugs with volatile... */
+static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t *ptr)
+{
+    return *ptr;
+}
+#define _(x) vol_read_a(&(x))
+
 /* local funcs */
 static QINLINE size_t qarray_gcd(size_t a, size_t b)
 {				       /*{{{ */
@@ -753,7 +760,7 @@ void qarray_iter(qthread_t * me, qarray * a, const size_t startat,
 	case ALL_SAME:
 	    qthread_fork_to((qthread_f) qarray_strider, &qfwa, NULL,
 			    a->dist_shep);
-	    while (donecount == 0) {
+	    while (_(donecount) == 0) {
 		qthread_yield(me);
 	    }
 	    break;
@@ -768,7 +775,7 @@ void qarray_iter(qthread_t * me, qarray * a, const size_t startat,
 	    if (stopat - startat < a->segment_size) {
 		qthread_fork_to((qthread_f) qarray_strider, &qfwa, NULL,
 				qarray_shepof(a, startat));
-		while (donecount == 0) {
+		while (_(donecount) == 0) {
 		    qthread_yield(me);
 		}
 	    } else {
@@ -780,7 +787,7 @@ void qarray_iter(qthread_t * me, qarray * a, const size_t startat,
 		    qthread_fork_to((qthread_f) qarray_strider, &qfwa, NULL,
 				    i);
 		}
-		while (donecount < maxsheps) {
+		while (_(donecount) < maxsheps) {
 		    qthread_yield(me);
 		}
 	    }
@@ -799,7 +806,7 @@ void qarray_iter_loop(qthread_t * me, qarray * a, const size_t startat,
 	case ALL_SAME:
 	    qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL,
 			    a->dist_shep);
-	    while (donecount == 0) {
+	    while (_(donecount) == 0) {
 		qthread_yield(me);
 	    }
 	    break;
@@ -814,7 +821,7 @@ void qarray_iter_loop(qthread_t * me, qarray * a, const size_t startat,
 	    if (stopat - startat < a->segment_size) {
 		qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL,
 				qarray_shepof(a, startat));
-		while (donecount == 0) {
+		while (_(donecount) == 0) {
 		    qthread_yield(me);
 		}
 	    } else {
@@ -826,7 +833,7 @@ void qarray_iter_loop(qthread_t * me, qarray * a, const size_t startat,
 		    qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa,
 				    NULL, i);
 		}
-		while (donecount < maxsheps) {
+		while (_(donecount) < maxsheps) {
 		    qthread_yield(me);
 		}
 	    }
@@ -846,7 +853,7 @@ void qarray_iter_constloop(qthread_t * me, const qarray * a,
 	case ALL_SAME:
 	    qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL,
 			    a->dist_shep);
-	    while (donecount == 0) {
+	    while (_(donecount) == 0) {
 		qthread_yield(me);
 	    }
 	    break;
@@ -861,7 +868,7 @@ void qarray_iter_constloop(qthread_t * me, const qarray * a,
 	    if (stopat - startat < a->segment_size) {
 		qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL,
 				qarray_shepof(a, startat));
-		while (donecount == 0) {
+		while (_(donecount) == 0) {
 		    qthread_yield(me);
 		}
 	    } else {
@@ -873,7 +880,7 @@ void qarray_iter_constloop(qthread_t * me, const qarray * a,
 		    qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa,
 				    NULL, i);
 		}
-		while (donecount < maxsheps) {
+		while (_(donecount) < maxsheps) {
 		    qthread_yield(me);
 		}
 	    }
