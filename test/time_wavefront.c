@@ -10,7 +10,7 @@ static size_t ASIZE = 10;
 void sum(const void *restrict left, const void *restrict leftdown,
 	 const void *restrict down, void *restrict out)
 {
-    //*(int *)out = *(int *)left + *(int *)leftdown + *(int *)down;
+    *(int *)out = *(int *)left + *(int *)leftdown + *(int *)down;
 }
 
 void suma(const void *restrict left, const void *restrict leftdown,
@@ -67,13 +67,13 @@ int main(int argc, char *argv[])
 	}
 	/* do stuff */
 	qtimer_start(timer);
-	for (int i=0; i<10; i++) {
+	for (int i = 0; i < 10; i++) {
 	    qt_wavefront(R, ASIZE, sum);
 	}
 	qtimer_stop(timer);
 
 	/* prove it */
-	printf("wavefront secs: %f\n", qtimer_secs(timer)/10.0);
+	printf("wavefront secs: %f\n", qtimer_secs(timer) / 10.0);
 	/* free it */
 	for (int col = 0; col < ASIZE; col++) {
 	    qarray_destroy(R[col]);

@@ -49,10 +49,12 @@ struct qpool_s {
 static size_t pagesize = 0;
 
 /* avoid compiler bugs with volatile... */
-static Q_NOINLINE volatile void *volatile* vol_id_void(volatile void*volatile*ptr)
-{/*{{{*/
+static Q_NOINLINE volatile void *volatile *vol_id_void(volatile void *volatile
+						       *ptr)
+{				       /*{{{ */
     return ptr;
-}/*}}}*/
+}				       /*}}} */
+
 #define _(x) (*vol_id_void(&(x)))
 
 /* local funcs */

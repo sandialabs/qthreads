@@ -796,19 +796,24 @@ static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t *
 }				       /*}}} */
 
 /* to avoid compiler bugs regarding volatile... */
-static Q_NOINLINE volatile qt_lfqueue_node_t * volatile * vol_id_qtlfqn(volatile qt_lfqueue_node_t*volatile*ptr)
+static Q_NOINLINE volatile qt_lfqueue_node_t *volatile *vol_id_qtlfqn(volatile
+								      qt_lfqueue_node_t
+								      *
+								      volatile
+								      *ptr)
 {
     return ptr;
 }
-#define _(x) *vol_id_qtlfqn(&(x))
-static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t *ptr)
+static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t * ptr)
 {
     return *ptr;
 }
-static Q_NOINLINE volatile aligned_t * vol_id_a(volatile aligned_t *ptr)
+static Q_NOINLINE volatile aligned_t *vol_id_a(volatile aligned_t * ptr)
 {
     return ptr;
 }
+
+#define _(x) *vol_id_qtlfqn(&(x))
 
 #ifdef QTHREAD_DEBUG
 int debuglevel = 0;
@@ -2100,7 +2105,7 @@ static QINLINE void qt_lfqueue_free(qt_lfqueue_t * q)
     QTHREAD_DESTROYLOCK(&q->lock);
     QTHREAD_DESTROYCOND(&q->notempty);
 #endif
-    FREE_LFQNODE((qt_lfqueue_node_t*)QPTR(q->head));
+    FREE_LFQNODE((qt_lfqueue_node_t *) QPTR(q->head));
     FREE_LFQUEUE(q);
 }				       /*}}} */
 
@@ -2117,7 +2122,7 @@ static QINLINE void qt_lfqueue_enqueue(qt_lfqueue_t * q, qthread_t * t,
     ALLOC_LFQNODE(&node, shep);
     //node = malloc(sizeof(qt_lfqueue_node_t));
     assert(node != NULL);
-    assert(QCTR(node) == 0);	// node MUST be aligned
+    assert(QCTR(node) == 0);	       // node MUST be aligned
 
     node->value = t;
     // set to null without disturbing the ctr
@@ -2126,15 +2131,13 @@ static QINLINE void qt_lfqueue_enqueue(qt_lfqueue_t * q, qthread_t * t,
     while (1) {
 	tail = _(q->tail);
 	next = _(QPTR(tail)->next);
-	if (tail == _(q->tail)) {	       // are tail and next consistent?
+	if (tail == _(q->tail)) {      // are tail and next consistent?
 	    if (QPTR(next) == NULL) {  // was tail pointing to the last node?
-		if (qt_cas
-		    (&(QPTR(tail)->next), next,
-		     QCOMPOSE(node, next)) == next)
+		if (qt_cas(&(QPTR(tail)->next), next, QCOMPOSE(node, next)) ==
+		    next)
 		    break;	       // success!
 	    } else {		       // tail not pointing to last node
-		(void)qt_cas(&(q->tail), tail,
-			     QCOMPOSE(next, tail));
+		(void)qt_cas(&(q->tail), tail, QCOMPOSE(next, tail));
 	    }
 	}
     }
@@ -2163,7 +2166,7 @@ static QINLINE qthread_t *qt_lfqueue_dequeue(qt_lfqueue_t * q)
 	head = _(q->head);
 	tail = _(q->tail);
 	next = _(QPTR(head)->next);
-	if (head == _(q->head)) {	       // are head, tail, and next consistent?
+	if (head == _(q->head)) {      // are head, tail, and next consistent?
 	    if (QPTR(head) == QPTR(tail)) {	// is queue empty or tail falling behind?
 		if (QPTR(next) == NULL) {	// is queue empty?
 		    return NULL;
@@ -2172,14 +2175,13 @@ static QINLINE qthread_t *qt_lfqueue_dequeue(qt_lfqueue_t * q)
 	    } else {		       // no need to deal with tail
 		// read value before CAS, otherwise another dequeue might free the next node
 		p = QPTR(next)->value;
-		if (qt_cas(&(q->head), head,
-		     QCOMPOSE(next, head)) == head) {
+		if (qt_cas(&(q->head), head, QCOMPOSE(next, head)) == head) {
 		    break;	       // success!
 		}
 	    }
 	}
     }
-    FREE_LFQNODE((qt_lfqueue_node_t*)QPTR(head));
+    FREE_LFQNODE((qt_lfqueue_node_t *) QPTR(head));
     return p;
 }				       /*}}} */
 
@@ -2200,7 +2202,7 @@ static QINLINE qthread_t *qt_lfqueue_dequeue_blocking(qt_lfqueue_t * q)
 	head = _(q->head);
 	tail = _(q->tail);
 	next = _(QPTR(head)->next);
-	if (head == _(q->head)) {	       // are head, tail, and next consistent?
+	if (head == _(q->head)) {      // are head, tail, and next consistent?
 	    if (QPTR(head) == QPTR(tail)) {	// is queue empty or tail falling behind?
 		if (QPTR(next) == NULL) {	// is queue empty?
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
@@ -2224,14 +2226,13 @@ static QINLINE qthread_t *qt_lfqueue_dequeue_blocking(qt_lfqueue_t * q)
 	    } else {		       // no need to deal with tail
 		// read value before CAS, otherwise another dequeue might free the next node
 		p = QPTR(next)->value;
-		if (qt_cas(&(q->head), head,
-		     QCOMPOSE(next, head)) == head) {
+		if (qt_cas(&(q->head), head, QCOMPOSE(next, head)) == head) {
 		    break;	       // success!
 		}
 	    }
 	}
     }
-    FREE_LFQNODE((qt_lfqueue_node_t*)QPTR(head));
+    FREE_LFQNODE((qt_lfqueue_node_t *) QPTR(head));
     return p;
 }				       /*}}} */
 

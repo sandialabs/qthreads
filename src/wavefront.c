@@ -10,8 +10,7 @@
 #include <qthread/qdqueue.h>
 #include <qthread/wavefront.h>
 
-struct qt_wave_wargs
-{
+struct qt_wave_wargs {
     qdqueue_t *const work_queue;
     volatile aligned_t *restrict const no_more_work;
     volatile aligned_t *restrict const donecount;
@@ -21,24 +20,25 @@ struct qt_wave_wargs
     volatile aligned_t *restrict colprogress;
 };
 
-struct qt_wave_workunit
-{
+struct qt_wave_workunit {
     size_t origrow, startrow, endrow, col;
 };
 
 /* to avoid compiler bugs regarding volatile... */
-static Q_NOINLINE volatile aligned_t *volatile*vol_id_ap(volatile aligned_t *volatile*ptr)
+static Q_NOINLINE volatile aligned_t *volatile *vol_id_ap(volatile aligned_t *
+							  volatile *ptr)
 {
     return ptr;
 }
-static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t *ptr)
+static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t * ptr)
 {
     return *ptr;
 }
-static Q_NOINLINE volatile aligned_t * vol_id_a(volatile aligned_t *ptr)
+static Q_NOINLINE volatile aligned_t *vol_id_a(volatile aligned_t * ptr)
 {
     return ptr;
 }
+
 #define _(x) (*vol_id_ap(&(x)))
 
 static void qt_wave_worker(qthread_t * me, struct qt_wave_wargs *const arg)

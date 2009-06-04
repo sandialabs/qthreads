@@ -7,18 +7,18 @@
 
 /* So, the idea here is that this is a (braindead) C version of Megan's
  * mt_loop. */
-struct qt_loop_wrapper_args
-{
+struct qt_loop_wrapper_args {
     qthread_f func;
     void *arg;
     volatile aligned_t *donecount;
 };
 
 /* avoid compiler bugs with volatile... */
-static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t *ptr)
+static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t * ptr)
 {
     return *ptr;
 }
+
 #define _(x) vol_read_a(&(x))
 
 static aligned_t qt_loop_wrapper(qthread_t * me,
@@ -94,8 +94,7 @@ void qt_loop_future(const size_t start, const size_t stop,
  * divide work evenly, so that we're maxing out our processor use with minimal
  * overhead. Then, we divvy the work up as evenly as we can.
  */
-struct qloop_wrapper_args
-{
+struct qloop_wrapper_args {
     qt_loop_f func;
     size_t startat, stopat;
     void *arg;
@@ -161,8 +160,7 @@ void qt_loop_balance_future(const size_t start, const size_t stop,
     qt_loop_balance_inner(start, stop, func, argptr, 1);
 }
 
-struct qloopaccum_wrapper_args
-{
+struct qloopaccum_wrapper_args {
     qt_loopr_f func;
     size_t startat, stopat;
     void *restrict arg;
@@ -344,8 +342,7 @@ static int dcmp(const void *restrict a, const void *restrict b)
     return 0;
 }
 
-struct qt_qsort_args
-{
+struct qt_qsort_args {
     double *array;
     double pivot;
     size_t length, chunksize, jump, offset;
@@ -423,14 +420,12 @@ static aligned_t qt_qsort_partition(qthread_t * me,
     return 0;
 }
 
-struct qt_qsort_iargs
-{
+struct qt_qsort_iargs {
     double *array;
     size_t length;
 };
 
-struct qt_qsort_iprets
-{
+struct qt_qsort_iprets {
     aligned_t leftwall, rightwall;
 };
 
@@ -494,7 +489,8 @@ static struct qt_qsort_iprets qt_qsort_inner_partitioner(qthread_t * me,
     return retval;
 }
 
-static aligned_t qt_qsort_inner(qthread_t * me, const struct qt_qsort_iargs * a)
+static aligned_t qt_qsort_inner(qthread_t * me,
+				const struct qt_qsort_iargs *a)
 {
     const size_t len = a->length;
     double *array = a->array;
