@@ -48,6 +48,13 @@ struct qpool_s {
 /* local constants */
 static size_t pagesize = 0;
 
+/* avoid compiler bugs with volatile... */
+static Q_NOINLINE volatile void *volatile* vol_id_void(volatile void*volatile*ptr)
+{/*{{{*/
+    return ptr;
+}/*}}}*/
+#define _(x) (*vol_id_void(&(x)))
+
 /* local funcs */
 static QINLINE size_t mpool_gcd(size_t a, size_t b)
 {				       /*{{{ */
@@ -217,7 +224,7 @@ qpool *qpool_create_aligned(const size_t isize, size_t alignment)
     /* now that we have all the information, set up the pools */
     for (pindex = 0; pindex < numsheps; pindex++) {
 	pool->pools[pindex].node = qthread_internal_shep_to_node(pindex);
-	pool->pools[pindex].reuse_pool = NULL;
+	_(pool->pools[pindex].reuse_pool) = NULL;
 	pool->pools[pindex].alloc_block =
 	    (char *)qpool_internal_aligned_alloc(alloc_size,
 						 pool->pools[pindex].node,
@@ -295,7 +302,7 @@ void *qpool_alloc(qthread_t * me, qpool * pool)
     }
     shep = qthread_shep(me);
     mypool = &(pool->pools[shep]);
-    p = (void *)(mypool->reuse_pool);
+    p = (void *)_(mypool->reuse_pool);
 
     if (QPTR(p) != NULL) {
 	void *old, *new;
@@ -378,7 +385,7 @@ void qpool_free(qthread_t * me, qpool * pool, void *mem)
 	return;
     }
     do {
-	old = (void *)(mypool->reuse_pool);	// should be an atomic read
+	old = (void *)_(mypool->reuse_pool);	// should be an atomic read
 	*(void **)mem = old;
 	new = QCOMPOSE(mem, old);
 	p = (void *)qthread_cas_ptr(&(mypool->reuse_pool), old, new);
