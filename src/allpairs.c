@@ -1,3 +1,6 @@
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 #include <qthread/allpairs.h>
 #include <qthread/qthread.h>
 #include <qthread/qdqueue.h>
@@ -44,6 +47,12 @@ struct qt_ap_workunit
     size_t a1_start, a1_stop, a2_start, a2_stop;
 };
 
+/* avoid compiler bugs with volatile... */
+static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t *ptr)
+{
+    return *ptr;
+}
+
 static aligned_t qt_ap_worker(qthread_t * restrict me,
 			      struct qt_ap_wargs *restrict args)
 {
@@ -51,7 +60,7 @@ static aligned_t qt_ap_worker(qthread_t * restrict me,
 	struct qt_ap_workunit *restrict const wu =
 	    qdqueue_dequeue(me, args->work_queue);
 	if (wu == NULL) {
-	    if (*(args->no_more_work)) {
+	    if (vol_read_a(args->no_more_work)) {
 		qthread_incr(args->donecount, 1);
 		break;
 	    }
@@ -283,7 +292,7 @@ static void qt_allpairs_internal(const qarray * array1, const qarray * array2,
 			  (qa_cloop_f) qt_ap_genwork, &gargs);
     /* step 4: wait for the workers to get done */
     no_more_work = 1;
-    while (donecount < max_i) {
+    while (vol_read_a(&donecount) < max_i) {
 	qthread_yield(me);
     }
     qdqueue_destroy(me, wargs.work_queue);
