@@ -868,7 +868,8 @@ static QINLINE int qthread_unique_collect(void *key, void *value, void *id)
 
 #ifdef HAVE_SYS_LGRP_USER_H
 static int lgrp_walk(const lgrp_cookie_t cookie, const lgrp_id_t lgrp,
-		     processorid_t ** cpus, lgrp_id_t * lgrp_ids, int cpu_grps)
+		     processorid_t ** cpus, lgrp_id_t * lgrp_ids,
+		     int cpu_grps)
 {				       /*{{{ */
     int nchildren, ncpus =
 	lgrp_cpus(cookie, lgrp, NULL, 0, LGRP_CONTENT_DIRECT);
@@ -957,7 +958,7 @@ static void *qthread_shepherd(void *arg)
 #elif defined(HAVE_SYS_LGRP_USER_H)
 	if (me->node != -1) {
 	    if (lgrp_affinity_set(P_LWPID, P_MYID, me->lgrp, LGRP_AFF_STRONG)
-		    != 0) {
+		!= 0) {
 		perror("lgrp_affinity_set");
 	    }
 	}
@@ -970,7 +971,7 @@ static void *qthread_shepherd(void *arg)
 	    /* using this to set preferred memory affinity (probably unnecessary);
 	     * this does NOT change the processor binding. */
 	    if (lgrp_affinity_set(P_LWPID, P_MYID, me->lgrp, LGRP_AFF_STRONG)
-		    != 0) {
+		!= 0) {
 		perror("lgrp_affinity_set");
 	    }
 # endif
@@ -1100,6 +1101,7 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
     size_t i;
     int cp_syncmode = COLLECTION_MODE_PLAIN;
     int need_sync = 1;
+
 #ifdef HAVE_SYS_LGRP_USER_H
     lgrp_cookie_t lgrp_cookie = lgrp_init(LGRP_VIEW_OS);
 #endif
@@ -1119,13 +1121,15 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
     qthread_debug(2, "qthread_init(): began.\n");
 
 #ifdef QTHREAD_USE_PTHREADS
-    if (nshepherds == 0) { /* try to guess the "right" number */
+    if (nshepherds == 0) {	       /* try to guess the "right" number */
 #ifdef QTHREAD_HAVE_LIBNUMA
 	if (numa_available() != -1) {
 	    nshepherds = numa_max_node() + 1;
 	}
 #elif defined(HAVE_SYS_LGRP_USER_H)
-	nshepherds = lgrp_cpus(lgrp_cookie, lgrp_root(lgrp_cookie), NULL, 0, LGRP_CONTENT_ALL);
+	nshepherds =
+	    lgrp_cpus(lgrp_cookie, lgrp_root(lgrp_cookie), NULL, 0,
+		      LGRP_CONTENT_ALL);
 #endif
 	if (nshepherds <= 0) {
 	    nshepherds = 1;
@@ -1207,10 +1211,11 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 	qlib->max_stack_size = rlp.rlim_max;
     }
 
-    if (getenv("QTHREAD_AFFINITY")) {/*{{{*/
+    if (getenv("QTHREAD_AFFINITY")) {  /*{{{ */
 #ifdef QTHREAD_HAVE_LIBNUMA
 	if (numa_available() != -1) {
 	    size_t max = numa_max_node() + 1;
+
 	    {
 # ifdef QTHREAD_LIBNUMA_V2
 		struct bitmask *bmask = numa_allocate_nodemask();
@@ -1239,12 +1244,16 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 	    for (i = 0; i < nshepherds; i++) {
 		const unsigned int node_i = qlib->shepherds[i].node;
 		size_t j, k;
-		qlib->shepherds[i].shep_dists = calloc(nshepherds, sizeof(unsigned int));
+		qlib->shepherds[i].shep_dists =
+		    calloc(nshepherds, sizeof(unsigned int));
 		assert(qlib->shepherds[i].shep_dists);
 		for (j = 0; j < nshepherds; j++) {
 		    const unsigned int node_j = qlib->shepherds[j].node;
-		    if (node_i != QTHREAD_NO_NODE && node_j != QTHREAD_NO_NODE) {
-			qlib->shepherds[i].shep_dists[j] = numa_distance(node_i, node_j);
+
+		    if (node_i != QTHREAD_NO_NODE &&
+			node_j != QTHREAD_NO_NODE) {
+			qlib->shepherds[i].shep_dists[j] =
+			    numa_distance(node_i, node_j);
 		    } else {
 			/* XXX too arbitrary */
 			if (i == j) {
@@ -1254,19 +1263,24 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 			}
 		    }
 		}
-		qlib->shepherds[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
+		qlib->shepherds[i].sorted_sheplist =
+		    calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
 		assert(qlib->shepherds[i].sorted_sheplist);
 		k = 0;
-		for (j=0;j<nshepherds;j++) {
+		for (j = 0; j < nshepherds; j++) {
 		    if (j != i) {
 			qlib->shepherds[i].sorted_sheplist[k++] = j;
 		    }
 		}
 #  ifdef HAVE_QSORT_R
-		qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds-1, sizeof(qthread_shepherd_id_t), (void*)(intptr_t)i, &qthread_internal_shepcomp);
+		qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
+			sizeof(qthread_shepherd_id_t), (void *)(intptr_t) i,
+			&qthread_internal_shepcomp);
 #  else
-		shepcomp_src = (qthread_shepherd_id_t)i;
-		qsort(qlib->shepherds[i].sorted_sheplist, nshepherds-1, sizeof(qthread_shepherd_id_t), qthread_internal_shepcomp);
+		shepcomp_src = (qthread_shepherd_id_t) i;
+		qsort(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
+		      sizeof(qthread_shepherd_id_t),
+		      qthread_internal_shepcomp);
 #  endif
 	    }
 	} else {
@@ -1285,15 +1299,17 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 	}
 	{
 	    size_t max_lgrps = lgrp_nlgrps(lgrp_cookie);
+
 	    if (lgrp_count_grps <= 0) {
 		return QTHREAD_THIRD_PARTY_ERROR;
 	    }
-	    cpus = calloc(max_lgrps, sizeof(processorid_t*));
+	    cpus = calloc(max_lgrps, sizeof(processorid_t *));
 	    assert(cpus);
 	    lgrp_ids = calloc(max_lgrps, sizeof(lgrp_id_t));
 	    assert(lgrp_ids);
 	}
-	lgrp_count_grps = lgrp_walk(lgrp_cookie, lgrp_root(lgrp_cookie), cpus, lgrp_ids, 0);
+	lgrp_count_grps =
+	    lgrp_walk(lgrp_cookie, lgrp_root(lgrp_cookie), cpus, lgrp_ids, 0);
 	if (lgrp_count_grps <= 0) {
 	    return QTHREAD_THIRD_PARTY_ERROR;
 	}
@@ -1309,7 +1325,7 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 	    while (1) {
 		cpu = 0;
 		/* find an unused one */
-		while (cpus[lgrp_offset][cpu] != (processorid_t)(-1))
+		while (cpus[lgrp_offset][cpu] != (processorid_t) (-1))
 		    cpu++;
 		if (cpu == 0) {
 		    /* if no unused ones... try the next lgrp */
@@ -1331,12 +1347,16 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 	for (i = 0; i < nshepherds; i++) {
 	    const unsigned int node_i = qlib->shepherds[i].lgrp;
 	    size_t j;
-	    qlib->shepherds[i].shep_dists = calloc(nshepherds, sizeof(unsigned int));
+	    qlib->shepherds[i].shep_dists =
+		calloc(nshepherds, sizeof(unsigned int));
 	    assert(qlib->shepherds[i].shep_dists);
 	    for (j = 0; j < nshepherds; j++) {
 		const unsigned int node_j = qlib->shepherds[j].lgrp;
+
 		if (node_i != QTHREAD_NO_NODE && node_j != QTHREAD_NO_NODE) {
-		    int ret = lgrp_latency_cookie(lgrp_cookie, node_i, node_j, LGRP_LAT_CPU_TO_MEM);
+		    int ret =
+			lgrp_latency_cookie(lgrp_cookie, node_i, node_j,
+					    LGRP_LAT_CPU_TO_MEM);
 		    if (ret < 0) {
 			assert(ret >= 0);
 			return QTHREAD_THIRD_PARTY_ERROR;
@@ -1355,18 +1375,23 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 	}
 	for (i = 0; i < nshepherds; i++) {
 	    size_t j, k = 0;
-	    qlib->shepherds[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
+
+	    qlib->shepherds[i].sorted_sheplist =
+		calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
 	    assert(qlib->shepherds[i].sorted_sheplist);
-	    for (j=0;j<nshepherds;j++) {
+	    for (j = 0; j < nshepherds; j++) {
 		if (j != i) {
 		    qlib->shepherds[i].sorted_sheplist[k++] = j;
 		}
 	    }
 #ifdef HAVE_QSORT_R
-	    qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds-1, sizeof(qthread_shepherd_id_t), (void*)(intptr_t)i, &qthread_internal_shepcomp);
+	    qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
+		    sizeof(qthread_shepherd_id_t), (void *)(intptr_t) i,
+		    &qthread_internal_shepcomp);
 #else
-	    shepcomp_src = (qthread_shepherd_id_t)i;
-	    qsort(qlib->shepherds[i].sorted_sheplist, nshepherds-1, sizeof(qthread_shepherd_id_t), qthread_internal_shepcomp);
+	    shepcomp_src = (qthread_shepherd_id_t) i;
+	    qsort(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
+		  sizeof(qthread_shepherd_id_t), qthread_internal_shepcomp);
 #endif
 	}
 	if (cpus) {
@@ -1380,17 +1405,16 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 	}
 #endif
     } else {
-noaffinity: Q_UNUSED
-	for (i = 0; i < nshepherds; i++) {
+      noaffinity:Q_UNUSED for (i = 0; i < nshepherds; i++) {
 	    qlib->shepherds[i].node = -1;
 	    qlib->shepherds[i].shep_dists = NULL;
 	    qlib->shepherds[i].sorted_sheplist = NULL;
 	}
-    }/*}}}*/
+    }				       /*}}} */
 
 #ifndef UNPOOLED
     /* set up the memory pools */
-    for (i = 0; i < nshepherds; i++) {/*{{{*/
+    for (i = 0; i < nshepherds; i++) { /*{{{ */
 	/* the following SHOULD only be accessed by one thread at a time, so
 	 * should be quite safe unsynchronized. If things fail, though...
 	 * resynchronize them and see if that fixes it. */
@@ -1432,7 +1456,7 @@ noaffinity: Q_UNUSED
 	qlib->shepherds[i].addrstat_pool =
 	    qt_mpool_create(need_sync, sizeof(qthread_addrstat_t),
 			    qlib->shepherds[i].node);
-    }/*}}}*/
+    }				       /*}}} */
     /* these are used when qthread_fork() is called from a non-qthread. */
     generic_qthread_pool = qt_mpool_create(need_sync, sizeof(qthread_t), -1);
     generic_stack_pool =
@@ -1452,7 +1476,7 @@ noaffinity: Q_UNUSED
 
     /* spawn the number of shepherd threads that were specified */
     for (i = 0; i < nshepherds; i++) {
-	qlib->shepherds[i].shepherd_id = (qthread_shepherd_id_t)i;
+	qlib->shepherds[i].shepherd_id = (qthread_shepherd_id_t) i;
 	if ((qlib->shepherds[i].ready =
 	     qt_lfqueue_new(&(qlib->shepherds[i]))) == NULL) {
 	    perror("qthread_init creating shepherd queue");
@@ -1510,7 +1534,8 @@ noaffinity: Q_UNUSED
 	return QTHREAD_MALLOC_ERROR;
     }
 #ifdef QTHREAD_USE_VALGRIND
-    qlib->valgrind_masterstack_id = VALGRIND_STACK_REGISTER(qlib->master_stack, qlib->master_stack_size);
+    qlib->valgrind_masterstack_id =
+	VALGRIND_STACK_REGISTER(qlib->master_stack, qlib->master_stack_size);
 #endif
 
     /* the context will have its own stack ptr */
@@ -1520,30 +1545,35 @@ noaffinity: Q_UNUSED
     FREE_STACK(qlib->mccoy_thread->creator_ptr, qlib->mccoy_thread->stack);
     qlib->mccoy_thread->stack = NULL;
     qlib->mccoy_thread->thread_state = QTHREAD_STATE_YIELDED;	/* avoid re-launching */
-    qlib->mccoy_thread->flags = QTHREAD_REAL_MCCOY; /* i.e. this is THE parent thread */
+    qlib->mccoy_thread->flags = QTHREAD_REAL_MCCOY;	/* i.e. this is THE parent thread */
     qlib->mccoy_thread->shepherd_ptr = &(qlib->shepherds[0]);
 
     qt_lfqueue_enqueue(qlib->shepherds[0].ready, qlib->mccoy_thread,
-	    &(qlib->shepherds[0]));
+		       &(qlib->shepherds[0]));
     qassert(getcontext(qlib->mccoy_thread->context), 0);
     qassert(getcontext(qlib->master_context), 0);
     /* now build the context for the shepherd 0 */
-    qthread_makecontext(qlib->master_context, qlib->master_stack, qlib->master_stack_size,
+    qthread_makecontext(qlib->master_context, qlib->master_stack,
+			qlib->master_stack_size,
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
-	    (void (*)(void))qthread_shepherd_wrapper,
+			(void (*)(void))qthread_shepherd_wrapper,
 #else
-	    (void (*)(void))qthread_shepherd,
+			(void (*)(void))qthread_shepherd,
 #endif
-	    &(qlib->shepherds[0]), qlib->mccoy_thread->context);
+			&(qlib->shepherds[0]), qlib->mccoy_thread->context);
     /* this launches shepherd 0 */
     qthread_debug(2, "qthread_init(): launching shepherd 0\n");
 #ifdef QTHREAD_USE_VALGRIND
-    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(qlib->mccoy_thread->context, sizeof(ucontext_t));
-    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(qlib->master_context, sizeof(ucontext_t));
-    VALGRIND_MAKE_MEM_DEFINED(qlib->mccoy_thread->context, sizeof(ucontext_t));
+    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(qlib->mccoy_thread->context,
+				      sizeof(ucontext_t));
+    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(qlib->master_context,
+				      sizeof(ucontext_t));
+    VALGRIND_MAKE_MEM_DEFINED(qlib->mccoy_thread->context,
+			      sizeof(ucontext_t));
     VALGRIND_MAKE_MEM_DEFINED(qlib->master_context, sizeof(ucontext_t));
 #endif
-    qassert(swapcontext(qlib->mccoy_thread->context, qlib->master_context), 0);
+    qassert(swapcontext(qlib->mccoy_thread->context, qlib->master_context),
+	    0);
 
     qthread_debug(2, "qthread_init(): finished.\n");
     return QTHREAD_SUCCESS;
@@ -1905,7 +1935,8 @@ static QINLINE int qthread_thread_plush(qthread_t * t)
 	    t->context = uc;
 	    t->stack = stack;
 #ifdef QTHREAD_USE_VALGRIND
-	    t->valgrind_stack_id = VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
+	    t->valgrind_stack_id =
+		VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
 #endif
 	    return QTHREAD_SUCCESS;
 	}
@@ -1948,7 +1979,8 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
 	return NULL;
     }
 #ifdef QTHREAD_USE_VALGRIND
-    t->valgrind_stack_id = VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
+    t->valgrind_stack_id =
+	VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
 #endif
 
     t->thread_state = QTHREAD_STATE_NEW;
@@ -2002,9 +2034,9 @@ static QINLINE void qthread_thread_free(qthread_t * t)
  * need to be huge, just big enough to avoid trouble. We'll
  * just claim 4, to be conservative. Thus, a qt_lfqueue_node_t must be at least 16 bytes. */
 #define QCTR_MASK (15)
-#define QPTR(x) ((qt_lfqueue_node_t*)(((uintptr_t)(x))&~(uintptr_t)QCTR_MASK))
-#define QCTR(x) ((unsigned char)(((uintptr_t)(x))&QCTR_MASK))
-#define QCOMPOSE(x,y) (void*)(((uintptr_t)QPTR(x))|((QCTR(y)+1)&QCTR_MASK))
+#define QPTR(x) ((volatile qt_lfqueue_node_t*volatile)(((volatile uintptr_t)(x))&~(uintptr_t)QCTR_MASK))
+#define QCTR(x) (((volatile uintptr_t)(x))&QCTR_MASK)
+#define QCOMPOSE(x,y) (void*)(((volatile uintptr_t)QPTR(x))|((QCTR(y)+1)&QCTR_MASK))
 
 static QINLINE qt_lfqueue_t *qt_lfqueue_new(qthread_shepherd_t * shepherd)
 {				       /*{{{ */
@@ -2093,7 +2125,7 @@ static QINLINE void qt_lfqueue_enqueue(qt_lfqueue_t * q, qthread_t * t,
 #endif
 }				       /*}}} */
 
-#if 0 /* unused */
+#if 0				       /* unused */
 static QINLINE qthread_t *qt_lfqueue_dequeue(qt_lfqueue_t * q)
 {				       /*{{{ */
     qthread_t *p = NULL;
@@ -2231,7 +2263,7 @@ static QINLINE void qthread_enqueue(qthread_queue_t * q, qthread_t * t)
     QTHREAD_UNLOCK(&q->lock);
 }				       /*}}} */
 
-#if 0 /* unused */
+#if 0				       /* unused */
 static QINLINE qthread_t *qthread_dequeue(qthread_queue_t * q)
 {				       /*{{{ */
     qthread_t *t;
@@ -2447,7 +2479,7 @@ int qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
 	(qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
 
     if (myshep) {		       /* note: for forking from a qthread, NO LOCKS! */
-	shep = (qthread_shepherd_id_t)(myshep->sched_shepherd++);
+	shep = (qthread_shepherd_id_t) (myshep->sched_shepherd++);
 	if (myshep->sched_shepherd == qlib->nshepherds) {
 	    myshep->sched_shepherd = 0;
 	}
@@ -2577,7 +2609,7 @@ qthread_t *qthread_prepare(const qthread_f f, const void *arg,
 	(qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
 
     if (myshep) {
-	shep = (qthread_shepherd_id_t)(myshep->sched_shepherd++);
+	shep = (qthread_shepherd_id_t) (myshep->sched_shepherd++);
 	if (myshep->sched_shepherd == qlib->nshepherds) {
 	    myshep->sched_shepherd = 0;
 	}
@@ -3375,8 +3407,9 @@ unsigned int qthread_internal_shep_to_node(const qthread_shepherd_id_t shep)
 }				       /*}}} */
 
 /* returns the distance between two shepherds */
-int qthread_distance(const qthread_shepherd_id_t src, const qthread_shepherd_id_t dest)
-{/*{{{*/
+int qthread_distance(const qthread_shepherd_id_t src,
+		     const qthread_shepherd_id_t dest)
+{				       /*{{{ */
     assert(src < qlib->nshepherds);
     assert(dest < qlib->nshepherds);
     if (src >= qlib->nshepherds || dest >= qlib->nshepherds) {
@@ -3387,36 +3420,38 @@ int qthread_distance(const qthread_shepherd_id_t src, const qthread_shepherd_id_
     } else {
 	return qlib->shepherds[src].shep_dists[dest];
     }
-}/*}}}*/
+}				       /*}}} */
 
 /* returns a list of shepherds, sorted by their distance from this qthread;
  * if NULL, then all sheps are equidistant */
 const qthread_shepherd_id_t *qthread_sorted_sheps(const qthread_t * t)
-{/*{{{*/
+{				       /*{{{ */
     assert(t);
     if (t == NULL) {
 	return NULL;
     }
     assert(t->shepherd_ptr);
     return t->shepherd_ptr->sorted_sheplist;
-}/*}}}*/
+}				       /*}}} */
 
 /* returns a list of shepherds, sorted by their distance from the specified shepherd;
  * if NULL, then all sheps are equidistant */
-const qthread_shepherd_id_t *qthread_sorted_sheps_remote(const qthread_shepherd_id_t src)
-{/*{{{*/
+const qthread_shepherd_id_t *qthread_sorted_sheps_remote(const
+							 qthread_shepherd_id_t
+							 src)
+{				       /*{{{ */
     assert(src < qlib->nshepherds);
     if (src >= qlib->nshepherds) {
 	return NULL;
     }
     return qlib->shepherds[src].sorted_sheplist;
-}/*}}}*/
+}				       /*}}} */
 
 /* returns the number of shepherds (i.e. one more than the largest valid shepherd id) */
 qthread_shepherd_id_t qthread_num_shepherds(void)
-{/*{{{*/
-    return (qthread_shepherd_id_t)(qlib->nshepherds);
-}/*}}}*/
+{				       /*{{{ */
+    return (qthread_shepherd_id_t) (qlib->nshepherds);
+}				       /*}}} */
 
 /* these two functions are helper functions for futurelib
  * (nobody else gets to have 'em!) */

@@ -14,23 +14,23 @@
 #ifdef QTHREAD_TRACK_DISTANCES
 struct cacheline_s {
     aligned_t i;
-    char block[128-sizeof(aligned_t)];
-} __attribute__((packed));
+    char block[128 - sizeof(aligned_t)];
+}
+__attribute__ ((packed));
 
 struct cacheline_s *distances = NULL;
 #endif
 
 //#define QTHREAD_USE_HALFWAYARRAY
 #ifdef QTHREAD_USE_HALFWAYARRAY
-qthread_shepherd_id_t ** halfway = NULL;
+qthread_shepherd_id_t **halfway = NULL;
 //unsigned int ** halfway_dist = NULL;
 //volatile aligned_t mindistances = 0;
 //aligned_t stolen_work = 0;
 //aligned_t stealing_penalty = 0;
 #endif
 
-struct qt_ap_wargs
-{
+struct qt_ap_wargs {
     qdqueue_t *restrict work_queue;
     const void *distfunc;
     const int outfunc_style;
@@ -42,13 +42,12 @@ struct qt_ap_wargs
     const size_t outsize;
 };
 
-struct qt_ap_workunit
-{
+struct qt_ap_workunit {
     size_t a1_start, a1_stop, a2_start, a2_stop;
 };
 
 /* avoid compiler bugs with volatile... */
-static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t *ptr)
+static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t * ptr)
 {
     return *ptr;
 }
@@ -77,13 +76,17 @@ static aligned_t qt_ap_worker(qthread_t * restrict me,
 #ifdef QTHREAD_TRACK_DISTANCES
 	    {
 		const qthread_shepherd_id_t shep = qthread_shep(me);
-		const qthread_shepherd_id_t a1_shep = qarray_shepof(args->a1, wu->a1_start);
-		const qthread_shepherd_id_t a2_shep = qarray_shepof(args->a2, wu->a2_start);
-		const unsigned int cur_dist = qthread_distance(shep, a1_shep) + qthread_distance(shep, a2_shep);
+		const qthread_shepherd_id_t a1_shep =
+		    qarray_shepof(args->a1, wu->a1_start);
+		const qthread_shepherd_id_t a2_shep =
+		    qarray_shepof(args->a2, wu->a2_start);
+		const unsigned int cur_dist =
+		    qthread_distance(shep, a1_shep) + qthread_distance(shep,
+								       a2_shep);
 		/*if (shep != halfway[a1_shep][a2_shep]) {
-		    qthread_incr(&stolen_work, 1);
-		    qthread_incr(&stealing_penalty, cur_dist - halfway_dist[a1_shep][a2_shep]);
-		}*/
+		 * qthread_incr(&stolen_work, 1);
+		 * qthread_incr(&stealing_penalty, cur_dist - halfway_dist[a1_shep][a2_shep]);
+		 * } */
 		distances[shep].i += cur_dist;
 	    }
 #endif
@@ -140,14 +143,12 @@ static aligned_t qt_ap_worker(qthread_t * restrict me,
     return 0;
 }
 
-struct qt_ap_gargs
-{
+struct qt_ap_gargs {
     qdqueue_t *const wq;
     const qarray *restrict array2;
 };
 
-struct qt_ap_gargs2
-{
+struct qt_ap_gargs2 {
     qdqueue_t *const wq;
     const size_t start, stop;
     const qthread_shepherd_id_t shep;
@@ -158,6 +159,7 @@ static void qt_ap_genwork2(qthread_t * me, const size_t startat,
 			   struct qt_ap_gargs2 *gargs)
 {
     struct qt_ap_workunit *workunit = malloc(sizeof(struct qt_ap_workunit));
+
     //const qthread_shepherd_id_t *neighbors = qthread_sorted_sheps(me);
     const qthread_shepherd_id_t shep = gargs->shep;
     const qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
@@ -168,7 +170,8 @@ static void qt_ap_genwork2(qthread_t * me, const size_t startat,
     workunit->a2_stop = stopat;
 
     /* Find distance of gargs shep */
-    if (maxsheps == 1 || shep == qthread_shep(me) /* both remote and local on same place */) {
+    if (maxsheps == 1 ||
+	shep == qthread_shep(me) /* both remote and local on same place */ ) {
 	qdqueue_enqueue(me, gargs->wq, workunit);
 	//qthread_incr(&mindistances, halfway_dist[qthread_shep(me)][shep]);
     } else {
@@ -177,15 +180,17 @@ static void qt_ap_genwork2(qthread_t * me, const size_t startat,
 	qdqueue_enqueue_there(me, gargs->wq, workunit, 0);
 #elif 0
 	/* option 2: random, probably bad */
-	qdqueue_enqueue_there(me, gargs->wq, workunit, random()%maxsheps);
+	qdqueue_enqueue_there(me, gargs->wq, workunit, random() % maxsheps);
 #elif 1
 	/* option 3: random selection of the two, maybe good */
-	qdqueue_enqueue_there(me, gargs->wq, workunit, (random()%2)?shep:qthread_shep(me));
+	qdqueue_enqueue_there(me, gargs->wq, workunit,
+			      (random() % 2) ? shep : qthread_shep(me));
 #elif 0
 	/* option 4: the "halfway" idea */
 	unsigned int i;
 	const qthread_shepherd_id_t *neighbors = qthread_sorted_sheps(me);
-	for (i=0; i<maxsheps; i++) {
+
+	for (i = 0; i < maxsheps; i++) {
 	    if (neighbors[i] == shep)
 		break;
 	}
@@ -193,7 +198,8 @@ static void qt_ap_genwork2(qthread_t * me, const size_t startat,
 	qdqueue_enqueue_there(me, gargs->wq, workunit, neighbors[i]);
 #elif defined(QTHREAD_USE_HALFWAYARRAY)
 	/* option 5: optimal "halfway" idea */
-	qdqueue_enqueue_there(me, gargs->wq, workunit, halfway[qthread_shep(me)][shep]);
+	qdqueue_enqueue_there(me, gargs->wq, workunit,
+			      halfway[qthread_shep(me)][shep]);
 	//qthread_incr(&mindistances, halfway_dist[qthread_shep(me)][shep]);
 #endif
     }
@@ -221,16 +227,16 @@ static void qt_ap_genwork(qthread_t * restrict me, const size_t startat,
  * 3. Per-shepherd worker threads pull out work and execute it, ideally near the data they work on.
  */
 static void qt_allpairs_internal(const qarray * array1, const qarray * array2,
-			const void * distfunc,
-			int funcstyle,
-			void *restrict * restrict output,
-			const size_t outsize)
+				 const void *distfunc, int funcstyle,
+				 void *restrict * restrict output,
+				 const size_t outsize)
 {
     const qthread_shepherd_id_t max_i = qthread_num_shepherds();
     volatile aligned_t no_more_work = 0;
     volatile aligned_t donecount = 0;
     struct qt_ap_wargs wargs =
-	{ qdqueue_create(), distfunc, funcstyle, &no_more_work, &donecount, array1,
+	{ qdqueue_create(), distfunc, funcstyle, &no_more_work, &donecount,
+array1,
 	array2, output,
 	outsize
     };
@@ -250,20 +256,23 @@ static void qt_allpairs_internal(const qarray * array1, const qarray * array2,
     //stolen_work = 0;
     //stealing_penalty = 0;
     if (halfway == NULL) {
-	qthread_shepherd_id_t *equivs = calloc(max_i, sizeof(qthread_shepherd_id_t));
-	halfway = calloc(max_i, sizeof(qthread_shepherd_id_t*));
+	qthread_shepherd_id_t *equivs =
+	    calloc(max_i, sizeof(qthread_shepherd_id_t));
+	halfway = calloc(max_i, sizeof(qthread_shepherd_id_t *));
 	//halfway_dist = calloc(max_i, sizeof(unsigned int*));
-	for (int s=0; s<max_i; s++) {
+	for (int s = 0; s < max_i; s++) {
 	    halfway[s] = calloc(max_i, sizeof(qthread_shepherd_id_t));
 	    //halfway_dist[s] = calloc(max_i, sizeof(unsigned int));
-	    for (int d=0; d<max_i; d++) {
+	    for (int d = 0; d < max_i; d++) {
 		/* halfway[s][d] is the shep id with the lowest total distance to both */
 		unsigned int equiv_cnt = 0;
-		unsigned int dist = qthread_distance(0, s) + qthread_distance(0, d);
+		unsigned int dist =
+		    qthread_distance(0, s) + qthread_distance(0, d);
 		equiv_cnt = 1;
 		equivs[0] = 0;
-		for (int h=1; h<max_i; h++) {
-		    unsigned int tmp = qthread_distance(h, s) + qthread_distance(h, d);
+		for (int h = 1; h < max_i; h++) {
+		    unsigned int tmp =
+			qthread_distance(h, s) + qthread_distance(h, d);
 		    if (tmp < dist) {
 			dist = tmp;
 			equiv_cnt = 1;
@@ -272,7 +281,7 @@ static void qt_allpairs_internal(const qarray * array1, const qarray * array2,
 			equivs[equiv_cnt++] = h;
 		    }
 		}
-		halfway[s][d] = equivs[random()%equiv_cnt];
+		halfway[s][d] = equivs[random() % equiv_cnt];
 		//halfway_dist[s][d] = dist;
 		//printf("optimal [%i][%i]:%i from %i\n", (int)s, (int)d, (int)dist, equiv_cnt);
 	    }
@@ -297,10 +306,12 @@ static void qt_allpairs_internal(const qarray * array1, const qarray * array2,
     }
     qdqueue_destroy(me, wargs.work_queue);
 #ifdef QTHREAD_TRACK_DISTANCES
-    for (i=1; i<max_i; i++) {
+    for (i = 1; i < max_i; i++) {
 	distances[0].i += distances[i].i;
     }
-    printf("total distances: %lu/%lu (%lu steals, %lu penalty)\n", (unsigned long)(distances[0].i), (unsigned long)mindistances, (unsigned long)stolen_work, (unsigned long)stealing_penalty);
+    printf("total distances: %lu/%lu (%lu steals, %lu penalty)\n",
+	   (unsigned long)(distances[0].i), (unsigned long)mindistances,
+	   (unsigned long)stolen_work, (unsigned long)stealing_penalty);
     free(distances);
 #endif
 }

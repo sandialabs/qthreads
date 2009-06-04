@@ -16,23 +16,20 @@
 
 struct qdsubqueue_s;
 
-struct qdqueue_adstruct_s
-{
+struct qdqueue_adstruct_s {
     struct qdsubqueue_s *shep;
     uintptr_t generation;	/* XXX change to aligned_t when we have a CAS */
 };
 
-struct qdqueue_adheap_elem_s
-{
+struct qdqueue_adheap_elem_s {
     int inheap;
     struct qdqueue_adstruct_s ad;
     struct qdqueue_adheap_elem_s *prev;
     struct qdqueue_adheap_elem_s *next;
 };
 
-struct qdqueue_adheap_s
-{
-    aligned_t gateway_lock; /* unnecessary, but avoids compiler warnings about punning */
+struct qdqueue_adheap_s {
+    aligned_t gateway_lock;	/* unnecessary, but avoids compiler warnings about punning */
     struct qdqueue_adheap_elem_s *first;
     struct qdqueue_adheap_elem_s *heap;
 };
@@ -50,22 +47,24 @@ struct qdsubqueue_s {
     struct qdsubqueue_s **allsheps;	/* ordered by distance */
 };
 
-struct qdqueue_s
-{
+struct qdqueue_s {
     struct qdsubqueue_s *Qs;
 };
 
 static qthread_shepherd_id_t maxsheps = 0;
 
 /* avoid compiler bugs with volatile... */
-static Q_NOINLINE struct qdsubqueue_s *volatile*vol_id_qdsqptr(struct qdsubqueue_s *volatile* ptr)
-{/*{{{*/
+static Q_NOINLINE struct qdsubqueue_s *volatile *vol_id_qdsqptr(struct
+								qdsubqueue_s
+								*volatile
+								*ptr)
+{				       /*{{{ */
     return ptr;
-}/*}}}*/
+}				       /*}}} */
+
 #define _(x) *vol_id_qdsqptr(&(x))
 
-static struct qdqueue_adstruct_s qdqueue_adheap_pop(qthread_t * me,
-						    struct qdqueue_adheap_s
+static struct qdqueue_adstruct_s qdqueue_adheap_pop(qthread_t * me, struct qdqueue_adheap_s
 						    *heap)
 {				       /*{{{ */
     struct qdqueue_adstruct_s ret;
@@ -228,10 +227,10 @@ static void qdqueue_internal_sortedsheps(qthread_shepherd_id_t shep,
 }				       /*}}} */
 
 static struct qdsubqueue_s
-    **qdqueue_internal_getneighbors(qthread_shepherd_id_t shep,
-				    struct qdsubqueue_s *Qs,
-				    size_t * numNeighbors,
-				    int *Q_UNUSED distances)
+           **qdqueue_internal_getneighbors(qthread_shepherd_id_t shep,
+					   struct qdsubqueue_s *Qs,
+					   size_t * numNeighbors,
+					   int *Q_UNUSED distances)
 {				       /*{{{ */
     struct qdsubqueue_s **ret;
     size_t i;

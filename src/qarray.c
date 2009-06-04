@@ -21,10 +21,11 @@ static unsigned short pageshift = 0;
 static aligned_t *chunk_distribution_tracker = NULL;
 
 /* avoid compiler bugs with volatile... */
-static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t *ptr)
-{
+static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t * ptr)
+{				       /*{{{ */
     return *ptr;
-}
+}				       /*}}} */
+
 #define _(x) vol_read_a(&(x))
 
 /* local funcs */
@@ -65,8 +66,7 @@ static QINLINE qthread_shepherd_id_t *qarray_internal_segment_shep(const
 }				       /*}}} */
 
 static inline qthread_shepherd_id_t qarray_internal_shepof_ch(const qarray *
-							      a,
-							      const void
+							      a, const void
 							      *segment_head)
 {				       /*{{{ */
     switch (a->dist_type) {
@@ -574,10 +574,8 @@ void *qarray_elem(qthread_t * me, const qarray * a, const size_t index)
     return ret;
 }				       /*}}} */
 
-struct qarray_func_wrapper_args
-{
-    union
-    {
+struct qarray_func_wrapper_args {
+    union {
 	qa_loop_f ql;
 	qthread_f qt;
     } func;
@@ -586,10 +584,8 @@ struct qarray_func_wrapper_args
     volatile aligned_t *donecount;
     const size_t startat, stopat;
 };
-struct qarray_constfunc_wrapper_args
-{
-    const union
-    {
+struct qarray_constfunc_wrapper_args {
+    const union {
 	qa_cloop_f ql;
 	qthread_f qt;
     } func;
@@ -670,8 +666,7 @@ static aligned_t qarray_strider(qthread_t * me,
     return 0;
 }				       /*}}} */
 
-static aligned_t qarray_loop_strider(qthread_t * me,
-				     const struct qarray_func_wrapper_args
+static aligned_t qarray_loop_strider(qthread_t * me, const struct qarray_func_wrapper_args
 				     *arg)
 {				       /*{{{ */
     const size_t max_count = arg->stopat;
