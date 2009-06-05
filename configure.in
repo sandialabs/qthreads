@@ -463,6 +463,17 @@ AS_IF([test "x$qthread_implementation" = "xunix"],
 						break],
 						[QTHREAD_CHECK_LIBNUMA([],
 							 [QTHREAD_CHECK_PLPA])])
+	   case "$host" in
+		   ia32-*|ia64-*|x86_64-*)
+			QTHREAD_IA_CACHELINE
+		   ;;
+		   *)
+		   qt_cv_cacheline=128;
+		   ;;
+	   esac
+	   AC_DEFINE_UNQUOTED([QTHREAD_CACHELINE_BYTES],
+						  [$qt_cv_cacheline],
+						  [Bytes per cache line])
 	  ])
 
 
@@ -495,30 +506,37 @@ AC_CONFIG_FILES([
 AC_OUTPUT
 
 echo ""
-echo    "           Target Style: $qthread_implementation"
-echo    "          Pooled Memory: $enable_pooled_memory"
-echo    "        Lazy Thread IDs: $enable_lazy_threadids"
-echo    "  Sanity assert() Calls: $enable_asserts"
-echo    "        Thread Counting: $enable_thread_count"
-echo    "        Use setrlimit(): $enable_setrlimit"
-echo    "Check address alignment: $enable_aligncheck"
-echo    "     Shepherd profiling: $enable_shepherd_profiling"
-echo    "            Qtimer type: ${qthread_timer_type:-none}"
-qthread_incprefix="             Increments: "
-AS_IF([test "x$qthread_cv_atomic_incr" = "xyes"],
-      [echo "${qthread_incprefix}Compiler Builtin"],
-      [AS_IF([test "x$enable_software_increments" = "xyes"],
-	     [echo "${qthread_incprefix}Mutex (software)"],
-	     [echo "${qthread_incprefix}$qthread_cv_asm_arch"])
-      ])
-qthread_stackprefix="             Stack size: "
+echo    "System Characteristics:"
+echo    "               Target Style: $qthread_implementation"
+echo    "                Qtimer type: ${qthread_timer_type:-none}"
+echo    "             Aligned_t size: $sizeof_aligned_t (aligned on $align_aligned_t byte boundaries)"
+echo    "            Cache-line size: $qt_cv_cacheline bytes"
+qthread_stackprefix="                 Stack size: "
 case "$qthread_cv_stack_size" in
 	8388608) echo "${qthread_stackprefix}8MB" ;;
 	2096)    echo "${qthread_stackprefix}2kB" ;;
 	4096)    echo "${qthread_stackprefix}4kB" ;;
 	*)       echo "${qthread_stackprefix}${qthread_cv_stack_size} bytes" ;;
 esac
-echo    " Debugging Trace Output: $enable_debug_trace"
-echo    "         Aligned_t size: $sizeof_aligned_t"
-echo    "    Aligned_t alignment: $align_aligned_t"
+echo    ""
+echo    "Safety/Debugging:"
+echo    "      Sanity assert() Calls: $enable_asserts"
+echo    "    Check address alignment: $enable_aligncheck"
+echo    "            Thread Counting: $enable_thread_count"
+echo    "         Shepherd profiling: $enable_shepherd_profiling"
+echo    "       Debugging Capability: $enable_debug_trace"
+echo    ""
+echo    "Speed:"
+echo    "            Lazy Thread IDs: $enable_lazy_threadids"
+echo    "              Pooled Memory: $enable_pooled_memory"
+qthread_incprefix="             Increments/CAS: "
+AS_IF([test "x$enable_software_increments" = "xyes"],
+	  [echo "${qthread_incprefix}Mutex (software)"],
+	  [AS_IF([test "x$qthread_cv_atomic_incr" = "xyes" -a "x$qthread_cv_atomic_CAS" = "xyes"],
+			 [echo "${qthread_incprefix}Compiler Builtin (both)"],
+			 [AS_IF([test "x$qthread_cv_atomic_incr" = "xyes"],
+					[echo "${qthread_incprefix}Compiler Builtin/$qthread_cv_asm_arch"],
+					[AS_IF([test "x$qthread_cv_atomic_CAS" = "xyes"],
+						   [echo "${qthread_incprefix}$qthread_cv_asm_arch/Compiler Builtin"],
+						   [echo "${qthread_incprefix}Unsupported"])])])])
 echo ""
