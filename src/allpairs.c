@@ -155,7 +155,7 @@ struct qt_ap_gargs2 {
 };
 
 static void qt_ap_genwork2(qthread_t * me, const size_t startat,
-			   const size_t stopat, const qarray * a,
+			   const size_t stopat, const qarray *Q_UNUSED a,
 			   struct qt_ap_gargs2 *gargs)
 {
     struct qt_ap_workunit *workunit = malloc(sizeof(struct qt_ap_workunit));
@@ -206,7 +206,7 @@ static void qt_ap_genwork2(qthread_t * me, const size_t startat,
 }
 
 static void qt_ap_genwork(qthread_t * restrict me, const size_t startat,
-			  const size_t stopat, const qarray * restrict a,
+			  const size_t stopat, const qarray * restrict Q_UNUSED a,
 			  struct qt_ap_gargs *restrict gargs)
 {
     struct qt_ap_gargs2 garg2 =
