@@ -348,7 +348,7 @@ qdqueue_t *qdqueue_create(void)
 	ret->Qs[curshep].ads.heap =
 	    calloc(maxsheps, sizeof(struct qdqueue_adheap_elem_s));
 	ret->Qs[curshep].ads.heap[0].ad.shep = &(ret->Qs[curshep]);
-	for (size_t i = 0; i < (maxsheps - 1); i++) {
+	for (qthread_shepherd_id_t i = 0; i < (maxsheps - 1); i++) {
 	    ret->Qs[curshep].ads.heap[i + 1].ad.shep =
 		ret->Qs[curshep].allsheps[i];
 	}
