@@ -177,7 +177,7 @@ static int dcmp(const void *a, const void *b)
     return 0;
 }
 
-static aligned_t qutil_mergesort_presort(qthread_t * me,
+static aligned_t qutil_mergesort_presort(qthread_t * Q_UNUSED me,
 				  struct qutil_mergesort_args * args)
 {
     qsort(args->array + args->first_start,
@@ -185,7 +185,7 @@ static aligned_t qutil_mergesort_presort(qthread_t * me,
     return 0;
 }
 
-static aligned_t qutil_mergesort_inner(qthread_t * me,
+static aligned_t qutil_mergesort_inner(qthread_t * Q_UNUSED me,
 				struct qutil_mergesort_args * args)
 {
     double *array = args->array;
