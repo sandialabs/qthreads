@@ -55,10 +55,10 @@ int main(int argc, char *argv[])
 
 	assert(R);
 	assert(timer);
-	R[0] = qarray_create_tight(ASIZE, sizeof(aligned_t));
+	R[0] = qarray_create_configured(ASIZE, sizeof(aligned_t), FIXED_HASH, 1, 1);
 	qarray_iter_loop(me, R[0], 0, ASIZE, assign1, NULL);
 	for (int col = 1; col < ASIZE; col++) {
-	    R[col] = qarray_create_tight(ASIZE, sizeof(aligned_t));
+	    R[col] = qarray_create_configured(ASIZE, sizeof(aligned_t), FIXED_HASH, 1, 1);
 	    {
 		aligned_t *ptr = qarray_elem_nomigrate(R[col], 0);
 
