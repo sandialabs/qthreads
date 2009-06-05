@@ -464,8 +464,11 @@ AS_IF([test "x$qthread_implementation" = "xunix"],
 						[QTHREAD_CHECK_LIBNUMA([],
 							 [QTHREAD_CHECK_PLPA])])
 	   case "$host" in
-		   ia32-*|ia64-*|x86_64-*)
+		   ia32-*|x86_64-*)
 			QTHREAD_IA_CACHELINE
+		   ;;
+		   ia64-*) # Itanium
+		   qt_cv_cacheline=128; # L2/L3 (L1 is 64)
 		   ;;
 		   *)
 		   qt_cv_cacheline=128;
