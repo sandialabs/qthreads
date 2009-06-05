@@ -30,11 +30,6 @@ struct qt_wave_workunit {
 };
 
 /* to avoid compiler bugs regarding volatile... */
-static Q_NOINLINE volatile aligned_t *volatile *vol_id_ap(volatile aligned_t *
-							  volatile *ptr)
-{
-    return ptr;
-}
 static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t * ptr)
 {
     return *ptr;
@@ -44,7 +39,7 @@ static Q_NOINLINE volatile aligned_t *vol_id_a(volatile aligned_t * ptr)
     return ptr;
 }
 
-#define _(x) (*vol_id_ap(&(x)))
+#define _(x) (vol_read_a(&(x)))
 
 static void qt_wave_worker(qthread_t * me, struct qt_wave_wargs *const arg)
 {
@@ -73,7 +68,7 @@ static void qt_wave_worker(qthread_t * me, struct qt_wave_wargs *const arg)
 #ifdef QTHREAD_FEBS_ARE_FAST
 		    qthread_feb_status(left)
 #else
-		    vol_read_a(&(arg->colprogress[col - 1].i)) >= row
+		    _(arg->colprogress[col - 1].i) >= row
 #endif
 		    ) {
 		    void *ptr = qarray_elem_nomigrate(R[col], row);
@@ -201,7 +196,7 @@ void qt_wavefront(qarray * restrict const *const R, size_t cols, wave_f func)
     qdqueue_enqueue_there(me, wargs.work_queue, &wu, qarray_shepof(R[1], 1));
 
     /* step 5: wait for the workers to get done */
-    while (vol_read_a(&donecount) < maxsheps) {
+    while (_(donecount) < maxsheps) {
 	qthread_yield(me);
     }
     qdqueue_destroy(me, wargs.work_queue);
