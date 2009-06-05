@@ -804,6 +804,7 @@ static Q_NOINLINE volatile qt_lfqueue_node_t *volatile *vol_id_qtlfqn(volatile
 {
     return ptr;
 }
+#ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
 static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t * ptr)
 {
     return *ptr;
@@ -812,6 +813,7 @@ static Q_NOINLINE volatile aligned_t *vol_id_a(volatile aligned_t * ptr)
 {
     return ptr;
 }
+#endif
 
 #define _(x) *vol_id_qtlfqn(&(x))
 
@@ -1055,8 +1057,8 @@ static void *qthread_shepherd(void *arg)
 	    switch (t->thread_state) {
 		case QTHREAD_STATE_MIGRATING:
 		    qthread_debug(1,
-				  "qthread_shepherd(%u): thread %p migrating to %i\n",
-				  me->shepherd_id, t,
+				  "qthread_shepherd(%u): thread %u migrating to shep %u\n",
+				  me->shepherd_id, t->thread_id,
 				  (qthread_shepherd_id_t) (intptr_t)
 				  t->blockedon);
 		    t->thread_state = QTHREAD_STATE_RUNNING;
@@ -1068,16 +1070,16 @@ static void *qthread_shepherd(void *arg)
 		    break;
 		case QTHREAD_STATE_YIELDED:	/* reschedule it */
 		    qthread_debug(1,
-				  "qthread_shepherd(%u): thread %p yielded; rescheduling\n",
-				  me->shepherd_id, t);
+				  "qthread_shepherd(%u): thread %i yielded; rescheduling\n",
+				  me->shepherd_id, t->thread_id);
 		    t->thread_state = QTHREAD_STATE_RUNNING;
 		    qt_lfqueue_enqueue(me->ready, t, me);
 		    break;
 
 		case QTHREAD_STATE_FEB_BLOCKED:	/* unlock the related FEB address locks, and re-arrange memory to be correct */
 		    qthread_debug(1,
-				  "qthread_shepherd(%u): thread %p blocked on FEB\n",
-				  me->shepherd_id, t);
+				  "qthread_shepherd(%u): thread %i blocked on FEB\n",
+				  me->shepherd_id, t->thread_id);
 		    t->thread_state = QTHREAD_STATE_BLOCKED;
 		    QTHREAD_UNLOCK(&
 				   (((qthread_addrstat_t *) (t->blockedon))->
@@ -1087,8 +1089,8 @@ static void *qthread_shepherd(void *arg)
 
 		case QTHREAD_STATE_BLOCKED:	/* put it in the blocked queue */
 		    qthread_debug(1,
-				  "qthread_shepherd(%u): thread %p blocked on LOCK\n",
-				  me->shepherd_id, t);
+				  "qthread_shepherd(%u): thread %i blocked on LOCK\n",
+				  me->shepherd_id, t->thread_id);
 		    qthread_enqueue((qthread_queue_t *) t->blockedon->waiting,
 				    t);
 		    QTHREAD_UNLOCK(&(t->blockedon->lock));
@@ -1096,8 +1098,8 @@ static void *qthread_shepherd(void *arg)
 
 		case QTHREAD_STATE_TERMINATED:
 		    qthread_debug(1,
-				  "qthread_shepherd(%u): thread %p terminated\n",
-				  me->shepherd_id, t);
+				  "qthread_shepherd(%u): thread %i terminated\n",
+				  me->shepherd_id, t->thread_id);
 		    t->thread_state = QTHREAD_STATE_DONE;
 		    /* we can remove the stack and the context... */
 		    qthread_thread_free(t);
@@ -1132,7 +1134,8 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 	char *qdle = NULL;
 
 	debuglevel = qdl ? strtol(qdl, &qdle, 0) : 0;
-	if (qdle == NULL || *qdle == 0) {
+	if (qdle == NULL || qdle == qdl) {
+	    fprintf(stderr, "unparsable debug level (%s)\n", qdl);
 	    debuglevel = 0;
 	}
     }
@@ -1494,7 +1497,7 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 	qt_mpool_create(need_sync, sizeof(qthread_addrstat_t), -1);
 #endif
 
-    /* spawn the number of shepherd threads that were specified */
+    /* initialize the shepherd structures */
     for (i = 0; i < nshepherds; i++) {
 	qlib->shepherds[i].shepherd_id = (qthread_shepherd_id_t) i;
 	if ((qlib->shepherds[i].ready =
@@ -1514,18 +1517,19 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 	qthread_debug(2, "qthread_init(): forking shepherd %i thread %p\n", i,
 		      &qlib->shepherds[i]);
 
-	if (i > 0) {
-	    if ((r =
-		 pthread_create(&qlib->shepherds[i].shepherd, NULL,
-				qthread_shepherd,
-				&qlib->shepherds[i])) != 0) {
-		fprintf(stderr,
-			"qthread_init: pthread_create() failed (%d)\n", r);
-		perror("qthread_init spawning shepherd");
-		return r;
-	    }
+    }
+    /* spawn the shepherds */
+    for (i = 1; i < nshepherds; i++) {
+	if ((r = pthread_create(&qlib->shepherds[i].shepherd, NULL,
+			qthread_shepherd,
+			&qlib->shepherds[i])) != 0) {
+	    fprintf(stderr,
+		    "qthread_init: pthread_create() failed (%d)\n", r);
+	    perror("qthread_init spawning shepherd");
+	    return r;
 	}
     }
+
 
     /* now, transform the current main context into a qthread,
      * and make the main thread a shepherd (shepherd 0).
@@ -2370,7 +2374,7 @@ static void qthread_wrapper(void *ptr)
     qthread_t *t = (qthread_t *) ptr;
 #endif
 
-    qthread_debug(2, "qthread_wrapper(): executing f=%p arg=%p.\n", t->f,
+    qthread_debug(2, "qthread_wrapper(): tid %u executing f=%p arg=%p.\n", t->thread_id, t->f,
 		  t->arg);
 #ifdef QTHREAD_COUNT_THREADS
     qthread_internal_incr(&threadcount, &threadcount_lock);
@@ -2388,7 +2392,7 @@ static void qthread_wrapper(void *ptr)
     }
     t->thread_state = QTHREAD_STATE_TERMINATED;
 
-    qthread_debug(2, "qthread_wrapper(): f=%p arg=%p completed.\n", t->f,
+    qthread_debug(2, "qthread_wrapper(): tid %u f=%p arg=%p completed.\n", t->thread_id, t->f,
 		  t->arg);
 #ifdef QTHREAD_COUNT_THREADS
     qassert(pthread_mutex_lock(&concurrentthreads_lock), 0);
@@ -2398,17 +2402,20 @@ static void qthread_wrapper(void *ptr)
     if (t->flags & QTHREAD_FUTURE) {
 	future_exit(t);
     }
-#if !defined(HAVE_NATIVE_MAKECONTEXT) || defined(NEED_RLIMIT)
-    /* without a built-in make/get/swapcontext, we're relying on the portable
-     * one in context.c (stolen from libtask). unfortunately, this home-made
-     * context stuff does not allow us to set up a uc_link pointer that will be
-     * returned to once qthread_wrapper returns, so we have to do it by hand.
+    /* theoretically, we could rely on the uc_link pointer to bring us back to
+     * the parent shepherd. HOWEVER, this doesn't work in lots of situations,
+     * so we do it manually. A brief list of situations:
+     *  1. if we're using the portable make/get/swapcontext
+     *  2. if the context switch requires a stack-size modification
+     *  3. if the thread has migrated (i.e. uc_link points to the original
+     *  shepherd, not the current parent... theoretically, that could be
+     *  changed, but getting a good uc_link is finicky)
      *
-     * We also have to do it by hand if the context switch requires a
-     * stack-size modification.
+     * Thus, since doing it manually isn't a performance problem, we do it
+     * manually.
      */
+    qthread_debug(2, "qthread_wrapper(): tid %u exiting...\n", t->thread_id);
     qthread_back_to_master(t);
-#endif
 }				       /*}}} */
 
 /* This function means "run thread t". The second argument (c) is a pointer
@@ -2710,13 +2717,14 @@ int qthread_migrate_to(qthread_t * me, const qthread_shepherd_id_t shepherd)
     }
     if (me && shepherd < qlib->nshepherds) {
 	qthread_debug(2,
-		      "qthread_migrate_to(): thread %p from shep %i to shep %i\n",
-		      me, me->shepherd_ptr->shepherd_id, shepherd);
+		      "qthread_migrate_to(): thread %u from shep %u to shep %u\n",
+		      me->thread_id, me->shepherd_ptr->shepherd_id, shepherd);
 	me->thread_state = QTHREAD_STATE_MIGRATING;
 	me->blockedon = (struct qthread_lock_s *)(intptr_t) shepherd;
 	qthread_back_to_master(me);
 
-	qthread_debug(2, "qthread_migrate_to(): awake on new shepherd! %i\n",
+	qthread_debug(2, "qthread_migrate_to(): thread %u awakes on new shepherd! %u\n",
+		me->thread_id,
 		      ((qthread_shepherd_t *)
 		       pthread_getspecific(shepherd_structs))->shepherd_id);
 	assert(((qthread_shepherd_t *)
@@ -2790,7 +2798,7 @@ static QINLINE void qthread_FEB_remove(void *maddr)
     qthread_addrstat_t *m;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(maddr);
 
-    qthread_debug(2, "qthread_FEB_remove(): attempting removal\n");
+    qthread_debug(3, "qthread_FEB_remove(): attempting removal\n");
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     cp_hashtable_wrlock(qlib->FEBs[lockbin]); {
 	m = (qthread_addrstat_t *) cp_hashtable_get(qlib->FEBs[lockbin],
@@ -2800,13 +2808,13 @@ static QINLINE void qthread_FEB_remove(void *maddr)
 	    REPORTLOCK(m);
 	    if (m->FEQ == NULL && m->EFQ == NULL && m->FFQ == NULL &&
 		m->full == 1) {
-		qthread_debug(2,
+		qthread_debug(3,
 			      "qthread_FEB_remove(): all lists are empty, and status is full\n");
 		cp_hashtable_remove(qlib->FEBs[lockbin], maddr);
 	    } else {
 		QTHREAD_UNLOCK(&(m->lock));
 		REPORTUNLOCK(m);
-		qthread_debug(2,
+		qthread_debug(3,
 			      "qthread_FEB_remove(): address cannot be removed; in use\n");
 		m = NULL;
 	    }
@@ -2863,11 +2871,11 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t * shep,
     qthread_addrres_t *X = NULL;
     int removeable;
 
-    qthread_debug(2, "qthread_gotlock_fill(%p, %p)\n", m, maddr);
+    qthread_debug(3, "qthread_gotlock_fill(%p, %p)\n", m, maddr);
     m->full = 1;
     QTHREAD_EMPTY_TIMER_STOP(m);
     /* dequeue all FFQ, do their operation, and schedule them */
-    qthread_debug(2, "qthread_gotlock_fill(): dQ all FFQ\n");
+    qthread_debug(3, "qthread_gotlock_fill(): dQ all FFQ\n");
     while (m->FFQ != NULL) {
 	/* dQ */
 	X = m->FFQ;
@@ -2885,7 +2893,7 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t * shep,
 	/* dequeue one FEQ, do their operation, and schedule them */
 	qthread_t *waiter;
 
-	qthread_debug(2, "qthread_gotlock_fill(): dQ 1 FEQ\n");
+	qthread_debug(3, "qthread_gotlock_fill(): dQ 1 FEQ\n");
 	X = m->FEQ;
 	m->FEQ = X->next;
 	/* op */
