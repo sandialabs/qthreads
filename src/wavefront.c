@@ -10,6 +10,11 @@
 #include <qthread/qdqueue.h>
 #include <qthread/wavefront.h>
 
+struct cacheline_t {
+    volatile aligned_t i;
+    char pad[QTHREAD_CACHELINE_BYTES-sizeof(aligned_t)];
+};
+
 struct qt_wave_wargs {
     qdqueue_t *const work_queue;
     volatile aligned_t *restrict const no_more_work;
@@ -17,7 +22,7 @@ struct qt_wave_wargs {
     wave_f func;
     qarray *restrict const *const R;
     size_t maxcols;
-    volatile aligned_t *restrict colprogress;
+    struct cacheline_t* colprogress;
 };
 
 struct qt_wave_workunit {
@@ -68,7 +73,7 @@ static void qt_wave_worker(qthread_t * me, struct qt_wave_wargs *const arg)
 #ifdef QTHREAD_FEBS_ARE_FAST
 		    qthread_feb_status(left)
 #else
-		    vol_read_a(&(arg->colprogress[col - 1])) >= row
+		    vol_read_a(&(arg->colprogress[col - 1].i)) >= row
 #endif
 		    ) {
 		    void *ptr = qarray_elem_nomigrate(R[col], row);
@@ -86,7 +91,7 @@ static void qt_wave_worker(qthread_t * me, struct qt_wave_wargs *const arg)
 		    qthread_fill(me, ptr);
 #else
 		    /* this is assumed to be atomic for a single thread */
-		    *vol_id_a(&(arg->colprogress[col])) += 1;
+		    *vol_id_a(&(arg->colprogress[col].i)) += 1;
 #endif
 		} else {
 		    /* re-queue the work unit */
@@ -175,7 +180,7 @@ void qt_wavefront(qarray * restrict const *const R, size_t cols, wave_f func)
 #error Implement array emptying
 #else
     /* step 1: create an array to record the data completed in each column */
-    wargs.colprogress = calloc(cols, sizeof(aligned_t));
+    wargs.colprogress = calloc(cols, sizeof(struct cacheline_t));
 #endif
 
     /* step 2: set up a qdqueue of work */
