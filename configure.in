@@ -464,7 +464,7 @@ AS_IF([test "x$qthread_implementation" = "xunix"],
 						[QTHREAD_CHECK_LIBNUMA([],
 							 [QTHREAD_CHECK_PLPA])])
 	   case "$host" in
-		   ia32-*|x86_64-*)
+		   ia32-*|x86_64-*|i*86-*)
 			QTHREAD_IA_CACHELINE
 		   ;;
 		   ia64-*) # Itanium
@@ -541,5 +541,5 @@ AS_IF([test "x$enable_software_increments" = "xyes"],
 					[echo "${qthread_incprefix}Compiler Builtin/$qthread_cv_asm_arch"],
 					[AS_IF([test "x$qthread_cv_atomic_CAS" = "xyes"],
 						   [echo "${qthread_incprefix}$qthread_cv_asm_arch/Compiler Builtin"],
-						   [echo "${qthread_incprefix}Unsupported"])])])])
+						   [echo "${qthread_incprefix}$qthread_cv_asm_arch"])])])])
 echo ""
