@@ -1063,16 +1063,14 @@ static QINLINE uint64_t qthread_cas64(volatile uint64_t * operand, const uint64_
 	    uint32_t h;
 	} s;
     } oldv, newv, ret;
-    register char test;
     oldv.i = oldval;
     newv.i = newval;
     /* the PIC stuff is already defined above */
     __asm__ __volatile__ (
 	    QTHREAD_PIC_PREFIX
-	    "lock; cmpxchg8b %1"
+	    "lock; cmpxchg8b %2"
 	    QTHREAD_PIC_SUFFIX
-	    :"=r"(test),
-	    /*EAX*/"=a"(ret.s.l),
+	    :/*EAX*/"=a"(ret.s.l),
 	    /*EDX*/"=d"(ret.s.h)
 	    :"m"(*operand),
 	    /*EAX*/"a"(oldv.s.l),
