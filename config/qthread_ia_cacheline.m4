@@ -21,12 +21,18 @@ int op = 1, eax, ebx, ecx, edx, cachelinesize;
 FILE *f;
 #if QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32 || \
     QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64
+# ifdef __PIC__
 __asm__("push %%ebx\n\t"
 "cpuid\n\t"
 "mov %%ebx, %1\n\t"
 "pop %%ebx"
 :"=a"(eax), "=m"(ebx), "=c"(ecx), "=d"(edx)
 :"a"(op));
+# else
+__asm__("cpuid"
+:"=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
+:"a"(op));
+# endif
 #elif QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64
 __asm__("cpuid"
 :"=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
