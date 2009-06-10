@@ -14,7 +14,7 @@
 #ifdef QTHREAD_ATOMIC_CAS
 #define qt_cas(P,O,N) (void*)__sync_val_compare_and_swap((P),(O),(N))
 #else
-static QINLINE void* qt_cas(volatile void** ptr, void* oldv, void* newv)
+static QINLINE void* qt_cas(volatile void*volatile* ptr, void* oldv, void* newv)
 {
 # if defined(HAVE_GCC_INLINE_ASSEMBLY)
 #  if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
@@ -68,9 +68,9 @@ static QINLINE void* qt_cas(volatile void** ptr, void* oldv, void* newv)
      *                src, dest
      */
     __asm__ __volatile__ ("lock; cmpxchg %1,%2"
-	    : "=&a"(retval) /* store from EAX */
+	    : "=a"(retval) /* store from EAX */
 	    : "r"(newv), "m" (*ptr),
-	      "0"(oldv) /* load into EAX */
+	      "a"(oldv) /* load into EAX */
 	    :"cc","memory");
     return retval;
 #  else
