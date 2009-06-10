@@ -1134,7 +1134,7 @@ static QINLINE aligned_t qthread_cas_xx(volatile aligned_t * addr,
     return 0;			       /* compiler check */
 }
 
-static QINLINE void *qthread_cas_ptr_(volatile void **const addr,
+static QINLINE void *qthread_cas_ptr_(void *volatile*const addr,
 				     void *const oldval, void *const newval)
 {
     switch (sizeof(void *)) {
