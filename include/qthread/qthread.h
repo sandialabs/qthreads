@@ -571,7 +571,7 @@ static QINLINE double qthread_dincr(volatile double *operand,
 			     "lock; cmpxchg8b %1\n\t"
 			     "setne %0"	/* test = (ZF==0) */
 			     QTHREAD_PIC_SUFFIX
-			     :"=r"(test)
+			     :"=q"(test)
 			     :"m"(*operand),
 			     /*EAX*/ "a"(oldval.s.l),
 			     /*EDX*/ "d"(oldval.s.h),
@@ -856,7 +856,7 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand,
 			     "lock; cmpxchg8b %1\n\t"
 			     "setne %0"	/* test = (ZF==0) */
 			     QTHREAD_PIC_SUFFIX
-			     :"=r"(test)
+			     :"=q"(test)
 			     :"m"    (*operand),
 			     /*EAX*/ "a"(oldval.s.l),
 			     /*EDX*/ "d"(oldval.s.h),
