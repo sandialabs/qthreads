@@ -750,7 +750,7 @@ static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t *
 		"lock; cmpxchg8b %1\n\t"
 		"setne %0" /* test = (ZF==0) */
 		QTHREAD_PIC_SUFFIX
-		:"=r"(test)
+		:"=q"(test)
 		:"m"(*operand),
 		/*EAX*/"a"(oldval.s.l),
 		/*EDX*/"d"(oldval.s.h),
@@ -1234,9 +1234,12 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 	qlib->max_stack_size = rlp.rlim_max;
     }
 
-    if (getenv("QTHREAD_AFFINITY")) {  /*{{{ */
+    if (getenv("QTHREAD_AFFINITY")  /*{{{ */
 #ifdef QTHREAD_HAVE_LIBNUMA
-	if (numa_available() != -1) {
+	&& numa_available() != -1
+#endif
+	) {
+#ifdef QTHREAD_HAVE_LIBNUMA
 	    size_t max = numa_max_node() + 1;
 
 	    {
@@ -1306,8 +1309,6 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 		      qthread_internal_shepcomp);
 #  endif
 	    }
-	} else {
-	    goto noaffinity;
 	}
 #elif defined(HAVE_SYS_LGRP_USER_H)
 	unsigned int lgrp_offset;
@@ -1428,7 +1429,7 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 	}
 #endif
     } else {
-      noaffinity:Q_UNUSED for (i = 0; i < nshepherds; i++) {
+      for (i = 0; i < nshepherds; i++) {
 	    qlib->shepherds[i].node = -1;
 	    qlib->shepherds[i].shep_dists = NULL;
 	    qlib->shepherds[i].sorted_sheplist = NULL;
