@@ -1,7 +1,7 @@
 template <int C, class BehaviorT, class VarT>
 class Storage {
-  static const void value( int Behavior_Type_Undefined_Error ) {;}
-  static const void update( int Behavior_Type_Undefined_Error ) {;}
+  static void value( int Behavior_Type_Undefined_Error ) {;}
+  static void update( int Behavior_Type_Undefined_Error ) {;}
 };
 
 template <int C, class VarT1>
@@ -37,14 +37,14 @@ template <int C, class PtrT>
 class Storage<C, ArrayPtr, PtrT > {
   PtrT ptr_;
   static PtrT sptr_;
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(__PGI)
   typedef typeof(sptr_.operator[](0)) ele_t;
 #else
   typedef typename typeof(sptr_.operator[](0)) ele_t;
 #endif
 protected:
   Storage(PtrT ptr) : ptr_(ptr) {;}
-#ifdef __GNUC__
+#if defined(__GNUC__) || defined(__PGI)
   ele_t&
 #else
   (typename ele_t)&
