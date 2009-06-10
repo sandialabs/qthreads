@@ -363,9 +363,9 @@ static inline float qthread_fincr(volatile float * operand, const float incr)
     do {
 	oldval.f = *operand;
 	newval.f = oldval.f + incr;
-	__asm__ __volatile__ ("lock; cmpxchg %1, %2"
+	__asm__ __volatile__ ("lock; cmpxchg %1, (%2)"
 		:"=a"(retval.i) /* store from EAX */
-		:"r"(newval.i), "m"(*(uint64_t*)operand),
+		:"r"(newval.i), "r"(operand),
 		    "0"(oldval.i) /* load into EAX */
 		:"cc","memory");
     } while (retval.i != oldval.i);
@@ -461,8 +461,9 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
     do {
 	oldval.d = *operand;
 	newval.d = oldval.d + incr;
-	__asm__ __volatile__ ("lock; cmpxchgq %1, %2":"=a"(retval.i)
-		:"r"(newval.i), "m"(*(uint64_t*)operand), "0"(oldval.i)
+	__asm__ __volatile__ ("lock; cmpxchgq %1, (%2)"
+		:"=a"(retval.i)
+		:"r"(newval.i), "r"(operand), "0"(oldval.i)
 		:"memory");
     } while (retval.i != oldval.i);
     return oldval.d;
@@ -514,11 +515,11 @@ static inline double qthread_dincr(volatile double * operand, const double incr)
 	 */
 	__asm__ __volatile__ (
 		QTHREAD_PIC_PREFIX
-		"lock; cmpxchg8b %1\n\t"
+		"lock; cmpxchg8b (%1)\n\t"
 		"setne %0" /* test = (ZF==0) */
 		QTHREAD_PIC_SUFFIX
 		:"=r"(test)
-		:"m"(*operand),
+		:"r"(operand),
 		/*EAX*/"a"(oldval.s.l),
 		/*EDX*/"d"(oldval.s.h),
 		/*EBX*/QTHREAD_PIC_REG(newval.s.l),

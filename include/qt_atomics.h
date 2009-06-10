@@ -67,9 +67,9 @@ static QINLINE void* qt_cas(volatile void*volatile* ptr, void* oldv, void* newv)
      * [lock] cmpxchg reg, reg/mem
      *                src, dest
      */
-    __asm__ __volatile__ ("lock; cmpxchg %1,%2"
+    __asm__ __volatile__ ("lock; cmpxchg %1,(%2)"
 	    : "=a"(retval) /* store from EAX */
-	    : "r"(newv), "m" (*ptr),
+	    : "r"(newv), "r" (ptr),
 	      "a"(oldv) /* load into EAX */
 	    :"cc","memory");
     return retval;

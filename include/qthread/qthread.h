@@ -368,10 +368,10 @@ static QINLINE float qthread_fincr(volatile float *operand, const float incr)
     do {
 	oldval.f = *operand;
 	newval.f = oldval.f + incr;
-	__asm__ __volatile__("lock; cmpxchg %1, %2"
+	__asm__ __volatile__("lock; cmpxchg %1, (%2)"
 			     :"=a"(retval.i)	/* store from EAX */
 			     :"r"    (newval.i),
-			      "m"(*(uint64_t *) operand), /* goofy for portability */
+			      "r"(operand),
 			      "0"(oldval.i)	/* load into EAX */
 			     :"cc", "memory");
     } while (retval.i != oldval.i);
@@ -511,9 +511,9 @@ static QINLINE double qthread_dincr(volatile double *operand,
     do {
 	oldval.d = *operand;
 	newval.d = oldval.d + incr;
-	__asm__ __volatile__("lock; cmpxchgq %1, %2"
+	__asm__ __volatile__("lock; cmpxchgq %1, (%2)"
 			     :"=a"(retval.i)
-			     :"r"(newval.i), "m"(*(uint64_t *) operand),
+			     :"r"(newval.i), "r"(operand),
 			      "0"(oldval.i)
 			     :"memory");
     } while (retval.i != oldval.i);
@@ -536,9 +536,9 @@ static QINLINE double qthread_dincr(volatile double *operand,
 
     do {
 #ifdef __PIC__
-	/* this saves off %ebx to make PIC code happy :P */
+       /* this saves off %ebx to make PIC code happy :P */
 # define QTHREAD_PIC_PREFIX "pushl %%ebx\n\tmovl %4, %%ebx\n\t"
-	/* this restores it */
+       /* this restores it */
 # define QTHREAD_PIC_SUFFIX "\n\tpopl %%ebx"
 # define QTHREAD_PIC_REG "m"
 #else
@@ -568,11 +568,11 @@ static QINLINE double qthread_dincr(volatile double *operand,
 	 * minimizing our extra write-out to the one-byte test variable.
 	 */
 	__asm__ __volatile__(QTHREAD_PIC_PREFIX
-			     "lock; cmpxchg8b %1\n\t"
+			     "lock; cmpxchg8b (%1)\n\t"
 			     "setne %0"	/* test = (ZF==0) */
 			     QTHREAD_PIC_SUFFIX
 			     :"=q"(test)
-			     :"m"(*operand),
+			     :"r"(operand),
 			     /*EAX*/ "a"(oldval.s.l),
 			     /*EDX*/ "d"(oldval.s.h),
 			     /*EBX*/ QTHREAD_PIC_REG(newval.s.l),
@@ -676,9 +676,9 @@ static QINLINE uint32_t qthread_incr32(volatile uint32_t * operand,
       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 
     uint32_t retval = incr;
-    asm volatile ("lock ;  xaddl %0, %1;"
+    asm volatile ("lock ;  xaddl %0, (%1);"
 		  :"=r" (retval)
-		  :"m"  (*operand), "0"(retval)
+		  :"r"  (operand), "0"(retval)
 		  :"memory");
 
     return retval;
@@ -818,18 +818,20 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand,
     register char test;
 
     do {
-#ifdef __PIC__
+#ifndef QTHREAD_PIC_PREFIX
+# ifdef __PIC__
 	/* should share this code with the dincr stuff */
 	/* this saves off %ebxindent: Standard input:884: Error:Stmt nesting error.
 	 * to make PIC code happy :P */
-# define QTHREAD_PIC_PREFIX "pushl %%ebx\n\tmovl %4, %%ebx\n\t"
+#  define QTHREAD_PIC_PREFIX "pushl %%ebx\n\tmovl %4, %%ebx\n\t"
 	/* this restores it */
-# define QTHREAD_PIC_SUFFIX "\n\tpopl %%ebx"
-# define QTHREAD_PIC_REG "m"
-#else
-# define QTHREAD_PIC_PREFIX
-# define QTHREAD_PIC_SUFFIX
-# define QTHREAD_PIC_REG "b"
+#  define QTHREAD_PIC_SUFFIX "\n\tpopl %%ebx"
+#  define QTHREAD_PIC_REG "m"
+# else
+#  define QTHREAD_PIC_PREFIX
+#  define QTHREAD_PIC_SUFFIX
+#  define QTHREAD_PIC_REG "b"
+# endif
 #endif
 	oldval.i = *operand;
 	newval.i = oldval.i + incr;
@@ -853,11 +855,11 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand,
 	 * minimizing our extra write-out to the one-byte test variable.
 	 */
 	__asm__ __volatile__(QTHREAD_PIC_PREFIX
-			     "lock; cmpxchg8b %1\n\t"
+			     "lock; cmpxchg8b (%1)\n\t"
 			     "setne %0"	/* test = (ZF==0) */
 			     QTHREAD_PIC_SUFFIX
 			     :"=q"(test)
-			     :"m"    (*operand),
+			     :"r"    (operand),
 			     /*EAX*/ "a"(oldval.s.l),
 			     /*EDX*/ "d"(oldval.s.h),
 			     /*EBX*/ QTHREAD_PIC_REG(newval.s.l),
@@ -868,9 +870,9 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand,
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
     uint64_t retval = incr;
 
-    asm volatile ("lock ; xaddq %0, %1;"
+    asm volatile ("lock ; xaddq %0, (%1);"
 		  :"=r" (retval)
-		  :"m"     (*operand), "0"(retval)
+		  :"r"     (operand), "0"(retval)
 		  :"memory");
 
     return retval;
@@ -976,14 +978,10 @@ static QINLINE uint32_t qthread_cas32(volatile uint32_t * operand, const uint32_
      * Thus, this instruction has the form:
      * [lock] cmpxchg reg, reg/mem
      *                src, dest
-     * The reason we use "m"(*operand) instead of "r"(operand) is because the
-     * memory-reference syntax is different on different architectures, and
-     * this is a cheap way to support whatever it is (some use parens, some use
-     * brackets).
      */
-    __asm__ __volatile__ ("lock; cmpxchg %1,%2"
+    __asm__ __volatile__ ("lock; cmpxchg %1,(%2)"
 	    : "=&a"(retval) /* store from EAX */
-	    : "r"(newval), "m" (*operand),
+	    : "r"(newval), "r" (operand),
 	      "0"(oldval) /* load into EAX */
 	    :"cc","memory");
     return retval;
@@ -1068,11 +1066,11 @@ static QINLINE uint64_t qthread_cas64(volatile uint64_t * operand, const uint64_
     /* the PIC stuff is already defined above */
     __asm__ __volatile__ (
 	    QTHREAD_PIC_PREFIX
-	    "lock; cmpxchg8b %2"
+	    "lock; cmpxchg8b (%2)"
 	    QTHREAD_PIC_SUFFIX
 	    :/*EAX*/"=a"(ret.s.l),
 	    /*EDX*/"=d"(ret.s.h)
-	    :"m"(*operand),
+	    :"r"(operand),
 	    /*EAX*/"a"(oldv.s.l),
 	    /*EDX*/"d"(oldv.s.h),
 	    /*EBX*/QTHREAD_PIC_REG(newv.s.l),
@@ -1085,14 +1083,10 @@ static QINLINE uint64_t qthread_cas64(volatile uint64_t * operand, const uint64_
      * Thus, this instruction has the form:
      * [lock] cmpxchg reg, reg/mem
      *                src, dest
-     * The reason we use "m"(*operand) instead of "r"(operand) is because the
-     * memory-reference syntax is different on different architectures, and
-     * this is a cheap way to support whatever it is (some use parens, some use
-     * brackets).
      */
-    __asm__ __volatile__ ("lock; cmpxchg %1,%2"
+    __asm__ __volatile__ ("lock; cmpxchg %1,(%2)"
 	    : "=&a"(retval) /* store from EAX */
-	    : "r"(newval), "m" (*operand),
+	    : "r"(newval), "r" (operand),
 	      "0"(oldval) /* load into EAX */
 	    :"cc","memory");
     return retval;

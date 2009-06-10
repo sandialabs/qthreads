@@ -713,8 +713,9 @@ static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t *
 	oldval = *operand;
 	newval = oldval + 1;
 	newval *= (newval < max);
-	asm volatile ("lock; cmpxchgl %1, %2":"=&a" (retval)
-		      :"r"     (newval), "m"(*operand), "0"(oldval)
+	asm volatile ("lock; cmpxchgl %1, (%2)"
+		      :"=&a" (retval)
+		      :"r" (newval), "r" (operand), "0"(oldval)
 		      :"memory");
     } while (retval != oldval);
 
@@ -747,11 +748,11 @@ static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t *
 	newval.i *= (newval.i < max);
 	__asm__ __volatile__ (
 		QTHREAD_PIC_PREFIX
-		"lock; cmpxchg8b %1\n\t"
+		"lock; cmpxchg8b (%1)\n\t"
 		"setne %0" /* test = (ZF==0) */
 		QTHREAD_PIC_SUFFIX
 		:"=q"(test)
-		:"m"(*operand),
+		:"r"(operand),
 		/*EAX*/"a"(oldval.s.l),
 		/*EDX*/"d"(oldval.s.h),
 		/*EBX*/QTHREAD_PIC_REG(newval.s.l),
@@ -768,8 +769,9 @@ static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t *
 	oldval = *operand;
 	newval = oldval + 1;
 	newval *= (newval < max);
-	asm volatile ("lock; cmpxchgq %1, %2":"=a" (retval)
-		      :"r"     (newval), "m"(*operand), "0"(oldval)
+	asm volatile ("lock; cmpxchgq %1, (%2)"
+		      :"=a" (retval)
+		      :"r" (newval), "r" (operand), "0"(oldval)
 		      :"memory");
     } while (retval != oldval);
 
