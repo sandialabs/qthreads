@@ -114,14 +114,14 @@ int qlfqueue_enqueue(qthread_t * me, qlfqueue_t * q, void *elem)
 	if (tail == _(q->tail)) {      // are tail and next consistent?
 	    if (QPTR(next) == NULL) {  // was tail pointing to the last node?
 		if (qthread_cas_ptr
-		    (&(QPTR(tail)->next), next, QCOMPOSE(node, next)) == next)
+		    (&(QPTR(tail)->next), (void*)next, QCOMPOSE(node, next)) == next)
 		    break;	       // success!
 	    } else {		       // tail not pointing to last node
-		(void)qthread_cas_ptr(&(q->tail), tail, QCOMPOSE(next, tail));
+		(void)qthread_cas_ptr(&(q->tail), (void*)tail, QCOMPOSE(next, tail));
 	    }
 	}
     }
-    (void)qthread_cas_ptr(&(q->tail), tail, QCOMPOSE(node, tail));
+    (void)qthread_cas_ptr(&(q->tail), (void*)tail, QCOMPOSE(node, tail));
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
@@ -145,11 +145,11 @@ void *qlfqueue_dequeue(qthread_t * me, qlfqueue_t * q)
 		if (QPTR(next) == NULL) {	// is queue empty?
 		    return NULL;
 		}
-		(void)qthread_cas_ptr(&(q->tail), tail, QCOMPOSE(next, tail));	// advance tail ptr
+		(void)qthread_cas_ptr(&(q->tail), (void*)tail, QCOMPOSE(next, tail));	// advance tail ptr
 	    } else if (QPTR(next) != NULL) {	// no need to deal with tail
 		// read value before CAS, otherwise another dequeue might free the next node
 		p = QPTR(next)->value;
-		if (qthread_cas_ptr(&(q->head), head, QCOMPOSE(next, head)) ==
+		if (qthread_cas_ptr(&(q->head), (void*)head, QCOMPOSE(next, head)) ==
 		    head) {
 		    break;	       // success!
 		}
