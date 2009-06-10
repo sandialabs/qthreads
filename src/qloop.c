@@ -249,7 +249,7 @@ void qt_loopaccum_balance_future(const size_t start, const size_t stop,
 }
 
 #define PARALLEL_FUNC(category, initials, _op_, type, shorttype) \
-struct qt##initials \
+struct qt##initials##_s \
 { \
     type *a; \
     int feb; \
@@ -260,17 +260,17 @@ static void qt##initials##_worker(qthread_t * me, const size_t startat, \
 { \
     size_t i; \
     type acc; \
-    if (((struct qt##initials *)arg)->feb) { \
-	qthread_readFF(me, NULL, (aligned_t*)(((struct qt##initials *)arg)->a)); \
-	acc = ((struct qt##initials *)arg)->a[startat]; \
+    if (((struct qt##initials##_s *)arg)->feb) { \
+	qthread_readFF(me, NULL, (aligned_t*)(((struct qt##initials##_s *)arg)->a)); \
+	acc = ((struct qt##initials##_s *)arg)->a[startat]; \
 	for (i = startat + 1; i < stopat; i++) { \
-	    qthread_readFF(me, NULL, (aligned_t*)(((struct qt##initials *)arg)->a + i)); \
-	    acc = _op_(acc, ((struct qt##initials *)arg)->a[i]); \
+	    qthread_readFF(me, NULL, (aligned_t*)(((struct qt##initials##_s *)arg)->a + i)); \
+	    acc = _op_(acc, ((struct qt##initials##_s *)arg)->a[i]); \
 	} \
     } else { \
-	acc = ((struct qt##initials *)arg)->a[startat]; \
+	acc = ((struct qt##initials##_s *)arg)->a[startat]; \
 	for (i = startat + 1; i < stopat; i++) { \
-	    acc = _op_(acc, ((struct qt##initials *)arg)->a[i]); \
+	    acc = _op_(acc, ((struct qt##initials##_s *)arg)->a[i]); \
 	} \
     } \
     *(type *)ret = acc; \
@@ -281,7 +281,7 @@ static void qt##initials##_acc (void * restrict a, void * restrict b) \
 } \
 type qt_##shorttype##_##category (type *array, size_t length, int checkfeb) \
 { \
-    struct qt##initials arg = { array, checkfeb }; \
+    struct qt##initials##_s arg = { array, checkfeb }; \
     type ret; \
     qt_loopaccum_balance_inner(0, length, sizeof(type), &ret, \
 			 qt##initials##_worker, \
