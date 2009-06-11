@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     }
     if (argc >= 3) {
 	ASIZE = strtol(argv[2], NULL, 0);
-	printf("ASIZE: %i\n", ASIZE);
+	printf("ASIZE: %i\n", (int)ASIZE);
     }
     qthread_init(threads);
     if (interactive == 0) {
