@@ -6,7 +6,7 @@
 #include <assert.h>
 #include <qthread/qthread.h>
 
-static int target = 1000;
+static unsigned int target = 1000;
 static aligned_t x = 0;
 
 //pthread_mutex_t alldone = PTHREAD_MUTEX_INITIALIZER;
@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
     int threads = 1;
 
     if (argc >= 3) {
-	target = strtol(argv[2], NULL, 0);
+	target = strtoul(argv[2], NULL, 0);
     }
     if (argc >= 2) {
 	threads = strtol(argv[1], NULL, 0);

@@ -89,13 +89,14 @@ int main(int argc, char *argv[])
     double rate;
     unsigned int i;
     aligned_t rets[MAXPARALLELISM];
-    int shepherds = 1;
+    unsigned int shepherds = 1;
     int interactive = 0;
 
     if (argc == 2) {
-	shepherds = strtol(argv[1], NULL, 0);
+	char * errcheck;
+	shepherds = strtoul(argv[1], &errcheck, 0);
 	interactive = 1;
-	if (shepherds < 0) {
+	if (errcheck == argv[1] || (errcheck && *errcheck != 0)) {
 	    shepherds = 1;
 	    interactive = 0;
 	}

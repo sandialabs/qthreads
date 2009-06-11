@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
     const size_t sizes[] =
 	{ 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 23, 32, 64, 65, 71, 100, 128, 256, 301, 333,
 512/*, 1024, 2048, 4096, 5000, 10000, 16384*/ };
-    int dt_index;
+    unsigned int dt_index;
     unsigned dist_requested = 63;
     int interactive = 0;
 

@@ -114,7 +114,7 @@ int main(int argc, char *argv[])
 	"FIXED_HASH", "ALL_LOCAL", /*"ALL_RAND", "ALL_LEAST", */ "DIST_RAND",
 	"DIST_REG_STRIPES", "DIST_REG_FIELDS", "DIST_LEAST", "SERIAL"
     };
-    int dt_index;
+    unsigned int dt_index;
     int interactive = 0;
     int enabled_tests = 7;
     int enabled_types = 255;

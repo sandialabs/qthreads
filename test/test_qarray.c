@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
 	"FIXED_HASH", "ALL_LOCAL", "ALL_RAND", "ALL_LEAST", "DIST_RAND",
 	"DIST_REG_STRIPES", "DIST_REG_FIELDS", "DIST_LEAST"
     };
-    int dt_index;
+    unsigned int dt_index;
     int interactive = 0;
 
     if (argc == 2) {
@@ -87,7 +87,7 @@ int main(int argc, char *argv[])
 	    printf("%s: iterated; now checking work...\n",
 		   distnames[dt_index]);
 	if (count != ELEMENT_COUNT) {
-	    printf("count = %lu, dt_index = %i\n", (unsigned long)count,
+	    printf("count = %lu, dt_index = %u\n", (unsigned long)count,
 		   dt_index);
 	    assert(count == ELEMENT_COUNT);
 	}
@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
 	    printf("%s: iterated; now checking work...\n",
 		   distnames[dt_index]);
 	if (count != ELEMENT_COUNT) {
-	    printf("count = %lu, dt_index = %i\n", (unsigned long)count,
+	    printf("count = %lu, dt_index = %u\n", (unsigned long)count,
 		   dt_index);
 	    assert(count == ELEMENT_COUNT);
 	}
@@ -134,7 +134,7 @@ int main(int argc, char *argv[])
 		for (j = 0; j < sizeof(bigobj); j++) {
 		    if (elem[j] != 1) {
 			printf
-			    ("byte %lu of element %lu is %i instead of 1, dt_index = %i\n",
+			    ("byte %lu of element %lu is %i instead of 1, dt_index = %u\n",
 			     (unsigned long)j, (unsigned long)i, elem[j],
 			     dt_index);
 			assert(elem[j] == 1);
@@ -158,7 +158,7 @@ int main(int argc, char *argv[])
 	    printf("%s: iterated; now checking work...\n",
 		   distnames[dt_index]);
 	if (count != ELEMENT_COUNT) {
-	    printf("count = %lu, dt_index = %i\n", (unsigned long)count,
+	    printf("count = %lu, dt_index = %u\n", (unsigned long)count,
 		   dt_index);
 	    assert(count == ELEMENT_COUNT);
 	}
@@ -172,7 +172,7 @@ int main(int argc, char *argv[])
 		for (j = 0; j < sizeof(offsize); j++) {
 		    if (elem[j] != 1) {
 			printf
-			    ("byte %lu of element %lu is %i instead of 1, dt_index = %i\n",
+			    ("byte %lu of element %lu is %i instead of 1, dt_index = %u\n",
 			     (unsigned long)j, (unsigned long)i, elem[j],
 			     dt_index);
 			assert(elem[j] == 1);

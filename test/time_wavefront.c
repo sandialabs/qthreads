@@ -44,8 +44,8 @@ int main(int argc, char *argv[])
 	}
     }
     if (argc >= 3) {
-	ASIZE = strtol(argv[2], NULL, 0);
-	printf("ASIZE: %i\n", ASIZE);
+	ASIZE = strtoul(argv[2], NULL, 0);
+	printf("ASIZE: %i\n", (int)ASIZE);
     }
     qthread_init(threads);
     {
@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
 	assert(timer);
 	R[0] = qarray_create_configured(ASIZE, sizeof(aligned_t), FIXED_HASH, 1, 1);
 	qarray_iter_loop(me, R[0], 0, ASIZE, assign1, NULL);
-	for (int col = 1; col < ASIZE; col++) {
+	for (unsigned int col = 1; col < ASIZE; col++) {
 	    R[col] = qarray_create_configured(ASIZE, sizeof(aligned_t), FIXED_HASH, 1, 1);
 	    {
 		aligned_t *ptr = qarray_elem_nomigrate(R[col], 0);
@@ -65,17 +65,19 @@ int main(int argc, char *argv[])
 		*ptr = 1;
 	    }
 	}
+	printf("initialized (%i-unit segments)\n", (int)(R[0]->segment_size));
 	/* do stuff */
 	qtimer_start(timer);
 	for (int i = 0; i < 10; i++) {
 	    qt_wavefront(R, ASIZE, sum);
+	    printf("i=%i\n", i);
 	}
 	qtimer_stop(timer);
 
 	/* prove it */
 	printf("wavefront secs: %f\n", qtimer_secs(timer) / 10.0);
 	/* free it */
-	for (int col = 0; col < ASIZE; col++) {
+	for (unsigned int col = 0; col < ASIZE; col++) {
 	    qarray_destroy(R[col]);
 	}
 	free(R);

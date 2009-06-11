@@ -9,7 +9,7 @@ static aligned_t whereami(qthread_t * me, void *arg)
 
 int main()
 {
-    int i;
+    unsigned int i;
     aligned_t rets[30];
     qthread_t *me;
 
