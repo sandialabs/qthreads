@@ -120,4 +120,5 @@ int main(int argc, char *argv[])
 	}
 	free(R);
     }
+    return 0;
 }
