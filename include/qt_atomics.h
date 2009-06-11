@@ -11,10 +11,10 @@
 # endif
 #endif
 
-#ifdef QTHREAD_ATOMIC_CAS
+#ifdef QTHREAD_ATOMIC_CAS_PTR
 #define qt_cas(P,O,N) (void*)__sync_val_compare_and_swap((P),(O),(N))
 #else
-static QINLINE void* qt_cas(volatile void*volatile* ptr, void* oldv, void* newv)
+static QINLINE void* qt_cas(void*volatile* ptr, void* oldv, void* newv)
 {
 # if defined(HAVE_GCC_INLINE_ASSEMBLY)
 #  if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
