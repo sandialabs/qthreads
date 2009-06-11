@@ -1135,20 +1135,16 @@ static QINLINE void *qthread_cas_ptr_(void *volatile*const addr,
 	case 4:
 	    return (void *)(uintptr_t) qthread_cas32((volatile uint32_t *)
 						     addr,
-						     (const
-						      uint32_t)(uintptr_t)
+						     (uint32_t)(uintptr_t)
 						     oldval,
-						     (const
-						      uint32_t)(uintptr_t)
+						     (uint32_t)(uintptr_t)
 						     newval);
 	case 8:
 	    return (void *)(uintptr_t) qthread_cas64((volatile uint64_t *)
 						     addr,
-						     (const
-						      uint64_t)(uintptr_t)
+						     (uint64_t)(uintptr_t)
 						     oldval,
-						     (const
-						      uint64_t)(uintptr_t)
+						     (uint64_t)(uintptr_t)
 						     newval);
 	default:
 	    /* This should never happen, so deliberately cause a seg fault for
