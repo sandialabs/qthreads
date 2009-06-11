@@ -1,9 +1,14 @@
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
 #include "qtimer.h"
+#define QTHREAD_SHIFT_GCD
+#include "qt_gcd.h"
 
-size_t qarray_gcd(size_t a, size_t b)
+static inline size_t shift_gcd(size_t a, size_t b)
 {
     size_t k = 0;
     if (a == 0) return b;
@@ -27,7 +32,7 @@ size_t qarray_gcd(size_t a, size_t b)
     return b << k;
 }
 
-size_t old_gcd(size_t a, size_t b)
+static inline size_t mod_gcd(size_t a, size_t b)
 {
     while (1) {
 	if (a == 0) return b;
@@ -46,38 +51,62 @@ int main ()
     size_t *answer1 = malloc(sizeof(size_t) * BIGNUM);
     size_t *answer2 = malloc(sizeof(size_t) * BIGNUM);
     size_t i;
-    qtimer_t timer1 = qtimer_new();
-    qtimer_t timer2 = qtimer_new();
+    qtimer_t lib_timer = qtimer_new();
+    qtimer_t mod_timer = qtimer_new();
+    qtimer_t shift_timer = qtimer_new();
     for (i=0;i<BIGNUM;i++) {
 	bigset[i].a = random();
 	bigset[i].b = 4096;
     }
     for (i=0;i<BIGNUM;i++) {
-	answer1[i] = qarray_gcd(bigset[i].a, bigset[i].b);
+	answer1[i] = qt_gcd(bigset[i].a, bigset[i].b);
     }
-    qtimer_start(timer1);
+    qtimer_start(lib_timer);
     for (i=0;i<BIGNUM;i++) {
-	answer1[i] = qarray_gcd(bigset[i].a, bigset[i].b);
+	answer1[i] = qt_gcd(bigset[i].a, bigset[i].b);
     }
-    qtimer_stop(timer1);
+    qtimer_stop(lib_timer);
     for (i=0;i<BIGNUM;i++) {
-	answer2[i] = old_gcd(bigset[i].a, bigset[i].b);
+	answer2[i] = mod_gcd(bigset[i].a, bigset[i].b);
     }
-    qtimer_start(timer2);
+    qtimer_start(mod_timer);
     for (i=0;i<BIGNUM;i++) {
-	answer2[i] = old_gcd(bigset[i].a, bigset[i].b);
+	answer2[i] = mod_gcd(bigset[i].a, bigset[i].b);
     }
-    qtimer_stop(timer2);
+    qtimer_stop(mod_timer);
     for (i=0;i<BIGNUM;i++) {
 	if (answer1[i] != answer2[i]) {
 	    printf("ERROR! %lu\n", (unsigned long)i);
 	}
     }
-    printf("new secs: %f\n", qtimer_secs(timer1));
-    printf("old secs: %f\n", qtimer_secs(timer2));
-    assert(qtimer_secs(timer1) > qtimer_secs(timer2));
-    qtimer_free(timer1);
-    qtimer_free(timer2);
+    for (i=0;i<BIGNUM;i++) {
+	answer2[i] = shift_gcd(bigset[i].a, bigset[i].b);
+    }
+    qtimer_start(shift_timer);
+    for (i=0;i<BIGNUM;i++) {
+	answer2[i] = shift_gcd(bigset[i].a, bigset[i].b);
+    }
+    qtimer_stop(shift_timer);
+    for (i=0;i<BIGNUM;i++) {
+	if (answer1[i] != answer2[i]) {
+	    printf("ERROR! %lu\n", (unsigned long)i);
+	}
+    }
+    for (i=0;i<BIGNUM;i++) {
+	answer1[i] = qt_gcd(bigset[i].a, bigset[i].b);
+    }
+    qtimer_start(lib_timer);
+    for (i=0;i<BIGNUM;i++) {
+	answer1[i] = qt_gcd(bigset[i].a, bigset[i].b);
+    }
+    qtimer_stop(lib_timer);
+    printf("  lib gcd secs: %f\n", qtimer_secs(lib_timer));
+    printf("  mod gcd secs: %f\n", qtimer_secs(mod_timer));
+    printf("shift gcd secs: %f\n", qtimer_secs(shift_timer));
+    assert(qtimer_secs(lib_timer) < ((qtimer_secs(shift_timer) + qtimer_secs(mod_timer))/2.0));
+    qtimer_free(lib_timer);
+    qtimer_free(mod_timer);
+    qtimer_free(shift_timer);
     free(bigset);
     free(answer1);
     free(answer2);

@@ -428,6 +428,14 @@ int main() {
         [AC_MSG_ERROR([Can not find working makecontext.])])
 ])
 
+AC_ARG_WITH([gcd],
+			[AS_HELP_STRING([--with-gcd=[gcd_style]],
+							[specify which algorithm for computing greatest common denominator. Current options are: "mod" (default) and "shift". The mod option uses modulo operations, and is usually the fastest option. On some systems, modulo operations are particularly slow, and so the "shift" algorithm is faster. The difference is usually minor, and probably won't impact overall performance significantly, but this option is for true speed-demons who want to get the last word in speed.])],
+			[],
+			[with_gcd=mod])
+AS_IF([test "x$with_gcd" == "xshift"],
+	  [AC_DEFINE([QTHREAD_SHIFT_GCD],[1],[use a shift-based gcd algorithm])])
+
 AC_ARG_ENABLE([condwait-queue],
   [AS_HELP_STRING([--enable-condwait-queue],
 				  [force the use of a pthread condwait queue, instead of a spin-based queue for inter-thread communication (important if spinning shepherds interfere with each other). Default enabled on sparc/solaris, but default disabled elsewhere.])],

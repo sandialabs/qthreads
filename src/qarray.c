@@ -17,6 +17,8 @@
 # include <sys/lgrp_user.h>
 #endif
 
+#include "qt_gcd.h"		       /* for qt_lcm() */
+
 static unsigned short pageshift = 0;
 static aligned_t *chunk_distribution_tracker = NULL;
 
@@ -29,25 +31,6 @@ static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t * ptr)
 #define _(x) vol_read_a(&(x))
 
 /* local funcs */
-static QINLINE size_t qarray_gcd(size_t a, size_t b)
-{				       /*{{{ */
-    while (1) {
-	if (a == 0)
-	    return b;
-	b %= a;
-	if (b == 0)
-	    return a;
-	a %= b;
-    }
-}				       /*}}} */
-
-static QINLINE size_t qarray_lcm(size_t a, size_t b)
-{				       /*{{{ */
-    size_t tmp = qarray_gcd(a, b);
-
-    return (tmp != 0) ? (a * b / tmp) : 0;
-}				       /*}}} */
-
 static QINLINE qthread_shepherd_id_t *qarray_internal_segment_shep(const
 								   qarray * a,
 								   const void
@@ -161,7 +144,7 @@ static qarray *qarray_create_internal(const size_t count,
 	    if (seg_pages == 0) {
 		ret->segment_bytes = 16 * pagesize;
 		if (ret->unit_size > ret->segment_bytes) {
-		    ret->segment_bytes = qarray_lcm(ret->unit_size, pagesize);
+		    ret->segment_bytes = qt_lcm(ret->unit_size, pagesize);
 		}
 	    } else {
 		ret->segment_bytes = seg_pages * pagesize;

@@ -21,6 +21,7 @@
 
 #include <qthread/qthread-int.h>       /* for uintptr_t */
 #include "qthread_asserts.h"
+#include "qt_gcd.h"		       /* for qt_lcm() */
 
 #ifdef HAVE_GETPAGESIZE
 #include <unistd.h>
@@ -62,25 +63,6 @@ static Q_NOINLINE volatile void *volatile *vol_id_void(volatile void *volatile
 #define _(x) (*vol_id_void(&(x)))
 
 /* local funcs */
-static QINLINE size_t mpool_gcd(size_t a, size_t b)
-{				       /*{{{ */
-    while (1) {
-	if (a == 0)
-	    return b;
-	b %= a;
-	if (b == 0)
-	    return a;
-	a %= b;
-    }
-}				       /*}}} */
-
-static QINLINE size_t mpool_lcm(size_t a, size_t b)
-{				       /*{{{ */
-    size_t tmp = mpool_gcd(a, b);
-
-    return (tmp != 0) ? (a * b / tmp) : 0;
-}				       /*}}} */
-
 static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
 						     /*int node, */
 						     size_t alignment)
@@ -210,7 +192,7 @@ qt_mpool qt_mpool_create_aligned(const int sync, size_t item_size,
      * increase the alloc_size until it is at least that big. This guarantees
      * that the allocation size will be a multiple of pagesize (fast!
      * efficient!). */
-    alloc_size = mpool_lcm(item_size, pagesize);
+    alloc_size = qt_lcm(item_size, pagesize);
     if (alloc_size == 0) {	       /* degenerative case */
 	if (item_size > pagesize) {
 	    alloc_size = item_size;

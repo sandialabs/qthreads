@@ -10,6 +10,7 @@ noinst_HEADERS = \
 	qthread_asserts.h \
 	qthread_expect.h \
 	qt_atomics.h \
+	qt_gcd.h \
 	qtimer.h \
 	qt_mpool.h \
 	futurelib_innards.h
