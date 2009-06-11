@@ -41,6 +41,15 @@
 /* builtin cas supported */
 #undef QTHREAD_ATOMIC_CAS
 
+/* if the compiler supports __sync_val_compare_and_swap on 32-bit ints */
+#undef QTHREAD_ATOMIC_CAS32
+
+/* if the compiler supports __sync_val_compare_and_swap on 64-bit ints */
+#undef QTHREAD_ATOMIC_CAS64
+
+/* if the compiler supports __sync_val_compare_and_swap on pointers */
+#undef QTHREAD_ATOMIC_CAS_PTR
+
 /* builtin incr supported */
 #undef QTHREAD_ATOMIC_INCR
 
