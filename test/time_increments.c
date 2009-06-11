@@ -11,7 +11,7 @@ size_t ITERATIONS;
 aligned_t incrementme = 0;
 aligned_t *increments = NULL;
 
-void balanced_incr(qthread_t *me, const unsigned long startat, const unsigned long stopat, void *arg)
+void balanced_incr(qthread_t *me, const size_t startat, const size_t stopat, void *arg)
 {
     size_t i;
     for (i = startat; i < stopat; i++) {
@@ -19,7 +19,7 @@ void balanced_incr(qthread_t *me, const unsigned long startat, const unsigned lo
     }
 }
 
-void balanced_shepincr(qthread_t *me, const unsigned long startat, const unsigned long stopat, void *arg)
+void balanced_shepincr(qthread_t *me, const size_t startat, const size_t stopat, void *arg)
 {
     size_t i;
     qthread_shepherd_id_t shep = qthread_shep(me);
