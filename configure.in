@@ -486,6 +486,12 @@ AS_IF([test "x$qthread_implementation" = "xunix"],
 		   ia64-*) # Itanium
 		   qt_cv_cacheline=128; # L2/L3 (L1 is 64)
 		   ;;
+		   powerpc-*|powerpc64-*)
+		   AC_CHECK_SIZEOF([long])
+		   AS_IF([test "x$ac_cv_sizeof_long" = "x4"],
+				 [qt_cv_cacheline=32], dnl G4
+				 [qt_cv_cacheline=128]) dnl G5
+		   ;;
 		   *)
 		   qt_cv_cacheline=128;
 		   ;;
