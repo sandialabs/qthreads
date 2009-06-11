@@ -37,9 +37,9 @@ static qpool *qlfqueue_node_pool = NULL;
 # define QCOMPOSE(x,y) (x)
 #else
 # define QCTR_MASK (15)
-# define QPTR(x) ((volatile qlfqueue_node_t*volatile)(((volatile uintptr_t)(x))&~(uintptr_t)QCTR_MASK))
-# define QCTR(x) (((volatile uintptr_t)(x))&QCTR_MASK)
-# define QCOMPOSE(x,y) (void*)(((volatile uintptr_t)QPTR(x))|((QCTR(y)+1)&QCTR_MASK))
+# define QPTR(x) ((volatile qlfqueue_node_t*)(((uintptr_t)(x))&~(uintptr_t)QCTR_MASK))
+# define QCTR(x) (((uintptr_t)(x))&QCTR_MASK)
+# define QCOMPOSE(x,y) (void*)(((uintptr_t)QPTR(x))|((QCTR(y)+1)&QCTR_MASK))
 #endif
 
 /* to avoid compiler bugs regarding volatile... */

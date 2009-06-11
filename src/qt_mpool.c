@@ -276,7 +276,7 @@ qt_mpool qt_mpool_create(int sync, size_t item_size, int node)
  * of memory must be aligned to 16 bytes. */
 #ifndef QTHREAD_USE_VALGRIND
 #define QCTR_MASK (15)
-#define QPTR(x) ((void*volatile*volatile)(((volatile uintptr_t)(x))&~(uintptr_t)QCTR_MASK))
+#define QPTR(x) ((void*volatile*)(((uintptr_t)(x))&~(uintptr_t)QCTR_MASK))
 #define QCTR(x) (((uintptr_t)(x))&QCTR_MASK)
 #define QCOMPOSE(x,y) (void*)(((uintptr_t)QPTR(x))|((QCTR(y)+1)&QCTR_MASK))
 #else
@@ -372,7 +372,7 @@ void qt_mpool_free(qt_mpool pool, void *mem)
     assert(mem != NULL);
     assert(pool);
     do {
-	old = (void *)_(pool->reuse_pool);	// should be an atomic read
+	old = (void *)_(pool->reuse_pool);	/* should be an atomic read */
 	*(void *volatile *)mem = old;
 	new = QCOMPOSE(mem, old);
 	p = qt_cas(&(pool->reuse_pool), old, new);

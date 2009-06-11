@@ -2067,9 +2067,9 @@ static QINLINE void qthread_thread_free(qthread_t * t)
 # define QCOMPOSE(x,y) (x)
 #else
 # define QCTR_MASK (15)
-# define QPTR(x) ((volatile qt_lfqueue_node_t*volatile)(((volatile uintptr_t)(x))&~(uintptr_t)QCTR_MASK))
-# define QCTR(x) (((volatile uintptr_t)(x))&QCTR_MASK)
-# define QCOMPOSE(x,y) (void*)(((volatile uintptr_t)QPTR(x))|((QCTR(y)+1)&QCTR_MASK))
+# define QPTR(x) ((volatile qt_lfqueue_node_t*)(((uintptr_t)(x))&~(uintptr_t)QCTR_MASK))
+# define QCTR(x) (((uintptr_t)(x))&QCTR_MASK)
+# define QCOMPOSE(x,y) (void*)(((uintptr_t)QPTR(x))|((QCTR(y)+1)&QCTR_MASK))
 #endif
 
 static QINLINE qt_lfqueue_t *qt_lfqueue_new(qthread_shepherd_t * shepherd)
