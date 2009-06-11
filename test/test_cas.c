@@ -18,7 +18,11 @@ aligned_t incr(qthread_t * me, void *arg)
 
 volatile uint32_t four = 4;
 volatile uint64_t eight = 8;
-volatile void * ptr = NULL;
+void * volatile ptr = NULL;
+
+uint32_t read_vol32(volatile uint32_t *ptr) { return *ptr; }
+uint64_t read_vol64(volatile uint64_t *ptr) { return *ptr; }
+void * read_volptr(void * volatile *ptr) { return *ptr; }
 
 int main()
 {
@@ -47,13 +51,13 @@ int main()
 #if (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
     assert(qthread_cas(&eight, 8, 9) == 8);
 #endif
-    assert(four == 5);
+    assert(read_vol32(&four) == 5);
 #if (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
-    assert(eight == 9);
+    assert(read_vol64(&eight) == 9);
 #endif
 
     assert(qthread_cas_ptr(&ptr, NULL, &i) == NULL);
-    assert(ptr == &i);
+    assert(read_volptr(&ptr) == &i);
 
     qthread_finalize();
 
