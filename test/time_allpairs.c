@@ -22,57 +22,9 @@ static void assigni(qthread_t * me, const size_t startat, const size_t stopat,
     }
 }
 
-static void assignrand(qthread_t * me, const size_t startat,
-		       const size_t stopat, qarray * q, void *arg)
-{
-    int *ptr = qarray_elem_nomigrate(q, startat);
-
-    for (size_t i = 0; i < (stopat - startat); i++) {
-	ptr[i] = random();
-    }
-}
-
-static void printout(int *restrict * restrict out)
-{
-    size_t i;
-
-    for (i = 0; i < ASIZE; i++) {
-	size_t j;
-
-	for (j = 0; j < ASIZE; j++) {
-	    if (out[i][j] == -1) {
-		printf("       _ ");
-	    } else {
-		printf("%8i ", out[i][j]);
-	    }
-	    assert(out[i][j] == out[j][i]);
-	}
-	printf("\n");
-    }
-}
-
 static void mult(const int *inta, const int *intb, int *restrict out)
 {
     *out = (*inta) * (*intb);
-}
-
-static void hammingdist(const int *inta, const int *intb)
-{
-    unsigned int ham = *inta ^ *intb;
-    aligned_t hamdist = 0;
-    qthread_t *me = qthread_self();
-
-    while (ham != 0) {
-	hamdist += ham & 1;
-	ham >>= 1;
-    }
-    if (hamming > hamdist) {
-	qthread_lock(me, &hamming);
-	if (hamming > hamdist) {
-	    hamming = hamdist;
-	}
-	qthread_unlock(me, &hamming);
-    }
 }
 
 int main(int argc, char *argv[])
@@ -115,7 +67,6 @@ int main(int argc, char *argv[])
     out = calloc(ASIZE, sizeof(int *));
     assert(out);
     for (i = 0; i < ASIZE; i++) {
-	size_t j;
 	out[i] = calloc(sizeof(int), ASIZE);
 	assert(out[i]);
     }
