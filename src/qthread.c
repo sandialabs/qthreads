@@ -1236,81 +1236,86 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 	qlib->max_stack_size = rlp.rlim_max;
     }
 
-    if (getenv("QTHREAD_AFFINITY")  /*{{{ */
+    /* initialize the shepherds as having no affinity */
+    for (i = 0; i < nshepherds; i++) {
+	qlib->shepherds[i].node = -1;
+	qlib->shepherds[i].shep_dists = NULL;
+	qlib->shepherds[i].sorted_sheplist = NULL;
+    }
+    if (getenv("QTHREAD_AFFINITY")
 #ifdef QTHREAD_HAVE_LIBNUMA
 	&& numa_available() != -1
 #endif
-	) {
+       ) {/*{{{*/
 #ifdef QTHREAD_HAVE_LIBNUMA
-	    size_t max = numa_max_node() + 1;
+	size_t max = numa_max_node() + 1;
 
-	    {
+	{
 # ifdef QTHREAD_LIBNUMA_V2
-		struct bitmask *bmask = numa_allocate_nodemask();
+	    struct bitmask *bmask = numa_allocate_nodemask();
 
-		assert(bmask);
-		numa_bitmask_clearall(bmask);
-		/* assign nodes */
-		for (i = 0; i < nshepherds; i++) {
-		    qlib->shepherds[i].node = i % max;
-		    numa_bitmask_setbit(bmask, i % max);
-		}
-		numa_set_interleave_mask(bmask);
-		numa_bitmask_free(bmask);
-# else
-		nodemask_t bmask;
-
-		nodemask_zero(&bmask);
-		/* assign nodes */
-		for (i = 0; i < nshepherds; i++) {
-		    qlib->shepherds[i].node = i % max;
-		    nodemask_set(&bmask, i % max);
-		}
-		numa_set_interleave_mask(&bmask);
-# endif
-	    }
+	    assert(bmask);
+	    numa_bitmask_clearall(bmask);
+	    /* assign nodes */
 	    for (i = 0; i < nshepherds; i++) {
-		const unsigned int node_i = qlib->shepherds[i].node;
-		size_t j, k;
-		qlib->shepherds[i].shep_dists =
-		    calloc(nshepherds, sizeof(unsigned int));
-		assert(qlib->shepherds[i].shep_dists);
-		for (j = 0; j < nshepherds; j++) {
-		    const unsigned int node_j = qlib->shepherds[j].node;
-
-		    if (node_i != QTHREAD_NO_NODE &&
-			node_j != QTHREAD_NO_NODE) {
-			qlib->shepherds[i].shep_dists[j] =
-			    numa_distance(node_i, node_j);
-		    } else {
-			/* XXX too arbitrary */
-			if (i == j) {
-			    qlib->shepherds[i].shep_dists[j] = 0;
-			} else {
-			    qlib->shepherds[i].shep_dists[j] = 20;
-			}
-		    }
-		}
-		qlib->shepherds[i].sorted_sheplist =
-		    calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
-		assert(qlib->shepherds[i].sorted_sheplist);
-		k = 0;
-		for (j = 0; j < nshepherds; j++) {
-		    if (j != i) {
-			qlib->shepherds[i].sorted_sheplist[k++] = j;
-		    }
-		}
-#  ifdef HAVE_QSORT_R
-		qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
-			sizeof(qthread_shepherd_id_t), (void *)(intptr_t) i,
-			&qthread_internal_shepcomp);
-#  else
-		shepcomp_src = (qthread_shepherd_id_t) i;
-		qsort(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
-		      sizeof(qthread_shepherd_id_t),
-		      qthread_internal_shepcomp);
-#  endif
+		qlib->shepherds[i].node = i % max;
+		numa_bitmask_setbit(bmask, i % max);
 	    }
+	    numa_set_interleave_mask(bmask);
+	    numa_bitmask_free(bmask);
+# else
+	    nodemask_t bmask;
+
+	    nodemask_zero(&bmask);
+	    /* assign nodes */
+	    for (i = 0; i < nshepherds; i++) {
+		qlib->shepherds[i].node = i % max;
+		nodemask_set(&bmask, i % max);
+	    }
+	    numa_set_interleave_mask(&bmask);
+# endif
+	}
+	for (i = 0; i < nshepherds; i++) {
+	    const unsigned int node_i = qlib->shepherds[i].node;
+	    size_t j, k;
+	    qlib->shepherds[i].shep_dists =
+		calloc(nshepherds, sizeof(unsigned int));
+	    assert(qlib->shepherds[i].shep_dists);
+	    for (j = 0; j < nshepherds; j++) {
+		const unsigned int node_j = qlib->shepherds[j].node;
+
+		if (node_i != QTHREAD_NO_NODE &&
+			node_j != QTHREAD_NO_NODE) {
+		    qlib->shepherds[i].shep_dists[j] =
+			numa_distance(node_i, node_j);
+		} else {
+		    /* XXX too arbitrary */
+		    if (i == j) {
+			qlib->shepherds[i].shep_dists[j] = 0;
+		    } else {
+			qlib->shepherds[i].shep_dists[j] = 20;
+		    }
+		}
+	    }
+	    qlib->shepherds[i].sorted_sheplist =
+		calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
+	    assert(qlib->shepherds[i].sorted_sheplist);
+	    k = 0;
+	    for (j = 0; j < nshepherds; j++) {
+		if (j != i) {
+		    qlib->shepherds[i].sorted_sheplist[k++] = j;
+		}
+	    }
+#  ifdef HAVE_QSORT_R
+	    qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
+		    sizeof(qthread_shepherd_id_t), (void *)(intptr_t) i,
+		    &qthread_internal_shepcomp);
+#  else
+	    shepcomp_src = (qthread_shepherd_id_t) i;
+	    qsort(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
+		    sizeof(qthread_shepherd_id_t),
+		    qthread_internal_shepcomp);
+#  endif
 	}
 #elif defined(HAVE_SYS_LGRP_USER_H)
 	unsigned int lgrp_offset;
@@ -1430,13 +1435,7 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 	    free(lgrp_ids);
 	}
 #endif
-    } else {
-      for (i = 0; i < nshepherds; i++) {
-	    qlib->shepherds[i].node = -1;
-	    qlib->shepherds[i].shep_dists = NULL;
-	    qlib->shepherds[i].sorted_sheplist = NULL;
-	}
-    }				       /*}}} */
+    }/*}}}*/
 
 #ifndef UNPOOLED
     /* set up the memory pools */
