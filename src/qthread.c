@@ -1135,9 +1135,13 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 	char *qdl = getenv("QTHREAD_DEBUG_LEVEL");
 	char *qdle = NULL;
 
-	debuglevel = qdl ? strtol(qdl, &qdle, 0) : 0;
-	if (qdle == NULL || qdle == qdl) {
-	    fprintf(stderr, "unparsable debug level (%s)\n", qdl);
+	if (qdl) {
+	    debuglevel = strtol(qdl, &qdle, 0);
+	    if (qdle == NULL || qdle == qdl) {
+		fprintf(stderr, "unparsable debug level (%s)\n", qdl);
+		debuglevel = 0;
+	    }
+	} else {
 	    debuglevel = 0;
 	}
     }
