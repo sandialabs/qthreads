@@ -3,6 +3,8 @@
 # Copyright (c)      2008  Sandia Corporation
 #
 
+AM_CXXFLAGS = @RESTRICT_CXXFLAGS@
+
 TESTS = test1 test2 test3 test_qalloc \
 		testincr testdincr testfincr \
 		test_cas \

@@ -282,12 +282,28 @@ AC_CACHE_SAVE
 ## ---------------------------------- ##
 ## Check for compiler characteristics ##
 ## ---------------------------------- ##
+# Find out if we need the -restrict flag
+AC_CACHE_CHECK([if $CXX needs -restrict],
+   [qthread_cv_cxx_restrict],
+   [case "$CXX" in
+	icpc*) dnl icpc requires it for proper restrict handling in C headers
+		qthread_cv_cxx_restrict="yes"
+		;;
+	*)
+		qthread_cv_cxx_restrict="no"
+		;;
+	esac])
+RESTRICT_CXXFLAGS=""
+AS_IF([test "x$qthread_cv_cxx_restrict" = "xyes"],
+	  [RESTRICT_CXXFLAGS="-restrict"])
+AC_SUBST([RESTRICT_CXXFLAGS])
 # Find out if GCC understands -fno-gcse
 AC_CACHE_CHECK([if $CC understands -fno-gcse],
    [qthread_cv_cc_fno_gcse],
    [case "$CC" in
 	icc*) dnl icc accepts it and spits out warnings about unknown flags
 		qthread_cv_cc_fno_gcse="no"
+		RESTRICT_CXXFLAGS="-restrict"
 		;;
 	*)
 		CFLAGS_save="${CFLAGS}"
