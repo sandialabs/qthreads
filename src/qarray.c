@@ -99,6 +99,9 @@ static qarray *qarray_create_internal(const size_t count,
 
     assert(count > 0);
     assert(obj_size > 0);
+    if (obj_size == 0 || count == 0) {
+	return NULL;
+    }
 
     if (pageshift == 0) {
 	pagesize = getpagesize() - 1;
