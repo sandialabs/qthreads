@@ -1,9 +1,10 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <assert.h>
 #include <qthread/qthread.h>
 #include <qthread/wavefront.h>
 
-static size_t ASIZE = 10;
+static size_t ASIZE = 2000;
 
 void sum(const void *restrict left, const void *restrict leftdown,
 	 const void *restrict down, void *restrict out)
@@ -22,14 +23,49 @@ void suma(const void *restrict left, const void *restrict leftdown,
 	*(aligned_t *) left + *(aligned_t *) leftdown + *(aligned_t *) down;
 }
 
-void assign1(qthread_t * me, const size_t startat, const size_t stopat,
+double ** bigR = NULL;
+/* note that the bottom-left corner is item 0 of the below array */
+void average(qarray * restrict left, qarray * restrict below, void **R)
+{
+    bigR=(double**)R;
+    /* the first column */
+    bigR[0][0] = (*(double*)qarray_elem_nomigrate(left, 0) +
+		  *(double*)qarray_elem_nomigrate(below, 0) +
+		  *(double*)qarray_elem_nomigrate(below, 1)) / 3.0;
+    for (size_t row=1; row < left->count; row++) {
+	bigR[0][row] = (*(double*)qarray_elem_nomigrate(left, row) + *(double*)qarray_elem_nomigrate(left, row-1) + bigR[0][row-1])/3.0;
+    }
+    /* the rest of the columns */
+    for (size_t col=1; col < below->count-1; col++) {
+	bigR[col][0] = (bigR[col-1][0] /* left */ +
+		*(double*)qarray_elem_nomigrate(below, col) /* belowleft */ +
+		*(double*)qarray_elem_nomigrate(below, col+1))/3.0;
+	for (size_t row=1; row < left->count; row++) {
+	    bigR[col][row] = (bigR[col-1][row] +
+			      bigR[col-1][row-1] +
+			      bigR[col][row-1]) / 3.0;
+	}
+    }
+}
+
+void avg(const void *restrict left, const void *restrict leftdown,
+	 const void *restrict down, void *restrict out)
+{
+    *(double*)out = (*(double*)left + *(double*)leftdown + *(double*)down) / 3.0;
+}
+
+void assignrand(qthread_t * me, const size_t startat, const size_t stopat,
 	     qarray * a, void *arg)
 {
-    aligned_t *ptr = qarray_elem_nomigrate(a, startat);
+    double *ptr = qarray_elem_nomigrate(a, startat);
     const size_t max = stopat - startat;
 
+    assert(a->unit_size == sizeof(double));
+
     for (size_t i = 0; i < max; i++) {
-	ptr[i] = 1;
+	/*long r = random();
+	memcpy(&(ptr[i]), &r, sizeof(long));*/
+	ptr[i] = (double)(i+startat);
     }
 }
 
@@ -37,6 +73,9 @@ int main(int argc, char *argv[])
 {
     int threads = 0;
     int interactive = 0;
+    qthread_t *me;
+    qarray *v, *h;
+    qt_wavefront_lattice *L;
 
     if (argc >= 2) {
 	threads = strtol(argv[1], NULL, 0);
@@ -52,73 +91,25 @@ int main(int argc, char *argv[])
 	printf("ASIZE: %i\n", (int)ASIZE);
     }
     qthread_init(threads);
-    if (interactive == 0) {
-	int **R = calloc(ASIZE, sizeof(int *));
-	int i;
 
-	for (i = 0; i < ASIZE; i++) {
-	    R[i] = calloc(ASIZE, sizeof(int));
-	    R[i][0] = 1;
-	    if (i == 0) {
-		for (i = 0; i < ASIZE; i++) {
-		    R[0][i] = 1;
-		}
-		i = 0;
-	    }
-	}
-	/* do stuff */
-	qt_basic_wavefront(R, ASIZE, ASIZE, sum);
+    me = qthread_self();
+    v=qarray_create_configured(ASIZE, sizeof(double), FIXED_HASH, 1, 1);
+    h=qarray_create_configured(ASIZE+1, sizeof(double), FIXED_HASH, 1, 1);
 
-	/* prove it */
-	if (interactive) {
-	    for (int row = (ASIZE - 1); row >= 0; row--) {
-		for (int col = 0; col < ASIZE; col++) {
-		    printf("%7i ", R[col][row]);
-		}
-		printf("\n");
-	    }
-	    printf("\n");
-	}
+    qarray_iter_loop(me, h, 1, ASIZE+1, assignrand, NULL);
+    qarray_iter_loop(me, v, 0, ASIZE, assignrand, NULL);
+    printf("v items per seg: %i\n", (int)v->segment_size);
 
-	/* free it */
-	for (i = 0; i < ASIZE; i++) {
-	    free(R[i]);
-	}
-	free(R);
+    /* do stuff */
+    L = qt_wavefront(v, h, avg);
+
+    if (L) {
+	//qt_wavefront_print_lattice(L);
+    } else {
+	printf("wavefront returned NULL!\n");
     }
-    {
-	qthread_t *me = qthread_self();
-	qarray **R = calloc(ASIZE, sizeof(qarray *));
-
-	R[0] = qarray_create_tight(ASIZE, sizeof(aligned_t));
-	qarray_iter_loop(me, R[0], 0, ASIZE, assign1, NULL);
-	for (int col = 1; col < ASIZE; col++) {
-	    R[col] = qarray_create_tight(ASIZE, sizeof(aligned_t));
-	    {
-		aligned_t *ptr = qarray_elem_nomigrate(R[col], 0);
-
-		*ptr = 1;
-	    }
-	}
-	/* do stuff */
-	qt_wavefront(R, ASIZE, sum);
-
-	/* prove it */
-	if (interactive) {
-	    for (int row = (ASIZE - 1); row >= 0; row--) {
-		for (int col = 0; col < ASIZE; col++) {
-		    aligned_t *tmpint = qarray_elem_nomigrate(R[col], row);
-
-		    printf("%10u ", (unsigned int)*tmpint);
-		}
-		printf("\n");
-	    }
-	}
-	/* free it */
-	for (int col = 0; col < ASIZE; col++) {
-	    qarray_destroy(R[col]);
-	}
-	free(R);
-    }
+    qarray_destroy(v);
+    qarray_destroy(h);
+    qt_wavefront_destroy_lattice(L);
     return 0;
 }
