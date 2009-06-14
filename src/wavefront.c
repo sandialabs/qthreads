@@ -102,7 +102,6 @@ struct qt_wavefront_workunit {
 static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const arg)
 {
     qt_wavefront_lattice * const L = arg->L;
-    printf("worker alive!\n");
 
     while (1) {
 	struct qt_wavefront_workunit *const wu = qdqueue_dequeue(me, arg->work_queue);
@@ -173,11 +172,11 @@ static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const 
 		wu->row ++;
 		qdqueue_enqueue_there(me, arg->work_queue, wu, qarray_shepof(L->slats.strips[wu->row][wu->col],0));
 	    } else {
-		if (wu->col != 0) {
-		    free(wu);
-		}
 		if (wu->col == L->slats.segs-1) {
 		    *vol_id_a(arg->no_more_work) = 1;
+		}
+		if (wu->col != 0) {
+		    free(wu);
 		}
 	    }
 	}
@@ -236,12 +235,6 @@ qt_wavefront_lattice *qt_wavefront(qarray * restrict const vertical,
 	L->struts.seg_len = vertical->segment_size;
 	L->struts.segs = L->slats.num - 1;
 	L->slats.segs = L->struts.num - 1;
-	printf(" slats.num = %i\n", (int)L->slats.num);
-	printf(" slats.segs = %i\n", (int)L->slats.segs);
-	printf(" slats.seg_len = %i\n", (int)L->slats.seg_len);
-	printf("struts.num = %i\n", (int)L->struts.num);
-	printf("struts.segs = %i\n", (int)L->struts.segs);
-	printf("struts.seg_len = %i\n", (int)L->struts.seg_len);
 	L->slats.strips = calloc(L->slats.num, sizeof(qarray**));
 	L->struts.strips = calloc(L->struts.num, sizeof(qarray**));
 	for (size_t i=0; i<L->struts.num; i++) {
@@ -282,7 +275,6 @@ qt_wavefront_lattice *qt_wavefront(qarray * restrict const vertical,
 
 	/* step 3: spawn workers */
 	for (qthread_shepherd_id_t shep=0; shep < maxsheps; shep++) {
-	    printf("spawned to %i\n", (int)shep);
 	    qthread_fork_to((qthread_f) qt_wavefront_worker, &wargs, NULL, shep);
 	}
 	/* step 4: queue a job for the lower-left corner */
