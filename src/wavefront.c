@@ -12,25 +12,6 @@
 #include <qthread/qdqueue.h>
 #include <qthread/wavefront.h>
 
-struct cacheline_t {
-    volatile aligned_t i;
-    char pad[QTHREAD_CACHELINE_BYTES-sizeof(aligned_t)];
-};
-
-struct qt_wave_wargs {
-    qdqueue_t *const work_queue;
-    volatile aligned_t *restrict const no_more_work;
-    volatile aligned_t *restrict const donecount;
-    wave_comp_f func;
-    qarray *restrict const *const R;
-    size_t maxcols;
-    struct cacheline_t* colprogress;
-};
-
-struct qt_wave_workunit {
-    size_t origrow, startrow, endrow, col;
-};
-
 /* to avoid compiler bugs regarding volatile... */
 static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t * ptr)
 {
@@ -102,6 +83,8 @@ struct qt_wavefront_workunit {
 static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const arg)
 {
     qt_wavefront_lattice * const L = arg->L;
+    qarray *local = NULL;
+    void **R;
 
     while (1) {
 	struct qt_wavefront_workunit *const wu = qdqueue_dequeue(me, arg->work_queue);
@@ -113,9 +96,8 @@ static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const 
 	    qthread_yield(me);
 	} else {
 	//printf("worker pulled col %i, row %i\n", (int)wu->col, (int)wu->row);
-	    void **R;
 	    /* step 0: locate the input and output qarrays */
-	    qarray *left, *below, *right, *above, *local;
+	    qarray *left, *below, *right, *above;
 	    left = L->struts.strips[wu->col][wu->row];
 	    below = L->slats.strips[wu->row][wu->col];
 	    right = L->struts.strips[wu->col+1][wu->row];
@@ -127,7 +109,16 @@ static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const 
 		continue;
 	    }
 	    /* step 1: allocate the necessary temporary local memory */
-	    local = qarray_create_configured(left->count * (below->count-1), L->unit_size, ALL_LOCAL, 1, 1);
+	    if (local == NULL) {
+		local = qarray_create_configured(left->count * (below->count-1), L->unit_size, ALL_LOCAL, 1, 1);
+		assert(local);
+		R = calloc(below->count-1, sizeof(void*));
+		assert(R);
+		for (size_t i=0; i<below->count-2; i++) {
+		    R[i] = qarray_elem_nomigrate(local, i * left->count);
+		    assert(R[i]);
+		}
+	    }
 	    assert(right == NULL);
 	    right = qarray_create_configured(left->count, L->unit_size, ALL_LOCAL, 1, 1);
 	    assert(right);
@@ -135,12 +126,6 @@ static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const 
 	    above = qarray_create_configured(below->count, L->unit_size, ALL_LOCAL, 1, 1);
 	    assert(above);
 	    L->slats.strips[wu->row+1][wu->col] = above;
-	    R = calloc(below->count-1, sizeof(void*));
-	    assert(R);
-	    for (size_t i=0; i<below->count-2; i++) {
-		R[i] = qarray_elem_nomigrate(local, i * left->count);
-		assert(R[i]);
-	    }
 	    R[below->count-2] = qarray_elem_nomigrate(right, 0); // so the computation dumps right into the qarray on the right
 	    /* step 2: complete the work unit */
 	    qt_wavefront_regionworker(
@@ -155,8 +140,6 @@ static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const 
 	    }
 	    L->struts.strips[wu->col+1][wu->row] = right;
 	    /* -- don't have to copy {right}, because data was placed in there directly */
-	    free(R);
-	    qarray_destroy(local);
 	    /* step 4: enqueue work unit for right (maybe) */
 	    if (wu->row==0 && wu->col < L->slats.segs-1) {
 		struct qt_wavefront_workunit *wu2 =
@@ -180,6 +163,10 @@ static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const 
 		}
 	    }
 	}
+    }
+    if (R) {
+	free(R);
+	qarray_destroy(local);
     }
 }
 
