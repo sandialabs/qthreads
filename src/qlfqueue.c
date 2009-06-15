@@ -98,7 +98,7 @@ int qlfqueue_enqueue(qthread_t * me, qlfqueue_t * q, void *elem)
 
     qargnonull(elem);
     qargnonull(q);
-    qargnonull(me);
+    //qargnonull(me); /* qpool_alloc is okay with a NULL {me} */
 
     node = (qlfqueue_node_t *) qpool_alloc(me, qlfqueue_node_pool);
     // these asserts should be redundant
@@ -130,7 +130,7 @@ void *qlfqueue_dequeue(qthread_t * me, qlfqueue_t * q)
     void *p = NULL;
     volatile qlfqueue_node_t *head;
     volatile qlfqueue_node_t *tail;
-    volatile qlfqueue_node_t *next;
+    volatile qlfqueue_node_t *next_ptr;
 
     assert(q != NULL);
     if (q == NULL) {
@@ -139,17 +139,17 @@ void *qlfqueue_dequeue(qthread_t * me, qlfqueue_t * q)
     while (1) {
 	head = _(q->head);
 	tail = _(q->tail);
-	next = _(QPTR(head)->next);
+	next_ptr = QPTR(_(QPTR(head)->next));
 	if (head == _(q->head)) {      // are head, tail, and next consistent?
 	    if (QPTR(head) == QPTR(tail)) {	// is queue empty or tail falling behind?
-		if (QPTR(next) == NULL) {	// is queue empty?
+		if (next_ptr == NULL) {	// is queue empty?
 		    return NULL;
 		}
-		(void)qthread_cas_ptr(&(q->tail), (void*)tail, QCOMPOSE(next, tail));	// advance tail ptr
-	    } else if (QPTR(next) != NULL) {	// no need to deal with tail
+		(void)qthread_cas_ptr(&(q->tail), (void*)tail, QCOMPOSE(next_ptr, tail));	// advance tail ptr
+	    } else if (next_ptr != NULL) {	// no need to deal with tail
 		// read value before CAS, otherwise another dequeue might free the next node
-		p = QPTR(next)->value;
-		if (qthread_cas_ptr(&(q->head), (void*)head, QCOMPOSE(next, head)) ==
+		p = next_ptr->value;
+		if (qthread_cas_ptr(&(q->head), (void*)head, QCOMPOSE(next_ptr, head)) ==
 		    head) {
 		    break;	       // success!
 		}
