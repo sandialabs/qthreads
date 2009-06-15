@@ -84,7 +84,7 @@ static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const 
 {
     qt_wavefront_lattice * const L = arg->L;
     qarray *local = NULL;
-    void **R;
+    void **R=NULL;
 
     while (1) {
 	struct qt_wavefront_workunit *const wu = qdqueue_dequeue(me, arg->work_queue);
