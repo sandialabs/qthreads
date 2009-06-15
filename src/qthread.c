@@ -2169,23 +2169,23 @@ static QINLINE qthread_t *qt_lfqueue_dequeue(qt_lfqueue_t * q)
     qthread_t *p = NULL;
     volatile qt_lfqueue_node_t *head;
     volatile qt_lfqueue_node_t *tail;
-    volatile qt_lfqueue_node_t *next;
+    volatile qt_lfqueue_node_t *next_ptr;
 
     assert(q != NULL);
     while (1) {
 	head = _(q->head);
 	tail = _(q->tail);
-	next = _(QPTR(head)->next);
+	next_ptr = QPTR(_(QPTR(head)->next));
 	if (head == _(q->head)) {      // are head, tail, and next consistent?
 	    if (QPTR(head) == QPTR(tail)) {	// is queue empty or tail falling behind?
-		if (QPTR(next) == NULL) {	// is queue empty?
+		if (next_ptr == NULL) {	// is queue empty?
 		    return NULL;
 		}
-		(void)qt_cas(&(q->tail), (void*)tail, QCOMPOSE(next, tail));	// advance tail ptr
+		(void)qt_cas(&(q->tail), (void*)tail, QCOMPOSE(next_ptr, tail));	// advance tail ptr
 	    } else {		       // no need to deal with tail
 		// read value before CAS, otherwise another dequeue might free the next node
-		p = QPTR(next)->value;
-		if (qt_cas(&(q->head), (void*)head, QCOMPOSE(next, head)) == head) {
+		p = next_ptr->value;
+		if (qt_cas(&(q->head), (void*)head, QCOMPOSE(next_ptr, head)) == head) {
 		    break;	       // success!
 		}
 	    }
@@ -2204,17 +2204,17 @@ static QINLINE qthread_t *qt_lfqueue_dequeue_blocking(qt_lfqueue_t * q)
     qthread_t *p = NULL;
     volatile qt_lfqueue_node_t *head;
     volatile qt_lfqueue_node_t *tail;
-    volatile qt_lfqueue_node_t *next;
+    volatile qt_lfqueue_node_t *next_ptr;
 
     assert(q != NULL);
   lfqueue_dequeue_restart:
     while (1) {
 	head = _(q->head);
 	tail = _(q->tail);
-	next = _(QPTR(head)->next);
+	next_ptr = QPTR(_(QPTR(head)->next));
 	if (head == _(q->head)) {      // are head, tail, and next consistent?
 	    if (QPTR(head) == QPTR(tail)) {	// is queue empty or tail falling behind?
-		if (QPTR(next) == NULL) {	// is queue empty?
+		if (next_ptr == NULL) {	// is queue empty?
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
 		    if (qthread_incr(&q->fruitless, 1) > 1000) {
 			QTHREAD_LOCK(&q->lock);
@@ -2232,11 +2232,11 @@ static QINLINE qthread_t *qt_lfqueue_dequeue_blocking(qt_lfqueue_t * q)
 #endif
 		    goto lfqueue_dequeue_restart;
 		}
-		(void)qt_cas(&(q->tail), (void*)tail, QCOMPOSE(next, tail));	// advance tail ptr
+		(void)qt_cas(&(q->tail), (void*)tail, QCOMPOSE(next_ptr, tail));	// advance tail ptr
 	    } else {		       // no need to deal with tail
 		// read value before CAS, otherwise another dequeue might free the next node
-		p = QPTR(next)->value;
-		if (qt_cas(&(q->head), (void*)head, QCOMPOSE(next, head)) == head) {
+		p = next_ptr->value;
+		if (qt_cas(&(q->head), (void*)head, QCOMPOSE(next_ptr, head)) == head) {
 		    break;	       // success!
 		}
 	    }
