@@ -410,6 +410,7 @@ void qpool_destroy(qpool * pool)
 #ifdef QTHREAD_USE_VALGRIND
 	VALGRIND_DESTROY_MEMPOOL(pool);
 #endif
+	free(pool->pools);
 	free(pool);
     }
 }				       /*}}} */
