@@ -174,7 +174,7 @@ static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const 
 		    wu2->col = wu->col;
 		    qdqueue_enqueue_there(me, arg->work_queue, wu2, qarray_shepof(vol_read_qa(&L->slats.strips[wu2->row][wu2->col]),0));
 		}
-		if (wu->col == L->slats.segs-1 && wu->row < L->struts.segs-1) {
+		if (wu->col == L->slats.segs-1 && wu->row == L->struts.segs-1) {
 		    *vol_id_a(arg->no_more_work) = 1;
 		}
 	    } else {
