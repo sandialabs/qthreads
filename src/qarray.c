@@ -16,6 +16,9 @@
 # endif
 # include <sys/lgrp_user.h>
 #endif
+#if defined(HAVE_MALLOC_H) && defined(HAVE_MEMALIGN)
+# include <malloc.h>
+#endif
 
 #include "qt_gcd.h"		       /* for qt_lcm() */
 
@@ -223,58 +226,7 @@ static qarray *qarray_create_internal(const size_t count,
     segment_count =
 	count / ret->segment_size + ((count % ret->segment_size) ? 1 : 0);
 
-#ifdef QTHREAD_HAVE_LIBNUMA
-    switch (d) {
-	case ALL_LOCAL:
-	case ALL_RAND:
-	case ALL_LEAST:
-	case ALL_SAME:
-	default:
-	    if (qthread_internal_shep_to_node(ret->dist_shep) ==
-		QTHREAD_NO_NODE) {
-	case DIST_REG_STRIPES:
-	case DIST_REG_FIELDS:
-	case DIST_RAND:
-	case DIST_LEAST:
-	case DIST:
-	case FIXED_HASH:
-		ret->base_ptr =
-		    (char *)numa_alloc(segment_count * ret->segment_bytes);
-		break;
-	    } else {
-		ret->base_ptr =
-		    (char *)numa_alloc_onnode(segment_count *
-					      ret->segment_bytes,
-					      qthread_internal_shep_to_node
-					      (ret->dist_shep));
-	    }
-	    break;
-    }
-#else
-    /* For speed, we want page-aligned memory, if we can get it */
-# ifdef HAVE_WORKING_VALLOC
-    ret->base_ptr = (char *)valloc(segment_count * ret->segment_bytes);
-# elif HAVE_MEMALIGN
-    ret->base_ptr =
-	(char *)memalign(pagesize, segment_count * ret->segment_bytes);
-# elif HAVE_POSIX_MEMALIGN
-    posix_memalign(&(ret->base_ptr), pagesize,
-		   segment_count * ret->segment_bytes);
-# elif HAVE_PAGE_ALIGNED_MALLOC
-    ret->base_ptr = (char *)malloc(segment_count * ret->segment_bytes);
-# else
-    /* just don't free it */
-    ret->base_ptr = (char *)valloc(segment_count * ret->segment_bytes);
-# endif
-#endif
-    if (ret->base_ptr == NULL) {
-	free(ret);
-	ret = NULL;
-    }
-
-    /********************************************
-     * Assign locations, maintain segment_count *
-     ********************************************/
+    /* figure out dist_shep */
     switch (d) {
 	case ALL_SAME:
 	case ALL_LOCAL:
@@ -302,6 +254,67 @@ static qarray *qarray_create_internal(const size_t count,
 	    qthread_incr(&chunk_distribution_tracker[least], segment_count);
 	}
 	    break;
+	default:
+	    ret->dist_shep = NO_SHEPHERD;
+    }
+#ifdef QTHREAD_HAVE_LIBNUMA
+    switch (d) {
+	case ALL_LOCAL:
+	case ALL_RAND:
+	case ALL_LEAST:
+	case ALL_SAME:
+	default:
+	    if (qthread_internal_shep_to_node(ret->dist_shep) ==
+		QTHREAD_NO_NODE) {
+	case DIST_REG_STRIPES:
+	case DIST_REG_FIELDS:
+	case DIST_RAND:
+	case DIST_LEAST:
+	case DIST:
+	case FIXED_HASH:
+		ret->base_ptr =
+		    (char *)numa_alloc(segment_count * ret->segment_bytes);
+		break;
+	    } else {
+		ret->base_ptr =
+		    (char *)numa_alloc_onnode(segment_count *
+					      ret->segment_bytes,
+					      qthread_internal_shep_to_node
+					      (ret->dist_shep));
+	    }
+	    break;
+    }
+    if (ret->base_ptr == NULL) {
+	numa_error("allocating qarray body");
+    }
+#else
+    /* For speed, we want page-aligned memory, if we can get it */
+# ifdef HAVE_WORKING_VALLOC
+    ret->base_ptr = (char *)valloc(segment_count * ret->segment_bytes);
+# elif HAVE_MEMALIGN
+    ret->base_ptr =
+	(char *)memalign(pagesize, segment_count * ret->segment_bytes);
+# elif HAVE_POSIX_MEMALIGN
+    posix_memalign((void**)&(ret->base_ptr), pagesize,
+	    segment_count * ret->segment_bytes);
+# elif HAVE_PAGE_ALIGNED_MALLOC
+    ret->base_ptr = (char *)malloc(segment_count * ret->segment_bytes);
+# else
+    /* just don't free it */
+    ret->base_ptr = (char *)valloc(segment_count * ret->segment_bytes);
+# endif
+#endif
+    assert(ret->base_ptr);
+    if (ret->base_ptr == NULL) {
+	free(ret);
+	ret = NULL;
+	return NULL;
+    }
+
+    /********************************************
+     * Assign locations, maintain segment_count *
+     ********************************************/
+    switch (d) {
 	case FIXED_HASH:
 	default:
 	{
@@ -516,8 +529,8 @@ void qarray_destroy(qarray * a)
 	    }
 #ifdef QTHREAD_HAVE_LIBNUMA
 	    numa_free(a->base_ptr,
-		      (a->count / a->segment_size +
-		       ((a->count % a->segment_size) ? 1 : 0)));
+		    (a->count / a->segment_size +
+		     ((a->count % a->segment_size) ? 1 : 0)));
 #elif (HAVE_WORKING_VALLOC || HAVE_MEMALIGN || HAVE_POSIX_MEMALIGN || HAVE_PAGE_ALIGNED_MALLOC)
 	    /* avoid freeing base ptr if we had to use a broken valloc */
 	    free(a->base_ptr);
