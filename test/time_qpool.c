@@ -191,6 +191,8 @@ int main(int argc, char *argv[])
 	free(numa_pools[i]);
 #endif
     }
+    free(numa_pools);
+    free(numa_allocs);
 
     if ((qp = qpool_create(44)) == NULL) {
 	fprintf(stderr, "qpool_create() failed!\n");
