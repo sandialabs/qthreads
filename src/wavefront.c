@@ -24,6 +24,14 @@ static Q_NOINLINE volatile aligned_t *vol_id_a(volatile aligned_t * ptr)
 {
     return ptr;
 }
+static Q_NOINLINE qarray *vol_read_qa(qarray *volatile*volatile ptr)
+{
+    return *ptr;
+}
+static Q_NOINLINE qarray *volatile*vol_id_qa(qarray *volatile*volatile ptr)
+{
+    return ptr;
+}
 
 #define _(x) (vol_read_a(&(x)))
 
@@ -116,10 +124,10 @@ static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const 
 	//printf("worker pulled col %i, row %i\n", (int)wu->col, (int)wu->row);
 	    /* step 1: locate the input and output qarrays */
 	    qarray *left, *below, *right, *above;
-	    left = L->struts.strips[wu->col][wu->row];
-	    below = L->slats.strips[wu->row][wu->col];
-	    right = L->struts.strips[wu->col+1][wu->row];
-	    above = L->slats.strips[wu->row+1][wu->col];
+	    left = vol_read_qa(&L->struts.strips[wu->col][wu->row]);
+	    below = vol_read_qa(&L->slats.strips[wu->row][wu->col]);
+	    right = vol_read_qa(&L->struts.strips[wu->col+1][wu->row]);
+	    above = vol_read_qa(&L->slats.strips[wu->row+1][wu->col]);
 	    assert(below);
 	    assert(left);
 	    if (qthread_cas_ptr(&(L->slats.strips[wu->row+1][wu->col]), NULL, (void*)1) == NULL) {
@@ -142,27 +150,29 @@ static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const 
 		for (size_t col=0; col<(below->count-1); col++) {
 		    memcpy(qarray_elem_nomigrate(above, col+1), R[col]+((left->count-1)*L->unit_size), L->unit_size);
 		}
-		L->slats.strips[wu->row+1][wu->col] = above;
-		L->struts.strips[wu->col+1][wu->row] = right;
+		assert(vol_read_qa(&L->slats.strips[wu->row+1][wu->col]) == (void*)1);
+		assert(vol_read_qa(&L->struts.strips[wu->col+1][wu->row]) == NULL);
+		*vol_id_qa(&L->slats.strips[wu->row+1][wu->col]) = above;
+		*vol_id_qa(&L->struts.strips[wu->col+1][wu->row]) = right;
 		/* -- don't have to copy {right}, because data was placed in there directly */
 		/* step 4: enqueue work unit for right (maybe) */
 		if (wu->col < L->slats.segs-1 /* there is a next column */ &&
-		    (intptr_t)(L->slats.strips[wu->row][wu->col+1]) > 1) {
+		    (intptr_t)vol_read_qa(&L->slats.strips[wu->row][wu->col+1]) > 1) {
 		    /* data is ready! yay! */
 		    struct qt_wavefront_workunit *wu2 = qpool_alloc(me, workunit_pool);
 
 		    wu2->row = wu->row;
 		    wu2->col = wu->col+1;
-		    qdqueue_enqueue_there(me, arg->work_queue, wu2, qarray_shepof(L->slats.strips[wu2->row][wu2->col],0));
+		    qdqueue_enqueue_there(me, arg->work_queue, wu2, qarray_shepof(vol_read_qa(&L->slats.strips[wu2->row][wu2->col]),0));
 		}
 		/* step 5: enqueue work unit for next up (maybe) */
 		if (wu->row < L->struts.segs-1 &&
-		    L->struts.strips[wu->col][wu->row+1] != NULL) {
+		    vol_read_qa(&L->struts.strips[wu->col][wu->row+1]) != NULL) {
 		    struct qt_wavefront_workunit *wu2 = qpool_alloc(me, workunit_pool);
 
 		    wu2->row = wu->row+1;
 		    wu2->col = wu->col;
-		    qdqueue_enqueue_there(me, arg->work_queue, wu2, qarray_shepof(L->slats.strips[wu2->row][wu2->col],0));
+		    qdqueue_enqueue_there(me, arg->work_queue, wu2, qarray_shepof(vol_read_qa(&L->slats.strips[wu2->row][wu2->col]),0));
 		}
 		if (wu->col == L->slats.segs-1 && wu->row < L->struts.segs-1) {
 		    *vol_id_a(arg->no_more_work) = 1;
@@ -258,7 +268,7 @@ qt_wavefront_lattice *qt_wavefront(qarray * restrict const vertical,
 	    memcpy(qarray_elem_nomigrate(tmp, 0),
 		   qarray_elem_nomigrate(vertical, i*(L->struts.seg_len)),
 		   L->unit_size * array_len);
-	    L->struts.strips[0][i] = tmp;
+	    *vol_id_qa(&L->struts.strips[0][i]) = tmp;
 	}
 	for (size_t i=0; i<L->slats.segs; i++) {
 	    const size_t array_len = (horizontal->count-(i*L->slats.seg_len) > L->slats.seg_len)?L->slats.seg_len:(horizontal->count - (i*L->slats.seg_len)+1);
@@ -270,7 +280,7 @@ qt_wavefront_lattice *qt_wavefront(qarray * restrict const vertical,
 	    memcpy(qarray_elem_nomigrate(tmp, 0),
 		   qarray_elem_nomigrate(horizontal, i*(L->slats.seg_len-1)),
 		   L->unit_size * array_len);
-	    L->slats.strips[0][i] = tmp;
+	    *vol_id_qa(&L->slats.strips[0][i]) = tmp;
 	}
 	/* step 2: create the qdqueue for coordinating workers */
 	/* -- work queue set up as part of initialization stuff, above */
@@ -304,7 +314,7 @@ void qt_wavefront_destroy_lattice(qt_wavefront_lattice *const L)
     const size_t strutSegCount = L->struts.segs;
     for (size_t i=0; i<slatCount; i++) {
 	for (size_t seg=0; seg<slatSegCount; seg++) {
-	    qarray_destroy(L->slats.strips[i][seg]);
+	    qarray_destroy(vol_read_qa(&L->slats.strips[i][seg]));
 	}
 	free((void*)(L->slats.strips[i]));
     }
