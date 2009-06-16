@@ -95,11 +95,16 @@ static qarray *qarray_create_internal(const size_t count,
 {				       /*{{{ */
     size_t pagesize;
     size_t segment_count;	/* number of segments allocated */
-    qarray *ret = calloc(1, sizeof(qarray));
+    qarray *ret = NULL;
 
     assert(count > 0);
     assert(obj_size > 0);
     if (obj_size == 0 || count == 0) {
+	return NULL;
+    }
+    ret = calloc(1, sizeof(qarray));
+    assert(ret);
+    if (ret == NULL) {
 	return NULL;
     }
 
@@ -115,6 +120,11 @@ static qarray *qarray_create_internal(const size_t count,
     if (chunk_distribution_tracker == NULL) {
 	chunk_distribution_tracker =
 	    calloc(qthread_num_shepherds(), sizeof(aligned_t));
+	assert(chunk_distribution_tracker);
+	if (chunk_distribution_tracker == NULL) {
+	    free(ret);
+	    return NULL;
+	}
     }
 
     ret->count = count;
