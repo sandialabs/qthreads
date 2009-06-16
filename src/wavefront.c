@@ -78,6 +78,7 @@ struct qt_wavefront_wargs {
 
 struct qt_wavefront_workunit {
     size_t col, row;
+    struct qt_wavefront_workunit *next;
 };
 
 static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const arg)
@@ -85,6 +86,7 @@ static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const 
     qt_wavefront_lattice * const L = arg->L;
     qarray *local = NULL;
     void **R=NULL;
+    struct qt_wavefront_workunit *unusable_units = NULL;
 
     while (1) {
 	struct qt_wavefront_workunit *const wu = qdqueue_dequeue(me, arg->work_queue);
@@ -92,6 +94,12 @@ static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const 
 	    if (vol_read_a(arg->no_more_work)) {
 		qthread_incr(arg->donecount, 1);
 		break;
+	    }
+	    while (unusable_units) {
+		struct qt_wavefront_workunit *wuback = unusable_units;
+		unusable_units = wuback->next;
+		wuback->next = NULL;
+		qdqueue_enqueue_there(me, arg->work_queue, wuback, qarray_shepof(L->slats.strips[wuback->row][wuback->col], 0));
 	    }
 	    qthread_yield(me);
 	} else {
@@ -105,17 +113,28 @@ static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const 
 	    assert(below);
 	    if (left == NULL) {
 		/* inputs aren't ready */
-		qdqueue_enqueue_there(me, arg->work_queue, wu, qarray_shepof(below, 0));
+		//qdqueue_enqueue_there(me, arg->work_queue, wu, qarray_shepof(below, 0));
+		wu->next = unusable_units;
+		unusable_units = wu;
 		continue;
+	    } else {
+		while (unusable_units) {
+		    struct qt_wavefront_workunit *wuback = unusable_units;
+		    unusable_units = wuback->next;
+		    wuback->next = NULL;
+		    qdqueue_enqueue_there(me, arg->work_queue, wuback, qarray_shepof(L->slats.strips[wuback->row][wuback->col], 0));
+		}
 	    }
 	    /* step 1: allocate the necessary temporary local memory */
 	    if (local == NULL) {
-		local = qarray_create_configured(left->count * (below->count-1), L->unit_size, ALL_LOCAL, 1, 1);
+		const size_t horizCount = L->slats.seg_len-1;
+		const size_t vertCount = L->struts.seg_len;
+		local = qarray_create_configured(vertCount * horizCount, L->unit_size, ALL_LOCAL, 1, 1);
 		assert(local);
-		R = calloc(below->count-1, sizeof(void*));
+		R = calloc(horizCount, sizeof(void*));
 		assert(R);
-		for (size_t i=0; i<below->count-2; i++) {
-		    R[i] = qarray_elem_nomigrate(local, i * left->count);
+		for (size_t i=0; i<horizCount-1; i++) {
+		    R[i] = qarray_elem_nomigrate(local, i * vertCount);
 		    assert(R[i]);
 		}
 	    }
@@ -147,6 +166,7 @@ static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const 
 
 		wu2->row = 0;
 		wu2->col = wu->col+1;
+		wu2->next = NULL;
 		qdqueue_enqueue_there(me, arg->work_queue, wu2, qarray_shepof(L->slats.strips[wu->row][wu->col+1],0));
 	    }
 	    /* step 5: enqueue work unit for next up */
@@ -267,6 +287,7 @@ qt_wavefront_lattice *qt_wavefront(qarray * restrict const vertical,
 	/* step 4: queue a job for the lower-left corner */
 	wu.row = 0;
 	wu.col = 0;
+	wu.next = NULL;
 	qdqueue_enqueue(me, wargs.work_queue, &wu);
 	/* step 5: wait for the workers to get done */
 	while(_(donecount) < maxsheps) {
