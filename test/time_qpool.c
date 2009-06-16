@@ -113,7 +113,9 @@ int main(int argc, char *argv[])
     unsigned long iterations = 1000;
     qtimer_t timer = qtimer_new();
     void** numa_allocs;
+    void** numa_pools;
     size_t numa_size;
+    size_t numshep;
 
     if (argc >= 2) {
 	threads = strtol(argv[1], NULL, 0);
@@ -146,12 +148,14 @@ int main(int argc, char *argv[])
 	   qtimer_secs(timer));
 
     /* heat the pool */
-    ptr = malloc(sizeof(void*)*qthread_num_shepherds());
-    ptr_lock = malloc(sizeof(pthread_mutex_t) * qthread_num_shepherds());
-    numa_allocs = malloc(sizeof(void*)*qthread_num_shepherds());
-    numa_size = iterations*48/qthread_num_shepherds();
+    numshep = qthread_num_shepherds();
+    ptr = malloc(sizeof(void*)*numshep);
+    ptr_lock = malloc(sizeof(pthread_mutex_t) * numshep);
+    numa_allocs = malloc(sizeof(void*)*numshep);
+    numa_pools = malloc(sizeof(void*)*numshep);
+    numa_size = iterations*48/numshep;
     printf("numa_size = %i\n", (int)numa_size);
-    for (i=0;i<qthread_num_shepherds(); i++) {
+    for (i=0;i<numshep; i++) {
 #ifdef QTHREAD_HAVE_LIBNUMA
 	numa_allocs[i] = numa_alloc_onnode(numa_size, i);
 #else
@@ -159,9 +163,10 @@ int main(int argc, char *argv[])
 #endif
 	pthread_mutex_init(ptr_lock+i, NULL);
     }
+    memcpy(numa_pools, numa_allocs, sizeof(void*)*numshep);
     for (i=0;i<iterations;i++) {
 	void *p;
-	int shep = i%qthread_num_shepherds();
+	int shep = i%numshep;
 	/* pull from numa_allocs[shep] */
 	p = numa_allocs[shep];
 	numa_allocs[shep] = ((char*)p) + 48;
@@ -179,11 +184,11 @@ int main(int argc, char *argv[])
     qtimer_stop(timer);
     printf("Time to free %lu mutex pooled blocks in parallel: %f\n", iterations,
 	   qtimer_secs(timer));
-    for (i=0;i<qthread_num_shepherds();i++) {
+    for (i=0;i<numshep;i++) {
 #ifdef QTHREAD_HAVE_LIBNUMA
-	numa_free(numa_allocs[i], numa_size);
+	numa_free(numa_pools[i], numa_size);
 #else
-	free(numa_allocs[i]);
+	free(numa_pools[i]);
 #endif
     }
 
