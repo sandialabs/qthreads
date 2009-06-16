@@ -967,7 +967,9 @@ static void *qthread_shepherd(void *arg)
     pthread_setspecific(shepherd_structs, arg);
     if (getenv("QTHREAD_AFFINITY")) {
 #ifdef QTHREAD_HAVE_LIBNUMA
-	numa_run_on_node(me->node);
+	if (numa_run_on_node(me->node) != 0) {
+	    numa_error("setting thread affinity");
+	}
 	numa_set_preferred(me->node);
 #elif defined(QTHREAD_USE_PLPA)
 	plpa_cpu_set_t *cpuset =
