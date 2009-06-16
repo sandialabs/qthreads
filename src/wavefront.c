@@ -11,6 +11,9 @@
 #include <qthread/qthread.h>
 #include <qthread/qdqueue.h>
 #include <qthread/wavefront.h>
+#include <qthread/qpool.h>
+
+static qpool *workunit_pool = NULL;
 
 /* to avoid compiler bugs regarding volatile... */
 static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t * ptr)
@@ -81,6 +84,8 @@ struct qt_wavefront_workunit {
     struct qt_wavefront_workunit *next;
 };
 
+//volatile aligned_t requeued=0;
+
 static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const arg)
 {
     qt_wavefront_lattice * const L = arg->L;
@@ -116,6 +121,7 @@ static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const 
 		//qdqueue_enqueue_there(me, arg->work_queue, wu, qarray_shepof(below, 0));
 		wu->next = unusable_units;
 		unusable_units = wu;
+		//qthread_incr(&requeued, 1);
 		continue;
 	    } else {
 		while (unusable_units) {
@@ -160,16 +166,15 @@ static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const 
 	    L->struts.strips[wu->col+1][wu->row] = right;
 	    /* -- don't have to copy {right}, because data was placed in there directly */
 	    /* step 4: enqueue work unit for right (maybe) */
-	    if (wu->row==0 && wu->col < L->slats.segs-1) {
-		struct qt_wavefront_workunit *wu2 =
-		    malloc(sizeof(struct qt_wavefront_workunit));
+	    if (wu->row == 0 && wu->col < L->slats.segs-1) {
+		struct qt_wavefront_workunit *wu2 = qpool_alloc(me, workunit_pool);
 
 		wu2->row = 0;
 		wu2->col = wu->col+1;
 		wu2->next = NULL;
-		qdqueue_enqueue_there(me, arg->work_queue, wu2, qarray_shepof(L->slats.strips[wu->row][wu->col+1],0));
+		qdqueue_enqueue_there(me, arg->work_queue, wu2, qarray_shepof(L->slats.strips[0][wu->col+1],0));
 	    }
-	    /* step 5: enqueue work unit for next up */
+	    /* step 5: enqueue work unit for next up (maybe) */
 	    if (wu->row < L->struts.segs-1) {
 		/* can reuse my work unit */
 		wu->row ++;
@@ -178,9 +183,7 @@ static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const 
 		if (wu->col == L->slats.segs-1) {
 		    *vol_id_a(arg->no_more_work) = 1;
 		}
-		if (wu->col != 0) {
-		    free(wu);
-		}
+		qpool_free(me, workunit_pool, wu);
 	    }
 	}
     }
@@ -218,8 +221,12 @@ qt_wavefront_lattice *qt_wavefront(qarray * restrict const vertical,
 	struct qt_wavefront_wargs wargs = {
 	    qdqueue_create(), &no_more_work, &donecount, func
 	};
-	struct qt_wavefront_workunit wu;
+	struct qt_wavefront_workunit *wu;
 	qthread_t *const me = qthread_self();
+
+	if (workunit_pool == NULL) {
+	    workunit_pool = qpool_create(sizeof(struct qt_wavefront_workunit));
+	}
 
 	/* step 1: create the lattice */
 	L = calloc(1, sizeof(qt_wavefront_lattice));
@@ -285,15 +292,17 @@ qt_wavefront_lattice *qt_wavefront(qarray * restrict const vertical,
 	    qthread_fork_to((qthread_f) qt_wavefront_worker, &wargs, NULL, shep);
 	}
 	/* step 4: queue a job for the lower-left corner */
-	wu.row = 0;
-	wu.col = 0;
-	wu.next = NULL;
-	qdqueue_enqueue(me, wargs.work_queue, &wu);
+	wu = qpool_alloc(me, workunit_pool);
+	wu->row = 0;
+	wu->col = 0;
+	wu->next = NULL;
+	qdqueue_enqueue(me, wargs.work_queue, wu);
 	/* step 5: wait for the workers to get done */
 	while(_(donecount) < maxsheps) {
 	    qthread_yield(me);
 	}
 	qdqueue_destroy(me, wargs.work_queue);
+	//printf("requeued: %lu\n", (unsigned long)requeued);
 	return L;
     }
     return NULL;
