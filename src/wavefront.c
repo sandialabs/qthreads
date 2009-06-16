@@ -217,7 +217,7 @@ qt_wavefront_lattice *qt_wavefront(qarray * restrict const vertical,
 	volatile aligned_t donecount = 0;
 	qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
 	struct qt_wavefront_wargs wargs = {
-	    qdqueue_create(), &no_more_work, &donecount, func
+	    qdqueue_create(), &no_more_work, &donecount, func, NULL/*L*/
 	};
 	struct qt_wavefront_workunit *wu;
 	qthread_t *const me = qthread_self();
