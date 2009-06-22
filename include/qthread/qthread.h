@@ -537,14 +537,14 @@ static QINLINE double qthread_dincr(volatile double *operand,
     do {
 #ifdef __PIC__
        /* this saves off %ebx to make PIC code happy :P */
-# define QTHREAD_PIC_PREFIX "pushl %%ebx\n\tmovl %4, %%ebx\n\t"
+# define QTHREAD_PIC_PREFIX "xchg %%ebx, %4\n\t"
        /* this restores it */
-# define QTHREAD_PIC_SUFFIX "\n\tpopl %%ebx"
-# define QTHREAD_PIC_REG "m"
+# define QTHREAD_PIC_SUFFIX "\n\txchg %%ebx, %4"
+# define QTHREAD_PIC_REG_4 "r"
 #else
 # define QTHREAD_PIC_PREFIX
 # define QTHREAD_PIC_SUFFIX
-# define QTHREAD_PIC_REG "b"
+# define QTHREAD_PIC_REG_4 "b"
 #endif
 	oldval.d = *operand;
 	newval.d = oldval.d + incr;
@@ -575,7 +575,7 @@ static QINLINE double qthread_dincr(volatile double *operand,
 			     :"r"(operand),
 			     /*EAX*/ "a"(oldval.s.l),
 			     /*EDX*/ "d"(oldval.s.h),
-			     /*EBX*/ QTHREAD_PIC_REG(newval.s.l),
+			     /*EBX*/ QTHREAD_PIC_REG_4(newval.s.l),
 			     /*ECX*/ "c"(newval.s.h)
 			     :"memory");
     } while (test);		       /* if ZF was cleared, the calculation is out of date */
@@ -821,16 +821,15 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand,
 #ifndef QTHREAD_PIC_PREFIX
 # ifdef __PIC__
 	/* should share this code with the dincr stuff */
-	/* this saves off %ebxindent: Standard input:884: Error:Stmt nesting error.
-	 * to make PIC code happy :P */
-#  define QTHREAD_PIC_PREFIX "pushl %%ebx\n\tmovl %4, %%ebx\n\t"
+	/* this saves off %ebx to make PIC code happy :P */
+#  define QTHREAD_PIC_PREFIX "xchg %%ebx, %4\n\t"
 	/* this restores it */
-#  define QTHREAD_PIC_SUFFIX "\n\tpopl %%ebx"
-#  define QTHREAD_PIC_REG "m"
+#  define QTHREAD_PIC_SUFFIX "\n\txchg %%ebx, %4"
+#  define QTHREAD_PIC_REG_4 "r"
 # else
 #  define QTHREAD_PIC_PREFIX
 #  define QTHREAD_PIC_SUFFIX
-#  define QTHREAD_PIC_REG "b"
+#  define QTHREAD_PIC_REG_4 "b"
 # endif
 #endif
 	oldval.i = *operand;
@@ -862,7 +861,7 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand,
 			     :"r"    (operand),
 			     /*EAX*/ "a"(oldval.s.l),
 			     /*EDX*/ "d"(oldval.s.h),
-			     /*EBX*/ QTHREAD_PIC_REG(newval.s.l),
+			     /*EBX*/ QTHREAD_PIC_REG_4(newval.s.l),
 			     /*ECX*/ "c"(newval.s.h)
 			     :"memory");
     } while (test);		       /* if ZF was cleared, the calculation is out of date */
@@ -1072,8 +1071,8 @@ static QINLINE uint64_t qthread_cas64(volatile uint64_t * operand, const uint64_
 	    /*EDX*/"=d"(ret.s.h)
 	    :"r"(operand),
 	    /*EAX*/"a"(oldv.s.l),
+	    /*EBX*/QTHREAD_PIC_REG_4(newv.s.l),
 	    /*EDX*/"d"(oldv.s.h),
-	    /*EBX*/QTHREAD_PIC_REG(newv.s.l),
 	    /*ECX*/"c"(newv.s.h)
 	    :"memory");
     return ret.i;
