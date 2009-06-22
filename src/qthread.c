@@ -2145,15 +2145,15 @@ static QINLINE void qt_lfqueue_enqueue(qt_lfqueue_t * q, qthread_t * t,
 	next = _(QPTR(tail)->next);
 	if (tail == _(q->tail)) {      // are tail and next consistent?
 	    if (QPTR(next) == NULL) {  // was tail pointing to the last node?
-		if (qt_cas(&(QPTR(tail)->next), (void*)next, QCOMPOSE(node, next)) ==
+		if (qt_cas((void*volatile*)&(QPTR(tail)->next), (void*)next, QCOMPOSE(node, next)) ==
 		    next)
 		    break;	       // success!
 	    } else {		       // tail not pointing to last node
-		(void)qt_cas(&(q->tail), (void*)tail, QCOMPOSE(next, tail));
+		(void)qt_cas((void*volatile*)&(q->tail), (void*)tail, QCOMPOSE(next, tail));
 	    }
 	}
     }
-    (void)qt_cas(&(q->tail), (void*)tail, QCOMPOSE(node, tail));
+    (void)qt_cas((void*volatile*)&(q->tail), (void*)tail, QCOMPOSE(node, tail));
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     if (vol_read_a(&(q->fruitless))) {
 	QTHREAD_LOCK(&q->lock);
@@ -2183,11 +2183,11 @@ static QINLINE qthread_t *qt_lfqueue_dequeue(qt_lfqueue_t * q)
 		if (next_ptr == NULL) {	// is queue empty?
 		    return NULL;
 		}
-		(void)qt_cas(&(q->tail), (void*)tail, QCOMPOSE(next_ptr, tail));	// advance tail ptr
+		(void)qt_cas((void*volatile*)&(q->tail), (void*)tail, QCOMPOSE(next_ptr, tail));	// advance tail ptr
 	    } else {		       // no need to deal with tail
 		// read value before CAS, otherwise another dequeue might free the next node
 		p = next_ptr->value;
-		if (qt_cas(&(q->head), (void*)head, QCOMPOSE(next_ptr, head)) == head) {
+		if (qt_cas((void*volatile*)&(q->head), (void*)head, QCOMPOSE(next_ptr, head)) == head) {
 		    break;	       // success!
 		}
 	    }
@@ -2234,11 +2234,11 @@ static QINLINE qthread_t *qt_lfqueue_dequeue_blocking(qt_lfqueue_t * q)
 #endif
 		    goto lfqueue_dequeue_restart;
 		}
-		(void)qt_cas(&(q->tail), (void*)tail, QCOMPOSE(next_ptr, tail));	// advance tail ptr
+		(void)qt_cas((void*volatile*)&(q->tail), (void*)tail, QCOMPOSE(next_ptr, tail));	// advance tail ptr
 	    } else {		       // no need to deal with tail
 		// read value before CAS, otherwise another dequeue might free the next node
 		p = next_ptr->value;
-		if (qt_cas(&(q->head), (void*)head, QCOMPOSE(next_ptr, head)) == head) {
+		if (qt_cas((void*volatile*)&(q->head), (void*)head, QCOMPOSE(next_ptr, head)) == head) {
 		    break;	       // success!
 		}
 	    }

@@ -518,7 +518,7 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
 		    /* it got work from somewhere! */
 		    qdqueue_adheap_push(me, &myq->ads, lc, 0);
 		    /* reset the remote host's last_consumed counter, to avoid infinite loops */
-		    (void)qthread_cas_ptr(&(ad.shep->last_consumed),
+		    (void)qthread_cas_ptr((void*volatile*)&(ad.shep->last_consumed),
 					  (void *)lc, NULL);
 		}
 	    }

@@ -27,7 +27,7 @@
 #endif
 
 struct qpool_shepspec_s {
-    volatile void *reuse_pool;
+    void *volatile reuse_pool;
     char *alloc_block;
     size_t alloc_block_pos;
     void **alloc_list;
@@ -50,8 +50,8 @@ struct qpool_s {
 static size_t pagesize = 0;
 
 /* avoid compiler bugs with volatile... */
-static Q_NOINLINE volatile void *volatile *vol_id_void(volatile void *volatile
-						       *ptr)
+static Q_NOINLINE void *volatile *vol_id_void(void *volatile
+						       *const ptr)
 {				       /*{{{ */
     return ptr;
 }				       /*}}} */
