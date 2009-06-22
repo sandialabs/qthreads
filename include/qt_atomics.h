@@ -66,6 +66,10 @@ static QINLINE void* qt_cas(volatile void*volatile* ptr, void* oldv, void* newv)
      * Thus, this instruction has the form:
      * [lock] cmpxchg reg, reg/mem
      *                src, dest
+     *
+     * NOTE: this is valid even on 64-bit architectures, because AMD64
+     * instantiates cmpxchg for 8-byte registers, and IA32 never has 64-bit
+     * pointers
      */
     __asm__ __volatile__ ("lock; cmpxchg %1,(%2)"
 	    : "=a"(retval) /* store from EAX */
