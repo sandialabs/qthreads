@@ -13,7 +13,7 @@
 int main()
 {
     void *r, *r2;
-    char teststring[16] = "This is a test.";
+    const char teststring[16] = "This is a test.";
     char filestat[30] = "/tmp/testqallocstatXXXXXX";
     char filedyn[30] = "/tmp/testqallocdynXXXXXX";
     char *ts, *ts2;
@@ -55,7 +55,7 @@ int main()
 	fprintf(stderr, "dynmalloc returned NULL!\n");
 	return -1;
     }
-    sprintf(ts, teststring);
+    sprintf(ts, "%s", teststring);
     sprintf(ts2, "012345678901");
     qalloc_checkpoint();
     qalloc_free(ts, r);
