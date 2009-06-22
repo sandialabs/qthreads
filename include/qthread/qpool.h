@@ -5,7 +5,7 @@
 
 #include <qthread/qthread.h>
 
-Q_STARTCXX;
+Q_STARTCXX /* */
 
 typedef struct qpool_s qpool;
 
@@ -18,6 +18,6 @@ qpool *qpool_create_aligned(const size_t item_size, const size_t alignment);
 
 void qpool_destroy(qpool * pool);
 
-Q_ENDCXX;
+Q_ENDCXX /* */
 
 #endif

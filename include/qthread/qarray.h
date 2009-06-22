@@ -5,7 +5,7 @@
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
 
-Q_STARTCXX;
+Q_STARTCXX /* */
 
 typedef enum
 {

@@ -3,7 +3,7 @@
 
 #include <qthread/qthread.h>
 
-Q_STARTCXX;
+Q_STARTCXX /* */
 
 /* This computes the sum/product of all the doubles in an array. If checkfeb is
  * non-zero, then it will wait for each array entry to be marked FEB-full */
@@ -38,5 +38,5 @@ void qutil_mergesort(qthread_t * me, double *array, size_t length);
 void qutil_qsort(qthread_t * me, double *array, size_t length);
 void qutil_aligned_qsort(qthread_t * me, aligned_t * array, size_t length);
 
-Q_ENDCXX;
+Q_ENDCXX /* */
 #endif

@@ -3,7 +3,7 @@
 
 #include <qthread/qthread.h>
 
-Q_STARTCXX;
+Q_STARTCXX /* */
 
 typedef struct qlfqueue_s qlfqueue_t;
 
@@ -22,6 +22,6 @@ void *qlfqueue_dequeue(qthread_t * me, qlfqueue_t * q);
 /* returns 1 if the queue is empty, 0 otherwise */
 int qlfqueue_empty(qlfqueue_t * q);
 
-Q_ENDCXX;
+Q_ENDCXX /* */
 
 #endif
