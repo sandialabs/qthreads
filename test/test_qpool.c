@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
 	exit(-1);
     }
     if (interactive) {
-	printf("allocated: %p (%lu)\n", rets, (unsigned long)*rets);
+	printf("allocated: %p (%lu)\n", (void*)rets, (unsigned long)*rets);
     }
     *rets = 1;
     if (*rets != 1) {

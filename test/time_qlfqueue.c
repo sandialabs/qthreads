@@ -17,7 +17,7 @@ aligned_t cpqueuer (qthread_t *me, void *arg)
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
 	if (cp_list_append(q, (void*)me) == NULL) {
-	    fprintf(stderr, "%i'th cp_list_append(q, %p) failed!\n", (int)i, me);
+	    fprintf(stderr, "%i'th cp_list_append(q, %p) failed!\n", (int)i, (void*)me);
 	    perror("cp_list_append");
 	    exit(-2);
 	}
@@ -45,7 +45,7 @@ aligned_t queuer (qthread_t *me, void *arg)
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
 	if (qlfqueue_enqueue(me, q, (void*)me) != QTHREAD_SUCCESS) {
-	    fprintf(stderr, "qlfqueue_enqueue(q, %p) failed!\n", me);
+	    fprintf(stderr, "qlfqueue_enqueue(q, %p) failed!\n", (void*)me);
 	    exit(-2);
 	}
     }
@@ -72,7 +72,7 @@ void loop_cpqueuer (qthread_t *me, const size_t startat, const size_t stopat, vo
 
     for (i=startat; i<stopat; i++) {
 	if (cp_list_append(q, (void*)me) == NULL) {
-	    fprintf(stderr, "cp_list_append(q, %p) failed!\n", me);
+	    fprintf(stderr, "cp_list_append(q, %p) failed!\n", (void*)me);
 	    exit(-2);
 	}
     }
@@ -85,7 +85,7 @@ void loop_cpdequeuer (qthread_t *me, const size_t startat, const size_t stopat, 
 
     for (i=startat; i<stopat; i++) {
 	if (cp_list_remove_head(q) == NULL) {
-	    fprintf(stderr, "cp_list_remove_head(q, %p) failed!\n", me);
+	    fprintf(stderr, "cp_list_remove_head(q, %p) failed!\n", (void*)me);
 	    exit(-2);
 	}
     }
@@ -98,7 +98,7 @@ void loop_queuer (qthread_t *me, const size_t startat, const size_t stopat, void
 
     for (i=startat; i<stopat; i++) {
 	if (qlfqueue_enqueue(me, q, (void*)me) != QTHREAD_SUCCESS) {
-	    fprintf(stderr, "qlfqueue_enqueue(q, %p) failed!\n", me);
+	    fprintf(stderr, "qlfqueue_enqueue(q, %p) failed!\n", (void*)me);
 	    exit(-2);
 	}
     }
@@ -111,7 +111,7 @@ void loop_dequeuer (qthread_t *me, const size_t startat, const size_t stopat, vo
 
     for (i=startat; i<stopat; i++) {
 	if (qlfqueue_dequeue(me, q) == NULL) {
-	    fprintf(stderr, "qlfqueue_dequeue(q, %p) failed!\n", me);
+	    fprintf(stderr, "qlfqueue_dequeue(q, %p) failed!\n", (void*)me);
 	    exit(-2);
 	}
     }

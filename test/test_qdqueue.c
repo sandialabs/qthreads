@@ -14,7 +14,7 @@ static aligned_t queuer(qthread_t * me, void *arg)
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
 	if (qdqueue_enqueue(me, q, (void *)me) != QTHREAD_SUCCESS) {
-	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", me);
+	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void*)me);
 	    exit(-2);
 	}
     }

@@ -16,7 +16,7 @@ aligned_t queuer (qthread_t *me, void *arg)
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
 	if (qdqueue_enqueue(me, q, (void*)me) != QTHREAD_SUCCESS) {
-	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", me);
+	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void*)me);
 	    exit(-2);
 	}
     }
@@ -43,7 +43,7 @@ void loop_queuer (qthread_t *me, const size_t startat, const size_t stopat, void
 
     for (i=startat; i<stopat; i++) {
 	if (qdqueue_enqueue(me, q, (void*)me) != QTHREAD_SUCCESS) {
-	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", me);
+	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void*)me);
 	    exit(-2);
 	}
     }
@@ -56,7 +56,7 @@ void loop_dequeuer (qthread_t *me, const size_t startat, const size_t stopat, vo
 
     for (i=startat; i<stopat; i++) {
 	if (qdqueue_dequeue(me, q) == NULL) {
-	    fprintf(stderr, "qdqueue_dequeue(q, %p) failed!\n", me);
+	    fprintf(stderr, "qdqueue_dequeue(q, %p) failed!\n", (void*)me);
 	    exit(-2);
 	}
     }

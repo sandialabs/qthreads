@@ -72,11 +72,11 @@ char *human_readable_rate(double rate)
     const double kB = 1024;
 
     if (rate > GB) {
-	snprintf(readable_string, 100, "(%'.1f GB/s)", rate / GB);
+	snprintf(readable_string, 100, "(%.1f GB/s)", rate / GB);
     } else if (rate > MB) {
-	snprintf(readable_string, 100, "(%'.1f MB/s)", rate / MB);
+	snprintf(readable_string, 100, "(%.1f MB/s)", rate / MB);
     } else if (rate > kB) {
-	snprintf(readable_string, 100, "(%'.1f kB/s)", rate / kB);
+	snprintf(readable_string, 100, "(%.1f kB/s)", rate / kB);
     } else {
 	memset(readable_string, 0, 100*sizeof(char));
     }
@@ -118,7 +118,7 @@ int main(int argc, char *argv[])
     printf("%19g secs (%u-threads %u iters)\n", qtimer_secs(timer), shepherds, (unsigned)(ITERATIONS*MAXPARALLELISM));
     printf("\t + average increment time: %17g secs\n",
 	   qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
-    printf("\t = increment throughput: %'19f increments/sec\n",
+    printf("\t = increment throughput: %19f increments/sec\n",
 	   (ITERATIONS*MAXPARALLELISM) / qtimer_secs(timer));
     rate = (ITERATIONS*MAXPARALLELISM * sizeof(aligned_t)) / qtimer_secs(timer);
     printf("\t = data throughput: %24g bytes/sec %s\n", rate,
@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
     printf("%14g secs (%u-threads %u iters)\n", qtimer_secs(timer), shepherds, (unsigned)(ITERATIONS*256));
     printf("\t + average increment time: %17g secs\n",
 	   qtimer_secs(timer) / (ITERATIONS*256));
-    printf("\t = increment throughput: %'19f increments/sec\n",
+    printf("\t = increment throughput: %19f increments/sec\n",
 	   (ITERATIONS*256) / qtimer_secs(timer));
     rate = (ITERATIONS*256* sizeof(aligned_t)) / qtimer_secs(timer);
     printf("\t = data throughput: %24g bytes/sec %s\n", rate,
@@ -156,7 +156,7 @@ int main(int argc, char *argv[])
     printf("%18g secs (%u-threads %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
     printf("\t + average increment time: %17g secs\n",
 	   qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
-    printf("\t = increment throughput: %'19f increments/sec\n",
+    printf("\t = increment throughput: %19f increments/sec\n",
 	   (ITERATIONS*MAXPARALLELISM) / qtimer_secs(timer));
     rate = (ITERATIONS*MAXPARALLELISM * sizeof(aligned_t)) / qtimer_secs(timer);
     printf("\t = data throughput: %24g bytes/sec %s\n", rate,
@@ -178,7 +178,7 @@ int main(int argc, char *argv[])
     printf("%14g secs (%u-threads %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
     printf("\t + average increment time: %17g secs\n",
 	   qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
-    printf("\t = increment throughput: %'19f increments/sec\n",
+    printf("\t = increment throughput: %19f increments/sec\n",
 	   (ITERATIONS*MAXPARALLELISM) / qtimer_secs(timer));
     rate = (ITERATIONS*MAXPARALLELISM * sizeof(aligned_t)) / qtimer_secs(timer);
     printf("\t = data throughput: %24g bytes/sec %s\n", rate,
@@ -200,7 +200,7 @@ int main(int argc, char *argv[])
     printf("%11g secs (%u-threads %u iters)\n", qtimer_secs(timer), shepherds, (unsigned)ITERATIONS);
     printf("\t + average increment time: %17g secs\n",
 	   qtimer_secs(timer) / (ITERATIONS*shepherds));
-    printf("\t = increment throughput: %'19f increments/sec\n",
+    printf("\t = increment throughput: %19f increments/sec\n",
 	   (ITERATIONS*shepherds) / qtimer_secs(timer));
     rate = (ITERATIONS*shepherds* sizeof(aligned_t)) / qtimer_secs(timer);
     printf("\t = data throughput: %24g bytes/sec %s\n", rate,
@@ -222,7 +222,7 @@ int main(int argc, char *argv[])
     printf("%20g secs (%u-way %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
     printf("\t + average increment time: %17g secs\n",
 	   qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
-    printf("\t = increment throughput: %'19f increments/sec\n",
+    printf("\t = increment throughput: %19f increments/sec\n",
 	   (ITERATIONS*MAXPARALLELISM) / qtimer_secs(timer));
     rate = (ITERATIONS*MAXPARALLELISM * sizeof(aligned_t)) / qtimer_secs(timer);
     printf("\t = data throughput: %24g bytes/sec %s\n", rate,
