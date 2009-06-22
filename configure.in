@@ -86,8 +86,19 @@ AC_ARG_ENABLE([very-small-stacks],
 dnl keep in mind, if the stack size is not a multiple of the page size,
 dnl alignment issues may become dicey, depending on the architecture
 AS_IF([test "x$enable_fullsize_stacks" = "xyes"],   [qthread_cv_stack_size=8388608],
-	  [AS_IF([test "x$enable_very_small_stacks" = "xyes"], [qthread_cv_stack_size=2048],
-	  [qthread_cv_stack_size=4096])])
+	  [AS_IF([test "x$enable_very_small_stacks" = "xyes"],
+			 [qthread_cv_stack_size=2048],
+			 [case "$host" in
+			  	powerpc-apple-darwin*)
+	  			AC_CHECK_SIZEOF([void*])
+				AS_IF([test "x$ac_cv_sizeof_voidp" == "x8"],
+					  [qthread_cv_stack_size=8192],
+					  [qthread_cv_stack_size=4096])
+	  			;;
+				*)
+				qthread_cv_stack_size=4096
+				;;
+		  	  esac])])
 AC_DEFINE_UNQUOTED([QTHREAD_DEFAULT_STACK_SIZE],[$qthread_cv_stack_size],
 				   [What size stacks to use])
 
