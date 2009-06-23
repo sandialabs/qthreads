@@ -16,7 +16,7 @@ struct mcontext
 	unsigned long pad;
 	double fpregs[18];		/* callee saved: r14-r31 */
 /*
-// XXX: currently do not save vector registers or floating-point state
+// XXX: currently do not save vector registers
 //	unsigned long	vr[4*12];	/ * callee saved: v20-v31, 256-bits each * /
 //      unsigned long   vrsave;         / * which v regs should be saved? * /
 */

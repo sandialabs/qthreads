@@ -60,25 +60,25 @@ struct mcontext {
 	 * and ucontext_t at the same time.
 	 */
 	long mc_onstack;		/* XXX - sigcontext compat. */
-	long mc_gs;
-	long mc_fs;
-	long mc_es;
-	long mc_ds;
-	long mc_edi;
-	long mc_esi;
-	long mc_ebp;
+	long mc_gs; /* processor-control in 64-bit Windows, unused elsewhere */
+	long mc_fs; /* thread-specific data */
+	long mc_es; /* flat segment group (do not touch) */
+	long mc_ds; /* flat segment group (do not touch) */
+	long mc_edi; /* general purpose 32-bit-only register */
+	long mc_esi; /* general purpose 32-bit-only register */
+	long mc_ebp; /* Stack frame pointer */
 	long mc_isp;
-	long mc_ebx;
-	long mc_edx;
-	long mc_ecx;
-	long mc_eax;
+	long mc_ebx; /* PIC base register, also general-purp. reg */
+	long mc_edx; /* UNSAVED "dividend register", general purp. */
+	long mc_ecx; /* UNSAVED "count register", general purp. */
+	long mc_eax; /* UNSAVED "accumulation register", general purp. */
 	long mc_trapno;
 	long mc_err;
-	long mc_eip;
-	long mc_cs;
+	long mc_eip; /* UNSAVED instruction pointer */
+	long mc_cs; /* flat segment group (do not touch) */
 	long mc_eflags;
-	long mc_esp;			/* machine state */
-	long mc_ss;
+	long mc_esp;			/* machine state; stack pointer */
+	long mc_ss; /* flat segment group (do not touch) */
 
 	long mc_fpregs[28];		/* env87 + fpacc87 + u_long */
 	long __spare__[17];
