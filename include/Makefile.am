@@ -6,6 +6,9 @@
 SUBDIRS = qthread
 
 noinst_HEADERS = \
+	osx_compat/taskimpl.h \
+	osx_compat/power-ucontext.h \
+	osx_compat/386-ucontext.h \
 	qthread_innards.h \
 	qthread_asserts.h \
 	qthread_expect.h \

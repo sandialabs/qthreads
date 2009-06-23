@@ -1,6 +1,6 @@
 /* Copyright (c) 2005-2006 Russ Cox, MIT; see COPYRIGHT */
 
-#include "taskimpl.h"
+#include <osx_compat/taskimpl.h>
 
 #ifdef NEEDPOWERMAKECONTEXT
 void makecontext(ucontext_t *ucp, void (*func)(void), int argc, ...)
