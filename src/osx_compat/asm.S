@@ -321,9 +321,9 @@ GET:				/* xxx: instruction scheduling */
 	li	r5, 1			/* return value for setmcontext */
 	std	r5, 6*8(r3)
 
-	std	r13, (0+7)*8(r3)	/* callee-save GPRs */
-	std	r14, (1+7)*8(r3)	/* xxx: block move */
-	std	r15, (2+7)*8(r3)
+	/*std	r13, (0+7)*8(r3) not saving r13 because I want thread migration */
+	std	r14, (1+7)*8(r3)	/* callee-save GPRs */
+	std	r15, (2+7)*8(r3)	/* xxx: block move */
 	std	r16, (3+7)*8(r3)
 	std	r17, (4+7)*8(r3)
 	std	r18, (5+7)*8(r3)
@@ -367,9 +367,9 @@ GET:				/* xxx: instruction scheduling */
 
 .globl SET
 SET:
-	ld	r13, (0+7)*8(r3)	/* callee-save GPRs */
-	ld	r14, (1+7)*8(r3)	/* xxx: block move */
-	ld	r15, (2+7)*8(r3)
+	/*ld	r13, (0+7)*8(r3) not restoring r13 because I want thread migration */
+	ld	r14, (1+7)*8(r3)	/* callee-save GPRs */
+	ld	r15, (2+7)*8(r3)	/* xxx: block move */
 	ld	r16, (3+7)*8(r3)
 	ld	r17, (4+7)*8(r3)
 	ld	r18, (5+7)*8(r3)
