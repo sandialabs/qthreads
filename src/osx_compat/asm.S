@@ -41,18 +41,18 @@
 #ifdef NEEDX86CONTEXT
 .globl SET
 SET:
-	movl	4(%esp), %eax /* technically doesn't need to be saved? */
+	movl	4(%esp), %eax /* get the offset of the uc_mcontext component */
 
-	movl	8(%eax), %fs
-	movl	12(%eax), %es
-	movl	16(%eax), %ds
-	movl	76(%eax), %ss
-	movl	20(%eax), %edi
-	movl	24(%eax), %esi
-	movl	28(%eax), %ebp
-	movl	36(%eax), %ebx
-	movl	40(%eax), %edx
-	movl	44(%eax), %ecx
+	/*movl	8(%eax), %fs thread-specific data (ignored to support migration) */
+	/*movl	12(%eax), %es only good to modify/save on 16-bit Windows */
+	/*movl	16(%eax), %ds segment register (SI,DI,BP,DS) */
+	/*movl	76(%eax), %ss only allowed to modify on 16-bit Windows */
+	movl	20(%eax), %edi /* general 32-bit use */
+	movl	24(%eax), %esi /* general 32-bit use */
+	movl	28(%eax), %ebp /* Stack frame pointer */
+	movl	36(%eax), %ebx /* PIC base register, also general-purp. reg */
+	/*movl	40(%eax), %edx NO (general-purp. reg) aka "dividend register" */
+	/*movl	44(%eax), %ecx NO (general-purp. reg) aka "count register" */
 
 	movl	72(%eax), %esp
 	pushl	60(%eax)	/* new %eip */
@@ -61,18 +61,18 @@ SET:
 
 .globl GET
 GET:
-	movl	4(%esp), %eax /* load arg0 from stack */
+	movl	4(%esp), %eax /* get the offset of the uc_mcontext component */
 
-	movl	%fs, 8(%eax)
-	movl	%es, 12(%eax)
-	movl	%ds, 16(%eax)
-	movl	%ss, 76(%eax)
-	movl	%edi, 20(%eax)
-	movl	%esi, 24(%eax)
-	movl	%ebp, 28(%eax)
-	movl	%ebx, 36(%eax)
-	movl	%edx, 40(%eax)		 
-	movl	%ecx, 44(%eax)
+	/*movl	%fs, 8(%eax) thread-specific data */
+	/*movl	%es, 12(%eax) only good to modify/save on 16-bit Windows */
+	/*movl	%ds, 16(%eax) segment register */
+	/*movl	%ss, 76(%eax) only allowed to modify on 16-bit Windows */
+	movl	%edi, 20(%eax) /* general 32-bit register */
+	movl	%esi, 24(%eax) /* general 32-bit register */
+	movl	%ebp, 28(%eax) /* Stack frame pointer */
+	movl	%ebx, 36(%eax) /* PIC base register, also general-purp. reg */
+	/*movl	%edx, 40(%eax) NO (general-purp. reg) aka "dividend register" */
+	/*movl	%ecx, 44(%eax) NO (general-purp. reg) aka "count register" */
 
 	movl	$1, 48(%eax)	/* %eax */
 	movl	(%esp), %ecx	/* %eip */
