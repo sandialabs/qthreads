@@ -18,7 +18,7 @@ struct qdsubqueue_s;
 
 struct qdqueue_adstruct_s {
     struct qdsubqueue_s *shep;
-    uintptr_t generation;	/* XXX change to aligned_t when we have a CAS */
+    aligned_t generation;
 };
 
 struct qdqueue_adheap_elem_s {
