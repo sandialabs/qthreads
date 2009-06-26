@@ -115,20 +115,20 @@ void future_init(int vp_per_loc)
 void blocking_vp_incr(qthread_t * me, location_t * loc)
 {
     qassert(pthread_mutex_lock(&(loc->vp_count_lock)), 0);
-    qthread_debug(2,
+    qthread_debug(ALL_DETAILS,
 		  "thread %p attempting a blocking increment on loc %d vps %d\n",
 		  (void *)me, loc->id, loc->vp_count);
 
     while (loc->vp_count >= loc->vp_max) {
 	qassert(pthread_mutex_unlock(&(loc->vp_count_lock)), 0);
-	qthread_debug(3,
+	qthread_debug(ALL_DETAILS,
 		      "Thread %p found too many futures in %d; waiting for vp_count\n",
 		      (void *)me, loc->id);
 	qthread_lock(me, &(loc->vp_count));
 	qassert(pthread_mutex_lock(&(loc->vp_count_lock)), 0);
     }
     loc->vp_count++;
-    qthread_debug(3, "Thread %p incr loc %d to %d vps\n", (void *)me, loc->id,
+    qthread_debug(ALL_DETAILS, "Thread %p incr loc %d to %d vps\n", (void *)me, loc->id,
 		  loc->vp_count);
     qassert(pthread_mutex_unlock(&(loc->vp_count_lock)), 0);
 }
@@ -156,7 +156,7 @@ void future_fork(qthread_f fptr, void *arg, aligned_t * retval)
     ptr = (location_t *) pthread_getspecific(future_bookkeeping);
     me = qthread_self();
 
-    qthread_debug(2, "Thread %p forking a future\n", (void *)me);
+    qthread_debug(THREAD_BEHAVIOR, "Thread %p forking a future\n", (void *)me);
     assert(me != NULL);
     assert(future_bookkeeping_array != NULL);
     /* step 1: future out where to go (fast) */
@@ -170,7 +170,7 @@ void future_fork(qthread_f fptr, void *arg, aligned_t * retval)
 	shep_for_new_futures *= (shep_for_new_futures < qlib->nshepherds);
 	qassert(pthread_mutex_unlock(&sfnf_lock), 0);
     }
-    qthread_debug(3, "Thread %p decided future will go to %i\n", (void *)me,
+    qthread_debug(THREAD_DETAILS, "Thread %p decided future will go to %i\n", (void *)me,
 		  rr);
     /* steps 2&3 (slow) */
     blocking_vp_incr(me, &(future_bookkeeping_array[rr]));
@@ -191,7 +191,7 @@ void future_fork_to(qthread_f fptr, void *arg, aligned_t * retval,
 
     me = qthread_self();
 
-    qthread_debug(2, "Thread %p forking a future\n", (void *)me);
+    qthread_debug(THREAD_BEHAVIOR, "Thread %p forking a future\n", (void *)me);
     assert(me != NULL);
     /* steps 2&3 (slow) */
     blocking_vp_incr(me, &(future_bookkeeping_array[shep]));
@@ -206,13 +206,13 @@ int future_yield(qthread_t * me)
     assert(me != NULL);
     assert(future_bookkeeping_array != NULL);
     loc = ft_loc(me);
-    qthread_debug(2, "Thread %p yield on loc %p\n", (void *)me, (void *)loc);
+    qthread_debug(THREAD_BEHAVIOR, "Thread %p yield on loc %p\n", (void *)me, (void *)loc);
     //Non-futures do not have a vproc to yield
     if (loc != NULL) {
 	int unlockit = 0;
 
 	//yield vproc
-	qthread_debug(3, "Thread %p yield loc %d vps %d\n", (void *)me,
+	qthread_debug(THREAD_DETAILS, "Thread %p yield loc %d vps %d\n", (void *)me,
 		      loc->id, loc->vp_count);
 	qassert(pthread_mutex_lock(&(loc->vp_count_lock)), 0);
 	unlockit = (loc->vp_count-- == loc->vp_max);
@@ -235,7 +235,7 @@ void future_acquire(qthread_t * me)
     assert(me != NULL);
     assert(future_bookkeeping_array != NULL);
     loc = ft_loc(me);
-    qthread_debug(2, "Thread %p acquire on loc %p\n", (void *)me,
+    qthread_debug(THREAD_BEHAVIOR, "Thread %p acquire on loc %p\n", (void *)me,
 		  (void *)loc);
     //Non-futures need not acquire a v proc
     if (loc != NULL) {
@@ -249,7 +249,7 @@ static void future_join(qthread_t * me, aligned_t * ft)
 {
     assert(me != NULL);
     assert(future_bookkeeping_array != NULL);
-    qthread_debug(2, "Thread %p join to future %p\n", (void *)me, (void *)ft);
+    qthread_debug(THREAD_BEHAVIOR, "Thread %p join to future %p\n", (void *)me, (void *)ft);
     qthread_readFF(me, ft, ft);
 }
 
@@ -259,7 +259,7 @@ void future_exit(qthread_t * me)
 {
     assert(me != NULL);
     assert(future_bookkeeping_array != NULL);
-    qthread_debug(2, "Thread %p exit on loc %d\n", (void *)me,
+    qthread_debug(THREAD_BEHAVIOR, "Thread %p exit on loc %d\n", (void *)me,
 		  qthread_shep(me));
     future_yield(me);
     qthread_assertnotfuture(me);
@@ -274,7 +274,7 @@ void future_join_all(qthread_t * qthr, aligned_t * fta, int ftc)
     assert(future_bookkeeping_array != NULL);
     assert(fta != NULL);
     assert(ftc > 0);
-    qthread_debug(2, "Qthread %p join all to %d futures\n", (void *)qthr,
+    qthread_debug(THREAD_BEHAVIOR, "Qthread %p join all to %d futures\n", (void *)qthr,
 		  ftc);
     for (i = 0; i < ftc; i++)
 	future_join(qthr, fta + i);

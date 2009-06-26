@@ -96,7 +96,11 @@ unsigned int qthread_internal_shep_to_node(const qthread_shepherd_id_t shep);
 /*#define QTHREAD_DEBUG 1*/
 /* for debugging */
 #ifdef QTHREAD_DEBUG
-extern int debuglevel;
+enum qthread_debug_levels { NONE = 0,
+    THREAD_BEHAVIOR, LOCK_BEHAVIOR, ALL_CALLS, ALL_FUNCTIONS,
+    THREAD_DETAILS, LOCK_DETAILS, ALL_DETAILS
+};
+extern enum qthread_debug_levels debuglevel;
 extern pthread_mutex_t output_lock;
 
 static QINLINE void qthread_debug(int level, char *format, ...)
