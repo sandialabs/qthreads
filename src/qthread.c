@@ -1522,7 +1522,7 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 				       cp_hash_addr, cp_hash_compare_addr);
 #endif
 
-	qthread_debug(ALL_DETAILS, "qthread_init(): forking shepherd %i thread %p\n", i,
+	qthread_debug(ALL_DETAILS, "qthread_init(): forking shepherd %i (%p)\n", i,
 		      &qlib->shepherds[i]);
 
     }
@@ -2498,10 +2498,10 @@ void qthread_yield(qthread_t * t)
 	t = qthread_self();
     }
     if (t != NULL) {
-	qthread_debug(THREAD_BEHAVIOR, "qthread_yield(): thread %p yielding.\n", t);
+	qthread_debug(THREAD_BEHAVIOR, "qthread_yield(): tid %u yielding.\n", t->thread_id);
 	t->thread_state = QTHREAD_STATE_YIELDED;
 	qthread_back_to_master(t);
-	qthread_debug(THREAD_BEHAVIOR, "qthread_yield(): thread %p resumed.\n", t);
+	qthread_debug(THREAD_BEHAVIOR, "qthread_yield(): tid %u resumed.\n", t->thread_id);
     }
 }				       /*}}} */
 
