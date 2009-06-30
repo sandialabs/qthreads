@@ -515,11 +515,12 @@ AS_IF([test "x$qthread_implementation" = "xunix"],
 		   qt_cv_cacheline=128;
 		   ;;
 	   esac
-	   AC_DEFINE_UNQUOTED([QTHREAD_CACHELINE_BYTES],
-						  [$qt_cv_cacheline],
-						  [Bytes per cache line])
 	  ])
-
+AS_IF([test "x$qthread_implementation" = "xsst"],
+	  [qt_cv_cacheline=128]) dnl G5-ish
+AC_DEFINE_UNQUOTED([QTHREAD_CACHELINE_BYTES],
+				   [$qt_cv_cacheline],
+				   [Bytes per cache line])
 
 ## --------------- ##
 ## Output and done ##
