@@ -46,8 +46,8 @@ static QINLINE qthread_shepherd_id_t *qarray_internal_segment_shep(const
     if (((uintptr_t) ptr) & 3)
 	ptr += 4 - (((uintptr_t) ptr) & 3);
     /* first, do we have the space? */
-    assert(((ptr + sizeof(qthread_shepherd_id_t) - 1) -
-	    (const char *)segment_head) < a->segment_bytes);
+    qassert_ret((((ptr + sizeof(qthread_shepherd_id_t) - 1) -
+	    (const char *)segment_head) < a->segment_bytes), NULL);
     return (qthread_shepherd_id_t *) ptr;
 }				       /*}}} */
 
@@ -86,7 +86,9 @@ static inline qthread_shepherd_id_t qarray_internal_shepof_shi(const qarray *
 						 qarray_elem_nomigrate(a,
 								       shi));
 	default:
-	    assert(0);
+	    /* This should never happen, so deliberately cause a seg fault for
+	     * corefile analysis */
+	    *(int *)(0) = 0;
 	    return 0;
     }
 }				       /*}}} */
@@ -100,16 +102,8 @@ static qarray *qarray_create_internal(const size_t count,
     size_t segment_count;	/* number of segments allocated */
     qarray *ret = NULL;
 
-    assert(count > 0);
-    assert(obj_size > 0);
-    if (obj_size == 0 || count == 0) {
-	return NULL;
-    }
-    ret = calloc(1, sizeof(qarray));
-    assert(ret);
-    if (ret == NULL) {
-	return NULL;
-    }
+    qassert_ret((count > 0), NULL);
+    qassert_ret((obj_size > 0), NULL);
 
     if (pageshift == 0) {
 	pagesize = getpagesize() - 1;
@@ -123,12 +117,10 @@ static qarray *qarray_create_internal(const size_t count,
     if (chunk_distribution_tracker == NULL) {
 	chunk_distribution_tracker =
 	    calloc(qthread_num_shepherds(), sizeof(aligned_t));
-	assert(chunk_distribution_tracker);
-	if (chunk_distribution_tracker == NULL) {
-	    free(ret);
-	    return NULL;
-	}
+	qassert_ret((chunk_distribution_tracker != NULL), NULL);
     }
+    ret = calloc(1, sizeof(qarray));
+    qassert_goto((ret != NULL), badret_exit);
 
     ret->count = count;
     /* make obj_size a multiple of 8 */
@@ -166,6 +158,8 @@ static qarray *qarray_create_internal(const size_t count,
 		ret->segment_bytes = seg_pages * pagesize;
 	    }
 	    ret->segment_size = ret->segment_bytes / ret->unit_size;
+	    assert(ret->segment_size > 0);
+	    assert(ret->segment_bytes > 0);
 	    break;
 	case DIST_REG_STRIPES:
 	case DIST_REG_FIELDS:
@@ -304,12 +298,7 @@ static qarray *qarray_create_internal(const size_t count,
     ret->base_ptr = (char *)valloc(segment_count * ret->segment_bytes);
 # endif
 #endif
-    assert(ret->base_ptr);
-    if (ret->base_ptr == NULL) {
-	free(ret);
-	ret = NULL;
-	return NULL;
-    }
+    qassert_goto((ret->base_ptr != NULL), badret_exit);
 
     /********************************************
      * Assign locations, maintain segment_count *
@@ -453,6 +442,13 @@ static qarray *qarray_create_internal(const size_t count,
 	    MADV_ACCESS_LWP);
 #endif
     return ret;
+badret_exit:
+    if (ret) {
+	if (ret->base_ptr) {
+	    free(ret->base_ptr);
+	}
+	free(ret);
+    }
 }				       /*}}} */
 
 qarray *qarray_create(const size_t count, const size_t obj_size)
@@ -484,66 +480,60 @@ qarray *qarray_create_configured(const size_t count, const size_t obj_size,
 
 void qarray_destroy(qarray * a)
 {				       /*{{{ */
-    assert(a);
-    assert(a->base_ptr);
-    if (a) {
-	if (a->base_ptr) {
-	    switch (a->dist_type) {
-		case DIST:
-		{
-		    size_t segment;
-		    const size_t segment_count =
-			a->count / a->segment_size +
-			((a->count % a->segment_size) ? 1 : 0);
-		    for (segment = 0; segment < segment_count; segment++) {
-			char *segmenthead = qarray_elem_nomigrate(a,
-								  segment *
-								  a->
-								  segment_size);
-			qthread_incr(&chunk_distribution_tracker
-				     [*qarray_internal_segment_shep
-				      (a, segmenthead)], -1);
-		    }
-		}
-		    break;
-		default:
-		case FIXED_HASH:
-		{
-		    size_t segment;
-		    const size_t segment_count =
-			a->count / a->segment_size +
-			((a->count % a->segment_size) ? 1 : 0);
-		    for (segment = 0; segment < segment_count; segment++) {
-			qthread_incr(&chunk_distribution_tracker
-				     [qarray_internal_shepof_shi
-				      (a, segment * a->segment_size)], -1);
-		    }
-		}
-		    break;
-		case ALL_SAME:
-		    qthread_incr(&chunk_distribution_tracker[a->dist_shep],
-				 -1 * (a->count / a->segment_size +
-				       ((a->count %
-					 a->segment_size) ? 1 : 0)));
-		    break;
+    qassert_retvoid((a != NULL));
+    qassert_retvoid((a->base_ptr != NULL));
+    switch (a->dist_type) {
+	case DIST:
+	{
+	    size_t segment;
+	    const size_t segment_count =
+		a->count / a->segment_size +
+		((a->count % a->segment_size) ? 1 : 0);
+	    for (segment = 0; segment < segment_count; segment++) {
+		char *segmenthead = qarray_elem_nomigrate(a,
+							  segment *
+							  a->segment_size);
+		qthread_incr(&chunk_distribution_tracker
+			     [*qarray_internal_segment_shep(a, segmenthead)],
+			     -1);
 	    }
-#ifdef QTHREAD_HAVE_LIBNUMA
-	    numa_free(a->base_ptr,
-		    (a->count / a->segment_size +
-		     ((a->count % a->segment_size) ? 1 : 0)));
-#elif (HAVE_WORKING_VALLOC || HAVE_MEMALIGN || HAVE_POSIX_MEMALIGN || HAVE_PAGE_ALIGNED_MALLOC)
-	    /* avoid freeing base ptr if we had to use a broken valloc */
-	    free(a->base_ptr);
-#endif
 	}
-	free(a);
+	    break;
+	default:
+	case FIXED_HASH:
+	{
+	    size_t segment;
+	    const size_t segment_count =
+		a->count / a->segment_size +
+		((a->count % a->segment_size) ? 1 : 0);
+	    for (segment = 0; segment < segment_count; segment++) {
+		qthread_incr(&chunk_distribution_tracker
+			     [qarray_internal_shepof_shi
+			      (a, segment * a->segment_size)], -1);
+	    }
+	}
+	    break;
+	case ALL_SAME:
+	    qthread_incr(&chunk_distribution_tracker[a->dist_shep],
+			 -1 * (a->count / a->segment_size +
+			       ((a->count % a->segment_size) ? 1 : 0)));
+	    break;
     }
+#ifdef QTHREAD_HAVE_LIBNUMA
+    numa_free(a->base_ptr,
+	      (a->count / a->segment_size +
+	       ((a->count % a->segment_size) ? 1 : 0)));
+#elif (HAVE_WORKING_VALLOC || HAVE_MEMALIGN || HAVE_POSIX_MEMALIGN || HAVE_PAGE_ALIGNED_MALLOC)
+    /* avoid freeing base ptr if we had to use a broken valloc */
+    free(a->base_ptr);
+#endif
+    free(a);
 }				       /*}}} */
 
 qthread_shepherd_id_t qarray_shepof(const qarray * a, const size_t index)
 {				       /*{{{ */
-    assert(a);
-    assert(index < a->count);
+    qassert_ret((a != NULL), NO_SHEPHERD);
+    qassert_ret((index < a->count), NO_SHEPHERD);
     switch (a->dist_type) {
 	case ALL_SAME:
 	    return a->dist_shep;
@@ -559,16 +549,14 @@ qthread_shepherd_id_t qarray_shepof(const qarray * a, const size_t index)
     }
 }				       /*}}} */
 
-void *qarray_elem(qthread_t * me, const qarray * a, const size_t index)
+void *qarray_elem_migrate(qthread_t * me, const qarray * a, const size_t index)
 {				       /*{{{ */
     void *ret;
     qthread_shepherd_id_t dest;
 
-    assert(a);
-    assert(me);
-    if (index >= a->count) {
-	return NULL;
-    } else {
+    qassert_ret((a != NULL), NULL);
+    qassert_ret((index >= a->count), NULL);
+    {
 	const size_t segment_num = index / a->segment_size;	/* rounded down */
 	char *segment_head = a->base_ptr + (segment_num + a->segment_bytes);
 
@@ -642,7 +630,7 @@ static aligned_t qarray_strider(qthread_t * me,
 	for (inpage_offset = 0; inpage_offset < max_offset; inpage_offset++) {
 	    void *ptr = qarray_elem_nomigrate(arg->a, count + inpage_offset);
 
-	    assert(ptr != NULL);
+	    assert(ptr != NULL); // aka internal error
 	    arg->func.qt(me, ptr);
 	}
 	switch (dist_type) {
@@ -715,14 +703,13 @@ static aligned_t qarray_loop_strider(qthread_t * me, const struct qarray_func_wr
 	    const size_t max_offset =
 		((max_count - count) >
 		 segment_size) ? segment_size : (max_count - count);
-	    /*void *ptr = qarray_elem_nomigrate(arg->a, count);
-	     * 
-	     * assert(ptr != NULL); */
 	    ql(me, count, count + max_offset, arg->a, arg->arg);
 	}
 	switch (dist_type) {
 	    default:
-		assert(0);
+		/* This should never happen, so deliberately cause a seg fault
+		 * for corefile analysis */
+		*(int *)(0) = 0;
 		break;
 	    case ALL_SAME:
 		count += segment_size;
@@ -759,6 +746,9 @@ void qarray_iter(qthread_t * me, qarray * a, const size_t startat,
     struct qarray_func_wrapper_args qfwa =
 	{ {NULL}, a, NULL, &donecount, startat, stopat };
 
+    qassert_retvoid((a != NULL));
+    qassert_retvoid((func != NULL));
+    qassert_retvoid((startat <= stopat));
     qfwa.func.qt = func;
     switch (a->dist_type) {
 	case ALL_SAME:
@@ -806,6 +796,9 @@ void qarray_iter_loop(qthread_t * me, qarray * a, const size_t startat,
     struct qarray_func_wrapper_args qfwa =
 	{ {func}, a, arg, &donecount, startat, stopat };
 
+    qassert_retvoid((a != NULL));
+    qassert_retvoid((func != NULL));
+    qassert_retvoid((startat <= stopat));
     switch (a->dist_type) {
 	case ALL_SAME:
 	    qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL,
@@ -853,6 +846,9 @@ void qarray_iter_constloop(qthread_t * me, const qarray * a,
     const struct qarray_constfunc_wrapper_args qfwa =
 	{ {func}, a, arg, &donecount, startat, stopat };
 
+    qassert_retvoid((a != NULL));
+    qassert_retvoid((func != NULL));
+    qassert_retvoid((startat <= stopat));
     switch (a->dist_type) {
 	case ALL_SAME:
 	    qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL,

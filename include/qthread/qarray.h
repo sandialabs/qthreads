@@ -55,7 +55,8 @@ void qarray_iter_constloop(qthread_t * me, const qarray * a,
 
 qthread_shepherd_id_t qarray_shepof(const qarray * a, const size_t index);
 
-void *qarray_elem(qthread_t * me, const qarray * a, const size_t index);
+#define qarray_elem(me, a, i) qarray_elem_nomigrate(a, i)
+void *qarray_elem_migrate(qthread_t * me, const qarray * a, const size_t index);
 QINLINE static void *qarray_elem_nomigrate(const qarray * a,
 					   const size_t index)
 {
