@@ -24,6 +24,7 @@ int main()
 
     qthread_init(7);
 
+    assert(master[1] == 0.0);
     ret_test = qthread_fincr(master + 1, 1);
     assert(master[1] == 1.0);
     assert(ret_test == 0.0);
