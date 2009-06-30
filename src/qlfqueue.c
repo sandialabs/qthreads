@@ -81,7 +81,7 @@ qlfqueue_t *qlfqueue_create(void)
 
 int qlfqueue_destroy(qthread_t * me, qlfqueue_t * q)
 {				       /*{{{ */
-    qargnonull(q);
+    qassert_ret((q != NULL), QTHREAD_BADARGS);
     while (QPTR(_(q->head)) != QPTR(_(q->tail))) {
 	qlfqueue_dequeue(me, q);
     }
@@ -96,9 +96,9 @@ int qlfqueue_enqueue(qthread_t * me, qlfqueue_t * q, void *elem)
     volatile qlfqueue_node_t *next;
     qlfqueue_node_t *node;
 
-    qargnonull(elem);
-    qargnonull(q);
-    //qargnonull(me); /* qpool_alloc is okay with a NULL {me} */
+    qassert_ret((elem != NULL), QTHREAD_BADARGS);
+    qassert_ret((q != NULL), QTHREAD_BADARGS);
+    //qassert_ret((me != NULL), QTHREAD_BADARGS); /* qpool_alloc is okay with a NULL {me} */
 
     node = (qlfqueue_node_t *) qpool_alloc(me, qlfqueue_node_pool);
     // these asserts should be redundant
