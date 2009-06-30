@@ -11,6 +11,11 @@
 #endif
 #ifdef QTHREAD_HAVE_LIBNUMA
 # include <numa.h>
+# define LIBNUMA_ONLY_ARG(x) x,
+# define LIBNUMA_ONLY(x) x
+#else
+# define LIBNUMA_ONLY_ARG(x)
+# define LIBNUMA_ONLY(x)
 #endif
 #ifdef QTHREAD_USE_VALGRIND
 # include <valgrind/memcheck.h>
@@ -33,7 +38,7 @@ struct qpool_shepspec_s {
     void **alloc_list;
     size_t alloc_list_pos;
 
-    unsigned int node;
+    LIBNUMA_ONLY(unsigned int node;)
     aligned_t lock;
 };
 
@@ -60,7 +65,7 @@ static Q_NOINLINE void *volatile *vol_id_void(void *volatile
 
 /* local funcs */
 static QINLINE void *qpool_internal_aligned_alloc(size_t alloc_size,
-						  unsigned int Q_UNUSED node,
+						  LIBNUMA_ONLY_ARG(unsigned int Q_UNUSED node)
 						  size_t alignment)
 {				       /*{{{ */
     void *ret;
@@ -109,9 +114,9 @@ static QINLINE void *qpool_internal_aligned_alloc(size_t alloc_size,
 static QINLINE void qpool_internal_aligned_free(void *freeme,
 						const size_t Q_UNUSED
 						alloc_size,
+						LIBNUMA_ONLY_ARG(const unsigned int node)
 						const size_t Q_UNUSED
-						alignment,
-						const unsigned int node)
+						alignment)
 {				       /*{{{ */
 #ifdef QTHREAD_HAVE_LIBNUMA
     if (node != QTHREAD_NO_NODE) {
@@ -147,20 +152,14 @@ qpool *qpool_create_aligned(const size_t isize, size_t alignment)
     qthread_shepherd_id_t pindex;
 
     pool = (qpool *) calloc(1, sizeof(struct qpool_s));
-    assert(pool != NULL);
-    if (pool == NULL) {
-	return NULL;
-    }
+    qassert_ret((pool != NULL), NULL);
 #ifdef QTHREAD_USE_VALGRIND
     VALGRIND_CREATE_MEMPOOL(pool, 0, 0);
 #endif
     pool->pools =
 	(struct qpool_shepspec_s *)calloc(numsheps,
 					  sizeof(struct qpool_shepspec_s));
-    assert(pool->pools != NULL);
-    if (pool->pools == NULL) {
-	goto errexit_killpool;
-    }
+    qassert_goto((pool->pools != NULL), errexit_killpool);
     if (pagesize == 0) {
 	pagesize = getpagesize();
     }
@@ -207,29 +206,22 @@ qpool *qpool_create_aligned(const size_t isize, size_t alignment)
 
     /* now that we have all the information, set up the pools */
     for (pindex = 0; pindex < numsheps; pindex++) {
-	pool->pools[pindex].node = qthread_internal_shep_to_node(pindex);
+	LIBNUMA_ONLY(pool->pools[pindex].node = qthread_internal_shep_to_node(pindex));
 	_(pool->pools[pindex].reuse_pool) = NULL;
 	pool->pools[pindex].alloc_block =
 	    (char *)qpool_internal_aligned_alloc(alloc_size,
-						 pool->pools[pindex].node,
+						 LIBNUMA_ONLY(pool->pools[pindex].node)
 						 alignment);
 #ifdef QTHREAD_USE_VALGRIND
 	VALGRIND_MAKE_MEM_NOACCESS(pool->pools[pindex].alloc_block,
 				   alloc_size);
 #endif
-	assert(pool->pools[pindex].alloc_block != NULL);
-	assert(alignment != 0);
-	assert(((unsigned long)(pool->pools[pindex].
-				alloc_block) & (alignment - 1)) == 0);
-	if (pool->pools[pindex].alloc_block == NULL) {
-	    goto errexit_killpool;
-	}
+	qassert_goto((pool->pools[pindex].alloc_block != NULL), errexit_killpool);
+	qassert_goto((((unsigned long)(pool->pools[pindex].
+				alloc_block) & (alignment - 1)) == 0), errexit_killpool);
 	/* this assumes that pagesize is a multiple of sizeof(void*) */
 	pool->pools[pindex].alloc_list = calloc(1, pagesize);
-	assert(pool->pools[pindex].alloc_list != NULL);
-	if (pool->pools[pindex].alloc_list == NULL) {
-	    goto errexit_killpool;
-	}
+	qassert_goto((pool->pools[pindex].alloc_list != NULL), errexit_killpool);
 	pool->pools[pindex].alloc_list[0] = pool->pools[pindex].alloc_block;
 	pool->pools[pindex].alloc_list_pos = 1;
     }
@@ -242,8 +234,9 @@ qpool *qpool_create_aligned(const size_t isize, size_t alignment)
 	    for (i = 0; i < numsheps; i++) {
 		if (pool->pools[i].alloc_block) {
 		    qpool_internal_aligned_free(pool->pools[i].alloc_block,
-						alloc_size, alignment,
-						pool->pools[i].node);
+						alloc_size,
+						LIBNUMA_ONLY_ARG(pool->pools[i].node)
+						alignment);
 		}
 	    }
 	    free(pool->pools);
@@ -280,10 +273,7 @@ void *qpool_alloc(qthread_t * me, qpool * pool)
     qthread_shepherd_id_t shep;
     struct qpool_shepspec_s *mypool;
 
-    assert(pool);
-    if (pool == NULL) {
-	return NULL;
-    }
+    qassert_ret((pool != NULL), NULL);
     shep = qthread_shep(me);
     mypool = &(pool->pools[shep]);
     p = (void *)_(mypool->reuse_pool);
@@ -306,31 +296,28 @@ void *qpool_alloc(qthread_t * me, qpool * pool)
 	 * pools from the same node, but different shepherd */
 
 	/* on a single-threaded shepherd, locking is unnecessary */
-	//qassert(qthread_lock(me, &mypool->lock), 0);
+#ifdef SST
+	qassert(qthread_lock(me, &mypool->lock), 0);
+#endif
 	if (mypool->alloc_block_pos == pool->items_per_alloc) {
 	    if (mypool->alloc_list_pos == (pagesize / sizeof(void *) - 1)) {
 		void **tmp = calloc(1, pagesize);
 
-		assert(tmp != NULL);
-		if (tmp == NULL) {
-		    goto alloc_exit;
-		}
+		qassert_goto((tmp != NULL), alloc_exit);
 		tmp[pagesize / sizeof(void *) - 1] = mypool->alloc_list;
 		mypool->alloc_list = tmp;
 		mypool->alloc_list_pos = 0;
 	    }
-	    p = qpool_internal_aligned_alloc(pool->alloc_size, mypool->node,
+	    p = qpool_internal_aligned_alloc(pool->alloc_size,
+					     LIBNUMA_ONLY_ARG(mypool->node)
 					     pool->alignment);
 #ifdef QTHREAD_USE_VALGRIND
 	    VALGRIND_MAKE_MEM_NOACCESS(p, pool->alloc_size);
 #endif
-	    assert(p != NULL);
+	    qassert_goto((p != NULL), alloc_exit);
 	    assert(pool->alignment == 0 ||
 		   (((unsigned long)p) & (pool->alignment - 1)) == 0);
 	    assert(QCTR(p) == 0);
-	    if (p == NULL) {
-		goto alloc_exit;
-	    }
 	    mypool->alloc_block = p;
 	    mypool->alloc_block_pos = 1;
 	    mypool->alloc_list[mypool->alloc_list_pos] = mypool->alloc_block;
@@ -340,7 +327,9 @@ void *qpool_alloc(qthread_t * me, qpool * pool)
 		(pool->item_size * mypool->alloc_block_pos);
 	    mypool->alloc_block_pos++;
 	}
-	//qassert(qthread_unlock(me, &mypool->lock), 0);
+#ifdef SST
+	qassert(qthread_unlock(me, &mypool->lock), 0);
+#endif
 	if (pool->alignment != 0 &&
 	    (((unsigned long)p) & (pool->alignment - 1))) {
 	    printf("alloc_block = %p\n", mypool->alloc_block);
@@ -362,12 +351,8 @@ void qpool_free(qthread_t * me, qpool * pool, void *mem)
     qthread_shepherd_id_t shep = qthread_shep(me);
     struct qpool_shepspec_s *mypool = &(pool->pools[shep]);
 
-    assert(mem != NULL);
-    assert(pool);
-    assert(mypool);
-    if (pool == NULL || mem == NULL) {
-	return;
-    }
+    qassert_retvoid((mem != NULL));
+    qassert_retvoid((pool != NULL));
     do {
 	old = (void *)_(mypool->reuse_pool);	// should be an atomic read
 	*(void **)mem = old;
@@ -381,36 +366,34 @@ void qpool_free(qthread_t * me, qpool * pool, void *mem)
 
 void qpool_destroy(qpool * pool)
 {				       /*{{{ */
-    assert(pool);
-    if (pool) {
-	qthread_shepherd_id_t max = qthread_num_shepherds();
-	qthread_shepherd_id_t i;
+    qassert_retvoid((pool != NULL));
+    qthread_shepherd_id_t max = qthread_num_shepherds();
+    qthread_shepherd_id_t i;
 
-	for (i = 0; i < max; i++) {
-	    struct qpool_shepspec_s *mypool = &(pool->pools[i]);
+    for (i = 0; i < max; i++) {
+	struct qpool_shepspec_s *mypool = &(pool->pools[i]);
 
-	    while (mypool->alloc_list) {
-		unsigned int j = 0;
+	while (mypool->alloc_list) {
+	    unsigned int j = 0;
 
-		void *p = mypool->alloc_list[0];
+	    void *p = mypool->alloc_list[0];
 
-		while (p && j < (pagesize / sizeof(void *) - 1)) {
-		    qpool_internal_aligned_free(QPTR(p), pool->alloc_size,
-						pool->alignment,
-						mypool->node);
-		    j++;
-		    p = mypool->alloc_list[j];
-		}
-		p = mypool->alloc_list;
-		mypool->alloc_list =
-		    mypool->alloc_list[pagesize / sizeof(void *) - 1];
-		free(p);
+	    while (p && j < (pagesize / sizeof(void *) - 1)) {
+		qpool_internal_aligned_free(QPTR(p), pool->alloc_size,
+					    LIBNUMA_ONLY_ARG(mypool->node)
+					    pool->alignment);
+		j++;
+		p = mypool->alloc_list[j];
 	    }
+	    p = mypool->alloc_list;
+	    mypool->alloc_list =
+		mypool->alloc_list[pagesize / sizeof(void *) - 1];
+	    free(p);
 	}
-#ifdef QTHREAD_USE_VALGRIND
-	VALGRIND_DESTROY_MEMPOOL(pool);
-#endif
-	free(pool->pools);
-	free(pool);
     }
+#ifdef QTHREAD_USE_VALGRIND
+    VALGRIND_DESTROY_MEMPOOL(pool);
+#endif
+    free(pool->pools);
+    free(pool);
 }				       /*}}} */
