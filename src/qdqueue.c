@@ -314,21 +314,14 @@ qdqueue_t *qdqueue_create(void)
     if (maxsheps == 0)
 	maxsheps = qthread_num_shepherds();
     ret = calloc(1, sizeof(struct qdqueue_s));
-    assert(ret);
-    if (ret == NULL) {
-	goto erralloc_killq;
-    }
+    qassert_goto((ret != NULL), erralloc_killq);
     ret->Qs = calloc(maxsheps, sizeof(struct qdsubqueue_s));
 
     sheparray = malloc(maxsheps * sizeof(int *));
-    assert(sheparray);
-    if (sheparray == NULL)
-	goto erralloc_killq;
+    qassert_goto((sheparray != NULL), erralloc_killq);
     for (curshep = 0; curshep < maxsheps; curshep++) {
 	sheparray[curshep] = malloc(maxsheps * sizeof(int));
-	assert(sheparray[curshep]);
-	if (sheparray[curshep] == NULL)
-	    goto erralloc_killshep;
+	qassert_goto((sheparray[curshep] != NULL), erralloc_killshep);
     }
     qdqueue_internal_gensheparray(sheparray);
     for (curshep = 0; curshep < maxsheps; curshep++) {
@@ -381,7 +374,8 @@ int qdqueue_destroy(qthread_t * me, qdqueue_t * q)
 {				       /*{{{ */
     qthread_shepherd_id_t i;
 
-    qargnonull(q);
+    qassert_ret((q != NULL), QTHREAD_BADARGS);
+    qassert_ret((me != NULL), QTHREAD_BADARGS);
     for (i = 0; i < maxsheps; i++) {
 	if (q->Qs[i].theQ) {
 	    qlfqueue_destroy(me, q->Qs[i].theQ);
@@ -407,8 +401,9 @@ int qdqueue_enqueue(qthread_t * me, qdqueue_t * q, void *elem)
     int stat;
     struct qdsubqueue_s *myq;
 
-    qargnonull(me);
-    qargnonull(q);
+    qassert_ret((me != NULL), QTHREAD_BADARGS);
+    qassert_ret((q != NULL), QTHREAD_BADARGS);
+    qassert_ret((elem != NULL), QTHREAD_BADARGS);
 
     myq = &(q->Qs[qthread_shep(me)]);
 
@@ -443,8 +438,10 @@ int qdqueue_enqueue_there(qthread_t * me, qdqueue_t * q, void *elem,
     int stat;
     struct qdsubqueue_s *myq;
 
-    qargnonull(me);
-    qargnonull(q);
+    qassert_ret((me != NULL), QTHREAD_BADARGS);
+    qassert_ret((q != NULL), QTHREAD_BADARGS);
+    qassert_ret((elem != NULL), QTHREAD_BADARGS);
+    qassert_ret((there < qthread_num_shepherds()), QTHREAD_BADARGS);
 
     myq = &(q->Qs[there]);
 
@@ -478,13 +475,8 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
     struct qdsubqueue_s *myq;
     void *ret;
 
-    assert(me);
-    if (!me) {
-	goto fail_dequeue;
-    }
-    assert(q);
-    if (!q)
-	goto fail_dequeue;
+    qassert_ret((me != NULL), NULL);
+    qassert_ret((q != NULL), NULL);
 
     myq = &(q->Qs[qthread_shep(me)]);
     if ((ret = qlfqueue_dequeue(me, myq->theQ)) != NULL) {
@@ -546,8 +538,6 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
 	}
 	return NULL;
     }
-  fail_dequeue:
-    return NULL;
 }				       /*}}} */
 
 /* returns 1 if the queue is empty, 0 otherwise */
