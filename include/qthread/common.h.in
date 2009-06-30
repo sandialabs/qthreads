@@ -7,9 +7,6 @@
 #ifndef QTHREAD_COMMON_H
 #define QTHREAD_COMMON_H
 
-/* Whether the compiler supports the attribute aligned property */
-#undef HAVE_ATTRIBUTE_ALIGNED
-
 /* Whether C compiler supports GCC style inline assembly */
 #undef HAVE_GCC_INLINE_ASSEMBLY
 
