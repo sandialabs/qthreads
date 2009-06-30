@@ -5,8 +5,9 @@
 #include <qthread/qthread.h>
 #include <qthread/qdqueue.h>
 
+#include "qthread_asserts.h"
+
 #include <unistd.h>		       /* for getpagesize() */
-#include <assert.h>
 #include <stdlib.h>		       /* for malloc() */
 #include <stdio.h>		       /* for printf */
 
@@ -249,6 +250,7 @@ array1,
 
 #ifdef QTHREAD_TRACK_DISTANCES
     distances = calloc(max_i, sizeof(struct cacheline_s));
+    assert(distances != NULL);
 #endif
 #ifdef QTHREAD_USE_HALFWAYARRAY
     /* step 0: ensure halfway array is set up */
