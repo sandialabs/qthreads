@@ -930,8 +930,10 @@ static QINLINE unsigned long qthread_incr_xx(volatile void *addr, const int incr
     return 0;			       /* compiler check */
 }
 
-static QINLINE uint32_t qthread_cas32(volatile uint32_t * operand, const uint32_t oldval, const uint32_t newval)
-{/*{{{*/
+static QINLINE uint32_t qthread_cas32(volatile uint32_t * operand,
+				      const uint32_t oldval,
+				      const uint32_t newval)
+{				       /*{{{ */
 #if defined(HAVE_GCC_INLINE_ASSEMBLY)
 # if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
@@ -990,10 +992,12 @@ static QINLINE uint32_t qthread_cas32(volatile uint32_t * operand, const uint32_
 #else
 # error "CAS needs inline assembly OR __sync_val_compare_and_swap"
 #endif
-}/*}}}*/
+}				       /*}}} */
 
-static QINLINE uint64_t qthread_cas64(volatile uint64_t * operand, const uint64_t oldval, const uint64_t newval)
-{/*{{{*/
+static QINLINE uint64_t qthread_cas64(volatile uint64_t * operand,
+				      const uint64_t oldval,
+				      const uint64_t newval)
+{				       /*{{{ */
 #if defined(HAVE_GCC_INLINE_ASSEMBLY)
 # if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
     register uint64_t result;
@@ -1108,7 +1112,7 @@ static QINLINE uint64_t qthread_cas64(volatile uint64_t * operand, const uint64_
 #else
 # error "CAS needs inline assembly OR __sync_val_compare_and_swap"
 #endif
-}/*}}}*/
+}				       /*}}} */
 
 static QINLINE aligned_t qthread_cas_xx(volatile aligned_t * addr,
 					const aligned_t oldval,
