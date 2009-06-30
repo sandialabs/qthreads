@@ -62,16 +62,16 @@ qlfqueue_t *qlfqueue_create(void)
 	qlfqueue_node_pool =
 	    qpool_create_aligned(sizeof(qlfqueue_node_t), 16);
     }
-    assert(qlfqueue_node_pool != NULL);
+    qassert_ret((qlfqueue_node_pool != NULL), NULL);
 
     q = malloc(sizeof(struct qlfqueue_s));
     if (q != NULL) {
 	_(q->head) =
 	    (volatile qlfqueue_node_t *)qpool_alloc(NULL, qlfqueue_node_pool);
-	assert(_(q->head) != NULL);
+	assert(QPTR(_(q->head)) != NULL);
 	if (QPTR(_(q->head)) == NULL) {	// if we're not using asserts, fail nicely
 	    free(q);
-	    q = NULL;
+	    return NULL;
 	}
 	_(q->tail) = _(q->head);
 	_(QPTR(_(q->tail))->next) = NULL;
@@ -102,7 +102,7 @@ int qlfqueue_enqueue(qthread_t * me, qlfqueue_t * q, void *elem)
 
     node = (qlfqueue_node_t *) qpool_alloc(me, qlfqueue_node_pool);
     // these asserts should be redundant
-    assert(node != NULL);
+    qassert_ret((node != NULL), QTHREAD_MALLOC_ERROR);
     assert(QCTR(node) == 0);	       // node MUST be aligned
 
     memset((void *)node, 0, sizeof(qlfqueue_node_t));
@@ -132,10 +132,7 @@ void *qlfqueue_dequeue(qthread_t * me, qlfqueue_t * q)
     volatile qlfqueue_node_t *tail;
     volatile qlfqueue_node_t *next_ptr;
 
-    assert(q != NULL);
-    if (q == NULL) {
-	return NULL;
-    }
+    qassert_ret((q != NULL), NULL);
     while (1) {
 	head = _(q->head);
 	tail = _(q->tail);
@@ -166,10 +163,7 @@ int qlfqueue_empty(qlfqueue_t * q)
     volatile qlfqueue_node_t *tail;
     volatile qlfqueue_node_t *next;
 
-    assert(q != NULL);
-    if (q == NULL) {
-	return 1;
-    }
+    qassert_ret((q != NULL), QTHREAD_BADARGS);
 
     while (1) {
 	head = _(q->head);
