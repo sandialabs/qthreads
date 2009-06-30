@@ -60,12 +60,12 @@ int main(int argc, char *argv[])
 	exit(-1);
     }
 
-    if (qlfqueue_enqueue(me, q, (void*)me) != 0) {
+    if (qlfqueue_enqueue(me, q, (void*)(intptr_t)1) != 0) {
 	fprintf(stderr, "qlfqueue_enqueue() failed!\n");
 	exit(-1);
     }
 
-    if (qlfqueue_dequeue(me, q) != me) {
+    if (qlfqueue_dequeue(me, q) != (void*)(intptr_t)1) {
 	fprintf(stderr, "qlfqueue_dequeue() failed!\n");
 	exit(-1);
     }
