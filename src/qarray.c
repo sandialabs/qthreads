@@ -449,6 +449,7 @@ badret_exit:
 	}
 	free(ret);
     }
+    return NULL;
 }				       /*}}} */
 
 qarray *qarray_create(const size_t count, const size_t obj_size)
