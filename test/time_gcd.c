@@ -5,7 +5,6 @@
 #include <stdlib.h>
 #include <assert.h>
 #include "qtimer.h"
-#define QTHREAD_SHIFT_GCD
 #include "qt_gcd.h"
 
 static inline size_t shift_gcd(size_t a, size_t b)
@@ -51,7 +50,6 @@ int main ()
     size_t *answer1 = malloc(sizeof(size_t) * BIGNUM);
     size_t *answer2 = malloc(sizeof(size_t) * BIGNUM);
     size_t i;
-    qtimer_t lib_timer = qtimer_new();
     qtimer_t mod_timer = qtimer_new();
     qtimer_t shift_timer = qtimer_new();
     for (i=0;i<BIGNUM;i++) {
@@ -61,11 +59,6 @@ int main ()
     for (i=0;i<BIGNUM;i++) {
 	answer1[i] = qt_gcd(bigset[i].a, bigset[i].b);
     }
-    qtimer_start(lib_timer);
-    for (i=0;i<BIGNUM;i++) {
-	answer1[i] = qt_gcd(bigset[i].a, bigset[i].b);
-    }
-    qtimer_stop(lib_timer);
     for (i=0;i<BIGNUM;i++) {
 	answer2[i] = mod_gcd(bigset[i].a, bigset[i].b);
     }
@@ -92,19 +85,13 @@ int main ()
 	    printf("ERROR! %lu\n", (unsigned long)i);
 	}
     }
-    for (i=0;i<BIGNUM;i++) {
-	answer1[i] = qt_gcd(bigset[i].a, bigset[i].b);
-    }
-    qtimer_start(lib_timer);
-    for (i=0;i<BIGNUM;i++) {
-	answer1[i] = qt_gcd(bigset[i].a, bigset[i].b);
-    }
-    qtimer_stop(lib_timer);
-    printf("  lib gcd secs: %f\n", qtimer_secs(lib_timer));
     printf("  mod gcd secs: %f\n", qtimer_secs(mod_timer));
     printf("shift gcd secs: %f\n", qtimer_secs(shift_timer));
-    assert(qtimer_secs(lib_timer) < ((qtimer_secs(shift_timer) + qtimer_secs(mod_timer))/2.0));
-    qtimer_free(lib_timer);
+#ifdef QTHREAD_SHIFT_GCD
+    assert(qtimer_secs(shift_timer) < qtimer_secs(mod_timer));
+#else
+    assert(qtimer_secs(shift_timer) > qtimer_secs(mod_timer));
+#endif
     qtimer_free(mod_timer);
     qtimer_free(shift_timer);
     free(bigset);
