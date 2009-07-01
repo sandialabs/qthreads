@@ -151,7 +151,7 @@ qt_mpool qt_mpool_create_aligned(const int sync, size_t item_size,
     if (sync) {
 	pool->lock = (pthread_mutex_t *) malloc(sizeof(pthread_mutex_t));
 	qassert_goto((pool->lock != NULL), errexit);
-	qassert_goto((pthread_mutex_init(pool->lock, NULL) != 0), errexit);
+	qassert_goto((pthread_mutex_init(pool->lock, NULL) == 0), errexit);
     }
 #endif
     if (pagesize == 0) {
