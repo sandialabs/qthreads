@@ -123,11 +123,11 @@ char *human_readable_rate(double rate)
     const double kB = 1024;
 
     if (rate > GB) {
-	snprintf(readable_string, 100, "(%'.1f GB/s)", rate / GB);
+	snprintf(readable_string, 100, "(%.1f GB/s)", rate / GB);
     } else if (rate > MB) {
-	snprintf(readable_string, 100, "(%'.1f MB/s)", rate / MB);
+	snprintf(readable_string, 100, "(%.1f MB/s)", rate / MB);
     } else if (rate > kB) {
-	snprintf(readable_string, 100, "(%'.1f kB/s)", rate / kB);
+	snprintf(readable_string, 100, "(%.1f kB/s)", rate / kB);
     } else {
 	memset(readable_string, 0, 100*sizeof(char));
     }

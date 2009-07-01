@@ -180,19 +180,19 @@ template <class FptrT, class ObjT, class Arg1B, class Arg2B, class Arg3B, class 
 	  class Arg1V, class Arg2V, class Arg3V, class Arg4V, class Arg5V >
 C_BODY(ObjT,void,Arg1B,Arg2B,Arg3B,Arg4B,Arg5B,void*,Arg1V,Arg2V,Arg3V,Arg4V,Arg5V);
 C_VOID_RUN_OBJ(5);
-C_CLOSE();
+C_CLOSE()
 
 template <class FptrT, class RetB, class Arg1B, class Arg2B, class Arg3B, class Arg4B, class Arg5B,
 	  class RetV, class Arg1V, class Arg2V, class Arg3V, class Arg4V, class Arg5V >
 C_BODY(void,RetB,Arg1B,Arg2B,Arg3B,Arg4B,Arg5B,RetV,Arg1V,Arg2V,Arg3V,Arg4V,Arg5V);
 C_RUN(5);
-C_CLOSE();
+C_CLOSE()
 
 template <class FptrT, class Arg1B, class Arg2B, class Arg3B, class Arg4B, class Arg5B,
 	  class Arg1V, class Arg2V, class Arg3V, class Arg4V, class Arg5V>
 C_BODY(void,void,Arg1B,Arg2B,Arg3B,Arg4B,Arg5B,void*,Arg1V,Arg2V,Arg3V,Arg4V,Arg5V);
 C_VOID_RUN(5);
-C_CLOSE();
+C_CLOSE()
 
 /** 4 Args **/
 
@@ -200,25 +200,25 @@ template <class FptrT, class ObjT, class RetB, class Arg1B, class Arg2B, class A
 	  class RetV, class Arg1V, class Arg2V, class Arg3V, class Arg4V >
 C_BODY(ObjT,RetB,Arg1B,Arg2B,Arg3B,Arg4B,void,RetV,Arg1V,Arg2V,Arg3V,Arg4V,void*);
 C_RUN_OBJ(4);
-C_CLOSE();
+C_CLOSE()
 
 template <class FptrT, class ObjT, class Arg1B, class Arg2B, class Arg3B, class Arg4B,
 	  class Arg1V, class Arg2V, class Arg3V, class Arg4V >
 C_BODY(ObjT,void,Arg1B,Arg2B,Arg3B,Arg4B,void,void*,Arg1V,Arg2V,Arg3V,Arg4V,void*);
 C_VOID_RUN_OBJ(4);
-C_CLOSE();
+C_CLOSE()
 
 template <class FptrT, class RetB, class Arg1B, class Arg2B, class Arg3B, class Arg4B,
 	  class RetV, class Arg1V, class Arg2V, class Arg3V, class Arg4V>
 C_BODY(void,RetB,Arg1B,Arg2B,Arg3B,Arg4B,void,RetV,Arg1V,Arg2V,Arg3V,Arg4V,void*);
 C_RUN(4);
-C_CLOSE();
+C_CLOSE()
 
 template <class FptrT, class Arg1B, class Arg2B, class Arg3B, class Arg4B,
 	  class Arg1V, class Arg2V, class Arg3V, class Arg4V >
 C_BODY(void,void,Arg1B,Arg2B,Arg3B,Arg4B,void,void*,Arg1V,Arg2V,Arg3V,Arg4V,void*);
 C_VOID_RUN(4);
-C_CLOSE();
+C_CLOSE()
 
 /** 3 Args **/
 
@@ -226,25 +226,25 @@ template <class FptrT, class ObjT, class RetB, class Arg1B, class Arg2B, class A
 	  class RetV, class Arg1V, class Arg2V, class Arg3V >
 C_BODY(ObjT,RetB,Arg1B,Arg2B,Arg3B,void,void,RetV,Arg1V,Arg2V,Arg3V,void*,void*);
 C_RUN_OBJ(3);
-C_CLOSE();
+C_CLOSE()
 
 template <class FptrT, class ObjT, class Arg1B, class Arg2B, class Arg3B,
 	  class Arg1V, class Arg2V, class Arg3V >
 C_BODY(ObjT,void,Arg1B,Arg2B,Arg3B,void,void,void*,Arg1V,Arg2V,Arg3V,void*,void*);
 C_VOID_RUN_OBJ(3);
-C_CLOSE();
+C_CLOSE()
 
 template <class FptrT, class RetB, class Arg1B, class Arg2B, class Arg3B,
 	  class RetV, class Arg1V, class Arg2V, class Arg3V >
 C_BODY(void,RetB,Arg1B,Arg2B,Arg3B,void,void,RetV,Arg1V,Arg2V,Arg3V,void*,void*);
 C_RUN(3);
-C_CLOSE();
+C_CLOSE()
 
 template <class FptrT, class Arg1B, class Arg2B, class Arg3B,
 	  class Arg1V, class Arg2V, class Arg3V >
 C_BODY(void,void,Arg1B,Arg2B,Arg3B,void,void,void*,Arg1V,Arg2V,Arg3V,void*,void*);
 C_VOID_RUN(3);
-C_CLOSE();
+C_CLOSE()
 
 /** 2 Args **/
 
@@ -252,69 +252,69 @@ template <class FptrT, class ObjT, class RetB, class Arg1B, class Arg2B,
 	  class RetV, class Arg1V, class Arg2V>
 C_BODY(ObjT,RetB,Arg1B,Arg2B,void,void,void,RetV,Arg1V,Arg2V,void*,void*,void*);
 C_RUN_OBJ(2);
-C_CLOSE();
+C_CLOSE()
 
 template <class FptrT, class ObjT, class Arg1B, class Arg2B,
 	  class Arg1V, class Arg2V>
 C_BODY(ObjT,void,Arg1B,Arg2B,void,void,void,void*,Arg1V,Arg2V,void*,void*,void*);
 C_VOID_RUN_OBJ(2);
-C_CLOSE();
+C_CLOSE()
 
 template <class FptrT, class RetB, class Arg1B, class Arg2B,
 	  class RetV, class Arg1V, class Arg2V>
 C_BODY(void,RetB,Arg1B,Arg2B,void,void,void,RetV,Arg1V,Arg2V,void*,void*,void*);
 C_RUN(2);
-C_CLOSE();
+C_CLOSE()
 
 template <class FptrT, class Arg1B, class Arg2B,
 	  class Arg1V, class Arg2V>
 C_BODY(void,void,Arg1B,Arg2B,void,void,void,void*,Arg1V,Arg2V,void*,void*,void*);
 C_VOID_RUN(2);
-C_CLOSE();
+C_CLOSE()
 
 /** 1 Args **/
 
 template <class FptrT, class ObjT, class RetB, class Arg1B, class RetV, class Arg1V>
 C_BODY(ObjT,RetB,Arg1B,void,void,void,void,RetV,Arg1V,void*,void*,void*,void*);
 C_RUN_OBJ(1);
-C_CLOSE();
+C_CLOSE()
 
 template <class FptrT, class ObjT, class Arg1B, class Arg1V>
 C_BODY(ObjT,void,Arg1B,void,void,void,void,void*,Arg1V,void*,void*,void*,void*);
 C_VOID_RUN_OBJ(1);
-C_CLOSE();
+C_CLOSE()
 
 template <class FptrT, class RetB, class Arg1B, class RetV, class Arg1V>
 C_BODY(void,RetB,Arg1B,void,void,void,void,RetV,Arg1V,void*,void*,void*,void*);
 C_RUN(1);
-C_CLOSE();
+C_CLOSE()
 
 template <class FptrT, class Arg1B, class Arg1V>
 C_BODY(void,void,Arg1B,void,void,void,void,void*,Arg1V,void*,void*,void*,void*);
 C_VOID_RUN(1);
-C_CLOSE();
+C_CLOSE()
 
 /** 0 Args **/
 
 template <class FptrT, class ObjT, class RetB, class RetV>
 C_BODY(ObjT,RetB,void,void,void,void,void,RetV,void*,void*,void*,void*,void*);
 C_RUN_OBJ(0);
-C_CLOSE();
+C_CLOSE()
 
 template <class FptrT, class ObjT>
 C_BODY(ObjT,void,void,void,void,void,void,void*,void*,void*,void*,void*,void*);
 C_VOID_RUN_OBJ(0);
-C_CLOSE();
+C_CLOSE()
 
 template <class FptrT, class RetB, class RetV>
 C_BODY(void,RetB,void,void,void,void,void,RetV,void*,void*,void*,void*,void*);
 C_RUN(0);
-C_CLOSE();
+C_CLOSE()
 
 template <class FptrT >
 C_BODY(void,void,void,void,void,void,void,void*,void*,void*,void*,void*,void*);
 C_VOID_RUN(0);
-C_CLOSE();
+C_CLOSE()
 
 /** Iteration Object **/
 

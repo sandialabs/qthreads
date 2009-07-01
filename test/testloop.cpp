@@ -81,7 +81,7 @@ int genericArraySet (ArrayT& arr, int size, const char* const name) {
   printf (">>>>>>  Array setting %s <<<<<<<\n", name);
   mt_loop<Iterator, ArrayPtr, mt_loop_traits::Par> (set, 0, arr, 0, size);
   return 1;
-};
+}
 
 template <class ArrayT>
 void genericArrayPrint (ArrayT& arr, int size, const char* const name) {
@@ -89,7 +89,7 @@ void genericArrayPrint (ArrayT& arr, int size, const char* const name) {
   mt_loop<ArrayPtr, mt_loop_traits::Par> (output, arr, 0, size);
   printf (">>>>>>  Array printing double by value %s <<<<<<<\n", name);
   mt_loop<ArrayPtr, mt_loop_traits::Par> (output_double, arr, 0, size);
-};
+}
 
 extern "C" double assign (double val) {
   return val;
@@ -145,7 +145,7 @@ void message_stuff() {
   printf (">>>>>>  Msg printing <<<<<<<\n");
   mt_loop<Iterator, Val, ArrayPtr, mt_loop_traits::Par> 
     (hello, 0, msg, msg, 0, strlen(msg) - 1);
-};
+}
 
 void vanilla_stuff () {
   int i = 7;
