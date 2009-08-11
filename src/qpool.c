@@ -215,7 +215,7 @@ qpool *qpool_create_aligned(const size_t isize, size_t alignment)
 	_(pool->pools[pindex].reuse_pool) = NULL;
 	pool->pools[pindex].alloc_block =
 	    (char *)qpool_internal_aligned_alloc(alloc_size,
-						 LIBNUMA_ONLY(pool->pools[pindex].node)
+						 LIBNUMA_ONLY_ARG(pool->pools[pindex].node)
 						 alignment);
 	VALGRIND_MAKE_MEM_NOACCESS(pool->pools[pindex].alloc_block,
 				   alloc_size);
