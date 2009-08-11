@@ -15,8 +15,12 @@
 #include <qthread/qutil.h>
 #include "qtimer.h"
 
-int cmp(const void *a, const void *b) {
+int dcmp(const void *a, const void *b) {
     return(*(double*)a - *(double*)b);
+}
+
+int acmp(const void *a, const void *b) {
+    return(*(aligned_t*)a - *(aligned_t*)b);
 }
 
 int main(int argc, char *argv[])
@@ -69,25 +73,31 @@ int main(int argc, char *argv[])
 	    qtimer_stop(timer);
 	    cumulative_time += qtimer_secs(timer);
 	    if (interactive == 1) {
-		printf("\t%u: sorting %lu doubles in parallel took: %f seconds\n",
+		printf("\t%u: sorting %lu doubles with qutil took: %f seconds\n",
 			i, (unsigned long)len,
 			qtimer_secs(timer));
 	    }
 	}
 	if (interactive == 1) {
-	    printf("sorting %lu doubles in parallel took: %f seconds\n",
+	    printf("sorting %lu doubles with qutil took: %f seconds (avg)\n",
 		    (unsigned long)len,
 		    cumulative_time/(double)iterations);
 	}
+	cumulative_time = 0;
 	for (unsigned int i=0;i<iterations;i++) {
 	    memcpy(d_array2, d_array, len*sizeof(double));
 	    qtimer_start(timer);
-	    qsort(d_array2, len, sizeof(double), cmp);
+	    qsort(d_array2, len, sizeof(double), dcmp);
 	    qtimer_stop(timer);
 	    cumulative_time += qtimer_secs(timer);
+	    if (interactive == 1) {
+		printf("\t%u: sorting %lu doubles with libc took: %f seconds\n",
+			i, (unsigned long)len,
+			qtimer_secs(timer));
+	    }
 	}
 	if (interactive == 1) {
-	    printf("sorting %lu doubles took: %f seconds\n",
+	    printf("sorting %lu doubles with libc took: %f seconds\n",
 		    (unsigned long)len,
 		    cumulative_time/(double)iterations);
 	}
@@ -110,9 +120,22 @@ int main(int argc, char *argv[])
 	    cumulative_time += qtimer_secs(timer);
 	}
 	if (interactive == 1) {
-	    printf("sorting %lu aligned_ts took: %f seconds\n",
+	    printf("sorting %lu aligned_ts with qutil took: %f seconds\n",
 		    (unsigned long)len,
-		    cumulative_time);
+		    cumulative_time/(double)iterations);
+	}
+	cumulative_time = 0;
+	for (int i=0;i<10;i++) {
+	    memcpy(ui_array2, ui_array, len*sizeof(aligned_t));
+	    qtimer_start(timer);
+	    qsort(ui_array2, len, sizeof(double), acmp);
+	    qtimer_stop(timer);
+	    cumulative_time += qtimer_secs(timer);
+	}
+	if (interactive == 1) {
+	    printf("sorting %lu aligned_ts with libc took: %f seconds (avg)\n",
+		    (unsigned long)len,
+		    cumulative_time/(double)iterations);
 	}
 	free(ui_array);
 	free(ui_array2);
