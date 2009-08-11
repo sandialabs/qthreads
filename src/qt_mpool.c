@@ -85,7 +85,7 @@ static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
 	case 8:
 	case 4:
 	case 2:
-#ifdef HAVE_16ALIGNED_MALLOC
+#if defined(HAVE_16ALIGNED_MALLOC) && ! defined(QTHREAD_USE_VALGRIND)
 	    ret = malloc(alloc_size);
 #elif defined(HAVE_MEMALIGN)
 	    ret = memalign(16, alloc_size);
