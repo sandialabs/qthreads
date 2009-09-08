@@ -49,6 +49,19 @@
 #ifdef QTHREAD_HAVE_LIBNUMA
 # include <numa.h>
 #endif
+#ifdef HAVE_MACH_THREAD_POLICY_H
+# include <mach/mach_init.h>
+# include <mach/thread_policy.h>
+kern_return_t thread_policy_set(thread_t thread,
+				thread_policy_flavor_t flavor,
+				thread_policy_t policy_info,
+				mach_msg_type_number_t count);
+kern_return_t thread_policy_get(thread_t thread,
+				thread_policy_flavor_t flavor,
+				thread_policy_t policy_info,
+				mach_msg_type_number_t *count,
+				boolean_t *get_default);
+#endif
 
 #include "qt_mpool.h"
 #include "qt_atomics.h"
@@ -966,7 +979,34 @@ static void *qthread_shepherd(void *arg)
     /* Initialize myself */
     pthread_setspecific(shepherd_structs, arg);
     if (getenv("QTHREAD_AFFINITY")) {
-#ifdef QTHREAD_HAVE_LIBNUMA
+#ifdef HAVE_MACH_THREAD_POLICY_H
+	mach_msg_type_number_t Count = THREAD_AFFINITY_POLICY_COUNT;
+	thread_affinity_policy_data_t mask[THREAD_AFFINITY_POLICY_COUNT] = { 0 };
+	/*
+	boolean_t GetDefault = 0;
+	if (thread_policy_get(mach_thread_self(),
+		          THREAD_AFFINITY_POLICY,
+			  (thread_policy_t)&mask,
+			  &Count,
+			  &GetDefault) != KERN_SUCCESS) {
+	    printf("ERROR! Cannot get affinity for some reason\n");
+	}
+	printf("THREAD_AFFINITY_POLICY: krc=%#x default=%d\n",
+		krc, GetDefault);
+	printf("\tcount=%i\n", Count);
+	for (int i=0; i<Count; i++) {
+	    printf("\t\taffinity_tag=%d (%#x)\n",
+		mask[i].affinity_tag, mask[i].affinity_tag);
+	}*/
+	mask[0].affinity_tag = me->shepherd_id+1;
+	Count = 1;
+	if (thread_policy_set(mach_thread_self(),
+		    THREAD_AFFINITY_POLICY,
+		    (thread_policy_t)&mask,
+		    Count) != KERN_SUCCESS) {
+	    fprintf(stderr, "ERROR! Cannot SET affinity for some reason\n");
+	}
+#elif defined(QTHREAD_HAVE_LIBNUMA)
 	if (numa_run_on_node(me->node) != 0) {
 	    numa_error("setting thread affinity");
 	}
