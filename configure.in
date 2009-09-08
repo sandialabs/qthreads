@@ -367,6 +367,8 @@ AC_MSG_RESULT($qt_cv_malwp)
 AX_CHECK_PAGE_ALIGNED_MALLOC
 AX_CHECK_16ALIGNED_MALLOC
 AX_CHECK_16ALIGNED_CALLOC
+AX_CHECK_8ALIGNED_MALLOC
+AX_CHECK_8ALIGNED_CALLOC
 QTHREAD_CHECK_WORKING_VALLOC
 
 AC_CACHE_SAVE
@@ -441,7 +443,7 @@ int main() {
 
 AC_ARG_WITH([gcd],
 			[AS_HELP_STRING([--with-gcd=[gcd_style]],
-							[specify which algorithm for computing greatest common denominator. Current options are: "mod" (default) and "shift". The mod option uses modulo operations, and is usually the fastest option. On some systems, modulo operations are particularly slow, and so the "shift" algorithm is faster. The difference is usually minor, and probably won't impact overall performance significantly, but this option is for true speed-demons who want to get the last word in speed.])],
+							[specify which algorithm for computing greatest common denominator. Current options are: "mod" (default) and "shift". The mod option uses modulo operations, and is usually the fastest option. On some systems, modulo operations are particularly slow, and so the "shift" algorithm is faster. The difference is usually minor, and probably will not impact overall performance significantly, but this option is for true speed-demons who want to get the last word in speed.])],
 			[],
 			[with_gcd=mod])
 AS_IF([test "x$with_gcd" == "xshift"],
@@ -497,7 +499,11 @@ AS_IF([test "x$qthread_implementation" = "xunix"],
 						[AC_SEARCH_LIBS([lgrp_init], [lgrp])
 						break],
 						[QTHREAD_CHECK_LIBNUMA([],
-							 [QTHREAD_CHECK_PLPA])])
+							 [QTHREAD_CHECK_PLPA([],
+												 [AC_CHECK_HEADERS([mach/mach_init.h mach/thread_policy.h])
+												  AC_SEARCH_LIBS([thread_policy_set])
+												  AC_SEARCH_LIBS([thread_policy_get])
+												  ])])])
 	   case "$host" in
 		   ia32-*|x86_64-*|i*86-*)
 			QTHREAD_IA_CACHELINE
