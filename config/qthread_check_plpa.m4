@@ -30,4 +30,7 @@ int main(int argc, char* argv[]) {
   [plpa_happy=no])
   AC_MSG_RESULT($plpa_happy)
   ])
+  AS_IF([test "x$plpa_happy" = "xyes"],
+		[$1],
+		[$2])
 ])
