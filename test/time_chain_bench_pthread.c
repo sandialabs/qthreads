@@ -9,21 +9,27 @@
 
 #include <pthread.h>
 
-#define NUM_THREADS 1000
-#define PER_THREAD_INCR 10000
+#define NUM_THREADS 10
+#define LOCK_COUNT 1000000
 
-aligned_t counter = 0;
-pthread_mutex_t counter_lock;
+aligned_t counters[LOCK_COUNT] = { 0 };
+pthread_mutex_t counter_locks[LOCK_COUNT];
 
 void* qincr(void *arg)
 {
-    aligned_t *c = (aligned_t*)arg;
+    aligned_t id = (aligned_t)arg;
     size_t incrs;
 
-    for (incrs = 0; incrs < PER_THREAD_INCR; incrs++) {
-	pthread_mutex_lock(&counter_lock);
-	pthread_mutex_unlock(&counter_lock);
+    for (incrs = 0; incrs < LOCK_COUNT; incrs++) {
+	pthread_mutex_lock(&(counter_locks[incrs]));
+	while (counters[incrs] != id) {
+	    pthread_mutex_unlock(&(counter_locks[incrs]));
+	    pthread_mutex_lock(&(counter_locks[incrs]));
+	}
+	pthread_mutex_unlock(&(counter_locks[incrs]));
     }
+
+    return NULL;
 }
 
 int main(int argc, char *argv[])
@@ -47,10 +53,13 @@ int main(int argc, char *argv[])
 	}
     }
 
+    for (int i=0; i<LOCK_COUNT; i++) {
+	pthread_mutex_init(&(counter_locks[i]), NULL);
+    }
     for (int iteration = 0; iteration < 10; iteration++) {
 	qtimer_start(timer);
 	for (int i=0; i<NUM_THREADS; i++) {
-	    pthread_create(&(rets[i]), NULL, qincr, &counter);
+	    pthread_create(&(rets[i]), NULL, qincr, (void*)(intptr_t)(i));
 	}
 	for (int i=0; i<NUM_THREADS; i++) {
 	    pthread_join(rets[i], NULL);
