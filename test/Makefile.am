@@ -40,6 +40,12 @@ TESTS += time_swap time_producerconsumer time_increments \
 	 time_lul_bench_pthread \
 	 time_mutex_bench \
 	 time_mutex_bench_pthread \
+	 time_spin_bench \
+	 time_spin_bench_pthread \
+	 time_thrcrt_bench \
+	 time_thrcrt_bench_pthread \
+	 time_cncthr_bench \
+	 time_cncthr_bench_pthread \
 	 time_gcd
 endif
 
@@ -178,3 +184,21 @@ time_mutex_bench_DEPENDENCIES = $(QTHREADLIB)
 
 time_mutex_bench_pthread_SOURCES = time_mutex_bench_pthread.c
 time_mutex_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
+
+time_spin_bench_SOURCES = time_spin_bench.c
+time_spin_bench_DEPENDENCIES = $(QTHREADLIB)
+
+time_spin_bench_pthread_SOURCES = time_spin_bench_pthread.c
+time_spin_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
+
+time_thrcrt_bench_SOURCES = time_thrcrt_bench.c
+time_thrcrt_bench_DEPENDENCIES = $(QTHREADLIB)
+
+time_thrcrt_bench_pthread_SOURCES = time_thrcrt_bench_pthread.c
+time_thrcrt_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
+
+time_cncthr_bench_SOURCES = time_cncthr_bench.c
+time_cncthr_bench_DEPENDENCIES = $(QTHREADLIB)
+
+time_cncthr_bench_pthread_SOURCES = time_cncthr_bench_pthread.c
+time_cncthr_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
