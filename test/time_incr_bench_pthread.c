@@ -22,7 +22,7 @@ void * qincr(void *arg)
 
     for (incrs = 0; incrs < PER_THREAD_INCR; incrs++) {
 	pthread_mutex_lock(&counter_lock);
-	counter ++;
+	(*c) ++;
 	pthread_mutex_unlock(&counter_lock);
     }
 
