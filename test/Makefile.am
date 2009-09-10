@@ -36,6 +36,10 @@ TESTS += time_swap time_producerconsumer time_increments \
 	 time_wavefront \
 	 time_incr_bench \
 	 time_incr_bench_pthread \
+	 time_lul_bench \
+	 time_lul_bench_pthread \
+	 time_mutex_bench \
+	 time_mutex_bench_pthread \
 	 time_gcd
 endif
 
@@ -162,3 +166,15 @@ time_incr_bench_DEPENDENCIES = $(QTHREADLIB)
 
 time_incr_bench_pthread_SOURCES = time_incr_bench_pthread.c
 time_incr_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
+
+time_lul_bench_SOURCES = time_lul_bench.c
+time_lul_bench_DEPENDENCIES = $(QTHREADLIB)
+
+time_lul_bench_pthread_SOURCES = time_lul_bench_pthread.c
+time_lul_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
+
+time_mutex_bench_SOURCES = time_mutex_bench.c
+time_mutex_bench_DEPENDENCIES = $(QTHREADLIB)
+
+time_mutex_bench_pthread_SOURCES = time_mutex_bench_pthread.c
+time_mutex_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
