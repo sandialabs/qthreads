@@ -34,6 +34,8 @@ TESTS += time_swap time_producerconsumer time_increments \
 	 time_qutil_qsort \
 	 time_allpairs \
 	 time_wavefront \
+	 time_incr_bench \
+	 time_incr_bench_pthread \
 	 time_gcd
 endif
 
@@ -154,3 +156,9 @@ time_allpairs_DEPENDENCIES = $(QTHREADLIB)
 
 time_wavefront_SOURCES = time_wavefront.c
 time_wavefront_DEPENDENCIES = $(QTHREADLIB)
+
+time_incr_bench_SOURCES = time_incr_bench.c
+time_incr_bench_DEPENDENCIES = $(QTHREADLIB)
+
+time_incr_bench_pthread_SOURCES = time_incr_bench_pthread.c
+time_incr_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
