@@ -26,6 +26,7 @@ void* qincr(void *arg)
 	    pthread_mutex_unlock(&(counter_locks[incrs]));
 	    pthread_mutex_lock(&(counter_locks[incrs]));
 	}
+	counters[incrs]++;
 	pthread_mutex_unlock(&(counter_locks[incrs]));
     }
 
@@ -42,21 +43,11 @@ int main(int argc, char *argv[])
     qtimer_t timer = qtimer_new();
     double cumulative_time = 0.0;
 
-    if (argc >= 2) {
-	threads = strtol(argv[1], NULL, 0);
-	if (threads < 0) {
-	    threads = 0;
-	    interactive = 0;
-	} else {
-	    printf("threads: %i\n", threads);
-	    interactive = 1;
-	}
-    }
-
     for (int i=0; i<LOCK_COUNT; i++) {
 	pthread_mutex_init(&(counter_locks[i]), NULL);
     }
     for (int iteration = 0; iteration < 10; iteration++) {
+	memset(counters, 0, sizeof(aligned_t)*LOCK_COUNT);
 	qtimer_start(timer);
 	for (int i=0; i<NUM_THREADS; i++) {
 	    pthread_create(&(rets[i]), NULL, qincr, (void*)(intptr_t)(i));
