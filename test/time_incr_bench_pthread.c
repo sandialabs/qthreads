@@ -41,6 +41,8 @@ int main(int argc, char *argv[])
 
     pthread_mutex_init(&counter_lock, NULL);
 
+    interactive = (argc > 1);
+
     for (int iteration = 0; iteration < 10; iteration++) {
 	counter = 0;
 	qtimer_start(timer);
@@ -52,6 +54,9 @@ int main(int argc, char *argv[])
 	}
 	qtimer_stop(timer);
 	assert(counter == (NUM_THREADS * PER_THREAD_INCR));
+	if (interactive) {
+	    printf("\ttest iteration %i: %f secs\n", iteration, qtimer_secs(timer));
+	}
 	cumulative_time += qtimer_secs(timer);
     }
     printf("pthread time: %f\n", cumulative_time/10.0);

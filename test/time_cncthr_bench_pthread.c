@@ -27,6 +27,8 @@ int main(int argc, char *argv[])
     double cumulative_time = 0.0;
     size_t counter;
 
+    interactive = (argc > 1);
+
     for (int iteration = 0; iteration < 10; iteration++) {
 	qtimer_start(timer);
 	for (int i=0; i<NUM_THREADS; i++) {
@@ -36,6 +38,9 @@ int main(int argc, char *argv[])
 	    pthread_join(rets[i], NULL);
 	}
 	qtimer_stop(timer);
+	if (interactive) {
+	    printf("\ttest iteration %i: %f secs\n", iteration, qtimer_secs(timer));
+	}
 	cumulative_time += qtimer_secs(timer);
     }
     printf("pthread time: %f\n", cumulative_time/10.0);

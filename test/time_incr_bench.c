@@ -38,12 +38,11 @@ int main(int argc, char *argv[])
 	threads = strtol(argv[1], NULL, 0);
 	if (threads < 0) {
 	    threads = 0;
-	    interactive = 0;
 	} else {
 	    printf("threads: %i\n", threads);
-	    interactive = 1;
 	}
     }
+    interactive = (argc > 2);
 
     if (qthread_init(threads) != QTHREAD_SUCCESS) {
 	fprintf(stderr, "qthread library could not be initialized!\n");
@@ -62,6 +61,9 @@ int main(int argc, char *argv[])
 	}
 	qtimer_stop(timer);
 	assert(counter == (NUM_THREADS * PER_THREAD_INCR));
+	if (interactive) {
+	    printf("\ttest iteration %i: %f secs\n", iteration, qtimer_secs(timer));
+	}
 	cumulative_time += qtimer_secs(timer);
     }
     printf("qthread time: %f\n", cumulative_time/10.0);
