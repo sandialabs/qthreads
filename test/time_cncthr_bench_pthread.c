@@ -27,17 +27,6 @@ int main(int argc, char *argv[])
     double cumulative_time = 0.0;
     size_t counter;
 
-    if (argc >= 2) {
-	threads = strtol(argv[1], NULL, 0);
-	if (threads < 0) {
-	    threads = 0;
-	    interactive = 0;
-	} else {
-	    printf("threads: %i\n", threads);
-	    interactive = 1;
-	}
-    }
-
     for (int iteration = 0; iteration < 10; iteration++) {
 	qtimer_start(timer);
 	for (int i=0; i<NUM_THREADS; i++) {

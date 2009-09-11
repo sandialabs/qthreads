@@ -36,17 +36,6 @@ int main(int argc, char *argv[])
     qtimer_t timer = qtimer_new();
     double cumulative_time = 0.0;
 
-    if (argc >= 2) {
-	threads = strtol(argv[1], NULL, 0);
-	if (threads < 0) {
-	    threads = 0;
-	    interactive = 0;
-	} else {
-	    printf("threads: %i\n", threads);
-	    interactive = 1;
-	}
-    }
-
     for (int iteration = 0; iteration < 10; iteration++) {
 	qtimer_start(timer);
 	for (int i=0; i<NUM_THREADS; i++) {
