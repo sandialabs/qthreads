@@ -979,7 +979,7 @@ static void *qthread_shepherd(void *arg)
     /* Initialize myself */
     pthread_setspecific(shepherd_structs, arg);
     if (getenv("QTHREAD_AFFINITY")) {
-#ifdef HAVE_MACH_THREAD_POLICY_H
+#if defined(HAVE_MACH_THREAD_POLICY_H) && (defined(HAVE_DECL_THREAD_AFFINITY_POLICY_COUNT) && HAVE_DECL_THREAD_AFFINITY_POLICY_COUNT == 1)
 	mach_msg_type_number_t Count = THREAD_AFFINITY_POLICY_COUNT;
 	thread_affinity_policy_data_t mask[THREAD_AFFINITY_POLICY_COUNT] = { 0 };
 	/*
