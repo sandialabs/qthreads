@@ -503,6 +503,7 @@ AS_IF([test "x$qthread_implementation" = "xunix"],
 												 [AC_CHECK_HEADERS([mach/mach_init.h mach/thread_policy.h])
 												  AC_SEARCH_LIBS([thread_policy_set])
 												  AC_SEARCH_LIBS([thread_policy_get])
+												  AC_CHECK_DECLS([THREAD_AFFINITY_POLICY_COUNT])
 												  ])])])
 	   case "$host" in
 		   ia32-*|x86_64-*|i*86-*)
