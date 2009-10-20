@@ -92,7 +92,7 @@ struct qt_wavefront_workunit {
     struct qt_wavefront_workunit *next;
 };
 
-volatile aligned_t requeued=0;
+//volatile aligned_t requeued=0;
 
 static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const arg)
 {
@@ -177,8 +177,8 @@ static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const 
 		if (wu->col == L->slats.segs-1 && wu->row == L->struts.segs-1) {
 		    *vol_id_a(arg->no_more_work) = 1;
 		}
-	    } else {
-		qthread_incr(&requeued, 1);
+	    //} else {
+		//qthread_incr(&requeued, 1);
 	    }
 	    qpool_free(me, workunit_pool, wu);
 	}
@@ -300,7 +300,7 @@ qt_wavefront_lattice *qt_wavefront(qarray * restrict const vertical,
 	    qthread_yield(me);
 	}
 	qdqueue_destroy(me, wargs.work_queue);
-	printf("duplicates: %lu\n", (unsigned long)requeued);
+	//printf("duplicates: %lu\n", (unsigned long)requeued);
 	return L;
     }
     return NULL;

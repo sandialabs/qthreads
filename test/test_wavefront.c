@@ -98,7 +98,8 @@ int main(int argc, char *argv[])
 
     qarray_iter_loop(me, h, 1, ASIZE+1, assignrand, NULL);
     qarray_iter_loop(me, v, 0, ASIZE, assignrand, NULL);
-    printf("v items per seg: %i\n", (int)v->segment_size);
+    if (interactive)
+	printf("v items per seg: %i\n", (int)v->segment_size);
 
     /* do stuff */
     L = qt_wavefront(v, h, avg);
