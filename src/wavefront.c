@@ -130,7 +130,7 @@ static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const 
 	    above = vol_read_qa(&L->slats.strips[wu->row+1][wu->col]);
 	    assert(below);
 	    assert(left);
-	    if (qthread_cas_ptr(&(L->slats.strips[wu->row+1][wu->col]), NULL, (void*)1) == NULL) {
+	    if (qthread_cas_ptr((void*volatile*)&(L->slats.strips[wu->row+1][wu->col]), NULL, (void*)1) == NULL) {
 		/* I win! time to compute! */
 		assert(right == NULL);
 		right = qarray_create_configured(left->count, L->unit_size, ALL_LOCAL, 1, 1);
