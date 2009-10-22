@@ -1257,9 +1257,17 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 
     {
 	char *stacksize = getenv("QTHREAD_STACK_SIZE");
+	size_t ss = 0;
 
-	if (stacksize && atoi(stacksize)) {
-	    qlib->qthread_stack_size = atoi(stacksize);
+	if (stacksize && *stacksize) {
+	    char *eptr;
+	    ss = strtoul(stacksize,&eptr,0);
+	    if (*eptr != 0) {
+		ss = 0;
+	    }
+	}
+	if (ss != 0) {
+	    qlib->qthread_stack_size = ss;
 	} else {
 	    qlib->qthread_stack_size = QTHREAD_DEFAULT_STACK_SIZE;
 	}
