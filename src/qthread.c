@@ -255,6 +255,7 @@ pthread_key_t shepherd_structs;
 
 /* shared globals (w/ futurelib) */
 qlib_t qlib = NULL;
+int qaffinity = 1;
 
 /* internal globals */
 static qt_mpool generic_qthread_pool = NULL;
@@ -977,7 +978,7 @@ static void *qthread_shepherd(void *arg)
 
     /* Initialize myself */
     pthread_setspecific(shepherd_structs, arg);
-    if (getenv("QTHREAD_AFFINITY")) {
+    if (qaffinity) {
 #if defined(HAVE_MACH_THREAD_POLICY_H) && (defined(HAVE_DECL_THREAD_AFFINITY_POLICY_COUNT) && HAVE_DECL_THREAD_AFFINITY_POLICY_COUNT == 1)
 	mach_msg_type_number_t Count = THREAD_AFFINITY_POLICY_COUNT;
 	thread_affinity_policy_data_t mask[THREAD_AFFINITY_POLICY_COUNT] = { 0 };
@@ -1289,7 +1290,12 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 	qlib->shepherds[i].shep_dists = NULL;
 	qlib->shepherds[i].sorted_sheplist = NULL;
     }
-    if (getenv("QTHREAD_AFFINITY")
+    {
+	char * aff = getenv("QTHREAD_AFFINITY");
+	if (aff && !strncmp(aff,"no",3))
+	    qaffinity = 0;
+    }
+    if (qaffinity == 1
 #ifdef QTHREAD_HAVE_LIBNUMA
 	&& numa_available() != -1
 #endif
