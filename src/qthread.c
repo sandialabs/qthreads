@@ -1,6 +1,7 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
+#include <stdio.h>
 #include <stdlib.h>		       /* for malloc() and abort() */
 #ifdef HAVE_MALLOC_H
 # include <malloc.h>			/* for memalign() */
@@ -66,10 +67,6 @@ kern_return_t thread_policy_get(thread_t thread,
 #include "qthread/futurelib.h"
 #include "qthread_innards.h"
 #include "futurelib_innards.h"
-
-#ifdef QTHREAD_DEBUG
-# include <stdio.h>
-#endif
 
 /* internal constants */
 #define QTHREAD_STATE_NEW               0
