@@ -8,6 +8,7 @@
 #include <float.h>		       /* for DBL_EPSILON (according to C89) */
 #include <math.h>		       /* for fabs() */
 #include <assert.h>
+#include <sys/mman.h>
 
 #include <sys/time.h>		       /* for gettimeofday() */
 #include <time.h>		       /* for gettimeofday() */
@@ -59,10 +60,14 @@ int main(int argc, char *argv[])
 
     if (using_doubles) {
 	d_array = calloc(len, sizeof(double));
+	assert(d_array);
+	//madvise(d_array,len*sizeof(double), MADV_SEQUENTIAL);
 	for (i = 0; i < len; i++) {
 	    d_array[i] = ((double)random())/((double)RAND_MAX) + random();
 	}
 	d_array2 = calloc(len, sizeof(double));
+	assert(d_array2);
+	//madvise(d_array2,len*sizeof(double), MADV_RANDOM);
 	if (interactive) {
 	    printf("double array generated...\n");
 	}
