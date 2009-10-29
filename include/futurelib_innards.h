@@ -1,6 +1,8 @@
 #ifndef FUTURELIB_INNARDS_H
 #define FUTURELIB_INNARDS_H
 
+#include <pthread.h>
+
 typedef struct location_s location_t;
 
 struct location_s

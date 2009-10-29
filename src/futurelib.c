@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <cprops/hashtable.h>
 
 #include "futurelib_innards.h"
 #include "qthread_innards.h"

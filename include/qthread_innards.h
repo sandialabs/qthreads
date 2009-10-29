@@ -19,7 +19,9 @@
 # endif
 # include <stdarg.h>		       /* for va_start and va_end */
 #endif
-#include <cprops/hashtable.h>
+//#include <cprops/hashtable.h>
+#include <pthread.h>
+#include <qt_hash.h>
 
 #ifdef __SUN__
 # define STRIPECOUNT 128
@@ -57,7 +59,7 @@ typedef struct qlib_s
      * multiple hashtables to improve performance. The current hashing is a bit
      * of a hack, but improves the bottleneck a bit
      */
-    cp_hashtable *locks[STRIPECOUNT];
+    qt_hash locks[STRIPECOUNT];
 #ifdef QTHREAD_COUNT_THREADS
     aligned_t locks_stripes[STRIPECOUNT];
     pthread_mutex_t locks_stripes_locks[STRIPECOUNT];
@@ -67,7 +69,7 @@ typedef struct qlib_s
      * bottleneck concerns as the above hashtable, though these are slightly
      * better at shrinking their critical section. FEBs have more memory
      * overhead, though. */
-    cp_hashtable *FEBs[STRIPECOUNT];
+    qt_hash FEBs[STRIPECOUNT];
 #ifdef QTHREAD_COUNT_THREADS
     aligned_t febs_stripes[STRIPECOUNT];
     pthread_mutex_t febs_stripes_locks[STRIPECOUNT];

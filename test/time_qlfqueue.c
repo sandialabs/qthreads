@@ -1,7 +1,12 @@
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#ifdef HAVE_CPROPS
 #include <cprops/linked_list.h>
+#endif
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
 #include <qthread/qlfqueue.h>
@@ -10,6 +15,7 @@
 #define ELEMENT_COUNT 10000
 #define THREAD_COUNT 128
 
+#ifdef HAVE_CPROPS
 aligned_t cpqueuer (qthread_t *me, void *arg)
 {
     cp_list *q = (cp_list*)arg;
@@ -37,6 +43,7 @@ aligned_t cpdequeuer (qthread_t *me, void *arg)
     }
     return 0;
 }
+#endif
 
 aligned_t queuer (qthread_t *me, void *arg)
 {
@@ -65,6 +72,7 @@ aligned_t dequeuer (qthread_t *me, void *arg)
     return 0;
 }
 
+#ifdef HAVE_CPROPS
 void loop_cpqueuer (qthread_t *me, const size_t startat, const size_t stopat, void *arg)
 {
     size_t i;
@@ -90,6 +98,7 @@ void loop_cpdequeuer (qthread_t *me, const size_t startat, const size_t stopat, 
 	}
     }
 }
+#endif
 
 void loop_queuer (qthread_t *me, const size_t startat, const size_t stopat, void *arg)
 {
@@ -125,7 +134,9 @@ int main(int argc, char *argv[])
     size_t i;
     aligned_t *rets;
     qtimer_t timer = qtimer_new();
+#ifdef HAVE_CPROPS
     cp_list *cpq;
+#endif
 
     if (argc == 2) {
 	threads = strtol(argv[1], NULL, 0);
@@ -166,6 +177,7 @@ int main(int argc, char *argv[])
 	exit(-2);
     }
 
+#ifdef HAVE_CPROPS
     cpq = cp_list_create();
     qtimer_start(timer);
     qt_loop_balance(0, THREAD_COUNT * ELEMENT_COUNT, loop_cpqueuer, cpq);
@@ -175,6 +187,7 @@ int main(int argc, char *argv[])
     qt_loop_balance(0, THREAD_COUNT * ELEMENT_COUNT, loop_cpdequeuer, cpq);
     qtimer_stop(timer);
     printf("loop balance cp dequeue: %f secs\n", qtimer_secs(timer));
+#endif
 
     rets = calloc(THREAD_COUNT, sizeof(aligned_t));
     assert(rets != NULL);
@@ -195,6 +208,7 @@ int main(int argc, char *argv[])
     }
     printf("threaded lf test: %f secs\n", qtimer_secs(timer));
 
+#ifdef HAVE_CPROPS
     qtimer_start(timer);
     for (i = 0; i < THREAD_COUNT; i++) {
 	assert(qthread_fork(cpdequeuer, cpq, &(rets[i])) == QTHREAD_SUCCESS);
@@ -210,6 +224,7 @@ int main(int argc, char *argv[])
     printf("threaded cp test: %f secs\n", qtimer_secs(timer));
 
     cp_list_destroy(cpq);
+#endif
 
     if (qlfqueue_destroy(me, q) != QTHREAD_SUCCESS) {
 	fprintf(stderr, "qlfqueue_destroy() failed!\n");

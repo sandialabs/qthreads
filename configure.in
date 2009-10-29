@@ -220,12 +220,15 @@ AS_IF([test "x$qthread_implementation" = "xsst"],
 	  AC_ARG_WITH([cprops],
 				  [AC_HELP_STRING([--with-cprops=DIR],
 								  [Location of libcprops library])])
-	  AS_IF([test "x$with_cprops" != x -a "x$with_cprops" != "xyes"], [
+	  AS_IF([test "x$with_cprops" != xno],
+		[AS_IF([test "x$with_cprops" != x -a "x$with_cprops" != "xyes"], [
 			 CPPFLAGS="${CPPFLAGS} -I$with_cprops/include"
 			 LDFLAGS="${LDFLAGS} -L$with_cprops/lib"
 			 EXTRA_DISTCHECK_OPTIONS="${EXTRA_DISTCHECK_OPTIONS} --with-cprops=$with_cprops"])
-	  AC_SEARCH_LIBS([cp_hashtable_create], [cprops "cprops -ldl" "cprops -lsocket -lnsl" "cprops -lsocket -lnsl -ldl"], ,
-					 [AC_MSG_ERROR([Need libcprops 0.1.6 or better. See http://cprops.sf.net/])])
+		AC_SEARCH_LIBS([cp_hashtable_create], [cprops "cprops -ldl" "cprops -ldl -lssl" "cprops -lsocket -lnsl" "cprops -lsocket -lnsl -lssl" "cprops -lsocket -lnsl -ldl" "cprops -lsocket -lnsl -ldl -lssl"],
+			       [AC_DEFINE([HAVE_CPROPS],[1],[Define if cprops is available])],
+			       [AC_MSG_NOTICE([If you want libcprops, see http://cprops.sf.net/])])
+		])
 
 	  ])])
 
@@ -240,6 +243,7 @@ AC_HEADER_TIME
 AC_CHECK_HEADERS([stdlib.h fcntl.h ucontext.h sys/time.h sys/resource.h mach/mach_time.h malloc.h math.h])
 AX_CREATE_STDINT_H([include/qthread/qthread-int.h])
 AC_SYS_LARGEFILE
+QTHREAD_HASH_MAPS
 
 AC_CACHE_SAVE
 
@@ -367,8 +371,6 @@ AC_MSG_RESULT($qt_cv_malwp)
 AX_CHECK_PAGE_ALIGNED_MALLOC
 AX_CHECK_16ALIGNED_MALLOC
 AX_CHECK_16ALIGNED_CALLOC
-AX_CHECK_8ALIGNED_MALLOC
-AX_CHECK_8ALIGNED_CALLOC
 QTHREAD_CHECK_WORKING_VALLOC
 
 AC_CACHE_SAVE
