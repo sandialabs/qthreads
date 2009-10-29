@@ -9,29 +9,36 @@
 #include <qthread/qthread.h>
 #ifdef HAVE_UNORDERED_MAP
 # include <unordered_map>
-typedef std::unordered_map<void*,void*> qtmap;
+typedef std::unordered_map<qt_key_t,void*> qtmap;
 #elif defined(HAVE_TR1_UNORDERED_MAP)
 # include <tr1/unordered_map>
-typedef std::tr1::unordered_map<void*,void*> qtmap;
+typedef std::tr1::unordered_map<qt_key_t,void*> qtmap;
 #else /* unordered_map */
 # ifdef __GNUC__
 #  if __GNUC__ < 3
 #   include <hash_map.h>
 namespace extension { using ::hash_map; }; // inherit globals
 #  else
-#   include <backward/hash_map>
+#  include <ext/hash_map>
+//#   include <backward/hash_map>
 #   if __GNUC__ == 3 && __GNUC_MINOR__ == 0
 namespace extension = std; // GCC 3.0
+typedef std::hash_map<qt_key_t, void*> qtmap;
 #   else
 namespace extension = ::__gnu_cxx; // GCC 3.1 and later
+typedef __gnu_cxx::hash_map<uintptr_t, void*> qtmap;
+#    define QT_HASH_CAST uintptr_t
 #   endif
 #  endif
-#  include <ext/hash_map>
 # else
 #  include <hash_map>
+typedef std::hash_map<qt_key_t, void*> qtmap;
 # endif
-typedef std::hash_map<void*, void*> qtmap;
 #endif /* unordered_map */
+
+#ifndef QT_HASH_CAST
+#define QT_HASH_CAST qt_key_t
+#endif
 
 struct qt_hash_s {
     qtmap h;
@@ -83,11 +90,11 @@ void qt_hash_destroy_deallocate(qt_hash h, qt_hash_deallocator_fn f)
     }
 }
 
-void *qt_hash_put(qt_hash h, void *const key, void *value)
+void *qt_hash_put(qt_hash h, const qt_key_t key, void *value)
 {
     if (h) {
 	pthread_mutex_lock(&(h->lock));
-	h->h[key] = value;
+	h->h[(QT_HASH_CAST)key] = value;
 	pthread_mutex_unlock(&(h->lock));
 	return value;
     } else {
@@ -95,13 +102,13 @@ void *qt_hash_put(qt_hash h, void *const key, void *value)
     }
 }
 
-void *qt_hash_remove(qt_hash h, void *const key)
+void *qt_hash_remove(qt_hash h, const qt_key_t key)
 {
     if (h) {
 	void * ret;
 	qtmap::iterator iter;
 	pthread_mutex_lock(&(h->lock));
-	iter = h->h.find(key);
+	iter = h->h.find((QT_HASH_CAST)key);
 	if (iter != h->h.end()) {
 	    h->h.erase(iter);
 	    //h->h.erase(key);
@@ -112,17 +119,17 @@ void *qt_hash_remove(qt_hash h, void *const key)
     return NULL;
 }
 
-void *qt_hash_get(qt_hash h, void *const key)
+void *qt_hash_get(qt_hash h, const qt_key_t key)
 {
     if (h) {
 	void * ret;
 	qtmap::iterator iter;
 	pthread_mutex_lock(&(h->lock));
-	iter = h->h.find(key);
+	iter = h->h.find((QT_HASH_CAST)key);
 	if (iter == h->h.end()) {
 	    ret = NULL;
 	} else {
-	    assert(iter->first == key);
+	    assert(iter->first == (QT_HASH_CAST)key);
 	    ret = iter->second;
 	}
 	pthread_mutex_unlock(&(h->lock));
@@ -140,7 +147,7 @@ void qt_hash_callback(qt_hash h, qt_hash_callback_fn f, void *arg)
 	for (iter = h->h.begin();
 		iter != h->h.end();
 		iter++) {
-	    f(iter->first, iter->second, arg);
+	    f((void*)iter->first, iter->second, arg);
 	}
 	pthread_mutex_unlock(&(h->lock));
     }
