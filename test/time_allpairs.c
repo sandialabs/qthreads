@@ -77,7 +77,7 @@ int main(int argc, char *argv[])
 	qt_allpairs_output(a1, a2, (dist_out_f) mult, (void **)out, sizeof(int));
     }
     qtimer_stop(timer);
-    printf("mult time: %f\n", qtimer_secs(timer)/10.0);
+    printf("mult time: %f (avg)\n", qtimer_secs(timer)/10.0);
     for (i = 0; i < ASIZE; i++) {
 	free(out[i]);
     }
