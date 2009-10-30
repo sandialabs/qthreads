@@ -36,10 +36,7 @@ void* qincr(void *arg)
 int main(int argc, char *argv[])
 {
     pthread_t rets[NUM_THREADS];
-    size_t i;
-    int threads = 0;
     int interactive = 0;
-    qthread_t *me;
     qtimer_t timer = qtimer_new();
     double cumulative_time = 0.0;
 
