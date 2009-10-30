@@ -12,6 +12,7 @@ dist_qthread_HEADERS = \
 	qalloc.h \
 	qarray.h \
 	qlfqueue.h \
+	qdqueue.h \
 	qpool.h \
 	qutil.h \
 	qloop.h \
