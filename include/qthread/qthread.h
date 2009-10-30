@@ -930,6 +930,7 @@ static QINLINE unsigned long qthread_incr_xx(volatile void *addr, const int incr
     return 0;			       /* compiler check */
 }
 
+#ifndef QTHREAD_ATOMIC_CAS
 static QINLINE uint32_t qthread_cas32(volatile uint32_t * operand,
 				      const uint32_t oldval,
 				      const uint32_t newval)
@@ -1156,6 +1157,7 @@ static QINLINE void *qthread_cas_ptr_(void *volatile*const addr,
     }
     return NULL;		       /* compiler check */
 }
+#endif /* ifdef QTHREAD_ATOMIC_CAS */
 
 #ifdef QTHREAD_ATOMIC_CAS
 # define qthread_cas(ADDR, OLDV, NEWV) \
