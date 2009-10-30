@@ -1,3 +1,24 @@
+--- 1.2 ---
+New Features:
+ - Distributed Data Structures: array (qarray), queue (qdqueue), memory pool (qpool)
+ - Lock-free Data Structures: queue (qlfqueue)
+ - CPU Affinity for shepherds/threads on most systems (not OSX 10.4)
+ - Machine topology information can be queried
+   - qthread_num_shepherds()
+   - qthread_distance()
+   - qthread_sorted_sheps()/_remote()
+   - qthread_init(0) creates 1 shepherd per location
+ - Portable CAS
+ - future_fork_to()
+ - QTHREAD_CACHELINE_BYTES
+Improvements:
+ - Portability improvements
+ - Several bugs in queue management fixed
+ - Workarounds for bad compiler management of volatile operations
+ - Avoid ABA problems in lock-free memory pools
+ - Better memory barriers on Sparc
+ - Better valgrind support
+ - Removed dependency on external cprops library by depending on C++ hash maps
 --- 1.1.20090123 ---
 New Features:
  - Can now force 64-bit alignment
