@@ -35,7 +35,7 @@ static Q_NOINLINE qarray *volatile*vol_id_qa(qarray *volatile*volatile ptr)
 
 #define _(x) (vol_read_a(&(x)))
 
-void qt_wavefront_regionworker(qarray * restrict left, qarray * restrict below, void *restrict*R, wave_comp_f func)
+void qt_wavefront_regionworker(qarray * restrict left, qarray * restrict below, char *restrict*R, wave_comp_f func)
 {
     const size_t U_S = left->unit_size;
     const size_t Vert_Count = left->count;
@@ -98,7 +98,7 @@ static void qt_wavefront_worker(qthread_t *me, struct qt_wavefront_wargs *const 
 {
     qt_wavefront_lattice * const L = arg->L;
     qarray *local = NULL;
-    void **R=NULL;
+    char **R=NULL;
 
     { /* step 0: allocate local memory */
 	const size_t horizCount = L->slats.seg_len-1;
