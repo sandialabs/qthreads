@@ -1,0 +1,20 @@
+.TH qpool_create 3 "MAY 2009" libqthread "libqthread"
+.SH NAME
+\fBqpool_create\fR \- allocate a distributed memory pool
+.SH SYNOPSIS
+.B #include <qthread/qpool.h>
+
+.I qpool *
+.br
+\fBqpool_create\fR(const size_t \fIitem_size\fR);
+.PP
+.I qpool *
+.br
+\fBqpool_create_aligned\fR(const size_t \fIitem_size\fR,
+const size_t \fIalignment\fR);
+.SH DESCRIPTION
+These functions initialize qpool distributed memory pools. The \fBqpool_create_aligned\fR() function allows the alignment to be specified, such that all allocated elements will align along specific alignment boundaries. The \fIalignment\fR value is expected to be a power of two.
+.SH SEE ALSO
+.BR qpool_destroy (3),
+.BR qpool_alloc (3),
+.BR qpool_free (3)

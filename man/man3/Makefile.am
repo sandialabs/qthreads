@@ -57,6 +57,22 @@ man_MANS = qthread_empty.3 \
 		   qarray_iter_constloop.3 \
 		   qarray_iter_loop.3 \
 		   qarray_shepof.3 \
+		   qdqueue_create.3 \
+		   qdqueue_destroy.3 \
+		   qdqueue_enqueue.3 \
+		   qdqueue_enqueue_there.3 \
+		   qdqueue_dequeue.3 \
+		   qdqueue_empty.3 \
+		   qlfqueue_create.3 \
+		   qlfqueue_destroy.3 \
+		   qlfqueue_enqueue.3 \
+		   qlfqueue_dequeue.3 \
+		   qlfqueue_empty.3 \
+		   qpool_create.3 \
+		   qpool_create_aligned.3 \
+		   qpool_alloc.3 \
+		   qpool_free.3 \
+		   qpool_destroy.3 \
 		   qutil_double_sum.3 \
 		   qutil_double_mult.3 \
 		   qutil_double_max.3 \
@@ -71,6 +87,7 @@ man_MANS = qthread_empty.3 \
 		   qutil_int_min.3 \
 		   qutil_qsort.3 \
 		   qutil_mergesort.3 \
+		   qt_allpairs.3 \
 		   qt_double_max.3 \
 		   qt_double_min.3 \
 		   qt_double_prod.3 \

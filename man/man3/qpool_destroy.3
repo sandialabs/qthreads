@@ -1,0 +1,15 @@
+.TH qpool_destroy 3 "MAY 2009" libqthread "libqthread"
+.SH NAME
+\fBqpool_destroy\fR \- deallocate a distributed memory pool
+.SH SYNOPSIS
+.B #include <qthread/qpool.h>
+
+.I void
+.br
+\fBqpool_destroy\fR(qpool *\fIpool\fR);
+.SH DESCRIPTION
+This function deallocates the specified distributed memory pool, and all memory associated with that pool (even if it had not yet been returned to the pool).
+.SH SEE ALSO
+.BR qpool_create (3),
+.BR qpool_alloc (3),
+.BR qpool_free (3)

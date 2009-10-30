@@ -1,0 +1,15 @@
+.TH qpool_free 3 "MAY 2009" libqthread "libqthread"
+.SH NAME
+\fBqpool_free\fR \- return a memory block to its distributed memory pool
+.SH SYNOPSIS
+.B #include <qthread/qpool.h>
+
+.I void
+.br
+\fBqpool_free\fR(qthread_t *\fIme\fR, qpool *\fIpool\fR, void *\fImem\fR);
+.SH DESCRIPTION
+This function returns a block of memory (\fImem\fR) to its distributed memory pool (\fIpool\fR). This memory must have originated in that pool.
+.SH SEE ALSO
+.BR qpool_destroy (3),
+.BR qpool_alloc (3),
+.BR qpool_create (3)

@@ -1,0 +1,31 @@
+.TH qdqueue_enqueue 3 "OCTOBER 2009" libqthread "libqthread"
+.SH NAME
+\fBqdqueue_enqueue\fR \- append an element to a distributed queue
+.SH SYNOPSIS
+.B #include <qthread/qdqueue.h>
+
+.I int
+.br
+\fBqdqueue_enqueue\fR(qthread_t *\fIme\fR, qdqueue_t *\fIq\fR, void *\fIelem\fR);
+.PP
+.I int
+.br
+\fBqdqueue_enqueue_there\fR(qthread_t *\fIme\fR, qdqueue_t *\fIq\fR, void *\fIelem\fR,
+.br
+.ti +22
+qthread_shepherd_id_t \fIthere\fR);
+.SH DESCRIPTION
+These two functions append elements to distributed queues. The \fBqdqueue_enqueue\fR() function is equivalent to \fBqdqueue_enqueue_there\fR() when the \fIthere\fR location is the current shepherd (e.g. the result of \fBqthread_shep\fR(\fINULL\fR)).
+.SH RETURN VALUE
+The return value will be 0 for success, or will indicate an error.
+.SH ERROR CODES
+Possible error codes are:
+.TP 4
+QTHREAD_BADARGS
+This indicates that one of the input arguments was null.
+.SH SEE ALSO
+.BR qlfqueue_enqueue (3),
+.BR qdqueue_create (3),
+.BR qdqueue_enqueue (3),
+.BR qdqueue_dequeue (3),
+.BR qdqueue_empty (3)

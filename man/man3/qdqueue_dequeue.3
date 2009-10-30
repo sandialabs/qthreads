@@ -1,0 +1,19 @@
+.TH qdqueue_dequeue 3 "OCTOBER 2009" libqthread "libqthread"
+.SH NAME
+\fBqdqueue_dequeue\fR \- remove an element from a distributed queue
+.SH SYNOPSIS
+.B #include <qthread/qdqueue.h>
+
+.I void *
+.br
+\fBqdqueue_dequeue\fR(qthread_t *\fIme\fR, qdqueue_t *\fIq\fR);
+.SH DESCRIPTION
+This function removes an element from the distributed queue and returns a pointer to it.
+.SH RETURN VALUE
+The return value is one of the pointers that was enqueued in the queue.
+.SH SEE ALSO
+.BR qlfqueue_dequeue (3),
+.BR qdqueue_create (3),
+.BR qdqueue_enqueue (3),
+.BR qdqueue_destroy (3),
+.BR qdqueue_empty (3)
