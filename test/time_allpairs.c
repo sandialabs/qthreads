@@ -36,6 +36,7 @@ int main(int argc, char *argv[])
     int interactive = 0;
     qthread_t *me;
     qtimer_t timer = qtimer_new();
+    double cumulative_time = 0.0;
 
     if (argc >= 2) {
 	threads = strtol(argv[1], NULL, 0);
@@ -72,12 +73,14 @@ int main(int argc, char *argv[])
     }
     printf("all initialized\n");
 
-    qtimer_start(timer);
     for (int i=0; i<10; i++) {
+	qtimer_start(timer);
 	qt_allpairs_output(a1, a2, (dist_out_f) mult, (void **)out, sizeof(int));
+	qtimer_stop(timer);
+	cumulative_time += qtimer_secs(timer);
+	printf("\t%i: mult time %f\n", i, qtimer_secs(timer));
     }
-    qtimer_stop(timer);
-    printf("mult time: %f (avg)\n", qtimer_secs(timer)/10.0);
+    printf("mult time: %f (avg)\n", cumulative_time/10.0);
     for (i = 0; i < ASIZE; i++) {
 	free(out[i]);
     }
