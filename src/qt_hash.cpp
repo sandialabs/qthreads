@@ -77,9 +77,8 @@ void qt_hash_destroy(qt_hash h)
 void qt_hash_destroy_deallocate(qt_hash h, qt_hash_deallocator_fn f)
 {
     if (h) {
-	qtmap::iterator iter;
 	pthread_mutex_lock(&(h->lock));
-	for (iter = h->h.begin();
+	for (qtmap::iterator iter(h->h.begin());
 		iter != h->h.end();
 		iter++) {
 	    assert(iter->second != NULL);
@@ -106,9 +105,8 @@ void *qt_hash_remove(qt_hash h, const qt_key_t key)
 {
     if (h) {
 	void * ret = NULL;
-	qtmap::iterator iter;
 	pthread_mutex_lock(&(h->lock));
-	iter = h->h.find((QT_HASH_CAST)key);
+	qtmap::iterator iter(h->h.find((QT_HASH_CAST)key));
 	if (iter != h->h.end()) {
 	    ret = iter->second;
 	    h->h.erase(iter);
@@ -124,9 +122,8 @@ void *qt_hash_get(qt_hash h, const qt_key_t key)
 {
     if (h) {
 	void * ret;
-	qtmap::iterator iter;
 	pthread_mutex_lock(&(h->lock));
-	iter = h->h.find((QT_HASH_CAST)key);
+	qtmap::iterator iter(h->h.find((QT_HASH_CAST)key));
 	if (iter == h->h.end()) {
 	    ret = NULL;
 	} else {
@@ -143,9 +140,8 @@ void *qt_hash_get(qt_hash h, const qt_key_t key)
 void qt_hash_callback(qt_hash h, qt_hash_callback_fn f, void *arg)
 {
     if (h) {
-	qtmap::iterator iter;
 	pthread_mutex_lock(&(h->lock));
-	for (iter = h->h.begin();
+	for (qtmap::iterator iter(h->h.begin());
 		iter != h->h.end();
 		iter++) {
 	    f((void*)iter->first, iter->second, arg);
