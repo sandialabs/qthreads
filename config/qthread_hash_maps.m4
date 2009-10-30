@@ -17,20 +17,21 @@ AC_DEFUN([QTHREAD_HASH_MAPS], [
 		   [ac_found_without_flags=yes
 		    ac_found_a_hash=yes
 		    break])
-  AS_IF([test "x$ac_found_without_flags" == xno],
-        [ac_save_CXXFLAGS="$CXXFLAGS"
+  AS_IF([test "x$ac_found_without_flags" == xno], [
+        ac_save_CXXFLAGS="$CXXFLAGS"
 	 ac_save_CPPFLAGS="$CPPFLAGS"
 	 CXXFLAGS="$ac_save_CXXFLAGS -std=gnu++0x"
 	 CPPFLAGS="$ac_save_CPPFLAGS -std=gnu++0x"
 	 AC_CHECK_HEADERS([unordered_map tr1/unordered_map],
-			  [ac_save_CXXFLAGS="$ac_save_CXXFLAGS -std=gnu++0x"
-			   ac_found_a_hash=yes
+			  [ac_found_a_hash=yes
+			   ac_save_CXXFLAGS="$ac_save_CXXFLAGS -std=gnu++0x"
 			   break])
 	 CXXFLAGS="$ac_save_CXXFLAGS"
-	 CPPFLAGS="$ac_save_CPPFLAGS"])
+	 CPPFLAGS="$ac_save_CPPFLAGS"
+	 ])
   AC_LANG_RESTORE
-  AS_IF([test "x$ac_found_a_hash" == xno],
-        [AC_CACHE_CHECK(for ext/hash_map,
+  AS_IF([test "x$ac_found_a_hash" == xno],[
+        AC_CACHE_CHECK(for ext/hash_map,
 	    ac_cv_cxx_ext_hash_map,
 	    [AC_LANG_SAVE
 	    AC_LANG_CPLUSPLUS
