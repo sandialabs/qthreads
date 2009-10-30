@@ -9,6 +9,7 @@ dist_qthread_HEADERS = \
 	qthread.hpp \
 	allpairs.h \
 	wavefront.h \
+	cacheline.h \
 	qalloc.h \
 	qarray.h \
 	qlfqueue.h \

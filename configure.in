@@ -507,29 +507,7 @@ AS_IF([test "x$qthread_implementation" = "xunix"],
 												  AC_SEARCH_LIBS([thread_policy_get])
 												  AC_CHECK_DECLS([THREAD_AFFINITY_POLICY_COUNT])
 												  ])])])
-	   case "$host" in
-		   ia32-*|x86_64-*|i*86-*)
-			QTHREAD_IA_CACHELINE
-		   ;;
-		   ia64-*) # Itanium
-		   qt_cv_cacheline=128; # L2/L3 (L1 is 64)
-		   ;;
-		   powerpc-*|powerpc64-*)
-		   AC_CHECK_SIZEOF([long])
-		   AS_IF([test "x$ac_cv_sizeof_long" = "x4"],
-				 [qt_cv_cacheline=32], dnl G4
-				 [qt_cv_cacheline=128]) dnl G5
-		   ;;
-		   *)
-		   qt_cv_cacheline=128;
-		   ;;
-	   esac
 	  ])
-AS_IF([test "x$qthread_implementation" = "xsst"],
-	  [qt_cv_cacheline=128]) dnl G5-ish
-AC_DEFINE_UNQUOTED([QTHREAD_CACHELINE_BYTES],
-				   [$qt_cv_cacheline],
-				   [Bytes per cache line])
 
 ## --------------- ##
 ## Output and done ##

@@ -12,6 +12,7 @@ SUBDIRS = osx_compat qtimer .
 lib_LTLIBRARIES = libqthread.la
 
 libqthread_la_SOURCES = \
+	cacheline.c \
 	qarray.c \
 	wavefront.c \
 	allpairs.c \

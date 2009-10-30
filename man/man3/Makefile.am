@@ -88,6 +88,7 @@ man_MANS = qthread_empty.3 \
 		   qutil_qsort.3 \
 		   qutil_mergesort.3 \
 		   qt_allpairs.3 \
+		   qt_cacheline.3 \
 		   qt_double_max.3 \
 		   qt_double_min.3 \
 		   qt_double_prod.3 \

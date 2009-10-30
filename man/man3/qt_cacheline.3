@@ -1,0 +1,11 @@
+.TH qt_cacheline 3 "OCTOBER 2009" libqthread "libqthread"
+.SH NAME
+\fBqt_cacheline\fR \- returns the cache line size
+.SH SYNOPSIS
+.B #include <qthread/cacheline.h>
+
+.I int
+.br
+\fBqt_cacheline\fR(void);
+.SH DESCRIPTION
+This function returns the size of the local machine's top-level cache line in bytes. This is calculated only once. 

@@ -78,9 +78,6 @@
 # define _Restrict
 #endif
 
-/* Bytes per cache line */
-#undef QTHREAD_CACHELINE_BYTES
-
 /* Architecture defines */
 #define QTHREAD_UNSUPPORTED 0
 #define QTHREAD_IA32        1
