@@ -105,11 +105,12 @@ void *qt_hash_put(qt_hash h, const qt_key_t key, void *value)
 void *qt_hash_remove(qt_hash h, const qt_key_t key)
 {
     if (h) {
-	void * ret;
+	void * ret = NULL;
 	qtmap::iterator iter;
 	pthread_mutex_lock(&(h->lock));
 	iter = h->h.find((QT_HASH_CAST)key);
 	if (iter != h->h.end()) {
+	    ret = iter->second;
 	    h->h.erase(iter);
 	    //h->h.erase(key);
 	}
