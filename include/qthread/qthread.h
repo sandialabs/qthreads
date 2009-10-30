@@ -608,13 +608,13 @@ static QINLINE uint32_t qthread_incr32(volatile uint32_t * operand,
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
     uint32_t retval;
     register unsigned int incrd = incrd;	/* no initializing */
-    __asm__ __volatile__("1:\tlwarx  %0,0,%1\n\t"
-			 "add    %3,%0,%2\n\t"
-			 "stwcx. %3,0,%1\n\t"
+    __asm__ __volatile__("1:\tlwarx  %0,0,%2\n\t"
+			 "add    %1,%0,%3\n\t"
+			 "stwcx. %1,0,%2\n\t"
 			 "bne-   1b\n\t"	/* if it failed, try again */
 			 "isync"	/* make sure it wasn't all a dream */
-			 :"=&b"  (retval)
-			 :"r"    (operand), "r"(incr), "r"(incrd)
+			 :"=&b"  (retval), "=&r"(incrd)
+			 :"r"    (operand), "r"(incr)
 			 :"cc", "memory");
 
     return retval;
@@ -713,13 +713,13 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand,
     uint64_t retval;
     register uint64_t incrd = incrd;	/* no initializing */
 
-    asm volatile ("1:\tldarx  %0,0,%1\n\t"
-		  "add    %3,%0,%2\n\t"
-		  "stdcx. %3,0,%1\n\t"
+    asm volatile ("1:\tldarx  %0,0,%2\n\t"
+		  "add    %1,%0,%3\n\t"
+		  "stdcx. %1,0,%2\n\t"
 		  "bne-   1b\n\t"	/* if it failed, try again */
 		  "isync"	/* make sure it wasn't all a dream */
-		  :"=&b"   (retval)
-		  :"r"     (operand), "r"(incr), "r"(incrd)
+		  :"=&b"   (retval), "=&r"(incrd)
+		  :"r"     (operand), "r"(incr)
 		  :"cc", "memory");
 
     return retval;
