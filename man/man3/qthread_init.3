@@ -11,7 +11,27 @@
 Use this function to initialize the qthreads environment before spawning any
 qthreads or using any of the qthreads locking/FEB functions. The number of
 shepherd pthreads that will execute qthreads is specified with
-\fInshepherds\fR.
+\fInshepherds\fR. If \fInshepherds\fR is 0, the library will attempt to guess
+the correct number of shepherds, defaulting to a single shepherd if no
+information about the system could be found. Shepherds will attempt to pin
+themselves to processors using whatever CPU affinity libraries are available.
+.SH ENVIRONMENT
+The operation of \fBqthread_init\fR() is modified by the following environment variables:
+.TP 4
+QTHREAD_AFFINITY
+If this variable is set to "no", then the shepherds will not pin themselves to
+specific locations.
+.TP
+QTHREAD_DEBUG_LEVEL
+This variable is used to control the verbosity of debug messages that get
+printed at runtime. Higher numbers increase the verbosity; a value of 0 is the
+same as being unset, which prevents debug messages from being printed. This is
+only applicable if debugging has been enabled when the library was built.
+.TP
+QTHREAD_STACK_SIZE
+This variable adjusts the size of the stacks that will be created for each
+thread. Changes to this value during the course of the program run are ignored;
+the value is only considered when \fBqthread_init\fR() is run.
 .SH RETURN VALUE
 On success, the system is ready to fork threads and 0 is returned. On error, an
 non-zero error code is returned.

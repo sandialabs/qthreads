@@ -40,6 +40,14 @@ emptied (as if it had been passed to \fBqthread_empty\fR()). When the function
 \fIf\fR returns, the returned value will be stored into \fIret\fR and \fIret\fR
 will be filled. The way to block until a function has finished is to use
 \fBqthread_readFF\fR() on the \fIret\fR pointer.
+.SH ENVIRONMENT
+The operation of \fBqthread_fork\fR() and \fBqthread_fork_to\fR() is modified
+by the following environment variables:
+.TP 4
+QTHREAD_STACK_SIZE
+This variable adjusts the size of the stacks that will be created for each
+thread. Changes to this value during the course of the program run are ignored;
+the value is only considered when \fBqthread_init\fR() is run.
 .SH RETURN VALUE
 On success, the thread is spawned and 0 is returned. On error, a non-zero
 error code is returned.
