@@ -14,10 +14,15 @@ const size_t \fIindex\fR);
 .br
 \fBqarray_elem_nomigrate\fR(const qarray * \fIarray\fR,
 const size_t \fIindex\fR);
+.PP
+.I void *
+.br
+\fBqarray_elem_migrate\fR(const qarray * \fIarray\fR,
+const size_t \fIindex\fR);
 .SH DESCRIPTION
 These functions return a pointer to the \fIindex\fR element of the \fIarray\fR
-distributed array. The \fBqarray_elem\fR() function will additionally migrate
-the calling thread to the shepherd of the specified element.
+distributed array. The \fBqarray_elem_migrate\fR() function will additionally
+migrate the calling thread to the shepherd of the specified element.
 .SH SEE ALSO
 .BR qarray_create (3),
 .BR qarray_destroy (3),

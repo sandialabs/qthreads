@@ -15,7 +15,7 @@
 #ifdef QTHREAD_TRACK_DISTANCES
 struct cacheline_s {
     aligned_t i;
-    char block[qt_cacheline() - sizeof(aligned_t)];
+    char block[qthread_cacheline() - sizeof(aligned_t)];
 }
 __attribute__ ((packed));
 

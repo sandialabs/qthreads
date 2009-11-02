@@ -10,7 +10,7 @@ New Features:
    - qthread_init(0) creates 1 shepherd per location
  - Portable CAS
  - future_fork_to()
- - qt_cacheline() returns the machine's cache line size in bytes
+ - qthread_cacheline() returns the machine's cache line size in bytes
 Improvements:
  - Portability improvements
  - Several bugs in queue management fixed

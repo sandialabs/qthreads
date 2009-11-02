@@ -11,6 +11,7 @@ man_MANS = qthread_empty.3 \
 		   qthread_fork_to.3 \
 		   qthread_id.3 \
 		   qthread_incr.3 \
+		   qthread_cacheline.3 \
 		   qthread_dincr.3 \
 		   qthread_distance.3 \
 		   qthread_fincr.3 \
@@ -53,6 +54,7 @@ man_MANS = qthread_empty.3 \
 		   qarray_destroy.3 \
 		   qarray_elem.3 \
 		   qarray_elem_nomigrate.3 \
+		   qarray_elem_migrate.3 \
 		   qarray_iter.3 \
 		   qarray_iter_constloop.3 \
 		   qarray_iter_loop.3 \
@@ -88,7 +90,6 @@ man_MANS = qthread_empty.3 \
 		   qutil_qsort.3 \
 		   qutil_mergesort.3 \
 		   qt_allpairs.3 \
-		   qt_cacheline.3 \
 		   qt_double_max.3 \
 		   qt_double_min.3 \
 		   qt_double_prod.3 \
