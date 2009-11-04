@@ -5,6 +5,7 @@
 #include <qthread/qthread.h>
 #include <qthread/futurelib.h>
 #include <qthread_asserts.h>           /* for assert() toggling */
+#include <qthread/cacheline.h>
 
 #include <stdlib.h>
 #include <string.h>
