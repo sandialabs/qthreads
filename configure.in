@@ -11,7 +11,7 @@ AC_PREREQ(2.59)
 ## ---------------------------------- ##
 ## Autoconf / Automake Initialization ##
 ## ---------------------------------- ##
-AC_INIT([qthread], [1.2], [kbwheel@sandia.gov])
+AC_INIT([qthread], [1.3b], [kbwheel@sandia.gov])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 AC_CONFIG_SRCDIR([src/qthread.c])
@@ -86,6 +86,10 @@ AC_ARG_ENABLE([aligncheck],
 AS_IF([test "x$enable_aligncheck" = "xno"],
       [AC_DEFINE([QTHREAD_NOALIGNCHECK], [1],
          [Do not check the alignment of synchronization addresses])])
+
+AC_ARG_ENABLE([guard-pages],
+  [AS_HELP_STRING([--enable-guard-pages],
+     [use extra memory around the thread stacks to help detect stack overruns (will triple memory requirements per thread)])])
 
 AC_ARG_ENABLE([debug],
   [AS_HELP_STRING([--enable-debug],
@@ -353,6 +357,9 @@ AS_IF([test "x$have_assembly" == "x0"],
 AS_IF([test "x$enable_software_increments" = "xyes"],
       [AC_DEFINE([QTHREAD_MUTEX_INCREMENT], [1],
          [Use mutexes instead of assembly for atomic increment])])
+AS_IF([test "x$enable_guard_pages" = "xyes"],
+	  [AC_DEFINE([QTHREAD_GUARD_PAGES], [1],
+		 [Use guard pages to detect stack overruns])])
 
 AC_CACHE_SAVE
 
@@ -542,8 +549,7 @@ echo    "System Characteristics:"
 echo    "               Target Style: $qthread_implementation"
 echo    "                Qtimer type: ${qthread_timer_type:-none}"
 echo    "             Aligned_t size: $sizeof_aligned_t (aligned on $align_aligned_t byte boundaries)"
-echo    "            Cache-line size: $qt_cv_cacheline bytes"
-qthread_stackprefix="                 Stack size: "
+qthread_stackprefix="         Default Stack size: "
 case "$qthread_cv_stack_size" in
 	8388608) echo "${qthread_stackprefix}8MB" ;;
 	2096)    echo "${qthread_stackprefix}2kB" ;;
@@ -556,7 +562,8 @@ echo    "      Sanity assert() Calls: $enable_asserts"
 echo    "    Check address alignment: $enable_aligncheck"
 echo    "            Thread Counting: $enable_thread_count"
 echo    "         Shepherd profiling: $enable_shepherd_profiling"
-echo    "       Debugging Capability: $enable_debug_trace"
+echo    " Debugging Trace Capability: $enable_debug_trace"
+echo    "                Guard Pages: $enable_guard_pages"
 echo    ""
 echo    "Speed:"
 echo    "            Lazy Thread IDs: $enable_lazy_threadids"

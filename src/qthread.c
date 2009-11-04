@@ -31,6 +31,10 @@
 #ifdef QTHREAD_USE_VALGRIND
 # include <valgrind/memcheck.h>
 #endif
+#ifdef QTHREAD_GUARD_PAGES
+#include <sys/types.h>
+#include <sys/mman.h>
+#endif
 
 #ifdef QTHREAD_USE_PLPA
 #include <plpa.h>
@@ -376,11 +380,55 @@ static QINLINE void FREE_QTHREAD(qthread_t * t)
 #endif
 
 #if defined(UNPOOLED_STACKS) || defined(UNPOOLED)
-#define ALLOC_STACK(shep) malloc(qlib->qthread_stack_size)
-#define FREE_STACK(shep, t) free(t)
+# ifdef QTHREAD_GUARD_PAGES
+static QINLINE void * ALLOC_STACK(qthread_shepherd_t *shep)
+{
+    char * tmp = valloc(qlib->qthread_stack_size + (2*getpagesize()));
+    if (mprotect(tmp, getpagesize(), PROT_NONE) != 0) {
+	perror("mprotect alloc");
+    }
+    mprotect(tmp + qlib->qthread_stack_size + getpagesize(), getpagesize(), PROT_NONE);
+    return tmp + getpagesize();
+}
+static QINLINE void * FREE_STACK(qthread_shepherd_t *shep, void * t)
+{
+    char * tmp = t;
+    tmp -= getpagesize();
+    if (mprotect(tmp, getpagesize(), PROT_READ|PROT_WRITE) != 0) {
+	perror("mprotect free");
+    }
+    mprotect(tmp + qlib->qthread_stack_size + getpagesize(), getpagesize(), PROT_READ|PROT_WRITE);
+    free(tmp);
+}
+# else
+#  define ALLOC_STACK(shep) malloc(qlib->qthread_stack_size)
+#  define FREE_STACK(shep, t) free(t)
+# endif
 #else
-#define ALLOC_STACK(shep) qt_mpool_alloc(shep?(shep->stack_pool):generic_stack_pool)
-#define FREE_STACK(shep, t) qt_mpool_free(shep?(shep->stack_pool):generic_stack_pool, t)
+# ifdef QTHREAD_GUARD_PAGES
+static QINLINE void * ALLOC_STACK(qthread_shepherd_t *shep)
+{
+    char * tmp = qt_mpool_alloc(shep?(shep->stack_pool):generic_stack_pool);
+    if (mprotect(tmp, getpagesize(), PROT_NONE) != 0) {
+	perror("mprotect alloc");
+    }
+    mprotect(tmp + qlib->qthread_stack_size + getpagesize(), getpagesize(), PROT_NONE);
+    return tmp + getpagesize();
+}
+static QINLINE void * FREE_STACK(qthread_shepherd_t *shep, void * t)
+{
+    char * tmp = t;
+    tmp -= getpagesize();
+    if (mprotect(tmp, getpagesize(), PROT_READ|PROT_WRITE) != 0) {
+	perror("mprotect free");
+    }
+    mprotect(tmp + qlib->qthread_stack_size + getpagesize(), getpagesize(), PROT_READ|PROT_WRITE);
+    qt_mpool_free(shep?(shep->stack_pool):generic_stack_pool, tmp);
+}
+# else
+#  define ALLOC_STACK(shep) qt_mpool_alloc(shep?(shep->stack_pool):generic_stack_pool)
+#  define FREE_STACK(shep, t) qt_mpool_free(shep?(shep->stack_pool):generic_stack_pool, t)
+# endif
 #endif
 
 #if defined(UNPOOLED_CONTEXTS) || defined(UNPOOLED)
@@ -1263,6 +1311,15 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 	    qlib->qthread_stack_size = QTHREAD_DEFAULT_STACK_SIZE;
 	}
     }
+#ifdef QTHREAD_GUARD_PAGES
+    {
+	size_t pagesize = getpagesize();
+	/* round stack size to nearest page */
+	if (qlib->qthread_stack_size % pagesize) {
+	    qlib->qthread_stack_size += pagesize - (qlib->qthread_stack_size % pagesize);
+	}
+    }
+#endif
     qlib->max_thread_id = 0;
     qlib->sched_shepherd = 0;
     QTHREAD_INITLOCK(&qlib->max_thread_id_lock);
@@ -1497,8 +1554,14 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 	    qt_mpool_create(need_sync, sizeof(qthread_t),
 			    qlib->shepherds[i].node);
 	qlib->shepherds[i].stack_pool =
+#ifdef QTHREAD_GUARD_PAGES
+	    qt_mpool_create_aligned(need_sync, qlib->qthread_stack_size
+		    + (2*getpagesize()), qlib->shepherds[i].node,
+		    getpagesize());
+#else
 	    qt_mpool_create(need_sync, qlib->qthread_stack_size,
-			    qlib->shepherds[i].node);
+		    qlib->shepherds[i].node);
+#endif
 #if defined(ALIGNMENT_PROBLEMS_RETURN)
 	if (sizeof(ucontext_t) < 2048) {
 	    qlib->shepherds[i].context_pool =
@@ -1535,7 +1598,12 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
     /* these are used when qthread_fork() is called from a non-qthread. */
     generic_qthread_pool = qt_mpool_create(need_sync, sizeof(qthread_t), -1);
     generic_stack_pool =
+#ifdef QTHREAD_GUARD_PAGES
+	qt_mpool_create_aligned(need_sync, qlib->qthread_stack_size +
+		(2*getpagesize()), -1, getpagesize());
+#else
 	qt_mpool_create(need_sync, qlib->qthread_stack_size, -1);
+#endif
     generic_context_pool = qt_mpool_create(need_sync, sizeof(ucontext_t), -1);
     generic_queue_pool =
 	qt_mpool_create(need_sync, sizeof(qthread_queue_t), -1);
