@@ -6,11 +6,11 @@
 
 static aligned_t checkres(qthread_t *me, void *arg)
 {
-    int myshep = qthread_shep(me);
+    qthread_shepherd_id_t myshep = qthread_shep(me);
 
     assert(myshep == 1 || myshep == 0);
 
-    assert(myshep == (int)arg);
+    assert(myshep == (qthread_shepherd_id_t)(intptr_t)arg);
 
     return 0;
 }
