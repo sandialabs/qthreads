@@ -66,6 +66,9 @@ AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_CC_C99
 AC_PROG_CPP
 AC_PROG_CXX
+AS_IF([test "x$CXX" = "xg++"],
+	  [AS_IF([test "x$GXX" = x],
+	  		 [AC_MSG_ERROR([Qthreads requires a C++ compiler!])])])
 AM_PROG_AS
 AC_PROG_INSTALL
 AC_PROG_LN_S
