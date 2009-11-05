@@ -71,7 +71,10 @@ static void figure_out_cacheline_size()
 /* returns the cache line size */
 int qthread_cacheline()
 {
-    if (cacheline_bytes == 0)
+    if (cacheline_bytes == 0) {
 	figure_out_cacheline_size();
+	if (cacheline_bytes == 0) /* to cache errors in cacheline detection */
+	    cacheline_bytes = 128;
+    }
     return cacheline_bytes;
 }
