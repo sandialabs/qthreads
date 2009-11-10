@@ -3,37 +3,66 @@
 #endif
 #include <qthread/cacheline.h>
 #include <qthread/common.h>
-#include <stdio.h>
-//#define DEBUG_CPUID 1
+#define DEBUG_CPUID 1
 
-enum vendor { AMD, Intel, Unknown };
+#ifdef DEBUG_CPUID
+#include <stdio.h>
+#endif
+
+enum vendor
+{ AMD, Intel, Unknown };
 static int cacheline_bytes = 0;
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
-static void cpuid(int op, int *eax_ptr, int *ebx_ptr, int *ecx_ptr,
+static void cpuid(const int op, int *eax_ptr, int *ebx_ptr, int *ecx_ptr,
 		  int *edx_ptr)
 {				       /*{{{ */
-    int eax, ebx, ecx, edx;
-
 #  if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
 #   ifdef __PIC__
+    int eax, ebx, ecx, edx;
     __asm__ __volatile__("push %%ebx\n\t" "cpuid\n\t" "mov %%ebx, %1\n\t"
 			 "pop %%ebx":"=a"(eax), "=m"(ebx), "=c"(ecx),
 			 "=d"(edx)
 			 :"a"    (op));
-#   else
-    __asm__ __volatile__("cpuid":"=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
-			 :"a"    (op));
-#   endif
-#  elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
-    __asm__ __volatile__("cpuid":"=a"(eax), "=b"(ebx), "=c"(ecx), "=d"(edx)
-			 :"a"    (op));
-#  endif
     *eax_ptr = eax;
     *ebx_ptr = ebx;
     *ecx_ptr = ecx;
     *edx_ptr = edx;
+#   else
+    __asm__ __volatile__("cpuid":"=a"(*eax_ptr), "=b"(*ebx_ptr), "=c"(*ecx_ptr), "=d"(*edx_ptr)
+			 :"a"    (op));
+#   endif
+#  elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
+    __asm__ __volatile__("cpuid":"=a"(*eax_ptr), "=b"(*ebx_ptr), "=c"(*ecx_ptr), "=d"(*edx_ptr)
+			 :"a"    (op));
+#  endif
+}				       /*}}} */
+
+static void cpuid4(const int cache, int *eax_ptr, int *ebx_ptr, int *ecx_ptr,
+		   int *edx_ptr)
+{				       /*{{{ */
+#  if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
+#   ifdef __PIC__
+    int eax, ebx, ecx, edx;
+    __asm__ __volatile__("push %%ebx\n\t" "cpuid\n\t" "mov %%ebx, %1\n\t"
+			 "pop %%ebx":"=a"(eax), "=m"(ebx),
+			 "=c"(ecx), "=d"(edx)
+			 :"a"    (4), "c"(cache));
+    *eax_ptr = eax;
+    *ebx_ptr = ebx;
+    *ecx_ptr = ecx;
+    *edx_ptr = edx;
+#   else
+    __asm__ __volatile__("cpuid":"=a"(*eax_ptr), "=b"(*ebx_ptr),
+			 "=c"(*ecx_ptr), "=d"(*edx_ptr)
+			 :"a"    (4), "c"(cache));
+#   endif
+#  elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
+    __asm__ __volatile__("cpuid":"=a"(*eax_ptr), "=b"(*ebx_ptr),
+			 "=c"(*ecx_ptr), "=d"(*edx_ptr)
+			 :"a"    (4), "c"(cache));
+#  endif
 }				       /*}}} */
 
 static void descriptor(int d)
@@ -206,7 +235,7 @@ static void figure_out_cacheline_size()
 
     if (v == AMD && largest_std >= 1) {
 	cpuid(1, &eax, &ebx, &ecx, &edx);
-	tmp = 8 * ((ebx >> 8) & 0xff);     // The clflush width
+	tmp = 8 * ((ebx >> 8) & 0xff); // The clflush width
 #ifdef DEBUG_CPUID
 	printf("clflush width: %i\n", tmp);
 #endif
@@ -229,14 +258,21 @@ static void figure_out_cacheline_size()
 	}
 
 	if (largest_std >= 4) {
+	    int cache = 0;
+
 	    // Deterministic cache parameters
-	    cpuid(4, &eax, &ebx, &ecx, &edx);
-	    tmp = (ebx & 0xfff) + 1;
+	    cpuid4(cache, &eax, &ebx, &ecx, &edx);
+	    while ((eax & 0x1f) != 0) {
+		tmp = (ebx & 0xfff) + 1;
 #ifdef DEBUG_CPUID
-	    printf("System Coherency Line Size: %i\n", tmp);
+		printf("L%i System Coherency Line Size: %i\n",
+		       (eax >> 5) & 0x7, tmp);
 #endif
-	    cacheline_bytes = tmp;
-	    return;
+		cacheline_bytes = MAX(cacheline_bytes, tmp);
+		cpuid4(++cache, &eax, &ebx, &ecx, &edx);
+	    }
+	    if (cache > 0)
+		return;
 	}
     }
     cpuid(0x80000000, &eax, &ebx, &ecx, &edx);
@@ -284,3 +320,14 @@ int qthread_cacheline()
     }
     return cacheline_bytes;
 }				       /*}}} */
+
+#ifdef DEBUG_CPUID
+int main()
+{
+    int cl = qthread_cacheline();
+
+    printf("Hello! Cacheline: %i bytes\n", cl);
+
+    return 0;
+}
+#endif
