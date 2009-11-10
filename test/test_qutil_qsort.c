@@ -104,6 +104,5 @@ int main(int argc, char *argv[])
     }
     free(d_array);
 
-    qthread_finalize();
     return 0;
 }

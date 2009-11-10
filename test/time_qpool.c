@@ -217,7 +217,6 @@ int main(int argc, char *argv[])
     free(allthat);
 
     qtimer_free(timer);
-    qthread_finalize();
     if (interactive) {
 	printf("success!\n");
     }

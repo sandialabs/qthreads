@@ -61,7 +61,6 @@ int main(int argc, char *argv[])
 
     qthread_lock(qthread_self(), &alldone);
 
-    qthread_finalize();
 
     if (interactive == 1) {
 	fprintf(stderr, "Final value of x=%lu\n", (unsigned long)x);

@@ -31,7 +31,5 @@ int main()
 	assert(rets[i] == i % numsheps);
     }
 
-    qthread_finalize();
-
     return 0;
 }

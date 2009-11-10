@@ -59,7 +59,5 @@ int main()
     assert(qthread_cas_ptr(&ptr, NULL, &i) == NULL);
     assert(read_volptr(&ptr) == &i);
 
-    qthread_finalize();
-
     return 0;
 }

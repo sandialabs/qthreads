@@ -212,6 +212,5 @@ int main(int argc, char *argv[])
     }
 
     qtimer_free(timer);
-    qthread_finalize();
     return 0;
 }

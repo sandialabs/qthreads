@@ -76,7 +76,5 @@ int main(int argc, char *argv[])
 	printf("migrant returned successfully!\n");
     }
 
-    qthread_finalize();
-
     return 0;
 }

@@ -16,6 +16,5 @@ int main()
 	cacheline = qthread_cacheline();
 	printf("%i bytes\n", cacheline);
 	assert(cacheline > 0);
-    qthread_finalize();
     return 0;
 }

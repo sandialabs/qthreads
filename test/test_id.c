@@ -49,6 +49,5 @@ int main()
     assert(my_id == 0);
     qthread_fork(thread, NULL, &ret);
     qthread_readFF(qthread_self(), NULL, &ret);
-    qthread_finalize();
     return my_id;
 }

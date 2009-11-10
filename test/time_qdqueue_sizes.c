@@ -170,6 +170,5 @@ int main(int argc, char *argv[])
 	printf("success!\n");
     }
 
-    qthread_finalize();
     return 0;
 }

@@ -88,7 +88,9 @@ int qthread_init(qthread_shepherd_id_t nshepherds);
 /* use this function to clean up the qthreads environment after execution of
  * the program is finished. This function will terminate any currently running
  * qthreads, so only use it when you are certain that execution has completed.
- * For examples of how to do this, look at the included test programs. */
+ * This function is automatically called when the program exits, so only use if
+ * reclaiming resources from the library is necessary before the program exits.
+ */
 void qthread_finalize(void);
 
 /* this function allows a qthread to specifically give up control of the

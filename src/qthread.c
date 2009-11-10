@@ -1715,6 +1715,8 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
     qassert(swapcontext(qlib->mccoy_thread->context, qlib->master_context),
 	    0);
 
+    atexit(qthread_finalize);
+
     qthread_debug(ALL_DETAILS, "qthread_init(): finished.\n");
     return QTHREAD_SUCCESS;
 }				       /*}}} */
@@ -1791,7 +1793,7 @@ void qthread_finalize(void)
     qt_hash uniquefebaddrs = qt_hash_create(0);
 #endif
 
-    assert(qlib != NULL);
+    if (qlib == NULL) return;
 
     qthread_debug(ALL_CALLS, "qthread_finalize(): began.\n");
 

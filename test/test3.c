@@ -58,7 +58,6 @@ int main(int argc, char *argv[])
     qthread_fork(producer, NULL, &t);
     qthread_readFF(qthread_self(), &t, &t);
 
-    qthread_finalize();
 
     if (x == 55) {
 	if (interactive == 1) {

@@ -91,6 +91,5 @@ int main(int argc, char *argv[])
     qarray_destroy(a1);
     qarray_destroy(a2);
 
-    qthread_finalize();
     return 0;
 }

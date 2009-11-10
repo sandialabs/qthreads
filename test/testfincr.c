@@ -55,7 +55,5 @@ int main()
     }
     assert(master[1] == 150.0);
 
-    qthread_finalize();
-
     return 0;
 }

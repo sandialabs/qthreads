@@ -252,6 +252,5 @@ int main(int argc, char *argv[])
     qthread_fork(qmain, NULL, &ret);
     qthread_readFF(NULL, NULL, &ret);
     printf("[test1] now, to finalize\n"); fflush(stdout);
-    qthread_finalize();
     return 0;
 }

@@ -185,7 +185,6 @@ int main(int argc, char *argv[])
 	qarray_destroy(a);
     }
 
-    qthread_finalize();
     return 0;
 //void *qarray_elem_nomigrate(const qarray * a, const size_t index);
 //void *qarray_elem(qthread_t * me, const qarray * a, const size_t index);

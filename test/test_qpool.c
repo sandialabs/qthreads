@@ -97,7 +97,6 @@ int main(int argc, char *argv[])
 
     qpool_destroy(qp);
 
-    qthread_finalize();
     if (interactive) {
 	printf("success!\n");
     }

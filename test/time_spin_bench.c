@@ -79,6 +79,5 @@ int main(int argc, char *argv[])
     }
     printf("qthread time: %f\n", cumulative_time/10.0);
 
-    qthread_finalize();
     return 0;
 }

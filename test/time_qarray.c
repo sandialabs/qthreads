@@ -339,6 +339,5 @@ int main(int argc, char *argv[])
 	}
     }
 
-    qthread_finalize();
     return 0;
 }

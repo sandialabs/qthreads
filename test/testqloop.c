@@ -344,6 +344,5 @@ int main(int argc, char *argv[])
 	free(da);
     }
 
-    qthread_finalize();
     return 0;
 }

@@ -15,7 +15,7 @@ int main (int argc, char **argv) {
 
   my_main();
 
-  qthread_finalize();
+  return 0;
 }
 
 void hello (int i, const char* msg, char c) {
