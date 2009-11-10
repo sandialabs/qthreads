@@ -254,15 +254,18 @@ static void figure_out_cacheline_size()
     }
     if ((v == AMD || v == Intel) && largest_ext >= 0x80000006) {
 	cpuid(0x80000006, &eax, &ebx, &ecx, &edx);
-	if (v == AMD) {
-	    tmp = (ecx >> 8) & 0xff;
-	} else if (v == Intel) {
-	    tmp = ecx & 0xff;
-	}
+	tmp = ecx & 0xff;
 #ifdef DEBUG_CPUID
-	printf("L2/3 cache line size: %i\n", tmp);
+	printf("L2 cache line size: %i\n", tmp);
 #endif
 	cacheline_bytes = MAX(cacheline_bytes, tmp);
+	if (v == AMD) {
+	    tmp = edx & 0xff
+#ifdef DEBUG_CPUID
+	    printf("L3 cache line size: %i\n", tmp);
+#endif
+	    cacheline_bytes = MAX(cacheline_bytes, tmp);
+	}
     }
 # endif
 #else
