@@ -260,7 +260,7 @@ static void figure_out_cacheline_size()
 #endif
 	cacheline_bytes = MAX(cacheline_bytes, tmp);
 	if (v == AMD) {
-	    tmp = edx & 0xff
+	    tmp = edx & 0xff;
 #ifdef DEBUG_CPUID
 	    printf("L3 cache line size: %i\n", tmp);
 #endif
