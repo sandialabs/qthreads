@@ -4,7 +4,9 @@
 #include <qthread/cacheline.h>
 #include <qthread/common.h>
 #include <stdio.h>
+//#define DEBUG_CPUID 1
 
+enum vendor { AMD, Intel, Unknown };
 static int cacheline_bytes = 0;
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
@@ -50,6 +52,9 @@ static void descriptor(int d)
 	case 0x83:
 	case 0x84:
 	case 0x85:
+#ifdef DEBUG_CPUID
+	    printf("\top 2: code %02x: 32\n", d);
+#endif
 	    cacheline_bytes = MAX(cacheline_bytes, 32);
 	    return;
 	case 0x0d:
@@ -102,6 +107,9 @@ static void descriptor(int d)
 	case 0xea:
 	case 0xeb:
 	case 0xec:
+#ifdef DEBUG_CPUID
+	    printf("\top 2: code %02x: 64\n", d);
+#endif
 	    cacheline_bytes = MAX(cacheline_bytes, 64);
 	    return;
 	case 0x01:
@@ -171,35 +179,89 @@ static void figure_out_cacheline_size()
     cacheline_bytes = 128;
 # else
     int eax, ebx, ecx, edx;
-
+    enum vendor v;
     int tmp = 0;
+    int largest_ext = 0;
+    int largest_std = 0;
 
-    cpuid(1, &eax, &ebx, &ecx, &edx);
-    tmp = 8 * ((ebx >> 8) & 0xff);     // The clflush width, according to AMD
-    cacheline_bytes = MAX(cacheline_bytes, tmp);
-    {
-	int i = 1;
-
-	int limit;
-
-	do {
-	    cpuid(2, &eax, &ebx, &ecx, &edx);
-	    limit = eax & 0xf;
-	    i++;
-	    examine(eax, "eax");
-	    examine(ebx, "ebx");
-	    examine(ecx, "ecx");
-	    examine(edx, "edx");
-	} while (i < limit);
+    cpuid(0, &eax, &ebx, &ecx, &edx);
+    if (ebx == 0x756e6547 && edx == 0x49656e69 && ecx == 0x6c65746e) {
+	largest_std = eax;
+	v = Intel;
+#ifdef DEBUG_CPUID
+	printf("GenuineIntel (%i max)\n", largest_std);
+#endif
+    } else if (ebx == 0x68747541 && ecx == 0x444d4163 && edx == 0x69746e65) {
+	largest_std = eax;
+	v = AMD;
+#ifdef DEBUG_CPUID
+	printf("AuthenticAMD (%i max)\n", largest_std);
+#endif
+    } else {
+	v = Unknown;
+#ifdef DEBUG_CPUID
+	printf("Unknown Vendor: %x %x %x %x\n", eax, ebx, ecx, edx);
+#endif
     }
-    {
-	cpuid(0x80000005, &eax, &ebx, &ecx, &edx);
-	tmp = (ecx >> 8) & 0xff;
+
+    if (v == AMD && largest_std >= 1) {
+	cpuid(1, &eax, &ebx, &ecx, &edx);
+	tmp = 8 * ((ebx >> 8) & 0xff);     // The clflush width
+#ifdef DEBUG_CPUID
+	printf("clflush width: %i\n", tmp);
+#endif
 	cacheline_bytes = MAX(cacheline_bytes, tmp);
     }
-    {
-	cpuid(0x80000006, &eax, &ebx, &ecx, &edx);
+    if (v == Intel) {
+	if (largest_std >= 2) {
+	    int i = 1;
+	    int limit;
+
+	    do {
+		cpuid(2, &eax, &ebx, &ecx, &edx);
+		limit = eax & 0xf;
+		i++;
+		examine(eax, "eax");
+		examine(ebx, "ebx");
+		examine(ecx, "ecx");
+		examine(edx, "edx");
+	    } while (i < limit);
+	}
+
+	if (largest_std >= 4) {
+	    // Deterministic cache parameters
+	    cpuid(4, &eax, &ebx, &ecx, &edx);
+	    tmp = (ebx & 0xfff) + 1;
+#ifdef DEBUG_CPUID
+	    printf("System Coherency Line Size: %i\n", tmp);
+#endif
+	    cacheline_bytes = tmp;
+	    return;
+	}
+    }
+    cpuid(0x80000000, &eax, &ebx, &ecx, &edx);
+#ifdef DEBUG_CPUID
+    printf("largest ext = %x\n", eax);
+#endif
+    largest_ext = eax;
+    if (v == AMD && largest_ext >= 0x80000005) {
+	cpuid(0x80000005, &eax, &ebx, &ecx, &edx);
 	tmp = (ecx >> 8) & 0xff;
+#ifdef DEBUG_CPUID
+	printf("L1 cache line size: %i\n", tmp);
+#endif
+	cacheline_bytes = MAX(cacheline_bytes, tmp);
+    }
+    if ((v == AMD || v == Intel) && largest_ext >= 0x80000006) {
+	cpuid(0x80000006, &eax, &ebx, &ecx, &edx);
+	if (v == AMD) {
+	    tmp = (ecx >> 8) & 0xff;
+	} else if (v == Intel) {
+	    tmp = ecx & 0xff;
+	}
+#ifdef DEBUG_CPUID
+	printf("L2/3 cache line size: %i\n", tmp);
+#endif
 	cacheline_bytes = MAX(cacheline_bytes, tmp);
     }
 # endif
