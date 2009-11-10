@@ -272,13 +272,17 @@ static void figure_out_cacheline_size()
 	    while ((eax & 0x1f) != 0) {
 		tmp = (ebx & 0xfff) + 1;
 #ifdef DEBUG_CPUID
-		printf("L%i System Coherency Line Size: %i\n",
-		       (eax >> 5) & 0x7, tmp);
+		printf("L%i %s System Coherency Line Size: %i\n",
+		       (eax >> 5) & 0x7, ((eax&0x1f)==1)?"DCache":(((eax&0x1f)==2)?"ICache":(((eax&0x1f)==3)?"UCache":"NULL")), tmp);
+		if (ebx == 0) {
+		    printf("\teax:%x ebx:%x ecx:%x edx:%x\n", eax, ebx, ecx, edx);
+		    printf("\tI suspect this is a VirtualBox bug.\n");
+		}
 #endif
 		cacheline_bytes = MAX(cacheline_bytes, tmp);
 		cpuid4(++cache, &eax, &ebx, &ecx, &edx);
 	    }
-	    if (cache > 0)
+	    if (cache > 0 && cacheline_bytes > 0)
 		return;
 	}
     }
