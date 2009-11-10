@@ -8,6 +8,7 @@ AM_CXXFLAGS = @RESTRICT_CXXFLAGS@
 TESTS = test1 test2 test3 test_qalloc \
 		testincr testdincr testfincr \
 		test_cas \
+		test_cacheline \
 		testqloop testid \
 		test_internal_mod \
 		test_allpairs \
@@ -93,6 +94,9 @@ testdincr_DEPENDENCIES = $(QTHREADLIB)
 
 test_cas_SOURCES = test_cas.c
 test_cas_DEPENDENCIES = $(QTHREADLIB)
+
+test_cacheline_SOURCES = test_cacheline.c
+test_cacheline_DEPENDENCIES = $(QTHREADLIB)
 
 testid_SOURCES = test_id.c
 testid_DEPENDENCIES = $(QTHREADLIB)
