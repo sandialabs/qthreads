@@ -362,7 +362,8 @@ AS_IF([test "x$enable_software_increments" = "xyes"],
          [Use mutexes instead of assembly for atomic increment])])
 AS_IF([test "x$enable_guard_pages" = "xyes"],
 	  [AC_DEFINE([QTHREAD_GUARD_PAGES], [1],
-		 [Use guard pages to detect stack overruns])])
+		 [Use guard pages to detect stack overruns])],
+	  [enable_guard_pages="no"])
 
 AC_CACHE_SAVE
 
