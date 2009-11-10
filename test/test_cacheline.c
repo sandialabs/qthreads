@@ -10,11 +10,11 @@
 
 int main()
 {
-	int cacheline = 0;
+    int cacheline = 0;
 
     qthread_init(0);
-	cacheline = qthread_cacheline();
-	printf("%i bytes\n", cacheline);
-	assert(cacheline > 0);
+    cacheline = qthread_cacheline();
+    printf("%i bytes\n", cacheline);
+    assert(cacheline > 0);
     return 0;
 }
