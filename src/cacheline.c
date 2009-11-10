@@ -3,7 +3,7 @@
 #endif
 #include <qthread/cacheline.h>
 #include <qthread/common.h>
-#define DEBUG_CPUID 1
+//#define DEBUG_CPUID 1
 
 #ifdef DEBUG_CPUID
 #include <stdio.h>
@@ -15,6 +15,9 @@ static int cacheline_bytes = 0;
 
 #define MAX(a,b) (((a)>(b))?(a):(b))
 
+#if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
+     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)) && \
+    defined(HAVE_GCC_INLINE_ASSEMBLY)
 static void cpuid(const int op, int *eax_ptr, int *ebx_ptr, int *ecx_ptr,
 		  int *edx_ptr)
 {				       /*{{{ */
@@ -187,6 +190,7 @@ static void examine(int r, char *str)
 	descriptor((r >> 24) & 0xff);
     }
 }				       /*}}} */
+#endif
 
 static void figure_out_cacheline_size()
 {				       /*{{{ */
@@ -201,6 +205,9 @@ static void figure_out_cacheline_size()
       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
     cacheline_bytes = 128;
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
+# ifdef DEBUG_CPUID
+    printf("IA64 does not support CPUID; but is usually 128\n");
+# endif
     cacheline_bytes = 128;	       // Itanium L2/L3 are 128, L1 is 64
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
