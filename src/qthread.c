@@ -1771,6 +1771,8 @@ void qthread_finalize(void)
     qthread_shepherd_id_t i;
     qthread_t *t;
 
+    if (qlib == NULL) return;
+
 #ifdef QTHREAD_LOCK_PROFILING
     double aquirelock_maxtime = 0.0;
     double aquirelock_time = 0.0;
@@ -1792,8 +1794,6 @@ void qthread_finalize(void)
     qt_hash uniquelockaddrs = qt_hash_create(0);
     qt_hash uniquefebaddrs = qt_hash_create(0);
 #endif
-
-    if (qlib == NULL) return;
 
     qthread_debug(ALL_CALLS, "qthread_finalize(): began.\n");
 
