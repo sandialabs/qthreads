@@ -24,9 +24,13 @@ static void cpuid(const int op, int *eax_ptr, int *ebx_ptr, int *ecx_ptr,
 #  if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
 #   ifdef __PIC__
     int eax, ebx, ecx, edx;
-    __asm__ __volatile__("push %%ebx\n\t" "cpuid\n\t" "mov %%ebx, %1\n\t"
-			 "pop %%ebx":"=a"(eax), "=m"(ebx), "=c"(ecx),
-			 "=d"(edx)
+    int pic_ebx;
+    __asm__ __volatile__("mov %%ebx, %4\n\t"
+			 "cpuid\n\t"
+			 "mov %%ebx, %1\n\t"
+			 "mov %4, %%ebx"
+			 :"=a"(eax), "=m"(ebx), "=c"(ecx),
+			 "=d"(edx), "=m"(pic_ebx)
 			 :"a"    (op));
     *eax_ptr = eax;
     *ebx_ptr = ebx;
@@ -48,9 +52,13 @@ static void cpuid4(const int cache, int *eax_ptr, int *ebx_ptr, int *ecx_ptr,
 #  if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
 #   ifdef __PIC__
     int eax, ebx, ecx, edx;
-    __asm__ __volatile__("push %%ebx\n\t" "cpuid\n\t" "mov %%ebx, %1\n\t"
-			 "pop %%ebx":"=a"(eax), "=m"(ebx),
-			 "=c"(ecx), "=d"(edx)
+    int pic_ebx;
+    __asm__ __volatile__("mov %%ebx, %4\n\t"
+			 "cpuid\n\t"
+			 "mov %%ebx, %1\n\t"
+			 "mov %4, %%ebx"
+			 :"=a"(eax), "=m"(ebx), "=c"(ecx),
+			 "=d"(edx), "=m"(pic_ebx)
 			 :"a"    (4), "c"(cache));
     *eax_ptr = eax;
     *ebx_ptr = ebx;
@@ -235,6 +243,7 @@ static void figure_out_cacheline_size()
 #endif
     } else {
 	v = Unknown;
+	largest_std = eax;
 #ifdef DEBUG_CPUID
 	printf("Unknown Vendor: %x %x %x %x\n", eax, ebx, ecx, edx);
 #endif
@@ -332,7 +341,7 @@ int qthread_cacheline()
     return cacheline_bytes;
 }				       /*}}} */
 
-#ifdef DEBUG_CPUID
+#ifdef DEBUG_CPUIDno
 int main()
 {
     int cl = qthread_cacheline();
