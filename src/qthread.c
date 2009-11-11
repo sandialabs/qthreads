@@ -1251,7 +1251,7 @@ int qthread_initialize(void)
 	    if (qshe == NULL || qshe == qsh) {
 		fprintf(stderr, "unparsable number of shepherds (%s)\n", qsh);
 		nshepherds = 0;
-	    } else {
+	    } else if (nshepherds > 0) {
 		fprintf(stderr, "Forced %i Shepherds\n", nshepherds);
 	    }
 	} else {
