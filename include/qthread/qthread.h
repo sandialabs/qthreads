@@ -42,6 +42,7 @@
 #ifdef __cplusplus
 #define Q_STARTCXX extern "C" {
 #define Q_ENDCXX }
+#define restrict
 #else
 #define Q_STARTCXX
 #define Q_ENDCXX
@@ -81,9 +82,13 @@ typedef unsigned short qthread_shepherd_id_t;	/* doubt we'll run more than 65k s
 typedef aligned_t(*qthread_f) (qthread_t * me, void *arg);
 
 /* use this function to initialize the qthreads environment before spawning any
- * qthreads. The argument to this function specifies the number of pthreads
- * that will be spawned to shepherd the qthreads. */
+ * qthreads. The argument to this function used to specify the number of
+ * pthreads that will be spawned to shepherd the qthreads. This number is now
+ * ignored, the qthread_init() function is deprecated, and qthread_initialize()
+ * now takes its place. If you MUST specify the number of shepherds, use the
+ * environment variable QTHREAD_NUM_SHEPHERDS. */
 int qthread_init(qthread_shepherd_id_t nshepherds);
+int qthread_initialize(void);
 
 /* use this function to clean up the qthreads environment after execution of
  * the program is finished. This function will terminate any currently running

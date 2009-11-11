@@ -1207,10 +1207,16 @@ static void *qthread_shepherd(void *arg)
 }				       /*}}} */
 
 int qthread_init(qthread_shepherd_id_t nshepherds)
+{
+    return qthread_initialize();
+}
+
+int qthread_initialize(void)
 {				       /*{{{ */
     int r;
     size_t i;
     int need_sync = 1;
+    qthread_shepherd_id_t nshepherds = 0;
 
 #ifdef HAVE_SYS_LGRP_USER_H
     lgrp_cookie_t lgrp_cookie = lgrp_init(LGRP_VIEW_OS);
@@ -1236,6 +1242,22 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
     qthread_debug(ALL_CALLS, "qthread_init(): began.\n");
 
 #ifdef QTHREAD_USE_PTHREADS
+    {
+	char *qsh = getenv("QTHREAD_NUM_SHEPHERDS");
+	char *qshe = NULL;
+
+	if (qsh) {
+	    nshepherds = strtol(qsh, &qshe, 0);
+	    if (qshe == NULL || qshe == qsh) {
+		fprintf(stderr, "unparsable number of shepherds (%s)\n", qsh);
+		nshepherds = 0;
+	    } else {
+		fprintf(stderr, "Forced %i Shepherds\n", nshepherds);
+	    }
+	} else {
+	    nshepherds = 0;
+	}
+    }
     if (nshepherds == 0) {	       /* try to guess the "right" number */
 #ifdef QTHREAD_HAVE_LIBNUMA
 	if (numa_available() != -1) {

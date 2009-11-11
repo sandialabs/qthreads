@@ -40,7 +40,8 @@ int main(int argc, char *argv[])
     qthread_t *me;
     int interactive = 0;
 
-    qthread_init(2);
+    putenv("QTHREAD_NUM_SHEPHERDS=2");
+    qthread_initialize();
     me = qthread_self();
 
     if (argc >= 2) {

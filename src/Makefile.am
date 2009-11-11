@@ -23,7 +23,7 @@ libqthread_la_SOURCES = \
 	qutil.c \
 	qt_hash.cpp \
 	qloop.c
-libqthread_la_LDFLAGS = -version-info 10:0:0 -no-undefined
+libqthread_la_LDFLAGS = -version-info 10:1:0 -no-undefined
 libqthread_la_LIBADD =
 libqthread_la_DEPENDENCIES =
 
