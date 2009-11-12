@@ -9,7 +9,7 @@ static aligned_t checkres(qthread_t *me, void *arg)
 {
     qthread_shepherd_id_t myshep = qthread_shep(me);
 
-    printf("myshep = %i, should be %i\n", myshep, (int)(intptr_t)arg);
+    iprintf("checkres: myshep = %i, should be %i\n", myshep, (int)(intptr_t)arg);
 
     assert(myshep == 1 || myshep == 0 || myshep == 2);
 
