@@ -7,7 +7,6 @@ AM_CXXFLAGS = @RESTRICT_CXXFLAGS@
 
 TESTS = test1 test2 test3 test_qalloc \
 		testincr testdincr testfincr \
-		test_disabled \
 		test_cas \
 		test_cacheline \
 		testqloop testid \
@@ -15,18 +14,21 @@ TESTS = test1 test2 test3 test_qalloc \
 		test_allpairs \
 		test_wavefront \
 		test_migrate \
+		test_disabled \
 		test_qarray \
 		test_qpool \
 		test_qlfqueue \
 		test_qdqueue \
 		test_qutil_qsort
 
+noinst_PROGRAMS =
+
 if ENABLE_CXX_TESTS
 TESTS += testloop
 endif
 
 if ENABLE_TIMER_PROGS
-TESTS += time_swap time_producerconsumer time_increments \
+noinst_PROGRAMS += time_swap time_producerconsumer time_increments \
 	 time_qarray \
 	 time_qarray_sizes \
 	 time_qpool \
@@ -53,7 +55,7 @@ TESTS += time_swap time_producerconsumer time_increments \
 	 time_gcd
 endif
 
-buildall: $(TESTS)
+buildall: $(TESTS) $(noinst_PROGRAMS)
 .PHONY: buildall
 
 check_PROGRAMS = $(TESTS)

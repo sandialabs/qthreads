@@ -125,6 +125,9 @@ int main(int argc, char *argv[])
     NUMARG(ELEMENT_COUNT, "TEST_ELEMENT_COUNT");
     NUMARG(enabled_tests, "TEST_ENABLED_TESTS");
     NUMARG(enabled_types, "TEST_ENABLED_TYPES");
+    if (!interactive) {
+	ELEMENT_COUNT = 10000;
+    }
 
     me = qthread_self();
 

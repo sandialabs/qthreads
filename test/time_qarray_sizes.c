@@ -61,12 +61,14 @@ int main(int argc, char *argv[])
     assert(qthread_initialize() == QTHREAD_SUCCESS);
 
     CHECK_INTERACTIVE();
-    if (! interactive) {
-	return 0;
-    }
     NUMARG(dist_requested, "TEST_DIST_REQUESTED");
     NUMARG(ELEMENT_COUNT, "TEST_ELEMENT_COUNT");
     NUMARG(constant_size, "TEST_CONSTANT_SIZE");
+    if (! interactive) {
+	dist_requested = 1;
+	ELEMENT_COUNT = 1000;
+	constant_size = 0;
+    }
 
     me = qthread_self();
 

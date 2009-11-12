@@ -38,6 +38,7 @@ int main(int argc, char *argv[])
     qthread_initialize();
 
     CHECK_INTERACTIVE();
+    if (!interactive) return 0;
     iprintf("%i threads\n", qthread_num_shepherds());
     NUMARG(len, "TEST_LEN");
     iprintf("len = %lu\n", (unsigned long)len);
