@@ -98,6 +98,13 @@ int qthread_initialize(void);
  */
 void qthread_finalize(void);
 
+/* use this function to tell a shepherd to stop accepting new threads and to
+ * offload its existing threads to nearby shepherds. This latter may not take
+ * effect immediately, but may only take effect when the current executing
+ * qthread on that shepherd next stops executing */
+void qthread_disable_shepherd(const qthread_shepherd_id_t shep);
+void qthread_enable_shepherd(const qthread_shepherd_id_t shep);
+
 /* this function allows a qthread to specifically give up control of the
  * processor even though it has not blocked. This is useful for things like
  * busy-waits or cooperative multitasking. Without this function, threads will

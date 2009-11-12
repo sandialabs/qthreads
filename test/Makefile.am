@@ -7,6 +7,7 @@ AM_CXXFLAGS = @RESTRICT_CXXFLAGS@
 
 TESTS = test1 test2 test3 test_qalloc \
 		testincr testdincr testfincr \
+		test_disabled \
 		test_cas \
 		test_cacheline \
 		testqloop testid \
@@ -93,6 +94,9 @@ testfincr_DEPENDENCIES = $(QTHREADLIB)
 
 testdincr_SOURCES = testdincr.c
 testdincr_DEPENDENCIES = $(QTHREADLIB)
+
+test_disabled_SOURCES = test_disabled.c
+test_disabled_DEPENDENCIES = $(QTHREADLIB)
 
 test_cas_SOURCES = test_cas.c
 test_cas_DEPENDENCIES = $(QTHREADLIB)
