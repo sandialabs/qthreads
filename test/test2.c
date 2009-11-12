@@ -5,6 +5,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <qthread/qthread.h>
+#include "argparsing.h"
 
 static unsigned int target = 1000;
 static aligned_t x = 0;
@@ -33,21 +34,11 @@ static aligned_t thread(qthread_t * t, void *arg)
 int main(int argc, char *argv[])
 {
     long int i;
-    int interactive = 0;
-    int threads = 1;
 
-    if (argc >= 3) {
-	target = strtoul(argv[2], NULL, 0);
-    }
-    if (argc >= 2) {
-	threads = strtol(argv[1], NULL, 0);
-	if (threads < 0) {
-	    threads = 1;
-	}
-	interactive = 1;
-    }
+    assert(qthread_initialize() == 0);
 
-    assert(qthread_init(threads) == 0);
+    NUMARG(target,"TEST_TARGET");
+    CHECK_INTERACTIVE();
 
     qthread_lock(qthread_self(), &alldone);
 
@@ -62,9 +53,7 @@ int main(int argc, char *argv[])
     qthread_lock(qthread_self(), &alldone);
 
 
-    if (interactive == 1) {
-	fprintf(stderr, "Final value of x=%lu\n", (unsigned long)x);
-    }
+    iprintf("Final value of x=%lu\n", (unsigned long)x);
 
     if (x == target)
 	return 0;

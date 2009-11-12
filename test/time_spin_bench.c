@@ -5,7 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <qthread/qthread.h>
-#include <qtimer.h>
+#include "qtimer.h"
+#include "argparsing.h"
 
 #include <pthread.h>
 
@@ -39,26 +40,16 @@ int main(int argc, char *argv[])
 {
     aligned_t rets[NUM_THREADS];
     size_t i;
-    int threads = 0;
-    int interactive = 0;
     qthread_t *me;
     qtimer_t timer = qtimer_new();
     double cumulative_time = 0.0;
 
-    if (argc >= 2) {
-	threads = strtol(argv[1], NULL, 0);
-	if (threads < 0) {
-	    threads = 0;
-	} else {
-	    printf("threads: %i\n", threads);
-	}
-    }
-    interactive = (argc > 2);
-
-    if (qthread_init(threads) != QTHREAD_SUCCESS) {
+    if (qthread_initialize() != QTHREAD_SUCCESS) {
 	fprintf(stderr, "qthread library could not be initialized!\n");
 	exit(EXIT_FAILURE);
     }
+
+    CHECK_INTERACTIVE();
     me = qthread_self();
 
     for (int iteration = 0; iteration < 10; iteration++) {
@@ -72,12 +63,10 @@ int main(int argc, char *argv[])
 	    qthread_readFF(me, NULL, &(rets[i]));
 	}
 	qtimer_stop(timer);
-	if (interactive) {
-	    printf("\ttest iteration %i: %f secs\n", iteration, qtimer_secs(timer));
-	}
+	iprintf("\ttest iteration %i: %f secs\n", iteration, qtimer_secs(timer));
 	cumulative_time += qtimer_secs(timer);
     }
-    printf("qthread time: %f\n", cumulative_time/10.0);
+    iprintf("qthread time: %f\n", cumulative_time/10.0);
 
     return 0;
 }

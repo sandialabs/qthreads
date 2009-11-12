@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <qthread/qthread.h>
 #include <qthread/qdqueue.h>
+#include "argparsing.h"
 
 #define ELEMENT_COUNT 10000
 #define THREAD_COUNT 128
@@ -37,23 +38,13 @@ static aligned_t dequeuer(qthread_t * me, void *arg)
 int main(int argc, char *argv[])
 {
     qdqueue_t *q;
-    int threads = 1, interactive = 0;
     qthread_t *me;
     size_t i;
     aligned_t *rets;
 
-    if (argc == 2) {
-	threads = strtol(argv[1], NULL, 0);
-	if (threads < 0) {
-	    threads = 1;
-	    interactive = 0;
-	} else {
-	    interactive = 1;
-	}
-    }
-
-    assert(qthread_init(threads) == 0);
+    assert(qthread_initialize() == QTHREAD_SUCCESS);
     me = qthread_self();
+    CHECK_INTERACTIVE();
 
     if ((q = qdqueue_create()) == NULL) {
 	fprintf(stderr, "qdqueue_create() failed!\n");
@@ -91,9 +82,7 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "qdqueue not empty after ordering test!\n");
 	exit(-1);
     }
-    if (interactive) {
-	printf("ordering test succeeded\n");
-    }
+    iprintf("ordering test succeeded\n");
 
     rets = calloc(THREAD_COUNT, sizeof(aligned_t));
     assert(rets != NULL);
@@ -111,18 +100,14 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "qdqueue not empty after threaded test!\n");
 	exit(-2);
     }
-    if (interactive) {
-	printf("threaded test succeeded\n");
-    }
+    iprintf("threaded test succeeded\n");
 
     if (qdqueue_destroy(me, q) != QTHREAD_SUCCESS) {
 	fprintf(stderr, "qdqueue_destroy() failed!\n");
 	exit(-2);
     }
 
-    if (interactive) {
-	printf("success!\n");
-    }
+    iprintf("success!\n");
 
     return 0;
 }

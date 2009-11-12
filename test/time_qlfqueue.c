@@ -11,6 +11,7 @@
 #include <qthread/qloop.h>
 #include <qthread/qlfqueue.h>
 #include "qtimer.h"
+#include "argparsing.h"
 
 #define ELEMENT_COUNT 10000
 #define THREAD_COUNT 128
@@ -129,7 +130,6 @@ void loop_dequeuer (qthread_t *me, const size_t startat, const size_t stopat, vo
 int main(int argc, char *argv[])
 {
     qlfqueue_t *q;
-    int threads = 1, interactive = 0;
     qthread_t *me;
     size_t i;
     aligned_t *rets;
@@ -138,18 +138,10 @@ int main(int argc, char *argv[])
     cp_list *cpq;
 #endif
 
-    if (argc == 2) {
-	threads = strtol(argv[1], NULL, 0);
-	if (threads < 0) {
-	    threads = 1;
-	    interactive = 0;
-	} else {
-	    interactive = 1;
-	}
-    }
-
-    assert(qthread_init(threads) == 0);
+    assert(qthread_initialize() == QTHREAD_SUCCESS);
     me = qthread_self();
+
+    CHECK_INTERACTIVE();
 
     if ((q = qlfqueue_create()) == NULL) {
 	fprintf(stderr, "qlfqueue_create() failed!\n");
@@ -167,11 +159,11 @@ int main(int argc, char *argv[])
     qtimer_start(timer);
     qt_loop_balance(0, THREAD_COUNT * ELEMENT_COUNT, loop_queuer, q);
     qtimer_stop(timer);
-    printf("loop balance enqueue: %f secs\n", qtimer_secs(timer));
+    iprintf("loop balance enqueue: %f secs\n", qtimer_secs(timer));
     qtimer_start(timer);
     qt_loop_balance(0, THREAD_COUNT * ELEMENT_COUNT, loop_dequeuer, q);
     qtimer_stop(timer);
-    printf("loop balance dequeue: %f secs\n", qtimer_secs(timer));
+    iprintf("loop balance dequeue: %f secs\n", qtimer_secs(timer));
     if (!qlfqueue_empty(q)) {
 	fprintf(stderr, "qlfqueue not empty after loop balance test!\n");
 	exit(-2);
@@ -182,11 +174,11 @@ int main(int argc, char *argv[])
     qtimer_start(timer);
     qt_loop_balance(0, THREAD_COUNT * ELEMENT_COUNT, loop_cpqueuer, cpq);
     qtimer_stop(timer);
-    printf("loop balance cp enqueue: %f secs\n", qtimer_secs(timer));
+    iprintf("loop balance cp enqueue: %f secs\n", qtimer_secs(timer));
     qtimer_start(timer);
     qt_loop_balance(0, THREAD_COUNT * ELEMENT_COUNT, loop_cpdequeuer, cpq);
     qtimer_stop(timer);
-    printf("loop balance cp dequeue: %f secs\n", qtimer_secs(timer));
+    iprintf("loop balance cp dequeue: %f secs\n", qtimer_secs(timer));
 #endif
 
     rets = calloc(THREAD_COUNT, sizeof(aligned_t));
@@ -206,7 +198,7 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "qlfqueue not empty after threaded test!\n");
 	exit(-2);
     }
-    printf("threaded lf test: %f secs\n", qtimer_secs(timer));
+    iprintf("threaded lf test: %f secs\n", qtimer_secs(timer));
 
 #ifdef HAVE_CPROPS
     qtimer_start(timer);
@@ -221,7 +213,7 @@ int main(int argc, char *argv[])
     }
     qtimer_stop(timer);
     free(rets);
-    printf("threaded cp test: %f secs\n", qtimer_secs(timer));
+    iprintf("threaded cp test: %f secs\n", qtimer_secs(timer));
 
     cp_list_destroy(cpq);
 #endif
@@ -231,9 +223,7 @@ int main(int argc, char *argv[])
 	exit(-2);
     }
 
-    if (interactive) {
-	printf("success!\n");
-    }
+    iprintf("success!\n");
 
     return 0;
 }

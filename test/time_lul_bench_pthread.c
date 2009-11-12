@@ -5,7 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <qthread/qthread.h>
-#include <qtimer.h>
+#include "qtimer.h"
+#include "argparsing.h"
 
 #include <pthread.h>
 
@@ -31,12 +32,11 @@ int main(int argc, char *argv[])
     pthread_t rets[NUM_THREADS];
     size_t i;
     int threads = 0;
-    int interactive = 0;
     qthread_t *me;
     qtimer_t timer = qtimer_new();
     double cumulative_time = 0.0;
 
-    interactive = (argc > 1);
+    CHECK_INTERACTIVE();
 
     for (int iteration = 0; iteration < 10; iteration++) {
 	qtimer_start(timer);
@@ -47,12 +47,10 @@ int main(int argc, char *argv[])
 	    pthread_join(rets[i], NULL);
 	}
 	qtimer_stop(timer);
-	if (interactive) {
-	    printf("\ttest iteration %i: %f secs\n", iteration, qtimer_secs(timer));
-	}
+	iprintf("\ttest iteration %i: %f secs\n", iteration, qtimer_secs(timer));
 	cumulative_time += qtimer_secs(timer);
     }
-    printf("pthread time: %f\n", cumulative_time/10.0);
+    iprintf("pthread time: %f\n", cumulative_time/10.0);
 
     return 0;
 }

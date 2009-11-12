@@ -5,6 +5,7 @@
 #include <qthread/qloop.h>
 #include <qthread/qdqueue.h>
 #include "qtimer.h"
+#include "argparsing.h"
 
 #define ELEMENT_COUNT 10000
 #define THREAD_COUNT 128
@@ -65,23 +66,14 @@ void loop_dequeuer (qthread_t *me, const size_t startat, const size_t stopat, vo
 int main(int argc, char *argv[])
 {
     qdqueue_t *q;
-    int threads = 1, interactive = 0;
     qthread_t *me;
     size_t i;
     aligned_t *rets;
     qtimer_t timer = qtimer_new();
 
-    if (argc == 2) {
-	threads = strtol(argv[1], NULL, 0);
-	if (threads < 0) {
-	    threads = 1;
-	    interactive = 0;
-	} else {
-	    interactive = 1;
-	}
-    }
+    assert(qthread_initialize() == QTHREAD_SUCCESS);
 
-    assert(qthread_init(threads) == 0);
+    CHECK_INTERACTIVE();
     me = qthread_self();
 
     if ((q = qdqueue_create()) == NULL) {
@@ -100,11 +92,11 @@ int main(int argc, char *argv[])
     qtimer_start(timer);
     qt_loop_balance(0, THREAD_COUNT * ELEMENT_COUNT, loop_queuer, q);
     qtimer_stop(timer);
-    printf("loop balance enqueue: %f secs\n", qtimer_secs(timer));
+    iprintf("loop balance enqueue: %f secs\n", qtimer_secs(timer));
     qtimer_start(timer);
     qt_loop_balance(0, THREAD_COUNT * ELEMENT_COUNT, loop_dequeuer, q);
     qtimer_stop(timer);
-    printf("loop balance dequeue: %f secs\n", qtimer_secs(timer));
+    iprintf("loop balance dequeue: %f secs\n", qtimer_secs(timer));
     if (!qdqueue_empty(me, q)) {
 	fprintf(stderr, "qdqueue not empty after loop balance test!\n");
 	exit(-2);
@@ -127,7 +119,7 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "qdqueue not empty after threaded test!\n");
 	exit(-2);
     }
-    printf("threaded dq test: %f secs\n", qtimer_secs(timer));
+    iprintf("threaded dq test: %f secs\n", qtimer_secs(timer));
     free(rets);
 
     if (qdqueue_destroy(me, q) != QTHREAD_SUCCESS) {
@@ -135,9 +127,7 @@ int main(int argc, char *argv[])
 	exit(-2);
     }
 
-    if (interactive) {
-	printf("success!\n");
-    }
+    iprintf("success!\n");
 
     return 0;
 }

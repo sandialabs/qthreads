@@ -7,14 +7,16 @@
 #include <string.h>
 #include <qthread/qthread.h>
 #include <qthread/cacheline.h>
+#include "argparsing.h"
 
 int main()
 {
     int cacheline = 0;
 
-    qthread_init(0);
+    qthread_initialize();
     cacheline = qthread_cacheline();
-    printf("%i bytes\n", cacheline);
+    CHECK_INTERACTIVE();
+    iprintf("%i bytes\n", cacheline);
     assert(cacheline > 0);
     return 0;
 }

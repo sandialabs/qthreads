@@ -6,7 +6,8 @@
 #include <stdlib.h>
 #include <qthread/qthread.h>
 #include <qthread/allpairs.h>
-#include <qtimer.h>
+#include "qtimer.h"
+#include "argparsing.h"
 
 size_t ASIZE = 1026;
 
@@ -32,36 +33,24 @@ int main(int argc, char *argv[])
     qarray *a1, *a2;
     int **out;
     size_t i;
-    int threads = 0;
-    int interactive = 0;
     qthread_t *me;
     qtimer_t timer = qtimer_new();
     double cumulative_time = 0.0;
+    char *str;
 
-    if (argc >= 2) {
-	threads = strtol(argv[1], NULL, 0);
-	if (threads < 0) {
-	    threads = 0;
-	    interactive = 0;
-	} else {
-	    printf("threads: %i\n", threads);
-	    interactive = 1;
-	}
-    }
-    if (argc >= 3) {
-	ASIZE = strtol(argv[2], NULL, 0);
-	printf("ASIZE: %i\n", (int)ASIZE);
-    }
-
-    if (qthread_init(threads) != QTHREAD_SUCCESS) {
+    if (qthread_initialize() != QTHREAD_SUCCESS) {
 	fprintf(stderr, "qthread library could not be initialized!\n");
 	exit(EXIT_FAILURE);
     }
     me = qthread_self();
+    CHECK_INTERACTIVE();
+    NUMARG(ASIZE, "TEST_ASIZE");
+    iprintf("ASIZE: %i\n", (int)ASIZE);
+    iprintf("threads: %i\n", qthread_num_shepherds());
 
     a1 = qarray_create_configured(ASIZE, sizeof(int), FIXED_HASH, 1, 1);
     a2 = qarray_create_configured(ASIZE, sizeof(int), FIXED_HASH, 1, 1);
-    printf("segments of %u elements\n", (unsigned int)a1->segment_size);
+    iprintf("segments of %u elements\n", (unsigned int)a1->segment_size);
     qarray_iter_loop(me, a1, 0, ASIZE, assigni, NULL);
     qarray_iter_loop(me, a2, 0, ASIZE, assigni, NULL);
 
@@ -71,16 +60,16 @@ int main(int argc, char *argv[])
 	out[i] = calloc(sizeof(int), ASIZE);
 	assert(out[i]);
     }
-    printf("all initialized\n");
+    iprintf("all initialized\n");
 
     for (int i=0; i<10; i++) {
 	qtimer_start(timer);
 	qt_allpairs_output(a1, a2, (dist_out_f) mult, (void **)out, sizeof(int));
 	qtimer_stop(timer);
 	cumulative_time += qtimer_secs(timer);
-	printf("\t%i: mult time %f\n", i, qtimer_secs(timer));
+	iprintf("\t%i: mult time %f\n", i, qtimer_secs(timer));
     }
-    printf("mult time: %f (avg)\n", cumulative_time/10.0);
+    iprintf("mult time: %f (avg)\n", cumulative_time/10.0);
     for (i = 0; i < ASIZE; i++) {
 	free(out[i]);
     }

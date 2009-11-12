@@ -41,11 +41,11 @@ int main()
     qthread_t *me;
     int my_id;
 
-    qthread_init(1);
+    qthread_initialize();
     me = qthread_self();
     my_id = qthread_id(me);
     if (my_id != 0)
-	printf("my_id == %i (expected 0)\n", my_id);
+	fprintf(stderr,"my_id == %i (expected 0)\n", my_id);
     assert(my_id == 0);
     qthread_fork(thread, NULL, &ret);
     qthread_readFF(qthread_self(), NULL, &ret);

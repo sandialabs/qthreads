@@ -24,16 +24,16 @@ int main()
     double ret_test;
     qthread_t *me;
 
-    qthread_init(7);
+    qthread_initialize();
     me = qthread_self();
 
     ret_test = qthread_dincr(&master, 1);
     if (master != 1.0) {
-	printf("master = %f\n", master);
+	fprintf(stderr,"master = %f\n", master);
     }
     assert(master == 1.0);
     if (ret_test != 0.0) {
-	printf("ret_test = %f\n", ret_test);
+	fprintf(stderr,"ret_test = %f\n", ret_test);
     }
     assert(ret_test == 0.0);
     master = 2;
@@ -46,9 +46,9 @@ int main()
     if (master != 32.0) {
 	int j;
 
-	printf("master is %f rather than 32\n", master);
+	fprintf(stderr, "master is %f rather than 32\n", master);
 	for (j = 0; j < 30; j++) {
-	    printf("retvals[%i] = %f\n", j, retvals[j]);
+	    fprintf(stderr, "retvals[%i] = %f\n", j, retvals[j]);
 	}
     }
     assert(master == 32.0);
@@ -60,7 +60,7 @@ int main()
 	qthread_readFF(me, NULL, rets + i);
     }
     if (master != 150.0) {
-	printf("master is %f rather than 150\n", master);
+	fprintf(stderr,"master is %f rather than 150\n", master);
     }
     assert(master == 150.0);
 

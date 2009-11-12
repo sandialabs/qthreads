@@ -57,6 +57,8 @@ buildall: $(TESTS)
 
 check_PROGRAMS = $(TESTS)
 
+noinst_HEADERS = argparsing.h
+
 INCLUDES = -I$(top_srcdir)/include
 OUTPUTDIR = $(top_builddir)/src
 QTHREADLIB = $(OUTPUTDIR)/libqthread.la

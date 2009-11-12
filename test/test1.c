@@ -14,8 +14,7 @@
 #include <qthread/qthread.h>
 #include <qthread/futurelib.h>
 #include <qthread/qutil.h>
-
-int interactive = 0;
+#include "argparsing.h"
 
 /*
  * This file tests the qutil functions
@@ -58,47 +57,31 @@ static aligned_t qmain(qthread_t * me, void *junk)
 	if (ui_min_authoritative > ui_array[i])
 	    ui_min_authoritative = ui_array[i];
     }
-    if (interactive) {
-	printf("ui_array generated...\n");
-    }
+    iprintf("ui_array generated...\n");
     ui_out = qutil_uint_sum(me, ui_array, ui_len, 0);
     assert(ui_out == ui_sum_authoritative);
-    if (interactive) {
-	printf(" - qutil_uint_sum is correct\n");
-    }
+    iprintf(" - qutil_uint_sum is correct\n");
     /* testing with FEB just for full coverage; if it's good for uints, it's
      * good for everyone else */
     if (sizeof(aligned_t) <= sizeof(unsigned int)) {
-	if (interactive) {
-	    printf("   (aligned_t <= unsigned int)\n");
-	}
+	iprintf("   (aligned_t <= unsigned int)\n");
 	ui_out = qutil_uint_sum(me, ui_array, ui_len, 1);
 	assert(ui_out == ui_sum_authoritative);
-	if (interactive) {
-	    printf(" - qutil_uint_sum with futures is correct\n");
-	}
+	iprintf(" - qutil_uint_sum with futures is correct\n");
     }
     ui_out = qutil_uint_mult(me, ui_array, ui_len, 0);
     assert(ui_out == ui_mult_authoritative);
-    if (interactive) {
-	printf(" - qutil_uint_mult is correct\n");
-    }
+    iprintf(" - qutil_uint_mult is correct\n");
     ui_out = qutil_uint_max(me, ui_array, ui_len, 0);
     assert(ui_out == ui_max_authoritative);
-    if (interactive) {
-	printf(" - qutil_uint_max is correct\n");
-    }
+    iprintf(" - qutil_uint_max is correct\n");
     ui_out = qutil_uint_min(me, ui_array, ui_len, 0);
     assert(ui_out == ui_min_authoritative);
-    if (interactive) {
-	printf(" - qutil_uint_min is correct\n");
-    }
+    iprintf(" - qutil_uint_min is correct\n");
     gettimeofday(&start, NULL);
     qutil_aligned_qsort(me, ui_array, ui_len);
     gettimeofday(&stop, NULL);
-    if (interactive == 1) {
-	printf("done sorting, checking correctness...\n");
-    }
+    iprintf("done sorting, checking correctness...\n");
     for (i = 0; i < ui_len - 1; i++) {
 	if (ui_array[i] > ui_array[i + 1]) {
 	    /*
@@ -117,13 +100,11 @@ static aligned_t qmain(qthread_t * me, void *junk)
 	    abort();
 	}
     }
-    if (interactive == 1) {
-	printf("[test1] aligned_t sorting %lu numbers took: %f seconds\n",
-	       (unsigned long)d_len,
-	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
-							  (start.tv_usec *
-							   1.0e-6)));
-    }
+    iprintf("[test1] aligned_t sorting %lu numbers took: %f seconds\n",
+	    (unsigned long)d_len,
+	    (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
+						       (start.tv_usec *
+							1.0e-6)));
     free(ui_array);
 
     i_array = calloc(i_len, sizeof(saligned_t));
@@ -136,30 +117,20 @@ static aligned_t qmain(qthread_t * me, void *junk)
 	if (i_min_authoritative > i_array[i])
 	    i_min_authoritative = i_array[i];
     }
-    if (interactive) {
-	printf("i_array generated...\n");
-    }
+    iprintf("i_array generated...\n");
     i_out = qutil_int_sum(me, i_array, i_len, 0);
     assert(i_out == i_sum_authoritative);
-    if (interactive) {
-	printf(" - qutil_int_sum is correct\n");
-    }
+    iprintf(" - qutil_int_sum is correct\n");
     i_out = qutil_int_mult(me, i_array, i_len, 0);
     assert(i_out == i_mult_authoritative);
-    if (interactive) {
-	printf(" - qutil_int_mult is correct\n");
-    }
+    iprintf(" - qutil_int_mult is correct\n");
     i_out = qutil_int_max(me, i_array, i_len, 0);
     assert(i_out == i_max_authoritative);
-    if (interactive) {
-	printf(" - qutil_int_max is correct\n");
-    }
+    iprintf(" - qutil_int_max is correct\n");
     i_out = qutil_int_min(me, i_array, i_len, 0);
     assert(i_out == i_min_authoritative);
     free(i_array);
-    if (interactive) {
-	printf(" - qutil_int_min is correct\n");
-    }
+    iprintf(" - qutil_int_min is correct\n");
 
     d_array = calloc(d_len, sizeof(double));
     assert(d_array != NULL);
@@ -173,9 +144,7 @@ static aligned_t qmain(qthread_t * me, void *junk)
 	if (d_min_authoritative > d_array[i])
 	    d_min_authoritative = d_array[i];
     }
-    if (interactive) {
-	printf("d_array generated...\n");
-    }
+    iprintf("d_array generated...\n");
     d_out = qutil_double_sum(me, d_array, d_len, 0);
     if (fabs(d_out - d_sum_authoritative) >
 	(fabs(d_out + d_sum_authoritative) * FLT_EPSILON)) {
@@ -183,9 +152,7 @@ static aligned_t qmain(qthread_t * me, void *junk)
 	       fabs(d_out - d_sum_authoritative),
 	       (fabs(d_out + d_sum_authoritative) * FLT_EPSILON));
     }
-    if (interactive) {
-	printf(" - qutil_double_sum is correct\n");
-    }
+    iprintf(" - qutil_double_sum is correct\n");
     d_out = qutil_double_mult(me, d_array, d_len, 0);
     if (fabs(d_out - d_mult_authoritative) >
 	fabs(d_out + d_mult_authoritative) * FLT_EPSILON) {
@@ -193,19 +160,13 @@ static aligned_t qmain(qthread_t * me, void *junk)
 	       fabs(d_out - d_mult_authoritative),
 	       fabs(d_out + d_mult_authoritative) * FLT_EPSILON);
     }
-    if (interactive) {
-	printf(" - qutil_double_mult is correct\n");
-    }
+    iprintf(" - qutil_double_mult is correct\n");
     d_out = qutil_double_max(me, d_array, d_len, 0);
     assert(d_out == d_max_authoritative);
-    if (interactive) {
-	printf(" - qutil_double_max is correct\n");
-    }
+    iprintf(" - qutil_double_max is correct\n");
     d_out = qutil_double_min(me, d_array, d_len, 0);
     assert(d_out == d_min_authoritative);
-    if (interactive) {
-	printf(" - qutil_double_min is correct\n");
-    }
+    iprintf(" - qutil_double_min is correct\n");
     /*qutil_mergesort(me, d_array, d_len, 0);
      * for (i = 0; i < d_len-1; i++) {
      * if (d_array[i] > d_array[i+1]) {
@@ -219,9 +180,7 @@ static aligned_t qmain(qthread_t * me, void *junk)
     qutil_qsort(me, d_array, d_len);
     //qsort(d_array, d_len, sizeof(double), dcmp);
     gettimeofday(&stop, NULL);
-    if (interactive == 1) {
-	printf("done sorting, checking correctness...\n");
-    }
+    iprintf("done sorting, checking correctness...\n");
     for (i = 0; i < d_len - 1; i++) {
 	if (d_array[i] > d_array[i + 1]) {
 	    /*
@@ -239,13 +198,11 @@ static aligned_t qmain(qthread_t * me, void *junk)
 	    abort();
 	}
     }
-    if (interactive == 1) {
-	printf("[test1] sorting %lu numbers took: %f seconds\n",
-	       (unsigned long)d_len,
-	       (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
-							  (start.tv_usec *
-							   1.0e-6)));
-    }
+    iprintf("[test1] sorting %lu numbers took: %f seconds\n",
+	    (unsigned long)d_len,
+	    (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
+						       (start.tv_usec *
+							1.0e-6)));
     free(d_array);
     return 0;
 }
@@ -254,23 +211,15 @@ int main(int argc, char *argv[])
 {
     aligned_t ret;
     int futurelimit = 2;
-    int threads = 1;
 
-    if (argc >= 2) {
-	threads = strtol(argv[1], NULL, 0);
-	if (threads < 0)
-	    threads = 1;
-	futurelimit = (threads == 0) ? 10 : (threads + 1);
-	interactive = 1;
-    }
-    if (argc >= 3) {
-	futurelimit = strtol(argv[2], NULL, 0);
-    }
-    if (argc >= 4) {
-	d_len = i_len = ui_len = strtol(argv[3], NULL, 0);
-    }
+    assert(qthread_initialize() == 0);
 
-    assert(qthread_init(threads) == 0);
+    CHECK_INTERACTIVE();
+    NUMARG(futurelimit, "TEST_FUTURE_LIMIT");
+    NUMARG(d_len, "TEST_LEN");
+    NUMARG(i_len, "TEST_LEN");
+    NUMARG(ui_len, "TEST_LEN");
+
     future_init(futurelimit);
     assert(qthread_fork(qmain, NULL, &ret) == 0);
     qthread_readFF(qthread_self(), NULL, &ret);

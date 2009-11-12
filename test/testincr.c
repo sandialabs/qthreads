@@ -22,7 +22,7 @@ int main()
     aligned_t rets[30];
     qthread_t *me;
 
-    qthread_init(7);
+    qthread_initialize();
     me = qthread_self();
 
     rets[0] = qthread_incr(&master, 1);
@@ -36,7 +36,7 @@ int main()
 	qthread_readFF(me, NULL, rets + i);
     }
     if (master != 30) {
-	printf("master is %lu rather than 30\n", (long unsigned)master);
+	fprintf(stderr,"master is %lu rather than 30\n", (long unsigned)master);
     }
     assert(master == 30);
     master = 0;
@@ -47,7 +47,7 @@ int main()
 	qthread_readFF(me, NULL, rets + i);
     }
     if (master != 150) {
-	printf("master is %lu rather than 150\n", (long unsigned)master);
+	fprintf(stderr,"master is %lu rather than 150\n", (long unsigned)master);
     }
     assert(master == 150);
 

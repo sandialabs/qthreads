@@ -1,9 +1,11 @@
+#include <assert.h>
 #include <stdio.h>		       /* for printf() */
 #include <stdlib.h> /* for strtol() */
 #include <assert.h>		       /* for assert() */
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
 #include "qtimer.h"
+#include "argparsing.h"
 
 size_t ITERATIONS;
 #define MAXPARALLELISM 256
@@ -25,7 +27,7 @@ aligned_t FEB_consumer(qthread_t * me, void *arg)
 
     assert(qthread_readFE(me, &pong, arg) == 0);
     if (pong != 1) {
-	printf("pong = %u\n", (unsigned)pong);
+	iprintf("pong = %u\n", (unsigned)pong);
 	assert(pong == 1);
     }
     return pong;
@@ -141,20 +143,16 @@ int main(int argc, char *argv[])
     unsigned int i;
     aligned_t rets[MAXPARALLELISM];
     int shepherds = 1;
-    int interactive = 0;
-
-    if (argc == 2) {
-	shepherds = strtol(argv[1], NULL, 0);
-	interactive = 1;
-	if (shepherds < 0) {
-	    shepherds = 1;
-	    interactive = 0;
-	}
-    }
-    ITERATIONS = (interactive)?1000000:1000;
 
     /* setup */
-    qthread_init(shepherds);
+    assert(qthread_initialize() == QTHREAD_SUCCESS);
+    CHECK_INTERACTIVE();
+    if (! interactive) {
+	return 0;
+    }
+    ITERATIONS = 1000000;
+    shepherds = qthread_num_shepherds();
+
     for (i=0;i<MAXPARALLELISM;i++) {
 	qthread_empty(NULL, FEBbuffer+i);
 	sending[i][0] = qtimer_new();
@@ -162,23 +160,23 @@ int main(int argc, char *argv[])
 	qthread_empty(NULL, &(FEBtable[i][0]));
 	qthread_empty(NULL, &(FEBtable[i][1]));
     }
-    printf("Testing producer/consumer:\n");
+    iprintf("Testing producer/consumer:\n");
 
     /* SINGLE FEB SEND/RECEIVE TEST */
-    printf("\tSingle FEB send/receive: "); fflush(stdout);
+    iprintf("\tSingle FEB send/receive: ");
     qtimer_start(timer);
     qthread_fork(FEB_consumer, FEBbuffer, rets);
     qthread_fork(FEB_producer, FEBbuffer, NULL);
     qthread_readFF(NULL, NULL, rets);
     qtimer_stop(timer);
 
-    printf("%19g secs\n", qtimer_secs(timer));
+    iprintf("%19g secs\n", qtimer_secs(timer));
     rate = sizeof(aligned_t) / qtimer_secs(timer);
-    printf("\t = throughput: %29g bytes/sec %s\n", rate,
+    iprintf("\t = throughput: %29g bytes/sec %s\n", rate,
 	   human_readable_rate(rate));
 
     /* PARALLEL SINGLE FEB SEND/RECEIVE TEST */
-    printf("\tParallel single FEB send/receive: "); fflush(stdout);
+    iprintf("\tParallel single FEB send/receive: ");
     qtimer_start(timer);
     for (i=0; i<MAXPARALLELISM; i++) {
 	qthread_fork(FEB_consumer, FEBbuffer+i, rets+i);
@@ -189,37 +187,37 @@ int main(int argc, char *argv[])
     }
     qtimer_stop(timer);
 
-    printf("%10g secs (%u parallel)\n", qtimer_secs(timer), MAXPARALLELISM);
+    iprintf("%10g secs (%u parallel)\n", qtimer_secs(timer), MAXPARALLELISM);
     rate = (MAXPARALLELISM*sizeof(aligned_t)) / qtimer_secs(timer);
-    printf("\t = throughput: %29g bytes/sec %s\n", rate,
+    iprintf("\t = throughput: %29g bytes/sec %s\n", rate,
 	   human_readable_rate(rate));
 
     memset(total_sending_time, 0, sizeof(double)*MAXPARALLELISM);
 
     /* FEB PRODUCER/CONSUMER LOOP */
-    printf("\tFEB producer/consumer loop: "); fflush(stdout);
+    iprintf("\tFEB producer/consumer loop: ");
     qtimer_start(timer);
     qthread_fork(FEB_consumerloop, NULL, rets);
     qthread_fork(FEB_producerloop, NULL, NULL);
     qthread_readFF(NULL, NULL, rets);
     qtimer_stop(timer);
 
-    printf("%16g secs (%u iterations)\n", qtimer_secs(timer), (unsigned)ITERATIONS);
-    printf("\t - total sending time: %21g secs\n", total_sending_time[0]);
-    printf("\t + external average time: %18g secs\n",
+    iprintf("%16g secs (%u iterations)\n", qtimer_secs(timer), (unsigned)ITERATIONS);
+    iprintf("\t - total sending time: %21g secs\n", total_sending_time[0]);
+    iprintf("\t + external average time: %18g secs\n",
 	   qtimer_secs(timer) / ITERATIONS);
-    printf("\t + internal average time: %18g secs\n",
+    iprintf("\t + internal average time: %18g secs\n",
 	   total_sending_time[0] / ITERATIONS);
-    printf("\t = message throughput: %21g msgs/sec\n",
+    iprintf("\t = message throughput: %21g msgs/sec\n",
 	   ITERATIONS / total_sending_time[0]);
     rate = (ITERATIONS * sizeof(aligned_t)) / total_sending_time[0];
-    printf("\t = data throughput: %24g bytes/sec %s\n", rate,
+    iprintf("\t = data throughput: %24g bytes/sec %s\n", rate,
 	   human_readable_rate(rate));
 
     memset(total_sending_time, 0, sizeof(double)*MAXPARALLELISM);
 
     /* PARALLEL FEB PRODUCER/CONSUMER LOOPS */
-    printf("\tParallel FEB producer/consumer loop: "); fflush(stdout);
+    iprintf("\tParallel FEB producer/consumer loop: ");
     qtimer_start(timer);
     for (i=0; i<MAXPARALLELISM; i++) {
 	qthread_fork(FEB_consumerloop, (void*)(intptr_t)i, rets+i);
@@ -235,16 +233,16 @@ int main(int argc, char *argv[])
     for (i=1;i<MAXPARALLELISM;i++) {
 	total_sending_time[0] += total_sending_time[i];
     }
-    printf("%6g secs (%u-way %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
-    printf("\t - total sending time: %21g secs\n", total_sending_time[0]);
-    printf("\t + external average time: %18g secs\n",
+    iprintf("%6g secs (%u-way %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
+    iprintf("\t - total sending time: %21g secs\n", total_sending_time[0]);
+    iprintf("\t + external average time: %18g secs\n",
 	   qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
-    printf("\t + internal average time: %18g secs\n",
+    iprintf("\t + internal average time: %18g secs\n",
 	   total_sending_time[0] / (ITERATIONS*MAXPARALLELISM));
-    printf("\t = message throughput: %21g msgs/sec\n",
+    iprintf("\t = message throughput: %21g msgs/sec\n",
 	   (ITERATIONS*MAXPARALLELISM) / qtimer_secs(timer));
     rate = (ITERATIONS*MAXPARALLELISM * sizeof(aligned_t)) / qtimer_secs(timer);
-    printf("\t = data throughput: %24g bytes/sec %s\n", rate,
+    iprintf("\t = data throughput: %24g bytes/sec %s\n", rate,
 	   human_readable_rate(rate));
 
     memset(total_p1_sending_time, 0, sizeof(double)*MAXPARALLELISM);
@@ -252,46 +250,46 @@ int main(int argc, char *argv[])
     memset(total_roundtrip_time, 0, sizeof(double)*MAXPARALLELISM);
 
     /* FEB PING-PONG LOOP */
-    printf("\tFEB ping-pong loop: "); fflush(stdout);
+    iprintf("\tFEB ping-pong loop: ");
     qtimer_start(timer);
     qthread_fork(FEB_player2, NULL, rets);
     qthread_fork(FEB_player1, NULL, NULL);
     qthread_readFF(NULL, NULL, rets);
     qtimer_stop(timer);
 
-    printf("%24g secs (%u round trips)\n", qtimer_secs(timer), (unsigned)ITERATIONS);
-    printf("\t - total rtts: %29g secs\n", total_roundtrip_time[0]);
-    printf("\t - total sending time: %21g secs\n",
+    iprintf("%24g secs (%u round trips)\n", qtimer_secs(timer), (unsigned)ITERATIONS);
+    iprintf("\t - total rtts: %29g secs\n", total_roundtrip_time[0]);
+    iprintf("\t - total sending time: %21g secs\n",
 	   total_p1_sending_time[0] + total_p2_sending_time[0]);
-    printf("\t + external avg rtt: %23g secs\n",
+    iprintf("\t + external avg rtt: %23g secs\n",
 	   qtimer_secs(timer) / ITERATIONS);
-    printf("\t + internal avg rtt: %23g secs\n",
+    iprintf("\t + internal avg rtt: %23g secs\n",
 	   total_roundtrip_time[0] / ITERATIONS);
-    printf("\t + average p1 sending time: %16g secs\n",
+    iprintf("\t + average p1 sending time: %16g secs\n",
 	   total_p1_sending_time[0] / ITERATIONS);
-    printf("\t + average p2 sending time: %16g secs\n",
+    iprintf("\t + average p2 sending time: %16g secs\n",
 	   total_p2_sending_time[0] / ITERATIONS);
-    printf("\t + average sending time: %19g secs\n",
+    iprintf("\t + average sending time: %19g secs\n",
 	   (total_p1_sending_time[0] +
 	    total_p2_sending_time[0]) / (ITERATIONS * 2));
     /* each rt is 2 messages, thus: */
-    printf("\t = messaging throughput: %19g msgs/sec\n",
+    iprintf("\t = messaging throughput: %19g msgs/sec\n",
 	   (ITERATIONS * 2) / total_roundtrip_time[0]);
     /* each rt is 1 message of aligned_t bytes each, thus: */
     rate = (ITERATIONS * sizeof(aligned_t)) / total_roundtrip_time[0];
-    printf("\t = data roundtrip tput: %20g bytes/sec %s\n", rate,
+    iprintf("\t = data roundtrip tput: %20g bytes/sec %s\n", rate,
 	   human_readable_rate(rate));
     /* each send is 1 messsage of aligned_t bytes, thus: */
     rate = (ITERATIONS * sizeof(aligned_t)) / total_p1_sending_time[0];
-    printf("\t = p1 hop throughput: %22g bytes/sec %s\n", rate,
+    iprintf("\t = p1 hop throughput: %22g bytes/sec %s\n", rate,
 	   human_readable_rate(rate));
     rate = (ITERATIONS * sizeof(aligned_t)) / total_p2_sending_time[0];
-    printf("\t = p2 hop throughput: %22g bytes/sec %s\n", rate,
+    iprintf("\t = p2 hop throughput: %22g bytes/sec %s\n", rate,
 	   human_readable_rate(rate));
     rate =
 	(ITERATIONS * 2 * sizeof(aligned_t)) / (total_p1_sending_time[0] +
 						total_p2_sending_time[0]);
-    printf("\t = data hop throughput: %20g bytes/sec %s\n", rate,
+    iprintf("\t = data hop throughput: %20g bytes/sec %s\n", rate,
 	   human_readable_rate(rate));
 
     memset(total_p1_sending_time, 0, sizeof(double)*MAXPARALLELISM);
@@ -299,7 +297,7 @@ int main(int argc, char *argv[])
     memset(total_roundtrip_time, 0, sizeof(double)*MAXPARALLELISM);
 
     /* PARALLEL FEB PING-PONG LOOP */
-    printf("\tParallel FEB ping-pong loop: "); fflush(stdout);
+    iprintf("\tParallel FEB ping-pong loop: ");
     qtimer_start(timer);
     for (i=0; i<MAXPARALLELISM; i++) {
 	qthread_fork(FEB_player2, (void*)(intptr_t)i, rets+i);
@@ -317,39 +315,39 @@ int main(int argc, char *argv[])
 	total_p1_sending_time[0] += total_p1_sending_time[i];
 	total_p2_sending_time[0] += total_p2_sending_time[i];
     }
-    printf("%15g secs (%u-way %u rts)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
-    printf("\t - total rtts: %29g secs\n", total_roundtrip_time[0]);
-    printf("\t - total sending time: %21g secs\n",
+    iprintf("%15g secs (%u-way %u rts)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
+    iprintf("\t - total rtts: %29g secs\n", total_roundtrip_time[0]);
+    iprintf("\t - total sending time: %21g secs\n",
 	   total_p1_sending_time[0] + total_p2_sending_time[0]);
-    printf("\t + external avg rtt: %23g secs\n",
+    iprintf("\t + external avg rtt: %23g secs\n",
 	   qtimer_secs(timer) / (MAXPARALLELISM*ITERATIONS));
-    printf("\t + internal avg rtt: %23g secs\n",
+    iprintf("\t + internal avg rtt: %23g secs\n",
 	   total_roundtrip_time[0] / (MAXPARALLELISM*ITERATIONS));
-    printf("\t + average p1 sending time: %16g secs\n",
+    iprintf("\t + average p1 sending time: %16g secs\n",
 	   total_p1_sending_time[0] / (MAXPARALLELISM*ITERATIONS));
-    printf("\t + average p2 sending time: %16g secs\n",
+    iprintf("\t + average p2 sending time: %16g secs\n",
 	   total_p2_sending_time[0] / (MAXPARALLELISM*ITERATIONS));
-    printf("\t + average sending time: %19g secs\n",
+    iprintf("\t + average sending time: %19g secs\n",
 	   (total_p1_sending_time[0] +
 	    total_p2_sending_time[0]) / (MAXPARALLELISM*ITERATIONS * 2));
     /* each rt is 2 messages, thus: */
-    printf("\t = messaging throughput: %19g msgs/sec\n",
+    iprintf("\t = messaging throughput: %19g msgs/sec\n",
 	   (MAXPARALLELISM*ITERATIONS * 2) / total_roundtrip_time[0]);
     /* each rt is 1 message of aligned_t bytes each, thus: */
     rate = (MAXPARALLELISM*ITERATIONS * sizeof(aligned_t)) / total_roundtrip_time[0];
-    printf("\t = data roundtrip tput: %20g bytes/sec %s\n", rate,
+    iprintf("\t = data roundtrip tput: %20g bytes/sec %s\n", rate,
 	   human_readable_rate(rate));
     /* each send is 1 messsage of aligned_t bytes, thus: */
     rate = (MAXPARALLELISM*ITERATIONS * sizeof(aligned_t)) / total_p1_sending_time[0];
-    printf("\t = p1 hop throughput: %22g bytes/sec %s\n", rate,
+    iprintf("\t = p1 hop throughput: %22g bytes/sec %s\n", rate,
 	   human_readable_rate(rate));
     rate = (MAXPARALLELISM*ITERATIONS * sizeof(aligned_t)) / total_p2_sending_time[0];
-    printf("\t = p2 hop throughput: %22g bytes/sec %s\n", rate,
+    iprintf("\t = p2 hop throughput: %22g bytes/sec %s\n", rate,
 	   human_readable_rate(rate));
     rate =
 	(MAXPARALLELISM*ITERATIONS * 2 * sizeof(aligned_t)) / (total_p1_sending_time[0] +
 						total_p2_sending_time[0]);
-    printf("\t = data hop throughput: %20g bytes/sec %s\n", rate,
+    iprintf("\t = data hop throughput: %20g bytes/sec %s\n", rate,
 	   human_readable_rate(rate));
 
     qtimer_free(timer);

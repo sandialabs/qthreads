@@ -30,7 +30,7 @@ int main()
     aligned_t rets[30];
     qthread_t *me;
 
-    qthread_init(7);
+    assert(qthread_initialize() == QTHREAD_SUCCESS);
     me = qthread_self();
 
     rets[0] = qthread_cas(&master, master, 1);
@@ -44,7 +44,7 @@ int main()
 	qthread_readFF(me, NULL, rets + i);
     }
     if (master != 30) {
-	printf("master is %lu rather than 30\n", (long unsigned)master);
+	fprintf(stderr, "master is %lu rather than 30\n", (long unsigned)master);
     }
 
     assert(qthread_cas(&four, 4, 5) == 4);

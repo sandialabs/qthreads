@@ -12,9 +12,9 @@ int main()
     unsigned int i;
     aligned_t rets[30];
     qthread_t *me;
-    qthread_shepherd_id_t numsheps = 7;
+    qthread_shepherd_id_t numsheps;
 
-    qthread_init(numsheps);
+    qthread_initialize();
     me = qthread_self();
     numsheps = qthread_num_shepherds();
 
@@ -26,7 +26,7 @@ int main()
     }
     for (i = 0; i < 30; i++) {
 	if (rets[i] != i % numsheps) {
-	    printf("rets[%i] = %u ->? %i\n", i, (unsigned int)rets[i], i % numsheps);
+	    fprintf(stderr,"rets[%i] = %u ->? %i\n", i, (unsigned int)rets[i], i % numsheps);
 	}
 	assert(rets[i] == i % numsheps);
     }

@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <qthread/qthread.h>
 #include <qthread/wavefront.h>
+#include "argparsing.h"
 
 static size_t ASIZE = 2000;
 
@@ -71,26 +72,16 @@ void assignrand(qthread_t * me, const size_t startat, const size_t stopat,
 
 int main(int argc, char *argv[])
 {
-    int threads = 0;
-    int interactive = 0;
     qthread_t *me;
     qarray *v, *h;
     qt_wavefront_lattice *L;
+    char *str;
 
-    if (argc >= 2) {
-	threads = strtol(argv[1], NULL, 0);
-	if (threads < 0) {
-	    threads = 0;
-	} else {
-	    interactive = 1;
-	    printf("%i threads\n", threads);
-	}
-    }
-    if (argc >= 3) {
-	ASIZE = strtol(argv[2], NULL, 0);
-	printf("ASIZE: %i\n", (int)ASIZE);
-    }
-    qthread_init(threads);
+    assert(qthread_initialize() == QTHREAD_SUCCESS);
+    CHECK_INTERACTIVE();
+    NUMARG(ASIZE, "TEST_ASIZE");
+    iprintf("ASIZE: %i\n", (int)ASIZE);
+    iprintf("%i threads\n", qthread_num_shepherds());
 
     me = qthread_self();
     v=qarray_create_configured(ASIZE, sizeof(double), FIXED_HASH, 1, 1);
@@ -98,8 +89,7 @@ int main(int argc, char *argv[])
 
     qarray_iter_loop(me, h, 1, ASIZE+1, assignrand, NULL);
     qarray_iter_loop(me, v, 0, ASIZE, assignrand, NULL);
-    if (interactive)
-	printf("v items per seg: %i\n", (int)v->segment_size);
+    iprintf("v items per seg: %i\n", (int)v->segment_size);
 
     /* do stuff */
     L = qt_wavefront(v, h, avg);
@@ -107,7 +97,7 @@ int main(int argc, char *argv[])
     if (L) {
 	//qt_wavefront_print_lattice(L);
     } else {
-	printf("wavefront returned NULL!\n");
+	fprintf(stderr,"wavefront returned NULL!\n");
     }
     qarray_destroy(v);
     qarray_destroy(h);

@@ -4,6 +4,7 @@
 #include <qthread/qthread.h>
 #include <qthread/qarray.h>
 #include "qtimer.h"
+#include "argparsing.h"
 
 #define ITERATIONS 10
 size_t ELEMENT_COUNT = 100000;
@@ -103,7 +104,6 @@ void assertoff1(qthread_t * me, const size_t startat, const size_t stopat,
 int main(int argc, char *argv[])
 {
     qarray *a;
-    int threads = 1;
     qthread_t *me;
     qtimer_t timer = qtimer_new();
     distribution_t disttypes[] = {
@@ -115,40 +115,24 @@ int main(int argc, char *argv[])
 	"DIST_REG_STRIPES", "DIST_REG_FIELDS", "DIST_LEAST", "SERIAL"
     };
     unsigned int dt_index;
-    int interactive = 0;
     int enabled_tests = 7;
     int enabled_types = 255;
+    char *str;
+    
+    assert(qthread_initialize() == QTHREAD_SUCCESS);
 
-    if (argc >= 2) {
-	threads = strtol(argv[1], NULL, 0);
-	if (threads < 0) {
-	    threads = 1;
-	    interactive = 0;
-	} else {
-	    interactive = 1;
-	}
-    }
-    if (argc >= 3) {
-	ELEMENT_COUNT = strtol(argv[2], NULL, 0);
-    }
-    if (argc >= 4) {
-	enabled_tests = strtol(argv[3], NULL, 0);
-    }
-    if (argc >= 5) {
-	enabled_types = strtol(argv[4], NULL, 0);
-    }
-    if (!interactive) {
-	return 0;
-    }
+    CHECK_INTERACTIVE();
+    NUMARG(ELEMENT_COUNT, "TEST_ELEMENT_COUNT");
+    NUMARG(enabled_tests, "TEST_ENABLED_TESTS");
+    NUMARG(enabled_types, "TEST_ENABLED_TYPES");
 
-    qthread_init(threads);
     me = qthread_self();
 
-    printf("Using %i shepherds\n", threads);
-    printf("Arrays of %lu objects...\n", (unsigned long)ELEMENT_COUNT);
+    iprintf("Using %i shepherds\n", qthread_num_shepherds());
+    iprintf("Arrays of %lu objects...\n", (unsigned long)ELEMENT_COUNT);
 
     if (enabled_types & 0x1) {
-	printf("SERIAL:\n");
+	iprintf("SERIAL:\n");
 	if (enabled_tests & 1) {
 	    size_t i, j;
 	    double acctime = 0.0;
@@ -164,8 +148,7 @@ int main(int argc, char *argv[])
 		qtimer_stop(timer);
 		acctime += qtimer_secs(timer);
 	    }
-	    printf("\tIteration over doubles: %f/", acctime / ITERATIONS);
-	    fflush(stdout);
+	    iprintf("\tIteration over doubles: %f/", acctime / ITERATIONS);
 	    acctime = 0.0;
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
@@ -176,7 +159,7 @@ int main(int argc, char *argv[])
 		acctime += qtimer_secs(timer);
 	    }
 	    free(a);
-	    printf("%f secs\n", acctime / ITERATIONS);
+	    iprintf("%f secs\n", acctime / ITERATIONS);
 	}
 	if (enabled_tests & 2) {
 	    bigobj *a = calloc(ELEMENT_COUNT, sizeof(bigobj));
@@ -195,8 +178,7 @@ int main(int argc, char *argv[])
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
-	    printf("\tIteration over giants: %f/", acc / ITERATIONS);
-	    fflush(stdout);
+	    iprintf("\tIteration over giants: %f/", acc / ITERATIONS);
 	    acc = 0.0;
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
@@ -208,8 +190,7 @@ int main(int argc, char *argv[])
 	    }
 	    free(a);
 	    free(b);
-	    printf("%f secs\n", acc / ITERATIONS);
-	    fflush(stdout);
+	    iprintf("%f secs\n", acc / ITERATIONS);
 	}
 	if (enabled_tests & 4) {
 	    offsize *a = calloc(ELEMENT_COUNT, sizeof(offsize));
@@ -228,8 +209,7 @@ int main(int argc, char *argv[])
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
-	    printf("\tIteration over weirds: %f/", acc / ITERATIONS);
-	    fflush(stdout);
+	    iprintf("\tIteration over weirds: %f/", acc / ITERATIONS);
 	    acc = 0.0;
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
@@ -239,8 +219,7 @@ int main(int argc, char *argv[])
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
-	    printf("%f secs\n", acc / ITERATIONS);
-	    fflush(stdout);
+	    iprintf("%f secs\n", acc / ITERATIONS);
 	    free(a);
 	    free(b);
 	}
@@ -252,7 +231,7 @@ int main(int argc, char *argv[])
 	 dt_index++) {
 	if ((enabled_types & 1 << (dt_index + 1)) == 0)
 	    continue;
-	printf("%s:\n", distnames[dt_index]);
+	iprintf("%s:\n", distnames[dt_index]);
 	/* test a basic array of doubles */
 	if (enabled_tests & 1) {
 	    int j;
@@ -266,8 +245,7 @@ int main(int argc, char *argv[])
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
-	    printf("\tIteration over doubles: %f/", acc / ITERATIONS);
-	    fflush(stdout);
+	    iprintf("\tIteration over doubles: %f/", acc / ITERATIONS);
 	    acc = 0.0;
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
@@ -275,8 +253,7 @@ int main(int argc, char *argv[])
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
-	    printf("%f secs\n", acc / ITERATIONS);
-	    fflush(stdout);
+	    iprintf("%f secs\n", acc / ITERATIONS);
 	    qarray_destroy(a);
 	}
 
@@ -295,8 +272,7 @@ int main(int argc, char *argv[])
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
-	    printf("\tIteration over giants: %f/", acc / ITERATIONS);
-	    fflush(stdout);
+	    iprintf("\tIteration over giants: %f/", acc / ITERATIONS);
 	    acc = 0.0;
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
@@ -305,8 +281,7 @@ int main(int argc, char *argv[])
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
-	    printf("%f secs\n", acc / ITERATIONS);
-	    fflush(stdout);
+	    iprintf("%f secs\n", acc / ITERATIONS);
 	    qarray_destroy(a);
 	}
 
@@ -324,8 +299,7 @@ int main(int argc, char *argv[])
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
-	    printf("\tIteration over weirds: %f/", acc / ITERATIONS);
-	    fflush(stdout);
+	    iprintf("\tIteration over weirds: %f/", acc / ITERATIONS);
 	    acc = 0.0;
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
@@ -333,8 +307,7 @@ int main(int argc, char *argv[])
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
-	    printf("%f secs\n", acc / ITERATIONS);
-	    fflush(stdout);
+	    iprintf("%f secs\n", acc / ITERATIONS);
 	    qarray_destroy(a);
 	}
     }

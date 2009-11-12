@@ -6,6 +6,7 @@
 #include <assert.h>
 #include "qtimer.h"
 #include "qt_gcd.h"
+#include "argparsing.h"
 
 static inline size_t shift_gcd(size_t a, size_t b)
 {
@@ -52,6 +53,7 @@ int main ()
     size_t i;
     qtimer_t mod_timer = qtimer_new();
     qtimer_t shift_timer = qtimer_new();
+    CHECK_INTERACTIVE();
     for (i=0;i<BIGNUM;i++) {
 	bigset[i].a = random();
 	bigset[i].b = 4096;
@@ -69,7 +71,7 @@ int main ()
     qtimer_stop(mod_timer);
     for (i=0;i<BIGNUM;i++) {
 	if (answer1[i] != answer2[i]) {
-	    printf("ERROR! %lu\n", (unsigned long)i);
+	    fprintf(stderr,"ERROR! %lu\n", (unsigned long)i);
 	}
     }
     for (i=0;i<BIGNUM;i++) {
@@ -82,11 +84,11 @@ int main ()
     qtimer_stop(shift_timer);
     for (i=0;i<BIGNUM;i++) {
 	if (answer1[i] != answer2[i]) {
-	    printf("ERROR! %lu\n", (unsigned long)i);
+	    fprintf(stderr,"ERROR! %lu\n", (unsigned long)i);
 	}
     }
-    printf("  mod gcd secs: %f\n", qtimer_secs(mod_timer));
-    printf("shift gcd secs: %f\n", qtimer_secs(shift_timer));
+    iprintf("  mod gcd secs: %f\n", qtimer_secs(mod_timer));
+    iprintf("shift gcd secs: %f\n", qtimer_secs(shift_timer));
 #ifdef QTHREAD_SHIFT_GCD
     assert(qtimer_secs(shift_timer) < qtimer_secs(mod_timer));
 #else

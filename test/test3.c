@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <qthread/qthread.h>
+#include "argparsing.h"
 
 static aligned_t x;
 static aligned_t id = 1;
@@ -37,22 +38,14 @@ static aligned_t producer(qthread_t * t, void *arg)
 int main(int argc, char *argv[])
 {
     aligned_t t;
-    int threads = 1;
-    int interactive = 0;
+
+    assert(qthread_initialize() == 0);
 
     x = 0;
-    if (argc == 2) {
-	threads = strtol(argv[1], NULL, 0);
-	if (threads < 0)
-	    threads = 1;
-	interactive = 1;
-    }
-    assert(qthread_init(threads) == 0);
+    CHECK_INTERACTIVE();
 
-    if (interactive == 1) {
-	printf("%i threads...\n", threads);
-	printf("Initial value of x: %lu\n", (unsigned long)x);
-    }
+    iprintf("%i threads...\n", qthread_num_shepherds());
+    iprintf("Initial value of x: %lu\n", (unsigned long)x);
 
     qthread_fork(consumer, NULL, NULL);
     qthread_fork(producer, NULL, &t);
@@ -60,9 +53,7 @@ int main(int argc, char *argv[])
 
 
     if (x == 55) {
-	if (interactive == 1) {
-	    printf("Success! x==55\n");
-	}
+	iprintf("Success! x==55\n");
 	return 0;
     } else {
 	fprintf(stderr, "Final value of x=%lu\n", (unsigned long)x);

@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <qthread/qthread.h>
 #include <qthread/qarray.h>
+#include "argparsing.h"
 
 #define ELEMENT_COUNT 10000
 
@@ -44,7 +45,6 @@ static void assignoff1(qthread_t * me, const size_t startat,
 int main(int argc, char *argv[])
 {
     qarray *a;
-    int threads = 1;
     qthread_t *me;
     distribution_t disttypes[] = {
 	FIXED_HASH, ALL_LOCAL, ALL_RAND, ALL_LEAST, DIST_RAND,
@@ -55,20 +55,10 @@ int main(int argc, char *argv[])
 	"DIST_REG_STRIPES", "DIST_REG_FIELDS", "DIST_LEAST"
     };
     unsigned int dt_index;
-    int interactive = 0;
 
-    if (argc == 2) {
-	threads = strtol(argv[1], NULL, 0);
-	if (threads < 0) {
-	    threads = 1;
-	    interactive = 0;
-	} else {
-	    interactive = 1;
-	}
-    }
-
-    qthread_init(threads);
+    qthread_initialize();
     me = qthread_self();
+    CHECK_INTERACTIVE();
 
     /* iterate over all the different distribution types */
     for (dt_index = 0;
@@ -79,13 +69,11 @@ int main(int argc, char *argv[])
 	a = qarray_create_configured(ELEMENT_COUNT, sizeof(double),
 				     disttypes[dt_index], 0, 0);
 	assert(a);
-	if (interactive)
-	    printf("%s: created basic array of doubles\n",
-		   distnames[dt_index]);
+	iprintf("%s: created basic array of doubles\n",
+		distnames[dt_index]);
 	qarray_iter(me, a, 0, ELEMENT_COUNT, assign1);
-	if (interactive)
-	    printf("%s: iterated; now checking work...\n",
-		   distnames[dt_index]);
+	iprintf("%s: iterated; now checking work...\n",
+		distnames[dt_index]);
 	if (count != ELEMENT_COUNT) {
 	    printf("count = %lu, dt_index = %u\n", (unsigned long)count,
 		   dt_index);
@@ -105,20 +93,17 @@ int main(int argc, char *argv[])
 		}
 	    }
 	}
-	if (interactive)
-	    printf("%s: correct result!\n", distnames[dt_index]);
+	iprintf("%s: correct result!\n", distnames[dt_index]);
 	qarray_destroy(a);
 
 	/* now test an array of giant things */
 	count = 0;
 	a = qarray_create_configured(ELEMENT_COUNT, sizeof(bigobj),
 				     disttypes[dt_index], 0, 0);
-	if (interactive)
-	    printf("%s: created array of big objects\n", distnames[dt_index]);
+	iprintf("%s: created array of big objects\n", distnames[dt_index]);
 	qarray_iter(me, a, 0, ELEMENT_COUNT, assignall1);
-	if (interactive)
-	    printf("%s: iterated; now checking work...\n",
-		   distnames[dt_index]);
+	iprintf("%s: iterated; now checking work...\n",
+		distnames[dt_index]);
 	if (count != ELEMENT_COUNT) {
 	    printf("count = %lu, dt_index = %u\n", (unsigned long)count,
 		   dt_index);
@@ -142,21 +127,18 @@ int main(int argc, char *argv[])
 		}
 	    }
 	}
-	if (interactive)
-	    printf("%s: correct result!\n", distnames[dt_index]);
+	iprintf("%s: correct result!\n", distnames[dt_index]);
 	qarray_destroy(a);
 
 	/* now test an array of weird-sized things */
 	count = 0;
 	a = qarray_create_configured(ELEMENT_COUNT, sizeof(offsize),
 				     disttypes[dt_index], 0, 0);
-	if (interactive)
-	    printf("%s: created array of odd-sized objects\n",
-		   distnames[dt_index]);
+	iprintf("%s: created array of odd-sized objects\n",
+		distnames[dt_index]);
 	qarray_iter_loop(me, a, 0, ELEMENT_COUNT, assignoff1, NULL);
-	if (interactive)
-	    printf("%s: iterated; now checking work...\n",
-		   distnames[dt_index]);
+	iprintf("%s: iterated; now checking work...\n",
+		distnames[dt_index]);
 	if (count != ELEMENT_COUNT) {
 	    printf("count = %lu, dt_index = %u\n", (unsigned long)count,
 		   dt_index);
@@ -180,12 +162,9 @@ int main(int argc, char *argv[])
 		}
 	    }
 	}
-	if (interactive)
-	    printf("%s: correct result!\n", distnames[dt_index]);
+	iprintf("%s: correct result!\n", distnames[dt_index]);
 	qarray_destroy(a);
     }
 
     return 0;
-//void *qarray_elem_nomigrate(const qarray * a, const size_t index);
-//void *qarray_elem(qthread_t * me, const qarray * a, const size_t index);
 }

@@ -22,7 +22,7 @@ int main()
     aligned_t rets[30];
     float ret_test = 4.5;
 
-    qthread_init(7);
+    qthread_initialize();
 
     assert(master[1] == 0.0);
     ret_test = qthread_fincr(master + 1, 1);
@@ -36,8 +36,8 @@ int main()
 	qthread_readFF(NULL, NULL, rets + i);
     }
     if (master[1] != 30.0) {
-	printf("master is %f rather than 30\n", master[1]);
-	printf("master[0]:%f master[1]:%f master[2]:%f\n", master[0],
+	fprintf(stderr,"master is %f rather than 30\n", master[1]);
+	fprintf(stderr,"master[0]:%f master[1]:%f master[2]:%f\n", master[0],
 	       master[1], master[2]);
     }
     assert(master[1] == 30.0);
@@ -49,8 +49,8 @@ int main()
 	qthread_readFF(NULL, NULL, rets + i);
     }
     if (master[1] != 150.0) {
-	printf("master is %f rather than 150\n", master[1]);
-	printf("master[0]:%f master[1]:%f master[2]:%f\n", master[0],
+	fprintf(stderr,"master is %f rather than 150\n", master[1]);
+	fprintf(stderr,"master[0]:%f master[1]:%f master[2]:%f\n", master[0],
 	       master[1], master[2]);
     }
     assert(master[1] == 150.0);

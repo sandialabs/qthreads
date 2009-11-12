@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <qthread/qthread.h>
 #include <qthread/qpool.h>
+#include "argparsing.h"
 
 #define ELEMENT_COUNT 10000
 #define THREAD_COUNT 128
@@ -32,24 +33,14 @@ static aligned_t allocator(qthread_t * me, void *arg)
 
 int main(int argc, char *argv[])
 {
-    int threads = 1, interactive = 0;
     qthread_t *me;
     size_t i;
     aligned_t *rets;
     aligned_t **allthat;
 
-    if (argc == 2) {
-	threads = strtol(argv[1], NULL, 0);
-	if (threads < 0) {
-	    threads = 1;
-	    interactive = 0;
-	} else {
-	    interactive = 1;
-	}
-    }
-
-    assert(qthread_init(threads) == 0);
+    assert(qthread_initialize() == QTHREAD_SUCCESS);
     me = qthread_self();
+    CHECK_INTERACTIVE();
 
     if ((qp = qpool_create(sizeof(aligned_t))) == NULL) {
 	fprintf(stderr, "qpool_create() failed!\n");
@@ -60,9 +51,7 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "qpool_alloc() failed!\n");
 	exit(-1);
     }
-    if (interactive) {
-	printf("allocated: %p (%lu)\n", (void*)rets, (unsigned long)*rets);
-    }
+    iprintf("allocated: %p (%lu)\n", (void*)rets, (unsigned long)*rets);
     *rets = 1;
     if (*rets != 1) {
 	fprintf(stderr,
@@ -97,8 +86,6 @@ int main(int argc, char *argv[])
 
     qpool_destroy(qp);
 
-    if (interactive) {
-	printf("success!\n");
-    }
+    iprintf("success!\n");
     return 0;
 }
