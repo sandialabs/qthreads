@@ -1455,12 +1455,14 @@ int qthread_initialize(void)
 	switch (lgrp_cookie) {
 	    case EINVAL:
 	    case ENOMEM:
+		qthread_debug(ALL_DETAILS, "lgrp_cookie is invalid!\n");
 		return QTHREAD_THIRD_PARTY_ERROR;
 	}
 	{
 	    size_t max_lgrps = lgrp_nlgrps(lgrp_cookie);
 
-	    if (lgrp_count_grps <= 0) {
+	    if (max_lgrps <= 0) {
+		qthread_debug(ALL_DETAILS, "max_lgrps is <= zero! (%i)\n", max_lgrps);
 		return QTHREAD_THIRD_PARTY_ERROR;
 	    }
 	    cpus = calloc(max_lgrps, sizeof(processorid_t *));
@@ -1471,6 +1473,7 @@ int qthread_initialize(void)
 	lgrp_count_grps =
 	    lgrp_walk(lgrp_cookie, lgrp_root(lgrp_cookie), cpus, lgrp_ids, 0);
 	if (lgrp_count_grps <= 0) {
+	    qthread_debug(ALL_DETAILS, "lgrp_count_grps is <= zero ! (%i)\n", lgrp_count_grps);
 	    return QTHREAD_THIRD_PARTY_ERROR;
 	}
 	for (i = 0; i < nshepherds; i++) {
