@@ -32,8 +32,10 @@ AS_IF([test "x$libnuma_happy" = "xyes"],
   [
   dnl okay, so at this point, we need to determine what KIND of
   dnl libnuma interface we're dealing with
-  AC_CHECK_LIB([numa],[numa_allocate_nodemask],
-    [AC_DEFINE([QTHREAD_LIBNUMA_V2],[1],[if libnuma provides numa_allocate_nodemask])])])
+  AC_CHECK_FUNC([numa_allocate_nodemask],
+    [AC_DEFINE([QTHREAD_LIBNUMA_V2],[1],[if libnuma provides numa_allocate_nodemask])])
+  AC_CHECK_FUNCS([numa_num_configured_cpus numa_num_thread_cpus])
+  ])
   
 AS_IF([test "x$libnuma_happy" = "xyes"],
   [AC_DEFINE([QTHREAD_HAVE_LIBNUMA],[1],[if the machine has libnuma working])

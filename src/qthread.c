@@ -1313,9 +1313,22 @@ int qthread_initialize(void)
     if (nshepherds == 0) {	       /* try to guess the "right" number */
 #ifdef QTHREAD_HAVE_LIBNUMA
 	if (numa_available() != -1) {
+	    /* XXX: this logic is totally wrong for multithreaded shepherds */
+# ifdef HAVE_NUMA_NUM_THREAD_CPUS
+	    /* note: not numa_num_configured_cpus(), just in case an
+	     * artificial limit has been imposed. */
+	    nshepherds = numa_num_thread_cpus();
+# elif defined(HAVE_NUMA_NUM_CONFIGURED_CPUS)
+	    /* note: this is potentially WRONG, but works around a
+	     * bug in libnuma */
+# warning Using numa_num_configured_cpus(), which is potentially WRONG, but is required due to a bug in libnuma
+	    nshepherds = numa_num_configured_cpus();
+# else
 	    nshepherds = numa_max_node() + 1;
+# endif
 	}
 #elif defined(QTHREAD_HAVE_LGRP)
+	/* XXX: this is totally wrong for multithreaded shepherds */
 	nshepherds =
 	    lgrp_cpus(lgrp_cookie, lgrp_root(lgrp_cookie), NULL, 0,
 		      LGRP_CONTENT_ALL);
@@ -1333,6 +1346,7 @@ int qthread_initialize(void)
     syncmode |= COLLECTION_MODE_NOSYNC;
     need_sync = 0;
 #endif
+    qthread_debug(THREAD_BEHAVIOR,"qthread_init(): there will be %u shepherd(s)\n", (unsigned)nshepherds);
     qlib = (qlib_t) malloc(sizeof(struct qlib_s));
     if (qlib == NULL) {
 	return QTHREAD_MALLOC_ERROR;
