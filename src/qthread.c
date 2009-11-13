@@ -1134,11 +1134,8 @@ static void *qthread_shepherd(void *arg)
 
 	if (me->active == 0) {
 	    /* I've been disabled... send this thread to the closest shepherd(s). */
-#warning cannot handle non-existent distance matrix
-	    if (me->shep_dists && me->sorted_sheplist) {
-		int closest_distance = me->shep_dists[me->sorted_sheplist[0]];
-		qthread_debug(THREAD_DETAILS, "qthread_shepherd(%u): I'm disabled! nearest shepherd is %i away\n", me->shepherd_id, closest_distance);
-	    }
+	    qthread_shepherd_t *near_shep = qthread_find_active_shepherd(me->sorted_sheplist);
+	    qthread_debug(THREAD_DETAILS, "qthread_shepherd(%u): I'm disabled! nearest active shepherd is %i away\n", me->shepherd_id, me->shep_dists?(me->shep_dists[near_shep->shepherd_id]):20);
 	}
 	if (t->thread_state == QTHREAD_STATE_TERM_SHEP) {
 #ifdef QTHREAD_SHEPHERD_PROFILING
@@ -1202,27 +1199,16 @@ static void *qthread_shepherd(void *arg)
 				me->shepherd_id, t->thread_id);
 			qt_lfqueue_enqueue(me->ready, t, me);
 		    } else {
-			if (me->sorted_sheplist) {
-			    if (t->target_shepherd == NO_SHEPHERD || t->target_shepherd == me->shepherd_id) {
-				/* send to the closest shepherd */
-				t->shepherd_ptr = qthread_find_active_shepherd(me->sorted_sheplist);
-			    } else if (qlib->shepherds[t->target_shepherd].active) {
-				/* send to the thread's preferred shepherd */
-				t->shepherd_ptr = &(qlib->shepherds[t->target_shepherd]);
-			    } else {
-				/* find a shepherd somewhere near the preferred shepherd */
-				qthread_shepherd_id_t target = t->target_shepherd;
-				t->shepherd_ptr = qthread_find_active_shepherd(qlib->shepherds[target].sorted_sheplist);
-			    }
+			if (t->target_shepherd == NO_SHEPHERD || t->target_shepherd == me->shepherd_id) {
+			    /* send to the closest shepherd */
+			    t->shepherd_ptr = qthread_find_active_shepherd(me->sorted_sheplist);
+			} else if (qlib->shepherds[t->target_shepherd].active) {
+			    /* send to the thread's preferred shepherd */
+			    t->shepherd_ptr = &(qlib->shepherds[t->target_shepherd]);
 			} else {
-			    qthread_shepherd_id_t target = me->shepherd_id;
-			    size_t loop_ctr = 0;
-			    do {
-				target++;
-				target *= (target < qlib->nshepherds);
-				loop_ctr ++;
-			    } while (qlib->shepherds[target].active == 0 && loop_ctr < qlib->nshepherds);
-			    t->shepherd_ptr = &(qlib->shepherds[target]);
+			    /* find a shepherd somewhere near the preferred shepherd */
+			    qthread_shepherd_id_t target = t->target_shepherd;
+			    t->shepherd_ptr = qthread_find_active_shepherd(qlib->shepherds[target].sorted_sheplist);
 			}
 			assert(t->shepherd_ptr);
 			if (t->shepherd_ptr == NULL) {
@@ -1284,12 +1270,16 @@ static qthread_shepherd_t* qthread_find_active_shepherd(qthread_shepherd_id_t *l
     qthread_shepherd_t *sheps = qlib->shepherds;
     const qthread_shepherd_id_t nsheps = qlib->nshepherds;
 
+    qthread_debug(ALL_FUNCTIONS, "qthread_find_active_shepherd(%p)\n", l);
     if (l == NULL) {
-	while (sheps[target].active == 0 && target < nsheps)
+	size_t loop_ctr = 0;
+	target = random() % nsheps;
+	while (sheps[target].active == 0 && loop_ctr < nsheps)
 	{
 	    target ++;
+	    target *= (target < nsheps);
 	}
-	if (target == nsheps) {
+	if (loop_ctr == nsheps) {
 	    return NULL;
 	}
 	return &(sheps[target]);
