@@ -45,7 +45,6 @@ int main(int argc, char *argv[])
     me = qthread_self();
     CHECK_INTERACTIVE();
     NUMARG(ASIZE, "TEST_ASIZE");
-    iprintf("ASIZE: %i\n", (int)ASIZE);
     iprintf("threads: %i\n", qthread_num_shepherds());
 
     a1 = qarray_create_configured(ASIZE, sizeof(int), FIXED_HASH, 1, 1);

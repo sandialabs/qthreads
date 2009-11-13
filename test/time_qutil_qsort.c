@@ -41,9 +41,7 @@ int main(int argc, char *argv[])
     if (!interactive) return 0;
     iprintf("%i threads\n", qthread_num_shepherds());
     NUMARG(len, "TEST_LEN");
-    iprintf("len = %lu\n", (unsigned long)len);
     NUMARG(iterations, "TEST_ITERATIONS");
-    iprintf("%lu iterations\n", (unsigned long)iterations);
     NUMARG(using_doubles, "TEST_USING_DOUBLES");
     iprintf("using %s\n", using_doubles?"doubles":"aligned_ts");
 

@@ -16,6 +16,7 @@
 	    var = tmp; \
 	} \
     } \
+    iprintf(name" = %lu\n", (unsigned long)var); \
 } while (0)
 
 static int interactive = 0;
