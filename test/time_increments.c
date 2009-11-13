@@ -98,6 +98,7 @@ int main(int argc, char *argv[])
     CHECK_VERBOSE();
     ITERATIONS = (verbose)?1000000:1000;
     shepherds = qthread_num_shepherds();
+    iprintf("%u shepherds...\n", shepherds);
 
     /* BALANCED INCREMENT LOOP (strong scaling) */
     iprintf("\tBalanced increment loop: ");
