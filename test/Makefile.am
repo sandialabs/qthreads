@@ -21,14 +21,14 @@ TESTS = test1 test2 test3 test_qalloc \
 		test_qdqueue \
 		test_qutil_qsort
 
-noinst_PROGRAMS =
+EXTRA_PROGRAMS =
 
 if ENABLE_CXX_TESTS
 TESTS += testloop
 endif
 
 if ENABLE_TIMER_PROGS
-noinst_PROGRAMS += time_swap time_producerconsumer time_increments \
+EXTRA_PROGRAMS += time_swap time_producerconsumer time_increments \
 	 time_qarray \
 	 time_qarray_sizes \
 	 time_qpool \
@@ -53,9 +53,10 @@ noinst_PROGRAMS += time_swap time_producerconsumer time_increments \
 	 time_cncthr_bench \
 	 time_cncthr_bench_pthread \
 	 time_gcd
+CLEANFILES += $(EXTRA_PROGRAMS)
 endif
 
-buildall: $(TESTS) $(noinst_PROGRAMS)
+buildall: $(TESTS) $(EXTRA_PROGRAMS)
 .PHONY: buildall
 
 check_PROGRAMS = $(TESTS)
