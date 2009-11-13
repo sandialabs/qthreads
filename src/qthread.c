@@ -338,7 +338,11 @@ static QINLINE void qthread_gotlock_empty(qthread_shepherd_t * shep,
 					  const char recursive);
 #if (defined(QTHREAD_HAVE_LIBNUMA) || defined(QTHREAD_HAVE_LGRP))
 #ifdef HAVE_QSORT_R
+# if !defined(__linux__)
 static int qthread_internal_shepcomp(void *src, const void *a, const void *b)
+# else
+static int qthread_internal_shepcomp(const void *a, const void *b, void *src)
+#endif
 {
     int a_dist =
 	qthread_distance((qthread_shepherd_id_t) (intptr_t) src,
@@ -1506,10 +1510,18 @@ int qthread_initialize(void)
 		    qlib->shepherds[i].sorted_sheplist[k++] = j;
 		}
 	    }
-#  ifdef HAVE_QSORT_R
+#  if defined(HAVE_QSORT_R) && !defined(__linux__)
+	    assert(qlib->shepherds[i].sorted_sheplist);
 	    qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
 		    sizeof(qthread_shepherd_id_t), (void *)(intptr_t) i,
 		    &qthread_internal_shepcomp);
+#  elif defined(HAVE_QSORT_R)
+	    /* what moron in the linux community decided to implement BSD's
+	     * qsort_r with the arguments reversed??? */
+	    assert(qlib->shepherds[i].sorted_sheplist);
+	    qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
+		    sizeof(qthread_shepherd_id_t),
+		    &qthread_internal_shepcomp, (void *)(intptr_t) i);
 #  else
 	    shepcomp_src = (qthread_shepherd_id_t) i;
 	    qsort(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
@@ -1619,10 +1631,14 @@ int qthread_initialize(void)
 		    qlib->shepherds[i].sorted_sheplist[k++] = j;
 		}
 	    }
-#ifdef HAVE_QSORT_R
+#if defined(HAVE_QSORT_R) && !defined(__linux__)
 	    qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
 		    sizeof(qthread_shepherd_id_t), (void *)(intptr_t) i,
 		    &qthread_internal_shepcomp);
+#elif defined(HAVE_QSORT_R)
+	    qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
+		    sizeof(qthread_shepherd_id_t),
+		    &qthread_internal_shepcomp, (void *)(intptr_t) i);
 #else
 	    shepcomp_src = (qthread_shepherd_id_t) i;
 	    qsort(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
