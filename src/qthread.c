@@ -1318,12 +1318,12 @@ int qthread_initialize(void)
 	    /* note: not numa_num_configured_cpus(), just in case an
 	     * artificial limit has been imposed. */
 	    nshepherds = numa_num_thread_cpus();
-# elif defined(HAVE_NUMA_NUM_CONFIGURED_CPUS)
-	    /* note: this is potentially WRONG, but works around a
-	     * bug in libnuma */
-# warning Using numa_num_configured_cpus(), which is potentially WRONG, but is required due to a bug in libnuma
-	    nshepherds = numa_num_configured_cpus();
+# elif defined(HAVE_NUMA_BITMASK_NBYTES)
+	    for (size_t i=0;i<numa_bitmask_nbytes(numa_all_cpus_ptr)*8;i++) {
+		nshepherds += numa_bitmask_isbitset(numa_all_cpus_ptr, i);
+	    }
 # else
+	    /* this is (probably) optimal if/when we have multithreaded shepherds */
 	    nshepherds = numa_max_node() + 1;
 # endif
 	}
