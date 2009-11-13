@@ -1284,7 +1284,7 @@ static qthread_shepherd_t* qthread_find_active_shepherd(qthread_shepherd_id_t *l
     qthread_shepherd_t *sheps = qlib->shepherds;
     const qthread_shepherd_id_t nsheps = qlib->nshepherds;
 
-    if (l != NULL) {
+    if (l == NULL) {
 	while (sheps[target].active == 0 && target < nsheps)
 	{
 	    target ++;
@@ -1292,9 +1292,17 @@ static qthread_shepherd_t* qthread_find_active_shepherd(qthread_shepherd_id_t *l
 	if (target == nsheps) {
 	    return NULL;
 	}
+	return &(sheps[target]);
     } else {
-	s
-    return &(sheps[target]);
+	while (sheps[l[target]].active == 0 && target < nsheps)
+	{
+	    target ++;
+	}
+	if (target == nsheps) {
+	    return NULL;
+	}
+	return &(sheps[l[target]]);
+    }
 }
 
 int qthread_init(qthread_shepherd_id_t nshepherds)
