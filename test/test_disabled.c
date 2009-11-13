@@ -9,11 +9,15 @@ static aligned_t checkres(qthread_t *me, void *arg)
 {
     qthread_shepherd_id_t myshep = qthread_shep(me);
 
-    iprintf("checkres: myshep = %i, should be %i\n", myshep, (int)(intptr_t)arg);
-
     assert(myshep == 1 || myshep == 0 || myshep == 2);
 
-    assert(myshep == (qthread_shepherd_id_t)(intptr_t)arg);
+    if ((intptr_t)arg >= 0) {
+	iprintf("checkres: myshep = %i, should be %i\n", myshep, (int)(intptr_t)arg);
+	assert(myshep == (qthread_shepherd_id_t)(intptr_t)arg);
+    } else {
+	iprintf("checkres: myshep = %i, should NOT be %i\n", myshep, -1*(int)(intptr_t)arg);
+	assert(myshep != (qthread_shepherd_id_t)(-1*(intptr_t)arg));
+    }
 
     return 0;
 }
@@ -63,8 +67,8 @@ int main(int argc, char *argv[])
     qthread_readFF(me, &ret, &ret);
     iprintf("\tsuccess in forking to shepherd 0!\n");
     iprintf("now to fork to shepherd 1...\n");
-    qret = qthread_fork_to(checkres, (void*)1, &ret, 1);
-    assert(qret == QTHREAD_NOT_ALLOWED);
+    qret = qthread_fork_to(checkres, (void*)-1, &ret, 1);
+    iprintf("qret = %i\n", qret);
     qthread_readFF(me, &ret, &ret);
     iprintf("\tsuccessfully failed to fork to shepherd 1!\n");
     iprintf("now to fork to shepherd 2...\n");

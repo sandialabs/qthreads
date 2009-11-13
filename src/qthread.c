@@ -2887,6 +2887,7 @@ int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
 	if (qlib->shepherds[shepherd].active != 1) {
 	    shep = qthread_find_active_shepherd(shep->sorted_sheplist);
 	}
+	t->shepherd_ptr = shep;
 	qt_lfqueue_enqueue(shep->ready, t,
 			   (qthread_shepherd_t *)
 			   pthread_getspecific(shepherd_structs));
