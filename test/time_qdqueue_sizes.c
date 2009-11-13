@@ -99,7 +99,7 @@ int main(int argc, char *argv[])
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
 
-    CHECK_INTERACTIVE();
+    CHECK_VERBOSE();
     NUMARG(objsize, "TEST_OBJSIZE");
     me = qthread_self();
 

@@ -214,7 +214,7 @@ int main(int argc, char *argv[])
 
     assert(qthread_initialize() == 0);
 
-    CHECK_INTERACTIVE();
+    CHECK_VERBOSE();
     NUMARG(futurelimit, "TEST_FUTURE_LIMIT");
     NUMARG(d_len, "TEST_LEN");
     NUMARG(i_len, "TEST_LEN");

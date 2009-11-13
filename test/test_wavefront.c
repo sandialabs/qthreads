@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
     char *str;
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
-    CHECK_INTERACTIVE();
+    CHECK_VERBOSE();
     NUMARG(ASIZE, "TEST_ASIZE");
     iprintf("ASIZE: %i\n", (int)ASIZE);
     iprintf("%i threads\n", qthread_num_shepherds());

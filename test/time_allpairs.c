@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
 	exit(EXIT_FAILURE);
     }
     me = qthread_self();
-    CHECK_INTERACTIVE();
+    CHECK_VERBOSE();
     NUMARG(ASIZE, "TEST_ASIZE");
     iprintf("threads: %i\n", qthread_num_shepherds());
 

@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
     me = qthread_self();
-    CHECK_INTERACTIVE();
+    CHECK_VERBOSE();
 
     if ((q = qdqueue_create()) == NULL) {
 	fprintf(stderr, "qdqueue_create() failed!\n");

@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
     me = qthread_self();
-    CHECK_INTERACTIVE();
+    CHECK_VERBOSE();
 
     if ((qp = qpool_create(sizeof(aligned_t))) == NULL) {
 	fprintf(stderr, "qpool_create() failed!\n");

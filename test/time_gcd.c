@@ -53,7 +53,7 @@ int main ()
     size_t i;
     qtimer_t mod_timer = qtimer_new();
     qtimer_t shift_timer = qtimer_new();
-    CHECK_INTERACTIVE();
+    CHECK_VERBOSE();
     for (i=0;i<BIGNUM;i++) {
 	bigset[i].a = random();
 	bigset[i].b = 4096;

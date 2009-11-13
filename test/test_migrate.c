@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
     qthread_initialize();
     me = qthread_self();
 
-    CHECK_INTERACTIVE();
+    CHECK_VERBOSE();
 
     assert(qthread_num_shepherds() == 2);
     iprintf("now to fork to shepherd 0...\n");

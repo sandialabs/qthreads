@@ -26,7 +26,7 @@ int main(int argc, char *argv[])
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
 
-    CHECK_INTERACTIVE();
+    CHECK_VERBOSE();
     NUMARG(len, "TEST_LEN");
 
     ui_array = calloc(len, sizeof(aligned_t));

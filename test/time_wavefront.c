@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     qtimer_t timer = qtimer_new();
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
-    CHECK_INTERACTIVE();
+    CHECK_VERBOSE();
     NUMARG(ASIZE, "TEST_ASIZE");
 
     me = qthread_self();

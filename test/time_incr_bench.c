@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
 	exit(EXIT_FAILURE);
     }
     me = qthread_self();
-    CHECK_INTERACTIVE();
+    CHECK_VERBOSE();
 
     for (int iteration = 0; iteration < 10; iteration++) {
 	counter = 0;

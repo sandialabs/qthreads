@@ -58,7 +58,7 @@ int main(int argc, char *argv[])
 
     qthread_initialize();
     me = qthread_self();
-    CHECK_INTERACTIVE();
+    CHECK_VERBOSE();
 
     /* iterate over all the different distribution types */
     for (dt_index = 0;

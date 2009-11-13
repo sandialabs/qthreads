@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
 	exit(EXIT_FAILURE);
     }
 
-    CHECK_INTERACTIVE();
+    CHECK_VERBOSE();
     me = qthread_self();
 
     for (int iteration = 0; iteration < 10; iteration++) {

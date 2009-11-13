@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
     qtimer_t timer = qtimer_new();
     double cumulative_time = 0.0;
 
-    CHECK_INTERACTIVE();
+    CHECK_VERBOSE();
 
     for (int i=0; i<PER_THREAD_INCR; i++) {
 	pthread_mutex_init(&(locks[i]), NULL);

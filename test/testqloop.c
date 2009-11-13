@@ -20,7 +20,7 @@ int main(int argc, char *argv[])
     struct timeval start, stop;
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
-    CHECK_INTERACTIVE();
+    CHECK_VERBOSE();
     future_init(128);
 
     {

@@ -120,7 +120,7 @@ int main(int argc, char *argv[])
     assert(qthread_initialize() == QTHREAD_SUCCESS);
     me = qthread_self();
 
-    CHECK_INTERACTIVE();
+    CHECK_VERBOSE();
     NUMARG(iterations, "TEST_ITERATIONS");
 
     allthat = malloc(sizeof(void *) * iterations);

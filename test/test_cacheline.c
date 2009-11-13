@@ -15,7 +15,7 @@ int main()
 
     qthread_initialize();
     cacheline = qthread_cacheline();
-    CHECK_INTERACTIVE();
+    CHECK_VERBOSE();
     iprintf("%i bytes\n", cacheline);
     assert(cacheline > 0);
     return 0;

@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
     assert(qthread_initialize() == 0);
 
     NUMARG(target,"TEST_TARGET");
-    CHECK_INTERACTIVE();
+    CHECK_VERBOSE();
 
     qthread_lock(qthread_self(), &alldone);
 
