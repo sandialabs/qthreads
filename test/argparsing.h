@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#define CHECK_INTERACTIVE() interactive = (getenv("TEST_INTERACTIVE") != NULL)
+#define CHECK_VERBOSE() verbose = (getenv("VERBOSE") != NULL)
 #define NUMARG(var,name) do { \
     char *str; \
     if ((str = getenv(name)) != NULL) { \
@@ -19,11 +19,11 @@
     iprintf(name" = %lu\n", (unsigned long)var); \
 } while (0)
 
-static int interactive = 0;
+static int verbose = 0;
 
 static void iprintf(char *format, ...)
 {
-    if (interactive != 0) {
+    if (verbose != 0) {
 	va_list ap;
 
 	va_start(ap, format);

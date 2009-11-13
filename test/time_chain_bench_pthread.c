@@ -40,8 +40,8 @@ int main(int argc, char *argv[])
     qtimer_t timer = qtimer_new();
     double cumulative_time = 0.0;
 
-    CHECK_INTERACTIVE();
-    if (!interactive) return 0;
+    CHECK_VERBOSE();
+    if (!verbose) return 0;
 
     for (int i=0; i<LOCK_COUNT; i++) {
 	pthread_mutex_init(&(counter_locks[i]), NULL);

@@ -146,8 +146,8 @@ int main(int argc, char *argv[])
 
     /* setup */
     assert(qthread_initialize() == QTHREAD_SUCCESS);
-    CHECK_INTERACTIVE();
-    if (! interactive) {
+    CHECK_VERBOSE();
+    if (! verbose) {
 	return 0;
     }
     ITERATIONS = 1000000;

@@ -95,8 +95,8 @@ int main(int argc, char *argv[])
     /* setup */
     assert(qthread_initialize() == QTHREAD_SUCCESS);
 
-    CHECK_INTERACTIVE();
-    ITERATIONS = (interactive)?1000000:1000;
+    CHECK_VERBOSE();
+    ITERATIONS = (verbose)?1000000:1000;
     shepherds = qthread_num_shepherds();
 
     /* BALANCED INCREMENT LOOP (strong scaling) */

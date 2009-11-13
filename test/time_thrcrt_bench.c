@@ -32,9 +32,9 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "qthread library could not be initialized!\n");
 	exit(EXIT_FAILURE);
     }
-    CHECK_INTERACTIVE();
+    CHECK_VERBOSE();
     me = qthread_self();
-    if (!interactive) return 0;
+    if (!verbose) return 0;
 
     for (int iteration = 0; iteration < 10; iteration++) {
 	qtimer_start(timer);

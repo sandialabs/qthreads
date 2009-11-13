@@ -121,11 +121,11 @@ int main(int argc, char *argv[])
     
     assert(qthread_initialize() == QTHREAD_SUCCESS);
 
-    CHECK_INTERACTIVE();
+    CHECK_VERBOSE();
     NUMARG(ELEMENT_COUNT, "TEST_ELEMENT_COUNT");
     NUMARG(enabled_tests, "TEST_ENABLED_TESTS");
     NUMARG(enabled_types, "TEST_ENABLED_TYPES");
-    if (!interactive) {
+    if (!verbose) {
 	ELEMENT_COUNT = 10000;
     }
 

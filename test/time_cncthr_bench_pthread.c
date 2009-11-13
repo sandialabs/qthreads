@@ -26,8 +26,8 @@ int main(int argc, char *argv[])
     double cumulative_time = 0.0;
     size_t counter;
 
-    CHECK_INTERACTIVE();
-    if (!interactive) return 0;
+    CHECK_VERBOSE();
+    if (!verbose) return 0;
 
     for (int iteration = 0; iteration < 10; iteration++) {
 	qtimer_start(timer);

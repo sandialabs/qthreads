@@ -40,8 +40,8 @@ int main(int argc, char *argv[])
 
     pthread_mutex_init(&counter_lock, NULL);
 
-    CHECK_INTERACTIVE();
-    if (!interactive) return 0;
+    CHECK_VERBOSE();
+    if (!verbose) return 0;
 
     for (int iteration = 0; iteration < 10; iteration++) {
 	counter = 0;

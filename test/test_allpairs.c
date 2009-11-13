@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
     qthread_t *me;
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
-    CHECK_INTERACTIVE();
+    CHECK_VERBOSE();
     NUMARG(ASIZE, "TEST_ASIZE");
     iprintf("ASIZE: %i\n", (int)ASIZE);
 
@@ -108,7 +108,7 @@ int main(int argc, char *argv[])
     }
 
     qt_allpairs_output(a1, a2, (dist_out_f) mult, (void **)out, sizeof(int));
-    /*if (interactive) {
+    /*if (verbose) {
 	printout(out);
     }*/
     for (i = 0; i < ASIZE; i++) {
