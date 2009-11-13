@@ -192,7 +192,7 @@ struct qthread_shepherd_s
     aligned_t active;
     /* affinity information */
     unsigned int node;		/* whereami */
-#ifdef HAVE_SYS_LGRP_USER_H
+#ifdef QTHREAD_HAVE_LGRP
     unsigned int lgrp;
 #endif
     unsigned int *shep_dists;
@@ -336,7 +336,7 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t * shep,
 static QINLINE void qthread_gotlock_empty(qthread_shepherd_t * shep,
 					  qthread_addrstat_t * m, void *maddr,
 					  const char recursive);
-#if (defined(QTHREAD_HAVE_LIBNUMA) || defined(HAVE_SYS_LGRP_USER_H))
+#if (defined(QTHREAD_HAVE_LIBNUMA) || defined(QTHREAD_HAVE_LGRP))
 #ifdef HAVE_QSORT_R
 static int qthread_internal_shepcomp(void *src, const void *a, const void *b)
 {
@@ -971,7 +971,7 @@ static QINLINE int qthread_unique_collect(void *key, void *value, void *id)
 # define QTHREAD_LOCK_UNIQUERECORD(TYPE, ADDR, ME) do{ }while(0)
 #endif
 
-#ifdef HAVE_SYS_LGRP_USER_H
+#ifdef QTHREAD_HAVE_LGRP
 static int lgrp_walk(const lgrp_cookie_t cookie, const lgrp_id_t lgrp,
 		     processorid_t ** cpus, lgrp_id_t * lgrp_ids,
 		     int cpu_grps)
@@ -1048,7 +1048,7 @@ static void *qthread_shepherd(void *arg)
     /* Initialize myself */
     pthread_setspecific(shepherd_structs, arg);
     if (qaffinity) {/*{{{*/
-#if defined(HAVE_MACH_THREAD_POLICY_H) && (defined(HAVE_DECL_THREAD_AFFINITY_POLICY_COUNT) && HAVE_DECL_THREAD_AFFINITY_POLICY_COUNT == 1)
+#ifdef QTHREAD_HAVE_MACHTOPO
 	mach_msg_type_number_t Count = THREAD_AFFINITY_POLICY_COUNT;
 	thread_affinity_policy_data_t mask[THREAD_AFFINITY_POLICY_COUNT] =
 	    { 0 };
@@ -1090,7 +1090,7 @@ static void *qthread_shepherd(void *arg)
 	    perror("plpa setaffinity");
 	}
 	free(cpuset);
-#elif defined(HAVE_SYS_LGRP_USER_H)
+#elif defined(QTHREAD_HAVE_LGRP)
 	if (me->node != -1) {
 	    if (lgrp_affinity_set(P_LWPID, P_MYID, me->lgrp, LGRP_AFF_STRONG)
 		!= 0) {
@@ -1102,14 +1102,6 @@ static void *qthread_shepherd(void *arg)
 	    if (processor_bind(P_LWPID, P_MYID, me->node, NULL) < 0) {
 		perror("processor_bind");
 	    }
-# ifdef HAVE_SYS_LGRP_USER_H
-	    /* using this to set preferred memory affinity (probably unnecessary);
-	     * this does NOT change the processor binding. */
-	    if (lgrp_affinity_set(P_LWPID, P_MYID, me->lgrp, LGRP_AFF_STRONG)
-		!= 0) {
-		perror("lgrp_affinity_set");
-	    }
-# endif
 	}
 #endif
     }/*}}}*/
@@ -1278,7 +1270,7 @@ int qthread_initialize(void)
     int need_sync = 1;
     qthread_shepherd_id_t nshepherds = 0;
 
-#ifdef HAVE_SYS_LGRP_USER_H
+#ifdef QTHREAD_HAVE_LGRP
     lgrp_cookie_t lgrp_cookie = lgrp_init(LGRP_VIEW_OS);
 #endif
 
@@ -1323,7 +1315,7 @@ int qthread_initialize(void)
 	if (numa_available() != -1) {
 	    nshepherds = numa_max_node() + 1;
 	}
-#elif defined(HAVE_SYS_LGRP_USER_H)
+#elif defined(QTHREAD_HAVE_LGRP)
 	nshepherds =
 	    lgrp_cpus(lgrp_cookie, lgrp_root(lgrp_cookie), NULL, 0,
 		      LGRP_CONTENT_ALL);
@@ -1439,7 +1431,7 @@ int qthread_initialize(void)
 	&& numa_available() != -1
 #endif
 	) {			       /*{{{ */
-#if defined(HAVE_MACH_THREAD_POLICY_H) && (defined(HAVE_DECL_THREAD_AFFINITY_POLICY_COUNT) && HAVE_DECL_THREAD_AFFINITY_POLICY_COUNT == 1)
+#ifdef QTHREAD_HAVE_MACHTOPO
 	printf("NEED TO GENERATE DISTANCES!\n");
 	assert(0);
 #elif defined(QTHREAD_HAVE_LIBNUMA)
@@ -1510,7 +1502,7 @@ int qthread_initialize(void)
 		  sizeof(qthread_shepherd_id_t), qthread_internal_shepcomp);
 #  endif
 	}
-#elif defined(HAVE_SYS_LGRP_USER_H)
+#elif defined(QTHREAD_HAVE_LGRP)
 	unsigned int lgrp_offset;
 	int lgrp_count_grps;
 	processorid_t **cpus = NULL;

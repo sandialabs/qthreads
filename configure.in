@@ -508,16 +508,10 @@ AC_CACHE_SAVE
 
 ## External libraries that help on some architectures
 AS_IF([test "x$qthread_implementation" = "xunix"],
-	  [AC_CHECK_HEADERS([sys/lgrp_user.h],
-						[AC_SEARCH_LIBS([lgrp_init], [lgrp])
-						break],
-						[QTHREAD_CHECK_LIBNUMA([],
-							 [QTHREAD_CHECK_PLPA([],
-												 [AC_CHECK_HEADERS([mach/mach_init.h mach/thread_policy.h])
-												  AC_SEARCH_LIBS([thread_policy_set])
-												  AC_SEARCH_LIBS([thread_policy_get])
-												  AC_CHECK_DECLS([THREAD_AFFINITY_POLICY_COUNT])
-												  ])])])
+	  [QTHREAD_CHECK_LIBLGRP([qthread_topo=lgrp],
+	    [QTHREAD_CHECK_LIBNUMA([qthread_topo=libnuma],
+		  [QTHREAD_CHECK_PLPA([qthread_topo=plpa],
+			[QTHREAD_CHECK_MACHTOPO([qthread_topo=mach])])])])
 	  ])
 
 ## --------------- ##
@@ -551,6 +545,7 @@ AC_OUTPUT
 echo ""
 echo    "System Characteristics:"
 echo    "               Target Style: $qthread_implementation"
+echo    "         Topology Interface: ${qthread_topo:-none}"
 echo    "                Qtimer type: ${qthread_timer_type:-none}"
 echo    "             Aligned_t size: $sizeof_aligned_t (aligned on $align_aligned_t byte boundaries)"
 qthread_stackprefix="         Default Stack size: "
