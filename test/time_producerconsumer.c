@@ -160,7 +160,7 @@ int main(int argc, char *argv[])
 	qthread_empty(NULL, &(FEBtable[i][0]));
 	qthread_empty(NULL, &(FEBtable[i][1]));
     }
-    iprintf("Testing producer/consumer:\n");
+    iprintf("Testing producer/consumer (with %i sheps):\n", qthread_num_shepherds());
 
     /* SINGLE FEB SEND/RECEIVE TEST */
     iprintf("\tSingle FEB send/receive: ");
