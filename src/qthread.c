@@ -1477,7 +1477,7 @@ int qthread_initialize(void)
 	    qaffinity = 0;
     }
     qthread_debug(ALL_DETAILS, "qthread_init(): qaffinity = %i\n", qaffinity);
-    if (qaffinity == 1
+    if (qaffinity == 1 && nshepherds > 1
 #ifdef QTHREAD_HAVE_LIBNUMA
 	&& numa_available() != -1
 #endif
@@ -2100,6 +2100,14 @@ void qthread_finalize(void)
 #endif
     free(qlib->mccoy_thread->stack);
     free(qlib->master_stack);
+    for (i = 0; i < qlib->nshepherds; ++i) {
+	if (qlib->shepherds[i].shep_dists) {
+	    free(qlib->shepherds[i].shep_dists);
+	}
+	if (qlib->shepherds[i].sorted_sheplist) {
+	    free(qlib->shepherds[i].sorted_sheplist);
+	}
+    }
 #ifndef UNPOOLED
     for (i = 0; i < qlib->nshepherds; ++i) {
 	qt_mpool_destroy(qlib->shepherds[i].qthread_pool);
