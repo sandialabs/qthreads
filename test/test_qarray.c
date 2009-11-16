@@ -55,14 +55,19 @@ int main(int argc, char *argv[])
 	"DIST_REG_STRIPES", "DIST_REG_FIELDS", "DIST_LEAST"
     };
     unsigned int dt_index;
+    unsigned int num_dists = 8;
 
     qthread_initialize();
     me = qthread_self();
     CHECK_VERBOSE();
+    NUMARG(num_dists, "TEST_NUM_DISTS");
+    if (num_dists > 8) {
+	num_dists == 8;
+    }
 
     /* iterate over all the different distribution types */
     for (dt_index = 0;
-	 dt_index < (sizeof(disttypes) / sizeof(distribution_t));
+	 dt_index < num_dists;
 	 dt_index++) {
 	/* test a basic array of doubles */
 	count = 0;
