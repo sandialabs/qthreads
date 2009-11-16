@@ -15,7 +15,7 @@
 
 #ifdef QTHREAD_DEBUG
 # ifdef HAVE_UNISTD_H
-#  include <unistd.h> /* for write() */
+#  include <unistd.h>		       /* for write() */
 # endif
 # include <stdarg.h>		       /* for va_start and va_end */
 #endif
@@ -38,7 +38,7 @@ typedef struct qlib_s
     unsigned master_stack_size;
     unsigned max_stack_size;
 
-    qthread_t *mccoy_thread; /* free when exiting */
+    qthread_t *mccoy_thread;	/* free when exiting */
 
     void *master_stack;
     ucontext_t *master_context;
@@ -74,7 +74,7 @@ typedef struct qlib_s
     aligned_t febs_stripes[STRIPECOUNT];
     pthread_mutex_t febs_stripes_locks[STRIPECOUNT];
 #endif
-} *qlib_t;
+}     *qlib_t;
 
 #ifndef SST
 extern qlib_t qlib;
@@ -82,12 +82,16 @@ extern qlib_t qlib;
 
 /* These are the internal functions that futurelib should be allowed to get at */
 unsigned int qthread_isfuture(const qthread_t * t);
+
 void qthread_assertfuture(qthread_t * t);
+
 void qthread_assertnotfuture(qthread_t * t);
-int qthread_fork_future_to(const qthread_t *me, const qthread_f f, const void *arg,
-			    aligned_t * ret,
-			    const qthread_shepherd_id_t shepherd);
+
+int qthread_fork_future_to(const qthread_t * me, const qthread_f f,
+			   const void *arg, aligned_t * ret,
+			   const qthread_shepherd_id_t shepherd);
 unsigned int qthread_internal_shep_to_node(const qthread_shepherd_id_t shep);
+
 #define QTHREAD_NO_NODE ((unsigned int)(-1))
 #ifdef SST
 # define qthread_shepherd_count() PIM_readSpecial(PIM_CMD_LOC_COUNT)
@@ -98,11 +102,14 @@ unsigned int qthread_internal_shep_to_node(const qthread_shepherd_id_t shep);
 /*#define QTHREAD_DEBUG 1*/
 /* for debugging */
 #ifdef QTHREAD_DEBUG
-enum qthread_debug_levels { NONE = 0,
+enum qthread_debug_levels
+{ NONE = 0,
     THREAD_BEHAVIOR, LOCK_BEHAVIOR, ALL_CALLS, ALL_FUNCTIONS,
     THREAD_DETAILS, LOCK_DETAILS, ALL_DETAILS
 };
+
 extern enum qthread_debug_levels debuglevel;
+
 extern pthread_mutex_t output_lock;
 
 static QINLINE void qthread_debug(int level, char *format, ...)
@@ -110,64 +117,74 @@ static QINLINE void qthread_debug(int level, char *format, ...)
     va_list args;
 
     if (level <= debuglevel) {
-	static char buf[1024]; // protected by the output_lock
+	static char buf[1024];	// protected by the output_lock
+
 	char *head = buf;
+
 	char ch;
 
 	qassert(pthread_mutex_lock(&output_lock), 0);
 
-	write(2, "QDEBUG: ",8);
+	while (write(2, "QDEBUG: ", 8) != 8) ;
 
 	va_start(args, format);
 	/* avoiding the obvious method, to save on memory
-	vfprintf(stderr, format, args);*/
+	 * vfprintf(stderr, format, args); */
 	while ((ch = *format++)) {
 	    if (ch == '%') {
 		ch = *format++;
 		switch (ch) {
 		    case 's':
-			{
-			    char * str = va_arg(args, char*);
-			    write(2, buf, head - buf);
-			    head = buf;
-			    write(2, str, strlen(str));
-			    break;
-			}
+		    {
+			char *str = va_arg(args, char *);
+
+			while (write(2, buf, head - buf) != head - buf) ;
+			head = buf;
+			while (write(2, str, strlen(str)) != strlen(str)) ;
+			break;
+		    }
 		    case 'p':
 		    case 'x':
-			{
-			    uintptr_t num = 0;
-			    unsigned base = 0;
+		    {
+			uintptr_t num = 0;
+
+			unsigned base = 0;
+
+			*head++ = '0';
+			*head++ = 'x';
+		    case 'u':
+		    case 'd':
+		    case 'i':
+			num = va_arg(args, uintptr_t);
+			base = (ch == 'p') ? 16 : 10;
+			if (!num) {
 			    *head++ = '0';
-			    *head++ = 'x';
-			    case 'u':
-			    case 'd':
-			    case 'i':
-			    num = va_arg(args, uintptr_t);
-			    base = (ch == 'p')?16:10;
-			    if (!num) {
-				*head++ = '0';
-			    } else {
-				/* count places */
-				uintptr_t tmp = num;
-				unsigned places = 0;
-				while (tmp >= base) {
-				    tmp /= base;
-				    places++;
-				}
-				head += places;
-				places = 0;
-				while (num >= base) {
-				    tmp = num%base;
-				    *(head-places) = (tmp<10)?('0'+tmp):('a'+tmp-10);
-				    num /= base;
-				    places++;
-				}
-				num %= base;
-				*(head-places) = (num<10)?('0'+num):('a'+num-10);
-				head++;
+			} else {
+			    /* count places */
+			    uintptr_t tmp = num;
+
+			    unsigned places = 0;
+
+			    while (tmp >= base) {
+				tmp /= base;
+				places++;
 			    }
+			    head += places;
+			    places = 0;
+			    while (num >= base) {
+				tmp = num % base;
+				*(head - places) =
+				    (tmp <
+				     10) ? ('0' + tmp) : ('a' + tmp - 10);
+				num /= base;
+				places++;
+			    }
+			    num %= base;
+			    *(head - places) =
+				(num < 10) ? ('0' + num) : ('a' + num - 10);
+			    head++;
 			}
+		    }
 			break;
 		    default:
 			*head++ = '%';
@@ -178,9 +195,9 @@ static QINLINE void qthread_debug(int level, char *format, ...)
 	    }
 	}
 	/* XXX: not checking for extra long values of head */
-	write(2, buf, head - buf);
+	while (write(2, buf, head - buf) != head - buf) ;
 	va_end(args);
-	/*fflush(stderr);*/
+	/*fflush(stderr); */
 
 	qassert(pthread_mutex_unlock(&output_lock), 0);
     }
