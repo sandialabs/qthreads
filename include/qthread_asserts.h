@@ -19,12 +19,14 @@
 # define qassert_ret(assertion, retval) do { if (!(assertion)) { return retval; } } while (0)
 # define qassert_retvoid(assertion) do { if (!(assertion)) { return; } } while (0)
 # define qassert_goto(assertion, tag) do { if (!(assertion)) { goto tag; } } while (0)
+#define qgoto(tag) tag:
 #else
 # define qassert(op, val) assert(op == val)
 # define qassertnot(op, val) assert(op != val)
 # define qassert_ret(assertion, retval) assert(assertion)
 # define qassert_retvoid(assertion) assert(assertion)
 # define qassert_goto(assertion, tag) assert(assertion)
+# define qgoto(tag)
 #endif
 
 #endif

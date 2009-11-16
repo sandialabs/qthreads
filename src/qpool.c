@@ -229,7 +229,7 @@ qpool *qpool_create_aligned(const size_t isize, size_t alignment)
 	pool->pools[pindex].alloc_list_pos = 1;
     }
     return pool;
-  errexit_killpool:
+    qgoto(errexit_killpool);
     if (pool) {
 	if (pool->pools) {
 	    size_t i;
@@ -337,7 +337,7 @@ void *qpool_alloc(qthread_t * me, qpool * pool)
 		   (((unsigned long)p) & (pool->alignment - 1)) == 0);
 	}
     }
-  alloc_exit:
+    qgoto(alloc_exit);
     VALGRIND_MEMPOOL_ALLOC(pool, QPTR(p), pool->item_size);
     return QPTR(p);
 }				       /*}}} */

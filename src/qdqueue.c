@@ -354,12 +354,12 @@ qdqueue_t *qdqueue_create(void)
 
     return ret;
 
-  erralloc_killshep:
+    qgoto(erralloc_killshep);
     for (curshep--; curshep > 0; curshep--) {
 	free(sheparray[curshep]);
     }
     free(sheparray);
-  erralloc_killq:
+    qgoto(erralloc_killq);
     if (ret) {
 	if (ret->Qs) {
 	    free(ret->Qs);

@@ -210,7 +210,7 @@ qt_mpool qt_mpool_create_aligned(const int sync, size_t item_size,
     pool->alloc_list[0] = pool->alloc_block;
     pool->alloc_list_pos = 1;
     return pool;
-errexit:
+    qgoto(errexit);
     if (pool) {
 	if (pool->alloc_block) {
 	    qt_mpool_internal_aligned_free(pool->alloc_block, /* alloc_size, */ alignment);
@@ -312,7 +312,7 @@ void *qt_mpool_alloc(qt_mpool pool)
 		   (((unsigned long)p) & (pool->alignment - 1)) == 0);
 	}
     }
-  alloc_exit:
+    qgoto(alloc_exit);
     VALGRIND_MEMPOOL_ALLOC(pool, QPTR(p), pool->item_size);
     return (void *)QPTR(p);
 }				       /*}}} */

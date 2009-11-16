@@ -455,7 +455,7 @@ static qarray *qarray_create_internal(const size_t count,
 	    MADV_ACCESS_LWP);
 #endif
     return ret;
-badret_exit:
+    qgoto(badret_exit);
     if (ret) {
 	if (ret->base_ptr) {
 	    free(ret->base_ptr);
