@@ -31,27 +31,27 @@ static QINLINE void* qt_cas(void*volatile* const ptr, void* const oldv, void* co
 	    :"cc", "memory");
     return result;
 #  elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
-#   if defined(__SUNPRO_CC)
-    asm volatile
-#   else
+    void *nv = newv;
     __asm__ __volatile__
-#   endif
 	("cas [%1], %2, %0"
-	 : "=&r" (newv)
-	 : "r" (ptr), "r"(oldv), "0"(newv)
+	 : "=&r" (nv)
+	 : "r" (ptr), "r"(oldv)
+#if !defined(__SUNPRO_C) && !defined(__SUNPRO_CC)
+	 , "0"(nv)
+#endif
 	 : "cc", "memory");
-    return newv;
+    return nv;
 #  elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
-#   if defined(__SUNPRO_CC)
-    asm volatile
-#   else
+    void *nv = newv;
     __asm__ __volatile__
-#   endif
 	("casx [%1], %2, %0"
-	 : "=&r" (newv)
-	 : "r" (ptr), "r"(oldv), "0"(newv)
+	 : "=&r" (nv)
+	 : "r" (ptr), "r"(oldv)
+#if !defined(__SUNPRO_C) && !defined(__SUNPRO_CC)
+	 , "0"(nv)
+#endif
 	 : "cc", "memory");
-    return newv;
+    return nv;
 #  elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
     void ** retval;
     __asm__ __volatile__ ("mov ar.ccv=%0;;": :"rO" (oldv));
