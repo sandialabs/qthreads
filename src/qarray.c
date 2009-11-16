@@ -535,7 +535,7 @@ void qarray_destroy(qarray * a)
     }
 #ifdef QTHREAD_HAVE_LIBNUMA
     numa_free(a->base_ptr,
-	      (a->count / a->segment_size +
+	      a->segment_bytes * (a->count / a->segment_size +
 	       ((a->count % a->segment_size) ? 1 : 0)));
 #elif (HAVE_WORKING_VALLOC || HAVE_MEMALIGN || HAVE_POSIX_MEMALIGN || HAVE_PAGE_ALIGNED_MALLOC)
     /* avoid freeing base ptr if we had to use a broken valloc */
