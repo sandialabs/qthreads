@@ -93,6 +93,14 @@ static inline qthread_shepherd_id_t qarray_internal_shepof_shi(const qarray *
     }
 }				       /*}}} */
 
+static void qarray_free_cdt(void)
+{/*{{{*/
+    if (chunk_distribution_tracker != NULL) {
+	free(chunk_distribution_tracker);
+	chunk_distribution_tracker = NULL;
+    }
+}/*}}}*/
+
 static qarray *qarray_create_internal(const size_t count,
 				      const size_t obj_size,
 				      const distribution_t d,
@@ -115,9 +123,14 @@ static qarray *qarray_create_internal(const size_t count,
     pagesize = 1 << pageshift;
 
     if (chunk_distribution_tracker == NULL) {
-	chunk_distribution_tracker =
+	aligned_t *tmp =
 	    calloc(qthread_num_shepherds(), sizeof(aligned_t));
-	qassert_ret((chunk_distribution_tracker != NULL), NULL);
+	qassert_ret((tmp != NULL), NULL);
+	if (qthread_cas_ptr(&(chunk_distribution_tracker), NULL, tmp) != NULL) {
+	    free(tmp);
+	} else {
+	    atexit(qarray_free_cdt);
+	}
     }
     ret = calloc(1, sizeof(qarray));
     qassert_goto((ret != NULL), badret_exit);
