@@ -79,6 +79,13 @@
 # define __restrict__
 #endif
 
+/* Work around another bug in Sun C++: it does not support __asm__, even though
+ * their C compiler DOES. */
+#if defined(__SUNPRO_CC)
+# define __asm__ asm
+# define __volatile__ volatile
+#endif
+
 /* Architecture defines */
 #define QTHREAD_UNSUPPORTED 0
 #define QTHREAD_IA32        1

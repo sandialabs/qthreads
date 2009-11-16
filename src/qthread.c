@@ -752,7 +752,10 @@ static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t *
 	 * newval = *operand
 	 */
 	__asm__ __volatile__("casx [%1] , %2, %0":"=&r"(newval)
-			     :"r"    (operand), "r"(oldval), "0"(newval)
+			     :"r"    (operand), "r"(oldval)
+#if !defined(__SUNPRO_CC) && !defined(__SUNPRO_C)
+			     , "0"(newval)
+#endif
 			     :"memory");
     } while (oldval != newval);
 

@@ -342,15 +342,14 @@ static QINLINE float qthread_fincr(volatile float *operand, const float incr)
 	 * inside the loop fixes that problem, even at -O2 optimization. */
 	oldval.f = *operand;
 	newval.f = oldval.f + incr;
-#if defined(__SUNPRO_CC)
-	asm volatile
-#else
 	__asm__ __volatile__
-#endif
 	        ("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
 		 "cas [%1], %2, %0"
 		 :"=&r"(newval.i)
-		 :"r"    (operand), "r"(oldval.i), "0"(newval.i)
+		 :"r"    (operand), "r"(oldval.i)
+#if !defined(__SUNPRO_CC) && !defined(__SUNPRO_C)
+		 , "0"(newval.i)
+#endif
 		 :"cc", "memory");
     } while (oldval.i != newval.i);
     return oldval.f;
@@ -484,15 +483,14 @@ static QINLINE double qthread_dincr(volatile double *operand,
 	 * inside the loop fixes that problem, even at -O2 optimization. */
 	oldval.d = *operand;
 	newval.d = oldval.d + incr;
-#if defined(__SUNPRO_CC)
-	asm volatile
-#else
 	__asm__ __volatile__
-#endif
 	        ("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
 		 "casx [%1], %2, %0"
 		 :"=&r"(newval.i)
-		 :"r"(operand), "r"(oldval.i), "0"(newval.i)
+		 :"r"(operand), "r"(oldval.i)
+#if !defined(__SUNPRO_CC) && !defined(__SUNPRO_C)
+		 , "0"(newval.i)
+#endif
 		 :"memory");
     } while (oldval.d != newval.d);
     return oldval.d;
@@ -649,15 +647,14 @@ static QINLINE uint32_t qthread_incr32(volatile uint32_t * operand,
 	newval = oldval + incr;
 	/* newval always gets the value of *operand; if it's
 	 * the same as oldval, then the swap was successful */
-#if defined(__SUNPRO_CC)
-	asm volatile
-#else
 	__asm__ __volatile__
-#endif
 	        ("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
 		 "cas [%1] , %2, %0"
 		 :"=&r"  (newval)
-		 :"r"    (operand), "r"(oldval), "0"(newval)
+		 :"r"    (operand), "r"(oldval)
+#if !defined(__SUNPRO_CC) && !defined(__SUNPRO_C)
+		 , "0"(newval)
+#endif
 		 :"cc", "memory");
     } while (oldval != newval);
     return oldval;
@@ -778,17 +775,14 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand,
 	newval = oldval + incr;
 	/* newval always gets the value of *operand; if it's
 	 * the same as oldval, then the swap was successful */
-#if defined(__SUNPRO_CC)
-	/* Sun's C++ compiler doesn't do __asm__, but their C compiler does
-	 * :P */
-	asm volatile
-#else
 	__asm__ __volatile__
-#endif
 	        ("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
 		 "casx [%1] , %2, %0"
 		 :"=&r"(newval)
-		 :"r"    (operand), "r"(oldval), "0"(newval)
+		 :"r"    (operand), "r"(oldval)
+#if !defined(__SUNPRO_CC) && !defined(__SUNPRO_C)
+		 , "0"(newval)
+#endif
 		 :"cc", "memory");
     } while (oldval != newval);
     return oldval;
@@ -967,15 +961,14 @@ static QINLINE uint32_t qthread_cas32(volatile uint32_t * operand,
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32) || \
 	(QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
     register uint32_t newv = newval;
-#  if defined(__SUNPRO_CC)
-    asm volatile
-#  else
     __asm__ __volatile__
-#  endif
 	("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
 	 "cas [%1], %2, %0"
 	 : "=&r" (newv)
-	 : "r" (operand), "r"(oldval), "0"(newv)
+	 : "r" (operand), "r"(oldval)
+#if !defined(__SUNPRO_CC) && !defined(__SUNPRO_C)
+	 , "0"(newv)
+#endif
 	 : "cc", "memory");
     return newv;
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
@@ -1031,11 +1024,7 @@ static QINLINE uint64_t qthread_cas64(volatile uint64_t * operand,
     register uint64_t tmp1=tmp1;
     register uint64_t tmp2=tmp2;
     uint64_t newv = newval;
-#  if defined(__SUNPRO_CC)
-    asm volatile
-#  else
     __asm__ __volatile__
-#  endif
 	("ldx %0, %1\n\t"
 	 "ldx %4, %2\n\t"
 	 "membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
@@ -1049,15 +1038,14 @@ static QINLINE uint64_t qthread_cas64(volatile uint64_t * operand,
     return newv;
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
     register uint64_t newv = newval;
-#  if defined(__SUNPRO_CC)
-    asm volatile
-#  else
     __asm__ __volatile__
-#  endif
 	("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
 	 "casx [%1], %2, %0"
 	 : "=&r" (newv)
-	 : "r" (operand), "r"(oldval), "0"(newv)
+	 : "r" (operand), "r"(oldval)
+#if !defined(__SUNPRO_CC) && !defined(__SUNPRO_C)
+	 , "0"(newv)
+#endif
 	 : "cc", "memory");
     return newv;
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
