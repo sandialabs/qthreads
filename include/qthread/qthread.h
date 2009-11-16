@@ -42,7 +42,6 @@
 #ifdef __cplusplus
 #define Q_STARTCXX extern "C" {
 #define Q_ENDCXX }
-#define restrict
 #else
 #define Q_STARTCXX
 #define Q_ENDCXX

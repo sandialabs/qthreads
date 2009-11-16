@@ -325,7 +325,6 @@ AC_CACHE_CHECK([if $CC understands -fno-gcse],
    [case "$CC" in
 	icc*) dnl icc accepts it and spits out warnings about unknown flags
 		qthread_cv_cc_fno_gcse="no"
-		RESTRICT_CXXFLAGS="-restrict"
 		;;
 	*)
 		CFLAGS_save="${CFLAGS}"
@@ -343,7 +342,7 @@ AC_SUBST([GCSE_CFLAGS])
 
 AC_C_CONST
 AC_C_INLINE
-AC_C_RESTRICT
+AX_C_RESTRICT
 AC_C_VOLATILE
 
 QTHREAD_MALLOC_ATTRIBUTE

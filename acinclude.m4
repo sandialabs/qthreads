@@ -2,6 +2,7 @@ dnl -*- autoconf -*-
 dnl
 dnl Copyright (c) 2008 Sandia Corporation
 
+m4_include([config/ax_c_restrict.m4])
 m4_include([config/ax_create_stdint_h.m4])
 m4_include([config/ax_check_page_aligned_malloc.m4])
 m4_include([config/ax_check_16aligned_malloc.m4])
