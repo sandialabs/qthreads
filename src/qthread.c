@@ -1483,8 +1483,7 @@ int qthread_initialize(void)
 #endif
 	) {			       /*{{{ */
 #ifdef QTHREAD_HAVE_MACHTOPO
-	printf("NEED TO GENERATE DISTANCES!\n");
-	assert(0);
+	/* there is no native way to detect distances, so unfortunately we must assume that they're all equidistant */
 #elif defined(QTHREAD_HAVE_LIBNUMA)
 	size_t max = numa_max_node() + 1;
 
@@ -1689,8 +1688,7 @@ int qthread_initialize(void)
 	}
 #else
 # if defined(QTHREAD_USE_PLPA)
-	fprintf(stderr,"Cannot generate distance matrix.\n");
-	assert(0);
+	/* there is no inherent way to detect distances, so unfortunately we must assume that they're all equidistant */
 # endif
 #endif
     }
