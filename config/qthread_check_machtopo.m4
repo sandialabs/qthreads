@@ -11,14 +11,16 @@ AC_DEFUN([QTHREAD_CHECK_MACHTOPO], [
   			       [qt_allgoodsofar=no
 				    break])
   AS_IF([test "x$qt_allgoodsofar" = xyes],
-        [AC_SEARCH_LIBS([thread_policy_set],[],
+        [AC_SEARCH_LIBS([thread_policy_set],[],[],
 		                [qt_allgoodsofar=no])])
   AS_IF([test "x$qt_allgoodsofar" = xyes],
-  		[AC_SEARCH_LIBS([thread_policy_get],[],
+  		[AC_SEARCH_LIBS([thread_policy_get],[],[],
 						[qt_allgoodsofar=no])])
   AS_IF([test "x$qt_allgoodsofar" = xyes],
   	    [AC_CHECK_DECL([THREAD_AFFINITY_POLICY_COUNT],[],
-						[qt_allgoodsofar=no])])
+						[qt_allgoodsofar=no],
+						[[#include <mach/thread_policy.h>
+#include <mach/mach_init.h>]])])
   
   AS_IF([test "x$qt_allgoodsofar" = xyes],
 	    [AC_DEFINE([QTHREAD_HAVE_MACHTOPO],[1],[if the machine has a MacOS-style Mach topology interface])
