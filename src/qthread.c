@@ -122,7 +122,7 @@ struct qthread_s
     /* the shepherd we run on */
     qthread_shepherd_t *shepherd_ptr;
     /* the shepherd we'd rather run on */
-    qthread_shepherd_id_t target_shepherd;
+    qthread_shepherd_t *target_shepherd;
     /* the shepherd our memory comes from */
     qthread_shepherd_t *creator_ptr;
     /* a pointer used for passing information back to the shepherd when
@@ -1181,10 +1181,9 @@ static void *qthread_shepherd(void *arg)
 		    qthread_debug(THREAD_DETAILS,
 				  "qthread_shepherd(%u): thread %u migrating to shep %u\n",
 				  me->shepherd_id, t->thread_id,
-				  t->target_shepherd);
+				  t->target_shepherd->shepherd_id);
 		    t->thread_state = QTHREAD_STATE_RUNNING;
-		    t->shepherd_ptr =
-			&(qlib->shepherds[t->target_shepherd]);
+		    t->shepherd_ptr = t->target_shepherd;
 		    qt_lfqueue_enqueue(t->shepherd_ptr->ready, t, me);
 		    break;
 		default:
@@ -1199,16 +1198,15 @@ static void *qthread_shepherd(void *arg)
 				me->shepherd_id, t->thread_id);
 			qt_lfqueue_enqueue(me->ready, t, me);
 		    } else {
-			if (t->target_shepherd == NO_SHEPHERD || t->target_shepherd == me->shepherd_id) {
+			if (t->target_shepherd == NULL || t->target_shepherd == me) {
 			    /* send to the closest shepherd */
 			    t->shepherd_ptr = qthread_find_active_shepherd(me->sorted_sheplist);
-			} else if (qlib->shepherds[t->target_shepherd].active) {
+			} else if (t->target_shepherd->active) {
 			    /* send to the thread's preferred shepherd */
-			    t->shepherd_ptr = &(qlib->shepherds[t->target_shepherd]);
+			    t->shepherd_ptr = t->target_shepherd;
 			} else {
 			    /* find a shepherd somewhere near the preferred shepherd */
-			    qthread_shepherd_id_t target = t->target_shepherd;
-			    t->shepherd_ptr = qthread_find_active_shepherd(qlib->shepherds[target].sorted_sheplist);
+			    t->shepherd_ptr = qthread_find_active_shepherd(t->target_shepherd->sorted_sheplist);
 			}
 			assert(t->shepherd_ptr);
 			if (t->shepherd_ptr == NULL) {
@@ -2228,7 +2226,7 @@ static QINLINE qthread_t *qthread_thread_bare(const qthread_f f,
 	t->arg = (void *)arg;
 	t->blockedon = NULL;
 	t->shepherd_ptr = &(qlib->shepherds[shepherd]);
-	t->target_shepherd = NO_SHEPHERD;
+	t->target_shepherd = NULL;
 	t->ret = ret;
 	t->context = NULL;
 	t->stack = NULL;
@@ -2303,7 +2301,7 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
     t->arg = (void *)arg;
     t->blockedon = NULL;
     t->shepherd_ptr = &(qlib->shepherds[shepherd]);
-    t->target_shepherd = NO_SHEPHERD;
+    t->target_shepherd = NULL;
     t->ret = ret;
     t->flags = 0;
     t->context = uc;
@@ -2865,7 +2863,7 @@ int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
 	return QTHREAD_BADARGS;
     }
     t = qthread_thread_new(f, arg, ret, shepherd);
-    t->target_shepherd = shepherd;
+    t->target_shepherd = &(qlib->shepherds[shepherd]);
     if (t) {
 	qthread_shepherd_t *shep = &(qlib->shepherds[shepherd]);
 	qthread_debug(THREAD_BEHAVIOR,
@@ -3064,7 +3062,7 @@ int qthread_migrate_to(qthread_t * me, const qthread_shepherd_id_t shepherd)
     }
     assert(me == qthread_self());
     if (me->shepherd_ptr->shepherd_id == shepherd) {
-	me->target_shepherd = shepherd;
+	me->target_shepherd = me->shepherd_ptr;
 	return QTHREAD_SUCCESS;
     }
     if (me->flags & QTHREAD_REAL_MCCOY) {
@@ -3074,7 +3072,7 @@ int qthread_migrate_to(qthread_t * me, const qthread_shepherd_id_t shepherd)
 	qthread_debug(THREAD_BEHAVIOR,
 		      "qthread_migrate_to(): tid %u from shep %u to shep %u\n",
 		      me->thread_id, me->shepherd_ptr->shepherd_id, shepherd);
-	me->target_shepherd = shepherd;
+	me->target_shepherd = &(qlib->shepherds[shepherd]);
 	me->thread_state = QTHREAD_STATE_MIGRATING;
 	me->blockedon = (struct qthread_lock_s *)(intptr_t) shepherd;
 	qthread_back_to_master(me);
