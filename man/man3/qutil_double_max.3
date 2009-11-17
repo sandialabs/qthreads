@@ -1,7 +1,9 @@
 .TH qutil_double_max 3 "MAY 2007" libqthread "libqthread"
 .SH NAME
-\fBqutil_double_max\fR, \fBqutil_uint_max\fR, \fBqutil_int_max\fR \- find the
-maximum value within an array in parallel
+.BR qutil_double_max ,
+.BR qutil_uint_max ,
+.B qutil_int_max
+\- find the maximum value within an array in parallel
 .SH SYNOPSIS
 .B #include <qthread/qthread.h>
 .br
@@ -9,29 +11,41 @@ maximum value within an array in parallel
 
 .I double
 .br
-\fBqutil_double_max\fR(qthread_t *\fIme\fR, double *\fIarray\fR, size_t \fIlength\fR, int \fIcheckfeb\fR);
+.B qutil_double_max
+.RI "(qthread_t *" me ", double *" array ", size_t " length ", int " checkfeb );
 .PP
 .I unsigned int
 .br
-\fBqutil_uint_max\fR(qthread_t *\fIme\fR, unsigned int *\fIarray\fR, size_t
-\fIlength\fR, int \fIcheckfeb\fR);
+.B qutil_uint_max
+.RI "(qthread_t *" me ", unsigned int *" array ", size_t " length ", int " checkfeb );
 .PP
 .I int
 .br
-\fBqutil_int_max\fR(qthread_t *\fIme\fR, int *\fIarray\fR, size_t \fIlength\fR,
-int \fIcheckfeb\fR);
+.B qutil_int_max
+.RI "(qthread_t *" me ", int *" array ", size_t " length ", int " checkfeb );
 .SH DESCRIPTION
-These functions take as input an \fIarray\fR of \fIlength\fR numbers and will
-return the maximum value within those numbers. This value is computed in
-parallel by using a lagging-loop structure, using futures to restrict the
-parallelism to the available limits.
+These functions take as input an
+.I array
+of
+.I length
+numbers and will return the maximum value within those numbers. This value is
+computed in parallel by using a lagging-loop structure, using futures to
+restrict the parallelism to the available limits.
 .PP
-If \fIcheckfeb\fR is non-zero, these functions will wait for the entries in the
-array to be full before comparing them. They \fBDO NOT\fR check whether the
-array entries are properly aligned. If the datatype is too small to do a FEB
-operation on, \fBthey will abort\fR, if sanity checks are turned on.
+If
+.I checkfeb
+is non-zero, these functions will wait for the entries in the array to be full
+before comparing them. They
+.B DO NOT
+check whether the array entries are properly aligned. If the datatype is too
+small to do a FEB operation on,
+.B they will abort,
+if sanity checks are turned on.
 .SH RETURN VALUE
-The maximum value of the first \fIlength\fR entries of \fIarray\fR.
+The maximum value of the first
+.I length
+entries of
+.IR array .
 .SH SEE ALSO
 .BR qutil_double_mult (3),
 .BR qutil_double_sum (3),

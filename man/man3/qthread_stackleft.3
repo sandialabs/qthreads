@@ -1,20 +1,28 @@
 .TH qthread_stackleft 3 "NOVEMBER 2006" libqthread "libqthread"
 .SH NAME
-\fBqthread_stackleft\fR \- returns the amount of space left in the thread's allocated stack
+.B qthread_stackleft
+\- returns the amount of space left in the thread's allocated stack
 .SH SYNOPSIS
 .B #include <qthread/qthread.h>
 
 .I size_t
 .br
-\fBqthread_stackleft\fR(qthread_t *\fIt\fR);
+.B qthread_stackleft
+.RI "(qthread_t *" t );
 .SH DESCRIPTION
 This function returns the number of bytes left in the stack. The argument,
-\fIt\fR, MUST be the current qthread for the answer to make sense.
-.PP
-This function is intended primarily for debugging, and the answer is often imprecise and unreliable.
-.SH "RETURN VALUE"
-If \fIt\fR is non-null, it returns the number of bytes left in the stack, accurate to a small margin (on the order of 10 bytes). If \fIt\fR is NULL, \fBqthread_stackleft\fR() returns 0.
-.SH "SEE ALSO"
+.IR t ,
+MUST be the current qthread for the answer to make sense.
+.SH RETURN VALUE
+If
+.I t
+is non-null, it returns the number of bytes left in the stack, accurate to a
+small margin (on the order of 10 bytes). If
+.I t
+is NULL,
+.BR qthread_stackleft ()
+returns 0.
+.SH SEE ALSO
 .BR qthread_id (3),
 .BR qthread_retloc (3),
 .BR qthread_self (3),

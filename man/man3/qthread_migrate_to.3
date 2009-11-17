@@ -1,31 +1,40 @@
 .TH qthread_migrate_to 3 "JANUARY 2009" libqthread "libqthread"
 .SH NAME
-\fBqthread_migrate_to\fR \- relocate a qthread to the target shepherd
+.B qthread_migrate_to
+\- relocate a qthread to the target shepherd
 .SH SYNOPSIS
 .B #include <qthread/qthread.h>
 
 .I int
 .br
-\fBqthread_migrate_to\fR(qthread_t * const \fIme\fR,
-.ti +19n
-qthread_shepherd_id_t \fIshepherd\fR);
+.B qthread_migrate_to
+.RI "(qthread_t * const " me ", qthread_shepherd_id_t " shepherd );
 .SH DESCRIPTION
 This is the function for moving a qthread to a different shepherd.
 .PP
-The first argument, \fIme\fR, is the qthread_t pointer of the current qthread.
-If the \fIme\fR argument is NULL, the correct value will be discovered
-automatically (similar to using \fBqthread_self\fR()), but this lookup may be
-expensive. The second argument, \fIshepherd\fR, is the identifier of the
-shepherd to move to.
+The first argument,
+.IR me ,
+is the qthread_t pointer of the current qthread. If the
+.I me
+argument is NULL, the correct value will be discovered automatically (similar
+to using
+.BR qthread_self ()),
+but this lookup may be expensive. The second argument,
+.IR shepherd ,
+is the identifier of the shepherd to move to.
 .PP
 When the call returns, the qthread will be running on the specified shepherd.
 .SH RETURN VALUE
 On success, 0 is returned. On error, a non-zero error code is returned.
 .SH ERRORS
 .TP 12
-QTHREAD_BADARGS
-Either the \fIme\fR value was invalid or the \fIshepherd\fR was too large.
-.SH "SEE ALSO"
+.B QTHREAD_BADARGS
+Either the
+.I me
+value was invalid or the
+.I shepherd
+was too large.
+.SH SEE ALSO
 .BR qthread_prepare (3),
 .BR qthread_prepare_for (3),
 .BR qthread_schedule (3),

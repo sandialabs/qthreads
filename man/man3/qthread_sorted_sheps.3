@@ -1,25 +1,34 @@
 .TH qthread_sorted_sheps 3 "March 2009" libqthread "libqthread"
 .SH NAME
-\fBqthread_sorted_sheps\fR, \fBqthread_sorted_sheps_remote\fR \- returns a list
-of other shepherds, sorted by their distance
+.BR qthread_sorted_sheps ,
+.B qthread_sorted_sheps_remote
+\- returns a list of other shepherds, sorted by their distance
 .SH SYNOPSIS
 .B #include <qthread/qthread.h>
 
 .I const qthread_shepherd_id_t *
 .br
-\fBqthread_sorted_sheps\fR(const qthread_t *\fIt\fR);
+.B qthread_sorted_sheps
+.RI "(const qthread_t *" t );
 .PP
 .I const qthread_shepherd_id_t *
 .br
-\fBqthread_sorted_sheps_remote\fR(const qthread_shepherd_id_t \fIsrc\fR);
+.B qthread_sorted_sheps_remote
+.RI "(const qthread_shepherd_id_t " src );
 .SH DESCRIPTION
 This function returns a list of shepherds, sorted by their distance from either
-the shepherd of thread \fIt\fR or the specified shepherd \fIsrc\fR. This list
-is an array of qthread_shepherd_id_t objects with a length of one less than the
-number of shepherds (as determined by \fBqthread_num_shepherds\fR()). The
-source shepherd is not included in the list.
+the shepherd of thread
+.I t
+or the specified shepherd
+.IR src .
+This list is an array of qthread_shepherd_id_t objects with a length of one
+less than the number of shepherds (as determined by
+.BR qthread_num_shepherds ()).
+The source shepherd is not included in the list.
 .PP
-The returned array \fImust not\fR be altered.
+The returned array
+.I must not
+be altered.
 .SH RETURN VALUE
 These functions will return either a pointer to an array of
 qthread_shepherd_id_t objects, or NULL if the specified shepherd is either

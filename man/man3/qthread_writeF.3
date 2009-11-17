@@ -1,46 +1,68 @@
 .TH qthread_writeF 3 "NOVEMBER 2006" libqthread "libqthread"
 .SH NAME
-\fBqthread_writeF\fR, \fBqthread_writeF_const\fR \- fills an address with data
+.BR qthread_writeF ,
+.B qthread_writeF_const
+\- fills an address with data
 .SH SYNOPSIS
 .B #include <qthread/qthread.h>
 
 .I int
 .br
-\fBqthread_writeF\fR(qthread_t *\fIme\fR, aligned_t *\fIdest\fR, const aligned_t *\fIsrc\fR);
+.B qthread_writeF
+.RI "(qthread_t *" me ", aligned_t *" dest ", const aligned_t *" src );
 .PP
 .I int
 .br
-\fBqthread_writeF_const\fR(qthread_t *\fIme\fR, aligned_t *\fIdest\fR, const aligned_t \fIsrc\fR);
+.B qthread_writeF_const
+.RI "(qthread_t *" me ", aligned_t *" dest ", const aligned_t " src );
 .SH DESCRIPTION
-These functions are a cross between \fBqthread_fill\fR() and
-\fBqthread_writeEF\fR(). They do not wait for memory to become empty, but
-perform the write and set the state to full atomically (with respect to other
-FEB-based actions). Data is read from \fIsrc\fR and written to \fIdest\fR.
+These functions are a cross between
+.BR qthread_fill ()
+and
+.BR qthread_writeEF ().
+They do not wait for memory to become empty, but perform the write and set the
+state to full atomically (with respect to other FEB-based actions). Data is
+read from
+.I src
+and written to
+.IR dest .
 .PP
 The semantics of writeF are:
 .RS
 .PP
-1 - data is copied from \fIsrc\fR to \fIdest\fR
+1 - data is copied from
+.I src
+to
+.I dest
 .br
-2 - \fIdest\fR's FEB state gets set to "full"
+2 -
+.IR dest 's
+FEB state gets set to "full"
 .RE
 .PP
-This function takes a qthread_t pointer as an argument (\fIme\fR), which is
-supposed to point to the qthread_t relating to the currently executing qthread.
-If \fIme\fR is NULL, the current qthread will be discovered using
-\fBqthread_self\fR().
+This function takes a qthread_t pointer as an argument
+.RI ( me ),
+which is supposed to point to the qthread_t relating to the currently executing
+qthread. If
+.I me
+is NULL, the current qthread will be discovered using
+.BR qthread_self ().
 .SH WARNING
 This, and all other FEB-related functions currently operate exclusively on
 aligned data.
 .SH RETURN VALUE
-On success, the memory address \fIdest\fR is marked full, the address
-\fIdest\fR is filled with the contents of \fIsrc\fR and 0 is returned. On
-error, a non-zero error code is returned.
+On success, the memory address
+.I dest
+is marked full, the address
+.I dest
+is filled with the contents of
+.I src
+and 0 is returned. On error, a non-zero error code is returned.
 .SH ERRORS
 .TP 12
-ENOMEM
+.B ENOMEM
 Not enough memory could be allocated for bookkeeping structures.
-.SH "SEE ALSO"
+.SH SEE ALSO
 .BR qthread_empty (3),
 .BR qthread_fill (3),
 .BR qthread_writeEF (3),

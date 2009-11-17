@@ -1,47 +1,62 @@
 .TH qthread_empty/fill 3 "NOVEMBER 2006" libqthread "libqthread"
 .SH NAME
-\fBqthread_empty\fR, \fBqthread_fill\fR \- sets the given address to either "empty" or "full"
+.BR qthread_empty ,
+.B qthread_fill
+\- sets the given address to either "empty" or "full"
 .SH SYNOPSIS
 .B #include <qthread/qthread.h>
 
 .I int
 .br
-\fBqthread_empty\fR(qthread_t *\fIme\fR, const aligned_t *\fIdest\fR);
+.B qthread_empty
+.RI "(qthread_t *" me ", const aligned_t *" dest );
 .PP
 .I int
 .br
-\fBqthread_fill\fR(qthread_t *\fIme\fR, const aligned_t *\fIdest\fR);
+.B qthread_fill
+.RI "(qthread_t *" me ", const aligned_t *" dest );
 .SH DESCRIPTION
-The \fBqthread_empty\fR() and \fBqthread_fill\fR() functions assert the empty
-or full state of the given range of addresses. They do not wait for the
-addresses to be in any particular state.
+The
+.BR qthread_empty ()
+and
+.BR qthread_fill ()
+functions assert the empty or full state of the given range of addresses. They
+do not wait for the addresses to be in any particular state.
 .PP
-The \fIme\fR argument is used for memory pooling purposes. Memory is allocated
-on a per-shepherd basis (to avoid needing to protect the memory pool), thus it
-needs to know which shepherd it is currently on. HOWEVER, this argument is
-merely an optimization; these functions CAN figure out which pools to use
-without this information (i.e. if the \fIme\fR argument is \fBNULL\fR).
+The
+.I me
+argument is used for memory pooling purposes. Memory is allocated on a
+per-shepherd basis (to avoid needing to protect the memory pool), thus it needs
+to know which shepherd it is currently on. HOWEVER, this argument is merely an
+optimization; these functions CAN figure out which pools to use without this
+information (i.e. if the
+.I me
+argument is NULL).
 .PP
 Note that
 .RS
 .PP
-\fBqthread_empty\fR(\fBNULL\fR, \fIaddr\fR)
+.B qthread_empty
+(NULL,
+.IR addr )
 .RE
 .PP
 is faster than
 .RS
 .PP
-\fBqthread_empty\fR(\fBqthread_self\fR(), \fIaddr\fR)
+.B qthread_empty
+.RB ( qthread_self (),
+.IR addr )
 .RE
 .SH RETURN VALUE
 On success, the full/empty bits are modified and 0 is returned. On error, an
 non-zero error code is returned.
 .SH ERRORS
 .TP 12
-ENOMEM
+.B ENOMEM
 Not enough memory could be allocated. This may be because a temporary thread
 needed to be created, or because a management structure needed to be created.
-.SH "SEE ALSO"
+.SH SEE ALSO
 .BR qthread_writeF (3),
 .BR qthread_writeEF (3),
 .BR qthread_readFF (3),

@@ -1,6 +1,8 @@
 .TH qutil_qsort 3 "MAY 2007" libqthread "libqthread"
 .SH NAME
-\fBqutil_qsort\fR, \fBqutil_mergesort\fR \- sorts an array of doubles in parallel
+.BR qutil_qsort ,
+.B qutil_mergesort
+\- sorts an array of doubles in parallel
 .SH SYNOPSIS
 .B #include <qthread/qthread.h>
 .br
@@ -8,20 +10,44 @@
 
 .I void
 .br
-\fBqutil_qsort\fR(qthread_t *\fIme\fR, double *\fIarray\fR, size_t \fIlength\fR);
+.B qutil_qsort
+.RI "(qthread_t *" me ", double *" array ", size_t " length );
 .PP
 .I void
 .br
-\fBqutil_mergesort\fR(qthread_t *\fIme\fR, double *\fIarray\fR, size_t
-\fIlength\fR);
+.B qutil_mergesort
+.RI "(qthread_t *" me ", double *" array ", size_t " length );
 .SH DESCRIPTION
-These functions take as input an \fIarray\fR of \fIlength\fR numbers and sorts their values.
+These functions take as input an
+.I array
+of
+.I length
+numbers and sorts their values.
 .PP
-In \fBqutil_qsort\fR, large amounts of parallelism is achieved by using a strided lagging-loop structure for the partitioning phases of the sort, and a tree structure (with a minimum leaf-size) for the divide-and-conquer phases of the sort. The design is based, partly, upon work done by CRAY for their MTA-threaded quicksort. For sufficiently small arrays or sub-arrays, the libc \fBqsort\fR function is used.
+In
+.BR qutil_qsort (),
+large amounts of parallelism is achieved by using a strided lagging-loop
+structure for the partitioning phases of the sort, and a tree structure (with a
+minimum leaf-size) for the divide-and-conquer phases of the sort. The design is
+based, partly, upon work done by CRAY for their MTA-threaded quicksort. For
+sufficiently small arrays or sub-arrays, the libc
+.BR qsort ()
+function is used.
 .PP
-IN \fBqutil_mergesort\fR, the parallelism is achieved solely from the obvious divide-and-conquer tree. The merge phases of the algorithm use an in-place merge rather than a lookaside merge. As a result, the merge phases are rather computationally intensive. (This sort exists primarily as a proof of concept rather than as a useful alternative.)
+In
+.BR qutil_mergesort (),
+the parallelism is achieved solely from the obvious divide-and-conquer tree.
+The merge phases of the algorithm use an in-place merge rather than a lookaside
+merge. As a result, the merge phases are rather computationally intensive.
+(This sort exists primarily as a proof of concept rather than as a useful
+alternative.)
 .PP
-The parallelism in these sorts is NOT limited by the futurelib resource restrictions, because of the divide-and-conquer trees in both. Future implementations may use the futurelib if and when futurelib is reimplemented to allow forward progress without exceeding memory restrictions (significantly) even when there are an extremely large number of futures attempting to spawn new futures.
+The parallelism in these sorts is NOT limited by the futurelib resource
+restrictions, because of the divide-and-conquer trees in both. Future
+implementations may use the futurelib if and when futurelib is reimplemented to
+allow forward progress without exceeding memory restrictions (significantly)
+even when there are an extremely large number of futures attempting to spawn
+new futures.
 .PP
 The result of the sort is an array in increasing order.
 .SH SEE ALSO

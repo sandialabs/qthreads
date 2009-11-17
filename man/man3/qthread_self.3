@@ -1,21 +1,27 @@
 .TH qthread_self 3 "NOVEMBER 2006" libqthread "libqthread"
 .SH NAME
-\fBqthread_self\fR \- retrieve the qthread_t pointer for the current thread
+.B qthread_self
+\- retrieve the qthread_t pointer for the current thread
 .SH SYNOPSIS
 .B #include <qthread/qthread.h>
 
 .I qthread_t *
 .br
-\fBqthread_self\fR(void);
+.B qthread_self
+(void);
 .SH DESCRIPTION
 This function allows a qthread to retrieve its qthread_t pointer.
 .PP
-This often relies on \fBpthread_getspecific\fR(), which may be slow. On some
-architectures may cause a context-switch into the kernel.
-.SH "RETURN VALUE"
-\fBqthread_self\fR() will return either a pointer to the qthread_t structure
-associated with the calling qthread, or if called from a non-qthread (i.e. a
-pthread or before \fBqthread_init\fR() has been called), will return NULL.
-.SH "SEE ALSO"
+This often relies on
+.BR pthread_getspecific (),
+which may be slow. On some architectures may cause a context-switch into the
+kernel.
+.SH RETURN VALUE
+.BR qthread_self ()
+will return either a pointer to the qthread_t structure associated with the
+calling qthread, or if called from a non-qthread (i.e. a pthread or before
+.BR qthread_init ()
+has been called), will return NULL.
+.SH SEE ALSO
 .BR qthread_id (3),
 .BR qthread_shep (3)

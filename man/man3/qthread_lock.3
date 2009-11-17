@@ -1,16 +1,20 @@
 .TH qthread_lock/unlock 3 "NOVEMBER 2006" libqthread "libqthread"
 .SH NAME
-\fBqthread_lock\fR, \fBqthread_unlock\fR \- lock or unlock an address
+.BR qthread_lock ,
+.B qthread_unlock
+\- lock or unlock an address
 .SH SYNOPSIS
 .B #include <qthread/qthread.h>
 
 .I int
 .br
-\fBqthread_lock\fR(qthread_t *\fIme\fR, aligned_t *\fIaddr\fR);
+.B qthread_lock
+.RI "(qthread_t *" me ", aligned_t *" addr );
 .PP
 .I int
 .br
-\fBqthread_unlock\fR(qthread_t *\fIme\fR, aligned_t *\fIaddr\fR);
+.B qthread_unlock
+.RI "(qthread_t *" me ", aligned_t *" addr );
 .SH DESCRIPTION
 These functions are designed to implement FEB-like locking and unlocking that
 behaves much more like a mutex.
@@ -19,20 +23,26 @@ These are atomic and functional, but do not have the same semantics as full FEB
 locking/unlocking (namely, unlocking cannot block), however because of this,
 they have lower overhead.
 .PP
-This function takes a qthread_t pointer as an argument (\fIme\fR), which is
-supposed to point to the qthread_t relating to the currently executing qthread.
-If the \fIme\fR argument is NULL, the correct value will be discovered by the
-library via a \fBqthread_self\fR() call, but the lookup may be expensive.
+This function takes a qthread_t pointer as an argument
+.RI ( me ),
+which is supposed to point to the qthread_t relating to the currently executing
+qthread. If the
+.I me
+argument is NULL, the correct value will be discovered by the library via a
+.BR qthread_self ()
+call, but the lookup may be expensive.
 .SH RETURN VALUE
-On success, the memory address \fIaddr\fR is marked locked or unlocked
-appropriately and 0 is returned. If unlocking an address that is already
-unlocked, QTHREAD_REDUNDANT will be returned. On error, a non-zero error code
-is returned.
+On success, the memory address
+.I addr
+is marked locked or unlocked appropriately and 0 is returned. If unlocking an
+address that is already unlocked,
+.B QTHREAD_REDUNDANT
+will be returned. On error, a non-zero error code is returned.
 .SH ERRORS
 .TP 12
-ENOMEM
+.B ENOMEM
 Not enough memory could be allocated for bookkeeping structures.
-.SH "SEE ALSO"
+.SH SEE ALSO
 .BR qthread_empty (3),
 .BR qthread_fill (3),
 .BR qthread_writeEF (3),

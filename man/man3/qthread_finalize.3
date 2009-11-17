@@ -1,16 +1,18 @@
 .TH qthread_finalize 3 "NOVEMBER 2006" libqthread "libqthread"
 .SH NAME
-\fBqthread_finalize\fR \- terminate all qthreads and free library data stuctures
+.B qthread_finalize
+\- terminate all qthreads and free library data stuctures
 .SH SYNOPSIS
 .B #include <qthread/qthread.h>
 
 .I void
 .br
-\fBqthread_finalize\fR(void);
+.B qthread_finalize
+(void);
 .SH DESCRIPTION
 Use this function to clean up the qthreads environment after execution of the
 program has finished. This function will tell the shepherds to terminate at the
 next context switch, so only use it when you are certain that execution has
 completed.
-.SH "SEE ALSO"
+.SH SEE ALSO
 .BR qthread_init (3)

@@ -1,12 +1,14 @@
 .TH qthread_yield 3 "NOVEMBER 2006" libqthread "libqthread"
 .SH NAME
-\fBqthread_yield\fR \- release the CPU, allow other qthreads to run
+.B qthread_yield
+\- release the CPU, allow other qthreads to run
 .SH SYNOPSIS
 .B #include <qthread/qthread.h>
 
 .I void
 .br
-\fBqthread_yield\fR(qthread_t *\fIme\fR);
+.B qthread_yield
+.RI "(qthread_t *" me );
 .SH DESCRIPTION
 This function allows a qthread to explicitly interrupt computation and give
 other qthreads the chance to execute even though it has not blocked. This can
@@ -15,7 +17,15 @@ this function, there is no guarantee that other qthreads will have a chance to
 execute until the currently running qthread performs a synchronization
 operation.
 .PP
-The argument, \fIme\fR, should be a pointer to the qthread_t structure for the
-currently running qthread, or NULL. If \fIme\fR is NULL, the qthread_t pointer will be looked up via \fBqthread_self\fR(). If this function is called from a non-qthread or before the \fBqthread_init\fR() has been run, it does nothing.
-.SH "SEE ALSO"
+The argument,
+.IR me ,
+should be a pointer to the qthread_t structure for the currently running
+qthread, or NULL. If
+.I me
+is NULL, the qthread_t pointer will be looked up via
+.BR qthread_self ().
+If this function is called from a non-qthread or before the
+.BR qthread_init ()
+has been run, it does nothing.
+.SH SEE ALSO
 .BR qthread_self (3)

@@ -1,29 +1,39 @@
 .TH qthread_shep 3 "NOVEMBER 2006" libqthread "libqthread"
 .SH NAME
-\fBqthread_shep\fR \- returns the qthread's shepherd ID
+.B qthread_shep
+\- returns the qthread's shepherd ID
 .SH SYNOPSIS
 .B #include <qthread/qthread.h>
 
 .I qthread_shepherd_id_t
 .br
-\fBqthread_shep\fR(qthread_t *\fIt\fR);
+.B qthread_shep
+.RI "(qthread_t *" t );
 .SH DESCRIPTION
-This function returns the shepherd identifier of the qthread \fIt\fR. If \fIt\fR is NULL, the shepherd identifier is looked up using an internal mechanism; usually \fBpthread_getspecific\fR().
+This function returns the shepherd identifier of the qthread
+.IR t .
+If
+.I t
+is NULL, the shepherd identifier is looked up using an internal mechanism; usually
+.BR pthread_getspecific ().
 .PP
 Note that
 .RS
 .PP
-\fBqthread_shep\fR(\fBNULL\fR)
+.BR qthread_shep (NULL)
 .RE
 .PP
 is slightly more efficient than
 .RS
 .PP
-\fBqthread_shep\fR(\fBqthread_self\fR())
+.BR qthread_shep ( qthread_self ())
 .RE
-.SH "RETURN VALUE"
-This function either returns the ID number of the shepherd of the calling function, or returns NO_SHEPHERD.
-.SH "SEE ALSO"
+.SH RETURN VALUE
+This function either returns the ID number of the shepherd of the calling
+function, or returns
+.BR NO_SHEPHERD .
+.SH SEE ALSO
+.BR pthread_getspecific (3),
 .BR qthread_retloc (3),
 .BR qthread_self (3),
 .BR qthread_stackleft (3),

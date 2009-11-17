@@ -1,17 +1,19 @@
 .TH qthread_feb_status 3 "NOVEMBER 2006" libqthread "libqthread"
 .SH NAME
-\fBqthread_feb_status\fR \- return the full/empty status of an address
+.B qthread_feb_status
+\- return the full/empty status of an address
 .SH SYNOPSIS
 .B #include <qthread/qthread.h>
 
 .I int
 .br
-\fBqthread_feb_status\fR(const aligned_t *\fIaddr\fR);
+.B qthread_feb_status
+.RI "(const aligned_t *" addr );
 .SH DESCRIPTION
 This function is just to assist with debugging. It returns 1 if the address is
 full, and 0 if the address is empty. It is thread-safe, and should be very
 quick.
-.SH "SEE ALSO"
+.SH SEE ALSO
 .BR qthread_empty (3),
 .BR qthread_fill (3),
 .BR qthread_writeF (3),
