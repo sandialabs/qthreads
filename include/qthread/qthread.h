@@ -101,7 +101,7 @@ void qthread_finalize(void);
  * offload its existing threads to nearby shepherds. This latter may not take
  * effect immediately, but may only take effect when the current executing
  * qthread on that shepherd next stops executing */
-void qthread_disable_shepherd(const qthread_shepherd_id_t shep);
+int qthread_disable_shepherd(const qthread_shepherd_id_t shep);
 void qthread_enable_shepherd(const qthread_shepherd_id_t shep);
 
 /* this function allows a qthread to specifically give up control of the
