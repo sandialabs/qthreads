@@ -1,12 +1,13 @@
 .TH qlfqueue_destroy 3 "OCTOBER 2009" libqthread "libqthread"
 .SH NAME
-\fBqlfqueue_destroy\fR \- deallocate a lock-free queue
+.BR qlfqueue_destroy " \- deallocate a lock-free queue"
 .SH SYNOPSIS
 .B #include <qthread/qlfqueue.h>
 
 .I void
 .br
-\fBqlfqueue_destroy\fR(qthread_t *\fIme\fR, qlfqueue_t *\fIq\fR);
+.B qlfqueue_destroy
+.RI "(qthread_t *" me ", qlfqueue_t *" q );
 .SH DESCRIPTION
 This function deallocates a qlfqueue safely.
 .SH SEE ALSO

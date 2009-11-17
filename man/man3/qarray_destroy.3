@@ -1,12 +1,13 @@
 .TH qarray_destroy 3 "MAY 2009" libqthread "libqthread"
 .SH NAME
-\fBqarray_destroy\fR \- deallocate a distributed array
+.BR qarray_destroy " \- deallocate a distributed array"
 .SH SYNOPSIS
 .B #include <qthread/qarray.h>
 
 .I void
 .br
-\fBqarray_destroy\fR(qarray * \fIa\fR);
+.B qarray_destroy
+.RI "(qarray *" a );
 .SH DESCRIPTION
 This function deallocates a qarray safely, and updates all internal bookkeeping
 counters.

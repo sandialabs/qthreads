@@ -1,14 +1,19 @@
 .TH qdqueue_create 3 "OCTOBER 2009" libqthread "libqthread"
 .SH NAME
-\fBqdqueue_create\fR \- allocate a distributed queue
+.BR qdqueue_create " \- allocate a distributed queue"
 .SH SYNOPSIS
 .B #include <qthread/qdqueue.h>
 
 .I qdqueue_t *
 .br
-\fBqdqueue_create\fR(void);
+.B qdqueue_create
+(void);
 .SH DESCRIPTION
-This function initializes a qdqueue distributed queue object. This distributed queue is locality aware, and as such prioritizes "nearby" data over the globally oldest data. It provides an end-to-end ordering guarantee: elements enqueued from any given location may not be consumed out of order by any other single location.
+This function initializes a qdqueue distributed queue object. This distributed
+queue is locality aware, and as such prioritizes "nearby" data over the
+globally oldest data. It provides an end-to-end ordering guarantee: elements
+enqueued from any given location may not be consumed out of order by any other
+single location.
 .SH SEE ALSO
 .BR qlfqueue_create (3),
 .BR qdqueue_destroy (3),

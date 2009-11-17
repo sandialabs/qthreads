@@ -1,68 +1,86 @@
 .TH qarray_iter 3 "MAY 2009" libqthread "libqthread"
 .SH NAME
-\fBqarray_iter\fR \- iterate through a distributed array
+.BR qarray_iter " \- iterate through a distributed array"
 .SH SYNOPSIS
 .B #include <qthread/qarray.h>
 
 .I void
 .br
-\fBqarray_iter\fR(qthread_t * \fIme\fR,
-qarray * \fIa\fR,
-const size_t \fIstartat\fR,
-.ti +12
-const size_t \fIstopat\fR,
-qthread_f \fIfunc\fR);
+.B qarray_iter
+.RI "(qthread_t *" me ", qarray *" a ", const size_t " startat ,
+.ti +13
+.RI "const size_t " stopat ", qthread_f " func );
 .PP
 .I void
 .br
-\fBqarray_iter_loop\fR(qthread_t * \fIme\fR,
-qarray * \fIa\fR,
-const size_t \fIstartat\fR,
-.ti +17
-const size_t \fIstopat\fR,
-qa_loop_f \fIfunc\fR,
-.ti +17
-void * \fIarg\fR);
+.B qarray_iter_loop
+.RI "(qthread_t *" me ", qarray *" a ", const size_t " startat ,
+.ti +18
+.RI "const size_t " stopat ", qa_loop_f " func ,
+.ti +18
+.RI "void *" arg );
 .PP
 .I void
 .br
-\fBqarray_iter_constloop\fR(qthread_t * \fIme\fR,
-qarray * \fIa\fR,
-const size_t \fIstartat\fR,
-.ti +22
-const size_t \fIstopat\fR,
-qa_loop_f \fIfunc\fR,
-.ti +22
-void * \fIarg\fR);
+.B qarray_iter_constloop
+.RI "(qthread_t *" me ", qarray *" a ", const size_t " startat ,
+.ti +23
+.RI "const size_t " stopat ", qa_loop_f " func ,
+.ti +23
+.RI "void *" arg );
 .SH DESCRIPTION
 These functions iterate efficiently over the distributed arrays. The most basic
-and naive of the set is \fBqarray_iter\fR(), which applies the \fIfunc\fR
+and naive of the set is
+.BR qarray_iter (),
+which applies the
+.I func
 function to each element in the array, guaranteeing that the function will be
-executed near the specified data. The \fIfunc\fR function is a basic qthread
-function, of the following form:
+executed near the specified data. The
+.I func
+function is a basic qthread function, of the following form:
 .RS
 .PP
-void \fIfunc\fR(qthread_t *me, void *arg);
+void
+.I func
+(qthread_t *me, void *arg);
 .RE
 .PP
-The \fIarg\fR argument to the \fIfunc\fR function is a pointer to an array
-element.
+The 
+.I arg
+argument to the
+.I func
+function is a pointer to an array element.
 .PP
-The \fBqarray_iter_loop\fR and \fBqarray_iter_constloop\fR functions are more
-powerful iteration functions. They are identical to each other, except that the
-\fBqarray_iter_constloop\fR function forbids modifying the input qarray. Both
-functions iterate over a range of values within the qarray, which is defined by
-the \fIstartat\fR and \fIstopat\fR arguments. The \fIfunc\fR argument is
-expected to be a function of the following form:
+The
+.BR qarray_iter_loop ()
+and
+.BR qarray_iter_constloop ()
+functions are more powerful iteration functions. They are identical to each
+other, except that the
+.BR qarray_iter_constloop ()
+function forbids modifying the input qarray. Both functions iterate over a
+range of values within the qarray, which is defined by the
+.I startat
+and
+.I stopat
+arguments. The
+.I func
+argument is expected to be a function of the following form:
 .RS
 .PP
-void \fIfunc\fR(qthread_t *me, const size_t startat, const size_t stopat, qarray *array, void *arg)
+void 
+.I func
+(qthread_t *me, const size_t startat, const size_t stopat, qarray *array, void *arg)
 .br
 {
 .RS
 size_t i;
 .br
-for (i = \fIstartat\fR; i < \fIstopat\fR; i ++) {
+for (i = 
+.IR startat ;
+i <
+.IR stopat ;
+i ++) {
 .RS
 /* do work */
 .RE
@@ -71,9 +89,15 @@ for (i = \fIstartat\fR; i < \fIstopat\fR; i ++) {
 }
 .RE
 .PP
-The function \fIfunc\fR is given a sub-range of the qarray to iterate over. The
-\fIarg\fR argument passed to the \fIfunc\fR function is the same argument as is
-passed to the \fBqarray_iter_loop\fR argument.
+The function
+.I func
+is given a sub-range of the qarray to iterate over. The
+.I arg
+argument passed to the
+.I func
+function is the same argument as is passed to the
+.BR qarray_iter_loop ()
+argument.
 .SH SEE ALSO
 .BR qarray_create (3),
 .BR qarray_destroy (3),

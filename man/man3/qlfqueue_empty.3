@@ -1,12 +1,13 @@
 .TH qlfqueue_empty 3 "OCTOBER 2009" libqthread "libqthread"
 .SH NAME
-\fBqlfqueue_empty\fR \- test whether a lock-free queue is empty
+.BR qlfqueue_empty " \- test whether a lock-free queue is empty"
 .SH SYNOPSIS
 .B #include <qthread/qlfqueue.h>
 
 .I int
 .br
-\fBqlfqueue_empty\fR(qthread_t *\fIme\fR, qlfqueue_t *\fIq\fR);
+.B qlfqueue_empty
+.RI "(qthread_t *" me ", qlfqueue_t *" q );
 .SH DESCRIPTION
 This function checks whether the given qlfqueue is empty.
 .SH RETURN VALUE
