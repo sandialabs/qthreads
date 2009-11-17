@@ -1,32 +1,40 @@
 .TH qt_loop_future 3 "JUNE 2007" libqthread "libqthread"
 .SH NAME
-\fBqt_loop_future\fR \- a simple implementation of a threaded loop of futures
+.B qt_loop_future
+\- a simple implementation of a threaded loop of futures
 .SH SYNOPSIS
 .B #include <qthread/qloop.h>
 
 .I void
 .br
-\fBqt_loop_future\fR(const size_t \fIstart\fR,
-const size_t \fIstop\fR,
-.ti +15
-const size_t \fIstride\fR,
-const qthread_f \fIfunc\fR,
-.ti +15
-void *\fIargptr\fR);
+.B qt_loop_future
+.RI "(const size_t " start ", const size_t " stop ,
+.ti +16
+.RI "const size_t " stride ", const qthread_f " func ,
+.ti +16
+.RI "void *" argptr );
 .SH DESCRIPTION
 This function provides a simple C implementation of a threaded loop. This is
-similar to \fBmt_loop\fR, but does not provide much of the convenience and
-isomorphism that a C++ implementation can provide. On the other hand, it is
-more portable, and more predictable.
+similar to
+.BR mt_loop ,
+but does not provide much of the convenience and isomorphism that a C++
+implementation can provide. On the other hand, it is more portable, and more
+predictable.
 .PP
 This function can be thought of as akin to the following code:
 .RS
 .PP
 unsigned int i;
 .br
-for (i = \fIstart\fR; i < \fIstop\fR; i += \fIstride\fR) {
+for (i = 
+.IR start ;
+i <
+.IR stop ;
+i +=
+.IR stride)
+{
 .RS
-\fIfunc\fR(NULL, \fIargptr\fR);
+.IR func "(NULL, " argptr );
 .RE
 }
 .RE
@@ -35,13 +43,20 @@ A future is spawned for every iteration of the above loop. Thus, if start is
 50, stop is 100, and stride is 1, there will be 50 futures. But, if start is
 50, stop is 100, and stride is 2, there will be 25 futures.
 .PP
-The \fIfunc\fR argument must be a function pointer with a \fBqthread_f\fR prototype, such as:
+The
+.I func
+argument must be a function pointer with a
+.B qthread_f
+prototype, such as:
 .RS
 .PP
-aligned_t \fIfunc\fR(qthread_t *me, void *arg);
+aligned_t
+.I func
+(qthread_t *me, void *arg);
 .RE
 .PP
-The return value of this function is ignored. However, \fBqt_loop_future\fR
+The return value of this function is ignored. However,
+.BR qt_loop_future ()
 will not return until all of the futures it spawns have returned.
 .SH SEE ALSO
 .BR qt_loop (3),

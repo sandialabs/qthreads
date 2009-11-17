@@ -1,43 +1,48 @@
 .TH qt_double_prod 3 "JUNE 2007" libqthread "libqthread"
 .SH NAME
-\fBqt_double_prod\fR, \fBqt_uint_prod\fR, \fBqt_int_prod\fR \-
+.BR qt_double_prod ", " qt_uint_prod ", " qt_int_prod " \- "
 multiplies an array in parallel
 .SH SYNOPSIS
 .B #include <qthread/qloop.h>
 
 .I double
 .br
-\fBqt_double_prod\fR(qthread_t *\fIme\fR,
-double *\fIarray\fR,
-size_t \fIlength\fR,
-.ti +15
-int \fIcheckfeb\fR);
+.B qt_double_prod
+.RI "(qthread_t *" me ", double *" array ", size_t " length ,
+.ti +16
+.RI "int " checkfeb );
 .PP
 .I unsigned int
 .br
-\fBqt_uint_prod\fR(qthread_t *\fIme\fR,
-unsigned int *\fIarray\fR,
-size_t \fIlength\fR,
-.ti +13
-int \fIcheckfeb\fR);
+.B qt_uint_prod
+.RI "(qthread_t *" me ", unsigned int *" array ", size_t " length ,
+.ti +14
+.RI "int " checkfeb );
 .PP
 .I int
 .br
-\fBqt_int_prod\fR(qthread_t *\fIme\fR,
-int *\fIarray\fR,
-size_t \fIlength\fR,
-int \fIcheckfeb\fR);
+.B qt_int_prod
+.RI "(qthread_t *" me ", int *" array ", size_t " length ", int " checkfeb );
 .SH DESCRIPTION
-These functions take as input an \fIarray\fR of \fIlength\fR numbers and will
-return the product of those numbers. This product is computed in parallel by
-dividing the iterations evenly among the shepherds, using futures to restrict
-the parallelism to the available limits.
+These functions take as input an
+.I array
+of
+.I length
+numbers and will return the product of those numbers. This product is computed
+in parallel by dividing the iterations evenly among the shepherds, using
+futures to restrict the parallelism to the available limits.
 .PP
-If \fIcheckfeb\fR is non-zero, these functions will wait for the entries in the
-array to be full before multiplying them. They \fBDO NOT\fR check whether the
-array entries are properly aligned.
+If
+.I checkfeb
+is non-zero, these functions will wait for the entries in the array to be full
+before multiplying them. They
+.B DO NOT
+check whether the array entries are properly aligned.
 .SH RETURN VALUE
-The product of the first \fIlength\fR entries of \fIarray\fR.
+The product of the first
+.I length
+entries of
+.IR array .
 .SH SEE ALSO
 .BR qt_double_sum (3),
 .BR qt_double_max (3),

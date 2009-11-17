@@ -1,35 +1,46 @@
 .TH qt_double_sum 3 "JUNE 2007" libqthread "libqthread"
 .SH NAME
-\fBqt_double_sum\fR, \fBqt_uint_sum\fR, \fBqt_int_sum\fR \- add up an
-array in parallel
+.BR qt_double_sum ,
+.BR qt_uint_sum ,
+.B qt_int_sum
+\- add up an array in parallel
 .SH SYNOPSIS
 .B #include <qthread/qloop.h>
 
 .I double
 .br
-\fBqt_double_sum\fR(double *\fIarray\fR, size_t
-\fIlength\fR, int \fIcheckfeb\fR);
+.B qt_double_sum
+.RI "(double *" array ", size_t " length ", int " checkfeb );
 .PP
 .I unsigned int
 .br
-\fBqt_uint_sum\fR(unsigned int *\fIarray\fR, size_t
-\fIlength\fR, int \fIcheckfeb\fR);
+.B qt_uint_sum
+.RI "(unsigned int *" array ", size_t " length ", int " checkfeb );
 .PP
 .I int
 .br
-\fBqt_int_sum\fR(int *\fIarray\fR, size_t \fIlength\fR,
-int \fIcheckfeb\fR);
+.B qt_int_sum
+.RI "(int *" array ", size_t " length ", int " checkfeb );
 .SH DESCRIPTION
-These functions take as input an \fIarray\fR of \fIlength\fR numbers and will
-return the sum of those numbers. This sum is computed in parallel by
-dividing the iterations evenly among the shepherds, using futures to restrict
-the parallelism to the available limits.
+These functions take as input an
+.I array
+of
+.I length
+numbers and will return the sum of those numbers. This sum is computed in
+parallel by dividing the iterations evenly among the shepherds, using futures
+to restrict the parallelism to the available limits.
 .PP
-If \fIcheckfeb\fR is non-zero, these functions will wait for the entries in the
-array to be full before adding them. They \fBDO NOT\fR check whether the array
-entries are properly aligned.
+If
+.I checkfeb
+is non-zero, these functions will wait for the entries in the array to be full
+before adding them. They
+.B DO NOT
+check whether the array entries are properly aligned.
 .SH RETURN VALUE
-The sum of the first \fIlength\fR entries of \fIarray\fR.
+The sum of the first
+.I length
+entries of
+.IR array .
 .SH SEE ALSO
 .BR qt_double_prod (3),
 .BR qt_double_max (3),

@@ -1,33 +1,44 @@
 .TH qt_double_min 3 "JUNE 2007" libqthread "libqthread"
 .SH NAME
-\fBqt_double_min\fR, \fBqt_uint_min\fR, \fBqt_int_min\fR \- find the
-minimum value within an array in parallel
+.BR qt_double_min ", " qt_uint_min ", " qt_int_min " \- "
+find the minimum value within an array in parallel
 .SH SYNOPSIS
 .B #include <qthread/qloop.h>
 
 .I double
 .br
-\fBqt_double_min\fR(double *\fIarray\fR, size_t \fIlength\fR, int \fIcheckfeb\fR);
+.B qt_double_min
+.RI "(double *" array ", size_t " length ", int " checkfeb );
 .PP
 .I unsigned int
 .br
-\fBqt_uint_min\fR(unsigned int *\fIarray\fR, size_t \fIlength\fR, int
-\fIcheckfeb\fR);
+.B qt_uint_min
+.RI "(unsigned int *" array ", size_t " length ", int " checkfeb );
 .PP
 .I int
 .br
-\fBqt_int_min\fR(int *\fIarray\fR, size_t \fIlength\fR, int \fIcheckfeb\fR);
+.B qt_int_min
+.RI "(int *" array ", size_t " length ", int " checkfeb );
 .SH DESCRIPTION
-These functions take as input an \fIarray\fR of \fIlength\fR numbers and will
-return the minimum value within those numbers. This value is computed in
-parallel by dividing the iterations evenly among the shepherds, using futures
-to restrict the parallelism to the available limits.
+These functions take as input an
+.I array
+of
+.I length
+numbers and will return the minimum value within those numbers. This value is
+computed in parallel by dividing the iterations evenly among the shepherds,
+using futures to restrict the parallelism to the available limits.
 .PP
-If \fIcheckfeb\fR is non-zero, these functions will wait for the entries in the
-array to be full before comparing them. They \fBDO NOT\fR check whether the
-array entries are properly aligned.
+If
+.I checkfeb
+is non-zero, these functions will wait for the entries in the array to be full
+before comparing them. They
+.B DO NOT
+check whether the array entries are properly aligned.
 .SH RETURN VALUE
-The minimum value of the first \fIlength\fR entries of \fIarray\fR.
+The minimum value of the first
+.I length
+entries of
+.IR array .
 .SH SEE ALSO
 .BR qt_double_prod (3),
 .BR qt_double_sum (3),
