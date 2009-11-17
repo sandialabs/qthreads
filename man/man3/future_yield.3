@@ -1,43 +1,46 @@
 .TH future_yield 3 "NOVEMBER 2006" libqthread "libqthread"
 .SH NAME
-\fBfuture_yield\fR \- explicitly declare the calling thread inactive
+.BR future_yield " \- explicitly declare the calling thread inactive"
 .SH SYNOPSIS
 .B #include <qthread/futurelib.h>
 
 .I int
 .br
-\fBfuture_yield\fR(qthread_t *\fIme\fR);
+.B future_yield
+.RI "(qthread_t *" me );
 .PP
 
 .SH DESCRIPTION
-In order to prevent deadlocks over resource acquisition, threads should
-make a call to yield before attempting to create or join with futures.
+In order to prevent deadlocks over resource acquisition, threads should make a
+call to yield before attempting to create or join with futures.
 .PP
-The argument is a pointer to the thread attempting to yield.
-This can be found out with a call to \fBqthread_self\fR()
+The argument is a pointer to the thread attempting to yield. This can be found
+out with a call to
+.BR qthread_self ()
 .PP
-If a thread calls the yield function with an argument which
-is not a qthread \fBwhich was created as a future\fR, the
-yield function do nothing. This is acceptable behavior and
-it is generally expected that threads will attempt to yield
-before creating or joining with futures in the chance that
-yielding is necessary.
+If a thread calls the yield function with an argument which is not a qthread
+.B which was created as a future,
+the yield function do nothing. This is acceptable behavior and it is generally
+expected that threads will attempt to yield before creating or joining with
+futures in the chance that yielding is necessary.
 .PP
 The typical sequence for creating futures is: 
+.RS
 .PP
 1) yield 
-.PP
+.br
 2) loop creating futures
-.PP 
+.br 
 3) [optional: join with futures]
-.PP
+.br
 4) acquire
-.SH "RETURN VALUE"
-\fBfuture_yield\fR() returns nonzero when the yield resulted in the
-active future count decreasing, i.e. if the calling thread was a
-future itself. Otherwise, the function returns zero, i.e. no yield
-could be performed.
-.SH "SEE ALSO"
+.RE
+.SH RETURN VALUE
+.BR future_yield ()
+returns nonzero when the yield resulted in the active future count decreasing,
+i.e. if the calling thread was a future itself. Otherwise, the function returns
+zero, i.e. no yield could be performed.
+.SH SEE ALSO
 .BR future_join_all (3),
 .BR future_init (3),
 .BR future_exit (3),
