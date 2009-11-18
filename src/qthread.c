@@ -1166,7 +1166,9 @@ static void *qthread_shepherd(void *arg)
 			"qthread_shepherd(%u): thread %u going back home to shep %u\n",
 			me->shepherd_id, t->thread_id,
 			t->target_shepherd->shepherd_id);
-		goto qthread_state_migrating;
+		t->shepherd_ptr = t->target_shepherd;
+		qt_lfqueue_enqueue(t->shepherd_ptr->ready, t, me);
+		continue;
 	    } else { /* me->active */
 #ifdef QTHREAD_SHEPHERD_PROFILING
 		if (t->thread_state == QTHREAD_STATE_NEW) {
@@ -1192,7 +1194,6 @@ static void *qthread_shepherd(void *arg)
 				  me->shepherd_id, t->thread_id,
 				  t->target_shepherd->shepherd_id);
 		    t->thread_state = QTHREAD_STATE_RUNNING;
-qthread_state_migrating:
 		    t->shepherd_ptr = t->target_shepherd;
 		    qt_lfqueue_enqueue(t->shepherd_ptr->ready, t, me);
 		    break;
