@@ -1139,11 +1139,6 @@ static void *qthread_shepherd(void *arg)
 		      "qthread_shepherd(%u): dequeued thread id %d/state %d\n",
 		      me->shepherd_id, t->thread_id, t->thread_state);
 
-	if (me->active == 0) {
-	    /* I've been disabled... send this thread to the closest shepherd(s). */
-	    qthread_shepherd_t *near_shep = qthread_find_active_shepherd(me->sorted_sheplist, me->shep_dists);
-	    qthread_debug(THREAD_DETAILS, "qthread_shepherd(%u): I'm disabled! nearest active shepherd is %i away\n", me->shepherd_id, me->shep_dists?(me->shep_dists[near_shep->shepherd_id]):20);
-	}
 	if (t->thread_state == QTHREAD_STATE_TERM_SHEP) {
 #ifdef QTHREAD_SHEPHERD_PROFILING
 	    qtimer_stop(total);
@@ -1159,14 +1154,25 @@ static void *qthread_shepherd(void *arg)
 		     t->flags & QTHREAD_REAL_MCCOY));
 
 	    assert(t->f != NULL || t->flags & QTHREAD_REAL_MCCOY);
-#ifdef QTHREAD_SHEPHERD_PROFILING
-	    if (t->thread_state == QTHREAD_STATE_NEW) {
-		me->num_threads++;
-	    }
-#endif
+	    assert(t->shepherd_ptr == me);
 
-	    if (me->active) {
-		assert(t->shepherd_ptr == me);
+	    if (!me->active) {
+		qthread_debug(ALL_DETAILS,
+			"qthread_shepherd(%u): skipping thread exec because I've been disabled!\n",
+			me->shepherd_id);
+	    } else if (t->target_shepherd != NULL && t->target_shepherd != me && t->target_shepherd->active) {
+		/* send this thread home */
+		qthread_debug(THREAD_DETAILS,
+			"qthread_shepherd(%u): thread %u going back home to shep %u\n",
+			me->shepherd_id, t->thread_id,
+			t->target_shepherd->shepherd_id);
+		goto qthread_state_migrating;
+	    } else { /* me->active */
+#ifdef QTHREAD_SHEPHERD_PROFILING
+		if (t->thread_state == QTHREAD_STATE_NEW) {
+		    me->num_threads++;
+		}
+#endif
 		me->current = t;
 		getcontext(&my_context);
 		/* note: there's a good argument that the following should
@@ -1178,10 +1184,6 @@ static void *qthread_shepherd(void *arg)
 		qthread_debug(ALL_DETAILS,
 			"qthread_shepherd(%u): back from qthread_exec\n",
 			me->shepherd_id);
-	    } else {
-		qthread_debug(ALL_DETAILS,
-			"qthread_shepherd(%u): skipping thread exec because I've been disabled!\n",
-			me->shepherd_id);
 	    }
 	    switch (t->thread_state) {
 		case QTHREAD_STATE_MIGRATING:
@@ -1189,6 +1191,7 @@ static void *qthread_shepherd(void *arg)
 				  "qthread_shepherd(%u): thread %u migrating to shep %u\n",
 				  me->shepherd_id, t->thread_id,
 				  t->target_shepherd->shepherd_id);
+qthread_state_migrating:
 		    t->thread_state = QTHREAD_STATE_RUNNING;
 		    t->shepherd_ptr = t->target_shepherd;
 		    qt_lfqueue_enqueue(t->shepherd_ptr->ready, t, me);
