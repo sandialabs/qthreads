@@ -1191,8 +1191,8 @@ static void *qthread_shepherd(void *arg)
 				  "qthread_shepherd(%u): thread %u migrating to shep %u\n",
 				  me->shepherd_id, t->thread_id,
 				  t->target_shepherd->shepherd_id);
-qthread_state_migrating:
 		    t->thread_state = QTHREAD_STATE_RUNNING;
+qthread_state_migrating:
 		    t->shepherd_ptr = t->target_shepherd;
 		    qt_lfqueue_enqueue(t->shepherd_ptr->ready, t, me);
 		    break;
