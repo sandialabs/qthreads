@@ -3,42 +3,13 @@
 # Copyright (c)      2008  Sandia Corporation
 #
 
-man_MANS = qthread_empty.3 \
-		   qthread_cas.3 \
-		   qthread_cas_ptr.3 \
-		   qthread_feb_status.3 \
-		   qthread_fill.3 \
-		   qthread_finalize.3 \
-		   qthread_fork.3 \
-		   qthread_fork_to.3 \
-		   qthread_id.3 \
-		   qthread_incr.3 \
-		   qthread_cacheline.3 \
-		   qthread_dincr.3 \
-		   qthread_distance.3 \
-		   qthread_fincr.3 \
-		   qthread_init.3 \
-		   qthread_lock.3 \
-		   qthread_num_shepherds.3 \
-		   qthread_migrate_to.3 \
-		   qthread_prepare.3 \
-		   qthread_prepare_for.3 \
-		   qthread_retloc.3 \
-		   qthread_readFE.3 \
-		   qthread_readFF.3 \
-		   qthread_schedule.3 \
-		   qthread_schedule_on.3 \
-		   qthread_self.3 \
-		   qthread_shep.3 \
-		   qthread_sorted_sheps.3 \
-		   qthread_sorted_sheps_remote.3 \
-		   qthread_stackleft.3 \
-		   qthread_unlock.3 \
-		   qthread_writeEF.3 \
-		   qthread_writeEF_const.3 \
-		   qthread_writeF.3 \
-		   qthread_writeF_const.3 \
-		   qthread_yield.3 \
+man_MANS = \
+		   future_acquire.3 \
+		   future_exit.3 \
+		   future_fork.3 \
+		   future_init.3 \
+		   future_join_all.3 \
+		   future_yield.3 \
 		   qalloc_checkpoint.3 \
 		   qalloc_cleanup.3 \
 		   qalloc_dynfree.3 \
@@ -55,42 +26,28 @@ man_MANS = qthread_empty.3 \
 		   qarray_create_tight.3 \
 		   qarray_destroy.3 \
 		   qarray_elem.3 \
-		   qarray_elem_nomigrate.3 \
 		   qarray_elem_migrate.3 \
+		   qarray_elem_nomigrate.3 \
 		   qarray_iter.3 \
 		   qarray_iter_constloop.3 \
 		   qarray_iter_loop.3 \
 		   qarray_shepof.3 \
 		   qdqueue_create.3 \
+		   qdqueue_dequeue.3 \
 		   qdqueue_destroy.3 \
+		   qdqueue_empty.3 \
 		   qdqueue_enqueue.3 \
 		   qdqueue_enqueue_there.3 \
-		   qdqueue_dequeue.3 \
-		   qdqueue_empty.3 \
 		   qlfqueue_create.3 \
-		   qlfqueue_destroy.3 \
-		   qlfqueue_enqueue.3 \
 		   qlfqueue_dequeue.3 \
+		   qlfqueue_destroy.3 \
 		   qlfqueue_empty.3 \
+		   qlfqueue_enqueue.3 \
+		   qpool_alloc.3 \
 		   qpool_create.3 \
 		   qpool_create_aligned.3 \
-		   qpool_alloc.3 \
-		   qpool_free.3 \
 		   qpool_destroy.3 \
-		   qutil_double_sum.3 \
-		   qutil_double_mult.3 \
-		   qutil_double_max.3 \
-		   qutil_double_min.3 \
-		   qutil_uint_sum.3 \
-		   qutil_uint_mult.3 \
-		   qutil_uint_max.3 \
-		   qutil_uint_min.3 \
-		   qutil_int_sum.3 \
-		   qutil_int_mult.3 \
-		   qutil_int_max.3 \
-		   qutil_int_min.3 \
-		   qutil_qsort.3 \
-		   qutil_mergesort.3 \
+		   qpool_free.3 \
 		   qt_allpairs.3 \
 		   qt_double_max.3 \
 		   qt_double_min.3 \
@@ -100,20 +57,66 @@ man_MANS = qthread_empty.3 \
 		   qt_int_min.3 \
 		   qt_int_prod.3 \
 		   qt_int_sum.3 \
+		   qt_loop.3 \
+		   qt_loop_balance.3 \
+		   qt_loop_balance_future.3 \
+		   qt_loop_future.3 \
+		   qt_loopaccum_balance.3 \
+		   qt_loopaccum_balance_future.3 \
 		   qt_uint_max.3 \
 		   qt_uint_min.3 \
 		   qt_uint_prod.3 \
 		   qt_uint_sum.3 \
-		   qt_loop.3 \
-		   qt_loop_future.3 \
-		   qt_loop_balance.3 \
-		   qt_loop_balance_future.3 \
-		   qt_loopaccum_balance.3 \
-		   qt_loopaccum_balance_future.3 \
-		   future_acquire.3 \
-		   future_fork.3 \
-		   future_exit.3 \
-		   future_init.3 \
-		   future_join_all.3 \
-		   future_yield.3
+		   qthread_cacheline.3 \
+		   qthread_cas.3 \
+		   qthread_cas_ptr.3 \
+		   qthread_dincr.3 \
+		   qthread_disable_shepherd.3 \
+		   qthread_distance.3 \
+		   qthread_empty.3 \
+		   qthread_enable_shepherd.3 \
+		   qthread_feb_status.3 \
+		   qthread_fill.3 \
+		   qthread_finalize.3 \
+		   qthread_fincr.3 \
+		   qthread_fork.3 \
+		   qthread_fork_to.3 \
+		   qthread_id.3 \
+		   qthread_incr.3 \
+		   qthread_init.3 \
+		   qthread_lock.3 \
+		   qthread_migrate_to.3 \
+		   qthread_num_shepherds.3 \
+		   qthread_prepare.3 \
+		   qthread_prepare_for.3 \
+		   qthread_readFE.3 \
+		   qthread_readFF.3 \
+		   qthread_retloc.3 \
+		   qthread_schedule.3 \
+		   qthread_schedule_on.3 \
+		   qthread_self.3 \
+		   qthread_shep.3 \
+		   qthread_sorted_sheps.3 \
+		   qthread_sorted_sheps_remote.3 \
+		   qthread_stackleft.3 \
+		   qthread_unlock.3 \
+		   qthread_writeEF.3 \
+		   qthread_writeEF_const.3 \
+		   qthread_writeF.3 \
+		   qthread_writeF_const.3 \
+		   qthread_yield.3 \
+		   qutil_double_max.3 \
+		   qutil_double_min.3 \
+		   qutil_double_mult.3 \
+		   qutil_double_sum.3 \
+		   qutil_int_max.3 \
+		   qutil_int_min.3 \
+		   qutil_int_mult.3 \
+		   qutil_int_sum.3 \
+		   qutil_mergesort.3 \
+		   qutil_qsort.3 \
+		   qutil_uint_max.3 \
+		   qutil_uint_min.3 \
+		   qutil_uint_mult.3 \
+		   qutil_uint_sum.3
 EXTRA_DIST = $(man_MANS)
