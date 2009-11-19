@@ -1,3 +1,26 @@
+--- 1.3b ---
+New Features:
+ - Optional guard pages, to assist in debugging
+ - No longer need to call qthread_finalize()
+ - Environment variable QTHREAD_NUM_SHEPHERDS to force a specific number of
+   shepherds
+ - Shepherds an be enabled/disabled at runtime; threads are forcibly evicted
+   from disabled shepherds
+Improvements:
+ - Now prefer qthread_initialize(), which doesn't take arguments;
+   qthread_init() is deprecated (but still supported)
+ - Threads have second-order affinity, only established via explicit programmer
+   placement
+ - Better detection of insufficient compile environment
+ - Better detection of cacheline size
+ - Better compatibility with Intel compiler
+ - Test codes use environment variables instead of arguments
+ - Better interaction with libnuma to detect desired number of shepherds
+ - Compatibility with glibc's new qsort_r() function
+ - Use autoconf 2.64's C++ "restrict" tests, rather than the broken 2.59 ones
+ - Better Sun Studio ASM support (still fighting ICE)
+ - Removed small qarray memory leak
+ - Additional documentation
 --- 1.2 ---
 New Features:
  - Distributed Data Structures: array (qarray), queue (qdqueue), memory pool (qpool)
