@@ -1613,12 +1613,12 @@ int qthread_initialize(void)
 		    qlib->shepherds[i].sorted_sheplist[k++] = j;
 		}
 	    }
-#  if defined(HAVE_QSORT_R) && !defined(__linux__)
+#  if defined(HAVE_QSORT_R) && QTHREAD_QSORT_BSD
 	    assert(qlib->shepherds[i].sorted_sheplist);
 	    qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
 		    sizeof(qthread_shepherd_id_t), (void *)(intptr_t) i,
 		    &qthread_internal_shepcomp);
-#  elif defined(HAVE_QSORT_R)
+#  elif defined(HAVE_QSORT_R) && QTHREAD_QSORT_GLIBC
 	    /* what moron in the linux community decided to implement BSD's
 	     * qsort_r with the arguments reversed??? */
 	    assert(qlib->shepherds[i].sorted_sheplist);

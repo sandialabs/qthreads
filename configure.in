@@ -371,7 +371,8 @@ AC_CACHE_SAVE
 ## --------------------------- ##
 AC_FUNC_VPRINTF
 AC_FUNC_MMAP
-AC_CHECK_FUNCS([strtol floor memalign posix_memalign memset memmove munmap memcpy getrlimit setrlimit fstat64 lseek64 getcontext swapcontext makecontext sched_yield processor_bind madvise qsort_r])
+AC_CHECK_FUNCS([strtol floor memalign posix_memalign memset memmove munmap memcpy getrlimit setrlimit fstat64 lseek64 getcontext swapcontext makecontext sched_yield processor_bind madvise])
+QTHREAD_CHECK_QSORT
 AC_TRY_LINK([#include <sys/types.h>
 #include <sys/mman.h>
 ],[int testma (void) { return MADV_ACCESS_LWP; }],[qt_cv_malwp=yes
