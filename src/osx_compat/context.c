@@ -24,7 +24,6 @@ void makecontext(ucontext_t *ucp, void (*func)(void), int argc, ...)
 	uintptr_t *sp;
 #ifdef NEEDX86REGISTERARGS
 	int i;
-	uintptr_t arg;
 	va_list argp;
 
 	va_start(argp, argc);

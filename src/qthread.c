@@ -1064,8 +1064,8 @@ static void *qthread_shepherd(void *arg)
     if (qaffinity) {		       /*{{{ */
 #ifdef QTHREAD_HAVE_MACHTOPO
 	mach_msg_type_number_t Count = THREAD_AFFINITY_POLICY_COUNT;
-	thread_affinity_policy_data_t mask[THREAD_AFFINITY_POLICY_COUNT] =
-	    { 0 };
+	thread_affinity_policy_data_t mask[THREAD_AFFINITY_POLICY_COUNT];
+
 	/*
 	 * boolean_t GetDefault = 0;
 	 * if (thread_policy_get(mach_thread_self(),
@@ -1082,6 +1082,9 @@ static void *qthread_shepherd(void *arg)
 	 * printf("\t\taffinity_tag=%d (%#x)\n",
 	 * mask[i].affinity_tag, mask[i].affinity_tag);
 	 * } */
+	memset(mask, 0,
+	       sizeof(thread_affinity_policy_data_t) *
+	       THREAD_AFFINITY_POLICY_COUNT);
 	mask[0].affinity_tag = me->shepherd_id + 1;
 	Count = 1;
 	if (thread_policy_set
