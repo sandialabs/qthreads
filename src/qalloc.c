@@ -547,21 +547,21 @@ static inline size_t qalloc_findmark_bits(unsigned char *array, size_t a_len,
 
 	    if (array[byte] & 0x1) {
 		continue;
-	    } else if (!array[byte] & 0xff) {
+	    } else if (!(array[byte] & 0xff)) {
 		available = 8;
-	    } else if (!array[byte] & 0x7f) {
+	    } else if (!(array[byte] & 0x7f)) {
 		available = 7;
-	    } else if (!array[byte] & 0x3f) {
+	    } else if (!(array[byte] & 0x3f)) {
 		available = 6;
-	    } else if (!array[byte] & 0x1f) {
+	    } else if (!(array[byte] & 0x1f)) {
 		available = 5;
-	    } else if (!array[byte] & 0x0f) {
+	    } else if (!(array[byte] & 0x0f)) {
 		available = 4;
-	    } else if (!array[byte] & 0x07) {
+	    } else if (!(array[byte] & 0x07)) {
 		available = 3;
-	    } else if (!array[byte] & 0x03) {
+	    } else if (!(array[byte] & 0x03)) {
 		available = 2;
-	    } else if (!array[byte] & 0x01) {
+	    } else if (!(array[byte] & 0x01)) {
 		available = 1;
 	    }
 	    if (available != 0) {
