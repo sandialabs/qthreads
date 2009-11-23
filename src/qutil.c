@@ -7,6 +7,7 @@
 #include <qthread_asserts.h>           /* for assert() toggling */
 #include <qthread/cacheline.h>
 
+#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -163,26 +164,256 @@ INNER_LOOP_FF(qutil_int_FF_min_inner, qutil_is_args, MIN_MACRO)
 OUTER_LOOP(qutil_int_min, qutil_is_args, MIN_MACRO, saligned_t, qutil_int_min_inner,
 	qutil_int_FF_min_inner)
 
+typedef int (*cmp_f) (const void *a, const void *b);
+
+// This is based on a public-domain non-recursive C qsort by Darel Rex Finley
+// Obtained from http://alienryderflex.com/quicksort/
+// This sort CAN fail if there are more than 2^MAX elements (or so)
+static void drf_qsort_any(void *const array, const size_t elements,
+			  const size_t elem_size, const cmp_f cmp)
+{
+    const size_t MAX = log(elements) + 5;
+    ssize_t beg[MAX], end[MAX], i = 0, L, R, swap;
+    char piv[elem_size];
+    char *const arr = (char *const)array;
+
+    beg[0] = 0;
+    end[0] = elements;
+    while (i >= 0) {
+	assert(i < MAX);
+	L = beg[i];
+	R = end[i] - 1;
+	if (L < R) {
+	    memcpy(piv, arr + (L * elem_size), elem_size);
+	    while (L < R) {
+		while (cmp(arr + (R * elem_size), &piv) >= 0 && L < R)
+		    R--;
+		if (L < R)
+		    memcpy(arr + (L++ * elem_size), arr + (R * elem_size),
+			   elem_size);
+		while (cmp(arr + (L * elem_size), &piv) <= 0 && L < R)
+		    L++;
+		if (L < R)
+		    memcpy(arr + (R-- * elem_size), arr + (L * elem_size),
+			   elem_size);
+	    }
+	    memcpy(arr + (L * elem_size), &piv, elem_size);
+	    beg[i + 1] = L + 1;
+	    end[i + 1] = end[i];
+	    end[i++] = L;
+	    if (end[i] - beg[i] > end[i - 1] - beg[i - 1]) {
+		swap = beg[i];
+		beg[i] = beg[i - 1];
+		beg[i - 1] = swap;
+		swap = end[i];
+		end[i] = end[i - 1];
+		end[i - 1] = swap;
+	    }
+	} else {
+	    i--;
+	}
+    }
+}
+
+static void drf_qsort8(void *const array, const size_t elements,
+		       const cmp_f cmp)
+{
+    const size_t MAX = log(elements) + 5;
+    ssize_t beg[MAX], end[MAX], i = 0, L, R, swap;
+    uint64_t piv;
+    uint64_t *const arr = (uint64_t * const)array;
+
+    beg[0] = 0;
+    end[0] = elements;
+    while (i >= 0) {
+	assert(i < MAX);
+	L = beg[i];
+	R = end[i] - 1;
+	if (L < R) {
+	    piv = arr[L];
+	    while (L < R) {
+		while (cmp(&arr[R], &piv) >= 0 && L < R)
+		    R--;
+		if (L < R)
+		    arr[L++] = arr[R];
+		while (cmp(&arr[L], &piv) <= 0 && L < R)
+		    L++;
+		if (L < R)
+		    arr[R--] = arr[L];
+	    }
+	    arr[L] = piv;
+	    beg[i + 1] = L + 1;
+	    end[i + 1] = end[i];
+	    end[i++] = L;
+	    if (end[i] - beg[i] > end[i - 1] - beg[i - 1]) {
+		swap = beg[i];
+		beg[i] = beg[i - 1];
+		beg[i - 1] = swap;
+		swap = end[i];
+		end[i] = end[i - 1];
+		end[i - 1] = swap;
+	    }
+	} else {
+	    i--;
+	}
+    }
+}
+
+static void drf_qsort4(void *const array, const size_t elements,
+		       const cmp_f cmp)
+{
+    const size_t MAX = log(elements) + 5;
+    ssize_t beg[MAX], end[MAX], i = 0, L, R, swap;
+    uint32_t piv;
+    uint32_t *const arr = (uint32_t * const)array;
+
+    beg[0] = 0;
+    end[0] = elements;
+    while (i >= 0) {
+	assert(i < MAX);
+	L = beg[i];
+	R = end[i] - 1;
+	if (L < R) {
+	    piv = arr[L];
+	    while (L < R) {
+		while (cmp(&arr[R], &piv) >= 0 && L < R)
+		    R--;
+		if (L < R)
+		    arr[L++] = arr[R];
+		while (cmp(&arr[L], &piv) <= 0 && L < R)
+		    L++;
+		if (L < R)
+		    arr[R--] = arr[L];
+	    }
+	    arr[L] = piv;
+	    beg[i + 1] = L + 1;
+	    end[i + 1] = end[i];
+	    end[i++] = L;
+	    if (end[i] - beg[i] > end[i - 1] - beg[i - 1]) {
+		swap = beg[i];
+		beg[i] = beg[i - 1];
+		beg[i - 1] = swap;
+		swap = end[i];
+		end[i] = end[i - 1];
+		end[i - 1] = swap;
+	    }
+	} else {
+	    i--;
+	}
+    }
+}
+
+static void drf_qsort(void *const array, const size_t elements,
+		      const size_t elem_size, const cmp_f cmp)
+{
+    switch (elem_size) {
+	case 4:
+	    drf_qsort4(array, elements, cmp);
+	    break;
+	case 8:
+	    drf_qsort8(array, elements, cmp);
+	    break;
+	default:
+	    drf_qsort_any(array, elements, elem_size, cmp);
+	    break;
+    }
+}
+
+static void drf_qsort_dbl(double *const arr, const size_t elements)
+{
+    const size_t MAX = log(elements) + 5;
+    ssize_t beg[MAX], end[MAX], i = 0, L, R, swap;
+    double piv;
+
+    beg[0] = 0;
+    end[0] = elements;
+    while (i >= 0) {
+	assert(i < MAX);
+	L = beg[i];
+	R = end[i] - 1;
+	if (L < R) {
+	    piv = arr[L];
+	    while (L < R) {
+		while (arr[R] >= piv && L < R)
+		    R--;
+		if (L < R)
+		    arr[L++] = arr[R];
+		while (arr[L] <= piv && L < R)
+		    L++;
+		if (L < R)
+		    arr[R--] = arr[L];
+	    }
+	    arr[L] = piv;
+	    beg[i + 1] = L + 1;
+	    end[i + 1] = end[i];
+	    end[i++] = L;
+	    if (end[i] - beg[i] > end[i - 1] - beg[i - 1]) {
+		swap = beg[i];
+		beg[i] = beg[i - 1];
+		beg[i - 1] = swap;
+		swap = end[i];
+		end[i] = end[i - 1];
+		end[i - 1] = swap;
+	    }
+	} else {
+	    i--;
+	}
+    }
+}
+
+static void drf_qsort_algt(aligned_t * const arr, const size_t elements)
+{
+    const size_t MAX = log(elements) + 5;
+    ssize_t beg[MAX], end[MAX], i = 0, L, R, swap;
+    aligned_t piv;
+
+    beg[0] = 0;
+    end[0] = elements;
+    while (i >= 0) {
+	assert(i < MAX);
+	L = beg[i];
+	R = end[i] - 1;
+	if (L < R) {
+	    piv = arr[L];
+	    while (L < R) {
+		while (arr[R] >= piv && L < R)
+		    R--;
+		if (L < R)
+		    arr[L++] = arr[R];
+		while (arr[L] <= piv && L < R)
+		    L++;
+		if (L < R)
+		    arr[R--] = arr[L];
+	    }
+	    arr[L] = piv;
+	    beg[i + 1] = L + 1;
+	    end[i + 1] = end[i];
+	    end[i++] = L;
+	    if (end[i] - beg[i] > end[i - 1] - beg[i - 1]) {
+		swap = beg[i];
+		beg[i] = beg[i - 1];
+		beg[i - 1] = swap;
+		swap = end[i];
+		end[i] = end[i - 1];
+		end[i - 1] = swap;
+	    }
+	} else {
+	    i--;
+	}
+    }
+}
+
 struct qutil_mergesort_args {
     double *array;
     size_t first_start, first_stop;
     size_t second_start, second_stop;
 };
 
-static int dcmp(const void *a, const void *b)
-{
-    if ((*(double *)a) < (*(double *)b))
-	return -1;
-    if ((*(double *)a) > (*(double *)b))
-	return 1;
-    return 0;
-}
-
 static aligned_t qutil_mergesort_presort(qthread_t * Q_UNUSED me,
 				  struct qutil_mergesort_args * args)
 {
-    qsort(args->array + args->first_start,
-	  args->first_stop - args->first_start + 1, sizeof(double), dcmp);
+    drf_qsort_dbl(args->array + args->first_start,
+	  args->first_stop - args->first_start + 1);
     return 0;
 }
 
@@ -434,7 +665,7 @@ static inline aligned_t qutil_qsort_inner(qthread_t * me, struct qutil_qsort_iar
 
     /* choose the number of threads to use */
     if (a->length <= MT_LOOP_CHUNK) {  /* shortcut */
-	qsort(array, a->length, sizeof(double), dcmp);
+	drf_qsort_dbl(array, a->length);
 	return 0;
     }
     furthest.leftwall = 0;
@@ -680,7 +911,7 @@ static inline aligned_t qutil_aligned_qsort_inner(qthread_t * me, struct qutil_a
 
     /* choose the number of threads to use */
     if (a->length <= MT_LOOP_CHUNK) {  /* shortcut */
-	qsort(array, a->length, sizeof(aligned_t), alcmp);
+	drf_qsort_algt(array, a->length);
 	return 0;
     }
     furthest.leftwall = 0;
