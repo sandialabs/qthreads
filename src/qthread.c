@@ -1061,10 +1061,11 @@ static void *qthread_shepherd(void *arg)
 #endif
 
     assert(me != NULL);
+    assert(me->shepherd_id <= qlib->nshepherds);
     qthread_debug(ALL_FUNCTIONS, "qthread_shepherd(%u): forked with arg %p\n",
 		  me->shepherd_id, arg);
 #ifndef QTHREAD_NO_ASSERTS
-    if (shep0arg != NULL) {
+    if (shep0arg != NULL && me->shepherd_id == 0) {
 	if (arg != shep0arg) {
 	    fprintf(stderr, "arg = %p, shep0arg = %p\n", arg, shep0arg);
 	}
@@ -1522,6 +1523,7 @@ int qthread_initialize(void)
 	} else {
 	    qlib->qthread_stack_size = QTHREAD_DEFAULT_STACK_SIZE;
 	}
+	qthread_debug(THREAD_DETAILS, "qthread_init(): qthread stack size: %u\n", qlib->qthread_stack_size);
     }
 #ifdef QTHREAD_GUARD_PAGES
     {
@@ -1871,12 +1873,15 @@ int qthread_initialize(void)
 #endif
 
 	qthread_debug(ALL_DETAILS,
-		      "qthread_init(): forking shepherd %i (%p)\n", i,
+		      "qthread_init(): setting up shepherd %i (%p)\n", i,
 		      &qlib->shepherds[i]);
 
     }
     /* spawn the shepherds */
     for (i = 1; i < nshepherds; i++) {
+	qthread_debug(ALL_DETAILS,
+		      "qthread_init(): forking shepherd %i (%p)\n", i,
+		      &qlib->shepherds[i]);
 	if ((r =
 	     pthread_create(&qlib->shepherds[i].shepherd, NULL,
 			    qthread_shepherd, &qlib->shepherds[i])) != 0) {
@@ -2007,6 +2012,7 @@ static QINLINE void qthread_makecontext(ucontext_t * c, void *stack,
     makecontext(c, func, 1, arg);
 # endif /* EXTRA_MAKECONTEXT_ARGC */
 #endif /* QTHREAD_MAKECONTEXT_SPLIT */
+    assert(c->uc_link == returnc);
 }				       /*}}} */
 
 void qthread_finalize(void)
