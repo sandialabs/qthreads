@@ -1173,7 +1173,7 @@ static QINLINE void *qthread_cas_ptr_(void *volatile*const addr,
     __sync_val_compare_and_swap((ADDR), (OLDV), (NEWV))
 # else
 #  define qthread_cas_ptr(ADDR, OLDV, NEWV) \
-    qthread_cas_ptr_((void*volatile*const)(ADDR), (OLDV), (NEWV))
+    qthread_cas_ptr_((void*volatile*const)(ADDR), (void*const)(OLDV), (void*const)(NEWV))
 # endif
 #endif
 
