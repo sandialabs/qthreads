@@ -20,6 +20,8 @@ AC_DEFUN([QTHREAD_HASH_MAPS], [
   AS_IF([test "x$ac_found_without_flags" == xno], [
         ac_save_CXXFLAGS="$CXXFLAGS"
 	 ac_save_CPPFLAGS="$CPPFLAGS"
+	 unset ac_cv_header_unordered_map
+	 unset ac_cv_header_tr1_unordered_map
 	 CXXFLAGS="$ac_save_CXXFLAGS -std=gnu++0x"
 	 CPPFLAGS="$ac_save_CPPFLAGS -std=gnu++0x"
 	 AC_CHECK_HEADERS([unordered_map tr1/unordered_map],

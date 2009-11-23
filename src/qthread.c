@@ -1056,8 +1056,8 @@ static void *qthread_shepherd(void *arg)
 #endif
 
     assert(me != NULL);
-    qthread_debug(ALL_FUNCTIONS, "qthread_shepherd(%u): forked\n",
-		  me->shepherd_id);
+    qthread_debug(ALL_FUNCTIONS, "qthread_shepherd(%u): forked with arg %p\n",
+		  me->shepherd_id, arg);
 
     /* Initialize myself */
     pthread_setspecific(shepherd_structs, arg);
