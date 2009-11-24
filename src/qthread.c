@@ -303,9 +303,9 @@ static void qthread_wrapper(unsigned int high, unsigned int low);
 static void qthread_wrapper(void *ptr);
 #endif
 
-static QINLINE void qthread_makecontext(ucontext_t *, void *, size_t,
-					void (*)(void), const void *,
-					ucontext_t *);
+static QINLINE void qthread_makecontext(ucontext_t * const, void * const, const size_t,
+					void (*)(void), const void * const,
+					const ucontext_t * const);
 static QINLINE qthread_addrstat_t *qthread_addrstat_new(qthread_shepherd_t *
 							shepherd);
 static void qthread_addrstat_delete(qthread_addrstat_t * m);
@@ -420,7 +420,7 @@ static QINLINE void *ALLOC_STACK(qthread_shepherd_t * shep)
 	     PROT_NONE);
     return tmp + getpagesize();
 }
-static QINLINE void *FREE_STACK(qthread_shepherd_t * shep, void *t)
+static QINLINE void FREE_STACK(qthread_shepherd_t * shep, void *t)
 {
     char *tmp = t;
 
@@ -449,7 +449,7 @@ static QINLINE void *ALLOC_STACK(qthread_shepherd_t * shep)
 	     PROT_NONE);
     return tmp + getpagesize();
 }
-static QINLINE void *FREE_STACK(qthread_shepherd_t * shep, void *t)
+static QINLINE void FREE_STACK(qthread_shepherd_t * shep, void *t)
 {
     char *tmp = t;
 
@@ -1973,9 +1973,9 @@ int qthread_initialize(void)
 /* This initializes a context (c) to run the function (func) with a single
  * argument (arg). This is just a wrapper around makecontext that isolates some
  * of the portability garbage. */
-static QINLINE void qthread_makecontext(ucontext_t * c, void *stack,
-					size_t stacksize, void (*func) (void),
-					const void *arg, ucontext_t * returnc)
+static QINLINE void qthread_makecontext(ucontext_t * const c, void * const stack,
+					const size_t stacksize, void (*func) (void),
+					const void * const arg, const ucontext_t * const returnc)
 {				       /*{{{ */
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
     const unsigned int high = ((uintptr_t) arg) >> 32;
@@ -2012,7 +2012,9 @@ static QINLINE void qthread_makecontext(ucontext_t * c, void *stack,
     makecontext(c, func, 1, arg);
 # endif /* EXTRA_MAKECONTEXT_ARGC */
 #endif /* QTHREAD_MAKECONTEXT_SPLIT */
-    assert(c->uc_link == returnc);
+#ifdef HAVE_NATIVE_MAKECONTEXT
+    assert((void*)c->uc_link == (void*)returnc);
+#endif
 }				       /*}}} */
 
 void qthread_finalize(void)

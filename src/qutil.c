@@ -166,6 +166,7 @@ OUTER_LOOP(qutil_int_min, qutil_is_args, MIN_MACRO, saligned_t, qutil_int_min_in
 
 typedef int (*cmp_f) (const void *a, const void *b);
 
+#if 0
 // This is based on a public-domain non-recursive C qsort by Darel Rex Finley
 // Obtained from http://alienryderflex.com/quicksort/
 // This sort CAN fail if there are more than 2^MAX elements (or so)
@@ -318,6 +319,7 @@ static void drf_qsort(void *const array, const size_t elements,
 	    break;
     }
 }
+#endif
 
 static void drf_qsort_dbl(double *const arr, const size_t elements)
 {
@@ -838,15 +840,6 @@ quickexit:
     return 0;
 }
 
-
-static int alcmp(const void *a, const void *b)
-{
-    if ((*(aligned_t *)a) < (*(aligned_t *)b))
-	return -1;
-    if ((*(aligned_t *)a) > (*(aligned_t *)b))
-	return 1;
-    return 0;
-}
 
 struct qutil_aligned_qsort_iargs {
     aligned_t *array;

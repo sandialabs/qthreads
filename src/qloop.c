@@ -294,20 +294,20 @@ type qt_##shorttype##_##category (type *array, size_t length, int checkfeb) \
 #define MAX(a,b) (a>b)?a:b
 #define MIN(a,b) (a<b)?a:b
 
-PARALLEL_FUNC(sum, uis, ADD, aligned_t, uint);
-PARALLEL_FUNC(prod, uip, MULT, aligned_t, uint);
-PARALLEL_FUNC(max, uimax, MAX, aligned_t, uint);
-PARALLEL_FUNC(min, uimin, MIN, aligned_t, uint);
+PARALLEL_FUNC(sum, uis, ADD, aligned_t, uint)
+PARALLEL_FUNC(prod, uip, MULT, aligned_t, uint)
+PARALLEL_FUNC(max, uimax, MAX, aligned_t, uint)
+PARALLEL_FUNC(min, uimin, MIN, aligned_t, uint)
 
-PARALLEL_FUNC(sum, is, ADD, saligned_t, int);
-PARALLEL_FUNC(prod, ip, MULT, saligned_t, int);
-PARALLEL_FUNC(max, imax, MAX, saligned_t, int);
-PARALLEL_FUNC(min, imin, MIN, saligned_t, int);
+PARALLEL_FUNC(sum, is, ADD, saligned_t, int)
+PARALLEL_FUNC(prod, ip, MULT, saligned_t, int)
+PARALLEL_FUNC(max, imax, MAX, saligned_t, int)
+PARALLEL_FUNC(min, imin, MIN, saligned_t, int)
 
-PARALLEL_FUNC(sum, ds, ADD, double, double);
-PARALLEL_FUNC(prod, dp, MULT, double, double);
-PARALLEL_FUNC(max, dmax, MAX, double, double);
-PARALLEL_FUNC(min, dmin, MIN, double, double);
+PARALLEL_FUNC(sum, ds, ADD, double, double)
+PARALLEL_FUNC(prod, dp, MULT, double, double)
+PARALLEL_FUNC(max, dmax, MAX, double, double)
+PARALLEL_FUNC(min, dmin, MIN, double, double)
 
 /* The next idea is to implement it in a memory-bound kind of way. And I don't
  * mean memory-bound in that it spends its time waiting for memory; I mean in

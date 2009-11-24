@@ -13,7 +13,7 @@ namespace mt_loop_traits {
   const int Div = 3;
 
   const int identity[] = { 0, 0, 1, 1 };
-};
+}
 
 class Iterator {
 };
@@ -76,14 +76,6 @@ public:
 
 #include "loop_iter.hpp"
 
-#undef DBprintf
-#if 0
-#include <stdio.h>
-#define DBprintf printf
-#else
-#define DBprintf(...) ;
-#endif
-
 #define ITER(start__,step__,count__)					\
   new IterArg<ObjT,RetB,FptrT,Arg1B,Arg2B,Arg3B,Arg4B,Arg5B,		\
 	      RetV,Arg1V,Arg2V,Arg3V,Arg4V,Arg5V>			\
@@ -138,11 +130,6 @@ public:
     base_count = total >> tdc_pow2;
     round_total = base_count << tdc_pow2;
 
-    DBprintf ("Given start %d stop %d step %d: \n", start, stop, step);
-    DBprintf ("Total is %d, tdc_pow2 is %d (tdc %d)\n", total, tdc_pow2, 1<<tdc_pow2);
-    DBprintf ("Tdc is %d steptd is %d round_total %d base_count %d\n", 
-	      tdc, steptd, round_total, base_count);
-
     switch (TypeC) {
     case mt_loop_traits::ParNoJoin:
       join = false;
@@ -153,8 +140,6 @@ public:
 	int count = base_count + ( ((round_total + i) < total) ? 1 : 0 );
 	qthread_fork(run_qtd<Iter>, ITER(start, steptd, count), join?(thr+i):NULL);
 
-	DBprintf ("Thread %d %p start %d step %d count %d\n", 
-		  i, thr+i, start, steptd, count);
 	start += step;
       }
 
@@ -265,7 +250,7 @@ public:
 #define A_LIST const Arg1V& arg1, const Arg2V& arg2, const Arg3V& arg3, const Arg4V& arg4, const Arg5V& arg5,
 #define P_LIST arg1, arg2, arg3, arg4, arg5
 
-ALL_LOOPS();
+ALL_LOOPS()
 
 #undef B_LIST
 #undef V_LIST
@@ -280,7 +265,7 @@ ALL_LOOPS();
 #define A_LIST const Arg1V& arg1, const Arg2V& arg2, const Arg3V& arg3, const Arg4V& arg4,
 #define P_LIST arg1, arg2, arg3, arg4, my_null
 
-ALL_LOOPS();
+ALL_LOOPS()
 
 #undef B_LIST
 #undef V_LIST
@@ -296,7 +281,7 @@ ALL_LOOPS();
 #define P_LIST arg1, arg2, arg3, my_null, my_null
 
 
-ALL_LOOPS();
+ALL_LOOPS()
 
 #undef B_LIST
 #undef V_LIST
@@ -311,7 +296,7 @@ ALL_LOOPS();
 #define A_LIST const Arg1V& arg1, const Arg2V& arg2,
 #define P_LIST arg1, arg2, my_null, my_null, my_null
 
-ALL_LOOPS();
+ALL_LOOPS()
 
 #undef B_LIST
 #undef V_LIST
@@ -326,7 +311,7 @@ ALL_LOOPS();
 #define A_LIST const Arg1V& arg1,
 #define P_LIST arg1, my_null, my_null, my_null, my_null
 
-ALL_LOOPS();
+ALL_LOOPS()
 
 #undef B_LIST
 #undef V_LIST
@@ -341,7 +326,7 @@ ALL_LOOPS();
 #define A_LIST 
 #define P_LIST my_null, my_null, my_null, my_null, my_null
 
-ALL_LOOPS();
+ALL_LOOPS()
 
 #undef B_LIST
 #undef V_LIST
