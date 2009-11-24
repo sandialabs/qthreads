@@ -22,7 +22,6 @@ int main(int argc, char *argv[])
     aligned_t *ui_array;
     double *d_array;
     size_t len = 1000000, i;
-    char *str;
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
 
