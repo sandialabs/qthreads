@@ -6,6 +6,10 @@
 # QTHREAD_CHECK_ATOMICS([action-if-found], [action-if-not-found])
 # ------------------------------------------------------------------------------
 AC_DEFUN([QTHREAD_CHECK_ATOMICS], [
+AC_ARG_ENABLE([builtin-atomics],
+     [AS_HELP_STRING([--disable-builtin-atomics],
+	                 [force the use of inline-assembly (if possible) rather than compiler-builtins for atomics. This is useful for working around some compiler bugs; normally, it's preferable to use compiler builtins.])])
+AS_IF([test "x$enable_builtin_atomics" != xno], [
 AC_CHECK_HEADERS([ia64intrin.h ia32intrin.h])
 AC_CACHE_CHECK([whether compiler supports builtin atomic CAS-32],
   [qthread_cv_atomic_CAS32],
@@ -99,6 +103,7 @@ return foo;
 }]])],
 		[qthread_cv_require_ia64intrin_h="no"],
 		[qthread_cv_require_ia64intrin_h="yes"])])])
+])
 AS_IF([test "$qthread_cv_require_ia64intrin_h" = "yes"],
 	  [AC_DEFINE([QTHREAD_NEEDS_IA64INTRIN],[1],[if this header is necessary for builtin atomics])])
 AS_IF([test "x$qthread_cv_atomic_CASptr" = "xyes"],

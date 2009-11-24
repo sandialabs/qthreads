@@ -36,6 +36,10 @@
 #include <sys/mman.h>
 #endif
 
+#ifdef QTHREAD_USE_GASNET
+#include <gasnet.h>
+#endif
+
 #ifdef QTHREAD_USE_PLPA
 #include <plpa.h>
 #endif
@@ -1029,6 +1033,9 @@ static int lgrp_walk(const lgrp_cookie_t cookie, const lgrp_id_t lgrp,
 }				       /*}}} */
 #endif
 
+#ifndef QTHREAD_NO_ASSERTS
+void * shep0arg = NULL;
+#endif
 /* the qthread_shepherd() is the pthread responsible for actually
  * executing the work units
  *
@@ -1040,6 +1047,8 @@ static void *qthread_shepherd_wrapper(unsigned int high, unsigned int low)
 {				       /*{{{ */
     qthread_shepherd_t *me =
 	(qthread_shepherd_t *) ((((uintptr_t) high) << 32) | low);
+    qthread_debug(ALL_DETAILS, "qthread_shepherd_wrapper(%x, %x): me = %p\n",
+		  high, low, me);
     return qthread_shepherd(me);
 }
 #endif
@@ -1056,8 +1065,18 @@ static void *qthread_shepherd(void *arg)
 #endif
 
     assert(me != NULL);
+    assert(me->shepherd_id <= qlib->nshepherds);
     qthread_debug(ALL_FUNCTIONS, "qthread_shepherd(%u): forked with arg %p\n",
 		  me->shepherd_id, arg);
+#ifndef QTHREAD_NO_ASSERTS
+    if (shep0arg != NULL && me->shepherd_id == 0) {
+	if (arg != shep0arg) {
+	    fprintf(stderr, "arg = %p, shep0arg = %p\n", arg, shep0arg);
+	}
+	assert(arg == shep0arg);
+	shep0arg = NULL;
+    }
+#endif
 
     /* Initialize myself */
     pthread_setspecific(shepherd_structs, arg);
@@ -1508,6 +1527,7 @@ int qthread_initialize(void)
 	} else {
 	    qlib->qthread_stack_size = QTHREAD_DEFAULT_STACK_SIZE;
 	}
+	qthread_debug(THREAD_DETAILS, "qthread_init(): qthread stack size: %u\n", qlib->qthread_stack_size);
     }
 #ifdef QTHREAD_GUARD_PAGES
     {
@@ -1857,12 +1877,15 @@ int qthread_initialize(void)
 #endif
 
 	qthread_debug(ALL_DETAILS,
-		      "qthread_init(): forking shepherd %i (%p)\n", i,
+		      "qthread_init(): setting up shepherd %i (%p)\n", i,
 		      &qlib->shepherds[i]);
 
     }
     /* spawn the shepherds */
     for (i = 1; i < nshepherds; i++) {
+	qthread_debug(ALL_DETAILS,
+		      "qthread_init(): forking shepherd %i (%p)\n", i,
+		      &qlib->shepherds[i]);
 	if ((r =
 	     pthread_create(&qlib->shepherds[i].shepherd, NULL,
 			    qthread_shepherd, &qlib->shepherds[i])) != 0) {
@@ -1928,6 +1951,9 @@ int qthread_initialize(void)
 			(void (*)(void))qthread_shepherd,
 #endif
 			&(qlib->shepherds[0]), qlib->mccoy_thread->context);
+#ifndef QTHREAD_NO_ASSERTS
+    shep0arg = &(qlib->shepherds[0]);
+#endif
     /* this launches shepherd 0 */
     qthread_debug(ALL_DETAILS, "qthread_init(): launching shepherd 0\n");
 #ifdef QTHREAD_USE_VALGRIND
@@ -1978,18 +2004,19 @@ static QINLINE void qthread_makecontext(ucontext_t * c, void *stack,
     c->uc_link = returnc;	       /* NULL pthread_exit() */
 #endif
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
-#ifdef EXTRA_MAKECONTEXT_ARGC
+# ifdef EXTRA_MAKECONTEXT_ARGC
     makecontext(c, func, 3, high, low);
-#else
+# else
     makecontext(c, func, 2, high, low);
-#endif /* EXTRA_MAKECONTEXT_ARGC */
+# endif /* EXTRA_MAKECONTEXT_ARGC */
 #else /* QTHREAD_MAKECONTEXT_SPLIT */
-#ifdef EXTRA_MAKECONTEXT_ARGC
+# ifdef EXTRA_MAKECONTEXT_ARGC
     makecontext(c, func, 2, arg);
-#else
+# else
     makecontext(c, func, 1, arg);
-#endif /* EXTRA_MAKECONTEXT_ARGC */
+# endif /* EXTRA_MAKECONTEXT_ARGC */
 #endif /* QTHREAD_MAKECONTEXT_SPLIT */
+    assert(c->uc_link == returnc);
 }				       /*}}} */
 
 void qthread_finalize(void)
