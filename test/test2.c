@@ -10,8 +10,6 @@
 static unsigned int target = 1000;
 static aligned_t x = 0;
 
-//pthread_mutex_t alldone = PTHREAD_MUTEX_INITIALIZER;
-
 static aligned_t alldone;
 
 static aligned_t thread(qthread_t * t, void *arg)
