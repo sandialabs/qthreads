@@ -26,25 +26,25 @@ void incr(int& i) {
   qthread_t *me = qthread_self();
   qthread_lock(me, (aligned_t*)&i);
   i++;
-  printf ("incr i (%p) = %d\n", &i, i);
+  printf ("incr i (%p) = %d\n", (void*)&i, i);
   qthread_unlock(me, (aligned_t*)&i);
 }
 
 void set(int val, int& i) { 
   i = val + 1; 
-  printf ("set i (%p) = %d\n", &i, i);
+  printf ("set i (%p) = %d\n", (void*)&i, i);
 }
 
 void output(const int& i) { 
-  printf ("output i (%p) = %d\n", &i, i); 
+  printf ("output i (%p) = %d\n", (void*)&i, i); 
 }
 
 void output_double(double i) { 
-  printf ("output double i (%p) = %.4f\n", &i, i); 
+  printf ("output double i (%p) = %.4f\n", (void*)&i, i); 
 }
 
 void ref(int& i) { 
-  printf ("ref i (%p) = %d\n", &i, i); 
+  printf ("ref i (%p) = %d\n", (void*)&i, i); 
 }
 
 template <class T>
@@ -57,11 +57,11 @@ class BigData {
 public:
   static int copy_count;
   BigData() { 
-    printf ("Make new BigData @ %p\n", this);
+    printf ("Make new BigData @ %p\n", (void*)this);
   }
   BigData(const BigData& cp) {
     copy_count++;
-    printf ("Copy big data %p into new data @ %p\n", &cp, this);
+    printf ("Copy big data %p into new data @ %p\n", (void*)&cp, (void*)this);
   }
 };
 
@@ -149,14 +149,14 @@ void message_stuff() {
 
 void vanilla_stuff () {
   int i = 7;
-  printf ("i (%p) = %d\n", &i, i);
+  printf ("i (%p) = %d\n", (void*)&i, i);
   printf (">>>>>>  Incrementing i <<<<<<<\n");
   mt_loop<Ref, mt_loop_traits::Par>  (incr, i, 0, 5);
-  printf ("i (%p) = %d\n", &i, i);
+  printf ("i (%p) = %d\n", (void*)&i, i);
 
   printf (">>>>>>  Setting i <<<<<<<\n");
   mt_loop<Iterator, Ref, mt_loop_traits::Par>  (set, 0, i, 0, 5);
-  printf ("i (%p) = %d\n", &i, i);
+  printf ("i (%p) = %d\n", (void*)&i, i);
 
   //This will not compile
   //mt_loop<Iterator, Val, mt_loop_traits::Par>  (set, 0, i, 0, 5);
