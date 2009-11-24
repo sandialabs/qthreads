@@ -16,7 +16,6 @@ typedef struct ucontext ucontext_t;
 typedef void (MakeContextCallback)(void);
 
 /*extern*/ int swapcontext(ucontext_t *, ucontext_t *);
-//  /*extern*/ void makecontext(ucontext_t*, void(*)(), int, ...);
 /*extern*/ void makecontext(ucontext_t *, MakeContextCallback *, int, ...);
 /*extern*/ int getmcontext(mcontext_t *);
 /*extern*/ void setmcontext(mcontext_t *);

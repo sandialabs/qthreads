@@ -686,7 +686,7 @@ static QINLINE uint32_t qthread_incr32(volatile uint32_t * operand,
       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 
     uint32_t retval = incr;
-    asm volatile ("lock ;  xaddl %0, (%1);"
+    __asm__ __volatile__ ("lock ;  xaddl %0, (%1);"
 		  :"=r" (retval)
 		  :"r"  (operand), "0"(retval)
 		  :"memory");
@@ -876,7 +876,7 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand,
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
     uint64_t retval = incr;
 
-    asm volatile ("lock ; xaddq %0, (%1);"
+    __asm__ __volatile__ ("lock ; xaddq %0, (%1);"
 		  :"=r" (retval)
 		  :"r"     (operand), "0"(retval)
 		  :"memory");

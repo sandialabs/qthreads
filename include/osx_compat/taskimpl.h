@@ -7,7 +7,6 @@
 #endif
 
 /* HAS_UCONTEXT affects the include files on some systems (I think) */
-//#if defined(__APPLE__) || defined(linux) || defined(__NetBSD__) || defined(__FreeBSD__) || (defined(__SVR4) && defined (__sun))
 #if defined(linux) || defined(__NetBSD__) || defined(__FreeBSD__) || (defined(__SVR4) && defined (__sun))
 #define HAS_UCONTEXT 1
 #endif
@@ -115,8 +114,6 @@ void setmcontext(const mcontext_t*);
 #define	setcontext(u)	setmcontext(&(u)->uc_mcontext)
 #define	getcontext(u)	getmcontext(&(u)->uc_mcontext)
 #endif
-
-// --------------------------
 
 #if defined(__APPLE__) && (defined(__i386__) || defined(__x86_64__))
 # define NEEDX86MAKECONTEXT

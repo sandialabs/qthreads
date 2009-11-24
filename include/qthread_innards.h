@@ -19,7 +19,6 @@
 # endif
 # include <stdarg.h>		       /* for va_start and va_end */
 #endif
-//#include <cprops/hashtable.h>
 #include <pthread.h>
 #include <qt_hash.h>
 
@@ -117,7 +116,7 @@ static QINLINE void qthread_debug(int level, char *format, ...)
     va_list args;
 
     if (level <= debuglevel) {
-	static char buf[1024];	// protected by the output_lock
+	static char buf[1024];	/* protected by the output_lock */
 
 	char *head = buf;
 
