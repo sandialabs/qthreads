@@ -20,11 +20,9 @@ aligned_t qincr(qthread_t *me, void *arg)
 int main(int argc, char *argv[])
 {
     aligned_t rets[NUM_THREADS];
-    size_t i;
     qthread_t *me;
     qtimer_t timer = qtimer_new();
     double cumulative_time = 0.0;
-    size_t counter = 0;
 
     if (qthread_initialize() != QTHREAD_SUCCESS) {
 	fprintf(stderr, "qthread library could not be initialized!\n");
