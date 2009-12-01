@@ -155,6 +155,7 @@ unsigned qthread_id(const qthread_t * t);
 qthread_shepherd_id_t qthread_shep(const qthread_t * t);
 size_t qthread_stackleft(const qthread_t * t);
 aligned_t *qthread_retloc(const qthread_t * t);
+int qthread_shep_ok(const qthread_t * t);
 
 /* returns the distance from one shepherd to another */
 int qthread_distance(const qthread_shepherd_id_t src,

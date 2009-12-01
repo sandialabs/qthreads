@@ -3960,6 +3960,21 @@ qthread_shepherd_id_t qthread_shep(const qthread_t * t)
     }
 }				       /*}}} */
 
+int qthread_shep_ok(const qthread_t * t)
+{
+    qthread_shepherd_t *ret;
+
+    if (t) {
+	return t->shepherd_ptr->active;
+    }
+    ret = (qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
+    if (ret == NULL) {
+	return QTHREAD_PTHREAD_ERROR;
+    } else {
+	return ret->active;
+    }
+}
+
 unsigned int qthread_internal_shep_to_node(const qthread_shepherd_id_t shep)
 {				       /*{{{ */
     return qlib->shepherds[shep].node;
