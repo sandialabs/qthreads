@@ -1421,6 +1421,10 @@ int qthread_initialize(void)
 #endif
 
     qthread_debug(ALL_CALLS, "qthread_init(): began.\n");
+    if (qlib != NULL) {
+	qthread_debug(ALL_DETAILS, "qthread_init(): redundant call\n");
+	return QTHREAD_SUCCESS;
+    }
 
 #ifdef QTHREAD_USE_PTHREADS
     {
