@@ -305,7 +305,7 @@ static void qthread_wrapper(void *ptr);
 
 static QINLINE void qthread_makecontext(ucontext_t * const, void * const, const size_t,
 					void (*)(void), const void * const,
-					const ucontext_t * const);
+					ucontext_t * const);
 static QINLINE qthread_addrstat_t *qthread_addrstat_new(qthread_shepherd_t *
 							shepherd);
 static void qthread_addrstat_delete(qthread_addrstat_t * m);
@@ -1975,7 +1975,7 @@ int qthread_initialize(void)
  * of the portability garbage. */
 static QINLINE void qthread_makecontext(ucontext_t * const c, void * const stack,
 					const size_t stacksize, void (*func) (void),
-					const void * const arg, const ucontext_t * const returnc)
+					const void * const arg, ucontext_t * const returnc)
 {				       /*{{{ */
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
     const unsigned int high = ((uintptr_t) arg) >> 32;
