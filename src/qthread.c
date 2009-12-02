@@ -2946,7 +2946,7 @@ int qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
 	    loopctr++;
 	} while (qlib->shepherds[shep].active != 1 &&
 		 loopctr <= qlib->nshepherds);
-	if (loopctr > qlib->nshepherds) {
+	if (loopctr >= qlib->nshepherds) {
 	    return QTHREAD_NOT_ALLOWED;
 	}
     } else {
@@ -2979,6 +2979,8 @@ int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
 {				       /*{{{ */
     qthread_t *t;
 
+    assert(shepherd < qlib->nshepherds);
+    assert(f != NULL);
     if (shepherd >= qlib->nshepherds || f == NULL) {
 	return QTHREAD_BADARGS;
     }
@@ -3016,7 +3018,9 @@ int qthread_fork_future_to(const qthread_t * me, const qthread_f f,
 {				       /*{{{ */
     qthread_t *t;
 
-    if (shepherd > qlib->nshepherds || f == NULL) {
+    assert(shepherd < qlib->nshepherds);
+    assert(f != NULL);
+    if (shepherd >= qlib->nshepherds || f == NULL) {
 	return QTHREAD_BADARGS;
     }
     if (qlib->shepherds[shepherd].active != 1) {
@@ -3105,7 +3109,7 @@ qthread_t *qthread_prepare(const qthread_f f, const void *arg,
 	    loopctr++;
 	} while (qlib->shepherds[shep].active != 1 &&
 		 loopctr <= qlib->nshepherds);
-	if (loopctr > qlib->nshepherds) {
+	if (loopctr >= qlib->nshepherds) {
 	    return NULL;
 	}
     } else {
