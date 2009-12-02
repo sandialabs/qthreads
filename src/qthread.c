@@ -1386,6 +1386,9 @@ static qthread_shepherd_t *qthread_find_active_shepherd(qthread_shepherd_id_t
 
 int qthread_init(qthread_shepherd_id_t nshepherds)
 {				       /*{{{ */
+    char newenv[100] = {0};
+    snprintf(newenv, 99, "QTHREAD_NUM_SHEPHERDS=%i", nshepherds);
+    putenv(newenv);
     return qthread_initialize();
 }				       /*}}} */
 
