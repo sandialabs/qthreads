@@ -2979,7 +2979,7 @@ int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
 {				       /*{{{ */
     qthread_t *t;
 
-    if (shepherd > qlib->nshepherds || f == NULL) {
+    if (shepherd >= qlib->nshepherds || f == NULL) {
 	return QTHREAD_BADARGS;
     }
     t = qthread_thread_new(f, arg, ret, shepherd);
