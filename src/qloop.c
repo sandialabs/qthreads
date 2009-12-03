@@ -4,6 +4,7 @@
 #include <stdlib.h>
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
+#include <qthread_asserts.h>
 
 /* So, the idea here is that this is a (braindead) C version of Megan's
  * mt_loop. */
@@ -246,6 +247,193 @@ void qt_loopaccum_balance_future(const size_t start, const size_t stop,
 				 const qt_accum_f acc)
 {
     qt_loopaccum_balance_inner(start, stop, size, out, func, argptr, acc, 1);
+}
+
+/* Now, the easy option for qt_loop_balance() is... effective, but has a major
+ * drawback: if some iterations take longer than others, we will have a laggard
+ * thread holding everyone up. Even worse, imagine if a shepherd is disabled
+ * during loop processing: with qt_loop_balance, the thread responsible for a
+ * 1/n chunk of the iteration space will be reassigned to another shepherd,
+ * thereby guaranteeing that one thread doesn't keep up with the rest (and that
+ * we will have idle shepherds).
+ *
+ * To handle this, we can use a slightly more complicated (and thus,
+ * less-efficient) method: a shared iteration "queue" (probably the wrong word,
+ * but gives you the right idea) that each thread can pull from. This allows
+ * for a certain degree of self-scheduling, and adapts better when shepherds
+ * are disabled.
+ */
+struct qqloop_iteration_queue {
+    volatile aligned_t start;
+    aligned_t stop;
+};
+struct qqloop_static_args {
+    qt_loop_f func;
+    void *arg;
+    volatile aligned_t donecount;
+    volatile aligned_t activesheps;
+    struct qqloop_iteration_queue *iq;
+};
+struct qqloop_wrapper_args {
+    qthread_shepherd_id_t shep;
+    struct qqloop_static_args *stat;
+};
+struct qqloop_wrapper_range {
+    size_t startat, stopat;
+};
+typedef struct qqloop_handle_s {
+    struct qqloop_wrapper_args *qwa;
+    struct qqloop_static_args stat;
+} qqloop_handle_t;
+
+static QINLINE int qqloop_get_iterations(struct qqloop_iteration_queue *const
+					 iq,
+					 struct qqloop_wrapper_range *const
+					 range, int i)
+{
+    saligned_t ret = iq->start;
+    saligned_t ret2 = iq->stop;
+
+    while (ret < iq->stop && ret != ret2) {
+	ret2 = qthread_cas(&(iq->start), ret, ret + i);
+    }
+    if (ret < iq->stop) {
+	range->startat = ret;
+	range->stopat = ret + i;
+	return 1;
+    } else {
+	range->startat = 0;
+	range->stopat = 0;
+	return 0;
+    }
+}
+
+static QINLINE struct qqloop_iteration_queue *qqloop_create_iq(size_t startat,
+							       size_t stopat)
+{
+    struct qqloop_iteration_queue *iq =
+	malloc(sizeof(struct qqloop_iteration_queue));
+    return iq;
+}
+
+static QINLINE void qqloop_destroy_iq(qthread_t * me,
+				      struct qqloop_iteration_queue *iq)
+{
+    free(iq);
+}
+
+static aligned_t qqloop_wrapper(qthread_t * me,
+				const struct qqloop_wrapper_args *arg)
+{
+    struct qqloop_iteration_queue *const iq = arg->stat->iq;
+    const qt_loop_f func = arg->stat->func;
+    void *const a = arg->stat->arg;
+    volatile aligned_t *const dc = &(arg->stat->donecount);
+
+    /* non-consts */
+    struct qqloop_wrapper_range range;
+    int safeexit = 1;
+
+    /* XXX: should be more intelligent about the size ranges we pull */
+    if (qthread_shep(me) == arg->shep && qqloop_get_iterations(iq, &range, 1)) {
+	do {
+	    func(me, range.startat, range.stopat, a);
+	    if (!qthread_shep_ok(me) || qthread_shep(me) != arg->shep) {
+		/* my shepherd has been disabled while I was running */
+		safeexit = 0;
+		qthread_incr(&(arg->stat->activesheps), -1);
+		break;
+	    }
+	} while (qqloop_get_iterations(iq, &range, 1));
+    }
+    if (safeexit) {
+	qthread_incr(dc, 1);
+    }
+    return 0;
+}
+
+qqloop_handle_t *qt_loop_queue_create(const size_t start, const size_t stop,
+				      const qt_loop_f func,
+				      void *const argptr)
+{
+    qassert_ret(func, NULL);
+    {
+	qqloop_handle_t *h = malloc(sizeof(qqloop_handle_t));
+
+	if (h) {
+	    const qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
+	    qthread_shepherd_id_t i;
+
+	    h->qwa = malloc(sizeof(struct qqloop_wrapper_args) * maxsheps);
+	    h->stat.donecount = 0;
+	    h->stat.activesheps = maxsheps;
+	    h->stat.iq = qqloop_create_iq(start, stop);
+	    h->stat.func = func;
+	    h->stat.arg = argptr;
+	    for (i = 0; i < maxsheps; i++) {
+		h->qwa[i].stat = &(h->stat);
+		h->qwa[i].shep = i;    // this is the only thread-specific piece of information...
+	    }
+	}
+	return h;
+    }
+}
+
+void qt_loop_queue_run(qqloop_handle_t * loop)
+{
+    qassert_retvoid(loop);
+    {
+	qthread_shepherd_id_t i;
+	const qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
+	qthread_t *const me = qthread_self();
+	volatile aligned_t *const dc = &(loop->stat.donecount);
+	volatile aligned_t *const as = &(loop->stat.activesheps);
+
+	for (i = 0; i < maxsheps; i++) {
+	    qthread_fork_to((qthread_f) qqloop_wrapper, loop->qwa + i, NULL,
+			    i);
+	}
+	/* turning this into a spinlock :P */
+	while (_(*dc) < _(*as)) {
+	    qthread_yield(me);
+	}
+	qqloop_destroy_iq(me, loop->stat.iq);
+	free(loop->qwa);
+	free(loop);
+    }
+}
+
+void qt_loop_queue_run_there(qqloop_handle_t * loop, qthread_shepherd_id_t shep)
+{
+    qassert_retvoid(loop);
+    qassert_retvoid(shep < qthread_num_shepherds());
+    {
+	qthread_t *const me = qthread_self();
+	volatile aligned_t *const dc = &(loop->stat.donecount);
+	volatile aligned_t *const as = &(loop->stat.activesheps);
+
+	qthread_fork_to((qthread_f) qqloop_wrapper, loop->qwa + shep, NULL,
+			shep);
+	/* turning this into a spinlock :P */
+	while (_(*dc) < _(*as)) {
+	    qthread_yield(me);
+	}
+	qqloop_destroy_iq(me, loop->stat.iq);
+	free(loop->qwa);
+	free(loop);
+    }
+}
+
+/* The easiest way to get shepherds/workers to REJOIN when/if shepherds are
+ * re-enabled is to make the user do it. */
+void qt_loop_queue_addworker(qqloop_handle_t *loop, const qthread_shepherd_id_t shep)
+{
+    qthread_incr(&(loop->stat.activesheps), 1);
+    if (_(loop->stat.donecount) == 0) {
+	qthread_fork_to((qthread_f) qqloop_wrapper, loop->qwa + shep, NULL, shep);
+    } else {
+	qthread_incr(&(loop->stat.activesheps), -1);
+    }
 }
 
 #define PARALLEL_FUNC(category, initials, _op_, type, shorttype) \
