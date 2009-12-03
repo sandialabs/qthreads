@@ -34,7 +34,7 @@ static void qt_loop_inner(const size_t start, const size_t stop,
 			  void *argptr, int future)
 {
     size_t i, threadct = 0;
-    qthread_t *me = qthread_self();
+    qthread_t *const me = qthread_self();
     aligned_t *rets;
     size_t steps = (stop - start) / stride;
     volatile aligned_t donecount = 0;
@@ -46,6 +46,9 @@ static void qt_loop_inner(const size_t start, const size_t stop,
     rets = (aligned_t *) malloc(sizeof(aligned_t) * steps);
     qwa = (struct qt_loop_wrapper_args *)
 	malloc(sizeof(struct qt_loop_wrapper_args) * steps);
+    assert(rets);
+    assert(qwa);
+    assert(func);
 
     for (i = start; i < stop; i += stride) {
 	qwa[threadct].func = func;
@@ -57,11 +60,12 @@ static void qt_loop_inner(const size_t start, const size_t stop,
 			   (qthread_shepherd_id_t) (threadct %
 						    qthread_num_shepherds()));
 	} else {
-	    qthread_fork_to((qthread_f) qt_loop_wrapper, qwa + threadct,
-			    rets + threadct,
-			    (qthread_shepherd_id_t) (threadct %
-						     qthread_num_shepherds
-						     ()));
+	    qassert(qthread_fork_to
+		    ((qthread_f) qt_loop_wrapper, qwa + threadct,
+		     rets + threadct,
+		     (qthread_shepherd_id_t) (threadct %
+					      qthread_num_shepherds())),
+		    QTHREAD_SUCCESS);
 	}
 	threadct++;
     }
@@ -117,16 +121,17 @@ static QINLINE void qt_loop_balance_inner(const size_t start,
 {
     qthread_shepherd_id_t i;
     const qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
-    struct qloop_wrapper_args *qwa =
+    struct qloop_wrapper_args *const qwa =
 	(struct qloop_wrapper_args *)malloc(sizeof(struct qloop_wrapper_args)
 					    * maxsheps);
     volatile aligned_t donecount = 0;
-    size_t len = stop - start;
-    size_t each = len / maxsheps;
-    size_t extra = len - (each * maxsheps);
+    const size_t each = (stop - start) / maxsheps;
+    size_t extra = (stop - start) - (each * maxsheps);
     size_t iterend = start;
-    qthread_t *me = qthread_self();
+    qthread_t *const me = qthread_self();
 
+    assert(func);
+    assert(qwa);
     for (i = 0; i < maxsheps; i++) {
 	qwa[i].func = func;
 	qwa[i].arg = argptr;
@@ -141,7 +146,9 @@ static QINLINE void qt_loop_balance_inner(const size_t start,
 	if (future) {
 	    future_fork_to((qthread_f) qloop_wrapper, qwa + i, NULL, i);
 	} else {
-	    qthread_fork_to((qthread_f) qloop_wrapper, qwa + i, NULL, i);
+	    qassert(qthread_fork_to
+		    ((qthread_f) qloop_wrapper, qwa + i, NULL, i),
+		    QTHREAD_SUCCESS);
 	}
     }
     /* turning this into a spinlock :P */
@@ -185,21 +192,26 @@ static QINLINE void qt_loopaccum_balance_inner(const size_t start,
 					       const int future)
 {
     qthread_shepherd_id_t i;
-    struct qloopaccum_wrapper_args *qwa = (struct qloopaccum_wrapper_args *)
+    struct qloopaccum_wrapper_args *const qwa =
+	(struct qloopaccum_wrapper_args *)
 	malloc(sizeof(struct qloopaccum_wrapper_args) *
 	       qthread_num_shepherds());
-    aligned_t *rets =
+    aligned_t *const rets =
 	(aligned_t *) malloc(sizeof(aligned_t) * qthread_num_shepherds());
     char *realrets = NULL;
-    size_t len = stop - start;
-    size_t each = len / qthread_num_shepherds();
-    size_t extra = len - (each * qthread_num_shepherds());
+    const size_t each = (stop - start) / qthread_num_shepherds();
+    size_t extra = (stop - start) - (each * qthread_num_shepherds());
     size_t iterend = start;
-    qthread_t *me = qthread_self();
+    qthread_t *const me = qthread_self();
 
     if (qthread_num_shepherds() > 1) {
 	realrets = (char *)malloc(size * (qthread_num_shepherds() - 1));
+	assert(realrets);
     }
+    assert(rets);
+    assert(qwa);
+    assert(func);
+    assert(acc);
 
     for (i = 0; i < qthread_num_shepherds(); i++) {
 	qwa[i].func = func;
@@ -220,8 +232,9 @@ static QINLINE void qt_loopaccum_balance_inner(const size_t start,
 	    future_fork_to((qthread_f) qloopaccum_wrapper, qwa + i, rets + i,
 			   i);
 	} else {
-	    qthread_fork_to((qthread_f) qloopaccum_wrapper, qwa + i, rets + i,
-			    i);
+	    qassert(qthread_fork_to
+		    ((qthread_f) qloopaccum_wrapper, qwa + i, rets + i, i),
+		    QTHREAD_SUCCESS);
 	}
     }
     for (i = 0; i < qthread_num_shepherds(); i++) {
@@ -231,7 +244,9 @@ static QINLINE void qt_loopaccum_balance_inner(const size_t start,
 	}
     }
     free(rets);
-    free(realrets);
+    if (realrets) {
+	free(realrets);
+    }
     free(qwa);
 }
 void qt_loopaccum_balance(const size_t start, const size_t stop,
