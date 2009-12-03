@@ -2941,6 +2941,8 @@ int qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
     qthread_shepherd_t *myshep =
 	(qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
 
+    qthread_debug(THREAD_BEHAVIOR, "qthread_fork(%p, %p, %p)\n", f, arg, ret);
+    assert(qlib);
     assert(myshep);
     if (myshep) {		       /* note: for forking from a qthread, NO LOCKS! */
 	int loopctr = 0;
