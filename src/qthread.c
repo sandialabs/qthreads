@@ -2953,7 +2953,8 @@ int qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
 	    loopctr++;
 	} while (qlib->shepherds[shep].active != 1 &&
 		 loopctr <= qlib->nshepherds);
-	if (loopctr >= qlib->nshepherds) {
+	if (loopctr > qlib->nshepherds) {
+	    qthread_debug(THREAD_BEHAVIOR, "qthread_fork(): could not find an active shepherd\n");
 	    return QTHREAD_NOT_ALLOWED;
 	}
     } else {
@@ -2978,6 +2979,7 @@ int qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
 	qt_lfqueue_enqueue(qlib->shepherds[shep].ready, t, myshep);
 	return QTHREAD_SUCCESS;
     }
+    qthread_debug(THREAD_BEHAVIOR, "qthread_fork(): malloc error\n");
     return QTHREAD_MALLOC_ERROR;
 }				       /*}}} */
 
@@ -3116,7 +3118,7 @@ qthread_t *qthread_prepare(const qthread_f f, const void *arg,
 	    loopctr++;
 	} while (qlib->shepherds[shep].active != 1 &&
 		 loopctr <= qlib->nshepherds);
-	if (loopctr >= qlib->nshepherds) {
+	if (loopctr > qlib->nshepherds) {
 	    return NULL;
 	}
     } else {
