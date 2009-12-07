@@ -917,6 +917,17 @@ static Q_NOINLINE volatile aligned_t *vol_id_a(volatile aligned_t * ptr)
 #ifdef QTHREAD_DEBUG
 enum qthread_debug_levels debuglevel = 0;
 pthread_mutex_t output_lock = PTHREAD_MUTEX_INITIALIZER;
+
+int qthread_debuglevel(int d)
+{
+    if (d >= 0) debuglevel = d;
+    return debuglevel;
+}
+#else
+int qthread_debuglevel(int d)
+{
+    return 0;
+}
 #endif
 
 #ifdef QTHREAD_LOCK_PROFILING
@@ -1551,7 +1562,7 @@ int qthread_initialize(void)
 	struct rlimit rlp;
 
 	qassert(getrlimit(RLIMIT_STACK, &rlp), 0);
-	qthread_debug(THREAD_DETAILS, "stack sizes ... cur: %u max: %u\n",
+	qthread_debug(THREAD_DETAILS, "qthread_init(): stack sizes ... cur: %u max: %u\n",
 		      rlp.rlim_cur, rlp.rlim_max);
 	if (rlp.rlim_cur == RLIM_INFINITY) {
 	    qlib->master_stack_size = 8 * 1024 * 1024;
@@ -2292,8 +2303,21 @@ qthread_t *qthread_self(void)
 
 size_t qthread_stackleft(const qthread_t * t)
 {				       /*{{{ */
+    const qthread_t * f = t;
     if (t != NULL && t->stack != NULL) {
-	return (size_t) (&t) - (size_t) (t->stack);
+	assert((size_t) & f > (size_t) t->stack &&
+	       (size_t) & f < ((size_t) t->stack + qlib->qthread_stack_size));
+#ifdef STACK_GROWS_DOWN
+	/* not tested */
+	assert(((size_t) (t->stack) + qlib->qthread_stack_size) -
+	       (size_t) (&f) < qlib->qthread_stack_size);
+	return ((size_t) (t->stack) + qlib->qthread_stack_size) -
+	    (size_t) (&f);
+#else
+	assert((size_t) (&f) - (size_t) (t->stack) <
+	       qlib->qthread_stack_size);
+	return (size_t) (&f) - (size_t) (t->stack);
+#endif
     } else {
 	return 0;
     }
@@ -2803,6 +2827,8 @@ static void qthread_wrapper(void *ptr)
     qthread_debug(THREAD_BEHAVIOR,
 		  "qthread_wrapper(): tid %u executing f=%p arg=%p...\n",
 		  t->thread_id, t->f, t->arg);
+    assert((size_t)&t > (size_t)t->stack &&
+	   (size_t)&t < ((size_t)t->stack + qlib->qthread_stack_size));
 #ifdef QTHREAD_COUNT_THREADS
     qthread_internal_incr(&threadcount, &threadcount_lock);
     qassert(pthread_mutex_lock(&concurrentthreads_lock), 0);

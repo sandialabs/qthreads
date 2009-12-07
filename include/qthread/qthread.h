@@ -149,6 +149,9 @@ int qthread_schedule_on(qthread_t * t, const qthread_shepherd_id_t shepherd);
 /* This is a function to move a thread from one shepherd to another. */
 int qthread_migrate_to(qthread_t * me, const qthread_shepherd_id_t shepherd);
 
+/* This function sets the debug level if debugging has been enabled */
+int qthread_debuglevel(int);
+
 /* these are accessor functions for use by the qthreads to retrieve information
  * about themselves */
 unsigned qthread_id(const qthread_t * t);
