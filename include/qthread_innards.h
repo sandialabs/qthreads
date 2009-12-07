@@ -5,6 +5,8 @@
 # include "config.h"
 #endif
 
+#include <math.h>
+
 #include "qthread_asserts.h"
 
 #if defined(HAVE_UCONTEXT_H) && defined(HAVE_NATIVE_MAKECONTEXT)
@@ -144,34 +146,28 @@ static QINLINE void qthread_debug(int level, char *format, ...)
 		    }
 		    case 'p':
 		    case 'x':
-		    {
-			uintptr_t num = 0;
-
-			unsigned base = 0;
-
 			*head++ = '0';
 			*head++ = 'x';
 		    case 'u':
 		    case 'd':
 		    case 'i':
+		    {
+			uintptr_t num;
+			unsigned base;
+
 			num = va_arg(args, uintptr_t);
-			base = (ch == 'p') ? 16 : 10;
+			base = (ch == 'p' || ch == 'x') ? 16 : 10;
 			if (!num) {
 			    *head++ = '0';
 			} else {
 			    /* count places */
-			    uintptr_t tmp = num;
-
 			    unsigned places = 0;
 
-			    while (tmp >= base) {
-				tmp /= base;
-				places++;
-			    }
+			    places = log(num)/log(base);
 			    head += places;
 			    places = 0;
 			    while (num >= base) {
-				tmp = num % base;
+				uintptr_t tmp = num % base;
 				*(head - places) =
 				    (tmp <
 				     10) ? ('0' + tmp) : ('a' + tmp - 10);
