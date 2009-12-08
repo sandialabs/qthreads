@@ -3267,7 +3267,7 @@ int qthread_migrate_to(qthread_t * me, const qthread_shepherd_id_t shepherd)
 int qthread_feb_status(const aligned_t * addr)
 {				       /*{{{ */
     qthread_addrstat_t *m;
-    aligned_t *alignedaddr;
+    const aligned_t *alignedaddr;
     int status = 1;		/* full */
     const int lockbin = QTHREAD_CHOOSE_STRIPE(addr);
 
@@ -3444,7 +3444,7 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t * shep,
 int qthread_empty(qthread_t * me, const aligned_t * dest)
 {				       /*{{{ */
     qthread_addrstat_t *m;
-    aligned_t *alignedaddr;
+    const aligned_t *alignedaddr;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
 
     ALIGN(dest, alignedaddr, "qthread_empty()");
@@ -3482,7 +3482,7 @@ int qthread_empty(qthread_t * me, const aligned_t * dest)
 int qthread_fill(qthread_t * me, const aligned_t * dest)
 {				       /*{{{ */
     qthread_addrstat_t *m;
-    aligned_t *alignedaddr;
+    const aligned_t *alignedaddr;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
 
     ALIGN(dest, alignedaddr, "qthread_fill()");
@@ -3656,7 +3656,7 @@ int qthread_readFF(qthread_t * me, aligned_t * restrict const dest,
 {				       /*{{{ */
     qthread_addrstat_t *m = NULL;
     qthread_addrres_t *X = NULL;
-    aligned_t *alignedaddr;
+    const aligned_t *alignedaddr;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(src);
 
     QTHREAD_LOCK_TIMER_DECLARATION(febblock);
@@ -3736,7 +3736,7 @@ int qthread_readFE(qthread_t * me, aligned_t * restrict const dest,
 		   const aligned_t * restrict const src)
 {				       /*{{{ */
     qthread_addrstat_t *m;
-    aligned_t *alignedaddr;
+    const aligned_t *alignedaddr;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(src);
 
     QTHREAD_LOCK_TIMER_DECLARATION(febblock);
@@ -3799,7 +3799,7 @@ int qthread_readFE(qthread_t * me, aligned_t * restrict const dest,
 	qthread_debug(LOCK_BEHAVIOR,
 		      "qthread_readFF(): tid %u succeeded on %p=%p\n",
 		      me->thread_id, dest, src);
-	qthread_gotlock_empty(me->shepherd_ptr, m, alignedaddr, 0);
+	qthread_gotlock_empty(me->shepherd_ptr, m, (void*)alignedaddr, 0);
     }
     QTHREAD_LOCK_TIMER_STOP(febblock, me);
     return QTHREAD_SUCCESS;
