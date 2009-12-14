@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
     CHECK_VERBOSE();
     NUMARG(num_dists, "TEST_NUM_DISTS");
     if (num_dists > 8) {
-	num_dists == 8;
+	num_dists = 8;
     }
 
     /* iterate over all the different distribution types */

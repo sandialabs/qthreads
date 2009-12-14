@@ -32,6 +32,7 @@ static void assignrand(qthread_t * me, const size_t startat,
     }
 }
 
+#if 0 /* unused */
 static void printout(int *restrict * restrict out)
 {
     size_t i;
@@ -50,6 +51,7 @@ static void printout(int *restrict * restrict out)
 	printf("\n");
     }
 }
+#endif
 
 static void mult(const int *inta, const int *intb, int *restrict out)
 {

@@ -307,9 +307,9 @@ static void qthread_wrapper(unsigned int high, unsigned int low);
 static void qthread_wrapper(void *ptr);
 #endif
 
-static QINLINE void qthread_makecontext(ucontext_t *, void *, size_t,
-					void (*)(void), const void *,
-					ucontext_t *);
+static QINLINE void qthread_makecontext(ucontext_t * const, void * const, const size_t,
+					void (*)(void), const void * const,
+					ucontext_t * const);
 static QINLINE qthread_addrstat_t *qthread_addrstat_new(qthread_shepherd_t *
 							shepherd);
 static void qthread_addrstat_delete(qthread_addrstat_t * m);
@@ -424,7 +424,7 @@ static QINLINE void *ALLOC_STACK(qthread_shepherd_t * shep)
 	     PROT_NONE);
     return tmp + getpagesize();
 }
-static QINLINE void *FREE_STACK(qthread_shepherd_t * shep, void *t)
+static QINLINE void FREE_STACK(qthread_shepherd_t * shep, void *t)
 {
     char *tmp = t;
 
@@ -453,7 +453,7 @@ static QINLINE void *ALLOC_STACK(qthread_shepherd_t * shep)
 	     PROT_NONE);
     return tmp + getpagesize();
 }
-static QINLINE void *FREE_STACK(qthread_shepherd_t * shep, void *t)
+static QINLINE void FREE_STACK(qthread_shepherd_t * shep, void *t)
 {
     char *tmp = t;
 
@@ -921,6 +921,17 @@ static Q_NOINLINE volatile aligned_t *vol_id_a(volatile aligned_t * ptr)
 #ifdef QTHREAD_DEBUG
 enum qthread_debug_levels debuglevel = 0;
 pthread_mutex_t output_lock = PTHREAD_MUTEX_INITIALIZER;
+
+int qthread_debuglevel(int d)
+{
+    if (d >= 0) debuglevel = d;
+    return debuglevel;
+}
+#else
+int qthread_debuglevel(int d)
+{
+    return 0;
+}
 #endif
 
 #ifdef QTHREAD_LOCK_PROFILING
@@ -1390,6 +1401,9 @@ static qthread_shepherd_t *qthread_find_active_shepherd(qthread_shepherd_id_t
 
 int qthread_init(qthread_shepherd_id_t nshepherds)
 {				       /*{{{ */
+    char newenv[100] = {0};
+    snprintf(newenv, 99, "QTHREAD_NUM_SHEPHERDS=%i", nshepherds);
+    putenv(newenv);
     return qthread_initialize();
 }				       /*}}} */
 
@@ -1422,6 +1436,16 @@ int qthread_initialize(void)
 #endif
 
     qthread_debug(ALL_CALLS, "qthread_init(): began.\n");
+    if (qlib != NULL) {
+	qthread_debug(ALL_DETAILS, "qthread_init(): redundant call\n");
+	return QTHREAD_SUCCESS;
+    }
+
+    {
+	char **argv = { { 0 } };
+	int ret = gasnet_init(0, argv);
+	printf("gasnet_init returned %i\n", ret);
+    }
 
 #ifdef QTHREAD_USE_PTHREADS
     {
@@ -1548,7 +1572,7 @@ int qthread_initialize(void)
 	struct rlimit rlp;
 
 	qassert(getrlimit(RLIMIT_STACK, &rlp), 0);
-	qthread_debug(THREAD_DETAILS, "stack sizes ... cur: %u max: %u\n",
+	qthread_debug(THREAD_DETAILS, "qthread_init(): stack sizes ... cur: %u max: %u\n",
 		      rlp.rlim_cur, rlp.rlim_max);
 	if (rlp.rlim_cur == RLIM_INFINITY) {
 	    qlib->master_stack_size = 8 * 1024 * 1024;
@@ -1977,9 +2001,9 @@ int qthread_initialize(void)
 /* This initializes a context (c) to run the function (func) with a single
  * argument (arg). This is just a wrapper around makecontext that isolates some
  * of the portability garbage. */
-static QINLINE void qthread_makecontext(ucontext_t * c, void *stack,
-					size_t stacksize, void (*func) (void),
-					const void *arg, ucontext_t * returnc)
+static QINLINE void qthread_makecontext(ucontext_t * const c, void * const stack,
+					const size_t stacksize, void (*func) (void),
+					const void * const arg, ucontext_t * const returnc)
 {				       /*{{{ */
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
     const unsigned int high = ((uintptr_t) arg) >> 32;
@@ -2016,7 +2040,9 @@ static QINLINE void qthread_makecontext(ucontext_t * c, void *stack,
     makecontext(c, func, 1, arg);
 # endif /* EXTRA_MAKECONTEXT_ARGC */
 #endif /* QTHREAD_MAKECONTEXT_SPLIT */
-    assert(c->uc_link == returnc);
+#ifdef HAVE_NATIVE_MAKECONTEXT
+    assert((void*)c->uc_link == (void*)returnc);
+#endif
 }				       /*}}} */
 
 void qthread_finalize(void)
@@ -2287,8 +2313,21 @@ qthread_t *qthread_self(void)
 
 size_t qthread_stackleft(const qthread_t * t)
 {				       /*{{{ */
+    const qthread_t * f = t;
     if (t != NULL && t->stack != NULL) {
-	return (size_t) (&t) - (size_t) (t->stack);
+	assert((size_t) & f > (size_t) t->stack &&
+	       (size_t) & f < ((size_t) t->stack + qlib->qthread_stack_size));
+#ifdef STACK_GROWS_DOWN
+	/* not tested */
+	assert(((size_t) (t->stack) + qlib->qthread_stack_size) -
+	       (size_t) (&f) < qlib->qthread_stack_size);
+	return ((size_t) (t->stack) + qlib->qthread_stack_size) -
+	    (size_t) (&f);
+#else
+	assert((size_t) (&f) - (size_t) (t->stack) <
+	       qlib->qthread_stack_size);
+	return (size_t) (&f) - (size_t) (t->stack);
+#endif
     } else {
 	return 0;
     }
@@ -2798,6 +2837,8 @@ static void qthread_wrapper(void *ptr)
     qthread_debug(THREAD_BEHAVIOR,
 		  "qthread_wrapper(): tid %u executing f=%p arg=%p...\n",
 		  t->thread_id, t->f, t->arg);
+    assert((size_t)&t > (size_t)t->stack &&
+	   (size_t)&t < ((size_t)t->stack + qlib->qthread_stack_size));
 #ifdef QTHREAD_COUNT_THREADS
     qthread_internal_incr(&threadcount, &threadcount_lock);
     qassert(pthread_mutex_lock(&concurrentthreads_lock), 0);
@@ -2936,6 +2977,8 @@ int qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
     qthread_shepherd_t *myshep =
 	(qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
 
+    qthread_debug(THREAD_BEHAVIOR, "qthread_fork(%p, %p, %p)\n", f, arg, ret);
+    assert(qlib);
     assert(myshep);
     if (myshep) {		       /* note: for forking from a qthread, NO LOCKS! */
 	int loopctr = 0;
@@ -2949,6 +2992,7 @@ int qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
 	} while (qlib->shepherds[shep].active != 1 &&
 		 loopctr <= qlib->nshepherds);
 	if (loopctr > qlib->nshepherds) {
+	    qthread_debug(THREAD_BEHAVIOR, "qthread_fork(): could not find an active shepherd\n");
 	    return QTHREAD_NOT_ALLOWED;
 	}
     } else {
@@ -2973,6 +3017,7 @@ int qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
 	qt_lfqueue_enqueue(qlib->shepherds[shep].ready, t, myshep);
 	return QTHREAD_SUCCESS;
     }
+    qthread_debug(THREAD_BEHAVIOR, "qthread_fork(): malloc error\n");
     return QTHREAD_MALLOC_ERROR;
 }				       /*}}} */
 
@@ -2981,7 +3026,9 @@ int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
 {				       /*{{{ */
     qthread_t *t;
 
-    if (shepherd > qlib->nshepherds || f == NULL) {
+    assert(shepherd < qlib->nshepherds);
+    assert(f != NULL);
+    if (shepherd >= qlib->nshepherds || f == NULL) {
 	return QTHREAD_BADARGS;
     }
     t = qthread_thread_new(f, arg, ret, shepherd);
@@ -3018,7 +3065,9 @@ int qthread_fork_future_to(const qthread_t * me, const qthread_f f,
 {				       /*{{{ */
     qthread_t *t;
 
-    if (shepherd > qlib->nshepherds || f == NULL) {
+    assert(shepherd < qlib->nshepherds);
+    assert(f != NULL);
+    if (shepherd >= qlib->nshepherds || f == NULL) {
 	return QTHREAD_BADARGS;
     }
     if (qlib->shepherds[shepherd].active != 1) {
@@ -3228,7 +3277,7 @@ int qthread_migrate_to(qthread_t * me, const qthread_shepherd_id_t shepherd)
 int qthread_feb_status(const aligned_t * addr)
 {				       /*{{{ */
     qthread_addrstat_t *m;
-    aligned_t *alignedaddr;
+    const aligned_t *alignedaddr;
     int status = 1;		/* full */
     const int lockbin = QTHREAD_CHOOSE_STRIPE(addr);
 
@@ -3405,7 +3454,7 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t * shep,
 int qthread_empty(qthread_t * me, const aligned_t * dest)
 {				       /*{{{ */
     qthread_addrstat_t *m;
-    aligned_t *alignedaddr;
+    const aligned_t *alignedaddr;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
 
     ALIGN(dest, alignedaddr, "qthread_empty()");
@@ -3443,7 +3492,7 @@ int qthread_empty(qthread_t * me, const aligned_t * dest)
 int qthread_fill(qthread_t * me, const aligned_t * dest)
 {				       /*{{{ */
     qthread_addrstat_t *m;
-    aligned_t *alignedaddr;
+    const aligned_t *alignedaddr;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
 
     ALIGN(dest, alignedaddr, "qthread_fill()");
@@ -3617,7 +3666,7 @@ int qthread_readFF(qthread_t * me, aligned_t * restrict const dest,
 {				       /*{{{ */
     qthread_addrstat_t *m = NULL;
     qthread_addrres_t *X = NULL;
-    aligned_t *alignedaddr;
+    const aligned_t *alignedaddr;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(src);
 
     QTHREAD_LOCK_TIMER_DECLARATION(febblock);
@@ -3697,7 +3746,7 @@ int qthread_readFE(qthread_t * me, aligned_t * restrict const dest,
 		   const aligned_t * restrict const src)
 {				       /*{{{ */
     qthread_addrstat_t *m;
-    aligned_t *alignedaddr;
+    const aligned_t *alignedaddr;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(src);
 
     QTHREAD_LOCK_TIMER_DECLARATION(febblock);
@@ -3760,7 +3809,7 @@ int qthread_readFE(qthread_t * me, aligned_t * restrict const dest,
 	qthread_debug(LOCK_BEHAVIOR,
 		      "qthread_readFF(): tid %u succeeded on %p=%p\n",
 		      me->thread_id, dest, src);
-	qthread_gotlock_empty(me->shepherd_ptr, m, alignedaddr, 0);
+	qthread_gotlock_empty(me->shepherd_ptr, m, (void*)alignedaddr, 0);
     }
     QTHREAD_LOCK_TIMER_STOP(febblock, me);
     return QTHREAD_SUCCESS;
@@ -3961,6 +4010,21 @@ qthread_shepherd_id_t qthread_shep(const qthread_t * t)
 	return ret->shepherd_id;
     }
 }				       /*}}} */
+
+int qthread_shep_ok(const qthread_t * t)
+{
+    qthread_shepherd_t *ret;
+
+    if (t) {
+	return t->shepherd_ptr->active;
+    }
+    ret = (qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
+    if (ret == NULL) {
+	return QTHREAD_PTHREAD_ERROR;
+    } else {
+	return ret->active;
+    }
+}
 
 unsigned int qthread_internal_shep_to_node(const qthread_shepherd_id_t shep)
 {				       /*{{{ */

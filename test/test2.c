@@ -10,9 +10,14 @@
 static unsigned int target = 1000;
 static aligned_t x = 0;
 
-//pthread_mutex_t alldone = PTHREAD_MUTEX_INITIALIZER;
-
 static aligned_t alldone;
+
+static Q_NOINLINE void thread2(qthread_t *t, size_t left)
+{
+    int foo = qthread_stackleft(t);
+    iprintf("level2: %i bytes left\n", foo);
+    assert(foo < left);
+}
 
 static aligned_t thread(qthread_t * t, void *arg)
 {
@@ -20,7 +25,8 @@ static aligned_t thread(qthread_t * t, void *arg)
 
     //printf("thread(%p): me %i\n", (void*) t, me);
     int foo = qthread_stackleft(t);
-    //printf("%i bytes left\n", foo);
+    iprintf("%i bytes left\n", foo);
+    thread2(t, foo);
 
     assert(qthread_lock(t, &x) == 0);
     //printf("thread(%i): x=%d\n", me, x);

@@ -224,6 +224,7 @@ AS_IF([test "x$qthread_implementation" = "xsst"],
 	   ],
 	  [AS_IF([test "x$qthread_implementation" = "xunix"],[
 	  AC_SEARCH_LIBS([ceil],[m],[],[AC_MSG_ERROR([Can't seem to find ceil()])])
+	  AC_SEARCH_LIBS([gasnet_init],[gasnet-smp-par gasnet-mpi-par gasnet-udp-par gasnet_tools-par])
 	  AC_ARG_WITH([cprops],
 				  [AC_HELP_STRING([--with-cprops[=DIR]],
 								  [Enable the use of cprops, and optionally specify the location of libcprops library])])

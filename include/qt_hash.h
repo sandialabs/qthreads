@@ -8,7 +8,7 @@
 extern "C" {
 #endif
 
-typedef void *qt_key_t;
+typedef const void *qt_key_t;
 typedef struct qt_hash_s *qt_hash;
 typedef void (*qt_hash_deallocator_fn)(void*);
 typedef void (*qt_hash_callback_fn)(const qt_key_t, void *, void *);

@@ -75,7 +75,6 @@ int main(int argc, char *argv[])
     qthread_t *me;
     qarray *v, *h;
     qt_wavefront_lattice *L;
-    char *str;
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
     CHECK_VERBOSE();

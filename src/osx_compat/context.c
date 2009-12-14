@@ -16,9 +16,7 @@ void makecontext(ucontext_t *ucp, void (*func)(void), int argc, ...)
 	ucp->mc.r3 = va_arg(arg, long);
 	va_end(arg);
 }
-#endif
-
-#ifdef NEEDX86MAKECONTEXT
+#elif defined(NEEDX86MAKECONTEXT)
 void makecontext(ucontext_t *ucp, void (*func)(void), int argc, ...)
 {
 	uintptr_t *sp;

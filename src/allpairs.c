@@ -31,9 +31,13 @@ qthread_shepherd_id_t **halfway = NULL;
 //aligned_t stealing_penalty = 0;
 #endif
 
+union distfuncunion {
+    dist_f d;
+    dist_out_f od;
+};
 struct qt_ap_wargs {
     qdqueue_t *restrict work_queue;
-    const void *distfunc;
+    const union distfuncunion f;
     const int outfunc_style;
     volatile aligned_t *restrict const no_more_work;
     volatile aligned_t *restrict const donecount;
@@ -92,7 +96,7 @@ static aligned_t qt_ap_worker(qthread_t * restrict me,
 	    }
 #endif
 	    if (args->outfunc_style == 1) {
-		const dist_out_f f = (dist_out_f) (args->distfunc);
+		const dist_out_f f = args->f.od;
 
 		if (args->output == NULL) {
 		    for (a1_i = 0; a1_i < (wu->a1_stop - wu->a1_start);
@@ -125,7 +129,7 @@ static aligned_t qt_ap_worker(qthread_t * restrict me,
 		    }
 		}
 	    } else {
-		const dist_f f = (dist_f) (args->distfunc);
+		const dist_f f = args->f.d;
 
 		for (a1_i = 0; a1_i < (wu->a1_stop - wu->a1_start); a1_i++) {
 		    const char *restrict const this_a1_base =
@@ -228,7 +232,7 @@ static void qt_ap_genwork(qthread_t * restrict me, const size_t startat,
  * 3. Per-shepherd worker threads pull out work and execute it, ideally near the data they work on.
  */
 static void qt_allpairs_internal(const qarray * array1, const qarray * array2,
-				 const void *distfunc, int funcstyle,
+				 const union distfuncunion distfunc, int funcstyle,
 				 void *restrict * restrict output,
 				 const size_t outsize)
 {
@@ -323,11 +327,14 @@ void qt_allpairs_output(const qarray * array1, const qarray * array2,
 			void *restrict * restrict output,
 			const size_t outsize)
 {
-    qt_allpairs_internal(array1, array2, distfunc, 1, output, outsize);
+    union distfuncunion df;
+    df.od = distfunc;
+    qt_allpairs_internal(array1, array2, df, 1, output, outsize);
 }
 
 void qt_allpairs(const qarray * array1, const qarray * array2,
 		 const dist_f distfunc)
 {
-    qt_allpairs_internal(array1, array2, distfunc, 0, NULL, 0);
+    const union distfuncunion df = { distfunc };
+    qt_allpairs_internal(array1, array2, df, 0, NULL, 0);
 }

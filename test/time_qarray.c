@@ -117,8 +117,7 @@ int main(int argc, char *argv[])
     unsigned int dt_index;
     int enabled_tests = 7;
     int enabled_types = 255;
-    char *str;
-    
+
     assert(qthread_initialize() == QTHREAD_SUCCESS);
 
     CHECK_VERBOSE();

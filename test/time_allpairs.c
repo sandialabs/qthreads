@@ -36,7 +36,6 @@ int main(int argc, char *argv[])
     qthread_t *me;
     qtimer_t timer = qtimer_new();
     double cumulative_time = 0.0;
-    char *str;
 
     if (qthread_initialize() != QTHREAD_SUCCESS) {
 	fprintf(stderr, "qthread library could not be initialized!\n");

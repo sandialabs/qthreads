@@ -149,12 +149,16 @@ int qthread_schedule_on(qthread_t * t, const qthread_shepherd_id_t shepherd);
 /* This is a function to move a thread from one shepherd to another. */
 int qthread_migrate_to(qthread_t * me, const qthread_shepherd_id_t shepherd);
 
+/* This function sets the debug level if debugging has been enabled */
+int qthread_debuglevel(int);
+
 /* these are accessor functions for use by the qthreads to retrieve information
  * about themselves */
 unsigned qthread_id(const qthread_t * t);
 qthread_shepherd_id_t qthread_shep(const qthread_t * t);
 size_t qthread_stackleft(const qthread_t * t);
 aligned_t *qthread_retloc(const qthread_t * t);
+int qthread_shep_ok(const qthread_t * t);
 
 /* returns the distance from one shepherd to another */
 int qthread_distance(const qthread_shepherd_id_t src,
@@ -686,7 +690,7 @@ static QINLINE uint32_t qthread_incr32(volatile uint32_t * operand,
       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 
     uint32_t retval = incr;
-    asm volatile ("lock ;  xaddl %0, (%1);"
+    __asm__ __volatile__ ("lock ;  xaddl %0, (%1);"
 		  :"=r" (retval)
 		  :"r"  (operand), "0"(retval)
 		  :"memory");
@@ -876,7 +880,7 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand,
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
     uint64_t retval = incr;
 
-    asm volatile ("lock ; xaddq %0, (%1);"
+    __asm__ __volatile__ ("lock ; xaddq %0, (%1);"
 		  :"=r" (retval)
 		  :"r"     (operand), "0"(retval)
 		  :"memory");
