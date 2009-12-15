@@ -58,6 +58,9 @@
 #  include <sys/sysctl.h>
 # endif
 #endif
+#if defined(HAVE_SYSCONF) && ! defined(QTHREAD_HAVE_MACHTOPO) && defined(HAVE_UNISTD_H)
+# include <unistd.h>
+#endif
 #ifdef HAVE_MACH_THREAD_POLICY_H
 # include <mach/mach_init.h>
 # include <mach/thread_policy.h>
@@ -1484,7 +1487,9 @@ int qthread_initialize(void)
 	nshepherds =
 	    lgrp_cpus(lgrp_cookie, lgrp_root(lgrp_cookie), NULL, 0,
 		      LGRP_CONTENT_ALL);
-#elif defined(HAVE_SYSCTL)
+#elif defined(HAVE_SYSCONF) && ! defined(QTHREAD_HAVE_MACHTOPO) && defined(_SC_NPROCESSORS_CONF) /* Linux */
+	nshepherds = sysconf(_SC_NPROCESSORS_CONF);
+#elif defined(HAVE_SYSCTL) && defined(CTL_HW) && defined(HW_NCPU)
 	int name[2] = { CTL_HW, HW_NCPU };
 	uint32_t oldv;
 	size_t oldvlen = sizeof(oldv);
