@@ -50,6 +50,14 @@
 #ifdef QTHREAD_HAVE_LIBNUMA
 # include <numa.h>
 #endif
+#ifdef HAVE_SYSCTL
+# ifdef HAVE_SYS_TYPES_H
+#  include <sys/types.h>
+# endif
+# ifdef HAVE_SYS_SYSCTL_H
+#  include <sys/sysctl.h>
+# endif
+#endif
 #ifdef HAVE_MACH_THREAD_POLICY_H
 # include <mach/mach_init.h>
 # include <mach/thread_policy.h>
@@ -88,7 +96,7 @@ enum threadstate {
 #define QTHREAD_REAL_MCCOY		2
 
 #ifndef QTHREAD_NOALIGNCHECK
-#define ALIGN(d, s, f) do { \
+#define QALIGN(d, s, f) do { \
     s = (aligned_t *) (((size_t) d) & (~(sizeof(aligned_t)-1))); \
     if (s != d) { \
 	fprintf(stderr, \
@@ -97,7 +105,7 @@ enum threadstate {
     } \
 } while(0)
 #else /* QTHREAD_NOALIGNCHECK */
-#define ALIGN(d, s, f) (s)=(d)
+#define QALIGN(d, s, f) (s)=(d)
 #endif
 
 #ifdef DEBUG_DEADLOCK
@@ -1476,6 +1484,20 @@ int qthread_initialize(void)
 	nshepherds =
 	    lgrp_cpus(lgrp_cookie, lgrp_root(lgrp_cookie), NULL, 0,
 		      LGRP_CONTENT_ALL);
+#elif defined(HAVE_SYSCTL)
+	int name[2] = { CTL_HW, HW_NCPU };
+	uint32_t oldv;
+	size_t oldvlen = sizeof(oldv);
+	if (sysctl(name, 2, &oldv, &oldvlen, NULL, 0) < 0) {
+# ifdef QTHREAD_HAVE_MACHTOPO
+	    /* sysctl is the official query mechanism on Macs, so if it failed,
+	     * we want to know */
+	    perror("sysctl");
+# endif
+	} else {
+	    assert(oldvlen == sizeof(oldv));
+	    nshepherds = (int)oldv;
+	}
 #endif
 	if (nshepherds <= 0) {
 	    nshepherds = 1;
@@ -3271,7 +3293,7 @@ int qthread_feb_status(const aligned_t * addr)
     int status = 1;		/* full */
     const int lockbin = QTHREAD_CHOOSE_STRIPE(addr);
 
-    ALIGN(addr, alignedaddr, "qthread_feb_status()");
+    QALIGN(addr, alignedaddr, "qthread_feb_status()");
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]); {
 	m = (qthread_addrstat_t *) qt_hash_get(qlib->FEBs[lockbin],
@@ -3447,7 +3469,7 @@ int qthread_empty(qthread_t * me, const aligned_t * dest)
     const aligned_t *alignedaddr;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
 
-    ALIGN(dest, alignedaddr, "qthread_empty()");
+    QALIGN(dest, alignedaddr, "qthread_empty()");
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]);
     {				       /* BEGIN CRITICAL SECTION */
@@ -3485,7 +3507,7 @@ int qthread_fill(qthread_t * me, const aligned_t * dest)
     const aligned_t *alignedaddr;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
 
-    ALIGN(dest, alignedaddr, "qthread_fill()");
+    QALIGN(dest, alignedaddr, "qthread_fill()");
     /* lock hash */
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]);
@@ -3525,7 +3547,7 @@ int qthread_writeF(qthread_t * me, aligned_t * restrict const dest,
     qthread_debug(LOCK_BEHAVIOR,
 		  "qthread_writeF(): tid %u dest=%p src=%p...\n",
 		  me->thread_id, dest, src);
-    ALIGN(dest, alignedaddr, "qthread_fill_with()");
+    QALIGN(dest, alignedaddr, "qthread_fill_with()");
     QTHREAD_LOCK_UNIQUERECORD(feb, dest, me);
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]); {	/* lock hash */
@@ -3584,7 +3606,7 @@ int qthread_writeEF(qthread_t * me, aligned_t * restrict const dest,
 		  me->thread_id, dest, src);
     QTHREAD_LOCK_UNIQUERECORD(feb, dest, me);
     QTHREAD_LOCK_TIMER_START(febblock);
-    ALIGN(dest, alignedaddr, "qthread_writeEF()");
+    QALIGN(dest, alignedaddr, "qthread_writeEF()");
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]);
     {
@@ -3669,7 +3691,7 @@ int qthread_readFF(qthread_t * me, aligned_t * restrict const dest,
 		  me->thread_id, dest, src);
     QTHREAD_LOCK_UNIQUERECORD(feb, src, me);
     QTHREAD_LOCK_TIMER_START(febblock);
-    ALIGN(src, alignedaddr, "qthread_readFF()");
+    QALIGN(src, alignedaddr, "qthread_readFF()");
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]);
     {
@@ -3749,7 +3771,7 @@ int qthread_readFE(qthread_t * me, aligned_t * restrict const dest,
 		  me->thread_id, dest, src);
     QTHREAD_LOCK_UNIQUERECORD(feb, src, me);
     QTHREAD_LOCK_TIMER_START(febblock);
-    ALIGN(src, alignedaddr, "qthread_readFE()");
+    QALIGN(src, alignedaddr, "qthread_readFE()");
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]);
     {

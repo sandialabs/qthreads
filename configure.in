@@ -247,7 +247,7 @@ AC_CACHE_SAVE
 AC_HEADER_STDC
 AC_HEADER_SYS_WAIT
 AC_HEADER_TIME
-AC_CHECK_HEADERS([stdlib.h fcntl.h ucontext.h sys/time.h sys/resource.h mach/mach_time.h malloc.h math.h])
+AC_CHECK_HEADERS([stdlib.h fcntl.h ucontext.h sys/time.h sys/resource.h mach/mach_time.h malloc.h math.h sys/types.h sys/sysctl.h])
 AX_CREATE_STDINT_H([include/qthread/qthread-int.h])
 AC_SYS_LARGEFILE
 QTHREAD_HASH_MAPS
@@ -371,7 +371,7 @@ AC_CACHE_SAVE
 ## --------------------------- ##
 AC_FUNC_VPRINTF
 AC_FUNC_MMAP
-AC_CHECK_FUNCS([strtol floor memalign posix_memalign memset memmove munmap memcpy getrlimit setrlimit fstat64 lseek64 getcontext swapcontext makecontext sched_yield processor_bind madvise])
+AC_CHECK_FUNCS([strtol floor memalign posix_memalign memset memmove munmap memcpy getrlimit setrlimit fstat64 lseek64 getcontext swapcontext makecontext sched_yield processor_bind madvise sysctl])
 QTHREAD_CHECK_QSORT
 AC_TRY_LINK([#include <sys/types.h>
 #include <sys/mman.h>
