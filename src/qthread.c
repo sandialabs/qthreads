@@ -1488,7 +1488,8 @@ int qthread_initialize(void)
 	    lgrp_cpus(lgrp_cookie, lgrp_root(lgrp_cookie), NULL, 0,
 		      LGRP_CONTENT_ALL);
 #elif defined(HAVE_SYSCONF) && ! defined(QTHREAD_HAVE_MACHTOPO) && defined(_SC_NPROCESSORS_CONF) /* Linux */
-	nshepherds = sysconf(_SC_NPROCESSORS_CONF);
+	long ret = sysconf(_SC_NPROCESSORS_CONF);
+	nshepherds = (ret > 0) ? ret : 1;
 #elif defined(HAVE_SYSCTL) && defined(CTL_HW) && defined(HW_NCPU)
 	int name[2] = { CTL_HW, HW_NCPU };
 	uint32_t oldv;
