@@ -1,6 +1,13 @@
 #ifndef QT_HASH_H
 #define QT_HASH_H
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+#ifdef HAVE_CPROPS
+# include <cprops/hashlist.h>
+#endif
+
 #include <stddef.h> /* for size_t (according to C89) */
 #include <stdint.h> /* for uintptr_t (according to C99) */
 
@@ -9,9 +16,14 @@ extern "C" {
 #endif
 
 typedef const void *qt_key_t;
+#ifndef HAVE_CPROPS
 typedef struct qt_hash_s *qt_hash;
-typedef void (*qt_hash_deallocator_fn)(void*);
 typedef void (*qt_hash_callback_fn)(const qt_key_t, void *, void *);
+#else
+typedef cp_hashlist *qt_hash;
+typedef int (*qt_hash_callback_fn)(void *, void *, void *);
+#endif
+typedef void (*qt_hash_deallocator_fn)(void*);
 
 qt_hash qt_hash_create();
 void qt_hash_destroy(qt_hash h);
