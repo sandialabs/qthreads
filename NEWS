@@ -6,6 +6,7 @@ New Features:
    shepherds
  - Shepherds an be enabled/disabled at runtime; threads are forcibly evicted
    from disabled shepherds
+ - A primitive queue-based for-loop to handle imbalanced loop iterations, the qqloop
 Improvements:
  - Now prefer qthread_initialize(), which doesn't take arguments;
    qthread_init() is deprecated (but still supported)
@@ -13,14 +14,19 @@ Improvements:
    placement
  - Better detection of insufficient compile environment
  - Better detection of cacheline size
+ - Better detection of CPUs on MacOS X and Linux, via sysctl and sysconf
  - Better compatibility with Intel compiler
- - Test codes use environment variables instead of arguments
+ - Better Sun Studio ASM support (still fighting ICE)
  - Better interaction with libnuma to detect desired number of shepherds
+ - Added a more lightweight qsort() implementation
+ - Test codes use environment variables instead of arguments
  - Compatibility with glibc's new qsort_r() function
  - Use autoconf 2.64's C++ "restrict" tests, rather than the broken 2.59 ones
- - Better Sun Studio ASM support (still fighting ICE)
  - Removed small qarray memory leak
+ - Standardized C++ detection of integer arguments
+ - Fixed error detection in qthread_fork_to()
  - Additional documentation
+ - Restored ability to avoid C++ by using cprops library
 --- 1.2 ---
 New Features:
  - Distributed Data Structures: array (qarray), queue (qdqueue), memory pool (qpool)
