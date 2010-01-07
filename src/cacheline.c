@@ -341,7 +341,7 @@ int qthread_cacheline()
     return cacheline_bytes;
 }				       /*}}} */
 
-#ifdef DEBUG_CPUIDno
+#ifdef DEBUG_CPUID
 int main()
 {
     int cl = qthread_cacheline();
