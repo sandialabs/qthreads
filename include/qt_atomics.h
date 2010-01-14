@@ -2,6 +2,7 @@
 #define QT_ATOMICS_H
 
 #include <qthread/common.h>
+#include <qthread/qthread.h>
 
 #ifdef QTHREAD_NEEDS_IA64INTRIN
 # ifdef HAVE_IA64INTRIN_H
@@ -13,7 +14,50 @@
 
 #ifdef QTHREAD_ATOMIC_CAS_PTR
 #define qt_cas(P,O,N) (void*)__sync_val_compare_and_swap((P),(O),(N))
+#elif defined(__tile__)
+#include <pthread.h>
+#warning this is a stupid way of doing this
+#define QTHREAD_CASLOCK(var)	var; pthread_mutex_t var##_caslock
+#define QTHREAD_CASLOCK_INIT(var,i)   var = i; pthread_mutex_init(&(var##_caslock), NULL)
+#define QTHREAD_CASLOCK_DESTROY(var)	pthread_mutex_destroy(&(var##_caslock))
+#define QTHREAD_CASLOCK_READ(var)   qt_cas_read((void*volatile*)&(var), &(var##_caslock))
+#define QT_CAS(var,oldv,newv) qt_cas_((void*volatile*)&(var), (void*)(oldv), (void*)(newv), &(var##_caslock))
+extern pthread_mutex_t big_honkin_cas_lock;
+static QINLINE void* qt_cas(void*volatile* const ptr, void* const oldv, void* const newv)
+{
+    void * ret;
+    pthread_mutex_lock(&big_honkin_cas_lock);
+    ret = *ptr;
+    if (*ptr == oldv) {
+	*ptr = newv;
+    }
+    pthread_mutex_unlock(&big_honkin_cas_lock);
+    return ret;
+}
+static QINLINE void* qt_cas_(void*volatile* const ptr, void* const oldv, void* const newv, pthread_mutex_t *lock)
+{
+    void * ret;
+    pthread_mutex_lock(lock);
+    ret = *ptr;
+    if (*ptr == oldv) {
+	*ptr = newv;
+    }
+    pthread_mutex_unlock(lock);
+    return ret;
+}
+static QINLINE void* qt_cas_read(void*volatile* const ptr, pthread_mutex_t *mutex)
+{
+    void * ret;
+    pthread_mutex_lock(mutex);
+    ret = *ptr;
+    pthread_mutex_unlock(mutex);
+    return ret;
+}
 #else
+#define QTHREAD_CASLOCK(var)	var
+#define QTHREAD_CASLOCK_INIT(var,i) var = i
+#define QTHREAD_CASLOCK_DESTROY(var)
+#define QThREAD_CASLOCK_READ(var)
 static QINLINE void* qt_cas(void*volatile* const ptr, void* const oldv, void* const newv)
 {
 # if defined(HAVE_GCC_INLINE_ASSEMBLY)
