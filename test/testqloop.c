@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
     CHECK_VERBOSE();
-    numarg(BIGLEN, "BIGLEN");
+    NUMARG(BIGLEN, "BIGLEN");
     future_init(128);
 
     {

@@ -45,8 +45,8 @@ int main(int argc, char *argv[])
     assert(qthread_initialize() == QTHREAD_SUCCESS);
     me = qthread_self();
     CHECK_VERBOSE();
-    numarg(ELEMENT_COUNT, "ELEMENT_COUNT");
-    numarg(THREAD_COUNT, "THREAD_COUNT");
+    NUMARG(ELEMENT_COUNT, "ELEMENT_COUNT");
+    NUMARG(THREAD_COUNT, "THREAD_COUNT");
 
     if ((q = qdqueue_create()) == NULL) {
 	fprintf(stderr, "qdqueue_create() failed!\n");
