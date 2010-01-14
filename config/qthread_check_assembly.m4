@@ -187,6 +187,11 @@ AC_DEFUN([QTHREAD_CHECK_ASSEMBLY],[
       qthread_gcc_inline_assign='"bis [$]31,[$]31,%0" : "=&r"(ret)'
     ;;
 
+	tile-*)
+	  qthread_cv_asm_arch="TILE"
+	  qthread_gcc_inline_assign='"movei %0, 5" : "=&r"(ret)'
+	;;
+
     mips-*|mips64-*)
       # Should really find some way to make sure that we are on
       # a MIPS III machine (r4000 and later)
