@@ -296,7 +296,7 @@ AC_CACHE_SAVE
 ## -------------------- ##
 ## Check for structures ##
 ## -------------------- ##
-AC_COMPILE_CHECK_SIZEOF([pthread_mutex_t], [#include <pthread.h>], [24 40 44 64])
+AC_CHECK_SIZEOF(pthread_mutex_t)
 dnl BWB - FIX ME - shouldn't we actually make sure on this size thing?
 AC_DEFINE([PTHREAD_MUTEX_SMALL_ENOUGH], [1],
    [this signifies that pthread_mutex_t is small enough to fit in the existing data structures])
@@ -354,7 +354,7 @@ QTHREAD_NOINLINE_ATTRIBUTE
 
 QTHREAD_CHECK_ASSEMBLY([have_assembly=1], [have_assembly=0])
 AS_IF([test "x$have_assembly" == "x0"],
-	  [AC_MSG_NOTICE(Compiling on a system without assembly support. This is not well-tested or supported. Expect things to break!)
+	  [AC_MSG_NOTICE(Compiling on a system without inline assembly support. This is not well-tested or supported. Expect things to break!)
 	   AS_IF([test "x$enable_software_increments" == x],
 			 [AC_MSG_NOTICE(turning on software increments ($have_assembly))
 			  enable_software_increments=yes],
@@ -446,12 +446,12 @@ int main() {
       		[AC_DEFINE([QTHREAD_MAKECONTEXT_SPLIT], [1], [makecontext() passes args as int-sized, not long-sized])])
 		qthread_makecontext_type="native"],
 		[AC_MSG_RESULT(no)
-		 QTHREAD_CHECK_OSX_COMPAT_MAKECONTEXT([qthread_makecontext_type="osx"])],
+		 QTHREAD_CHECK_COMPAT_MAKECONTEXT([qthread_makecontext_type="own"])],
 		[AC_MSG_RESULT(cross-compile assumes no)
-		 QTHREAD_CHECK_OSX_COMPAT_MAKECONTEXT([qthread_makecontext_type="osx"])
-		 qthread_makecontext_type="osx"])
+		 QTHREAD_CHECK_COMPAT_MAKECONTEXT([qthread_makecontext_type="own"])
+		 qthread_makecontext_type="own"])
   ], [
-    QTHREAD_CHECK_OSX_COMPAT_MAKECONTEXT([qthread_makecontext_type="osx"])
+    QTHREAD_CHECK_COMPAT_MAKECONTEXT([qthread_makecontext_type="own"])
   ])
 
   AS_IF([test "x$qthread_makecontext_type" = "xnone"], 
@@ -525,7 +525,7 @@ AC_SUBST(EXTRA_DISTCHECK_OPTIONS)
 
 AM_CONDITIONAL([COMPILE_TARGET_SST], [test "x$qthread_implementation" = "xsst"])
 AM_CONDITIONAL([COMPILE_TARGET_UNIX], [test "x$qthread_implementation" = "xunix"])
-AM_CONDITIONAL([QTHREAD_NEED_OSX_MAKECONTEXT], [test "x$qthread_makecontext_type" = "xosx"])
+AM_CONDITIONAL([QTHREAD_NEED_OWN_MAKECONTEXT], [test "x$qthread_makecontext_type" = "xown"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_MACH], [test "x$qthread_timer_type" = "xmach"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETHRTIME], [test "x$qthread_timer_type" = "xgethrtime"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_ALTIX], [test "x$qthread_timer_type" = "xaltix"])

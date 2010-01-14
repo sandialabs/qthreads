@@ -59,21 +59,24 @@ int main()
 ])
 
 
-# QTHREAD_CHECK_OSX_COMPAT_MAKECONTEXT([action-if-found], [action-if-not-found])
+# QTHREAD_CHECK_COMPAT_MAKECONTEXT([action-if-found], [action-if-not-found])
 # ------------------------------------------------------------------------------
-AC_DEFUN([QTHREAD_CHECK_OSX_COMPAT_MAKECONTEXT], [
-AC_CACHE_CHECK([for OS X compatibility makecontext],
-  [qthread_cv_osx_makecontext],
-  [qthread_cv_osx_makecontext="no"
+AC_DEFUN([QTHREAD_CHECK_COMPAT_MAKECONTEXT], [
+AC_CACHE_CHECK([for hand-implemented makecontext],
+  [qthread_cv_makecontext],
+  [qthread_cv_makecontext="no"
    case "$host" in
      *-darwin*)
-	  qthread_cv_osx_makecontext="yes"
+	  qthread_cv_makecontext="yes"
      ;;
+	 *tile*)
+	  qthread_cv_makecontext="yes"
+	 ;;
    esac])
 
-AS_IF([test "$qthread_cv_osx_makecontext" = "yes"],
+AS_IF([test "$qthread_cv_makecontext" = "yes"],
   [AC_CHECK_FUNCS([memmove], [], 
-    [AC_MSG_ERROR([A functional memmove is required for OS X makecontext.])])
+    [AC_MSG_ERROR([A functional memmove is required for the included makecontext.])])
    AC_CHECK_HEADERS([sys/ucontext.h stdarg.h sched.h signal.h sys/utsname.h])
    $1],
   [$2])

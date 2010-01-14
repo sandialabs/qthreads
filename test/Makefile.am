@@ -148,7 +148,7 @@ time_swap_SOURCES = time_swap.c
 time_swap_CPPFLAGS = -I$(top_srcdir)/src/ # for osx_compat
 time_swap_LDADD = $(QTIMERLIB)
 time_swap_DEPENDENCIES = $(QTIMERLIB)
-if QTHREAD_NEED_OSX_MAKECONTEXT
+if QTHREAD_NEED_OWN_MAKECONTEXT
 time_swap_LDADD += $(CONTEXTLIB)
 time_swap_DEPENDENCIES += $(CONTEXTLIB)
 endif
