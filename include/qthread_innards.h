@@ -30,6 +30,20 @@
 # define STRIPECOUNT 32
 #endif
 
+#if defined(HAVE_PTHREAD_SPIN_INIT) && ! defined(__tile__)
+# define QTHREAD_FASTLOCK_INIT(x) pthread_spin_init(&(x), PTHREAD_PROCESS_PRIVATE)
+# define QTHREAD_FASTLOCK_LOCK(x) pthread_spin_lock((x))
+# define QTHREAD_FASTLOCK_UNLOCK(x) pthread_spin_unlock((x))
+# define QTHREAD_FASTLOCK_DESTROY(x) pthread_spin_destroy(&(x))
+# define QTHREAD_FASTLOCK_TYPE pthread_spinlock_t
+#else
+# define QTHREAD_FASTLOCK_INIT(x) pthread_mutex_init(&(x), NULL)
+# define QTHREAD_FASTLOCK_LOCK(x) pthread_mutex_lock((x))
+# define QTHREAD_FASTLOCK_UNLOCK(x) pthread_mutex_unlock((x))
+# define QTHREAD_FASTLOCK_DESTROY(x) pthread_mutex_destroy(&(x))
+# define QTHREAD_FASTLOCK_TYPE pthread_mutex_t
+#endif
+
 typedef struct qlib_s
 {
     unsigned int nshepherds;
@@ -49,11 +63,11 @@ typedef struct qlib_s
 
     /* assigns a unique thread_id mostly for debugging! */
     aligned_t max_thread_id;
-    pthread_mutex_t max_thread_id_lock;
+    QTHREAD_FASTLOCK_TYPE max_thread_id_lock;
 
     /* round robin scheduler - can probably be smarter */
     aligned_t sched_shepherd;
-    pthread_mutex_t sched_shepherd_lock;
+    QTHREAD_FASTLOCK_TYPE sched_shepherd_lock;
 
     /* this is how we manage FEB-type locks
      * NOTE: this can be a major bottleneck and we should probably create
@@ -63,7 +77,7 @@ typedef struct qlib_s
     qt_hash locks[STRIPECOUNT];
 #ifdef QTHREAD_COUNT_THREADS
     aligned_t locks_stripes[STRIPECOUNT];
-    pthread_mutex_t locks_stripes_locks[STRIPECOUNT];
+    QTHREAD_FASTLOCK_TYPE locks_stripes_locks[STRIPECOUNT];
 #endif
     /* these are separated out for memory reasons: if you can get away with
      * simple locks, then you can use a little less memory. Subject to the same
@@ -73,7 +87,7 @@ typedef struct qlib_s
     qt_hash FEBs[STRIPECOUNT];
 #ifdef QTHREAD_COUNT_THREADS
     aligned_t febs_stripes[STRIPECOUNT];
-    pthread_mutex_t febs_stripes_locks[STRIPECOUNT];
+    QTHREAD_FASTLOCK_TYPE febs_stripes_locks[STRIPECOUNT];
 #endif
 }     *qlib_t;
 
