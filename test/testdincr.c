@@ -26,6 +26,7 @@ int main()
 
     qthread_initialize();
     me = qthread_self();
+    iprintf("%i shepherds\n", qthread_num_shepherds());
 
     ret_test = qthread_dincr(&master, 1);
     if (master != 1.0) {
@@ -36,6 +37,7 @@ int main()
 	fprintf(stderr,"ret_test = %f\n", ret_test);
     }
     assert(ret_test == 0.0);
+    iprintf("basic increment succeeded\n");
     master = 2;
     for (i = 0; i < 30; i++) {
 	qthread_fork(incr, (void *)(intptr_t) i, &(rets[i]));
@@ -52,6 +54,7 @@ int main()
 	}
     }
     assert(master == 32.0);
+    iprintf("30 concurrent threads successfully incremented by 1\n");
     master = 0.0;
     for (i = 0; i < 30; i++) {
 	qthread_fork(incr5, NULL, &(rets[i]));
@@ -63,6 +66,7 @@ int main()
 	fprintf(stderr,"master is %f rather than 150\n", master);
     }
     assert(master == 150.0);
+    iprintf("30 concurrent threads successfully incremented by 5\n");
 
     return 0;
 }
