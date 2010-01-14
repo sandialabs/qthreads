@@ -5,8 +5,8 @@
 #include <qthread/qdqueue.h>
 #include "argparsing.h"
 
-#define ELEMENT_COUNT 10000
-#define THREAD_COUNT 128
+static unsigned int ELEMENT_COUNT = 10000;
+static unsigned int THREAD_COUNT = 128;
 
 static aligned_t queuer(qthread_t * me, void *arg)
 {
@@ -45,6 +45,8 @@ int main(int argc, char *argv[])
     assert(qthread_initialize() == QTHREAD_SUCCESS);
     me = qthread_self();
     CHECK_VERBOSE();
+    numarg(ELEMENT_COUNT, "ELEMENT_COUNT");
+    numarg(THREAD_COUNT, "THREAD_COUNT");
 
     if ((q = qdqueue_create()) == NULL) {
 	fprintf(stderr, "qdqueue_create() failed!\n");

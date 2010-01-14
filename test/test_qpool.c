@@ -5,8 +5,8 @@
 #include <qthread/qpool.h>
 #include "argparsing.h"
 
-#define ELEMENT_COUNT 10000
-#define THREAD_COUNT 128
+static unsigned int ELEMENT_COUNT = 10000;
+static unsigned int THREAD_COUNT = 128;
 
 qpool *qp = NULL;
 
@@ -41,6 +41,8 @@ int main(int argc, char *argv[])
     assert(qthread_initialize() == QTHREAD_SUCCESS);
     me = qthread_self();
     CHECK_VERBOSE();
+    numarg(ELEMENT_COUNT, "ELEMENT_COUNT");
+    numarg(THREAD_COUNT, "THREAD_COUNT");
 
     if ((qp = qpool_create(sizeof(aligned_t))) == NULL) {
 	fprintf(stderr, "qpool_create() failed!\n");

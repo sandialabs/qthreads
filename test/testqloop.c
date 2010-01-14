@@ -12,7 +12,7 @@
 #include "argparsing.h"
 
 //#define BIGLEN 200000000U
-#define BIGLEN 1000000U
+static unsigned int BIGLEN = 1000000U;
 
 int main(int argc, char *argv[])
 {
@@ -21,6 +21,7 @@ int main(int argc, char *argv[])
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
     CHECK_VERBOSE();
+    numarg(BIGLEN, "BIGLEN");
     future_init(128);
 
     {

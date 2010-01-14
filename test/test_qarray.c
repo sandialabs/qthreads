@@ -5,7 +5,7 @@
 #include <qthread/qarray.h>
 #include "argparsing.h"
 
-#define ELEMENT_COUNT 10000
+static unsigned int ELEMENT_COUNT = 10000;
 
 aligned_t count = 0;
 typedef struct
@@ -61,6 +61,7 @@ int main(int argc, char *argv[])
     me = qthread_self();
     CHECK_VERBOSE();
     NUMARG(num_dists, "TEST_NUM_DISTS");
+    NUMARG(ELEMENT_COUNT, "ELEMENT_COUNT");
     if (num_dists > 8) {
 	num_dists = 8;
     }
