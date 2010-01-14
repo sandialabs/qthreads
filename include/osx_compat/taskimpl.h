@@ -18,6 +18,16 @@
 #endif
 #endif
 
+#if defined(__tile__)
+#ifdef HAVE_STDARG_H
+# include <stdarg.h>
+#endif
+#include <stddef.h>
+#include "tile-ucontext.h"
+#define NEEDTILEMAKECONTEXT
+#define NEEDSWAPCONTEXT
+#endif
+
 #if defined(__FreeBSD__) ||  defined(__APPLE__)
 
 #ifdef HAVE_STDARG_H
@@ -132,7 +142,6 @@ void setmcontext(const mcontext_t*);
 #define NEEDX86MAKECONTEXT
 #define NEEDSWAPCONTEXT
 #endif
-
 
 #endif
 #endif
