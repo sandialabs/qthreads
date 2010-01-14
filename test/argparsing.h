@@ -21,7 +21,10 @@
 
 static int verbose = 0;
 
-static void iprintf(char *format, ...)
+#ifdef __tile__
+#define iprintf printf
+#else
+static void iprintf(const char * restrict format, ...)
 {
     if (verbose != 0) {
 	va_list ap;
@@ -32,5 +35,6 @@ static void iprintf(char *format, ...)
 	va_end(ap);
     }
 }
+#endif
 
 #endif
