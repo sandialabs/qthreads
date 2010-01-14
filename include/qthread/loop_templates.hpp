@@ -47,7 +47,7 @@ public:
 template <int opC, class VarT> 
 class Partial {
 public:
-  static const void update( int Operator_Type_Undefined_Error ) {;}
+  static void update( int Operator_Type_Undefined_Error ) {;}
 };
 
 template <class VarT>
