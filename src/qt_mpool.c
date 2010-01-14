@@ -85,12 +85,16 @@ static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
 	case 8:
 	case 4:
 	case 2:
-#if defined(HAVE_16ALIGNED_MALLOC) && ! defined(QTHREAD_USE_VALGRIND)
-	    ret = malloc(alloc_size);
-#elif defined(HAVE_MEMALIGN)
+#if defined(HAVE_MEMALIGN)
 	    ret = memalign(16, alloc_size);
 #elif defined(HAVE_POSIX_MEMALIGN)
 	    posix_memalign(&(ret), 16, alloc_size);
+#elif defined(HAVE_WORKING_VALLOC)
+	    ret = valloc(alloc_size);
+#elif defined(HAVE_16ALIGNED_CALLOC)
+	    return calloc(1, alloc_size);
+#elif defined(HAVE_16ALIGNED_MALLOC)
+	    ret = malloc(alloc_size);
 #elif defined(HAVE_PAGE_ALIGNED_MALLOC)
 	    ret = malloc(alloc_size);
 #else
@@ -102,6 +106,8 @@ static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
 	    ret = memalign(alignment, alloc_size);
 #elif defined(HAVE_POSIX_MEMALIGN)
 	    posix_memalign(&(ret), alignment, alloc_size);
+#elif defined(HAVE_WORKING_VALLOC)
+	    ret = valloc(alloc_size);
 #elif defined(HAVE_PAGE_ALIGNED_MALLOC)
 	    ret = malloc(alloc_size);
 #else
