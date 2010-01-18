@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <qthread/qthread.h>
+#include "argparsing.h"
 
 aligned_t master = 0;
 

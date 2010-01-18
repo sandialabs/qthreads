@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <qthread/qthread.h>
+#include "argparsing.h"
 
 static aligned_t whereami(qthread_t * me, void *arg)
 {

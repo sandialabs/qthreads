@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <qthread/qthread.h>
+#include "argparsing.h"
 
 double master = 0.0;
 double retvals[30];

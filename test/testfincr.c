@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <qthread/qthread.h>
+#include "argparsing.h"
 
 volatile float master[3] = { 0 };
 
