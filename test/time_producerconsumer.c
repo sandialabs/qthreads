@@ -142,7 +142,6 @@ int main(int argc, char *argv[])
     double rate;
     unsigned int i;
     aligned_t rets[MAXPARALLELISM];
-    int shepherds = 1;
 
     /* setup */
     assert(qthread_initialize() == QTHREAD_SUCCESS);
@@ -151,7 +150,6 @@ int main(int argc, char *argv[])
 	return 0;
     }
     ITERATIONS = 1000000;
-    shepherds = qthread_num_shepherds();
 
     for (i=0;i<MAXPARALLELISM;i++) {
 	qthread_empty(NULL, FEBbuffer+i);

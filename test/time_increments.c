@@ -66,7 +66,6 @@ aligned_t incrloop_falseshare(qthread_t * me, void *arg)
 
 aligned_t incrloop_nocompete(qthread_t * me, void *arg)
 {
-    unsigned int offset = (unsigned int)(intptr_t)arg;
     unsigned int i;
     aligned_t myinc;
 
@@ -90,7 +89,6 @@ aligned_t addloop_falseshare(qthread_t *me, void *arg)
 
 aligned_t addloop_nocompete(qthread_t *me, void *arg)
 {
-    unsigned int offset = (unsigned int)(intptr_t)arg;
     unsigned int i;
     aligned_t myinc = 0;
 

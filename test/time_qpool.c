@@ -108,7 +108,6 @@ void malloc_deallocator(qthread_t * me, const size_t startat,
 
 int main(int argc, char *argv[])
 {
-    qthread_t *me;
     size_t i;
     unsigned long iterations = 1000;
     qtimer_t timer = qtimer_new();
@@ -118,7 +117,6 @@ int main(int argc, char *argv[])
     size_t numshep;
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
-    me = qthread_self();
 
     CHECK_VERBOSE();
     NUMARG(iterations, "TEST_ITERATIONS");
