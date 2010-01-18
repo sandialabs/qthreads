@@ -12,54 +12,56 @@
 # endif
 #endif
 
-#ifdef QTHREAD_ATOMIC_CAS_PTR
-#define qt_cas(P,O,N) (void*)__sync_val_compare_and_swap((P),(O),(N))
-#elif defined(__tile__)
-#include <pthread.h>
-#warning this is a stupid way of doing this
-#define QTHREAD_CASLOCK(var)	var; pthread_mutex_t var##_caslock
-#define QTHREAD_CASLOCK_INIT(var,i)   var = i; pthread_mutex_init(&(var##_caslock), NULL)
-#define QTHREAD_CASLOCK_DESTROY(var)	pthread_mutex_destroy(&(var##_caslock))
-#define QTHREAD_CASLOCK_READ(var)   qt_cas_read((void*volatile*)&(var), &(var##_caslock))
-#define QT_CAS(var,oldv,newv) qt_cas_((void*volatile*)&(var), (void*)(oldv), (void*)(newv), &(var##_caslock))
-extern pthread_mutex_t big_honkin_cas_lock;
-static QINLINE void* qt_cas(void*volatile* const ptr, void* const oldv, void* const newv)
+#if defined(HAVE_PTHREAD_SPIN_INIT) && ! defined(__tile__)
+# define QTHREAD_FASTLOCK_INIT(x) pthread_spin_init(&(x), PTHREAD_PROCESS_PRIVATE)
+# define QTHREAD_FASTLOCK_LOCK(x) pthread_spin_lock((x))
+# define QTHREAD_FASTLOCK_UNLOCK(x) pthread_spin_unlock((x))
+# define QTHREAD_FASTLOCK_DESTROY(x) pthread_spin_destroy(&(x))
+# define QTHREAD_FASTLOCK_TYPE pthread_spinlock_t
+#else
+# define QTHREAD_FASTLOCK_INIT(x) pthread_mutex_init(&(x), NULL)
+# define QTHREAD_FASTLOCK_LOCK(x) pthread_mutex_lock((x))
+# define QTHREAD_FASTLOCK_UNLOCK(x) pthread_mutex_unlock((x))
+# define QTHREAD_FASTLOCK_DESTROY(x) pthread_mutex_destroy(&(x))
+# define QTHREAD_FASTLOCK_TYPE pthread_mutex_t
+#endif
+
+#ifdef QTHREAD_MUTEX_INCREMENT
+# include <pthread.h>
+# define QTHREAD_CASLOCK(var)	var; QTHREAD_FASTLOCK_TYPE var##_caslock
+# define QTHREAD_CASLOCK_INIT(var,i)   var = i; QTHREAD_FASTLOCK_INIT(var##_caslock)
+# define QTHREAD_CASLOCK_DESTROY(var)	QTHREAD_FASTLOCK_DESTROY(var##_caslock)
+# define QTHREAD_CASLOCK_READ_UI(var)   qt_cas_read_ui((volatile uintptr_t*)&(var), &(var##_caslock))
+# define QT_CAS(var,oldv,newv) qt_cas_((void*volatile*)&(var), (void*)(oldv), (void*)(newv), &(var##_caslock))
+static QINLINE void* qt_cas_(void*volatile* const ptr, void* const oldv, void* const newv, QTHREAD_FASTLOCK_TYPE *lock)
 {
     void * ret;
-    pthread_mutex_lock(&big_honkin_cas_lock);
+    QTHREAD_FASTLOCK_LOCK(lock);
     ret = *ptr;
     if (*ptr == oldv) {
 	*ptr = newv;
     }
-    pthread_mutex_unlock(&big_honkin_cas_lock);
+    QTHREAD_FASTLOCK_UNLOCK(lock);
     return ret;
 }
-static QINLINE void* qt_cas_(void*volatile* const ptr, void* const oldv, void* const newv, pthread_mutex_t *lock)
+static QINLINE uintptr_t qt_cas_read_ui(volatile uintptr_t * const ptr, QTHREAD_FASTLOCK_TYPE *mutex)
 {
-    void * ret;
-    pthread_mutex_lock(lock);
+    uintptr_t ret;
+    QTHREAD_FASTLOCK_LOCK(mutex);
     ret = *ptr;
-    if (*ptr == oldv) {
-	*ptr = newv;
-    }
-    pthread_mutex_unlock(lock);
-    return ret;
-}
-static QINLINE void* qt_cas_read(void*volatile* const ptr, pthread_mutex_t *mutex)
-{
-    void * ret;
-    pthread_mutex_lock(mutex);
-    ret = *ptr;
-    pthread_mutex_unlock(mutex);
+    QTHREAD_FASTLOCK_UNLOCK(mutex);
     return ret;
 }
 #else
-#define QTHREAD_CASLOCK(var)	var
-#define QTHREAD_CASLOCK_INIT(var,i) var = i
-#define QTHREAD_CASLOCK_DESTROY(var)
-#define QThREAD_CASLOCK_READ(var)
+# define QTHREAD_CASLOCK(var)	(var)
+# define QTHREAD_CASLOCK_INIT(var,i) (var) = i
+# define QTHREAD_CASLOCK_DESTROY(var)
+# define QThREAD_CASLOCK_READ_UI(var) (var)
+# ifdef QTHREAD_ATOMIC_CAS_PTR
+#  define qt_cas(P,O,N) (void*)__sync_val_compare_and_swap((P),(O),(N))
+# else
 static QINLINE void* qt_cas(void*volatile* const ptr, void* const oldv, void* const newv)
-{
+{/*{{{*/
 # if defined(HAVE_GCC_INLINE_ASSEMBLY)
 #  if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
     void* result;
@@ -127,7 +129,8 @@ static QINLINE void* qt_cas(void*volatile* const ptr, void* const oldv, void* co
 # else
 #  error "CAS needs inline assembly OR __sync_val_compare_and_swap"
 # endif
-}
-#endif
+}/*}}}*/
+# endif /* ATOMIC_CAS_PTR */
+#endif /* MUTEX_INCREMENT */
 
 #endif

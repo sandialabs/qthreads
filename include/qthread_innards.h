@@ -8,6 +8,7 @@
 #include <math.h>
 
 #include "qthread_asserts.h"
+#include "qt_atomics.h"
 
 #if defined(HAVE_UCONTEXT_H) && defined(HAVE_NATIVE_MAKECONTEXT)
 # include <ucontext.h>		       /* for ucontext_t */
@@ -28,20 +29,6 @@
 # define STRIPECOUNT 128
 #else
 # define STRIPECOUNT 32
-#endif
-
-#if defined(HAVE_PTHREAD_SPIN_INIT) && ! defined(__tile__)
-# define QTHREAD_FASTLOCK_INIT(x) pthread_spin_init(&(x), PTHREAD_PROCESS_PRIVATE)
-# define QTHREAD_FASTLOCK_LOCK(x) pthread_spin_lock((x))
-# define QTHREAD_FASTLOCK_UNLOCK(x) pthread_spin_unlock((x))
-# define QTHREAD_FASTLOCK_DESTROY(x) pthread_spin_destroy(&(x))
-# define QTHREAD_FASTLOCK_TYPE pthread_spinlock_t
-#else
-# define QTHREAD_FASTLOCK_INIT(x) pthread_mutex_init(&(x), NULL)
-# define QTHREAD_FASTLOCK_LOCK(x) pthread_mutex_lock((x))
-# define QTHREAD_FASTLOCK_UNLOCK(x) pthread_mutex_unlock((x))
-# define QTHREAD_FASTLOCK_DESTROY(x) pthread_mutex_destroy(&(x))
-# define QTHREAD_FASTLOCK_TYPE pthread_mutex_t
 #endif
 
 typedef struct qlib_s
