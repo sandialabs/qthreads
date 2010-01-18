@@ -2621,10 +2621,23 @@ static QINLINE qt_lfqueue_t *qt_lfqueue_new(qthread_shepherd_t * shepherd)
 	    qassert(QTHREAD_FASTLOCK_DESTROY(q->head_lock), 0);
 	    FREE_LFQUEUE(q);
 	}
+	if (QTHREAD_FASTLOCK_INIT(q->advisory_queuelen_m) != 0) {
+	    qassert(QTHREAD_FASTLOCK_DESTROY(q->head_lock), 0);
+	    qassert(QTHREAD_FASTLOCK_DESTROY(q->tail_lock), 0);
+	    FREE_LFQUEUE(q);
+	}
 	ALLOC_LFQNODE(((qt_lfqueue_node_t **) & (q->head)), shepherd);
 	assert(q->head != NULL);
-	q->tail = q->head;
-	q->head->next = NULL;
+	if (q->head == NULL) {
+	    QTHREAD_FASTLOCK_DESTROY(q->advisory_queuelen_m);
+	    QTHREAD_FASTLOCK_DESTROY(q->head_lock);
+	    QTHREAD_FASTLOCK_DESTROY(q->tail_lock);
+	    FREE_LFQUEUE(q);
+	    q = NULL;
+	} else {
+	    q->tail = q->head;
+	    q->head->next = NULL;
+	}
 #else
 # ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
 	if (pthread_mutex_init(&q->lock, NULL) != 0) {
@@ -2638,7 +2651,6 @@ static QINLINE qt_lfqueue_t *qt_lfqueue_new(qthread_shepherd_t * shepherd)
 	}
 	q->fruitless = 0;
 # endif
-	qassert(pthread_mutex_init(&q->advisory_queuelen_m, NULL), 0);
 	ALLOC_LFQNODE(((qt_lfqueue_node_t **) & (q->head)), shepherd);
 	assert(QPTR(q->head) != NULL);
 	if (QPTR(q->head) == NULL) {   // if we're not using asserts, fail nicely
