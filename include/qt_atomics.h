@@ -56,7 +56,7 @@ static QINLINE uintptr_t qt_cas_read_ui(volatile uintptr_t * const ptr, QTHREAD_
 # define QTHREAD_CASLOCK(var)	(var)
 # define QTHREAD_CASLOCK_INIT(var,i) (var) = i
 # define QTHREAD_CASLOCK_DESTROY(var)
-# define QThREAD_CASLOCK_READ_UI(var) (var)
+# define QTHREAD_CASLOCK_READ_UI(var) (var)
 # ifdef QTHREAD_ATOMIC_CAS_PTR
 #  define qt_cas(P,O,N) (void*)__sync_val_compare_and_swap((P),(O),(N))
 # else
