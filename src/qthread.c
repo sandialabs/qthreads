@@ -1480,9 +1480,8 @@ int qthread_initialize(void)
     lgrp_cookie_t lgrp_cookie = lgrp_init(LGRP_VIEW_OS);
 #endif
 
-    qassert(QTHREAD_FASTLOCK_INIT(output_lock), 0);
-
 #ifdef QTHREAD_DEBUG
+    qassert(QTHREAD_FASTLOCK_INIT(output_lock), 0);
     {
 	char *qdl = getenv("QTHREAD_DEBUG_LEVEL");
 	char *qdle = NULL;
