@@ -45,7 +45,7 @@ struct qt_mpool_s {
     size_t items_per_alloc;
     size_t alignment;
 
-    void *volatile reuse_pool;
+    void *volatile QTHREAD_CASLOCK(reuse_pool);
     char *alloc_block;
     size_t alloc_block_pos;
     void **alloc_list;
@@ -205,7 +205,7 @@ qt_mpool qt_mpool_create_aligned(const int sync, size_t item_size,
 
     pool->items_per_alloc = alloc_size / item_size;
 
-    _(pool->reuse_pool) = NULL;
+    QTHREAD_CASLOCK_INIT(pool->reuse_pool, NULL);
     pool->alloc_block = (char *)qt_mpool_internal_aligned_alloc(alloc_size,	/*node, */
 								alignment);
     assert(((unsigned long)(pool->alloc_block) & (alignment - 1)) == 0);
@@ -255,7 +255,7 @@ qt_mpool qt_mpool_create(int sync, size_t item_size, int node)
 
 void *qt_mpool_alloc(qt_mpool pool)
 {				       /*{{{ */
-    void **p = (void **)_(pool->reuse_pool);
+    void **p = (void **)QTHREAD_CASLOCK_READ(pool->reuse_pool);
 
     qassert_ret((pool != NULL), NULL);
     if (QPTR(p) != NULL) {
@@ -272,7 +272,7 @@ void *qt_mpool_alloc(qt_mpool pool)
 	    old = p;
 	    VALGRIND_MAKE_MEM_DEFINED(QPTR(p), pool->item_size);
 	    new = *(QPTR(p));
-	    p = qt_cas(&(pool->reuse_pool), old, QCOMPOSE(new, p));
+	    p = QT_CAS(pool->reuse_pool, old, QCOMPOSE(new, p));
 	} while (p != old && QPTR(p) != NULL);
     }
     if (QPTR(p) == NULL) {	       /* this is not an else on purpose */
@@ -330,10 +330,10 @@ void qt_mpool_free(qt_mpool pool, void *mem)
     qassert_retvoid((mem != NULL));
     qassert_retvoid((pool != NULL));
     do {
-	old = (void *)_(pool->reuse_pool);	/* should be an atomic read */
+	old = (void *)QTHREAD_CASLOCK_READ(pool->reuse_pool);	/* should be an atomic read */
 	*(void *volatile *)mem = old;
 	new = QCOMPOSE(mem, old);
-	p = qt_cas(&(pool->reuse_pool), old, new);
+	p = QT_CAS(pool->reuse_pool, old, new);
     } while (p != old);
     VALGRIND_MEMPOOL_FREE(pool, mem);
 }				       /*}}} */
@@ -356,6 +356,7 @@ void qt_mpool_destroy(qt_mpool pool)
 	pool->alloc_list = pool->alloc_list[pagesize / sizeof(void *) - 1];
 	free(p);
     }
+    QTHREAD_CASLOCK_DESTROY(pool->reuse_pool);
 #ifdef QTHREAD_USE_PTHREADS
     if (pool->lock) {
 	qassert(pthread_mutex_destroy(pool->lock), 0);
