@@ -37,7 +37,7 @@ int main()
 	qthread_fork(incr, NULL, &(rets[i]));
     }
     for (i = 0; i < 30; i++) {
-	qthread_readFF(NULL, NULL, rets + i);
+	qthread_readFF(me, NULL, rets + i);
     }
     if (master[1] != 30.0) {
 	fprintf(stderr,"master is %f rather than 30\n", master[1]);
@@ -51,7 +51,7 @@ int main()
 	qthread_fork(incr5, NULL, &(rets[i]));
     }
     for (i = 0; i < 30; i++) {
-	qthread_readFF(NULL, NULL, rets + i);
+	qthread_readFF(me, NULL, rets + i);
     }
     if (master[1] != 150.0) {
 	fprintf(stderr,"master is %f rather than 150\n", master[1]);
