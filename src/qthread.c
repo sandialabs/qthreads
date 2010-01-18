@@ -974,7 +974,7 @@ static Q_NOINLINE volatile aligned_t *vol_id_a(volatile aligned_t * ptr)
 
 #ifdef QTHREAD_DEBUG
 enum qthread_debug_levels debuglevel = 0;
-pthread_mutex_t output_lock = PTHREAD_MUTEX_INITIALIZER;
+QTHREAD_FASTLOCK_TYPE output_lock;
 
 int qthread_debuglevel(int d)
 {
@@ -1479,6 +1479,8 @@ int qthread_initialize(void)
 #ifdef QTHREAD_HAVE_LGRP
     lgrp_cookie_t lgrp_cookie = lgrp_init(LGRP_VIEW_OS);
 #endif
+
+    qassert(QTHREAD_FASTLOCK_INIT(output_lock), 0);
 
 #ifdef QTHREAD_DEBUG
     {

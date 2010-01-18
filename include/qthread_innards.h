@@ -112,7 +112,7 @@ enum qthread_debug_levels
 
 extern enum qthread_debug_levels debuglevel;
 
-extern pthread_mutex_t output_lock;
+extern QTHREAD_FASTLOCK_TYPE output_lock;
 
 static QINLINE void qthread_debug(int level, char *format, ...)
 {				       /*{{{ */
@@ -125,7 +125,7 @@ static QINLINE void qthread_debug(int level, char *format, ...)
 
 	char ch;
 
-	qassert(pthread_mutex_lock(&output_lock), 0);
+	qassert(QTHREAD_FASTLOCK_LOCK(&output_lock), 0);
 
 	while (write(2, "QDEBUG: ", 8) != 8) ;
 
@@ -195,7 +195,7 @@ static QINLINE void qthread_debug(int level, char *format, ...)
 	va_end(args);
 	/*fflush(stderr); */
 
-	qassert(pthread_mutex_unlock(&output_lock), 0);
+	qassert(QTHREAD_FASTLOCK_UNLOCK(&output_lock), 0);
     }
 }				       /*}}} */
 #else
