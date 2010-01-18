@@ -55,6 +55,7 @@ int main()
     double total_inout_time = 0.0;
     int i;
 
+    CHECK_VERBOSE();
     timer = qtimer_new();
     getcontext(&child);
     getcontext(&parent);
