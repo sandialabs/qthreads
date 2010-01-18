@@ -30,6 +30,7 @@ int main()
 	}
 	assert(rets[i] == i % numsheps);
     }
+    iprintf("all %i shepherds can be queued to directly!\n", (int)numsheps);
 
     return 0;
 }
