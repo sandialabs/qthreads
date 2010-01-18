@@ -21,13 +21,17 @@ int main()
     int i;
     aligned_t rets[30];
     float ret_test = 4.5;
+    qthread_t *me;
 
     qthread_initialize();
+    me = qthread_self();
+    iprintf("%i shepherds\n", qthread_num_shepherds());
 
     assert(master[1] == 0.0);
     ret_test = qthread_fincr(master + 1, 1);
     assert(master[1] == 1.0);
     assert(ret_test == 0.0);
+    iprintf("basic increment succeeded\n");
     master[1] = 0;
     for (i = 0; i < 30; i++) {
 	qthread_fork(incr, NULL, &(rets[i]));
@@ -41,6 +45,7 @@ int main()
 	       master[1], master[2]);
     }
     assert(master[1] == 30.0);
+    iprintf("30 concurrent threads successfully incremented by 1\n");
     master[1] = 0.0;
     for (i = 0; i < 30; i++) {
 	qthread_fork(incr5, NULL, &(rets[i]));
@@ -54,6 +59,7 @@ int main()
 	       master[1], master[2]);
     }
     assert(master[1] == 150.0);
+    iprintf("30 concurrent threads successfully incremented by 5\n");
 
     return 0;
 }
