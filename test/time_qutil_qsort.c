@@ -38,7 +38,6 @@ int main(int argc, char *argv[])
     qthread_initialize();
 
     CHECK_VERBOSE();
-    if (!verbose) return 0;
     printf("%i threads\n", qthread_num_shepherds());
     NUMARG(len, "TEST_LEN");
     NUMARG(iterations, "TEST_ITERATIONS");

@@ -35,8 +35,6 @@ int main(int argc, char *argv[])
     double cumulative_time = 0.0;
 
     CHECK_VERBOSE();
-    if (!verbose)
-	return 0;
 
     if (qthread_initialize() != QTHREAD_SUCCESS) {
 	fprintf(stderr, "qthread library could not be initialized!\n");
