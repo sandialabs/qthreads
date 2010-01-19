@@ -1691,16 +1691,12 @@ int qthread_initialize(void)
 	/* there is no native way to detect distances, so unfortunately we must assume that they're all equidistant */
 #elif defined(QTHREAD_HAVE_TILETOPO)
 	cpu_set_t online_cpus;
-	char *str;
 	unsigned int *cpu_array;
 	size_t cpu_count, offset;
 
 	qassert(tmc_cpus_get_online_cpus(&online_cpus), 0);
 	cpu_count = tmc_cpus_count(&online_cpus);
 	assert(cpu_count > 0);
-	str = calloc(sizeof(char), 1024);
-	tmc_cpus_to_string(&online_cpus, str, 1024);
-	printf("%u online cpus: %s\n", (unsigned)cpu_count, str);
 	/* assign nodes */
 	cpu_array = malloc(sizeof(unsigned int) * cpu_count);
 	assert(cpu_array != NULL);
