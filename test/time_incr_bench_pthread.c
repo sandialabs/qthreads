@@ -39,6 +39,7 @@ int main(int argc, char *argv[])
     pthread_mutex_init(&counter_lock, NULL);
 
     CHECK_VERBOSE();
+    printf("this may take a while...\n");
 
     for (int iteration = 0; iteration < 10; iteration++) {
 	counter = 0;
