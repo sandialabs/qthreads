@@ -36,6 +36,9 @@
 #include <sys/mman.h>
 #endif
 
+#ifdef HAVE_TMC_CPUS_H
+# include <tmc/cpus.h>
+#endif
 #ifdef QTHREAD_USE_PLPA
 #include <plpa.h>
 #endif
@@ -365,7 +368,9 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t * shep,
 static QINLINE void qthread_gotlock_empty(qthread_shepherd_t * shep,
 					  qthread_addrstat_t * m, void *maddr,
 					  const char recursive);
-#if (defined(QTHREAD_HAVE_LIBNUMA) || defined(QTHREAD_HAVE_LGRP))
+#if defined(QTHREAD_HAVE_LIBNUMA) || \
+    defined(QTHREAD_HAVE_LGRP) || \
+    defined(QTHREAD_HAVE_TILETOPO)
 #ifdef HAVE_QSORT_R
 # if !defined(__linux__)
 static int qthread_internal_shepcomp(void *src, const void *a, const void *b)
@@ -1177,6 +1182,10 @@ static void *qthread_shepherd(void *arg)
 	     (thread_policy_t) & mask, Count) != KERN_SUCCESS) {
 	    fprintf(stderr, "ERROR! Cannot SET affinity for some reason\n");
 	}
+#elif defined(QTHREAD_HAVE_TILETOPO)
+	if (tmc_cpus_set_my_cpu(me->node) < 0) {
+	    perror("tmc_cpus_set_my_affinity() failed");
+	}
 #elif defined(QTHREAD_HAVE_LIBNUMA)
 	if (numa_run_on_node(me->node) != 0) {
 	    numa_error("setting thread affinity");
@@ -1538,6 +1547,10 @@ int qthread_initialize(void)
 	    nshepherds = numa_max_node() + 1;
 # endif
 	}
+#elif defined(QTHREAD_HAVE_TILETOPO)
+	cpu_set_t online_cpus;
+	qassert(tmc_cpus_get_online_cpus(&online_cpus), 0);
+	nshepherds = tmc_cpus_count(&online_cpus);
 #elif defined(QTHREAD_HAVE_LGRP)
 	/* XXX: this is totally wrong for multithreaded shepherds */
 	nshepherds =
@@ -1676,6 +1689,66 @@ int qthread_initialize(void)
 	) {			       /*{{{ */
 #ifdef QTHREAD_HAVE_MACHTOPO
 	/* there is no native way to detect distances, so unfortunately we must assume that they're all equidistant */
+#elif defined(QTHREAD_HAVE_TILETOPO)
+	cpu_set_t online_cpus;
+	char *str;
+	unsigned int *cpu_array;
+	size_t cpu_count, offset;
+
+	qassert(tmc_cpus_get_online_cpus(&online_cpus), 0);
+	cpu_count = tmc_cpus_count(&online_cpus);
+	assert(cpu_count > 0);
+	str = calloc(sizeof(char), 1024);
+	tmc_cpus_to_string(&online_cpus, str, 1024);
+	printf("%u online cpus: %s\n", (unsigned)cpu_count, str);
+	/* assign nodes */
+	cpu_array = malloc(sizeof(unsigned int) * cpu_count);
+	assert(cpu_array != NULL);
+	qassert(tmc_cpus_to_array(&online_cpus, cpu_array, cpu_count), cpu_count);
+	offset = 0;
+	for (i = 0; i < nshepherds; i++) {
+	    qlib->shepherds[i].node = cpu_array[offset];
+	    offset++;
+	    offset *= (offset < cpu_count);
+	}
+	free(cpu_array);
+	for (i = 0; i < nshepherds; i++) {
+	    size_t j, k;
+	    unsigned int ix, iy;
+	    qlib->shepherds[i].shep_dists =
+		calloc(nshepherds, sizeof(unsigned int));
+	    assert(qlib->shepherds[i].shep_dists);
+	    tmc_cpus_grid_cpu_to_tile(qlib->shepherds[i].node, &ix, &iy);
+	    for (j = 0; j < nshepherds; j++) {
+		unsigned int jx, jy;
+		tmc_cpus_grid_cpu_to_tile(qlib->shepherds[j].node, &jx, &jy);
+		qlib->shepherds[i].shep_dists[j] = abs((int)ix-(int)jx) +
+		    abs((int)iy-(int)jy);
+	    }
+	    qlib->shepherds[i].sorted_sheplist =
+		calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
+	    assert(qlib->shepherds[i].sorted_sheplist);
+	    for (j = k = 0; j < nshepherds; j++) {
+		if (j != i) {
+		    qlib->shepherds[i].sorted_sheplist[k++] = j;
+		}
+	    }
+#  if defined(HAVE_QSORT_R) && QTHREAD_QSORT_BSD
+	    assert(qlib->shepherds[i].sorted_sheplist);
+	    qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
+		    sizeof(qthread_shepherd_id_t), (void *)(intptr_t) i,
+		    &qthread_internal_shepcomp);
+#  elif defined(HAVE_QSORT_R) && QTHREAD_QSORT_GLIBC
+	    assert(qlib->shepherds[i].sorted_sheplist);
+	    qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
+		    sizeof(qthread_shepherd_id_t),
+		    &qthread_internal_shepcomp, (void *)(intptr_t) i);
+#  else
+	    shepcomp_src = (qthread_shepherd_id_t) i;
+	    qsort(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
+		  sizeof(qthread_shepherd_id_t), qthread_internal_shepcomp);
+#  endif
+	}
 #elif defined(QTHREAD_HAVE_LIBNUMA)
 	size_t max = numa_max_node() + 1;
 
