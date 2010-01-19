@@ -131,10 +131,10 @@ int main(int argc, char *argv[])
     CHECK_VERBOSE();
     ITERATIONS = (verbose)?1000000:1000;
     shepherds = qthread_num_shepherds();
-    iprintf("%u shepherds...\n", shepherds);
+    printf("%u shepherds...\n", shepherds);
 
     /* BALANCED INCREMENT LOOP (strong scaling) */
-    iprintf("\tBalanced competing loop: ");
+    printf("\tBalanced competing loop: ");
     increments = (aligned_t*)calloc(MAXPARALLELISM*ITERATIONS, sizeof(aligned_t));
     qtimer_start(timer);
     qt_loop_balance(0, MAXPARALLELISM*ITERATIONS, balanced_incr, NULL);
@@ -143,17 +143,17 @@ int main(int argc, char *argv[])
     free(increments);
     increments = NULL;
 
-    iprintf("%19g secs (%u-threads %u iters)\n", qtimer_secs(timer), shepherds, (unsigned)(ITERATIONS*MAXPARALLELISM));
-    iprintf("\t + average increment time: %17g secs\n",
+    printf("%19g secs (%u-threads %u iters)\n", qtimer_secs(timer), shepherds, (unsigned)(ITERATIONS*MAXPARALLELISM));
+    printf("\t + average increment time: %17g secs\n",
 	    qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
-    iprintf("\t = increment throughput: %19f increments/sec\n",
+    printf("\t = increment throughput: %19f increments/sec\n",
 	    (ITERATIONS*MAXPARALLELISM) / qtimer_secs(timer));
     rate = (ITERATIONS*MAXPARALLELISM * sizeof(aligned_t)) / qtimer_secs(timer);
-    iprintf("\t = data throughput: %24g bytes/sec %s\n", rate,
+    printf("\t = data throughput: %24g bytes/sec %s\n", rate,
 	    human_readable_rate(rate));
 
     /* BALANCED FALSE-SHARING LOOP */
-    iprintf("\tBalanced false-sharing loop: ");
+    printf("\tBalanced false-sharing loop: ");
     increments = (aligned_t*)calloc(shepherds, sizeof(aligned_t));
     qtimer_start(timer);
     qt_loop_balance(0, ITERATIONS*256, balanced_falseshare, NULL);
@@ -161,32 +161,32 @@ int main(int argc, char *argv[])
     free(increments);
     increments = NULL;
 
-    iprintf("%15g secs (%u-threads %u iters)\n", qtimer_secs(timer), shepherds, (unsigned)(ITERATIONS*256));
-    iprintf("\t + average increment time: %17g secs\n",
+    printf("%15g secs (%u-threads %u iters)\n", qtimer_secs(timer), shepherds, (unsigned)(ITERATIONS*256));
+    printf("\t + average increment time: %17g secs\n",
 	    qtimer_secs(timer) / (ITERATIONS*256));
-    iprintf("\t = increment throughput: %19f increments/sec\n",
+    printf("\t = increment throughput: %19f increments/sec\n",
 	    (ITERATIONS*256) / qtimer_secs(timer));
     rate = (ITERATIONS*256* sizeof(aligned_t)) / qtimer_secs(timer);
-    iprintf("\t = data throughput: %24g bytes/sec %s\n", rate,
+    printf("\t = data throughput: %24g bytes/sec %s\n", rate,
 	    human_readable_rate(rate));
 
     /* BALANCED INDEPENDENT LOOP */
-    iprintf("\tBalanced independent loop: ");
+    printf("\tBalanced independent loop: ");
     qtimer_start(timer);
     qt_loop_balance(0, ITERATIONS*256, balanced_noncomp, NULL);
     qtimer_stop(timer);
 
-    iprintf("%17g secs (%u-threads %u iters)\n", qtimer_secs(timer), shepherds, (unsigned)(ITERATIONS*256));
-    iprintf("\t + average increment time: %17g secs\n",
+    printf("%17g secs (%u-threads %u iters)\n", qtimer_secs(timer), shepherds, (unsigned)(ITERATIONS*256));
+    printf("\t + average increment time: %17g secs\n",
 	    qtimer_secs(timer) / (ITERATIONS*256));
-    iprintf("\t = increment throughput: %19f increments/sec\n",
+    printf("\t = increment throughput: %19f increments/sec\n",
 	    (ITERATIONS*256) / qtimer_secs(timer));
     rate = (ITERATIONS*256* sizeof(aligned_t)) / qtimer_secs(timer);
-    iprintf("\t = data throughput: %24g bytes/sec %s\n", rate,
+    printf("\t = data throughput: %24g bytes/sec %s\n", rate,
 	    human_readable_rate(rate));
 
     /* OVER-SUBSCRIBED COMPETING INCREMENT LOOP */
-    iprintf("\tOver-subscribed competing loop: ");
+    printf("\tOver-subscribed competing loop: ");
     qtimer_start(timer);
     for (i = 0; i < MAXPARALLELISM; i++) {
 	qthread_fork(incrloop, NULL, rets+i);
@@ -197,17 +197,17 @@ int main(int argc, char *argv[])
     qtimer_stop(timer);
     assert(incrementme == ITERATIONS*MAXPARALLELISM);
 
-    iprintf("%12g secs (%u-threads %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
-    iprintf("\t + average increment time: %17g secs\n",
+    printf("%12g secs (%u-threads %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
+    printf("\t + average increment time: %17g secs\n",
 	    qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
-    iprintf("\t = increment throughput: %19f increments/sec\n",
+    printf("\t = increment throughput: %19f increments/sec\n",
 	    (ITERATIONS*MAXPARALLELISM) / qtimer_secs(timer));
     rate = (ITERATIONS*MAXPARALLELISM * sizeof(aligned_t)) / qtimer_secs(timer);
-    iprintf("\t = data throughput: %24g bytes/sec %s\n", rate,
+    printf("\t = data throughput: %24g bytes/sec %s\n", rate,
 	    human_readable_rate(rate));
 
     /* OVER-SUBSCRIBED FALSE-SHARING INCREMENT LOOP */
-    iprintf("\tOver-subscribed false-sharing loop: ");
+    printf("\tOver-subscribed false-sharing loop: ");
     increments = (aligned_t*)calloc(MAXPARALLELISM, sizeof(aligned_t));
     qtimer_start(timer);
     for (i=0; i<MAXPARALLELISM; i++) {
@@ -220,17 +220,17 @@ int main(int argc, char *argv[])
     free(increments);
     increments = NULL;
 
-    iprintf("%8g secs (%u-threads %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
-    iprintf("\t + average increment time: %17g secs\n",
+    printf("%8g secs (%u-threads %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
+    printf("\t + average increment time: %17g secs\n",
 	    qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
-    iprintf("\t = increment throughput: %19f increments/sec\n",
+    printf("\t = increment throughput: %19f increments/sec\n",
 	    (ITERATIONS*MAXPARALLELISM) / qtimer_secs(timer));
     rate = (ITERATIONS*MAXPARALLELISM * sizeof(aligned_t)) / qtimer_secs(timer);
-    iprintf("\t = data throughput: %24g bytes/sec %s\n", rate,
+    printf("\t = data throughput: %24g bytes/sec %s\n", rate,
 	    human_readable_rate(rate));
 
     /* OVER-SUBSCRIBED INDEPENDENT INCREMENT LOOP */
-    iprintf("\tOver-subscribed independent loop: ");
+    printf("\tOver-subscribed independent loop: ");
     qtimer_start(timer);
     for (i=0; i<MAXPARALLELISM; i++) {
 	qthread_fork(incrloop_nocompete, (void*)(intptr_t)i, rets+i);
@@ -240,17 +240,17 @@ int main(int argc, char *argv[])
     }
     qtimer_stop(timer);
 
-    iprintf("%10g secs (%u-threads %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
-    iprintf("\t + average increment time: %17g secs\n",
+    printf("%10g secs (%u-threads %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
+    printf("\t + average increment time: %17g secs\n",
 	    qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
-    iprintf("\t = increment throughput: %19f increments/sec\n",
+    printf("\t = increment throughput: %19f increments/sec\n",
 	    (ITERATIONS*MAXPARALLELISM) / qtimer_secs(timer));
     rate = (ITERATIONS*MAXPARALLELISM * sizeof(aligned_t)) / qtimer_secs(timer);
-    iprintf("\t = data throughput: %24g bytes/sec %s\n", rate,
+    printf("\t = data throughput: %24g bytes/sec %s\n", rate,
 	    human_readable_rate(rate));
 
     /* INDEPENDENT ADD LOOP */
-    iprintf("\tNon-atomic false-sharing loop: ");
+    printf("\tNon-atomic false-sharing loop: ");
     increments = (aligned_t*)calloc(MAXPARALLELISM, sizeof(aligned_t));
     qtimer_start(timer);
     for (i=0; i<MAXPARALLELISM; i++) {
@@ -263,17 +263,17 @@ int main(int argc, char *argv[])
     free(increments);
     increments = NULL;
 
-    iprintf("%13g secs (%u-way %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
-    iprintf("\t + average increment time: %17g secs\n",
+    printf("%13g secs (%u-way %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
+    printf("\t + average increment time: %17g secs\n",
 	    qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
-    iprintf("\t = increment throughput: %19f increments/sec\n",
+    printf("\t = increment throughput: %19f increments/sec\n",
 	    (ITERATIONS*MAXPARALLELISM) / qtimer_secs(timer));
     rate = (ITERATIONS*MAXPARALLELISM * sizeof(aligned_t)) / qtimer_secs(timer);
-    iprintf("\t = data throughput: %24g bytes/sec %s\n", rate,
+    printf("\t = data throughput: %24g bytes/sec %s\n", rate,
 	    human_readable_rate(rate));
 
     /* INDEPENDENT NON-ATOMIC LOOP */
-    iprintf("\tNon-atomic independent loop: ");
+    printf("\tNon-atomic independent loop: ");
     qtimer_start(timer);
     for (i=0; i<MAXPARALLELISM; i++) {
 	qthread_fork(addloop_nocompete, (void*)(intptr_t)i, rets+i);
@@ -283,13 +283,13 @@ int main(int argc, char *argv[])
     }
     qtimer_stop(timer);
 
-    iprintf("%15g secs (%u-way %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
-    iprintf("\t + average increment time: %17g secs\n",
+    printf("%15g secs (%u-way %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
+    printf("\t + average increment time: %17g secs\n",
 	    qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
-    iprintf("\t = increment throughput: %19f increments/sec\n",
+    printf("\t = increment throughput: %19f increments/sec\n",
 	    (ITERATIONS*MAXPARALLELISM) / qtimer_secs(timer));
     rate = (ITERATIONS*MAXPARALLELISM * sizeof(aligned_t)) / qtimer_secs(timer);
-    iprintf("\t = data throughput: %24g bytes/sec %s\n", rate,
+    printf("\t = data throughput: %24g bytes/sec %s\n", rate,
 	    human_readable_rate(rate));
 
     qtimer_free(timer);

@@ -87,8 +87,8 @@ int main ()
 	    fprintf(stderr,"ERROR! %lu\n", (unsigned long)i);
 	}
     }
-    iprintf("  mod gcd secs: %f\n", qtimer_secs(mod_timer));
-    iprintf("shift gcd secs: %f\n", qtimer_secs(shift_timer));
+    printf("  mod gcd secs: %f\n", qtimer_secs(mod_timer));
+    printf("shift gcd secs: %f\n", qtimer_secs(shift_timer));
 #ifdef QTHREAD_SHIFT_GCD
     assert(qtimer_secs(shift_timer) < qtimer_secs(mod_timer));
 #else

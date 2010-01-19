@@ -127,12 +127,12 @@ int main(int argc, char *argv[])
     qtimer_start(timer);
     qt_loop_balance(0, iterations, malloc_allocator, NULL);
     qtimer_stop(timer);
-    iprintf("Time to alloc %lu malloc blocks in parallel: %f\n", iterations,
+    printf("Time to alloc %lu malloc blocks in parallel: %f\n", iterations,
 	    qtimer_secs(timer));
     qtimer_start(timer);
     qt_loop_balance(0, iterations, malloc_deallocator, NULL);
     qtimer_stop(timer);
-    iprintf("Time to free %lu malloc blocks in parallel: %f\n", iterations,
+    printf("Time to free %lu malloc blocks in parallel: %f\n", iterations,
 	    qtimer_secs(timer));
 
     /* heat the pool */
@@ -165,12 +165,12 @@ int main(int argc, char *argv[])
     qtimer_start(timer);
     qt_loop_balance(0, iterations, mutexpool_allocator, qp);
     qtimer_stop(timer);
-    iprintf("Time to alloc %lu mutex pooled blocks in parallel: %f\n", iterations,
+    printf("Time to alloc %lu mutex pooled blocks in parallel: %f\n", iterations,
 	    qtimer_secs(timer));
     qtimer_start(timer);
     qt_loop_balance(0, iterations, mutexpool_deallocator, qp);
     qtimer_stop(timer);
-    iprintf("Time to free %lu mutex pooled blocks in parallel: %f\n", iterations,
+    printf("Time to free %lu mutex pooled blocks in parallel: %f\n", iterations,
 	    qtimer_secs(timer));
     for (i=0;i<numshep;i++) {
 #ifdef QTHREAD_HAVE_LIBNUMA
@@ -192,12 +192,12 @@ int main(int argc, char *argv[])
     qtimer_start(timer);
     qt_loop_balance(0, iterations, pool_allocator, qp);
     qtimer_stop(timer);
-    iprintf("Time to alloc %lu pooled blocks in parallel: %f\n", iterations,
+    printf("Time to alloc %lu pooled blocks in parallel: %f\n", iterations,
 	    qtimer_secs(timer));
     qtimer_start(timer);
     qt_loop_balance(0, iterations, pool_deallocator, qp);
     qtimer_stop(timer);
-    iprintf("Time to free %lu pooled blocks in parallel: %f\n", iterations,
+    printf("Time to free %lu pooled blocks in parallel: %f\n", iterations,
 	    qtimer_secs(timer));
 
     qpool_destroy(qp);

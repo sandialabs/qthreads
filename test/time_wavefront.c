@@ -52,7 +52,7 @@ int main(int argc, char *argv[])
     qtimer_stop(timer);
 
     if (L) {
-	iprintf("wavefront secs: %f\n", qtimer_secs(timer));
+	printf("wavefront secs: %f\n", qtimer_secs(timer));
 	//qt_wavefront_print_lattice(L);
     } else {
 	fprintf(stderr,"wavefront returned NULL!\n");

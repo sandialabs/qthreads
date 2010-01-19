@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
 		qtimer_secs(timer));
 	cumulative_time += qtimer_secs(timer);
     }
-    iprintf("qthread time: %f\n", cumulative_time / 10.0);
+    printf("qthread time: %f\n", cumulative_time / 10.0);
 
     return 0;
 }

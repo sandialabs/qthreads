@@ -57,7 +57,7 @@ int main(int argc, char *argv[])
 	iprintf("\ttest iteration %i: %f secs\n", iteration, qtimer_secs(timer));
 	cumulative_time += qtimer_secs(timer);
     }
-    iprintf("pthread time: %f\n", cumulative_time/10.0);
+    printf("pthread time: %f\n", cumulative_time/10.0);
 
     return 0;
 }

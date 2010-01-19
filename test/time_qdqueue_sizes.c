@@ -121,11 +121,11 @@ int main(int argc, char *argv[])
     qtimer_start(timer);
     qt_loop_balance(0, THREAD_COUNT * ELEMENT_COUNT, loop_queuer, q);
     qtimer_stop(timer);
-    iprintf("loop balance enqueue: %f secs\n", qtimer_secs(timer));
+    printf("loop balance enqueue: %f secs\n", qtimer_secs(timer));
     qtimer_start(timer);
     qt_loop_balance(0, THREAD_COUNT * ELEMENT_COUNT, loop_dequeuer, q);
     qtimer_stop(timer);
-    iprintf("loop balance dequeue: %f secs\n", qtimer_secs(timer));
+    printf("loop balance dequeue: %f secs\n", qtimer_secs(timer));
     if (!qdqueue_empty(me, q)) {
 	fprintf(stderr, "qdqueue not empty after loop balance test!\n");
 	exit(-2);
@@ -148,7 +148,7 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "qdqueue not empty after threaded test!\n");
 	exit(-2);
     }
-    iprintf("threaded dq test: %f secs\n", qtimer_secs(timer));
+    printf("threaded dq test: %f secs\n", qtimer_secs(timer));
     free(rets);
 
     if (qdqueue_destroy(me, q) != QTHREAD_SUCCESS) {

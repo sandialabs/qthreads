@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
 	cumulative_time += qtimer_secs(timer);
 	iprintf("\t%i: mult time %f\n", i, qtimer_secs(timer));
     }
-    iprintf("mult time: %f (avg)\n", cumulative_time/10.0);
+    printf("mult time: %f (avg)\n", cumulative_time/10.0);
     for (i = 0; i < ASIZE; i++) {
 	free(out[i]);
     }

@@ -39,11 +39,11 @@ int main(int argc, char *argv[])
 
     CHECK_VERBOSE();
     if (!verbose) return 0;
-    iprintf("%i threads\n", qthread_num_shepherds());
+    printf("%i threads\n", qthread_num_shepherds());
     NUMARG(len, "TEST_LEN");
     NUMARG(iterations, "TEST_ITERATIONS");
     NUMARG(using_doubles, "TEST_USING_DOUBLES");
-    iprintf("using %s\n", using_doubles?"doubles":"aligned_ts");
+    printf("using %s\n", using_doubles?"doubles":"aligned_ts");
 
 
     if (using_doubles) {
@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
 		    i, (unsigned long)len,
 		    qtimer_secs(timer));
 	}
-	iprintf("sorting %lu doubles with qutil took: %f seconds (avg)\n",
+	printf("sorting %lu doubles with qutil took: %f seconds (avg)\n",
 		(unsigned long)len,
 		cumulative_time/(double)iterations);
 	cumulative_time = 0;
@@ -81,7 +81,7 @@ int main(int argc, char *argv[])
 		    i, (unsigned long)len,
 		    qtimer_secs(timer));
 	}
-	iprintf("sorting %lu doubles with libc took: %f seconds\n",
+	printf("sorting %lu doubles with libc took: %f seconds\n",
 		(unsigned long)len,
 		cumulative_time/(double)iterations);
 	free(d_array);
@@ -100,7 +100,7 @@ int main(int argc, char *argv[])
 	    qtimer_stop(timer);
 	    cumulative_time += qtimer_secs(timer);
 	}
-	iprintf("sorting %lu aligned_ts with qutil took: %f seconds\n",
+	printf("sorting %lu aligned_ts with qutil took: %f seconds\n",
 		(unsigned long)len,
 		cumulative_time/(double)iterations);
 	cumulative_time = 0;
@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
 	    qtimer_stop(timer);
 	    cumulative_time += qtimer_secs(timer);
 	}
-	iprintf("sorting %lu aligned_ts with libc took: %f seconds (avg)\n",
+	printf("sorting %lu aligned_ts with libc took: %f seconds (avg)\n",
 		(unsigned long)len,
 		cumulative_time/(double)iterations);
 	free(ui_array);
