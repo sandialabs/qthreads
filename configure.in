@@ -515,7 +515,8 @@ AS_IF([test "x$qthread_implementation" = "xunix"],
 	  [QTHREAD_CHECK_LIBLGRP([qthread_topo=lgrp],
 	    [QTHREAD_CHECK_LIBNUMA([qthread_topo=libnuma],
 		  [QTHREAD_CHECK_PLPA([qthread_topo=plpa],
-			[QTHREAD_CHECK_MACHTOPO([qthread_topo=mach])])])])
+			[QTHREAD_CHECK_MACHTOPO([qthread_topo=mach],
+			  [QTHREAD_CHECK_TILETOPO([qthread_topo=tile])])])])])
 	  ])
 
 ## --------------- ##
