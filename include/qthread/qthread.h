@@ -906,18 +906,18 @@ static QINLINE unsigned long qthread_incr_xx(volatile void *addr, const int incr
     return 0;			       /* compiler check */
 }
 
-#if ! defined(QTHREAD_ATOMIC_CAS) || defined(QTHREAD_MUTEX_CAS)
+#if ! defined(QTHREAD_ATOMIC_CAS) || defined(QTHREAD_MUTEX_INCREMENT)
 static QINLINE uint32_t qthread_cas32(volatile uint32_t * operand,
 				      const uint32_t oldval,
 				      const uint32_t newval)
 {				       /*{{{ */
-#ifdef QTHREAD_MUTEX_CAS // XXX: this is only valid if you don't read *operand without the lock
+#ifdef QTHREAD_MUTEX_INCREMENT // XXX: this is only valid if you don't read *operand without the lock
     uint32_t retval;
     qthread_t *me = qthread_self();
 
     qthread_lock(me, (aligned_t *) operand);
     retval = *operand;
-    if (*operand == oldval) {
+    if (retval == oldval) {
 	*operand = newval;
     }
     qthread_unlock(me, (aligned_t *) operand);
@@ -983,13 +983,13 @@ static QINLINE uint64_t qthread_cas64(volatile uint64_t * operand,
 				      const uint64_t oldval,
 				      const uint64_t newval)
 {				       /*{{{ */
-#ifdef QTHREAD_MUTEX_CAS
+#ifdef QTHREAD_MUTEX_INCREMENT
     uint64_t retval;
     qthread_t *me = qthread_self();
 
     qthread_lock(me, (aligned_t *) operand);
     retval = *operand;
-    if (*operand == oldval) {
+    if (retval == oldval) {
 	*operand = newval;
     }
     qthread_unlock(me, (aligned_t *) operand);
