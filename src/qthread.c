@@ -513,10 +513,10 @@ static qt_mpool generic_context_pool = NULL;
 static QINLINE void ALLOC_LFQNODE(qt_lfqueue_node_t ** ret,
 				  qthread_shepherd_t * shep)
 {
-# ifdef HAVE_POSIX_MEMALIGN
-    qassert(posix_memalign((void **)ret, 16, sizeof(qt_lfqueue_node_t)), 0);
-# elif HAVE_MEMALIGN
+# ifdef HAVE_MEMALIGN
     *ret = (qt_lfqueue_node_t *) memalign(16, sizeof(qt_lfqueue_node_t));
+# elif defined(HAVE_POSIX_MEMALIGN)
+    qassert(posix_memalign((void **)ret, 16, sizeof(qt_lfqueue_node_t)), 0);
 # else
     *ret = calloc(1, sizeof(qt_lfqueue_node_t));
     return;
@@ -1183,8 +1183,11 @@ static void *qthread_shepherd(void *arg)
 	    fprintf(stderr, "ERROR! Cannot SET affinity for some reason\n");
 	}
 #elif defined(QTHREAD_HAVE_TILETOPO)
-	if (tmc_cpus_set_my_cpu(me->node) < 0) {
-	    perror("tmc_cpus_set_my_affinity() failed");
+	if (me->node != -1) {
+	    if (tmc_cpus_set_my_cpu(me->node) < 0) {
+		perror("tmc_cpus_set_my_affinity() failed");
+		fprintf(stderr,"\tnode = %i\n", me->node);
+	    }
 	}
 #elif defined(QTHREAD_HAVE_LIBNUMA)
 	if (numa_run_on_node(me->node) != 0) {
