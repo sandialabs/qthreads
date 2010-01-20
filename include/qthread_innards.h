@@ -125,7 +125,7 @@ static QINLINE void qthread_debug(int level, char *format, ...)
 
 	char ch;
 
-	qassert(QTHREAD_FASTLOCK_LOCK(&output_lock), 0);
+	QTHREAD_FASTLOCK_LOCK(&output_lock);
 
 	while (write(2, "QDEBUG: ", 8) != 8) ;
 
@@ -195,7 +195,7 @@ static QINLINE void qthread_debug(int level, char *format, ...)
 	va_end(args);
 	/*fflush(stderr); */
 
-	qassert(QTHREAD_FASTLOCK_UNLOCK(&output_lock), 0);
+	QTHREAD_FASTLOCK_UNLOCK(&output_lock);
     }
 }				       /*}}} */
 #else

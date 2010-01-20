@@ -1493,7 +1493,7 @@ int qthread_initialize(void)
 #endif
 
 #ifdef QTHREAD_DEBUG
-    qassert(QTHREAD_FASTLOCK_INIT(output_lock), 0);
+    QTHREAD_FASTLOCK_INIT(output_lock);
     {
 	char *qdl = getenv("QTHREAD_DEBUG_LEVEL");
 	char *qdle = NULL;
@@ -2686,19 +2686,9 @@ static QINLINE qt_lfqueue_t *qt_lfqueue_new(qthread_shepherd_t * shepherd)
     if (q != NULL) {
 	q->creator_ptr = shepherd;
 #ifdef QTHREAD_MUTEX_INCREMENT
-	if (QTHREAD_FASTLOCK_INIT(q->head_lock) != 0) {
-	    FREE_LFQUEUE(q);
-	    return NULL;
-	}
-	if (QTHREAD_FASTLOCK_INIT(q->tail_lock) != 0) {
-	    qassert(QTHREAD_FASTLOCK_DESTROY(q->head_lock), 0);
-	    FREE_LFQUEUE(q);
-	}
-	if (QTHREAD_FASTLOCK_INIT(q->advisory_queuelen_m) != 0) {
-	    qassert(QTHREAD_FASTLOCK_DESTROY(q->head_lock), 0);
-	    qassert(QTHREAD_FASTLOCK_DESTROY(q->tail_lock), 0);
-	    FREE_LFQUEUE(q);
-	}
+	QTHREAD_FASTLOCK_INIT(q->head_lock);
+	QTHREAD_FASTLOCK_INIT(q->tail_lock);
+	QTHREAD_FASTLOCK_INIT(q->advisory_queuelen_m);
 	ALLOC_LFQNODE(((qt_lfqueue_node_t **) & (q->head)), shepherd);
 	assert(q->head != NULL);
 	if (q->head == NULL) {
