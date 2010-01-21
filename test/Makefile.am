@@ -7,7 +7,7 @@ AM_CXXFLAGS = @RESTRICT_CXXFLAGS@
 
 TESTS = test_basic \
 		test1 \
-		test2 \
+		test_stackleft \
 		test_qalloc \
 		testincr testdincr testfincr \
 		test_cas \
@@ -77,8 +77,8 @@ LDADD = $(QTHREADLIB)
 test1_SOURCES = test1.c
 test1_DEPENDENCIES = $(QTHREADLIB)
 
-test2_SOURCES = test2.c
-test2_DEPENDENCIES = $(QTHREADLIB)
+test_stackleft_SOURCES = test_stackleft.c
+test_stackleft_DEPENDENCIES = $(QTHREADLIB)
 
 test_basic_SOURCES = test_basic.c
 test_basic_DEPENDENCIES = $(QTHREADLIB)
