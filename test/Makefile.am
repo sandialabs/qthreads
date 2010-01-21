@@ -6,23 +6,24 @@
 AM_CXXFLAGS = @RESTRICT_CXXFLAGS@
 
 TESTS = test_basic \
-		test1 \
-		test_stackleft \
-		test_qalloc \
-		testincr testdincr testfincr \
 		test_cas \
 		test_cacheline \
-		testqloop testid \
 		test_internal_mod \
-		test_allpairs \
-		test_wavefront \
+		testid \
+		testincr testdincr testfincr \
+		test_stackleft \
 		test_migrate \
 		test_disabled \
-		test_qarray \
+		test_qutil \
+		test_qutil_qsort \
+		testqloop \
 		test_qpool \
+		test_qarray \
 		test_qlfqueue \
 		test_qdqueue \
-		test_qutil_qsort
+		test_allpairs \
+		test_wavefront \
+		test_qalloc
 
 EXTRA_PROGRAMS =
 
@@ -74,8 +75,8 @@ CONTEXTLIB = $(OUTPUTDIR)/osx_compat/libosx_compat.la
 
 LDADD = $(QTHREADLIB)
 
-test1_SOURCES = test1.c
-test1_DEPENDENCIES = $(QTHREADLIB)
+test_qutil_SOURCES = test_qutil.c
+test_qutil_DEPENDENCIES = $(QTHREADLIB)
 
 test_stackleft_SOURCES = test_stackleft.c
 test_stackleft_DEPENDENCIES = $(QTHREADLIB)
