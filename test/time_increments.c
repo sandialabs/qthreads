@@ -6,8 +6,8 @@
 #include "qtimer.h"
 #include "argparsing.h"
 
-size_t ITERATIONS;
-#define MAXPARALLELISM 256
+size_t ITERATIONS = 1000000;
+size_t MAXPARALLELISM = 256;
 
 aligned_t incrementme = 0;
 aligned_t *increments = NULL;
@@ -129,7 +129,8 @@ int main(int argc, char *argv[])
     assert(qthread_initialize() == QTHREAD_SUCCESS);
 
     CHECK_VERBOSE();
-    ITERATIONS = (verbose)?1000000:1000;
+    NUMARG(ITERATIONS,"ITERATIONS");
+    NUMARG(MAXPARALLELISM,"MAXPARALLELISM");
     shepherds = qthread_num_shepherds();
     printf("%u shepherds...\n", shepherds);
 
