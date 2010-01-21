@@ -575,7 +575,9 @@ echo    "            Lazy Thread IDs: $enable_lazy_threadids"
 echo    "              Pooled Memory: $enable_pooled_memory"
 qthread_incprefix="             Increments/CAS: "
 AS_IF([test "x$enable_software_increments" = "xyes"],
-	  [echo "${qthread_incprefix}Mutex (software)"],
+	  [AS_IF([test "x$ac_cv_func_pthread_spin_init" = "yes"],
+			 [echo "${qthread_incprefix}Spin (software)"],
+			 [echo "${qthread_incprefix}Mutex (software)"])],
 	  [AS_IF([test "x$qthread_cv_atomic_incr" = "xyes" -a "x$qthread_cv_atomic_CAS" = "xyes"],
 			 [echo "${qthread_incprefix}Compiler Builtin (both)"],
 			 [AS_IF([test "x$qthread_cv_atomic_incr" = "xyes"],
