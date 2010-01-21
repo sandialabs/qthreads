@@ -33,12 +33,27 @@ void *qt_hash_put(qt_hash h, const qt_key_t key, void *value)
     return cp_hashlist_append(h, (void*)key, value);
 }
 
+void *qt_hash_put_locked(qt_hash h, const qt_key_t key, void *value)
+{
+    return cp_hashlist_append(h, (void*)key, value);
+}
+
 void *qt_hash_remove(qt_hash h, const qt_key_t key)
 {
     return cp_hashlist_remove(h, (void*)key);
 }
 
+void *qt_hash_remove_locked(qt_hash h, const qt_key_t key)
+{
+    return cp_hashlist_remove(h, (void*)key);
+}
+
 void *qt_hash_get(qt_hash h, const qt_key_t key)
+{
+    return cp_hashlist_get(h, (void*)key);
+}
+
+void *qt_hash_get_locked(qt_hash h, const qt_key_t key)
 {
     return cp_hashlist_get(h, (void*)key);
 }
