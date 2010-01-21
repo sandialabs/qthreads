@@ -5,7 +5,10 @@
 
 AM_CXXFLAGS = @RESTRICT_CXXFLAGS@
 
-TESTS = test1 test2 test3 test_qalloc \
+TESTS = test_basic \
+		test1 \
+		test2 \
+		test_qalloc \
 		testincr testdincr testfincr \
 		test_cas \
 		test_cacheline \
@@ -77,8 +80,8 @@ test1_DEPENDENCIES = $(QTHREADLIB)
 test2_SOURCES = test2.c
 test2_DEPENDENCIES = $(QTHREADLIB)
 
-test3_SOURCES = test3.c
-test3_DEPENDENCIES = $(QTHREADLIB)
+test_basic_SOURCES = test_basic.c
+test_basic_DEPENDENCIES = $(QTHREADLIB)
 
 test_qalloc_SOURCES = testq.c
 test_qalloc_DEPENDENCIES = $(QTHREADLIB)
