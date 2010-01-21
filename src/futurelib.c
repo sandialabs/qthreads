@@ -3,6 +3,7 @@
 #endif
 #include "qthread/qthread.h"
 #include "qthread/futurelib.h"
+#include "qt_atomics.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -15,7 +16,7 @@ pthread_key_t future_bookkeeping;
 location_t *future_bookkeeping_array = NULL;
 
 static qthread_shepherd_id_t shep_for_new_futures = 0;
-static pthread_mutex_t sfnf_lock;
+static QTHREAD_FASTLOCK_TYPE sfnf_lock;
 
 /* This function is critical to futurelib, and as such must be as fast as
  * possible.
@@ -55,7 +56,7 @@ static void future_cleanup(void)
 	qthread_readFF(NULL, rets + i, rets + i);
     }
     free(rets);
-    qassert(pthread_mutex_destroy(&sfnf_lock), 0);
+    QTHREAD_FASTLOCK_DESTROY(sfnf_lock);
     qassert(pthread_key_delete(&future_bookkeeping), 0);
 }
 #endif
@@ -83,7 +84,7 @@ void future_init(int vp_per_loc)
     aligned_t *rets;
     qthread_t *me = qthread_self();
 
-    qassert(pthread_mutex_init(&sfnf_lock, NULL), 0);
+    QTHREAD_FASTLOCK_INIT(sfnf_lock);
     qassert(pthread_key_create(&future_bookkeeping, NULL), 0);
     future_bookkeeping_array =
 	(location_t *) calloc(qlib->nshepherds, sizeof(location_t));
@@ -164,10 +165,10 @@ void future_fork(qthread_f fptr, void *arg, aligned_t * retval)
 	rr = ptr->sched_shep++;
 	ptr->sched_shep *= (ptr->sched_shep < qlib->nshepherds);
     } else {
-	qassert(pthread_mutex_lock(&sfnf_lock), 0);
+	QTHREAD_FASTLOCK_LOCK(&sfnf_lock);
 	rr = shep_for_new_futures++;
 	shep_for_new_futures *= (shep_for_new_futures < qlib->nshepherds);
-	qassert(pthread_mutex_unlock(&sfnf_lock), 0);
+	QTHREAD_FASTLOCK_UNLOCK(&sfnf_lock);
     }
     qthread_debug(THREAD_DETAILS, "Thread %p decided future will go to %i\n", (void *)me,
 		  rr);
