@@ -4347,43 +4347,79 @@ void qthread_assertnotfuture(qthread_t * t)
 }				       /*}}} */
 
 #ifdef QTHREAD_MUTEX_INCREMENT
-uint32_t qthread_incr32_(volatile uint32_t *op, const int incr)
+uint32_t qthread_incr32_(volatile uint32_t * op, const int incr)
 {
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
     uint32_t retval;
+
     QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
     retval = *op;
     *op += incr;
     QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
     return retval;
 }
-uint64_t qthread_incr64_(volatile uint64_t *op, const int incr)
+
+uint64_t qthread_incr64_(volatile uint64_t * op, const int incr)
 {
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
     uint64_t retval;
+
     QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
     retval = *op;
     *op += incr;
     QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
     return retval;
 }
+
 double qthread_dincr_(volatile double *op, const double incr)
 {
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
     double retval;
+
     QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
     retval = *op;
     *op += incr;
     QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
     return retval;
 }
+
 float qthread_fincr_(volatile float *op, const float incr)
 {
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
     float retval;
+
     QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
     retval = *op;
     *op += incr;
+    QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
+    return retval;
+}
+
+uint32_t qthread_cas32_(volatile uint32_t * operand, const uint32_t oldval,
+			const uint32_t newval)
+{
+    uint32_t retval;
+    unsigned int stripe = QTHREAD_CHOOSE_STRIPE(operand);
+
+    QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
+    retval = *operand;
+    if (retval == oldval) {
+	*operand = newval;
+    }
+    QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
+    return retval;
+}
+uint64_t qthread_cas64_(volatile uint64_t * operand, const uint64_t oldval,
+			const uint64_t newval)
+{
+    uint64_t retval;
+    unsigned int stripe = QTHREAD_CHOOSE_STRIPE(operand);
+
+    QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
+    retval = *operand;
+    if (retval == oldval) {
+	*operand = newval;
+    }
     QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
     return retval;
 }

@@ -289,6 +289,8 @@ uint32_t qthread_incr32_(volatile uint32_t *, const int);
 uint64_t qthread_incr64_(volatile uint64_t *, const int);
 float qthread_fincr_(volatile float *, const float);
 double qthread_dincr_(volatile double *, const double);
+uint32_t qthread_cas32_(volatile uint32_t *, const uint32_t, const uint32_t);
+uint64_t qthread_cas64_(volatile uint64_t *, const uint64_t, const uint64_t);
 #endif
 
 /* the following three functions implement variations on atomic increment. It
@@ -890,16 +892,7 @@ static QINLINE uint32_t qthread_cas32(volatile uint32_t * operand,
 				      const uint32_t newval)
 {				       /*{{{ */
 #ifdef QTHREAD_MUTEX_INCREMENT // XXX: this is only valid if you don't read *operand without the lock
-    uint32_t retval;
-    qthread_t *me = qthread_self();
-
-    qthread_lock(me, (aligned_t *) operand);
-    retval = *operand;
-    if (retval == oldval) {
-	*operand = newval;
-    }
-    qthread_unlock(me, (aligned_t *) operand);
-    return retval;
+    return qthread_cas32_(operand,oldval,newval);
 #else
 # if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
@@ -962,16 +955,7 @@ static QINLINE uint64_t qthread_cas64(volatile uint64_t * operand,
 				      const uint64_t newval)
 {				       /*{{{ */
 #ifdef QTHREAD_MUTEX_INCREMENT
-    uint64_t retval;
-    qthread_t *me = qthread_self();
-
-    qthread_lock(me, (aligned_t *) operand);
-    retval = *operand;
-    if (retval == oldval) {
-	*operand = newval;
-    }
-    qthread_unlock(me, (aligned_t *) operand);
-    return retval;
+    return qthread_cas64_(operand, oldval, newval);
 #else
 # if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
     register uint64_t result;
