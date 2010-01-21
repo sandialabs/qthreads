@@ -1,7 +1,7 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
-#include <assert.h>
+#include "qthread_asserts.h"
 #include <qt_hash.h>
 #include <stdlib.h> /* for calloc() */
 #include <stdio.h> /* debugging */
@@ -50,14 +50,10 @@ qt_hash qt_hash_create()
 {
     qt_hash ret = new qt_hash_s;
     if (ret) {
-	pthread_mutexattr_t attr;
-	pthread_mutexattr_init(&attr);
-	pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
-	if (pthread_mutex_init(&(ret->lock), &attr) != 0) {
+	if (pthread_mutex_init(&(ret->lock), NULL) != 0) {
 	    delete ret;
 	    ret = NULL;
 	}
-	pthread_mutexattr_destroy(&attr);
     }
     return ret;
 }
@@ -65,10 +61,9 @@ qt_hash qt_hash_create()
 void qt_hash_destroy(qt_hash h)
 {
     /* better hope nobody's fooling with it! */
-    if (h) {
-	pthread_mutex_destroy(&(h->lock));
-	delete h;
-    }
+    assert(h);
+    pthread_mutex_destroy(&(h->lock));
+    delete h;
 }
 
 
@@ -76,83 +71,98 @@ void qt_hash_destroy(qt_hash h)
  * to each value stored in the hash */
 void qt_hash_destroy_deallocate(qt_hash h, qt_hash_deallocator_fn f)
 {
-    if (h) {
-	pthread_mutex_lock(&(h->lock));
-	for (qtmap::iterator iter(h->h.begin());
-		iter != h->h.end();
-		iter++) {
-	    assert(iter->second != NULL);
-	    f((void*)(iter->second));
-	}
-	pthread_mutex_unlock(&(h->lock));
-	qt_hash_destroy(h);
+    assert(h);
+    pthread_mutex_lock(&(h->lock));
+    for (qtmap::iterator iter(h->h.begin());
+	    iter != h->h.end();
+	    iter++) {
+	assert(iter->second != NULL);
+	f((void*)(iter->second));
     }
+    pthread_mutex_unlock(&(h->lock));
+    qt_hash_destroy(h);
 }
 
 void *qt_hash_put(qt_hash h, const qt_key_t key, void *value)
 {
-    if (h) {
-	pthread_mutex_lock(&(h->lock));
-	h->h[(QT_HASH_CAST)key] = value;
-	pthread_mutex_unlock(&(h->lock));
-	return value;
-    } else {
-	return NULL;
-    }
+    assert(h);
+    pthread_mutex_lock(&(h->lock));
+    h->h[(QT_HASH_CAST)key] = value;
+    pthread_mutex_unlock(&(h->lock));
+    return value;
+}
+
+void *qt_hash_put_locked(qt_hash h, const qt_key_t key, void *value)
+{
+    assert(h);
+    h->h[(QT_HASH_CAST)key] = value;
+    return value;
 }
 
 void *qt_hash_remove(qt_hash h, const qt_key_t key)
 {
-    if (h) {
-	void * ret = NULL;
-	pthread_mutex_lock(&(h->lock));
+    void * ret = NULL;
+    assert(h);
+    pthread_mutex_lock(&(h->lock));
+    ret = qt_hash_remove_locked(h,key);
+    pthread_mutex_unlock(&(h->lock));
+    return ret;
+}
+
+void *qt_hash_remove_locked(qt_hash h, const qt_key_t key)
+{
+    void * ret = NULL;
+    assert(h);
+    {
 	qtmap::iterator iter(h->h.find((QT_HASH_CAST)key));
 	if (iter != h->h.end()) {
 	    ret = iter->second;
 	    h->h.erase(iter);
-	    //h->h.erase(key);
 	}
-	pthread_mutex_unlock(&(h->lock));
-	return ret;
     }
-    return NULL;
+    return ret;
 }
 
 void *qt_hash_get(qt_hash h, const qt_key_t key)
 {
-    if (h) {
-	void * ret;
-	pthread_mutex_lock(&(h->lock));
+    void * ret;
+    assert(h);
+    pthread_mutex_lock(&(h->lock));
+    ret = qt_hash_get_locked(h,key);
+    pthread_mutex_unlock(&(h->lock));
+    return ret;
+}
+
+void *qt_hash_get_locked(qt_hash h, const qt_key_t key)
+{
+    assert(h);
+    {
 	qtmap::iterator iter(h->h.find((QT_HASH_CAST)key));
 	if (iter == h->h.end()) {
-	    ret = NULL;
+	    return NULL;
 	} else {
 	    assert(iter->first == (QT_HASH_CAST)key);
-	    ret = iter->second;
+	    return iter->second;
 	}
-	pthread_mutex_unlock(&(h->lock));
-	return ret;
-    } else {
-	return NULL;
     }
 }
 
 void qt_hash_callback(qt_hash h, qt_hash_callback_fn f, void *arg)
 {
-    if (h) {
-	pthread_mutex_lock(&(h->lock));
-	for (qtmap::iterator iter(h->h.begin());
-		iter != h->h.end();
-		iter++) {
-	    f((void*)iter->first, iter->second, arg);
-	}
-	pthread_mutex_unlock(&(h->lock));
+    assert(h);
+    pthread_mutex_lock(&(h->lock));
+    for (qtmap::iterator iter(h->h.begin());
+	    iter != h->h.end();
+	    iter++) {
+	f((void*)iter->first, iter->second, arg);
     }
+    pthread_mutex_unlock(&(h->lock));
 }
 
 size_t qt_hash_count(qt_hash h)
 {
     size_t s;
+    assert(h);
     pthread_mutex_lock(&(h->lock));
     s = h->h.size();
     pthread_mutex_unlock(&(h->lock));
@@ -161,14 +171,12 @@ size_t qt_hash_count(qt_hash h)
 
 void qt_hash_lock(qt_hash h)
 {
-    if (h) {
-	pthread_mutex_lock(&(h->lock));
-    }
+    assert(h);
+    pthread_mutex_lock(&(h->lock));
 }
 
 void qt_hash_unlock(qt_hash h)
 {
-    if (h) {
-	pthread_mutex_unlock(&(h->lock));
-    }
+    assert(h);
+    pthread_mutex_unlock(&(h->lock));
 }

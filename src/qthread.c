@@ -276,7 +276,7 @@ struct qthread_lock_s
 #ifdef QTHREAD_DEBUG
     unsigned owner;
 #endif
-    pthread_mutex_t lock;
+    QTHREAD_FASTLOCK_TYPE lock;
 #ifdef QTHREAD_LOCK_PROFILING
     qtimer_t hold_timer;
 #endif
@@ -292,7 +292,7 @@ typedef struct qthread_addrres_s
 
 typedef struct qthread_addrstat_s
 {
-    pthread_mutex_t lock;
+    QTHREAD_FASTLOCK_TYPE lock;
     qthread_addrres_t *EFQ;
     qthread_addrres_t *FEQ;
     qthread_addrres_t *FFQ;
@@ -310,11 +310,13 @@ qlib_t qlib = NULL;
 int qaffinity = 1;
 
 #ifdef QTHREAD_COUNT_THREADS
-static aligned_t threadcount = 0;
-static pthread_mutex_t threadcount_lock = PTHREAD_MUTEX_INITIALIZER;
-static aligned_t maxconcurrentthreads = 0;
-static aligned_t concurrentthreads = 0;
-static pthread_mutex_t concurrentthreads_lock = PTHREAD_MUTEX_INITIALIZER;
+static aligned_t threadcount;
+static aligned_t maxconcurrentthreads;
+static aligned_t concurrentthreads;
+# ifdef QTHREAD_MUTEX_INCREMENT
+static QTHREAD_FASTLOCK_TYPE threadcount_lock;
+static QTHREAD_FASTLOCK_TYPE concurrentthreads_lock;
+# endif
 
 #define QTHREAD_COUNT_THREADS_BINCOUNTER(TYPE, BIN) qthread_internal_incr(&qlib->TYPE##_stripes[(BIN)], &qlib->TYPE##_stripes_locks[(BIN)], 1)
 #else
@@ -1037,11 +1039,18 @@ int qthread_debuglevel(int d)
     ret->empty_time += secs; \
     ret->empty_count ++; } while (0)
 # define QTHREAD_LOCK_UNIQUERECORD(TYPE, ADDR, ME) qt_hash_put((ME)->shepherd_ptr->unique##TYPE##addrs, (void*)(ADDR), (void*)(ADDR))
+# ifndef HAVE_CPROPS
+static QINLINE void qthread_unique_collect(const qt_key_t key, void *value, void *id)
+{
+    qt_hash_put_locked((qt_hash) id, key, value);
+}
+# else /* HAVE_CPROPS */
 static QINLINE int qthread_unique_collect(void *key, void *value, void *id)
 {
-    qt_hash_put((qt_hash) id, key, value);
+    qt_hash_put_locked((qt_hash) id, key, value);
     return 0;
 }
+# endif
 #else
 # define QTHREAD_WAIT_TIMER_DECLARATION
 # define QTHREAD_WAIT_TIMER_START() do{ }while(0)
@@ -1343,7 +1352,7 @@ static void *qthread_shepherd(void *arg)
 				      "qthread_shepherd(%u): thread %i blocked on FEB\n",
 				      me->shepherd_id, t->thread_id);
 			t->thread_state = QTHREAD_STATE_BLOCKED;
-			QTHREAD_UNLOCK(&
+			QTHREAD_FASTLOCK_UNLOCK(&
 				       (((qthread_addrstat_t *) (t->
 								 blockedon))->
 					lock));
@@ -1356,7 +1365,7 @@ static void *qthread_shepherd(void *arg)
 				      me->shepherd_id, t->thread_id);
 			qthread_enqueue((qthread_queue_t *) t->blockedon->
 					waiting, t);
-			QTHREAD_UNLOCK(&(t->blockedon->lock));
+			QTHREAD_FASTLOCK_UNLOCK(&(t->blockedon->lock));
 			break;
 
 		    case QTHREAD_STATE_TERMINATED:
@@ -1595,6 +1604,16 @@ int qthread_initialize(void)
     if (qlib == NULL) {
 	return QTHREAD_MALLOC_ERROR;
     }
+
+#ifdef QTHREAD_COUNT_THREADS
+    threadcount = 0;
+    maxconcurrentthreads = 0;
+    concurrentthreads = 0;
+# ifdef QTHREAD_MUTEX_INCREMENT
+    QTHREAD_FASTLOCK_INIT(threadcount_lock);
+    QTHREAD_FASTLOCK_INIT(concurrentthreads_lock);
+# endif
+#endif
 
     /* initialize the FEB-like locking structures */
 
@@ -2370,7 +2389,9 @@ void qthread_finalize(void)
 #ifdef QTHREAD_COUNT_THREADS
     printf("spawned %lu threads, max concurrency %lu\n",
 	   (unsigned long)threadcount, (unsigned long)maxconcurrentthreads);
-    QTHREAD_DESTROYLOCK(&threadcount_lock);
+#ifdef QTHREAD_MUTEX_INCREMENT
+    QTHREAD_FASTLOCK_DESTROY(threadcount_lock);
+#endif
     QTHREAD_DESTROYLOCK(&concurrentthreads_lock);
 #endif
 
@@ -3051,7 +3072,7 @@ static void qthread_addrstat_delete(qthread_addrstat_t * m)
 #ifdef QTHREAD_LOCK_PROFILING
     qtimer_free(m->empty_timer);
 #endif
-    QTHREAD_DESTROYLOCK(&m->lock);
+    QTHREAD_FASTLOCK_DESTROY(m->lock);
     FREE_ADDRSTAT(m);
 }				       /*}}} */
 
@@ -3516,13 +3537,13 @@ int qthread_feb_status(const aligned_t * addr)
     QALIGN(addr, alignedaddr, "qthread_feb_status()");
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]); {
-	m = (qthread_addrstat_t *) qt_hash_get(qlib->FEBs[lockbin],
+	m = (qthread_addrstat_t *) qt_hash_get_locked(qlib->FEBs[lockbin],
 					       (void *)alignedaddr);
 	if (m) {
-	    QTHREAD_LOCK(&m->lock);
+	    QTHREAD_FASTLOCK_LOCK(&m->lock);
 	    REPORTLOCK(m);
 	    status = m->full;
-	    QTHREAD_UNLOCK(&m->lock);
+	    QTHREAD_FASTLOCK_UNLOCK(&m->lock);
 	    REPORTUNLOCK(m);
 	}
     }
@@ -3541,10 +3562,7 @@ static QINLINE qthread_addrstat_t *qthread_addrstat_new(qthread_shepherd_t *
     qthread_addrstat_t *ret = ALLOC_ADDRSTAT(shepherd);
 
     if (ret != NULL) {
-	if (pthread_mutex_init(&ret->lock, NULL) != 0) {
-	    FREE_ADDRSTAT(ret);
-	    return NULL;
-	}
+	QTHREAD_FASTLOCK_INIT(ret->lock);
 	ret->full = 1;
 	ret->EFQ = NULL;
 	ret->FEQ = NULL;
@@ -3565,17 +3583,17 @@ static QINLINE void qthread_FEB_remove(void *maddr)
 		  "qthread_FEB_remove(): attempting removal %p\n", maddr);
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]); {
-	m = (qthread_addrstat_t *) qt_hash_get(qlib->FEBs[lockbin], maddr);
+	m = (qthread_addrstat_t *) qt_hash_get_locked(qlib->FEBs[lockbin], maddr);
 	if (m) {
-	    QTHREAD_LOCK(&(m->lock));
+	    QTHREAD_FASTLOCK_LOCK(&(m->lock));
 	    REPORTLOCK(m);
 	    if (m->FEQ == NULL && m->EFQ == NULL && m->FFQ == NULL &&
 		m->full == 1) {
 		qthread_debug(LOCK_DETAILS,
 			      "qthread_FEB_remove(): all lists are empty, and status is full\n");
-		qt_hash_remove(qlib->FEBs[lockbin], maddr);
+		qt_hash_remove_locked(qlib->FEBs[lockbin], maddr);
 	    } else {
-		QTHREAD_UNLOCK(&(m->lock));
+		QTHREAD_FASTLOCK_UNLOCK(&(m->lock));
 		REPORTUNLOCK(m);
 		qthread_debug(LOCK_DETAILS,
 			      "qthread_FEB_remove(): address cannot be removed; in use\n");
@@ -3585,7 +3603,7 @@ static QINLINE void qthread_FEB_remove(void *maddr)
     }
     qt_hash_unlock(qlib->FEBs[lockbin]);
     if (m != NULL) {
-	QTHREAD_UNLOCK(&m->lock);
+	QTHREAD_FASTLOCK_UNLOCK(&m->lock);
 	REPORTUNLOCK(m);
 	qthread_addrstat_delete(m);
     }
@@ -3619,7 +3637,7 @@ static QINLINE void qthread_gotlock_empty(qthread_shepherd_t * shep,
     else
 	removeable = 0;
     if (recursive == 0) {
-	QTHREAD_UNLOCK(&m->lock);
+	QTHREAD_FASTLOCK_UNLOCK(&m->lock);
 	REPORTUNLOCK(m);
 	if (removeable) {
 	    qthread_FEB_remove(maddr);
@@ -3674,7 +3692,7 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t * shep,
     else
 	removeable = 1;
     if (recursive == 0) {
-	QTHREAD_UNLOCK(&m->lock);
+	QTHREAD_FASTLOCK_UNLOCK(&m->lock);
 	REPORTUNLOCK(m);
 	/* now, remove it if it needs to be removed */
 	if (removeable) {
@@ -3693,7 +3711,7 @@ int qthread_empty(qthread_t * me, const aligned_t * dest)
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]);
     {				       /* BEGIN CRITICAL SECTION */
-	m = (qthread_addrstat_t *) qt_hash_get(qlib->FEBs[lockbin],
+	m = (qthread_addrstat_t *) qt_hash_get_locked(qlib->FEBs[lockbin],
 					       (void *)alignedaddr);
 	if (!m) {
 	    /* currently full, and must be added to the hash to empty */
@@ -3705,11 +3723,11 @@ int qthread_empty(qthread_t * me, const aligned_t * dest)
 	    }
 	    m->full = 0;
 	    QTHREAD_EMPTY_TIMER_START(m);
-	    qt_hash_put(qlib->FEBs[lockbin], (void *)alignedaddr, m);
+	    qt_hash_put_locked(qlib->FEBs[lockbin], (void *)alignedaddr, m);
 	    m = NULL;
 	} else {
 	    /* it could be either full or not, don't know */
-	    QTHREAD_LOCK(&m->lock);
+	    QTHREAD_FASTLOCK_LOCK(&m->lock);
 	    REPORTLOCK(m);
 	}
     }				       /* END CRITICAL SECTION */
@@ -3732,10 +3750,10 @@ int qthread_fill(qthread_t * me, const aligned_t * dest)
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]);
     {				       /* BEGIN CRITICAL SECTION */
-	m = (qthread_addrstat_t *) qt_hash_get(qlib->FEBs[lockbin],
+	m = (qthread_addrstat_t *) qt_hash_get_locked(qlib->FEBs[lockbin],
 					       (void *)alignedaddr);
 	if (m) {
-	    QTHREAD_LOCK(&m->lock);
+	    QTHREAD_FASTLOCK_LOCK(&m->lock);
 	    REPORTLOCK(m);
 	}
     }				       /* END CRITICAL SECTION */
@@ -3771,7 +3789,7 @@ int qthread_writeF(qthread_t * me, aligned_t * restrict const dest,
     QTHREAD_LOCK_UNIQUERECORD(feb, dest, me);
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]); {	/* lock hash */
-	m = (qthread_addrstat_t *) qt_hash_get(qlib->FEBs[lockbin],
+	m = (qthread_addrstat_t *) qt_hash_get_locked(qlib->FEBs[lockbin],
 					       (void *)alignedaddr);
 	if (!m) {
 	    m = qthread_addrstat_new(me->shepherd_ptr);
@@ -3779,9 +3797,9 @@ int qthread_writeF(qthread_t * me, aligned_t * restrict const dest,
 		qt_hash_unlock(qlib->FEBs[lockbin]);
 		return QTHREAD_MALLOC_ERROR;
 	    }
-	    qt_hash_put(qlib->FEBs[lockbin], alignedaddr, m);
+	    qt_hash_put_locked(qlib->FEBs[lockbin], alignedaddr, m);
 	}
-	QTHREAD_LOCK(&m->lock);
+	QTHREAD_FASTLOCK_LOCK(&m->lock);
 	REPORTLOCK(m);
     }
     qt_hash_unlock(qlib->FEBs[lockbin]);	/* unlock hash */
@@ -3830,7 +3848,7 @@ int qthread_writeEF(qthread_t * me, aligned_t * restrict const dest,
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]);
     {
-	m = (qthread_addrstat_t *) qt_hash_get(qlib->FEBs[lockbin],
+	m = (qthread_addrstat_t *) qt_hash_get_locked(qlib->FEBs[lockbin],
 					       (void *)alignedaddr);
 	if (!m) {
 	    m = qthread_addrstat_new(me->shepherd_ptr);
@@ -3838,9 +3856,9 @@ int qthread_writeEF(qthread_t * me, aligned_t * restrict const dest,
 		qt_hash_unlock(qlib->FEBs[lockbin]);
 		return QTHREAD_MALLOC_ERROR;
 	    }
-	    qt_hash_put(qlib->FEBs[lockbin], alignedaddr, m);
+	    qt_hash_put_locked(qlib->FEBs[lockbin], alignedaddr, m);
 	}
-	QTHREAD_LOCK(&(m->lock));
+	QTHREAD_FASTLOCK_LOCK(&(m->lock));
 	REPORTLOCK(m);
     }
     qt_hash_unlock(qlib->FEBs[lockbin]);
@@ -3852,7 +3870,7 @@ int qthread_writeEF(qthread_t * me, aligned_t * restrict const dest,
 	QTHREAD_WAIT_TIMER_DECLARATION;
 	X = ALLOC_ADDRRES(me->shepherd_ptr);
 	if (X == NULL) {
-	    QTHREAD_UNLOCK(&(m->lock));
+	    QTHREAD_FASTLOCK_UNLOCK(&(m->lock));
 	    REPORTUNLOCK(m);
 	    return QTHREAD_MALLOC_ERROR;
 	}
@@ -3915,14 +3933,14 @@ int qthread_readFF(qthread_t * me, aligned_t * restrict const dest,
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]);
     {
-	m = (qthread_addrstat_t *) qt_hash_get(qlib->FEBs[lockbin],
+	m = (qthread_addrstat_t *) qt_hash_get_locked(qlib->FEBs[lockbin],
 					       (void *)alignedaddr);
 	if (!m) {
 	    if (dest && dest != src) {
 		memcpy(dest, src, sizeof(aligned_t));
 	    }
 	} else {
-	    QTHREAD_LOCK(&m->lock);
+	    QTHREAD_FASTLOCK_LOCK(&m->lock);
 	    REPORTLOCK(m);
 	}
     }
@@ -3937,7 +3955,7 @@ int qthread_readFF(qthread_t * me, aligned_t * restrict const dest,
 	QTHREAD_WAIT_TIMER_DECLARATION;
 	X = ALLOC_ADDRRES(me->shepherd_ptr);
 	if (X == NULL) {
-	    QTHREAD_UNLOCK(&m->lock);
+	    QTHREAD_FASTLOCK_UNLOCK(&m->lock);
 	    REPORTUNLOCK(m);
 	    return QTHREAD_MALLOC_ERROR;
 	}
@@ -3961,7 +3979,7 @@ int qthread_readFF(qthread_t * me, aligned_t * restrict const dest,
 	qthread_debug(LOCK_BEHAVIOR,
 		      "qthread_readFF(): tid %u succeeded on %p=%p\n",
 		      me->thread_id, dest, src);
-	QTHREAD_UNLOCK(&m->lock);
+	QTHREAD_FASTLOCK_UNLOCK(&m->lock);
 	REPORTUNLOCK(m);
     }
     QTHREAD_LOCK_TIMER_STOP(febblock, me);
@@ -3995,7 +4013,7 @@ int qthread_readFE(qthread_t * me, aligned_t * restrict const dest,
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]);
     {
-	m = (qthread_addrstat_t *) qt_hash_get(qlib->FEBs[lockbin],
+	m = (qthread_addrstat_t *) qt_hash_get_locked(qlib->FEBs[lockbin],
 					       alignedaddr);
 	if (!m) {
 	    m = qthread_addrstat_new(me->shepherd_ptr);
@@ -4003,9 +4021,9 @@ int qthread_readFE(qthread_t * me, aligned_t * restrict const dest,
 		qt_hash_unlock(qlib->FEBs[lockbin]);
 		return QTHREAD_MALLOC_ERROR;
 	    }
-	    qt_hash_put(qlib->FEBs[lockbin], alignedaddr, m);
+	    qt_hash_put_locked(qlib->FEBs[lockbin], alignedaddr, m);
 	}
-	QTHREAD_LOCK(&(m->lock));
+	QTHREAD_FASTLOCK_LOCK(&(m->lock));
 	REPORTLOCK(m);
     }
     qt_hash_unlock(qlib->FEBs[lockbin]);
@@ -4016,7 +4034,7 @@ int qthread_readFE(qthread_t * me, aligned_t * restrict const dest,
 	qthread_addrres_t *X = ALLOC_ADDRRES(me->shepherd_ptr);
 
 	if (X == NULL) {
-	    QTHREAD_UNLOCK(&m->lock);
+	    QTHREAD_FASTLOCK_UNLOCK(&m->lock);
 	    REPORTUNLOCK(m);
 	    return QTHREAD_MALLOC_ERROR;
 	}
@@ -4078,7 +4096,7 @@ int qthread_lock(qthread_t * me, const aligned_t * a)
 
     QTHREAD_COUNT_THREADS_BINCOUNTER(locks, lockbin);
     qt_hash_lock(qlib->locks[lockbin]);
-    m = (qthread_lock_t *) qt_hash_get(qlib->locks[lockbin], (void *)a);
+    m = (qthread_lock_t *) qt_hash_get_locked(qlib->locks[lockbin], (void *)a);
     if (m == NULL) {
 	m = ALLOC_LOCK(me->shepherd_ptr);
 	if (m == NULL) {
@@ -4093,16 +4111,11 @@ int qthread_lock(qthread_t * me, const aligned_t * a)
 	    qt_hash_unlock(qlib->locks[lockbin]);
 	    return QTHREAD_MALLOC_ERROR;
 	}
-	if (pthread_mutex_init(&m->lock, NULL) != 0) {
-	    qthread_queue_free(m->waiting);
-	    FREE_LOCK(m);
-	    qt_hash_unlock(qlib->locks[lockbin]);
-	    return QTHREAD_PTHREAD_ERROR;
-	}
+	QTHREAD_FASTLOCK_INIT(m->lock);
 	QTHREAD_HOLD_TIMER_INIT(m);
-	qt_hash_put(qlib->locks[lockbin], (void *)a, m);
+	qt_hash_put_locked(qlib->locks[lockbin], (void *)a, m);
 	/* since we just created it, we own it */
-	QTHREAD_LOCK(&m->lock);
+	QTHREAD_FASTLOCK_LOCK(&m->lock);
 	/* can only unlock the hash after we've locked the address, because
 	 * otherwise there's a race condition: the address could be removed
 	 * before we have a chance to add ourselves to it */
@@ -4111,7 +4124,7 @@ int qthread_lock(qthread_t * me, const aligned_t * a)
 #ifdef QTHREAD_DEBUG
 	m->owner = me->thread_id;
 #endif
-	QTHREAD_UNLOCK(&m->lock);
+	QTHREAD_FASTLOCK_UNLOCK(&m->lock);
 	qthread_debug(LOCK_BEHAVIOR,
 		      "qthread_lock(%u, %p): returned (wasn't locked)\n",
 		      me->thread_id, a);
@@ -4121,7 +4134,7 @@ int qthread_lock(qthread_t * me, const aligned_t * a)
 	 * the lock; dequeue this thread and yield. NOTE: it's up to the
 	 * master thread to enqueue this thread and unlock the address
 	 */
-	QTHREAD_LOCK(&m->lock);
+	QTHREAD_FASTLOCK_LOCK(&m->lock);
 	/* for an explanation of the lock/unlock ordering here, see above */
 	qt_hash_unlock(qlib->locks[lockbin]);
 
@@ -4156,13 +4169,13 @@ int qthread_unlock(qthread_t * me, const aligned_t * a)
 
     QTHREAD_COUNT_THREADS_BINCOUNTER(locks, lockbin);
     qt_hash_lock(qlib->locks[lockbin]);
-    m = (qthread_lock_t *) qt_hash_get(qlib->locks[lockbin], (void *)a);
+    m = (qthread_lock_t *) qt_hash_get_locked(qlib->locks[lockbin], (void *)a);
     if (m == NULL) {
 	/* unlocking an address that's already unlocked */
 	qt_hash_unlock(qlib->locks[lockbin]);
 	return QTHREAD_REDUNDANT;
     }
-    QTHREAD_LOCK(&m->lock);
+    QTHREAD_FASTLOCK_LOCK(&m->lock);
 
     QTHREAD_HOLD_TIMER_STOP(m, me->shepherd_ptr);
 
@@ -4176,13 +4189,13 @@ int qthread_unlock(qthread_t * me, const aligned_t * a)
 	qthread_debug(LOCK_DETAILS,
 		      "qthread_unlock(%u,%p): deleting waiting queue\n",
 		      me->thread_id, a);
-	qt_hash_remove(qlib->locks[lockbin], (void *)a);
+	qt_hash_remove_locked(qlib->locks[lockbin], (void *)a);
 	qt_hash_unlock(qlib->locks[lockbin]);
 	QTHREAD_HOLD_TIMER_DESTROY(m);
 	QTHREAD_UNLOCK(&m->waiting->lock);
 	qthread_queue_free(m->waiting);
-	QTHREAD_UNLOCK(&m->lock);
-	QTHREAD_DESTROYLOCK(&m->lock);
+	QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+	QTHREAD_FASTLOCK_DESTROY(m->lock);
 	FREE_LOCK(m);
     } else {
 	qt_hash_unlock(qlib->locks[lockbin]);
@@ -4201,7 +4214,7 @@ int qthread_unlock(qthread_t * me, const aligned_t * a)
 	qt_lfqueue_enqueue(u->shepherd_ptr->ready, u, me->shepherd_ptr);
 
 	QTHREAD_UNLOCK(&m->waiting->lock);
-	QTHREAD_UNLOCK(&m->lock);
+	QTHREAD_FASTLOCK_UNLOCK(&m->lock);
     }
 
     return QTHREAD_SUCCESS;
