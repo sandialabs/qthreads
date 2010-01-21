@@ -284,6 +284,13 @@ int qthread_readFE(qthread_t * me, aligned_t * restrict const dest,
 int qthread_lock(qthread_t * me, const aligned_t * a);
 int qthread_unlock(qthread_t * me, const aligned_t * a);
 
+#ifdef QTHREAD_MUTEX_INCREMENT
+uint32_t qthread_incr32_(volatile uint32_t *, const int);
+uint64_t qthread_incr64_(volatile uint64_t *, const int);
+float qthread_fincr_(volatile float *, const float);
+double qthread_dincr_(volatile double *, const double);
+#endif
+
 /* the following three functions implement variations on atomic increment. It
  * is done with architecture-specific assembly (on supported architectures,
  * when possible) and does NOT use FEB's or lock/unlock unless the architecture
@@ -291,18 +298,10 @@ int qthread_unlock(qthread_t * me, const aligned_t * a);
  * All of these functions return the value of the contents of the operand
  * *after* incrementing.
  */
-
 static QINLINE float qthread_fincr(volatile float *operand, const float incr)
 {				       /*{{{ */
 #if defined (QTHREAD_MUTEX_INCREMENT)
-    float retval;
-    qthread_t *me = qthread_self();
-
-    qthread_lock(me, (aligned_t *) operand);
-    retval = *operand;
-    *operand += incr;
-    qthread_unlock(me, (aligned_t *) operand);
-    return retval;
+    return qthread_fincr_(operand,incr);
 #else
 # if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
     union
@@ -411,14 +410,7 @@ static QINLINE double qthread_dincr(volatile double *operand,
 				    const double incr)
 {				       /*{{{ */
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-    double retval;
-    qthread_t *me = qthread_self();
-
-    qthread_lock(me, (aligned_t *) operand);
-    retval = *operand;
-    *operand += incr;
-    qthread_unlock(me, (aligned_t *) operand);
-    return retval;
+    return qthread_dincr_(operand, incr);
 #else
 # if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
     register uint64_t scratch_int;
@@ -614,14 +606,7 @@ static QINLINE uint32_t qthread_incr32(volatile uint32_t * operand,
 				       const int incr)
 {				       /*{{{ */
 #ifdef QTHREAD_MUTEX_INCREMENT
-    uint32_t retval;
-    qthread_t *me = qthread_self();
-
-    qthread_lock(me, (aligned_t *) operand);
-    retval = *operand;
-    *operand += incr;
-    qthread_unlock(me, (aligned_t *) operand);
-    return retval;
+    return qthread_incr32_(operand,incr);
 #else
 # if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
@@ -712,14 +697,7 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand,
 #if defined(QTHREAD_MUTEX_INCREMENT) || \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
-    uint64_t retval;
-    qthread_t *me = qthread_self();
-
-    qthread_lock(me, (aligned_t *) operand);
-    retval = *operand;
-    *operand += incr;
-    qthread_unlock(me, (aligned_t *) operand);
-    return retval;
+    return qthread_incr64_(operand,incr);
 #else
 # if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
     uint64_t retval;
@@ -1181,7 +1159,7 @@ Q_ENDCXX /* */
 
 #ifndef __cplusplus
 
-# ifdef QTHREAD_ATOMIC_INCR
+# if defined(QTHREAD_ATOMIC_INCR) && !defined(QTHREAD_MUTEX_INCREMENT)
 #  define qthread_incr( ADDR, INCVAL ) \
     __sync_fetch_and_add(ADDR, INCVAL)
 # else

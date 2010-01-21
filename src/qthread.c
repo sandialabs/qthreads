@@ -1619,6 +1619,9 @@ int qthread_initialize(void)
 
     /* this is synchronized with read/write locks by default */
     for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
+#ifdef QTHREAD_MUTEX_INCREMENT
+	QTHREAD_FASTLOCK_INIT(qlib->atomic_locks[i]);
+#endif
 #ifdef QTHREAD_COUNT_THREADS
 	qlib->locks_stripes[i] = 0;
 	qlib->febs_stripes[i] = 0;
@@ -2376,6 +2379,9 @@ void qthread_finalize(void)
 	qt_hash_destroy_deallocate(qlib->FEBs[i],
 				   (qt_hash_deallocator_fn)
 				   qthread_addrstat_delete);
+#ifdef QTHREAD_MUTEX_INCREMENT
+	QTHREAD_FASTLOCK_DESTROY(qlib->atomic_locks[i]);
+#endif
 #ifdef QTHREAD_COUNT_THREADS
 	printf("QTHREADS: bin %i used %i/%i times\n", i,
 	       qlib->locks_stripes[i], qlib->febs_stripes[i]);
@@ -4339,3 +4345,46 @@ void qthread_assertnotfuture(qthread_t * t)
 {				       /*{{{ */
     t->flags &= ~QTHREAD_FUTURE;
 }				       /*}}} */
+
+#ifdef QTHREAD_MUTEX_INCREMENT
+uint32_t qthread_incr32_(volatile uint32_t *op, const int incr)
+{
+    unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
+    uint32_t retval;
+    QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
+    retval = *op;
+    *op += incr;
+    QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
+    return retval;
+}
+uint64_t qthread_incr64_(volatile uint64_t *op, const int incr)
+{
+    unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
+    uint64_t retval;
+    QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
+    retval = *op;
+    *op += incr;
+    QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
+    return retval;
+}
+double qthread_dincr_(volatile double *op, const double incr)
+{
+    unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
+    double retval;
+    QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
+    retval = *op;
+    *op += incr;
+    QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
+    return retval;
+}
+float qthread_fincr_(volatile float *op, const float incr)
+{
+    unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
+    float retval;
+    QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
+    retval = *op;
+    *op += incr;
+    QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
+    return retval;
+}
+#endif
