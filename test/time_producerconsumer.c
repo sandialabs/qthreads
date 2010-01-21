@@ -202,9 +202,9 @@ int main(int argc, char *argv[])
 
     printf("%16g secs (%u iterations)\n", qtimer_secs(timer), (unsigned)ITERATIONS);
     printf("\t - total sending time: %21g secs\n", total_sending_time[0]);
-    printf("\t + external average time: %18g secs\n",
+    iprintf("\t + external average time: %18g secs\n",
 	   qtimer_secs(timer) / ITERATIONS);
-    printf("\t + internal average time: %18g secs\n",
+    iprintf("\t + internal average time: %18g secs\n",
 	   total_sending_time[0] / ITERATIONS);
     printf("\t = message throughput: %21g msgs/sec\n",
 	   ITERATIONS / total_sending_time[0]);
@@ -233,9 +233,9 @@ int main(int argc, char *argv[])
     }
     printf("%6g secs (%u-way %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
     printf("\t - total sending time: %21g secs\n", total_sending_time[0]);
-    printf("\t + external average time: %18g secs\n",
+    iprintf("\t + external average time: %18g secs\n",
 	   qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
-    printf("\t + internal average time: %18g secs\n",
+    iprintf("\t + internal average time: %18g secs\n",
 	   total_sending_time[0] / (ITERATIONS*MAXPARALLELISM));
     printf("\t = message throughput: %21g msgs/sec\n",
 	   (ITERATIONS*MAXPARALLELISM) / qtimer_secs(timer));
@@ -259,15 +259,15 @@ int main(int argc, char *argv[])
     printf("\t - total rtts: %29g secs\n", total_roundtrip_time[0]);
     printf("\t - total sending time: %21g secs\n",
 	   total_p1_sending_time[0] + total_p2_sending_time[0]);
-    printf("\t + external avg rtt: %23g secs\n",
+    iprintf("\t + external avg rtt: %23g secs\n",
 	   qtimer_secs(timer) / ITERATIONS);
-    printf("\t + internal avg rtt: %23g secs\n",
+    iprintf("\t + internal avg rtt: %23g secs\n",
 	   total_roundtrip_time[0] / ITERATIONS);
-    printf("\t + average p1 sending time: %16g secs\n",
+    iprintf("\t + average p1 sending time: %16g secs\n",
 	   total_p1_sending_time[0] / ITERATIONS);
-    printf("\t + average p2 sending time: %16g secs\n",
+    iprintf("\t + average p2 sending time: %16g secs\n",
 	   total_p2_sending_time[0] / ITERATIONS);
-    printf("\t + average sending time: %19g secs\n",
+    iprintf("\t + average sending time: %19g secs\n",
 	   (total_p1_sending_time[0] +
 	    total_p2_sending_time[0]) / (ITERATIONS * 2));
     /* each rt is 2 messages, thus: */
@@ -317,15 +317,15 @@ int main(int argc, char *argv[])
     printf("\t - total rtts: %29g secs\n", total_roundtrip_time[0]);
     printf("\t - total sending time: %21g secs\n",
 	   total_p1_sending_time[0] + total_p2_sending_time[0]);
-    printf("\t + external avg rtt: %23g secs\n",
+    iprintf("\t + external avg rtt: %23g secs\n",
 	   qtimer_secs(timer) / (MAXPARALLELISM*ITERATIONS));
-    printf("\t + internal avg rtt: %23g secs\n",
+    iprintf("\t + internal avg rtt: %23g secs\n",
 	   total_roundtrip_time[0] / (MAXPARALLELISM*ITERATIONS));
-    printf("\t + average p1 sending time: %16g secs\n",
+    iprintf("\t + average p1 sending time: %16g secs\n",
 	   total_p1_sending_time[0] / (MAXPARALLELISM*ITERATIONS));
-    printf("\t + average p2 sending time: %16g secs\n",
+    iprintf("\t + average p2 sending time: %16g secs\n",
 	   total_p2_sending_time[0] / (MAXPARALLELISM*ITERATIONS));
-    printf("\t + average sending time: %19g secs\n",
+    iprintf("\t + average sending time: %19g secs\n",
 	   (total_p1_sending_time[0] +
 	    total_p2_sending_time[0]) / (MAXPARALLELISM*ITERATIONS * 2));
     /* each rt is 2 messages, thus: */

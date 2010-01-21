@@ -144,7 +144,7 @@ int main(int argc, char *argv[])
     increments = NULL;
 
     printf("%19g secs (%u-threads %u iters)\n", qtimer_secs(timer), shepherds, (unsigned)(ITERATIONS*MAXPARALLELISM));
-    printf("\t + average increment time: %17g secs\n",
+    iprintf("\t + average increment time: %17g secs\n",
 	    qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
     printf("\t = increment throughput: %19f increments/sec\n",
 	    (ITERATIONS*MAXPARALLELISM) / qtimer_secs(timer));
@@ -162,7 +162,7 @@ int main(int argc, char *argv[])
     increments = NULL;
 
     printf("%15g secs (%u-threads %u iters)\n", qtimer_secs(timer), shepherds, (unsigned)(ITERATIONS*256));
-    printf("\t + average increment time: %17g secs\n",
+    iprintf("\t + average increment time: %17g secs\n",
 	    qtimer_secs(timer) / (ITERATIONS*256));
     printf("\t = increment throughput: %19f increments/sec\n",
 	    (ITERATIONS*256) / qtimer_secs(timer));
@@ -177,7 +177,7 @@ int main(int argc, char *argv[])
     qtimer_stop(timer);
 
     printf("%17g secs (%u-threads %u iters)\n", qtimer_secs(timer), shepherds, (unsigned)(ITERATIONS*256));
-    printf("\t + average increment time: %17g secs\n",
+    iprintf("\t + average increment time: %17g secs\n",
 	    qtimer_secs(timer) / (ITERATIONS*256));
     printf("\t = increment throughput: %19f increments/sec\n",
 	    (ITERATIONS*256) / qtimer_secs(timer));
@@ -198,7 +198,7 @@ int main(int argc, char *argv[])
     assert(incrementme == ITERATIONS*MAXPARALLELISM);
 
     printf("%12g secs (%u-threads %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
-    printf("\t + average increment time: %17g secs\n",
+    iprintf("\t + average increment time: %17g secs\n",
 	    qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
     printf("\t = increment throughput: %19f increments/sec\n",
 	    (ITERATIONS*MAXPARALLELISM) / qtimer_secs(timer));
@@ -221,7 +221,7 @@ int main(int argc, char *argv[])
     increments = NULL;
 
     printf("%8g secs (%u-threads %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
-    printf("\t + average increment time: %17g secs\n",
+    iprintf("\t + average increment time: %17g secs\n",
 	    qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
     printf("\t = increment throughput: %19f increments/sec\n",
 	    (ITERATIONS*MAXPARALLELISM) / qtimer_secs(timer));
@@ -241,7 +241,7 @@ int main(int argc, char *argv[])
     qtimer_stop(timer);
 
     printf("%10g secs (%u-threads %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
-    printf("\t + average increment time: %17g secs\n",
+    iprintf("\t + average increment time: %17g secs\n",
 	    qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
     printf("\t = increment throughput: %19f increments/sec\n",
 	    (ITERATIONS*MAXPARALLELISM) / qtimer_secs(timer));
@@ -264,7 +264,7 @@ int main(int argc, char *argv[])
     increments = NULL;
 
     printf("%13g secs (%u-way %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
-    printf("\t + average increment time: %17g secs\n",
+    iprintf("\t + average increment time: %17g secs\n",
 	    qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
     printf("\t = increment throughput: %19f increments/sec\n",
 	    (ITERATIONS*MAXPARALLELISM) / qtimer_secs(timer));
@@ -284,7 +284,7 @@ int main(int argc, char *argv[])
     qtimer_stop(timer);
 
     printf("%15g secs (%u-way %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
-    printf("\t + average increment time: %17g secs\n",
+    iprintf("\t + average increment time: %17g secs\n",
 	    qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
     printf("\t = increment throughput: %19f increments/sec\n",
 	    (ITERATIONS*MAXPARALLELISM) / qtimer_secs(timer));
