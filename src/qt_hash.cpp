@@ -155,7 +155,7 @@ size_t qt_hash_count(qt_hash h)
     size_t s;
     pthread_mutex_lock(&(h->lock));
     s = h->h.size();
-    pthread_mutex_lock(&(h->lock));
+    pthread_mutex_unlock(&(h->lock));
     return s;
 }
 
