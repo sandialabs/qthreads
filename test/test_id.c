@@ -9,6 +9,7 @@
 #ifdef QTHREAD_DEBUG
 # include <qthread_innards.h>	       /* for qthread_debug() */
 #endif
+#include "argparsing.h"
 
 aligned_t counter = 0;
 
@@ -38,7 +39,11 @@ static aligned_t thread(qthread_t * me, void *arg)
 static aligned_t checkid(qthread_t *me, void *arg)
 {
     int id = qthread_id(me);
-    assert(id == (int)(intptr_t)arg);
+    int want = (int)(intptr_t)arg;
+    if (id != want) {
+	iprintf("id == %i (expected %i)\n", id, want);
+    }
+    assert(id == want);
     return 0;
 }
 
@@ -50,7 +55,8 @@ int main()
     int my_id;
     size_t i;
 
-    qthread_initialize();
+    qthread_init(1);
+    CHECK_VERBOSE();
     me = qthread_self();
     my_id = qthread_id(me);
     if (my_id != 0)
