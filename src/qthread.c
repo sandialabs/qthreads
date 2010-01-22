@@ -1449,10 +1449,10 @@ static qthread_shepherd_t *qthread_find_active_shepherd(qthread_shepherd_id_t
 	qthread_shepherd_id_t alt;
 	saligned_t busyness;
 
-	while (target < nsheps && QTHREAD_CASLOCK_READ_UI(sheps[l[target]].active) == 0) {
+	while (target < (nsheps-1) && QTHREAD_CASLOCK_READ_UI(sheps[l[target]].active) == 0) {
 	    target++;
 	}
-	if (target == nsheps) {
+	if (target >= (nsheps-1)) {
 	    return NULL;
 	}
 	qthread_debug(ALL_FUNCTIONS,
@@ -1461,7 +1461,7 @@ static qthread_shepherd_t *qthread_find_active_shepherd(qthread_shepherd_id_t
 	busyness =
 	    qthread_internal_atomic_read_s(&sheps[l[target]].ready->advisory_queuelen,
 		    &sheps[l[target]].ready->advisory_queuelen_m);
-	for (alt = target + 1; alt < nsheps && d[l[alt]] == d[l[target]];
+	for (alt = target + 1; alt < (nsheps-1) && d[l[alt]] == d[l[target]];
 	     alt++) {
 	    saligned_t shep_busy_level =
 		qthread_internal_atomic_read_s(&sheps[l[alt]].ready->advisory_queuelen,
