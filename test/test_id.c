@@ -35,11 +35,20 @@ static aligned_t thread(qthread_t * me, void *arg)
     return 0;
 }
 
+static aligned_t checkid(qthread_t *me, void *arg)
+{
+    int id = qthread_id(me);
+    assert(id == (int)(intptr_t)arg);
+    return 0;
+}
+
 int main()
 {
     aligned_t ret;
+    aligned_t *rets;
     qthread_t *me;
     int my_id;
+    size_t i;
 
     qthread_initialize();
     me = qthread_self();
@@ -48,6 +57,13 @@ int main()
 	fprintf(stderr,"my_id == %i (expected 0)\n", my_id);
     assert(my_id == 0);
     qthread_fork(thread, NULL, &ret);
-    qthread_readFF(qthread_self(), NULL, &ret);
+    qthread_readFF(me, NULL, &ret);
+    rets = malloc(sizeof(aligned_t)*qthread_num_shepherds());
+    for (i=0; i<qthread_num_shepherds(); i++) {
+	qthread_fork(checkid, (void*)(intptr_t)(i+2), &ret);
+    }
+    for (i=0; i<qthread_num_shepherds(); i++) {
+	qthread_readFF(me, NULL, rets);
+    }
     return my_id;
 }
