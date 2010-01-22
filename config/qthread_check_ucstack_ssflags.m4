@@ -8,17 +8,11 @@
 AC_DEFUN([QTHREAD_CHECK_UCSTACK_SSFLAGS], [
 AC_CACHE_CHECK([whether ucstack has an ss_flags element],
     [qthread_cv_ucstack_ssflags],
-    [AC_LINK_IFELSE([AC_LANG_SOURCE([[
-#include <assert.h>
+    [AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <assert.h>
 #include <stdlib.h>
-#include <ucontext.h>
-
-int main(int argc, char **argv)
-{
-    ucontext_t uc;
-    uc.uc_stack.ss_flags = 0;
-    return 0;
-}]])],
+#include <ucontext.h>]],
+[[ucontext_t uc;
+uc.uc_stack.ss_flags = 0;]])],
 	[qthread_cv_ucstack_ssflags="yes"],
 	[qthread_cv_ucstack_ssflags="no"],
 	[qthread_cv_ucstack_ssflags="no"])])
