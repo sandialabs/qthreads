@@ -356,7 +356,7 @@ QTHREAD_NOINLINE_ATTRIBUTE
 
 QTHREAD_CHECK_ASSEMBLY([have_assembly=1], [have_assembly=0])
 AS_IF([test "x$have_assembly" == "x0"],
-	  [AC_MSG_NOTICE(Compiling on a system without inline assembly support. This is not well-tested or supported. Expect things to break!)
+	  [AC_MSG_NOTICE(Compiling on a system without inline assembly support. This will be slow!)
 	   AS_IF([test "x$enable_software_increments" == x],
 			 [AC_MSG_NOTICE(turning on software increments ($have_assembly))
 			  enable_software_increments=yes],
