@@ -19,6 +19,7 @@ typedef std::tr1::unordered_map<qt_key_t,void*> qtmap;
 #  if __GNUC__ < 3
 #   include <hash_map.h>
 namespace extension { using ::hash_map; }; // inherit globals
+typedef hash_map<qt_key_t, void*> qtmap;
 #  else
 #  include <ext/hash_map>
 //#   include <backward/hash_map>
