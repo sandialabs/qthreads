@@ -6,6 +6,7 @@
 AM_CXXFLAGS = @RESTRICT_CXXFLAGS@
 
 TESTS = test_basic \
+		test_reinit \
 		test_cas \
 		test_cacheline \
 		test_internal_mod \
@@ -83,6 +84,9 @@ test_stackleft_DEPENDENCIES = $(QTHREADLIB)
 
 test_basic_SOURCES = test_basic.c
 test_basic_DEPENDENCIES = $(QTHREADLIB)
+
+test_reinit_SOURCES = test_reinit.c
+test_reinit_DEPENDENCIES = $(QTHREADLIB)
 
 test_qalloc_SOURCES = testq.c
 test_qalloc_DEPENDENCIES = $(QTHREADLIB)
