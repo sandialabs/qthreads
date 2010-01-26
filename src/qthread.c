@@ -659,13 +659,7 @@ static QINLINE void FREE_ADDRSTAT(qthread_addrstat_t * t)
 
 /* guaranteed to be between 0 and 128, using the first parts of addr that are
  * significant */
-#ifdef __SUN__
-#define QTHREAD_CHOOSE_STRIPE(addr) (((size_t)addr >> 4) & 0x7f)
-#define QTHREAD_LOCKING_STRIPES 128
-#else
-#define QTHREAD_CHOOSE_STRIPE(addr) (((size_t)addr >> 4) & 0x1f)
-#define QTHREAD_LOCKING_STRIPES 32
-#endif
+#define QTHREAD_CHOOSE_STRIPE(addr) (((size_t)addr >> 4) & (QTHREAD_LOCKING_STRIPES-1))
 
 #if !defined(QTHREAD_MUTEX_INCREMENT)
 #define qthread_internal_atomic_read_s(op,lock) (*op)
@@ -1041,7 +1035,7 @@ int qthread_debuglevel(int d)
 # define QTHREAD_LOCK_UNIQUERECORD(TYPE, ADDR, ME) qt_hash_put((ME)->shepherd_ptr->unique##TYPE##addrs, (void*)(ADDR), (void*)(ADDR))
 # ifndef HAVE_CPROPS
 static QINLINE void qthread_unique_collect(const qt_key_t key, void *value, void *id)
-{
+{/*{{{*/
     qt_hash_put_locked((qt_hash) id, key, value);
 }
 # else /* HAVE_CPROPS */
@@ -1049,7 +1043,7 @@ static QINLINE int qthread_unique_collect(void *key, void *value, void *id)
 {
     qt_hash_put_locked((qt_hash) id, key, value);
     return 0;
-}
+}/*}}}*/
 # endif
 #else
 # define QTHREAD_WAIT_TIMER_DECLARATION
@@ -1601,9 +1595,9 @@ int qthread_initialize(void)
 #endif
     qthread_debug(THREAD_BEHAVIOR,"qthread_init(): there will be %u shepherd(s)\n", (unsigned)nshepherds);
     qlib = (qlib_t) malloc(sizeof(struct qlib_s));
-    if (qlib == NULL) {
-	return QTHREAD_MALLOC_ERROR;
-    }
+    qassert_ret(qlib, QTHREAD_MALLOC_ERROR);
+
+    QTHREAD_LOCKING_STRIPES = 1<<((unsigned int)(log2(nshepherds)) + 1);
 
 #ifdef QTHREAD_COUNT_THREADS
     threadcount = 0;
@@ -1616,8 +1610,26 @@ int qthread_initialize(void)
 #endif
 
     /* initialize the FEB-like locking structures */
-
-    /* this is synchronized with read/write locks by default */
+#ifdef QTHREAD_MUTEX_INCREMENT
+    qlib->atomic_locks = malloc(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
+    qassert_ret(qlib->atomic_locks, QTHREAD_MALLOC_ERROR);
+#endif
+#ifdef QTHREAD_COUNT_THREADS
+    qlib->locks_stripes = malloc(sizeof(aligned_t) * QTHREAD_LOCKING_STRIPES);
+    qassert_ret(qlib->locks_stripes, QTHREAD_MALLOC_ERROR);
+    qlib->febs_stripes = malloc(sizeof(aligned_t) * QTHREAD_LOCKING_STRIPES);
+    qassert_ret(qlib->febs_stripes, QTHREAD_MALLOC_ERROR);
+# ifdef QTHREAD_MUTEX_INCREMENT
+    qlib->locks_stripes_locks = malloc(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
+    qassert_ret(qlib->locks_stripes_locks, QTHREAD_MALLOC_ERROR);
+    qlib->febs_stripes_locks = malloc(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
+    qassert_ret(qlib->febs_stripes_locks, QTHREAD_MALLOC_ERROR);
+# endif
+#endif
+    qlib->locks = malloc(sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
+    qassert_ret(qlib->locks, QTHREAD_MALLOC_ERROR);
+    qlib->FEBs = malloc(sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
+    qassert(qlib->FEBs, QTHREAD_MALLOC_ERROR);
     for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
 #ifdef QTHREAD_MUTEX_INCREMENT
 	QTHREAD_FASTLOCK_INIT(qlib->atomic_locks[i]);
@@ -1630,21 +1642,18 @@ int qthread_initialize(void)
 	QTHREAD_FASTLOCK_INIT(qlib->febs_stripes_locks[i]);
 # endif
 #endif
-	if ((qlib->locks[i] = qt_hash_create(need_sync)) == NULL) {
-	    return QTHREAD_MALLOC_ERROR;
-	}
-	if ((qlib->FEBs[i] = qt_hash_create(need_sync)) == NULL) {
-	    return QTHREAD_MALLOC_ERROR;
-	}
+	qlib->locks[i] = qt_hash_create(need_sync);
+	qassert_ret(qlib->locks[i], QTHREAD_MALLOC_ERROR);
+	qlib->FEBs[i] = qt_hash_create(need_sync);
+	qassert_ret(qlib->FEBs[i], QTHREAD_MALLOC_ERROR);
     }
 
     /* initialize the kernel threads and scheduler */
     qassert(pthread_key_create(&shepherd_structs, NULL), 0);
     qlib->nshepherds = nshepherds;
-    if ((qlib->shepherds = (qthread_shepherd_t *)
-	 calloc(nshepherds, sizeof(qthread_shepherd_t))) == NULL) {
-	return QTHREAD_MALLOC_ERROR;
-    }
+    qlib->shepherds = (qthread_shepherd_t *)
+	 calloc(nshepherds, sizeof(qthread_shepherd_t));
+    qassert_ret(qlib->shepherds, QTHREAD_MALLOC_ERROR);
 
     {
 	char *stacksize = getenv("QTHREAD_STACK_SIZE");
@@ -1705,6 +1714,8 @@ int qthread_initialize(void)
 
 	if (aff && !strncmp(aff, "no", 3))
 	    qaffinity = 0;
+	else
+	    qaffinity = 1;
     }
     qthread_debug(ALL_DETAILS, "qthread_init(): qaffinity = %i\n", qaffinity);
     if (qaffinity == 1 && nshepherds > 1
@@ -2061,11 +2072,9 @@ int qthread_initialize(void)
 		      &qlib->shepherds[i]);
 	qlib->shepherds[i].shepherd_id = (qthread_shepherd_id_t) i;
 	QTHREAD_CASLOCK_INIT(qlib->shepherds[i].active, 1);
-	if ((qlib->shepherds[i].ready =
-	     qt_lfqueue_new(&(qlib->shepherds[i]))) == NULL) {
-	    perror("qthread_init creating shepherd queue");
-	    return QTHREAD_MALLOC_ERROR;
-	}
+	qlib->shepherds[i].ready =
+	     qt_lfqueue_new(&(qlib->shepherds[i]));
+	qassert_ret(qlib->shepherds[i].ready, QTHREAD_MALLOC_ERROR);
 #ifdef QTHREAD_LOCK_PROFILING
 	qlib->shepherds[i].uniquelockaddrs = qt_hash_create(0);
 	qlib->shepherds[i].uniquefebaddrs = qt_hash_create(0);
@@ -2109,20 +2118,13 @@ int qthread_initialize(void)
     qthread_debug(ALL_DETAILS, "allocating shep0\n");
     qlib->mccoy_thread = qthread_thread_new(NULL, NULL, NULL, 0);
     qthread_debug(ALL_DETAILS, "mccoy thread = %p\n", qlib->mccoy_thread);
-    if (!qlib->mccoy_thread) {
-	perror("qthread_init allocating qthread");
-	return QTHREAD_MALLOC_ERROR;
-    }
+    qassert_ret(qlib->mccoy_thread, QTHREAD_MALLOC_ERROR);
 
-    if ((qlib->master_context = ALLOC_CONTEXT((&qlib->shepherds[0]))) == NULL) {
-	perror("qthread_init allocating context for shepherd 0");
-	return QTHREAD_MALLOC_ERROR;
-    }
+    qlib->master_context = ALLOC_CONTEXT((&qlib->shepherds[0]));
+    qassert_ret(qlib->master_context, QTHREAD_MALLOC_ERROR);
     qthread_debug(ALL_DETAILS, "master_context = %p\n", qlib->master_context);
-    if ((qlib->master_stack = calloc(1, qlib->master_stack_size)) == NULL) {
-	perror("qthread_init allocating stack for shepherd 0");
-	return QTHREAD_MALLOC_ERROR;
-    }
+    qlib->master_stack = calloc(1, qlib->master_stack_size);
+    qassert_ret(qlib->master_stack, QTHREAD_MALLOC_ERROR);
     qthread_debug(ALL_DETAILS, "master_stack = %p\n", qlib->master_stack);
 #ifdef QTHREAD_USE_VALGRIND
     qlib->valgrind_masterstack_id =
@@ -2391,6 +2393,19 @@ void qthread_finalize(void)
 # endif
 #endif
     }
+    free(qlib->locks);
+    free(qlib->FEBs);
+#ifdef QTHREAD_MUTEX_INCREMENT
+    free(qlib->atomic_locks);
+#endif
+#ifdef QTHREAD_COUNT_THREADS
+    free(qlib->locks_stripes);
+    free(qlib->febs_stripes);
+# ifdef QTHREAD_MUTEX_INCREMENT
+    free(qlib->locks_stripes_locks);
+    free(qlib->febs_stripes_locks);
+# endif
+#endif
 
 #ifdef QTHREAD_COUNT_THREADS
     printf("spawned %lu threads, max concurrency %lu\n",
@@ -2433,13 +2448,21 @@ void qthread_finalize(void)
 	qt_mpool_destroy(qlib->shepherds[i].context_pool);
     }
     qt_mpool_destroy(generic_qthread_pool);
+    generic_qthread_pool = NULL;
     qt_mpool_destroy(generic_stack_pool);
+    generic_stack_pool = NULL;
     qt_mpool_destroy(generic_context_pool);
+    generic_context_pool = NULL;
     qt_mpool_destroy(generic_queue_pool);
+    generic_queue_pool = NULL;
     qt_mpool_destroy(generic_lfqueue_pool);
+    generic_lfqueue_pool = NULL;
     qt_mpool_destroy(generic_lfqueue_node_pool);
+    generic_lfqueue_node_pool = NULL;
     qt_mpool_destroy(generic_lock_pool);
+    generic_lock_pool = NULL;
     qt_mpool_destroy(generic_addrstat_pool);
+    generic_addrstat_pool = NULL;
 #endif
     free(qlib->shepherds);
     free(qlib);
@@ -2583,19 +2606,19 @@ static QINLINE int qthread_thread_plush(qthread_t * t)
 	(qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
 
     uc = ALLOC_CONTEXT(shepherd);
-    if (uc != NULL) {
-	stack = ALLOC_STACK(shepherd);
-	if (stack != NULL) {
-	    t->context = uc;
-	    t->stack = stack;
+    qassert_ret(uc, QTHREAD_MALLOC_ERROR);
+    stack = ALLOC_STACK(shepherd);
+    assert(stack);
+    if (stack != NULL) {
+	t->context = uc;
+	t->stack = stack;
 #ifdef QTHREAD_USE_VALGRIND
-	    t->valgrind_stack_id =
-		VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
+	t->valgrind_stack_id =
+	    VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
 #endif
-	    return QTHREAD_SUCCESS;
-	}
-	FREE_CONTEXT(shepherd, uc);
+	return QTHREAD_SUCCESS;
     }
+    FREE_CONTEXT(shepherd, uc);
     return QTHREAD_MALLOC_ERROR;
 }				       /*}}} */
 
