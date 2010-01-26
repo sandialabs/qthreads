@@ -1629,7 +1629,7 @@ int qthread_initialize(void)
     qlib->locks = malloc(sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
     qassert_ret(qlib->locks, QTHREAD_MALLOC_ERROR);
     qlib->FEBs = malloc(sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
-    qassert(qlib->FEBs, QTHREAD_MALLOC_ERROR);
+    qassert_ret(qlib->FEBs, QTHREAD_MALLOC_ERROR);
     for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
 #ifdef QTHREAD_MUTEX_INCREMENT
 	QTHREAD_FASTLOCK_INIT(qlib->atomic_locks[i]);
