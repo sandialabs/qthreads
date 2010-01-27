@@ -24,9 +24,6 @@ struct qtimer_s
     struct timespec start, stop;
 };
 
-static struct timespec res;
-static int res_set = 0;
-
 void qtimer_start(qtimer_t q)
 {
     assert(q);
@@ -49,11 +46,6 @@ qtimer_t qtimer_new()
 {
     qtimer_t ret = calloc(1, sizeof(struct qtimer_s));
     assert(ret);
-    if (res_set == 0) {
-	qassert(clock_getres(CLOCK_MONOTONIC, &res), 0);
-	printf("res of %lu secs and %lu nanosecs\n", (long unsigned)ret.tv_sec, (long unsigned)ret.tv_nsec);
-	res_set = 1;
-    }
     return ret;
 }
 
