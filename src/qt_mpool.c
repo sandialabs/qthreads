@@ -215,7 +215,7 @@ qt_mpool qt_mpool_create_aligned(const int sync, size_t item_size,
 	}
 	if (pool->lock) {
 	    QTHREAD_FASTLOCK_DESTROY(*pool->lock);
-	    free(pool->lock);
+	    free((void*)(pool->lock));
 	}
 	free(pool);
     }
@@ -345,7 +345,7 @@ void qt_mpool_destroy(qt_mpool pool)
     QTHREAD_CASLOCK_DESTROY(pool->reuse_pool);
     if (pool->lock) {
 	QTHREAD_FASTLOCK_DESTROY(*pool->lock);
-	free(pool->lock);
+	free((void*)(pool->lock));
     }
     VALGRIND_DESTROY_MEMPOOL(pool);
     free(pool);
