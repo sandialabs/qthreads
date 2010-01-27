@@ -25,4 +25,8 @@ if QTHREAD_TIMER_TYPE_ALTIX
 libqtimer_la_SOURCES += altix.c
 endif
 
+if QTHREAD_TIMER_TYPE_GETTIME
+libqtimer_la_SOURCES += gettime.c
+endif
+
 endif

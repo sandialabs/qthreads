@@ -506,6 +506,8 @@ AS_IF([test "x$need_qtimer" = "xyes"],
 			 [AC_CHECK_FUNC([gethrtime], [qthread_timer_type=gethrtime])])
 	   AS_IF([test "x$qthread_timer_type" = "xgettimeofday"],
 			 [QTHREAD_CHECK_ALTIX_TIMER([qthread_timer_type=altix])])
+	   AS_IF([test "x$qthread_timer_type" = "xgettimeofday"],
+			 [AC_CHECK_FUNC([clock_gettime], [qthread_timer_type=gettime])])
 	   AC_MSG_CHECKING([for high resolution timer type])
 	   AC_MSG_RESULT([$qthread_timer_type])
   ],[qthread_timer_type=gettimeofday])])
@@ -529,6 +531,7 @@ AC_SUBST(EXTRA_DISTCHECK_OPTIONS)
 AM_CONDITIONAL([COMPILE_TARGET_SST], [test "x$qthread_implementation" = "xsst"])
 AM_CONDITIONAL([COMPILE_TARGET_UNIX], [test "x$qthread_implementation" = "xunix"])
 AM_CONDITIONAL([QTHREAD_NEED_OWN_MAKECONTEXT], [test "x$qthread_makecontext_type" = "xown"])
+AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIME], [test "x$qthread_timer_type" = "xgettime"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_MACH], [test "x$qthread_timer_type" = "xmach"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETHRTIME], [test "x$qthread_timer_type" = "xgethrtime"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_ALTIX], [test "x$qthread_timer_type" = "xaltix"])
