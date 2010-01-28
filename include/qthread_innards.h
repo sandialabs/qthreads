@@ -54,6 +54,10 @@ typedef struct qlib_s
 
 #ifdef QTHREAD_MUTEX_INCREMENT
     QTHREAD_FASTLOCK_TYPE *atomic_locks;
+# ifdef QTHREAD_COUNT_THREADS
+    aligned_t *atomic_stripes;
+    QTHREAD_FASTLOCK_TYPE *atomic_stripes_locks;
+# endif
 #endif
     /* this is how we manage FEB-type locks
      * NOTE: this can be a major bottleneck and we should probably create
