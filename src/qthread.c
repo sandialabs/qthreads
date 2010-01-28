@@ -246,6 +246,13 @@ struct qthread_shepherd_s
     size_t num_threads;		/* number of threads handled */
 #endif
 #ifdef QTHREAD_LOCK_PROFILING
+# ifdef QTHREAD_MUTEX_INCREMENT
+    qt_hash uniqueincraddrs;    /* the unique addresses that are incremented */
+    double incr_maxtime;        /* maximum time spent in a single increment */
+    double incr_time;           /* total time spent incrementing */
+    size_t incr_count;          /* number of increments */
+# endif
+
     qt_hash uniquelockaddrs;	/* the unique addresses that are locked */
     double aquirelock_maxtime;	/* max time spent aquiring locks */
     double aquirelock_time;	/* total time spent aquiring locks */
@@ -443,23 +450,35 @@ static QINLINE void *ALLOC_STACK(qthread_shepherd_t * shep)
 {
     char *tmp = valloc(qlib->qthread_stack_size + (2 * getpagesize()));
 
-    if (mprotect(tmp, getpagesize(), PROT_NONE) != 0) {
-	perror("mprotect alloc");
+    assert(tmp != NULL);
+    if (tmp == NULL) {
+	return NULL;
     }
-    mprotect(tmp + qlib->qthread_stack_size + getpagesize(), getpagesize(),
-	     PROT_NONE);
+    if (mprotect(tmp, getpagesize(), PROT_NONE) != 0) {
+	perror("mprotect in ALLOC_STACK (1)");
+    }
+    if (mprotect
+	(tmp + qlib->qthread_stack_size + getpagesize(), getpagesize(),
+	 PROT_NONE) != 0) {
+	perror("mprotect in ALLOC_STACK (2)");
+    }
     return tmp + getpagesize();
 }
 static QINLINE void FREE_STACK(qthread_shepherd_t * shep, void *t)
 {
     char *tmp = t;
 
+    assert(t);
+    assert(shep);
     tmp -= getpagesize();
     if (mprotect(tmp, getpagesize(), PROT_READ | PROT_WRITE) != 0) {
-	perror("mprotect free");
+	perror("mprotect in FREE_STACK (1)");
     }
-    mprotect(tmp + qlib->qthread_stack_size + getpagesize(), getpagesize(),
-	     PROT_READ | PROT_WRITE);
+    if (mprotect
+	(tmp + qlib->qthread_stack_size + getpagesize(), getpagesize(),
+	 PROT_READ | PROT_WRITE) != 0) {
+	perror("mprotect in FREE_STACK (2)");
+    }
     free(tmp);
 }
 # else
@@ -473,23 +492,34 @@ static QINLINE void *ALLOC_STACK(qthread_shepherd_t * shep)
 {
     char *tmp =
 	qt_mpool_alloc(shep ? (shep->stack_pool) : generic_stack_pool);
-    if (mprotect(tmp, getpagesize(), PROT_NONE) != 0) {
-	perror("mprotect alloc");
+    assert(tmp);
+    if (tmp == NULL) {
+	return NULL;
     }
-    mprotect(tmp + qlib->qthread_stack_size + getpagesize(), getpagesize(),
-	     PROT_NONE);
+    if (mprotect(tmp, getpagesize(), PROT_NONE) != 0) {
+	perror("mprotect in ALLOC_STACK (1)");
+    }
+    if (mprotect
+	(tmp + qlib->qthread_stack_size + getpagesize(), getpagesize(),
+	 PROT_NONE) != 0) {
+	perror("mprotect in ALLOC_STACK (2)");
+    }
     return tmp + getpagesize();
 }
 static QINLINE void FREE_STACK(qthread_shepherd_t * shep, void *t)
 {
     char *tmp = t;
 
+    assert(t);
     tmp -= getpagesize();
     if (mprotect(tmp, getpagesize(), PROT_READ | PROT_WRITE) != 0) {
-	perror("mprotect free");
+	perror("mprotect in FREE_STACK (1)");
     }
-    mprotect(tmp + qlib->qthread_stack_size + getpagesize(), getpagesize(),
-	     PROT_READ | PROT_WRITE);
+    if (mprotect
+	(tmp + qlib->qthread_stack_size + getpagesize(), getpagesize(),
+	 PROT_READ | PROT_WRITE) != 0) {
+	perror("mprotect in FREE_STACK (2)");
+    }
     qt_mpool_free(shep ? (shep->stack_pool) : generic_stack_pool, tmp);
 }
 # else
@@ -2076,6 +2106,7 @@ int qthread_initialize(void)
 	     qt_lfqueue_new(&(qlib->shepherds[i]));
 	qassert_ret(qlib->shepherds[i].ready, QTHREAD_MALLOC_ERROR);
 #ifdef QTHREAD_LOCK_PROFILING
+	qlib->shepherds[i].uniqueincraddrs = qt_hash_create(0);
 	qlib->shepherds[i].uniquelockaddrs = qt_hash_create(0);
 	qlib->shepherds[i].uniquefebaddrs = qt_hash_create(0);
 #endif
@@ -2238,6 +2269,11 @@ void qthread_finalize(void)
 	return;
 
 #ifdef QTHREAD_LOCK_PROFILING
+# ifdef QTHREAD_MUTEX_INCREMENT
+    double incr_maxtime = 0.0;
+    double incr_time = 0.0;
+    size_t incr_count = 0;
+# endif
     double aquirelock_maxtime = 0.0;
     double aquirelock_time = 0.0;
     size_t aquirelock_count = 0;
@@ -2255,6 +2291,7 @@ void qthread_finalize(void)
     double empty_maxtime = 0.0;
     double empty_time = 0.0;
     double empty_count = 0;
+    qt_hash uniqueincraddrs = qt_hash_create(0);
     qt_hash uniquelockaddrs = qt_hash_create(0);
     qt_hash uniquefebaddrs = qt_hash_create(0);
 #endif
@@ -2312,6 +2349,11 @@ void qthread_finalize(void)
 	     qlib->shepherds[i].idle_maxtime);
 #endif
 #ifdef QTHREAD_LOCK_PROFILING
+# ifdef QTHREAD_MUTEX_INCREMENT
+	QTHREAD_ACCUM_MAX(incr_maxtime, qlib->shepherds[i].incr_maxtime);
+	incr_time  += qlib->shepherds[i].incr_time;
+	incr_count += qlib->shepherds[i].incr_count;
+# endif
 	QTHREAD_ACCUM_MAX(aquirelock_maxtime,
 			  qlib->shepherds[i].aquirelock_maxtime);
 	aquirelock_time += qlib->shepherds[i].aquirelock_time;
@@ -2333,17 +2375,28 @@ void qthread_finalize(void)
 	QTHREAD_ACCUM_MAX(empty_maxtime, qlib->shepherds[i].empty_maxtime);
 	empty_time += qlib->shepherds[i].empty_time;
 	empty_count += qlib->shepherds[i].empty_count;
+# ifdef QTHREAD_MUTEX_INCREMENT
+	qt_hash_callback(qlib->shepherds[i].uniqueincraddrs,
+			 qthread_unique_collect, uniqueincraddrs);
+	qt_hash_destroy(qlib->shepherds[i].uniqueincraddrs);
+# endif
 	qt_hash_callback(qlib->shepherds[i].uniquelockaddrs,
 			 qthread_unique_collect, uniquelockaddrs);
+	qt_hash_destroy(qlib->shepherds[i].uniquelockaddrs);
 	qt_hash_callback(qlib->shepherds[i].uniquefebaddrs,
 			 qthread_unique_collect, uniquefebaddrs);
-	qt_hash_destroy(qlib->shepherds[i].uniquelockaddrs);
 	qt_hash_destroy(qlib->shepherds[i].uniquefebaddrs);
 #endif
     }
     qt_lfqueue_free(qlib->shepherds[0].ready);
 
 #ifdef QTHREAD_LOCK_PROFILING
+# ifdef QTHREAD_MUTEX_INCREMENT
+    printf
+	("QTHREADS: %llu increments performed (%ld unique), average %g secs, max %g secs\n",
+	 (unsigned long long)incr_count, qt_hash_count(uniqueincraddrs),
+	 (incr_count == 0) ? 0 : (incr_time / incr_count), incr_maxtime);
+# endif
     printf
 	("QTHREADS: %llu locks aquired (%ld unique), average %g secs, max %g secs\n",
 	 (unsigned long long)aquirelock_count, qt_hash_count(uniquelockaddrs),
@@ -4374,11 +4427,16 @@ uint32_t qthread_incr32_(volatile uint32_t * op, const int incr)
 {
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
     uint32_t retval;
+    QTHREAD_LOCK_TIMER_DECLARATION(incr);
 
+    QTHREAD_COUNT_THREADS_BINCOUNTER(atomic, stripe);
+    QTHREAD_LOCK_UNIQUERECORD(incr, op, qthread_self());
+    QTHREAD_LOCK_TIMER_START(incr);
     QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
     retval = *op;
     *op += incr;
     QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
+    QTHREAD_LOCK_TIMER_STOP(incr, qthread_self());
     return retval;
 }
 
@@ -4386,11 +4444,16 @@ uint64_t qthread_incr64_(volatile uint64_t * op, const int incr)
 {
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
     uint64_t retval;
+    QTHREAD_LOCK_TIMER_DECLARATION(incr);
 
+    QTHREAD_COUNT_THREADS_BINCOUNTER(atomic, stripe);
+    QTHREAD_LOCK_UNIQUERECORD(incr, op, qthread_self());
+    QTHREAD_LOCK_TIMER_START(incr);
     QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
     retval = *op;
     *op += incr;
     QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
+    QTHREAD_LOCK_TIMER_STOP(incr, qthread_self());
     return retval;
 }
 
