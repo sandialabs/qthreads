@@ -469,7 +469,6 @@ static QINLINE void FREE_STACK(qthread_shepherd_t * shep, void *t)
     char *tmp = t;
 
     assert(t);
-    assert(shep);
     tmp -= getpagesize();
     if (mprotect(tmp, getpagesize(), PROT_READ | PROT_WRITE) != 0) {
 	perror("mprotect in FREE_STACK (1)");
