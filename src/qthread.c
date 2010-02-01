@@ -165,6 +165,7 @@ struct qthread_s
     unsigned int valgrind_stack_id;
 #endif
 
+    int forCount; /* added akp */
     struct qthread_s *next;
 };
 
@@ -688,6 +689,7 @@ static QINLINE void FREE_ADDRSTAT(qthread_addrstat_t * t)
 
 /* guaranteed to be between 0 and 128, using the first parts of addr that are
  * significant */
+unsigned int QTHREAD_LOCKING_STRIPES = 128;
 #define QTHREAD_CHOOSE_STRIPE(addr) (((size_t)addr >> 4) & (QTHREAD_LOCKING_STRIPES-1))
 
 #if !defined(QTHREAD_MUTEX_INCREMENT)
@@ -1508,7 +1510,7 @@ static qthread_shepherd_t *qthread_find_active_shepherd(qthread_shepherd_id_t
 int qthread_init(qthread_shepherd_id_t nshepherds)
 {				       /*{{{ */
     char newenv[100] = {0};
-    snprintf(newenv, 99, "QTHREAD_NUM_SHEPHERDS=%i", nshepherds);
+    snprintf(newenv, 99, "QTHREAD_NUM_SHEPHERDS=%i", (int)nshepherds);
     putenv(newenv);
     return qthread_initialize();
 }				       /*}}} */
@@ -2539,7 +2541,7 @@ int qthread_disable_shepherd(const qthread_shepherd_id_t shep)
 	return QTHREAD_NOT_ALLOWED;
     }
     qthread_debug(ALL_CALLS, "qthread_disable_shepherd(%i)\n", shep);
-    QT_CAS(qlib->shepherds[shep].active, 1, 0);
+    (void)QT_CAS(qlib->shepherds[shep].active, 1, 0);
     return QTHREAD_SUCCESS;
 }
 
@@ -2547,7 +2549,7 @@ void qthread_enable_shepherd(const qthread_shepherd_id_t shep)
 {
     assert(shep < qlib->nshepherds);
     qthread_debug(ALL_CALLS, "qthread_enable_shepherd(%i)\n", shep);
-    QT_CAS(qlib->shepherds[shep].active, 0, 1);
+    (void)QT_CAS(qlib->shepherds[shep].active, 0, 1);
 }
 
 qthread_t *qthread_self(void)
@@ -4420,6 +4422,17 @@ void qthread_assertnotfuture(qthread_t * t)
 {				       /*{{{ */
     t->flags &= ~QTHREAD_FUTURE;
 }				       /*}}} */
+
+/* added akp */
+ int qthread_forCount(qthread_t * t, int inc)
+{                                    /*{{{ */
+    return (t->forCount += inc);
+}                                    /*}}} */
+void qthread_reset_forCount(qthread_t * t)
+{                                    /*{{{ */
+    t->forCount = 0;
+    return;
+}                                    /*}}} */
 
 #ifdef QTHREAD_MUTEX_INCREMENT
 uint32_t qthread_incr32_(volatile uint32_t * op, const int incr)

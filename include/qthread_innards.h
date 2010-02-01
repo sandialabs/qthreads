@@ -25,7 +25,7 @@
 #include <pthread.h>
 #include <qt_hash.h>
 
-static unsigned int QTHREAD_LOCKING_STRIPES=128;
+extern unsigned int QTHREAD_LOCKING_STRIPES;
 
 typedef struct qlib_s
 {
