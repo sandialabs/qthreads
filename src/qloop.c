@@ -299,6 +299,11 @@ struct qqloop_wrapper_range {
 typedef struct qqloop_handle_s {
     struct qqloop_wrapper_args *qwa;
     struct qqloop_static_args stat;
+    int workers;
+    int assignNext;
+    int assignStop;
+    volatile aligned_t assignDone; // start+offset
+    size_t shepherdsActive; // bit vector to stop shepherds from grabbing a loop twice (is this necessary?)
 } qqloop_handle_t;
 
 static QINLINE int qqloop_get_iterations(struct qqloop_iteration_queue *const
@@ -800,4 +805,135 @@ void qt_qsort(qthread_t * me, double *array, const size_t length)
     arg.length = length;
 
     qt_qsort_inner(me, &arg);
+}
+
+/* function calls added to support OpenMP-to-qthreads translation via the ROSE compiler
+ *  - also gets the loops in the form preferred by MAESTRO
+ *    easier dynamic parallel load balancing
+ *    facilitates nested loop handling by allowing shepherd additions after initial loop construction
+ */
+
+/* qt_parallel - translator for qt_loop() */
+void qt_parallel(const qthread_f func, const unsigned int threads,
+		 void *argptr)
+{
+    qt_loop(0, threads-1, 1, func, argptr);
+}
+
+/* qt_parallel_for - function generated in response to OpenMP parallel for
+ *    - Rose takes contents of the loop an makes an out-of-line function
+ *      (func) assigns an iteration number (iter) and generates an argument
+ *      list (argptr) - the function is responsible for knowing how long
+ *      the argument list is - qthreads is responsible for assigning
+ *      iterations numbers and making sure that every loop iteration is
+ *      complete before allowing execution to continue in the calling function
+ *
+ * This is called within parallel regions - every thread calls this function
+ * but we only need one parallel loop and the shepherds need to share
+ * iterations.  Care is needed to insure only one copy is executed.
+ */
+aligned_t forLock = 0;      // used for mutual exclusion in qt_parallel_for - needs init
+volatile int forLoopsStarted = 0;  // used for active loop in qt_parallel_for
+int qthread_forCount(qthread_t*, int);
+
+// written by AKP
+void qt_forloop_queue_run_single(qqloop_handle_t * loop, void * arg)
+{
+    qthread_t * const me = qthread_self();
+    const qthread_shepherd_id_t myShep = qthread_shep(me);
+
+    /* This shepherd needs an iteration */
+    if (!(loop->shepherdsActive & (1<<myShep))) {
+	size_t iterationNumber = (size_t)qthread_incr(&loop->assignNext, 1);
+
+	while (iterationNumber <= loop->assignStop) {
+	    if (!(loop->shepherdsActive & (1<<myShep))) {
+		loop->shepherdsActive |= (1<<myShep);
+	    }
+
+	    if (arg != NULL) {
+		loop->stat.func(me, iterationNumber, iterationNumber+1, arg);
+	    } else {
+		loop->stat.func(me, iterationNumber, iterationNumber+1, loop->stat.arg);
+	    }
+	    qthread_incr(&loop->assignDone, 1);
+	    iterationNumber = (size_t)qthread_incr(&loop->assignNext, 1);
+	}
+    }
+
+    if (!(loop->shepherdsActive & (1<<myShep))) { /* I did no iterations */
+	/* use higher level call to loop over multiple items in the work list */
+	return;
+    }
+
+    while (_(loop->assignDone) < loop->assignStop) ; /* spin until all done */
+}
+
+// added akp -- run loop until done
+void qt_loop_queue_run_single(volatile qqloop_handle_t * loop, void *t)
+{
+    qthread_shepherd_id_t i;
+    qthread_t *me = qthread_self();
+    int myNum = qthread_shep(me);
+
+    // this shepherd has not grabbed an interation yet
+    if (!(loop->shepherdsActive & (1 << myNum))) {
+	// get next loop iteration (shared access)
+	aligned_t iterationNumber = qthread_incr(&loop->assignNext, 1);
+
+	while (iterationNumber <= loop->assignStop) {
+	    if (!(loop->shepherdsActive & (1 << myNum))) {
+		loop->shepherdsActive |= (1 << myNum);	// mark me active
+	    }
+	    if (t != NULL)
+		loop->stat.func(me, iterationNumber, iterationNumber + 1, t);
+	    else
+		loop->stat.func(me, iterationNumber, iterationNumber + 1,
+				loop->stat.arg);
+
+	    (void)qthread_incr(&loop->assignDone, 1);
+	    iterationNumber = (size_t) qthread_incr(&loop->assignNext, 1);
+	}
+    }
+    // to get here -- loop done and if (loop->coresActive & (1<<myNum)) is true I did get an iteration
+
+    if (!(loop->shepherdsActive & (1 << myNum))) {	// did no iterations
+	return;			       // use higher level call to loop over multiple items in the work list
+    }
+    // did some work in this loop; need to wait for others to finish
+
+    while (_(loop->assignDone) < loop->assignStop) ;	// XXX: spinlock
+
+    return;
+}
+
+volatile qqloop_handle_t *activeLoop = NULL;
+
+void qt_parallel_for(const qt_loop_f func, const int iter,
+		     void *restrict argptr)
+{
+    qthread_t *me = qthread_self();
+    volatile qqloop_handle_t *qqhandle = NULL;
+
+    while (qthread_cas(&forLock, 0, 1) != 0) ;
+    int forCount = qthread_forCount(me, 1);	// my loop count
+
+    if (forLoopsStarted < forCount) {  // is this a new loop?
+	// add work
+	qqhandle = qt_loop_queue_create(0, iter, func, argptr);	// put loop on the queue
+	forLoopsStarted = forCount;    // set current loop number
+	activeLoop = qqhandle;
+    } else {
+	if (forLoopsStarted != forCount) {	// out of sync
+	    forLock = 0;
+	    return;
+	} else {
+	    qqhandle = activeLoop;
+	}
+    }
+    forLock = 0;
+
+    qt_loop_queue_run_single(qqhandle, argptr);
+
+    return;
 }
