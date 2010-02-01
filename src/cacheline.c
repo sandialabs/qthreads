@@ -18,13 +18,13 @@ static int cacheline_bytes = 0;
 #if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)) && \
     defined(HAVE_GCC_INLINE_ASSEMBLY)
-static void cpuid(const int op, int *eax_ptr, int *ebx_ptr, int *ecx_ptr,
-		  int *edx_ptr)
+static void cpuid(const unsigned int op, unsigned int *eax_ptr, unsigned int *ebx_ptr,
+		  unsigned int *ecx_ptr, unsigned int *edx_ptr)
 {				       /*{{{ */
 #  if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
 #   ifdef __PIC__
-    int eax, ebx, ecx, edx;
-    int pic_ebx;
+    unsigned int eax, ebx, ecx, edx;
+    unsigned int pic_ebx;
     __asm__ __volatile__("mov %%ebx, %4\n\t"
 			 "cpuid\n\t"
 			 "mov %%ebx, %1\n\t"
@@ -46,13 +46,13 @@ static void cpuid(const int op, int *eax_ptr, int *ebx_ptr, int *ecx_ptr,
 #  endif
 }				       /*}}} */
 
-static void cpuid4(const int cache, int *eax_ptr, int *ebx_ptr, int *ecx_ptr,
-		   int *edx_ptr)
+static void cpuid4(const int cache, unsigned int *eax_ptr, unsigned int *ebx_ptr, unsigned int *ecx_ptr,
+		   unsigned int *edx_ptr)
 {				       /*{{{ */
 #  if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
 #   ifdef __PIC__
-    int eax, ebx, ecx, edx;
-    int pic_ebx;
+    unsigned int eax, ebx, ecx, edx;
+    unsigned int pic_ebx;
     __asm__ __volatile__("mov %%ebx, %4\n\t"
 			 "cpuid\n\t"
 			 "mov %%ebx, %1\n\t"
@@ -76,7 +76,7 @@ static void cpuid4(const int cache, int *eax_ptr, int *ebx_ptr, int *ecx_ptr,
 #  endif
 }				       /*}}} */
 
-static void descriptor(int d)
+static void descriptor(unsigned int d)
 {				       /*{{{ */
     switch (d) {
 	case 0x00:
@@ -189,7 +189,7 @@ static void descriptor(int d)
     }
 }				       /*}}} */
 
-static void examine(int r, char *str)
+static void examine(unsigned int r, char *str)
 {				       /*{{{ */
     if ((r & 0x40000000) == 0) {
 	descriptor((r >> 0) & 0xff);
@@ -224,7 +224,7 @@ static void figure_out_cacheline_size()
 # if !defined(HAVE_GCC_INLINE_ASSEMBLY)
     cacheline_bytes = 128;
 # else
-    int eax, ebx, ecx, edx;
+    unsigned int eax, ebx, ecx, edx;
     enum vendor v;
     int tmp = 0;
     int largest_ext = 0;
