@@ -21,7 +21,8 @@ static int cacheline_bytes = 0;
 static void cpuid(const unsigned int op, unsigned int *eax_ptr, unsigned int *ebx_ptr,
 		  unsigned int *ecx_ptr, unsigned int *edx_ptr)
 {				       /*{{{ */
-#  if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
+#  if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
+      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 #   ifdef __PIC__
     unsigned int eax, ebx, ecx, edx;
     unsigned int pic_ebx;
@@ -40,16 +41,15 @@ static void cpuid(const unsigned int op, unsigned int *eax_ptr, unsigned int *eb
     __asm__ __volatile__("cpuid":"=a"(*eax_ptr), "=b"(*ebx_ptr), "=c"(*ecx_ptr), "=d"(*edx_ptr)
 			 :"a"    (op));
 #   endif
-#  elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
-    __asm__ __volatile__("cpuid":"=a"(*eax_ptr), "=b"(*ebx_ptr), "=c"(*ecx_ptr), "=d"(*edx_ptr)
-			 :"a"    (op));
+#  elif 
 #  endif
 }				       /*}}} */
 
 static void cpuid4(const int cache, unsigned int *eax_ptr, unsigned int *ebx_ptr, unsigned int *ecx_ptr,
 		   unsigned int *edx_ptr)
 {				       /*{{{ */
-#  if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
+#  if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
+      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 #   ifdef __PIC__
     unsigned int eax, ebx, ecx, edx;
     unsigned int pic_ebx;
@@ -69,10 +69,6 @@ static void cpuid4(const int cache, unsigned int *eax_ptr, unsigned int *ebx_ptr
 			 "=c"(*ecx_ptr), "=d"(*edx_ptr)
 			 :"a"    (4), "c"(cache));
 #   endif
-#  elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
-    __asm__ __volatile__("cpuid":"=a"(*eax_ptr), "=b"(*ebx_ptr),
-			 "=c"(*ecx_ptr), "=d"(*edx_ptr)
-			 :"a"    (4), "c"(cache));
 #  endif
 }				       /*}}} */
 
