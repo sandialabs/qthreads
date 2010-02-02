@@ -41,7 +41,6 @@ static void cpuid(const unsigned int op, unsigned int *eax_ptr, unsigned int *eb
     __asm__ __volatile__("cpuid":"=a"(*eax_ptr), "=b"(*ebx_ptr), "=c"(*ecx_ptr), "=d"(*edx_ptr)
 			 :"a"    (op));
 #   endif
-#  elif 
 #  endif
 }				       /*}}} */
 
