@@ -164,8 +164,9 @@ struct qthread_s
 #ifdef QTHREAD_USE_VALGRIND
     unsigned int valgrind_stack_id;
 #endif
-
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
     int forCount; /* added akp */
+#endif
     struct qthread_s *next;
 };
 
@@ -4423,6 +4424,7 @@ void qthread_assertnotfuture(qthread_t * t)
     t->flags &= ~QTHREAD_FUTURE;
 }				       /*}}} */
 
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
 /* added akp */
  int qthread_forCount(qthread_t * t, int inc)
 {                                    /*{{{ */
@@ -4433,6 +4435,7 @@ void qthread_reset_forCount(qthread_t * t)
     t->forCount = 0;
     return;
 }                                    /*}}} */
+#endif
 
 #ifdef QTHREAD_MUTEX_INCREMENT
 uint32_t qthread_incr32_(volatile uint32_t * op, const int incr)

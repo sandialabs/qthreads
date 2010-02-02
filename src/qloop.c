@@ -299,11 +299,13 @@ struct qqloop_wrapper_range {
 typedef struct qqloop_handle_s {
     struct qqloop_wrapper_args *qwa;
     struct qqloop_static_args stat;
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
     int workers;
     int assignNext;
     int assignStop;
     volatile aligned_t assignDone; // start+offset
     size_t shepherdsActive; // bit vector to stop shepherds from grabbing a loop twice (is this necessary?)
+#endif
 } qqloop_handle_t;
 
 static QINLINE int qqloop_get_iterations(struct qqloop_iteration_queue *const
@@ -807,6 +809,7 @@ void qt_qsort(qthread_t * me, double *array, const size_t length)
     qt_qsort_inner(me, &arg);
 }
 
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
 /* function calls added to support OpenMP-to-qthreads translation via the ROSE compiler
  *  - also gets the loops in the form preferred by MAESTRO
  *    easier dynamic parallel load balancing
@@ -937,3 +940,4 @@ void qt_parallel_for(const qt_loop_f func, const int iter,
 
     return;
 }
+#endif

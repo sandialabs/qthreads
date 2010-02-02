@@ -492,6 +492,12 @@ AS_IF([test "x$enable_valgrind" = "xyes"],
 						[AC_DEFINE([QTHREAD_USE_VALGRIND], [1],
 								   [Use Valgrind Macros])])])
 
+AC_ARG_ENABLE([rose-extensions],
+			  [AS_HELP_STRING([--enable-rose-extensions],
+							  [Enable some experimental extensions to qthreads that are designed to support integration with the ROSE compiler.])])
+AS_IF([test "x$enable_rose_extensions" == xyes],
+	  [AC_DEFINE([QTHREAD_USE_ROSE_EXTENSIONS], [1], [Define to enable ROSE extensions])])
+
 AC_ARG_ENABLE([hardware-timer],
   [AS_HELP_STRING([--disable-hardware-timer],
 				  [force the use of gettimeofday even if there is a better timer available])],
