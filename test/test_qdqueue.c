@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
     }
     iprintf("ordering test succeeded\n");
 
-    rets = calloc(THREAD_COUNT, sizeof(aligned_t));
+    rets = (aligned_t*)calloc(THREAD_COUNT, sizeof(aligned_t));
     assert(rets != NULL);
     for (i = 0; i < THREAD_COUNT; i++) {
 	assert(qthread_fork(dequeuer, q, &(rets[i])) == QTHREAD_SUCCESS);

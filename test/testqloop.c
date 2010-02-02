@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
 	aligned_t *uia, uitmp, uisum = 0, uiprod = 1, uimax = 0, uimin =
 	    UINT_MAX;
 
-	uia = malloc(sizeof(aligned_t) * BIGLEN);
+	uia = (aligned_t*)malloc(sizeof(aligned_t) * BIGLEN);
 	assert(uia);
 	for (i = 0; i < BIGLEN; i++) {
 	    uia[i] = random();
@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
     {
 	saligned_t *ia, itmp, isum = 0, iprod = 1, imax = INT_MIN, imin = INT_MAX;
 
-	ia = malloc(sizeof(saligned_t) * BIGLEN);
+	ia = (saligned_t*)malloc(sizeof(saligned_t) * BIGLEN);
 	assert(ia);
 	for (i = 0; i < BIGLEN; i++) {
 	    ia[i] = random();
@@ -187,7 +187,7 @@ int main(int argc, char *argv[])
 	double *da, dtmp, dsum = 0.0, dprod = 1.0, dmin = DBL_MAX, dmax =
 	    DBL_MIN;
 
-	da = malloc(sizeof(double) * BIGLEN);
+	da = (double*)malloc(sizeof(double) * BIGLEN);
 	assert(da);
 	srandom(0xdeadbeef);
 	for (i = 0; i < BIGLEN; i++) {

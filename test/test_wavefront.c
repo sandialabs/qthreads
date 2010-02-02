@@ -58,7 +58,7 @@ void avg(const void *restrict left, const void *restrict leftdown,
 void assignrand(qthread_t * me, const size_t startat, const size_t stopat,
 	     qarray * a, void *arg)
 {
-    double *ptr = qarray_elem_nomigrate(a, startat);
+    double *ptr = (double*)qarray_elem_nomigrate(a, startat);
     const size_t max = stopat - startat;
 
     assert(a->unit_size == sizeof(double));

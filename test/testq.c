@@ -45,12 +45,12 @@ int main()
 	return -1;
     }
 
-    ts = qalloc_statmalloc(r);
+    ts = (char*)qalloc_statmalloc((mapinfo_s*)r);
     if (ts == NULL) {
 	fprintf(stderr, "statmalloc returned NULL!\n");
 	return -1;
     }
-    ts2 = qalloc_dynmalloc(r2, strlen("012345678901") + 1);
+    ts2 = (char*)qalloc_dynmalloc((dynmapinfo_s*)r2, strlen("012345678901") + 1);
     if (ts2 == NULL) {
 	fprintf(stderr, "dynmalloc returned NULL!\n");
 	return -1;
@@ -60,7 +60,7 @@ int main()
     qalloc_checkpoint();
     qalloc_free(ts, r);
     qalloc_free(ts2, r2);
-    ts2 = qalloc_malloc(r2, 128);
+    ts2 = (char*)qalloc_malloc(r2, 128);
     if (ts2 == NULL) {
 	fprintf(stderr, "second dynmalloc returned NULL!\n");
 	return -1;

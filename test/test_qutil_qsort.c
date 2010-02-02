@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     CHECK_VERBOSE();
     NUMARG(len, "TEST_LEN");
 
-    ui_array = calloc(len, sizeof(aligned_t));
+    ui_array = (aligned_t*)calloc(len, sizeof(aligned_t));
     for (i = 0; i < len; i++) {
 	ui_array[i] = random();
     }
@@ -62,7 +62,7 @@ int main(int argc, char *argv[])
 							1.0e-6)));
     free(ui_array);
 
-    d_array = calloc(len, sizeof(double));
+    d_array = (double*)calloc(len, sizeof(double));
     for (i = 0; i < len; i++) {
 	d_array[i] = random() / (double)RAND_MAX *10;
     }

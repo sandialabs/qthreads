@@ -64,7 +64,7 @@ int main()
     assert(my_id == 0);
     qthread_fork(thread, NULL, &ret);
     qthread_readFF(me, NULL, &ret);
-    rets = malloc(sizeof(aligned_t)*qthread_num_shepherds());
+    rets = (aligned_t*)malloc(sizeof(aligned_t)*qthread_num_shepherds());
     for (i=0; i<qthread_num_shepherds(); i++) {
 	qthread_fork(checkid, (void*)(intptr_t)(i+2), &ret);
     }

@@ -15,7 +15,7 @@ aligned_t hamming = (aligned_t) - 1;
 static void assigni(qthread_t * me, const size_t startat, const size_t stopat,
 		    qarray * q, void *arg)
 {
-    int *ptr = qarray_elem_nomigrate(q, startat);
+    int *ptr = (int*)qarray_elem_nomigrate(q, startat);
 
     for (size_t i = 0; i < (stopat - startat); i++) {
 	ptr[i] = (i + startat);
@@ -25,7 +25,7 @@ static void assigni(qthread_t * me, const size_t startat, const size_t stopat,
 static void assignrand(qthread_t * me, const size_t startat,
 		       const size_t stopat, qarray * q, void *arg)
 {
-    int *ptr = qarray_elem_nomigrate(q, startat);
+    int *ptr = (int*)qarray_elem_nomigrate(q, startat);
 
     for (size_t i = 0; i < (stopat - startat); i++) {
 	ptr[i] = random();
@@ -98,11 +98,11 @@ int main(int argc, char *argv[])
     qarray_iter_loop(me, a1, 0, ASIZE, assigni, NULL);
     qarray_iter_loop(me, a2, 0, ASIZE, assigni, NULL);
 
-    out = calloc(ASIZE, sizeof(int *));
+    out = (int**)calloc(ASIZE, sizeof(int *));
     assert(out);
     for (i = 0; i < ASIZE; i++) {
 	size_t j;
-	out[i] = calloc(sizeof(int), ASIZE);
+	out[i] = (int*)calloc(sizeof(int), ASIZE);
 	assert(out[i]);
 	for (j = 0; j < ASIZE; j++) {
 	    out[i][j] = -1;
