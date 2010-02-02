@@ -323,26 +323,6 @@ RESTRICT_CXXFLAGS=""
 AS_IF([test "x$qthread_cv_cxx_restrict" = "xyes"],
 	  [RESTRICT_CXXFLAGS="-restrict"])
 AC_SUBST([RESTRICT_CXXFLAGS])
-# Find out if GCC understands -fno-gcse
-AC_CACHE_CHECK([if $CC understands -fno-gcse],
-   [qthread_cv_cc_fno_gcse],
-   [case "$CC" in
-	icc*) dnl icc accepts it and spits out warnings about unknown flags
-		qthread_cv_cc_fno_gcse="no"
-		;;
-	*)
-		CFLAGS_save="${CFLAGS}"
-		CFLAGS="${CFLAGS} -fno-gcse"
-		AC_COMPILE_IFELSE([AC_LANG_PROGRAM([[]], [[]])], 
-						  [qthread_cv_cc_fno_gcse=yes],
-						  [qthread_cv_cc_fno_gcse=no])
-		CFLAGS="${CFLAGS_save}"
-		;;
-	esac])
-GCSE_CFLAGS=""
-AS_IF([test "x$qthread_cv_cc_fno_gcse" = "xyes"],
-	  [GCSE_CFLAGS="-fno-gcse"])
-AC_SUBST([GCSE_CFLAGS])
 
 AC_C_CONST
 AC_C_INLINE
