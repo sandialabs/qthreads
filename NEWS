@@ -1,4 +1,4 @@
---- 1.3b ---
+--- 1.3 ---
 New Features:
  - Optional guard pages, to assist in debugging
  - No longer need to call qthread_finalize()
@@ -6,8 +6,11 @@ New Features:
    shepherds
  - Shepherds an be enabled/disabled at runtime; threads are forcibly evicted
    from disabled shepherds
+ - Support for Tilera systems and Tilera locality libraries
  - A primitive queue-based for-loop to handle imbalanced loop iterations, the qqloop
 Improvements:
+ - Significant speed improvements (and full support) for systems without
+   hardware atomic operations
  - Now prefer qthread_initialize(), which doesn't take arguments;
    qthread_init() is deprecated (but still supported)
  - Threads have second-order affinity, only established via explicit programmer
@@ -27,6 +30,9 @@ Improvements:
  - Fixed error detection in qthread_fork_to()
  - Additional documentation
  - Restored ability to avoid C++ by using cprops library
+ - Can now be re-initialized safely
+ - No longer relies on PTHREAD_RECURSIVE
+ - Use clock_gettime() for timing, if available, instead of gettimeofday()
 --- 1.2 ---
 New Features:
  - Distributed Data Structures: array (qarray), queue (qdqueue), memory pool (qpool)

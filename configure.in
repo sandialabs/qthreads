@@ -11,7 +11,7 @@ AC_PREREQ(2.59)
 ## ---------------------------------- ##
 ## Autoconf / Automake Initialization ##
 ## ---------------------------------- ##
-AC_INIT([qthread], [1.3b], [kbwheel@sandia.gov])
+AC_INIT([qthread], [1.3], [kbwheel@sandia.gov])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 AC_CONFIG_SRCDIR([src/qthread.c])

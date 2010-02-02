@@ -1,3 +1,449 @@
+2010-02-02 21:44  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/cacheline.c: AMD64 may have PIC as well <sigh>
+
+2010-02-02 21:40  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_stackleft.c: test fails for some optimization
+
+2010-02-02 21:36  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, src/Makefile.am: gcse flag is no longer necessary
+
+2010-02-02 21:35  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_allpairs.c, test/test_id.c, test/test_qdqueue.c,
+	  test/test_qlfqueue.c, test/test_qpool.c, test/test_qutil.c,
+	  test/test_qutil_qsort.c, test/test_wavefront.c, test/testq.c,
+	  test/testqloop.c: remove c++ compile warnings
+
+2010-02-02 21:27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/cacheline.h: c++ compatibility
+
+2010-02-02 20:49  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_stackleft.c: make the test succeed on IA64 (not sure
+	  why it breaks, or what a better way to do it might be)
+
+2010-02-02 16:10  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, src/qloop.c, src/qthread.c: make ROSE extensions
+	  optional for now
+
+2010-02-01 22:00  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: experimental loop work by Allan
+
+2010-02-01 18:29  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread_innards.h, src/qthread.c: fiddling with removing
+	  -Wall warnings; also added some (NON-PUBLIC) functions for
+	  tracking for loops for Allan (I don't like them, but I haven't
+	  figured out a good way of avoiding them yet).
+
+2010-02-01 18:23  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/cacheline.c: treat things as unsigned... just to avoid
+	  potential problems
+
+2010-01-28 21:23  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread_innards.h: atomic_stripes_locks
+
+2010-01-28 18:18  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: oops - stupid assert
+
+2010-01-28 18:14  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_increments.c: allow selection of only certain tests
+
+2010-01-28 18:14  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: better error checking in unpooled memory
+	  allocation
+
+2010-01-27 23:10  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_mpool.c: this is goofy, but makes the compiler happy
+
+2010-01-27 22:58  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, src/qtimer/gettime.c: fix clock_gettime (found a
+	  system to test)
+
+2010-01-27 21:53  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, src/qtimer/Makefile.am, src/qtimer/gettime.c: new
+	  timer type: clock_gettime
+
+2010-01-26 20:56  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: change error message
+
+2010-01-26 20:15  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: typo
+
+2010-01-26 20:01  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread_innards.h, src/qthread.c: make lock stripes
+	  variable based on number of shepherds
+
+2010-01-26 20:01  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_hash.cpp: missing a typedef
+
+2010-01-26 20:00  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am, test/test_reinit.c: test reinitialization
+
+2010-01-26 15:14  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_hash_maps.m4: arguments
+
+2010-01-22 20:57  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: fix off-by-one error in disabling shepherds
+
+2010-01-22 20:35  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_id.c: avoid spurious failures in parallel environments
+
+2010-01-22 20:07  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test: updated ignores
+
+2010-01-22 20:05  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_id.c: more thorough id checking
+
+2010-01-22 18:17  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_ucstack_ssflags.m4: test for ssflags in a
+	  slightly cleaner fashion
+
+2010-01-22 18:17  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: enable silent rules
+
+2010-01-21 22:31  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h, src/qthread.c: faster mutex-based CAS
+	  operations
+
+2010-01-21 21:50  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread_innards.h: faster mutex increments
+
+2010-01-21 21:50  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/futurelib.c: fastlock sfnf_lock
+
+2010-01-21 21:50  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_mpool.c: fastlocks in the memory pool
+
+2010-01-21 21:49  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h, src/qthread.c: faster mutex increments
+
+2010-01-21 18:27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_cp_hash.c: match changes in qt_hash.cpp
+
+2010-01-21 18:13  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_increments.c: remove compiler warnings
+
+2010-01-21 18:09  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_hash.cpp: use fastlocks for qt_hash
+
+2010-01-21 17:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_hash.h, src/qt_hash.cpp, src/qthread.c: remove
+	  reliance on PTHREAD_RECURSIVE
+
+2010-01-21 17:26  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_hash.cpp: fix double-lock bug
+
+2010-01-21 16:08  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_increments.c: make more configurable, more reliable
+
+2010-01-21 15:57  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_increments.c, test/time_producerconsumer.c: only output
+	  unnecessary stats if VERBOSE=1
+
+2010-01-21 15:50  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am, test/test1.c, test/test_qutil.c: rename test1
+	  to test_qutil, reorder tests to be in increasing order of
+	  complexity
+
+2010-01-21 15:46  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am, test/test2.c, test/test_stackleft.c: rename
+	  test2 to test_stackleft
+
+2010-01-21 15:45  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am, test/test3.c, test/test_basic.c: rename test3
+	  to test_basic
+
+2010-01-21 15:10  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: typo
+
+2010-01-21 15:05  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: report when spinlocks are available
+
+2010-01-20 23:44  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: ditch MUTEX_CAS; pointless
+
+2010-01-20 23:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread_innards.h, src/qthread.c: fastlock operations may
+	  not have return values
+
+2010-01-20 23:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h: tmc_sync_mutex_t's are faster than even
+	  spinlocks on tilera, for some reason
+
+2010-01-20 18:17  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: avoid issues if the node is undefined
+
+2010-01-19 23:22  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: remove debug printf
+
+2010-01-19 23:19  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: CPU affinity and rudimentary distances on tilera
+
+2010-01-19 23:18  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* acinclude.m4, config/qthread_check_tiletopo.m4, configure.in:
+	  detect tilera topology library
+
+2010-01-19 17:14  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_incr_bench_pthread.c: warning
+
+2010-01-19 17:14  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_chain_bench.c, test/time_chain_bench_pthread.c,
+	  test/time_cncthr_bench.c, test/time_cncthr_bench_pthread.c,
+	  test/time_incr_bench_pthread.c, test/time_lul_bench.c,
+	  test/time_mutex_bench.c, test/time_qarray.c,
+	  test/time_qutil_qsort.c, test/time_thrcrt_bench.c,
+	  test/time_thrcrt_bench_pthread.c: dont *require* verbose
+
+2010-01-19 17:10  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_allpairs.c, test/time_chain_bench.c,
+	  test/time_chain_bench_pthread.c, test/time_cncthr_bench.c,
+	  test/time_cncthr_bench_pthread.c, test/time_gcd.c,
+	  test/time_incr_bench.c, test/time_incr_bench_pthread.c,
+	  test/time_increments.c, test/time_lul_bench.c,
+	  test/time_lul_bench_pthread.c, test/time_mutex_bench.c,
+	  test/time_mutex_bench_pthread.c, test/time_producerconsumer.c,
+	  test/time_qarray.c, test/time_qarray_sizes.c,
+	  test/time_qdqueue.c, test/time_qdqueue_sizes.c,
+	  test/time_qlfqueue.c, test/time_qpool.c, test/time_qutil_qsort.c,
+	  test/time_spin_bench.c, test/time_spin_bench_pthread.c,
+	  test/time_swap.c, test/time_thrcrt_bench.c,
+	  test/time_thrcrt_bench_pthread.c, test/time_wavefront.c: make
+	  timer progs produce output (since tey arent run via make check)
+
+2010-01-18 22:23  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_swap.c: allow VERBOSE check
+
+2010-01-18 22:10  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_increments.c, test/time_producerconsumer.c,
+	  test/time_qpool.c: remove compiler warnings on Tilera
+
+2010-01-18 19:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/cacheline.c: more debug output
+
+2010-01-18 18:41  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h, src/qt_mpool.c: make qt_mpool work in a
+	  non-atomic world (via the CASLOCK macros)
+
+2010-01-18 16:50  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_internal_mod.c, test/testdincr.c, test/testfincr.c,
+	  test/testincr.c: need to include argparsing.h
+
+2010-01-18 16:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: only init the output_lock in debug mode
+	  (obviously)
+
+2010-01-18 16:27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/testfincr.c: use "me"
+
+2010-01-18 16:26  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_internal_mod.c: more verbosity
+
+2010-01-18 16:23  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/testfincr.c: more verbosity; match testdincr
+
+2010-01-18 16:10  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread_innards.h, src/qthread.c: make the output_lock a
+	  FASTLOCK
+
+2010-01-18 16:08  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h: unconditionally include pthread.h, for the
+	  FASTLOCK stuff
+
+2010-01-18 16:00  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: better init of two-mutex queue
+
+2010-01-18 15:56  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h: missing QT_CAS macro for architectures with
+	  CAS atomics
+
+2010-01-18 15:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h: fix typo
+
+2010-01-18 15:46  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h, include/qthread_innards.h, src/qthread.c:
+	  many changes getting it to work on tilera... not done yet. Using
+	  the Maged Michael two-lock queue instead of lock-free queue for
+	  speed, added support for pthread spinlocks (which for some reason
+	  dont work on Tilera... maybe Im doing something wrong)
+
+2010-01-14 23:33  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h: attempting to handle CAS via mutex safely,
+	  at least internally... not done yet
+
+2010-01-14 23:32  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread_innards.h: fastlock support (why broken on
+	  tilera???)
+
+2010-01-14 23:31  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/testdincr.c, test/testincr.c: more verbosity
+
+2010-01-14 23:30  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: detect pthread spinlocks
+
+2010-01-14 18:11  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qpool.c: since the alignment of malloc is a finicky thing,
+	  lets avoid relying on the result of that alignment test if
+	  possible (this is important on systems that incorrectly generate
+	  HAVE_16ALIGNED_MALLOC, such as the Tilera)
+
+2010-01-14 18:11  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_mpool.c: since the alignment of malloc is a finicky thing,
+	  lets avoid relying on the result of that alignment test if
+	  possible (this is important on systems that incorrectly generate
+	  HAVE_16ALIGNED_MALLOC, such as the Tilera)
+
+2010-01-14 18:04  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_qdqueue.c, test/test_qpool.c, test/testqloop.c: oops;
+	  fix typo
+
+2010-01-14 17:36  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_qarray.c, test/test_qdqueue.c, test/test_qpool.c,
+	  test/testqloop.c: more configurable
+
+2010-01-14 17:31  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_qlfqueue.c: more configurable
+
+2010-01-14 17:05  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/loop_templates.hpp: remove pointless const
+	  declaration
+
+2010-01-14 17:03  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/common.h.in: recognize QTHREAD_TILE
+
+2010-01-14 17:01  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test3.c: remove unused variable warnings
+
+2010-01-14 17:00  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/argparsing.h: tile cant handle iprintf for some bizarre
+	  reason
+
+2010-01-14 16:57  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test3.c: even more verbosity, since this is such a basic
+	  test
+
+2010-01-14 16:52  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/cacheline.c: Tilera cache lines are always 64-byte
+
+2010-01-14 16:51  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/Makefile.am, include/osx_compat/taskimpl.h,
+	  include/osx_compat/tile-ucontext.h, src/osx_compat/asm.S,
+	  src/osx_compat/context.c: wrote my own Tilera
+	  getcontext/setcontext
+
+2010-01-14 16:41  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_makecontext.m4, configure.in,
+	  src/Makefile.am, src/osx_compat/Makefile.am, test/Makefile.am:
+	  rename OSX_MAKECONTEXT macros, because they are useful on non-OSX
+	  platforms; also, use AC_CHECK_SIZEOF builtin autoconf macro
+
+2010-01-14 16:36  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_assembly.m4: detect tilera assembly
+
+2010-01-12 20:08  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h, src/qthread.c: fixed up handling of
+	  atomics on systems without useful hardware features (still work
+	  to do here... mutex-based CAS is broken)
+
+2010-01-07 21:30  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/cacheline.c: restore debugging #def
+
+2010-01-07 21:24  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* ChangeLog: updated
+
+2010-01-07 21:23  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* NEWS: more beta stuff
+
 2010-01-04 21:30  Kyle Wheeler <kbwheel@sandia.gov>
 
 	* configure.in, include/qt_hash.h, src/Makefile.am,
