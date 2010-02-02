@@ -21,9 +21,9 @@ static Q_NOINLINE void thread2(qthread_t *t, size_t left, size_t depth)
 #else
     assert(foo < left);
 #endif
-    if (depth < 5) {
+    /*if (depth < 5) {
 	thread2(t, foo, depth+1);
-    }
+    }*/
 }
 
 static aligned_t thread(qthread_t * t, void *arg)
