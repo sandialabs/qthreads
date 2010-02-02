@@ -10,8 +10,8 @@
 extern "C" {
 #endif
 
-struct mapinfo_s;
-struct dynmapinfo_s;
+typedef struct mapinfo_s mapinfo_t;
+typedef struct dynmapinfo_s dynmapinfo_t;
 
 /* there are two kinds of maps: dynamic maps and static maps. Static maps have
  * very low overhead, but have the restriction that all allocations in them
@@ -50,8 +50,8 @@ void qalloc_cleanup();
  * The malloc() function merges the previous two; if the specified map is a
  * static-size map, the size argument is ignored.
  */
-void *qalloc_statmalloc(struct mapinfo_s *map);
-void *qalloc_dynmalloc(struct dynmapinfo_s *map, size_t size);
+void *qalloc_statmalloc(mapinfo_t *map);
+void *qalloc_dynmalloc(dynmapinfo_t *map, size_t size);
 void *qalloc_malloc(void *map, size_t size);
 
 /* These are the deallocation functions.
@@ -60,8 +60,8 @@ void *qalloc_malloc(void *map, size_t size);
  * The dynfree() function returns a dynamic-size chunk to its map.
  * The free() function is a merging of the above two.
  */
-void qalloc_statfree(void *block, struct mapinfo_s *map);
-void qalloc_dynfree(void *block, struct dynmapinfo_s *map);
+void qalloc_statfree(void *block, mapinfo_t *map);
+void qalloc_dynfree(void *block, dynmapinfo_t *map);
 void qalloc_free(void *block, void *map);
 
 #ifdef __cplusplus
