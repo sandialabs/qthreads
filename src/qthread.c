@@ -428,7 +428,7 @@ int qthread_internal_shepcomp(const void *a, const void *b)
 #else
 static qt_mpool generic_qthread_pool = NULL;
 static QINLINE qthread_t *ALLOC_QTHREAD(qthread_shepherd_t * shep)
-{
+{				       /*{{{ */
     qthread_t *tmp =
 	(qthread_t *) qt_mpool_alloc(shep ? (shep->qthread_pool) :
 				     generic_qthread_pool);
@@ -436,20 +436,19 @@ static QINLINE qthread_t *ALLOC_QTHREAD(qthread_shepherd_t * shep)
 	tmp->creator_ptr = shep;
     }
     return tmp;
-}
+}				       /*}}} */
 
 static QINLINE void FREE_QTHREAD(qthread_t * t)
-{
-    qt_mpool_free(t->
-		  creator_ptr ? (t->creator_ptr->
-				 qthread_pool) : generic_qthread_pool, t);
-}
+{				       /*{{{ */
+    qt_mpool_free(t->creator_ptr ? (t->creator_ptr->qthread_pool) :
+		  generic_qthread_pool, t);
+}				       /*}}} */
 #endif
 
 #if defined(UNPOOLED_STACKS) || defined(UNPOOLED)
 # ifdef QTHREAD_GUARD_PAGES
 static QINLINE void *ALLOC_STACK(qthread_shepherd_t * shep)
-{
+{				       /*{{{ */
     char *tmp = valloc(qlib->qthread_stack_size + (2 * getpagesize()));
 
     assert(tmp != NULL);
@@ -465,9 +464,10 @@ static QINLINE void *ALLOC_STACK(qthread_shepherd_t * shep)
 	perror("mprotect in ALLOC_STACK (2)");
     }
     return tmp + getpagesize();
-}
+}				       /*}}} */
+
 static QINLINE void FREE_STACK(qthread_shepherd_t * shep, void *t)
-{
+{				       /*{{{ */
     char *tmp = t;
 
     assert(t);
@@ -481,7 +481,7 @@ static QINLINE void FREE_STACK(qthread_shepherd_t * shep, void *t)
 	perror("mprotect in FREE_STACK (2)");
     }
     free(tmp);
-}
+}				       /*}}} */
 # else
 #  define ALLOC_STACK(shep) malloc(qlib->qthread_stack_size)
 #  define FREE_STACK(shep, t) free(t)
@@ -490,7 +490,7 @@ static QINLINE void FREE_STACK(qthread_shepherd_t * shep, void *t)
 static qt_mpool generic_stack_pool = NULL;
 # ifdef QTHREAD_GUARD_PAGES
 static QINLINE void *ALLOC_STACK(qthread_shepherd_t * shep)
-{
+{				       /*{{{ */
     char *tmp =
 	qt_mpool_alloc(shep ? (shep->stack_pool) : generic_stack_pool);
     assert(tmp);
@@ -506,9 +506,10 @@ static QINLINE void *ALLOC_STACK(qthread_shepherd_t * shep)
 	perror("mprotect in ALLOC_STACK (2)");
     }
     return tmp + getpagesize();
-}
+}				       /*}}} */
+
 static QINLINE void FREE_STACK(qthread_shepherd_t * shep, void *t)
-{
+{				       /*{{{ */
     char *tmp = t;
 
     assert(t);
@@ -522,7 +523,7 @@ static QINLINE void FREE_STACK(qthread_shepherd_t * shep, void *t)
 	perror("mprotect in FREE_STACK (2)");
     }
     qt_mpool_free(shep ? (shep->stack_pool) : generic_stack_pool, tmp);
-}
+}				       /*}}} */
 # else
 #  define ALLOC_STACK(shep) qt_mpool_alloc(shep?(shep->stack_pool):generic_stack_pool)
 #  define FREE_STACK(shep, t) qt_mpool_free(shep?(shep->stack_pool):generic_stack_pool, t)
@@ -543,27 +544,29 @@ static qt_mpool generic_context_pool = NULL;
 # define FREE_QUEUE(t) free(t)
 # define ALLOC_THREADQUEUE(shep) (qt_threadqueue_t *) malloc(sizeof(qt_threadqueue_t))
 # define FREE_THREADQUEUE(t) free(t)
-static QINLINE void ALLOC_LFQNODE(qt_threadqueue_node_t ** ret,
-				  qthread_shepherd_t * shep)
-{
+static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t ** ret,
+				 qthread_shepherd_t * shep)
+{				       /*{{{ */
 # ifdef HAVE_MEMALIGN
-    *ret = (qt_threadqueue_node_t *) memalign(16, sizeof(qt_threadqueue_node_t));
+    *ret =
+	(qt_threadqueue_node_t *) memalign(16, sizeof(qt_threadqueue_node_t));
 # elif defined(HAVE_POSIX_MEMALIGN)
-    qassert(posix_memalign((void **)ret, 16, sizeof(qt_threadqueue_node_t)), 0);
+    qassert(posix_memalign((void **)ret, 16, sizeof(qt_threadqueue_node_t)),
+	    0);
 # else
     *ret = calloc(1, sizeof(qt_threadqueue_node_t));
     return;
 # endif
     memset(*ret, 0, sizeof(qt_threadqueue_node_t));
-}
+}				       /*}}} */
 
-# define FREE_LFQNODE(t) free(t)
+# define FREE_TQNODE(t) free(t)
 #else
 static qt_mpool generic_queue_pool = NULL;
 static qt_mpool generic_threadqueue_pool = NULL;
 static qt_mpool generic_threadqueue_node_pool = NULL;
 static QINLINE qthread_queue_t *ALLOC_QUEUE(qthread_shepherd_t * shep)
-{
+{				       /*{{{ */
     qthread_queue_t *tmp =
 	(qthread_queue_t *) qt_mpool_alloc(shep ? (shep->queue_pool) :
 					   generic_queue_pool);
@@ -571,52 +574,51 @@ static QINLINE qthread_queue_t *ALLOC_QUEUE(qthread_shepherd_t * shep)
 	tmp->creator_ptr = shep;
     }
     return tmp;
-}
+}				       /*}}} */
 
 static QINLINE void FREE_QUEUE(qthread_queue_t * t)
-{
-    qt_mpool_free(t->
-		  creator_ptr ? (t->creator_ptr->
-				 queue_pool) : generic_queue_pool, t);
-}
+{				       /*{{{ */
+    qt_mpool_free(t->creator_ptr ? (t->creator_ptr->queue_pool) :
+		  generic_queue_pool, t);
+}				       /*}}} */
 
 static QINLINE qt_threadqueue_t *ALLOC_THREADQUEUE(qthread_shepherd_t * shep)
-{
+{				       /*{{{ */
     qt_threadqueue_t *tmp =
 	(qt_threadqueue_t *) qt_mpool_alloc(shep ? (shep->threadqueue_pool) :
-					generic_threadqueue_pool);
+					    generic_threadqueue_pool);
     if (tmp != NULL) {
 	tmp->creator_ptr = shep;
     }
     return tmp;
-}
+}				       /*}}} */
 
 static QINLINE void FREE_THREADQUEUE(qt_threadqueue_t * t)
-{
-    qt_mpool_free(t->
-		  creator_ptr ? (t->creator_ptr->
-				 threadqueue_pool) : generic_threadqueue_pool, t);
-}
+{				       /*{{{ */
+    qt_mpool_free(t->creator_ptr ? (t->creator_ptr->threadqueue_pool) :
+		  generic_threadqueue_pool, t);
+}				       /*}}} */
 
-static QINLINE void ALLOC_LFQNODE(qt_threadqueue_node_t ** ret,
-				  qthread_shepherd_t * shep)
-{
+static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t ** ret,
+				 qthread_shepherd_t * shep)
+{				       /*{{{ */
     *ret =
-	(qt_threadqueue_node_t *) qt_mpool_alloc(shep ? (shep->threadqueue_node_pool)
-					     : generic_threadqueue_node_pool);
+	(qt_threadqueue_node_t *) qt_mpool_alloc(shep
+						 ? (shep->
+						    threadqueue_node_pool)
+						 :
+						 generic_threadqueue_node_pool);
     if (*ret != NULL) {
 	memset(*ret, 0, sizeof(qt_threadqueue_node_t));
 	(*ret)->creator_ptr = shep;
     }
-}
+}				       /*}}} */
 
-static QINLINE void FREE_LFQNODE(qt_threadqueue_node_t * t)
-{
-    qt_mpool_free(t->
-		  creator_ptr ? (t->creator_ptr->
-				 threadqueue_node_pool) :
+static QINLINE void FREE_TQNODE(qt_threadqueue_node_t * t)
+{				       /*{{{ */
+    qt_mpool_free(t->creator_ptr ? (t->creator_ptr->threadqueue_node_pool) :
 		  generic_threadqueue_node_pool, t);
-}
+}				       /*}}} */
 #endif
 
 #if defined(UNPOOLED_LOCKS) || defined(UNPOOLED)
@@ -625,7 +627,7 @@ static QINLINE void FREE_LFQNODE(qt_threadqueue_node_t * t)
 #else
 static qt_mpool generic_lock_pool = NULL;
 static QINLINE qthread_lock_t *ALLOC_LOCK(qthread_shepherd_t * shep)
-{
+{				       /*{{{ */
     qthread_lock_t *tmp =
 	(qthread_lock_t *) qt_mpool_alloc(shep ? (shep->lock_pool) :
 					  generic_lock_pool);
@@ -633,14 +635,13 @@ static QINLINE qthread_lock_t *ALLOC_LOCK(qthread_shepherd_t * shep)
 	tmp->creator_ptr = shep;
     }
     return tmp;
-}
+}				       /*}}} */
 
 static QINLINE void FREE_LOCK(qthread_lock_t * t)
-{
-    qt_mpool_free(t->
-		  creator_ptr ? (t->creator_ptr->
-				 lock_pool) : generic_lock_pool, t);
-}
+{				       /*{{{ */
+    qt_mpool_free(t->creator_ptr ? (t->creator_ptr->lock_pool) :
+		  generic_lock_pool, t);
+}				       /*}}} */
 #endif
 
 #if defined(UNPOOLED_ADDRRES) || defined(UNPOOLED)
@@ -648,19 +649,19 @@ static QINLINE void FREE_LOCK(qthread_lock_t * t)
 #define FREE_ADDRRES(t) free(t)
 #else
 static QINLINE qthread_addrres_t *ALLOC_ADDRRES(qthread_shepherd_t * shep)
-{
+{				       /*{{{ */
     qthread_addrres_t *tmp =
 	(qthread_addrres_t *) qt_mpool_alloc(shep->addrres_pool);
     if (tmp != NULL) {
 	tmp->creator_ptr = shep;
     }
     return tmp;
-}
+}				       /*}}} */
 
 static QINLINE void FREE_ADDRRES(qthread_addrres_t * t)
-{
+{				       /*{{{ */
     qt_mpool_free(t->creator_ptr->addrres_pool, t);
-}
+}				       /*}}} */
 #endif
 
 #if defined(UNPOOLED_ADDRSTAT) || defined(UNPOOLED)
@@ -669,7 +670,7 @@ static QINLINE void FREE_ADDRRES(qthread_addrres_t * t)
 #else
 static qt_mpool generic_addrstat_pool = NULL;
 static QINLINE qthread_addrstat_t *ALLOC_ADDRSTAT(qthread_shepherd_t * shep)
-{
+{				       /*{{{ */
     qthread_addrstat_t *tmp =
 	(qthread_addrstat_t *) qt_mpool_alloc(shep ? (shep->addrstat_pool) :
 					      generic_addrstat_pool);
@@ -677,14 +678,13 @@ static QINLINE qthread_addrstat_t *ALLOC_ADDRSTAT(qthread_shepherd_t * shep)
 	tmp->creator_ptr = shep;
     }
     return tmp;
-}
+}				       /*}}} */
 
 static QINLINE void FREE_ADDRSTAT(qthread_addrstat_t * t)
-{
-    qt_mpool_free(t->
-		  creator_ptr ? (t->creator_ptr->
-				 addrstat_pool) : generic_addrstat_pool, t);
-}
+{				       /*{{{ */
+    qt_mpool_free(t->creator_ptr ? (t->creator_ptr->addrstat_pool) :
+		  generic_addrstat_pool, t);
+}				       /*}}} */
 #endif
 
 
@@ -2794,7 +2794,7 @@ static QINLINE qt_threadqueue_t *qt_threadqueue_new(qthread_shepherd_t * shepher
 	QTHREAD_FASTLOCK_INIT(q->head_lock);
 	QTHREAD_FASTLOCK_INIT(q->tail_lock);
 	QTHREAD_FASTLOCK_INIT(q->advisory_queuelen_m);
-	ALLOC_LFQNODE(((qt_threadqueue_node_t **) & (q->head)), shepherd);
+	ALLOC_TQNODE(((qt_threadqueue_node_t **) & (q->head)), shepherd);
 	assert(q->head != NULL);
 	if (q->head == NULL) {
 	    QTHREAD_FASTLOCK_DESTROY(q->advisory_queuelen_m);
@@ -2819,7 +2819,7 @@ static QINLINE qt_threadqueue_t *qt_threadqueue_new(qthread_shepherd_t * shepher
 	}
 	q->fruitless = 0;
 # endif
-	ALLOC_LFQNODE(((qt_threadqueue_node_t **) & (q->head)), shepherd);
+	ALLOC_TQNODE(((qt_threadqueue_node_t **) & (q->head)), shepherd);
 	assert(QPTR(q->head) != NULL);
 	if (QPTR(q->head) == NULL) {   // if we're not using asserts, fail nicely
 # ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
@@ -2855,7 +2855,7 @@ static QINLINE void qt_threadqueue_free(qt_threadqueue_t * q)
     QTHREAD_DESTROYCOND(&q->notempty);
 # endif
 #endif /* MUTEX queue */
-    FREE_LFQNODE((qt_threadqueue_node_t *) QPTR(q->head));
+    FREE_TQNODE((qt_threadqueue_node_t *) QPTR(q->head));
     FREE_THREADQUEUE(q);
 }				       /*}}} */
 
@@ -2865,7 +2865,7 @@ static QINLINE void qt_threadqueue_enqueue(qt_threadqueue_t * q, qthread_t * t,
 #ifdef QTHREAD_MUTEX_INCREMENT
     qt_threadqueue_node_t *node;
 
-    ALLOC_LFQNODE(&node, shep);
+    ALLOC_TQNODE(&node, shep);
     assert(node != NULL);
     node->value = t;
     node->next = NULL;
@@ -2883,7 +2883,7 @@ static QINLINE void qt_threadqueue_enqueue(qt_threadqueue_t * q, qthread_t * t,
     assert(t != NULL);
     assert(q != NULL);
 
-    ALLOC_LFQNODE(&node, shep);
+    ALLOC_TQNODE(&node, shep);
     assert(node != NULL);
     assert(QCTR(node) == 0);	       // node MUST be aligned
 
@@ -2966,7 +2966,7 @@ static QINLINE qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t * q)
 	    }
 	}
     }
-    FREE_LFQNODE((qt_threadqueue_node_t *) QPTR(head));
+    FREE_TQNODE((qt_threadqueue_node_t *) QPTR(head));
 #endif
     if (p != NULL) {
 	qthread_internal_incr_s(&q->advisory_queuelen, &q->advisory_queuelen_m, -1);
@@ -3027,7 +3027,7 @@ static QINLINE qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q)
 	    }
 	}
     }
-    FREE_LFQNODE((qt_threadqueue_node_t *) QPTR(head));
+    FREE_TQNODE((qt_threadqueue_node_t *) QPTR(head));
     if (p != NULL) {
 	qthread_internal_incr_s(&q->advisory_queuelen, &q->advisory_queuelen_m, -1);
     }
