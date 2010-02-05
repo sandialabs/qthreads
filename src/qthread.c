@@ -2528,7 +2528,7 @@ void qthread_finalize(void)
 }				       /*}}} */
 
 int qthread_disable_shepherd(const qthread_shepherd_id_t shep)
-{
+{				       /*{{{ */
     assert(shep < qlib->nshepherds);
     if (shep == 0) {
 	/* currently, the "real mccoy" original thread cannot be migrated
@@ -2544,14 +2544,14 @@ int qthread_disable_shepherd(const qthread_shepherd_id_t shep)
     qthread_debug(ALL_CALLS, "qthread_disable_shepherd(%i)\n", shep);
     (void)QT_CAS(qlib->shepherds[shep].active, 1, 0);
     return QTHREAD_SUCCESS;
-}
+}				       /*}}} */
 
 void qthread_enable_shepherd(const qthread_shepherd_id_t shep)
-{
+{				       /*{{{ */
     assert(shep < qlib->nshepherds);
     qthread_debug(ALL_CALLS, "qthread_enable_shepherd(%i)\n", shep);
     (void)QT_CAS(qlib->shepherds[shep].active, 0, 1);
-}
+}				       /*}}} */
 
 qthread_t *qthread_self(void)
 {				       /*{{{ */
@@ -4341,7 +4341,7 @@ qthread_shepherd_id_t qthread_shep(const qthread_t * t)
 }				       /*}}} */
 
 int qthread_shep_ok(const qthread_t * t)
-{
+{				       /*{{{ */
     qthread_shepherd_t *ret;
 
     if (t) {
@@ -4353,7 +4353,7 @@ int qthread_shep_ok(const qthread_t * t)
     } else {
 	return QTHREAD_CASLOCK_READ_UI(ret->active);
     }
-}
+}				       /*}}} */
 
 unsigned int qthread_internal_shep_to_node(const qthread_shepherd_id_t shep)
 {				       /*{{{ */
@@ -4439,7 +4439,7 @@ void qthread_reset_forCount(qthread_t * t)
 
 #ifdef QTHREAD_MUTEX_INCREMENT
 uint32_t qthread_incr32_(volatile uint32_t * op, const int incr)
-{
+{				       /*{{{ */
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
     uint32_t retval;
     QTHREAD_LOCK_TIMER_DECLARATION(incr);
@@ -4453,10 +4453,10 @@ uint32_t qthread_incr32_(volatile uint32_t * op, const int incr)
     QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
     QTHREAD_LOCK_TIMER_STOP(incr, qthread_self());
     return retval;
-}
+}				       /*}}} */
 
 uint64_t qthread_incr64_(volatile uint64_t * op, const int incr)
-{
+{				       /*{{{ */
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
     uint64_t retval;
     QTHREAD_LOCK_TIMER_DECLARATION(incr);
@@ -4470,10 +4470,10 @@ uint64_t qthread_incr64_(volatile uint64_t * op, const int incr)
     QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
     QTHREAD_LOCK_TIMER_STOP(incr, qthread_self());
     return retval;
-}
+}				       /*}}} */
 
 double qthread_dincr_(volatile double *op, const double incr)
-{
+{				       /*{{{ */
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
     double retval;
 
@@ -4482,10 +4482,10 @@ double qthread_dincr_(volatile double *op, const double incr)
     *op += incr;
     QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
     return retval;
-}
+}				       /*}}} */
 
 float qthread_fincr_(volatile float *op, const float incr)
-{
+{				       /*{{{ */
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
     float retval;
 
@@ -4494,11 +4494,11 @@ float qthread_fincr_(volatile float *op, const float incr)
     *op += incr;
     QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
     return retval;
-}
+}				       /*}}} */
 
 uint32_t qthread_cas32_(volatile uint32_t * operand, const uint32_t oldval,
 			const uint32_t newval)
-{
+{				       /*{{{ */
     uint32_t retval;
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(operand);
 
@@ -4509,10 +4509,11 @@ uint32_t qthread_cas32_(volatile uint32_t * operand, const uint32_t oldval,
     }
     QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
     return retval;
-}
+}				       /*}}} */
+
 uint64_t qthread_cas64_(volatile uint64_t * operand, const uint64_t oldval,
 			const uint64_t newval)
-{
+{				       /*{{{ */
     uint64_t retval;
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(operand);
 
@@ -4523,5 +4524,5 @@ uint64_t qthread_cas64_(volatile uint64_t * operand, const uint64_t oldval,
     }
     QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
     return retval;
-}
+}				       /*}}} */
 #endif
