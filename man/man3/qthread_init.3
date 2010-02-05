@@ -22,19 +22,21 @@ other qthread functions. The
 function is deprecated in favor of
 .BR qthread_initialize ()
 which will attempt to auto-detect the correct number of shepherds for the system. The number of shepherds can be forcibly specified with the
-.I nshepherds
-argument to
-.BR qthread_init ()
-or by specifying the environment variable
+environment variable
 .BR QTHREAD_NUM_SHEPHERDS .
-If either
-.I nshepherds
-or
+The
+.BR qthread_init ()
+function is a wrapper around
+.BR qthread_initialize ()
+that simply exports the
 .B QTHREAD_NUM_SHEPHERDS
-is 0 or unset, the library will attempt to guess the correct number of shepherds,
-defaulting to a single shepherd if no information about the system could be
-found. Shepherds will attempt to pin themselves to processors using whatever
-CPU affinity libraries are available.
+environment variable.
+If 
+.B QTHREAD_NUM_SHEPHERDS
+is 0 or unset, the library will attempt to guess the correct number of
+shepherds, defaulting to a single shepherd if no information about the system
+could be found. Shepherds will attempt to pin themselves to processors using
+whatever CPU affinity libraries are available.
 .SH ENVIRONMENT
 The operation of
 .BR qthread_init ()

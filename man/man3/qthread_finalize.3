@@ -13,6 +13,6 @@
 Use this function to clean up the qthreads environment after execution of the
 program has finished. This function will tell the shepherds to terminate at the
 next context switch, so only use it when you are certain that execution has
-completed.
+completed. This function may be called multiple times safely.
 .SH SEE ALSO
-.BR qthread_init (3)
+.BR qthread_initialize (3)

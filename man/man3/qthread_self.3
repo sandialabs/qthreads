@@ -20,7 +20,7 @@ kernel.
 .BR qthread_self ()
 will return either a pointer to the qthread_t structure associated with the
 calling qthread, or if called from a non-qthread (i.e. a pthread or before
-.BR qthread_init ()
+.BR qthread_initialize ()
 has been called), will return NULL.
 .SH SEE ALSO
 .BR qthread_id (3),
