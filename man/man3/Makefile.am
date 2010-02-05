@@ -84,6 +84,7 @@ man_MANS = \
 		   qthread_id.3 \
 		   qthread_incr.3 \
 		   qthread_init.3 \
+		   qthread_initialize.3 \
 		   qthread_lock.3 \
 		   qthread_migrate_to.3 \
 		   qthread_num_shepherds.3 \

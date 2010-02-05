@@ -1,6 +1,7 @@
 .TH qthread_init 3 "NOVEMBER 2006" libqthread "libqthread"
 .SH NAME
-.B qthread_init
+.BR qthread_init ,
+.B qthread_initialize
 \- initialize the qthread library
 .SH SYNOPSIS
 .B #include <qthread/qthread.h>
@@ -9,14 +10,28 @@
 .br
 .B qthread_init
 .RI "(const int " nshepherds );
+.PP
+.I int
+.br
+.B qthread_initialize
+();
 .SH DESCRIPTION
-Use this function to initialize the qthreads environment before spawning any
-qthreads or using any of the qthreads locking/FEB functions. The number of
-shepherd pthreads that will execute qthreads is specified with
-.IR nshepherds .
-If
+Use these functions to initialize the qthreads environment before using any
+other qthread functions. The
+.BR qthread_init ()
+function is deprecated in favor of
+.BR qthread_initialize ()
+which will attempt to auto-detect the correct number of shepherds for the system. The number of shepherds can be forcibly specified with the
 .I nshepherds
-is 0, the library will attempt to guess the correct number of shepherds,
+argument to
+.BR qthread_init ()
+or by specifying the environment variable
+.BR QTHREAD_NUM_SHEPHERDS .
+If either
+.I nshepherds
+or
+.B QTHREAD_NUM_SHEPHERDS
+is 0 or unset, the library will attempt to guess the correct number of shepherds,
 defaulting to a single shepherd if no information about the system could be
 found. Shepherds will attempt to pin themselves to processors using whatever
 CPU affinity libraries are available.
@@ -41,6 +56,9 @@ thread. Changes to this value during the course of the program run are ignored;
 the value is only considered when
 .BR qthread_init ()
 is run.
+.TP
+.B QTHREAD_NUM_SHEPHERDS
+This variable specifies how many shepherds to create.
 .SH RETURN VALUE
 On success, the system is ready to fork threads and 0 is returned. On error, an
 non-zero error code is returned.
