@@ -97,6 +97,7 @@ man_MANS = \
 		   qthread_schedule_on.3 \
 		   qthread_self.3 \
 		   qthread_shep.3 \
+		   qthread_shep_ok.3 \
 		   qthread_sorted_sheps.3 \
 		   qthread_sorted_sheps_remote.3 \
 		   qthread_stackleft.3 \
