@@ -42,7 +42,7 @@ static inline size_t mod_gcd(size_t a, size_t b)
     }
 }
 
-#define BIGNUM 1000000
+size_t BIGNUM = 1000000;
 
 int main ()
 {
@@ -54,6 +54,7 @@ int main ()
     qtimer_t mod_timer = qtimer_new();
     qtimer_t shift_timer = qtimer_new();
     CHECK_VERBOSE();
+    NUMARG(BIGNUM, "BIGNUM");
     for (i=0;i<BIGNUM;i++) {
 	bigset[i].a = random();
 	bigset[i].b = 4096;

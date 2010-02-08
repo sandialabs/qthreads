@@ -12,7 +12,7 @@
 #include "qtimer.h"
 #include "argparsing.h"
 
-#define ITERATIONS 1000000
+size_t ITERATIONS = 1000000;
 
 ucontext_t child, parent;
 qtimer_t timer;
@@ -56,6 +56,7 @@ int main()
     int i;
 
     CHECK_VERBOSE();
+    NUMARG(ITERATIONS, "ITERATIONS");
     timer = qtimer_new();
     getcontext(&child);
     getcontext(&parent);

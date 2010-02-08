@@ -44,11 +44,10 @@ void balanced_noncomp(qthread_t * me, const size_t startat,
 		      const size_t stopat, void *arg)
 {
     size_t i;
-
     qthread_shepherd_id_t shep = qthread_shep(me);
-
     aligned_t myinc;
 
+    assert(shep != NO_SHEPHERD);
     for (i = startat; i < stopat; i++) {
 	qthread_incr(&myinc, 1);
     }
