@@ -43,8 +43,9 @@ AC_DEFUN([QTHREAD_HASH_MAPS], [
 		  [using __gnu_cxx::hash_map;],
 		  [ac_cv_cxx_ext_hash_map=yes
 		   ac_found_a_hash=yes
-		   ac_save_CXXFLAGS="$ac_save_CXXFLAGS -Wno-deprecated"],
-		  [ac_cv_cxx_ext_hash_map=no])
+		   CXXFLAGS="$ac_save_CXXFLAGS -Wno-deprecated"],
+		  [ac_cv_cxx_ext_hash_map=no
+		   CXXFLAGS="$ac_save_CXXFLAGS"])
 	    AC_LANG_RESTORE
 	    ])
 	AS_IF([test "x$ac_cv_cxx_ext_hash_map" = xyes],
