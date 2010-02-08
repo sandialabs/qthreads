@@ -242,8 +242,8 @@ static qarray *qarray_create_internal(const size_t count,
 			 segment_count);
 	    break;
 	case ALL_RAND:
-	    ret->dist_shep =
-		(qthread_shepherd_id_t) (random() % qthread_num_shepherds());
+	    ret->dist_shep = (qthread_shepherd_id_t) random();
+	    ret->dist_shep = (qthread_shepherd_id_t) qthread_num_shepherds();
 	    qthread_incr(&chunk_distribution_tracker[ret->dist_shep],
 			 segment_count);
 	    break;
@@ -372,14 +372,14 @@ static qarray *qarray_create_internal(const size_t count,
 	    const qthread_shepherd_id_t max_sheps = qthread_num_shepherds();
 	    const size_t field_size = segment_count / max_sheps;
 	    size_t field_count = 0;
-	    unsigned int cur_shep = 0;
+	    qthread_shepherd_id_t cur_shep = 0;
 
 	    for (segment = 0; segment < segment_count; segment++) {
 		char *seghead =
 		    qarray_elem_nomigrate(ret, segment * ret->segment_size);
 		qthread_shepherd_id_t *ptr =
 		    qarray_internal_segment_shep(ret, seghead);
-		*ptr = (qthread_shepherd_id_t) cur_shep;
+		*ptr = cur_shep;
 #ifdef QTHREAD_HAVE_LIBNUMA
 		if (qthread_internal_shep_to_node(cur_shep) !=
 		    QTHREAD_NO_NODE) {
@@ -392,7 +392,8 @@ static qarray *qarray_create_internal(const size_t count,
 		field_count++;
 		if (field_count == field_size) {
 		    cur_shep++;
-		    cur_shep *= (cur_shep != max_sheps);
+		    cur_shep = (qthread_shepherd_id_t)
+			(cur_shep * (cur_shep != max_sheps));
 		    field_count = 0;
 		}
 	    }
