@@ -13,7 +13,8 @@
 
 //#define QTHREAD_TRACK_DISTANCES
 #ifdef QTHREAD_TRACK_DISTANCES
-struct cacheline_s {
+struct cacheline_s
+{
     aligned_t i;
     char block[qthread_cacheline() - sizeof(aligned_t)];
 }
@@ -31,11 +32,13 @@ qthread_shepherd_id_t **halfway = NULL;
 //aligned_t stealing_penalty = 0;
 #endif
 
-union distfuncunion {
+union distfuncunion
+{
     dist_f d;
     dist_out_f od;
 };
-struct qt_ap_wargs {
+struct qt_ap_wargs
+{
     qdqueue_t *restrict work_queue;
     const union distfuncunion f;
     const int outfunc_style;
@@ -47,7 +50,8 @@ struct qt_ap_wargs {
     const size_t outsize;
 };
 
-struct qt_ap_workunit {
+struct qt_ap_workunit
+{
     size_t a1_start, a1_stop, a2_start, a2_stop;
 };
 
@@ -148,19 +152,21 @@ static aligned_t qt_ap_worker(qthread_t * restrict me,
     return 0;
 }
 
-struct qt_ap_gargs {
+struct qt_ap_gargs
+{
     qdqueue_t *const wq;
     const qarray *restrict array2;
 };
 
-struct qt_ap_gargs2 {
+struct qt_ap_gargs2
+{
     qdqueue_t *const wq;
     const size_t start, stop;
     const qthread_shepherd_id_t shep;
 };
 
 static void qt_ap_genwork2(qthread_t * me, const size_t startat,
-			   const size_t stopat, const qarray *Q_UNUSED a,
+			   const size_t stopat, const qarray * Q_UNUSED a,
 			   struct qt_ap_gargs2 *gargs)
 {
     struct qt_ap_workunit *workunit = malloc(sizeof(struct qt_ap_workunit));
@@ -188,8 +194,13 @@ static void qt_ap_genwork2(qthread_t * me, const size_t startat,
 	qdqueue_enqueue_there(me, gargs->wq, workunit, random() % maxsheps);
 #elif 1
 	/* option 3: random selection of the two, maybe good */
-	qdqueue_enqueue_there(me, gargs->wq, workunit,
-			      (random() % 2) ? shep : qthread_shep(me));
+	qthread_shepherd_id_t s;
+	if (random() % 2) {
+	    s = shep;
+	} else {
+	    s = qthread_shep(me);
+	}
+	qdqueue_enqueue_there(me, gargs->wq, workunit, s);
 #elif 0
 	/* option 4: the "halfway" idea */
 	unsigned int i;
@@ -211,7 +222,8 @@ static void qt_ap_genwork2(qthread_t * me, const size_t startat,
 }
 
 static void qt_ap_genwork(qthread_t * restrict me, const size_t startat,
-			  const size_t stopat, const qarray * restrict Q_UNUSED a,
+			  const size_t stopat,
+			  const qarray * restrict Q_UNUSED a,
 			  struct qt_ap_gargs *restrict gargs)
 {
     struct qt_ap_gargs2 garg2 =
@@ -232,7 +244,8 @@ static void qt_ap_genwork(qthread_t * restrict me, const size_t startat,
  * 3. Per-shepherd worker threads pull out work and execute it, ideally near the data they work on.
  */
 static void qt_allpairs_internal(const qarray * array1, const qarray * array2,
-				 const union distfuncunion distfunc, int funcstyle,
+				 const union distfuncunion distfunc,
+				 int funcstyle,
 				 void *restrict * restrict output,
 				 const size_t outsize)
 {
@@ -241,7 +254,7 @@ static void qt_allpairs_internal(const qarray * array1, const qarray * array2,
     volatile aligned_t donecount = 0;
     struct qt_ap_wargs wargs =
 	{ qdqueue_create(), distfunc, funcstyle, &no_more_work, &donecount,
-array1,
+	array1,
 	array2, output,
 	outsize
     };
