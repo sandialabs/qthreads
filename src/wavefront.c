@@ -38,10 +38,6 @@ static Q_NOINLINE qarray *volatile *vol_id_qa(qarray * volatile *volatile ptr)
 
 #define _(x) (vol_read_a(&(x)))
 
-#ifdef __ICC
-/* turn off icc warnings about operand evaluation order */
-#pragma warning (disable:981)
-#endif
 static void qt_wavefront_regionworker(qarray * restrict left,
 				      qarray * restrict below,
 				      char *restrict * R, wave_comp_f func)

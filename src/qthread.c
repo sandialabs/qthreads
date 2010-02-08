@@ -1422,7 +1422,8 @@ static qthread_shepherd_t *qthread_find_active_shepherd(qthread_shepherd_id_t
 {				       /*{{{ */
     qthread_shepherd_id_t target = 0;
     qthread_shepherd_t *sheps = qlib->shepherds;
-    const qthread_shepherd_id_t nsheps = qlib->nshepherds;
+    const qthread_shepherd_id_t nsheps =
+	(qthread_shepherd_id_t) qlib->nshepherds;
 
     qthread_debug(ALL_FUNCTIONS,
 		  "qthread_find_active_shepherd(%p): from %i sheps\n", l,
@@ -1577,8 +1578,8 @@ int qthread_initialize(void)
 	     * artificial limit has been imposed. */
 	    nshepherds = numa_num_thread_cpus();
 # elif defined(HAVE_NUMA_BITMASK_NBYTES)
-	    for (size_t i=0;i<numa_bitmask_nbytes(numa_all_cpus_ptr)*8;i++) {
-		nshepherds += numa_bitmask_isbitset(numa_all_cpus_ptr, i);
+	    for (size_t b=0;b<numa_bitmask_nbytes(numa_all_cpus_ptr)*8;b++) {
+		nshepherds += numa_bitmask_isbitset(numa_all_cpus_ptr, b);
 	    }
 # else
 	    /* this is (probably) optimal if/when we have multithreaded shepherds */
@@ -1797,12 +1798,12 @@ int qthread_initialize(void)
 		    qlib->shepherds[i].sorted_sheplist[k++] = j;
 		}
 	    }
-#  if defined(HAVE_QSORT_R) && QTHREAD_QSORT_BSD
+#  if defined(HAVE_QSORT_R) && defined(QTHREAD_QSORT_BSD)
 	    assert(qlib->shepherds[i].sorted_sheplist);
 	    qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
 		    sizeof(qthread_shepherd_id_t), (void *)(intptr_t) i,
 		    &qthread_internal_shepcomp);
-#  elif defined(HAVE_QSORT_R) && QTHREAD_QSORT_GLIBC
+#  elif defined(HAVE_QSORT_R) && defined(QTHREAD_QSORT_GLIBC)
 	    assert(qlib->shepherds[i].sorted_sheplist);
 	    qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
 		    sizeof(qthread_shepherd_id_t),
@@ -1871,12 +1872,12 @@ int qthread_initialize(void)
 		    qlib->shepherds[i].sorted_sheplist[k++] = j;
 		}
 	    }
-#  if defined(HAVE_QSORT_R) && QTHREAD_QSORT_BSD
+#  if defined(HAVE_QSORT_R) && defined(QTHREAD_QSORT_BSD)
 	    assert(qlib->shepherds[i].sorted_sheplist);
 	    qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
 		    sizeof(qthread_shepherd_id_t), (void *)(intptr_t) i,
 		    &qthread_internal_shepcomp);
-#  elif defined(HAVE_QSORT_R) && QTHREAD_QSORT_GLIBC
+#  elif defined(HAVE_QSORT_R) && defined(QTHREAD_QSORT_GLIBC)
 	    /* what moron in the linux community decided to implement BSD's
 	     * qsort_r with the arguments reversed??? */
 	    assert(qlib->shepherds[i].sorted_sheplist);
@@ -4425,6 +4426,9 @@ void qthread_assertnotfuture(qthread_t * t)
 }				       /*}}} */
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
+# ifdef __INTEL_COMPILER
+#  pragma warning (disable:1418)
+# endif
 /* added akp */
  int qthread_forCount(qthread_t * t, int inc)
 {                                    /*{{{ */

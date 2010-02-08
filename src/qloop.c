@@ -296,7 +296,7 @@ struct qqloop_wrapper_args {
 struct qqloop_wrapper_range {
     size_t startat, stopat;
 };
-typedef struct qqloop_handle_s {
+struct qqloop_handle_s {
     struct qqloop_wrapper_args *qwa;
     struct qqloop_static_args stat;
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
@@ -306,7 +306,7 @@ typedef struct qqloop_handle_s {
     volatile aligned_t assignDone; // start+offset
     size_t shepherdsActive; // bit vector to stop shepherds from grabbing a loop twice (is this necessary?)
 #endif
-} qqloop_handle_t;
+};
 
 static QINLINE int qqloop_get_iterations(struct qqloop_iteration_queue *const
 					 iq,
@@ -335,11 +335,12 @@ static QINLINE struct qqloop_iteration_queue *qqloop_create_iq(size_t startat,
 {
     struct qqloop_iteration_queue *iq =
 	malloc(sizeof(struct qqloop_iteration_queue));
+    iq->start = startat;
+    iq->stop = stopat;
     return iq;
 }
 
-static QINLINE void qqloop_destroy_iq(qthread_t * me,
-				      struct qqloop_iteration_queue *iq)
+static QINLINE void qqloop_destroy_iq(struct qqloop_iteration_queue *iq)
 {
     free(iq);
 }
@@ -419,7 +420,7 @@ void qt_loop_queue_run(qqloop_handle_t * loop)
 	while (_(*dc) < _(*as)) {
 	    qthread_yield(me);
 	}
-	qqloop_destroy_iq(me, loop->stat.iq);
+	qqloop_destroy_iq(loop->stat.iq);
 	free(loop->qwa);
 	free(loop);
     }
@@ -440,7 +441,7 @@ void qt_loop_queue_run_there(qqloop_handle_t * loop, qthread_shepherd_id_t shep)
 	while (_(*dc) < _(*as)) {
 	    qthread_yield(me);
 	}
-	qqloop_destroy_iq(me, loop->stat.iq);
+	qqloop_destroy_iq(loop->stat.iq);
 	free(loop->qwa);
 	free(loop);
     }
@@ -810,6 +811,12 @@ void qt_qsort(qthread_t * me, double *array, const size_t length)
 }
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
+# ifdef __INTEL_COMPILER
+/* external function with no prior declaration */
+#  pragma warning (disable:1418)
+/* external declaration in primary source file */
+#  pragma warning (disable:1419)
+# endif
 /* function calls added to support OpenMP-to-qthreads translation via the ROSE compiler
  *  - also gets the loops in the form preferred by MAESTRO
  *    easier dynamic parallel load balancing

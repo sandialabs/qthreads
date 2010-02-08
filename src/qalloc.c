@@ -28,6 +28,10 @@
 #error On Linux you must compile this code with _GNU_SOURCE defined! You will probably see several errors about fstat64 and such, otherwise.
 #endif
 
+#ifdef __INTEL_COMPILER
+# pragma warning (disable:2259)
+#endif
+
 /* The pads and bitmaps in these two datastructures are where they are (namely,
  * next to each other, after the next ptrs and mutexes) because it makes the
  * compiler naturally align things, which aids in speed (not to mention
