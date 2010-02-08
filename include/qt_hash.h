@@ -21,7 +21,7 @@ typedef struct qt_hash_s *qt_hash;
 typedef void (*qt_hash_callback_fn)(const qt_key_t, void *, void *);
 #else
 typedef cp_hashlist *qt_hash;
-typedef int (*qt_hash_callback_fn)(void *, void *, void *);
+typedef int (*qt_hash_callback_fn)(void *, void restrict *, void restrict *);
 #endif
 typedef void (*qt_hash_deallocator_fn)(void*);
 
