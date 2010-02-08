@@ -54,15 +54,6 @@ struct qt_mpool_s {
 /* local constants */
 static size_t pagesize = 0;
 
-/* avoid compiler bugs with volatile... */
-static Q_NOINLINE void *volatile *vol_id_void(void *volatile
-						       *const ptr)
-{				       /*{{{ */
-    return ptr;
-}				       /*}}} */
-
-#define _(x) (*vol_id_void(&(x)))
-
 /* local funcs */
 static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
 						     /*int node, */
