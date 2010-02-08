@@ -23,14 +23,14 @@ static void cpuid(const unsigned int op, unsigned int *eax_ptr, unsigned int *eb
 {				       /*{{{ */
 # ifdef __PIC__
     unsigned int eax, ebx, ecx, edx;
-    unsigned int pic_ebx;
+    unsigned int pic_ebx = pic_ebx;
     __asm__ __volatile__("mov %%ebx, %4\n\t"
 			 "cpuid\n\t"
 			 "mov %%ebx, %1\n\t"
 			 "mov %4, %%ebx"
 			 :"=a"(eax), "=m"(ebx), "=c"(ecx),
 			 "=d"(edx), "=m"(pic_ebx)
-			 :"a"    (op));
+			 :"a"(op));
     *eax_ptr = eax;
     *ebx_ptr = ebx;
     *ecx_ptr = ecx;
@@ -46,7 +46,7 @@ static void cpuid4(const int cache, unsigned int *eax_ptr, unsigned int *ebx_ptr
 {				       /*{{{ */
 # ifdef __PIC__
     unsigned int eax, ebx, ecx, edx;
-    unsigned int pic_ebx;
+    unsigned int pic_ebx = pic_ebx;
     __asm__ __volatile__("mov %%ebx, %4\n\t"
 			 "cpuid\n\t"
 			 "mov %%ebx, %1\n\t"
@@ -178,7 +178,7 @@ static void descriptor(unsigned int d)
     }
 }				       /*}}} */
 
-static void examine(unsigned int r, char *str)
+static void examine(unsigned int r)
 {				       /*{{{ */
     if ((r & 0x40000000) == 0) {
 	descriptor((r >> 0) & 0xff);
@@ -261,10 +261,10 @@ static void figure_out_cacheline_size()
 		cpuid(2, &eax, &ebx, &ecx, &edx);
 		limit = eax & 0xf;
 		i++;
-		examine(eax, "eax");
-		examine(ebx, "ebx");
-		examine(ecx, "ecx");
-		examine(edx, "edx");
+		examine(eax);
+		examine(ebx);
+		examine(ecx);
+		examine(edx);
 	    } while (i < limit);
 	}
 
