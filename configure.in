@@ -107,18 +107,26 @@ AS_IF([test "x$enable_debug_trace" == "xyes"],
 AC_ARG_ENABLE([picky],
   [AS_HELP_STRING([--enable-picky],
 	 [turns on extra compiler warnings (for developers of qthreads)])],
-  [case "$CC" in
-   gcc*)
+  [case "$qthread_cv_c_compiler_type" in
+   GNU)
    CFLAGS="-Wall -Wno-strict-aliasing $CFLAGS"
-   CXXFLAGS="-Wall $CXXFLAGS"
    ;;
-   icc*)
+   Intel)
    CFLAGS="-Wall -wd981 $CFLAGS"
-   CXXFLAGS="-Wall $CXXFLAGS"
    ;;
    *)
    CFLAGS="-Wall $CFLAGS"
-   CXXFLAGS="-Wall $CXXFLAGS"
+   ;;
+   esac
+   case "$qthread_cv_cxx_compiler_type" in
+   GNU)
+   CXXFLAGS="-Wall -Wno-strict-aliasing $CFLAGS"
+   ;;
+   Intel)
+   CXXFLAGS="-Wall -wd981 $CFLAGS"
+   ;;
+   *)
+   CXXFLAGS="-Wall $CFLAGS"
    ;;
    esac])
 
