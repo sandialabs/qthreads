@@ -120,13 +120,13 @@ AC_ARG_ENABLE([picky],
    esac
    case "$qthread_cv_cxx_compiler_type" in
    GNU)
-   CXXFLAGS="-Wall -Wno-strict-aliasing $CFLAGS"
+   CXXFLAGS="-Wall -Wno-strict-aliasing $CXXFLAGS"
    ;;
    Intel)
-   CXXFLAGS="-Wall -wd981 $CFLAGS"
+   CXXFLAGS="-Wall -wd981 $CXXFLAGS"
    ;;
    *)
-   CXXFLAGS="-Wall $CFLAGS"
+   CXXFLAGS="-Wall $CXXFLAGS"
    ;;
    esac])
 
