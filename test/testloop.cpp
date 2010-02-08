@@ -18,18 +18,6 @@ int main (int argc, char **argv) {
   return 0;
 }
 
-static void hello (int i, const char* msg, char c) {
-  printf ("%s %3d %3c\n", msg, i, c);
-}
-
-static void incr(int& i) {
-  qthread_t *me = qthread_self();
-  qthread_lock(me, (aligned_t*)&i);
-  i++;
-  printf ("incr i (%p) = %d\n", (void*)&i, i);
-  qthread_unlock(me, (aligned_t*)&i);
-}
-
 static void set(int val, int& i) { 
   i = val + 1; 
   printf ("set i (%p) = %d\n", (void*)&i, i);
@@ -41,10 +29,6 @@ static void output(const int& i) {
 
 static void output_double(double i) { 
   printf ("output double i (%p) = %.4f\n", (void*)&i, i); 
-}
-
-static void ref(int& i) { 
-  printf ("ref i (%p) = %d\n", (void*)&i, i); 
 }
 
 template <class T>
@@ -89,103 +73,6 @@ static void genericArrayPrint (ArrayT& arr, int size, const char* const name) {
   mt_loop<ArrayPtr, mt_loop_traits::Par> (output, arr, 0, size);
   printf (">>>>>>  Array printing double by value %s <<<<<<<\n", name);
   mt_loop<ArrayPtr, mt_loop_traits::Par> (output_double, arr, 0, size);
-}
-
-extern "C" static double assign (double val) {
-  return val;
-}
-
-
-static void array_stuff() {
-  const int size = 100;
-  int *arr = new int[size];
-  genericArraySet(arr, size, "Plain old Pointer");
-  genericArrayPrint(arr, size, "Plain old Pointer");
-
-  //This compiles under some compilers - depends on support for typeof operator
-  //UserArray usr_arr(size);
-  //genericArraySet(usr_arr, size, "User Array Class");
-  //genericArrayPrint(usr_arr, size, "User Array Class");
-
-  printf (">>>>> Copy Array <<<<<\n");
-  int *new_arr = new int[size];
-  mt_loop_returns <ArrayPtr, ArrayPtr, mt_loop_traits::Par>
-    (new_arr, assign, arr, 0, size);
-  genericArrayPrint(new_arr, size, "Array Copy");
-
-  int sum = 0;
-  printf (">>>>> Adding Array <<<<<\n");
-  mt_loop_returns <Collect<mt_loop_traits::Add>, ArrayPtr, mt_loop_traits::Par>
-    (sum, assign, arr, 0, size);
-  printf ("Sum = %d\n", sum);
-
-  sum = 0;
-  printf (">>>>> Subbing Array <<<<<\n");
-  mt_loop_returns <Collect<mt_loop_traits::Sub>, ArrayPtr, mt_loop_traits::Par>
-    (sum, assign, arr, 0, size);
-  printf ("Diff = %d\n", sum);
-
-  double product = 1;
-  printf (">>>>> Multiplying first 10 in Array <<<<<\n");
-  mt_loop_returns <Collect<mt_loop_traits::Mult>, ArrayPtr, mt_loop_traits::Par>
-    (product, assign, arr, 0, 10);
-  printf ("Product = %f\n", product);
-
-  product = 1;
-  printf (">>>>> Dividing by first 5 in Array <<<<<\n");
-  mt_loop_returns <Collect<mt_loop_traits::Div>, ArrayPtr, mt_loop_traits::Par>
-    (product, assign, arr, 0, 5);
-  printf ("Quotient = %.8f\n", product);
-}
-
-
-static void message_stuff() {
-  const char *msg = "Hello Thread!";
-
-  printf (">>>>>>  Msg printing <<<<<<<\n");
-  mt_loop<Iterator, Val, ArrayPtr, mt_loop_traits::Par> 
-    (hello, 0, msg, msg, 0, strlen(msg) - 1);
-}
-
-static void vanilla_stuff () {
-  int i = 7;
-  printf ("i (%p) = %d\n", (void*)&i, i);
-  printf (">>>>>>  Incrementing i <<<<<<<\n");
-  mt_loop<Ref, mt_loop_traits::Par>  (incr, i, 0, 5);
-  printf ("i (%p) = %d\n", (void*)&i, i);
-
-  printf (">>>>>>  Setting i <<<<<<<\n");
-  mt_loop<Iterator, Ref, mt_loop_traits::Par>  (set, 0, i, 0, 5);
-  printf ("i (%p) = %d\n", (void*)&i, i);
-
-  //This will not compile
-  //mt_loop<Iterator, Val, mt_loop_traits::Par>  (set, 0, i, 0, 5);
-
-  printf (">>>>>>  Printing constant int <<<<<<<\n");
-  mt_loop<Val, mt_loop_traits::Par> (output, 3, 0, 3);
-
-  //This will not compile
-  //mt_loop<Val, mt_loop_traits::Par> (ref, 3, 0, 3);
-
-  printf (">>>>>>  Printing Iterator <<<<<<<\n");
-  mt_loop<Iterator, mt_loop_traits::Par> (output, 0, 0, 3);
-
-  //This will not compile
-  //mt_loop<Iterator, mt_loop_traits::Par> (ref, 0, 0, 3);
-}
-
-static void big_data_stuff() {
-  const int N = 100;
-  printf (">>>>> Pass Big Data by Value %d iterations <<<<\n", N);
-  BigData bd;
-  bd.copy_count = 0;
-  mt_loop<Val, mt_loop_traits::Par> (recvData<BigData>, bd, 0, N);
-  printf ("Made %d copies for %d iterations\n", bd.copy_count, N);
-
-  printf (">>>>> Pass Big Data by Reference %d iterations <<<<\n", N);
-  bd.copy_count = 0;
-  mt_loop<Ref, mt_loop_traits::Par> (recvData<BigData>, bd, 0, N);
-  printf ("Made %d copies for %d iterations\n", bd.copy_count, N);
 }
 
 class add {
