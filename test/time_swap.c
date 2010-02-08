@@ -70,7 +70,7 @@ int main()
     msg = msg << 16;
     msg += 1L;
 
-    for (i=0; i< ITERATIONS; i++) {
+    for (i = 0; i < ITERATIONS; i++) {
 	makecontext(&child, (void (*)(void))inout, 1, msg);
 	qtimer_start(timer);
 	assert(swapcontext(&parent, &child) == 0);
@@ -78,7 +78,7 @@ int main()
 	total_inout_time += qtimer_secs(timer);
     }
 
-    for (i=0; i<ITERATIONS; i++) {
+    for (i = 0; i < ITERATIONS; i++) {
 	makecontext(&child, single, 1, 0);
 	qtimer_start(timer);
 	assert(swapcontext(&parent, &child) == 0);
@@ -86,11 +86,13 @@ int main()
 	total_single_time += qtimer_secs(timer);
     }
 
-    printf("Testing swap time (average over %lu iterations)\n", (unsigned long int)ITERATIONS);
+    printf("Testing swap time (average over %lu iterations)\n",
+	   (unsigned long int)ITERATIONS);
     printf("\t  Total in-out time: %g secs\n", total_inout_time);
-    printf("\tAverage in-out time: %g secs\n", total_inout_time/ITERATIONS);
+    printf("\tAverage in-out time: %g secs\n", total_inout_time / ITERATIONS);
     printf("\t  Total single time: %g secs\n", total_single_time);
-    printf("\tAverage single time: %g secs\n", total_single_time/(ITERATIONS*2));
+    printf("\tAverage single time: %g secs\n",
+	   total_single_time / (ITERATIONS * 2));
 
     qtimer_free(timer);
     return 0;

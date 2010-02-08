@@ -1,5 +1,5 @@
 #ifdef HAVE_CONFIG_H
-# include "config.h" /* for _GNU_SOURCE */
+# include "config.h"		       /* for _GNU_SOURCE */
 #endif
 #include <assert.h>
 #include <stdio.h>
@@ -59,14 +59,15 @@ int main(int argc, char *argv[])
     }
     iprintf("all initialized\n");
 
-    for (int i=0; i<10; i++) {
+    for (int i = 0; i < 10; i++) {
 	qtimer_start(timer);
-	qt_allpairs_output(a1, a2, (dist_out_f) mult, (void **)out, sizeof(int));
+	qt_allpairs_output(a1, a2, (dist_out_f) mult, (void **)out,
+			   sizeof(int));
 	qtimer_stop(timer);
 	cumulative_time += qtimer_secs(timer);
 	iprintf("\t%i: mult time %f\n", i, qtimer_secs(timer));
     }
-    printf("mult time: %f (avg)\n", cumulative_time/10.0);
+    printf("mult time: %f (avg)\n", cumulative_time / 10.0);
     for (size_t i = 0; i < ASIZE; i++) {
 	free(out[i]);
     }

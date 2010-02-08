@@ -41,9 +41,9 @@ int main()
 	qthread_readFF(me, NULL, rets + i);
     }
     if (master[1] != 30.0) {
-	fprintf(stderr,"master is %f rather than 30\n", master[1]);
-	fprintf(stderr,"master[0]:%f master[1]:%f master[2]:%f\n", master[0],
-	       master[1], master[2]);
+	fprintf(stderr, "master is %f rather than 30\n", master[1]);
+	fprintf(stderr, "master[0]:%f master[1]:%f master[2]:%f\n", master[0],
+		master[1], master[2]);
     }
     assert(master[1] == 30.0);
     iprintf("30 concurrent threads successfully incremented by 1\n");
@@ -55,9 +55,9 @@ int main()
 	qthread_readFF(me, NULL, rets + i);
     }
     if (master[1] != 150.0) {
-	fprintf(stderr,"master is %f rather than 150\n", master[1]);
-	fprintf(stderr,"master[0]:%f master[1]:%f master[2]:%f\n", master[0],
-	       master[1], master[2]);
+	fprintf(stderr, "master is %f rather than 150\n", master[1]);
+	fprintf(stderr, "master[0]:%f master[1]:%f master[2]:%f\n", master[0],
+		master[1], master[2]);
     }
     assert(master[1] == 150.0);
     iprintf("30 concurrent threads successfully incremented by 5\n");

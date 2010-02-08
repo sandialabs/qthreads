@@ -12,18 +12,18 @@ static aligned_t x = 0;
 
 static aligned_t alldone;
 
-static Q_NOINLINE void thread2(qthread_t *t, size_t left, size_t depth)
+static Q_NOINLINE void thread2(qthread_t * t, size_t left, size_t depth)
 {
     int foo = qthread_stackleft(t);
-    iprintf("leveli%i: %i bytes left\n",(int)depth, foo);
+    iprintf("leveli%i: %i bytes left\n", (int)depth, foo);
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
     assert(foo <= left);
 #else
     assert(foo < left);
 #endif
     /*if (depth < 5) {
-	thread2(t, foo, depth+1);
-    }*/
+     * thread2(t, foo, depth+1);
+     * } */
 }
 
 static aligned_t thread(qthread_t * t, void *arg)
@@ -41,7 +41,7 @@ static aligned_t thread(qthread_t * t, void *arg)
     if (x == target)
 	qthread_unlock(t, &alldone);
     assert(qthread_unlock(t, &x) == 0);
-    return foo + me; /* to force them to be used */
+    return foo + me;		       /* to force them to be used */
 }
 
 int main(int argc, char *argv[])
@@ -50,7 +50,7 @@ int main(int argc, char *argv[])
 
     assert(qthread_initialize() == 0);
 
-    NUMARG(target,"TEST_TARGET");
+    NUMARG(target, "TEST_TARGET");
     CHECK_VERBOSE();
 
     qthread_lock(qthread_self(), &alldone);

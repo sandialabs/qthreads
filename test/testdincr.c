@@ -31,11 +31,11 @@ int main()
 
     ret_test = qthread_dincr(&master, 1);
     if (master != 1.0) {
-	fprintf(stderr,"master = %f\n", master);
+	fprintf(stderr, "master = %f\n", master);
     }
     assert(master == 1.0);
     if (ret_test != 0.0) {
-	fprintf(stderr,"ret_test = %f\n", ret_test);
+	fprintf(stderr, "ret_test = %f\n", ret_test);
     }
     assert(ret_test == 0.0);
     iprintf("basic increment succeeded\n");
@@ -64,7 +64,7 @@ int main()
 	qthread_readFF(me, NULL, rets + i);
     }
     if (master != 150.0) {
-	fprintf(stderr,"master is %f rather than 150\n", master);
+	fprintf(stderr, "master is %f rather than 150\n", master);
     }
     assert(master == 150.0);
     iprintf("30 concurrent threads successfully incremented by 5\n");

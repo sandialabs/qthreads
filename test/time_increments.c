@@ -35,7 +35,7 @@ static void balanced_falseshare(qthread_t * me, const size_t startat,
 }
 
 static void balanced_noncomp(qthread_t * me, const size_t startat,
-		      const size_t stopat, void *arg)
+			     const size_t stopat, void *arg)
 {
     size_t i;
     qthread_shepherd_id_t shep = qthread_shep(me);
@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
     NUMARG(TEST_SELECTION, "TEST_SELECTION");
     shepherds = qthread_num_shepherds();
     printf("%u shepherds...\n", shepherds);
-    rets = malloc(sizeof(aligned_t)*MAXPARALLELISM);
+    rets = malloc(sizeof(aligned_t) * MAXPARALLELISM);
     assert(rets);
 
     /* BALANCED INCREMENT LOOP (strong scaling) */

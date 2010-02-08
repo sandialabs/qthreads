@@ -67,19 +67,15 @@ int main(int argc, char *argv[])
     }
 
     /* iterate over all the different distribution types */
-    for (dt_index = 0;
-	 dt_index < num_dists;
-	 dt_index++) {
+    for (dt_index = 0; dt_index < num_dists; dt_index++) {
 	/* test a basic array of doubles */
 	count = 0;
 	a = qarray_create_configured(ELEMENT_COUNT, sizeof(double),
 				     disttypes[dt_index], 0, 0);
 	assert(a);
-	iprintf("%s: created basic array of doubles\n",
-		distnames[dt_index]);
+	iprintf("%s: created basic array of doubles\n", distnames[dt_index]);
 	qarray_iter(me, a, 0, ELEMENT_COUNT, assign1);
-	iprintf("%s: iterated; now checking work...\n",
-		distnames[dt_index]);
+	iprintf("%s: iterated; now checking work...\n", distnames[dt_index]);
 	if (count != ELEMENT_COUNT) {
 	    printf("count = %lu, dt_index = %u\n", (unsigned long)count,
 		   dt_index);
@@ -108,8 +104,7 @@ int main(int argc, char *argv[])
 				     disttypes[dt_index], 0, 0);
 	iprintf("%s: created array of big objects\n", distnames[dt_index]);
 	qarray_iter(me, a, 0, ELEMENT_COUNT, assignall1);
-	iprintf("%s: iterated; now checking work...\n",
-		distnames[dt_index]);
+	iprintf("%s: iterated; now checking work...\n", distnames[dt_index]);
 	if (count != ELEMENT_COUNT) {
 	    printf("count = %lu, dt_index = %u\n", (unsigned long)count,
 		   dt_index);
@@ -143,8 +138,7 @@ int main(int argc, char *argv[])
 	iprintf("%s: created array of odd-sized objects\n",
 		distnames[dt_index]);
 	qarray_iter_loop(me, a, 0, ELEMENT_COUNT, assignoff1, NULL);
-	iprintf("%s: iterated; now checking work...\n",
-		distnames[dt_index]);
+	iprintf("%s: iterated; now checking work...\n", distnames[dt_index]);
 	if (count != ELEMENT_COUNT) {
 	    printf("count = %lu, dt_index = %u\n", (unsigned long)count,
 		   dt_index);

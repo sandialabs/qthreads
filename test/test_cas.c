@@ -18,11 +18,22 @@ static aligned_t incr(qthread_t * me, void *arg)
 
 volatile uint32_t four = 4;
 volatile uint64_t eight = 8;
-void * volatile ptr = NULL;
+void *volatile ptr = NULL;
 
-static uint32_t read_vol32(volatile uint32_t *ptr) { return *ptr; }
-static uint64_t read_vol64(volatile uint64_t *ptr) { return *ptr; }
-static void * read_volptr(void * volatile *ptr) { return *ptr; }
+static uint32_t read_vol32(volatile uint32_t * ptr)
+{
+    return *ptr;
+}
+
+static uint64_t read_vol64(volatile uint64_t * ptr)
+{
+    return *ptr;
+}
+
+static void *read_volptr(void *volatile *ptr)
+{
+    return *ptr;
+}
 
 int main()
 {
@@ -44,7 +55,8 @@ int main()
 	qthread_readFF(me, NULL, rets + i);
     }
     if (master != 30) {
-	fprintf(stderr, "master is %lu rather than 30\n", (long unsigned)master);
+	fprintf(stderr, "master is %lu rather than 30\n",
+		(long unsigned)master);
     }
 
     assert(qthread_cas(&four, 4, 5) == 4);

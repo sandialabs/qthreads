@@ -36,10 +36,10 @@ static aligned_t thread(qthread_t * me, void *arg)
     return 0;
 }
 
-static aligned_t checkid(qthread_t *me, void *arg)
+static aligned_t checkid(qthread_t * me, void *arg)
 {
     int id = qthread_id(me);
-    int want = (int)(intptr_t)arg;
+    int want = (int)(intptr_t) arg;
     if (id != want) {
 	iprintf("id == %i (expected %i)\n", id, want);
     }
@@ -60,15 +60,15 @@ int main()
     me = qthread_self();
     my_id = qthread_id(me);
     if (my_id != 0)
-	fprintf(stderr,"my_id == %i (expected 0)\n", my_id);
+	fprintf(stderr, "my_id == %i (expected 0)\n", my_id);
     assert(my_id == 0);
     qthread_fork(thread, NULL, &ret);
     qthread_readFF(me, NULL, &ret);
-    rets = (aligned_t*)malloc(sizeof(aligned_t)*qthread_num_shepherds());
-    for (i=0; i<qthread_num_shepherds(); i++) {
-	qthread_fork(checkid, (void*)(intptr_t)(i+2), &ret);
+    rets = (aligned_t *) malloc(sizeof(aligned_t) * qthread_num_shepherds());
+    for (i = 0; i < qthread_num_shepherds(); i++) {
+	qthread_fork(checkid, (void *)(intptr_t) (i + 2), &ret);
     }
-    for (i=0; i<qthread_num_shepherds(); i++) {
+    for (i = 0; i < qthread_num_shepherds(); i++) {
 	qthread_readFF(me, NULL, rets);
     }
     return my_id;

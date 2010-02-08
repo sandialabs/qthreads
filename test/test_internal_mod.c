@@ -27,7 +27,8 @@ int main()
     }
     for (i = 0; i < 30; i++) {
 	if (rets[i] != i % numsheps) {
-	    fprintf(stderr,"rets[%u] = %u ->? %u\n", i, (unsigned int)rets[i], i % numsheps);
+	    fprintf(stderr, "rets[%u] = %u ->? %u\n", i,
+		    (unsigned int)rets[i], i % numsheps);
 	}
 	assert(rets[i] == i % numsheps);
     }

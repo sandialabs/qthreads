@@ -28,7 +28,7 @@ int main(int argc, char *argv[])
     CHECK_VERBOSE();
     NUMARG(len, "TEST_LEN");
 
-    ui_array = (aligned_t*)calloc(len, sizeof(aligned_t));
+    ui_array = (aligned_t *) calloc(len, sizeof(aligned_t));
     for (i = 0; i < len; i++) {
 	ui_array[i] = random();
     }
@@ -49,20 +49,19 @@ int main(int argc, char *argv[])
 	     * }
 	     * printf("\n");
 	     */
-	    fprintf(stderr,"out of order at %lu: %lu > %lu\n", (unsigned long)i,
-		   (unsigned long)ui_array[i],
-		   (unsigned long)ui_array[i + 1]);
+	    fprintf(stderr, "out of order at %lu: %lu > %lu\n",
+		    (unsigned long)i, (unsigned long)ui_array[i],
+		    (unsigned long)ui_array[i + 1]);
 	    abort();
 	}
     }
-    iprintf("sorting %lu aligned_ts took: %f seconds\n",
-	    (unsigned long)len,
+    iprintf("sorting %lu aligned_ts took: %f seconds\n", (unsigned long)len,
 	    (stop.tv_sec + (stop.tv_usec * 1.0e-6)) - (start.tv_sec +
 						       (start.tv_usec *
 							1.0e-6)));
     free(ui_array);
 
-    d_array = (double*)calloc(len, sizeof(double));
+    d_array = (double *)calloc(len, sizeof(double));
     for (i = 0; i < len; i++) {
 	d_array[i] = random() / (double)RAND_MAX *10;
     }
@@ -73,8 +72,8 @@ int main(int argc, char *argv[])
     iprintf("done sorting, checking correctness...\n");
     for (i = 0; i < len - 1; i++) {
 	if (d_array[i] > d_array[i + 1]) {
-	    fprintf(stderr,"out of order at %lu: %f > %f\n", (unsigned long)i,
-		   d_array[i], d_array[i + 1]);
+	    fprintf(stderr, "out of order at %lu: %f > %f\n",
+		    (unsigned long)i, d_array[i], d_array[i + 1]);
 	    abort();
 	}
     }

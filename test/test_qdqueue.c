@@ -15,7 +15,7 @@ static aligned_t queuer(qthread_t * me, void *arg)
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
 	if (qdqueue_enqueue(me, q, (void *)me) != QTHREAD_SUCCESS) {
-	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void*)me);
+	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void *)me);
 	    exit(-2);
 	}
     }
@@ -86,7 +86,7 @@ int main(int argc, char *argv[])
     }
     iprintf("ordering test succeeded\n");
 
-    rets = (aligned_t*)calloc(THREAD_COUNT, sizeof(aligned_t));
+    rets = (aligned_t *) calloc(THREAD_COUNT, sizeof(aligned_t));
     assert(rets != NULL);
     for (i = 0; i < THREAD_COUNT; i++) {
 	assert(qthread_fork(dequeuer, q, &(rets[i])) == QTHREAD_SUCCESS);

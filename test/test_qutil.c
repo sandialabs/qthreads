@@ -1,5 +1,5 @@
 #ifdef HAVE_CONFIG_H
-# include "config.h" /* for _GNU_SOURCE */
+# include "config.h"		       /* for _GNU_SOURCE */
 #endif
 #include <stdlib.h>
 #include <stdio.h>
@@ -47,7 +47,7 @@ static aligned_t qmain(qthread_t * me, void *junk)
 {
     size_t i;
 
-    ui_array = (aligned_t*)calloc(ui_len, sizeof(aligned_t));
+    ui_array = (aligned_t *) calloc(ui_len, sizeof(aligned_t));
     for (i = 0; i < ui_len; i++) {
 	ui_array[i] = random();
 	ui_sum_authoritative += ui_array[i];
@@ -107,7 +107,7 @@ static aligned_t qmain(qthread_t * me, void *junk)
 							1.0e-6)));
     free(ui_array);
 
-    i_array = (saligned_t*)calloc(i_len, sizeof(saligned_t));
+    i_array = (saligned_t *) calloc(i_len, sizeof(saligned_t));
     for (i = 0; i < i_len; i++) {
 	i_array[i] = random();
 	i_sum_authoritative += i_array[i];
@@ -132,7 +132,7 @@ static aligned_t qmain(qthread_t * me, void *junk)
     free(i_array);
     iprintf(" - qutil_int_min is correct\n");
 
-    d_array = (double*)calloc(d_len, sizeof(double));
+    d_array = (double *)calloc(d_len, sizeof(double));
     assert(d_array != NULL);
     for (i = 0; i < d_len; i++) {
 	d_array[i] = random() / (double)RAND_MAX *10;

@@ -39,7 +39,8 @@ int main()
 	qthread_readFF(me, NULL, rets + i);
     }
     if (master != 30) {
-	fprintf(stderr,"master is %lu rather than 30\n", (long unsigned)master);
+	fprintf(stderr, "master is %lu rather than 30\n",
+		(long unsigned)master);
     }
     assert(master == 30);
     iprintf("30 concurrent threads successfully incremented by 1\n");
@@ -51,7 +52,8 @@ int main()
 	qthread_readFF(me, NULL, rets + i);
     }
     if (master != 150) {
-	fprintf(stderr,"master is %lu rather than 150\n", (long unsigned)master);
+	fprintf(stderr, "master is %lu rather than 150\n",
+		(long unsigned)master);
     }
     assert(master == 150);
     iprintf("30 concurrent threads successfully incremented by 5\n");
