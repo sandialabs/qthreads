@@ -875,7 +875,6 @@ void qt_forloop_queue_run_single(qqloop_handle_t * loop, void * arg)
 // added akp -- run loop until done
 void qt_loop_queue_run_single(volatile qqloop_handle_t * loop, void *t)
 {
-    qthread_shepherd_id_t i;
     qthread_t *me = qthread_self();
     int myNum = qthread_shep(me);
 
