@@ -5,7 +5,7 @@
 #include <qthread/qarray.h>
 #include "argparsing.h"
 
-static unsigned int ELEMENT_COUNT = 10000;
+static unsigned int ELEMENT_COUNT = 1000;
 
 aligned_t count = 0;
 typedef struct
