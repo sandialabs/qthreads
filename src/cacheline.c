@@ -23,14 +23,14 @@ static void cpuid(const unsigned int op, unsigned int *eax_ptr, unsigned int *eb
 {				       /*{{{ */
 # ifdef __PIC__
     unsigned int eax, ebx, ecx, edx;
-    unsigned int pic_ebx = pic_ebx;
+    unsigned int pic_ebx = 0;
     __asm__ __volatile__("mov %%ebx, %4\n\t"
 			 "cpuid\n\t"
 			 "mov %%ebx, %1\n\t"
 			 "mov %4, %%ebx"
 			 :"=a"(eax), "=m"(ebx), "=c"(ecx),
 			 "=d"(edx), "=m"(pic_ebx)
-			 :"a"(op));
+			 :"a"(op), "m"(pic_ebx));
     *eax_ptr = eax;
     *ebx_ptr = ebx;
     *ecx_ptr = ecx;
@@ -46,14 +46,15 @@ static void cpuid4(const int cache, unsigned int *eax_ptr, unsigned int *ebx_ptr
 {				       /*{{{ */
 # ifdef __PIC__
     unsigned int eax, ebx, ecx, edx;
-    unsigned int pic_ebx = pic_ebx;
+    unsigned int pic_ebx = 0;
     __asm__ __volatile__("mov %%ebx, %4\n\t"
 			 "cpuid\n\t"
 			 "mov %%ebx, %1\n\t"
 			 "mov %4, %%ebx"
 			 :"=a"(eax), "=m"(ebx), "=c"(ecx),
 			 "=d"(edx), "=m"(pic_ebx)
-			 :"a"    (4), "c"(cache));
+			 :"a"    (4), "c"(cache),
+			  "m"(pic_ebx));
     *eax_ptr = eax;
     *ebx_ptr = ebx;
     *ecx_ptr = ecx;
