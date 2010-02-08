@@ -130,8 +130,6 @@ AC_CACHE_CHECK([what kind of C++ compiler $CXX is],
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__PATHCC__],[qthread_cv_cxx_compiler_type=EKOPath])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__EDG__],[qthread_cv_cxx_compiler_type=EDG])])
-   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__ghs__],[qthread_cv_cxx_compiler_type=GreenHill])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__HP_aCC],[qthread_cv_cxx_compiler_type=HP])])
@@ -185,6 +183,9 @@ AC_CACHE_CHECK([what kind of C++ compiler $CXX is],
      [_QTHREAD_CHECK_IFDEF([_UCC],[qthread_cv_cxx_compiler_type=Ultimate])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__WATCOMC__],[qthread_cv_cxx_compiler_type=Watcom])])
+
+   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
+     [_QTHREAD_CHECK_IFDEF([__EDG__],[qthread_cv_cxx_compiler_type=EDG_FrontEnd])])
 
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [qthread_cv_cxx_compiler_type=unknown])
