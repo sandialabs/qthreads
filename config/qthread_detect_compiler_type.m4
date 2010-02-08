@@ -112,7 +112,6 @@ AC_CACHE_CHECK([what kind of C++ compiler $CXX is],
   [qthread_cv_cxx_compiler_type],
   [qthread_cv_cxx_compiler_type=unknown
    AC_LANG_PUSH([C++])
-   _QTHREAD_CHECK_IFDEF([__GNUC__],[qthread_cv_cxx_compiler_type=GNU])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__BORLANDC__],[qthread_cv_cxx_compiler_type=Borland])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
@@ -157,6 +156,8 @@ AC_CACHE_CHECK([what kind of C++ compiler $CXX is],
      [_QTHREAD_CHECK_IFDEF([__LCC__],[qthread_cv_cxx_compiler_type=LCC])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__llvm__],[qthread_cv_cxx_compiler_type=LLVM])])
+   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
+     [_QTHREAD_CHECK_IFDEF([__GNUC__],[qthread_cv_cxx_compiler_type=GNU])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__HIGHC__],[qthread_cv_cxx_compiler_type=MetaWare])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
