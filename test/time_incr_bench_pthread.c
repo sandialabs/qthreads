@@ -16,7 +16,7 @@
 aligned_t counter = 0;
 pthread_mutex_t counter_lock;
 
-void *qincr(void *arg)
+static void *qincr(void *arg)
 {
     aligned_t *c = (aligned_t *) arg;
     size_t incrs;

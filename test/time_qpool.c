@@ -20,11 +20,11 @@
 qpool *qp = NULL;
 size_t **allthat;
 
-void ** ptr = NULL;
+void **ptr = NULL;
 pthread_mutex_t *ptr_lock;
 
-void mutexpool_allocator(qthread_t * me, const size_t startat, const size_t stopat,
-		    void *arg)
+static void mutexpool_allocator(qthread_t * me, const size_t startat,
+				const size_t stopat, void *arg)
 {
     size_t i;
     qthread_shepherd_id_t shep = qthread_shep(me);
@@ -32,32 +32,33 @@ void mutexpool_allocator(qthread_t * me, const size_t startat, const size_t stop
     for (i = startat; i < stopat; i++) {
 	pthread_mutex_lock(ptr_lock + shep);
 	if (ptr == NULL || ptr[shep] == NULL) {
-	    fprintf(stderr, "mutex pool failed! (pool_allocator %i)\n", (int)shep);
+	    fprintf(stderr, "mutex pool failed! (pool_allocator %i)\n",
+		    (int)shep);
 	    exit(-1);
 	}
 	allthat[i] = ptr[shep];
-	ptr[shep] = *((void**)(ptr[shep]));
-	pthread_mutex_unlock(ptr_lock+shep);
+	ptr[shep] = *((void **)(ptr[shep]));
+	pthread_mutex_unlock(ptr_lock + shep);
 	allthat[i][0] = i;
     }
 }
 
-void mutexpool_deallocator(qthread_t * me, const size_t startat,
-		      const size_t stopat, void *arg)
+static void mutexpool_deallocator(qthread_t * me, const size_t startat,
+				  const size_t stopat, void *arg)
 {
     size_t i;
     qthread_shepherd_id_t shep = qthread_shep(me);
 
     for (i = startat; i < stopat; i++) {
-	pthread_mutex_lock(ptr_lock+shep);
-	*(void**)(allthat[i]) = ptr[shep];
+	pthread_mutex_lock(ptr_lock + shep);
+	*(void **)(allthat[i]) = ptr[shep];
 	ptr[shep] = allthat[i];
-	pthread_mutex_unlock(ptr_lock+shep);
+	pthread_mutex_unlock(ptr_lock + shep);
     }
 }
 
-void pool_allocator(qthread_t * me, const size_t startat, const size_t stopat,
-		    void *arg)
+static void pool_allocator(qthread_t * me, const size_t startat,
+			   const size_t stopat, void *arg)
 {
     size_t i;
     qpool *p = (qpool *) arg;
@@ -71,8 +72,8 @@ void pool_allocator(qthread_t * me, const size_t startat, const size_t stopat,
     }
 }
 
-void pool_deallocator(qthread_t * me, const size_t startat,
-		      const size_t stopat, void *arg)
+static void pool_deallocator(qthread_t * me, const size_t startat,
+			     const size_t stopat, void *arg)
 {
     size_t i;
     qpool *p = (qpool *) arg;
@@ -82,8 +83,8 @@ void pool_deallocator(qthread_t * me, const size_t startat,
     }
 }
 
-void malloc_allocator(qthread_t * me, const size_t startat,
-		      const size_t stopat, void *arg)
+static void malloc_allocator(qthread_t * me, const size_t startat,
+			     const size_t stopat, void *arg)
 {
     size_t i;
 
@@ -96,8 +97,8 @@ void malloc_allocator(qthread_t * me, const size_t startat,
     }
 }
 
-void malloc_deallocator(qthread_t * me, const size_t startat,
-			const size_t stopat, void *arg)
+static void malloc_deallocator(qthread_t * me, const size_t startat,
+			       const size_t stopat, void *arg)
 {
     size_t i;
 
@@ -111,8 +112,8 @@ int main(int argc, char *argv[])
     size_t i;
     unsigned long iterations = 1000;
     qtimer_t timer = qtimer_new();
-    void** numa_allocs;
-    void** numa_pools;
+    void **numa_allocs;
+    void **numa_pools;
     size_t numa_size;
     size_t numshep;
 
@@ -128,51 +129,51 @@ int main(int argc, char *argv[])
     qt_loop_balance(0, iterations, malloc_allocator, NULL);
     qtimer_stop(timer);
     printf("Time to alloc %lu malloc blocks in parallel: %f\n", iterations,
-	    qtimer_secs(timer));
+	   qtimer_secs(timer));
     qtimer_start(timer);
     qt_loop_balance(0, iterations, malloc_deallocator, NULL);
     qtimer_stop(timer);
     printf("Time to free %lu malloc blocks in parallel: %f\n", iterations,
-	    qtimer_secs(timer));
+	   qtimer_secs(timer));
 
     /* heat the pool */
     numshep = qthread_num_shepherds();
-    ptr = malloc(sizeof(void*)*numshep);
+    ptr = malloc(sizeof(void *) * numshep);
     ptr_lock = malloc(sizeof(pthread_mutex_t) * numshep);
-    numa_allocs = malloc(sizeof(void*)*numshep);
-    numa_pools = malloc(sizeof(void*)*numshep);
-    numa_size = iterations*48/numshep;
+    numa_allocs = malloc(sizeof(void *) * numshep);
+    numa_pools = malloc(sizeof(void *) * numshep);
+    numa_size = iterations * 48 / numshep;
     iprintf("numa_size = %i\n", (int)numa_size);
-    for (i=0;i<numshep; i++) {
+    for (i = 0; i < numshep; i++) {
 #ifdef QTHREAD_HAVE_LIBNUMA
 	numa_allocs[i] = numa_alloc_onnode(numa_size, i);
 #else
 	numa_allocs[i] = malloc(numa_size);
 #endif
-	pthread_mutex_init(ptr_lock+i, NULL);
+	pthread_mutex_init(ptr_lock + i, NULL);
     }
-    memcpy(numa_pools, numa_allocs, sizeof(void*)*numshep);
-    for (i=0;i<iterations;i++) {
+    memcpy(numa_pools, numa_allocs, sizeof(void *) * numshep);
+    for (i = 0; i < iterations; i++) {
 	void *p;
-	int shep = i%numshep;
+	int shep = i % numshep;
 	/* pull from numa_allocs[shep] */
 	p = numa_allocs[shep];
-	numa_allocs[shep] = ((char*)p) + 48;
+	numa_allocs[shep] = ((char *)p) + 48;
 	/* push to ptr[shep] */
-	*(void**)p = ptr[shep];
+	*(void **)p = ptr[shep];
 	ptr[shep] = p;
     }
     qtimer_start(timer);
     qt_loop_balance(0, iterations, mutexpool_allocator, qp);
     qtimer_stop(timer);
-    printf("Time to alloc %lu mutex pooled blocks in parallel: %f\n", iterations,
-	    qtimer_secs(timer));
+    printf("Time to alloc %lu mutex pooled blocks in parallel: %f\n",
+	   iterations, qtimer_secs(timer));
     qtimer_start(timer);
     qt_loop_balance(0, iterations, mutexpool_deallocator, qp);
     qtimer_stop(timer);
-    printf("Time to free %lu mutex pooled blocks in parallel: %f\n", iterations,
-	    qtimer_secs(timer));
-    for (i=0;i<numshep;i++) {
+    printf("Time to free %lu mutex pooled blocks in parallel: %f\n",
+	   iterations, qtimer_secs(timer));
+    for (i = 0; i < numshep; i++) {
 #ifdef QTHREAD_HAVE_LIBNUMA
 	numa_free(numa_pools[i], numa_size);
 #else
@@ -193,12 +194,12 @@ int main(int argc, char *argv[])
     qt_loop_balance(0, iterations, pool_allocator, qp);
     qtimer_stop(timer);
     printf("Time to alloc %lu pooled blocks in parallel: %f\n", iterations,
-	    qtimer_secs(timer));
+	   qtimer_secs(timer));
     qtimer_start(timer);
     qt_loop_balance(0, iterations, pool_deallocator, qp);
     qtimer_stop(timer);
     printf("Time to free %lu pooled blocks in parallel: %f\n", iterations,
-	    qtimer_secs(timer));
+	   qtimer_secs(timer));
 
     qpool_destroy(qp);
 

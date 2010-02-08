@@ -7,21 +7,21 @@
 #include "qtimer.h"
 #include "argparsing.h"
 
-size_t ITERATIONS;
-#define MAXPARALLELISM 256
+size_t ITERATIONS = 1000000;
+size_t MAXPARALLELISM = 256;
 
-aligned_t FEBbuffer[MAXPARALLELISM] = { 0 };
-aligned_t FEBtable[MAXPARALLELISM][2] = { { 0 } };
+aligned_t *FEBbuffer;
+aligned_t **FEBtable;
 
-qtimer_t sending[MAXPARALLELISM][2];
-double total_sending_time[MAXPARALLELISM];
-double total_roundtrip_time[MAXPARALLELISM];
-double total_p1_sending_time[MAXPARALLELISM];
-double total_p2_sending_time[MAXPARALLELISM];
+qtimer_t **sending;
+double *total_sending_time;
+double *total_roundtrip_time;
+double *total_p1_sending_time;
+double *total_p2_sending_time;
 
 aligned_t incrementme = 0;
 
-aligned_t FEB_consumer(qthread_t * me, void *arg)
+static aligned_t FEB_consumer(qthread_t * me, void *arg)
 {
     aligned_t pong = 0;
 
@@ -33,7 +33,7 @@ aligned_t FEB_consumer(qthread_t * me, void *arg)
     return pong;
 }
 
-aligned_t FEB_producer(qthread_t * me, void *arg)
+static aligned_t FEB_producer(qthread_t * me, void *arg)
 {
     aligned_t ping = 1;
 
@@ -41,7 +41,7 @@ aligned_t FEB_producer(qthread_t * me, void *arg)
     return ping;
 }
 
-aligned_t FEB_producerloop(qthread_t * me, void *arg)
+static aligned_t FEB_producerloop(qthread_t * me, void *arg)
 {
     unsigned int offset = (unsigned int)(intptr_t) arg;
     aligned_t timer = 0;
@@ -55,7 +55,7 @@ aligned_t FEB_producerloop(qthread_t * me, void *arg)
     return 0;
 }
 
-aligned_t FEB_consumerloop(qthread_t * me, void *arg)
+static aligned_t FEB_consumerloop(qthread_t * me, void *arg)
 {
     unsigned int offset = (unsigned int)(intptr_t) arg;
     aligned_t timer = 0;
@@ -69,7 +69,7 @@ aligned_t FEB_consumerloop(qthread_t * me, void *arg)
     return 0;
 }
 
-aligned_t FEB_player2(qthread_t * me, void *arg)
+static aligned_t FEB_player2(qthread_t * me, void *arg)
 {
     unsigned int offset = (unsigned int)(intptr_t) arg;
     aligned_t paddle = 0;
@@ -87,7 +87,7 @@ aligned_t FEB_player2(qthread_t * me, void *arg)
     return 0;
 }
 
-aligned_t FEB_player1(qthread_t * me, void *arg)
+static aligned_t FEB_player1(qthread_t * me, void *arg)
 {
     unsigned int offset = (unsigned int)(intptr_t) arg;
     aligned_t paddle = 1;
@@ -117,7 +117,7 @@ aligned_t FEB_player1(qthread_t * me, void *arg)
     return 0;
 }
 
-char *human_readable_rate(double rate)
+static char *human_readable_rate(double rate)
 {
     static char readable_string[100] = { 0 };
     const double GB = 1024 * 1024 * 1024;
@@ -149,12 +149,22 @@ int main(int argc, char *argv[])
     if (! verbose) {
 	return 0;
     }
-    ITERATIONS = 1000000;
+    NUMARG(ITERATIONS, "ITERATIONS");
+    NUMARG(MAXPARALLELISM, "MAXPARALLELISM");
 
+    FEBbuffer = calloc(MAXPARALLELISM, sizeof(aligned_t));
+    FEBtable = calloc(MAXPARALLELISM, sizeof(aligned_t*));
+    sending = malloc(MAXPARALLELISM * sizeof(qtimer_t*));
+    total_sending_time = malloc(MAXPARALLELISM * sizeof(double));
+    total_roundtrip_time = malloc(MAXPARALLELISM * sizeof(double));
+    total_p1_sending_time = malloc(MAXPARALLELISM * sizeof(double));
+    total_p2_sending_time = malloc(MAXPARALLELISM * sizeof(double));
     for (i=0;i<MAXPARALLELISM;i++) {
 	qthread_empty(NULL, FEBbuffer+i);
+	sending[i] = malloc(2 * sizeof(qtimer_t));
 	sending[i][0] = qtimer_new();
 	sending[i][1] = qtimer_new();
+	FEBtable[i] = malloc(sizeof(aligned_t)*2);
 	qthread_empty(NULL, &(FEBtable[i][0]));
 	qthread_empty(NULL, &(FEBtable[i][1]));
     }
@@ -185,7 +195,7 @@ int main(int argc, char *argv[])
     }
     qtimer_stop(timer);
 
-    printf("%10g secs (%u parallel)\n", qtimer_secs(timer), MAXPARALLELISM);
+    printf("%10g secs (%u parallel)\n", qtimer_secs(timer), (unsigned)MAXPARALLELISM);
     rate = (MAXPARALLELISM*sizeof(aligned_t)) / qtimer_secs(timer);
     printf("\t = throughput: %29g bytes/sec %s\n", rate,
 	   human_readable_rate(rate));
@@ -231,7 +241,7 @@ int main(int argc, char *argv[])
     for (i=1;i<MAXPARALLELISM;i++) {
 	total_sending_time[0] += total_sending_time[i];
     }
-    printf("%6g secs (%u-way %u iters)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
+    printf("%6g secs (%u-way %u iters)\n", qtimer_secs(timer), (unsigned)MAXPARALLELISM, (unsigned)ITERATIONS);
     printf("\t - total sending time: %21g secs\n", total_sending_time[0]);
     iprintf("\t + external average time: %18g secs\n",
 	   qtimer_secs(timer) / (ITERATIONS*MAXPARALLELISM));
@@ -313,7 +323,7 @@ int main(int argc, char *argv[])
 	total_p1_sending_time[0] += total_p1_sending_time[i];
 	total_p2_sending_time[0] += total_p2_sending_time[i];
     }
-    printf("%15g secs (%u-way %u rts)\n", qtimer_secs(timer), MAXPARALLELISM, (unsigned)ITERATIONS);
+    printf("%15g secs (%u-way %u rts)\n", qtimer_secs(timer), (unsigned)MAXPARALLELISM, (unsigned)ITERATIONS);
     printf("\t - total rtts: %29g secs\n", total_roundtrip_time[0]);
     printf("\t - total sending time: %21g secs\n",
 	   total_p1_sending_time[0] + total_p2_sending_time[0]);
@@ -349,6 +359,19 @@ int main(int argc, char *argv[])
 	   human_readable_rate(rate));
 
     qtimer_free(timer);
+    for (i=0;i<MAXPARALLELISM;i++) {
+	qtimer_free(sending[i][0]);
+	qtimer_free(sending[i][1]);
+	free(sending[i]);
+	free(FEBtable[i]);
+    }
+    free(FEBbuffer);
+    free(FEBtable);
+    free(sending);
+    free(total_sending_time);
+    free(total_roundtrip_time);
+    free(total_p1_sending_time);
+    free(total_p2_sending_time);
 
     return 0;
 }

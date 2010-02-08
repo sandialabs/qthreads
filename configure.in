@@ -112,7 +112,7 @@ AC_ARG_ENABLE([picky],
    CFLAGS="-Wall -Wno-strict-aliasing $CFLAGS"
    ;;
    Intel)
-   CFLAGS="-Wall -wd981 $CFLAGS"
+   CFLAGS="-Wall -wd981 -wd1572 -wd869 $CFLAGS"
    ;;
    *)
    CFLAGS="-Wall $CFLAGS"

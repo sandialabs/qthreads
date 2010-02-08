@@ -1,5 +1,5 @@
 #ifdef HAVE_CONFIG_H
-# include "config.h" /* for _GNU_SOURCE */
+# include "config.h"		       /* for _GNU_SOURCE */
 #endif
 #include <assert.h>
 #include <stdio.h>
@@ -12,7 +12,7 @@
 
 #define NUM_THREADS 1000000
 
-aligned_t qincr(qthread_t *me, void *arg)
+static aligned_t qincr(qthread_t * me, void *arg)
 {
     return 0;
 }
@@ -33,17 +33,18 @@ int main(int argc, char *argv[])
 
     for (int iteration = 0; iteration < 10; iteration++) {
 	qtimer_start(timer);
-	for (int i=0; i<NUM_THREADS; i++) {
+	for (int i = 0; i < NUM_THREADS; i++) {
 	    qthread_fork(qincr, NULL, &(rets[i]));
 	}
-	for (int i=0; i<NUM_THREADS; i++) {
+	for (int i = 0; i < NUM_THREADS; i++) {
 	    qthread_readFF(me, NULL, &(rets[i]));
 	}
 	qtimer_stop(timer);
-	iprintf("\ttest iteration %i: %f secs\n", iteration, qtimer_secs(timer));
+	iprintf("\ttest iteration %i: %f secs\n", iteration,
+		qtimer_secs(timer));
 	cumulative_time += qtimer_secs(timer);
     }
-    printf("qthread time: %f\n", cumulative_time/10.0);
+    printf("qthread time: %f\n", cumulative_time / 10.0);
 
     return 0;
 }

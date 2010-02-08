@@ -7,7 +7,7 @@
 #define NUM_LOCS() 3
 #define FUTURE_PER_LOC() 128
 
-void my_main();
+static void my_main();
 
 int main (int argc, char **argv) {
   qthread_init(NUM_LOCS());
@@ -18,11 +18,11 @@ int main (int argc, char **argv) {
   return 0;
 }
 
-void hello (int i, const char* msg, char c) {
+static void hello (int i, const char* msg, char c) {
   printf ("%s %3d %3c\n", msg, i, c);
 }
 
-void incr(int& i) {
+static void incr(int& i) {
   qthread_t *me = qthread_self();
   qthread_lock(me, (aligned_t*)&i);
   i++;
@@ -30,25 +30,25 @@ void incr(int& i) {
   qthread_unlock(me, (aligned_t*)&i);
 }
 
-void set(int val, int& i) { 
+static void set(int val, int& i) { 
   i = val + 1; 
   printf ("set i (%p) = %d\n", (void*)&i, i);
 }
 
-void output(const int& i) { 
+static void output(const int& i) { 
   printf ("output i (%p) = %d\n", (void*)&i, i); 
 }
 
-void output_double(double i) { 
+static void output_double(double i) { 
   printf ("output double i (%p) = %.4f\n", (void*)&i, i); 
 }
 
-void ref(int& i) { 
+static void ref(int& i) { 
   printf ("ref i (%p) = %d\n", (void*)&i, i); 
 }
 
 template <class T>
-void recvData( const T& t ) {
+static void recvData( const T& t ) {
   //printf ("Got data reference @ %p\n", &t);
 }
 
@@ -77,26 +77,26 @@ int BigData::copy_count = 0;
 #define ALIGN_ATTR __attribute__ ((aligned (8)))
 
 template <class ArrayT>
-int genericArraySet (ArrayT& arr, int size, const char* const name) {
+static int genericArraySet (ArrayT& arr, int size, const char* const name) {
   printf (">>>>>>  Array setting %s <<<<<<<\n", name);
   mt_loop<Iterator, ArrayPtr, mt_loop_traits::Par> (set, 0, arr, 0, size);
   return 1;
 }
 
 template <class ArrayT>
-void genericArrayPrint (ArrayT& arr, int size, const char* const name) {
+static void genericArrayPrint (ArrayT& arr, int size, const char* const name) {
   printf (">>>>>>  Array printing %s <<<<<<<\n", name);
   mt_loop<ArrayPtr, mt_loop_traits::Par> (output, arr, 0, size);
   printf (">>>>>>  Array printing double by value %s <<<<<<<\n", name);
   mt_loop<ArrayPtr, mt_loop_traits::Par> (output_double, arr, 0, size);
 }
 
-extern "C" double assign (double val) {
+extern "C" static double assign (double val) {
   return val;
 }
 
 
-void array_stuff() {
+static void array_stuff() {
   const int size = 100;
   int *arr = new int[size];
   genericArraySet(arr, size, "Plain old Pointer");
@@ -139,7 +139,7 @@ void array_stuff() {
 }
 
 
-void message_stuff() {
+static void message_stuff() {
   const char *msg = "Hello Thread!";
 
   printf (">>>>>>  Msg printing <<<<<<<\n");
@@ -147,7 +147,7 @@ void message_stuff() {
     (hello, 0, msg, msg, 0, strlen(msg) - 1);
 }
 
-void vanilla_stuff () {
+static void vanilla_stuff () {
   int i = 7;
   printf ("i (%p) = %d\n", (void*)&i, i);
   printf (">>>>>>  Incrementing i <<<<<<<\n");
@@ -174,7 +174,7 @@ void vanilla_stuff () {
   //mt_loop<Iterator, mt_loop_traits::Par> (ref, 0, 0, 3);
 }
 
-void big_data_stuff() {
+static void big_data_stuff() {
   const int N = 100;
   printf (">>>>> Pass Big Data by Value %d iterations <<<<\n", N);
   BigData bd;
@@ -203,7 +203,7 @@ public:
 };
 
 template <class OpT>
-void class_stuff (int value, OpT op, int times) {
+static void class_stuff (int value, OpT op, int times) {
   int results[3];
   mt_mfun_loop_returns<ArrayPtr, Val, mt_loop_traits::Par>
     (&op, (int*)results, &OpT::operator(), value, 0, 3);

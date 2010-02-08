@@ -14,7 +14,7 @@
 #define MAX_THREADS 400
 #define THREAD_BLOCK 200
 
-aligned_t qincr(qthread_t * me, void *arg)
+static aligned_t qincr(qthread_t * me, void *arg)
 {
     return 0;
 }

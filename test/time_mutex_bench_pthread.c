@@ -15,7 +15,7 @@
 
 pthread_mutex_t locks[PER_THREAD_INCR];
 
-void *qincr(void *arg)
+static void *qincr(void *arg)
 {
     size_t incrs;
 

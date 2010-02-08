@@ -14,31 +14,31 @@
 qpool *memory = NULL;
 size_t objsize = 8;
 
-aligned_t queuer (qthread_t *me, void *arg)
+static aligned_t queuer(qthread_t * me, void *arg)
 {
-    qdqueue_t *q = (qdqueue_t*)arg;
+    qdqueue_t *q = (qdqueue_t *) arg;
     size_t i;
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
-	void * tmp = qpool_alloc(me, memory);
+	void *tmp = qpool_alloc(me, memory);
 	memset(tmp, 1, objsize);
 	if (qdqueue_enqueue(me, q, tmp) != QTHREAD_SUCCESS) {
-	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void*)me);
+	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void *)me);
 	    exit(-2);
 	}
     }
     return 0;
 }
 
-aligned_t dequeuer (qthread_t *me, void *arg)
+static aligned_t dequeuer(qthread_t * me, void *arg)
 {
-    qdqueue_t *q = (qdqueue_t*)arg;
+    qdqueue_t *q = (qdqueue_t *) arg;
     size_t i;
-    void * ref = qpool_alloc(me, memory);
+    void *ref = qpool_alloc(me, memory);
 
     memset(ref, 1, objsize);
     for (i = 0; i < ELEMENT_COUNT; i++) {
-	void * tmp;
+	void *tmp;
 	while ((tmp = qdqueue_dequeue(me, q)) == NULL) {
 	    qthread_yield(me);
 	}
@@ -52,32 +52,34 @@ aligned_t dequeuer (qthread_t *me, void *arg)
     return 0;
 }
 
-void loop_queuer (qthread_t *me, const size_t startat, const size_t stopat, void *arg)
+static void loop_queuer(qthread_t * me, const size_t startat,
+			const size_t stopat, void *arg)
 {
     size_t i;
-    qdqueue_t *q = (qdqueue_t *)arg;
+    qdqueue_t *q = (qdqueue_t *) arg;
 
-    for (i=startat; i<stopat; i++) {
-	void * tmp = qpool_alloc(me, memory);
+    for (i = startat; i < stopat; i++) {
+	void *tmp = qpool_alloc(me, memory);
 	memset(tmp, 1, objsize);
 	if (qdqueue_enqueue(me, q, tmp) != QTHREAD_SUCCESS) {
-	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void*)me);
+	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void *)me);
 	    exit(-2);
 	}
     }
 }
 
-void loop_dequeuer (qthread_t *me, const size_t startat, const size_t stopat, void *arg)
+static void loop_dequeuer(qthread_t * me, const size_t startat,
+			  const size_t stopat, void *arg)
 {
     size_t i;
-    qdqueue_t *q = (qdqueue_t *)arg;
-    void * ref = qpool_alloc(me, memory);
+    qdqueue_t *q = (qdqueue_t *) arg;
+    void *ref = qpool_alloc(me, memory);
 
     memset(ref, 1, objsize);
-    for (i=startat; i<stopat; i++) {
-	void * tmp;
+    for (i = startat; i < stopat; i++) {
+	void *tmp;
 	if ((tmp = qdqueue_dequeue(me, q)) == NULL) {
-	    fprintf(stderr, "qdqueue_dequeue(q, %p) failed!\n", (void*)me);
+	    fprintf(stderr, "qdqueue_dequeue(q, %p) failed!\n", (void *)me);
 	    exit(-2);
 	}
 	if (memcmp(ref, tmp, objsize)) {
@@ -112,11 +114,11 @@ int main(int argc, char *argv[])
 
     /* prime the pump */
     /*qt_loop_balance(0, THREAD_COUNT * ELEMENT_COUNT, loop_queuer, q);
-    qt_loop_balance(0, THREAD_COUNT * ELEMENT_COUNT, loop_dequeuer, q);
-    if (!qdqueue_empty(me, q)) {
-	fprintf(stderr, "qdqueue not empty after priming!\n");
-	exit(-2);
-    }*/
+     * qt_loop_balance(0, THREAD_COUNT * ELEMENT_COUNT, loop_dequeuer, q);
+     * if (!qdqueue_empty(me, q)) {
+     * fprintf(stderr, "qdqueue not empty after priming!\n");
+     * exit(-2);
+     * } */
 
     qtimer_start(timer);
     qt_loop_balance(0, THREAD_COUNT * ELEMENT_COUNT, loop_queuer, q);

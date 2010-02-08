@@ -32,7 +32,6 @@ int main(int argc, char *argv[])
 {
     qarray *a1, *a2;
     int **out;
-    size_t i;
     qthread_t *me;
     qtimer_t timer = qtimer_new();
     double cumulative_time = 0.0;
@@ -54,7 +53,7 @@ int main(int argc, char *argv[])
 
     out = calloc(ASIZE, sizeof(int *));
     assert(out);
-    for (i = 0; i < ASIZE; i++) {
+    for (size_t i = 0; i < ASIZE; i++) {
 	out[i] = calloc(sizeof(int), ASIZE);
 	assert(out[i]);
     }
@@ -68,7 +67,7 @@ int main(int argc, char *argv[])
 	iprintf("\t%i: mult time %f\n", i, qtimer_secs(timer));
     }
     printf("mult time: %f (avg)\n", cumulative_time/10.0);
-    for (i = 0; i < ASIZE; i++) {
+    for (size_t i = 0; i < ASIZE; i++) {
 	free(out[i]);
     }
     free(out);

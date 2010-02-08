@@ -15,7 +15,7 @@
 
 aligned_t counters[LOCK_COUNT] = { 0 };
 
-aligned_t qincr(qthread_t * me, void *arg)
+static aligned_t qincr(qthread_t * me, void *arg)
 {
     aligned_t id = (aligned_t) arg;
     size_t incrs;

@@ -4,7 +4,7 @@
 
 aligned_t master = 0;
 
-aligned_t incr(qthread_t * me, void *arg)
+static aligned_t incr(qthread_t * me, void *arg)
 {
     aligned_t localmaster, addition, ret;
     ret = master;
@@ -20,9 +20,9 @@ volatile uint32_t four = 4;
 volatile uint64_t eight = 8;
 void * volatile ptr = NULL;
 
-uint32_t read_vol32(volatile uint32_t *ptr) { return *ptr; }
-uint64_t read_vol64(volatile uint64_t *ptr) { return *ptr; }
-void * read_volptr(void * volatile *ptr) { return *ptr; }
+static uint32_t read_vol32(volatile uint32_t *ptr) { return *ptr; }
+static uint64_t read_vol64(volatile uint64_t *ptr) { return *ptr; }
+static void * read_volptr(void * volatile *ptr) { return *ptr; }
 
 int main()
 {

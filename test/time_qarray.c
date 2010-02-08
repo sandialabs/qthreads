@@ -13,20 +13,15 @@ typedef struct
 {
     char pad[10000];
 } bigobj;
+
 typedef struct
 {
     char pad[40];
 } offsize;
 
-aligned_t assign1(qthread_t * me, void *arg)
-{
-    *(double *)arg = 1.0;
-    return 0;
-}
-
 /* we can do this because we forced qarray to create tight segments */
-void assign1_loop(qthread_t * me, const size_t startat, const size_t stopat,
-		  qarray * qa, void *arg)
+static void assign1_loop(qthread_t * me, const size_t startat,
+			 const size_t stopat, qarray * qa, void *arg)
 {
     double *ptr = qarray_elem_nomigrate(qa, startat);
     const size_t max = stopat - startat;
@@ -36,8 +31,8 @@ void assign1_loop(qthread_t * me, const size_t startat, const size_t stopat,
     }
 }
 
-void assert1_loop(qthread_t * me, const size_t startat, const size_t stopat,
-		  qarray * qa, void *arg)
+static void assert1_loop(qthread_t * me, const size_t startat,
+			 const size_t stopat, qarray * qa, void *arg)
 {
     const double *ptr = qarray_elem_nomigrate(qa, startat);
     size_t max = stopat - startat;
@@ -47,14 +42,8 @@ void assert1_loop(qthread_t * me, const size_t startat, const size_t stopat,
     }
 }
 
-aligned_t assignall1(qthread_t * me, void *arg)
-{
-    memset(arg, 1, sizeof(bigobj));
-    return 0;
-}
-
-void assignall1_loop(qthread_t * me, const size_t startat,
-		     const size_t stopat, qarray * qa, void *arg)
+static void assignall1_loop(qthread_t * me, const size_t startat,
+			    const size_t stopat, qarray * qa, void *arg)
 {
     for (size_t i = startat; i < stopat; i++) {
 	char *ptr = qarray_elem_nomigrate(qa, i);
@@ -63,8 +52,8 @@ void assignall1_loop(qthread_t * me, const size_t startat,
     }
 }
 
-void assertall1_loop(qthread_t * me, const size_t startat,
-		     const size_t stopat, qarray * qa, void *arg)
+static void assertall1_loop(qthread_t * me, const size_t startat,
+			    const size_t stopat, qarray * qa, void *arg)
 {
     bigobj *example = malloc(sizeof(bigobj));
 
@@ -77,8 +66,8 @@ void assertall1_loop(qthread_t * me, const size_t startat,
     free(example);
 }
 
-void assignoff1(qthread_t * me, const size_t startat, const size_t stopat,
-		qarray * qa, void *arg)
+static void assignoff1(qthread_t * me, const size_t startat,
+		       const size_t stopat, qarray * qa, void *arg)
 {
     for (size_t i = startat; i < stopat; i++) {
 	char *ptr = qarray_elem_nomigrate(qa, i);
@@ -87,8 +76,8 @@ void assignoff1(qthread_t * me, const size_t startat, const size_t stopat,
     }
 }
 
-void assertoff1(qthread_t * me, const size_t startat, const size_t stopat,
-		qarray * qa, void *arg)
+static void assertoff1(qthread_t * me, const size_t startat,
+		       const size_t stopat, qarray * qa, void *arg)
 {
     offsize *example = malloc(sizeof(offsize));
 
@@ -103,7 +92,6 @@ void assertoff1(qthread_t * me, const size_t startat, const size_t stopat,
 
 int main(int argc, char *argv[])
 {
-    qarray *a;
     qthread_t *me;
     qtimer_t timer = qtimer_new();
     distribution_t disttypes[] = {
@@ -235,7 +223,8 @@ int main(int argc, char *argv[])
 	if (enabled_tests & 1) {
 	    int j;
 	    double acc = 0.0;
-	    a = qarray_create_configured(ELEMENT_COUNT, sizeof(double),
+	    qarray *a =
+		qarray_create_configured(ELEMENT_COUNT, sizeof(double),
 					 disttypes[dt_index], 1, 0);
 	    assert(a != NULL);
 	    for (j = 0; j < ITERATIONS; j++) {
@@ -260,8 +249,8 @@ int main(int argc, char *argv[])
 	if (enabled_tests & 2) {
 	    int j;
 	    double acc = 0.0;
-
-	    a = qarray_create_configured(ELEMENT_COUNT, sizeof(bigobj),
+	    qarray *a =
+		qarray_create_configured(ELEMENT_COUNT, sizeof(bigobj),
 					 disttypes[dt_index], 0, 0);
 	    assert(a != NULL);
 	    for (j = 0; j < ITERATIONS; j++) {
@@ -288,8 +277,8 @@ int main(int argc, char *argv[])
 	if (enabled_tests & 4) {
 	    int j;
 	    double acc = 0.0;
-
-	    a = qarray_create_configured(ELEMENT_COUNT, sizeof(offsize),
+	    qarray *a =
+		qarray_create_configured(ELEMENT_COUNT, sizeof(offsize),
 					 disttypes[dt_index], 0, 0);
 	    assert(a != NULL);
 	    for (j = 0; j < ITERATIONS; j++) {

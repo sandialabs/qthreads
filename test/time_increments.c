@@ -7,17 +7,13 @@
 #include "argparsing.h"
 
 size_t TEST_SELECTION = 255;
-
 size_t ITERATIONS = 1000000;
-
 size_t MAXPARALLELISM = 256;
-
 aligned_t incrementme = 0;
-
 aligned_t *increments = NULL;
 
-void balanced_incr(qthread_t * me, const size_t startat, const size_t stopat,
-		   void *arg)
+static void balanced_incr(qthread_t * me, const size_t startat,
+			  const size_t stopat, void *arg)
 {
     size_t i;
 
@@ -26,13 +22,11 @@ void balanced_incr(qthread_t * me, const size_t startat, const size_t stopat,
     }
 }
 
-void balanced_falseshare(qthread_t * me, const size_t startat,
-			 const size_t stopat, void *arg)
+static void balanced_falseshare(qthread_t * me, const size_t startat,
+				const size_t stopat, void *arg)
 {
     size_t i;
-
     qthread_shepherd_id_t shep = qthread_shep(me);
-
     aligned_t *myinc = increments + shep;
 
     for (i = startat; i < stopat; i++) {
@@ -40,7 +34,7 @@ void balanced_falseshare(qthread_t * me, const size_t startat,
     }
 }
 
-void balanced_noncomp(qthread_t * me, const size_t startat,
+static void balanced_noncomp(qthread_t * me, const size_t startat,
 		      const size_t stopat, void *arg)
 {
     size_t i;
@@ -53,7 +47,7 @@ void balanced_noncomp(qthread_t * me, const size_t startat,
     }
 }
 
-aligned_t incrloop(qthread_t * me, void *arg)
+static aligned_t incrloop(qthread_t * me, void *arg)
 {
     unsigned int i;
 
@@ -63,12 +57,10 @@ aligned_t incrloop(qthread_t * me, void *arg)
     return 0;
 }
 
-aligned_t incrloop_falseshare(qthread_t * me, void *arg)
+static aligned_t incrloop_falseshare(qthread_t * me, void *arg)
 {
     unsigned int offset = (unsigned int)(intptr_t) arg;
-
     unsigned int i;
-
     aligned_t *myinc = increments + offset;
 
     for (i = 0; i < ITERATIONS; i++) {
@@ -77,10 +69,9 @@ aligned_t incrloop_falseshare(qthread_t * me, void *arg)
     return 0;
 }
 
-aligned_t incrloop_nocompete(qthread_t * me, void *arg)
+static aligned_t incrloop_nocompete(qthread_t * me, void *arg)
 {
     unsigned int i;
-
     aligned_t myinc;
 
     for (i = 0; i < ITERATIONS; i++) {
@@ -89,12 +80,10 @@ aligned_t incrloop_nocompete(qthread_t * me, void *arg)
     return 0;
 }
 
-aligned_t addloop_falseshare(qthread_t * me, void *arg)
+static aligned_t addloop_falseshare(qthread_t * me, void *arg)
 {
     unsigned int offset = (unsigned int)(intptr_t) arg;
-
     unsigned int i;
-
     aligned_t *myinc = increments + offset;
 
     for (i = 0; i < ITERATIONS; i++) {
@@ -103,10 +92,9 @@ aligned_t addloop_falseshare(qthread_t * me, void *arg)
     return *myinc;
 }
 
-aligned_t addloop_nocompete(qthread_t * me, void *arg)
+static aligned_t addloop_nocompete(qthread_t * me, void *arg)
 {
     unsigned int i;
-
     aligned_t myinc = 0;
 
     for (i = 0; i < ITERATIONS; i++) {
@@ -115,13 +103,11 @@ aligned_t addloop_nocompete(qthread_t * me, void *arg)
     return myinc;
 }
 
-char *human_readable_rate(double rate)
+static char *human_readable_rate(double rate)
 {
     static char readable_string[100] = { 0 };
     const double GB = 1024 * 1024 * 1024;
-
     const double MB = 1024 * 1024;
-
     const double kB = 1024;
 
     if (rate > GB) {
@@ -139,13 +125,9 @@ char *human_readable_rate(double rate)
 int main(int argc, char *argv[])
 {
     qtimer_t timer = qtimer_new();
-
     double rate;
-
     unsigned int i;
-
-    aligned_t rets[MAXPARALLELISM];
-
+    aligned_t *rets;
     unsigned int shepherds = 1;
 
     /* setup */
@@ -157,6 +139,8 @@ int main(int argc, char *argv[])
     NUMARG(TEST_SELECTION, "TEST_SELECTION");
     shepherds = qthread_num_shepherds();
     printf("%u shepherds...\n", shepherds);
+    rets = malloc(sizeof(aligned_t)*MAXPARALLELISM);
+    assert(rets);
 
     /* BALANCED INCREMENT LOOP (strong scaling) */
     if (TEST_SELECTION & 1) {
@@ -357,6 +341,7 @@ int main(int argc, char *argv[])
     }
 
     qtimer_free(timer);
+    free(rets);
 
     return 0;
 }

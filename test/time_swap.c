@@ -18,7 +18,7 @@ ucontext_t child, parent;
 qtimer_t timer;
 double total_single_time = 0.0;
 
-void inout(void *msg)
+static void inout(void *msg)
 {
     long expected = 0;
 
@@ -36,7 +36,7 @@ void inout(void *msg)
 #endif
 }
 
-void single(void)
+static void single(void)
 {
     qtimer_stop(timer);
     total_single_time += qtimer_secs(timer);

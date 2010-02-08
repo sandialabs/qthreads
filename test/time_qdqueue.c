@@ -10,23 +10,23 @@
 #define ELEMENT_COUNT 10000
 #define THREAD_COUNT 128
 
-aligned_t queuer (qthread_t *me, void *arg)
+static aligned_t queuer(qthread_t * me, void *arg)
 {
-    qdqueue_t *q = (qdqueue_t*)arg;
+    qdqueue_t *q = (qdqueue_t *) arg;
     size_t i;
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
-	if (qdqueue_enqueue(me, q, (void*)me) != QTHREAD_SUCCESS) {
-	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void*)me);
+	if (qdqueue_enqueue(me, q, (void *)me) != QTHREAD_SUCCESS) {
+	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void *)me);
 	    exit(-2);
 	}
     }
     return 0;
 }
 
-aligned_t dequeuer (qthread_t *me, void *arg)
+static aligned_t dequeuer(qthread_t * me, void *arg)
 {
-    qdqueue_t *q = (qdqueue_t*)arg;
+    qdqueue_t *q = (qdqueue_t *) arg;
     size_t i;
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
@@ -37,27 +37,29 @@ aligned_t dequeuer (qthread_t *me, void *arg)
     return 0;
 }
 
-void loop_queuer (qthread_t *me, const size_t startat, const size_t stopat, void *arg)
+static void loop_queuer(qthread_t * me, const size_t startat,
+			const size_t stopat, void *arg)
 {
     size_t i;
-    qdqueue_t *q = (qdqueue_t *)arg;
+    qdqueue_t *q = (qdqueue_t *) arg;
 
-    for (i=startat; i<stopat; i++) {
-	if (qdqueue_enqueue(me, q, (void*)me) != QTHREAD_SUCCESS) {
-	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void*)me);
+    for (i = startat; i < stopat; i++) {
+	if (qdqueue_enqueue(me, q, (void *)me) != QTHREAD_SUCCESS) {
+	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void *)me);
 	    exit(-2);
 	}
     }
 }
 
-void loop_dequeuer (qthread_t *me, const size_t startat, const size_t stopat, void *arg)
+static void loop_dequeuer(qthread_t * me, const size_t startat,
+			  const size_t stopat, void *arg)
 {
     size_t i;
-    qdqueue_t *q = (qdqueue_t *)arg;
+    qdqueue_t *q = (qdqueue_t *) arg;
 
-    for (i=startat; i<stopat; i++) {
+    for (i = startat; i < stopat; i++) {
 	if (qdqueue_dequeue(me, q) == NULL) {
-	    fprintf(stderr, "qdqueue_dequeue(q, %p) failed!\n", (void*)me);
+	    fprintf(stderr, "qdqueue_dequeue(q, %p) failed!\n", (void *)me);
 	    exit(-2);
 	}
     }

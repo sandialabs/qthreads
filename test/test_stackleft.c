@@ -16,7 +16,7 @@ static Q_NOINLINE void thread2(qthread_t *t, size_t left, size_t depth)
 {
     int foo = qthread_stackleft(t);
     iprintf("leveli%i: %i bytes left\n",(int)depth, foo);
-#if (QTHREAD_ASSEMBLY == QTHREAD_IA64)
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
     assert(foo <= left);
 #else
     assert(foo < left);

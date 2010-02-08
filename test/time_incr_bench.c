@@ -15,7 +15,7 @@
 
 aligned_t counter = 0;
 
-aligned_t qincr(qthread_t * me, void *arg)
+static aligned_t qincr(qthread_t * me, void *arg)
 {
     aligned_t *c = (aligned_t *) arg;
     size_t incrs;
