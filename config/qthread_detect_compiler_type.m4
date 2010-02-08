@@ -110,8 +110,7 @@ AC_CACHE_CHECK([what kind of C compiler $CC is],
   ])
 AC_CACHE_CHECK([what kind of C++ compiler $CXX is],
   [qthread_cv_cxx_compiler_type],
-  [qthread_cv_cxx_compiler_type=unknown
-   AC_LANG_PUSH([C++])
+  [AC_LANG_PUSH([C++])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__BORLANDC__],[qthread_cv_cxx_compiler_type=Borland])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
