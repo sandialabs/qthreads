@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
 	"DIST_REG_STRIPES", "DIST_REG_FIELDS", "DIST_LEAST"
     };
     unsigned int dt_index;
-    unsigned int num_dists = 8;
+    unsigned int num_dists = 1;
 
     qthread_initialize();
     me = qthread_self();
