@@ -2321,6 +2321,9 @@ void qthread_finalize(void)
 			   &(qlib->shepherds[0]));
     }
 
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    qt_global_barrier_destroy();
+#endif
 #ifdef QTHREAD_SHEPHERD_PROFILING
 #warning FIXME: total_time is always 0 on shepherd 0
     printf
