@@ -23,10 +23,9 @@ TESTS = test_basic \
 		test_qlfqueue \
 		test_qdqueue \
 		test_allpairs \
-		test_wavefront \
 		test_qalloc
 
-EXTRA_PROGRAMS =
+EXTRA_PROGRAMS = test_wavefront
 
 if ENABLE_CXX_TESTS
 TESTS += testloop
