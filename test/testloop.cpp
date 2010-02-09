@@ -18,6 +18,19 @@ int main (int argc, char **argv) {
   return 0;
 }
 
+static void set(int val, int& i) { 
+  i = val + 1; 
+  printf ("set i (%p) = %d\n", (void*)&i, i);
+}
+
+static void output(const int& i) { 
+  printf ("output i (%p) = %d\n", (void*)&i, i); 
+}
+
+static void output_double(double i) { 
+  printf ("output double i (%p) = %.4f\n", (void*)&i, i); 
+}
+
 template <class T>
 static void recvData( const T& t ) {
   //printf ("Got data reference @ %p\n", &t);
