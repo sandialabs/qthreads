@@ -18,10 +18,10 @@ extern "C" {
 typedef const void *qt_key_t;
 #ifndef HAVE_CPROPS
 typedef struct qt_hash_s *qt_hash;
-typedef void (*qt_hash_callback_fn)(const qt_key_t, void *, void *);
+typedef void (*qt_hash_callback_fn)(const qt_key_t, void restrict *, void restrict *);
 #else
 typedef cp_hashlist *qt_hash;
-typedef int (*qt_hash_callback_fn)(void *, void restrict *, void restrict *);
+typedef int (*qt_hash_callback_fn)(void *, void *, void *);
 #endif
 typedef void (*qt_hash_deallocator_fn)(void*);
 
