@@ -32,6 +32,10 @@ else
 libqthread_la_SOURCES += qt_cp_hash.c
 endif
 
+if COMPILE_ROSE_EXTENSIONS
+libqthread_la_SOURCES += qt_barrier.c
+endif
+
 if COMPILE_TARGET_SST
 libqthread_la_SOURCES += \
 	sst/qthread-sst.c \

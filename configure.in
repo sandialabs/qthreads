@@ -554,6 +554,7 @@ AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIMEOFDAY], [test "x$qthread_timer_type" =
 AM_CONDITIONAL([QTHREAD_NEED_QTIMER], [test "x$qthread_timer_type" != "x"])
 AM_CONDITIONAL([COMPILE_POOLED_MEMORY], [test "x$enable_pooled_memory" = "xyes"])
 AM_CONDITIONAL([COMPILE_CXX_HASH], [test "x$with_cprops" != "xyes"])
+AM_CONDITIONAL([COMPILE_ROSE_EXTENSIONS], [test "x$enable_rose_extensions" == xyes])
 
 AC_CONFIG_HEADERS([include/config.h include/qthread/common.h])
 AC_CONFIG_FILES([

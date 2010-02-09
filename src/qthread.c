@@ -85,6 +85,9 @@ kern_return_t thread_policy_get(thread_t thread,
 #include "qthread/futurelib.h"
 #include "qthread_innards.h"
 #include "futurelib_innards.h"
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+# include "qt_barrier.h"
+#endif
 
 /* internal constants */
 enum threadstate {
@@ -1552,6 +1555,9 @@ int qthread_initialize(void)
 	return QTHREAD_SUCCESS;
     }
 
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    qt_global_barrier_init(14, 0); // XXX: completely arbitrary
+#endif
 #ifdef QTHREAD_USE_PTHREADS
     {
 	char *qsh = getenv("QTHREAD_NUM_SHEPHERDS");

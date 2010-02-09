@@ -14,6 +14,7 @@ noinst_HEADERS = \
 	qthread_asserts.h \
 	qthread_expect.h \
 	qt_atomics.h \
+	qt_barrier.h \
 	qt_hash.h \
 	qt_gcd.h \
 	qtimer.h \
