@@ -4450,7 +4450,7 @@ void qthread_reset_forCount(qthread_t * t)
 }                                    /*}}} */
 #endif
 
-#ifdef QTHREAD_MUTEX_INCREMENT
+#if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
 uint32_t qthread_incr32_(volatile uint32_t * op, const int incr)
 {				       /*{{{ */
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);

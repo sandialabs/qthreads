@@ -248,6 +248,7 @@ AS_IF([test "x$ac_cv_pthreads_enable" == "xyes"],
 	   AC_CHECK_FUNCS([pthread_yield pthread_spin_init])])
 AS_IF([test "x$qthread_implementation" = "xsst"],
 	  [
+	   AC_DEFINE([QTHREAD_SST_PRIMITIVES],[1],[Define to use the SST primitives])
 	   enable_pooled_memory="no"
 	   LDFLAGS="$LDFLAGS $SST_LIBS"
 	   AC_SEARCH_LIBS([ceil],[m_ppc],[],[AC_MSG_ERROR([Cannot find ceil()])])

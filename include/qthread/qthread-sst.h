@@ -41,12 +41,17 @@ typedef aligned_t(*qthread_f) (qthread_t * me, void *arg);
  * primarily to prove that qthreads are being used (thus the quickPrint call
  * with the "scalable" argument) */
 #define qthread_init(x) PIM_quickPrint(0x5ca1ab1e,x,PIM_readSpecial(PIM_CMD_LOC_COUNT))
+#define qthread_initialize() PIM_quickPrint(0x5ca1ab1e,0,PIM_readSpecial(PIM_CMD_LOC_COUNT))
 
 /* XXX: not sure how to handle this in a truly multithreaded environment */
 #define qthread_finalize() PIM_quickPrint(0xaced,0,0)
 
 /* means nothing in a truly multithreaded environment */
 #define qthread_yield(x)
+
+/* cannot be done without hardware support */
+#define qthread_disable_shepherd(x)
+#define qthread_enable_shepherd(x)
 
 /* this function allows a qthread to retrieve its qthread_t pointer if it has
  * been lost for some reason */
@@ -120,6 +125,11 @@ static inline
 aligned_t *qthread_retloc(const qthread_t * t)
 {
     return 0;			       /* XXX: this is a bug! */
+}
+static inline
+int qthread_shep_ok(const qthread_t * t)
+{
+    return 1;
 }
 
 /* returns the distance from one shepherd to another */

@@ -52,7 +52,7 @@ typedef struct qlib_s
     aligned_t sched_shepherd;
     QTHREAD_FASTLOCK_TYPE sched_shepherd_lock;
 
-#ifdef QTHREAD_MUTEX_INCREMENT
+#if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
     QTHREAD_FASTLOCK_TYPE *atomic_locks;
 # ifdef QTHREAD_COUNT_THREADS
     aligned_t *atomic_stripes;

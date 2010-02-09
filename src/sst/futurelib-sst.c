@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-#include <cprops/hashtable.h>
 #include <stdarg.h>		       /* for va_start and va_end */
 
 #include <ppcPimCalls.h>

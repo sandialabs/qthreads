@@ -26,6 +26,9 @@
 /* compile for the SST */
 #undef SST
 
+/* Define to use the SST primitives */
+#undef QTHREAD_SST_PRIMITIVES
+
 /* alignment of aligned_t */
 #undef QTHREAD_ALIGNMENT_ALIGNED_T
 

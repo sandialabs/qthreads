@@ -69,7 +69,7 @@ typedef int64_t Q_ALIGNED(QTHREAD_ALIGNMENT_ALIGNED_T) saligned_t;
 #endif
 Q_ENDCXX /* */
 
-#ifdef SST
+#ifdef QTHREAD_SST_PRIMITIVES
 # include <qthread/qthread-sst.h>
 #else
 
@@ -284,7 +284,7 @@ int qthread_readFE(qthread_t * me, aligned_t * restrict const dest,
 int qthread_lock(qthread_t * me, const aligned_t * a);
 int qthread_unlock(qthread_t * me, const aligned_t * a);
 
-#ifdef QTHREAD_MUTEX_INCREMENT
+#if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
 uint32_t qthread_incr32_(volatile uint32_t *, const int);
 uint64_t qthread_incr64_(volatile uint64_t *, const int);
 float qthread_fincr_(volatile float *, const float);
