@@ -1190,7 +1190,7 @@ static void *qthread_shepherd(void *arg)
     /* Initialize myself */
     pthread_setspecific(shepherd_structs, arg);
     if (qaffinity) {		       /*{{{ */
-#ifdef QTHREAD_HAVE_MACHTOPO
+#if defined(QTHREAD_HAVE_MACHTOPO) && ! defined(SST)
 	mach_msg_type_number_t Count = THREAD_AFFINITY_POLICY_COUNT;
 	thread_affinity_policy_data_t mask[THREAD_AFFINITY_POLICY_COUNT];
 
@@ -1540,13 +1540,16 @@ int qthread_initialize(void)
 	if (qdl) {
 	    debuglevel = strtol(qdl, &qdle, 0);
 	    if (qdle == NULL || qdle == qdl) {
-		fprintf(stderr, "unparsable debug level (%s)\n", qdl);
+		fprintf(stderr, "unparseable debug level (%s)\n", qdl);
 		debuglevel = 0;
 	    }
 	} else {
 	    debuglevel = 0;
 	}
     }
+# ifdef SST
+    debuglevel = 7;
+# endif
 #endif
 
     qthread_debug(ALL_CALLS, "qthread_init(): began.\n");
