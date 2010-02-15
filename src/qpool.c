@@ -301,7 +301,7 @@ void *qpool_alloc(qthread_t * me, qpool * pool)
 	 * pools from the same node, but different shepherd */
 
 	/* on a single-threaded shepherd, locking is unnecessary */
-#ifdef SST
+#ifdef QTHREAD_SST_PRIMITIVES
 	qassert(qthread_lock(me, &mypool->lock), 0);
 #endif
 	if (mypool->alloc_block_pos == pool->items_per_alloc) {
@@ -330,7 +330,7 @@ void *qpool_alloc(qthread_t * me, qpool * pool)
 		(pool->item_size * mypool->alloc_block_pos);
 	    mypool->alloc_block_pos++;
 	}
-#ifdef SST
+#ifdef QTHREAD_SST_PRIMITIVES
 	qassert(qthread_unlock(me, &mypool->lock), 0);
 #endif
 	if (pool->alignment != 0 &&
