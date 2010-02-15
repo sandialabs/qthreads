@@ -1155,6 +1155,6 @@ Q_ENDCXX /* */
 # include "qthread.hpp"
 #endif /* __cplusplus */
 
-#endif /* SST */
+#endif /* QTHREAD_SST_PRIMITIVES */
 
 #endif /* _QTHREAD_H_ */
