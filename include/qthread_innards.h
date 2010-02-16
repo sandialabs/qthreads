@@ -85,7 +85,7 @@ typedef struct qlib_s
 #endif
 }     *qlib_t;
 
-#ifndef SST
+#ifndef QTHREAD_SST_PRIMITIVES
 extern qlib_t qlib;
 #endif
 
@@ -102,7 +102,7 @@ int qthread_fork_future_to(const qthread_t * me, const qthread_f f,
 unsigned int qthread_internal_shep_to_node(const qthread_shepherd_id_t shep);
 
 #define QTHREAD_NO_NODE ((unsigned int)(-1))
-#ifdef SST
+#ifdef QTHREAD_SST_PRIMITIVES
 # define qthread_shepherd_count() PIM_readSpecial(PIM_CMD_LOC_COUNT)
 #else
 # define qthread_shepherd_count() (qlib->nshepherds)
@@ -127,9 +127,7 @@ static QINLINE void qthread_debug(int level, char *format, ...)
 
     if (level <= debuglevel) {
 	static char buf[1024];	/* protected by the output_lock */
-
 	char *head = buf;
-
 	char ch;
 
 	QTHREAD_FASTLOCK_LOCK(&output_lock);
@@ -140,6 +138,7 @@ static QINLINE void qthread_debug(int level, char *format, ...)
 	/* avoiding the obvious method, to save on memory
 	 * vfprintf(stderr, format, args); */
 	while ((ch = *format++)) {
+	    assert(head < (buf + 1024));
 	    if (ch == '%') {
 		ch = *format++;
 		switch (ch) {
@@ -147,9 +146,9 @@ static QINLINE void qthread_debug(int level, char *format, ...)
 		    {
 			char *str = va_arg(args, char *);
 
-			while (write(2, buf, head - buf) != head - buf) ;
+			qassert(write(2, buf, head - buf), head - buf);
 			head = buf;
-			while (write(2, str, strlen(str)) != strlen(str)) ;
+			qassert(write(2, str, strlen(str)), strlen(str));
 			break;
 		    }
 		    case 'p':
@@ -198,7 +197,7 @@ static QINLINE void qthread_debug(int level, char *format, ...)
 	    }
 	}
 	/* XXX: not checking for extra long values of head */
-	while (write(2, buf, head - buf) != head - buf) ;
+	qassert(write(2, buf, head - buf), head - buf);
 	va_end(args);
 	/*fflush(stderr); */
 
