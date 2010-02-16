@@ -22,7 +22,21 @@ libqthread_la_SOURCES = \
 	qalloc.c \
 	qutil.c \
 	qloop.c
-libqthread_la_LDFLAGS = -version-info 10:1:0 -no-undefined
+# version-info fields are:
+# 1. the current interface revision number (i.e. whenever arguments of existing
+#    functions change, increment this number)
+# 2. the revision number (the library with the highest revision number will be
+#    preferred)
+# 3. the age (how many previous interfaces are supported)
+#
+# So...
+# - If you add functions, increase the interface number AND the age, and reset
+#   the revision number to 0.
+# - If you modify (or remove) existing functions, increase the interface number
+#   and reset the revision and age numbers to 0
+# - If you support all the same functions (just bugfixes or whatnot), increment
+#   the revision number
+libqthread_la_LDFLAGS = -version-info 11:0:0 -no-undefined
 libqthread_la_LIBADD =
 libqthread_la_DEPENDENCIES =
 
