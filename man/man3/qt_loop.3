@@ -10,7 +10,7 @@
 .B qt_loop
 .RI "(const size_t " start ", const size_t " stop ", const size_t " stride ,
 .ti +9
-.RI "const qthread_f " func ", void *" argptr );
+.RI "const qt_loop_f " func ", void *" argptr );
 .SH DESCRIPTION
 This function provides a simple C implementation of a threaded loop. This is
 similar to
@@ -33,7 +33,7 @@ i +=
 {
 .RS
 .br
-.IR func "(NULL, " argptr );
+.IR func "(NULL, i, i+1, " argptr );
 .RE
 .br
 }
@@ -46,13 +46,13 @@ A qthread is spawned for every iteration of the above loop. Thus, if start is
 The
 .I func
 argument must be a function pointer with a
-.I qthread_f
+.I qt_loop_f
 prototype, such as:
 .RS
 .PP
 aligned_t
 .I func
-(qthread_t *me, void *arg);
+(qthread_t *me, size_t start, size_t stop, void *arg);
 .RE
 .PP
 The return value of this function is ignored. However,

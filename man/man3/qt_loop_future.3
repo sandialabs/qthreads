@@ -10,7 +10,7 @@
 .B qt_loop_future
 .RI "(const size_t " start ", const size_t " stop ,
 .ti +16
-.RI "const size_t " stride ", const qthread_f " func ,
+.RI "const size_t " stride ", const qt_loop_f " func ,
 .ti +16
 .RI "void *" argptr );
 .SH DESCRIPTION
@@ -34,7 +34,7 @@ i +=
 .IR stride)
 {
 .RS
-.IR func "(NULL, " argptr );
+.IR func "(NULL, i, i+1, " argptr );
 .RE
 }
 .RE
@@ -52,7 +52,7 @@ prototype, such as:
 .PP
 aligned_t
 .I func
-(qthread_t *me, void *arg);
+(qthread_t *me, size_t start, size_t stop, void *arg);
 .RE
 .PP
 The return value of this function is ignored. However,
