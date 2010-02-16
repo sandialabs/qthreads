@@ -6,14 +6,6 @@
 #include <qthread/qloop.h>
 #include <qthread_asserts.h>
 
-/* So, the idea here is that this is a (braindead) C version of Megan's
- * mt_loop. */
-struct qt_loop_wrapper_args {
-    qthread_f func;
-    void *arg;
-    volatile aligned_t *donecount;
-};
-
 /* avoid compiler bugs with volatile... */
 static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t * ptr)
 {
@@ -22,15 +14,25 @@ static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t * ptr)
 
 #define _(x) vol_read_a(&(x))
 
-static aligned_t qt_loop_wrapper(qthread_t * me,
-				 const struct qt_loop_wrapper_args *arg)
+/* So, the idea here is that this is a (braindead) C version of Megan's
+ * mt_loop. */
+struct qloop_wrapper_args {
+    qt_loop_f func;
+    size_t startat, stopat;
+    void * arg;
+    volatile aligned_t * donecount;
+};
+
+static aligned_t qloop_wrapper(qthread_t * me,
+			       const struct qloop_wrapper_args *arg)
 {
-    arg->func(me, arg->arg);
+    arg->func(me, arg->startat, arg->stopat, arg->arg);
     qthread_incr(arg->donecount, 1);
     return 0;
 }
+
 static void qt_loop_inner(const size_t start, const size_t stop,
-			  const size_t stride, const qthread_f func,
+			  const size_t stride, const qt_loop_f func,
 			  void *argptr, int future)
 {
     size_t i, threadct = 0;
@@ -38,30 +40,32 @@ static void qt_loop_inner(const size_t start, const size_t stop,
     aligned_t *rets;
     size_t steps = (stop - start) / stride;
     volatile aligned_t donecount = 0;
-    struct qt_loop_wrapper_args *qwa;
+    struct qloop_wrapper_args *qwa;
 
     if ((steps * stride) + start < stop) {
 	steps++;
     }
     rets = (aligned_t *) malloc(sizeof(aligned_t) * steps);
-    qwa = (struct qt_loop_wrapper_args *)
-	malloc(sizeof(struct qt_loop_wrapper_args) * steps);
+    qwa = (struct qloop_wrapper_args *)
+	malloc(sizeof(struct qloop_wrapper_args) * steps);
     assert(rets);
     assert(qwa);
     assert(func);
 
     for (i = start; i < stop; i += stride) {
 	qwa[threadct].func = func;
+	qwa[threadct].startat = i;
+	qwa[threadct].stopat = i + 1;
 	qwa[threadct].arg = argptr;
 	qwa[threadct].donecount = &donecount;
 	if (future) {
-	    future_fork_to((qthread_f) qt_loop_wrapper, qwa + threadct,
+	    future_fork_to((qthread_f) qloop_wrapper, qwa + threadct,
 			   rets + threadct,
 			   (qthread_shepherd_id_t) (threadct %
 						    qthread_num_shepherds()));
 	} else {
 	    qassert(qthread_fork_to
-		    ((qthread_f) qt_loop_wrapper, qwa + threadct,
+		    ((qthread_f) qloop_wrapper, qwa + threadct,
 		     rets + threadct,
 		     (qthread_shepherd_id_t) (threadct %
 					      qthread_num_shepherds())),
@@ -76,7 +80,7 @@ static void qt_loop_inner(const size_t start, const size_t stop,
     free(rets);
 }
 void qt_loop(const size_t start, const size_t stop, const size_t stride,
-	     const qthread_f func, void *argptr)
+	     const qt_loop_f func, void *argptr)
 {
     qt_loop_inner(start, stop, stride, func, argptr, 0);
 }
@@ -84,7 +88,7 @@ void qt_loop(const size_t start, const size_t stop, const size_t stride,
 /* So, the idea here is that this is a (braindead) C version of Megan's
  * mt_loop_future. */
 void qt_loop_future(const size_t start, const size_t stop,
-		    const size_t stride, const qthread_f func, void *argptr)
+		    const size_t stride, const qt_loop_f func, void *argptr)
 {
     qt_loop_inner(start, stop, stride, func, argptr, 1);
 }
@@ -99,21 +103,6 @@ void qt_loop_future(const size_t start, const size_t stop,
  * divide work evenly, so that we're maxing out our processor use with minimal
  * overhead. Then, we divvy the work up as evenly as we can.
  */
-struct qloop_wrapper_args {
-    qt_loop_f func;
-    size_t startat, stopat;
-    void *arg;
-    volatile aligned_t *donecount;
-};
-
-static aligned_t qloop_wrapper(qthread_t * me,
-			       const struct qloop_wrapper_args *arg)
-{
-    arg->func(me, arg->startat, arg->stopat, arg->arg);
-    qthread_incr((aligned_t *) arg->donecount, 1);
-    return 0;
-}
-
 static QINLINE void qt_loop_balance_inner(const size_t start,
 					  const size_t stop,
 					  const qt_loop_f func, void *argptr,
