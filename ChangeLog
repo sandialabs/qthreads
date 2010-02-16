@@ -1,3 +1,207 @@
+2010-02-09 18:13  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_hash.h: apparently restrict is hard to use in typedefs
+
+2010-02-09 18:12  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_qarray.c: default; only test the basic operation
+
+2010-02-09 17:12  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_barrier.h, src/qthread.c: clean up global barrier
+
+2010-02-09 17:12  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: only check atomics if we haven't explicitly
+	  disabled them
+
+2010-02-09 17:05  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_hash.h: cprops doesnt care for the restrict keyword
+
+2010-02-09 16:22  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, include/Makefile.am, include/qt_barrier.h,
+	  src/Makefile.am, src/qt_barrier.c, src/qthread.c: qt_barrier
+	  initial commit (slightly modified from Allan's source)
+
+2010-02-09 15:25  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am: test_wavefront has issues
+
+2010-02-09 15:18  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/testloop.cpp: roll back previous change... prevents compile
+
+2010-02-09 15:12  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test:
+
+2010-02-08 23:48  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/testloop.cpp: remove dead code
+
+2010-02-08 23:46  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_qarray.c: reduce default workload
+
+2010-02-08 22:12  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/testloop.cpp: fix GCC compiler warnings about dead code
+
+2010-02-08 21:27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_reinit.c:
+
+2010-02-08 21:27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/benchmark.c, test/test_allpairs.c, test/test_cas.c,
+	  test/test_disabled.c, test/test_id.c, test/test_internal_mod.c,
+	  test/test_migrate.c, test/test_qarray.c, test/test_qdqueue.c,
+	  test/test_qlfqueue.c, test/test_qpool.c, test/test_qutil.c,
+	  test/test_qutil_qsort.c, test/test_reinit.c,
+	  test/test_stackleft.c, test/testdincr.c, test/testfincr.c,
+	  test/testincr.c, test/testq.c, test/testqloop.c,
+	  test/time_allpairs.c, test/time_gcd.c, test/time_increments.c,
+	  test/time_producerconsumer.c, test/time_swap.c: formatting
+
+2010-02-08 21:24  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, test/test_cas.c, test/test_internal_mod.c,
+	  test/test_stackleft.c, test/test_wavefront.c, test/testloop.cpp,
+	  test/time_allpairs.c, test/time_chain_bench.c,
+	  test/time_chain_bench_pthread.c, test/time_cncthr_bench.c,
+	  test/time_cncthr_bench_pthread.c, test/time_incr_bench.c,
+	  test/time_incr_bench_pthread.c, test/time_increments.c,
+	  test/time_lul_bench.c, test/time_lul_bench_pthread.c,
+	  test/time_mutex_bench.c, test/time_mutex_bench_pthread.c,
+	  test/time_producerconsumer.c, test/time_qarray.c,
+	  test/time_qarray_sizes.c, test/time_qdqueue.c,
+	  test/time_qdqueue_sizes.c, test/time_qlfqueue.c,
+	  test/time_qpool.c, test/time_qutil_qsort.c,
+	  test/time_spin_bench.c, test/time_spin_bench_pthread.c,
+	  test/time_swap.c, test/time_thrcrt_bench.c,
+	  test/time_thrcrt_bench_pthread.c, test/time_wavefront.c: remove
+	  Intel warnings
+
+2010-02-08 19:32  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qloop.h: export new qqloop functions
+
+2010-02-08 19:31  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_hash.h: removing ICC warnings
+
+2010-02-08 19:31  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: C++ doesn't need the strict-aliasing exception
+	  (yet?)
+
+2010-02-08 19:20  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qalloc.c, src/qloop.c, src/qthread.c, src/qutil.c,
+	  src/wavefront.c: removing ICC warnings
+
+2010-02-08 18:13  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: copy/paste typo
+
+2010-02-08 18:09  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_hash_maps.m4: CXXFLAGS was not being properly
+	  restored after ext/hash check
+
+2010-02-08 18:04  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_detect_compiler_type.m4: many compilers use EDG
+	  front-end; so move it to the end of the tests
+
+2010-02-08 17:58  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_detect_compiler_type.m4: Fix the unknown-cxx issue
+
+2010-02-08 17:56  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_detect_compiler_type.m4: Intel's compiler pretends
+	  to be GNU
+
+2010-02-08 17:53  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: better picky flag detection
+
+2010-02-08 17:49  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* ChangeLog, NEWS, acinclude.m4,
+	  config/qthread_detect_compiler_type.m4, configure.in: preparing
+	  for 1.3.1
+
+2010-02-08 16:34  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/allpairs.c: removing icc warnings
+
+2010-02-08 16:18  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/wavefront.c: remove icc compiler warnings
+
+2010-02-08 16:04  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/cacheline.c: remove icc compiler warnings
+
+2010-02-08 16:00  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qarray.c: remove icc compiler warnings
+
+2010-02-08 15:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/cacheline.c: remove icc compiler warnings
+
+2010-02-08 15:39  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_gcd.c, test/time_increments.c, test/time_swap.c: remove
+	  compiler warnings
+
+2010-02-08 15:35  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_mpool.c: remove dead code
+
+2010-02-08 15:32  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: unused variable
+
+2010-02-05 19:31  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3: ignore htmlized output
+
+2010-02-05 19:31  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/htmlize.sh: detect missing rman
+
+2010-02-05 19:29  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: formatting
+
+2010-02-05 19:20  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am, man/man3/qthread_shep_ok.3: document
+	  qthread_shep_ok
+
+2010-02-05 19:11  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/qthread_finalize.3, man/man3/qthread_fork.3,
+	  man/man3/qthread_init.3, man/man3/qthread_self.3,
+	  man/man3/qthread_yield.3: reference qthread_initialize instead of
+	  qthread_init
+
+2010-02-05 19:06  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am, man/man3/qthread_init.3,
+	  man/man3/qthread_initialize.3: document qthread_initialize
+
+2010-02-05 18:08  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/cacheline.c: simplify the #defs... they were unnecessarily
+	  complex after the AMD-PIC changes
+
 2010-02-04 16:39  Kyle Wheeler <kbwheel@sandia.gov>
 
 	* src/qthread.c: LFQNODE remnant

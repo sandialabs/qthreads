@@ -2,6 +2,8 @@
 Improvements:
  - Documentation
  - Fix GCC 4.4 compiler error
+ - More ROSE support
+ - Better compiler detection
 --- 1.3 ---
 New Features:
  - Optional guard pages, to assist in debugging
