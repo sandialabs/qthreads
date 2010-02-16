@@ -16,9 +16,9 @@ typedef void (*qt_accum_f) (void *restrict a, void *restrict b);
 typedef struct qqloop_handle_s qqloop_handle_t;
 
 void qt_loop(const size_t start, const size_t stop, const size_t stride,
-	     const qthread_f func, void *argptr);
+	     const qt_loop_f func, void *argptr);
 void qt_loop_future(const size_t start, const size_t stop,
-		    const size_t stride, const qthread_f func, void *argptr);
+		    const size_t stride, const qt_loop_f func, void *argptr);
 void qt_loop_balance(const size_t start, const size_t stop,
 		     const qt_loop_f func, void *argptr);
 void qt_loop_balance_future(const size_t start, const size_t stop,
