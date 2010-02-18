@@ -169,8 +169,15 @@ static QINLINE void qthread_debug(int level, char *format, ...)
 			} else {
 			    /* count places */
 			    unsigned places = 0;
+			    uintptr_t tmpnum = num;
 
-			    places = log(num)/log(base);
+			    /* yes, this is dumb, but its guaranteed to take
+			     * less than 10 iterations on 32-bit numbers and
+			     * doesn't involve floating point */
+			    while (tmpnum >= base) {
+				tmpnum /= base;
+				places ++;
+			    }
 			    head += places;
 			    places = 0;
 			    while (num >= base) {
