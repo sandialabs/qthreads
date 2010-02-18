@@ -599,6 +599,18 @@ struct qarray_func_wrapper_args
     volatile aligned_t *donecount;
     const size_t startat, stopat;
 };
+struct qarray_accumfunc_wrapper_args
+{
+    union
+    {
+	qa_loopr_f ql;
+    } func;
+    qt_accum_f acc;
+    qarray *a;
+    void *arg;
+    void *ret;
+    size_t startat, stopat, retsize;
+};
 struct qarray_constfunc_wrapper_args
 {
     const union
@@ -760,6 +772,97 @@ static aligned_t qarray_loop_strider(qthread_t * me,
     return 0;
 }				       /*}}} */
 
+static aligned_t qarray_loopaccum_strider(qthread_t * me,
+				     const struct qarray_accumfunc_wrapper_args
+				     *arg)
+{				       /*{{{ */
+    const size_t max_count = arg->stopat;
+    const size_t segment_size = arg->a->segment_size;
+    const distribution_t dist_type = arg->a->dist_type;
+    size_t count = arg->startat;
+    qthread_shepherd_id_t shep = qthread_shep(me);
+    const qt_accum_f acc = arg->acc;
+    const qa_loopr_f ql = arg->func.ql;
+    char *myret = arg->ret;
+    char *tmpret = NULL;
+    char first = 1;
+
+    if (dist_type == ALL_SAME && shep != arg->a->dist_shep) {
+	goto qarray_loop_strider_exit;
+    }
+    if (count > 0 && qarray_shepof(arg->a, count) != shep) {
+	/* jump to the next segment boundary */
+	count += segment_size - (count % segment_size);
+	if (count >= max_count) {
+	    goto qarray_loop_strider_exit;
+	}
+    }
+    while (qarray_shepof(arg->a, count) != shep) {
+	count += segment_size;
+	if (count >= max_count) {
+	    goto qarray_loop_strider_exit;
+	}
+    }
+    assert(count < max_count);
+    /* at this point...
+     * 1. cursor points to the first element of the array associated with this CPU
+     * 2. count is the index of that element
+     */
+    if (dist_type == ALL_SAME) {
+	ql(me, count, max_count, arg->a, arg->arg, arg->ret);
+	goto qarray_loop_strider_exit;
+    }
+    tmpret = malloc(arg->retsize);
+    assert(tmpret);
+    while (1) {
+	{
+	    const size_t max_offset =
+		((max_count - count) >
+		 segment_size) ? segment_size : (max_count - count);
+	    ql(me, count, count + max_offset, arg->a, arg->arg, tmpret);
+	    if (first) {
+		memcpy(myret, tmpret, arg->retsize);
+		first = 0;
+	    } else {
+		acc(myret, tmpret);
+	    }
+	}
+	switch (dist_type) {
+	    default:
+		/* This should never happen, so deliberately cause a seg fault
+		 * for corefile analysis */
+		*(int *)(0) = 0;
+		break;
+	    case ALL_SAME:
+		count += segment_size;
+		break;
+	    case FIXED_HASH:
+		count += segment_size * qthread_num_shepherds();
+		break;
+	    case DIST:		       /* XXX: this is awful - slow and bad for cache */
+		count += segment_size;
+		if (count >= max_count) {
+		    goto qarray_loop_strider_exit;
+		}
+		while (qarray_shepof(arg->a, count) != shep) {
+		    count += segment_size;
+		    if (count >= max_count) {
+			goto qarray_loop_strider_exit;
+		    }
+		}
+		break;
+	}
+	if (count >= max_count) {
+	    goto qarray_loop_strider_exit;
+	}
+    }
+  qarray_loop_strider_exit:
+    if (tmpret != NULL) {
+	free(tmpret);
+    }
+    return 0;
+}				       /*}}} */
+
 void qarray_iter(qthread_t * me, qarray * a, const size_t startat,
 		 const size_t stopat, qthread_f func)
 {				       /*{{{ */
@@ -908,3 +1011,73 @@ void qarray_iter_constloop(qthread_t * me, const qarray * a,
 	    break;
     }
 }				       /*}}} */
+
+void qarray_iter_loopaccum(qthread_t * me, qarray * a, const size_t startat,
+			   const size_t stopat, qa_loopr_f func, void *arg,
+			   void *ret, const size_t retsize, qt_accum_f acc)
+{				       /*{{{ */
+    qassert_retvoid((a != NULL));
+    qassert_retvoid((func != NULL));
+    qassert_retvoid((startat <= stopat));
+    switch (a->dist_type) {
+	case ALL_SAME:
+	{
+	    struct qarray_accumfunc_wrapper_args qfwa =
+		{ {func}, acc, a, arg, ret, startat, stopat, retsize };
+	    aligned_t r;
+	    qthread_fork_to((qthread_f) qarray_loopaccum_strider, &qfwa, &r,
+			    a->dist_shep);
+	    qthread_readFF(me, &r, &r);
+	}
+	    break;
+	default:
+	    /* it'd be NICE to avoid spawning if not all sheps are represented
+	     * in the range (esp if the range is small), but because of
+	     * DIST_RAND, that's impossible to do without checking all the
+	     * ranges ahead of time. By spawning threads that check their own
+	     * ranges, we essentially parallelize the task of figuring out
+	     * which threads to spawn (bizarre way of thinking about it, I
+	     * know). */
+	    if (stopat - startat < a->segment_size) {
+		aligned_t r;
+		struct qarray_accumfunc_wrapper_args qfwa =
+		    { {func}, acc, a, arg, ret, startat, stopat, retsize };
+		qthread_fork_to((qthread_f) qarray_loopaccum_strider, &qfwa,
+				&r, qarray_shepof(a, startat));
+		qthread_readFF(me, &r, &r);
+	    } else {
+		qthread_shepherd_id_t i;
+		const qthread_shepherd_id_t maxsheps =
+		    qthread_num_shepherds();
+		struct qarray_accumfunc_wrapper_args *qfwa =
+		    malloc(sizeof(struct qarray_accumfunc_wrapper_args) *
+			   maxsheps);
+		char *rets = malloc(retsize * (maxsheps - 1));
+		aligned_t *rv = malloc(sizeof(aligned_t) * maxsheps);
+
+		for (i = 0; i < maxsheps; i++) {
+		    qfwa[i].func.ql = func;
+		    qfwa[i].acc = acc;
+		    qfwa[i].a = a;
+		    qfwa[i].arg = arg;
+		    qfwa[i].startat = startat;
+		    qfwa[i].stopat = stopat;
+		    if (i == 0) {
+			qfwa[i].ret = ret;
+		    } else {
+			qfwa[i].ret = rets + ((i - 1) * retsize);
+		    }
+		    qthread_fork_to((qthread_f) qarray_loopaccum_strider,
+				    &qfwa[i], &rv[i], i);
+		}
+		for (i = 0; i < maxsheps; i++) {
+		    qthread_readFF(me, NULL, &(rv[i]));
+		    if (i > 0) {
+			acc(ret, &rets[i - 1]);
+		    }
+		}
+	    }
+	    break;
+    }
+}				       /*}}} */
+

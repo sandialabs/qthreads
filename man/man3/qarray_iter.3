@@ -28,6 +28,17 @@
 .RI "const size_t " stopat ", qa_loop_f " func ,
 .ti +23
 .RI "void *" arg );
+.PP
+.I void
+.br
+.B qarray_iter_loopaccum
+.RI "(qthread_t *" me ", qarray *" a ", const size_t " startat ,
+.ti +23
+.RI "const size_t " stopat ", qa_loopr_f " func ,
+.ti +23
+.RI "void *" arg ", void *" ret ", const size_t " retsize ,
+.ti +23
+.RI "qt_accum_f " acc );
 .SH DESCRIPTION
 These functions iterate efficiently over the distributed arrays. The most basic
 and naive of the set is
@@ -52,14 +63,20 @@ argument to the
 function is a pointer to an array element.
 .PP
 The
-.BR qarray_iter_loop ()
+.BR qarray_iter_loop (), qarray_iter_constloop (),
 and
+.BR qarray_iter_loopaccum ()
+functions are more powerful iteration functions. They are largely identical, with the following distinctions:
+the
 .BR qarray_iter_constloop ()
-functions are more powerful iteration functions. They are identical to each
-other, except that the
-.BR qarray_iter_constloop ()
-function forbids modifying the input qarray. Both functions iterate over a
-range of values within the qarray, which is defined by the
+function forbids modifying the input qarray, and the
+.BR qarray_iter_loopaccum ()
+function requires an accumulator function,
+.IR acc ,
+and allows the calculation of an accumulated value similar to
+.BR qt_loopaccum_balance ().
+Both functions iterate over a range of values within the qarray, which is
+defined by the
 .I startat
 and
 .I stopat

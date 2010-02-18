@@ -31,6 +31,7 @@ man_MANS = \
 		   qarray_iter.3 \
 		   qarray_iter_constloop.3 \
 		   qarray_iter_loop.3 \
+		   qarray_iter_loopaccum.3 \
 		   qarray_shepof.3 \
 		   qdqueue_create.3 \
 		   qdqueue_dequeue.3 \
