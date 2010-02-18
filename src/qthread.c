@@ -327,8 +327,8 @@ static aligned_t maxconcurrentthreads;
 static aligned_t concurrentthreads;
 # ifdef QTHREAD_MUTEX_INCREMENT
 static QTHREAD_FASTLOCK_TYPE threadcount_lock;
-static QTHREAD_FASTLOCK_TYPE concurrentthreads_lock;
 # endif
+static QTHREAD_FASTLOCK_TYPE concurrentthreads_lock;
 
 #define QTHREAD_COUNT_THREADS_BINCOUNTER(TYPE, BIN) qthread_internal_incr(&qlib->TYPE##_stripes[(BIN)], &qlib->TYPE##_stripes_locks[(BIN)], 1)
 #else
@@ -1647,8 +1647,8 @@ int qthread_initialize(void)
     concurrentthreads = 0;
 # ifdef QTHREAD_MUTEX_INCREMENT
     QTHREAD_FASTLOCK_INIT(threadcount_lock);
-    QTHREAD_FASTLOCK_INIT(concurrentthreads_lock);
 # endif
+    QTHREAD_FASTLOCK_INIT(concurrentthreads_lock);
 #endif
 
     /* initialize the FEB-like locking structures */
@@ -2118,7 +2118,9 @@ int qthread_initialize(void)
 	     qt_threadqueue_new(&(qlib->shepherds[i]));
 	qassert_ret(qlib->shepherds[i].ready, QTHREAD_MALLOC_ERROR);
 #ifdef QTHREAD_LOCK_PROFILING
+# ifdef QTHREAD_MUTEX_INCREMENT
 	qlib->shepherds[i].uniqueincraddrs = qt_hash_create(0);
+# endif
 	qlib->shepherds[i].uniquelockaddrs = qt_hash_create(0);
 	qlib->shepherds[i].uniquefebaddrs = qt_hash_create(0);
 #endif
@@ -2453,8 +2455,8 @@ void qthread_finalize(void)
 	QTHREAD_FASTLOCK_DESTROY(qlib->atomic_locks[i]);
 #endif
 #ifdef QTHREAD_COUNT_THREADS
-	printf("QTHREADS: bin %i used %i/%i times\n", i,
-	       qlib->locks_stripes[i], qlib->febs_stripes[i]);
+	printf("QTHREADS: bin %i used %u/%u times\n", i,
+	       (unsigned int)qlib->locks_stripes[i], (unsigned int)qlib->febs_stripes[i]);
 # ifdef QTHREAD_MUTEX_INCREMENT
 	QTHREAD_FASTLOCK_DESTROY(qlib->locks_stripes_locks[i]);
 	QTHREAD_FASTLOCK_DESTROY(qlib->febs_stripes_locks[i]);
@@ -2478,10 +2480,10 @@ void qthread_finalize(void)
 #ifdef QTHREAD_COUNT_THREADS
     printf("spawned %lu threads, max concurrency %lu\n",
 	   (unsigned long)threadcount, (unsigned long)maxconcurrentthreads);
-#ifdef QTHREAD_MUTEX_INCREMENT
+# ifdef QTHREAD_MUTEX_INCREMENT
     QTHREAD_FASTLOCK_DESTROY(threadcount_lock);
-#endif
-    QTHREAD_DESTROYLOCK(&concurrentthreads_lock);
+# endif
+    QTHREAD_FASTLOCK_DESTROY(concurrentthreads_lock);
 #endif
 
     QTHREAD_FASTLOCK_DESTROY(qlib->max_thread_id_lock);
@@ -3191,11 +3193,11 @@ static void qthread_wrapper(void *ptr)
 	   (size_t)&t < ((size_t)t->stack + qlib->qthread_stack_size));
 #ifdef QTHREAD_COUNT_THREADS
     qthread_internal_incr(&threadcount, &threadcount_lock, 1);
-    qassert(pthread_mutex_lock(&concurrentthreads_lock), 0);
+    QTHREAD_FASTLOCK_LOCK(&concurrentthreads_lock);
     concurrentthreads++;
     if (concurrentthreads > maxconcurrentthreads)
 	maxconcurrentthreads = concurrentthreads;
-    qassert(pthread_mutex_unlock(&concurrentthreads_lock), 0);
+    QTHREAD_FASTLOCK_UNLOCK(&concurrentthreads_lock);
 #endif
     if (t->ret) {
 	/* XXX: if this fails, we should probably do something */
@@ -3206,9 +3208,9 @@ static void qthread_wrapper(void *ptr)
     t->thread_state = QTHREAD_STATE_TERMINATED;
 
 #ifdef QTHREAD_COUNT_THREADS
-    qassert(pthread_mutex_lock(&concurrentthreads_lock), 0);
+    QTHREAD_FASTLOCK_LOCK(&concurrentthreads_lock);
     concurrentthreads--;
-    qassert(pthread_mutex_unlock(&concurrentthreads_lock), 0);
+    QTHREAD_FASTLOCK_UNLOCK(&concurrentthreads_lock);
 #endif
     if (t->flags & QTHREAD_FUTURE) {
 	future_exit(t);
