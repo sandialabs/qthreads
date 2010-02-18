@@ -47,12 +47,13 @@ static QINLINE qthread_shepherd_id_t *qarray_internal_segment_shep(const
 	ptr += 4 - (((uintptr_t) ptr) & 3);
     /* first, do we have the space? */
     qassert_ret((((ptr + sizeof(qthread_shepherd_id_t) - 1) -
-	    (const char *)segment_head) < a->segment_bytes), NULL);
+		  (const char *)segment_head) < a->segment_bytes), NULL);
     return (qthread_shepherd_id_t *) ptr;
 }				       /*}}} */
 
 static inline qthread_shepherd_id_t qarray_internal_shepof_ch(const qarray *
-							      a, const void
+							      a,
+							      const void
 							      *segment_head)
 {				       /*{{{ */
     switch (a->dist_type) {
@@ -94,12 +95,12 @@ static inline qthread_shepherd_id_t qarray_internal_shepof_shi(const qarray *
 }				       /*}}} */
 
 static void qarray_free_cdt(void)
-{/*{{{*/
+{				       /*{{{ */
     if (chunk_distribution_tracker != NULL) {
 	free(chunk_distribution_tracker);
 	chunk_distribution_tracker = NULL;
     }
-}/*}}}*/
+}				       /*}}} */
 
 static qarray *qarray_create_internal(const size_t count,
 				      const size_t obj_size,
@@ -123,8 +124,7 @@ static qarray *qarray_create_internal(const size_t count,
     pagesize = 1 << pageshift;
 
     if (chunk_distribution_tracker == NULL) {
-	aligned_t *tmp =
-	    calloc(qthread_num_shepherds(), sizeof(aligned_t));
+	aligned_t *tmp = calloc(qthread_num_shepherds(), sizeof(aligned_t));
 	qassert_ret((tmp != NULL), NULL);
 	if (qthread_cas_ptr(&(chunk_distribution_tracker), NULL, tmp) != NULL) {
 	    free(tmp);
@@ -302,8 +302,8 @@ static qarray *qarray_create_internal(const size_t count,
     ret->base_ptr =
 	(char *)memalign(pagesize, segment_count * ret->segment_bytes);
 # elif HAVE_POSIX_MEMALIGN
-    posix_memalign((void**)&(ret->base_ptr), pagesize,
-	    segment_count * ret->segment_bytes);
+    posix_memalign((void **)&(ret->base_ptr), pagesize,
+		   segment_count * ret->segment_bytes);
 # elif HAVE_PAGE_ALIGNED_MALLOC
     ret->base_ptr = (char *)malloc(segment_count * ret->segment_bytes);
 # else
@@ -537,7 +537,7 @@ void qarray_destroy(qarray * a)
 #ifdef QTHREAD_HAVE_LIBNUMA
     numa_free(a->base_ptr,
 	      a->segment_bytes * (a->count / a->segment_size +
-	       ((a->count % a->segment_size) ? 1 : 0)));
+				  ((a->count % a->segment_size) ? 1 : 0)));
 #elif (HAVE_WORKING_VALLOC || HAVE_MEMALIGN || HAVE_POSIX_MEMALIGN || HAVE_PAGE_ALIGNED_MALLOC)
     /* avoid freeing base ptr if we had to use a broken valloc */
     free(a->base_ptr);
@@ -564,7 +564,8 @@ qthread_shepherd_id_t qarray_shepof(const qarray * a, const size_t index)
     }
 }				       /*}}} */
 
-void *qarray_elem_migrate(qthread_t * me, const qarray * a, const size_t index)
+void *qarray_elem_migrate(qthread_t * me, const qarray * a,
+			  const size_t index)
 {				       /*{{{ */
     void *ret;
     qthread_shepherd_id_t dest;
@@ -586,8 +587,10 @@ void *qarray_elem_migrate(qthread_t * me, const qarray * a, const size_t index)
     return ret;
 }				       /*}}} */
 
-struct qarray_func_wrapper_args {
-    union {
+struct qarray_func_wrapper_args
+{
+    union
+    {
 	qa_loop_f ql;
 	qthread_f qt;
     } func;
@@ -596,8 +599,10 @@ struct qarray_func_wrapper_args {
     volatile aligned_t *donecount;
     const size_t startat, stopat;
 };
-struct qarray_constfunc_wrapper_args {
-    const union {
+struct qarray_constfunc_wrapper_args
+{
+    const union
+    {
 	qa_cloop_f ql;
 	qthread_f qt;
     } func;
@@ -645,7 +650,7 @@ static aligned_t qarray_strider(qthread_t * me,
 	for (inpage_offset = 0; inpage_offset < max_offset; inpage_offset++) {
 	    void *ptr = qarray_elem_nomigrate(arg->a, count + inpage_offset);
 
-	    assert(ptr != NULL); // aka internal error
+	    assert(ptr != NULL);       // aka internal error
 	    arg->func.qt(me, ptr);
 	}
 	switch (dist_type) {
@@ -678,7 +683,8 @@ static aligned_t qarray_strider(qthread_t * me,
     return 0;
 }				       /*}}} */
 
-static aligned_t qarray_loop_strider(qthread_t * me, const struct qarray_func_wrapper_args
+static aligned_t qarray_loop_strider(qthread_t * me,
+				     const struct qarray_func_wrapper_args
 				     *arg)
 {				       /*{{{ */
     const size_t max_count = arg->stopat;
