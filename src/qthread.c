@@ -1652,7 +1652,7 @@ int qthread_initialize(void)
 #endif
 
     /* initialize the FEB-like locking structures */
-#ifdef QTHREAD_MUTEX_INCREMENT
+#if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
     qlib->atomic_locks = malloc(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
     qassert_ret(qlib->atomic_locks, QTHREAD_MALLOC_ERROR);
 #endif
@@ -1673,7 +1673,7 @@ int qthread_initialize(void)
     qlib->FEBs = malloc(sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
     qassert_ret(qlib->FEBs, QTHREAD_MALLOC_ERROR);
     for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
-#ifdef QTHREAD_MUTEX_INCREMENT
+#if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
 	QTHREAD_FASTLOCK_INIT(qlib->atomic_locks[i]);
 #endif
 #ifdef QTHREAD_COUNT_THREADS
@@ -2451,7 +2451,7 @@ void qthread_finalize(void)
 	qt_hash_destroy_deallocate(qlib->FEBs[i],
 				   (qt_hash_deallocator_fn)
 				   qthread_addrstat_delete);
-#ifdef QTHREAD_MUTEX_INCREMENT
+#if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
 	QTHREAD_FASTLOCK_DESTROY(qlib->atomic_locks[i]);
 #endif
 #ifdef QTHREAD_COUNT_THREADS
@@ -2465,7 +2465,7 @@ void qthread_finalize(void)
     }
     free(qlib->locks);
     free(qlib->FEBs);
-#ifdef QTHREAD_MUTEX_INCREMENT
+#if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
     free(qlib->atomic_locks);
 #endif
 #ifdef QTHREAD_COUNT_THREADS
