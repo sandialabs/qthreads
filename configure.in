@@ -425,45 +425,8 @@ AS_IF([test "x$qthread_implementation" = "xunix"], [
       AC_DEFINE([__MAKECONTEXT_V2_SOURCE], [1], [force the Sun makecontext to behave correctly])
     ;;
   esac
-  AS_IF([test "x$ac_cv_func_getcontext" = "xyes"], [
-	QTHREAD_CHECK_UCSTACK_SSFLAGS([AC_DEFINE([QTHREAD_UCSTACK_HAS_SSFLAGS],[1],[the uc_stack structure in ucontext_t has an ss_flags structure that needs to be initialized])])
-	AC_MSG_CHECKING([if swapcontext works])
-	# On OSX 10.5.x, for example, the system-provided swapcontext doesn't work
-	AC_RUN_IFELSE(
-		[AC_LANG_SOURCE([[
-#include <ucontext.h>
-#include <stdlib.h>
-ucontext_t child, parent;
-int comparison = 0;
-void inout(void *junk) { comparison = (junk != NULL); }
-int main() {
-	char *stack = malloc(1024*1024*16);
-	getcontext(&child);
-	getcontext(&parent);
-	child.uc_stack.ss_sp = stack + 1024*1024*8;
-	child.uc_stack.ss_size = 1024*1024*8 - 64;
-#ifdef QTHREAD_UCSTACK_HAS_SSFLAGS
-	child.uc_stack.ss_flags = 0;
-#endif
-	child.uc_link = &parent;
-	makecontext(&child, (void(*)(void))inout, 1, 0);
-	if (swapcontext(&parent, &child) != 0) return 1;
-	if (comparison) return 1;
-	return 0;
-}]])],
-		[AC_MSG_RESULT(yes)
-		AC_DEFINE([HAVE_NATIVE_MAKECONTEXT], [1], [The system provides native (proper) make/swap/get-contect functions])
-		QTHREAD_CHECK_MAKECONTEXT_SPLIT_ARGS(
-      		[AC_DEFINE([QTHREAD_MAKECONTEXT_SPLIT], [1], [makecontext() passes args as int-sized, not long-sized])])
-		qthread_makecontext_type="native"],
-		[AC_MSG_RESULT(no)
-		 QTHREAD_CHECK_COMPAT_MAKECONTEXT([qthread_makecontext_type="own"])],
-		[AC_MSG_RESULT(cross-compile assumes no)
-		 QTHREAD_CHECK_COMPAT_MAKECONTEXT([qthread_makecontext_type="own"])
-		 qthread_makecontext_type="own"])
-  ], [
-    QTHREAD_CHECK_COMPAT_MAKECONTEXT([qthread_makecontext_type="own"])
-  ])
+  QTHREAD_CHECK_SWAPCONTEXT([qthread_makecontext_type="native"],
+							[qthread_makecontext_type="own"])
 
   AS_IF([test "x$qthread_makecontext_type" = "xnone"], 
         [AC_MSG_ERROR([Can not find working makecontext.])])
