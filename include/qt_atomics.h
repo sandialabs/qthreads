@@ -86,6 +86,19 @@ static QINLINE void* qt_cas(void*volatile* const ptr, void* const oldv, void* co
 	    :"r"(oldv), "r"(newv), "r"(ptr)
 	    :"cc", "memory");
     return result;
+#  elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
+    void* result;
+    __asm__ __volatile__ ("1:\n\t"
+	    "ldarx  %0,0,%3\n\t"
+	    "cmpw   %0,%1\n\t"
+	    "bne    2f\n\t"
+	    "stdcx. %2,0,%3\n\t"
+	    "bne-   1b\n"
+	    "2:"
+	    :"=&b" (result)
+	    :"r"(oldv), "r"(newv), "r"(ptr)
+	    :"cc", "memory");
+    return result;
 #  elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
     void *nv = newv;
     __asm__ __volatile__
