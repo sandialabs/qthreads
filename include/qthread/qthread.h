@@ -75,7 +75,7 @@ Q_ENDCXX /* */
 
 Q_STARTCXX /* */
 typedef struct qthread_s qthread_t;
-typedef unsigned short qthread_shepherd_id_t;	/* doubt we'll run more than 65k shepherds */
+typedef unsigned int qthread_shepherd_id_t;
 
 /* for convenient arguments to qthread_fork */
 typedef aligned_t(*qthread_f) (qthread_t * me, void *arg);
