@@ -6,7 +6,7 @@
 #include "qtimer.h"
 #include "argparsing.h"
 
-#define ITERATIONS 10
+size_t ITERATIONS = 10;
 size_t ELEMENT_COUNT = 100000;
 
 typedef struct
@@ -23,7 +23,7 @@ typedef struct
 static void assign1_loop(qthread_t * me, const size_t startat,
 			 const size_t stopat, qarray * qa, void *arg)
 {
-    double *ptr = qarray_elem_nomigrate(qa, startat);
+    double *ptr = (double *)qarray_elem_nomigrate(qa, startat);
     const size_t max = stopat - startat;
 
     for (size_t i = 0; i < max; i++) {
@@ -34,7 +34,7 @@ static void assign1_loop(qthread_t * me, const size_t startat,
 static void assert1_loop(qthread_t * me, const size_t startat,
 			 const size_t stopat, qarray * qa, void *arg)
 {
-    const double *ptr = qarray_elem_nomigrate(qa, startat);
+    const double *ptr = (const double *)qarray_elem_nomigrate(qa, startat);
     size_t max = stopat - startat;
 
     for (size_t i = 0; i < max; i++) {
@@ -46,7 +46,7 @@ static void assignall1_loop(qthread_t * me, const size_t startat,
 			    const size_t stopat, qarray * qa, void *arg)
 {
     for (size_t i = startat; i < stopat; i++) {
-	char *ptr = qarray_elem_nomigrate(qa, i);
+	char *ptr = (char *)qarray_elem_nomigrate(qa, i);
 
 	memset(ptr, 1, sizeof(bigobj));
     }
@@ -55,11 +55,11 @@ static void assignall1_loop(qthread_t * me, const size_t startat,
 static void assertall1_loop(qthread_t * me, const size_t startat,
 			    const size_t stopat, qarray * qa, void *arg)
 {
-    bigobj *example = malloc(sizeof(bigobj));
+    bigobj *example = (bigobj *) malloc(sizeof(bigobj));
 
     memset(example, 1, sizeof(bigobj));
     for (size_t i = startat; i < stopat; i++) {
-	char *ptr = qarray_elem_nomigrate(qa, i);
+	char *ptr = (char *)qarray_elem_nomigrate(qa, i);
 
 	assert(memcmp(ptr, example, sizeof(bigobj)) == 0);
     }
@@ -70,7 +70,7 @@ static void assignoff1(qthread_t * me, const size_t startat,
 		       const size_t stopat, qarray * qa, void *arg)
 {
     for (size_t i = startat; i < stopat; i++) {
-	char *ptr = qarray_elem_nomigrate(qa, i);
+	char *ptr = (char *)qarray_elem_nomigrate(qa, i);
 
 	memset(ptr, 1, sizeof(offsize));
     }
@@ -79,11 +79,11 @@ static void assignoff1(qthread_t * me, const size_t startat,
 static void assertoff1(qthread_t * me, const size_t startat,
 		       const size_t stopat, qarray * qa, void *arg)
 {
-    offsize *example = malloc(sizeof(offsize));
+    offsize *example = (offsize *) malloc(sizeof(offsize));
 
     memset(example, 1, sizeof(offsize));
     for (size_t i = startat; i < stopat; i++) {
-	char *ptr = qarray_elem_nomigrate(qa, i);
+	char *ptr = (char *)qarray_elem_nomigrate(qa, i);
 
 	assert(memcmp(ptr, example, sizeof(offsize)) == 0);
     }
@@ -95,20 +95,25 @@ int main(int argc, char *argv[])
     qthread_t *me;
     qtimer_t timer = qtimer_new();
     distribution_t disttypes[] = {
-	FIXED_HASH, ALL_LOCAL, /*ALL_RAND, ALL_LEAST, */ DIST_RAND,
+	FIXED_HASH, FIXED_FIELDS, ALL_LOCAL,	/*ALL_RAND, ALL_LEAST, */
+	DIST_RAND,
 	DIST_REG_STRIPES, DIST_REG_FIELDS, DIST_LEAST
     };
     const char *distnames[] = {
-	"FIXED_HASH", "ALL_LOCAL", /*"ALL_RAND", "ALL_LEAST", */ "DIST_RAND",
+	"FIXED_HASH", "FIXED_FIELDS", "ALL_LOCAL",
+	/*"ALL_RAND", "ALL_LEAST", */ "DIST_RAND",
 	"DIST_REG_STRIPES", "DIST_REG_FIELDS", "DIST_LEAST", "SERIAL"
     };
     unsigned int dt_index;
+    unsigned int num_dists =
+	sizeof(disttypes) / sizeof(distribution_t) + 1 /* serial */ ;
     int enabled_tests = 7;
-    int enabled_types = 255;
+    int enabled_types = (1 << num_dists) - 1;
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
 
     verbose = 1;
+    NUMARG(ITERATIONS, "ITERATIONS");
     NUMARG(ELEMENT_COUNT, "TEST_ELEMENT_COUNT");
     NUMARG(enabled_tests, "TEST_ENABLED_TESTS");
     NUMARG(enabled_types, "TEST_ENABLED_TYPES");
@@ -118,12 +123,12 @@ int main(int argc, char *argv[])
     printf("Using %i shepherds\n", qthread_num_shepherds());
     printf("Arrays of %lu objects...\n", (unsigned long)ELEMENT_COUNT);
 
-    if (enabled_types & 0x1) {
+    if (enabled_types & 1) {
 	printf("SERIAL:\n");
 	if (enabled_tests & 1) {
 	    size_t i, j;
 	    double acctime = 0.0;
-	    double *a = calloc(ELEMENT_COUNT, sizeof(double));
+	    double *a = (double *)calloc(ELEMENT_COUNT, sizeof(double));
 
 	    assert(a != NULL);
 
@@ -149,8 +154,8 @@ int main(int argc, char *argv[])
 	    printf("%f secs\n", acctime / ITERATIONS);
 	}
 	if (enabled_tests & 2) {
-	    bigobj *a = calloc(ELEMENT_COUNT, sizeof(bigobj));
-	    bigobj *b = malloc(sizeof(bigobj));
+	    bigobj *a = (bigobj *) calloc(ELEMENT_COUNT, sizeof(bigobj));
+	    bigobj *b = (bigobj *) malloc(sizeof(bigobj));
 	    size_t i, j;
 	    double acc = 0.0;
 
@@ -180,8 +185,8 @@ int main(int argc, char *argv[])
 	    printf("%f secs\n", acc / ITERATIONS);
 	}
 	if (enabled_tests & 4) {
-	    offsize *a = calloc(ELEMENT_COUNT, sizeof(offsize));
-	    offsize *b = malloc(sizeof(offsize));
+	    offsize *a = (offsize *) calloc(ELEMENT_COUNT, sizeof(offsize));
+	    offsize *b = (offsize *) malloc(sizeof(offsize));
 	    size_t i, j;
 	    double acc = 0.0;
 
@@ -216,7 +221,7 @@ int main(int argc, char *argv[])
     for (dt_index = 0;
 	 dt_index < (sizeof(disttypes) / sizeof(distribution_t));
 	 dt_index++) {
-	if ((enabled_types & 1 << (dt_index + 1)) == 0)
+	if ((enabled_types & (1 << (dt_index + 1))) == 0)
 	    continue;
 	printf("%s:\n", distnames[dt_index]);
 	/* test a basic array of doubles */
