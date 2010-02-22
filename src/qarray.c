@@ -51,6 +51,8 @@ static QINLINE qthread_shepherd_id_t *qarray_internal_segment_shep(const
     return (qthread_shepherd_id_t *) ptr;
 }				       /*}}} */
 
+/* this function returns the shepherd that owns a given segment, specified by
+ * the pointer to the segment's first element */
 static inline qthread_shepherd_id_t qarray_internal_shepof_ch(const qarray *
 							      a,
 							      const void
@@ -58,7 +60,13 @@ static inline qthread_shepherd_id_t qarray_internal_shepof_ch(const qarray *
 {				       /*{{{ */
     switch (a->dist_type) {
 	case ALL_SAME:
-	    return a->dist_shep;
+	    return a->dist_specific.dist_shep;
+	case FIXED_FIELDS:
+	    {
+		const size_t bytes_in = (uintptr_t)segment_head - (uintptr_t)a->base_ptr;
+		const size_t segments_in = bytes_in / a->segment_bytes;
+		return segments_in / a->dist_specific.segs_per_shep;
+	    }
 	case FIXED_HASH:
 	default:
 	    return (qthread_shepherd_id_t) (((((uintptr_t) segment_head) -
@@ -71,6 +79,8 @@ static inline qthread_shepherd_id_t qarray_internal_shepof_ch(const qarray *
     }
 }				       /*}}} */
 
+/* this function returns the shepherd that owns a given segment, specified by
+ * the index of the first element in the segment */
 static inline qthread_shepherd_id_t qarray_internal_shepof_shi(const qarray *
 							       a,
 							       const size_t
@@ -78,7 +88,12 @@ static inline qthread_shepherd_id_t qarray_internal_shepof_shi(const qarray *
 {				       /*{{{ */
     switch (a->dist_type) {
 	case ALL_SAME:
-	    return a->dist_shep;
+	    return a->dist_specific.dist_shep;
+	case FIXED_FIELDS:
+	    {
+		const size_t segments_in = shi / a->segment_size;
+		return segments_in / a->dist_specific.segs_per_shep;
+	    }
 	case FIXED_HASH:
 	    return (qthread_shepherd_id_t) ((shi / a->segment_size) %
 					    qthread_num_shepherds());
@@ -149,7 +164,7 @@ static qarray *qarray_create_internal(const size_t count,
      * elsewhere in qthreads). Each segment can have its own shepherd. Which
      * shepherd a segment is assigned to is stored in the segment itself
      * (otherwise we'd have to use a hash table, and we'd lose all our cache
-     * benefits). In SOME cases, such as FIXED_HASH and ALL_SAME, this is
+     * benefits). In SOME cases, such as FIXED_* and ALL_SAME, this is
      * unnecessary, so we can be a little more efficient with things by NOT
      * storing a shepherd ID in the segments. */
     /***************************
@@ -160,6 +175,7 @@ static qarray *qarray_create_internal(const size_t count,
 	case ALL_RAND:
 	case ALL_LEAST:
 	case ALL_SAME:		       /* assumed equivalent to ALL_LOCAL */
+	case FIXED_FIELDS:
 	case FIXED_HASH:
 	default:
 	    if (seg_pages == 0) {
@@ -217,6 +233,9 @@ static qarray *qarray_create_internal(const size_t count,
 	case ALL_SAME:
 	    ret->dist_type = ALL_SAME;
 	    break;
+	case FIXED_FIELDS:
+	    ret->dist_type = FIXED_FIELDS;
+	    break;
 	case FIXED_HASH:
 	default:
 	    ret->dist_type = FIXED_HASH;
@@ -233,18 +252,18 @@ static qarray *qarray_create_internal(const size_t count,
     segment_count =
 	count / ret->segment_size + ((count % ret->segment_size) ? 1 : 0);
 
-    /* figure out dist_shep */
+    /* figure out dist_specific data */
     switch (d) {
 	case ALL_SAME:
 	case ALL_LOCAL:
-	    ret->dist_shep = qthread_shep(NULL);
-	    qthread_incr(&chunk_distribution_tracker[ret->dist_shep],
+	    ret->dist_specific.dist_shep = qthread_shep(NULL);
+	    qthread_incr(&chunk_distribution_tracker[ret->dist_specific.dist_shep],
 			 segment_count);
 	    break;
 	case ALL_RAND:
-	    ret->dist_shep = (qthread_shepherd_id_t) random();
-	    ret->dist_shep = (qthread_shepherd_id_t) qthread_num_shepherds();
-	    qthread_incr(&chunk_distribution_tracker[ret->dist_shep],
+	    ret->dist_specific.dist_shep = (qthread_shepherd_id_t) random();
+	    ret->dist_specific.dist_shep %= (qthread_shepherd_id_t) qthread_num_shepherds();
+	    qthread_incr(&chunk_distribution_tracker[ret->dist_specific.dist_shep],
 			 segment_count);
 	    break;
 	case ALL_LEAST:
@@ -257,12 +276,15 @@ static qarray *qarray_create_internal(const size_t count,
 		    least = i;
 		}
 	    }
-	    ret->dist_shep = least;
+	    ret->dist_specific.dist_shep = least;
 	    qthread_incr(&chunk_distribution_tracker[least], segment_count);
 	}
 	    break;
+	case FIXED_HASH:
+	    ret->dist_specific.segs_per_shep = segment_count / qthread_num_shepherds();
+	    break;
 	default:
-	    ret->dist_shep = NO_SHEPHERD;
+	    ret->dist_specific.dist_shep = NO_SHEPHERD;
     }
 #ifdef QTHREAD_HAVE_LIBNUMA
     switch (d) {
@@ -271,13 +293,14 @@ static qarray *qarray_create_internal(const size_t count,
 	case ALL_LEAST:
 	case ALL_SAME:
 	default:
-	    if (qthread_internal_shep_to_node(ret->dist_shep) ==
+	    if (qthread_internal_shep_to_node(ret->dist_specific.dist_shep) ==
 		QTHREAD_NO_NODE) {
 	case DIST_REG_STRIPES:
 	case DIST_REG_FIELDS:
 	case DIST_RAND:
 	case DIST_LEAST:
 	case DIST:
+	case FIXED_FIELDS:
 	case FIXED_HASH:
 		ret->base_ptr =
 		    (char *)numa_alloc(segment_count * ret->segment_bytes);
@@ -287,7 +310,7 @@ static qarray *qarray_create_internal(const size_t count,
 		    (char *)numa_alloc_onnode(segment_count *
 					      ret->segment_bytes,
 					      qthread_internal_shep_to_node
-					      (ret->dist_shep));
+					      (ret->dist_specific.dist_shep));
 	    }
 	    break;
     }
@@ -317,28 +340,32 @@ static qarray *qarray_create_internal(const size_t count,
      * Assign locations, maintain segment_count *
      ********************************************/
     switch (d) {
+	case FIXED_FIELDS:
 	case FIXED_HASH:
 	default:
 	{
-	    size_t segment;
+	    size_t segment, target_shep;
 
 	    for (segment = 0; segment < segment_count; segment++) {
+		if (d == FIXED_HASH) {
+		    target_shep = segment % qthread_num_shepherds();
+		} else if (d == FIXED_FIELDS) {
+		    target_shep = segment / ret->dist_specific.segs_per_shep;
+		} else if (ret->dist_type == ALL_SAME) {
+		    target_shep = ret->dist_specific.dist_shep;
+		}
 #ifdef QTHREAD_HAVE_LIBNUMA
-		if (qthread_internal_shep_to_node
-		    (segment % qthread_num_shepherds()) !=
-		    (unsigned int)(-1)) {
+		/* make sure this shep has a node; if it does, put this segment there */
+		unsigned int target_node = qthread_internal_shep_to_node(target_shep);
+		if (target_node != (unsigned int)(-1)) {
 		    char *seghead = qarray_elem_nomigrate(ret,
 							  segment *
 							  ret->segment_size);
 		    numa_tonode_memory(seghead, ret->segment_bytes,
-				       qthread_internal_shep_to_node(segment %
-								     qthread_num_shepherds
-								     ()));
+				       target_node);
 		}
 #endif
-		qthread_incr(&chunk_distribution_tracker
-			     [qarray_internal_shepof_shi
-			      (ret, segment * ret->segment_size)], 1);
+		qthread_incr(&chunk_distribution_tracker[target_shep], 1);
 	    }
 	}
 	    break;
@@ -515,6 +542,7 @@ void qarray_destroy(qarray * a)
 	}
 	    break;
 	default:
+	case FIXED_FIELDS:
 	case FIXED_HASH:
 	{
 	    size_t segment;
@@ -529,7 +557,7 @@ void qarray_destroy(qarray * a)
 	}
 	    break;
 	case ALL_SAME:
-	    qthread_incr(&chunk_distribution_tracker[a->dist_shep],
+	    qthread_incr(&chunk_distribution_tracker[a->dist_specific.dist_shep],
 			 -1 * (a->count / a->segment_size +
 			       ((a->count % a->segment_size) ? 1 : 0)));
 	    break;
@@ -551,7 +579,8 @@ qthread_shepherd_id_t qarray_shepof(const qarray * a, const size_t index)
     qassert_ret((index < a->count), NO_SHEPHERD);
     switch (a->dist_type) {
 	case ALL_SAME:
-	    return a->dist_shep;
+	    return a->dist_specific.dist_shep;
+	case FIXED_FIELDS:
 	case FIXED_HASH:
 	case DIST:
 	default:
@@ -627,27 +656,56 @@ struct qarray_constfunc_wrapper_args
 static aligned_t qarray_strider(qthread_t * me,
 				const struct qarray_func_wrapper_args *arg)
 {				       /*{{{ */
-    const size_t max_count = arg->stopat;
     const size_t segment_size = arg->a->segment_size;
     const distribution_t dist_type = arg->a->dist_type;
+    const qthread_shepherd_id_t shep = qthread_shep(me);
+    size_t max_count = arg->stopat;
     size_t count = arg->startat;
-    qthread_shepherd_id_t shep = qthread_shep(me);
 
-    if (dist_type == ALL_SAME && shep != arg->a->dist_shep) {
-	goto qarray_strider_exit;
-    }
-    if (count > 0 && qarray_shepof(arg->a, count) != shep) {
-	/* jump to the next segment boundary */
-	count += segment_size - (count % segment_size);
-	if (count >= max_count) {
-	    goto qarray_strider_exit;
-	}
-    }
-    while (qarray_shepof(arg->a, count) != shep) {
-	count += segment_size;
-	if (count >= max_count) {
-	    goto qarray_strider_exit;
-	}
+    /* all striders get the same count/max_count, so we have to find our own
+     * starting point based on this thread's shep */
+    switch (dist_type) {
+	case ALL_SAME:
+	    if (shep != arg->a->dist_specific.dist_shep) {
+		goto qarray_strider_exit;
+	    } break;
+	case FIXED_FIELDS:
+	    {
+		qthread_shepherd_id_t start_shep = qarray_shepof(arg->a, count);
+		qthread_shepherd_id_t stop_shep = qarray_shepof(arg->a, max_count-1);
+		if (shep < start_shep || shep > stop_shep) {
+		    goto qarray_strider_exit;
+		}
+		if (shep != start_shep) {
+		    /* count isn't *my* starting point, but I am within the
+		     * range of interest, so find my starting point. */
+		    /* this relies on sheps being zero-indexed */
+		    count = shep * segment_size * arg->a->dist_specific.segs_per_shep;
+		}
+		{
+		    size_t last_count_on_my_shep = ((shep+1)*segment_size *
+			    arg->a->dist_specific.segs_per_shep)-1;
+		    if (max_count > last_count_on_my_shep) {
+			max_count = last_count_on_my_shep;
+		    }
+		}
+	    }
+	    break;
+	default: // use this when our starting point is somewhat unpredictable
+	    if (count > 0 && qarray_shepof(arg->a, count) != shep) {
+		/* jump to the next segment boundary */
+		count += segment_size - (count % segment_size);
+		if (count >= max_count) {
+		    goto qarray_strider_exit;
+		}
+	    }
+	    while (qarray_shepof(arg->a, count) != shep) {
+		count += segment_size;
+		if (count >= max_count) {
+		    goto qarray_strider_exit;
+		}
+	    }
+	    break;
     }
     /* at this point...
      * 1. cursor points to the first element of the array associated with this CPU
@@ -666,6 +724,7 @@ static aligned_t qarray_strider(qthread_t * me,
 	    arg->func.qt(me, ptr);
 	}
 	switch (dist_type) {
+	    case FIXED_FIELDS:
 	    case ALL_SAME:
 		count += segment_size;
 		break;
@@ -699,37 +758,71 @@ static aligned_t qarray_loop_strider(qthread_t * me,
 				     const struct qarray_func_wrapper_args
 				     *arg)
 {				       /*{{{ */
-    const size_t max_count = arg->stopat;
     const size_t segment_size = arg->a->segment_size;
     const distribution_t dist_type = arg->a->dist_type;
+    const qthread_shepherd_id_t shep = qthread_shep(me);
+    size_t max_count = arg->stopat;
     size_t count = arg->startat;
-    qthread_shepherd_id_t shep = qthread_shep(me);
     const qa_loop_f ql = arg->func.ql;
 
-    if (dist_type == ALL_SAME && shep != arg->a->dist_shep) {
-	goto qarray_loop_strider_exit;
-    }
-    if (count > 0 && qarray_shepof(arg->a, count) != shep) {
-	/* jump to the next segment boundary */
-	count += segment_size - (count % segment_size);
-	if (count >= max_count) {
-	    goto qarray_loop_strider_exit;
-	}
-    }
-    while (qarray_shepof(arg->a, count) != shep) {
-	count += segment_size;
-	if (count >= max_count) {
-	    goto qarray_loop_strider_exit;
-	}
+    /* all striders get the same count/max_count, so we have to find our own
+     * starting point based on this thread's shep */
+    switch (dist_type) {
+	case ALL_SAME:
+	    if (shep != arg->a->dist_specific.dist_shep) {
+		goto qarray_loop_strider_exit;
+	    } break;
+	case FIXED_FIELDS:
+	    {
+		qthread_shepherd_id_t start_shep = qarray_shepof(arg->a, count);
+		qthread_shepherd_id_t stop_shep = qarray_shepof(arg->a, max_count-1);
+		if (shep < start_shep || shep > stop_shep) {
+		    goto qarray_loop_strider_exit;
+		}
+		if (shep != start_shep) {
+		    /* count isn't *my* starting point, but I am within the
+		     * range of interest, so find my starting point. */
+		    /* this relies on sheps being zero-indexed */
+		    count = shep * segment_size * arg->a->dist_specific.segs_per_shep;
+		}
+		{
+		    size_t last_count_on_my_shep = ((shep+1)*segment_size *
+			    arg->a->dist_specific.segs_per_shep)-1;
+		    if (max_count > last_count_on_my_shep) {
+			max_count = last_count_on_my_shep;
+		    }
+		}
+	    }
+	    break;
+	default:
+	    if (count > 0 && qarray_shepof(arg->a, count) != shep) {
+		/* jump to the next segment boundary */
+		count += segment_size - (count % segment_size);
+		if (count >= max_count) {
+		    goto qarray_loop_strider_exit;
+		}
+	    }
+	    while (qarray_shepof(arg->a, count) != shep) {
+		count += segment_size;
+		if (count >= max_count) {
+		    goto qarray_loop_strider_exit;
+		}
+	    }
     }
     assert(count < max_count);
     /* at this point...
      * 1. cursor points to the first element of the array associated with this CPU
      * 2. count is the index of that element
      */
-    if (dist_type == ALL_SAME) {
-	ql(me, count, max_count, arg->a, arg->arg);
-	goto qarray_loop_strider_exit;
+    switch (dist_type) {
+	/* special case: all the work is contiguous, so we can hand it to the
+	 * loop function directly */
+	case ALL_SAME:
+	case FIXED_FIELDS:
+	    ql(me, count, max_count, arg->a, arg->arg);
+	    goto qarray_loop_strider_exit;
+	default: /* aka NOT the special case */
+	    break;
     }
     while (1) {
 	{
@@ -743,9 +836,6 @@ static aligned_t qarray_loop_strider(qthread_t * me,
 		/* This should never happen, so deliberately cause a seg fault
 		 * for corefile analysis */
 		*(int *)(0) = 0;
-		break;
-	    case ALL_SAME:
-		count += segment_size;
 		break;
 	    case FIXED_HASH:
 		count += segment_size * qthread_num_shepherds();
@@ -776,41 +866,73 @@ static aligned_t qarray_loopaccum_strider(qthread_t * me,
 				     const struct qarray_accumfunc_wrapper_args
 				     *arg)
 {				       /*{{{ */
-    const size_t max_count = arg->stopat;
     const size_t segment_size = arg->a->segment_size;
     const distribution_t dist_type = arg->a->dist_type;
-    size_t count = arg->startat;
-    qthread_shepherd_id_t shep = qthread_shep(me);
+    const qthread_shepherd_id_t shep = qthread_shep(me);
     const qt_accum_f acc = arg->acc;
     const qa_loopr_f ql = arg->func.ql;
+    size_t max_count = arg->stopat;
+    size_t count = arg->startat;
     char *myret = arg->ret;
     char *tmpret = NULL;
     char first = 1;
 
-    if (dist_type == ALL_SAME && shep != arg->a->dist_shep) {
-	goto qarray_loop_strider_exit;
-    }
-    if (count > 0 && qarray_shepof(arg->a, count) != shep) {
-	/* jump to the next segment boundary */
-	count += segment_size - (count % segment_size);
-	if (count >= max_count) {
-	    goto qarray_loop_strider_exit;
-	}
-    }
-    while (qarray_shepof(arg->a, count) != shep) {
-	count += segment_size;
-	if (count >= max_count) {
-	    goto qarray_loop_strider_exit;
-	}
+    switch (dist_type) {
+	case ALL_SAME:
+	    if (shep != arg->a->dist_specific.dist_shep) {
+		goto qarray_loop_strider_exit;
+	    } break;
+	case FIXED_FIELDS:
+	    {
+		qthread_shepherd_id_t start_shep = qarray_shepof(arg->a, count);
+		qthread_shepherd_id_t stop_shep = qarray_shepof(arg->a, max_count-1);
+		if (shep < start_shep || shep > stop_shep) {
+		    goto qarray_loop_strider_exit;
+		}
+		if (shep != start_shep) {
+		    /* count isn't *my* starting point, but I am within the
+		     * range of interest, so find my starting point. */
+		    /* this relies on sheps being zero-indexed */
+		    count = shep * segment_size * arg->a->dist_specific.segs_per_shep;
+		}
+		{
+		    size_t last_count_on_my_shep = ((shep+1)*segment_size *
+			    arg->a->dist_specific.segs_per_shep)-1;
+		    if (max_count > last_count_on_my_shep) {
+			max_count = last_count_on_my_shep;
+		    }
+		}
+	    }
+	    break;
+	default:
+	    if (count > 0 && qarray_shepof(arg->a, count) != shep) {
+		/* jump to the next segment boundary */
+		count += segment_size - (count % segment_size);
+		if (count >= max_count) {
+		    goto qarray_loop_strider_exit;
+		}
+	    }
+	    while (qarray_shepof(arg->a, count) != shep) {
+		count += segment_size;
+		if (count >= max_count) {
+		    goto qarray_loop_strider_exit;
+		}
+	    }
     }
     assert(count < max_count);
     /* at this point...
      * 1. cursor points to the first element of the array associated with this CPU
      * 2. count is the index of that element
      */
-    if (dist_type == ALL_SAME) {
-	ql(me, count, max_count, arg->a, arg->arg, arg->ret);
-	goto qarray_loop_strider_exit;
+    switch (dist_type) {
+	/* special case: all the work is contiguous, so we can hand it to the
+	 * loop function directly */
+	case ALL_SAME:
+	case FIXED_FIELDS:
+	    ql(me, count, max_count, arg->a, arg->arg, arg->ret);
+	    goto qarray_loop_strider_exit;
+	default: /* aka NOT the special case */
+	    break;
     }
     tmpret = malloc(arg->retsize);
     assert(tmpret);
@@ -832,9 +954,6 @@ static aligned_t qarray_loopaccum_strider(qthread_t * me,
 		/* This should never happen, so deliberately cause a seg fault
 		 * for corefile analysis */
 		*(int *)(0) = 0;
-		break;
-	    case ALL_SAME:
-		count += segment_size;
 		break;
 	    case FIXED_HASH:
 		count += segment_size * qthread_num_shepherds();
@@ -877,9 +996,23 @@ void qarray_iter(qthread_t * me, qarray * a, const size_t startat,
     switch (a->dist_type) {
 	case ALL_SAME:
 	    qthread_fork_to((qthread_f) qarray_strider, &qfwa, NULL,
-			    a->dist_shep);
+			    a->dist_specific.dist_shep);
 	    while (_(donecount) == 0) {
 		qthread_yield(me);
+	    }
+	    break;
+	case FIXED_FIELDS:
+	    {
+		qthread_shepherd_id_t start_shep = qarray_shepof(a, startat);
+		qthread_shepherd_id_t stop_shep = qarray_shepof(a, stopat-1);
+		size_t num_spawns = 0;
+		for (qthread_shepherd_id_t s = start_shep; s <= stop_shep; s++) {
+		    qthread_fork_to((qthread_f) qarray_strider, &qfwa, NULL, s);
+		    num_spawns ++;
+		}
+		while (_(donecount) < num_spawns) {
+		    qthread_yield(me);
+		}
 	    }
 	    break;
 	default:
@@ -926,9 +1059,23 @@ void qarray_iter_loop(qthread_t * me, qarray * a, const size_t startat,
     switch (a->dist_type) {
 	case ALL_SAME:
 	    qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL,
-			    a->dist_shep);
+			    a->dist_specific.dist_shep);
 	    while (_(donecount) == 0) {
 		qthread_yield(me);
+	    }
+	    break;
+	case FIXED_FIELDS:
+	    {
+		qthread_shepherd_id_t start_shep = qarray_shepof(a, startat);
+		qthread_shepherd_id_t stop_shep = qarray_shepof(a, stopat-1);
+		size_t num_spawns = 0;
+		for (qthread_shepherd_id_t s = start_shep; s <= stop_shep; s++) {
+		    qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL, s);
+		    num_spawns ++;
+		}
+		while (_(donecount) < num_spawns) {
+		    qthread_yield(me);
+		}
 	    }
 	    break;
 	default:
@@ -976,9 +1123,23 @@ void qarray_iter_constloop(qthread_t * me, const qarray * a,
     switch (a->dist_type) {
 	case ALL_SAME:
 	    qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL,
-			    a->dist_shep);
+			    a->dist_specific.dist_shep);
 	    while (_(donecount) == 0) {
 		qthread_yield(me);
+	    }
+	    break;
+	case FIXED_FIELDS:
+	    {
+		qthread_shepherd_id_t start_shep = qarray_shepof(a, startat);
+		qthread_shepherd_id_t stop_shep = qarray_shepof(a, stopat-1);
+		size_t num_spawns = 0;
+		for (qthread_shepherd_id_t s = start_shep; s <= stop_shep; s++) {
+		    qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL, s);
+		    num_spawns ++;
+		}
+		while (_(donecount) < num_spawns) {
+		    qthread_yield(me);
+		}
 	    }
 	    break;
 	default:
@@ -1026,9 +1187,44 @@ void qarray_iter_loopaccum(qthread_t * me, qarray * a, const size_t startat,
 		{ {func}, acc, a, arg, ret, startat, stopat, retsize };
 	    aligned_t r;
 	    qthread_fork_to((qthread_f) qarray_loopaccum_strider, &qfwa, &r,
-			    a->dist_shep);
+			    a->dist_specific.dist_shep);
 	    qthread_readFF(me, &r, &r);
 	}
+	    break;
+	case FIXED_FIELDS:
+	    {
+		qthread_shepherd_id_t start_shep = qarray_shepof(a, startat);
+		qthread_shepherd_id_t stop_shep = qarray_shepof(a, stopat-1);
+		const size_t num_spawns = (stop_shep - start_shep) + 1;
+		struct qarray_accumfunc_wrapper_args *qfwa = malloc(sizeof(struct qarray_accumfunc_wrapper_args) * num_spawns);
+		char * rets = malloc(retsize * (num_spawns - 1));
+		aligned_t *rv = malloc(sizeof(aligned_t) * num_spawns);
+		unsigned int i;
+
+		assert(qfwa);
+		assert(rets);
+		assert(rv);
+		qfwa[0].ret = ret;
+		for (qthread_shepherd_id_t s = start_shep; s <= stop_shep; s++) {
+		    i = s-start_shep;
+		    qfwa[i].func.ql = func;
+		    qfwa[i].acc = acc;
+		    qfwa[i].a = a;
+		    qfwa[i].arg = arg;
+		    qfwa[i].startat = startat;
+		    qfwa[i].stopat = stopat;
+		    if (s > start_shep) {
+			qfwa[i].ret = rets + ((i-1) * retsize);
+		    }
+		    qthread_fork_to((qthread_f) qarray_loopaccum_strider, &qfwa[i], &rv[i], s);
+		}
+		for (i=0; i<num_spawns; i++) {
+		    qthread_readFF(me, NULL, &(rv[i]));
+		    if (i > 0) {
+			acc(ret, &rets[i - 1]);
+		    }
+		}
+	    }
 	    break;
 	default:
 	    /* it'd be NICE to avoid spawning if not all sheps are represented
@@ -1055,6 +1251,10 @@ void qarray_iter_loopaccum(qthread_t * me, qarray * a, const size_t startat,
 		char *rets = malloc(retsize * (maxsheps - 1));
 		aligned_t *rv = malloc(sizeof(aligned_t) * maxsheps);
 
+		assert(qfwa);
+		assert(rets);
+		assert(rv);
+		qfwa[0].ret = ret;
 		for (i = 0; i < maxsheps; i++) {
 		    qfwa[i].func.ql = func;
 		    qfwa[i].acc = acc;
@@ -1062,9 +1262,7 @@ void qarray_iter_loopaccum(qthread_t * me, qarray * a, const size_t startat,
 		    qfwa[i].arg = arg;
 		    qfwa[i].startat = startat;
 		    qfwa[i].stopat = stopat;
-		    if (i == 0) {
-			qfwa[i].ret = ret;
-		    } else {
+		    if (i > 0) {
 			qfwa[i].ret = rets + ((i - 1) * retsize);
 		    }
 		    qthread_fork_to((qthread_f) qarray_loopaccum_strider,
