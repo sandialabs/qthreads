@@ -1572,7 +1572,7 @@ int qthread_initialize(void)
 		fprintf(stderr, "unparsable number of shepherds (%s)\n", qsh);
 		nshepherds = 0;
 	    } else if (nshepherds > 0) {
-		fprintf(stderr, "Forced %i Shepherds\n", nshepherds);
+		fprintf(stderr, "Forced %i Shepherds\n", (int)nshepherds);
 	    }
 	} else {
 	    nshepherds = 0;
@@ -2347,7 +2347,7 @@ void qthread_finalize(void)
 	if ((r = pthread_join(qlib->shepherds[i].shepherd, NULL)) != 0) {
 	    fprintf(stderr,
 		    "qthread_finalize: pthread_join() of shep %i failed (%d, or \"%s\")\n",
-		    i, r, strerror(r));
+		    (int)i, r, strerror(r));
 	    abort();
 	}
 	QTHREAD_CASLOCK_DESTROY(qlib->shepherds[i].active);
