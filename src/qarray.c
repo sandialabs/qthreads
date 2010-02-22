@@ -351,7 +351,8 @@ static qarray *qarray_create_internal(const size_t count,
 		    target_shep = segment % qthread_num_shepherds();
 		} else if (d == FIXED_FIELDS) {
 		    target_shep = segment / ret->dist_specific.segs_per_shep;
-		} else if (ret->dist_type == ALL_SAME) {
+		} else {
+		    assert(ret->dist_type == ALL_SAME);
 		    target_shep = ret->dist_specific.dist_shep;
 		}
 #ifdef QTHREAD_HAVE_LIBNUMA
