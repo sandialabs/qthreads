@@ -5,12 +5,13 @@
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
 
-Q_STARTCXX /* */
-
-typedef enum
+Q_STARTCXX			       /* */
+    typedef enum
 {
     /* the default, used both as input and after creation */
     FIXED_HASH = 0,
+    /* these are also used both as input and after creation */
+    FIXED_FIELDS,
     /* these are used only after it's created */
     ALL_SAME, DIST,
     /* types of DIST... only used for input to qarray_create() */
@@ -26,18 +27,21 @@ typedef struct qarray_s
     size_t segment_bytes;	/* bytes per segment (sometimes > unit_size*segment_count) */
     char *base_ptr;
     distribution_t dist_type;
-    qthread_shepherd_id_t dist_shep;	/* for ALL_SAME dist type */
+    union
+    {
+	qthread_shepherd_id_t dist_shep;	/* for ALL_SAME dist type */
+	size_t segs_per_shep;			/* for FIXED_STRIPES dist type */
+    } dist_specific;
 } qarray;
 
 typedef void (*qa_loop_f) (qthread_t * me, const size_t startat,
-			   const size_t stopat, qarray * array,
-			   void * arg);
+			   const size_t stopat, qarray * array, void *arg);
 typedef void (*qa_loopr_f) (qthread_t * me, const size_t startat,
-			   const size_t stopat, qarray * array,
-			   void * arg, void *ret);
+			    const size_t stopat, qarray * array, void *arg,
+			    void *ret);
 typedef void (*qa_cloop_f) (qthread_t * me, const size_t startat,
 			    const size_t stopat, const qarray * array,
-			    void * arg);
+			    void *arg);
 
 qarray *qarray_create(const size_t count, const size_t unit_size);
 qarray *qarray_create_tight(const size_t count, const size_t unit_size);
@@ -50,11 +54,10 @@ void qarray_destroy(qarray * a);
 void qarray_iter(qthread_t * me, qarray * a, const size_t startat,
 		 const size_t stopat, qthread_f func);
 void qarray_iter_loop(qthread_t * me, qarray * a, const size_t startat,
-		      const size_t stopat, qa_loop_f func,
-		      void * arg);
+		      const size_t stopat, qa_loop_f func, void *arg);
 void qarray_iter_constloop(qthread_t * me, const qarray * a,
 			   const size_t startat, const size_t stopat,
-			   qa_cloop_f func, void * arg);
+			   qa_cloop_f func, void *arg);
 void qarray_iter_loopaccum(qthread_t * me, qarray * a, const size_t startat,
 			   const size_t stopat, qa_loopr_f func, void *arg,
 			   void *ret, const size_t retsize, qt_accum_f acc);
@@ -62,7 +65,8 @@ void qarray_iter_loopaccum(qthread_t * me, qarray * a, const size_t startat,
 qthread_shepherd_id_t qarray_shepof(const qarray * a, const size_t index);
 
 #define qarray_elem(me, a, i) qarray_elem_nomigrate(a, i)
-void *qarray_elem_migrate(qthread_t * me, const qarray * a, const size_t index);
+void *qarray_elem_migrate(qthread_t * me, const qarray * a,
+			  const size_t index);
 QINLINE static void *qarray_elem_nomigrate(const qarray * a,
 					   const size_t index)
 {
