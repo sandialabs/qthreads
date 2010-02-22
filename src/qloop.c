@@ -25,16 +25,16 @@ struct qloop_wrapper_args {
 
 static aligned_t qloop_wrapper(qthread_t * me,
 			       const struct qloop_wrapper_args *arg)
-{
+{				       /*{{{ */
     arg->func(me, arg->startat, arg->stopat, arg->arg);
     qthread_incr(arg->donecount, 1);
     return 0;
-}
+}				       /*}}} */
 
 static void qt_loop_inner(const size_t start, const size_t stop,
 			  const size_t stride, const qt_loop_f func,
 			  void *argptr, int future)
-{
+{				       /*{{{ */
     size_t i, threadct = 0;
     qthread_t *const me = qthread_self();
     aligned_t *rets;
@@ -78,20 +78,21 @@ static void qt_loop_inner(const size_t start, const size_t stop,
     }
     free(qwa);
     free(rets);
-}
+}				       /*}}} */
+
 void qt_loop(const size_t start, const size_t stop, const size_t stride,
 	     const qt_loop_f func, void *argptr)
-{
+{				       /*{{{ */
     qt_loop_inner(start, stop, stride, func, argptr, 0);
-}
+}				       /*}}} */
 
 /* So, the idea here is that this is a (braindead) C version of Megan's
  * mt_loop_future. */
 void qt_loop_future(const size_t start, const size_t stop,
 		    const size_t stride, const qt_loop_f func, void *argptr)
-{
+{				       /*{{{ */
     qt_loop_inner(start, stop, stride, func, argptr, 1);
-}
+}				       /*}}} */
 
 /* So, the idea here is that this is a C version of Megan's mt_loop (note: not
  * using futures here (at least, not exactly)). As such, what it needs to do is
@@ -107,7 +108,7 @@ static QINLINE void qt_loop_balance_inner(const size_t start,
 					  const size_t stop,
 					  const qt_loop_f func, void *argptr,
 					  const int future)
-{
+{				       /*{{{ */
     qthread_shepherd_id_t i;
     const qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
     struct qloop_wrapper_args *const qwa =
@@ -145,17 +146,19 @@ static QINLINE void qt_loop_balance_inner(const size_t start,
 	qthread_yield(me);
     }
     free(qwa);
-}
+}				       /*}}} */
+
 void qt_loop_balance(const size_t start, const size_t stop,
 		     const qt_loop_f func, void *argptr)
-{
+{				       /*{{{ */
     qt_loop_balance_inner(start, stop, func, argptr, 0);
-}
+}				       /*}}} */
+
 void qt_loop_balance_future(const size_t start, const size_t stop,
 			    const qt_loop_f func, void *argptr)
-{
+{				       /*{{{ */
     qt_loop_balance_inner(start, stop, func, argptr, 1);
-}
+}				       /*}}} */
 
 struct qloopaccum_wrapper_args {
     qt_loopr_f func;
@@ -166,10 +169,10 @@ struct qloopaccum_wrapper_args {
 
 static aligned_t qloopaccum_wrapper(qthread_t * me,
 				    const struct qloopaccum_wrapper_args *arg)
-{
+{				       /*{{{ */
     arg->func(me, arg->startat, arg->stopat, arg->arg, arg->ret);
     return 0;
-}
+}				       /*}}} */
 
 static QINLINE void qt_loopaccum_balance_inner(const size_t start,
 					       const size_t stop,
