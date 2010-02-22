@@ -47,27 +47,28 @@ int main(int argc, char *argv[])
     qarray *a;
     qthread_t *me;
     distribution_t disttypes[] = {
-	FIXED_HASH, ALL_LOCAL, ALL_RAND, ALL_LEAST, DIST_RAND,
-	DIST_REG_STRIPES, DIST_REG_FIELDS, DIST_LEAST
+	FIXED_HASH, FIXED_FIELDS,
+	ALL_LOCAL, ALL_RAND, ALL_LEAST,
+	DIST_RAND, DIST_REG_STRIPES, DIST_REG_FIELDS, DIST_LEAST
     };
     const char *distnames[] = {
-	"FIXED_HASH", "ALL_LOCAL", "ALL_RAND", "ALL_LEAST", "DIST_RAND",
-	"DIST_REG_STRIPES", "DIST_REG_FIELDS", "DIST_LEAST"
+	"FIXED_HASH", "FIXED_FIELDS",
+	"ALL_LOCAL", "ALL_RAND", "ALL_LEAST",
+	"DIST_RAND", "DIST_REG_STRIPES", "DIST_REG_FIELDS", "DIST_LEAST"
     };
     unsigned int dt_index;
-    unsigned int num_dists = 1;
+    unsigned int num_dists = sizeof(disttypes)/sizeof(distribution_t);
+    unsigned int dists = (1<<num_dists)-1;
 
     qthread_initialize();
     me = qthread_self();
     CHECK_VERBOSE();
-    NUMARG(num_dists, "TEST_NUM_DISTS");
+    NUMARG(dists, "TEST_DISTS");
     NUMARG(ELEMENT_COUNT, "ELEMENT_COUNT");
-    if (num_dists > 8) {
-	num_dists = 8;
-    }
 
     /* iterate over all the different distribution types */
     for (dt_index = 0; dt_index < num_dists; dt_index++) {
+	if ((dists & (1 << dt_index)) == 0) continue;
 	/* test a basic array of doubles */
 	count = 0;
 	a = qarray_create_configured(ELEMENT_COUNT, sizeof(double),
