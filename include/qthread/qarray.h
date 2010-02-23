@@ -24,13 +24,16 @@ typedef struct qarray_s
     size_t unit_size;
     size_t count;
     size_t segment_size;	/* units in a segment */
-    size_t segment_bytes;	/* bytes per segment (sometimes > unit_size*segment_count) */
+    size_t segment_bytes;	/* bytes per segment (sometimes > unit_size*segment_size) */
     char *base_ptr;
     distribution_t dist_type;
     union
     {
 	qthread_shepherd_id_t dist_shep;	/* for ALL_SAME dist type */
-	size_t segs_per_shep;			/* for FIXED_STRIPES dist type */
+	struct {
+	    size_t segs_per_shep;			/* for FIXED_STRIPES dist type */
+	    size_t extras;
+	} stripes;
     } dist_specific;
 } qarray;
 
@@ -61,6 +64,7 @@ void qarray_iter_constloop(qthread_t * me, const qarray * a,
 void qarray_iter_loopaccum(qthread_t * me, qarray * a, const size_t startat,
 			   const size_t stopat, qa_loopr_f func, void *arg,
 			   void *ret, const size_t retsize, qt_accum_f acc);
+void qarray_set_shepof(qarray *a, const size_t i, qthread_shepherd_id_t shep);
 
 qthread_shepherd_id_t qarray_shepof(const qarray * a, const size_t index);
 

@@ -1244,17 +1244,15 @@ void qarray_set_shepof(qarray *a, const size_t i, qthread_shepherd_id_t shep)
 	case FIXED_HASH:
 	    return;
 	case ALL_SAME:
-	    {
+	    if (a->dist_specific.dist_shep != shep) {
 		size_t segment_count = (a->count / a->segment_size);
 		segment_count += (a->count % a->segment_size)?1:0;
 #ifdef QTHREAD_HAVE_LIBNUMA
-		{
-		    unsigned int target_node = qthread_internal_shep_to_node(shep);
-		    if (target_node != QTHREAD_NO_NODE) {
-			size_t num_segments = a->count / a->segment_size;
-			size_t array_size = a->segment_bytes * num_segments;
-			numa_tonode_memory(a->base_ptr, array_size, target_node);
-		    }
+		unsigned int target_node = qthread_internal_shep_to_node(shep);
+		if (target_node != QTHREAD_NO_NODE) {
+		    size_t num_segments = a->count / a->segment_size;
+		    size_t array_size = a->segment_bytes * num_segments;
+		    numa_tonode_memory(a->base_ptr, array_size, target_node);
 		}
 #elif defined(HAVE_MADVISE) && defined(HAVE_MADV_ACCESS_LWP)
 		madvise(a->base_ptr, (a->count / a->segment_size) *
@@ -1267,7 +1265,27 @@ void qarray_set_shepof(qarray *a, const size_t i, qthread_shepherd_id_t shep)
 	    }
 	    return;
 	case DIST:
-	    
+	    {
+		size_t segment = i / a->segment_size;
+		char *seghead = qarray_elem_nomigrate(a, segment * a->segment_size);
+		qthread_shepherd_id_t *ptr = qarray_internal_segment_shep(a, seghead);
+		if (*ptr != shep) {
+#ifdef QTHREAD_HAVE_LIBNUMA
+		    unsigned int target_node = qthread_internal_shep_to_node(shep);
+		    if (target_node != QTHREAD_NO_NODE) {
+			numa_tonode_memory(a->base_ptr + (a->segment_bytes *
+				    segment), a->segment_bytes, target_node);
+		    }
+#elif defined(HAVE_MADVISE) && defined(HAVE_MADV_ACCESS_LWP)
+		    madvise(a->base_ptr + (a->segment_bytes * (i /
+				    a->segment_size)), a->segment_bytes,
+			    MADV_ACCESS_LWP);
+#endif
+		    qthread_incr(&chunk_distribution_tracker[shep], 1);
+		    qthread_incr(&chunk_distribution_tracker[*ptr], -1);
+		    *ptr = shep;
+		}
+	    }
 	    return;
 	default: /* should never happen; cause segfault for corefile analysis */
 	    *(int *)0 = 0;
