@@ -197,8 +197,8 @@ static qarray *qarray_create_internal(const size_t count,
 	    assert(ret->segment_size > 0);
 	    assert(ret->segment_bytes > 0);
 	    break;
-	case DIST_REG_STRIPES:
-	case DIST_REG_FIELDS:
+	case DIST_STRIPES:
+	case DIST_FIELDS:
 	case DIST_RAND:
 	case DIST_LEAST:
 	case DIST:		       /* assumed equivalent to DIST_RAND */
@@ -247,8 +247,8 @@ static qarray *qarray_create_internal(const size_t count,
 	default:
 	    ret->dist_type = FIXED_HASH;
 	    break;
-	case DIST_REG_STRIPES:
-	case DIST_REG_FIELDS:
+	case DIST_STRIPES:
+	case DIST_FIELDS:
 	case DIST_RAND:
 	case DIST_LEAST:
 	case DIST:
@@ -307,8 +307,8 @@ static qarray *qarray_create_internal(const size_t count,
 	default:
 	    if (qthread_internal_shep_to_node(ret->dist_specific.dist_shep) ==
 		QTHREAD_NO_NODE) {
-	case DIST_REG_STRIPES:
-	case DIST_REG_FIELDS:
+	case DIST_STRIPES:
+	case DIST_FIELDS:
 	case DIST_RAND:
 	case DIST_LEAST:
 	case DIST:
@@ -368,7 +368,7 @@ static qarray *qarray_create_internal(const size_t count,
 		case DIST_RAND:
 		    target_shep = random() % max_sheps;
 		    break;
-		case DIST_REG_FIELDS:
+		case DIST_FIELDS:
 		    { /* roughly copied from FIXED_FIELDS logic */
 			size_t segs_per_shep = segment_count/max_sheps;
 			size_t extras = segment_count % max_sheps;
@@ -378,7 +378,7 @@ static qarray *qarray_create_internal(const size_t count,
 			}
 		    }
 		    break;
-		case DIST_REG_STRIPES:
+		case DIST_STRIPES:
 		    target_shep = (qthread_shepherd_id_t)(segment % max_sheps);
 		    break;
 		case DIST_LEAST:
@@ -444,7 +444,7 @@ qarray *qarray_create(const size_t count, const size_t obj_size)
 {				       /*{{{ */
 #if QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32 || \
     QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64
-    return qarray_create_internal(count, obj_size, DIST_REG_STRIPES, 0, 0);
+    return qarray_create_internal(count, obj_size, DIST_STRIPES, 0, 0);
 #else
     return qarray_create_internal(count, obj_size, FIXED_HASH, 0, 0);
 #endif
@@ -454,7 +454,7 @@ qarray *qarray_create_tight(const size_t count, const size_t obj_size)
 {				       /*{{{ */
 #if QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32 || \
     QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64
-    return qarray_create_internal(count, obj_size, DIST_REG_STRIPES, 1, 0);
+    return qarray_create_internal(count, obj_size, DIST_STRIPES, 1, 0);
 #else
     return qarray_create_internal(count, obj_size, FIXED_HASH, 1, 0);
 #endif
