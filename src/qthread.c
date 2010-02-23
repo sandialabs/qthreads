@@ -3307,11 +3307,11 @@ void qthread_yield(qthread_t * t)
 	t = qthread_self();
     }
     if (t != NULL) {
-	qthread_debug(THREAD_BEHAVIOR,
+	qthread_debug(THREAD_DETAILS,
 		      "qthread_yield(): tid %u yielding...\n", t->thread_id);
 	t->thread_state = QTHREAD_STATE_YIELDED;
 	qthread_back_to_master(t);
-	qthread_debug(THREAD_BEHAVIOR, "qthread_yield(): tid %u resumed.\n",
+	qthread_debug(THREAD_DETAILS, "qthread_yield(): tid %u resumed.\n",
 		      t->thread_id);
     }
 }				       /*}}} */
