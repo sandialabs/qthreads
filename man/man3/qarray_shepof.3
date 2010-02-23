@@ -1,6 +1,8 @@
 .TH qarray_shepof 3 "MAY 2009" libqthread "libqthread"
 .SH NAME
-.BR qarray_shepof " \- locate a distributed array element"
+.BR qarray_shepof ,
+.B qarray_set_shepof
+\- locate a distributed array element
 .SH SYNOPSIS
 .B #include <qthread/qarray.h>
 
@@ -8,10 +10,17 @@
 .br
 .B qarray_shepof
 .RI "(const qarray *" array ", const size_t " index );
+.PP
+.I void
+.br
+.B qarray_set_shepof
+.RI "(qarray *" array ", const size_t " index ,
+.ti +19
+.RI "qthread_shepherd_id_t " shep );
 .SH DESCRIPTION
-This function returns the shepherd to which the
+These functions manipulate or report the shepherd to which the
 .I index
-element of the
+elementof the
 .I array
 qarray is assigned.
 .SH SEE ALSO

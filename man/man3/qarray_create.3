@@ -57,6 +57,11 @@ Distributes the memory across the available shepherds evenly, using a basic
 round-robin assignment mechanism based on the address of the initial page of
 each segment. Array segments cannot be relocated.
 .TP
+.B FIXED_FIELDS
+Distributes the memory evenly across all shepherds, maintaining long contiguous
+sets of segments on each shepherd. Segment locations are defined by a simple
+math operation on the index, so array segments cannot be relocated.
+.TP
 .B ALL_LOCAL
 Assigns the entire array to the local shepherd. Array segments cannot be
 relocated.
@@ -69,12 +74,12 @@ relocated.
 Assigns the entire array to the shepherd with the least qarray segments
 currently assigned to it. Array segments cannot be relocated.
 .TP
-.B DIST_REG_STRIPES
+.B DIST_STRIPES
 Assigns array segments with a round-robin mechanism. Segment location is stored
 in the segment, so segments can be relocated, but finding a segment requires
 extra memory operations.
 .TP
-.B DIST_REG_FIELDS
+.B DIST_FIELDS
 Assigns array segments evenly across all shepherds, attempting to maintain long
 contiguous sets of segments on each shepherd. Segment location is stored in the
 segment, so segments can be relocated, but finding a segment requires extra
