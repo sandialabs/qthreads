@@ -13,9 +13,11 @@ Q_STARTCXX			       /* */
     /* these are also used both as input and after creation */
     FIXED_FIELDS,
     /* these are used only after it's created */
-    ALL_SAME, DIST,
-    /* types of DIST... only used for input to qarray_create() */
-    DIST_REG_STRIPES, DIST_REG_FIELDS, DIST_RAND, DIST_LEAST,
+    ALL_SAME /* if used as input to qarray_create(), treated as ALL_LOCAL */,
+    DIST /* if used as input to qarray_create(), treated as DIST_RAND */,
+    /* types of DIST... only used for input to qarray_create();
+     * note that these only establish an initial condition. */
+    DIST_STRIPES, DIST_FIELDS, DIST_RAND, DIST_LEAST,
     /* types of ALL_SAME... only used for input to qarray_create() */
     ALL_LOCAL, ALL_RAND, ALL_LEAST
 } distribution_t;
@@ -64,8 +66,9 @@ void qarray_iter_constloop(qthread_t * me, const qarray * a,
 void qarray_iter_loopaccum(qthread_t * me, qarray * a, const size_t startat,
 			   const size_t stopat, qa_loopr_f func, void *arg,
 			   void *ret, const size_t retsize, qt_accum_f acc);
-void qarray_set_shepof(qarray *a, const size_t i, qthread_shepherd_id_t shep);
 
+void qarray_set_shepof(qarray * a, const size_t i,
+		       qthread_shepherd_id_t shep);
 qthread_shepherd_id_t qarray_shepof(const qarray * a, const size_t index);
 
 #define qarray_elem(me, a, i) qarray_elem_nomigrate(a, i)
