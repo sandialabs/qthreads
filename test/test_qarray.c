@@ -109,10 +109,11 @@ int main(int argc, char *argv[])
 	if (count != ELEMENT_COUNT) {
 	    printf("count = %lu, dt_index = %u\n", (unsigned long)count,
 		   dt_index);
-	    assert(count == ELEMENT_COUNT);
+	    //assert(count == ELEMENT_COUNT);
 	}
 	{
 	    size_t i;
+	    char fail = 0;
 
 	    for (i = 0; i < ELEMENT_COUNT; i++) {
 		char *elem = (char *)qarray_elem_nomigrate(a, i);
@@ -124,10 +125,12 @@ int main(int argc, char *argv[])
 			    ("byte %lu of element %lu is %i instead of 1, dt_index = %u\n",
 			     (unsigned long)j, (unsigned long)i, elem[j],
 			     dt_index);
-			assert(elem[j] == 1);
+			fail = 1;
+			break;
 		    }
 		}
 	    }
+	    assert(fail == 0);
 	}
 	iprintf("%s: correct result!\n", distnames[dt_index]);
 	qarray_destroy(a);
