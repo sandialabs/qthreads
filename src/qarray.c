@@ -897,11 +897,11 @@ static aligned_t qarray_loopaccum_strider(qthread_t * me,
 	    const size_t max_offset =
 		((max_count - count) >
 		 segment_size) ? segment_size : (max_count - count);
-	    ql(me, count, count + max_offset, arg->a, arg->arg, tmpret);
 	    if (first) {
-		memcpy(myret, tmpret, arg->retsize);
+		ql(me, count, count + max_offset, arg->a, arg->arg, myret);
 		first = 0;
 	    } else {
+		ql(me, count, count + max_offset, arg->a, arg->arg, tmpret);
 		acc(myret, tmpret);
 	    }
 	}
@@ -1169,6 +1169,7 @@ void qarray_iter_loopaccum(qthread_t * me, qarray * a, const size_t startat,
 		    qfwa[i].arg = arg;
 		    qfwa[i].startat = startat;
 		    qfwa[i].stopat = stopat;
+		    qfwa[i].retsize = retsize;
 		    if (s > start_shep) {
 			qfwa[i].ret = rets + ((i-1) * retsize);
 		    }
@@ -1218,6 +1219,7 @@ void qarray_iter_loopaccum(qthread_t * me, qarray * a, const size_t startat,
 		    qfwa[i].arg = arg;
 		    qfwa[i].startat = startat;
 		    qfwa[i].stopat = stopat;
+		    qfwa[i].retsize = retsize;
 		    if (i > 0) {
 			qfwa[i].ret = rets + ((i - 1) * retsize);
 		    }
@@ -1236,7 +1238,7 @@ void qarray_iter_loopaccum(qthread_t * me, qarray * a, const size_t startat,
 }				       /*}}} */
 
 void qarray_set_shepof(qarray *a, const size_t i, qthread_shepherd_id_t shep)
-{
+{/*{{{*/
     if (a == NULL)
 	return;
     switch(a->dist_type) {
@@ -1291,4 +1293,4 @@ void qarray_set_shepof(qarray *a, const size_t i, qthread_shepherd_id_t shep)
 	    *(int *)0 = 0;
 	    return;
     }
-}
+}/*}}}*/
