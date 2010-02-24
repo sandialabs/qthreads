@@ -421,9 +421,9 @@ static qarray *qarray_create_internal(const size_t count,
 		unsigned int target_node =
 		    qthread_internal_shep_to_node(target_shep);
 		if (target_node != QTHREAD_NO_NODE) {
-		    char *seghead =
-			qarray_elem_nomigrate(ret,
-					      segment * ret->segment_size);
+		    char *seghead = qarray_elem_nomigrate(ret,
+							  segment *
+							  ret->segment_size);
 		    numa_tonode_memory(seghead, ret->segment_bytes,
 				       target_node);
 		}
@@ -1340,3 +1340,65 @@ void qarray_set_shepof(qarray * a, const size_t i, qthread_shepherd_id_t shep)
 	    return;
     }
 }				       /*}}} */
+
+void qarray_dist_like(const qarray * ref, qarray * mod)
+{
+    qassert_retvoid(ref->count == mod->count);
+    qassert_retvoid(ref->unit_size == mod->unit_size);
+    if (ref->dist_type == DIST) {
+	qassert_retvoid(mod->dist_type != ALL_SAME);
+    }
+    switch (ref->dist_type) {
+	case ALL_SAME:
+	{
+	    qthread_shepherd_id_t shep = qarray_shepof(ref, 0);
+	    size_t i;
+	    qassert_retvoid(mod->dist_type != FIXED_HASH);
+	    qassert_retvoid(mod->dist_type != FIXED_FIELDS);
+	    switch (mod->dist_type) {
+		case ALL_SAME:
+		    qarray_set_shepof(mod, 0, shep);
+		    break;
+		case DIST:
+		    for (i = 0; i < mod->count; i += mod->segment_size) {
+			qarray_set_shepof(mod, i, shep);
+		    }
+		    break;
+		default:	       /* should not happen *ever*, so trigger a segfault for corefile analysis */
+		    *(int *)0 = 0;
+	    }
+	}
+	    break;
+	case DIST:
+	    qassert_retvoid(ref->segment_size == mod->segment_size);
+	    qassert_retvoid(ref->segment_bytes == mod->segment_bytes);
+	    qassert_retvoid(mod->dist_type != FIXED_HASH);
+	    qassert_retvoid(mod->dist_type != FIXED_FIELDS);
+	    if (mod->dist_type == DIST) {
+		size_t i;
+		for (i = 0; i < mod->count; i += mod->segment_size) {
+		    qarray_set_shepof(mod, i, qarray_shepof(ref, i));
+		}
+	    } else {
+		/* should not happen *ever*, so trigger a segfault for corefile analysis */
+		*(int *)0 = 0;
+	    }
+	    break;
+	default:		       /* should not happen *ever*, so trigger a segfault for corefile analysis */
+	    *(int *)0 = 0;
+	case FIXED_HASH:
+	case FIXED_FIELDS:
+#if 0
+	    /* theoretically, this should be possible... but it could be
+	     * complicated, and nobody wants it yet */
+	    if (mod->dist_type == ref->dist_type) {
+		return;
+	    }
+	    qassert_retvoid(mod->dist_type == FIXED_HASH ||
+			    mod->dist_type == FIXED_FIELDS);
+#else
+	    qassert_retvoid(ref->dist_type != FIXED_HASH &&
+			    ref->dist_type != FIXED_FIELDS);
+#endif
+    }
+}

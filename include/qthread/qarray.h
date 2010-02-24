@@ -70,6 +70,7 @@ void qarray_iter_loopaccum(qthread_t * me, qarray * a, const size_t startat,
 void qarray_set_shepof(qarray * a, const size_t i,
 		       qthread_shepherd_id_t shep);
 qthread_shepherd_id_t qarray_shepof(const qarray * a, const size_t index);
+void qarray_dist_like(const qarray *ref, qarray *mod);
 
 #define qarray_elem(me, a, i) qarray_elem_nomigrate(a, i)
 void *qarray_elem_migrate(qthread_t * me, const qarray * a,
