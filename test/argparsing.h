@@ -1,6 +1,7 @@
 #ifndef TEST_ARGPARSING_H
 #define TEST_ARGPARSING_H
 
+#include <stdlib.h>
 #include <stdio.h>
 #include <stdarg.h>
 
