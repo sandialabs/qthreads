@@ -1,10 +1,11 @@
 #include <qthread/qthread.h>
 #include <qthread/qarray.h>
 
-#include <stdio.h>
+#include "argparsing.h"
+
 #include <assert.h>
 
-#define ITER 1000000
+static double ret = 0.0;
 
 static void assigni(qthread_t *me, const size_t startat, const size_t stopat, qarray *q, void *arg)
 {
@@ -27,25 +28,44 @@ static void permute(qthread_t *me, const size_t startat, const size_t stopat, qa
     memcpy(ret, &sum, sizeof(double));
 }
 
+static aligned_t onesum(qthread_t *me, void *arg)
+{
+    qthread_dincr(&ret, (double)*(int*)arg);
+    return 0;
+}
+
 int main()
 {
     qarray *t;
     qthread_t *me;
-    double ret = 0.0;
     size_t int_calc = 0, i;
+    size_t ITER = 10000;
 
     qthread_initialize();
     me = qthread_self();
+    CHECK_VERBOSE();
+    NUMARG(ITER,"ITERATIONS");
 
-    t = qarray_create(ITER, sizeof(int));
+    t = qarray_create_tight(ITER, sizeof(int));
     assert(t);
     qarray_iter_loop(me, t, 0, ITER, assigni, NULL);
     for (i = 1; i<ITER; i++) {
 	int_calc += i;
     }
+    /* ******************************
+     * Example 1
+     */
     qarray_iter_loopaccum(me, t, 0, ITER, permute, NULL, &ret, sizeof(double), qt_dbl_add_acc);
-    printf("int = %lu\n", (long unsigned)int_calc);
-    printf("ret = %f\n", ret);
+    iprintf("int = %lu\n", (long unsigned)int_calc);
+    iprintf("ret = %f\n", ret);
+    assert(int_calc == ret);
+    ret = 0.0;
+    /* ******************************
+     * Example 2
+     */
+    qarray_iter(me, t, 0, ITER, onesum);
+    iprintf("int = %lu\n", (long unsigned)int_calc);
+    iprintf("ret = %f\n", ret);
     assert(int_calc == ret);
     qarray_destroy(t);
     return 0;
