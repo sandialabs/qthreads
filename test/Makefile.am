@@ -20,6 +20,7 @@ TESTS = test_basic \
 		testqloop \
 		test_qpool \
 		test_qarray \
+		test_qarray_accum \
 		test_qlfqueue \
 		test_qdqueue \
 		test_allpairs \
@@ -137,6 +138,9 @@ time_qutil_qsort_DEPENDENCIES = $(QTHREADLIB)
 
 test_qarray_SOURCES = test_qarray.c
 test_qarray_DEPENDENCIES = $(QTHREADLIB)
+
+test_qarray_accum_SOURCES = test_qarray_accum.c
+test_qarray_accum_DEPENDENCIES = $(QTHREADLIB)
 
 test_qlfqueue_SOURCES = test_qlfqueue.c
 test_qlfqueue_DEPENDENCIES = $(QTHREADLIB)
