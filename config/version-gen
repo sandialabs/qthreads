@@ -1,2 +1,7 @@
-#!/bin/sh
-svn info | awk '/^Revision: /{printf "1.4-%s", $2}' | tr -d '\012'
+#!/bin/bash
+version=$(awk '{if(NR==1)print$1;else exit}' ./NEWS)
+if [ ${version%b} != ${version} ] ; then
+	svn info | awk '/^Revision: /{printf "'$version'-%s", $2}'
+else
+	echo $version | tr -d '\012'
+fi

@@ -1,4 +1,18 @@
---- 1.3.1 --
+--- 1.4b ---
+New Features:
+ - qarray_dist_like() to match one qarray to another
+ - qarray_set_shepof() to specify a qarray segment's location
+ - qarray_iter_loopaccum()
+Improvements:
+ - Renamed DIST_REG_FIELDS and DIST_REG_STRIPES qarray distributions
+ - Added FIXED_FIELDS to qarray distributions
+ - Increased size of qthread_shepherd_id_t
+ - Fixed qthread_dincr() on ppc32
+ - Fixed qt_cas() on ppc64
+ - Better workaround for broken MacOS X swapcontext()
+ - Fixed logic in debug output to avoid floating point
+ - Fixed bug in lock profiling code (credit to David Evensky)
+--- 1.3.1 ---
 Improvements:
  - Documentation
  - Fix GCC 4.4 compiler error

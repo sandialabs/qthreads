@@ -1,3 +1,186 @@
+2010-02-24 23:45  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qarray.h, src/qarray.c: qarray_dist_like(), first
+	  pass
+
+2010-02-24 22:21  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_qarray_accum.c: example 2
+
+2010-02-24 22:21  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/argparsing.h: for getenv
+
+2010-02-24 22:02  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am, test/test_qarray_accum.c: new test for qarray
+	  iter_loopaccum
+
+2010-02-24 22:01  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qarray.c: whitespace reformatting
+
+2010-02-24 22:01  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qarray.c: forgot to pass accumulator argument
+
+2010-02-23 19:58  dstark
+
+	* test/test_qarray.c: Updates DIST_REG_FIELDS and DIST_REG_STRIPES
+	  to DIST_FIELDS and DIST_STRIPES, respectively.
+
+2010-02-23 19:46  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qarray.h: rename DIST_REG*
+
+2010-02-23 19:46  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qarray.c: rename DIST_REG*
+
+2010-02-23 19:46  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am, man/man3/qarray_create.3,
+	  man/man3/qarray_set_shepof.3, man/man3/qarray_shepof.3: update
+	  docs for new qarray behavior
+
+2010-02-23 19:34  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qarray.h, src/qarray.c: qarray_set_shepof()
+
+2010-02-23 19:19  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: spinlocks with qthread_yield() makes this debug
+	  info really annoying
+
+2010-02-23 19:18  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_qarray.c: more useful assertions
+
+2010-02-23 19:18  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qarray.c: fixed the FIXED_FIELDS math (which was completely
+	  bogus if num_segments wasnt evenly divisible by num_shepherds),
+	  started on qarray_set_shepof()
+
+2010-02-22 21:09  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qarray.c: change else to assert
+
+2010-02-22 21:00  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: remove icc warnings
+
+2010-02-22 20:12  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_qarray.c: FIXED_FIELDS
+
+2010-02-22 19:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: added vim folds
+
+2010-02-22 19:41  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: not quite so inconceivable that the
+	  shepherd count would be huge now
+
+2010-02-22 19:34  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qarray.h: FIXED_FIELD and qarray accumulator
+	  definitions
+
+2010-02-22 19:27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_qarray.c: add FIXED_FIELDS test, restore full testing
+
+2010-02-22 19:27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qarray.c: create FIXED_FIELDS distribution type; also fix
+	  ALL_RAND problem (basically, a typo that became a logic error)
+
+2010-02-20 00:13  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: fix dincr on ppc32
+
+2010-02-20 00:09  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h: ppc64 implementation of cas
+
+2010-02-20 00:08  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* acinclude.m4, config/qthread_check_swapcontext.m4, configure.in:
+	  do a better job of working around the broken swapcontext
+	  implementation on MacOSX
+
+2010-02-18 17:16  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qarray.h, man/man3/Makefile.am,
+	  man/man3/qarray_iter.3, man/man3/qarray_iter_loopaccum.3,
+	  src/qarray.c: qarray_iter_loopaccum
+
+2010-02-18 15:46  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qarray.c: whitespace
+
+2010-02-18 15:45  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread_innards.h: avoid floating point in debug print
+
+2010-02-18 15:30  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: fix concurrentthreads_lock issue (bug found by
+	  David Evensky)
+
+2010-02-16 22:36  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* ChangeLog, NEWS: 1.3.1
+
+2010-02-16 22:29  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/qt_loop.3, man/man3/qt_loop_future.3: unify the qt_loop*
+	  interfaces
+
+2010-02-16 22:29  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread_innards.h: use QTHREAD_SST_PRIMITIVES, and note
+	  that the while loops in qthread_debug were just asking for
+	  trouble
+
+2010-02-16 22:28  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qloop.h: unify the qt_loop* interfaces
+
+2010-02-16 22:28  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: unify the qt_loop* interfaces
+
+2010-02-16 22:27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/Makefile.am: document version info stuff
+
+2010-02-15 18:17  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: comment change
+
+2010-02-15 18:17  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: minor tweaks for SST
+
+2010-02-15 18:14  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qpool.c: move to QTHREAD_SST_PRIMITIVES to allow unix-like
+	  behavior in the SST
+
+2010-02-15 18:13  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* Makefile.am: fix config file distribution inclusion
+
+2010-02-09 22:03  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_sst.m4, configure.in,
+	  include/qthread/common.h.in, include/qthread/qthread-sst.h,
+	  include/qthread/qthread.h, include/qthread_innards.h,
+	  src/qthread.c, src/sst/futurelib-sst.c: updates for new SST
+
 2010-02-09 18:13  Kyle Wheeler <kbwheel@sandia.gov>
 
 	* include/qt_hash.h: apparently restrict is hard to use in typedefs
