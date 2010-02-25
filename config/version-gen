@@ -1,0 +1,2 @@
+#!/bin/sh
+svn info | awk '/^Revision: /{printf "1.4-%s", $2}' | tr -d '\012'
