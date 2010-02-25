@@ -97,12 +97,12 @@ int main(int argc, char *argv[])
     distribution_t disttypes[] = {
 	FIXED_HASH, FIXED_FIELDS, ALL_LOCAL,	/*ALL_RAND, ALL_LEAST, */
 	DIST_RAND,
-	DIST_REG_STRIPES, DIST_REG_FIELDS, DIST_LEAST
+	DIST_STRIPES, DIST_FIELDS, DIST_LEAST
     };
     const char *distnames[] = {
 	"FIXED_HASH", "FIXED_FIELDS", "ALL_LOCAL",
 	/*"ALL_RAND", "ALL_LEAST", */ "DIST_RAND",
-	"DIST_REG_STRIPES", "DIST_REG_FIELDS", "DIST_LEAST", "SERIAL"
+	"DIST_STRIPES", "DIST_FIELDS", "DIST_LEAST", "SERIAL"
     };
     unsigned int dt_index;
     unsigned int num_dists =
