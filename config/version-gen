@@ -1,7 +1,7 @@
 #!/bin/bash
-version=$(awk '{if(NR==1)print$1;else exit}' ./NEWS)
+version=$(awk '{if(NR==1)print$2;else exit}' ./NEWS)
 if [ ${version%b} != ${version} ] ; then
-	svn info | awk '/^Revision: /{printf "'$version'-%s", $2}'
+	svn stat -u 2>/dev/null | awk '/^Status against revision: /{printf "'$version'-%s", $4}'
 else
 	echo $version | tr -d '\012'
 fi
