@@ -49,12 +49,15 @@ int main(int argc, char *argv[])
     qthread_t *me;
     qtimer_t timer = qtimer_new();
     distribution_t disttypes[] = {
-	FIXED_HASH, ALL_LOCAL, /*ALL_RAND, ALL_LEAST, */ DIST_RAND,
-	DIST_REG_STRIPES, DIST_REG_FIELDS, DIST_LEAST
+	FIXED_HASH, FIXED_FIELDS,
+	ALL_LOCAL, /*ALL_RAND, ALL_LEAST, */
+	DIST_RAND, DIST_STRIPES, DIST_FIELDS, DIST_LEAST
     };
     const char *distnames[] = {
-	"FIXED_HASH", "ALL_LOCAL", /*"ALL_RAND", "ALL_LEAST", */ "DIST_RAND",
-	"DIST_REG_STRIPES", "DIST_REG_FIELDS", "DIST_LEAST", "SERIAL"
+	"FIXED_HASH", "FIXED_FIELDS",
+	"ALL_LOCAL", /*"ALL_RAND", "ALL_LEAST", */
+	"DIST_RAND", "DIST_STRIPES", "DIST_FIELDS", "DIST_LEAST",
+	"SERIAL"
     };
     const size_t sizes[] =
 	{ 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 23, 32, 64, 65, 71,
