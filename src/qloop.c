@@ -816,7 +816,7 @@ void qt_qsort(qthread_t * me, double *array, const size_t length)
  */
 
 /* qt_parallel - translator for qt_loop() */
-void qt_parallel(const qthread_f func, const unsigned int threads,
+void qt_parallel(const qt_loop_f func, const unsigned int threads,
 		 void *argptr)
 {
     qt_loop(0, threads-1, 1, func, argptr);

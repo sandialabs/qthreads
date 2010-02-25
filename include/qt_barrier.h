@@ -1,8 +1,10 @@
 #ifndef QT_BARRIER_H
 #define QT_BARRIER_H
 
+#include <qthread/qthread.h>
+
 /* these two calls assume that we're using a/the global barrier */
-void qt_global_barrier(int threadNum);
+void qt_global_barrier(const qthread_t *me);
 void qt_global_barrier_init(int size, int debug);
 void qt_global_barrier_destroy();
 #define qt_barrier(x) qt_global_barrier(x)

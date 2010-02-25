@@ -235,9 +235,11 @@ void qt_barrier_enter(qt_barrier_t * b, int threadNum)
 
 // used indirectly by omp barrier calls (initially - others I hope)
 // akp 7/24/09
-
-void qt_global_barrier(const int threadNum)
+#define QT_GLOBAL_LOGBARRIER
+#ifdef QT_GLOBAL_LOGBARRIER
+void qt_global_barrier(const qthread_t * me)
 {
+    const int threadNum = qthread_shep(me);
     qt_barrier_enter(MBar, threadNum);
     //  now execute code on one thread that everyone needs to see -- should be
     //     at middle of barrier but does not seem to work there -- so here with double barrier
@@ -263,3 +265,4 @@ void qt_global_barrier_destroy()
 	MBar = NULL;
     }
 }
+#endif

@@ -1558,9 +1558,6 @@ int qthread_initialize(void)
 	return QTHREAD_SUCCESS;
     }
 
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    qt_global_barrier_init(14, 0); // XXX: completely arbitrary
-#endif
 #ifdef QTHREAD_USE_PTHREADS
     {
 	char *qsh = getenv("QTHREAD_NUM_SHEPHERDS");
@@ -2218,6 +2215,10 @@ int qthread_initialize(void)
     qthread_debug(ALL_DETAILS, "calling swapcontext\n");
     qassert(swapcontext(qlib->mccoy_thread->context, qlib->master_context),
 	    0);
+
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    qt_global_barrier_init(nshepherds-1, 0);
+#endif
 
     qthread_debug(ALL_DETAILS, "calling atexit\n");
     atexit(qthread_finalize);

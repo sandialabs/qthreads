@@ -36,7 +36,7 @@ libqthread_la_SOURCES = \
 #   and reset the revision and age numbers to 0
 # - If you support all the same functions (just bugfixes or whatnot), increment
 #   the revision number
-libqthread_la_LDFLAGS = -version-info 11:0:0 -no-undefined
+libqthread_la_LDFLAGS = -version-info 12:0:1 -no-undefined
 libqthread_la_LIBADD =
 libqthread_la_DEPENDENCIES =
 
@@ -47,7 +47,8 @@ libqthread_la_SOURCES += qt_cp_hash.c
 endif
 
 if COMPILE_ROSE_EXTENSIONS
-libqthread_la_SOURCES += qt_barrier.c
+libqthread_la_SOURCES += qt_barrier.c \
+			 qt_feb_barrier.c
 endif
 
 if COMPILE_TARGET_SST
