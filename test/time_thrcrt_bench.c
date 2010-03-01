@@ -23,7 +23,7 @@ int main(int argc, char *argv[])
 {
     aligned_t rets[MAX_THREADS];
     qthread_t *me;
-    qtimer_t timer = qtimer_new();
+    qtimer_t timer = qtimer_create();
     double cumulative_time = 0.0;
     size_t counter = 0;
 

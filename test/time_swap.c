@@ -57,7 +57,7 @@ int main()
 
     CHECK_VERBOSE();
     NUMARG(ITERATIONS, "ITERATIONS");
-    timer = qtimer_new();
+    timer = qtimer_create();
     getcontext(&child);
     getcontext(&parent);
     child.uc_stack.ss_sp = stack + 1024 * 1024 * 8;
@@ -94,6 +94,6 @@ int main()
     printf("\tAverage single time: %g secs\n",
 	   total_single_time / (ITERATIONS * 2));
 
-    qtimer_free(timer);
+    qtimer_destroy(timer);
     return 0;
 }

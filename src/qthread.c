@@ -1026,7 +1026,7 @@ int qthread_debuglevel(int d)
 
 #ifdef QTHREAD_LOCK_PROFILING
 # define QTHREAD_ACCUM_MAX(a, b) do { if ((a) < (b)) { a = b; } } while (0)
-# define QTHREAD_WAIT_TIMER_DECLARATION qtimer_t wait_timer = qtimer_new();
+# define QTHREAD_WAIT_TIMER_DECLARATION qtimer_t wait_timer = qtimer_create();
 # define QTHREAD_WAIT_TIMER_START() qtimer_start(wait_timer)
 # define QTHREAD_WAIT_TIMER_STOP(ME, TYPE) do { double secs; \
     qtimer_stop(wait_timer); \
@@ -1035,8 +1035,8 @@ int qthread_debuglevel(int d)
 	(ME)->shepherd_ptr->TYPE##_maxtime = secs; } \
     (ME)->shepherd_ptr->TYPE##_time += secs; \
     (ME)->shepherd_ptr->TYPE##_count ++; \
-    qtimer_free(wait_timer); } while(0)
-# define QTHREAD_LOCK_TIMER_DECLARATION(TYPE) qtimer_t TYPE##_timer = qtimer_new();
+    qtimer_destroy(wait_timer); } while(0)
+# define QTHREAD_LOCK_TIMER_DECLARATION(TYPE) qtimer_t TYPE##_timer = qtimer_create();
 # define QTHREAD_LOCK_TIMER_START(TYPE) qtimer_start(TYPE##_timer)
 # define QTHREAD_LOCK_TIMER_STOP(TYPE, ME) do { double secs; \
     qtimer_stop(TYPE##_timer); \
@@ -1045,8 +1045,8 @@ int qthread_debuglevel(int d)
 	(ME)->shepherd_ptr->TYPE##_maxtime = secs; } \
     (ME)->shepherd_ptr->TYPE##_time += qtimer_secs(TYPE##_timer); \
     (ME)->shepherd_ptr->TYPE##_count ++; \
-    qtimer_free(TYPE##_timer); } while(0)
-# define QTHREAD_HOLD_TIMER_INIT(LOCKSTRUCT_P) (LOCKSTRUCT_P)->hold_timer = qtimer_new()
+    qtimer_destroy(TYPE##_timer); } while(0)
+# define QTHREAD_HOLD_TIMER_INIT(LOCKSTRUCT_P) (LOCKSTRUCT_P)->hold_timer = qtimer_create()
 # define QTHREAD_HOLD_TIMER_START(LOCKSTRUCT_P) qtimer_start((LOCKSTRUCT_P)->hold_timer)
 # define QTHREAD_HOLD_TIMER_STOP(LOCKSTRUCT_P, SHEP) do { double secs; \
     qtimer_stop((LOCKSTRUCT_P)->hold_timer); \
@@ -1054,8 +1054,8 @@ int qthread_debuglevel(int d)
     if ((SHEP)->hold_maxtime < secs) { \
 	(SHEP)->hold_maxtime = secs; } \
     (SHEP)->hold_time += secs; } while(0)
-# define QTHREAD_HOLD_TIMER_DESTROY(LOCKSTRUCT_P) qtimer_free((LOCKSTRUCT_P)->hold_timer)
-# define QTHREAD_EMPTY_TIMER_INIT(LOCKSTRUCT_P) (LOCKSTRUCT_P)->empty_timer = qtimer_new()
+# define QTHREAD_HOLD_TIMER_DESTROY(LOCKSTRUCT_P) qtimer_destroy((LOCKSTRUCT_P)->hold_timer)
+# define QTHREAD_EMPTY_TIMER_INIT(LOCKSTRUCT_P) (LOCKSTRUCT_P)->empty_timer = qtimer_create()
 # define QTHREAD_EMPTY_TIMER_START(LOCKSTRUCT_P) qtimer_start((LOCKSTRUCT_P)->empty_timer)
 # define QTHREAD_EMPTY_TIMER_STOP(LOCKSTRUCT_P) do { qthread_shepherd_t *ret; \
     double secs; \
@@ -1168,8 +1168,8 @@ static void *qthread_shepherd(void *arg)
     int done = 0;
 
 #ifdef QTHREAD_SHEPHERD_PROFILING
-    qtimer_t total = qtimer_new();
-    qtimer_t idle = qtimer_new();
+    qtimer_t total = qtimer_create();
+    qtimer_t idle = qtimer_create();
 #endif
 
     qthread_debug(ALL_DETAILS, "qthread_shepherds(): alive! me = %p\n", me);
@@ -1411,8 +1411,8 @@ static void *qthread_shepherd(void *arg)
     }
 
 #ifdef QTHREAD_SHEPHERD_PROFILING
-    qtimer_free(total);
-    qtimer_free(idle);
+    qtimer_destroy(total);
+    qtimer_destroy(idle);
 #endif
     qthread_debug(ALL_DETAILS, "qthread_shepherd(%u): finished\n",
 		  me->shepherd_id);
@@ -3170,7 +3170,7 @@ static QINLINE qthread_t *qthread_dequeue_nonblocking(qthread_queue_t * q)
 static void qthread_addrstat_delete(qthread_addrstat_t * m)
 {				       /*{{{ */
 #ifdef QTHREAD_LOCK_PROFILING
-    qtimer_free(m->empty_timer);
+    qtimer_destroy(m->empty_timer);
 #endif
     QTHREAD_FASTLOCK_DESTROY(m->lock);
     FREE_ADDRSTAT(m);

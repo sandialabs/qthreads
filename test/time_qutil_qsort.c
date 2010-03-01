@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
     aligned_t *ui_array, *ui_array2;
     double *d_array, *d_array2;
     size_t len = 1000000;
-    qtimer_t timer = qtimer_new();
+    qtimer_t timer = qtimer_create();
     double cumulative_time = 0.0;
     int using_doubles = 0;
     unsigned long iterations = 10;
@@ -113,7 +113,7 @@ int main(int argc, char *argv[])
 	free(ui_array2);
     }
 
-    qtimer_free(timer);
+    qtimer_destroy(timer);
 
     return 0;
 }

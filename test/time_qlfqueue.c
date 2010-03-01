@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
     qthread_t *me;
     size_t i;
     aligned_t *rets;
-    qtimer_t timer = qtimer_new();
+    qtimer_t timer = qtimer_create();
 #ifdef HAVE_CPROPS
     cp_list *cpq;
 #endif

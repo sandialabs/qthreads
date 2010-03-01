@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
 {
     size_t i;
     unsigned long iterations = 1000;
-    qtimer_t timer = qtimer_new();
+    qtimer_t timer = qtimer_create();
     void **numa_allocs;
     void **numa_pools;
     size_t numa_size;
@@ -205,7 +205,7 @@ int main(int argc, char *argv[])
 
     free(allthat);
 
-    qtimer_free(timer);
+    qtimer_destroy(timer);
     iprintf("success!\n");
     return 0;
 }

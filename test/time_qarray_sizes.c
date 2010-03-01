@@ -47,7 +47,7 @@ static void assert1_loop(qthread_t * me, const size_t startat,
 int main(int argc, char *argv[])
 {
     qthread_t *me;
-    qtimer_t timer = qtimer_new();
+    qtimer_t timer = qtimer_create();
     distribution_t disttypes[] = {
 	FIXED_HASH, FIXED_FIELDS,
 	ALL_LOCAL, /*ALL_RAND, ALL_LEAST, */
@@ -217,6 +217,6 @@ int main(int argc, char *argv[])
 	}
     }
 
-    qtimer_free(timer);
+    qtimer_destroy(timer);
     return 0;
 }

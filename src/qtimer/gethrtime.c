@@ -30,13 +30,13 @@ qtimer_secs(qtimer_t q)
 }
 
 qtimer_t
-qtimer_new()
+qtimer_create()
 {
     return calloc(1, sizeof(struct qtimer_s));
 }
 
 void
-qtimer_free(qtimer_t q)
+qtimer_destroy(qtimer_t q)
 {
     free(q);
 }

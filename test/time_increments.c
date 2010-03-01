@@ -124,7 +124,7 @@ static char *human_readable_rate(double rate)
 
 int main(int argc, char *argv[])
 {
-    qtimer_t timer = qtimer_new();
+    qtimer_t timer = qtimer_create();
     double rate;
     unsigned int i;
     aligned_t *rets;
@@ -340,7 +340,7 @@ int main(int argc, char *argv[])
 	       human_readable_rate(rate));
     }
 
-    qtimer_free(timer);
+    qtimer_destroy(timer);
     free(rets);
 
     return 0;

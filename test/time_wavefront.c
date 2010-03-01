@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
     qthread_t *me;
     qarray *v, *h;
     qt_wavefront_lattice *L;
-    qtimer_t timer = qtimer_new();
+    qtimer_t timer = qtimer_create();
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
     CHECK_VERBOSE();

@@ -58,8 +58,8 @@ int main()
     size_t *answer1 = malloc(sizeof(size_t) * BIGNUM);
     size_t *answer2 = malloc(sizeof(size_t) * BIGNUM);
     size_t i;
-    qtimer_t mod_timer = qtimer_new();
-    qtimer_t shift_timer = qtimer_new();
+    qtimer_t mod_timer = qtimer_create();
+    qtimer_t shift_timer = qtimer_create();
     CHECK_VERBOSE();
     NUMARG(BIGNUM, "BIGNUM");
     for (i = 0; i < BIGNUM; i++) {
@@ -102,8 +102,8 @@ int main()
 #else
     assert(qtimer_secs(shift_timer) > qtimer_secs(mod_timer));
 #endif
-    qtimer_free(mod_timer);
-    qtimer_free(shift_timer);
+    qtimer_destroy(mod_timer);
+    qtimer_destroy(shift_timer);
     free(bigset);
     free(answer1);
     free(answer2);

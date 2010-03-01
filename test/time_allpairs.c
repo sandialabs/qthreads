@@ -33,7 +33,7 @@ int main(int argc, char *argv[])
     qarray *a1, *a2;
     int **out;
     qthread_t *me;
-    qtimer_t timer = qtimer_new();
+    qtimer_t timer = qtimer_create();
     double cumulative_time = 0.0;
 
     if (qthread_initialize() != QTHREAD_SUCCESS) {
@@ -73,7 +73,7 @@ int main(int argc, char *argv[])
     }
     free(out);
 
-    qtimer_free(timer);
+    qtimer_destroy(timer);
 
     qarray_destroy(a1);
     qarray_destroy(a2);

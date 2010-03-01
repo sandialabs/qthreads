@@ -92,7 +92,7 @@ static aligned_t FEB_player1(qthread_t * me, void *arg)
     unsigned int offset = (unsigned int)(intptr_t) arg;
     aligned_t paddle = 1;
     unsigned int i;
-    qtimer_t roundtrip_timer = qtimer_new();
+    qtimer_t roundtrip_timer = qtimer_create();
 
     /* serve */
     qtimer_start(sending[offset][0]);
@@ -113,7 +113,7 @@ static aligned_t FEB_player1(qthread_t * me, void *arg)
 	    assert(qthread_writeEF(me, FEBtable[offset], &paddle) == 0);
 	}
     }
-    qtimer_free(roundtrip_timer);
+    qtimer_destroy(roundtrip_timer);
     return 0;
 }
 
@@ -138,7 +138,7 @@ static char *human_readable_rate(double rate)
 
 int main(int argc, char *argv[])
 {
-    qtimer_t timer = qtimer_new();
+    qtimer_t timer = qtimer_create();
     double rate;
     unsigned int i;
     aligned_t rets[MAXPARALLELISM];
@@ -162,8 +162,8 @@ int main(int argc, char *argv[])
     for (i = 0; i < MAXPARALLELISM; i++) {
 	qthread_empty(NULL, FEBbuffer + i);
 	sending[i] = malloc(2 * sizeof(qtimer_t));
-	sending[i][0] = qtimer_new();
-	sending[i][1] = qtimer_new();
+	sending[i][0] = qtimer_create();
+	sending[i][1] = qtimer_create();
 	FEBtable[i] = malloc(sizeof(aligned_t) * 2);
 	qthread_empty(NULL, &(FEBtable[i][0]));
 	qthread_empty(NULL, &(FEBtable[i][1]));
@@ -372,10 +372,10 @@ int main(int argc, char *argv[])
     printf("\t = data hop throughput: %20g bytes/sec %s\n", rate,
 	   human_readable_rate(rate));
 
-    qtimer_free(timer);
+    qtimer_destroy(timer);
     for (i = 0; i < MAXPARALLELISM; i++) {
-	qtimer_free(sending[i][0]);
-	qtimer_free(sending[i][1]);
+	qtimer_destroy(sending[i][0]);
+	qtimer_destroy(sending[i][1]);
 	free(sending[i]);
 	free(FEBtable[i]);
     }

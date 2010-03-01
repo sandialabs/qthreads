@@ -89,7 +89,7 @@ double qtimer_secs(qtimer_t q)
 }
 
 
-qtimer_t qtimer_new(void)
+qtimer_t qtimer_create(void)
 {
     if (NULL == timer_address) {
 	if (0 != qtimer_init())
@@ -100,7 +100,7 @@ qtimer_t qtimer_new(void)
 }
 
 
-void qtimer_free(qtimer_t q)
+void qtimer_destroy(qtimer_t q)
 {
     free(q);
 }

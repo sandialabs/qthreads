@@ -42,14 +42,14 @@ double qtimer_secs(qtimer_t q)
     return (q->stop.tv_sec + q->stop.tv_nsec*1e-9) - (q->start.tv_sec + q->start.tv_nsec*1e-9);
 }
 
-qtimer_t qtimer_new()
+qtimer_t qtimer_create()
 {
     qtimer_t ret = calloc(1, sizeof(struct qtimer_s));
     assert(ret);
     return ret;
 }
 
-void qtimer_free(qtimer_t q)
+void qtimer_destroy(qtimer_t q)
 {
     assert(q);
     free(q);

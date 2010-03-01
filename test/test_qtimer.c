@@ -15,14 +15,14 @@ int main()
 
     CHECK_VERBOSE();
 
-    t = qtimer_new();
+    t = qtimer_create();
     assert(t);
     qtimer_start(t);
     me = qthread_self();
     qtimer_stop(t);
     assert(qtimer_secs(t) > 0);
     iprintf("t = %f secs\n", qtimer_secs(t));
-    qtimer_free(t);
+    qtimer_destroy(t);
 
     return 0;
 }

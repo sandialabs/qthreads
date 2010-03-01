@@ -33,7 +33,7 @@ static void *qincr(void *arg)
 int main(int argc, char *argv[])
 {
     pthread_t rets[NUM_THREADS];
-    qtimer_t timer = qtimer_new();
+    qtimer_t timer = qtimer_create();
     double cumulative_time = 0.0;
 
     pthread_mutex_init(&counter_lock, NULL);

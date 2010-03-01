@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
 {
     aligned_t rets[NUM_THREADS];
     qthread_t *me;
-    qtimer_t timer = qtimer_new();
+    qtimer_t timer = qtimer_create();
     double cumulative_time = 0.0;
 
     if (qthread_initialize() != QTHREAD_SUCCESS) {

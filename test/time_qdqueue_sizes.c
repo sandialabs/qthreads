@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
     qthread_t *me;
     size_t i;
     aligned_t *rets;
-    qtimer_t timer = qtimer_new();
+    qtimer_t timer = qtimer_create();
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
 
