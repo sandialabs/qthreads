@@ -177,16 +177,14 @@ AC_ARG_ENABLE([shepherd-profiling],
      [counts the amount of wall-clock time that each shepherd spends idle])],
   [], [enable_shepherd_profiling="no"])
 AS_IF([test "x$enable_shepherd_profiling" = "xyes"],
-      [AC_DEFINE([QTHREAD_SHEPHERD_PROFILING], [1], [adds code to monitor how much time shepherds spend idle])
-	  need_qtimer=yes])
+      [AC_DEFINE([QTHREAD_SHEPHERD_PROFILING], [1], [adds code to monitor how much time shepherds spend idle])])
 
 AC_ARG_ENABLE([lock-profiling],
   [AS_HELP_STRING([--enable-lock-profiling],
 	 [counts the amount of wall-clock time that is spent aquiring locks])],
   [], [enable_lock_profiling="no"])
 AS_IF([test "x$enable_lock_profiling" = "xyes"],
-	  [AC_DEFINE([QTHREAD_LOCK_PROFILING], [1], [adds code to monitor how much time is spent aquiring locks])
-	  need_qtimer=yes])
+	  [AC_DEFINE([QTHREAD_LOCK_PROFILING], [1], [adds code to monitor how much time is spent aquiring locks])])
 
 AC_ARG_ENABLE([timer-progs],
   [AS_HELP_STRING([--enable-timer-progs],
@@ -477,8 +475,7 @@ AC_ARG_ENABLE([hardware-timer],
   [AS_HELP_STRING([--disable-hardware-timer],
 				  [force the use of gettimeofday even if there is a better timer available])],
   [], [enable_hardware_timer="yes"])
-AS_IF([test "x$need_qtimer" = "xyes"],
-  [AS_IF([test "x$enable_hardware_timer" = "xyes"],
+AS_IF([test "x$enable_hardware_timer" = "xyes"],
 	  [# Which timer do we want to use
 	   qthread_timer_type=gettimeofday
 	   AS_IF([test "x$qthread_timer_type" = "xgettimeofday"],
@@ -493,7 +490,7 @@ AS_IF([test "x$need_qtimer" = "xyes"],
 							  break])])
 	   AC_MSG_CHECKING([for high resolution timer type])
 	   AC_MSG_RESULT([$qthread_timer_type])
-  ],[qthread_timer_type=gettimeofday])])
+	   ],[qthread_timer_type=gettimeofday])
 
 AC_CACHE_SAVE
 
@@ -519,7 +516,6 @@ AM_CONDITIONAL([QTHREAD_TIMER_TYPE_MACH], [test "x$qthread_timer_type" = "xmach"
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETHRTIME], [test "x$qthread_timer_type" = "xgethrtime"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_ALTIX], [test "x$qthread_timer_type" = "xaltix"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIMEOFDAY], [test "x$qthread_timer_type" = "xgettimeofday"])
-AM_CONDITIONAL([QTHREAD_NEED_QTIMER], [test "x$qthread_timer_type" != "x"])
 AM_CONDITIONAL([COMPILE_POOLED_MEMORY], [test "x$enable_pooled_memory" = "xyes"])
 AM_CONDITIONAL([COMPILE_CXX_HASH], [test "x$with_cprops" != "xyes"])
 AM_CONDITIONAL([COMPILE_ROSE_EXTENSIONS], [test "x$enable_rose_extensions" == xyes])
