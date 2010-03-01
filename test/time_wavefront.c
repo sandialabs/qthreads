@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <qthread/qthread.h>
 #include <qthread/wavefront.h>
-#include "qtimer.h"
+#include <qthread/qtimer.h>
 #include "argparsing.h"
 
 static size_t ASIZE = 10;

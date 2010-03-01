@@ -6,7 +6,7 @@
 #include <stdlib.h>
 #include <qthread/qthread.h>
 #include <qthread/allpairs.h>
-#include "qtimer.h"
+#include <qthread/qtimer.h>
 #include "argparsing.h"
 
 size_t ASIZE = 1026;

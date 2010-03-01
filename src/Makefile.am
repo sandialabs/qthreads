@@ -37,8 +37,8 @@ libqthread_la_SOURCES = \
 # - If you support all the same functions (just bugfixes or whatnot), increment
 #   the revision number
 libqthread_la_LDFLAGS = -version-info 12:0:1 -no-undefined
-libqthread_la_LIBADD =
-libqthread_la_DEPENDENCIES =
+libqthread_la_LIBADD = qtimer/libqtimer.la
+libqthread_la_DEPENDENCIES = qtimer/libqtimer.la
 
 if COMPILE_CXX_HASH
 libqthread_la_SOURCES += qt_hash.cpp
@@ -70,9 +70,4 @@ endif
 if QTHREAD_NEED_OWN_MAKECONTEXT
 libqthread_la_DEPENDENCIES += osx_compat/libosx_compat.la
 libqthread_la_LIBADD += osx_compat/libosx_compat.la
-endif
-
-if QTHREAD_NEED_QTIMER
-libqthread_la_DEPENDENCIES += qtimer/libqtimer.la
-libqthread_la_LIBADD += qtimer/libqtimer.la
 endif

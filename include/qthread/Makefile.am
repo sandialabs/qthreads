@@ -23,6 +23,7 @@ dist_qthread_HEADERS = \
 	loop.hpp
 nodist_qthread_HEADERS = \
 	common.h \
+	qtimer.h \
 	qthread-int.h
 
 if COMPILE_TARGET_SST

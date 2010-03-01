@@ -2,7 +2,7 @@
 #include "config.h"
 #endif
 
-#include "qtimer.h"
+#include <qthread/qtimer.h>
 
 #if TIME_WITH_SYS_TIME
 # include <sys/time.h>

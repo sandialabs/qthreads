@@ -3,8 +3,6 @@
 # Copyright (c)      2008  Sandia Corporation
 #
 
-if QTHREAD_NEED_QTIMER
-
 AM_CPPFLAGS = -I$(top_srcdir)/include
 noinst_LTLIBRARIES = libqtimer.la
 libqtimer_la_SOURCES = 
@@ -27,6 +25,4 @@ endif
 
 if QTHREAD_TIMER_TYPE_GETTIME
 libqtimer_la_SOURCES += gettime.c
-endif
-
 endif

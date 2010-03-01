@@ -2,7 +2,7 @@
 #include "config.h"
 #endif
 
-#include "qtimer.h"
+#include <qthread/qtimer.h>
 
 #include <stdlib.h> /* calloc() & free()*/
 

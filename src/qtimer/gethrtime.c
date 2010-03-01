@@ -4,7 +4,7 @@
 
 #include <stdlib.h>
 
-#include "qtimer.h"
+#include <qthread/qtimer.h>
 
 struct qtimer_s {
     hrtime_t start;

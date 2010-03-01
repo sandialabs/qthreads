@@ -18,6 +18,5 @@ noinst_HEADERS = \
 	qt_feb_barrier.h \
 	qt_hash.h \
 	qt_gcd.h \
-	qtimer.h \
 	qt_mpool.h \
 	futurelib_innards.h

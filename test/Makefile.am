@@ -15,6 +15,7 @@ TESTS = test_basic \
 		test_stackleft \
 		test_migrate \
 		test_disabled \
+		test_qtimer \
 		test_qutil \
 		test_qutil_qsort \
 		testqloop \
