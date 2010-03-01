@@ -339,18 +339,8 @@ AC_CACHE_SAVE
 ## Check for compiler characteristics ##
 ## ---------------------------------- ##
 # Find out if we need the -restrict flag
-AC_CACHE_CHECK([if $CXX needs -restrict],
-   [qthread_cv_cxx_restrict],
-   [case "$CXX" in
-	icpc*) dnl icpc requires it for proper restrict handling in C headers
-		qthread_cv_cxx_restrict="yes"
-		;;
-	*)
-		qthread_cv_cxx_restrict="no"
-		;;
-	esac])
 RESTRICT_CXXFLAGS=""
-AS_IF([test "x$qthread_cv_cxx_restrict" = "xyes"],
+AS_IF([test "x$qthread_cv_cxx_compiler_type" = "xIntel"],
 	  [RESTRICT_CXXFLAGS="-restrict"])
 AC_SUBST([RESTRICT_CXXFLAGS])
 
