@@ -389,6 +389,13 @@ qqloop_handle_t *qt_loop_queue_create(const size_t start, const size_t stop,
 		h->qwa[i].stat = &(h->stat);
 		h->qwa[i].shep = i;    // this is the only thread-specific piece of information...
 	    }
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+	    h->workers = 0;
+	    h->shepherdsActive = 0;
+	    h->assignNext = start;
+	    h->assignStop = stop;
+	    h->assignDone = start;
+#endif
 	}
 	return h;
     }
@@ -815,11 +822,15 @@ void qt_qsort(qthread_t * me, double *array, const size_t length)
  *    facilitates nested loop handling by allowing shepherd additions after initial loop construction
  */
 
+static int activeParallel = 0;
+
 /* qt_parallel - translator for qt_loop() */
 void qt_parallel(const qt_loop_f func, const unsigned int threads,
 		 void *argptr)
 {
-    qt_loop(0, threads-1, 1, func, argptr);
+    activeParallel = 1;
+    qt_loop(0, threads, 1, func, argptr);
+    activeParallel = 0;
 }
 
 /* qt_parallel_for - function generated in response to OpenMP parallel for
@@ -848,7 +859,7 @@ void qt_forloop_queue_run_single(qqloop_handle_t * loop, void * arg)
     if (!(loop->shepherdsActive & (1<<myShep))) {
 	size_t iterationNumber = (size_t)qthread_incr(&loop->assignNext, 1);
 
-	while (iterationNumber <= loop->assignStop) {
+	while (iterationNumber < loop->assignStop) {
 	    if (!(loop->shepherdsActive & (1<<myShep))) {
 		loop->shepherdsActive |= (1<<myShep);
 	    }
@@ -882,7 +893,7 @@ void qt_loop_queue_run_single(volatile qqloop_handle_t * loop, void *t)
 	// get next loop iteration (shared access)
 	aligned_t iterationNumber = qthread_incr(&loop->assignNext, 1);
 
-	while (iterationNumber <= loop->assignStop) {
+	while (iterationNumber < loop->assignStop) {
 	    if (!(loop->shepherdsActive & (1 << myNum))) {
 		loop->shepherdsActive |= (1 << myNum);	// mark me active
 	    }
@@ -910,7 +921,7 @@ void qt_loop_queue_run_single(volatile qqloop_handle_t * loop, void *t)
 
 volatile qqloop_handle_t *activeLoop = NULL;
 
-void qt_parallel_for(const qt_loop_f func, const int iter,
+void qt_parallel_qfor(const qt_loop_f func, const int iter,
 		     void *restrict argptr)
 {
     qthread_t *me = qthread_self();
@@ -937,5 +948,32 @@ void qt_parallel_for(const qt_loop_f func, const int iter,
     qt_loop_queue_run_single(qqhandle, argptr);
 
     return;
+}
+
+void qt_naked_parallel_for(qthread_t * me, const size_t startat, const size_t stopat, void *nakedArg);
+
+void qt_parallel_for(const qt_loop_f func, const int iter,
+                     void *restrict argptr)
+{
+  if (!activeParallel){
+    void * nakedArg[3] = {(void*)func, (void*)&iter, (void*)argptr};
+
+    activeParallel = 1;
+    qt_loop(0, qthread_num_shepherds(), 1, qt_naked_parallel_for, nakedArg);
+    activeParallel = 0;
+ 
+  }
+  else {
+    qt_parallel_qfor(func,iter,argptr);
+  }
+}
+
+void qt_naked_parallel_for(qthread_t * me, const size_t startat, const size_t stopat, void *nakedArg)
+{
+  void ** funcArgs = (void**)nakedArg;
+  const qt_loop_f func = (const qt_loop_f)(funcArgs[0]);
+  const int64_t iter = *(const int64_t*)(funcArgs[1]);
+  void *restrict argptr = funcArgs[2];
+  qt_parallel_qfor(func,iter,argptr);
 }
 #endif
