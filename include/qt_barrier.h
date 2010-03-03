@@ -25,7 +25,7 @@ typedef enum dumpType
 typedef struct qt_barrier_s qt_barrier_t;
 
 qt_barrier_t *qt_barrier_create(int size, enum barrierType type, int debug);
-void qt_barrier_enter(qt_barrier_t *b, int threadNum);
+void qt_barrier_enter(const qthread_t *me, qt_barrier_t *b);
 void qt_barrier_dump(qt_barrier_t *b, enum dumpType dt);
 void qt_barrier_destroy(qt_barrier_t *b);
 

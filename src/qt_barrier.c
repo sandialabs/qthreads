@@ -222,15 +222,16 @@ static void qtb_internal_up(qt_barrier_t * b, int myLock, int64_t val,
 
 // actual barrier entry point
 
-void qt_barrier_enter(qt_barrier_t * b, int threadNum)
+void qt_barrier_enter(const qthread_t *me, qt_barrier_t * b)
 {
     // should be dual versions  1) all active threads barrier
     //                          2) all active streams
 
     // only dealing with (1) for first pass for now
-    int64_t val = b->upLock[threadNum] + 1;
+    const qthread_shepherd_id_t shep = qthread_shep(me);
+    int64_t val = b->upLock[shep] + 1;
 
-    qtb_internal_up(b, threadNum, val, 0);
+    qtb_internal_up(b, shep, val, 0);
 }
 
 // used indirectly by omp barrier calls (initially - others I hope)
@@ -239,13 +240,12 @@ void qt_barrier_enter(qt_barrier_t * b, int threadNum)
 #ifdef QT_GLOBAL_LOGBARRIER
 void qt_global_barrier(const qthread_t * me)
 {
-    const int threadNum = qthread_shep(me);
-    qt_barrier_enter(MBar, threadNum);
+    qt_barrier_enter(me, MBar);
     //  now execute code on one thread that everyone needs to see -- should be
     //     at middle of barrier but does not seem to work there -- so here with double barrier
     //     blech.  akp -2/9/10
     qthread_reset_forCount(qthread_self());	// for loop reset on each thread
-    qt_barrier_enter(MBar, threadNum);
+    qt_barrier_enter(me, MBar);
     return;
 }
 
