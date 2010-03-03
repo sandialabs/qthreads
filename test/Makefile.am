@@ -18,6 +18,7 @@ TESTS = test_basic \
 		test_qtimer \
 		test_qutil \
 		test_qutil_qsort \
+		test_feb_barrier \
 		testqloop \
 		test_qpool \
 		test_qarray \
@@ -72,7 +73,6 @@ noinst_HEADERS = argparsing.h
 INCLUDES = -I$(top_srcdir)/include
 OUTPUTDIR = $(top_builddir)/src
 QTHREADLIB = $(OUTPUTDIR)/libqthread.la
-QTIMERLIB = $(OUTPUTDIR)/qtimer/libqtimer.la
 CONTEXTLIB = $(OUTPUTDIR)/osx_compat/libosx_compat.la
 
 LDADD = $(QTHREADLIB)
@@ -153,13 +153,9 @@ test_qpool_SOURCES = test_qpool.c
 test_qpool_DEPENDENCIES = $(QTHREADLIB)
 
 time_gcd_SOURCES = time_gcd.c
-time_gcd_LDADD = $(QTIMERLIB)
-time_gcd_DEPENDENCIES = $(QTIMERLIB)
 
 time_swap_SOURCES = time_swap.c
 time_swap_CPPFLAGS = -I$(top_srcdir)/src/ # for osx_compat
-time_swap_LDADD = $(QTIMERLIB)
-time_swap_DEPENDENCIES = $(QTIMERLIB)
 if QTHREAD_NEED_OWN_MAKECONTEXT
 time_swap_LDADD += $(CONTEXTLIB)
 time_swap_DEPENDENCIES += $(CONTEXTLIB)
@@ -235,3 +231,6 @@ time_cncthr_bench_DEPENDENCIES = $(QTHREADLIB)
 
 time_cncthr_bench_pthread_SOURCES = time_cncthr_bench_pthread.c
 time_cncthr_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
+
+test_feb_barrier_SOURCES = test_feb_barrier.c
+test_feb_barrier_DEPENDENCIES = $(QTHREADLIB)

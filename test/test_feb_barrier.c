@@ -5,6 +5,7 @@
 #include <unistd.h>
 #include <qthread/qthread.h>
 #include <qthread/feb_barrier.h>
+#include <qthread/qtimer.h>
 #include "argparsing.h"
 
 aligned_t initme_idx = 0;
@@ -25,9 +26,11 @@ int main(int argc, char *argv[])
     size_t threads=1000, i;
     qthread_t *me;
     aligned_t *rets;
+    qtimer_t t;;
 
     assert(qthread_initialize() == 0);
     me = qthread_self();
+    t = qtimer_create();
 
     CHECK_VERBOSE();
     NUMARG(threads, "THREADS");
@@ -47,13 +50,19 @@ int main(int argc, char *argv[])
     for (i=0; i<threads; i++) {
 	qthread_fork(barrier_thread, wait_on_me, rets+i);
     }
+    qtimer_start(t);
     qt_feb_barrier_enter(me, wait_on_me);
+    qtimer_stop(t);
+    iprintf("main thread exited barrier 1 in %f seconds\n", qtimer_secs(t));
     initme_idx = 0;
 
     for (i=0; i<threads; i++) {
 	qthread_fork(barrier_thread, wait_on_me, rets+i);
     }
+    qtimer_start(t);
     qt_feb_barrier_enter(me, wait_on_me);
+    qtimer_stop(t);
+    iprintf("main thread exited barrier 2 in %f seconds\n", qtimer_secs(t));
 
     for (i=0; i<threads; i++) {
 	if (initme[i] != 2) {
