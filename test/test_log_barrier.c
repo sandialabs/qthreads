@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
     rets = malloc(threads * sizeof(aligned_t));
     assert(rets);
 
-    wait_on_me = qt_barrier_create(threads+1, REGION_BARRIER, 0); // all my spawnees plus me
+    wait_on_me = qt_barrier_create(threads+1, REGION_BARRIER, 1); // all my spawnees plus me
     assert(wait_on_me);
 
     for (i=0; i<threads; i++) {
