@@ -78,7 +78,8 @@ static inline qthread_shepherd_id_t qarray_internal_shepof_segidx(const qarray
 	    return *qarray_internal_segment_shep(a,
 						 qarray_elem_nomigrate(a,
 								       seg *
-								       a->segment_size));
+								       a->
+								       segment_size));
 	default:
 	    /* This should never happen, so deliberately cause a seg fault for
 	     * corefile analysis */
@@ -1229,7 +1230,7 @@ void qarray_iter_loopaccum(qthread_t * me, qarray * a, const size_t startat,
 	     * ranges, we essentially parallelize the task of figuring out
 	     * which threads to spawn (bizarre way of thinking about it, I
 	     * know). */
-	    if (stopat - startat < a->segment_size) {
+	    if (stopat - startat <= a->segment_size) {
 		aligned_t r;
 		struct qarray_accumfunc_wrapper_args qfwa =
 		    { {func}, acc, a, arg, ret, startat, stopat, retsize };
@@ -1342,7 +1343,7 @@ void qarray_set_shepof(qarray * a, const size_t i, qthread_shepherd_id_t shep)
 }				       /*}}} */
 
 void qarray_dist_like(const qarray * ref, qarray * mod)
-{
+{				       /*{{{ */
     qassert_retvoid(ref->count == mod->count);
     qassert_retvoid(ref->unit_size == mod->unit_size);
     if (ref->dist_type == DIST) {
@@ -1401,4 +1402,4 @@ void qarray_dist_like(const qarray * ref, qarray * mod)
 			    ref->dist_type != FIXED_FIELDS);
 #endif
     }
-}
+}				       /*}}} */
