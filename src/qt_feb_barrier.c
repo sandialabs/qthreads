@@ -20,7 +20,7 @@ struct qt_feb_barrier_s
 };
 
 static qt_mpool feb_barrier_pool = NULL;
-static qt_feb_barrier_t *global_barrier = NULL;
+static Q_UNUSED qt_feb_barrier_t *global_barrier = NULL;
 
 static void cleanup_feb_barrier(void)
 {
