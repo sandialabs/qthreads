@@ -156,6 +156,8 @@ time_gcd_SOURCES = time_gcd.c
 
 time_swap_SOURCES = time_swap.c
 time_swap_CPPFLAGS = -I$(top_srcdir)/src/ # for osx_compat
+time_swap_LDADD =
+time_swap_DEPENDENCIES =
 if QTHREAD_NEED_OWN_MAKECONTEXT
 time_swap_LDADD += $(CONTEXTLIB)
 time_swap_DEPENDENCIES += $(CONTEXTLIB)
