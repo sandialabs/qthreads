@@ -19,7 +19,6 @@ TESTS = test_basic \
 		test_qutil \
 		test_qutil_qsort \
 		test_feb_barrier \
-		test_log_barrier \
 		testqloop \
 		test_qpool \
 		test_qarray \
@@ -33,6 +32,10 @@ EXTRA_PROGRAMS = test_wavefront
 
 if ENABLE_CXX_TESTS
 TESTS += testloop
+endif
+
+if COMPILE_ROSE_EXTENSIONS
+TESTS += test_log_barrier
 endif
 
 if ENABLE_TIMER_PROGS
