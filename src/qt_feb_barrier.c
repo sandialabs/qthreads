@@ -6,10 +6,10 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "qt_feb_barrier.h"
 #include "qthread_asserts.h"
 #include "qt_atomics.h"
 #include "qt_mpool.h"
+#include <qthread/feb_barrier.h>
 #include <qthread/qthread.h>
 
 struct qt_feb_barrier_s

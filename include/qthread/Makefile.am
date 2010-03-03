@@ -17,7 +17,7 @@ dist_qthread_HEADERS = \
 	qpool.h \
 	qutil.h \
 	qloop.h \
-	qt_feb_barrier.h \
+	feb_barrier.h \
 	futurelib.h \
 	qtimer.h \
 	loop_templates.hpp \
