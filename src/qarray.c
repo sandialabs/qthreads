@@ -1268,7 +1268,7 @@ void qarray_iter_loopaccum(qthread_t * me, qarray * a, const size_t startat,
 		for (i = 0; i < maxsheps; i++) {
 		    qthread_readFF(me, NULL, &(rv[i]));
 		    if (i > 0) {
-			acc(ret, &rets[i - 1]);
+			acc(ret, rets + ((i - 1) * retsize));
 		    }
 		}
 	    }
