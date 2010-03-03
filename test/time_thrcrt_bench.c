@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <qthread/qthread.h>
-#include "qtimer.h"
+#include <qthread/qtimer.h>
 #include "argparsing.h"
 
 #include <pthread.h>

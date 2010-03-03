@@ -6,12 +6,10 @@
 
 int main()
 {
-    int i;
-    qthread_t *me;
     qtimer_t t;
+    qthread_t *me;
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
-    me = qthread_self();
 
     CHECK_VERBOSE();
 
@@ -19,6 +17,7 @@ int main()
     assert(t);
     qtimer_start(t);
     me = qthread_self();
+    assert(me);
     qtimer_stop(t);
     assert(qtimer_secs(t) > 0);
     iprintf("t = %f secs\n", qtimer_secs(t));

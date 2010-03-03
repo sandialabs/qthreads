@@ -14,7 +14,7 @@
 #include <time.h>		       /* for gettimeofday() */
 
 #include <qthread/qutil.h>
-#include "qtimer.h"
+#include <qthread/qtimer.h>
 #include "argparsing.h"
 
 static int dcmp(const void *a, const void *b)

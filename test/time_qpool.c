@@ -8,7 +8,7 @@
 #include <qthread/qloop.h>
 #include <qthread/qpool.h>
 #include <pthread.h>
-#include "qtimer.h"
+#include <qthread/qtimer.h>
 #ifdef QTHREAD_HAVE_LIBNUMA
 # include <numa.h>
 #endif

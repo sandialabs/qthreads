@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
-#include "qtimer.h"
+#include <qthread/qtimer.h>
 #include "qt_gcd.h"
 #include "argparsing.h"
 

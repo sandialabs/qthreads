@@ -159,20 +159,17 @@ test_qpool_DEPENDENCIES = $(QTHREADLIB)
 time_gcd_SOURCES = time_gcd.c
 
 time_swap_SOURCES = time_swap.c
-time_swap_CPPFLAGS = -I$(top_srcdir)/src/ # for osx_compat
-time_swap_LDADD =
-time_swap_DEPENDENCIES =
+time_swap_LDADD = $(QTHREADLIB)
+time_swap_DEPENDENCIES = $(QTHREADLIB)
 if QTHREAD_NEED_OWN_MAKECONTEXT
 time_swap_LDADD += $(CONTEXTLIB)
 time_swap_DEPENDENCIES += $(CONTEXTLIB)
 endif
 
 time_producerconsumer_SOURCES = time_producerconsumer.c
-time_producerconsumer_LDADD = $(QTHREADLIB)
 time_producerconsumer_DEPENDENCIES = $(QTHREADLIB)
 
 time_increments_SOURCES = time_increments.c
-time_increments_LDADD = $(QTHREADLIB)
 time_increments_DEPENDENCIES = $(QTHREADLIB)
 
 time_qarray_SOURCES = time_qarray.c

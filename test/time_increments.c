@@ -3,7 +3,7 @@
 #include <assert.h>		       /* for assert() */
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
-#include "qtimer.h"
+#include <qthread/qtimer.h>
 #include "argparsing.h"
 
 size_t TEST_SELECTION = 255;

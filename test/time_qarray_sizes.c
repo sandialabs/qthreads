@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <qthread/qthread.h>
 #include <qthread/qarray.h>
-#include "qtimer.h"
+#include <qthread/qtimer.h>
 #include "argparsing.h"
 
 size_t ELEMENT_COUNT = 100000;

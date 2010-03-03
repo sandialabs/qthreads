@@ -10,7 +10,7 @@
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
 #include <qthread/qlfqueue.h>
-#include "qtimer.h"
+#include <qthread/qtimer.h>
 #include "argparsing.h"
 
 #define ELEMENT_COUNT 10000
