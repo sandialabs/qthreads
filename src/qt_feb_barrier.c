@@ -19,21 +19,24 @@ struct qt_feb_barrier_s
     size_t max_blockers;
 };
 
-static qt_mpool feb_barrier_pool = NULL;
+static qt_mpool QTHREAD_CASLOCK2(feb_barrier_pool);
 static Q_UNUSED qt_feb_barrier_t *global_barrier = NULL;
 
 static void cleanup_feb_barrier(void)
 {
-    qt_mpool_destroy(feb_barrier_pool);
+    if (feb_barrier_pool) {
+	qt_mpool_destroy(feb_barrier_pool);
+    }
     feb_barrier_pool = NULL;
 }
 
 qt_feb_barrier_t *qt_feb_barrier_create(qthread_t *me, size_t max_threads)
 {
     qt_feb_barrier_t *b;
+#ifndef UNPOOLED
     if (feb_barrier_pool == NULL) {
 	qt_mpool bp = qt_mpool_create(qthread_num_shepherds()>1, sizeof(struct qt_feb_barrier_s), -1);
-	if (qt_cas(&feb_barrier_pool, NULL, bp) != NULL) {
+	if (QT_CAS(feb_barrier_pool, NULL, bp) != NULL) {
 	    /* someone else created an mpool first */
 	    qt_mpool_destroy(bp);
 	} else {
@@ -41,6 +44,9 @@ qt_feb_barrier_t *qt_feb_barrier_create(qthread_t *me, size_t max_threads)
 	}
     }
     b = qt_mpool_alloc(feb_barrier_pool);
+#else
+    b = malloc(sizeof(struct qt_feb_barrier_s));
+#endif
     b->blockers = 0;
     b->max_blockers = max_threads;
     qthread_empty(me, &b->block_on_me);
@@ -66,7 +72,11 @@ void qt_feb_barrier_destroy(qthread_t *me, qt_feb_barrier_t *b)
     assert(feb_barrier_pool != NULL);
     assert(b->blockers == 0);
     qthread_fill(me, &b->block_on_me);
+#ifndef UNPOOLED
     qt_mpool_free(feb_barrier_pool, b);
+#else
+    free(b);
+#endif
 }
 
 #ifdef QTHREAD_GLOBAL_FEB_BARRIER
