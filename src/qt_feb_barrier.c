@@ -51,7 +51,6 @@ void qt_feb_barrier_enter(qthread_t *me, qt_feb_barrier_t *b)
 {
     aligned_t waiters = qthread_incr(&b->blockers, 1) + 1;
     qassert_retvoid(b);
-    printf("waiters = %i, max_blockers = %i\n", (int)waiters, (int)b->max_blockers);
     if (waiters == b->max_blockers) {
 	/* last guy into the barrier */
 	qthread_fill(me, &b->block_on_me);
