@@ -9,7 +9,7 @@
 #else
 # include "osx_compat/taskimpl.h"
 #endif
-#include "qtimer.h"
+#include <qthread/qtimer.h>
 #include "argparsing.h"
 
 size_t ITERATIONS = 1000000;
