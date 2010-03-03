@@ -19,6 +19,7 @@ TESTS = test_basic \
 		test_qutil \
 		test_qutil_qsort \
 		test_feb_barrier \
+		test_log_barrier \
 		testqloop \
 		test_qpool \
 		test_qarray \
@@ -236,3 +237,6 @@ time_cncthr_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
 
 test_feb_barrier_SOURCES = test_feb_barrier.c
 test_feb_barrier_DEPENDENCIES = $(QTHREADLIB)
+
+test_log_barrier_SOURCES = test_log_barrier.c
+test_log_barrier_DEPENDENCIES = $(QTHREADLIB)
