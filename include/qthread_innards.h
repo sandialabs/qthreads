@@ -125,7 +125,7 @@ static QINLINE void qthread_debug(int level, char *format, ...)
 {				       /*{{{ */
     va_list args;
 
-    if (level <= debuglevel) {
+    if (level <= debuglevel || level == 0) {
 	static char buf[1024];	/* protected by the output_lock */
 	char *head = buf;
 	char ch;
