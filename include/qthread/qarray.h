@@ -60,6 +60,8 @@ void qarray_iter(qthread_t * me, qarray * a, const size_t startat,
 		 const size_t stopat, qthread_f func);
 void qarray_iter_loop(qthread_t * me, qarray * a, const size_t startat,
 		      const size_t stopat, qa_loop_f func, void *arg);
+void qarray_iter_loop_nb(qthread_t * me, qarray * a, const size_t startat,
+		      const size_t stopat, qa_loop_f func, void *arg, aligned_t *ret);
 void qarray_iter_constloop(qthread_t * me, const qarray * a,
 			   const size_t startat, const size_t stopat,
 			   qa_cloop_f func, void *arg);

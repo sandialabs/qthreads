@@ -20,6 +20,13 @@
 # include <malloc.h>
 #endif
 
+#ifdef QTHREAD_USE_VALGRIND
+# include <valgrind/memcheck.h>
+#else
+# define VALGRIND_MAKE_MEM_NOACCESS(a, b)
+# define VALGRIND_MAKE_MEM_DEFINED(a, b)
+#endif
+
 #include "qt_gcd.h"		       /* for qt_lcm() */
 
 static unsigned short pageshift = 0;
@@ -34,6 +41,9 @@ static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t * ptr)
 #define _(x) vol_read_a(&(x))
 
 /* local funcs */
+/* this function is for DIST *ONLY*; it returns a pointer to the location that
+ * the bookkeeping data is stored (i.e. the record of where this segment is
+ * stored) */
 static QINLINE qthread_shepherd_id_t *qarray_internal_segment_shep(const
 								   qarray * a,
 								   const void
@@ -41,6 +51,7 @@ static QINLINE qthread_shepherd_id_t *qarray_internal_segment_shep(const
 {				       /*{{{ */
     char *ptr = (((char *)segment_head) + (a->segment_size * a->unit_size));
 
+    qassert_ret(a->dist_type == DIST, NULL);
     /* ensure that it's 4-byte aligned
      * (mandatory on Sparc, good idea elsewhere) */
     if (((uintptr_t) ptr) & 3)
@@ -50,6 +61,24 @@ static QINLINE qthread_shepherd_id_t *qarray_internal_segment_shep(const
 		  (const char *)segment_head) < a->segment_bytes), NULL);
     return (qthread_shepherd_id_t *) ptr;
 }				       /*}}} */
+
+static QINLINE qthread_shepherd_id_t qarray_internal_segment_shep_read(const qarray *a, const void *segment_head)
+{
+    qthread_shepherd_id_t retval;
+    qthread_shepherd_id_t *ptr = qarray_internal_segment_shep(a, segment_head);
+    VALGRIND_MAKE_MEM_DEFINED(ptr, sizeof(qthread_shepherd_id_t));
+    retval = *ptr;
+    VALGRIND_MAKE_MEM_NOACCESS(ptr, sizeof(qthread_shepherd_id_t));
+    return retval;
+}
+
+static QINLINE void qarray_internal_segment_shep_write(const qarray *a, const void *segment_head, qthread_shepherd_id_t shep)
+{
+    qthread_shepherd_id_t *ptr = qarray_internal_segment_shep(a, segment_head);
+    VALGRIND_MAKE_MEM_DEFINED(ptr, sizeof(qthread_shepherd_id_t));
+    *ptr = shep;
+    VALGRIND_MAKE_MEM_NOACCESS(ptr, sizeof(qthread_shepherd_id_t));
+}
 
 /* this function returns the shepherd that owns a given segment, specified by
  * the segment's index */
@@ -75,7 +104,7 @@ static inline qthread_shepherd_id_t qarray_internal_shepof_segidx(const qarray
 	case FIXED_HASH:
 	    return (qthread_shepherd_id_t) (seg % qthread_num_shepherds());
 	case DIST:
-	    return *qarray_internal_segment_shep(a,
+	    return qarray_internal_segment_shep_read(a,
 						 qarray_elem_nomigrate(a,
 								       seg *
 								       a->
@@ -112,7 +141,7 @@ static inline qthread_shepherd_id_t qarray_internal_shepof_ch(const qarray *
 					     a->segment_bytes) %
 					    qthread_num_shepherds());
 	case DIST:
-	    return *qarray_internal_segment_shep(a, segment_head);
+	    return qarray_internal_segment_shep_read(a, segment_head);
 	    break;
     }
 }				       /*}}} */
@@ -408,9 +437,7 @@ static qarray *qarray_create_internal(const size_t count,
 	    if (ret->dist_type == DIST) {
 		char *seghead =
 		    qarray_elem_nomigrate(ret, segment * ret->segment_size);
-		qthread_shepherd_id_t *ptr =
-		    qarray_internal_segment_shep(ret, seghead);
-		*ptr = target_shep;
+		qarray_internal_segment_shep_write(ret, seghead, target_shep);
 	    }
 	    assert(target_shep < max_sheps);
 	    qthread_debug(ALL_DETAILS,
@@ -498,7 +525,7 @@ void qarray_destroy(qarray * a)
 							  segment *
 							  a->segment_size);
 		qthread_incr(&chunk_distribution_tracker
-			     [*qarray_internal_segment_shep(a, segmenthead)],
+			     [qarray_internal_segment_shep_read(a, segmenthead)],
 			     -1);
 	    }
 	}
@@ -548,8 +575,10 @@ qthread_shepherd_id_t qarray_shepof(const qarray * a, const size_t index)
 	default:
 	{
 	    const size_t segment_num = index / a->segment_size;	/* rounded down */
-
-	    return qarray_internal_shepof_segidx(a, segment_num);
+	    const qthread_shepherd_id_t retval =
+		qarray_internal_shepof_segidx(a, segment_num);
+	    assert(retval < qthread_num_shepherds());
+	    return retval;
 	}
     }
 }				       /*}}} */
@@ -1100,6 +1129,35 @@ void qarray_iter_loop(qthread_t * me, qarray * a, const size_t startat,
     }
 }				       /*}}} */
 
+struct qarray_ilnb_args
+{
+    qarray * a;
+    size_t startat;
+    size_t stopat;
+    qa_loop_f func;
+    void *arg;
+};
+
+aligned_t qarray_ilnb_wrapper(qthread_t *me, void *_args)
+{
+    struct qarray_ilnb_args *a = (struct qarray_ilnb_args *)_args;
+    qarray_iter_loop(me, a->a, a->startat, a->stopat, a->func, a->arg);
+    free(_args);
+    return 0;
+}
+
+void qarray_iter_loop_nb(qthread_t * me, qarray * a, const size_t startat,
+		      const size_t stopat, qa_loop_f func, void *arg, aligned_t *ret)
+{
+    struct qarray_ilnb_args *qargs = malloc(sizeof(struct qarray_ilnb_args));
+    qargs->a = a;
+    qargs->startat = startat;
+    qargs->stopat = stopat;
+    qargs->func = func;
+    qargs->arg = arg;
+    qthread_fork_to(qarray_ilnb_wrapper, qargs, ret, qthread_shep(me));
+}
+
 void qarray_iter_constloop(qthread_t * me, const qarray * a,
 			   const size_t startat, const size_t stopat,
 			   qa_cloop_f func, void *arg)
@@ -1230,47 +1288,92 @@ void qarray_iter_loopaccum(qthread_t * me, qarray * a, const size_t startat,
 	     * ranges, we essentially parallelize the task of figuring out
 	     * which threads to spawn (bizarre way of thinking about it, I
 	     * know). */
-	    if (stopat - startat <= a->segment_size) {
-		aligned_t r;
-		struct qarray_accumfunc_wrapper_args qfwa =
-		    { {func}, acc, a, arg, ret, startat, stopat, retsize };
-		qthread_fork_to((qthread_f) qarray_loopaccum_strider, &qfwa,
-				&r, qarray_shepof(a, startat));
-		qthread_readFF(me, &r, &r);
-	    } else {
+	    {
 		qthread_shepherd_id_t i;
 		const qthread_shepherd_id_t maxsheps =
 		    qthread_num_shepherds();
 		struct qarray_accumfunc_wrapper_args *qfwa =
 		    malloc(sizeof(struct qarray_accumfunc_wrapper_args) *
 			   maxsheps);
-		char *rets = malloc(retsize * (maxsheps - 1));
+		char *rets = calloc(maxsheps - 1, retsize);
 		aligned_t *rv = malloc(sizeof(aligned_t) * maxsheps);
 
 		assert(qfwa);
 		assert(rets);
 		assert(rv);
 		qfwa[0].ret = ret;
-		for (i = 0; i < maxsheps; i++) {
-		    qfwa[i].func.ql = func;
-		    qfwa[i].acc = acc;
-		    qfwa[i].a = a;
-		    qfwa[i].arg = arg;
-		    qfwa[i].startat = startat;
-		    qfwa[i].stopat = stopat;
-		    qfwa[i].retsize = retsize;
-		    if (i > 0) {
-			qfwa[i].ret = rets + ((i - 1) * retsize);
+		if ((ceil((double)a->count/a->segment_size)/*tot_segs*/ /
+			    maxsheps) > /*range_segs*/((stopat-startat)/a->segment_size)) {
+		    /* If we have a small(ish) range, try to figure out which
+		     * shepherds need to be spawned to rather than spawning to
+		     * everyone */
+		    memset(rv, 1, sizeof(aligned_t)*maxsheps);
+		    size_t count_marked = 0;
+		    size_t start = (startat/a->segment_size)*a->segment_size;
+		    for (i=start; i<stopat; i+=a->segment_size) {
+			if (rv[qarray_shepof(a, i)]) {
+			    rv[qarray_shepof(a, i)] = 0; // mark to spawn
+			    count_marked ++;
+			}
+			if(count_marked == maxsheps) break;
 		    }
-		    qthread_fork_to((qthread_f) qarray_loopaccum_strider,
+		    for (i=0; i<maxsheps; i++) {
+			if(rv[i] == 0) {
+			    qfwa[i].func.ql = func;
+			    qfwa[i].acc = acc;
+			    qfwa[i].a = a;
+			    qfwa[i].arg = arg;
+			    qfwa[i].startat = startat;
+			    qfwa[i].stopat = stopat;
+			    qfwa[i].retsize = retsize;
+			    if (i > 0) {
+				qfwa[i].ret = rets + ((i - 1) * retsize);
+			    }
+			    qthread_fork_to((qthread_f) qarray_loopaccum_strider,
 				    &qfwa[i], &rv[i], i);
-		}
-		for (i = 0; i < maxsheps; i++) {
-		    qthread_readFF(me, NULL, &(rv[i]));
-		    if (i > 0) {
-			acc(ret, rets + ((i - 1) * retsize));
+			}
+		    }
+		    {
+			int first = 1;
+			for (i=0; i<maxsheps; i++) {
+			    if (rv[i] == 0){
+				qthread_readFF(me, NULL, &(rv[i]));
+				if (first) {
+				    first = 0;
+				    if (i > 0)
+					memcpy(ret, rets + ((i - 1) * retsize), retsize);
+				} else {
+				    acc(ret, rets + ((i - 1) * retsize));
+				}
+			    }
+			}
+		    }
+		} else {
+		    /* spawn to everyone, and let them sort it out */
+		    for (i = 0; i < maxsheps; i++) {
+			qfwa[i].func.ql = func;
+			qfwa[i].acc = acc;
+			qfwa[i].a = a;
+			qfwa[i].arg = arg;
+			qfwa[i].startat = startat;
+			qfwa[i].stopat = stopat;
+			qfwa[i].retsize = retsize;
+			if (i > 0) {
+			    qfwa[i].ret = rets + ((i - 1) * retsize);
+			}
+			qthread_fork_to((qthread_f) qarray_loopaccum_strider,
+				&qfwa[i], &rv[i], i);
+		    }
+		    for (i = 0; i < maxsheps; i++) {
+			qthread_readFF(me, NULL, &(rv[i]));
+			if (i > 0) {
+			    acc(ret, rets + ((i - 1) * retsize));
+			}
 		    }
 		}
+		free(qfwa);
+		free(rets);
+		free(rv);
 	    }
 	    break;
     }
@@ -1278,7 +1381,7 @@ void qarray_iter_loopaccum(qthread_t * me, qarray * a, const size_t startat,
 
 void qarray_set_shepof(qarray * a, const size_t i, qthread_shepherd_id_t shep)
 {				       /*{{{ */
-    if (a == NULL)
+    if (a == NULL || i > a->count)
 	return;
     switch (a->dist_type) {
 	case FIXED_FIELDS:
@@ -1314,9 +1417,10 @@ void qarray_set_shepof(qarray * a, const size_t i, qthread_shepherd_id_t shep)
 	    size_t segment = i / a->segment_size;
 	    char *seghead =
 		qarray_elem_nomigrate(a, segment * a->segment_size);
-	    qthread_shepherd_id_t *ptr =
-		qarray_internal_segment_shep(a, seghead);
-	    if (*ptr != shep) {
+	    qthread_shepherd_id_t cur_shep =
+		qarray_internal_segment_shep_read(a, seghead);
+	    assert(cur_shep < qthread_num_shepherds());
+	    if (cur_shep != shep) {
 #ifdef QTHREAD_HAVE_LIBNUMA
 		unsigned int target_node =
 		    qthread_internal_shep_to_node(shep);
@@ -1331,8 +1435,8 @@ void qarray_set_shepof(qarray * a, const size_t i, qthread_shepherd_id_t shep)
 			a->segment_bytes, MADV_ACCESS_LWP);
 #endif
 		qthread_incr(&chunk_distribution_tracker[shep], 1);
-		qthread_incr(&chunk_distribution_tracker[*ptr], -1);
-		*ptr = shep;
+		qthread_incr(&chunk_distribution_tracker[cur_shep], -1);
+		qarray_internal_segment_shep_write(a, seghead, shep);
 	    }
 	}
 	    return;
