@@ -2288,11 +2288,11 @@ void qthread_finalize(void)
     double incr_time = 0.0;
     size_t incr_count = 0;
 # endif
-    qthread_shepherd_t *shep0 = &(qlib->shepherds[0]);
     qt_hash uniqueincraddrs = qt_hash_create(0);
     qt_hash uniquelockaddrs = qt_hash_create(0);
     qt_hash uniquefebaddrs = qt_hash_create(0);
 #endif
+    qthread_shepherd_t *shep0 = &(qlib->shepherds[0]);
 
     qthread_debug(ALL_CALLS, "qthread_finalize(): began.\n");
 
@@ -2301,7 +2301,9 @@ void qthread_finalize(void)
      */
 
     /* enqueue the termination thread sentinal */
+#ifdef QTHREAD_SHEPHERD_PROFILING
     qtimer_stop(shep0->total_time);
+#endif
     for (i = 1; i < qlib->nshepherds; i++) {
 	t = qthread_thread_bare(NULL, NULL, (aligned_t *) NULL, i);
 	assert(t != NULL);	       /* what else can we do? */
