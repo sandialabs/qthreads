@@ -2280,16 +2280,6 @@ void qthread_finalize(void)
     if (qlib == NULL)
 	return;
 
-#ifdef QTHREAD_LOCK_PROFILING
-# ifdef QTHREAD_MUTEX_INCREMENT
-    double incr_maxtime = 0.0;
-    double incr_time = 0.0;
-    size_t incr_count = 0;
-# endif
-    qt_hash uniqueincraddrs = qt_hash_create(0);
-    qt_hash uniquelockaddrs = qt_hash_create(0);
-    qt_hash uniquefebaddrs = qt_hash_create(0);
-#endif
     qthread_shepherd_t *shep0 = &(qlib->shepherds[0]);
 
     qthread_debug(ALL_CALLS, "qthread_finalize(): began.\n");
@@ -2348,9 +2338,9 @@ void qthread_finalize(void)
 #endif
 #ifdef QTHREAD_LOCK_PROFILING
 # ifdef QTHREAD_MUTEX_INCREMENT
-	QTHREAD_ACCUM_MAX(incr_maxtime, shep->incr_maxtime);
-	incr_time  += shep->incr_time;
-	incr_count += shep->incr_count;
+	QTHREAD_ACCUM_MAX(shep0->incr_maxtime, shep->incr_maxtime);
+	shep0->incr_time  += shep->incr_time;
+	shep0->incr_count += shep->incr_count;
 # endif
 	QTHREAD_ACCUM_MAX(shep0->aquirelock_maxtime,
 			  shep->aquirelock_maxtime);
@@ -2375,14 +2365,14 @@ void qthread_finalize(void)
 	shep0->empty_count += shep->empty_count;
 # ifdef QTHREAD_MUTEX_INCREMENT
 	qt_hash_callback(shep->uniqueincraddrs,
-			 qthread_unique_collect, uniqueincraddrs);
+			 qthread_unique_collect, shep0->uniqueincraddrs);
 	qt_hash_destroy(shep->uniqueincraddrs);
 # endif
 	qt_hash_callback(shep->uniquelockaddrs,
-			 qthread_unique_collect, uniquelockaddrs);
+			 qthread_unique_collect, shep0->uniquelockaddrs);
 	qt_hash_destroy(shep->uniquelockaddrs);
 	qt_hash_callback(shep->uniquefebaddrs,
-			 qthread_unique_collect, uniquefebaddrs);
+			 qthread_unique_collect, shep0->uniquefebaddrs);
 	qt_hash_destroy(shep->uniquefebaddrs);
 #endif
     }
@@ -2392,15 +2382,17 @@ void qthread_finalize(void)
 # ifdef QTHREAD_MUTEX_INCREMENT
     printf
 	("QTHREADS: %llu increments performed (%ld unique), average %g secs, max %g secs\n",
-	 (unsigned long long)shep0->incr_count, qt_hash_count(uniqueincraddrs),
+	 (unsigned long long)shep0->incr_count, qt_hash_count(shep0->uniqueincraddrs),
 	 (shep0->incr_count == 0) ? 0 : (shep0->incr_time / shep0->incr_count),
 	 shep0->incr_maxtime);
+    qt_hash_destroy(shep0->uniqueincraddrs);
 # endif
     printf
 	("QTHREADS: %llu locks aquired (%ld unique), average %g secs, max %g secs\n",
-	 (unsigned long long)shep0->aquirelock_count, qt_hash_count(uniquelockaddrs),
+	 (unsigned long long)shep0->aquirelock_count, qt_hash_count(shep0->uniquelockaddrs),
 	 (shep0->aquirelock_count == 0) ? 0 : (shep0->aquirelock_time /
 	     shep0->aquirelock_count), shep0->aquirelock_maxtime);
+    qt_hash_destroy(shep0->uniquelockaddrs);
     printf
 	("QTHREADS: Blocked on a lock %llu times, average %g secs, max %g secs\n",
 	 (unsigned long long)shep0->lockwait_count,
@@ -2410,8 +2402,9 @@ void qthread_finalize(void)
 	   (shep0->aquirelock_count == 0) ? 0 : (shep0->hold_time / shep0->aquirelock_count),
 	   shep0->hold_maxtime);
     printf("QTHREADS: %ld unique addresses used with FEB, blocked %g secs\n",
-	   qt_hash_count(uniquefebaddrs),
+	   qt_hash_count(shep0->uniquefebaddrs),
 	   (shep0->febblock_count == 0) ? 0 : shep0->febblock_time);
+    qt_hash_destroy(shep0->uniquefebaddrs);
     printf
 	("QTHREADS: %llu potentially-blocking FEB operations, average %g secs, max %g secs\n",
 	 (unsigned long long)shep0->febblock_count,
