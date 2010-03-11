@@ -325,10 +325,9 @@ int qaffinity = 1;
 #ifdef QTHREAD_COUNT_THREADS
 static aligned_t threadcount;
 static aligned_t maxconcurrentthreads;
+static double avg_concurrent_threads;
+static aligned_t avg_count;
 static aligned_t concurrentthreads;
-# ifdef QTHREAD_MUTEX_INCREMENT
-static QTHREAD_FASTLOCK_TYPE threadcount_lock;
-# endif
 static QTHREAD_FASTLOCK_TYPE concurrentthreads_lock;
 
 #define QTHREAD_COUNT_THREADS_BINCOUNTER(TYPE, BIN) qthread_internal_incr(&qlib->TYPE##_stripes[(BIN)], &qlib->TYPE##_stripes_locks[(BIN)], 1)
@@ -1641,9 +1640,8 @@ int qthread_initialize(void)
     threadcount = 0;
     maxconcurrentthreads = 0;
     concurrentthreads = 0;
-# ifdef QTHREAD_MUTEX_INCREMENT
-    QTHREAD_FASTLOCK_INIT(threadcount_lock);
-# endif
+    avg_concurrent_threads = 0;
+    avg_count = 0;
     QTHREAD_FASTLOCK_INIT(concurrentthreads_lock);
 #endif
 
@@ -2463,11 +2461,9 @@ void qthread_finalize(void)
 #endif
 
 #ifdef QTHREAD_COUNT_THREADS
-    printf("QTHREADS: spawned %lu threads, max concurrency %lu\n",
-	   (unsigned long)threadcount, (unsigned long)maxconcurrentthreads);
-# ifdef QTHREAD_MUTEX_INCREMENT
-    QTHREAD_FASTLOCK_DESTROY(threadcount_lock);
-# endif
+    printf("QTHREADS: spawned %lu threads, max concurrency %lu, avg concurrency %g\n",
+	   (unsigned long)threadcount, (unsigned long)maxconcurrentthreads,
+	   avg_concurrent_threads);
     QTHREAD_FASTLOCK_DESTROY(concurrentthreads_lock);
 #endif
 
@@ -3177,11 +3173,14 @@ static void qthread_wrapper(void *ptr)
     assert((size_t)&t > (size_t)t->stack &&
 	   (size_t)&t < ((size_t)t->stack + qlib->qthread_stack_size));
 #ifdef QTHREAD_COUNT_THREADS
-    qthread_internal_incr(&threadcount, &threadcount_lock, 1);
     QTHREAD_FASTLOCK_LOCK(&concurrentthreads_lock);
+    threadcount++;
     concurrentthreads++;
     if (concurrentthreads > maxconcurrentthreads)
 	maxconcurrentthreads = concurrentthreads;
+    avg_concurrent_threads =
+	(avg_concurrent_threads*(double)(threadcount-1.0)/threadcount)
+	+((double)concurrentthreads/threadcount);
     QTHREAD_FASTLOCK_UNLOCK(&concurrentthreads_lock);
 #endif
     if (t->ret) {
