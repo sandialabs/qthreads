@@ -545,7 +545,7 @@ static qt_mpool generic_context_pool = NULL;
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
 # define ALLOC_QUEUE(shep) (qthread_queue_t *) malloc(sizeof(qthread_queue_t))
 # define FREE_QUEUE(t) free(t)
-# define ALLOC_THREADQUEUE(shep) (qt_threadqueue_t *) malloc(sizeof(qt_threadqueue_t))
+# define ALLOC_THREADQUEUE(shep) (qt_threadqueue_t *) calloc(1, sizeof(qt_threadqueue_t))
 # define FREE_THREADQUEUE(t) free(t)
 static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t ** ret,
 				 qthread_shepherd_t * shep)
