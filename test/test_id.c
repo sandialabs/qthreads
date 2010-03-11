@@ -66,10 +66,10 @@ int main()
     qthread_readFF(me, NULL, &ret);
     rets = (aligned_t *) malloc(sizeof(aligned_t) * qthread_num_shepherds());
     for (i = 0; i < qthread_num_shepherds(); i++) {
-	qthread_fork(checkid, (void *)(intptr_t) (i + 2), &ret);
+	qthread_fork(checkid, (void *)(intptr_t) (i + 2), rets+i);
     }
     for (i = 0; i < qthread_num_shepherds(); i++) {
-	qthread_readFF(me, NULL, rets);
+	qthread_readFF(me, NULL, rets+i);
     }
     free(rets);
     return my_id;
