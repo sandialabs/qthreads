@@ -2174,8 +2174,7 @@ int qthread_initialize(void)
 #ifdef QTHREAD_USE_VALGRIND
     VALGRIND_STACK_DEREGISTER(qlib->mccoy_thread->valgrind_stack_id);
 #endif
-    FREE_STACK(qlib->mccoy_thread->creator_ptr, qlib->mccoy_thread->stack);
-    qlib->mccoy_thread->stack = NULL;
+    assert(qlib->mccoy_thread->stack == NULL);
     qlib->mccoy_thread->thread_state = QTHREAD_STATE_YIELDED;	/* avoid re-launching */
     qlib->mccoy_thread->flags = QTHREAD_REAL_MCCOY;	/* i.e. this is THE parent thread */
     qlib->mccoy_thread->shepherd_ptr = &(qlib->shepherds[0]);
@@ -2469,7 +2468,8 @@ void qthread_finalize(void)
     VALGRIND_STACK_DEREGISTER(qlib->mccoy_thread->valgrind_stack_id);
     VALGRIND_STACK_DEREGISTER(qlib->valgrind_masterstack_id);
 #endif
-    free(qlib->mccoy_thread->stack);
+    assert(qlib->mccoy_thread->stack == NULL);
+    FREE_QTHREAD(qlib->mccoy_thread);
     free(qlib->master_stack);
     for (i = 0; i < qlib->nshepherds; ++i) {
 	if (qlib->shepherds[i].shep_dists) {
@@ -2697,12 +2697,16 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
 	FREE_QTHREAD(t);
 	return NULL;
     }
-    stack = ALLOC_STACK(myshep);
-    qthread_debug(ALL_DETAILS, "qthread_thread_new(): stack = %p\n", stack);
-    if (stack == NULL) {
-	FREE_QTHREAD(t);
-	FREE_CONTEXT(myshep, uc);
-	return NULL;
+    if (f) {
+	stack = ALLOC_STACK(myshep);
+	qthread_debug(ALL_DETAILS, "qthread_thread_new(): stack = %p\n", stack);
+	if (stack == NULL) {
+	    FREE_QTHREAD(t);
+	    FREE_CONTEXT(myshep, uc);
+	    return NULL;
+	}
+    } else {
+	stack = NULL;
     }
 #ifdef QTHREAD_USE_VALGRIND
     t->valgrind_stack_id =
