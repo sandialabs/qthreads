@@ -22,6 +22,7 @@ struct qt_feb_barrier_s
 static qt_mpool QTHREAD_CASLOCK2(feb_barrier_pool);
 static Q_UNUSED qt_feb_barrier_t *global_barrier = NULL;
 
+#ifndef UNPOOLED
 static void cleanup_feb_barrier(void)
 {
     if (feb_barrier_pool) {
@@ -29,6 +30,7 @@ static void cleanup_feb_barrier(void)
     }
     feb_barrier_pool = NULL;
 }
+#endif
 
 qt_feb_barrier_t *qt_feb_barrier_create(qthread_t *me, size_t max_threads)
 {
