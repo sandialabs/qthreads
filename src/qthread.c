@@ -1266,6 +1266,7 @@ static void *qthread_shepherd(void *arg)
 #endif
 	qthread_debug(ALL_DETAILS, "qthread_shepherd(%i): waiting for my queue...\n", me->shepherd_id);
 	t = qt_threadqueue_dequeue_blocking(me->ready);
+	assert(t);
 #ifdef QTHREAD_SHEPHERD_PROFILING
 	qtimer_stop(idle);
 	me->idle_count++;
@@ -1276,8 +1277,8 @@ static void *qthread_shepherd(void *arg)
 #endif
 
 	qthread_debug(THREAD_DETAILS,
-		      "qthread_shepherd(%u): dequeued thread id %d/state %d\n",
-		      me->shepherd_id, t->thread_id, t->thread_state);
+		      "qthread_shepherd(%u): dequeued thread %p: id %d/state %d\n",
+		      me->shepherd_id, t, t->thread_id, t->thread_state);
 
 	if (t->thread_state == QTHREAD_STATE_TERM_SHEP) {
 #ifdef QTHREAD_SHEPHERD_PROFILING
@@ -2171,9 +2172,6 @@ int qthread_initialize(void)
 #endif
 
     /* the context will have its own stack ptr */
-#ifdef QTHREAD_USE_VALGRIND
-    VALGRIND_STACK_DEREGISTER(qlib->mccoy_thread->valgrind_stack_id);
-#endif
     assert(qlib->mccoy_thread->stack == NULL);
     qlib->mccoy_thread->thread_state = QTHREAD_STATE_YIELDED;	/* avoid re-launching */
     qlib->mccoy_thread->flags = QTHREAD_REAL_MCCOY;	/* i.e. this is THE parent thread */
@@ -2741,15 +2739,19 @@ static QINLINE void qthread_thread_free(qthread_t * t)
 {				       /*{{{ */
     assert(t != NULL);
 
+    qthread_debug(ALL_FUNCTIONS, "qthread_thread_free(%p): destroying thread id %i\n", t, t->thread_id);
     if (t->context) {
+	qthread_debug(ALL_DETAILS, "qthread_thread_free(%p): releasing context %p to %p\n", t, t->context, t->creator_ptr);
 	FREE_CONTEXT(t->creator_ptr, t->context);
     }
     if (t->stack != NULL) {
 #ifdef QTHREAD_USE_VALGRIND
 	VALGRIND_STACK_DEREGISTER(t->valgrind_stack_id);
 #endif
+	qthread_debug(ALL_DETAILS, "qthread_thread_free(%p): releasing stack %p to %p\n", t, t->stack, t->creator_ptr);
 	FREE_STACK(t->creator_ptr, t->stack);
     }
+    qthread_debug(ALL_DETAILS, "qthread_thread_free(%p): releasing thread handle %p\n", t, t);
     FREE_QTHREAD(t);
 }				       /*}}} */
 
@@ -4303,7 +4305,7 @@ int qthread_unlock(qthread_t * me, const aligned_t * a)
 /* These are just accessor functions */
 unsigned qthread_id(const qthread_t * t)
 {				       /*{{{ */
-    qthread_debug(ALL_CALLS, "qthread_id(%u)",
+    qthread_debug(ALL_CALLS, "qthread_id(%u)\n",
 		  t ? t->thread_id : (unsigned)-1);
 #ifdef QTHREAD_NONLAZY_THREADIDS
     return t ? t->thread_id : (unsigned int)-1;
