@@ -71,5 +71,6 @@ int main()
     for (i = 0; i < qthread_num_shepherds(); i++) {
 	qthread_readFF(me, NULL, rets);
     }
+    free(rets);
     return my_id;
 }
