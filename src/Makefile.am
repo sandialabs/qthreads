@@ -7,15 +7,13 @@ AM_CPPFLAGS = $(SST_INCLUDE) -I$(top_srcdir)/include
 AM_LDFLAGS = $(SST_LIBS)
 AM_CFLAGS = @SST_CFLAGS@
 
-SUBDIRS = osx_compat qtimer .
+SUBDIRS = osx_compat qtimer patterns .
 
 lib_LTLIBRARIES = libqthread.la
 
 libqthread_la_SOURCES = \
 	cacheline.c \
 	qarray.c \
-	wavefront.c \
-	allpairs.c \
 	qlfqueue.c \
 	qdqueue.c \
 	qpool.c \
@@ -23,6 +21,7 @@ libqthread_la_SOURCES = \
 	qutil.c \
 	qt_feb_barrier.c \
 	qloop.c
+
 # version-info fields are:
 # 1. the current interface revision number (i.e. whenever arguments of existing
 #    functions change, increment this number)
@@ -38,8 +37,11 @@ libqthread_la_SOURCES = \
 # - If you support all the same functions (just bugfixes or whatnot), increment
 #   the revision number
 libqthread_la_LDFLAGS = -version-info 12:0:1 -no-undefined
-libqthread_la_LIBADD = qtimer/libqtimer.la
-libqthread_la_DEPENDENCIES = qtimer/libqtimer.la
+
+COMPONENT_LIB_LA_FILES = qtimer/libqtimer.la \
+						 patterns/libpatterns.la
+libqthread_la_LIBADD = $(COMPONENT_LIB_LA_FILES)
+libqthread_la_DEPENDENCIES = $(COMPONENT_LIB_LA_FILES)
 
 if COMPILE_CXX_HASH
 libqthread_la_SOURCES += qt_hash.cpp
