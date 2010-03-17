@@ -7,16 +7,12 @@ AM_CPPFLAGS = $(SST_INCLUDE) -I$(top_srcdir)/include
 AM_LDFLAGS = $(SST_LIBS)
 AM_CFLAGS = @SST_CFLAGS@
 
-SUBDIRS = osx_compat qtimer patterns .
+SUBDIRS = osx_compat qtimer ds patterns .
 
 lib_LTLIBRARIES = libqthread.la
 
 libqthread_la_SOURCES = \
 	cacheline.c \
-	qarray.c \
-	qlfqueue.c \
-	qdqueue.c \
-	qpool.c \
 	qalloc.c \
 	qutil.c \
 	qt_feb_barrier.c \
@@ -39,6 +35,7 @@ libqthread_la_SOURCES = \
 libqthread_la_LDFLAGS = -version-info 12:0:1 -no-undefined
 
 COMPONENT_LIB_LA_FILES = qtimer/libqtimer.la \
+						 ds/libds.la \
 						 patterns/libpatterns.la
 libqthread_la_LIBADD = $(COMPONENT_LIB_LA_FILES)
 libqthread_la_DEPENDENCIES = $(COMPONENT_LIB_LA_FILES)
