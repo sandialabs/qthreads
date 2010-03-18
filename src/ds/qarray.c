@@ -1138,7 +1138,7 @@ struct qarray_ilnb_args
     void *arg;
 };
 
-aligned_t qarray_ilnb_wrapper(qthread_t *me, void *_args)
+static aligned_t qarray_ilnb_wrapper(qthread_t *me, void *_args)
 {
     struct qarray_ilnb_args *a = (struct qarray_ilnb_args *)_args;
     qarray_iter_loop(me, a->a, a->startat, a->stopat, a->func, a->arg);
