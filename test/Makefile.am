@@ -20,6 +20,7 @@ TESTS = test_basic \
 		test_qutil_qsort \
 		test_feb_barrier \
 		testqloop \
+		test_queue_loop \
 		test_qpool \
 		test_qarray \
 		test_qarray_accum \
@@ -101,6 +102,9 @@ testloop_DEPENDENCIES = $(QTHREADLIB)
 
 testqloop_SOURCES = testqloop.c
 testqloop_DEPENDENCIES = $(QTHREADLIB)
+
+test_queue_loop_SOURCES = test_queue_loop.c
+test_queue_loop_DEPENDENCIES = $(QTHREADLIB)
 
 testincr_SOURCES = testincr.c
 testincr_DEPENDENCIES = $(QTHREADLIB)
