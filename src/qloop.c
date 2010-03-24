@@ -271,15 +271,20 @@ void qt_loopaccum_balance_future(const size_t start, const size_t stop,
  * are disabled.
  */
 struct qqloop_iteration_queue {
-    volatile aligned_t start;
-    aligned_t stop;
+    volatile saligned_t start;
+    saligned_t stop;
+    volatile saligned_t phase;
 };
+struct qqloop_static_args;
+struct qqloop_wrapper_range;
+typedef int(*qq_getiter_f)(struct qqloop_iteration_queue *const restrict, struct qqloop_static_args *const restrict, struct qqloop_wrapper_range *const restrict);
 struct qqloop_static_args {
     qt_loop_f func;
     void *arg;
     volatile aligned_t donecount;
     volatile aligned_t activesheps;
     struct qqloop_iteration_queue *iq;
+    qq_getiter_f get;
 };
 struct qqloop_wrapper_args {
     qthread_shepherd_id_t shep;
@@ -300,20 +305,79 @@ struct qqloop_handle_s {
 #endif
 };
 
-static QINLINE int qqloop_get_iterations(struct qqloop_iteration_queue *const
-					 iq,
+static QINLINE int qqloop_get_iterations_guided(struct qqloop_iteration_queue *const
+					 restrict iq,
+					 struct qqloop_static_args *const
+					 restrict sa,
 					 struct qqloop_wrapper_range *const
-					 range, int i)
+					 restrict range)
 {
     saligned_t ret = iq->start;
     saligned_t ret2 = iq->stop;
+    saligned_t iterations = 0;
+    const saligned_t stop = iq->stop;
+    const qthread_shepherd_id_t sheps = sa->activesheps;
 
+    /* this loop ensure atomicity in figuring out the number of iterations to
+     * process */
     while (ret < iq->stop && ret != ret2) {
-	ret2 = qthread_cas(&(iq->start), ret, ret + i);
+	ret = iq->start;
+	iterations = (stop - ret) / sheps;
+	if (iterations == 0) {
+	    iterations = 1;
+	}
+	ret2 = qthread_cas(&(iq->start), ret, ret + iterations);
     }
+    assert(iterations > 0);
     if (ret < iq->stop) {
 	range->startat = ret;
-	range->stopat = ret + i;
+	range->stopat = ret + iterations;
+	return 1;
+    } else {
+	range->startat = 0;
+	range->stopat = 0;
+	return 0;
+    }
+}
+static QINLINE int qqloop_get_iterations_factored(struct qqloop_iteration_queue *const
+					 restrict iq,
+					 struct qqloop_static_args *const
+					 restrict sa,
+					 struct qqloop_wrapper_range *const
+					 restrict range)
+{
+    saligned_t ret = iq->start;
+    saligned_t ret2 = iq->stop;
+    const saligned_t stop = iq->stop;
+    saligned_t iterations = 0;
+    saligned_t phase = iq->phase;
+    const qthread_shepherd_id_t sheps = sa->activesheps;
+
+    /* this loop ensure atomicity in figuring out the number of iterations to
+     * process */
+    while (ret < iq->stop && ret != ret2) {
+	ret = iq->start;
+	while (ret >= phase && ret < iq->stop) {
+	    /* set a new phase */
+	    saligned_t newphase = (stop + ret) / 2;
+	    saligned_t chunksize = (stop - newphase) / sheps;
+	    newphase = ret + (chunksize * sheps);
+	    if (newphase != phase) {
+		phase = qthread_cas(&(iq->phase), phase, newphase);
+	    } else {
+		phase = qthread_cas(&(iq->phase), phase, stop);
+	    }
+	}
+	iterations = (stop - phase) / sheps;
+	if (iterations == 0) {
+	    iterations = 1;
+	}
+	ret2 = qthread_cas(&(iq->start), ret, ret + iterations);
+    }
+    assert(iterations > 0);
+    if (ret < iq->stop) {
+	range->startat = ret;
+	range->stopat = ret + iterations;
 	return 1;
     } else {
 	range->startat = 0;
@@ -329,6 +393,7 @@ static QINLINE struct qqloop_iteration_queue *qqloop_create_iq(size_t startat,
 	malloc(sizeof(struct qqloop_iteration_queue));
     iq->start = startat;
     iq->stop = stopat;
+    iq->phase = (startat + stopat) / 2;
     return iq;
 }
 
@@ -340,26 +405,28 @@ static QINLINE void qqloop_destroy_iq(struct qqloop_iteration_queue *iq)
 static aligned_t qqloop_wrapper(qthread_t * me,
 				const struct qqloop_wrapper_args *arg)
 {
-    struct qqloop_iteration_queue *const iq = arg->stat->iq;
-    const qt_loop_f func = arg->stat->func;
-    void *const a = arg->stat->arg;
-    volatile aligned_t *const dc = &(arg->stat->donecount);
+    struct qqloop_static_args *const restrict stat = arg->stat;
+    struct qqloop_iteration_queue *const restrict iq = stat->iq;
+    const qt_loop_f func = stat->func;
+    void *const restrict a = stat->arg;
+    volatile aligned_t *const dc = &(stat->donecount);
+    const qq_getiter_f get_iters = stat->get;
 
     /* non-consts */
     struct qqloop_wrapper_range range;
     int safeexit = 1;
 
     /* XXX: should be more intelligent about the size ranges we pull */
-    if (qthread_shep(me) == arg->shep && qqloop_get_iterations(iq, &range, 1)) {
+    if (qthread_shep(me) == arg->shep && get_iters(iq, stat, &range)) {
 	do {
 	    func(me, range.startat, range.stopat, a);
 	    if (!qthread_shep_ok(me) || qthread_shep(me) != arg->shep) {
 		/* my shepherd has been disabled while I was running */
 		safeexit = 0;
-		qthread_incr(&(arg->stat->activesheps), -1);
+		qthread_incr(&(stat->activesheps), -1);
 		break;
 	    }
-	} while (qqloop_get_iterations(iq, &range, 1));
+	} while (get_iters(iq, stat, &range));
     }
     if (safeexit) {
 	qthread_incr(dc, 1);
@@ -385,6 +452,7 @@ qqloop_handle_t *qt_loop_queue_create(const size_t start, const size_t stop,
 	    h->stat.iq = qqloop_create_iq(start, stop);
 	    h->stat.func = func;
 	    h->stat.arg = argptr;
+	    h->stat.get = qqloop_get_iterations_factored;
 	    for (i = 0; i < maxsheps; i++) {
 		h->qwa[i].stat = &(h->stat);
 		h->qwa[i].shep = i;    // this is the only thread-specific piece of information...
@@ -415,7 +483,9 @@ void qt_loop_queue_run(qqloop_handle_t * loop)
 	    qthread_fork_to((qthread_f) qqloop_wrapper, loop->qwa + i, NULL,
 			    i);
 	}
-	/* turning this into a spinlock :P */
+	/* turning this into a spinlock :P
+	 * I *would* do qthread_readFF, except shepherds can join and leave
+	 * during the loop */
 	while (_(*dc) < _(*as)) {
 	    qthread_yield(me);
 	}
