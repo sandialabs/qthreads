@@ -34,6 +34,7 @@ void qt_loopaccum_balance_future(const size_t start, const size_t stop,
 qqloop_handle_t *qt_loop_queue_create(const size_t start, const size_t stop,
 				      const qt_loop_f func,
 				      void *const argptr);
+void qt_loop_queue_destroy(qqloop_handle_t *loop);
 void qt_loop_queue_run(qqloop_handle_t *loop);
 void qt_loop_queue_run_there(qqloop_handle_t *loop, qthread_shepherd_id_t shep);
 void qt_loop_queue_addworker(qqloop_handle_t *loop, const qthread_shepherd_id_t shep);
