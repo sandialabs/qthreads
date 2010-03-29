@@ -2310,6 +2310,7 @@ void qthread_finalize(void)
 	("QTHREADS: Shepherd 0 averaged %g secs to find a new thread, max %g secs\n",
 	 shep0->idle_time / shep0->idle_count,
 	 shep0->idle_maxtime);
+    qtimer_destroy(shep0->total_time);
 #endif
     /* wait for each SPAWNED shepherd to drain it's queue
      * (note: not shepherd 0, because that one wasn't spawned) */
