@@ -38,10 +38,10 @@ int main(int argc, char *argv[])
     iprintf("%i shepherds...\n", qthread_num_shepherds());
     iprintf("%i threads...\n", (int)threads);
 
-    initme = calloc(threads, sizeof(aligned_t));
+    initme = (aligned_t*)calloc(threads, sizeof(aligned_t));
     assert(initme);
 
-    rets = malloc(threads * sizeof(aligned_t));
+    rets = (aligned_t*)malloc(threads * sizeof(aligned_t));
     assert(rets);
 
     wait_on_me = qt_feb_barrier_create(me, threads+1); // all my spawnees plus me
