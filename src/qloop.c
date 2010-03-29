@@ -528,6 +528,15 @@ void qt_loop_queue_addworker(qqloop_handle_t *loop, const qthread_shepherd_id_t 
     }
 }
 
+void qt_loop_queue_destroy(qqloop_handle_t *loop)
+{
+    qassert_retvoid(loop);
+    if (loop->qwa) {
+	free(loop->qwa);
+    }
+    free(loop);
+}
+
 #define PARALLEL_FUNC(category, initials, _op_, type, shorttype) \
 struct qt##initials##_s \
 { \
