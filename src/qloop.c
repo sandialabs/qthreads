@@ -353,6 +353,13 @@ static QINLINE int qqloop_get_iterations_factored(struct qqloop_iteration_queue 
     saligned_t phase = iq->phase;
     const qthread_shepherd_id_t sheps = sa->activesheps;
 
+    if (qthread_num_shepherds() == 1 && ret < iq->stop) {
+	range->startat = iq->start;
+	range->stopat = iq->stop;
+	iq->start = iq->stop;
+	return 1;
+    }
+
     /* this loop ensure atomicity in figuring out the number of iterations to
      * process */
     while (ret < iq->stop && ret != ret2) {
