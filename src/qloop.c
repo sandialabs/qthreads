@@ -353,11 +353,16 @@ static QINLINE int qqloop_get_iterations_factored(struct qqloop_iteration_queue 
     saligned_t phase = iq->phase;
     const qthread_shepherd_id_t sheps = sa->activesheps;
 
-    if (qthread_num_shepherds() == 1 && ret < iq->stop) {
-	range->startat = iq->start;
-	range->stopat = iq->stop;
-	iq->start = iq->stop;
-	return 1;
+    if (qthread_num_shepherds() == 1) {
+	if (ret < iq->stop) {
+	    range->startat = iq->start;
+	    range->stopat = iq->stop;
+	    iq->start = iq->stop;
+	    return 1;
+	} else {
+	    range->startat = range->stopat = 0;
+	    return 0;
+	}
     }
 
     /* this loop ensure atomicity in figuring out the number of iterations to
@@ -381,8 +386,8 @@ static QINLINE int qqloop_get_iterations_factored(struct qqloop_iteration_queue 
 	}
 	ret2 = qthread_cas(&(iq->start), ret, ret + iterations);
     }
-    assert(iterations > 0);
     if (ret < iq->stop) {
+	assert(iterations > 0);
 	range->startat = ret;
 	range->stopat = ret + iterations;
 	return 1;
