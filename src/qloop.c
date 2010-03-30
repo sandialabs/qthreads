@@ -318,6 +318,18 @@ static QINLINE int qqloop_get_iterations_guided(struct qqloop_iteration_queue *c
     const saligned_t stop = iq->stop;
     const qthread_shepherd_id_t sheps = sa->activesheps;
 
+    if (qthread_num_shepherds() == 1) {
+	if (ret < iq->stop) {
+	    range->startat = iq->start;
+	    range->stopat = iq->stop;
+	    iq->start = iq->stop;
+	    return 1;
+	} else {
+	    range->startat = range->stopat = 0;
+	    return 0;
+	}
+    }
+
     /* this loop ensure atomicity in figuring out the number of iterations to
      * process */
     while (ret < iq->stop && ret != ret2) {
@@ -328,8 +340,8 @@ static QINLINE int qqloop_get_iterations_guided(struct qqloop_iteration_queue *c
 	}
 	ret2 = qthread_cas(&(iq->start), ret, ret + iterations);
     }
-    assert(iterations > 0);
     if (ret < iq->stop) {
+	assert(iterations > 0);
 	range->startat = ret;
 	range->stopat = ret + iterations;
 	return 1;
@@ -464,7 +476,7 @@ qqloop_handle_t *qt_loop_queue_create(const size_t start, const size_t stop,
 	    h->stat.iq = qqloop_create_iq(start, stop);
 	    h->stat.func = func;
 	    h->stat.arg = argptr;
-	    h->stat.get = qqloop_get_iterations_factored;
+	    h->stat.get = qqloop_get_iterations_guided;
 	    for (i = 0; i < maxsheps; i++) {
 		h->qwa[i].stat = &(h->stat);
 		h->qwa[i].shep = i;    // this is the only thread-specific piece of information...
