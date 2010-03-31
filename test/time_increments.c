@@ -6,7 +6,7 @@
 #include <qthread/qtimer.h>
 #include "argparsing.h"
 
-size_t TEST_SELECTION = 255;
+size_t TEST_SELECTION = 0xffffffff;
 size_t ITERATIONS = 1000000;
 size_t MAXPARALLELISM = 256;
 aligned_t incrementme = 0;
@@ -18,7 +18,7 @@ static void balanced_incr(qthread_t * me, const size_t startat,
     size_t i;
 
     for (i = startat; i < stopat; i++) {
-	qthread_incr(increments + i, 1);
+	qthread_incr((aligned_t*)arg, 1);
     }
 }
 
@@ -103,6 +103,26 @@ static aligned_t addloop_nocompete(qthread_t * me, void *arg)
     return myinc;
 }
 
+static void streaming_incr(qthread_t * me, const size_t startat,
+			  const size_t stopat, void *arg)
+{
+    size_t i;
+
+    for (i = startat; i < stopat; i++) {
+	qthread_incr(increments + i, 1);
+    }
+}
+
+static void streaming_naincr(qthread_t * me, const size_t startat,
+			  const size_t stopat, void *arg)
+{
+    size_t i;
+
+    for (i = startat; i < stopat; i++) {
+	increments[i] ++;
+    }
+}
+
 static char *human_readable_rate(double rate)
 {
     static char readable_string[100] = { 0 };
@@ -146,13 +166,12 @@ int main(int argc, char *argv[])
     if (TEST_SELECTION & 1) {
 	printf("\tBalanced competing loop: ");
 	increments =
-	    (aligned_t *) calloc(MAXPARALLELISM * ITERATIONS,
+	    (aligned_t *) calloc(1,
 				 sizeof(aligned_t));
 	qtimer_start(timer);
-	qt_loop_balance(0, MAXPARALLELISM * ITERATIONS, balanced_incr, NULL);
+	qt_loop_balance(0, MAXPARALLELISM * ITERATIONS, balanced_incr, increments);
 	qtimer_stop(timer);
-	for (i = 0; i < MAXPARALLELISM * ITERATIONS; i++)
-	    assert(increments[i] == 1);
+	assert(*increments == MAXPARALLELISM * ITERATIONS);
 	free(increments);
 	increments = NULL;
 
@@ -329,6 +348,58 @@ int main(int argc, char *argv[])
 
 	printf("%15g secs (%u-way %u iters)\n", qtimer_secs(timer),
 	       (unsigned)MAXPARALLELISM, (unsigned)ITERATIONS);
+	iprintf("\t + average increment time: %17g secs\n",
+		qtimer_secs(timer) / (ITERATIONS * MAXPARALLELISM));
+	printf("\t = increment throughput: %19f increments/sec\n",
+	       (ITERATIONS * MAXPARALLELISM) / qtimer_secs(timer));
+	rate =
+	    (ITERATIONS * MAXPARALLELISM * sizeof(aligned_t)) /
+	    qtimer_secs(timer);
+	printf("\t = data throughput: %24g bytes/sec %s\n", rate,
+	       human_readable_rate(rate));
+    }
+
+    if (TEST_SELECTION & (1 << 8)) {
+	printf("\tBalanced streaming loop: ");
+	increments =
+	    (aligned_t *) calloc(MAXPARALLELISM * ITERATIONS,
+				 sizeof(aligned_t));
+	qtimer_start(timer);
+	qt_loop_balance(0, MAXPARALLELISM * ITERATIONS, streaming_incr, NULL);
+	qtimer_stop(timer);
+	for (i = 0; i < MAXPARALLELISM * ITERATIONS; i++)
+	    assert(increments[i] == 1);
+	free(increments);
+	increments = NULL;
+
+	printf("%19g secs (%u-threads %u iters)\n", qtimer_secs(timer),
+	       shepherds, (unsigned)(ITERATIONS * MAXPARALLELISM));
+	iprintf("\t + average increment time: %17g secs\n",
+		qtimer_secs(timer) / (ITERATIONS * MAXPARALLELISM));
+	printf("\t = increment throughput: %19f increments/sec\n",
+	       (ITERATIONS * MAXPARALLELISM) / qtimer_secs(timer));
+	rate =
+	    (ITERATIONS * MAXPARALLELISM * sizeof(aligned_t)) /
+	    qtimer_secs(timer);
+	printf("\t = data throughput: %24g bytes/sec %s\n", rate,
+	       human_readable_rate(rate));
+    }
+
+    if (TEST_SELECTION & (1 << 9)) {
+	printf("\tNon-atomic Balanced streaming loop: ");
+	increments =
+	    (aligned_t *) calloc(MAXPARALLELISM * ITERATIONS,
+				 sizeof(aligned_t));
+	qtimer_start(timer);
+	qt_loop_balance(0, MAXPARALLELISM * ITERATIONS, streaming_naincr, NULL);
+	qtimer_stop(timer);
+	for (i = 0; i < MAXPARALLELISM * ITERATIONS; i++)
+	    assert(increments[i] == 1);
+	free(increments);
+	increments = NULL;
+
+	printf("%19g secs (%u-threads %u iters)\n", qtimer_secs(timer),
+	       shepherds, (unsigned)(ITERATIONS * MAXPARALLELISM));
 	iprintf("\t + average increment time: %17g secs\n",
 		qtimer_secs(timer) / (ITERATIONS * MAXPARALLELISM));
 	printf("\t = increment throughput: %19f increments/sec\n",
