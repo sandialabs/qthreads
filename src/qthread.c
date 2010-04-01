@@ -1824,7 +1824,7 @@ int qthread_initialize(void)
 	{
 # ifdef QTHREAD_LIBNUMA_V2
 	    struct bitmask *bmask = numa_allocate_nodemask();
-	    size_t *cpus_leftper_node = calloc(max, sizeof(size_t)); // to handle heterogeneous core counts
+	    size_t *cpus_left_per_node = calloc(max, sizeof(size_t)); // handle heterogeneous core counts
 	    int over_subscribing = 0;
 
 	    assert(bmask);
@@ -1834,8 +1834,9 @@ int qthread_initialize(void)
 	    for (i = 0; i < max; i++) {
 		numa_node_to_cpus(i, bmask);
 		for (size_t j = 0; j < numa_bitmask_nbytes(bmask)*8; j++) {
-		    cpus_leftper_node[i] += numa_bitmask_isbitset(bmask, j);
+		    cpus_left_per_node[i] += numa_bitmask_isbitset(bmask, j);
 		}
+		qthread_debug(ALL_DETAILS, "there are %i CPUs on node %i\n", (int)cpus_left_per_node[i], (int)i);
 	    }
 	    /* assign nodes */
 	    int node = 0;
@@ -1844,7 +1845,7 @@ int qthread_initialize(void)
 		    case 0:
 			{
 			    int count = 0;
-			    while (count < max && cpus_leftper_node[node] == 0) {
+			    while (count < max && cpus_left_per_node[node] == 0) {
 				node ++;
 				node *= (node < max);
 				count ++;
@@ -1857,12 +1858,14 @@ int qthread_initialize(void)
 			}
 			over_subscribing = 1;
 		}
+		qthread_debug(ALL_DETAILS, "setting shep %i to numa node %i\n", (int)i, (int)node);
 		qlib->shepherds[i].node = node;
 		node++;
 		node *= (node < max);
 	    }
 	    numa_set_interleave_mask(bmask);
 	    numa_bitmask_free(bmask);
+	    free(cpus_left_per_node);
 # else
 	    nodemask_t bmask;
 
@@ -2933,7 +2936,7 @@ static QINLINE void qt_threadqueue_enqueue(qt_threadqueue_t * q, qthread_t * t,
     }
     (void)qt_cas((void *volatile *)&(q->tail), (void *)tail,
 		 QCOMPOSE(node, tail));
-    qthread_incr(&q->advisory_queuelen, 1);
+    (void)qthread_incr(&q->advisory_queuelen, 1);
 # ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     if (vol_read_a(&(q->fruitless))) {
 	QTHREAD_LOCK(&q->lock);
@@ -2994,7 +2997,7 @@ static QINLINE qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t * q)
     FREE_TQNODE((qt_threadqueue_node_t *) QPTR(head));
 #endif
     if (p != NULL) {
-	qthread_internal_incr_s(&q->advisory_queuelen, &q->advisory_queuelen_m, -1);
+	(void)qthread_internal_incr_s(&q->advisory_queuelen, &q->advisory_queuelen_m, -1);
     }
     return p;
 }				       /*}}} */
@@ -3054,7 +3057,7 @@ static QINLINE qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q)
     }
     FREE_TQNODE((qt_threadqueue_node_t *) QPTR(head));
     if (p != NULL) {
-	qthread_internal_incr_s(&q->advisory_queuelen, &q->advisory_queuelen_m, -1);
+	(void)qthread_internal_incr_s(&q->advisory_queuelen, &q->advisory_queuelen_m, -1);
     }
 #endif
     return p;
