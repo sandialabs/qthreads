@@ -1582,13 +1582,17 @@ int qthread_initialize(void)
 	    /* note: not numa_num_configured_cpus(), just in case an
 	     * artificial limit has been imposed. */
 	    nshepherds = numa_num_thread_cpus();
+	    qthread_debug(ALL_DETAILS, "numa_num_thread_cpus returned %i\n", nshepherds);
 # elif defined(HAVE_NUMA_BITMASK_NBYTES)
 	    for (size_t b=0;b<numa_bitmask_nbytes(numa_all_cpus_ptr)*8;b++) {
 		nshepherds += numa_bitmask_isbitset(numa_all_cpus_ptr, b);
 	    }
+	    qthread_debug(ALL_DETAILS, "after checking through the all_cpus_ptr, I counted %i cpus\n", nshepherds);
 # else
-	    /* this is (probably) optimal if/when we have multithreaded shepherds */
+	    /* this is (probably) correct if/when we have multithreaded shepherds,
+	     * ... BUT ONLY IF ALL NODES HAVE CPUS!!!!!! */
 	    nshepherds = numa_max_node() + 1;
+	    qthread_debug(ALL_DETAILS, "numa_max_node() returned %i\n", nshepherds);
 # endif
 	}
 #elif defined(QTHREAD_HAVE_TILETOPO)
@@ -1828,7 +1832,7 @@ int qthread_initialize(void)
 	    int over_subscribing = 0;
 
 	    assert(bmask);
-	    assert(cpus_per_node);
+	    assert(cpus_left_per_node);
 	    numa_bitmask_clearall(bmask);
 	    /* get the # cpus for each node */
 	    for (i = 0; i < max; i++) {
@@ -1863,7 +1867,7 @@ int qthread_initialize(void)
 		node++;
 		node *= (node < max);
 	    }
-	    numa_set_interleave_mask(bmask);
+	    //numa_set_interleave_mask(bmask);
 	    numa_bitmask_free(bmask);
 	    free(cpus_left_per_node);
 # else
