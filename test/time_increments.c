@@ -80,6 +80,17 @@ static aligned_t incrloop_nocompete(qthread_t * me, void *arg)
     return 0;
 }
 
+static aligned_t incrstream(qthread_t * me, void *arg)
+{
+    unsigned int i;
+    aligned_t * const myinc = (aligned_t*)arg;
+
+    for (i = 0; i < ITERATIONS; i++) {
+	qthread_incr(myinc+i, 1);
+    }
+    return 0;
+}
+
 static aligned_t addloop_falseshare(qthread_t * me, void *arg)
 {
     unsigned int offset = (unsigned int)(intptr_t) arg;
@@ -386,7 +397,38 @@ int main(int argc, char *argv[])
     }
 
     if (TEST_SELECTION & (1 << 9)) {
-	printf("\tNon-atomic Balanced streaming loop: ");
+	printf("\tOver-subscribed streaming loop: ");
+	increments =
+	    (aligned_t *) calloc(MAXPARALLELISM * ITERATIONS,
+				 sizeof(aligned_t));
+	qtimer_start(timer);
+	for (i = 0; i < MAXPARALLELISM; i++) {
+	    qthread_fork(incrstream, increments + (i*ITERATIONS), rets + i);
+	}
+	for (i = 0; i < MAXPARALLELISM; i++) {
+	    qthread_readFF(NULL, NULL, rets + i);
+	}
+	qtimer_stop(timer);
+	for (i = 0; i < MAXPARALLELISM * ITERATIONS; i++)
+	    assert(increments[i] == 1);
+	free(increments);
+	increments = NULL;
+
+	printf("%6g secs (%u-threads %u iters)\n", qtimer_secs(timer),
+	       shepherds, (unsigned)(ITERATIONS * MAXPARALLELISM));
+	iprintf("\t + average increment time: %17g secs\n",
+		qtimer_secs(timer) / (ITERATIONS * MAXPARALLELISM));
+	printf("\t = increment throughput: %19f increments/sec\n",
+	       (ITERATIONS * MAXPARALLELISM) / qtimer_secs(timer));
+	rate =
+	    (ITERATIONS * MAXPARALLELISM * sizeof(aligned_t)) /
+	    qtimer_secs(timer);
+	printf("\t = data throughput: %24g bytes/sec %s\n", rate,
+	       human_readable_rate(rate));
+    }
+
+    if (TEST_SELECTION & (1 << 10)) {
+	printf("\tNon-atomic bal. streaming loop: ");
 	increments =
 	    (aligned_t *) calloc(MAXPARALLELISM * ITERATIONS,
 				 sizeof(aligned_t));
@@ -398,7 +440,7 @@ int main(int argc, char *argv[])
 	free(increments);
 	increments = NULL;
 
-	printf("%19g secs (%u-threads %u iters)\n", qtimer_secs(timer),
+	printf("%6g secs (%u-threads %u iters)\n", qtimer_secs(timer),
 	       shepherds, (unsigned)(ITERATIONS * MAXPARALLELISM));
 	iprintf("\t + average increment time: %17g secs\n",
 		qtimer_secs(timer) / (ITERATIONS * MAXPARALLELISM));
