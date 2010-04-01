@@ -1824,13 +1824,42 @@ int qthread_initialize(void)
 	{
 # ifdef QTHREAD_LIBNUMA_V2
 	    struct bitmask *bmask = numa_allocate_nodemask();
+	    size_t *cpus_leftper_node = calloc(max, sizeof(size_t)); // to handle heterogeneous core counts
+	    int over_subscribing = 0;
 
 	    assert(bmask);
+	    assert(cpus_per_node);
 	    numa_bitmask_clearall(bmask);
+	    /* get the # cpus for each node */
+	    for (i = 0; i < max; i++) {
+		numa_node_to_cpus(i, bmask);
+		for (size_t j = 0; j < numa_bitmask_nbytes(bmask)*8; j++) {
+		    cpus_leftper_node[i] += numa_bitmask_isbitset(bmask, j);
+		}
+	    }
 	    /* assign nodes */
+	    int node = 0;
 	    for (i = 0; i < nshepherds; i++) {
-		qlib->shepherds[i].node = i % max;
-		numa_bitmask_setbit(bmask, i % max);
+		switch (over_subscribing) {
+		    case 0:
+			{
+			    int count = 0;
+			    while (count < max && cpus_leftper_node[node] == 0) {
+				node ++;
+				node *= (node < max);
+				count ++;
+			    }
+			    if (count < max) {
+				cpus_left_per_node[node] --;
+				numa_bitmask_setbit(bmask, node);
+				break;
+			    }
+			}
+			over_subscribing = 1;
+		}
+		qlib->shepherds[i].node = node;
+		node++;
+		node *= (node < max);
 	    }
 	    numa_set_interleave_mask(bmask);
 	    numa_bitmask_free(bmask);
