@@ -176,6 +176,7 @@ int main(int argc, char *argv[])
     /* BALANCED INCREMENT LOOP (strong scaling) */
     if (TEST_SELECTION & 1) {
 	printf("\tBalanced competing loop: ");
+	fflush(stdout);
 	increments =
 	    (aligned_t *) calloc(1,
 				 sizeof(aligned_t));
@@ -202,6 +203,7 @@ int main(int argc, char *argv[])
     /* BALANCED FALSE-SHARING LOOP */
     if (TEST_SELECTION & (1 << 1)) {
 	printf("\tBalanced false-sharing loop: ");
+	fflush(stdout);
 	increments = (aligned_t *) calloc(shepherds, sizeof(aligned_t));
 	qtimer_start(timer);
 	qt_loop_balance(0, ITERATIONS * 256, balanced_falseshare, NULL);
@@ -223,6 +225,7 @@ int main(int argc, char *argv[])
     if (TEST_SELECTION & (1 << 2)) {
 	/* BALANCED INDEPENDENT LOOP */
 	printf("\tBalanced independent loop: ");
+	fflush(stdout);
 	qtimer_start(timer);
 	qt_loop_balance(0, ITERATIONS * 256, balanced_noncomp, NULL);
 	qtimer_stop(timer);
@@ -241,6 +244,7 @@ int main(int argc, char *argv[])
     if (TEST_SELECTION & (1 << 3)) {
 	/* OVER-SUBSCRIBED COMPETING INCREMENT LOOP */
 	printf("\tOver-subscribed competing loop: ");
+	fflush(stdout);
 	qtimer_start(timer);
 	for (i = 0; i < MAXPARALLELISM; i++) {
 	    qthread_fork(incrloop, NULL, rets + i);
@@ -267,6 +271,7 @@ int main(int argc, char *argv[])
     if (TEST_SELECTION & (1 << 4)) {
 	/* OVER-SUBSCRIBED FALSE-SHARING INCREMENT LOOP */
 	printf("\tOver-subscribed false-sharing loop: ");
+	fflush(stdout);
 	increments = (aligned_t *) calloc(MAXPARALLELISM, sizeof(aligned_t));
 	qtimer_start(timer);
 	for (i = 0; i < MAXPARALLELISM; i++) {
@@ -295,6 +300,7 @@ int main(int argc, char *argv[])
     if (TEST_SELECTION & (1 << 5)) {
 	/* OVER-SUBSCRIBED INDEPENDENT INCREMENT LOOP */
 	printf("\tOver-subscribed independent loop: ");
+	fflush(stdout);
 	qtimer_start(timer);
 	for (i = 0; i < MAXPARALLELISM; i++) {
 	    qthread_fork(incrloop_nocompete, (void *)(intptr_t) i, rets + i);
@@ -320,6 +326,7 @@ int main(int argc, char *argv[])
     if (TEST_SELECTION & (1 << 6)) {
 	/* INDEPENDENT ADD LOOP */
 	printf("\tNon-atomic false-sharing loop: ");
+	fflush(stdout);
 	increments = (aligned_t *) calloc(MAXPARALLELISM, sizeof(aligned_t));
 	qtimer_start(timer);
 	for (i = 0; i < MAXPARALLELISM; i++) {
@@ -348,6 +355,7 @@ int main(int argc, char *argv[])
     if (TEST_SELECTION & (1 << 7)) {
 	/* INDEPENDENT NON-ATOMIC LOOP */
 	printf("\tNon-atomic independent loop: ");
+	fflush(stdout);
 	qtimer_start(timer);
 	for (i = 0; i < MAXPARALLELISM; i++) {
 	    qthread_fork(addloop_nocompete, (void *)(intptr_t) i, rets + i);
@@ -372,6 +380,7 @@ int main(int argc, char *argv[])
 
     if (TEST_SELECTION & (1 << 8)) {
 	printf("\tBalanced streaming loop: ");
+	fflush(stdout);
 	increments =
 	    (aligned_t *) calloc(MAXPARALLELISM * ITERATIONS,
 				 sizeof(aligned_t));
@@ -398,6 +407,7 @@ int main(int argc, char *argv[])
 
     if (TEST_SELECTION & (1 << 9)) {
 	printf("\tOver-subscribed streaming loop: ");
+	fflush(stdout);
 	increments =
 	    (aligned_t *) calloc(MAXPARALLELISM * ITERATIONS,
 				 sizeof(aligned_t));
@@ -429,6 +439,7 @@ int main(int argc, char *argv[])
 
     if (TEST_SELECTION & (1 << 10)) {
 	printf("\tNon-atomic bal. streaming loop: ");
+	fflush(stdout);
 	increments =
 	    (aligned_t *) calloc(MAXPARALLELISM * ITERATIONS,
 				 sizeof(aligned_t));
