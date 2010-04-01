@@ -476,7 +476,7 @@ qqloop_handle_t *qt_loop_queue_create(const size_t start, const size_t stop,
 	    h->stat.iq = qqloop_create_iq(start, stop);
 	    h->stat.func = func;
 	    h->stat.arg = argptr;
-	    h->stat.get = qqloop_get_iterations_guided;
+	    h->stat.get = qqloop_get_iterations_factored;
 	    for (i = 0; i < maxsheps; i++) {
 		h->qwa[i].stat = &(h->stat);
 		h->qwa[i].shep = i;    // this is the only thread-specific piece of information...
