@@ -20,7 +20,13 @@ int main()
     assert(me);
     qtimer_stop(t);
     assert(qtimer_secs(t) > 0);
-    iprintf("t = %f secs\n", qtimer_secs(t));
+    iprintf("time to find self and assert it: %g secs\n", qtimer_secs(t));
+
+    qtimer_start(t);
+    qtimer_stop(t);
+    assert(qtimer_secs(t) > 0);
+    iprintf("smallest measurable time: %g secs\n", qtimer_secs(t));
+
     qtimer_destroy(t);
 
     return 0;
