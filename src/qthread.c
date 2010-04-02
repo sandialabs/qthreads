@@ -35,6 +35,7 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 #endif
+#include <errno.h>
 
 #ifdef HAVE_TMC_CPUS_H
 # include <tmc/cpus.h>
@@ -1593,6 +1594,23 @@ int qthread_initialize(void)
 	     * ... BUT ONLY IF ALL NODES HAVE CPUS!!!!!! */
 	    nshepherds = numa_max_node() + 1;
 	    qthread_debug(ALL_DETAILS, "numa_max_node() returned %i\n", nshepherds);
+#  ifndef QTHREAD_LIBNUMA_V2
+	    {
+		size_t i;
+		unsigned long bmask = 0;
+		unsigned long count = 0;
+		for (size_t i=0; i<nshepherds; i++) {
+		    int foo = numa_node_to_cpus(i, &bmask, sizeof(unsigned long));
+		    for (size_t j=0; j < sizeof(unsigned long)*8; j++) {
+			if (bmask & ((unsigned long)1<<j)) {
+			    count++;
+			}
+		    }
+		}
+		nshepherds = count;
+		qthread_debug(ALL_DETAILS, "counted %i CPUs via numa_node_to_cpus()\n", (int)count);
+	    }
+#  endif
 # endif
 	}
 #elif defined(QTHREAD_HAVE_TILETOPO)
@@ -1882,6 +1900,9 @@ int qthread_initialize(void)
 	    numa_set_interleave_mask(&bmask);
 # endif
 	}
+# ifdef HAVE_NUMA_DISTANCE
+	/* truly ancient versions of libnuma (in the changelog, this is
+	 * considered "pre-history") do not have numa_distance() */
 	for (i = 0; i < nshepherds; i++) {
 	    const unsigned int node_i = qlib->shepherds[i].node;
 	    size_t j, k;
@@ -1930,6 +1951,7 @@ int qthread_initialize(void)
 		  sizeof(qthread_shepherd_id_t), qthread_internal_shepcomp);
 #  endif
 	}
+# endif
 #elif defined(QTHREAD_HAVE_LGRP)
 	unsigned int lgrp_offset;
 	int lgrp_count_grps;
@@ -2723,11 +2745,10 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
 
     t = ALLOC_QTHREAD(myshep);
     qthread_debug(ALL_DETAILS, "qthread_thread_new(): t = %p\n", t);
-    if (t == NULL) {
-	return NULL;
-    }
+    qassert_ret(t, NULL);
     uc = ALLOC_CONTEXT(myshep);
     qthread_debug(ALL_DETAILS, "qthread_thread_new(): uc = %p\n", uc);
+    assert(uc);
     if (uc == NULL) {
 	FREE_QTHREAD(t);
 	return NULL;
@@ -3404,8 +3425,9 @@ int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
 	return QTHREAD_BADARGS;
     }
     t = qthread_thread_new(f, arg, ret, shepherd);
-    t->target_shepherd = &(qlib->shepherds[shepherd]);
+    assert(t);
     if (t) {
+	t->target_shepherd = &(qlib->shepherds[shepherd]);
 	qthread_shepherd_t *shep = &(qlib->shepherds[shepherd]);
 	qthread_debug(THREAD_BEHAVIOR,
 		      "qthread_fork_to(): new-tid %u shep %u\n", t->thread_id,
