@@ -109,10 +109,15 @@ AS_IF([test "x$enable_debug_trace" == "xyes"],
 
 AC_ARG_ENABLE([picky],
   [AS_HELP_STRING([--enable-picky],
-	 [turns on extra compiler warnings (for developers of qthreads)])],
+	 [turns on extra compiler warnings (for developers of qthreads)])])
+AS_IF([test "x$enable_picky" == x],
+	  [AS_IF([test -d "${srcdir}/.svn"],
+			 [echo "--> developer override: enable picky compiler by default"
+			  enable_picky=yes])])
+AS_IF([test "x$enable_picky" == xyes],
   [case "$qthread_cv_c_compiler_type" in
    GNU)
-   CFLAGS="-Wall -Wno-strict-aliasing $CFLAGS"
+   CFLAGS="-Wall -Wno-strict-aliasing -Wmissing-prototypes -Wstrict-prototypes $CFLAGS"
    ;;
    Intel)
    CFLAGS="-Wall -wd981 -wd1572 -wd869 $CFLAGS"
@@ -488,6 +493,7 @@ AC_CACHE_SAVE
 AS_IF([test "x$qthread_implementation" = "xunix"],
 	  [QTHREAD_CHECK_LIBLGRP([qthread_topo=lgrp],
 	    [QTHREAD_CHECK_LIBNUMA([qthread_topo=libnuma],
+							   [qthread_topo=libnumaV2],
 		  [QTHREAD_CHECK_PLPA([qthread_topo=plpa],
 			[QTHREAD_CHECK_MACHTOPO([qthread_topo=mach],
 			  [QTHREAD_CHECK_TILETOPO([qthread_topo=tile])])])])])

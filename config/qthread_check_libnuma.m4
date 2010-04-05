@@ -38,7 +38,8 @@ AS_IF([test "x$libnuma_happy" = "xyes"],
   ])
   
 AS_IF([test "x$libnuma_happy" = "xyes"],
-  [AC_DEFINE([QTHREAD_HAVE_LIBNUMA],[1],[if the machine has libnuma working])
-		 $1],
-		[$2])
+      [AC_DEFINE([QTHREAD_HAVE_LIBNUMA],[1],[if libnuma is available])
+       AS_IF([test "x$ac_cv_func_numa_allocate_nodemask" == "xyes"],
+             [$2],[$1])],
+      [$3])
 ])
