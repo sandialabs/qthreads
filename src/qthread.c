@@ -404,10 +404,13 @@ static int qthread_internal_shepcomp(const void *a, const void *b, void *src)
 #else
 static qthread_shepherd_id_t shepcomp_src;
 
+#ifndef __SUN__
 /* this cannot be static, because Sun's idiotic gccfss compiler sometimes (at
  * optimization levels > -O3) refuses to compile it if it is - note that this
  * doesn't seem to be something that can be detected with a configure script,
  * because it WORKS on small programs */
+static
+#endif
 int qthread_internal_shepcomp(const void *a, const void *b)
 {
     int a_dist = qthread_distance(shepcomp_src, *(qthread_shepherd_id_t *) a);
