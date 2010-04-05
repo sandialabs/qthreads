@@ -190,7 +190,7 @@ static void examine(unsigned int r)
 }				       /*}}} */
 #endif
 
-static void figure_out_cacheline_size()
+static void figure_out_cacheline_size(void)
 {				       /*{{{ */
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
@@ -326,7 +326,7 @@ static void figure_out_cacheline_size()
 }				       /*}}} */
 
 /* returns the cache line size */
-int qthread_cacheline()
+int qthread_cacheline(void)
 {				       /*{{{ */
     if (cacheline_bytes == 0) {
 	figure_out_cacheline_size();
