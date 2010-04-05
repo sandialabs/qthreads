@@ -25,7 +25,7 @@ typedef int (*qt_hash_callback_fn)(void *, void *, void *);
 #endif
 typedef void (*qt_hash_deallocator_fn)(void*);
 
-qt_hash qt_hash_create();
+qt_hash qt_hash_create(int needSync);
 void qt_hash_destroy(qt_hash h);
 void qt_hash_destroy_deallocate(qt_hash h, qt_hash_deallocator_fn f);
 void *qt_hash_put(qt_hash h, const qt_key_t key, void *value);

@@ -50,14 +50,19 @@ typedef std::hash_map<qt_key_t, void*> qtmap;
 
 struct qt_hash_s {
     qtmap h;
-    QTHREAD_FASTLOCK_TYPE lock;
+    QTHREAD_FASTLOCK_TYPE *lock;
 };
 
-qt_hash qt_hash_create()
+qt_hash qt_hash_create(int needSync)
 {
     qt_hash ret = new qt_hash_s;
     if (ret) {
-	QTHREAD_FASTLOCK_INIT(ret->lock);
+	if (needSync) {
+	    ret->lock = new QTHREAD_FASTLOCK_TYPE;
+	    QTHREAD_FASTLOCK_INIT_PTR(ret->lock);
+	} else {
+	    ret->lock = NULL;
+	}
     }
     return ret;
 }
@@ -66,7 +71,10 @@ void qt_hash_destroy(qt_hash h)
 {
     /* better hope nobody's fooling with it! */
     assert(h);
-    QTHREAD_FASTLOCK_DESTROY(h->lock);
+    if (h->lock) {
+	QTHREAD_FASTLOCK_DESTROY_PTR(h->lock);
+	delete h->lock;
+    }
     delete h;
 }
 
@@ -76,23 +84,31 @@ void qt_hash_destroy(qt_hash h)
 void qt_hash_destroy_deallocate(qt_hash h, qt_hash_deallocator_fn f)
 {
     assert(h);
-    QTHREAD_FASTLOCK_LOCK(&(h->lock));
+    if (h->lock) {
+	QTHREAD_FASTLOCK_LOCK(h->lock);
+    }
     for (qtmap::iterator iter(h->h.begin());
 	    iter != h->h.end();
 	    iter++) {
 	assert(iter->second != NULL);
 	f((void*)(iter->second));
     }
-    QTHREAD_FASTLOCK_UNLOCK(&(h->lock));
+    if (h->lock) {
+	QTHREAD_FASTLOCK_UNLOCK(h->lock);
+    }
     qt_hash_destroy(h);
 }
 
 void *qt_hash_put(qt_hash h, const qt_key_t key, void *value)
 {
     assert(h);
-    QTHREAD_FASTLOCK_LOCK(&(h->lock));
+    if (h->lock) {
+	QTHREAD_FASTLOCK_LOCK(h->lock);
+    }
     h->h[(QT_HASH_CAST)key] = value;
-    QTHREAD_FASTLOCK_UNLOCK(&(h->lock));
+    if (h->lock) {
+	QTHREAD_FASTLOCK_UNLOCK(h->lock);
+    }
     return value;
 }
 
@@ -107,9 +123,13 @@ void *qt_hash_remove(qt_hash h, const qt_key_t key)
 {
     void * ret = NULL;
     assert(h);
-    QTHREAD_FASTLOCK_LOCK(&(h->lock));
+    if (h->lock) {
+	QTHREAD_FASTLOCK_LOCK(h->lock);
+    }
     ret = qt_hash_remove_locked(h,key);
-    QTHREAD_FASTLOCK_UNLOCK(&(h->lock));
+    if (h->lock) {
+	QTHREAD_FASTLOCK_UNLOCK(h->lock);
+    }
     return ret;
 }
 
@@ -131,9 +151,13 @@ void *qt_hash_get(qt_hash h, const qt_key_t key)
 {
     void * ret;
     assert(h);
-    QTHREAD_FASTLOCK_LOCK(&(h->lock));
+    if (h->lock) {
+	QTHREAD_FASTLOCK_LOCK(h->lock);
+    }
     ret = qt_hash_get_locked(h,key);
-    QTHREAD_FASTLOCK_UNLOCK(&(h->lock));
+    if (h->lock) {
+	QTHREAD_FASTLOCK_UNLOCK(h->lock);
+    }
     return ret;
 }
 
@@ -154,33 +178,45 @@ void *qt_hash_get_locked(qt_hash h, const qt_key_t key)
 void qt_hash_callback(qt_hash h, qt_hash_callback_fn f, void *arg)
 {
     assert(h);
-    QTHREAD_FASTLOCK_LOCK(&(h->lock));
+    if (h->lock) {
+	QTHREAD_FASTLOCK_LOCK(h->lock);
+    }
     for (qtmap::iterator iter(h->h.begin());
 	    iter != h->h.end();
 	    iter++) {
 	f((void*)iter->first, iter->second, arg);
     }
-    QTHREAD_FASTLOCK_UNLOCK(&(h->lock));
+    if (h->lock) {
+	QTHREAD_FASTLOCK_UNLOCK(h->lock);
+    }
 }
 
 size_t qt_hash_count(qt_hash h)
 {
     size_t s;
     assert(h);
-    QTHREAD_FASTLOCK_LOCK(&(h->lock));
+    if (h->lock) {
+	QTHREAD_FASTLOCK_LOCK(h->lock);
+    }
     s = h->h.size();
-    QTHREAD_FASTLOCK_UNLOCK(&(h->lock));
+    if (h->lock) {
+	QTHREAD_FASTLOCK_UNLOCK(h->lock);
+    }
     return s;
 }
 
 void qt_hash_lock(qt_hash h)
 {
     assert(h);
-    QTHREAD_FASTLOCK_LOCK(&(h->lock));
+    if (h->lock) {
+	QTHREAD_FASTLOCK_LOCK(h->lock);
+    }
 }
 
 void qt_hash_unlock(qt_hash h)
 {
     assert(h);
-    QTHREAD_FASTLOCK_UNLOCK(&(h->lock));
+    if (h->lock) {
+	QTHREAD_FASTLOCK_UNLOCK(h->lock);
+    }
 }
