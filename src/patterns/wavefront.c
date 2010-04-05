@@ -180,10 +180,9 @@ static void qt_wavefront_worker(qthread_t * me,
 		*vol_id_qa(&L->struts.strips[wu->col + 1][wu->row]) = right;
 		/* -- don't have to copy {right}, because data was placed in there directly */
 		/* step 4: enqueue work unit for right (maybe) */
-		if (wu->col < L->slats.segs - 1 /* there is a next column */ 
-		    &&
-		    (intptr_t) vol_read_qa(&L->slats.
-					   strips[wu->row][wu->col + 1]) >
+		if (wu->col < L->slats.segs - 1	/* there is a next column */
+		    && (intptr_t) vol_read_qa(&L->slats.
+					      strips[wu->row][wu->col + 1]) >
 		    1) {
 		    /* data is ready! yay! */
 		    struct qt_wavefront_workunit *wu2 =
@@ -194,10 +193,8 @@ static void qt_wavefront_worker(qthread_t * me,
 		    qdqueue_enqueue_there(me, arg->work_queue, wu2,
 					  qarray_shepof(vol_read_qa
 							(&L->slats.
-							 strips[wu2->
-								row][wu2->
-								     col]),
-							0));
+							 strips[wu2->row]
+							 [wu2->col]), 0));
 		}
 		/* step 5: enqueue work unit for next up (maybe) */
 		if (wu->row < L->struts.segs - 1 &&
@@ -211,10 +208,8 @@ static void qt_wavefront_worker(qthread_t * me,
 		    qdqueue_enqueue_there(me, arg->work_queue, wu2,
 					  qarray_shepof(vol_read_qa
 							(&L->slats.
-							 strips[wu2->
-								row][wu2->
-								     col]),
-							0));
+							 strips[wu2->row]
+							 [wu2->col]), 0));
 		}
 		if (wu->col == L->slats.segs - 1 &&
 		    wu->row == L->struts.segs - 1) {
@@ -278,14 +273,13 @@ qt_wavefront_lattice *qt_wavefront(qarray * restrict const vertical,
 	L->unit_size = vertical->unit_size;
 	if (vertical->count > vertical->segment_size) {
 	    L->slats.num =
-		ceil((double)vertical->count /
-		     (double)vertical->segment_size) + 1;
+		(size_t) ceil((double)vertical->count /
+			      (double)vertical->segment_size) + 1;
 	} else {
 	    L->slats.num = 2;
 	}
 	if (horizontal->count > horizontal->segment_size) {
-	    L->struts.num =
-		2 +
+	    L->struts.num = 2 + (size_t)
 		ceil((double)(horizontal->count - horizontal->segment_size) /
 		     (double)(horizontal->segment_size - 1));
 	} else {
