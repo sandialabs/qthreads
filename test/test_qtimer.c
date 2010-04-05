@@ -4,7 +4,7 @@
 #include <qthread/qtimer.h>
 #include "argparsing.h"
 
-int main()
+int main(int argc, char *argv[])
 {
     qtimer_t t;
     qthread_t *me;

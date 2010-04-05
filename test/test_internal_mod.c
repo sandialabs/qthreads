@@ -8,7 +8,7 @@ static aligned_t whereami(qthread_t * me, void *arg)
     return qthread_shep(me);
 }
 
-int main()
+int main(int argc, char *argv[])
 {
     unsigned int i;
     aligned_t rets[30];

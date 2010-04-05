@@ -16,21 +16,21 @@
 static unsigned int BIGLEN = 1000000U;
 aligned_t *uia = NULL;
 
-void sum(qthread_t *me, const size_t startat, const size_t stopat, void *arg_)
+static void sum(qthread_t * me, const size_t startat, const size_t stopat,
+		void *arg_)
 {
     size_t i;
     aligned_t local_sum = 0;
     //printf("S%i: summing %i numbers, from %i to %i\n", (int)qthread_shep(me), (int)(stopat-startat), (int)startat, (int)stopat);
-    for (i=startat; i<stopat; i++) {
+    for (i = startat; i < stopat; i++) {
 	local_sum += uia[i];
     }
-    qthread_incr((aligned_t*)arg_, local_sum);
+    qthread_incr((aligned_t *) arg_, local_sum);
 }
 
 int main(int argc, char *argv[])
 {
     size_t i;
-    struct timeval start, stop;
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
     CHECK_VERBOSE();
@@ -51,15 +51,15 @@ int main(int argc, char *argv[])
 	for (i = 0; i < BIGLEN; i++)
 	    uisum += uia[i];
 	qtimer_stop(t);
-	iprintf("summing-serial   %u uints took %g seconds\n",
-		BIGLEN, qtimer_secs(t));
+	iprintf("summing-serial   %u uints took %g seconds\n", BIGLEN,
+		qtimer_secs(t));
 	iprintf("\tsum was %lu\n", (unsigned long)uisum);
 	loophandle = qt_loop_queue_create(0, BIGLEN, sum, &uitmp);
 	qtimer_start(t);
 	qt_loop_queue_run(loophandle);
 	qtimer_stop(t);
-	iprintf("summing-parallel %u uints took %g seconds\n",
-		BIGLEN, qtimer_secs(t));
+	iprintf("summing-parallel %u uints took %g seconds\n", BIGLEN,
+		qtimer_secs(t));
 	iprintf("\tsum was %lu\n", (unsigned long)uitmp);
 	assert(uitmp == uisum);
 

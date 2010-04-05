@@ -42,7 +42,7 @@ static aligned_t producer(qthread_t * t, void *arg)
     return 0;
 }
 
-static int realmain()
+static int realmain(void)
 {
     aligned_t t;
 

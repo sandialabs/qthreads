@@ -9,7 +9,7 @@
 #include <qthread/cacheline.h>
 #include "argparsing.h"
 
-int main()
+int main(int argc, char *argv[])
 {
     int cacheline = 0;
 

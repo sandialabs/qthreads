@@ -7,18 +7,20 @@
 
 static double ret = 0.0;
 
-static void assigni(qthread_t *me, const size_t startat, const size_t stopat, qarray *q, void *arg)
+static void assigni(qthread_t * me, const size_t startat, const size_t stopat,
+		    qarray * q, void *arg)
 {
-    int *ptr = (int*)qarray_elem(me, q, startat);
+    int *ptr = (int *)qarray_elem(me, q, startat);
     size_t i;
     for (i = 0; i < (stopat - startat); ++i) {
-	ptr[i] = (int)(i+startat);
+	ptr[i] = (int)(i + startat);
     }
 }
 
-static void permute(qthread_t *me, const size_t startat, const size_t stopat, qarray *q, void *arg, void *ret)
+static void permute(qthread_t * me, const size_t startat, const size_t stopat,
+		    qarray * q, void *arg, void *ret)
 {
-    int *ptr = (int*)qarray_elem(me, q, startat);
+    int *ptr = (int *)qarray_elem(me, q, startat);
     size_t i;
     double sum = 0.0;
     for (i = 0; i < (stopat - startat); ++i) {
@@ -28,13 +30,13 @@ static void permute(qthread_t *me, const size_t startat, const size_t stopat, qa
     memcpy(ret, &sum, sizeof(double));
 }
 
-static aligned_t onesum(qthread_t *me, void *arg)
+static aligned_t onesum(qthread_t * me, void *arg)
 {
-    qthread_dincr(&ret, (double)*(int*)arg);
+    qthread_dincr(&ret, (double)*(int *)arg);
     return 0;
 }
 
-int main()
+int main(int argc, char *argv[])
 {
     qarray *t;
     qthread_t *me;
@@ -44,18 +46,19 @@ int main()
     qthread_initialize();
     me = qthread_self();
     CHECK_VERBOSE();
-    NUMARG(ITER,"ITERATIONS");
+    NUMARG(ITER, "ITERATIONS");
 
     t = qarray_create_tight(ITER, sizeof(int));
     assert(t);
     qarray_iter_loop(me, t, 0, ITER, assigni, NULL);
-    for (i = 1; i<ITER; i++) {
+    for (i = 1; i < ITER; i++) {
 	int_calc += i;
     }
     /* ******************************
      * Example 1
      */
-    qarray_iter_loopaccum(me, t, 0, ITER, permute, NULL, &ret, sizeof(double), qt_dbl_add_acc);
+    qarray_iter_loopaccum(me, t, 0, ITER, permute, NULL, &ret, sizeof(double),
+			  qt_dbl_add_acc);
     iprintf("int = %lu\n", (long unsigned)int_calc);
     iprintf("ret = %f\n", ret);
     assert(int_calc == ret);
