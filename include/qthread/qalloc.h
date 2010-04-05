@@ -35,11 +35,11 @@ void *qalloc_makedynmap(const off_t filesize, void *addr,
 void *qalloc_loadmap(const char *filename);
 
 /* This function sync's the mmap'd regions to disk. */
-void qalloc_checkpoint();
+void qalloc_checkpoint(void);
 
 /* This function performs a checkpoint, and then un-maps all of the currently
  * mapped regions */
-void qalloc_cleanup();
+void qalloc_cleanup(void);
 
 /* These are the allocation functions.
  *
