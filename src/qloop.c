@@ -16,11 +16,12 @@ static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t * ptr)
 
 /* So, the idea here is that this is a (braindead) C version of Megan's
  * mt_loop. */
-struct qloop_wrapper_args {
+struct qloop_wrapper_args
+{
     qt_loop_f func;
     size_t startat, stopat;
-    void * arg;
-    volatile aligned_t * donecount;
+    void *arg;
+    volatile aligned_t *donecount;
 };
 
 static aligned_t qloop_wrapper(qthread_t * me,
@@ -160,7 +161,8 @@ void qt_loop_balance_future(const size_t start, const size_t stop,
     qt_loop_balance_inner(start, stop, func, argptr, 1);
 }				       /*}}} */
 
-struct qloopaccum_wrapper_args {
+struct qloopaccum_wrapper_args
+{
     qt_loopr_f func;
     size_t startat, stopat;
     void *restrict arg;
@@ -241,6 +243,7 @@ static QINLINE void qt_loopaccum_balance_inner(const size_t start,
     }
     free(qwa);
 }
+
 void qt_loopaccum_balance(const size_t start, const size_t stop,
 			  const size_t size, void *restrict out,
 			  const qt_loopr_f func, void *restrict argptr,
@@ -248,6 +251,7 @@ void qt_loopaccum_balance(const size_t start, const size_t stop,
 {
     qt_loopaccum_balance_inner(start, stop, size, out, func, argptr, acc, 0);
 }
+
 void qt_loopaccum_balance_future(const size_t start, const size_t stop,
 				 const size_t size, void *restrict out,
 				 const qt_loopr_f func, void *restrict argptr,
@@ -270,15 +274,19 @@ void qt_loopaccum_balance_future(const size_t start, const size_t stop,
  * for a certain degree of self-scheduling, and adapts better when shepherds
  * are disabled.
  */
-struct qqloop_iteration_queue {
+struct qqloop_iteration_queue
+{
     volatile saligned_t start;
     saligned_t stop;
     volatile saligned_t phase;
 };
 struct qqloop_static_args;
 struct qqloop_wrapper_range;
-typedef int(*qq_getiter_f)(struct qqloop_iteration_queue *const restrict, struct qqloop_static_args *const restrict, struct qqloop_wrapper_range *const restrict);
-struct qqloop_static_args {
+typedef int (*qq_getiter_f) (struct qqloop_iteration_queue * const restrict,
+			     struct qqloop_static_args * const restrict,
+			     struct qqloop_wrapper_range * const restrict);
+struct qqloop_static_args
+{
     qt_loop_f func;
     void *arg;
     volatile aligned_t donecount;
@@ -286,31 +294,38 @@ struct qqloop_static_args {
     struct qqloop_iteration_queue *iq;
     qq_getiter_f get;
 };
-struct qqloop_wrapper_args {
+struct qqloop_wrapper_args
+{
     qthread_shepherd_id_t shep;
     struct qqloop_static_args *stat;
 };
-struct qqloop_wrapper_range {
+struct qqloop_wrapper_range
+{
     size_t startat, stopat;
 };
-struct qqloop_handle_s {
+struct qqloop_handle_s
+{
     struct qqloop_wrapper_args *qwa;
     struct qqloop_static_args stat;
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     int workers;
     int assignNext;
     int assignStop;
-    volatile aligned_t assignDone; // start+offset
-    size_t shepherdsActive; // bit vector to stop shepherds from grabbing a loop twice (is this necessary?)
+    volatile aligned_t assignDone;	// start+offset
+    size_t shepherdsActive;	// bit vector to stop shepherds from grabbing a loop twice (is this necessary?)
 #endif
 };
 
-static Q_UNUSED QINLINE int qqloop_get_iterations_guided(struct qqloop_iteration_queue *const
-					 restrict iq,
-					 struct qqloop_static_args *const
-					 restrict sa,
-					 struct qqloop_wrapper_range *const
-					 restrict range)
+static Q_UNUSED QINLINE int qqloop_get_iterations_guided(struct
+							 qqloop_iteration_queue
+							 *const restrict iq,
+							 struct
+							 qqloop_static_args
+							 *const restrict sa,
+							 struct
+							 qqloop_wrapper_range
+							 *const restrict
+							 range)
 {
     saligned_t ret = iq->start;
     saligned_t ret2 = iq->stop;
@@ -351,12 +366,14 @@ static Q_UNUSED QINLINE int qqloop_get_iterations_guided(struct qqloop_iteration
 	return 0;
     }
 }
-static QINLINE int qqloop_get_iterations_factored(struct qqloop_iteration_queue *const
-					 restrict iq,
-					 struct qqloop_static_args *const
-					 restrict sa,
-					 struct qqloop_wrapper_range *const
-					 restrict range)
+
+static QINLINE int qqloop_get_iterations_factored(struct
+						  qqloop_iteration_queue
+						  *const restrict iq,
+						  struct qqloop_static_args
+						  *const restrict sa,
+						  struct qqloop_wrapper_range
+						  *const restrict range)
 {
     saligned_t ret = iq->start;
     saligned_t ret2 = iq->stop;
@@ -519,7 +536,8 @@ void qt_loop_queue_run(qqloop_handle_t * loop)
     }
 }
 
-void qt_loop_queue_run_there(qqloop_handle_t * loop, qthread_shepherd_id_t shep)
+void qt_loop_queue_run_there(qqloop_handle_t * loop,
+			     qthread_shepherd_id_t shep)
 {
     qassert_retvoid(loop);
     qassert_retvoid(shep < qthread_num_shepherds());
@@ -542,11 +560,13 @@ void qt_loop_queue_run_there(qqloop_handle_t * loop, qthread_shepherd_id_t shep)
 
 /* The easiest way to get shepherds/workers to REJOIN when/if shepherds are
  * re-enabled is to make the user do it. */
-void qt_loop_queue_addworker(qqloop_handle_t *loop, const qthread_shepherd_id_t shep)
+void qt_loop_queue_addworker(qqloop_handle_t * loop,
+			     const qthread_shepherd_id_t shep)
 {
     qthread_incr(&(loop->stat.activesheps), 1);
     if (_(loop->stat.donecount) == 0) {
-	qthread_fork_to((qthread_f) qqloop_wrapper, loop->qwa + shep, NULL, shep);
+	qthread_fork_to((qthread_f) qqloop_wrapper, loop->qwa + shep, NULL,
+			shep);
     } else {
 	qthread_incr(&(loop->stat.activesheps), -1);
     }
@@ -607,7 +627,6 @@ PARALLEL_FUNC(sum, is, ADD, saligned_t, int)
 PARALLEL_FUNC(prod, ip, MULT, saligned_t, int)
 PARALLEL_FUNC(max, imax, MAX, saligned_t, int)
 PARALLEL_FUNC(min, imin, MIN, saligned_t, int)
-
 PARALLEL_FUNC(sum, ds, ADD, double, double)
 PARALLEL_FUNC(prod, dp, MULT, double, double)
 PARALLEL_FUNC(max, dmax, MAX, double, double)
@@ -646,7 +665,8 @@ static int dcmp(const void *restrict a, const void *restrict b)
     return 0;
 }
 
-struct qt_qsort_args {
+struct qt_qsort_args
+{
     double *array;
     double pivot;
     size_t length, chunksize, jump, offset;
@@ -724,12 +744,14 @@ static aligned_t qt_qsort_partition(qthread_t * me,
     return 0;
 }
 
-struct qt_qsort_iargs {
+struct qt_qsort_iargs
+{
     double *array;
     size_t length;
 };
 
-struct qt_qsort_iprets {
+struct qt_qsort_iprets
+{
     aligned_t leftwall, rightwall;
 };
 
@@ -939,41 +961,43 @@ void qt_parallel(const qt_loop_f func, const unsigned int threads,
  * but we only need one parallel loop and the shepherds need to share
  * iterations.  Care is needed to insure only one copy is executed.
  */
-aligned_t forLock = 0;      // used for mutual exclusion in qt_parallel_for - needs init
-volatile int forLoopsStarted = 0;  // used for active loop in qt_parallel_for
-int qthread_forCount(qthread_t*, int);
+aligned_t forLock = 0;		// used for mutual exclusion in qt_parallel_for - needs init
+volatile int forLoopsStarted = 0;	// used for active loop in qt_parallel_for
+int qthread_forCount(qthread_t *, int);
 
 // written by AKP
-void qt_forloop_queue_run_single(qqloop_handle_t * loop, void * arg)
+void qt_forloop_queue_run_single(qqloop_handle_t * loop, void *arg)
 {
-    qthread_t * const me = qthread_self();
+    qthread_t *const me = qthread_self();
     const qthread_shepherd_id_t myShep = qthread_shep(me);
 
     /* This shepherd needs an iteration */
-    if (!(loop->shepherdsActive & (1<<myShep))) {
-	size_t iterationNumber = (size_t)qthread_incr(&loop->assignNext, 1);
+    if (!(loop->shepherdsActive & (1 << myShep))) {
+	size_t iterationNumber = (size_t) qthread_incr(&loop->assignNext, 1);
 
 	while (iterationNumber < loop->assignStop) {
-	    if (!(loop->shepherdsActive & (1<<myShep))) {
-		loop->shepherdsActive |= (1<<myShep);
+	    if (!(loop->shepherdsActive & (1 << myShep))) {
+		loop->shepherdsActive |= (1 << myShep);
 	    }
 
 	    if (arg != NULL) {
-		loop->stat.func(me, iterationNumber, iterationNumber+1, arg);
+		loop->stat.func(me, iterationNumber, iterationNumber + 1,
+				arg);
 	    } else {
-		loop->stat.func(me, iterationNumber, iterationNumber+1, loop->stat.arg);
+		loop->stat.func(me, iterationNumber, iterationNumber + 1,
+				loop->stat.arg);
 	    }
 	    qthread_incr(&loop->assignDone, 1);
-	    iterationNumber = (size_t)qthread_incr(&loop->assignNext, 1);
+	    iterationNumber = (size_t) qthread_incr(&loop->assignNext, 1);
 	}
     }
 
-    if (!(loop->shepherdsActive & (1<<myShep))) { /* I did no iterations */
+    if (!(loop->shepherdsActive & (1 << myShep))) {	/* I did no iterations */
 	/* use higher level call to loop over multiple items in the work list */
 	return;
     }
 
-    while (_(loop->assignDone) < loop->assignStop) ; /* spin until all done */
+    while (_(loop->assignDone) < loop->assignStop) ;	/* spin until all done */
 }
 
 // added akp -- run loop until done
@@ -1016,7 +1040,7 @@ void qt_loop_queue_run_single(volatile qqloop_handle_t * loop, void *t)
 volatile qqloop_handle_t *activeLoop = NULL;
 
 void qt_parallel_qfor(const qt_loop_f func, const int iter,
-		     void *restrict argptr)
+		      void *restrict argptr)
 {
     qthread_t *me = qthread_self();
     volatile qqloop_handle_t *qqhandle = NULL;
@@ -1044,30 +1068,32 @@ void qt_parallel_qfor(const qt_loop_f func, const int iter,
     return;
 }
 
-void qt_naked_parallel_for(qthread_t * me, const size_t startat, const size_t stopat, void *nakedArg);
+void qt_naked_parallel_for(qthread_t * me, const size_t startat,
+			   const size_t stopat, void *nakedArg);
 
 void qt_parallel_for(const qt_loop_f func, const int iter,
-                     void *restrict argptr)
+		     void *restrict argptr)
 {
-  if (!activeParallel){
-    void * nakedArg[3] = {(void*)func, (void*)&iter, (void*)argptr};
+    if (!activeParallel) {
+	void *nakedArg[3] = { (void *)func, (void *)&iter, (void *)argptr };
 
-    activeParallel = 1;
-    qt_loop(0, qthread_num_shepherds(), 1, qt_naked_parallel_for, nakedArg);
-    activeParallel = 0;
- 
-  }
-  else {
-    qt_parallel_qfor(func,iter,argptr);
-  }
+	activeParallel = 1;
+	qt_loop(0, qthread_num_shepherds(), 1, qt_naked_parallel_for,
+		nakedArg);
+	activeParallel = 0;
+
+    } else {
+	qt_parallel_qfor(func, iter, argptr);
+    }
 }
 
-void qt_naked_parallel_for(qthread_t * me, const size_t startat, const size_t stopat, void *nakedArg)
+void qt_naked_parallel_for(qthread_t * me, const size_t startat,
+			   const size_t stopat, void *nakedArg)
 {
-  void ** funcArgs = (void**)nakedArg;
-  const qt_loop_f func = (const qt_loop_f)(funcArgs[0]);
-  const int64_t iter = *(const int64_t*)(funcArgs[1]);
-  void *restrict argptr = funcArgs[2];
-  qt_parallel_qfor(func,iter,argptr);
+    void **funcArgs = (void **)nakedArg;
+    const qt_loop_f func = (const qt_loop_f)(funcArgs[0]);
+    const int64_t iter = *(const int64_t *)(funcArgs[1]);
+    void *restrict argptr = funcArgs[2];
+    qt_parallel_qfor(func, iter, argptr);
 }
 #endif
