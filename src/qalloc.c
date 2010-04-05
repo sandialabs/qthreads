@@ -368,7 +368,7 @@ void *qalloc_loadmap(const char *filename)
     }
 }				       /*}}} */
 
-void qalloc_cleanup()
+void qalloc_cleanup(void)
 {				       /*{{{ */
     qalloc_checkpoint();
     while (mmaps) {
@@ -892,7 +892,7 @@ void qalloc_free(void *block, void *mapinfo)
     }
 }				       /*}}} */
 
-void qalloc_checkpoint()
+void qalloc_checkpoint(void)
 {				       /*{{{ */
     struct mapinfo_s *m = mmaps;
     struct dynmapinfo_s *dm = dynmmaps;
