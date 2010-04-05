@@ -305,7 +305,7 @@ struct qqloop_handle_s {
 #endif
 };
 
-static QINLINE int qqloop_get_iterations_guided(struct qqloop_iteration_queue *const
+static Q_UNUSED QINLINE int qqloop_get_iterations_guided(struct qqloop_iteration_queue *const
 					 restrict iq,
 					 struct qqloop_static_args *const
 					 restrict sa,
