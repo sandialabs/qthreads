@@ -1102,6 +1102,11 @@ static QINLINE aligned_t qthread_cas_xx(volatile aligned_t * addr,
 static QINLINE void *qthread_cas_ptr_(void *volatile*const addr,
 				     void *const oldval, void *const newval)
 {
+#ifdef __INTEL_COMPILER
+/* selector expression is constant
+ * yes, that's the point; C does not have templates */
+# pragma warning (disable:280)
+#endif
     switch (sizeof(void *)) {
 	case 4:
 	    return (void *)(uintptr_t) qthread_cas32((volatile uint32_t *)
