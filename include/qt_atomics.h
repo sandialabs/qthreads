@@ -16,21 +16,27 @@
 #if defined(__tile__)
 # include <tmc/sync.h>
 # define QTHREAD_FASTLOCK_INIT(x) tmc_sync_mutex_init(&(x))
+# define QTHREAD_FASTLOCK_INIT_PTR(x) tmc_sync_mutex_init((x))
 # define QTHREAD_FASTLOCK_LOCK(x) tmc_sync_mutex_lock((x))
 # define QTHREAD_FASTLOCK_UNLOCK(x) tmc_sync_mutex_unlock((x))
 # define QTHREAD_FASTLOCK_DESTROY(x)
+# define QTHREAD_FASTLOCK_DESTROY_PTR(x)
 # define QTHREAD_FASTLOCK_TYPE tmc_sync_mutex_t
 #elif defined(HAVE_PTHREAD_SPIN_INIT)
 # define QTHREAD_FASTLOCK_INIT(x) pthread_spin_init(&(x), PTHREAD_PROCESS_PRIVATE)
+# define QTHREAD_FASTLOCK_INIT_PTR(x) pthread_spin_init((x), PTHREAD_PROCESS_PRIVATE)
 # define QTHREAD_FASTLOCK_LOCK(x) pthread_spin_lock((x))
 # define QTHREAD_FASTLOCK_UNLOCK(x) pthread_spin_unlock((x))
 # define QTHREAD_FASTLOCK_DESTROY(x) pthread_spin_destroy(&(x))
+# define QTHREAD_FASTLOCK_DESTROY_PTR(x) pthread_spin_destroy((x))
 # define QTHREAD_FASTLOCK_TYPE pthread_spinlock_t
 #else
 # define QTHREAD_FASTLOCK_INIT(x) pthread_mutex_init(&(x), NULL)
+# define QTHREAD_FASTLOCK_INIT_PTR(x) pthread_mutex_init((x), NULL)
 # define QTHREAD_FASTLOCK_LOCK(x) pthread_mutex_lock((x))
 # define QTHREAD_FASTLOCK_UNLOCK(x) pthread_mutex_unlock((x))
 # define QTHREAD_FASTLOCK_DESTROY(x) pthread_mutex_destroy(&(x))
+# define QTHREAD_FASTLOCK_DESTROY_PTR(x) pthread_mutex_destroy((x))
 # define QTHREAD_FASTLOCK_TYPE pthread_mutex_t
 #endif
 
