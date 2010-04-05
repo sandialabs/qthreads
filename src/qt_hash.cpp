@@ -42,6 +42,12 @@ typedef std::hash_map<qt_key_t, void*> qtmap;
 #define QT_HASH_CAST qt_key_t
 #endif
 
+#ifdef __INTEL_COMPILER
+/* value copied to temporary, reference to temporary used;
+ * ignoring because yes, that's how this works */
+# pragma warning (disable:383)
+#endif
+
 struct qt_hash_s {
     qtmap h;
     QTHREAD_FASTLOCK_TYPE lock;
