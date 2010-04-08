@@ -60,8 +60,6 @@ AC_CACHE_CHECK([what kind of C compiler $CC is],
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__llvm__],[qthread_cv_c_compiler_type=LLVM])])
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__GNUC__],[qthread_cv_c_compiler_type=GNU])])
-   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__HIGHC__],[qthread_cv_c_compiler_type=MetaWare])])
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__MWERKS__],[qthread_cv_c_compiler_type=MetaWare])])
@@ -98,11 +96,15 @@ AC_CACHE_CHECK([what kind of C compiler $CC is],
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__TenDRA__],[qthread_cv_c_compiler_type=TenDRA])])
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
+     [_QTHREAD_CHECK_IFDEF([__TILECC__],[qthread_cv_c_compiler_type=TileCC])])
+   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__TINYC__],[qthread_cv_c_compiler_type=TinyC])])
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([_UCC],[qthread_cv_c_compiler_type=Ultimate])])
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__USLC__],[qthread_cv_c_compiler_type=USL])])
+   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
+     [_QTHREAD_CHECK_IFDEF([__GNUC__],[qthread_cv_c_compiler_type=GNU])])
 
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [qthread_cv_c_compiler_type=unknown])
@@ -154,8 +156,6 @@ AC_CACHE_CHECK([what kind of C++ compiler $CXX is],
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__llvm__],[qthread_cv_cxx_compiler_type=LLVM])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__GNUC__],[qthread_cv_cxx_compiler_type=GNU])])
-   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__HIGHC__],[qthread_cv_cxx_compiler_type=MetaWare])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__MWERKS__],[qthread_cv_cxx_compiler_type=MetaWare])])
@@ -180,9 +180,13 @@ AC_CACHE_CHECK([what kind of C++ compiler $CXX is],
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__TenDRA__],[qthread_cv_cxx_compiler_type=TenDRA])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
+     [_QTHREAD_CHECK_IFDEF([__TILECC__],[qthread_cv_cxx_compiler_type=TileCC])])
+   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([_UCC],[qthread_cv_cxx_compiler_type=Ultimate])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__WATCOMC__],[qthread_cv_cxx_compiler_type=Watcom])])
+   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
+     [_QTHREAD_CHECK_IFDEF([__GNUC__],[qthread_cv_cxx_compiler_type=GNU])])
 
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__EDG__],[qthread_cv_cxx_compiler_type=EDG_FrontEnd])])
