@@ -142,7 +142,6 @@ static inline qthread_shepherd_id_t qarray_internal_shepof_ch(const qarray *
 					    qthread_num_shepherds());
 	case DIST:
 	    return qarray_internal_segment_shep_read(a, segment_head);
-	    break;
     }
 }				       /*}}} */
 
