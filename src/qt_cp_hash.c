@@ -10,9 +10,13 @@
 #define QT_HASH_CAST qt_key_t
 #endif
 
-qt_hash qt_hash_create()
+qt_hash qt_hash_create(int needSync)
 {
-    return cp_hashlist_create(100, cp_hash_addr, cp_hash_compare_addr);
+    if (needSync == 0) {
+	return cp_hashlist_create_by_mode(COLLECTION_MODE_NOSYNC, 100, cp_hash_addr, cp_hash_compare_addr);
+    } else {
+	return cp_hashlist_create(100, cp_hash_addr, cp_hash_compare_addr);
+    }
 }
 
 void qt_hash_destroy(qt_hash h)
