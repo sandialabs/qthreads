@@ -4,7 +4,12 @@
 #include <stdlib.h>
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
+#include <qt_barrier.h>
 #include <qthread_asserts.h>
+
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+#include <qthread/qtimer.h>
+#endif
 
 /* avoid compiler bugs with volatile... */
 static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t * ptr)
@@ -966,74 +971,103 @@ volatile int forLoopsStarted = 0;	// used for active loop in qt_parallel_for
 int qthread_forCount(qthread_t *, int);
 
 // written by AKP
-void qt_forloop_queue_run_single(qqloop_handle_t * loop, void *arg)
-{
-    qthread_t *const me = qthread_self();
-    const qthread_shepherd_id_t myShep = qthread_shep(me);
+/*  - 4 min 0 sec   --  8 threads
+static int foo = 0;
+static QINLINE int computeNextBlock(int block, double time, qqloop_handle_t * loop) {
+  
+  if ((block < 30000) && (time < 1.0e-3)) {
+    double overhead = 1.6e-6;
+    double work = ((time-overhead ) > 0) ? time - overhead: overhead/100.0; 
+    double n = (1.0e-3/work)*block;
+    block = n+1;
+    if (block > 30000) block = 30000;
+  }
+  //  if (foo++ > 1000){
+  //  printf("dynamicBlock %d\n", block);
+  //  foo=0;
+  // }
+  return block;
+}
+*/
 
-    /* This shepherd needs an iteration */
-    if (!(loop->shepherdsActive & (1 << myShep))) {
-	size_t iterationNumber = (size_t) qthread_incr(&loop->assignNext, 1);
+/* - 4 min 27sec   --   8 threads
+static QINLINE int computeNextBlock(int block, double time, qqloop_handle_t * loop) {
+  
+  if ((block < 5000) && (time < 5.0e-4)) {
+    block = 5000;
+  }
+  return block;
+}
+*/
 
-	while (iterationNumber < loop->assignStop) {
-	    if (!(loop->shepherdsActive & (1 << myShep))) {
-		loop->shepherdsActive |= (1 << myShep);
-	    }
+/* - 3 min 47 sec   --   8 threads
+ */
+int cnbWorkers;
+double cnbTimeMin;
+int fixedBlock;
 
-	    if (arg != NULL) {
-		loop->stat.func(me, iterationNumber, iterationNumber + 1,
-				arg);
-	    } else {
-		loop->stat.func(me, iterationNumber, iterationNumber + 1,
-				loop->stat.arg);
-	    }
-	    qthread_incr(&loop->assignDone, 1);
-	    iterationNumber = (size_t) qthread_incr(&loop->assignNext, 1);
-	}
-    }
+static QINLINE int computeNextBlock(int block, double time, volatile qqloop_handle_t * loop) {
+  
+  int newBlock;
+  if (fixedBlock != 0) return fixedBlock;
+  int remaining = loop->assignStop - loop->assignNext;
+  if (remaining < 0) return block;
+    
+  if (time < 7.5e-5) newBlock = block;
+  else newBlock = (remaining / (cnbWorkers<<1))+1;
 
-    if (!(loop->shepherdsActive & (1 << myShep))) {	/* I did no iterations */
-	/* use higher level call to loop over multiple items in the work list */
-	return;
-    }
+  // printf(" in cnb newBlock %d %e\n",newBlock,cnbTimeMin);
 
-    while (_(loop->assignDone) < loop->assignStop) ;	/* spin until all done */
+  //if (newBlock > 30000) newBlock = 30000;
+  return newBlock;
 }
 
-// added akp -- run loop until done
 void qt_loop_queue_run_single(volatile qqloop_handle_t * loop, void *t)
 {
-    qthread_t *me = qthread_self();
-    int myNum = qthread_shep(me);
+    qthread_t *const me = qthread_self();
+    int dynamicBlock =  computeNextBlock(dynamicBlock,1.0,loop); // fake time to prevent blocking for short time chunks
+    qtimer_t qt = qtimer_create();
+    double time = 0.;
 
-    // this shepherd has not grabbed an interation yet
-    if (!(loop->shepherdsActive & (1 << myNum))) {
-	// get next loop iteration (shared access)
-	aligned_t iterationNumber = qthread_incr(&loop->assignNext, 1);
-
-	while (iterationNumber < loop->assignStop) {
-	    if (!(loop->shepherdsActive & (1 << myNum))) {
-		loop->shepherdsActive |= (1 << myNum);	// mark me active
-	    }
-	    if (t != NULL)
-		loop->stat.func(me, iterationNumber, iterationNumber + 1, t);
-	    else
-		loop->stat.func(me, iterationNumber, iterationNumber + 1,
-				loop->stat.arg);
-
-	    (void)qthread_incr(&loop->assignDone, 1);
-	    iterationNumber = (size_t) qthread_incr(&loop->assignNext, 1);
-	}
+    // get next loop iteration (shared access)
+    aligned_t iterationNumber = qthread_incr(&loop->assignNext, dynamicBlock );
+    aligned_t iterationStop = iterationNumber + dynamicBlock;
+    if (iterationStop > loop->assignStop) iterationStop = loop->assignStop; 
+    
+    while (iterationNumber < loop->assignStop) {
+      if (t != NULL){
+	qtimer_start(qt);
+	loop->stat.func(me, iterationNumber, iterationStop, t);
+	qtimer_stop(qt);
+      }
+      else {
+	qtimer_start(qt);
+	loop->stat.func(me, iterationNumber, iterationStop,
+			loop->stat.arg);
+	qtimer_stop(qt);
+      }
+      (void)qthread_incr(&loop->assignDone, iterationStop-iterationNumber);
+      time = qtimer_secs(qt);
+      if (time < cnbTimeMin) cnbTimeMin = time;
+      
+      dynamicBlock = computeNextBlock(dynamicBlock,time,loop);
+      
+      iterationNumber = (size_t) qthread_incr(&loop->assignNext, dynamicBlock);
+      iterationStop = iterationNumber + dynamicBlock;
+      if (iterationStop > loop->assignStop) iterationStop = loop->assignStop; 
     }
-    // to get here -- loop done and if (loop->coresActive & (1<<myNum)) is true I did get an iteration
-
-    if (!(loop->shepherdsActive & (1 << myNum))) {	// did no iterations
-	return;			       // use higher level call to loop over multiple items in the work list
-    }
+    
     // did some work in this loop; need to wait for others to finish
-
-    while (_(loop->assignDone) < loop->assignStop) ;	// XXX: spinlock
-
+    
+    //    qtimer_start(qt);
+    //    while (_(loop->assignDone) < loop->assignStop) ;	// XXX: spinlock
+    qt_global_barrier(me); // keep everybody together -- don't lose workers
+    
+    //    qtimer_stop(qt);
+    //    time = qtimer_secs(qt);
+    //    printf("\twait time %e dynamicBlock %d  MinTime %e\n",time, dynamicBlock, cnbTimeMin);
+    
+    qtimer_destroy(qt);
     return;
 }
 
@@ -1044,6 +1078,9 @@ void qt_parallel_qfor(const qt_loop_f func, const int iter,
 {
     qthread_t *me = qthread_self();
     volatile qqloop_handle_t *qqhandle = NULL;
+
+    cnbWorkers = qthread_num_shepherds();
+    cnbTimeMin = 1.0;
 
     while (qthread_cas(&forLock, 0, 1) != 0) ;
     int forCount = qthread_forCount(me, 1);	// my loop count
@@ -1074,17 +1111,25 @@ void qt_naked_parallel_for(qthread_t * me, const size_t startat,
 void qt_parallel_for(const qt_loop_f func, const int iter,
 		     void *restrict argptr)
 {
-    if (!activeParallel) {
-	void *nakedArg[3] = { (void *)func, (void *)&iter, (void *)argptr };
-
-	activeParallel = 1;
-	qt_loop(0, qthread_num_shepherds(), 1, qt_naked_parallel_for,
-		nakedArg);
-	activeParallel = 0;
-
-    } else {
-	qt_parallel_qfor(func, iter, argptr);
-    }
+  //  printf("new for stmt \n");
+  int t = 0;
+  //    qtimer_t qt = qtimer_create();
+  //    qtimer_start(qt);
+  if (!activeParallel){
+    void * nakedArg[3] = {(void*)func, (void*)&iter, (void*)argptr};
+    t = 1;
+    activeParallel = 1;
+    qt_loop(0, qthread_num_shepherds(), 1, qt_naked_parallel_for, nakedArg);
+    activeParallel = 0;
+ 
+  }
+  else {
+    qt_parallel_qfor(func,iter,argptr);
+  }
+  //    qtimer_stop(qt);
+  //    double time = qtimer_secs(qt);
+  //    printf("for loop %d time %e \n",t,time);
+  //    qtimer_destroy(qt);
 }
 
 void qt_naked_parallel_for(qthread_t * me, const size_t startat,
