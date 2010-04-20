@@ -82,6 +82,7 @@ static void qtb_internal_initialize_fixed(qt_barrier_t * b, size_t size,
     b->barrierDebug = debug;
 
     // compute size of barrier arrays
+    temp = temp-1;
     temp >>= 1;
     while (temp) {
 	temp >>= 1;
@@ -89,7 +90,7 @@ static void qtb_internal_initialize_fixed(qt_barrier_t * b, size_t size,
     }
 
     b->doneLevel = depth;
-    b->allocatedSize = (1 << depth);
+    b->allocatedSize = (2 << depth);
 
     // allocate and init upLock and downLock arrays
     b->upLock = calloc(b->allocatedSize, sizeof(int64_t));
@@ -168,7 +169,7 @@ static void qtb_internal_up(qt_barrier_t * b, int myLock, int64_t val,
 	printf("on lock %d paired with %d level %d val %ld\n", myLock,
 	       pairedLock, level, (long int)val);
     }
-    if (pairedLock > b->activeSize) {  // my pair is out of range don't wait for it
+    if (pairedLock >= b->activeSize) {  // my pair is out of range don't wait for it
 	(void)qthread_incr(&b->upLock[myLock], 1);	// mark me as present
 	while (b->downLock[myLock] != val) ;	// KBW: XXX: not mutex safe
 	if (debug) {
@@ -222,13 +223,12 @@ static void qtb_internal_up(qt_barrier_t * b, int myLock, int64_t val,
 
 // actual barrier entry point
 
-void qt_barrier_enter(const qthread_t *me, qt_barrier_t * b)
+void qt_barrier_enter(qt_barrier_t * b, qthread_shepherd_id_t shep)
 {
     // should be dual versions  1) all active threads barrier
     //                          2) all active streams
 
     // only dealing with (1) for first pass for now
-    const qthread_shepherd_id_t shep = qthread_shep(me);
     int64_t val = b->upLock[shep] + 1;
 
     qtb_internal_up(b, shep, val, 0);
@@ -240,12 +240,13 @@ void qt_barrier_enter(const qthread_t *me, qt_barrier_t * b)
 #ifdef QT_GLOBAL_LOGBARRIER
 void qt_global_barrier(const qthread_t * me)
 {
-    qt_barrier_enter(me, MBar);
+    const qthread_shepherd_id_t shep = qthread_shep(me);
+    qt_barrier_enter(MBar, shep);
     //  now execute code on one thread that everyone needs to see -- should be
     //     at middle of barrier but does not seem to work there -- so here with double barrier
     //     blech.  akp -2/9/10
     qthread_reset_forCount(qthread_self());	// for loop reset on each thread
-    qt_barrier_enter(me, MBar);
+    qt_barrier_enter(MBar, shep);
     return;
 }
 
