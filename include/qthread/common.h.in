@@ -23,6 +23,9 @@
 /* Allow functions to be inlined */
 #undef QINLINE
 
+/* support ROSE extensions */
+#undef QTHREAD_USE_ROSE_EXTENSIONS
+
 /* compile for the SST */
 #undef SST
 
