@@ -4464,12 +4464,7 @@ const qthread_shepherd_id_t *qthread_sorted_sheps_remote(const
 /* returns the number of shepherds (i.e. one more than the largest valid shepherd id) */
 qthread_shepherd_id_t qthread_num_shepherds(void)
 {				       /*{{{ */
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    // XXX: technically incorrect, but since shep0 is monopolized, is somewhat accurate
-    return (qthread_shepherd_id_t) (qlib->nshepherds)-1;
-#else
     return (qthread_shepherd_id_t) (qlib->nshepherds);
-#endif
 }				       /*}}} */
 
 /* these two functions are helper functions for futurelib
