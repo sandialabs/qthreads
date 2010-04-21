@@ -8,6 +8,7 @@
 #include <qthread_asserts.h>
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
+#include "qt_atomics.h"
 #include <qthread/qtimer.h>
 #endif
 
@@ -966,7 +967,7 @@ void qt_parallel(const qt_loop_f func, const unsigned int threads,
  * but we only need one parallel loop and the shepherds need to share
  * iterations.  Care is needed to insure only one copy is executed.
  */
-aligned_t forLock = 0;		// used for mutual exclusion in qt_parallel_for - needs init
+QTHREAD_FASTLOCK_TYPE forLock = QTHREAD_FASTLOCK_INITIALIZER;		// used for mutual exclusion in qt_parallel_for - needs init
 volatile int forLoopsStarted = 0;	// used for active loop in qt_parallel_for
 int qthread_forCount(qthread_t *, int);
 
@@ -1078,26 +1079,25 @@ void qt_parallel_qfor(const qt_loop_f func,
 {
     qthread_t *me = qthread_self();
     volatile qqloop_handle_t *qqhandle = NULL;
+    int forCount = qthread_forCount(me, 1);	// my loop count
 
     cnbWorkers = qthread_num_shepherds();
     cnbTimeMin = 1.0;
 
-    while (qthread_cas(&forLock, 0, 1) != 0) ;
-    int forCount = qthread_forCount(me, 1);	// my loop count
-
+    QTHREAD_FASTLOCK_LOCK(&forLock);
     if (forLoopsStarted < forCount) {  // is this a new loop? - if so, add work
 	qqhandle = qt_loop_queue_create(startat, stopat, func, argptr);	// put loop on the queue
 	forLoopsStarted = forCount;    // set current loop number
 	activeLoop = qqhandle;
     } else {
 	if (forLoopsStarted != forCount) {	// out of sync
-	    forLock = 0;
+	    QTHREAD_FASTLOCK_UNLOCK(&forLock);
 	    return;
 	} else {
 	    qqhandle = activeLoop;
 	}
     }
-    forLock = 0;
+    QTHREAD_FASTLOCK_UNLOCK(&forLock);
 
     qt_loop_queue_run_single(qqhandle, argptr);
 
