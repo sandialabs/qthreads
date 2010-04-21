@@ -1076,6 +1076,10 @@ volatile qqloop_handle_t *activeLoop = NULL;
 static void qt_parallel_qfor(const qt_loop_f func,
 		      const size_t startat,
 		      const size_t stopat,
+		      void *restrict argptr);
+static void qt_parallel_qfor(const qt_loop_f func,
+		      const size_t startat,
+		      const size_t stopat,
 		      void *restrict argptr)
 {
     qthread_t *me = qthread_self();
@@ -1105,7 +1109,7 @@ static void qt_parallel_qfor(const qt_loop_f func,
     return;
 }
 
-void qt_naked_parallel_for(qthread_t * me, const size_t startat,
+static void qt_naked_parallel_for(qthread_t * me, const size_t startat,
 			   const size_t stopat, void *nakedArg);
 
 void qt_parallel_for(const qt_loop_f func,

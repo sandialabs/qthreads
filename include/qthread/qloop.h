@@ -44,8 +44,6 @@ void qt_loop_queue_addworker(qqloop_handle_t * loop,
 void qt_loop_queue_run_single(volatile qqloop_handle_t * loop, void *t);
 void qt_parallel(const qt_loop_f func, const unsigned int threads,
 		 void *argptr);
-void qt_parallel_qfor(const qt_loop_f func, const size_t startat,
-		      const size_t stopat, void *restrict argptr);
 void qt_parallel_for(const qt_loop_f func, const size_t startat,
 		     const size_t stopat, void *restrict argptr);
 #endif
