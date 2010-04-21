@@ -1025,15 +1025,16 @@ static QINLINE int computeNextBlock(int block, double time, volatile qqloop_hand
 void qt_loop_queue_run_single(volatile qqloop_handle_t * loop, void *t)
 {
     qthread_t *const me = qthread_self();
-    int dynamicBlock =  computeNextBlock(dynamicBlock,1.0,loop); // fake time to prevent blocking for short time chunks
+    qthread_shepherd_id_t myNum = qthread_shep(me);
+    int dynamicBlock =  computeNextBlock(0, 1.0, loop); // fake time to prevent blocking for short time chunks
     qtimer_t qt = qtimer_create();
     double time = 0.;
 
     // get next loop iteration (shared access)
     aligned_t iterationNumber = qthread_incr(&loop->assignNext, dynamicBlock );
     aligned_t iterationStop = iterationNumber + dynamicBlock;
-    if (iterationStop > loop->assignStop) iterationStop = loop->assignStop; 
-    
+    if (iterationStop > loop->assignStop) iterationStop = loop->assignStop;
+
     while (iterationNumber < loop->assignStop) {
       if (t != NULL){
 	qtimer_start(qt);
@@ -1046,7 +1047,6 @@ void qt_loop_queue_run_single(volatile qqloop_handle_t * loop, void *t)
 			loop->stat.arg);
 	qtimer_stop(qt);
       }
-      (void)qthread_incr(&loop->assignDone, iterationStop-iterationNumber);
       time = qtimer_secs(qt);
       if (time < cnbTimeMin) cnbTimeMin = time;
       
@@ -1060,20 +1060,21 @@ void qt_loop_queue_run_single(volatile qqloop_handle_t * loop, void *t)
     // did some work in this loop; need to wait for others to finish
     
     //    qtimer_start(qt);
-    //    while (_(loop->assignDone) < loop->assignStop) ;	// XXX: spinlock
     qt_global_barrier(me); // keep everybody together -- don't lose workers
-    
+
     //    qtimer_stop(qt);
     //    time = qtimer_secs(qt);
     //    printf("\twait time %e dynamicBlock %d  MinTime %e\n",time, dynamicBlock, cnbTimeMin);
-    
+
     qtimer_destroy(qt);
     return;
 }
 
 volatile qqloop_handle_t *activeLoop = NULL;
 
-void qt_parallel_qfor(const qt_loop_f func, const int iter,
+void qt_parallel_qfor(const qt_loop_f func,
+		      const size_t startat,
+		      const size_t stopat,
 		      void *restrict argptr)
 {
     qthread_t *me = qthread_self();
@@ -1085,9 +1086,8 @@ void qt_parallel_qfor(const qt_loop_f func, const int iter,
     while (qthread_cas(&forLock, 0, 1) != 0) ;
     int forCount = qthread_forCount(me, 1);	// my loop count
 
-    if (forLoopsStarted < forCount) {  // is this a new loop?
-	// add work
-	qqhandle = qt_loop_queue_create(0, iter, func, argptr);	// put loop on the queue
+    if (forLoopsStarted < forCount) {  // is this a new loop? - if so, add work
+	qqhandle = qt_loop_queue_create(startat, stopat, func, argptr);	// put loop on the queue
 	forLoopsStarted = forCount;    // set current loop number
 	activeLoop = qqhandle;
     } else {
@@ -1108,7 +1108,9 @@ void qt_parallel_qfor(const qt_loop_f func, const int iter,
 void qt_naked_parallel_for(qthread_t * me, const size_t startat,
 			   const size_t stopat, void *nakedArg);
 
-void qt_parallel_for(const qt_loop_f func, const int iter,
+void qt_parallel_for(const qt_loop_f func,
+		     const size_t startat,
+		     const size_t stopat,
 		     void *restrict argptr)
 {
   //  printf("new for stmt \n");
@@ -1116,7 +1118,7 @@ void qt_parallel_for(const qt_loop_f func, const int iter,
   //    qtimer_t qt = qtimer_create();
   //    qtimer_start(qt);
   if (!activeParallel){
-    void * nakedArg[3] = {(void*)func, (void*)&iter, (void*)argptr};
+    void * nakedArg[3] = {(void*)func, (void*)argptr};
     t = 1;
     activeParallel = 1;
     qt_loop(0, qthread_num_shepherds(), 1, qt_naked_parallel_for, nakedArg);
@@ -1124,7 +1126,7 @@ void qt_parallel_for(const qt_loop_f func, const int iter,
  
   }
   else {
-    qt_parallel_qfor(func,iter,argptr);
+    qt_parallel_qfor(func, startat, stopat, argptr);
   }
   //    qtimer_stop(qt);
   //    double time = qtimer_secs(qt);
@@ -1132,13 +1134,15 @@ void qt_parallel_for(const qt_loop_f func, const int iter,
   //    qtimer_destroy(qt);
 }
 
-void qt_naked_parallel_for(qthread_t * me, const size_t startat,
-			   const size_t stopat, void *nakedArg)
+void qt_naked_parallel_for(qthread_t * me,
+			   const size_t startat,
+			   const size_t stopat,
+			   void *nakedArg)
 {
     void **funcArgs = (void **)nakedArg;
     const qt_loop_f func = (const qt_loop_f)(funcArgs[0]);
-    const int64_t iter = *(const int64_t *)(funcArgs[1]);
-    void *restrict argptr = funcArgs[2];
-    qt_parallel_qfor(func, iter, argptr);
+    //const int64_t iter = *(const int64_t *)(funcArgs[1]);
+    void *restrict argptr = funcArgs[1];
+    qt_parallel_qfor(func, startat, stopat, argptr);
 }
 #endif
