@@ -1025,7 +1025,6 @@ static QINLINE int computeNextBlock(int block, double time, volatile qqloop_hand
 void qt_loop_queue_run_single(volatile qqloop_handle_t * loop, void *t)
 {
     qthread_t *const me = qthread_self();
-    qthread_shepherd_id_t myNum = qthread_shep(me);
     int dynamicBlock =  computeNextBlock(0, 1.0, loop); // fake time to prevent blocking for short time chunks
     qtimer_t qt = qtimer_create();
     double time = 0.;

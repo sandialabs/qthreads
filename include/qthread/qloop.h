@@ -34,9 +34,21 @@ void qt_loopaccum_balance_future(const size_t start, const size_t stop,
 qqloop_handle_t *qt_loop_queue_create(const size_t start, const size_t stop,
 				      const qt_loop_f func,
 				      void *const argptr);
-void qt_loop_queue_run(qqloop_handle_t *loop);
-void qt_loop_queue_run_there(qqloop_handle_t *loop, qthread_shepherd_id_t shep);
-void qt_loop_queue_addworker(qqloop_handle_t *loop, const qthread_shepherd_id_t shep);
+void qt_loop_queue_run(qqloop_handle_t * loop);
+void qt_loop_queue_run_there(qqloop_handle_t * loop,
+			     qthread_shepherd_id_t shep);
+void qt_loop_queue_addworker(qqloop_handle_t * loop,
+			     const qthread_shepherd_id_t shep);
+
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+void qt_loop_queue_run_single(volatile qqloop_handle_t * loop, void *t);
+void qt_parallel(const qt_loop_f func, const unsigned int threads,
+		 void *argptr);
+void qt_parallel_qfor(const qt_loop_f func, const size_t startat,
+		      const size_t stopat, void *restrict argptr);
+void qt_parallel_for(const qt_loop_f func, const size_t startat,
+		     const size_t stopat, void *restrict argptr);
+#endif
 
 double qt_double_sum(double *array, size_t length, int checkfeb);
 double qt_double_prod(double *array, size_t length, int checkfeb);
