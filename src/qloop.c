@@ -967,7 +967,8 @@ void qt_parallel(const qt_loop_f func, const unsigned int threads,
  * but we only need one parallel loop and the shepherds need to share
  * iterations.  Care is needed to insure only one copy is executed.
  */
-QTHREAD_FASTLOCK_TYPE forLock = QTHREAD_FASTLOCK_INITIALIZER;		// used for mutual exclusion in qt_parallel_for - needs init
+int forLockInitialized = 0;
+QTHREAD_FASTLOCK_TYPE forLock;		// used for mutual exclusion in qt_parallel_for - needs init
 volatile int forLoopsStarted = 0;	// used for active loop in qt_parallel_for
 int qthread_forCount(qthread_t *, int);
 
@@ -1072,7 +1073,7 @@ void qt_loop_queue_run_single(volatile qqloop_handle_t * loop, void *t)
 
 volatile qqloop_handle_t *activeLoop = NULL;
 
-void qt_parallel_qfor(const qt_loop_f func,
+static void qt_parallel_qfor(const qt_loop_f func,
 		      const size_t startat,
 		      const size_t stopat,
 		      void *restrict argptr)
@@ -1116,6 +1117,10 @@ void qt_parallel_for(const qt_loop_f func,
   int t = 0;
   //    qtimer_t qt = qtimer_create();
   //    qtimer_start(qt);
+  if (forLockInitialized == 0) {
+      forLockInitialized = 1;
+      QTHREAD_FASTLOCK_INIT(forLock);
+  }
   if (!activeParallel){
     void * nakedArg[3] = {(void*)func, (void*)argptr};
     t = 1;
@@ -1133,7 +1138,7 @@ void qt_parallel_for(const qt_loop_f func,
   //    qtimer_destroy(qt);
 }
 
-void qt_naked_parallel_for(qthread_t * me,
+static void qt_naked_parallel_for(qthread_t * me,
 			   const size_t startat,
 			   const size_t stopat,
 			   void *nakedArg)
