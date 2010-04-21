@@ -22,6 +22,7 @@
 # define QTHREAD_FASTLOCK_DESTROY(x)
 # define QTHREAD_FASTLOCK_DESTROY_PTR(x)
 # define QTHREAD_FASTLOCK_TYPE tmc_sync_mutex_t
+# define QTHREAD_FASTLOCK_INITIALIZER TMC_SYNC_MUTEX_INIT
 #elif defined(HAVE_PTHREAD_SPIN_INIT)
 # define QTHREAD_FASTLOCK_INIT(x) pthread_spin_init(&(x), PTHREAD_PROCESS_PRIVATE)
 # define QTHREAD_FASTLOCK_INIT_PTR(x) pthread_spin_init((x), PTHREAD_PROCESS_PRIVATE)
@@ -30,6 +31,7 @@
 # define QTHREAD_FASTLOCK_DESTROY(x) pthread_spin_destroy(&(x))
 # define QTHREAD_FASTLOCK_DESTROY_PTR(x) pthread_spin_destroy((x))
 # define QTHREAD_FASTLOCK_TYPE pthread_spinlock_t
+# define QTHREAD_FASTLOCK_INITIALIZER PTHREAD_SPINLOCK_INITIALIZER
 #else
 # define QTHREAD_FASTLOCK_INIT(x) pthread_mutex_init(&(x), NULL)
 # define QTHREAD_FASTLOCK_INIT_PTR(x) pthread_mutex_init((x), NULL)
@@ -38,6 +40,7 @@
 # define QTHREAD_FASTLOCK_DESTROY(x) pthread_mutex_destroy(&(x))
 # define QTHREAD_FASTLOCK_DESTROY_PTR(x) pthread_mutex_destroy((x))
 # define QTHREAD_FASTLOCK_TYPE pthread_mutex_t
+# define QTHREAD_FASTLOCK_INITIALIZER PTHREAD_MUTEX_INITIALIZER
 #endif
 
 #ifdef QTHREAD_MUTEX_INCREMENT
