@@ -747,7 +747,13 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand,
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
     register uint64_t oldval, newval;
 
-    /* newval = *operand; */
+#  ifdef QTHREAD_ATOMIC_CAS
+    newval = *operand;
+    do {
+	oldval = newval;
+	newval = __sync_val_compare_and_swap(operand, oldval, oldval + incr);
+    } while (oldval != newval);
+#  else
     do {
 	/* you *should* be able to move the *operand reference outside the
 	 * loop and use the output of the CAS (namely, newval) instead.
@@ -766,11 +772,12 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand,
 		 "casx [%1] , %2, %0"
 		 :"=&r"(newval)
 		 :"r"    (operand), "r"(oldval)
-#  if !defined(__SUNPRO_CC) && !defined(__SUNPRO_C)
+#   if !defined(__SUNPRO_CC) && !defined(__SUNPRO_C)
 		 , "0"(newval)
-#  endif
+#   endif
 		 :"cc", "memory");
     } while (oldval != newval);
+#  endif
     return oldval;
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
     uint64_t res;
