@@ -27,6 +27,30 @@ static void sum(qthread_t * me, const size_t startat, const size_t stopat,
     qthread_incr((aligned_t *) arg_, local_sum);
 }
 
+static const char * units[] = {
+    "bytes",
+    "kB",
+    "MB",
+    "GB",
+    "TB",
+    "PB",
+    "EB",
+    NULL
+};
+static char * human_readable_bytes(size_t bytes)
+{
+    static char str[1024];
+
+    int unit = 0;
+    double dbytes = bytes;
+    while (dbytes > 1024.0 && units[unit] != 0) {
+	dbytes /= 1024.0;
+	unit++;
+    }
+    snprintf(str, 1024, "%.2f %s", dbytes, units[unit]);
+    return str;
+}
+
 int main(int argc, char *argv[])
 {
     size_t i;
@@ -41,8 +65,10 @@ int main(int argc, char *argv[])
 	qqloop_handle_t *loophandle;
 	qtimer_t t = qtimer_create();
 
+	iprintf("allocating array of %u elements (%s)...\n", BIGLEN, human_readable_bytes(BIGLEN*sizeof(aligned_t)));
 	uia = (aligned_t *) malloc(sizeof(aligned_t) * BIGLEN);
 	assert(uia);
+	iprintf("initializing array\n");
 	for (i = 0; i < BIGLEN; i++) {
 	    uia[i] = random();
 	}
@@ -53,7 +79,7 @@ int main(int argc, char *argv[])
 	iprintf("summing-serial   %u uints took %g seconds\n", BIGLEN,
 		qtimer_secs(t));
 	iprintf("\tsum was %lu\n", (unsigned long)uisum);
-	loophandle = qt_loop_queue_create(0, BIGLEN, 1, sum, &uitmp);
+	loophandle = qt_loop_queue_create(TIMED, 0, BIGLEN, 1, sum, &uitmp);
 	qtimer_start(t);
 	qt_loop_queue_run(loophandle);
 	qtimer_stop(t);
