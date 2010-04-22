@@ -70,13 +70,16 @@ int main(int argc, char *argv[])
     x = 0;
     CHECK_VERBOSE();
 
+    iprintf("initialized, calling realmain()\n");
     realmain();
-
+    iprintf("finalizing...\n");
     qthread_finalize();
-
+    iprintf("ready to reinitialize!\n");
     qthread_init(1);
-
+    iprintf("reinitialized, calling realmain()\n");
     realmain();
-
+    iprintf("finalizing...\n");
     qthread_finalize();
+    iprintf("exiting!\n");
+    return 0;
 }
