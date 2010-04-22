@@ -7,7 +7,7 @@
 Q_STARTCXX			       /* */
 /* for convenient arguments to qt_loop_future */
 typedef void (*qt_loop_f) (qthread_t * me, const size_t startat,
-			   const size_t stopat, void *arg);
+			   const size_t stopat, const size_t step, void *arg);
 typedef void (*qt_loopr_f) (qthread_t * me, const size_t startat,
 			    const size_t stopat, void *restrict arg,
 			    void *restrict ret);
@@ -32,7 +32,7 @@ void qt_loopaccum_balance_future(const size_t start, const size_t stop,
 				 const qt_loopr_f func, void *restrict argptr,
 				 const qt_accum_f acc);
 qqloop_handle_t *qt_loop_queue_create(const size_t start, const size_t stop,
-				      const qt_loop_f func,
+				      const size_t incr, const qt_loop_f func,
 				      void *const argptr);
 void qt_loop_queue_run(qqloop_handle_t * loop);
 void qt_loop_queue_run_there(qqloop_handle_t * loop,
@@ -45,7 +45,8 @@ void qt_loop_queue_run_single(volatile qqloop_handle_t * loop, void *t);
 void qt_parallel(const qt_loop_f func, const unsigned int threads,
 		 void *argptr);
 void qt_parallel_for(const qt_loop_f func, const size_t startat,
-		     const size_t stopat, void *restrict argptr);
+		     const size_t stopat, const size_t incr,
+		     void *restrict argptr);
 #endif
 
 double qt_double_sum(double *array, size_t length, int checkfeb);
