@@ -24,8 +24,12 @@ int main(int argc, char *argv[])
 
     qtimer_start(t);
     qtimer_stop(t);
-    assert(qtimer_secs(t) > 0);
-    iprintf("smallest measurable time: %g secs\n", qtimer_secs(t));
+    assert(qtimer_secs(t) >= 0.0);
+    if (qtimer_secs(t) == 0.0) {
+	iprintf("inlining reduces calltime to zero (apparently)\n");
+    } else {
+	iprintf("smallest measurable time: %g secs\n", qtimer_secs(t));
+    }
 
     qtimer_destroy(t);
 
