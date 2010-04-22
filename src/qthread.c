@@ -1349,6 +1349,7 @@ static void *qthread_shepherd(void *arg)
 #endif
 		me->current = t;
 		getcontext(&my_context);
+		qthread_debug(THREAD_DETAILS, "qthread_shepherd(%u): shepherd context is %p\n", me->shepherd_id, &my_context);
 		/* note: there's a good argument that the following should
 		 * be: (*t->f)(t), however the state management would be
 		 * more complex
@@ -3319,7 +3320,7 @@ static QINLINE void qthread_exec(qthread_t * t, ucontext_t * c)
 #endif
 
     qthread_debug(ALL_DETAILS,
-		  "qthread_exec(%p): executing swapcontext()...\n", t);
+		  "qthread_exec(%p): executing swapcontext(%p, %p)...\n", t, t->return_context, t->context);
     /* return_context (aka "c") is being written over with the current context */
 #ifdef QTHREAD_USE_VALGRIND
     VALGRIND_CHECK_MEM_IS_ADDRESSABLE(t->context, sizeof(ucontext_t));
