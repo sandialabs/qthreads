@@ -795,46 +795,18 @@ type qt_##shorttype##_##category (type *array, size_t length, int checkfeb) \
 #define MIN(a,b) (a<b)?a:b
 
 PARALLEL_FUNC(sum, uis, ADD, aligned_t, uint)
-    PARALLEL_FUNC(prod, uip, MULT, aligned_t, uint)
-    PARALLEL_FUNC(max, uimax, MAX, aligned_t, uint)
-    PARALLEL_FUNC(min, uimin, MIN, aligned_t, uint)
+PARALLEL_FUNC(prod, uip, MULT, aligned_t, uint)
+PARALLEL_FUNC(max, uimax, MAX, aligned_t, uint)
+PARALLEL_FUNC(min, uimin, MIN, aligned_t, uint)
 
-PARALLEL_FUNC(sum, is, ADD, saligned_t, int) PARALLEL_FUNC(
-    prod,
-    ip,
-    MULT,
-    saligned_t,
-    int) PARALLEL_FUNC(
-    max,
-    imax,
-    MAX,
-    saligned_t,
-    int) PARALLEL_FUNC(
-    min,
-    imin,
-    MIN,
-    saligned_t,
-    int) PARALLEL_FUNC(
-    sum,
-    ds,
-    ADD,
-    double,
-    double) PARALLEL_FUNC(
-    prod,
-    dp,
-    MULT,
-    double,
-    double) PARALLEL_FUNC(
-    max,
-    dmax,
-    MAX,
-    double,
-    double) PARALLEL_FUNC(
-    min,
-    dmin,
-    MIN,
-    double,
-    double)
+PARALLEL_FUNC( sum, is,   ADD, saligned_t, int)
+PARALLEL_FUNC(prod, ip,  MULT, saligned_t, int)
+PARALLEL_FUNC( max, imax, MAX, saligned_t, int)
+PARALLEL_FUNC( min, imin, MIN, saligned_t, int)
+PARALLEL_FUNC( sum, ds,   ADD, double, double)
+PARALLEL_FUNC(prod, dp,  MULT, double, double)
+PARALLEL_FUNC( max, dmax, MAX, double, double)
+PARALLEL_FUNC( min, dmin, MIN, double, double)
 
 /* The next idea is to implement it in a memory-bound kind of way. And I don't
  * mean memory-bound in that it spends its time waiting for memory; I mean in
@@ -964,7 +936,7 @@ static struct qt_qsort_iprets qt_qsort_inner_partitioner(
     double *array,
     const size_t length,
     const double pivot)
-{
+{				       /*{{{ */
     const size_t chunksize = 10;
 
     /* choose the number of threads to use */
@@ -1018,12 +990,12 @@ static struct qt_qsort_iprets qt_qsort_inner_partitioner(
     free(rets);
 
     return retval;
-}
+}				       /*}}} */
 
 static aligned_t qt_qsort_inner(
     qthread_t * me,
     const struct qt_qsort_iargs *a)
-{
+{				       /*{{{ */
     const size_t len = a->length;
     double *array = a->array;
     size_t i;
@@ -1119,20 +1091,20 @@ static aligned_t qt_qsort_inner(
 	}
     }
     return 0;
-}
+}				       /*}}} */
 
 void qt_qsort(
     qthread_t * me,
     double *array,
     const size_t length)
-{
+{				       /*{{{ */
     struct qt_qsort_iargs arg;
 
     arg.array = array;
     arg.length = length;
 
     qt_qsort_inner(me, &arg);
-}
+}				       /*}}} */
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 # ifdef __INTEL_COMPILER
@@ -1257,12 +1229,6 @@ void qt_loop_queue_run_single(
 
 volatile qqloop_handle_t *activeLoop = NULL;
 
-static void qt_parallel_qfor(
-    const qt_loop_f func,
-    const size_t startat,
-    const size_t stopat,
-    const size_t incr,
-    void *restrict argptr);
 static void qt_parallel_qfor(
     const qt_loop_f func,
     const size_t startat,
