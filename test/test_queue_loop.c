@@ -12,17 +12,16 @@
 #include <qthread/qtimer.h>
 #include "argparsing.h"
 
-//#define BIGLEN 200000000U
 static unsigned int BIGLEN = 1000000U;
 aligned_t *uia = NULL;
 
 static void sum(qthread_t * me, const size_t startat, const size_t stopat,
-		void *arg_)
+		const size_t step, void *arg_)
 {
     size_t i;
     aligned_t local_sum = 0;
-    //printf("S%i: summing %i numbers, from %i to %i\n", (int)qthread_shep(me), (int)(stopat-startat), (int)startat, (int)stopat);
-    for (i = startat; i < stopat; i++) {
+    //printf("S%i: summing %i numbers, from %i to %i with a stride of %i\n", (int)qthread_shep(me), (int)(stopat-startat), (int)startat, (int)stopat, (int)step);
+    for (i = startat; i < stopat; i += step) {
 	local_sum += uia[i];
     }
     qthread_incr((aligned_t *) arg_, local_sum);
@@ -54,7 +53,7 @@ int main(int argc, char *argv[])
 	iprintf("summing-serial   %u uints took %g seconds\n", BIGLEN,
 		qtimer_secs(t));
 	iprintf("\tsum was %lu\n", (unsigned long)uisum);
-	loophandle = qt_loop_queue_create(0, BIGLEN, sum, &uitmp);
+	loophandle = qt_loop_queue_create(0, BIGLEN, 1, sum, &uitmp);
 	qtimer_start(t);
 	qt_loop_queue_run(loophandle);
 	qtimer_stop(t);

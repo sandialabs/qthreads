@@ -6,6 +6,7 @@
 #include <qthread/qloop.h>
 #include <qt_barrier.h>
 #include <qthread_asserts.h>
+#include <qthread_innards.h> /* for qthread_debug() */
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 #include "qt_atomics.h"
@@ -25,7 +26,7 @@ static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t * ptr)
 struct qloop_wrapper_args
 {
     qt_loop_f func;
-    size_t startat, stopat;
+    size_t startat, stopat, step;
     void *arg;
     volatile aligned_t *donecount;
 };
@@ -33,7 +34,7 @@ struct qloop_wrapper_args
 static aligned_t qloop_wrapper(qthread_t * me,
 			       const struct qloop_wrapper_args *arg)
 {				       /*{{{ */
-    arg->func(me, arg->startat, arg->stopat, arg->arg);
+    arg->func(me, arg->startat, arg->stopat, arg->step, arg->arg);
     qthread_incr(arg->donecount, 1);
     return 0;
 }				       /*}}} */
@@ -284,6 +285,7 @@ struct qqloop_iteration_queue
 {
     volatile saligned_t start;
     saligned_t stop;
+    saligned_t step;
     volatile saligned_t phase;
 };
 struct qqloop_static_args;
@@ -307,7 +309,7 @@ struct qqloop_wrapper_args
 };
 struct qqloop_wrapper_range
 {
-    size_t startat, stopat;
+    size_t startat, stopat, step;
 };
 struct qqloop_handle_s
 {
@@ -317,6 +319,7 @@ struct qqloop_handle_s
     int workers;
     int assignNext;
     int assignStop;
+    int assignStep;
     volatile aligned_t assignDone;	// start+offset
     size_t shepherdsActive;	// bit vector to stop shepherds from grabbing a loop twice (is this necessary?)
 #endif
@@ -332,7 +335,7 @@ static Q_UNUSED QINLINE int qqloop_get_iterations_guided(struct
 							 qqloop_wrapper_range
 							 *const restrict
 							 range)
-{
+{				       /*{{{ */
     saligned_t ret = iq->start;
     saligned_t ret2 = iq->stop;
     saligned_t iterations = 0;
@@ -343,10 +346,11 @@ static Q_UNUSED QINLINE int qqloop_get_iterations_guided(struct
 	if (ret < iq->stop) {
 	    range->startat = iq->start;
 	    range->stopat = iq->stop;
+	    range->step = iq->step;
 	    iq->start = iq->stop;
 	    return 1;
 	} else {
-	    range->startat = range->stopat = 0;
+	    range->startat = range->stopat = range->step = 0;
 	    return 0;
 	}
     }
@@ -365,13 +369,15 @@ static Q_UNUSED QINLINE int qqloop_get_iterations_guided(struct
 	assert(iterations > 0);
 	range->startat = ret;
 	range->stopat = ret + iterations;
+	range->step = iq->step;
 	return 1;
     } else {
 	range->startat = 0;
 	range->stopat = 0;
+	range->step = 0;
 	return 0;
     }
-}
+}				       /*}}} */
 
 static QINLINE int qqloop_get_iterations_factored(struct
 						  qqloop_iteration_queue
@@ -380,7 +386,7 @@ static QINLINE int qqloop_get_iterations_factored(struct
 						  *const restrict sa,
 						  struct qqloop_wrapper_range
 						  *const restrict range)
-{
+{				       /*{{{ */
     saligned_t ret = iq->start;
     saligned_t ret2 = iq->stop;
     const saligned_t stop = iq->stop;
@@ -392,10 +398,11 @@ static QINLINE int qqloop_get_iterations_factored(struct
 	if (ret < iq->stop) {
 	    range->startat = iq->start;
 	    range->stopat = iq->stop;
+	    range->step = iq->step;
 	    iq->start = iq->stop;
 	    return 1;
 	} else {
-	    range->startat = range->stopat = 0;
+	    range->startat = range->stopat = range->step = 0;
 	    return 0;
 	}
     }
@@ -425,29 +432,36 @@ static QINLINE int qqloop_get_iterations_factored(struct
 	assert(iterations > 0);
 	range->startat = ret;
 	range->stopat = ret + iterations;
+	range->step = iq->step;
 	return 1;
     } else {
 	range->startat = 0;
 	range->stopat = 0;
+	range->step = 0;
 	return 0;
     }
-}
+}				       /*}}} */
 
-static QINLINE struct qqloop_iteration_queue *qqloop_create_iq(size_t startat,
-							       size_t stopat)
-{
+static QINLINE struct qqloop_iteration_queue *qqloop_create_iq(const size_t
+							       startat,
+							       const size_t
+							       stopat,
+							       const size_t
+							       step)
+{				       /*{{{ */
     struct qqloop_iteration_queue *iq =
 	malloc(sizeof(struct qqloop_iteration_queue));
     iq->start = startat;
     iq->stop = stopat;
+    iq->step = step;
     iq->phase = (startat + stopat) / 2;
     return iq;
-}
+}				       /*}}} */
 
 static QINLINE void qqloop_destroy_iq(struct qqloop_iteration_queue *iq)
-{
+{				       /*{{{ */
     free(iq);
-}
+}				       /*}}} */
 
 static aligned_t qqloop_wrapper(qthread_t * me,
 				const struct qqloop_wrapper_args *arg)
@@ -463,12 +477,14 @@ static aligned_t qqloop_wrapper(qthread_t * me,
     struct qqloop_wrapper_range range;
     int safeexit = 1;
 
-    /* XXX: should be more intelligent about the size ranges we pull */
     if (qthread_shep(me) == arg->shep && get_iters(iq, stat, &range)) {
 	do {
-	    func(me, range.startat, range.stopat, a);
+	    func(me, range.startat, range.stopat, range.step, a);
 	    if (!qthread_shep_ok(me) || qthread_shep(me) != arg->shep) {
 		/* my shepherd has been disabled while I was running */
+		qthread_debug(ALL_DETAILS,
+			      "qqloop_wrapper(): my shepherd (%i) has been disabled!\n",
+			      (int)arg->shep);
 		safeexit = 0;
 		qthread_incr(&(stat->activesheps), -1);
 		break;
@@ -481,13 +497,15 @@ static aligned_t qqloop_wrapper(qthread_t * me,
     return 0;
 }
 
-qqloop_handle_t *qt_loop_queue_create(const size_t start, const size_t stop,
+qqloop_handle_t *qt_loop_queue_create(const size_t start,
+				      const size_t stop,
+				      const size_t incr,
 				      const qt_loop_f func,
-				      void *const argptr)
+				      void *const restrict argptr)
 {
     qassert_ret(func, NULL);
     {
-	qqloop_handle_t *h = malloc(sizeof(qqloop_handle_t));
+	qqloop_handle_t * const restrict h = malloc(sizeof(qqloop_handle_t));
 
 	if (h) {
 	    const qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
@@ -496,7 +514,7 @@ qqloop_handle_t *qt_loop_queue_create(const size_t start, const size_t stop,
 	    h->qwa = malloc(sizeof(struct qqloop_wrapper_args) * maxsheps);
 	    h->stat.donecount = 0;
 	    h->stat.activesheps = maxsheps;
-	    h->stat.iq = qqloop_create_iq(start, stop);
+	    h->stat.iq = qqloop_create_iq(start, stop, incr);
 	    h->stat.func = func;
 	    h->stat.arg = argptr;
 	    h->stat.get = qqloop_get_iterations_factored;
@@ -509,7 +527,8 @@ qqloop_handle_t *qt_loop_queue_create(const size_t start, const size_t stop,
 	    h->shepherdsActive = 0;
 	    h->assignNext = start;
 	    h->assignStop = stop;
-	    h->assignDone = start;
+	    h->assignStep = incr;
+	    h->assignDone = stop;
 #endif
 	}
 	return h;
@@ -973,54 +992,20 @@ volatile int forLoopsStarted = 0;	// used for active loop in qt_parallel_for
 int qthread_forCount(qthread_t *, int);
 
 // written by AKP
-/*  - 4 min 0 sec   --  8 threads
-static int foo = 0;
-static QINLINE int computeNextBlock(int block, double time, qqloop_handle_t * loop) {
-  
-  if ((block < 30000) && (time < 1.0e-3)) {
-    double overhead = 1.6e-6;
-    double work = ((time-overhead ) > 0) ? time - overhead: overhead/100.0; 
-    double n = (1.0e-3/work)*block;
-    block = n+1;
-    if (block > 30000) block = 30000;
-  }
-  //  if (foo++ > 1000){
-  //  printf("dynamicBlock %d\n", block);
-  //  foo=0;
-  // }
-  return block;
-}
-*/
-
-/* - 4 min 27sec   --   8 threads
-static QINLINE int computeNextBlock(int block, double time, qqloop_handle_t * loop) {
-  
-  if ((block < 5000) && (time < 5.0e-4)) {
-    block = 5000;
-  }
-  return block;
-}
-*/
-
-/* - 3 min 47 sec   --   8 threads
- */
 int cnbWorkers;
 double cnbTimeMin;
-int fixedBlock;
+int fixedBlock = 0;
 
 static QINLINE int computeNextBlock(int block, double time, volatile qqloop_handle_t * loop) {
-  
+
   int newBlock;
   if (fixedBlock != 0) return fixedBlock;
   int remaining = loop->assignStop - loop->assignNext;
   if (remaining < 0) return block;
-    
+
   if (time < 7.5e-5) newBlock = block;
-  else newBlock = (remaining / (cnbWorkers<<1))+1;
+  else newBlock = (remaining / ((cnbWorkers<<1)*(loop->assignStep)))+1;
 
-  // printf(" in cnb newBlock %d %e\n",newBlock,cnbTimeMin);
-
-  //if (newBlock > 30000) newBlock = 30000;
   return newBlock;
 }
 
@@ -1039,12 +1024,13 @@ void qt_loop_queue_run_single(volatile qqloop_handle_t * loop, void *t)
     while (iterationNumber < loop->assignStop) {
       if (t != NULL){
 	qtimer_start(qt);
-	loop->stat.func(me, iterationNumber, iterationStop, t);
+	loop->stat.func(me, iterationNumber, iterationStop, loop->assignStep, t);
 	qtimer_stop(qt);
       }
       else {
 	qtimer_start(qt);
 	loop->stat.func(me, iterationNumber, iterationStop,
+		loop->assignStep,
 			loop->stat.arg);
 	qtimer_stop(qt);
       }
@@ -1076,10 +1062,12 @@ volatile qqloop_handle_t *activeLoop = NULL;
 static void qt_parallel_qfor(const qt_loop_f func,
 		      const size_t startat,
 		      const size_t stopat,
+		      const size_t incr,
 		      void *restrict argptr);
 static void qt_parallel_qfor(const qt_loop_f func,
 		      const size_t startat,
 		      const size_t stopat,
+		      const size_t incr,
 		      void *restrict argptr)
 {
     qthread_t *me = qthread_self();
@@ -1089,9 +1077,9 @@ static void qt_parallel_qfor(const qt_loop_f func,
     cnbWorkers = qthread_num_shepherds();
     cnbTimeMin = 1.0;
 
-    QTHREAD_FASTLOCK_LOCK(&forLock);
+    QTHREAD_FASTLOCK_LOCK(&forLock); // KBW: XXX: need to find a way to avoid locking
     if (forLoopsStarted < forCount) {  // is this a new loop? - if so, add work
-	qqhandle = qt_loop_queue_create(startat, stopat, func, argptr);	// put loop on the queue
+	qqhandle = qt_loop_queue_create(startat, stopat, incr, func, argptr);	// put loop on the queue
 	forLoopsStarted = forCount;    // set current loop number
 	activeLoop = qqhandle;
     } else {
@@ -1110,11 +1098,12 @@ static void qt_parallel_qfor(const qt_loop_f func,
 }
 
 static void qt_naked_parallel_for(qthread_t * me, const size_t startat,
-			   const size_t stopat, void *nakedArg);
+			   const size_t stopat, const size_t step, void *nakedArg);
 
 void qt_parallel_for(const qt_loop_f func,
 		     const size_t startat,
 		     const size_t stopat,
+		     const size_t incr,
 		     void *restrict argptr)
 {
   //  printf("new for stmt \n");
@@ -1134,7 +1123,7 @@ void qt_parallel_for(const qt_loop_f func,
  
   }
   else {
-    qt_parallel_qfor(func, startat, stopat, argptr);
+    qt_parallel_qfor(func, startat, stopat, incr, argptr);
   }
   //    qtimer_stop(qt);
   //    double time = qtimer_secs(qt);
@@ -1145,12 +1134,12 @@ void qt_parallel_for(const qt_loop_f func,
 static void qt_naked_parallel_for(qthread_t * me,
 			   const size_t startat,
 			   const size_t stopat,
+			   const size_t step,
 			   void *nakedArg)
 {
     void **funcArgs = (void **)nakedArg;
     const qt_loop_f func = (const qt_loop_f)(funcArgs[0]);
-    //const int64_t iter = *(const int64_t *)(funcArgs[1]);
     void *restrict argptr = funcArgs[1];
-    qt_parallel_qfor(func, startat, stopat, argptr);
+    qt_parallel_qfor(func, startat, stopat, step, argptr);
 }
 #endif
