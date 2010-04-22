@@ -44,10 +44,12 @@ qt_barrier_t *MBar = NULL;
 void qt_barrier_destroy(qt_barrier_t * b)
 {				       /*{{{ */
     assert(b);
-    assert(b->upLock);
-    assert(b->downLock);
-    free((void *)(b->upLock));
-    free((void *)(b->downLock));
+    if (b->upLock) {
+	free((void *)(b->upLock));
+    }
+    if (b->downLock) {
+	free((void *)(b->downLock));
+    }
     free(b);
 }				       /*}}} */
 
