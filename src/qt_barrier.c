@@ -48,6 +48,7 @@ void qt_barrier_destroy(qt_barrier_t * b)
     assert(b->downLock);
     free((void *)(b->upLock));
     free((void *)(b->downLock));
+    free(b);
 }				       /*}}} */
 
 qt_barrier_t *qt_barrier_create(int size, qt_barrier_btype type, int debug)
@@ -239,7 +240,7 @@ static void qtb_internal_up(qt_barrier_t * b, int myLock, int64_t val,
 // actual barrier entry point
 
 void qt_barrier_enter(qt_barrier_t * b, qthread_shepherd_id_t shep)
-{
+{				       /*{{{ */
     // should be dual versions  1) all active threads barrier
     //                          2) all active streams
 
@@ -249,14 +250,14 @@ void qt_barrier_enter(qt_barrier_t * b, qthread_shepherd_id_t shep)
     if (b->activeSize <= 1)
 	return;
     qtb_internal_up(b, shep, val, 0);
-}
+}				       /*}}} */
 
 // used indirectly by omp barrier calls (initially - others I hope)
 // akp 7/24/09
 #define QT_GLOBAL_LOGBARRIER
 #ifdef QT_GLOBAL_LOGBARRIER
 void qt_global_barrier(const qthread_t * me)
-{
+{				       /*{{{ */
     const qthread_shepherd_id_t shep = qthread_shep(me);
     qt_barrier_enter(MBar, shep);
     //  now execute code on one thread that everyone needs to see -- should be
@@ -265,22 +266,22 @@ void qt_global_barrier(const qthread_t * me)
     qthread_reset_forCount(qthread_self());	// for loop reset on each thread
     qt_barrier_enter(MBar, shep);
     return;
-}
+}				       /*}}} */
 
 // allow barrer initization from C
 void qt_global_barrier_init(int size, int debug)
-{
+{				       /*{{{ */
     if (MBar == NULL) {
 	MBar = qt_barrier_create(size, REGION_BARRIER, debug);
 	assert(MBar);
     }
-}
+}				       /*}}} */
 
 void qt_global_barrier_destroy()
-{
+{				       /*{{{ */
     if (MBar) {
 	qt_barrier_destroy(MBar);
 	MBar = NULL;
     }
-}
+}				       /*}}} */
 #endif
