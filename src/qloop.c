@@ -7,10 +7,10 @@
 #include <qt_barrier.h>
 #include <qthread_asserts.h>
 #include <qthread_innards.h>	       /* for qthread_debug() */
+#include <qthread/qtimer.h>
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 #include "qt_atomics.h"
-#include <qthread/qtimer.h>
 #endif
 
 /* avoid compiler bugs with volatile... */
