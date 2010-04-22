@@ -15,6 +15,7 @@
 #include "qthread_asserts.h"
 #include "qt_atomics.h"
 #include <qthread/qthread.h>
+#include <qthread_innards.h>
 
 struct qt_barrier_s
 {
@@ -33,47 +34,53 @@ static void qtb_internal_initialize_variable(qt_barrier_t * b, size_t size,
 static void qtb_internal_initialize_fixed(qt_barrier_t * b, size_t size,
 					  int debug);
 
-static void qtb_internal_up(qt_barrier_t *b, int myLock, int64_t val, int level);
-static void qtb_internal_down(qt_barrier_t *b, int mylock, int level);
+static void qtb_internal_up(qt_barrier_t * b, int myLock, int64_t val,
+			    int level);
+static void qtb_internal_down(qt_barrier_t * b, int mylock, int level);
 
 /* global barrier */
 qt_barrier_t *MBar = NULL;
 
 void qt_barrier_destroy(qt_barrier_t * b)
-{
+{				       /*{{{ */
     assert(b);
     assert(b->upLock);
     assert(b->downLock);
     free((void *)(b->upLock));
     free((void *)(b->downLock));
-}
+}				       /*}}} */
 
 qt_barrier_t *qt_barrier_create(int size, qt_barrier_btype type, int debug)
-{
-    qt_barrier_t *b = malloc(sizeof(qt_barrier_t));
+{				       /*{{{ */
+    qt_barrier_t *b = calloc(1, sizeof(qt_barrier_t));
 
+    qthread_debug(ALL_CALLS, "qt_barrier_create(%i, %i, %i): begin\n", size,
+		  (int)type, debug);
     assert(b);
     if (b) {
 	assert(type == REGION_BARRIER);
-	if (type == REGION_BARRIER) {
-	    qtb_internal_initialize_fixed(b, size, debug);
-	} else {
-	    qtb_internal_initialize_variable(b, size, debug);
+	switch (type) {
+	    case REGION_BARRIER:
+		qtb_internal_initialize_fixed(b, size, debug);
+		break;
+	    default:
+		qtb_internal_initialize_variable(b, size, debug);
+		break;
 	}
     }
     return b;
-}
+}				       /*}}} */
 
 static void qtb_internal_initialize_variable(qt_barrier_t * b, size_t size,
 					     int debug)
-{
+{				       /*{{{ */
     assert(0);
     printf("Loop barrier not implemented yet\n");
-}
+}				       /*}}} */
 
 static void qtb_internal_initialize_fixed(qt_barrier_t * b, size_t size,
 					  int debug)
-{
+{				       /*{{{ */
     int depth = 1;
     int temp = size;
 
@@ -81,8 +88,12 @@ static void qtb_internal_initialize_fixed(qt_barrier_t * b, size_t size,
     b->activeSize = size;
     b->barrierDebug = debug;
 
+    if (size <= 1) {
+	return;
+    }
+
     // compute size of barrier arrays
-    temp = temp-1;
+    temp = temp - 1;
     temp >>= 1;
     while (temp) {
 	temp >>= 1;
@@ -99,11 +110,11 @@ static void qtb_internal_initialize_fixed(qt_barrier_t * b, size_t size,
     for (size_t i = b->activeSize + 1; i < b->allocatedSize; i++) {
 	b->upLock[i] = INT64_MAX;      // 64 bit  -- should never overflow
     }
-}
+}				       /*}}} */
 
 // dump function for debugging -  print barrier array contents
 void qt_barrier_dump(qt_barrier_t * b, enum dumpType dt)
-{
+{				       /*{{{ */
     size_t i, j;
     const size_t activeSize = b->activeSize;
 
@@ -126,12 +137,13 @@ void qt_barrier_dump(qt_barrier_t * b, enum dumpType dt)
 	}
     }
     return;
-}
+}				       /*}}} */
 
 // walk down the barrier -- releases all locks in subtree below myLock
 //    level -- how high in the tree is this node
 static void qtb_internal_down(qt_barrier_t * b, int myLock, int level)
-{
+{				       /*{{{ */
+    assert(b->activeSize > 1);
     for (int i = level; i >= 0; i--) {
 	int mask = 1 << i;
 	int pairedLock = myLock ^ mask;
@@ -145,7 +157,7 @@ static void qtb_internal_down(qt_barrier_t * b, int myLock, int level)
 	} else {		       // out of range -- continue
 	}
     }
-}
+}				       /*}}} */
 
 // two functions in the for loop implmentation that need to be reset
 //  to make sure that they stay in sync
@@ -160,16 +172,17 @@ void qthread_reset_forCount(qthread_t *);	// KBW
 //   leaves, releases its subtree
 static void qtb_internal_up(qt_barrier_t * b, int myLock, int64_t val,
 			    int level)
-{
+{				       /*{{{ */
     // compute neighbor node at this level
     int mask = 1 << level;
     int pairedLock = myLock ^ mask;
     char debug = b->barrierDebug;
+    assert(b->activeSize > 1);
     if (debug) {
 	printf("on lock %d paired with %d level %d val %ld\n", myLock,
 	       pairedLock, level, (long int)val);
     }
-    if (pairedLock >= b->activeSize) {  // my pair is out of range don't wait for it
+    if (pairedLock >= b->activeSize) { // my pair is out of range don't wait for it
 	(void)qthread_incr(&b->upLock[myLock], 1);	// mark me as present
 	while (b->downLock[myLock] != val) ;	// KBW: XXX: not mutex safe
 	if (debug) {
@@ -191,7 +204,8 @@ static void qtb_internal_up(qt_barrier_t * b, int myLock, int64_t val,
 	while (b->downLock[myLock] != val) {	// my pair is not here yet (KBW:XXX: not mutex safe)
 	}
 	if (debug) {
-	    printf("released lock %d level %d val %ld\n", myLock, level, (long int)val);
+	    printf("released lock %d level %d val %ld\n", myLock, level,
+		   (long int)val);
 	}
 	if (level != 0)
 	    qtb_internal_down(b, myLock, level);	// everyone is here and I have people to release
@@ -204,7 +218,8 @@ static void qtb_internal_up(qt_barrier_t * b, int myLock, int64_t val,
 	while (b->upLock[pairedLock] < val) {	// my pair is not here yet (KBW:XXX: not mutex safe)
 	}
 	if (debug) {
-	    printf("continue on %d level %d val %ld\n", myLock, level, (long int)val);
+	    printf("continue on %d level %d val %ld\n", myLock, level,
+		   (long int)val);
 	}
     }
 
@@ -219,7 +234,7 @@ static void qtb_internal_up(qt_barrier_t * b, int myLock, int64_t val,
 	}
 	qtb_internal_down(b, myLock, level);	// everyone is here
     }
-}
+}				       /*}}} */
 
 // actual barrier entry point
 
@@ -231,6 +246,8 @@ void qt_barrier_enter(qt_barrier_t * b, qthread_shepherd_id_t shep)
     // only dealing with (1) for first pass for now
     int64_t val = b->upLock[shep] + 1;
 
+    if (b->activeSize <= 1)
+	return;
     qtb_internal_up(b, shep, val, 0);
 }
 
