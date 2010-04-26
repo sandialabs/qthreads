@@ -16,10 +16,6 @@
 # endif
 #endif
 
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-extern int __qthreads_temp;
-#endif
-
 /*****************************************************************************
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *
@@ -1153,6 +1149,11 @@ static QINLINE void *qthread_cas_ptr_(void *volatile*const addr,
 #  define qthread_cas_ptr(ADDR, OLDV, NEWV) \
     qthread_cas_ptr_((void*volatile*const)(ADDR), (void*const)(OLDV), (void*const)(NEWV))
 # endif
+#endif
+
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+extern int __qthreads_temp;
+void qthread_reset_forCount(qthread_t *);
 #endif
 
 Q_ENDCXX /* */
