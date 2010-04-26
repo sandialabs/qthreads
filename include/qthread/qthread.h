@@ -605,7 +605,7 @@ static QINLINE double qthread_dincr(volatile double *operand,
 }				       /*}}} */
 
 static QINLINE uint32_t qthread_incr32(volatile uint32_t * operand,
-				       const int incr)
+				       const uint32_t incr)
 {				       /*{{{ */
 #ifdef QTHREAD_MUTEX_INCREMENT
     return qthread_incr32_(operand,incr);
@@ -694,7 +694,7 @@ static QINLINE uint32_t qthread_incr32(volatile uint32_t * operand,
 }				       /*}}} */
 
 static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand,
-				       const int incr)
+				       const uint64_t incr)
 {				       /*{{{ */
 #if defined(QTHREAD_MUTEX_INCREMENT) || \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
@@ -877,7 +877,7 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand,
 #endif
 }				       /*}}} */
 
-static QINLINE unsigned long qthread_incr_xx(volatile void *addr, const int incr,
+static QINLINE unsigned long qthread_incr_xx(volatile void *addr, const long int incr,
 					     const size_t length)
 {
     switch (length) {
@@ -1165,7 +1165,7 @@ Q_ENDCXX /* */
     __sync_fetch_and_add(ADDR, INCVAL)
 # else
 #  define qthread_incr( ADDR, INCVAL )                  \
-   qthread_incr_xx( (volatile void*)(ADDR), (int)(INCVAL), sizeof(*(ADDR)) )
+   qthread_incr_xx( (volatile void*)(ADDR), (long int)(INCVAL), sizeof(*(ADDR)) )
 # endif
 
 #else /* ifdef __cplusplus */
