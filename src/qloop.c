@@ -1278,7 +1278,6 @@ void qt_parallel_for(
     void *restrict argptr)
 {
     //  printf("new for stmt \n");
-    int t = 0;
     //    qtimer_t qt = qtimer_create();
     //    qtimer_start(qt);
     if (forLockInitialized == 0) {
@@ -1287,7 +1286,6 @@ void qt_parallel_for(
     }
     if (!activeParallel) {
 	void *nakedArg[3] = { (void *)func, (void *)argptr };
-	t = 1;
 	activeParallel = 1;
 	qt_loop(0, qthread_num_shepherds(), 1, qt_naked_parallel_for,
 		nakedArg);
@@ -1310,7 +1308,7 @@ static void qt_naked_parallel_for(
     void *nakedArg)
 {
     void **funcArgs = (void **)nakedArg;
-    const qt_loop_f func = (const qt_loop_f)(funcArgs[0]);
+    const qt_loop_f func = (qt_loop_f)(funcArgs[0]);
     void *restrict argptr = funcArgs[1];
     qt_parallel_qfor(func, startat, stopat, step, argptr);
 }
