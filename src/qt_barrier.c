@@ -162,10 +162,6 @@ static void qtb_internal_down(qt_barrier_t * b, int myLock, int level)
     }
 }				       /*}}} */
 
-// two functions in the for loop implmentation that need to be reset
-//  to make sure that they stay in sync
-extern volatile int forLoopsStarted;
-
 // walk up the barrier -- waits for neighbor lock at each level of the tree
 //   when both arrive the lower thread number climbs up the tree and the
 //   higher number waits for the down walk to release.  When all of the nodes arrive
@@ -229,9 +225,6 @@ static void qtb_internal_up(qt_barrier_t * b, int myLock, int64_t val,
 	qtb_internal_up(b, myLock, val, level + 1);
     } else {			       // done -- start release
 	(void)qthread_incr(&b->upLock[myLock], 1);	// mark me as present
-	/* KBW: XXX: THIS SEEMS WRONG */
-#warning Barriers should know nothing of parallel for loops
-	forLoopsStarted = 0;	       // for loop global reset
 	(void)qthread_incr(&b->downLock[myLock], 1);	// mark me as released
 	if (debug) {
 	    printf("\t start down lock %d level %d \n", myLock, level);
