@@ -89,7 +89,7 @@ static void qtb_internal_initialize_fixed(qt_barrier_t * b, size_t size,
 
     assert(b);
     b->activeSize = size;
-    b->barrierDebug = debug;
+    b->barrierDebug = (char)debug;
 
     if (size <= 1) {
 	return;
@@ -124,7 +124,7 @@ void qt_barrier_dump(qt_barrier_t * b, enum dumpType dt)
     if ((dt == UPLOCK) || (dt == BOTHLOCKS)) {
 	printf("upLock\n");
 	for (j = 0; j < activeSize; j += 8) {
-	    for (i = 0; ((i < 8) && ((j + i) < activeSize)); i++) {
+	    for (i = 0; ((i < 8) && ((j + i) <= activeSize)); i++) {
 		printf("%ld ", (long int)b->upLock[j + i]);
 	    }
 	    printf("\n");
@@ -133,7 +133,7 @@ void qt_barrier_dump(qt_barrier_t * b, enum dumpType dt)
     if ((dt == DOWNLOCK) || (dt == BOTHLOCKS)) {
 	printf("downLock\n");
 	for (j = 0; j < activeSize; j += 8) {
-	    for (i = 0; ((i < 8) && ((j + i) < activeSize)); i++) {
+	    for (i = 0; ((i < 8) && ((j + i) <= activeSize)); i++) {
 		printf("%ld ", (long int)b->downLock[j + i]);
 	    }
 	    printf("\n");
@@ -165,7 +165,6 @@ static void qtb_internal_down(qt_barrier_t * b, int myLock, int level)
 // two functions in the for loop implmentation that need to be reset
 //  to make sure that they stay in sync
 extern volatile int forLoopsStarted;
-void qthread_reset_forCount(qthread_t *);	// KBW
 
 // walk up the barrier -- waits for neighbor lock at each level of the tree
 //   when both arrive the lower thread number climbs up the tree and the
@@ -185,7 +184,7 @@ static void qtb_internal_up(qt_barrier_t * b, int myLock, int64_t val,
 	printf("on lock %d paired with %d level %d val %ld\n", myLock,
 	       pairedLock, level, (long int)val);
     }
-    if (pairedLock >= b->activeSize) { // my pair is out of range don't wait for it
+    if (pairedLock > b->activeSize) { // my pair is out of range don't wait for it
 	(void)qthread_incr(&b->upLock[myLock], 1);	// mark me as present
 	while (b->downLock[myLock] != val) ;	// KBW: XXX: not mutex safe
 	if (debug) {
@@ -230,6 +229,8 @@ static void qtb_internal_up(qt_barrier_t * b, int myLock, int64_t val,
 	qtb_internal_up(b, myLock, val, level + 1);
     } else {			       // done -- start release
 	(void)qthread_incr(&b->upLock[myLock], 1);	// mark me as present
+	/* KBW: XXX: THIS SEEMS WRONG */
+#warning Barriers should know nothing of parallel for loops
 	forLoopsStarted = 0;	       // for loop global reset
 	(void)qthread_incr(&b->downLock[myLock], 1);	// mark me as released
 	if (debug) {
