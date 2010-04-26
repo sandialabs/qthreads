@@ -23,9 +23,10 @@ int main(int argc, char *argv[])
     aligned_t rets[30];
     qthread_t *me;
 
-    qthread_initialize();
-    me = qthread_self();
+    assert(qthread_initialize() == QTHREAD_SUCCESS);
+    CHECK_VERBOSE();
     iprintf("%i shepherds\n", qthread_num_shepherds());
+    me = qthread_self();
 
     rets[0] = qthread_incr(&master, 1);
     assert(master == 1);
@@ -57,6 +58,22 @@ int main(int argc, char *argv[])
     }
     assert(master == 150);
     iprintf("30 concurrent threads successfully incremented by 5\n");
+
+    if (sizeof(aligned_t) == 8) {
+	master = 0xFFFFFFFF;
+	qthread_incr(&master, 1);
+	if (master != 0x100000000) {
+	    fprintf(stderr, "master is %lx rather than 0x10000000 -- incr1 failed\n", (unsigned long)master);
+	    assert(master == 0x100000000);
+	}
+	master = 0;
+	qthread_incr(&master, 0x100000000);
+	if (master != 0x100000000) {
+	    fprintf(stderr, "master is %lx rather than 0x10000000 -- incr2 failed\n", (unsigned long)master);
+	    assert(master == 0x100000000);
+	}
+	iprintf("64-bit add appears to work\n");
+    }
 
     return 0;
 }
