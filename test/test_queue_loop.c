@@ -13,18 +13,24 @@
 #include "argparsing.h"
 
 static unsigned int BIGLEN = 1000000U;
-aligned_t *uia = NULL;
+static aligned_t *uia = NULL;
+static unsigned int REALLY_VERBOSE = 0;
 
 static void sum(qthread_t * me, const size_t startat, const size_t stopat,
 		const size_t step, void *arg_)
 {
     size_t i;
-    aligned_t local_sum = 0;
-    //printf("S%i: summing %i numbers, from %i to %i with a stride of %i\n", (int)qthread_shep(me), (int)(stopat-startat), (int)startat, (int)stopat, (int)step);
+    aligned_t local_sum = 0, bigsum;
+    if (REALLY_VERBOSE) {
+	printf("S%i: summing %i numbers, from %i to %i with a stride of %i\n", (int)qthread_shep(me), (int)(stopat-startat), (int)startat, (int)stopat, (int)step);
+    }
     for (i = startat; i < stopat; i += step) {
 	local_sum += uia[i];
     }
-    qthread_incr((aligned_t *) arg_, local_sum);
+    bigsum = qthread_incr((aligned_t *) arg_, local_sum);
+    if (REALLY_VERBOSE) {
+	printf("S%i: localsum = %lu, bigsum = %lu\n", (int)qthread_shep(me), (unsigned long)local_sum, (unsigned long)bigsum);
+    }
 }
 
 static const char * units[] = {
@@ -58,7 +64,9 @@ int main(int argc, char *argv[])
     assert(qthread_initialize() == QTHREAD_SUCCESS);
     CHECK_VERBOSE();
     NUMARG(BIGLEN, "BIGLEN");
-    future_init(128);
+    NUMARG(REALLY_VERBOSE,"REALLY_VERBOSE");
+    //future_init(128);
+    iprintf("%i threads\n", qthread_num_shepherds());
 
     {
 	aligned_t uitmp = 0, uisum = 0;
