@@ -197,7 +197,7 @@ static void figure_out_cacheline_size(void)
     if (sizeof(long) == 4) {
 	cacheline_bytes = 32;	       // G4
     } else {
-	cacheline_bytes == 128;	       // G5
+	cacheline_bytes = 128;	       // G5
     }
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32) || \
       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
