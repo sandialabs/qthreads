@@ -38,7 +38,7 @@ static inline void DBprintf(char *format, ...)
 
 /* global data (copy everywhere) */
 location_t * future_bookkeeping_array = NULL;
-static qthread_shepherd_id_t shep_for_new_futures = 0;
+//static qthread_shepherd_id_t shep_for_new_futures = 0;
 static pthread_mutex_t sfnf_lock;
 
 /* This function is critical to futurelib, and as such must be as fast as
@@ -47,14 +47,14 @@ static pthread_mutex_t sfnf_lock;
  * If the qthread is not a future, it returns NULL; otherwise, it returns a
  * pointer to the bookkeeping structure associated with that future's shepherd.
  */
-inline location_t *ft_loc(qthread_t * ft)
+static inline location_t *ft_loc(qthread_t * ft)
 {
     return qthread_isfuture(ft) ? &(future_bookkeeping_array[qthread_shep(NULL)]) : NULL;
 }
 
 /* this function is used as a qthread; it is run by each shepherd so that each
  * shepherd will get some PIM-local data associated with it. */
-aligned_t future_shep_init(qthread_t * me, void * arg)
+static aligned_t future_shep_init(qthread_t * me, void * arg)
 {
     location_t * bk = (location_t *)PIM_localMallocAtID((unsigned int)sizeof(location_t), (unsigned int)arg);
     PIM_mem_region_create( 0 /* I think this argument is ignored... */,
@@ -116,8 +116,8 @@ inline void blocking_vp_incr(qthread_t * me, location_t * loc)
 void future_fork(qthread_f fptr, void *arg, aligned_t * retval)
 {
     qthread_shepherd_id_t rr = 0;
-    qthread_t *me = qthread_self();
-    location_t *ptr = ft_loc(me);
+    //qthread_t *me = qthread_self();
+    //location_t *ptr = ft_loc(me);
 
     DBprintf("Thread %p forking a future\n", me);
     /* step 1: figure out where to go (fast) */
@@ -181,7 +181,7 @@ void future_acquire(qthread_t * me)
     }
 }
 
-void future_join(qthread_t * me, aligned_t * ft)
+static void future_join(qthread_t * me, aligned_t * ft)
 {
     DBprintf("Qthread %p join to future %p\n", me, ft);
     qthread_readFF(me, ft, ft);
