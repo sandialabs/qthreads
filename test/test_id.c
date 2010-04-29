@@ -72,5 +72,6 @@ int main(int argc, char *argv[])
 	qthread_readFF(me, NULL, rets+i);
     }
     free(rets);
+    iprintf("success!\n");
     return my_id;
 }

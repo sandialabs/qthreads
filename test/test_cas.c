@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <assert.h>
 #include <qthread/qthread.h>
+#include "argparsing.h"
 
 aligned_t master = 0;
 
@@ -25,10 +26,12 @@ static uint32_t read_vol32(volatile uint32_t * ptr)
     return *ptr;
 }
 
+#if (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
 static uint64_t read_vol64(volatile uint64_t * ptr)
 {
     return *ptr;
 }
+#endif
 
 static void *read_volptr(void *volatile *ptr)
 {
@@ -43,6 +46,7 @@ int main(int argc, char *argv[])
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
     me = qthread_self();
+    CHECK_VERBOSE();
 
     rets[0] = qthread_cas(&master, master, 1);
     assert(master == 1);
@@ -70,6 +74,7 @@ int main(int argc, char *argv[])
 
     assert(qthread_cas_ptr(&ptr, NULL, &i) == NULL);
     assert(read_volptr(&ptr) == &i);
+    iprintf("success!\n");
 
     return 0;
 }

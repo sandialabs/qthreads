@@ -48,6 +48,7 @@ static aligned_t qmain(qthread_t * me, void *junk)
     size_t i;
 
     ui_array = (aligned_t *) calloc(ui_len, sizeof(aligned_t));
+    iprintf("generating ui_array...\n");
     for (i = 0; i < ui_len; i++) {
 	ui_array[i] = random();
 	ui_sum_authoritative += ui_array[i];
@@ -57,7 +58,7 @@ static aligned_t qmain(qthread_t * me, void *junk)
 	if (ui_min_authoritative > ui_array[i])
 	    ui_min_authoritative = ui_array[i];
     }
-    iprintf("ui_array generated...\n");
+    iprintf("ui_array generated, calculating sum in parallel..\n");
     ui_out = qutil_uint_sum(me, ui_array, ui_len, 0);
     assert(ui_out == ui_sum_authoritative);
     iprintf(" - qutil_uint_sum is correct\n");

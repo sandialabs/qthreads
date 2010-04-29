@@ -59,21 +59,21 @@ int main(int argc, char *argv[])
     assert(master == 150);
     iprintf("30 concurrent threads successfully incremented by 5\n");
 
-    if (sizeof(aligned_t) == 8) {
-	master = 0xFFFFFFFF;
-	qthread_incr(&master, 1);
-	if (master != 0x100000000) {
-	    fprintf(stderr, "master is %lx rather than 0x10000000 -- incr1 failed\n", (unsigned long)master);
-	    assert(master == 0x100000000);
-	}
-	master = 0;
-	qthread_incr(&master, 0x100000000);
-	if (master != 0x100000000) {
-	    fprintf(stderr, "master is %lx rather than 0x10000000 -- incr2 failed\n", (unsigned long)master);
-	    assert(master == 0x100000000);
-	}
-	iprintf("64-bit add appears to work\n");
+#if (QTHREAD_SIZEOF_ALIGNED_T == 8)
+    master = 0xFFFFFFFF;
+    qthread_incr(&master, 1);
+    if (master != 0x100000000) {
+	fprintf(stderr, "master is %lx rather than 0x10000000 -- incr1 failed\n", (unsigned long)master);
+	assert(master == 0x100000000);
     }
+    master = 0;
+    qthread_incr(&master, 0x100000000);
+    if (master != 0x100000000) {
+	fprintf(stderr, "master is %lx rather than 0x10000000 -- incr2 failed\n", (unsigned long)master);
+	assert(master == 0x100000000);
+    }
+    iprintf("64-bit add appears to work\n");
+#endif
 
     return 0;
 }
