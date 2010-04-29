@@ -5,7 +5,12 @@
 #include <stdio.h>
 #include <stdarg.h>
 
-#define CHECK_VERBOSE() verbose = (getenv("VERBOSE") != NULL)
+#ifndef SST
+# define CHECK_VERBOSE() verbose = (getenv("VERBOSE") != NULL)
+#else
+# define CHECK_VERBOSE()
+#endif
+
 #define NUMARG(var,name) do { \
     char *str; \
     if ((str = getenv(name)) != NULL) { \
@@ -20,7 +25,11 @@
     iprintf(name" = %lu\n", (unsigned long)var); \
 } while (0)
 
+#ifdef SST
+static int verbose = 1;
+#else
 static int verbose = 0;
+#endif
 
 #ifdef __tile__
 #define iprintf printf
