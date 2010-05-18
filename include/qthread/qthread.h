@@ -67,6 +67,24 @@ typedef int64_t Q_ALIGNED(QTHREAD_ALIGNMENT_ALIGNED_T) saligned_t;
 #else
 #error "Don't know type for sizeof aligned_t"
 #endif
+
+typedef struct _syncvar_s {
+    volatile union {
+	volatile uint64_t w;
+	volatile struct {
+#ifdef BITFIELD_ORDER_FORWARD
+	    volatile uint64_t data : 60;
+	    volatile unsigned state : 3;
+	    volatile unsigned lock : 1;
+#else
+	    volatile unsigned lock : 1;
+	    volatile unsigned state : 3;
+	    volatile uint64_t data : 60;
+#endif
+	} s;
+    } u;
+} syncvar_t;
+#define SYNCVAR_STATIC_INITIALIZER { { 0 } }
 Q_ENDCXX /* */
 
 #ifdef QTHREAD_SST_PRIMITIVES
@@ -190,6 +208,7 @@ qthread_shepherd_id_t qthread_num_shepherds(void);
 /* This function is just to assist with debugging; it returns 1 if the address
  * is full, and 0 if the address is empty */
 int qthread_feb_status(const aligned_t * addr);
+unsigned char qthread_syncvar_status(syncvar_t *const v);
 
 /* The empty/fill functions merely assert the empty or full state of the given
  * address. You may be wondering why they require a qthread_t argument. The
@@ -197,7 +216,9 @@ int qthread_feb_status(const aligned_t * addr);
  * basis (to avoid needing to lock the memory pool). Anyway, if you pass it a
  * NULL qthread_t, it will still work, it just won't be as fast. */
 int qthread_empty(qthread_t * me, const aligned_t * dest);
+int qthread_syncvar_empty(qthread_t * restrict const me, syncvar_t * restrict const dest);
 int qthread_fill(qthread_t * me, const aligned_t * dest);
+int qthread_syncvar_fill(qthread_t * restrict const me, syncvar_t * restrict const dest);
 
 /* These functions wait for memory to become empty, and then fill it. When
  * memory becomes empty, only one thread blocked like this will be awoken. Data
@@ -217,6 +238,10 @@ int qthread_writeEF(qthread_t * me, aligned_t * restrict const dest,
 		    const aligned_t * restrict const src);
 int qthread_writeEF_const(qthread_t * me, aligned_t * const dest,
 			  const aligned_t src);
+int qthread_syncvar_writeEF(qthread_t *restrict const me, syncvar_t *restrict
+			    const dest, const uint64_t *restrict const src);
+int qthread_syncvar_writeEF_const(qthread_t *restrict const me, syncvar_t *restrict
+			    const dest, const uint64_t src);
 
 /* This function is a cross between qthread_fill() and qthread_writeEF(). It
  * does not wait for memory to become empty, but performs the write and sets
@@ -236,6 +261,10 @@ int qthread_writeF(qthread_t * me, aligned_t * restrict const dest,
 		   const aligned_t * restrict const src);
 int qthread_writeF_const(qthread_t * me, aligned_t * const dest,
 			 const aligned_t src);
+int qthread_syncvar_writeF(qthread_t *restrict const me, syncvar_t *restrict
+			   const dest, const uint64_t *restrict const src);
+int qthread_syncvar_writeF_const(qthread_t *restrict const me, syncvar_t *restrict
+			   const dest, const uint64_t src);
 
 /* This function waits for memory to become full, and then reads it and leaves
  * the memory as full. When memory becomes full, all threads waiting for it to
@@ -253,6 +282,8 @@ int qthread_writeF_const(qthread_t * me, aligned_t * const dest,
  */
 int qthread_readFF(qthread_t * me, aligned_t * restrict const dest,
 		   const aligned_t * restrict const src);
+int qthread_syncvar_readFF(qthread_t * restrict const me, uint64_t * restrict const dest,
+		   syncvar_t * restrict const src);
 
 /* These functions wait for memory to become full, and then empty it. When
  * memory becomes full, only one thread blocked like this will be awoken. Data
@@ -270,6 +301,8 @@ int qthread_readFF(qthread_t * me, aligned_t * restrict const dest,
  */
 int qthread_readFE(qthread_t * me, aligned_t * restrict const dest,
 		   const aligned_t * restrict const src);
+int qthread_syncvar_readFE(qthread_t * restrict const me, uint64_t * restrict const dest,
+		   syncvar_t * restrict const src);
 
 /* functions to implement FEB-ish locking/unlocking
  *
