@@ -12,18 +12,26 @@ size_t MAXPARALLELISM = 256;
 aligned_t incrementme = 0;
 aligned_t *increments = NULL;
 
-static void balanced_incr(qthread_t * me, const size_t startat,
-			  const size_t stopat, void *arg)
+static void balanced_incr(
+    qthread_t * me,
+    const size_t startat,
+    const size_t stopat,
+    const size_t step,
+    void *arg)
 {
     size_t i;
 
     for (i = startat; i < stopat; i++) {
-	qthread_incr((aligned_t*)arg, 1);
+	qthread_incr((aligned_t *) arg, 1);
     }
 }
 
-static void balanced_falseshare(qthread_t * me, const size_t startat,
-				const size_t stopat, void *arg)
+static void balanced_falseshare(
+    qthread_t * me,
+    const size_t startat,
+    const size_t stopat,
+    const size_t step,
+    void *arg)
 {
     size_t i;
     qthread_shepherd_id_t shep = qthread_shep(me);
@@ -34,8 +42,12 @@ static void balanced_falseshare(qthread_t * me, const size_t startat,
     }
 }
 
-static void balanced_noncomp(qthread_t * me, const size_t startat,
-			     const size_t stopat, void *arg)
+static void balanced_noncomp(
+    qthread_t * me,
+    const size_t startat,
+    const size_t stopat,
+    const size_t step,
+    void *arg)
 {
     size_t i;
     qthread_shepherd_id_t shep = qthread_shep(me);
@@ -47,7 +59,9 @@ static void balanced_noncomp(qthread_t * me, const size_t startat,
     }
 }
 
-static aligned_t incrloop(qthread_t * me, void *arg)
+static aligned_t incrloop(
+    qthread_t * me,
+    void *arg)
 {
     unsigned int i;
 
@@ -57,7 +71,9 @@ static aligned_t incrloop(qthread_t * me, void *arg)
     return 0;
 }
 
-static aligned_t incrloop_falseshare(qthread_t * me, void *arg)
+static aligned_t incrloop_falseshare(
+    qthread_t * me,
+    void *arg)
 {
     unsigned int offset = (unsigned int)(intptr_t) arg;
     unsigned int i;
@@ -69,7 +85,9 @@ static aligned_t incrloop_falseshare(qthread_t * me, void *arg)
     return 0;
 }
 
-static aligned_t incrloop_nocompete(qthread_t * me, void *arg)
+static aligned_t incrloop_nocompete(
+    qthread_t * me,
+    void *arg)
 {
     unsigned int i;
     aligned_t myinc;
@@ -80,18 +98,22 @@ static aligned_t incrloop_nocompete(qthread_t * me, void *arg)
     return 0;
 }
 
-static aligned_t incrstream(qthread_t * me, void *arg)
+static aligned_t incrstream(
+    qthread_t * me,
+    void *arg)
 {
     unsigned int i;
-    aligned_t * const myinc = (aligned_t*)arg;
+    aligned_t *const myinc = (aligned_t *) arg;
 
     for (i = 0; i < ITERATIONS; i++) {
-	qthread_incr(myinc+i, 1);
+	qthread_incr(myinc + i, 1);
     }
     return 0;
 }
 
-static aligned_t addloop_falseshare(qthread_t * me, void *arg)
+static aligned_t addloop_falseshare(
+    qthread_t * me,
+    void *arg)
 {
     unsigned int offset = (unsigned int)(intptr_t) arg;
     unsigned int i;
@@ -103,7 +125,9 @@ static aligned_t addloop_falseshare(qthread_t * me, void *arg)
     return *myinc;
 }
 
-static aligned_t addloop_nocompete(qthread_t * me, void *arg)
+static aligned_t addloop_nocompete(
+    qthread_t * me,
+    void *arg)
 {
     unsigned int i;
     aligned_t myinc = 0;
@@ -114,8 +138,12 @@ static aligned_t addloop_nocompete(qthread_t * me, void *arg)
     return myinc;
 }
 
-static void streaming_incr(qthread_t * me, const size_t startat,
-			  const size_t stopat, void *arg)
+static void streaming_incr(
+    qthread_t * me,
+    const size_t startat,
+    const size_t stopat,
+    const size_t step,
+    void *arg)
 {
     size_t i;
 
@@ -124,17 +152,22 @@ static void streaming_incr(qthread_t * me, const size_t startat,
     }
 }
 
-static void streaming_naincr(qthread_t * me, const size_t startat,
-			  const size_t stopat, void *arg)
+static void streaming_naincr(
+    qthread_t * me,
+    const size_t startat,
+    const size_t stopat,
+    const size_t step,
+    void *arg)
 {
     size_t i;
 
     for (i = startat; i < stopat; i++) {
-	increments[i] ++;
+	increments[i]++;
     }
 }
 
-static char *human_readable_rate(double rate)
+static char *human_readable_rate(
+    double rate)
 {
     static char readable_string[100] = { 0 };
     const double GB = 1024 * 1024 * 1024;
@@ -153,7 +186,9 @@ static char *human_readable_rate(double rate)
     return readable_string;
 }
 
-int main(int argc, char *argv[])
+int main(
+    int argc,
+    char *argv[])
 {
     qtimer_t timer = qtimer_create();
     double rate;
@@ -177,11 +212,10 @@ int main(int argc, char *argv[])
     if (TEST_SELECTION & 1) {
 	printf("\tBalanced competing loop: ");
 	fflush(stdout);
-	increments =
-	    (aligned_t *) calloc(1,
-				 sizeof(aligned_t));
+	increments = (aligned_t *) calloc(1, sizeof(aligned_t));
 	qtimer_start(timer);
-	qt_loop_balance(0, MAXPARALLELISM * ITERATIONS, balanced_incr, increments);
+	qt_loop_balance(0, MAXPARALLELISM * ITERATIONS, balanced_incr,
+			increments);
 	qtimer_stop(timer);
 	assert(*increments == MAXPARALLELISM * ITERATIONS);
 	free(increments);
@@ -413,7 +447,7 @@ int main(int argc, char *argv[])
 				 sizeof(aligned_t));
 	qtimer_start(timer);
 	for (i = 0; i < MAXPARALLELISM; i++) {
-	    qthread_fork(incrstream, increments + (i*ITERATIONS), rets + i);
+	    qthread_fork(incrstream, increments + (i * ITERATIONS), rets + i);
 	}
 	for (i = 0; i < MAXPARALLELISM; i++) {
 	    qthread_readFF(NULL, NULL, rets + i);
@@ -444,7 +478,8 @@ int main(int argc, char *argv[])
 	    (aligned_t *) calloc(MAXPARALLELISM * ITERATIONS,
 				 sizeof(aligned_t));
 	qtimer_start(timer);
-	qt_loop_balance(0, MAXPARALLELISM * ITERATIONS, streaming_naincr, NULL);
+	qt_loop_balance(0, MAXPARALLELISM * ITERATIONS, streaming_naincr,
+			NULL);
 	qtimer_stop(timer);
 	for (i = 0; i < MAXPARALLELISM * ITERATIONS; i++)
 	    assert(increments[i] == 1);

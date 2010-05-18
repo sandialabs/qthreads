@@ -17,7 +17,9 @@
 #define THREAD_COUNT 128
 
 #ifdef HAVE_CPROPS
-static aligned_t cpqueuer(qthread_t * me, void *arg)
+static aligned_t cpqueuer(
+    qthread_t * me,
+    void *arg)
 {
     cp_list *q = (cp_list *) arg;
     size_t i;
@@ -33,7 +35,9 @@ static aligned_t cpqueuer(qthread_t * me, void *arg)
     return 0;
 }
 
-static aligned_t cpdequeuer(qthread_t * me, void *arg)
+static aligned_t cpdequeuer(
+    qthread_t * me,
+    void *arg)
 {
     cp_list *q = (cp_list *) arg;
     size_t i;
@@ -47,7 +51,9 @@ static aligned_t cpdequeuer(qthread_t * me, void *arg)
 }
 #endif
 
-static aligned_t queuer(qthread_t * me, void *arg)
+static aligned_t queuer(
+    qthread_t * me,
+    void *arg)
 {
     qlfqueue_t *q = (qlfqueue_t *) arg;
     size_t i;
@@ -61,7 +67,9 @@ static aligned_t queuer(qthread_t * me, void *arg)
     return 0;
 }
 
-static aligned_t dequeuer(qthread_t * me, void *arg)
+static aligned_t dequeuer(
+    qthread_t * me,
+    void *arg)
 {
     qlfqueue_t *q = (qlfqueue_t *) arg;
     size_t i;
@@ -75,8 +83,12 @@ static aligned_t dequeuer(qthread_t * me, void *arg)
 }
 
 #ifdef HAVE_CPROPS
-void loop_cpqueuer(qthread_t * me, const size_t startat, const size_t stopat,
-		   void *arg)
+void loop_cpqueuer(
+    qthread_t * me,
+    const size_t startat,
+    const size_t stopat,
+    const size_t step,
+    void *arg)
 {
     size_t i;
     cp_list *q = (cp_list *) arg;
@@ -89,8 +101,12 @@ void loop_cpqueuer(qthread_t * me, const size_t startat, const size_t stopat,
     }
 }
 
-void loop_cpdequeuer(qthread_t * me, const size_t startat,
-		     const size_t stopat, void *arg)
+void loop_cpdequeuer(
+    qthread_t * me,
+    const size_t startat,
+    const size_t stopat,
+    const size_t step,
+    void *arg)
 {
     size_t i;
     cp_list *q = (cp_list *) arg;
@@ -105,8 +121,12 @@ void loop_cpdequeuer(qthread_t * me, const size_t startat,
 }
 #endif
 
-static void loop_queuer(qthread_t * me, const size_t startat,
-			const size_t stopat, void *arg)
+static void loop_queuer(
+    qthread_t * me,
+    const size_t startat,
+    const size_t stopat,
+    const size_t step,
+    void *arg)
 {
     size_t i;
     qlfqueue_t *q = (qlfqueue_t *) arg;
@@ -119,8 +139,12 @@ static void loop_queuer(qthread_t * me, const size_t startat,
     }
 }
 
-static void loop_dequeuer(qthread_t * me, const size_t startat,
-			  const size_t stopat, void *arg)
+static void loop_dequeuer(
+    qthread_t * me,
+    const size_t startat,
+    const size_t stopat,
+    const size_t step,
+    void *arg)
 {
     size_t i;
     qlfqueue_t *q = (qlfqueue_t *) arg;
@@ -133,7 +157,9 @@ static void loop_dequeuer(qthread_t * me, const size_t startat,
     }
 }
 
-int main(int argc, char *argv[])
+int main(
+    int argc,
+    char *argv[])
 {
     qlfqueue_t *q;
     qthread_t *me;

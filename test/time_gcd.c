@@ -8,7 +8,9 @@
 #include "qt_gcd.h"
 #include "argparsing.h"
 
-static inline size_t shift_gcd(size_t a, size_t b)
+static inline size_t shift_gcd(
+    size_t a,
+    size_t b)
 {
     size_t k = 0;
     if (a == 0)
@@ -34,7 +36,9 @@ static inline size_t shift_gcd(size_t a, size_t b)
     return b << k;
 }
 
-static inline size_t mod_gcd(size_t a, size_t b)
+static inline size_t mod_gcd(
+    size_t a,
+    size_t b)
 {
     while (1) {
 	if (a == 0)
@@ -48,10 +52,11 @@ static inline size_t mod_gcd(size_t a, size_t b)
 
 size_t BIGNUM = 1000000;
 
-int main()
+int main(
+    int argc,
+    char *argv[])
 {
-    struct pair
-    {
+    struct pair {
 	size_t a, b;
     };
     struct pair *bigset = malloc(sizeof(struct pair) * BIGNUM);

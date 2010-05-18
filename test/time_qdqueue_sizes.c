@@ -14,7 +14,9 @@
 qpool *memory = NULL;
 size_t objsize = 8;
 
-static aligned_t queuer(qthread_t * me, void *arg)
+static aligned_t queuer(
+    qthread_t * me,
+    void *arg)
 {
     qdqueue_t *q = (qdqueue_t *) arg;
     size_t i;
@@ -30,7 +32,9 @@ static aligned_t queuer(qthread_t * me, void *arg)
     return 0;
 }
 
-static aligned_t dequeuer(qthread_t * me, void *arg)
+static aligned_t dequeuer(
+    qthread_t * me,
+    void *arg)
 {
     qdqueue_t *q = (qdqueue_t *) arg;
     size_t i;
@@ -52,8 +56,12 @@ static aligned_t dequeuer(qthread_t * me, void *arg)
     return 0;
 }
 
-static void loop_queuer(qthread_t * me, const size_t startat,
-			const size_t stopat, void *arg)
+static void loop_queuer(
+    qthread_t * me,
+    const size_t startat,
+    const size_t stopat,
+    const size_t step,
+    void *arg)
 {
     size_t i;
     qdqueue_t *q = (qdqueue_t *) arg;
@@ -68,8 +76,12 @@ static void loop_queuer(qthread_t * me, const size_t startat,
     }
 }
 
-static void loop_dequeuer(qthread_t * me, const size_t startat,
-			  const size_t stopat, void *arg)
+static void loop_dequeuer(
+    qthread_t * me,
+    const size_t startat,
+    const size_t stopat,
+    const size_t step,
+    void *arg)
 {
     size_t i;
     qdqueue_t *q = (qdqueue_t *) arg;
@@ -91,7 +103,9 @@ static void loop_dequeuer(qthread_t * me, const size_t startat,
     qpool_free(me, memory, ref);
 }
 
-int main(int argc, char *argv[])
+int main(
+    int argc,
+    char *argv[])
 {
     qdqueue_t *q;
     qthread_t *me;

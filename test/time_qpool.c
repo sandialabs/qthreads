@@ -23,8 +23,12 @@ size_t **allthat;
 void **ptr = NULL;
 pthread_mutex_t *ptr_lock;
 
-static void mutexpool_allocator(qthread_t * me, const size_t startat,
-				const size_t stopat, void *arg)
+static void mutexpool_allocator(
+    qthread_t * me,
+    const size_t startat,
+    const size_t stopat,
+    const size_t step,
+    void *arg)
 {
     size_t i;
     qthread_shepherd_id_t shep = qthread_shep(me);
@@ -43,8 +47,12 @@ static void mutexpool_allocator(qthread_t * me, const size_t startat,
     }
 }
 
-static void mutexpool_deallocator(qthread_t * me, const size_t startat,
-				  const size_t stopat, void *arg)
+static void mutexpool_deallocator(
+    qthread_t * me,
+    const size_t startat,
+    const size_t stopat,
+    const size_t step,
+    void *arg)
 {
     size_t i;
     qthread_shepherd_id_t shep = qthread_shep(me);
@@ -57,8 +65,12 @@ static void mutexpool_deallocator(qthread_t * me, const size_t startat,
     }
 }
 
-static void pool_allocator(qthread_t * me, const size_t startat,
-			   const size_t stopat, void *arg)
+static void pool_allocator(
+    qthread_t * me,
+    const size_t startat,
+    const size_t stopat,
+    const size_t step,
+    void *arg)
 {
     size_t i;
     qpool *p = (qpool *) arg;
@@ -72,8 +84,12 @@ static void pool_allocator(qthread_t * me, const size_t startat,
     }
 }
 
-static void pool_deallocator(qthread_t * me, const size_t startat,
-			     const size_t stopat, void *arg)
+static void pool_deallocator(
+    qthread_t * me,
+    const size_t startat,
+    const size_t stopat,
+    const size_t step,
+    void *arg)
 {
     size_t i;
     qpool *p = (qpool *) arg;
@@ -83,8 +99,12 @@ static void pool_deallocator(qthread_t * me, const size_t startat,
     }
 }
 
-static void malloc_allocator(qthread_t * me, const size_t startat,
-			     const size_t stopat, void *arg)
+static void malloc_allocator(
+    qthread_t * me,
+    const size_t startat,
+    const size_t stopat,
+    const size_t step,
+    void *arg)
 {
     size_t i;
 
@@ -97,8 +117,12 @@ static void malloc_allocator(qthread_t * me, const size_t startat,
     }
 }
 
-static void malloc_deallocator(qthread_t * me, const size_t startat,
-			       const size_t stopat, void *arg)
+static void malloc_deallocator(
+    qthread_t * me,
+    const size_t startat,
+    const size_t stopat,
+    const size_t step,
+    void *arg)
 {
     size_t i;
 
@@ -107,7 +131,9 @@ static void malloc_deallocator(qthread_t * me, const size_t startat,
     }
 }
 
-int main(int argc, char *argv[])
+int main(
+    int argc,
+    char *argv[])
 {
     size_t i;
     unsigned long iterations = 1000;
