@@ -23,6 +23,13 @@
 /* Allow functions to be inlined */
 #undef QINLINE
 
+/* Define if bitfields are in forward order */
+#undef BITFIELD_ORDER_FORWARD
+
+/* Define if bitfields are in reverse order */
+#undef BITFIELD_ORDER_REVERSE
+
+
 /* support ROSE extensions */
 #undef QTHREAD_USE_ROSE_EXTENSIONS
 
