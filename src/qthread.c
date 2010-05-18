@@ -4754,7 +4754,7 @@ int qthread_syncvar_readFF(
 	 * that state and do not need to do a locked atomic operation of any
 	 * kind (e.g. cas) */
 	syncvar_t local_copy_of_src = *src;
-	if (local_copy_of_src.u.s.lock == 0 && (local_copy_of_src.u.s.state & 2)) { /* full and unlocked */
+	if (local_copy_of_src.u.s.lock == 0 && (local_copy_of_src.u.s.state & 2) == 0) { /* full and unlocked */
 	    /* short-circuit */
 	    if (dest) {
 		*dest = local_copy_of_src.u.s.data;
