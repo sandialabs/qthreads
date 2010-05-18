@@ -138,6 +138,7 @@ qt_mpool qt_mpool_create_aligned(const int sync, size_t item_size,
     qassert_ret((pool != NULL), NULL);
     VALGRIND_CREATE_MEMPOOL(pool, 0, 0);
     pool->node = node;
+    assert(pool->lock == NULL);
     if (sync) {
 	pool->lock = (QTHREAD_FASTLOCK_TYPE *) malloc(sizeof(QTHREAD_FASTLOCK_TYPE));
 	qassert_goto((pool->lock != NULL), errexit);
