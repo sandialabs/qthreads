@@ -83,6 +83,9 @@ typedef struct qlib_s
     QTHREAD_FASTLOCK_TYPE *febs_stripes_locks;
 # endif
 #endif
+    /* this is for holding syncvar waiters... it's not striped because there
+     * isn't supposed to be much contention for this hash table */
+    qt_hash syncvars;
 }     *qlib_t;
 
 #ifndef QTHREAD_SST_PRIMITIVES
@@ -108,7 +111,6 @@ unsigned int qthread_internal_shep_to_node(const qthread_shepherd_id_t shep);
 # define qthread_shepherd_count() (qlib->nshepherds)
 #endif
 
-/*#define QTHREAD_DEBUG 1*/
 /* for debugging */
 #ifdef QTHREAD_DEBUG
 enum qthread_debug_levels
@@ -121,7 +123,15 @@ extern enum qthread_debug_levels debuglevel;
 
 extern QTHREAD_FASTLOCK_TYPE output_lock;
 
+#ifdef HAVE_GNU_VAMACROS
+#define qthread_debug(level, format, args...) qthread_debug_(level, "%s(%u): " format, __FUNCTION__, __LINE__, ##args)
+static QINLINE void qthread_debug_(int level, char *format, ...)
+#elif defined( HAVE_C99_VAMACROS )
+#define qthread_debug(level, format, ...) qthread_debug_(level, "%s(%u): " format, __FUNCTION__, __LINE__, __VA_ARGS__)
+static QINLINE void qthread_debug_(int level, char *format, ...)
+#else
 static QINLINE void qthread_debug(int level, char *format, ...)
+#endif
 {				       /*{{{ */
     va_list args;
 
