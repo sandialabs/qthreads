@@ -6,6 +6,7 @@
 AM_CXXFLAGS = @RESTRICT_CXXFLAGS@
 
 TESTS = test_basic \
+		test_basic_syncvar \
 		test_reinit \
 		test_cas \
 		test_cacheline \
@@ -39,10 +40,13 @@ if COMPILE_ROSE_EXTENSIONS
 TESTS += test_log_barrier
 endif
 
-if ENABLE_TIMER_PROGS
-EXTRA_PROGRAMS += time_swap time_producerconsumer time_increments \
+EXTRA_PROGRAMS += \
+	 time_swap \
+	 time_increments \
 	 time_qarray \
 	 time_qarray_sizes \
+	 time_producerconsumer \
+	 time_syncvar_producerconsumer \
 	 time_qpool \
 	 time_qlfqueue \
 	 time_qdqueue \
@@ -66,7 +70,6 @@ EXTRA_PROGRAMS += time_swap time_producerconsumer time_increments \
 	 time_cncthr_bench_pthread \
 	 time_gcd
 CLEANFILES += $(EXTRA_PROGRAMS)
-endif
 
 buildall: $(TESTS) $(EXTRA_PROGRAMS)
 .PHONY: buildall
@@ -172,6 +175,9 @@ endif
 
 time_producerconsumer_SOURCES = time_producerconsumer.c
 time_producerconsumer_DEPENDENCIES = $(QTHREADLIB)
+
+time_syncvar_producerconsumer_SOURCES = time_syncvar_producerconsumer.c
+time_syncvar_producerconsumer_DEPENDENCIES = $(QTHREADLIB)
 
 time_increments_SOURCES = time_increments.c
 time_increments_DEPENDENCIES = $(QTHREADLIB)
