@@ -11,6 +11,7 @@
 #else
 # include "osx_compat/taskimpl.h"
 #endif
+#include <limits.h>		       /* for INT_MAX */
 #include <qthread/qthread-int.h>       /* for UINT8_MAX */
 #include <string.h>		       /* for memset() */
 #if !HAVE_MEMCPY
