@@ -48,7 +48,6 @@ int main(int argc, char *argv[])
 
     x = 0;
     CHECK_VERBOSE();
-    verbose=1;
 
     iprintf("%i threads...\n", qthread_num_shepherds());
     iprintf("Initial value of x: %lu\n", (unsigned long)x);
