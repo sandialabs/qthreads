@@ -1,3 +1,7 @@
+dnl -*- Autoconf -*-
+dnl
+dnl Copyright (c)  2009 Sandia Corporation
+dnl
 dnl valloc'd memory cannot safely be freed on all operating systems. (Some
 dnl flavors of BSD are the troublemakers.) It's best to avoid using valloc in
 dnl favor of posix_memalign, memalign, or an aligned malloc as detected by
