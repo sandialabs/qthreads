@@ -4684,7 +4684,7 @@ static uint64_t qthread_mwaitc(
     return 0;
 }				       /*}}} */
 
-unsigned char qthread_syncvar_status(
+unsigned int qthread_syncvar_status(
     syncvar_t * const v)
 {				       /*{{{ */
     eflags_t e = { 0 };
@@ -4693,7 +4693,7 @@ unsigned char qthread_syncvar_status(
     assert(e.cf == 0);
     realret = v->u.s.state;
     v->u.s.lock = 0;		       // unlock it
-    return realret;
+    return (realret&0x2)?0:1;
 }				       /*}}} */
 
 /* state 0: full, no waiters

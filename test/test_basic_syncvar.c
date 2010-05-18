@@ -66,16 +66,17 @@ int main(int argc, char *argv[])
 	qthread_syncvar_readFF(qthread_self(), &t, &id);
 	assert(t == 1);
     }
-    iprintf("x's status is: %u (want 0; full nowait)\n", qthread_syncvar_status(&x));
+    iprintf("x's status is: %u (want 1; full nowait)\n", qthread_syncvar_status(&x));
+    assert(qthread_syncvar_status(&x) == 1);
     qthread_syncvar_readFE(qthread_self(), NULL, &x);
-    iprintf("x's status became: %u (want 2; empty nowait)\n", qthread_syncvar_status(&x));
-    assert(qthread_syncvar_status(&x) == 2);
+    iprintf("x's status became: %u (want 0; empty nowait)\n", qthread_syncvar_status(&x));
+    assert(qthread_syncvar_status(&x) == 0);
     qthread_fork(consumer, NULL, NULL);
     qthread_fork(producer, NULL, &t);
     qthread_readFF(qthread_self(), NULL, &t);
     iprintf("blocking on x (current status: %u)\n", qthread_syncvar_status(&x));
     qthread_syncvar_readFF(qthread_self(), &x_value, &x);
-    assert(qthread_syncvar_status(&x) == 0);
+    assert(qthread_syncvar_status(&x) == 1);
 
 
     if (x_value == 55) {
