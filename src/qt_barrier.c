@@ -57,7 +57,7 @@ qt_barrier_t *qt_barrier_create(int size, qt_barrier_btype type, int debug)
 {				       /*{{{ */
     qt_barrier_t *b = calloc(1, sizeof(qt_barrier_t));
 
-    qthread_debug(ALL_CALLS, "qt_barrier_create(%i, %i, %i): begin\n", size,
+    qthread_debug(ALL_CALLS, "size(%i), type(%i), debug(%i): begin\n", size,
 		  (int)type, debug);
     assert(b);
     if (b) {
@@ -91,12 +91,11 @@ static void qtb_internal_initialize_fixed(qt_barrier_t * b, size_t size,
     b->activeSize = size;
     b->barrierDebug = (char)debug;
 
-    if (size <= 1) {
+    if (size < 1) {
 	return;
     }
 
     // compute size of barrier arrays
-    temp = temp - 1;
     temp >>= 1;
     while (temp) {
 	temp >>= 1;
@@ -243,7 +242,7 @@ void qt_barrier_enter(qt_barrier_t * b, qthread_shepherd_id_t shep)
     // only dealing with (1) for first pass for now
     int64_t val = b->upLock[shep] + 1;
 
-    if (b->activeSize <= 1)
+    if (b->activeSize < 1)
 	return;
     qtb_internal_up(b, shep, val, 0);
 }				       /*}}} */
