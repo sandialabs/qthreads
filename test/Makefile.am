@@ -43,6 +43,7 @@ endif
 EXTRA_PROGRAMS += \
 	 time_swap \
 	 time_increments \
+	 time_febs \
 	 time_qarray \
 	 time_qarray_sizes \
 	 time_producerconsumer \
@@ -181,6 +182,9 @@ time_syncvar_producerconsumer_DEPENDENCIES = $(QTHREADLIB)
 
 time_increments_SOURCES = time_increments.c
 time_increments_DEPENDENCIES = $(QTHREADLIB)
+
+time_febs_SOURCES = time_febs.c
+time_febs_DEPENDENCIES = $(QTHREADLIB)
 
 time_qarray_SOURCES = time_qarray.c
 time_qarray_DEPENDENCIES = $(QTHREADLIB)
