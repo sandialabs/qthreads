@@ -83,8 +83,7 @@ AC_PROG_LIBTOOL
 
 AC_CACHE_SAVE
 
-dnl Logic for dealing with this argument in compiler characteristics section, as it
-dnl somewhat depends on assembly behavior
+dnl check arguments, save values for later
 AC_ARG_ENABLE([hardware-increments],
   [AS_HELP_STRING([--disable-hardware-increments],
      [use mutexes to do the internal increments; compatible with more compilers, but slow.])])
@@ -238,6 +237,7 @@ QTHREAD_CHECK_SST([qthread_implementation="sst"], [qthread_implementation="unix"
 AS_IF([test "x$enable_hardware_increments" != xno],
 	  [QTHREAD_CHECK_ATOMICS])
 QTHREAD_BUILTIN_EXPECT
+QTHREAD_VAMACROS
 
 ## -------------------- ##
 ## Checks for libraries ##
