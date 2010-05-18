@@ -4689,6 +4689,23 @@ unsigned int qthread_syncvar_status(
 {				       /*{{{ */
     eflags_t e = { 0 };
     unsigned char realret;
+#if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || \
+     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) || \
+     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || \
+     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64))
+    {
+	/* I'm being optimistic here; this only works if a basic 64-bit load is
+	 * atomic (on most platforms it is). Thus, if I've done an atomic read
+	 * and the syncvar is unlocked, then I figure I can trust
+	 * that state and do not need to do a locked atomic operation of any
+	 * kind (e.g. cas) */
+	syncvar_t local_copy_of_v = *v;
+	if (local_copy_of_v.u.s.lock == 0) {
+	    /* short-circuit */
+	    return (local_copy_of_v.u.s.state & 0x2)?0:1;
+	}
+    }
+#endif
     (void)qthread_mwaitc(v, 0xff, INT_MAX, &e);
     assert(e.cf == 0);
     realret = v->u.s.state;
@@ -4725,6 +4742,26 @@ int qthread_syncvar_readFF(
 
     qthread_debug(LOCK_BEHAVIOR, "me(%p), dest(%p), src(%p) = 0x%lx\n", me,
 		  dest, src, (unsigned long)src->u.w);
+#if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || \
+     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) || \
+     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || \
+     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64))
+    {
+	/* I'm being optimistic here; this only works if a basic 64-bit load is
+	 * atomic (on most platforms it is). Thus, if I've done an atomic read
+	 * and the syncvar is both unlocked and full, then I figure I can trust
+	 * that state and do not need to do a locked atomic operation of any
+	 * kind (e.g. cas) */
+	syncvar_t local_copy_of_src = *src;
+	if (local_copy_of_src.u.s.lock == 0 && (local_copy_of_src.u.s.state & 2)) { /* full and unlocked */
+	    /* short-circuit */
+	    if (dest) {
+		*dest = local_copy_of_src.u.s.data;
+	    }
+	    return QTHREAD_SUCCESS;
+	}
+    }
+#endif
     ret = qthread_mwaitc(src, SYNCFEB_FULL, INITIAL_TIMEOUT, &e);
     qthread_debug(LOCK_DETAILS, "2 src(%p) = 0x%lx\n", src,
 		  (unsigned long)src->u.w);
