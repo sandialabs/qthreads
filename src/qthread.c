@@ -4678,7 +4678,7 @@ static uint64_t qthread_mwaitc(volatile syncvar_t * const restrict addr,
 	    unlocked.u.s.lock = 0;
 	    qthread_cas((uint64_t *) addr, locked.u.w, unlocked.u.w);
 	}
-    } while (timeout > 0);
+    } while (timeout-- > 0);
   errexit:
     *err = e;
     return 0;
