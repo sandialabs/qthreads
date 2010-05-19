@@ -4636,11 +4636,10 @@ uint64_t qthread_cas64_(volatile uint64_t * operand, const uint64_t oldval,
 #endif
 
 #define BUILD_UNLOCKED_SYNCVAR(data,state) (((data)<<4)|((state)<<1))
-static uint64_t qthread_mwaitc(
-    volatile syncvar_t * const restrict addr,
-    unsigned char const statemask,
-    unsigned int timeout,
-    eflags_t * const restrict err)
+static uint64_t qthread_mwaitc(volatile syncvar_t * const restrict addr,
+			       unsigned char const statemask,
+			       unsigned int timeout,
+			       eflags_t * const restrict err)
 {				       /*{{{ */
     syncvar_t unlocked;
     syncvar_t locked;
@@ -4685,8 +4684,7 @@ static uint64_t qthread_mwaitc(
     return 0;
 }				       /*}}} */
 
-unsigned int qthread_syncvar_status(
-    syncvar_t * const v)
+unsigned int qthread_syncvar_status(syncvar_t * const v)
 {				       /*{{{ */
     eflags_t e = { 0 };
     unsigned char realret;
@@ -4703,7 +4701,7 @@ unsigned int qthread_syncvar_status(
 	syncvar_t local_copy_of_v = *v;
 	if (local_copy_of_v.u.s.lock == 0) {
 	    /* short-circuit */
-	    return (local_copy_of_v.u.s.state & 0x2)?0:1;
+	    return (local_copy_of_v.u.s.state & 0x2) ? 0 : 1;
 	}
     }
 #endif
@@ -4711,7 +4709,7 @@ unsigned int qthread_syncvar_status(
     assert(e.cf == 0);
     realret = v->u.s.state;
     v->u.s.lock = 0;		       // unlock it
-    return (realret&0x2)?0:1;
+    return (realret & 0x2) ? 0 : 1;
 }				       /*}}} */
 
 /* state 0: full, no waiters
@@ -4731,10 +4729,9 @@ unsigned int qthread_syncvar_status(
 #define SYNCFEB_ANY           0xf /* 0xx */
 #define INITIAL_TIMEOUT 1000
 
-int qthread_syncvar_readFF(
-    qthread_t * restrict const me,
-    uint64_t * restrict const dest,
-    syncvar_t * restrict const src)
+int qthread_syncvar_readFF(qthread_t * restrict const me,
+			   uint64_t * restrict const dest,
+			   syncvar_t * restrict const src)
 {				       /*{{{ */
     eflags_t e = { 0 };
     uint64_t ret;
@@ -4754,7 +4751,7 @@ int qthread_syncvar_readFF(
 	 * that state and do not need to do a locked atomic operation of any
 	 * kind (e.g. cas) */
 	syncvar_t local_copy_of_src = *src;
-	if (local_copy_of_src.u.s.lock == 0 && (local_copy_of_src.u.s.state & 2) == 0) { /* full and unlocked */
+	if (local_copy_of_src.u.s.lock == 0 && (local_copy_of_src.u.s.state & 2) == 0) {	/* full and unlocked */
 	    /* short-circuit */
 	    if (dest) {
 		*dest = local_copy_of_src.u.s.data;
@@ -4793,7 +4790,7 @@ int qthread_syncvar_readFF(
 	qt_hash_unlock(qlib->syncvars);
 	X = ALLOC_ADDRRES(me->shepherd_ptr);
 	assert(X);
-	X->addr = dest;
+	X->addr = (aligned_t *) dest;
 	X->waiter = me;
 	X->next = m->FFQ;
 	m->FFQ = X;
@@ -4816,9 +4813,8 @@ int qthread_syncvar_readFF(
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-int qthread_syncvar_fill(
-    qthread_t * restrict const me,
-    syncvar_t * restrict const addr)
+int qthread_syncvar_fill(qthread_t * restrict const me,
+			 syncvar_t * restrict const addr)
 {				       /*{{{ */
     eflags_t e = { 0 };
     uint64_t ret;
@@ -4863,9 +4859,8 @@ int qthread_syncvar_fill(
 
 }				       /*}}} */
 
-int qthread_syncvar_empty(
-    qthread_t * restrict const me,
-    syncvar_t * restrict const addr)
+int qthread_syncvar_empty(qthread_t * restrict const me,
+			  syncvar_t * restrict const addr)
 {				       /*{{{ */
     eflags_t e = { 0 };
     uint64_t ret;
@@ -4902,8 +4897,9 @@ int qthread_syncvar_empty(
 	qthread_syncvar_gotlock_empty(me->shepherd_ptr, m, addr, ret);
 	qthread_debug(LOCK_DETAILS, "empty(%p) => 0x%lx\n", addr,
 		      (unsigned long)BUILD_UNLOCKED_SYNCVAR(ret,
-							    (e.pf << 1) | e.
-							    sf));
+							    (e.
+							     pf << 1) |
+							    e.sf));
     } else {
 	assert(e.sf == 0);	       /* no waiters */
 	assert(addr->u.s.state == 2);
@@ -4913,10 +4909,9 @@ int qthread_syncvar_empty(
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-int qthread_syncvar_readFE(
-    qthread_t * restrict const me,
-    uint64_t * restrict const dest,
-    syncvar_t * restrict const src)
+int qthread_syncvar_readFE(qthread_t * restrict const me,
+			   uint64_t * restrict const dest,
+			   syncvar_t * restrict const src)
 {				       /*{{{ */
     eflags_t e = { 0 };
     uint64_t ret;
@@ -4924,8 +4919,8 @@ int qthread_syncvar_readFE(
     assert(me);
     assert(src);
 
-    qthread_debug(LOCK_BEHAVIOR, "me(%p), dest(%p), src(%p) = 0x%lx\n", me, dest, src,
-		  (unsigned long)src->u.w);
+    qthread_debug(LOCK_BEHAVIOR, "me(%p), dest(%p), src(%p) = 0x%lx\n", me,
+		  dest, src, (unsigned long)src->u.w);
     ret = qthread_mwaitc(src, SYNCFEB_FULL, INITIAL_TIMEOUT, &e);
     qthread_debug(LOCK_DETAILS, "2 src(%p) = 0x%lx\n", src,
 		  (unsigned long)src->u.w);
@@ -4956,7 +4951,7 @@ int qthread_syncvar_readFE(
 	qt_hash_unlock(qlib->syncvars);
 	X = ALLOC_ADDRRES(me->shepherd_ptr);
 	assert(X);
-	X->addr = &ret;
+	X->addr = (aligned_t *) & ret;
 	X->waiter = me;
 	X->next = m->FEQ;
 	m->FEQ = X;
@@ -5002,11 +4997,10 @@ int qthread_syncvar_readFE(
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-static QINLINE void qthread_syncvar_gotlock_empty(
-    qthread_shepherd_t * shep,
-    qthread_addrstat_t * m,
-    syncvar_t * maddr,
-    const uint64_t ret)
+static QINLINE void qthread_syncvar_gotlock_empty(qthread_shepherd_t * shep,
+						  qthread_addrstat_t * m,
+						  syncvar_t * maddr,
+						  const uint64_t ret)
 {				       /*{{{ */
     qthread_addrres_t *X = NULL;
     int removeable;
@@ -5061,11 +5055,10 @@ static QINLINE void qthread_syncvar_gotlock_empty(
     }
 }				       /*}}} */
 
-static QINLINE void qthread_syncvar_gotlock_fill(
-    qthread_shepherd_t * shep,
-    qthread_addrstat_t * m,
-    syncvar_t * maddr,
-    const uint64_t ret)
+static QINLINE void qthread_syncvar_gotlock_fill(qthread_shepherd_t * shep,
+						 qthread_addrstat_t * m,
+						 syncvar_t * maddr,
+						 const uint64_t ret)
 {				       /*{{{ */
     qthread_addrres_t *X = NULL;
     int removeable;
@@ -5136,19 +5129,17 @@ static QINLINE void qthread_syncvar_gotlock_fill(
     }
 }				       /*}}} */
 
-int qthread_syncvar_writeF(
-    qthread_t * restrict const me,
-    syncvar_t * restrict const dest,
-    const uint64_t * restrict const src)
+int qthread_syncvar_writeF(qthread_t * restrict const me,
+			   syncvar_t * restrict const dest,
+			   const uint64_t * restrict const src)
 {				       /*{{{ */
     eflags_t e = { 0 };
     uint64_t ret = *src;
 
     assert((*src >> 60) == 0);
 
-    qthread_debug(LOCK_BEHAVIOR,
-		  "me(%p), dest(%p) = %x, src(%p) = %x\n", me, dest,
-		  (unsigned long)dest->u.w, src, *src);
+    qthread_debug(LOCK_BEHAVIOR, "me(%p), dest(%p) = %x, src(%p) = %x\n", me,
+		  dest, (unsigned long)dest->u.w, src, *src);
     qthread_mwaitc(dest, SYNCFEB_ANY, INT_MAX, &e);
     assert(e.cf == 0);		       // there had better not have been a timeout */
     if (e.pf == 1 && e.sf == 1) {      /* there are waiters to release */
@@ -5180,18 +5171,16 @@ int qthread_syncvar_writeF(
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-int qthread_syncvar_writeF_const(
-    qthread_t * restrict const me,
-    syncvar_t * restrict const dest,
-    const uint64_t src)
+int qthread_syncvar_writeF_const(qthread_t * restrict const me,
+				 syncvar_t * restrict const dest,
+				 const uint64_t src)
 {				       /*{{{ */
     return qthread_syncvar_writeF(me, dest, &src);
 }				       /*}}} */
 
-int qthread_syncvar_writeEF(
-    qthread_t * restrict const me,
-    syncvar_t * restrict const dest,
-    const uint64_t * restrict const src)
+int qthread_syncvar_writeEF(qthread_t * restrict const me,
+			    syncvar_t * restrict const dest,
+			    const uint64_t * restrict const src)
 {				       /*{{{ */
     eflags_t e = { 0 };
     uint64_t ret;
@@ -5228,7 +5217,7 @@ int qthread_syncvar_writeEF(
 	qt_hash_unlock(qlib->syncvars);
 	X = ALLOC_ADDRRES(me->shepherd_ptr);
 	assert(X);
-	X->addr = &ret;
+	X->addr = (aligned_t *) & ret;
 	X->waiter = me;
 	X->next = m->EFQ;
 	m->EFQ = X;
@@ -5276,10 +5265,9 @@ int qthread_syncvar_writeEF(
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-int qthread_syncvar_writeEF_const(
-    qthread_t * restrict const me,
-    syncvar_t * restrict const dest,
-    const uint64_t src)
+int qthread_syncvar_writeEF_const(qthread_t * restrict const me,
+				  syncvar_t * restrict const dest,
+				  const uint64_t src)
 {				       /*{{{ */
     return qthread_syncvar_writeEF(me, dest, &src);
 }				       /*}}} */
