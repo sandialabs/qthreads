@@ -4687,7 +4687,7 @@ static uint64_t qthread_mwaitc(volatile syncvar_t * const restrict addr,
 unsigned int qthread_syncvar_status(syncvar_t * const v)
 {				       /*{{{ */
     eflags_t e = { 0 };
-    unsigned char realret;
+    unsigned int realret;
 #if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || \
      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) || \
      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || \
