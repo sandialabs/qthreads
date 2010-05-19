@@ -4668,9 +4668,9 @@ static uint64_t qthread_mwaitc(volatile syncvar_t * const restrict addr,
 	/* now locked == unlocked, and the lock bit is set */
 	if (statemask & (1 << locked.u.s.state)) {
 	    e.cf = 0;
-	    e.sf = locked.u.s.state & 1;
-	    e.pf = (locked.u.s.state >> 1) & 1;
-	    e.of = (locked.u.s.state >> 2) & 1;
+	    e.sf = (unsigned char)(locked.u.s.state & 1);
+	    e.pf = (unsigned char)((locked.u.s.state >> 1) & 1);
+	    e.of = (unsigned char)((locked.u.s.state >> 2) & 1);
 	    *err = e;
 	    return locked.u.s.data;
 	} else {
