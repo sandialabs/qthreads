@@ -58,7 +58,9 @@ int main(int argc, char *argv[])
     qthread_init(1);
     CHECK_VERBOSE();
     me = qthread_self();
+    iprintf("Alive! Checking my id (expecting ID 0)\n");
     my_id = qthread_id(me);
+    iprintf("My id is %i\n", my_id);
     if (my_id != 0)
 	fprintf(stderr, "my_id == %i (expected 0)\n", my_id);
     assert(my_id == 0);
