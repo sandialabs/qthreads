@@ -41,8 +41,8 @@ static aligned_t producer(qthread_t * t, void *arg)
     me++;
     qthread_syncvar_writeEF(t, &id, &me);
 
-    iprintf("producer(%p) x's status is: %u (expect empty)\n", t,
-	    qthread_syncvar_status(&x));
+    iprintf("producer(%p) x's status is: %s (expect empty)\n", t,
+	    qthread_syncvar_status(&x)?"full":"empty");
     iprintf("producer(%p) filling x(%p)\n", t, &x);
     qthread_syncvar_writeEF(t, &x, &res);
 
@@ -68,18 +68,18 @@ int main(int argc, char *argv[])
 	qthread_syncvar_readFF(qthread_self(), &tmp, &id);
 	assert(tmp == 1);
     }
-    iprintf("x's status is: %u (want 1; full nowait)\n",
-	    qthread_syncvar_status(&x));
+    iprintf("x's status is: %s (want full (and nowait))\n",
+	    qthread_syncvar_status(&x)?"full":"empty");
     assert(qthread_syncvar_status(&x) == 1);
     qthread_syncvar_readFE(qthread_self(), NULL, &x);
-    iprintf("x's status became: %u (want 0; empty nowait)\n",
-	    qthread_syncvar_status(&x));
+    iprintf("x's status became: %s (want empty (and nowait))\n",
+	    qthread_syncvar_status(&x)?"full":"empty");
     assert(qthread_syncvar_status(&x) == 0);
     qthread_fork(consumer, NULL, NULL);
     qthread_fork(producer, NULL, &t);
     qthread_readFF(qthread_self(), NULL, &t);
-    iprintf("blocking on x (current status: %u)\n",
-	    qthread_syncvar_status(&x));
+    iprintf("shouldn't be blocking on x (current status: %s)\n",
+	    qthread_syncvar_status(&x)?"full":"empty");
     qthread_syncvar_readFF(qthread_self(), &x_value, &x);
     assert(qthread_syncvar_status(&x) == 1);
 
