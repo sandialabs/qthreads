@@ -106,6 +106,7 @@ enum threadstate {
 /* flags (must be different bits) */
 #define QTHREAD_FUTURE                  1
 #define QTHREAD_REAL_MCCOY		2
+#define QTHREAD_RET_IS_SYNCVAR          4
 
 #ifndef QTHREAD_NOALIGNCHECK
 #define QALIGN(d, s, f) do { \
@@ -3291,7 +3292,11 @@ static void qthread_wrapper(void *ptr)
 #endif
     if (t->ret) {
 	/* XXX: if this fails, we should probably do something */
-	qthread_writeEF_const(t, t->ret, (t->f) (t, t->arg));
+	if (t->flags & QTHREAD_RET_IS_SYNCVAR) {
+	    qassert(qthread_syncvar_writeEF_const(t, (syncvar_t*)t->ret, (t->f) (t, t->arg)), QTHREAD_SUCCESS);
+	} else {
+	    qassert(qthread_writeEF_const(t, t->ret, (t->f) (t, t->arg)), QTHREAD_SUCCESS);
+	}
     } else {
 	(t->f) (t, t->arg);
     }
@@ -3463,6 +3468,58 @@ int qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
     return QTHREAD_MALLOC_ERROR;
 }				       /*}}} */
 
+int qthread_fork_syncvar(const qthread_f f, const void *arg, syncvar_t * ret)
+{				       /*{{{ */
+    qthread_t *t;
+    qthread_shepherd_id_t shep;
+    qthread_shepherd_t *myshep =
+	(qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
+
+    qthread_debug(THREAD_BEHAVIOR, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
+    assert(qlib);
+    assert(myshep);
+    if (myshep) {		       /* note: for forking from a qthread, NO LOCKS! */
+	int loopctr = 0;
+
+	do {
+	    shep = (qthread_shepherd_id_t) (myshep->sched_shepherd++);
+	    if (myshep->sched_shepherd == qlib->nshepherds) {
+		myshep->sched_shepherd = 0;
+	    }
+	    loopctr++;
+	} while (QTHREAD_CASLOCK_READ_UI(qlib->shepherds[shep].active) != 1 &&
+		 loopctr <= qlib->nshepherds);
+	if (loopctr > qlib->nshepherds) {
+	    qthread_debug(THREAD_BEHAVIOR, "could not find an active shepherd\n");
+	    return QTHREAD_NOT_ALLOWED;
+	}
+    } else {
+	shep = (qthread_shepherd_id_t)
+	    qthread_internal_incr_mod(&qlib->sched_shepherd, qlib->nshepherds,
+				      &qlib->sched_shepherd_lock);
+	assert(shep < qlib->nshepherds);
+    }
+    t = qthread_thread_new(f, arg, (aligned_t*)ret, shep);
+    if (t) {
+	qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n",
+		      t->thread_id, shep);
+
+	if (ret) {
+	    t->flags |= QTHREAD_RET_IS_SYNCVAR;
+	    int test = qthread_syncvar_empty(qthread_self(), ret);
+
+	    if (test != QTHREAD_SUCCESS) {
+		qthread_thread_free(t);
+		return test;
+	    }
+	}
+	qt_threadqueue_enqueue(qlib->shepherds[shep].ready, t, myshep);
+	return QTHREAD_SUCCESS;
+    }
+    qthread_debug(THREAD_BEHAVIOR, "malloc error\n");
+    return QTHREAD_MALLOC_ERROR;
+}				       /*}}} */
+
 int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
 		    const qthread_shepherd_id_t shepherd)
 {				       /*{{{ */
@@ -3484,6 +3541,46 @@ int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
 
 	if (ret) {
 	    int test = qthread_empty(qthread_self(), ret);
+
+	    if (test != QTHREAD_SUCCESS) {
+		qthread_thread_free(t);
+		return test;
+	    }
+	}
+	if (QTHREAD_CASLOCK_READ_UI(shep->active) == 0) {
+	    shep = qthread_find_active_shepherd(shep->sorted_sheplist, shep->shep_dists);
+	}
+	t->shepherd_ptr = shep;
+	qt_threadqueue_enqueue(shep->ready, t,
+			   (qthread_shepherd_t *)
+			   pthread_getspecific(shepherd_structs));
+	return QTHREAD_SUCCESS;
+    }
+    return QTHREAD_MALLOC_ERROR;
+}				       /*}}} */
+
+int qthread_fork_syncvar_to(const qthread_f f, const void *arg, syncvar_t * ret,
+		    const qthread_shepherd_id_t shepherd)
+{				       /*{{{ */
+    qthread_t *t;
+
+    assert(shepherd < qlib->nshepherds);
+    assert(f != NULL);
+    if (shepherd >= qlib->nshepherds || f == NULL) {
+	return QTHREAD_BADARGS;
+    }
+    t = qthread_thread_new(f, arg, (aligned_t*)ret, shepherd);
+    assert(t);
+    if (t) {
+	t->target_shepherd = &(qlib->shepherds[shepherd]);
+	qthread_shepherd_t *shep = &(qlib->shepherds[shepherd]);
+	qthread_debug(THREAD_BEHAVIOR,
+		      "new-tid %u shep %u\n", t->thread_id,
+		      shepherd);
+
+	if (ret) {
+	    t->flags |= QTHREAD_RET_IS_SYNCVAR;
+	    int test = qthread_syncvar_empty(qthread_self(), ret);
 
 	    if (test != QTHREAD_SUCCESS) {
 		qthread_thread_free(t);
@@ -4946,11 +5043,14 @@ int qthread_syncvar_empty(qthread_t * restrict const me,
 							    e.sf));
     } else {
 	assert(e.sf == 0);	       /* no waiters */
-	assert(addr->u.s.state == 2);
 #ifdef __tile__
 	addr->u.w = BUILD_UNLOCKED_SYNCVAR(ret, 2);
 #else
-	addr->u.s.lock = 0;
+	if (e.pf != 1) {
+	    addr->u.w = BUILD_UNLOCKED_SYNCVAR(ret, 2);
+	} else {
+	    addr->u.s.lock = 0;
+	}
 #endif
     }
     return QTHREAD_SUCCESS;
