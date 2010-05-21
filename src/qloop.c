@@ -213,14 +213,14 @@ static QINLINE void qt_loopaccum_balance_inner(
     void *restrict argptr,
     const qt_accum_f acc,
     const int future)
-{
+{				       /*{{{ */
     qthread_shepherd_id_t i;
     struct qloopaccum_wrapper_args *const qwa =
 	(struct qloopaccum_wrapper_args *)
 	malloc(sizeof(struct qloopaccum_wrapper_args) *
 	       qthread_num_shepherds());
-    aligned_t *const rets =
-	(aligned_t *) malloc(sizeof(aligned_t) * qthread_num_shepherds());
+    syncvar_t *const rets =
+	(syncvar_t *) calloc(qthread_num_shepherds(), sizeof(syncvar_t));
     char *realrets = NULL;
     const size_t each = (stop - start) / qthread_num_shepherds();
     size_t extra = (stop - start) - (each * qthread_num_shepherds());
@@ -251,17 +251,13 @@ static QINLINE void qt_loopaccum_balance_inner(
 	    extra--;
 	}
 	iterend = qwa[i].stopat;
-	if (future) {
-	    future_fork_to((qthread_f) qloopaccum_wrapper, qwa + i, rets + i,
-			   i);
-	} else {
-	    qassert(qthread_fork_to
-		    ((qthread_f) qloopaccum_wrapper, qwa + i, rets + i, i),
-		    QTHREAD_SUCCESS);
-	}
+	assert(!future);
+	qassert(qthread_fork_syncvar_to
+		((qthread_f) qloopaccum_wrapper, qwa + i, rets + i, i),
+		QTHREAD_SUCCESS);
     }
     for (i = 0; i < qthread_num_shepherds(); i++) {
-	qthread_readFF(me, NULL, rets + i);
+	qthread_syncvar_readFF(me, NULL, rets + i);
 	if (i > 0) {
 	    acc(out, realrets + ((i - 1) * size));
 	}
@@ -271,7 +267,7 @@ static QINLINE void qt_loopaccum_balance_inner(
 	free(realrets);
     }
     free(qwa);
-}
+}				       /*}}} */
 
 void qt_loopaccum_balance(
     const size_t start,
@@ -281,9 +277,9 @@ void qt_loopaccum_balance(
     const qt_loopr_f func,
     void *restrict argptr,
     const qt_accum_f acc)
-{
+{				       /*{{{ */
     qt_loopaccum_balance_inner(start, stop, size, out, func, argptr, acc, 0);
-}
+}				       /*}}} */
 
 void qt_loopaccum_balance_future(
     const size_t start,
@@ -293,9 +289,9 @@ void qt_loopaccum_balance_future(
     const qt_loopr_f func,
     void *restrict argptr,
     const qt_accum_f acc)
-{
+{				       /*{{{ */
     qt_loopaccum_balance_inner(start, stop, size, out, func, argptr, acc, 1);
-}
+}				       /*}}} */
 
 /* Now, the easy option for qt_loop_balance() is... effective, but has a major
  * drawback: if some iterations take longer than others, we will have a laggard
