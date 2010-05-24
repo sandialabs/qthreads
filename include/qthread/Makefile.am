@@ -7,6 +7,7 @@ qthreaddir = $(includedir)/qthread
 dist_qthread_HEADERS = \
 	qthread.h \
 	qthread.hpp \
+	syncvar.hpp \
 	allpairs.h \
 	wavefront.h \
 	cacheline.h \
