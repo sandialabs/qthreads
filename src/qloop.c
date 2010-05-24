@@ -29,15 +29,15 @@ struct qloop_wrapper_args {
     size_t startat, stopat, step;
     void *arg;
     volatile aligned_t *donecount;
-    aligned_t ret;
+    syncvar_t ret;
 };
 
 static aligned_t qloop_wrapper(
-    qthread_t * me,
-    const struct qloop_wrapper_args *arg)
+    qthread_t * const restrict me,
+    struct qloop_wrapper_args * const restrict arg)
 {				       /*{{{ */
     arg->func(me, arg->startat, arg->stopat, arg->step, arg->arg);
-    qthread_fill(me, &(arg->ret));
+    qthread_syncvar_fill(me, &(arg->ret));
     qthread_incr(arg->donecount, 1);
     return 0;
 }				       /*}}} */
@@ -69,9 +69,8 @@ static void qt_loop_inner(
 	qwa[threadct].startat = i;
 	qwa[threadct].stopat = i + 1;
 	qwa[threadct].arg = argptr;
-	qwa[threadct].ret = 0;
 	qwa[threadct].donecount = &donecount;
-	qthread_empty(me, &(qwa[threadct].ret));
+	qthread_syncvar_empty(me, &(qwa[threadct].ret));
 	if (future) {
 	    future_fork_to((qthread_f) qloop_wrapper, qwa + threadct,
 			   NULL,
@@ -88,7 +87,7 @@ static void qt_loop_inner(
 	threadct++;
     }
     for (i = 0; _(donecount) < steps; i++) {
-	qthread_readFF(me, NULL, &(qwa[i].ret));
+	qthread_syncvar_readFF(me, NULL, &(qwa[i].ret));
     }
     free(qwa);
 }				       /*}}} */
@@ -151,6 +150,7 @@ static QINLINE void qt_loop_balance_inner(
 	qwa[i].startat = iterend;
 	qwa[i].stopat = iterend + each;
 	qwa[i].donecount = &donecount;
+	qthread_syncvar_empty(me, &(qwa[i].ret));
 	if (extra > 0) {
 	    qwa[i].stopat++;
 	    extra--;
@@ -164,9 +164,8 @@ static QINLINE void qt_loop_balance_inner(
 		    QTHREAD_SUCCESS);
 	}
     }
-    /* turning this into a spinlock :P */
-    while (_(donecount) < maxsheps) {
-	qthread_yield(me);
+    for (i = 0; _(donecount) < maxsheps; i++) {
+	qthread_syncvar_readFF(me, NULL, &(qwa[i].ret));
     }
     free(qwa);
 }				       /*}}} */
@@ -695,7 +694,7 @@ void qt_loop_queue_run(
 			    i);
 	}
 	/* turning this into a spinlock :P
-	 * I *would* do qthread_readFF, except shepherds can join and leave
+	 * I *would* do readFF, except shepherds can join and leave
 	 * during the loop */
 	while (_(*dc) < _(*as)) {
 	    qthread_yield(me);
@@ -719,7 +718,9 @@ void qt_loop_queue_run_there(
 
 	qthread_fork_to((qthread_f) qqloop_wrapper, loop->qwa + shep, NULL,
 			shep);
-	/* turning this into a spinlock :P */
+	/* turning this into a spinlock :P
+	 * I *would* do readFF, except shepherds can join and leave
+	 * during the loop */
 	while (_(*dc) < _(*as)) {
 	    qthread_yield(me);
 	}
@@ -949,11 +950,11 @@ static struct qt_qsort_iprets qt_qsort_inner_partitioner(
     /* non-consts */
     size_t megachunks = length / (chunksize * numthreads);
     struct qt_qsort_iprets retval = { ((aligned_t) - 1), 0 };
-    aligned_t *rets;
+    syncvar_t *rets;
     struct qt_qsort_args *args;
     size_t i;
 
-    rets = (aligned_t *) malloc(sizeof(aligned_t) * numthreads);
+    rets = (syncvar_t *) calloc(numthreads, sizeof(syncvar_t));
     args =
 	(struct qt_qsort_args *)malloc(sizeof(struct qt_qsort_args) *
 				       numthreads);
@@ -977,10 +978,10 @@ static struct qt_qsort_iprets qt_qsort_inner_partitioner(
 	}
 	/* qt_qsort_partition(me, args+i); */
 	/* future_fork((qthread_f)qt_qsort_partition, args+i, rets+i); */
-	qthread_fork((qthread_f) qt_qsort_partition, args + i, rets + i);
+	qthread_fork_syncvar((qthread_f) qt_qsort_partition, args + i, rets + i);
     }
     for (i = 0; i < numthreads; i++) {
-	qthread_readFF(me, NULL, rets + i);
+	qthread_syncvar_readFF(me, NULL, rets + i);
     }
     free(args);
     free(rets);
@@ -1059,30 +1060,24 @@ static aligned_t qt_qsort_inner(
 	    /* now, spawn the next two iterations */
 	    {
 		struct qt_qsort_iargs na[2];
-		aligned_t rets[2] = { 1, 1 };
+		syncvar_t rets[2] = { SYNCVAR_STATIC_INITIALIZER, SYNCVAR_STATIC_INITIALIZER };
 		na[0].array = array;
 		na[0].length = rightwall;
 		na[1].array = array + rightwall;
 		na[1].length = len - rightwall;
 		if (na[0].length > 0) {
-		    rets[0] = 0;
 		    /* future_fork((qthread_f)qt_qsort_inner, na, rets); */
 		    /* qt_qsort_inner(me, na); */
-		    qthread_fork((qthread_f) qt_qsort_inner, na, rets);
+		    qthread_fork_syncvar((qthread_f) qt_qsort_inner, na, rets);
 		}
 		if (na[1].length > 0 && len > rightwall) {
-		    rets[1] = 0;
 		    /* future_fork((qthread_f)qt_qsort_inner, na+1, rets+1); */
 		    /* qt_qsort_inner(me, na+1); */
-		    qthread_fork((qthread_f) qt_qsort_inner, na + 1,
+		    qthread_fork_syncvar((qthread_f) qt_qsort_inner, na + 1,
 				 rets + 1);
 		}
-		if (rets[0] == 0) {
-		    qthread_readFF(me, NULL, rets);
-		}
-		if (rets[1] == 0) {
-		    qthread_readFF(me, NULL, rets + 1);
-		}
+		qthread_syncvar_readFF(me, NULL, rets);
+		qthread_syncvar_readFF(me, NULL, rets + 1);
 	    }
 	}
     }
