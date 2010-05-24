@@ -68,6 +68,7 @@ static void qt_loop_inner(
 	qwa[threadct].func = func;
 	qwa[threadct].startat = i;
 	qwa[threadct].stopat = i + 1;
+	qwa[threadct].step = stride;
 	qwa[threadct].arg = argptr;
 	qwa[threadct].donecount = &donecount;
 	qthread_syncvar_empty(me, &(qwa[threadct].ret));
@@ -250,7 +251,7 @@ static QINLINE void qt_loopaccum_balance_inner(
 	    extra--;
 	}
 	iterend = qwa[i].stopat;
-	assert(!future);
+	assert(!future); // XXX: need to implement future_fork_syncvar_to
 	qassert(qthread_fork_syncvar_to
 		((qthread_f) qloopaccum_wrapper, qwa + i, rets + i, i),
 		QTHREAD_SUCCESS);
@@ -1256,9 +1257,9 @@ static void qt_parallel_qfor(
 
 static void qt_naked_parallel_for(
     qthread_t * me,
-    const size_t startat,
-    const size_t stopat,
-    const size_t step,
+    int dummy1,
+    int dummy2,
+    int dummy3,
     void *nakedArg);
 
 void qt_parallel_for(
@@ -1269,6 +1270,7 @@ void qt_parallel_for(
     void *restrict argptr)
 {
     //  printf("new for stmt \n");
+    //  int t = 0;
     //    qtimer_t qt = qtimer_create();
     //    qtimer_start(qt);
     if (forLockInitialized == 0) {
@@ -1276,7 +1278,9 @@ void qt_parallel_for(
 	QTHREAD_FASTLOCK_INIT(forLock);
     }
     if (!activeParallel) {
-	void *nakedArg[3] = { (void *)func, (void *)argptr };
+      void *nakedArg[5] = { (void *)func, (void*)startat, (void*)stopat,
+			    (void*)incr, (void *)argptr };  // pass the loop bounds for the
+                                                            // for loop we are wrapping
 	activeParallel = 1;
 	qt_loop(0, qthread_num_shepherds(), 1, qt_naked_parallel_for,
 		nakedArg);
@@ -1293,14 +1297,17 @@ void qt_parallel_for(
 
 static void qt_naked_parallel_for(
     qthread_t * me,
-    const size_t startat,
-    const size_t stopat,
-    const size_t step,
-    void *nakedArg)
+    int dummy1,                       // function seems to have trouble if use less arguments
+    int dummy2,                       // someplace in qt_loop_inner -- Kyle can we get
+    int dummy3,                       // to fewer arguments or are we in shared code and
+    void *nakedArg)                   // dummies are easier?
 {
     void **funcArgs = (void **)nakedArg;
-    const qt_loop_f func = (qt_loop_f)(funcArgs[0]);
-    void *restrict argptr = funcArgs[1];
+    const qt_loop_f func = (const qt_loop_f)(funcArgs[0]);
+    const size_t startat = (size_t)funcArgs[1]; // get the for loop bounds from the argument
+    const size_t stopat = (size_t)funcArgs[2];
+    const size_t step = (size_t)funcArgs[3];
+    void *restrict argptr = funcArgs[4];
     qt_parallel_qfor(func, startat, stopat, step, argptr);
 }
 #endif
