@@ -78,6 +78,11 @@ static void balanced_noncomp_readFF(qthread_t * me, const size_t startat,
     }
 }
 
+static aligned_t justreturn(qthread_t * me, void * arg)
+{
+    return 7;
+}
+
 static char *human_readable_rate(double rate)
 {
     static char readable_string[100] = { 0 };
@@ -170,17 +175,17 @@ int main(int argc, char *argv[])
 	fflush(stdout);
 	shared = (syncvar_t *) calloc(shepherds, sizeof(syncvar_t));
 	qtimer_start(timer);
-	qt_loop_balance(0, ITERATIONS * 256, balanced_falseshare_syncreadFF, shared);
+	qt_loop_balance(0, ITERATIONS * MAXPARALLELISM, balanced_falseshare_syncreadFF, shared);
 	qtimer_stop(timer);
 	free(shared);
 
 	printf("%11g secs (%u-threads %u iters)\n", qtimer_secs(timer),
-	       shepherds, (unsigned)(ITERATIONS * 256));
+	       shepherds, (unsigned)(ITERATIONS * MAXPARALLELISM));
 	iprintf("\t + average read time: %28g secs\n",
-		qtimer_secs(timer) / (ITERATIONS * 256));
+		qtimer_secs(timer) / (ITERATIONS * MAXPARALLELISM));
 	printf("\t = read throughput: %30f reads/sec\n",
-	       (ITERATIONS * 256) / qtimer_secs(timer));
-	rate = (ITERATIONS * 256 * sizeof(aligned_t)) / qtimer_secs(timer);
+	       (ITERATIONS * MAXPARALLELISM) / qtimer_secs(timer));
+	rate = (ITERATIONS * MAXPARALLELISM * sizeof(aligned_t)) / qtimer_secs(timer);
 	printf("\t = data throughput: %30g bytes/sec %s\n", rate,
 	       human_readable_rate(rate));
     }
@@ -191,17 +196,17 @@ int main(int argc, char *argv[])
 	fflush(stdout);
 	shared = (aligned_t *) calloc(shepherds, sizeof(aligned_t));
 	qtimer_start(timer);
-	qt_loop_balance(0, ITERATIONS * 256, balanced_falseshare_readFF, shared);
+	qt_loop_balance(0, ITERATIONS * MAXPARALLELISM, balanced_falseshare_readFF, shared);
 	qtimer_stop(timer);
 	free(shared);
 
 	printf("%19g secs (%u-threads %u iters)\n", qtimer_secs(timer),
-	       shepherds, (unsigned)(ITERATIONS * 256));
+	       shepherds, (unsigned)(ITERATIONS * MAXPARALLELISM));
 	iprintf("\t + average read time: %28g secs\n",
-		qtimer_secs(timer) / (ITERATIONS * 256));
+		qtimer_secs(timer) / (ITERATIONS * MAXPARALLELISM));
 	printf("\t = read throughput: %30f reads/sec\n",
-	       (ITERATIONS * 256) / qtimer_secs(timer));
-	rate = (ITERATIONS * 256 * sizeof(aligned_t)) / qtimer_secs(timer);
+	       (ITERATIONS * MAXPARALLELISM) / qtimer_secs(timer));
+	rate = (ITERATIONS * MAXPARALLELISM * sizeof(aligned_t)) / qtimer_secs(timer);
 	printf("\t = data throughput: %30g bytes/sec %s\n", rate,
 	       human_readable_rate(rate));
     }
@@ -211,16 +216,16 @@ int main(int argc, char *argv[])
 	printf("\tBalanced independent syncvar readFF: ");
 	fflush(stdout);
 	qtimer_start(timer);
-	qt_loop_balance(0, ITERATIONS * 256, balanced_noncomp_syncreadFF, NULL);
+	qt_loop_balance(0, ITERATIONS * MAXPARALLELISM, balanced_noncomp_syncreadFF, NULL);
 	qtimer_stop(timer);
 
 	printf("%13g secs (%u-threads %u iters)\n", qtimer_secs(timer),
-	       shepherds, (unsigned)(ITERATIONS * 256));
+	       shepherds, (unsigned)(ITERATIONS * MAXPARALLELISM));
 	iprintf("\t + average read time: %28g secs\n",
-		qtimer_secs(timer) / (ITERATIONS * 256));
+		qtimer_secs(timer) / (ITERATIONS * MAXPARALLELISM));
 	printf("\t = read throughput: %30f reads/sec\n",
-	       (ITERATIONS * 256) / qtimer_secs(timer));
-	rate = (ITERATIONS * 256 * sizeof(aligned_t)) / qtimer_secs(timer);
+	       (ITERATIONS * MAXPARALLELISM) / qtimer_secs(timer));
+	rate = (ITERATIONS * MAXPARALLELISM * sizeof(aligned_t)) / qtimer_secs(timer);
 	printf("\t = data throughput: %30g bytes/sec %s\n", rate,
 	       human_readable_rate(rate));
     }
@@ -229,17 +234,94 @@ int main(int argc, char *argv[])
 	/* BALANCED INDEPENDENT LOOP */
 	printf("\tBalanced independent readFF: ");
 	fflush(stdout);
+	/* prime it */
+	qt_loop_balance(0, ITERATIONS * MAXPARALLELISM, balanced_noncomp_readFF, NULL);
+	/* time it */
 	qtimer_start(timer);
-	qt_loop_balance(0, ITERATIONS * 256, balanced_noncomp_readFF, NULL);
+	qt_loop_balance(0, ITERATIONS * MAXPARALLELISM, balanced_noncomp_readFF, NULL);
 	qtimer_stop(timer);
 
 	printf("%21g secs (%u-threads %u iters)\n", qtimer_secs(timer),
-	       shepherds, (unsigned)(ITERATIONS * 256));
+	       shepherds, (unsigned)(ITERATIONS * MAXPARALLELISM));
 	iprintf("\t + average read time: %28g secs\n",
-		qtimer_secs(timer) / (ITERATIONS * 256));
+		qtimer_secs(timer) / (ITERATIONS * MAXPARALLELISM));
 	printf("\t = read throughput: %30f reads/sec\n",
-	       (ITERATIONS * 256) / qtimer_secs(timer));
-	rate = (ITERATIONS * 256 * sizeof(aligned_t)) / qtimer_secs(timer);
+	       (ITERATIONS * MAXPARALLELISM) / qtimer_secs(timer));
+	rate = (ITERATIONS * MAXPARALLELISM * sizeof(aligned_t)) / qtimer_secs(timer);
+	printf("\t = data throughput: %30g bytes/sec %s\n", rate,
+	       human_readable_rate(rate));
+    }
+
+    if (TEST_SELECTION & (1 << 6)) {
+	syncvar_t *rets = calloc(ITERATIONS, sizeof(syncvar_t));
+	size_t i;
+	/* LOOP SYNCHRONIZATION */
+	printf("\tLoop syncvar synchronization: ");
+	fflush(stdout);
+	/* prime it */
+	for (i = 0; i < ITERATIONS; i++) {
+	    qthread_fork_syncvar(justreturn, (void*)(intptr_t)i, rets + i);
+	}
+	for (i = 0; i < ITERATIONS; i++) {
+	    uint64_t r = 0;
+	    qthread_syncvar_readFF(NULL, &r, rets + i);
+	    assert(r == 7);
+	}
+	/* time it */
+	qtimer_start(timer);
+	for (i = 0; i < ITERATIONS; i++) {
+	    qthread_fork_syncvar(justreturn, (void*)(intptr_t)i, rets + i);
+	}
+	for (i = 0; i < ITERATIONS; i++) {
+	    qthread_syncvar_readFF(NULL, NULL, rets + i);
+	}
+	qtimer_stop(timer);
+	free(rets);
+
+	printf("%21g secs (%u-threads %u-qthreads)\n", qtimer_secs(timer),
+	       shepherds, (unsigned)(ITERATIONS));
+	iprintf("\t + average read time: %28g secs\n",
+		qtimer_secs(timer) / (ITERATIONS));
+	printf("\t = read throughput: %30f reads/sec\n",
+	       (ITERATIONS) / qtimer_secs(timer));
+	rate = (ITERATIONS * sizeof(syncvar_t)) / qtimer_secs(timer);
+	printf("\t = data throughput: %30g bytes/sec %s\n", rate,
+	       human_readable_rate(rate));
+    }
+
+    if (TEST_SELECTION & (1 << 7)) {
+	aligned_t *rets = calloc(ITERATIONS, sizeof(aligned_t));
+	size_t i;
+	/* LOOP SYNCHRONIZATION */
+	printf("\tLoop synchronization: ");
+	fflush(stdout);
+	/* prime it */
+	for (i = 0; i < ITERATIONS; i++) {
+	    qthread_fork(justreturn, (void*)(intptr_t)i, rets + i);
+	}
+	for (i = 0; i < ITERATIONS; i++) {
+	    aligned_t r = 0;
+	    qthread_readFF(NULL, &r, rets + i);
+	    assert(r == 7);
+	}
+	/* time it */
+	qtimer_start(timer);
+	for (i = 0; i < ITERATIONS; i++) {
+	    qthread_fork(justreturn, (void*)(intptr_t)i, rets + i);
+	}
+	for (i = 0; i < ITERATIONS; i++) {
+	    qthread_readFF(NULL, NULL, rets + i);
+	}
+	qtimer_stop(timer);
+	free(rets);
+
+	printf("%21g secs (%u-threads %u-qthreads)\n", qtimer_secs(timer),
+	       shepherds, (unsigned)(ITERATIONS));
+	iprintf("\t + average read time: %28g secs\n",
+		qtimer_secs(timer) / (ITERATIONS));
+	printf("\t = read throughput: %30f reads/sec\n",
+	       (ITERATIONS) / qtimer_secs(timer));
+	rate = (ITERATIONS * sizeof(aligned_t)) / qtimer_secs(timer);
 	printf("\t = data throughput: %30g bytes/sec %s\n", rate,
 	       human_readable_rate(rate));
     }
