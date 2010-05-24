@@ -4866,15 +4866,17 @@ unsigned int qthread_syncvar_status(syncvar_t * const v)
 #define SYNCFEB_ANY           0xf /* 0xx */
 #define INITIAL_TIMEOUT 1000
 
-int qthread_syncvar_readFF(qthread_t * restrict const me,
+int qthread_syncvar_readFF(qthread_t * restrict me,
 			   uint64_t * restrict const dest,
 			   syncvar_t * restrict const src)
 {				       /*{{{ */
     eflags_t e = { 0 };
     uint64_t ret;
-    assert(me);
     assert(src);
 
+    if (me == NULL) {
+	me = qthread_self();
+    }
     qthread_debug(LOCK_BEHAVIOR, "me(%p), dest(%p), src(%p) = %x\n", me,
 		  dest, src, (uintptr_t)src->u.w);
 #if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || \
