@@ -1,7 +1,34 @@
 #ifndef QTHREAD_SYNCVAR_HPP
 #define QTHREAD_SYNCVAR_HPP
 
+#include <assert.h>
 #include <qthread/qthread.h>
+
+class syncvar
+{
+    public:
+	QINLINE syncvar(void) { the_syncvar_t.u.w = 0; }
+
+	int empty(qthread_t *me = NULL) { return qthread_syncvar_empty(me, &the_syncvar_t); }
+	int fill(qthread_t *me = NULL) { return qthread_syncvar_fill(me, &the_syncvar_t); }
+	int readFF(qthread_t *me, uint64_t *const dest) { return qthread_syncvar_readFF(me, dest, &the_syncvar_t); }
+	int readFF(uint64_t *const dest) { return qthread_syncvar_readFF(NULL, dest, &the_syncvar_t); }
+	int readFE(qthread_t *me, uint64_t *const dest) { return qthread_syncvar_readFE(me, dest, &the_syncvar_t); }
+	int readFE(uint64_t *const dest) { return qthread_syncvar_readFE(NULL, dest, &the_syncvar_t); }
+	int writeF(qthread_t *me, const uint64_t * const src) { return qthread_syncvar_writeF(me, &the_syncvar_t, src); }
+	int writeF(const uint64_t * const src) { return qthread_syncvar_writeF(NULL, &the_syncvar_t, src); }
+	int writeEF(qthread_t *me, const uint64_t * const src) { return qthread_syncvar_writeEF(me, &the_syncvar_t, src); }
+	int writeEF(const uint64_t * const src) { return qthread_syncvar_writeEF(NULL, &the_syncvar_t, src); }
+
+	int status() { return qthread_syncvar_status(&the_syncvar_t); }
+	uint64_t read() const { return the_syncvar_t.u.s.data; }
+	void write(uint64_t src) {
+	    assert((src>>60) == 0);
+	    the_syncvar_t.u.s.data = src;
+	}
+    protected:
+	syncvar_t the_syncvar_t;
+};
 
 #define _QT_ALL_OPS_(macro) \
     macro(+) \
@@ -15,29 +42,9 @@
     macro(<<) \
     macro(>>)
 
-class syncvar
-{
-    public:
-	virtual int empty();
-	virtual int fill();
-	virtual int readFF(uint64_t *const dest);
-	virtual int readFE(uint64_t *const dest);
-	virtual int writeF(const uint64_t * const src);
-	virtual int writeEF(const uint64_t * const src);
-	virtual uint64_t read() const;
-	virtual void write(uint64_t src);
-	virtual int status();
-};
-
-class strict_syncvar;
-
 class loose_syncvar : public syncvar
 {
-    friend class onlysyncvar;
     /* constructors */
-    QINLINE loose_syncvar(void) {
-	the_syncvar_t.u.w = 0;
-    }
     QINLINE loose_syncvar(const loose_syncvar &val) {
 	the_syncvar_t.u.w = val.the_syncvar_t.u.w;
     }
@@ -109,20 +116,14 @@ class loose_syncvar : public syncvar
     {
 	return the_syncvar_t;
     }
-
-    private:
-	syncvar_t the_syncvar_t;
 };
 
-class strict_syncvar
+class strict_syncvar : public syncvar
 {
-    friend class loose_syncvar;
     /* constructors */
-    QINLINE strict_syncvar(void) {
-	the_syncvar_t.u.w = 0;
-    }
     QINLINE strict_syncvar(const uint64_t &val) {
-	the_syncvar_t.u.w = val;
+	the_syncvar_t.u.w = 0;
+	the_syncvar_t.u.s.state = val;
     }
     QINLINE strict_syncvar(const syncvar_t &val) {
 	the_syncvar_t.u.w = val.u.w;
@@ -192,9 +193,6 @@ class strict_syncvar
 	qthread_syncvar_readFF(NULL, &ret, &the_syncvar_t);
 	return ret;
     }
-
-    private:
-	syncvar_t the_syncvar_t;
 };
 
 #undef _QT_ALL_OPS_
