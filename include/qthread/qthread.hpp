@@ -9,6 +9,7 @@
 #include <limits>
 
 #include <qthread/qthread.h>
+#include <qthread/syncvar.hpp>
 
 template <bool> class OnlyTrue;
 template <> class OnlyTrue<true> {};
@@ -32,6 +33,10 @@ inline int qthread_empty(const T * const dest)
 {
     QTHREAD_CHECKSIZE(T);
     return qthread_empty(qthread_self(), (aligned_t *) dest);
+}
+inline int qthread_empty(syncvar * const dest)
+{
+    return dest->empty();
 }
 template <typename T>
 inline int qthread_empty(qthread_t * const me, const T * const dest)
