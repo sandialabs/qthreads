@@ -3,6 +3,7 @@
 #include <pthread.h>
 #include <stdlib.h>
 #include <string.h>
+#include <qthread/syncvar.hpp>
 
 #define NUM_LOCS() 3
 #define FUTURE_PER_LOC() 128
