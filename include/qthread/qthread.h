@@ -395,11 +395,8 @@ static QINLINE float qthread_fincr(volatile float *operand, const float incr)
 	__asm__ __volatile__
 	        ("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
 		 "cas [%1], %2, %0"
-		 :"=&r"(newval.i)
+		 :"+r"(newval.i)
 		 :"r"    (operand), "r"(oldval.i)
-#if !defined(__SUNPRO_CC) && !defined(__SUNPRO_C)
-		 , "0"(newval.i)
-#endif
 		 :"cc", "memory");
     } while (oldval.i != newval.i);
     return oldval.f;
@@ -528,11 +525,8 @@ static QINLINE double qthread_dincr(volatile double *operand,
 	__asm__ __volatile__
 	        ("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
 		 "casx [%1], %2, %0"
-		 :"=&r"(newval.i)
+		 :"+r"(newval.i)
 		 :"r"(operand), "r"(oldval.i)
-#  if !defined(__SUNPRO_CC) && !defined(__SUNPRO_C)
-		 , "0"(newval.i)
-#  endif
 		 :"memory");
     } while (oldval.d != newval.d);
     return oldval.d;
@@ -681,11 +675,8 @@ static QINLINE uint32_t qthread_incr32(volatile uint32_t * operand,
 	__asm__ __volatile__
 	        ("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
 		 "cas [%1] , %2, %0"
-		 :"=&r"  (newval)
+		 :"+r"  (newval)
 		 :"r"    (operand), "r"(oldval)
-#  if !defined(__SUNPRO_CC) && !defined(__SUNPRO_C)
-		 , "0"(newval)
-#  endif
 		 :"cc", "memory");
     } while (oldval != newval);
     return oldval;
@@ -718,8 +709,8 @@ static QINLINE uint32_t qthread_incr32(volatile uint32_t * operand,
 
     uint32_t retval = incr;
     __asm__ __volatile__ ("lock ;  xaddl %0, (%1);"
-		  :"=r" (retval)
-		  :"r"  (operand), "0"(retval)
+		  :"+r" (retval)
+		  :"r"  (operand)
 		  :"memory");
 
     return retval;
@@ -802,11 +793,8 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand,
 	__asm__ __volatile__
 	        ("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
 		 "casx [%1] , %2, %0"
-		 :"=&r"(newval)
+		 :"+r"(newval)
 		 :"r"    (operand), "r"(oldval)
-#   if !defined(__SUNPRO_CC) && !defined(__SUNPRO_C)
-		 , "0"(newval)
-#   endif
 		 :"cc", "memory");
     } while (oldval != newval);
 #  endif
@@ -902,8 +890,8 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand,
     uint64_t retval = incr;
 
     __asm__ __volatile__ ("lock ; xaddq %0, (%1);"
-		  :"=r" (retval)
-		  :"r"     (operand), "0"(retval)
+		  :"+r" (retval)
+		  :"r" (operand)
 		  :"memory");
 
     return retval;
@@ -958,11 +946,8 @@ static QINLINE uint32_t qthread_cas32(volatile uint32_t * operand,
     __asm__ __volatile__
 	("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
 	 "cas [%1], %2, %0"
-	 : "=&r" (newv)
+	 : "+r" (newv)
 	 : "r" (operand), "r"(oldval)
-#if !defined(__SUNPRO_CC) && !defined(__SUNPRO_C)
-	 , "0"(newv)
-#endif
 	 : "cc", "memory");
     return newv;
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
@@ -1026,8 +1011,8 @@ static QINLINE uint64_t qthread_cas64(volatile uint64_t * operand,
 	 "stx %1, %0"
 	 /* h means 64-BIT REGISTER
 	  * (probably unneecessary, but why take chances?) */
-	 : "=m" (newv), "=&h" (tmp1), "=&h"(tmp2)
-	 : "r" (operand), "m"(oldval), "0"(newv)
+	 : "+m" (newv), "=&h" (tmp1), "=&h"(tmp2)
+	 : "r" (operand), "m"(oldval)
 	 : "cc", "memory");
     return newv;
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
@@ -1035,11 +1020,8 @@ static QINLINE uint64_t qthread_cas64(volatile uint64_t * operand,
     __asm__ __volatile__
 	("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
 	 "casx [%1], %2, %0"
-	 : "=&r" (newv)
+	 : "+r" (newv)
 	 : "r" (operand), "r"(oldval)
-#if !defined(__SUNPRO_CC) && !defined(__SUNPRO_C)
-	 , "0"(newv)
-#endif
 	 : "cc", "memory");
     return newv;
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
