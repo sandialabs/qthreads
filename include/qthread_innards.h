@@ -7,6 +7,13 @@
 
 #include <math.h>
 
+#ifdef QTHREAD_HAVE_HWLOC
+# include <hwloc.h>
+# if (HWLOC_API_VERSION < 0x00010000)
+#  error HWLOC version unrecognized
+# endif
+#endif
+
 #include "qthread_asserts.h"
 #include "qt_atomics.h"
 
@@ -51,6 +58,10 @@ typedef struct qlib_s
     /* round robin scheduler - can probably be smarter */
     aligned_t sched_shepherd;
     QTHREAD_FASTLOCK_TYPE sched_shepherd_lock;
+
+#ifdef QTHREAD_HAVE_HWLOC
+    hwloc_topology_t topology;
+#endif
 
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
     QTHREAD_FASTLOCK_TYPE *atomic_locks;
