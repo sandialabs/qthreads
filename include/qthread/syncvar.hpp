@@ -27,6 +27,11 @@ class syncvar
 	    the_syncvar_t.u.s.data = src;
 	}
     protected:
+	uint64_t readFF(void) {
+	    uint64_t ret = 0;
+	    qthread_syncvar_readFF(NULL, &ret, &the_syncvar_t);
+	    return ret;
+	}
 	syncvar_t the_syncvar_t;
 };
 
@@ -92,30 +97,15 @@ class loose_syncvar : public syncvar
 
     /* binary arithmetic */
 #define OVERLOAD_BINARY_ARITHMETIC_OPERATOR(op) \
-    QINLINE const uint64_t operator op (const uint64_t &val) const { \
-	uint64_t tmp = uint64_t(*this); \
+    QINLINE uint64_t operator op (const uint64_t &val) const { \
+	uint64_t tmp = read(); \
 	return tmp op##= val; \
     }
     _QT_ALL_OPS_(OVERLOAD_BINARY_ARITHMETIC_OPERATOR)
 #undef OVERLOAD_BINARY_ARITHMETIC_OPERATOR
 
-    /* comparison */
-    QINLINE bool operator == (const uint64_t &val) const {
-	return the_syncvar_t.u.s.data == val;
-    }
-    QINLINE bool operator != (const uint64_t &val) const {
-	return the_syncvar_t.u.s.data != val;
-    }
-
     /* cast operators */
-    operator uint64_t() const
-    {
-	return the_syncvar_t.u.s.data;
-    }
-    operator syncvar_t()
-    {
-	return the_syncvar_t;
-    }
+    operator uint64_t() const { return read(); }
 };
 
 class strict_syncvar : public syncvar
@@ -123,7 +113,7 @@ class strict_syncvar : public syncvar
     /* constructors */
     QINLINE strict_syncvar(const uint64_t &val) {
 	the_syncvar_t.u.w = 0;
-	the_syncvar_t.u.s.state = val;
+	the_syncvar_t.u.s.data = val;
     }
     QINLINE strict_syncvar(const syncvar_t &val) {
 	the_syncvar_t.u.w = val.u.w;
@@ -135,16 +125,17 @@ class strict_syncvar : public syncvar
 
     /* assignment operator */
     QINLINE strict_syncvar& operator =(const uint64_t &val) {
-	qthread_syncvar_writeF(NULL, &the_syncvar_t, &val);
+	writeF(&val);
 	return *this;
     }
     /* compound assignment operators */
 #define OVERLOAD_ASSIGNMENT_OPERATOR(op) \
     QINLINE strict_syncvar& operator op##= (const uint64_t &val) { \
 	uint64_t myval; \
-	qthread_syncvar_readFE(NULL, &myval, &the_syncvar_t); \
+	qthread_t *me = qthread_self(); \
+	readFE(me, &myval); \
 	myval op##= val; \
-	qthread_syncvar_writeEF(NULL, &the_syncvar_t, &myval); \
+	writeEF(me, &myval); \
 	return *this; \
     }
     _QT_ALL_OPS_(OVERLOAD_ASSIGNMENT_OPERATOR)
@@ -168,31 +159,16 @@ class strict_syncvar : public syncvar
 
     /* binary arithmetic */
 #define OVERLOAD_BINARY_ARITHMETIC_OPERATOR(op) \
-    QINLINE const uint64_t operator op (const uint64_t &val) { \
+    QINLINE uint64_t operator op (const uint64_t &val) { \
 	uint64_t myval; \
-	qthread_syncvar_readFF(NULL, &myval, &the_syncvar_t); \
+	readFF(&myval); \
 	return myval op##= val; \
     }
     _QT_ALL_OPS_(OVERLOAD_BINARY_ARITHMETIC_OPERATOR)
 #undef OVERLOAD_BINARY_ARITHMETIC_OPERATOR
 
-    /* comparison */
-    QINLINE bool operator == (const uint64_t &val) {
-	uint64_t myval;
-	qthread_syncvar_readFF(NULL, &myval, &the_syncvar_t);
-	return myval == val;
-    }
-    QINLINE bool operator != (const uint64_t &val) {
-	return !(*this == val);
-    }
-
     /* cast operators */
-    operator uint64_t()
-    {
-	uint64_t ret = 0;
-	qthread_syncvar_readFF(NULL, &ret, &the_syncvar_t);
-	return ret;
-    }
+    operator uint64_t() { return readFF(); }
 };
 
 #undef _QT_ALL_OPS_
