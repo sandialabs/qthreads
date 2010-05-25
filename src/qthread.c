@@ -44,6 +44,9 @@
 #ifdef QTHREAD_USE_PLPA
 #include <plpa.h>
 #endif
+#ifdef QTHREAD_HAVE_HWLOC
+# include <hwloc.h>
+#endif
 #ifdef HAVE_PROCESSOR_BIND
 # include <sys/types.h>
 # include <sys/processor.h>
@@ -1209,7 +1212,7 @@ static void *qthread_shepherd(void *arg)
 
     /* Initialize myself */
     pthread_setspecific(shepherd_structs, arg);
-    if (qaffinity) {		       /*{{{ */
+    if (qaffinity && me->node != -1) {		       /*{{{ */
 #if defined(QTHREAD_HAVE_MACHTOPO) && ! defined(SST)
 	mach_msg_type_number_t Count = THREAD_AFFINITY_POLICY_COUNT;
 	thread_affinity_policy_data_t mask[THREAD_AFFINITY_POLICY_COUNT];
@@ -1240,12 +1243,20 @@ static void *qthread_shepherd(void *arg)
 	     (thread_policy_t) & mask, Count) != KERN_SUCCESS) {
 	    fprintf(stderr, "ERROR! Cannot SET affinity for some reason\n");
 	}
+#elif defined(QTHREAD_HAVE_HWLOC)
+	hwloc_cpuset_t cpuset = hwloc_cpuset_alloc();
+	hwloc_cpuset_cpu(cpuset, me->node);
+	if (hwloc_set_cpubind(qlib->topology, cpuset, HWLOC_CPUBIND_THREAD)) {
+	    char *str;
+	    int i = errno;
+	    hwloc_cpuset_asprintf(&str, cpuset);
+	    fprintf(stderr, "Couldn't bind to cpuset %s because %s\n", str, strerror(i));
+	    free(str);
+	}
 #elif defined(QTHREAD_HAVE_TILETOPO)
-	if (me->node != -1) {
-	    if (tmc_cpus_set_my_cpu(me->node) < 0) {
-		perror("tmc_cpus_set_my_affinity() failed");
-		fprintf(stderr,"\tnode = %i\n", me->node);
-	    }
+	if (tmc_cpus_set_my_cpu(me->node) < 0) {
+	    perror("tmc_cpus_set_my_affinity() failed");
+	    fprintf(stderr,"\tnode = %i\n", me->node);
 	}
 #elif defined(QTHREAD_HAVE_LIBNUMA)
 	if (numa_run_on_node(me->node) != 0) {
@@ -1263,17 +1274,12 @@ static void *qthread_shepherd(void *arg)
 	}
 	free(cpuset);
 #elif defined(QTHREAD_HAVE_LGRP)
-	if (me->node != -1) {
-	    if (lgrp_affinity_set(P_LWPID, P_MYID, me->lgrp, LGRP_AFF_STRONG)
-		!= 0) {
-		perror("lgrp_affinity_set");
-	    }
+	if (lgrp_affinity_set(P_LWPID, P_MYID, me->lgrp, LGRP_AFF_STRONG) != 0) {
+	    perror("lgrp_affinity_set");
 	}
 #elif defined(HAVE_PROCESSOR_BIND)
-	if (me->node != -1) {
-	    if (processor_bind(P_LWPID, P_MYID, me->node, NULL) < 0) {
-		perror("processor_bind");
-	    }
+	if (processor_bind(P_LWPID, P_MYID, me->node, NULL) < 0) {
+	    perror("processor_bind");
 	}
 #endif
     }
@@ -1575,6 +1581,8 @@ int qthread_initialize(void)
 	qthread_debug(ALL_DETAILS, "redundant call\n");
 	return QTHREAD_SUCCESS;
     }
+    qlib = (qlib_t) malloc(sizeof(struct qlib_s));
+    qassert_ret(qlib, QTHREAD_MALLOC_ERROR);
 
 #ifdef QTHREAD_USE_PTHREADS
     {
@@ -1594,7 +1602,14 @@ int qthread_initialize(void)
 	}
     }
     if (nshepherds == 0) {	       /* try to guess the "right" number */
-#ifdef QTHREAD_HAVE_LIBNUMA
+#ifdef QTHREAD_HAVE_HWLOC
+	qassert(hwloc_topology_init(&qlib->topology), 0);
+	qassert(hwloc_topology_load(qlib->topology), 0);
+	/* XXX: when we get multithreaded shepherds, HWLOC_OBJ_PU should be
+	 * HWLOC_OBJ_CACHE (or something like that, with a fallback to OBJ_PU) */
+	nshepherds = hwloc_get_nbobjs_by_type(qlib->topology, HWLOC_OBJ_PU);
+	qthread_debug(ALL_DETAILS, "nbobjs_by_type HWLOC_OBJ_PU is %u\n", nshepherds);
+#elif defined(QTHREAD_HAVE_LIBNUMA)
 	if (numa_available() != -1) {
 	    /* XXX: this logic is totally wrong for multithreaded shepherds */
 # ifdef HAVE_NUMA_NUM_THREAD_CPUS
@@ -1672,8 +1687,6 @@ int qthread_initialize(void)
     need_sync = 0;
 #endif
     qthread_debug(THREAD_BEHAVIOR,"there will be %u shepherd(s)\n", (unsigned)nshepherds);
-    qlib = (qlib_t) malloc(sizeof(struct qlib_s));
-    qassert_ret(qlib, QTHREAD_MALLOC_ERROR);
 
     QTHREAD_LOCKING_STRIPES = 1<<((unsigned int)(log2(nshepherds)) + 1);
 
@@ -1972,6 +1985,8 @@ int qthread_initialize(void)
 #  endif
 	}
 # endif
+#elif defined(QTHREAD_HAVE_HWLOC)
+	/* there does not seem to be a way to extract distances... <sigh> */
 #elif defined(QTHREAD_HAVE_LGRP)
 	unsigned int lgrp_offset;
 	int lgrp_count_grps;
@@ -2611,6 +2626,10 @@ void qthread_finalize(void)
     generic_lock_pool = NULL;
     qt_mpool_destroy(generic_addrstat_pool);
     generic_addrstat_pool = NULL;
+#endif
+#ifdef QTHREAD_HAVE_HWLOC
+    qthread_debug(ALL_DETAILS, "destroy hwloc topology handle\n");
+    hwloc_topology_destroy(qlib->topology);
 #endif
     qthread_debug(ALL_DETAILS, "destroy global shepherd array\n");
     free(qlib->shepherds);
