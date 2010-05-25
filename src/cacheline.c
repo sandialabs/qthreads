@@ -21,7 +21,7 @@ static int cacheline_bytes = 0;
 static void cpuid(const unsigned int op, unsigned int *eax_ptr, unsigned int *ebx_ptr,
 		  unsigned int *ecx_ptr, unsigned int *edx_ptr)
 {				       /*{{{ */
-# ifdef __PIC__
+# if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) && defined(__PIC__)
     unsigned int eax, ebx, ecx, edx;
     unsigned int pic_ebx = 0;
     __asm__ __volatile__("mov %%ebx, %4\n\t"
@@ -44,7 +44,7 @@ static void cpuid(const unsigned int op, unsigned int *eax_ptr, unsigned int *eb
 static void cpuid4(const int cache, unsigned int *eax_ptr, unsigned int *ebx_ptr, unsigned int *ecx_ptr,
 		   unsigned int *edx_ptr)
 {				       /*{{{ */
-# ifdef __PIC__
+# if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) && defined(__PIC__)
     unsigned int eax, ebx, ecx, edx;
     unsigned int pic_ebx = 0;
     __asm__ __volatile__("mov %%ebx, %4\n\t"
