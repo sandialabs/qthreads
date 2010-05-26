@@ -290,8 +290,13 @@ AC_HEADER_TIME
 AC_CHECK_HEADERS([stdlib.h fcntl.h ucontext.h sys/time.h sys/resource.h mach/mach_time.h malloc.h math.h sys/types.h sys/sysctl.h unistd.h])
 AX_CREATE_STDINT_H([include/qthread/qthread-int.h])
 AC_SYS_LARGEFILE
+
+NEWCCLD='$(CC)'
 AS_IF([test "x$with_cprops" != xyes ],
-	  [QTHREAD_HASH_MAPS])
+      [QTHREAD_HASH_MAPS([AS_IF([test "x$enable_shared" == xno],
+			 [NEWCCLD='$(CXX)'])])])
+AC_SUBST([NEWCCLD])
+
 
 AC_CACHE_SAVE
 

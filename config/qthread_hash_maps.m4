@@ -1,12 +1,12 @@
-##### based on http://gcc.gnu.org/onlinedocs/libstdc++/manual/backwards.html
-#
-# SYNOPSIS
-#
-#   AC_HEADER_EXT_HASH_MAP
-#
-# DESCRIPTION
-#
-#   This macro checks for working HP/SGI hash containers.
+dnl#### based on http://gcc.gnu.org/onlinedocs/libstdc++/manual/backwards.html
+dnl
+dnl SYNOPSIS
+dnl
+dnl   QTHREAD_HASH_MAPS([if-found],[if-not-found])
+dnl
+dnl DESCRIPTION
+dnl
+dnl   This macro checks for working hash containers.
 
 AC_DEFUN([QTHREAD_HASH_MAPS], [
   AC_LANG_SAVE

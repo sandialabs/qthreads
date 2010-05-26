@@ -4,6 +4,7 @@
 #
 
 AM_CXXFLAGS = @RESTRICT_CXXFLAGS@
+CCLD = @NEWCCLD@
 
 TESTS = test_basic \
 		test_basic_syncvar \
