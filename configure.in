@@ -294,7 +294,7 @@ AC_SYS_LARGEFILE
 NEWCCLD='$(CC)'
 AS_IF([test "x$with_cprops" != xyes ],
       [QTHREAD_HASH_MAPS([AS_IF([test "x$enable_shared" == xno],
-			 [NEWCCLD='$(CXX)'])])])
+			 [NEWCCLD='$(CXXLD)'])])])
 AC_SUBST([NEWCCLD])
 
 
