@@ -121,6 +121,9 @@ AS_IF([test "x$enable_picky" == xyes],
    Intel)
    CFLAGS="-Wall -wd981 -wd1572 -wd869 $CFLAGS"
    ;;
+   SunStudio)
+   # This compiler defaults to enabling all warnings
+   ;;
    *)
    CFLAGS="-Wall $CFLAGS"
    ;;
@@ -131,6 +134,9 @@ AS_IF([test "x$enable_picky" == xyes],
    ;;
    Intel)
    CXXFLAGS="-Wall -wd981 $CXXFLAGS"
+   ;;
+   SunStudio)
+   # This compiler defaults to enabling all warnings
    ;;
    *)
    CXXFLAGS="-Wall $CXXFLAGS"
@@ -294,7 +300,8 @@ AC_SYS_LARGEFILE
 NEWCCLD='$(CC)'
 AS_IF([test "x$with_cprops" != xyes ],
       [QTHREAD_HASH_MAPS([AS_IF([test "x$enable_shared" == xno],
-			 [NEWCCLD='$(CXXLD)'])])])
+			 [NEWCCLD='$(CXXLD)'],
+			 [AC_MSG_FAILURE([No acceptable hash table method available (suggest that either you get a different C++ compiler or install libcprops)])])])])
 AC_SUBST([NEWCCLD])
 
 
