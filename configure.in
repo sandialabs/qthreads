@@ -297,11 +297,14 @@ AC_CHECK_HEADERS([stdlib.h fcntl.h ucontext.h sys/time.h sys/resource.h mach/mac
 AX_CREATE_STDINT_H([include/qthread/qthread-int.h])
 AC_SYS_LARGEFILE
 
+QTHREAD_CHECK_FUNCTION
+
 NEWCCLD='$(CC)'
 AS_IF([test "x$with_cprops" != xyes ],
       [QTHREAD_HASH_MAPS([AS_IF([test "x$enable_shared" == xno],
-			 [NEWCCLD='$(CXXLD)'],
-			 [AC_MSG_FAILURE([No acceptable hash table method available (suggest that either you get a different C++ compiler or install libcprops)])])])])
+			 [NEWCCLD='$(CXXLD)'])],
+			 [AC_MSG_ERROR([No acceptable hash table method available (suggest either a different C++ compiler or libcprops)])]
+			 )])
 AC_SUBST([NEWCCLD])
 
 
