@@ -443,6 +443,7 @@ int qthread_internal_shepcomp(const void *a, const void *b)
 #define QTHREAD_INITLOCK(l) do { if (pthread_mutex_init(l, NULL) != 0) { return QTHREAD_PTHREAD_ERROR; } } while(0)
 #define QTHREAD_LOCK(l) qassert(pthread_mutex_lock(l), 0)
 #define QTHREAD_UNLOCK(l) qassert(pthread_mutex_unlock(l), 0)
+//#define QTHREAD_DESTROYLOCK(l) do { int __ret__ = pthread_mutex_destroy(l); if (__ret__ != 0) fprintf(stderr, "pthread_mutex_destroy(%p) returned %i (%s)\n", l, __ret__, strerror(__ret__)); assert(__ret__ == 0); } while (0)
 #define QTHREAD_DESTROYLOCK(l) qassert(pthread_mutex_destroy(l), 0)
 #define QTHREAD_DESTROYCOND(l) qassert(pthread_cond_destroy(l), 0)
 #define QTHREAD_SIGNAL(l) qassert(pthread_cond_signal(l), 0)
@@ -4832,13 +4833,13 @@ static uint64_t qthread_mwaitc(volatile syncvar_t * const restrict addr,
     return 0;
 }				       /*}}} */
 
-unsigned int qthread_syncvar_status(syncvar_t * const v)
+int qthread_syncvar_status(syncvar_t * const v)
 {				       /*{{{ */
     eflags_t e = { 0 };
     unsigned int realret;
 #ifdef __tile__
     uint64_t ret = qthread_mwaitc(v, 0xff, INT_MAX, &e);
-    assert(e.cf == 0);
+    qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
     realret = (e.of << 2) | (e.pf << 1) | e.sf;
     v->u.w = BUILD_UNLOCKED_SYNCVAR(ret, realret);
     return (realret & 0x2) ? 0 : 1;
@@ -4861,7 +4862,7 @@ unsigned int qthread_syncvar_status(syncvar_t * const v)
     }
 #endif
     (void)qthread_mwaitc(v, 0xff, INT_MAX, &e);
-    assert(e.cf == 0);
+    qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
     realret = v->u.s.state;
     v->u.s.lock = 0;		       // unlock it
     return (realret & 0x2) ? 0 : 1;
@@ -4927,7 +4928,7 @@ int qthread_syncvar_readFF(qthread_t * restrict me,
 	qthread_addrres_t *X;
 
 	ret = qthread_mwaitc(src, SYNCFEB_ANY, INT_MAX, &e);
-	assert(e.cf == 0);
+	qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
 	if (e.pf == 0) {	       /* it got full! */
 	    goto locked_full;
 	}
@@ -4989,7 +4990,7 @@ int qthread_syncvar_fill(qthread_t * restrict const me,
     ret = qthread_mwaitc(addr, SYNCFEB_ANY, INT_MAX, &e);
     qthread_debug(LOCK_DETAILS, "me(%p), addr(%p) = %x (b)\n", me, addr,
 		  (uintptr_t)addr->u.w);
-    assert(e.cf == 0);		       /* there better not have been a timeout */
+    qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
     if (e.pf == 1 && e.sf == 1) {      /* waiters! */
 	qthread_addrstat_t *m;
 
@@ -5035,7 +5036,7 @@ int qthread_syncvar_empty(qthread_t * restrict const me,
     ret = qthread_mwaitc(addr, SYNCFEB_ANY, INT_MAX, &e);
     qthread_debug(LOCK_DETAILS, "me(%p), addr(%p) = %x (b)\n", me, addr,
 		  (uintptr_t)addr->u.w);
-    assert(e.cf == 0);		       /* there better not have been a timeout */
+    qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
     if (e.pf == 0 && e.sf == 1) {      /* waiters! */
 	qthread_addrstat_t *m;
 
@@ -5098,7 +5099,7 @@ int qthread_syncvar_readFE(qthread_t * restrict const me,
 	qthread_addrres_t *X;
 
 	ret = qthread_mwaitc(src, SYNCFEB_ANY, INT_MAX, &e);
-	assert(e.cf == 0);	       // there better not be a timeout
+	qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
 	if (e.pf == 0) {	       /* it got full! */
 	    goto locked_full;
 	}
@@ -5309,7 +5310,7 @@ int qthread_syncvar_writeF(qthread_t * restrict const me,
     qthread_debug(LOCK_BEHAVIOR, "me(%p), dest(%p) = %x, src(%p) = %x\n", me,
 		  dest, (unsigned long)dest->u.w, src, *src);
     qthread_mwaitc(dest, SYNCFEB_ANY, INT_MAX, &e);
-    assert(e.cf == 0);		       // there had better not have been a timeout */
+    qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
     if (e.pf == 1 && e.sf == 1) {      /* there are waiters to release */
 	qthread_addrstat_t *m;
 
@@ -5364,7 +5365,7 @@ int qthread_syncvar_writeEF(qthread_t * restrict const me,
 	qthread_addrres_t *X;
 
 	ret = qthread_mwaitc(dest, SYNCFEB_ANY, INT_MAX, &e);
-	assert(e.cf == 0);	       // there better not be a timeout
+	qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
 	if (e.pf == 1) {	       /* it got empty! */
 	    goto locked_empty;
 	}

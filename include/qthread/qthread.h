@@ -37,6 +37,7 @@
 #define QTHREAD_NOT_ALLOWED     -3
 #define QTHREAD_MALLOC_ERROR	ENOMEM
 #define QTHREAD_THIRD_PARTY_ERROR -4
+#define QTHREAD_TIMEOUT		-5
 #define NO_SHEPHERD ((qthread_shepherd_id_t)-1)
 
 #ifdef __cplusplus
@@ -211,7 +212,7 @@ qthread_shepherd_id_t qthread_num_shepherds(void);
 /* This function is just to assist with debugging; it returns 1 if the address
  * is full, and 0 if the address is empty */
 int qthread_feb_status(const aligned_t * addr);
-unsigned int qthread_syncvar_status(syncvar_t *const v);
+int qthread_syncvar_status(syncvar_t *const v);
 
 /* The empty/fill functions merely assert the empty or full state of the given
  * address. You may be wondering why they require a qthread_t argument. The
