@@ -28,8 +28,6 @@ struct qloop_wrapper_args {
     qt_loop_f func;
     size_t startat, stopat, step;
     void *arg;
-    volatile aligned_t *donecount;
-    syncvar_t ret;
 };
 
 static aligned_t qloop_wrapper(
@@ -37,8 +35,6 @@ static aligned_t qloop_wrapper(
     struct qloop_wrapper_args * const restrict arg)
 {				       /*{{{ */
     arg->func(me, arg->startat, arg->stopat, arg->step, arg->arg);
-    qthread_syncvar_fill(me, &(arg->ret));
-    qthread_incr(arg->donecount, 1);
     return 0;
 }				       /*}}} */
 
@@ -53,15 +49,17 @@ static void qt_loop_inner(
     size_t i, threadct = 0;
     qthread_t *const me = qthread_self();
     size_t steps = (stop - start) / stride;
-    volatile aligned_t donecount = 0;
     struct qloop_wrapper_args *qwa;
+    syncvar_t *rets;
 
     if ((steps * stride) + start < stop) {
 	steps++;
     }
     qwa = (struct qloop_wrapper_args *)
 	malloc(sizeof(struct qloop_wrapper_args) * steps);
+    rets = calloc(steps, sizeof(syncvar_t));
     assert(qwa);
+    assert(rets);
     assert(func);
 
     for (i = start; i < stop; i += stride) {
@@ -70,25 +68,16 @@ static void qt_loop_inner(
 	qwa[threadct].stopat = i + 1;
 	qwa[threadct].step = stride;
 	qwa[threadct].arg = argptr;
-	qwa[threadct].donecount = &donecount;
-	qthread_syncvar_empty(me, &(qwa[threadct].ret));
-	if (future) {
-	    future_fork_to((qthread_f) qloop_wrapper, qwa + threadct,
-			   NULL,
-			   (qthread_shepherd_id_t) (threadct %
-						    qthread_num_shepherds()));
-	} else {
-	    qassert(qthread_fork_to
-		    ((qthread_f) qloop_wrapper, qwa + threadct,
-		     NULL,
-		     (qthread_shepherd_id_t) (threadct %
-					      qthread_num_shepherds())),
-		    QTHREAD_SUCCESS);
-	}
+	assert(!future);	       // need to implement future_fork_syncvar_to
+	qassert(qthread_fork_syncvar_to
+		((qthread_f) qloop_wrapper, qwa + threadct, rets + i,
+		 (qthread_shepherd_id_t) (threadct %
+					  qthread_num_shepherds())),
+		QTHREAD_SUCCESS);
 	threadct++;
     }
-    for (i = 0; _(donecount) < steps; i++) {
-	qthread_syncvar_readFF(me, NULL, &(qwa[i].ret));
+    for (i = 0; i < steps; i++) {
+	qthread_syncvar_readFF(me, NULL, rets + i);
     }
     free(qwa);
 }				       /*}}} */
@@ -137,7 +126,7 @@ static QINLINE void qt_loop_balance_inner(
     struct qloop_wrapper_args *const qwa =
 	(struct qloop_wrapper_args *)malloc(sizeof(struct qloop_wrapper_args)
 					    * maxsheps);
-    volatile aligned_t donecount = 0;
+    syncvar_t *const rets = calloc(maxsheps, sizeof(syncvar_t));
     const size_t each = (stop - start) / maxsheps;
     size_t extra = (stop - start) - (each * maxsheps);
     size_t iterend = start;
@@ -150,23 +139,18 @@ static QINLINE void qt_loop_balance_inner(
 	qwa[i].arg = argptr;
 	qwa[i].startat = iterend;
 	qwa[i].stopat = iterend + each;
-	qwa[i].donecount = &donecount;
-	qthread_syncvar_empty(me, &(qwa[i].ret));
 	if (extra > 0) {
 	    qwa[i].stopat++;
 	    extra--;
 	}
 	iterend = qwa[i].stopat;
-	if (future) {
-	    future_fork_to((qthread_f) qloop_wrapper, qwa + i, NULL, i);
-	} else {
-	    qassert(qthread_fork_to
-		    ((qthread_f) qloop_wrapper, qwa + i, NULL, i),
-		    QTHREAD_SUCCESS);
-	}
+	assert(!future);	       // XXX: need to implement future_fork_syncvar_to
+	qassert(qthread_fork_syncvar_to
+		((qthread_f) qloop_wrapper, qwa + i, rets + i, i),
+		QTHREAD_SUCCESS);
     }
-    for (i = 0; _(donecount) < maxsheps; i++) {
-	qthread_syncvar_readFF(me, NULL, &(qwa[i].ret));
+    for (i = 0; i < maxsheps; i++) {
+	qthread_syncvar_readFF(me, NULL, rets + i);
     }
     free(qwa);
 }				       /*}}} */
