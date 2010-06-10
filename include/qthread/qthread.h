@@ -1121,35 +1121,28 @@ static QINLINE aligned_t qthread_cas_xx(volatile aligned_t * addr,
     return 0;			       /* compiler check */
 }
 
-static QINLINE void *qthread_cas_ptr_(void *volatile*const addr,
-				     void *const oldval, void *const newval)
+static QINLINE void *qthread_cas_ptr_(
+    void *volatile *const addr,
+    void *const oldval,
+    void *const newval)
 {
-#ifdef __INTEL_COMPILER
-/* selector expression is constant
- * yes, that's the point; C does not have templates */
-# pragma warning (disable:280)
-#endif
-    switch (sizeof(void *)) {
-	case 4:
-	    return (void *)(uintptr_t) qthread_cas32((volatile uint32_t *)
-						     addr,
-						     (uint32_t)(uintptr_t)
-						     oldval,
-						     (uint32_t)(uintptr_t)
-						     newval);
-	case 8:
-	    return (void *)(uintptr_t) qthread_cas64((volatile uint64_t *)
-						     addr,
-						     (uint64_t)(uintptr_t)
-						     oldval,
-						     (uint64_t)(uintptr_t)
-						     newval);
-	default:
-	    /* This should never happen, so deliberately cause a seg fault for
-	     * corefile analysis */
-	    *(int *)(0) = 0;
-    }
+#if (SIZEOF_VOIDP == 4)
+    return (void *)(uintptr_t) qthread_cas32((volatile uint32_t *)
+					     addr, (uint32_t) (uintptr_t)
+					     oldval, (uint32_t) (uintptr_t)
+					     newval);
+#elif (SIZEOF_VOIDP == 8)
+    return (void *)(uintptr_t) qthread_cas64((volatile uint64_t *)
+					     addr, (uint64_t) (uintptr_t)
+					     oldval, (uint64_t) (uintptr_t)
+					     newval);
+#else
+#error The size of void* either couldn't be determined, or is very unusual.
+    /* This should never happen, so deliberately cause a seg fault for
+     * corefile analysis */
+    *(int *)(0) = 0;
     return NULL;		       /* compiler check */
+#endif
 }
 #endif /* ifdef QTHREAD_ATOMIC_CAS */
 

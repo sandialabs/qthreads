@@ -29,6 +29,8 @@
 /* Define if bitfields are in reverse order */
 #undef BITFIELD_ORDER_REVERSE
 
+/* The size of `void*', as computed by sizeof. */
+#undef SIZEOF_VOIDP
 
 /* support ROSE extensions */
 #undef QTHREAD_USE_ROSE_EXTENSIONS
