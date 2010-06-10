@@ -124,6 +124,9 @@ AS_IF([test "x$enable_picky" == xyes],
    SunStudio)
    # This compiler defaults to enabling all warnings
    ;;
+   PortlandGroup)
+   CFLAGS="-Minform=inform $CFLAGS"
+   ;;
    *)
    CFLAGS="-Wall $CFLAGS"
    ;;
@@ -137,6 +140,9 @@ AS_IF([test "x$enable_picky" == xyes],
    ;;
    SunStudio)
    # This compiler defaults to enabling all warnings
+   ;;
+   PortlandGroup)
+   CXXFLAGS="-Minform=inform $CXXFLAGS"
    ;;
    *)
    CXXFLAGS="-Wall $CXXFLAGS"
