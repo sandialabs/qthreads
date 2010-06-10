@@ -1630,11 +1630,10 @@ int qthread_initialize(void)
 	    qthread_debug(ALL_DETAILS, "numa_max_node() returned %i\n", nshepherds);
 #  ifndef QTHREAD_LIBNUMA_V2
 	    {
-		size_t i;
 		unsigned long bmask = 0;
 		unsigned long count = 0;
-		for (size_t i=0; i<nshepherds; i++) {
-		    int foo = numa_node_to_cpus(i, &bmask, sizeof(unsigned long));
+		for (size_t shep=0; shep<nshepherds; shep++) {
+		    numa_node_to_cpus(shep, &bmask, sizeof(unsigned long));
 		    for (size_t j=0; j < sizeof(unsigned long)*8; j++) {
 			if (bmask & ((unsigned long)1<<j)) {
 			    count++;
