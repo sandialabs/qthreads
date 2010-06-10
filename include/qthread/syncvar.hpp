@@ -8,6 +8,7 @@ class syncvar
 {
     public:
 	QINLINE syncvar(void) { the_syncvar_t.u.w = 0; }
+	virtual ~syncvar(void) {;}
 
 	int empty(qthread_t *me = NULL) { return qthread_syncvar_empty(me, &the_syncvar_t); }
 	int fill(qthread_t *me = NULL) { return qthread_syncvar_fill(me, &the_syncvar_t); }

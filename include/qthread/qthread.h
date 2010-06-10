@@ -1137,7 +1137,7 @@ static QINLINE void *qthread_cas_ptr_(
 					     oldval, (uint64_t) (uintptr_t)
 					     newval);
 #else
-#error The size of void* either couldn't be determined, or is very unusual.
+#error The size of void* either could not be determined, or is very unusual.
     /* This should never happen, so deliberately cause a seg fault for
      * corefile analysis */
     *(int *)(0) = 0;
