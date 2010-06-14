@@ -37,7 +37,12 @@
 #define QTHREAD_NOT_ALLOWED     -3
 #define QTHREAD_MALLOC_ERROR	ENOMEM
 #define QTHREAD_THIRD_PARTY_ERROR -4
-#define QTHREAD_TIMEOUT		-5
+#define QTHREAD_TIMEOUT		-5     /* neither ETIME nor ETIMEDOUT seem appropriate, strictly speaking */
+#ifdef EOVERFLOW
+# define QTHREAD_OVERFLOW	EOVERFLOW
+#else
+# define QTHREAD_OVERFLOW	-6
+#endif
 #define NO_SHEPHERD ((qthread_shepherd_id_t)-1)
 
 #ifdef __cplusplus
@@ -242,9 +247,9 @@ int qthread_writeEF(qthread_t * me, aligned_t * restrict const dest,
 		    const aligned_t * restrict const src);
 int qthread_writeEF_const(qthread_t * me, aligned_t * const dest,
 			  const aligned_t src);
-int qthread_syncvar_writeEF(qthread_t *restrict const me, syncvar_t *restrict
+int qthread_syncvar_writeEF(qthread_t *restrict me, syncvar_t *restrict
 			    const dest, const uint64_t *restrict const src);
-int qthread_syncvar_writeEF_const(qthread_t *restrict const me, syncvar_t *restrict
+int qthread_syncvar_writeEF_const(qthread_t *restrict me, syncvar_t *restrict
 			    const dest, const uint64_t src);
 
 /* This function is a cross between qthread_fill() and qthread_writeEF(). It
@@ -265,9 +270,9 @@ int qthread_writeF(qthread_t * me, aligned_t * restrict const dest,
 		   const aligned_t * restrict const src);
 int qthread_writeF_const(qthread_t * me, aligned_t * const dest,
 			 const aligned_t src);
-int qthread_syncvar_writeF(qthread_t *restrict const me, syncvar_t *restrict
+int qthread_syncvar_writeF(qthread_t *restrict me, syncvar_t *restrict
 			   const dest, const uint64_t *restrict const src);
-int qthread_syncvar_writeF_const(qthread_t *restrict const me, syncvar_t *restrict
+int qthread_syncvar_writeF_const(qthread_t *restrict me, syncvar_t *restrict
 			   const dest, const uint64_t src);
 
 /* This function waits for memory to become full, and then reads it and leaves
@@ -284,8 +289,8 @@ int qthread_syncvar_writeF_const(qthread_t *restrict const me, syncvar_t *restri
  * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
  * (which, conveniently, returns NULL if you aren't a qthread).
  */
-int qthread_readFF(qthread_t * me, aligned_t * restrict const dest,
-		   const aligned_t * restrict const src);
+int qthread_readFF(qthread_t * me, aligned_t * const dest,
+		   const aligned_t * const src);
 int qthread_syncvar_readFF(qthread_t * restrict const me, uint64_t * restrict const dest,
 		   syncvar_t * restrict const src);
 
@@ -303,8 +308,8 @@ int qthread_syncvar_readFF(qthread_t * restrict const me, uint64_t * restrict co
  * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
  * (which, conveniently, returns NULL if you aren't a qthread).
  */
-int qthread_readFE(qthread_t * me, aligned_t * restrict const dest,
-		   const aligned_t * restrict const src);
+int qthread_readFE(qthread_t * me, aligned_t * const dest,
+		   const aligned_t * const src);
 int qthread_syncvar_readFE(qthread_t * restrict const me, uint64_t * restrict const dest,
 		   syncvar_t * restrict const src);
 
@@ -902,9 +907,11 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand,
 #endif
 }				       /*}}} */
 
-static QINLINE unsigned long qthread_incr_xx(volatile void *addr, const long int incr,
-					     const size_t length)
-{
+static QINLINE unsigned long qthread_incr_xx(
+    volatile void *addr,
+    const long int incr,
+    const size_t length)
+{				       /*{{{ */
     switch (length) {
 	case 4:
 	    return qthread_incr32((volatile uint32_t *)addr, incr);
@@ -916,7 +923,7 @@ static QINLINE unsigned long qthread_incr_xx(volatile void *addr, const long int
 	    *(int *)(0) = 0;
     }
     return 0;			       /* compiler check */
-}
+}				       /*}}} */
 
 #if ! defined(QTHREAD_ATOMIC_CAS) || defined(QTHREAD_MUTEX_INCREMENT)
 static QINLINE uint32_t qthread_cas32(volatile uint32_t * operand,
@@ -1104,10 +1111,12 @@ static QINLINE uint64_t qthread_cas64(volatile uint64_t * operand,
 #endif
 }				       /*}}} */
 
-static QINLINE aligned_t qthread_cas_xx(volatile aligned_t * addr,
-					const aligned_t oldval,
-					const aligned_t newval, const size_t length)
-{
+static QINLINE aligned_t qthread_cas_xx(
+    volatile aligned_t * addr,
+    const aligned_t oldval,
+    const aligned_t newval,
+    const size_t length)
+{				       /*{{{ */
     switch (length) {
 	case 4:
 	    return qthread_cas32((volatile uint32_t *)addr, oldval, newval);
@@ -1119,7 +1128,7 @@ static QINLINE aligned_t qthread_cas_xx(volatile aligned_t * addr,
 	    *(int *)(0) = 0;
     }
     return 0;			       /* compiler check */
-}
+}				       /*}}} */
 
 static QINLINE void *qthread_cas_ptr_(
     void *volatile *const addr,
