@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
     qthread_initialize();
 
     CHECK_VERBOSE();
-    printf("%i threads\n", qthread_num_shepherds());
+    printf("%i threads\n", (int)qthread_num_shepherds());
     NUMARG(len, "TEST_LEN");
     NUMARG(iterations, "TEST_ITERATIONS");
     NUMARG(using_doubles, "TEST_USING_DOUBLES");

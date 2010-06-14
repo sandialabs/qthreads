@@ -44,7 +44,7 @@ static aligned_t FEB_producer(qthread_t * me, void *arg)
 static aligned_t FEB_producerloop(qthread_t * me, void *arg)
 {
     unsigned int offset = (unsigned int)(intptr_t) arg;
-    aligned_t timer = 0;
+    uint64_t timer = 0;
     unsigned int i;
 
     for (i = 0; i < ITERATIONS; i++) {
@@ -58,7 +58,7 @@ static aligned_t FEB_producerloop(qthread_t * me, void *arg)
 static aligned_t FEB_consumerloop(qthread_t * me, void *arg)
 {
     unsigned int offset = (unsigned int)(intptr_t) arg;
-    aligned_t timer = 0;
+    uint64_t timer = 0;
     unsigned int i;
 
     for (i = 0; i < ITERATIONS; i++) {
@@ -171,7 +171,7 @@ int main(int argc, char *argv[])
 	qthread_empty(NULL, &(FEBtable[i][1]));
     }
     printf("Testing producer/consumer (with %i sheps):\n",
-	   qthread_num_shepherds());
+	   (int)qthread_num_shepherds());
 
     /* SINGLE FEB SEND/RECEIVE TEST */
     printf("\tSingle FEB send/receive: ");

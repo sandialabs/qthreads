@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
 
     me = qthread_self();
 
-    printf("Using %i shepherds\n", qthread_num_shepherds());
+    printf("Using %i shepherds\n", (int)qthread_num_shepherds());
     printf("Arrays of %lu objects...\n", (unsigned long)ELEMENT_COUNT);
 
     if (enabled_types & 1) {
