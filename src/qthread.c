@@ -5089,7 +5089,7 @@ int qthread_syncvar_empty(qthread_t * restrict const me,
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-int qthread_syncvar_readFE(qthread_t * restrict const me,
+int qthread_syncvar_readFE(qthread_t * restrict me,
 			   uint64_t * restrict const dest,
 			   syncvar_t * restrict const src)
 {				       /*{{{ */
