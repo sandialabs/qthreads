@@ -107,6 +107,7 @@ man_MANS = \
 		   qthread_syncvar_fill.3 \
 		   qthread_syncvar_readFE.3 \
 		   qthread_syncvar_readFF.3 \
+		   qthread_syncvar_status.3 \
 		   qthread_syncvar_writeEF.3 \
 		   qthread_syncvar_writeEF_const.3 \
 		   qthread_syncvar_writeF.3 \
