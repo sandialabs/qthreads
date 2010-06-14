@@ -20,8 +20,9 @@ The
 .BR qthread_empty ()
 and
 .BR qthread_fill ()
-functions assert the empty or full state of the given range of addresses. They
-do not wait for the addresses to be in any particular state.
+functions assert the empty or full state of the given
+.I dest
+addresses. They do not wait for the addresses to be in any particular state.
 .PP
 The
 .I me
@@ -41,7 +42,7 @@ Note that
 .IR addr )
 .RE
 .PP
-is faster than
+is slightly faster than
 .RS
 .PP
 .B qthread_empty
