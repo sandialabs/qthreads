@@ -103,6 +103,8 @@ man_MANS = \
 		   qthread_sorted_sheps.3 \
 		   qthread_sorted_sheps_remote.3 \
 		   qthread_stackleft.3 \
+		   qthread_syncvar_empty.3 \
+		   qthread_syncvar_fill.3 \
 		   qthread_unlock.3 \
 		   qthread_writeEF.3 \
 		   qthread_writeEF_const.3 \
