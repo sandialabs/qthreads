@@ -68,10 +68,15 @@ The value specified in
 could not be stored in the syncvar_t. On most platforms, syncvar_t can only
 store 60 bits of data, despite occupying 64 bits of memory, because four bits
 are reserved for status information.
+.B QTHREAD_TIMEOUT
+Could not obtain the lock on the syncvar_t's status bits. This may be caused by
+many things, including memory corruption, invalid syncvar, or even absurdly
+excessive contention (because its protected by a naive spinlock rather than a
+fair spinlock).
 .SH SEE ALSO
 .BR qthread_syncvar_empty (3),
 .BR qthread_syncvar_fill (3),
-.BR qthread_syncvar_writeF (3),
+.BR qthread_syncvar_writeFE (3),
 .BR qthread_syncvar_readFF (3),
 .BR qthread_syncvar_readFE (3),
 .BR qthread_syncvar_status (3)
