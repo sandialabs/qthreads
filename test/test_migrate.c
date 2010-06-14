@@ -35,12 +35,16 @@ static aligned_t migrant(qthread_t * me, void *arg)
     return 0;
 }
 
+#ifdef __INTEL_COMPILER
+int setenv(const char *name, const char *value, int overwrite);
+#endif
+
 int main(int argc, char *argv[])
 {
     aligned_t ret;
     qthread_t *me;
 
-    putenv("QTHREAD_NUM_SHEPHERDS=2");
+    setenv("QTHREAD_NUM_SHEPHERDS","2",1);
     qthread_initialize();
     me = qthread_self();
 
