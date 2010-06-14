@@ -64,6 +64,10 @@ man_MANS = \
 		   qt_loop_balance_future.3 \
 		   qt_loop_future.3 \
 		   qt_loopaccum_balance.3 \
+		   qt_loop_queue_addworker.3 \
+		   qt_loop_queue_create.3 \
+		   qt_loop_queue_run.3 \
+		   qt_loop_queue_run_there.3 \
 		   qt_loopaccum_balance_future.3 \
 		   qt_uint_max.3 \
 		   qt_uint_min.3 \
