@@ -1159,13 +1159,13 @@ static QINLINE void *qthread_cas_ptr_(
 # define qthread_cas(ADDR, OLDV, NEWV) \
     __sync_val_compare_and_swap((ADDR), (OLDV), (NEWV))
 # define qthread_cas_ptr(ADDR, OLDV, NEWV) \
-    __sync_val_compare_and_swap((ADDR), (OLDV), (NEWV))
+    (void*)__sync_val_compare_and_swap((ADDR), (OLDV), (NEWV))
 #else
 # define qthread_cas(ADDR, OLDV, NEWV) \
     qthread_cas_xx((volatile aligned_t*)(ADDR), (aligned_t)(OLDV), (aligned_t)(NEWV), sizeof(*(ADDR)))
 # ifdef QTHREAD_ATOMIC_CAS_PTR
 #  define qthread_cas_ptr(ADDR, OLDV, NEWV) \
-    __sync_val_compare_and_swap((ADDR), (OLDV), (NEWV))
+    (void*)__sync_val_compare_and_swap((ADDR), (OLDV), (NEWV))
 # else
 #  define qthread_cas_ptr(ADDR, OLDV, NEWV) \
     qthread_cas_ptr_((void*volatile*const)(ADDR), (void*const)(OLDV), (void*const)(NEWV))
