@@ -144,10 +144,15 @@ static QINLINE void qt_loop_balance_inner(
 	    extra--;
 	}
 	iterend = qwa[i].stopat;
-	assert(!future);	       // XXX: need to implement future_fork_syncvar_to
-	qassert(qthread_fork_syncvar_to
-		((qthread_f) qloop_wrapper, qwa + i, rets + i, i),
-		QTHREAD_SUCCESS);
+	if (!future) {
+	    qassert(qthread_fork_syncvar_to
+		    ((qthread_f) qloop_wrapper, qwa + i, rets + i, i),
+		    QTHREAD_SUCCESS);
+	} else {
+	    qassert(qthread_fork_syncvar_future_to
+		    (me, (qthread_f) qloop_wrapper, qwa + i, rets + i, i),
+		    QTHREAD_SUCCESS);
+	}
     }
     for (i = 0; i < maxsheps; i++) {
 	qthread_syncvar_readFF(me, NULL, rets + i);
@@ -235,10 +240,15 @@ static QINLINE void qt_loopaccum_balance_inner(
 	    extra--;
 	}
 	iterend = qwa[i].stopat;
-	assert(!future); // XXX: need to implement future_fork_syncvar_to
-	qassert(qthread_fork_syncvar_to
-		((qthread_f) qloopaccum_wrapper, qwa + i, rets + i, i),
-		QTHREAD_SUCCESS);
+	if (!future) {
+	    qassert(qthread_fork_syncvar_to
+		    ((qthread_f) qloopaccum_wrapper, qwa + i, rets + i, i),
+		    QTHREAD_SUCCESS);
+	} else {
+	    qassert(qthread_fork_syncvar_future_to
+		    (me, (qthread_f) qloopaccum_wrapper, qwa + i, rets + i,
+		     i), QTHREAD_SUCCESS);
+	}
     }
     for (i = 0; i < qthread_num_shepherds(); i++) {
 	qthread_syncvar_readFF(me, NULL, rets + i);

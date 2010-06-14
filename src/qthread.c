@@ -173,7 +173,7 @@ struct qthread_s
     /* the function to call (that defines this thread) */
     qthread_f f;
     void *arg;			/* user defined data */
-    aligned_t *ret;		/* user defined retval location */
+    void *ret;			/* user defined retval location */
 
     ucontext_t *context;	/* the context switch info */
     void *stack;		/* the thread's stack */
@@ -363,7 +363,7 @@ static QINLINE qthread_addrstat_t *qthread_addrstat_new(qthread_shepherd_t *
 							shepherd);
 static void qthread_addrstat_delete(qthread_addrstat_t * m);
 static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
-					     const void *arg, aligned_t * ret,
+					     const void *arg, void * ret,
 					     const qthread_shepherd_id_t
 					     shepherd);
 static QINLINE qthread_t *qthread_thread_bare(const qthread_f f,
@@ -2796,7 +2796,7 @@ static QINLINE int qthread_thread_plush(qthread_t * t)
  * but I *think* doing it this way makes it faster. maybe not, I haven't tested
  * it. */
 static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
-					     const void *arg, aligned_t * ret,
+					     const void *arg, void * ret,
 					     const qthread_shepherd_id_t
 					     shepherd)
 {				       /*{{{ */
@@ -3314,7 +3314,7 @@ static void qthread_wrapper(void *ptr)
 	if (t->flags & QTHREAD_RET_IS_SYNCVAR) {
 	    qassert(qthread_syncvar_writeEF_const(t, (syncvar_t*)t->ret, (t->f) (t, t->arg)), QTHREAD_SUCCESS);
 	} else {
-	    qassert(qthread_writeEF_const(t, t->ret, (t->f) (t, t->arg)), QTHREAD_SUCCESS);
+	    qassert(qthread_writeEF_const(t, (aligned_t*)t->ret, (t->f) (t, t->arg)), QTHREAD_SUCCESS);
 	}
     } else {
 	(t->f) (t, t->arg);
@@ -3578,44 +3578,44 @@ int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
     return QTHREAD_MALLOC_ERROR;
 }				       /*}}} */
 
-int qthread_fork_syncvar_to(const qthread_f f, const void *arg, syncvar_t * ret,
-		    const qthread_shepherd_id_t shepherd)
+int qthread_fork_syncvar_to(
+    const qthread_f f,
+    const void *arg,
+    syncvar_t * ret,
+    const qthread_shepherd_id_t shepherd)
 {				       /*{{{ */
     qthread_t *t;
+    qthread_shepherd_t *shep;
 
     assert(shepherd < qlib->nshepherds);
     assert(f != NULL);
     if (shepherd >= qlib->nshepherds || f == NULL) {
 	return QTHREAD_BADARGS;
     }
-    t = qthread_thread_new(f, arg, (aligned_t*)ret, shepherd);
-    assert(t);
-    if (t) {
-	t->target_shepherd = &(qlib->shepherds[shepherd]);
-	qthread_shepherd_t *shep = &(qlib->shepherds[shepherd]);
-	qthread_debug(THREAD_BEHAVIOR,
-		      "new-tid %u shep %u\n", t->thread_id,
-		      shepherd);
+    t = qthread_thread_new(f, arg, ret, shepherd);
+    qassert_ret(t, QTHREAD_MALLOC_ERROR);
+    t->target_shepherd = shep = &(qlib->shepherds[shepherd]);
+    qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id,
+		  shepherd);
 
-	if (ret) {
-	    t->flags |= QTHREAD_RET_IS_SYNCVAR;
-	    int test = qthread_syncvar_empty(qthread_self(), ret);
+    if (ret) {
+	int test = qthread_syncvar_empty(qthread_self(), ret);
 
-	    if (test != QTHREAD_SUCCESS) {
-		qthread_thread_free(t);
-		return test;
-	    }
+	if (test != QTHREAD_SUCCESS) {
+	    qthread_thread_free(t);
+	    return test;
 	}
-	if (QTHREAD_CASLOCK_READ_UI(shep->active) == 0) {
-	    shep = qthread_find_active_shepherd(shep->sorted_sheplist, shep->shep_dists);
-	}
-	t->shepherd_ptr = shep;
-	qt_threadqueue_enqueue(shep->ready, t,
-			   (qthread_shepherd_t *)
-			   pthread_getspecific(shepherd_structs));
-	return QTHREAD_SUCCESS;
+	t->flags |= QTHREAD_RET_IS_SYNCVAR;
     }
-    return QTHREAD_MALLOC_ERROR;
+    if (QTHREAD_CASLOCK_READ_UI(shep->active) == 0) {
+	shep =
+	    qthread_find_active_shepherd(shep->sorted_sheplist,
+					 shep->shep_dists);
+    }
+    t->shepherd_ptr = shep;
+    qt_threadqueue_enqueue(shep->ready, t, (qthread_shepherd_t *)
+			   pthread_getspecific(shepherd_structs));
+    return QTHREAD_SUCCESS;
 }				       /*}}} */
 
 int qthread_fork_future_to(const qthread_t * me, const qthread_f f,
@@ -3633,7 +3633,8 @@ int qthread_fork_future_to(const qthread_t * me, const qthread_f f,
 	return QTHREAD_NOT_ALLOWED;
     }
     t = qthread_thread_new(f, arg, ret, shepherd);
-    if (t) {
+    qassert_ret(t, QTHREAD_MALLOC_ERROR);
+    {
 	qthread_shepherd_t *shep = &(qlib->shepherds[shepherd]);
 
 	t->flags |= QTHREAD_FUTURE;
@@ -3659,8 +3660,51 @@ int qthread_fork_future_to(const qthread_t * me, const qthread_f f,
 	qt_threadqueue_enqueue(shep->ready, t, me->shepherd_ptr);
 	return QTHREAD_SUCCESS;
     }
-    return QTHREAD_MALLOC_ERROR;
 }				       /*}}} */
+
+int qthread_fork_syncvar_future_to(
+    const qthread_t * me,
+    const qthread_f f,
+    const void *arg,
+    syncvar_t * ret,
+    const qthread_shepherd_id_t shepherd)
+{
+    qthread_t *t;
+    qthread_shepherd_t *shep;
+
+    assert(shepherd < qlib->nshepherds);
+    assert(f != NULL);
+    if (shepherd >= qlib->nshepherds || f == NULL) {
+	return QTHREAD_BADARGS;
+    }
+    if (QTHREAD_CASLOCK_READ_UI(qlib->shepherds[shepherd].active) != 1) {
+	return QTHREAD_NOT_ALLOWED;
+    }
+    t = qthread_thread_new(f, arg, ret, shepherd);
+    qassert_ret(t, QTHREAD_MALLOC_ERROR);
+    shep = &(qlib->shepherds[shepherd]);
+    t->flags |= QTHREAD_FUTURE;
+    t->target_shepherd = &(qlib->shepherds[shepherd]);
+    qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id,
+		  shepherd);
+    if (ret) {
+	int test = qthread_syncvar_empty(qthread_self(), ret);
+
+	if (test != QTHREAD_SUCCESS) {
+	    qthread_thread_free(t);
+	    return test;
+	}
+	t->flags |= QTHREAD_RET_IS_SYNCVAR;
+    }
+    if (QTHREAD_CASLOCK_READ_UI(shep->active) == 0) {
+	shep =
+	    qthread_find_active_shepherd(shep->sorted_sheplist,
+					 shep->shep_dists);
+    }
+    t->shepherd_ptr = shep;
+    qt_threadqueue_enqueue(shep->ready, t, me->shepherd_ptr);
+    return QTHREAD_SUCCESS;
+}
 
 static QINLINE void qthread_back_to_master(qthread_t * t)
 {				       /*{{{ */
