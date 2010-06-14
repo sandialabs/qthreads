@@ -25,6 +25,7 @@ man_MANS = \
 		   qarray_create_configured.3 \
 		   qarray_create_tight.3 \
 		   qarray_destroy.3 \
+		   qarray_dist_like.3 \
 		   qarray_elem.3 \
 		   qarray_elem_migrate.3 \
 		   qarray_elem_nomigrate.3 \
