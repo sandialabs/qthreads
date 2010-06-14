@@ -741,29 +741,28 @@ void qt_loop_queue_addworker(
 }
 
 #define PARALLEL_FUNC(category, initials, _op_, type, shorttype) \
-struct qt##initials##_s \
-{ \
-    type *a; \
-    int feb; \
-}; \
-static void qt##initials##_worker(qthread_t * me, const size_t startat, \
+static void qt##initials##_febworker(qthread_t * me, const size_t startat, \
 			 const size_t stopat, void * restrict arg, \
 			 void * restrict ret) \
 { \
     size_t i; \
     type acc; \
-    if (((struct qt##initials##_s *)arg)->feb) { \
-	qthread_readFF(me, NULL, (aligned_t*)(((struct qt##initials##_s *)arg)->a)); \
-	acc = ((struct qt##initials##_s *)arg)->a[startat]; \
-	for (i = startat + 1; i < stopat; i++) { \
-	    qthread_readFF(me, NULL, (aligned_t*)(((struct qt##initials##_s *)arg)->a + i)); \
-	    acc = _op_(acc, ((struct qt##initials##_s *)arg)->a[i]); \
-	} \
-    } else { \
-	acc = ((struct qt##initials##_s *)arg)->a[startat]; \
-	for (i = startat + 1; i < stopat; i++) { \
-	    acc = _op_(acc, ((struct qt##initials##_s *)arg)->a[i]); \
-	} \
+    qthread_readFF(me, NULL, (aligned_t*)(((type *)arg)+startat)); \
+    acc = ((type *)arg)[startat]; \
+    for (i = startat + 1; i < stopat; i++) { \
+	qthread_readFF(me, NULL, (aligned_t*)(((type *)arg) + i)); \
+	acc = _op_(acc, ((type *)arg)[i]); \
+    } \
+    *(type *)ret = acc; \
+} \
+static void qt##initials##_worker(qthread_t * me, const size_t startat, \
+			 const size_t stopat, void * restrict arg, \
+			 void * restrict ret) \
+{ \
+    size_t i; \
+    type acc = ((type*)arg)[startat]; \
+    for (i = startat + 1; i < stopat; i++) { \
+	acc = _op_(acc, ((type *)arg)[i]); \
     } \
     *(type *)ret = acc; \
 } \
@@ -773,11 +772,17 @@ static void qt##initials##_acc (void * restrict a, void * restrict b) \
 } \
 type qt_##shorttype##_##category (type *array, size_t length, int checkfeb) \
 { \
-    struct qt##initials##_s arg = { array, checkfeb }; \
     type ret; \
+    if (checkfeb) { \
+    if (sizeof(type) != sizeof(aligned_t)) return 0; \
+    qt_loopaccum_balance_inner(0, length, sizeof(type), &ret, \
+			 qt##initials##_febworker, \
+			 array, qt##initials##_acc, 0 ); \
+    } else { \
     qt_loopaccum_balance_inner(0, length, sizeof(type), &ret, \
 			 qt##initials##_worker, \
-			 &arg, qt##initials##_acc, 0 ); \
+			 array, qt##initials##_acc, 0 ); \
+    } \
     return ret; \
 }
 
