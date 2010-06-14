@@ -8,7 +8,7 @@
 .I int
 .br
 .B qthread_readFF
-.RI "(qthread_t *" me ", aligned_t * restrict " dest ", const aligned_t * restrict " src );
+.RI "(qthread_t *" me ", aligned_t *" dest ", const aligned_t *" src );
 .SH DESCRIPTION
 This function waits for memory to become full, and then reads it and leaves the
 memory as full. When memory becomes full, all threads waiting for it to become
