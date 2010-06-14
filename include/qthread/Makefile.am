@@ -3,6 +3,7 @@
 # Copyright (c)      2008  Sandia Corporation
 #
 
+include_HEADERS = qthread.h
 qthreaddir = $(includedir)/qthread
 dist_qthread_HEADERS = \
 	qthread.h \
