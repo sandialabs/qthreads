@@ -4811,11 +4811,6 @@ static uint64_t qthread_mwaitc(volatile syncvar_t * const restrict addr,
     assert(addr != NULL);
     assert(err != NULL);
 
-#ifndef __tile__
-    locked = unlocked = *addr;	       // may be locked or unlocked, we don't know
-    unlocked.u.s.lock = 0;	       // create the unlocked version
-    locked.u.s.lock = 1;	       // create the locked version
-#endif
     e = *err;
     e.zf = 0;
     e.cf = 1;
@@ -4834,40 +4829,58 @@ static uint64_t qthread_mwaitc(volatile syncvar_t * const restrict addr,
 	 * value. */
 	high = addrptr[1];
 	locked.u.w = (((uint64_t)high) << 32) | low;
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
+	/* This applies for any 32-bit architecture with a valid 32-bit CAS
+	 * (though I'm making some big-endian assumptions at the moment) */
+	uint32_t low_unlocked, low_locked;
+	uint32_t * addrptr = (uint32_t*)addr;
+	do {
+	    if (timeout-- <= 0) {
+		goto errexit;
+	    }
+	    low_unlocked = addrptr[1]; // atomic read
+	    low_unlocked &= 0xfffffffe;
+	    low_locked = low_unlocked | 1;
+	} while (qthread_cas32(&(addrptr[1]), low_unlocked, low_locked) != low_unlocked);
+	locked.u.w = addr->u.w; // I locked it, so I can read it
+	unlocked = locked;
 #else
-	while (qthread_cas((uint64_t *) addr, unlocked.u.w, locked.u.w) !=
-	       unlocked.u.w) {
+	do {
 	    if (timeout-- <= 0) {
 		goto errexit;
 	    }
 	    locked = unlocked = *addr; // may be locked or unlocked, we don't know
 	    unlocked.u.s.lock = 0;     // create the unlocked version
 	    locked.u.s.lock = 1;       // create the locked version
-	}
+	} while (qthread_cas((uint64_t *) addr, unlocked.u.w, locked.u.w) !=
+	       unlocked.u.w);
 #endif
-	/* now locked == unlocked, and the lock bit is set */
+	/***************************************************
+	 * now locked == unlocked, and the lock bit is set *
+	 ***************************************************/
 	if (statemask & (1 << locked.u.s.state)) {
+	    /* this is a state of interest, so fill the err struct */
 	    e.cf = 0;
 	    e.sf = (unsigned char)(locked.u.s.state & 1);
 	    e.pf = (unsigned char)((locked.u.s.state >> 1) & 1);
 	    e.of = (unsigned char)((locked.u.s.state >> 2) & 1);
 	    *err = e;
-	    qthread_debug(LOCK_DETAILS, "returning locked...\n");
+	    qthread_debug(LOCK_DETAILS, "returning locked... (%i)\n", (int)locked.u.s.data);
 	    return locked.u.s.data;
 	} else {
-	    /* unlock the locked bit */
+	    /* this is NOT a state of interest, so unlock the locked bit */
 #ifdef __tile__
 	    addrptr[0] = low;
+#elif ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC) || \
+       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || \
+       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
+       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) || \
+       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || \
+       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64))
+	    addr->u.s.lock = 0;
 #else
 	    unlocked.u.s.lock = 0;
-# if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || \
-      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) || \
-      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || \
-      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64))
-	    addr->u.w = unlocked.u.w;
-# else
-	    qthread_cas((uint64_t *) addr, locked.u.w, unlocked.u.w);
-# endif
+	    qthread_cas64((uint64_t *) addr, locked.u.w, unlocked.u.w);
 #endif
 	}
     } while (timeout-- > 0);
@@ -5016,6 +5029,7 @@ int qthread_syncvar_readFF(qthread_t * restrict me,
 	QTHREAD_WAIT_TIMER_STOP(me, febwait);
 	qthread_debug(LOCK_DETAILS, "src(%p) woke up\n", src);
     } else {
+	qthread_debug(LOCK_DETAILS, "locked/full on the first try; word=%x, state = %x, ret=%x\n", (unsigned int)src->u.w, (int)src->u.s.state, (int)ret);
       locked_full:
 	/* at this point, the syncvar is locked and e.pf should be 0 */
 	assert(e.pf == 0);
