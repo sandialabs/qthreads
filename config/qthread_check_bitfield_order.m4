@@ -12,9 +12,9 @@ AC_CACHE_CHECK([bitfield ordering],
 	   [AC_LANG_PROGRAM([[
 #include <assert.h>
 union foo {
-	unsigned long w;
+	unsigned int w;
 	struct bar {
-		unsigned long a : 60;
+		unsigned a : 28;
 		unsigned b : 3;
 		unsigned c : 1;
 	} s;
