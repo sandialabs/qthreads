@@ -4871,11 +4871,11 @@ static uint64_t qthread_mwaitc(volatile syncvar_t * const restrict addr,
 	    /* this is NOT a state of interest, so unlock the locked bit */
 #ifdef __tile__
 	    addrptr[0] = low;
-#elif ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC) || \
+#elif ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
+       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || \
        (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || \
        (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
        (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) || \
-       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || \
        (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64))
 	    addr->u.s.lock = 0;
 #else
