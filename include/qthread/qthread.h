@@ -1080,18 +1080,30 @@ static QINLINE uint64_t qthread_cas64(volatile uint64_t * operand,
 	    :"memory");
     return ret.i;
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
-    register uint64_t retval;
     /* note that this is GNU/Linux syntax (aka AT&T syntax), not Intel syntax.
      * Thus, this instruction has the form:
      * [lock] cmpxchg reg, reg/mem
      *                src, dest
      */
-    __asm__ __volatile__ ("lock; cmpxchg %1,(%2)"
-	    : "=&a"(retval) /* store from EAX */
-	    : "r"(newval), "r" (operand),
-	      "0"(oldval) /* load into EAX */
+#  ifdef __PGI
+    /* this is a workaround for a bug in the PGI compiler where the width of
+     * retval is not respected and %eax is used instead of %rax */
+    uint64_t retval;
+    __asm__ __volatile__ ("lock cmpxchg %1,(%2)\n\t"
+	    "mov %%rax,(%0)"
+	    ::"r"(&retval), "r"(newval), "r"(operand),
+	    "a"(oldval) /* load into RAX */
 	    :"cc","memory");
     return retval;
+#  else
+    uint64_t retval;
+    __asm__ __volatile__ ("lock; cmpxchg %1,(%2)"
+	    : "=a"(retval) /* store from RAX */
+	    : "r"(newval), "r" (operand),
+	      "a"(oldval) /* load into RAX */
+	    :"cc","memory");
+    return retval;
+#  endif
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
     /* In general, RISC doesn't provide a way to do 64 bit operations from 32
      * bit code. Sorry! */
