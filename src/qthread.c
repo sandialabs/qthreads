@@ -335,6 +335,10 @@ pthread_key_t shepherd_structs;
 /* shared globals (w/ futurelib) */
 qlib_t qlib = NULL;
 int qaffinity = 1;
+struct qt_cleanup_funcs_s {
+    void(*func)(void);
+    struct qt_cleanup_funcs_s *next;
+} *qt_cleanup_funcs = NULL;
 
 #ifdef QTHREAD_COUNT_THREADS
 static aligned_t threadcount;
@@ -2365,6 +2369,16 @@ static QINLINE void qthread_makecontext(ucontext_t * const c, void * const stack
 #endif
 }				       /*}}} */
 
+/* this adds a function to the list of cleanup functions to call at finalize */
+void qthread_internal_cleanup(void (*function)(void))
+{
+    struct qt_cleanup_funcs_s *ng = malloc(sizeof(struct qt_cleanup_funcs_s));
+    assert(ng);
+    ng->func = function;
+    ng->next = qt_cleanup_funcs;
+    qt_cleanup_funcs = ng;
+}
+
 void qthread_finalize(void)
 {				       /*{{{ */
     int r;
@@ -2396,6 +2410,13 @@ void qthread_finalize(void)
 			   shep0);
     }
 
+    qthread_debug(ALL_DETAILS, "calling cleanup functions\n");
+    while (qt_cleanup_funcs != NULL) {
+	struct qt_cleanup_funcs_s *tmp = qt_cleanup_funcs;
+	qt_cleanup_funcs = tmp->next;
+	tmp->func();
+	free(tmp);
+    }
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     qthread_debug(ALL_DETAILS, "destroying the global barrier\n");
     qt_global_barrier_destroy();

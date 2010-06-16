@@ -127,6 +127,7 @@ unsigned int qthread_internal_shep_to_node(const qthread_shepherd_id_t shep);
 
 /* internal initialization functions */
 void qt_feb_barrier_internal_init(void);
+void qthread_internal_cleanup(void (*function)(void));
 
 /* for debugging */
 #ifdef QTHREAD_DEBUG

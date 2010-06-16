@@ -11,6 +11,7 @@
 #include "qt_mpool.h"
 #include <qthread/feb_barrier.h>
 #include <qthread/qthread.h>
+#include "qthread_innards.h"
 
 struct qt_feb_barrier_s
 {
@@ -47,7 +48,7 @@ qt_feb_barrier_t *qt_feb_barrier_create(qthread_t *me, size_t max_threads)
 	    /* someone else created an mpool first */
 	    qt_mpool_destroy(bp);
 	} else {
-	    atexit(cleanup_feb_barrier);
+	    qthread_internal_cleanup(cleanup_feb_barrier);
 	}
     }
     b = qt_mpool_alloc(feb_barrier_pool);
