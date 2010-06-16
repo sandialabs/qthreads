@@ -154,7 +154,7 @@ static QINLINE void* qt_cas(void*volatile* const ptr, void* const oldv, void* co
 #   if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) && defined(__PGI)
     __asm__ __volatile__ ("lock; cmpxchg %1,(%2)\n\t"
 	    "mov %%rax,(%0)"
-	    ::"r"(&retval)
+	    ::"r"(&retval),
 	      "r"(newv), "r" (ptr),
 	      "a"(oldv) /* load into RAX */
 	    :"cc","memory");
