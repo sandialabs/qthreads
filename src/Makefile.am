@@ -47,7 +47,9 @@ libqthread_la_SOURCES += qt_cp_hash.c
 endif
 
 if COMPILE_ROSE_EXTENSIONS
-libqthread_la_SOURCES += qt_barrier.c
+libqthread_la_SOURCES += qt_barrier.c \
+						 rose_xomp.c \
+						 rose_log_arrivaldetector.c
 endif
 
 if COMPILE_TARGET_SST

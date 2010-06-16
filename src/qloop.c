@@ -9,6 +9,8 @@
 #include <qthread_innards.h>	       /* for qthread_debug() */
 #include <qthread/qtimer.h>
 
+#include "qloop_innards.h"
+
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 #include "qt_atomics.h"
 #endif
@@ -301,53 +303,6 @@ void qt_loopaccum_balance_future(
  * for a certain degree of self-scheduling, and adapts better when shepherds
  * are disabled.
  */
-struct qqloop_iteration_queue {
-    volatile saligned_t start;
-    saligned_t stop;
-    saligned_t step;
-    qt_loop_queue_type type;
-    union {
-	volatile saligned_t phase;
-	struct {
-	    qtimer_t *timers;
-	    saligned_t *lastblocks;
-	} timed;
-    } type_specific_data;
-};
-struct qqloop_static_args;
-struct qqloop_wrapper_range;
-typedef int (
-    *qq_getiter_f) (
-    struct qqloop_iteration_queue * const restrict,
-    struct qqloop_static_args * const restrict,
-    struct qqloop_wrapper_range * const restrict);
-struct qqloop_static_args {
-    qt_loop_f func;
-    void *arg;
-    volatile aligned_t donecount;
-    volatile aligned_t activesheps;
-    struct qqloop_iteration_queue *iq;
-    qq_getiter_f get;
-};
-struct qqloop_wrapper_args {
-    qthread_shepherd_id_t shep;
-    struct qqloop_static_args *stat;
-};
-struct qqloop_wrapper_range {
-    size_t startat, stopat, step;
-};
-struct qqloop_handle_s {
-    struct qqloop_wrapper_args *qwa;
-    struct qqloop_static_args stat;
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    int workers;
-    int assignNext;
-    int assignStop;
-    int assignStep;
-    volatile aligned_t assignDone;	// start+offset
-    size_t shepherdsActive;	// bit vector to stop shepherds from grabbing a loop twice (is this necessary?)
-#endif
-};
 
 static Q_UNUSED QINLINE int qqloop_get_iterations_guided(
     struct qqloop_iteration_queue *const restrict iq,
@@ -493,7 +448,7 @@ static QINLINE int qqloop_get_iterations_timed(
     localstart = iq->start;
     while (localstart < localstop) {
 	saligned_t tmp;
-	if (loop_time >= 7.5e-5) { /* KBW: XXX: arbitrary constant */
+	if (loop_time >= 7.5e-7) { /* KBW: XXX: arbitrary constant */
 	    dynamicBlock = ((localstop - localstart)/((workerCount << 1)*(localstep)))+1;
 	}
 	if ((localstart + dynamicBlock) > localstop) {
@@ -1154,15 +1109,15 @@ static QINLINE int computeNextBlock(
 
     int newBlock;
     int remaining = loop->assignStop - loop->assignNext;
-    if (remaining < 0)
-	return block;
+    if (remaining <= 0)
+	return 0;
 
-    if (time < 7.5e-5)
+    if (time < 7.5e-7)
 	newBlock = block;
     else
 	newBlock = (remaining / ((cnbWorkers << 1) * (loop->assignStep))) + 1;
 
-    return newBlock;
+    return newBlock?newBlock:1;
 }
 
 void qt_loop_queue_run_single(
@@ -1256,9 +1211,9 @@ static void qt_parallel_qfor(
 
 static void qt_naked_parallel_for(
     qthread_t * me,
-    int dummy1,
-    int dummy2,
-    int dummy3,
+    const size_t dummy1,
+    const size_t dummy2,
+    const size_t dummy3,
     void *nakedArg);
 
 void qt_parallel_for(
@@ -1296,10 +1251,10 @@ void qt_parallel_for(
 
 static void qt_naked_parallel_for(
     qthread_t * me,
-    int dummy1,                       // function seems to have trouble if use less arguments
-    int dummy2,                       // someplace in qt_loop_inner -- Kyle can we get
-    int dummy3,                       // to fewer arguments or are we in shared code and
-    void *nakedArg)                   // dummies are easier?
+    const size_t dummy1,                    // This function must match qt_loop_f prototype so it can be called with qt_loop()
+    const size_t dummy2,                    // But since I only care when all the children return, the arguments are ignored
+    const size_t dummy3,
+    void *nakedArg)
 {
     void **funcArgs = (void **)nakedArg;
     const qt_loop_f func = (const qt_loop_f)(funcArgs[0]);
