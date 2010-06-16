@@ -4801,7 +4801,8 @@ static uint64_t qthread_mwaitc(volatile syncvar_t * const restrict addr,
 			       unsigned int timeout,
 			       eflags_t * const restrict err)
 {				       /*{{{ */
-#ifndef __tile__
+#if ((QTHREAD_ASSEMBLY_ARCH != QTHREAD_TILE) && \
+     (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32))
     syncvar_t unlocked;
 #endif
     syncvar_t locked;
@@ -4815,7 +4816,7 @@ static uint64_t qthread_mwaitc(volatile syncvar_t * const restrict addr,
     e.zf = 0;
     e.cf = 1;
     do {
-#ifdef __tile__
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILE)
 	uint32_t low, high;
 	int32_t * addrptr = (int32_t*) addr;
 	/* note that the tilera is little-endian, otherwise this would be
@@ -4830,20 +4831,21 @@ static uint64_t qthread_mwaitc(volatile syncvar_t * const restrict addr,
 	high = addrptr[1];
 	locked.u.w = (((uint64_t)high) << 32) | low;
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-	/* This applies for any 32-bit architecture with a valid 32-bit CAS
-	 * (though I'm making some big-endian assumptions at the moment) */
-	uint32_t low_unlocked, low_locked;
-	uint32_t * addrptr = (uint32_t*)addr;
-	do {
-	    if (timeout-- <= 0) {
-		goto errexit;
-	    }
-	    low_unlocked = addrptr[1]; // atomic read
-	    low_unlocked &= 0xfffffffe;
-	    low_locked = low_unlocked | 1;
-	} while (qthread_cas32(&(addrptr[1]), low_unlocked, low_locked) != low_unlocked);
-	locked.u.w = addr->u.w; // I locked it, so I can read it
-	unlocked = locked;
+	{
+	    /* This applies for any 32-bit architecture with a valid 32-bit CAS
+	     * (though I'm making some big-endian assumptions at the moment) */
+	    uint32_t low_unlocked, low_locked;
+	    uint32_t * addrptr = (uint32_t*)addr;
+	    do {
+		if (timeout-- <= 0) {
+		    goto errexit;
+		}
+		low_unlocked = addrptr[1]; // atomic read
+		low_unlocked &= 0xfffffffe;
+		low_locked = low_unlocked | 1;
+	    } while (qthread_cas32(&(addrptr[1]), low_unlocked, low_locked) != low_unlocked);
+	    locked.u.w = addr->u.w; // I locked it, so I can read it
+	}
 #else
 	do {
 	    if (timeout-- <= 0) {
