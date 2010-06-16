@@ -564,11 +564,20 @@ static QINLINE double qthread_dincr(volatile double *operand,
     do {
 	oldval.d = *operand;
 	newval.d = oldval.d + incr;
+#  ifdef __PGI
+	__asm__ __volatile__("lock; cmpxchgq %1, (%2)\n\t"
+		"mov %%rax,(%0)"
+			     ::"r"(&retval.i),
+			      "r"(newval.i), "r"(operand),
+			      "a"(oldval.i)
+			     :"memory");
+#  else
 	__asm__ __volatile__("lock; cmpxchgq %1, (%2)"
 			     :"=a"(retval.i)
 			     :"r"(newval.i), "r"(operand),
 			      "0"(oldval.i)
 			     :"memory");
+#  endif
     } while (retval.i != oldval.i);
     return oldval.d;
 
@@ -895,10 +904,21 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand,
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
     uint64_t retval = incr;
 
+#  ifdef __PGI
+    /* this is a workaround for a bug in the PGI compiler where the width of
+     * retval is not respected and %eax is used instead of %rax */
+    __asm__ __volatile__ ("lock xaddq %0, (%2)\n\t"
+	    "mov %0,(%1)"
+		  ::"r" (incr),
+		  "r"(&retval),
+		  "r" (operand)
+		  :"memory");
+#  else
     __asm__ __volatile__ ("lock ; xaddq %0, (%1);"
 		  :"+r" (retval)
 		  :"r" (operand)
 		  :"memory");
+#  endif
 
     return retval;
 # else
