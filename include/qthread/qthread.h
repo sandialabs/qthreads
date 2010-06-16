@@ -327,8 +327,8 @@ int qthread_lock(qthread_t * me, const aligned_t * a);
 int qthread_unlock(qthread_t * me, const aligned_t * a);
 
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-uint32_t qthread_incr32_(volatile uint32_t *, const int);
-uint64_t qthread_incr64_(volatile uint64_t *, const int);
+uint32_t qthread_incr32_(volatile uint32_t *, const int32_t);
+uint64_t qthread_incr64_(volatile uint64_t *, const int64_t);
 float qthread_fincr_(volatile float *, const float);
 double qthread_dincr_(volatile double *, const double);
 uint32_t qthread_cas32_(volatile uint32_t *, const uint32_t, const uint32_t);
