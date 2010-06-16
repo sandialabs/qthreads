@@ -44,12 +44,15 @@ int main(int argc, char *argv[])
     rets = (aligned_t*)malloc(threads * sizeof(aligned_t));
     assert(rets);
 
+    iprintf("creating the barrier for %i threads\n", threads+1);
     wait_on_me = qt_feb_barrier_create(me, threads+1); // all my spawnees plus me
     assert(wait_on_me);
 
+    iprintf("forking the threads\n");
     for (i=0; i<threads; i++) {
 	qthread_fork(barrier_thread, wait_on_me, rets+i);
     }
+    iprintf("done forking the threads, entering the barrier\n");
     qtimer_start(t);
     qt_feb_barrier_enter(me, wait_on_me);
     qtimer_stop(t);

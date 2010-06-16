@@ -2311,6 +2311,9 @@ int qthread_initialize(void)
     qthread_debug(ALL_DETAILS, "calling atexit\n");
     atexit(qthread_finalize);
 
+    qthread_debug(ALL_DETAILS, "calling component init functions\n");
+    qt_feb_barrier_internal_init();
+
     qthread_debug(ALL_DETAILS, "finished.\n");
     return QTHREAD_SUCCESS;
 }				       /*}}} */
@@ -4706,7 +4709,7 @@ void qthread_reset_forCount(qthread_t * t)
 #endif
 
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-uint32_t qthread_incr32_(volatile uint32_t * op, const int incr)
+uint32_t qthread_incr32_(volatile uint32_t * op, const int32_t incr)
 {				       /*{{{ */
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
     uint32_t retval;
@@ -4723,7 +4726,7 @@ uint32_t qthread_incr32_(volatile uint32_t * op, const int incr)
     return retval;
 }				       /*}}} */
 
-uint64_t qthread_incr64_(volatile uint64_t * op, const int incr)
+uint64_t qthread_incr64_(volatile uint64_t * op, const int64_t incr)
 {				       /*{{{ */
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
     uint64_t retval;

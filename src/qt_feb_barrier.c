@@ -19,7 +19,7 @@ struct qt_feb_barrier_s
     size_t max_blockers;
 };
 
-static qt_mpool QTHREAD_CASLOCK2(feb_barrier_pool);
+static qt_mpool QTHREAD_CASLOCK(feb_barrier_pool);
 static Q_UNUSED qt_feb_barrier_t *global_barrier = NULL;
 
 #ifndef UNPOOLED
@@ -31,6 +31,11 @@ static void cleanup_feb_barrier(void)
     feb_barrier_pool = NULL;
 }
 #endif
+
+void qt_feb_barrier_internal_init(void)
+{
+    QTHREAD_CASLOCK_INIT(feb_barrier_pool, NULL);
+}
 
 qt_feb_barrier_t *qt_feb_barrier_create(qthread_t *me, size_t max_threads)
 {

@@ -125,6 +125,9 @@ unsigned int qthread_internal_shep_to_node(const qthread_shepherd_id_t shep);
 # define qthread_shepherd_count() (qlib->nshepherds)
 #endif
 
+/* internal initialization functions */
+void qt_feb_barrier_internal_init(void);
+
 /* for debugging */
 #ifdef QTHREAD_DEBUG
 enum qthread_debug_levels
