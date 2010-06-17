@@ -11,6 +11,7 @@ noinst_HEADERS = \
 	osx_compat/386-ucontext.h \
 	osx_compat/tile-ucontext.h \
 	qthread_innards.h \
+	qloop_innards.h \
 	qthread_asserts.h \
 	qthread_expect.h \
 	qt_atomics.h \
