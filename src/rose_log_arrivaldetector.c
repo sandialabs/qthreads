@@ -11,6 +11,7 @@
 #include "qt_barrier.h"
 #include "qthread_asserts.h"
 
+/* Types */
 typedef struct qt_arrive_first_s {
     size_t activeSize;		// size of barrier
     size_t allocatedSize;	// lowest size power of 2 equal or bigger than barrier -- for allocations
@@ -20,7 +21,17 @@ typedef struct qt_arrive_first_s {
     volatile int64_t **value;	// array of values to return
 
 } qt_arrive_first_t;
-qt_arrive_first_t *MArrFirst = NULL;
+struct guided_s {
+    int64_t upper;
+    int64_t lower;
+    int64_t stride;
+};
+
+/* Global Variables
+ * (should be static)
+ */
+static struct guided_s guided = { 1, 1, 1 };
+static qt_arrive_first_t *MArrFirst = NULL;
 
 static void qtar_internal_initialize_fixed(
     qt_arrive_first_t * b,
@@ -130,14 +141,6 @@ qqloop_handle_t *qt_loop_rose_queue_create(
     int64_t rt,
     int64_t p,
     int64_t r);
-struct guided_s {
-    int64_t upper;
-    int64_t lower;
-    int64_t stride;
-};
-
-struct guided_s guided = { 1, 1, 1 };
-
 
 static int64_t qtar_internal_up(
     qt_arrive_first_t * b,

@@ -1101,7 +1101,7 @@ int qthread_forCount(
 int cnbWorkers;
 double cnbTimeMin;
 
-static QINLINE int computeNextBlock(
+int qloop_internal_computeNextBlock(
     int block,
     double time,
     volatile qqloop_handle_t * loop)
@@ -1125,7 +1125,7 @@ void qt_loop_queue_run_single(
     void *t)
 {
     qthread_t *const me = qthread_self();
-    int dynamicBlock = computeNextBlock(0, 1.0, loop);	// fake time to prevent blocking for short time chunks
+    int dynamicBlock = qloop_internal_computeNextBlock(0, 1.0, loop);	// fake time to prevent blocking for short time chunks
     qtimer_t qt = qtimer_create();
     double time = 0.;
 
@@ -1151,7 +1151,7 @@ void qt_loop_queue_run_single(
 	if (time < cnbTimeMin)
 	    cnbTimeMin = time;
 
-	dynamicBlock = computeNextBlock(dynamicBlock, time, loop);
+	dynamicBlock = qloop_internal_computeNextBlock(dynamicBlock, time, loop);
 
 	iterationNumber =
 	    (size_t) qthread_incr(&loop->assignNext, dynamicBlock);

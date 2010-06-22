@@ -49,4 +49,11 @@ struct qqloop_handle_s {
 #endif
 };
 
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+int qloop_internal_computeNextBlock(
+    int block,
+    double time,
+    volatile qqloop_handle_t * loop);
+#endif
+
 #endif

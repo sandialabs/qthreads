@@ -8,7 +8,10 @@
 #include <qthread/qtimer.h>
 #include <qthread/qloop.h>	       // for qt_loop_f
 #include "qthread_innards.h"	       // for qthread_debug()
-#include "qloop_innards.h"	       // for qqloop_handle_t
+#include "rose_log_arrivaldetector.h"  // for qt_global_arrive_first()
+#include "qloop_innards.h"	       // for qqloop_handle_t and qloop_internal_computeNextBlock()
+
+#include "rose_xomp.h"
 
 #define bool unsigned char
 
@@ -57,17 +60,23 @@ qqloop_handle_t *qt_loop_rose_queue_create(
     int64_t stop,
     int64_t incr)
 {
-    qqloop_handle_t *ret;
-    ret = (qqloop_handle_t *) malloc(sizeof(qqloop_handle_t));
+    qqloop_handle_t * const restrict ret = malloc(sizeof(qqloop_handle_t));
 
-    ret->workers = 0;
-    ret->shepherdsActive = 0;
-    ret->assignNext = start;
-    ret->assignStop = stop;
-    ret->assignStep = incr;
-    ret->assignDone = stop;
+    assert(ret);
+    if (ret) {
+	ret->workers = 0;
+	ret->shepherdsActive = 0;
+	ret->assignNext = start;
+	ret->assignStop = stop;
+	ret->assignStep = incr;
+	ret->assignDone = stop;
+	/*
+	 * ret->qwa is uninitialized
+	 * ret->stat is uninitialized
+	 */
 
-    array[qthread_shep(qthread_self())] = ret;
+	array[qthread_shep(qthread_self())] = ret;
+    }
 
     return ret;
 }
@@ -129,7 +138,7 @@ bool XOMP_loop_guided_start(
 	smallBlock[myid] = 5000;
     }
 
-    int dynamicBlock = computeNextBlock(smallBlock[myid], time, loop);
+    int dynamicBlock = qloop_internal_computeNextBlock(smallBlock[myid], time, loop);
 
     aligned_t iterationNumber = qthread_incr(&loop->assignNext, dynamicBlock);
     *returnLower = iterationNumber;
