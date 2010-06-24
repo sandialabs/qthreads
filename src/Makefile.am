@@ -7,8 +7,6 @@ AM_CPPFLAGS = $(SST_INCLUDE) -I$(top_srcdir)/include
 AM_LDFLAGS = $(SST_LIBS)
 AM_CFLAGS = @SST_CFLAGS@
 
-SUBDIRS = osx_compat qtimer ds patterns .
-
 lib_LTLIBRARIES = libqthread.la
 
 libqthread_la_SOURCES = \
@@ -17,6 +15,10 @@ libqthread_la_SOURCES = \
 	qutil.c \
 	qt_feb_barrier.c \
 	qloop.c
+
+include qtimer/Makefile.inc
+include ds/Makefile.inc
+include patterns/Makefile.inc
 
 # version-info fields are:
 # 1. the current interface revision number (i.e. whenever arguments of existing
@@ -34,11 +36,8 @@ libqthread_la_SOURCES = \
 #   the revision number
 libqthread_la_LDFLAGS = -version-info 12:0:1 -no-undefined
 
-COMPONENT_LIB_LA_FILES = qtimer/libqtimer.la \
-						 ds/libds.la \
-						 patterns/libpatterns.la
-libqthread_la_LIBADD = $(COMPONENT_LIB_LA_FILES)
-libqthread_la_DEPENDENCIES = $(COMPONENT_LIB_LA_FILES)
+libqthread_la_LIBADD =
+libqthread_la_DEPENDENCIES =
 
 if COMPILE_CXX_HASH
 libqthread_la_SOURCES += qt_hash.cpp
@@ -69,6 +68,5 @@ libqthread_la_SOURCES += qt_mpool.c
 endif
 
 if QTHREAD_NEED_OWN_MAKECONTEXT
-libqthread_la_DEPENDENCIES += osx_compat/libosx_compat.la
-libqthread_la_LIBADD += osx_compat/libosx_compat.la
+include osx_compat/Makefile.inc
 endif
