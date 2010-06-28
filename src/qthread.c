@@ -1014,7 +1014,7 @@ static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t *
 }				       /*}}} */
 
 /* to avoid compiler bugs regarding volatile... */
-#ifndef QTHREAD_MUTEX_INREMENT
+#ifndef QTHREAD_MUTEX_INCREMENT
 static Q_NOINLINE volatile qt_threadqueue_node_t *volatile *vol_id_qtlfqn(volatile
 								      qt_threadqueue_node_t
 								      *
