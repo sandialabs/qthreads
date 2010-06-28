@@ -198,6 +198,27 @@ void future_fork_to(qthread_f fptr, void *arg, aligned_t * retval,
     qthread_fork_future_to(me, fptr, arg, retval, shep);
 }
 
+void future_fork_syncvar_to(qthread_f fptr, void *arg, syncvar_t * retval,
+			    qthread_shepherd_id_t shep)
+{
+    qthread_t *me;
+
+    assert(future_bookkeeping_array != NULL);
+    if (future_bookkeeping_array == NULL) {
+	/* futures weren't initialized properly... */
+	qthread_fork_syncvar_to(fptr, arg, retval, shep);
+	return;
+    }
+
+    me = qthread_self();
+
+    qthread_debug(THREAD_BEHAVIOR, "Thread %p forking a future\n", (void *)me);
+    assert(me != NULL);
+    /* steps 2&3 (slow) */
+    blocking_vp_incr(me, &(future_bookkeeping_array[shep]));
+    qthread_fork_syncvar_future_to(me, fptr, arg, retval, shep);
+}
+
 /* This says: "I do not count toward future resource limits, temporarily." */
 int future_yield(qthread_t * me)
 {

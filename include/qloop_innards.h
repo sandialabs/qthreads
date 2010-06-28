@@ -39,21 +39,31 @@ struct qqloop_wrapper_range {
 struct qqloop_handle_s {
     struct qqloop_wrapper_args *qwa;
     struct qqloop_static_args stat;
+};
+
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
+struct qtrose_loop_handle_s {
+    qt_loop_step_f func;
+    void *arg;
     int workers;
     int assignNext;
     int assignStop;
     int assignStep;
     volatile aligned_t assignDone;	// start+offset
     size_t shepherdsActive;	// bit vector to stop shepherds from grabbing a loop twice (is this necessary?)
-#endif
 };
+qtrose_loop_handle_t *qtrose_loop_queue_create(
+    const qt_loop_queue_type type,
+    const size_t start,
+    const size_t stop,
+    const size_t incr,
+    const qt_loop_step_f func,
+    void *const restrict argptr);
 
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
 int qloop_internal_computeNextBlock(
     int block,
     double time,
-    volatile qqloop_handle_t * loop);
-#endif
+    volatile qtrose_loop_handle_t * loop);
+#endif /* QTHREAD_USE_ROSE_EXTENSIONS */
 
 #endif

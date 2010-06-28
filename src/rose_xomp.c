@@ -8,8 +8,9 @@
 #include <qthread/qtimer.h>
 #include <qthread/qloop.h>	       // for qt_loop_f
 #include "qthread_innards.h"	       // for qthread_debug()
+#include "qt_barrier.h"		       // for qt_global_barrier()
 #include "rose_log_arrivaldetector.h"  // for qt_global_arrive_first()
-#include "qloop_innards.h"	       // for qqloop_handle_t and qloop_internal_computeNextBlock()
+#include "qloop_innards.h"	       // for qtrose_loop_handle_t and qloop_internal_computeNextBlock()
 
 #include "rose_xomp.h"
 
@@ -38,7 +39,7 @@ void XOMP_parallel_start(
     unsigned numThread)
 {
     qthread_shepherd_id_t parallelWidth = qthread_num_shepherds();
-    qt_loop_f f = (qt_loop_f) func;
+    qt_loop_step_f f = (qt_loop_step_f) func;
     qt_parallel(f, parallelWidth, data);
     return;
 }
@@ -51,36 +52,9 @@ void XOMP_parallel_end(
 }
 
 #define ROSE_TIMED 1
-volatile qqloop_handle_t *array[64];
-int *lastBlock[64];
+volatile qtrose_loop_handle_t *array[64];
+int lastBlock[64];
 int smallBlock[64];
-
-qqloop_handle_t *qt_loop_rose_queue_create(
-    int64_t start,
-    int64_t stop,
-    int64_t incr)
-{
-    qqloop_handle_t * const restrict ret = malloc(sizeof(qqloop_handle_t));
-
-    assert(ret);
-    if (ret) {
-	ret->workers = 0;
-	ret->shepherdsActive = 0;
-	ret->assignNext = start;
-	ret->assignStop = stop;
-	ret->assignStep = incr;
-	ret->assignDone = stop;
-	/*
-	 * ret->qwa is uninitialized
-	 * ret->stat is uninitialized
-	 */
-
-	array[qthread_shep(qthread_self())] = ret;
-    }
-
-    return ret;
-}
-
 
 qtimer_t loopTimer;
 int firstTime[64];
@@ -92,7 +66,7 @@ void XOMP_loop_guided_init(
     int chunk_size)
 {
     qthread_t *const me = qthread_self();
-    volatile qqloop_handle_t *qqhandle = NULL;
+    volatile qtrose_loop_handle_t *qqhandle = NULL;
 
     /*
      * guided.upper = upper;
@@ -104,7 +78,7 @@ void XOMP_loop_guided_init(
     int myid = qthread_shep(me);
 
     qqhandle =
-	(volatile qqloop_handle_t *)qt_global_arrive_first(qthread_shep(me));
+	(volatile qtrose_loop_handle_t *)qt_global_arrive_first(qthread_shep(me));
 
     array[myid] = qqhandle;
     firstTime[myid] = 1;
@@ -124,14 +98,13 @@ bool XOMP_loop_guided_start(
     double time;
     qthread_t *const me = qthread_self();
     int myid = qthread_shep(me);
-    qqloop_handle_t *loop = array[myid];	// from init;
+    volatile qtrose_loop_handle_t *loop = array[myid];	// from init;
     if (!firstTime[myid]) {
 	qtimer_stop(loopTimer);
 	time = qtimer_secs(loopTimer);
-	if (time > 7.5e-7)
-	    smallBlock[myid] =
-		(smallBlock[myid] <
-		 lastBlock[myid]) ? smallBlock[myid] : lastBlock[myid];
+	if (time > 7.5e-7 && smallBlock[myid] >= lastBlock[myid]) {
+	    smallBlock[myid] = lastBlock[myid];
+	}
     } else {
 	time = 1.0;
 	firstTime[myid] = 0;

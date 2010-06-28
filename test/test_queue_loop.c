@@ -16,24 +16,30 @@ static unsigned int BIGLEN = 1000000U;
 static aligned_t *uia = NULL;
 static unsigned int REALLY_VERBOSE = 0;
 
-static void sum(qthread_t * me, const size_t startat, const size_t stopat,
-		const size_t step, void *arg_)
+static void sum(
+    qthread_t * me,
+    const size_t startat,
+    const size_t stopat,
+    void *arg_)
 {
     size_t i;
     aligned_t local_sum = 0, bigsum;
     if (REALLY_VERBOSE) {
-	printf("S%i: summing %i numbers, from %i to %i with a stride of %i\n", (int)qthread_shep(me), (int)(stopat-startat), (int)startat, (int)stopat, (int)step);
+	printf("S%i: summing %i numbers, from %i to %i\n",
+	       (int)qthread_shep(me), (int)(stopat - startat), (int)startat,
+	       (int)stopat);
     }
-    for (i = startat; i < stopat; i += step) {
+    for (i = startat; i < stopat; ++i) {
 	local_sum += uia[i];
     }
     bigsum = qthread_incr((aligned_t *) arg_, local_sum);
     if (REALLY_VERBOSE) {
-	printf("S%i: localsum = %lu, bigsum = %lu\n", (int)qthread_shep(me), (unsigned long)local_sum, (unsigned long)bigsum);
+	printf("S%i: localsum = %lu, bigsum = %lu\n", (int)qthread_shep(me),
+	       (unsigned long)local_sum, (unsigned long)bigsum);
     }
 }
 
-static const char * units[] = {
+static const char *units[] = {
     "bytes",
     "kB",
     "MB",
@@ -43,7 +49,9 @@ static const char * units[] = {
     "EB",
     NULL
 };
-static char * human_readable_bytes(size_t bytes)
+
+static char *human_readable_bytes(
+    size_t bytes)
 {
     static char str[1024];
 
@@ -57,14 +65,16 @@ static char * human_readable_bytes(size_t bytes)
     return str;
 }
 
-int main(int argc, char *argv[])
+int main(
+    int argc,
+    char *argv[])
 {
     size_t i;
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
     CHECK_VERBOSE();
     NUMARG(BIGLEN, "BIGLEN");
-    NUMARG(REALLY_VERBOSE,"REALLY_VERBOSE");
+    NUMARG(REALLY_VERBOSE, "REALLY_VERBOSE");
     //future_init(128);
     iprintf("%i threads\n", qthread_num_shepherds());
 
@@ -73,7 +83,8 @@ int main(int argc, char *argv[])
 	qqloop_handle_t *loophandle;
 	qtimer_t t = qtimer_create();
 
-	iprintf("allocating array of %u elements (%s)...\n", BIGLEN, human_readable_bytes(BIGLEN*sizeof(aligned_t)));
+	iprintf("allocating array of %u elements (%s)...\n", BIGLEN,
+		human_readable_bytes(BIGLEN * sizeof(aligned_t)));
 	uia = (aligned_t *) malloc(sizeof(aligned_t) * BIGLEN);
 	assert(uia);
 	iprintf("initializing array\n");
