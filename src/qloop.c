@@ -82,8 +82,8 @@ static void qt_loop_inner(
 	qwa[threadct].stopat = i + 1;
 	qwa[threadct].arg = argptr;
 	if (future) {
-	    qassert(qthread_fork_future_syncvar_to
-		    ((qthread_f) qloop_wrapper, qwa + threadct, rets + i,
+	    qassert(qthread_fork_syncvar_future_to
+		    (me, (qthread_f) qloop_wrapper, qwa + threadct, rets + i,
 		     (qthread_shepherd_id_t) (threadct %
 			 qthread_num_shepherds())),
 		    QTHREAD_SUCCESS);
