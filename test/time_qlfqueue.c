@@ -83,7 +83,7 @@ static aligned_t dequeuer(
 }
 
 #ifdef HAVE_CPROPS
-void loop_cpqueuer(
+static void loop_cpqueuer(
     qthread_t * me,
     const size_t startat,
     const size_t stopat,
@@ -101,7 +101,7 @@ void loop_cpqueuer(
     }
 }
 
-void loop_cpdequeuer(
+static void loop_cpdequeuer(
     qthread_t * me,
     const size_t startat,
     const size_t stopat,
