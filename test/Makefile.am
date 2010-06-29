@@ -13,7 +13,7 @@ TESTS = test_basic \
 		test_cacheline \
 		test_internal_mod \
 		test_id \
-		testincr testdincr testfincr \
+		test_incr test_fincr test_dincr \
 		test_stackleft \
 		test_migrate \
 		test_disabled \
@@ -111,14 +111,14 @@ testqloop_DEPENDENCIES = $(QTHREADLIB)
 test_queue_loop_SOURCES = test_queue_loop.c
 test_queue_loop_DEPENDENCIES = $(QTHREADLIB)
 
-testincr_SOURCES = testincr.c
-testincr_DEPENDENCIES = $(QTHREADLIB)
+test_incr_SOURCES = testincr.c
+test_incr_DEPENDENCIES = $(QTHREADLIB)
 
-testfincr_SOURCES = testfincr.c
-testfincr_DEPENDENCIES = $(QTHREADLIB)
+test_fincr_SOURCES = testfincr.c
+test_fincr_DEPENDENCIES = $(QTHREADLIB)
 
-testdincr_SOURCES = testdincr.c
-testdincr_DEPENDENCIES = $(QTHREADLIB)
+test_dincr_SOURCES = testdincr.c
+test_dincr_DEPENDENCIES = $(QTHREADLIB)
 
 test_disabled_SOURCES = test_disabled.c
 test_disabled_DEPENDENCIES = $(QTHREADLIB)
