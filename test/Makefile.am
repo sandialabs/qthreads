@@ -41,8 +41,8 @@ if COMPILE_ROSE_EXTENSIONS
 TESTS += test_log_barrier
 endif
 
+	 #time_swap \
 EXTRA_PROGRAMS += \
-	 time_swap \
 	 time_increments \
 	 time_febs \
 	 time_qarray \
@@ -83,7 +83,7 @@ noinst_HEADERS = argparsing.h
 INCLUDES = -I$(top_srcdir)/include
 OUTPUTDIR = $(top_builddir)/src
 QTHREADLIB = $(OUTPUTDIR)/libqthread.la
-CONTEXTLIB = $(OUTPUTDIR)/osx_compat/libosx_compat.la
+#CONTEXTLIB = $(OUTPUTDIR)/osx_compat/libosx_compat.la
 
 LDADD = $(QTHREADLIB)
 
@@ -167,13 +167,13 @@ test_qpool_DEPENDENCIES = $(QTHREADLIB)
 
 time_gcd_SOURCES = time_gcd.c
 
-time_swap_SOURCES = time_swap.c
-time_swap_LDADD = $(QTHREADLIB)
-time_swap_DEPENDENCIES = $(QTHREADLIB)
-if QTHREAD_NEED_OWN_MAKECONTEXT
-time_swap_LDADD += $(CONTEXTLIB)
-time_swap_DEPENDENCIES += $(CONTEXTLIB)
-endif
+#time_swap_SOURCES = time_swap.c
+#time_swap_LDADD = $(QTHREADLIB)
+#time_swap_DEPENDENCIES = $(QTHREADLIB)
+#if QTHREAD_NEED_OWN_MAKECONTEXT
+#time_swap_LDADD += $(CONTEXTLIB)
+#time_swap_DEPENDENCIES += $(CONTEXTLIB)
+#endif
 
 time_producerconsumer_SOURCES = time_producerconsumer.c
 time_producerconsumer_DEPENDENCIES = $(QTHREADLIB)
