@@ -10,7 +10,7 @@ AC_ARG_WITH([forward-bitfields],
 			[AC_HELP_STRING([--with-forward-bitfields],
 							[Force bitfields to be declared in forward order (e.g. for SST)])])
 AS_IF([test "x$with_forward_bitfields" = xyes],
-	  [qthread_cv_bitfield_order=forward]);
+	  [qthread_cv_bitfield_order=forward])
 AC_CACHE_CHECK([bitfield ordering],
     [qthread_cv_bitfield_order],
     [AC_RUN_IFELSE(
