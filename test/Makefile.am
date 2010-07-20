@@ -41,7 +41,6 @@ if COMPILE_ROSE_EXTENSIONS
 TESTS += test_log_barrier
 endif
 
-	 #time_swap \
 EXTRA_PROGRAMS += \
 	 time_increments \
 	 time_febs \
