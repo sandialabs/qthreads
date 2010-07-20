@@ -1,3 +1,1090 @@
+2010-07-20 15:21  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test: fix ignores
+
+2010-07-20 15:19  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_bitfield_order.m4: remove accidental
+	  semicolon
+
+2010-06-29 17:03  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_bitfield_order.m4: fix variable typo; add
+	  ability to force detection (i.e. for cross-compiling)
+
+2010-06-29 17:02  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_qlfqueue.c: remove compiler warnings in cprops case
+
+2010-06-29 17:00  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am: make testincr into test_incr (and friends)
+
+2010-06-28 20:44  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: fix typo in ifndef
+
+2010-06-28 19:16  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: use correct function name
+
+2010-06-28 17:07  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qloop_innards.h, include/qthread/futurelib.h,
+	  include/qthread/qloop.h, src/futurelib.c, src/qloop.c,
+	  src/rose_xomp.c, test/test_queue_loop.c: reverted some qloop API
+	  changes so as to not break MTGL compatibility, and separated
+	  qqloop_handle_t from the rose interface (since they dont actually
+	  overlap yet)
+
+2010-06-24 20:37  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/ds/Makefile.inc: whitespace
+
+2010-06-24 16:40  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, src/Makefile.am, src/ds/Makefile.am,
+	  src/ds/Makefile.inc, src/osx_compat/Makefile.am,
+	  src/osx_compat/Makefile.inc, src/patterns/Makefile.am,
+	  src/patterns/Makefile.inc, src/qtimer/Makefile.am,
+	  src/qtimer/Makefile.inc: enable a more parallel build
+
+2010-06-22 19:15  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/Makefile.am, include/qloop_innards.h,
+	  include/rose_log_arrivaldetector.h, include/rose_xomp.h,
+	  src/qloop.c, src/rose_log_arrivaldetector.c, src/rose_xomp.c:
+	  updates per Allan's request
+
+2010-06-17 15:40  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/Makefile.am: include qloop_innards.h
+
+2010-06-16 21:41  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qloop_innards.h, src/Makefile.am, src/qloop.c,
+	  src/rose_log_arrivaldetector.c, src/rose_xomp.c: import updates
+	  from Allan
+
+2010-06-16 17:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread_innards.h, src/qt_feb_barrier.c, src/qthread.c:
+	  cleanup callbacks to make reinit safe when using such things
+	  (only applies to feb barrier at the moment)
+
+2010-06-16 17:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h, include/qthread_innards.h,
+	  src/qt_feb_barrier.c, src/qthread.c, test/test_feb_barrier.c:
+	  qt_feb_barrier needs a one-time initialization
+
+2010-06-16 17:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: incr functions take same-sized
+	  arguments
+
+2010-06-16 17:11  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h: typo
+
+2010-06-16 17:09  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h, include/qthread/qthread.h: push PGI fixes
+	  to all ASM
+
+2010-06-16 16:40  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: workaround for a PGI bug
+
+2010-06-16 16:40  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: dont depend on __tile__; use QTHREAD_TILE
+
+2010-06-16 14:23  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: typo in PPC64 ifdef
+
+2010-06-15 16:40  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: fix mwaitc on ppc32
+
+2010-06-15 16:39  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_bitfield_order.m4: fix behavior on 32-bit
+	  hosts
+
+2010-06-14 22:36  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: more efficient helper functions (weird bug in ppc64)
+
+2010-06-14 22:34  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qutil.c: slight correctness improvement on qutil functions
+
+2010-06-14 21:20  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_producerconsumer.c, test/time_qarray.c,
+	  test/time_qutil_qsort.c, test/time_syncvar_producerconsumer.c:
+	  fix compiler warnings on 32-bit platforms
+
+2010-06-14 21:15  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_disabled.c, test/test_migrate.c: setenv is preferred to
+	  putenv
+
+2010-06-14 18:28  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: fix clang warning
+
+2010-06-14 18:16  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am, man/man3/qtimer_create.3,
+	  man/man3/qtimer_destroy.3, man/man3/qtimer_secs.3,
+	  man/man3/qtimer_start.3, man/man3/qtimer_stop.3: document qtimers
+
+2010-06-14 17:50  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am, man/man3/qarray_dist_like.3: document
+	  qarray_dist_like
+
+2010-06-14 17:44  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread_innards.h, src/qloop.c, src/qthread.c:
+	  implemented qthread_fork_syncvar_future_to
+
+2010-06-14 17:05  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/qt_loop_queue_run_there.3: oops, forgot this one
+
+2010-06-14 17:04  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/Makefile.am: convenience; qthread/qthread.h ought
+	  to be deprecated, but keep it for now
+
+2010-06-14 17:03  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* TODO: full list
+
+2010-06-14 16:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am, man/man3/qt_loop_queue_addworker.3,
+	  man/man3/qt_loop_queue_create.3, man/man3/qt_loop_queue_run.3:
+	  document qt_loop_queue_* stuff
+
+2010-06-14 15:52  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: fix const
+
+2010-06-14 15:50  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: use named constants for BUILD_UNLOCKED_SYNCVAR
+	  states, and do better ENOMEM error handling in syncvar functions
+
+2010-06-14 15:49  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: add more error possibilities (for
+	  syncvars) and fix some slightly incorrect restrict pointer
+	  declarations (specifically, readFF/FE *can* use the same pointer
+	  for both arguments)
+
+2010-06-14 15:46  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am, man/man3/qthread_syncvar_status.3: document
+	  syncvar status
+
+2010-06-14 15:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am, man/man3/qthread_readFE.3,
+	  man/man3/qthread_readFF.3, man/man3/qthread_syncvar_readFE.3:
+	  document syncvar readFE
+
+2010-06-14 15:34  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am, man/man3/qthread_readFF.3,
+	  man/man3/qthread_syncvar_readFF.3,
+	  man/man3/qthread_syncvar_writeEF.3,
+	  man/man3/qthread_syncvar_writeF.3: document syncvar readFF
+
+2010-06-14 15:08  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am, man/man3/qthread_syncvar_writeEF.3,
+	  man/man3/qthread_syncvar_writeF.3,
+	  man/man3/qthread_syncvar_writeF_const.3,
+	  man/man3/qthread_writeF.3: document syncvar writeF(_const)
+
+2010-06-14 14:59  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am, man/man3/qthread_syncvar_writeEF.3,
+	  man/man3/qthread_syncvar_writeEF_const.3,
+	  man/man3/qthread_writeEF.3: document syncvar writeEF(_const)
+
+2010-06-14 14:59  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/qthread_empty.3: minor corrections
+
+2010-06-14 14:58  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am, man/man3/qthread_syncvar_empty.3,
+	  man/man3/qthread_syncvar_fill.3: document syncvar_empty/fill
+
+2010-06-10 18:46  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: PGI flags
+
+2010-06-10 16:48  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: fix icc compiler warnings
+
+2010-06-10 15:53  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h, include/qthread/syncvar.hpp: fix the
+	  virtual declaration, and skip the static initializer bit
+
+2010-06-10 14:03  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/common.h.in, include/qthread/qthread.h: avoid
+	  static-selector compiler warnings
+
+2010-06-07 16:38  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: fix general race condition with qloop waiting; it's
+	  only an efficient solution because syncvars are so darn quick.
+	  Still need to implement future_fork_syncvar_to
+
+2010-06-03 16:33  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h, src/qthread.c: better error handling
+	  for syncvar timeouts
+
+2010-06-01 15:55  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* acinclude.m4, config/qthread_check_FUNCTION.m4, configure.in: add
+	  __FUNCTION__ checking, as well as error out if no hash table
+	  method is available
+
+2010-05-28 22:09  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: set picky mode on SunStudio correctly, and fail if
+	  no hash table method is available
+
+2010-05-26 21:29  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: it should be CXXLD instead of CXX
+
+2010-05-26 21:13  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_hash_maps.m4, configure.in, test/Makefile.am:
+	  automatically adjust CCLD if using c++ hashes and compiling
+	  without shared libraries
+
+2010-05-25 22:11  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: hwloc 1.0 support
+
+2010-05-25 21:55  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread_innards.h: hwloc requires globally accessible
+	  topology widget
+
+2010-05-25 21:52  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: use +r notation rather than separate
+	  =&r and 0 arguments
+
+2010-05-25 21:49  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/cacheline.c: __PIC__ only reserves ebx in 32-bit builds!
+
+2010-05-25 20:56  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* acinclude.m4, config/qthread_check_hwloc.m4, configure.in: check
+	  for hwloc, and make topology library preferences more sensible
+
+2010-05-25 15:50  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/syncvar.hpp: simplify
+
+2010-05-24 22:12  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.hpp, include/qthread/syncvar.hpp:
+	  syncvar_t c++ wrappers
+
+2010-05-24 22:11  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/testloop.cpp: make sure syncvar.hpp compiles
+
+2010-05-24 21:31  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/Makefile.am: preliminary C++ support for syncvar
+	  class
+
+2010-05-24 21:30  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.hpp, include/qthread/syncvar.hpp:
+	  preliminary C++ support for syncvar class
+
+2010-05-24 21:30  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: allan updates
+
+2010-05-24 15:18  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: use the much faster syncvar_t instead of aligned_t
+	  synchronization when possible
+
+2010-05-24 15:18  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_febs.c: time loop synchronization style
+
+2010-05-24 15:16  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: do not assert(me) in readFF
+
+2010-05-21 00:03  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: use syncvars in qt_loopaccum_balance rather than
+	  aligned_ts
+
+2010-05-21 00:03  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h, src/qthread.c: syncvar versions of
+	  fork
+
+2010-05-20 17:25  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_id.c: more verbosity
+
+2010-05-20 17:22  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_basic_syncvar.c: better printouts
+
+2010-05-20 17:22  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: tilera mwaitc implementation with test-and-set,
+	  also make mwaitc more efficient on 64-bit-atomic-rw platforms,
+	  and fix some debug statements
+
+2010-05-19 20:11  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_basic_syncvar.c: use writeF_const
+
+2010-05-19 20:07  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: quiet ANOTHER of Intel's idiotic compiler warning
+
+2010-05-19 20:06  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: quiet Intel's idiotic compiler warning
+
+2010-05-19 19:52  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: forgot to expire the timeout on state checks in
+	  mwaitc
+
+2010-05-19 04:02  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: fix some compiler warnings about pointer
+	  conversion
+
+2010-05-18 22:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: fix syncvar readFF shortcut
+
+2010-05-18 20:55  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: limits.h
+
+2010-05-18 20:53  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: optimistic syncvar read-only operations
+
+2010-05-18 20:32  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h, src/qthread.c,
+	  test/test_basic_syncvar.c: make syncvar_status match feb_status
+	  semantics
+
+2010-05-18 20:27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_gcd.c, test/time_increments.c, test/time_qdqueue.c,
+	  test/time_qdqueue_sizes.c, test/time_qlfqueue.c,
+	  test/time_qpool.c, test/time_swap.c: match new qloop semantics
+
+2010-05-18 20:22  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am, test/time_febs.c: add time_febs to measure the
+	  difference between using syncvars and using aligned_ts
+
+2010-05-18 18:46  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am, test/test_basic_syncvar.c,
+	  test/time_syncvar_producerconsumer.c: test syncvar stuff
+
+2010-05-18 18:46  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_basic.c: remove forced verbosity
+
+2010-05-18 18:46  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h, src/qthread.c: continue standardizing
+	  qthread_debug calls, add syncval idea
+
+2010-05-18 18:45  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread_innards.h, src/qloop.c: begin standardizing
+	  qthread_debug output
+
+2010-05-18 18:44  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_barrier.c: bugfixes from allan
+
+2010-05-18 18:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_mpool.c: extra assert
+
+2010-05-18 18:42  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* acinclude.m4, config/qthread_check_bitfield_order.m4,
+	  configure.in, include/qthread/common.h.in: check bitfield
+	  ordering
+
+2010-05-18 18:41  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_working_valloc.m4: update copyright
+
+2010-05-18 14:26  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: detect variadic macro styles
+
+2010-05-18 14:25  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* acinclude.m4, config/qthread_vamacros.m4: detect variadic macro
+	  styles
+
+2010-05-18 14:25  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/version-gen: improved version generation
+
+2010-04-29 17:57  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_basic.c, test/test_cas.c, test/test_id.c,
+	  test/test_qtimer.c, test/test_qutil.c, test/testincr.c: a bit
+	  more verbosity and other sst-related fixes
+
+2010-04-29 17:56  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/argparsing.h: sst behavior convenience
+
+2010-04-29 17:55  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/sst/futurelib-sst.c, src/sst/qthread-sst.c: remove compiler
+	  warnings
+
+2010-04-29 17:55  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread-sst.h: sync with master
+
+2010-04-28 16:33  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: need cprops in SST context too
+
+2010-04-28 16:33  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/cacheline.c: fix typo
+
+2010-04-26 17:12  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: avoid unintentional bitwidth downgrade
+
+2010-04-26 17:12  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_queue_loop.c: REALLY_VERBOSE
+
+2010-04-26 17:11  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/testincr.c: check for verbose
+
+2010-04-26 15:52  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: fix race condition on freeing rets, without
+	  sacrificing efficiency
+
+2010-04-26 15:49  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_barrier.c: separate barrier from for-loops
+
+2010-04-26 14:55  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: remove ICC ROSE warnings
+
+2010-04-26 14:55  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_barrier.c: fix bugs that Allan found
+
+2010-04-26 14:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: remove ICC warnings
+
+2010-04-22 21:18  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: reformatting
+
+2010-04-22 19:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: need qtimer for normal build now
+
+2010-04-22 17:45  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qloop.h, src/qloop.c, test/test_queue_loop.c:
+	  created a new type of queue loop (TIMED) based on Allans work;
+	  made runtime loop type switching possible
+
+2010-04-22 15:23  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qloop.h: more changes from allan, adding step
+	  values to the queue loops (currently only a step of 1 is
+	  supported)
+
+2010-04-22 15:23  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c, test/test_queue_loop.c: more changes from allan,
+	  adding step values to the queue loops (currently only a step of 1
+	  is supported)
+
+2010-04-22 15:01  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_barrier.c: avoid assert fails on low shepherd counts
+
+2010-04-22 14:59  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: more verbose debug info
+
+2010-04-22 14:59  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_barrier.c: remove memory leak
+
+2010-04-22 14:55  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_qtimer.c: allow for zero (or apparently-zero) call time
+
+2010-04-22 14:51  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_barrier.c: handle low shepherd numbers safely
+
+2010-04-22 14:44  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_reinit.c: more verbose
+
+2010-04-21 19:41  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: use builtin CAS if available on
+	  Sparc64 for increment
+
+2010-04-21 16:48  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: ROSE now handles correct num_shepherds values
+
+2010-04-21 16:39  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qloop.h, src/qloop.c: static declarations
+
+2010-04-21 16:37  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: no static initializer
+
+2010-04-21 16:31  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_log_barrier.c: match allans interface
+
+2010-04-21 16:27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h: static initializers for FASTLOCKS
+
+2010-04-21 16:27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: use FASTLOCKs instead of home-made cas-based lock;
+	  this way is more reliable, but long term we want to get rid of
+	  the locking here altogether
+
+2010-04-21 16:06  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qloop.h, src/qloop.c: compiles cleanly
+
+2010-04-21 16:03  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: more changes from allan to fix lower-bound problem
+
+2010-04-20 14:59  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/common.h.in: support ROSE in header
+
+2010-04-20 14:57  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: update to Allans new code (from paper)
+
+2010-04-20 14:57  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_barrier.h, src/qt_barrier.c: changes from Allan to the
+	  loop barrier (maybe it works now?)
+
+2010-04-08 14:45  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_detect_compiler_type.m4: detect TileCC; also move
+	  GNU test to the end, since so many of these blasted compilers
+	  pretend to be the GNU compiler
+
+2010-04-08 14:45  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/ds/qarray.c: remove unreachable break
+
+2010-04-08 14:44  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_cp_hash.c: handle needSync argument to qt_hash_create()
+	  correctly
+
+2010-04-05 16:27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: avoid compiler warnings on non-Suns
+
+2010-04-05 16:18  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/testloop.cpp: remove a few more warnings from icc
+
+2010-04-05 16:14  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_cacheline.c, test/test_cas.c, test/test_id.c,
+	  test/test_internal_mod.c, test/test_qarray_accum.c,
+	  test/test_qtimer.c, test/test_queue_loop.c, test/test_reinit.c,
+	  test/testdincr.c, test/testfincr.c, test/testincr.c,
+	  test/testq.c: fix gcc warnings about function declarations
+
+2010-04-05 16:04  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_hash.h, src/qt_hash.cpp: handle needSync argument to
+	  _create()
+
+2010-04-05 16:04  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h: add _PTR versions of FASTLOCK macros, for
+	  convenience
+
+2010-04-05 16:04  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qalloc.h, include/qthread/qtimer.h: remove gcc
+	  warnings about prototypes
+
+2010-04-05 16:03  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/cacheline.c: remove gcc warnings about prototypes
+
+2010-04-05 16:03  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qalloc.c: remove gcc warnings about prototypes
+
+2010-04-05 16:03  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_libnuma.m4, configure.in: developer default
+	  for enable-picky; also report libnumaV1 or V2
+
+2010-04-05 15:04  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: ignore icc remark about constant
+	  selector
+
+2010-04-05 15:02  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_hash.cpp: ignore icc error
+
+2010-04-05 14:56  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: whitespace
+
+2010-04-05 14:53  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: mark guided as unused (for now) to quiet icc
+
+2010-04-05 14:51  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qutil.c: whitespace
+
+2010-04-05 14:50  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qutil.c: explicitly convert log() results to quite icc
+
+2010-04-05 14:49  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/patterns/wavefront.c: explicitly convert ceil results to
+	  quite icc
+
+2010-04-02 20:22  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_libnuma.m4, src/qthread.c: handle really
+	  ancient versions of libnuma
+
+2010-04-02 15:34  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/ds, src/patterns: update ignores
+
+2010-04-02 15:33  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test: update ignores
+
+2010-04-02 14:42  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_qtimer.c: better qtimer test
+
+2010-04-01 18:56  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: numa_set_interleave_mask is broken, and I noted my
+	  observation about numa_max_node(); come to think of it, this now
+	  handles CPU-less nodes
+
+2010-04-01 18:19  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: fixed bug in new libnuma node allocation
+
+2010-04-01 18:08  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: new way to allocate libnuma nodes that deals with
+	  heterogeneity (3leaf)
+
+2010-04-01 14:22  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_increments.c: fflush test name so we know what we're up
+	  to
+
+2010-04-01 14:04  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: factored is better
+
+2010-04-01 14:03  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_increments.c: fixed output formatting of new tests
+
+2010-03-31 19:09  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_increments.c: fixed the "Balanced competing loop" to do
+	  what I thought it was doing, and added the Streaming loops to
+	  test what BCL used to be testing
+
+2010-03-30 20:39  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: guided fixes
+
+2010-03-30 17:20  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: better end-of-loop handling in factored queue
+
+2010-03-30 17:11  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: single-shep shortcut in loop scheduling
+
+2010-03-29 21:02  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qloop.h, src/qloop.c: what was I thinking?
+	  queue_run handles the object deletion already
+
+2010-03-29 21:01  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: free shep0 total_time timer
+
+2010-03-29 21:00  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_feb_barrier.c: C++ casting
+
+2010-03-29 18:30  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qloop.h: function to destroy loop handles
+
+2010-03-29 18:29  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: function to destroy loop handles
+
+2010-03-24 22:03  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am, test/test_queue_loop.c: test loop queues
+
+2010-03-24 22:03  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: guided/factored self-scheduling in loop queues
+
+2010-03-18 16:50  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/ds/qarray.c: keep ilnb wrapper private
+
+2010-03-17 17:06  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/ds: ignore Makefile.in
+
+2010-03-17 17:05  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, src/Makefile.am, src/ds, src/ds/Makefile.am,
+	  src/ds/qarray.c, src/ds/qdqueue.c, src/ds/qlfqueue.c,
+	  src/ds/qpool.c, src/qarray.c, src/qdqueue.c, src/qlfqueue.c,
+	  src/qpool.c: move public data structures into ds directory
+
+2010-03-17 16:33  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/Makefile.am, src/allpairs.c, src/patterns,
+	  src/patterns/Makefile.am, src/patterns/allpairs.c,
+	  src/patterns/wavefront.c, src/wavefront.c: move allpairs and
+	  wavefront into their own subdirectory
+
+2010-03-11 19:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: minor debug output improvement
+
+2010-03-11 18:52  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_id.c: properly handle rets
+
+2010-03-11 18:20  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: threadqueue assumes calloc'd data
+
+2010-03-11 18:19  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_id.c: free rets array
+
+2010-03-11 18:19  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am: rename testid to test_id for consistency
+
+2010-03-11 18:12  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: better handling of mccoy_thread memory
+
+2010-03-11 18:03  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: be more efficient when calculating unique address
+	  totals
+
+2010-03-11 18:02  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_feb_barrier.c: behave when using UNPOOLED
+
+2010-03-11 16:10  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: compute average concurrency
+
+2010-03-10 22:05  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: oops, fix non-profiling stuff
+
+2010-03-10 21:45  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qarray.h, src/qarray.c: add valgrind support to
+	  protect DIST location markers, add nonblocking iter_loop wrapper,
+	  make loopaccum use a heuristic to avoid spawning threads to all
+	  shepherds on small ranges, fix memory leak, add more error checks
+	  to set_shepof
+
+2010-03-10 21:40  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread_innards.h: enable forced printout
+
+2010-03-10 21:40  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: fixed up the profiling code; removed the FIXME
+	  warning by fixing the shep0 issue
+
+2010-03-09 17:58  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qtimer.h: C++ compatibility
+
+2010-03-03 22:07  dstark
+
+	* src/qarray.c: bad math in loopaccum
+
+2010-03-03 21:12  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h: moved the paren
+
+2010-03-03 21:08  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h: QTHREAD_CASLOCK2 for initializing
+
+2010-03-03 21:07  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am, test/test_qtimer.c, test/time_gcd.c,
+	  test/time_incr_bench.c, test/time_incr_bench_pthread.c,
+	  test/time_increments.c, test/time_lul_bench.c,
+	  test/time_lul_bench_pthread.c, test/time_mutex_bench.c,
+	  test/time_mutex_bench_pthread.c, test/time_producerconsumer.c,
+	  test/time_qarray.c, test/time_qarray_sizes.c,
+	  test/time_qdqueue.c, test/time_qdqueue_sizes.c,
+	  test/time_qlfqueue.c, test/time_qpool.c, test/time_qutil_qsort.c,
+	  test/time_spin_bench.c, test/time_spin_bench_pthread.c,
+	  test/time_thrcrt_bench.c, test/time_thrcrt_bench_pthread.c:
+	  handle moved qtimer.h
+
+2010-03-03 20:57  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_swap.c: moved qtimer.h
+
+2010-03-03 20:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_feb_barrier.c: handle unpooled memory
+
+2010-03-03 20:07  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h, src/qthread.c: egads... (ROSE)
+
+2010-03-03 20:00  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: weird ROSE change to num shepherds reporting
+
+2010-03-03 19:58  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am: log barrier only works with rose extensions at
+	  the moment
+
+2010-03-03 19:58  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/Makefile.am: FEB barrier is public (because I understand it)
+
+2010-03-03 19:57  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: AKP updates
+
+2010-03-03 19:32  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_log_barrier.c: safety
+
+2010-03-03 19:28  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am, test/test_log_barrier.c: test log barrier
+	  (BROKEN)
+
+2010-03-03 19:25  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_barrier.h, src/qt_barrier.c: make the barrier
+	  interfaces similar
+
+2010-03-03 19:24  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_feb_barrier.c: remove warning
+
+2010-03-03 19:16  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am: oops
+
+2010-03-03 19:13  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am, test/test_feb_barrier.c: feb test does timing
+	  now too
+
+2010-03-03 19:09  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_feb_barrier.c:
+
+2010-03-03 19:09  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/Makefile.am, src/qt_feb_barrier.c: rename feb
+	  barrier header
+
+2010-03-03 19:07  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/Makefile.am, include/qt_feb_barrier.h,
+	  include/qthread/Makefile.am, include/qthread/feb_barrier.h: FEB
+	  barrier is now public
+
+2010-03-03 19:05  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_feb_barrier.c: remove debug printf
+
+2010-03-03 15:42  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qarray.c: fix boundary condition in loopaccum
+
+2010-03-01 21:37  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: use compiler detection for -restrict flag
+
+2010-03-01 20:29  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qtimer.h, src/qthread.c, src/qtimer/altix.c,
+	  src/qtimer/gethrtime.c, src/qtimer/gettime.c,
+	  src/qtimer/gettimeofday.c, src/qtimer/mach.c, test/test_qtimer.c,
+	  test/time_allpairs.c, test/time_chain_bench.c,
+	  test/time_chain_bench_pthread.c, test/time_cncthr_bench.c,
+	  test/time_cncthr_bench_pthread.c, test/time_gcd.c,
+	  test/time_incr_bench.c, test/time_incr_bench_pthread.c,
+	  test/time_increments.c, test/time_lul_bench.c,
+	  test/time_lul_bench_pthread.c, test/time_mutex_bench.c,
+	  test/time_mutex_bench_pthread.c, test/time_producerconsumer.c,
+	  test/time_qarray.c, test/time_qarray_sizes.c,
+	  test/time_qdqueue.c, test/time_qdqueue_sizes.c,
+	  test/time_qlfqueue.c, test/time_qpool.c, test/time_qutil_qsort.c,
+	  test/time_spin_bench.c, test/time_spin_bench_pthread.c,
+	  test/time_swap.c, test/time_thrcrt_bench.c,
+	  test/time_thrcrt_bench_pthread.c, test/time_wavefront.c: make
+	  qtimer interface more consistent with other qthread functions
+
+2010-03-01 18:38  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_qtimer.c: make qtimer always available
+
+2010-03-01 18:38  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/Makefile.am, include/qthread/Makefile.am,
+	  include/qthread/qtimer.h, include/qtimer.h, src/Makefile.am,
+	  src/qtimer/Makefile.am, src/qtimer/altix.c,
+	  src/qtimer/gethrtime.c, src/qtimer/gettime.c,
+	  src/qtimer/gettimeofday.c, src/qtimer/mach.c, test/Makefile.am,
+	  test/time_allpairs.c, test/time_chain_bench.c,
+	  test/time_chain_bench_pthread.c, test/time_cncthr_bench.c,
+	  test/time_cncthr_bench_pthread.c, test/time_wavefront.c: make
+	  qtimer always available
+
+2010-03-01 18:37  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: make qtimer always available
+
+2010-02-25 21:16  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* Makefile.am: set up reconfigure dependencies
+
+2010-02-25 21:14  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: cant check news anymore
+
+2010-02-25 21:13  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* autogen.sh: fix configure generation to handle dynamic version
+	  number
+
+2010-02-25 21:11  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/version-gen: better svn revision detection; use different
+	  behavior if there isnt a b at the end of the version
+
+2010-02-25 21:01  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* ChangeLog, NEWS, config/ChangeLogGen.sh, config/version-gen:
+	  better version generation; automatically detect releases based on
+	  NEWS file
+
+2010-02-25 20:28  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/Makefile.am, include/qt_barrier.h,
+	  include/qt_feb_barrier.h, src/Makefile.am, src/qloop.c,
+	  src/qt_barrier.c, src/qt_feb_barrier.c, src/qthread.c: feb
+	  barrier
+
+2010-02-25 20:26  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/version-gen, configure.in: generate package version
+	  programmatically
+
+2010-02-25 15:19  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_qarray.c, test/time_qarray_sizes.c: update constants
+
+2010-02-25 15:18  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_qarray.c: update constants
+
 2010-02-24 23:45  Kyle Wheeler <kbwheel@sandia.gov>
 
 	* include/qthread/qarray.h, src/qarray.c: qarray_dist_like(), first
