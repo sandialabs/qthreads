@@ -37,7 +37,9 @@
 #include <sys/mman.h>
 #endif
 #include <errno.h>
-
+#ifdef SST
+# include <ppcPimCalls.h>
+#endif
 #ifdef HAVE_TMC_CPUS_H
 # include <tmc/cpus.h>
 #endif
@@ -112,16 +114,16 @@ enum threadstate {
 #define QTHREAD_RET_IS_SYNCVAR          4
 
 #ifndef QTHREAD_NOALIGNCHECK
-#define QALIGN(d, s, f) do { \
+#define QALIGN(d, s) do { \
     s = (aligned_t *) (((size_t) d) & (~(sizeof(aligned_t)-1))); \
     if (s != d) { \
 	fprintf(stderr, \
 		"WARNING: %s(): unaligned address %p ... assuming %p\n", \
-		f, (void *) d, (void *) s); \
+		__FUNCTION__, (void *) d, (void *) s); \
     } \
 } while(0)
 #else /* QTHREAD_NOALIGNCHECK */
-#define QALIGN(d, s, f) (s)=(d)
+#define QALIGN(d, s) (s)=(d)
 #endif
 
 #if !(defined(HAVE_GCC_INLINE_ASSEMBLY) && \
@@ -3902,12 +3904,13 @@ int qthread_migrate_to(qthread_t * me, const qthread_shepherd_id_t shepherd)
 /* This is just a little function that should help in debugging */
 int qthread_feb_status(const aligned_t * addr)
 {				       /*{{{ */
-    qthread_addrstat_t *m;
     const aligned_t *alignedaddr;
+#ifndef SST
     int status = 1;		/* full */
+    qthread_addrstat_t *m;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(addr);
 
-    QALIGN(addr, alignedaddr, "qthread_feb_status()");
+    QALIGN(addr, alignedaddr);
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]); {
 	m = (qthread_addrstat_t *) qt_hash_get_locked(qlib->FEBs[lockbin],
@@ -3924,6 +3927,10 @@ int qthread_feb_status(const aligned_t * addr)
     qthread_debug(LOCK_BEHAVIOR, "addr %p is %i", addr,
 		  status);
     return status;
+#else
+    QALIGN(addr, alignedaddr);
+    return PIM_feb_is_full((void*)alignedaddr);
+#endif
 }				       /*}}} */
 
 /* This allocates a new, initialized addrstat structure, which is used for
@@ -4076,11 +4083,12 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t * shep,
 
 int qthread_empty(qthread_t * me, const aligned_t * dest)
 {				       /*{{{ */
-    qthread_addrstat_t *m;
     const aligned_t *alignedaddr;
+#ifndef SST
+    qthread_addrstat_t *m;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
 
-    QALIGN(dest, alignedaddr, "qthread_empty()");
+    QALIGN(dest, alignedaddr);
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]);
     {				       /* BEGIN CRITICAL SECTION */
@@ -4109,16 +4117,21 @@ int qthread_empty(qthread_t * me, const aligned_t * dest)
     if (m) {
 	qthread_gotlock_empty(me->shepherd_ptr, m, (void *)alignedaddr, 0);
     }
+#else
+    QALIGN(dest, alignedaddr);
+    PIM_feb_empty((void*)alignedaddr);
+#endif
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
 int qthread_fill(qthread_t * me, const aligned_t * dest)
 {				       /*{{{ */
-    qthread_addrstat_t *m;
     const aligned_t *alignedaddr;
+#ifndef SST
+    qthread_addrstat_t *m;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
 
-    QALIGN(dest, alignedaddr, "qthread_fill()");
+    QALIGN(dest, alignedaddr);
     /* lock hash */
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]);
@@ -4137,6 +4150,10 @@ int qthread_fill(qthread_t * me, const aligned_t * dest)
 	 * we need to fill it. */
 	qthread_gotlock_fill(me->shepherd_ptr, m, (void *)alignedaddr, 0);
     }
+#else
+    QALIGN(dest, alignedaddr);
+    PIM_feb_fill((unsigned int*)alignedaddr);
+#endif
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
@@ -4148,8 +4165,9 @@ int qthread_fill(qthread_t * me, const aligned_t * dest)
 int qthread_writeF(qthread_t * me, aligned_t * restrict const dest,
 		   const aligned_t * restrict const src)
 {				       /*{{{ */
-    qthread_addrstat_t *m;
     aligned_t *alignedaddr;
+#ifndef SST
+    qthread_addrstat_t *m;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
 
     if (me == NULL) {
@@ -4158,7 +4176,7 @@ int qthread_writeF(qthread_t * me, aligned_t * restrict const dest,
     qthread_debug(LOCK_BEHAVIOR,
 		  "tid %u dest=%p src=%p...\n",
 		  me->thread_id, dest, src);
-    QALIGN(dest, alignedaddr, "qthread_fill_with()");
+    QALIGN(dest, alignedaddr);
     QTHREAD_LOCK_UNIQUERECORD(feb, dest, me);
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]); {	/* lock hash */
@@ -4184,6 +4202,10 @@ int qthread_writeF(qthread_t * me, aligned_t * restrict const dest,
 		  "tid %u succeeded on %p=%p\n",
 		  me->thread_id, dest, src);
     qthread_gotlock_fill(me->shepherd_ptr, m, alignedaddr, 0);
+#else
+    QALIGN(dest, alignedaddr);
+    PIM_feb_empty((void*)alignedaddr);
+#endif
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
@@ -4202,9 +4224,10 @@ int qthread_writeF_const(qthread_t * me, aligned_t * const dest,
 int qthread_writeEF(qthread_t * me, aligned_t * restrict const dest,
 		    const aligned_t * restrict const src)
 {				       /*{{{ */
+    aligned_t *alignedaddr;
+#ifndef SST
     qthread_addrstat_t *m;
     qthread_addrres_t *X = NULL;
-    aligned_t *alignedaddr;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
 
     QTHREAD_LOCK_TIMER_DECLARATION(febblock);
@@ -4217,7 +4240,7 @@ int qthread_writeEF(qthread_t * me, aligned_t * restrict const dest,
 		  me->thread_id, dest, src);
     QTHREAD_LOCK_UNIQUERECORD(feb, dest, me);
     QTHREAD_LOCK_TIMER_START(febblock);
-    QALIGN(dest, alignedaddr, "qthread_writeEF()");
+    QALIGN(dest, alignedaddr);
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]);
     {
@@ -4270,6 +4293,12 @@ int qthread_writeEF(qthread_t * me, aligned_t * restrict const dest,
 	qthread_gotlock_fill(me->shepherd_ptr, m, alignedaddr, 0);
     }
     QTHREAD_LOCK_TIMER_STOP(febblock, me);
+#else
+    QALIGN(dest, alignedaddr);
+    while (PIM_feb_try_writeef(alignedaddr, src) == 1) {
+	qthread_yield(me);
+    }
+#endif
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
@@ -4287,9 +4316,10 @@ int qthread_writeEF_const(qthread_t * me, aligned_t * const dest,
 int qthread_readFF(qthread_t * me, aligned_t * restrict const dest,
 		   const aligned_t * restrict const src)
 {				       /*{{{ */
+    const aligned_t *alignedaddr;
+#ifndef SST
     qthread_addrstat_t *m = NULL;
     qthread_addrres_t *X = NULL;
-    const aligned_t *alignedaddr;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(src);
 
     QTHREAD_LOCK_TIMER_DECLARATION(febblock);
@@ -4302,7 +4332,7 @@ int qthread_readFF(qthread_t * me, aligned_t * restrict const dest,
 		  me->thread_id, dest, src);
     QTHREAD_LOCK_UNIQUERECORD(feb, src, me);
     QTHREAD_LOCK_TIMER_START(febblock);
-    QALIGN(src, alignedaddr, __FUNCTION__);
+    QALIGN(src, alignedaddr);
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]);
     {
@@ -4356,6 +4386,12 @@ int qthread_readFF(qthread_t * me, aligned_t * restrict const dest,
 	REPORTUNLOCK(m);
     }
     QTHREAD_LOCK_TIMER_STOP(febblock, me);
+#else
+    QALIGN(src, alignedaddr);
+    while (PIM_feb_try_readff(dest, alignedaddr) == 1) {
+	qthread_yield(me);
+    }
+#endif
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
@@ -4368,8 +4404,9 @@ int qthread_readFF(qthread_t * me, aligned_t * restrict const dest,
 int qthread_readFE(qthread_t * me, aligned_t * restrict const dest,
 		   const aligned_t * restrict const src)
 {				       /*{{{ */
-    qthread_addrstat_t *m;
     const aligned_t *alignedaddr;
+#ifndef SST
+    qthread_addrstat_t *m;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(src);
 
     QTHREAD_LOCK_TIMER_DECLARATION(febblock);
@@ -4382,7 +4419,7 @@ int qthread_readFE(qthread_t * me, aligned_t * restrict const dest,
 		  me->thread_id, dest, src);
     QTHREAD_LOCK_UNIQUERECORD(feb, src, me);
     QTHREAD_LOCK_TIMER_START(febblock);
-    QALIGN(src, alignedaddr, __FUNCTION__);
+    QALIGN(src, alignedaddr);
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]);
     {
@@ -4435,6 +4472,12 @@ int qthread_readFE(qthread_t * me, aligned_t * restrict const dest,
 	qthread_gotlock_empty(me->shepherd_ptr, m, (void*)alignedaddr, 0);
     }
     QTHREAD_LOCK_TIMER_STOP(febblock, me);
+#else
+    QALIGN(src, alignedaddr);
+    while (PIM_feb_try_readfe(dest, alignedaddr) == 1) {
+	qthread_yield(me);
+    }
+#endif
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
