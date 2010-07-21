@@ -29,7 +29,7 @@ AS_IF([test "x$with_sst" != xno],
 	  AS_IF([test $qt_cv_sst_version == 1],
 		    [SST_INCLUDE="-I$with_sst/Struct_Simulator/serialProto/ -I$with_sst/Struct_Simulator/serialProto/ssFrontEnd/ -I$with_sst/Struct_Simulator/pimSrc/ppc/"])
 	  AS_IF([test $qt_cv_sst_version == 2],
-		    [SST_INCLUDE="-I$with_sst/user_includes -I$with_sst/components/genericProc/programs/ -I$with_sst/components/genericProc/FE/"])
+		    [SST_INCLUDE="-I$with_sst/user_includes -I$with_sst/sst/elements/genericProc/programs/ -I$with_sst/sst/elements/genericProc/FE/"])
 	 ])
 
    CPPFLAGS="$CPPFLAGS $SST_INCLUDE"
