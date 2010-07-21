@@ -72,8 +72,10 @@ static inline qthread_t *qthread_self(void) {
  * In the SST PIM environment, the shepherd is the CPU ID number.
  */
 #define qthread_fork(f, arg, ret) qthread_fork_to((f), (arg), (ret), NO_SHEPHERD)
+#define qthread_fork_syncvar(f, arg, ret) qthread_fork_to((f), (arg), (aligned_t*)(ret), NO_SHEPHERD)
 int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
 		    const qthread_shepherd_id_t shepherd);
+#define qthread_fork_syncvar_to(f, arg, ret, shep) qthread_fork_to((f), (arg), (aligned_t*)(ret), (shep))
 
 /* Using qthread_prepare()/qthread_schedule() and variants:
  *
@@ -177,6 +179,7 @@ static inline int qthread_feb_status(const aligned_t *addr)
 {
     return PIM_feb_is_full((unsigned int*)addr);
 }
+#define qthread_syncvar_status(addr) qthread_feb_status((const aligned_t*)addr)
 
 /* The empty/fill functions merely assert the empty or full state of the given
  * address. */
@@ -186,12 +189,14 @@ int qthread_empty(qthread_t * me, const aligned_t *dest)
     PIM_feb_empty((unsigned int*)dest);
     return 0;
 }
+#define qthread_syncvar_empty(me, dest) qthread_empty((me), (aligned_t*)(dest))
 static inline
 int qthread_fill(qthread_t * me, const aligned_t *dest)
 {
     PIM_feb_fill((unsigned int*)dest);
     return 0;
 }
+#define qthread_syncvar_fill(me, dest) qthread_fill((me), (aligned_t*)(dest))
 
 /* These functions wait for memory to become empty, and then fill it. When
  * memory becomes empty, only one thread blocked like this will be awoken. Data
@@ -221,6 +226,8 @@ int qthread_writeEF_const(qthread_t * me, aligned_t * const dest,
     PIM_feb_writeef(dest, src);
     return 0;
 }
+#define qthread_syncvar_writeEF(me, dest, src) qthread_writeEF((me), (aligned_t*)(dest), (aligned_t*)(src))
+#define qthread_syncvar_writeEF_const(me, dest, src) qthread_writeEF_const((me), (aligned_t*)(dest), (aligned_t*)(src))
 
 /* This function is a cross between qthread_fill() and qthread_writeEF(). It
  * does not wait for memory to become empty, but performs the write and sets
@@ -250,6 +257,8 @@ static inline int qthread_writeF_const(qthread_t * me, aligned_t * const dest,
     PIM_feb_fill(dest);
     return 0;
 }
+#define qthread_syncvar_writeF(me, dest, src) qthread_writeF((me), (aligned_t*)(dest), (aligned_t*)(src))
+#define qthread_syncvar_writeF_const(me, dest, src) qthread_writeF_const((me), (aligned_t*)(dest), (aligned_t)(src))
 
 /* This function waits for memory to become full, and then reads it and leaves
  * the memory as full. When memory becomes full, all threads waiting for it to
@@ -276,6 +285,7 @@ int qthread_readFF(qthread_t * me, aligned_t * const dest,
     }
     return 0;
 }
+#define qthread_syncvar_readFF(me, dest, src) qthread_readFF((me), (aligned_t*)(dest), (aligned_t*)(src))
 
 /* These functions wait for memory to become full, and then empty it. When
  * memory becomes full, only one thread blocked like this will be awoken. Data
@@ -302,6 +312,7 @@ int qthread_readFE(qthread_t * me, aligned_t * restrict const dest,
     }
     return 0;
 }
+#define qthread_syncvar_readFE(me, dest, src) qthread_readFE((me), (aligned_t*)(dest), (aligned_t*)(src))
 
 /* functions to implement FEB-ish locking/unlocking
  *
@@ -316,13 +327,13 @@ int qthread_readFE(qthread_t * me, aligned_t * restrict const dest,
 static inline
 int qthread_lock(qthread_t * me, const aligned_t * a)
 {
-    PIM_feb_readfe((aligned_t * const)a);
+    PIM_feb_lock((aligned_t * const)a);
     return 0;
 }
 static inline
 int qthread_unlock(qthread_t * me, const aligned_t * a)
 {
-    PIM_feb_fill((aligned_t * const)a);
+    PIM_feb_unlock((aligned_t * const)a);
     return 0;
 }
 
