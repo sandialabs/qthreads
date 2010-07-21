@@ -113,16 +113,17 @@ void qthread_assertnotfuture(qthread_t * t);
 int qthread_fork_future_to(const qthread_t * me, const qthread_f f,
 			   const void *arg, aligned_t * ret,
 			   const qthread_shepherd_id_t shepherd);
-int qthread_fork_syncvar_future_to(const qthread_t * me, const qthread_f f,
-			   const void *arg, syncvar_t * ret,
-			   const qthread_shepherd_id_t shepherd);
 unsigned int qthread_internal_shep_to_node(const qthread_shepherd_id_t shep);
 
 #define QTHREAD_NO_NODE ((unsigned int)(-1))
 #ifdef QTHREAD_SST_PRIMITIVES
 # define qthread_shepherd_count() PIM_readSpecial(PIM_CMD_LOC_COUNT)
+# define qthread_fork_syncvar_future_to(me, f, arg, ret, shep) qthread_fork_syncvar_to(f, arg, ret, shep)
 #else
 # define qthread_shepherd_count() (qlib->nshepherds)
+int qthread_fork_syncvar_future_to(const qthread_t * me, const qthread_f f,
+			   const void *arg, syncvar_t * ret,
+			   const qthread_shepherd_id_t shepherd);
 #endif
 
 /* internal initialization functions */
