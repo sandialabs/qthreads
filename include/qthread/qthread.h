@@ -1222,7 +1222,7 @@ Q_ENDCXX /* */
 # endif
 
 #else /* ifdef __cplusplus */
-# include "qthread.hpp"
+# include <qthread/qthread.hpp>
 #endif /* __cplusplus */
 
 #endif /* QTHREAD_SST_PRIMITIVES */
