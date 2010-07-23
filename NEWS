@@ -1,3 +1,8 @@
+--- 1.4.1b ---
+Improvements:
+ - Speed up the qt_feb_barrier with syncvar_t's
+Bugfixes:
+ - Fixed the race condition in the qt_feb_barrier
 --- 1.4 ---
 New Features:
  - qarray_dist_like() to match one qarray to another
