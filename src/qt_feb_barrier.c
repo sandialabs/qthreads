@@ -73,6 +73,7 @@ void qt_feb_barrier_enter(qthread_t *me, qt_feb_barrier_t *b)
     qthread_syncvar_readFF(me, NULL, &b->in_gate);
     /* increment the blocker count */
     waiters = qthread_incr(&b->blockers, 1) + 1;
+    assert(waiters <= b->max_blockers);
     if (waiters == b->max_blockers) {
 	/* last guy into the barrier, close the in_gate, open the out_gate */
 	qthread_syncvar_empty(me, &b->in_gate);
