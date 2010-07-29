@@ -27,7 +27,6 @@ static void mutexpool_allocator(
     qthread_t * me,
     const size_t startat,
     const size_t stopat,
-    const size_t step,
     void *arg)
 {
     size_t i;
@@ -51,7 +50,6 @@ static void mutexpool_deallocator(
     qthread_t * me,
     const size_t startat,
     const size_t stopat,
-    const size_t step,
     void *arg)
 {
     size_t i;
@@ -69,7 +67,6 @@ static void pool_allocator(
     qthread_t * me,
     const size_t startat,
     const size_t stopat,
-    const size_t step,
     void *arg)
 {
     size_t i;
@@ -88,7 +85,6 @@ static void pool_deallocator(
     qthread_t * me,
     const size_t startat,
     const size_t stopat,
-    const size_t step,
     void *arg)
 {
     size_t i;
@@ -103,7 +99,6 @@ static void malloc_allocator(
     qthread_t * me,
     const size_t startat,
     const size_t stopat,
-    const size_t step,
     void *arg)
 {
     size_t i;
@@ -121,7 +116,6 @@ static void malloc_deallocator(
     qthread_t * me,
     const size_t startat,
     const size_t stopat,
-    const size_t step,
     void *arg)
 {
     size_t i;

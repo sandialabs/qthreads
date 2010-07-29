@@ -16,7 +16,6 @@ static void balanced_incr(
     qthread_t * me,
     const size_t startat,
     const size_t stopat,
-    const size_t step,
     void *arg)
 {
     size_t i;
@@ -30,7 +29,6 @@ static void balanced_falseshare(
     qthread_t * me,
     const size_t startat,
     const size_t stopat,
-    const size_t step,
     void *arg)
 {
     size_t i;
@@ -46,7 +44,6 @@ static void balanced_noncomp(
     qthread_t * me,
     const size_t startat,
     const size_t stopat,
-    const size_t step,
     void *arg)
 {
     size_t i;
@@ -142,7 +139,6 @@ static void streaming_incr(
     qthread_t * me,
     const size_t startat,
     const size_t stopat,
-    const size_t step,
     void *arg)
 {
     size_t i;
@@ -156,7 +152,6 @@ static void streaming_naincr(
     qthread_t * me,
     const size_t startat,
     const size_t stopat,
-    const size_t step,
     void *arg)
 {
     size_t i;

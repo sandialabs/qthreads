@@ -45,7 +45,6 @@ static void loop_queuer(
     qthread_t * me,
     const size_t startat,
     const size_t stopat,
-    const size_t step,
     void *arg)
 {
     size_t i;
@@ -63,7 +62,6 @@ static void loop_dequeuer(
     qthread_t * me,
     const size_t startat,
     const size_t stopat,
-    const size_t step,
     void *arg)
 {
     size_t i;

@@ -13,7 +13,7 @@ aligned_t incrementme = 0;
 aligned_t *increments = NULL;
 
 static void balanced_readFF(qthread_t * me, const size_t startat,
-			  const size_t stopat, const size_t step, void *arg)
+			  const size_t stopat, void *arg)
 {
     size_t i;
 
@@ -23,7 +23,7 @@ static void balanced_readFF(qthread_t * me, const size_t startat,
 }
 
 static void balanced_syncvar_readFF(qthread_t * me, const size_t startat,
-			  const size_t stopat, const size_t step, void *arg)
+			  const size_t stopat, void *arg)
 {
     size_t i;
 
@@ -33,7 +33,7 @@ static void balanced_syncvar_readFF(qthread_t * me, const size_t startat,
 }
 
 static void balanced_falseshare_syncreadFF(qthread_t * me, const size_t startat,
-				const size_t stopat, const size_t step, void *arg)
+				const size_t stopat, void *arg)
 {
     size_t i;
     qthread_shepherd_id_t shep = qthread_shep(me);
@@ -45,7 +45,7 @@ static void balanced_falseshare_syncreadFF(qthread_t * me, const size_t startat,
 }
 
 static void balanced_falseshare_readFF(qthread_t * me, const size_t startat,
-				const size_t stopat, const size_t step, void *arg)
+				const size_t stopat, void *arg)
 {
     size_t i;
     qthread_shepherd_id_t shep = qthread_shep(me);
@@ -57,7 +57,7 @@ static void balanced_falseshare_readFF(qthread_t * me, const size_t startat,
 }
 
 static void balanced_noncomp_syncreadFF(qthread_t * me, const size_t startat,
-			     const size_t stopat, const size_t step, void *arg)
+			     const size_t stopat, void *arg)
 {
     size_t i;
     syncvar_t myinc = SYNCVAR_STATIC_INITIALIZER;
@@ -68,7 +68,7 @@ static void balanced_noncomp_syncreadFF(qthread_t * me, const size_t startat,
 }
 
 static void balanced_noncomp_readFF(qthread_t * me, const size_t startat,
-			     const size_t stopat, const size_t step, void *arg)
+			     const size_t stopat, void *arg)
 {
     size_t i;
     aligned_t myinc = 0;
