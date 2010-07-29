@@ -263,9 +263,22 @@ AS_IF([test "x$ac_cv_pthreads_enable" == "xyes"],
 	   AS_IF([test "$ac_cv_search_pthread_create" != "no"],
 			 [AC_DEFINE([QTHREAD_USE_PTHREADS], [1], [allowed to spawn worker threads])])
 	   AC_CHECK_FUNCS([pthread_yield pthread_spin_init])])
+AC_ARG_WITH([judy],
+			[AC_HELP_STRING([--with-judy[=DIR]],
+							[Enable the use of Judy, and optionally specify the location of the libcprops library])])
 AC_ARG_WITH([cprops],
 			[AC_HELP_STRING([--with-cprops[=DIR]],
 							[Enable the use of cprops, and optionally specify the location of libcprops library])])
+AS_IF([test "x$with_judy" != xno],
+	  [AS_IF([test "x$with_judy" != xyes -a "x$with_judy" != x],
+			 [CPPFLAGS="$CPPFLAGS -I$with_judy/include"
+			  LDFLAGS="$LDFLAGS -L$with_judy/lib"])
+	  EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --with-judy=$with_judy"
+	  AC_SEARCH_LIBS([JudyLIns],
+					 [Judy],
+					 [AC_DEFINE([HAVE_JUDY],[1],[Define if judy is available])
+					  with_judy=yes])],
+	  [
 AS_IF([test "x$with_cprops" != xno && test "x$with_cprops" != x],
 	  [AS_IF([test "x$with_cprops" != "xyes"],
 			 [CPPFLAGS="${CPPFLAGS} -I$with_cprops/include"
@@ -277,6 +290,7 @@ AS_IF([test "x$with_cprops" != xno && test "x$with_cprops" != x],
 					  with_cprops=yes],
 					 [AC_MSG_ERROR([If you want libcprops, see http://cprops.sf.net/])])
 	  ])
+])
 AS_IF([test "x$qthread_implementation" = "xsst"],
 	  [
 	   AC_DEFINE([QTHREAD_SST_PRIMITIVES],[1],[Define to use the SST primitives])
@@ -307,10 +321,10 @@ AC_SYS_LARGEFILE
 QTHREAD_CHECK_FUNCTION
 
 NEWCCLD='$(CC)'
-AS_IF([test "x$with_cprops" != xyes ],
+AS_IF([test "x$with_cprops" != xyes -a "x$with_judy" != xyes],
       [QTHREAD_HASH_MAPS([AS_IF([test "x$enable_shared" == xno],
 			 [NEWCCLD='$(CXXLD)'])],
-			 [AC_MSG_ERROR([No acceptable hash table method available (suggest either a different C++ compiler or libcprops)])]
+			 [AC_MSG_ERROR([No acceptable hash table method available (suggest either a different C++ compiler, Judy, or libcprops)])]
 			 )])
 AC_SUBST([NEWCCLD])
 
@@ -549,7 +563,8 @@ AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETHRTIME], [test "x$qthread_timer_type" = "x
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_ALTIX], [test "x$qthread_timer_type" = "xaltix"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIMEOFDAY], [test "x$qthread_timer_type" = "xgettimeofday"])
 AM_CONDITIONAL([COMPILE_POOLED_MEMORY], [test "x$enable_pooled_memory" = "xyes"])
-AM_CONDITIONAL([COMPILE_CXX_HASH], [test "x$with_cprops" != "xyes"])
+AM_CONDITIONAL([COMPILE_CPROPS], [test "x$with_cprops" == xyes])
+AM_CONDITIONAL([COMPILE_JUDY], [test "x$with_judy" == xyes])
 AM_CONDITIONAL([COMPILE_ROSE_EXTENSIONS], [test "x$enable_rose_extensions" == xyes])
 
 AC_CONFIG_HEADERS([include/config.h include/qthread/common.h])
