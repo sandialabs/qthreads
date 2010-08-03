@@ -7,6 +7,19 @@
 #include "qthread/cacheline.h"
 #include <stdlib.h>
 #include <unistd.h>		       /* for getpagesize() */
+#if (HAVE_MEMALIGN && HAVE_MALLOC_H)
+# include <malloc.h>
+#endif
+
+#ifdef HAVE_GETPAGESIZE
+# include <unistd.h>
+#else
+static QINLINE int getpagesize(
+    )
+{
+    return 4096;
+}
+#endif
 
 #ifndef QT_HASH_CAST
 #define QT_HASH_CAST qt_key_t
@@ -65,8 +78,18 @@ static inline void qt_hash_internal_create(
 	ret->shrink_size = entries * 0.030f;
     }
     /* data storage */
+#if defined(HAVE_MEMALIGN)
+    ret->entries = memalign(linesize, sizeof(hash_entry) * entries);
+#elif defined(HAVE_POSIX_MEMALIGN)
     posix_memalign((void **)&(ret->entries), linesize,
 		   sizeof(hash_entry) * entries);
+#elif defined(HAVE_WORKING_VALLOC)
+    ret->entries = valloc(sizeof(hash_entry) * entries);
+#elif defined(HAVE_PAGE_ALIGNED_MALLOC)
+    ret->entries = malloc(sizeof(hash_entry) * entries);
+#else
+    ret->entries = valloc(sizeof(hash_entry) * entries);	/* cross your fingers */
+#endif
     if (ret->entries) {
 	memset(ret->entries, 0, sizeof(hash_entry) * entries);
     } else {
@@ -84,8 +107,7 @@ static uint64_t qt_hashword(
     const union {
 	uint64_t key;
 	uint8_t b[sizeof(uint64_t)];
-    }
-    k = {
+    } k = {
     key};
 
     a = b = c = 0xdeadbeef + sizeof(uint64_t);
