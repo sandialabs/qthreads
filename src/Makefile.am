@@ -14,6 +14,7 @@ libqthread_la_SOURCES = \
 	qalloc.c \
 	qutil.c \
 	qt_feb_barrier.c \
+	qt_c_hash.c \
 	qloop.c
 
 include qtimer/Makefile.inc
@@ -38,16 +39,6 @@ libqthread_la_LDFLAGS = -version-info 12:0:1 -no-undefined
 
 libqthread_la_LIBADD =
 libqthread_la_DEPENDENCIES =
-
-if COMPILE_CPROPS
-libqthread_la_SOURCES += qt_cp_hash.c
-else
-if COMPILE_JUDY
-libqthread_la_SOURCES += qt_judy_hash.c
-else
-libqthread_la_SOURCES += qt_hash.cpp
-endif
-endif
 
 if COMPILE_ROSE_EXTENSIONS
 libqthread_la_SOURCES += qt_barrier.c \
