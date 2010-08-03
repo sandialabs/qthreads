@@ -200,7 +200,7 @@ void qt_hash_destroy(
     assert(h);
     if (h->lock) {
 	QTHREAD_FASTLOCK_DESTROY_PTR(h->lock);
-	free(h->lock);
+	free((void*)h->lock);
     }
     assert(h->entries);
     free(h->entries);
