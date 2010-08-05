@@ -228,6 +228,7 @@ static QINLINE void qt_loop_balance_inner(
 	qthread_syncvar_readFF(me, NULL, rets + i);
     }
     free(qwa);
+    free(rets);
 }				       /*}}} */
 
 void qt_loop_balance(
