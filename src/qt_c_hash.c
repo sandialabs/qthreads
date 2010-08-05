@@ -181,7 +181,7 @@ qt_hash qt_hash_create(
 	bucketsize = linesize / sizeof(hash_entry);
 	bucketmask = bucketsize - 1;
     }
-    ret = malloc(sizeof(struct qt_hash_s));
+    ret = calloc(1, sizeof(struct qt_hash_s));
     if (ret) {
 	if (needSync) {
 	    ret->lock = malloc(sizeof(QTHREAD_FASTLOCK_TYPE));
