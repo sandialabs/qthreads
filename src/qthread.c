@@ -5149,7 +5149,7 @@ int qthread_syncvar_fill(qthread_t * restrict const me,
 		    e.sf = 1;	       // only one will be dequeued, so it'll still have waiters
 		}
 	    }
-	    //addr->u.w = BUILD_UNLOCKED_SYNCVAR(ret, (e.pf << 1) | e.sf);
+	    addr->u.w = BUILD_UNLOCKED_SYNCVAR(ret, (e.pf << 1) | e.sf);
 	    assert(m->FFQ || m->EFQ);      // otherwise there weren't really any waiters
 	    assert(m->FEQ == NULL);	       // someone snuck in!
 	    qthread_syncvar_gotlock_fill(me->shepherd_ptr, m, addr, BUILD_UNLOCKED_SYNCVAR(ret, (e.pf << 1) | e.sf));
