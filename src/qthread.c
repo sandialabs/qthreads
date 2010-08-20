@@ -5211,12 +5211,12 @@ int qthread_syncvar_empty(qthread_t * restrict const me,
 			e.sf));
 	} else {
 	    assert(e.sf == 0);	       /* no waiters */
-	    addr->u.w = BUILD_UNLOCKED_SYNCVAR(ret, 2);
+	    addr->u.w = BUILD_UNLOCKED_SYNCVAR(ret, SYNCFEB_STATE_EMPTY_NO_WAITERS);
 	}
     } else { /* already empty, so just release the lock */
 	assert(e.pf == 1);
 #ifdef __tile__
-	addr->u.w = BUILD_UNLOCKED_SYNCVAR(ret, 2 | e.sf);
+	addr->u.w = BUILD_UNLOCKED_SYNCVAR(ret, SYNCFEB_STATE_EMPTY_NO_WAITERS | e.sf);
 #else
 	addr->u.s.lock = 0;
 #endif
