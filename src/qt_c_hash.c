@@ -290,7 +290,7 @@ static void brehash(
     }
     assert(h->population == d->population);
     free(h->entries);
-    memcpy(h, d, sizeof(struct qt_hash_s));
+    memcpy(((char*)h)+sizeof(QTHREAD_FASTLOCK_TYPE), ((char*)d)+sizeof(QTHREAD_FASTLOCK_TYPE), sizeof(struct qt_hash_s)-sizeof(QTHREAD_FASTLOCK_TYPE));
     free(d);
 }
 
