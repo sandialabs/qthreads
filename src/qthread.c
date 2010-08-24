@@ -5538,7 +5538,7 @@ int qthread_syncvar_writeEF(qthread_t * restrict me,
 	ret = qthread_mwaitc(dest, SYNCFEB_ANY, INT_MAX, &e);
 	qassert_ret(e.cf == 0, QTHREAD_TIMEOUT);	/* there better not have been a timeout */
 	if (e.pf == 1) {	       /* it got empty! */
-	    if (e.sf == 1) {
+	    if (e.sf == 1) {	       /* not just empty, but with waiters! */
 		goto locked_empty_waiters;
 	    } else {
 		goto locked_empty;
