@@ -7,42 +7,52 @@
 #define GET getmcontext
 #endif
 
-#if defined(__APPLE__) && defined(__i386__)
-#define NEEDX86CONTEXT 1
-#define SET _setmcontext
-#define GET _getmcontext
+#if defined(__APPLE__)
+# if defined(__i386__)
+#  define NEEDX86CONTEXT 1
+#  define SET _setmcontext
+#  define GET _getmcontext
+# elif defined(__x86_64__)
+#  define NEEDX86_64CONTEXT 1
+#  define SET _setmcontext
+#  define GET _getmcontext
+# elif defined(__ppc64__)
+#  define NEEDPOWER64CONTEXT 1
+#  define SET __setmcontext
+#  define GET __getmcontext
+# else /* why not detect __ppc__? */
+#  define NEEDPOWERCONTEXT 1
+#  define SET __setmcontext
+#  define GET __getmcontext
+# endif
 #endif
 
-#if defined(__APPLE__) && defined(__x86_64__)
-#define NEEDX86_64CONTEXT 1
-#define SET _setmcontext
-#define GET _getmcontext
-#endif
-
-#if defined(__APPLE__) && defined(__ppc64__)
-#define NEEDPOWER64CONTEXT 1
-#define SET __setmcontext
-#define GET __getmcontext
-#endif
-
-#if defined(__APPLE__) && \
-   !defined(__i386__) && !defined(__x86_64__) && \
-   !defined(__ppc64__)
-#define NEEDPOWERCONTEXT 1
-#define SET __setmcontext
-#define GET __getmcontext
-#endif
-
-#if defined(__linux__) && defined(__arm__)
-#define NEEDARMCONTEXT 1
-#define SET setmcontext
-#define GET getmcontext
-#endif
-
-#if defined(__linux__) && defined(__tile__)
-#define NEEDTILECONTEXT 1
-#define SET _setmcontext
-#define GET _getmcontext
+#if defined(__linux__)
+# if defined(__arm__)
+#  define NEEDARMCONTEXT 1
+#  define SET setmcontext
+#  define GET getmcontext
+# elif defined(__tile__)
+#  define NEEDTILECONTEXT 1
+#  define SET _setmcontext
+#  define GET _getmcontext
+# elif defined (__i386__)
+#  define NEEDX86CONTEXT 1
+#  define SET setmcontext
+#  define GET getmcontext
+# elif defined (__x86_64__)
+#  define NEEDX86_64CONTEXT 1
+#  define SET setmcontext
+#  define GET getmcontext
+# elif defined (__ppc64__)
+#  define NEEDPOWER64CONTEXT 1
+#  define SET setmcontext
+#  define GET getmcontext
+# elif defined (__ppc__)
+#  define NEEDPOWERCONTEXT 1
+#  define SET setmcontext
+#  define GET getmcontext
+# endif
 #endif
 
 #ifdef NEEDX86CONTEXT
