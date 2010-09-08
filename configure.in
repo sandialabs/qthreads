@@ -237,6 +237,12 @@ AC_ARG_ENABLE([64bit-alignment],
   [AS_HELP_STRING([--enable-64bit-alignment], [Align aligned_t to 8 byte boundry, even if it is 4 bytes long.  Default is to align to sizeof(aligned_t). Alignment cannot be smaller than aligned_t.])])
 dnl deal with result once we figure out the hardware sizes
 
+AC_ARG_ENABLE([fastcontext],
+			  [AS_HELP_STRING([--enable-fastcontext],
+							  [use a lighter-weight non-system-based context swapping mechanism that does not make system calls. This is currently experimental, and DOES have bugs. Use at your own risk (defaults to enabled on MacOS, because otherwise there is no available context swapping mechanism).])],
+							  [],
+							  [enable_fastcontext=no])
+
 AC_CACHE_SAVE
 
 # Figure out if we're targeting SST or Unix implementation.  Will add
@@ -422,8 +428,10 @@ AS_IF([test "x$qthread_implementation" = "xunix"], [
       AC_DEFINE([__MAKECONTEXT_V2_SOURCE], [1], [force the Sun makecontext to behave correctly])
     ;;
   esac
-  QTHREAD_CHECK_SWAPCONTEXT([qthread_makecontext_type="native"],
-							[qthread_makecontext_type="own"])
+  AS_IF([test "x$enable_fastcontext" == "xno"],
+  		[QTHREAD_CHECK_SWAPCONTEXT([qthread_makecontext_type="native"],
+								   [qthread_makecontext_type="own"])],
+		[QTHREAD_CHECK_COMPAT_MAKECONTEXT([qthread_makecontext_type="own"])])
 
   AS_IF([test "x$qthread_makecontext_type" = "xnone"], 
         [AC_MSG_ERROR([Can not find working makecontext.])])

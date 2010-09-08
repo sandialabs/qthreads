@@ -7,7 +7,7 @@
 #endif
 
 /* HAS_UCONTEXT affects the include files on some systems (I think) */
-#if defined(linux) || defined(__NetBSD__) || defined(__FreeBSD__) || (defined(__SVR4) && defined (__sun))
+#if defined(__linux__) || defined(__NetBSD__) || defined(__FreeBSD__) || (defined(__SVR4) && defined (__sun))
 #define HAS_UCONTEXT 1
 #endif
 
@@ -28,7 +28,7 @@
 #define NEEDSWAPCONTEXT
 #endif
 
-#if defined(__FreeBSD__) ||  defined(__APPLE__)
+#if defined(__FreeBSD__) ||  defined(__APPLE__) || defined(__linux__)
 
 #ifdef HAVE_STDARG_H
 # include <stdarg.h>
@@ -85,7 +85,7 @@ extern	int		swapcontext(ucontext_t*, ucontext_t*);
 extern	void		makecontext(ucontext_t*, void(*)(), int, ...);
 #endif
 
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(__linux__)
 #	define mcontext libthread_mcontext
 #	define mcontext_t libthread_mcontext_t
 #	define ucontext libthread_ucontext
@@ -125,7 +125,7 @@ void setmcontext(const mcontext_t*);
 #define	getcontext(u)	getmcontext(&(u)->uc_mcontext)
 #endif
 
-#if defined(__APPLE__) && (defined(__i386__) || defined(__x86_64__))
+#if (defined(__APPLE__) || defined(__linux__)) && (defined(__i386__) || defined(__x86_64__))
 # define NEEDX86MAKECONTEXT
 # define NEEDSWAPCONTEXT
 # if defined(__x86_64__)
@@ -133,7 +133,7 @@ void setmcontext(const mcontext_t*);
 # endif
 #endif
 
-#if defined(__APPLE__) && (defined(__ppc__) || defined(__ppc64__))
+#if (defined(__APPLE__) || defined(__linux__)) && (defined(__ppc__) || defined(__ppc64__))
 #define NEEDPOWERMAKECONTEXT
 #define NEEDSWAPCONTEXT
 #endif

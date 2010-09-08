@@ -72,6 +72,9 @@ AC_CACHE_CHECK([for hand-implemented makecontext],
 	 *tile*)
 	  qthread_cv_makecontext="yes"
 	 ;;
+	 *-linux-gnu)
+	 qthread_cv_makecontext="yes"
+	 ;;
    esac])
 
 AS_IF([test "$qthread_cv_makecontext" = "yes"],
