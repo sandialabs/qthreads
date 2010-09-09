@@ -15,10 +15,10 @@ typedef struct ucontext ucontext_t;
 
 typedef void (MakeContextCallback)(void);
 
-/*extern*/ int swapcontext(ucontext_t *, ucontext_t *);
-/*extern*/ void makecontext(ucontext_t *, MakeContextCallback *, int, ...);
-/*extern*/ int getmcontext(mcontext_t *);
-/*extern*/ void setmcontext(mcontext_t *);
+int swapcontext(ucontext_t *, ucontext_t *);
+void makecontext(ucontext_t *, MakeContextCallback *, int, ...);
+int getmcontext(mcontext_t *);
+void setmcontext(mcontext_t *);
 
 /*-
  * Copyright (c) 1999 Marcel Moolenaar
@@ -50,54 +50,29 @@ typedef void (MakeContextCallback)(void);
  * $FreeBSD: src/sys/sys/ucontext.h,v 1.4 1999/10/11 20:33:17 luoqi Exp $
  */
 
-/* #include <machine/ucontext.h> */
-
 struct mcontext {
-	/*
-	 * The first 20 fields must match the definition of
-	 * sigcontext. So that we can support sigcontext
-	 * and ucontext_t at the same time.
-	 */
-	long mc_onstack;		/* XXX - sigcontext compat. */
-	long mc_gs; /* processor-control in 64-bit Windows, unused elsewhere */
-	long mc_fs; /* thread-specific data */
-	long mc_es; /* flat segment group (do not touch) */
-	long mc_ds; /* flat segment group (do not touch) */
-	long mc_edi; /* general purpose 32-bit-only register */
-	long mc_esi; /* general purpose 32-bit-only register */
-	long mc_ebp; /* Stack frame pointer */
-	long mc_isp;
-	long mc_ebx; /* PIC base register, also general-purp. reg */
-	long mc_edx; /* UNSAVED "dividend register", general purp. */
-	long mc_ecx; /* UNSAVED "count register", general purp. */
-	long mc_eax; /* UNSAVED "accumulation register", general purp. */
-	long mc_trapno;
-	long mc_err;
-	long mc_eip; /* UNSAVED instruction pointer */
-	long mc_cs; /* flat segment group (do not touch) */
-	long mc_eflags;
-	long mc_esp;			/* machine state; stack pointer */
-	long mc_ss; /* flat segment group (do not touch) */
-
-	long mc_fpregs[28];		/* env87 + fpacc87 + u_long */
-	long __spare__[17];
+	long mc_edi; /* 0: 1st arg (mandatory) */
+	long mc_esi; /* 1: 2nd arg (often mandatory) */
+#ifdef NEEDX86REGISTERARGS
+	long mc_edx; /* 2: 3rd arg */
+	long mc_ecx; /* 3: 4th arg */
+#endif
+	long mc_ebp; /* 4/2: Stack frame pointer */
+	long mc_ebx; /* 5/3: PIC base register, also general-purp. reg */
+	long mc_eax; /* 6/4: return value */
+#ifdef __x86_64__
+	long mc_r12; /* 7: extra callee-saved registers */
+	long mc_r13; /* 8: extra callee-saved registers */
+	long mc_r14; /* 9: extra callee-saved registers */
+	long mc_r15; /* 10: extra callee-saved registers */
+#endif
+	long mc_esp; /* 11/5: machine state; stack pointer */
+	long mc_eip; /* 12/6: function pointer */
 };
 
 struct ucontext {
-	/*
-	 * Keep the order of the first two fields. Also,
-	 * keep them the first two fields in the structure.
-	 * This way we can have a union with struct
-	 * sigcontext and ucontext_t. This allows us to
-	 * support them both at the same time.
-	 * note: the union is not defined, though.
-	 */
-	sigset_t	uc_sigmask;
 	mcontext_t	uc_mcontext;
-
-	struct __ucontext *uc_link;
 	stack_t		uc_stack;
-	long		__spare__[8];
 };
 
 

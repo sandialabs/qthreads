@@ -85,6 +85,24 @@ extern	int		swapcontext(ucontext_t*, ucontext_t*);
 extern	void		makecontext(ucontext_t*, void(*)(), int, ...);
 #endif
 
+#if (defined(__APPLE__) || defined(__linux__)) && (defined(__i386__) || defined(__x86_64__))
+# define NEEDX86MAKECONTEXT
+# define NEEDSWAPCONTEXT
+# if defined(__x86_64__)
+#  define NEEDX86REGISTERARGS
+# endif
+#endif
+
+#if (defined(__APPLE__) || defined(__linux__)) && (defined(__ppc__) || defined(__ppc64__))
+#define NEEDPOWERMAKECONTEXT
+#define NEEDSWAPCONTEXT
+#endif
+
+#if defined(__FreeBSD__) && defined(__i386__) && __FreeBSD__ < 5
+#define NEEDX86MAKECONTEXT
+#define NEEDSWAPCONTEXT
+#endif
+
 #if defined(__APPLE__) || defined(__linux__)
 #	define mcontext libthread_mcontext
 #	define mcontext_t libthread_mcontext_t
@@ -123,24 +141,6 @@ int getmcontext(mcontext_t*);
 void setmcontext(const mcontext_t*);
 #define	setcontext(u)	setmcontext(&(u)->uc_mcontext)
 #define	getcontext(u)	getmcontext(&(u)->uc_mcontext)
-#endif
-
-#if (defined(__APPLE__) || defined(__linux__)) && (defined(__i386__) || defined(__x86_64__))
-# define NEEDX86MAKECONTEXT
-# define NEEDSWAPCONTEXT
-# if defined(__x86_64__)
-#  define NEEDX86REGISTERARGS
-# endif
-#endif
-
-#if (defined(__APPLE__) || defined(__linux__)) && (defined(__ppc__) || defined(__ppc64__))
-#define NEEDPOWERMAKECONTEXT
-#define NEEDSWAPCONTEXT
-#endif
-
-#if defined(__FreeBSD__) && defined(__i386__) && __FreeBSD__ < 5
-#define NEEDX86MAKECONTEXT
-#define NEEDSWAPCONTEXT
 #endif
 
 #endif
