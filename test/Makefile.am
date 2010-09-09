@@ -68,6 +68,7 @@ EXTRA_PROGRAMS += \
 	 time_thrcrt_bench_pthread \
 	 time_cncthr_bench \
 	 time_cncthr_bench_pthread \
+	 time_swap \
 	 time_gcd
 CLEANFILES += $(EXTRA_PROGRAMS)
 
@@ -165,9 +166,9 @@ test_qpool_DEPENDENCIES = $(QTHREADLIB)
 
 time_gcd_SOURCES = time_gcd.c
 
-#time_swap_SOURCES = time_swap.c
-#time_swap_LDADD = $(QTHREADLIB)
-#time_swap_DEPENDENCIES = $(QTHREADLIB)
+time_swap_SOURCES = time_swap.c
+time_swap_LDADD = $(QTHREADLIB)
+time_swap_DEPENDENCIES = $(QTHREADLIB)
 #if QTHREAD_NEED_OWN_MAKECONTEXT
 #time_swap_LDADD += $(CONTEXTLIB)
 #time_swap_DEPENDENCIES += $(CONTEXTLIB)

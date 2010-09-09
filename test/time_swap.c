@@ -97,6 +97,7 @@ int main(
     printf("\t  Total single time: %g secs\n", total_single_time);
     printf("\tAverage single time: %g secs\n",
 	   total_single_time / (ITERATIONS * 2));
+    printf("Context is %u bytes\n", (unsigned)sizeof(ucontext_t));
 
     qtimer_destroy(timer);
     return 0;
