@@ -60,44 +60,31 @@
 SET:
 	movl	4(%esp), %eax /* get the offset of the uc_mcontext component */
 
-	/*movl	8(%eax), %fs thread-specific data (ignored to support migration) */
-	/*movl	12(%eax), %es only good to modify/save on 16-bit Windows */
-	/*movl	16(%eax), %ds segment register (SI,DI,BP,DS) */
-	/*movl	76(%eax), %ss only allowed to modify on 16-bit Windows */
-	movl	20(%eax), %edi /* general 32-bit use */
-	movl	24(%eax), %esi /* general 32-bit use */
-	movl	28(%eax), %ebp /* Stack frame pointer */
-	movl	36(%eax), %ebx /* PIC base register, also general-purp. reg */
-	/*movl	40(%eax), %edx NO (general-purp. reg) aka "dividend register" */
-	/*movl	44(%eax), %ecx NO (general-purp. reg) aka "count register" */
+	movl	(0*4)(%eax), %edi /* general 32-bit use */
+	movl	(1*4)(%eax), %esi /* general 32-bit use */
+	movl	(2*4)(%eax), %ebp /* Stack frame pointer */
+	movl	(3*4)(%eax), %ebx /* PIC base register, also general-purp. reg */
 
-	movl	72(%eax), %esp
-	pushl	60(%eax)	/* new %eip */
-	movl	48(%eax), %eax
+	movl	(5*4)(%eax), %esp
+	pushl	(6*4)(%eax)	/* new %eip */
+	movl	(4*4)(%eax), %eax
 	ret
 
 .globl GET
 GET:
 	movl	4(%esp), %eax /* get the offset of the uc_mcontext component */
 
-	/*movl	%fs, 8(%eax) thread-specific data */
-	/*movl	%es, 12(%eax) only good to modify/save on 16-bit Windows */
-	/*movl	%ds, 16(%eax) segment register */
-	/*movl	%ss, 76(%eax) only allowed to modify on 16-bit Windows */
-	movl	%edi, 20(%eax) /* general 32-bit register */
-	movl	%esi, 24(%eax) /* general 32-bit register */
-	movl	%ebp, 28(%eax) /* Stack frame pointer */
-	movl	%ebx, 36(%eax) /* PIC base register, also general-purp. reg */
-	/*movl	%edx, 40(%eax) NO (general-purp. reg) aka "dividend register" */
-	/*movl	%ecx, 44(%eax) NO (general-purp. reg) aka "count register" */
+	movl	%edi, (0*4)(%eax) /* general 32-bit register */
+	movl	%esi, (1*4)(%eax) /* general 32-bit register */
+	movl	%ebp, (2*4)(%eax) /* Stack frame pointer */
+	movl	%ebx, (3*4)(%eax) /* PIC base register, also general-purp. reg */
 
-	movl	$1, 48(%eax)	/* %eax */
+	movl	$1, (4*4)(%eax)	/* %eax */
 	movl	(%esp), %ecx	/* %eip */
-	movl	%ecx, 60(%eax)
+	movl	%ecx, (6*4)(%eax)
 	leal	4(%esp), %ecx	/* %esp */
-	movl	%ecx, 72(%eax)
+	movl	%ecx, (5*4)(%eax)
 
-	movl	44(%eax), %ecx	/* restore %ecx */
 	movl	$0, %eax
 	ret
 #endif
