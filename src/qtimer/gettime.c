@@ -30,6 +30,13 @@ void qtimer_start(qtimer_t q)
     qassert(clock_gettime(CLOCK_MONOTONIC, &(q->start)), 0);
 }
 
+long qtimer_fastrand(void)
+{
+    struct timespec s;
+    qassert(clock_gettime(CLOCK_MONOTONIC, &(s)), 0);
+    return (long)(s.tv_nsec);
+}
+
 void qtimer_stop(qtimer_t q)
 {
     assert(q);

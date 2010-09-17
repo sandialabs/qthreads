@@ -28,6 +28,13 @@ void qtimer_start(qtimer_t q)
     gettimeofday(&(q->start), NULL);
 }
 
+long qtimer_fastrand(void)
+{
+    struct timeval s;
+    gettimeofday(&(s), NULL);
+    return (long)(s.tv_usec);
+}
+
 void qtimer_stop(qtimer_t q)
 {
     gettimeofday(&(q->stop), NULL);

@@ -17,6 +17,11 @@ qtimer_start(qtimer_t q)
     q->start = gethrtime();
 }
 
+long qtimer_fastrand(void)
+{
+    return (long)(gethrtime());
+}
+
 void
 qtimer_stop(qtimer_t q)
 {
