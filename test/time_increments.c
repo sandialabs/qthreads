@@ -29,7 +29,7 @@ static void init_prism(
 /* the following int_fetch_inc() function borrowed from Simon Kahan's 2010
  * PRMHTS talk */
 static aligned_t int_fetch_inc(
-    void)
+    qthread_t *me)
 {
     unsigned int offset, node, depth;
     for (offset = 0, node = 0, depth = 0; depth < PTREE_DEPTH; ++depth) {
@@ -43,12 +43,12 @@ static aligned_t int_fetch_inc(
 		node = 2 * node + 1;   // yes, so I'll go left
 	    } else {		       // no...
 		aligned_t try2;
-		qthread_readFE(NULL, &try2, &prism[node][pindex]);
+		qthread_readFE(me, &try2, &prism[node][pindex]);
 		if (try2 != try1 + 1) {	// anyone now?
-		    qthread_fill(NULL, &prism[node][pindex]);	// yes, so go left
+		    qthread_fill(me, &prism[node][pindex]);	// yes, so go left
 		    node = 2 * node + 1;
 		} else {	       // still no one...
-		    qthread_writeF(NULL, &prism[node][pindex], &try1);	// as if never in'prism'ed
+		    qthread_writeF(me, &prism[node][pindex], &try1);	// as if never in'prism'ed
 		    aligned_t addend = qthread_incr(&prism[node][0], 1) & 0x1;
 		    if (addend)
 			offset += 1 << depth;
@@ -83,7 +83,7 @@ static void diffract_incr(
     aligned_t sum = 0;
 
     for (i = startat; i < stopat; ++i) {
-	sum = int_fetch_inc();
+	sum = int_fetch_inc(me);
     }
     ((aligned_t*)arg)[qthread_id(me)] = sum+1;
 }
