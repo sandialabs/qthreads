@@ -12,6 +12,54 @@ size_t MAXPARALLELISM = 256;
 aligned_t incrementme = 0;
 aligned_t *increments = NULL;
 
+// PTREE_DEPTH controls the tradeoff between
+// overhead and concurrent capacity of the Index: larger
+// PTREE_DEPTH ==> greater capacity for beating on increment().
+#define PTREE_DEPTH 0		       /* equivalent to DUMB_INCREMENT */
+#define ROOT_PRISM_SIZE (1<<PTREE_DEPTH)
+#define NUM_LEAVES (1<<PTREE_DEPTH)
+aligned_t prism[(1 << (PTREE_DEPTH + 1)) - 1][ROOT_PRISM_SIZE + 1];
+
+static void init_prism(
+    void)
+{
+    memset(prism, 0, sizeof(prism));
+}
+
+/* the following int_fetch_inc() function borrowed from Simon Kahan's 2010
+ * PRMHTS talk */
+static aligned_t int_fetch_inc(
+    void)
+{
+    unsigned int offset, node, depth;
+    for (offset = 0, node = 0, depth = 0; depth < PTREE_DEPTH; ++depth) {
+	unsigned int pindex = qtimer_fastrand() % (ROOT_PRISM_SIZE >> depth) + 1;
+	aligned_t try1 = qthread_incr(&prism[node][pindex], 1);
+	if (try1 & 0x1) {	       // try is odd
+	    node = 2 * node + 2;       // go right
+	    offset += 1 << depth;
+	} else {		       // try is even
+	    if (prism[node][pindex] != try1 + 1) {	// did anyone come by?
+		node = 2 * node + 1;   // yes, so I'll go left
+	    } else {		       // no...
+		aligned_t try2;
+		qthread_readFE(NULL, &try2, &prism[node][pindex]);
+		if (try2 != try1 + 1) {	// anyone now?
+		    qthread_fill(NULL, &prism[node][pindex]);	// yes, so go left
+		    node = 2 * node + 1;
+		} else {	       // still no one...
+		    qthread_writeF(NULL, &prism[node][pindex], &try1);	// as if never in'prism'ed
+		    aligned_t addend = qthread_incr(&prism[node][0], 1) & 0x1;
+		    if (addend)
+			offset += 1 << depth;
+		    node = 2 * node + 1 + addend;
+		}
+	    }
+	}
+    }
+    return offset + NUM_LEAVES * qthread_incr(&prism[node][0], 1);
+}
+
 static void balanced_incr(
     qthread_t * me,
     const size_t startat,
@@ -23,6 +71,21 @@ static void balanced_incr(
     for (i = startat; i < stopat; i++) {
 	qthread_incr((aligned_t *) arg, 1);
     }
+}
+
+static void diffract_incr(
+    qthread_t * me,
+    const size_t startat,
+    const size_t stopat,
+    void *arg)
+{
+    size_t i;
+    aligned_t sum = 0;
+
+    for (i = startat; i < stopat; ++i) {
+	sum = int_fetch_inc();
+    }
+    ((aligned_t*)arg)[qthread_id(me)] = sum+1;
 }
 
 static void balanced_falseshare(
@@ -482,6 +545,40 @@ int main(
 	increments = NULL;
 
 	printf("%6g secs (%u-threads %u iters)\n", qtimer_secs(timer),
+	       shepherds, (unsigned)(ITERATIONS * MAXPARALLELISM));
+	iprintf("\t + average increment time: %17g secs\n",
+		qtimer_secs(timer) / (ITERATIONS * MAXPARALLELISM));
+	printf("\t = increment throughput: %19f increments/sec\n",
+	       (ITERATIONS * MAXPARALLELISM) / qtimer_secs(timer));
+	rate =
+	    (ITERATIONS * MAXPARALLELISM * sizeof(aligned_t)) /
+	    qtimer_secs(timer);
+	printf("\t = data throughput: %24g bytes/sec %s\n", rate,
+	       human_readable_rate(rate));
+    }
+
+    /* Diffracting Trees */
+    if (TEST_SELECTION & 1 << 11) {
+	printf("\tDiffracting Trees: ");
+	fflush(stdout);
+	init_prism();
+	increments = (aligned_t*)calloc(MAXPARALLELISM, sizeof(aligned_t));
+	qtimer_start(timer);
+	qt_loop_balance(0, MAXPARALLELISM * ITERATIONS, diffract_incr, increments);
+	qtimer_stop(timer);
+	{
+	    int foundmax = 0;
+	    for (size_t i=0;i<MAXPARALLELISM;++i) {
+		if (increments[i] == MAXPARALLELISM*ITERATIONS) {
+		    foundmax=1;
+		    break;
+		}
+	    }
+	    assert(foundmax == 1);
+	}
+	free(increments);
+
+	printf("%19g secs (%u-threads %u iters)\n", qtimer_secs(timer),
 	       shepherds, (unsigned)(ITERATIONS * MAXPARALLELISM));
 	iprintf("\t + average increment time: %17g secs\n",
 		qtimer_secs(timer) / (ITERATIONS * MAXPARALLELISM));
