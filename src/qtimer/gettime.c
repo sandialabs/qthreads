@@ -34,7 +34,7 @@ long qtimer_fastrand(void)
 {
     struct timespec s;
     qassert(clock_gettime(CLOCK_MONOTONIC, &(s)), 0);
-    return (long)(s.tv_nsec);
+    return (long)(s.tv_nsec>>5); // last five bits seem to always be the same
 }
 
 void qtimer_stop(qtimer_t q)
