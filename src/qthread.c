@@ -5626,3 +5626,47 @@ int qthread_syncvar_writeEF_const(qthread_t * restrict me,
 {				       /*{{{ */
     return qthread_syncvar_writeEF(me, dest, &src);
 }				       /*}}} */
+
+uint64_t qthread_syncvar_incrF(qthread_t * restrict me, syncvar_t * restrict const operand, const uint64_t inc)
+{
+    eflags_t e = { 0 };
+    uint64_t newv;
+
+    assert(operand);
+    if (me == NULL) {
+	me = qthread_self();
+    }
+    qthread_debug(LOCK_BEHAVIOR, "me(%p), operand(%p), inc(%lu) = %x\n", me,
+		  operand, (unsigned long)inc);
+    qthread_mwaitc(operand, SYNCFEB_ANY, INT_MAX, &e);
+    qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
+    if (e.pf == 1 && e.sf == 1) {      /* there are waiters to release */
+	qthread_addrstat_t *m;
+
+	e.sf = 0;		       // I'm releasing waiters
+	e.pf = 0;		       // I'm going to mark this as full
+	qt_hash_lock(qlib->syncvars);
+	m = (qthread_addrstat_t *) qt_hash_get_locked(qlib->syncvars,
+						      (void *)operand);
+	assert(m);		       // otherwise there weren't really any waiters
+	QTHREAD_FASTLOCK_LOCK(&(m->lock));
+	REPORTLOCK(m);
+	qt_hash_unlock(qlib->syncvars);
+	if (m->FEQ) {
+	    e.pf = 1;		       // back to being empty
+	    if (m->FEQ->next) {
+		e.sf = 1;	       // only one will be dequeued, so it'll still have waiters
+	    }
+	}
+	newv = operand->u.s.data + inc;
+	operand->u.w = BUILD_UNLOCKED_SYNCVAR(newv, (e.pf << 1) | e.sf);
+	assert(m->FFQ || m->EFQ);      // otherwise there weren't really any waiters
+	assert(m->FEQ == NULL);	       // someone snuck in!
+	qthread_syncvar_gotlock_fill(me->shepherd_ptr, m, operand, newv);
+    } else {
+	newv = operand->u.s.data + inc;
+	operand->u.w = BUILD_UNLOCKED_SYNCVAR(newv, (e.pf << 1) | e.sf);
+    }
+
+    return newv;
+}

@@ -21,6 +21,8 @@ class syncvar
 	int writeEF(qthread_t *me, const uint64_t * const src) { return qthread_syncvar_writeEF(me, &the_syncvar_t, src); }
 	int writeEF(const uint64_t * const src) { return qthread_syncvar_writeEF(NULL, &the_syncvar_t, src); }
 
+	uint64_t incr(int64_t inc=1) { return qthread_syncvar_incrF(NULL, &the_syncvar_t, inc); }
+
 	int status() { return qthread_syncvar_status(&the_syncvar_t); }
 	uint64_t read() const { return the_syncvar_t.u.s.data; }
 	void write(uint64_t src) {
