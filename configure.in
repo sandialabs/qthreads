@@ -47,20 +47,10 @@ AS_IF([test "x$enable_inlined_functions" == x],
 
 dnl Logic for this argument happens in system services section
 AC_ARG_ENABLE([setrlimit],
-  [AS_HELP_STRING([--disable-setrlimit],
-     [do not use setrlimit to limit the stack (which is normally used only on Linux systems)])])
-AS_IF([test "x$enable_setrlimit" == x], [
-  case "$host" in
-    ia64-*-linux-*)
-      # this does not need get/setrlimit
-      enable_setrlimit="no"
-    ;;
-    *-linux-*)
-      enable_setrlimit="yes"
-    ;;
-    *)
-      enable_setrlimit="no"
-  esac])
+  [AS_HELP_STRING([--enable-setrlimit],
+     [use setrlimit to limit the stack (not usually necessary, but technically more correct for applications that consult rlimit for the stack size, such as some printf implementations)])],
+  [],
+  [enable_setrlimit=no])
 
 ## ------------------- ##
 ## Checks for programs ##
@@ -389,7 +379,11 @@ AC_CACHE_SAVE
 ## --------------------------- ##
 AC_FUNC_VPRINTF
 AC_FUNC_MMAP
-AC_CHECK_FUNCS([strtol floor memalign posix_memalign memset memmove munmap memcpy getrlimit setrlimit fstat64 lseek64 getcontext swapcontext makecontext sched_yield processor_bind madvise sysconf sysctl])
+AS_IF([test "x$enable_setrlimit" != xno],
+	  [AC_CHECK_FUNCS([getrlimit setrlimit],
+					  [AC_DEFINE([NEED_RLIMIT], [1], [Whether the library should use get/set rlimit functions])],
+					  [AC_MSG_ERROR([setrlimit() calls enabled, but function is unavailable])])])
+AC_CHECK_FUNCS([strtol floor memalign posix_memalign memset memmove munmap memcpy fstat64 lseek64 getcontext swapcontext makecontext sched_yield processor_bind madvise sysconf sysctl])
 QTHREAD_CHECK_QSORT
 AC_TRY_LINK([#include <sys/types.h>
 #include <sys/mman.h>
@@ -407,12 +401,6 @@ AC_CACHE_SAVE
 ## ------------------------- ##
 ## Check for system services ##
 ## ------------------------- ##
-
-# Figure out if we need rlimit...
-AS_IF([test "x$enable_setrlimit" != "xno" -a "x$qthread_implementation" = "xunix"], [
-  AS_IF([test "x$ac_cv_func_getrlimit" != "xyes"],
-        [AC_MSG_ERROR([getrlimit() needed on Linux platforms or when setrlimit enabled])])
-  AC_DEFINE([NEED_RLIMIT], [1], [Whether the library should use get/set rlimit functions])])
 
 # Figure out if we need makecontext
 qthread_makecontext_type="none"
