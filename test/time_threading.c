@@ -17,6 +17,7 @@ int main(void)
     qtimer_t timer = qtimer_create();
     double spawn;
     aligned_t *rets;
+    //syncvar_t *srets;
     unsigned int shepherds = 1;
 
     qthread_initialize();
@@ -44,7 +45,27 @@ int main(void)
     printf("Averaging over %lu threads...\n", THREADS);
     printf("\tTime to spawn: %g usecs\n", (spawn/THREADS)*1000000);
     printf("\tTime to sync:  %g usecs\n", ((qtimer_secs(timer)-spawn)/THREADS)*1000000);
+    free(rets);
+
+#if 0
+    srets = malloc(sizeof(syncvar_t) * THREADS);
+    qtimer_start(timer);
+    for (unsigned long i=0; i<THREADS; ++i) {
+	qthread_fork_syncvar(null_thread, NULL, srets + i);
+    }
+    qtimer_stop(timer);
+
+    spawn = qtimer_secs(timer);
+
+    for (unsigned long i=0; i<THREADS; ++i) {
+	qthread_syncvar_readFF(NULL, NULL, srets + i);
+    }
+    qtimer_stop(timer);
+
+    printf("\tTime to spawn: %g usecs\n", (spawn/THREADS)*1000000);
+    printf("\tTime to sync:  %g usecs\n", ((qtimer_secs(timer)-spawn)/THREADS)*1000000);
+    free(srets);
+#endif
 
     qtimer_destroy(timer);
-    free(rets);
 }
