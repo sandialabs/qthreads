@@ -69,6 +69,7 @@ EXTRA_PROGRAMS += \
 	 time_cncthr_bench \
 	 time_cncthr_bench_pthread \
 	 time_swap \
+	 time_threading \
 	 time_gcd
 CLEANFILES += $(EXTRA_PROGRAMS)
 
@@ -165,6 +166,9 @@ test_qpool_SOURCES = test_qpool.c
 test_qpool_DEPENDENCIES = $(QTHREADLIB)
 
 time_gcd_SOURCES = time_gcd.c
+
+time_threading_SOURCES = time_threading.c
+time_threading_DEPENDENCIES = $(QTHREADLIB)
 
 time_swap_SOURCES = time_swap.c
 time_swap_LDADD = $(QTHREADLIB)
