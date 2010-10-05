@@ -190,14 +190,6 @@ AC_ARG_ENABLE([lock-profiling],
 AS_IF([test "x$enable_lock_profiling" = "xyes"],
 	  [AC_DEFINE([QTHREAD_LOCK_PROFILING], [1], [adds code to monitor how much time is spent aquiring locks])])
 
-AC_ARG_ENABLE([timer-progs],
-  [AS_HELP_STRING([--enable-timer-progs],
-     [enables a few test programs that report some system-specific statistics (context-swap time, etc.)])],
-  [], [enable_timer_progs="no"])
-AS_IF([test "x$enable_timer_progs" = "xyes"],
-	  [need_qtimer=yes])
-AM_CONDITIONAL([ENABLE_TIMER_PROGS], [test "x$enable_timer_progs" = "xyes"])
-
 AC_ARG_ENABLE([cxx-tests],
 	      [AS_HELP_STRING([--disable-cxx-tests],
 			      [disables all C++ test programs])],
