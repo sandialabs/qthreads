@@ -1551,6 +1551,75 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
     return qthread_initialize();
 }				       /*}}} */
 
+#ifdef QTHREAD_HAVE_LIBNUMA
+static void assign_nodes(qthread_shepherd_t *sheps, size_t nsheps)
+{
+    const size_t num_extant_nodes = numa_max_node() + 1;
+
+    {
+# ifdef QTHREAD_LIBNUMA_V2
+	struct bitmask *nmask = numa_get_run_node_mask();
+	struct bitmask *cmask = numa_allocate_cpumask();
+	size_t *cpus_left_per_node = calloc(num_extant_nodes, sizeof(size_t)); // handle heterogeneous core counts
+	int over_subscribing = 0;
+
+	assert(cmask);
+	assert(nmask);
+	assert(cpus_left_per_node);
+	numa_bitmask_clearall(cmask);
+	/* get the # cpus for each node */
+	for (size_t i = 0; i < numa_bitmask_nbytes(nmask)*8; ++i) {
+	    if (numa_bitmask_isbitset(nmask, i)) {
+		numa_node_to_cpus(i, cmask);
+		for (size_t j = 0; j < numa_bitmask_nbytes(cmask)*8; j++) {
+		    cpus_left_per_node[i] += numa_bitmask_isbitset(cmask, j)?1:0;
+		}
+		qthread_debug(ALL_DETAILS, "there are %i CPUs on node %i\n", (int)cpus_left_per_node[i], (int)i);
+	    }
+	}
+	/* assign nodes by iterating over cpus_left_per_node array (which is of
+	 * size num_extant_nodes rather than of size nodes_i_can_use) */
+	int node = 0;
+	for (size_t i = 0; i < nsheps; ++i) {
+	    switch (over_subscribing) {
+		case 0:
+		    {
+			int count = 0;
+			while (count < num_extant_nodes && cpus_left_per_node[node] == 0) {
+			    node ++;
+			    node *= (node < num_extant_nodes);
+			    count ++;
+			}
+			if (count < num_extant_nodes) {
+			    cpus_left_per_node[node] --;
+			    break;
+			}
+		    }
+		    over_subscribing = 1;
+	    }
+	    qthread_debug(ALL_DETAILS, "setting shep %i to numa node %i\n", (int)i, (int)node);
+	    sheps[i].node = node;
+	    node++;
+	    node *= (node < num_extant_nodes);
+	}
+	numa_bitmask_free(nmask);
+	numa_bitmask_free(cmask);
+	free(cpus_left_per_node);
+# else
+	nodemask_t bmask;
+
+	nodemask_zero(&bmask);
+	/* assign nodes */
+	for (size_t i = 0; i < nsheps; ++i) {
+	    sheps[i].node = i % max;
+	    nodemask_set(&bmask, i % max);
+	}
+	numa_set_interleave_mask(&bmask);
+# endif
+    }
+}
+#endif
+
 int qthread_initialize(void)
 {				       /*{{{ */
     int r;
@@ -1880,65 +1949,7 @@ int qthread_initialize(void)
 #  endif
 	}
 #elif defined(QTHREAD_HAVE_LIBNUMA)
-	size_t max = numa_max_node() + 1;
-
-	{
-# ifdef QTHREAD_LIBNUMA_V2
-	    struct bitmask *bmask = numa_allocate_nodemask();
-	    size_t *cpus_left_per_node = calloc(max, sizeof(size_t)); // handle heterogeneous core counts
-	    int over_subscribing = 0;
-
-	    assert(bmask);
-	    assert(cpus_left_per_node);
-	    numa_bitmask_clearall(bmask);
-	    /* get the # cpus for each node */
-	    for (i = 0; i < max; i++) {
-		numa_node_to_cpus(i, bmask);
-		for (size_t j = 0; j < numa_bitmask_nbytes(bmask)*8; j++) {
-		    cpus_left_per_node[i] += numa_bitmask_isbitset(bmask, j);
-		}
-		qthread_debug(ALL_DETAILS, "there are %i CPUs on node %i\n", (int)cpus_left_per_node[i], (int)i);
-	    }
-	    /* assign nodes */
-	    int node = 0;
-	    for (i = 0; i < nshepherds; i++) {
-		switch (over_subscribing) {
-		    case 0:
-			{
-			    int count = 0;
-			    while (count < max && cpus_left_per_node[node] == 0) {
-				node ++;
-				node *= (node < max);
-				count ++;
-			    }
-			    if (count < max) {
-				cpus_left_per_node[node] --;
-				numa_bitmask_setbit(bmask, node);
-				break;
-			    }
-			}
-			over_subscribing = 1;
-		}
-		qthread_debug(ALL_DETAILS, "setting shep %i to numa node %i\n", (int)i, (int)node);
-		qlib->shepherds[i].node = node;
-		node++;
-		node *= (node < max);
-	    }
-	    //numa_set_interleave_mask(bmask);
-	    numa_bitmask_free(bmask);
-	    free(cpus_left_per_node);
-# else
-	    nodemask_t bmask;
-
-	    nodemask_zero(&bmask);
-	    /* assign nodes */
-	    for (i = 0; i < nshepherds; i++) {
-		qlib->shepherds[i].node = i % max;
-		nodemask_set(&bmask, i % max);
-	    }
-	    numa_set_interleave_mask(&bmask);
-# endif
-	}
+	assign_nodes(qlib->shepherds, nshepherds);
 # ifdef HAVE_NUMA_DISTANCE
 	/* truly ancient versions of libnuma (in the changelog, this is
 	 * considered "pre-history") do not have numa_distance() */
