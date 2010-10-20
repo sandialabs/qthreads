@@ -2750,6 +2750,25 @@ size_t qthread_stackleft(const qthread_t * t)
     }
 }				       /*}}} */
 
+size_t qthread_readstate(const enum introspective_state type)
+{
+    switch (type) {
+	case STACK_SIZE:
+	    return qlib->qthread_stack_size;
+	case BUSYNESS:
+	    {
+		qthread_shepherd_t *shep = pthread_getspecific(shepherd_structs);
+		if (shep == NULL) {
+		    return (size_t)(-1);
+		} else {
+		    return qthread_internal_atomic_read_s(&(shep->ready->advisory_queuelen), &(shep->ready->advisory_queuelen_m));
+		}
+	    }
+	default:
+	    return (size_t)(-1);
+    }
+}
+
 aligned_t *qthread_retloc(const qthread_t * t)
 {				       /*{{{ */
     if (t) {

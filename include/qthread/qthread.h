@@ -198,6 +198,12 @@ const qthread_shepherd_id_t *qthread_sorted_sheps_remote(const
 							 src);
 /* returns the number of shepherds (i.e. one more than the largest valid shepherd id) */
 qthread_shepherd_id_t qthread_num_shepherds(void);
+/* returns the stack size */
+enum introspective_state {
+    STACK_SIZE,
+    BUSYNESS,
+};
+size_t qthread_readstate(const enum introspective_state type);
 
 /****************************************************************************
  * functions to implement FEB locking/unlocking
