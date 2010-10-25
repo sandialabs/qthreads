@@ -41,6 +41,14 @@ static void qtb_internal_down(qt_barrier_t * b, int mylock, int level);
 /* global barrier */
 qt_barrier_t *MBar = NULL;
 
+void qt_barrier_resize(
+    size_t size)
+{				       /*{{{ */
+    qt_barrier_destroy(MBar);
+    MBar = NULL;
+    qt_global_barrier_init(size, 0);
+}				       /*}}} */
+
 void qt_barrier_destroy(qt_barrier_t * b)
 {				       /*{{{ */
     assert(b);
@@ -85,7 +93,7 @@ static void qtb_internal_initialize_fixed(qt_barrier_t * b, size_t size,
 					  int debug)
 {				       /*{{{ */
     int depth = 1;
-    int temp = size;
+    int temp = size - 1;
 
     assert(b);
     b->activeSize = size;
@@ -123,7 +131,7 @@ void qt_barrier_dump(qt_barrier_t * b, enum dumpType dt)
     if ((dt == UPLOCK) || (dt == BOTHLOCKS)) {
 	printf("upLock\n");
 	for (j = 0; j < activeSize; j += 8) {
-	    for (i = 0; ((i < 8) && ((j + i) <= activeSize)); i++) {
+	    for (i = 0; ((i < 8) && ((j + i) < activeSize)); i++) {
 		printf("%ld ", (long int)b->upLock[j + i]);
 	    }
 	    printf("\n");
@@ -132,7 +140,7 @@ void qt_barrier_dump(qt_barrier_t * b, enum dumpType dt)
     if ((dt == DOWNLOCK) || (dt == BOTHLOCKS)) {
 	printf("downLock\n");
 	for (j = 0; j < activeSize; j += 8) {
-	    for (i = 0; ((i < 8) && ((j + i) <= activeSize)); i++) {
+	    for (i = 0; ((i < 8) && ((j + i) < activeSize)); i++) {
 		printf("%ld ", (long int)b->downLock[j + i]);
 	    }
 	    printf("\n");
@@ -179,7 +187,7 @@ static void qtb_internal_up(qt_barrier_t * b, int myLock, int64_t val,
 	printf("on lock %d paired with %d level %d val %ld\n", myLock,
 	       pairedLock, level, (long int)val);
     }
-    if (pairedLock > b->activeSize) { // my pair is out of range don't wait for it
+    if (pairedLock >= b->activeSize) { // my pair is out of range don't wait for it
 	(void)qthread_incr(&b->upLock[myLock], 1);	// mark me as present
 	while (b->downLock[myLock] != val) ;	// KBW: XXX: not mutex safe
 	if (debug) {
