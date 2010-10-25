@@ -66,7 +66,8 @@ int main(int argc, char *argv[])
 
     CHECK_VERBOSE();
 
-    assert(qthread_num_shepherds() == 3);
+    assert(qthread_readstate(TOTAL_SHEPHERDS) == 3);
+    assert(qthread_readstate(ACTIVE_SHEPHERDS) == 2);
     iprintf("now to fork to shepherd 0...\n");
     qret = qthread_fork_to(checkres, (void *)0, &ret, 0);
     assert(qret == QTHREAD_SUCCESS);
