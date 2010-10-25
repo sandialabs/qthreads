@@ -91,6 +91,12 @@ typedef struct _syncvar_s {
     } u;
 } syncvar_t;
 #define SYNCVAR_STATIC_INITIALIZER { { 0 } }
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+typedef struct taskSyncvar_s {
+    syncvar_t retValue;
+    struct taskSyncvar_s * next_task;
+} taskSyncvar_t;
+#endif /* QTHREAD_USE_ROSE_EXTENSIONS */
 Q_ENDCXX /* */
 
 #ifdef QTHREAD_SST_PRIMITIVES

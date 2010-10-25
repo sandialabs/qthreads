@@ -3,5 +3,6 @@
 
 int64_t qt_global_arrive_first(
     const qthread_shepherd_id_t shep);
+void qtar_resize(size_t s);
 
 #endif

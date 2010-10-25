@@ -19,6 +19,7 @@ noinst_HEADERS = \
 	qt_hash.h \
 	qt_gcd.h \
 	qt_mpool.h \
+	qt_arrive_first.h \
 	rose_xomp.h \
 	rose_log_arrivaldetector.h \
 	futurelib_innards.h

@@ -29,9 +29,21 @@ struct qqloop_static_args {
     struct qqloop_iteration_queue *iq;
     qq_getiter_f get;
 };
+struct qqloop_step_static_args {
+    qt_loop_step_f func;
+    void *arg;
+    volatile aligned_t donecount;
+    volatile aligned_t activesheps;
+    struct qqloop_iteration_queue *iq;
+    qq_getiter_f get;
+};
 struct qqloop_wrapper_args {
     qthread_shepherd_id_t shep;
     struct qqloop_static_args *stat;
+};
+struct qqloop_step_wrapper_args {
+    qthread_shepherd_id_t shep;
+    struct qqloop_step_static_args *stat;
 };
 struct qqloop_wrapper_range {
     size_t startat, stopat, step;
@@ -41,29 +53,34 @@ struct qqloop_handle_s {
     struct qqloop_static_args stat;
 };
 
+enum qloop_handle_type {
+    QLOOP_NONE = 0,
+    STATIC_SCHED,
+    GUIDED_SCHED,
+    DYNAMIC_SCHED,
+    RUNTIME_SCHED,
+};
+
+struct qqloop_step_handle_s {
+    struct qqloop_step_wrapper_args *qwa;
+    struct qqloop_step_static_args stat;
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-struct qtrose_loop_handle_s {
-    qt_loop_step_f func;
-    void *arg;
     int workers;
+    enum qloop_handle_type type;
     int assignNext;
     int assignStop;
     int assignStep;
+    int chunkSize;
     volatile aligned_t assignDone;	// start+offset
     size_t shepherdsActive;	// bit vector to stop shepherds from grabbing a loop twice (is this necessary?)
+#endif /* QTHREAD_USE_ROSE_EXTENSIONS */
 };
-qtrose_loop_handle_t *qtrose_loop_queue_create(
-    const qt_loop_queue_type type,
-    const size_t start,
-    const size_t stop,
-    const size_t incr,
-    const qt_loop_step_f func,
-    void *const restrict argptr);
 
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
 int qloop_internal_computeNextBlock(
     int block,
     double time,
-    volatile qtrose_loop_handle_t * loop);
+    volatile qqloop_step_handle_t * loop);
 #endif /* QTHREAD_USE_ROSE_EXTENSIONS */
 
 #endif

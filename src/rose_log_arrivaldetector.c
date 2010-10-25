@@ -3,35 +3,63 @@
 // Follows a strategy based on the barrier lock - 5/25/09 akp
 
 #include <stddef.h>		       // for size_t (C89)
-#include <stdlib.h>		       // for calloc()
 #include <qthread/qthread-int.h>       // for int64_t
+#include <stdlib.h>		       // for calloc()
+#include <stdio.h>		       // for perror()
+
 #include "qthread_innards.h"	       // for qthread_debug()
 
 #include <qthread/qloop.h>
+#include "qt_arrive_first.h"
 #include "qt_barrier.h"
 #include "qthread_asserts.h"
 
-/* Types */
-typedef struct qt_arrive_first_s {
-    size_t activeSize;		// size of barrier
-    size_t allocatedSize;	// lowest size power of 2 equal or bigger than barrier -- for allocations
-    int doneLevel;		// height of the tree
-    char arriveFirstDebug;	// flag to turn on internal printf debugging
-    volatile int64_t **present;	// array of counters to track who's arrived
-    volatile int64_t **value;	// array of values to return
 
-} qt_arrive_first_t;
-struct guided_s {
-    int64_t upper;
-    int64_t lower;
-    int64_t stride;
-};
+qt_arrive_first_t *MArrFirst = NULL;
 
-/* Global Variables
- * (should be static)
- */
-static struct guided_s guided = { 1, 1, 1 };
-static qt_arrive_first_t *MArrFirst = NULL;
+qtar_resize(size_t size){
+  qt_global_arrive_first_destroy();
+  qt_global_arrive_first_init(size-1, 0);  // the size to resize is the number of threads (1 based)
+                 // the size to first init is for the max thread number(0 based) -- so subtract one
+}
+
+// dump function for debugging -  print list of occupied data
+void qtar_dump(qt_arrive_first_t * b)
+{
+  int notClean = 0;
+  printf ("\tdump arrive first data \n");
+  if (!b->present) printf("\tarray is not allocated\n");
+  else {
+    int i = -1;
+    for (i = 0; i <= b->doneLevel; i++) {
+      if (!b->present[i]) printf ("\tarray row %d expected but not allocated \n", i);
+      else {
+	int j = -1;
+	int firstTime = 0;
+	int count = 0;
+	for (j = 0; j <= b->activeSize; j++) {
+	  if (b->present[i][j]){
+	    if (firstTime == 0){
+	      // first found -- print identification
+	      printf("\tlevel %d occupied --", i);
+	      firstTime = 1;
+	    }
+	    count++;
+	    notClean = 1; // something was printed
+	    printf (" %d",j);
+	    if (count > 20){
+	      // found too many need new line
+	      printf("\n");
+	      count = 0;
+	    }
+	  }
+	}
+	if (count > 0) printf("\n");  // finish up last line
+      }
+    }
+    if (notClean == 0) printf("\tarrive first data was ready for use\n");
+  }
+}
 
 static void qtar_internal_initialize_fixed(
     qt_arrive_first_t * b,
@@ -45,7 +73,7 @@ static void qtar_internal_initialize_fixed(
 {				       /*{{{ */
     int i;
     int depth = 1;
-    int temp = size;
+    int temp = size-1;
 
     assert(b);
     b->activeSize = size;
@@ -66,11 +94,9 @@ static void qtar_internal_initialize_fixed(
     b->allocatedSize = (2 << depth);
 
     // allocate and init upLock and downLock arrays
-    b->present = calloc(depth, sizeof(int64_t));
-    b->value = calloc(depth, sizeof(int64_t));
+    b->present = calloc(depth+1, sizeof(int64_t));
     for (i = 0; i <= depth; i++) {
-	b->present[i] = calloc(b->allocatedSize, sizeof(int64_t));
-	b->value[i] = calloc(b->allocatedSize, sizeof(int64_t));
+	b->present[i] = calloc(b->allocatedSize+1, sizeof(int64_t));
     }
 }				       /*}}} */
 
@@ -92,7 +118,7 @@ qt_arrive_first_t *qt_arrive_first_create(
 		qtar_internal_initialize_fixed(b, size, debug);
 		break;
 	    default:
-		printf("qt_arrive_first must be of type REGION_BARRIER\n");
+		perror("qt_arrive_first must be of type REGION_BARRIER");
 		break;
 	}
     }
@@ -114,33 +140,11 @@ void qt_arrive_first_destroy(
 	free((void *)(b->present));
 	b->present = NULL;
     }
-    if (b->value) {
-	int i;
-	for (i = 0; i <= b->doneLevel; i++) {
-	    if (b->present[i]) {
-		free((void *)(b->value[i]));
-		b->value[i] = NULL;
-	    }
-	}
-	free((void *)(b->value));
-	b->value = NULL;
-    }
     free(b);
 }				       /*}}} */
 
-
-static int64_t qtar_internal_up(
-    qt_arrive_first_t * b,
-    int myLock,
-    int level);
-
 // walk up the psuedo barrier -- waits if neighbor beat you and
 // value has not arrived yet.
-
-qqloop_handle_t *qt_loop_rose_queue_create(
-    int64_t rt,
-    int64_t p,
-    int64_t r);
 
 static int64_t qtar_internal_up(
     qt_arrive_first_t * b,
@@ -154,47 +158,35 @@ static int64_t qtar_internal_up(
     int nextLevelLock = (myLock < pairedLock) ? myLock : pairedLock;
     char debug = b->arriveFirstDebug;
     assert(b->activeSize > 1);
-    if (debug) {
-	printf
-	    ("on lock %d paired with %d level %d lock value %ld  paired %ld\n",
-	     myLock, pairedLock, level, b->present[level][myLock],
-	     b->present[level][pairedLock]);
-    }
-    // my pair is out of range don't wait for it
-    if (pairedLock > b->activeSize) {
-	// continue up
-	if (level != b->doneLevel) {
-	    t = qtar_internal_up(b, nextLevelLock, level + 1);
-	    b->value[level][myLock] = t;
-	} else if (myLock == 0) {
-	    if (debug) {
-		printf("Lock arrived %d\n", myLock);
-	    }
-	    t = (int64_t) qt_loop_rose_queue_create(guided.lower,
-						    guided.upper,
-						    guided.stride);
-	};
-	return t;
-    }
-    // mark me as present
+
+    qthread_debug(ALL_CALLS,
+		  "on lock %d paired with %d level %d lock value %ld  paired %ld\n",
+		  myLock, pairedLock, level, b->present[level][myLock],
+		  b->present[level][pairedLock]);
+		  
     int lk = 0;
-    lk = qthread_incr(&b->present[level][nextLevelLock], 1);
+    lk = qthread_incr(&b->present[level][nextLevelLock], 1);    // mark me as present
 
     if (lk == 0) {		       // I'm first continue up
-	if ((level + 1) <= b->doneLevel) {	// done? -- more to check 
-	    t = qtar_internal_up(b, nextLevelLock, level + 1);
-	    b->value[level][nextLevelLock] = t;
+      if (pairedLock > b->activeSize) {
+	// continue up
+	if (level != b->doneLevel) {
+	  t = qtar_internal_up(b, nextLevelLock, level + 1);
+	  b->present[level][nextLevelLock] = 0;
+	  return t; 
+	} else if (myLock == 0) {
+	  qthread_debug(ALL_CALLS, "First arrived %d\n", myLock);
+	  b->present[level][nextLevelLock] = 0;
+	  return 1;
 	}
-    } else {			       // someone else is first
-	// check to see if value has arrived  -- wait for it
-	while ((t = b->value[level][nextLevelLock]) == 0) {	// my pair is not here yet  
-	    // gate not lock -- mutex safe?
-	}
-	b->value[level][myLock] = t;
-	b->value[level][nextLevelLock] = 0;
-	b->present[level][nextLevelLock] = 0;
-    }
-    return t;
+      }
+      else if ((level + 1) <= b->doneLevel) {	// done? -- more to check 
+	t = qtar_internal_up(b, nextLevelLock, level + 1);
+	return t;
+      }
+    } 
+    b->present[level][nextLevelLock] = 0;
+    return 0;     // someone else is first
 }				       /*}}} */
 
 void cleanArriveFirst(

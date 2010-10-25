@@ -16,7 +16,7 @@ void XOMP_parallel_start(
     unsigned numThread);
 void XOMP_parallel_end(
     void);
-qqloop_handle_t *qt_loop_rose_queue_create(
+qqloop_step_handle_t *qt_loop_rose_queue_create(
     int64_t start,
     int64_t stop,
     int64_t incr);

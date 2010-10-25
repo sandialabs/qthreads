@@ -8,17 +8,27 @@ Q_STARTCXX			       /* */
 /* for convenient arguments to qt_loop_future */
 typedef void (*qt_loop_f) (qthread_t * me, const size_t startat,
 			   const size_t stopat, void *arg);
+typedef void (*qt_loop_step_f) (qthread_t * me, const size_t startat,
+                                const size_t stopat, const size_t step,
+                                void *arg);
 typedef void (*qt_loopr_f) (qthread_t * me, const size_t startat,
 			    const size_t stopat, void *restrict arg,
 			    void *restrict ret);
 typedef void (*qt_accum_f) (void *restrict a, void *restrict b);
 
 typedef struct qqloop_handle_s qqloop_handle_t;
+typedef struct qqloop_step_handle_s qqloop_step_handle_t;
 
 void qt_loop(const size_t start, const size_t stop,
 	     const qt_loop_f func, void *argptr);
+void qt_loop_step(const size_t start, const size_t stop,
+                  const size_t stride, const qt_loop_step_f func,
+                  void *argptr);
 void qt_loop_future(const size_t start, const size_t stop,
 		    const qt_loop_f func, void *argptr);
+void qt_loop_step_future(const size_t start, const size_t stop,
+		    const size_t stride, const qt_loop_f func,
+                    void *argptr);
 void qt_loop_balance(const size_t start, const size_t stop,
 		     const qt_loop_f func, void *argptr);
 void qt_loop_balance_future(const size_t start, const size_t stop,
@@ -36,6 +46,9 @@ typedef enum { CHUNK, GUIDED, FACTORED, TIMED } qt_loop_queue_type;
 qqloop_handle_t *qt_loop_queue_create(const qt_loop_queue_type type,
 	const size_t start, const size_t stop, const size_t incr,
 	const qt_loop_f func, void *const argptr);
+qqloop_step_handle_t *qt_loop_step_queue_create(const qt_loop_queue_type type,
+	const size_t start, const size_t stop, const size_t incr,
+	const qt_loop_step_f func, void *const argptr);
 void qt_loop_queue_run(qqloop_handle_t * loop);
 void qt_loop_queue_run_there(qqloop_handle_t * loop,
 			     qthread_shepherd_id_t shep);
@@ -43,16 +56,16 @@ void qt_loop_queue_addworker(qqloop_handle_t * loop,
 			     const qthread_shepherd_id_t shep);
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-typedef void (*qt_loop_step_f) (qthread_t * me, const size_t startat,
-			   const size_t stopat, const size_t step, void *arg);
-typedef struct qtrose_loop_handle_s qtrose_loop_handle_t;
-
-void qt_loop_queue_run_single(volatile qtrose_loop_handle_t * loop, void *t);
-void qt_parallel(const qt_loop_step_f func, const unsigned int threads,
-		 void *argptr);
+void qt_loop_queue_run_single(volatile qqloop_step_handle_t * loop, void *t);
+void qt_parallel(const qt_loop_f func, const unsigned int threads,
+                 void *argptr);
+void qt_parallel_step(const qt_loop_step_f func, const unsigned int threads,
+                 void *argptr);
 void qt_parallel_for(const qt_loop_step_f func, const size_t startat,
-		     const size_t stopat, const size_t step,
+		     const size_t stopat, const size_t incr,
 		     void *restrict argptr);
+//int qloop_internal_computeNextBlock(int block, double time, volatile
+//qqloop_step_handle_t * loop);
 #endif
 
 double qt_double_sum(double *array, size_t length, int checkfeb);
