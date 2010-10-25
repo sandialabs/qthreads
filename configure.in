@@ -220,10 +220,10 @@ AC_ARG_ENABLE([64bit-alignment],
 dnl deal with result once we figure out the hardware sizes
 
 AC_ARG_ENABLE([fastcontext],
-			  [AS_HELP_STRING([--enable-fastcontext],
-							  [use a lighter-weight non-system-based context swapping mechanism that does not make system calls. This is currently experimental, and DOES have bugs. Use at your own risk (defaults to enabled on MacOS, because otherwise there is no available context swapping mechanism).])],
+			  [AS_HELP_STRING([--disable-fastcontext],
+							  [use a lighter-weight non-system-based context swapping mechanism that does not make system calls. If you run into bugs, you can disable it on some systems to use the slower libc-provided version.])],
 							  [],
-							  [enable_fastcontext=no])
+							  [enable_fastcontext=yes])
 
 AC_CACHE_SAVE
 
