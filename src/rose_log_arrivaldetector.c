@@ -73,7 +73,7 @@ static void qtar_internal_initialize_fixed(
 {				       /*{{{ */
     int i;
     int depth = 1;
-    int temp = size-1;
+    int temp = size;
 
     assert(b);
     b->activeSize = size;
@@ -89,6 +89,9 @@ static void qtar_internal_initialize_fixed(
 	temp >>= 1;
 	depth++;		       // how many bits set
     }
+
+    // need to watch when max depth completely full and increment it to one bigger
+    if (size >= ((1<<depth)-2)) depth++;
 
     b->doneLevel = depth;
     b->allocatedSize = (2 << depth);
