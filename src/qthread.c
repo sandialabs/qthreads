@@ -185,7 +185,9 @@ struct qthread_s
     unsigned int valgrind_stack_id;
 #endif
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    int forCount; /* added akp */
+    int forCount;
+    taskSyncvar_t *openmpTaskRetVar; /* ptr to linked list if task's I started -- used in openMP taskwait */
+    syncvar_t taskWaitLock;
 #endif
     struct qthread_s *next;
 };
@@ -1818,6 +1820,7 @@ int qthread_initialize(void)
     /* initialize the kernel threads and scheduler */
     qassert(pthread_key_create(&shepherd_structs, NULL), 0);
     qlib->nshepherds = nshepherds;
+    qlib->nshepherds_active = nshepherds;
     qlib->shepherds = (qthread_shepherd_t *)
 	 calloc(nshepherds, sizeof(qthread_shepherd_t));
     qassert_ret(qlib->shepherds, QTHREAD_MALLOC_ERROR);
@@ -2321,15 +2324,15 @@ int qthread_initialize(void)
     qassert(swapcontext(qlib->mccoy_thread->context, qlib->master_context),
 	    0);
 
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    qt_global_barrier_init(nshepherds-1, 0);
-#endif
-
     qthread_debug(ALL_DETAILS, "calling atexit\n");
     atexit(qthread_finalize);
 
     qthread_debug(ALL_DETAILS, "calling component init functions\n");
     qt_feb_barrier_internal_init();
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    qt_global_barrier_init(nshepherds, 0);
+    qt_global_arrive_first_init(nshepherds-1, 0);
+#endif
 
     qthread_debug(ALL_DETAILS, "finished.\n");
     return QTHREAD_SUCCESS;
@@ -2681,7 +2684,7 @@ void qthread_finalize(void)
 
 int qthread_disable_shepherd(const qthread_shepherd_id_t shep)
 {				       /*{{{ */
-    assert(shep < qlib->nshepherds);
+    qassert_ret((shep < qlib->nshepherds), QTHREAD_BADARGS);
     if (shep == 0) {
 	/* currently, the "real mccoy" original thread cannot be migrated
 	 * (because I don't know what issues that could cause on all
@@ -2694,6 +2697,7 @@ int qthread_disable_shepherd(const qthread_shepherd_id_t shep)
 	return QTHREAD_NOT_ALLOWED;
     }
     qthread_debug(ALL_CALLS, "began on shep(%i)\n", shep);
+    qthread_internal_incr(&(qlib->nshepherds_active), &(qlib->nshepherds_active_lock), -1);
     (void)QT_CAS(qlib->shepherds[shep].active, 1, 0);
     return QTHREAD_SUCCESS;
 }				       /*}}} */
@@ -2702,6 +2706,7 @@ void qthread_enable_shepherd(const qthread_shepherd_id_t shep)
 {				       /*{{{ */
     assert(shep < qlib->nshepherds);
     qthread_debug(ALL_CALLS, "began on shep(%i)\n", shep);
+    qthread_internal_incr(&(qlib->nshepherds_active), &(qlib->nshepherds_active_lock), 1);
     (void)QT_CAS(qlib->shepherds[shep].active, 0, 1);
 }				       /*}}} */
 
@@ -2750,22 +2755,32 @@ size_t qthread_stackleft(const qthread_t * t)
     }
 }				       /*}}} */
 
-size_t qthread_readstate(const enum introspective_state type)
+size_t qthread_readstate(
+    const enum introspective_state type)
 {
     switch (type) {
 	case STACK_SIZE:
 	    return qlib->qthread_stack_size;
 	case BUSYNESS:
-	    {
-		qthread_shepherd_t *shep = pthread_getspecific(shepherd_structs);
-		if (shep == NULL) {
-		    return (size_t)(-1);
-		} else {
-		    return qthread_internal_atomic_read_s(&(shep->ready->advisory_queuelen), &(shep->ready->advisory_queuelen_m));
-		}
+	{
+	    qthread_shepherd_t *shep = pthread_getspecific(shepherd_structs);
+	    if (shep == NULL) {
+		return (size_t) (-1);
+	    } else {
+		return
+		    qthread_internal_atomic_read_s(&
+						   (shep->ready->
+						    advisory_queuelen),
+						   &(shep->ready->
+						     advisory_queuelen_m));
 	    }
+	}
+	case ACTIVE_SHEPHERDS:
+	    return (size_t) (qlib->nshepherds_active);
+	case TOTAL_SHEPHERDS:
+	    return (size_t) (qlib->nshepherds);
 	default:
-	    return (size_t)(-1);
+	    return (size_t) (-1);
     }
 }
 
@@ -2912,6 +2927,10 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
 			      &qlib->max_thread_id_lock, 1);
 #else
     t->thread_id = (unsigned int)-1;
+#endif
+
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    qthread_syncvar_empty(t, &t->taskWaitLock);
 #endif
 
     qthread_debug(ALL_DETAILS, "returning\n");
@@ -4763,10 +4782,10 @@ const qthread_shepherd_id_t *qthread_sorted_sheps_remote(const
     return qlib->shepherds[src].sorted_sheplist;
 }				       /*}}} */
 
-/* returns the number of shepherds (i.e. one more than the largest valid shepherd id) */
+/* returns the number of shepherds actively scheduling work */
 qthread_shepherd_id_t qthread_num_shepherds(void)
 {				       /*{{{ */
-    return (qthread_shepherd_id_t) (qlib->nshepherds);
+    return (qthread_shepherd_id_t) (qlib->nshepherds_active);
 }				       /*}}} */
 
 /* these two functions are helper functions for futurelib
@@ -4790,16 +4809,34 @@ void qthread_assertnotfuture(qthread_t * t)
 # ifdef __INTEL_COMPILER
 #  pragma warning (disable:1418)
 # endif
-/* added akp */
- int qthread_forCount(qthread_t * t, int inc)
+int qt_thread_done(qthread_t * t)
+{				       /*{{{ */
+    return ((t->thread_state == QTHREAD_STATE_DONE) ? 1 : 0);
+}				       /*}}} */
+int qthread_forCount(qthread_t * t, int inc)
 {                                    /*{{{ */
     return (t->forCount += inc);
 }                                    /*}}} */
 void qthread_reset_forCount(qthread_t * t)
 {                                    /*{{{ */
     t->forCount = 0;
-    return;
 }                                    /*}}} */
+void qthread_getTaskListLock(qthread_t * t)
+{/*{{{*/
+    qthread_syncvar_writeEF_const(t, &t->taskWaitLock, 1);
+}/*}}}*/
+void qthread_releaseTaskListLock(qthread_t * t)
+{/*{{{*/
+    qthread_syncvar_readFE(t, NULL, &t->taskWaitLock);
+}/*}}}*/
+taskSyncvar_t * qthread_getTaskRetVar(qthread_t * t)
+{/*{{{*/
+    return t->openmpTaskRetVar;
+}/*}}}*/
+void qthread_setTaskRetVar(qthread_t *t, taskSyncvar_t *v)
+{/*{{{*/
+    t->openmpTaskRetVar = v;
+}/*}}}*/
 #endif
 
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)

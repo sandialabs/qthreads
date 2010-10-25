@@ -37,6 +37,7 @@ extern unsigned int QTHREAD_LOCKING_STRIPES;
 typedef struct qlib_s
 {
     unsigned int nshepherds;
+    unsigned int nshepherds_active;
     struct qthread_shepherd_s *shepherds;
 
     unsigned qthread_stack_size;

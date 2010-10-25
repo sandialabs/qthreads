@@ -196,12 +196,14 @@ const qthread_shepherd_id_t *qthread_sorted_sheps(const qthread_t * t);
 const qthread_shepherd_id_t *qthread_sorted_sheps_remote(const
 							 qthread_shepherd_id_t
 							 src);
-/* returns the number of shepherds (i.e. one more than the largest valid shepherd id) */
-qthread_shepherd_id_t qthread_num_shepherds(void);
-/* returns the stack size */
+/* returns the number of actively-scheduling shepherds */
+qthread_shepherd_id_t qthread_num_shepherds(void) /*__attribute__ ((deprecated))*/;
+/* queries the current state */
 enum introspective_state {
     STACK_SIZE,
     BUSYNESS,
+    ACTIVE_SHEPHERDS,
+    TOTAL_SHEPHERDS,
 };
 size_t qthread_readstate(const enum introspective_state type);
 
