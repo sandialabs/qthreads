@@ -94,7 +94,8 @@ kern_return_t thread_policy_get(thread_t thread,
 #include "futurelib_innards.h"
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 # include "qt_barrier.h"
-int __qthreads_temp; // wtf?
+# include "qt_arrive_first.h"
+int __qthreads_temp; // XXX: wtf?
 #endif
 
 /* internal constants */
