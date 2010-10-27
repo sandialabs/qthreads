@@ -77,6 +77,7 @@ man_MANS = \
 		   qthread_cacheline.3 \
 		   qthread_cas.3 \
 		   qthread_cas_ptr.3 \
+		   qthread_debuglevel.3 \
 		   qthread_dincr.3 \
 		   qthread_disable_shepherd.3 \
 		   qthread_distance.3 \
@@ -87,7 +88,9 @@ man_MANS = \
 		   qthread_finalize.3 \
 		   qthread_fincr.3 \
 		   qthread_fork.3 \
+		   qthread_fork_syncvar.3 \
 		   qthread_fork_to.3 \
+		   qthread_fork_syncvar_to.3 \
 		   qthread_id.3 \
 		   qthread_incr.3 \
 		   qthread_init.3 \
@@ -99,6 +102,7 @@ man_MANS = \
 		   qthread_prepare_for.3 \
 		   qthread_readFE.3 \
 		   qthread_readFF.3 \
+		   qthread_readstate.3 \
 		   qthread_retloc.3 \
 		   qthread_schedule.3 \
 		   qthread_schedule_on.3 \

@@ -1,10 +1,12 @@
-.TH qthread_fork 3 "NOVEMBER 2006" libqthread "libqthread"
+.TH qthread_fork 3 "OCTOBER 2010" libqthread "libqthread"
 .SH NAME
 .BR qthread_fork ,
-.B qthread_fork_to
+.BR qthread_fork_syncvar ,
+.BR qthread_fork_to ,
+.B qthread_fork_syncvar_to
 \- spawn a qthread
 .SH SYNOPSIS
-.B #include <qthread/qthread.h>
+.B #include <qthread.h>
 
 .I int
 .br
@@ -13,9 +15,23 @@
 .PP
 .I int
 .br
+.B qthread_fork_syncvar
+.RI "(const qthread_f *" f ", const void *" arg ", syncvar_t *" ret );
+.PP
+.I int
+.br
 .B qthread_fork_to
 .RI "(const qthread_f *" f ", const void *" arg ", aligned_t *" ret ,
 .ti +17
+.RI "const qthread_shepherd_id_t " shepherd );
+.PP
+.I int
+.br
+.B qthread_fork_syncvar_to
+.RI "(const qthread_f *" f ", const void *" arg ,
+.ti +25
+.RI "syncvar_t *" ret ,
+.ti +25
 .RI "const qthread_shepherd_id_t " shepherd );
 .SH DESCRIPTION
 These are the functions for generating new qthreads.
@@ -56,7 +72,9 @@ or
 is called,
 .I ret
 will be emptied (as if it had been passed to
-.BR qthread_empty ()).
+.BR qthread_empty ()
+or
+.BR qthread_syncvar_empty ()).
 When the function
 .I f
 returns, the returned value will be stored into
@@ -65,19 +83,18 @@ and
 .I ret
 will be filled. The way to block until a function has finished is to use
 .BR qthread_readFF ()
+or
+.BR qthread_syncvar_readFF ()
 on the
 .I ret pointer.
 .SH ENVIRONMENT
-The operation of
-.BR qthread_fork ()
-and
-.BR qthread_fork_to ()
-is modified by the following environment variables:
+The operation of these functions is modified by the following environment
+variables:
 .TP 4
 .B QTHREAD_STACK_SIZE
 This variable adjusts the size of the stacks that will be created for each
 thread. Changes to this value during the course of the program run are ignored;
-the value is only considered when
+the value is only evaluated when
 .BR qthread_initialize ()
 is run.
 .SH RETURN VALUE
