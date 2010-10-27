@@ -20,6 +20,9 @@
 /* use inlined functions */
 #undef QTHREAD_INLINE
 
+/* if the compiler supports __attribute__((deprecated)) */
+#undef Q_DEPRECATED
+
 /* Allow functions to be inlined */
 #undef QINLINE
 

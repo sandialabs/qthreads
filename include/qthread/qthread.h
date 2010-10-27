@@ -170,14 +170,14 @@ int qthread_fork_syncvar_to(const qthread_f f, const void *const arg, syncvar_t 
  *     the finishing touches on the qthread_t structure and places it into an
  *     active queue.
  */
-qthread_t *qthread_prepare(const qthread_f f, const void *const arg,
+qthread_t Q_DEPRECATED *qthread_prepare(const qthread_f f, const void *const arg,
 			   aligned_t * ret);
-qthread_t *qthread_prepare_for(const qthread_f f, const void *const arg,
+qthread_t Q_DEPRECATED *qthread_prepare_for(const qthread_f f, const void *const arg,
 			       aligned_t * ret,
 			       const qthread_shepherd_id_t shepherd);
 
-int qthread_schedule(qthread_t * t);
-int qthread_schedule_on(qthread_t * t, const qthread_shepherd_id_t shepherd);
+int Q_DEPRECATED qthread_schedule(qthread_t * t);
+int Q_DEPRECATED qthread_schedule_on(qthread_t * t, const qthread_shepherd_id_t shepherd);
 
 /* This is a function to move a thread from one shepherd to another. */
 int qthread_migrate_to(qthread_t * me, const qthread_shepherd_id_t shepherd);
@@ -203,7 +203,7 @@ const qthread_shepherd_id_t *qthread_sorted_sheps_remote(const
 							 qthread_shepherd_id_t
 							 src);
 /* returns the number of actively-scheduling shepherds */
-qthread_shepherd_id_t qthread_num_shepherds(void) /*__attribute__ ((deprecated))*/;
+qthread_shepherd_id_t /*Q_DEPRECATED*/ qthread_num_shepherds(void);
 /* queries the current state */
 enum introspective_state {
     STACK_SIZE,
