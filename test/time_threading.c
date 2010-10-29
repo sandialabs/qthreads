@@ -1,6 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
-#include <qthread.h>
+#include <qthread/qthread.h> // because we're build within the qthread source
 #include <qthread/qloop.h>
 #include <qthread/qtimer.h>
 #include "argparsing.h"
@@ -29,7 +29,7 @@ int main(
     NUMARG(THREADS, "THREADS");
     shepherds = qthread_num_shepherds();
     printf("%u shepherds...\n", shepherds);
-    {
+    /*{
 	const size_t bytes =
 	    (THREADS * sizeof(ucontext_t) +
 	     THREADS * (sizeof(unsigned int) + sizeof(int) +
@@ -43,7 +43,7 @@ int main(
 	       shepherds, (shepherds > 1) ? "s" : "", THREADS / shepherds,
 	       (mbytes > 0) ? mbytes : ((kbytes > 0) ? kbytes : bytes),
 	       (mbytes > 0) ? "MB" : ((kbytes > 0) ? "kB" : "bytes"));
-    }
+    }*/
 
     rets = malloc(sizeof(aligned_t) * THREADS);
 
