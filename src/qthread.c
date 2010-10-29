@@ -1666,10 +1666,12 @@ int qthread_initialize(void)
 	    nshepherds = 0;
 	}
     }
+#if defined(QTHREAD_HAVE_HWLOC)
+    qassert(hwloc_topology_init(&qlib->topology), 0);
+    qassert(hwloc_topology_load(qlib->topology), 0);
+#endif
     if (nshepherds == 0) {	       /* try to guess the "right" number */
 #ifdef QTHREAD_HAVE_HWLOC
-	qassert(hwloc_topology_init(&qlib->topology), 0);
-	qassert(hwloc_topology_load(qlib->topology), 0);
 	/* XXX: when we get multithreaded shepherds, HWLOC_OBJ_PU should be
 	 * HWLOC_OBJ_CACHE (or something like that, with a fallback to OBJ_PU) */
 	nshepherds = hwloc_get_nbobjs_by_type(qlib->topology, HWLOC_OBJ_PU);
