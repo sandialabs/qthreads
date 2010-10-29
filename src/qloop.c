@@ -645,6 +645,7 @@ static aligned_t qqloop_wrapper(
     return 0;
 }
 
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
 static aligned_t qqloop_step_wrapper(
     qthread_t * me,
     const struct qqloop_step_wrapper_args *arg)
@@ -688,6 +689,7 @@ static aligned_t qqloop_step_wrapper(
     }
     return 0;
 }
+#endif
 
 qqloop_handle_t *qt_loop_queue_create(
     const qt_loop_queue_type type,
