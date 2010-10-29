@@ -47,7 +47,7 @@ typedef struct qlib_s
     qthread_t *mccoy_thread;	/* free when exiting */
 
     void *master_stack;
-    ucontext_t *master_context;
+    ucontext_t master_context;
 #ifdef QTHREAD_USE_VALGRIND
     unsigned int valgrind_masterstack_id;
 #endif
