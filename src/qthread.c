@@ -160,6 +160,8 @@ typedef struct {
 struct qthread_s
 {
     struct qthread_s *next;
+    /* the shepherd our memory comes from */
+    qthread_shepherd_t *creator_ptr;
 
     unsigned int thread_id;
     enum threadstate thread_state;
@@ -169,8 +171,6 @@ struct qthread_s
     qthread_shepherd_t *shepherd_ptr;
     /* the shepherd we'd rather run on */
     qthread_shepherd_t *target_shepherd;
-    /* the shepherd our memory comes from */
-    qthread_shepherd_t *creator_ptr;
     /* a pointer used for passing information back to the shepherd when
      * becoming blocked */
     struct qthread_lock_s *blockedon;
@@ -179,6 +179,7 @@ struct qthread_s
     qthread_f f;
     void *arg;			/* user defined data */
     void *ret;			/* user defined retval location */
+    void *stack;		/* the thread's stack */
 
     ucontext_t *return_context;	/* context of parent shepherd */
 
@@ -191,7 +192,6 @@ struct qthread_s
     syncvar_t taskWaitLock;
 #endif
     ucontext_t context;	/* the context switch info */
-    void *stack;		/* the thread's stack */
 };
 
 struct qthread_queue_s
@@ -1025,6 +1025,7 @@ static Q_NOINLINE volatile aligned_t *vol_id_a(volatile aligned_t * ptr)
 }
 # endif
 # define _(x) *vol_id_qtlfqn(&(x))
+//# define _(x) (x)
 #endif
 
 #ifdef QTHREAD_DEBUG
@@ -2783,16 +2784,6 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
     qthread_debug(ALL_DETAILS, "t = %p\n", t);
     qassert_ret(t, NULL);
 
-    t->thread_state = QTHREAD_STATE_NEW;
-    t->f = f;
-    t->arg = (void *)arg;
-    t->blockedon = NULL;
-    t->shepherd_ptr = myshep;
-    t->target_shepherd = NULL;
-    t->ret = ret;
-    t->flags = 0;
-    t->stack = NULL;
-
 #ifdef QTHREAD_NONLAZY_THREADIDS
     /* give the thread an ID number */
     t->thread_id =
@@ -2801,6 +2792,16 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
 #else
     t->thread_id = (unsigned int)-1;
 #endif
+
+    t->thread_state = QTHREAD_STATE_NEW;
+    t->flags = 0;
+    t->shepherd_ptr = myshep;
+    t->target_shepherd = NULL;
+    t->blockedon = NULL;
+    t->f = f;
+    t->arg = (void *)arg;
+    t->ret = ret;
+    t->stack = NULL;
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     qthread_syncvar_empty(t, &t->taskWaitLock);
@@ -3035,6 +3036,7 @@ static QINLINE qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t * q)
     FREE_TQNODE((qt_threadqueue_node_t *) QPTR(head));
 #endif
     if (p != NULL) {
+	Q_PREFETCH(&(p->thread_state));
 	(void)qthread_internal_incr_s(&q->advisory_queuelen, &q->advisory_queuelen_m, -1);
     }
     return p;
@@ -3993,25 +3995,29 @@ int qthread_empty(qthread_t * me, const aligned_t * dest)
     const aligned_t *alignedaddr;
 #ifndef SST
     qthread_addrstat_t *m;
-    const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
+    qt_hash FEBbin;
+    {
+	const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
+	FEBbin = qlib->FEBs[lockbin];
 
-    QALIGN(dest, alignedaddr);
-    QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
-    qt_hash_lock(qlib->FEBs[lockbin]);
+	QALIGN(dest, alignedaddr);
+	QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
+    }
+    qt_hash_lock(FEBbin);
     {				       /* BEGIN CRITICAL SECTION */
-	m = (qthread_addrstat_t *) qt_hash_get_locked(qlib->FEBs[lockbin],
+	m = (qthread_addrstat_t *) qt_hash_get_locked(FEBbin,
 					       (void *)alignedaddr);
 	if (!m) {
 	    /* currently full, and must be added to the hash to empty */
 	    m = qthread_addrstat_new(me ? (me->shepherd_ptr) :
 				     pthread_getspecific(shepherd_structs));
 	    if (!m) {
-		qt_hash_unlock(qlib->FEBs[lockbin]);
+		qt_hash_unlock(FEBbin);
 		return QTHREAD_MALLOC_ERROR;
 	    }
 	    m->full = 0;
 	    QTHREAD_EMPTY_TIMER_START(m);
-	    qt_hash_put_locked(qlib->FEBs[lockbin], (void *)alignedaddr, m);
+	    qt_hash_put_locked(FEBbin, (void *)alignedaddr, m);
 	    m = NULL;
 	} else {
 	    /* it could be either full or not, don't know */
@@ -4019,7 +4025,7 @@ int qthread_empty(qthread_t * me, const aligned_t * dest)
 	    REPORTLOCK(m);
 	}
     }				       /* END CRITICAL SECTION */
-    qt_hash_unlock(qlib->FEBs[lockbin]);
+    qt_hash_unlock(FEBbin);
     qthread_debug(LOCK_BEHAVIOR, "%p is now empty\n", dest);
     if (m) {
 	qthread_gotlock_empty(me->shepherd_ptr, m, (void *)alignedaddr, 0);
