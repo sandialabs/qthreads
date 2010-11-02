@@ -151,6 +151,8 @@ static inline void **qt_hash_internal_find(
     uint64_t step, quit;
 
     for (unsigned i = 0; i < bucketsize; ++i) {
+	Q_PREFETCH(&z[bucket + i + 1].key, 0, 1);
+	Q_PREFETCH(&z[bucket + i + 1].value, 1, 1);
 	if (z[bucket + i].key == key)
 	    return (void *)&z[bucket + i].value;
 	if (z[bucket + i].key == KEY_NULL)
@@ -163,6 +165,8 @@ static inline void **qt_hash_internal_find(
 	unsigned i;
 	bucket = (bucket + step) & mask;
 	for (i = 0; i < bucketsize; ++i) {
+	    Q_PREFETCH(&z[bucket + i + 1].key,   0, 1);
+	    Q_PREFETCH(&z[bucket + i + 1].value, 1, 1);
 	    if (z[bucket + i].key == key)
 		return (void *)&z[bucket + i].value;
 	    if (z[bucket + i].key == KEY_NULL)
