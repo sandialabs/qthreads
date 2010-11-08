@@ -159,7 +159,7 @@ typedef struct {
 struct qthread_runtime_data_s
 {
     void *stack;		/* the thread's stack */
-    ucontext_t *context;	/* the context switch info */
+    ucontext_t context;	/* the context switch info */
     ucontext_t *return_context;	/* context of parent shepherd */
 
     /* the shepherd we run on */
@@ -195,7 +195,7 @@ struct qthread_s
     qthread_f f;
     void *arg;			/* user defined data */
     void *ret;			/* user defined retval location */
-    struct qthread_runtime_data_s rdata;
+    struct qthread_runtime_data_s *rdata;
 };
 
 struct qthread_queue_s
@@ -2266,14 +2266,13 @@ int qthread_initialize(void)
     assert(qlib->mccoy_thread->stack == NULL);
     qlib->mccoy_thread->thread_state = QTHREAD_STATE_YIELDED;	/* avoid re-launching */
     qlib->mccoy_thread->flags = QTHREAD_REAL_MCCOY;	/* i.e. this is THE parent thread */
-    qlib->mccoy_thread->rdata.context = malloc(sizeof(ucontext_t));
-    qlib->mccoy_thread->rdata.shepherd_ptr = &(qlib->shepherds[0]);
-    assert(qlib->mccoy_thread->context != NULL);
+    qlib->mccoy_thread->rdata = malloc(sizeof(struct qthread_runtime_data_s));
+    assert(qlib->mccoy_thread->rdata != NULL);
 
     qthread_debug(ALL_DETAILS, "enqueueing mccoy thread\n");
     qt_threadqueue_enqueue(qlib->shepherds[0].ready, qlib->mccoy_thread,
 		       &(qlib->shepherds[0]));
-    qassert(getcontext(qlib->mccoy_thread->rdata.context), 0);
+    qassert(getcontext(&(qlib->mccoy_thread->rdata.context)), 0);
     qassert(getcontext(&(qlib->master_context)), 0);
     /* now build the context for the shepherd 0 */
     qthread_debug(ALL_DETAILS, "calling qthread_makecontext\n");
@@ -2284,23 +2283,23 @@ int qthread_initialize(void)
 #else
 			(void (*)(void))qthread_shepherd,
 #endif
-			&(qlib->shepherds[0]), qlib->mccoy_thread->rdata.context);
+			&(qlib->shepherds[0]), &(qlib->mccoy_thread->rdata.context));
 #ifndef QTHREAD_NO_ASSERTS
     shep0arg = &(qlib->shepherds[0]);
 #endif
     /* this launches shepherd 0 */
     qthread_debug(ALL_DETAILS, "launching shepherd 0\n");
 #ifdef QTHREAD_USE_VALGRIND
-    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(qlib->mccoy_thread->rdata.context,
+    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&qlib->mccoy_thread->rdata.context,
 				      sizeof(ucontext_t));
     VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&(qlib->master_context),
 				      sizeof(ucontext_t));
-    VALGRIND_MAKE_MEM_DEFINED(qlib->mccoy_thread->rdata.context,
+    VALGRIND_MAKE_MEM_DEFINED(&qlib->mccoy_thread->rdata.context,
 			      sizeof(ucontext_t));
     VALGRIND_MAKE_MEM_DEFINED(&(qlib->master_context), sizeof(ucontext_t));
 #endif
     qthread_debug(ALL_DETAILS, "calling swapcontext\n");
-    qassert(swapcontext(qlib->mccoy_thread->rdata.context, &(qlib->master_context)),
+    qassert(swapcontext(&qlib->mccoy_thread->rdata.context, &(qlib->master_context)),
 	    0);
 
     qthread_debug(ALL_DETAILS, "calling atexit\n");
@@ -2591,7 +2590,6 @@ void qthread_finalize(void)
 #endif
     assert(qlib->mccoy_thread->stack == NULL);
     qthread_debug(ALL_DETAILS, "destroy mccoy thread structure\n");
-    free(qlib->mccoy_thread->rdata.context);
     FREE_QTHREAD(qlib->mccoy_thread);
     qthread_debug(ALL_DETAILS, "destroy master stack\n");
     free(qlib->master_stack);
@@ -3315,11 +3313,11 @@ static QINLINE void qthread_exec(qthread_t * t, ucontext_t * c)
 	    void *stack = ALLOC_STACK(t->rdata.shepherd_ptr);
 	    assert(stack);
 	    t->rdata.stack = stack;
-#ifdef QTHREAD_GUARD_PAGES
+/*#ifdef QTHREAD_GUARD_PAGES
 	    t->rdata.context = (ucontext_t*)(((char*)stack) + getpagesize() + qlib->qthread_stack_size);
 #else
 	    t->rdata.context = (ucontext_t*)(((char*)stack) + qlib->qthread_stack_size);
-#endif
+#endif*/
 #ifdef QTHREAD_USE_VALGRIND
 	    t->valgrind_stack_id = VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
 #endif
@@ -3330,12 +3328,12 @@ static QINLINE void qthread_exec(qthread_t * t, ucontext_t * c)
 		      t, c);
 	t->thread_state = QTHREAD_STATE_RUNNING;
 
-	qassert(getcontext(t->rdata.context), 0);	/* puts the current context into t->rdata.context */
-	qthread_makecontext(t->rdata.context, t->rdata.stack, qlib->qthread_stack_size,
+	qassert(getcontext(&t->rdata.context), 0);	/* puts the current context into t->rdata.context */
+	qthread_makecontext(&t->rdata.context, t->rdata.stack, qlib->qthread_stack_size,
 			    (void (*)(void))qthread_wrapper, t, c);
 #ifdef HAVE_NATIVE_MAKECONTEXT
     } else {
-	t->rdata.context->uc_link = c;       /* NULL pthread_exit() */
+	t->rdata.context.uc_link = c;       /* NULL pthread_exit() */
 #endif
     }
 
@@ -3355,15 +3353,15 @@ static QINLINE void qthread_exec(qthread_t * t, ucontext_t * c)
 #endif
 
     qthread_debug(ALL_DETAILS,
-		  "t(%p): executing swapcontext(%p, %p)...\n", t, t->rdata.return_context, t->rdata.context);
+		  "t(%p): executing swapcontext(%p, %p)...\n", t, t->rdata.return_context, &t->rdata.context);
     /* return_context (aka "c") is being written over with the current context */
 #ifdef QTHREAD_USE_VALGRIND
-    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(t->rdata.context, sizeof(ucontext_t));
+    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&t->rdata.context, sizeof(ucontext_t));
     VALGRIND_CHECK_MEM_IS_ADDRESSABLE(t->rdata.return_context, sizeof(ucontext_t));
-    VALGRIND_MAKE_MEM_DEFINED(t->rdata.context, sizeof(ucontext_t));
+    VALGRIND_MAKE_MEM_DEFINED(&t->rdata.context, sizeof(ucontext_t));
     VALGRIND_MAKE_MEM_DEFINED(t->rdata.return_context, sizeof(ucontext_t));
 #endif
-    qassert(swapcontext(t->rdata.return_context, t->rdata.context), 0);
+    qassert(swapcontext(t->rdata.return_context, &t->rdata.context), 0);
 #ifdef NEED_RLIMIT
     qthread_debug(ALL_DETAILS,
 		  "t(%p): setting stack size limits back to normal...\n",
@@ -3680,12 +3678,12 @@ static QINLINE void qthread_back_to_master(qthread_t * t)
 #endif
     /* now back to your regularly scheduled master thread */
 #ifdef QTHREAD_USE_VALGRIND
-    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(t->rdata.context, sizeof(ucontext_t));
+    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&t->rdata.context, sizeof(ucontext_t));
     VALGRIND_CHECK_MEM_IS_ADDRESSABLE(t->rdata.return_context, sizeof(ucontext_t));
-    VALGRIND_MAKE_MEM_DEFINED(t->rdata.context, sizeof(ucontext_t));
+    VALGRIND_MAKE_MEM_DEFINED(&t->rdata.context, sizeof(ucontext_t));
     VALGRIND_MAKE_MEM_DEFINED(t->rdata.return_context, sizeof(ucontext_t));
 #endif
-    qassert(swapcontext(t->rdata.context, t->rdata.return_context), 0);
+    qassert(swapcontext(&t->rdata.context, t->rdata.return_context), 0);
 #ifdef NEED_RLIMIT
     qthread_debug(ALL_DETAILS,
 		  "t(%p): setting stack size limits back to qthread size...\n",
