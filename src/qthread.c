@@ -91,6 +91,7 @@ kern_return_t thread_policy_get(thread_t thread,
 #include "qthread/qthread.h"
 #include "qthread/futurelib.h"
 #include "qthread_innards.h"
+#include "qthread_prefetch.h"
 #include "futurelib_innards.h"
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 # include "qt_barrier.h"

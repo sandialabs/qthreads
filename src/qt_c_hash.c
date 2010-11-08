@@ -3,6 +3,7 @@
 #endif
 #include "qt_hash.h"
 #include "qthread_asserts.h"
+#include "qthread_prefetch.h"
 #include "qt_atomics.h"
 #include "qthread/cacheline.h"
 #include <stdlib.h>
