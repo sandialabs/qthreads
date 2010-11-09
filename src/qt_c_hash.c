@@ -146,7 +146,7 @@ static inline void **qt_hash_internal_find(
 {
     const hash_entry *z = h->entries;
     const uint64_t mask = h->mask;
-    const uint64_t hashed = qt_hashword((uint64_t) key);
+    const uint64_t hashed = qt_hashword((uint64_t)(uintptr_t) key);
 
     uint64_t bucket = hashed & mask;
     uint64_t step, quit;
