@@ -263,10 +263,6 @@ void qt_global_barrier(const qthread_t * me)
 {				       /*{{{ */
     const qthread_shepherd_id_t shep = qthread_shep(me);
     qt_barrier_enter(MBar, shep);
-    //  now execute code on one thread that everyone needs to see -- should be
-    //     at middle of barrier but does not seem to work there -- so here with double barrier
-    //     blech.  akp -2/9/10
-    qt_barrier_enter(MBar, shep);
     return;
 }				       /*}}} */
 

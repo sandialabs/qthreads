@@ -1340,7 +1340,9 @@ static void *qthread_shepherd(void *arg)
 #endif
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 		t->rdata->openmpTaskRetVar = NULL;
-		t->rdata->taskWaitLock.u.w = 0;
+		//	t->rdata->taskWaitLock.u.w = 0;
+		qthread_syncvar_empty(t, &t->rdata->taskWaitLock);
+
 #endif
 	    }
 	    assert(t->rdata->shepherd_ptr == me);
@@ -4721,6 +4723,7 @@ int qthread_forCount(qthread_t * t, int inc)
 {                                    /*{{{ */
      return (t->rdata->forCount += inc);
  }                                    /*}}} */
+
 void qthread_getTaskListLock(qthread_t * t)
 {				       /*{{{ */
     qthread_syncvar_writeEF_const(t, &t->rdata->taskWaitLock, 1);
