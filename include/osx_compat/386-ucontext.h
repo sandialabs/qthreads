@@ -51,23 +51,18 @@ void setmcontext(mcontext_t *);
  */
 
 struct mcontext {
-	long mc_edi; /* 0: 1st arg (mandatory) */
-	long mc_esi; /* 1: 2nd arg (often mandatory) */
-#ifdef NEEDX86REGISTERARGS
-	long mc_edx; /* 2: 3rd arg */
-	long mc_ecx; /* 3: 4th arg */
-#endif
-	long mc_ebp; /* 4/2: Stack frame pointer */
-	long mc_ebx; /* 5/3: PIC base register, also general-purp. reg */
-	long mc_eax; /* 6/4: return value */
+	unsigned long mc_edi; /* 0: 1st arg (mandatory) */
+	unsigned long mc_ebp; /* 1: Stack frame pointer */
+	unsigned long mc_ebx; /* 2: PIC base register, also general-purp. reg */
+	unsigned long mc_eax; /* 3: return value */
 #ifdef __x86_64__
-	long mc_r12; /* 7: extra callee-saved registers */
-	long mc_r13; /* 8: extra callee-saved registers */
-	long mc_r14; /* 9: extra callee-saved registers */
-	long mc_r15; /* 10: extra callee-saved registers */
+	unsigned long mc_r12; /* 4: extra callee-saved registers */
+	unsigned long mc_r13; /* 5: extra callee-saved registers */
+	unsigned long mc_r14; /* 6: extra callee-saved registers */
+	unsigned long mc_r15; /* 7: extra callee-saved registers */
 #endif
-	long mc_esp; /* 11/5: machine state; stack pointer */
-	long mc_eip; /* 12/6: function pointer */
+	unsigned long mc_esp; /* 8/4: machine state; stack pointer */
+	unsigned long mc_eip; /* 9/5: function pointer */
 };
 
 struct ucontext {

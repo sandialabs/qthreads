@@ -41,10 +41,10 @@ void makecontext(ucontext_t *ucp, void (*func)(void), int argc, ...)
 	for (i=0;i<argc;i++) {
 	    switch (i) {
 		case 0: ucp->uc_mcontext.mc_edi = va_arg(argp, uintptr_t); break;
-		case 1: ucp->uc_mcontext.mc_esi = va_arg(argp, uintptr_t); break;
+		/*case 1: ucp->uc_mcontext.mc_esi = va_arg(argp, uintptr_t); break;
 		case 2: ucp->uc_mcontext.mc_edx = va_arg(argp, uintptr_t); break;
 		case 3: ucp->uc_mcontext.mc_ecx = va_arg(argp, uintptr_t); break;
-		/*case 4: ucp->uc_mcontext.mc_r8 = va_arg(argp, uintptr_t); break;
+		case 4: ucp->uc_mcontext.mc_r8 = va_arg(argp, uintptr_t); break;
 		case 5: ucp->uc_mcontext.mc_r9 = va_arg(argp, uintptr_t); break;*/
 	    }
 	}
