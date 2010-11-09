@@ -4,6 +4,7 @@
 #include <stdio.h>		       /* debugging */
 #include "qt_mpool.h"
 #include "qt_atomics.h"
+#include "qthread_expect.h"
 #include <stddef.h>		       /* for size_t (according to C89) */
 #include <stdlib.h>		       /* for calloc() and malloc() */
 #if (HAVE_MEMALIGN && HAVE_MALLOC_H)
@@ -43,7 +44,7 @@ struct qt_mpool_s {
 
     void *volatile QTHREAD_CASLOCK(reuse_pool);
     char *alloc_block;
-    size_t alloc_block_pos;
+    char *volatile alloc_block_ptr;
     void **alloc_list;
     size_t alloc_list_pos;
 
@@ -194,6 +195,7 @@ qt_mpool qt_mpool_create_aligned(const int sync, size_t item_size,
 								alignment);
     assert(((unsigned long)(pool->alloc_block) & (alignment - 1)) == 0);
     qassert_goto((pool->alloc_block != NULL), errexit);
+    pool->alloc_block_ptr = pool->alloc_block;
     /* this assumes that pagesize is a multiple of sizeof(void*) */
     pool->alloc_list = calloc(1, pagesize);
     qassert_goto((pool->alloc_list != NULL), errexit);
@@ -258,11 +260,23 @@ void *qt_mpool_alloc(qt_mpool pool)
 	} while (p != old && QPTR(p) != NULL);
     }
     if (QPTR(p) == NULL) {	       /* this is not an else on purpose */
-	if (pool->lock) {
-	    QTHREAD_FASTLOCK_LOCK(pool->lock);
+	char *base, *max, *cur;
+start:
+	base = pool->alloc_block;
+	max = base + (pool->item_size * pool->items_per_alloc);
+	cur = pool->alloc_block_ptr;
+	while (cur <= max && cur >= base) {
+	    char * cur2 = qt_cas(&pool->alloc_block_ptr, cur, cur + pool->item_size);
+	    if (cur2 == cur) break;
+	    cur = cur2;
+	    if (base != pool->alloc_block) goto start;
 	}
-	if (pool->alloc_block_pos == pool->items_per_alloc) {
-	    if (pool->alloc_list_pos == (pagesize / sizeof(void *) - 1)) {
+	if (QTHREAD_EXPECT(cur == max + pool->item_size, 0)) {
+	    while (pool->alloc_block_ptr == cur) ;
+	    goto start;
+	} else if (QTHREAD_EXPECT(cur == max, 0)) {
+	    /* realloc */
+	    if (pool->alloc_list_pos == (pagesize / sizeof(void*) - 1)) {
 		void **tmp = calloc(1, pagesize);
 
 		qassert_goto((tmp != NULL), alloc_exit);
@@ -277,23 +291,12 @@ void *qt_mpool_alloc(qt_mpool pool)
 	    assert(pool->alignment == 0 ||
 		   (((unsigned long)p) & (pool->alignment - 1)) == 0);
 	    pool->alloc_block = (void *)p;
-	    pool->alloc_block_pos = 1;
 	    pool->alloc_list[pool->alloc_list_pos] = pool->alloc_block;
 	    pool->alloc_list_pos++;
+	    __sync_synchronize();
+	    pool->alloc_block_ptr = ((char*)p) + pool->item_size;
 	} else {
-	    p = (void **)(pool->alloc_block +
-			  (pool->item_size * pool->alloc_block_pos));
-	    pool->alloc_block_pos++;
-	}
-	if (pool->lock) {
-	    QTHREAD_FASTLOCK_UNLOCK(pool->lock);
-	}
-	if (pool->alignment != 0 &&
-	    (((unsigned long)p) & (pool->alignment - 1))) {
-	    printf("alloc_block = %p\n", pool->alloc_block);
-	    printf("item_size = %u\n", (unsigned)(pool->item_size));
-	    assert(pool->alignment == 0 ||
-		   (((unsigned long)p) & (pool->alignment - 1)) == 0);
+	    p = (void**)cur;
 	}
     }
     qgoto(alloc_exit);
