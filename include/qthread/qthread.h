@@ -164,8 +164,12 @@ int qthread_fork(const qthread_f f, const void *const arg, aligned_t * ret);
 int qthread_fork_syncvar(const qthread_f f, const void *const arg, syncvar_t * ret);
 int qthread_fork_to(const qthread_f f, const void *const arg, aligned_t * ret,
 		    const qthread_shepherd_id_t shepherd);
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
 int qthread_fork_syncvar_to(const qthread_f f, const void *const arg,  const void *const arg_copy,
 			    int64_t free_arg, syncvar_t * ret, const qthread_shepherd_id_t shepherd);
+#else
+int qthread_fork_syncvar_to(const qthread_f f, const void *const arg, syncvar_t * ret, const qthread_shepherd_id_t shepherd);
+#endif
 
 /* Using qthread_prepare()/qthread_schedule() and variants:
  *

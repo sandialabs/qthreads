@@ -1339,7 +1339,6 @@ static void *qthread_shepherd(void *arg)
 		t->rdata->valgrind_stack_id = VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
 #endif
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-		t->rdata->forCount = 0;
 		t->rdata->openmpTaskRetVar = NULL;
 		t->rdata->taskWaitLock.u.w = 0;
 #endif
@@ -3558,13 +3557,21 @@ int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
 int qthread_fork_syncvar_to(
     const qthread_f f,
-    const void *const arg, 
+    const void *const arg,
     const void *const arg_copy,
-    int64_t free_arg, 
-    syncvar_t * ret, 
+    int64_t free_arg,
+    syncvar_t * ret,
     const qthread_shepherd_id_t shepherd)
+#else
+int qthread_fork_syncvar_to(
+    const qthread_f f,
+    const void *const arg,
+    syncvar_t * ret,
+    const qthread_shepherd_id_t shepherd)
+#endif
 {				       /*{{{ */
     qthread_t *t;
     qthread_shepherd_t *shep;
@@ -3574,7 +3581,11 @@ int qthread_fork_syncvar_to(
     if (shepherd >= qlib->nshepherds || f == NULL) {
 	return QTHREAD_BADARGS;
     }
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
     t = qthread_thread_new(f, arg, arg_copy, free_arg, ret, shepherd);
+#else
+    t = qthread_thread_new(f, arg, NULL, 0, ret, shepherd);
+#endif
     qassert_ret(t, QTHREAD_MALLOC_ERROR);
     t->target_shepherd = shep = &(qlib->shepherds[shepherd]);
     qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id,

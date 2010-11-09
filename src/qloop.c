@@ -92,11 +92,19 @@ static void qt_loop_inner(
 			 qthread_num_shepherds())),
 		    QTHREAD_SUCCESS);
 	} else {
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
 	    qassert(qthread_fork_syncvar_to
 		    ((qthread_f) qloop_wrapper, qwa + threadct, NULL, 0, rets + i,
 		     (qthread_shepherd_id_t) (threadct %
 			 qthread_num_shepherds())),
 		    QTHREAD_SUCCESS);
+#else
+	    qassert(qthread_fork_syncvar_to
+		    ((qthread_f) qloop_wrapper, qwa + threadct, rets + i,
+		     (qthread_shepherd_id_t) (threadct %
+			 qthread_num_shepherds())),
+		    QTHREAD_SUCCESS);
+#endif
 	}
 	threadct++;
     }
@@ -219,9 +227,15 @@ static QINLINE void qt_loop_balance_inner(
 	}
 	iterend = qwa[i].stopat;
 	if (!future) {
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
 	    qassert(qthread_fork_syncvar_to
 		    ((qthread_f) qloop_wrapper, qwa + i, NULL, 0, rets + i, i),
 		    QTHREAD_SUCCESS);
+#else
+	    qassert(qthread_fork_syncvar_to
+		    ((qthread_f) qloop_wrapper, qwa + i, rets + i, i),
+		    QTHREAD_SUCCESS);
+#endif
 	} else {
 	    qassert(qthread_fork_syncvar_future_to
 		    (me, (qthread_f) qloop_wrapper, qwa + i, rets + i, i),
@@ -316,9 +330,15 @@ static QINLINE void qt_loopaccum_balance_inner(
 	}
 	iterend = qwa[i].stopat;
 	if (!future) {
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
 	    qassert(qthread_fork_syncvar_to
 		    ((qthread_f) qloopaccum_wrapper, qwa + i, NULL, 0, rets + i, i),
 		    QTHREAD_SUCCESS);
+#else
+	    qassert(qthread_fork_syncvar_to
+		    ((qthread_f) qloopaccum_wrapper, qwa + i, rets + i, i),
+		    QTHREAD_SUCCESS);
+#endif
 	} else {
 	    qassert(qthread_fork_syncvar_future_to
 		    (me, (qthread_f) qloopaccum_wrapper, qwa + i, rets + i,
