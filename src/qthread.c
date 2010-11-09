@@ -1335,10 +1335,12 @@ static void *qthread_shepherd(void *arg)
 		t->rdata->shepherd_ptr = me;
 		t->rdata->blockedon = NULL;
 #ifdef QTHREAD_USE_VALGRIND
-		t->valgrind_stack_id = VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
+		t->rdata->valgrind_stack_id = VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
 #endif
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-		qthread_syncvar_empty(t, &t->rdata->taskWaitLock);
+		t->rdata->forCount = 0;
+		t->rdata->openmpTaskRetVar = NULL;
+		t->rdata->taskWaitLock.u.w = 0;
 #endif
 	    }
 	    assert(t->rdata->shepherd_ptr == me);
@@ -4703,21 +4705,21 @@ int qt_thread_done(qthread_t * t)
     return ((t->thread_state == QTHREAD_STATE_DONE) ? 1 : 0);
 }				       /*}}} */
 void qthread_getTaskListLock(qthread_t * t)
-{/*{{{*/
+{				       /*{{{ */
     qthread_syncvar_writeEF_const(t, &t->rdata->taskWaitLock, 1);
-}/*}}}*/
+}				       /*}}} */
 void qthread_releaseTaskListLock(qthread_t * t)
-{/*{{{*/
+{				       /*{{{ */
     qthread_syncvar_readFE(t, NULL, &t->rdata->taskWaitLock);
-}/*}}}*/
+}				       /*}}} */
 taskSyncvar_t * qthread_getTaskRetVar(qthread_t * t)
-{/*{{{*/
+{				       /*{{{ */
     return t->rdata->openmpTaskRetVar;
-}/*}}}*/
+}				       /*}}} */
 void qthread_setTaskRetVar(qthread_t *t, taskSyncvar_t *v)
-{/*{{{*/
+{				       /*{{{ */
     t->rdata->openmpTaskRetVar = v;
-}/*}}}*/
+}				       /*}}} */
 #endif
 
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
