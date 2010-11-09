@@ -96,7 +96,6 @@ kern_return_t thread_policy_get(thread_t thread,
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 # include "qt_barrier.h"
 # include "qt_arrive_first.h"
-int __qthreads_temp; // XXX: wtf?
 #endif
 
 /* internal constants */
@@ -160,20 +159,19 @@ typedef struct {
 struct qthread_runtime_data_s
 {
     void *stack;		/* the thread's stack */
-    ucontext_t context;	/* the context switch info */
+    ucontext_t context;	        /* the context switch info */
+
     ucontext_t *return_context;	/* context of parent shepherd */
 
-    /* the shepherd we run on */
-    qthread_shepherd_t *shepherd_ptr;
     /* a pointer used for passing information back to the shepherd when
      * becoming blocked */
     struct qthread_lock_s *blockedon;
+    qthread_shepherd_t *shepherd_ptr; /* the shepherd we run on */
 
 #ifdef QTHREAD_USE_VALGRIND
     unsigned int valgrind_stack_id;
 #endif
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    int forCount;
     taskSyncvar_t *openmpTaskRetVar; /* ptr to linked list if task's I started -- used in openMP taskwait */
     syncvar_t taskWaitLock;
 #endif
@@ -196,6 +194,8 @@ struct qthread_s
     qthread_f f;
     void *arg;			/* user defined data */
     void *ret;			/* user defined retval location */
+    aligned_t   free_arg;       /* user defined data malloced and to be freed */
+    aligned_t   test[128];            /* space so that I can avoid malloc in most small cases */
     struct qthread_runtime_data_s *rdata;
 };
 
@@ -377,9 +377,11 @@ static QINLINE qthread_addrstat_t *qthread_addrstat_new(qthread_shepherd_t *
 							shepherd);
 static void qthread_addrstat_delete(qthread_addrstat_t * m);
 static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
-					     const void *arg, void * ret,
-					     const qthread_shepherd_id_t
-					     shepherd);
+					     const void *arg,
+					     const void *arg_copy,
+					     int64_t free_arg,
+					     void * ret,
+					     const qthread_shepherd_id_t shepherd);
 static QINLINE void qthread_thread_free(qthread_t * t);
 static qthread_shepherd_t* qthread_find_active_shepherd(qthread_shepherd_id_t *l, unsigned int *d);
 
@@ -1030,7 +1032,6 @@ static Q_NOINLINE volatile aligned_t *vol_id_a(volatile aligned_t * ptr)
 }
 # endif
 # define _(x) *vol_id_qtlfqn(&(x))
-//# define _(x) (x)
 #endif
 
 #ifdef QTHREAD_DEBUG
@@ -1335,6 +1336,9 @@ static void *qthread_shepherd(void *arg)
 		t->rdata->blockedon = NULL;
 #ifdef QTHREAD_USE_VALGRIND
 		t->valgrind_stack_id = VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
+#endif
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+		qthread_syncvar_empty(t, &t->rdata->taskWaitLock);
 #endif
 	    }
 	    assert(t->rdata->shepherd_ptr == me);
@@ -2265,7 +2269,7 @@ int qthread_initialize(void)
      * this weirdness is so that the current thread can block the same way that
      * a qthread can. */
     qthread_debug(ALL_DETAILS, "allocating shep0\n");
-    qlib->mccoy_thread = qthread_thread_new(NULL, NULL, NULL, 0);
+    qlib->mccoy_thread = qthread_thread_new(NULL, NULL, NULL, 0, NULL, 0);
     qthread_debug(ALL_DETAILS, "mccoy thread = %p\n", qlib->mccoy_thread);
     qassert_ret(qlib->mccoy_thread, QTHREAD_MALLOC_ERROR);
 
@@ -2414,7 +2418,7 @@ void qthread_finalize(void)
 #endif
     for (i = 1; i < qlib->nshepherds; i++) {
 	qthread_debug(ALL_DETAILS, "terminating shepherd %i\n", (int)i);
-	t = qthread_thread_new(NULL, NULL, (aligned_t *) NULL, i);
+	t = qthread_thread_new(NULL, NULL, NULL, 0, (aligned_t *) NULL, i);
 	assert(t != NULL);	       /* what else can we do? */
 	t->thread_state = QTHREAD_STATE_TERM_SHEP;
 	t->thread_id = (unsigned int)-1;
@@ -2792,7 +2796,10 @@ aligned_t *qthread_retloc(const qthread_t * t)
 /* functions to manage thread stack allocation/deallocation */
 /************************************************************/
 static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
-					     const void *arg, void * ret,
+					     const void *arg,
+					     const void *arg_copy, 
+					     int64_t free_arg,
+					     void * ret,
 					     const qthread_shepherd_id_t
 					     shepherd)
 {				       /*{{{ */
@@ -2826,7 +2833,13 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
     t->rdata = NULL;
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    qthread_syncvar_empty(t, &t->taskWaitLock);
+    if ((free_arg != 0)&(free_arg <= 128)&(arg_copy == NULL)) { // use the builtin block for args
+      memcpy(t->test,arg,free_arg);
+      t->arg = (void*)(&t->test);
+    }
+    else {
+      free_arg =0;
+    }
 #endif
 
     qthread_debug(ALL_DETAILS, "returning\n");
@@ -3280,12 +3293,22 @@ static void qthread_wrapper(void *ptr)
     if (t->ret) {
 	/* XXX: if this fails, we should probably do something */
 	if (t->flags & QTHREAD_RET_IS_SYNCVAR) {
+#ifndef QTHREAD_USE_ROSE_EXTENSIONS
 	    qassert(qthread_syncvar_writeEF_const(t, (syncvar_t*)t->ret, (t->f) (t, t->arg)), QTHREAD_SUCCESS);
+	    if((t->free_arg) && (&t->test != t->arg))free(t->arg);
+#else
+	    qassert(qthread_syncvar_writeEF_const(t, (syncvar_t*)t->ret, (t->f) (t->arg, t->arg)), QTHREAD_SUCCESS);
+	    if((t->free_arg) && (&t->test != t->arg))free(t->arg);
+#endif
 	} else {
 	    qassert(qthread_writeEF_const(t, (aligned_t*)t->ret, (t->f) (t, t->arg)), QTHREAD_SUCCESS);
 	}
     } else {
+#ifndef QTHREAD_USE_ROSE_EXTENSIONS
 	(t->f) (t, t->arg);
+#else
+	(t->f) (t->arg, t->arg);
+#endif
     }
     t->thread_state = QTHREAD_STATE_TERMINATED;
 
@@ -3427,7 +3450,7 @@ int qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
 	qthread_debug(THREAD_BEHAVIOR, "could not find an active shepherd\n");
 	return QTHREAD_NOT_ALLOWED;
     }
-    t = qthread_thread_new(f, arg, ret, shep);
+    t = qthread_thread_new(f, arg, NULL, 0, ret, shep);
     if (t) {
 	qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n",
 		      t->thread_id, shep);
@@ -3478,7 +3501,7 @@ int qthread_fork_syncvar(const qthread_f f, const void *arg, syncvar_t * ret)
 				      &qlib->sched_shepherd_lock);
 	assert(shep < qlib->nshepherds);
     }
-    t = qthread_thread_new(f, arg, (aligned_t*)ret, shep);
+    t = qthread_thread_new(f, arg, NULL, 0, (aligned_t*)ret, shep);
     if (t) {
 	qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n",
 		      t->thread_id, shep);
@@ -3510,7 +3533,7 @@ int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
     if (shepherd >= qlib->nshepherds || f == NULL) {
 	return QTHREAD_BADARGS;
     }
-    t = qthread_thread_new(f, arg, ret, shepherd);
+    t = qthread_thread_new(f, arg, NULL, 0, ret, shepherd);
     qassert_ret(t, QTHREAD_MALLOC_ERROR);
     shep = &(qlib->shepherds[shepherd]);
     t->target_shepherd = shep;
@@ -3534,8 +3557,10 @@ int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
 
 int qthread_fork_syncvar_to(
     const qthread_f f,
-    const void *arg,
-    syncvar_t * ret,
+    const void *const arg, 
+    const void *const arg_copy,
+    int64_t free_arg, 
+    syncvar_t * ret, 
     const qthread_shepherd_id_t shepherd)
 {				       /*{{{ */
     qthread_t *t;
@@ -3546,7 +3571,7 @@ int qthread_fork_syncvar_to(
     if (shepherd >= qlib->nshepherds || f == NULL) {
 	return QTHREAD_BADARGS;
     }
-    t = qthread_thread_new(f, arg, ret, shepherd);
+    t = qthread_thread_new(f, arg, arg_copy, free_arg, ret, shepherd);
     qassert_ret(t, QTHREAD_MALLOC_ERROR);
     t->target_shepherd = shep = &(qlib->shepherds[shepherd]);
     qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id,
@@ -3583,7 +3608,7 @@ int qthread_fork_future_to(const qthread_t * me, const qthread_f f,
     if (shepherd >= qlib->nshepherds || f == NULL) {
 	return QTHREAD_BADARGS;
     }
-    t = qthread_thread_new(f, arg, ret, shepherd);
+    t = qthread_thread_new(f, arg, NULL, 0, ret, shepherd);
     qassert_ret(t, QTHREAD_MALLOC_ERROR);
     shep = &(qlib->shepherds[shepherd]);
     t->flags |= QTHREAD_FUTURE;
@@ -3627,7 +3652,7 @@ int qthread_fork_syncvar_future_to(
     if (QTHREAD_CASLOCK_READ_UI(qlib->shepherds[shepherd].active) != 1) {
 	return QTHREAD_NOT_ALLOWED;
     }
-    t = qthread_thread_new(f, arg, ret, shepherd);
+    t = qthread_thread_new(f, arg, NULL, 0, ret, shepherd);
     qassert_ret(t, QTHREAD_MALLOC_ERROR);
     shep = &(qlib->shepherds[shepherd]);
     t->flags |= QTHREAD_FUTURE;
@@ -3715,7 +3740,7 @@ qthread_t *qthread_prepare(const qthread_f f, const void *arg,
 	assert(shep < qlib->nshepherds);
     }
 
-    t = qthread_thread_new(f, arg, ret, shep);
+    t = qthread_thread_new(f, arg, NULL, 0, ret, shep);
     qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n",
 		  t->thread_id, shep);
     if (t && ret) {
@@ -3731,7 +3756,7 @@ qthread_t *qthread_prepare_for(const qthread_f f, const void *arg,
 			       aligned_t * ret,
 			       const qthread_shepherd_id_t shepherd)
 {				       /*{{{ */
-    qthread_t *t = qthread_thread_new(f, arg, ret, shepherd);
+  qthread_t *t = qthread_thread_new(f, arg, NULL, 0, ret, shepherd);
 
     qthread_debug(THREAD_BEHAVIOR,
 		  "new-tid %u shep %u\n", t->thread_id,
@@ -4677,29 +4702,21 @@ int qt_thread_done(qthread_t * t)
 {				       /*{{{ */
     return ((t->thread_state == QTHREAD_STATE_DONE) ? 1 : 0);
 }				       /*}}} */
-int qthread_forCount(qthread_t * t, int inc)
-{                                    /*{{{ */
-    return (t->forCount += inc);
-}                                    /*}}} */
-void qthread_reset_forCount(qthread_t * t)
-{                                    /*{{{ */
-    t->forCount = 0;
-}                                    /*}}} */
 void qthread_getTaskListLock(qthread_t * t)
 {/*{{{*/
-    qthread_syncvar_writeEF_const(t, &t->taskWaitLock, 1);
+    qthread_syncvar_writeEF_const(t, &t->rdata->taskWaitLock, 1);
 }/*}}}*/
 void qthread_releaseTaskListLock(qthread_t * t)
 {/*{{{*/
-    qthread_syncvar_readFE(t, NULL, &t->taskWaitLock);
+    qthread_syncvar_readFE(t, NULL, &t->rdata->taskWaitLock);
 }/*}}}*/
 taskSyncvar_t * qthread_getTaskRetVar(qthread_t * t)
 {/*{{{*/
-    return t->openmpTaskRetVar;
+    return t->rdata->openmpTaskRetVar;
 }/*}}}*/
 void qthread_setTaskRetVar(qthread_t *t, taskSyncvar_t *v)
 {/*{{{*/
-    t->openmpTaskRetVar = v;
+    t->rdata->openmpTaskRetVar = v;
 }/*}}}*/
 #endif
 

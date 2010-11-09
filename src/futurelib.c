@@ -206,7 +206,11 @@ void future_fork_syncvar_to(qthread_f fptr, void *arg, syncvar_t * retval,
     assert(future_bookkeeping_array != NULL);
     if (future_bookkeeping_array == NULL) {
 	/* futures weren't initialized properly... */
-	qthread_fork_syncvar_to(fptr, arg, retval, shep);
+#ifndef QTHREAD_USE_ROSE_EXTENSIONS
+      qthread_fork_syncvar_to(fptr, arg, retval, shep);
+#else
+      qthread_fork_syncvar_to(fptr, arg, NULL, 0, retval, shep);
+#endif
 	return;
     }
 

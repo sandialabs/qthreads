@@ -79,6 +79,7 @@ static void qtar_internal_initialize_fixed(
     b->activeSize = size;
     //    b->arriveFirstDebug = (char)debug;
     b->arriveFirstDebug = 0;
+    b->nestLock = 0;
 
     if (size < 1) {
 	return;
@@ -204,16 +205,26 @@ int64_t qt_arrive_first_enter(
     qt_arrive_first_t * b,
     qthread_shepherd_id_t shep)
 {				       /*{{{ */
-    int64_t t = qtar_internal_up(MArrFirst, shep, 0);
+    int64_t t = qtar_internal_up(b, shep, 0);
     return t;
 }				       /*}}} */
 
 
 int64_t qt_global_arrive_first(
-    const qthread_shepherd_id_t shep)
+    const qthread_shepherd_id_t shep,
+    int64_t nest)
 {				       /*{{{ */
-    int64_t t = qtar_internal_up(MArrFirst, shep, 0);
-    return t;
+    int64_t t;
+    if (nest) {
+      qthread_t *const me = qthread_self();
+      qt_global_barrier(me);
+      if (qthread_shep(me)) return 0;
+      else return 1;
+    }
+    else {
+      t = qtar_internal_up(MArrFirst, shep, 0);
+      return t;
+    }
 }				       /*}}} */
 
 
@@ -222,6 +233,7 @@ void qt_global_arrive_first_init(
     int size,
     int debug)
 {				       /*{{{ */
+
     if (MArrFirst == NULL) {
 	extern int cnbWorkers;
 	extern double cnbTimeMin;

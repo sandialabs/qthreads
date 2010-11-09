@@ -26,10 +26,10 @@
 #define TRUE 1
 #define FALSE 0
 
-typedef enum xomp_nest_level{NO_NEST=0, ALLOW_NEST, AUTO_NEST}xomp_nest_level_t;
-
 /* XXX: KBW: fixes a compiler warning */
 void omp_set_nested (int val);
+
+typedef enum xomp_nest_level{NO_NEST=0, ALLOW_NEST, AUTO_NEST}xomp_nest_level_t;
 
 //
 // XOMP_Status
@@ -39,10 +39,10 @@ typedef struct XOMP_Status
 {
   bool inside_xomp_parallel;
   xomp_nest_level_t allow_xomp_nested_parallel;
-  int xomp_nested_parallel_level;
+  int64_t xomp_nested_parallel_level;
   clock_t start_time;
   qthread_shepherd_id_t num_omp_threads;
-  int dynamic;
+  int64_t dynamic;
   enum qloop_handle_type runtime_sched_option;
   aligned_t atomic_lock;
 } XOMP_Status;
@@ -54,7 +54,7 @@ static bool get_inside_xomp_parallel(XOMP_Status *);
 static int incr_inside_xomp_nested_parallel(XOMP_Status *p_status);
 static int decr_inside_xomp_nested_parallel(XOMP_Status *p_status);
 static void set_xomp_dynamic(int, XOMP_Status *);
-static int get_xomp_dynamic(XOMP_Status *);
+static int64_t get_xomp_dynamic(XOMP_Status *);
 static void xomp_set_nested(XOMP_Status *, bool val);
 static xomp_nest_level_t xomp_get_nested(XOMP_Status *);
 
@@ -176,8 +176,8 @@ static double XOMP_get_wtick(
 #endif
 }
 
-// Get dyamic scheduler value
-static int get_xomp_dynamic(
+// Get dynamic scheduler value
+static int64_t get_xomp_dynamic(
     XOMP_Status *p_status)
 {
   return p_status->dynamic;
@@ -265,7 +265,8 @@ void XOMP_parallel_start(
   if (gb == NULL) gb = qt_feb_barrier_create(me,qthread_num_shepherds()); // setup taskwait barrier
 
   qthread_shepherd_id_t parallelWidth = qthread_num_shepherds();
-  qt_parallel_step((qt_loop_step_f) func, parallelWidth, data);
+  qt_loop_f f = (qt_loop_f) func;
+  qt_parallel_step(f, parallelWidth, data);
 
   return;
 }
@@ -290,16 +291,15 @@ void XOMP_parallel_end(
 int64_t arr[100][64];
 volatile int64_t arr_level[64];
 
-static qqloop_step_handle_t *qqloop_get_value(
-    int id)
+qqloop_step_handle_t* qqloop_get_value(int id)
 {
-    qqloop_step_handle_t *ret = NULL;
-    while (1) {
-	int lev = *(volatile int64_t *)(&arr_level[id]);
-	if (*(volatile int64_t *)(&arr[lev][id])) {
-	    ret = arr[lev][id];
-	    break;
-	}
+    qqloop_step_handle_t * ret = NULL;
+    while(1) {
+       int lev = *(volatile int64_t*)(&arr_level[id]);
+       if (*(volatile int*)(&arr[lev][id])){
+	   ret = arr[lev][id];
+	   break;
+       }
     }
 
     return ret;
@@ -372,7 +372,7 @@ void XOMP_loop_guided_init(
 
   int myid = qthread_shep(me);
   
-  if (qt_global_arrive_first(myid)) {
+  if (qt_global_arrive_first(myid,xomp_get_nested(&xomp_status))) {
     qqhandle  =  qt_loop_rose_queue_create(lower,
 					   upper,
 					   stride);
@@ -532,7 +532,7 @@ extern int activeParallelLoop;
 void XOMP_barrier(void)
 {
     qthread_t *const me = qthread_self();
-    if (activeParallelLoop || xomp_get_nested(&xomp_status)) {
+    if (activeParallelLoop || get_inside_xomp_nested_parallel(&xomp_status)) {
       // everybody should be co-scheduled -- no need to allow blocking
       qt_global_barrier(me);
     }
@@ -635,8 +635,13 @@ void XOMP_task(
   aligned_t id = qthread_incr(&taskId,1);
   qthread_debug(LOCK_DETAILS, "me(%p) creating task for shepherd %d\n", me, id%qthread_num_shepherds());
   syncvar_t *ret = getSyncTaskVar(me,id); // get new syncvar_t -- setup openmpThreadId (if needed)
+  void * arg_copy = NULL;
+  if ((sizeof(aligned_t) * 128) < arg_size){
+    arg_copy = malloc(arg_size);
+    memcpy(arg_copy,arg,arg_size);
+  }
   qthread_f qfunc = (qthread_f)func;
-  qthread_fork_syncvar_to(qfunc, arg, ret, id%qthread_num_shepherds());
+  qthread_fork_syncvar_to(qfunc, arg, arg_copy, arg_size, ret, id%qthread_num_shepherds());
 }
 
 void XOMP_taskwait(
@@ -659,7 +664,7 @@ void XOMP_loop_static_init(
   int myid = qthread_shep(me);
   qqloop_step_handle_t *qqhandle = NULL;
 
-  if (qt_global_arrive_first(myid)) {
+  if (qt_global_arrive_first(myid,xomp_get_nested(&xomp_status))) {
     qqhandle  =  qt_loop_rose_queue_create(lower,
 					   upper,
 					   stride);
@@ -695,7 +700,7 @@ void XOMP_loop_dynamic_init(
   
   int myid = qthread_shep(me);
   
-  if (qt_global_arrive_first(myid)) {
+  if (qt_global_arrive_first(myid,xomp_get_nested(&xomp_status))) {
     qqhandle  =  qt_loop_rose_queue_create(lower,
 					   upper,
 					   stride);
@@ -975,7 +980,7 @@ bool XOMP_single(
     void)
 {
   int myid = qthread_shep(qthread_self());
-  if (qt_global_arrive_first(myid)){ 
+  if (qt_global_arrive_first(myid,xomp_get_nested(&xomp_status))){ 
     //    printf("XOMP_single returning true (%d)\n",myid);
     return 1;
   }
@@ -1149,7 +1154,7 @@ void omp_set_nested (int val)
   xomp_set_nested(&xomp_status, b);
 }
 
-int omp_get_nested (void)
+int64_t omp_get_nested (void)
 {
   bool b = xomp_get_nested(&xomp_status);
   return (b)? 1:0;

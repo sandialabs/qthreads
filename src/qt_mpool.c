@@ -100,7 +100,9 @@ static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
 	    ret = valloc(alloc_size);  /* cross your fingers */
 #endif
     }
-    memset(ret, 0, alloc_size);
+#ifndef QTHREAD_USE_ROSE_EXTENSIONS
+           memset(ret, 0, alloc_size);
+#endif
     VALGRIND_MAKE_MEM_NOACCESS(ret, alloc_size);
     return ret;
 }				       /*}}} */

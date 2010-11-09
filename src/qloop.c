@@ -51,7 +51,11 @@ static aligned_t qloop_step_wrapper(
     qthread_t * const restrict me,
     struct qloop_step_wrapper_args * const restrict arg)
 {				       /*{{{ */
-    arg->func(me, arg->startat, arg->stopat, arg->step, arg->arg);
+#ifndef QTHREAD_USE_ROSE_EXTENSIONS
+    arg->func(me, arg->startat, arg->stopat, arg->arg);
+#else
+    arg->func(arg->arg, arg->startat, arg->stopat, arg->step, arg->arg);
+#endif
     return 0;
 }				       /*}}} */
 #endif
@@ -89,7 +93,7 @@ static void qt_loop_inner(
 		    QTHREAD_SUCCESS);
 	} else {
 	    qassert(qthread_fork_syncvar_to
-		    ((qthread_f) qloop_wrapper, qwa + threadct, rets + i,
+		    ((qthread_f) qloop_wrapper, qwa + threadct, NULL, 0, rets + i,
 		     (qthread_shepherd_id_t) (threadct %
 			 qthread_num_shepherds())),
 		    QTHREAD_SUCCESS);
@@ -155,12 +159,12 @@ static void qt_loop_step_inner(
 	qwa[threadct].arg = argptr;
 	if (future) {
 	    future_fork_syncvar_to
-		((qthread_f) qloop_step_wrapper, qwa + threadct, rets + i,
+	        ((qthread_f) qloop_step_wrapper, qwa + threadct, rets + i,
 		 (qthread_shepherd_id_t) (threadct %
 					  qthread_num_shepherds()));
 	} else {
 	    qassert(qthread_fork_syncvar_to
-		    ((qthread_f) qloop_step_wrapper, qwa + threadct, rets + i,
+		    ((qthread_f) qloop_step_wrapper, qwa + threadct, NULL, 0, rets + i,
 		     (qthread_shepherd_id_t) (threadct %
 			 qthread_num_shepherds())),
 		    QTHREAD_SUCCESS);
@@ -216,7 +220,7 @@ static QINLINE void qt_loop_balance_inner(
 	iterend = qwa[i].stopat;
 	if (!future) {
 	    qassert(qthread_fork_syncvar_to
-		    ((qthread_f) qloop_wrapper, qwa + i, rets + i, i),
+		    ((qthread_f) qloop_wrapper, qwa + i, NULL, 0, rets + i, i),
 		    QTHREAD_SUCCESS);
 	} else {
 	    qassert(qthread_fork_syncvar_future_to
@@ -313,7 +317,7 @@ static QINLINE void qt_loopaccum_balance_inner(
 	iterend = qwa[i].stopat;
 	if (!future) {
 	    qassert(qthread_fork_syncvar_to
-		    ((qthread_f) qloopaccum_wrapper, qwa + i, rets + i, i),
+		    ((qthread_f) qloopaccum_wrapper, qwa + i, NULL, 0, rets + i, i),
 		    QTHREAD_SUCCESS);
 	} else {
 	    qassert(qthread_fork_syncvar_future_to
@@ -414,7 +418,9 @@ static Q_UNUSED QINLINE int qqloop_get_iterations_guided(
 	range->step = iq->step;
 	return 1;
     } else {
-	range->startat = range->stopat = range->step = 0;
+	range->startat = 0;
+	range->stopat = 0;
+	range->step = 0;
 	return 0;
     }
 }				       /*}}} */
@@ -536,7 +542,9 @@ static QINLINE int qqloop_get_iterations_timed(
 	range->step = localstep;
 	return 1;
     } else {
-	range->startat = range->stopat = range->step = 0;
+	range->startat = 0;
+	range->stopat = 0;
+	range->step = 0;
 	return 0;
     }
 }
@@ -619,7 +627,7 @@ static aligned_t qqloop_wrapper(
 
     assert(get_iters != NULL);
     if (qthread_shep(me) == shep && get_iters(iq, stat, &range)) {
-	assert(range.startat != range.stopat);
+        assert(range.startat != range.stopat);
 	do {
 	    if (iq->type == TIMED) {
 		qtimer_start(iq->type_specific_data.timed.timers[shep]);
@@ -663,8 +671,8 @@ static aligned_t qqloop_step_wrapper(
     int safeexit = 1;
 
     assert(get_iters != NULL);
-    if (qthread_shep(me) == shep && get_iters(iq, (struct qqloop_static_args *)stat, &range)) {
-	assert(range.startat != range.stopat);
+    if (qthread_shep(me) == shep && get_iters(iq, stat, &range)) {
+        assert(range.startat != range.stopat);
 	do {
 	    if (iq->type == TIMED) {
 		qtimer_start(iq->type_specific_data.timed.timers[shep]);
@@ -682,7 +690,7 @@ static aligned_t qqloop_step_wrapper(
 		qthread_incr(&(stat->activesheps), -1);
 		break;
 	    }
-	} while (get_iters(iq, (struct qqloop_static_args *)stat, &range));
+	} while (get_iters(iq, (struct qqloop_static_args *const restrict)stat, &range));
     }
     if (safeexit) {
 	qthread_incr(dc, 1);
@@ -702,7 +710,6 @@ qqloop_handle_t *qt_loop_queue_create(
     qassert_ret(func, NULL);
     {
 	qqloop_handle_t *const restrict h = malloc(sizeof(qqloop_handle_t));
-
 	if (h) {
 	    const qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
 	    qthread_shepherd_id_t i;
@@ -731,7 +738,6 @@ qqloop_handle_t *qt_loop_queue_create(
 	return h;
     }
 }
-
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 qqloop_step_handle_t *qt_loop_step_queue_create(
     const qt_loop_queue_type type,
@@ -744,7 +750,6 @@ qqloop_step_handle_t *qt_loop_step_queue_create(
     qassert_ret(func, NULL);
     {
 	qqloop_step_handle_t *const restrict h = malloc(sizeof(qqloop_step_handle_t));
-
 	if (h) {
 	    const qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
 	    qthread_shepherd_id_t i;
@@ -755,7 +760,7 @@ qqloop_step_handle_t *qt_loop_step_queue_create(
 	    h->stat.iq = qqloop_create_iq(start, stop, incr, type);
 	    h->stat.func = func;
 	    h->stat.arg = argptr;
-	    switch (type) {
+	    switch(type) {
 		case FACTORED:
 		    h->stat.get = qqloop_get_iterations_factored; break;
 		case TIMED:
@@ -1221,12 +1226,12 @@ void qt_qsort(
 
 static int activeParallel = 0;
 int activeParallelLoop = 0;
-
+ 
 /* qt_parallel - translator for qt_loop() */
 void qt_parallel(
-	const qt_loop_f func,
-	const unsigned int threads,
-	void *argptr)
+       const qt_loop_f func,
+       const unsigned int threads,
+       void *argptr)
 {
     activeParallel = 1;
     qt_loop_inner(0, threads, func, argptr, 0);

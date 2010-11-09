@@ -90,14 +90,18 @@ typedef struct _syncvar_s {
 	} s;
     } u;
 } syncvar_t;
+
 #define SYNCVAR_STATIC_INITIALIZER { { 0 } }
 #define SYNCVAR_STATIC_EMPTY_INITIALIZER { .u.s={.data=0,.state=2,.lock=0} }
+
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-typedef struct taskSyncvar_s {
-    syncvar_t retValue;
-    struct taskSyncvar_s * next_task;
+typedef struct taskSyncvar_s{ /* added akp for openmp taskwait */
+  syncvar_t retValue;
+  struct taskSyncvar_s * next_task;
 } taskSyncvar_t;
-#endif /* QTHREAD_USE_ROSE_EXTENSIONS */
+#endif
+
+#define SYNCVAR_STATIC_INITIALIZER { { 0 } }
 Q_ENDCXX /* */
 
 #ifdef QTHREAD_SST_PRIMITIVES
@@ -160,8 +164,8 @@ int qthread_fork(const qthread_f f, const void *const arg, aligned_t * ret);
 int qthread_fork_syncvar(const qthread_f f, const void *const arg, syncvar_t * ret);
 int qthread_fork_to(const qthread_f f, const void *const arg, aligned_t * ret,
 		    const qthread_shepherd_id_t shepherd);
-int qthread_fork_syncvar_to(const qthread_f f, const void *const arg, syncvar_t * ret,
-		    const qthread_shepherd_id_t shepherd);
+int qthread_fork_syncvar_to(const qthread_f f, const void *const arg,  const void *const arg_copy,
+			    int64_t free_arg, syncvar_t * ret, const qthread_shepherd_id_t shepherd);
 
 /* Using qthread_prepare()/qthread_schedule() and variants:
  *
@@ -340,6 +344,16 @@ int qthread_syncvar_readFE(qthread_t * restrict const me, uint64_t * restrict co
  */
 int qthread_lock(qthread_t * me, const aligned_t * a);
 int qthread_unlock(qthread_t * me, const aligned_t * a);
+
+/* functions added by akp to hand openMP task completion 
+ */
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+void qthread_getTaskListLock(qthread_t * t);
+void qthread_releaseTaskListLock(qthread_t * t);
+
+extern int __qthreads_temp;
+void qthread_reset_forCount(qthread_t *);
+#endif
 
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
 uint32_t qthread_incr32_(volatile uint32_t *, const int32_t);
@@ -1219,11 +1233,6 @@ static QINLINE void *qthread_cas_ptr_(
 #  define qthread_cas_ptr(ADDR, OLDV, NEWV) \
     qthread_cas_ptr_((void*volatile*const)(ADDR), (void*const)(OLDV), (void*const)(NEWV))
 # endif
-#endif
-
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-extern int __qthreads_temp;
-void qthread_reset_forCount(qthread_t *);
 #endif
 
 Q_ENDCXX /* */
