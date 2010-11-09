@@ -266,7 +266,6 @@ void qt_global_barrier(const qthread_t * me)
     //  now execute code on one thread that everyone needs to see -- should be
     //     at middle of barrier but does not seem to work there -- so here with double barrier
     //     blech.  akp -2/9/10
-    qthread_reset_forCount(qthread_self());	// for loop reset on each thread
     qt_barrier_enter(MBar, shep);
     return;
 }				       /*}}} */

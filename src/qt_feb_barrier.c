@@ -105,15 +105,9 @@ void qt_feb_barrier_destroy(qthread_t *me, qt_feb_barrier_t *b)
 }
 
 #ifdef QTHREAD_GLOBAL_FEB_BARRIER
-void qthread_reset_forCount(qthread_t *);	// KBW
 void qt_global_barrier(qthread_t *me)
 {
     assert(global_barrier);
-    qt_feb_barrier_enter(me, global_barrier);
-    //  now execute code on one thread that everyone needs to see -- should be
-    //     at middle of barrier but does not seem to work there -- so here with double barrier
-    //     blech.  akp -2/9/10
-    qthread_reset_forCount(qthread_self());	// for loop reset on each thread
     qt_feb_barrier_enter(me, global_barrier);
     return;
 }

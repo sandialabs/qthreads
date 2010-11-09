@@ -172,6 +172,7 @@ struct qthread_runtime_data_s
     unsigned int valgrind_stack_id;
 #endif
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    int forCount; /* added akp */
     taskSyncvar_t *openmpTaskRetVar; /* ptr to linked list if task's I started -- used in openMP taskwait */
     syncvar_t taskWaitLock;
 #endif
@@ -4704,6 +4705,11 @@ int qt_thread_done(qthread_t * t)
 {				       /*{{{ */
     return ((t->thread_state == QTHREAD_STATE_DONE) ? 1 : 0);
 }				       /*}}} */
+
+int qthread_forCount(qthread_t * t, int inc)
+{                                    /*{{{ */
+     return (t->rdata->forCount += inc);
+ }                                    /*}}} */
 void qthread_getTaskListLock(qthread_t * t)
 {				       /*{{{ */
     qthread_syncvar_writeEF_const(t, &t->rdata->taskWaitLock, 1);
