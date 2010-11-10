@@ -127,8 +127,10 @@ SET:
 	movq	(5*8)(%rdi), %r13
 	movq	(6*8)(%rdi), %r14
 	movq	(7*8)(%rdi), %r15
-	movq	(8*8)(%rdi), %rsp /* stack pointer */
-	pushq	(9*8)(%rdi) /* push new $pc onto stack for `ret` */
+	ldmxcsr (8*8)(%rdi)			/* restore SSE2 control and status word */
+	fldcw	(9*8)(%rdi)			/* restore x87 control word */
+	movq	(10*8)(%rdi), %rsp /* stack pointer */
+	pushq	(11*8)(%rdi) /* push new $pc onto stack for `ret` */
 	movq	(0*8)(%rdi), %rdi /* 1st int arg (arg passing) */
 
 	movq	$1,          %rax /* return value (allows us to escape the swapcontext loop) */
@@ -137,30 +139,27 @@ SET:
 .globl GET
 GET:
 	/* arg0 is in %rdi, DO NOT load from stack */
-	movq	%rdi, ( 0*8)(%rdi) /* set rdi properly (???) */
+	movq	%rdi, (0*8)(%rdi) /* set rdi properly (???) */
 
 	movq	%rbp, (1*8)(%rdi) /* frame pointer */
 	movq	%rbx, (2*8)(%rdi) /* base pointer */
-	/* the return value is 1 here in order to avoid getting into a
-	 * swapcontext loop. If this isn't zero, what will happen is
-	 * that every time we swap back to the parent, it will think
-	 * we just finished the getcontext, and will immediately swap
-	 * back to the child. */
 
 	/* extra registers in AMD - callee saved */
 	movq	%r12, (4*8)(%rdi) /* in the __spare__ area */
 	movq	%r13, (5*8)(%rdi)
 	movq	%r14, (6*8)(%rdi)
 	movq	%r15, (7*8)(%rdi)
+	stmxcsr		  (8*8)(%rdi) /* save SSE2 control and status word */
+	fnstcw		  (9*8)(%rdi) /* save x86 control word */
 
 	/* the following is broken into two instructions
 	 * because we can only dereference one memory op at a time */
 	movq	(%rsp), %rcx
-	movq	%rcx, (9*8)(%rdi)
+	movq	%rcx, (11*8)(%rdi)
 
 	/* I don't entirely understand why this is correct */
 	leaq	8(%rsp), %rcx	 /* %rsp */
-	movq	%rcx, (8*8)(%rdi)
+	movq	%rcx, (10*8)(%rdi)
 
 	mov		$0, %rax /* set return value - success! */
 	ret

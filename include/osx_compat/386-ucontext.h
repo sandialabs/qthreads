@@ -60,9 +60,11 @@ struct mcontext {
 	unsigned long mc_r13; /* 5: extra callee-saved registers */
 	unsigned long mc_r14; /* 6: extra callee-saved registers */
 	unsigned long mc_r15; /* 7: extra callee-saved registers */
+	unsigned long mc_xcsr; /* 8: SSE2 control and status word */
+	unsigned long mc_cw;   /* 9: x86 control word */
 #endif
-	unsigned long mc_esp; /* 8/4: machine state; stack pointer */
-	unsigned long mc_eip; /* 9/5: function pointer */
+	unsigned long mc_esp; /* 10/4: machine state; stack pointer */
+	unsigned long mc_eip; /* 11/5: function pointer */
 };
 
 struct ucontext {
