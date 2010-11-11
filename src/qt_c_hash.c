@@ -330,7 +330,7 @@ void *qt_hash_put_locked(
     done = 0;
     f = -1;
 
-    hw = qt_hashword((uint64_t) (intptr_t) key);
+    hw = qt_hashword((uint64_t) (uintptr_t) key);
     bucket = hw & mask;
 
     /* find the key in the bucket
