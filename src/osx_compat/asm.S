@@ -58,32 +58,34 @@
 #ifdef NEEDX86CONTEXT
 .globl SET
 SET:
-	movl	4(%esp), %eax /* get the offset of the uc_mcontext component
-							 (arguments are passed via the stack) */
+	movl	4(%esp), %eax 	  /* get the offset of the uc_mcontext component
+							 	 (arguments are passed via the stack) */
 
-	movl	(0*4)(%eax), %edi
-	movl	(1*4)(%eax), %esi
-	movl	(2*4)(%eax), %ebp
-	movl	(3*4)(%eax), %ebx
+	movl	(0*4)(%eax), %edi /* restore EDI: general 32-bit register */
+	movl	(1*4)(%eax), %esi /* restore ESI: general 32-bit register */
+	movl	(2*4)(%eax), %ebp /* restore EBP: Stack frame pointer */
+	movl	(3*4)(%eax), %ebx /* restore EBX: PIC base register */
+	fldcw	(4*4)(%eax)		  /* restore x87 control word */
 
-	movl	(4*4)(%eax), %esp /* set the stack */
-	pushl	(5*4)(%eax)		  /* push the function pointer (aka where to return to, aka new %eip) onto the stack */
+	movl	(5*4)(%eax), %esp /* set the stack */
+	pushl	(6*4)(%eax)		  /* push the function pointer (aka where to return to, aka new %eip) onto the stack */
 
 	movl	$1, 		 %eax /* return value (allows us to escape the swapcontext loop) */
 	ret
 
 .globl GET
 GET:
-	movl	4(%esp), %eax /* get the offset of the uc_mcontext component */
+	movl	4(%esp), %eax 	  /* get the offset of the uc_mcontext component */
 
-	movl	%edi, (0*4)(%eax) /* general 32-bit register */
-	movl	%esi, (1*4)(%eax) /* general 32-bit register */
-	movl	%ebp, (2*4)(%eax) /* Stack frame pointer */
-	movl	%ebx, (3*4)(%eax) /* PIC base register, also general-purp. reg */
-	movl	%esp, (4*4)(%eax) /* stack pointer */
+	movl	%edi, (0*4)(%eax) /* save EDI: general 32-bit register */
+	movl	%esi, (1*4)(%eax) /* save ESI: general 32-bit register */
+	movl	%ebp, (2*4)(%eax) /* save EBP: Stack frame pointer */
+	movl	%ebx, (3*4)(%eax) /* save EBX: PIC base register */
+	fnstcw		  (4*4)(%eax) /* save x87 control word */
+	movl	%esp, (5*4)(%eax) /* save stack pointer */
 
 	movl	(%esp), %ecx	  /* store the current return location (%eip), which is stored on the stack */
-	movl	%ecx, (5*4)(%eax)
+	movl	%ecx, (6*4)(%eax)
 
 	movl	$0, %eax /* return value (allows us to escape the swapcontext loop) */
 	ret
