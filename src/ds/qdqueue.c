@@ -36,7 +36,7 @@ struct qdqueue_adheap_s {
 
 struct qdsubqueue_s {
     qlfqueue_t *theQ;
-    struct qdsubqueue_s *volatile last_consumed;
+    void *volatile last_consumed;
 
     struct qdqueue_adheap_s ads;
     aligned_t last_ad_issued;
@@ -54,10 +54,7 @@ struct qdqueue_s {
 static qthread_shepherd_id_t maxsheps = 0;
 
 /* avoid compiler bugs with volatile... */
-static Q_NOINLINE struct qdsubqueue_s *volatile *vol_id_qdsqptr(struct
-								qdsubqueue_s
-								*volatile
-								*ptr)
+static Q_NOINLINE void *volatile *vol_id_qdsqptr(void *volatile *ptr)
 {				       /*{{{ */
     return ptr;
 }				       /*}}} */
@@ -491,7 +488,7 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
 	    struct qdqueue_adstruct_s ad;
 
 	    while ((ad = qdqueue_adheap_pop(me, &myq->ads)).shep != NULL) {
-		struct qdsubqueue_s *lc = _(ad.shep->last_consumed);
+		struct qdsubqueue_s *lc = (struct qdsubqueue_s *) _(ad.shep->last_consumed);
 
 		if (lc == ad.shep) {
 		    /* it's working on its own queue */
