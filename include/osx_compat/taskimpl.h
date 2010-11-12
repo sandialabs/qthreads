@@ -74,7 +74,6 @@
 #ifdef HAVE_SYS_UCONTEXT_H
 # include <sys/ucontext.h>
 #endif
-typedef unsigned long ulong;
 
 #if defined(__FreeBSD__) && __FreeBSD__ < 5
 extern	int		getmcontext(mcontext_t*);

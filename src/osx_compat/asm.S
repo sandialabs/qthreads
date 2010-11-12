@@ -62,9 +62,9 @@ SET:
 							 	 (arguments are passed via the stack) */
 
 	movl	(0*4)(%eax), %edi /* restore EDI: general 32-bit register */
-	movl	(1*4)(%eax), %esi /* restore ESI: general 32-bit register */
-	movl	(2*4)(%eax), %ebp /* restore EBP: Stack frame pointer */
-	movl	(3*4)(%eax), %ebx /* restore EBX: PIC base register */
+	movl	(1*4)(%eax), %ebp /* restore EBP: Stack frame pointer */
+	movl	(2*4)(%eax), %ebx /* restore EBX: PIC base register */
+	movl	(3*4)(%eax), %esi /* restore ESI: general 32-bit register */
 	fldcw	(4*4)(%eax)		  /* restore x87 control word */
 
 	movl	(5*4)(%eax), %esp /* set the stack */
@@ -78,9 +78,9 @@ GET:
 	movl	4(%esp), %eax 	  /* get the offset of the uc_mcontext component */
 
 	movl	%edi, (0*4)(%eax) /* save EDI: general 32-bit register */
-	movl	%esi, (1*4)(%eax) /* save ESI: general 32-bit register */
-	movl	%ebp, (2*4)(%eax) /* save EBP: Stack frame pointer */
-	movl	%ebx, (3*4)(%eax) /* save EBX: PIC base register */
+	movl	%ebp, (1*4)(%eax) /* save EBP: Stack frame pointer */
+	movl	%ebx, (2*4)(%eax) /* save EBX: PIC base register */
+	movl	%esi, (3*4)(%eax) /* save ESI: general 32-bit register */
 	fnstcw		  (4*4)(%eax) /* save x87 control word */
 	movl	%esp, (5*4)(%eax) /* save stack pointer */
 
@@ -125,14 +125,14 @@ SET:
 	movq	(1*8)(%rdi), %rbp /* frame pointer */
 	movq	(2*8)(%rdi), %rbx /* base pointer */
 	/* extra caller-saved registers in AMD */
-	movq	(4*8)(%rdi), %r12
-	movq	(5*8)(%rdi), %r13
-	movq	(6*8)(%rdi), %r14
-	movq	(7*8)(%rdi), %r15
-	ldmxcsr (8*8)(%rdi)			/* restore SSE2 control and status word */
-	fldcw	(9*8)(%rdi)			/* restore x87 control word */
-	movq	(10*8)(%rdi), %rsp /* stack pointer */
-	pushq	(11*8)(%rdi) /* push new $pc onto stack for `ret` */
+	movq	(3*8)(%rdi), %r12
+	movq	(4*8)(%rdi), %r13
+	movq	(5*8)(%rdi), %r14
+	movq	(6*8)(%rdi), %r15
+	ldmxcsr (7*8)(%rdi)			/* restore SSE2 control and status word */
+	fldcw	(8*8)(%rdi)			/* restore x87 control word */
+	movq	(9*8)(%rdi), %rsp /* stack pointer */
+	pushq	(10*8)(%rdi) /* push new $pc onto stack for `ret` */
 	movq	(0*8)(%rdi), %rdi /* 1st int arg (arg passing) */
 
 	movq	$1,          %rax /* return value (allows us to escape the swapcontext loop) */
@@ -147,21 +147,21 @@ GET:
 	movq	%rbx, (2*8)(%rdi) /* base pointer */
 
 	/* extra registers in AMD - callee saved */
-	movq	%r12, (4*8)(%rdi) /* in the __spare__ area */
-	movq	%r13, (5*8)(%rdi)
-	movq	%r14, (6*8)(%rdi)
-	movq	%r15, (7*8)(%rdi)
-	stmxcsr		  (8*8)(%rdi) /* save SSE2 control and status word */
-	fnstcw		  (9*8)(%rdi) /* save x86 control word */
+	movq	%r12, (3*8)(%rdi) /* in the __spare__ area */
+	movq	%r13, (4*8)(%rdi)
+	movq	%r14, (5*8)(%rdi)
+	movq	%r15, (6*8)(%rdi)
+	stmxcsr		  (7*8)(%rdi) /* save SSE2 control and status word */
+	fnstcw		  (8*8)(%rdi) /* save x86 control word */
 
 	/* the following is broken into two instructions
 	 * because we can only dereference one memory op at a time */
 	movq	(%rsp), %rcx
-	movq	%rcx, (11*8)(%rdi)
+	movq	%rcx, (10*8)(%rdi)
 
 	/* I don't entirely understand why this is correct */
 	leaq	8(%rsp), %rcx	 /* %rsp */
-	movq	%rcx, (10*8)(%rdi)
+	movq	%rcx, (9*8)(%rdi)
 
 	mov		$0, %rax /* set return value - success! */
 	ret
