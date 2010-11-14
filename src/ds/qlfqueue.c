@@ -15,7 +15,7 @@
 typedef struct _qlfqueue_node
 {
     void *value;
-    volatile struct _qlfqueue_node * volatile next;
+    void * volatile next;
 } qlfqueue_node_t;
 
 struct qlfqueue_s		/* typedef'd to qlfqueue_t */
@@ -52,7 +52,7 @@ static Q_NOINLINE volatile qlfqueue_node_t *volatile *vol_id_qlfqn(volatile
     return ptr;
 }				       /*}}} */
 
-#define _(x) *vol_id_qlfqn(&(x))
+#define _(x) *vol_id_qlfqn((volatile qlfqueue_node_t * volatile *)&(x))
 
 qlfqueue_t *qlfqueue_create(void)
 {				       /*{{{ */
@@ -66,15 +66,15 @@ qlfqueue_t *qlfqueue_create(void)
 
     q = malloc(sizeof(struct qlfqueue_s));
     if (q != NULL) {
-	_(q->head) =
+	q->head =
 	    (volatile qlfqueue_node_t *)qpool_alloc(NULL, qlfqueue_node_pool);
-	assert(QPTR(_(q->head)) != NULL);
-	if (QPTR(_(q->head)) == NULL) {	// if we're not using asserts, fail nicely
+	assert(QPTR(q->head) != NULL);
+	if (QPTR(q->head) == NULL) {	// if we're not using asserts, fail nicely
 	    free(q);
 	    return NULL;
 	}
-	_(q->tail) = _(q->head);
-	_(QPTR(_(q->tail))->next) = NULL;
+	q->tail = q->head;
+	QPTR(q->tail)->next = NULL;
     }
     return q;
 }				       /*}}} */
