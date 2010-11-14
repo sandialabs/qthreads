@@ -47,9 +47,6 @@ struct qt_mpool_s {
     char *volatile alloc_block_ptr;
     void **alloc_list;
     size_t alloc_list_pos;
-
-    int node;
-    QTHREAD_FASTLOCK_TYPE *lock;
 };
 
 /* local constants */
@@ -57,7 +54,6 @@ static size_t pagesize = 0;
 
 /* local funcs */
 static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
-						     /*int node, */
 						     size_t alignment)
 {				       /*{{{ */
     void *ret;
@@ -132,7 +128,7 @@ static QINLINE void qt_mpool_internal_aligned_free(void *freeme,
 // item_size is how many bytes to return
 // ...memory is always allocated in multiples of getpagesize()
 qt_mpool qt_mpool_create_aligned(const int sync, size_t item_size,
-				 const int node, size_t alignment)
+				 size_t alignment)
 {				       /*{{{ */
     qt_mpool pool = (qt_mpool) calloc(1, sizeof(struct qt_mpool_s));
 
@@ -140,13 +136,7 @@ qt_mpool qt_mpool_create_aligned(const int sync, size_t item_size,
 
     qassert_ret((pool != NULL), NULL);
     VALGRIND_CREATE_MEMPOOL(pool, 0, 0);
-    pool->node = node;
     assert(pool->lock == NULL);
-    if (sync) {
-	pool->lock = (QTHREAD_FASTLOCK_TYPE *) malloc(sizeof(QTHREAD_FASTLOCK_TYPE));
-	qassert_goto((pool->lock != NULL), errexit);
-	QTHREAD_FASTLOCK_INIT(*pool->lock);
-    }
     if (pagesize == 0) {
 	pagesize = getpagesize();
     }
@@ -193,7 +183,7 @@ qt_mpool qt_mpool_create_aligned(const int sync, size_t item_size,
     pool->items_per_alloc = alloc_size / item_size;
 
     QTHREAD_CASLOCK_INIT(pool->reuse_pool, NULL);
-    pool->alloc_block = (char *)qt_mpool_internal_aligned_alloc(alloc_size,	/*node, */
+    pool->alloc_block = (char *)qt_mpool_internal_aligned_alloc(alloc_size,
 								alignment);
     assert(((unsigned long)(pool->alloc_block) & (alignment - 1)) == 0);
     qassert_goto((pool->alloc_block != NULL), errexit);
@@ -209,18 +199,14 @@ qt_mpool qt_mpool_create_aligned(const int sync, size_t item_size,
 	if (pool->alloc_block) {
 	    qt_mpool_internal_aligned_free(pool->alloc_block, /* alloc_size, */ alignment);
 	}
-	if (pool->lock) {
-	    QTHREAD_FASTLOCK_DESTROY(*pool->lock);
-	    free((void*)(pool->lock));
-	}
 	free(pool);
     }
     return NULL;
 }				       /*}}} */
 
-qt_mpool qt_mpool_create(int sync, size_t item_size, int node)
+qt_mpool qt_mpool_create(int sync, size_t item_size)
 {				       /*{{{ */
-    return qt_mpool_create_aligned(sync, item_size, node, 0);
+    return qt_mpool_create_aligned(sync, item_size, 0);
 }				       /*}}} */
 
 /* to avoid ABA reinsertion trouble, each pointer in the pool needs to have a
@@ -286,7 +272,7 @@ start:
 		pool->alloc_list = tmp;
 		pool->alloc_list_pos = 0;
 	    }
-	    p = qt_mpool_internal_aligned_alloc(pool->alloc_size,	/*pool->node, */
+	    p = qt_mpool_internal_aligned_alloc(pool->alloc_size,
 						pool->alignment);
 	    qassert_ret((p != NULL), NULL);
 	    qassert_ret((QCTR(p) == 0), NULL);
@@ -340,10 +326,6 @@ void qt_mpool_destroy(qt_mpool pool)
 	free(p);
     }
     QTHREAD_CASLOCK_DESTROY(pool->reuse_pool);
-    if (pool->lock) {
-	QTHREAD_FASTLOCK_DESTROY(*pool->lock);
-	free((void*)(pool->lock));
-    }
     VALGRIND_DESTROY_MEMPOOL(pool);
     free(pool);
 }				       /*}}} */

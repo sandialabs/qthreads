@@ -2166,57 +2166,49 @@ int qthread_initialize(void)
 	 * should be quite safe unsynchronized. If things fail, though...
 	 * resynchronize them and see if that fixes it. */
 	qlib->shepherds[i].qthread_pool =
-	    qt_mpool_create(need_sync, sizeof(qthread_t),
-			    qlib->shepherds[i].node);
+	    qt_mpool_create(need_sync, sizeof(qthread_t));
 	qlib->shepherds[i].stack_pool =
 #ifdef QTHREAD_GUARD_PAGES
 	    qt_mpool_create_aligned(need_sync,
 				    qlib->qthread_stack_size +
 				    sizeof(struct qthread_runtime_data_s) + (2 * getpagesize()),
-				    qlib->shepherds[i].node, getpagesize());
+				    getpagesize());
 #else
-	    qt_mpool_create(need_sync, qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s),
-			    qlib->shepherds[i].node);
+	    qt_mpool_create(need_sync, qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s));
 #endif
 	qlib->shepherds[i].queue_pool =
-	    qt_mpool_create(need_sync, sizeof(qthread_queue_t),
-			    qlib->shepherds[i].node);
+	    qt_mpool_create(need_sync, sizeof(qthread_queue_t));
 	qlib->shepherds[i].threadqueue_pool =
-	    qt_mpool_create(need_sync, sizeof(qt_threadqueue_t),
-			    qlib->shepherds[i].node);
+	    qt_mpool_create(need_sync, sizeof(qt_threadqueue_t));
 	qlib->shepherds[i].threadqueue_node_pool =
-	    qt_mpool_create_aligned(need_sync, sizeof(qt_threadqueue_node_t),
-				    qlib->shepherds[i].node, 16);
+	    qt_mpool_create_aligned(need_sync, sizeof(qt_threadqueue_node_t), 16);
 	qlib->shepherds[i].lock_pool =
-	    qt_mpool_create(need_sync, sizeof(qthread_lock_t),
-			    qlib->shepherds[i].node);
+	    qt_mpool_create(need_sync, sizeof(qthread_lock_t));
 	qlib->shepherds[i].addrres_pool =
-	    qt_mpool_create(need_sync, sizeof(qthread_addrres_t),
-			    qlib->shepherds[i].node);
+	    qt_mpool_create(need_sync, sizeof(qthread_addrres_t));
 	qlib->shepherds[i].addrstat_pool =
-	    qt_mpool_create(need_sync, sizeof(qthread_addrstat_t),
-			    qlib->shepherds[i].node);
+	    qt_mpool_create(need_sync, sizeof(qthread_addrstat_t));
     }				       /*}}} */
     /* these are used when qthread_fork() is called from a non-qthread. */
-    generic_qthread_pool = qt_mpool_create(need_sync, sizeof(qthread_t), -1);
+    generic_qthread_pool = qt_mpool_create(need_sync, sizeof(qthread_t));
     generic_stack_pool =
 #ifdef QTHREAD_GUARD_PAGES
 	qt_mpool_create_aligned(need_sync,
 				qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s) +
-				(2 * getpagesize()), -1, getpagesize());
+				(2 * getpagesize()), getpagesize());
 #else
-	qt_mpool_create(need_sync, sizeof(struct qthread_runtime_data_s) + qlib->qthread_stack_size, -1);
+	qt_mpool_create(need_sync, sizeof(struct qthread_runtime_data_s) + qlib->qthread_stack_size);
 #endif
     generic_queue_pool =
-	qt_mpool_create(need_sync, sizeof(qthread_queue_t), -1);
+	qt_mpool_create(need_sync, sizeof(qthread_queue_t));
     generic_threadqueue_pool =
-	qt_mpool_create(need_sync, sizeof(qt_threadqueue_t), -1);
+	qt_mpool_create(need_sync, sizeof(qt_threadqueue_t));
     generic_threadqueue_node_pool =
-	qt_mpool_create_aligned(need_sync, sizeof(qt_threadqueue_node_t), -1, 16);
+	qt_mpool_create_aligned(need_sync, sizeof(qt_threadqueue_node_t), 16);
     generic_lock_pool =
-	qt_mpool_create(need_sync, sizeof(qthread_lock_t), -1);
+	qt_mpool_create(need_sync, sizeof(qthread_lock_t));
     generic_addrstat_pool =
-	qt_mpool_create(need_sync, sizeof(qthread_addrstat_t), -1);
+	qt_mpool_create(need_sync, sizeof(qthread_addrstat_t));
 #endif
 
     /* initialize the shepherd structures */

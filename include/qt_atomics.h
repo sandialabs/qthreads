@@ -45,11 +45,14 @@
 
 #ifdef QTHREAD_MUTEX_INCREMENT
 # define QTHREAD_CASLOCK(var)	var; QTHREAD_FASTLOCK_TYPE var##_caslock
+# define QTHREAD_CASLOCK_EXPLICIT_DECL(name)    QTHREAD_FASTLOCK_TYPE name
+# define QTHREAD_CASLOCK_EXPLICIT_INIT(name)	QTHREAD_FASTLOCK_INIT(name)
 # define QTHREAD_CASLOCK_INIT(var,i)   var = i; QTHREAD_FASTLOCK_INIT(var##_caslock)
 # define QTHREAD_CASLOCK_DESTROY(var)	QTHREAD_FASTLOCK_DESTROY(var##_caslock)
 # define QTHREAD_CASLOCK_READ(var)   (void*)qt_cas_read_ui((volatile uintptr_t*)&(var), &(var##_caslock))
 # define QTHREAD_CASLOCK_READ_UI(var)   qt_cas_read_ui((volatile uintptr_t*)&(var), &(var##_caslock))
 # define QT_CAS(var,oldv,newv) qt_cas((void*volatile*)&(var), (void*)(oldv), (void*)(newv), &(var##_caslock))
+# define QT_CAS_(var,oldv,newv,caslock) qt_cas((void*volatile*)&(var), (void*)(oldv), (void*)(newv), &(caslock))
 static QINLINE void* qt_cas(void*volatile* const ptr, void* const oldv, void* const newv, QTHREAD_FASTLOCK_TYPE *lock)
 {
     void * ret;
@@ -71,12 +74,14 @@ static QINLINE uintptr_t qt_cas_read_ui(volatile uintptr_t * const ptr, QTHREAD_
 }
 #else
 # define QTHREAD_CASLOCK(var)	(var)
-# define QTHREAD_CASLOCK2(var)	(var) = NULL
+# define QTHREAD_CASLOCK_EXPLICIT_DECL(name)
+# define QTHREAD_CASLOCK_EXPLICIT_INIT(name)
 # define QTHREAD_CASLOCK_INIT(var,i) (var) = i
 # define QTHREAD_CASLOCK_DESTROY(var)
 # define QTHREAD_CASLOCK_READ(var) (var)
 # define QTHREAD_CASLOCK_READ_UI(var) (var)
 # define QT_CAS(var,oldv,newv) qt_cas((void*volatile*)&(var), (void*)(oldv), (void*)(newv))
+# define QT_CAS_(var,oldv,newv,caslock) qt_cas((void*volatile*)&(var), (void*)(oldv), (void*)(newv))
 # ifdef QTHREAD_ATOMIC_CAS_PTR
 #  define qt_cas(P,O,N) (void*)__sync_val_compare_and_swap((P),(O),(N))
 # else
