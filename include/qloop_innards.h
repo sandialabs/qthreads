@@ -28,6 +28,7 @@ struct qqloop_static_args {
     volatile aligned_t activesheps;
     struct qqloop_iteration_queue *iq;
     qq_getiter_f get;
+    size_t chunksize;
 };
 struct qqloop_step_static_args {
     qt_loop_step_f func;

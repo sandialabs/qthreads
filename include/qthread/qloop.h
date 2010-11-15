@@ -47,8 +47,9 @@ qqloop_handle_t *qt_loop_queue_create(const qt_loop_queue_type type,
 	const size_t start, const size_t stop, const size_t incr,
 	const qt_loop_f func, void *const argptr);
 qqloop_step_handle_t *qt_loop_step_queue_create(const qt_loop_queue_type type,
-	const size_t start, const size_t stop, const size_t incr,
-	const qt_loop_step_f func, void *const argptr);
+	size_t start, size_t stop, size_t incr,
+	qt_loop_step_f func, void *argptr);
+void qt_loop_queue_setchunk(qqloop_handle_t *l, size_t chunk);
 void qt_loop_queue_run(qqloop_handle_t * loop);
 void qt_loop_queue_run_there(qqloop_handle_t * loop,
 			     qthread_shepherd_id_t shep);

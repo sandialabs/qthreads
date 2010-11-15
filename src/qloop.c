@@ -10,6 +10,7 @@
 #include <qthread/qtimer.h>
 
 #include "qloop_innards.h"
+#include "qthread_expect.h"
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 #include "qt_atomics.h"
@@ -507,16 +508,45 @@ static QINLINE int qqloop_get_iterations_chunked(
     struct qqloop_iteration_queue *const restrict iq,
     struct qqloop_static_args *const restrict sa,
     struct qqloop_wrapper_range *const restrict range)
-{
-    abort();
-    return 0;
-}
+{				       /*{{{ */
+    saligned_t ret = iq->start;
+    saligned_t chunk_size = sa->chunksize;
+    int retval = 1;
+
+    if (qthread_num_shepherds() == 1) {
+	if (ret < iq->stop) {
+	    range->startat = iq->start;
+	    range->stopat = iq->stop;
+	    range->step = iq->step;
+	    iq->start = iq->stop;
+	} else {
+	    range->startat = range->stopat = range->step = 0;
+	    retval = 0;
+	}
+	return retval;
+    }
+    if (ret < iq->stop) {
+	ret = qthread_incr(&(iq->start), chunk_size);
+    }
+    if (ret < iq->stop) {
+	if (ret + chunk_size > iq->stop) {
+	    chunk_size = iq->stop - ret;
+	}
+	range->startat = ret;
+	range->stopat = ret + chunk_size;
+	range->step = iq->step;
+    } else {
+	range->startat = range->stopat = range->step = 0;
+	retval = 0;
+    }
+    return retval;
+}				       /*}}} */
 
 static QINLINE int qqloop_get_iterations_timed(
     struct qqloop_iteration_queue *const restrict iq,
     struct qqloop_static_args *const restrict sa,
     struct qqloop_wrapper_range *const restrict range)
-{
+{				       /*{{{ */
     const qthread_shepherd_id_t workerCount = sa->activesheps;
     const qthread_shepherd_id_t shep = qthread_shep(NULL);
     const saligned_t localstop = iq->stop;
@@ -540,8 +570,10 @@ static QINLINE int qqloop_get_iterations_timed(
     localstart = iq->start;
     while (localstart < localstop) {
 	saligned_t tmp;
-	if (loop_time >= 7.5e-7) { /* KBW: XXX: arbitrary constant */
-	    dynamicBlock = ((localstop - localstart)/((workerCount << 1)*(localstep)))+1;
+	if (loop_time >= 7.5e-7) {     /* KBW: XXX: arbitrary constant */
+	    dynamicBlock =
+		((localstop -
+		  localstart) / ((workerCount << 1) * (localstep))) + 1;
 	}
 	if ((localstart + dynamicBlock) > localstop) {
 	    dynamicBlock = (localstop - localstart);
@@ -567,7 +599,7 @@ static QINLINE int qqloop_get_iterations_timed(
 	range->step = 0;
 	return 0;
     }
-}
+}				       /*}}} */
 
 static QINLINE struct qqloop_iteration_queue *qqloop_create_iq(
     const size_t startat,
@@ -740,6 +772,7 @@ qqloop_handle_t *qt_loop_queue_create(
 	    h->stat.iq = qqloop_create_iq(start, stop, incr, type);
 	    h->stat.func = func;
 	    h->stat.arg = argptr;
+	    h->stat.chunksize = (stop-start)/qthread_num_shepherds()/10; // completely arbitrary
 	    switch(type) {
 		case FACTORED:
 		    h->stat.get = qqloop_get_iterations_factored; break;
@@ -758,6 +791,12 @@ qqloop_handle_t *qt_loop_queue_create(
 	return h;
     }
 }
+
+void qt_loop_queue_setchunk(qqloop_handle_t *l, size_t chunk)
+{
+    l->stat.chunksize = chunk;
+}
+
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 qqloop_step_handle_t *qt_loop_step_queue_create(
     const qt_loop_queue_type type,
