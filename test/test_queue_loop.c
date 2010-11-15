@@ -98,6 +98,37 @@ int main(
 	iprintf("summing-serial   %u uints took %g seconds\n", BIGLEN,
 		qtimer_secs(t));
 	iprintf("\tsum was %lu\n", (unsigned long)uisum);
+
+	loophandle = qt_loop_queue_create(CHUNK, 0, BIGLEN, 1, sum, &uitmp);
+	qtimer_start(t);
+	qt_loop_queue_run(loophandle);
+	qtimer_stop(t);
+	iprintf("summing-parallel %u uints took %g seconds\n", BIGLEN,
+		qtimer_secs(t));
+	iprintf("\tsum was %lu\n", (unsigned long)uitmp);
+	assert(uitmp == uisum);
+
+	uitmp = 0;
+	loophandle = qt_loop_queue_create(GUIDED, 0, BIGLEN, 1, sum, &uitmp);
+	qtimer_start(t);
+	qt_loop_queue_run(loophandle);
+	qtimer_stop(t);
+	iprintf("summing-parallel %u uints took %g seconds\n", BIGLEN,
+		qtimer_secs(t));
+	iprintf("\tsum was %lu\n", (unsigned long)uitmp);
+	assert(uitmp == uisum);
+
+	uitmp = 0;
+	loophandle = qt_loop_queue_create(FACTORED, 0, BIGLEN, 1, sum, &uitmp);
+	qtimer_start(t);
+	qt_loop_queue_run(loophandle);
+	qtimer_stop(t);
+	iprintf("summing-parallel %u uints took %g seconds\n", BIGLEN,
+		qtimer_secs(t));
+	iprintf("\tsum was %lu\n", (unsigned long)uitmp);
+	assert(uitmp == uisum);
+
+	uitmp = 0;
 	loophandle = qt_loop_queue_create(TIMED, 0, BIGLEN, 1, sum, &uitmp);
 	qtimer_start(t);
 	qt_loop_queue_run(loophandle);
