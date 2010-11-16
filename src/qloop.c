@@ -513,18 +513,6 @@ static QINLINE int qqloop_get_iterations_chunked(
     saligned_t chunk_size = sa->chunksize;
     int retval = 1;
 
-    if (qthread_num_shepherds() == 1) {
-	if (ret < iq->stop) {
-	    range->startat = iq->start;
-	    range->stopat = iq->stop;
-	    range->step = iq->step;
-	    iq->start = iq->stop;
-	} else {
-	    range->startat = range->stopat = range->step = 0;
-	    retval = 0;
-	}
-	return retval;
-    }
     if (ret < iq->stop) {
 	ret = qthread_incr(&(iq->start), chunk_size);
     }
