@@ -98,6 +98,11 @@ kern_return_t thread_policy_get(thread_t thread,
 # include "qt_arrive_first.h"
 #endif
 
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+typedef int qthread_worker_id_t;  /* SLO -- multithreaded shepherd */
+#define MAX_WORKERS_PER_SHEPHERD 1024
+#endif
+
 /* internal constants */
 enum threadstate {
     QTHREAD_STATE_NEW,
@@ -146,6 +151,9 @@ enum threadstate {
 
 /* internal data structures */
 typedef struct qthread_lock_s qthread_lock_t;
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+typedef struct qthread_worker_s qthread_worker_t; /* SLO -- multithreaded shepherd */
+#endif
 typedef struct qthread_shepherd_s qthread_shepherd_t;
 typedef struct qthread_queue_s qthread_queue_t;
 typedef struct {
@@ -244,10 +252,23 @@ typedef struct qt_threadqueue_s
     qthread_shepherd_t *creator_ptr;
 } qt_threadqueue_t;
 
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+struct qthread_worker_s  /* SLO -- multithreaded shepherd */
+{
+    pthread_t worker;
+    qthread_worker_id_t worker_id;
+    qthread_shepherd_t *shepherd;
+    qthread_t *current;
+};
+#endif
+
 struct qthread_shepherd_s
 {
     pthread_t shepherd;
     qthread_shepherd_id_t shepherd_id;	/* whoami */
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    qthread_worker_t workers[MAX_WORKERS_PER_SHEPHERD];  /* SLO -- multithreaded shepherd */
+#endif
     qthread_t *current;
     qt_threadqueue_t *ready;
     /* memory pools */
@@ -1189,10 +1210,45 @@ static void *qthread_shepherd_wrapper(unsigned int high, unsigned int low)
 #endif
 static void *qthread_shepherd(void *arg)
 {
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    /* SLO -- multithreaded shepherd */
+    qthread_worker_t *me_worker = (qthread_worker_t *) arg;
+    qthread_shepherd_t *me = (qthread_shepherd_t *) me_worker->shepherd;
+#else
     qthread_shepherd_t *me = (qthread_shepherd_t *) arg;
+#endif
     ucontext_t my_context;
     qthread_t *t;
     int done = 0;
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    /* SLO -- multithreaded shepherd */
+    
+    /* Bind threads to physical cores such that workers of a shpeherd are on the same socket.
+       Assumes round robin thread numbering. (Not very portable and should be replaced) */
+    unsigned long phys_thread_num = (me_worker->worker_id * qlib->nshepherds) + me->shepherd_id;
+    unsigned long mask = 1 << phys_thread_num;
+
+    sched_setaffinity(0, sizeof(mask), &mask);
+
+    /* Shepherd 0 worker 0 is responsible for creating the other shepherd 0 workers
+       and does so at this point. */
+    if (me->shepherd_id == 0 && me_worker->worker_id == 0) {
+        qthread_worker_id_t j; 
+        int r;
+        for (j = 1; j < qlib->nworkerspershep; j++) {
+             me->workers[j].shepherd = me;
+             me->workers[j].worker_id = j;
+             if ((r =
+                 pthread_create(&me->workers[j].worker, NULL,
+                                qthread_shepherd, &me->workers[j])) != 0) {
+                 fprintf(stderr, "qthread_init: pthread_create() failed (%d)\n",
+                         r);
+                 perror("qthread_init spawning worker");
+                 return r;
+             }
+        }
+    }
+#endif
 
 #ifdef QTHREAD_SHEPHERD_PROFILING
     me->total_time = qtimer_create();
@@ -1394,7 +1450,11 @@ static void *qthread_shepherd(void *arg)
 		    me->num_threads++;
 		}
 #endif
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+        me_worker->current = t;  /* SLO -- multithreaded shepherd */
+#else
 		me->current = t;
+#endif
 		getcontext(&my_context);
 		qthread_debug(THREAD_DETAILS, "id(%u): shepherd context is %p\n", me->shepherd_id, &my_context);
 		/* note: there's a good argument that the following should
@@ -1402,7 +1462,11 @@ static void *qthread_shepherd(void *arg)
 		 * more complex
 		 */
 		qthread_exec(t, &my_context);
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+        me_worker->current = NULL;  /* SLO -- multithreaded shepherd */
+#else
 		me->current = NULL;
+#endif
 		qthread_debug(ALL_DETAILS,
 			      "id(%u): back from qthread_exec\n",
 			      me->shepherd_id);
@@ -1644,6 +1708,9 @@ int qthread_initialize(void)
     size_t i;
     int need_sync = 1;
     qthread_shepherd_id_t nshepherds = 0;
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    qthread_worker_id_t nworkerspershep = 0;  /* SLO -- multithreaded shepherd */
+#endif
 
 #ifdef QTHREAD_HAVE_LGRP
     lgrp_cookie_t lgrp_cookie = lgrp_init(LGRP_VIEW_OS);
@@ -1694,6 +1761,24 @@ int qthread_initialize(void)
 	} else {
 	    nshepherds = 0;
 	}
+	
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+	/* SLO -- multithreaded shepherd */
+	qsh = getenv("QTHREAD_NUM_WORKERS_PER_SHEPHERD");
+    qshe = NULL;
+
+    if (qsh) {
+        nworkerspershep = strtol(qsh, &qshe, 0);
+        if (qshe == NULL || qshe == qsh) {
+            fprintf(stderr, "unparsable number of workers (%s)\n", qsh);
+            nworkerspershep = 0;
+        } else if (nworkerspershep > 0) {
+            fprintf(stderr, "Forced %i Workers per Shepherd\n", (int)nworkerspershep);
+        }
+    } else {
+        nworkerspershep = 1;
+    }
+#endif
     }
 #if defined(QTHREAD_HAVE_HWLOC)
     qassert(hwloc_topology_init(&qlib->topology), 0);
@@ -1773,7 +1858,11 @@ int qthread_initialize(void)
 	}
     }
 
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    if (nshepherds == 1 && nworkerspershep == 1) {  /* SLO -- multithreaded shepherd */
+#else
     if (nshepherds == 1) {
+#endif
 	need_sync = 0;
     }
 #else
@@ -1838,6 +1927,10 @@ int qthread_initialize(void)
     /* initialize the kernel threads and scheduler */
     qassert(pthread_key_create(&shepherd_structs, NULL), 0);
     qlib->nshepherds = nshepherds;
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    /* SLO -- multithreaded shepherd */
+    qlib->nworkerspershep = nworkerspershep;
+#endif
     qlib->nshepherds_active = nshepherds;
     qlib->shepherds = (qthread_shepherd_t *)
 	 calloc(nshepherds, sizeof(qthread_shepherd_t));
@@ -2237,6 +2330,27 @@ int qthread_initialize(void)
 	qthread_debug(ALL_DETAILS,
 "done setting up shepherds.\n");
     /* spawn the shepherds */
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    /* SLO -- multithreaded shepherd */
+    for (i = 1; i < nshepherds; i++) {
+        qthread_worker_id_t j;
+	qthread_debug(ALL_DETAILS,
+		      "forking workers for shepherd %i (%p)\n", i,
+		      &qlib->shepherds[i]);
+        for (j = 0; j < nworkerspershep; j++) {   
+            qlib->shepherds[i].workers[j].shepherd = &qlib->shepherds[i];
+            qlib->shepherds[i].workers[j].worker_id = j;
+	    if ((r =
+	        pthread_create(&qlib->shepherds[i].workers[j].worker, NULL,
+	    	    	        qthread_shepherd, &qlib->shepherds[i].workers[j])) != 0) {
+   	        fprintf(stderr, "qthread_init: pthread_create() failed (%d)\n",
+		        r);
+	        perror("qthread_init spawning worker");
+	        return r;
+	    }
+        }
+    }
+#else
     for (i = 1; i < nshepherds; i++) {
 	qthread_debug(ALL_DETAILS,
 		      "forking shepherd %i (%p)\n", i,
@@ -2250,6 +2364,7 @@ int qthread_initialize(void)
 	    return r;
 	}
     }
+#endif
 
 
     /* now, transform the current main context into a qthread,
@@ -2294,6 +2409,11 @@ int qthread_initialize(void)
     qassert(getcontext(&(qlib->master_context)), 0);
     /* now build the context for the shepherd 0 */
     qthread_debug(ALL_DETAILS, "calling qthread_makecontext\n");
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    /* SLO -- multithreaded shepherd */
+    qlib->shepherds[0].workers[0].shepherd = &qlib->shepherds[0];
+    qlib->shepherds[0].workers[0].worker_id = 0;
+#endif
     qthread_makecontext(&(qlib->master_context), qlib->master_stack,
 			qlib->master_stack_size,
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
@@ -2301,7 +2421,12 @@ int qthread_initialize(void)
 #else
 			(void (*)(void))qthread_shepherd,
 #endif
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    /* SLO -- multithreaded shepherd */
+			&(qlib->shepherds[0].workers[0]), &(qlib->mccoy_thread->rdata->context));
+#else
 			&(qlib->shepherds[0]), &(qlib->mccoy_thread->rdata->context));
+#endif
 #ifndef QTHREAD_NO_ASSERTS
     shep0arg = &(qlib->shepherds[0]);
 #endif
@@ -2396,9 +2521,21 @@ void qthread_finalize(void)
     int r;
     qthread_shepherd_id_t i;
     qthread_t *t;
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    qthread_worker_t* worker;  /* SLO -- multithreaded shepherd */
+#endif
 
     if (qlib == NULL)
 	return;
+	
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    /* SLO -- multithreaded shepherd */
+	worker = (qthread_worker_t *) pthread_getspecific(shepherd_structs);
+    if (worker->worker_id != 0) {    /* Only run finalize on shepherd 0 worker 0*/
+        worker->current->thread_state = QTHREAD_STATE_YIELDED;  /* Otherwise, put back */
+        return;
+    }
+#endif
 
     qthread_shepherd_t *shep0 = &(qlib->shepherds[0]);
 
@@ -2412,6 +2549,24 @@ void qthread_finalize(void)
 #ifdef QTHREAD_SHEPHERD_PROFILING
     qtimer_stop(shep0->total_time);
 #endif
+
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    /* SLO -- multithreaded shepherd */
+    for (i = 0; i < qlib->nshepherds; i++) {
+        qthread_worker_id_t j;
+        for (j = 0; j < qlib->nworkerspershep; j++) {
+           if (i == 0 && j == 0)
+                continue;   /* None for shepard 0's worker 0 */
+	       qthread_debug(ALL_DETAILS, "terminating shepherd %i worker %i\n", (int)i, j);
+	       t = qthread_thread_new(NULL, NULL, NULL, 0, (aligned_t *) NULL, i);
+	       assert(t != NULL);	       /* what else can we do? */
+	       t->thread_state = QTHREAD_STATE_TERM_SHEP;
+	       t->thread_id = (unsigned int)-1;
+	       qt_threadqueue_enqueue(qlib->shepherds[i].ready, t,
+		   	          shep0);
+        }
+    }
+#else    
     for (i = 1; i < qlib->nshepherds; i++) {
 	qthread_debug(ALL_DETAILS, "terminating shepherd %i\n", (int)i);
 	t = qthread_thread_new(NULL, NULL, NULL, 0, (aligned_t *) NULL, i);
@@ -2421,6 +2576,7 @@ void qthread_finalize(void)
 	qt_threadqueue_enqueue(qlib->shepherds[i].ready, t,
 			   shep0);
     }
+#endif
 
     qthread_debug(ALL_DETAILS, "calling cleanup functions\n");
     while (qt_cleanup_funcs != NULL) {
@@ -2446,6 +2602,26 @@ void qthread_finalize(void)
 #endif
     /* wait for each SPAWNED shepherd to drain it's queue
      * (note: not shepherd 0, because that one wasn't spawned) */
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    /* SLO -- multithreaded shepherd */
+    for (i = 0; i < qlib->nshepherds; i++) {
+        /* With multi-threaded shepherds, do join shepherd 0 workers, but not worker 0 */
+        qthread_worker_id_t j; 
+	    qthread_shepherd_t *shep = &(qlib->shepherds[i]);
+	    qthread_debug(ALL_DETAILS, "waiting for shepherd %i to exit\n", (int)i);
+        for (j = 0; j < qlib->nworkerspershep; j++) { 
+            if (i == 0 && j == 0)
+                continue;  /* This leaves out shepard 0's worker 0 */
+	    if ((r = pthread_join(shep->workers[j].worker, NULL)) != 0) {
+	        fprintf(stderr,
+		        "qthread_finalize: pthread_join() of shep %i worker %i failed (%d, or \"%s\")\n",
+		        (int)i, (int)j, r, strerror(r));
+	        abort();
+	    }
+        }
+        if (i == 0)  /* Nothing more to do for shepherd 0 at the moment */
+           continue;
+#else
     for (i = 1; i < qlib->nshepherds; i++) {
 	qthread_shepherd_t *shep = &(qlib->shepherds[i]);
 	qthread_debug(ALL_DETAILS, "waiting for shepherd %i to exit\n", (int)i);
@@ -2455,6 +2631,7 @@ void qthread_finalize(void)
 		    (int)i, r, strerror(r));
 	    abort();
 	}
+#endif
 	QTHREAD_CASLOCK_DESTROY(shep->active);
 	qt_threadqueue_free(shep->ready);
 #ifdef QTHREAD_SHEPHERD_PROFILING
@@ -2701,7 +2878,11 @@ void qthread_enable_shepherd(const qthread_shepherd_id_t shep)
 
 qthread_t *qthread_self(void)
 {				       /*{{{ */
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    qthread_worker_t *worker;  /* SLO -- multithreaded shepherd */
+#else
     qthread_shepherd_t *shep;
+#endif
 
 #if 0
     /* size_t mask; */
@@ -2718,8 +2899,14 @@ qthread_t *qthread_self(void)
 	   ((size_t) (&ret) & ~mask) + qlib->qthread_stack_size);
     /* printf("stack pointer should be %p\n", t->rdata->stack); */
 #endif
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    /* SLO -- multithreaded shepherd */
+    worker = (qthread_worker_t *) pthread_getspecific(shepherd_structs);
+    return worker ? worker->current : NULL;
+#else
     shep = (qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
     return shep ? shep->current : NULL;
+#endif
 }				       /*}}} */
 
 size_t qthread_stackleft(const qthread_t * t)
@@ -2752,7 +2939,15 @@ size_t qthread_readstate(
 	    return qlib->qthread_stack_size;
 	case BUSYNESS:
 	{
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+        /* SLO -- multithreaded shepherd */
+            qthread_worker_t *worker = 
+                (qthread_worker_t *) pthread_getspecific(shepherd_structs);
+            qthread_shepherd_t *shep =
+                (qthread_shepherd_t *) worker->shepherd;
+#else
 	    qthread_shepherd_t *shep = pthread_getspecific(shepherd_structs);
+#endif
 	    if (shep == NULL) {
 		return (size_t) (-1);
 	    } else {
@@ -3427,8 +3622,17 @@ int qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
 {				       /*{{{ */
     qthread_t *t;
     qthread_shepherd_id_t shep;
+
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    /* SLO -- multithreaded shepherd */
+    qthread_worker_t *worker = 
+        (qthread_worker_t *) pthread_getspecific(shepherd_structs);
+    qthread_shepherd_t *myshep =
+        (qthread_shepherd_t *) worker->shepherd;
+#else
     qthread_shepherd_t *myshep =
 	(qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
+#endif
     int loopctr = 0;
 
     qthread_debug(THREAD_BEHAVIOR, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
@@ -3470,8 +3674,16 @@ int qthread_fork_syncvar(const qthread_f f, const void *arg, syncvar_t * ret)
 {				       /*{{{ */
     qthread_t *t;
     qthread_shepherd_id_t shep;
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    /* SLO -- multithreaded shepherd */
+    qthread_worker_t *worker = 
+        (qthread_worker_t *) pthread_getspecific(shepherd_structs);
+    qthread_shepherd_t *myshep =
+        (qthread_shepherd_t *) worker->shepherd;
+#else
     qthread_shepherd_t *myshep =
 	(qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
+#endif
 
     qthread_debug(THREAD_BEHAVIOR, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
     assert(qlib);
@@ -3545,9 +3757,21 @@ int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
 	    return test;
 	}
     }
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    /* SLO -- multithreaded shepherd */
+    {
+    qthread_worker_t *worker =
+        (qthread_worker_t *) pthread_getspecific(shepherd_structs);
+    qthread_shepherd_t *myshep =
+        (qthread_shepherd_t *) worker->shepherd;
+	qt_threadqueue_enqueue(shep->ready, t,
+			   myshep);
+    }
+#else
     qt_threadqueue_enqueue(shep->ready, t,
 	    (qthread_shepherd_t *)
 	    pthread_getspecific(shepherd_structs));
+#endif
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
@@ -3599,8 +3823,20 @@ int qthread_fork_syncvar_to(
 	    qthread_find_active_shepherd(shep->sorted_sheplist,
 					 shep->shep_dists);
     }
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    /* SLO -- multithreaded shepherd */
+    {
+    qthread_worker_t *worker =
+        (qthread_worker_t *) pthread_getspecific(shepherd_structs);
+    qthread_shepherd_t *myshep =
+        (qthread_shepherd_t *) worker->shepherd;
+	qt_threadqueue_enqueue(shep->ready, t,
+			   myshep);
+    }
+#else
     qt_threadqueue_enqueue(shep->ready, t, (qthread_shepherd_t *)
 			   pthread_getspecific(shepherd_structs));
+#endif
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
@@ -3723,8 +3959,16 @@ qthread_t *qthread_prepare(const qthread_f f, const void *arg,
 {				       /*{{{ */
     qthread_t *t;
     qthread_shepherd_id_t shep;
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    /* SLO -- multithreaded shepherd */
+    qthread_worker_t *worker =
+        (qthread_worker_t *) pthread_getspecific(shepherd_structs);
+    qthread_shepherd_t *myshep =
+        (qthread_shepherd_t *) worker->shepherd;
+#else
     qthread_shepherd_t *myshep =
 	(qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
+#endif
 
     assert(myshep);
     if (myshep) {
@@ -3785,8 +4029,20 @@ int qthread_schedule(qthread_t * t)
     }
     qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id,
 		  t->rdata->shepherd_ptr->shepherd_id);
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    /* SLO -- multithreaded shepherd */
+    {
+    qthread_worker_t *worker =
+        (qthread_worker_t *) pthread_getspecific(shepherd_structs);
+    qthread_shepherd_t *myshep =
+        (qthread_shepherd_t *) worker->shepherd;
+	qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t,
+			   myshep);
+    }
+#else
     qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t, (qthread_shepherd_t *)
 			   pthread_getspecific(shepherd_structs));
+#endif
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
@@ -3797,9 +4053,21 @@ int qthread_schedule_on(qthread_t * t, const qthread_shepherd_id_t shepherd)
     }
     qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id,
 		  shepherd);
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    /* SLO -- multithreaded shepherd */
+    {
+    qthread_worker_t *worker =
+        (qthread_worker_t *) pthread_getspecific(shepherd_structs);
+    qthread_shepherd_t *myshep =
+        (qthread_shepherd_t *) worker->shepherd;
+	qt_threadqueue_enqueue(qlib->shepherds[shepherd].ready, t,
+			   myshep);
+    }
+#else
     qt_threadqueue_enqueue(qlib->shepherds[shepherd].ready, t,
 			   (qthread_shepherd_t *)
 			   pthread_getspecific(shepherd_structs));
+#endif
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
@@ -4042,8 +4310,20 @@ int qthread_empty(qthread_t * me, const aligned_t * dest)
 					       (void *)alignedaddr);
 	if (!m) {
 	    /* currently full, and must be added to the hash to empty */
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+        /* SLO -- multithreaded shepherd */
+        {
+        qthread_worker_t *worker =
+            (qthread_worker_t *) pthread_getspecific(shepherd_structs);
+        qthread_shepherd_t *myshep =
+            (qthread_shepherd_t *) worker->shepherd;
+	    m = qthread_addrstat_new(me ? (me->rdata->shepherd_ptr) :
+				     myshep);
+        }
+#else
 	    m = qthread_addrstat_new(me ? (me->rdata->shepherd_ptr) :
 				     pthread_getspecific(shepherd_structs));
+#endif
 	    if (!m) {
 		qt_hash_unlock(FEBbin);
 		return QTHREAD_MALLOC_ERROR;
@@ -4465,8 +4745,20 @@ int qthread_lock(qthread_t * me, const aligned_t * a)
 	    qt_hash_unlock(qlib->locks[lockbin]);
 	    return QTHREAD_MALLOC_ERROR;
 	}
+
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+        /* SLO -- multithreaded shepherd */
+        {
+        qthread_worker_t *worker =
+            (qthread_worker_t *) pthread_getspecific(shepherd_structs);
+        qthread_shepherd_t *myshep =
+            (qthread_shepherd_t *) worker->shepherd;
+	assert(me->rdata->shepherd_ptr == myshep);
+        }
+#else
 	assert(me->rdata->shepherd_ptr == (qthread_shepherd_t *)
 	       pthread_getspecific(shepherd_structs));
+#endif
 	m->waiting = qthread_queue_new(me->rdata->shepherd_ptr);
 	if (m->waiting == NULL) {
 	    FREE_LOCK(m);
@@ -4606,11 +4898,20 @@ unsigned qthread_id(const qthread_t * t)
 qthread_shepherd_id_t qthread_shep(const qthread_t * t)
 {				       /*{{{ */
     qthread_shepherd_t *ret;
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    qthread_worker_t *worker;  /* SLO -- multithreaded shepherd */
+#endif
 
     if (t) {
 	return t->rdata->shepherd_ptr->shepherd_id;
     }
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    /* SLO -- multithreaded shepherd */
+    worker = (qthread_worker_t *) pthread_getspecific(shepherd_structs);
+    ret = (qthread_shepherd_t *) worker->shepherd;
+#else
     ret = (qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
+#endif
     if (ret == NULL) {
 	return NO_SHEPHERD;
     } else {
@@ -4621,11 +4922,20 @@ qthread_shepherd_id_t qthread_shep(const qthread_t * t)
 int qthread_shep_ok(const qthread_t * t)
 {				       /*{{{ */
     qthread_shepherd_t *ret;
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    qthread_worker_t *worker;  /* SLO -- multithreaded shepherd */
+#endif
 
     if (t) {
 	return QTHREAD_CASLOCK_READ_UI(t->rdata->shepherd_ptr->active);
     }
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    /* SLO -- multithreaded shepherd */
+    worker = (qthread_worker_t *) pthread_getspecific(shepherd_structs);
+    ret = (qthread_shepherd_t *) worker->shepherd;
+#else
     ret = (qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
+#endif
     if (ret == NULL) {
 	return QTHREAD_PTHREAD_ERROR;
     } else {
