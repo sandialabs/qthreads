@@ -43,6 +43,7 @@ struct qt_mpool_s {
     size_t alignment;
 
     void *volatile QTHREAD_CASLOCK(reuse_pool);
+    QTHREAD_FASTLOCK_TYPE pool_lock;
     char *alloc_block;
     char *volatile alloc_block_ptr;
     void **alloc_list;
@@ -183,6 +184,7 @@ qt_mpool qt_mpool_create_aligned(const int sync, size_t item_size,
     pool->items_per_alloc = alloc_size / item_size;
 
     QTHREAD_CASLOCK_INIT(pool->reuse_pool, NULL);
+    QTHREAD_FASTLOCK_INIT(pool->pool_lock);
     pool->alloc_block = (char *)qt_mpool_internal_aligned_alloc(alloc_size,
 								alignment);
     assert(((unsigned long)(pool->alloc_block) & (alignment - 1)) == 0);
@@ -250,9 +252,11 @@ void *qt_mpool_alloc(qt_mpool pool)
     if (QPTR(p) == NULL) {	       /* this is not an else on purpose */
 	char *base, *max, *cur;
 start:
+	QTHREAD_FASTLOCK_LOCK(&pool->pool_lock);
 	base = pool->alloc_block;
 	max = base + (pool->item_size * pool->items_per_alloc);
 	cur = pool->alloc_block_ptr;
+	QTHREAD_FASTLOCK_UNLOCK(&pool->pool_lock);
 	while (cur <= max && cur >= base) {
 	    char * cur2 = qt_cas(&pool->alloc_block_ptr, cur, cur + pool->item_size);
 	    if (cur2 == cur) break;
@@ -278,11 +282,13 @@ start:
 	    qassert_ret((QCTR(p) == 0), NULL);
 	    assert(pool->alignment == 0 ||
 		   (((unsigned long)p) & (pool->alignment - 1)) == 0);
+	    QTHREAD_FASTLOCK_LOCK(&pool->pool_lock);
 	    pool->alloc_block = (void *)p;
 	    pool->alloc_list[pool->alloc_list_pos] = pool->alloc_block;
 	    pool->alloc_list_pos++;
 	    __sync_synchronize();
 	    pool->alloc_block_ptr = ((char*)p) + pool->item_size;
+	    QTHREAD_FASTLOCK_UNLOCK(&pool->pool_lock);
 	} else {
 	    p = (void**)cur;
 	}

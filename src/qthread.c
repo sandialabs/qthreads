@@ -1403,7 +1403,7 @@ static void *qthread_shepherd(void *arg)
 	    }
 	    assert(t->rdata->shepherd_ptr == me);
 
-	    if (t->target_shepherd != NULL && t->target_shepherd != me &&
+	    if ((t->target_shepherd != NULL) && (t->target_shepherd != me) &&
 		QTHREAD_CASLOCK_READ_UI(t->target_shepherd->active)) {
 		/* send this thread home */
 		qthread_debug(THREAD_DETAILS,
@@ -3024,7 +3024,8 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
     t->rdata = NULL;
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    if ((free_arg != 0)&(free_arg <= 128)&(arg_copy == NULL)) { // use the builtin block for args
+    // should I use the builtin block for args?
+    if ((free_arg > 0) & (free_arg <= 128) & (arg_copy == NULL)) {
       memcpy(t->test,arg,free_arg);
       t->arg = (void*)(&t->test);
     }

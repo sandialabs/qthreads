@@ -598,9 +598,11 @@ syncvar_t *getSyncTaskVar(qthread_t *me, int id);
 syncvar_t *getSyncTaskVar(qthread_t *me, int id)
 {
   taskSyncvar_t * syncVar = (taskSyncvar_t *)calloc(1,sizeof(taskSyncvar_t));
+  qthread_getTaskListLock(me);
   //  qthread_syncvar_empty(me,&(syncVar->retValue));
   syncVar->next_task = qthread_getTaskRetVar(me);
   qthread_setTaskRetVar(me,syncVar);
+  qthread_releaseTaskListLock(me);
   
   return &(syncVar->retValue);
 }
