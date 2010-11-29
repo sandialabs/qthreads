@@ -457,6 +457,19 @@ AC_ARG_ENABLE([rose-extensions],
 AS_IF([test "x$enable_rose_extensions" == xyes],
 	  [AC_DEFINE([QTHREAD_USE_ROSE_EXTENSIONS], [1], [Define to enable ROSE extensions])])
 
+AC_ARG_ENABLE([hpctoolkit],
+			  [AS_HELP_STRING([--enable-hpctoolkit-support],
+							  [Enable modifications so that HPCToolkit can unwind Qthreads threads.])])
+AS_IF([test "x$enable_hpctoolkit_support" == xyes],
+	  [AC_DEFINE([QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING], [1], [Support HPCToolkit stack unwinding])])
+
+AC_ARG_ENABLE([multithreaded_shepherds],
+			  [AS_HELP_STRING([--enable-multithreaded-shepherds],
+							  [Enable multithreaded shepherds.])])
+AS_IF([test "x$enable_multithread_shepherds" == xyes],
+	  [AC_DEFINE([QTHREAD_MULTITHREADED_SHEPHERDS], [1], [Support multithreaded spherds])])
+
+
 AC_ARG_ENABLE([hardware-timer],
   [AS_HELP_STRING([--disable-hardware-timer],
 				  [force the use of gettimeofday even if there is a better timer available])],

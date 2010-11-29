@@ -48,6 +48,19 @@ struct qloop_step_wrapper_args {
     void *arg;
 };
 
+#ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
+// in Rose only code -- call function with rose argument list
+// pulled from HPCToolkit externals
+
+int in_qthread_step_fence(void* addr);
+extern void *qthread_step_fence1;
+extern void *qthread_step_fence2;
+
+#define MONITOR_ASM_LABEL(name)         \
+    asm volatile (".globl " #name );    \
+    asm volatile ( #name ":" )
+#endif
+
 static aligned_t qloop_step_wrapper(
     qthread_t * const restrict me,
     struct qloop_step_wrapper_args * const restrict arg)
@@ -55,10 +68,23 @@ static aligned_t qloop_step_wrapper(
 #ifndef QTHREAD_USE_ROSE_EXTENSIONS
     arg->func(me, arg->startat, arg->stopat, arg->arg);
 #else
+#ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
+    MONITOR_ASM_LABEL(qthread_step_fence1); // add label for HPCToolkit unwind
+#endif
     arg->func(arg->arg, arg->startat, arg->stopat, arg->step, arg->arg);
+#ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
+    MONITOR_ASM_LABEL(qthread_step_fence2); // add label for HPCToolkit unwind
+#endif
 #endif
     return 0;
 }				       /*}}} */
+
+#ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
+int in_qthread_step_fence(void* addr)
+{
+  return (qthread_step_fence1 <= addr) && (addr >= qthread_step_fence2);
+}
+#endif
 #endif
 
 static void qt_loop_inner(

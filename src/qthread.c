@@ -3455,6 +3455,19 @@ static void qthread_addrstat_delete(qthread_addrstat_t * m)
     FREE_ADDRSTAT(m);
 }				       /*}}} */
 
+#ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
+// in Rose only code -- call function with rose argument list
+// pulled from HPCToolkit externals
+ 
+int in_qthread_fence(void* addr);
+extern void *qthread_fence1;
+extern void *qthread_fence2;
+
+#define MONITOR_ASM_LABEL(name)         \
+  asm volatile (".globl " #name );	\
+  asm volatile ( #name ":" )
+#endif
+
 /* this function runs a thread until it completes or yields */
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
 static void qthread_wrapper(unsigned int high, unsigned int low)
@@ -3464,6 +3477,9 @@ static void qthread_wrapper(unsigned int high, unsigned int low)
 static void qthread_wrapper(void *ptr)
 {
     qthread_t *t = (qthread_t *) ptr;
+#endif
+#ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
+    MONITOR_ASM_LABEL(qthread_fence1); // add label for HPCToolkit stack unwind
 #endif
 
     qthread_debug(THREAD_BEHAVIOR,
@@ -3526,8 +3542,18 @@ static void qthread_wrapper(void *ptr)
      */
     qthread_debug(THREAD_BEHAVIOR, "tid %u exiting.\n",
 		  t->thread_id);
+#ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
+    MONITOR_ASM_LABEL(qthread_fence2); // add label for HPCToolkit stack unwind
+#endif
     qthread_back_to_master(t);
 }				       /*}}} */
+ 
+#ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
+int in_qthread_fence(void* addr)
+{
+  return (qthread_fence1 <= addr) && (addr >= qthread_fence2);
+}
+#endif
 
 /* This function means "run thread t". The second argument (c) is a pointer
  * to the current context. */
