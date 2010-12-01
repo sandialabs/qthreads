@@ -1791,10 +1791,22 @@ int qthread_initialize(void)
 #endif
     if (nshepherds == 0) {	       /* try to guess the "right" number */
 #ifdef QTHREAD_HAVE_HWLOC
-	/* XXX: when we get multithreaded shepherds, HWLOC_OBJ_PU should be
-	 * HWLOC_OBJ_CACHE (or something like that, with a fallback to OBJ_PU) */
+# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+	unsigned int depth = hwloc_get_type_or_below_depth(qlib->topology, HWLOC_OBJ_SOCKET);
+	nshepherds = hwloc_get_nbobjs_by_type(qlib->topology, HWLOC_OBJ_SOCKET);
+	qthread_debug(ALL_DETAILS, "nbobjs_by_type HWLOC_OBJ_SOCKET is %u, depth: %u\n", nshepherds, depth);
+	for (size_t socket = 0; socket < nshepherds; ++socket) {
+	    hwloc_obj_t obj = hwloc_get_obj_by_depth(qlib->topology, depth, socket);
+	    /* get the cpuset: obj->cpuset */
+	    qthread_debug(ALL_DETAILS, "socket %lu has %u arity\n", socket, obj->arity);
+	    if (socket == 0 || nworkerspershep < obj->arity) {
+		nworkerspershep = obj->arity;
+	    }
+	}
+# else
 	nshepherds = hwloc_get_nbobjs_by_type(qlib->topology, HWLOC_OBJ_PU);
 	qthread_debug(ALL_DETAILS, "nbobjs_by_type HWLOC_OBJ_PU is %u\n", nshepherds);
+# endif
 #elif defined(QTHREAD_HAVE_LIBNUMA)
 	if (numa_available() != -1) {
 	    /* XXX: this logic is totally wrong for multithreaded shepherds */
@@ -4851,13 +4863,13 @@ qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *shepherd_id,
 {                                      /*{{{ */
   qthread_worker_t *worker = (qthread_worker_t *)pthread_getspecific(shepherd_structs);
   if (worker != NULL) {
-    qthread_shepherd_id_t s = (qthread_shepherd_id_t *)worker->shepherd->shepherd_id;
+    qthread_shepherd_id_t s = worker->shepherd->shepherd_id;
     if(shepherd_id != NULL) *shepherd_id = s;
     
     uint ret = (s*qlib->nworkerspershep) + worker->worker_id;
     return ret;
   }
-  if(shepherd_id != NULL) shepherd_id = NO_SHEPHERD;
+  if(shepherd_id != NULL) *shepherd_id = NO_SHEPHERD;
   return NO_SHEPHERD;
 }                                      /*}}} */
 #endif
