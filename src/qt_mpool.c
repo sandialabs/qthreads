@@ -137,7 +137,6 @@ qt_mpool qt_mpool_create_aligned(const int sync, size_t item_size,
 
     qassert_ret((pool != NULL), NULL);
     VALGRIND_CREATE_MEMPOOL(pool, 0, 0);
-    assert(pool->lock == NULL);
     if (pagesize == 0) {
 	pagesize = getpagesize();
     }
