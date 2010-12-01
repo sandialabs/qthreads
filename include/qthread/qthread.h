@@ -110,7 +110,7 @@ Q_ENDCXX /* */
 
 Q_STARTCXX /* */
 typedef struct qthread_s qthread_t;
-typedef unsigned int qthread_sheherd_id_t;
+typedef unsigned int qthread_shepherd_id_t;
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 typedef unsigned int qthread_worker_id_t;/* SLO -- multithreaded shepherd */
 #endif
