@@ -465,9 +465,10 @@ AS_IF([test "x$enable_hpctoolkit_support" == xyes],
 
 AC_ARG_ENABLE([multithreaded_shepherds],
 			  [AS_HELP_STRING([--enable-multithreaded-shepherds],
-							  [Enable multithreaded shepherds.])])
-AS_IF([test "x$enable_multithread_shepherds" == xyes],
-	  [AC_DEFINE([QTHREAD_MULTITHREADED_SHEPHERDS], [1], [Support multithreaded spherds])])
+							  [Enable multithreaded shepherds. Number of workers per shepherd is controlled via QTHREAD_NUM_WORKERS_PER_SHEPHERD environment variable at runtime.])])
+AS_IF([test "x$enable_multithreaded_shepherds" == xyes],
+	  [AC_DEFINE([QTHREAD_MULTITHREADED_SHEPHERDS], [1], [Support multithreaded shepherds])],
+	  [enable_multithreaded_shepherds="no"])
 
 
 AC_ARG_ENABLE([hardware-timer],
@@ -567,6 +568,7 @@ echo    ""
 echo    "Speed:"
 echo    "            Lazy Thread IDs: $enable_lazy_threadids"
 echo    "              Pooled Memory: $enable_pooled_memory"
+echo    "    Multithreaded Shepherds: $enable_multithreaded_shepherds"
 qthread_incprefix="             Increments/CAS: "
 AS_IF([test "x$enable_hardware_increments" = "xno"],
 	  [AS_IF([test "x$ac_cv_func_pthread_spin_init" = "xyes"],
