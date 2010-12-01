@@ -110,7 +110,10 @@ Q_ENDCXX /* */
 
 Q_STARTCXX /* */
 typedef struct qthread_s qthread_t;
-typedef unsigned int qthread_shepherd_id_t;
+typedef unsigned int qthread_sheherd_id_t;
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+typedef unsigned int qthread_worker_id_t;/* SLO -- multithreaded shepherd */
+#endif
 
 /* for convenient arguments to qthread_fork */
 typedef aligned_t(*qthread_f) (qthread_t * me, void *arg);
@@ -198,6 +201,10 @@ int qthread_debuglevel(int);
  * about themselves */
 unsigned qthread_id(const qthread_t * t);
 qthread_shepherd_id_t qthread_shep(const qthread_t * t);
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *s,const qthread_t * t); 
+#endif
+
 size_t qthread_stackleft(const qthread_t * t);
 aligned_t *qthread_retloc(const qthread_t * t);
 int qthread_shep_ok(const qthread_t * t);
