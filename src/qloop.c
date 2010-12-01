@@ -1355,10 +1355,14 @@ int qloop_internal_computeNextBlock(
     if (remaining <= 0)
 	return 0;
 
+#if defined(__i386__) || defined(__x86_64__)
+    if (time < 1.0)
+#else
     if (time < 7.5e-7)
-	newBlock = block;
+#endif
+      newBlock = block;
     else
-	newBlock = (remaining / ((cnbWorkers << 1) * (loop->assignStep))) + 1;
+      newBlock = (remaining / ((cnbWorkers << 1) * (loop->assignStep))) + 1;
 
     return newBlock?newBlock:1;
 }
@@ -1429,7 +1433,11 @@ static void qt_parallel_qfor(
     volatile qqloop_step_handle_t *qqhandle = NULL;
     int forCount = qthread_forCount(me, 1);	// my loop count
 
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    cnbWorkers = qthread_num_shepherds()* qlib->nworkerspershep;
+#else
     cnbWorkers = qthread_num_shepherds();
+#endif
     cnbTimeMin = 1.0;
 
     QTHREAD_FASTLOCK_LOCK(&forLock);   // KBW: XXX: need to find a way to avoid locking

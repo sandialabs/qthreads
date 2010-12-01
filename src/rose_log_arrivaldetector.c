@@ -237,7 +237,11 @@ void qt_global_arrive_first_init(
     if (MArrFirst == NULL) {
 	extern int cnbWorkers;
 	extern double cnbTimeMin;
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+	cnbWorkers = qthread_num_shepherds()*qlib->nworkerspershep;
+#else
 	cnbWorkers = qthread_num_shepherds();
+#endif
 	cnbTimeMin = 1.0;
 	MArrFirst = qt_arrive_first_create(size, REGION_BARRIER, debug);
 	assert(MArrFirst);

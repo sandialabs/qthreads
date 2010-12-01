@@ -22,6 +22,10 @@
 #include <qthread/feb_barrier.h>
 #include <rose_xomp.h>
 
+#if defined(__i386__) || defined(__x86_64__)
+#define USE_RDTSC 1
+#endif
+
 #define bool unsigned char
 #define TRUE 1
 #define FALSE 0
@@ -264,7 +268,11 @@ void XOMP_parallel_start(
 
   if (gb == NULL) gb = qt_feb_barrier_create(me,qthread_num_shepherds()); // setup taskwait barrier
 
-  qthread_shepherd_id_t parallelWidth = qthread_num_shepherds();
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+  qthread_shepherd_id_t parallelWidth = qthread_num_shepherds()*qlib->nworkerspershep;
+#else
+  qthread_shepherd_id_t parallelWidth = qthread_num_shepherds()*qlib->nworkerspershep;
+#endif
   qt_loop_f f = (qt_loop_f) func;
   qt_parallel_step(f, parallelWidth, data);
 
@@ -317,7 +325,12 @@ void qqloop_clear_value(int id)
 void qqloop_set_value(qqloop_step_handle_t * qqhandle)
 {
   int i;
-  int lim = qthread_num_shepherds();
+  int lim;
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+  lim = qthread_num_shepherds()*qlib->nworkerspershep;
+#else
+  lim = qthread_num_shepherds();
+#endif
 
   for (i = 0; i < lim; i++){
     int lev = arr_level[i];
@@ -349,9 +362,24 @@ qqloop_step_handle_t *qt_loop_rose_queue_create(
     return ret;
 }
 
-
 // used to compute time to dynamically determine minimum effective block size 
+#ifdef USE_RDTSC
+#include <stdint.h>
+static QINLINE uint64_t rdtsc() {
+uint32_t lo, hi;
+__asm__ __volatile__ (      // serialize
+"xorl %%eax,%%eax \n        cpuid"
+::: "%rax", "%rbx", "%rcx", "%rdx");
+/* We cannot use "=A", since this would use %rax on x86_64 */
+__asm__ __volatile__ ("rdtsc" : "=a" (lo), "=d" (hi));
+return (uint64_t)hi << 32 | lo;
+}
+
+// NOTE: need to replace these magic numbers with #defs 
+uint64_t loopTimer[64*16];
+#else
 qtimer_t loopTimer;
+#endif
 int firstTime[64];
 int currentIteration[64];
 int staticStartCount[64];
@@ -368,11 +396,20 @@ void XOMP_loop_guided_init(
   qthread_t *const me = qthread_self();
   qqloop_step_handle_t *qqhandle = NULL;
   
-  loopTimer = qtimer_create();
-
+#ifdef USE_RDTSC
   int myid = qthread_shep(me);
+  qthread_worker_id_t workerid = qthread_worker(&myid,me);
+  loopTimer[workerid] = 0;
+#else
+  int myid = qthread_shep(me);
+  loopTimer = qtimer_create();
+#endif
   
+#ifdef USE_RDTSC
+  if (qt_global_arrive_first(workerid,xomp_get_nested(&xomp_status))) {
+#else
   if (qt_global_arrive_first(myid,xomp_get_nested(&xomp_status))) {
+#endif
     qqhandle  =  qt_loop_rose_queue_create(lower,
 					   upper,
 					   stride);
@@ -386,13 +423,17 @@ void XOMP_loop_guided_init(
   }
   else {
     // wait for value
+#ifdef USE_RDTSC
+    qqhandle = qqloop_get_value(workerid);
+#else
     qqhandle = qqloop_get_value(myid);
-
+#endif
   }
   
   firstTime[myid] = 1;
   currentIteration[myid] = 1;
   smallBlock[myid] =  qqhandle->assignStop - qqhandle->assignNext;;
+  lastBlock[myid] =  qqhandle->assignStop - qqhandle->assignNext;
 
   return;
 }
@@ -448,21 +489,43 @@ bool XOMP_loop_guided_start(
     long *returnLower,
     long *returnUpper)
 {
+#ifdef USE_RDTSC
+    uint64_t s;
     double time;
+    qthread_shepherd_id_t myid;
     qthread_t *const me = qthread_self();
-    int myid = qthread_shep(me);
+    qthread_worker_id_t workerid = qthread_worker(&myid,me);
+#else
+    double time;
+    qt_shepherd_id_t myid = qthread_shep(me);
+#endif
 
-    qqloop_step_handle_t *loop = qqloop_get_value(myid);	// from init;
-    if (!firstTime[myid] && (loop->type == GUIDED_SCHED)) {
+    qqloop_step_handle_t *loop = qqloop_get_value(workerid);	// from init;
+    if (!firstTime[workerid] && (loop->type == GUIDED_SCHED)) {
+#ifdef USE_RDTSC
+        s = rdtsc();
+	time = s - loopTimer[workerid];
+	//      if (myid==1)printf("%ld  %ld %f\n",s,loopTimer[workerid],time);
+	if (time > 10000)
+	  smallBlock[myid] =
+	    (smallBlock[myid] <
+	     lastBlock[myid]) ? smallBlock[myid] : lastBlock[myid];
+#else
 	qtimer_stop(loopTimer);
 	time = qtimer_secs(loopTimer);
 	if (time > 7.5e-7)
 	    smallBlock[myid] =
 		(smallBlock[myid] <
 		 lastBlock[myid]) ? smallBlock[myid] : lastBlock[myid];
+#endif
     } else {
 	time = 1.0;
+
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+	firstTime[workerid] = 0;
+#else
 	firstTime[myid] = 0;
+#endif
 	smallBlock[myid] = 5000;
     }
 
@@ -475,7 +538,11 @@ bool XOMP_loop_guided_start(
     }
     aligned_t iterationNumber = qthread_incr(&loop->assignNext, dynamicBlock);
     *returnLower = iterationNumber;
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    currentIteration[workerid] = *returnLower;
+#else
     currentIteration[myid] = *returnLower;
+#endif
     aligned_t iterationStop = iterationNumber + dynamicBlock;
     if (iterationStop >= loop->assignStop) {
 	iterationStop = loop->assignStop;
@@ -485,17 +552,25 @@ bool XOMP_loop_guided_start(
 	    return 0;
 	}
     }
-    lastBlock[myid] = dynamicBlock;
+    lastBlock[workerid] = dynamicBlock;
     *returnUpper = iterationStop;
 
     qthread_debug(ALL_DETAILS,
 		  "limit %10d lower %10d upper %10d block %10d smallBlock %10d id %d\n",
 		  loop->assignDone, *returnLower, *returnUpper, dynamicBlock,
-		  smallBlock[myid], myid);
+		  smallBlock[myid], 
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+		  workerid
+#else
+		  myid
+#endif
+		  );
 
-
+#ifdef USE_RDTSC
+    loopTimer[workerid] = rdtsc();
+#else
     qtimer_start(loopTimer);
-
+#endif
     return (dynamicBlock > 0);
 }
 
@@ -511,9 +586,16 @@ bool XOMP_loop_guided_next(
 void XOMP_loop_end(
     void)
 {
+#ifdef USE_RDTSC
+#else
   qtimer_stop(loopTimer);
+#endif
   qthread_t *const me = qthread_self();
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+  qqloop_clear_value(qthread_worker(NULL,me));
+#else
   qqloop_clear_value(qthread_shep(me));
+#endif
   qt_global_barrier(me);	       // need barrier or timeout in qt_loop_inner kills performance
 }
 
@@ -696,6 +778,8 @@ void XOMP_loop_dynamic_init(
     int stride,
     int chunk_size)
 {
+  XOMP_loop_guided_init(lower, upper, stride, chunk_size);
+  /* AKP: until I get the ROSE patch install locally
   //  int i;
   qthread_t *const me = qthread_self();
   qqloop_step_handle_t *qqhandle = NULL;
@@ -719,6 +803,7 @@ void XOMP_loop_dynamic_init(
   
   firstTime[myid] = 1;
   smallBlock[myid] = qqhandle->assignStop - qqhandle->assignNext;
+  */
   return;
 }
 

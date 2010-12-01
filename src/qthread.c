@@ -99,10 +99,8 @@ kern_return_t thread_policy_get(thread_t thread,
 #endif
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-typedef int qthread_worker_id_t;
 #define MAX_WORKERS_PER_SHEPHERD 1024
 #endif
-
 /* internal constants */
 enum threadstate {
     QTHREAD_STATE_NEW,
@@ -2474,6 +2472,11 @@ int qthread_initialize(void)
     qthread_debug(ALL_DETAILS, "calling component init functions\n");
     qt_feb_barrier_internal_init();
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    qt_global_barrier_init(nshepherds*qlib->nworkerspershep, 0);
+    qt_global_arrive_first_init((nshepherds*qlib->nworkerspershep)-1, 0);
+#else
+#endif
     qt_global_barrier_init(nshepherds, 0);
     qt_global_arrive_first_init(nshepherds-1, 0);
 #endif
@@ -4842,6 +4845,22 @@ qthread_shepherd_id_t qthread_shep(const qthread_t * t)
 	}
     }
 }				       /*}}} */
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *shepherd_id,
+				   const qthread_t * t)
+{                                      /*{{{ */
+  qthread_worker_t *worker = (qthread_worker_t *)pthread_getspecific(shepherd_structs);
+  if (worker != NULL) {
+    qthread_shepherd_id_t s = (qthread_shepherd_id_t *)worker->shepherd->shepherd_id;
+    if(shepherd_id != NULL) *shepherd_id = s;
+    
+    uint ret = (s*qlib->nworkerspershep) + worker->worker_id;
+    return ret;
+  }
+  if(shepherd_id != NULL) shepherd_id = NO_SHEPHERD;
+  return NO_SHEPHERD;
+}                                      /*}}} */
+#endif
 
 int qthread_shep_ok(const qthread_t * t)
 {				       /*{{{ */
