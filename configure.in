@@ -508,9 +508,9 @@ AS_IF([test "x$qthread_implementation" = "xunix"],
        # At the moment, hwloc does not support Mach very well,
        # so I need to use the Mach interface directly (i.e. check it first)
        AS_IF([test "x$qthread_topo" = xunknown],
-	     [QTHREAD_CHECK_MACHTOPO([qthread_topo=mach])])
-       AS_IF([test "x$qthread_topo" = xunknown],
 	     [QTHREAD_CHECK_HWLOC([qthread_topo=hwloc])])
+       AS_IF([test "x$qthread_topo" = xunknown],
+	     [QTHREAD_CHECK_MACHTOPO([qthread_topo=mach])])
        # PLPA is deprecated in favor of hwloc
        AS_IF([test "x$qthread_topo" = xunknown],
 	     [QTHREAD_CHECK_PLPA([qthread_topo=plpa],)])
