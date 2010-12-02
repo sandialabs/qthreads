@@ -12,6 +12,7 @@
 #endif
 #include <string.h>                    // for strcmp
 
+#include "config.h"
 #include "qthread/qthread.h"
 #include "qthread/qtimer.h"
 #include "qt_barrier.h"	               // for qt_global_barrier
