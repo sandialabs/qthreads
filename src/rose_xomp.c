@@ -1,6 +1,10 @@
 //  include libxomp.h from ROSE implementation as the full list
 //  of functions needed to support OpenMP 3.0 with Rose.
 
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdlib.h>		       // for malloc()
 #include <stdio.h>
 
@@ -12,7 +16,6 @@
 #endif
 #include <string.h>                    // for strcmp
 
-#include "config.h"
 #include "qthread/qthread.h"
 #include "qthread/qtimer.h"
 #include "qt_barrier.h"	               // for qt_global_barrier
