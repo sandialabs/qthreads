@@ -1709,8 +1709,8 @@ static void assign_nodes(qthread_shepherd_t *sheps, size_t nsheps)
 	nodemask_zero(&bmask);
 	/* assign nodes */
 	for (size_t i = 0; i < nsheps; ++i) {
-	    sheps[i].node = i % numa_extant_nodes;
-	    nodemask_set(&bmask, i % numa_extant_nodes);
+	    sheps[i].node = i % num_extant_nodes;
+	    nodemask_set(&bmask, i % num_extant_nodes);
 	}
 	numa_set_interleave_mask(&bmask);
 # endif
