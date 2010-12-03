@@ -400,12 +400,11 @@ void XOMP_loop_guided_init(
   qthread_t *const me = qthread_self();
   qqloop_step_handle_t *qqhandle = NULL;
   
-#ifdef USE_RDTSC
   int myid = qthread_shep(me);
+#ifdef USE_RDTSC
   qthread_worker_id_t workerid = qthread_worker(&myid,me);
   loopTimer[workerid] = 0;
 #else
-  int myid = qthread_shep(me);
   loopTimer = qtimer_create();
 #endif
   
@@ -749,7 +748,11 @@ void XOMP_loop_static_init(
     int chunk_size)
 {
   qthread_t *const me = qthread_self();
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+  int myid = qthread_worker(NULL,me);
+#else
   int myid = qthread_shep(me);
+#endif
   qqloop_step_handle_t *qqhandle = NULL;
 
   if (qt_global_arrive_first(myid,xomp_get_nested(&xomp_status))) {
@@ -788,7 +791,11 @@ void XOMP_loop_dynamic_init(
   qthread_t *const me = qthread_self();
   qqloop_step_handle_t *qqhandle = NULL;
   
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+  int myid = qthread_worker(NULL,me);
+#else
   int myid = qthread_shep(me);
+#endif
   
   if (qt_global_arrive_first(myid,xomp_get_nested(&xomp_status))) {
     qqhandle  =  qt_loop_rose_queue_create(lower,
@@ -823,7 +830,11 @@ void XOMP_loop_runtime_init(
   qthread_t *const me = qthread_self();
   qqloop_step_handle_t *qqhandle = NULL;
   
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+  int myid = qthread_worker(NULL,me);
+#else
   int myid = qthread_shep(me);
+#endif
 
   switch(get_runtime_sched_option(&xomp_status))
     {
@@ -884,7 +895,11 @@ void XOMP_loop_ordered_runtime_init(
 void XOMP_ordered_start(
     void)
 {
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+  int myid = qthread_worker(NULL,qthread_self());
+#else
   int myid = qthread_shep(qthread_self());
+#endif
   while (orderedLoopCount != currentIteration[myid]){}; // spin until my turn
   
   currentIteration[myid]++;
@@ -904,7 +919,11 @@ bool XOMP_loop_static_start(
     long *returnLower,
     long *returnUpper)
 {
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+  int myid = qthread_worker(NULL,qthread_self());
+#else
   int myid = qthread_shep(qthread_self());
+#endif
   int iterationNum = staticStartCount[myid]++;
   int parallelWidth = qthread_num_shepherds();
 
@@ -1031,7 +1050,11 @@ void XOMP_critical_start(
   qthread_t *const me = qthread_self();
   aligned_t v;
   if(value == 0) { // null data passed in
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    v = qthread_worker(NULL,me);
+#else
     v = qthread_shep(me);
+#endif
   }
   else {
     v = *value;
@@ -1047,7 +1070,11 @@ void XOMP_critical_end(
   qthread_t *const me = qthread_self();
   aligned_t v;
   if(value == 0) { // null data passed in
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    v = -qthread_worker(NULL,me);
+#else
     v = -qthread_shep(me);
+#endif
   }
   else {
     v = *value;
@@ -1061,7 +1088,11 @@ void XOMP_critical_end(
 bool XOMP_master(
     void)
 {
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+  int myid = qthread_worker(NULL,qthread_self());
+#else
   int myid = qthread_shep(qthread_self());
+#endif
   if (myid == 0) return 1;
   else return 0;
 }
@@ -1070,13 +1101,15 @@ bool XOMP_master(
 bool XOMP_single(
     void)
 {
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+  int myid = qthread_worker(NULL,qthread_self());
+#else
   int myid = qthread_shep(qthread_self());
+#endif
   if (qt_global_arrive_first(myid,xomp_get_nested(&xomp_status))){ 
-    //    printf("XOMP_single returning true (%d)\n",myid);
     return 1;
   }
   else{
-    //    printf("XOMP_single returning false (%d)\n",myid);
     return 0;
   }
 }

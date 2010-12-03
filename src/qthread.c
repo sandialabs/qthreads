@@ -1249,9 +1249,7 @@ static void *qthread_shepherd(void *arg)
 
     /* Initialize myself */
     pthread_setspecific(shepherd_structs, arg);
-    if (qaffinity && me->node != -1) {		       /*{{{ */
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS_never
-    /* SLO -- multithreaded shepherd */
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 
     /* Bind threads to physical cores such that workers of a shpeherd are on the same socket.
        Assumes round robin thread numbering. (Not very portable and should be replaced) */
@@ -1280,6 +1278,7 @@ static void *qthread_shepherd(void *arg)
     }
 #endif
 
+    if (qaffinity && me->node != -1) {		       /*{{{ */
 #if defined(QTHREAD_HAVE_MACHTOPO) && ! defined(SST)
 	mach_msg_type_number_t Count = THREAD_AFFINITY_POLICY_COUNT;
 	thread_affinity_policy_data_t mask[THREAD_AFFINITY_POLICY_COUNT];
@@ -2374,21 +2373,6 @@ int qthread_initialize(void)
     qthread_debug(ALL_DETAILS, "done setting up shepherds.\n");
     /* spawn the shepherds */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    {
-	qthread_worker_id_t j;
-	for (j = 1; j < nworkerspershep; ++j) {
-	    qlib->shepherds[0].workers[j].shepherd = &qlib->shepherds[0];
-	    qlib->shepherds[0].workers[j].worker_id = j;
-	    if ((r = pthread_create(&qlib->shepherds[0].workers[j].worker, NULL,
-			    qthread_shepherd, &qlib->shepherds[0].workers[j])) != 0) {
-		fprintf(stderr, "qthread_init: pthread_create() failed (%d)\n",
-			r);
-		perror("qthread_init spawning worker");
-		return r;
-	    }
-	    printf("spawned shep 0 worker %i\n", (int)j);
-	}
-    }
     for (i = 1; i < nshepherds; ++i) {
         qthread_worker_id_t j;
 	qthread_debug(ALL_DETAILS,
@@ -2405,7 +2389,7 @@ int qthread_initialize(void)
 	        perror("qthread_init spawning worker");
 	        return r;
 	    }
-	    printf("spawned shep %i worker %i\n", (int)i, (int)j);
+	    //	    printf("spawned shep %i worker %i\n", (int)i, (int)j);
         }
     }
 #else
@@ -2513,8 +2497,8 @@ int qthread_initialize(void)
     qt_feb_barrier_internal_init();
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    qt_global_barrier_init(nshepherds*qlib->nworkerspershep, 0);
-    qt_global_arrive_first_init((nshepherds*qlib->nworkerspershep)-1, 0);
+    qt_global_barrier_init(qlib->nshepherds*qlib->nworkerspershep, 0);
+    qt_global_arrive_first_init((qlib->nshepherds*qlib->nworkerspershep)-1, 0);
 #else
 #endif
     qt_global_barrier_init(nshepherds, 0);
