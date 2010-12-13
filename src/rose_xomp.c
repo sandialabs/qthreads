@@ -270,12 +270,12 @@ void XOMP_parallel_start(
   }
   set_inside_xomp_parallel(&xomp_status, TRUE);
 
-  if (gb == NULL) gb = qt_feb_barrier_create(me,qthread_num_shepherds()); // setup taskwait barrier
+  if (gb == NULL) gb = qt_feb_barrier_create(me,qthread_num_shepherds()*qlib->nworkerspershep); // setup taskwait barrier
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   qthread_shepherd_id_t parallelWidth = qthread_num_shepherds()*qlib->nworkerspershep;
 #else
-  qthread_shepherd_id_t parallelWidth = qthread_num_shepherds()*qlib->nworkerspershep;
+  qthread_shepherd_id_t parallelWidth = qthread_num_shepherds();
 #endif
   qt_loop_f f = (qt_loop_f) func;
   qt_parallel_step(f, parallelWidth, data);
@@ -718,6 +718,7 @@ void XOMP_task(
     unsigned untied)
 {
   qthread_t *const me = qthread_self();
+  int myid = qthread_shep(me);
 
   aligned_t id = qthread_incr(&taskId,1);
   qthread_debug(LOCK_DETAILS, "me(%p) creating task for shepherd %d\n", me, id%qthread_num_shepherds());
@@ -728,7 +729,11 @@ void XOMP_task(
     memcpy(arg_copy,arg,arg_size);
   }
   qthread_f qfunc = (qthread_f)func;
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+  qthread_fork_syncvar_to(qfunc, arg, arg_copy, arg_size, ret, myid);
+#else
   qthread_fork_syncvar_to(qfunc, arg, arg_copy, arg_size, ret, id%qthread_num_shepherds());
+#endif
 }
 
 void XOMP_taskwait(

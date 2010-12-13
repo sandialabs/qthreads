@@ -224,6 +224,14 @@ typedef struct _qt_threadqueue_node
 #else
     volatile struct _qt_threadqueue_node *volatile next;
 #endif
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    /* used for the work stealing queue implementation */
+#ifdef QTHREAD_MUTEX_INCREMENT
+    struct _qt_threadqueue_node *prev;
+#else
+    volatile struct _qt_threadqueue_node *volatile prev;
+#endif
+#endif
     qthread_shepherd_t *creator_ptr;
 } qt_threadqueue_node_t;
 
@@ -248,6 +256,11 @@ typedef struct qt_threadqueue_s
      * guaranteed accurate (that would be a race condition) */
     volatile saligned_t advisory_queuelen;
     qthread_shepherd_t *creator_ptr;
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    /* used for the work stealing queue implementation */
+    pthread_mutex_t qlock;
+    long qlength;
+#endif
 } qt_threadqueue_t;
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -266,6 +279,7 @@ struct qthread_shepherd_s
     qthread_shepherd_id_t shepherd_id;	/* whoami */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t workers[MAX_WORKERS_PER_SHEPHERD]; // XXX: this is too big; should be allocated at runtime based on actual number of workers
+    uint8_t stealing;  /* True when a worker is in the steal (attempt) process */
 #endif
     qthread_t *current;
     qt_threadqueue_t *ready;
@@ -411,6 +425,18 @@ static QINLINE void qt_threadqueue_enqueue(qt_threadqueue_t * q, qthread_t * t,
                                       qthread_shepherd_t * shep);
 static QINLINE qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t * q);
 static QINLINE qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q);
+
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+/* Functions for work stealing functionality */
+static QINLINE void qt_threadqueue_enqueue_yielded(qt_threadqueue_t * q, qthread_t * t,
+                                      qthread_shepherd_t * shep);
+static QINLINE void qt_threadqueue_enqueue_multiple(qt_threadqueue_t * q, 
+                       qt_threadqueue_node_t * first, qthread_shepherd_t *shep);
+static QINLINE qt_threadqueue_node_t *qt_threadqueue_dequeue_steal(qt_threadqueue_t * q);
+static QINLINE long qthread_steal_chunksize(void);
+static QINLINE void qthread_steal(void);                       
+#endif
+
 static QINLINE qthread_queue_t *qthread_queue_new(qthread_shepherd_t *
  				  shepherd);
 static QINLINE void qthread_queue_free(qthread_queue_t * q);
@@ -1504,7 +1530,12 @@ static void *qthread_shepherd(void *arg)
 			qthread_debug(THREAD_DETAILS,
 				      "id(%u): thread %i yielded; rescheduling\n",
 				      me->shepherd_id, t->thread_id);
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+            /* separate enqueue function for yielded qthreads on work stealing queue */
+			qt_threadqueue_enqueue_yielded(me->ready, t, me);
+#else
 			qt_threadqueue_enqueue(me->ready, t, me);
+#endif
 			break;
 
 		    case QTHREAD_STATE_FEB_BLOCKED:	/* unlock the related FEB address locks, and re-arrange memory to be correct */
@@ -3092,13 +3123,16 @@ static QINLINE void qthread_thread_free(qthread_t * t)
     FREE_QTHREAD(t);
 }				       /*}}} */
 
-
 /*****************************************/
 /* functions to manage the thread queues */
 /*****************************************/
 
 // This lock-free algorithm borrowed from
 // http://www.research.ibm.com/people/m/michael/podc-1996.pdf
+
+#ifndef QTHREAD_MULTITHREADED_SHEPHERDS
+/* These are defined differently for work stealing.  See end of file.
+ */
 
 /* to avoid ABA reinsertion trouble, each pointer in the queue needs to have a
  * monotonically increasing counter associated with it. The counter doesn't
@@ -3367,6 +3401,7 @@ static QINLINE qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q)
 #endif
     return p;
 }				       /*}}} */
+#endif
 
 static QINLINE qthread_queue_t *qthread_queue_new(qthread_shepherd_t *
 						  shepherd)
@@ -5899,3 +5934,227 @@ uint64_t qthread_syncvar_incrF(qthread_t * restrict me, syncvar_t * restrict con
 
     return newv;
 }
+
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+/* Herein lies the work stealing code */
+
+/*  Steal work from another shepherd's queue
+ *    Returns the amount of work stolen
+ */
+static QINLINE void qthread_steal()
+{
+    int i;
+    qt_threadqueue_node_t *first;
+    qthread_shepherd_t *victim_shepherd;
+    qthread_worker_t *worker =
+        (qthread_worker_t *) pthread_getspecific(shepherd_structs);
+    qthread_shepherd_t *theif_shepherd =
+        (qthread_shepherd_t *) worker->shepherd;
+
+if (theif_shepherd->stealing)
+    return;
+else
+    theif_shepherd->stealing = 1;
+
+for (i = 1; i < qlib->nshepherds; i++)
+{
+    victim_shepherd = &qlib->shepherds[(theif_shepherd->shepherd_id+i) % qlib->nshepherds];
+    if (1 < victim_shepherd->ready->qlength)
+    {
+        first = qt_threadqueue_dequeue_steal(victim_shepherd->ready);
+        if (first) {
+            qt_threadqueue_enqueue_multiple(theif_shepherd->ready, first, theif_shepherd);
+            break;
+        }
+    }
+}
+    theif_shepherd->stealing = 0;
+}
+
+/*  Redefine threadqueue functions for work stealing
+ */
+
+static QINLINE qt_threadqueue_t *qt_threadqueue_new(qthread_shepherd_t * shepherd)
+{                                      /*{{{ */
+    qt_threadqueue_t *q = ALLOC_THREADQUEUE(shepherd);
+
+    if (q != NULL) {
+        q->creator_ptr = shepherd;
+        q->head = q->tail = NULL;
+        q->qlength = 0;
+        if (pthread_mutex_init(&q->qlock, NULL) != 0) {
+            FREE_THREADQUEUE(q);
+            return NULL;
+        }
+    }
+    return q;
+}
+
+static QINLINE void qt_threadqueue_free(qt_threadqueue_t * q)
+{                                      
+    assert(q->head == q->tail);
+    QTHREAD_DESTROYLOCK(&q->qlock);
+    FREE_THREADQUEUE(q);
+}                                   
+
+/* enqueue at tail */
+static QINLINE void qt_threadqueue_enqueue(qt_threadqueue_t * q, qthread_t * t, qthread_shepherd_t * shep)
+{
+    qt_threadqueue_node_t *node;
+
+    ALLOC_TQNODE(&node, shep);
+    assert(node != NULL);
+
+    node->value = t;
+
+    assert(q != NULL);
+    assert(t != NULL);
+
+    QTHREAD_LOCK(&q->qlock);
+    node->next = NULL;
+    node->prev = q->tail;
+    q->tail = node;
+    if (q->head == NULL)
+        q->head = node;
+    else
+        node->prev->next = node;
+    q->qlength++;
+    QTHREAD_UNLOCK(&q->qlock);
+}
+
+/* enqueue multiple (from steal) */
+static QINLINE void qt_threadqueue_enqueue_multiple(qt_threadqueue_t * q, qt_threadqueue_node_t * first, qthread_shepherd_t *shep)
+{
+    qt_threadqueue_node_t *last;
+
+    assert(first != NULL);
+    assert(q != NULL);
+
+    last = first;
+    last->value->target_shepherd = shep;  // Defeats default of "sending home" to original shepherd
+    while (last->next) {
+        last = last->next;
+        last->value->target_shepherd = shep;  // Defeats default of "sending home" to original shepherd
+    }
+
+    QTHREAD_LOCK(&q->qlock);
+    last->next = NULL;
+    first->prev = q->tail;
+    q->tail = last;
+    if (q->head == NULL)
+        q->head = first;
+    else
+        first->prev->next = first;
+    q->qlength++;
+    QTHREAD_UNLOCK(&q->qlock);
+}
+
+/* yielded threads enqueue at head */
+static QINLINE void qt_threadqueue_enqueue_yielded(qt_threadqueue_t * q, qthread_t * t, qthread_shepherd_t * shep)
+{
+    qt_threadqueue_node_t *node;
+
+    ALLOC_TQNODE(&node, shep);
+    assert(node != NULL);
+
+    node->value = t;
+
+    assert(q != NULL);
+    assert(t != NULL);
+
+    QTHREAD_LOCK(&q->qlock);
+    node->prev = NULL;
+    node->next = q->head;
+    q->head = node;
+    if (q->tail == NULL)
+        q->tail = node;
+    else
+        node->next->prev = node;
+    q->qlength++;
+    QTHREAD_UNLOCK(&q->qlock);
+}
+
+/* dequeue at tail, unlike original qthreads implementation */
+static QINLINE qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q)
+{
+    volatile qt_threadqueue_node_t *node;
+    qthread_t *t;
+
+    assert(q != NULL);
+
+    while (1) {
+        QTHREAD_LOCK(&q->qlock);
+        node = q->tail;
+        if (node != NULL) {
+            q->tail = q->tail->prev;
+            if (q->tail == NULL)
+                q->head = NULL;
+            else
+                q->tail->next = NULL;
+            q->qlength--;
+        }
+        QTHREAD_UNLOCK(&q->qlock);
+
+        if (node == NULL) {
+            qthread_steal();
+//if (amt > 0) printf("Steal (amt stolen = %ld)\n", amt);
+        }
+        else {
+            t = node->value;
+            FREE_TQNODE((qt_threadqueue_node_t *) node);
+            break;
+        }
+    }
+    return (t);
+}
+
+/* Returns the number of tasks to steal per steal operation (chunk size) */
+static QINLINE long qthread_steal_chunksize()
+{
+   return qlib->nworkerspershep;  // Obviously this belongs in an environment variable or such
+}
+
+/* dequeue stolen threads at head, skip yielded threads */
+static QINLINE qt_threadqueue_node_t *qt_threadqueue_dequeue_steal(qt_threadqueue_t * q)
+{
+    volatile qt_threadqueue_node_t *node;
+    volatile qt_threadqueue_node_t *first = NULL;
+    volatile qt_threadqueue_node_t *last = NULL;
+    long amtStolen = 0;
+
+    assert(q != NULL);
+
+    QTHREAD_LOCK(&q->qlock);
+    while (q->qlength > 1 && amtStolen < qthread_steal_chunksize()) {
+        node = q->head;
+        while (node != NULL && node->value->thread_state == QTHREAD_STATE_YIELDED)
+            node = node->next;
+        if (node != NULL) {
+            if (node == q->head)
+                q->head = node->next;
+            else
+                node->prev->next = node->next;
+            if (node == q->tail)
+                q->tail = node->prev;
+           else
+                node->next->prev = node->prev;
+            q->qlength--;
+
+            node->prev = node->next = NULL;
+            if (first == NULL)
+                first = last = node;
+            else {
+                last->next = node;
+                node->prev = last;
+                last = node;
+            }
+            amtStolen++;
+        }
+        else
+            break;
+    }
+    QTHREAD_UNLOCK(&q->qlock);
+
+    return (first);
+}
+#endif
