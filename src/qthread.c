@@ -5495,8 +5495,8 @@ int qthread_syncvar_fill(qthread_t * restrict const me,
 		}
 	    }
 	    addr->u.w = BUILD_UNLOCKED_SYNCVAR(ret, (e.pf << 1) | e.sf);
-	    assert(m->FFQ || m->EFQ);      // otherwise there weren't really any waiters
-	    assert(m->FEQ == NULL);	       // someone snuck in!
+	    assert(m->FFQ || m->FEQ);      // otherwise there weren't really any waiters
+	    assert(m->EFQ == NULL);	       // someone snuck in!
 	    qthread_syncvar_gotlock_fill(me->rdata->shepherd_ptr, m, addr, BUILD_UNLOCKED_SYNCVAR(ret, (e.pf << 1) | e.sf));
 	} else {
 	    assert(e.sf == 0);	       /* no waiters */
