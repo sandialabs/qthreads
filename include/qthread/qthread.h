@@ -141,6 +141,13 @@ void qthread_finalize(void);
  * qthread on that shepherd next stops executing */
 int qthread_disable_shepherd(const qthread_shepherd_id_t shep);
 void qthread_enable_shepherd(const qthread_shepherd_id_t shep);
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+/* add calls to allow workers in addition to shepherds to be disabled and renumber */
+int qthread_disable_worker(const qthread_worker_id_t worker);
+int qthread_enable_worker(const qthread_worker_id_t worker);
+void qthread_pack_workerid(const qthread_worker_id_t worker,
+			   const qthread_worker_id_t newId);
+#endif
 
 /* this function allows a qthread to specifically give up control of the
  * processor even though it has not blocked. This is useful for things like
@@ -220,6 +227,9 @@ const qthread_shepherd_id_t *qthread_sorted_sheps_remote(const
 							 src);
 /* returns the number of actively-scheduling shepherds */
 qthread_shepherd_id_t /*Q_DEPRECATED*/ qthread_num_shepherds(void);
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+qthread_worker_id_t qthread_num_workers(void); /* how many threads working on problem */
+#endif
 /* queries the current state */
 enum introspective_state {
     STACK_SIZE,

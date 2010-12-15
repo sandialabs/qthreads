@@ -17,10 +17,15 @@
 
 qt_arrive_first_t *MArrFirst = NULL;
 
-qtar_resize(size_t size){
+void qtar_resize(size_t size){
   qt_global_arrive_first_destroy();
   qt_global_arrive_first_init(size-1, 0);  // the size to resize is the number of threads (1 based)
                  // the size to first init is for the max thread number(0 based) -- so subtract one
+}
+
+aligned_t qtar_size(){
+  if(MArrFirst) return MArrFirst->activeSize;
+  else return 0;
 }
 
 // dump function for debugging -  print list of occupied data
@@ -198,8 +203,9 @@ void cleanArriveFirst(
 {
 }
 
-
 // actual arrive first entry point
+
+
 
 int64_t qt_arrive_first_enter(
     qt_arrive_first_t * b,
@@ -209,20 +215,30 @@ int64_t qt_arrive_first_enter(
     return t;
 }				       /*}}} */
 
-
 int64_t qt_global_arrive_first(
     const qthread_shepherd_id_t shep,
     int64_t nest)
 {				       /*{{{ */
     int64_t t;
-    if (nest) {
       qthread_t *const me = qthread_self();
-      qt_global_barrier(me);
-      if (qthread_shep(me)) return 0;
-      else return 1;
+    if (nest) {
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+      if (qthread_worker(NULL,me))
+#else
+      if (qthread_shep(me))
+#endif
+	{
+	  qt_global_barrier(me);
+	  return 0;
+	}
+      else{
+	qt_global_barrier(me);
+	return 1;
+      } 
     }
     else {
-      t = qtar_internal_up(MArrFirst, shep, 0);
+      t = qt_arrive_first_enter(MArrFirst, shep);
+      qt_global_barrier(me);
       return t;
     }
 }				       /*}}} */
