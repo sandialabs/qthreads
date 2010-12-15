@@ -250,8 +250,7 @@ void qt_barrier_enter(qt_barrier_t * b, qthread_shepherd_id_t shep)
     // only dealing with (1) for first pass for now
     int64_t val = b->upLock[shep] + 1;
 
-    if (b->activeSize < 1)
-	return;
+    if (b->activeSize <= 1) return;
     qtb_internal_up(b, shep, val, 0);
 }				       /*}}} */
 

@@ -166,6 +166,7 @@ static int64_t qtar_internal_up(
     int pairedLock = myLock ^ mask;
     int nextLevelLock = (myLock < pairedLock) ? myLock : pairedLock;
     char debug = b->arriveFirstDebug;
+    if (b->activeSize == 0) return 1; // only one thread -- It's first by definition
     assert(b->activeSize > 1);
 
     qthread_debug(ALL_CALLS,
@@ -254,7 +255,7 @@ void qt_global_arrive_first_init(
 	extern int cnbWorkers;
 	extern double cnbTimeMin;
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-	cnbWorkers = qthread_num_shepherds()*qlib->nworkerspershep;
+	cnbWorkers = qthread_num_workers();
 #else
 	cnbWorkers = qthread_num_shepherds();
 #endif
