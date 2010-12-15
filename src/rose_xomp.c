@@ -1173,24 +1173,36 @@ void omp_set_num_threads (
 int omp_get_num_threads (
     void)
 {
-  qthread_shepherd_id_t num_shep = qthread_num_shepherds();
-  return (int) num_shep;
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+  qthread_worker_id_t num = qthread_num_shepherds()*qlib->nworkerspershep;
+#else
+  qthread_shepherd_id_t num = qthread_num_shepherds();
+#endif
+  return (int) num;
 }
 
 // extern int omp_get_max_threads (void);
 int omp_get_max_threads (
     void)
 {
-  qthread_shepherd_id_t num_shep = qthread_num_shepherds();
-  return (int) num_shep;
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+  qthread_worker_id_t num = qthread_num_shepherds()*qlib->nworkerspershep;
+#else
+  qthread_shepherd_id_t num = qthread_num_shepherds();
+#endif
+  return (int) num;
 }
 
 // extern int omp_get_thread_num (void);
 int omp_get_thread_num (
     void)
 {
-  qthread_shepherd_id_t shep_id = qthread_shep (NULL);
-  return (int) shep_id;
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+  qthread_worker_id_t id = qthread_worker (NULL, NULL);
+#else
+  qthread_shepherd_id_t id = qthread_shep (NULL);
+#endif
+  return (int) id;
 }
 
 // extern int omp_get_num_procs (void);
