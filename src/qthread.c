@@ -1418,7 +1418,7 @@ static void *qthread_shepherd(void *arg)
 	    done = 1;
 	    qthread_thread_free(t);
 	} else {
-
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 	  if(!*(volatile size_t*)&me_worker->active){
 	    qt_threadqueue_enqueue(me->ready,t,me);
 	    // short stall to prevent worker from monoplizing queue
@@ -1428,6 +1428,7 @@ static void *qthread_shepherd(void *arg)
 	    nanosleep(&req,&req);
 	  }
 	  else {
+#endif
 	    /* yielded only happens for the first thread */
 	    assert((t->thread_state == QTHREAD_STATE_NEW) ||
 		   (t->thread_state == QTHREAD_STATE_RUNNING) ||
@@ -1583,7 +1584,9 @@ static void *qthread_shepherd(void *arg)
 			break;
 		}
 	    }
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 	  }
+#endif
 	}
     }
 
@@ -2947,6 +2950,7 @@ void qthread_finalize(void)
 }				       /*}}} */
 
     
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 void qthread_pack_workerid(const qthread_worker_id_t w, const qthread_worker_id_t newId)
 {
 
@@ -2999,6 +3003,7 @@ int qthread_enable_worker(const qthread_worker_id_t w)
   (void)QT_CAS(qlib->shepherds[shep].workers[worker].active, 0,1);
   return QTHREAD_SUCCESS;
 }				       /*}}} */
+#endif
 
 
 int qthread_disable_shepherd(const qthread_shepherd_id_t shep)
