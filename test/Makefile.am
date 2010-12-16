@@ -17,6 +17,7 @@ TESTS = test_basic \
 		test_migrate \
 		test_disabled \
 		test_qtimer \
+		test_syncvar \
 		test_qutil \
 		test_qutil_qsort \
 		test_feb_barrier \
