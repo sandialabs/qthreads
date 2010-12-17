@@ -1340,7 +1340,7 @@ static void *qthread_shepherd(void *arg)
 	    fprintf(stderr, "ERROR! Cannot SET affinity for some reason\n");
 	}
 #elif defined(QTHREAD_HAVE_HWLOC)
-# if HWLOCK_API_VERSION == 0x00010000
+# if HWLOC_API_VERSION == 0x00010000
 	hwloc_cpuset_t cpuset = hwloc_cpuset_alloc();
 	hwloc_cpuset_cpu(cpuset, me->node);
 # else
@@ -1350,7 +1350,7 @@ static void *qthread_shepherd(void *arg)
 	if (hwloc_set_cpubind(qlib->topology, cpuset, HWLOC_CPUBIND_THREAD)) {
 	    char *str;
 	    int i = errno;
-# if HWLOCK_API_VERSION == 0x00010000
+# if HWLOC_API_VERSION == 0x00010000
 	    hwloc_cpuset_asprintf(&str, cpuset);
 # else
 	    hwloc_bitmap_asprintf(&str, cpuset);
@@ -1864,7 +1864,7 @@ int qthread_initialize(void)
 	    if (getenv("QTHREAD_NUM_WORKERS_PER_SHEPHERD") == NULL) {
 		for (size_t socket = 0; socket < nshepherds; ++socket) {
 		    hwloc_obj_t obj = hwloc_get_obj_by_depth(qlib->topology, depth, socket);
-#  if HWLOCK_API_VERSION == 0x00010000
+#  if HWLOC_API_VERSION == 0x00010000
 		    hwloc_cpuset_t cpuset = obj->allowed_cpuset;
 		    unsigned int weight = hwloc_cpuset_weight(cpuset);
 #  else
