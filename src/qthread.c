@@ -2549,12 +2549,14 @@ int qthread_initialize(void)
 
     qthread_debug(ALL_DETAILS, "calling component init functions\n");
     qt_feb_barrier_internal_init();
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qt_global_barrier_init(qlib->nshepherds*qlib->nworkerspershep, 0);
     qt_global_arrive_first_init(qthread_num_workers()-1, 0);
-#else
+# else
     qt_global_barrier_init(nshepherds, 0);
     qt_global_arrive_first_init(nshepherds-1, 0);
+# endif
 #endif
 
     qthread_debug(ALL_DETAILS, "finished.\n");
