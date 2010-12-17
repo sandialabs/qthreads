@@ -75,7 +75,9 @@ EXTRA_PROGRAMS += \
 CLEANFILES += $(EXTRA_PROGRAMS)
 
 buildall: $(TESTS) $(EXTRA_PROGRAMS)
-.PHONY: buildall
+buildtests: $(TESTS)
+buildextra: $(EXTRA_PROGRAMS)
+.PHONY: buildall buildtests buildextra
 
 check_PROGRAMS = $(TESTS)
 
