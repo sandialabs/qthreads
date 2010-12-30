@@ -9,7 +9,7 @@
 static syncvar_t x = SYNCVAR_STATIC_INITIALIZER;
 static syncvar_t id = SYNCVAR_STATIC_INITIALIZER;
 static uint64_t readout = 0;
-static uint64_t iterations = 1000000;
+static uint64_t iterations = 10000;
 
 static aligned_t consumer(qthread_t * t, void *arg)
 {
