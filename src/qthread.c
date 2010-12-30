@@ -426,7 +426,6 @@ static QINLINE void qt_threadqueue_free(qt_threadqueue_t * q);
 static QINLINE void qt_threadqueue_enqueue(qt_threadqueue_t * q, qthread_t * t,
                                       qthread_shepherd_t * shep);
 static QINLINE qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t * q);
-static QINLINE qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q);
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 /* Functions for work stealing functionality */
@@ -437,6 +436,9 @@ static QINLINE void qt_threadqueue_enqueue_multiple(qt_threadqueue_t * q,
 static QINLINE qt_threadqueue_node_t *qt_threadqueue_dequeue_steal(qt_threadqueue_t * q);
 static QINLINE long qthread_steal_chunksize(void);
 static QINLINE void qthread_steal(void);                       
+static QINLINE qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q, size_t active);
+#else
+static QINLINE qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q);
 #endif
 
 static QINLINE qthread_queue_t *qthread_queue_new(qthread_shepherd_t *
@@ -1396,7 +1398,11 @@ static void *qthread_shepherd(void *arg)
 	qtimer_start(idle);
 #endif
 	qthread_debug(ALL_DETAILS, "id(%i): fetching a thread from my queue...\n", me->shepherd_id);
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+	t = qt_threadqueue_dequeue_blocking(me->ready,me_worker->active);
+#else
 	t = qt_threadqueue_dequeue_blocking(me->ready);
+#endif
 	assert(t);
 #ifdef QTHREAD_SHEPHERD_PROFILING
 	qtimer_stop(idle);
@@ -2963,12 +2969,12 @@ void qthread_pack_workerid(const qthread_worker_id_t w, const qthread_worker_id_
 int qthread_disable_worker(const qthread_worker_id_t w)
 {
 
-  int shep = w%qlib->nworkerspershep;
-  int worker = w/qlib->nworkerspershep;
+  int shep = w/qlib->nworkerspershep;
+  int worker = w%qlib->nworkerspershep;
    
   qassert_ret((shep < qlib->nshepherds), QTHREAD_BADARGS);
   qassert_ret((worker < qlib->nworkerspershep), QTHREAD_BADARGS);
-  if ((worker == 0) && (shep == 0)) {
+  if ((worker == 0) & (shep == 0)) {
     /* currently, the "real mccoy" original thread cannot be migrated
      * (because I don't know what issues that could cause on all
      * architectures). For similar reasons, therefore, the original
@@ -3942,11 +3948,11 @@ int qthread_fork_syncvar_to(
     qthread_t *t;
     qthread_shepherd_t *shep;
 
-    assert(shepherd < qlib->nshepherds);
-    assert(f != NULL);
     if (shepherd >= qlib->nshepherds || f == NULL) {
-	return QTHREAD_BADARGS;
+      return QTHREAD_BADARGS;
     }
+    assert(f != NULL);
+    assert(shepherd < qlib->nshepherds);
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     t = qthread_thread_new(f, arg, arg_copy, free_arg, ret, shepherd);
 #else
@@ -5740,6 +5746,7 @@ static QINLINE void qthread_syncvar_gotlock_empty(qthread_shepherd_t * shep,
     }
 }				       /*}}} */
 
+
 static QINLINE void qthread_syncvar_gotlock_fill(qthread_shepherd_t * shep,
 						 qthread_addrstat_t * m,
 						 syncvar_t * maddr,
@@ -6175,7 +6182,7 @@ static QINLINE void qt_threadqueue_enqueue_yielded(qt_threadqueue_t * q, qthread
 }
 
 /* dequeue at tail, unlike original qthreads implementation */
-static QINLINE qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q)
+ static QINLINE qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q, size_t active)
 {
     volatile qt_threadqueue_node_t *node;
     qthread_t *t;
@@ -6195,7 +6202,7 @@ static QINLINE qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q)
         }
         QTHREAD_UNLOCK(&q->qlock);
 
-        if (node == NULL) {
+        if ((node == NULL) &(active)) {
             qthread_steal();
         }
         else {

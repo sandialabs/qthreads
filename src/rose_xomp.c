@@ -336,7 +336,7 @@ void qqloop_set_value(qqloop_step_handle_t * qqhandle)
   int lim;
   //   qthread_t *const me = qthread_self();
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  lim = qthread_num_shepherds()*qlib->nworkerspershep;
+  lim = qthread_num_workers();
 #else
   lim = qthread_num_shepherds();
 #endif
@@ -442,7 +442,7 @@ void XOMP_loop_guided_init(
   }
   
   aligned_t barrierSize = qtar_size() + 1; // returns index value -- need count of waiters
-  aligned_t bCnt = qthread_incr(&gate_cnt, 1);
+  aligned_t bCnt = qthread_incr(&gate_cnt, 1) + 1; // number waiting + myself
   if(bCnt == barrierSize) {
     qthread_syncvar_empty(me,&outGate);
     qthread_incr(&gate_cnt, -barrierSize);
@@ -518,7 +518,11 @@ bool XOMP_loop_guided_start(
 #endif
 
     qqloop_step_handle_t *loop = qqloop_get_value(workerid);	// from init;
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     if (!firstTime[workerid] && (loop->type == GUIDED_SCHED)) {
+#else
+    if (!firstTime[myid] && (loop->type == GUIDED_SCHED)) {
+#endif
 #ifdef USE_RDTSC
         s = rdtsc();
 	time = s - loopTimer[workerid];
@@ -607,13 +611,12 @@ void XOMP_loop_end(
   qtimer_stop(loopTimer);
 #endif
   qthread_t *const me = qthread_self();
+  XOMP_barrier();            // need barrier or timeout in qt_loop_inner kills performance
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   qqloop_clear_value(qthread_worker(NULL,me));
 #else
   qqloop_clear_value(qthread_shep(me));
 #endif
-  XOMP_barrier();
-  //  qt_global_barrier(me);	       // need barrier or timeout in qt_loop_inner kills performance
 }
 
 // Openmp parallel for loop is completed --NOTE-- barrier not required by OpenMP
@@ -632,8 +635,8 @@ void XOMP_barrier(void)
 {
     qthread_t *const me = qthread_self();
     if ( 
-	 (activeParallelLoop || get_inside_xomp_nested_parallel(&xomp_status))
-	 ) {
+      	 (activeParallelLoop || get_inside_xomp_nested_parallel(&xomp_status))
+       ) {
       // everybody should be co-scheduled -- no need to allow blocking
       qt_global_barrier(me);
     }
@@ -1188,7 +1191,6 @@ void omp_set_num_threads (
   else if (qt_num_threads_requested < num_active)
     {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-      qlib->nworkers_active = qt_num_threads_requested; // before possible decrement
       if ((workerid <= num_active) && (workerid>=qt_num_threads_requested))
       	{
 	  qt_num_threads_requested--;
@@ -1274,6 +1276,12 @@ int omp_in_parallel (
   return (int) get_inside_xomp_parallel(&xomp_status);
 }
 
+// extern int omp_in_final (void);
+char omp_in_final(void)
+{
+  return 0; // needs to be fixed when omp final clause is supported (coming 3.1)
+}
+
 // extern void omp_set_dynamic (int);
 void omp_set_dynamic (
     int val)
@@ -1292,32 +1300,30 @@ int omp_get_dynamic (
 void omp_init_lock (
     void *pval)
 {
-  perror("qthread wrapper for omp_init_lock not yet implmented");
-  exit(1);
+  qthread_t *const me = qthread_self();
+  qthread_syncvar_empty(me, pval);
 }
 
 // extern void omp_destroy_lock (omp_lock_t *);
 void omp_destroy_lock (
     void *pval)
 {
-  perror("qthread wrapper for omp_destroy_lock not yet implmented");
-  exit(1);
 }
 
 // extern void omp_set_lock (omp_lock_t *);
 void omp_set_lock (
     void *pval)
 {
-  perror("qthread wrapper for omp_set_lock not yet implmented");
-  exit(1);
+  qthread_t *const me = qthread_self();
+  qthread_syncvar_writeEF_const(me, pval, 1);
 }
 
 // extern void omp_unset_lock (omp_lock_t *);
 void omp_unset_lock (
     void *pval)
 {
-  perror("qthread wrapper for omp_unset_lock not yet implmented");
-  exit(1);
+  qthread_t *const me = qthread_self();
+  qthread_syncvar_readFE(me, NULL, pval);
 }
 
 // extern int omp_test_lock (omp_lock_t *);
