@@ -1284,7 +1284,7 @@ static void *qthread_shepherd(void *arg)
     /* Bind threads to physical cores such that workers of a shpeherd are on the same socket.
        Assumes round robin thread numbering. (Not very portable and should be replaced) */
     unsigned long phys_thread_num = (me_worker->worker_id * qlib->nshepherds) + me->shepherd_id;
-    unsigned long mask = 1 << phys_thread_num;
+    unsigned long mask = ((unsigned long)1) << phys_thread_num;
 
     sched_setaffinity(0, sizeof(mask), &mask);
 
