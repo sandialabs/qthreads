@@ -99,9 +99,9 @@ typedef struct qlib_s
     QTHREAD_FASTLOCK_TYPE *febs_stripes_locks;
 # endif
 #endif
-    /* this is for holding syncvar waiters... it's not striped because there
-     * isn't supposed to be much contention for this hash table */
-    qt_hash syncvars;
+    /* this is for holding syncvar waiters... similar to the FEBs (perhaps
+     * should have the _stripes business as well... maybe later) */
+    qt_hash *syncvars;
 }     *qlib_t;
 
 #ifndef QTHREAD_SST_PRIMITIVES
