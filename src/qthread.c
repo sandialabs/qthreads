@@ -580,7 +580,7 @@ static QINLINE void FREE_STACK(qthread_shepherd_t * shep, void *t)
     free(tmp);
 }				       /*}}} */
 # else
-#  define ALLOC_STACK(shep) malloc(qlib->qthread_stack_size)
+#  define ALLOC_STACK(shep) malloc(qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s))
 #  define FREE_STACK(shep, t) free(t)
 # endif
 #else
@@ -3159,8 +3159,6 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
 
 #ifndef UNPOOLED
     qthread_shepherd_t *myshep = &(qlib->shepherds[shepherd]);
-#else
-    qthread_shepherd_t *myshep = NULL;
 #endif
 
     t = ALLOC_QTHREAD(myshep);
