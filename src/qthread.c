@@ -1704,15 +1704,15 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 }				       /*}}} */
 
 #ifdef QTHREAD_HAVE_LIBNUMA
-static void assign_nodes(qthread_shepherd_t *sheps, size_t nsheps)
-{
+static void assign_nodes(qthread_shepherd_t * sheps, size_t nsheps)
+{				       /*{{{ */
     const size_t num_extant_nodes = numa_max_node() + 1;
 
     {
 # ifdef QTHREAD_LIBNUMA_V2
 	struct bitmask *nmask = numa_get_run_node_mask();
 	struct bitmask *cmask = numa_allocate_cpumask();
-	size_t *cpus_left_per_node = calloc(num_extant_nodes, sizeof(size_t)); // handle heterogeneous core counts
+	size_t *cpus_left_per_node = calloc(num_extant_nodes, sizeof(size_t));	// handle heterogeneous core counts
 	int over_subscribing = 0;
 
 	assert(cmask);
@@ -1720,13 +1720,15 @@ static void assign_nodes(qthread_shepherd_t *sheps, size_t nsheps)
 	assert(cpus_left_per_node);
 	numa_bitmask_clearall(cmask);
 	/* get the # cpus for each node */
-	for (size_t i = 0; i < numa_bitmask_nbytes(nmask)*8; ++i) {
+	for (size_t i = 0; i < numa_bitmask_nbytes(nmask) * 8; ++i) {
 	    if (numa_bitmask_isbitset(nmask, i)) {
 		numa_node_to_cpus(i, cmask);
-		for (size_t j = 0; j < numa_bitmask_nbytes(cmask)*8; j++) {
-		    cpus_left_per_node[i] += numa_bitmask_isbitset(cmask, j)?1:0;
+		for (size_t j = 0; j < numa_bitmask_nbytes(cmask) * 8; j++) {
+		    cpus_left_per_node[i] +=
+			numa_bitmask_isbitset(cmask, j) ? 1 : 0;
 		}
-		qthread_debug(ALL_DETAILS, "there are %i CPUs on node %i\n", (int)cpus_left_per_node[i], (int)i);
+		qthread_debug(ALL_DETAILS, "there are %i CPUs on node %i\n",
+			      (int)cpus_left_per_node[i], (int)i);
 	    }
 	}
 	/* assign nodes by iterating over cpus_left_per_node array (which is of
@@ -1735,21 +1737,23 @@ static void assign_nodes(qthread_shepherd_t *sheps, size_t nsheps)
 	for (size_t i = 0; i < nsheps; ++i) {
 	    switch (over_subscribing) {
 		case 0:
-		    {
-			int count = 0;
-			while (count < num_extant_nodes && cpus_left_per_node[node] == 0) {
-			    node ++;
-			    node *= (node < num_extant_nodes);
-			    count ++;
-			}
-			if (count < num_extant_nodes) {
-			    cpus_left_per_node[node] --;
-			    break;
-			}
+		{
+		    int count = 0;
+		    while (count < num_extant_nodes &&
+			   cpus_left_per_node[node] == 0) {
+			node++;
+			node *= (node < num_extant_nodes);
+			count++;
 		    }
+		    if (count < num_extant_nodes) {
+			cpus_left_per_node[node]--;
+			break;
+		    }
+		}
 		    over_subscribing = 1;
 	    }
-	    qthread_debug(ALL_DETAILS, "setting shep %i to numa node %i\n", (int)i, (int)node);
+	    qthread_debug(ALL_DETAILS, "setting shep %i to numa node %i\n",
+			  (int)i, (int)node);
 	    sheps[i].node = node;
 	    node++;
 	    node *= (node < num_extant_nodes);
@@ -1769,7 +1773,7 @@ static void assign_nodes(qthread_shepherd_t *sheps, size_t nsheps)
 	numa_set_interleave_mask(&bmask);
 # endif
     }
-}
+}				       /*}}} */
 #endif
 
 int qthread_initialize(void)
@@ -5315,6 +5319,9 @@ static uint64_t qthread_mwaitc(volatile syncvar_t * const restrict addr,
     *err = e;
     return 0;
 }				       /*}}} */
+
+const syncvar_t SYNCVAR_INITIALIZER = SYNCVAR_STATIC_INITIALIZER;
+const syncvar_t SYNCVAR_EMPTY_INITIALIZER = SYNCVAR_STATIC_EMPTY_INITIALIZER;
 
 int qthread_syncvar_status(syncvar_t * const v)
 {				       /*{{{ */

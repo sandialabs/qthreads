@@ -93,6 +93,8 @@ typedef struct _syncvar_s {
 
 #define SYNCVAR_STATIC_INITIALIZER { { 0 } }
 #define SYNCVAR_STATIC_EMPTY_INITIALIZER { .u.s={.data=0,.state=2,.lock=0} }
+extern const syncvar_t SYNCVAR_INITIALIZER;
+extern const syncvar_t SYNCVAR_EMPTY_INITIALIZER;
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 typedef struct taskSyncvar_s{ /* added akp for openmp taskwait */
