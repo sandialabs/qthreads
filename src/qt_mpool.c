@@ -188,6 +188,7 @@ qt_mpool qt_mpool_create_aligned(const int sync, size_t item_size,
 								alignment);
     assert(((unsigned long)(pool->alloc_block) & (alignment - 1)) == 0);
     qassert_goto((pool->alloc_block != NULL), errexit);
+    *(void**)(pool->alloc_block) = NULL; // just in case aligned_alloc doesn't memset
     pool->alloc_block_ptr = pool->alloc_block;
     /* this assumes that pagesize is a multiple of sizeof(void*) */
     pool->alloc_list = calloc(1, pagesize);
