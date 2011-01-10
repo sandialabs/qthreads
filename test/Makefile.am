@@ -18,6 +18,7 @@ TESTS = test_basic \
 		test_disabled \
 		test_qtimer \
 		test_syncvar \
+		test_syncvar2 \
 		test_qutil \
 		test_qutil_qsort \
 		test_feb_barrier \
