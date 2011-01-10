@@ -6,12 +6,6 @@
 #include <qthread/qthread.h>
 #include "argparsing.h"
 
-typedef struct {
-    int64_t u:60;
-} int60_t;
-#define INT64TOINT60(x) ((uint64_t)((x)&0xfffffffffffffffUL))
-#define INT60TOINT64(x) ((int64_t)(((x)&0x800000000000000UL)?((x)|0xf800000000000000UL):(x)))
-
 /* More or less, this code matches the prodCons.chpl code from the open-source
  * Chapel compiler. This is a demonstration generated in an attempt to figure
  * out whether a given race condition is in qthreads on in Chapel */
@@ -41,12 +35,19 @@ static aligned_t producer(
 	qthread_syncvar_writeEF_const(t, &buff[buffInd], i);
 	iprintf("producer wrote value #%u\n", i);
     }
-    qthread_syncvar_writeEF_const(t, &buff[numItems % bufferSize], INT64TOINT60(-1));
+    qthread_syncvar_writeEF_const(t, &buff[numItems % bufferSize],
+				  INT64TOINT60(-1));
 
     return 0;
 }
 
-static int64_t readFromBuff(qthread_t *t) {
+/*
+ * The readFromBuff() iterator simply reads values from the shared buffer
+ * starting at the 0th position and yields them.
+ */
+static int64_t readFromBuff(
+    qthread_t * t)
+{
     static unsigned int ind = 0;
     uint64_t readVal;
     int64_t nextVal;
@@ -59,6 +60,10 @@ static int64_t readFromBuff(qthread_t *t) {
     return nextVal;
 }
 
+/*
+ * the consumer invokes an iterator to control its loop and yield values from
+ * the shared buffer. It writes them out to the console.
+ */
 static aligned_t consumer(
     qthread_t * t,
     void *arg)
@@ -71,6 +76,10 @@ static aligned_t consumer(
     return 0;
 }
 
+/*
+ * The main procedure simply creates a producer and a consumer task to run in
+ * parallel
+ */
 int main(
     int argc,
     char *argv[])
@@ -96,9 +105,9 @@ int main(
     qthread_readFF(qthread_self(), NULL, &t[0]);
     qthread_readFF(qthread_self(), NULL, &t[1]);
 
-    iprintf("Success!\n");
-
     free(buff);
+
+    iprintf("Success!\n");
 
     return 0;
 }
