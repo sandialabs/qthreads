@@ -8,7 +8,6 @@
 
 static syncvar_t x = SYNCVAR_STATIC_INITIALIZER;
 static syncvar_t id = SYNCVAR_STATIC_INITIALIZER;
-static uint64_t readout = 0;
 static uint64_t iterations = 10000;
 
 static aligned_t consumer(qthread_t * t, void *arg)
@@ -26,7 +25,7 @@ static aligned_t consumer(qthread_t * t, void *arg)
 
     for (uint64_t i = 0; i < iterations; ++i) {
 	iprintf("consumer(%p) readFE on x\n", t);
-	qthread_syncvar_readFE(t, &readout, &x);
+	qthread_syncvar_readFE(t, NULL, &x);
     }
 
     iprintf("thread %i (%p) exiting\n", (int)(uintptr_t)arg, t);
