@@ -88,7 +88,7 @@ int main(
 
     buff = malloc(sizeof(syncvar_t) * bufferSize);
     for (unsigned int i = 0; i < bufferSize; ++i) {
-	buff[i] = SYNCVAR_INITIALIZER;
+	buff[i] = SYNCVAR_EMPTY_INITIALIZER;
     }
 
     qthread_fork(consumer, NULL, &t[0]);
