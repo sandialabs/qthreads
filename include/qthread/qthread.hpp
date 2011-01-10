@@ -223,14 +223,14 @@ template <typename T>
 inline int qthread_readFF(T * const dest, syncvar * const src)
 {
     QTHREAD_CHECKSIZE(T);
-    return src->readFF((uint64_t *)dest);
+    return src->readFF(dest);
 }
 template <typename T>
 inline int qthread_readFF(qthread_t * const me, T * const dest,
 			  syncvar * const src)
 {
     QTHREAD_CHECKSIZE(T);
-    return src->readFF(me, (uint64_t *)dest);
+    return src->readFF(dest);
 }
 
 /**************************************************************************
@@ -253,13 +253,13 @@ template <typename T>
 inline int qthread_readFE(T * const dest, syncvar * const src)
 {
     QTHREAD_CHECKSIZE(T);
-    return src->readFE((uint64_t *)dest);
+    return src->readFE(dest);
 }
 template <typename T>
 inline int qthread_readFE(qthread_t * const me, T * const dest, syncvar * const src)
 {
     QTHREAD_CHECKSIZE(T);
-    return src->readFE(me, (uint64_t*)dest);
+    return src->readFE(dest);
 }
 
 /**************************************************************************
