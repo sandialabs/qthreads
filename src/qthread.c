@@ -155,8 +155,8 @@ typedef struct qthread_worker_s qthread_worker_t;
 typedef struct qthread_shepherd_s qthread_shepherd_t;
 typedef struct qthread_queue_s qthread_queue_t;
 typedef struct {
-    unsigned char cf : 1;
-    unsigned char zf : 1;
+    unsigned char cf : 1; // there was a timeout
+    unsigned char zf : 1; // unused
     unsigned char of : 1;
     unsigned char pf : 1;
     unsigned char sf : 1;
@@ -5278,7 +5278,8 @@ static uint64_t qthread_mwaitc(volatile syncvar_t * const restrict addr,
 	    if (timeout-- <= 0) {
 		goto errexit;
 	    }
-	    locked = unlocked = *addr; // may be locked or unlocked, we don't know
+	    unlocked = *addr; // may be locked or unlocked, we don't know
+	    locked = unlocked;
 	    unlocked.u.s.lock = 0;     // create the unlocked version
 	    locked.u.s.lock = 1;       // create the locked version
 	} while (qthread_cas((uint64_t *) addr, unlocked.u.w, locked.u.w) !=
@@ -5306,7 +5307,9 @@ static uint64_t qthread_mwaitc(volatile syncvar_t * const restrict addr,
        (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
        (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) || \
        (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64))
-	    addr->u.s.lock = 0;
+	    //addr->u.s.lock = 0;
+	    //The above line is unsafe; must write the whole word for atomicity relative to CAS
+	    addr->u.w = unlocked.u.w;
 #else
 	    unlocked.u.s.lock = 0;
 	    qthread_cas64((uint64_t *) addr, locked.u.w, unlocked.u.w);
@@ -5352,7 +5355,9 @@ int qthread_syncvar_status(syncvar_t * const v)
     (void)qthread_mwaitc(v, 0xff, INT_MAX, &e);
     qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
     realret = v->u.s.state;
-    v->u.s.lock = 0;		       // unlock it
+    //v->u.s.lock = 0;		       // unlock it
+    //The above line is unsafe; must write the whole word for atomicity relative to CAS
+    v->u.w = BUILD_UNLOCKED_SYNCVAR(v->u.s.data, v->u.s.state);
     return (realret & 0x2) ? 0 : 1;
 #endif /* __tile__ */
 }				       /*}}} */
@@ -6146,7 +6151,7 @@ static QINLINE void qt_threadqueue_enqueue(qt_threadqueue_t * q, qthread_t * t, 
 /* enqueue multiple (from steal) */
 static QINLINE void qt_threadqueue_enqueue_multiple(qt_threadqueue_t * q, qt_threadqueue_node_t * first, qthread_shepherd_t *shep)
 {
-    qt_threadqueue_node_t *last;
+    volatile qt_threadqueue_node_t *last;
     size_t addCnt = 1;
 
     assert(first != NULL);
@@ -6277,6 +6282,6 @@ static QINLINE qt_threadqueue_node_t *qt_threadqueue_dequeue_steal(qt_threadqueu
     }
     QTHREAD_UNLOCK(&q->qlock);
 
-    return (first);
+    return (qt_threadqueue_node_t *)(first);
 }
 #endif
