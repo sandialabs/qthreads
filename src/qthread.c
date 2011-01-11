@@ -1398,6 +1398,7 @@ static void *qthread_shepherd(void *arg)
 	qtimer_start(idle);
 #endif
 	qthread_debug(ALL_DETAILS, "id(%i): fetching a thread from my queue...\n", me->shepherd_id);
+	assert(me->ready);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 	t = qt_threadqueue_dequeue_blocking(me->ready,me_worker->active);
 #else
@@ -1473,6 +1474,7 @@ static void *qthread_shepherd(void *arg)
 			      me->shepherd_id, t->thread_id,
 			      t->target_shepherd->shepherd_id);
 		t->rdata->shepherd_ptr = t->target_shepherd;
+		assert(t->rdata->shepherd_ptr->ready != NULL);
 		qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t, me);
 	    } else if (!QTHREAD_CASLOCK_READ_UI(me->active)) {
 		qthread_debug(ALL_DETAILS,
@@ -1505,6 +1507,7 @@ static void *qthread_shepherd(void *arg)
 			      "id(%u): rescheduling thread %i on %i\n",
 			      me->shepherd_id, t->thread_id,
 			      t->rdata->shepherd_ptr->shepherd_id);
+		assert(t->rdata->shepherd_ptr->ready != NULL);
 		qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t, me);
 	    } else {		       /* me->active */
 #ifdef QTHREAD_SHEPHERD_PROFILING
@@ -1541,6 +1544,7 @@ static void *qthread_shepherd(void *arg)
 				      t->target_shepherd->shepherd_id);
 			t->thread_state = QTHREAD_STATE_RUNNING;
 			t->rdata->shepherd_ptr = t->target_shepherd;
+			assert(t->rdata->shepherd_ptr->ready != NULL);
 			qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t, me);
 			break;
 		    default:
@@ -1555,6 +1559,7 @@ static void *qthread_shepherd(void *arg)
             /* separate enqueue function for yielded qthreads on work stealing queue */
 			qt_threadqueue_enqueue_yielded(me->ready, t, me);
 #else
+			assert(me->ready != NULL);
 			qt_threadqueue_enqueue(me->ready, t, me);
 #endif
 			break;
@@ -3675,6 +3680,7 @@ static void qthread_wrapper(void *ptr)
 	    qassert(qthread_writeEF_const(t, (aligned_t*)t->ret, (t->f) (t, t->arg)), QTHREAD_SUCCESS);
 	}
     } else {
+	assert(t->f);
 #ifndef QTHREAD_USE_ROSE_EXTENSIONS
 	(t->f) (t, t->arg);
 #else
@@ -5223,6 +5229,41 @@ uint64_t qthread_cas64_(volatile uint64_t * operand, const uint64_t oldval,
 #endif
 
 #define BUILD_UNLOCKED_SYNCVAR(data,state) (((data)<<4)|((state)<<1))
+
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
+# define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked) do { \
+    __asm__ __volatile__ ("":::"memory"); \
+    (addr)->u.s.lock = 0; \
+} while (0)
+# define UNLOCK_THIS_MODIFIED_SYNCVAR(addr, val, state) do { \
+    __asm__ __volatile__ ("":::"memory"); \
+    (addr)->u.w = BUILD_UNLOCKED_SYNCVAR(val,state); \
+} while (0)
+#elif ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
+       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || \
+       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
+       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) || \
+       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) || \
+	defined(__tile__))
+# define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked) do { \
+    __asm__ __volatile__ ("":::"memory"); \
+    (addr)->u.w = (unlocked); \
+} while (0)
+# define UNLOCK_THIS_MODIFIED_SYNCVAR(addr, val, state) do { \
+    __asm__ __volatile__ ("":::"memory"); \
+    (addr)->u.w = BUILD_UNLOCKED_SYNCVAR(val,state); \
+} while (0)
+#else
+# define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked) do { \
+    /* this has its own pthread mutex, so does not need memory synch */ \
+    qthread_cas64(&((addr)->u.w), (addr)->u.w, (unlocked)); \
+} while (0)
+# define UNLOCK_THIS_MODIFIED_SYNCVAR(addr, val, state) do { \
+    /* this has its own pthread mutex, so does not need memory synch */ \
+    qthread_cas64(&((addr)->u.w), (addr)->u.w, BUILD_UNLOCKED_SYNCVAR(val,state)); \
+} while (0)
+#endif
+
 static uint64_t qthread_mwaitc(volatile syncvar_t * const restrict addr,
 			       unsigned char const statemask,
 			       unsigned int timeout,
@@ -5300,19 +5341,10 @@ static uint64_t qthread_mwaitc(volatile syncvar_t * const restrict addr,
 	} else {
 	    /* this is NOT a state of interest, so unlock the locked bit */
 #ifdef __tile__
+	    __asm__ __volatile__ ("":::"memory");
 	    addrptr[0] = low;
-#elif ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
-       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || \
-       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || \
-       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
-       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) || \
-       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64))
-	    //addr->u.s.lock = 0;
-	    //The above line is unsafe; must write the whole word for atomicity relative to CAS
-	    addr->u.w = unlocked.u.w;
 #else
-	    unlocked.u.s.lock = 0;
-	    qthread_cas64((uint64_t *) addr, locked.u.w, unlocked.u.w);
+	    UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked.u.w);
 #endif
 	}
     } while (timeout-- > 0);
@@ -5332,6 +5364,7 @@ int qthread_syncvar_status(syncvar_t * const v)
     uint64_t ret = qthread_mwaitc(v, 0xff, INT_MAX, &e);
     qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
     realret = (e.of << 2) | (e.pf << 1) | e.sf;
+    __asm__ __volatile__ ("":::"memory");
     v->u.w = BUILD_UNLOCKED_SYNCVAR(ret, realret);
     return (realret & 0x2) ? 0 : 1;
 #else
@@ -5355,9 +5388,7 @@ int qthread_syncvar_status(syncvar_t * const v)
     (void)qthread_mwaitc(v, 0xff, INT_MAX, &e);
     qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
     realret = v->u.s.state;
-    //v->u.s.lock = 0;		       // unlock it
-    //The above line is unsafe; must write the whole word for atomicity relative to CAS
-    v->u.w = BUILD_UNLOCKED_SYNCVAR(v->u.s.data, v->u.s.state);
+    UNLOCK_THIS_UNMODIFIED_SYNCVAR(v, BUILD_UNLOCKED_SYNCVAR(v->u.s.data, v->u.s.state));
     return (realret & 0x2) ? 0 : 1;
 #endif /* __tile__ */
 }				       /*}}} */
@@ -5431,8 +5462,7 @@ int qthread_syncvar_readFF(qthread_t * restrict me,
 	    goto locked_full;
 	}
 	qt_hash_lock(qlib->syncvars[lockbin]);
-	//__sync_synchronize();
-	src->u.w = BUILD_UNLOCKED_SYNCVAR(ret, SYNCFEB_STATE_EMPTY_WITH_WAITERS);
+	UNLOCK_THIS_MODIFIED_SYNCVAR(src, ret, SYNCFEB_STATE_EMPTY_WITH_WAITERS);
 	qthread_debug(LOCK_DETAILS,
 		      "3 src(%p) = %x (queued waiter waiting for full)\n",
 		      src, (uintptr_t)BUILD_UNLOCKED_SYNCVAR(ret, SYNCFEB_STATE_EMPTY_WITH_WAITERS));
@@ -5472,11 +5502,7 @@ int qthread_syncvar_readFF(qthread_t * restrict me,
       locked_full:
 	/* at this point, the syncvar is locked and e.pf should be 0 */
 	assert(e.pf == 0);
-#ifdef __tile__
-	src->u.w = BUILD_UNLOCKED_SYNCVAR(ret, e.sf);
-#else
-	src->u.s.lock = 0;	       // unlock it
-#endif
+	UNLOCK_THIS_MODIFIED_SYNCVAR(src, ret, e.sf);
 	if (dest) {
 	    *dest = ret;
 	}
@@ -5519,21 +5545,17 @@ int qthread_syncvar_fill(qthread_t * restrict const me,
 		    e.sf = 1;	       // only one will be dequeued, so it'll still have waiters
 		}
 	    }
-	    addr->u.w = BUILD_UNLOCKED_SYNCVAR(ret, (e.pf << 1) | e.sf);
+	    UNLOCK_THIS_MODIFIED_SYNCVAR(addr, ret, (e.pf << 1) | e.sf);
 	    assert(m->FFQ || m->FEQ);      // otherwise there weren't really any waiters
 	    assert(m->EFQ == NULL);	       // someone snuck in!
 	    qthread_syncvar_gotlock_fill(me->rdata->shepherd_ptr, m, addr, BUILD_UNLOCKED_SYNCVAR(ret, (e.pf << 1) | e.sf));
 	} else {
 	    assert(e.sf == 0);	       /* no waiters */
-	    addr->u.w = BUILD_UNLOCKED_SYNCVAR(ret, 0);
+	    UNLOCK_THIS_MODIFIED_SYNCVAR(addr, ret, 0);
 	}
     } else { /* already empty, so just release the lock */
 	assert(e.pf == 0);
-#ifdef __tile__
-	addr->u.w = BUILD_UNLOCKED_SYNCVAR(ret, e.sf);
-#else
-	addr->u.s.lock = 0;
-#endif
+	UNLOCK_THIS_MODIFIED_SYNCVAR(addr, ret, e.sf);
     }
     return QTHREAD_SUCCESS;
 
@@ -5582,15 +5604,11 @@ int qthread_syncvar_empty(qthread_t * restrict const me,
 			e.sf));
 	} else {
 	    assert(e.sf == 0);	       /* no waiters */
-	    addr->u.w = BUILD_UNLOCKED_SYNCVAR(ret, SYNCFEB_STATE_EMPTY_NO_WAITERS);
+	    UNLOCK_THIS_MODIFIED_SYNCVAR(addr, ret, SYNCFEB_STATE_EMPTY_NO_WAITERS);
 	}
     } else { /* already empty, so just release the lock */
 	assert(e.pf == 1);
-#ifdef __tile__
-	addr->u.w = BUILD_UNLOCKED_SYNCVAR(ret, SYNCFEB_STATE_EMPTY_NO_WAITERS | e.sf);
-#else
-	addr->u.s.lock = 0;
-#endif
+	UNLOCK_THIS_MODIFIED_SYNCVAR(addr, ret, SYNCFEB_STATE_EMPTY_NO_WAITERS | e.sf);
     }
     return QTHREAD_SUCCESS;
 }				       /*}}} */
@@ -5607,6 +5625,11 @@ int qthread_syncvar_readFE(qthread_t * restrict me,
     if (me == NULL) {
 	me = qthread_self();
     }
+    assert(me->rdata);
+    assert(me->rdata->shepherd_ptr);
+    assert(me->rdata->shepherd_ptr->ready);
+    assert(me->rdata->shepherd_ptr->shepherd_id >= 0);
+    assert(me->rdata->shepherd_ptr->shepherd_id < qthread_num_shepherds());
 
     qthread_debug(LOCK_BEHAVIOR, "me(%p), dest(%p), src(%p) = %x\n", me, dest,
 		  src, (uintptr_t) src->u.w);
@@ -5628,9 +5651,7 @@ int qthread_syncvar_readFE(qthread_t * restrict me,
 	    }
 	}
 	qt_hash_lock(qlib->syncvars[lockbin]);
-	__sync_synchronize();
-	src->u.w =
-	    BUILD_UNLOCKED_SYNCVAR(ret, SYNCFEB_STATE_EMPTY_WITH_WAITERS);
+	UNLOCK_THIS_MODIFIED_SYNCVAR(src, ret, SYNCFEB_STATE_EMPTY_WITH_WAITERS);
 	qthread_debug(LOCK_DETAILS,
 		      "3 src(%p) = %x (queued waiter waiting for full)\n",
 		      src, (uintptr_t) BUILD_UNLOCKED_SYNCVAR(ret,
@@ -5694,8 +5715,7 @@ int qthread_syncvar_readFE(qthread_t * restrict me,
     } else {
       locked_full:
 	assert(e.pf == 0);	       // otherwise this isn't really full
-	src->u.w =
-	    BUILD_UNLOCKED_SYNCVAR(ret, SYNCFEB_STATE_EMPTY_NO_WAITERS);
+	UNLOCK_THIS_MODIFIED_SYNCVAR(src, ret, SYNCFEB_STATE_EMPTY_NO_WAITERS);
     }
     if (dest) {
 	*dest = ret;
@@ -5722,7 +5742,7 @@ static QINLINE void qthread_syncvar_gotlock_empty(qthread_shepherd_t * shep,
 	m->EFQ = X->next;
 	/* op */
 	if (maddr && maddr != (syncvar_t*)X->addr) {
-	    maddr->u.w = BUILD_UNLOCKED_SYNCVAR(*((uint64_t*)X->addr), sf);
+	    UNLOCK_THIS_MODIFIED_SYNCVAR(maddr, *((uint64_t*)X->addr), sf);
 	}
 	X->waiter->thread_state = QTHREAD_STATE_RUNNING;
 	qt_threadqueue_enqueue(X->waiter->rdata->shepherd_ptr->ready, X->waiter,
@@ -5874,12 +5894,12 @@ int qthread_syncvar_writeF(qthread_t * restrict me,
 		e.sf = 1;	       // only one will be dequeued, so it'll still have waiters
 	    }
 	}
-	dest->u.w = BUILD_UNLOCKED_SYNCVAR(ret, (e.pf << 1) | e.sf);
+	UNLOCK_THIS_MODIFIED_SYNCVAR(dest, ret, (e.pf << 1) | e.sf);
 	assert(m->FFQ || m->FEQ);      // otherwise there weren't really any waiters
 	assert(m->EFQ == NULL);	       // someone snuck in!
 	qthread_syncvar_gotlock_fill(me->rdata->shepherd_ptr, m, dest, ret);
     } else {
-	dest->u.w = BUILD_UNLOCKED_SYNCVAR(ret, 0);
+	UNLOCK_THIS_MODIFIED_SYNCVAR(dest, ret, 0);
     }
 
     return QTHREAD_SUCCESS;
@@ -5924,9 +5944,7 @@ int qthread_syncvar_writeEF(qthread_t * restrict me,
 	}
 	/* lock the hash, then mark the syncvar as "consult-hash" and release it */
 	qt_hash_lock(qlib->syncvars[lockbin]);
-	//__sync_synchronize();
-	dest->u.w =
-	    BUILD_UNLOCKED_SYNCVAR(ret, SYNCFEB_STATE_FULL_WITH_WAITERS);
+	UNLOCK_THIS_MODIFIED_SYNCVAR(dest, ret, SYNCFEB_STATE_FULL_WITH_WAITERS);
 	qthread_debug(LOCK_DETAILS,
 		      "writeEF(c) dest(%p) = %x (queued waiter waiting for empty)\n",
 		      dest, (uintptr_t) BUILD_UNLOCKED_SYNCVAR(ret,
@@ -5985,7 +6003,7 @@ int qthread_syncvar_writeEF(qthread_t * restrict me,
 		      m->FEQ, m->FFQ, m->EFQ);
 	{
 	    uint64_t val = *src;
-	    dest->u.w = BUILD_UNLOCKED_SYNCVAR(val, (e.pf << 1) | e.sf);
+	    UNLOCK_THIS_MODIFIED_SYNCVAR(dest, val, (e.pf << 1) | e.sf);
 	    qthread_syncvar_gotlock_fill(me->rdata->shepherd_ptr, m, dest,
 					 val);
 	    qthread_debug(LOCK_DETAILS, "writeEF(%p) => %x ...1\n", dest,
@@ -6000,8 +6018,7 @@ int qthread_syncvar_writeEF(qthread_t * restrict me,
 	assert(e.sf == 0);
 	val = *src;
 	//e.pf = 0;                    // now mark it full
-	dest->u.w =
-	    BUILD_UNLOCKED_SYNCVAR(val, SYNCFEB_STATE_FULL_NO_WAITERS);
+	UNLOCK_THIS_MODIFIED_SYNCVAR(dest, val, SYNCFEB_STATE_FULL_NO_WAITERS);
 	qthread_debug(LOCK_DETAILS, "writeEF(%p) => %x ...2\n", dest,
 		      (uintptr_t) BUILD_UNLOCKED_SYNCVAR(val,
 							 SYNCFEB_STATE_FULL_NO_WAITERS));
@@ -6049,13 +6066,13 @@ uint64_t qthread_syncvar_incrF(qthread_t * restrict me, syncvar_t * restrict con
 	    }
 	}
 	newv = operand->u.s.data + inc;
-	operand->u.w = BUILD_UNLOCKED_SYNCVAR(newv, (e.pf << 1) | e.sf);
+	UNLOCK_THIS_MODIFIED_SYNCVAR(operand, newv, (e.pf << 1) | e.sf);
 	assert(m->FFQ || m->EFQ);      // otherwise there weren't really any waiters
 	assert(m->FEQ == NULL);	       // someone snuck in!
 	qthread_syncvar_gotlock_fill(me->rdata->shepherd_ptr, m, operand, newv);
     } else {
 	newv = operand->u.s.data + inc;
-	operand->u.w = BUILD_UNLOCKED_SYNCVAR(newv, (e.pf << 1) | e.sf);
+	UNLOCK_THIS_MODIFIED_SYNCVAR(operand, newv, (e.pf << 1) | e.sf);
     }
 
     return newv;
