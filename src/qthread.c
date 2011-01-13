@@ -3823,15 +3823,22 @@ int qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
 
     qthread_debug(THREAD_BEHAVIOR, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
     assert(qlib);
-    assert(myshep);
-    do {
-	shep = (qthread_shepherd_id_t) (myshep->sched_shepherd++);
-	if (myshep->sched_shepherd == qlib->nshepherds) {
-	    myshep->sched_shepherd = 0;
-	}
-	loopctr++;
-    } while (QTHREAD_CASLOCK_READ_UI(qlib->shepherds[shep].active) != 1 &&
-	    loopctr <= qlib->nshepherds);
+    if (myshep) {
+	do {
+	    shep = (qthread_shepherd_id_t) (myshep->sched_shepherd++);
+	    if (myshep->sched_shepherd == qlib->nshepherds) {
+		myshep->sched_shepherd = 0;
+	    }
+	    loopctr++;
+	} while (QTHREAD_CASLOCK_READ_UI(qlib->shepherds[shep].active) != 1 &&
+		loopctr <= qlib->nshepherds);
+    } else {
+	do {
+	    shep = (qthread_shepherd_id_t) qthread_internal_incr_mod(&qlib->sched_shepherd, qlib->nshepherds, &qlib->sched_shepherd_lock);
+	    loopctr++;
+	} while (QTHREAD_CASLOCK_READ_UI(qlib->shepherds[shep].active) != 1 &&
+		loopctr <= qlib->nshepherds);
+    }
     if (loopctr > qlib->nshepherds) {
 	qthread_debug(THREAD_BEHAVIOR, "could not find an active shepherd\n");
 	return QTHREAD_NOT_ALLOWED;
@@ -3861,13 +3868,12 @@ int qthread_fork_syncvar(const qthread_f f, const void *arg, syncvar_t * ret)
     qthread_t *t;
     qthread_shepherd_id_t shep;
     qthread_shepherd_t *myshep = qthread_internal_getshep();
+    int loopctr = 0;
 
     qthread_debug(THREAD_BEHAVIOR, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
     assert(qlib);
     assert(myshep);
     if (myshep) {		       /* note: for forking from a qthread, NO LOCKS! */
-	int loopctr = 0;
-
 	do {
 	    shep = (qthread_shepherd_id_t) (myshep->sched_shepherd++);
 	    if (myshep->sched_shepherd == qlib->nshepherds) {
@@ -3876,20 +3882,24 @@ int qthread_fork_syncvar(const qthread_f f, const void *arg, syncvar_t * ret)
 	    loopctr++;
 	} while (QTHREAD_CASLOCK_READ_UI(qlib->shepherds[shep].active) != 1 &&
 		 loopctr <= qlib->nshepherds);
-	if (loopctr > qlib->nshepherds) {
-	    qthread_debug(THREAD_BEHAVIOR, "could not find an active shepherd\n");
-	    return QTHREAD_NOT_ALLOWED;
-	}
     } else {
-	shep = (qthread_shepherd_id_t)
-	    qthread_internal_incr_mod(&qlib->sched_shepherd, qlib->nshepherds,
-				      &qlib->sched_shepherd_lock);
-	assert(shep < qlib->nshepherds);
+	do {
+	    shep = (qthread_shepherd_id_t)
+		qthread_internal_incr_mod(&qlib->sched_shepherd,
+					  qlib->nshepherds,
+					  &qlib->sched_shepherd_lock);
+	    loopctr++;
+	} while (QTHREAD_CASLOCK_READ_UI(qlib->shepherds[shep].active) != 1 &&
+		 loopctr <= qlib->nshepherds);
     }
-    t = qthread_thread_new(f, arg, NULL, 0, (aligned_t*)ret, shep);
+    if (loopctr > qlib->nshepherds) {
+	qthread_debug(THREAD_BEHAVIOR, "could not find an active shepherd\n");
+	return QTHREAD_NOT_ALLOWED;
+    }
+    t = qthread_thread_new(f, arg, NULL, 0, (aligned_t *) ret, shep);
     if (t) {
-	qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n",
-		      t->thread_id, shep);
+	qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id,
+		      shep);
 	t->flags |= QTHREAD_RET_IS_SYNCVAR;
 
 	if (ret) {
@@ -4111,11 +4121,10 @@ qthread_t *qthread_prepare(const qthread_f f, const void *arg,
     qthread_t *t;
     qthread_shepherd_id_t shep;
     qthread_shepherd_t *myshep = qthread_internal_getshep();
+    int loopctr = 0;
 
     assert(myshep);
     if (myshep) {
-	int loopctr = 0;
-
 	do {
 	    shep = (qthread_shepherd_id_t) (myshep->sched_shepherd++);
 	    if (myshep->sched_shepherd == qlib->nshepherds) {
@@ -4124,19 +4133,23 @@ qthread_t *qthread_prepare(const qthread_f f, const void *arg,
 	    loopctr++;
 	} while (QTHREAD_CASLOCK_READ_UI(qlib->shepherds[shep].active) != 1 &&
 		 loopctr <= qlib->nshepherds);
-	if (loopctr > qlib->nshepherds) {
-	    return NULL;
-	}
     } else {
-	shep = (qthread_shepherd_id_t)
-	    qthread_internal_incr_mod(&qlib->sched_shepherd, qlib->nshepherds,
-				      &qlib->sched_shepherd_lock);
-	assert(shep < qlib->nshepherds);
+	do {
+	    shep = (qthread_shepherd_id_t)
+		qthread_internal_incr_mod(&qlib->sched_shepherd,
+					  qlib->nshepherds,
+					  &qlib->sched_shepherd_lock);
+	    loopctr++;
+	} while (QTHREAD_CASLOCK_READ_UI(qlib->shepherds[shep].active) != 1 &&
+		 loopctr <= qlib->nshepherds);
+    }
+    if (loopctr > qlib->nshepherds) {
+	return NULL;
     }
 
     t = qthread_thread_new(f, arg, NULL, 0, ret, shep);
-    qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n",
-		  t->thread_id, shep);
+    qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id,
+		  shep);
     if (t && ret) {
 	if (qthread_empty(qthread_self(), ret) != QTHREAD_SUCCESS) {
 	    qthread_thread_free(t);
