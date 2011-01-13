@@ -14,6 +14,7 @@ TESTS = test_basic \
 		test_id \
 		test_incr test_fincr test_dincr \
 		test_stackleft \
+		test_external_fork \
 		test_migrate \
 		test_disabled \
 		test_qtimer \
@@ -262,3 +263,6 @@ test_feb_barrier_DEPENDENCIES = $(QTHREADLIB)
 
 test_log_barrier_SOURCES = test_log_barrier.c
 test_log_barrier_DEPENDENCIES = $(QTHREADLIB)
+
+test_external_fork_SOURCES = test_external_fork.c
+test_external_fork_DEPENDENCIES = $(QTHREADLIB)
