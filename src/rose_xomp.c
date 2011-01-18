@@ -389,6 +389,7 @@ uint64_t loopTimer[64*16];
 #else
 qtimer_t loopTimer;
 #endif
+
 int firstTime[64];
 int currentIteration[64];
 int staticStartCount[64];
@@ -406,15 +407,20 @@ void XOMP_loop_guided_init(
   qthread_t *const me = qthread_self();
   qqloop_step_handle_t *qqhandle = NULL;
   
-  int myid = qthread_shep(me);
+  int myid;
 #ifdef USE_RDTSC
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   qthread_worker_id_t workerid = qthread_worker(&myid,me);
   loopTimer[workerid] = 0;
+#else
+  myid = qthread_shep(me);
+  loopTimer[myid] = 0;
+#endif
 #else
   loopTimer = qtimer_create();
 #endif
 
-#ifdef USE_RDTSC
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   if (qt_global_arrive_first(workerid,xomp_get_nested(&xomp_status))) {
 #else
   if (qt_global_arrive_first(myid,xomp_get_nested(&xomp_status))) {
@@ -434,7 +440,7 @@ void XOMP_loop_guided_init(
 
   else {
     qthread_syncvar_readFF(me, NULL, &outGate); // make sure that this loop is set up
-#ifdef USE_RDTSC
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qqhandle = qqloop_get_value(workerid);
 #else
     qqhandle = qqloop_get_value(myid);
@@ -448,10 +454,17 @@ void XOMP_loop_guided_init(
     qthread_incr(&gate_cnt, -barrierSize);
   }
   
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   firstTime[workerid] = 1;
   currentIteration[workerid] = 1;
   smallBlock[workerid] =  qqhandle->assignStop - qqhandle->assignNext;;
   lastBlock[workerid] =  qqhandle->assignStop - qqhandle->assignNext;
+#else
+  firstTime[myid] = 1;
+  currentIteration[myid] = 1;
+  smallBlock[myid] =  qqhandle->assignStop - qqhandle->assignNext;;
+  lastBlock[myid] =  qqhandle->assignStop - qqhandle->assignNext;
+#endif
   return;
 }
 
@@ -506,48 +519,67 @@ bool XOMP_loop_guided_start(
     long *returnLower,
     long *returnUpper)
 {
-#ifdef USE_RDTSC
-    uint64_t s;
     double time;
     qthread_shepherd_id_t myid;
     qthread_t *const me = qthread_self();
-    qthread_worker_id_t workerid = qthread_worker(&myid,me);
-#else
-    double time;
-    qt_shepherd_id_t myid = qthread_shep(me);
-#endif
-
-    qqloop_step_handle_t *loop = qqloop_get_value(workerid);	// from init;
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    if (!firstTime[workerid] && (loop->type == GUIDED_SCHED)) {
-#else
-    if (!firstTime[myid] && (loop->type == GUIDED_SCHED)) {
-#endif
+    // both halves nearly the same -- difference workerid for MTS shep id for original
+    qthread_worker_id_t workerid = qthread_worker(&myid,me);
+    qqloop_step_handle_t *loop = qqloop_get_value(workerid);	// from init;
 #ifdef USE_RDTSC
-        s = rdtsc();
+    if (!firstTime[workerid] && (loop->type == GUIDED_SCHED)) {
+        uint64_t s = rdtsc();
 	time = s - loopTimer[workerid];
 	if (time > 10000)
-	  smallBlock[myid] =
-	    (smallBlock[myid] <
-	     lastBlock[myid]) ? smallBlock[myid] : lastBlock[myid];
+	  smallBlock[myid] = (smallBlock[myid] < lastBlock[workerid]) 
+	    ? smallBlock[myid] : lastBlock[workerid];
+    } else {
+	time = 1.0;
+	firstTime[workerid] = 0;
+	smallBlock[workerid] = 5000;
+    }
 #else
+    if (!firstTime[workerid] && (loop->type == GUIDED_SCHED)) {
 	qtimer_stop(loopTimer);
 	time = qtimer_secs(loopTimer);
 	if (time > 7.5e-7)
-	    smallBlock[myid] =
-		(smallBlock[myid] <
-		 lastBlock[myid]) ? smallBlock[myid] : lastBlock[myid];
-#endif
+	    smallBlock[workerid] = (smallBlock[workerid] < lastBlock[workerid]) 
+	      ? smallBlock[workerid] : lastBlock[workerid];
     } else {
 	time = 1.0;
-
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 	firstTime[workerid] = 0;
-#else
-	firstTime[myid] = 0;
+	smallBlock[workerid] = 5000;
+    }
 #endif
+#else
+    myid = qthread_shep(me);
+    qqloop_step_handle_t *loop = qqloop_get_value(myid);	// from init;
+#ifdef USE_RDTSC
+    if (!firstTime[myid] && (loop->type == GUIDED_SCHED)) {
+        uint64_t s = rdtsc();
+	time = s - loopTimer[myid];
+	if (time > 10000)
+	  smallBlock[myid] = (smallBlock[myid] < lastBlock[myid]) 
+	    ? smallBlock[myid] : lastBlock[myid];
+    } else {
+	time = 1.0;
+	firstTime[myid] = 0;
 	smallBlock[myid] = 5000;
     }
+#else
+    if (!firstTime[myid] && (loop->type == GUIDED_SCHED)) {
+	qtimer_stop(loopTimer);
+	time = qtimer_secs(loopTimer);
+	if (time > 7.5e-7)
+	    smallBlock[myid] = (smallBlock[myid] < lastBlock[myid]) 
+	      ? smallBlock[myid] : lastBlock[myid];
+    } else {
+	time = 1.0;
+	firstTime[myid] = 0;
+	smallBlock[myid] = 5000;
+    }
+#endif
+#endif
 
     int dynamicBlock;
     if (loop->type == GUIDED_SCHED){
@@ -572,7 +604,11 @@ bool XOMP_loop_guided_start(
 	    return 0;
 	}
     }
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     lastBlock[workerid] = dynamicBlock;
+#else
+    lastBlock[myid] = dynamicBlock;
+#endif
     *returnUpper = iterationStop;
 
     qthread_debug(ALL_DETAILS,
@@ -587,7 +623,11 @@ bool XOMP_loop_guided_start(
 		  );
 
 #ifdef USE_RDTSC
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     loopTimer[workerid] = rdtsc();
+#else
+    loopTimer[myid] = rdtsc();
+#endif
 #else
     qtimer_start(loopTimer);
 #endif
@@ -697,9 +737,9 @@ bool XOMP_loop_ordered_guided_next(
 
 taskSyncvar_t * qthread_getTaskRetVar(qthread_t * t);
 void qthread_setTaskRetVar(qthread_t * t, taskSyncvar_t * v);
-syncvar_t *getSyncTaskVar(qthread_t *me, int id);
+syncvar_t *getSyncTaskVar(qthread_t *me);
 
-syncvar_t *getSyncTaskVar(qthread_t *me, int id)
+syncvar_t *getSyncTaskVar(qthread_t *me)
 {
   taskSyncvar_t * syncVar = (taskSyncvar_t *)calloc(1,sizeof(taskSyncvar_t));
   qthread_getTaskListLock(me);
@@ -711,12 +751,40 @@ syncvar_t *getSyncTaskVar(qthread_t *me, int id)
   return &(syncVar->retValue);
 }
 
+void qthread_run_needed_task(syncvar_t *value);
 void walkSyncTaskList(qthread_t *me)
 {
   qthread_getTaskListLock(me);
   taskSyncvar_t * syncVar;
   while ( (syncVar = qthread_getTaskRetVar(me))) {
-    qthread_syncvar_readFF(me, NULL, &syncVar->retValue);
+
+    // manually check for empty -- check if present in current shepherds ready queue
+    //   if present take and start executing
+    syncvar_t *lc_p = &syncVar->retValue;
+
+#if AKP_TOUCH_EXECUTION
+#if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || \
+     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) || \
+     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || \
+     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64))
+    {
+      // taken from qthread_syncvar_readFF in qthread.c - I want empty not full
+      /* I'm being optimistic here; this only works if a basic 64-bit load is
+       * atomic (on most platforms it is). Thus, if I've done an atomic read
+       * and the syncvar is both unlocked and full, then I figure I can trust
+       * that state and do not need to do a locked atomic operation of any
+       * kind (e.g. cas) */
+      syncvar_t lc_syncVar = *lc_p;
+      if (lc_syncVar.u.s.lock == 0 && (lc_syncVar.u.s.state & 2) ) { /* empty and unlocked */
+	qthread_releaseTaskListLock(me);
+	qthread_run_needed_task(lc_p);
+	qthread_getTaskListLock(me);
+	syncVar = qthread_getTaskRetVar(me);
+      }
+    }
+#endif
+#endif
+    qthread_syncvar_readFF(me, NULL, lc_p);
     qthread_setTaskRetVar(me,syncVar->next_task);
     free(syncVar);
   }
@@ -737,11 +805,13 @@ void XOMP_task(
     unsigned untied)
 {
   qthread_t *const me = qthread_self();
-  int myid = qthread_shep(me);
 
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+#else
   aligned_t id = qthread_incr(&taskId,1);
   qthread_debug(LOCK_DETAILS, "me(%p) creating task for shepherd %d\n", me, id%qthread_num_shepherds());
-  syncvar_t *ret = getSyncTaskVar(me,id); // get new syncvar_t -- setup openmpThreadId (if needed)
+#endif
+  syncvar_t *ret = getSyncTaskVar(me); // get new syncvar_t -- setup openmpThreadId (if needed)
   void * arg_copy = NULL;
   if ((sizeof(aligned_t) * 128) < arg_size){
     arg_copy = malloc(arg_size);
@@ -749,7 +819,7 @@ void XOMP_task(
   }
   qthread_f qfunc = (qthread_f)func;
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  qthread_fork_syncvar_to(qfunc, arg, arg_copy, arg_size, ret, myid);
+  qthread_fork_syncvar_to(qfunc, arg, arg_copy, arg_size, ret, qthread_shep(me));
 #else
   qthread_fork_syncvar_to(qfunc, arg, arg_copy, arg_size, ret, id%qthread_num_shepherds());
 #endif

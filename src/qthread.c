@@ -434,6 +434,7 @@ static QINLINE void qt_threadqueue_enqueue_yielded(qt_threadqueue_t * q, qthread
 static QINLINE void qt_threadqueue_enqueue_multiple(qt_threadqueue_t * q, 
                        qt_threadqueue_node_t * first, qthread_shepherd_t *shep);
 static QINLINE qt_threadqueue_node_t *qt_threadqueue_dequeue_steal(qt_threadqueue_t * q);
+qt_threadqueue_node_t *qt_threadqueue_dequeue_specfic(qt_threadqueue_t * q, void* value);
 static QINLINE long qthread_steal_chunksize(void);
 static QINLINE void qthread_steal(void);                       
 static QINLINE qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q, size_t active);
@@ -1245,6 +1246,31 @@ static void *qthread_shepherd_wrapper(unsigned int high, unsigned int low)
     return qthread_shepherd(me);
 }
 #endif
+
+/* pulled from qthread_shepherd in case needed by stealing/run specific code */
+static QINLINE void alloc_rdata(qthread_shepherd_t *me, qthread_t *t)
+{
+  void *stack = ALLOC_STACK(me);
+  assert(stack);
+#ifdef QTHREAD_GUARD_PAGES
+  t->rdata = (struct qthread_runtime_data_s*)(((char*)stack) + getpagesize() + qlib->qthread_stack_size);
+#else
+  t->rdata = (struct qthread_runtime_data_s*)(((char*)stack) + qlib->qthread_stack_size);
+#endif
+  t->rdata->stack = stack;
+  t->rdata->shepherd_ptr = me;
+  t->rdata->blockedon = NULL;
+#ifdef QTHREAD_USE_VALGRIND
+  t->rdata->valgrind_stack_id = VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
+#endif
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+  t->rdata->openmpTaskRetVar = NULL;
+  //	t->rdata->taskWaitLock.u.w = 0;
+  qthread_syncvar_empty(t, &t->rdata->taskWaitLock);
+
+#endif
+}
+
 static void *qthread_shepherd(void *arg)
 {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -1443,27 +1469,7 @@ static void *qthread_shepherd(void *arg)
 		    t->flags & QTHREAD_REAL_MCCOY));
 
 	    assert(t->f != NULL || t->flags & QTHREAD_REAL_MCCOY);
-	    if (t->rdata == NULL) {
-		void *stack = ALLOC_STACK(me);
-		assert(stack);
-#ifdef QTHREAD_GUARD_PAGES
-		t->rdata = (struct qthread_runtime_data_s*)(((char*)stack) + getpagesize() + qlib->qthread_stack_size);
-#else
-		t->rdata = (struct qthread_runtime_data_s*)(((char*)stack) + qlib->qthread_stack_size);
-#endif
-		t->rdata->stack = stack;
-		t->rdata->shepherd_ptr = me;
-		t->rdata->blockedon = NULL;
-#ifdef QTHREAD_USE_VALGRIND
-		t->rdata->valgrind_stack_id = VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
-#endif
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-		t->rdata->openmpTaskRetVar = NULL;
-		//	t->rdata->taskWaitLock.u.w = 0;
-		qthread_syncvar_empty(t, &t->rdata->taskWaitLock);
-
-#endif
-	    }
+	    if (t->rdata == NULL) alloc_rdata(me, t);
 	    assert(t->rdata->shepherd_ptr == me);
 
 	    if ((t->target_shepherd != NULL) && (t->target_shepherd != me) &&
@@ -6104,27 +6110,29 @@ static QINLINE void qthread_steal()
     qthread_shepherd_t *victim_shepherd;
     qthread_worker_t *worker =
         (qthread_worker_t *) pthread_getspecific(shepherd_structs);
-    qthread_shepherd_t *theif_shepherd =
+    qthread_shepherd_t *thief_shepherd =
         (qthread_shepherd_t *) worker->shepherd;
 
-if (theif_shepherd->stealing)
-    return;
-else
-    theif_shepherd->stealing = 1;
-
-for (i = 1; i < qlib->nshepherds; i++)
-{
-    victim_shepherd = &qlib->shepherds[(theif_shepherd->shepherd_id+i) % qlib->nshepherds];
-    if (0 < victim_shepherd->ready->qlength)
-    {
-        first = qt_threadqueue_dequeue_steal(victim_shepherd->ready);
-        if (first) {
-            qt_threadqueue_enqueue_multiple(theif_shepherd->ready, first, theif_shepherd);
-            break;
-        }
+    if (thief_shepherd->stealing) {
+      return;
     }
-}
-    theif_shepherd->stealing = 0;
+    else {
+      thief_shepherd->stealing = 1;
+    }
+
+    for (i = 1; i < qlib->nshepherds; i++)
+      {
+	victim_shepherd = &qlib->shepherds[(thief_shepherd->shepherd_id+i) % qlib->nshepherds];
+	if (0 < victim_shepherd->ready->qlength)
+	  {
+	    first = qt_threadqueue_dequeue_steal(victim_shepherd->ready);
+	    if (first) {
+	      qt_threadqueue_enqueue_multiple(thief_shepherd->ready, first, thief_shepherd);
+	      break;
+	    }
+	  }
+      }
+    thief_shepherd->stealing = 0;
 }
 
 /*  Redefine threadqueue functions for work stealing
@@ -6145,6 +6153,7 @@ static QINLINE qt_threadqueue_t *qt_threadqueue_new(qthread_shepherd_t * shepher
     }
     return q;
 }
+
 
 static QINLINE void qt_threadqueue_free(qt_threadqueue_t * q)
 {                                      
@@ -6241,6 +6250,7 @@ static QINLINE void qt_threadqueue_enqueue_yielded(qt_threadqueue_t * q, qthread
     assert(q != NULL);
 
     while (1) {
+
         QTHREAD_LOCK(&q->qlock);
         node = q->tail;
         if (node != NULL) {
@@ -6253,13 +6263,15 @@ static QINLINE void qt_threadqueue_enqueue_yielded(qt_threadqueue_t * q, qthread
         }
         QTHREAD_UNLOCK(&q->qlock);
 
-        if ((node == NULL) &(active)) {
+        if ((node == NULL) & (active)) {
             qthread_steal();
         }
         else {
+	  if (node) {  // watch out for inactive node not stealling
             t = node->value;
             FREE_TQNODE((qt_threadqueue_node_t *) node);
             break;
+	  }
         }
     }
     return (t);
@@ -6268,7 +6280,7 @@ static QINLINE void qt_threadqueue_enqueue_yielded(qt_threadqueue_t * q, qthread
 /* Returns the number of tasks to steal per steal operation (chunk size) */
 static QINLINE long qthread_steal_chunksize()
 {
-   return qlib->nworkerspershep;  // Obviously this belongs in an environment variable or such
+  return qlib->nworkerspershep;   // Obviously this belongs in an environment variable or such
 }
 
 /* dequeue stolen threads at head, skip yielded threads */
@@ -6283,35 +6295,96 @@ static QINLINE qt_threadqueue_node_t *qt_threadqueue_dequeue_steal(qt_threadqueu
 
     QTHREAD_LOCK(&q->qlock);
     while (q->qlength > 0 && amtStolen < qthread_steal_chunksize()) {
-        node = q->head;
-        while (node != NULL && node->value->thread_state == QTHREAD_STATE_YIELDED)
-            node = node->next;
-        if (node != NULL) {
-            if (node == q->head)
-                q->head = node->next;
-            else
-                node->prev->next = node->next;
-            if (node == q->tail)
-                q->tail = node->prev;
-           else
-                node->next->prev = node->prev;
-            q->qlength--;
-
-            node->prev = node->next = NULL;
-            if (first == NULL)
-                first = last = node;
-            else {
-                last->next = node;
-                node->prev = last;
-                last = node;
-            }
-            amtStolen++;
-        }
-        else
-            break;
+      node = q->head;
+      while (node != NULL && node->value->thread_state == QTHREAD_STATE_YIELDED) {
+	node = node->next;
+      }
+      if (node != NULL) {
+	if (node == q->head) q->head = node->next;
+	else node->prev->next = node->next;
+	if (node == q->tail) q->tail = node->prev;
+	else node->next->prev = node->prev;
+	
+	q->qlength--;
+	
+	node->prev = node->next = NULL;
+	if (first == NULL) first = last = node;
+	else {
+	  last->next = node;
+	  node->prev = last;
+	  last = node;
+	}
+	amtStolen++;
+      }
+      else {
+	break;
+      }
     }
     QTHREAD_UNLOCK(&q->qlock);
+    
+    return (first);
+}
 
-    return (qt_threadqueue_node_t *)(first);
+
+/* walk queue looking for a specific value  -- if found remove it (and start
+ * it running)  -- if not return NULL
+ */
+qt_threadqueue_node_t *qt_threadqueue_dequeue_specific(qt_threadqueue_t * q, void* value)
+{
+
+    volatile qt_threadqueue_node_t *node = NULL;
+    qthread_t * t;
+
+    assert(q != NULL);
+
+    QTHREAD_LOCK(&q->qlock);
+    if (q->qlength > 0) {
+      node = q->tail;
+      if (node) t = (qthread_t *)node->value;
+      while ((node != NULL) && (t->ret != value) ) {
+	node = node->prev;
+	if (node) t = (qthread_t *)node->value;
+      }
+      if ((node != NULL)) {
+	if (node != q->tail) {
+	  if (node == q->head) q->head = node->next; // reset front ptr
+	  else node->prev->next = node->next;
+	  node->next->prev = node->prev;   // reset back ptr (know we're not tail
+	  node->next = NULL;
+	  node->prev = q->tail;
+	  q->tail->next = node;
+	  q->tail = node;
+	}
+      }
+      else node = NULL;
+    }
+    QTHREAD_UNLOCK(&q->qlock);
+    
+    return (node);
+}
+
+size_t qthread_run_needed_task(syncvar_t *value);
+
+size_t qthread_run_needed_task(syncvar_t *value)
+{
+  qthread_shepherd_t *shep = qthread_internal_getshep();
+  qt_threadqueue_node_t * n = NULL;
+  qthread_t * orig_t = qthread_self();
+  ucontext_t my_context;
+
+  if (n = qt_threadqueue_dequeue_specific(shep->ready, value)) {
+    // switch to task and run -- else missing and return
+    //    qthread_t * t = n->value;
+    
+    //getcontext(&my_context); // done inside qthread_exec
+    //t->rdata->return_context = &my_context;  // done inside qthread_exec
+    //qassert(qthread_writeEF_const(t, (aligned_t*)t->ret, (t->f) (t->arg, t->arg)), QTHREAD_SUCCESS);
+    /* note: there's a good argument that the following should
+     * be: (*t->f)(t), however the state management would be
+     * more complex
+     */
+    //    qthread_exec(t, &my_context);
+    qthread_back_to_master(orig_t);
+  }
 }
 #endif
