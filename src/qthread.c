@@ -100,6 +100,7 @@ kern_return_t thread_policy_get(thread_t thread,
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 #define MAX_WORKERS_PER_SHEPHERD 1024
+#define STEAL_PROFILE
 #endif
 /* internal constants */
 enum threadstate {
@@ -304,6 +305,11 @@ struct qthread_shepherd_s
 #endif
     unsigned int *shep_dists;
     qthread_shepherd_id_t *sorted_sheplist;
+#ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
+    size_t steal_called;
+    size_t steal_attempted;
+    size_t steal_amount_stolen;
+#endif
 #ifdef QTHREAD_SHEPHERD_PROFILING
     qtimer_t total_time;	/* how much time the shepherd spent running */
     double idle_maxtime;	/* max time the shepherd spent waiting for new threads */
@@ -2655,12 +2661,23 @@ void qthread_finalize(void)
     if (qlib == NULL)
 	return;
 
+#ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
+    for (i = 0; i < qlib->nshepherds; i++) {
+	fprintf(stderr,"shepherd %d - steals called %ld attempted %ld work stolen %ld\n",
+		qlib->shepherds[i].shepherd_id,
+		qlib->shepherds[i].steal_called,
+		qlib->shepherds[i].steal_attempted,
+		qlib->shepherds[i].steal_amount_stolen);
+    }
+#endif
+
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     worker = (qthread_worker_t *) pthread_getspecific(shepherd_structs);
     if (worker->packed_worker_id != 0) {    /* Only run finalize on shepherd 0 worker 0*/
         worker->current->thread_state = QTHREAD_STATE_YIELDED;  /* Otherwise, put back */
         return;
     }
+
 #endif
 
     qthread_shepherd_t *shep0 = &(qlib->shepherds[0]);
@@ -6113,13 +6130,18 @@ static QINLINE void qthread_steal()
     qthread_shepherd_t *thief_shepherd =
         (qthread_shepherd_t *) worker->shepherd;
 
+#ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
+    qthread_incr(&thief_shepherd->steal_called, 1);
+#endif
     if (thief_shepherd->stealing) {
       return;
     }
     else {
       thief_shepherd->stealing = 1;
     }
-
+#ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
+    qthread_incr(&thief_shepherd->steal_attempted, 1);
+#endif
     for (i = 1; i < qlib->nshepherds; i++)
       {
 	victim_shepherd = &qlib->shepherds[(thief_shepherd->shepherd_id+i) % qlib->nshepherds];
@@ -6275,7 +6297,7 @@ static QINLINE void qt_threadqueue_enqueue_yielded(qt_threadqueue_t * q, qthread
         }
     }
     return (t);
-}
+ }
 
 /* Returns the number of tasks to steal per steal operation (chunk size) */
 static QINLINE long qthread_steal_chunksize()
@@ -6321,6 +6343,9 @@ static QINLINE qt_threadqueue_node_t *qt_threadqueue_dequeue_steal(qt_threadqueu
       }
     }
     QTHREAD_UNLOCK(&q->qlock);
+#ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
+    qthread_incr(&q->creator_ptr->steal_amount_stolen, amtStolen);
+#endif
     
     return (first);
 }
