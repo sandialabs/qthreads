@@ -599,7 +599,7 @@ void *qarray_elem_migrate(const qarray * a, const size_t index)
 	dest = qarray_internal_shepof_ch(a, segment_head);
     }
     if (qthread_shep(qthread_self()) != dest) {
-	qthread_migrate_to(qthread_self(), dest);
+	qthread_migrate_to(dest);
     }
     return ret;
 }				       /*}}} */

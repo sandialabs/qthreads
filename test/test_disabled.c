@@ -33,11 +33,11 @@ static aligned_t migrant(void *arg)
     assert(myshep == 1 || myshep == 0);
 
     if (myshep == 1) {
-	qthread_migrate_to(me, 0);
+	qthread_migrate_to(0);
 	assert(qthread_shep(me) == 0);
 	assert(qthread_shep(NULL) == 0);
     } else {
-	qthread_migrate_to(me, 1);
+	qthread_migrate_to(1);
 	iprintf("migrant starting on %i, aimed at 1, ended up on %i\n",
 		myshep, qthread_shep(me));
 	if (arg == (void *)2) {

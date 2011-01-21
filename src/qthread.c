@@ -3016,12 +3016,9 @@ void qthread_back_to_master(qthread_t * t)
 }				       /*}}} */
 
 /* function to move a qthread from one shepherd to another */
-int qthread_migrate_to(qthread_t * me, const qthread_shepherd_id_t shepherd)
+int qthread_migrate_to(const qthread_shepherd_id_t shepherd)
 {				       /*{{{ */
-    if (me == NULL) {
-	me = qthread_self();
-    }
-    assert(me == qthread_self());
+    qthread_t *me = qthread_self();
     if (me->rdata->shepherd_ptr->shepherd_id == shepherd) {
 	me->target_shepherd = me->rdata->shepherd_ptr;
 	return QTHREAD_SUCCESS;

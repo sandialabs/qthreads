@@ -187,7 +187,7 @@ int qthread_fork_syncvar_to(const qthread_f f, const void *const arg, syncvar_t 
 #endif
 
 /* This is a function to move a thread from one shepherd to another. */
-int qthread_migrate_to(qthread_t * me, const qthread_shepherd_id_t shepherd);
+int qthread_migrate_to(const qthread_shepherd_id_t shepherd);
 
 /* This function sets the debug level if debugging has been enabled */
 int qthread_debuglevel(int);
