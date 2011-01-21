@@ -69,10 +69,10 @@ static struct qdqueue_adstruct_s qdqueue_adheap_pop(qthread_t * me, struct qdque
     if (heap->first != NULL) {
 	struct qdqueue_adheap_elem_s *tmp;
 
-	qthread_lock(me, &(heap->gateway_lock));
+	qthread_lock(&(heap->gateway_lock));
 	/* pull off "first" */
 	if ((tmp = heap->first) == NULL) {
-	    qthread_unlock(me, &(heap->gateway_lock));
+	    qthread_unlock(&(heap->gateway_lock));
 	    goto emptyheap;
 	}
 	ret = tmp->ad;
@@ -80,7 +80,7 @@ static struct qdqueue_adstruct_s qdqueue_adheap_pop(qthread_t * me, struct qdque
 	    heap->first->prev = NULL;
 	}
 	tmp->inheap = 0;
-	qthread_unlock(me, &(heap->gateway_lock));
+	qthread_unlock(&(heap->gateway_lock));
     } else {
       emptyheap:
 	ret.shep = NULL;
@@ -108,7 +108,7 @@ static void qdqueue_adheap_push(qthread_t * me, struct qdqueue_adheap_s *heap,
 	}
     }
     assert(heap->heap[i].ad.shep == shep);
-    qthread_lock(me, &(heap->gateway_lock));
+    qthread_lock(&(heap->gateway_lock));
     /* update the gen record */
     if (heap->heap[i].ad.generation < gen || gen == 0) {
 	if (gen != 0) {
@@ -149,7 +149,7 @@ static void qdqueue_adheap_push(qthread_t * me, struct qdqueue_adheap_s *heap,
 	}
     }
   done_pushing:
-    qthread_unlock(me, &(heap->gateway_lock));
+    qthread_unlock(&(heap->gateway_lock));
 }				       /*}}} */
 
 static int qdqueue_adheap_empty(struct qdqueue_adheap_s *heap)

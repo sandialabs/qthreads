@@ -72,7 +72,7 @@ static aligned_t future_shep_init(void * Q_UNUSED arg)
     location_t *ptr = &(future_bookkeeping_array[shep]);
 
     // vp_count is *always* locked. This establishes the waiting queue.
-    qthread_lock(qthread_self(), &(ptr->vp_count));
+    qthread_lock(&(ptr->vp_count));
 
     qassert(pthread_setspecific(future_bookkeeping, ptr), 0);
     return 0;
@@ -124,7 +124,7 @@ void blocking_vp_incr(qthread_t * me, location_t * loc)
 	qthread_debug(ALL_DETAILS,
 		      "Thread %p found too many futures in %d; waiting for vp_count\n",
 		      (void *)me, loc->id);
-	qthread_lock(me, &(loc->vp_count));
+	qthread_lock(&(loc->vp_count));
 	qassert(pthread_mutex_lock(&(loc->vp_count_lock)), 0);
     }
     loc->vp_count++;
@@ -243,7 +243,7 @@ int future_yield(qthread_t * me)
 	unlockit = (loc->vp_count-- == loc->vp_max);
 	qassert(pthread_mutex_unlock(&(loc->vp_count_lock)), 0);
 	if (unlockit) {
-	    qthread_unlock(me, &(loc->vp_count));
+	    qthread_unlock(&(loc->vp_count));
 	}
 	return 1;
     }

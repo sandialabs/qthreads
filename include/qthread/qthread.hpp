@@ -269,13 +269,13 @@ template <typename T>
 inline int qthread_lock(const T * const a)
 {
     QTHREAD_CHECKSIZE(T);
-    return qthread_lock(qthread_self(), (aligned_t *) a);
+    return qthread_lock((aligned_t *) a);
 }
 template <typename T>
 inline int qthread_lock(qthread_t * const me, const T * const a)
 {
     QTHREAD_CHECKSIZE(T);
-    return qthread_lock(me, (aligned_t *) a);
+    return qthread_lock((aligned_t *) a);
 }
 
 /**************************************************************************
@@ -285,13 +285,13 @@ template <typename T>
 inline int qthread_unlock(const T * const a)
 {
     QTHREAD_CHECKSIZE(T);
-    return qthread_unlock(qthread_self(), (aligned_t *) a);
+    return qthread_unlock((aligned_t *) a);
 }
 template <typename T>
 inline int qthread_unlock(qthread_t * const me, const T * const a)
 {
     QTHREAD_CHECKSIZE(T);
-    return qthread_unlock(me, (aligned_t *) a);
+    return qthread_unlock((aligned_t *) a);
 }
 
 /**************************************************************************

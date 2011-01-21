@@ -15,10 +15,10 @@ static aligned_t consumer(void *arg)
     qthread_t *t = qthread_self();
 
     iprintf("consumer(%p) locking id(%p)\n", t, &id);
-    qthread_lock(t, &id);
+    qthread_lock(&id);
     me = id++;
     iprintf("consumer(%p) unlocking id(%p), result is %i\n", t, &id, me);
-    qthread_unlock(t, &id);
+    qthread_unlock(&id);
 
     qthread_readFE(t, &readout, &x);
 
@@ -31,10 +31,10 @@ static aligned_t producer(void *arg)
     qthread_t *t = qthread_self();
 
     iprintf("producer(%p) locking id(%p)\n", t, &id);
-    qthread_lock(t, &id);
+    qthread_lock(&id);
     me = id++;
     iprintf("producer(%p) unlocking id(%p), result is %i\n", t, &id, me);
-    qthread_unlock(t, &id);
+    qthread_unlock(&id);
 
     iprintf("producer(%p) filling x(%p)\n", t, &x);
     qthread_writeEF_const(t, &x, 55);

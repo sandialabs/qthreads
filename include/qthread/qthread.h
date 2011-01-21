@@ -346,13 +346,9 @@ int qthread_syncvar_readFE(qthread_t * restrict const me, uint64_t * restrict co
  * These are atomic and functional, but do not have the same semantics as full
  * FEB locking/unlocking (namely, unlocking cannot block), however because of
  * this, they have lower overhead.
- *
- * These functions take a qthread_t pointer as an argument. If this is called
- * from somewhere other than a qthread, use NULL for the me argument. If you
- * have lost your qthread_t pointer, it can be reclaimed using qthread_self().
  */
-int qthread_lock(qthread_t * me, const aligned_t * a);
-int qthread_unlock(qthread_t * me, const aligned_t * a);
+int qthread_lock(const aligned_t * a);
+int qthread_unlock(const aligned_t * a);
 
 /* functions added by akp to hand openMP task completion 
  */

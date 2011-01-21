@@ -561,7 +561,6 @@ static inline aligned_t qutil_qsort_partition(struct qutil_qsort_args *args)
     const size_t length = args->length;
     const size_t jump = args->jump;
     size_t leftwall, rightwall;
-    qthread_t *me = qthread_self();
 
     leftwall = 0;
     rightwall = length - 1;
@@ -613,14 +612,14 @@ static inline aligned_t qutil_qsort_partition(struct qutil_qsort_args *args)
 	SWAP(double, a, leftwall, rightwall);
     }
   quickexit:
-    qthread_lock(me, args->furthest_leftwall);
+    qthread_lock(args->furthest_leftwall);
     if (leftwall + args->offset < *args->furthest_leftwall) {
 	*args->furthest_leftwall = leftwall + args->offset;
     }
     if (rightwall + args->offset > *args->furthest_rightwall) {
 	*args->furthest_rightwall = rightwall + args->offset;
     }
-    qthread_unlock(me, args->furthest_leftwall);
+    qthread_unlock(args->furthest_leftwall);
     return 0;
 }
 
@@ -808,7 +807,6 @@ static inline aligned_t qutil_aligned_qsort_partition(struct
     const size_t length = args->length;
     const size_t jump = args->jump;
     size_t leftwall, rightwall;
-    qthread_t *me = qthread_self();
 
     leftwall = 0;
     rightwall = length - 1;
@@ -860,14 +858,14 @@ static inline aligned_t qutil_aligned_qsort_partition(struct
 	SWAP(aligned_t, a, leftwall, rightwall);
     }
   quickexit:
-    qthread_lock(me, args->furthest_leftwall);
+    qthread_lock(args->furthest_leftwall);
     if (leftwall + args->offset < *args->furthest_leftwall) {
 	*args->furthest_leftwall = leftwall + args->offset;
     }
     if (rightwall + args->offset > *args->furthest_rightwall) {
 	*args->furthest_rightwall = rightwall + args->offset;
     }
-    qthread_unlock(me, args->furthest_leftwall);
+    qthread_unlock(args->furthest_leftwall);
     return 0;
 }
 

@@ -1044,14 +1044,14 @@ static aligned_t qt_qsort_partition(
 	SWAP(a, leftwall, rightwall);
     }
   quickexit:
-    qthread_lock(me, args->furthest_leftwall);
+    qthread_lock(args->furthest_leftwall);
     if (leftwall + args->offset < *args->furthest_leftwall) {
 	*args->furthest_leftwall = leftwall + args->offset;
     }
     if (rightwall + args->offset > *args->furthest_rightwall) {
 	*args->furthest_rightwall = rightwall + args->offset;
     }
-    qthread_unlock(me, args->furthest_leftwall);
+    qthread_unlock(args->furthest_leftwall);
     return 0;
 }
 

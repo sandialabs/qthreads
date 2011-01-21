@@ -63,18 +63,17 @@ static void hammingdist(const int *inta, const int *intb)
 {
     unsigned int ham = *inta ^ *intb;
     aligned_t hamdist = 0;
-    qthread_t *me = qthread_self();
 
     while (ham != 0) {
 	hamdist += ham & 1;
 	ham >>= 1;
     }
     if (hamming > hamdist) {
-	qthread_lock(me, &hamming);
+	qthread_lock(&hamming);
 	if (hamming > hamdist) {
 	    hamming = hamdist;
 	}
-	qthread_unlock(me, &hamming);
+	qthread_unlock(&hamming);
     }
 }
 

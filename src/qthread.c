@@ -3610,16 +3610,14 @@ int qthread_readFE(qthread_t * me, aligned_t * restrict const dest,
  * unless you REALLY know what you're doing!
  */
 
-int qthread_lock(qthread_t * me, const aligned_t * a)
+int qthread_lock(const aligned_t * a)
 {				       /*{{{ */
     qthread_lock_t *m;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(a);
+    qthread_t *me = qthread_self();
 
     QTHREAD_LOCK_TIMER_DECLARATION(aquirelock);
 
-    if (me == NULL) {
-	me = qthread_self();
-    }
     qthread_debug(LOCK_BEHAVIOR, "tid(%u), a(%p): starting...\n",
 		  me->thread_id, a);
     QTHREAD_LOCK_UNIQUERECORD(lock, a, me);
@@ -3689,11 +3687,12 @@ int qthread_lock(qthread_t * me, const aligned_t * a)
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-int qthread_unlock(qthread_t * me, const aligned_t * a)
+int qthread_unlock(const aligned_t * a)
 {				       /*{{{ */
     qthread_lock_t *m;
     qthread_t *u;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(a);
+    qthread_t *me = qthread_self();
 
     qthread_debug(LOCK_BEHAVIOR, "tid(%u), a(%p)\n", me->thread_id,
 		  a);

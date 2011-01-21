@@ -28,7 +28,6 @@ static Q_NOINLINE void thread2(size_t left, size_t depth)
 
 static aligned_t thread(void *arg)
 {
-    qthread_t *t = qthread_self();
     int me = qthread_id();
 
     //printf("thread(%p): me %i\n", (void*) t, me);
@@ -36,12 +35,12 @@ static aligned_t thread(void *arg)
     iprintf("%i bytes left\n", foo);
     thread2(foo, 2);
 
-    assert(qthread_lock(t, &x) == 0);
+    assert(qthread_lock(&x) == 0);
     //printf("thread(%i): x=%d\n", me, x);
     x++;
     if (x == target)
-	qthread_unlock(t, &alldone);
-    assert(qthread_unlock(t, &x) == 0);
+	qthread_unlock(&alldone);
+    assert(qthread_unlock(&x) == 0);
     return foo + me;		       /* to force them to be used */
 }
 
@@ -54,7 +53,7 @@ int main(int argc, char *argv[])
     NUMARG(target, "TEST_TARGET");
     CHECK_VERBOSE();
 
-    qthread_lock(qthread_self(), &alldone);
+    qthread_lock(&alldone);
 
     for (i = 0; i < target; i++) {
 	int res = qthread_fork(thread, NULL, NULL);
@@ -64,7 +63,7 @@ int main(int argc, char *argv[])
 	assert(res == 0);
     }
 
-    qthread_lock(qthread_self(), &alldone);
+    qthread_lock(&alldone);
 
 
     iprintf("Final value of x=%lu\n", (unsigned long)x);
