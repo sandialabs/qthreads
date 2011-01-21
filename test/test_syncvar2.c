@@ -29,13 +29,12 @@ static syncvar_t *buff = NULL;
 static aligned_t producer(
     void *arg)
 {
-    qthread_t * t = qthread_self();
     for (unsigned int i = 0; i < numItems; ++i) {
 	const unsigned int buffInd = i % bufferSize;
-	qthread_syncvar_writeEF_const(t, &buff[buffInd], i);
+	qthread_syncvar_writeEF_const(&buff[buffInd], i);
 	iprintf("producer wrote value #%u\n", i);
     }
-    qthread_syncvar_writeEF_const(t, &buff[numItems % bufferSize],
+    qthread_syncvar_writeEF_const(&buff[numItems % bufferSize],
 				  INT64TOINT60(-1));
 
     return 0;
@@ -45,14 +44,13 @@ static aligned_t producer(
  * The readFromBuff() iterator simply reads values from the shared buffer
  * starting at the 0th position and yields them.
  */
-static int64_t readFromBuff(
-    qthread_t * t)
+static int64_t readFromBuff(void)
 {
     static unsigned int ind = 0;
     uint64_t readVal;
     int64_t nextVal;
 
-    qthread_syncvar_readFE(t, &readVal, &buff[ind]);
+    qthread_syncvar_readFE(&readVal, &buff[ind]);
     nextVal = INT60TOINT64(readVal);
     if (nextVal != -1) {
 	ind = (ind + 1) % bufferSize;
@@ -67,9 +65,8 @@ static int64_t readFromBuff(
 static aligned_t consumer(
     void *arg)
 {
-    qthread_t * t = qthread_self();
     int64_t buffVal;
-    while ((buffVal = readFromBuff(t)) != -1) {
+    while ((buffVal = readFromBuff()) != -1) {
 	iprintf("Consumer got: %li\n", (long)buffVal);
     }
 

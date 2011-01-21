@@ -28,17 +28,16 @@
 #define INNER_LOOP(_fname_,_structtype_,_opmacro_) static aligned_t _fname_(struct _structtype_ *args) \
 { \
     size_t i; \
-    qthread_t *me = qthread_self(); \
     args->ret = args->array[args->start]; \
     for (i = args->start + 1; i < args->stop; i++) { \
 	_opmacro_(args->ret, args->array[i]); \
     } \
     if (args->addlast) { \
-	qthread_syncvar_readFF(me, NULL, args->addlast_sentinel); \
+	qthread_syncvar_readFF(NULL, args->addlast_sentinel); \
 	_opmacro_(args->ret, *(args->addlast)); \
 	free(args->backptr); \
     } \
-    qthread_syncvar_fill(me, &(args->ret_sentinel)); \
+    qthread_syncvar_fill(&(args->ret_sentinel)); \
     return 0; \
 }
 #define INNER_LOOP_FF(_fname_,_structtype_,_opmacro_) static aligned_t _fname_(struct _structtype_ *args) \
@@ -52,11 +51,11 @@
 	_opmacro_(args->ret, args->array[i]); \
     } \
     if (args->addlast) { \
-	qthread_syncvar_readFF(me, NULL, args->addlast_sentinel); \
+	qthread_syncvar_readFF(NULL, args->addlast_sentinel); \
 	_opmacro_(args->ret, *(args->addlast)); \
 	free(args->backptr); \
     } \
-    qthread_syncvar_fill(me, &(args->ret_sentinel)); \
+    qthread_syncvar_fill(&(args->ret_sentinel)); \
     return 0; \
 }
 #define OUTER_LOOP(_fname_,_structtype_,_opmacro_,_rtype_,_innerfunc_,_innerfuncff_) \
@@ -83,7 +82,7 @@ _rtype_ _fname_(qthread_t *me, const _rtype_ *array, size_t length, int checkfeb
 	left_args->addlast_sentinel = waitfor_sentinel; \
 	waitfor = &(left_args->ret); \
 	waitfor_sentinel = &(left_args->ret_sentinel); \
-	qthread_syncvar_empty(me, &(left_args->ret_sentinel)); \
+	qthread_syncvar_empty(&(left_args->ret_sentinel)); \
 	if (checkfeb) { \
 	    future_fork((qthread_f) _innerfuncff_, left_args, NULL); \
 	} else { \
@@ -104,7 +103,7 @@ _rtype_ _fname_(qthread_t *me, const _rtype_ *array, size_t length, int checkfeb
 	} \
     } \
     if (waitfor) { \
-	qthread_syncvar_readFF(me, NULL, waitfor_sentinel); \
+	qthread_syncvar_readFF(NULL, waitfor_sentinel); \
 	_opmacro_(myret, *waitfor); \
 	free(bkptr); \
     } \
@@ -136,23 +135,7 @@ OUTER_LOOP(qutil_double_min, qutil_ds_args, MIN_MACRO, double,
 	   qutil_double_min_inner, qutil_double_FF_min_inner)
 /* These are the functions for computing things about unsigned ints */
 STRUCT(qutil_uis_args, aligned_t);
-//INNER_LOOP(qutil_uint_sum_inner, qutil_uis_args, SUM_MACRO)
-static aligned_t qutil_uint_sum_inner(struct qutil_uis_args *args)
-{
-    size_t i;
-    qthread_t *me = qthread_self();
-    args->ret = args->array[args->start];
-    for (i = args->start + 1; i < args->stop; i++) {
-	SUM_MACRO(args->ret, args->array[i]);
-    }
-    if (args->addlast) {
-	qthread_syncvar_readFF(me, NULL, args->addlast_sentinel);
-	SUM_MACRO(args->ret, *(args->addlast));
-	free(args->backptr);
-    }
-    qthread_syncvar_fill(me, &(args->ret_sentinel));
-    return 0;
-}
+INNER_LOOP(qutil_uint_sum_inner, qutil_uis_args, SUM_MACRO)
 INNER_LOOP_FF(qutil_uint_FF_sum_inner, qutil_uis_args, SUM_MACRO)
 OUTER_LOOP(qutil_uint_sum, qutil_uis_args, SUM_MACRO, aligned_t,
 	   qutil_uint_sum_inner, qutil_uint_FF_sum_inner)

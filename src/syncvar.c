@@ -218,17 +218,14 @@ int qthread_syncvar_status(syncvar_t * const v)
 #define SYNCFEB_STATE_EMPTY_NO_WAITERS	    0x2
 #define SYNCFEB_STATE_EMPTY_WITH_WAITERS    0x3
 
-int qthread_syncvar_readFF(qthread_t * restrict me,
-			   uint64_t * restrict const dest,
+int qthread_syncvar_readFF(uint64_t * restrict const dest,
 			   syncvar_t * restrict const src)
 {				       /*{{{ */
     eflags_t e = { 0 };
     uint64_t ret;
+    qthread_t *me = qthread_self();
 
     assert(src);
-    if (me == NULL) {
-	me = qthread_self();
-    }
     qthread_debug(LOCK_BEHAVIOR, "me(%p), dest(%p), src(%p) = %x\n", me,
 		  dest, src, (uintptr_t)src->u.w);
 #if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || \
@@ -313,13 +310,12 @@ int qthread_syncvar_readFF(qthread_t * restrict me,
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-int qthread_syncvar_fill(qthread_t * restrict const me,
-			 syncvar_t * restrict const addr)
+int qthread_syncvar_fill(syncvar_t * restrict const addr)
 {				       /*{{{ */
     eflags_t e = { 0 };
     uint64_t ret;
+    qthread_t *me = qthread_self();
 
-    assert(me);
     assert(addr);
 
     qthread_debug(LOCK_DETAILS, "me(%p), addr(%p) = %x\n", me, addr,
@@ -363,13 +359,12 @@ int qthread_syncvar_fill(qthread_t * restrict const me,
 
 }				       /*}}} */
 
-int qthread_syncvar_empty(qthread_t * restrict const me,
-			  syncvar_t * restrict const addr)
+int qthread_syncvar_empty(syncvar_t * restrict const addr)
 {				       /*{{{ */
     eflags_t e = { 0 };
     uint64_t ret;
+    qthread_t *me = qthread_self();
 
-    assert(me);
     assert(addr);
 
     qthread_debug(LOCK_DETAILS, "me(%p), addr(%p) = %x\n", me, addr,
@@ -414,18 +409,15 @@ int qthread_syncvar_empty(qthread_t * restrict const me,
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-int qthread_syncvar_readFE(qthread_t * restrict me,
-			   uint64_t * restrict const dest,
+int qthread_syncvar_readFE(uint64_t * restrict const dest,
 			   syncvar_t * restrict const src)
 {				       /*{{{ */
     eflags_t e = { 0 };
     uint64_t ret;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(src);
+    qthread_t *me = qthread_self();
 
     assert(src);
-    if (me == NULL) {
-	me = qthread_self();
-    }
     assert(me->rdata);
     assert(me->rdata->shepherd_ptr);
     assert(me->rdata->shepherd_ptr->ready);
@@ -650,17 +642,14 @@ static QINLINE void qthread_syncvar_gotlock_fill(qthread_shepherd_t * shep,
     }
 }				       /*}}} */
 
-int qthread_syncvar_writeF(qthread_t * restrict me,
-			   syncvar_t * restrict const dest,
+int qthread_syncvar_writeF(syncvar_t * restrict const dest,
 			   const uint64_t * restrict const src)
 {				       /*{{{ */
     eflags_t e = { 0 };
     uint64_t ret = *src;
+    qthread_t *me = qthread_self();
 
     qassert_ret((*src >> 60) == 0, QTHREAD_OVERFLOW);
-    if (me == NULL) {
-	me = qthread_self();
-    }
 
     qthread_debug(LOCK_BEHAVIOR, "me(%p), dest(%p) = %x, src(%p) = %x\n", me,
 		  dest, (unsigned long)dest->u.w, src, *src);
@@ -695,25 +684,21 @@ int qthread_syncvar_writeF(qthread_t * restrict me,
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-int qthread_syncvar_writeF_const(qthread_t * restrict me,
-				 syncvar_t * restrict const dest,
+int qthread_syncvar_writeF_const(syncvar_t * restrict const dest,
 				 const uint64_t src)
 {				       /*{{{ */
-    return qthread_syncvar_writeF(me, dest, &src);
+    return qthread_syncvar_writeF(dest, &src);
 }				       /*}}} */
 
-int qthread_syncvar_writeEF(qthread_t * restrict me,
-			    syncvar_t * restrict const dest,
+int qthread_syncvar_writeEF(syncvar_t * restrict const dest,
 			    const uint64_t * restrict const src)
 {				       /*{{{ */
     eflags_t e = { 0 };
     uint64_t ret;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
+    qthread_t *me = qthread_self();
 
     qassert_ret((*src >> 60) == 0, QTHREAD_OVERFLOW);
-    if (me == NULL) {
-	me = qthread_self();
-    }
 
     qthread_debug(LOCK_DETAILS, "writeEF dest(%p) = %x\n", dest,
 		  (uintptr_t) dest->u.w);
@@ -814,11 +799,10 @@ int qthread_syncvar_writeEF(qthread_t * restrict me,
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-int qthread_syncvar_writeEF_const(qthread_t * restrict me,
-				  syncvar_t * restrict const dest,
+int qthread_syncvar_writeEF_const(syncvar_t * restrict const dest,
 				  const uint64_t src)
 {				       /*{{{ */
-    return qthread_syncvar_writeEF(me, dest, &src);
+    return qthread_syncvar_writeEF(dest, &src);
 }				       /*}}} */
 
 uint64_t qthread_syncvar_incrF(syncvar_t * restrict const operand,

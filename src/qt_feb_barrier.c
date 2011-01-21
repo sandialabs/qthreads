@@ -65,8 +65,8 @@ qt_feb_barrier_t *qt_feb_barrier_create(qthread_t *me, size_t max_threads)
     b->max_blockers = max_threads;
     b->in_gate.u.w = 0;
     b->out_gate.u.w = 0;
-    qthread_syncvar_fill(me, &b->in_gate);
-    qthread_syncvar_empty(me, &b->out_gate);
+    qthread_syncvar_fill(&b->in_gate);
+    qthread_syncvar_empty(&b->out_gate);
     return b;
 }
 
@@ -75,24 +75,24 @@ void qt_feb_barrier_enter(qthread_t *me, qt_feb_barrier_t *b)
     aligned_t waiters;
     qassert_retvoid(b);
     /* pass through the in_gate */
-    qthread_syncvar_readFF(me, NULL, &b->in_gate);
+    qthread_syncvar_readFF(NULL, &b->in_gate);
     /* increment the blocker count */
     waiters = qthread_incr(&b->blockers, 1) + 1;
     assert(waiters <= b->max_blockers);
     if (waiters == b->max_blockers) {
 	/* last guy into the barrier, close the in_gate, open the out_gate */
-	qthread_syncvar_empty(me, &b->in_gate);
-	qthread_syncvar_fill(me, &b->out_gate);
+	qthread_syncvar_empty(&b->in_gate);
+	qthread_syncvar_fill(&b->out_gate);
     } else {
 	/* pass through the out_gate */
-	qthread_syncvar_readFF(me, NULL, &b->out_gate);
+	qthread_syncvar_readFF(NULL, &b->out_gate);
     }
     /* I'm on the way out, so decrement the blocker count */
     waiters = qthread_incr(&b->blockers, -1) - 1;
     if (waiters == 0) {
 	/* last guy out of the barrier, close the out_gate, open the in_gate */
-	qthread_syncvar_empty(me, &b->out_gate);
-	qthread_syncvar_fill(me, &b->in_gate);
+	qthread_syncvar_empty(&b->out_gate);
+	qthread_syncvar_fill(&b->in_gate);
     }
 }
 
@@ -100,8 +100,8 @@ void qt_feb_barrier_destroy(qthread_t *me, qt_feb_barrier_t *b)
 {
     assert(fbp.pool != NULL);
     assert(b->blockers == 0);
-    qthread_syncvar_fill(me, &b->out_gate);
-    qthread_syncvar_fill(me, &b->in_gate);
+    qthread_syncvar_fill(&b->out_gate);
+    qthread_syncvar_fill(&b->in_gate);
 #ifndef UNPOOLED
     qt_mpool_free(fbp.pool, b);
 #else

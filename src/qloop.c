@@ -134,7 +134,7 @@ static void qt_loop_inner(
 	threadct++;
     }
     for (i = 0; i < steps; i++) {
-	qthread_syncvar_readFF(me, NULL, rets + i);
+	qthread_syncvar_readFF(NULL, rets + i);
     }
     free(qwa);
 }				       /*}}} */
@@ -204,7 +204,7 @@ static void qt_loop_step_inner(
 	threadct++;
     }
     for (i = 0; i < steps; i++) {
-	qthread_syncvar_readFF(me, NULL, rets + i);
+	qthread_syncvar_readFF(NULL, rets + i);
     }
     free(qwa);
 }				       /*}}} */
@@ -267,7 +267,7 @@ static QINLINE void qt_loop_balance_inner(
 	}
     }
     for (i = 0; i < maxsheps; i++) {
-	qthread_syncvar_readFF(me, NULL, rets + i);
+	qthread_syncvar_readFF(NULL, rets + i);
     }
     free(qwa);
     free(rets);
@@ -369,7 +369,7 @@ static QINLINE void qt_loopaccum_balance_inner(
 	}
     }
     for (i = 0; i < qthread_num_shepherds(); i++) {
-	qthread_syncvar_readFF(me, NULL, rets + i);
+	qthread_syncvar_readFF(NULL, rets + i);
 	if (i > 0) {
 	    acc(out, realrets + ((i - 1) * size));
 	}
@@ -1117,7 +1117,7 @@ static struct qt_qsort_iprets qt_qsort_inner_partitioner(
 	qthread_fork_syncvar((qthread_f) qt_qsort_partition, args + i, rets + i);
     }
     for (i = 0; i < numthreads; i++) {
-	qthread_syncvar_readFF(me, NULL, rets + i);
+	qthread_syncvar_readFF(NULL, rets + i);
     }
     free(args);
     free(rets);
@@ -1212,8 +1212,8 @@ static aligned_t qt_qsort_inner(
 		    qthread_fork_syncvar((qthread_f) qt_qsort_inner, na + 1,
 				 rets + 1);
 		}
-		qthread_syncvar_readFF(me, NULL, rets);
-		qthread_syncvar_readFF(me, NULL, rets + 1);
+		qthread_syncvar_readFF(NULL, rets);
+		qthread_syncvar_readFF(NULL, rets + 1);
 	    }
 	}
     }

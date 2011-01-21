@@ -511,7 +511,7 @@ static QINLINE void alloc_rdata(qthread_shepherd_t *me, qthread_t *t)
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
   t->rdata->openmpTaskRetVar = NULL;
   //	t->rdata->taskWaitLock.u.w = 0;
-  qthread_syncvar_empty(t, &t->rdata->taskWaitLock);
+  qthread_syncvar_empty(&t->rdata->taskWaitLock);
 
 #endif
 }
@@ -2569,7 +2569,7 @@ static void qthread_wrapper(void *ptr)
     if (t->ret) {
 	/* XXX: if this fails, we should probably do something */
 	if (t->flags & QTHREAD_RET_IS_SYNCVAR) {
-	    qassert(qthread_syncvar_writeEF_const(t, (syncvar_t*)t->ret, (t->f) (t->arg)), QTHREAD_SUCCESS);
+	    qassert(qthread_syncvar_writeEF_const((syncvar_t*)t->ret, (t->f) (t->arg)), QTHREAD_SUCCESS);
 	    if((t->free_arg) && (&t->test != t->arg))free(t->arg);
 	} else {
 	    qassert(qthread_writeEF_const(t, (aligned_t*)t->ret, (t->f) (t->arg)), QTHREAD_SUCCESS);
@@ -2792,7 +2792,7 @@ int qthread_fork_syncvar(const qthread_f f, const void *arg, syncvar_t * ret)
 	t->flags |= QTHREAD_RET_IS_SYNCVAR;
 
 	if (ret) {
-	    int test = qthread_syncvar_empty(qthread_self(), ret);
+	    int test = qthread_syncvar_empty(ret);
 
 	    if (test != QTHREAD_SUCCESS) {
 		qthread_thread_free(t);
@@ -2880,7 +2880,7 @@ int qthread_fork_syncvar_to(
 		  shepherd);
 
     if (ret) {
-	int test = qthread_syncvar_empty(qthread_self(), ret);
+	int test = qthread_syncvar_empty(ret);
 
 	if (test != QTHREAD_SUCCESS) {
 	    qthread_thread_free(t);
@@ -2961,7 +2961,7 @@ int qthread_fork_syncvar_future_to(
     qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id,
 		  shepherd);
     if (ret) {
-	int test = qthread_syncvar_empty(qthread_self(), ret);
+	int test = qthread_syncvar_empty(ret);
 
 	if (test != QTHREAD_SUCCESS) {
 	    qthread_thread_free(t);
@@ -3904,11 +3904,11 @@ int qthread_forCount(qthread_t * t, int inc)
 
 void qthread_getTaskListLock(qthread_t * t)
 {				       /*{{{ */
-    qthread_syncvar_writeEF_const(t, &t->rdata->taskWaitLock, 1);
+    qthread_syncvar_writeEF_const(&t->rdata->taskWaitLock, 1);
 }				       /*}}} */
 void qthread_releaseTaskListLock(qthread_t * t)
 {				       /*{{{ */
-    qthread_syncvar_readFE(t, NULL, &t->rdata->taskWaitLock);
+    qthread_syncvar_readFE(NULL, &t->rdata->taskWaitLock);
 }				       /*}}} */
 taskSyncvar_t * qthread_getTaskRetVar(qthread_t * t)
 {				       /*{{{ */

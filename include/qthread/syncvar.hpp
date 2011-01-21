@@ -50,15 +50,15 @@ class syncvar
 	QINLINE syncvar(void) { the_syncvar_t.u.w = 0; }
 	virtual ~syncvar(void) {;}
 
-	int empty(qthread_t *me = NULL) { return qthread_syncvar_empty(me, &the_syncvar_t); }
-	int fill(qthread_t *me = NULL) { return qthread_syncvar_fill(me, &the_syncvar_t); }
+	int empty(void) { return qthread_syncvar_empty(&the_syncvar_t); }
+	int fill(void) { return qthread_syncvar_fill(&the_syncvar_t); }
 
 	uint64_t readFF(void) {
 	    uint64_t ret = 0;
 	    readFF(&ret);
 	    return ret;
 	}
-	int readFF(uint64_t *const dest) { return qthread_syncvar_readFF(qthread_self(), dest, &the_syncvar_t); }
+	int readFF(uint64_t *const dest) { return qthread_syncvar_readFF(dest, &the_syncvar_t); }
 	int readFF(int64_t *const dest) {
 	    uint64_t tmp_dest = 0;
 	    int ret = readFF(&tmp_dest);
@@ -79,7 +79,7 @@ class syncvar
 	    readFE(&ret);
 	    return ret;
 	}
-	int readFE(uint64_t *const dest) { return qthread_syncvar_readFE(qthread_self(), dest, &the_syncvar_t); }
+	int readFE(uint64_t *const dest) { return qthread_syncvar_readFE(dest, &the_syncvar_t); }
 	int readFE(int64_t *const dest) {
 	    uint64_t tmp_dest = 0;
 	    int ret = readFE(&tmp_dest);
@@ -95,10 +95,8 @@ class syncvar
 	    return ret;
 	}
 
-	int writeF(qthread_t *me, const uint60_t src) { return qthread_syncvar_writeF_const(me, &the_syncvar_t, src); }
-	int writeF(const uint60_t src) { return qthread_syncvar_writeF_const(qthread_self(), &the_syncvar_t, src); }
-	int writeEF(qthread_t *me, const uint60_t src) { return qthread_syncvar_writeEF_const(me, &the_syncvar_t, src); }
-	int writeEF(const uint60_t src) { return qthread_syncvar_writeEF_const(NULL, &the_syncvar_t, src); }
+	int writeF(const uint60_t src) { return qthread_syncvar_writeF_const(&the_syncvar_t, src); }
+	int writeEF(const uint60_t src) { return qthread_syncvar_writeEF_const(&the_syncvar_t, src); }
 
 	uint64_t incr(int64_t inc=1) { return qthread_syncvar_incrF(&the_syncvar_t, inc); }
 

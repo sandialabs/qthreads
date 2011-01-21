@@ -253,9 +253,9 @@ int qthread_syncvar_status(syncvar_t *const v);
  * basis (to avoid needing to lock the memory pool). Anyway, if you pass it a
  * NULL qthread_t, it will still work, it just won't be as fast. */
 int qthread_empty(qthread_t * me, const aligned_t * dest);
-int qthread_syncvar_empty(qthread_t * restrict const me, syncvar_t * restrict const dest);
+int qthread_syncvar_empty(syncvar_t * restrict const dest);
 int qthread_fill(qthread_t * me, const aligned_t * dest);
-int qthread_syncvar_fill(qthread_t * restrict const me, syncvar_t * restrict const dest);
+int qthread_syncvar_fill(syncvar_t * restrict const dest);
 
 /* These functions wait for memory to become empty, and then fill it. When
  * memory becomes empty, only one thread blocked like this will be awoken. Data
@@ -275,10 +275,10 @@ int qthread_writeEF(qthread_t * me, aligned_t * restrict const dest,
 		    const aligned_t * restrict const src);
 int qthread_writeEF_const(qthread_t * me, aligned_t * const dest,
 			  const aligned_t src);
-int qthread_syncvar_writeEF(qthread_t *restrict me, syncvar_t *restrict
-			    const dest, const uint64_t *restrict const src);
-int qthread_syncvar_writeEF_const(qthread_t *restrict me, syncvar_t *restrict
-			    const dest, const uint64_t src);
+int qthread_syncvar_writeEF(syncvar_t * restrict const dest,
+			    const uint64_t * restrict const src);
+int qthread_syncvar_writeEF_const(syncvar_t * restrict const dest,
+				  const uint64_t src);
 
 /* This function is a cross between qthread_fill() and qthread_writeEF(). It
  * does not wait for memory to become empty, but performs the write and sets
@@ -298,10 +298,10 @@ int qthread_writeF(qthread_t * me, aligned_t * restrict const dest,
 		   const aligned_t * restrict const src);
 int qthread_writeF_const(qthread_t * me, aligned_t * const dest,
 			 const aligned_t src);
-int qthread_syncvar_writeF(qthread_t *restrict me, syncvar_t *restrict
-			   const dest, const uint64_t *restrict const src);
-int qthread_syncvar_writeF_const(qthread_t *restrict me, syncvar_t *restrict
-			   const dest, const uint64_t src);
+int qthread_syncvar_writeF(syncvar_t * restrict const dest,
+			   const uint64_t * restrict const src);
+int qthread_syncvar_writeF_const(syncvar_t * restrict const dest,
+				 const uint64_t src);
 
 /* This function waits for memory to become full, and then reads it and leaves
  * the memory as full. When memory becomes full, all threads waiting for it to
@@ -319,8 +319,8 @@ int qthread_syncvar_writeF_const(qthread_t *restrict me, syncvar_t *restrict
  */
 int qthread_readFF(qthread_t * me, aligned_t * const dest,
 		   const aligned_t * const src);
-int qthread_syncvar_readFF(qthread_t * restrict const me, uint64_t * restrict const dest,
-		   syncvar_t * restrict const src);
+int qthread_syncvar_readFF(uint64_t * restrict const dest,
+			   syncvar_t * restrict const src);
 
 /* These functions wait for memory to become full, and then empty it. When
  * memory becomes full, only one thread blocked like this will be awoken. Data
@@ -338,8 +338,8 @@ int qthread_syncvar_readFF(qthread_t * restrict const me, uint64_t * restrict co
  */
 int qthread_readFE(qthread_t * me, aligned_t * const dest,
 		   const aligned_t * const src);
-int qthread_syncvar_readFE(qthread_t * restrict const me, uint64_t * restrict const dest,
-		   syncvar_t * restrict const src);
+int qthread_syncvar_readFE(uint64_t * restrict const dest,
+			   syncvar_t * restrict const src);
 
 /* functions to implement FEB-ish locking/unlocking
  *
@@ -1171,14 +1171,13 @@ static QINLINE uint64_t qthread_cas64(volatile uint64_t * operand,
     /* In general, RISC doesn't provide a way to do 64 bit operations from 32
      * bit code. Sorry! */
     uint64_t retval;
-    qthread_t *me = qthread_self();
 
-    qthread_lock(me, (aligned_t*)operand);
+    qthread_lock((aligned_t*)operand);
     retval = *operand;
     if (retval == oldval) {
 	*operand = newval;
     }
-    qthread_unlock(me, (aligned_t*)operand);
+    qthread_unlock((aligned_t*)operand);
     return retval;
 # else
 #  error Unimplemented assembly architecture for qthread_cas64
