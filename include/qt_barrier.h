@@ -4,10 +4,10 @@
 #include <qthread/qthread.h>
 
 /* these two calls assume that we're using a/the global barrier */
-void qt_global_barrier(const qthread_t *me);
+void qt_global_barrier(void);
 void qt_global_barrier_init(int size, int debug);
 void qt_global_barrier_destroy(void);
-#define qt_barrier(x) qt_global_barrier(x)
+#define qt_barrier(x) qt_global_barrier()
 
 typedef enum barrierType
 {

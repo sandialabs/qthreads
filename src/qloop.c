@@ -69,7 +69,7 @@ static aligned_t qloop_step_wrapper(
 #ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
     MONITOR_ASM_LABEL(qthread_step_fence1); // add label for HPCToolkit unwind
 #endif
-    arg->func(arg->arg, arg->startat, arg->stopat, arg->step, arg->arg);
+    arg->func(arg->startat, arg->stopat, arg->step, arg->arg);
 #ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
     MONITOR_ASM_LABEL(qthread_step_fence2); // add label for HPCToolkit unwind
 #endif
@@ -169,7 +169,6 @@ static void qt_loop_step_inner(
     int future)
 {				       /*{{{ */
     size_t i, threadct = 0;
-    qthread_t *const me = qthread_self();
     size_t steps = (stop - start) / stride;
     struct qloop_step_wrapper_args *qwa;
     syncvar_t *rets;
@@ -1317,7 +1316,6 @@ void qt_loop_queue_run_single(
     volatile qqloop_step_handle_t * loop,
     void *t)
 {
-    qthread_t *const me = qthread_self();
     int dynamicBlock = qloop_internal_computeNextBlock(0, 1.0, loop);	// fake time to prevent blocking for short time chunks
     qtimer_t qt = qtimer_create();
     double time = 0.;
@@ -1356,7 +1354,7 @@ void qt_loop_queue_run_single(
     // did some work in this loop; need to wait for others to finish
 
     //    qtimer_start(qt);
-    qt_global_barrier(me);	       // keep everybody together -- don't lose workers
+    qt_global_barrier();	       // keep everybody together -- don't lose workers
 
     //    qtimer_stop(qt);
     //    time = qtimer_secs(qt);
@@ -1407,7 +1405,6 @@ static void qt_parallel_qfor(
 }
 
 static void qt_naked_parallel_for(
-    qthread_t * me,
     const size_t dummy1,
     const size_t dummy2,
     const size_t dummy3,
@@ -1449,7 +1446,6 @@ void qt_parallel_for(
 }
 
 static void qt_naked_parallel_for(
-    qthread_t * me,
     const size_t dummy1,                    // This function must match qt_loop_f prototype so it can be called with qt_loop()
     const size_t dummy2,                    // But since I only care when all the children return, the arguments are ignored
     const size_t dummy3,

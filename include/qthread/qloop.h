@@ -8,9 +8,8 @@ Q_STARTCXX			       /* */
 /* for convenient arguments to qt_loop_future */
 typedef void (*qt_loop_f) (qthread_t * me, const size_t startat,
 			   const size_t stopat, void *arg);
-typedef void (*qt_loop_step_f) (qthread_t * me, const size_t startat,
-                                const size_t stopat, const size_t step,
-                                void *arg);
+typedef void (*qt_loop_step_f) (const size_t startat, const size_t stopat,
+				const size_t step, void *arg);
 typedef void (*qt_loopr_f) (qthread_t * me, const size_t startat,
 			    const size_t stopat, void *restrict arg,
 			    void *restrict ret);

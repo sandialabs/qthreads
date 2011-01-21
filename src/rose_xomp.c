@@ -233,8 +233,7 @@ void XOMP_init(
 
     XOMP_Status_init(&xomp_status);  // Initialize XOMP_Status
 
-    qthread_t *const me = qthread_self();
-    qthread_syncvar_empty(me,&outGate); // initialize lock to control loop creation
+    qthread_syncvar_empty(&outGate); // initialize lock to control loop creation
     
     // Process special environment variables
     if ((env=getenv("OMP_SCHEDULE")) != NULL) {
@@ -265,7 +264,9 @@ void XOMP_init(
 void XOMP_terminate(
     int exitcode)
 {
+#ifdef STEAL_PROFILE		       // should give mechanism to make steal profiling optional
   qthread_steal_stat();  // qthread_finalize called by at_exit handler
+#endif
   return;
 }
 
@@ -416,16 +417,15 @@ void XOMP_loop_guided_init(
     int chunk_size)
 {
   //  int i;
-  qthread_t *const me = qthread_self();
   qqloop_step_handle_t *qqhandle = NULL;
   
   qthread_shepherd_id_t myid;
 #ifdef USE_RDTSC
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  qthread_worker_id_t workerid = qthread_worker(&myid,me);
+  qthread_worker_id_t workerid = qthread_worker(&myid);
   loopTimer[workerid] = 0;
 #else
-  myid = qthread_shep(me);
+  myid = qthread_shep();
   loopTimer[myid] = 0;
 #endif
 #else
@@ -447,11 +447,11 @@ void XOMP_loop_guided_init(
     orderedLoopCount = 0;
     
     qqloop_set_value(qqhandle);
-    qthread_syncvar_fill(me,&outGate); // open gate 
+    qthread_syncvar_fill(&outGate); // open gate 
   }
 
   else {
-    qthread_syncvar_readFF(me, NULL, &outGate); // make sure that this loop is set up
+    qthread_syncvar_readFF(NULL, &outGate); // make sure that this loop is set up
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qqhandle = qqloop_get_value(workerid);
 #else
@@ -462,7 +462,7 @@ void XOMP_loop_guided_init(
   aligned_t barrierSize = qtar_size() + 1; // returns index value -- need count of waiters
   aligned_t bCnt = qthread_incr(&gate_cnt, 1) + 1; // number waiting + myself
   if(bCnt == barrierSize) {
-    qthread_syncvar_empty(me,&outGate);
+    qthread_syncvar_empty(&outGate);
     qthread_incr(&gate_cnt, -barrierSize);
   }
   
@@ -533,10 +533,9 @@ bool XOMP_loop_guided_start(
 {
     double time;
     qthread_shepherd_id_t myid;
-    qthread_t *const me = qthread_self();
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     // both halves nearly the same -- difference workerid for MTS shep id for original
-    qthread_worker_id_t workerid = qthread_worker(&myid,me);
+    qthread_worker_id_t workerid = qthread_worker(&myid);
     qqloop_step_handle_t *loop = qqloop_get_value(workerid);	// from init;
 #ifdef USE_RDTSC
     if (!firstTime[workerid] && (loop->type == GUIDED_SCHED)) {
@@ -564,7 +563,7 @@ bool XOMP_loop_guided_start(
     }
 #endif
 #else
-    myid = qthread_shep(me);
+    myid = qthread_shep();
     qqloop_step_handle_t *loop = qqloop_get_value(myid);	// from init;
 #ifdef USE_RDTSC
     if (!firstTime[myid] && (loop->type == GUIDED_SCHED)) {
@@ -662,12 +661,11 @@ void XOMP_loop_end(
 #else
   qtimer_stop(loopTimer);
 #endif
-  qthread_t *const me = qthread_self();
   XOMP_barrier();            // need barrier or timeout in qt_loop_inner kills performance
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  qqloop_clear_value(qthread_worker(NULL,me));
+  qqloop_clear_value(qthread_worker(NULL));
 #else
-  qqloop_clear_value(qthread_shep(me));
+  qqloop_clear_value(qthread_shep());
 #endif
 }
 
@@ -690,7 +688,7 @@ void XOMP_barrier(void)
       	 (activeParallelLoop || get_inside_xomp_nested_parallel(&xomp_status))
        ) {
       // everybody should be co-scheduled -- no need to allow blocking
-      qt_global_barrier(me);
+      qt_global_barrier();
     }
     else {
       // in task parallelism -- need to allow blocking
@@ -703,17 +701,13 @@ void XOMP_barrier(void)
 void XOMP_atomic_start(
     void)
 {
-    qthread_t *me = qthread_self();
-
-    qthread_lock(me, get_atomic_lock(&xomp_status));
+    qthread_lock(get_atomic_lock(&xomp_status));
 }
 
 void XOMP_atomic_end(
     void)
 {
-    qthread_t *me = qthread_self();
-
-    qthread_unlock(me, get_atomic_lock(&xomp_status));
+    qthread_unlock(get_atomic_lock(&xomp_status));
 }
 
 // needed for full OpenMP 3.0 support
@@ -796,7 +790,7 @@ void walkSyncTaskList(qthread_t *me)
     }
 #endif
 #endif
-    qthread_syncvar_readFF(me, NULL, lc_p);
+    qthread_syncvar_readFF(NULL, lc_p);
     qthread_setTaskRetVar(me,syncVar->next_task);
     free(syncVar);
   }
@@ -831,7 +825,7 @@ void XOMP_task(
   }
   qthread_f qfunc = (qthread_f)func;
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  qthread_fork_syncvar_to(qfunc, arg, arg_copy, arg_size, ret, qthread_shep(me));
+  qthread_fork_syncvar_to(qfunc, arg, arg_copy, arg_size, ret, qthread_shep());
 #else
   qthread_fork_syncvar_to(qfunc, arg, arg_copy, arg_size, ret, id%qthread_num_shepherds());
 #endif
@@ -853,11 +847,10 @@ void XOMP_loop_static_init(
     int stride,
     int chunk_size)
 {
-  qthread_t *const me = qthread_self();
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  int myid = qthread_worker(NULL,me);
+  int myid = qthread_worker(NULL);
 #else
-  int myid = qthread_shep(me);
+  int myid = qthread_shep();
 #endif
   qqloop_step_handle_t *qqhandle = NULL;
 
@@ -900,7 +893,7 @@ void XOMP_loop_dynamic_init(
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   int myid = qthread_worker(NULL,me);
 #else
-  int myid = qthread_shep(me);
+  int myid = qthread_shep();
 #endif
   
   if (qt_global_arrive_first(myid,xomp_get_nested(&xomp_status))) {
@@ -933,13 +926,12 @@ void XOMP_loop_runtime_init(
     int stride)
 {
   int chunk_size = 1; // Something has to be done to correctly compute chunk_size
-  qthread_t *const me = qthread_self();
   qqloop_step_handle_t *qqhandle = NULL;
   
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  int myid = qthread_worker(NULL,me);
+  int myid = qthread_worker(NULL);
 #else
-  int myid = qthread_shep(me);
+  int myid = qthread_shep();
 #endif
 
   switch(get_runtime_sched_option(&xomp_status))
@@ -1001,9 +993,9 @@ void XOMP_ordered_start(
     void)
 {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  int myid = qthread_worker(NULL,qthread_self());
+  int myid = qthread_worker(NULL);
 #else
-  int myid = qthread_shep(qthread_self());
+  int myid = qthread_shep();
 #endif
   while (orderedLoopCount != currentIteration[myid]){}; // spin until my turn
   
@@ -1025,9 +1017,9 @@ bool XOMP_loop_static_start(
     long *returnUpper)
 {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  int myid = qthread_worker(NULL,qthread_self());
+  int myid = qthread_worker(NULL);
 #else
-  int myid = qthread_shep(qthread_self());
+  int myid = qthread_shep();
 #endif
   int iterationNum = staticStartCount[myid]++;
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -1155,19 +1147,18 @@ void XOMP_critical_start(
 {
   // wait on omp critical region to be available
   aligned_t *value = (aligned_t*)*data;
-  qthread_t *const me = qthread_self();
   aligned_t v;
   if(value == 0) { // null data passed in
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    v = qthread_worker(NULL,me);
+    v = qthread_worker(NULL);
 #else
-    v = qthread_shep(me);
+    v = qthread_shep();
 #endif
   }
   else {
     v = *value;
   }
-  qthread_readFE(me, &v, &XOMP_critical);
+  qthread_readFE(&v, &XOMP_critical);
 }
 
 void XOMP_critical_end(
@@ -1175,19 +1166,18 @@ void XOMP_critical_end(
 {
 
   aligned_t *value = (aligned_t*)*data;
-  qthread_t *const me = qthread_self();
   aligned_t v;
   if(value == 0) { // null data passed in
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    v = -qthread_worker(NULL,me);
+    v = -qthread_worker(NULL);
 #else
-    v = -qthread_shep(me);
+    v = -qthread_shep();
 #endif
   }
   else {
     v = *value;
   }
-  qthread_writeF(me, &XOMP_critical, &v);
+  qthread_writeF(&XOMP_critical, &v);
 }
 
 // really should have a include that defines true and false
@@ -1197,9 +1187,9 @@ bool XOMP_master(
     void)
 {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  int myid = qthread_worker(NULL,qthread_self());
+  int myid = qthread_worker(NULL);
 #else
-  int myid = qthread_shep(qthread_self());
+  int myid = qthread_shep();
 #endif
   if (myid == 0) return 1;
   else return 0;
@@ -1210,9 +1200,9 @@ bool XOMP_single(
     void)
 {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  int myid = qthread_worker(NULL,qthread_self());
+  int myid = qthread_worker(NULL);
 #else
-  int myid = qthread_shep(qthread_self());
+  int myid = qthread_shep();
 #endif
   if (qt_global_arrive_first(myid,xomp_get_nested(&xomp_status))){ 
     return 1;
@@ -1249,8 +1239,7 @@ void omp_set_num_threads (
   set_inside_xomp_parallel(&xomp_status, TRUE);
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  qthread_t *const me = qthread_self();
-  qthread_worker_id_t workerid = qthread_worker(NULL,me);
+  qthread_worker_id_t workerid = qthread_worker(NULL);
   qthread_shepherd_id_t num_active = qthread_num_workers();
 #else
   qthread_shepherd_id_t num_active = qthread_num_shepherds();
@@ -1337,9 +1326,9 @@ int omp_get_thread_num (
     void)
 {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  qthread_worker_id_t id = qthread_worker (NULL, NULL);
+  qthread_worker_id_t id = qthread_worker (NULL);
 #else
-  qthread_shepherd_id_t id = qthread_shep (NULL);
+  qthread_shepherd_id_t id = qthread_shep ();
 #endif
   return (int) id;
 }
@@ -1382,8 +1371,7 @@ int omp_get_dynamic (
 void omp_init_lock (
     void *pval)
 {
-  qthread_t *const me = qthread_self();
-  qthread_syncvar_empty(me, pval);
+  qthread_syncvar_empty(pval);
 }
 
 // extern void omp_destroy_lock (omp_lock_t *);
@@ -1396,16 +1384,14 @@ void omp_destroy_lock (
 void omp_set_lock (
     void *pval)
 {
-  qthread_t *const me = qthread_self();
-  qthread_syncvar_writeEF_const(me, pval, 1);
+  qthread_syncvar_writeEF_const(pval, 1);
 }
 
 // extern void omp_unset_lock (omp_lock_t *);
 void omp_unset_lock (
     void *pval)
 {
-  qthread_t *const me = qthread_self();
-  qthread_syncvar_readFE(me, NULL, pval);
+  qthread_syncvar_readFE(NULL, pval);
 }
 
 // extern int omp_test_lock (omp_lock_t *);

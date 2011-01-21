@@ -16,11 +16,9 @@ struct qqloop_iteration_queue {
 };
 struct qqloop_static_args;
 struct qqloop_wrapper_range;
-typedef int (
-    *qq_getiter_f) (
-    struct qqloop_iteration_queue * const restrict,
-    struct qqloop_static_args * const restrict,
-    struct qqloop_wrapper_range * const restrict);
+typedef int (*qq_getiter_f) (struct qqloop_iteration_queue * const restrict,
+			     struct qqloop_static_args * const restrict,
+			     struct qqloop_wrapper_range * const restrict);
 struct qqloop_static_args {
     qt_loop_f func;
     void *arg;

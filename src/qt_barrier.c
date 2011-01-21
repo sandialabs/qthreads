@@ -258,13 +258,13 @@ void qt_barrier_enter(qt_barrier_t * b, qthread_shepherd_id_t shep)
 // akp 7/24/09
 #define QT_GLOBAL_LOGBARRIER
 #ifdef QT_GLOBAL_LOGBARRIER
-void qt_global_barrier(const qthread_t * me)
+void qt_global_barrier(void)
 {				       /*{{{ */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  const qthread_worker_id_t workerid = qthread_worker(NULL,me);
+  const qthread_worker_id_t workerid = qthread_worker(NULL);
   qt_barrier_enter(MBar, workerid);
 #else
-  const qthread_shepherd_id_t shep = qthread_shep(me);
+  const qthread_shepherd_id_t shep = qthread_shep();
   qt_barrier_enter(MBar, shep);
 #endif
   return;

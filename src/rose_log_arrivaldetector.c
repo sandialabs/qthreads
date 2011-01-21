@@ -21,7 +21,7 @@ static int64_t qt_arrive_first_enter(qt_arrive_first_t * b, qthread_shepherd_id_
 
 qt_arrive_first_t *MArrFirst = NULL;
 
-void qtar_resize(size_t size){
+void qtar_resize(aligned_t size){
   qt_global_arrive_first_destroy();
   qt_global_arrive_first_init(size-1, 0);  // the size to resize is the number of threads (1 based)
                  // the size to first init is for the max thread number(0 based) -- so subtract one
@@ -212,25 +212,24 @@ int64_t qt_global_arrive_first(
     int64_t nest)
 {				       /*{{{ */
     int64_t t;
-      qthread_t *const me = qthread_self();
     if (nest) {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-      if (qthread_worker(NULL,me))
+      if (qthread_worker(NULL))
 #else
-      if (qthread_shep(me))
+      if (qthread_shep())
 #endif
 	{
-	  qt_global_barrier(me);
+	  qt_global_barrier();
 	  return 0;
 	}
       else{
-	qt_global_barrier(me);
+	qt_global_barrier();
 	return 1;
       } 
     }
     else {
       t = qt_arrive_first_enter(MArrFirst, shep);
-      qt_global_barrier(me);
+      qt_global_barrier();
       return t;
     }
 }				       /*}}} */

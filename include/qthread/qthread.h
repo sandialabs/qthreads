@@ -118,7 +118,8 @@ Q_STARTCXX /* */
 typedef struct qthread_s qthread_t;
 typedef unsigned int qthread_shepherd_id_t;
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-typedef unsigned int qthread_worker_id_t;/* SLO -- multithreaded shepherd */
+typedef unsigned int qthread_worker_id_t;
+#define NO_WORKER   ((qthread_worker_id_t)-1)
 #endif
 
 /* for convenient arguments to qthread_fork */
@@ -197,7 +198,7 @@ int qthread_debuglevel(int);
 unsigned qthread_id(void);
 qthread_shepherd_id_t qthread_shep(void);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *s,const qthread_t * t); 
+qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *s);
 #endif
 
 size_t qthread_stackleft(void);
