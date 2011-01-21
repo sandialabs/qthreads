@@ -151,7 +151,7 @@ static Q_UNUSED void qt_uint_min_acc(void *restrict a, void *restrict b)
 	*(aligned_t *) a = *(aligned_t *) b;
 }
 
-void qt_qsort(qthread_t * me, double *array, const size_t length);
+void qt_qsort(double *array, const size_t length);
 
 Q_ENDCXX			       /* */
 #endif

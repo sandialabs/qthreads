@@ -2572,7 +2572,7 @@ static void qthread_wrapper(void *ptr)
 	    qassert(qthread_syncvar_writeEF_const((syncvar_t*)t->ret, (t->f) (t->arg)), QTHREAD_SUCCESS);
 	    if((t->free_arg) && (&t->test != t->arg))free(t->arg);
 	} else {
-	    qassert(qthread_writeEF_const(t, (aligned_t*)t->ret, (t->f) (t->arg)), QTHREAD_SUCCESS);
+	    qassert(qthread_writeEF_const((aligned_t*)t->ret, (t->f) (t->arg)), QTHREAD_SUCCESS);
 	}
     } else {
 	assert(t->f);
@@ -2738,7 +2738,7 @@ int qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
 		      t->thread_id, shep);
 
 	if (ret) {
-	    int test = qthread_empty(qthread_self(), ret);
+	    int test = qthread_empty(ret);
 
 	    if (test != QTHREAD_SUCCESS) {
 		qthread_thread_free(t);
@@ -2826,7 +2826,7 @@ int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
 	    shepherd);
 
     if (ret) {
-	int test = qthread_empty(qthread_self(), ret);
+	int test = qthread_empty(ret);
 
 	if (test != QTHREAD_SUCCESS) {
 	    qthread_thread_free(t);
@@ -2919,7 +2919,7 @@ int qthread_fork_future_to(const qthread_t * me, const qthread_f f,
 	    t->thread_id, shepherd);
 
     if (ret) {
-	int test = qthread_empty(qthread_self(), ret);
+	int test = qthread_empty(ret);
 
 	if (test != QTHREAD_SUCCESS) {
 	    qthread_thread_free(t);
@@ -3202,12 +3202,13 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t * shep,
     }
 }				       /*}}} */
 
-int qthread_empty(qthread_t * me, const aligned_t * dest)
+int qthread_empty(const aligned_t * dest)
 {				       /*{{{ */
     const aligned_t *alignedaddr;
 #ifndef SST
     qthread_addrstat_t *m;
     qt_hash FEBbin;
+    qthread_t *me = qthread_self();
     {
 	const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
 	FEBbin = qlib->FEBs[lockbin];
@@ -3248,12 +3249,13 @@ int qthread_empty(qthread_t * me, const aligned_t * dest)
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-int qthread_fill(qthread_t * me, const aligned_t * dest)
+int qthread_fill(const aligned_t * dest)
 {				       /*{{{ */
     const aligned_t *alignedaddr;
 #ifndef SST
     qthread_addrstat_t *m;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
+    qthread_t *me = qthread_self();
 
     QALIGN(dest, alignedaddr);
     /* lock hash */
@@ -3285,17 +3287,15 @@ int qthread_fill(qthread_t * me, const aligned_t * dest)
  * 2 - the destination's FEB state gets changed from empty to full
  */
 
-int qthread_writeF(qthread_t * me, aligned_t * restrict const dest,
+int qthread_writeF(aligned_t * restrict const dest,
 		   const aligned_t * restrict const src)
 {				       /*{{{ */
     aligned_t *alignedaddr;
 #ifndef SST
     qthread_addrstat_t *m;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
+    qthread_t *me = qthread_self();
 
-    if (me == NULL) {
-	me = qthread_self();
-    }
     qthread_debug(LOCK_BEHAVIOR,
 		  "tid %u dest=%p src=%p...\n",
 		  me->thread_id, dest, src);
@@ -3331,10 +3331,10 @@ int qthread_writeF(qthread_t * me, aligned_t * restrict const dest,
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-int qthread_writeF_const(qthread_t * me, aligned_t * const dest,
+int qthread_writeF_const(aligned_t * const dest,
 			 const aligned_t src)
 {				       /*{{{ */
-    return qthread_writeF(me, dest, &src);
+    return qthread_writeF(dest, &src);
 }				       /*}}} */
 
 /* the way this works is that:
@@ -3343,7 +3343,7 @@ int qthread_writeF_const(qthread_t * me, aligned_t * const dest,
  * 3 - the destination's FEB state gets changed from empty to full
  */
 
-int qthread_writeEF(qthread_t * me, aligned_t * restrict const dest,
+int qthread_writeEF(aligned_t * restrict const dest,
 		    const aligned_t * restrict const src)
 {				       /*{{{ */
     aligned_t *alignedaddr;
@@ -3351,12 +3351,10 @@ int qthread_writeEF(qthread_t * me, aligned_t * restrict const dest,
     qthread_addrstat_t *m;
     qthread_addrres_t *X = NULL;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
+    qthread_t *me = qthread_self();
 
     QTHREAD_LOCK_TIMER_DECLARATION(febblock);
 
-    if (me == NULL) {
-	me = qthread_self();
-    }
     qthread_debug(LOCK_BEHAVIOR,
 		  "tid %u dest=%p src=%p...\n",
 		  me->thread_id, dest, src);
@@ -3422,10 +3420,9 @@ int qthread_writeEF(qthread_t * me, aligned_t * restrict const dest,
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-int qthread_writeEF_const(qthread_t * me, aligned_t * const dest,
-			  const aligned_t src)
+int qthread_writeEF_const(aligned_t * const dest, const aligned_t src)
 {				       /*{{{ */
-    return qthread_writeEF(me, dest, &src);
+    return qthread_writeEF(dest, &src);
 }				       /*}}} */
 
 /* the way this works is that:
@@ -3433,7 +3430,7 @@ int qthread_writeEF_const(qthread_t * me, aligned_t * const dest,
  * 2 - data is copied from src to destination
  */
 
-int qthread_readFF(qthread_t * me, aligned_t * restrict const dest,
+int qthread_readFF(aligned_t * restrict const dest,
 		   const aligned_t * restrict const src)
 {				       /*{{{ */
     const aligned_t *alignedaddr;
@@ -3441,12 +3438,10 @@ int qthread_readFF(qthread_t * me, aligned_t * restrict const dest,
     qthread_addrstat_t *m = NULL;
     qthread_addrres_t *X = NULL;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(src);
+    qthread_t *me = qthread_self();
 
     QTHREAD_LOCK_TIMER_DECLARATION(febblock);
 
-    if (me == NULL) {
-	me = qthread_self();
-    }
     qthread_debug(LOCK_BEHAVIOR,
 		  "tid %u dest=%p src=%p...\n",
 		  me->thread_id, dest, src);
@@ -3518,19 +3513,17 @@ int qthread_readFF(qthread_t * me, aligned_t * restrict const dest,
  * 3 - the src's FEB bits get changed from full to empty
  */
 
-int qthread_readFE(qthread_t * me, aligned_t * restrict const dest,
+int qthread_readFE(aligned_t * restrict const dest,
 		   const aligned_t * restrict const src)
 {				       /*{{{ */
     const aligned_t *alignedaddr;
 #ifndef SST
     qthread_addrstat_t *m;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(src);
+    qthread_t *me = qthread_self();
 
     QTHREAD_LOCK_TIMER_DECLARATION(febblock);
 
-    if (me == NULL) {
-	me = qthread_self();
-    }
     qthread_debug(LOCK_BEHAVIOR,
 		  "tid %u dest=%p src=%p...\n",
 		  me->thread_id, dest, src);

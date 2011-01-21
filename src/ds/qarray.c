@@ -1223,7 +1223,6 @@ void qarray_iter_loopaccum(qarray * a, const size_t startat,
 			   const size_t stopat, qa_loopr_f func, void *arg,
 			   void *ret, const size_t retsize, qt_accum_f acc)
 {				       /*{{{ */
-    qthread_t *me = qthread_self();
     qassert_retvoid((a != NULL));
     qassert_retvoid((func != NULL));
     qassert_retvoid((startat <= stopat));
@@ -1235,7 +1234,7 @@ void qarray_iter_loopaccum(qarray * a, const size_t startat,
 	    aligned_t r;
 	    qthread_fork_to((qthread_f) qarray_loopaccum_strider, &qfwa, &r,
 			    a->dist_specific.dist_shep);
-	    qthread_readFF(me, &r, &r);
+	    qthread_readFF(&r, &r);
 	}
 	    break;
 	case FIXED_FIELDS:
@@ -1270,7 +1269,7 @@ void qarray_iter_loopaccum(qarray * a, const size_t startat,
 				&qfwa[i], &rv[i], s);
 	    }
 	    for (i = 0; i < num_spawns; i++) {
-		qthread_readFF(me, NULL, &(rv[i]));
+		qthread_readFF(NULL, &(rv[i]));
 		if (i > 0) {
 		    acc(ret, &rets[i - 1]);
 		}
@@ -1334,7 +1333,7 @@ void qarray_iter_loopaccum(qarray * a, const size_t startat,
 			int first = 1;
 			for (i=0; i<maxsheps; i++) {
 			    if (rv[i] == 0){
-				qthread_readFF(me, NULL, &(rv[i]));
+				qthread_readFF(NULL, &(rv[i]));
 				if (first) {
 				    first = 0;
 				    if (i > 0)
@@ -1362,7 +1361,7 @@ void qarray_iter_loopaccum(qarray * a, const size_t startat,
 				&qfwa[i], &rv[i], i);
 		    }
 		    for (i = 0; i < maxsheps; i++) {
-			qthread_readFF(me, NULL, &(rv[i]));
+			qthread_readFF(NULL, &(rv[i]));
 			if (i > 0) {
 			    acc(ret, rets + ((i - 1) * retsize));
 			}

@@ -43,11 +43,10 @@
 #define INNER_LOOP_FF(_fname_,_structtype_,_opmacro_) static aligned_t _fname_(struct _structtype_ *args) \
 { \
     size_t i; \
-    qthread_t *me = qthread_self(); \
-    qthread_readFF(me, NULL, (aligned_t*)(args->array + args->start)); \
+    qthread_readFF(NULL, (aligned_t*)(args->array + args->start)); \
     args->ret = args->array[args->start]; \
     for (i = args->start + 1; i < args->stop; i++) { \
-	qthread_readFF(me, NULL, (aligned_t*)(args->array + i)); \
+	qthread_readFF(NULL, (aligned_t*)(args->array + i)); \
 	_opmacro_(args->ret, args->array[i]); \
     } \
     if (args->addlast) { \
@@ -59,7 +58,7 @@
     return 0; \
 }
 #define OUTER_LOOP(_fname_,_structtype_,_opmacro_,_rtype_,_innerfunc_,_innerfuncff_) \
-_rtype_ _fname_(qthread_t *me, const _rtype_ *array, size_t length, int checkfeb) \
+_rtype_ _fname_(const _rtype_ *array, size_t length, int checkfeb) \
 { \
     size_t i, start = 0; \
     syncvar_t *waitfor_sentinel = NULL; \
@@ -90,10 +89,10 @@ _rtype_ _fname_(qthread_t *me, const _rtype_ *array, size_t length, int checkfeb
 	} \
     } \
     if (checkfeb) { \
-	qthread_readFF(me, NULL, (aligned_t*)(array + start)); \
+	qthread_readFF(NULL, (aligned_t*)(array + start)); \
 	myret = array[start]; \
 	for (i = start + 1; i < length; i++) { \
-	    qthread_readFF(me, NULL, (aligned_t*)(array + i)); \
+	    qthread_readFF(NULL, (aligned_t*)(array + i)); \
 	    _opmacro_(myret, array[i]); \
 	} \
     } else { \
@@ -455,7 +454,7 @@ static aligned_t qutil_mergesort_inner(struct qutil_mergesort_args *args)
     return 0;
 }
 
-void qutil_mergesort(qthread_t * me, double *array, size_t length)
+void qutil_mergesort(double *array, size_t length)
 {
     /* first, decide how much of the array each thread gets */
     size_t chunksize = MT_LOOP_CHUNK;
@@ -483,7 +482,7 @@ void qutil_mergesort(qthread_t * me, double *array, size_t length)
 	future_fork((qthread_f) qutil_mergesort_presort, args + i, rets + i);
     }
     for (i = 0; i < numthreads; i++) {
-	qthread_readFF(me, NULL, rets + i);
+	qthread_readFF(NULL, rets + i);
     }
     free(rets);
     free(args);
@@ -516,7 +515,7 @@ void qutil_mergesort(qthread_t * me, double *array, size_t length)
 	    numthreads++;
 	}
 	for (i = 0; i < numthreads; i++) {
-	    qthread_readFF(me, NULL, rets + i);
+	    qthread_readFF(NULL, rets + i);
 	}
 	chunksize *= 2;
     }
@@ -660,7 +659,7 @@ qutil_qsort_inner_partitioner(qthread_t * me, double *array,
 	qthread_fork((qthread_f) qutil_qsort_partition, args + i, rets + i);
     }
     for (i = 0; i < numthreads; i++) {
-	qthread_readFF(me, NULL, rets + i);
+	qthread_readFF(NULL, rets + i);
     }
     free(args);
     free(rets);
@@ -753,17 +752,17 @@ static inline aligned_t qutil_qsort_inner(struct qutil_qsort_iargs *a)
 		qthread_fork((qthread_f) qutil_qsort_inner, na + 1, rets + 1);
 	    }
 	    if (rets[0] == 0) {
-		qthread_readFF(me, NULL, rets);
+		qthread_readFF(NULL, rets);
 	    }
 	    if (rets[1] == 0) {
-		qthread_readFF(me, NULL, rets + 1);
+		qthread_readFF(NULL, rets + 1);
 	    }
 	}
     }
     return 0;
 }
 
-void qutil_qsort(qthread_t * me, double *array, const size_t length)
+void qutil_qsort(double *array, const size_t length)
 {
     struct qutil_qsort_iargs arg;
 
@@ -904,7 +903,7 @@ qutil_aligned_qsort_inner_partitioner(qthread_t * me, aligned_t * array,
 		     rets + i);
     }
     for (i = 0; i < numthreads; i++) {
-	qthread_readFF(me, NULL, rets + i);
+	qthread_readFF(NULL, rets + i);
     }
     free(args);
     free(rets);
@@ -1004,18 +1003,17 @@ static inline aligned_t qutil_aligned_qsort_inner(struct
 			     &rets[1]);
 	    }
 	    if (rets[0] == 0) {
-		qthread_readFF(me, NULL, rets);
+		qthread_readFF(NULL, rets);
 	    }
 	    if (rets[1] == 0) {
-		qthread_readFF(me, NULL, rets + 1);
+		qthread_readFF(NULL, rets + 1);
 	    }
 	}
     }
     return 0;
 }
 
-void qutil_aligned_qsort(qthread_t * me, aligned_t * array,
-			 const size_t length)
+void qutil_aligned_qsort(aligned_t * array, const size_t length)
 {
     struct qutil_aligned_qsort_iargs arg;
 

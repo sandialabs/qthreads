@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
     }
     iprintf("ui_array generated...\n");
     gettimeofday(&start, NULL);
-    qutil_aligned_qsort(qthread_self(), ui_array, len);
+    qutil_aligned_qsort(ui_array, len);
     gettimeofday(&stop, NULL);
     iprintf("done sorting, checking correctness...\n");
     for (i = 0; i < len - 1; i++) {
@@ -67,7 +67,7 @@ int main(int argc, char *argv[])
     }
     iprintf("d_array generated...\n");
     gettimeofday(&start, NULL);
-    qutil_qsort(qthread_self(), d_array, len);
+    qutil_qsort(d_array, len);
     gettimeofday(&stop, NULL);
     iprintf("done sorting, checking correctness...\n");
     for (i = 0; i < len - 1; i++) {

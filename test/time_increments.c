@@ -28,8 +28,7 @@ static void init_prism(
 
 /* the following int_fetch_inc() function borrowed from Simon Kahan's 2010
  * PRMHTS talk */
-static aligned_t int_fetch_inc(
-    qthread_t *me)
+static aligned_t int_fetch_inc(void)
 {
     unsigned int offset, node, depth;
     for (offset = 0, node = 0, depth = 0; depth < PTREE_DEPTH; ++depth) {
@@ -43,12 +42,12 @@ static aligned_t int_fetch_inc(
 		node = 2 * node + 1;   // yes, so I'll go left
 	    } else {		       // no...
 		aligned_t try2;
-		qthread_readFE(me, &try2, &prism[node][pindex]);
+		qthread_readFE(&try2, &prism[node][pindex]);
 		if (try2 != try1 + 1) {	// anyone now?
-		    qthread_fill(me, &prism[node][pindex]);	// yes, so go left
+		    qthread_fill(&prism[node][pindex]);	// yes, so go left
 		    node = 2 * node + 1;
 		} else {	       // still no one...
-		    qthread_writeF(me, &prism[node][pindex], &try1);	// as if never in'prism'ed
+		    qthread_writeF(&prism[node][pindex], &try1);	// as if never in'prism'ed
 		    aligned_t addend = qthread_incr(&prism[node][0], 1) & 0x1;
 		    if (addend)
 			offset += 1 << depth;
@@ -61,7 +60,7 @@ static aligned_t int_fetch_inc(
 }
 
 static void balanced_incr(
-    qthread_t * me,
+    qthread_t *me,
     const size_t startat,
     const size_t stopat,
     void *arg)
@@ -74,7 +73,7 @@ static void balanced_incr(
 }
 
 static void diffract_incr(
-    qthread_t * me,
+    qthread_t *me,
     const size_t startat,
     const size_t stopat,
     void *arg)
@@ -83,19 +82,19 @@ static void diffract_incr(
     aligned_t sum = 0;
 
     for (i = startat; i < stopat; ++i) {
-	sum = int_fetch_inc(me);
+	sum = int_fetch_inc();
     }
-    ((aligned_t*)arg)[qthread_id(me)] = sum+1;
+    ((aligned_t*)arg)[qthread_id()] = sum+1;
 }
 
 static void balanced_falseshare(
-    qthread_t * me,
+    qthread_t *me,
     const size_t startat,
     const size_t stopat,
     void *arg)
 {
     size_t i;
-    qthread_shepherd_id_t shep = qthread_shep(me);
+    qthread_shepherd_id_t shep = qthread_shep();
     aligned_t *myinc = increments + shep;
 
     for (i = startat; i < stopat; i++) {
@@ -104,13 +103,13 @@ static void balanced_falseshare(
 }
 
 static void balanced_noncomp(
-    qthread_t * me,
+    qthread_t *me,
     const size_t startat,
     const size_t stopat,
     void *arg)
 {
     size_t i;
-    qthread_shepherd_id_t shep = qthread_shep(me);
+    qthread_shepherd_id_t shep = qthread_shep();
     aligned_t myinc;
 
     assert(shep != NO_SHEPHERD);
@@ -120,7 +119,6 @@ static void balanced_noncomp(
 }
 
 static aligned_t incrloop(
-    qthread_t * me,
     void *arg)
 {
     unsigned int i;
@@ -132,7 +130,6 @@ static aligned_t incrloop(
 }
 
 static aligned_t incrloop_falseshare(
-    qthread_t * me,
     void *arg)
 {
     unsigned int offset = (unsigned int)(intptr_t) arg;
@@ -146,7 +143,6 @@ static aligned_t incrloop_falseshare(
 }
 
 static aligned_t incrloop_nocompete(
-    qthread_t * me,
     void *arg)
 {
     unsigned int i;
@@ -159,7 +155,6 @@ static aligned_t incrloop_nocompete(
 }
 
 static aligned_t incrstream(
-    qthread_t * me,
     void *arg)
 {
     unsigned int i;
@@ -172,7 +167,6 @@ static aligned_t incrstream(
 }
 
 static aligned_t addloop_falseshare(
-    qthread_t * me,
     void *arg)
 {
     unsigned int offset = (unsigned int)(intptr_t) arg;
@@ -186,7 +180,6 @@ static aligned_t addloop_falseshare(
 }
 
 static aligned_t addloop_nocompete(
-    qthread_t * me,
     void *arg)
 {
     unsigned int i;
@@ -342,7 +335,7 @@ int main(
 	    qthread_fork(incrloop, NULL, rets + i);
 	}
 	for (i = 0; i < MAXPARALLELISM; i++) {
-	    qthread_readFF(NULL, NULL, rets + i);
+	    qthread_readFF(NULL, rets + i);
 	}
 	qtimer_stop(timer);
 	assert(incrementme == ITERATIONS * MAXPARALLELISM);
@@ -370,7 +363,7 @@ int main(
 	    qthread_fork(incrloop_falseshare, (void *)(intptr_t) i, rets + i);
 	}
 	for (i = 0; i < MAXPARALLELISM; i++) {
-	    qthread_readFF(NULL, NULL, rets + i);
+	    qthread_readFF(NULL, rets + i);
 	}
 	qtimer_stop(timer);
 	free(increments);
@@ -398,7 +391,7 @@ int main(
 	    qthread_fork(incrloop_nocompete, (void *)(intptr_t) i, rets + i);
 	}
 	for (i = 0; i < MAXPARALLELISM; i++) {
-	    qthread_readFF(NULL, NULL, rets + i);
+	    qthread_readFF(NULL, rets + i);
 	}
 	qtimer_stop(timer);
 
@@ -425,7 +418,7 @@ int main(
 	    qthread_fork(addloop_falseshare, (void *)(intptr_t) i, rets + i);
 	}
 	for (i = 0; i < MAXPARALLELISM; i++) {
-	    qthread_readFF(NULL, NULL, rets + i);
+	    qthread_readFF(NULL, rets + i);
 	}
 	qtimer_stop(timer);
 	free(increments);
@@ -453,7 +446,7 @@ int main(
 	    qthread_fork(addloop_nocompete, (void *)(intptr_t) i, rets + i);
 	}
 	for (i = 0; i < MAXPARALLELISM; i++) {
-	    qthread_readFF(NULL, NULL, rets + i);
+	    qthread_readFF(NULL, rets + i);
 	}
 	qtimer_stop(timer);
 
@@ -508,7 +501,7 @@ int main(
 	    qthread_fork(incrstream, increments + (i * ITERATIONS), rets + i);
 	}
 	for (i = 0; i < MAXPARALLELISM; i++) {
-	    qthread_readFF(NULL, NULL, rets + i);
+	    qthread_readFF(NULL, rets + i);
 	}
 	qtimer_stop(timer);
 	for (i = 0; i < MAXPARALLELISM * ITERATIONS; i++)

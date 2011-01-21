@@ -53,7 +53,7 @@ static void future_cleanup(void)
 	qthread_fork_to(future_shep_cleanup, NULL, rets + i, i);
     }
     for (i = 0; i < qlib->nshepherds; i++) {
-	qthread_readFF(NULL, rets + i, rets + i);
+	qthread_readFF(NULL, rets + i);
     }
     free(rets);
     QTHREAD_FASTLOCK_DESTROY(sfnf_lock);
@@ -82,7 +82,6 @@ void future_init(int vp_per_loc)
 {
     qthread_shepherd_id_t i;
     aligned_t *rets;
-    qthread_t *me = qthread_self();
 
     QTHREAD_FASTLOCK_INIT(sfnf_lock);
     qassert(pthread_key_create(&future_bookkeeping, NULL), 0);
@@ -98,7 +97,7 @@ void future_init(int vp_per_loc)
 	qthread_fork_to(future_shep_init, NULL, rets + i, i);
     }
     for (i = 0; i < qlib->nshepherds; i++) {
-	qthread_readFF(me, rets + i, rets + i);
+	qthread_readFF(NULL, rets + i);
     }
     free(rets);
 #ifdef CLEANUP
@@ -275,7 +274,7 @@ static void future_join(qthread_t * me, aligned_t * ft)
     assert(me != NULL);
     assert(future_bookkeeping_array != NULL);
     qthread_debug(THREAD_BEHAVIOR, "Thread %p join to future %p\n", (void *)me, (void *)ft);
-    qthread_readFF(me, ft, ft);
+    qthread_readFF(NULL, ft);
 }
 
 /* this makes me not a future. Once a future exits, the thread may not

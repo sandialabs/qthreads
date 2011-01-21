@@ -51,13 +51,11 @@ int main(int argc, char *argv[])
 {
     aligned_t ret;
     aligned_t *rets;
-    qthread_t *me;
     int my_id;
     size_t i;
 
     qthread_init(1);
     CHECK_VERBOSE();
-    me = qthread_self();
     iprintf("Alive! Checking my id (expecting ID 0)\n");
     my_id = qthread_id();
     iprintf("My id is %i\n", my_id);
@@ -65,13 +63,13 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "my_id == %i (expected 0)\n", my_id);
     assert(my_id == 0);
     qthread_fork(thread, NULL, &ret);
-    qthread_readFF(me, NULL, &ret);
+    qthread_readFF(NULL, &ret);
     rets = (aligned_t *) malloc(sizeof(aligned_t) * qthread_num_shepherds());
     for (i = 0; i < qthread_num_shepherds(); i++) {
 	qthread_fork(checkid, (void *)(intptr_t) (i + 2), rets+i);
     }
     for (i = 0; i < qthread_num_shepherds(); i++) {
-	qthread_readFF(me, NULL, rets+i);
+	qthread_readFF(NULL, rets+i);
     }
     free(rets);
     iprintf("success!\n");

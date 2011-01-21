@@ -101,8 +101,8 @@ int main(int argc, char *argv[])
 	qthread_fork(producer, (void*)(uintptr_t)(i+pairs), &(t[1][i]));
     }
     for (unsigned int i = 0; i < pairs; ++i) {
-	qthread_readFF(me, NULL, &(t[0][i]));
-	qthread_readFF(me, NULL, &(t[1][i]));
+	qthread_readFF(NULL, &(t[0][i]));
+	qthread_readFF(NULL, &(t[1][i]));
     }
     iprintf("shouldn't be blocking on x (current status: %s)\n",
 	    qthread_syncvar_status(&x)?"full":"empty");

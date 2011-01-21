@@ -18,7 +18,7 @@ static void balanced_readFF(qthread_t * me, const size_t startat,
     size_t i;
 
     for (i = startat; i < stopat; i++) {
-	qthread_readFF(me, NULL, (aligned_t*)arg);
+	qthread_readFF(NULL, (aligned_t*)arg);
     }
 }
 
@@ -28,7 +28,7 @@ static void balanced_syncvar_readFF(qthread_t * me, const size_t startat,
     size_t i;
 
     for (i = startat; i < stopat; i++) {
-	qthread_syncvar_readFF(me, NULL, (syncvar_t*)arg);
+	qthread_syncvar_readFF(NULL, (syncvar_t*)arg);
     }
 }
 
@@ -36,11 +36,11 @@ static void balanced_falseshare_syncreadFF(qthread_t * me, const size_t startat,
 				const size_t stopat, void *arg)
 {
     size_t i;
-    qthread_shepherd_id_t shep = qthread_shep(me);
+    qthread_shepherd_id_t shep = qthread_shep();
     syncvar_t *myloc = ((syncvar_t*)arg) + shep;
 
     for (i = startat; i < stopat; i++) {
-	qthread_syncvar_readFF(me, NULL, myloc);
+	qthread_syncvar_readFF(NULL, myloc);
     }
 }
 
@@ -48,11 +48,11 @@ static void balanced_falseshare_readFF(qthread_t * me, const size_t startat,
 				const size_t stopat, void *arg)
 {
     size_t i;
-    qthread_shepherd_id_t shep = qthread_shep(me);
+    qthread_shepherd_id_t shep = qthread_shep();
     aligned_t *myloc = ((aligned_t*)arg) + shep;
 
     for (i = startat; i < stopat; i++) {
-	qthread_readFF(me, NULL, myloc);
+	qthread_readFF(NULL, myloc);
     }
 }
 
@@ -63,7 +63,7 @@ static void balanced_noncomp_syncreadFF(qthread_t * me, const size_t startat,
     syncvar_t myinc = SYNCVAR_STATIC_INITIALIZER;
 
     for (i = startat; i < stopat; i++) {
-	qthread_syncvar_readFF(me, NULL, &myinc);
+	qthread_syncvar_readFF(NULL, &myinc);
     }
 }
 
@@ -74,11 +74,11 @@ static void balanced_noncomp_readFF(qthread_t * me, const size_t startat,
     aligned_t myinc = 0;
 
     for (i = startat; i < stopat; i++) {
-	qthread_readFF(me, NULL, &myinc);
+	qthread_readFF(NULL, &myinc);
     }
 }
 
-static aligned_t justreturn(qthread_t * me, void * arg)
+static aligned_t justreturn(void * arg)
 {
     return 7;
 }
@@ -264,7 +264,7 @@ int main(int argc, char *argv[])
 	}
 	for (i = 0; i < ITERATIONS; i++) {
 	    uint64_t r = 0;
-	    qthread_syncvar_readFF(NULL, &r, rets + i);
+	    qthread_syncvar_readFF(&r, rets + i);
 	    assert(r == 7);
 	}
 	/* time it */
@@ -273,7 +273,7 @@ int main(int argc, char *argv[])
 	    qthread_fork_syncvar(justreturn, (void*)(intptr_t)i, rets + i);
 	}
 	for (i = 0; i < ITERATIONS; i++) {
-	    qthread_syncvar_readFF(NULL, NULL, rets + i);
+	    qthread_syncvar_readFF(NULL, rets + i);
 	}
 	qtimer_stop(timer);
 	free(rets);
@@ -301,7 +301,7 @@ int main(int argc, char *argv[])
 	}
 	for (i = 0; i < ITERATIONS; i++) {
 	    aligned_t r = 0;
-	    qthread_readFF(NULL, &r, rets + i);
+	    qthread_readFF(&r, rets + i);
 	    assert(r == 7);
 	}
 	/* time it */
@@ -310,7 +310,7 @@ int main(int argc, char *argv[])
 	    qthread_fork(justreturn, (void*)(intptr_t)i, rets + i);
 	}
 	for (i = 0; i < ITERATIONS; i++) {
-	    qthread_readFF(NULL, NULL, rets + i);
+	    qthread_readFF(NULL, rets + i);
 	}
 	qtimer_stop(timer);
 	free(rets);

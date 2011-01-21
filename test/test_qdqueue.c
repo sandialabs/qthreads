@@ -97,7 +97,7 @@ int main(int argc, char *argv[])
 	assert(qthread_fork(queuer, q, NULL) == QTHREAD_SUCCESS);
     }
     for (i = 0; i < THREAD_COUNT; i++) {
-	assert(qthread_readFF(me, NULL, &(rets[i])) == QTHREAD_SUCCESS);
+	assert(qthread_readFF(NULL, &(rets[i])) == QTHREAD_SUCCESS);
     }
     free(rets);
     if (!qdqueue_empty(me, q)) {

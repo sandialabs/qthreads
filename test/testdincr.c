@@ -23,10 +23,8 @@ int main(int argc, char *argv[])
     int i;
     aligned_t rets[30];
     double ret_test;
-    qthread_t *me;
 
     qthread_initialize();
-    me = qthread_self();
     iprintf("%i shepherds\n", qthread_num_shepherds());
 
     ret_test = qthread_dincr(&master, 1);
@@ -44,7 +42,7 @@ int main(int argc, char *argv[])
 	qthread_fork(incr, (void *)(intptr_t) i, &(rets[i]));
     }
     for (i = 0; i < 30; i++) {
-	qthread_readFF(me, NULL, rets + i);
+	qthread_readFF(NULL, rets + i);
     }
     if (master != 32.0) {
 	int j;
@@ -61,7 +59,7 @@ int main(int argc, char *argv[])
 	qthread_fork(incr5, NULL, &(rets[i]));
     }
     for (i = 0; i < 30; i++) {
-	qthread_readFF(me, NULL, rets + i);
+	qthread_readFF(NULL, rets + i);
     }
     if (master != 150.0) {
 	fprintf(stderr, "master is %f rather than 150\n", master);

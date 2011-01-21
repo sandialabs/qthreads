@@ -145,7 +145,7 @@ public:
 
       if (join) {
 	for (int i = 0; i < tdc; i++)
-	  qthread_readFF(me, thr+i, thr+i);
+	  qthread_readFF(thr+i, thr+i);
 	delete thr;
       }
     } break;

@@ -248,13 +248,10 @@ int qthread_feb_status(const aligned_t * addr);
 int qthread_syncvar_status(syncvar_t *const v);
 
 /* The empty/fill functions merely assert the empty or full state of the given
- * address. You may be wondering why they require a qthread_t argument. The
- * reason for this is memory pooling; memory is allocated on a per-shepherd
- * basis (to avoid needing to lock the memory pool). Anyway, if you pass it a
- * NULL qthread_t, it will still work, it just won't be as fast. */
-int qthread_empty(qthread_t * me, const aligned_t * dest);
+ * address. */
+int qthread_empty(const aligned_t * dest);
 int qthread_syncvar_empty(syncvar_t * restrict const dest);
-int qthread_fill(qthread_t * me, const aligned_t * dest);
+int qthread_fill(const aligned_t * dest);
 int qthread_syncvar_fill(syncvar_t * restrict const dest);
 
 /* These functions wait for memory to become empty, and then fill it. When
@@ -265,16 +262,10 @@ int qthread_syncvar_fill(syncvar_t * restrict const dest);
  * 1 - destination's FEB state must be "empty"
  * 2 - data is copied from src to destination
  * 3 - the destination's FEB state gets changed from empty to full
- *
- * This function takes a qthread_t pointer as an argument. If this is called
- * from somewhere other than a qthread, use NULL for the me argument. If you
- * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
- * (which, conveniently, returns NULL if you aren't a qthread).
  */
-int qthread_writeEF(qthread_t * me, aligned_t * restrict const dest,
+int qthread_writeEF(aligned_t * restrict const dest,
 		    const aligned_t * restrict const src);
-int qthread_writeEF_const(qthread_t * me, aligned_t * const dest,
-			  const aligned_t src);
+int qthread_writeEF_const(aligned_t * const dest, const aligned_t src);
 int qthread_syncvar_writeEF(syncvar_t * restrict const dest,
 			    const uint64_t * restrict const src);
 int qthread_syncvar_writeEF_const(syncvar_t * restrict const dest,
@@ -288,16 +279,10 @@ int qthread_syncvar_writeEF_const(syncvar_t * restrict const dest,
  * The semantics of writeF are:
  * 1 - data is copied from src to destination
  * 2 - the destination's FEB state gets set to full
- *
- * This function takes a qthread_t pointer as an argument. If this is called
- * from somewhere other than a qthread, use NULL for the me argument. If you
- * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
- * (which, conveniently, returns NULL if you aren't a qthread).
  */
-int qthread_writeF(qthread_t * me, aligned_t * restrict const dest,
+int qthread_writeF(aligned_t * restrict const dest,
 		   const aligned_t * restrict const src);
-int qthread_writeF_const(qthread_t * me, aligned_t * const dest,
-			 const aligned_t src);
+int qthread_writeF_const(aligned_t * const dest, const aligned_t src);
 int qthread_syncvar_writeF(syncvar_t * restrict const dest,
 			   const uint64_t * restrict const src);
 int qthread_syncvar_writeF_const(syncvar_t * restrict const dest,
@@ -311,14 +296,8 @@ int qthread_syncvar_writeF_const(syncvar_t * restrict const dest,
  * The semantics of readFF are:
  * 1 - src's FEB state must be "full"
  * 2 - data is copied from src to destination
- *
- * This function takes a qthread_t pointer as an argument. If this is called
- * from somewhere other than a qthread, use NULL for the me argument. If you
- * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
- * (which, conveniently, returns NULL if you aren't a qthread).
  */
-int qthread_readFF(qthread_t * me, aligned_t * const dest,
-		   const aligned_t * const src);
+int qthread_readFF(aligned_t * const dest, const aligned_t * const src);
 int qthread_syncvar_readFF(uint64_t * restrict const dest,
 			   syncvar_t * restrict const src);
 
@@ -330,14 +309,8 @@ int qthread_syncvar_readFF(uint64_t * restrict const dest,
  * 1 - src's FEB state must be "full"
  * 2 - data is copied from src to destination
  * 3 - the src's FEB bits get changed from full to empty when the data is copied
- *
- * This function takes a qthread_t pointer as an argument. If this is called
- * from somewhere other than a qthread, use NULL for the me argument. If you
- * have lost your qthread_t pointer, it can be reclaimed using qthread_self()
- * (which, conveniently, returns NULL if you aren't a qthread).
  */
-int qthread_readFE(qthread_t * me, aligned_t * const dest,
-		   const aligned_t * const src);
+int qthread_readFE(aligned_t * const dest, const aligned_t * const src);
 int qthread_syncvar_readFE(uint64_t * restrict const dest,
 			   syncvar_t * restrict const src);
 

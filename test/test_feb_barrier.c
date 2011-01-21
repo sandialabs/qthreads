@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
      * cases (in other words there must a race condition in qthread_finalize()
      * if there are outstanding threads out there) */
     for (i=0; i<threads; i++) {
-	qthread_readFF(me, NULL, rets+i);
+	qthread_readFF(NULL, rets+i);
     }
     return 0;
 }

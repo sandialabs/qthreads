@@ -79,7 +79,7 @@ int main(int argc, char *argv[])
     assert(qthread_syncvar_status(&x) == 0);
     qthread_fork(consumer, NULL, NULL);
     qthread_fork(producer, NULL, &t);
-    qthread_readFF(qthread_self(), NULL, &t);
+    qthread_readFF(NULL, &t);
     iprintf("shouldn't be blocking on x (current status: %s)\n",
 	    qthread_syncvar_status(&x)?"full":"empty");
     qthread_syncvar_readFF(&x_value, &x);

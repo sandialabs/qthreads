@@ -42,10 +42,8 @@ int main(int argc, char *argv[])
 {
     int i;
     aligned_t rets[30];
-    qthread_t *me;
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
-    me = qthread_self();
     CHECK_VERBOSE();
 
     rets[0] = qthread_cas(&master, master, 1);
@@ -56,7 +54,7 @@ int main(int argc, char *argv[])
 	qthread_fork(incr, NULL, &(rets[i]));
     }
     for (i = 0; i < 30; i++) {
-	qthread_readFF(me, NULL, rets + i);
+	qthread_readFF(NULL, rets + i);
     }
     if (master != 30) {
 	fprintf(stderr, "master is %lu rather than 30\n",

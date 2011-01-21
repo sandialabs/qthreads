@@ -32,19 +32,9 @@ template <typename T>
 inline int qthread_empty(const T * const dest)
 {
     QTHREAD_CHECKSIZE(T);
-    return qthread_empty(qthread_self(), (aligned_t *) dest);
+    return qthread_empty((aligned_t *) dest);
 }
 inline int qthread_empty(syncvar * const dest)
-{
-    return dest->empty();
-}
-template <typename T>
-inline int qthread_empty(qthread_t * const me, const T * const dest)
-{
-    QTHREAD_CHECKSIZE(T);
-    return qthread_empty(me, (aligned_t *) dest);
-}
-inline int qthread_empty(qthread_t * const me, syncvar * const dest)
 {
     return dest->empty();
 }
@@ -56,19 +46,9 @@ template <typename T>
 inline int qthread_fill(const T * const dest)
 {
     QTHREAD_CHECKSIZE(T);
-    return qthread_fill(qthread_self(), (aligned_t *) dest);
+    return qthread_fill((aligned_t *) dest);
 }
 inline int qthread_fill(syncvar * const dest)
-{
-    return dest->fill();
-}
-template <typename T>
-inline int qthread_fill(qthread_t * const me, const T * const dest)
-{
-    QTHREAD_CHECKSIZE(T);
-    return qthread_fill(me, (aligned_t *) dest);
-}
-inline int qthread_fill(qthread_t * const me, syncvar * const dest)
 {
     return dest->fill();
 }
@@ -81,7 +61,7 @@ template < typename T > inline int qthread_writeEF(
     const T * const src)
 {
     QTHREAD_CHECKSIZE(T);
-    return qthread_writeEF(qthread_self(), (aligned_t *) dest,
+    return qthread_writeEF((aligned_t *) dest,
 			   (aligned_t *) src);
 }
 
@@ -98,7 +78,7 @@ template < typename T > inline int qthread_writeEF(
     const T src)
 {
     QTHREAD_CHECKSIZE(T);
-    return qthread_writeEF_const(qthread_self(), (aligned_t *) dest,
+    return qthread_writeEF_const((aligned_t *) dest,
 				 (aligned_t) src);
 }
 
@@ -110,42 +90,6 @@ template < typename T > inline int qthread_writeEF(
     return dest->writeEF((uint64_t) src);
 }
 
-template < typename T > inline int qthread_writeEF(
-    qthread_t * const me,
-    T * const dest,
-    const T * const src)
-{
-    QTHREAD_CHECKSIZE(T);
-    return qthread_writeEF(me, (aligned_t *) dest, (aligned_t *) src);
-}
-
-template < typename T > inline int qthread_writeEF(
-    qthread_t * const me,
-    syncvar * const dest,
-    const T * const src)
-{
-    QTHREAD_CHECKSIZE(T);
-    return dest->writeEF(src);
-}
-
-template < typename T > inline int qthread_writeEF(
-    qthread_t * const me,
-    T * const dest,
-    const T src)
-{
-    QTHREAD_CHECKSIZE(T);
-    return qthread_writeEF_const(me, (aligned_t *) dest, (aligned_t) src);
-}
-
-template < typename T > inline int qthread_writeEF(
-    qthread_t * const me,
-    syncvar * const dest,
-    const T src)
-{
-    QTHREAD_CHECKSIZE(T);
-    return dest->writeEF((const uint64_t *) &src);
-}
-
 /**************************************************************************
  * writeF
  **************************************************************************/
@@ -153,7 +97,7 @@ template <typename T>
 inline int qthread_writeF(T * const dest, const T * const src)
 {
     QTHREAD_CHECKSIZE(T);
-    return qthread_writeF(qthread_self(), (aligned_t *) dest,
+    return qthread_writeF((aligned_t *) dest,
 			  (aligned_t *) src);
 }
 template <typename T>
@@ -166,37 +110,11 @@ template <typename T>
 inline int qthread_writeF(T * const dest, const T src)
 {
     QTHREAD_CHECKSIZE(T);
-    return qthread_writeF(qthread_self(), (aligned_t *) dest,
+    return qthread_writeF((aligned_t *) dest,
 				(aligned_t *) &src);
 }
 template <typename T>
 inline int qthread_writeF(syncvar * const dest, const T src)
-{
-    QTHREAD_CHECKSIZE(T);
-    return dest->writeF((uint64_t *) &src);
-}
-template <typename T>
-inline int qthread_writeF(qthread_t * const me, T * const dest,
-			  const T * const src)
-{
-    QTHREAD_CHECKSIZE(T);
-    return qthread_writeF(me, (aligned_t *) dest, (aligned_t *) src);
-}
-template <typename T>
-inline int qthread_writeF(qthread_t * const me, T * const dest, const T src)
-{
-    QTHREAD_CHECKSIZE(T);
-    return qthread_writeF_const(me, (aligned_t *) dest, (aligned_t) src);
-}
-template <typename T>
-inline int qthread_writeF(qthread_t * const me, syncvar * const dest,
-			  const T * const src)
-{
-    QTHREAD_CHECKSIZE(T);
-    return dest->writeF((uint64_t *) src);
-}
-template <typename T>
-inline int qthread_writeF(qthread_t * const me, syncvar * const dest, const T src)
 {
     QTHREAD_CHECKSIZE(T);
     return dest->writeF((uint64_t *) &src);
@@ -209,25 +127,11 @@ template <typename T>
 inline int qthread_readFF(T * const dest, const T * const src)
 {
     QTHREAD_CHECKSIZE(T);
-    return qthread_readFF(qthread_self(), (aligned_t *) dest,
+    return qthread_readFF((aligned_t *) dest,
 			  (aligned_t *) src);
 }
 template <typename T>
-inline int qthread_readFF(qthread_t * const me, T * const dest,
-			  const T * const src)
-{
-    QTHREAD_CHECKSIZE(T);
-    return qthread_readFF(me, (aligned_t *) dest, (aligned_t *) src);
-}
-template <typename T>
 inline int qthread_readFF(T * const dest, syncvar * const src)
-{
-    QTHREAD_CHECKSIZE(T);
-    return src->readFF(dest);
-}
-template <typename T>
-inline int qthread_readFF(qthread_t * const me, T * const dest,
-			  syncvar * const src)
 {
     QTHREAD_CHECKSIZE(T);
     return src->readFF(dest);
@@ -240,23 +144,11 @@ template <typename T>
 inline int qthread_readFE(T * const dest, const T * const src)
 {
     QTHREAD_CHECKSIZE(T);
-    return qthread_readFE(qthread_self(), (aligned_t *) dest,
+    return qthread_readFE((aligned_t *) dest,
 			  (aligned_t *) src);
 }
 template <typename T>
-inline int qthread_readFE(qthread_t * const me, T * const dest, const T * const src)
-{
-    QTHREAD_CHECKSIZE(T);
-    return qthread_readFE(me, (aligned_t *) dest, (aligned_t *) src);
-}
-template <typename T>
 inline int qthread_readFE(T * const dest, syncvar * const src)
-{
-    QTHREAD_CHECKSIZE(T);
-    return src->readFE(dest);
-}
-template <typename T>
-inline int qthread_readFE(qthread_t * const me, T * const dest, syncvar * const src)
 {
     QTHREAD_CHECKSIZE(T);
     return src->readFE(dest);

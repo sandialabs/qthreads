@@ -22,7 +22,7 @@ static aligned_t consumer(void *arg)
     iprintf("consumer(%p) unlocking id(%p), result is %i\n", t, &id, me);
     qthread_unlock(&id);
 
-    qthread_readFE(t, &readout, &x);
+    qthread_readFE(&readout, &x);
 
     return 0;
 }
@@ -39,7 +39,7 @@ static aligned_t producer(void *arg)
     qthread_unlock(&id);
 
     iprintf("producer(%p) filling x(%p)\n", t, &x);
-    qthread_writeEF_const(t, &x, 55);
+    qthread_writeEF_const(&x, 55);
 
     return 0;
 }
@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
     pthread_create(&external, NULL, external_thread, NULL);
     pthread_join(external, NULL);
 
-    qthread_readFF(qthread_self(), &t, &t);
+    qthread_readFF(NULL, &t);
 
     if (x == 55) {
 	iprintf("Success! x==55\n");

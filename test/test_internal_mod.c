@@ -12,18 +12,16 @@ int main(int argc, char *argv[])
 {
     unsigned int i;
     aligned_t rets[30];
-    qthread_t *me;
     qthread_shepherd_id_t numsheps;
 
     qthread_initialize();
-    me = qthread_self();
     numsheps = qthread_num_shepherds();
 
     for (i = 0; i < 30; i++) {
 	qthread_fork(whereami, NULL, &(rets[i]));
     }
     for (i = 0; i < 30; i++) {
-	qthread_readFF(me, NULL, rets + i);
+	qthread_readFF(NULL, rets + i);
     }
     for (i = 0; i < 30; i++) {
 	if (rets[i] != i % numsheps) {

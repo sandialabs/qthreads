@@ -883,10 +883,10 @@ static void qt##initials##_febworker(qthread_t * me, const size_t startat, \
 { \
     size_t i; \
     type acc; \
-    qthread_readFF(me, NULL, (aligned_t*)(((type *)arg)+startat)); \
+    qthread_readFF(NULL, (aligned_t*)(((type *)arg)+startat)); \
     acc = ((type *)arg)[startat]; \
     for (i = startat + 1; i < stopat; i++) { \
-	qthread_readFF(me, NULL, (aligned_t*)(((type *)arg) + i)); \
+	qthread_readFF(NULL, (aligned_t*)(((type *)arg) + i)); \
 	acc = _op_(acc, ((type *)arg)[i]); \
     } \
     *(type *)ret = acc; \
@@ -1065,7 +1065,6 @@ struct qt_qsort_iprets {
 };
 
 static struct qt_qsort_iprets qt_qsort_inner_partitioner(
-    qthread_t * me,
     double *array,
     const size_t length,
     const double pivot)
@@ -1112,7 +1111,7 @@ static struct qt_qsort_iprets qt_qsort_inner_partitioner(
 	} else {
 	    args[i].length = length - megachunk_size + chunksize;
 	}
-	/* qt_qsort_partition(me, args+i); */
+	/* qt_qsort_partition(args+i); */
 	/* future_fork((qthread_f)qt_qsort_partition, args+i, rets+i); */
 	qthread_fork_syncvar((qthread_f) qt_qsort_partition, args + i, rets + i);
     }
@@ -1126,7 +1125,6 @@ static struct qt_qsort_iprets qt_qsort_inner_partitioner(
 }				       /*}}} */
 
 static aligned_t qt_qsort_inner(
-    qthread_t * me,
     const struct qt_qsort_iargs *a)
 {				       /*{{{ */
     const size_t len = a->length;
@@ -1161,7 +1159,7 @@ static aligned_t qt_qsort_inner(
 	    const size_t offset = furthest.leftwall;
 
 	    furthest =
-		qt_qsort_inner_partitioner(me, array + furthest.leftwall,
+		qt_qsort_inner_partitioner(array + furthest.leftwall,
 					   furthest.rightwall -
 					   furthest.leftwall + 1, pivot);
 	    furthest.leftwall += offset;
@@ -1203,12 +1201,12 @@ static aligned_t qt_qsort_inner(
 		na[1].length = len - rightwall;
 		if (na[0].length > 0) {
 		    /* future_fork((qthread_f)qt_qsort_inner, na, rets); */
-		    /* qt_qsort_inner(me, na); */
+		    /* qt_qsort_inner(na); */
 		    qthread_fork_syncvar((qthread_f) qt_qsort_inner, na, rets);
 		}
 		if (na[1].length > 0 && len > rightwall) {
 		    /* future_fork((qthread_f)qt_qsort_inner, na+1, rets+1); */
-		    /* qt_qsort_inner(me, na+1); */
+		    /* qt_qsort_inner(na+1); */
 		    qthread_fork_syncvar((qthread_f) qt_qsort_inner, na + 1,
 				 rets + 1);
 		}
@@ -1221,7 +1219,6 @@ static aligned_t qt_qsort_inner(
 }				       /*}}} */
 
 void qt_qsort(
-    qthread_t * me,
     double *array,
     const size_t length)
 {				       /*{{{ */
@@ -1230,7 +1227,7 @@ void qt_qsort(
     arg.array = array;
     arg.length = length;
 
-    qt_qsort_inner(me, &arg);
+    qt_qsort_inner(&arg);
 }				       /*}}} */
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
@@ -1334,12 +1331,12 @@ void qt_loop_queue_run_single(
     while (iterationNumber < loop->assignStop) {
 	if (t != NULL) {
 	    qtimer_start(qt);
-	    loop->stat.func(me, iterationNumber, iterationStop,
+	    loop->stat.func(iterationNumber, iterationStop,
 			    loop->assignStep, t);
 	    qtimer_stop(qt);
 	} else {
 	    qtimer_start(qt);
-	    loop->stat.func(me, iterationNumber, iterationStop,
+	    loop->stat.func(iterationNumber, iterationStop,
 			    loop->assignStep, loop->stat.arg);
 	    qtimer_stop(qt);
 	}

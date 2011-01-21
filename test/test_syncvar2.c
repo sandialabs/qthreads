@@ -99,8 +99,8 @@ int main(
 
     qthread_fork(consumer, NULL, &t[0]);
     qthread_fork(producer, NULL, &t[1]);
-    qthread_readFF(qthread_self(), NULL, &t[0]);
-    qthread_readFF(qthread_self(), NULL, &t[1]);
+    qthread_readFF(NULL, &t[0]);
+    qthread_readFF(NULL, &t[1]);
 
     free(buff);
 
