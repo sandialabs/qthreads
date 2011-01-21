@@ -7,8 +7,7 @@
 
 static aligned_t checkres(void *arg)
 {
-    qthread_t *me = qthread_self();
-    qthread_shepherd_id_t myshep = qthread_shep(me);
+    qthread_shepherd_id_t myshep = qthread_shep();
 
     assert(myshep == 1 || myshep == 0 || myshep == 2);
 
@@ -28,24 +27,22 @@ static aligned_t checkres(void *arg)
 static aligned_t migrant(void *arg)
 {
     qthread_t *me = qthread_self();
-    int myshep = qthread_shep(me);
+    int myshep = qthread_shep();
 
     assert(myshep == 1 || myshep == 0);
 
     if (myshep == 1) {
 	qthread_migrate_to(0);
-	assert(qthread_shep(me) == 0);
-	assert(qthread_shep(NULL) == 0);
+	assert(qthread_shep() == 0);
     } else {
 	qthread_migrate_to(1);
 	iprintf("migrant starting on %i, aimed at 1, ended up on %i\n",
-		myshep, qthread_shep(me));
+		myshep, qthread_shep());
 	if (arg == (void *)2) {
-	    assert(qthread_shep(me) != 1);
+	    assert(qthread_shep() != 1);
 	} else {
-	    assert(qthread_shep(me) == 1);
+	    assert(qthread_shep() == 1);
 	}
-	assert(qthread_shep(NULL) == qthread_shep(me));
     }
 
     return 0;

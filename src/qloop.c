@@ -558,7 +558,7 @@ static QINLINE int qqloop_get_iterations_timed(
     struct qqloop_wrapper_range *const restrict range)
 {				       /*{{{ */
     const qthread_shepherd_id_t workerCount = sa->activesheps;
-    const qthread_shepherd_id_t shep = qthread_shep(NULL);
+    const qthread_shepherd_id_t shep = qthread_shep();
     const saligned_t localstop = iq->stop;
     const saligned_t localstep = iq->step;
 
@@ -688,7 +688,7 @@ static aligned_t qqloop_wrapper(
     int safeexit = 1;
 
     assert(get_iters != NULL);
-    if (qthread_shep(me) == shep && get_iters(iq, stat, &range)) {
+    if (qthread_shep() == shep && get_iters(iq, stat, &range)) {
         assert(range.startat != range.stopat);
 	do {
 	    if (iq->type == TIMED) {
@@ -698,7 +698,7 @@ static aligned_t qqloop_wrapper(
 	    if (iq->type == TIMED) {
 		qtimer_stop(iq->type_specific_data.timed.timers[shep]);
 	    }
-	    if (!qthread_shep_ok(me) || qthread_shep(me) != shep) {
+	    if (!qthread_shep_ok(me) || qthread_shep() != shep) {
 		/* my shepherd has been disabled while I was running */
 		qthread_debug(ALL_DETAILS,
 			      "my shepherd (%i) has been disabled!\n",

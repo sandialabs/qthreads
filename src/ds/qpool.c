@@ -281,7 +281,7 @@ void *qpool_alloc(qthread_t * me, qpool * pool)
     struct qpool_shepspec_s *mypool;
 
     qassert_ret((pool != NULL), NULL);
-    shep = qthread_shep(me);
+    shep = qthread_shep();
     mypool = &(pool->pools[shep]);
     p = (void *)_(mypool->reuse_pool);
 
@@ -349,7 +349,7 @@ void *qpool_alloc(qthread_t * me, qpool * pool)
 void qpool_free(qthread_t * me, qpool * pool, void *mem)
 {				       /*{{{ */
     void *p, *old, *new;
-    qthread_shepherd_id_t shep = qthread_shep(me);
+    qthread_shepherd_id_t shep = qthread_shep();
     struct qpool_shepspec_s *mypool = &(pool->pools[shep]);
 
     qassert_retvoid((mem != NULL));

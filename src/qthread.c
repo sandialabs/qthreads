@@ -3777,17 +3777,13 @@ unsigned qthread_id(void)
 #endif
 }				       /*}}} */
 
-qthread_shepherd_id_t qthread_shep(const qthread_t * t)
+qthread_shepherd_id_t qthread_shep(void)
 {				       /*{{{ */
-    if (t) {
-	return t->rdata->shepherd_ptr->shepherd_id;
+    qthread_shepherd_t *ret = qthread_internal_getshep();
+    if (ret == NULL) {
+	return NO_SHEPHERD;
     } else {
-	qthread_shepherd_t *ret = qthread_internal_getshep();
-	if (ret == NULL) {
-	    return NO_SHEPHERD;
-	} else {
-	    return ret->shepherd_id;
-	}
+	return ret->shepherd_id;
     }
 }				       /*}}} */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS

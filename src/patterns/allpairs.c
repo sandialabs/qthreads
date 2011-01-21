@@ -84,7 +84,7 @@ static aligned_t qt_ap_worker(struct qt_ap_wargs *restrict args)
 
 #ifdef QTHREAD_TRACK_DISTANCES
 	    {
-		const qthread_shepherd_id_t shep = qthread_shep(me);
+		const qthread_shepherd_id_t shep = qthread_shep();
 		const qthread_shepherd_id_t a1_shep =
 		    qarray_shepof(args->a1, wu->a1_start);
 		const qthread_shepherd_id_t a2_shep =
@@ -182,9 +182,9 @@ static void qt_ap_genwork2(const size_t startat,
 
     /* Find distance of gargs shep */
     if (maxsheps == 1 ||
-	shep == qthread_shep(me) /* both remote and local on same place */ ) {
+	shep == qthread_shep() /* both remote and local on same place */ ) {
 	qdqueue_enqueue(me, gargs->wq, workunit);
-	//qthread_incr(&mindistances, halfway_dist[qthread_shep(me)][shep]);
+	//qthread_incr(&mindistances, halfway_dist[qthread_shep()][shep]);
     } else {
 #if 0
 	/* option 1: trivial, probably bad */
@@ -198,7 +198,7 @@ static void qt_ap_genwork2(const size_t startat,
 	if (random() % 2) {
 	    s = shep;
 	} else {
-	    s = qthread_shep(me);
+	    s = qthread_shep();
 	}
 	qdqueue_enqueue_there(me, gargs->wq, workunit, s);
 #elif 0
@@ -215,8 +215,8 @@ static void qt_ap_genwork2(const size_t startat,
 #elif defined(QTHREAD_USE_HALFWAYARRAY)
 	/* option 5: optimal "halfway" idea */
 	qdqueue_enqueue_there(me, gargs->wq, workunit,
-			      halfway[qthread_shep(me)][shep]);
-	//qthread_incr(&mindistances, halfway_dist[qthread_shep(me)][shep]);
+			      halfway[qthread_shep()][shep]);
+	//qthread_incr(&mindistances, halfway_dist[qthread_shep()][shep]);
 #endif
     }
 }
@@ -227,7 +227,7 @@ static void qt_ap_genwork(const size_t startat,
 			  struct qt_ap_gargs *restrict gargs)
 {
     struct qt_ap_gargs2 garg2 =
-	{ gargs->wq, startat, stopat, qthread_shep(NULL) };
+	{ gargs->wq, startat, stopat, qthread_shep() };
 
     qarray_iter_constloop(gargs->array2, 0, gargs->array2->count,
 			  (qa_cloop_f) qt_ap_genwork2, &garg2);

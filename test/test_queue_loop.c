@@ -26,7 +26,7 @@ static void sum(
     aligned_t local_sum = 0, bigsum;
     if (REALLY_VERBOSE) {
 	printf("S%i: summing %i numbers, from %i to %i\n",
-	       (int)qthread_shep(me), (int)(stopat - startat), (int)startat,
+	       (int)qthread_shep(), (int)(stopat - startat), (int)startat,
 	       (int)stopat);
     }
     for (i = startat; i < stopat; ++i) {
@@ -34,7 +34,7 @@ static void sum(
     }
     bigsum = qthread_incr((aligned_t *) arg_, local_sum);
     if (REALLY_VERBOSE) {
-	printf("S%i: localsum = %lu, bigsum = %lu\n", (int)qthread_shep(me),
+	printf("S%i: localsum = %lu, bigsum = %lu\n", (int)qthread_shep(),
 	       (unsigned long)local_sum, (unsigned long)bigsum);
     }
 }

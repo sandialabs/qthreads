@@ -195,7 +195,7 @@ int qthread_debuglevel(int);
 /* these are accessor functions for use by the qthreads to retrieve information
  * about themselves */
 unsigned qthread_id(void);
-qthread_shepherd_id_t qthread_shep(const qthread_t * t);
+qthread_shepherd_id_t qthread_shep(void);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *s,const qthread_t * t); 
 #endif

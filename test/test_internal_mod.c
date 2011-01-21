@@ -5,7 +5,7 @@
 
 static aligned_t whereami(void *arg)
 {
-    return qthread_shep(qthread_self());
+    return qthread_shep();
 }
 
 int main(int argc, char *argv[])

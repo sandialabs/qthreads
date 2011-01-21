@@ -68,7 +68,7 @@ static void future_cleanup(void)
  * doesn't support PIM-local data (yet). Better PIM support is coming. */
 static aligned_t future_shep_init(void * Q_UNUSED arg)
 {
-    qthread_shepherd_id_t shep = qthread_shep(qthread_self());
+    qthread_shepherd_id_t shep = qthread_shep();
     location_t *ptr = &(future_bookkeeping_array[shep]);
 
     // vp_count is *always* locked. This establishes the waiting queue.
@@ -285,7 +285,7 @@ void future_exit(qthread_t * me)
     assert(me != NULL);
     assert(future_bookkeeping_array != NULL);
     qthread_debug(THREAD_BEHAVIOR, "Thread %p exit on loc %d\n", (void *)me,
-		  qthread_shep(me));
+		  qthread_shep());
     future_yield(me);
     qthread_assertnotfuture(me);
 }

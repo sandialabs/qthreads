@@ -295,7 +295,7 @@ static qarray *qarray_create_internal(const size_t count,
     switch (d) {
 	case ALL_SAME:
 	case ALL_LOCAL:
-	    ret->dist_specific.dist_shep = qthread_shep(NULL);
+	    ret->dist_specific.dist_shep = qthread_shep();
 	    qthread_incr(&chunk_distribution_tracker
 			 [ret->dist_specific.dist_shep], segment_count);
 	    break;
@@ -598,7 +598,7 @@ void *qarray_elem_migrate(const qarray * a, const size_t index)
 	    ((index - segment_num * a->segment_size) * a->unit_size);
 	dest = qarray_internal_shepof_ch(a, segment_head);
     }
-    if (qthread_shep(qthread_self()) != dest) {
+    if (qthread_shep() != dest) {
 	qthread_migrate_to(dest);
     }
     return ret;
@@ -645,7 +645,7 @@ static aligned_t qarray_strider(const struct qarray_func_wrapper_args *arg)
 {				       /*{{{ */
     const size_t segment_size = arg->a->segment_size;
     const distribution_t dist_type = arg->a->dist_type;
-    const qthread_shepherd_id_t shep = qthread_shep(qthread_self());
+    const qthread_shepherd_id_t shep = qthread_shep();
     size_t max_count = arg->stopat;
     size_t count = arg->startat;
 
@@ -763,7 +763,7 @@ static aligned_t qarray_loop_strider(const struct qarray_func_wrapper_args
 {				       /*{{{ */
     const size_t segment_size = arg->a->segment_size;
     const distribution_t dist_type = arg->a->dist_type;
-    const qthread_shepherd_id_t shep = qthread_shep(qthread_self());
+    const qthread_shepherd_id_t shep = qthread_shep();
     size_t max_count = arg->stopat;
     size_t count = arg->startat;
     const qa_loop_f ql = arg->func.ql;
@@ -876,7 +876,7 @@ static aligned_t qarray_loopaccum_strider(const struct
 {				       /*{{{ */
     const size_t segment_size = arg->a->segment_size;
     const distribution_t dist_type = arg->a->dist_type;
-    const qthread_shepherd_id_t shep = qthread_shep(qthread_self());
+    const qthread_shepherd_id_t shep = qthread_shep();
     const qt_accum_f acc = arg->acc;
     const qa_loopr_f ql = arg->func.ql;
     size_t max_count = arg->stopat;
@@ -1151,7 +1151,7 @@ void qarray_iter_loop_nb(qarray * a, const size_t startat,
     qargs->stopat = stopat;
     qargs->func = func;
     qargs->arg = arg;
-    qthread_fork_to(qarray_ilnb_wrapper, qargs, ret, qthread_shep(qthread_self()));
+    qthread_fork_to(qarray_ilnb_wrapper, qargs, ret, qthread_shep());
 }
 
 void qarray_iter_constloop(const qarray * a,

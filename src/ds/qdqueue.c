@@ -402,7 +402,7 @@ int qdqueue_enqueue(qthread_t * me, qdqueue_t * q, void *elem)
     qassert_ret((q != NULL), QTHREAD_BADARGS);
     qassert_ret((elem != NULL), QTHREAD_BADARGS);
 
-    myq = &(q->Qs[qthread_shep(me)]);
+    myq = &(q->Qs[qthread_shep()]);
 
     stat = qlfqueue_empty(myq->theQ);
     qlfqueue_enqueue(me, myq->theQ, elem);
@@ -475,7 +475,7 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
     qassert_ret((me != NULL), NULL);
     qassert_ret((q != NULL), NULL);
 
-    myq = &(q->Qs[qthread_shep(me)]);
+    myq = &(q->Qs[qthread_shep()]);
     if ((ret = qlfqueue_dequeue(me, myq->theQ)) != NULL) {
 	/* this write MUST be atomic */
 	_(myq->last_consumed) = myq;
@@ -548,7 +548,7 @@ int qdqueue_empty(qthread_t * me, qdqueue_t * q)
 	return 0;
     }
 
-    myq = &(q->Qs[qthread_shep(me)]);
+    myq = &(q->Qs[qthread_shep()]);
     if (!qlfqueue_empty(myq->theQ)) {
 	return 0;
     } else {
