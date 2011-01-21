@@ -3756,8 +3756,9 @@ int qthread_unlock(qthread_t * me, const aligned_t * a)
 }				       /*}}} */
 
 /* These are just accessor functions */
-unsigned qthread_id(const qthread_t * t)
+unsigned qthread_id(void)
 {				       /*{{{ */
+    qthread_t *t = qthread_self();
     qthread_debug(ALL_CALLS, "tid(%u)\n",
 		  t ? t->thread_id : (unsigned)-1);
 #ifdef QTHREAD_NONLAZY_THREADIDS

@@ -34,7 +34,7 @@ static aligned_t dequeuer(void *arg)
 	    qthread_yield();
 	}
     }
-    iprintf("dequeuer %i exiting\n", qthread_id(me));
+    iprintf("dequeuer %i exiting\n", qthread_id());
     return 0;
 }
 
