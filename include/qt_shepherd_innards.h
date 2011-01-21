@@ -109,11 +109,14 @@ extern pthread_key_t shepherd_structs;
 static QINLINE qthread_shepherd_t *qthread_internal_getshep(void)
 {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    return ((qthread_worker_t*)pthread_getspecific(shepherd_structs))->shepherd;
+    qthread_worker_t *w =
+	(qthread_worker_t *) pthread_getspecific(shepherd_structs);
+    return w ? w->shepherd : NULL;
 #else
-    return (qthread_shepherd_t*)pthread_getspecific(shepherd_structs);
+    return (qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
 #endif
 }
+
 void qthread_back_to_master(qthread_t * t);
 
 #endif
