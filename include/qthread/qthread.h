@@ -170,8 +170,7 @@ qthread_t *qthread_self(void);
  *
  * Using qthread_fork() and variants:
  *
- *     The specified function (the first argument; note that it is a qthread_f
- *     and not a qthread_t) will be run to completion. You can detect that a
+ *     The specified function will be run to completion. You can detect that a
  *     thread has finished by specifying a location to store the return value
  *     (which will be stored with a qthread_writeF call). The qthread_fork_to
  *     function spawns the thread to a specific shepherd.
@@ -186,23 +185,6 @@ int qthread_fork_syncvar_to(const qthread_f f, const void *const arg,  const voi
 #else
 int qthread_fork_syncvar_to(const qthread_f f, const void *const arg, syncvar_t * ret, const qthread_shepherd_id_t shepherd);
 #endif
-
-/* Using qthread_prepare()/qthread_schedule() and variants:
- *
- *     The combination of these two functions works like qthread_fork().
- *     First, qthread_prepare() creates a qthread_t object that is ready to be
- *     run (almost), but has not been scheduled. Next, qthread_schedule puts
- *     the finishing touches on the qthread_t structure and places it into an
- *     active queue.
- */
-qthread_t Q_DEPRECATED *qthread_prepare(const qthread_f f, const void *const arg,
-			   aligned_t * ret);
-qthread_t Q_DEPRECATED *qthread_prepare_for(const qthread_f f, const void *const arg,
-			       aligned_t * ret,
-			       const qthread_shepherd_id_t shepherd);
-
-int Q_DEPRECATED qthread_schedule(qthread_t * t);
-int Q_DEPRECATED qthread_schedule_on(qthread_t * t, const qthread_shepherd_id_t shepherd);
 
 /* This is a function to move a thread from one shepherd to another. */
 int qthread_migrate_to(qthread_t * me, const qthread_shepherd_id_t shepherd);
