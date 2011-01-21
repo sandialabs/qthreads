@@ -12,8 +12,8 @@ size_t ASIZE = 1026;
 
 aligned_t hamming = (aligned_t) - 1;
 
-static void assigni(qthread_t * me, const size_t startat, const size_t stopat,
-		    qarray * q, void *arg)
+static void assigni(const size_t startat, const size_t stopat, qarray * q,
+		    void *arg)
 {
     int *ptr = (int *)qarray_elem_nomigrate(q, startat);
 
@@ -22,8 +22,8 @@ static void assigni(qthread_t * me, const size_t startat, const size_t stopat,
     }
 }
 
-static void assignrand(qthread_t * me, const size_t startat,
-		       const size_t stopat, qarray * q, void *arg)
+static void assignrand(const size_t startat, const size_t stopat, qarray * q,
+		       void *arg)
 {
     int *ptr = (int *)qarray_elem_nomigrate(q, startat);
 
@@ -95,8 +95,8 @@ int main(int argc, char *argv[])
 
     a1 = qarray_create_tight(ASIZE, sizeof(int));
     a2 = qarray_create_tight(ASIZE, sizeof(int));
-    qarray_iter_loop(me, a1, 0, ASIZE, assigni, NULL);
-    qarray_iter_loop(me, a2, 0, ASIZE, assigni, NULL);
+    qarray_iter_loop(a1, 0, ASIZE, assigni, NULL);
+    qarray_iter_loop(a2, 0, ASIZE, assigni, NULL);
 
     out = (int **)calloc(ASIZE, sizeof(int *));
     assert(out);
@@ -119,8 +119,8 @@ int main(int argc, char *argv[])
     free(out);
 
     /* trial #2 */
-    qarray_iter_loop(me, a1, 0, ASIZE, assignrand, NULL);
-    qarray_iter_loop(me, a2, 0, ASIZE, assignrand, NULL);
+    qarray_iter_loop(a1, 0, ASIZE, assignrand, NULL);
+    qarray_iter_loop(a2, 0, ASIZE, assignrand, NULL);
 
     qt_allpairs(a1, a2, (dist_f) hammingdist);
 

@@ -5,13 +5,13 @@
 
 volatile float master[3] = { 0 };
 
-static aligned_t incr(qthread_t * me, void *arg)
+static aligned_t incr(void *arg)
 {
     qthread_fincr(master + 1, 1.0);
     return 0;
 }
 
-static aligned_t incr5(qthread_t * me, void *arg)
+static aligned_t incr5(void *arg)
 {
     qthread_fincr(master + 1, 5.0);
     return 0;

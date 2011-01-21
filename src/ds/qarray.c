@@ -582,8 +582,7 @@ qthread_shepherd_id_t qarray_shepof(const qarray * a, const size_t index)
     }
 }				       /*}}} */
 
-void *qarray_elem_migrate(qthread_t * me, const qarray * a,
-			  const size_t index)
+void *qarray_elem_migrate(const qarray * a, const size_t index)
 {				       /*{{{ */
     void *ret;
     qthread_shepherd_id_t dest;
@@ -599,8 +598,8 @@ void *qarray_elem_migrate(qthread_t * me, const qarray * a,
 	    ((index - segment_num * a->segment_size) * a->unit_size);
 	dest = qarray_internal_shepof_ch(a, segment_head);
     }
-    if (qthread_shep(me) != dest) {
-	qthread_migrate_to(me, dest);
+    if (qthread_shep(qthread_self()) != dest) {
+	qthread_migrate_to(qthread_self(), dest);
     }
     return ret;
 }				       /*}}} */
@@ -642,12 +641,11 @@ struct qarray_constfunc_wrapper_args
     const size_t startat, stopat;
 };
 
-static aligned_t qarray_strider(qthread_t * me,
-				const struct qarray_func_wrapper_args *arg)
+static aligned_t qarray_strider(const struct qarray_func_wrapper_args *arg)
 {				       /*{{{ */
     const size_t segment_size = arg->a->segment_size;
     const distribution_t dist_type = arg->a->dist_type;
-    const qthread_shepherd_id_t shep = qthread_shep(me);
+    const qthread_shepherd_id_t shep = qthread_shep(qthread_self());
     size_t max_count = arg->stopat;
     size_t count = arg->startat;
 
@@ -727,7 +725,7 @@ static aligned_t qarray_strider(qthread_t * me,
 	    void *ptr = qarray_elem_nomigrate(arg->a, count + inpage_offset);
 
 	    assert(ptr != NULL);       // aka internal error
-	    arg->func.qt(me, ptr);
+	    arg->func.qt(ptr);
 	}
 	switch (dist_type) {
 	    case FIXED_FIELDS:
@@ -760,13 +758,12 @@ static aligned_t qarray_strider(qthread_t * me,
     return 0;
 }				       /*}}} */
 
-static aligned_t qarray_loop_strider(qthread_t * me,
-				     const struct qarray_func_wrapper_args
+static aligned_t qarray_loop_strider(const struct qarray_func_wrapper_args
 				     *arg)
 {				       /*{{{ */
     const size_t segment_size = arg->a->segment_size;
     const distribution_t dist_type = arg->a->dist_type;
-    const qthread_shepherd_id_t shep = qthread_shep(me);
+    const qthread_shepherd_id_t shep = qthread_shep(qthread_self());
     size_t max_count = arg->stopat;
     size_t count = arg->startat;
     const qa_loop_f ql = arg->func.ql;
@@ -831,7 +828,7 @@ static aligned_t qarray_loop_strider(qthread_t * me,
 	     * loop function directly */
 	case ALL_SAME:
 	case FIXED_FIELDS:
-	    ql(me, count, max_count, arg->a, arg->arg);
+	    ql(count, max_count, arg->a, arg->arg);
 	    goto qarray_loop_strider_exit;
 	default:		       /* aka NOT the special case */
 	    break;
@@ -841,7 +838,7 @@ static aligned_t qarray_loop_strider(qthread_t * me,
 	    const size_t max_offset =
 		((max_count - count) >
 		 segment_size) ? segment_size : (max_count - count);
-	    ql(me, count, count + max_offset, arg->a, arg->arg);
+	    ql(count, count + max_offset, arg->a, arg->arg);
 	}
 	switch (dist_type) {
 	    default:
@@ -874,13 +871,12 @@ static aligned_t qarray_loop_strider(qthread_t * me,
     return 0;
 }				       /*}}} */
 
-static aligned_t qarray_loopaccum_strider(qthread_t * me,
-					  const struct
+static aligned_t qarray_loopaccum_strider(const struct
 					  qarray_accumfunc_wrapper_args *arg)
 {				       /*{{{ */
     const size_t segment_size = arg->a->segment_size;
     const distribution_t dist_type = arg->a->dist_type;
-    const qthread_shepherd_id_t shep = qthread_shep(me);
+    const qthread_shepherd_id_t shep = qthread_shep(qthread_self());
     const qt_accum_f acc = arg->acc;
     const qa_loopr_f ql = arg->func.ql;
     size_t max_count = arg->stopat;
@@ -947,7 +943,7 @@ static aligned_t qarray_loopaccum_strider(qthread_t * me,
 	     * loop function directly */
 	case ALL_SAME:
 	case FIXED_FIELDS:
-	    ql(me, count, max_count, arg->a, arg->arg, arg->ret);
+	    ql(count, max_count, arg->a, arg->arg, arg->ret);
 	    goto qarray_loop_strider_exit;
 	default:		       /* aka NOT the special case */
 	    break;
@@ -960,10 +956,10 @@ static aligned_t qarray_loopaccum_strider(qthread_t * me,
 		((max_count - count) >
 		 segment_size) ? segment_size : (max_count - count);
 	    if (first) {
-		ql(me, count, count + max_offset, arg->a, arg->arg, myret);
+		ql(count, count + max_offset, arg->a, arg->arg, myret);
 		first = 0;
 	    } else {
-		ql(me, count, count + max_offset, arg->a, arg->arg, tmpret);
+		ql(count, count + max_offset, arg->a, arg->arg, tmpret);
 		acc(myret, tmpret);
 	    }
 	}
@@ -1000,10 +996,11 @@ static aligned_t qarray_loopaccum_strider(qthread_t * me,
     return 0;
 }				       /*}}} */
 
-void qarray_iter(qthread_t * me, qarray * a, const size_t startat,
+void qarray_iter(qarray * a, const size_t startat,
 		 const size_t stopat, qthread_f func)
 {				       /*{{{ */
     volatile aligned_t donecount = 0;
+    qthread_t *me = qthread_self();
     struct qarray_func_wrapper_args qfwa =
 	{ {NULL}, a, NULL, &donecount, startat, stopat };
 
@@ -1064,9 +1061,10 @@ void qarray_iter(qthread_t * me, qarray * a, const size_t startat,
     }
 }				       /*}}} */
 
-void qarray_iter_loop(qthread_t * me, qarray * a, const size_t startat,
+void qarray_iter_loop(qarray * a, const size_t startat,
 		      const size_t stopat, qa_loop_f func, void *arg)
 {				       /*{{{ */
+    qthread_t *me = qthread_self();
     volatile aligned_t donecount = 0;
     struct qarray_func_wrapper_args qfwa =
 	{ {func}, a, arg, &donecount, startat, stopat };
@@ -1137,16 +1135,17 @@ struct qarray_ilnb_args
     void *arg;
 };
 
-static aligned_t qarray_ilnb_wrapper(qthread_t *me, void *_args)
+static aligned_t qarray_ilnb_wrapper(void *_args)
 {
     struct qarray_ilnb_args *a = (struct qarray_ilnb_args *)_args;
-    qarray_iter_loop(me, a->a, a->startat, a->stopat, a->func, a->arg);
+    qarray_iter_loop(a->a, a->startat, a->stopat, a->func, a->arg);
     free(_args);
     return 0;
 }
 
-void qarray_iter_loop_nb(qthread_t * me, qarray * a, const size_t startat,
-		      const size_t stopat, qa_loop_f func, void *arg, aligned_t *ret)
+void qarray_iter_loop_nb(qarray * a, const size_t startat,
+			 const size_t stopat, qa_loop_f func, void *arg,
+			 aligned_t * ret)
 {
     struct qarray_ilnb_args *qargs = malloc(sizeof(struct qarray_ilnb_args));
     qargs->a = a;
@@ -1154,13 +1153,14 @@ void qarray_iter_loop_nb(qthread_t * me, qarray * a, const size_t startat,
     qargs->stopat = stopat;
     qargs->func = func;
     qargs->arg = arg;
-    qthread_fork_to(qarray_ilnb_wrapper, qargs, ret, qthread_shep(me));
+    qthread_fork_to(qarray_ilnb_wrapper, qargs, ret, qthread_shep(qthread_self()));
 }
 
-void qarray_iter_constloop(qthread_t * me, const qarray * a,
+void qarray_iter_constloop(const qarray * a,
 			   const size_t startat, const size_t stopat,
 			   qa_cloop_f func, void *arg)
 {				       /*{{{ */
+    qthread_t *me = qthread_self();
     volatile aligned_t donecount = 0;
     const struct qarray_constfunc_wrapper_args qfwa =
 	{ {func}, a, arg, &donecount, startat, stopat };
@@ -1222,10 +1222,11 @@ void qarray_iter_constloop(qthread_t * me, const qarray * a,
     }
 }				       /*}}} */
 
-void qarray_iter_loopaccum(qthread_t * me, qarray * a, const size_t startat,
+void qarray_iter_loopaccum(qarray * a, const size_t startat,
 			   const size_t stopat, qa_loopr_f func, void *arg,
 			   void *ret, const size_t retsize, qt_accum_f acc)
 {				       /*{{{ */
+    qthread_t *me = qthread_self();
     qassert_retvoid((a != NULL));
     qassert_retvoid((func != NULL));
     qassert_retvoid((startat <= stopat));

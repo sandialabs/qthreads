@@ -31,7 +31,7 @@ template <int opC>
 class Collect {
 public:
   template <class T>
-  static void update (T& total, T part) { 
+  static void update (T& total, T part) {
     qthread_t *me = qthread_self();
     qthread_lock (me, (aligned_t*)&total);
     switch (opC) {
@@ -44,7 +44,7 @@ public:
   }
 };
 
-template <int opC, class VarT> 
+template <int opC, class VarT>
 class Partial {
 public:
   static void update( int Operator_Type_Undefined_Error ) {;}

@@ -8,8 +8,9 @@
 static unsigned int ELEMENT_COUNT = 10000;
 static unsigned int THREAD_COUNT = 128;
 
-static aligned_t queuer(qthread_t * me, void *arg)
+static aligned_t queuer(void *arg)
 {
+    qthread_t *me = qthread_self();
     qdqueue_t *q = (qdqueue_t *) arg;
     size_t i;
 
@@ -22,8 +23,9 @@ static aligned_t queuer(qthread_t * me, void *arg)
     return 0;
 }
 
-static aligned_t dequeuer(qthread_t * me, void *arg)
+static aligned_t dequeuer(void *arg)
 {
+    qthread_t *me = qthread_self();
     qdqueue_t *q = (qdqueue_t *) arg;
     size_t i;
 

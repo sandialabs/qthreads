@@ -43,8 +43,9 @@ double d_out, d_sum_authoritative = 0.0, d_mult_authoritative =
 size_t d_len = 1000000;
 struct timeval start, stop;
 
-static aligned_t qmain(qthread_t * me, void *junk)
+static aligned_t qmain(void *junk)
 {
+    qthread_t * me = qthread_self();
     size_t i;
 
     ui_array = (aligned_t *) calloc(ui_len, sizeof(aligned_t));

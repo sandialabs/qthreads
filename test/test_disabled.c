@@ -5,8 +5,9 @@
 #include <qthread/qthread.h>
 #include "argparsing.h"
 
-static aligned_t checkres(qthread_t * me, void *arg)
+static aligned_t checkres(void *arg)
 {
+    qthread_t *me = qthread_self();
     qthread_shepherd_id_t myshep = qthread_shep(me);
 
     assert(myshep == 1 || myshep == 0 || myshep == 2);
@@ -24,8 +25,9 @@ static aligned_t checkres(qthread_t * me, void *arg)
     return 0;
 }
 
-static aligned_t migrant(qthread_t * me, void *arg)
+static aligned_t migrant(void *arg)
 {
+    qthread_t *me = qthread_self();
     int myshep = qthread_shep(me);
 
     assert(myshep == 1 || myshep == 0);

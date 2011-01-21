@@ -6,13 +6,13 @@
 double master = 0.0;
 double retvals[30];
 
-static aligned_t incr(qthread_t * me, void *arg)
+static aligned_t incr(void *arg)
 {
     retvals[(intptr_t) arg] = qthread_dincr(&master, 1.0);
     return 0;
 }
 
-static aligned_t incr5(qthread_t * me, void *arg)
+static aligned_t incr5(void *arg)
 {
     qthread_dincr(&master, 5.0);
     return 0;

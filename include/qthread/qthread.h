@@ -122,7 +122,7 @@ typedef unsigned int qthread_worker_id_t;/* SLO -- multithreaded shepherd */
 #endif
 
 /* for convenient arguments to qthread_fork */
-typedef aligned_t(*qthread_f) (qthread_t * me, void *arg);
+typedef aligned_t(*qthread_f) (void *arg);
 
 /* use this function to initialize the qthreads environment before spawning any
  * qthreads. The argument to this function used to specify the number of

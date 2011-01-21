@@ -66,13 +66,13 @@ static void future_cleanup(void)
  * better in the case of big machines (like massive SMP's) with intelligent
  * pthreads implementations than on PIM, but that's mostly because PIM's libc
  * doesn't support PIM-local data (yet). Better PIM support is coming. */
-static aligned_t future_shep_init(qthread_t * me, void * Q_UNUSED arg)
+static aligned_t future_shep_init(void * Q_UNUSED arg)
 {
-    qthread_shepherd_id_t shep = qthread_shep(me);
+    qthread_shepherd_id_t shep = qthread_shep(qthread_self());
     location_t *ptr = &(future_bookkeeping_array[shep]);
 
     // vp_count is *always* locked. This establishes the waiting queue.
-    qthread_lock(me, &(ptr->vp_count));
+    qthread_lock(qthread_self(), &(ptr->vp_count));
 
     qassert(pthread_setspecific(future_bookkeeping, ptr), 0);
     return 0;

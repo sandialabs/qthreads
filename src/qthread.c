@@ -2573,23 +2573,14 @@ static void qthread_wrapper(void *ptr)
     if (t->ret) {
 	/* XXX: if this fails, we should probably do something */
 	if (t->flags & QTHREAD_RET_IS_SYNCVAR) {
-#ifndef QTHREAD_USE_ROSE_EXTENSIONS
-	    qassert(qthread_syncvar_writeEF_const(t, (syncvar_t*)t->ret, (t->f) (t, t->arg)), QTHREAD_SUCCESS);
+	    qassert(qthread_syncvar_writeEF_const(t, (syncvar_t*)t->ret, (t->f) (t->arg)), QTHREAD_SUCCESS);
 	    if((t->free_arg) && (&t->test != t->arg))free(t->arg);
-#else
-	    qassert(qthread_syncvar_writeEF_const(t, (syncvar_t*)t->ret, (t->f) (t->arg, t->arg)), QTHREAD_SUCCESS);
-	    if((t->free_arg) && (&t->test != t->arg))free(t->arg);
-#endif
 	} else {
-	    qassert(qthread_writeEF_const(t, (aligned_t*)t->ret, (t->f) (t, t->arg)), QTHREAD_SUCCESS);
+	    qassert(qthread_writeEF_const(t, (aligned_t*)t->ret, (t->f) (t->arg)), QTHREAD_SUCCESS);
 	}
     } else {
 	assert(t->f);
-#ifndef QTHREAD_USE_ROSE_EXTENSIONS
-	(t->f) (t, t->arg);
-#else
-	(t->f) (t->arg, t->arg);
-#endif
+	(t->f) (t->arg);
     }
     t->thread_state = QTHREAD_STATE_TERMINATED;
 

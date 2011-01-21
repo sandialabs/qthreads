@@ -39,14 +39,12 @@ typedef struct qarray_s
     } dist_specific;
 } qarray;
 
-typedef void (*qa_loop_f) (qthread_t * me, const size_t startat,
-			   const size_t stopat, qarray * array, void *arg);
-typedef void (*qa_loopr_f) (qthread_t * me, const size_t startat,
-			    const size_t stopat, qarray * array, void *arg,
-			    void *ret);
-typedef void (*qa_cloop_f) (qthread_t * me, const size_t startat,
-			    const size_t stopat, const qarray * array,
-			    void *arg);
+typedef void (*qa_loop_f) (const size_t startat, const size_t stopat,
+			   qarray * array, void *arg);
+typedef void (*qa_loopr_f) (const size_t startat, const size_t stopat,
+			    qarray * array, void *arg, void *ret);
+typedef void (*qa_cloop_f) (const size_t startat, const size_t stopat,
+			    const qarray * array, void *arg);
 
 qarray *qarray_create(const size_t count, const size_t unit_size);
 qarray *qarray_create_tight(const size_t count, const size_t unit_size);
@@ -56,16 +54,16 @@ qarray *qarray_create_configured(const size_t count, const size_t unit_size,
 
 void qarray_destroy(qarray * a);
 
-void qarray_iter(qthread_t * me, qarray * a, const size_t startat,
+void qarray_iter(qarray * a, const size_t startat,
 		 const size_t stopat, qthread_f func);
-void qarray_iter_loop(qthread_t * me, qarray * a, const size_t startat,
+void qarray_iter_loop(qarray * a, const size_t startat,
 		      const size_t stopat, qa_loop_f func, void *arg);
-void qarray_iter_loop_nb(qthread_t * me, qarray * a, const size_t startat,
+void qarray_iter_loop_nb(qarray * a, const size_t startat,
 		      const size_t stopat, qa_loop_f func, void *arg, aligned_t *ret);
-void qarray_iter_constloop(qthread_t * me, const qarray * a,
+void qarray_iter_constloop(const qarray * a,
 			   const size_t startat, const size_t stopat,
 			   qa_cloop_f func, void *arg);
-void qarray_iter_loopaccum(qthread_t * me, qarray * a, const size_t startat,
+void qarray_iter_loopaccum(qarray * a, const size_t startat,
 			   const size_t stopat, qa_loopr_f func, void *arg,
 			   void *ret, const size_t retsize, qt_accum_f acc);
 
@@ -74,9 +72,8 @@ void qarray_set_shepof(qarray * a, const size_t i,
 qthread_shepherd_id_t qarray_shepof(const qarray * a, const size_t index);
 void qarray_dist_like(const qarray *ref, qarray *mod);
 
-#define qarray_elem(me, a, i) qarray_elem_nomigrate(a, i)
-void *qarray_elem_migrate(qthread_t * me, const qarray * a,
-			  const size_t index);
+#define qarray_elem(a, i) qarray_elem_nomigrate(a, i)
+void *qarray_elem_migrate(const qarray * a, const size_t index);
 QINLINE static void *qarray_elem_nomigrate(const qarray * a,
 					   const size_t index)
 {

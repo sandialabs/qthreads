@@ -25,9 +25,10 @@
     syncvar_t *addlast_sentinel; \
     struct _structname_ *backptr; \
 }
-#define INNER_LOOP(_fname_,_structtype_,_opmacro_) static aligned_t _fname_(qthread_t *me, struct _structtype_ *args) \
+#define INNER_LOOP(_fname_,_structtype_,_opmacro_) static aligned_t _fname_(struct _structtype_ *args) \
 { \
     size_t i; \
+    qthread_t *me = qthread_self(); \
     args->ret = args->array[args->start]; \
     for (i = args->start + 1; i < args->stop; i++) { \
 	_opmacro_(args->ret, args->array[i]); \
@@ -40,9 +41,10 @@
     qthread_syncvar_fill(me, &(args->ret_sentinel)); \
     return 0; \
 }
-#define INNER_LOOP_FF(_fname_,_structtype_,_opmacro_) static aligned_t _fname_(qthread_t *me, struct _structtype_ *args) \
+#define INNER_LOOP_FF(_fname_,_structtype_,_opmacro_) static aligned_t _fname_(struct _structtype_ *args) \
 { \
     size_t i; \
+    qthread_t *me = qthread_self(); \
     qthread_readFF(me, NULL, (aligned_t*)(args->array + args->start)); \
     args->ret = args->array[args->start]; \
     for (i = args->start + 1; i < args->stop; i++) { \
@@ -134,7 +136,23 @@ OUTER_LOOP(qutil_double_min, qutil_ds_args, MIN_MACRO, double,
 	   qutil_double_min_inner, qutil_double_FF_min_inner)
 /* These are the functions for computing things about unsigned ints */
 STRUCT(qutil_uis_args, aligned_t);
-INNER_LOOP(qutil_uint_sum_inner, qutil_uis_args, SUM_MACRO)
+//INNER_LOOP(qutil_uint_sum_inner, qutil_uis_args, SUM_MACRO)
+static aligned_t qutil_uint_sum_inner(struct qutil_uis_args *args)
+{
+    size_t i;
+    qthread_t *me = qthread_self();
+    args->ret = args->array[args->start];
+    for (i = args->start + 1; i < args->stop; i++) {
+	SUM_MACRO(args->ret, args->array[i]);
+    }
+    if (args->addlast) {
+	qthread_syncvar_readFF(me, NULL, args->addlast_sentinel);
+	SUM_MACRO(args->ret, *(args->addlast));
+	free(args->backptr);
+    }
+    qthread_syncvar_fill(me, &(args->ret_sentinel));
+    return 0;
+}
 INNER_LOOP_FF(qutil_uint_FF_sum_inner, qutil_uis_args, SUM_MACRO)
 OUTER_LOOP(qutil_uint_sum, qutil_uis_args, SUM_MACRO, aligned_t,
 	   qutil_uint_sum_inner, qutil_uint_FF_sum_inner)
@@ -417,16 +435,14 @@ struct qutil_mergesort_args
     size_t second_start, second_stop;
 };
 
-static aligned_t qutil_mergesort_presort(qthread_t * Q_UNUSED me,
-					 struct qutil_mergesort_args *args)
+static aligned_t qutil_mergesort_presort(struct qutil_mergesort_args *args)
 {
     drf_qsort_dbl(args->array + args->first_start,
 		  args->first_stop - args->first_start + 1);
     return 0;
 }
 
-static aligned_t qutil_mergesort_inner(qthread_t * Q_UNUSED me,
-				       struct qutil_mergesort_args *args)
+static aligned_t qutil_mergesort_inner(struct qutil_mergesort_args *args)
 {
     double *array = args->array;
 
@@ -538,14 +554,14 @@ struct qutil_qsort_args
     aligned_t *furthest_leftwall, *furthest_rightwall;
 };
 
-static inline aligned_t qutil_qsort_partition(qthread_t * me,
-					      struct qutil_qsort_args *args)
+static inline aligned_t qutil_qsort_partition(struct qutil_qsort_args *args)
 {
     double *a = args->array;
     const double pivot = args->pivot;
     const size_t length = args->length;
     const size_t jump = args->jump;
     size_t leftwall, rightwall;
+    qthread_t *me = qthread_self();
 
     leftwall = 0;
     rightwall = length - 1;
@@ -670,11 +686,11 @@ qutil_qsort_inner_partitioner(qthread_t * me, double *array,
     return retval;
 }
 
-static inline aligned_t qutil_qsort_inner(qthread_t * me,
-					  struct qutil_qsort_iargs *a)
+static inline aligned_t qutil_qsort_inner(struct qutil_qsort_iargs *a)
 {
     double *array = a->array, pivot;
     struct qutil_qsort_iprets furthest;
+    qthread_t *me = qthread_self();
 
     /* choose the number of threads to use */
     if (a->length <= MT_LOOP_CHUNK) {  /* shortcut */
@@ -772,7 +788,7 @@ void qutil_qsort(qthread_t * me, double *array, const size_t length)
     arg.array = array;
     arg.length = length;
 
-    qutil_qsort_inner(me, &arg);
+    qutil_qsort_inner(&arg);
 }
 
 struct qutil_aligned_qsort_args
@@ -783,8 +799,7 @@ struct qutil_aligned_qsort_args
     aligned_t *furthest_leftwall, *furthest_rightwall;
 };
 
-static inline aligned_t qutil_aligned_qsort_partition(qthread_t * me,
-						      struct
+static inline aligned_t qutil_aligned_qsort_partition(struct
 						      qutil_aligned_qsort_args
 						      *args)
 {
@@ -793,6 +808,7 @@ static inline aligned_t qutil_aligned_qsort_partition(qthread_t * me,
     const size_t length = args->length;
     const size_t jump = args->jump;
     size_t leftwall, rightwall;
+    qthread_t *me = qthread_self();
 
     leftwall = 0;
     rightwall = length - 1;
@@ -915,13 +931,13 @@ qutil_aligned_qsort_inner_partitioner(qthread_t * me, aligned_t * array,
     return retval;
 }
 
-static inline aligned_t qutil_aligned_qsort_inner(qthread_t * me,
-						  struct
+static inline aligned_t qutil_aligned_qsort_inner(struct
 						  qutil_aligned_qsort_iargs
 						  *a)
 {
     aligned_t *array = a->array, pivot;
     struct qutil_qsort_iprets furthest;
+    qthread_t *me = qthread_self();
 
     /* choose the number of threads to use */
     if (a->length <= MT_LOOP_CHUNK) {  /* shortcut */
@@ -1025,5 +1041,5 @@ void qutil_aligned_qsort(qthread_t * me, aligned_t * array,
     arg.array = array;
     arg.length = length;
 
-    qutil_aligned_qsort_inner(me, &arg);
+    qutil_aligned_qsort_inner(&arg);
 }

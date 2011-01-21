@@ -5,7 +5,7 @@
 
 aligned_t master = 0;
 
-static aligned_t incr(qthread_t * me, void *arg)
+static aligned_t incr(void *arg)
 {
     aligned_t localmaster, addition, ret;
     ret = master;

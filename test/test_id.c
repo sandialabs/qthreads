@@ -13,9 +13,9 @@
 
 aligned_t counter = 0;
 
-static aligned_t thread(qthread_t * me, void *arg)
+static aligned_t thread(void *arg)
 {
-    int id = qthread_id(me);
+    int id = qthread_id(qthread_self());
     int ret;
     int ret2;
 
@@ -36,9 +36,9 @@ static aligned_t thread(qthread_t * me, void *arg)
     return 0;
 }
 
-static aligned_t checkid(qthread_t * me, void *arg)
+static aligned_t checkid(void *arg)
 {
-    int id = qthread_id(me);
+    int id = qthread_id(qthread_self());
     int want = (int)(intptr_t) arg;
     if (id != want) {
 	iprintf("id == %i (expected %i)\n", id, want);

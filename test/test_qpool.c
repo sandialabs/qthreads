@@ -10,11 +10,12 @@ static unsigned int THREAD_COUNT = 128;
 
 qpool *qp = NULL;
 
-static aligned_t allocator(qthread_t * me, void *arg)
+static aligned_t allocator(void *arg)
 {
     aligned_t *block[5];
     aligned_t i;
     qpool *p = (qpool *) arg;
+    qthread_t *me = qthread_self();
 
     for (i = 0; i < 5; i++) {
 	if ((block[i] = (aligned_t *) qpool_alloc(me, p)) == NULL) {

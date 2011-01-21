@@ -26,9 +26,10 @@ static Q_NOINLINE void thread2(qthread_t * t, size_t left, size_t depth)
      * } */
 }
 
-static aligned_t thread(qthread_t * t, void *arg)
+static aligned_t thread(void *arg)
 {
-    int me = qthread_id(qthread_self());
+    qthread_t *t = qthread_self();
+    int me = qthread_id(t);
 
     //printf("thread(%p): me %i\n", (void*) t, me);
     int foo = qthread_stackleft(t);

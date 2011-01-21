@@ -3,9 +3,9 @@
 #include <qthread/qthread.h>
 #include "argparsing.h"
 
-static aligned_t whereami(qthread_t * me, void *arg)
+static aligned_t whereami(void *arg)
 {
-    return qthread_shep(me);
+    return qthread_shep(qthread_self());
 }
 
 int main(int argc, char *argv[])

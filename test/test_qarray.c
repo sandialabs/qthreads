@@ -17,22 +17,21 @@ typedef struct
     char pad[41];
 } offsize;
 
-static aligned_t assign1(qthread_t * me, void *arg)
+static aligned_t assign1(void *arg)
 {
     *(double *)arg = 1.0;
     qthread_incr(&count, 1);
     return 0;
 }
 
-static aligned_t assignall1(qthread_t * me, void *arg)
+static aligned_t assignall1(void *arg)
 {
     memset(arg, 1, sizeof(bigobj));
     qthread_incr(&count, 1);
     return 0;
 }
 
-static void assignoff1(qthread_t * me, const size_t startat,
-		       const size_t stopat, qarray * q, void *arg)
+static void assignoff1(const size_t startat, const size_t stopat, qarray * q, void *arg)
 {
     for (size_t i = startat; i < stopat; i++) {
 	void *ptr = qarray_elem_nomigrate(q, i);
@@ -75,7 +74,7 @@ int main(int argc, char *argv[])
 				     disttypes[dt_index], 0, 0);
 	assert(a);
 	iprintf("%s: created basic array of doubles\n", distnames[dt_index]);
-	qarray_iter(me, a, 0, ELEMENT_COUNT, assign1);
+	qarray_iter(a, 0, ELEMENT_COUNT, assign1);
 	iprintf("%s: iterated; now checking work...\n", distnames[dt_index]);
 	if (count != ELEMENT_COUNT) {
 	    printf("count = %lu, dt_index = %u\n", (unsigned long)count,
@@ -104,7 +103,7 @@ int main(int argc, char *argv[])
 	a = qarray_create_configured(ELEMENT_COUNT, sizeof(bigobj),
 				     disttypes[dt_index], 0, 0);
 	iprintf("%s: created array of big objects\n", distnames[dt_index]);
-	qarray_iter(me, a, 0, ELEMENT_COUNT, assignall1);
+	qarray_iter(a, 0, ELEMENT_COUNT, assignall1);
 	iprintf("%s: iterated; now checking work...\n", distnames[dt_index]);
 	if (count != ELEMENT_COUNT) {
 	    printf("count = %lu, dt_index = %u\n", (unsigned long)count,
@@ -141,7 +140,7 @@ int main(int argc, char *argv[])
 				     disttypes[dt_index], 0, 0);
 	iprintf("%s: created array of odd-sized objects\n",
 		distnames[dt_index]);
-	qarray_iter_loop(me, a, 0, ELEMENT_COUNT, assignoff1, NULL);
+	qarray_iter_loop(a, 0, ELEMENT_COUNT, assignoff1, NULL);
 	iprintf("%s: iterated; now checking work...\n", distnames[dt_index]);
 	if (count != ELEMENT_COUNT) {
 	    printf("count = %lu, dt_index = %u\n", (unsigned long)count,

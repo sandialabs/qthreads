@@ -359,7 +359,7 @@ public:
 };
 
 template <class IterT>
-aligned_t run_ft (qthread_t *qthr, void *arg) {
+aligned_t run_ft (void *arg) {
   IterT* iter = (IterT*)arg;
   register int count = iter->Count();
   for (int i = 0; i < count; i++) {
@@ -367,13 +367,13 @@ aligned_t run_ft (qthread_t *qthr, void *arg) {
     iter->Next();
   }
   delete iter;
-  future_exit(qthr);
+  future_exit(qthread_self());
   return 0;
 }
 
 /* This seems to be the function that does the real work, namely, running the iter->Run() function */
 template <class IterT>
-aligned_t run_qtd (qthread_t *qthr, void *arg) {
+aligned_t run_qtd (void *arg) {
   IterT* iter = (IterT*)arg;
   register int count = iter->Count();
 

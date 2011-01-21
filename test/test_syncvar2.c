@@ -27,9 +27,9 @@ static syncvar_t *buff = NULL;
  * the buffer. It then writes the value -1 as a sentinel to the next position.
  */
 static aligned_t producer(
-    qthread_t * t,
     void *arg)
 {
+    qthread_t * t = qthread_self();
     for (unsigned int i = 0; i < numItems; ++i) {
 	const unsigned int buffInd = i % bufferSize;
 	qthread_syncvar_writeEF_const(t, &buff[buffInd], i);
@@ -65,9 +65,9 @@ static int64_t readFromBuff(
  * the shared buffer. It writes them out to the console.
  */
 static aligned_t consumer(
-    qthread_t * t,
     void *arg)
 {
+    qthread_t * t = qthread_self();
     int64_t buffVal;
     while ((buffVal = readFromBuff(t)) != -1) {
 	iprintf("Consumer got: %li\n", (long)buffVal);

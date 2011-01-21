@@ -10,8 +10,9 @@ static syncvar_t x = SYNCVAR_STATIC_INITIALIZER;
 static syncvar_t id = SYNCVAR_STATIC_INITIALIZER;
 static uint64_t iterations = 10000;
 
-static aligned_t consumer(qthread_t * t, void *arg)
+static aligned_t consumer(void *arg)
 {
+    qthread_t *t = qthread_self();
     uint64_t me;
 
     iprintf("consumer(%p) locking id(%p)\n", t, &id);
@@ -33,8 +34,9 @@ static aligned_t consumer(qthread_t * t, void *arg)
     return 0;
 }
 
-static aligned_t producer(qthread_t * t, void *arg)
+static aligned_t producer(void *arg)
 {
+    qthread_t *t = qthread_self();
     uint64_t me;
 
     iprintf("producer(%p) locking id(%p)\n", t, &id);

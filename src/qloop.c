@@ -34,10 +34,9 @@ struct qloop_wrapper_args {
 };
 
 static aligned_t qloop_wrapper(
-    qthread_t * const restrict me,
     struct qloop_wrapper_args * const restrict arg)
 {				       /*{{{ */
-    arg->func(me, arg->startat, arg->stopat, arg->arg);
+    arg->func(qthread_self(), arg->startat, arg->stopat, arg->arg);
     return 0;
 }				       /*}}} */
 
@@ -62,11 +61,10 @@ extern void *qthread_step_fence2;
 #endif
 
 static aligned_t qloop_step_wrapper(
-    qthread_t * const restrict me,
     struct qloop_step_wrapper_args * const restrict arg)
 {				       /*{{{ */
 #ifndef QTHREAD_USE_ROSE_EXTENSIONS
-    arg->func(me, arg->startat, arg->stopat, arg->arg);
+    arg->func(qthread_self(), arg->startat, arg->stopat, arg->arg);
 #else
 #ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
     MONITOR_ASM_LABEL(qthread_step_fence1); // add label for HPCToolkit unwind
@@ -301,10 +299,9 @@ struct qloopaccum_wrapper_args {
 };
 
 static aligned_t qloopaccum_wrapper(
-    qthread_t * me,
     const struct qloopaccum_wrapper_args *arg)
 {				       /*{{{ */
-    arg->func(me, arg->startat, arg->stopat, arg->arg, arg->ret);
+    arg->func(qthread_self(), arg->startat, arg->stopat, arg->arg, arg->ret);
     return 0;
 }				       /*}}} */
 
@@ -675,7 +672,6 @@ static QINLINE void qqloop_destroy_iq(
 }				       /*}}} */
 
 static aligned_t qqloop_wrapper(
-    qthread_t * me,
     const struct qqloop_wrapper_args *arg)
 {
     struct qqloop_static_args *const restrict stat = arg->stat;
@@ -685,6 +681,7 @@ static aligned_t qqloop_wrapper(
     volatile aligned_t *const dc = &(stat->donecount);
     const qq_getiter_f get_iters = stat->get;
     const qthread_shepherd_id_t shep = arg->shep;
+    qthread_t *me = qthread_self();
 
     /* non-consts */
     struct qqloop_wrapper_range range = {0,0,0};

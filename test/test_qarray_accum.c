@@ -7,20 +7,20 @@
 
 static double ret = 0.0;
 
-static void assigni(qthread_t * me, const size_t startat, const size_t stopat,
+static void assigni(const size_t startat, const size_t stopat,
 		    qarray * q, void *arg)
 {
-    int *ptr = (int *)qarray_elem(me, q, startat);
+    int *ptr = (int *)qarray_elem(q, startat);
     size_t i;
     for (i = 0; i < (stopat - startat); ++i) {
 	ptr[i] = (int)(i + startat);
     }
 }
 
-static void permute(qthread_t * me, const size_t startat, const size_t stopat,
+static void permute(const size_t startat, const size_t stopat,
 		    qarray * q, void *arg, void *ret)
 {
-    int *ptr = (int *)qarray_elem(me, q, startat);
+    int *ptr = (int *)qarray_elem(q, startat);
     size_t i;
     double sum = 0.0;
     for (i = 0; i < (stopat - startat); ++i) {
@@ -30,7 +30,7 @@ static void permute(qthread_t * me, const size_t startat, const size_t stopat,
     memcpy(ret, &sum, sizeof(double));
 }
 
-static aligned_t onesum(qthread_t * me, void *arg)
+static aligned_t onesum(void *arg)
 {
     qthread_dincr(&ret, (double)*(int *)arg);
     return 0;
@@ -50,14 +50,14 @@ int main(int argc, char *argv[])
 
     t = qarray_create_tight(ITER, sizeof(int));
     assert(t);
-    qarray_iter_loop(me, t, 0, ITER, assigni, NULL);
+    qarray_iter_loop(t, 0, ITER, assigni, NULL);
     for (i = 1; i < ITER; i++) {
 	int_calc += i;
     }
     /* ******************************
      * Example 1
      */
-    qarray_iter_loopaccum(me, t, 0, ITER, permute, NULL, &ret, sizeof(double),
+    qarray_iter_loopaccum(t, 0, ITER, permute, NULL, &ret, sizeof(double),
 			  qt_dbl_add_acc);
     iprintf("int = %lu\n", (long unsigned)int_calc);
     iprintf("ret = %f\n", ret);
@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
     /* ******************************
      * Example 2
      */
-    qarray_iter(me, t, 0, ITER, onesum);
+    qarray_iter(t, 0, ITER, onesum);
     iprintf("int = %lu\n", (long unsigned)int_calc);
     iprintf("ret = %f\n", ret);
     assert(int_calc == ret);

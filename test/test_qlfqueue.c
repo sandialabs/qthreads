@@ -8,8 +8,9 @@
 static int elementcount = 10000;
 static int threadcount = 128;
 
-static aligned_t queuer(qthread_t * me, void *arg)
+static aligned_t queuer(void *arg)
 {
+    qthread_t *me = qthread_self();
     qlfqueue_t *q = (qlfqueue_t *) arg;
     size_t i;
 
@@ -22,8 +23,9 @@ static aligned_t queuer(qthread_t * me, void *arg)
     return 0;
 }
 
-static aligned_t dequeuer(qthread_t * me, void *arg)
+static aligned_t dequeuer(void *arg)
 {
+    qthread_t *me = qthread_self();
     qlfqueue_t *q = (qlfqueue_t *) arg;
     size_t i;
 

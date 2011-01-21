@@ -12,12 +12,12 @@ aligned_t initme_idx = 0;
 volatile aligned_t *initme = NULL;
 qt_feb_barrier_t *wait_on_me;
 
-static aligned_t barrier_thread(qthread_t *t, void *arg)
+static aligned_t barrier_thread(void *arg)
 {
     qt_feb_barrier_t *b = (qt_feb_barrier_t*)arg;
     aligned_t idx = qthread_incr(&initme_idx, 1);
     qthread_incr(&(initme[idx]), 1);
-    qt_feb_barrier_enter(t, b);
+    qt_feb_barrier_enter(qthread_self(), b);
     return 0;
 }
 

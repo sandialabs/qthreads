@@ -61,9 +61,9 @@ static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t * ptr)
     return *ptr;
 }
 
-static aligned_t qt_ap_worker(qthread_t * restrict me,
-			      struct qt_ap_wargs *restrict args)
+static aligned_t qt_ap_worker(struct qt_ap_wargs *restrict args)
 {
+    qthread_t *me = qthread_self();
     while (1) {
 	struct qt_ap_workunit *restrict const wu =
 	    qdqueue_dequeue(me, args->work_queue);
@@ -165,15 +165,15 @@ struct qt_ap_gargs2
     const qthread_shepherd_id_t shep;
 };
 
-static void qt_ap_genwork2(qthread_t * me, const size_t startat,
+static void qt_ap_genwork2(const size_t startat,
 			   const size_t stopat, const qarray * Q_UNUSED a,
 			   struct qt_ap_gargs2 *gargs)
 {
     struct qt_ap_workunit *workunit = malloc(sizeof(struct qt_ap_workunit));
 
-    //const qthread_shepherd_id_t *neighbors = qthread_sorted_sheps(me);
     const qthread_shepherd_id_t shep = gargs->shep;
     const qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
+    qthread_t *me = qthread_self();
 
     workunit->a1_start = gargs->start;
     workunit->a1_stop = gargs->stop;
@@ -221,15 +221,15 @@ static void qt_ap_genwork2(qthread_t * me, const size_t startat,
     }
 }
 
-static void qt_ap_genwork(qthread_t * restrict me, const size_t startat,
+static void qt_ap_genwork(const size_t startat,
 			  const size_t stopat,
 			  const qarray * restrict Q_UNUSED a,
 			  struct qt_ap_gargs *restrict gargs)
 {
     struct qt_ap_gargs2 garg2 =
-	{ gargs->wq, startat, stopat, qthread_shep(me) };
+	{ gargs->wq, startat, stopat, qthread_shep(NULL) };
 
-    qarray_iter_constloop(me, gargs->array2, 0, gargs->array2->count,
+    qarray_iter_constloop(gargs->array2, 0, gargs->array2->count,
 			  (qa_cloop_f) qt_ap_genwork2, &garg2);
 }
 
@@ -316,7 +316,7 @@ static void qt_allpairs_internal(const qarray * array1, const qarray * array2,
 	qthread_fork_to((qthread_f) qt_ap_worker, &wargs, NULL, i);
     }
     /* step 3: feed work into queue */
-    qarray_iter_constloop(me, array1, 0, array1->count,
+    qarray_iter_constloop(array1, 0, array1->count,
 			  (qa_cloop_f) qt_ap_genwork, &gargs);
     /* step 4: wait for the workers to get done */
     no_more_work = 1;
