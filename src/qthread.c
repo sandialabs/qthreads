@@ -3805,17 +3805,13 @@ qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *shepherd_id,
 }                                      /*}}} */
 #endif
 
-int qthread_shep_ok(const qthread_t * t)
+int qthread_shep_ok(void)
 {				       /*{{{ */
-    if (t) {
-	return QTHREAD_CASLOCK_READ_UI(t->rdata->shepherd_ptr->active);
+    qthread_shepherd_t *ret = qthread_internal_getshep();
+    if (ret == NULL) {
+	return QTHREAD_PTHREAD_ERROR;
     } else {
-	qthread_shepherd_t *ret = qthread_internal_getshep();
-	if (ret == NULL) {
-	    return QTHREAD_PTHREAD_ERROR;
-	} else {
-	    return QTHREAD_CASLOCK_READ_UI(ret->active);
-	}
+	return QTHREAD_CASLOCK_READ_UI(ret->active);
     }
 }				       /*}}} */
 

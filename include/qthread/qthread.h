@@ -202,7 +202,7 @@ qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *s,const qthread_t * t)
 
 size_t qthread_stackleft(void);
 aligned_t *qthread_retloc(void);
-int qthread_shep_ok(const qthread_t * t);
+int qthread_shep_ok(void);
 
 /* returns the distance from one shepherd to another */
 int qthread_distance(const qthread_shepherd_id_t src,

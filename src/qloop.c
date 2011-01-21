@@ -698,7 +698,7 @@ static aligned_t qqloop_wrapper(
 	    if (iq->type == TIMED) {
 		qtimer_stop(iq->type_specific_data.timed.timers[shep]);
 	    }
-	    if (!qthread_shep_ok(me) || qthread_shep() != shep) {
+	    if (!qthread_shep_ok() || qthread_shep() != shep) {
 		/* my shepherd has been disabled while I was running */
 		qthread_debug(ALL_DETAILS,
 			      "my shepherd (%i) has been disabled!\n",
