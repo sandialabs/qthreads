@@ -15,17 +15,16 @@ qpool *memory = NULL;
 size_t objsize = 8;
 
 static aligned_t queuer(
-    qthread_t * me,
     void *arg)
 {
     qdqueue_t *q = (qdqueue_t *) arg;
     size_t i;
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
-	void *tmp = qpool_alloc(me, memory);
+	void *tmp = qpool_alloc(qthread_self(), memory);
 	memset(tmp, 1, objsize);
-	if (qdqueue_enqueue(me, q, tmp) != QTHREAD_SUCCESS) {
-	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void *)me);
+	if (qdqueue_enqueue(qthread_self(), q, tmp) != QTHREAD_SUCCESS) {
+	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void *)qthread_self());
 	    exit(-2);
 	}
     }
@@ -33,26 +32,25 @@ static aligned_t queuer(
 }
 
 static aligned_t dequeuer(
-    qthread_t * me,
     void *arg)
 {
     qdqueue_t *q = (qdqueue_t *) arg;
     size_t i;
-    void *ref = qpool_alloc(me, memory);
+    void *ref = qpool_alloc(qthread_self(), memory);
 
     memset(ref, 1, objsize);
     for (i = 0; i < ELEMENT_COUNT; i++) {
 	void *tmp;
-	while ((tmp = qdqueue_dequeue(me, q)) == NULL) {
-	    qthread_yield(me);
+	while ((tmp = qdqueue_dequeue(qthread_self(), q)) == NULL) {
+	    qthread_yield();
 	}
 	if (memcmp(ref, tmp, objsize)) {
 	    fprintf(stderr, "memory was corrupted!\n");
 	    exit(-3);
 	}
-	qpool_free(me, memory, tmp);
+	qpool_free(qthread_self(), memory, tmp);
     }
-    qpool_free(me, memory, ref);
+    qpool_free(qthread_self(), memory, ref);
     return 0;
 }
 
@@ -155,7 +153,7 @@ int main(
 	assert(qthread_fork(queuer, q, NULL) == QTHREAD_SUCCESS);
     }
     for (i = 0; i < THREAD_COUNT; i++) {
-	assert(qthread_readFF(me, NULL, &(rets[i])) == QTHREAD_SUCCESS);
+	assert(qthread_readFF(NULL, &(rets[i])) == QTHREAD_SUCCESS);
     }
     qtimer_stop(timer);
     if (!qdqueue_empty(me, q)) {

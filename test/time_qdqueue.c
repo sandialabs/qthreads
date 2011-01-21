@@ -11,15 +11,14 @@
 #define THREAD_COUNT 128
 
 static aligned_t queuer(
-    qthread_t * me,
     void *arg)
 {
     qdqueue_t *q = (qdqueue_t *) arg;
     size_t i;
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
-	if (qdqueue_enqueue(me, q, (void *)me) != QTHREAD_SUCCESS) {
-	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void *)me);
+	if (qdqueue_enqueue(qthread_self(), q, (void *)qthread_self()) != QTHREAD_SUCCESS) {
+	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void *)qthread_self());
 	    exit(-2);
 	}
     }
@@ -27,15 +26,14 @@ static aligned_t queuer(
 }
 
 static aligned_t dequeuer(
-    qthread_t * me,
     void *arg)
 {
     qdqueue_t *q = (qdqueue_t *) arg;
     size_t i;
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
-	while (qdqueue_dequeue(me, q) == NULL) {
-	    qthread_yield(me);
+	while (qdqueue_dequeue(qthread_self(), q) == NULL) {
+	    qthread_yield();
 	}
     }
     return 0;
@@ -126,7 +124,7 @@ int main(
 	assert(qthread_fork(queuer, q, NULL) == QTHREAD_SUCCESS);
     }
     for (i = 0; i < THREAD_COUNT; i++) {
-	assert(qthread_readFF(me, NULL, &(rets[i])) == QTHREAD_SUCCESS);
+	assert(qthread_readFF(NULL, &(rets[i])) == QTHREAD_SUCCESS);
     }
     qtimer_stop(timer);
     if (!qdqueue_empty(me, q)) {

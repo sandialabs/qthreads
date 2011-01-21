@@ -30,7 +30,7 @@ static void mutexpool_allocator(
     void *arg)
 {
     size_t i;
-    qthread_shepherd_id_t shep = qthread_shep(me);
+    qthread_shepherd_id_t shep = qthread_shep();
 
     for (i = startat; i < stopat; i++) {
 	pthread_mutex_lock(ptr_lock + shep);
@@ -53,7 +53,7 @@ static void mutexpool_deallocator(
     void *arg)
 {
     size_t i;
-    qthread_shepherd_id_t shep = qthread_shep(me);
+    qthread_shepherd_id_t shep = qthread_shep();
 
     for (i = startat; i < stopat; i++) {
 	pthread_mutex_lock(ptr_lock + shep);

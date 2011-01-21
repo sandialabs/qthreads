@@ -15,20 +15,20 @@
 
 aligned_t counters[LOCK_COUNT] = { 0 };
 
-static aligned_t qincr(qthread_t * me, void *arg)
+static aligned_t qincr(void *arg)
 {
     aligned_t id = (aligned_t) arg;
     size_t incrs;
 
     for (incrs = 0; incrs < LOCK_COUNT; incrs++) {
-	qthread_lock(me, &(counters[incrs]));
+	qthread_lock(&(counters[incrs]));
 	while (counters[incrs] != id) {
-	    qthread_unlock(me, &(counters[incrs]));
-	    qthread_yield(me);
-	    qthread_lock(me, &(counters[incrs]));
+	    qthread_unlock(&(counters[incrs]));
+	    qthread_yield();
+	    qthread_lock(&(counters[incrs]));
 	}
 	counters[incrs]++;
-	qthread_unlock(me, &(counters[incrs]));
+	qthread_unlock(&(counters[incrs]));
     }
     return 0;
 }
@@ -36,7 +36,6 @@ static aligned_t qincr(qthread_t * me, void *arg)
 int main(int argc, char *argv[])
 {
     aligned_t rets[NUM_THREADS];
-    qthread_t *me;
     qtimer_t timer = qtimer_create();
     double cumulative_time = 0.0;
 
@@ -44,7 +43,6 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "qthread library could not be initialized!\n");
 	exit(EXIT_FAILURE);
     }
-    me = qthread_self();
     CHECK_VERBOSE();
 
     for (int iteration = 0; iteration < 10; iteration++) {
@@ -54,7 +52,7 @@ int main(int argc, char *argv[])
 	    qthread_fork(qincr, (void *)(intptr_t) (i), &(rets[i]));
 	}
 	for (int i = 0; i < NUM_THREADS; i++) {
-	    qthread_readFF(me, NULL, &(rets[i]));
+	    qthread_readFF(NULL, &(rets[i]));
 	}
 	qtimer_stop(timer);
 	iprintf("\ttest iteration %i: %f secs\n", iteration,

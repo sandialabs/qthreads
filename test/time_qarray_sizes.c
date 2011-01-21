@@ -11,12 +11,12 @@ size_t constant_size = 1073741824 /*1GB */ ;
 /* 536870912 = 512MB, 104857600 = 100MB */
 size_t global_size = 0;
 
-static void assign1_loop(qthread_t * me, const size_t startat,
+static void assign1_loop(const size_t startat,
 			 const size_t stopat, qarray * qa, void *arg)
 {
     const size_t size = global_size;
     size_t i;
-    const qthread_shepherd_id_t shep = qthread_shep(me);
+    const qthread_shepherd_id_t shep = qthread_shep();
 
     for (i = startat; i < stopat; i++) {
 	void *ptr = qarray_elem_nomigrate(qa, i);
@@ -24,14 +24,14 @@ static void assign1_loop(qthread_t * me, const size_t startat,
     }
 }
 
-static void assert1_loop(qthread_t * me, const size_t startat,
+static void assert1_loop(const size_t startat,
 			 const size_t stopat, qarray * qa, void *arg)
 {
     const size_t size = global_size;
     char *example = malloc(size);
     size_t i;
 
-    memset(example, qthread_shep(me), size);
+    memset(example, qthread_shep(), size);
     for (i = startat; i < stopat; i++) {
 	char *ptr = qarray_elem_nomigrate(qa, i);
 	assert(ptr != NULL);
@@ -172,7 +172,7 @@ int main(int argc, char *argv[])
 		global_size = size;
 		qtimer_start(timer);
 		for (unsigned i = 0; i < 10; i++) {
-		    qarray_iter_loop(me, a, 0, ELEMENT_COUNT, assign1_loop,
+		    qarray_iter_loop(a, 0, ELEMENT_COUNT, assign1_loop,
 				     NULL);
 		}
 		qtimer_stop(timer);
@@ -180,7 +180,7 @@ int main(int argc, char *argv[])
 		       qtimer_secs(timer) / 10.0);
 		qtimer_start(timer);
 		for (unsigned i = 0; i < 10; i++) {
-		    qarray_iter_loop(me, a, 0, ELEMENT_COUNT, assert1_loop,
+		    qarray_iter_loop(a, 0, ELEMENT_COUNT, assert1_loop,
 				     NULL);
 		}
 		qtimer_stop(timer);
@@ -201,14 +201,14 @@ int main(int argc, char *argv[])
 		global_size = size;
 		qtimer_start(timer);
 		for (unsigned i = 0; i < 10; i++) {
-		    qarray_iter_loop(me, a, 0, count, assign1_loop, NULL);
+		    qarray_iter_loop(a, 0, count, assign1_loop, NULL);
 		}
 		qtimer_stop(timer);
 		printf("\t%lu, %f", (unsigned long)sizes[size_i],
 		       qtimer_secs(timer) / 10.0);
 		qtimer_start(timer);
 		for (unsigned i = 0; i < 10; i++) {
-		    qarray_iter_loop(me, a, 0, count, assert1_loop, NULL);
+		    qarray_iter_loop(a, 0, count, assert1_loop, NULL);
 		}
 		qtimer_stop(timer);
 		printf(", %f\n", qtimer_secs(timer) / 10.0);

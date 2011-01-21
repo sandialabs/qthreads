@@ -18,7 +18,6 @@
 
 #ifdef HAVE_CPROPS
 static aligned_t cpqueuer(
-    qthread_t * me,
     void *arg)
 {
     cp_list *q = (cp_list *) arg;
@@ -36,7 +35,6 @@ static aligned_t cpqueuer(
 }
 
 static aligned_t cpdequeuer(
-    qthread_t * me,
     void *arg)
 {
     cp_list *q = (cp_list *) arg;
@@ -52,15 +50,14 @@ static aligned_t cpdequeuer(
 #endif
 
 static aligned_t queuer(
-    qthread_t * me,
     void *arg)
 {
     qlfqueue_t *q = (qlfqueue_t *) arg;
     size_t i;
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
-	if (qlfqueue_enqueue(me, q, (void *)me) != QTHREAD_SUCCESS) {
-	    fprintf(stderr, "qlfqueue_enqueue(q, %p) failed!\n", (void *)me);
+	if (qlfqueue_enqueue(qthread_self(), q, (void *)qthread_self()) != QTHREAD_SUCCESS) {
+	    fprintf(stderr, "qlfqueue_enqueue(q, %p) failed!\n", (void *)qthread_self());
 	    exit(-2);
 	}
     }
@@ -68,15 +65,14 @@ static aligned_t queuer(
 }
 
 static aligned_t dequeuer(
-    qthread_t * me,
     void *arg)
 {
     qlfqueue_t *q = (qlfqueue_t *) arg;
     size_t i;
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
-	while (qlfqueue_dequeue(me, q) == NULL) {
-	    qthread_yield(me);
+	while (qlfqueue_dequeue(qthread_self(), q) == NULL) {
+	    qthread_yield();
 	}
     }
     return 0;
@@ -218,7 +214,7 @@ int main(
 	assert(qthread_fork(queuer, q, NULL) == QTHREAD_SUCCESS);
     }
     for (i = 0; i < THREAD_COUNT; i++) {
-	assert(qthread_readFF(me, NULL, &(rets[i])) == QTHREAD_SUCCESS);
+	assert(qthread_readFF(NULL, &(rets[i])) == QTHREAD_SUCCESS);
     }
     qtimer_stop(timer);
     if (!qlfqueue_empty(q)) {
@@ -236,7 +232,7 @@ int main(
 	assert(qthread_fork(cpqueuer, cpq, NULL) == QTHREAD_SUCCESS);
     }
     for (i = 0; i < THREAD_COUNT; i++) {
-	assert(qthread_readFF(me, NULL, &(rets[i])) == QTHREAD_SUCCESS);
+	assert(qthread_readFF(NULL, &(rets[i])) == QTHREAD_SUCCESS);
     }
     qtimer_stop(timer);
     free(rets);

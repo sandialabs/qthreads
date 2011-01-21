@@ -14,7 +14,7 @@
 #define MAX_THREADS 400
 #define THREAD_BLOCK 200
 
-static aligned_t qincr(qthread_t * me, void *arg)
+static aligned_t qincr(void *arg)
 {
     return 0;
 }
@@ -22,7 +22,6 @@ static aligned_t qincr(qthread_t * me, void *arg)
 int main(int argc, char *argv[])
 {
     aligned_t rets[MAX_THREADS];
-    qthread_t *me;
     qtimer_t timer = qtimer_create();
     double cumulative_time = 0.0;
     size_t counter = 0;
@@ -32,7 +31,6 @@ int main(int argc, char *argv[])
 	exit(EXIT_FAILURE);
     }
     CHECK_VERBOSE();
-    me = qthread_self();
 
     for (int iteration = 0; iteration < 10; iteration++) {
 	qtimer_start(timer);
@@ -42,13 +40,13 @@ int main(int argc, char *argv[])
 	counter = MAX_THREADS;
 	while (counter < NUM_THREADS) {
 	    for (int i = 0; i < THREAD_BLOCK; i++) {
-		qthread_readFF(me, NULL, &(rets[i]));
+		qthread_readFF(NULL, &(rets[i]));
 	    }
 	    for (int i = 0; i < THREAD_BLOCK; i++) {
 		qthread_fork(qincr, &counter, &(rets[i]));
 	    }
 	    for (int i = THREAD_BLOCK; i < MAX_THREADS; i++) {
-		qthread_readFF(me, NULL, &(rets[i]));
+		qthread_readFF(NULL, &(rets[i]));
 	    }
 	    for (int i = THREAD_BLOCK; i < MAX_THREADS; i++) {
 		qthread_fork(qincr, &counter, &(rets[i]));
@@ -56,7 +54,7 @@ int main(int argc, char *argv[])
 	    counter += MAX_THREADS;
 	}
 	for (int i = 0; i < MAX_THREADS; i++) {
-	    qthread_readFF(me, NULL, &(rets[i]));
+	    qthread_readFF(NULL, &(rets[i]));
 	}
 	qtimer_stop(timer);
 	iprintf("\ttest iteration %i: %f secs\n", iteration,

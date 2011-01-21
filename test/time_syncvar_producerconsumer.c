@@ -21,11 +21,11 @@ double *total_p2_sending_time;
 
 aligned_t incrementme = 0;
 
-static aligned_t FEB_consumer(qthread_t * me, void *arg)
+static aligned_t FEB_consumer(void *arg)
 {
     uint64_t pong = 0;
 
-    assert(qthread_syncvar_readFE(me, &pong, arg) == 0);
+    assert(qthread_syncvar_readFE(&pong, arg) == 0);
     if (pong != 1) {
 	iprintf("ERROR: pong = %u\n", (unsigned)pong);
 	assert(pong == 1);
@@ -33,15 +33,15 @@ static aligned_t FEB_consumer(qthread_t * me, void *arg)
     return pong;
 }
 
-static aligned_t FEB_producer(qthread_t * me, void *arg)
+static aligned_t FEB_producer(void *arg)
 {
     uint64_t ping = 1;
 
-    assert(qthread_syncvar_writeEF(me, arg, &ping) == 0);
+    assert(qthread_syncvar_writeEF(arg, &ping) == 0);
     return ping;
 }
 
-static aligned_t FEB_producerloop(qthread_t * me, void *arg)
+static aligned_t FEB_producerloop(void *arg)
 {
     unsigned int offset = (unsigned int)(intptr_t) arg;
     uint64_t timer = 0;
@@ -49,45 +49,45 @@ static aligned_t FEB_producerloop(qthread_t * me, void *arg)
 
     for (i = 0; i < ITERATIONS; i++) {
 	qtimer_start(sending[offset][timer]);
-	assert(qthread_syncvar_writeEF(me, FEBbuffer + offset, &timer) == 0);
+	assert(qthread_syncvar_writeEF(FEBbuffer + offset, &timer) == 0);
 	timer = timer ? 0 : 1;
     }
     return 0;
 }
 
-static aligned_t FEB_consumerloop(qthread_t * me, void *arg)
+static aligned_t FEB_consumerloop(void *arg)
 {
     unsigned int offset = (unsigned int)(intptr_t) arg;
     uint64_t timer = 0;
     unsigned int i;
 
     for (i = 0; i < ITERATIONS; i++) {
-	assert(qthread_syncvar_readFE(me, &timer, FEBbuffer + offset) == 0);
+	assert(qthread_syncvar_readFE(&timer, FEBbuffer + offset) == 0);
 	qtimer_stop(sending[offset][timer]);
 	total_sending_time[offset] += qtimer_secs(sending[offset][timer]);
     }
     return 0;
 }
 
-static aligned_t FEB_player2(qthread_t * me, void *arg)
+static aligned_t FEB_player2(void *arg)
 {
     unsigned int offset = (unsigned int)(intptr_t) arg;
     aligned_t paddle = 0;
     unsigned int i;
 
     for (i = 0; i < ITERATIONS; i++) {
-	assert(qthread_readFE(me, &paddle, FEBtable[offset]) == 0);
+	assert(qthread_readFE(&paddle, FEBtable[offset]) == 0);
 	qtimer_stop(sending[offset][0]);
 
 	total_p1_sending_time[offset] += qtimer_secs(sending[offset][0]);
 
 	qtimer_start(sending[offset][1]);
-	assert(qthread_writeEF(me, FEBtable[offset] + 1, &paddle) == 0);
+	assert(qthread_writeEF(FEBtable[offset] + 1, &paddle) == 0);
     }
     return 0;
 }
 
-static aligned_t FEB_player1(qthread_t * me, void *arg)
+static aligned_t FEB_player1(void *arg)
 {
     unsigned int offset = (unsigned int)(intptr_t) arg;
     aligned_t paddle = 1;
@@ -97,10 +97,10 @@ static aligned_t FEB_player1(qthread_t * me, void *arg)
     /* serve */
     qtimer_start(sending[offset][0]);
     qtimer_start(roundtrip_timer);
-    assert(qthread_writeEF(me, FEBtable[offset], &paddle) == 0);
+    assert(qthread_writeEF(FEBtable[offset], &paddle) == 0);
 
     for (i = 0; i < ITERATIONS; i++) {
-	assert(qthread_readFE(me, &paddle, FEBtable[offset] + 1) == 0);
+	assert(qthread_readFE(&paddle, FEBtable[offset] + 1) == 0);
 	qtimer_stop(sending[offset][1]);
 	qtimer_stop(roundtrip_timer);
 
@@ -110,7 +110,7 @@ static aligned_t FEB_player1(qthread_t * me, void *arg)
 	if (i + 1 < ITERATIONS) {
 	    qtimer_start(sending[offset][0]);
 	    qtimer_start(roundtrip_timer);
-	    assert(qthread_writeEF(me, FEBtable[offset], &paddle) == 0);
+	    assert(qthread_writeEF(FEBtable[offset], &paddle) == 0);
 	}
     }
     qtimer_destroy(roundtrip_timer);
@@ -142,7 +142,6 @@ int main(int argc, char *argv[])
     double rate;
     unsigned int i;
     aligned_t rets[MAXPARALLELISM];
-    qthread_t *me;
 
     /* setup */
     assert(qthread_initialize() == QTHREAD_SUCCESS);
@@ -152,7 +151,6 @@ int main(int argc, char *argv[])
     }
     NUMARG(ITERATIONS, "ITERATIONS");
     NUMARG(MAXPARALLELISM, "MAXPARALLELISM");
-    me = qthread_self();
 
     FEBbuffer = calloc(MAXPARALLELISM, sizeof(syncvar_t));
     FEBtable = calloc(MAXPARALLELISM, sizeof(aligned_t *));
@@ -162,13 +160,13 @@ int main(int argc, char *argv[])
     total_p1_sending_time = malloc(MAXPARALLELISM * sizeof(double));
     total_p2_sending_time = malloc(MAXPARALLELISM * sizeof(double));
     for (i = 0; i < MAXPARALLELISM; i++) {
-	qthread_syncvar_empty(me, FEBbuffer + i);
+	qthread_syncvar_empty(FEBbuffer + i);
 	sending[i] = malloc(2 * sizeof(qtimer_t));
 	sending[i][0] = qtimer_create();
 	sending[i][1] = qtimer_create();
 	FEBtable[i] = malloc(sizeof(aligned_t) * 2);
-	qthread_empty(NULL, &(FEBtable[i][0]));
-	qthread_empty(NULL, &(FEBtable[i][1]));
+	qthread_empty(&(FEBtable[i][0]));
+	qthread_empty(&(FEBtable[i][1]));
     }
     printf("Testing producer/consumer (with %i sheps):\n",
 	   (int)qthread_num_shepherds());
@@ -178,7 +176,7 @@ int main(int argc, char *argv[])
     qtimer_start(timer);
     qthread_fork(FEB_consumer, (void*)FEBbuffer, rets);
     qthread_fork(FEB_producer, (void*)FEBbuffer, NULL);
-    qthread_readFF(NULL, NULL, rets);
+    qthread_readFF(NULL, rets);
     qtimer_stop(timer);
 
     printf("%19g secs\n", qtimer_secs(timer));
@@ -194,7 +192,7 @@ int main(int argc, char *argv[])
 	qthread_fork(FEB_producer, (void*)(FEBbuffer + i), NULL);
     }
     for (i = 0; i < MAXPARALLELISM; i++) {
-	qthread_readFF(NULL, NULL, rets + i);
+	qthread_readFF(NULL, rets + i);
     }
     qtimer_stop(timer);
 
@@ -211,7 +209,7 @@ int main(int argc, char *argv[])
     qtimer_start(timer);
     qthread_fork(FEB_consumerloop, NULL, rets);
     qthread_fork(FEB_producerloop, NULL, NULL);
-    qthread_readFF(NULL, NULL, rets);
+    qthread_readFF(NULL, rets);
     qtimer_stop(timer);
 
     printf("%16g secs (%u iterations)\n", qtimer_secs(timer),
@@ -239,7 +237,7 @@ int main(int argc, char *argv[])
 	qthread_fork(FEB_producerloop, (void *)(intptr_t) i, NULL);
     }
     for (i = 0; i < MAXPARALLELISM; i++) {
-	qthread_readFF(NULL, NULL, rets + i);
+	qthread_readFF(NULL, rets + i);
     }
     qtimer_stop(timer);
 
@@ -270,7 +268,7 @@ int main(int argc, char *argv[])
     qtimer_start(timer);
     qthread_fork(FEB_player2, NULL, rets);
     qthread_fork(FEB_player1, NULL, NULL);
-    qthread_readFF(NULL, NULL, rets);
+    qthread_readFF(NULL, rets);
     qtimer_stop(timer);
 
     printf("%24g secs (%u round trips)\n", qtimer_secs(timer),
@@ -323,7 +321,7 @@ int main(int argc, char *argv[])
 	qthread_fork(FEB_player1, (void *)(intptr_t) i, NULL);
     }
     for (i = 0; i < MAXPARALLELISM; i++) {
-	qthread_readFF(NULL, NULL, rets + i);
+	qthread_readFF(NULL, rets + i);
     }
     qtimer_stop(timer);
 

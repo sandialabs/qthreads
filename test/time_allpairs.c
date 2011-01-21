@@ -13,7 +13,7 @@ size_t ASIZE = 1026;
 
 aligned_t hamming = (aligned_t) - 1;
 
-static void assigni(qthread_t * me, const size_t startat, const size_t stopat,
+static void assigni(const size_t startat, const size_t stopat,
 		    qarray * q, void *arg)
 {
     int *ptr = qarray_elem_nomigrate(q, startat);
@@ -32,7 +32,6 @@ int main(int argc, char *argv[])
 {
     qarray *a1, *a2;
     int **out;
-    qthread_t *me;
     qtimer_t timer = qtimer_create();
     double cumulative_time = 0.0;
 
@@ -40,7 +39,6 @@ int main(int argc, char *argv[])
 	fprintf(stderr, "qthread library could not be initialized!\n");
 	exit(EXIT_FAILURE);
     }
-    me = qthread_self();
     CHECK_VERBOSE();
     NUMARG(ASIZE, "TEST_ASIZE");
     iprintf("threads: %i\n", qthread_num_shepherds());
@@ -48,8 +46,8 @@ int main(int argc, char *argv[])
     a1 = qarray_create_configured(ASIZE, sizeof(int), FIXED_HASH, 1, 1);
     a2 = qarray_create_configured(ASIZE, sizeof(int), FIXED_HASH, 1, 1);
     iprintf("segments of %u elements\n", (unsigned int)a1->segment_size);
-    qarray_iter_loop(me, a1, 0, ASIZE, assigni, NULL);
-    qarray_iter_loop(me, a2, 0, ASIZE, assigni, NULL);
+    qarray_iter_loop(a1, 0, ASIZE, assigni, NULL);
+    qarray_iter_loop(a2, 0, ASIZE, assigni, NULL);
 
     out = calloc(ASIZE, sizeof(int *));
     assert(out);

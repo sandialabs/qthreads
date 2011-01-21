@@ -8,7 +8,6 @@
 unsigned long THREADS = 1000000;
 
 static aligned_t null_thread(
-    qthread_t * me,
     void *arg)
 {
     return 0;
@@ -48,7 +47,7 @@ int main(
     rets = malloc(sizeof(aligned_t) * THREADS);
 
     for (unsigned long i = 0; i < THREADS; ++i) {
-	qthread_empty(NULL, rets + i);
+	qthread_empty(rets + i);
     }
 
     printf("Priming...\n");
@@ -59,7 +58,7 @@ int main(
     qtimer_stop(timer);
     spawn = qtimer_secs(timer);
     for (unsigned long i = 0; i < THREADS; ++i) {
-	qthread_readFE(NULL, NULL, rets + i);
+	qthread_readFE(NULL, rets + i);
     }
     qtimer_stop(timer);
     printf("\tCold spawn time: %f usecs, %f/sec\n", 1000000 * spawn / THREADS,
@@ -78,7 +77,7 @@ int main(
     spawn = qtimer_secs(timer);
 
     for (unsigned long i = 0; i < THREADS; ++i) {
-	qthread_readFF(NULL, NULL, rets + i);
+	qthread_readFF(NULL, rets + i);
     }
     qtimer_stop(timer);
 
@@ -105,7 +104,7 @@ int main(
     spawn = qtimer_secs(timer);
 
     for (unsigned long i = 0; i < THREADS; ++i) {
-	qthread_syncvar_readFF(NULL, NULL, srets + i);
+	qthread_syncvar_readFF(NULL, srets + i);
     }
     qtimer_stop(timer);
 

@@ -15,7 +15,7 @@ static void avg(const void *restrict left, const void *restrict leftdown,
 	(*(double *)left + *(double *)leftdown + *(double *)down) / 3.0;
 }
 
-static void assignrand(qthread_t * me, const size_t startat,
+static void assignrand(const size_t startat,
 		       const size_t stopat, qarray * a, void *arg)
 {
     double *ptr = qarray_elem_nomigrate(a, startat);
@@ -30,7 +30,6 @@ static void assignrand(qthread_t * me, const size_t startat,
 
 int main(int argc, char *argv[])
 {
-    qthread_t *me;
     qarray *v, *h;
     qt_wavefront_lattice *L;
     qtimer_t timer = qtimer_create();
@@ -39,12 +38,11 @@ int main(int argc, char *argv[])
     CHECK_VERBOSE();
     NUMARG(ASIZE, "TEST_ASIZE");
 
-    me = qthread_self();
     v = qarray_create_configured(ASIZE, sizeof(double), FIXED_HASH, 1, 1);
     h = qarray_create_configured(ASIZE + 1, sizeof(double), FIXED_HASH, 1, 1);
 
-    qarray_iter_loop(me, h, 1, ASIZE + 1, assignrand, NULL);
-    qarray_iter_loop(me, v, 0, ASIZE, assignrand, NULL);
+    qarray_iter_loop(h, 1, ASIZE + 1, assignrand, NULL);
+    qarray_iter_loop(v, 0, ASIZE, assignrand, NULL);
     iprintf("v items per seg: %i\n", (int)v->segment_size);
 
     /* do stuff */

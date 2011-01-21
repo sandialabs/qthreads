@@ -61,7 +61,7 @@ int main(int argc, char *argv[])
 	for (unsigned int i = 0; i < iterations; i++) {
 	    memcpy(d_array2, d_array, len * sizeof(double));
 	    qtimer_start(timer);
-	    qutil_qsort(qthread_self(), d_array2, len);
+	    qutil_qsort(d_array2, len);
 	    qtimer_stop(timer);
 	    cumulative_time += qtimer_secs(timer);
 	    iprintf("\t%u: sorting %lu doubles with qutil took: %f seconds\n",
@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
 	for (int i = 0; i < 10; i++) {
 	    memcpy(ui_array2, ui_array, len * sizeof(aligned_t));
 	    qtimer_start(timer);
-	    qutil_aligned_qsort(qthread_self(), ui_array2, len);
+	    qutil_aligned_qsort(ui_array2, len);
 	    qtimer_stop(timer);
 	    cumulative_time += qtimer_secs(timer);
 	}
