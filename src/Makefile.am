@@ -13,6 +13,7 @@ libqthread_la_SOURCES = \
 	cacheline.c \
 	qalloc.c \
 	qutil.c \
+	syncvar.c \
 	qt_feb_barrier.c \
 	qt_c_hash.c \
 	qloop.c

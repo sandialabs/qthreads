@@ -249,4 +249,6 @@ static QINLINE void qthread_debug(int level, char *format, ...)
 #define qthread_debug(...) do{ }while(0)
 #endif
 
+#define QTHREAD_CHOOSE_STRIPE(addr) (((size_t)addr >> 4) & (QTHREAD_LOCKING_STRIPES-1))
+
 #endif
