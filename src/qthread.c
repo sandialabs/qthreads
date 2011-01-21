@@ -3838,12 +3838,13 @@ int qthread_distance(const qthread_shepherd_id_t src,
 
 /* returns a list of shepherds, sorted by their distance from this qthread;
  * if NULL, then all sheps are equidistant */
-const qthread_shepherd_id_t *qthread_sorted_sheps(const qthread_t * t)
+const qthread_shepherd_id_t *qthread_sorted_sheps(void)
 {				       /*{{{ */
-    assert(t);
+    qthread_t *t = qthread_self();
     if (t == NULL) {
 	return NULL;
     }
+    assert(t->rdata);
     assert(t->rdata->shepherd_ptr);
     return t->rdata->shepherd_ptr->sorted_sheplist;
 }				       /*}}} */

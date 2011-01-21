@@ -209,7 +209,7 @@ int qthread_distance(const qthread_shepherd_id_t src,
 		     const qthread_shepherd_id_t dest);
 /* returns a list of shepherds, sorted by their distance from either this
  * qthread or the specified shepherd */
-const qthread_shepherd_id_t *qthread_sorted_sheps(const qthread_t * t);
+const qthread_shepherd_id_t *qthread_sorted_sheps(void);
 const qthread_shepherd_id_t *qthread_sorted_sheps_remote(const
 							 qthread_shepherd_id_t
 							 src);
