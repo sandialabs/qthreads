@@ -986,7 +986,7 @@ static QINLINE unsigned long qthread_incr_xx(
     return 0;			       /* compiler check */
 }				       /*}}} */
 
-uint64_t qthread_syncvar_incrF(qthread_t * restrict const me, syncvar_t * restrict const operand, const uint64_t inc);
+uint64_t qthread_syncvar_incrF(syncvar_t * restrict const operand, const uint64_t inc);
 
 #if ! defined(QTHREAD_ATOMIC_CAS) || defined(QTHREAD_MUTEX_INCREMENT)
 static QINLINE uint32_t qthread_cas32(volatile uint32_t * operand,

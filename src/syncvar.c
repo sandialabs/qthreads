@@ -821,17 +821,14 @@ int qthread_syncvar_writeEF_const(qthread_t * restrict me,
     return qthread_syncvar_writeEF(me, dest, &src);
 }				       /*}}} */
 
-uint64_t qthread_syncvar_incrF(qthread_t * restrict me,
-			       syncvar_t * restrict const operand,
+uint64_t qthread_syncvar_incrF(syncvar_t * restrict const operand,
 			       const uint64_t inc)
 {				       /*{{{ */
     eflags_t e = { 0 };
     uint64_t newv;
+    qthread_t *me = qthread_self();
 
     assert(operand);
-    if (me == NULL) {
-	me = qthread_self();
-    }
     qthread_debug(LOCK_BEHAVIOR, "me(%p), operand(%p), inc(%lu) = %x\n", me,
 		  operand, (unsigned long)inc);
     qthread_mwaitc(operand, SYNCFEB_ANY, INT_MAX, &e);
