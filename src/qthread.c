@@ -2655,7 +2655,7 @@ void qthread_internal_cleanup(void (*function)(void))
     qt_cleanup_funcs = ng;
 }
 
-void qthread_steal_stat() {
+static QINLINE void qthread_steal_stat(void) {
 #ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
   int i;
   for (i = 0; i < qlib->nshepherds; i++) {
@@ -3471,12 +3471,6 @@ static QINLINE qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t * q)
     return p;
 }				       /*}}} */
 
-static QINLINE qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t * q)
-{				       /*{{{ */
-  return qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q);
-}				       /*}}} */
-
-
 /* this function is amusing, but the point is to avoid unnecessary bus traffic
  * by allowing idle shepherds to sit for a while while still allowing for
  * low-overhead for busy shepherds. This is a hybrid approach: normally, it
@@ -4003,7 +3997,7 @@ int qthread_fork_syncvar_to(
     const qthread_f f,
     const void *const arg,
     syncvar_t * ret,
-    const qthread_shepherd_id_t shepherd)
+    const qthread_shepherd_id_t s)
 #endif
 {				       /*{{{ */
     qthread_t *t;
@@ -4022,7 +4016,11 @@ int qthread_fork_syncvar_to(
 #endif
     qassert_ret(t, QTHREAD_MALLOC_ERROR);
     t->target_shepherd = shep = &(qlib->shepherds[shepherd]);
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     t->id = s % (qlib->nworkerspershep*qthread_num_shepherds());
+#else
+    t->id = shepherd;
+#endif
     // printf("thread create %d %d\n",t->id,qlib->nworkerspershep*qthread_num_shepherds());
     qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id,
 		  shepherd);
