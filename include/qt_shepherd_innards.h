@@ -8,6 +8,21 @@ typedef struct qt_threadqueue_s qt_threadqueue_t;
 typedef struct qthread_shepherd_s qthread_shepherd_t;
 #endif
 
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+#define MAX_WORKERS_PER_SHEPHERD 1024
+
+struct qthread_worker_s
+{
+    pthread_t worker;
+    qthread_worker_id_t worker_id;
+    qthread_worker_id_t packed_worker_id;
+    qthread_shepherd_t *shepherd;
+    qthread_t *current;
+    volatile size_t active;
+};
+typedef struct qthread_worker_s qthread_worker_t;
+#endif
+
 /* The Shepherd Struct */
 struct qthread_shepherd_s
 {

@@ -98,9 +98,6 @@ kern_return_t thread_policy_get(thread_t thread,
 # include "qt_arrive_first.h"
 #endif
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-#define MAX_WORKERS_PER_SHEPHERD 1024
-#endif
 /* flags (must be different bits) */
 #define QTHREAD_FUTURE                  1
 #define QTHREAD_REAL_MCCOY		2
@@ -130,9 +127,7 @@ kern_return_t thread_policy_get(thread_t thread,
 
 /* internal data structures */
 typedef struct qthread_lock_s qthread_lock_t;
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-typedef struct qthread_worker_s qthread_worker_t;
-#endif
+
 #define QTHREAD_SHEPHERD_TYPEDEF
 typedef struct qthread_shepherd_s qthread_shepherd_t;
 
@@ -166,18 +161,6 @@ typedef struct _qt_threadqueue_node
 #endif
     qthread_shepherd_t *creator_ptr;
 } qt_threadqueue_node_t;
-
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-struct qthread_worker_s
-{
-    pthread_t worker;
-    qthread_worker_id_t worker_id;
-    qthread_worker_id_t packed_worker_id;
-    qthread_shepherd_t *shepherd;
-    qthread_t *current;
-    volatile size_t active;
-};
-#endif
 
 #include "qt_shepherd_innards.h"
 #include "qt_blocking_structs.h"
@@ -256,7 +239,6 @@ static QINLINE qt_threadqueue_t *qt_threadqueue_new(qthread_shepherd_t * shepher
 static QINLINE void qt_threadqueue_free(qt_threadqueue_t * q);
 static QINLINE qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t * q);
 
-static QINLINE void qthread_steal_stat(void);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 /* Functions for work stealing functionality */
 static QINLINE void qt_threadqueue_enqueue_yielded(qt_threadqueue_t * q, qthread_t * t,
@@ -2357,7 +2339,7 @@ void qthread_internal_cleanup(void (*function)(void))
     qt_cleanup_funcs = ng;
 }
 
-static QINLINE void qthread_steal_stat(void) {
+void qthread_steal_stat(void) {
 #ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
   int i;
   for (i = 0; i < qlib->nshepherds; i++) {
@@ -4989,7 +4971,7 @@ static QINLINE void qt_threadqueue_free(qt_threadqueue_t * q)
 }                                   
 
 /* enqueue at tail */
-static QINLINE void qt_threadqueue_enqueue(qt_threadqueue_t * q, qthread_t * t, qthread_shepherd_t * shep)
+void qt_threadqueue_enqueue(qt_threadqueue_t * q, qthread_t * t, qthread_shepherd_t * shep)
 {
     qt_threadqueue_node_t *node;
 
