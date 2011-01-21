@@ -380,6 +380,13 @@ void qthread_releaseTaskListLock(qthread_t * t);
 
 extern int __qthreads_temp;
 void qthread_reset_forCount(qthread_t *);
+
+int qthread_forCount(qthread_t * t, int inc);
+taskSyncvar_t * qthread_getTaskRetVar(qthread_t * t);
+void qthread_setTaskRetVar(qthread_t * t,taskSyncvar_t *v);
+#endif
+#ifdef STEAL_PROFILE
+void qthread_steal_stat(void);
 #endif
 
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)

@@ -14,10 +14,14 @@ struct qt_arrive_first_s {
 
 typedef struct qt_arrive_first_s qt_arrive_first_t;
 
-/* visable function calls */
-int64_t qt_global_arrive_first(const qthread_shepherd_id_t shep, int64_t nest);
-void qt_global_arrive_first_destroy(void);
-void qt_global_arrive_first_init(int size, int debug);
+/* visible function calls */
+int64_t   qt_global_arrive_first(const qthread_shepherd_id_t shep, int64_t nest);
+void      qt_global_arrive_first_destroy(void);
+void      qt_global_arrive_first_init(int size, int debug);
+void      qtar_resize(size_t s); /* reset the size of the psuedo barrier */
+aligned_t qtar_size(void);       /* how big is current psuedo barrier */
+void      qtar_dump(qt_arrive_first_t * b); /* debugging function -- dump */
+                                            /* internal structure of b */
 
 #define qt_arrive_first(x) qt_global_arrive_first(x)
 

@@ -23,7 +23,10 @@
 #include "qthread/qloop.h"	       // for qt_loop_f
 #include "qthread_innards.h"	       // for qthread_debug()
 #include "qloop_innards.h"	       // for qqloop_handle_t
+#include <qthread/qthread.h>           // for syncvar_t
 #include <qthread/feb_barrier.h>
+#include <qthread/omp_defines.h>       // Wrappered OMP functions from omp.h
+
 #include <rose_xomp.h>
 
 #if defined(__i386__) || defined(__x86_64__)
@@ -34,10 +37,16 @@
 #define TRUE 1
 #define FALSE 0
 
-/* XXX: KBW: fixes a compiler warning */
-void omp_set_nested (int val);
-
 typedef enum xomp_nest_level{NO_NEST=0, ALLOW_NEST, AUTO_NEST}xomp_nest_level_t;
+
+static qqloop_step_handle_t* qqloop_get_value(int id);
+static void qqloop_clear_value(int id);
+static void qqloop_set_value(qqloop_step_handle_t * qqhandle);
+#ifdef USE_RDTSC
+static uint64_t rdtsc(void);
+#endif
+int get_nprocs(void); // in sys/sysinfo.h but __FUNCTION__ in that file collides with
+                      // the same (un)define in config.h
 
 //
 // XOMP_Status
@@ -211,7 +220,7 @@ static void set_xomp_dynamic(
 //
 
 static volatile qt_feb_barrier_t *gb = NULL;
-static aligned_t outGate = 0; // lock to control loop creation 
+static syncvar_t outGate; // lock to control loop creation 
 
 //Runtime library initialization routine
 void XOMP_init(
@@ -250,12 +259,13 @@ void XOMP_init(
     return;
 }
 
+
 // Runtime library termination routine
 void XOMP_terminate(
     int exitcode)
 {
-    qthread_finalize();
-    return;
+  qthread_steal_stat();  // qthread_finalize called by at_exit handler
+  return;
 }
 
 // start a parallel task
@@ -281,7 +291,7 @@ void XOMP_parallel_start(
   if (gb == NULL) gb = qt_feb_barrier_create(me,qthread_num_shepherds()); // setup taskwait barrier
   qthread_shepherd_id_t parallelWidth = qthread_num_shepherds();
 #endif
-  qt_loop_f f = (qt_loop_f) func;
+  qt_loop_step_f f = (qt_loop_step_f) func;
   qt_parallel_step(f, parallelWidth, data);
 
   return;
@@ -307,13 +317,13 @@ void XOMP_parallel_end(
 int64_t arr[100][64];
 volatile int64_t arr_level[64];
 
-qqloop_step_handle_t* qqloop_get_value(int id)
+static qqloop_step_handle_t* qqloop_get_value(int id)
 {
     qqloop_step_handle_t * ret = NULL;
     while(1) {
        int lev = *(volatile int64_t*)(&arr_level[id]);
        if (*(volatile int*)(&arr[lev][id])){
-	   ret = arr[lev][id];
+	 ret = (qqloop_step_handle_t*)(arr[lev][id]);
 	   break;
        }
     }
@@ -321,16 +331,15 @@ qqloop_step_handle_t* qqloop_get_value(int id)
     return ret;
 }
 
-void qqloop_clear_value(int id)
+static void qqloop_clear_value(int id)
 {
-  qthread_t *const me = qthread_self();
   int64_t lev = arr_level[id];
   arr[lev][id] = 0;
   qthread_incr(&arr_level[id], -1);
   return;
 }
 
-void qqloop_set_value(qqloop_step_handle_t * qqhandle)
+static void qqloop_set_value(qqloop_step_handle_t * qqhandle)
 {
   int i;
   int lim;
@@ -374,6 +383,7 @@ qqloop_step_handle_t *qt_loop_rose_queue_create(
 // used to compute time to dynamically determine minimum effective block size 
 #ifdef USE_RDTSC
 #include <stdint.h>
+static uint64_t rdtsc(void);
 static QINLINE uint64_t rdtsc() {
 uint32_t lo, hi;
 __asm__ __volatile__ (      // serialize
@@ -395,6 +405,7 @@ int currentIteration[64];
 int staticStartCount[64];
 volatile int orderedLoopCount = 0;
 static size_t gate_cnt = 0;
+aligned_t qtar_size(void);
 
 // handle Qthread default openmp loop initialization
 void XOMP_loop_guided_init(
@@ -407,7 +418,7 @@ void XOMP_loop_guided_init(
   qthread_t *const me = qthread_self();
   qqloop_step_handle_t *qqhandle = NULL;
   
-  int myid;
+  qthread_shepherd_id_t myid;
 #ifdef USE_RDTSC
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   qthread_worker_id_t workerid = qthread_worker(&myid,me);
@@ -920,7 +931,7 @@ void XOMP_loop_runtime_init(
     int upper,
     int stride)
 {
-  //  int i;
+  int chunk_size = 1; // Something has to be done to correctly compute chunk_size
   qthread_t *const me = qthread_self();
   qqloop_step_handle_t *qqhandle = NULL;
   
@@ -932,7 +943,6 @@ void XOMP_loop_runtime_init(
 
   switch(get_runtime_sched_option(&xomp_status))
     {
-      int chunk_size = 1; // For all these something has to be done to correctly compute chunk_size  -BV
     case GUIDED_SCHED: // Initalize guided scheduling at runtime
       XOMP_loop_guided_init(lower, upper, stride, chunk_size);
       break;
@@ -1220,6 +1230,8 @@ void XOMP_flush_all(
   exit(1);
 }
 
+void qtar_resize(aligned_t);
+
 // omp flush with variable list, flush one by one, given each's start address and size
 void XOMP_flush_one(
     char *startAddress,
@@ -1229,8 +1241,7 @@ void XOMP_flush_one(
   exit(1);
 }
 
-// Wrappered OMP functions from omp.h
-// extern void omp_set_num_threads (int);
+
 void omp_set_num_threads (
     int omp_num_threads_requested)
 {

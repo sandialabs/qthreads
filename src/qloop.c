@@ -200,8 +200,7 @@ static void qt_loop_step_inner(
 	} else {
 	    qassert(qthread_fork_syncvar_to
 		    ((qthread_f) qloop_step_wrapper, qwa + threadct, NULL, 0, rets + i,
-		     (qthread_shepherd_id_t) (threadct %
-			 qthread_num_shepherds())),
+		     (qthread_shepherd_id_t) (threadct)),
 		    QTHREAD_SUCCESS);
 	}
 	threadct++;

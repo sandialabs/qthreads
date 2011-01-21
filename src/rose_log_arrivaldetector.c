@@ -14,6 +14,10 @@
 #include "qt_barrier.h"
 #include "qthread_asserts.h"
 
+static qt_arrive_first_t *qt_arrive_first_create(int size, qt_barrier_btype type, int debug);
+static void qt_arrive_first_destroy(qt_arrive_first_t * b);
+static void qtar_internal_initialize_fixed(qt_arrive_first_t * b, size_t size, int debug);
+static int64_t qt_arrive_first_enter(qt_arrive_first_t * b, qthread_shepherd_id_t shep);
 
 qt_arrive_first_t *MArrFirst = NULL;
 
@@ -69,11 +73,6 @@ void qtar_dump(qt_arrive_first_t * b)
 static void qtar_internal_initialize_fixed(
     qt_arrive_first_t * b,
     size_t size,
-    int debug);
-
-static void qtar_internal_initialize_fixed(
-    qt_arrive_first_t * b,
-    size_t size,
     int debug)
 {				       /*{{{ */
     int i;
@@ -109,7 +108,7 @@ static void qtar_internal_initialize_fixed(
     }
 }				       /*}}} */
 
-qt_arrive_first_t *qt_arrive_first_create(
+static qt_arrive_first_t *qt_arrive_first_create(
     int size,
     qt_barrier_btype type,
     int debug)
@@ -134,7 +133,7 @@ qt_arrive_first_t *qt_arrive_first_create(
     return b;
 }				       /*}}} */
 
-void qt_arrive_first_destroy(
+static void qt_arrive_first_destroy(
     qt_arrive_first_t * b)
 {				       /*{{{ */
     assert(b);
@@ -165,7 +164,6 @@ static int64_t qtar_internal_up(
     int mask = 1 << level;
     int pairedLock = myLock ^ mask;
     int nextLevelLock = (myLock < pairedLock) ? myLock : pairedLock;
-    char debug = b->arriveFirstDebug;
     if (b->activeSize == 0) return 1; // only one thread -- It's first by definition
     assert(b->activeSize > 1);
 
@@ -199,14 +197,7 @@ static int64_t qtar_internal_up(
     return 0;     // someone else is first
 }				       /*}}} */
 
-void cleanArriveFirst(
-    )
-{
-}
-
 // actual arrive first entry point
-
-
 
 int64_t qt_arrive_first_enter(
     qt_arrive_first_t * b,

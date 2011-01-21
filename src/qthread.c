@@ -100,7 +100,6 @@ kern_return_t thread_policy_get(thread_t thread,
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 #define MAX_WORKERS_PER_SHEPHERD 1024
-#define STEAL_PROFILE
 #endif
 /* internal constants */
 enum threadstate {
@@ -200,10 +199,11 @@ struct qthread_s
 
     /* the function to call (that defines this thread) */
     qthread_f f;
+    aligned_t id;               /* id used in barrier and arrive_first */
     void *arg;			/* user defined data */
     void *ret;			/* user defined retval location */
     aligned_t   free_arg;       /* user defined data malloced and to be freed */
-    aligned_t   test[128];            /* space so that I can avoid malloc in most small cases */
+    aligned_t   test[128];      /* space so that I can avoid malloc in most small cases */
     struct qthread_runtime_data_s *rdata;
 };
 
@@ -309,6 +309,8 @@ struct qthread_shepherd_s
     size_t steal_called;
     size_t steal_attempted;
     size_t steal_amount_stolen;
+    size_t steal_failed;
+    size_t steal_successful;
 #endif
 #ifdef QTHREAD_SHEPHERD_PROFILING
     qtimer_t total_time;	/* how much time the shepherd spent running */
@@ -1316,7 +1318,11 @@ static void *qthread_shepherd(void *arg)
     /* Bind threads to physical cores such that workers of a shpeherd are on the same socket.
        Assumes round robin thread numbering. (Not very portable and should be replaced) */
     unsigned long phys_thread_num = (me_worker->worker_id * qlib->nshepherds) + me->shepherd_id;
-    unsigned long mask = 1UL << phys_thread_num;
+
+    cpu_set_t mask;
+    CPU_ZERO(&mask);
+    CPU_SET(phys_thread_num, &mask);
+    //    unsigned long mask = 1UL << phys_thread_num;
 
     sched_setaffinity(0, sizeof(mask), &mask);
 
@@ -1324,19 +1330,19 @@ static void *qthread_shepherd(void *arg)
        and does so at this point. */
     if (me->shepherd_id == 0 && me_worker->worker_id == 0) {
         qthread_worker_id_t j; 
-        int r;
+        long r;
         for (j = 1; j < qlib->nworkerspershep; j++) {
              me->workers[j].shepherd = me;
              me->workers[j].active = 1;	     
              me->workers[j].worker_id = j;
 	     me->workers[j].packed_worker_id = j;
              if ((r =
-                 pthread_create(&me->workers[j].worker, NULL,
+		  pthread_create(&me->workers[j].worker, NULL,
                                 qthread_shepherd, &me->workers[j])) != 0) {
-                 fprintf(stderr, "qthread_init: pthread_create() failed (%d)\n",
+                 fprintf(stderr, "qthread_init: pthread_create() failed (%ld)\n",
                          r);
                  perror("qthread_init spawning worker");
-                 return r;
+                 return (void *) r;
              }
         }
     }
@@ -2649,6 +2655,21 @@ void qthread_internal_cleanup(void (*function)(void))
     qt_cleanup_funcs = ng;
 }
 
+void qthread_steal_stat() {
+#ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
+  int i;
+  for (i = 0; i < qlib->nshepherds; i++) {
+    fprintf(stdout,"shepherd %d - steals called %ld attempted %ld failed %ld successful %ld work stolen %ld\n",
+	    qlib->shepherds[i].shepherd_id,
+	    qlib->shepherds[i].steal_called,
+	    qlib->shepherds[i].steal_attempted,
+	    qlib->shepherds[i].steal_failed,
+	    qlib->shepherds[i].steal_successful,
+	    qlib->shepherds[i].steal_amount_stolen);
+  }
+#endif
+ }
+
 void qthread_finalize(void)
 {				       /*{{{ */
     int r;
@@ -2661,26 +2682,17 @@ void qthread_finalize(void)
     if (qlib == NULL)
 	return;
 
-#ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
-    for (i = 0; i < qlib->nshepherds; i++) {
-	fprintf(stderr,"shepherd %d - steals called %ld attempted %ld work stolen %ld\n",
-		qlib->shepherds[i].shepherd_id,
-		qlib->shepherds[i].steal_called,
-		qlib->shepherds[i].steal_attempted,
-		qlib->shepherds[i].steal_amount_stolen);
-    }
-#endif
+    qthread_shepherd_t *shep0 = &(qlib->shepherds[0]);
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     worker = (qthread_worker_t *) pthread_getspecific(shepherd_structs);
     if (worker->packed_worker_id != 0) {    /* Only run finalize on shepherd 0 worker 0*/
         worker->current->thread_state = QTHREAD_STATE_YIELDED;  /* Otherwise, put back */
+        //	    qt_threadqueue_enqueue(shep0->ready, worker->current,
+        //			   shep0);
         return;
     }
-
 #endif
-
-    qthread_shepherd_t *shep0 = &(qlib->shepherds[0]);
 
     qthread_debug(ALL_CALLS, "began.\n");
 
@@ -2688,7 +2700,7 @@ void qthread_finalize(void)
      * the programmer can ensure that no further threads are forked for now
      */
 
-    /* enqueue the termination thread sentinal */
+    /* enqueue the terminaqlib->shepherds[tion thread sentinal */
 #ifdef QTHREAD_SHEPHERD_PROFILING
     qtimer_stop(shep0->total_time);
 #endif
@@ -2698,14 +2710,14 @@ void qthread_finalize(void)
         qthread_worker_id_t j;
 	for (j = 0; j < qlib->nworkerspershep; j++) {
 	    if (i == 0 && j == 0)
-		continue;   /* None for shepard 0's worker 0 */
+	        continue;   /* None for shepard 0's worker 0 */
 	    qthread_debug(ALL_DETAILS, "terminating shepherd %i worker %i\n", (int)i, j);
 	    t = qthread_thread_new(NULL, NULL, NULL, 0, (aligned_t *) NULL, i);
 	    assert(t != NULL);	       /* what else can we do? */
 	    t->thread_state = QTHREAD_STATE_TERM_SHEP;
 	    t->thread_id = (unsigned int)-1;
 	    qt_threadqueue_enqueue(qlib->shepherds[i].ready, t,
-		    shep0);
+	    	    shep0);
 	}
     }
 #else
@@ -2751,7 +2763,7 @@ void qthread_finalize(void)
 	    qthread_shepherd_t *shep = &(qlib->shepherds[i]);
 	    qthread_debug(ALL_DETAILS, "waiting for shepherd %i to exit\n", (int)i);
         for (j = 0; j < qlib->nworkerspershep; j++) {
-            if (i == 0 && j == 0)
+	  if (i == 0 && j == 0)
                 continue;  /* This leaves out shepard 0's worker 0 */
 	    if ((r = pthread_join(shep->workers[j].worker, NULL)) != 0) {
 	        fprintf(stderr,
@@ -3459,6 +3471,12 @@ static QINLINE qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t * q)
     return p;
 }				       /*}}} */
 
+static QINLINE qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t * q)
+{				       /*{{{ */
+  return qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q);
+}				       /*}}} */
+
+
 /* this function is amusing, but the point is to avoid unnecessary bus traffic
  * by allowing idle shepherds to sit for a while while still allowing for
  * low-overhead for busy shepherds. This is a hybrid approach: normally, it
@@ -3979,7 +3997,7 @@ int qthread_fork_syncvar_to(
     const void *const arg_copy,
     int64_t free_arg,
     syncvar_t * ret,
-    const qthread_shepherd_id_t shepherd)
+    const qthread_shepherd_id_t s)
 #else
 int qthread_fork_syncvar_to(
     const qthread_f f,
@@ -3991,6 +4009,7 @@ int qthread_fork_syncvar_to(
     qthread_t *t;
     qthread_shepherd_t *shep;
 
+    const qthread_shepherd_id_t shepherd = s % qthread_num_shepherds();
     if (shepherd >= qlib->nshepherds || f == NULL) {
       return QTHREAD_BADARGS;
     }
@@ -4003,6 +4022,8 @@ int qthread_fork_syncvar_to(
 #endif
     qassert_ret(t, QTHREAD_MALLOC_ERROR);
     t->target_shepherd = shep = &(qlib->shepherds[shepherd]);
+    t->id = s % (qlib->nworkerspershep*qthread_num_shepherds());
+    // printf("thread create %d %d\n",t->id,qlib->nworkerspershep*qthread_num_shepherds());
     qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id,
 		  shepherd);
 
@@ -5040,6 +5061,13 @@ qthread_shepherd_id_t qthread_shep(const qthread_t * t)
 qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *shepherd_id,
 				   const qthread_t * t)
 {                                      /*{{{ */
+
+  if(shepherd_id != NULL) {
+    qthread_worker_t *worker = (qthread_worker_t *)pthread_getspecific(shepherd_structs);
+    *shepherd_id = worker->shepherd->shepherd_id;
+  }
+  return t->id;
+  /*
   qthread_worker_t *worker = (qthread_worker_t *)pthread_getspecific(shepherd_structs);
   if (worker != NULL) {
     qthread_shepherd_id_t s = worker->shepherd->shepherd_id;
@@ -5048,6 +5076,7 @@ qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *shepherd_id,
   }
   if(shepherd_id != NULL) *shepherd_id = NO_SHEPHERD;
   return NO_SHEPHERD;
+  */
 }                                      /*}}} */
 #endif
 
@@ -5146,10 +5175,6 @@ void qthread_assertnotfuture(qthread_t * t)
 # ifdef __INTEL_COMPILER
 #  pragma warning (disable:1418)
 # endif
-int qt_thread_done(qthread_t * t)
-{				       /*{{{ */
-    return ((t->thread_state == QTHREAD_STATE_DONE) ? 1 : 0);
-}				       /*}}} */
 
 int qthread_forCount(qthread_t * t, int inc)
 {                                    /*{{{ */
@@ -6150,8 +6175,16 @@ static QINLINE void qthread_steal()
 	    first = qt_threadqueue_dequeue_steal(victim_shepherd->ready);
 	    if (first) {
 	      qt_threadqueue_enqueue_multiple(thief_shepherd->ready, first, thief_shepherd);
+#ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
+	      qthread_incr(&thief_shepherd->steal_successful, 1);
+#endif
 	      break;
 	    }
+#ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
+	    else {
+	      qthread_incr(&thief_shepherd->steal_failed, 1);
+	    }
+#endif
 	  }
       }
     thief_shepherd->stealing = 0;
@@ -6308,18 +6341,18 @@ static QINLINE long qthread_steal_chunksize()
 /* dequeue stolen threads at head, skip yielded threads */
 static QINLINE qt_threadqueue_node_t *qt_threadqueue_dequeue_steal(qt_threadqueue_t * q)
 {
-    volatile qt_threadqueue_node_t *node;
-    volatile qt_threadqueue_node_t *first = NULL;
-    volatile qt_threadqueue_node_t *last = NULL;
+    qt_threadqueue_node_t *node;
+    qt_threadqueue_node_t *first = NULL;
+    qt_threadqueue_node_t *last = NULL;
     long amtStolen = 0;
 
     assert(q != NULL);
 
     QTHREAD_LOCK(&q->qlock);
     while (q->qlength > 0 && amtStolen < qthread_steal_chunksize()) {
-      node = q->head;
+      node = (qt_threadqueue_node_t *)q->head;
       while (node != NULL && node->value->thread_state == QTHREAD_STATE_YIELDED) {
-	node = node->next;
+	node = (qt_threadqueue_node_t *)node->next;
       }
       if (node != NULL) {
 	if (node == q->head) q->head = node->next;
@@ -6354,20 +6387,22 @@ static QINLINE qt_threadqueue_node_t *qt_threadqueue_dequeue_steal(qt_threadqueu
 /* walk queue looking for a specific value  -- if found remove it (and start
  * it running)  -- if not return NULL
  */
+ qt_threadqueue_node_t *qt_threadqueue_dequeue_specific(qt_threadqueue_t * q, void* value);
+
 qt_threadqueue_node_t *qt_threadqueue_dequeue_specific(qt_threadqueue_t * q, void* value)
 {
 
-    volatile qt_threadqueue_node_t *node = NULL;
+    qt_threadqueue_node_t *node = NULL;
     qthread_t * t;
 
     assert(q != NULL);
 
     QTHREAD_LOCK(&q->qlock);
     if (q->qlength > 0) {
-      node = q->tail;
+      node = (qt_threadqueue_node_t *)q->tail;
       if (node) t = (qthread_t *)node->value;
       while ((node != NULL) && (t->ret != value) ) {
-	node = node->prev;
+	node = (qt_threadqueue_node_t *)node->prev;
 	if (node) t = (qthread_t *)node->value;
       }
       if ((node != NULL)) {
@@ -6388,16 +6423,16 @@ qt_threadqueue_node_t *qt_threadqueue_dequeue_specific(qt_threadqueue_t * q, voi
     return (node);
 }
 
-size_t qthread_run_needed_task(syncvar_t *value);
+void qthread_run_needed_task(syncvar_t *value);
 
-size_t qthread_run_needed_task(syncvar_t *value)
+void qthread_run_needed_task(syncvar_t *value)
 {
   qthread_shepherd_t *shep = qthread_internal_getshep();
   qt_threadqueue_node_t * n = NULL;
   qthread_t * orig_t = qthread_self();
-  ucontext_t my_context;
+  //  ucontext_t my_context;
 
-  if (n = qt_threadqueue_dequeue_specific(shep->ready, value)) {
+  if ((n = qt_threadqueue_dequeue_specific(shep->ready, value))) {
     // switch to task and run -- else missing and return
     //    qthread_t * t = n->value;
     
