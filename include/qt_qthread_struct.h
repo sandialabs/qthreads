@@ -1,6 +1,16 @@
 #ifndef QT_QTHREAD_STRUCT_H
 #define QT_QTHREAD_STRUCT_H
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
+#if defined(HAVE_UCONTEXT_H) && defined(HAVE_NATIVE_MAKECONTEXT)
+# include <ucontext.h>		       /* for make/get/swap-context functions */
+#else
+# include "osx_compat/taskimpl.h"
+#endif
+
 enum threadstate {
     QTHREAD_STATE_NEW,
     QTHREAD_STATE_RUNNING,

@@ -56,7 +56,12 @@ endif
 if COMPILE_TARGET_UNIX
 libqthread_la_SOURCES += \
 	qthread.c \
+	threadqueues.c \
 	futurelib.c
+if QTHREAD_MULTITHREADED_SHEPHERDS
+libqthread_la_SOURCES += \
+	touch.c
+endif
 endif
 
 if COMPILE_POOLED_MEMORY

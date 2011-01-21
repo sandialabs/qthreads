@@ -19,6 +19,8 @@ noinst_HEADERS = \
 	qt_blocking_structs.h \
 	qt_profiling.h \
 	qt_shepherd_innards.h \
+	qt_threadqueues.h \
+	qt_touch.h \
 	qt_atomics.h \
 	qt_barrier.h \
 	qt_hash.h \

@@ -1,6 +1,13 @@
 #ifndef QT_SHEPHERD_INNARDS_H
 #define QT_SHEPHERD_INNARDS_H
 
+/* System Pre-requisites */
+#include <pthread.h>
+
+/* Internal Pre-requisites */
+#include "qt_mpool.h"
+#include "qt_atomics.h"
+
 /* pre-declarations */
 typedef struct qt_threadqueue_s qt_threadqueue_t;
 
@@ -98,7 +105,15 @@ struct qthread_shepherd_s
 #endif
 };
 
-void qt_threadqueue_enqueue(qt_threadqueue_t * q, qthread_t * t, qthread_shepherd_t * shep);
+extern pthread_key_t shepherd_structs;
+static QINLINE qthread_shepherd_t *qthread_internal_getshep(void)
+{
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    return ((qthread_worker_t*)pthread_getspecific(shepherd_structs))->shepherd;
+#else
+    return (qthread_shepherd_t*)pthread_getspecific(shepherd_structs);
+#endif
+}
 void qthread_back_to_master(qthread_t * t);
 
 #endif

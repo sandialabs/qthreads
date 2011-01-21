@@ -6,11 +6,6 @@
 #ifdef HAVE_MALLOC_H
 # include <malloc.h>		       /* for memalign() */
 #endif
-#if defined(HAVE_UCONTEXT_H) && defined(HAVE_NATIVE_MAKECONTEXT)
-# include <ucontext.h>		       /* for make/get/swap-context functions */
-#else
-# include "osx_compat/taskimpl.h"
-#endif
 #include <limits.h>		       /* for INT_MAX */
 #include <qthread/qthread-int.h>       /* for UINT8_MAX */
 #include <string.h>		       /* for memset() */
@@ -127,7 +122,6 @@ kern_return_t thread_policy_get(thread_t thread,
 
 /* internal data structures */
 typedef struct qthread_lock_s qthread_lock_t;
-
 #define QTHREAD_SHEPHERD_TYPEDEF
 typedef struct qthread_shepherd_s qthread_shepherd_t;
 
@@ -142,56 +136,9 @@ struct qthread_queue_s
     pthread_cond_t notempty;
 };
 
-/* queue declarations */
-typedef struct _qt_threadqueue_node
-{
-    qthread_t *value;
-#ifdef QTHREAD_MUTEX_INCREMENT
-    struct _qt_threadqueue_node *next;
-#else
-    volatile struct _qt_threadqueue_node *volatile next;
-#endif
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    /* used for the work stealing queue implementation */
-#ifdef QTHREAD_MUTEX_INCREMENT
-    struct _qt_threadqueue_node *prev;
-#else
-    volatile struct _qt_threadqueue_node *volatile prev;
-#endif
-#endif
-    qthread_shepherd_t *creator_ptr;
-} qt_threadqueue_node_t;
-
 #include "qt_shepherd_innards.h"
 #include "qt_blocking_structs.h"
-
-struct qt_threadqueue_s
-{
-#ifdef QTHREAD_MUTEX_INCREMENT
-    qt_threadqueue_node_t *head;
-    qt_threadqueue_node_t *tail;
-    QTHREAD_FASTLOCK_TYPE head_lock;
-    QTHREAD_FASTLOCK_TYPE tail_lock;
-    QTHREAD_FASTLOCK_TYPE advisory_queuelen_m;
-#else
-    volatile qt_threadqueue_node_t *volatile head;
-    volatile qt_threadqueue_node_t *volatile tail;
-#ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-    volatile aligned_t fruitless;
-    pthread_mutex_t lock;
-    pthread_cond_t notempty;
-#endif /* CONDWAIT */
-#endif /* MUTEX_INCREMENT */
-    /* the following is for estimating a queue's "busy" level, and is not
-     * guaranteed accurate (that would be a race condition) */
-    volatile saligned_t advisory_queuelen;
-    qthread_shepherd_t *creator_ptr;
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    /* used for the work stealing queue implementation */
-    pthread_mutex_t qlock;
-    long qlength;
-#endif
-};
+#include "qt_threadqueues.h"
 
 pthread_key_t shepherd_structs;
 
@@ -235,27 +182,9 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
 static QINLINE void qthread_thread_free(qthread_t * t);
 static qthread_shepherd_t* qthread_find_active_shepherd(qthread_shepherd_id_t *l, unsigned int *d);
 
-static QINLINE qt_threadqueue_t *qt_threadqueue_new(qthread_shepherd_t * shepherd);
-static QINLINE void qt_threadqueue_free(qt_threadqueue_t * q);
-static QINLINE qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t * q);
-
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-/* Functions for work stealing functionality */
-static QINLINE void qt_threadqueue_enqueue_yielded(qt_threadqueue_t * q, qthread_t * t,
-                                      qthread_shepherd_t * shep);
-static QINLINE void qt_threadqueue_enqueue_multiple(qt_threadqueue_t * q, 
-                       qt_threadqueue_node_t * first, qthread_shepherd_t *shep);
-static QINLINE qt_threadqueue_node_t *qt_threadqueue_dequeue_steal(qt_threadqueue_t * q);
-qt_threadqueue_node_t *qt_threadqueue_dequeue_specfic(qt_threadqueue_t * q, void* value);
-static QINLINE long qthread_steal_chunksize(void);
-static QINLINE void qthread_steal(void);                       
-static QINLINE qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q, size_t active);
-#else
-static QINLINE qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q);
-#endif
 
 static QINLINE qthread_queue_t *qthread_queue_new(qthread_shepherd_t *
- 				  shepherd);
+				  shepherd);
 static QINLINE void qthread_queue_free(qthread_queue_t * q);
 static QINLINE void qthread_enqueue(qthread_queue_t * q, qthread_t * t);
 
@@ -268,14 +197,6 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t * shep,
 static QINLINE void qthread_gotlock_empty(qthread_shepherd_t * shep,
 					  qthread_addrstat_t * m, void *maddr,
 					  const char recursive);
-static QINLINE qthread_shepherd_t *qthread_internal_getshep(void)
-{
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    return ((qthread_worker_t*)pthread_getspecific(shepherd_structs))->shepherd;
-#else
-    return (qthread_shepherd_t*)pthread_getspecific(shepherd_structs);
-#endif
-}
 
 #if defined(QTHREAD_HAVE_LIBNUMA) || \
     defined(QTHREAD_HAVE_LGRP) || \
@@ -435,29 +356,10 @@ static QINLINE void FREE_STACK(qthread_shepherd_t * shep, void *t)
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
 # define ALLOC_QUEUE(shep) (qthread_queue_t *) malloc(sizeof(qthread_queue_t))
 # define FREE_QUEUE(t) free(t)
-# define ALLOC_THREADQUEUE(shep) (qt_threadqueue_t *) calloc(1, sizeof(qt_threadqueue_t))
-# define FREE_THREADQUEUE(t) free(t)
-static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t ** ret,
-				 qthread_shepherd_t * shep)
-{				       /*{{{ */
-# ifdef HAVE_MEMALIGN
-    *ret =
-	(qt_threadqueue_node_t *) memalign(16, sizeof(qt_threadqueue_node_t));
-# elif defined(HAVE_POSIX_MEMALIGN)
-    qassert(posix_memalign((void **)ret, 16, sizeof(qt_threadqueue_node_t)),
-	    0);
-# else
-    *ret = calloc(1, sizeof(qt_threadqueue_node_t));
-    return;
-# endif
-    memset(*ret, 0, sizeof(qt_threadqueue_node_t));
-}				       /*}}} */
-
-# define FREE_TQNODE(t) free(t)
 #else
 static qt_mpool generic_queue_pool = NULL;
-static qt_mpool generic_threadqueue_pool = NULL;
-static qt_mpool generic_threadqueue_node_pool = NULL;
+qt_mpool generic_threadqueue_pool = NULL;
+qt_mpool generic_threadqueue_node_pool = NULL;
 static QINLINE qthread_queue_t *ALLOC_QUEUE(qthread_shepherd_t * shep)
 {				       /*{{{ */
     qthread_queue_t *tmp =
@@ -475,43 +377,6 @@ static QINLINE void FREE_QUEUE(qthread_queue_t * t)
 		  generic_queue_pool, t);
 }				       /*}}} */
 
-static QINLINE qt_threadqueue_t *ALLOC_THREADQUEUE(qthread_shepherd_t * shep)
-{				       /*{{{ */
-    qt_threadqueue_t *tmp =
-	(qt_threadqueue_t *) qt_mpool_alloc(shep ? (shep->threadqueue_pool) :
-					    generic_threadqueue_pool);
-    if (tmp != NULL) {
-	tmp->creator_ptr = shep;
-    }
-    return tmp;
-}				       /*}}} */
-
-static QINLINE void FREE_THREADQUEUE(qt_threadqueue_t * t)
-{				       /*{{{ */
-    qt_mpool_free(t->creator_ptr ? (t->creator_ptr->threadqueue_pool) :
-		  generic_threadqueue_pool, t);
-}				       /*}}} */
-
-static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t ** ret,
-				 qthread_shepherd_t * shep)
-{				       /*{{{ */
-    *ret =
-	(qt_threadqueue_node_t *) qt_mpool_alloc(shep
-						 ? (shep->
-						    threadqueue_node_pool)
-						 :
-						 generic_threadqueue_node_pool);
-    if (*ret != NULL) {
-	memset(*ret, 0, sizeof(qt_threadqueue_node_t));
-	(*ret)->creator_ptr = shep;
-    }
-}				       /*}}} */
-
-static QINLINE void FREE_TQNODE(qt_threadqueue_node_t * t)
-{				       /*{{{ */
-    qt_mpool_free(t->creator_ptr ? (t->creator_ptr->threadqueue_node_pool) :
-		  generic_threadqueue_node_pool, t);
-}				       /*}}} */
 #endif
 
 #if defined(UNPOOLED_LOCKS) || defined(UNPOOLED)
@@ -541,322 +406,9 @@ static QINLINE void FREE_LOCK(qthread_lock_t * t)
 qt_mpool generic_addrstat_pool = NULL;
 #endif
 
-
 /* guaranteed to be between 0 and 128, using the first parts of addr that are
  * significant */
 unsigned int QTHREAD_LOCKING_STRIPES = 128;
-
-#if !defined(QTHREAD_MUTEX_INCREMENT)
-#define qthread_internal_atomic_read_s(op,lock) (*op)
-#define qthread_internal_incr(op,lock,val) qthread_incr(op, val)
-#define qthread_internal_incr_s(op,lock,val) qthread_incr(op, val)
-#define qthread_internal_decr(op,lock) qthread_incr(op, -1)
-#define qthread_internal_incr_mod(op,m,lock) qthread_internal_incr_mod_(op,m)
-#define QTHREAD_OPTIONAL_LOCKARG
-#else
-#define qthread_internal_incr_mod(op,m,lock) qthread_internal_incr_mod_(op,m,lock)
-#define QTHREAD_OPTIONAL_LOCKARG , QTHREAD_FASTLOCK_TYPE *lock
-static QINLINE aligned_t qthread_internal_incr(volatile aligned_t * operand,
-					       QTHREAD_FASTLOCK_TYPE * lock,
-					       int val)
-{				       /*{{{ */
-    aligned_t retval;
-
-    QTHREAD_FASTLOCK_LOCK(lock);
-    retval = *operand;
-    *operand += val;
-    QTHREAD_FASTLOCK_UNLOCK(lock);
-    return retval;
-}				       /*}}} */
-static QINLINE saligned_t qthread_internal_incr_s(volatile saligned_t *
-						  operand,
-						  QTHREAD_FASTLOCK_TYPE * lock,
-						  int val)
-{				       /*{{{ */
-    saligned_t retval;
-
-    QTHREAD_FASTLOCK_LOCK(lock);
-    retval = *operand;
-    *operand += val;
-    QTHREAD_FASTLOCK_UNLOCK(lock);
-    return retval;
-}				       /*}}} */
-
-static QINLINE saligned_t qthread_internal_atomic_read_s(volatile saligned_t *
-							 operand,
-							 QTHREAD_FASTLOCK_TYPE *
-							 lock)
-{				       /*{{{ */
-    saligned_t retval;
-
-    QTHREAD_FASTLOCK_LOCK(lock);
-    retval = *operand;
-    QTHREAD_FASTLOCK_UNLOCK(lock);
-    return retval;
-}				       /*}}} */
-#endif
-
-static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t *
-						    operand,
-						    const int max
-						    QTHREAD_OPTIONAL_LOCKARG)
-{				       /*{{{ */
-    aligned_t retval;
-
-#if defined(HAVE_GCC_INLINE_ASSEMBLY)
-
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
-    ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) && (QTHREAD_SIZEOF_ALIGNED_T == 4))
-
-    register unsigned int incrd = incrd;	/* these don't need to be initialized */
-    register unsigned int compd = compd;	/* they're just tmp variables */
-
-    /* the minus in bne- means "this bne is unlikely to be taken" */
-    asm volatile ("1:\n\t"	/* local label */
-		  "lwarx  %0,0,%3\n\t"	/* load operand */
-		  "addi   %2,%0,1\n\t"	/* increment it into incrd */
-		  "cmplw  7,%2,%4\n\t"	/* compare incrd to the max */
-		  "mfcr   %1\n\t"	/* move the result into compd */
-		  "rlwinm %1,%1,29,1\n\t"	/* isolate the result bit */
-		  "mullw  %2,%2,%1\n\t"	/* incrd *= compd */
-		  "stwcx. %2,0,%3\n\t"	/* *operand = incrd */
-		  "bne-   1b\n\t"	/* if it failed, go to label 1 back */
-		  "isync"	/* make sure it wasn't all a dream */
-		  /* = means this operand is write-only (previous value is discarded)
-		   * & means this operand is an earlyclobber (i.e. cannot use the same register as any of the input operands)
-		   * b means this is a register but must not be r0 */
-		  :"=&b"   (retval), "=&r"(compd), "=&r"(incrd)
-		  :"r"     (operand), "r"(max)
-		  :"cc", "memory");
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
-
-    register uint64_t incrd = incrd;
-    register uint64_t compd = compd;
-
-    asm volatile ("1:\n\t"	/* local label */
-		  "ldarx  %0,0,%3\n\t"	/* load operand */
-		  "addi   %2,%0,1\n\t"	/* increment it into incrd */
-		  "cmpl   7,1,%2,%4\n\t"	/* compare incrd to the max */
-		  "mfcr   %1\n\t"	/* move the result into compd */
-		  "rlwinm %1,%1,29,1\n\t"	/* isolate the result bit */
-		  "mulld  %2,%2,%1\n\t"	/* incrd *= compd */
-		  "stdcx. %2,0,%3\n\t"	/* *operand = incrd */
-		  "bne-   1b\n\t"	/* if it failed, to to label 1 back */
-		  "isync"	/* make sure it wasn't all just a dream */
-		  :"=&b"   (retval), "=&r"(compd), "=&r"(incrd)
-		  :"r"     (operand), "r"(max)
-		  :"cc", "memory");
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32) || \
-      ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) && (QTHREAD_SIZEOF_ALIGNED_T == 4))
-
-    register uint32_t oldval, newval;
-
-    /* newval = *operand; */
-    do {
-	/* you *should* be able to move the *operand reference outside the
-	 * loop and use the output of the CAS (namely, newval) instead.
-	 * However, there seems to be a bug in gcc 4.0.4 wherein, if you do
-	 * that, the while() comparison uses a temporary register value for
-	 * newval that has nothing to do with the output of the CAS
-	 * instruction. (See how obviously wrong that is?) For some reason that
-	 * I haven't been able to figure out, moving the *operand reference
-	 * inside the loop fixes that problem, even at -O2 optimization. */
-	retval = oldval = *operand;
-	newval = oldval + 1;
-	newval *= (newval < max);
-	/* if (*operand == oldval)
-	 * swap(newval, *operand)
-	 * else
-	 * newval = *operand
-	 */
-	__asm__ __volatile__("cas [%1] , %2, %0"	/* */
-			     :"=&r"  (newval)
-			     :"r"    (operand), "r"(oldval), "0"(newval)
-			     :"memory");
-    } while (oldval != newval);
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
-
-    register aligned_t oldval, newval;
-
-    /* newval = *operand; */
-    do {
-	/* you *should* be able to move the *operand reference outside the
-	 * loop and use the output of the CAS (namely, newval) instead.
-	 * However, there seems to be a bug in gcc 4.0.4 wherein, if you do
-	 * that, the while() comparison uses a temporary register value for
-	 * newval that has nothing to do with the output of the CAS
-	 * instruction. (See how obviously wrong that is?) For some reason that
-	 * I haven't been able to figure out, moving the *operand reference
-	 * inside the loop fixes that problem, even at -O2 optimization. */
-	retval = oldval = *operand;
-	newval = oldval + 1;
-	newval *= (newval < max);
-	/* if (*operand == oldval)
-	 * swap(newval, *operand)
-	 * else
-	 * newval = *operand
-	 */
-	__asm__ __volatile__("casx [%1] , %2, %0":"=&r"(newval)
-			     :"r"    (operand), "r"(oldval)
-#if !defined(__SUNPRO_CC) && !defined(__SUNPRO_C)
-			     , "0"(newval)
-#endif
-			     :"memory");
-    } while (oldval != newval);
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
-
-# if QTHREAD_SIZEOF_ALIGNED_T == 8
-
-    int64_t res, old, new;
-
-    do {
-	old = *operand;		       /* atomic, because operand is aligned */
-	new = old + 1;
-	new *= (new < max);
-	asm volatile ("mov ar.ccv=%0;;":	/* no output */
-		      :"rO"    (old));
-
-	/* separate so the compiler can insert its junk */
-	asm volatile ("cmpxchg8.acq %0=[%1],%2,ar.ccv":"=r" (res)
-		      :"r"     (operand), "r"(new)
-		      :"memory");
-    } while (res != old);	       /* if res==old, new is out of date */
-    retval = old;
-
-# else /* 32-bit aligned_t */
-
-    int32_t res, old, new;
-
-    do {
-	old = *operand;		       /* atomic, because operand is aligned */
-	new = old + 1;
-	new *= (new < max);
-	asm volatile ("mov ar.ccv=%0;;":	/* no output */
-		      :"rO"    (old));
-
-	/* separate so the compiler can insert its junk */
-	asm volatile ("cmpxchg4.acq %0=[%1],%2,ar.ccv":"=r" (res)
-		      :"r"     (operand), "r"(new)
-		      :"memory");
-    } while (res != old);	       /* if res==old, new is out of date */
-    retval = old;
-
-# endif
-
-#elif ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) && (QTHREAD_SIZEOF_ALIGNED_T == 4)) || \
-      ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) && (QTHREAD_SIZEOF_ALIGNED_T == 4))
-
-    unsigned int oldval, newval;
-
-    do {
-	oldval = *operand;
-	newval = oldval + 1;
-	newval *= (newval < max);
-	asm volatile ("lock; cmpxchgl %1, (%2)":"=&a" (retval)
-		      :"r"     (newval), "r"(operand), "0"(oldval)
-		      :"memory");
-    } while (retval != oldval);
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
-
-    union
-    {
-	uint64_t i;
-	struct
-	{
-	    /* note: the ordering of these is important and counter-intuitive; welcome to little-endian! */
-	    uint32_t l;
-	    uint32_t h;
-	} s;
-    } oldval, newval;
-    register char test;
-
-    do {
-# ifdef __PIC__
-	/* this saves off %ebx to make PIC code happy :P */
-#  define QTHREAD_PIC_PREFIX "pushl %%ebx\n\tmovl %4, %%ebx\n\t"
-	/* this restores it */
-#  define QTHREAD_PIC_SUFFIX "\n\tpopl %%ebx"
-#  define QTHREAD_PIC_REG "m"
-# else
-#  define QTHREAD_PIC_PREFIX
-#  define QTHREAD_PIC_SUFFIX
-#  define QTHREAD_PIC_REG "b"
-# endif
-	oldval.i = *operand;
-	newval.i = oldval.i + 1;
-	newval.i *= (newval.i < max);
-	__asm__ __volatile__(QTHREAD_PIC_PREFIX "lock; cmpxchg8b (%1)\n\t" "setne %0"	/* test = (ZF==0) */
-			     QTHREAD_PIC_SUFFIX:"=q"(test)
-			     :"r"    (operand), /*EAX*/ "a"(oldval.s.l),
-			     /*EDX*/ "d"(oldval.s.h),
-			     /*EBX*/ QTHREAD_PIC_REG(newval.s.l),
-			     /*ECX*/ "c"(newval.s.h)
-			     :"memory");
-    } while (test);
-    retval = oldval.i;
-
-#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
-
-    unsigned long oldval, newval;
-
-    do {
-	oldval = *operand;
-	newval = oldval + 1;
-	newval *= (newval < max);
-	asm volatile ("lock; cmpxchgq %1, (%2)":"=a" (retval)
-		      :"r"     (newval), "r"(operand), "0"(oldval)
-		      :"memory");
-    } while (retval != oldval);
-
-#else
-
-#error "Unimplemented assembly architecture"
-
-#endif
-
-#elif defined(QTHREAD_MUTEX_INCREMENT)
-
-    QTHREAD_FASTLOCK_LOCK(lock);
-    retval = (*operand)++;
-    *operand *= (*operand < max);
-    QTHREAD_FASTLOCK_UNLOCK(lock);
-
-#else
-
-#error "Neither atomic or mutex increment enabled"
-
-#endif
-
-    return retval;
-}				       /*}}} */
-
-/* to avoid compiler bugs regarding volatile... */
-#ifndef QTHREAD_MUTEX_INCREMENT
-static Q_NOINLINE volatile qt_threadqueue_node_t *volatile *vol_id_qtlfqn(volatile
-								      qt_threadqueue_node_t
-								      *
-								      volatile
-								      *ptr)
-{
-    return ptr;
-}
-# ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t * ptr)
-{
-    return *ptr;
-}
-static Q_NOINLINE volatile aligned_t *vol_id_a(volatile aligned_t * ptr)
-{
-    return ptr;
-}
-# endif
-# define _(x) *vol_id_qtlfqn(&(x))
-#endif
 
 #ifdef QTHREAD_DEBUG
 enum qthread_debug_levels debuglevel = 0;
@@ -1000,6 +552,7 @@ static void *qthread_shepherd(void *arg)
     pthread_setspecific(shepherd_structs, arg);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 
+#ifndef __APPLE__
     /* Bind threads to physical cores such that workers of a shpeherd are on the same socket.
        Assumes round robin thread numbering. (Not very portable and should be replaced) */
     unsigned long phys_thread_num = (me_worker->worker_id * qlib->nshepherds) + me->shepherd_id;
@@ -1010,6 +563,7 @@ static void *qthread_shepherd(void *arg)
     //    unsigned long mask = 1UL << phys_thread_num;
 
     sched_setaffinity(0, sizeof(mask), &mask);
+#endif
 
     /* Shepherd 0 worker 0 is responsible for creating the other shepherd 0 workers
        and does so at this point. */
@@ -1122,11 +676,7 @@ static void *qthread_shepherd(void *arg)
 #endif
 	qthread_debug(ALL_DETAILS, "id(%i): fetching a thread from my queue...\n", me->shepherd_id);
 	assert(me->ready);
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-	t = qt_threadqueue_dequeue_blocking(me->ready,me_worker->active);
-#else
-	t = qt_threadqueue_dequeue_blocking(me->ready);
-#endif
+	t = qt_threadqueue_dequeue_blocking(me->ready QMS_ARG(me_worker->active));
 	assert(t);
 #ifdef QTHREAD_SHEPHERD_PROFILING
 	qtimer_stop(idle);
@@ -1258,13 +808,8 @@ static void *qthread_shepherd(void *arg)
 			qthread_debug(THREAD_DETAILS,
 				      "id(%u): thread %i yielded; rescheduling\n",
 				      me->shepherd_id, t->thread_id);
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-            /* separate enqueue function for yielded qthreads on work stealing queue */
-			qt_threadqueue_enqueue_yielded(me->ready, t, me);
-#else
 			assert(me->ready != NULL);
-			qt_threadqueue_enqueue(me->ready, t, me);
-#endif
+			qt_threadqueue_enqueue_yielded(me->ready, t, me);
 			break;
 
 		    case QTHREAD_STATE_FEB_BLOCKED:	/* unlock the related FEB address locks, and re-arrange memory to be correct */
@@ -2339,21 +1884,6 @@ void qthread_internal_cleanup(void (*function)(void))
     qt_cleanup_funcs = ng;
 }
 
-void qthread_steal_stat(void) {
-#ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
-  int i;
-  for (i = 0; i < qlib->nshepherds; i++) {
-    fprintf(stdout,"shepherd %d - steals called %ld attempted %ld failed %ld successful %ld work stolen %ld\n",
-	    qlib->shepherds[i].shepherd_id,
-	    qlib->shepherds[i].steal_called,
-	    qlib->shepherds[i].steal_attempted,
-	    qlib->shepherds[i].steal_failed,
-	    qlib->shepherds[i].steal_successful,
-	    qlib->shepherds[i].steal_amount_stolen);
-  }
-#endif
-}
-
 void qthread_finalize(void)
 {				       /*{{{ */
     int r;
@@ -2936,285 +2466,6 @@ static QINLINE void qthread_thread_free(qthread_t * t)
     qthread_debug(ALL_DETAILS, "t(%p): releasing thread handle %p\n", t, t);
     FREE_QTHREAD(t);
 }				       /*}}} */
-
-/*****************************************/
-/* functions to manage the thread queues */
-/*****************************************/
-
-// This lock-free algorithm borrowed from
-// http://www.research.ibm.com/people/m/michael/podc-1996.pdf
-
-#ifndef QTHREAD_MULTITHREADED_SHEPHERDS
-/* These are defined differently for work stealing.  See end of file.
- */
-
-/* to avoid ABA reinsertion trouble, each pointer in the queue needs to have a
- * monotonically increasing counter associated with it. The counter doesn't
- * need to be huge, just big enough to avoid trouble. We'll
- * just claim 4, to be conservative. Thus, a qt_threadqueue_node_t must be at least
- * 16 bytes. */
-#if defined(QTHREAD_USE_VALGRIND) && NO_ABA_PROTECTION
-# define QPTR(x) (x)
-# define QCTR(x) 0
-# define QCOMPOSE(x,y) (x)
-#else
-# define QCTR_MASK (15)
-# define QPTR(x) ((volatile qt_threadqueue_node_t*)(((uintptr_t)(x))&~(uintptr_t)QCTR_MASK))
-# define QCTR(x) (((uintptr_t)(x))&QCTR_MASK)
-# define QCOMPOSE(x,y) (void*)(((uintptr_t)QPTR(x))|((QCTR(y)+1)&QCTR_MASK))
-#endif
-
-static QINLINE qt_threadqueue_t *qt_threadqueue_new(qthread_shepherd_t * shepherd)
-{				       /*{{{ */
-    qt_threadqueue_t *q = ALLOC_THREADQUEUE(shepherd);
-
-    if (q != NULL) {
-	q->creator_ptr = shepherd;
-#ifdef QTHREAD_MUTEX_INCREMENT
-	QTHREAD_FASTLOCK_INIT(q->head_lock);
-	QTHREAD_FASTLOCK_INIT(q->tail_lock);
-	QTHREAD_FASTLOCK_INIT(q->advisory_queuelen_m);
-	ALLOC_TQNODE(((qt_threadqueue_node_t **) & (q->head)), shepherd);
-	assert(q->head != NULL);
-	if (q->head == NULL) {
-	    QTHREAD_FASTLOCK_DESTROY(q->advisory_queuelen_m);
-	    QTHREAD_FASTLOCK_DESTROY(q->head_lock);
-	    QTHREAD_FASTLOCK_DESTROY(q->tail_lock);
-	    FREE_THREADQUEUE(q);
-	    q = NULL;
-	} else {
-	    q->tail = q->head;
-	    q->head->next = NULL;
-	}
-#else
-# ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-	if (pthread_mutex_init(&q->lock, NULL) != 0) {
-	    FREE_THREADQUEUE(q);
-	    return NULL;
-	}
-	if (pthread_cond_init(&q->notempty, NULL) != 0) {
-	    QTHREAD_DESTROYLOCK(&q->lock);
-	    FREE_THREADQUEUE(q);
-	    return NULL;
-	}
-	q->fruitless = 0;
-# endif
-	ALLOC_TQNODE(((qt_threadqueue_node_t **) & (q->head)), shepherd);
-	assert(QPTR(q->head) != NULL);
-	if (QPTR(q->head) == NULL) {   // if we're not using asserts, fail nicely
-# ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-	    QTHREAD_DESTROYLOCK(&q->lock);
-	    QTHREAD_DESTROYCOND(&q->notempty);
-# endif
-	    FREE_THREADQUEUE(q);
-	    q = NULL;
-	}
-	q->tail = q->head;
-	QPTR(q->tail)->next = NULL;
-#endif
-    }
-    return q;
-}				       /*}}} */
-
-static QINLINE void qt_threadqueue_free(qt_threadqueue_t * q)
-{				       /*{{{ */
-#ifdef QTHREAD_MUTEX_INCREMENT
-    while (q->head != q->tail) {
-	qt_threadqueue_dequeue(q);
-    }
-    QTHREAD_FASTLOCK_DESTROY(q->head_lock);
-    QTHREAD_FASTLOCK_DESTROY(q->tail_lock);
-    QTHREAD_FASTLOCK_DESTROY(q->advisory_queuelen_m);
-#else
-    while (QPTR(q->head) != QPTR(q->tail)) {
-	qt_threadqueue_dequeue(q);
-    }
-    assert(QPTR(q->head) == QPTR(q->tail));
-# ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-    QTHREAD_DESTROYLOCK(&q->lock);
-    QTHREAD_DESTROYCOND(&q->notempty);
-# endif
-#endif /* MUTEX queue */
-    FREE_TQNODE((qt_threadqueue_node_t *) QPTR(q->head));
-    FREE_THREADQUEUE(q);
-}				       /*}}} */
-
-void qt_threadqueue_enqueue(qt_threadqueue_t * q, qthread_t * t, qthread_shepherd_t * shep)
-{				       /*{{{ */
-#ifdef QTHREAD_MUTEX_INCREMENT
-    qt_threadqueue_node_t *node;
-
-    ALLOC_TQNODE(&node, shep);
-    assert(node != NULL);
-    node->value = t;
-    node->next = NULL;
-    QTHREAD_FASTLOCK_LOCK(&q->tail_lock);
-    {
-	q->tail->next = node;
-	q->tail = node;
-    }
-    QTHREAD_FASTLOCK_UNLOCK(&q->tail_lock);
-#else
-    volatile qt_threadqueue_node_t *tail;
-    volatile qt_threadqueue_node_t *next;
-    qt_threadqueue_node_t *node;
-
-    assert(t != NULL);
-    assert(q != NULL);
-
-    ALLOC_TQNODE(&node, shep);
-    assert(node != NULL);
-    assert(QCTR(node) == 0);	       // node MUST be aligned
-
-    node->value = t;
-    // set to null without disturbing the ctr
-    node->next = (qt_threadqueue_node_t *) (uintptr_t) QCTR(node->next);
-
-    while (1) {
-	tail = _(q->tail);
-	next = _(QPTR(tail)->next);
-	if (tail == _(q->tail)) {      // are tail and next consistent?
-	    if (QPTR(next) == NULL) {  // was tail pointing to the last node?
-		if (qt_cas
-		    ((void *volatile *)&(QPTR(tail)->next), (void *)next,
-		     QCOMPOSE(node, next)) == next)
-		    break;	       // success!
-	    } else {		       // tail not pointing to last node
-		(void)qt_cas((void *volatile *)&(q->tail), (void *)tail,
-			     QCOMPOSE(next, tail));
-	    }
-	}
-    }
-    (void)qt_cas((void *volatile *)&(q->tail), (void *)tail,
-		 QCOMPOSE(node, tail));
-    (void)qthread_incr(&q->advisory_queuelen, 1);
-# ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-    if (vol_read_a(&(q->fruitless))) {
-	QTHREAD_LOCK(&q->lock);
-	if (vol_read_a(&(q->fruitless))) {
-	    *vol_id_a(&(q->fruitless)) = 0;
-	    QTHREAD_SIGNAL(&q->notempty);
-	}
-	QTHREAD_UNLOCK(&q->lock);
-    }
-# endif
-#endif
-}				       /*}}} */
-
-static QINLINE qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t * q)
-{				       /*{{{ */
-    qthread_t *p = NULL;
-#ifdef QTHREAD_MUTEX_INCREMENT
-    qt_threadqueue_node_t *node, *new_head;
-
-    assert(q != NULL);
-    QTHREAD_FASTLOCK_LOCK(&q->head_lock);
-    {
-	node = q->head;
-	new_head = node->next;
-	if (new_head != NULL) {
-	    p = new_head->value;
-	    q->head = new_head;
-	}
-    }
-    QTHREAD_FASTLOCK_UNLOCK(&q->head_lock);
-#else
-    volatile qt_threadqueue_node_t *head;
-    volatile qt_threadqueue_node_t *tail;
-    volatile qt_threadqueue_node_t *next_ptr;
-
-    assert(q != NULL);
-    while (1) {
-	head = _(q->head);
-	tail = _(q->tail);
-	next_ptr = QPTR(_(QPTR(head)->next));
-	if (head == _(q->head)) {      // are head, tail, and next consistent?
-	    if (QPTR(head) == QPTR(tail)) {	// is queue empty or tail falling behind?
-		if (next_ptr == NULL) {	// is queue empty?
-		    return NULL;
-		}
-		(void)qt_cas((void *volatile *)&(q->tail), (void *)tail, QCOMPOSE(next_ptr, tail));	// advance tail ptr
-	    } else {		       // no need to deal with tail
-		// read value before CAS, otherwise another dequeue might free the next node
-		p = next_ptr->value;
-		if (qt_cas
-		    ((void *volatile *)&(q->head), (void *)head,
-		     QCOMPOSE(next_ptr, head)) == head) {
-		    break;	       // success!
-		}
-	    }
-	}
-    }
-    FREE_TQNODE((qt_threadqueue_node_t *) QPTR(head));
-#endif
-    if (p != NULL) {
-	Q_PREFETCH(&(p->thread_state));
-	(void)qthread_internal_incr_s(&q->advisory_queuelen, &q->advisory_queuelen_m, -1);
-    }
-    return p;
-}				       /*}}} */
-
-/* this function is amusing, but the point is to avoid unnecessary bus traffic
- * by allowing idle shepherds to sit for a while while still allowing for
- * low-overhead for busy shepherds. This is a hybrid approach: normally, it
- * functions as a spinlock, but if it spins too much, it waits for a signal */
-static QINLINE qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q)
-{				       /*{{{ */
-    qthread_t *p = NULL;
-#ifdef QTHREAD_MUTEX_INCREMENT
-    while ((p = qt_threadqueue_dequeue(q)) == NULL) {
-    }
-#else
-    volatile qt_threadqueue_node_t *head;
-    volatile qt_threadqueue_node_t *tail;
-    volatile qt_threadqueue_node_t *next_ptr;
-
-    assert(q != NULL);
-  threadqueue_dequeue_restart:
-    while (1) {
-	head = _(q->head);
-	tail = _(q->tail);
-	next_ptr = QPTR(_(QPTR(head)->next));
-	if (head == _(q->head)) {      // are head, tail, and next consistent?
-	    if (QPTR(head) == QPTR(tail)) {	// is queue empty or tail falling behind?
-		if (next_ptr == NULL) {	// is queue empty?
-#ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-		    if (qthread_internal_incr(&q->fruitless, &q->fruitless_m, 1) > 1000) {
-			QTHREAD_LOCK(&q->lock);
-			while (vol_read_a(&q->fruitless) > 1000) {
-			    QTHREAD_CONDWAIT(&q->notempty, &q->lock);
-			}
-			QTHREAD_UNLOCK(&q->lock);
-		    } else {
-#ifdef HAVE_PTHREAD_YIELD
-			pthread_yield();
-#elif HAVE_SHED_YIELD
-			sched_yield();
-#endif
-		    }
-#endif
-		    goto threadqueue_dequeue_restart;
-		}
-		(void)qt_cas((void *volatile *)&(q->tail), (void *)tail, QCOMPOSE(next_ptr, tail));	// advance tail ptr
-	    } else {		       // no need to deal with tail
-		// read value before CAS, otherwise another dequeue might free the next node
-		p = next_ptr->value;
-		if (qt_cas
-		    ((void *volatile *)&(q->head), (void *)head,
-		     QCOMPOSE(next_ptr, head)) == head) {
-		    break;	       // success!
-		}
-	    }
-	}
-    }
-    FREE_TQNODE((qt_threadqueue_node_t *) QPTR(head));
-    if (p != NULL) {
-	(void)qthread_internal_incr_s(&q->advisory_queuelen, &q->advisory_queuelen_m, -1);
-    }
-#endif
-    return p;
-}				       /*}}} */
-#endif
 
 static QINLINE qthread_queue_t *qthread_queue_new(qthread_shepherd_t *
 						  shepherd)
@@ -4890,314 +4141,4 @@ uint64_t qthread_cas64_(volatile uint64_t * operand, const uint64_t oldval,
     QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
     return retval;
 }				       /*}}} */
-#endif
-
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-/* Herein lies the work stealing code */
-
-/*  Steal work from another shepherd's queue
- *    Returns the amount of work stolen
- */
-static QINLINE void qthread_steal()
-{
-    int i;
-    qt_threadqueue_node_t *first;
-    qthread_shepherd_t *victim_shepherd;
-    qthread_worker_t *worker =
-        (qthread_worker_t *) pthread_getspecific(shepherd_structs);
-    qthread_shepherd_t *thief_shepherd =
-        (qthread_shepherd_t *) worker->shepherd;
-
-#ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
-    qthread_incr(&thief_shepherd->steal_called, 1);
-#endif
-    if (thief_shepherd->stealing) {
-      return;
-    }
-    else {
-      thief_shepherd->stealing = 1;
-    }
-#ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
-    qthread_incr(&thief_shepherd->steal_attempted, 1);
-#endif
-    for (i = 1; i < qlib->nshepherds; i++)
-      {
-	victim_shepherd = &qlib->shepherds[(thief_shepherd->shepherd_id+i) % qlib->nshepherds];
-	if (0 < victim_shepherd->ready->qlength)
-	  {
-	    first = qt_threadqueue_dequeue_steal(victim_shepherd->ready);
-	    if (first) {
-	      qt_threadqueue_enqueue_multiple(thief_shepherd->ready, first, thief_shepherd);
-#ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
-	      qthread_incr(&thief_shepherd->steal_successful, 1);
-#endif
-	      break;
-	    }
-#ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
-	    else {
-	      qthread_incr(&thief_shepherd->steal_failed, 1);
-	    }
-#endif
-	  }
-      }
-    thief_shepherd->stealing = 0;
-}
-
-/*  Redefine threadqueue functions for work stealing
- */
-
-static QINLINE qt_threadqueue_t *qt_threadqueue_new(qthread_shepherd_t * shepherd)
-{                                      /*{{{ */
-    qt_threadqueue_t *q = ALLOC_THREADQUEUE(shepherd);
-
-    if (q != NULL) {
-        q->creator_ptr = shepherd;
-        q->head = q->tail = NULL;
-        q->qlength = 0;
-        if (pthread_mutex_init(&q->qlock, NULL) != 0) {
-            FREE_THREADQUEUE(q);
-            return NULL;
-        }
-    }
-    return q;
-}
-
-
-static QINLINE void qt_threadqueue_free(qt_threadqueue_t * q)
-{                                      
-    assert(q->head == q->tail);
-    QTHREAD_DESTROYLOCK(&q->qlock);
-    FREE_THREADQUEUE(q);
-}                                   
-
-/* enqueue at tail */
-void qt_threadqueue_enqueue(qt_threadqueue_t * q, qthread_t * t, qthread_shepherd_t * shep)
-{
-    qt_threadqueue_node_t *node;
-
-    ALLOC_TQNODE(&node, shep);
-    assert(node != NULL);
-
-    node->value = t;
-
-    assert(q != NULL);
-    assert(t != NULL);
-
-    QTHREAD_LOCK(&q->qlock);
-    node->next = NULL;
-    node->prev = q->tail;
-    q->tail = node;
-    if (q->head == NULL)
-        q->head = node;
-    else
-        node->prev->next = node;
-    q->qlength++;
-    QTHREAD_UNLOCK(&q->qlock);
-}
-
-/* enqueue multiple (from steal) */
-static QINLINE void qt_threadqueue_enqueue_multiple(qt_threadqueue_t * q, qt_threadqueue_node_t * first, qthread_shepherd_t *shep)
-{
-    volatile qt_threadqueue_node_t *last;
-    size_t addCnt = 1;
-
-    assert(first != NULL);
-    assert(q != NULL);
-
-    last = first;
-    last->value->target_shepherd = shep;  // Defeats default of "sending home" to original shepherd
-    while (last->next) {
-        last = last->next;
-        last->value->target_shepherd = shep;  // Defeats default of "sending home" to original shepherd
-	addCnt++;
-    }
-
-    QTHREAD_LOCK(&q->qlock);
-    last->next = NULL;
-    first->prev = q->tail;
-    q->tail = last;
-    if (q->head == NULL)
-        q->head = first;
-    else
-        first->prev->next = first;
-    q->qlength += addCnt;
-    QTHREAD_UNLOCK(&q->qlock);
-}
-
-/* yielded threads enqueue at head */
-static QINLINE void qt_threadqueue_enqueue_yielded(qt_threadqueue_t * q, qthread_t * t, qthread_shepherd_t * shep)
-{
-    qt_threadqueue_node_t *node;
-
-    ALLOC_TQNODE(&node, shep);
-    assert(node != NULL);
-
-    node->value = t;
-
-    assert(q != NULL);
-    assert(t != NULL);
-
-    QTHREAD_LOCK(&q->qlock);
-    node->prev = NULL;
-    node->next = q->head;
-    q->head = node;
-    if (q->tail == NULL)
-        q->tail = node;
-    else
-        node->next->prev = node;
-    q->qlength++;
-    QTHREAD_UNLOCK(&q->qlock);
-}
-
-/* dequeue at tail, unlike original qthreads implementation */
- static QINLINE qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q, size_t active)
-{
-    volatile qt_threadqueue_node_t *node;
-    qthread_t *t;
-
-    assert(q != NULL);
-
-    while (1) {
-
-        QTHREAD_LOCK(&q->qlock);
-        node = q->tail;
-        if (node != NULL) {
-            q->tail = q->tail->prev;
-            if (q->tail == NULL)
-                q->head = NULL;
-            else
-                q->tail->next = NULL;
-            q->qlength--;
-        }
-        QTHREAD_UNLOCK(&q->qlock);
-
-        if ((node == NULL) & (active)) {
-            qthread_steal();
-        }
-        else {
-	  if (node) {  // watch out for inactive node not stealling
-            t = node->value;
-            FREE_TQNODE((qt_threadqueue_node_t *) node);
-            break;
-	  }
-        }
-    }
-    return (t);
- }
-
-/* Returns the number of tasks to steal per steal operation (chunk size) */
-static QINLINE long qthread_steal_chunksize()
-{
-  return qlib->nworkerspershep;   // Obviously this belongs in an environment variable or such
-}
-
-/* dequeue stolen threads at head, skip yielded threads */
-static QINLINE qt_threadqueue_node_t *qt_threadqueue_dequeue_steal(qt_threadqueue_t * q)
-{
-    qt_threadqueue_node_t *node;
-    qt_threadqueue_node_t *first = NULL;
-    qt_threadqueue_node_t *last = NULL;
-    long amtStolen = 0;
-
-    assert(q != NULL);
-
-    QTHREAD_LOCK(&q->qlock);
-    while (q->qlength > 0 && amtStolen < qthread_steal_chunksize()) {
-      node = (qt_threadqueue_node_t *)q->head;
-      while (node != NULL && node->value->thread_state == QTHREAD_STATE_YIELDED) {
-	node = (qt_threadqueue_node_t *)node->next;
-      }
-      if (node != NULL) {
-	if (node == q->head) q->head = node->next;
-	else node->prev->next = node->next;
-	if (node == q->tail) q->tail = node->prev;
-	else node->next->prev = node->prev;
-	
-	q->qlength--;
-	
-	node->prev = node->next = NULL;
-	if (first == NULL) first = last = node;
-	else {
-	  last->next = node;
-	  node->prev = last;
-	  last = node;
-	}
-	amtStolen++;
-      }
-      else {
-	break;
-      }
-    }
-    QTHREAD_UNLOCK(&q->qlock);
-#ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
-    qthread_incr(&q->creator_ptr->steal_amount_stolen, amtStolen);
-#endif
-    
-    return (first);
-}
-
-
-/* walk queue looking for a specific value  -- if found remove it (and start
- * it running)  -- if not return NULL
- */
- qt_threadqueue_node_t *qt_threadqueue_dequeue_specific(qt_threadqueue_t * q, void* value);
-
-qt_threadqueue_node_t *qt_threadqueue_dequeue_specific(qt_threadqueue_t * q, void* value)
-{
-
-    qt_threadqueue_node_t *node = NULL;
-    qthread_t * t;
-
-    assert(q != NULL);
-
-    QTHREAD_LOCK(&q->qlock);
-    if (q->qlength > 0) {
-      node = (qt_threadqueue_node_t *)q->tail;
-      if (node) t = (qthread_t *)node->value;
-      while ((node != NULL) && (t->ret != value) ) {
-	node = (qt_threadqueue_node_t *)node->prev;
-	if (node) t = (qthread_t *)node->value;
-      }
-      if ((node != NULL)) {
-	if (node != q->tail) {
-	  if (node == q->head) q->head = node->next; // reset front ptr
-	  else node->prev->next = node->next;
-	  node->next->prev = node->prev;   // reset back ptr (know we're not tail
-	  node->next = NULL;
-	  node->prev = q->tail;
-	  q->tail->next = node;
-	  q->tail = node;
-	}
-      }
-      else node = NULL;
-    }
-    QTHREAD_UNLOCK(&q->qlock);
-    
-    return (node);
-}
-
-void qthread_run_needed_task(syncvar_t *value);
-
-void qthread_run_needed_task(syncvar_t *value)
-{
-  qthread_shepherd_t *shep = qthread_internal_getshep();
-  qt_threadqueue_node_t * n = NULL;
-  qthread_t * orig_t = qthread_self();
-  //  ucontext_t my_context;
-
-  if ((n = qt_threadqueue_dequeue_specific(shep->ready, value))) {
-    // switch to task and run -- else missing and return
-    //    qthread_t * t = n->value;
-    
-    //getcontext(&my_context); // done inside qthread_exec
-    //t->rdata->return_context = &my_context;  // done inside qthread_exec
-    //qassert(qthread_writeEF_const(t, (aligned_t*)t->ret, (t->f) (t->arg, t->arg)), QTHREAD_SUCCESS);
-    /* note: there's a good argument that the following should
-     * be: (*t->f)(t), however the state management would be
-     * more complex
-     */
-    //    qthread_exec(t, &my_context);
-    qthread_back_to_master(orig_t);
-  }
-}
 #endif

@@ -12,6 +12,7 @@
 #include "qt_profiling.h"
 #include "qt_blocking_structs.h"
 #include "qt_qthread_struct.h"
+#include "qt_threadqueues.h"
 
 /* Internal Prototypes */
 static QINLINE void qthread_syncvar_gotlock_fill(qthread_shepherd_t * shep,
@@ -820,8 +821,10 @@ int qthread_syncvar_writeEF_const(qthread_t * restrict me,
     return qthread_syncvar_writeEF(me, dest, &src);
 }				       /*}}} */
 
-uint64_t qthread_syncvar_incrF(qthread_t * restrict me, syncvar_t * restrict const operand, const uint64_t inc)
-{
+uint64_t qthread_syncvar_incrF(qthread_t * restrict me,
+			       syncvar_t * restrict const operand,
+			       const uint64_t inc)
+{				       /*{{{ */
     eflags_t e = { 0 };
     uint64_t newv;
 
@@ -832,7 +835,7 @@ uint64_t qthread_syncvar_incrF(qthread_t * restrict me, syncvar_t * restrict con
     qthread_debug(LOCK_BEHAVIOR, "me(%p), operand(%p), inc(%lu) = %x\n", me,
 		  operand, (unsigned long)inc);
     qthread_mwaitc(operand, SYNCFEB_ANY, INT_MAX, &e);
-    qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
+    qassert_ret(e.cf == 0, QTHREAD_TIMEOUT);	/* there better not have been a timeout */
     if (e.pf == 1 && e.sf == 1) {      /* there are waiters to release */
 	const int lockbin = QTHREAD_CHOOSE_STRIPE(operand);
 	qthread_addrstat_t *m;
@@ -855,12 +858,12 @@ uint64_t qthread_syncvar_incrF(qthread_t * restrict me, syncvar_t * restrict con
 	UNLOCK_THIS_MODIFIED_SYNCVAR(operand, newv, (e.pf << 1) | e.sf);
 	assert(m->FFQ || m->EFQ);      // otherwise there weren't really any waiters
 	assert(m->FEQ == NULL);	       // someone snuck in!
-	qthread_syncvar_gotlock_fill(me->rdata->shepherd_ptr, m, operand, newv);
+	qthread_syncvar_gotlock_fill(me->rdata->shepherd_ptr, m, operand,
+				     newv);
     } else {
 	newv = operand->u.s.data + inc;
 	UNLOCK_THIS_MODIFIED_SYNCVAR(operand, newv, (e.pf << 1) | e.sf);
     }
 
     return newv;
-}
-
+}				       /*}}} */

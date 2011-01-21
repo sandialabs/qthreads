@@ -538,6 +538,7 @@ AM_CONDITIONAL([QTHREAD_TIMER_TYPE_ALTIX], [test "x$qthread_timer_type" = "xalti
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIMEOFDAY], [test "x$qthread_timer_type" = "xgettimeofday"])
 AM_CONDITIONAL([COMPILE_POOLED_MEMORY], [test "x$enable_pooled_memory" = "xyes"])
 AM_CONDITIONAL([COMPILE_ROSE_EXTENSIONS], [test "x$enable_rose_extensions" == xyes])
+AM_CONDITIONAL([QTHREAD_MULTITHREADED_SHEPHERDS], [test "x$enable_multithreaded_shepherds" == xyes])
 
 AC_CONFIG_HEADERS([include/config.h include/qthread/common.h])
 AC_CONFIG_FILES([

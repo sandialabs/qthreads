@@ -23,6 +23,7 @@
 #include "qthread/qloop.h"	       // for qt_loop_f
 #include "qthread_innards.h"	       // for qthread_debug()
 #include "qloop_innards.h"	       // for qqloop_handle_t
+#include "qt_touch.h"		       // for qthread_run_needed_task()
 #include <qthread/qthread.h>           // for syncvar_t
 #include <qthread/feb_barrier.h>
 #include <qthread/omp_defines.h>       // Wrappered OMP functions from omp.h
