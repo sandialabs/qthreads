@@ -2360,18 +2360,14 @@ size_t qthread_readstate(
     }
 }				       /*}}} */
 
-aligned_t *qthread_retloc(const qthread_t * t)
+aligned_t *qthread_retloc(void)
 {				       /*{{{ */
-    if (t) {
-	return t->ret;
-    } else {
-	qthread_t *me = qthread_self();
+    qthread_t *me = qthread_self();
 
-	if (me) {
-	    return me->ret;
-	} else {
-	    return NULL;
-	}
+    if (me) {
+	return me->ret;
+    } else {
+	return NULL;
     }
 }				       /*}}} */
 
