@@ -550,9 +550,8 @@ static void *qthread_shepherd(void *arg)
 
     /* Initialize myself */
     pthread_setspecific(shepherd_structs, arg);
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 
-#ifndef __APPLE__
+#if defined(QTHREAD_MULTITHREADED_SHEPHERDS) && ! defined(__APPLE__)
     /* Bind threads to physical cores such that workers of a shpeherd are on the same socket.
        Assumes round robin thread numbering. (Not very portable and should be replaced) */
     unsigned long phys_thread_num = (me_worker->worker_id * qlib->nshepherds) + me->shepherd_id;
@@ -563,28 +562,6 @@ static void *qthread_shepherd(void *arg)
     //    unsigned long mask = 1UL << phys_thread_num;
 
     sched_setaffinity(0, sizeof(mask), &mask);
-#endif
-
-    /* Shepherd 0 worker 0 is responsible for creating the other shepherd 0 workers
-       and does so at this point. */
-    if (me->shepherd_id == 0 && me_worker->worker_id == 0) {
-        qthread_worker_id_t j; 
-        long r;
-        for (j = 1; j < qlib->nworkerspershep; j++) {
-             me->workers[j].shepherd = me;
-             me->workers[j].active = 1;	     
-             me->workers[j].worker_id = j;
-	     me->workers[j].packed_worker_id = j;
-             if ((r =
-		  pthread_create(&me->workers[j].worker, NULL,
-                                qthread_shepherd, &me->workers[j])) != 0) {
-                 fprintf(stderr, "qthread_init: pthread_create() failed (%ld)\n",
-                         r);
-                 perror("qthread_init spawning worker");
-                 return (void *) r;
-             }
-        }
-    }
 #endif
 
     if (qaffinity && me->node != -1) {		       /*{{{ */
@@ -1769,26 +1746,26 @@ int qthread_initialize(void)
 
     /* spawn the shepherds */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    for (i = 1; i < nshepherds; ++i) {
+    for (i = 0; i < nshepherds; ++i) {
         qthread_worker_id_t j;
 	qthread_debug(ALL_DETAILS,
 		      "forking workers for shepherd %i (%p)\n", i,
 		      &qlib->shepherds[i]);
         for (j = 0; j < nworkerspershep; ++j) {
-	  if (( i == 0) && (j == 0)) continue; // original pthread becomes shep 0 worker 0
-	  qlib->shepherds[i].workers[j].shepherd = &qlib->shepherds[i];
-	  qlib->shepherds[i].workers[j].active = 1;	     
-	  qlib->shepherds[i].workers[j].worker_id = j;
-	  qlib->shepherds[i].workers[j].packed_worker_id = j+(i*nworkerspershep);
-	  if ((r =
-	       pthread_create(&qlib->shepherds[i].workers[j].worker, NULL,
-			      qthread_shepherd, &qlib->shepherds[i].workers[j])) != 0) {
-	    fprintf(stderr, "qthread_init: pthread_create() failed (%d)\n",
-		    r);
-	    perror("qthread_init spawning worker");
-	    return r;
-	  }
-	  //	  printf("spawned shep %i worker %i\n", (int)i, (int)j);
+	    if ((i == 0) && (j == 0)) continue; // original pthread becomes shep 0 worker 0
+            qlib->shepherds[i].workers[j].shepherd = &qlib->shepherds[i];
+            qlib->shepherds[i].workers[j].worker_id = j;
+            qlib->shepherds[i].workers[j].packed_worker_id = j+(i*nworkerspershep);
+            qlib->shepherds[i].workers[j].active = 1;
+	    if ((r =
+	        pthread_create(&qlib->shepherds[i].workers[j].worker, NULL,
+		    qthread_shepherd, &qlib->shepherds[i].workers[j])) != 0) {
+		fprintf(stderr, "qthread_init: pthread_create() failed (%d)\n",
+		        r);
+	        perror("qthread_init spawning worker");
+	        return r;
+	    }
+	    qthread_debug(ALL_DETAILS, "spawned shep %i worker %i\n", (int)i, (int)j);
         }
     }
     qlib->nworkers_active = nshepherds*nworkerspershep;
