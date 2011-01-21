@@ -277,8 +277,7 @@ static QINLINE qthread_queue_t *qthread_queue_new(qthread_shepherd_t *
 static QINLINE void qthread_queue_free(qthread_queue_t * q);
 static QINLINE void qthread_enqueue(qthread_queue_t * q, qthread_t * t);
 
-/*static QINLINE qthread_t *qthread_dequeue(qthread_queue_t * q);*/
-static QINLINE qthread_t *qthread_dequeue_nonblocking(qthread_queue_t * q);
+static QINLINE qthread_t *qthread_dequeue(qthread_queue_t * q);
 
 static QINLINE void qthread_exec(qthread_t * t, ucontext_t * c);
 static QINLINE void qthread_gotlock_fill(qthread_shepherd_t * shep,
@@ -3289,38 +3288,7 @@ static QINLINE void qthread_enqueue(qthread_queue_t * q, qthread_t * t)
     QTHREAD_UNLOCK(&q->lock);
 }				       /*}}} */
 
-#if 0				       /* unused */
 static QINLINE qthread_t *qthread_dequeue(qthread_queue_t * q)
-{				       /*{{{ */
-    qthread_t *t;
-
-    qthread_debug(ALL_FUNCTIONS, "q(%p): started\n", q);
-
-    QTHREAD_LOCK(&q->lock);
-
-    while (q->head == NULL) {	       /* if head is null, then surely tail is also null */
-	QTHREAD_CONDWAIT(&q->notempty, &q->lock);
-    }
-
-    assert(q->head != NULL);
-
-    t = q->head;
-    if (q->head != q->tail) {
-	q->head = q->head->next;
-    } else {
-	q->head = NULL;
-	q->tail = NULL;
-    }
-    t->next = NULL;
-
-    QTHREAD_UNLOCK(&q->lock);
-
-    qthread_debug(ALL_DETAILS, "q(%p), t(%p): finished\n", q, t);
-    return (t);
-}				       /*}}} */
-#endif
-
-static QINLINE qthread_t *qthread_dequeue_nonblocking(qthread_queue_t * q)
 {				       /*{{{ */
     qthread_t *t = NULL;
 
@@ -4640,7 +4608,7 @@ int qthread_unlock(qthread_t * me, const aligned_t * a)
      */
 
     QTHREAD_LOCK(&m->waiting->lock);
-    u = qthread_dequeue_nonblocking(m->waiting);
+    u = qthread_dequeue(m->waiting);
     if (u == NULL) {
 	qthread_debug(LOCK_DETAILS,
 		      "tid(%u), a(%p): deleting waiting queue\n",
