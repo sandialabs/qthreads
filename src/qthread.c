@@ -2688,11 +2688,9 @@ static QINLINE void qthread_exec(qthread_t * t, ucontext_t * c)
 }				       /*}}} */
 
 /* this function yields thread t to the master kernel thread */
-void qthread_yield(qthread_t * t)
+void qthread_yield(void)
 {				       /*{{{ */
-    if (t == NULL) {
-	t = qthread_self();
-    }
+    qthread_t *t = qthread_self();
     if (t != NULL) {
 	qthread_debug(THREAD_DETAILS,
 		      "tid %u yielding...\n", t->thread_id);

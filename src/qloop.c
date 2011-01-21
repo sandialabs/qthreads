@@ -818,7 +818,6 @@ void qt_loop_queue_run(
     {
 	qthread_shepherd_id_t i;
 	const qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
-	qthread_t *const me = qthread_self();
 	volatile aligned_t *const dc = &(loop->stat.donecount);
 	volatile aligned_t *const as = &(loop->stat.activesheps);
 
@@ -830,7 +829,7 @@ void qt_loop_queue_run(
 	 * I *would* do readFF, except shepherds can join and leave
 	 * during the loop */
 	while (_(*dc) < _(*as)) {
-	    qthread_yield(me);
+	    qthread_yield();
 	}
 	qqloop_destroy_iq(loop->stat.iq);
 	free(loop->qwa);
@@ -845,7 +844,6 @@ void qt_loop_queue_run_there(
     qassert_retvoid(loop);
     qassert_retvoid(shep < qthread_num_shepherds());
     {
-	qthread_t *const me = qthread_self();
 	volatile aligned_t *const dc = &(loop->stat.donecount);
 	volatile aligned_t *const as = &(loop->stat.activesheps);
 
@@ -855,7 +853,7 @@ void qt_loop_queue_run_there(
 	 * I *would* do readFF, except shepherds can join and leave
 	 * during the loop */
 	while (_(*dc) < _(*as)) {
-	    qthread_yield(me);
+	    qthread_yield();
 	}
 	qqloop_destroy_iq(loop->stat.iq);
 	free(loop->qwa);

@@ -135,7 +135,7 @@ static void qt_wavefront_worker(qthread_t * me,
 		qthread_incr(arg->donecount, 1);
 		break;
 	    }
-	    qthread_yield(me);
+	    qthread_yield();
 	} else {
 	    //printf("worker pulled col %i, row %i\n", (int)wu->col, (int)wu->row);
 	    /* step 1: locate the input and output qarrays */
@@ -353,7 +353,7 @@ qt_wavefront_lattice *qt_wavefront(qarray * restrict const vertical,
 	qdqueue_enqueue(me, wargs.work_queue, wu);
 	/* step 5: wait for the workers to get done */
 	while (_(donecount) < maxsheps) {
-	    qthread_yield(me);
+	    qthread_yield();
 	}
 	qdqueue_destroy(me, wargs.work_queue);
 	//printf("duplicates: %lu\n", (unsigned long)requeued);

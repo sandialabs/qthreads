@@ -31,7 +31,7 @@ static aligned_t dequeuer(void *arg)
 
     for (i = 0; i < elementcount; i++) {
 	while (qlfqueue_dequeue(me, q) == NULL) {
-	    qthread_yield(me);
+	    qthread_yield();
 	}
     }
     iprintf("dequeuer %i exiting\n", qthread_id(me));

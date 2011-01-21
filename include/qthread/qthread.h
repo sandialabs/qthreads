@@ -160,7 +160,7 @@ void qthread_pack_workerid(const qthread_worker_id_t worker,
  * busy-waits or cooperative multitasking. Without this function, threads will
  * only ever allow other threads assigned to the same pthread to execute when
  * they block. */
-void qthread_yield(qthread_t * me);
+void qthread_yield(void);
 
 /* this function allows a qthread to retrieve its qthread_t pointer if it has
  * been lost for some reason */

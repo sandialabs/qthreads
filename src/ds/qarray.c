@@ -1000,7 +1000,6 @@ void qarray_iter(qarray * a, const size_t startat,
 		 const size_t stopat, qthread_f func)
 {				       /*{{{ */
     volatile aligned_t donecount = 0;
-    qthread_t *me = qthread_self();
     struct qarray_func_wrapper_args qfwa =
 	{ {NULL}, a, NULL, &donecount, startat, stopat };
 
@@ -1013,7 +1012,7 @@ void qarray_iter(qarray * a, const size_t startat,
 	    qthread_fork_to((qthread_f) qarray_strider, &qfwa, NULL,
 			    a->dist_specific.dist_shep);
 	    while (_(donecount) == 0) {
-		qthread_yield(me);
+		qthread_yield();
 	    }
 	    break;
 	case FIXED_FIELDS:
@@ -1026,7 +1025,7 @@ void qarray_iter(qarray * a, const size_t startat,
 		num_spawns++;
 	    }
 	    while (_(donecount) < num_spawns) {
-		qthread_yield(me);
+		qthread_yield();
 	    }
 	}
 	    break;
@@ -1042,7 +1041,7 @@ void qarray_iter(qarray * a, const size_t startat,
 		qthread_fork_to((qthread_f) qarray_strider, &qfwa, NULL,
 				qarray_shepof(a, startat));
 		while (_(donecount) == 0) {
-		    qthread_yield(me);
+		    qthread_yield();
 		}
 	    } else {
 		qthread_shepherd_id_t i;
@@ -1054,7 +1053,7 @@ void qarray_iter(qarray * a, const size_t startat,
 				    i);
 		}
 		while (_(donecount) < maxsheps) {
-		    qthread_yield(me);
+		    qthread_yield();
 		}
 	    }
 	    break;
@@ -1064,7 +1063,6 @@ void qarray_iter(qarray * a, const size_t startat,
 void qarray_iter_loop(qarray * a, const size_t startat,
 		      const size_t stopat, qa_loop_f func, void *arg)
 {				       /*{{{ */
-    qthread_t *me = qthread_self();
     volatile aligned_t donecount = 0;
     struct qarray_func_wrapper_args qfwa =
 	{ {func}, a, arg, &donecount, startat, stopat };
@@ -1077,7 +1075,7 @@ void qarray_iter_loop(qarray * a, const size_t startat,
 	    qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL,
 			    a->dist_specific.dist_shep);
 	    while (_(donecount) == 0) {
-		qthread_yield(me);
+		qthread_yield();
 	    }
 	    break;
 	case FIXED_FIELDS:
@@ -1091,7 +1089,7 @@ void qarray_iter_loop(qarray * a, const size_t startat,
 		num_spawns++;
 	    }
 	    while (_(donecount) < num_spawns) {
-		qthread_yield(me);
+		qthread_yield();
 	    }
 	}
 	    break;
@@ -1107,7 +1105,7 @@ void qarray_iter_loop(qarray * a, const size_t startat,
 		qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL,
 				qarray_shepof(a, startat));
 		while (_(donecount) == 0) {
-		    qthread_yield(me);
+		    qthread_yield();
 		}
 	    } else {
 		qthread_shepherd_id_t i;
@@ -1119,7 +1117,7 @@ void qarray_iter_loop(qarray * a, const size_t startat,
 				    NULL, i);
 		}
 		while (_(donecount) < maxsheps) {
-		    qthread_yield(me);
+		    qthread_yield();
 		}
 	    }
 	    break;
@@ -1160,7 +1158,6 @@ void qarray_iter_constloop(const qarray * a,
 			   const size_t startat, const size_t stopat,
 			   qa_cloop_f func, void *arg)
 {				       /*{{{ */
-    qthread_t *me = qthread_self();
     volatile aligned_t donecount = 0;
     const struct qarray_constfunc_wrapper_args qfwa =
 	{ {func}, a, arg, &donecount, startat, stopat };
@@ -1173,7 +1170,7 @@ void qarray_iter_constloop(const qarray * a,
 	    qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL,
 			    a->dist_specific.dist_shep);
 	    while (_(donecount) == 0) {
-		qthread_yield(me);
+		qthread_yield();
 	    }
 	    break;
 	case FIXED_FIELDS:
@@ -1187,7 +1184,7 @@ void qarray_iter_constloop(const qarray * a,
 		num_spawns++;
 	    }
 	    while (_(donecount) < num_spawns) {
-		qthread_yield(me);
+		qthread_yield();
 	    }
 	}
 	    break;
@@ -1203,7 +1200,7 @@ void qarray_iter_constloop(const qarray * a,
 		qthread_fork_to((qthread_f) qarray_loop_strider, &qfwa, NULL,
 				qarray_shepof(a, startat));
 		while (_(donecount) == 0) {
-		    qthread_yield(me);
+		    qthread_yield();
 		}
 	    } else {
 		qthread_shepherd_id_t i;
@@ -1215,7 +1212,7 @@ void qarray_iter_constloop(const qarray * a,
 				    NULL, i);
 		}
 		while (_(donecount) < maxsheps) {
-		    qthread_yield(me);
+		    qthread_yield();
 		}
 	    }
 	    break;

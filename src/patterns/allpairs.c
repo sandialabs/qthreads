@@ -72,7 +72,7 @@ static aligned_t qt_ap_worker(struct qt_ap_wargs *restrict args)
 		qthread_incr(args->donecount, 1);
 		break;
 	    }
-	    qthread_yield(me);
+	    qthread_yield();
 	} else {
 	    const char *const a1_base =
 		qarray_elem_nomigrate(args->a1, wu->a1_start);
@@ -321,7 +321,7 @@ static void qt_allpairs_internal(const qarray * array1, const qarray * array2,
     /* step 4: wait for the workers to get done */
     no_more_work = 1;
     while (vol_read_a(&donecount) < max_i) {
-	qthread_yield(me);
+	qthread_yield();
     }
     qdqueue_destroy(me, wargs.work_queue);
 #ifdef QTHREAD_TRACK_DISTANCES
