@@ -200,7 +200,7 @@ qthread_shepherd_id_t qthread_shep(void);
 qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *s,const qthread_t * t); 
 #endif
 
-size_t qthread_stackleft(const qthread_t * t);
+size_t qthread_stackleft(void);
 aligned_t *qthread_retloc(const qthread_t * t);
 int qthread_shep_ok(const qthread_t * t);
 

@@ -26,7 +26,6 @@ static aligned_t checkres(void *arg)
 
 static aligned_t migrant(void *arg)
 {
-    qthread_t *me = qthread_self();
     int myshep = qthread_shep();
 
     assert(myshep == 1 || myshep == 0);

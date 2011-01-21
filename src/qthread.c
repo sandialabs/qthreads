@@ -2309,22 +2309,22 @@ qthread_t *qthread_self(void)
 #endif
 }				       /*}}} */
 
-size_t qthread_stackleft(const qthread_t * t)
+size_t qthread_stackleft(void)
 {				       /*{{{ */
-    const qthread_t * f = t;
-    if (t != NULL && t->rdata->stack != NULL) {
-	assert((size_t) & f > (size_t) t->rdata->stack &&
-	       (size_t) & f < ((size_t) t->rdata->stack + qlib->qthread_stack_size));
+    const qthread_t * f = qthread_self();
+    if (f != NULL && f->rdata->stack != NULL) {
+	assert((size_t) & f > (size_t) f->rdata->stack &&
+	       (size_t) & f < ((size_t) f->rdata->stack + qlib->qthread_stack_size));
 #ifdef STACK_GROWS_DOWN
 	/* not tested */
-	assert(((size_t) (t->rdata->stack) + qlib->qthread_stack_size) -
+	assert(((size_t) (f->rdata->stack) + qlib->qthread_stack_size) -
 	       (size_t) (&f) < qlib->qthread_stack_size);
-	return ((size_t) (t->rdata->stack) + qlib->qthread_stack_size) -
+	return ((size_t) (f->rdata->stack) + qlib->qthread_stack_size) -
 	    (size_t) (&f);
 #else
-	assert((size_t) (&f) - (size_t) (t->rdata->stack) <
+	assert((size_t) (&f) - (size_t) (f->rdata->stack) <
 	       qlib->qthread_stack_size);
-	return (size_t) (&f) - (size_t) (t->rdata->stack);
+	return (size_t) (&f) - (size_t) (f->rdata->stack);
 #endif
     } else {
 	return 0;
