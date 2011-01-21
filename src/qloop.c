@@ -718,51 +718,6 @@ static aligned_t qqloop_wrapper(
     return 0;
 }
 
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-static aligned_t qqloop_step_wrapper(
-    qthread_t * me,
-    const struct qqloop_step_wrapper_args *arg)
-{
-    struct qqloop_step_static_args *const restrict stat = arg->stat;
-    struct qqloop_iteration_queue *const restrict iq = stat->iq;
-    const qt_loop_step_f func = stat->func;
-    void *const restrict a = stat->arg;
-    volatile aligned_t *const dc = &(stat->donecount);
-    const qq_getiter_f get_iters = stat->get;
-    const qthread_shepherd_id_t shep = arg->shep;
-
-    /* non-consts */
-    struct qqloop_wrapper_range range = {0,0,0};
-    int safeexit = 1;
-
-    assert(get_iters != NULL);
-    if (qthread_shep(me) == shep && get_iters(iq, stat, &range)) {
-        assert(range.startat != range.stopat);
-	do {
-	    if (iq->type == TIMED) {
-		qtimer_start(iq->type_specific_data.timed.timers[shep]);
-	    }
-	    func(me, range.startat, range.stopat, range.step, a);
-	    if (iq->type == TIMED) {
-		qtimer_stop(iq->type_specific_data.timed.timers[shep]);
-	    }
-	    if (!qthread_shep_ok(me) || qthread_shep(me) != shep) {
-		/* my shepherd has been disabled while I was running */
-		qthread_debug(ALL_DETAILS,
-			      "my shepherd (%i) has been disabled!\n",
-			      (int)shep);
-		safeexit = 0;
-		qthread_incr(&(stat->activesheps), -1);
-		break;
-	    }
-	} while (get_iters(iq, (struct qqloop_static_args *const restrict)stat, &range));
-    }
-    if (safeexit) {
-	qthread_incr(dc, 1);
-    }
-    return 0;
-}
-#endif
 
 qqloop_handle_t *qt_loop_queue_create(
     const qt_loop_queue_type type,
