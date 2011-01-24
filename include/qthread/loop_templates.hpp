@@ -32,15 +32,14 @@ class Collect {
 public:
   template <class T>
   static void update (T& total, T part) {
-    qthread_t *me = qthread_self();
-    qthread_lock (me, (aligned_t*)&total);
+    qthread_lock ((aligned_t*)&total);
     switch (opC) {
     case mt_loop_traits::Sub:
     case mt_loop_traits::Add: total += part; break;
     case mt_loop_traits::Div:
     case mt_loop_traits::Mult: total *= part; break;
     };
-    qthread_unlock (me, (aligned_t*)&total);
+    qthread_unlock ((aligned_t*)&total);
   }
 };
 
