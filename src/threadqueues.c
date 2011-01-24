@@ -658,7 +658,7 @@ qt_threadqueue_node_t *qt_threadqueue_dequeue_specific(qt_threadqueue_t * q,
 
     assert(q != NULL);
 
-    QTHREAD_LOCK(&q->qlock);
+    QTHREAD_FASTLOCK_LOCK(&q->qlock);
     if (q->qlength > 0) {
 	node = (qt_threadqueue_node_t *) q->tail;
 	if (node)
@@ -683,7 +683,7 @@ qt_threadqueue_node_t *qt_threadqueue_dequeue_specific(qt_threadqueue_t * q,
 	} else
 	    node = NULL;
     }
-    QTHREAD_UNLOCK(&q->qlock);
+    QTHREAD_FASTLOCK_UNLOCK(&q->qlock);
 
     return (node);
 }

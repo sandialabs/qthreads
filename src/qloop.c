@@ -69,7 +69,7 @@ static aligned_t qloop_step_wrapper(
 #ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
     MONITOR_ASM_LABEL(qthread_step_fence1); // add label for HPCToolkit unwind
 #endif
-    arg->func(arg->startat, arg->stopat, arg->step, arg->arg);
+    arg->func(arg->arg);
 #ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
     MONITOR_ASM_LABEL(qthread_step_fence2); // add label for HPCToolkit unwind
 #endif
@@ -182,7 +182,6 @@ static void qt_loop_step_inner(
     assert(qwa);
     assert(rets);
     assert(func);
-
     for (i = start; i < stop; i += stride) {
 	qwa[threadct].func = func;
 	qwa[threadct].startat = i;
@@ -190,12 +189,12 @@ static void qt_loop_step_inner(
 	qwa[threadct].step = stride;
 	qwa[threadct].arg = argptr;
 	if (future) {
-	    future_fork_syncvar
+	    future_fork_syncvar_to
 	        ((qthread_f) qloop_step_wrapper, qwa + threadct, rets + i,
 		 (qthread_shepherd_id_t) (threadct %
 					  qthread_num_shepherds()));
 	} else {
-	    qassert(qthread_fork_syncvar
+	    qassert(qthread_fork_syncvar_to
 		    ((qthread_f) qloop_step_wrapper, qwa + threadct, NULL, 0, rets + i,
 		     (qthread_shepherd_id_t) (threadct)),
 		    QTHREAD_SUCCESS);
@@ -1329,13 +1328,11 @@ void qt_loop_queue_run_single(
     while (iterationNumber < loop->assignStop) {
 	if (t != NULL) {
 	    qtimer_start(qt);
-	    loop->stat.func(iterationNumber, iterationStop,
-			    loop->assignStep, t);
+	    loop->stat.func(t);
 	    qtimer_stop(qt);
 	} else {
 	    qtimer_start(qt);
-	    loop->stat.func(iterationNumber, iterationStop,
-			    loop->assignStep, loop->stat.arg);
+	    loop->stat.func(loop->stat.arg);
 	    qtimer_stop(qt);
 	}
 	time = qtimer_secs(qt);
@@ -1405,9 +1402,6 @@ static void qt_parallel_qfor(
 }
 
 static void qt_naked_parallel_for(
-    const size_t dummy1,
-    const size_t dummy2,
-    const size_t dummy3,
     void *nakedArg);
 
 void qt_parallel_for(
@@ -1446,10 +1440,7 @@ void qt_parallel_for(
 }
 
 static void qt_naked_parallel_for(
-    const size_t dummy1,                    // This function must match qt_loop_f prototype so it can be called with qt_loop()
-    const size_t dummy2,                    // But since I only care when all the children return, the arguments are ignored
-    const size_t dummy3,
-    void *nakedArg)
+    void *nakedArg) // This function must match qt_loop_step_f prototype so it can be called with qt_step_loop()
 {
     void **funcArgs = (void **)nakedArg;
     const qt_loop_step_f func = (const qt_loop_step_f)(funcArgs[0]);

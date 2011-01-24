@@ -16,7 +16,6 @@ typedef struct qthread_shepherd_s qthread_shepherd_t;
 #endif
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-#define MAX_WORKERS_PER_SHEPHERD 1024
 
 struct qthread_worker_s
 {
@@ -36,8 +35,7 @@ struct qthread_shepherd_s
     pthread_t shepherd;
     qthread_shepherd_id_t shepherd_id;	/* whoami */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    qthread_worker_t workers[MAX_WORKERS_PER_SHEPHERD]; // XXX: this is too big; should be allocated at runtime based on actual number of workers
-    uint8_t stealing;  /* True when a worker is in the steal (attempt) process */
+    qthread_worker_t *workers; // dymanic length qlib->nworkerspershep
 #endif
     qthread_t *current;
     qt_threadqueue_t *ready;
@@ -60,6 +58,9 @@ struct qthread_shepherd_s
 #endif
     unsigned int *shep_dists;
     qthread_shepherd_id_t *sorted_sheplist;
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    unsigned int stealing;  /* True when a worker is in the steal (attempt) process */
+#endif
 #ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
     size_t steal_called;
     size_t steal_attempted;

@@ -43,6 +43,19 @@ typedef enum xomp_nest_level{NO_NEST=0, ALLOW_NEST, AUTO_NEST}xomp_nest_level_t;
 static qqloop_step_handle_t* qqloop_get_value(int id);
 static void qqloop_clear_value(int id);
 static void qqloop_set_value(qqloop_step_handle_t * qqhandle);
+
+
+volatile int64_t *arr_level;
+static int64_t *arr_shep;
+static int64_t *arr[100];
+static uint64_t *lastBlock;
+static uint64_t *smallBlock;
+static uint64_t *loopTimer;
+static uint64_t *firstTime;
+static uint64_t *currentIteration;
+static uint64_t *staticStartCount;
+
+
 #ifdef USE_RDTSC
 static uint64_t rdtsc(void);
 #endif
@@ -228,6 +241,7 @@ void XOMP_init(
     int argc,
     char **argv)
 {
+    int i;
     char *env;  // Used to get Envionment variables
     qthread_initialize();
 
@@ -256,6 +270,44 @@ void XOMP_init(
     else {
       omp_set_nested(NO_NEST);
     }
+
+    int lim_s = qthread_num_shepherds();
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    int lim_w = qthread_num_workers();
+#endif
+
+    for(i = 0; i  < 100; i++) {
+      arr[i] = calloc(lim_s, sizeof(uint64_t));
+      if (!arr[i]){
+	fprintf(stderr,"qqloop_set_value arr(%d) build malloc failed\n",lim_s);
+      }
+    }
+
+    arr_level = calloc(lim_s, sizeof(uint64_t));
+    arr_shep = calloc(lim_s, sizeof(uint64_t));
+    lastBlock = calloc(lim_s, sizeof(uint64_t));
+    smallBlock = calloc(lim_s, sizeof(uint64_t));
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    loopTimer =  calloc(lim_w, sizeof(uint64_t));
+#endif
+    firstTime = calloc(lim_s, sizeof(uint64_t));
+    currentIteration = calloc(lim_s, sizeof(uint64_t));
+    staticStartCount = calloc(lim_s, sizeof(uint64_t));
+    
+    if (!arr_level || !lastBlock || !smallBlock || !loopTimer 
+	|| !firstTime || !currentIteration || ! staticStartCount){
+      fprintf(stderr,"XOMP_init build shepherd aux structure malloc failed\n");
+    }
+    
+    for(i = 0; i  < lim_s; i++) {
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+      arr_shep[i] = qlib->nworkerspershep;
+#else
+      arr_shep[i] = 1;
+#endif
+    }
+    
+
     return;
 }
 
@@ -264,7 +316,7 @@ void XOMP_init(
 void XOMP_terminate(
     int exitcode)
 {
-#ifdef STEAL_PROFILE		       // should give mechanism to make steal profiling optional
+#ifdef STEAL_PROFILE
   qthread_steal_stat();  // qthread_finalize called by at_exit handler
 #endif
   return;
@@ -276,8 +328,6 @@ void XOMP_parallel_start(
     void *data,
     unsigned numThread)
 {
-  qthread_t *const me = qthread_self();
-  
   if (get_inside_xomp_parallel(&xomp_status)){ // already parallel add to nesting level
     incr_inside_xomp_nested_parallel(&xomp_status);
     if (!xomp_get_nested(&xomp_status)) {  // going nested but not set in environment/nested call
@@ -287,10 +337,10 @@ void XOMP_parallel_start(
   set_inside_xomp_parallel(&xomp_status, TRUE);
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  if (gb == NULL) gb = qt_feb_barrier_create(me,qthread_num_workers()); // setup taskwait barrier
+  if (gb == NULL) gb = qt_feb_barrier_create(qthread_num_workers()); // setup taskwait barrier
   qthread_shepherd_id_t parallelWidth = qthread_num_workers();
 #else
-  if (gb == NULL) gb = qt_feb_barrier_create(me,qthread_num_shepherds()); // setup taskwait barrier
+  if (gb == NULL) gb = qt_feb_barrier_create(qthread_num_shepherds()); // setup taskwait barrier
   qthread_shepherd_id_t parallelWidth = qthread_num_shepherds();
 #endif
   qt_loop_step_f f = (qt_loop_step_f) func;
@@ -314,10 +364,6 @@ void XOMP_parallel_end(
 }
 
 // helper function to set up parallel loop
-#define ROSE_TIMED 1
-
-int64_t arr[100][64];
-volatile int64_t arr_level[64];
 
 static qqloop_step_handle_t* qqloop_get_value(int id)
 {
@@ -335,9 +381,21 @@ static qqloop_step_handle_t* qqloop_get_value(int id)
 
 static void qqloop_clear_value(int id)
 {
-  int64_t lev = arr_level[id];
-  arr[lev][id] = 0;
-  qthread_incr(&arr_level[id], -1);
+  int val = qthread_incr(&arr_shep[id], -1);  // count down within shepherd
+  int adj = 1;
+  if (val == 0) {  // last from shepherd -- count down loop nesting
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    adj = qlib->nworkerspershep;
+#endif
+    qthread_incr(&arr_shep[id], adj);  // bloody race here
+                   //  the correct fix is to add a loop structure to XOMP call
+                   //  and then I can use language scoping rules to get this right
+                   //  rather than trying to figure them out under the covers
+    int64_t lev = arr_level[id];
+    arr[lev][id] = 0;
+    qthread_incr(&arr_level[id], -1);
+    
+  }
   return;
 }
 
@@ -346,11 +404,11 @@ static void qqloop_set_value(qqloop_step_handle_t * qqhandle)
   int i;
   int lim;
   //   qthread_t *const me = qthread_self();
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  lim = qthread_num_workers();
-#else
+  //#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+  //  lim = qthread_num_workers();
+  //#else
   lim = qthread_num_shepherds();
-#endif
+  //#endif
 
   for (i = 0; i < lim; i++){
     int64_t lev = qthread_incr(&arr_level[i], 1);
@@ -359,10 +417,6 @@ static void qqloop_set_value(qqloop_step_handle_t * qqhandle)
   }
   return;
 }
-
-
-int lastBlock[64];
-int smallBlock[64];
 
 qqloop_step_handle_t *qt_loop_rose_queue_create(
     int64_t start,
@@ -397,14 +451,10 @@ return (uint64_t)hi << 32 | lo;
 }
 
 // NOTE: need to replace these magic numbers with #defs 
-uint64_t loopTimer[64*16];
 #else
 qtimer_t loopTimer;
 #endif
 
-int firstTime[64];
-int currentIteration[64];
-int staticStartCount[64];
 volatile int orderedLoopCount = 0;
 static size_t gate_cnt = 0;
 aligned_t qtar_size(void);
@@ -453,7 +503,7 @@ void XOMP_loop_guided_init(
   else {
     qthread_syncvar_readFF(NULL, &outGate); // make sure that this loop is set up
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    qqhandle = qqloop_get_value(workerid);
+    qqhandle = qqloop_get_value(myid);
 #else
     qqhandle = qqloop_get_value(myid);
 #endif
@@ -467,10 +517,10 @@ void XOMP_loop_guided_init(
   }
   
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  firstTime[workerid] = 1;
-  currentIteration[workerid] = 1;
-  smallBlock[workerid] =  qqhandle->assignStop - qqhandle->assignNext;;
-  lastBlock[workerid] =  qqhandle->assignStop - qqhandle->assignNext;
+  firstTime[myid] = 1;
+  currentIteration[myid] = 1;
+  smallBlock[myid] =  qqhandle->assignStop - qqhandle->assignNext;;
+  lastBlock[myid] =  qqhandle->assignStop - qqhandle->assignNext;
 #else
   firstTime[myid] = 1;
   currentIteration[myid] = 1;
@@ -536,7 +586,7 @@ bool XOMP_loop_guided_start(
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     // both halves nearly the same -- difference workerid for MTS shep id for original
     qthread_worker_id_t workerid = qthread_worker(&myid);
-    qqloop_step_handle_t *loop = qqloop_get_value(workerid);	// from init;
+    qqloop_step_handle_t *loop = qqloop_get_value(myid);	// from init;
 #ifdef USE_RDTSC
     if (!firstTime[workerid] && (loop->type == GUIDED_SCHED)) {
         uint64_t s = rdtsc();
@@ -663,7 +713,12 @@ void XOMP_loop_end(
 #endif
   XOMP_barrier();            // need barrier or timeout in qt_loop_inner kills performance
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  qqloop_clear_value(qthread_worker(NULL));
+  
+  qthread_shepherd_id_t myid;
+  // both halves nearly the same -- difference workerid for MTS shep id for original
+  qthread_worker_id_t workerid = qthread_worker(&myid);
+  printf("worker %d myid %d\n",workerid, myid);
+  qqloop_clear_value(myid);
 #else
   qqloop_clear_value(qthread_shep());
 #endif
@@ -695,7 +750,7 @@ void XOMP_barrier(void)
       while (!gb);  // wait for instance of barrier to arrive
       qt_feb_barrier_t * test = (qt_feb_barrier_t *)gb;
       walkSyncTaskList(me); // wait for outstanding tasks to complete
-      qt_feb_barrier_enter(me, test);
+      qt_feb_barrier_enter(test);
     }  
 }
 void XOMP_atomic_start(

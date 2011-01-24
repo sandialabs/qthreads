@@ -559,7 +559,6 @@ static void *qthread_shepherd(void *arg)
     cpu_set_t mask;
     CPU_ZERO(&mask);
     CPU_SET(phys_thread_num, &mask);
-    //    unsigned long mask = 1UL << phys_thread_num;
 
     sched_setaffinity(0, sizeof(mask), &mask);
 #endif
@@ -695,8 +694,8 @@ static void *qthread_shepherd(void *arg)
 	    assert(t->f != NULL || t->flags & QTHREAD_REAL_MCCOY);
 	    if (t->rdata == NULL) alloc_rdata(me, t);
 	    if (t->rdata->shepherd_ptr != me) {
-		fprintf(stderr, "shepherd_ptr = %p, me = %p\n", t->rdata->shepherd_ptr, me);
-		fflush(stderr);
+	      //		fprintf(stderr, "shepherd_ptr = %p, me = %p\n", t->rdata->shepherd_ptr, me);
+	      //		fflush(stderr);
 	    }
 	    assert(t->rdata->shepherd_ptr == me);
 
@@ -1319,6 +1318,7 @@ int qthread_initialize(void)
 	    qlib->master_stack_size = (unsigned int)(rlp.rlim_cur);
 	}
 	qlib->max_stack_size = rlp.rlim_max;
+
     }
 
     /* initialize the shepherds as having no affinity */
@@ -1326,6 +1326,11 @@ int qthread_initialize(void)
 	qlib->shepherds[i].node = -1;
 	qlib->shepherds[i].shep_dists = NULL;
 	qlib->shepherds[i].sorted_sheplist = NULL;
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+	qlib->shepherds[i].workers = (qthread_worker_t *)
+	  calloc(nworkerspershep, sizeof(qthread_worker_t));
+	qassert_ret(qlib->shepherds[i].workers, QTHREAD_MALLOC_ERROR);
+#endif   
     }
     {
 	char *aff = getenv("QTHREAD_AFFINITY");
