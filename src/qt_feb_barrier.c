@@ -44,7 +44,7 @@ void qt_feb_barrier_internal_init(void)
     QTHREAD_CASLOCK_EXPLICIT_INIT(fbp_caslock);
 }
 
-qt_feb_barrier_t *qt_feb_barrier_create(qthread_t *me, size_t max_threads)
+qt_feb_barrier_t *qt_feb_barrier_create(size_t max_threads)
 {
     qt_feb_barrier_t *b;
 #ifndef UNPOOLED
@@ -70,7 +70,7 @@ qt_feb_barrier_t *qt_feb_barrier_create(qthread_t *me, size_t max_threads)
     return b;
 }
 
-void qt_feb_barrier_enter(qthread_t *me, qt_feb_barrier_t *b)
+void qt_feb_barrier_enter(qt_feb_barrier_t *b)
 {
     aligned_t waiters;
     qassert_retvoid(b);
@@ -96,7 +96,7 @@ void qt_feb_barrier_enter(qthread_t *me, qt_feb_barrier_t *b)
     }
 }
 
-void qt_feb_barrier_destroy(qthread_t *me, qt_feb_barrier_t *b)
+void qt_feb_barrier_destroy(qt_feb_barrier_t *b)
 {
     assert(fbp.pool != NULL);
     assert(b->blockers == 0);
@@ -129,7 +129,7 @@ void qt_global_barrier_init(int size, int debug)
 void qt_global_barrier_destroy()
 {
     if (global_barrier) {
-	qt_feb_barrier_destroy(qthread_self(), global_barrier);
+	qt_feb_barrier_destroy(global_barrier);
 	global_barrier = NULL;
     }
 }

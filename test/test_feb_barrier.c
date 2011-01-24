@@ -17,7 +17,7 @@ static aligned_t barrier_thread(void *arg)
     qt_feb_barrier_t *b = (qt_feb_barrier_t*)arg;
     aligned_t idx = qthread_incr(&initme_idx, 1);
     qthread_incr(&(initme[idx]), 1);
-    qt_feb_barrier_enter(qthread_self(), b);
+    qt_feb_barrier_enter(b);
     return 0;
 }
 
@@ -45,7 +45,7 @@ int main(int argc, char *argv[])
     assert(rets);
 
     iprintf("creating the barrier for %i threads\n", threads+1);
-    wait_on_me = qt_feb_barrier_create(me, threads+1); // all my spawnees plus me
+    wait_on_me = qt_feb_barrier_create(threads+1); // all my spawnees plus me
     assert(wait_on_me);
 
     iprintf("forking the threads\n");
@@ -54,7 +54,7 @@ int main(int argc, char *argv[])
     }
     iprintf("done forking the threads, entering the barrier\n");
     qtimer_start(t);
-    qt_feb_barrier_enter(me, wait_on_me);
+    qt_feb_barrier_enter(wait_on_me);
     qtimer_stop(t);
     iprintf("main thread exited barrier 1 in %f seconds\n", qtimer_secs(t));
     initme_idx = 0;
@@ -63,7 +63,7 @@ int main(int argc, char *argv[])
 	qthread_fork(barrier_thread, wait_on_me, rets+i);
     }
     qtimer_start(t);
-    qt_feb_barrier_enter(me, wait_on_me);
+    qt_feb_barrier_enter(wait_on_me);
     qtimer_stop(t);
     iprintf("main thread exited barrier 2 in %f seconds\n", qtimer_secs(t));
 
