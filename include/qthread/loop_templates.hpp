@@ -110,7 +110,6 @@ public:
 		   const Arg4V& arg4, const Arg5V& arg5,
 		   int start, int stop, int step=1) {
 
-    qthread_t *me = qthread_self();
     bool join = true;
 
     int total, steptd, tdc, tdc_pow2, round_total, base_count;
@@ -158,7 +157,7 @@ public:
       if (join) ft = new aligned_t[total];
       /* try to yield. This will return 1 if me is a future. Only futures can
        * succesfully yield, everybody else just falls through the function */
-      int yielded = future_yield(me);
+      int yielded = future_yield();
 
       /* for each future I want to create -- for tdc = the total number of
        * threads that will be created */
@@ -172,12 +171,12 @@ public:
       }
 
       if (join) /* this waits for the futures to finish */
-	future_join_all (me, ft, tdc);
+	future_join_all (ft, tdc);
       if (yielded)
 	/* Aquire back a virtual processor. It is actually fine to call this
 	 * even if the thread is not a future, the if is there to save a
 	 * function call and twiddling with the global future data */
-	future_acquire(me);
+	future_acquire();
 
       if (join) delete ft;
     } break;

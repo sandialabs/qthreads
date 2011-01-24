@@ -14,6 +14,6 @@ struct location_s
     qthread_shepherd_id_t sched_shep;
 };
 
-void blocking_vp_incr(qthread_t * me, location_t * loc);
+void blocking_vp_incr(location_t * loc);
 
 #endif

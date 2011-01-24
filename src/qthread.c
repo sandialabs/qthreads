@@ -2590,7 +2590,7 @@ static void qthread_wrapper(void *ptr)
     QTHREAD_FASTLOCK_UNLOCK(&concurrentthreads_lock);
 #endif
     if (t->flags & QTHREAD_FUTURE) {
-	future_exit(t);
+	future_exit();
     }
     /* theoretically, we could rely on the uc_link pointer to bring us back to
      * the parent shepherd. HOWEVER, this doesn't work in lots of situations,
@@ -3874,8 +3874,9 @@ qthread_worker_id_t qthread_num_workers(void)
 
 /* these two functions are helper functions for futurelib
  * (nobody else gets to have 'em!) */
-unsigned int qthread_isfuture(const qthread_t * t)
+unsigned int qthread_isfuture(void)
 {				       /*{{{ */
+    qthread_t * t = qthread_self();
     return t ? (t->flags & QTHREAD_FUTURE) : 0;
 }				       /*}}} */
 
@@ -3884,8 +3885,9 @@ void qthread_assertfuture(qthread_t * t)
     t->flags |= QTHREAD_FUTURE;
 }				       /*}}} */
 
-void qthread_assertnotfuture(qthread_t * t)
+void qthread_assertnotfuture(void)
 {				       /*{{{ */
+    qthread_t *t = qthread_self();
     t->flags &= ~QTHREAD_FUTURE;
 }				       /*}}} */
 

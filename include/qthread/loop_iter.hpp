@@ -367,7 +367,7 @@ aligned_t run_ft (void *arg) {
     iter->Next();
   }
   delete iter;
-  future_exit(qthread_self());
+  future_exit();
   return 0;
 }
 

@@ -17,16 +17,15 @@ void future_fork_syncvar_to(qthread_f fptr,
 			    qthread_shepherd_id_t shep);
 
 void future_join_all(
-    qthread_t * me,
     aligned_t * fta,
     int ftc);
 
 void future_init(int vp_per_loc);
 
-void future_exit(qthread_t * me);
+void future_exit(void);
 
-int future_yield(qthread_t * me);
-void future_acquire(qthread_t * me);
+int future_yield(void);
+void future_acquire(void);
 
 Q_ENDCXX			       /* */
 #ifdef __cplusplus
