@@ -80,12 +80,11 @@ qlfqueue_t *qlfqueue_create(
 }				       /*}}} */
 
 int qlfqueue_destroy(
-    qthread_t * me,
     qlfqueue_t * q)
 {				       /*{{{ */
     qassert_ret((q != NULL), QTHREAD_BADARGS);
     while (QPTR(_(q->head)) != QPTR(_(q->tail))) {
-	qlfqueue_dequeue(me, q);
+	qlfqueue_dequeue(q);
     }
     qpool_free(qlfqueue_node_pool, (void *)(QPTR(_(q->head))));
     free(q);
@@ -93,7 +92,6 @@ int qlfqueue_destroy(
 }				       /*}}} */
 
 int qlfqueue_enqueue(
-    qthread_t * me,
     qlfqueue_t * q,
     void *elem)
 {				       /*{{{ */
@@ -133,7 +131,6 @@ int qlfqueue_enqueue(
 }				       /*}}} */
 
 void *qlfqueue_dequeue(
-    qthread_t * me,
     qlfqueue_t * q)
 {				       /*{{{ */
     void *p = NULL;

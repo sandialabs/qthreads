@@ -372,10 +372,9 @@ int qdqueue_destroy(qthread_t * me, qdqueue_t * q)
     qthread_shepherd_id_t i;
 
     qassert_ret((q != NULL), QTHREAD_BADARGS);
-    qassert_ret((me != NULL), QTHREAD_BADARGS);
     for (i = 0; i < maxsheps; i++) {
 	if (q->Qs[i].theQ) {
-	    qlfqueue_destroy(me, q->Qs[i].theQ);
+	    qlfqueue_destroy(q->Qs[i].theQ);
 	}
 	if (q->Qs[i].ads.heap != NULL) {
 	    free(q->Qs[i].ads.heap);
@@ -405,7 +404,7 @@ int qdqueue_enqueue(qthread_t * me, qdqueue_t * q, void *elem)
     myq = &(q->Qs[qthread_shep()]);
 
     stat = qlfqueue_empty(myq->theQ);
-    qlfqueue_enqueue(me, myq->theQ, elem);
+    qlfqueue_enqueue(myq->theQ, elem);
     if (stat) {
 	/* the queue was empty, so we may have to wake up waiters */
 	/*qdqueue_adheap_pushcond(myq->ads, myq, 0); */
@@ -443,7 +442,7 @@ int qdqueue_enqueue_there(qthread_t * me, qdqueue_t * q, void *elem,
     myq = &(q->Qs[there]);
 
     stat = qlfqueue_empty(myq->theQ);
-    qlfqueue_enqueue(me, myq->theQ, elem);
+    qlfqueue_enqueue(myq->theQ, elem);
     if (stat) {
 	/* the queue was empty, so we may have to wake up waiters */
 	/* qdqueue_adheap_pushcond(myq->ads, myq, 0); */
@@ -476,7 +475,7 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
     qassert_ret((q != NULL), NULL);
 
     myq = &(q->Qs[qthread_shep()]);
-    if ((ret = qlfqueue_dequeue(me, myq->theQ)) != NULL) {
+    if ((ret = qlfqueue_dequeue(myq->theQ)) != NULL) {
 	/* this write MUST be atomic */
 	_(myq->last_consumed) = myq;
 	return ret;
@@ -499,7 +498,7 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
 			    qthread_cas(&(ad.shep->last_ad_consumed), last_ad,
 					ad.generation);
 		    }
-		    if ((ret = qlfqueue_dequeue(me, ad.shep->theQ)) != NULL) {
+		    if ((ret = qlfqueue_dequeue(ad.shep->theQ)) != NULL) {
 			_(myq->last_consumed) = ad.shep;
 			return ret;
 		    }
@@ -519,12 +518,12 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
 		struct qdsubqueue_s *remoteshep = myq->allsheps[shep];
 		struct qdsubqueue_s *lc = _(remoteshep->last_consumed);
 
-		if ((ret = qlfqueue_dequeue(me, remoteshep->theQ)) != NULL) {
+		if ((ret = qlfqueue_dequeue(remoteshep->theQ)) != NULL) {
 		    _(myq->last_consumed) = remoteshep;
 		    return ret;
 		} else if (lc != NULL && lc != remoteshep) {
 		    /* it got work from somewhere! */
-		    if ((ret = qlfqueue_dequeue(me, lc->theQ)) != NULL) {
+		    if ((ret = qlfqueue_dequeue(lc->theQ)) != NULL) {
 			_(myq->last_consumed) = lc;
 			return ret;
 		    }

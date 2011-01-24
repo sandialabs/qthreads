@@ -56,7 +56,7 @@ static aligned_t queuer(
     size_t i;
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
-	if (qlfqueue_enqueue(qthread_self(), q, (void *)qthread_self()) != QTHREAD_SUCCESS) {
+	if (qlfqueue_enqueue(q, (void *)qthread_self()) != QTHREAD_SUCCESS) {
 	    fprintf(stderr, "qlfqueue_enqueue(q, %p) failed!\n", (void *)qthread_self());
 	    exit(-2);
 	}
@@ -71,7 +71,7 @@ static aligned_t dequeuer(
     size_t i;
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
-	while (qlfqueue_dequeue(qthread_self(), q) == NULL) {
+	while (qlfqueue_dequeue(q) == NULL) {
 	    qthread_yield();
 	}
     }
@@ -125,7 +125,7 @@ static void loop_queuer(
     qlfqueue_t *q = (qlfqueue_t *) arg;
 
     for (i = startat; i < stopat; i++) {
-	if (qlfqueue_enqueue(me, q, (void *)me) != QTHREAD_SUCCESS) {
+	if (qlfqueue_enqueue(q, (void *)me) != QTHREAD_SUCCESS) {
 	    fprintf(stderr, "qlfqueue_enqueue(q, %p) failed!\n", (void *)me);
 	    exit(-2);
 	}
@@ -142,8 +142,8 @@ static void loop_dequeuer(
     qlfqueue_t *q = (qlfqueue_t *) arg;
 
     for (i = startat; i < stopat; i++) {
-	if (qlfqueue_dequeue(me, q) == NULL) {
-	    fprintf(stderr, "qlfqueue_dequeue(q, %p) failed!\n", (void *)me);
+	if (qlfqueue_dequeue(q) == NULL) {
+	    fprintf(stderr, "qlfqueue_dequeue(%p) failed!\n", (void *)q);
 	    exit(-2);
 	}
     }
@@ -241,7 +241,7 @@ int main(
     cp_list_destroy(cpq);
 #endif
 
-    if (qlfqueue_destroy(me, q) != QTHREAD_SUCCESS) {
+    if (qlfqueue_destroy(q) != QTHREAD_SUCCESS) {
 	fprintf(stderr, "qlfqueue_destroy() failed!\n");
 	exit(-2);
     }
