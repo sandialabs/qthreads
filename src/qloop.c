@@ -63,16 +63,12 @@ extern void *qthread_step_fence2;
 static aligned_t qloop_step_wrapper(
     struct qloop_step_wrapper_args * const restrict arg)
 {				       /*{{{ */
-#ifndef QTHREAD_USE_ROSE_EXTENSIONS
-    arg->func(qthread_self(), arg->startat, arg->stopat, arg->arg);
-#else
 #ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
     MONITOR_ASM_LABEL(qthread_step_fence1); // add label for HPCToolkit unwind
 #endif
     arg->func(arg->arg);
 #ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
     MONITOR_ASM_LABEL(qthread_step_fence2); // add label for HPCToolkit unwind
-#endif
 #endif
     return 0;
 }				       /*}}} */
@@ -299,7 +295,7 @@ struct qloopaccum_wrapper_args {
 static aligned_t qloopaccum_wrapper(
     const struct qloopaccum_wrapper_args *arg)
 {				       /*{{{ */
-    arg->func(qthread_self(), arg->startat, arg->stopat, arg->arg, arg->ret);
+    arg->func(arg->startat, arg->stopat, arg->arg, arg->ret);
     return 0;
 }				       /*}}} */
 
@@ -874,9 +870,8 @@ void qt_loop_queue_addworker(
 }
 
 #define PARALLEL_FUNC(category, initials, _op_, type, shorttype) \
-static void qt##initials##_febworker(qthread_t * me, const size_t startat, \
-			 const size_t stopat, void * restrict arg, \
-			 void * restrict ret) \
+static void qt##initials##_febworker(const size_t startat, const size_t stopat, \
+				     void * restrict arg, void * restrict ret) \
 { \
     size_t i; \
     type acc; \
@@ -888,9 +883,8 @@ static void qt##initials##_febworker(qthread_t * me, const size_t startat, \
     } \
     *(type *)ret = acc; \
 } \
-static void qt##initials##_worker(qthread_t * me, const size_t startat, \
-			 const size_t stopat, void * restrict arg, \
-			 void * restrict ret) \
+static void qt##initials##_worker(const size_t startat, const size_t stopat, \
+				  void * restrict arg, void * restrict ret) \
 { \
     size_t i; \
     type acc = ((type*)arg)[startat]; \

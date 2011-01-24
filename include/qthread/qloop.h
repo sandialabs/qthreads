@@ -9,7 +9,7 @@ Q_STARTCXX			       /* */
 typedef void (*qt_loop_f) (const size_t startat, const size_t stopat,
 			   void *arg);
 typedef void (*qt_loop_step_f) ( void *arg);
-typedef void (*qt_loopr_f) (qthread_t * me, const size_t startat,
+typedef void (*qt_loopr_f) (const size_t startat,
 			    const size_t stopat, void *restrict arg,
 			    void *restrict ret);
 typedef void (*qt_accum_f) (void *restrict a, void *restrict b);
