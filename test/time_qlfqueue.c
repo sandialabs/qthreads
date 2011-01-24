@@ -79,12 +79,9 @@ static aligned_t dequeuer(
 }
 
 #ifdef HAVE_CPROPS
-static void loop_cpqueuer(
-    qthread_t * me,
-    const size_t startat,
-    const size_t stopat,
-    void *arg)
-{
+static void loop_cpqueuer(const size_t startat, const size_t stopat,
+			  void *arg)
+{				       /*{{{ */
     size_t i;
     cp_list *q = (cp_list *) arg;
 
@@ -94,14 +91,11 @@ static void loop_cpqueuer(
 	    exit(-2);
 	}
     }
-}
+}				       /*}}} */
 
-static void loop_cpdequeuer(
-    qthread_t * me,
-    const size_t startat,
-    const size_t stopat,
-    void *arg)
-{
+static void loop_cpdequeuer(const size_t startat, const size_t stopat,
+			    void *arg)
+{				       /*{{{ */
     size_t i;
     cp_list *q = (cp_list *) arg;
 
@@ -112,32 +106,26 @@ static void loop_cpdequeuer(
 	    exit(-2);
 	}
     }
-}
+}				       /*}}} */
 #endif
 
-static void loop_queuer(
-    qthread_t * me,
-    const size_t startat,
-    const size_t stopat,
-    void *arg)
-{
+static void loop_queuer(const size_t startat, const size_t stopat, void *arg)
+{				       /*{{{ */
     size_t i;
     qlfqueue_t *q = (qlfqueue_t *) arg;
+    void *me = (void*)(uintptr_t)qthread_id();
 
     for (i = startat; i < stopat; i++) {
-	if (qlfqueue_enqueue(q, (void *)me) != QTHREAD_SUCCESS) {
-	    fprintf(stderr, "qlfqueue_enqueue(q, %p) failed!\n", (void *)me);
+	if (qlfqueue_enqueue(q, me) != QTHREAD_SUCCESS) {
+	    fprintf(stderr, "qlfqueue_enqueue(q, %p) failed!\n", me);
 	    exit(-2);
 	}
     }
-}
+}				       /*}}} */
 
-static void loop_dequeuer(
-    qthread_t * me,
-    const size_t startat,
-    const size_t stopat,
-    void *arg)
-{
+static void loop_dequeuer(const size_t startat, const size_t stopat,
+			  void *arg)
+{				       /*{{{ */
     size_t i;
     qlfqueue_t *q = (qlfqueue_t *) arg;
 
@@ -147,7 +135,7 @@ static void loop_dequeuer(
 	    exit(-2);
 	}
     }
-}
+}				       /*}}} */
 
 int main(
     int argc,

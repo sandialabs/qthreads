@@ -59,40 +59,31 @@ static aligned_t int_fetch_inc(void)
     return offset + NUM_LEAVES * qthread_incr(&prism[node][0], 1);
 }
 
-static void balanced_incr(
-    qthread_t *me,
-    const size_t startat,
-    const size_t stopat,
-    void *arg)
-{
+static void balanced_incr(const size_t startat, const size_t stopat,
+			  void *arg)
+{				       /*{{{ */
     size_t i;
 
     for (i = startat; i < stopat; i++) {
 	qthread_incr((aligned_t *) arg, 1);
     }
-}
+}				       /*}}} */
 
-static void diffract_incr(
-    qthread_t *me,
-    const size_t startat,
-    const size_t stopat,
-    void *arg)
-{
+static void diffract_incr(const size_t startat, const size_t stopat,
+			  void *arg)
+{				       /*{{{ */
     size_t i;
     aligned_t sum = 0;
 
     for (i = startat; i < stopat; ++i) {
 	sum = int_fetch_inc();
     }
-    ((aligned_t*)arg)[qthread_id()] = sum+1;
-}
+    ((aligned_t *) arg)[qthread_id()] = sum + 1;
+}				       /*}}} */
 
-static void balanced_falseshare(
-    qthread_t *me,
-    const size_t startat,
-    const size_t stopat,
-    void *arg)
-{
+static void balanced_falseshare(const size_t startat, const size_t stopat,
+				void *arg)
+{				       /*{{{ */
     size_t i;
     qthread_shepherd_id_t shep = qthread_shep();
     aligned_t *myinc = increments + shep;
@@ -100,14 +91,11 @@ static void balanced_falseshare(
     for (i = startat; i < stopat; i++) {
 	qthread_incr(myinc, 1);
     }
-}
+}				       /*}}} */
 
-static void balanced_noncomp(
-    qthread_t *me,
-    const size_t startat,
-    const size_t stopat,
-    void *arg)
-{
+static void balanced_noncomp(const size_t startat, const size_t stopat,
+			     void *arg)
+{				       /*{{{ */
     size_t i;
     qthread_shepherd_id_t shep = qthread_shep();
     aligned_t myinc;
@@ -116,22 +104,20 @@ static void balanced_noncomp(
     for (i = startat; i < stopat; i++) {
 	qthread_incr(&myinc, 1);
     }
-}
+}				       /*}}} */
 
-static aligned_t incrloop(
-    void *arg)
-{
+static aligned_t incrloop(void *arg)
+{				       /*{{{ */
     unsigned int i;
 
     for (i = 0; i < ITERATIONS; i++) {
 	qthread_incr(&incrementme, 1);
     }
     return 0;
-}
+}				       /*}}} */
 
-static aligned_t incrloop_falseshare(
-    void *arg)
-{
+static aligned_t incrloop_falseshare(void *arg)
+{				       /*{{{ */
     unsigned int offset = (unsigned int)(intptr_t) arg;
     unsigned int i;
     aligned_t *myinc = increments + offset;
@@ -140,11 +126,10 @@ static aligned_t incrloop_falseshare(
 	qthread_incr(myinc, 1);
     }
     return 0;
-}
+}				       /*}}} */
 
-static aligned_t incrloop_nocompete(
-    void *arg)
-{
+static aligned_t incrloop_nocompete(void *arg)
+{				       /*{{{ */
     unsigned int i;
     aligned_t myinc;
 
@@ -152,11 +137,10 @@ static aligned_t incrloop_nocompete(
 	qthread_incr(&myinc, 1);
     }
     return 0;
-}
+}				       /*}}} */
 
-static aligned_t incrstream(
-    void *arg)
-{
+static aligned_t incrstream(void *arg)
+{				       /*{{{ */
     unsigned int i;
     aligned_t *const myinc = (aligned_t *) arg;
 
@@ -164,11 +148,10 @@ static aligned_t incrstream(
 	qthread_incr(myinc + i, 1);
     }
     return 0;
-}
+}				       /*}}} */
 
-static aligned_t addloop_falseshare(
-    void *arg)
-{
+static aligned_t addloop_falseshare(void *arg)
+{				       /*{{{ */
     unsigned int offset = (unsigned int)(intptr_t) arg;
     unsigned int i;
     aligned_t *myinc = increments + offset;
@@ -177,11 +160,10 @@ static aligned_t addloop_falseshare(
 	(*myinc)++;
     }
     return *myinc;
-}
+}				       /*}}} */
 
-static aligned_t addloop_nocompete(
-    void *arg)
-{
+static aligned_t addloop_nocompete(void *arg)
+{				       /*{{{ */
     unsigned int i;
     aligned_t myinc = 0;
 
@@ -189,33 +171,27 @@ static aligned_t addloop_nocompete(
 	myinc++;
     }
     return myinc;
-}
+}				       /*}}} */
 
-static void streaming_incr(
-    qthread_t * me,
-    const size_t startat,
-    const size_t stopat,
-    void *arg)
-{
+static void streaming_incr(const size_t startat, const size_t stopat,
+			   void *arg)
+{				       /*{{{ */
     size_t i;
 
     for (i = startat; i < stopat; i++) {
 	qthread_incr(increments + i, 1);
     }
-}
+}				       /*}}} */
 
-static void streaming_naincr(
-    qthread_t * me,
-    const size_t startat,
-    const size_t stopat,
-    void *arg)
-{
+static void streaming_naincr(const size_t startat, const size_t stopat,
+			     void *arg)
+{				       /*{{{ */
     size_t i;
 
     for (i = startat; i < stopat; i++) {
 	increments[i]++;
     }
-}
+}				       /*}}} */
 
 static char *human_readable_rate(
     double rate)

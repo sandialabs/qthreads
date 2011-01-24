@@ -39,29 +39,23 @@ static aligned_t dequeuer(
     return 0;
 }
 
-static void loop_queuer(
-    qthread_t * me,
-    const size_t startat,
-    const size_t stopat,
-    void *arg)
-{
+static void loop_queuer(const size_t startat, const size_t stopat, void *arg)
+{				       /*{{{ */
     size_t i;
     qdqueue_t *q = (qdqueue_t *) arg;
+    void *me = (void*)(uintptr_t)qthread_id();
 
     for (i = startat; i < stopat; i++) {
-	if (qdqueue_enqueue(q, (void *)me) != QTHREAD_SUCCESS) {
-	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void *)me);
+	if (qdqueue_enqueue(q, me) != QTHREAD_SUCCESS) {
+	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", me);
 	    exit(-2);
 	}
     }
-}
+}				       /*}}} */
 
-static void loop_dequeuer(
-    qthread_t * me,
-    const size_t startat,
-    const size_t stopat,
-    void *arg)
-{
+static void loop_dequeuer(const size_t startat, const size_t stopat,
+			  void *arg)
+{				       /*{{{ */
     size_t i;
     qdqueue_t *q = (qdqueue_t *) arg;
 
@@ -71,7 +65,7 @@ static void loop_dequeuer(
 	    exit(-2);
 	}
     }
-}
+}				       /*}}} */
 
 int main(
     int argc,

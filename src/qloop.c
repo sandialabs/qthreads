@@ -36,7 +36,7 @@ struct qloop_wrapper_args {
 static aligned_t qloop_wrapper(
     struct qloop_wrapper_args * const restrict arg)
 {				       /*{{{ */
-    arg->func(qthread_self(), arg->startat, arg->stopat, arg->arg);
+    arg->func(arg->startat, arg->stopat, arg->arg);
     return 0;
 }				       /*}}} */
 
@@ -679,7 +679,6 @@ static aligned_t qqloop_wrapper(
     volatile aligned_t *const dc = &(stat->donecount);
     const qq_getiter_f get_iters = stat->get;
     const qthread_shepherd_id_t shep = arg->shep;
-    qthread_t *me = qthread_self();
 
     /* non-consts */
     struct qqloop_wrapper_range range = {0,0,0};
@@ -692,7 +691,7 @@ static aligned_t qqloop_wrapper(
 	    if (iq->type == TIMED) {
 		qtimer_start(iq->type_specific_data.timed.timers[shep]);
 	    }
-	    func(me, range.startat, range.stopat, a);
+	    func(range.startat, range.stopat, a);
 	    if (iq->type == TIMED) {
 		qtimer_stop(iq->type_specific_data.timed.timers[shep]);
 	    }

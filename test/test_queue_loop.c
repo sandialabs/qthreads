@@ -17,7 +17,6 @@ static aligned_t *uia = NULL;
 static unsigned int REALLY_VERBOSE = 0;
 
 static void sum(
-    qthread_t * me,
     const size_t startat,
     const size_t stopat,
     void *arg_)

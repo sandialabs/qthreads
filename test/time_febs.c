@@ -12,71 +12,71 @@ size_t MAXPARALLELISM = 256;
 aligned_t incrementme = 0;
 aligned_t *increments = NULL;
 
-static void balanced_readFF(qthread_t * me, const size_t startat,
-			  const size_t stopat, void *arg)
-{
+static void balanced_readFF(const size_t startat, const size_t stopat,
+			    void *arg)
+{				       /*{{{ */
     size_t i;
 
     for (i = startat; i < stopat; i++) {
-	qthread_readFF(NULL, (aligned_t*)arg);
+	qthread_readFF(NULL, (aligned_t *) arg);
     }
-}
+}				       /*}}} */
 
-static void balanced_syncvar_readFF(qthread_t * me, const size_t startat,
-			  const size_t stopat, void *arg)
-{
+static void balanced_syncvar_readFF(const size_t startat, const size_t stopat,
+				    void *arg)
+{				       /*{{{ */
     size_t i;
 
     for (i = startat; i < stopat; i++) {
-	qthread_syncvar_readFF(NULL, (syncvar_t*)arg);
+	qthread_syncvar_readFF(NULL, (syncvar_t *) arg);
     }
-}
+}				       /*}}} */
 
-static void balanced_falseshare_syncreadFF(qthread_t * me, const size_t startat,
-				const size_t stopat, void *arg)
-{
+static void balanced_falseshare_syncreadFF(const size_t startat,
+					   const size_t stopat, void *arg)
+{				       /*{{{ */
     size_t i;
     qthread_shepherd_id_t shep = qthread_shep();
-    syncvar_t *myloc = ((syncvar_t*)arg) + shep;
+    syncvar_t *myloc = ((syncvar_t *) arg) + shep;
 
     for (i = startat; i < stopat; i++) {
 	qthread_syncvar_readFF(NULL, myloc);
     }
-}
+}				       /*}}} */
 
-static void balanced_falseshare_readFF(qthread_t * me, const size_t startat,
-				const size_t stopat, void *arg)
-{
+static void balanced_falseshare_readFF(const size_t startat,
+				       const size_t stopat, void *arg)
+{				       /*{{{ */
     size_t i;
     qthread_shepherd_id_t shep = qthread_shep();
-    aligned_t *myloc = ((aligned_t*)arg) + shep;
+    aligned_t *myloc = ((aligned_t *) arg) + shep;
 
     for (i = startat; i < stopat; i++) {
 	qthread_readFF(NULL, myloc);
     }
-}
+}				       /*}}} */
 
-static void balanced_noncomp_syncreadFF(qthread_t * me, const size_t startat,
-			     const size_t stopat, void *arg)
-{
+static void balanced_noncomp_syncreadFF(const size_t startat,
+					const size_t stopat, void *arg)
+{				       /*{{{ */
     size_t i;
     syncvar_t myinc = SYNCVAR_STATIC_INITIALIZER;
 
     for (i = startat; i < stopat; i++) {
 	qthread_syncvar_readFF(NULL, &myinc);
     }
-}
+}				       /*}}} */
 
-static void balanced_noncomp_readFF(qthread_t * me, const size_t startat,
-			     const size_t stopat, void *arg)
-{
+static void balanced_noncomp_readFF(const size_t startat, const size_t stopat,
+				    void *arg)
+{				       /*{{{ */
     size_t i;
     aligned_t myinc = 0;
 
     for (i = startat; i < stopat; i++) {
 	qthread_readFF(NULL, &myinc);
     }
-}
+}				       /*}}} */
 
 static aligned_t justreturn(void * arg)
 {

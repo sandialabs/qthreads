@@ -54,12 +54,8 @@ static aligned_t dequeuer(
     return 0;
 }
 
-static void loop_queuer(
-    qthread_t * me,
-    const size_t startat,
-    const size_t stopat,
-    void *arg)
-{
+static void loop_queuer(const size_t startat, const size_t stopat, void *arg)
+{				       /*{{{ */
     size_t i;
     qdqueue_t *q = (qdqueue_t *) arg;
 
@@ -67,18 +63,15 @@ static void loop_queuer(
 	void *tmp = qpool_alloc(memory);
 	memset(tmp, 1, objsize);
 	if (qdqueue_enqueue(q, tmp) != QTHREAD_SUCCESS) {
-	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void *)me);
+	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void *)tmp);
 	    exit(-2);
 	}
     }
-}
+}				       /*}}} */
 
-static void loop_dequeuer(
-    qthread_t * me,
-    const size_t startat,
-    const size_t stopat,
-    void *arg)
-{
+static void loop_dequeuer(const size_t startat, const size_t stopat,
+			  void *arg)
+{				       /*{{{ */
     size_t i;
     qdqueue_t *q = (qdqueue_t *) arg;
     void *ref = qpool_alloc(memory);
@@ -97,7 +90,7 @@ static void loop_dequeuer(
 	qpool_free(memory, tmp);
     }
     qpool_free(memory, ref);
-}
+}				       /*}}} */
 
 int main(
     int argc,
