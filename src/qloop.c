@@ -89,7 +89,6 @@ static void qt_loop_inner(
     int future)
 {				       /*{{{ */
     size_t i, threadct = 0;
-    qthread_t *const me = qthread_self();
     size_t steps = stop - start;
     struct qloop_wrapper_args *qwa;
     syncvar_t *rets;
@@ -107,25 +106,13 @@ static void qt_loop_inner(
 	qwa[threadct].stopat = i + 1;
 	qwa[threadct].arg = argptr;
 	if (future) {
-	    qassert(qthread_fork_syncvar_future_to
-		    (me, (qthread_f) qloop_wrapper, qwa + threadct, rets + i,
-		     (qthread_shepherd_id_t) (threadct %
-			 qthread_num_shepherds())),
+	    qassert(qthread_fork_syncvar_future
+		    ((qthread_f) qloop_wrapper, qwa + threadct, rets + i),
 		    QTHREAD_SUCCESS);
 	} else {
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-	    qassert(qthread_fork_syncvar_to
-		    ((qthread_f) qloop_wrapper, qwa + threadct, NULL, 0, rets + i,
-		     (qthread_shepherd_id_t) (threadct %
-			 qthread_num_shepherds())),
+	    qassert(qthread_fork_syncvar
+		    ((qthread_f) qloop_wrapper, qwa + threadct, rets + i),
 		    QTHREAD_SUCCESS);
-#else
-	    qassert(qthread_fork_syncvar_to
-		    ((qthread_f) qloop_wrapper, qwa + threadct, rets + i,
-		     (qthread_shepherd_id_t) (threadct %
-			 qthread_num_shepherds())),
-		    QTHREAD_SUCCESS);
-#endif
 	}
 	threadct++;
     }
@@ -190,9 +177,8 @@ static void qt_loop_step_inner(
 		 (qthread_shepherd_id_t) (threadct %
 					  qthread_num_shepherds()));
 	} else {
-	    qassert(qthread_fork_syncvar_to
-		    ((qthread_f) qloop_step_wrapper, qwa + threadct, NULL, 0, rets + i,
-		     (qthread_shepherd_id_t) (threadct)),
+	    qassert(qthread_fork_syncvar
+		    ((qthread_f) qloop_step_wrapper, qwa + threadct, rets + i),
 		    QTHREAD_SUCCESS);
 	}
 	threadct++;
@@ -230,7 +216,6 @@ static QINLINE void qt_loop_balance_inner(
     const size_t each = (stop - start) / maxsheps;
     size_t extra = (stop - start) - (each * maxsheps);
     size_t iterend = start;
-    qthread_t *const me = qthread_self();
 
     assert(func);
     assert(qwa);
@@ -245,18 +230,12 @@ static QINLINE void qt_loop_balance_inner(
 	}
 	iterend = qwa[i].stopat;
 	if (!future) {
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-	    qassert(qthread_fork_syncvar_to
-		    ((qthread_f) qloop_wrapper, qwa + i, NULL, 0, rets + i, i),
-		    QTHREAD_SUCCESS);
-#else
 	    qassert(qthread_fork_syncvar_to
 		    ((qthread_f) qloop_wrapper, qwa + i, rets + i, i),
 		    QTHREAD_SUCCESS);
-#endif
 	} else {
 	    qassert(qthread_fork_syncvar_future_to
-		    (me, (qthread_f) qloop_wrapper, qwa + i, rets + i, i),
+		    ((qthread_f) qloop_wrapper, qwa + i, rets + i, i),
 		    QTHREAD_SUCCESS);
 	}
     }
@@ -320,7 +299,6 @@ static QINLINE void qt_loopaccum_balance_inner(
     const size_t each = (stop - start) / qthread_num_shepherds();
     size_t extra = (stop - start) - (each * qthread_num_shepherds());
     size_t iterend = start;
-    qthread_t *const me = qthread_self();
 
     if (qthread_num_shepherds() > 1) {
 	realrets = (char *)malloc(size * (qthread_num_shepherds() - 1));
@@ -347,19 +325,13 @@ static QINLINE void qt_loopaccum_balance_inner(
 	}
 	iterend = qwa[i].stopat;
 	if (!future) {
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-	    qassert(qthread_fork_syncvar_to
-		    ((qthread_f) qloopaccum_wrapper, qwa + i, NULL, 0, rets + i, i),
-		    QTHREAD_SUCCESS);
-#else
 	    qassert(qthread_fork_syncvar_to
 		    ((qthread_f) qloopaccum_wrapper, qwa + i, rets + i, i),
 		    QTHREAD_SUCCESS);
-#endif
 	} else {
 	    qassert(qthread_fork_syncvar_future_to
-		    (me, (qthread_f) qloopaccum_wrapper, qwa + i, rets + i,
-		     i), QTHREAD_SUCCESS);
+		    ((qthread_f) qloopaccum_wrapper, qwa + i, rets + i, i),
+		    QTHREAD_SUCCESS);
 	}
     }
     for (i = 0; i < qthread_num_shepherds(); i++) {
@@ -1273,13 +1245,19 @@ void qt_parallel_step(
 int forLockInitialized = 0;
 QTHREAD_FASTLOCK_TYPE forLock;	// used for mutual exclusion in qt_parallel_for - needs init
 volatile int forLoopsStarted = 0;	// used for active loop in qt_parallel_for
-int qthread_forCount(
-    qthread_t *,
-    int);
 
 // written by AKP
-int cnbWorkers;
-double cnbTimeMin;
+static int cnbWorkers;
+static double cnbTimeMin;
+
+int *cnbWorkers_(void)
+{
+    return &cnbWorkers;
+}
+double *cnbTimeMin_(void)
+{
+    return &cnbTimeMin;
+}
 
 int qloop_internal_computeNextBlock(
     int block,
@@ -1363,9 +1341,8 @@ static void qt_parallel_qfor(
     const size_t incr,
     void *restrict argptr)
 {
-    qthread_t *me = qthread_self();
     volatile qqloop_step_handle_t *qqhandle = NULL;
-    int forCount = qthread_forCount(me, 1);	// my loop count
+    int forCount = qthread_forCount(1);	// my loop count
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     cnbWorkers = qthread_num_shepherds()* qlib->nworkerspershep;

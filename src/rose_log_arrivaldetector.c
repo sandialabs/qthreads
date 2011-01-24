@@ -13,6 +13,7 @@
 #include "qt_arrive_first.h"
 #include "qt_barrier.h"
 #include "qthread_asserts.h"
+#include "qloop_innards.h"	       /* for cnbWorkers_ and cnbTimeMin_ */
 
 static qt_arrive_first_t *qt_arrive_first_create(int size, qt_barrier_btype type, int debug);
 static void qt_arrive_first_destroy(qt_arrive_first_t * b);
@@ -242,14 +243,12 @@ void qt_global_arrive_first_init(
 {				       /*{{{ */
 
     if (MArrFirst == NULL) {
-	extern int cnbWorkers;
-	extern double cnbTimeMin;
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-	cnbWorkers = qthread_num_workers();
+	*cnbWorkers_() = qthread_num_workers();
 #else
-	cnbWorkers = qthread_num_shepherds();
+	*cnbWorkers_() = qthread_num_shepherds();
 #endif
-	cnbTimeMin = 1.0;
+	*cnbTimeMin_() = 1.0;
 	MArrFirst = qt_arrive_first_create(size, REGION_BARRIER, debug);
 	assert(MArrFirst);
     }

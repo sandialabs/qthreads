@@ -796,18 +796,16 @@ bool XOMP_loop_ordered_guided_next(
   return XOMP_loop_guided_next(a, b);
 }
 
-taskSyncvar_t * qthread_getTaskRetVar(qthread_t * t);
-void qthread_setTaskRetVar(qthread_t * t, taskSyncvar_t * v);
 syncvar_t *getSyncTaskVar(qthread_t *me);
 
 syncvar_t *getSyncTaskVar(qthread_t *me)
 {
   taskSyncvar_t * syncVar = (taskSyncvar_t *)calloc(1,sizeof(taskSyncvar_t));
-  qthread_getTaskListLock(me);
+  qthread_getTaskListLock();
   //  qthread_syncvar_empty(me,&(syncVar->retValue));
-  syncVar->next_task = qthread_getTaskRetVar(me);
-  qthread_setTaskRetVar(me,syncVar);
-  qthread_releaseTaskListLock(me);
+  syncVar->next_task = qthread_getTaskRetVar();
+  qthread_setTaskRetVar(syncVar);
+  qthread_releaseTaskListLock();
   
   return &(syncVar->retValue);
 }
@@ -815,9 +813,9 @@ syncvar_t *getSyncTaskVar(qthread_t *me)
 void qthread_run_needed_task(syncvar_t *value);
 void walkSyncTaskList(qthread_t *me)
 {
-  qthread_getTaskListLock(me);
+  qthread_getTaskListLock();
   taskSyncvar_t * syncVar;
-  while ( (syncVar = qthread_getTaskRetVar(me))) {
+  while ( (syncVar = qthread_getTaskRetVar())) {
 
     // manually check for empty -- check if present in current shepherds ready queue
     //   if present take and start executing
@@ -837,19 +835,19 @@ void walkSyncTaskList(qthread_t *me)
        * kind (e.g. cas) */
       syncvar_t lc_syncVar = *lc_p;
       if (lc_syncVar.u.s.lock == 0 && (lc_syncVar.u.s.state & 2) ) { /* empty and unlocked */
-	qthread_releaseTaskListLock(me);
+	qthread_releaseTaskListLock();
 	qthread_run_needed_task(lc_p);
-	qthread_getTaskListLock(me);
-	syncVar = qthread_getTaskRetVar(me);
+	qthread_getTaskListLock();
+	syncVar = qthread_getTaskRetVar();
       }
     }
 #endif
 #endif
     qthread_syncvar_readFF(NULL, lc_p);
-    qthread_setTaskRetVar(me,syncVar->next_task);
+    qthread_setTaskRetVar(syncVar->next_task);
     free(syncVar);
   }
-  qthread_releaseTaskListLock(me);
+  qthread_releaseTaskListLock();
   return;
 }
 
@@ -873,17 +871,7 @@ void XOMP_task(
   qthread_debug(LOCK_DETAILS, "me(%p) creating task for shepherd %d\n", me, id%qthread_num_shepherds());
 #endif
   syncvar_t *ret = getSyncTaskVar(me); // get new syncvar_t -- setup openmpThreadId (if needed)
-  void * arg_copy = NULL;
-  if ((sizeof(aligned_t) * 128) < arg_size){
-    arg_copy = malloc(arg_size);
-    memcpy(arg_copy,arg,arg_size);
-  }
-  qthread_f qfunc = (qthread_f)func;
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  qthread_fork_syncvar_to(qfunc, arg, arg_copy, arg_size, ret, qthread_shep());
-#else
-  qthread_fork_syncvar_to(qfunc, arg, arg_copy, arg_size, ret, id%qthread_num_shepherds());
-#endif
+  qthread_fork_syncvar_copyargs((qthread_f)func, arg, arg_size, ret);
 }
 
 void XOMP_taskwait(

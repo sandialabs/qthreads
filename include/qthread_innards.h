@@ -115,8 +115,8 @@ void qthread_assertfuture(qthread_t * t);
 
 void qthread_assertnotfuture(void);
 
-int qthread_fork_future_to(const qthread_t * me, const qthread_f f,
-			   const void *arg, aligned_t * ret,
+int qthread_fork_future_to(const qthread_f f, const void *arg,
+			   aligned_t * ret,
 			   const qthread_shepherd_id_t shepherd);
 unsigned int qthread_internal_shep_to_node(const qthread_shepherd_id_t shep);
 
@@ -126,9 +126,30 @@ unsigned int qthread_internal_shep_to_node(const qthread_shepherd_id_t shep);
 # define qthread_fork_syncvar_future_to(me, f, arg, ret, shep) qthread_fork_syncvar_to(f, arg, ret, shep)
 #else
 # define qthread_shepherd_count() (qlib->nshepherds)
-int qthread_fork_syncvar_future_to(const qthread_t * me, const qthread_f f,
-			   const void *arg, syncvar_t * ret,
-			   const qthread_shepherd_id_t shepherd);
+int qthread_fork_syncvar_future(const qthread_f f, const void *arg,
+				syncvar_t * ret);
+int qthread_fork_syncvar_future_to(const qthread_f f, const void *arg,
+				   syncvar_t * ret,
+				   const qthread_shepherd_id_t shepherd);
+int qthread_fork_syncvar_copyargs(const qthread_f f, const void *arg,
+				  size_t arg_size, syncvar_t * ret);
+#endif
+
+/* functions added by akp to hand openMP task completion 
+ */
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+void qthread_getTaskListLock(void);
+void qthread_releaseTaskListLock(void);
+
+extern int __qthreads_temp;
+void qthread_reset_forCount(void);
+
+int qthread_forCount(int inc);
+taskSyncvar_t * qthread_getTaskRetVar(void);
+void qthread_setTaskRetVar(taskSyncvar_t *v);
+#endif
+#ifdef STEAL_PROFILE
+void qthread_steal_stat(void);
 #endif
 
 /* internal initialization functions */

@@ -177,15 +177,13 @@ qthread_t *qthread_self(void);
  *     function spawns the thread to a specific shepherd.
  */
 int qthread_fork(const qthread_f f, const void *const arg, aligned_t * ret);
-int qthread_fork_syncvar(const qthread_f f, const void *const arg, syncvar_t * ret);
+int qthread_fork_syncvar(const qthread_f f, const void *const arg,
+			 syncvar_t * ret);
 int qthread_fork_to(const qthread_f f, const void *const arg, aligned_t * ret,
 		    const qthread_shepherd_id_t shepherd);
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-int qthread_fork_syncvar_to(const qthread_f f, const void *const arg,  const void *const arg_copy,
-			    int64_t free_arg, syncvar_t * ret, const qthread_shepherd_id_t shepherd);
-#else
-int qthread_fork_syncvar_to(const qthread_f f, const void *const arg, syncvar_t * ret, const qthread_shepherd_id_t shepherd);
-#endif
+int qthread_fork_syncvar_to(const qthread_f f, const void *const arg,
+			    syncvar_t * ret,
+			    const qthread_shepherd_id_t shepherd);
 
 /* This is a function to move a thread from one shepherd to another. */
 int qthread_migrate_to(const qthread_shepherd_id_t shepherd);
@@ -323,23 +321,6 @@ int qthread_syncvar_readFE(uint64_t * restrict const dest,
  */
 int qthread_lock(const aligned_t * a);
 int qthread_unlock(const aligned_t * a);
-
-/* functions added by akp to hand openMP task completion 
- */
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-void qthread_getTaskListLock(qthread_t * t);
-void qthread_releaseTaskListLock(qthread_t * t);
-
-extern int __qthreads_temp;
-void qthread_reset_forCount(qthread_t *);
-
-int qthread_forCount(qthread_t * t, int inc);
-taskSyncvar_t * qthread_getTaskRetVar(qthread_t * t);
-void qthread_setTaskRetVar(qthread_t * t,taskSyncvar_t *v);
-#endif
-#ifdef STEAL_PROFILE
-void qthread_steal_stat(void);
-#endif
 
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
 uint32_t qthread_incr32_(volatile uint32_t *, const int32_t);

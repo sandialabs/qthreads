@@ -1,6 +1,8 @@
 #ifndef QLOOP_INNARDS_H
 #define QLOOP_INNARDS_H
 
+#include "qthread/qtimer.h"
+
 struct qqloop_iteration_queue {
     volatile saligned_t start;
     saligned_t stop;
@@ -80,6 +82,9 @@ int qloop_internal_computeNextBlock(
     int block,
     double time,
     volatile qqloop_step_handle_t * loop);
+
+double *cnbTimeMin_(void);
+int *cnbWorkers_(void);
 #endif /* QTHREAD_USE_ROSE_EXTENSIONS */
 
 #endif

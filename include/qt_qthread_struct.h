@@ -11,6 +11,8 @@
 # include "osx_compat/taskimpl.h"
 #endif
 
+#define ARGCOPY_MAX 1024
+
 enum threadstate {
     QTHREAD_STATE_NEW,
     QTHREAD_STATE_RUNNING,
@@ -62,9 +64,9 @@ struct qthread_s
     aligned_t id;               /* id used in barrier and arrive_first */
     void *arg;			/* user defined data */
     void *ret;			/* user defined retval location */
-    aligned_t   free_arg;       /* user defined data malloced and to be freed */
-    aligned_t   test[128];      /* space so that I can avoid malloc in most small cases */
     struct qthread_runtime_data_s *rdata;
+    enum {NO,YES} free_arg;	      /* flag that says arg was malloced and needs to be freed */
+    char argcopy_data[ARGCOPY_MAX];   /* space so that I can avoid malloc in most small cases */
 };
 
 #endif
