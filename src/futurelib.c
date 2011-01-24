@@ -257,7 +257,7 @@ void future_acquire(void)
 
     assert(future_bookkeeping_array != NULL);
     loc = ft_loc();
-    qthread_debug(THREAD_BEHAVIOR, "Thread %p acquire on loc %p\n", (void *)me,
+    qthread_debug(THREAD_BEHAVIOR, "Thread %i acquire on loc %p\n", (int)qthread_id(),
 		  (void *)loc);
     //Non-futures need not acquire a v proc
     if (loc != NULL) {
@@ -279,7 +279,7 @@ static void future_join(aligned_t * ft)
 void future_exit(void)
 {
     assert(future_bookkeeping_array != NULL);
-    qthread_debug(THREAD_BEHAVIOR, "Thread %p exit on loc %d\n", (void *)me,
+    qthread_debug(THREAD_BEHAVIOR, "Thread %i exit on loc %d\n", (int)qthread_id(),
 		  qthread_shep());
     future_yield();
     qthread_assertnotfuture();
