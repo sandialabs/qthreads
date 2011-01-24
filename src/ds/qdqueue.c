@@ -61,7 +61,7 @@ static Q_NOINLINE void *volatile *vol_id_qdsqptr(void *volatile *ptr)
 
 #define _(x) *vol_id_qdsqptr(&(x))
 
-static struct qdqueue_adstruct_s qdqueue_adheap_pop(qthread_t * me, struct qdqueue_adheap_s
+static struct qdqueue_adstruct_s qdqueue_adheap_pop(struct qdqueue_adheap_s
 						    *heap)
 {				       /*{{{ */
     struct qdqueue_adstruct_s ret;
@@ -96,7 +96,7 @@ static struct qdqueue_adstruct_s qdqueue_adheap_pop(qthread_t * me, struct qdque
     printf("pushcond\n");
 }*/
 
-static void qdqueue_adheap_push(qthread_t * me, struct qdqueue_adheap_s *heap,
+static void qdqueue_adheap_push(struct qdqueue_adheap_s *heap,
 				void *shep, aligned_t gen)
 {				       /*{{{ */
     size_t i;
@@ -367,7 +367,7 @@ qdqueue_t *qdqueue_create(void)
 }				       /*}}} */
 
 /* destroy that queue */
-int qdqueue_destroy(qthread_t * me, qdqueue_t * q)
+int qdqueue_destroy(qdqueue_t * q)
 {				       /*{{{ */
     qthread_shepherd_id_t i;
 
@@ -392,12 +392,11 @@ int qdqueue_destroy(qthread_t * me, qdqueue_t * q)
 }				       /*}}} */
 
 /* enqueue something in the queue */
-int qdqueue_enqueue(qthread_t * me, qdqueue_t * q, void *elem)
+int qdqueue_enqueue(qdqueue_t * q, void *elem)
 {				       /*{{{ */
     int stat;
     struct qdsubqueue_s *myq;
 
-    qassert_ret((me != NULL), QTHREAD_BADARGS);
     qassert_ret((q != NULL), QTHREAD_BADARGS);
     qassert_ret((elem != NULL), QTHREAD_BADARGS);
 
@@ -419,7 +418,7 @@ int qdqueue_enqueue(qthread_t * me, qdqueue_t * q, void *elem)
 	    for (shep = 0; shep < myq->nNeighbors; shep++) {
 		struct qdsubqueue_s *neighbor = myq->neighbors[shep];
 
-		qdqueue_adheap_push(me, &(neighbor->ads), myq, generation);
+		qdqueue_adheap_push(&(neighbor->ads), myq, generation);
 	    }
 	}
     }
@@ -428,13 +427,12 @@ int qdqueue_enqueue(qthread_t * me, qdqueue_t * q, void *elem)
 }				       /*}}} */
 
 /* enqueue something in the queue at a given location */
-int qdqueue_enqueue_there(qthread_t * me, qdqueue_t * q, void *elem,
+int qdqueue_enqueue_there(qdqueue_t * q, void *elem,
 			  qthread_shepherd_id_t there)
 {				       /*{{{ */
     int stat;
     struct qdsubqueue_s *myq;
 
-    qassert_ret((me != NULL), QTHREAD_BADARGS);
     qassert_ret((q != NULL), QTHREAD_BADARGS);
     qassert_ret((elem != NULL), QTHREAD_BADARGS);
     qassert_ret((there < qthread_num_shepherds()), QTHREAD_BADARGS);
@@ -457,7 +455,7 @@ int qdqueue_enqueue_there(qthread_t * me, qdqueue_t * q, void *elem,
 	    for (shep = 0; shep < myq->nNeighbors; shep++) {
 		struct qdsubqueue_s *neighbor = myq->neighbors[shep];
 
-		qdqueue_adheap_push(me, &(neighbor->ads), myq, generation);
+		qdqueue_adheap_push(&(neighbor->ads), myq, generation);
 	    }
 	}
     }
@@ -466,12 +464,11 @@ int qdqueue_enqueue_there(qthread_t * me, qdqueue_t * q, void *elem,
 }				       /*}}} */
 
 /* dequeue something from the queue (returns NULL for an empty queue) */
-void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
+void *qdqueue_dequeue(qdqueue_t * q)
 {				       /*{{{ */
     struct qdsubqueue_s *myq;
     void *ret;
 
-    qassert_ret((me != NULL), NULL);
     qassert_ret((q != NULL), NULL);
 
     myq = &(q->Qs[qthread_shep()]);
@@ -486,7 +483,7 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
 	{
 	    struct qdqueue_adstruct_s ad;
 
-	    while ((ad = qdqueue_adheap_pop(me, &myq->ads)).shep != NULL) {
+	    while ((ad = qdqueue_adheap_pop(&myq->ads)).shep != NULL) {
 		struct qdsubqueue_s *lc = (struct qdsubqueue_s *) _(ad.shep->last_consumed);
 
 		if (lc == ad.shep) {
@@ -504,7 +501,7 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
 		    }
 		} else if (lc != NULL) {
 		    /* it got work from somewhere! */
-		    qdqueue_adheap_push(me, &myq->ads, lc, 0);
+		    qdqueue_adheap_push(&myq->ads, lc, 0);
 		    /* reset the remote host's last_consumed counter, to avoid infinite loops */
 		    (void)qthread_cas_ptr((void*volatile*)&(ad.shep->last_consumed),
 					  (void *)lc, NULL);
@@ -537,16 +534,11 @@ void *qdqueue_dequeue(qthread_t * me, qdqueue_t * q)
 }				       /*}}} */
 
 /* returns 1 if the queue is empty, 0 otherwise */
-int qdqueue_empty(qthread_t * me, qdqueue_t * q)
+int qdqueue_empty(qdqueue_t * q)
 {				       /*{{{ */
     struct qdsubqueue_s *myq;
 
-    assert(me);
-    assert(q);
-    if (!me || !q) {
-	return 0;
-    }
-
+    qassert_ret(q, 0);
     myq = &(q->Qs[qthread_shep()]);
     if (!qlfqueue_empty(myq->theQ)) {
 	return 0;

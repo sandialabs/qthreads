@@ -128,7 +128,7 @@ static void qt_wavefront_worker(qthread_t * me,
     }
     while (1) {
 	struct qt_wavefront_workunit *const wu =
-	    qdqueue_dequeue(me, arg->work_queue);
+	    qdqueue_dequeue(arg->work_queue);
 
 	if (wu == NULL) {
 	    if (vol_read_a(arg->no_more_work)) {
@@ -181,19 +181,20 @@ static void qt_wavefront_worker(qthread_t * me,
 		/* -- don't have to copy {right}, because data was placed in there directly */
 		/* step 4: enqueue work unit for right (maybe) */
 		if (wu->col < L->slats.segs - 1	/* there is a next column */
-		    && (intptr_t) vol_read_qa(&L->slats.
-					      strips[wu->row][wu->col + 1]) >
-		    1) {
+		    && (intptr_t) vol_read_qa(&L->
+					      slats.strips[wu->row][wu->col +
+								    1]) > 1) {
 		    /* data is ready! yay! */
 		    struct qt_wavefront_workunit *wu2 =
 			qpool_alloc(workunit_pool);
 
 		    wu2->row = wu->row;
 		    wu2->col = wu->col + 1;
-		    qdqueue_enqueue_there(me, arg->work_queue, wu2,
+		    qdqueue_enqueue_there(arg->work_queue, wu2,
 					  qarray_shepof(vol_read_qa
-							(&L->slats.
-							 strips[wu2->row]
+							(&L->
+							 slats.strips[wu2->
+								      row]
 							 [wu2->col]), 0));
 		}
 		/* step 5: enqueue work unit for next up (maybe) */
@@ -205,10 +206,11 @@ static void qt_wavefront_worker(qthread_t * me,
 
 		    wu2->row = wu->row + 1;
 		    wu2->col = wu->col;
-		    qdqueue_enqueue_there(me, arg->work_queue, wu2,
+		    qdqueue_enqueue_there(arg->work_queue, wu2,
 					  qarray_shepof(vol_read_qa
-							(&L->slats.
-							 strips[wu2->row]
+							(&L->
+							 slats.strips[wu2->
+								      row]
 							 [wu2->col]), 0));
 		}
 		if (wu->col == L->slats.segs - 1 &&
@@ -259,7 +261,6 @@ qt_wavefront_lattice *qt_wavefront(qarray * restrict const vertical,
 	    qdqueue_create(), &no_more_work, &donecount, func, NULL /*L*/
 	};
 	struct qt_wavefront_workunit *wu;
-	qthread_t *const me = qthread_self();
 
 	if (workunit_pool == NULL) {
 	    workunit_pool =
@@ -350,12 +351,12 @@ qt_wavefront_lattice *qt_wavefront(qarray * restrict const vertical,
 	wu->row = 0;
 	wu->col = 0;
 	wu->next = NULL;
-	qdqueue_enqueue(me, wargs.work_queue, wu);
+	qdqueue_enqueue(wargs.work_queue, wu);
 	/* step 5: wait for the workers to get done */
 	while (_(donecount) < maxsheps) {
 	    qthread_yield();
 	}
-	qdqueue_destroy(me, wargs.work_queue);
+	qdqueue_destroy(wargs.work_queue);
 	//printf("duplicates: %lu\n", (unsigned long)requeued);
 	return L;
     }

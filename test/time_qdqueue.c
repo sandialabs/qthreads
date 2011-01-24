@@ -17,7 +17,7 @@ static aligned_t queuer(
     size_t i;
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
-	if (qdqueue_enqueue(qthread_self(), q, (void *)qthread_self()) != QTHREAD_SUCCESS) {
+	if (qdqueue_enqueue(q, (void *)qthread_self()) != QTHREAD_SUCCESS) {
 	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void *)qthread_self());
 	    exit(-2);
 	}
@@ -32,7 +32,7 @@ static aligned_t dequeuer(
     size_t i;
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
-	while (qdqueue_dequeue(qthread_self(), q) == NULL) {
+	while (qdqueue_dequeue(q) == NULL) {
 	    qthread_yield();
 	}
     }
@@ -49,7 +49,7 @@ static void loop_queuer(
     qdqueue_t *q = (qdqueue_t *) arg;
 
     for (i = startat; i < stopat; i++) {
-	if (qdqueue_enqueue(me, q, (void *)me) != QTHREAD_SUCCESS) {
+	if (qdqueue_enqueue(q, (void *)me) != QTHREAD_SUCCESS) {
 	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void *)me);
 	    exit(-2);
 	}
@@ -66,8 +66,8 @@ static void loop_dequeuer(
     qdqueue_t *q = (qdqueue_t *) arg;
 
     for (i = startat; i < stopat; i++) {
-	if (qdqueue_dequeue(me, q) == NULL) {
-	    fprintf(stderr, "qdqueue_dequeue(q, %p) failed!\n", (void *)me);
+	if (qdqueue_dequeue(q) == NULL) {
+	    fprintf(stderr, "qdqueue_dequeue(%p) failed!\n", (void *)q);
 	    exit(-2);
 	}
     }
@@ -96,7 +96,7 @@ int main(
     /* prime the pump */
     qt_loop_balance(0, THREAD_COUNT * ELEMENT_COUNT, loop_queuer, q);
     qt_loop_balance(0, THREAD_COUNT * ELEMENT_COUNT, loop_dequeuer, q);
-    if (!qdqueue_empty(me, q)) {
+    if (!qdqueue_empty(q)) {
 	fprintf(stderr, "qdqueue not empty after priming!\n");
 	exit(-2);
     }
@@ -109,7 +109,7 @@ int main(
     qt_loop_balance(0, THREAD_COUNT * ELEMENT_COUNT, loop_dequeuer, q);
     qtimer_stop(timer);
     printf("loop balance dequeue: %f secs\n", qtimer_secs(timer));
-    if (!qdqueue_empty(me, q)) {
+    if (!qdqueue_empty(q)) {
 	fprintf(stderr, "qdqueue not empty after loop balance test!\n");
 	exit(-2);
     }
@@ -127,14 +127,14 @@ int main(
 	assert(qthread_readFF(NULL, &(rets[i])) == QTHREAD_SUCCESS);
     }
     qtimer_stop(timer);
-    if (!qdqueue_empty(me, q)) {
+    if (!qdqueue_empty(q)) {
 	fprintf(stderr, "qdqueue not empty after threaded test!\n");
 	exit(-2);
     }
     printf("threaded dq test: %f secs\n", qtimer_secs(timer));
     free(rets);
 
-    if (qdqueue_destroy(me, q) != QTHREAD_SUCCESS) {
+    if (qdqueue_destroy(q) != QTHREAD_SUCCESS) {
 	fprintf(stderr, "qdqueue_destroy() failed!\n");
 	exit(-2);
     }

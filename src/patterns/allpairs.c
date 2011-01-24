@@ -63,10 +63,9 @@ static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t * ptr)
 
 static aligned_t qt_ap_worker(struct qt_ap_wargs *restrict args)
 {
-    qthread_t *me = qthread_self();
     while (1) {
 	struct qt_ap_workunit *restrict const wu =
-	    qdqueue_dequeue(me, args->work_queue);
+	    qdqueue_dequeue(args->work_queue);
 	if (wu == NULL) {
 	    if (vol_read_a(args->no_more_work)) {
 		qthread_incr(args->donecount, 1);
@@ -173,7 +172,6 @@ static void qt_ap_genwork2(const size_t startat,
 
     const qthread_shepherd_id_t shep = gargs->shep;
     const qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
-    qthread_t *me = qthread_self();
 
     workunit->a1_start = gargs->start;
     workunit->a1_stop = gargs->stop;
@@ -183,15 +181,15 @@ static void qt_ap_genwork2(const size_t startat,
     /* Find distance of gargs shep */
     if (maxsheps == 1 ||
 	shep == qthread_shep() /* both remote and local on same place */ ) {
-	qdqueue_enqueue(me, gargs->wq, workunit);
+	qdqueue_enqueue(gargs->wq, workunit);
 	//qthread_incr(&mindistances, halfway_dist[qthread_shep()][shep]);
     } else {
 #if 0
 	/* option 1: trivial, probably bad */
-	qdqueue_enqueue_there(me, gargs->wq, workunit, 0);
+	qdqueue_enqueue_there(gargs->wq, workunit, 0);
 #elif 0
 	/* option 2: random, probably bad */
-	qdqueue_enqueue_there(me, gargs->wq, workunit, random() % maxsheps);
+	qdqueue_enqueue_there(gargs->wq, workunit, random() % maxsheps);
 #elif 1
 	/* option 3: random selection of the two, maybe good */
 	qthread_shepherd_id_t s;
@@ -200,7 +198,7 @@ static void qt_ap_genwork2(const size_t startat,
 	} else {
 	    s = qthread_shep();
 	}
-	qdqueue_enqueue_there(me, gargs->wq, workunit, s);
+	qdqueue_enqueue_there(gargs->wq, workunit, s);
 #elif 0
 	/* option 4: the "halfway" idea */
 	unsigned int i;
@@ -211,10 +209,10 @@ static void qt_ap_genwork2(const size_t startat,
 		break;
 	}
 	i /= 2;
-	qdqueue_enqueue_there(me, gargs->wq, workunit, neighbors[i]);
+	qdqueue_enqueue_there(gargs->wq, workunit, neighbors[i]);
 #elif defined(QTHREAD_USE_HALFWAYARRAY)
 	/* option 5: optimal "halfway" idea */
-	qdqueue_enqueue_there(me, gargs->wq, workunit,
+	qdqueue_enqueue_there(gargs->wq, workunit,
 			      halfway[qthread_shep()][shep]);
 	//qthread_incr(&mindistances, halfway_dist[qthread_shep()][shep]);
 #endif
@@ -260,7 +258,6 @@ static void qt_allpairs_internal(const qarray * array1, const qarray * array2,
     };
     struct qt_ap_gargs gargs = { wargs.work_queue, array2 };
     qthread_shepherd_id_t i;
-    qthread_t *const me = qthread_self();
 
     assert(array1);
     assert(array2);
@@ -323,7 +320,7 @@ static void qt_allpairs_internal(const qarray * array1, const qarray * array2,
     while (vol_read_a(&donecount) < max_i) {
 	qthread_yield();
     }
-    qdqueue_destroy(me, wargs.work_queue);
+    qdqueue_destroy(wargs.work_queue);
 #ifdef QTHREAD_TRACK_DISTANCES
     for (i = 1; i < max_i; i++) {
 	distances[0].i += distances[i].i;
