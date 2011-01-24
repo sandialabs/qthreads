@@ -11,6 +11,8 @@ static aligned_t checkres(void *arg)
 
     assert(myshep == 1 || myshep == 0);
 
+    printf("myshep = %u\n", (unsigned)myshep);
+    printf("arg = %u\n", (unsigned)(uintptr_t)arg);
     assert(myshep == (qthread_shepherd_id_t) (intptr_t) arg);
 
     return 0;

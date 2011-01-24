@@ -21,7 +21,7 @@ static aligned_t queuer(
     size_t i;
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
-	void *tmp = qpool_alloc(qthread_self(), memory);
+	void *tmp = qpool_alloc(memory);
 	memset(tmp, 1, objsize);
 	if (qdqueue_enqueue(qthread_self(), q, tmp) != QTHREAD_SUCCESS) {
 	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void *)qthread_self());
@@ -36,7 +36,7 @@ static aligned_t dequeuer(
 {
     qdqueue_t *q = (qdqueue_t *) arg;
     size_t i;
-    void *ref = qpool_alloc(qthread_self(), memory);
+    void *ref = qpool_alloc(memory);
 
     memset(ref, 1, objsize);
     for (i = 0; i < ELEMENT_COUNT; i++) {
@@ -48,9 +48,9 @@ static aligned_t dequeuer(
 	    fprintf(stderr, "memory was corrupted!\n");
 	    exit(-3);
 	}
-	qpool_free(qthread_self(), memory, tmp);
+	qpool_free(memory, tmp);
     }
-    qpool_free(qthread_self(), memory, ref);
+    qpool_free(memory, ref);
     return 0;
 }
 
@@ -64,7 +64,7 @@ static void loop_queuer(
     qdqueue_t *q = (qdqueue_t *) arg;
 
     for (i = startat; i < stopat; i++) {
-	void *tmp = qpool_alloc(me, memory);
+	void *tmp = qpool_alloc(memory);
 	memset(tmp, 1, objsize);
 	if (qdqueue_enqueue(me, q, tmp) != QTHREAD_SUCCESS) {
 	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void *)me);
@@ -81,7 +81,7 @@ static void loop_dequeuer(
 {
     size_t i;
     qdqueue_t *q = (qdqueue_t *) arg;
-    void *ref = qpool_alloc(me, memory);
+    void *ref = qpool_alloc(memory);
 
     memset(ref, 1, objsize);
     for (i = startat; i < stopat; i++) {
@@ -94,9 +94,9 @@ static void loop_dequeuer(
 	    fprintf(stderr, "memory was corrupted!\n");
 	    exit(-3);
 	}
-	qpool_free(me, memory, tmp);
+	qpool_free(memory, tmp);
     }
-    qpool_free(me, memory, ref);
+    qpool_free(memory, ref);
 }
 
 int main(

@@ -274,7 +274,7 @@ qpool *qpool_create(const size_t item_size)
 # define QCOMPOSE(x,y) (void*)(((uintptr_t)QPTR(x))|((QCTR(y)+1)&QCTR_MASK))
 #endif
 
-void *qpool_alloc(qthread_t * me, qpool * pool)
+void *qpool_alloc(qpool * pool)
 {				       /*{{{ */
     void *p;
     qthread_shepherd_id_t shep;
@@ -302,7 +302,7 @@ void *qpool_alloc(qthread_t * me, qpool * pool)
 
 	/* on a single-threaded shepherd, locking is unnecessary */
 #ifdef QTHREAD_SST_PRIMITIVES
-	qassert(qthread_lock(me, &mypool->lock), 0);
+	qassert(qthread_lock(&mypool->lock), 0);
 #endif
 	if (mypool->alloc_block_pos == pool->items_per_alloc) {
 	    if (mypool->alloc_list_pos == (pagesize / sizeof(void *) - 1)) {
@@ -331,7 +331,7 @@ void *qpool_alloc(qthread_t * me, qpool * pool)
 	    mypool->alloc_block_pos++;
 	}
 #ifdef QTHREAD_SST_PRIMITIVES
-	qassert(qthread_unlock(me, &mypool->lock), 0);
+	qassert(qthread_unlock(&mypool->lock), 0);
 #endif
 	if (pool->alignment != 0 &&
 	    (((unsigned long)p) & (pool->alignment - 1))) {
@@ -346,7 +346,7 @@ void *qpool_alloc(qthread_t * me, qpool * pool)
     return QPTR(p);
 }				       /*}}} */
 
-void qpool_free(qthread_t * me, qpool * pool, void *mem)
+void qpool_free(qpool * pool, void *mem)
 {				       /*{{{ */
     void *p, *old, *new;
     qthread_shepherd_id_t shep = qthread_shep();

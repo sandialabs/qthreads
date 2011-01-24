@@ -694,6 +694,10 @@ static void *qthread_shepherd(void *arg)
 
 	    assert(t->f != NULL || t->flags & QTHREAD_REAL_MCCOY);
 	    if (t->rdata == NULL) alloc_rdata(me, t);
+	    if (t->rdata->shepherd_ptr != me) {
+		fprintf(stderr, "shepherd_ptr = %p, me = %p\n", t->rdata->shepherd_ptr, me);
+		fflush(stderr);
+	    }
 	    assert(t->rdata->shepherd_ptr == me);
 
 	    if ((t->target_shepherd != NULL) && (t->target_shepherd != me) &&

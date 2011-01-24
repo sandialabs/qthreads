@@ -15,10 +15,9 @@ static aligned_t allocator(void *arg)
     aligned_t *block[5];
     aligned_t i;
     qpool *p = (qpool *) arg;
-    qthread_t *me = qthread_self();
 
     for (i = 0; i < 5; i++) {
-	if ((block[i] = (aligned_t *) qpool_alloc(me, p)) == NULL) {
+	if ((block[i] = (aligned_t *) qpool_alloc(p)) == NULL) {
 	    fprintf(stderr, "qpool_alloc() failed!\n");
 	    exit(-2);
 	}
@@ -27,20 +26,18 @@ static aligned_t allocator(void *arg)
 	block[i][0] = i;
     }
     for (i = 0; i < 5; i++) {
-	qpool_free(me, p, block[i]);
+	qpool_free(p, block[i]);
     }
     return 0;
 }
 
 int main(int argc, char *argv[])
 {
-    qthread_t *me;
     size_t i;
     aligned_t *rets;
     aligned_t **allthat;
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
-    me = qthread_self();
     CHECK_VERBOSE();
     NUMARG(ELEMENT_COUNT, "ELEMENT_COUNT");
     NUMARG(THREAD_COUNT, "THREAD_COUNT");
@@ -50,7 +47,7 @@ int main(int argc, char *argv[])
 	exit(-1);
     }
 
-    if ((rets = (aligned_t *) qpool_alloc(me, qp)) == NULL) {
+    if ((rets = (aligned_t *) qpool_alloc(qp)) == NULL) {
 	fprintf(stderr, "qpool_alloc() failed!\n");
 	exit(-1);
     }
@@ -62,18 +59,18 @@ int main(int argc, char *argv[])
 	exit(-1);
     }
 
-    qpool_free(me, qp, rets);
+    qpool_free(qp, rets);
 
     allthat = (aligned_t **) malloc(sizeof(aligned_t *) * ELEMENT_COUNT);
     assert(allthat != NULL);
     for (i = 0; i < ELEMENT_COUNT; i++) {
-	if ((allthat[i] = (aligned_t *) qpool_alloc(me, qp)) == NULL) {
+	if ((allthat[i] = (aligned_t *) qpool_alloc(qp)) == NULL) {
 	    fprintf(stderr, "qpool_alloc() failed!\n");
 	    exit(-2);
 	}
     }
     for (i = 0; i < ELEMENT_COUNT; i++) {
-	qpool_free(me, qp, allthat[i]);
+	qpool_free(qp, allthat[i]);
     }
     free(allthat);
 

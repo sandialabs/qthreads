@@ -73,7 +73,7 @@ static void pool_allocator(
     qpool *p = (qpool *) arg;
 
     for (i = startat; i < stopat; i++) {
-	if ((allthat[i] = qpool_alloc(me, p)) == NULL) {
+	if ((allthat[i] = qpool_alloc(p)) == NULL) {
 	    fprintf(stderr, "qpool_alloc() failed! (pool_allocator)\n");
 	    exit(-1);
 	}
@@ -91,7 +91,7 @@ static void pool_deallocator(
     qpool *p = (qpool *) arg;
 
     for (i = startat; i < stopat; i++) {
-	qpool_free(me, p, allthat[i]);
+	qpool_free(p, allthat[i]);
     }
 }
 

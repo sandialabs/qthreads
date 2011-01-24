@@ -186,7 +186,7 @@ static void qt_wavefront_worker(qthread_t * me,
 		    1) {
 		    /* data is ready! yay! */
 		    struct qt_wavefront_workunit *wu2 =
-			qpool_alloc(me, workunit_pool);
+			qpool_alloc(workunit_pool);
 
 		    wu2->row = wu->row;
 		    wu2->col = wu->col + 1;
@@ -201,7 +201,7 @@ static void qt_wavefront_worker(qthread_t * me,
 		    vol_read_qa(&L->struts.strips[wu->col][wu->row + 1]) !=
 		    NULL) {
 		    struct qt_wavefront_workunit *wu2 =
-			qpool_alloc(me, workunit_pool);
+			qpool_alloc(workunit_pool);
 
 		    wu2->row = wu->row + 1;
 		    wu2->col = wu->col;
@@ -218,7 +218,7 @@ static void qt_wavefront_worker(qthread_t * me,
 		//} else {
 		//qthread_incr(&requeued, 1);
 	    }
-	    qpool_free(me, workunit_pool, wu);
+	    qpool_free(workunit_pool, wu);
 	}
     }
     if (R) {
@@ -346,7 +346,7 @@ qt_wavefront_lattice *qt_wavefront(qarray * restrict const vertical,
 			    shep);
 	}
 	/* step 4: queue a job for the lower-left corner */
-	wu = qpool_alloc(me, workunit_pool);
+	wu = qpool_alloc(workunit_pool);
 	wu->row = 0;
 	wu->col = 0;
 	wu->next = NULL;

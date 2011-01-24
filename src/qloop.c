@@ -190,12 +190,12 @@ static void qt_loop_step_inner(
 	qwa[threadct].step = stride;
 	qwa[threadct].arg = argptr;
 	if (future) {
-	    future_fork_syncvar_to
+	    future_fork_syncvar
 	        ((qthread_f) qloop_step_wrapper, qwa + threadct, rets + i,
 		 (qthread_shepherd_id_t) (threadct %
 					  qthread_num_shepherds()));
 	} else {
-	    qassert(qthread_fork_syncvar_to
+	    qassert(qthread_fork_syncvar
 		    ((qthread_f) qloop_step_wrapper, qwa + threadct, NULL, 0, rets + i,
 		     (qthread_shepherd_id_t) (threadct)),
 		    QTHREAD_SUCCESS);
