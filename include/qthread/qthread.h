@@ -178,8 +178,8 @@ qthread_t *qthread_self(void);
  */
 int qthread_fork(const qthread_f f, const void *const arg, aligned_t * ret);
 int qthread_fork_syncvar(const qthread_f f, const void *const arg,
-			 syncvar_t * ret);
-int qthread_fork_to(const qthread_f f, const void *const arg, aligned_t * ret,
+			 syncvar_t * const ret);
+int qthread_fork_to(const qthread_f f, const void *const arg, aligned_t * const ret,
 		    const qthread_shepherd_id_t shepherd);
 int qthread_fork_syncvar_to(const qthread_f f, const void *const arg,
 			    syncvar_t * ret,

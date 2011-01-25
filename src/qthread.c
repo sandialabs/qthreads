@@ -2771,70 +2771,93 @@ int qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
     return QTHREAD_MALLOC_ERROR;
 }				       /*}}} */
 
-int qthread_fork_syncvar_copyargs(const qthread_f f, const void *arg,
-				  size_t arg_size, syncvar_t * ret)
+int qthread_fork_syncvar_copyargs_to(const qthread_f f, const void *const arg,
+				     const size_t arg_size,
+				     syncvar_t * const ret,
+				     const qthread_shepherd_id_t
+				     preferred_shep)
 {				       /*{{{ */
     qthread_t *t;
-    qthread_shepherd_id_t shep;
+    qthread_shepherd_id_t target_shep;
     qthread_shepherd_t *myshep = qthread_internal_getshep();
 
     qthread_debug(THREAD_BEHAVIOR, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
     assert(qlib);
-    assert(myshep);
+    assert(f);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    if (myshep) {
-	shep = myshep->shepherd_id; // rely on work-stealing
+    if (preferred_shep != NO_SHEPHERD) {
+	target_shep = preferred_shep % qthread_num_shepherds();
+    } else if (myshep != NULL) {
+	target_shep = myshep->shepherd_id;;
     } else {
-	shep = 0;
+	target_shep = 0;
     }
 #else
-    int loopctr = 0;
-    if (myshep) {		       /* note: for forking from a qthread, NO LOCKS! */
-	do {
-	    shep = (qthread_shepherd_id_t) (myshep->sched_shepherd++);
-	    if (myshep->sched_shepherd == qlib->nshepherds) {
-		myshep->sched_shepherd = 0;
-	    }
-	    loopctr++;
-	} while (QTHREAD_CASLOCK_READ_UI(qlib->shepherds[shep].active) != 1 &&
-		 loopctr <= qlib->nshepherds);
+    if (preferred_shep != NO_SHEPHERD) {
+	target_shep = preferred_shep % qthread_num_shepherds();
     } else {
-	do {
-	    shep = (qthread_shepherd_id_t)
-		qthread_internal_incr_mod(&qlib->sched_shepherd,
-					  qlib->nshepherds,
-					  &qlib->sched_shepherd_lock);
-	    loopctr++;
-	} while (QTHREAD_CASLOCK_READ_UI(qlib->shepherds[shep].active) != 1 &&
-		 loopctr <= qlib->nshepherds);
-    }
-    if (loopctr > qlib->nshepherds) {
-	qthread_debug(THREAD_BEHAVIOR, "could not find an active shepherd\n");
-	return QTHREAD_NOT_ALLOWED;
+	int loopctr = 0;
+	if (myshep) {		       /* note: for forking from a qthread, NO LOCKS! */
+	    do {
+		target_shep =
+		    (qthread_shepherd_id_t) (myshep->sched_shepherd++);
+		if (myshep->sched_shepherd == qlib->nshepherds) {
+		    myshep->sched_shepherd = 0;
+		}
+		loopctr++;
+	    } while (QTHREAD_CASLOCK_READ_UI
+		     (qlib->shepherds[target_shep].active) != 1 &&
+		     loopctr <= qlib->nshepherds);
+	} else {
+	    do {
+		target_shep = (qthread_shepherd_id_t)
+		    qthread_internal_incr_mod(&qlib->sched_shepherd,
+					      qlib->nshepherds,
+					      &qlib->sched_shepherd_lock);
+		loopctr++;
+	    } while (QTHREAD_CASLOCK_READ_UI
+		     (qlib->shepherds[target_shep].active) != 1 &&
+		     loopctr <= qlib->nshepherds);
+	}
+	if (loopctr > qlib->nshepherds) {
+	    qthread_debug(THREAD_BEHAVIOR,
+			  "could not find an active shepherd\n");
+	    return QTHREAD_NOT_ALLOWED;
+	}
     }
 #endif
-    t = qthread_thread_new(f, arg, arg_size, (aligned_t *) ret, shep);
-    if (t) {
-	qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id,
-		      shep);
-	t->flags |= QTHREAD_RET_IS_SYNCVAR;
-
-	if (ret) {
-	    int test = qthread_syncvar_empty(ret);
-
-	    if (test != QTHREAD_SUCCESS) {
-		qthread_thread_free(t);
-		return test;
-	    }
-	}
-	qt_threadqueue_enqueue(qlib->shepherds[shep].ready, t, myshep);
-	return QTHREAD_SUCCESS;
+    t = qthread_thread_new(f, arg, arg_size, (aligned_t *) ret, target_shep);
+    if (!t) {
+	qthread_debug(THREAD_BEHAVIOR, "malloc error\n");
+	return QTHREAD_MALLOC_ERROR;
     }
-    qthread_debug(THREAD_BEHAVIOR, "malloc error\n");
-    return QTHREAD_MALLOC_ERROR;
+    qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id,
+		  target_shep);
+    t->flags |= QTHREAD_RET_IS_SYNCVAR;
+    t->id = preferred_shep;	       // used in barrier and arrive_first, NOT the thread-id
+
+    if (ret) {
+	int test = qthread_syncvar_empty(ret);
+
+	if (test != QTHREAD_SUCCESS) {
+	    qthread_thread_free(t);
+	    return test;
+	}
+    }
+    qt_threadqueue_enqueue(qlib->shepherds[target_shep].ready, t, myshep);
+    return QTHREAD_SUCCESS;
 }				       /*}}} */
 
-int qthread_fork_syncvar(const qthread_f f, const void *arg, syncvar_t * ret)
+int qthread_fork_syncvar_copyargs(const qthread_f f, const void *const arg,
+				  const size_t arg_size,
+				  syncvar_t * const ret)
+{				       /*{{{ */
+    return qthread_fork_syncvar_copyargs_to(f, arg, arg_size, ret,
+					    NO_SHEPHERD);
+}				       /*}}} */
+
+
+int qthread_fork_syncvar(const qthread_f f, const void *const arg, syncvar_t * const ret)
 {				       /*{{{ */
     return qthread_fork_syncvar_copyargs(f, arg, 0, ret);
 }				       /*}}} */

@@ -177,8 +177,8 @@ static void qt_loop_step_inner(
 		 (qthread_shepherd_id_t) (threadct %
 					  qthread_num_shepherds()));
 	} else {
-	    qassert(qthread_fork_syncvar
-		    ((qthread_f) qloop_step_wrapper, qwa + threadct, rets + i),
+	    qassert(qthread_fork_syncvar_copyargs_to
+		    ((qthread_f) qloop_step_wrapper, qwa + threadct, 0, rets + i, (qthread_shepherd_id_t) threadct),
 		    QTHREAD_SUCCESS);
 	}
 	threadct++;

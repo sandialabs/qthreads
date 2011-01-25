@@ -83,9 +83,9 @@ _rtype_ _fname_(const _rtype_ *array, size_t length, int checkfeb) \
 	waitfor_sentinel = &(left_args->ret_sentinel); \
 	qthread_syncvar_empty(&(left_args->ret_sentinel)); \
 	if (checkfeb) { \
-	    future_fork((qthread_f) _innerfuncff_, left_args, NULL); \
+	    qthread_fork((qthread_f) _innerfuncff_, left_args, NULL); \
 	} else { \
-	    future_fork((qthread_f) _innerfunc_, left_args, NULL); \
+	    qthread_fork((qthread_f) _innerfunc_, left_args, NULL); \
 	} \
     } \
     if (checkfeb) { \
@@ -479,7 +479,7 @@ void qutil_mergesort(double *array, size_t length)
 	if (args[i].first_stop >= length)
 	    args[i].first_stop = length - 1;
 
-	future_fork((qthread_f) qutil_mergesort_presort, args + i, rets + i);
+	qthread_fork((qthread_f) qutil_mergesort_presort, args + i, rets + i);
     }
     for (i = 0; i < numthreads; i++) {
 	qthread_readFF(NULL, rets + i);
@@ -509,7 +509,7 @@ void qutil_mergesort(double *array, size_t length)
 	    args[numthreads].second_stop =
 		((i + 2 * chunksize - 1) <
 		 (length - 1)) ? (i + 2 * chunksize - 1) : (length - 1);
-	    future_fork((qthread_f) qutil_mergesort_inner, args + numthreads,
+	    qthread_fork((qthread_f) qutil_mergesort_inner, args + numthreads,
 			rets + numthreads);
 	    i += 2 * chunksize;
 	    numthreads++;
