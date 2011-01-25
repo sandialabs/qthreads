@@ -12,12 +12,12 @@ aligned_t initme_idx = 0;
 volatile aligned_t *initme = NULL;
 qt_barrier_t *wait_on_me;
 
-static aligned_t barrier_thread(qthread_t *t, void *arg)
+static aligned_t barrier_thread(void *arg)
 {
     qt_barrier_t *b = (qt_barrier_t*)arg;
     aligned_t idx = qthread_incr(&initme_idx, 1);
     qthread_incr(&(initme[idx]), 1);
-    qt_barrier_enter(b, qthread_shep(t));
+    qt_barrier_enter(b, qthread_shep());
     return 0;
 }
 
@@ -55,7 +55,7 @@ int main(int argc, char *argv[])
 	qthread_fork(barrier_thread, wait_on_me, rets+i);
     }
     qtimer_start(t);
-    qt_barrier_enter(wait_on_me, qthread_shep(me));
+    qt_barrier_enter(wait_on_me, qthread_shep());
     qtimer_stop(t);
     iprintf("main thread exited barrier 1 in %f seconds\n", qtimer_secs(t));
     initme_idx = 0;
@@ -64,7 +64,7 @@ int main(int argc, char *argv[])
 	qthread_fork(barrier_thread, wait_on_me, rets+i);
     }
     qtimer_start(t);
-    qt_barrier_enter(wait_on_me, qthread_shep(me));
+    qt_barrier_enter(wait_on_me, qthread_shep());
     qtimer_stop(t);
     iprintf("main thread exited barrier 2 in %f seconds\n", qtimer_secs(t));
 
@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
      * cases (in other words there must a race condition in qthread_finalize()
      * if there are outstanding threads out there) */
     for (i=0; i<threads; i++) {
-	qthread_readFF(me, NULL, rets+i);
+	qthread_readFF(NULL, rets+i);
     }
     return 0;
 }
