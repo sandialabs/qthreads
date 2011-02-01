@@ -13,6 +13,8 @@
 
 #include "qt_affinity.h"
 
+#include "shepcomp.h"
+
 static lgrp_cookie_t lgrp_cookie;
 
 void qt_affinity_init(

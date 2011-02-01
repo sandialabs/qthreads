@@ -4,7 +4,10 @@
 
 #include <numa.h>
 
+#include "qthread_innards.h"
 #include "qt_affinity.h"
+
+#include "shepcomp.h"
 
 void qt_affinity_init(
     void)
@@ -16,8 +19,6 @@ qthread_shepherd_id_t guess_num_shepherds(
 {
     qthread_shepherd_id_t nshepherds = 1;
     if (numa_available() != 1) {
-	unsigned long bmask = 0;
-	unsigned long count = 0;
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 	/* this is (probably) correct if/when we have multithreaded shepherds,
 	 * ... BUT ONLY IF ALL NODES HAVE CPUS!!!!!! */
@@ -146,7 +147,7 @@ void qt_affinity_gendists(
 # ifdef HAVE_NUMA_DISTANCE
     /* truly ancient versions of libnuma (in the changelog, this is
      * considered "pre-history") do not have numa_distance() */
-    for (i = 0; i < nshepherds; i++) {
+    for (unsigned int i = 0; i < nshepherds; i++) {
 	const unsigned int node_i = sheps[i].node;
 	size_t j, k;
 	sheps[i].shep_dists = calloc(nshepherds, sizeof(unsigned int));

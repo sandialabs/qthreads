@@ -6,6 +6,8 @@
 
 #include "qt_affinity.h"
 
+#include "shepcomp.h"
+
 void qt_affinity_init(
     void)
 {
