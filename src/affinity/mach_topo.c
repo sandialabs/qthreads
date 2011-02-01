@@ -28,6 +28,7 @@ kern_return_t thread_policy_get(
 #endif
 
 #include "qthread_asserts.h"
+#include "qt_shepherd_innards.h"
 #include "qt_affinity.h"
 
 void qt_affinity_init(
@@ -55,8 +56,29 @@ qthread_shepherd_id_t guess_num_shepherds(
     return nshepherds;
 }
 
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 void qt_affinity_set(
-    int node)
+	qthread_worker_t *me)
+{
+#ifndef SST
+    mach_msg_type_number_t Count = THREAD_AFFINITY_POLICY_COUNT;
+    thread_affinity_policy_data_t mask[THREAD_AFFINITY_POLICY_COUNT];
+
+    memset(mask, 0,
+	   sizeof(thread_affinity_policy_data_t) *
+	   THREAD_AFFINITY_POLICY_COUNT);
+    mask[0].affinity_tag = me->packed_worker_id + 1;
+    Count = 1;
+    if (thread_policy_set
+	(mach_thread_self(), THREAD_AFFINITY_POLICY, (thread_policy_t) & mask,
+	 Count) != KERN_SUCCESS) {
+	fprintf(stderr, "ERROR! Cannot SET affinity for some reason\n");
+    }
+#endif
+}
+#else
+void qt_affinity_set(
+	qthread_shepherd_t *me)
 {
 #ifndef SST
     mach_msg_type_number_t Count = THREAD_AFFINITY_POLICY_COUNT;
@@ -81,7 +103,7 @@ void qt_affinity_set(
     memset(mask, 0,
 	   sizeof(thread_affinity_policy_data_t) *
 	   THREAD_AFFINITY_POLICY_COUNT);
-    mask[0].affinity_tag = qthread_shep() + 1;
+    mask[0].affinity_tag = me->shepherd_id + 1;
     Count = 1;
     if (thread_policy_set
 	(mach_thread_self(), THREAD_AFFINITY_POLICY, (thread_policy_t) & mask,
@@ -90,6 +112,7 @@ void qt_affinity_set(
     }
 #endif
 }
+#endif
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 unsigned int guess_num_workers_per_shep(
