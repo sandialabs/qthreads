@@ -27,7 +27,7 @@ qthread_shepherd_id_t guess_num_shepherds(
     void)
 {
     qthread_shepherd_id_t nshepherds = 1;
-#if defined(HAVE_SYSCONF) && defined(_SC_NPROCESSORS_CONF) /* Linux */
+#if defined(HAVE_SYSCONF) && defined(_SC_NPROCESSORS_CONF)	/* Linux */
     long ret = sysconf(_SC_NPROCESSORS_CONF);
     nshepherds = (ret > 0) ? ret : 1;
 #elif defined(HAVE_SYSCTL) && defined(CTL_HW) && defined(HW_NCPU)
@@ -42,19 +42,35 @@ qthread_shepherd_id_t guess_num_shepherds(
     return nshepherds;
 }
 
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 void qt_affinity_set(
-    int node)
+    qthread_worker_t * me)
 {
     plpa_cpu_set_t *cpuset =
 	(plpa_cpu_set_t *) malloc(sizeof(plpa_cpu_set_t));
     PLPA_CPU_ZERO(cpuset);
-    PLPA_CPU_SET(me->shepherd_id, cpuset);
+    PLPA_CPU_SET(me->packed_worker_id, cpuset);
     if (plpa_sched_setaffinity(0, sizeof(plpa_cpu_set_t), cpuset) < 0 &&
-	    errno != EINVAL) {
+	errno != EINVAL) {
 	perror("plpa setaffinity");
     }
     free(cpuset);
 }
+#else
+void qt_affinity_set(
+    qthread_shepherd_t * me)
+{
+    plpa_cpu_set_t *cpuset =
+	(plpa_cpu_set_t *) malloc(sizeof(plpa_cpu_set_t));
+    PLPA_CPU_ZERO(cpuset);
+    PLPA_CPU_SET(me->node, cpuset);
+    if (plpa_sched_setaffinity(0, sizeof(plpa_cpu_set_t), cpuset) < 0 &&
+	errno != EINVAL) {
+	perror("plpa setaffinity");
+    }
+    free(cpuset);
+}
+#endif
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 unsigned int guess_num_workers_per_shep(
@@ -68,5 +84,12 @@ void qt_affinity_gendists(
     qthread_shepherd_t * sheps,
     qthread_shepherd_id_t nshepherds)
 {
+    for (size_t i = 0; i < nshepherds; ++i) {
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+	sheps[i].node = i * qlib->nworkerspershep;
+#else
+	sheps[i].node = i;
+#endif
+    }
     /* there is no inherent way to detect distances, so unfortunately we must assume that they're all equidistant */
 }
