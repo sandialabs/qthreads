@@ -49,14 +49,25 @@ qthread_shepherd_id_t guess_num_shepherds(
     return nshepherds;
 }
 
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 void qt_affinity_set(
-    int node)
+	qthread_worker_t *me)
 {
-    if (numa_run_on_node(node) != 0) {
+    if (numa_run_on_node(me->shepherd->node) != 0) {
 	numa_error("setting thread affinity");
     }
-    numa_set_preferred(node);
+    numa_set_preferred(me->shepherd->node);
 }
+#else
+void qt_affinity_set(
+	qthread_shepherd_t *me)
+{
+    if (numa_run_on_node(me->node) != 0) {
+	numa_error("setting thread affinity");
+    }
+    numa_set_preferred(me->node);
+}
+#endif
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 unsigned int guess_num_workers_per_shep(
