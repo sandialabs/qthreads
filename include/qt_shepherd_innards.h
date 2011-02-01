@@ -12,6 +12,7 @@
 typedef struct qt_threadqueue_s qt_threadqueue_t;
 
 #ifndef QTHREAD_SHEPHERD_TYPEDEF
+#define QTHREAD_SHEPHERD_TYPEDEF
 typedef struct qthread_shepherd_s qthread_shepherd_t;
 #endif
 

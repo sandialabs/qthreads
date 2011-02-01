@@ -35,26 +35,6 @@
 #ifdef SST
 # include <ppcPimCalls.h>
 #endif
-#ifdef HAVE_TMC_CPUS_H
-# include <tmc/cpus.h>
-#endif
-#ifdef QTHREAD_USE_PLPA
-#include <plpa.h>
-#endif
-#ifdef QTHREAD_HAVE_HWLOC
-# include <hwloc.h>
-#endif
-#ifdef HAVE_PROCESSOR_BIND
-# include <sys/types.h>
-# include <sys/processor.h>
-# include <sys/procset.h>
-# ifdef HAVE_SYS_LGRP_USER_H
-#  include <sys/lgrp_user.h>
-# endif
-#endif
-#ifdef QTHREAD_HAVE_LIBNUMA
-# include <numa.h>
-#endif
 #ifdef HAVE_SYSCTL
 # ifdef HAVE_SYS_TYPES_H
 #  include <sys/types.h>
@@ -65,19 +45,6 @@
 #endif
 #if defined(HAVE_SYSCONF) && ! defined(QTHREAD_HAVE_MACHTOPO) && defined(HAVE_UNISTD_H)
 # include <unistd.h>
-#endif
-#ifdef HAVE_MACH_THREAD_POLICY_H
-# include <mach/mach_init.h>
-# include <mach/thread_policy.h>
-kern_return_t thread_policy_set(thread_t thread,
-				thread_policy_flavor_t flavor,
-				thread_policy_t policy_info,
-				mach_msg_type_number_t count);
-kern_return_t thread_policy_get(thread_t thread,
-				thread_policy_flavor_t flavor,
-				thread_policy_t policy_info,
-				mach_msg_type_number_t * count,
-				boolean_t * get_default);
 #endif
 
 #include "qt_mpool.h"
@@ -122,8 +89,10 @@ kern_return_t thread_policy_get(thread_t thread,
 
 /* internal data structures */
 typedef struct qthread_lock_s qthread_lock_t;
+#ifndef QTHREAD_SHEPHERD_TYPEDEF
 #define QTHREAD_SHEPHERD_TYPEDEF
 typedef struct qthread_shepherd_s qthread_shepherd_t;
+#endif
 
 #include "qt_qthread_struct.h"
 
@@ -139,6 +108,7 @@ struct qthread_queue_s
 #include "qt_shepherd_innards.h"
 #include "qt_blocking_structs.h"
 #include "qt_threadqueues.h"
+#include "qt_affinity.h"
 
 pthread_key_t shepherd_structs;
 
@@ -427,50 +397,6 @@ int qthread_debuglevel(int d)
 
 #include "qt_profiling.h"
 
-#ifdef QTHREAD_HAVE_LGRP
-static int lgrp_walk(const lgrp_cookie_t cookie, const lgrp_id_t lgrp,
-		     processorid_t ** cpus, lgrp_id_t * lgrp_ids,
-		     int cpu_grps)
-{				       /*{{{ */
-    int nchildren, ncpus =
-	lgrp_cpus(cookie, lgrp, NULL, 0, LGRP_CONTENT_DIRECT);
-
-    if (ncpus == -1) {
-	return cpu_grps;
-    } else if (ncpus > 0) {
-	processorid_t *cpuids = malloc((ncpus + 1) * sizeof(processorid_t));
-
-	ncpus = lgrp_cpus(cookie, lgrp, cpuids, ncpus, LGRP_CONTENT_DIRECT);
-	if (ncpus == -1) {
-	    free(cpuids);
-	    return cpu_grps;
-	}
-	cpuids[ncpus] = -1;
-	cpus[cpu_grps] = cpuids;
-	lgrp_ids[cpu_grps] = lgrp;
-	cpu_grps++;
-    }
-    nchildren = lgrp_children(cookie, lgrp, NULL, 0);
-    if (nchildren == -1) {
-	return cpu_grps;
-    } else if (nchildren > 0) {
-	int i;
-	lgrp_id_t *children = malloc(nchildren * sizeof(lgrp_id_t));
-
-	nchildren = lgrp_children(cookie, lgrp, children, nchildren);
-	if (nchildren == -1) {
-	    free(children);
-	    return cpu_grps;
-	}
-	for (i = 0; i < nchildren; i++) {
-	    cpu_grps =
-		lgrp_walk(cookie, children[i], cpus, lgrp_ids, cpu_grps);
-	}
-    }
-    return cpu_grps;
-}				       /*}}} */
-#endif
-
 #ifndef QTHREAD_NO_ASSERTS
 void * shep0arg = NULL;
 #endif
@@ -562,87 +488,13 @@ static void *qthread_shepherd(void *arg)
     sched_setaffinity(0, sizeof(mask), &mask);
 #endif
 
-    if (qaffinity && me->node != -1) {		       /*{{{ */
-#if defined(QTHREAD_HAVE_MACHTOPO) && ! defined(SST)
-	mach_msg_type_number_t Count = THREAD_AFFINITY_POLICY_COUNT;
-	thread_affinity_policy_data_t mask[THREAD_AFFINITY_POLICY_COUNT];
-
-	/*
-	 * boolean_t GetDefault = 0;
-	 * if (thread_policy_get(mach_thread_self(),
-	 * THREAD_AFFINITY_POLICY,
-	 * (thread_policy_t)&mask,
-	 * &Count,
-	 * &GetDefault) != KERN_SUCCESS) {
-	 * printf("ERROR! Cannot get affinity for some reason\n");
-	 * }
-	 * printf("THREAD_AFFINITY_POLICY: krc=%#x default=%d\n",
-	 * krc, GetDefault);
-	 * printf("\tcount=%i\n", Count);
-	 * for (int i=0; i<Count; i++) {
-	 * printf("\t\taffinity_tag=%d (%#x)\n",
-	 * mask[i].affinity_tag, mask[i].affinity_tag);
-	 * } */
-	memset(mask, 0,
-	       sizeof(thread_affinity_policy_data_t) *
-	       THREAD_AFFINITY_POLICY_COUNT);
-	mask[0].affinity_tag = me->shepherd_id + 1;
-	Count = 1;
-	if (thread_policy_set
-	    (mach_thread_self(), THREAD_AFFINITY_POLICY,
-	     (thread_policy_t) & mask, Count) != KERN_SUCCESS) {
-	    fprintf(stderr, "ERROR! Cannot SET affinity for some reason\n");
-	}
-#elif defined(QTHREAD_HAVE_HWLOC)
-# if HWLOC_API_VERSION == 0x00010000
-	hwloc_cpuset_t cpuset = hwloc_cpuset_alloc();
-	hwloc_cpuset_cpu(cpuset, me->node);
-# else
-	hwloc_bitmap_t cpuset = hwloc_bitmap_alloc();
-	hwloc_bitmap_only(cpuset, me->node);
-#endif
-	if (hwloc_set_cpubind(qlib->topology, cpuset, HWLOC_CPUBIND_THREAD)) {
-	    char *str;
-	    int i = errno;
-# if HWLOC_API_VERSION == 0x00010000
-	    hwloc_cpuset_asprintf(&str, cpuset);
-# else
-	    hwloc_bitmap_asprintf(&str, cpuset);
-# endif
-	    fprintf(stderr, "Couldn't bind to cpuset %s because %s\n", str, strerror(i));
-	    free(str);
-	}
-#elif defined(QTHREAD_HAVE_TILETOPO)
-	if (tmc_cpus_set_my_cpu(me->node) < 0) {
-	    perror("tmc_cpus_set_my_affinity() failed");
-	    fprintf(stderr,"\tnode = %i\n", me->node);
-	}
-#elif defined(QTHREAD_HAVE_LIBNUMA)
-	if (numa_run_on_node(me->node) != 0) {
-	    numa_error("setting thread affinity");
-	}
-	numa_set_preferred(me->node);
-#elif defined(QTHREAD_USE_PLPA)
-	plpa_cpu_set_t *cpuset =
-	    (plpa_cpu_set_t *) malloc(sizeof(plpa_cpu_set_t));
-	PLPA_CPU_ZERO(cpuset);
-	PLPA_CPU_SET(me->shepherd_id, cpuset);
-	if (plpa_sched_setaffinity(0, sizeof(plpa_cpu_set_t), cpuset) < 0 &&
-	    errno != EINVAL) {
-	    perror("plpa setaffinity");
-	}
-	free(cpuset);
-#elif defined(QTHREAD_HAVE_LGRP)
-	if (lgrp_affinity_set(P_LWPID, P_MYID, me->lgrp, LGRP_AFF_STRONG) != 0) {
-	    perror("lgrp_affinity_set");
-	}
-#elif defined(HAVE_PROCESSOR_BIND)
-	if (processor_bind(P_LWPID, P_MYID, me->node, NULL) < 0) {
-	    perror("processor_bind");
-	}
+    if (qaffinity && me->node != -1) {
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+	qt_affinity_set(me_worker);
+#else
+	qt_affinity_set(me);
 #endif
     }
-    /*}}} */
 
     /* workhorse loop */
     while (!done) {
@@ -692,9 +544,11 @@ static void *qthread_shepherd(void *arg)
 
 	    assert(t->f != NULL || t->flags & QTHREAD_REAL_MCCOY);
 	    if (t->rdata == NULL) alloc_rdata(me, t);
+	    assert(t->rdata->shepherd_ptr != NULL);
 	    if (t->rdata->shepherd_ptr != me) {
-	      //		fprintf(stderr, "shepherd_ptr = %p, me = %p\n", t->rdata->shepherd_ptr, me);
-	      //		fflush(stderr);
+		fprintf(stderr, "shepherd_ptr = %p, me = %p\n", t->rdata->shepherd_ptr, me);
+		fflush(stderr);
+		t->rdata->shepherd_ptr = me;
 	    }
 	    assert(t->rdata->shepherd_ptr == me);
 
@@ -934,79 +788,6 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
     return qthread_initialize();
 }				       /*}}} */
 
-#ifdef QTHREAD_HAVE_LIBNUMA
-static void assign_nodes(qthread_shepherd_t * sheps, size_t nsheps)
-{				       /*{{{ */
-    const size_t num_extant_nodes = numa_max_node() + 1;
-
-    {
-# ifdef QTHREAD_LIBNUMA_V2
-	struct bitmask *nmask = numa_get_run_node_mask();
-	struct bitmask *cmask = numa_allocate_cpumask();
-	size_t *cpus_left_per_node = calloc(num_extant_nodes, sizeof(size_t));	// handle heterogeneous core counts
-	int over_subscribing = 0;
-
-	assert(cmask);
-	assert(nmask);
-	assert(cpus_left_per_node);
-	numa_bitmask_clearall(cmask);
-	/* get the # cpus for each node */
-	for (size_t i = 0; i < numa_bitmask_nbytes(nmask) * 8; ++i) {
-	    if (numa_bitmask_isbitset(nmask, i)) {
-		numa_node_to_cpus(i, cmask);
-		for (size_t j = 0; j < numa_bitmask_nbytes(cmask) * 8; j++) {
-		    cpus_left_per_node[i] +=
-			numa_bitmask_isbitset(cmask, j) ? 1 : 0;
-		}
-		qthread_debug(ALL_DETAILS, "there are %i CPUs on node %i\n",
-			      (int)cpus_left_per_node[i], (int)i);
-	    }
-	}
-	/* assign nodes by iterating over cpus_left_per_node array (which is of
-	 * size num_extant_nodes rather than of size nodes_i_can_use) */
-	int node = 0;
-	for (size_t i = 0; i < nsheps; ++i) {
-	    switch (over_subscribing) {
-		case 0:
-		{
-		    int count = 0;
-		    while (count < num_extant_nodes &&
-			   cpus_left_per_node[node] == 0) {
-			node++;
-			node *= (node < num_extant_nodes);
-			count++;
-		    }
-		    if (count < num_extant_nodes) {
-			cpus_left_per_node[node]--;
-			break;
-		    }
-		}
-		    over_subscribing = 1;
-	    }
-	    qthread_debug(ALL_DETAILS, "setting shep %i to numa node %i\n",
-			  (int)i, (int)node);
-	    sheps[i].node = node;
-	    node++;
-	    node *= (node < num_extant_nodes);
-	}
-	numa_bitmask_free(nmask);
-	numa_bitmask_free(cmask);
-	free(cpus_left_per_node);
-# else
-	nodemask_t bmask;
-
-	nodemask_zero(&bmask);
-	/* assign nodes */
-	for (size_t i = 0; i < nsheps; ++i) {
-	    sheps[i].node = i % num_extant_nodes;
-	    nodemask_set(&bmask, i % num_extant_nodes);
-	}
-	numa_set_interleave_mask(&bmask);
-# endif
-    }
-}				       /*}}} */
-#endif
-
 int qthread_initialize(void)
 {				       /*{{{ */
     int r;
@@ -1015,10 +796,6 @@ int qthread_initialize(void)
     qthread_shepherd_id_t nshepherds = 0;
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_id_t nworkerspershep = 0;
-#endif
-
-#ifdef QTHREAD_HAVE_LGRP
-    lgrp_cookie_t lgrp_cookie = lgrp_init(LGRP_VIEW_OS);
 #endif
 
 #ifdef QTHREAD_DEBUG
@@ -1083,120 +860,24 @@ int qthread_initialize(void)
 	}
 #endif
     }
-#if defined(QTHREAD_HAVE_HWLOC)
-    qassert(hwloc_topology_init(&qlib->topology), 0);
-    qassert(hwloc_topology_load(qlib->topology), 0);
-#endif
+    qt_affinity_init();
     if (nshepherds == 0) {	       /* try to guess the "right" number */
-#ifdef QTHREAD_HAVE_HWLOC
-# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-	int depth = hwloc_get_type_depth(qlib->topology, HWLOC_OBJ_CACHE);
-	qthread_debug(ALL_DETAILS, "depth of OBJ_CACHE = %d\n", depth);
-	if (depth == HWLOC_TYPE_DEPTH_UNKNOWN || depth == HWLOC_TYPE_DEPTH_MULTIPLE) {
-	    depth = hwloc_get_type_depth(qlib->topology, HWLOC_OBJ_SOCKET);
-	    qthread_debug(ALL_DETAILS, "depth of OBJ_SOCKET = %d\n", depth);
-	}
-	if (depth == HWLOC_TYPE_DEPTH_UNKNOWN || depth == HWLOC_TYPE_DEPTH_MULTIPLE) {
-	    nshepherds = hwloc_get_nbobjs_by_type(qlib->topology, HWLOC_OBJ_PU);
-	    qthread_debug(ALL_DETAILS, "topology too weird... nbobjs_by_type HWLOC_OBJ_PU is %u\n", nshepherds);
-	} else {
-	    nshepherds = hwloc_get_nbobjs_by_depth(qlib->topology, depth);
-	    qthread_debug(ALL_DETAILS, "nbobjs_by_type HWLOC_OBJ_SOCKET is %u, depth: %u\n", (unsigned int)nshepherds, depth);
-	    if (getenv("QTHREAD_NUM_WORKERS_PER_SHEPHERD") == NULL) {
-		for (size_t socket = 0; socket < nshepherds; ++socket) {
-		    hwloc_obj_t obj = hwloc_get_obj_by_depth(qlib->topology, depth, socket);
-#  if HWLOC_API_VERSION == 0x00010000
-		    hwloc_cpuset_t cpuset = obj->allowed_cpuset;
-		    unsigned int weight = hwloc_cpuset_weight(cpuset);
-#  else
-		    hwloc_bitmap_t cpuset = obj->allowed_cpuset;
-		    unsigned int weight = hwloc_bitmap_weight(cpuset);
-#  endif
-		    qthread_debug(ALL_DETAILS, "socket %u has %u weight\n", (unsigned int)socket, weight);
-		    if (socket == 0 || nworkerspershep < weight) {
-			nworkerspershep = weight;
-		    }
-		}
-	    }
-	}
-	qthread_debug(ALL_DETAILS, "nworkerspershep = %u\n", (unsigned) nworkerspershep);
-# else
-	nshepherds = hwloc_get_nbobjs_by_type(qlib->topology, HWLOC_OBJ_PU);
-	qthread_debug(ALL_DETAILS, "nbobjs_by_type HWLOC_OBJ_PU is %u\n", nshepherds);
-# endif
-#elif defined(QTHREAD_HAVE_LIBNUMA)
-	if (numa_available() != -1) {
-	    /* XXX: this logic is totally wrong for multithreaded shepherds */
-# ifdef HAVE_NUMA_NUM_THREAD_CPUS
-	    /* note: not numa_num_configured_cpus(), just in case an
-	     * artificial limit has been imposed. */
-	    nshepherds = numa_num_thread_cpus();
-	    qthread_debug(ALL_DETAILS, "numa_num_thread_cpus returned %i\n", nshepherds);
-# elif defined(HAVE_NUMA_BITMASK_NBYTES)
-	    for (size_t b=0;b<numa_bitmask_nbytes(numa_all_cpus_ptr)*8;b++) {
-		nshepherds += numa_bitmask_isbitset(numa_all_cpus_ptr, b);
-	    }
-	    qthread_debug(ALL_DETAILS, "after checking through the all_cpus_ptr, I counted %i cpus\n", nshepherds);
-# else
-	    /* this is (probably) correct if/when we have multithreaded shepherds,
-	     * ... BUT ONLY IF ALL NODES HAVE CPUS!!!!!! */
-	    nshepherds = numa_max_node() + 1;
-	    qthread_debug(ALL_DETAILS, "numa_max_node() returned %i\n", nshepherds);
-#  ifndef QTHREAD_LIBNUMA_V2
-	    {
-		unsigned long bmask = 0;
-		unsigned long count = 0;
-		for (size_t shep=0; shep<nshepherds; shep++) {
-		    numa_node_to_cpus(shep, &bmask, sizeof(unsigned long));
-		    for (size_t j=0; j < sizeof(unsigned long)*8; j++) {
-			if (bmask & ((unsigned long)1<<j)) {
-			    count++;
-			}
-		    }
-		}
-		nshepherds = count;
-		qthread_debug(ALL_DETAILS, "counted %i CPUs via numa_node_to_cpus()\n", (int)count);
-	    }
-#  endif
-# endif
-	}
-#elif defined(QTHREAD_HAVE_TILETOPO)
-	cpu_set_t online_cpus;
-	qassert(tmc_cpus_get_online_cpus(&online_cpus), 0);
-	nshepherds = tmc_cpus_count(&online_cpus);
-#elif defined(QTHREAD_HAVE_LGRP)
-	/* XXX: this is totally wrong for multithreaded shepherds */
-	nshepherds =
-	    lgrp_cpus(lgrp_cookie, lgrp_root(lgrp_cookie), NULL, 0,
-		      LGRP_CONTENT_ALL);
-#elif defined(HAVE_SYSCONF) && ! defined(QTHREAD_HAVE_MACHTOPO) && defined(_SC_NPROCESSORS_CONF) /* Linux */
-	long ret = sysconf(_SC_NPROCESSORS_CONF);
-	nshepherds = (ret > 0) ? ret : 1;
-#elif defined(HAVE_SYSCTL) && defined(CTL_HW) && defined(HW_NCPU)
-	int name[2] = { CTL_HW, HW_NCPU };
-	uint32_t oldv;
-	size_t oldvlen = sizeof(oldv);
-	if (sysctl(name, 2, &oldv, &oldvlen, NULL, 0) < 0) {
-# ifdef QTHREAD_HAVE_MACHTOPO
-	    /* sysctl is the official query mechanism on Macs, so if it failed,
-	     * we want to know */
-	    perror("sysctl");
-# endif
-	} else {
-	    assert(oldvlen == sizeof(oldv));
-	    nshepherds = (int)oldv;
-	}
-#endif
+	nshepherds = guess_num_shepherds();
 	if (nshepherds <= 0) {
 	    nshepherds = 1;
 	}
+    } else {
+	guess_num_shepherds();
     }
-
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    if (nshepherds == 1 && nworkerspershep == 1) {
-#else
-    if (nshepherds == 1) {
+    nworkerspershep = guess_num_workers_per_shep(nshepherds);
 #endif
+
+    if (nshepherds == 1
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+        && nworkerspershep == 1
+#endif
+       ) {
 	need_sync = 0;
     }
 #else
@@ -1329,7 +1010,7 @@ int qthread_initialize(void)
 	qlib->shepherds[i].workers = (qthread_worker_t *)
 	  calloc(nworkerspershep, sizeof(qthread_worker_t));
 	qassert_ret(qlib->shepherds[i].workers, QTHREAD_MALLOC_ERROR);
-#endif   
+#endif
     }
     {
 	char *aff = getenv("QTHREAD_AFFINITY");
@@ -1340,258 +1021,9 @@ int qthread_initialize(void)
 	    qaffinity = 1;
     }
     qthread_debug(ALL_DETAILS, "qaffinity = %i\n", qaffinity);
-    if (qaffinity == 1 && nshepherds > 1
-#ifdef QTHREAD_HAVE_LIBNUMA
-	&& numa_available() != -1
-#endif
-	) {			       /*{{{ */
-#ifdef QTHREAD_HAVE_MACHTOPO
-	/* there is no native way to detect distances, so unfortunately we must assume that they're all equidistant */
-#elif defined(QTHREAD_HAVE_TILETOPO)
-	cpu_set_t online_cpus;
-	unsigned int *cpu_array;
-	size_t cpu_count, offset;
-
-	qassert(tmc_cpus_get_online_cpus(&online_cpus), 0);
-	cpu_count = tmc_cpus_count(&online_cpus);
-	assert(cpu_count > 0);
-	/* assign nodes */
-	cpu_array = malloc(sizeof(unsigned int) * cpu_count);
-	assert(cpu_array != NULL);
-	qassert(tmc_cpus_to_array(&online_cpus, cpu_array, cpu_count), cpu_count);
-	offset = 0;
-	for (i = 0; i < nshepherds; i++) {
-	    qlib->shepherds[i].node = cpu_array[offset];
-	    offset++;
-	    offset *= (offset < cpu_count);
-	}
-	free(cpu_array);
-	for (i = 0; i < nshepherds; i++) {
-	    size_t j, k;
-	    unsigned int ix, iy;
-	    qlib->shepherds[i].shep_dists =
-		calloc(nshepherds, sizeof(unsigned int));
-	    assert(qlib->shepherds[i].shep_dists);
-	    tmc_cpus_grid_cpu_to_tile(qlib->shepherds[i].node, &ix, &iy);
-	    for (j = 0; j < nshepherds; j++) {
-		unsigned int jx, jy;
-		tmc_cpus_grid_cpu_to_tile(qlib->shepherds[j].node, &jx, &jy);
-		qlib->shepherds[i].shep_dists[j] = abs((int)ix-(int)jx) +
-		    abs((int)iy-(int)jy);
-	    }
-	    qlib->shepherds[i].sorted_sheplist =
-		calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
-	    assert(qlib->shepherds[i].sorted_sheplist);
-	    for (j = k = 0; j < nshepherds; j++) {
-		if (j != i) {
-		    qlib->shepherds[i].sorted_sheplist[k++] = j;
-		}
-	    }
-#  if defined(HAVE_QSORT_R) && defined(QTHREAD_QSORT_BSD)
-	    assert(qlib->shepherds[i].sorted_sheplist);
-	    qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
-		    sizeof(qthread_shepherd_id_t), (void *)(intptr_t) i,
-		    &qthread_internal_shepcomp);
-#  elif defined(HAVE_QSORT_R) && defined(QTHREAD_QSORT_GLIBC)
-	    assert(qlib->shepherds[i].sorted_sheplist);
-	    qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
-		    sizeof(qthread_shepherd_id_t),
-		    &qthread_internal_shepcomp, (void *)(intptr_t) i);
-#  else
-	    shepcomp_src = (qthread_shepherd_id_t) i;
-	    qsort(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
-		  sizeof(qthread_shepherd_id_t), qthread_internal_shepcomp);
-#  endif
-	}
-#elif defined(QTHREAD_HAVE_LIBNUMA)
-	assign_nodes(qlib->shepherds, nshepherds);
-# ifdef HAVE_NUMA_DISTANCE
-	/* truly ancient versions of libnuma (in the changelog, this is
-	 * considered "pre-history") do not have numa_distance() */
-	for (i = 0; i < nshepherds; i++) {
-	    const unsigned int node_i = qlib->shepherds[i].node;
-	    size_t j, k;
-	    qlib->shepherds[i].shep_dists =
-		calloc(nshepherds, sizeof(unsigned int));
-	    assert(qlib->shepherds[i].shep_dists);
-	    for (j = 0; j < nshepherds; j++) {
-		const unsigned int node_j = qlib->shepherds[j].node;
-
-		if (node_i != QTHREAD_NO_NODE && node_j != QTHREAD_NO_NODE) {
-		    qlib->shepherds[i].shep_dists[j] =
-			numa_distance(node_i, node_j);
-		} else {
-		    /* XXX too arbitrary */
-		    if (i == j) {
-			qlib->shepherds[i].shep_dists[j] = 0;
-		    } else {
-			qlib->shepherds[i].shep_dists[j] = 20;
-		    }
-		}
-	    }
-	    qlib->shepherds[i].sorted_sheplist =
-		calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
-	    assert(qlib->shepherds[i].sorted_sheplist);
-	    k = 0;
-	    for (j = 0; j < nshepherds; j++) {
-		if (j != i) {
-		    qlib->shepherds[i].sorted_sheplist[k++] = j;
-		}
-	    }
-#  if defined(HAVE_QSORT_R) && defined(QTHREAD_QSORT_BSD)
-	    assert(qlib->shepherds[i].sorted_sheplist);
-	    qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
-		    sizeof(qthread_shepherd_id_t), (void *)(intptr_t) i,
-		    &qthread_internal_shepcomp);
-#  elif defined(HAVE_QSORT_R) && defined(QTHREAD_QSORT_GLIBC)
-	    /* what moron in the linux community decided to implement BSD's
-	     * qsort_r with the arguments reversed??? */
-	    assert(qlib->shepherds[i].sorted_sheplist);
-	    qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
-		    sizeof(qthread_shepherd_id_t),
-		    &qthread_internal_shepcomp, (void *)(intptr_t) i);
-#  else
-	    shepcomp_src = (qthread_shepherd_id_t) i;
-	    qsort(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
-		  sizeof(qthread_shepherd_id_t), qthread_internal_shepcomp);
-#  endif
-	}
-# endif
-#elif defined(QTHREAD_HAVE_HWLOC)
-	/* there does not seem to be a way to extract distances... <sigh> */
-#elif defined(QTHREAD_HAVE_LGRP)
-	unsigned int lgrp_offset;
-	int lgrp_count_grps;
-	processorid_t **cpus = NULL;
-	lgrp_id_t *lgrp_ids = NULL;
-
-	switch (lgrp_cookie) {
-	    case EINVAL:
-	    case ENOMEM:
-		qthread_debug(ALL_DETAILS, "lgrp_cookie is invalid!\n");
-		return QTHREAD_THIRD_PARTY_ERROR;
-	}
-	{
-	    size_t max_lgrps = lgrp_nlgrps(lgrp_cookie);
-
-	    if (max_lgrps <= 0) {
-		qthread_debug(ALL_DETAILS, "max_lgrps is <= zero! (%i)\n",
-			      max_lgrps);
-		return QTHREAD_THIRD_PARTY_ERROR;
-	    }
-	    cpus = calloc(max_lgrps, sizeof(processorid_t *));
-	    assert(cpus);
-	    lgrp_ids = calloc(max_lgrps, sizeof(lgrp_id_t));
-	    assert(lgrp_ids);
-	}
-	lgrp_count_grps =
-	    lgrp_walk(lgrp_cookie, lgrp_root(lgrp_cookie), cpus, lgrp_ids, 0);
-	if (lgrp_count_grps <= 0) {
-	    qthread_debug(ALL_DETAILS, "lgrp_count_grps is <= zero ! (%i)\n",
-			  lgrp_count_grps);
-	    return QTHREAD_THIRD_PARTY_ERROR;
-	}
-	for (i = 0; i < nshepherds; i++) {
-	    /* first, pick a lgrp/node */
-	    int cpu;
-	    unsigned int first_loff;
-
-	    first_loff = lgrp_offset = i % lgrp_count_grps;
-	    qlib->shepherds[i].node = -1;
-	    qlib->shepherds[i].lgrp = -1;
-	    /* now pick an available CPU */
-	    while (1) {
-		cpu = 0;
-		/* find an unused one */
-		while (cpus[lgrp_offset][cpu] != (processorid_t) (-1))
-		    cpu++;
-		if (cpu == 0) {
-		    /* if no unused ones... try the next lgrp */
-		    lgrp_offset++;
-		    lgrp_offset *= (lgrp_offset < lgrp_count_grps);
-		    if (lgrp_offset == first_loff) {
-			break;
-		    }
-		} else {
-		    /* found one! */
-		    cpu--;
-		    qlib->shepherds[i].node = cpus[lgrp_offset][cpu];
-		    qlib->shepherds[i].lgrp = lgrp_ids[lgrp_offset];
-		    cpus[lgrp_offset][cpu] = -1;
-		    break;
-		}
-	    }
-	}
-	for (i = 0; i < nshepherds; i++) {
-	    const unsigned int node_i = qlib->shepherds[i].lgrp;
-	    size_t j;
-	    qlib->shepherds[i].shep_dists =
-		calloc(nshepherds, sizeof(unsigned int));
-	    assert(qlib->shepherds[i].shep_dists);
-	    for (j = 0; j < nshepherds; j++) {
-		const unsigned int node_j = qlib->shepherds[j].lgrp;
-
-		if (node_i != QTHREAD_NO_NODE && node_j != QTHREAD_NO_NODE) {
-		    int ret = lgrp_latency_cookie(lgrp_cookie, node_i, node_j,
-						  LGRP_LAT_CPU_TO_MEM);
-
-		    if (ret < 0) {
-			assert(ret >= 0);
-			return QTHREAD_THIRD_PARTY_ERROR;
-		    } else {
-			qlib->shepherds[i].shep_dists[j] = (unsigned int)ret;
-		    }
-		} else {
-		    /* XXX too arbitrary */
-		    if (i == j) {
-			qlib->shepherds[i].shep_dists[j] = 12;
-		    } else {
-			qlib->shepherds[i].shep_dists[j] = 18;
-		    }
-		}
-	    }
-	}
-	for (i = 0; i < nshepherds; i++) {
-	    size_t j, k = 0;
-
-	    qlib->shepherds[i].sorted_sheplist =
-		calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
-	    assert(qlib->shepherds[i].sorted_sheplist);
-	    for (j = 0; j < nshepherds; j++) {
-		if (j != i) {
-		    qlib->shepherds[i].sorted_sheplist[k++] = j;
-		}
-	    }
-#if defined(HAVE_QSORT_R) && !defined(__linux__)
-	    qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
-		    sizeof(qthread_shepherd_id_t), (void *)(intptr_t) i,
-		    &qthread_internal_shepcomp);
-#elif defined(HAVE_QSORT_R)
-	    qsort_r(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
-		    sizeof(qthread_shepherd_id_t),
-		    &qthread_internal_shepcomp, (void *)(intptr_t) i);
-#else
-	    shepcomp_src = (qthread_shepherd_id_t) i;
-	    qsort(qlib->shepherds[i].sorted_sheplist, nshepherds - 1,
-		  sizeof(qthread_shepherd_id_t), qthread_internal_shepcomp);
-#endif
-	}
-	if (cpus) {
-	    for (i = 0; i < lgrp_count_grps; i++) {
-		free(cpus[i]);
-	    }
-	    free(cpus);
-	}
-	if (lgrp_ids) {
-	    free(lgrp_ids);
-	}
-#else
-# if defined(QTHREAD_USE_PLPA)
-	/* there is no inherent way to detect distances, so unfortunately we must assume that they're all equidistant */
-# endif
-#endif
+    if (qaffinity == 1 && nshepherds > 1) {
+	qt_affinity_gendists(qlib->shepherds, nshepherds);
     }
-    /*}}} */
 #ifndef UNPOOLED
     /* set up the memory pools */
     qthread_debug(ALL_DETAILS, "shepherd pools sync = %i\n", need_sync);
@@ -1931,13 +1363,6 @@ void qthread_finalize(void)
     }
 #endif
 
-    qthread_debug(ALL_DETAILS, "calling cleanup functions\n");
-    while (qt_cleanup_funcs != NULL) {
-	struct qt_cleanup_funcs_s *tmp = qt_cleanup_funcs;
-	qt_cleanup_funcs = tmp->next;
-	tmp->func();
-	free(tmp);
-    }
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     qthread_debug(ALL_DETAILS, "destroying the global barrier\n");
     qt_global_barrier_destroy();
@@ -2039,6 +1464,14 @@ void qthread_finalize(void)
     }
     qthread_debug(ALL_DETAILS, "freeing shep0's threadqueue\n");
     qt_threadqueue_free(shep0->ready);
+
+    qthread_debug(ALL_DETAILS, "calling cleanup functions\n");
+    while (qt_cleanup_funcs != NULL) {
+	struct qt_cleanup_funcs_s *tmp = qt_cleanup_funcs;
+	qt_cleanup_funcs = tmp->next;
+	tmp->func();
+	free(tmp);
+    }
 
 #ifdef QTHREAD_LOCK_PROFILING
 # ifdef QTHREAD_MUTEX_INCREMENT
@@ -2184,10 +1617,6 @@ void qthread_finalize(void)
     generic_lock_pool = NULL;
     qt_mpool_destroy(generic_addrstat_pool);
     generic_addrstat_pool = NULL;
-#endif
-#ifdef QTHREAD_HAVE_HWLOC
-    qthread_debug(ALL_DETAILS, "destroy hwloc topology handle\n");
-    hwloc_topology_destroy(qlib->topology);
 #endif
     qthread_debug(ALL_DETAILS, "destroy global shepherd array\n");
     free(qlib->shepherds);

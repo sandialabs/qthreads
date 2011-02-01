@@ -5,7 +5,6 @@
 
 AM_CPPFLAGS = $(SST_INCLUDE) -I$(top_srcdir)/include
 AM_LDFLAGS = $(SST_LIBS)
-AM_CFLAGS = @SST_CFLAGS@
 
 lib_LTLIBRARIES = libqthread.la
 
@@ -57,6 +56,7 @@ if COMPILE_TARGET_UNIX
 libqthread_la_SOURCES += \
 	qthread.c \
 	threadqueues.c \
+	affinity/@qthread_topo@.c \
 	futurelib.c
 if QTHREAD_MULTITHREADED_SHEPHERDS
 libqthread_la_SOURCES += \
@@ -71,3 +71,5 @@ endif
 if QTHREAD_NEED_OWN_MAKECONTEXT
 include osx_compat/Makefile.inc
 endif
+
+EXTRA_DIST = affinity/hwloc.c affinity/no_affinity.c affinity/libnuma.c

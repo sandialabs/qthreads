@@ -1,3 +1,7 @@
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -51,7 +55,10 @@ int main(int argc, char *argv[])
     x = 0;
     CHECK_VERBOSE();
 
-    iprintf("%i threads...\n", qthread_num_shepherds());
+    iprintf("%i shepherds...\n", qthread_num_shepherds());
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    iprintf("  %i threads total\n", qthread_num_workers());
+#endif
     iprintf("Initial value of x: %lu\n", (unsigned long)x);
 
     qthread_fork(consumer, NULL, NULL);
