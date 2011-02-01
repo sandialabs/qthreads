@@ -978,6 +978,7 @@ int qthread_initialize(void)
 	    ) {
 	int ret = qt_affinity_gendists(qlib->shepherds, nshepherds);
 	if (ret != QTHREAD_SUCCESS) {
+	    qthread_debug(ALL_DETAILS, "gendists returned non-success (%i)\n", (int)ret);
 	    return ret;
 	}
     }

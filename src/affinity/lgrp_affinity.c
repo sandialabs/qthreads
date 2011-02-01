@@ -20,49 +20,37 @@
 
 static lgrp_cookie_t lgrp_cookie;
 
-void qt_affinity_init(
-    void)
-{
-    lgrp_cookie = lgrp_init(LGRP_VIEW_OS);
-}
+static int lgrp_maxcpus(
+    const lgrp_id_t lgrp,
+    int cpu_max)
+{				       /*{{{ */
+    int nchildren, ncpus =
+	lgrp_cpus(lgrp_cookie, lgrp, NULL, 0, LGRP_CONTENT_DIRECT);
 
-qthread_shepherd_id_t guess_num_shepherds(
-    void)
-{
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-# warning affinity logic is totally wrong for multithreaded shepherds
-#else
-    return lgrp_cpus(lgrp_cookie, lgrp_root(lgrp_cookie), NULL, 0,
-		     LGRP_CONTENT_ALL);
-#endif
-}
-
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-void qt_affinity_set(
-    qthread_worker_t * me)
-{
-    if (lgrp_affinity_set
-	(P_LWPID, P_MYID, me->shepherd->lgrp, LGRP_AFF_STRONG) != 0) {
-	perror("lgrp_affinity_set");
+    if (ncpus == -1) {
+	return cpu_max;
+    } else if (ncpus > 0 && ncpus > cpu_max) {
+	cpu_max = ncpus;
     }
-}
-#else
-void qt_affinity_set(
-    qthread_shepherd_t * me)
-{
-    if (lgrp_affinity_set(P_LWPID, P_MYID, me->lgrp, LGRP_AFF_STRONG) != 0) {
-	perror("lgrp_affinity_set");
-    }
-}
-#endif
+    nchildren = lgrp_children(lgrp_cookie, lgrp, NULL, 0);
+    if (nchildren == -1) {
+	return cpu_max;
+    } else if (nchildren > 0) {
+	int i;
+	lgrp_id_t *children = malloc(nchildren * sizeof(lgrp_id_t));
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-unsigned int guess_num_workers_per_shep(
-    qthread_shepherd_id_t nshepherds)
-{
-    return 1;
-}
-#endif
+	nchildren = lgrp_children(lgrp_cookie, lgrp, children, nchildren);
+	if (nchildren == -1) {
+	    free(children);
+	    return cpu_max;
+	}
+	for (i = 0; i < nchildren; i++) {
+	    cpu_max = lgrp_maxcpus(children[i], cpu_max);
+	}
+	free(children);
+    }
+    return cpu_max;
+}				       /*}}} */
 
 static int lgrp_walk(
     const lgrp_id_t lgrp,
@@ -85,8 +73,12 @@ static int lgrp_walk(
 	    return cpu_grps;
 	}
 	cpuids[ncpus] = -1;
-	cpus[cpu_grps] = cpuids;
-	lgrp_ids[cpu_grps] = lgrp;
+	if (cpus) {
+	    cpus[cpu_grps] = cpuids;
+	}
+	if (lgrp_ids) {
+	    lgrp_ids[cpu_grps] = lgrp;
+	}
 	cpu_grps++;
     }
     nchildren = lgrp_children(lgrp_cookie, lgrp, NULL, 0);
@@ -104,9 +96,73 @@ static int lgrp_walk(
 	for (i = 0; i < nchildren; i++) {
 	    cpu_grps = lgrp_walk(children[i], cpus, lgrp_ids, cpu_grps);
 	}
+	free(children);
     }
     return cpu_grps;
 }				       /*}}} */
+
+void qt_affinity_init(
+    void)
+{
+    lgrp_cookie = lgrp_init(LGRP_VIEW_OS);
+}
+
+qthread_shepherd_id_t guess_num_shepherds(
+    void)
+{
+    qthread_shepherd_id_t guess = 1;
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    guess = lgrp_walk(lgrp_root(lgrp_cookie), NULL, NULL, 0);
+#else
+    guess = lgrp_cpus(lgrp_cookie, lgrp_root(lgrp_cookie), NULL, 0,
+		     LGRP_CONTENT_ALL);
+#endif
+    qthread_debug(ALL_DETAILS, "guessing %i shepherds\n", (int)guess);
+    return guess;
+}
+
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+void qt_affinity_set(
+    qthread_worker_t * me)
+{
+    /* if this seems wrong, first answer: why should workers have more than socket affinity? */
+    qthread_debug(0, "set shep %i worker %i to lgrp %i\n", (int)me->shepherd->shepherd_id, (int)me->worker_id, (int)me->shepherd->lgrp);
+    if (lgrp_affinity_set
+	(P_LWPID, P_MYID, me->shepherd->lgrp, LGRP_AFF_STRONG) != 0) {
+	perror("lgrp_affinity_set");
+    }
+}
+#else
+void qt_affinity_set(
+    qthread_shepherd_t * me)
+{
+    if (lgrp_affinity_set(P_LWPID, P_MYID, me->lgrp, LGRP_AFF_STRONG) != 0) {
+	perror("lgrp_affinity_set");
+    }
+}
+#endif
+
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+unsigned int guess_num_workers_per_shep(
+    qthread_shepherd_id_t nshepherds)
+{
+    unsigned int guess = 1;
+    int tot_nodes = lgrp_walk(lgrp_root(lgrp_cookie), NULL, NULL, 0);
+    guess = lgrp_maxcpus(lgrp_root(lgrp_cookie), 0);
+
+    qthread_debug(ALL_DETAILS, "guessing num workers for %i sheps (nodes:%i max:%i)\n", (int)nshepherds, tot_nodes, (int)guess);
+
+    if (nshepherds > tot_nodes) {
+	guess /= (nshepherds/tot_nodes);
+    }
+    if (guess == 0) {
+	guess = 1;
+    }
+
+    qthread_debug(ALL_DETAILS, "guessing %i workers per shep\n", (int)guess);
+    return guess;
+}
+#endif
 
 int qt_affinity_gendists(
     qthread_shepherd_t * sheps,
@@ -235,4 +291,5 @@ int qt_affinity_gendists(
     if (lgrp_ids) {
 	free(lgrp_ids);
     }
+    return QTHREAD_SUCCESS;
 }
