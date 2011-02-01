@@ -972,7 +972,10 @@ int qthread_initialize(void)
     }
     qthread_debug(ALL_DETAILS, "qaffinity = %i\n", qaffinity);
     if (qaffinity == 1 && nshepherds > 1) {
-	qt_affinity_gendists(qlib->shepherds, nshepherds);
+	int ret = qt_affinity_gendists(qlib->shepherds, nshepherds);
+	if (ret != QTHREAD_SUCCESS) {
+	    return ret;
+	}
     }
 #ifndef UNPOOLED
     /* set up the memory pools */

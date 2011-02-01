@@ -239,10 +239,10 @@ void qt_threadqueue_enqueue(qt_threadqueue_t * q, qthread_t * t, qthread_shepher
 		 QCOMPOSE(node, tail));
     (void)qthread_incr(&q->advisory_queuelen, 1);
 # ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-    if (vol_read_a(&(q->fruitless))) {
+    if (q->fruitless) {
 	QTHREAD_LOCK(&q->lock);
-	if (vol_read_a(&(q->fruitless))) {
-	    *vol_id_a(&(q->fruitless)) = 0;
+	if (q->fruitless) {
+	    q->fruitless = 0;
 	    QTHREAD_SIGNAL(&q->notempty);
 	}
 	QTHREAD_UNLOCK(&q->lock);
@@ -331,7 +331,7 @@ qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q)
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
 		    if (qthread_internal_incr(&q->fruitless, &q->fruitless_m, 1) > 1000) {
 			QTHREAD_LOCK(&q->lock);
-			while (vol_read_a(&q->fruitless) > 1000) {
+			while (q->fruitless > 1000) {
 			    QTHREAD_CONDWAIT(&q->notempty, &q->lock);
 			}
 			QTHREAD_UNLOCK(&q->lock);

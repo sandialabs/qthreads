@@ -21,7 +21,7 @@ void qt_affinity_set(
     qthread_shepherd_t * me
 #endif
     );
-void qt_affinity_gendists(
+int qt_affinity_gendists(
     qthread_shepherd_t * sheps,
     qthread_shepherd_id_t nshepherds);
 

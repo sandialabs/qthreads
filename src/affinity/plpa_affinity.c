@@ -80,7 +80,7 @@ unsigned int guess_num_workers_per_shep(
 }
 #endif
 
-void qt_affinity_gendists(
+int qt_affinity_gendists(
     qthread_shepherd_t * sheps,
     qthread_shepherd_id_t nshepherds)
 {
@@ -92,4 +92,5 @@ void qt_affinity_gendists(
 #endif
     }
     /* there is no inherent way to detect distances, so unfortunately we must assume that they're all equidistant */
+    return QTHREAD_SUCCESS;
 }

@@ -91,7 +91,7 @@ unsigned int guess_num_workers_per_shep(
 }
 #endif
 
-void qt_affinity_gendists(
+int qt_affinity_gendists(
     qthread_shepherd_t * sheps,
     qthread_shepherd_id_t nshepherds)
 {
@@ -158,4 +158,5 @@ void qt_affinity_gendists(
 #  endif
     }
 # endif
+    return QTHREAD_SUCCESS;
 }
