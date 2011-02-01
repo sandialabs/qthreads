@@ -408,11 +408,12 @@ AS_IF([test "x$qthread_implementation" = "xunix"], [
          [make the ss_sp member of uc_stack be the high-address of the stack, rather than the low-address of the stack])
 	  qthread_disable_fastcontext=yes
     ;;
-    *-solaris2.9)
+    *-solaris2.9|*-solaris2.10)
       AC_DEFINE([__MAKECONTEXT_V2_SOURCE], [1], [force the Sun makecontext to behave correctly])
 	  qthread_disable_fastcontext=yes
     ;;
   esac
+  AC_MSG_NOTICE([enable_fastcontext = $enable_fastcontext and qthread_disable_fastcontext = $qthread_disable_fastcontext])
   AS_IF([test "x$enable_fastcontext" == "xno" -o "x$qthread_disable_fastcontext" == "xyes"],
   		[QTHREAD_CHECK_SWAPCONTEXT([qthread_makecontext_type="native"],
 								   [qthread_makecontext_type="own"])],
