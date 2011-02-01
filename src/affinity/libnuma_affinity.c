@@ -4,6 +4,7 @@
 
 #include <numa.h>
 
+#include "qthread_innards.h"
 #include "qt_affinity.h"
 
 #include "shepcomp.h"
@@ -13,12 +14,14 @@ void qt_affinity_init(
 {
 }
 
+#define BMASK_WORDS 16
+
 qthread_shepherd_id_t guess_num_shepherds(
     void)
 {
     qthread_shepherd_id_t nshepherds = 1;
     if (numa_available() != 1) {
-	unsigned long bmask = 0;
+	unsigned long bmask[BMASK_WORDS];
 	unsigned long count = 0;
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 	/* this is (probably) correct if/when we have multithreaded shepherds,
@@ -46,18 +49,27 @@ qthread_shepherd_id_t guess_num_shepherds(
 	nshepherds = numa_max_node() + 1;
 	qthread_debug(ALL_DETAILS, "numa_max_node() returned %i\n",
 		      nshepherds);
+	qthread_debug(ALL_DETAILS, "bmask is %i bytes\n",
+		      (int)sizeof(bmask));
+	memset(bmask, 0, sizeof(bmask));
 	for (size_t shep = 0; shep < nshepherds; ++shep) {
-	    numa_node_to_cpus(shep, &bmask, sizeof(unsigned long));
-	    for (size_t j = 0; j < sizeof(unsigned long) * 8; ++j) {
-		if (bmask & (1UL << j)) {
-		    ++count;
+	    int ret = numa_node_to_cpus(shep, bmask, sizeof(bmask));
+	    qthread_debug(ALL_DETAILS, "bmask for shep %i is %x,%x,%x,%x (%i)\n", (int)shep, (unsigned)bmask[0], (unsigned)bmask[1], (unsigned)bmask[2], (unsigned)bmask[3], ret);
+	    if (ret != 0) break;
+	    for (size_t word = 0; word < sizeof(bmask)/sizeof(unsigned long); ++word) {
+		for (size_t j = 0; j < sizeof(unsigned long) * 8; ++j) {
+		    if (bmask[word] & (1UL << j)) {
+			++count;
+		    }
 		}
 	    }
 	}
-	nshepherds = count;
 	qthread_debug(ALL_DETAILS,
 		      "counted %i CPUs via numa_node_to_cpus()\n",
 		      (int)count);
+	if (count > 0) {
+	    nshepherds = count;
+	}
 # endif
 #endif /* MULTITHREADED */
     }
@@ -140,7 +152,7 @@ int qt_affinity_gendists(
 # ifdef HAVE_NUMA_DISTANCE
     /* truly ancient versions of libnuma (in the changelog, this is
      * considered "pre-history") do not have numa_distance() */
-    for (i = 0; i < nshepherds; i++) {
+    for (qthread_shepherd_id_t i = 0; i < nshepherds; i++) {
 	const unsigned int node_i = sheps[i].node;
 	size_t j, k;
 	sheps[i].shep_dists = calloc(nshepherds, sizeof(unsigned int));

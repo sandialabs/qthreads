@@ -1,3 +1,5 @@
+#include <stdlib.h>
+
 #ifdef HAVE_QSORT_R
 # if !defined(__linux__)
 static int qthread_internal_shepcomp(void *src, const void *a, const void *b)
