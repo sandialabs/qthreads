@@ -33,6 +33,7 @@ qthread_shepherd_id_t guess_num_shepherds(
 	qthread_debug(ALL_DETAILS, "numa_num_thread_cpus returned %i\n",
 		      nshepherds);
 # elif defined(HAVE_NUMA_BITMASK_NBYTES)
+	nshepherds = 0;
 	for (size_t b = 0; b < numa_bitmask_nbytes(numa_all_cpus_ptr) * 8;
 	     b++) {
 	    nshepherds += numa_bitmask_isbitset(numa_all_cpus_ptr, b);
@@ -52,7 +53,7 @@ qthread_shepherd_id_t guess_num_shepherds(
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 void qt_affinity_set(
-	qthread_worker_t *me)
+    qthread_worker_t * me)
 {
     if (numa_run_on_node(me->shepherd->node) != 0) {
 	numa_error("setting thread affinity");
@@ -61,7 +62,7 @@ void qt_affinity_set(
 }
 #else
 void qt_affinity_set(
-	qthread_shepherd_t *me)
+    qthread_shepherd_t * me)
 {
     if (numa_run_on_node(me->node) != 0) {
 	numa_error("setting thread affinity");

@@ -34,6 +34,7 @@ qthread_shepherd_id_t guess_num_shepherds(
 	qthread_debug(ALL_DETAILS, "numa_num_thread_cpus returned %i\n",
 		      nshepherds);
 # elif defined(HAVE_NUMA_BITMASK_NBYTES)
+	nshepherds = 0;
 	for (size_t b = 0; b < numa_bitmask_nbytes(numa_all_cpus_ptr) * 8;
 	     b++) {
 	    nshepherds += numa_bitmask_isbitset(numa_all_cpus_ptr, b);
