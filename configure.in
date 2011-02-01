@@ -411,6 +411,9 @@ AS_IF([test "x$qthread_implementation" = "xunix"], [
       AC_DEFINE([__MAKECONTEXT_V2_SOURCE], [1], [force the Sun makecontext to behave correctly])
 	  qthread_disable_fastcontext=yes
     ;;
+	ia64-*)
+	  qthread_disable_fastcontext=yes
+	;;
   esac
   AC_MSG_NOTICE([enable_fastcontext = $enable_fastcontext and qthread_disable_fastcontext = $qthread_disable_fastcontext])
   AS_IF([test "x$enable_fastcontext" == "xno" -o "x$qthread_disable_fastcontext" == "xyes"],
