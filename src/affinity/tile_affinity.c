@@ -21,14 +21,25 @@ qthread_shepherd_id_t guess_num_shepherds(
     return tmc_cpus_count(&online_cpus);
 }
 
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 void qt_affinity_set(
-    int node)
+	qthread_worker_t *me)
 {
-    if (tmc_cpus_set_my_cpu(node) < 0) {
+    if (tmc_cpus_set_my_cpu(me->packed_worker_id) < 0) {
 	perror("tmc_cpus_set_my_affinity() failed");
-	fprintf(stderr,"\tnode = %i\n", (int)node);
+	fprintf(stderr,"\tnode = %i\n", (int)me->packed_worker_id);
     }
 }
+#else
+void qt_affinity_set(
+	qthread_shepherd_t *me)
+{
+    if (tmc_cpus_set_my_cpu(me->node) < 0) {
+	perror("tmc_cpus_set_my_affinity() failed");
+	fprintf(stderr,"\tnode = %i\n", (int)me->node);
+    }
+}
+#endif
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 unsigned int guess_num_workers_per_shep(
@@ -46,6 +57,9 @@ void qt_affinity_gendists(
     unsigned int *cpu_array;
     size_t cpu_count, offset;
 
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+# error The logic for node assignment is completely wrong for multithreaded shepherds
+#endif
     qassert(tmc_cpus_get_online_cpus(&online_cpus), 0);
     cpu_count = tmc_cpus_count(&online_cpus);
     assert(cpu_count > 0);
