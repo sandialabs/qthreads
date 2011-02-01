@@ -27,10 +27,17 @@ qthread_shepherd_id_t guess_num_shepherds(
     return 1;
 }
 
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 void qt_affinity_set(
-    int node)
+	qthread_worker_t *me)
 {
 }
+#else
+void qt_affinity_set(
+	qthread_shepherd_t *me)
+{
+}
+#endif
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 unsigned int guess_num_workers_per_shep(

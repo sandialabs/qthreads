@@ -476,18 +476,6 @@ static void *qthread_shepherd(void *arg)
     /* Initialize myself */
     pthread_setspecific(shepherd_structs, arg);
 
-#if defined(QTHREAD_MULTITHREADED_SHEPHERDS) && ! defined(__APPLE__)
-    /* Bind threads to physical cores such that workers of a shpeherd are on the same socket.
-       Assumes round robin thread numbering. (Not very portable and should be replaced) */
-    unsigned long phys_thread_num = (me_worker->worker_id * qlib->nshepherds) + me->shepherd_id;
-
-    cpu_set_t mask;
-    CPU_ZERO(&mask);
-    CPU_SET(phys_thread_num, &mask);
-
-    sched_setaffinity(0, sizeof(mask), &mask);
-#endif
-
     if (qaffinity && me->node != -1) {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 	qt_affinity_set(me_worker);
