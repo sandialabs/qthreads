@@ -76,7 +76,20 @@ void qt_affinity_set(
     qthread_shepherd_t *myshep = me->shepherd;
     hwloc_obj_t obj = hwloc_get_obj_inside_cpuset_by_depth(ltopology, allowed_cpuset, shep_depth, myshep->node);
     size_t nbobjs = hwloc_get_nbobjs_inside_cpuset_by_type(ltopology, obj->allowed_cpuset, HWLOC_OBJ_PU);
+    qthread_debug(ALL_DETAILS, "shep %i worker %i, there are %i PUs\n", me->shepherd->shepherd_id, me->worker_id, (int)nbobjs);
     hwloc_obj_t sub_obj = hwloc_get_obj_inside_cpuset_by_type(ltopology, obj->allowed_cpuset, HWLOC_OBJ_PU, me->worker_id % nbobjs);
+#ifdef QTHREAD_DEBUG
+    {
+	char *str;
+#if HWLOC_API_VERSION == 0x00010000
+	hwloc_cpuset_asprintf(&str, sub_obj->allowed_cpuset);
+#else
+	hwloc_bitmap_asprintf(&str, sub_obj->allowed_cpuset);
+#endif
+	qthread_debug(ALL_DETAILS, "binding shep %i worker %i (%i) to mask %s\n", me->shepherd->shepherd_id, me->worker_id, me->packed_worker_id, str);
+	free(str);
+    }
+#endif
     if (hwloc_set_cpubind(ltopology, sub_obj->allowed_cpuset, HWLOC_CPUBIND_THREAD)) {
 	char *str;
 	int i = errno;
@@ -86,9 +99,9 @@ void qt_affinity_set(
 	}
 #endif
 #if HWLOC_API_VERSION == 0x00010000
-	hwloc_cpuset_asprintf(&str, obj->allowed_cpuset);
+	hwloc_cpuset_asprintf(&str, sub_obj->allowed_cpuset);
 #else
-	hwloc_bitmap_asprintf(&str, obj->allowed_cpuset);
+	hwloc_bitmap_asprintf(&str, sub_obj->allowed_cpuset);
 #endif
 	fprintf(stderr, "Couldn't bind to cpuset %s because %s (%i)\n", str,
 		strerror(i), i);
