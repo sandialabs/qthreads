@@ -5,7 +5,6 @@
 #include <hwloc.h>
 
 #include "qthread_innards.h"
-#include "qt_shepherd_innards.h"
 #include "qt_affinity.h"
 
 static hwloc_topology_t topology;

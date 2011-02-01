@@ -28,7 +28,6 @@ kern_return_t thread_policy_get(
 #endif
 
 #include "qthread_asserts.h"
-#include "qt_shepherd_innards.h"
 #include "qt_affinity.h"
 
 void qt_affinity_init(

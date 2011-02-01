@@ -509,26 +509,26 @@ AS_IF([test "x$enable_hardware_timer" = "xyes"],
 AC_CACHE_SAVE
 
 ## External libraries that help on some architectures
-AS_IF([test "x$qthread_topo" != xno_affinity],[
+AS_IF([test "x$qthread_topo" != xno],[
 AS_IF([test "x$qthread_topo" == "xnone_specified"],
-	  [qthread_topo=no_affinity])
+	  [qthread_topo=no])
 AS_IF([test "x$qthread_implementation" = "xunix"],
       [# First, check for the ones that will give me distance information
-       AS_IF([test "x$qthread_topo" = xno_affinity -o "x$qthread_topo" = xlgrp],
+       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xlgrp],
 	     [QTHREAD_CHECK_LIBLGRP([qthread_topo=lgrp])])
-       AS_IF([test "x$qthread_topo" = xno_affinity -o "x$qthread_topo" = xlibnuma -o "x$qthread_topo" = xlibnumaV2],
+       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xlibnuma -o "x$qthread_topo" = xlibnumaV2],
 	     [QTHREAD_CHECK_LIBNUMA([qthread_topo=libnuma],[qthread_topo=libnumaV2])])
-       AS_IF([test "x$qthread_topo" = xno_affinity -o "x$qthread_topo" = xtile],
+       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xtile],
 	     [QTHREAD_CHECK_TILETOPO([qthread_topo=tile])])
        # Second, check for the ones that only give me CPU affinity control/information
        # At the moment, hwloc does not support Mach very well,
        # so I need to use the Mach interface directly (i.e. check it first)
-       AS_IF([test "x$qthread_topo" = xno_affinity -o "x$qthread_topo" = xhwloc],
+       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xhwloc],
 	     [QTHREAD_CHECK_HWLOC([qthread_topo=hwloc])])
-       AS_IF([test "x$qthread_topo" = xno_affinity -o "x$qthread_topo" = xmach -o "x$qthread_topo" = xmach_topo],
-	     [QTHREAD_CHECK_MACHTOPO([qthread_topo=mach_topo])])
+       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xmach],
+	     [QTHREAD_CHECK_MACHTOPO([qthread_topo=mach])])
        # PLPA is deprecated in favor of hwloc
-       AS_IF([test "x$qthread_topo" = xno_affinity -o "x$qthread_topo" = xplpa],
+       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xplpa],
 	     [QTHREAD_CHECK_PLPA([qthread_topo=plpa],)])
        ])
 ])

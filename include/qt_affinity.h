@@ -3,6 +3,7 @@
 #endif
 
 #include "qthread/qthread.h"
+#include "qt_shepherd_innards.h"
 
 #ifndef QTHREAD_SHEPHERD_TYPEDEF
 #define QTHREAD_SHEPHERD_TYPEDEF
