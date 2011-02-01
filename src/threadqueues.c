@@ -5,6 +5,7 @@
 /* System Headers */
 #include <pthread.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 /* Internal Headers */
 #include "qthread/qthread.h"

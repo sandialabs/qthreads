@@ -35,7 +35,7 @@ Q_NOINLINE static unsigned long vol_read_ul(volatile unsigned long *ptr)
     return *ptr;
 }
 
-int qtimer_init(void)
+static int qtimer_init(void)
 {
     int fd, ret;
     unsigned long val;
