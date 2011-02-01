@@ -24,18 +24,31 @@ void qt_affinity_init(
 qthread_shepherd_id_t guess_num_shepherds(
     void)
 {
-    /* XXX: this is totally wrong for multithreaded shepherds */
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+# warning affinity logic is totally wrong for multithreaded shepherds
+#else
     return lgrp_cpus(lgrp_cookie, lgrp_root(lgrp_cookie), NULL, 0,
 		     LGRP_CONTENT_ALL);
+#endif
 }
 
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 void qt_affinity_set(
-    int node)
+	qthread_worker_t *me)
+{
+    if (lgrp_affinity_set(P_LWPID, P_MYID, me->shepherd->lgrp, LGRP_AFF_STRONG) != 0) {
+	perror("lgrp_affinity_set");
+    }
+}
+#else
+void qt_affinity_set(
+	qthread_shepherd_t *me)
 {
     if (lgrp_affinity_set(P_LWPID, P_MYID, me->lgrp, LGRP_AFF_STRONG) != 0) {
 	perror("lgrp_affinity_set");
     }
 }
+#endif
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 unsigned int guess_num_workers_per_shep(
