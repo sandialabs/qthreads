@@ -198,13 +198,13 @@ int qt_affinity_gendists(
 	hwloc_cpuset_t obj_cpuset = obj->allowed_cpuset;
 	/* count how many PUs in this obj */
 #if HWLOC_API_VERSION == 0x00010000
-	hwloc_bitmap_foreach_begin(j, obj_cpuset)
-	    cpus_left_per_obj[i]++;
-	hwloc_bitmap_foreach_end();
-#else
 	hwloc_cpuset_foreach_begin(j, obj_cpuset)
 	    cpus_left_per_obj[i]++;
 	hwloc_cpuset_foreach_end();
+#else
+	hwloc_bitmap_foreach_begin(j, obj_cpuset)
+	    cpus_left_per_obj[i]++;
+	hwloc_bitmap_foreach_end();
 #endif
 	//printf("count[%i] = %i\n", (int)i, (int)cpus_left_per_obj[i]);
     }
