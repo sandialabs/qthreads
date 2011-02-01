@@ -2,6 +2,7 @@
 /* Portions of this file are Copyright Sandia National Laboratories */
 
 #include <osx_compat/taskimpl.h>
+#include "qthread_prefetch.h"
 
 #ifdef NEEDPOWERMAKECONTEXT
 void makecontext(ucontext_t *ucp, void (*func)(void), int argc, ...)
@@ -93,9 +94,9 @@ int swapcontext(ucontext_t *oucp, ucontext_t *ucp)
      * values: 1 and 0. If it's 0, then I successfully got the context. If it's
      * 1, then I've just swapped back into a previously fetched context (i.e. I
      * do NOT want to swap again, because that'll put me into a nasty loop). */
-    __builtin_prefetch(ucp, 0, 0);
+    Q_PREFETCH(ucp, 0, 0);
     if(getcontext(oucp) == 0) {
-	__builtin_prefetch((void*)ucp->uc_mcontext.mc_esp, 1, 3);
+	Q_PREFETCH((void*)ucp->uc_mcontext.mc_esp, 1, 3);
 	setcontext(ucp);
     }
     return 0;

@@ -286,7 +286,7 @@ start:
 	    pool->alloc_block = (void *)p;
 	    pool->alloc_list[pool->alloc_list_pos] = pool->alloc_block;
 	    pool->alloc_list_pos++;
-	    __sync_synchronize();
+	    __asm__ __volatile__ ("":::"memory");
 	    pool->alloc_block_ptr = ((char*)p) + pool->item_size;
 	    QTHREAD_FASTLOCK_UNLOCK(&pool->pool_lock);
 	} else {
