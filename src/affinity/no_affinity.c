@@ -2,6 +2,7 @@
 # include "config.h"
 #endif
 
+#include "qthread_innards.h"
 #include "qt_affinity.h"
 
 void qt_affinity_init(
@@ -13,17 +14,20 @@ qthread_shepherd_id_t guess_num_shepherds(
     void)
 {
 #if defined(HAVE_SYSCONF) && defined(_SC_NPROCESSORS_CONF) /* Linux */
-	long ret = sysconf(_SC_NPROCESSORS_CONF);
-	nshepherds = (ret > 0) ? ret : 1;
+    long ret = sysconf(_SC_NPROCESSORS_CONF);
+    qthread_debug(ALL_DETAILS, "based on sysconf(), guessing %i shepherds\n", (int)ret);
+    return (ret > 0) ? ret : 1;
 #elif defined(HAVE_SYSCTL) && defined(CTL_HW) && defined(HW_NCPU)
-	int name[2] = { CTL_HW, HW_NCPU };
-	uint32_t oldv;
-	size_t oldvlen = sizeof(oldv);
-	if (sysctl(name, 2, &oldv, &oldvlen, NULL, 0) >= 0) {
-	    assert(oldvlen == sizeof(oldv));
-	    nshepherds = (int)oldv;
-	}
+    int name[2] = { CTL_HW, HW_NCPU };
+    uint32_t oldv;
+    size_t oldvlen = sizeof(oldv);
+    if (sysctl(name, 2, &oldv, &oldvlen, NULL, 0) >= 0) {
+	assert(oldvlen == sizeof(oldv));
+	qthread_debug(ALL_DETAILS, "based on sysctl(), buessing %i shepherds\n", (int)oldv);
+	return oldv;
+    }
 #endif
+    qthread_debug(ALL_DETAILS, "no useful interfaces present; assuming a single shepherd\n");
     return 1;
 }
 
@@ -43,6 +47,7 @@ void qt_affinity_set(
 unsigned int guess_num_workers_per_shep(
     qthread_shepherd_id_t nshepherds)
 {
+    qthread_debug(ALL_DETAILS, "no useful interfaces present; assuming a single worker\n");
     return 1;
 }
 #endif
