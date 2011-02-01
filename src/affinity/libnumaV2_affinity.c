@@ -141,7 +141,7 @@ int qt_affinity_gendists(
     qthread_shepherd_id_t nshepherds)
 {
     if (numa_available() == -1) {
-	return;
+	return QTHREAD_THIRD_PARTY_ERROR;
     }
     assign_nodes(sheps, nshepherds);
 # ifdef HAVE_NUMA_DISTANCE

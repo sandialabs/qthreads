@@ -99,7 +99,7 @@ int qt_affinity_gendists(
     nodemask_t bmask;
 
     if (numa_available() == -1) {
-	return;
+	return QTHREAD_THIRD_PARTY_ERROR;
     }
     nodemask_zero(&bmask);
     /* assign nodes */
