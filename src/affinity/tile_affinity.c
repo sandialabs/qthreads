@@ -6,7 +6,11 @@
 # include <tmc/cpus.h>
 #endif
 
+#include <stdio.h>
+
+#include "qthread_innards.h"
 #include "qt_affinity.h"
+#include "shepcomp.h"
 
 void qt_affinity_init(
     void)
@@ -68,13 +72,13 @@ int qt_affinity_gendists(
     assert(cpu_array != NULL);
     qassert(tmc_cpus_to_array(&online_cpus, cpu_array, cpu_count), cpu_count);
     offset = 0;
-    for (i = 0; i < nshepherds; i++) {
+    for (qthread_shepherd_id_t i = 0; i < nshepherds; i++) {
 	sheps[i].node = cpu_array[offset];
 	offset++;
 	offset *= (offset < cpu_count);
     }
     free(cpu_array);
-    for (i = 0; i < nshepherds; i++) {
+    for (qthread_shepherd_id_t i = 0; i < nshepherds; i++) {
 	size_t j, k;
 	unsigned int ix, iy;
 	sheps[i].shep_dists =

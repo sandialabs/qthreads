@@ -56,14 +56,16 @@
 #ifdef HAVE_SYS_TYPES_H
 # include <sys/types.h>
 #endif
-#ifdef HAVE_SYS_WAIT_H
-# include <sys/wait.h>
-#endif
-#ifdef HAVE_SCHED_H
-# include <sched.h>
-#endif
-#ifdef HAVE_SIGNAL_H
-# include <signal.h>
+#ifndef __tile__
+# ifdef HAVE_SYS_WAIT_H
+#  include <sys/wait.h>
+# endif
+# ifdef HAVE_SCHED_H
+#  include <sched.h>
+# endif
+# ifdef HAVE_SIGNAL_H
+#  include <signal.h>
+# endif
 #endif
 #ifdef HAVE_SYS_UTSNAME_H
 # include <sys/utsname.h>
@@ -71,8 +73,10 @@
 #ifdef HAVE_INTTYPES_H
 # include <inttypes.h>
 #endif
-#ifdef HAVE_SYS_UCONTEXT_H
-# include <sys/ucontext.h>
+#ifndef __tile__
+# ifdef HAVE_SYS_UCONTEXT_H
+#  include <sys/ucontext.h>
+# endif
 #endif
 
 #if defined(__FreeBSD__) && __FreeBSD__ < 5
@@ -109,6 +113,8 @@ extern	void		makecontext(ucontext_t*, void(*)(), int, ...);
 #	define ucontext_t libthread_ucontext_t
 #	if defined(__i386__) || defined(__x86_64__)
 #		include "386-ucontext.h"
+#       elif defined(__tile__)
+#		include "tile-ucontext.h"
 #	else
 #		include "power-ucontext.h"
 #	endif

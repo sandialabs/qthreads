@@ -38,6 +38,9 @@ typedef struct qlib_s
 {
     unsigned int nshepherds;
     unsigned int nshepherds_active;
+#ifdef QTHREAD_MUTEX_INCREMENT
+    QTHREAD_FASTLOCK_TYPE nshepherds_active_lock;
+#endif
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     unsigned int nworkers_active;
     unsigned int nworkerspershep;
