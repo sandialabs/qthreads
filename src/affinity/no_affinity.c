@@ -58,7 +58,7 @@ unsigned int guess_num_workers_per_shep(
 #if defined(HAVE_SYSCONF) && defined(_SC_NPROCESSORS_CONF)	/* Linux */
     long ret = sysconf(_SC_NPROCESSORS_CONF);
     qthread_debug(ALL_DETAILS, "sysconf() says %i processors\n",
-		  (int)num_procs);
+		  (int)ret);
     num_procs = (ret > 0) ? (size_t) ret : 1;
 #elif defined(HAVE_SYSCTL) && defined(CTL_HW) && defined(HW_NCPU)
     int name[2] = { CTL_HW, HW_NCPU };
