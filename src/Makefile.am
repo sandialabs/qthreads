@@ -72,4 +72,13 @@ if QTHREAD_NEED_OWN_MAKECONTEXT
 include osx_compat/Makefile.inc
 endif
 
-EXTRA_DIST = affinity/hwloc.c affinity/no_affinity.c affinity/libnuma.c
+EXTRA_DIST = \
+			 affinity/hwloc_affinity.c \
+			 affinity/no_affinity.c \
+			 affinity/libnuma_affinity.c \
+			 affinity/libnumaV2_affinity.c \
+			 affinity/mach_affinity.c \
+			 affinity/tile_affinity.c \
+			 affinity/plpa_affinity.c \
+			 affinity/lgrp_affinity.c \
+			 affinity/shepcomp.h
