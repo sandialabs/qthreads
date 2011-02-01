@@ -12,6 +12,7 @@
 void qt_affinity_init(
     void)
 {
+    qassert(numa_available(), 0);
 }
 
 qthread_shepherd_id_t guess_num_shepherds(
@@ -75,7 +76,35 @@ void qt_affinity_set(
 unsigned int guess_num_workers_per_shep(
     qthread_shepherd_id_t nshepherds)
 {
-    return 1;
+    size_t cpu_count = 1;
+    unsigned int guess = 1;
+    qthread_debug(ALL_DETAILS, "guessing workers for %i shepherds\n", (int)nshepherds);
+# ifdef HAVE_NUMA_NUM_THREAD_CPUS
+    /* note: not numa_num_configured_cpus(), just in case an
+     * artificial limit has been imposed. */
+    cpu_count = numa_num_thread_cpus();
+    qthread_debug(ALL_DETAILS, "numa_num_thread_cpus returned %i\n",
+	    nshepherds);
+# elif defined(HAVE_NUMA_BITMASK_NBYTES)
+    cpu_count = 0;
+    for (size_t b = 0; b < numa_bitmask_nbytes(numa_all_cpus_ptr) * 8;
+	    b++) {
+	cpu_count += numa_bitmask_isbitset(numa_all_cpus_ptr, b);
+    }
+    qthread_debug(ALL_DETAILS,
+	    "after checking through the all_cpus_ptr, I counted %i cpus\n",
+	    (int)cpu_count);
+# else
+    cpu_count = numa_max_node() + 1;
+    qthread_debug(ALL_DETAILS, "numa_max_node() returned %i\n",
+	    nshepherds);
+# endif
+    guess = cpu_count / nshepherds;
+    if (guess == 0) {
+	guess = 1;
+    }
+    qthread_debug(ALL_DETAILS, "guessing %i workers per shepherd\n", (int)guess);
+    return guess;
 }
 #endif
 

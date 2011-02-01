@@ -816,8 +816,6 @@ int qthread_initialize(void)
 	if (nshepherds <= 0) {
 	    nshepherds = 1;
 	}
-    } else {
-	guess_num_shepherds();
     }
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     nworkerspershep = guess_num_workers_per_shep(nshepherds);
@@ -971,7 +969,13 @@ int qthread_initialize(void)
 	    qaffinity = 1;
     }
     qthread_debug(ALL_DETAILS, "qaffinity = %i\n", qaffinity);
-    if (qaffinity == 1 && nshepherds > 1) {
+    if (qaffinity == 1 &&
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+	    nshepherds * nworkerspershep > 1
+#else
+	    nshepherds > 1
+#endif
+	    ) {
 	int ret = qt_affinity_gendists(qlib->shepherds, nshepherds);
 	if (ret != QTHREAD_SUCCESS) {
 	    return ret;
