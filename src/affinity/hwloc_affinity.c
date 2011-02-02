@@ -7,8 +7,13 @@
 #include "qthread_innards.h"
 #include "qt_affinity.h"
 
+#define ALL_DETAILS 0
+
 static hwloc_topology_t topology;
 static int shep_depth = -1;
+#ifdef QTHREAD_DEBUG
+static const char * typename;
+#endif
 
 static void qt_affinity_internal_hwloc_teardown(
     void)
@@ -27,24 +32,66 @@ void qt_affinity_init(
     /* the goal here is to basically pick the number of domains over which
      * memory access is the same cost (e.g. number of sockets, if all cores on
      * a given socket share top-level cache */
-    shep_depth = hwloc_get_type_depth(topology, HWLOC_OBJ_CACHE);
-    qthread_debug(ALL_DETAILS, "depth of OBJ_CACHE = %d\n", shep_depth);
-    if (shep_depth == HWLOC_TYPE_DEPTH_UNKNOWN ||
-	shep_depth == HWLOC_TYPE_DEPTH_MULTIPLE) {
-	shep_depth = hwloc_get_type_depth(topology, HWLOC_OBJ_SOCKET);
+#ifdef QTHREAD_DEBUG
+    const char *typenames[] = {"node","cache","socket","pu"};
+#endif
+    hwloc_obj_type_t shep_type_options[] = {HWLOC_OBJ_NODE, HWLOC_OBJ_CACHE, HWLOC_OBJ_SOCKET, HWLOC_OBJ_PU};
+    int shep_type_idx = -1;
+    {
+	char *qsh = getenv("QTHREAD_SHEPHERD_BOUNDARY");
+
+	if (qsh) {
+	    if (!strncmp("node",qsh,5)) {
+		shep_type_idx=0;
+	    } else if (!strncmp("cache",qsh,6)) {
+		shep_type_idx=1;
+	    } else if (!strncmp("socket",qsh,7)) {
+		shep_type_idx=2;
+	    } else if (!strncmp("pu",qsh,7)) {
+		shep_type_idx=3;
+	    } else {
+		fprintf(stderr, "unparsable shepherd boundary(%s)\n", qsh);
+	    }
+	}
+    }
+    if (shep_type_idx == -1) {
+	do {
+	    shep_type_idx++;
+	    shep_depth = hwloc_get_type_depth(topology, shep_type_options[shep_type_idx]);
+	    qthread_debug(ALL_DETAILS, "depth of type %i = %d\n", shep_type_idx, shep_depth);
+	    if (shep_type_idx == 3) {
+		break;
+	    }
+	    qthread_debug(ALL_DETAILS, "num objs of type %i = %d\n", shep_type_idx, hwloc_get_nbobjs_by_type(topology, shep_type_options[shep_type_idx]));
+	    if (shep_type_idx == 0 && hwloc_get_nbobjs_by_type(topology, shep_type_options[0]) == 1) {
+		qthread_debug(ALL_DETAILS, "only one node; assuming multiple shepherds\n");
+		continue;
+	    }
+	} while (shep_depth == HWLOC_TYPE_DEPTH_UNKNOWN ||
+		 shep_depth == HWLOC_TYPE_DEPTH_MULTIPLE);
+
 	assert(hwloc_get_nbobjs_inside_cpuset_by_depth
 	       (topology, hwloc_topology_get_allowed_cpuset(topology),
 		shep_depth) > 0);
-	qthread_debug(ALL_DETAILS, "depth of OBJ_SOCKET = %d\n", shep_depth);
+    } else {
+	shep_depth = hwloc_get_type_depth(topology, shep_type_options[shep_type_idx]);
+	qthread_debug(ALL_DETAILS, "depth of type %i = %d\n", shep_type_idx, shep_depth);
     }
+#ifdef QTHREAD_DEBUG
+    typename = typenames[shep_type_idx];
+#endif
     if (shep_depth == HWLOC_TYPE_DEPTH_UNKNOWN ||
 	shep_depth == HWLOC_TYPE_DEPTH_MULTIPLE) {
 	qthread_debug(ALL_DETAILS,
 		      "topology too weird... nbobjs_by_type HWLOC_OBJ_PU is %u\n",
-		      (unsigned int)hwloc_get_nbobjs_by_depth(topology,
+		      (unsigned int)hwloc_get_nbobjs_by_type(topology,
 							      HWLOC_OBJ_PU));
 	shep_depth = hwloc_get_type_depth(topology, HWLOC_OBJ_PU);
+#ifdef QTHREAD_DEBUG
+	typename = "pu";
+#endif
     }
+    qthread_debug(ALL_DETAILS, "final shep_depth: %i (%s)\n", shep_depth, typename);
 #endif
 }				       /*}}} */
 
@@ -84,8 +131,8 @@ qthread_worker_id_t guess_num_workers_per_shep(
 	hwloc_bitmap_t cpuset = obj->allowed_cpuset;
 	unsigned int weight = hwloc_bitmap_weight(cpuset);
 # endif
-	qthread_debug(ALL_DETAILS, "socket %u has %u weight\n",
-		      (unsigned int)socket, weight);
+	qthread_debug(ALL_DETAILS, "%s %u has %u weight\n",
+		      typename, (unsigned int)socket, weight);
 	total += weight;
 	if (socket == 0 || ret < weight) {
 	    ret = weight;
