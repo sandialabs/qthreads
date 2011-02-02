@@ -805,8 +805,6 @@ int qthread_initialize(void)
 	    } else if (nworkerspershep > 0) {
 		fprintf(stderr, "Forced %i Workers per Shepherd\n", (int)nworkerspershep);
 	    }
-	} else {
-	    nworkerspershep = 1;
 	}
 #endif
     }
