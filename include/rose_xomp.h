@@ -20,12 +20,16 @@ qqloop_step_handle_t *qt_loop_rose_queue_create(
     int64_t start,
     int64_t stop,
     int64_t incr);
+void qt_loop_rose_queue_free(
+    qqloop_step_handle_t *);
 void XOMP_loop_guided_init(
+    void ** loop,
     int lower,
     int upper,
     int stride,
     int chunk_size);
 unsigned char XOMP_loop_guided_start(
+    void * loop,
     long startLower,
     long startUpper,
     long stride,
@@ -33,12 +37,15 @@ unsigned char XOMP_loop_guided_start(
     long *returnLower,
     long *returnUpper);
 unsigned char XOMP_loop_guided_next(
+    void * loop,
     long *returnLower,
     long *returnUpper);
 void XOMP_loop_end(
-    void);
+    void * loop
+    );
 void XOMP_loop_end_nowait(
-    void);
+    void * loop
+    );
 void XOMP_barrier(
     void);
 void XOMP_atomic_start(
@@ -47,11 +54,13 @@ void XOMP_atomic_end(
     void);
 // needed for full OpenMP 3.0 support
 void XOMP_loop_ordered_guided_init(
+    void ** loop,
     int lower,
     int upper,
     int stride,
     int chunk_size);
 unsigned char XOMP_loop_ordered_guided_start(
+    void * loop,
     long a,
     long b,
     long c,
@@ -59,6 +68,7 @@ unsigned char XOMP_loop_ordered_guided_start(
     long *e,
     long *f);
 unsigned char XOMP_loop_ordered_guided_next(
+    void * loop,
     long *a,
     long *b);
 void XOMP_task(
@@ -73,31 +83,37 @@ void XOMP_task(
 void XOMP_taskwait(
     void);
 void XOMP_loop_static_init(
+    void ** loop,
     int lower,
     int upper,
     int stride,
     int chunk_size);
 void XOMP_loop_dynamic_init(
+    void ** loop,
     int lower,
     int upper,
     int stride,
     int chunk_size);
 void XOMP_loop_runtime_init(
+    void ** loop,
     int lower,
     int upper,
     int stride);
 //ordered case
 void XOMP_loop_ordered_static_init(
+    void ** loop,
     int lower,
     int upper,
     int stride,
     int chunk_size);
 void XOMP_loop_ordered_dynamic_init(
+    void ** loop,
     int lower,
     int upper,
     int stride,
     int chunk_size);
 void XOMP_loop_ordered_runtime_init(
+    void ** loop,
     int lower,
     int upper,
     int stride);
@@ -108,6 +124,7 @@ void XOMP_ordered_start(
 void XOMP_ordered_end(
     void);
 unsigned char XOMP_loop_static_start(
+    void * loop,
     long a,
     long b,
     long c,
@@ -115,6 +132,7 @@ unsigned char XOMP_loop_static_start(
     long *e,
     long *f);
 unsigned char XOMP_loop_dynamic_start(
+    void * loop,
     long a,
     long b,
     long c,
@@ -122,12 +140,14 @@ unsigned char XOMP_loop_dynamic_start(
     long *e,
     long *f);
 unsigned char XOMP_loop_runtime_start(
+    void * loop,
     long a,
     long b,
     long c,
     long *d,
     long *e);
 unsigned char XOMP_loop_ordered_static_start(
+    void * loop,
     long a,
     long b,
     long c,
@@ -135,6 +155,7 @@ unsigned char XOMP_loop_ordered_static_start(
     long *e,
     long *f);
 unsigned char XOMP_loop_ordered_dynamic_start(
+    void * loop,
     long a,
     long b,
     long c,
@@ -142,6 +163,7 @@ unsigned char XOMP_loop_ordered_dynamic_start(
     long *e,
     long *f);
 unsigned char XOMP_loop_ordered_runtime_start(
+    void * loop,
     long a,
     long b,
     long c,
@@ -149,21 +171,27 @@ unsigned char XOMP_loop_ordered_runtime_start(
     long *e);
 // next
 unsigned char XOMP_loop_static_next(
+    void * loop,
     long *a,
     long *b);
 unsigned char XOMP_loop_dynamic_next(
+    void * loop,
     long *a,
     long *b);
 unsigned char XOMP_loop_runtime_next(
+    void * loop,
     long *a,
     long *b);
 unsigned char XOMP_loop_ordered_static_next(
+    void * loop,
     long *a,
     long *b);
 unsigned char XOMP_loop_ordered_dynamic_next(
+    void * loop,
     long *a,
     long *b);
 unsigned char XOMP_loop_ordered_runtime_next(
+    void * loop,
     long *a,
     long *b);
 void XOMP_critical_start(

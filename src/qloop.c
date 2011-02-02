@@ -765,7 +765,6 @@ qqloop_step_handle_t *qt_loop_step_queue_create(
 	    }
 
 	    h->workers = 0;
-	    h->shepherdsActive = 0;
 	    h->assignNext = start;
 	    h->assignStop = stop;
 	    h->assignStep = incr;
@@ -1260,9 +1259,7 @@ double *cnbTimeMin_(void)
 }
 
 int qloop_internal_computeNextBlock(
-    int block,
-    double time,
-    volatile qqloop_step_handle_t * loop)
+    qqloop_step_handle_t * loop)
 {
 
     int newBlock;
@@ -1270,23 +1267,16 @@ int qloop_internal_computeNextBlock(
     if (remaining <= 0)
 	return 0;
 
-#if defined(__i386__) || defined(__x86_64__)
-    if (time < 1.0)
-#else
-    if (time < 7.5e-7)
-#endif
-      newBlock = block;
-    else
-      newBlock = (remaining / ((cnbWorkers << 1) * (loop->assignStep))) + 1;
+    newBlock = (remaining / ((cnbWorkers << 1) * (loop->assignStep))) + 1;
 
     return newBlock?newBlock:1;
 }
 
 void qt_loop_queue_run_single(
-    volatile qqloop_step_handle_t * loop,
+    qqloop_step_handle_t * loop,
     void *t)
 {
-    int dynamicBlock = qloop_internal_computeNextBlock(0, 1.0, loop);	// fake time to prevent blocking for short time chunks
+    int dynamicBlock = qloop_internal_computeNextBlock(loop);	// fake time to prevent blocking for short time chunks
     qtimer_t qt = qtimer_create();
     double time = 0.;
 
@@ -1310,7 +1300,7 @@ void qt_loop_queue_run_single(
 	if (time < cnbTimeMin)
 	    cnbTimeMin = time;
 
-	dynamicBlock = qloop_internal_computeNextBlock(dynamicBlock, time, loop);
+	dynamicBlock = qloop_internal_computeNextBlock(loop);
 
 	iterationNumber =
 	    (size_t) qthread_incr(&loop->assignNext, dynamicBlock);
@@ -1332,7 +1322,7 @@ void qt_loop_queue_run_single(
     return;
 }
 
-volatile qqloop_step_handle_t *activeLoop = NULL;
+qqloop_step_handle_t *activeLoop = NULL;
 
 static void qt_parallel_qfor(
     const qt_loop_step_f func,
@@ -1341,7 +1331,7 @@ static void qt_parallel_qfor(
     const size_t incr,
     void *restrict argptr)
 {
-    volatile qqloop_step_handle_t *qqhandle = NULL;
+    qqloop_step_handle_t *qqhandle = NULL;
     int forCount = qthread_forCount(1);	// my loop count
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS

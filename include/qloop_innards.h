@@ -66,22 +66,19 @@ struct qqloop_step_handle_s {
     struct qqloop_step_wrapper_args *qwa;
     struct qqloop_step_static_args stat;
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    int workers;
+    aligned_t workers;
+    aligned_t departed_workers;
     enum qloop_handle_type type;
-    int assignNext;
-    int assignStop;
-    int assignStep;
-    int chunkSize;
+    aligned_t assignNext;
+    aligned_t assignStop;
+    aligned_t assignStep;
+    aligned_t chunkSize;
     volatile aligned_t assignDone;	// start+offset
-    size_t shepherdsActive;	// bit vector to stop shepherds from grabbing a loop twice (is this necessary?)
 #endif /* QTHREAD_USE_ROSE_EXTENSIONS */
 };
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-int qloop_internal_computeNextBlock(
-    int block,
-    double time,
-    volatile qqloop_step_handle_t * loop);
+int qloop_internal_computeNextBlock(qqloop_step_handle_t * loop);
 
 double *cnbTimeMin_(void);
 int *cnbWorkers_(void);

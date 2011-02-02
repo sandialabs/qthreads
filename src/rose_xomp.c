@@ -38,23 +38,21 @@
 #define TRUE 1
 #define FALSE 0
 
+void xomp_internal_loop_init(enum qloop_handle_type type,
+			     void ** loop,
+			     int lower,
+			     int upper,
+			     int stride,
+			     int chunk_size);
+int compute_XOMP_block(qqloop_step_handle_t * loop);
+syncvar_t *getSyncTaskVar(qthread_t *me);
+
 typedef enum xomp_nest_level{NO_NEST=0, ALLOW_NEST, AUTO_NEST}xomp_nest_level_t;
 
-static qqloop_step_handle_t* qqloop_get_value(int id);
-static void qqloop_clear_value(int id);
-static void qqloop_set_value(qqloop_step_handle_t * qqhandle);
-
-
-volatile int64_t *arr_level;
-static int64_t *arr_shep;
-static int64_t *arr[100];
-static uint64_t *lastBlock;
-static uint64_t *smallBlock;
-static uint64_t *loopTimer;
-static uint64_t *firstTime;
-static uint64_t *currentIteration;
+static uint64_t *orderedIteration;
 static uint64_t *staticStartCount;
-
+static volatile int orderedLoopCount = 0;
+static qqloop_step_handle_t *qqhandle = NULL;
 
 #ifdef USE_RDTSC
 static uint64_t rdtsc(void);
@@ -241,7 +239,6 @@ void XOMP_init(
     int argc,
     char **argv)
 {
-    int i;
     char *env;  // Used to get Envionment variables
     qthread_initialize();
 
@@ -272,42 +269,14 @@ void XOMP_init(
     }
 
     int lim_s = qthread_num_shepherds();
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    int lim_w = qthread_num_workers();
-#endif
 
-    for(i = 0; i  < 100; i++) {
-      arr[i] = calloc(lim_s, sizeof(uint64_t));
-      if (!arr[i]){
-	fprintf(stderr,"qqloop_set_value arr(%d) build malloc failed\n",lim_s);
-      }
-    }
-
-    arr_level = calloc(lim_s, sizeof(uint64_t));
-    arr_shep = calloc(lim_s, sizeof(uint64_t));
-    lastBlock = calloc(lim_s, sizeof(uint64_t));
-    smallBlock = calloc(lim_s, sizeof(uint64_t));
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    loopTimer =  calloc(lim_w, sizeof(uint64_t));
-#endif
-    firstTime = calloc(lim_s, sizeof(uint64_t));
-    currentIteration = calloc(lim_s, sizeof(uint64_t));
+    orderedIteration = calloc(lim_s, sizeof(uint64_t));
     staticStartCount = calloc(lim_s, sizeof(uint64_t));
     
-    if (!arr_level || !lastBlock || !smallBlock || !loopTimer 
-	|| !firstTime || !currentIteration || ! staticStartCount){
+    if (!orderedIteration || ! staticStartCount){
       fprintf(stderr,"XOMP_init build shepherd aux structure malloc failed\n");
     }
     
-    for(i = 0; i  < lim_s; i++) {
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-      arr_shep[i] = qlib->nworkerspershep;
-#else
-      arr_shep[i] = 1;
-#endif
-    }
-    
-
     return;
 }
 
@@ -363,61 +332,6 @@ void XOMP_parallel_end(
   return;
 }
 
-// helper function to set up parallel loop
-
-static qqloop_step_handle_t* qqloop_get_value(int id)
-{
-    qqloop_step_handle_t * ret = NULL;
-    while(1) {
-       int lev = *(volatile int64_t*)(&arr_level[id]);
-       if (*(volatile int*)(&arr[lev][id])){
-	 ret = (qqloop_step_handle_t*)(arr[lev][id]);
-	   break;
-       }
-    }
-
-    return ret;
-}
-
-static void qqloop_clear_value(int id)
-{
-  int val = qthread_incr(&arr_shep[id], -1);  // count down within shepherd
-  int adj = 1;
-  if (val == 0) {  // last from shepherd -- count down loop nesting
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    adj = qlib->nworkerspershep;
-#endif
-    qthread_incr(&arr_shep[id], adj);  // bloody race here
-                   //  the correct fix is to add a loop structure to XOMP call
-                   //  and then I can use language scoping rules to get this right
-                   //  rather than trying to figure them out under the covers
-    int64_t lev = arr_level[id];
-    arr[lev][id] = 0;
-    qthread_incr(&arr_level[id], -1);
-    
-  }
-  return;
-}
-
-static void qqloop_set_value(qqloop_step_handle_t * qqhandle)
-{
-  int i;
-  int lim;
-  //   qthread_t *const me = qthread_self();
-  //#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  //  lim = qthread_num_workers();
-  //#else
-  lim = qthread_num_shepherds();
-  //#endif
-
-  for (i = 0; i < lim; i++){
-    int64_t lev = qthread_incr(&arr_level[i], 1);
-    asm __volatile__("": : :"memory");
-    arr[lev+1][i] = (int64_t)qqhandle;
-  }
-  return;
-}
-
 qqloop_step_handle_t *qt_loop_rose_queue_create(
     int64_t start,
     int64_t stop,
@@ -427,13 +341,19 @@ qqloop_step_handle_t *qt_loop_rose_queue_create(
     ret = (qqloop_step_handle_t *) malloc(sizeof(qqloop_step_handle_t));
 
     ret->workers = 0;
-    ret->shepherdsActive = 0;
+    ret->departed_workers = 0;
     ret->assignNext = start;
     ret->assignStop = stop;
     ret->assignStep = incr;
     ret->assignDone = stop;
 
     return ret;
+}
+
+void qt_loop_rose_queue_free(qqloop_step_handle_t * qqloop)
+{
+  free(qqloop);
+  return;
 }
 
 // used to compute time to dynamically determine minimum effective block size 
@@ -451,35 +371,24 @@ return (uint64_t)hi << 32 | lo;
 }
 
 // NOTE: need to replace these magic numbers with #defs 
-#else
-qtimer_t loopTimer;
 #endif
 
-volatile int orderedLoopCount = 0;
-static size_t gate_cnt = 0;
-aligned_t qtar_size(void);
-
 // handle Qthread default openmp loop initialization
-void XOMP_loop_guided_init(
-    int lower,
-    int upper,
-    int stride,
-    int chunk_size)
+void xomp_internal_loop_init(
+		    enum qloop_handle_type type,
+		    void ** loop,
+		    int lower,
+		    int upper,
+		    int stride,
+		    int chunk_size)
 {
-  //  int i;
-  qqloop_step_handle_t *qqhandle = NULL;
-  
   qthread_shepherd_id_t myid;
 #ifdef USE_RDTSC
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   qthread_worker_id_t workerid = qthread_worker(&myid);
-  loopTimer[workerid] = 0;
 #else
   myid = qthread_shep();
-  loopTimer[myid] = 0;
 #endif
-#else
-  loopTimer = qtimer_create();
 #endif
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -489,61 +398,50 @@ void XOMP_loop_guided_init(
 #endif
     qqhandle  =  qt_loop_rose_queue_create(lower,
 					   upper,
-					   stride);
-    
+					   stride);    
     qqhandle->chunkSize = 1;
-    qqhandle->type = GUIDED_SCHED;
-    
-    orderedLoopCount = 0;
-    
-    qqloop_set_value(qqhandle);
-    qthread_syncvar_fill(&outGate); // open gate 
-  }
+    qqhandle->type = type;
 
+    qthread_syncvar_writeEF(&outGate,(const uint64_t * const restrict)qqhandle);
+  
+  }
   else {
-    qthread_syncvar_readFF(NULL, &outGate); // make sure that this loop is set up
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    qqhandle = qqloop_get_value(myid);
-#else
-    qqhandle = qqloop_get_value(myid);
-#endif
+    // wait for value
+    qthread_syncvar_readFF(NULL,&outGate);
   }
   
-  aligned_t barrierSize = qtar_size() + 1; // returns index value -- need count of waiters
-  aligned_t bCnt = qthread_incr(&gate_cnt, 1) + 1; // number waiting + myself
-  if(bCnt == barrierSize) {
+  qqloop_step_handle_t * t = qqhandle;
+  *loop = (void*)qqhandle;
+  aligned_t cnt = qthread_incr(&t->workers,1)+1;
+  if (cnt == qthread_num_workers()){
     qthread_syncvar_empty(&outGate);
-    qthread_incr(&gate_cnt, -barrierSize);
+    qqhandle = NULL;
   }
   
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  firstTime[myid] = 1;
-  currentIteration[myid] = 1;
-  smallBlock[myid] =  qqhandle->assignStop - qqhandle->assignNext;;
-  lastBlock[myid] =  qqhandle->assignStop - qqhandle->assignNext;
-#else
-  firstTime[myid] = 1;
-  currentIteration[myid] = 1;
-  smallBlock[myid] =  qqhandle->assignStop - qqhandle->assignNext;;
-  lastBlock[myid] =  qqhandle->assignStop - qqhandle->assignNext;
-#endif
+  orderedIteration[myid] = 1;
   return;
 }
 
-int compute_XOMP_block(int block, double time, volatile qqloop_step_handle_t * loop);
-
+void XOMP_loop_guided_init(
+    void ** loop,
+    int lower,
+    int upper,
+    int stride,
+    int chunk_size)
+{
+  xomp_internal_loop_init(GUIDED_SCHED, loop, lower, upper, stride, chunk_size);
+  return;
+}
 
 int compute_XOMP_block(
-    int block,
-    double time,
-    volatile qqloop_step_handle_t * loop)
+    qqloop_step_handle_t * loop)
 {
   int ret = 1;
   switch (loop->type)
     {
     case GUIDED_SCHED: // default schedule -- varient of guided self-schedule to prevent overly small blocks
       {
-      ret = qloop_internal_computeNextBlock(block,time,loop);
+      ret = qloop_internal_computeNextBlock(loop);
       break;
       }
     case STATIC_SCHED: // get my next chunk -- used to access same data with same threads over time
@@ -574,6 +472,7 @@ int compute_XOMP_block(
 
 // start Qthreads default openmp loop execution
 bool XOMP_loop_guided_start(
+    void * lp,
     long startLower,
     long startUpper,
     long stride,
@@ -581,81 +480,18 @@ bool XOMP_loop_guided_start(
     long *returnLower,
     long *returnUpper)
 {
-    double time;
-    qthread_shepherd_id_t myid;
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    // both halves nearly the same -- difference workerid for MTS shep id for original
-    qthread_worker_id_t workerid = qthread_worker(&myid);
-    qqloop_step_handle_t *loop = qqloop_get_value(myid);	// from init;
-#ifdef USE_RDTSC
-    if (!firstTime[workerid] && (loop->type == GUIDED_SCHED)) {
-        uint64_t s = rdtsc();
-	time = s - loopTimer[workerid];
-	if (time > 10000)
-	  smallBlock[myid] = (smallBlock[myid] < lastBlock[workerid]) 
-	    ? smallBlock[myid] : lastBlock[workerid];
-    } else {
-	time = 1.0;
-	firstTime[workerid] = 0;
-	smallBlock[workerid] = 5000;
-    }
-#else
-    if (!firstTime[workerid] && (loop->type == GUIDED_SCHED)) {
-	qtimer_stop(loopTimer);
-	time = qtimer_secs(loopTimer);
-	if (time > 7.5e-7)
-	    smallBlock[workerid] = (smallBlock[workerid] < lastBlock[workerid]) 
-	      ? smallBlock[workerid] : lastBlock[workerid];
-    } else {
-	time = 1.0;
-	firstTime[workerid] = 0;
-	smallBlock[workerid] = 5000;
-    }
-#endif
-#else
-    myid = qthread_shep();
-    qqloop_step_handle_t *loop = qqloop_get_value(myid);	// from init;
-#ifdef USE_RDTSC
-    if (!firstTime[myid] && (loop->type == GUIDED_SCHED)) {
-        uint64_t s = rdtsc();
-	time = s - loopTimer[myid];
-	if (time > 10000)
-	  smallBlock[myid] = (smallBlock[myid] < lastBlock[myid]) 
-	    ? smallBlock[myid] : lastBlock[myid];
-    } else {
-	time = 1.0;
-	firstTime[myid] = 0;
-	smallBlock[myid] = 5000;
-    }
-#else
-    if (!firstTime[myid] && (loop->type == GUIDED_SCHED)) {
-	qtimer_stop(loopTimer);
-	time = qtimer_secs(loopTimer);
-	if (time > 7.5e-7)
-	    smallBlock[myid] = (smallBlock[myid] < lastBlock[myid]) 
-	      ? smallBlock[myid] : lastBlock[myid];
-    } else {
-	time = 1.0;
-	firstTime[myid] = 0;
-	smallBlock[myid] = 5000;
-    }
-#endif
-#endif
-
     int dynamicBlock;
-    if (loop->type == GUIDED_SCHED){
-      dynamicBlock = qloop_internal_computeNextBlock(smallBlock[myid],time,loop);
-    }
-    else {
-      dynamicBlock = compute_XOMP_block(smallBlock[myid], time, loop);
-    }
+    qthread_shepherd_id_t myid = qthread_shep();
+
+    qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
+
+    dynamicBlock = compute_XOMP_block(loop);
+    
     aligned_t iterationNumber = qthread_incr(&loop->assignNext, dynamicBlock);
+
     *returnLower = iterationNumber;
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    currentIteration[workerid] = *returnLower;
-#else
-    currentIteration[myid] = *returnLower;
-#endif
+    orderedIteration[myid] = *returnLower;
+
     aligned_t iterationStop = iterationNumber + dynamicBlock;
     if (iterationStop >= loop->assignStop) {
 	iterationStop = loop->assignStop;
@@ -665,71 +501,38 @@ bool XOMP_loop_guided_start(
 	    return 0;
 	}
     }
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    lastBlock[workerid] = dynamicBlock;
-#else
-    lastBlock[myid] = dynamicBlock;
-#endif
     *returnUpper = iterationStop;
 
     qthread_debug(ALL_DETAILS,
-		  "limit %10d lower %10d upper %10d block %10d smallBlock %10d id %d\n",
+		  "limit %10d lower %10d upper %10d block %10d id %d\n",
 		  loop->assignDone, *returnLower, *returnUpper, dynamicBlock,
-		  smallBlock[myid], 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-		  workerid
-#else
 		  myid
-#endif
 		  );
 
-#ifdef USE_RDTSC
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    loopTimer[workerid] = rdtsc();
-#else
-    loopTimer[myid] = rdtsc();
-#endif
-#else
-    qtimer_start(loopTimer);
-#endif
     return (dynamicBlock > 0);
 }
 
 // get next iteration(if any) for Qthreads default openmp loop execution
 bool XOMP_loop_guided_next(
+    void * loop,
     long *returnLower,
     long *returnUpper)
 {
-  return XOMP_loop_guided_start(-1, -1, -1, -1, returnLower, returnUpper);
+  return XOMP_loop_guided_start(loop, -1, -1, -1, -1, returnLower, returnUpper);
 }
 
 // Openmp parallel for loop is completed (waits for all to complete)
 void XOMP_loop_end(
-    void)
+    void * loop)
 {
-#ifdef USE_RDTSC
-#else
-  qtimer_stop(loopTimer);
-#endif
+  XOMP_loop_end_nowait(loop);
   XOMP_barrier();            // need barrier or timeout in qt_loop_inner kills performance
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  
-  qthread_shepherd_id_t myid;
-  // both halves nearly the same -- difference workerid for MTS shep id for original
-  qthread_worker_id_t workerid = qthread_worker(&myid);
-  printf("worker %d myid %d\n",workerid, myid);
-  qqloop_clear_value(myid);
-#else
-  qqloop_clear_value(qthread_shep());
-#endif
 }
 
-// Openmp parallel for loop is completed --NOTE-- barrier not required by OpenMP
-// but needed to keep Qtheads sanity for the moment
+// Openmp parallel for loop is completed
 void XOMP_loop_end_nowait(
-    void)
+    void * loop)
 {
-  XOMP_loop_end();
 }
 
 // Qthread implementation of a OpenMP global barrier
@@ -767,16 +570,18 @@ void XOMP_atomic_end(
 
 // needed for full OpenMP 3.0 support
 void XOMP_loop_ordered_guided_init(
+    void ** loop,
     int lower,
     int upper,
     int stride,
     int chunk_size)
 {
   // until ordered is handled defualt to standard loop
-  XOMP_loop_guided_init(lower, upper, stride, chunk_size);
+  xomp_internal_loop_init(GUIDED_SCHED, loop, lower, upper, stride, chunk_size);
 }
 
 bool XOMP_loop_ordered_guided_start(
+    void * loop,
     long a,
     long b,
     long c,
@@ -785,18 +590,17 @@ bool XOMP_loop_ordered_guided_start(
     long *f)
 {
   // until ordered is handled defualt to standard loop
-  return XOMP_loop_guided_start(a, b, c, d, e, f);
+  return XOMP_loop_guided_start(loop, a, b, c, d, e, f);
 }
 
 bool XOMP_loop_ordered_guided_next(
+    void * loop,
     long *a,
     long *b)
 {
   // until ordered is handled defualt to standard loop
-  return XOMP_loop_guided_next(a, b);
+  return XOMP_loop_guided_next(loop, a, b);
 }
-
-syncvar_t *getSyncTaskVar(qthread_t *me);
 
 syncvar_t *getSyncTaskVar(qthread_t *me)
 {
@@ -810,12 +614,13 @@ syncvar_t *getSyncTaskVar(qthread_t *me)
   return &(syncVar->retValue);
 }
 
+
 void qthread_run_needed_task(syncvar_t *value);
 void walkSyncTaskList(qthread_t *me)
 {
   qthread_getTaskListLock();
   taskSyncvar_t * syncVar;
-  while ( (syncVar = qthread_getTaskRetVar())) {
+  while ((syncVar = qthread_getTaskRetVar())) {
 
     // manually check for empty -- check if present in current shepherds ready queue
     //   if present take and start executing
@@ -828,7 +633,7 @@ void walkSyncTaskList(qthread_t *me)
      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64))
     {
       // taken from qthread_syncvar_readFF in qthread.c - I want empty not full
-      /* I'm being optimistic here; this only works if a basic 64-bit load is
+      /* I'm being  optimistic here; this only works if a basic 64-bit load is
        * atomic (on most platforms it is). Thus, if I've done an atomic read
        * and the syncvar is both unlocked and full, then I figure I can trust
        * that state and do not need to do a locked atomic operation of any
@@ -885,6 +690,7 @@ int staticUpper = 0;
 int staticChunkSize = 0;
 
 void XOMP_loop_static_init(
+    void ** loop,
     int lower,
     int upper,
     int stride,
@@ -895,26 +701,25 @@ void XOMP_loop_static_init(
 #else
   int myid = qthread_shep();
 #endif
-  qqloop_step_handle_t *qqhandle = NULL;
+  volatile static qqloop_step_handle_t *qqhandle = NULL;
 
   if (qt_global_arrive_first(myid,xomp_get_nested(&xomp_status))) {
     qqhandle  =  qt_loop_rose_queue_create(lower,
 					   upper,
 					   stride);
-    
     qqhandle->chunkSize = chunk_size;
     qqhandle->type = STATIC_SCHED;
-    
-    orderedLoopCount = 0;
-    
-    qqloop_set_value(qqhandle);
   }
   else {
     // wait for value
-    qqhandle = qqloop_get_value(myid);
+    while (qqhandle == NULL); // wait for loop to be allocated
+  }
+  aligned_t cnt = qthread_incr(&qqhandle->workers,1)+1;
+  if (cnt == qthread_num_workers()){
+    qqhandle = NULL;
   }
 
-  currentIteration[myid] = 1;
+  orderedIteration[myid] = 1;
   staticStartCount[myid] = 0;
   staticUpper = upper;
   staticChunkSize = chunk_size;
@@ -922,41 +727,13 @@ void XOMP_loop_static_init(
 }
 
 void XOMP_loop_dynamic_init(
+    void ** loop,
     int lower,
     int upper,
     int stride,
     int chunk_size)
 {
-  XOMP_loop_guided_init(lower, upper, stride, chunk_size);
-  /* AKP: until I get the ROSE patch install locally
-  //  int i;
-  qthread_t *const me = qthread_self();
-  qqloop_step_handle_t *qqhandle = NULL;
-  
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  int myid = qthread_worker(NULL,me);
-#else
-  int myid = qthread_shep();
-#endif
-  
-  if (qt_global_arrive_first(myid,xomp_get_nested(&xomp_status))) {
-    qqhandle  =  qt_loop_rose_queue_create(lower,
-					   upper,
-					   stride);
-    
-    qqhandle->chunkSize = chunk_size;
-    qqhandle->type = DYNAMIC_SCHED;
-    
-    qqloop_set_value(qqhandle);
-  }
-  else {
-    // wait for value
-    qqhandle = qqloop_get_value(myid);
-  }
-  
-  firstTime[myid] = 1;
-  smallBlock[myid] = qqhandle->assignStop - qqhandle->assignNext;
-  */
+  xomp_internal_loop_init(DYNAMIC_SCHED, loop, lower, upper, stride, chunk_size);
   return;
 }
 
@@ -964,6 +741,7 @@ void XOMP_loop_dynamic_init(
 int runtime_sched_chunk = 1;
 
 void XOMP_loop_runtime_init(
+    void ** loop,
     int lower,
     int upper,
     int stride)
@@ -971,60 +749,50 @@ void XOMP_loop_runtime_init(
   int chunk_size = 1; // Something has to be done to correctly compute chunk_size
   qqloop_step_handle_t *qqhandle = NULL;
   
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  int myid = qthread_worker(NULL);
-#else
-  int myid = qthread_shep();
-#endif
-
   switch(get_runtime_sched_option(&xomp_status))
     {
     case GUIDED_SCHED: // Initalize guided scheduling at runtime
-      XOMP_loop_guided_init(lower, upper, stride, chunk_size);
-      break;
     case STATIC_SCHED: // Initalize static scheding at runtime
-      XOMP_loop_static_init(lower, upper, stride, chunk_size);
-      break;
     case DYNAMIC_SCHED: // Initialize dynamic scheduling at runtime
-      XOMP_loop_dynamic_init(lower, upper, stride, chunk_size);
+      xomp_internal_loop_init(get_runtime_sched_option(&xomp_status),
+			      loop, lower, upper, stride, chunk_size);
       break;
     default:
       fprintf(stderr, "Weird XOMP_loop_runtime_init case happened that should never happen: %d", qqhandle->type);
       abort();
     }
 
-
-  firstTime[myid] = 1;
-  qqhandle = qqloop_get_value(myid);
-  smallBlock[myid] = qqhandle->assignStop - qqhandle->assignNext;
   return;
 }
 
 //ordered case
 void XOMP_loop_ordered_static_init(
+    void ** loop,
     int lower,
     int upper,
     int stride,
     int chunk_size)
 {
-  XOMP_loop_static_init(lower, upper, stride, chunk_size);
+  XOMP_loop_static_init(loop, lower, upper, stride, chunk_size);
 }
 
 void XOMP_loop_ordered_dynamic_init(
+    void ** loop,
     int lower,
     int upper,
     int stride,
     int chunk_size)
 {
-  XOMP_loop_dynamic_init(lower, upper, stride, chunk_size);
+  XOMP_loop_dynamic_init(loop, lower, upper, stride, chunk_size);
 }
 
 void XOMP_loop_ordered_runtime_init(
+    void ** loop,
     int lower,
     int upper,
     int stride)
 {
-  XOMP_loop_runtime_init(lower, upper, stride);
+  XOMP_loop_runtime_init(loop, lower, upper, stride);
 }
 
 
@@ -1040,9 +808,9 @@ void XOMP_ordered_start(
 #else
   int myid = qthread_shep();
 #endif
-  while (orderedLoopCount != currentIteration[myid]){}; // spin until my turn
+  while (orderedLoopCount != orderedIteration[myid]){}; // spin until my turn
   
-  currentIteration[myid]++;
+  orderedIteration[myid]++;
 }
 
 void XOMP_ordered_end(
@@ -1052,6 +820,7 @@ void XOMP_ordered_end(
 }
 
 bool XOMP_loop_static_start(
+    void * loop,
     long startLower,
     long startUpper,
     long stride,
@@ -1072,7 +841,7 @@ bool XOMP_loop_static_start(
 #endif
   *returnLower = (iterationNum * chunkSize * parallelWidth) + (myid*chunkSize); // start + offset
   *returnUpper = (staticUpper - (*returnLower + chunkSize) < 0) ? staticUpper : (*returnLower + chunkSize);
-  currentIteration[myid] = *returnLower;
+  orderedIteration[myid] = *returnLower;
 
   iterationNum++;
 
@@ -1080,6 +849,7 @@ bool XOMP_loop_static_start(
 }
 
 bool XOMP_loop_dynamic_start(
+    void * loop,
     long a,
     long b,
     long c,
@@ -1088,10 +858,11 @@ bool XOMP_loop_dynamic_start(
     long *returnUpper)
 {
   // set up so we can call guided and the correct actions happen
-  return XOMP_loop_guided_start(-1, -1, -1, -1, returnLower, returnUpper);
+  return XOMP_loop_guided_start(loop, -1, -1, -1, -1, returnLower, returnUpper);
 }
 
 bool XOMP_loop_runtime_start(
+    void * loop,
     long a,
     long b,
     long c,
@@ -1099,10 +870,11 @@ bool XOMP_loop_runtime_start(
     long *returnUpper)
 {
   // set up so we can call guided and the correct actions happen
-  return XOMP_loop_guided_start(-1, -1, -1, -1, returnLower, returnUpper);
+  return XOMP_loop_guided_start(loop, -1, -1, -1, -1, returnLower, returnUpper);
 }
 
 bool XOMP_loop_ordered_static_start(
+    void * loop,
     long a,
     long b,
     long c,
@@ -1110,10 +882,11 @@ bool XOMP_loop_ordered_static_start(
     long *e,
     long *f)
 {
-  return XOMP_loop_static_start(a, b, c, d, e, f);
+  return XOMP_loop_static_start(loop, a, b, c, d, e, f);
 }
 
 bool XOMP_loop_ordered_dynamic_start(
+    void * loop,
     long a,
     long b,
     long c,
@@ -1121,10 +894,11 @@ bool XOMP_loop_ordered_dynamic_start(
     long *e,
     long *f)
 {
-  return XOMP_loop_dynamic_start(a, b, c, d, e, f);
+  return XOMP_loop_dynamic_start(loop, a, b, c, d, e, f);
 }
 
 bool XOMP_loop_ordered_runtime_start(
+    void * loop,
     long a,
     long b,
     long c,
@@ -1133,52 +907,58 @@ bool XOMP_loop_ordered_runtime_start(
 {
 
 
-  return XOMP_loop_runtime_start(a, b, c, d, e);
+  return XOMP_loop_runtime_start(loop, a, b, c, d, e);
 }
 
 // next
 bool XOMP_loop_static_next(
+    void * loop,
     long *a,
     long *b)
 {
-  return XOMP_loop_static_start(0,0,0,staticChunkSize, a, b);
+  return XOMP_loop_static_start(loop, 0,0,0,staticChunkSize, a, b);
 }
 
 bool XOMP_loop_dynamic_next(
+    void * loop,
     long *returnLower,
     long *returnUpper)
 {
   // set up so we can call guided and the correct actions happen
-  return XOMP_loop_guided_start(-1, -1, -1, -1, returnLower, returnUpper);
+  return XOMP_loop_guided_start(loop, -1, -1, -1, -1, returnLower, returnUpper);
 }
 
 bool XOMP_loop_runtime_next(
+    void * loop,
     long *returnLower,
     long *returnUpper)
 {
   // set up so we can call guided and the correct actions happen
-  return XOMP_loop_guided_start(-1, -1, -1, -1, returnLower, returnUpper);
+  return XOMP_loop_guided_start(loop, -1, -1, -1, -1, returnLower, returnUpper);
 }
 
 bool XOMP_loop_ordered_static_next(
+    void * loop,
     long *a,
     long *b)
 {
-  return XOMP_loop_static_next(a, b);
+  return XOMP_loop_static_next(loop, a, b);
 }
 
 bool XOMP_loop_ordered_dynamic_next(
+    void * loop,
     long *a,
     long *b)
 {
-  return XOMP_loop_dynamic_next(a, b);
+  return XOMP_loop_dynamic_next(loop, a, b);
 }
 
 bool XOMP_loop_ordered_runtime_next(
+    void * loop,
     long *a,
     long *b)
 {
-  return XOMP_loop_runtime_next(a, b);
+  return XOMP_loop_runtime_next(loop, a, b);
 }
 
 //--------------end of  loop functions 
