@@ -7,8 +7,6 @@
 #include "qthread_innards.h"
 #include "qt_affinity.h"
 
-#define ALL_DETAILS 0
-
 static hwloc_topology_t topology;
 static int shep_depth = -1;
 #ifdef QTHREAD_DEBUG
