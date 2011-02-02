@@ -496,7 +496,7 @@ static void *qthread_shepherd(void *arg)
 	    if (t->rdata == NULL) alloc_rdata(me, t);
 	    assert(t->rdata->shepherd_ptr != NULL);
 	    if (t->rdata->shepherd_ptr != me) {
-		fprintf(stderr, "shepherd_ptr = %p, me = %p\n", t->rdata->shepherd_ptr, me);
+		//fprintf(stderr, "shepherd_ptr = %p, me = %p\n", t->rdata->shepherd_ptr, me);
 		fflush(stderr);
 		t->rdata->shepherd_ptr = me;
 	    }
@@ -833,9 +833,11 @@ int qthread_initialize(void)
        ) {
 	need_sync = 0;
     }
-#else
+#else /* i.e. not using pthreads aka all serial. */
     nshepherds = 1;
-    syncmode |= COLLECTION_MODE_NOSYNC;
+# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    nworkerspershep = 1;
+# endif
     need_sync = 0;
 #endif
     qthread_debug(THREAD_BEHAVIOR,"there will be %u shepherd(s)\n", (unsigned)nshepherds);
