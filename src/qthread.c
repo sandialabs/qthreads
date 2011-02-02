@@ -818,7 +818,12 @@ int qthread_initialize(void)
 	}
     }
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    nworkerspershep = guess_num_workers_per_shep(nshepherds);
+    if (nworkerspershep == 0) {
+	nworkerspershep = guess_num_workers_per_shep(nshepherds);
+	if (nworkerspershep <= 0) {
+	    nworkerspershep = 1;
+	}
+    }
 #endif
 
     if (nshepherds == 1
