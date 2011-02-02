@@ -56,6 +56,7 @@ void qt_affinity_init(
     }
     if (shep_type_idx == -1) {
 	do {
+loop_top:
 	    shep_type_idx++;
 	    shep_depth = hwloc_get_type_depth(topology, shep_type_options[shep_type_idx]);
 	    qthread_debug(ALL_DETAILS, "depth of type %i = %d\n", shep_type_idx, shep_depth);
@@ -65,7 +66,7 @@ void qt_affinity_init(
 	    qthread_debug(ALL_DETAILS, "num objs of type %i = %d\n", shep_type_idx, hwloc_get_nbobjs_by_type(topology, shep_type_options[shep_type_idx]));
 	    if (shep_type_idx == 0 && hwloc_get_nbobjs_by_type(topology, shep_type_options[0]) == 1) {
 		qthread_debug(ALL_DETAILS, "only one node; assuming multiple shepherds\n");
-		continue;
+		goto loop_top;
 	    }
 	} while (shep_depth == HWLOC_TYPE_DEPTH_UNKNOWN ||
 		 shep_depth == HWLOC_TYPE_DEPTH_MULTIPLE);
