@@ -1,6 +1,8 @@
 /* Portions of this file are Copyright (c) 2005-2006 Russ Cox, MIT; see COPYRIGHT */
 /* Portions of this file are Copyright Sandia National Laboratories */
 
+#include "qthread/common.h"
+
 #include <osx_compat/taskimpl.h>
 #include "qthread_prefetch.h"
 
@@ -96,7 +98,11 @@ int swapcontext(ucontext_t *oucp, ucontext_t *ucp)
      * do NOT want to swap again, because that'll put me into a nasty loop). */
     Q_PREFETCH(ucp, 0, 0);
     if(getcontext(oucp) == 0) {
+#if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
+     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || \
+     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64))
 	Q_PREFETCH((void*)ucp->uc_mcontext.mc_esp, 1, 3);
+#endif
 	setcontext(ucp);
     }
     return 0;
