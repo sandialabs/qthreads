@@ -696,34 +696,9 @@ void XOMP_loop_static_init(
     int stride,
     int chunk_size)
 {
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  int myid = qthread_worker(NULL);
-#else
-  int myid = qthread_shep();
-#endif
-  volatile static qqloop_step_handle_t *qqhandle = NULL;
-
-  if (qt_global_arrive_first(myid,xomp_get_nested(&xomp_status))) {
-    qqhandle  =  qt_loop_rose_queue_create(lower,
-					   upper,
-					   stride);
-    qqhandle->chunkSize = chunk_size;
-    qqhandle->type = STATIC_SCHED;
-  }
-  else {
-    // wait for value
-    while (qqhandle == NULL); // wait for loop to be allocated
-  }
-  aligned_t cnt = qthread_incr(&qqhandle->workers,1)+1;
-  if (cnt == qthread_num_workers()){
-    qqhandle = NULL;
-  }
-
-  orderedIteration[myid] = 1;
-  staticStartCount[myid] = 0;
-  staticUpper = upper;
-  staticChunkSize = chunk_size;
-  return;
+  // until ordered is handled defualt to standard loop
+  xomp_internal_loop_init(STATIC_SCHED, loop, lower, upper, stride, chunk_size);
+ return;
 }
 
 void XOMP_loop_dynamic_init(
