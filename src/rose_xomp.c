@@ -1,3 +1,4 @@
+
 //  include libxomp.h from ROSE implementation as the full list
 //  of functions needed to support OpenMP 3.0 with Rose.
 
@@ -268,10 +269,17 @@ void XOMP_init(
       omp_set_nested(NO_NEST);
     }
 
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     int lim_s = qthread_num_shepherds();
-
+    int lim_w = qthread_num_workers();
+    orderedIteration = calloc(lim_w, sizeof(uint64_t));
+    staticStartCount = calloc(lim_s, sizeof(uint64_t));
+#else
+    int lim_s = qthread_num_shepherds();
     orderedIteration = calloc(lim_s, sizeof(uint64_t));
     staticStartCount = calloc(lim_s, sizeof(uint64_t));
+#endif
+
     
     if (!orderedIteration || ! staticStartCount){
       fprintf(stderr,"XOMP_init build shepherd aux structure malloc failed\n");
@@ -338,7 +346,15 @@ qqloop_step_handle_t *qt_loop_rose_queue_create(
     int64_t incr)
 {
     qqloop_step_handle_t *ret;
-    ret = (qqloop_step_handle_t *) malloc(sizeof(qqloop_step_handle_t));
+    int array_size = 0;
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    array_size = qthread_num_workers(); 
+#else
+    array_size = qthread_num_shepherds(); 
+#endif
+    int malloc_size = sizeof(qqloop_step_handle_t) + // base size
+                     array_size * sizeof(aligned_t); // array size
+    ret = (qqloop_step_handle_t *) malloc(malloc_size);
 
     ret->workers = 0;
     ret->departed_workers = 0;
@@ -346,6 +362,13 @@ qqloop_step_handle_t *qt_loop_rose_queue_create(
     ret->assignStop = stop;
     ret->assignStep = incr;
     ret->assignDone = stop;
+    ret->work_array_size = array_size;
+// zero work array
+    int i; 
+    aligned_t * tmp = &ret->work_array;
+    for (i = 0; i < array_size; i++) {
+      *tmp++ = 0;
+    }
 
     return ret;
 }
@@ -401,6 +424,7 @@ void xomp_internal_loop_init(
 					   stride);    
     qqhandle->chunkSize = 1;
     qqhandle->type = type;
+    qqhandle->iterations = 0;
 
     qthread_syncvar_writeEF(&outGate,(const uint64_t * const restrict)qqhandle);
   
@@ -686,7 +710,6 @@ void XOMP_taskwait(
   walkSyncTaskList(me);
 }
 
-int staticUpper = 0;
 int staticChunkSize = 0;
 
 void XOMP_loop_static_init(
@@ -795,7 +818,7 @@ void XOMP_ordered_end(
 }
 
 bool XOMP_loop_static_start(
-    void * loop,
+    void * lp,
     long startLower,
     long startUpper,
     long stride,
@@ -803,24 +826,25 @@ bool XOMP_loop_static_start(
     long *returnLower,
     long *returnUpper)
 {
+  qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   int myid = qthread_worker(NULL);
-#else
-  int myid = qthread_shep();
-#endif
-  int iterationNum = staticStartCount[myid]++;
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   int parallelWidth = qthread_num_workers();
 #else
+  int myid = qthread_shep();
   int parallelWidth = qthread_num_shepherds();
 #endif
-  *returnLower = (iterationNum * chunkSize * parallelWidth) + (myid*chunkSize); // start + offset
-  *returnUpper = (staticUpper - (*returnLower + chunkSize) < 0) ? staticUpper : (*returnLower + chunkSize);
+
+  aligned_t *myIteration = &loop->work_array + myid;
+  int iterationNum = qthread_incr(myIteration,1);
+  *returnLower = (iterationNum * chunkSize * parallelWidth) // start
+    + (myid*chunkSize);                                     // + offset
+  *returnUpper = (startUpper - (*returnLower + (chunkSize-1)) < 0) ?
+    startUpper                        // hit loop upper bound
+    : (*returnLower + (chunkSize-1)); // returned upper bound is executed
   orderedIteration[myid] = *returnLower;
 
-  iterationNum++;
-
-  return ((staticUpper - *returnLower) > 0);
+  return ((int)(startUpper - *returnLower) > 0);
 }
 
 bool XOMP_loop_dynamic_start(

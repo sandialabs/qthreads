@@ -74,7 +74,11 @@ struct qqloop_step_handle_s {
     aligned_t assignStep;
     aligned_t chunkSize;
     volatile aligned_t assignDone;	// start+offset
+    aligned_t iterations;
 #endif /* QTHREAD_USE_ROSE_EXTENSIONS */
+    aligned_t work_array_size;
+    aligned_t work_array;               // really an address to reach an array
+                                        // with one aligned_t per worker/shepherd
 };
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
