@@ -523,7 +523,9 @@ qt_threadqueue_node_t *qt_threadqueue_dequeue_steal(qt_threadqueue_t * q)
     while (q->qlength > 0 && amtStolen < qthread_steal_chunksize()) {
 	node = (qt_threadqueue_node_t *) q->head;
 	while (node != NULL &&
-	       node->value->thread_state == QTHREAD_STATE_YIELDED) {
+ 	       (node->value->thread_state == QTHREAD_STATE_YIELDED ||
+		node->value->thread_state == QTHREAD_STATE_TERM_SHEP)
+	       ) {
 	    node = (qt_threadqueue_node_t *) node->next;
 	}
 	if (node != NULL) {
