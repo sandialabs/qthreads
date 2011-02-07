@@ -1596,9 +1596,10 @@ void qthread_finalize(void)
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 void qthread_pack_workerid(const qthread_worker_id_t w, const qthread_worker_id_t newId)
 {
-
-  int shep = w%qlib->nworkerspershep;
-  int worker = w/qlib->nworkerspershep;
+  int shep = w/qlib->nworkerspershep;
+  int worker = w%qlib->nworkerspershep;
+  assert((shep < qlib->nshepherds));
+  assert((worker < qlib->nworkerspershep));
   qlib->shepherds[shep].workers[worker].packed_worker_id = newId;
 }
 
