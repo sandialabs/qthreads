@@ -174,7 +174,7 @@ void qthread_yield(void);
 
 /* this function allows a qthread to retrieve its qthread_t pointer if it has
  * been lost for some reason */
-qthread_t *qthread_self(void);
+qthread_t Q_DEPRECATED *qthread_self(void);
 
 /* these are the functions for generating a new qthread.
  *

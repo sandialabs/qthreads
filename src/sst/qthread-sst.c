@@ -17,11 +17,11 @@ unsigned int qthread_isfuture(const qthread_t * t);
 void qthread_wrapper(const qthread_f f, const void *arg, aligned_t * ret)
 {
     if (ret == NULL) {
-	f(qthread_self(), (void *)arg);
+	f((void *)arg);
     } else {
-	aligned_t retval = f(qthread_self(), (void *)arg);
+	aligned_t retval = f((void *)arg);
 
-	qthread_writeEF_const(qthread_self(), ret, retval);
+	qthread_writeEF_const(ret, retval);
     }
 }
 
@@ -30,12 +30,12 @@ void qthread_future_wrapper(const qthread_f f, const void *arg,
 {
     PIM_writeSpecial(PIM_CMD_SET_FUTURE, 1);
     if (ret == NULL) {
-	f(qthread_self(), (void *)arg);
+	f((void *)arg);
     } else {
-	qthread_writeEF_const(qthread_self(), ret,
-			      f(qthread_self(), (void *)arg));
+	qthread_writeEF_const(ret,
+			      f((void *)arg));
     }
-    future_exit(qthread_self());
+    future_exit();
     PIM_threadExitFree();	       // Why here and not in qthread_wrapper() ?
 }
 
@@ -61,27 +61,6 @@ int qthread_fork_future_to(const qthread_f f, const void *arg,
 					(void *)qthread_future_wrapper,
 					(void *)f, (void *)arg, ret, NULL,
 					NULL);
-}
-
-qthread_t *qthread_prepare_for(const qthread_f f, const void *arg,
-			       aligned_t * ret,
-			       const qthread_shepherd_id_t shep)
-{
-    if (ret)
-	PIM_feb_empty(ret);
-    /*printf
-     * ("2shep: %i, qthread_wrapper: %p, arg1(f): %p, arg2(arg): %p, arg3(ret): %p\n",
-     * (shep == NO_SHEPHERD ? INT_MAX : shep), qthread_wrapper, f, arg,
-     * ret); fflush(NULL); */
-    return (qthread_t *) PIM_loadAndSpawnToLocaleStackStopped(shep ==
-							      NO_SHEPHERD ?
-							      INT_MAX : shep,
-							      (void *)
-							      qthread_wrapper,
-							      (void *)f,
-							      (void *)arg,
-							      ret, NULL,
-							      NULL);
 }
 
 void qthread_assertnotfuture(qthread_t * t)

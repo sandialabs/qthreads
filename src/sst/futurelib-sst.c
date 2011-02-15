@@ -31,8 +31,6 @@ static inline void DBprintf(char *format, ...)
 #define LOCK(qqq,xxx) qthread_lock(qqq, (void*)(xxx))
 #define UNLOCK(qqq,xxx) qthread_unlock(qqq, (void*)(xxx))
 
-#define THREAD_LOC(qqq) qthread_shep(qqq)
-
 #define MALLOC(sss) malloc(sss)
 #define FREE(sss) free(sss)
 
@@ -47,14 +45,14 @@ static pthread_mutex_t sfnf_lock;
  * If the qthread is not a future, it returns NULL; otherwise, it returns a
  * pointer to the bookkeeping structure associated with that future's shepherd.
  */
-static inline location_t *ft_loc(qthread_t * ft)
+static inline location_t *ft_loc(void)
 {
-    return qthread_isfuture(ft) ? &(future_bookkeeping_array[qthread_shep(NULL)]) : NULL;
+    return qthread_isfuture() ? &(future_bookkeeping_array[qthread_shep(NULL)]) : NULL;
 }
 
 /* this function is used as a qthread; it is run by each shepherd so that each
  * shepherd will get some PIM-local data associated with it. */
-static aligned_t future_shep_init(qthread_t * me, void * arg)
+static aligned_t future_shep_init(void * arg)
 {
     location_t * bk = (location_t *)PIM_localMallocAtID((unsigned int)sizeof(location_t), (unsigned int)arg);
     PIM_mem_region_create( 0 /* I think this argument is ignored... */,
@@ -69,7 +67,6 @@ void future_init(int vp_per_loc)
 {
     unsigned int i;
     aligned_t *rets;
-    qthread_t *me = qthread_self();
 
     pthread_mutex_init(&sfnf_lock, NULL);
     future_bookkeeping_array =
@@ -81,7 +78,7 @@ void future_init(int vp_per_loc)
 	qthread_fork_to(future_shep_init, NULL, rets + i, i);
     }
     for (i = 0; i < (unsigned int) PIM_readSpecial(PIM_CMD_LOC_COUNT); i++) {
-	qthread_readFF(me, rets + i, rets + i);
+	qthread_readFF(rets + i, rets + i);
 	future_bookkeeping_array[i].vp_count = 0;
 	future_bookkeeping_array[i].vp_max = vp_per_loc;
 	future_bookkeeping_array[i].id = i;
@@ -94,20 +91,20 @@ void future_init(int vp_per_loc)
  * slot. second, if there is no available slot, it adds itself to the waiter
  * queue to get one.
  */
-inline void blocking_vp_incr(qthread_t * me, location_t * loc)
+inline void blocking_vp_incr(location_t * loc)
 {
     pthread_mutex_lock(&(loc->vp_count_lock));
-    DBprintf("Thread %p try blocking increment on loc %d vps %d\n", me,
+    DBprintf("Thread %i try blocking increment on loc %d vps %d\n", (int)qthread_id(),
 	    loc->id, loc->vp_count);
     while (loc->vp_count >= loc->vp_max) {
 	pthread_mutex_unlock(&(loc->vp_count_lock));
-	DBprintf("thread %p found too many futures in %d; waiting for vp_count\n",
-		me, loc->id);
-	qthread_lock(me, &(loc->vp_count));
+	DBprintf("thread %i found too many futures in %d; waiting for vp_count\n",
+		(int)qthread_id(), loc->id);
+	qthread_lock(&(loc->vp_count));
 	pthread_mutex_lock(&(loc->vp_count_lock));
     }
     loc->vp_count++;
-    DBprintf("Thread %p incr loc %d to %d vps\n", me, loc->id, loc->vp_count);
+    DBprintf("Thread %i incr loc %d to %d vps\n", (int)qthread_id(), loc->id, loc->vp_count);
     pthread_mutex_unlock(&(loc->vp_count_lock));
 }
 
@@ -116,10 +113,8 @@ inline void blocking_vp_incr(qthread_t * me, location_t * loc)
 void future_fork(qthread_f fptr, void *arg, aligned_t * retval)
 {
     qthread_shepherd_id_t rr = 0;
-    //qthread_t *me = qthread_self();
-    //location_t *ptr = ft_loc(me);
 
-    DBprintf("Thread %p forking a future\n", me);
+    DBprintf("Thread %p forking a future\n", (int)qthread_id());
     /* step 1: figure out where to go (fast) */
 #if 1
     rr = 0;
@@ -134,71 +129,70 @@ void future_fork(qthread_f fptr, void *arg, aligned_t * retval)
 	pthread_mutex_unlock(&sfnf_lock);
     }
 #endif
-    DBprintf("Thread %p decided future will go to %i\n", me, rr);
+    DBprintf("Thread %i decided future will go to %i\n", (int)qthread_id(), rr);
     /* Steps 2&3 (slow) */
     future_fork_to(fptr, arg, retval, rr);
 }
 void future_fork_to(qthread_f fptr, void *arg, aligned_t * retval, qthread_shepherd_id_t rr)
 {
-    qthread_t *me = qthread_self();
-    blocking_vp_incr(me, &(future_bookkeeping_array[rr]));
-    qthread_fork_future_to(me, fptr, arg, retval, rr);
+    blocking_vp_incr(&(future_bookkeeping_array[rr]));
+    qthread_fork_future_to(fptr, arg, retval, rr);
 }
 
 /* This function declares that the current function (qthr) no longer
  * counts toward the per-shepherd resource restrictions
  */
-int future_yield(qthread_t * me)
+int future_yield(void)
 {
-    location_t *loc = ft_loc(me);
+    location_t *loc = ft_loc();
 
-    DBprintf("Thread %p yield on loc %p\n", me, loc);
+    DBprintf("Thread %i yield on loc %p\n", (int)qthread_id(), loc);
     /* Non-futures do not have a vproc to yield */
     if (loc != NULL) {
 	char unlockit;
 	/* yield vproc */
-	DBprintf("Thread %p yield loc %i vps %d\n", me, loc->id,
+	DBprintf("Thread %i yield loc %i vps %d\n", (int)qthread_id(), loc->id,
 		 loc->vp_count);
 	pthread_mutex_lock(&(loc->vp_count_lock));
 	unlockit = (loc->vp_count-- == loc->vp_max);
 	pthread_mutex_unlock(&(loc->vp_count_lock));
 	if (unlockit) {
-	    qthread_unlock(me, &(loc->vp_count));
+	    qthread_unlock(&(loc->vp_count));
 	}
 	return 1;
     }
     return 0;
 }
 
-void future_acquire(qthread_t * me)
+void future_acquire(void)
 {
-    location_t *loc = ft_loc(me);
+    location_t *loc = ft_loc();
 
-    DBprintf("Thread %p acquire on loc %p\n", me, loc);
+    DBprintf("Thread %p acquire on loc %p\n", (int)qthread_id(), loc);
     /* Non-futures need not acquire a v proc */
     if (loc != NULL) {
-	blocking_vp_incr(me, loc);
+	blocking_vp_incr(loc);
     }
 }
 
-static void future_join(qthread_t * me, aligned_t * ft)
+static void future_join(aligned_t * ft)
 {
-    DBprintf("Qthread %p join to future %p\n", me, ft);
-    qthread_readFF(me, ft, ft);
+    DBprintf("Qthread %i join to future %p\n", (int)qthread_id(), ft);
+    qthread_readFF(ft, ft);
 }
 
-void future_exit(qthread_t * me)
+void future_exit(void)
 {
-    DBprintf("Thread %p exit on loc %d\n", me, THREAD_LOC(me));
-    future_yield(me);
-    qthread_assertnotfuture(me);
+    DBprintf("Thread %i exit on loc %d\n", (int)qthread_id(), qthread_shep());
+    future_yield();
+    qthread_assertnotfuture();
 }
 
-void future_join_all(qthread_t * me, aligned_t * fta, int ftc)
+void future_join_all(aligned_t * fta, int ftc)
 {
     int i;
 
-    DBprintf("Qthread %p join all to %d futures\n", me, ftc);
+    DBprintf("Qthread %i join all to %d futures\n", (int)qthread_id(), ftc);
     for (i = 0; i < ftc; i++)
-	future_join(me, fta+i);
+	future_join(fta+i);
 }

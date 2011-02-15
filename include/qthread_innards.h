@@ -32,6 +32,10 @@
 #include <pthread.h>
 #include <qt_hash.h>
 
+/* this function allows a qthread to retrieve its qthread_t pointer if it has
+ * been lost for some reason */
+qthread_t *qthread_internal_self(void);
+
 extern unsigned int QTHREAD_LOCKING_STRIPES;
 
 typedef struct qlib_s

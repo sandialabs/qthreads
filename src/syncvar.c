@@ -223,7 +223,7 @@ int qthread_syncvar_readFF(uint64_t * restrict const dest,
 {				       /*{{{ */
     eflags_t e = { 0 };
     uint64_t ret;
-    qthread_t *me = qthread_self();
+    qthread_t *me = qthread_internal_self();
 
     assert(src);
     qthread_debug(LOCK_BEHAVIOR, "me(%p), dest(%p), src(%p) = %x\n", me,
@@ -314,7 +314,7 @@ int qthread_syncvar_fill(syncvar_t * restrict const addr)
 {				       /*{{{ */
     eflags_t e = { 0 };
     uint64_t ret;
-    qthread_t *me = qthread_self();
+    qthread_t *me = qthread_internal_self();
 
     assert(addr);
 
@@ -363,7 +363,7 @@ int qthread_syncvar_empty(syncvar_t * restrict const addr)
 {				       /*{{{ */
     eflags_t e = { 0 };
     uint64_t ret;
-    qthread_t *me = qthread_self();
+    qthread_t *me = qthread_internal_self();
 
     assert(addr);
 
@@ -415,7 +415,7 @@ int qthread_syncvar_readFE(uint64_t * restrict const dest,
     eflags_t e = { 0 };
     uint64_t ret;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(src);
-    qthread_t *me = qthread_self();
+    qthread_t *me = qthread_internal_self();
 
     assert(src);
     assert(me->rdata);
@@ -647,7 +647,7 @@ int qthread_syncvar_writeF(syncvar_t * restrict const dest,
 {				       /*{{{ */
     eflags_t e = { 0 };
     uint64_t ret = *src;
-    qthread_t *me = qthread_self();
+    qthread_t *me = qthread_internal_self();
 
     qassert_ret((*src >> 60) == 0, QTHREAD_OVERFLOW);
 
@@ -696,7 +696,7 @@ int qthread_syncvar_writeEF(syncvar_t * restrict const dest,
     eflags_t e = { 0 };
     uint64_t ret;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
-    qthread_t *me = qthread_self();
+    qthread_t *me = qthread_internal_self();
 
     qassert_ret((*src >> 60) == 0, QTHREAD_OVERFLOW);
 
@@ -810,7 +810,7 @@ uint64_t qthread_syncvar_incrF(syncvar_t * restrict const operand,
 {				       /*{{{ */
     eflags_t e = { 0 };
     uint64_t newv;
-    qthread_t *me = qthread_self();
+    qthread_t *me = qthread_internal_self();
 
     assert(operand);
     qthread_debug(LOCK_BEHAVIOR, "me(%p), operand(%p), inc(%lu) = %x\n", me,

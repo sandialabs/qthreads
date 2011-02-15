@@ -1681,41 +1681,31 @@ void qthread_enable_shepherd(const qthread_shepherd_id_t shep)
     (void)QT_CAS(qlib->shepherds[shep].active, 0, 1);
 }				       /*}}} */
 
+qthread_t *qthread_internal_self(void)
+{				       /*{{{ */
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    qthread_worker_t *worker = (qthread_worker_t *) pthread_getspecific(shepherd_structs);
+    return worker ? worker->current : NULL;
+#else
+    qthread_shepherd_t *shep = (qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
+    return shep ? shep->current : NULL;
+#endif
+}				       /*}}} */
+
 qthread_t *qthread_self(void)
 {				       /*{{{ */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    qthread_worker_t *worker;
-#else
-    qthread_shepherd_t *shep;
-#endif
-
-#if 0
-    /* size_t mask; */
-
-    printf("stack size: %lu\n", qlib->qthread_stack_size);
-    printf("ret is at %p\n", &ret);
-    mask = qlib->qthread_stack_size - 1;	/* assuming the stack is a power of two */
-    printf("mask is: %p\n", ((size_t) (qlib->qthread_stack_size) - 1));
-    printf("low order bits: 0x%lx\n",
-	   ((size_t) (&ret) % (size_t) (qlib->qthread_stack_size)));
-    printf("low order bits: 0x%lx\n", (size_t) (&ret) & mask);
-    printf("calc stack pointer is: %p\n", ((size_t) (&ret) & ~mask));
-    printf("top is then: 0x%lx\n",
-	   ((size_t) (&ret) & ~mask) + qlib->qthread_stack_size);
-    /* printf("stack pointer should be %p\n", t->rdata->stack); */
-#endif
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    worker = (qthread_worker_t *) pthread_getspecific(shepherd_structs);
+    qthread_worker_t *worker = (qthread_worker_t *) pthread_getspecific(shepherd_structs);
     return worker ? worker->current : NULL;
 #else
-    shep = (qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
+    qthread_shepherd_t *shep = (qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
     return shep ? shep->current : NULL;
 #endif
 }				       /*}}} */
 
 size_t qthread_stackleft(void)
 {				       /*{{{ */
-    const qthread_t * f = qthread_self();
+    const qthread_t * f = qthread_internal_self();
     if (f != NULL && f->rdata->stack != NULL) {
 	assert((size_t) & f > (size_t) f->rdata->stack &&
 	       (size_t) & f < ((size_t) f->rdata->stack + qlib->qthread_stack_size));
@@ -1766,7 +1756,7 @@ size_t qthread_readstate(
 
 aligned_t *qthread_retloc(void)
 {				       /*{{{ */
-    qthread_t *me = qthread_self();
+    qthread_t *me = qthread_internal_self();
 
     if (me) {
 	return me->ret;
@@ -2095,7 +2085,7 @@ static QINLINE void qthread_exec(qthread_t * t, ucontext_t * c)
 /* this function yields thread t to the master kernel thread */
 void qthread_yield(void)
 {				       /*{{{ */
-    qthread_t *t = qthread_self();
+    qthread_t *t = qthread_internal_self();
     if (t != NULL) {
 	qthread_debug(THREAD_DETAILS,
 		      "tid %u yielding...\n", t->thread_id);
@@ -2503,7 +2493,7 @@ void qthread_back_to_master(qthread_t * t)
 /* function to move a qthread from one shepherd to another */
 int qthread_migrate_to(const qthread_shepherd_id_t shepherd)
 {				       /*{{{ */
-    qthread_t *me = qthread_self();
+    qthread_t *me = qthread_internal_self();
     if (me->rdata->shepherd_ptr->shepherd_id == shepherd) {
 	me->target_shepherd = me->rdata->shepherd_ptr;
 	return QTHREAD_SUCCESS;
@@ -2697,7 +2687,7 @@ int qthread_empty(const aligned_t * dest)
 #ifndef SST
     qthread_addrstat_t *m;
     qt_hash FEBbin;
-    qthread_t *me = qthread_self();
+    qthread_t *me = qthread_internal_self();
     {
 	const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
 	FEBbin = qlib->FEBs[lockbin];
@@ -2744,7 +2734,7 @@ int qthread_fill(const aligned_t * dest)
 #ifndef SST
     qthread_addrstat_t *m;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
-    qthread_t *me = qthread_self();
+    qthread_t *me = qthread_internal_self();
 
     QALIGN(dest, alignedaddr);
     /* lock hash */
@@ -2783,7 +2773,7 @@ int qthread_writeF(aligned_t * restrict const dest,
 #ifndef SST
     qthread_addrstat_t *m;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
-    qthread_t *me = qthread_self();
+    qthread_t *me = qthread_internal_self();
 
     qthread_debug(LOCK_BEHAVIOR,
 		  "tid %u dest=%p src=%p...\n",
@@ -2840,7 +2830,7 @@ int qthread_writeEF(aligned_t * restrict const dest,
     qthread_addrstat_t *m;
     qthread_addrres_t *X = NULL;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(dest);
-    qthread_t *me = qthread_self();
+    qthread_t *me = qthread_internal_self();
 
     QTHREAD_LOCK_TIMER_DECLARATION(febblock);
 
@@ -2927,7 +2917,7 @@ int qthread_readFF(aligned_t * restrict const dest,
     qthread_addrstat_t *m = NULL;
     qthread_addrres_t *X = NULL;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(src);
-    qthread_t *me = qthread_self();
+    qthread_t *me = qthread_internal_self();
 
     QTHREAD_LOCK_TIMER_DECLARATION(febblock);
 
@@ -3009,7 +2999,7 @@ int qthread_readFE(aligned_t * restrict const dest,
 #ifndef SST
     qthread_addrstat_t *m;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(src);
-    qthread_t *me = qthread_self();
+    qthread_t *me = qthread_internal_self();
 
     QTHREAD_LOCK_TIMER_DECLARATION(febblock);
 
@@ -3096,7 +3086,7 @@ int qthread_lock(const aligned_t * a)
 {				       /*{{{ */
     qthread_lock_t *m;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(a);
-    qthread_t *me = qthread_self();
+    qthread_t *me = qthread_internal_self();
 
     QTHREAD_LOCK_TIMER_DECLARATION(aquirelock);
 
@@ -3174,7 +3164,7 @@ int qthread_unlock(const aligned_t * a)
     qthread_lock_t *m;
     qthread_t *u;
     const int lockbin = QTHREAD_CHOOSE_STRIPE(a);
-    qthread_t *me = qthread_self();
+    qthread_t *me = qthread_internal_self();
 
     qthread_debug(LOCK_BEHAVIOR, "tid(%u), a(%p)\n", me->thread_id,
 		  a);
@@ -3273,7 +3263,7 @@ int qt_omp_parallel_region_create()
 /* These are just accessor functions */
 unsigned qthread_id(void)
 {				       /*{{{ */
-    qthread_t *t = qthread_self();
+    qthread_t *t = qthread_internal_self();
     qthread_debug(ALL_CALLS, "tid(%u)\n",
 		  t ? t->thread_id : (unsigned)-1);
 #ifdef QTHREAD_NONLAZY_THREADIDS
@@ -3309,7 +3299,7 @@ qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *shepherd_id)
     qthread_worker_t *worker = (qthread_worker_t *)pthread_getspecific(shepherd_structs);
     *shepherd_id = worker->shepherd->shepherd_id;
   }
-  qthread_t *t = qthread_self();
+  qthread_t *t = qthread_internal_self();
   return t?(t->id):NO_WORKER;
 }                                      /*}}} */
 #endif
@@ -3349,7 +3339,7 @@ int qthread_distance(const qthread_shepherd_id_t src,
  * if NULL, then all sheps are equidistant */
 const qthread_shepherd_id_t *qthread_sorted_sheps(void)
 {				       /*{{{ */
-    qthread_t *t = qthread_self();
+    qthread_t *t = qthread_internal_self();
     if (t == NULL) {
 	return NULL;
     }
@@ -3389,7 +3379,7 @@ qthread_worker_id_t qthread_num_workers(void)
  * (nobody else gets to have 'em!) */
 unsigned int qthread_isfuture(void)
 {				       /*{{{ */
-    qthread_t * t = qthread_self();
+    qthread_t * t = qthread_internal_self();
     return t ? (t->flags & QTHREAD_FUTURE) : 0;
 }				       /*}}} */
 
@@ -3400,7 +3390,7 @@ void qthread_assertfuture(qthread_t * t)
 
 void qthread_assertnotfuture(void)
 {				       /*{{{ */
-    qthread_t *t = qthread_self();
+    qthread_t *t = qthread_internal_self();
     t->flags &= ~QTHREAD_FUTURE;
 }				       /*}}} */
 
@@ -3411,35 +3401,35 @@ void qthread_assertnotfuture(void)
 
 int qthread_forCount(int inc)
 {                                    /*{{{ */
-    qthread_t *t = qthread_self();
+    qthread_t *t = qthread_internal_self();
     assert(t);
     return (t->rdata->forCount += inc);
 }                                    /*}}} */
 
 void qthread_getTaskListLock(void)
 {				       /*{{{ */
-    qthread_t *t = qthread_self();
+    qthread_t *t = qthread_internal_self();
     assert(t);
     qthread_syncvar_writeEF_const(&t->rdata->taskWaitLock, 1);
 }				       /*}}} */
 
 void qthread_releaseTaskListLock(void)
 {				       /*{{{ */
-    qthread_t *t = qthread_self();
+    qthread_t *t = qthread_internal_self();
     assert(t);
     qthread_syncvar_readFE(NULL, &t->rdata->taskWaitLock);
 }				       /*}}} */
 
 taskSyncvar_t * qthread_getTaskRetVar(void)
 {				       /*{{{ */
-    qthread_t *t = qthread_self();
+    qthread_t *t = qthread_internal_self();
     assert(t);
     return t->rdata->openmpTaskRetVar;
 }				       /*}}} */
 
 void qthread_setTaskRetVar(taskSyncvar_t *v)
 {				       /*{{{ */
-    qthread_t *t = qthread_self();
+    qthread_t *t = qthread_internal_self();
     assert(t);
     t->rdata->openmpTaskRetVar = v;
 }				       /*}}} */
@@ -3453,13 +3443,13 @@ uint32_t qthread_incr32_(volatile uint32_t * op, const int32_t incr)
     QTHREAD_LOCK_TIMER_DECLARATION(incr);
 
     QTHREAD_COUNT_THREADS_BINCOUNTER(atomic, stripe);
-    QTHREAD_LOCK_UNIQUERECORD(incr, op, qthread_self());
+    QTHREAD_LOCK_UNIQUERECORD(incr, op, qthread_internal_self());
     QTHREAD_LOCK_TIMER_START(incr);
     QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
     retval = *op;
     *op += incr;
     QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
-    QTHREAD_LOCK_TIMER_STOP(incr, qthread_self());
+    QTHREAD_LOCK_TIMER_STOP(incr, qthread_internal_self());
     return retval;
 }				       /*}}} */
 
@@ -3470,13 +3460,13 @@ uint64_t qthread_incr64_(volatile uint64_t * op, const int64_t incr)
     QTHREAD_LOCK_TIMER_DECLARATION(incr);
 
     QTHREAD_COUNT_THREADS_BINCOUNTER(atomic, stripe);
-    QTHREAD_LOCK_UNIQUERECORD(incr, op, qthread_self());
+    QTHREAD_LOCK_UNIQUERECORD(incr, op, qthread_internal_self());
     QTHREAD_LOCK_TIMER_START(incr);
     QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
     retval = *op;
     *op += incr;
     QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
-    QTHREAD_LOCK_TIMER_STOP(incr, qthread_self());
+    QTHREAD_LOCK_TIMER_STOP(incr, qthread_internal_self());
     return retval;
 }				       /*}}} */
 

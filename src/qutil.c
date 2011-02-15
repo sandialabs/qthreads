@@ -617,7 +617,7 @@ struct qutil_qsort_iprets
 };
 
 static inline struct qutil_qsort_iprets
-qutil_qsort_inner_partitioner(qthread_t * me, double *array,
+qutil_qsort_inner_partitioner(double *array,
 			      const size_t length, const double pivot)
 {
     /* choose the number of threads to use */
@@ -654,7 +654,7 @@ qutil_qsort_inner_partitioner(qthread_t * me, double *array,
 	} else {
 	    args[i].length = length - megachunk_size + MT_CHUNKSIZE;
 	}
-	/* qutil_qsort_partition(me, args+i); */
+	/* qutil_qsort_partition(args+i); */
 	/* future_fork((qthread_f)qutil_qsort_partition, args+i, rets+i); */
 	qthread_fork((qthread_f) qutil_qsort_partition, args + i, rets + i);
     }
@@ -671,7 +671,6 @@ static inline aligned_t qutil_qsort_inner(struct qutil_qsort_iargs *a)
 {
     double *array = a->array, pivot;
     struct qutil_qsort_iprets furthest;
-    qthread_t *me = qthread_self();
 
     /* choose the number of threads to use */
     if (a->length <= MT_LOOP_CHUNK) {  /* shortcut */
@@ -700,7 +699,7 @@ static inline aligned_t qutil_qsort_inner(struct qutil_qsort_iargs *a)
 	size_t offset = furthest.leftwall;
 
 	furthest =
-	    qutil_qsort_inner_partitioner(me, a->array + furthest.leftwall,
+	    qutil_qsort_inner_partitioner(a->array + furthest.leftwall,
 					  furthest.rightwall -
 					  furthest.leftwall + 1, pivot);
 	furthest.leftwall += offset;
@@ -742,13 +741,13 @@ static inline aligned_t qutil_qsort_inner(struct qutil_qsort_iargs *a)
 	    if (na[0].length > 0) {
 		rets[0] = 0;
 		/* future_fork((qthread_f)qutil_qsort_inner, na, rets); */
-		/* qutil_qsort_inner(me, na); */
+		/* qutil_qsort_inner(na); */
 		qthread_fork((qthread_f) qutil_qsort_inner, na, rets);
 	    }
 	    if (na[1].length > 0 && a->length > rightwall) {
 		rets[1] = 0;
 		/* future_fork((qthread_f)qutil_qsort_inner, na+1, rets+1); */
-		/* qutil_qsort_inner(me, na+1); */
+		/* qutil_qsort_inner(na+1); */
 		qthread_fork((qthread_f) qutil_qsort_inner, na + 1, rets + 1);
 	    }
 	    if (rets[0] == 0) {
@@ -859,7 +858,7 @@ struct qutil_aligned_qsort_iargs
 };
 
 static inline struct qutil_qsort_iprets
-qutil_aligned_qsort_inner_partitioner(qthread_t * me, aligned_t * array,
+qutil_aligned_qsort_inner_partitioner(aligned_t * array,
 				      const size_t length,
 				      const aligned_t pivot)
 {
@@ -897,7 +896,7 @@ qutil_aligned_qsort_inner_partitioner(qthread_t * me, aligned_t * array,
 	} else {
 	    args[i].length = length - megachunk_size + MT_CHUNKSIZE;
 	}
-	/* qutil_aligned_qsort_partition(me, args+i); */
+	/* qutil_aligned_qsort_partition(args+i); */
 	/* future_fork((qthread_f)qutil_aligned_qsort_partition, args+i, rets+i); */
 	qthread_fork((qthread_f) qutil_aligned_qsort_partition, args + i,
 		     rets + i);
@@ -917,7 +916,6 @@ static inline aligned_t qutil_aligned_qsort_inner(struct
 {
     aligned_t *array = a->array, pivot;
     struct qutil_qsort_iprets furthest;
-    qthread_t *me = qthread_self();
 
     /* choose the number of threads to use */
     if (a->length <= MT_LOOP_CHUNK) {  /* shortcut */
@@ -946,8 +944,7 @@ static inline aligned_t qutil_aligned_qsort_inner(struct
 	size_t offset = furthest.leftwall;
 
 	furthest =
-	    qutil_aligned_qsort_inner_partitioner(me,
-						  a->array +
+	    qutil_aligned_qsort_inner_partitioner(a->array +
 						  furthest.leftwall,
 						  furthest.rightwall -
 						  furthest.leftwall + 1,
@@ -991,14 +988,14 @@ static inline aligned_t qutil_aligned_qsort_inner(struct
 	    if (na[0].length > 0) {
 		rets[0] = 0;
 		/* future_fork((qthread_f)qutil_aligned_qsort_inner, na, rets); */
-		/* qutil_aligned_qsort_inner(me, na); */
+		/* qutil_aligned_qsort_inner(na); */
 		qthread_fork((qthread_f) qutil_aligned_qsort_inner, &na[0],
 			     &rets[0]);
 	    }
 	    if (na[1].length > 0 && a->length > rightwall) {
 		rets[1] = 0;
 		/* future_fork((qthread_f)qutil_aligned_qsort_inner, na+1, rets+1); */
-		/* qutil_aligned_qsort_inner(me, na+1); */
+		/* qutil_aligned_qsort_inner(na+1); */
 		qthread_fork((qthread_f) qutil_aligned_qsort_inner, &na[1],
 			     &rets[1]);
 	    }

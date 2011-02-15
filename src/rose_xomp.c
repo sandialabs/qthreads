@@ -49,7 +49,7 @@ void xomp_internal_loop_init(enum qloop_handle_type type,
 void xomp_internal_set_ordered_iter(qqloop_step_handle_t *loop, int lower);
 
 int compute_XOMP_block(qqloop_step_handle_t * loop);
-syncvar_t *getSyncTaskVar(qthread_t *me);
+syncvar_t *getSyncTaskVar(void);
 
 typedef enum xomp_nest_level{NO_NEST=0, ALLOW_NEST, AUTO_NEST}xomp_nest_level_t;
 
@@ -521,13 +521,12 @@ void XOMP_loop_end_nowait(
 }
 
 // Qthread implementation of a OpenMP global barrier
-void walkSyncTaskList(qthread_t *me);
+void walkSyncTaskList(void);
 extern int activeParallelLoop;
 
 void XOMP_barrier(void)
 {
-    qthread_t *const me = qthread_self();
-    walkSyncTaskList(me); // wait for outstanding tasks to complete
+    walkSyncTaskList(); // wait for outstanding tasks to complete
     qt_feb_barrier_enter(qt_thread_barrier());
 }
 void XOMP_atomic_start(
@@ -583,7 +582,7 @@ bool XOMP_loop_ordered_guided_next(
   return ret;
 }
 
-syncvar_t *getSyncTaskVar(qthread_t *me)
+syncvar_t *getSyncTaskVar(void)
 {
   taskSyncvar_t * syncVar = (taskSyncvar_t *)calloc(1,sizeof(taskSyncvar_t));
   qthread_getTaskListLock();
@@ -597,7 +596,7 @@ syncvar_t *getSyncTaskVar(qthread_t *me)
 
 
 void qthread_run_needed_task(syncvar_t *value);
-void walkSyncTaskList(qthread_t *me)
+void walkSyncTaskList(void)
 {
   qthread_getTaskListLock();
   taskSyncvar_t * syncVar;
@@ -649,22 +648,19 @@ void XOMP_task(
     bool if_clause,
     unsigned untied)
 {
-  qthread_t *const me = qthread_self();
-
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 #else
   aligned_t id = qthread_incr(&taskId,1);
   qthread_debug(LOCK_DETAILS, "me(%p) creating task for shepherd %d\n", me, id%qthread_num_shepherds());
 #endif
-  syncvar_t *ret = getSyncTaskVar(me); // get new syncvar_t -- setup openmpThreadId (if needed)
+  syncvar_t *ret = getSyncTaskVar(); // get new syncvar_t -- setup openmpThreadId (if needed)
   qthread_fork_syncvar_copyargs((qthread_f)func, arg, arg_size, ret);
 }
 
 void XOMP_taskwait(
     void)
 {
-  qthread_t *const me = qthread_self();
-  walkSyncTaskList(me);
+  walkSyncTaskList();
 }
 
 int staticChunkSize = 0;
