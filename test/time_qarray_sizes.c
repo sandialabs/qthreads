@@ -11,8 +11,8 @@ size_t constant_size = 1073741824 /*1GB */ ;
 /* 536870912 = 512MB, 104857600 = 100MB */
 size_t global_size = 0;
 
-static void assign1_loop(const size_t startat,
-			 const size_t stopat, qarray * qa, void *arg)
+static void assign1_loop(const size_t startat, const size_t stopat,
+			 qarray * qa, void *arg)
 {
     const size_t size = global_size;
     size_t i;
@@ -24,8 +24,8 @@ static void assign1_loop(const size_t startat,
     }
 }
 
-static void assert1_loop(const size_t startat,
-			 const size_t stopat, qarray * qa, void *arg)
+static void assert1_loop(const size_t startat, const size_t stopat,
+			 qarray * qa, void *arg)
 {
     const size_t size = global_size;
     char *example = malloc(size);
@@ -46,16 +46,15 @@ static void assert1_loop(const size_t startat,
 
 int main(int argc, char *argv[])
 {
-    qthread_t *me;
     qtimer_t timer = qtimer_create();
     distribution_t disttypes[] = {
 	FIXED_HASH, FIXED_FIELDS,
-	ALL_LOCAL, /*ALL_RAND, ALL_LEAST, */
+	ALL_LOCAL,		       /*ALL_RAND, ALL_LEAST, */
 	DIST_RAND, DIST_STRIPES, DIST_FIELDS, DIST_LEAST
     };
     const char *distnames[] = {
 	"FIXED_HASH", "FIXED_FIELDS",
-	"ALL_LOCAL", /*"ALL_RAND", "ALL_LEAST", */
+	"ALL_LOCAL",		       /*"ALL_RAND", "ALL_LEAST", */
 	"DIST_RAND", "DIST_STRIPES", "DIST_FIELDS", "DIST_LEAST",
 	"SERIAL"
     };
@@ -78,8 +77,6 @@ int main(int argc, char *argv[])
 	ELEMENT_COUNT = 1000;
 	constant_size = 0;
     }
-
-    me = qthread_self();
 
     printf("Arrays of %lu objects...\n", (unsigned long)ELEMENT_COUNT);
 
@@ -172,16 +169,14 @@ int main(int argc, char *argv[])
 		global_size = size;
 		qtimer_start(timer);
 		for (unsigned i = 0; i < 10; i++) {
-		    qarray_iter_loop(a, 0, ELEMENT_COUNT, assign1_loop,
-				     NULL);
+		    qarray_iter_loop(a, 0, ELEMENT_COUNT, assign1_loop, NULL);
 		}
 		qtimer_stop(timer);
 		printf("\t%lu, %f", (unsigned long)sizes[size_i],
 		       qtimer_secs(timer) / 10.0);
 		qtimer_start(timer);
 		for (unsigned i = 0; i < 10; i++) {
-		    qarray_iter_loop(a, 0, ELEMENT_COUNT, assert1_loop,
-				     NULL);
+		    qarray_iter_loop(a, 0, ELEMENT_COUNT, assert1_loop, NULL);
 		}
 		qtimer_stop(timer);
 		printf(", %f\n", qtimer_secs(timer) / 10.0);

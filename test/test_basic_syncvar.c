@@ -13,18 +13,16 @@ static uint64_t readout = 0;
 static aligned_t consumer(void *arg)
 {
     uint64_t me;
-    qthread_t *t = qthread_self();
 
-    iprintf("consumer(%p) locking id(%p)\n", t, &id);
+    iprintf("consumer locking id(%p)\n", &id);
     qthread_syncvar_readFE(&me, &id);
-    iprintf("consumer(%p) id's status became: %u\n", t,
-	    qthread_syncvar_status(&id));
-    iprintf("consumer(%p) unlocking id(%p), result is %lu\n", t, &id,
+    iprintf("consumer id's status became: %u\n", qthread_syncvar_status(&id));
+    iprintf("consumer unlocking id(%p), result is %lu\n", &id,
 	    (unsigned long)me);
     me++;
     qthread_syncvar_writeEF(&id, &me);
 
-    iprintf("consumer(%p) readFF on x\n", t);
+    iprintf("consumer readFF on x\n");
     qthread_syncvar_readFF(&readout, &x);
 
     return 0;
@@ -34,18 +32,17 @@ static aligned_t producer(void *arg)
 {
     uint64_t me;
     uint64_t res = 55;
-    qthread_t *t = qthread_self();
 
-    iprintf("producer(%p) locking id(%p)\n", t, &id);
+    iprintf("producer locking id(%p)\n", &id);
     qthread_syncvar_readFE(&me, &id);
-    iprintf("producer(%p) unlocking id(%p), result is %lu\n", t, &id,
+    iprintf("producer unlocking id(%p), result is %lu\n", &id,
 	    (unsigned long)me);
     me++;
     qthread_syncvar_writeEF(&id, &me);
 
-    iprintf("producer(%p) x's status is: %s (expect empty)\n", t,
-	    qthread_syncvar_status(&x)?"full":"empty");
-    iprintf("producer(%p) filling x(%p)\n", t, &x);
+    iprintf("producer x's status is: %s (expect empty)\n",
+	    qthread_syncvar_status(&x) ? "full" : "empty");
+    iprintf("producer filling x(%p)\n", &x);
     qthread_syncvar_writeEF(&x, &res);
 
     return 0;
@@ -71,17 +68,17 @@ int main(int argc, char *argv[])
 	assert(tmp == 1);
     }
     iprintf("x's status is: %s (want full (and nowait))\n",
-	    qthread_syncvar_status(&x)?"full":"empty");
+	    qthread_syncvar_status(&x) ? "full" : "empty");
     assert(qthread_syncvar_status(&x) == 1);
     qthread_syncvar_readFE(NULL, &x);
     iprintf("x's status became: %s (want empty (and nowait))\n",
-	    qthread_syncvar_status(&x)?"full":"empty");
+	    qthread_syncvar_status(&x) ? "full" : "empty");
     assert(qthread_syncvar_status(&x) == 0);
     qthread_fork(consumer, NULL, NULL);
     qthread_fork(producer, NULL, &t);
     qthread_readFF(NULL, &t);
     iprintf("shouldn't be blocking on x (current status: %s)\n",
-	    qthread_syncvar_status(&x)?"full":"empty");
+	    qthread_syncvar_status(&x) ? "full" : "empty");
     qthread_syncvar_readFF(&x_value, &x);
     assert(qthread_syncvar_status(&x) == 1);
 

@@ -34,7 +34,6 @@ static void assignrand(const size_t startat, const size_t stopat, qarray * a,
 
 int main(int argc, char *argv[])
 {
-    qthread_t *me;
     qarray *v, *h;
     qt_wavefront_lattice *L;
 
@@ -44,7 +43,6 @@ int main(int argc, char *argv[])
     iprintf("ASIZE: %i\n", (int)ASIZE);
     iprintf("%i threads\n", qthread_num_shepherds());
 
-    me = qthread_self();
     v = qarray_create_configured(ASIZE, sizeof(double), FIXED_HASH, 1, 1);
     h = qarray_create_configured(ASIZE + 1, sizeof(double), FIXED_HASH, 1, 1);
 

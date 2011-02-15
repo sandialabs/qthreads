@@ -82,14 +82,12 @@ int main(int argc, char *argv[])
     qarray *a1, *a2;
     int **out;
     size_t i;
-    qthread_t *me;
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
     CHECK_VERBOSE();
     NUMARG(ASIZE, "TEST_ASIZE");
     iprintf("ASIZE: %i\n", (int)ASIZE);
 
-    me = qthread_self();
     iprintf("%i threads\n", qthread_num_shepherds());
 
     a1 = qarray_create_tight(ASIZE, sizeof(int));

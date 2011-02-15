@@ -17,16 +17,15 @@
 #define THREAD_COUNT 128
 
 #ifdef HAVE_CPROPS
-static aligned_t cpqueuer(
-    void *arg)
+static aligned_t cpqueuer(void *arg)
 {
     cp_list *q = (cp_list *) arg;
     size_t i;
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
-	if (cp_list_append(q, (void *)me) == NULL) {
+	if (cp_list_append(q, (void *)(intptr_t) qthread_id()) == NULL) {
 	    fprintf(stderr, "%i'th cp_list_append(q, %p) failed!\n", (int)i,
-		    (void *)me);
+		    (void *)(intptr_t) qthread_id());
 	    perror("cp_list_append");
 	    exit(-2);
 	}
@@ -34,38 +33,37 @@ static aligned_t cpqueuer(
     return 0;
 }
 
-static aligned_t cpdequeuer(
-    void *arg)
+static aligned_t cpdequeuer(void *arg)
 {
     cp_list *q = (cp_list *) arg;
     size_t i;
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
 	while (cp_list_remove_head(q) == NULL) {
-	    qthread_yield(me);
+	    qthread_yield();
 	}
     }
     return 0;
 }
 #endif
 
-static aligned_t queuer(
-    void *arg)
+static aligned_t queuer(void *arg)
 {
     qlfqueue_t *q = (qlfqueue_t *) arg;
     size_t i;
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
-	if (qlfqueue_enqueue(q, (void *)qthread_self()) != QTHREAD_SUCCESS) {
-	    fprintf(stderr, "qlfqueue_enqueue(q, %p) failed!\n", (void *)qthread_self());
+	if (qlfqueue_enqueue(q, (void *)(intptr_t) qthread_id()) !=
+	    QTHREAD_SUCCESS) {
+	    fprintf(stderr, "qlfqueue_enqueue(q, %p) failed!\n",
+		    (void *)(intptr_t) qthread_id());
 	    exit(-2);
 	}
     }
     return 0;
 }
 
-static aligned_t dequeuer(
-    void *arg)
+static aligned_t dequeuer(void *arg)
 {
     qlfqueue_t *q = (qlfqueue_t *) arg;
     size_t i;
@@ -86,8 +84,9 @@ static void loop_cpqueuer(const size_t startat, const size_t stopat,
     cp_list *q = (cp_list *) arg;
 
     for (i = startat; i < stopat; i++) {
-	if (cp_list_append(q, (void *)me) == NULL) {
-	    fprintf(stderr, "cp_list_append(q, %p) failed!\n", (void *)me);
+	if (cp_list_append(q, (void *)(intptr_t) qthread_id()) == NULL) {
+	    fprintf(stderr, "cp_list_append(q, %p) failed!\n",
+		    (void *)(intptr_t) qthread_id());
 	    exit(-2);
 	}
     }
@@ -102,7 +101,7 @@ static void loop_cpdequeuer(const size_t startat, const size_t stopat,
     for (i = startat; i < stopat; i++) {
 	if (cp_list_remove_head(q) == NULL) {
 	    fprintf(stderr, "cp_list_remove_head(q, %p) failed!\n",
-		    (void *)me);
+		    (void *)(intptr_t) qthread_id());
 	    exit(-2);
 	}
     }
@@ -113,7 +112,7 @@ static void loop_queuer(const size_t startat, const size_t stopat, void *arg)
 {				       /*{{{ */
     size_t i;
     qlfqueue_t *q = (qlfqueue_t *) arg;
-    void *me = (void*)(uintptr_t)qthread_id();
+    void *me = (void *)(uintptr_t) qthread_id();
 
     for (i = startat; i < stopat; i++) {
 	if (qlfqueue_enqueue(q, me) != QTHREAD_SUCCESS) {
@@ -137,12 +136,9 @@ static void loop_dequeuer(const size_t startat, const size_t stopat,
     }
 }				       /*}}} */
 
-int main(
-    int argc,
-    char *argv[])
+int main(int argc, char *argv[])
 {
     qlfqueue_t *q;
-    qthread_t *me;
     size_t i;
     aligned_t *rets;
     qtimer_t timer = qtimer_create();
@@ -151,7 +147,6 @@ int main(
 #endif
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
-    me = qthread_self();
 
     CHECK_VERBOSE();
 

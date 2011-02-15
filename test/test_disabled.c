@@ -54,12 +54,10 @@ int setenv(const char *name, const char *value, int overwrite);
 int main(int argc, char *argv[])
 {
     aligned_t ret;
-    qthread_t *me;
     int qret;
 
-    setenv("QTHREAD_NUM_SHEPHERDS","3",1);
+    setenv("QTHREAD_NUM_SHEPHERDS", "3", 1);
     qthread_initialize();
-    me = qthread_self();
     qthread_disable_shepherd(1);
 
     CHECK_VERBOSE();

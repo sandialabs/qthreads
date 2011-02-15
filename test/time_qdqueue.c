@@ -10,23 +10,23 @@
 #define ELEMENT_COUNT 10000
 #define THREAD_COUNT 128
 
-static aligned_t queuer(
-    void *arg)
+static aligned_t queuer(void *arg)
 {
     qdqueue_t *q = (qdqueue_t *) arg;
     size_t i;
 
     for (i = 0; i < ELEMENT_COUNT; i++) {
-	if (qdqueue_enqueue(q, (void *)qthread_self()) != QTHREAD_SUCCESS) {
-	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n", (void *)qthread_self());
+	if (qdqueue_enqueue(q, (void *)(intptr_t) qthread_id()) !=
+	    QTHREAD_SUCCESS) {
+	    fprintf(stderr, "qdqueue_enqueue(q, %p) failed!\n",
+		    (void *)(intptr_t) qthread_id());
 	    exit(-2);
 	}
     }
     return 0;
 }
 
-static aligned_t dequeuer(
-    void *arg)
+static aligned_t dequeuer(void *arg)
 {
     qdqueue_t *q = (qdqueue_t *) arg;
     size_t i;
@@ -43,7 +43,7 @@ static void loop_queuer(const size_t startat, const size_t stopat, void *arg)
 {				       /*{{{ */
     size_t i;
     qdqueue_t *q = (qdqueue_t *) arg;
-    void *me = (void*)(uintptr_t)qthread_id();
+    void *me = (void *)(uintptr_t) qthread_id();
 
     for (i = startat; i < stopat; i++) {
 	if (qdqueue_enqueue(q, me) != QTHREAD_SUCCESS) {
@@ -67,12 +67,9 @@ static void loop_dequeuer(const size_t startat, const size_t stopat,
     }
 }				       /*}}} */
 
-int main(
-    int argc,
-    char *argv[])
+int main(int argc, char *argv[])
 {
     qdqueue_t *q;
-    qthread_t *me;
     size_t i;
     aligned_t *rets;
     qtimer_t timer = qtimer_create();
@@ -80,7 +77,6 @@ int main(
     assert(qthread_initialize() == QTHREAD_SUCCESS);
 
     CHECK_VERBOSE();
-    me = qthread_self();
 
     if ((q = qdqueue_create()) == NULL) {
 	fprintf(stderr, "qdqueue_create() failed!\n");

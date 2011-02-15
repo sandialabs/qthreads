@@ -8,12 +8,10 @@
 static unsigned int ELEMENT_COUNT = 1000;
 
 aligned_t count = 0;
-typedef struct
-{
+typedef struct {
     char pad[10000];
 } bigobj;
-typedef struct
-{
+typedef struct {
     char pad[41];
 } offsize;
 
@@ -31,7 +29,8 @@ static aligned_t assignall1(void *arg)
     return 0;
 }
 
-static void assignoff1(const size_t startat, const size_t stopat, qarray * q, void *arg)
+static void assignoff1(const size_t startat, const size_t stopat, qarray * q,
+		       void *arg)
 {
     for (size_t i = startat; i < stopat; i++) {
 	void *ptr = qarray_elem_nomigrate(q, i);
@@ -44,7 +43,6 @@ static void assignoff1(const size_t startat, const size_t stopat, qarray * q, vo
 int main(int argc, char *argv[])
 {
     qarray *a;
-    qthread_t *me;
     distribution_t disttypes[] = {
 	FIXED_HASH, FIXED_FIELDS,
 	ALL_LOCAL, ALL_RAND, ALL_LEAST,
@@ -56,18 +54,18 @@ int main(int argc, char *argv[])
 	"DIST_RAND", "DIST_STRIPES", "DIST_FIELDS", "DIST_LEAST"
     };
     unsigned int dt_index;
-    unsigned int num_dists = sizeof(disttypes)/sizeof(distribution_t);
-    unsigned int dists = (1<<num_dists)-1;
+    unsigned int num_dists = sizeof(disttypes) / sizeof(distribution_t);
+    unsigned int dists = (1 << num_dists) - 1;
 
     qthread_initialize();
-    me = qthread_self();
     CHECK_VERBOSE();
     NUMARG(dists, "TEST_DISTS");
     NUMARG(ELEMENT_COUNT, "ELEMENT_COUNT");
 
     /* iterate over all the different distribution types */
     for (dt_index = 0; dt_index < num_dists; dt_index++) {
-	if ((dists & (1 << dt_index)) == 0) continue;
+	if ((dists & (1 << dt_index)) == 0)
+	    continue;
 	/* test a basic array of doubles */
 	count = 0;
 	a = qarray_create_configured(ELEMENT_COUNT, sizeof(double),

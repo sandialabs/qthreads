@@ -10,13 +10,14 @@ static int threadcount = 128;
 
 static aligned_t queuer(void *arg)
 {
-    qthread_t *me = qthread_self();
     qlfqueue_t *q = (qlfqueue_t *) arg;
     size_t i;
 
     for (i = 0; i < elementcount; i++) {
-	if (qlfqueue_enqueue(q, (void *)me) != QTHREAD_SUCCESS) {
-	    fprintf(stderr, "qlfqueue_enqueue(q, %p) failed!\n", (void *)me);
+	if (qlfqueue_enqueue(q, (void *)(intptr_t) qthread_id()) !=
+	    QTHREAD_SUCCESS) {
+	    fprintf(stderr, "qlfqueue_enqueue(q, %p) failed!\n",
+		    (void *)(intptr_t) qthread_id());
 	    exit(-2);
 	}
     }
@@ -40,12 +41,10 @@ static aligned_t dequeuer(void *arg)
 int main(int argc, char *argv[])
 {
     qlfqueue_t *q;
-    qthread_t *me;
     size_t i;
     aligned_t *rets;
 
     assert(qthread_initialize() == 0);
-    me = qthread_self();
     NUMARG(threadcount, "THREAD_COUNT");
     NUMARG(elementcount, "ELEMENT_COUNT");
     CHECK_VERBOSE();

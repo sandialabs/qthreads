@@ -8,7 +8,6 @@
 int main(int argc, char *argv[])
 {
     qtimer_t t;
-    qthread_t *me;
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
 
@@ -17,17 +16,17 @@ int main(int argc, char *argv[])
     t = qtimer_create();
     assert(t);
     qtimer_start(t);
-    me = qthread_self();
-    assert(me);
     qtimer_stop(t);
-#ifndef SST /* SST can do this blazingly fast */
+#ifndef SST			       /* SST can do this blazingly fast */
     if (qtimer_secs(t) == 0) {
 	struct timeval tv;
 	fprintf(stderr, "qtimer_secs(t) reported zero length time.\n");
 	assert(gettimeofday(&tv, NULL) == 0);
-	printf("tv.tv_sec = %u, tv.tv_usec = %u\n", (unsigned int)tv.tv_sec, (unsigned int)tv.tv_usec);
+	printf("tv.tv_sec = %u, tv.tv_usec = %u\n", (unsigned int)tv.tv_sec,
+	       (unsigned int)tv.tv_usec);
     } else if (qtimer_secs(t) < 0) {
-	fprintf(stderr, "qtimer_secs(t) thinks time went backwards (%g).\n", qtimer_secs(t));
+	fprintf(stderr, "qtimer_secs(t) thinks time went backwards (%g).\n",
+		qtimer_secs(t));
     }
     assert(qtimer_secs(t) > 0);
 #endif

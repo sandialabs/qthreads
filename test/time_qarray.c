@@ -9,13 +9,11 @@
 size_t ITERATIONS = 10;
 size_t ELEMENT_COUNT = 100000;
 
-typedef struct
-{
+typedef struct {
     char pad[10000];
 } bigobj;
 
-typedef struct
-{
+typedef struct {
     char pad[40];
 } offsize;
 
@@ -92,16 +90,15 @@ static void assertoff1(const size_t startat, const size_t stopat, qarray * qa,
 
 int main(int argc, char *argv[])
 {
-    qthread_t *me;
     qtimer_t timer = qtimer_create();
     distribution_t disttypes[] = {
 	FIXED_HASH, FIXED_FIELDS,
-	ALL_LOCAL, /*ALL_RAND, ALL_LEAST, */
+	ALL_LOCAL,		       /*ALL_RAND, ALL_LEAST, */
 	DIST_RAND, DIST_STRIPES, DIST_FIELDS, DIST_LEAST
     };
     const char *distnames[] = {
 	"FIXED_HASH", "FIXED_FIELDS",
-	"ALL_LOCAL", /*"ALL_RAND", "ALL_LEAST", */
+	"ALL_LOCAL",		       /*"ALL_RAND", "ALL_LEAST", */
 	"DIST_RAND", "DIST_STRIPES", "DIST_FIELDS", "DIST_LEAST",
 	"SERIAL"
     };
@@ -118,8 +115,6 @@ int main(int argc, char *argv[])
     NUMARG(ELEMENT_COUNT, "TEST_ELEMENT_COUNT");
     NUMARG(enabled_tests, "TEST_ENABLED_TESTS");
     NUMARG(enabled_types, "TEST_ENABLED_TYPES");
-
-    me = qthread_self();
 
     printf("Using %i shepherds\n", (int)qthread_num_shepherds());
     printf("Arrays of %lu objects...\n", (unsigned long)ELEMENT_COUNT);
@@ -261,8 +256,7 @@ int main(int argc, char *argv[])
 	    assert(a != NULL);
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
-		qarray_iter_loop(a, 0, ELEMENT_COUNT, assignall1_loop,
-				 NULL);
+		qarray_iter_loop(a, 0, ELEMENT_COUNT, assignall1_loop, NULL);
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
@@ -270,8 +264,7 @@ int main(int argc, char *argv[])
 	    acc = 0.0;
 	    for (j = 0; j < ITERATIONS; j++) {
 		qtimer_start(timer);
-		qarray_iter_loop(a, 0, ELEMENT_COUNT, assertall1_loop,
-				 NULL);
+		qarray_iter_loop(a, 0, ELEMENT_COUNT, assertall1_loop, NULL);
 		qtimer_stop(timer);
 		acc += qtimer_secs(timer);
 	    }
