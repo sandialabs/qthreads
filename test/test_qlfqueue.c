@@ -14,10 +14,10 @@ static aligned_t queuer(void *arg)
     size_t i;
 
     for (i = 0; i < elementcount; i++) {
-	if (qlfqueue_enqueue(q, (void *)(intptr_t) qthread_id()) !=
+	if (qlfqueue_enqueue(q, (void *)(intptr_t) qthread_id() + 1) !=
 	    QTHREAD_SUCCESS) {
-	    fprintf(stderr, "qlfqueue_enqueue(q, %p) failed!\n",
-		    (void *)(intptr_t) qthread_id());
+	    fprintf(stderr, "qlfqueue_enqueue(q, %p) failed! (%i)\n",
+		    (void *)(intptr_t) qthread_id() + 1, __LINE__);
 	    exit(-2);
 	}
     }
