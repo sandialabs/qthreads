@@ -60,11 +60,6 @@
 # include "qt_arrive_first.h"
 #endif
 
-/* flags (must be different bits) */
-#define QTHREAD_FUTURE                  1
-#define QTHREAD_REAL_MCCOY		2
-#define QTHREAD_RET_IS_SYNCVAR          4
-
 #ifndef QTHREAD_NOALIGNCHECK
 #define QALIGN(d, s) do { \
     s = (aligned_t *) (((size_t) d) & (~(sizeof(aligned_t)-1))); \
@@ -2270,6 +2265,7 @@ int qthread_fork_to(const qthread_f f, const void *arg, aligned_t * ret,
     qassert_ret(t, QTHREAD_MALLOC_ERROR);
     shep = &(qlib->shepherds[shepherd]);
     t->target_shepherd = shep;
+    t->flags |= QTHREAD_UNSTEALABLE;
     qthread_debug(THREAD_BEHAVIOR,
 	    "new-tid %u shep %u\n", t->thread_id,
 	    shepherd);
@@ -2306,6 +2302,7 @@ int qthread_fork_syncvar_to(
     t = qthread_thread_new(f, arg, 0, ret, shepherd);
     qassert_ret(t, QTHREAD_MALLOC_ERROR);
     t->target_shepherd = shep = &(qlib->shepherds[shepherd]);
+    t->flags |= QTHREAD_UNSTEALABLE;
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     t->id = s % (qlib->nworkerspershep*qthread_num_shepherds());
 #else

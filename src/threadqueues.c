@@ -510,8 +510,9 @@ void qt_threadqueue_enqueue_multiple(qt_threadqueue_t * q,
 }/*}}}*/
 
 /* dequeue stolen threads at head, skip yielded threads */
-qt_threadqueue_node_t *qt_threadqueue_dequeue_steal(qt_threadqueue_t * q)
-{/*{{{*/
+qt_threadqueue_node_t *qt_threadqueue_dequeue_steal(
+    qt_threadqueue_t * q)
+{				       /*{{{ */
     qt_threadqueue_node_t *node;
     qt_threadqueue_node_t *first = NULL;
     qt_threadqueue_node_t *last = NULL;
@@ -523,9 +524,10 @@ qt_threadqueue_node_t *qt_threadqueue_dequeue_steal(qt_threadqueue_t * q)
     while (q->qlength > 0 && amtStolen < qthread_steal_chunksize()) {
 	node = (qt_threadqueue_node_t *) q->head;
 	while (node != NULL &&
- 	       (node->value->thread_state == QTHREAD_STATE_YIELDED ||
-		node->value->thread_state == QTHREAD_STATE_TERM_SHEP)
-	       ) {
+	       (node->value->thread_state == QTHREAD_STATE_YIELDED ||
+		node->value->thread_state == QTHREAD_STATE_TERM_SHEP ||
+		(node->value->flags & QTHREAD_UNSTEALABLE))
+	    ) {
 	    node = (qt_threadqueue_node_t *) node->next;
 	}
 	if (node != NULL) {
@@ -559,7 +561,7 @@ qt_threadqueue_node_t *qt_threadqueue_dequeue_steal(qt_threadqueue_t * q)
 #endif
 
     return (first);
-}/*}}}*/
+}				       /*}}} */
 
 /* Returns the number of tasks to steal per steal operation (chunk size) */
 static QINLINE long qthread_steal_chunksize(void)

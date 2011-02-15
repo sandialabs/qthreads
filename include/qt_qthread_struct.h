@@ -24,6 +24,12 @@ enum threadstate {
     QTHREAD_STATE_MIGRATING,
     QTHREAD_STATE_TERM_SHEP = UINT8_MAX };
 
+/* flags (must be different bits) */
+#define QTHREAD_FUTURE                  (1<<0)
+#define QTHREAD_REAL_MCCOY		(1<<1)
+#define QTHREAD_RET_IS_SYNCVAR          (1<<2)
+#define QTHREAD_UNSTEALABLE		(1<<3)
+
 struct qthread_runtime_data_s
 {
     void *stack;		/* the thread's stack */
