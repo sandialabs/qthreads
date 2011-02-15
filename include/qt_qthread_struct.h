@@ -65,6 +65,11 @@ struct qthread_s
     /* the shepherd we'd rather run on */
     qthread_shepherd_t *target_shepherd;
 
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    /* parallel region barrier this thread should use */
+    qthread_parallel_region_t * currentParallelRegion;
+#endif
+
     /* the function to call (that defines this thread) */
     qthread_f f;
     aligned_t id;               /* id used in barrier and arrive_first */

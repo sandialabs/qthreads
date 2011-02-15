@@ -62,6 +62,9 @@ struct qthread_shepherd_s
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     unsigned int stealing;  /* True when a worker is in the steal (attempt) process */
 #endif
+ #ifdef QTHREAD_USE_ROSE_EXTENSIONS
+   qthread_parallel_region_t *currentParallelRegion;
+#endif
 #ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
     size_t steal_called;
     size_t steal_attempted;

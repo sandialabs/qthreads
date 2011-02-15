@@ -209,30 +209,12 @@ int64_t qt_arrive_first_enter(
 }				       /*}}} */
 
 int64_t qt_global_arrive_first(
-    const qthread_shepherd_id_t shep,
-    int64_t nest)
+    const qthread_shepherd_id_t shep)
 {				       /*{{{ */
     int64_t t;
-    if (nest) {
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-      if (qthread_worker(NULL))
-#else
-      if (qthread_shep())
-#endif
-	{
-	  qt_global_barrier();
-	  return 0;
-	}
-      else{
-	qt_global_barrier();
-	return 1;
-      } 
-    }
-    else {
       t = qt_arrive_first_enter(MArrFirst, shep);
       qt_global_barrier();
       return t;
-    }
 }				       /*}}} */
 
 

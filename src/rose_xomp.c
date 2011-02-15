@@ -55,7 +55,6 @@ typedef enum xomp_nest_level{NO_NEST=0, ALLOW_NEST, AUTO_NEST}xomp_nest_level_t;
 
 static uint64_t *staticStartCount;
 static volatile int orderedLoopCount = 0;
-static qqloop_step_handle_t *qqhandle = NULL;
 
 #ifdef USE_RDTSC
 static uint64_t rdtsc(void);
@@ -82,9 +81,6 @@ static XOMP_Status xomp_status;
 
 static void XOMP_Status_init(XOMP_Status *);
 static void set_inside_xomp_parallel(XOMP_Status *, bool);
-static bool get_inside_xomp_parallel(XOMP_Status *);
-static int incr_inside_xomp_nested_parallel(XOMP_Status *p_status);
-static int decr_inside_xomp_nested_parallel(XOMP_Status *p_status);
 static void set_xomp_dynamic(int, XOMP_Status *);
 static int64_t get_xomp_dynamic(XOMP_Status *);
 static void xomp_set_nested(XOMP_Status *, bool val);
@@ -141,10 +137,6 @@ static bool get_inside_xomp_parallel(
   return p_status->inside_xomp_parallel;
 }
 // increasing level of nesting of OMP parallel regions -- returns new level
-int incr_inside_xomp_nested_parallel(XOMP_Status *p_status){
-  return  ++p_status->xomp_nested_parallel_level;
-}
-
 static void xomp_set_nested (XOMP_Status *p_status, bool val)
 {
   p_status->allow_xomp_nested_parallel =  val;
@@ -154,23 +146,6 @@ static xomp_nest_level_t xomp_get_nested (XOMP_Status *p_status)
 {
   return p_status->allow_xomp_nested_parallel;
 }
-
-
-// decrease level of nesting of OMP parallel regions -- returns new level
-
-// if I decr, I turn off nested before last barrier -- a problem 
-// need to keep nested set until parallel region ends only then turn it off 
-// need second variable (I think)
-
-static int decr_inside_xomp_nested_parallel(XOMP_Status *p_status){
-  return  p_status->xomp_nested_parallel_level;
-}
-
-// return current level of nesting of OMP parallel regions
-static int get_inside_xomp_nested_parallel(XOMP_Status *p_status){
-  return  p_status->xomp_nested_parallel_level;
-}
-
 
 // Get wtime used by omp
 static double XOMP_get_wtime(
@@ -234,9 +209,6 @@ static void set_xomp_dynamic(
 // END Setup local variables 
 //
 
-static volatile qt_feb_barrier_t *gb = NULL;
-static syncvar_t outGate; // lock to control loop creation 
-
 //Runtime library initialization routine
 void XOMP_init(
     int argc,
@@ -247,8 +219,6 @@ void XOMP_init(
 
     XOMP_Status_init(&xomp_status);  // Initialize XOMP_Status
 
-    qthread_syncvar_empty(&outGate); // initialize lock to control loop creation
-    
     // Process special environment variables
     if ((env=getenv("OMP_SCHEDULE")) != NULL) {
       if (!strcmp(env, "GUIDED_SCHED")) set_runtime_sched_option(&xomp_status, GUIDED_SCHED);
@@ -277,7 +247,6 @@ void XOMP_init(
     if (! staticStartCount){
       fprintf(stderr,"XOMP_init build shepherd aux structure malloc failed\n");
     }
-    
     return;
 }
 
@@ -298,19 +267,15 @@ void XOMP_parallel_start(
     void *data,
     unsigned numThread)
 {
-  if (get_inside_xomp_parallel(&xomp_status)){ // already parallel add to nesting level
-    incr_inside_xomp_nested_parallel(&xomp_status);
-    if (!xomp_get_nested(&xomp_status)) {  // going nested but not set in environment/nested call
-      xomp_set_nested(&xomp_status,AUTO_NEST);
-    } 
-  }
-  set_inside_xomp_parallel(&xomp_status, TRUE);
+  // allocate block to hold parallel for loop pointer for any loop directly created within this region
+  //    --- parallel for loops directly created within other for loops will be handled by passing
+  //   this value in as part of the XOMP_loop_*_init function
+  qt_omp_parallel_region_create();
 
+  // allocate and set new feb barrier
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  if (gb == NULL) gb = qt_feb_barrier_create(qthread_num_workers()); // setup taskwait barrier
   qthread_shepherd_id_t parallelWidth = qthread_num_workers();
 #else
-  if (gb == NULL) gb = qt_feb_barrier_create(qthread_num_shepherds()); // setup taskwait barrier
   qthread_shepherd_id_t parallelWidth = qthread_num_shepherds();
 #endif
   qt_loop_step_f f = (qt_loop_step_f) func;
@@ -323,13 +288,8 @@ void XOMP_parallel_start(
 void XOMP_parallel_end(
     void)
 {
-  int nest = decr_inside_xomp_nested_parallel(&xomp_status);
-  if (nest == 0){
-    set_inside_xomp_parallel(&xomp_status, FALSE);
-    if(xomp_get_nested(&xomp_status) == AUTO_NEST) {
-      xomp_set_nested(&xomp_status, NO_NEST);
-    } 
-  }
+  XOMP_taskwait();
+  //  akp -- if last need to free parallel region and barrier it contains
   return;
 }
 
@@ -343,7 +303,7 @@ qqloop_step_handle_t *qt_loop_rose_queue_create(
 {
     qqloop_step_handle_t *ret;
     int array_size = 0;
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     array_size = qthread_num_workers(); 
 #else
     array_size = qthread_num_shepherds(); 
@@ -404,42 +364,35 @@ void xomp_internal_loop_init(
 		    int stride,
 		    int chunk_size)
 {
-  qthread_shepherd_id_t myid;
-#ifdef USE_RDTSC
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  qthread_worker_id_t workerid = qthread_worker(&myid);
-#else
-  myid = qthread_shep();
-#endif
-#endif
+  qthread_parallel_region_t *pr = qt_parallel_region();
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  if (qt_global_arrive_first(workerid,xomp_get_nested(&xomp_status))) {
-#else
-  if (qt_global_arrive_first(myid,xomp_get_nested(&xomp_status))) {
-#endif
-    qqhandle  =  qt_loop_rose_queue_create(lower,
-					   upper,
-					   stride);    
-    qqhandle->chunkSize = 1;
-    qqhandle->type = type;
-    qqhandle->iterations = 0;
-
-    qthread_syncvar_writeEF(&outGate,(const uint64_t * const restrict)qqhandle);
+  qqloop_step_handle_t *t = NULL;
   
+  if (pr) { // have active parallel region -- one parallel for loop structure per region
+    t = qthread_cas(&pr->forLoop, NULL, -1);
   }
-  else {
-    // wait for value
-    qthread_syncvar_readFF(NULL,&outGate);
+  else { // already within parallel loop -- use loop argument to store loop structure
+    t = qthread_cas(loop, NULL, -1);
   }
   
-  qqloop_step_handle_t * t = qqhandle;
-  *loop = (void*)qqhandle;
-  aligned_t cnt = qthread_incr(&t->workers,1)+1;
-  if (cnt == qthread_num_workers()){
-    qthread_syncvar_empty(&outGate);
-    qqhandle = NULL;
+  if (t == NULL) { // am I first?
+    t  =  qt_loop_rose_queue_create(lower, upper, stride);
+    t->chunkSize = 1;
+    t->type = type;
+    t->iterations = 0;
+    if (pr) pr->forLoop = t;
   }
+  // akp - this feels more than should be needed but I was having problems with simpler
+  //       waiting mechanisms (at both compilation and execution) 
+  if ((int64_t)pr->forLoop == -1) { // wait for region to be created 
+    t = qthread_cas(&pr->forLoop, -1, -1);
+    while( (int64_t)t == -1){
+      t = qthread_cas(&pr->forLoop, -1, -1);
+    }
+  }
+
+  qthread_incr(&t->workers,1);
+  *loop = (void*)t;
   
   return;
 }
@@ -512,26 +465,27 @@ bool XOMP_loop_guided_start(
     long *returnLower,
     long *returnUpper)
 {
+
     int dynamicBlock;
 
     qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
 
     dynamicBlock = compute_XOMP_block(loop);
-    
+
+    dynamicBlock = (dynamicBlock <= 1) ? 1:(dynamicBlock - 1); // min size 1
     aligned_t iterationNumber = qthread_incr(&loop->assignNext, dynamicBlock);
-
     *returnLower = iterationNumber;
+    *returnUpper = iterationNumber + (dynamicBlock-1); // top is inclusive
 
-    aligned_t iterationStop = iterationNumber + dynamicBlock - 1; // xomp now includsive
-    if (iterationStop >= loop->assignStop) {
-	iterationStop = loop->assignStop;
-	if (iterationNumber >= loop->assignStop) {
-	    *returnLower = loop->assignStop;
-	    *returnUpper = iterationStop;
-	    return 0;
-	}
+    if (iterationNumber > loop->assignStop) {  // already assigned everything
+      *returnLower = 0;
+      *returnUpper = 0;
+      return FALSE;
     }
-    *returnUpper = iterationStop;
+    if (*returnUpper > loop->assignStop) {// this iteration goes past end of loop
+      *returnUpper = loop->assignStop;
+      printf("tuncate loop %ld (%p)\n", *returnUpper, loop);
+    }
 
     qthread_debug(ALL_DETAILS,
 		  "limit %10d lower %10d upper %10d block %10d id %d\n",
@@ -539,7 +493,7 @@ bool XOMP_loop_guided_start(
 		  qthread_shep()
 		  );
 
-    return (dynamicBlock > 0);
+    return TRUE;
 }
 
 // get next iteration(if any) for Qthreads default openmp loop execution
@@ -563,6 +517,7 @@ void XOMP_loop_end(
 void XOMP_loop_end_nowait(
     void * loop)
 {
+
 }
 
 // Qthread implementation of a OpenMP global barrier
@@ -572,19 +527,8 @@ extern int activeParallelLoop;
 void XOMP_barrier(void)
 {
     qthread_t *const me = qthread_self();
-    if ( 
-      	 (activeParallelLoop || get_inside_xomp_nested_parallel(&xomp_status))
-       ) {
-      // everybody should be co-scheduled -- no need to allow blocking
-      qt_global_barrier();
-    }
-    else {
-      // in task parallelism -- need to allow blocking
-      while (!gb);  // wait for instance of barrier to arrive
-      qt_feb_barrier_t * test = (qt_feb_barrier_t *)gb;
-      walkSyncTaskList(me); // wait for outstanding tasks to complete
-      qt_feb_barrier_enter(test);
-    }  
+    walkSyncTaskList(me); // wait for outstanding tasks to complete
+    qt_feb_barrier_enter(qt_thread_barrier());
 }
 void XOMP_atomic_start(
     void)
@@ -1079,7 +1023,7 @@ bool XOMP_single(
 #else
   int myid = qthread_shep();
 #endif
-  if (qt_global_arrive_first(myid,xomp_get_nested(&xomp_status))){ 
+  if (qt_global_arrive_first(myid)){ 
     return 1;
   }
   else{

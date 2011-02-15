@@ -57,6 +57,7 @@
 #include "futurelib_innards.h"
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 # include "qt_barrier.h"
+# include "qthread/feb_barrier.h"   /* for barrier in parallel region defination */
 # include "qt_arrive_first.h"
 #endif
 
@@ -110,6 +111,7 @@ pthread_key_t shepherd_structs;
 /* shared globals (w/ futurelib) */
 qlib_t qlib = NULL;
 int qaffinity = 1;
+
 struct qt_cleanup_funcs_s {
     void(*func)(void);
     struct qt_cleanup_funcs_s *next;
@@ -1090,10 +1092,16 @@ int qthread_initialize(void)
     qlib->mccoy_thread->thread_state = QTHREAD_STATE_YIELDED;	/* avoid re-launching */
     qlib->mccoy_thread->flags = QTHREAD_REAL_MCCOY;	/* i.e. this is THE parent thread */
     assert(qlib->mccoy_thread->rdata == NULL);
+
     qlib->mccoy_thread->rdata = malloc(sizeof(struct qthread_runtime_data_s));
+
     assert(qlib->mccoy_thread->rdata != NULL);
     qlib->mccoy_thread->rdata->shepherd_ptr = &(qlib->shepherds[0]);
     qlib->mccoy_thread->rdata->stack = NULL;
+
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+   qthread_syncvar_empty(&qlib->mccoy_thread->rdata->taskWaitLock);
+#endif
 
     qthread_debug(ALL_DETAILS, "enqueueing mccoy thread\n");
     qt_threadqueue_enqueue(qlib->shepherds[0].ready, qlib->mccoy_thread,
@@ -1591,8 +1599,8 @@ void qthread_finalize(void)
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 void qthread_pack_workerid(const qthread_worker_id_t w, const qthread_worker_id_t newId)
 {
-  int shep = w/qlib->nworkerspershep;
-  int worker = w%qlib->nworkerspershep;
+  int shep = w%qlib->nshepherds;
+  int worker = w/qlib->nshepherds;
   assert((shep < qlib->nshepherds));
   assert((worker < qlib->nworkerspershep));
   qlib->shepherds[shep].workers[worker].packed_worker_id = newId;
@@ -1602,8 +1610,8 @@ void qthread_pack_workerid(const qthread_worker_id_t w, const qthread_worker_id_
 int qthread_disable_worker(const qthread_worker_id_t w)
 {
 
-  int shep = w/qlib->nworkerspershep;
-  int worker = w%qlib->nworkerspershep;
+  int shep = w%qlib->nshepherds;
+  int worker = w/qlib->nshepherds;
    
   qassert_ret((shep < qlib->nshepherds), QTHREAD_BADARGS);
   qassert_ret((worker < qlib->nworkerspershep), QTHREAD_BADARGS);
@@ -1631,8 +1639,8 @@ int qthread_disable_worker(const qthread_worker_id_t w)
 int qthread_enable_worker(const qthread_worker_id_t w)
 {				       /*{{{ */
 
-  int shep = w%qlib->nworkerspershep;
-  int worker = w/qlib->nworkerspershep;
+  int shep = w%qlib->nshepherds;
+  int worker = w/qlib->nshepherds;
 
   assert(shep < qlib->nshepherds);
   
@@ -1803,7 +1811,9 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
     t->arg = (void *)arg;
     t->ret = ret;
     t->rdata = NULL;
-
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    t->currentParallelRegion = NULL;
+#endif
     // should I use the builtin block for args?
     t->free_arg = NO;
     if (arg_size > 0) {
@@ -2159,11 +2169,12 @@ int qthread_fork(const qthread_f f, const void *arg, aligned_t * ret)
     return QTHREAD_MALLOC_ERROR;
 }				       /*}}} */
 
-int qthread_fork_syncvar_copyargs_to(const qthread_f f, const void *const arg,
+int qthread_fork_syncvar_copyargs_to(const qthread_f f,
+				     const void *const arg,
 				     const size_t arg_size,
 				     syncvar_t * const ret,
-				     const qthread_shepherd_id_t
-				     preferred_shep)
+				     const qthread_shepherd_id_t preferred_shep
+				     )
 {				       /*{{{ */
     qthread_t *t;
     qthread_shepherd_id_t target_shep;
@@ -2176,7 +2187,7 @@ int qthread_fork_syncvar_copyargs_to(const qthread_f f, const void *const arg,
     if (preferred_shep != NO_SHEPHERD) {
 	target_shep = preferred_shep % qthread_num_shepherds();
     } else if (myshep != NULL) {
-	target_shep = myshep->shepherd_id;;
+	target_shep = myshep->shepherd_id;
     } else {
 	target_shep = 0;
     }
@@ -2222,7 +2233,13 @@ int qthread_fork_syncvar_copyargs_to(const qthread_f f, const void *const arg,
     qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id,
 		  target_shep);
     t->flags |= QTHREAD_RET_IS_SYNCVAR;
-    t->id = preferred_shep;	       // used in barrier and arrive_first, NOT the thread-id
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    t->currentParallelRegion = myshep->currentParallelRegion; // saved in shepherd
+#endif
+    t->id = preferred_shep;  // used in barrier and arrive_first, NOT the thread-id
+                             // may be extraneous in both when parallel region 
+                             // barriers in place (not will to pull it now
+                             // maybe late) akp
 
     if (ret) {
 	int test = qthread_syncvar_empty(ret);
@@ -2304,11 +2321,10 @@ int qthread_fork_syncvar_to(
     t->target_shepherd = shep = &(qlib->shepherds[shepherd]);
     t->flags |= QTHREAD_UNSTEALABLE;
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    t->id = s % (qlib->nworkerspershep*qthread_num_shepherds());
+    t->id = s % (qthread_num_workers());
 #else
     t->id = shepherd;
 #endif
-    // printf("thread create %d %d\n",t->id,qlib->nworkerspershep*qthread_num_shepherds());
     qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id,
 		  shepherd);
 
@@ -3216,6 +3232,44 @@ int qthread_unlock(const aligned_t * a)
     return QTHREAD_SUCCESS;
 }				       /*}}} */
 
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+/* These are just accessor functions */
+qt_feb_barrier_t *qt_thread_barrier()            // get barrier active for this thread
+{				       /*{{{ */
+    qthread_t *t = qthread_self();
+    return t->currentParallelRegion->barrier;
+}				       /*}}} */
+
+/* These are just accessor functions */
+qthread_parallel_region_t *qt_parallel_region()  // get active parallel region
+{				       /*{{{ */
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+  qthread_worker_t *worker = (qthread_worker_t *) pthread_getspecific(shepherd_structs);
+  return worker->current->currentParallelRegion;
+#else
+  qthread_shepherd_t * shep = (qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
+  return shep->currentParallelRegion;
+#endif
+
+}				       /*}}} */
+
+int qt_omp_parallel_region_create()
+{				       /*{{{ */
+  qthread_shepherd_t *myshep = qthread_internal_getshep();
+ 
+  qthread_parallel_region_t *pr = malloc(sizeof(qthread_parallel_region_t));
+  qassert_ret(pr, QTHREAD_MALLOC_ERROR);
+
+  qt_feb_barrier_t *gb = qt_feb_barrier_create(qthread_num_shepherds()); // allocate barrier for region
+
+  myshep->currentParallelRegion = pr;
+  myshep->currentParallelRegion->barrier = gb; 
+  myshep->currentParallelRegion->forLoop = NULL; 
+
+  return 0;
+}  		                       /*}}} */
+#endif
+
 /* These are just accessor functions */
 unsigned qthread_id(void)
 {				       /*{{{ */
@@ -3257,16 +3311,6 @@ qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *shepherd_id)
   }
   qthread_t *t = qthread_self();
   return t?(t->id):NO_WORKER;
-  /*
-  qthread_worker_t *worker = (qthread_worker_t *)pthread_getspecific(shepherd_structs);
-  if (worker != NULL) {
-    qthread_shepherd_id_t s = worker->shepherd->shepherd_id;
-    if(shepherd_id != NULL) *shepherd_id = s;
-    return worker->packed_worker_id;
-  }
-  if(shepherd_id != NULL) *shepherd_id = NO_SHEPHERD;
-  return NO_SHEPHERD;
-  */
 }                                      /*}}} */
 #endif
 
