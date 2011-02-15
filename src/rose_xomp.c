@@ -390,6 +390,8 @@ void xomp_internal_loop_init(
       t = qthread_cas(&pr->forLoop, -1, -1);
     }
   }
+  else t = pr->forLoop; // t got no value but pr->forLoop was full by the time we got here
+  // just use the value
 
   qthread_incr(&t->workers,1);
   *loop = (void*)t;
