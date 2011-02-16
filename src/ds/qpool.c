@@ -46,7 +46,7 @@ struct qpool_shepspec_s {
     size_t alloc_list_pos;
 
     LIBNUMA_ONLY(unsigned int node;)
-    aligned_t lock;
+    syncvar_t lock;
 };
 
 struct qpool_s {
@@ -231,6 +231,7 @@ qpool *qpool_create_aligned(const size_t isize, size_t alignment)
 	qassert_goto((pool->pools[pindex].alloc_list != NULL), errexit_killpool);
 	pool->pools[pindex].alloc_list[0] = pool->pools[pindex].alloc_block;
 	pool->pools[pindex].alloc_list_pos = 1;
+	pool->pools[pindex].lock = SYNCVAR_INITIALIZER;
     }
     return pool;
     qgoto(errexit_killpool);
@@ -301,8 +302,8 @@ void *qpool_alloc(qpool * pool)
 	 * pools from the same node, but different shepherd */
 
 	/* on a single-threaded shepherd, locking is unnecessary */
-#ifdef QTHREAD_SST_PRIMITIVES
-	qassert(qthread_lock(&mypool->lock), 0);
+#if defined(QTHREAD_SST_PRIMITIVES) || defined(QTHREAD_MULTITHREADED_SHEPHERDS)
+	qassert(qthread_syncvar_readFE(NULL, &mypool->lock), 0);
 #endif
 	if (mypool->alloc_block_pos == pool->items_per_alloc) {
 	    if (mypool->alloc_list_pos == (pagesize / sizeof(void *) - 1)) {
@@ -330,8 +331,8 @@ void *qpool_alloc(qpool * pool)
 		(pool->item_size * mypool->alloc_block_pos);
 	    mypool->alloc_block_pos++;
 	}
-#ifdef QTHREAD_SST_PRIMITIVES
-	qassert(qthread_unlock(&mypool->lock), 0);
+#if defined(QTHREAD_SST_PRIMITIVES) || defined(QTHREAD_MULTITHREADED_SHEPHERDS)
+	qassert(qthread_syncvar_writeF_const(&mypool->lock, 1), 0);
 #endif
 	if (pool->alignment != 0 &&
 	    (((unsigned long)p) & (pool->alignment - 1))) {
