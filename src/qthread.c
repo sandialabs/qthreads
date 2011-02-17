@@ -3250,8 +3250,11 @@ int qt_omp_parallel_region_create()
   qthread_parallel_region_t *pr = malloc(sizeof(qthread_parallel_region_t));
   qassert_ret(pr, QTHREAD_MALLOC_ERROR);
 
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+  qt_feb_barrier_t *gb = qt_feb_barrier_create(qthread_num_workers()); // allocate barrier for region
+#else
   qt_feb_barrier_t *gb = qt_feb_barrier_create(qthread_num_shepherds()); // allocate barrier for region
-
+#endif
   myshep->currentParallelRegion = pr;
   myshep->currentParallelRegion->barrier = gb; 
   myshep->currentParallelRegion->forLoop = NULL; 

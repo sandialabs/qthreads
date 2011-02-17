@@ -367,7 +367,7 @@ void xomp_internal_loop_init(
   qthread_parallel_region_t *pr = qt_parallel_region();
 
   qqloop_step_handle_t *t = NULL;
-  
+
   if (pr) { // have active parallel region -- one parallel for loop structure per region
     t = qthread_cas(&pr->forLoop, NULL, -1);
   }
@@ -393,9 +393,13 @@ void xomp_internal_loop_init(
   else t = pr->forLoop; // t got no value but pr->forLoop was full by the time we got here
   // just use the value
 
-  qthread_incr(&t->workers,1);
-  *loop = (void*)t;
-  
+  if (t && (t->departed_workers == 0)) {
+    qthread_incr(&t->workers,1);
+    *loop = (void*)t;
+  }
+  else {
+    *loop = NULL;
+  }
   return;
 }
   
@@ -470,6 +474,8 @@ bool XOMP_loop_guided_start(
 
     int dynamicBlock;
 
+    if (lp == NULL) return FALSE;
+
     qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
 
     dynamicBlock = compute_XOMP_block(loop);
@@ -494,7 +500,6 @@ bool XOMP_loop_guided_start(
 		  loop->assignDone, *returnLower, *returnUpper, dynamicBlock,
 		  qthread_shep()
 		  );
-
     return TRUE;
 }
 
@@ -512,14 +517,25 @@ void XOMP_loop_end(
     void * loop)
 {
   XOMP_loop_end_nowait(loop);
-  XOMP_barrier();            // need barrier or timeout in qt_loop_inner kills performance
 }
 
 // Openmp parallel for loop is completed
 void XOMP_loop_end_nowait(
     void * loop)
 {
-
+  int w;
+  XOMP_barrier(); // need barrier to make sure loop is freed after everyone has used it
+  if (loop) {
+    w = qthread_incr(&((qqloop_step_handle_t *)loop)->departed_workers,1);
+    if ((w+1) == ((qqloop_step_handle_t *)loop)->workers) { // this is last decrement
+      qthread_parallel_region_t *pr = qt_parallel_region();
+      free(pr->forLoop);
+      loop = NULL;
+      pr->forLoop = NULL;
+    }
+  }
+  XOMP_barrier(); // but before it could be used again  -- really would like to do it in
+                  // the middle of the barrier -- akp 2/16/11
 }
 
 // Qthread implementation of a OpenMP global barrier
