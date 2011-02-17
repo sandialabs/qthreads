@@ -23,7 +23,6 @@
 # include <stdarg.h>
 #endif
 #include <stddef.h>
-#include "tile-ucontext.h"
 #define NEEDTILEMAKECONTEXT
 #define NEEDSWAPCONTEXT
 #endif
