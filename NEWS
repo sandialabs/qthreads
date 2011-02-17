@@ -1,19 +1,28 @@
---- 1.5b ---
+--- 1.5 ---
 New Features:
+ - Multithreaded shepherds (non-default)
  - Qtimer-based fast "random" function
  - Syncvar_t incrF function
  - New qthread_readstate() function, helps support Chapel
+ - Convenience functions for storing data in syncvar_t's
+ - Removed all library API reliance on qthread_t
 Improvements:
  - Speed up the qt_feb_barrier with syncvar_t's
  - Speed up context switch on x86/ppc Linux with handwritten one
  - Semi-non-native mode in SST
  - Remove external dependency on C++ and/or cprops
  - Stop using setrlimit unnecessarily on Linux
+ - Built-in cache-aware hash for speed and portability
+ - Syncvar_t initializers (static and dynamic)
+ - Faster thread creation and lower memory footprint
+ - MANY improvements to ROSE OpenMP code
+ - Faster syncvar_t performance under load
+ - Removed deprecated functions
 Bugfixes:
  - Fixed the race condition in the qt_feb_barrier
  - Fixed C++ headers
  - Match new SST layout
- - Fixed syncvar_t corner cases (occur under heavy load)
+ - Fixed syncvar_t bugs, race-conditions, corner-cases
  - Better behavior with CPU subsets, workaround libnuma bugs
 --- 1.4 ---
 New Features:

@@ -12,28 +12,26 @@ These are ideas for things to add (in no particular order):
  3. Add a qthread_forker(func, ret, ...) that accepts multiple arguments. How
     painful would this be?
 
- 4. Multithreaded shepherds
-
- 5. Directed rescheduling, where I specify that I want to prioritize a given
+ 4. Directed rescheduling, where I specify that I want to prioritize a given
 	thread's return value. The easy thing to do is to use a special type of
 	fork that creates a "special" return value (i.e. stored in a hash) so that
 	I don't have to save EVERY thread for lookup. However, that approach has
 	unexpected consequences when a prioritized thread is blocking on an
 	unprioritizeable thread...
 
- 6. Make futurelib limits dynamic
+ 5. Make futurelib limits dynamic
 
- 7. Rework qpool strategy
+ 6. Rework qpool strategy
 
- 8. Port to XMT (is this even possible???)
+ 7. Port to XMT (is this even possible???)
 
- 9. Rework futures to use preallocated contexts
+ 8. Rework futures to use preallocated contexts
 
-10. Rework futures to use small structs for queueing new futures
+ 9. Rework futures to use small structs for queueing new futures
 
-11. Rework most qutil/qloop functions to deal with deactivated shepherds
+10. Rework most qutil/qloop functions to deal with deactivated shepherds
 
-12. Continuation passing (start with cross-node migration, with the agreement
+11. Continuation passing (start with cross-node migration, with the agreement
     that no pointers will work after a migration)... CAN BE DONE WITH MPI
 
 	- Can allow for qthread_incr/feb/etc operation IFF we can identify them
