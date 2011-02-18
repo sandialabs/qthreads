@@ -316,6 +316,7 @@ qqloop_step_handle_t *qt_loop_rose_queue_create(
     ret->workers = 0;
     ret->departed_workers = 0;
     ret->assignNext = start;
+    ret->assignStart = start;
     ret->assignStop = stop;
     ret->assignStep = incr;
     ret->assignDone = stop;
@@ -492,7 +493,6 @@ bool XOMP_loop_guided_start(
     }
     if (*returnUpper > loop->assignStop) {// this iteration goes past end of loop
       *returnUpper = loop->assignStop;
-      printf("tuncate loop %ld (%p)\n", *returnUpper, loop);
     }
 
     qthread_debug(ALL_DETAILS,
@@ -826,15 +826,22 @@ bool XOMP_loop_static_start(
   int parallelWidth = qthread_num_shepherds();
 #endif
 
+  aligned_t start = loop->assignStart;
+  aligned_t stop = loop->assignStop;
+  aligned_t step = loop->assignStep;
+
   aligned_t *myIteration = &loop->work_array + myid;
   int iterationNum = qthread_incr(myIteration,1);
-  *returnLower = (iterationNum * chunkSize * parallelWidth) // start
-    + (myid*chunkSize);                                     // + offset
-  *returnUpper = (startUpper - (*returnLower + (chunkSize-1)) < 0) ?
-    startUpper                        // hit loop upper bound
-    : (*returnLower + (chunkSize-1)); // returned upper bound is executed
+  *returnLower = start + (iterationNum * step * parallelWidth) // start
+    + (myid*step);                                     // + offset
+  *returnUpper = (stop - (*returnLower + (chunkSize-1)) < 0) ?
+    stop                              // hit loop upper bound
+    : (*returnLower + (step-1)); // returned upper bound is executed
 
-  return ((int)(startUpper - *returnLower) > 0);
+  long t = (long)stop - *returnLower;  // casting problem simpler methods getting
+                                       // wrong answers
+  if (t >= 0) return 1;
+  else return 0;
 }
 
 bool XOMP_loop_dynamic_start(
@@ -871,7 +878,7 @@ bool XOMP_loop_ordered_static_start(
     long *e,
     long *f)
 {
-  bool ret =  XOMP_loop_static_next(loop, e, f);
+  bool ret =  XOMP_loop_static_start(loop, a, b, c, d, e, f);
   
   xomp_internal_set_ordered_iter(loop, *e);
 
@@ -914,7 +921,7 @@ bool XOMP_loop_static_next(
     long *a,
     long *b)
 {
-  return XOMP_loop_static_start(loop, 0,0,0,staticChunkSize, a, b);
+  return XOMP_loop_static_start(loop, 0, 0, 0, staticChunkSize, a, b);
 }
 
 bool XOMP_loop_dynamic_next(

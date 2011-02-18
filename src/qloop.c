@@ -766,6 +766,7 @@ qqloop_step_handle_t *qt_loop_step_queue_create(
 
 	    h->workers = 0;
 	    h->assignNext = start;
+	    h->assignStart = start;
 	    h->assignStop = stop;
 	    h->assignStep = incr;
 	    h->assignDone = stop;

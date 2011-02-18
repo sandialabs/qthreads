@@ -70,6 +70,7 @@ struct qqloop_step_handle_s {
     aligned_t departed_workers;
     enum qloop_handle_type type;
     aligned_t assignNext;
+    aligned_t assignStart;
     aligned_t assignStop;
     aligned_t assignStep;
     aligned_t chunkSize;
