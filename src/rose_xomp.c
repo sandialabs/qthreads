@@ -1202,7 +1202,7 @@ int omp_get_thread_num (
 int omp_get_num_procs (
     void)
 {
-  return get_nprocs();
+    return qthread_readstate(ACTIVE_SHEPHERDS);
 }
 
 // extern int omp_in_parallel (void);
