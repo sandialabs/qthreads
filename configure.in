@@ -468,7 +468,8 @@ AC_ARG_ENABLE([rose-extensions],
 			  [AS_HELP_STRING([--enable-rose-extensions],
 							  [Enable some experimental extensions to qthreads that are designed to support integration with the ROSE compiler.])])
 AS_IF([test "x$enable_rose_extensions" == xyes],
-	  [AC_DEFINE([QTHREAD_USE_ROSE_EXTENSIONS], [1], [Define to enable ROSE extensions])])
+	  [AC_DEFINE([QTHREAD_USE_ROSE_EXTENSIONS], [1], [Define to enable ROSE extensions])
+	   EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --enable-rose-extensions"])
 
 AC_ARG_ENABLE([hpctoolkit],
 			  [AS_HELP_STRING([--enable-hpctoolkit-support],
@@ -488,7 +489,8 @@ AC_ARG_ENABLE([multithreaded_shepherds],
 							  [Enable multithreaded shepherds. Number of workers per shepherd is controlled via QTHREAD_NUM_WORKERS_PER_SHEPHERD environment variable at runtime.])])
 AS_IF([test "x$enable_multithreaded_shepherds" == xyes],
 	  [AC_DEFINE([QTHREAD_MULTITHREADED_SHEPHERDS], [1], [Support multithreaded shepherds])
-	   AC_SEARCH_LIBS([nanosleep],[rt],[],[AC_MSG_ERROR([Cannot find nanosleep])])],
+	   AC_SEARCH_LIBS([nanosleep],[rt],[],[AC_MSG_ERROR([Cannot find nanosleep])])
+	   EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --enable-multithreaded-shepherds"],
 	  [enable_multithreaded_shepherds="no"])
 
 AC_ARG_ENABLE([steal_profile],
