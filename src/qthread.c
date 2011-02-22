@@ -3230,7 +3230,7 @@ qt_barrier_t *qt_thread_barrier()            // get barrier active for this thre
 qt_feb_barrier_t *qt_thread_barrier()            // get barrier active for this thread
 #endif
 {				       /*{{{ */
-    qthread_t *t = qthread_self();
+    qthread_t *t = qthread_internal_self();
     return t->currentParallelRegion->barrier;
 }				       /*}}} */
 
