@@ -31,6 +31,10 @@ nodist_qthread_HEADERS = \
 	common.h \
 	qthread-int.h
 
+# Installed here to keep it separate from the "real" omp_defines.h
+noinst_HEADERS = \
+	omp_defines.h
+
 if COMPILE_TARGET_SST
 dist_qthread_HEADERS += qthread-sst.h
 endif
