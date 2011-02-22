@@ -296,6 +296,10 @@ void XOMP_parallel_end(
 static qqloop_step_handle_t *testLoop; // akp - temp needs rose change to pass
                                        // loop value to ordered_start function
 
+static qqloop_step_handle_t *mallocSaveLoop; // akp -- save last freed loop structure to see
+                                             // it can be reused
+static int mallocSaveLoopSize; // size of save loop structure
+
 qqloop_step_handle_t *qt_loop_rose_queue_create(
     int64_t start,
     int64_t stop,
@@ -308,10 +312,17 @@ qqloop_step_handle_t *qt_loop_rose_queue_create(
 #else
     array_size = qthread_num_shepherds(); 
 #endif
-    int malloc_size = sizeof(qqloop_step_handle_t) + // base size
+    if (mallocSaveLoopSize == array_size) {
+      ret = mallocSaveLoop;
+    }
+    else {
+      free(mallocSaveLoop);
+      mallocSaveLoop = NULL;
+      int malloc_size = sizeof(qqloop_step_handle_t) + // base size
                   array_size * sizeof(aligned_t) + // static iteration array size
                   array_size * sizeof(aligned_t);  // current iteration array size 
-    ret = (qqloop_step_handle_t *) malloc(malloc_size);
+      ret = (qqloop_step_handle_t *) malloc(malloc_size);
+    }
 
     ret->workers = 0;
     ret->departed_workers = 0;
@@ -334,7 +345,9 @@ qqloop_step_handle_t *qt_loop_rose_queue_create(
 
 void qt_loop_rose_queue_free(qqloop_step_handle_t * qqloop)
 {
-  free(qqloop);
+  
+  // add code to keep one live and reuse above -- saving a pile of mallocs
+  mallocSaveLoop = qqloop;
   return;
 }
 
@@ -407,10 +420,11 @@ void xomp_internal_loop_init(
 void xomp_internal_set_ordered_iter(qqloop_step_handle_t *loop, int lower) {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   qthread_worker_id_t myid = qthread_worker(NULL);
+  aligned_t *iter = ((aligned_t*)&loop->work_array) + qthread_num_workers() + myid;
 #else
   qthread_shepherd_id_t myid = qthread_shep();
+  aligned_t *iter = ((aligned_t*)&loop->work_array) + qthread_num_shepherds() + myid;
 #endif
-  aligned_t *iter = ((aligned_t*)&loop->work_array) + qthread_num_workers() + myid;
   *iter = lower; // insert lower bound
 }
 
@@ -529,7 +543,7 @@ void XOMP_loop_end_nowait(
     w = qthread_incr(&((qqloop_step_handle_t *)loop)->departed_workers,1);
     if ((w+1) == ((qqloop_step_handle_t *)loop)->workers) { // this is last decrement
       qthread_parallel_region_t *pr = qt_parallel_region();
-      free(pr->forLoop);
+      qt_loop_rose_queue_free(pr->forLoop);
       loop = NULL;
       pr->forLoop = NULL;
     }
@@ -545,7 +559,17 @@ extern int activeParallelLoop;
 void XOMP_barrier(void)
 {
     walkSyncTaskList(); // wait for outstanding tasks to complete
+
+#ifdef QTHREAD_LOG_BARRIER
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    qthread_worker_id_t myid = qthread_worker(NULL);
+#else
+    qthread_shepherd_id_t myid = qthread_shep();
+#endif
+    qt_barrier_enter(qt_thread_barrier(),myid);
+#else
     qt_feb_barrier_enter(qt_thread_barrier());
+#endif
 }
 void XOMP_atomic_start(
     void)
@@ -668,7 +692,7 @@ void XOMP_task(
 {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 #else
-  aligned_t id = qthread_incr(&taskId,1);
+  qthread_incr(&taskId,1);
   qthread_debug(LOCK_DETAILS, "me(%p) creating task for shepherd %d\n", me, id%qthread_num_shepherds());
 #endif
   syncvar_t *ret = getSyncTaskVar(); // get new syncvar_t -- setup openmpThreadId (if needed)
@@ -793,10 +817,11 @@ void XOMP_ordered_start(
   qqloop_step_handle_t * loop = testLoop;
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   qthread_worker_id_t myid = qthread_worker(NULL);
+  aligned_t *iter = ((aligned_t*)&loop->work_array) + qthread_num_workers() + myid;
 #else
   qthread_shepherd_id_t myid = qthread_shep();
+  aligned_t *iter = ((aligned_t*)&loop->work_array) + qthread_num_shepherds() + myid;
 #endif
-  aligned_t *iter = ((aligned_t*)&loop->work_array) + qthread_num_workers() + myid;
 
   while (orderedLoopCount != *iter){}; // spin until my turn
   *iter += loop->assignStep;
