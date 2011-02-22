@@ -476,6 +476,13 @@ AC_ARG_ENABLE([hpctoolkit],
 AS_IF([test "x$enable_hpctoolkit_support" == xyes],
 	  [AC_DEFINE([QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING], [1], [Support HPCToolkit stack unwinding])])
 
+AC_ARG_ENABLE([log-barrier],
+			  [AS_HELP_STRING([--enable-rose-log-barrier],
+							  [Enable logrithmic barrier (replaces FEB version) dealing with the XOMP interface.])])
+AS_IF([test "x$enable_log_barrier" == xyes],
+	  [AC_DEFINE([QTHREAD_LOG_BARRIER], [1], [Define to use Logrithmic barrier inside XOMP support])])
+
+
 AC_ARG_ENABLE([multithreaded_shepherds],
 			  [AS_HELP_STRING([--enable-multithreaded-shepherds],
 							  [Enable multithreaded shepherds. Number of workers per shepherd is controlled via QTHREAD_NUM_WORKERS_PER_SHEPHERD environment variable at runtime.])])

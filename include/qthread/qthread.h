@@ -7,7 +7,12 @@
 #include <qthread/common.h>	       /* important configuration options */
 
 #include <string.h>		       /* for memcpy() */
+
+#ifdef QTHREAD_LOG_BARRIER
+#include <qt_barrier.h>
+#else
 #include <qthread/feb_barrier.h>
+#endif
 
 #ifdef QTHREAD_NEEDS_IA64INTRIN
 # ifdef HAVE_IA64INTRIN_H
@@ -110,7 +115,11 @@ typedef struct taskSyncvar_s{ /* added akp for openmp taskwait */
 struct qthread_parallel_region_s
 {
   void *forLoop;
+#ifdef QTHREAD_LOG_BARRIER
+  qt_barrier_t *barrier;
+#else
   qt_feb_barrier_t *barrier;
+#endif
 };
 typedef struct qthread_parallel_region_s qthread_parallel_region_t;
 
@@ -125,7 +134,9 @@ Q_ENDCXX /* */
 
 Q_STARTCXX /* */
 typedef struct qthread_s qthread_t;
-typedef unsigned int qthread_shepherd_id_t;
+
+typedef unsigned int qthread_shepherd_id_t;  
+
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 typedef unsigned int qthread_worker_id_t;
 #define NO_WORKER   ((qthread_worker_id_t)-1)
@@ -209,7 +220,11 @@ qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *s);
 #endif
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 struct qthread_parallel_region_s *qt_parallel_region(void);
+#ifdef QTHREAD_LOG_BARRIER
+qt_barrier_t *qt_thread_barrier(void);
+#else
 qt_feb_barrier_t *qt_thread_barrier(void);
+#endif
 int qt_omp_parallel_region_create(void);
 #endif
 

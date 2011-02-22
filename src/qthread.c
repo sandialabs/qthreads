@@ -3224,7 +3224,11 @@ int qthread_unlock(const aligned_t * a)
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 /* These are just accessor functions */
+#ifdef QTHREAD_LOG_BARRIER
+qt_barrier_t *qt_thread_barrier()            // get barrier active for this thread
+#else
 qt_feb_barrier_t *qt_thread_barrier()            // get barrier active for this thread
+#endif
 {				       /*{{{ */
     qthread_t *t = qthread_self();
     return t->currentParallelRegion->barrier;
@@ -3250,11 +3254,20 @@ int qt_omp_parallel_region_create()
   qthread_parallel_region_t *pr = malloc(sizeof(qthread_parallel_region_t));
   qassert_ret(pr, QTHREAD_MALLOC_ERROR);
 
+#ifdef QTHREAD_LOG_BARRIER
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  qt_feb_barrier_t *gb = qt_feb_barrier_create(qthread_num_workers()); // allocate barrier for region
+  qt_barrier_t *gb = qt_barrier_create(qthread_num_workers(), REGION_BARRIER,0); // allocate barrier for region (workers)
 #else
-  qt_feb_barrier_t *gb = qt_feb_barrier_create(qthread_num_shepherds()); // allocate barrier for region
+  qt_barrier_t *gb = qt_barrier_create(qthread_num_shepherds(), REGION_BARRIER,0); // allocate barrier for region (shepherds)
 #endif
+#else
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+  qt_feb_barrier_t *gb = qt_feb_barrier_create(qthread_num_workers()); // allocate barrier for region (workers)
+#else
+  qt_feb_barrier_t *gb = qt_feb_barrier_create(qthread_num_shepherds()); // allocate barrier for region (sheperds)
+#endif
+#endif
+
   myshep->currentParallelRegion = pr;
   myshep->currentParallelRegion->barrier = gb; 
   myshep->currentParallelRegion->forLoop = NULL; 
