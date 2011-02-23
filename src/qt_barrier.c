@@ -24,8 +24,11 @@ struct qt_barrier_s
     size_t allocatedSize;	// lowest size power of 2 equal or bigger than barrier -- for allocations
     int doneLevel;		// height of the tree
     char barrierDebug;		// flag to turn on internal printf debugging
-    volatile int64_t *upLock;	// array of counters to track number of people that have arrived
-    volatile int64_t *downLock;	// array of counters that allows threads to leave
+    syncvar_t *upLock;
+  //    volatile int64_t *upLock;	// array of counters to track number of people that have arrived
+
+    syncvar_t *downLock;
+  //    volatile int64_t *downLock;	// array of counters that allows threads to leave
 
 } /* qt_barrier_t */ ;
 
@@ -53,10 +56,10 @@ void qt_barrier_destroy(qt_barrier_t * b)
 {				       /*{{{ */
     assert(b);
     if (b->upLock) {
-	free((void *)(b->upLock));
+      free((void *)(b->upLock));
     }
     if (b->downLock) {
-	free((void *)(b->downLock));
+      free((void *)(b->downLock));
     }
     free(b);
 }				       /*}}} */
@@ -114,12 +117,16 @@ static void qtb_internal_initialize_fixed(qt_barrier_t * b, size_t size,
     b->allocatedSize = (2 << depth);
 
     // allocate and init upLock and downLock arrays
-    b->upLock = calloc(b->allocatedSize, sizeof(int64_t));
-    b->downLock = calloc(b->allocatedSize, sizeof(int64_t));
+    b->upLock = calloc(b->allocatedSize, sizeof(syncvar_t));
+    b->downLock = calloc(b->allocatedSize, sizeof(syncvar_t));
+    //    b->upLock = calloc(b->allocatedSize, sizeof(int64_t));
+    //    b->downLock = calloc(b->allocatedSize, sizeof(int64_t));
 
-    for (size_t i = b->activeSize + 1; i < b->allocatedSize; i++) {
+
+    /*    for (size_t i = b->activeSize + 1; i < b->allocatedSize; i++) {
 	b->upLock[i] = INT64_MAX;      // 64 bit  -- should never overflow
     }
+    */
 }				       /*}}} */
 
 // dump function for debugging -  print barrier array contents
@@ -132,7 +139,7 @@ void qt_barrier_dump(qt_barrier_t * b, enum dumpType dt)
 	printf("upLock\n");
 	for (j = 0; j < activeSize; j += 8) {
 	    for (i = 0; ((i < 8) && ((j + i) < activeSize)); i++) {
-		printf("%ld ", (long int)b->upLock[j + i]);
+	      //		printf("%ld ", (long int)b->upLock[j + i]);
 	    }
 	    printf("\n");
 	}
@@ -141,7 +148,7 @@ void qt_barrier_dump(qt_barrier_t * b, enum dumpType dt)
 	printf("downLock\n");
 	for (j = 0; j < activeSize; j += 8) {
 	    for (i = 0; ((i < 8) && ((j + i) < activeSize)); i++) {
-		printf("%ld ", (long int)b->downLock[j + i]);
+	      //		printf("%ld ", (long int)b->downLock[j + i]);
 	    }
 	    printf("\n");
 	}
@@ -159,7 +166,8 @@ static void qtb_internal_down(qt_barrier_t * b, int myLock, int level)
 	int pairedLock = myLock ^ mask;
 	if (pairedLock <= b->activeSize) {	// my pair is in of range
 	    if (pairedLock > myLock) {
-		b->downLock[pairedLock]++;	// mark me as released
+ 	        //		b->downLock[pairedLock]++;	// mark me as released
+	        qthread_syncvar_fill(&b->downLock[pairedLock]);
 		if (b->barrierDebug) {
 		    printf("\t down lock %d level %d \n", pairedLock, i);
 		}
@@ -182,46 +190,55 @@ static void qtb_internal_up(qt_barrier_t * b, int myLock, int64_t val,
     int mask = 1 << level;
     int pairedLock = myLock ^ mask;
     char debug = b->barrierDebug;
+    uint64_t akp;
     assert(b->activeSize > 1);
     if (debug) {
 	printf("on lock %d paired with %d level %d val %ld\n", myLock,
 	       pairedLock, level, (long int)val);
     }
     if (pairedLock >= b->activeSize) { // my pair is out of range don't wait for it
-	(void)qthread_incr(&b->upLock[myLock], 1);	// mark me as present
-	while (b->downLock[myLock] != val) ;	// KBW: XXX: not mutex safe
+      //	(void)qthread_incr(&b->upLock[myLock], 1);	// mark me as present
+	qthread_syncvar_fill(&b->downLock[myLock]);
+	//	while (b->downLock[myLock] != val) ;	// KBW: XXX: not mutex safe
+	qthread_syncvar_readFE(&akp,&b->downLock[myLock]);
 	if (debug) {
 	    printf("released (no pair) lock %d level %d val %ld\n", myLock,
 		   level, (long int)val);
 	}
 	if (level != 0)
 	    qtb_internal_down(b, myLock, level);	// everyone is here and I have people to release
+	//	printf("\t Leaving qtb_internal_up b %p lock %d level %d \n", b, myLock, level);
 	return;			       // done
     }
 
     if (pairedLock < myLock) {	       // I'm higher -- wait for release
-	(void)qthread_incr(&b->upLock[myLock], 1);	// mark me as present
+      //	(void)qthread_incr(&b->upLock[myLock], 1);	// mark me as present
+	qthread_syncvar_fill(&b->downLock[myLock]);
 	if (debug) {
 	    printf
 		("about to wait on lock %d paired with %d level %d val %ld\n",
 		 myLock, pairedLock, level, (long int)val);
 	}
-	while (b->downLock[myLock] != val) {	// my pair is not here yet (KBW:XXX: not mutex safe)
-	}
+	//	while (b->downLock[myLock] != val) {	// my pair is not here yet (KBW:XXX: not mutex safe)
+	qthread_syncvar_readFE(&akp,&b->downLock[myLock]);
+	
 	if (debug) {
 	    printf("released lock %d level %d val %ld\n", myLock, level,
 		   (long int)val);
 	}
 	if (level != 0)
 	    qtb_internal_down(b, myLock, level);	// everyone is here and I have people to release
+	//	printf("\t Leaving qtb_internal_up lock b %p %d level %d \n", b, myLock, level);
 	return;			       // done
     } else {			       // I'm lower -- wait for pair and continue up
 	if (debug) {
 	    printf("wait lock %d for %d level %d val %ld\n", myLock,
 		   pairedLock, level, (long int)val);
 	}
-	while (b->upLock[pairedLock] < val) {	// my pair is not here yet (KBW:XXX: not mutex safe)
+	qthread_syncvar_readFE(&akp,&b->upLock[pairedLock]);
+/*	while (b->upLock[pairedLock] < val) {	// my pair is not here yet (KBW:XXX: not mutex safe)
 	}
+*/
 	if (debug) {
 	    printf("continue on %d level %d val %ld\n", myLock, level,
 		   (long int)val);
@@ -231,13 +248,17 @@ static void qtb_internal_up(qt_barrier_t * b, int myLock, int64_t val,
     if ((level + 1 < b->doneLevel) || (myLock != 0)) {	// not done?  yes
 	qtb_internal_up(b, myLock, val, level + 1);
     } else {			       // done -- start release
-	(void)qthread_incr(&b->upLock[myLock], 1);	// mark me as present
-	(void)qthread_incr(&b->downLock[myLock], 1);	// mark me as released
+      //	(void)qthread_incr(&b->upLock[myLock], 1);	// mark me as present
+	qthread_syncvar_fill(&b->upLock[myLock]);
+	//(void)qthread_incr(&b->downLock[myLock], 1);	// mark me as released
+	qthread_syncvar_fill(&b->downLock[pairedLock]);
 	if (debug) {
 	    printf("\t start down lock %d level %d \n", myLock, level);
 	}
 	qtb_internal_down(b, myLock, level);	// everyone is here
     }
+
+    //    printf("\t Leaving qtb_internal_up lock b %p %d level %d \n", b, myLock, level);
 }				       /*}}} */
 
 // actual barrier entry point
@@ -248,7 +269,8 @@ void qt_barrier_enter(qt_barrier_t * b, qthread_shepherd_id_t shep)
     //                          2) all active streams
 
     // only dealing with (1) for first pass for now
-    int64_t val = b->upLock[shep] + 1;
+    int64_t val = 0;
+    //    int64_t val = b->upLock[shep] + 1;
 
     if (b->activeSize <= 1) return;
     qtb_internal_up(b, shep, val, 0);
