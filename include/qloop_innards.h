@@ -68,6 +68,7 @@ struct qqloop_step_handle_s {
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     aligned_t workers;
     aligned_t departed_workers;
+  struct qqloop_step_handle_s * next;
     enum qloop_handle_type type;
     aligned_t assignNext;
     aligned_t assignStart;

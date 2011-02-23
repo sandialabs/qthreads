@@ -114,7 +114,9 @@ typedef struct taskSyncvar_s{ /* added akp for openmp taskwait */
 
 struct qthread_parallel_region_s
 {
-  void *forLoop;
+  struct qthread_parallel_region_s * last;
+  void *forLoop;   // current loop really qqloop_step_handle_t * -- void to save include ordering problems
+  void *loopList;  // really list of qqloop_step_handle_t * -- void to save include ordering problems
 #ifdef QTHREAD_LOG_BARRIER
   qt_barrier_t *barrier;
 #else
@@ -225,7 +227,9 @@ qt_barrier_t *qt_thread_barrier(void);
 #else
 qt_feb_barrier_t *qt_thread_barrier(void);
 #endif
+void * qt_next_loop(void *loop);
 int qt_omp_parallel_region_create(void);
+void qt_omp_parallel_region_destroy(void);
 #endif
 
 size_t qthread_stackleft(void);

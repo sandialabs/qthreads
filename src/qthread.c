@@ -735,6 +735,8 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
     return qthread_initialize();
 }				       /*}}} */
 
+static syncvar_t rLock;
+
 int qthread_initialize(void)
 {				       /*{{{ */
     int r;
@@ -1205,6 +1207,7 @@ int qthread_initialize(void)
     qt_global_arrive_first_init(nshepherds-1, 0);
 # endif
 #endif
+    qthread_syncvar_empty(&rLock);
 
     qthread_debug(ALL_DETAILS, "finished.\n");
     return QTHREAD_SUCCESS;
@@ -3268,12 +3271,43 @@ int qt_omp_parallel_region_create()
 #endif
 #endif
 
+  pr->last = myshep->currentParallelRegion;
   myshep->currentParallelRegion = pr;
   myshep->currentParallelRegion->barrier = gb; 
   myshep->currentParallelRegion->forLoop = NULL; 
-
+  myshep->currentParallelRegion->loopList = NULL; 
+  
   return 0;
 }  		                       /*}}} */
+
+
+void qt_omp_parallel_region_destroy()
+{				       /*{{{ */
+  qthread_shepherd_t *myshep = qthread_internal_getshep();
+  qthread_parallel_region_t *pr = myshep->currentParallelRegion;
+  if (!pr) return;
+
+  qthread_syncvar_writeEF_const(&rLock, 1);
+
+  if (pr->barrier){
+#ifdef QTHREAD_LOG_BARRIER
+    qt_barrier_destroy(pr->barrier);
+#else
+    qt_feb_barrier_destroy(pr->barrier);
+#endif
+  }
+  void *loop = pr->loopList;
+  void *t= pr->loopList;
+  while((t = qt_next_loop(t))) {
+    free(loop);
+    loop = t;
+  }
+  free(loop);  // no t at end but need to clean up last
+  myshep->currentParallelRegion = pr->last;
+  free(pr);
+  qthread_syncvar_readFE(NULL, &rLock);
+}  		                       /*}}} */
+
 #endif
 
 /* These are just accessor functions */

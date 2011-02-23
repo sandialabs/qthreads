@@ -774,6 +774,7 @@ qqloop_step_handle_t *qt_loop_step_queue_create(
 	return h;
     }
 }
+
 #endif
 
 void qt_loop_queue_run(
@@ -1272,6 +1273,22 @@ int qloop_internal_computeNextBlock(
 
     return newBlock?newBlock:1;
 }
+
+void qt_omp_parallel_region_add_loop(qqloop_step_handle_t *loop);
+void qt_omp_parallel_region_add_loop(qqloop_step_handle_t *loop)
+{				       /*{{{ */
+  qthread_parallel_region_t *pr = qt_parallel_region();
+  assert(pr);
+  // wrap in lock to make atomic - akp
+  loop->next = (void*)pr->loopList;
+  pr->loopList = (void*)loop;
+}  		                       /*}}} */
+
+void * qt_next_loop(void *loop);
+void * qt_next_loop(void *loop)
+{				       /*{{{ */
+  return (void*)((qqloop_step_handle_t *)loop)->next;
+}  		                       /*}}} */
 
 void qt_loop_queue_run_single(
     qqloop_step_handle_t * loop,

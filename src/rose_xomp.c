@@ -49,6 +49,7 @@ void xomp_internal_loop_init(enum qloop_handle_type type,
 void xomp_internal_set_ordered_iter(qqloop_step_handle_t *loop, int lower);
 
 int compute_XOMP_block(qqloop_step_handle_t * loop);
+void qt_omp_parallel_region_add_loop(qqloop_step_handle_t *loop);
 syncvar_t *getSyncTaskVar(void);
 
 typedef enum xomp_nest_level{NO_NEST=0, ALLOW_NEST, AUTO_NEST}xomp_nest_level_t;
@@ -289,16 +290,13 @@ void XOMP_parallel_end(
     void)
 {
   XOMP_taskwait();
-  //  akp -- if last need to free parallel region and barrier it contains
+  qt_omp_parallel_region_destroy();  //  need to free parallel region and all it contains
+
   return;
 }
 
 static qqloop_step_handle_t *testLoop; // akp - temp needs rose change to pass
                                        // loop value to ordered_start function
-
-static qqloop_step_handle_t *mallocSaveLoop; // akp -- save last freed loop structure to see
-                                             // it can be reused
-static int mallocSaveLoopSize; // size of save loop structure
 
 qqloop_step_handle_t *qt_loop_rose_queue_create(
     int64_t start,
@@ -312,19 +310,13 @@ qqloop_step_handle_t *qt_loop_rose_queue_create(
 #else
     array_size = qthread_num_shepherds(); 
 #endif
-    if (mallocSaveLoopSize == array_size) {
-      ret = mallocSaveLoop;
-    }
-    else {
-      free(mallocSaveLoop);
-      mallocSaveLoop = NULL;
-      int malloc_size = sizeof(qqloop_step_handle_t) + // base size
-                  array_size * sizeof(aligned_t) + // static iteration array size
-                  array_size * sizeof(aligned_t);  // current iteration array size 
-      ret = (qqloop_step_handle_t *) malloc(malloc_size);
-    }
+    int malloc_size = sizeof(qqloop_step_handle_t) + // base size
+      array_size * sizeof(aligned_t) + // static iteration array size
+      array_size * sizeof(aligned_t);  // current iteration array size 
+    ret = (qqloop_step_handle_t *) malloc(malloc_size);
 
     ret->workers = 0;
+    ret->next = NULL;
     ret->departed_workers = 0;
     ret->assignNext = start;
     ret->assignStart = start;
@@ -332,7 +324,7 @@ qqloop_step_handle_t *qt_loop_rose_queue_create(
     ret->assignStep = incr;
     ret->assignDone = stop;
     ret->work_array_size = array_size;
-// zero work array
+    // zero work array
     int i; 
     aligned_t * tmp = &ret->work_array;
     for (i = 0; i < 2*array_size; i++) {
@@ -340,14 +332,13 @@ qqloop_step_handle_t *qt_loop_rose_queue_create(
     }
 
     testLoop = ret;
+    // add to linked list so that I can delete all the loops when the parallel region
+    qt_omp_parallel_region_add_loop(ret);
     return ret;
 }
 
 void qt_loop_rose_queue_free(qqloop_step_handle_t * qqloop)
-{
-  
-  // add code to keep one live and reuse above -- saving a pile of mallocs
-  mallocSaveLoop = qqloop;
+{  
   return;
 }
 
@@ -531,25 +522,13 @@ void XOMP_loop_end(
     void * loop)
 {
   XOMP_loop_end_nowait(loop);
+   XOMP_barrier(); // need barrier to make sure loop is freed after everyone has used it
 }
 
 // Openmp parallel for loop is completed
 void XOMP_loop_end_nowait(
     void * loop)
 {
-  int w;
-  XOMP_barrier(); // need barrier to make sure loop is freed after everyone has used it
-  if (loop) {
-    w = qthread_incr(&((qqloop_step_handle_t *)loop)->departed_workers,1);
-    if ((w+1) == ((qqloop_step_handle_t *)loop)->workers) { // this is last decrement
-      qthread_parallel_region_t *pr = qt_parallel_region();
-      qt_loop_rose_queue_free(pr->forLoop);
-      loop = NULL;
-      pr->forLoop = NULL;
-    }
-  }
-  XOMP_barrier(); // but before it could be used again  -- really would like to do it in
-                  // the middle of the barrier -- akp 2/16/11
 }
 
 // Qthread implementation of a OpenMP global barrier
