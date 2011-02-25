@@ -3260,6 +3260,7 @@ int qt_omp_parallel_region_create()
 #ifdef QTHREAD_LOG_BARRIER
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   qt_barrier_t *gb = qt_barrier_create(qthread_num_workers(), REGION_BARRIER,0); // allocate barrier for region (workers)
+  printf("creating barrier %p\n",gb);
 #else
   qt_barrier_t *gb = qt_barrier_create(qthread_num_shepherds(), REGION_BARRIER,0); // allocate barrier for region (shepherds)
 #endif
@@ -3288,10 +3289,11 @@ void qt_omp_parallel_region_destroy()
   if (!pr) return;
 
   qthread_syncvar_writeEF_const(&rLock, 1);
+  /*
 
   if (pr->barrier){
 #ifdef QTHREAD_LOG_BARRIER
-    qt_barrier_destroy(pr->barrier);
+    //    qt_barrier_destroy(pr->barrier);
 #else
     qt_feb_barrier_destroy(pr->barrier);
 #endif
@@ -3303,8 +3305,11 @@ void qt_omp_parallel_region_destroy()
     loop = t;
   }
   free(loop);  // no t at end but need to clean up last
+  */
   myshep->currentParallelRegion = pr->last;
+  /*
   free(pr);
+  */
   qthread_syncvar_readFE(NULL, &rLock);
 }  		                       /*}}} */
 

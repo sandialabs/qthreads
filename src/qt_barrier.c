@@ -101,6 +101,7 @@ static void qtb_internal_initialize_fixed(qt_barrier_t * b, size_t size,
     assert(b);
     b->activeSize = size;
     b->barrierDebug = (char)debug;
+    b->count = size;
 
     if (size < 1) {
 	return;
@@ -158,6 +159,7 @@ void qt_barrier_dump(qt_barrier_t * b, enum dumpType dt)
 
 // walk down the barrier -- releases all locks in subtree below myLock
 //    level -- how high in the tree is this node
+int64_t dummy = 0;
 static void qtb_internal_down(qt_barrier_t * b, int myLock, int level)
 {				       /*{{{ */
     assert(b->activeSize > 1);
@@ -166,11 +168,10 @@ static void qtb_internal_down(qt_barrier_t * b, int myLock, int level)
 	int pairedLock = myLock ^ mask;
 	if (pairedLock <= b->activeSize) {	// my pair is in of range
 	    if (pairedLock > myLock) {
- 	        //		b->downLock[pairedLock]++;	// mark me as released
-	        qthread_syncvar_fill(&b->downLock[pairedLock]);
-		if (b->barrierDebug) {
-		    printf("\t down lock %d level %d \n", pairedLock, i);
-		}
+	      qthread_syncvar_writeEF(&b->downLock[pairedLock],&dummy);
+	      if (b->barrierDebug) {
+		printf("\t down lock %d level %d \n", pairedLock, i);
+	      }
 	    }
 	} else {		       // out of range -- continue
 	}
@@ -190,61 +191,61 @@ static void qtb_internal_up(qt_barrier_t * b, int myLock, int64_t val,
     int mask = 1 << level;
     int pairedLock = myLock ^ mask;
     char debug = b->barrierDebug;
-    uint64_t akp;
     assert(b->activeSize > 1);
     if (debug) {
 	printf("on lock %d paired with %d level %d val %ld\n", myLock,
 	       pairedLock, level, (long int)val);
     }
     if (pairedLock >= b->activeSize) { // my pair is out of range don't wait for it
-	qthread_syncvar_fill(&b->upLock[myLock]);
-	qthread_syncvar_readFE(&akp,&b->downLock[myLock]);
-	if (debug) {
-	    printf("released (no pair) lock %d level %d val %ld\n", myLock,
-		   level, (long int)val);
-	}
-	if (level != 0)
-	    qtb_internal_down(b, myLock, level);	// everyone is here and I have people to release
-	return;			       // done
+      qthread_syncvar_writeEF(&b->upLock[myLock], &dummy);
+      qthread_syncvar_readFE(NULL,&b->downLock[myLock]);
+      if (debug) {
+	printf("released (no pair) lock %d level %d val %ld\n", myLock,
+	       level, (long int)val);
+      }
+      if (level != 0)
+	qtb_internal_down(b, myLock, level);	// everyone is here and I have people to release
+      return;			       // done
     }
-
+    
     if (pairedLock < myLock) {	       // I'm higher -- wait for release
-	qthread_syncvar_fill(&b->upLock[myLock]);
-	if (debug) {
-	    printf
-		("about to wait on lock %d paired with %d level %d val %ld\n",
-		 myLock, pairedLock, level, (long int)val);
-	}
-	qthread_syncvar_readFE(&akp,&b->downLock[myLock]);
-	
-	if (debug) {
-	    printf("released lock %d level %d val %ld\n", myLock, level,
-		   (long int)val);
-	}
-	if (level != 0)
-	    qtb_internal_down(b, myLock, level);	// everyone is here and I have people to release
-	return;			       // done
+      qthread_syncvar_writeEF(&b->upLock[myLock],&dummy);
+      if (debug) {
+	printf
+	  ("about to wait on lock %d paired with %d level %d val %ld\n",
+	   myLock, pairedLock, level, (long int)val);
+      }
+      qthread_syncvar_readFE(NULL,&b->downLock[myLock]);
+      
+      if (debug) {
+	printf("released lock %d level %d val %ld\n", myLock, level,
+	       (long int)val);
+      }
+      if (level != 0)
+	qtb_internal_down(b, myLock, level);	// everyone is here and I have people to release
+      return;			       // done
     } else {			       // I'm lower -- wait for pair and continue up
-	if (debug) {
-	    printf("wait lock %d for %d level %d val %ld\n", myLock,
-		   pairedLock, level, (long int)val);
-	}
-	qthread_syncvar_readFE(&akp,&b->upLock[pairedLock]);
-	if (debug) {
-	    printf("continue on %d level %d val %ld\n", myLock, level,
-		   (long int)val);
-	}
+      if (debug) {
+	printf("wait lock %d for %d level %d val %ld\n", myLock,
+	       pairedLock, level, (long int)val);
+      }
+      qthread_syncvar_readFE(NULL,&b->upLock[pairedLock]);
+      if (debug) {
+	printf("continue on %d level %d val %ld\n", myLock, level,
+	       (long int)val);
+      }
     }
 
     if ((level + 1 < b->doneLevel) || (myLock != 0)) {	// not done?  yes
 	qtb_internal_up(b, myLock, val, level + 1);
     } else {			       // done -- start release
-	qthread_syncvar_fill(&b->upLock[myLock]);
-	qthread_syncvar_fill(&b->downLock[myLock]);
-	if (debug) {
-	    printf("\t start down lock %d level %d \n", myLock, level);
-	}
-	qtb_internal_down(b, myLock, level);	// everyone is here
+      // myLock == 0 here -- don't need to fill either because Zero never waits on them
+      // qthread_syncvar_writeEF(&b->upLock[myLock],&dummy);
+      //qthread_syncvar_writeEF(&b->downLock[myLock],&dummy);
+      if (debug) {
+	printf("\t start down lock %d level %d \n", myLock, level);
+      }
+      qtb_internal_down(b, myLock, level);	// everyone is here
     }
 }				       /*}}} */
 
