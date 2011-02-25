@@ -166,7 +166,7 @@ static void qtb_internal_down(qt_barrier_t * b, int myLock, int level)
     for (int i = level; i >= 0; i--) {
 	int mask = 1 << i;
 	int pairedLock = myLock ^ mask;
-	if (pairedLock <= b->activeSize) {	// my pair is in of range
+	if (pairedLock < b->activeSize) {	// my pair is in range
 	    if (pairedLock > myLock) {
 	      qthread_syncvar_writeEF(&b->downLock[pairedLock],&dummy);
 	      if (b->barrierDebug) {

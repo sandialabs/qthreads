@@ -3260,7 +3260,6 @@ int qt_omp_parallel_region_create()
 #ifdef QTHREAD_LOG_BARRIER
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   qt_barrier_t *gb = qt_barrier_create(qthread_num_workers(), REGION_BARRIER,0); // allocate barrier for region (workers)
-  printf("creating barrier %p\n",gb);
 #else
   qt_barrier_t *gb = qt_barrier_create(qthread_num_shepherds(), REGION_BARRIER,0); // allocate barrier for region (shepherds)
 #endif
