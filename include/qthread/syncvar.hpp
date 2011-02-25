@@ -16,7 +16,10 @@ class uint60_t {
 	    DBL64TODBL60(d, v2);
 	    v = v2;
 	}
-	uint60_t(int64_t i) { v = INT64TOINT60(i); }
+	uint60_t(int64_t i) {
+	    assert((i>>60) == 0 || (i>>59) == 31);
+	    v = INT64TOINT60(i);
+	}
 
 	~uint60_t(void) {;}
 
