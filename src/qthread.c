@@ -1968,7 +1968,9 @@ static void qthread_wrapper(void *ptr)
     if (t->ret) {
 	/* XXX: if this fails, we should probably do something */
 	if (t->flags & QTHREAD_RET_IS_SYNCVAR) {
-	    qassert(qthread_syncvar_writeEF_const((syncvar_t*)t->ret, (t->f) (t->arg)), QTHREAD_SUCCESS);
+	  (t->f) (t->arg);   // separate -- need a non-neg value for the return code -- void 
+	                     //  function will occassionly return negative value
+	  qassert(qthread_syncvar_writeEF_const((syncvar_t*)t->ret, 1), QTHREAD_SUCCESS);
 	    if (t->free_arg) {
 		assert(&t->argcopy_data != t->arg);
 		free(t->arg);
