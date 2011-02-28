@@ -230,6 +230,7 @@ qt_feb_barrier_t *qt_thread_barrier(void);
 void * qt_next_loop(void *loop);
 int qt_omp_parallel_region_create(void);
 void qt_omp_parallel_region_destroy(void);
+void qt_set_unstealable(void);
 #endif
 
 size_t qthread_stackleft(void);

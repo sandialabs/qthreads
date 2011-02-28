@@ -1284,10 +1284,26 @@ void qt_omp_parallel_region_add_loop(qqloop_step_handle_t *loop)
   pr->loopList = (void*)loop;
 }  		                       /*}}} */
 
-void * qt_next_loop(void *loop);
-void * qt_next_loop(void *loop)
+void *qt_next_loop(void *loop)
 {				       /*{{{ */
   return (void*)((qqloop_step_handle_t *)loop)->next;
+}  		                       /*}}} */
+
+void * qt_free_loop(void *lp);
+void * qt_free_loop(void *lp)
+{				       /*{{{ */
+  qqloop_step_handle_t *t;
+  qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
+  if (loop){
+    do{
+      while(loop->workers != *(volatile aligned_t*)&(loop->departed_workers)){}
+      t = loop;
+      loop = qt_next_loop(loop);
+      free(t);
+    } while(loop);
+  } 
+  
+  return;
 }  		                       /*}}} */
 
 void qt_loop_queue_run_single(

@@ -279,9 +279,13 @@ void XOMP_parallel_start(
 #else
   qthread_shepherd_id_t parallelWidth = qthread_num_shepherds();
 #endif
+
+  qt_set_unstealable(); // need to have the original thread execute on the same spot for termination
+                        //   not sure this enough -- do I need to be the same worker? akp 2/29/11
+
   qt_loop_step_f f = (qt_loop_step_f) func;
   qt_parallel_step(f, parallelWidth, data);
-
+  
   return;
 }
 
@@ -494,7 +498,8 @@ bool XOMP_loop_guided_start(
     if (iterationNumber > loop->assignStop) {  // already assigned everything
       *returnLower = 0;
       *returnUpper = 0;
-      return FALSE;
+      qthread_incr(&loop->departed_workers,1);
+     return FALSE;
     }
     if (*returnUpper > loop->assignStop) {// this iteration goes past end of loop
       *returnUpper = loop->assignStop;
@@ -845,7 +850,10 @@ bool XOMP_loop_static_start(
   long t = (long)stop - *returnLower;  // casting problem simpler methods getting
                                        // wrong answers
   if (t >= 0) return 1;
-  else return 0;
+  else{
+    qthread_incr(&loop->departed_workers,1);
+    return 0;
+  }
 }
 
 bool XOMP_loop_dynamic_start(
