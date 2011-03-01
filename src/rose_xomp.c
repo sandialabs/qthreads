@@ -402,7 +402,7 @@ void xomp_internal_loop_init(
   else t = pr->forLoop; // t got no value but pr->forLoop was full by the time we got here
   // just use the value
 
-  if (t && (t->departed_workers == 0)) {
+  if (t && ((t->departed_workers == 0)|(type == STATIC_SCHED))) {
     qthread_incr(&t->workers,1);
     *loop = (void*)t;
   }
@@ -413,6 +413,8 @@ void xomp_internal_loop_init(
 }
   
 void xomp_internal_set_ordered_iter(qqloop_step_handle_t *loop, int lower) {
+  if (loop == NULL) return; // loop is completed (and destroyed) we just need to
+                            // complete -- no more work
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   qthread_worker_id_t myid = qthread_worker(NULL);
   aligned_t *iter = ((aligned_t*)&loop->work_array) + qthread_num_workers() + myid;
@@ -527,7 +529,12 @@ void XOMP_loop_end(
     void * loop)
 {
   XOMP_loop_end_nowait(loop);
-   XOMP_barrier(); // need barrier to make sure loop is freed after everyone has used it
+  XOMP_barrier(); // need barrier to make sure loop is freed after everyone has used it
+  qthread_parallel_region_t *pr = qt_parallel_region();
+  pr->forLoop = NULL;
+  loop = NULL;
+  XOMP_barrier(); // need barrier to make sure loop is freed after everyone has used it
+   
 }
 
 // Openmp parallel for loop is completed
@@ -835,6 +842,9 @@ bool XOMP_loop_static_start(
   int parallelWidth = qthread_num_shepherds();
 #endif
 
+  if (!loop){
+    return 0;
+  }
   aligned_t start = loop->assignStart;
   aligned_t stop = loop->assignStop;
   aligned_t step = loop->assignStep;
