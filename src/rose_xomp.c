@@ -1219,7 +1219,8 @@ char omp_in_final(void)
 void omp_set_dynamic (
     int val)
 {
-  set_xomp_dynamic(val, &xomp_status);
+  int b = (val)?1:0;
+  set_xomp_dynamic(b, &xomp_status);
 }
 
 // extern int omp_get_dynamic (void);
