@@ -465,13 +465,26 @@ qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q,
 	}
 	QTHREAD_FASTLOCK_UNLOCK(&q->qlock);
 
-	if ((node == NULL) & (active)) {
+	if ((node == NULL) && (active)) {
 	    qthread_steal();
 	} else {
 	    if (node) {		       // watch out for inactive node not stealling
 		t = node->value;
 		FREE_TQNODE((qt_threadqueue_node_t *) node);
-		break;
+		if ((t->flags & QTHREAD_REAL_MCCOY)) {
+		    switch(qthread_worker(NULL)) {
+			case NO_WORKER:
+			    *(int*)0 = 0; // should never happen
+			case 0:
+			    return (t);
+			default:
+			    /* McCoy thread can only run on worker 0 */
+			    qt_threadqueue_enqueue_yielded(q, t, t->rdata->shepherd_ptr);
+			    break;
+		    }
+		} else {
+		    break;
+		}
 	    }
 	}
     }
