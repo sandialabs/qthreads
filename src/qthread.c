@@ -1091,7 +1091,7 @@ int qthread_initialize(void)
 
     /* the context will have its own stack ptr */
     qlib->mccoy_thread->thread_state = QTHREAD_STATE_YIELDED;	/* avoid re-launching */
-    qlib->mccoy_thread->flags = QTHREAD_REAL_MCCOY;	/* i.e. this is THE parent thread */
+    qlib->mccoy_thread->flags = QTHREAD_REAL_MCCOY | QTHREAD_UNSTEALABLE;	/* i.e. this is THE parent thread */
     assert(qlib->mccoy_thread->rdata == NULL);
 
     qlib->mccoy_thread->rdata = malloc(sizeof(struct qthread_runtime_data_s));
@@ -3343,13 +3343,11 @@ qthread_shepherd_id_t qthread_shep(void)
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *shepherd_id)
 {                                      /*{{{ */
-
-  if(shepherd_id != NULL) {
     qthread_worker_t *worker = (qthread_worker_t *)pthread_getspecific(shepherd_structs);
-    *shepherd_id = worker->shepherd->shepherd_id;
-  }
-  qthread_t *t = qthread_internal_self();
-  return t?(t->id):NO_WORKER;
+    if(shepherd_id != NULL) {
+	*shepherd_id = worker->shepherd->shepherd_id;
+    }
+    return worker?(worker->packed_worker_id):NO_WORKER;
 }                                      /*}}} */
 #endif
 
