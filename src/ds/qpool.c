@@ -9,14 +9,6 @@
 #if (HAVE_MEMALIGN && HAVE_MALLOC_H)
 #include <malloc.h>		       /* for memalign() */
 #endif
-#ifdef QTHREAD_HAVE_LIBNUMA
-# include <numa.h>
-# define LIBNUMA_ONLY_ARG(x) x,
-# define LIBNUMA_ONLY(x) x
-#else
-# define LIBNUMA_ONLY_ARG(x)
-# define LIBNUMA_ONLY(x)
-#endif
 #ifdef QTHREAD_USE_VALGRIND
 # include <valgrind/memcheck.h>
 #else
@@ -30,6 +22,7 @@
 
 #include "qthread_innards.h"	       /* for QTHREAD_NO_NODE */
 #include "qthread_asserts.h"
+#include "qt_affinity.h"
 #include "qt_gcd.h"		       /* for qt_lcm() */
 
 #ifdef HAVE_GETPAGESIZE
@@ -45,7 +38,7 @@ struct qpool_shepspec_s {
     void **alloc_list;
     size_t alloc_list_pos;
 
-    LIBNUMA_ONLY(unsigned int node;)
+    MEM_AFFINITY_ONLY(unsigned int node;)
     syncvar_t lock;
 };
 
@@ -72,14 +65,14 @@ static Q_NOINLINE void *volatile *vol_id_void(void *volatile
 
 /* local funcs */
 static QINLINE void *qpool_internal_aligned_alloc(size_t alloc_size,
-						  LIBNUMA_ONLY_ARG(unsigned int Q_UNUSED node)
+						  MEM_AFFINITY_ONLY_ARG(unsigned int node)
 						  size_t alignment)
 {				       /*{{{ */
     void *ret;
 
-#ifdef QTHREAD_HAVE_LIBNUMA
+#ifdef QTHREAD_HAVE_MEM_AFFINITY
     if (node != QTHREAD_NO_NODE) {     /* guaranteed page alignment */
-	ret = numa_alloc_onnode(alloc_size, node);
+	ret = qt_affinity_alloc(alloc_size, node);
     } else
 #endif
 	switch (alignment) {
@@ -125,13 +118,13 @@ static QINLINE void *qpool_internal_aligned_alloc(size_t alloc_size,
 static QINLINE void qpool_internal_aligned_free(void *freeme,
 						const size_t Q_UNUSED
 						alloc_size,
-						LIBNUMA_ONLY_ARG(const unsigned int node)
+						MEM_AFFINITY_ONLY_ARG(const unsigned int node)
 						const size_t Q_UNUSED
 						alignment)
 {				       /*{{{ */
-#ifdef QTHREAD_HAVE_LIBNUMA
+#ifdef QTHREAD_HAVE_MEM_AFFINITY
     if (node != QTHREAD_NO_NODE) {
-	numa_free(freeme, alloc_size);
+	qt_affinity_free(freeme, alloc_size);
 	return;
     }
 #endif
@@ -215,11 +208,11 @@ qpool *qpool_create_aligned(const size_t isize, size_t alignment)
 
     /* now that we have all the information, set up the pools */
     for (pindex = 0; pindex < numsheps; pindex++) {
-	LIBNUMA_ONLY(pool->pools[pindex].node = qthread_internal_shep_to_node(pindex));
+	MEM_AFFINITY_ONLY(pool->pools[pindex].node = qthread_internal_shep_to_node(pindex));
 	_(pool->pools[pindex].reuse_pool) = NULL;
 	pool->pools[pindex].alloc_block =
 	    (char *)qpool_internal_aligned_alloc(alloc_size,
-						 LIBNUMA_ONLY_ARG(pool->pools[pindex].node)
+						 MEM_AFFINITY_ONLY_ARG(pool->pools[pindex].node)
 						 alignment);
 	VALGRIND_MAKE_MEM_NOACCESS(pool->pools[pindex].alloc_block,
 				   alloc_size);
@@ -243,7 +236,7 @@ qpool *qpool_create_aligned(const size_t isize, size_t alignment)
 		if (pool->pools[i].alloc_block) {
 		    qpool_internal_aligned_free(pool->pools[i].alloc_block,
 						alloc_size,
-						LIBNUMA_ONLY_ARG(pool->pools[i].node)
+						MEM_AFFINITY_ONLY_ARG(pool->pools[i].node)
 						alignment);
 		}
 	    }
@@ -315,7 +308,7 @@ void *qpool_alloc(qpool * pool)
 		mypool->alloc_list_pos = 0;
 	    }
 	    p = qpool_internal_aligned_alloc(pool->alloc_size,
-					     LIBNUMA_ONLY_ARG(mypool->node)
+					     MEM_AFFINITY_ONLY_ARG(mypool->node)
 					     pool->alignment);
 	    VALGRIND_MAKE_MEM_NOACCESS(p, pool->alloc_size);
 	    qassert_goto((p != NULL), alloc_exit);
@@ -380,7 +373,7 @@ void qpool_destroy(qpool * pool)
 
 	    while (p && j < (pagesize / sizeof(void *) - 1)) {
 		qpool_internal_aligned_free(QPTR(p), pool->alloc_size,
-					    LIBNUMA_ONLY_ARG(mypool->node)
+					    MEM_AFFINITY_ONLY_ARG(mypool->node)
 					    pool->alignment);
 		j++;
 		p = mypool->alloc_list[j];

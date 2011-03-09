@@ -14,6 +14,16 @@ void qt_affinity_init(
 {
 }
 
+void * qt_affinity_alloc(size_t bytes, int node)
+{
+    return numa_alloc_onnode(bytes, node);
+}
+
+void qt_affinity_free(void * ptr, size_t bytes)
+{
+    numa_free(ptr, bytes);
+}
+
 #define BMASK_WORDS 16
 
 qthread_shepherd_id_t guess_num_shepherds(

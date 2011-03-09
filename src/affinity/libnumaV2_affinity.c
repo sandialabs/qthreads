@@ -15,6 +15,16 @@ void qt_affinity_init(
     qassert(numa_available(), 0);
 }
 
+void * qt_affinity_alloc(size_t bytes, int node)
+{
+    return numa_alloc_onnode(bytes, node);
+}
+
+void qt_affinity_free(void * ptr, size_t bytes)
+{
+    numa_free(ptr, bytes);
+}
+
 qthread_shepherd_id_t guess_num_shepherds(
     void)
 {

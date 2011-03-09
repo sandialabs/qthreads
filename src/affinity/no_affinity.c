@@ -10,6 +10,15 @@ void qt_affinity_init(
 {
 }
 
+void * qt_affinity_alloc(size_t bytes, int node)
+{
+    return NULL;
+}
+
+void qt_affinity_free(void * ptr, size_t bytes)
+{
+}
+
 qthread_shepherd_id_t guess_num_shepherds(
     void)
 {
