@@ -226,18 +226,18 @@ void qt_affinity_set(
     qassert(hwloc_topology_load(ltopology), 0);
     hwloc_const_cpuset_t allowed_cpuset = hwloc_topology_get_allowed_cpuset(ltopology);	// where am I allowed to run?
     qthread_shepherd_t *myshep = me->shepherd;
+    size_t nb_shepobjs = hwloc_get_nbobjs_inside_cpuset_by_depth(ltopology, allowed_cpuset, shep_depth);
     hwloc_obj_t obj =
 	hwloc_get_obj_inside_cpuset_by_depth(ltopology, allowed_cpuset,
 					     shep_depth, myshep->node);
-    size_t nbobjs =
-	hwloc_get_nbobjs_inside_cpuset_by_type(ltopology, obj->allowed_cpuset,
-					       HWLOC_OBJ_PU);
-    qthread_debug(ALL_DETAILS, "shep %i worker %i, there are %i PUs\n",
-		  me->shepherd->shepherd_id, me->worker_id, (int)nbobjs);
+    qthread_debug(ALL_DETAILS, "shep %i worker %i, there are %i sockets\n",
+		  (int)me->shepherd->shepherd_id, (int)me->worker_id, (int)nb_shepobjs);
+    /* We use packed_worker_id here to encourage overlapping shepherds to use
+     * different cores */
     hwloc_obj_t sub_obj =
 	hwloc_get_obj_inside_cpuset_by_type(ltopology, obj->allowed_cpuset,
 					    HWLOC_OBJ_PU,
-					    me->worker_id % nbobjs);
+					    me->packed_worker_id / nb_shepobjs);
 #ifdef QTHREAD_DEBUG
     {
 	char *str;
@@ -248,8 +248,8 @@ void qt_affinity_set(
 #endif
 	qthread_debug(ALL_DETAILS,
 		      "binding shep %i worker %i (%i) to mask %s\n",
-		      me->shepherd->shepherd_id, me->worker_id,
-		      me->packed_worker_id, str);
+		      (int)me->shepherd->shepherd_id, (int)me->worker_id,
+		      (int)me->packed_worker_id, str);
 	free(str);
     }
 #endif
