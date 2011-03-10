@@ -33,8 +33,13 @@ void qt_affinity_set(
 int qt_affinity_gendists(
     qthread_shepherd_t * sheps,
     qthread_shepherd_id_t nshepherds);
-void * qt_affinity_alloc(size_t bytes, int node);
+
+#ifdef QTHREAD_HAVE_MEM_AFFINITY
+void * qt_affinity_alloc(size_t bytes);
+void * qt_affinity_alloc_onnode(size_t bytes, int node);
+void qt_affinity_mem_tonode(void * addr, size_t bytes, int node);
 void qt_affinity_free(void * ptr, size_t bytes);
+#endif
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 qthread_worker_id_t guess_num_workers_per_shep(

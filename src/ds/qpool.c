@@ -72,7 +72,7 @@ static QINLINE void *qpool_internal_aligned_alloc(size_t alloc_size,
 
 #ifdef QTHREAD_HAVE_MEM_AFFINITY
     if (node != QTHREAD_NO_NODE) {     /* guaranteed page alignment */
-	ret = qt_affinity_alloc(alloc_size, node);
+	ret = qt_affinity_alloc_onnode(alloc_size, node);
     } else
 #endif
 	switch (alignment) {

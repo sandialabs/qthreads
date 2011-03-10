@@ -6,10 +6,7 @@
 #include <qthread/qarray.h>
 #include "qthread_asserts.h"
 #include "qthread_innards.h"	       /* for shep_to_node && qthread_debug */
-#ifdef QTHREAD_HAVE_LIBNUMA
-# include <numa.h>
-# include <sys/mman.h>
-#elif defined(HAVE_SYS_LGRP_USER_H)
+#if defined(HAVE_SYS_LGRP_USER_H)
 # ifdef HAVE_MADV_ACCESS_LWP
 #  include <sys/types.h>
 #  include <sys/mman.h>
@@ -332,7 +329,7 @@ static qarray *qarray_create_internal(const size_t count,
 	default:
 	    ret->dist_specific.dist_shep = NO_SHEPHERD;
     }
-#ifdef QTHREAD_HAVE_LIBNUMA
+#ifdef QTHREAD_HAVE_MEM_AFFINITY
     switch (d) {
 	case ALL_LOCAL:
 	case ALL_RAND:
@@ -349,11 +346,11 @@ static qarray *qarray_create_internal(const size_t count,
 	case FIXED_FIELDS:
 	case FIXED_HASH:
 		ret->base_ptr =
-		    (char *)numa_alloc(segment_count * ret->segment_bytes);
+		    (char *)qt_affinity_alloc(segment_count * ret->segment_bytes);
 		break;
 	    } else {
 		ret->base_ptr =
-		    (char *)numa_alloc_onnode(segment_count *
+		    (char *)qt_affinity_alloc_onnode(segment_count *
 					      ret->segment_bytes,
 					      qthread_internal_shep_to_node
 					      (ret->dist_specific.dist_shep));
@@ -361,7 +358,9 @@ static qarray *qarray_create_internal(const size_t count,
 	    break;
     }
     if (ret->base_ptr == NULL) {
+#ifdef QTHREAD_HAVE_LIBNUMA
 	numa_error("allocating qarray body");
+#endif
     }
 #else
     /* For speed, we want page-aligned memory, if we can get it */
@@ -442,7 +441,7 @@ static qarray *qarray_create_internal(const size_t count,
 	    qthread_debug(ALL_DETAILS,
 			  "qarray_create(): segment %i assigned to shep %i\n",
 			  segment, target_shep);
-#ifdef QTHREAD_HAVE_LIBNUMA
+#ifdef QTHREAD_HAVE_MEM_AFFINITY
 	    {
 		/* make sure this shep has a node; if it does, put this segment there */
 		unsigned int target_node =
@@ -451,7 +450,7 @@ static qarray *qarray_create_internal(const size_t count,
 		    char *seghead = qarray_elem_nomigrate(ret,
 							  segment *
 							  ret->segment_size);
-		    numa_tonode_memory(seghead, ret->segment_bytes,
+		    qt_affinity_mem_tonode(seghead, ret->segment_bytes,
 				       target_node);
 		}
 	    }
@@ -550,8 +549,8 @@ void qarray_destroy(qarray * a)
 			       ((a->count % a->segment_size) ? 1 : 0)));
 	    break;
     }
-#ifdef QTHREAD_HAVE_LIBNUMA
-    numa_free(a->base_ptr,
+#ifdef QTHREAD_HAVE_MEM_AFFINITY
+    qt_affinity_free(a->base_ptr,
 	      a->segment_bytes * (a->count / a->segment_size +
 				  ((a->count % a->segment_size) ? 1 : 0)));
 #elif (HAVE_WORKING_VALLOC || HAVE_MEMALIGN || HAVE_POSIX_MEMALIGN || HAVE_PAGE_ALIGNED_MALLOC)
@@ -1387,13 +1386,13 @@ void qarray_set_shepof(qarray * a, const size_t i, qthread_shepherd_id_t shep)
 	    if (a->dist_specific.dist_shep != shep) {
 		size_t segment_count = (a->count / a->segment_size);
 		segment_count += (a->count % a->segment_size) ? 1 : 0;
-#ifdef QTHREAD_HAVE_LIBNUMA
+#ifdef QTHREAD_HAVE_MEM_AFFINITY
 		unsigned int target_node =
 		    qthread_internal_shep_to_node(shep);
 		if (target_node != QTHREAD_NO_NODE) {
 		    size_t num_segments = a->count / a->segment_size;
 		    size_t array_size = a->segment_bytes * num_segments;
-		    numa_tonode_memory(a->base_ptr, array_size, target_node);
+		    qt_affinity_mem_tonode(a->base_ptr, array_size, target_node);
 		}
 #elif defined(HAVE_MADVISE) && defined(HAVE_MADV_ACCESS_LWP)
 		madvise(a->base_ptr,
@@ -1417,11 +1416,11 @@ void qarray_set_shepof(qarray * a, const size_t i, qthread_shepherd_id_t shep)
 		qarray_internal_segment_shep_read(a, seghead);
 	    assert(cur_shep < qthread_num_shepherds());
 	    if (cur_shep != shep) {
-#ifdef QTHREAD_HAVE_LIBNUMA
+#ifdef QTHREAD_HAVE_MEM_AFFINITY
 		unsigned int target_node =
 		    qthread_internal_shep_to_node(shep);
 		if (target_node != QTHREAD_NO_NODE) {
-		    numa_tonode_memory(a->base_ptr +
+		    qt_affinity_mem_tonode(a->base_ptr +
 				       (a->segment_bytes * segment),
 				       a->segment_bytes, target_node);
 		}

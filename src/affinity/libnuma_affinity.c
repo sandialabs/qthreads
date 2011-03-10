@@ -14,7 +14,17 @@ void qt_affinity_init(
 {
 }
 
-void * qt_affinity_alloc(size_t bytes, int node)
+void qt_affinity_mem_tonode(void * addr, size_t bytes, int node)
+{
+    numa_tonode_memory(addr, bytes, node);
+}
+
+void * qt_affinity_alloc(size_t bytes)
+{
+    return numa_alloc(bytes);
+}
+
+void * qt_affinity_alloc_onnode(size_t bytes, int node)
 {
     return numa_alloc_onnode(bytes, node);
 }

@@ -7,10 +7,15 @@
 #include "qthread_innards.h"
 #include "qt_affinity.h"
 
+#define ALL_DETAILS 0
+
 static hwloc_topology_t topology;
 static int shep_depth = -1;
 #ifdef QTHREAD_DEBUG
+# define DEBUG_ONLY(x) x
 static const char * typename;
+#else
+# define DEBUG_ONLY(x)
 #endif
 
 static void qt_affinity_internal_hwloc_teardown(
@@ -29,11 +34,16 @@ void qt_affinity_init(
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     /* the goal here is to basically pick the number of domains over which
      * memory access is the same cost (e.g. number of sockets, if all cores on
-     * a given socket share top-level cache */
+     * a given socket share top-level cache). This will define the shepherd
+     * boundary, unless the user has specified a shepherd boundary */
     const char *typenames[] =
 	{ "node", "cache", "socket", "pu", "L1cache", "L2cache", "L3cache",
 	"L4cache"
     };
+    const size_t numtypes = sizeof(typenames)/sizeof(char*);
+    /* BEWARE: L*cache must be consecutive of ascending levels, as the index
+     * below is used to compare to the cache level */
+    const size_t shepindexofL1cache = 4;
     hwloc_obj_type_t shep_type_options[] =
 	{ HWLOC_OBJ_NODE, HWLOC_OBJ_CACHE, HWLOC_OBJ_SOCKET, HWLOC_OBJ_PU,
 	HWLOC_OBJ_CACHE, HWLOC_OBJ_CACHE, HWLOC_OBJ_CACHE, HWLOC_OBJ_CACHE
@@ -43,7 +53,7 @@ void qt_affinity_init(
 	char *qsh = getenv("QTHREAD_SHEPHERD_BOUNDARY");
 
 	if (qsh) {
-	    for (int ti = 0; ti < 4; ++ti) {
+	    for (int ti = 0; ti < numtypes; ++ti) {
 		if (!strncmp(typenames[ti], qsh, strlen(typenames[ti]))) {
 		    shep_type_idx = ti;
 		}
@@ -88,39 +98,37 @@ void qt_affinity_init(
 	qthread_debug(ALL_DETAILS, "depth of type %i = %d\n", shep_type_idx,
 		      shep_depth);
     }
-#ifdef QTHREAD_DEBUG
-    typename = typenames[shep_type_idx];
-#endif
+    DEBUG_ONLY(typename = typenames[shep_type_idx]);
     if (shep_depth == HWLOC_TYPE_DEPTH_UNKNOWN ||
 	shep_depth == HWLOC_TYPE_DEPTH_MULTIPLE) {
 	if (shep_type_idx > 0 &&
 	    shep_type_options[shep_type_idx] == HWLOC_OBJ_CACHE) {
 	    /* caches are almost always weird; so if the user asked for them, just give best effort */
 	    unsigned int maxdepth = hwloc_topology_get_depth(topology);
-	    unsigned int curdepth = maxdepth;
+	    unsigned int curdepth;
 	    unsigned int cacdepth = maxdepth;
 	    unsigned int level = 0;
 	    qthread_debug(ALL_DETAILS, "Trying to identify caches...\n");
 	    /* look backward from the PU to be able to identify cache level */
-	    while (curdepth > 0) {
+	    for (curdepth = maxdepth; curdepth > 0; --curdepth) {
+		unsigned int realdepth = curdepth - 1;
 		hwloc_obj_type_t t =
-		    hwloc_get_depth_type(topology, (curdepth - 1));
+		    hwloc_get_depth_type(topology, realdepth);
 		if (t == HWLOC_OBJ_CACHE) {
 		    unsigned int num =
-			hwloc_get_nbobjs_by_depth(topology, (curdepth - 1));
+			hwloc_get_nbobjs_by_depth(topology, realdepth);
 		    level++;
 		    qthread_debug(ALL_DETAILS,
-				  "L%u at depth %u (and %u of them)\n", level,
-				  (curdepth - 1), num);
+				  "L%u at depth %u (nbobjs is %u)\n", level,
+				  realdepth, num);
 		    /* default choice (1): pick the outermost layer of cache */
 		    /* if user requested L-specific cache, then count & compare */
 		    /* L1 is _not_ the same as 'pu' _if_ we have hyperthreading */
 		    /* BEWARE: ugly compare between depth & shep_type_idx */
 		    if ((shep_type_idx == 1) ||
-			(level == (shep_type_idx - 3)))
-			cacdepth = curdepth - 1;
+			(level == (shep_type_idx - (shepindexofL1cache - 1))))
+			cacdepth = realdepth;
 		}
-		curdepth--;
 	    }
 	    if (cacdepth == maxdepth) {
 		qthread_debug(ALL_DETAILS,
@@ -129,11 +137,10 @@ void qt_affinity_init(
 			      (unsigned int)hwloc_get_nbobjs_by_type(topology,
 								     HWLOC_OBJ_PU));
 		shep_depth = hwloc_get_type_depth(topology, HWLOC_OBJ_PU);
-#ifdef QTHREAD_DEBUG
-		typename = "pu";
-#endif
+		DEBUG_ONLY(typename = "pu");
+	    } else {
+		shep_depth = cacdepth;
 	    }
-	    shep_depth = cacdepth;
 	    qthread_debug(ALL_DETAILS, "final shep_depth: %i (%s)\n",
 			  shep_depth, typename);
 	} else {
@@ -142,9 +149,7 @@ void qt_affinity_init(
 			  (unsigned int)hwloc_get_nbobjs_by_type(topology,
 								 HWLOC_OBJ_PU));
 	    shep_depth = hwloc_get_type_depth(topology, HWLOC_OBJ_PU);
-#ifdef QTHREAD_DEBUG
-	    typename = "pu";
-#endif
+	    DEBUG_ONLY(typename = "pu");
 	}
     }
     qthread_debug(ALL_DETAILS, "final shep_depth: %i (%s)\n", shep_depth,
@@ -152,7 +157,20 @@ void qt_affinity_init(
 #endif
 }				       /*}}} */
 
-void * qt_affinity_alloc(size_t bytes, int node)
+void qt_affinity_mem_tonode(void * addr, size_t bytes, int node)
+{
+    hwloc_nodeset_t nodeset = hwloc_bitmap_alloc();
+    hwloc_bitmap_set(nodeset, node);
+    hwloc_set_area_membind_nodeset(topology, addr, bytes, nodeset, HWLOC_MEMBIND_BIND, HWLOC_MEMBIND_NOCPUBIND);
+    hwloc_bitmap_free(nodeset);
+}
+
+void * qt_affinity_alloc(size_t bytes)
+{
+    return hwloc_alloc(topology, bytes);
+}
+
+void * qt_affinity_alloc_onnode(size_t bytes, int node)
 {
     void * ret;
     hwloc_nodeset_t nodeset = hwloc_bitmap_alloc();
