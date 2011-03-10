@@ -7,8 +7,6 @@
 #include "qthread_innards.h"
 #include "qt_affinity.h"
 
-#define ALL_DETAILS 0
-
 static hwloc_topology_t topology;
 static int shep_depth = -1;
 #ifdef QTHREAD_DEBUG
@@ -243,13 +241,13 @@ void qt_affinity_set(
     qassert(hwloc_topology_init(&ltopology), 0);
     qassert(hwloc_topology_load(ltopology), 0);
     hwloc_const_cpuset_t allowed_cpuset = hwloc_topology_get_allowed_cpuset(ltopology);	// where am I allowed to run?
-    qthread_shepherd_t *myshep = me->shepherd;
+    qthread_shepherd_t *const myshep = me->shepherd;
     size_t nb_shepobjs = hwloc_get_nbobjs_inside_cpuset_by_depth(ltopology, allowed_cpuset, shep_depth);
     hwloc_obj_t obj =
 	hwloc_get_obj_inside_cpuset_by_depth(ltopology, allowed_cpuset,
 					     shep_depth, myshep->node);
     qthread_debug(ALL_DETAILS, "shep %i worker %i, there are %i sockets\n",
-		  (int)me->shepherd->shepherd_id, (int)me->worker_id, (int)nb_shepobjs);
+		  (int)myshep->shepherd_id, (int)me->worker_id, (int)nb_shepobjs);
     /* We use packed_worker_id here to encourage overlapping shepherds to use
      * different cores */
     hwloc_obj_t sub_obj =
@@ -266,7 +264,7 @@ void qt_affinity_set(
 #endif
 	qthread_debug(ALL_DETAILS,
 		      "binding shep %i worker %i (%i) to mask %s\n",
-		      (int)me->shepherd->shepherd_id, (int)me->worker_id,
+		      (int)myshep->shepherd_id, (int)me->worker_id,
 		      (int)me->packed_worker_id, str);
 	free(str);
     }
