@@ -280,9 +280,6 @@ void XOMP_parallel_start(
   qthread_shepherd_id_t parallelWidth = qthread_num_shepherds();
 #endif
 
-  qt_set_unstealable(); // need to have the original thread execute on the same spot for termination
-                        //   not sure this enough -- do I need to be the same worker? akp 2/29/11
-
   qt_loop_step_f f = (qt_loop_step_f) func;
   qt_parallel_step(f, parallelWidth, data);
   
@@ -416,7 +413,7 @@ void xomp_internal_set_ordered_iter(qqloop_step_handle_t *loop, int lower) {
   if (loop == NULL) return; // loop is completed (and destroyed) we just need to
                             // complete -- no more work
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  qthread_worker_id_t myid = qthread_worker(NULL);
+  qthread_worker_id_t myid = qthread_barrier_id();
   aligned_t *iter = ((aligned_t*)&loop->work_array) + qthread_num_workers() + myid;
 #else
   qthread_shepherd_id_t myid = qthread_shep();
@@ -552,11 +549,7 @@ void XOMP_barrier(void)
     walkSyncTaskList(); // wait for outstanding tasks to complete
 
 #ifdef QTHREAD_LOG_BARRIER
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    qthread_worker_id_t myid = qthread_worker(NULL);
-#else
-    qthread_shepherd_id_t myid = qthread_shep();
-#endif
+    size_t myid = qthread_barrier_id();
     qt_barrier_enter(qt_thread_barrier(),myid);
 #else
     qt_feb_barrier_enter(qt_thread_barrier());
@@ -807,7 +800,7 @@ void XOMP_ordered_start(
 {
   qqloop_step_handle_t * loop = testLoop;
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  qthread_worker_id_t myid = qthread_worker(NULL);
+  qthread_worker_id_t myid = qthread_barrier_id();
   aligned_t *iter = ((aligned_t*)&loop->work_array) + qthread_num_workers() + myid;
 #else
   qthread_shepherd_id_t myid = qthread_shep();
@@ -834,11 +827,10 @@ bool XOMP_loop_static_start(
     long *returnUpper)
 {
   qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
+  int myid = qthread_barrier_id();
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  int myid = qthread_worker(NULL);
   int parallelWidth = qthread_num_workers();
 #else
-  int myid = qthread_shep();
   int parallelWidth = qthread_num_shepherds();
 #endif
 
@@ -1012,7 +1004,7 @@ void XOMP_critical_start(
   aligned_t v;
   if(value == 0) { // null data passed in
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    v = qthread_worker(NULL);
+    v = qthread_barrier_id();
 #else
     v = qthread_shep();
 #endif
@@ -1031,7 +1023,7 @@ void XOMP_critical_end(
   aligned_t v;
   if(value == 0) { // null data passed in
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    v = -qthread_worker(NULL);
+    v = -qthread_barrier_id();
 #else
     v = -qthread_shep();
 #endif
@@ -1049,7 +1041,7 @@ bool XOMP_master(
     void)
 {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  int myid = qthread_worker(NULL);
+  int myid = qthread_barrier_id();
 #else
   int myid = qthread_shep();
 #endif
@@ -1061,8 +1053,10 @@ bool XOMP_master(
 bool XOMP_single(
     void)
 {
+  return XOMP_master();  // forces thread 0 no barrier
+  /*                     // any thread barrier to make sure its cleaned before next use
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  int myid = qthread_worker(NULL);
+  int myid = qthread_barrier_id();
 #else
   int myid = qthread_shep();
 #endif
@@ -1072,6 +1066,7 @@ bool XOMP_single(
   else{
     return 0;
   }
+  */  
 }
 
 
@@ -1187,12 +1182,7 @@ int omp_get_max_threads (
 int omp_get_thread_num (
     void)
 {
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  qthread_worker_id_t id = qthread_worker (NULL);
-#else
-  qthread_shepherd_id_t id = qthread_shep ();
-#endif
-  return (int) id;
+  return (int) qthread_barrier_id();
 }
 
 // extern int omp_get_num_procs (void);

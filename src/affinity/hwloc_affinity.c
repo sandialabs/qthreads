@@ -154,7 +154,7 @@ void qt_affinity_init(
 		  typename);
 #endif
 }				       /*}}} */
-
+/*
 void qt_affinity_mem_tonode(void * addr, size_t bytes, int node)
 {
     hwloc_nodeset_t nodeset = hwloc_bitmap_alloc();
@@ -177,11 +177,11 @@ void * qt_affinity_alloc_onnode(size_t bytes, int node)
     hwloc_bitmap_free(nodeset);
     return ret;
 }
-
 void qt_affinity_free(void * ptr, size_t bytes)
 {
     hwloc_free(topology, ptr, bytes);
 }
+*/
 
 qthread_shepherd_id_t guess_num_shepherds(
     void)

@@ -212,8 +212,13 @@ int64_t qt_global_arrive_first(
     const qthread_shepherd_id_t shep)
 {				       /*{{{ */
     int64_t t;
-      t = qt_arrive_first_enter(MArrFirst, shep);
-      qt_global_barrier();
+    t = qt_arrive_first_enter(MArrFirst, shep);
+#ifdef QTHREAD_LOG_BARRIER
+    size_t myid = qthread_barrier_id();
+    qt_barrier_enter(qt_thread_barrier(),myid);
+#else
+    qt_feb_barrier_enter(qt_thread_barrier());
+#endif
       return t;
 }				       /*}}} */
 

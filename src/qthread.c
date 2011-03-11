@@ -442,7 +442,6 @@ static void *qthread_shepherd(void *arg)
 	qt_affinity_set(me);
 #endif
     }
-
     /* workhorse loop */
     while (!done) {
 #ifdef QTHREAD_SHEPHERD_PROFILING
@@ -1283,7 +1282,7 @@ void qthread_finalize(void)
     qthread_shepherd_t *shep0 = &(qlib->shepherds[0]);
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    worker = (qthread_worker_t *) pthread_getspecific(shepherd_structs);
+    worker = qthread_internal_getworker();
     if (worker->packed_worker_id != 0) {    /* Only run finalize on shepherd 0 worker 0*/
         worker->current->thread_state = QTHREAD_STATE_YIELDED;  /* Otherwise, put back */
         //	    qt_threadqueue_enqueue(shep0->ready, worker->current,
@@ -1685,10 +1684,10 @@ void qthread_enable_shepherd(const qthread_shepherd_id_t shep)
 qthread_t *qthread_internal_self(void)
 {				       /*{{{ */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    qthread_worker_t *worker = (qthread_worker_t *) pthread_getspecific(shepherd_structs);
+    qthread_worker_t *worker = qthread_internal_getworker();
     return worker ? worker->current : NULL;
 #else
-    qthread_shepherd_t *shep = (qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
+    qthread_shepherd_t *shep = qthread_internal_getshep();
     return shep ? shep->current : NULL;
 #endif
 }				       /*}}} */
@@ -1696,10 +1695,10 @@ qthread_t *qthread_internal_self(void)
 qthread_t *qthread_self(void)
 {				       /*{{{ */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    qthread_worker_t *worker = (qthread_worker_t *) pthread_getspecific(shepherd_structs);
+  qthread_worker_t *worker = qthread_internal_getworker();
     return worker ? worker->current : NULL;
 #else
-    qthread_shepherd_t *shep = (qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
+    qthread_shepherd_t *shep = qthread_internal_getshep();
     return shep ? shep->current : NULL;
 #endif
 }				       /*}}} */
@@ -3248,10 +3247,10 @@ void qt_set_unstealable()
 qthread_parallel_region_t *qt_parallel_region()  // get active parallel region
 {				       /*{{{ */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  qthread_worker_t *worker = (qthread_worker_t *) pthread_getspecific(shepherd_structs);
+  qthread_worker_t *worker = qthread_internal_getworker();
   return worker->current->currentParallelRegion;
 #else
-  qthread_shepherd_t * shep = (qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
+  qthread_shepherd_t * shep = qthread_internal_getshep();
   return shep->currentParallelRegion;
 #endif
 
@@ -3283,7 +3282,7 @@ int qt_omp_parallel_region_create()
   myshep->currentParallelRegion->barrier = gb; 
   myshep->currentParallelRegion->forLoop = NULL; 
   myshep->currentParallelRegion->loopList = NULL; 
-  
+
   return 0;
 }  		                       /*}}} */
 
@@ -3329,6 +3328,13 @@ unsigned qthread_id(void)
 			      &qlib->max_thread_id_lock, 1);
     return t->thread_id;
 #endif
+}				       /*}}} */
+unsigned qthread_barrier_id(void)
+{				       /*{{{ */
+    qthread_t *t = qthread_internal_self();
+    qthread_debug(ALL_CALLS, "tid(%u)\n",
+		  t ? t->id : (unsigned)-1);
+    return t ? t->id : (unsigned int)-1;
 }				       /*}}} */
 
 qthread_shepherd_id_t qthread_shep(void)

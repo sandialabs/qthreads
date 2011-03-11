@@ -43,7 +43,7 @@ static aligned_t qloop_wrapper(
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 struct qloop_step_wrapper_args {
     qt_loop_step_f func;
-    size_t startat, stopat, step;
+  size_t startat, stopat, step, id;
     void *arg;
 };
 
@@ -171,6 +171,7 @@ static void qt_loop_step_inner(
 	qwa[threadct].stopat = i + 1;
 	qwa[threadct].step = stride;
 	qwa[threadct].arg = argptr;
+	qwa[threadct].id = threadct;
 	if (future) {
 	    future_fork_syncvar_to
 	        ((qthread_f) qloop_step_wrapper, qwa + threadct, rets + i,
