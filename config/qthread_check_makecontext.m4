@@ -75,6 +75,9 @@ AC_CACHE_CHECK([for hand-implemented makecontext],
 	 *-linux-gnu)
 	 qthread_cv_makecontext="yes"
 	 ;;
+	 *-cygwin)
+	 qthread_cv_makecontext="yes"
+	 ;;
    esac])
 
 AS_IF([test "$qthread_cv_makecontext" = "yes"],
