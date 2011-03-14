@@ -6,13 +6,6 @@
 #include <qthread/qarray.h>
 #include "qthread_asserts.h"
 #include "qthread_innards.h"	       /* for shep_to_node && qthread_debug */
-#if defined(HAVE_SYS_LGRP_USER_H)
-# ifdef HAVE_MADV_ACCESS_LWP
-#  include <sys/types.h>
-#  include <sys/mman.h>
-# endif
-# include <sys/lgrp_user.h>
-#endif
 #if defined(HAVE_MALLOC_H) && defined(HAVE_MEMALIGN)
 # include <malloc.h>
 #endif
