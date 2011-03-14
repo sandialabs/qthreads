@@ -70,7 +70,11 @@ struct mcontext {
 
 struct ucontext {
 	mcontext_t	uc_mcontext;
-	stack_t		uc_stack;
+	struct {
+	    void * ss_sp;
+	    size_t ss_size;
+	    int ss_flags;
+	} uc_stack;
 };
 
 

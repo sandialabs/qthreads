@@ -27,7 +27,7 @@
 #define NEEDSWAPCONTEXT
 #endif
 
-#if defined(__FreeBSD__) ||  defined(__APPLE__) || defined(__linux__)
+#if defined(__FreeBSD__) ||  defined(__APPLE__) || defined(__linux__) || defined(__CYGWIN32__)
 
 #ifdef HAVE_STDARG_H
 # include <stdarg.h>
@@ -87,6 +87,11 @@ extern	int		swapcontext(ucontext_t*, ucontext_t*);
 extern	void		makecontext(ucontext_t*, void(*)(), int, ...);
 #endif
 
+#ifdef __CYGWIN32__
+# define NEEDX86MAKECONTEXT
+# define NEEDSWAPCONTEXT
+#endif
+
 #if (defined(__APPLE__) || defined(__linux__)) && (defined(__i386__) || defined(__x86_64__))
 # define NEEDX86MAKECONTEXT
 # define NEEDSWAPCONTEXT
@@ -105,7 +110,7 @@ extern	void		makecontext(ucontext_t*, void(*)(), int, ...);
 #define NEEDSWAPCONTEXT
 #endif
 
-#if defined(__APPLE__) || defined(__linux__)
+#if defined(__APPLE__) || defined(__linux__) || defined(__CYGWIN32__)
 #	define mcontext libthread_mcontext
 #	define mcontext_t libthread_mcontext_t
 #	define ucontext libthread_ucontext
