@@ -10,6 +10,7 @@
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #ifndef MT_LOOP_CHUNK
 #define MT_LOOP_CHUNK 10000

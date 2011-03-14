@@ -9,7 +9,7 @@ class uint60_t {
 	uint60_t(void) { v = 0; }
 	uint60_t(uint64_t u) {
 	    assert((u>>60) == 0);
-	    v = u & 0xfffffffffffffff;
+	    v = u & 0xfffffffffffffffULL;
 	}
 	uint60_t(double d) {
 	    uint64_t v2 = 0;

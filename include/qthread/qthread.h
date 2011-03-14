@@ -101,8 +101,8 @@ typedef struct _syncvar_s {
 #define SYNCVAR_STATIC_EMPTY_INITIALIZER { .u.s={.data=0,.state=2,.lock=0} }
 extern const syncvar_t SYNCVAR_INITIALIZER;
 extern const syncvar_t SYNCVAR_EMPTY_INITIALIZER;
-#define INT64TOINT60(x) ((uint64_t)((x)&0xfffffffffffffffUL))
-#define INT60TOINT64(x) ((int64_t)(((x)&0x800000000000000UL)?((x)|0xf800000000000000UL):(x)))
+#define INT64TOINT60(x) ((uint64_t)((x)&0xfffffffffffffffULL))
+#define INT60TOINT64(x) ((int64_t)(((x)&0x800000000000000ULL)?((x)|0xf800000000000000ULL):(x)))
 #define DBL64TODBL60(in,out) do { memcpy(&(out),&(in),8); out>>=4; } while (0)
 #define DBL60TODBL64(in,out) do { in<<=4; memcpy(&(out),&(in),8); } while(0)
 
