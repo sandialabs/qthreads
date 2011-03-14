@@ -12,51 +12,77 @@
 #include "qt_affinity.h"
 #include "shepcomp.h"
 
+qthread_shepherd_id_t guess_num_shepherds(
+    void);
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+qthread_worker_id_t guess_num_workers_per_shep(
+    qthread_shepherd_id_t nshepherds);
+#endif
+
 void qt_affinity_init(
-    void)
-{
-}
+    qthread_shepherd_id_t * nbshepherds
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    ,
+    qthread_worker_id_t * nbworkers
+#endif
+    )
+{				       /*{{{ */
+    if (*nbshepherds == 0) {
+	*nbshepherds = guess_num_shepherds();
+	if (*nbshepherds <= 0) {
+	    *nbshepherds = 1;
+	}
+    }
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    if (*nbworkers == 0) {
+	*nbworkers = guess_num_workers(*nbshepherds);
+	if (*nbworkers <= 0) {
+	    *nbworkers = 1;
+	}
+    }
+#endif
+}				       /*}}} */
 
 qthread_shepherd_id_t guess_num_shepherds(
     void)
-{
+{				       /*{{{ */
     cpu_set_t online_cpus;
     qassert(tmc_cpus_get_online_cpus(&online_cpus), 0);
     return tmc_cpus_count(&online_cpus);
-}
+}				       /*}}} */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 void qt_affinity_set(
-	qthread_worker_t *me)
-{
+    qthread_worker_t * me)
+{				       /*{{{ */
     if (tmc_cpus_set_my_cpu(me->packed_worker_id) < 0) {
 	perror("tmc_cpus_set_my_affinity() failed");
-	fprintf(stderr,"\tnode = %i\n", (int)me->packed_worker_id);
+	fprintf(stderr, "\tnode = %i\n", (int)me->packed_worker_id);
     }
-}
+}				       /*}}} */
 #else
 void qt_affinity_set(
-	qthread_shepherd_t *me)
-{
+    qthread_shepherd_t * me)
+{				       /*{{{ */
     if (tmc_cpus_set_my_cpu(me->node) < 0) {
 	perror("tmc_cpus_set_my_affinity() failed");
-	fprintf(stderr,"\tnode = %i\n", (int)me->node);
+	fprintf(stderr, "\tnode = %i\n", (int)me->node);
     }
-}
+}				       /*}}} */
 #endif
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 unsigned int guess_num_workers_per_shep(
     qthread_shepherd_id_t nshepherds)
-{
+{				       /*{{{ */
     return 1;
-}
+}				       /*}}} */
 #endif
 
 int qt_affinity_gendists(
     qthread_shepherd_t * sheps,
     qthread_shepherd_id_t nshepherds)
-{
+{				       /*{{{ */
     cpu_set_t online_cpus;
     unsigned int *cpu_array;
     size_t cpu_count, offset;
@@ -81,8 +107,7 @@ int qt_affinity_gendists(
     for (qthread_shepherd_id_t i = 0; i < nshepherds; i++) {
 	size_t j, k;
 	unsigned int ix, iy;
-	sheps[i].shep_dists =
-	    calloc(nshepherds, sizeof(unsigned int));
+	sheps[i].shep_dists = calloc(nshepherds, sizeof(unsigned int));
 	assert(sheps[i].shep_dists);
 	tmc_cpus_grid_cpu_to_tile(sheps[i].node, &ix, &iy);
 	for (j = 0; j < nshepherds; j++) {
@@ -116,4 +141,4 @@ int qt_affinity_gendists(
 #  endif
     }
     return QTHREAD_SUCCESS;
-}
+}				       /*}}} */

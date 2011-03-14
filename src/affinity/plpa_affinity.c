@@ -18,14 +18,40 @@
 
 #include "qt_affinity.h"
 
+qthread_shepherd_id_t guess_num_shepherds(
+    void);
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+qthread_worker_id_t guess_num_workers_per_shep(
+    qthread_shepherd_id_t nshepherds);
+#endif
+
 void qt_affinity_init(
-    void)
-{
-}
+    qthread_shepherd_id_t * nbshepherds
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    ,
+    qthread_worker_id_t * nbworkers
+#endif
+    )
+{				       /*{{{ */
+    if (*nbshepherds == 0) {
+	*nbshepherds = guess_num_shepherds();
+	if (*nbshepherds <= 0) {
+	    *nbshepherds = 1;
+	}
+    }
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    if (*nbworkers == 0) {
+	*nbworkers = guess_num_workers(*nbshepherds);
+	if (*nbworkers <= 0) {
+	    *nbworkers = 1;
+	}
+    }
+#endif
+}				       /*}}} */
 
 qthread_shepherd_id_t guess_num_shepherds(
     void)
-{
+{				       /*{{{ */
     qthread_shepherd_id_t nshepherds = 1;
 #if defined(HAVE_SYSCONF) && defined(_SC_NPROCESSORS_CONF)	/* Linux */
     long ret = sysconf(_SC_NPROCESSORS_CONF);
@@ -40,12 +66,12 @@ qthread_shepherd_id_t guess_num_shepherds(
     }
 #endif
     return nshepherds;
-}
+}				       /*}}} */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 void qt_affinity_set(
     qthread_worker_t * me)
-{
+{				       /*{{{ */
     plpa_cpu_set_t *cpuset =
 	(plpa_cpu_set_t *) malloc(sizeof(plpa_cpu_set_t));
     PLPA_CPU_ZERO(cpuset);
@@ -55,11 +81,11 @@ void qt_affinity_set(
 	perror("plpa setaffinity");
     }
     free(cpuset);
-}
+}				       /*}}} */
 #else
 void qt_affinity_set(
     qthread_shepherd_t * me)
-{
+{				       /*{{{ */
     plpa_cpu_set_t *cpuset =
 	(plpa_cpu_set_t *) malloc(sizeof(plpa_cpu_set_t));
     PLPA_CPU_ZERO(cpuset);
@@ -69,15 +95,15 @@ void qt_affinity_set(
 	perror("plpa setaffinity");
     }
     free(cpuset);
-}
+}				       /*}}} */
 #endif
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 unsigned int guess_num_workers_per_shep(
     qthread_shepherd_id_t nshepherds)
-{
+{				       /*{{{ */
     return 1;
-}
+}				       /*}}} */
 #endif
 
 int qt_affinity_gendists(

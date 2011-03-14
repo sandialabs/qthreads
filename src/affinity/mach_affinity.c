@@ -30,14 +30,34 @@ kern_return_t thread_policy_get(
 #include "qthread_asserts.h"
 #include "qt_affinity.h"
 
+qthread_shepherd_id_t guess_num_shepherds(
+    void);
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+qthread_worker_id_t guess_num_workers_per_shep(
+    qthread_shepherd_id_t nshepherds);
+#endif
+
 void qt_affinity_init(
-    void)
-{
-}
+    qthread_shepherd_id_t * nbshepherds
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    ,
+    qthread_worker_id_t * nbworkers
+#endif
+    )
+{				       /*{{{ */
+    if (*nbshepherds == 0) {
+	*nbshepherds = guess_num_shepherds();
+    }
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    if (*nbworkers == 0) {
+	*nbworkers = guess_num_workers(*nbshepherds);
+    }
+#endif
+}				       /*}}} */
 
 qthread_shepherd_id_t guess_num_shepherds(
     void)
-{
+{				       /*{{{ */
     qthread_shepherd_id_t nshepherds = 1;
 #if defined(HAVE_SYSCTL) && defined(CTL_HW) && defined(HW_NCPU)
     int name[2] = { CTL_HW, HW_NCPU };
@@ -49,16 +69,19 @@ qthread_shepherd_id_t guess_num_shepherds(
 	perror("sysctl");
     } else {
 	assert(oldvlen == sizeof(oldv));
-	nshepherds = (qthread_shepherd_id_t)oldv;
+	nshepherds = (qthread_shepherd_id_t) oldv;
     }
 #endif
+    if (nshepherds <= 0) {
+	nshepherds = 1;
+    }
     return nshepherds;
-}
+}				       /*}}} */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 void qt_affinity_set(
-	qthread_worker_t *me)
-{
+    qthread_worker_t * me)
+{				       /*{{{ */
 #ifndef SST
     mach_msg_type_number_t Count = THREAD_AFFINITY_POLICY_COUNT;
     thread_affinity_policy_data_t mask[THREAD_AFFINITY_POLICY_COUNT];
@@ -74,11 +97,11 @@ void qt_affinity_set(
 	fprintf(stderr, "ERROR! Cannot SET affinity for some reason\n");
     }
 #endif
-}
+}				       /*}}} */
 #else
 void qt_affinity_set(
-	qthread_shepherd_t *me)
-{
+    qthread_shepherd_t * me)
+{				       /*{{{ */
 #ifndef SST
     mach_msg_type_number_t Count = THREAD_AFFINITY_POLICY_COUNT;
     thread_affinity_policy_data_t mask[THREAD_AFFINITY_POLICY_COUNT];
@@ -110,21 +133,21 @@ void qt_affinity_set(
 	fprintf(stderr, "ERROR! Cannot SET affinity for some reason\n");
     }
 #endif
-}
+}				       /*}}} */
 #endif
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 unsigned int guess_num_workers_per_shep(
     qthread_shepherd_id_t nshepherds)
-{
+{				       /*{{{ */
     return 1;
-}
+}				       /*}}} */
 #endif
 
 int qt_affinity_gendists(
     qthread_shepherd_t * sheps,
     qthread_shepherd_id_t nshepherds)
-{
+{				       /*{{{ */
     /* there is no native way to detect distances, so unfortunately we must assume that they're all equidistant */
     return QTHREAD_SUCCESS;
-}
+}				       /*}}} */

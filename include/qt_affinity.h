@@ -20,9 +20,11 @@ typedef struct qthread_shepherd_s qthread_shepherd_t;
 #endif
 
 void qt_affinity_init(
-    void);
-qthread_shepherd_id_t guess_num_shepherds(
-    void);
+    qthread_shepherd_id_t *nbshepherds
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    , qthread_worker_id_t *nbworkers
+#endif
+    );
 void qt_affinity_set(
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t * me
@@ -39,9 +41,4 @@ void * qt_affinity_alloc(size_t bytes);
 void * qt_affinity_alloc_onnode(size_t bytes, int node);
 void qt_affinity_mem_tonode(void * addr, size_t bytes, int node);
 void qt_affinity_free(void * ptr, size_t bytes);
-#endif
-
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-qthread_worker_id_t guess_num_workers_per_shep(
-    qthread_shepherd_id_t nshepherds);
 #endif

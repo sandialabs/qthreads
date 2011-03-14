@@ -801,25 +801,18 @@ int qthread_initialize(void)
 		nworkerspershep = 1;
 	    } else if (nworkerspershep > 0) {
 		fprintf(stderr, "Forced %i Workers per Shepherd\n", (int)nworkerspershep);
+		if (nshepherds == 0) {
+		    fprintf(stderr, "Number of shepherds not specified - number of workers may be ignored\n");
+		}
 	    }
 	}
 #endif
     }
-    qt_affinity_init();
-    if (nshepherds == 0) {	       /* try to guess the "right" number */
-	nshepherds = guess_num_shepherds();
-	if (nshepherds <= 0) {
-	    nshepherds = 1;
-	}
-    }
+    qt_affinity_init(&nshepherds
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    if (nworkerspershep == 0) {
-	nworkerspershep = guess_num_workers_per_shep(nshepherds);
-	if (nworkerspershep <= 0) {
-	    nworkerspershep = 1;
-	}
-    }
+	    , &nworkerspershep
 #endif
+	    );
 
     if (nshepherds == 1
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
