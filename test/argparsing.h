@@ -31,7 +31,7 @@ static int verbose = 1;
 static int verbose = 0;
 #endif
 
-#ifdef __tile__
+#if defined(__tile__) || defined(__CYGWIN32__)
 #define iprintf printf
 #else
 static void iprintf(const char * restrict format, ...)
