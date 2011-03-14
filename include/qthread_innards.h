@@ -216,6 +216,43 @@ static QINLINE void qthread_debug(int level, char *format, ...)
 			break;
 		    }
 		    case 'p':
+			*head++ = '0';
+			*head++ = 'x';
+		    {
+			uintptr_t num;
+
+			num = va_arg(args, uintptr_t);
+			if (!num) {
+			    *head++ = '0';
+			} else {
+			    /* count places */
+			    unsigned places = 0;
+			    uintptr_t tmpnum = num;
+
+			    /* yes, this is dumb, but its guaranteed to take
+			     * less than 10 iterations on 32-bit numbers and
+			     * doesn't involve floating point */
+			    while (tmpnum >= 16) {
+				tmpnum /= 16;
+				places ++;
+			    }
+			    head += places;
+			    places = 0;
+			    while (num >= 16) {
+				uintptr_t tmp = num % 16;
+				*(head - places) =
+				    (tmp <
+				     10) ? ('0' + tmp) : ('a' + tmp - 10);
+				num /= 16;
+				places++;
+			    }
+			    num %= 16;
+			    *(head - places) =
+				(num < 10) ? ('0' + num) : ('a' + num - 10);
+			    head++;
+			}
+		    }
+			break;
 		    case 'x':
 			*head++ = '0';
 			*head++ = 'x';
@@ -223,11 +260,11 @@ static QINLINE void qthread_debug(int level, char *format, ...)
 		    case 'd':
 		    case 'i':
 		    {
-			uintptr_t num;
+			unsigned int num;
 			unsigned base;
 
-			num = va_arg(args, uintptr_t);
-			base = (ch == 'p' || ch == 'x') ? 16 : 10;
+			num = va_arg(args, unsigned int);
+			base = (ch == 'x') ? 16 : 10;
 			if (!num) {
 			    *head++ = '0';
 			} else {
