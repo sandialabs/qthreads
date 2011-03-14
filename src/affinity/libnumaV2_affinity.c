@@ -9,12 +9,20 @@
 
 #include "shepcomp.h"
 
+static struct bitmask * mccoy_bitmask = NULL;
+
 qthread_shepherd_id_t guess_num_shepherds(
     void);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 qthread_worker_id_t guess_num_workers_per_shep(
     qthread_shepherd_id_t nshepherds);
 #endif
+
+static void qt_affinity_internal_numaV2_teardown(
+    void)
+{
+    numa_run_on_node_mask(mccoy_bitmask);
+}
 
 void qt_affinity_init(
     qthread_shepherd_id_t * nbshepherds
@@ -25,6 +33,8 @@ void qt_affinity_init(
     )
 {				       /*{{{ */
     qassert(numa_available(), 0);
+    mccoy_bitmask = numa_get_run_node_mask();
+    qthread_internal_cleanup(qt_affinity_internal_numaV2_teardown);
     if (*nbshepherds == 0) {
 	*nbshepherds = guess_num_shepherds();
     }

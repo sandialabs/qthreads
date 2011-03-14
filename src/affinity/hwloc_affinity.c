@@ -11,6 +11,7 @@
 
 static hwloc_topology_t topology;
 static int shep_depth = -1;
+static hwloc_cpuset_t mccoy_thread_bindings;
 #ifdef QTHREAD_DEBUG
 # define DEBUG_ONLY(x) x
 static const char *typename;
@@ -23,11 +24,15 @@ static const char *typename;
 # define ASPRINTF(x,y) hwloc_cpuset_asprintf((x),(y))
 # define FOREACH_START(x,y) hwloc_cpuset_foreach_begin((x),(y))
 # define FOREACH_END() hwloc_cpuset_foreach_end()
+# define ALLOC() hwloc_cpuset_alloc()
+# define FREE(x) hwloc_cpuset_free(x)
 #else
 # define WEIGHT(x) hwloc_bitmap_weight(x)
 # define ASPRINTF(x,y) hwloc_bitmap_asprintf((x),(y))
 # define FOREACH_START(x,y) hwloc_bitmap_foreach_begin((x),(y))
 # define FOREACH_END() hwloc_bitmap_foreach_end()
+# define ALLOC() hwloc_bitmap_alloc()
+# define FREE(x) hwloc_bitmap_free(x)
 #endif
 
 qthread_shepherd_id_t guess_num_shepherds(
@@ -40,6 +45,8 @@ qthread_worker_id_t guess_num_workers_per_shep(
 static void qt_affinity_internal_hwloc_teardown(
     void)
 {
+    hwloc_set_cpubind(topology, mccoy_thread_bindings, HWLOC_CPUBIND_THREAD);
+    FREE(mccoy_thread_bindings);
     qthread_debug(ALL_DETAILS, "destroy hwloc topology handle\n");
     hwloc_topology_destroy(topology);
 }
@@ -54,6 +61,8 @@ void qt_affinity_init(
     qassert(hwloc_topology_init(&topology), 0);
     qassert(hwloc_topology_load(topology), 0);
     qthread_internal_cleanup(qt_affinity_internal_hwloc_teardown);
+    mccoy_thread_bindings = ALLOC();
+    hwloc_get_cpubind(topology, mccoy_thread_bindings, HWLOC_CPUBIND_THREAD);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     if (*nbshepherds == 0) {	       /* we need to guesstimate */
 	/* the goal here is to basically pick the number of domains over which

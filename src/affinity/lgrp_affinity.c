@@ -19,6 +19,8 @@
 #include "shepcomp.h"
 
 static lgrp_cookie_t lgrp_cookie;
+static lgrp_id_t mccoy_thread_home;
+static lgrp_affinity_t mccoy_thread_home_affinity;
 
 qthread_shepherd_id_t guess_num_shepherds(
     void);
@@ -108,6 +110,12 @@ static int lgrp_walk(
     return cpu_grps;
 }				       /*}}} */
 
+static void qt_affinity_internal_lgrp_teardown(
+    void)
+{
+    lgrp_affinity_set(P_LWPID, P_MYID, mccoy_thread_home, mccoy_thread_home_affinity);
+}
+
 void qt_affinity_init(
     qthread_shepherd_id_t * nbshepherds
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -117,6 +125,9 @@ void qt_affinity_init(
     )
 {				       /*{{{ */
     lgrp_cookie = lgrp_init(LGRP_VIEW_OS);
+    mccoy_thread_home = lgrp_home(P_LWPID, P_MYID);
+    mccoy_thread_home_affinity = lgrp_affinity_get(P_LWPID, P_MYID, mccoy_thread_home);
+    qthread_internal_cleanup(qt_affinity_internal_lgrp_teardown);
     if (*nbshepherds == 0) {
 	*nbshepherds = guess_num_shepherds();
     }
