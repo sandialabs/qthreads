@@ -10,8 +10,15 @@
 typedef struct qthread_shepherd_s qthread_shepherd_t;
 #endif
 
-#if defined(QTHREAD_HAVE_LIBNUMA) || defined(QTHREAD_HAVE_HWLOC)
+#if defined(QTHREAD_HAVE_LIBNUMA)
 # define QTHREAD_HAVE_MEM_AFFINITY
+#endif
+
+#if defined(QTHREAD_HAVE_HWLOC) && (HWLOC_API_VERSION > 0x00010000)
+# define QTHREAD_HAVE_MEM_AFFINITY
+#endif
+
+#ifdef QTHREAD_HAVE_MEM_AFFINITY
 # define MEM_AFFINITY_ONLY_ARG(x) x,
 # define MEM_AFFINITY_ONLY(x) x
 #else

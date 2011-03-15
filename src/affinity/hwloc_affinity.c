@@ -7,8 +7,6 @@
 #include "qthread_innards.h"
 #include "qt_affinity.h"
 
-#define ALL_DETAILS 0
-
 static hwloc_topology_t topology;
 static uint32_t initialized = 0;
 
@@ -254,29 +252,30 @@ void qt_affinity_init(
 #endif
 }				       /*}}} */
 
+#ifdef QTHREAD_HAVE_MEM_AFFINITY
 void qt_affinity_mem_tonode(
     void *addr,
     size_t bytes,
     int node)
-{
+{				       /*{{{ */
     hwloc_nodeset_t nodeset = hwloc_bitmap_alloc();
     hwloc_bitmap_set(nodeset, node);
     hwloc_set_area_membind_nodeset(topology, addr, bytes, nodeset,
 				   HWLOC_MEMBIND_BIND,
 				   HWLOC_MEMBIND_NOCPUBIND);
     hwloc_bitmap_free(nodeset);
-}
+}				       /*}}} */
 
 void *qt_affinity_alloc(
     size_t bytes)
-{
+{				       /*{{{ */
     return hwloc_alloc(topology, bytes);
-}
+}				       /*}}} */
 
 void *qt_affinity_alloc_onnode(
     size_t bytes,
     int node)
-{
+{				       /*{{{ */
     void *ret;
     hwloc_nodeset_t nodeset = hwloc_bitmap_alloc();
     hwloc_bitmap_set(nodeset, node);
@@ -286,14 +285,15 @@ void *qt_affinity_alloc_onnode(
 				    HWLOC_MEMBIND_NOCPUBIND);
     hwloc_bitmap_free(nodeset);
     return ret;
-}
+}				       /*}}} */
+
 void qt_affinity_free(
     void *ptr,
     size_t bytes)
-{
+{				       /*{{{ */
     hwloc_free(topology, ptr, bytes);
-}
-
+}				       /*}}} */
+#endif
 
 qthread_shepherd_id_t guess_num_shepherds(
     void)
