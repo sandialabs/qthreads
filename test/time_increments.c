@@ -86,7 +86,7 @@ static void balanced_falseshare(const size_t startat, const size_t stopat,
 {				       /*{{{ */
     size_t i;
     qthread_shepherd_id_t shep = qthread_shep();
-    aligned_t *myinc = increments + shep;
+    aligned_t *volatile myinc = increments + shep;
 
     for (i = startat; i < stopat; i++) {
 	qthread_incr(myinc, 1);
@@ -120,7 +120,7 @@ static aligned_t incrloop_falseshare(void *arg)
 {				       /*{{{ */
     unsigned int offset = (unsigned int)(intptr_t) arg;
     unsigned int i;
-    aligned_t *myinc = increments + offset;
+    aligned_t *volatile myinc = increments + offset;
 
     for (i = 0; i < ITERATIONS; i++) {
 	qthread_incr(myinc, 1);
@@ -154,7 +154,7 @@ static aligned_t addloop_falseshare(void *arg)
 {				       /*{{{ */
     unsigned int offset = (unsigned int)(intptr_t) arg;
     unsigned int i;
-    aligned_t *myinc = increments + offset;
+    aligned_t *volatile myinc = increments + offset;
 
     for (i = 0; i < ITERATIONS; i++) {
 	(*myinc)++;
