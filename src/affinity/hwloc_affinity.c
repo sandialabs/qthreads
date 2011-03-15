@@ -10,6 +10,8 @@
 #define ALL_DETAILS 0
 
 static hwloc_topology_t topology;
+static uint32_t initialized = 0;
+
 static int shep_depth = -1;
 static hwloc_cpuset_t mccoy_thread_bindings;
 #ifdef QTHREAD_DEBUG
@@ -49,6 +51,7 @@ static void qt_affinity_internal_hwloc_teardown(
     FREE(mccoy_thread_bindings);
     qthread_debug(ALL_DETAILS, "destroy hwloc topology handle\n");
     hwloc_topology_destroy(topology);
+    initialized = 0;
 }
 
 void qt_affinity_init(
@@ -58,8 +61,15 @@ void qt_affinity_init(
 #endif
     )
 {				       /*{{{ */
-    qassert(hwloc_topology_init(&topology), 0);
-    qassert(hwloc_topology_load(topology), 0);
+    if (qthread_cas(&initialized, 0, 1) == 0) {
+	qassert(hwloc_topology_init(&topology), 0);
+	qassert(hwloc_topology_load(topology), 0);
+	__sync_synchronize();
+	initialized = 2;
+    } else {
+	while (initialized == 1) ;
+    }
+
     qthread_internal_cleanup(qt_affinity_internal_hwloc_teardown);
     mccoy_thread_bindings = ALLOC();
     hwloc_get_cpubind(topology, mccoy_thread_bindings, HWLOC_CPUBIND_THREAD);
@@ -337,20 +347,17 @@ qthread_worker_id_t guess_num_workers_per_shep(
 void qt_affinity_set(
     qthread_worker_t * me)
 {				       /*{{{ */
-    hwloc_topology_t ltopology;
-    qassert(hwloc_topology_init(&ltopology), 0);
-    qassert(hwloc_topology_load(ltopology), 0);
-    hwloc_const_cpuset_t allowed_cpuset = hwloc_topology_get_allowed_cpuset(ltopology);	// where am I allowed to run?
+    hwloc_const_cpuset_t allowed_cpuset = hwloc_topology_get_allowed_cpuset(topology);	// where am I allowed to run?
     qthread_shepherd_t *const myshep = me->shepherd;
     size_t nb_shepobjs =
-	hwloc_get_nbobjs_inside_cpuset_by_depth(ltopology, allowed_cpuset,
+	hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset,
 						shep_depth);
     hwloc_obj_t obj =
-	hwloc_get_obj_inside_cpuset_by_depth(ltopology, allowed_cpuset,
+	hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset,
 					     shep_depth, myshep->node);
-    hwloc_obj_type_t t = hwloc_get_depth_type(ltopology, shep_depth);
+    hwloc_obj_type_t t = hwloc_get_depth_type(topology, shep_depth);
     unsigned npu =
-	hwloc_get_nbobjs_inside_cpuset_by_type(ltopology, allowed_cpuset,
+	hwloc_get_nbobjs_inside_cpuset_by_type(topology, allowed_cpuset,
 					       HWLOC_OBJ_PU);
     qthread_debug(ALL_DETAILS,
 		  "shep %i worker %i [%i], there are %i %s [%i pu]\n",
@@ -359,7 +366,7 @@ void qt_affinity_set(
 		  hwloc_obj_type_string(t), (int)npu);
     unsigned int weight = WEIGHT(obj->allowed_cpuset);
     hwloc_obj_t sub_obj =
-	hwloc_get_obj_inside_cpuset_by_type(ltopology, obj->allowed_cpuset,
+	hwloc_get_obj_inside_cpuset_by_type(topology, obj->allowed_cpuset,
 					    HWLOC_OBJ_PU,
 					    me->worker_id % weight);
 #ifdef QTHREAD_DEBUG
@@ -374,7 +381,7 @@ void qt_affinity_set(
     }
 #endif
     if (hwloc_set_cpubind
-	(ltopology, sub_obj->allowed_cpuset, HWLOC_CPUBIND_THREAD)) {
+	(topology, sub_obj->allowed_cpuset, HWLOC_CPUBIND_THREAD)) {
 	char *str;
 	int i = errno;
 #ifdef __APPLE__

@@ -41,7 +41,7 @@ void qt_affinity_init(
     }
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     if (*nbworkers == 0) {
-	*nbworkers = guess_num_workers(*nbshepherds);
+	*nbworkers = guess_num_workers_per_shep(*nbshepherds);
 	if (*nbworkers <= 0) {
 	    *nbworkers = 1;
 	}
