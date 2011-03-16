@@ -32,27 +32,27 @@ int main(int argc, char *argv[])
     iprintf("basic increment succeeded\n");
     master = 0;
     for (i = 0; i < 30; i++) {
-	qthread_fork(incr, NULL, &(rets[i]));
+        qthread_fork(incr, NULL, &(rets[i]));
     }
     for (i = 0; i < 30; i++) {
-	qthread_readFF(NULL, rets + i);
+        qthread_readFF(NULL, rets + i);
     }
     if (master != 30) {
-	fprintf(stderr, "master is %lu rather than 30\n",
-		(long unsigned)master);
+        fprintf(stderr, "master is %lu rather than 30\n",
+                (long unsigned)master);
     }
     assert(master == 30);
     iprintf("30 concurrent threads successfully incremented by 1\n");
     master = 0;
     for (i = 0; i < 30; i++) {
-	qthread_fork(incr5, NULL, &(rets[i]));
+        qthread_fork(incr5, NULL, &(rets[i]));
     }
     for (i = 0; i < 30; i++) {
-	qthread_readFF(NULL, rets + i);
+        qthread_readFF(NULL, rets + i);
     }
     if (master != 150) {
-	fprintf(stderr, "master is %lu rather than 150\n",
-		(long unsigned)master);
+        fprintf(stderr, "master is %lu rather than 150\n",
+                (long unsigned)master);
     }
     assert(master == 150);
     iprintf("30 concurrent threads successfully incremented by 5\n");
@@ -61,17 +61,19 @@ int main(int argc, char *argv[])
     master = 0xFFFFFFFF;
     qthread_incr(&master, 1);
     if (master != 0x100000000) {
-	fprintf(stderr, "master is %lx rather than 0x10000000 -- incr1 failed\n", (unsigned long)master);
-	assert(master == 0x100000000);
+        fprintf(stderr, "master is %lx rather than 0x10000000 -- incr1 failed\n", (unsigned long)master);
+        assert(master == 0x100000000);
     }
     master = 0;
     qthread_incr(&master, 0x100000000);
     if (master != 0x100000000) {
-	fprintf(stderr, "master is %lx rather than 0x10000000 -- incr2 failed\n", (unsigned long)master);
-	assert(master == 0x100000000);
+        fprintf(stderr, "master is %lx rather than 0x10000000 -- incr2 failed\n", (unsigned long)master);
+        assert(master == 0x100000000);
     }
     iprintf("64-bit add appears to work\n");
-#endif
+#endif /* if (QTHREAD_SIZEOF_ALIGNED_T == 8) */
 
     return 0;
 }
+
+/* vim:set expandtab */
