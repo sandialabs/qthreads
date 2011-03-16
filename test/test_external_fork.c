@@ -67,11 +67,13 @@ int main(int argc, char *argv[])
     qthread_readFF(NULL, &t);
 
     if (x == 55) {
-	iprintf("Success! x==55\n");
-	return 0;
+        iprintf("Success! x==55\n");
+        return 0;
     } else {
-	fprintf(stderr, "Final value of x=%lu (expected 55)\n",
-		(unsigned long)x);
-	return -1;
+        fprintf(stderr, "Final value of x=%lu (expected 55)\n",
+                (unsigned long)x);
+        return -1;
     }
 }
+
+/* vim:set expandtab */

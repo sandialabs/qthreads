@@ -11,14 +11,14 @@ double **bigR = NULL;
 /* note that the bottom-left corner is item 0 of the below array */
 
 static void avg(const void *restrict left, const void *restrict leftdown,
-		const void *restrict down, void *restrict out)
+                const void *restrict down, void *restrict out)
 {
     *(double *)out =
-	(*(double *)left + *(double *)leftdown + *(double *)down) / 3.0;
+        (*(double *)left + *(double *)leftdown + *(double *)down) / 3.0;
 }
 
 static void assignrand(const size_t startat, const size_t stopat, qarray * a,
-		       void *arg)
+                       void *arg)
 {
     double *ptr = (double *)qarray_elem_nomigrate(a, startat);
     const size_t max = stopat - startat;
@@ -26,9 +26,9 @@ static void assignrand(const size_t startat, const size_t stopat, qarray * a,
     assert(a->unit_size == sizeof(double));
 
     for (size_t i = 0; i < max; i++) {
-	/*long r = random();
-	 * memcpy(&(ptr[i]), &r, sizeof(long)); */
-	ptr[i] = (double)(i + startat);
+        /*long r = random();
+         * memcpy(&(ptr[i]), &r, sizeof(long)); */
+        ptr[i] = (double)(i + startat);
     }
 }
 
@@ -54,12 +54,14 @@ int main(int argc, char *argv[])
     L = qt_wavefront(v, h, avg);
 
     if (L) {
-	//qt_wavefront_print_lattice(L);
+        // qt_wavefront_print_lattice(L);
     } else {
-	fprintf(stderr, "wavefront returned NULL!\n");
+        fprintf(stderr, "wavefront returned NULL!\n");
     }
     qarray_destroy(v);
     qarray_destroy(h);
     qt_wavefront_destroy_lattice(L);
     return 0;
 }
+
+/* vim:set expandtab */

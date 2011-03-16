@@ -11,14 +11,14 @@ static aligned_t checkres(void *arg)
 
     assert(myshep == 1 || myshep == 0 || myshep == 2);
 
-    if ((intptr_t) arg >= 0) {
-	iprintf("checkres: myshep = %i, should be %i\n", myshep,
-		(int)(intptr_t) arg);
-	assert(myshep == (qthread_shepherd_id_t) (intptr_t) arg);
+    if ((intptr_t)arg >= 0) {
+        iprintf("checkres: myshep = %i, should be %i\n", myshep,
+                (int)(intptr_t)arg);
+        assert(myshep == (qthread_shepherd_id_t)(intptr_t)arg);
     } else {
-	iprintf("checkres: myshep = %i, should NOT be %i\n", myshep,
-		-1 * (int)(intptr_t) arg);
-	assert(myshep != (qthread_shepherd_id_t) (-1 * (intptr_t) arg));
+        iprintf("checkres: myshep = %i, should NOT be %i\n", myshep,
+                -1 * (int)(intptr_t)arg);
+        assert(myshep != (qthread_shepherd_id_t)(-1 * (intptr_t)arg));
     }
 
     return 0;
@@ -31,17 +31,17 @@ static aligned_t migrant(void *arg)
     assert(myshep == 1 || myshep == 0);
 
     if (myshep == 1) {
-	qthread_migrate_to(0);
-	assert(qthread_shep() == 0);
+        qthread_migrate_to(0);
+        assert(qthread_shep() == 0);
     } else {
-	qthread_migrate_to(1);
-	iprintf("migrant starting on %i, aimed at 1, ended up on %i\n",
-		myshep, qthread_shep());
-	if (arg == (void *)2) {
-	    assert(qthread_shep() != 1);
-	} else {
-	    assert(qthread_shep() == 1);
-	}
+        qthread_migrate_to(1);
+        iprintf("migrant starting on %i, aimed at 1, ended up on %i\n",
+                myshep, qthread_shep());
+        if (arg == (void *)2) {
+            assert(qthread_shep() != 1);
+        } else {
+            assert(qthread_shep() == 1);
+        }
     }
 
     return 0;
@@ -93,3 +93,5 @@ int main(int argc, char *argv[])
 
     return 0;
 }
+
+/* vim:set expandtab */

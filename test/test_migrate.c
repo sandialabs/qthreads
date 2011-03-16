@@ -13,7 +13,7 @@ static aligned_t checkres(void *arg)
 
     iprintf("myshep = %u\n", (unsigned)myshep);
     iprintf("arg = %u\n", (unsigned)(uintptr_t)arg);
-    assert(myshep == (qthread_shepherd_id_t) (intptr_t) arg);
+    assert(myshep == (qthread_shepherd_id_t)(intptr_t)arg);
 
     return 0;
 }
@@ -25,11 +25,11 @@ static aligned_t migrant(void *arg)
     assert(myshep == 1 || myshep == 0);
 
     if (myshep == 1) {
-	qthread_migrate_to(0);
-	assert(qthread_shep() == 0);
+        qthread_migrate_to(0);
+        assert(qthread_shep() == 0);
     } else {
-	qthread_migrate_to(1);
-	assert(qthread_shep() == 1);
+        qthread_migrate_to(1);
+        assert(qthread_shep() == 1);
     }
 
     return 0;
@@ -43,7 +43,7 @@ int main(int argc, char *argv[])
 {
     aligned_t ret;
 
-    setenv("QTHREAD_NUM_SHEPHERDS","2",1);
+    setenv("QTHREAD_NUM_SHEPHERDS", "2", 1);
     qthread_initialize();
 
     CHECK_VERBOSE();
@@ -65,3 +65,5 @@ int main(int argc, char *argv[])
 
     return 0;
 }
+
+/* vim:set expandtab */

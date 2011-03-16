@@ -32,7 +32,7 @@ static int verbose = 0;
 #endif
 
 #ifdef __tile__
-#define iprintf printf
+# define iprintf printf
 #else
 static void iprintf(const char * restrict format, ...)
 {

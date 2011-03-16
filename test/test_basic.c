@@ -1,5 +1,5 @@
 #ifdef HAVE_CONFIG_H
-#include <config.h>
+# include <config.h>
 #endif
 
 #include <stdio.h>
@@ -63,12 +63,13 @@ int main(int argc, char *argv[])
     qthread_fork(producer, NULL, &t);
     qthread_readFF(&t, &t);
 
-
     if (x == 55) {
-	iprintf("Success! x==55\n");
-	return 0;
+        iprintf("Success! x==55\n");
+        return 0;
     } else {
-	fprintf(stderr, "Final value of x=%lu\n", (unsigned long)x);
-	return -1;
+        fprintf(stderr, "Final value of x=%lu\n", (unsigned long)x);
+        return -1;
     }
 }
+
+/* vim:set expandtab */

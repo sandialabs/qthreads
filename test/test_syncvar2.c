@@ -10,8 +10,8 @@
  * Chapel compiler. This is a demonstration generated in an attempt to figure
  * out whether a given race condition is in qthreads on in Chapel */
 
-static uint64_t bufferSize = 1024;	/* size of the circular buffer */
-static uint64_t numItems;	/* number of items to write to buffer */
+static uint64_t bufferSize = 1024;      /* size of the circular buffer */
+static uint64_t numItems;       /* number of items to write to buffer */
 
 /*
  * Circular buffer of synchronization variables, which store
@@ -30,12 +30,12 @@ static aligned_t producer(
     void *arg)
 {
     for (unsigned int i = 0; i < numItems; ++i) {
-	const unsigned int buffInd = i % bufferSize;
-	qthread_syncvar_writeEF_const(&buff[buffInd], i);
-	iprintf("producer wrote value #%u\n", i);
+        const unsigned int buffInd = i % bufferSize;
+        qthread_syncvar_writeEF_const(&buff[buffInd], i);
+        iprintf("producer wrote value #%u\n", i);
     }
     qthread_syncvar_writeEF_const(&buff[numItems % bufferSize],
-				  INT64TOINT60(-1));
+                                  INT64TOINT60(-1));
 
     return 0;
 }
@@ -53,7 +53,7 @@ static int64_t readFromBuff(void)
     qthread_syncvar_readFE(&readVal, &buff[ind]);
     nextVal = INT60TOINT64(readVal);
     if (nextVal != -1) {
-	ind = (ind + 1) % bufferSize;
+        ind = (ind + 1) % bufferSize;
     }
     return nextVal;
 }
@@ -66,8 +66,9 @@ static aligned_t consumer(
     void *arg)
 {
     int64_t buffVal;
+
     while ((buffVal = readFromBuff()) != -1) {
-	iprintf("Consumer got: %li\n", (long)buffVal);
+        iprintf("Consumer got: %li\n", (long)buffVal);
     }
 
     return 0;
@@ -94,7 +95,7 @@ int main(
 
     buff = malloc(sizeof(syncvar_t) * bufferSize);
     for (unsigned int i = 0; i < bufferSize; ++i) {
-	buff[i] = SYNCVAR_EMPTY_INITIALIZER;
+        buff[i] = SYNCVAR_EMPTY_INITIALIZER;
     }
 
     qthread_fork(consumer, NULL, &t[0]);
@@ -108,3 +109,5 @@ int main(
 
     return 0;
 }
+
+/* vim:set expandtab */

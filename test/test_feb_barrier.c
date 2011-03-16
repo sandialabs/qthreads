@@ -14,8 +14,9 @@ qt_feb_barrier_t *wait_on_me;
 
 static aligned_t barrier_thread(void *arg)
 {
-    qt_feb_barrier_t *b = (qt_feb_barrier_t *) arg;
+    qt_feb_barrier_t *b = (qt_feb_barrier_t *)arg;
     aligned_t idx = qthread_incr(&initme_idx, 1);
+
     qthread_incr(&(initme[idx]), 1);
     qt_feb_barrier_enter(b);
     return 0;
@@ -25,7 +26,7 @@ int main(int argc, char *argv[])
 {
     size_t threads = 1000, i;
     aligned_t *rets;
-    qtimer_t t;;
+    qtimer_t t;
 
     assert(qthread_initialize() == 0);
     t = qtimer_create();
@@ -36,19 +37,19 @@ int main(int argc, char *argv[])
     iprintf("%i shepherds...\n", qthread_num_shepherds());
     iprintf("%i threads...\n", (int)threads);
 
-    initme = (aligned_t *) calloc(threads, sizeof(aligned_t));
+    initme = (aligned_t *)calloc(threads, sizeof(aligned_t));
     assert(initme);
 
-    rets = (aligned_t *) malloc(threads * sizeof(aligned_t));
+    rets = (aligned_t *)malloc(threads * sizeof(aligned_t));
     assert(rets);
 
     iprintf("creating the barrier for %i threads\n", threads + 1);
-    wait_on_me = qt_feb_barrier_create(threads + 1);	// all my spawnees plus me
+    wait_on_me = qt_feb_barrier_create(threads + 1);    // all my spawnees plus me
     assert(wait_on_me);
 
     iprintf("forking the threads\n");
     for (i = 0; i < threads; i++) {
-	qthread_fork(barrier_thread, wait_on_me, rets + i);
+        qthread_fork(barrier_thread, wait_on_me, rets + i);
     }
     iprintf("done forking the threads, entering the barrier\n");
     qtimer_start(t);
@@ -58,7 +59,7 @@ int main(int argc, char *argv[])
     initme_idx = 0;
 
     for (i = 0; i < threads; i++) {
-	qthread_fork(barrier_thread, wait_on_me, rets + i);
+        qthread_fork(barrier_thread, wait_on_me, rets + i);
     }
     qtimer_start(t);
     qt_feb_barrier_enter(wait_on_me);
@@ -66,11 +67,11 @@ int main(int argc, char *argv[])
     iprintf("main thread exited barrier 2 in %f seconds\n", qtimer_secs(t));
 
     for (i = 0; i < threads; i++) {
-	if (initme[i] != 2) {
-	    iprintf("initme[%i] = %i (should be 2)\n", (int)i,
-		    (int)initme[i]);
-	}
-	assert(initme[i] == 2);
+        if (initme[i] != 2) {
+            iprintf("initme[%i] = %i (should be 2)\n", (int)i,
+                    (int)initme[i]);
+        }
+        assert(initme[i] == 2);
     }
     iprintf("Success!\n");
 
@@ -78,7 +79,9 @@ int main(int argc, char *argv[])
      * cases (in other words there must a race condition in qthread_finalize()
      * if there are outstanding threads out there) */
     for (i = 0; i < threads; i++) {
-	qthread_readFF(NULL, rets + i);
+        qthread_readFF(NULL, rets + i);
     }
     return 0;
 }
+
+/* vim:set expandtab */

@@ -20,3 +20,5 @@ int main(int argc, char *argv[])
     assert(cacheline > 0);
     return 0;
 }
+
+/* vim:set expandtab */

@@ -18,19 +18,21 @@ int main(int argc, char *argv[])
     numsheps = qthread_num_shepherds();
 
     for (i = 0; i < 30; i++) {
-	qthread_fork(whereami, NULL, &(rets[i]));
+        qthread_fork(whereami, NULL, &(rets[i]));
     }
     for (i = 0; i < 30; i++) {
-	qthread_readFF(NULL, rets + i);
+        qthread_readFF(NULL, rets + i);
     }
     for (i = 0; i < 30; i++) {
-	if (rets[i] != i % numsheps) {
-	    fprintf(stderr, "rets[%u] = %u ->? %u\n", i,
-		    (unsigned int)rets[i], i % numsheps);
-	}
-	assert(rets[i] == i % numsheps);
+        if (rets[i] != i % numsheps) {
+            fprintf(stderr, "rets[%u] = %u ->? %u\n", i,
+                    (unsigned int)rets[i], i % numsheps);
+        }
+        assert(rets[i] == i % numsheps);
     }
     iprintf("all %i shepherds can be queued to directly!\n", (int)numsheps);
 
     return 0;
 }
+
+/* vim:set expandtab */

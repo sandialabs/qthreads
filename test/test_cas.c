@@ -8,11 +8,12 @@ aligned_t master = 0;
 static aligned_t incr(void *arg)
 {
     aligned_t localmaster, addition, ret;
+
     ret = master;
     do {
-	localmaster = ret;
-	addition = localmaster + 1;
-	ret = qthread_cas(&master, ret, addition);
+        localmaster = ret;
+        addition = localmaster + 1;
+        ret = qthread_cas(&master, ret, addition);
     } while (ret != localmaster);
     return 0;
 }
@@ -31,6 +32,7 @@ static uint64_t read_vol64(volatile uint64_t * ptr)
 {
     return *ptr;
 }
+
 #endif
 
 static void *read_volptr(void *volatile *ptr)
@@ -51,14 +53,14 @@ int main(int argc, char *argv[])
     assert(rets[0] == 0);
     master = 0;
     for (i = 0; i < 30; i++) {
-	qthread_fork(incr, NULL, &(rets[i]));
+        qthread_fork(incr, NULL, &(rets[i]));
     }
     for (i = 0; i < 30; i++) {
-	qthread_readFF(NULL, rets + i);
+        qthread_readFF(NULL, rets + i);
     }
     if (master != 30) {
-	fprintf(stderr, "master is %lu rather than 30\n",
-		(long unsigned)master);
+        fprintf(stderr, "master is %lu rather than 30\n",
+                (long unsigned)master);
     }
 
     assert(qthread_cas(&four, 4, 5) == 4);
@@ -76,3 +78,5 @@ int main(int argc, char *argv[])
 
     return 0;
 }
+
+/* vim:set expandtab */

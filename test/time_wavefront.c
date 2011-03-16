@@ -9,22 +9,22 @@
 static size_t ASIZE = 10;
 
 static void avg(const void *restrict left, const void *restrict leftdown,
-		const void *restrict down, void *restrict out)
+                const void *restrict down, void *restrict out)
 {
     *(double *)out =
-	(*(double *)left + *(double *)leftdown + *(double *)down) / 3.0;
+        (*(double *)left + *(double *)leftdown + *(double *)down) / 3.0;
 }
 
 static void assignrand(const size_t startat,
-		       const size_t stopat, qarray * a, void *arg)
+                       const size_t stopat, qarray * a, void *arg)
 {
     double *ptr = qarray_elem_nomigrate(a, startat);
     const size_t max = stopat - startat;
 
     for (size_t i = 0; i < max; i++) {
-	/*long r = random();
-	 * memcpy(&(ptr[i]), &r, sizeof(long)); */
-	ptr[i] = (double)(i + startat);
+        /*long r = random();
+         * memcpy(&(ptr[i]), &r, sizeof(long)); */
+        ptr[i] = (double)(i + startat);
     }
 }
 
@@ -51,13 +51,15 @@ int main(int argc, char *argv[])
     qtimer_stop(timer);
 
     if (L) {
-	printf("wavefront secs: %f\n", qtimer_secs(timer));
-	//qt_wavefront_print_lattice(L);
+        printf("wavefront secs: %f\n", qtimer_secs(timer));
+        // qt_wavefront_print_lattice(L);
     } else {
-	fprintf(stderr, "wavefront returned NULL!\n");
+        fprintf(stderr, "wavefront returned NULL!\n");
     }
     qarray_destroy(v);
     qarray_destroy(h);
     qt_wavefront_destroy_lattice(L);
     return 0;
 }
+
+/* vim:set expandtab */

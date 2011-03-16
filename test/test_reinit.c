@@ -17,7 +17,7 @@ static aligned_t consumer(void *arg)
     qthread_lock(&id);
     me = id++;
     iprintf("consumer(%i) unlocking id(%p), result is %i\n", qthread_id(),
-	    &id, me);
+            &id, me);
     qthread_unlock(&id);
 
     qthread_readFE(&readout, &x);
@@ -33,7 +33,7 @@ static aligned_t producer(void *arg)
     qthread_lock(&id);
     me = id++;
     iprintf("producer(%i) unlocking id(%p), result is %i\n", qthread_id(),
-	    &id, me);
+            &id, me);
     qthread_unlock(&id);
 
     iprintf("producer(%i) filling x(%p)\n", qthread_id(), &x);
@@ -53,13 +53,12 @@ static int realmain(void)
     qthread_fork(producer, NULL, &t);
     qthread_readFF(NULL, &t);
 
-
     if (x == 55) {
-	iprintf("Success! x==55\n");
-	return 0;
+        iprintf("Success! x==55\n");
+        return 0;
     } else {
-	fprintf(stderr, "Final value of x=%lu\n", (unsigned long)x);
-	return -1;
+        fprintf(stderr, "Final value of x=%lu\n", (unsigned long)x);
+        return -1;
     }
 }
 
@@ -83,3 +82,5 @@ int main(int argc, char *argv[])
     iprintf("exiting!\n");
     return 0;
 }
+
+/* vim:set expandtab */

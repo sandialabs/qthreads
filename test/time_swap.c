@@ -1,9 +1,9 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
-#include <assert.h>		       /* for assert() */
-#include <stdlib.h>		       /* for malloc() */
-#include <stdio.h>		       /* for printf() */
+#include <assert.h>                    /* for assert() */
+#include <stdlib.h>                    /* for malloc() */
+#include <stdio.h>                     /* for printf() */
 #if defined(HAVE_UCONTEXT_H) && defined(HAVE_NATIVE_MAKECONTEXT)
 # include <ucontext.h>
 #else
@@ -28,9 +28,9 @@ static void inout(
     expected += 1L;
 
     if ((long)msg == expected) {
-	msg = (void *)1;
+        msg = (void *)1;
     } else {
-	msg = (void *)2;
+        msg = (void *)2;
     }
 #if !defined(HAVE_UCONTEXT_H) || !defined(HAVE_NATIVE_MAKECONTEXT)
     assert(swapcontext(&child, &parent) == 0);
@@ -75,30 +75,32 @@ int main(
     msg += 1L;
 
     for (i = 0; i < ITERATIONS; i++) {
-	makecontext(&child, (void (*)(void))inout, 1, msg);
-	qtimer_start(timer);
-	assert(swapcontext(&parent, &child) == 0);
-	qtimer_stop(timer);
-	total_inout_time += qtimer_secs(timer);
+        makecontext(&child, (void (*)(void))inout, 1, msg);
+        qtimer_start(timer);
+        assert(swapcontext(&parent, &child) == 0);
+        qtimer_stop(timer);
+        total_inout_time += qtimer_secs(timer);
     }
 
     for (i = 0; i < ITERATIONS; i++) {
-	makecontext(&child, single, 1, 0);
-	qtimer_start(timer);
-	assert(swapcontext(&parent, &child) == 0);
-	qtimer_stop(timer);
-	total_single_time += qtimer_secs(timer);
+        makecontext(&child, single, 1, 0);
+        qtimer_start(timer);
+        assert(swapcontext(&parent, &child) == 0);
+        qtimer_stop(timer);
+        total_single_time += qtimer_secs(timer);
     }
 
     printf("Testing swap time (average over %lu iterations)\n",
-	   (unsigned long int)ITERATIONS);
+           (unsigned long int)ITERATIONS);
     printf("\t  Total in-out time: %g secs\n", total_inout_time);
     printf("\tAverage in-out time: %g secs\n", total_inout_time / ITERATIONS);
     printf("\t  Total single time: %g secs\n", total_single_time);
     printf("\tAverage single time: %g secs\n",
-	   total_single_time / (ITERATIONS * 2));
+           total_single_time / (ITERATIONS * 2));
     printf("Context is %u bytes\n", (unsigned)sizeof(ucontext_t));
 
     qtimer_destroy(timer);
     return 0;
 }
+
+/* vim:set expandtab */
