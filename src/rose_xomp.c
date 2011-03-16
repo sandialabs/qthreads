@@ -251,7 +251,6 @@ void XOMP_init(
     return;
 }
 
-
 // Runtime library termination routine
 void XOMP_terminate(
     int exitcode)
@@ -370,6 +369,7 @@ void xomp_internal_loop_init(
 		    int stride,
 		    int chunk_size)
 {
+ 
   qthread_parallel_region_t *pr = qt_parallel_region();
 
   qqloop_step_handle_t *t = NULL;
@@ -483,8 +483,9 @@ bool XOMP_loop_guided_start(
 
     int dynamicBlock;
 
-    if (lp == NULL) return FALSE;
-
+    if (lp == NULL){
+      return FALSE;
+    }
     qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
 
     dynamicBlock = compute_XOMP_block(loop);
@@ -531,7 +532,6 @@ void XOMP_loop_end(
   pr->forLoop = NULL;
   loop = NULL;
   XOMP_barrier(); // need barrier to make sure loop is freed after everyone has used it
-   
 }
 
 // Openmp parallel for loop is completed
@@ -999,39 +999,16 @@ aligned_t XOMP_critical = 0;
 void XOMP_critical_start(
     void **data)
 {
-  // wait on omp critical region to be available
-  aligned_t *value = (aligned_t*)*data;
-  aligned_t v;
-  if(value == 0) { // null data passed in
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    v = qthread_barrier_id();
-#else
-    v = qthread_shep();
-#endif
-  }
-  else {
-    v = *value;
-  }
-  qthread_readFE(&v, &XOMP_critical);
+    int t = qthread_cas(&XOMP_critical, 0, -1);
+    while( (int64_t)t == -1){
+      t = qthread_cas(&XOMP_critical, -1, -1);
+    }
 }
 
 void XOMP_critical_end(
     void **data)
 {
-
-  aligned_t *value = (aligned_t*)*data;
-  aligned_t v;
-  if(value == 0) { // null data passed in
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    v = -qthread_barrier_id();
-#else
-    v = -qthread_shep();
-#endif
-  }
-  else {
-    v = *value;
-  }
-  qthread_writeF(&XOMP_critical, &v);
+    XOMP_critical = 0;
 }
 
 // really should have a include that defines true and false
