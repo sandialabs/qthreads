@@ -435,7 +435,7 @@ static void *qthread_shepherd(void *arg)
     /* Initialize myself */
     pthread_setspecific(shepherd_structs, arg);
 
-    if (qaffinity && me->node != -1) {
+    if (qaffinity & (me->node != -1)) {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 	qt_affinity_set(me_worker);
 #else
@@ -3280,12 +3280,18 @@ int qt_omp_parallel_region_create()
 }  		                       /*}}} */
 
 void * qt_free_loop(void *lp);
+
 void qt_omp_parallel_region_destroy()
 {				       /*{{{ */
   qthread_shepherd_t *myshep = qthread_internal_getshep();
   qthread_parallel_region_t *pr = myshep->currentParallelRegion;
   if (!pr) return;
 
+#if 0 // race condition on cleanup - commented out until found - akp 3/16/11
+      // it looks like one thread reaches cleanup code before completing loop
+      // I thought it was related to threads moving (affinity reduces the 
+      // likelyhood of the hang -- but does not make it go away) but have not 
+      // found it.
   qt_free_loop(pr->loopList);
 
   if (pr->barrier){
@@ -3297,6 +3303,8 @@ void qt_omp_parallel_region_destroy()
   }
   myshep->currentParallelRegion = pr->last;
   free(pr);
+  
+#endif
 }  		                       /*}}} */
 
 #endif
