@@ -11,7 +11,7 @@
 
 static nodemask_t * mccoy_bitmask = NULL;
 
-qthread_shepherd_id_t guess_num_shepherds(void);
+static qthread_shepherd_id_t guess_num_shepherds(void);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 qthread_worker_id_t   guess_num_workers_per_shep(qthread_shepherd_id_t
                                                  nshepherds);
@@ -69,7 +69,7 @@ void qt_affinity_free(void *ptr,
 
 #define BMASK_WORDS 16
 
-qthread_shepherd_id_t guess_num_shepherds(void)
+static qthread_shepherd_id_t guess_num_shepherds(void)
 {                                      /*{{{ */
     qthread_shepherd_id_t nshepherds = 1;
 

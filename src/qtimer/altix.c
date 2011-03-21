@@ -10,9 +10,9 @@
 #include <fcntl.h>
 #include <sys/ioctl.h>
 #include <sys/mman.h>
-#if HAVE_SN_MMTIMER_H
+#ifdef HAVE_SN_MMTIMER_H
 # include <sn/mmtimer.h>
-#elif HAVE_LINUX_MMTIMER_H
+#elif defined(HAVE_LINUX_MMTIMER_H)
 # include <linux/mmtimer.h>
 #endif
 #include <unistd.h>

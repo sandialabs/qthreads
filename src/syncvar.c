@@ -34,13 +34,19 @@ typedef struct {
 /* Internal Macros */
 #define BUILD_UNLOCKED_SYNCVAR(data,state) (((data)<<4)|((state)<<1))
 
+#ifdef QTHREAD_MUTEX_INCREMENT
+# define ASM_ALLOWED(x)
+#else
+# define ASM_ALLOWED(x) x
+#endif
+
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 # define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked) do { \
-    __asm__ __volatile__ ("":::"memory"); \
+    ASM_ALLOWED(__asm__ __volatile__ ("":::"memory");) \
     (addr)->u.s.lock = 0; \
 } while (0)
 # define UNLOCK_THIS_MODIFIED_SYNCVAR(addr, val, state) do { \
-    __asm__ __volatile__ ("":::"memory"); \
+    ASM_ALLOWED(__asm__ __volatile__ ("":::"memory");) \
     (addr)->u.w = BUILD_UNLOCKED_SYNCVAR(val,state); \
 } while (0)
 #elif ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
@@ -50,11 +56,11 @@ typedef struct {
        (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) || \
 	defined(__tile__))
 # define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked) do { \
-    __asm__ __volatile__ ("":::"memory"); \
+    ASM_ALLOWED(__asm__ __volatile__ ("":::"memory");) \
     (addr)->u.w = (unlocked); \
 } while (0)
 # define UNLOCK_THIS_MODIFIED_SYNCVAR(addr, val, state) do { \
-    __asm__ __volatile__ ("":::"memory"); \
+    ASM_ALLOWED(__asm__ __volatile__ ("":::"memory");) \
     (addr)->u.w = BUILD_UNLOCKED_SYNCVAR(val,state); \
 } while (0)
 #else

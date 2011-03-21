@@ -36,6 +36,12 @@ static QINLINE int getpagesize()
 }
 #endif
 
+#ifdef QTHREAD_MUTEX_INCREMENT
+# define ASM_ALLOWED(x)
+#else
+# define ASM_ALLOWED(x) x
+#endif
+
 struct qt_mpool_s {
     size_t item_size;
     size_t alloc_size;
@@ -45,7 +51,7 @@ struct qt_mpool_s {
     void *volatile QTHREAD_CASLOCK(reuse_pool);
     QTHREAD_FASTLOCK_TYPE pool_lock;
     char *alloc_block;
-    char *volatile alloc_block_ptr;
+    char *volatile QTHREAD_CASLOCK(alloc_block_ptr);
     void **alloc_list;
     size_t alloc_list_pos;
 };
@@ -258,7 +264,7 @@ start:
 	cur = pool->alloc_block_ptr;
 	QTHREAD_FASTLOCK_UNLOCK(&pool->pool_lock);
 	while (cur <= max && cur >= base) {
-	    char * cur2 = qt_cas(&pool->alloc_block_ptr, cur, cur + pool->item_size);
+	    char * cur2 = QT_CAS(pool->alloc_block_ptr, cur, cur + pool->item_size);
 	    if (cur2 == cur) break;
 	    cur = cur2;
 	    if (base != pool->alloc_block) goto start;
@@ -286,7 +292,7 @@ start:
 	    pool->alloc_block = (void *)p;
 	    pool->alloc_list[pool->alloc_list_pos] = pool->alloc_block;
 	    pool->alloc_list_pos++;
-	    __asm__ __volatile__ ("":::"memory");
+	    ASM_ALLOWED(__asm__ __volatile__ ("":::"memory"));
 	    pool->alloc_block_ptr = ((char*)p) + pool->item_size;
 	    QTHREAD_FASTLOCK_UNLOCK(&pool->pool_lock);
 	} else {
