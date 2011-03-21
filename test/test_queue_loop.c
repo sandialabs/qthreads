@@ -16,10 +16,9 @@ static unsigned int BIGLEN = 1000000U;
 static aligned_t *uia = NULL;
 static unsigned int REALLY_VERBOSE = 0;
 
-static void sum(
-    const size_t startat,
-    const size_t stopat,
-    void *arg_)
+static void sum(const size_t startat,
+                const size_t stopat,
+                void *arg_)
 {
     size_t i;
     aligned_t local_sum = 0, bigsum;
@@ -50,8 +49,7 @@ static const char *units[] = {
     NULL
 };
 
-static char *human_readable_bytes(
-    size_t bytes)
+static char *human_readable_bytes(size_t bytes)
 {
     static char str[1024];
 
@@ -66,9 +64,8 @@ static char *human_readable_bytes(
     return str;
 }
 
-int main(
-    int argc,
-    char *argv[])
+int main(int argc,
+         char *argv[])
 {
     size_t i;
 

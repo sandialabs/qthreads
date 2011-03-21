@@ -5,7 +5,8 @@
 #include <sys/time.h>
 #include "argparsing.h"
 
-int main(int argc, char *argv[])
+int main(int argc,
+         char *argv[])
 {
     qtimer_t t;
 

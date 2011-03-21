@@ -37,7 +37,8 @@ static aligned_t dequeuer(void *arg)
     return 0;
 }
 
-int main(int argc, char *argv[])
+int main(int argc,
+         char *argv[])
 {
     qdqueue_t *q;
     size_t i;

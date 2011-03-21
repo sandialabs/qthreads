@@ -49,7 +49,8 @@ static aligned_t checkid(void *arg)
     return 0;
 }
 
-int main(int argc, char *argv[])
+int main(int argc,
+         char *argv[])
 {
     aligned_t ret;
     aligned_t *rets;

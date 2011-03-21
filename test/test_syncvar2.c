@@ -26,8 +26,7 @@ static syncvar_t *buff = NULL;
  * buffer starting at location 0 and wrapping around when it hits the end of
  * the buffer. It then writes the value -1 as a sentinel to the next position.
  */
-static aligned_t producer(
-    void *arg)
+static aligned_t producer(void *arg)
 {
     for (unsigned int i = 0; i < numItems; ++i) {
         const unsigned int buffInd = i % bufferSize;
@@ -62,8 +61,7 @@ static int64_t readFromBuff(void)
  * the consumer invokes an iterator to control its loop and yield values from
  * the shared buffer. It writes them out to the console.
  */
-static aligned_t consumer(
-    void *arg)
+static aligned_t consumer(void *arg)
 {
     int64_t buffVal;
 
@@ -78,9 +76,8 @@ static aligned_t consumer(
  * The main procedure simply creates a producer and a consumer task to run in
  * parallel
  */
-int main(
-    int argc,
-    char *argv[])
+int main(int argc,
+         char *argv[])
 {
     aligned_t t[2];
 

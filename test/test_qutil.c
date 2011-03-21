@@ -20,7 +20,8 @@
  * This file tests the qutil functions
  *
  */
-static Q_UNUSED int dcmp(const void *a, const void *b)
+static Q_UNUSED int dcmp(const void *a,
+                         const void *b)
 {
     if ((*(double *)a) < (*(double *)b)) {return -1; }
     if ((*(double *)a) > (*(double *)b)) {return 1; }
@@ -212,7 +213,8 @@ static aligned_t qmain(void *junk)
     return 0;
 }
 
-int main(int argc, char *argv[])
+int main(int argc,
+         char *argv[])
 {
     aligned_t ret;
     int futurelimit = 2;

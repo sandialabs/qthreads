@@ -12,7 +12,9 @@ size_t ASIZE = 1026;
 
 aligned_t hamming = (aligned_t)-1;
 
-static void assigni(const size_t startat, const size_t stopat, qarray * q,
+static void assigni(const size_t startat,
+                    const size_t stopat,
+                    qarray * q,
                     void *arg)
 {
     int *ptr = (int *)qarray_elem_nomigrate(q, startat);
@@ -22,7 +24,9 @@ static void assigni(const size_t startat, const size_t stopat, qarray * q,
     }
 }
 
-static void assignrand(const size_t startat, const size_t stopat, qarray * q,
+static void assignrand(const size_t startat,
+                       const size_t stopat,
+                       qarray * q,
                        void *arg)
 {
     int *ptr = (int *)qarray_elem_nomigrate(q, startat);
@@ -54,13 +58,16 @@ static void printout(int *restrict * restrict out)
 
 #endif /* if 0 */
 
-static void mult(const int *inta, const int *intb, int *restrict out)
+static void mult(const int *inta,
+                 const int *intb,
+                 int *restrict out)
 {
     assert(*out == -1);
     *out = (*inta) * (*intb);
 }
 
-static void hammingdist(const int *inta, const int *intb)
+static void hammingdist(const int *inta,
+                        const int *intb)
 {
     unsigned int ham = *inta ^ *intb;
     aligned_t hamdist = 0;
@@ -78,7 +85,8 @@ static void hammingdist(const int *inta, const int *intb)
     }
 }
 
-int main(int argc, char *argv[])
+int main(int argc,
+         char *argv[])
 {
     qarray *a1, *a2;
     int **out;

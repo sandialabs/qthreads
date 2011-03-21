@@ -49,7 +49,8 @@ static void *external_thread(void *junk)
     return NULL;
 }
 
-int main(int argc, char *argv[])
+int main(int argc,
+         char *argv[])
 {
     pthread_t external;
 

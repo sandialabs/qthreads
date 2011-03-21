@@ -12,7 +12,8 @@ static aligned_t x = 0;
 
 static aligned_t alldone;
 
-static Q_NOINLINE void thread2(size_t left, size_t depth)
+static Q_NOINLINE void thread2(size_t left,
+                               size_t depth)
 {
     int foo = qthread_stackleft();
 
@@ -47,7 +48,8 @@ static aligned_t thread(void *arg)
     return foo + me;                   /* to force them to be used */
 }
 
-int main(int argc, char *argv[])
+int main(int argc,
+         char *argv[])
 {
     long int i;
 

@@ -31,7 +31,8 @@ static aligned_t allocator(void *arg)
     return 0;
 }
 
-int main(int argc, char *argv[])
+int main(int argc,
+         char *argv[])
 {
     size_t i;
     aligned_t *rets;

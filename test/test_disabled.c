@@ -48,10 +48,13 @@ static aligned_t migrant(void *arg)
 }
 
 #ifdef __INTEL_COMPILER
-int setenv(const char *name, const char *value, int overwrite);
+int setenv(const char *name,
+           const char *value,
+           int overwrite);
 #endif
 
-int main(int argc, char *argv[])
+int main(int argc,
+         char *argv[])
 {
     aligned_t ret;
     int qret;

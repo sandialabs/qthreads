@@ -17,7 +17,8 @@
 
 struct timeval start, stop;
 
-int main(int argc, char *argv[])
+int main(int argc,
+         char *argv[])
 {
     aligned_t *ui_array;
     double *d_array;

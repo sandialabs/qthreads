@@ -14,7 +14,8 @@
 // #define BIGLEN 200000000U
 static unsigned int BIGLEN = 1000000U;
 
-int main(int argc, char *argv[])
+int main(int argc,
+         char *argv[])
 {
     size_t i;
     struct timeval start, stop;

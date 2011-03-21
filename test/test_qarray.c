@@ -29,7 +29,9 @@ static aligned_t assignall1(void *arg)
     return 0;
 }
 
-static void assignoff1(const size_t startat, const size_t stopat, qarray * q,
+static void assignoff1(const size_t startat,
+                       const size_t stopat,
+                       qarray * q,
                        void *arg)
 {
     for (size_t i = startat; i < stopat; i++) {
@@ -40,7 +42,8 @@ static void assignoff1(const size_t startat, const size_t stopat, qarray * q,
     qthread_incr(&count, stopat - startat);
 }
 
-int main(int argc, char *argv[])
+int main(int argc,
+         char *argv[])
 {
     qarray *a;
     distribution_t disttypes[] = {
@@ -121,9 +124,9 @@ int main(int argc, char *argv[])
                     if (elem[j] != 1) {
                         printf
                         (
-                            "byte %lu of element %lu is %i instead of 1, dt_index = %u\n",
-                            (unsigned long)j, (unsigned long)i, elem[j],
-                            dt_index);
+                         "byte %lu of element %lu is %i instead of 1, dt_index = %u\n",
+                         (unsigned long)j, (unsigned long)i, elem[j],
+                         dt_index);
                         fail = 1;
                         break;
                     }
@@ -158,9 +161,9 @@ int main(int argc, char *argv[])
                     if (elem[j] != 1) {
                         printf
                         (
-                            "byte %lu of element %lu is %i instead of 1, dt_index = %u\n",
-                            (unsigned long)j, (unsigned long)i, elem[j],
-                            dt_index);
+                         "byte %lu of element %lu is %i instead of 1, dt_index = %u\n",
+                         (unsigned long)j, (unsigned long)i, elem[j],
+                         dt_index);
                         assert(elem[j] == 1);
                     }
                 }

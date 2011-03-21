@@ -10,7 +10,8 @@
 #include <inttypes.h>
 #include <string.h>
 
-int main(int argc, char *argv[])
+int main(int argc,
+         char *argv[])
 {
     void *r, *r2;
     const char teststring[16] = "This is a test.";

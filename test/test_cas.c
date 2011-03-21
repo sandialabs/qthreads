@@ -40,7 +40,8 @@ static void *read_volptr(void *volatile *ptr)
     return *ptr;
 }
 
-int main(int argc, char *argv[])
+int main(int argc,
+         char *argv[])
 {
     int i;
     aligned_t rets[30];

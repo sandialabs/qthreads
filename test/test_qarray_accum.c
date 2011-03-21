@@ -7,7 +7,9 @@
 
 static double ret = 0.0;
 
-static void assigni(const size_t startat, const size_t stopat, qarray * q,
+static void assigni(const size_t startat,
+                    const size_t stopat,
+                    qarray * q,
                     void *arg)
 {
     int *ptr = (int *)qarray_elem(q, startat);
@@ -18,8 +20,11 @@ static void assigni(const size_t startat, const size_t stopat, qarray * q,
     }
 }
 
-static void permute(const size_t startat, const size_t stopat, qarray * q,
-                    void *arg, void *ret)
+static void permute(const size_t startat,
+                    const size_t stopat,
+                    qarray * q,
+                    void *arg,
+                    void *ret)
 {
     int *ptr = (int *)qarray_elem(q, startat);
     size_t i;
@@ -38,7 +43,8 @@ static aligned_t onesum(void *arg)
     return 0;
 }
 
-int main(int argc, char *argv[])
+int main(int argc,
+         char *argv[])
 {
     qarray *t;
     size_t int_calc = 0, i;

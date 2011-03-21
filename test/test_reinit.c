@@ -62,7 +62,8 @@ static int realmain(void)
     }
 }
 
-int main(int argc, char *argv[])
+int main(int argc,
+         char *argv[])
 {
     assert(qthread_initialize() == 0);
 

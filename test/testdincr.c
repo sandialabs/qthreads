@@ -18,7 +18,8 @@ static aligned_t incr5(void *arg)
     return 0;
 }
 
-int main(int argc, char *argv[])
+int main(int argc,
+         char *argv[])
 {
     int i;
     aligned_t rets[30];

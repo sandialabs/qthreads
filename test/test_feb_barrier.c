@@ -22,7 +22,8 @@ static aligned_t barrier_thread(void *arg)
     return 0;
 }
 
-int main(int argc, char *argv[])
+int main(int argc,
+         char *argv[])
 {
     size_t threads = 1000, i;
     aligned_t *rets;
