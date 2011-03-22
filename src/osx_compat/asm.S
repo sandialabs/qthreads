@@ -55,6 +55,12 @@
 # endif
 #endif
 
+#if defined(__CYGWIN32__)
+# define NEEDX86CONTEXT
+# define SET _setmcontext
+# define GET _getmcontext
+#endif
+
 #ifdef NEEDX86CONTEXT
 .globl SET
 SET:

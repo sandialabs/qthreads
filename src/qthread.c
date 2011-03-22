@@ -3461,11 +3461,11 @@ int qthread_forCount(int inc)
 }                                    /*}}} */
 
 void qthread_getTaskListLock(void)
-{				       /*{{{ */
+{                                      /*{{{ */
     qthread_t *t = qthread_internal_self();
     assert(t);
     qthread_syncvar_writeEF_const(&t->rdata->taskWaitLock, 1);
-}				       /*}}} */
+}                                      /*}}} */
 
 void qthread_releaseTaskListLock(void)
 {				       /*{{{ */
