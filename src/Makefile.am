@@ -11,11 +11,11 @@ lib_LTLIBRARIES = libqthread.la
 libqthread_la_SOURCES = \
 	cacheline.c \
 	qalloc.c \
-	qutil.c \
-	syncvar.c \
-	qt_feb_barrier.c \
+	qloop.c \
 	qt_c_hash.c \
-	qloop.c
+	qt_feb_barrier.c \
+	qutil.c \
+	syncvar.c
 
 include qtimer/Makefile.inc
 include ds/Makefile.inc
