@@ -1,4 +1,15 @@
---- 1.5.1b ---
+--- 1.5.1 ---
+New Features:
+ - Chapel shims
+Improvements:
+ - Compiles under Cygwin
+ - Better OpenMP nested loop behavior (more efficient barriers)
+ - Use memory affinity interface in hwloc (if available)
+ - Better CPU affinity behavior for non-default shepherd counts
+Bugfixes:
+ - Better behavior when void functions are used as syncvar-returning threads
+ - Pthread_id() now does not change between qthread_initialize() and qthread_finalize()
+ - Affinity of calling thread restored during qthread_finalize()
 --- 1.5 ---
 New Features:
  - Multithreaded shepherds (non-default)

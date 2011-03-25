@@ -1,3 +1,442 @@
+2011-03-22 15:42  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_makecontext.m4,
+	  include/osx_compat/386-ucontext.h, include/osx_compat/taskimpl.h,
+	  include/qthread/qthread.h, include/qthread/syncvar.hpp,
+	  src/osx_compat/asm.S, src/qthread.c, src/qutil.c,
+	  test/argparsing.h: fixes to compile and run on CYGWIN (that's
+	  right, I said Cygwin)
+
+2011-03-22 15:41  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/Makefile.am: alphabetize ordering (to emphasize that there is
+	  no implicit dependency)
+
+2011-03-21 22:02  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/affinity/libnuma_affinity.c, src/qt_mpool.c,
+	  src/qtimer/altix.c, src/syncvar.c, test/test_qdqueue.c,
+	  test/test_qlfqueue.c: Itanium compiler warning fixes && ICC
+	  compile fixes
+
+2011-03-21 21:00  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/testloop.cpp: fixing compiler warnings on Itanium
+
+2011-03-21 15:21  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_allpairs.c, test/test_basic_syncvar.c,
+	  test/test_cacheline.c, test/test_cas.c, test/test_disabled.c,
+	  test/test_external_fork.c, test/test_feb_barrier.c,
+	  test/test_id.c, test/test_internal_mod.c, test/test_migrate.c,
+	  test/test_qarray.c, test/test_qarray_accum.c,
+	  test/test_qdqueue.c, test/test_qlfqueue.c, test/test_qpool.c,
+	  test/test_qtimer.c, test/test_queue_loop.c, test/test_qutil.c,
+	  test/test_qutil_qsort.c, test/test_reinit.c,
+	  test/test_stackleft.c, test/test_syncvar.c, test/test_syncvar2.c,
+	  test/testdincr.c, test/testfincr.c, test/testincr.c,
+	  test/testq.c, test/testqloop.c: fixing compiler warnings on
+	  Itanium
+
+2011-03-21 15:13  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_basic.c: fix newline
+
+2011-03-21 15:09  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/affinity/libnuma_affinity.c: fixes compiling (thanks for
+	  pointing it out Allan!)
+
+2011-03-17 14:06  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* NEWS: bump version to 1.5.1b
+
+2011-03-17 14:05  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* Makefile.am: include chapel shim files in the standard
+	  distribution
+
+2011-03-17 14:04  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* shims/chapel: chapel is now part of the standard checkout
+
+2011-03-17 13:55  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* shims: lets just make this part of qthreads proper
+
+2011-03-16 22:06  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/argparsing.h, test/benchmark.c, test/test_allpairs.c,
+	  test/test_basic.c, test/test_basic_syncvar.c,
+	  test/test_cacheline.c, test/test_cas.c, test/test_disabled.c,
+	  test/test_external_fork.c, test/test_feb_barrier.c,
+	  test/test_id.c, test/test_internal_mod.c,
+	  test/test_log_barrier.c, test/test_migrate.c, test/test_qarray.c,
+	  test/test_qarray_accum.c, test/test_qdqueue.c,
+	  test/test_qlfqueue.c, test/test_qpool.c, test/test_qtimer.c,
+	  test/test_queue_loop.c, test/test_qutil.c,
+	  test/test_qutil_qsort.c, test/test_reinit.c,
+	  test/test_stackleft.c, test/test_syncvar.c, test/test_syncvar2.c,
+	  test/test_wavefront.c, test/testdincr.c, test/testfincr.c,
+	  test/testincr.c, test/testloop.cpp, test/testq.c,
+	  test/testqloop.c, test/time_allpairs.c, test/time_chain_bench.c,
+	  test/time_chain_bench_pthread.c, test/time_cncthr_bench.c,
+	  test/time_cncthr_bench_pthread.c, test/time_febs.c,
+	  test/time_gcd.c, test/time_incr_bench.c,
+	  test/time_incr_bench_pthread.c, test/time_increments.c,
+	  test/time_lul_bench.c, test/time_lul_bench_pthread.c,
+	  test/time_mutex_bench.c, test/time_mutex_bench_pthread.c,
+	  test/time_producerconsumer.c, test/time_qarray.c,
+	  test/time_qarray_sizes.c, test/time_qdqueue.c,
+	  test/time_qdqueue_sizes.c, test/time_qlfqueue.c,
+	  test/time_qpool.c, test/time_qutil_qsort.c,
+	  test/time_spin_bench.c, test/time_spin_bench_pthread.c,
+	  test/time_swap.c, test/time_syncvar_producerconsumer.c,
+	  test/time_tbbq.cpp, test/time_tbbq_sizes.cpp,
+	  test/time_thrcrt_bench.c, test/time_thrcrt_bench_pthread.c,
+	  test/time_threading.c, test/time_wavefront.c: uncrustified
+
+2011-03-16 20:40  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/testincr.c: uncrustified
+
+2011-03-16 20:33  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h: uncrustified
+
+2011-03-16 19:54  Allan Porterfield <akp@renci.org>
+
+	* src/qthread.c: comment out parallel region cleanup -- there is a
+	  race condition that
+	  occasionly causes a hang as data is cleaned up before it is
+	  use for the last time
+
+2011-03-16 19:51  Allan Porterfield <akp@renci.org>
+
+	* src/rose_xomp.c: rewrite XOMP_critical to use compare ans swap
+	  rather than FEB for speed
+
+2011-03-15 22:24  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_shepherd_innards.h: fix compilation without multiple
+	  shepherds
+
+2011-03-15 22:13  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_increments.c: MACHINE_READABLE option
+
+2011-03-15 21:31  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_increments.c: false sharing should be volatile, to
+	  avoid optimizations on that loop
+
+2011-03-15 16:44  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_affinity.h, src/affinity/hwloc_affinity.c: deal with
+	  old hwloc versions (i.e. without memory affinity)
+
+2011-03-15 14:48  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/affinity/hwloc_affinity.c, src/affinity/lgrp_affinity.c,
+	  src/affinity/libnumaV2_affinity.c,
+	  src/affinity/libnuma_affinity.c, src/affinity/mach_affinity.c,
+	  src/affinity/no_affinity.c, src/affinity/plpa_affinity.c,
+	  src/affinity/tile_affinity.c: fix the guess_num_workers function
+	  call name (thanks Allan!)
+
+2011-03-14 17:02  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/affinity/hwloc_affinity.c, src/affinity/lgrp_affinity.c,
+	  src/affinity/libnumaV2_affinity.c,
+	  src/affinity/libnuma_affinity.c: undo affinity specifications
+	  when finalize is called
+
+2011-03-14 16:37  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_affinity.h, src/affinity/hwloc_affinity.c,
+	  src/affinity/lgrp_affinity.c, src/affinity/libnumaV2_affinity.c,
+	  src/affinity/libnuma_affinity.c, src/affinity/mach_affinity.c,
+	  src/affinity/no_affinity.c, src/affinity/plpa_affinity.c,
+	  src/affinity/tile_affinity.c, src/qthread.c: improve the affinity
+	  interface with Romain's patch (modified slightly to suit my
+	  taste)
+
+2011-03-14 16:34  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/ds/qarray.c: unnecessary header information
+
+2011-03-14 16:21  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread_innards.h: more predictable handling of
+	  qthread_debug integer args
+
+2011-03-11 20:40  Allan Porterfield <akp@renci.org>
+
+	* src/affinity/hwloc_affinity.c: Deleted the last change from the
+	  SVN ci file but it changed it anyway.
+	  I think this backs the affinity changes out from the last
+	  checkin,
+	  (I don't understand why I need these locally to compile but
+	  should
+	  keep them tlocal until I do
+
+2011-03-11 20:35  Allan Porterfield <akp@renci.org>
+
+	* include/qt_shepherd_innards.h, include/qthread/qthread.h,
+	  src/affinity/hwloc_affinity.c, src/qloop.c, src/qthread.c,
+	  src/rose_log_arrivaldetector.c, src/rose_xomp.c: Changes to mover
+	  from hardware thread number to software thread number
+	  for barrier computations in OpenMP
+	  (qthread.h) add barrier id call
+	  (qt_shepherd_innards.h) add function to get current worker
+	  structure
+	  (rose_xomp.c) switch to using software id for all barrier-like
+	  calls
+	  (rose_log_arrivaldetector.c) switch to using software id for all
+	  barrier-like calls
+	  (qthread.c) add barrier id call
+	  add and switch to internal call to get current worker structure
+	  (qloop.c) set software id when generating chucks of work from
+	  loops
+
+2011-03-10 17:38  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/affinity/hwloc_affinity.c: remove debugging printouts
+
+2011-03-10 17:24  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_affinity.h, src/affinity/hwloc_affinity.c,
+	  src/affinity/libnumaV2_affinity.c,
+	  src/affinity/libnuma_affinity.c, src/ds/qarray.c, src/ds/qpool.c:
+	  Pushing memory affinity operations into the affinity shim API.
+	  Also pushed the changes from Romain Dolbeau to improve hwloc
+	  support.
+
+2011-03-10 17:07  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/affinity/lgrp_affinity.c, src/affinity/mach_affinity.c,
+	  src/affinity/no_affinity.c, src/affinity/plpa_affinity.c,
+	  src/affinity/tile_affinity.c: remove unnecessary functions
+
+2011-03-09 22:27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/affinity/hwloc_affinity.c: alter the way worker threads bind
+	  themselves to member-objects of shared resources to improve
+	  performance. In other words, if more than one shepherd is sitting
+	  within a shepherd boundary (e.g. a socket), their worker threads
+	  will bind to different cores. (note: not the solution Allan and I
+	  found, because that solution was broken)
+
+2011-03-09 18:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/affinity/hwloc_affinity.c: more cache options, from Romain
+	  Dolbeau
+
+2011-03-09 18:10  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_affinity.h, src/affinity/hwloc_affinity.c,
+	  src/affinity/lgrp_affinity.c, src/affinity/libnumaV2_affinity.c,
+	  src/affinity/libnuma_affinity.c, src/affinity/mach_affinity.c,
+	  src/affinity/no_affinity.c, src/affinity/plpa_affinity.c,
+	  src/affinity/tile_affinity.c, src/ds/qpool.c: starting a memory
+	  affinity interface shim
+
+2011-03-08 19:05  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c, src/threadqueues.c: fix a stealing problem where
+	  the pthread_id() changes between qthread_initialize() and
+	  qthread_finalize()
+
+2011-03-04 16:40  Allan Porterfield <akp@renci.org>
+
+	* src/rose_xomp.c: omp_get_dynamic takes and returns a true value
+	  of whether dynamic
+	  thread counts are allowed -- not a specific number
+
+2011-03-01 19:09  Allan Porterfield <akp@renci.org>
+
+	* src/rose_xomp.c: fixes
+	  allow multiple parallel loops within a single parallel region
+	  clean up after loop (double barrier for now - should
+	  be within barrier)
+	  fix static scheduling -- allow late joins even after first
+	  thread completes its allocation
+	  
+
+2011-02-28 22:33  Allan Porterfield <akp@renci.org>
+
+	* include/qthread/qthread.h, src/qloop.c, src/qthread.c,
+	  src/rose_xomp.c: (qthread.h) add function declaration to allow a
+	  thred making itself unstealable
+	  (rose_xomp.c) set the original function as unstealable to allow
+	  parallel
+	  region cleanup
+	  add code to track departed workers -- to figure out when loops
+	  can be
+	  cleaned up
+	  (qthread.c) add function to set thread as unstealable
+	  try again on parallel region cleanup
+	  (qloop.c) add function to wait for completion and clean up linked
+	  list of loops
+
+2011-02-25 22:33  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: completely ignoring the return value is an
+	  unacceptable solution to the problems that crop up when you don't
+	  match the defined thread prototype
+
+2011-02-25 22:24  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/syncvar.hpp: add assertion
+
+2011-02-25 22:19  Allan Porterfield <akp@renci.org>
+
+	* src/qthread.c: Rose generated fuctions have void return values.
+	  Writing the return value to
+	  a syncvar occasionally finds a negative value -- this causes
+	  problems
+	  change to write a 1 after the function completes
+
+2011-02-25 15:51  Allan Porterfield <akp@renci.org>
+
+	* src/qt_barrier.c, src/qthread.c: (qthread.c) remove debugging
+	  (qt_barrier.c) fix uplocking -- don't try to overstep array on
+	  way down
+	  - It has never been emptied
+
+2011-02-25 14:01  Allan Porterfield <akp@renci.org>
+
+	* src/qt_barrier.c, src/qthread.c: Work on log barrier routine
+	  (using syncvar_t under the covers)
+	  turn off clean up in parallel region termination -- may have
+	  active loops still
+	  fix soon
+	  (qthread.c) turn off clean up in parallel region termination
+	  (qt_barrier.c)use smaller hammer (qthread_syncvar_writeEF instead
+	  of
+	  qthread_syncvar_fill) gives me better assurance that everything
+	  is in
+	  sync
+
+2011-02-24 18:36  Allan Porterfield <akp@renci.org>
+
+	* src/qt_barrier.c: fix some typos in switch to FEB's within log
+	  barrier -- need better
+	  testing strategy
+
+2011-02-23 22:06  Allan Porterfield <akp@renci.org>
+
+	* include/qloop_innards.h, include/qthread/qthread.h, src/qloop.c,
+	  src/qthread.c, src/rose_xomp.c: work on nested loop termination
+	  -- you can't delete the loop if anyone
+	  may at sometime in the future look at it. Save until parellel
+	  region
+	  termination and then delete all outstanding loops (we know they
+	  are done)
+	  (qthread.h) add list of loops (generic to ease include problems)
+	  (qloop_innards.h) give loops next ponter so we can build linked
+	  lists
+	  (rose_xomp.c) remove loop deleting in middle of loop_end
+	  remove code to reuse loops
+	  add call to qt_omp_parallel_region_destroy()
+	  (qthread.c) add qt_omp_parallel_region_destroy to clean up
+	  parallel region
+	  link parallel regions so we can back up during deletin
+	  (qloop.c) add hook to link loops together
+
+2011-02-23 20:21  Allan Porterfield <akp@renci.org>
+
+	* src/qt_barrier.c: change log barrier to use syncvars so that when
+	  long stalls occur we can
+	  leave barrier and do other work. This was not previously possible
+	  before the
+	  thread numbering was changed, since it possible for the same
+	  hardware worker/
+	  shepherd to hit a barrier more than once. With id's embedded in
+	  the thread
+	  this is not possible.
+
+2011-02-22 22:38  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: avoid warning
+
+2011-02-22 22:37  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: preserve mt_sheps and rose extensions through
+	  distcheck
+
+2011-02-22 22:37  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/rose_xomp.c: dont use linux-specific apis
+
+2011-02-22 22:29  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/Makefile.am: include omp_defines.h in dist
+	  tarballs
+
+2011-02-22 19:50  Allan Porterfield <akp@renci.org>
+
+	* configure.in, include/qt_barrier.h, include/qthread/qthread.h,
+	  src/qthread.c: Really implement code to allow configuration
+	  depended decision on the type of
+	  barrier to use
+	  (qt_barrier.h) Change call type to avoid multiple include
+	  problems
+	  (qthread.h) make barrier type #ifdef dependent
+	  and return type of qt_thread_barrier call
+	  (configure.in) add QTHREAD_LOG_BARRIER
+	  (qthread.c) initialize the barrier the correct way depending on
+	  type
+
+2011-02-22 19:46  Allan Porterfield <akp@renci.org>
+
+	* src/rose_xomp.c: Adding code to limit mallocs of loop structures
+	  inside of loops --
+	  reuse previous loop
+	  start using QTHREAD_LOG_BARRIER to decide which barrier type to
+	  use
+
+2011-02-18 19:17  Allan Porterfield <akp@renci.org>
+
+	* include/qloop_innards.h, src/qloop.c, src/rose_xomp.c:
+	  (qloop_innards.h) add start so that static scheduling can use as
+	  base
+	  for iteration distribution
+	  (rose_xomp.h) fix static iteration distribution (loop count
+	  correct
+	  off of correct base) -- may still need work for
+	  negative increments
+	  (qloop.c) initial start field
+
+2011-02-17 20:20  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/Makefile.am: qt_affinity.h
+
+2011-02-17 18:58  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/osx_compat/taskimpl.h,
+	  include/osx_compat/tile-ucontext.h: fix compiling on the tilera
+
+2011-02-17 16:56  Allan Porterfield <akp@renci.org>
+
+	* src/qthread.c, src/rose_xomp.c: minor fixes
+	  
+	  (rose_xomp.c) close race condition starting omp for loop
+	  allow late thread to progress without executing any iterations
+	  add double barrier so that we can clean up and release the loop
+	  after the completion of all iterations
+	  (qthread.c) set the barrier size in a parallel region to the
+	  number
+	  of workers (if MTS) rather than the number of shepherds
+
+2011-02-17 15:19  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* AUTHORS, ChangeLog, NEWS, TODO: preparing to release 1.5
+
+2011-02-16 19:34  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/ds/qpool.c: fix behavior with multithreaded shepherds
+
 2011-02-15 20:09  Allan Porterfield <akp@renci.org>
 
 	* src/rose_xomp.c: (rose_somp.c) close race condition in loop
