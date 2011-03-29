@@ -1,5 +1,5 @@
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 #include "qthread/qthread.h"
 #include "qthread/futurelib.h"
@@ -13,7 +13,7 @@
 
 /* GLOBAL DATA (copy everywhere) */
 pthread_key_t future_bookkeeping;
-location_t *future_bookkeeping_array = NULL;
+location_t   *future_bookkeeping_array = NULL;
 
 static qthread_shepherd_id_t shep_for_new_futures = 0;
 static QTHREAD_FASTLOCK_TYPE sfnf_lock;
@@ -26,50 +26,51 @@ static QTHREAD_FASTLOCK_TYPE sfnf_lock;
  * shepherd. */
 static location_t *ft_loc(void)
 {
-    return qthread_isfuture() ? (location_t *)
-	pthread_getspecific(future_bookkeeping) : NULL;
+    return qthread_isfuture() ? (location_t *)pthread_getspecific(future_bookkeeping) : NULL;
 }
 
 #ifdef CLEANUP
 /* this requires that qthreads haven't been finalized yet */
-static aligned_t future_shep_cleanup(qthread_t * me, void *arg)
+static aligned_t future_shep_cleanup(qthread_t *me,
+                                     void      *arg)
 {
-    location_t *ptr = (location_t *) pthread_getspecific(future_bookkeeping);
+    location_t *ptr = (location_t *)pthread_getspecific(future_bookkeeping);
 
     if (ptr != NULL) {
-	qassert(pthread_setspecific(future_bookkeeping, NULL), 0);
-	qassert(pthread_mutex_destroy(&(ptr->vp_count_lock), 0));
-	free(ptr);
+        qassert(pthread_setspecific(future_bookkeeping, NULL), 0);
+        qassert(pthread_mutex_destroy(&(ptr->vp_count_lock), 0));
+        free(ptr);
     }
 }
 
 static void future_cleanup(void)
 {
-    int i;
+    int        i;
     aligned_t *rets;
 
-    rets = (aligned_t *) calloc(qlib->nshepherds, sizeof(aligned_t));
+    rets = (aligned_t *)calloc(qlib->nshepherds, sizeof(aligned_t));
     for (i = 0; i < qlib->nshepherds; i++) {
-	qthread_fork_to(future_shep_cleanup, NULL, rets + i, i);
+        qthread_fork_to(future_shep_cleanup, NULL, rets + i, i);
     }
     for (i = 0; i < qlib->nshepherds; i++) {
-	qthread_readFF(NULL, rets + i);
+        qthread_readFF(NULL, rets + i);
     }
     free(rets);
     QTHREAD_FASTLOCK_DESTROY(sfnf_lock);
     qassert(pthread_key_delete(&future_bookkeeping), 0);
 }
-#endif
+
+#endif /* ifdef CLEANUP */
 
 /* this function is used as a qthread; it is run by each shepherd so that each
  * shepherd will get some thread-local data associated with it. This works
  * better in the case of big machines (like massive SMP's) with intelligent
  * pthreads implementations than on PIM, but that's mostly because PIM's libc
  * doesn't support PIM-local data (yet). Better PIM support is coming. */
-static aligned_t future_shep_init(void * Q_UNUSED arg)
+static aligned_t future_shep_init(void *Q_UNUSED arg)
 {
     qthread_shepherd_id_t shep = qthread_shep();
-    location_t *ptr = &(future_bookkeeping_array[shep]);
+    location_t           *ptr  = &(future_bookkeeping_array[shep]);
 
     // vp_count is *always* locked. This establishes the waiting queue.
     qthread_lock(&(ptr->vp_count));
@@ -81,23 +82,21 @@ static aligned_t future_shep_init(void * Q_UNUSED arg)
 void future_init(int vp_per_loc)
 {
     qthread_shepherd_id_t i;
-    aligned_t *rets;
+    aligned_t            *rets;
 
     QTHREAD_FASTLOCK_INIT(sfnf_lock);
     qassert(pthread_key_create(&future_bookkeeping, NULL), 0);
-    future_bookkeeping_array =
-	(location_t *) calloc(qlib->nshepherds, sizeof(location_t));
-    rets = (aligned_t *) calloc(qlib->nshepherds, sizeof(aligned_t));
+    future_bookkeeping_array = (location_t *)calloc(qlib->nshepherds, sizeof(location_t));
+    rets                     = (aligned_t *)calloc(qlib->nshepherds, sizeof(aligned_t));
     for (i = 0; i < qlib->nshepherds; i++) {
-	future_bookkeeping_array[i].vp_count = 0;
-	future_bookkeeping_array[i].vp_max = vp_per_loc;
-	future_bookkeeping_array[i].id = i;
-	qassert(pthread_mutex_init
-		(&(future_bookkeeping_array[i].vp_count_lock), NULL), 0);
-	qthread_fork_to(future_shep_init, NULL, rets + i, i);
+        future_bookkeeping_array[i].vp_count = 0;
+        future_bookkeeping_array[i].vp_max   = vp_per_loc;
+        future_bookkeeping_array[i].id       = i;
+        qassert(pthread_mutex_init(&(future_bookkeeping_array[i].vp_count_lock), NULL), 0);
+        qthread_fork_to(future_shep_init, NULL, rets + i, i);
     }
     for (i = 0; i < qlib->nshepherds; i++) {
-	qthread_readFF(NULL, rets + i);
+        qthread_readFF(NULL, rets + i);
     }
     free(rets);
 #ifdef CLEANUP
@@ -111,24 +110,19 @@ void future_init(int vp_per_loc)
  * 2. if there is no available slot, it adds itself to the waiter
  *    queue to get one.
  */
-void blocking_vp_incr(location_t * loc)
+void blocking_vp_incr(location_t *loc)
 {
     qassert(pthread_mutex_lock(&(loc->vp_count_lock)), 0);
-    qthread_debug(ALL_DETAILS,
-		  "thread %i attempting a blocking increment on loc %d vps %d\n",
-		  (int)qthread_id(), loc->id, loc->vp_count);
+    qthread_debug(ALL_DETAILS, "thread %i attempting a blocking increment on loc %d vps %d\n", (int)qthread_id(), loc->id, loc->vp_count);
 
     while (loc->vp_count >= loc->vp_max) {
-	qassert(pthread_mutex_unlock(&(loc->vp_count_lock)), 0);
-	qthread_debug(ALL_DETAILS,
-		      "Thread %i found too many futures in %d; waiting for vp_count\n",
-		      (int)qthread_id(), loc->id);
-	qthread_lock(&(loc->vp_count));
-	qassert(pthread_mutex_lock(&(loc->vp_count_lock)), 0);
+        qassert(pthread_mutex_unlock(&(loc->vp_count_lock)), 0);
+        qthread_debug(ALL_DETAILS, "Thread %i found too many futures in %d; waiting for vp_count\n", (int)qthread_id(), loc->id);
+        qthread_lock(&(loc->vp_count));
+        qassert(pthread_mutex_lock(&(loc->vp_count_lock)), 0);
     }
     loc->vp_count++;
-    qthread_debug(ALL_DETAILS, "Thread %i incr loc %d to %d vps\n", (int)qthread_id(), loc->id,
-		  loc->vp_count);
+    qthread_debug(ALL_DETAILS, "Thread %i incr loc %d to %d vps\n", (int)qthread_id(), loc->id, loc->vp_count);
     qassert(pthread_mutex_unlock(&(loc->vp_count_lock)), 0);
 }
 
@@ -139,48 +133,51 @@ void blocking_vp_incr(location_t * loc)
  * 2. Check the # of futures on the destination
  * 3. If there are too many futures there, wait
  */
-void future_fork(qthread_f fptr, void *arg, aligned_t * retval)
+void future_fork(qthread_f  fptr,
+                 void      *arg,
+                 aligned_t *retval)
 {
     qthread_shepherd_id_t rr;
-    location_t *ptr;
+    location_t           *ptr;
 
     assert(future_bookkeeping_array != NULL);
     if (future_bookkeeping_array == NULL) {
-	/* futures weren't initialized properly... */
-	qthread_fork(fptr, arg, retval);
-	return;
+        /* futures weren't initialized properly... */
+        qthread_fork(fptr, arg, retval);
+        return;
     }
 
-    ptr = (location_t *) pthread_getspecific(future_bookkeeping);
+    ptr = (location_t *)pthread_getspecific(future_bookkeeping);
 
     qthread_debug(THREAD_BEHAVIOR, "Thread %i forking a future\n", (int)qthread_id());
     assert(future_bookkeeping_array != NULL);
     /* step 1: future out where to go (fast) */
     /* XXX: should merge with qthread.c to use qthread_internal_incr_mod */
     if (ptr) {
-	rr = ptr->sched_shep++;
-	ptr->sched_shep *= (ptr->sched_shep < qlib->nshepherds);
+        rr               = ptr->sched_shep++;
+        ptr->sched_shep *= (ptr->sched_shep < qlib->nshepherds);
     } else {
-	QTHREAD_FASTLOCK_LOCK(&sfnf_lock);
-	rr = shep_for_new_futures++;
-	shep_for_new_futures *= (shep_for_new_futures < qlib->nshepherds);
-	QTHREAD_FASTLOCK_UNLOCK(&sfnf_lock);
+        QTHREAD_FASTLOCK_LOCK(&sfnf_lock);
+        rr                    = shep_for_new_futures++;
+        shep_for_new_futures *= (shep_for_new_futures < qlib->nshepherds);
+        QTHREAD_FASTLOCK_UNLOCK(&sfnf_lock);
     }
-    qthread_debug(THREAD_DETAILS, "Thread %i decided future will go to %i\n", (int)qthread_id(),
-		  rr);
+    qthread_debug(THREAD_DETAILS, "Thread %i decided future will go to %i\n", (int)qthread_id(), rr);
     /* steps 2&3 (slow) */
     blocking_vp_incr(&(future_bookkeeping_array[rr]));
     qthread_fork_future_to(fptr, arg, retval, rr);
 }
 
-void future_fork_to(qthread_f fptr, void *arg, aligned_t * retval,
-		    qthread_shepherd_id_t shep)
+void future_fork_to(qthread_f             fptr,
+                    void                 *arg,
+                    aligned_t            *retval,
+                    qthread_shepherd_id_t shep)
 {
     assert(future_bookkeeping_array != NULL);
     if (future_bookkeeping_array == NULL) {
-	/* futures weren't initialized properly... */
-	qthread_fork_to(fptr, arg, retval, shep);
-	return;
+        /* futures weren't initialized properly... */
+        qthread_fork_to(fptr, arg, retval, shep);
+        return;
     }
 
     qthread_debug(THREAD_BEHAVIOR, "Thread %i forking a future\n", (int)qthread_id());
@@ -189,18 +186,19 @@ void future_fork_to(qthread_f fptr, void *arg, aligned_t * retval,
     qthread_fork_future_to(fptr, arg, retval, shep);
 }
 
-void future_fork_syncvar_to(qthread_f fptr, void *arg, syncvar_t * retval,
-			    qthread_shepherd_id_t shep)
+void future_fork_syncvar_to(qthread_f             fptr,
+                            void                 *arg,
+                            syncvar_t            *retval,
+                            qthread_shepherd_id_t shep)
 {
     assert(future_bookkeeping_array != NULL);
     if (future_bookkeeping_array == NULL) {
-	/* futures weren't initialized properly... */
-	qthread_fork_syncvar_to(fptr, arg, retval, shep);
-	return;
+        /* futures weren't initialized properly... */
+        qthread_fork_syncvar_to(fptr, arg, retval, shep);
+        return;
     }
 
-    qthread_debug(THREAD_BEHAVIOR, "Thread %i forking a future\n",
-		  (int)qthread_id());
+    qthread_debug(THREAD_BEHAVIOR, "Thread %i forking a future\n", (int)qthread_id());
     /* steps 2&3 (slow) */
     blocking_vp_incr(&(future_bookkeeping_array[shep]));
     qthread_fork_syncvar_future_to(fptr, arg, retval, shep);
@@ -214,20 +212,19 @@ int future_yield(void)
     assert(future_bookkeeping_array != NULL);
     loc = ft_loc();
     qthread_debug(THREAD_BEHAVIOR, "Thread %i yield on loc %p\n", (int)qthread_id(), (void *)loc);
-    //Non-futures do not have a vproc to yield
+    // Non-futures do not have a vproc to yield
     if (loc != NULL) {
-	int unlockit = 0;
+        int unlockit = 0;
 
-	//yield vproc
-	qthread_debug(THREAD_DETAILS, "Thread %i yield loc %d vps %d\n", (int)qthread_id(),
-		      loc->id, loc->vp_count);
-	qassert(pthread_mutex_lock(&(loc->vp_count_lock)), 0);
-	unlockit = (loc->vp_count-- == loc->vp_max);
-	qassert(pthread_mutex_unlock(&(loc->vp_count_lock)), 0);
-	if (unlockit) {
-	    qthread_unlock(&(loc->vp_count));
-	}
-	return 1;
+        // yield vproc
+        qthread_debug(THREAD_DETAILS, "Thread %i yield loc %d vps %d\n", (int)qthread_id(), loc->id, loc->vp_count);
+        qassert(pthread_mutex_lock(&(loc->vp_count_lock)), 0);
+        unlockit = (loc->vp_count-- == loc->vp_max);
+        qassert(pthread_mutex_unlock(&(loc->vp_count_lock)), 0);
+        if (unlockit) {
+            qthread_unlock(&(loc->vp_count));
+        }
+        return 1;
     }
     return 0;
 }
@@ -242,16 +239,16 @@ void future_acquire(void)
     assert(future_bookkeeping_array != NULL);
     loc = ft_loc();
     qthread_debug(THREAD_BEHAVIOR, "Thread %i acquire on loc %p\n", (int)qthread_id(),
-		  (void *)loc);
-    //Non-futures need not acquire a v proc
+                  (void *)loc);
+    // Non-futures need not acquire a v proc
     if (loc != NULL) {
-	blocking_vp_incr(loc);
+        blocking_vp_incr(loc);
     }
 }
 
 /* this is pretty obvious: wait for a thread to finish (ft is supposed
  * to be a thread/future's return value. */
-static void future_join(aligned_t * ft)
+static void future_join(aligned_t *ft)
 {
     assert(future_bookkeeping_array != NULL);
     qthread_debug(THREAD_BEHAVIOR, "Thread %i join to future %p\n", (int)qthread_id(), (void *)ft);
@@ -263,22 +260,22 @@ static void future_join(aligned_t * ft)
 void future_exit(void)
 {
     assert(future_bookkeeping_array != NULL);
-    qthread_debug(THREAD_BEHAVIOR, "Thread %i exit on loc %d\n", (int)qthread_id(),
-		  qthread_shep());
+    qthread_debug(THREAD_BEHAVIOR, "Thread %i exit on loc %d\n", (int)qthread_id(), qthread_shep());
     future_yield();
     qthread_assertnotfuture();
 }
 
 /* a more fun version of future_join */
-void future_join_all(aligned_t * fta, int ftc)
+void future_join_all(aligned_t *fta,
+                     int        ftc)
 {
     int i;
 
     assert(future_bookkeeping_array != NULL);
     assert(fta != NULL);
     assert(ftc > 0);
-    qthread_debug(THREAD_BEHAVIOR, "Qthread %i join all to %d futures\n", (int)qthread_id(),
-		  ftc);
-    for (i = 0; i < ftc; i++)
-	future_join(fta + i);
+    qthread_debug(THREAD_BEHAVIOR, "Qthread %i join all to %d futures\n", (int)qthread_id(), ftc);
+    for (i = 0; i < ftc; i++) future_join(fta + i);
 }
+
+/* vim:set expandtab: */
