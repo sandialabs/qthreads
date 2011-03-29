@@ -128,7 +128,7 @@ void qt_global_barrier_init(int size,
     }
 }
 
-void qt_global_barrier_destroy()
+void qt_global_barrier_destroy(void)
 {
     if (global_barrier) {
         qt_feb_barrier_destroy(global_barrier);
