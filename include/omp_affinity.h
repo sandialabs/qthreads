@@ -1,6 +1,8 @@
 #ifndef OMP_AFFINITY_H
 #define OMP_AFFINITY_H
 
+#include <stddef.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -12,8 +14,14 @@ void qthread_disable_stealing (
 void qthread_enable_stealing (
     unsigned int stealing_mode);
 
-void qthread_child_task_affinity (
+void omp_child_task_affinity (
     unsigned int shep);
+
+void * omp_affinity_alloc(size_t bytes);
+void * omp_affinity_alloc_onshep(size_t bytes, unsigned int shep);
+void omp_affinity_mem_toshep(void * addr, size_t bytes, unsigned int shep);
+void omp_affinity_free(void * ptr, size_t bytes);
+
 #endif
 
 #ifdef __cplusplus
