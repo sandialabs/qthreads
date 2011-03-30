@@ -64,7 +64,10 @@ struct qthread_s
 
     /* the shepherd we'd rather run on */
     qthread_shepherd_t *target_shepherd;
-
+#ifdef QTHREAD_OMP_AFFINITY
+    /* affinity for children created by this task */
+    qthread_shepherd_id_t child_affinity;
+#endif
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     /* parallel region barrier this thread should use */
     qthread_parallel_region_t * currentParallelRegion;

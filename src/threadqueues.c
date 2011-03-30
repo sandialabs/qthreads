@@ -615,6 +615,15 @@ static QINLINE void qthread_steal(void)
 #ifdef STEAL_PROFILE		       // should give mechanism to make steal profiling optional
     qthread_incr(&thief_shepherd->steal_called, 1);
 #endif
+#ifdef QTHREAD_OMP_AFFINITY
+    if (thief_shepherd->stealing_mode == QTHREAD_STEAL_ON_ALL_IDLE)
+    {
+       for (i = 0; i < qlib->nworkerspershep; i++)
+          if (thief_shepherd->workers[i].current != NULL)
+             return;
+       thief_shepherd->stealing_mode = QTHREAD_STEAL_ON_ANY_IDLE;
+    }
+#endif
     if (thief_shepherd->stealing) {
 	return;
     } else {

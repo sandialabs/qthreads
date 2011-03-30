@@ -494,11 +494,18 @@ AS_IF([test "x$enable_multithreaded_shepherds" == xyes],
 	  [enable_multithreaded_shepherds="no"])
 
 AC_ARG_ENABLE([steal_profile],
-			  [AS_HELP_STRING([--enable-steal-profile],
-							  [Enable profiling of steal includes printing to stderr at program conclusion.])])
+                          [AS_HELP_STRING([--enable-steal-profile],
+                                                          [Enable profiling of steal includes printing to stderr at program conclusion.])])
 AS_IF([test "x$enable_steal_profile" == xyes],
-	  [AC_DEFINE([STEAL_PROFILE], [1], [Support dynamic profile of steal infomation])],
-	  [enable_steal_profile="no"])
+          [AC_DEFINE([STEAL_PROFILE], [1], [Support dynamic profile of steal infomation])],
+          [enable_steal_profile="no"])
+
+AC_ARG_ENABLE([omp_affinity],
+			  [AS_HELP_STRING([--enable-omp-affinity],
+							  [Enable experimental OpenMP affinity extensions. Under development])])
+AS_IF([test "x$enable_omp_affinity" == xyes],
+	  [AC_DEFINE([QTHREAD_OMP_AFFINITY], [1], [Enable experimental OpenMP affinity extensions. Under development])],
+	  [enable_omp_affinity="no"])
 
 
 AC_ARG_ENABLE([hardware-timer],

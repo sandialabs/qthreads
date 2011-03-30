@@ -23,11 +23,16 @@
 #include "qt_arrive_first.h"           // for qt_global_arrive_first
 #include "qthread/qloop.h"	       // for qt_loop_f
 #include "qthread_innards.h"	       // for qthread_debug()
+#include "qt_shepherd_innards.h"       // for qthread_shepherd_t
 #include "qloop_innards.h"	       // for qqloop_handle_t
+#include "qt_qthread_struct.h"	       // for qthread_t
 #include "qt_touch.h"		       // for qthread_run_needed_task()
 #include <qthread/qthread.h>           // for syncvar_t
 #include <qthread/feb_barrier.h>
 #include <qthread/omp_defines.h>       // Wrappered OMP functions from omp.h
+#ifdef QTHREAD_OMP_AFFINITY
+#include <omp_affinity.h>	       // Headers for OMP affinity functions
+#endif
 
 #include <rose_xomp.h>
 
@@ -680,7 +685,12 @@ void XOMP_task(
   qthread_debug(LOCK_DETAILS, "me(%p) creating task for shepherd %d\n", me, id%qthread_num_shepherds());
 #endif
   syncvar_t *ret = getSyncTaskVar(); // get new syncvar_t -- setup openmpThreadId (if needed)
+#ifdef QTHREAD_OMP_AFFINITY
+  qthread_t *t = qthread_internal_self();
+  qthread_fork_syncvar_copyargs_to((qthread_f)func, arg, arg_size, ret, t->child_affinity);
+#else
   qthread_fork_syncvar_copyargs((qthread_f)func, arg, arg_size, ret);
+#endif
 }
 
 void XOMP_taskwait(
@@ -1299,3 +1309,35 @@ double omp_get_wtick (
 {
   return XOMP_get_wtick(&xomp_status);
 }
+
+#ifdef QTHREAD_OMP_AFFINITY
+// Additional Functions for Scheduling and Locality Control
+
+void qthread_disable_stealing (
+    void)
+{
+  int i;
+
+  for (i = 0; i < qthread_num_shepherds(); i++)
+     qlib->shepherds[i].stealing = 1;
+}
+
+void qthread_enable_stealing (
+    unsigned int stealing_mode)
+{
+  int i;
+
+  for (i = 0; i < qthread_num_shepherds(); i++)
+  {
+     qlib->shepherds[i].stealing = 0;
+     qlib->shepherds[i].stealing_mode = stealing_mode;
+  }
+}
+
+void qthread_child_task_affinity (
+    unsigned int shep)
+{
+  qthread_t *t = qthread_internal_self();   
+  t->child_affinity = (qthread_shepherd_id_t) shep;
+}  
+#endif

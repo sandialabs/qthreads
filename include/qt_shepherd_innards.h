@@ -28,6 +28,13 @@ struct qthread_worker_s
     volatile size_t active;
 };
 typedef struct qthread_worker_s qthread_worker_t;
+
+#ifdef QTHREAD_OMP_AFFINITY
+// Stealing modes
+#define QTHREAD_STEAL_ON_ANY_IDLE 0
+#define QTHREAD_STEAL_ON_ALL_IDLE 1
+#endif
+
 #endif
 
 /* The Shepherd Struct */
@@ -60,7 +67,10 @@ struct qthread_shepherd_s
     unsigned int *shep_dists;
     qthread_shepherd_id_t *sorted_sheplist;
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    unsigned int stealing;  /* True when a worker is in the steal (attempt) process */
+    unsigned int stealing;  /* True when a worker is in the steal (attempt) process OR if stealing disabled*/
+#ifdef QTHREAD_OMP_AFFINITY
+    unsigned int stealing_mode;  /* Specifies when a shepherd may steal */
+#endif
 #endif
  #ifdef QTHREAD_USE_ROSE_EXTENSIONS
    qthread_parallel_region_t *currentParallelRegion;
