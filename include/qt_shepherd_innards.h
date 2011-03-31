@@ -8,6 +8,10 @@
 #include "qt_mpool.h"
 #include "qt_atomics.h"
 
+#ifdef QTHREAD_OMP_AFFINITY
+#include "omp_affinity.h"
+#endif
+
 /* pre-declarations */
 typedef struct qt_threadqueue_s qt_threadqueue_t;
 
@@ -28,12 +32,6 @@ struct qthread_worker_s
     volatile size_t active;
 };
 typedef struct qthread_worker_s qthread_worker_t;
-
-#ifdef QTHREAD_OMP_AFFINITY
-// Stealing modes
-#define QTHREAD_STEAL_ON_ANY_IDLE 0
-#define QTHREAD_STEAL_ON_ALL_IDLE 1
-#endif
 
 #endif
 

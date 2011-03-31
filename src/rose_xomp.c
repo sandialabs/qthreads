@@ -687,7 +687,10 @@ void XOMP_task(
   syncvar_t *ret = getSyncTaskVar(); // get new syncvar_t -- setup openmpThreadId (if needed)
 #ifdef QTHREAD_OMP_AFFINITY
   qthread_t *t = qthread_internal_self();
-  qthread_fork_syncvar_copyargs_to((qthread_f)func, arg, arg_size, ret, t->child_affinity);
+  if (t->child_affinity != OMP_NO_CHILD_TASK_AFFINITY)
+    qthread_fork_syncvar_copyargs_to((qthread_f)func, arg, arg_size, ret, t->child_affinity);
+  else
+    qthread_fork_syncvar_copyargs((qthread_f)func, arg, arg_size, ret);
 #else
   qthread_fork_syncvar_copyargs((qthread_f)func, arg, arg_size, ret);
 #endif

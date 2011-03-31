@@ -8,6 +8,13 @@ extern "C" {
 #endif
 
 #ifdef QTHREAD_OMP_AFFINITY
+
+// Stealing modes
+#define QTHREAD_STEAL_ON_ANY_IDLE 0
+#define QTHREAD_STEAL_ON_ALL_IDLE 1
+
+#define OMP_NO_CHILD_TASK_AFFINITY -1
+
 void qthread_disable_stealing (
     void);
 

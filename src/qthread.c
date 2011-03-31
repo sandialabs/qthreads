@@ -60,6 +60,9 @@
 # include "qthread/feb_barrier.h"   /* for barrier in parallel region defination */
 # include "qt_arrive_first.h"
 #endif
+#ifdef QTHREAD_OMP_AFFINITY
+# include "omp_affinity.h"
+#endif
 
 #ifndef QTHREAD_NOALIGNCHECK
 #define QALIGN(d, s) do { \
@@ -1790,6 +1793,9 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
     t->thread_state = QTHREAD_STATE_NEW;
     t->flags = 0;
     t->target_shepherd = NULL;
+#ifdef QTHREAD_OMP_AFFINITY
+    t->child_affinity = OMP_NO_CHILD_TASK_AFFINITY;
+#endif
     t->f = f;
     t->arg = (void *)arg;
     t->ret = ret;
