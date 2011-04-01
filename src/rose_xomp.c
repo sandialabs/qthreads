@@ -1316,7 +1316,20 @@ double omp_get_wtick (
 #ifdef QTHREAD_OMP_AFFINITY
 // Additional Functions for Scheduling and Locality Control
 
+unsigned int qthread_shepherds_available (
+    void)
+{
+   return qthread_num_shepherds();
+}
+
 void qthread_disable_stealing (
+    void)
+{
+  qthread_shepherd_t *shep = qthread_internal_getshep();
+  shep->stealing = 1;
+}
+
+void qthread_disable_stealing_all (
     void)
 {
   int i;
@@ -1325,7 +1338,21 @@ void qthread_disable_stealing (
      qlib->shepherds[i].stealing = 1;
 }
 
+void qthread_disable_stealing_onshep (
+    unsigned int shep)
+{
+  qlib->shepherds[shep].stealing = 1;
+}
+
 void qthread_enable_stealing (
+    unsigned int stealing_mode)
+{
+  qthread_shepherd_t *shep = qthread_internal_getshep();
+  shep->stealing = 0;
+  shep->stealing_mode = stealing_mode;
+}
+
+void qthread_enable_stealing_all (
     unsigned int stealing_mode)
 {
   int i;
@@ -1335,6 +1362,14 @@ void qthread_enable_stealing (
      qlib->shepherds[i].stealing = 0;
      qlib->shepherds[i].stealing_mode = stealing_mode;
   }
+}
+
+void qthread_enable_stealing_on_shep (
+    unsigned int shep,
+    unsigned int stealing_mode)
+{
+  qlib->shepherds[shep].stealing = 0;
+  qlib->shepherds[shep].stealing_mode = stealing_mode;
 }
 
 void omp_child_task_affinity (

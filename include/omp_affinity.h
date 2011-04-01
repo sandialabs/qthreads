@@ -15,10 +15,26 @@ extern "C" {
 
 #define OMP_NO_CHILD_TASK_AFFINITY -1
 
+unsigned int qthread_shepherds_available (
+    void);
+
 void qthread_disable_stealing (
     void);
 
+void qthread_disable_stealing_onshep (
+    unsigned int shep);
+
+void qthread_disable_stealing_all (
+    void);
+
 void qthread_enable_stealing (
+    unsigned int stealing_mode);
+
+void qthread_enable_stealing_on_shep (
+    unsigned int shep,
+    unsigned int stealing_mode);
+
+void qthread_enable_stealing_all (
     unsigned int stealing_mode);
 
 void omp_child_task_affinity (
