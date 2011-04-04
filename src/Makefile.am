@@ -20,6 +20,7 @@ libqthread_la_SOURCES = \
 include qtimer/Makefile.inc
 include ds/Makefile.inc
 include patterns/Makefile.inc
+include rcrtool/Makefile.inc
 
 # version-info fields are:
 # 1. the current interface revision number (i.e. whenever arguments of existing

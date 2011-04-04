@@ -10,11 +10,20 @@ void XOMP_init(
 // Runtime library termination routine
 void XOMP_terminate(
     int exitcode);
+#ifdef QTHREAD_RCRTOOL
+void XOMP_parallel_start(
+    void (*func) (void *),
+    void *data,
+    unsigned ifClause,     /* rose added argument - 4/1/11 AKP */
+    unsigned numThread,
+    const char* funcName);
+#else
 void XOMP_parallel_start(
     void (*func) (void *),
     void *data,
     unsigned ifClause,     /* rose added argument - 4/1/11 AKP */
     unsigned numThread);
+#endif
 void XOMP_parallel_end(
     void);
 qqloop_step_handle_t *qt_loop_rose_queue_create(

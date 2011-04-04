@@ -37,6 +37,10 @@
 
 #include <rose_xomp.h>
 
+#ifdef QTHREAD_RCRTOOL
+#include "rcrtool/qt_rcrtool.h"
+#endif
+
 #if defined(__i386__) || defined(__x86_64__)
 #define USE_RDTSC 1
 #endif
@@ -226,6 +230,11 @@ void XOMP_init(
     char *env;  // Used to get Envionment variables
     qthread_initialize();
 
+#ifdef QTHREAD_RCRTOOL
+    //Log the XOMP initialization and the application name into the RCRTool RAT Table.
+    rcrtool_log(RCR_RATTABLE, XOMP_INIT, 0, 0, argv[0]);
+#endif
+
     XOMP_Status_init(&xomp_status);  // Initialize XOMP_Status
 
     // Process special environment variables
@@ -277,16 +286,30 @@ void XOMP_terminate(
 }
 
 // start a parallel task
+#ifdef QTHREAD_RCRTOOL
+void XOMP_parallel_start(
+    void (*func) (void *),
+    void *data,
+    unsigned ifClause,
+    unsigned numThread,
+    const char* funcName)
+#else
 void XOMP_parallel_start(
     void (*func) (void *),
     void *data,
     unsigned ifClause,
     unsigned numThread)
+#endif
 {
   // allocate block to hold parallel for loop pointer for any loop directly created within this region
   //    --- parallel for loops directly created within other for loops will be handled by passing
   //   this value in as part of the XOMP_loop_*_init function
   qt_omp_parallel_region_create();
+
+#ifdef QTHREAD_RCRTOOL
+    //Here we log entering an open MP section into the RCRTool RAT Table.
+    rcrtool_log(RCR_RATTABLE, XOMP_PARALLEL_START, numThread, (uint64_t) func, funcName);
+#endif
 
   // allocate and set new feb barrier
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -306,6 +329,12 @@ void XOMP_parallel_end(
     void)
 {
   XOMP_taskwait();
+
+#ifdef QTHREAD_RCRTOOL
+    //Here we log leaving an open MP section into the RCRTool RAT Table.
+    rcrtool_log(RCR_RATTABLE, XOMP_PARALLEL_END, -1, 0, 0);
+#endif
+
   qt_omp_parallel_region_destroy();  //  need to free parallel region and all it contains
 
   return;
