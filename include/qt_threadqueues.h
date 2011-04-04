@@ -45,6 +45,9 @@ struct qt_threadqueue_s {
     /* used for the work stealing queue implementation */
     QTHREAD_FASTLOCK_TYPE qlock;
     long qlength;
+    long qlength_stealable; /* number of stealable tasks on queue - stop steal attempts
+			     * that will fail because tasks cannot be moved - 4/1/11 AKP
+			     */ 
 #endif
 };
 

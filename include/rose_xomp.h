@@ -13,6 +13,7 @@ void XOMP_terminate(
 void XOMP_parallel_start(
     void (*func) (void *),
     void *data,
+    unsigned ifClause,     /* rose added argument - 4/1/11 AKP */
     unsigned numThread);
 void XOMP_parallel_end(
     void);
@@ -20,6 +21,8 @@ qqloop_step_handle_t *qt_loop_rose_queue_create(
     int64_t start,
     int64_t stop,
     int64_t incr);
+void XOMP_spin_lock(
+    void * lp);
 void qt_loop_rose_queue_free(
     qqloop_step_handle_t *);
 void XOMP_loop_guided_init(

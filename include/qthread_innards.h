@@ -156,6 +156,7 @@ void qthread_reset_forCount(void);
 int qthread_forCount(int inc);
 taskSyncvar_t * qthread_getTaskRetVar(void);
 void qthread_setTaskRetVar(taskSyncvar_t *v);
+void qt_move_to_orig(void);  /* reschedule this thread on shepherd 0 worker 0 -- for termination 4/1/11 AKP */
 #endif
 #ifdef STEAL_PROFILE
 void qthread_steal_stat(void);

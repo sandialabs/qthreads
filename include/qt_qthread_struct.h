@@ -29,6 +29,7 @@ enum threadstate {
 #define QTHREAD_REAL_MCCOY		(1<<1)
 #define QTHREAD_RET_IS_SYNCVAR          (1<<2)
 #define QTHREAD_UNSTEALABLE		(1<<3)
+#define QTHREAD_MUST_BE_WORKER_ZERO	(1<<4)   /* force thread to shepherd 0 worker 0 for termination 4/1/11 akp */
 
 struct qthread_runtime_data_s
 {

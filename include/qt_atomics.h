@@ -12,7 +12,24 @@
 # endif
 #endif
 
-#if defined(__tile__)
+#if AKP_DEBUG
+
+typedef struct qt_spin_exclusive_s { /* added to allow fast critical section ordering */
+  volatile uint64_t enter;           /* and not call pthreads spin_lock -- hard to debug */
+  volatile uint64_t exit;            /* near the lock under gdb -- 4/1/11 akp */
+} qt_spin_exclusive_t;
+void qt_spin_exclusive_lock(qt_spin_exclusive_t *);
+void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
+
+# define QTHREAD_FASTLOCK_INIT(x)     {(x).enter = 0; (x).exit = 0;}
+# define QTHREAD_FASTLOCK_INIT_PTR(x) {(x)->enter = 0; (x)->exit = 0;}
+# define QTHREAD_FASTLOCK_LOCK(x)     qt_spin_exclusive_lock((x))
+# define QTHREAD_FASTLOCK_UNLOCK(x)   qt_spin_exclusive_unlock((x))
+# define QTHREAD_FASTLOCK_DESTROY(x)
+# define QTHREAD_FASTLOCK_DESTROY_PTR(x)
+# define QTHREAD_FASTLOCK_TYPE        qt_spin_exclusive_t
+# define QTHREAD_FASTLOCK_INITIALIZER 
+#elif defined(__tile__)
 # include <tmc/sync.h>
 # define QTHREAD_FASTLOCK_INIT(x)     tmc_sync_mutex_init(& (x))
 # define QTHREAD_FASTLOCK_INIT_PTR(x) tmc_sync_mutex_init((x))

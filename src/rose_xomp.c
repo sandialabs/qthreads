@@ -30,6 +30,7 @@
 #include <qthread/qthread.h>           // for syncvar_t
 #include <qthread/feb_barrier.h>
 #include <qthread/omp_defines.h>       // Wrappered OMP functions from omp.h
+#include <qt_atomics.h>       // Wrappered OMP functions from omp.h
 #ifdef QTHREAD_OMP_AFFINITY
 #include <omp_affinity.h>	       // Headers for OMP affinity functions
 #endif
@@ -61,6 +62,8 @@ typedef enum xomp_nest_level{NO_NEST=0, ALLOW_NEST, AUTO_NEST}xomp_nest_level_t;
 
 static uint64_t *staticStartCount;
 static volatile int orderedLoopCount = 0;
+QTHREAD_FASTLOCK_TYPE critLock;
+syncvar_t XOMP_critical;
 
 #ifdef USE_RDTSC
 static uint64_t rdtsc(void);
@@ -250,6 +253,10 @@ void XOMP_init(
     int lim_s = qthread_num_shepherds();
     staticStartCount = calloc(lim_s, sizeof(uint64_t));
     
+    qthread_syncvar_fill(&XOMP_critical);
+
+    QTHREAD_FASTLOCK_INIT(critLock);
+
     if (! staticStartCount){
       fprintf(stderr,"XOMP_init build shepherd aux structure malloc failed\n");
     }
@@ -260,6 +267,9 @@ void XOMP_init(
 void XOMP_terminate(
     int exitcode)
 {
+  if (qthread_worker(NULL) !=0) {
+    qt_move_to_orig();  // for termination need to be on the original thread - 4/1/11 AKP
+  }
 #ifdef STEAL_PROFILE
   qthread_steal_stat();  // qthread_finalize called by at_exit handler
 #endif
@@ -270,6 +280,7 @@ void XOMP_terminate(
 void XOMP_parallel_start(
     void (*func) (void *),
     void *data,
+    unsigned ifClause,
     unsigned numThread)
 {
   // allocate block to hold parallel for loop pointer for any loop directly created within this region
@@ -286,7 +297,7 @@ void XOMP_parallel_start(
 
   qt_loop_step_f f = (qt_loop_step_f) func;
   qt_parallel_step(f, parallelWidth, data);
-  
+
   return;
 }
 
@@ -374,7 +385,6 @@ void xomp_internal_loop_init(
 		    int stride,
 		    int chunk_size)
 {
- 
   qthread_parallel_region_t *pr = qt_parallel_region();
 
   qqloop_step_handle_t *t = NULL;
@@ -527,16 +537,36 @@ bool XOMP_loop_guided_next(
   return XOMP_loop_guided_start(loop, -1, -1, -1, -1, returnLower, returnUpper);
 }
 
+volatile aligned_t spinLock = 0;
+volatile aligned_t spinLock_rel = 0;
+
+void XOMP_spin_lock(
+    void * lp)
+{
+  int val = qthread_incr(&spinLock,1);
+  int limit = qthread_num_workers()-1;
+  if (val == limit) spinLock_rel = 1;
+  while (!spinLock_rel){}; // spin until my turn
+
+  if(XOMP_master()) {
+    qthread_parallel_region_t *pr = qt_parallel_region();
+    pr->forLoop = NULL;
+    lp = NULL;
+  }  
+
+  val = qthread_incr(&spinLock,-1);
+  if (val == 1) spinLock_rel = 0;
+  while (spinLock_rel){}; // spin until my turn
+}
+
 // Openmp parallel for loop is completed (waits for all to complete)
 void XOMP_loop_end(
-    void * loop)
+    void * lp)
 {
-  XOMP_loop_end_nowait(loop);
-  XOMP_barrier(); // need barrier to make sure loop is freed after everyone has used it
-  qthread_parallel_region_t *pr = qt_parallel_region();
-  pr->forLoop = NULL;
-  loop = NULL;
-  XOMP_barrier(); // need barrier to make sure loop is freed after everyone has used it
+    qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
+    XOMP_loop_end_nowait(loop);
+
+    XOMP_spin_lock(loop); // need barrier to make sure loop is freed 
 }
 
 // Openmp parallel for loop is completed
@@ -559,6 +589,7 @@ void XOMP_barrier(void)
 #else
     qt_feb_barrier_enter(qt_thread_barrier());
 #endif
+
 }
 void XOMP_atomic_start(
     void)
@@ -1007,21 +1038,16 @@ bool XOMP_loop_ordered_runtime_next(
 
 //--------------end of  loop functions 
 
-aligned_t XOMP_critical = 0;
-
 void XOMP_critical_start(
     void **data)
 {
-    int t = qthread_cas(&XOMP_critical, 0, -1);
-    while( (int64_t)t == -1){
-      t = qthread_cas(&XOMP_critical, -1, -1);
-    }
+  QTHREAD_FASTLOCK_LOCK(&critLock);
 }
 
 void XOMP_critical_end(
     void **data)
 {
-    XOMP_critical = 0;
+  QTHREAD_FASTLOCK_UNLOCK(&critLock);
 }
 
 // really should have a include that defines true and false

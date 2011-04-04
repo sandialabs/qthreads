@@ -16,6 +16,22 @@
 #include "qthread_prefetch.h"
 #include "qt_threadqueues.h"
 
+#if AKP_DEBUG
+/* function added to ease debugging and tuning around queue critical sections - 4/1/11 AKP */
+
+void qt_spin_exclusive_lock(qt_spin_exclusive_t *l)
+{
+    uint64_t val = qthread_incr(&l->enter,1);
+    while (val != l->exit) {} // spin waiting for my turn
+}
+
+void qt_spin_exclusive_unlock(qt_spin_exclusive_t *l)
+{
+    qthread_incr(&l->exit,1); // allow next guy's turn
+}
+/* end of added functions - AKP */
+#endif
+
 /* Memory Management */
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
 # define ALLOC_THREADQUEUE(shep) (qt_threadqueue_t *) calloc(1, sizeof(qt_threadqueue_t))
@@ -378,6 +394,7 @@ qt_threadqueue_t *qt_threadqueue_new(qthread_shepherd_t * shepherd)
 	q->creator_ptr = shepherd;
 	q->head = q->tail = NULL;
 	q->qlength = 0;
+	q->qlength_stealable = 0;
 	QTHREAD_FASTLOCK_INIT(q->qlock);
     }
     return q;
@@ -413,6 +430,7 @@ void qt_threadqueue_enqueue(qt_threadqueue_t * q, qthread_t * t,
     else
 	node->prev->next = node;
     q->qlength++;
+    if (!(t->flags & QTHREAD_UNSTEALABLE)) q->qlength_stealable++;
     QTHREAD_FASTLOCK_UNLOCK(&q->qlock);
 }/*}}}*/
 
@@ -439,6 +457,7 @@ void qt_threadqueue_enqueue_yielded(qt_threadqueue_t * q, qthread_t * t,
     else
 	node->next->prev = node;
     q->qlength++;
+    if (!(t->flags & QTHREAD_UNSTEALABLE)) q->qlength_stealable++;
     QTHREAD_FASTLOCK_UNLOCK(&q->qlock);
 }/*}}}*/
 
@@ -462,16 +481,17 @@ qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q,
 	    else
 		q->tail->next = NULL;
 	    q->qlength--;
+	    if (!(node->value->flags & QTHREAD_UNSTEALABLE)) q->qlength_stealable--;
 	}
 	QTHREAD_FASTLOCK_UNLOCK(&q->qlock);
 
 	if ((node == NULL) && (active)) {
-	    qthread_steal();
+	  qthread_steal();
 	} else {
 	    if (node) {		       // watch out for inactive node not stealling
 		t = node->value;
 		FREE_TQNODE((qt_threadqueue_node_t *) node);
-		if ((t->flags & QTHREAD_REAL_MCCOY)) {
+		if ((t->flags & QTHREAD_MUST_BE_WORKER_ZERO)) { // only needs to be on worker 0 for termination
 		    switch(qthread_worker(NULL)) {
 			case NO_WORKER:
 			    *(int*)0 = 0; // should never happen
@@ -519,6 +539,7 @@ void qt_threadqueue_enqueue_multiple(qt_threadqueue_t * q,
     else
 	first->prev->next = first;
     q->qlength += addCnt;
+    q->qlength_stealable += addCnt;
     QTHREAD_FASTLOCK_UNLOCK(&q->qlock);
 }/*}}}*/
 
@@ -534,7 +555,7 @@ qt_threadqueue_node_t *qt_threadqueue_dequeue_steal(
     assert(q != NULL);
 
     QTHREAD_FASTLOCK_LOCK(&q->qlock);
-    while (q->qlength > 0 && amtStolen < qthread_steal_chunksize()) {
+    while (q->qlength_stealable > 0 && amtStolen < qthread_steal_chunksize()) {
 	node = (qt_threadqueue_node_t *) q->head;
 	while (node != NULL &&
 	       (node->value->thread_state == QTHREAD_STATE_YIELDED ||
@@ -554,6 +575,7 @@ qt_threadqueue_node_t *qt_threadqueue_dequeue_steal(
 		node->next->prev = node->prev;
 
 	    q->qlength--;
+	    q->qlength_stealable--;
 
 	    node->prev = node->next = NULL;
 	    if (first == NULL)
@@ -636,7 +658,7 @@ static QINLINE void qthread_steal(void)
 	victim_shepherd =
 	    &qlib->shepherds[(thief_shepherd->shepherd_id + i) %
 			     qlib->nshepherds];
-	if (0 < victim_shepherd->ready->qlength) {
+	if (0 < victim_shepherd->ready->qlength_stealable) {
 	    first = qt_threadqueue_dequeue_steal(victim_shepherd->ready);
 	    if (first) {
 		qt_threadqueue_enqueue_multiple(thief_shepherd->ready, first,
@@ -651,6 +673,10 @@ static QINLINE void qthread_steal(void)
 		qthread_incr(&thief_shepherd->steal_failed, 1);
 	    }
 #endif
+
+	}
+	if (0 < thief_shepherd->ready->qlength) {  // work at home quit steal attempt
+	  break;
 	}
     }
     thief_shepherd->stealing = 0;

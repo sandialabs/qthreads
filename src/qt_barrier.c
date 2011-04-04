@@ -159,7 +159,7 @@ void qt_barrier_dump(qt_barrier_t * b, enum dumpType dt)
 
 // walk down the barrier -- releases all locks in subtree below myLock
 //    level -- how high in the tree is this node
-int64_t dummy = 0;
+uint64_t dummy = 0;
 static void qtb_internal_down(qt_barrier_t * b, int myLock, int level)
 {				       /*{{{ */
     assert(b->activeSize > 1);

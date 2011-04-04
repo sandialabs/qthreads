@@ -1826,10 +1826,10 @@ static QINLINE void qthread_thread_free(qthread_t * t)
     qthread_debug(ALL_FUNCTIONS, "t(%p): destroying thread id %i\n", t, t->thread_id);
     if (t->rdata != NULL) {
 #ifdef QTHREAD_USE_VALGRIND
-	VALGRIND_STACK_DEREGISTER(t->valgrind_stack_id);
+        VALGRIND_STACK_DEREGISTER(t->valgrind_stack_id);
 #endif
-	qthread_debug(ALL_DETAILS, "t(%p): releasing stack %p to %p\n", t, t->rdata->stack, t->creator_ptr);
-	FREE_STACK(t->creator_ptr, t->rdata->stack);
+        qthread_debug(ALL_DETAILS, "t(%p): releasing stack %p to %p\n", t, t->rdata->stack, t->creator_ptr);
+        FREE_STACK(t->creator_ptr, t->rdata->stack);
     }
     qthread_debug(ALL_DETAILS, "t(%p): releasing thread handle %p\n", t, t);
     FREE_QTHREAD(t);
@@ -2225,7 +2225,7 @@ int qthread_fork_syncvar_copyargs_to(const qthread_f f,
 		  target_shep);
     t->flags |= QTHREAD_RET_IS_SYNCVAR;
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    t->currentParallelRegion = myshep->currentParallelRegion; // saved in shepherd
+    t->currentParallelRegion = qlib->shepherds[0].currentParallelRegion; // saved in shepherd
 #endif
     t->id = preferred_shep;  // used in barrier and arrive_first, NOT the thread-id
                              // may be extraneous in both when parallel region 
@@ -3285,7 +3285,14 @@ int qt_omp_parallel_region_create()
   return 0;
 }  		                       /*}}} */
 
-void * qt_free_loop(void *lp);
+void qt_free_loop(void *lp);
+
+void qt_move_to_orig() {
+   qthread_t *t = qthread_internal_self();
+   t->flags |= QTHREAD_MUST_BE_WORKER_ZERO;
+   qthread_back_to_master(t);
+}
+
 
 void qt_omp_parallel_region_destroy()
 {				       /*{{{ */
