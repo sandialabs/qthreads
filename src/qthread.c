@@ -1260,11 +1260,12 @@ int qthread_initialize(void)
     qt_feb_barrier_internal_init();
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 # ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-   if (rcrtoollevel > 0) {
-      qt_global_barrier_init(qlib->nshepherds * qlib->nworkerspershep - 1, 0);
-   } else {
-      qt_global_barrier_init(qlib->nshepherds*qlib->nworkerspershep, 0);
-   }
+#  ifdef QTHREAD_RCRTOOL
+   if (rcrtoollevel > 0) 
+       qt_global_barrier_init(qlib->nshepherds * qlib->nworkerspershep - 1, 0);
+   else
+#  endif
+   qt_global_barrier_init(qlib->nshepherds*qlib->nworkerspershep, 0);
    qt_global_arrive_first_init(qthread_num_workers()-1, 0);
 # else
    qt_global_barrier_init(nshepherds, 0);
