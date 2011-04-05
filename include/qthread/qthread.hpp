@@ -136,6 +136,14 @@ inline int qthread_readFF(T * const dest, syncvar * const src)
     QTHREAD_CHECKSIZE(T);
     return src->readFF(dest);
 }
+template <typename T>
+inline T qthread_readFF(const T *const src)
+{
+    T tmp;
+    QTHREAD_CHECKSIZE(T);
+    src->readFE(tmp);
+    return tmp;
+}
 
 /**************************************************************************
  * readFE
@@ -152,6 +160,14 @@ inline int qthread_readFE(T * const dest, syncvar * const src)
 {
     QTHREAD_CHECKSIZE(T);
     return src->readFE(dest);
+}
+template <typename T>
+inline T qthread_readFE(const T *const src)
+{
+    T tmp;
+    QTHREAD_CHECKSIZE(T);
+    src->readFE(tmp);
+    return tmp;
 }
 
 /**************************************************************************
