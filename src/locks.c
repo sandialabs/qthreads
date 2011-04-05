@@ -2,7 +2,10 @@
 # include "config.h"
 #endif
 
-#include "qthread.h"
+/* The API */
+#include "qthread/qthread.h"
+
+/* Internal Headers */
 #include "qthread_innards.h"
 #include "qt_blocking_structs.h"
 #include "qt_qthread_struct.h"

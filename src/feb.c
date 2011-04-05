@@ -3,7 +3,7 @@
 #endif
 
 /* The API */
-#include "qthread.h"
+#include "qthread/qthread.h"
 
 /* Internal Headers */
 #include "qthread_innards.h"
