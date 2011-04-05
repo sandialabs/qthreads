@@ -15,20 +15,20 @@
 #if AKP_DEBUG
 
 typedef struct qt_spin_exclusive_s { /* added to allow fast critical section ordering */
-  volatile uint64_t enter;           /* and not call pthreads spin_lock -- hard to debug */
-  volatile uint64_t exit;            /* near the lock under gdb -- 4/1/11 akp */
+    volatile uint64_t enter;         /* and not call pthreads spin_lock -- hard to debug */
+    volatile uint64_t exit;          /* near the lock under gdb -- 4/1/11 akp */
 } qt_spin_exclusive_t;
 void qt_spin_exclusive_lock(qt_spin_exclusive_t *);
 void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
 
-# define QTHREAD_FASTLOCK_INIT(x)     {(x).enter = 0; (x).exit = 0;}
-# define QTHREAD_FASTLOCK_INIT_PTR(x) {(x)->enter = 0; (x)->exit = 0;}
+# define QTHREAD_FASTLOCK_INIT(x)     { (x).enter = 0; (x).exit = 0; }
+# define QTHREAD_FASTLOCK_INIT_PTR(x) { (x)->enter = 0; (x)->exit = 0; }
 # define QTHREAD_FASTLOCK_LOCK(x)     qt_spin_exclusive_lock((x))
 # define QTHREAD_FASTLOCK_UNLOCK(x)   qt_spin_exclusive_unlock((x))
 # define QTHREAD_FASTLOCK_DESTROY(x)
 # define QTHREAD_FASTLOCK_DESTROY_PTR(x)
-# define QTHREAD_FASTLOCK_TYPE        qt_spin_exclusive_t
-# define QTHREAD_FASTLOCK_INITIALIZER 
+# define QTHREAD_FASTLOCK_TYPE qt_spin_exclusive_t
+# define QTHREAD_FASTLOCK_INITIALIZER
 #elif defined(__tile__)
 # include <tmc/sync.h>
 # define QTHREAD_FASTLOCK_INIT(x)     tmc_sync_mutex_init(& (x))
@@ -61,27 +61,31 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
 # define QTHREAD_FASTLOCK_INITIALIZER PTHREAD_MUTEX_INITIALIZER
 #endif /* */
 
-#define QTHREAD_INITLOCK(l) do { if (pthread_mutex_init(l, NULL) != 0) { return QTHREAD_PTHREAD_ERROR; } } while(0)
-#define QTHREAD_LOCK(l) qassert(pthread_mutex_lock(l), 0)
-#define QTHREAD_UNLOCK(l) qassert(pthread_mutex_unlock(l), 0)
+#define QTHREAD_INITLOCK(l)    do { if (pthread_mutex_init(l, NULL) != 0) { return QTHREAD_PTHREAD_ERROR; } } while(0)
+#define QTHREAD_LOCK(l)        qassert(pthread_mutex_lock(l), 0)
+#define QTHREAD_UNLOCK(l)      qassert(pthread_mutex_unlock(l), 0)
 #define QTHREAD_DESTROYLOCK(l) qassert(pthread_mutex_destroy(l), 0)
 #define QTHREAD_DESTROYCOND(l) qassert(pthread_cond_destroy(l), 0)
-#define QTHREAD_SIGNAL(l) qassert(pthread_cond_signal(l), 0)
+#define QTHREAD_SIGNAL(l)      qassert(pthread_cond_signal(l), 0)
 #define QTHREAD_CONDWAIT(c, l) qassert(pthread_cond_wait(c, l), 0)
 
 #ifdef QTHREAD_MUTEX_INCREMENT
 # define QTHREAD_CASLOCK(var)                var; QTHREAD_FASTLOCK_TYPE var ## _caslock
 # define QTHREAD_CASLOCK_EXPLICIT_DECL(name) QTHREAD_FASTLOCK_TYPE name
 # define QTHREAD_CASLOCK_EXPLICIT_INIT(name) QTHREAD_FASTLOCK_INIT(name)
-# define QTHREAD_CASLOCK_INIT(var,i)         var = i; QTHREAD_FASTLOCK_INIT(var ## _caslock)
+# define QTHREAD_CASLOCK_INIT(var, i)        var = i; QTHREAD_FASTLOCK_INIT(var ## _caslock)
 # define QTHREAD_CASLOCK_DESTROY(var)        QTHREAD_FASTLOCK_DESTROY(var ## _caslock)
 # define QTHREAD_CASLOCK_READ(var)           (void *)qt_cas_read_ui((volatile uintptr_t *)& (var), & (var ## _caslock))
 # define QTHREAD_CASLOCK_READ_UI(var)        qt_cas_read_ui((volatile uintptr_t *)& (var), & (var ## _caslock))
-# define QT_CAS(var,oldv,newv)               qt_cas((void *volatile *)& (var), (void *)(oldv), (void *)(newv), & (var ## _caslock))
-# define QT_CAS_(var,oldv,newv,caslock)      qt_cas((void *volatile *)& (var), (void *)(oldv), (void *)(newv), & (caslock))
-static QINLINE void *qt_cas(void *volatile * const ptr, void * const oldv, void * const newv, QTHREAD_FASTLOCK_TYPE *lock)
+# define QT_CAS(var, oldv, newv)             qt_cas((void *volatile *)& (var), (void *)(oldv), (void *)(newv), & (var ## _caslock))
+# define QT_CAS_(var, oldv, newv, caslock)   qt_cas((void *volatile *)& (var), (void *)(oldv), (void *)(newv), & (caslock))
+static QINLINE void *qt_cas(void *volatile *const  ptr,
+                            void *const            oldv,
+                            void *const            newv,
+                            QTHREAD_FASTLOCK_TYPE *lock)
 {
-    void * ret;
+    void *ret;
+
     QTHREAD_FASTLOCK_LOCK(lock);
     ret = *ptr;
     if (*ptr == oldv) {
@@ -91,9 +95,11 @@ static QINLINE void *qt_cas(void *volatile * const ptr, void * const oldv, void 
     return ret;
 }
 
-static QINLINE uintptr_t qt_cas_read_ui(volatile uintptr_t * const ptr, QTHREAD_FASTLOCK_TYPE *mutex)
+static QINLINE uintptr_t qt_cas_read_ui(volatile uintptr_t *const ptr,
+                                        QTHREAD_FASTLOCK_TYPE    *mutex)
 {
     uintptr_t ret;
+
     QTHREAD_FASTLOCK_LOCK(mutex);
     ret = *ptr;
     QTHREAD_FASTLOCK_UNLOCK(mutex);
@@ -101,23 +107,25 @@ static QINLINE uintptr_t qt_cas_read_ui(volatile uintptr_t * const ptr, QTHREAD_
 }
 
 #else /* ifdef QTHREAD_MUTEX_INCREMENT */
-# define QTHREAD_CASLOCK(var)           (var)
+# define QTHREAD_CASLOCK(var) (var)
 # define QTHREAD_CASLOCK_EXPLICIT_DECL(name)
 # define QTHREAD_CASLOCK_EXPLICIT_INIT(name)
-# define QTHREAD_CASLOCK_INIT(var,i)    (var) = i
+# define QTHREAD_CASLOCK_INIT(var, i) (var) = i
 # define QTHREAD_CASLOCK_DESTROY(var)
-# define QTHREAD_CASLOCK_READ(var)      (var)
-# define QTHREAD_CASLOCK_READ_UI(var)   (var)
-# define QT_CAS(var,oldv,newv)          qt_cas((void *volatile *)& (var), (void *)(oldv), (void *)(newv))
-# define QT_CAS_(var,oldv,newv,caslock) qt_cas((void *volatile *)& (var), (void *)(oldv), (void *)(newv))
+# define QTHREAD_CASLOCK_READ(var)         (var)
+# define QTHREAD_CASLOCK_READ_UI(var)      (var)
+# define QT_CAS(var, oldv, newv)           qt_cas((void *volatile *)& (var), (void *)(oldv), (void *)(newv))
+# define QT_CAS_(var, oldv, newv, caslock) qt_cas((void *volatile *)& (var), (void *)(oldv), (void *)(newv))
 # ifdef QTHREAD_ATOMIC_CAS_PTR
-#  define qt_cas(P,O,N)                 (void *)__sync_val_compare_and_swap((P),(O),(N))
+#  define qt_cas(P, O, N) (void *)__sync_val_compare_and_swap((P), (O), (N))
 # else
-static QINLINE void *qt_cas(void *volatile * const ptr, void * const oldv, void * const newv)
-{ /*{{{*/
+static QINLINE void *qt_cas(void *volatile *const ptr,
+                            void *const           oldv,
+                            void *const           newv)
+{   /*{{{*/
 #  if defined(HAVE_GCC_INLINE_ASSEMBLY)
 #   if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-    void * result;
+    void *result;
     __asm__ __volatile__ ("1:\n\t"
                           "lwarx  %0,0,%3\n\t"
                           "cmpw   %0,%1\n\t"
@@ -131,7 +139,7 @@ static QINLINE void *qt_cas(void *volatile * const ptr, void * const oldv, void 
     return result;
 
 #   elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
-    void * result;
+    void *result;
     __asm__ __volatile__ ("1:\n\t"
                           "ldarx  %0,0,%3\n\t"
                           "cmpw   %0,%1\n\t"
@@ -146,30 +154,28 @@ static QINLINE void *qt_cas(void *volatile * const ptr, void * const oldv, void 
 
 #   elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
     void *nv = newv;
-    __asm__ __volatile__
-    ("cas [%1], %2, %0"
-     : "=&r" (nv)
-     : "r" (ptr), "r" (oldv)
+    __asm__ __volatile__ ("cas [%1], %2, %0"
+                          : "=&r" (nv)
+                          : "r" (ptr), "r" (oldv)
 #    if !defined(__SUNPRO_C) && !defined(__SUNPRO_CC)
-     , "0" (nv)
+                          , "0" (nv)
 #    endif
-     : "cc", "memory");
+                          : "cc", "memory");
     return nv;
 
 #   elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
     void *nv = newv;
-    __asm__ __volatile__
-    ("casx [%1], %2, %0"
-     : "=&r" (nv)
-     : "r" (ptr), "r" (oldv)
+    __asm__ __volatile__ ("casx [%1], %2, %0"
+                          : "=&r" (nv)
+                          : "r" (ptr), "r" (oldv)
 #    if !defined(__SUNPRO_C) && !defined(__SUNPRO_CC)
-     , "0" (nv)
+                          , "0" (nv)
 #    endif
-     : "cc", "memory");
+                          : "cc", "memory");
     return nv;
 
 #   elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64)
-    void * * retval;
+    void **retval;
     __asm__ __volatile__ ("mov ar.ccv=%0;;" : : "rO" (oldv));
     __asm__ __volatile__ ("cmpxchg4.acq %0=[%1],%2,ar.ccv"
                           : "=r" (retval)
@@ -178,7 +184,7 @@ static QINLINE void *qt_cas(void *volatile * const ptr, void * const oldv, void 
     return retval;
 
 #   elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
-    void * * retval;
+    void **retval;
 
     /* note that this is GNU/Linux syntax (aka AT&T syntax), not Intel syntax.
      * Thus, this instruction has the form:
@@ -195,13 +201,13 @@ static QINLINE void *qt_cas(void *volatile * const ptr, void * const oldv, void 
                           ::"r" (&retval),
                           "r" (newv), "r" (ptr),
                           "a" (oldv) /* load into RAX */
-                          : "cc","memory");
+                          : "cc", "memory");
 #    else
     __asm__ __volatile__ ("lock; cmpxchg %1,(%2)"
                           : "=a" (retval) /* store from RAX */
                           : "r" (newv), "r" (ptr),
                           "a" (oldv) /* load into RAX */
-                          : "cc","memory");
+                          : "cc", "memory");
 #    endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) && defined(__PGI) */
     return retval;
 
@@ -214,45 +220,46 @@ static QINLINE void *qt_cas(void *volatile * const ptr, void * const oldv, void 
 } /*}}}*/
 
 # endif /* ATOMIC_CAS_PTR */
-#endif /* MUTEX_INCREMENT */
+#endif  /* MUTEX_INCREMENT */
 
 #ifndef QTHREAD_MUTEX_INCREMENT
-# define qthread_internal_atomic_read_s(op,lock) (*op)
-# define qthread_internal_incr(op,lock,val)      qthread_incr(op, val)
-# define qthread_internal_incr_s(op,lock,val)    qthread_incr(op, val)
-# define qthread_internal_decr(op,lock)          qthread_incr(op, -1)
-# define qthread_internal_incr_mod(op,m,lock)    qthread_internal_incr_mod_(op,m)
+# define qthread_internal_atomic_read_s(op, lock) (*op)
+# define qthread_internal_incr(op, lock, val)     qthread_incr(op, val)
+# define qthread_internal_incr_s(op, lock, val)   qthread_incr(op, val)
+# define qthread_internal_decr(op, lock)          qthread_incr(op, -1)
+# define qthread_internal_incr_mod(op, m, lock)   qthread_internal_incr_mod_(op, m)
 # define QTHREAD_OPTIONAL_LOCKARG
 #else
-# define qthread_internal_incr_mod(op,m,lock)    qthread_internal_incr_mod_(op,m,lock)
+# define qthread_internal_incr_mod(op, m, lock) qthread_internal_incr_mod_(op, m, lock)
 # define QTHREAD_OPTIONAL_LOCKARG , QTHREAD_FASTLOCK_TYPE * lock
-static QINLINE aligned_t qthread_internal_incr(volatile aligned_t * operand,
-                                               QTHREAD_FASTLOCK_TYPE * lock,
-                                               int val)
+static QINLINE aligned_t qthread_internal_incr(volatile aligned_t    *operand,
+                                               QTHREAD_FASTLOCK_TYPE *lock,
+                                               int                    val)
 {                                      /*{{{ */
     aligned_t retval;
 
     QTHREAD_FASTLOCK_LOCK(lock);
-    retval = *operand;
+    retval    = *operand;
     *operand += val;
     QTHREAD_FASTLOCK_UNLOCK(lock);
     return retval;
 }                                      /*}}} */
 
-static QINLINE saligned_t qthread_internal_incr_s(volatile saligned_t * operand,
-                                                  QTHREAD_FASTLOCK_TYPE * lock, int val)
+static QINLINE saligned_t qthread_internal_incr_s(volatile saligned_t   *operand,
+                                                  QTHREAD_FASTLOCK_TYPE *lock,
+                                                  int                    val)
 {                                      /*{{{ */
     saligned_t retval;
 
     QTHREAD_FASTLOCK_LOCK(lock);
-    retval = *operand;
+    retval    = *operand;
     *operand += val;
     QTHREAD_FASTLOCK_UNLOCK(lock);
     return retval;
 }                                      /*}}} */
 
-static QINLINE saligned_t qthread_internal_atomic_read_s(volatile saligned_t * operand,
-                                                         QTHREAD_FASTLOCK_TYPE * lock)
+static QINLINE saligned_t qthread_internal_atomic_read_s(volatile saligned_t   *operand,
+                                                         QTHREAD_FASTLOCK_TYPE *lock)
 {                                      /*{{{ */
     saligned_t retval;
 
@@ -264,8 +271,8 @@ static QINLINE saligned_t qthread_internal_atomic_read_s(volatile saligned_t * o
 
 #endif /* ifndef QTHREAD_MUTEX_INCREMENT */
 
-static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t * operand,
-                                                    const int max QTHREAD_OPTIONAL_LOCKARG)
+static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t *operand,
+                                                    const int max       QTHREAD_OPTIONAL_LOCKARG)
 {                                      /*{{{ */
     aligned_t retval;
 
@@ -277,16 +284,16 @@ static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t * operand
     register unsigned int compd = compd;        /* they're just tmp variables */
 
     /* the minus in bne- means "this bne is unlikely to be taken" */
-    asm volatile ("1:\n\t"      /* local label */
-                  "lwarx  %0,0,%3\n\t"  /* load operand */
-                  "addi   %2,%0,1\n\t"  /* increment it into incrd */
-                  "cmplw  7,%2,%4\n\t"  /* compare incrd to the max */
-                  "mfcr   %1\n\t"       /* move the result into compd */
-                  "rlwinm %1,%1,29,1\n\t"       /* isolate the result bit */
-                  "mullw  %2,%2,%1\n\t" /* incrd *= compd */
-                  "stwcx. %2,0,%3\n\t"  /* *operand = incrd */
-                  "bne-   1b\n\t"       /* if it failed, go to label 1 back */
-                  "isync"       /* make sure it wasn't all a dream */
+    asm volatile ("1:\n\t"                /* local label */
+                  "lwarx  %0,0,%3\n\t"    /* load operand */
+                  "addi   %2,%0,1\n\t"    /* increment it into incrd */
+                  "cmplw  7,%2,%4\n\t"    /* compare incrd to the max */
+                  "mfcr   %1\n\t"         /* move the result into compd */
+                  "rlwinm %1,%1,29,1\n\t" /* isolate the result bit */
+                  "mullw  %2,%2,%1\n\t"   /* incrd *= compd */
+                  "stwcx. %2,0,%3\n\t"    /* *operand = incrd */
+                  "bne-   1b\n\t"         /* if it failed, go to label 1 back */
+                  "isync"                 /* make sure it wasn't all a dream */
 
                   /* = means this operand is write-only (previous value is discarded)
                    * & means this operand is an earlyclobber (i.e. cannot use the same register as any of the input operands)
@@ -299,16 +306,16 @@ static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t * operand
     register uint64_t incrd = incrd;
     register uint64_t compd = compd;
 
-    asm volatile ("1:\n\t"      /* local label */
-                  "ldarx  %0,0,%3\n\t"  /* load operand */
-                  "addi   %2,%0,1\n\t"  /* increment it into incrd */
-                  "cmpl   7,1,%2,%4\n\t"        /* compare incrd to the max */
-                  "mfcr   %1\n\t"       /* move the result into compd */
-                  "rlwinm %1,%1,29,1\n\t"       /* isolate the result bit */
-                  "mulld  %2,%2,%1\n\t" /* incrd *= compd */
-                  "stdcx. %2,0,%3\n\t"  /* *operand = incrd */
-                  "bne-   1b\n\t"       /* if it failed, to to label 1 back */
-                  "isync"       /* make sure it wasn't all just a dream */
+    asm volatile ("1:\n\t"                /* local label */
+                  "ldarx  %0,0,%3\n\t"    /* load operand */
+                  "addi   %2,%0,1\n\t"    /* increment it into incrd */
+                  "cmpl   7,1,%2,%4\n\t"  /* compare incrd to the max */
+                  "mfcr   %1\n\t"         /* move the result into compd */
+                  "rlwinm %1,%1,29,1\n\t" /* isolate the result bit */
+                  "mulld  %2,%2,%1\n\t"   /* incrd *= compd */
+                  "stdcx. %2,0,%3\n\t"    /* *operand = incrd */
+                  "bne-   1b\n\t"         /* if it failed, to to label 1 back */
+                  "isync"                 /* make sure it wasn't all just a dream */
                   : "=&b"   (retval), "=&r" (compd), "=&r" (incrd)
                   : "r"     (operand), "r" (max)
                   : "cc", "memory");
@@ -328,8 +335,8 @@ static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t * operand
         * instruction. (See how obviously wrong that is?) For some reason that
         * I haven't been able to figure out, moving the *operand reference
         * inside the loop fixes that problem, even at -O2 optimization. */
-        retval = oldval = *operand;
-        newval = oldval + 1;
+        retval  = oldval = *operand;
+        newval  = oldval + 1;
         newval *= (newval < max);
 
         /* if (*operand == oldval)
@@ -356,8 +363,8 @@ static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t * operand
         * instruction. (See how obviously wrong that is?) For some reason that
         * I haven't been able to figure out, moving the *operand reference
         * inside the loop fixes that problem, even at -O2 optimization. */
-        retval = oldval = *operand;
-        newval = oldval + 1;
+        retval  = oldval = *operand;
+        newval  = oldval + 1;
         newval *= (newval < max);
 
         /* if (*operand == oldval)
@@ -378,8 +385,8 @@ static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t * operand
     int64_t res, old, new;
 
     do {
-        old = *operand;                /* atomic, because operand is aligned */
-        new = old + 1;
+        old  = *operand;               /* atomic, because operand is aligned */
+        new  = old + 1;
         new *= (new < max);
         asm volatile ("mov ar.ccv=%0;;" :        /* no output */
                       : "rO"    (old));
@@ -395,8 +402,8 @@ static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t * operand
     int32_t res, old, new;
 
     do {
-        old = *operand;                /* atomic, because operand is aligned */
-        new = old + 1;
+        old  = *operand;               /* atomic, because operand is aligned */
+        new  = old + 1;
         new *= (new < max);
         asm volatile ("mov ar.ccv=%0;;" :        /* no output */
                       : "rO"    (old));
@@ -415,10 +422,11 @@ static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t * operand
     unsigned int oldval, newval;
 
     do {
-        oldval = *operand;
-        newval = oldval + 1;
+        oldval  = *operand;
+        newval  = oldval + 1;
         newval *= (newval < max);
-        asm volatile ("lock; cmpxchgl %1, (%2)" : "=&a" (retval)
+        asm volatile ("lock; cmpxchgl %1, (%2)"
+                      : "=&a" (retval)
                       : "r"     (newval), "r" (operand), "0" (oldval)
                       : "memory");
     } while (retval != oldval);
@@ -446,11 +454,14 @@ static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t * operand
 #   define QTHREAD_PIC_SUFFIX
 #   define QTHREAD_PIC_REG "b"
 #  endif
-        oldval.i = *operand;
-        newval.i = oldval.i + 1;
+        oldval.i  = *operand;
+        newval.i  = oldval.i + 1;
         newval.i *= (newval.i < max);
-        __asm__ __volatile__ (QTHREAD_PIC_PREFIX "lock; cmpxchg8b (%1)\n\t" "setne %0"   /* test = (ZF==0) */
-QTHREAD_PIC_SUFFIX: "=q" (test)
+        __asm__ __volatile__ (QTHREAD_PIC_PREFIX
+                              "lock; cmpxchg8b (%1)\n\t"
+                              "setne %0" /* test = (ZF==0) */
+                              QTHREAD_PIC_SUFFIX
+                              : "=q" (test)
                               : "r"    (operand), /*EAX*/ "a" (oldval.s.l),
                               /*EDX*/ "d" (oldval.s.h),
                               /*EBX*/ QTHREAD_PIC_REG(newval.s.l),
@@ -463,10 +474,11 @@ QTHREAD_PIC_SUFFIX: "=q" (test)
     unsigned long oldval, newval;
 
     do {
-        oldval = *operand;
-        newval = oldval + 1;
+        oldval  = *operand;
+        newval  = oldval + 1;
         newval *= (newval < max);
-        asm volatile ("lock; cmpxchgq %1, (%2)" : "=a" (retval)
+        asm volatile ("lock; cmpxchgq %1, (%2)"
+                      : "=a" (retval)
                       : "r"     (newval), "r" (operand), "0" (oldval)
                       : "memory");
     } while (retval != oldval);
@@ -477,7 +489,7 @@ QTHREAD_PIC_SUFFIX: "=q" (test)
 
 #elif defined(QTHREAD_MUTEX_INCREMENT)
     QTHREAD_FASTLOCK_LOCK(lock);
-    retval = (*operand)++;
+    retval    = (*operand)++;
     *operand *= (*operand < max);
     QTHREAD_FASTLOCK_UNLOCK(lock);
 
