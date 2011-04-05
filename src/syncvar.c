@@ -398,8 +398,8 @@ int qthread_syncvar_fill(syncvar_t *restrict const addr)
     qthread_debug(LOCK_DETAILS, "me(%p), addr(%p) = %x\n", me, addr,
                   (uintptr_t)addr->u.w);
     if (!me) {
-	qthread_syncvar_blocker_func(addr, NULL, FILL);
-	return QTHREAD_SUCCESS;
+        qthread_syncvar_blocker_func(addr, NULL, FILL);
+        return QTHREAD_SUCCESS;
     }
     ret = qthread_mwaitc(addr, SYNCFEB_ANY, INT_MAX, &e);
     qthread_debug(LOCK_DETAILS, "me(%p), addr(%p) = %x (b)\n", me, addr,
@@ -450,8 +450,8 @@ int qthread_syncvar_empty(syncvar_t *restrict const addr)
     qthread_debug(LOCK_DETAILS, "me(%p), addr(%p) = %x\n", me, addr,
                   (uintptr_t)addr->u.w);
     if (!me) {
-	qthread_syncvar_blocker_func(addr, NULL, EMPTY);
-	return QTHREAD_SUCCESS;
+        qthread_syncvar_blocker_func(addr, NULL, EMPTY);
+        return QTHREAD_SUCCESS;
     }
     ret = qthread_mwaitc(addr, SYNCFEB_ANY, INT_MAX, &e);
     qthread_debug(LOCK_DETAILS, "me(%p), addr(%p) = %x (b)\n", me, addr,
@@ -745,8 +745,8 @@ int qthread_syncvar_writeF(syncvar_t *restrict const      dest,
     qthread_debug(LOCK_BEHAVIOR, "me(%p), dest(%p) = %x, src(%p) = %x\n", me,
                   dest, (unsigned long)dest->u.w, src, *src);
     if (!me) {
-	qthread_syncvar_blocker_func(dest, (void*)src, WRITEF);
-	return QTHREAD_SUCCESS;
+        qthread_syncvar_blocker_func(dest, (void *)src, WRITEF);
+        return QTHREAD_SUCCESS;
     }
     qthread_mwaitc(dest, SYNCFEB_ANY, INT_MAX, &e);
     qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
@@ -915,8 +915,8 @@ uint64_t qthread_syncvar_incrF(syncvar_t *restrict const operand,
     qthread_debug(LOCK_BEHAVIOR, "me(%p), operand(%p), inc(%lu) = %x\n", me,
                   operand, (unsigned long)inc);
     if (!me) {
-	qthread_syncvar_blocker_func(operand, (void*)&inc, INCR);
-	return QTHREAD_SUCCESS;
+        qthread_syncvar_blocker_func(operand, (void *)&inc, INCR);
+        return QTHREAD_SUCCESS;
     }
     qthread_mwaitc(operand, SYNCFEB_ANY, INT_MAX, &e);
     qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
