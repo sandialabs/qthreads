@@ -15,6 +15,8 @@ libqthread_la_SOURCES = \
 	qt_c_hash.c \
 	qt_feb_barrier.c \
 	qutil.c \
+	locks.c \
+	feb.c \
 	syncvar.c
 
 include qtimer/Makefile.inc

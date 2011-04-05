@@ -11,6 +11,8 @@
 # include "osx_compat/taskimpl.h"
 #endif
 
+#include "qt_shepherd_innards.h"
+
 #define ARGCOPY_MAX 1024
 
 enum threadstate {

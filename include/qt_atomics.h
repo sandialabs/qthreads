@@ -61,6 +61,14 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
 # define QTHREAD_FASTLOCK_INITIALIZER PTHREAD_MUTEX_INITIALIZER
 #endif /* */
 
+#define QTHREAD_INITLOCK(l) do { if (pthread_mutex_init(l, NULL) != 0) { return QTHREAD_PTHREAD_ERROR; } } while(0)
+#define QTHREAD_LOCK(l) qassert(pthread_mutex_lock(l), 0)
+#define QTHREAD_UNLOCK(l) qassert(pthread_mutex_unlock(l), 0)
+#define QTHREAD_DESTROYLOCK(l) qassert(pthread_mutex_destroy(l), 0)
+#define QTHREAD_DESTROYCOND(l) qassert(pthread_cond_destroy(l), 0)
+#define QTHREAD_SIGNAL(l) qassert(pthread_cond_signal(l), 0)
+#define QTHREAD_CONDWAIT(c, l) qassert(pthread_cond_wait(c, l), 0)
+
 #ifdef QTHREAD_MUTEX_INCREMENT
 # define QTHREAD_CASLOCK(var)                var; QTHREAD_FASTLOCK_TYPE var ## _caslock
 # define QTHREAD_CASLOCK_EXPLICIT_DECL(name) QTHREAD_FASTLOCK_TYPE name

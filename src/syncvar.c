@@ -11,6 +11,7 @@
 #include "qthread_innards.h"
 #include "qt_profiling.h"
 #include "qt_blocking_structs.h"
+#include "qt_addrstat.h"
 #include "qt_qthread_struct.h"
 #include "qt_threadqueues.h"
 
