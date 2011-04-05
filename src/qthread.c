@@ -356,6 +356,16 @@ static void *qthread_shepherd(void *arg)
     /* Initialize myself */
     pthread_setspecific(shepherd_structs, arg);
 
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    if (!me_worker) {  // }  // if worker 0 init taskWaitLock
+#else
+      if (!me){                // if sheperhd 0 init taskWaitLock
+#endif
+      qthread_syncvar_empty(&qlib->mccoy_thread->rdata->taskWaitLock);
+    }
+#endif
+
     if (qaffinity & (me->node != -1)) {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
         qt_affinity_set(me_worker);
@@ -1008,10 +1018,6 @@ int qthread_initialize(void)
     assert(qlib->mccoy_thread->rdata != NULL);
     qlib->mccoy_thread->rdata->shepherd_ptr = &(qlib->shepherds[0]);
     qlib->mccoy_thread->rdata->stack        = NULL;
-
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    qthread_syncvar_empty(&qlib->mccoy_thread->rdata->taskWaitLock);
-#endif
 
     qthread_debug(ALL_DETAILS, "enqueueing mccoy thread\n");
     qt_threadqueue_enqueue(qlib->shepherds[0].ready, qlib->mccoy_thread, &(qlib->shepherds[0]));
