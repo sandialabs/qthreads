@@ -1,4 +1,4 @@
-.TH future_fork 3 "NOVEMBER 2006" libqthread "libqthread"
+.TH future_fork 3 "APRIL 2011" libqthread "libqthread"
 .SH NAME
 .BR future_fork " \- spawn a qthread as a future"
 .SH SYNOPSIS
@@ -20,16 +20,15 @@ The first argument is a pointer to the qthread creating the future computation.
 This may be a NULL pointer if futures are created by a non-qthread. The second
 argument,
 .IR f ,
-is a function that will be run to completion by the created qthread. (Note that
-.I f
-is a qthread_f and not a qthread_t.) The last argument,
+is a function that will be run to completion by the created qthread. The last
+argument,
 .IR arg ,
 is an argument that will be passed to the specified function.
 .PP
 The qthread_f function must have a prototype like this:
 .RS
 .PP
-void function(qthread_t *me, void *arg);
+void function(void *arg);
 .RE
 .PP
 Threads which are spawned with

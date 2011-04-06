@@ -1,4 +1,4 @@
-.TH qthread_syncvar_readFF 3 "JUNE 2010" libqthread "libqthread"
+.TH qthread_syncvar_readFF 3 "APRIL 2011" libqthread "libqthread"
 .SH NAME
 .B qthread_syncvar_readFF
 \- waits for the syncvar to be full, then copies its data
@@ -8,7 +8,7 @@
 .I int
 .br
 .B qthread_syncvar_readFF
-.RI "(qthread_t *" me ", uint64_t * restrict " dest ", syncvar_t * restrict " src );
+.RI "(uint64_t * restrict " dest ", syncvar_t * restrict " src );
 .SH DESCRIPTION
 This function waits for memory to become full, and then reads it and leaves the
 memory as full. When memory becomes full, all threads waiting for it to become
@@ -33,14 +33,6 @@ FEB state must be "full"
 to
 .I dest
 .RE
-.PP
-This function takes a qthread_t pointer as an argument
-.RI ( me ),
-which is supposed to point to the qthread_t relating to the currently executing
-qthread. If
-.I me
-is NULL, the current qthread will be discovered using
-.BR qthread_self ().
 .SH RETURN VALUE
 On success, the memory address
 .I src

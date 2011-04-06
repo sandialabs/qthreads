@@ -1,4 +1,4 @@
-.TH qthread_syncvar_writeEF 3 "JUNE 2010" libqthread "libqthread"
+.TH qthread_syncvar_writeEF 3 "APRIL 2011" libqthread "libqthread"
 .SH NAME
 .BR qthread_syncvar_writeEF ,
 .B qthread_syncvar_writeEF_const
@@ -9,12 +9,12 @@
 .I int
 .br
 .B qthread_syncvar_writeEF
-.RI "(qthread_t *" me ", syncvar_t * restrict " dest ", const uint64_t * restrict " src );
+.RI "(syncvar_t * restrict " dest ", const uint64_t * restrict " src );
 .PP
 .I int
 .br
 .B qthread_writeEF_const
-.RI "(qthread_t *" me ", syncvar_t *" dest ", const uint64_t " src );
+.RI "(syncvar_t *" dest ", const uint64_t " src );
 .SH DESCRIPTION
 These functions wait for the
 .I dest
@@ -45,14 +45,6 @@ to
 .IR dest 's
 FEB state gets changed from "empty" to "full"
 .RE
-.PP
-This function takes a qthread_t pointer as an argument
-.RI ( me ),
-which is supposed to point to the qthread_t relating to the currently executing
-qthread. If
-.I me
-is NULL, the current qthread will be discovered using
-.BR qthread_self ().
 .SH RETURN VALUE
 On success, the memory address
 .I dest

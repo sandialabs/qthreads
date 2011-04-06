@@ -1,4 +1,4 @@
-.TH qt_loop_balance 3 "JUNE 2007" libqthread "libqthread"
+.TH qt_loop_balance 3 "APRIL 2011" libqthread "libqthread"
 .SH NAME
 .BR qt_loopaccum_balance ,
 .B qt_loopaccum_balance_future
@@ -82,7 +82,7 @@ argument. Its basic code structure is expected to look like this:
 .PP
 void
 .B func
-(qthread_t *me, const size_t startat,
+(const size_t startat,
 .ti +10
 const size_t stopat,
 .RI "void *" argptr ,
@@ -214,8 +214,7 @@ The
 .I qtds_worker
 function does the real work of adding up the numbers:
 .PP
-static void qtds_worker (qthread_t *me,
-const size_t startat,
+static void qtds_worker (const size_t startat,
 .ti +25
 const size_t stopat,
 void *array,

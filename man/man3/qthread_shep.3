@@ -1,4 +1,4 @@
-.TH qthread_shep 3 "NOVEMBER 2006" libqthread "libqthread"
+.TH qthread_shep 3 "APRIL 2011" libqthread "libqthread"
 .SH NAME
 .B qthread_shep
 \- returns the qthread's shepherd ID
@@ -8,26 +8,9 @@
 .I qthread_shepherd_id_t
 .br
 .B qthread_shep
-.RI "(qthread_t *" t );
+(void);
 .SH DESCRIPTION
-This function returns the shepherd identifier of the qthread
-.IR t .
-If
-.I t
-is NULL, the shepherd identifier is looked up using an internal mechanism; usually
-.BR pthread_getspecific ().
-.PP
-Note that
-.RS
-.PP
-.BR qthread_shep (NULL)
-.RE
-.PP
-is slightly more efficient than
-.RS
-.PP
-.BR qthread_shep ( qthread_self ())
-.RE
+This function returns the shepherd identifier of the current thread.
 .SH RETURN VALUE
 This function either returns the ID number of the shepherd of the calling
 function, or returns
@@ -35,6 +18,5 @@ function, or returns
 .SH SEE ALSO
 .BR pthread_getspecific (3),
 .BR qthread_retloc (3),
-.BR qthread_self (3),
 .BR qthread_stackleft (3),
 .BR qthread_id (3)

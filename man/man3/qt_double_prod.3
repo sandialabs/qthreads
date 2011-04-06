@@ -1,4 +1,4 @@
-.TH qt_double_prod 3 "JUNE 2007" libqthread "libqthread"
+.TH qt_double_prod 3 "APRIL 2011" libqthread "libqthread"
 .SH NAME
 .BR qt_double_prod ,
 .BR qt_uint_prod ,
@@ -10,21 +10,17 @@
 .I double
 .br
 .B qt_double_prod
-.RI "(qthread_t *" me ", double *" array ", size_t " length ,
-.ti +16
-.RI "int " checkfeb );
+.RI "(double *" array ", size_t " length ", int " checkfeb );
 .PP
 .I unsigned int
 .br
 .B qt_uint_prod
-.RI "(qthread_t *" me ", unsigned int *" array ", size_t " length ,
-.ti +14
-.RI "int " checkfeb );
+.RI "(unsigned int *" array ", size_t " length ", int " checkfeb );
 .PP
 .I int
 .br
 .B qt_int_prod
-.RI "(qthread_t *" me ", int *" array ", size_t " length ", int " checkfeb );
+.RI "(int *" array ", size_t " length ", int " checkfeb );
 .SH DESCRIPTION
 These functions take as input an
 .I array

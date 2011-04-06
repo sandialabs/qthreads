@@ -1,4 +1,4 @@
-.TH qdqueue_enqueue 3 "OCTOBER 2009" libqthread "libqthread"
+.TH qdqueue_enqueue 3 "APRIL 2011" libqthread "libqthread"
 .SH NAME
 .BR qdqueue_enqueue " \- append an element to a distributed queue"
 .SH SYNOPSIS
@@ -7,12 +7,12 @@
 .I int
 .br
 .B qdqueue_enqueue
-.RI "(qthread_t *" me ", qdqueue_t *" q ", void *" elem );
+.RI "(qdqueue_t *" q ", void *" elem );
 .PP
 .I int
 .br
 .B qdqueue_enqueue_there
-.RI "(qthread_t *" me ", qdqueue_t *" q ", void *" elem ,
+.RI "(qdqueue_t *" q ", void *" elem ,
 .ti +23
 .RI "qthread_shepherd_id_t " there );
 .SH DESCRIPTION

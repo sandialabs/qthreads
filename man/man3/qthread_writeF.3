@@ -1,4 +1,4 @@
-.TH qthread_writeF 3 "NOVEMBER 2006" libqthread "libqthread"
+.TH qthread_writeF 3 "APRIL 2011" libqthread "libqthread"
 .SH NAME
 .BR qthread_writeF ,
 .B qthread_writeF_const
@@ -9,12 +9,12 @@
 .I int
 .br
 .B qthread_writeF
-.RI "(qthread_t *" me ", aligned_t * restrict " dest ", const aligned_t * restrict " src );
+.RI "(aligned_t * restrict " dest ", const aligned_t * restrict " src );
 .PP
 .I int
 .br
 .B qthread_writeF_const
-.RI "(qthread_t *" me ", aligned_t *" dest ", const aligned_t " src );
+.RI "(aligned_t *" dest ", const aligned_t " src );
 .SH DESCRIPTION
 These functions are a cross between
 .BR qthread_fill ()
@@ -39,14 +39,6 @@ to
 .IR dest 's
 FEB state gets set to "full"
 .RE
-.PP
-This function takes a qthread_t pointer as an argument
-.RI ( me ),
-which is supposed to point to the qthread_t relating to the currently executing
-qthread. If
-.I me
-is NULL, the current qthread will be discovered using
-.BR qthread_self ().
 .SH WARNING
 This, and all other FEB-related functions currently operate exclusively on
 aligned data.

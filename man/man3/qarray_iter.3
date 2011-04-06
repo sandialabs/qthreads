@@ -1,4 +1,4 @@
-.TH qarray_iter 3 "MAY 2009" libqthread "libqthread"
+.TH qarray_iter 3 "APRIL 2011" libqthread "libqthread"
 .SH NAME
 .BR qarray_iter " \- iterate through a distributed array"
 .SH SYNOPSIS
@@ -7,14 +7,14 @@
 .I void
 .br
 .B qarray_iter
-.RI "(qthread_t *" me ", qarray *" a ", const size_t " startat ,
+.RI "(qarray *" a ", const size_t " startat ,
 .ti +13
 .RI "const size_t " stopat ", qthread_f " func );
 .PP
 .I void
 .br
 .B qarray_iter_loop
-.RI "(qthread_t *" me ", qarray *" a ", const size_t " startat ,
+.RI "(qarray *" a ", const size_t " startat ,
 .ti +18
 .RI "const size_t " stopat ", qa_loop_f " func ,
 .ti +18
@@ -23,7 +23,7 @@
 .I void
 .br
 .B qarray_iter_constloop
-.RI "(qthread_t *" me ", qarray *" a ", const size_t " startat ,
+.RI "(qarray *" a ", const size_t " startat ,
 .ti +23
 .RI "const size_t " stopat ", qa_loop_f " func ,
 .ti +23
@@ -32,7 +32,7 @@
 .I void
 .br
 .B qarray_iter_loopaccum
-.RI "(qthread_t *" me ", qarray *" a ", const size_t " startat ,
+.RI "(qarray *" a ", const size_t " startat ,
 .ti +23
 .RI "const size_t " stopat ", qa_loopr_f " func ,
 .ti +23
@@ -53,7 +53,7 @@ function is a basic qthread function, of the following form:
 .PP
 void
 .I func
-(qthread_t *me, void *arg);
+(void *arg);
 .RE
 .PP
 The 
@@ -87,7 +87,7 @@ argument is expected to be a function of the following form:
 .PP
 void 
 .I func
-(qthread_t *me, const size_t startat, const size_t stopat, qarray *array, void *arg)
+(const size_t startat, const size_t stopat, qarray *array, void *arg)
 .br
 {
 .RS

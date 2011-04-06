@@ -1,4 +1,4 @@
-.TH qlfqueue_enqueue 3 "OCTOBER 2009" libqthread "libqthread"
+.TH qlfqueue_enqueue 3 "APRIL 2011" libqthread "libqthread"
 .SH NAME
 .BR qlfqueue_enqueue " \- append an element to a lock-free queue"
 .SH SYNOPSIS
@@ -7,7 +7,7 @@
 .I int
 .br
 .B qlfqueue_enqueue
-.RI "(qthread_t *" me ", qlfqueue_t *" q ", void *" elem );
+.RI "(qlfqueue_t *" q ", void *" elem );
 .SH DESCRIPTION
 This function appends elements to lock-free queues.
 .SH RETURN VALUE

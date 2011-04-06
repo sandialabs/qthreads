@@ -1,4 +1,4 @@
-.TH qthread_empty/fill 3 "NOVEMBER 2006" libqthread "libqthread"
+.TH qthread_empty/fill 3 "APRIL 2011" libqthread "libqthread"
 .SH NAME
 .BR qthread_empty ,
 .B qthread_fill
@@ -9,12 +9,12 @@
 .I int
 .br
 .B qthread_empty
-.RI "(qthread_t *" me ", const aligned_t *" dest );
+.RI "(const aligned_t *" dest );
 .PP
 .I int
 .br
 .B qthread_fill
-.RI "(qthread_t *" me ", const aligned_t *" dest );
+.RI "(const aligned_t *" dest );
 .SH DESCRIPTION
 The
 .BR qthread_empty ()
@@ -37,17 +37,17 @@ argument is NULL).
 Note that
 .RS
 .PP
-.B qthread_empty
-(NULL,
-.IR addr )
+.BR qthread_empty (
+.I addr
+)
 .RE
 .PP
 is slightly faster than
 .RS
 .PP
-.B qthread_empty
-.RB ( qthread_self (),
-.IR addr )
+.BR qthread_empty (
+.I addr
+)
 .RE
 .SH RETURN VALUE
 On success, the full/empty bits are modified and 0 is returned. On error, an

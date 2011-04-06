@@ -1,4 +1,4 @@
-.TH qthread_fork 3 "OCTOBER 2010" libqthread "libqthread"
+.TH qthread_fork 3 "APRIL 2011" libqthread "libqthread"
 .SH NAME
 .BR qthread_fork ,
 .BR qthread_fork_syncvar ,
@@ -38,9 +38,8 @@ These are the functions for generating new qthreads.
 .PP
 The first argument to these functions,
 .IR f ,
-is a function that will be run to completion by the created qthread. (Note that
-.I f
-is a qthread_f and not a qthread_t.) The second argument to these functions,
+is a function that will be run to completion by the created qthread. The second
+argument to these functions,
 .IR arg ,
 is an argument that will be passed to the specified function. Finally,
 .I ret
@@ -51,7 +50,7 @@ will be placed into.
 The qthread_f function must have a prototype like this:
 .RS
 .PP
-aligned_t function(qthread_t *me, void *arg);
+aligned_t function(void *arg);
 .RE
 .PP
 The
@@ -105,7 +104,4 @@ error code is returned.
 .B ENOMEM
 Not enough memory could be allocated.
 .SH SEE ALSO
-.BR qthread_prepare (3),
-.BR qthread_prepare_for (3),
-.BR qthread_schedule (3),
-.BR qthread_schedule_on (3)
+.BR qthread_migrate_to (3)

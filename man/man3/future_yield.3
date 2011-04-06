@@ -1,4 +1,4 @@
-.TH future_yield 3 "NOVEMBER 2006" libqthread "libqthread"
+.TH future_yield 3 "APRIL 2011" libqthread "libqthread"
 .SH NAME
 .BR future_yield " \- explicitly declare the calling thread inactive"
 .SH SYNOPSIS
@@ -7,16 +7,12 @@
 .I int
 .br
 .B future_yield
-.RI "(qthread_t *" me );
+(void);
 .PP
 
 .SH DESCRIPTION
 In order to prevent deadlocks over resource acquisition, threads should make a
 call to yield before attempting to create or join with futures.
-.PP
-The argument is a pointer to the thread attempting to yield. This can be found
-out with a call to
-.BR qthread_self ()
 .PP
 If a thread calls the yield function with an argument which is not a qthread
 .B which was created as a future,

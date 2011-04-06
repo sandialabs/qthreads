@@ -1,4 +1,4 @@
-.TH qthread_readFF 3 "NOVEMBER 2006" libqthread "libqthread"
+.TH qthread_readFF 3 "APRIL 2011" libqthread "libqthread"
 .SH NAME
 .B qthread_readFF
 \- waits for the source to be full, then copies it
@@ -8,7 +8,7 @@
 .I int
 .br
 .B qthread_readFF
-.RI "(qthread_t *" me ", aligned_t *" dest ", const aligned_t *" src );
+.RI "(aligned_t *" dest ", const aligned_t *" src );
 .SH DESCRIPTION
 This function waits for memory to become full, and then reads it and leaves the
 memory as full. When memory becomes full, all threads waiting for it to become
@@ -30,18 +30,11 @@ FEB state must be "full"
 to
 .I dest
 .RE
-.PP
-This function takes a qthread_t pointer as an argument
-.RI ( me ),
-which is supposed to point to the qthread_t relating to the currently executing
-qthread. If
-.I me
-is NULL, the current qthread will be discovered using
-.BR qthread_self ().
 .SH WARNING
 This, and all other FEB-related functions currently operate exclusively on
 aligned data. This is to simulate the behavior of the MTA as closely as
-possible. The library requires 4-byte alignment.
+possible. The library requires 4- or 8-byte alignment, depending on whether
+compiled in 32-bit or 64-bit mode.
 .SH RETURN VALUE
 On success, the memory address
 .I src
