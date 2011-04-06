@@ -23,11 +23,15 @@ typedef struct dynmapinfo_s dynmapinfo_t;
 /* The following functions are fairly straightforward. If the file specified
  * does not exist, it will be created. If the file specified does exist, it
  * will be loaded up. */
-void *qalloc_makestatmap(const off_t filesize, void *addr,
-			 const char *filename, size_t itemsize,
-			 const size_t streams);
-void *qalloc_makedynmap(const off_t filesize, void *addr,
-			const char *filename, const size_t streams);
+void *qalloc_makestatmap(const off_t  filesize,
+                         void        *addr,
+                         const char  *filename,
+                         size_t       itemsize,
+                         const size_t streams);
+void *qalloc_makedynmap(const off_t  filesize,
+                        void        *addr,
+                        const char  *filename,
+                        const size_t streams);
 
 /* This function is a special version of the previous two. It reads the map's
  * headers to determine it's vital details, and then loads it up as if you'd
@@ -51,8 +55,10 @@ void qalloc_cleanup(void);
  * static-size map, the size argument is ignored.
  */
 void *qalloc_statmalloc(mapinfo_t *map);
-void *qalloc_dynmalloc(dynmapinfo_t *map, size_t size);
-void *qalloc_malloc(void *map, size_t size);
+void *qalloc_dynmalloc(dynmapinfo_t *map,
+                       size_t        size);
+void *qalloc_malloc(void  *map,
+                    size_t size);
 
 /* These are the deallocation functions.
  *
@@ -60,12 +66,16 @@ void *qalloc_malloc(void *map, size_t size);
  * The dynfree() function returns a dynamic-size chunk to its map.
  * The free() function is a merging of the above two.
  */
-void qalloc_statfree(void *block, mapinfo_t *map);
-void qalloc_dynfree(void *block, dynmapinfo_t *map);
-void qalloc_free(void *block, void *map);
+void qalloc_statfree(void      *block,
+                     mapinfo_t *map);
+void qalloc_dynfree(void         *block,
+                    dynmapinfo_t *map);
+void qalloc_free(void *block,
+                 void *map);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif
+#endif // ifndef QALLOC_H
+/* vim:set expandtab: */

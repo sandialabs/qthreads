@@ -9,4 +9,5 @@ int qthread_cacheline(void);
 }
 #endif
 
-#endif
+#endif // ifndef QTHREAD_CACHELINE_H
+/* vim:set expandtab: */
