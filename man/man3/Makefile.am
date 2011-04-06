@@ -136,6 +136,7 @@ man_MANS = \
 		   qthread_yield.3 \
 		   qtimer_create.3 \
 		   qtimer_destroy.3 \
+		   qtimer_fastrand.3 \
 		   qtimer_start.3 \
 		   qtimer_stop.3 \
 		   qtimer_secs.3 \
