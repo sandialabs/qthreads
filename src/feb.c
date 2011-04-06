@@ -5,6 +5,11 @@
 /* The API */
 #include "qthread/qthread.h"
 
+/* System Headers */
+#ifndef QTHREAD_NOALIGNCHECK
+# include <stdio.h>
+#endif
+
 /* Internal Headers */
 #include "qthread_innards.h"
 #include "qt_qthread_struct.h"
