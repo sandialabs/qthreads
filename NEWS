@@ -1,3 +1,13 @@
+--- 1.5.2b ---
+New Features:
+ - Support for OpenMP affinity extensions
+ - Supports multi-locale Chapel
+ - Support for RCRDaemon
+Improvements:
+ - Support for external blocking operations
+ - Renamed internal context functions, to improve dynamic library loading
+ - Better C++ wrappers
+ - Updated documentation
 --- 1.5.1 ---
 New Features:
  - Chapel shims

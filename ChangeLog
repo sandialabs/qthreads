@@ -1,3 +1,291 @@
+2011-04-06 13:24  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/feb.c: fix compiler complaint about stdio
+
+2011-04-06 13:09  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/Makefile.am, include/osx_compat/386-ucontext.h,
+	  include/osx_compat/power-ucontext.h,
+	  include/osx_compat/taskimpl.h,
+	  include/osx_compat/tile-ucontext.h, include/qt_context.h,
+	  include/qt_qthread_struct.h, include/qthread_innards.h,
+	  src/osx_compat/context.c, src/qthread.c: rename local context
+	  datastructures to allow better integration with linux and shared
+	  libraries (3 of 3)
+
+2011-04-06 12:50  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/osx_compat/386-ucontext.h,
+	  include/osx_compat/power-ucontext.h,
+	  include/osx_compat/taskimpl.h, src/osx_compat/asm.S: rename local
+	  get/setcontext to allow better integration with linux and shared
+	  libraries (2 of 3)
+
+2011-04-06 12:46  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/osx_compat/386-ucontext.h,
+	  include/osx_compat/power-ucontext.h,
+	  include/osx_compat/taskimpl.h, src/osx_compat/context.c,
+	  src/qthread.c: rename local makecontext to allow better
+	  integration with linux and shared libraries (0 of 3)
+
+2011-04-06 12:41  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/osx_compat/386-ucontext.h,
+	  include/osx_compat/power-ucontext.h,
+	  include/osx_compat/taskimpl.h, include/qthread/feb_barrier.h,
+	  src/osx_compat/context.c, src/qthread.c: rename local swapcontext
+	  to allow better integration with linux and shared libraries (1 of
+	  3)
+
+2011-04-06 12:25  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am: remove man pages
+
+2011-04-06 12:24  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/qarray_iter_loop_nb.3: missed a man page
+
+2011-04-06 05:28  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/allpairs.h, include/qthread/cacheline.h,
+	  include/qthread/feb_barrier.h, include/qthread/futurelib.h,
+	  include/qthread/qalloc.h, include/qthread/qarray.h,
+	  include/qthread/qdqueue.h, include/qthread/qlfqueue.h,
+	  include/qthread/qloop.h, include/qthread/qpool.h,
+	  include/qthread/qtimer.h, include/qthread/qutil.h,
+	  include/qthread/wavefront.h: reformatting
+
+2011-04-06 05:23  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/qthread_syncvar_fill.3: fix typo
+
+2011-04-06 04:49  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am, man/man3/qt_loop_queue_create.3,
+	  man/man3/qt_loop_queue_setchunk.3: add documentation for setchunk
+
+2011-04-06 03:56  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am, man/man3/qtimer_fastrand.3: qtimer_fastrand
+	  documentation
+
+2011-04-06 03:53  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am: install them
+
+2011-04-06 03:51  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/qt_loop.3, man/man3/qt_loop_future.3,
+	  man/man3/qt_loop_step.3, man/man3/qt_loop_step_future.3:
+	  qt_loop_step* documentation
+
+2011-04-06 03:44  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/qarray_iter.3: qarray_iter_loop_nb documentation
+
+2011-04-06 03:18  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/qthread_feb_barrier_create.3,
+	  man/man3/qthread_feb_barrier_destroy.3,
+	  man/man3/qthread_feb_barrier_enter.3,
+	  man/man3/qthread_feb_barrier_resize.3: feb barrier documentation
+
+2011-04-06 02:50  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/future_acquire.3, man/man3/future_exit.3,
+	  man/man3/future_fork.3, man/man3/future_join_all.3,
+	  man/man3/future_yield.3, man/man3/qarray_elem.3,
+	  man/man3/qarray_iter.3, man/man3/qdqueue_dequeue.3,
+	  man/man3/qdqueue_destroy.3, man/man3/qdqueue_empty.3,
+	  man/man3/qdqueue_enqueue.3, man/man3/qlfqueue_dequeue.3,
+	  man/man3/qlfqueue_destroy.3, man/man3/qlfqueue_empty.3,
+	  man/man3/qlfqueue_enqueue.3, man/man3/qpool_alloc.3,
+	  man/man3/qpool_free.3, man/man3/qt_double_prod.3,
+	  man/man3/qt_loop.3, man/man3/qt_loop_balance.3,
+	  man/man3/qt_loop_future.3, man/man3/qt_loop_queue_create.3,
+	  man/man3/qt_loopaccum_balance.3, man/man3/qthread_debuglevel.3,
+	  man/man3/qthread_distance.3, man/man3/qthread_empty.3,
+	  man/man3/qthread_fork.3, man/man3/qthread_id.3,
+	  man/man3/qthread_lock.3, man/man3/qthread_migrate_to.3,
+	  man/man3/qthread_num_shepherds.3, man/man3/qthread_prepare.3,
+	  man/man3/qthread_prepare_detached.3,
+	  man/man3/qthread_prepare_for.3, man/man3/qthread_readFE.3,
+	  man/man3/qthread_readFF.3, man/man3/qthread_readstate.3,
+	  man/man3/qthread_retloc.3, man/man3/qthread_schedule.3,
+	  man/man3/qthread_schedule_on.3, man/man3/qthread_self.3,
+	  man/man3/qthread_shep.3, man/man3/qthread_shep_ok.3,
+	  man/man3/qthread_sorted_sheps.3, man/man3/qthread_stackleft.3,
+	  man/man3/qthread_syncvar_empty.3,
+	  man/man3/qthread_syncvar_readFE.3,
+	  man/man3/qthread_syncvar_readFF.3,
+	  man/man3/qthread_syncvar_writeEF.3,
+	  man/man3/qthread_syncvar_writeF.3, man/man3/qthread_writeEF.3,
+	  man/man3/qthread_writeF.3, man/man3/qthread_yield.3,
+	  man/man3/qutil_double_max.3, man/man3/qutil_double_min.3,
+	  man/man3/qutil_double_mult.3, man/man3/qutil_double_sum.3,
+	  man/man3/qutil_qsort.3: update semantics to 1.5
+
+2011-04-05 23:51  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.hpp: single argument wrappers for readFF
+	  and readFE
+
+2011-04-05 18:32  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* shims/chapel/src/tasks-qthreads.c: fixes to enable multilocale
+
+2011-04-05 17:22  Allan Porterfield <akp@renci.org>
+
+	* src/qthread.c: move empty of taskWaitLock until after worker is
+	  initialized (and only do once)
+
+2011-04-05 15:46  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: tidying up qthread.c...
+
+2011-04-05 15:40  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/feb.c, src/locks.c: fix the qthread.h path problem (whoops!)
+
+2011-04-05 15:06  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: reduce unnecessary include lines
+
+2011-04-05 14:47  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_barrier.c, src/threadqueues.c, src/touch.c: uncrustifying
+
+2011-04-05 14:29  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_qthread_struct.h, src/syncvar.c: uncrustifying
+
+2011-04-05 14:26  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h: uncrustified
+
+2011-04-05 14:21  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/Makefile.am, include/qt_addrstat.h, include/qt_atomics.h,
+	  include/qt_blocking_structs.h, include/qt_locks.h,
+	  include/qt_qthread_struct.h, src/Makefile.am, src/feb.c,
+	  src/locks.c, src/qthread.c, src/syncvar.c: extract locks and FEB
+	  operations into their own respective files
+
+2011-04-05 13:11  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/syncvar.c: allow syncvar opterations from outside qthreads
+
+2011-04-04 21:05  debiddo99
+
+	* src/qthread.c: Fixed problem with bad reference to rcrtoollevel
+
+2011-04-04 20:37  debiddo99
+
+	* configure.in, include/qthread_innards.h, include/rose_xomp.h,
+	  src/Makefile.am, src/qthread.c, src/rcrtool,
+	  src/rcrtool/Makefile.inc, src/rcrtool/RCRdaemon.c,
+	  src/rcrtool/RCRlogger.c, src/rcrtool/bcGen.c,
+	  src/rcrtool/bcGen.h, src/rcrtool/common_rcrtool.c,
+	  src/rcrtool/common_rcrtool.h, src/rcrtool/perf_util.c,
+	  src/rcrtool/perf_util.h, src/rcrtool/qt_rcrtool.c,
+	  src/rcrtool/qt_rcrtool.h, src/rcrtool/triggers.c,
+	  src/rcrtool/triggers.h, src/rose_xomp.c: Adding initial version
+	  of RCRTool daemon support.
+
+2011-04-04 13:35  Allan Porterfield <akp@renci.org>
+
+	* include/qt_atomics.h, include/qt_qthread_struct.h,
+	  include/qt_threadqueues.h, include/qthread_innards.h,
+	  include/rose_xomp.h, src/qloop.c, src/qt_barrier.c,
+	  src/qthread.c, src/rose_xomp.c, src/threadqueues.c: Changes to
+	  speed up parallel loop start up/execution
+	  Added personal spin loop under config to ease debugging
+	  (qt_qthread_struct.h) add flag to force thread to worker 0 for
+	  termination
+	  (qt_threadqueues.h) add stealable task count
+	  (qt_atomics.h) add mechanism to get to debug spin lock (seems to
+	  be measurably faster than pthreads spin_lock)
+	  (qthread_innards.h) add call declation to force thread to worker
+	  0
+	  (rose_xomp.h) add new Rose extention
+	  add new lock type (spin lock) to XOMP
+	  (threadqueues.c) add debug spin lock
+	  add stealable task cnt
+	  (rose_xomp.c) rework critical sections
+	  add spuin barrier (Mis-named XOMP_spin_lock?)
+	  (qthread.c) add function to force thread to worker 0
+	  (qloop.c) change parallel loops startup (non-future) to tree
+	  based rather than
+	  loop based
+	  (qt_barrier.c) make dummy unsigned to remove compile warnings
+
+2011-04-01 23:45  stephenolivier@gmail.com
+
+	* src/threadqueues.c: adjustment in OMP affinity stealing control
+
+2011-04-01 18:33  stephenolivier@gmail.com
+
+	* include/omp_affinity.h, src/rose_xomp.c: Added more OMP affinity
+	  functions
+
+2011-03-31 22:51  stephenolivier@gmail.com
+
+	* include/omp_affinity.h, include/qt_shepherd_innards.h,
+	  src/qthread.c, src/rose_xomp.c: Set OpenMP child task affinity
+	  off by default
+	  Make affinity-related flags visible at user level
+
+2011-03-30 23:34  stephenolivier@gmail.com
+
+	* include/omp_affinity.h, src/rose_xomp.c: Added OpenMP affinity
+	  wrappers to memory affinity functions qt_affinity_*
+
+2011-03-30 22:04  stephenolivier@gmail.com
+
+	* configure.in, include/omp_affinity.h,
+	  include/qt_qthread_struct.h, include/qt_shepherd_innards.h,
+	  src/rose_xomp.c, src/threadqueues.c: First shot at some
+	  experimental affinity extensions for OpenMP. Added code is
+	  guarded by QTHREAD_OMP_AFFINITY with a corresponding configure
+	  script entry.
+
+2011-03-30 22:02  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/syncvar.c: uncrustified
+
+2011-03-29 22:01  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qutil.c: uncrustified
+
+2011-03-29 21:49  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_feb_barrier.c, src/qt_mpool.c: uncrustified
+
+2011-03-29 21:47  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qalloc.c, src/qt_c_hash.c: uncrustified
+
+2011-03-29 21:41  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/cacheline.c: uncrustified
+
+2011-03-29 21:36  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qloop_innards.h, src/qloop.c: uncrustified
+
+2011-03-29 21:06  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/futurelib.c: uncrustified
+
+2011-03-29 21:02  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_feb_barrier.c: uncrustified
+
+2011-03-25 15:19  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* ChangeLog, NEWS: 1.5.1 stuff
+
 2011-03-22 15:42  Kyle Wheeler <kbwheel@sandia.gov>
 
 	* config/qthread_check_makecontext.m4,
