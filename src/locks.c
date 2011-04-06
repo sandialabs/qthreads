@@ -13,6 +13,15 @@
 #include "qt_locks.h"
 
 /* Types */
+typedef enum bt {
+    LOCK,
+    UNLOCK
+} blocker_type;
+typedef struct {
+    pthread_mutex_t lock;
+    void           *a;
+    blocker_type    type;
+} qthread_lock_blocker_t;
 
 /* Function Prototypes */
 static QINLINE qthread_queue_t *qthread_queue_new(qthread_shepherd_t *shepherd);
@@ -73,6 +82,34 @@ static QINLINE void FREE_QUEUE(qthread_queue_t *t)
 # define QTHREAD_COUNT_THREADS_BINCOUNTER(TYPE, BIN) do { } while(0)
 #endif
 
+static aligned_t qthread_lock_blocker_thread(void *arg)
+{                                      /*{{{ */
+    qthread_lock_blocker_t *const restrict a = (qthread_lock_blocker_t *)arg;
+
+    switch (a->type) {
+        case LOCK:
+            qthread_lock(a->a);
+            break;
+        case UNLOCK:
+            qthread_unlock(a->a);
+            break;
+    }
+    pthread_mutex_unlock(&(a->lock));
+    return 0;
+}                                      /*}}} */
+
+static void qthread_lock_blocker_func(void        *addr,
+                                      blocker_type t)
+{   /*{{{*/
+    qthread_lock_blocker_t args = { PTHREAD_MUTEX_INITIALIZER, addr, t };
+
+    pthread_mutex_lock(&args.lock);
+    qthread_fork(qthread_lock_blocker_thread, &args, NULL);
+    pthread_mutex_lock(&args.lock);
+    pthread_mutex_unlock(&args.lock);
+    pthread_mutex_destroy(&args.lock);
+} /*}}}*/
+
 /* functions to implement FEB-ish locking/unlocking
  *
  * These are atomic and functional, but do not have the same semantics as full
@@ -95,6 +132,10 @@ int qthread_lock(const aligned_t *a)
 
     QTHREAD_LOCK_TIMER_DECLARATION(aquirelock);
 
+    if (!me) {
+        qthread_lock_blocker_func((void *)a, LOCK);
+        return QTHREAD_SUCCESS;
+    }
     qthread_debug(LOCK_BEHAVIOR, "tid(%u), a(%p): starting...\n",
                   me->thread_id, a);
     QTHREAD_LOCK_UNIQUERECORD(lock, a, me);
@@ -171,6 +212,10 @@ int qthread_unlock(const aligned_t *a)
     const int       lockbin = QTHREAD_CHOOSE_STRIPE(a);
     qthread_t      *me      = qthread_internal_self();
 
+    if (!me) {
+        qthread_lock_blocker_func((void *)a, UNLOCK);
+        return QTHREAD_SUCCESS;
+    }
     qthread_debug(LOCK_BEHAVIOR, "tid(%u), a(%p)\n", me->thread_id, a);
 
     QTHREAD_COUNT_THREADS_BINCOUNTER(locks, lockbin);
