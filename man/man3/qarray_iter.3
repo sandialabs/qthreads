@@ -20,6 +20,16 @@
 .ti +18
 .RI "void *" arg );
 .PP
+.PP
+.I void
+.br
+.B qarray_iter_loop_nb
+.RI "(qarray *" a ", const size_t " startat ,
+.ti +18
+.RI "const size_t " stopat ", qa_loop_f " func ,
+.ti +18
+.RI "void *" arg ", aligned_t *" arg );
+.PP
 .I void
 .br
 .B qarray_iter_constloop
@@ -63,7 +73,7 @@ argument to the
 function is a pointer to an array element.
 .PP
 The
-.BR qarray_iter_loop (), qarray_iter_constloop (),
+.BR qarray_iter_loop (), qarray_iter_loop_nb (), qarray_iter_constloop (),
 and
 .BR qarray_iter_loopaccum ()
 functions are more powerful iteration functions. They are largely identical, with the following distinctions:
@@ -114,7 +124,10 @@ argument passed to the
 .I func
 function is the same argument as is passed to the
 .BR qarray_iter_loop ()
-argument.
+argument. The
+.BR qarray_iter_loop_nb ()
+variant allows the iterations to occur in the background while allowing the
+calling thread to continue execution.
 .SH SEE ALSO
 .BR qarray_create (3),
 .BR qarray_destroy (3),
