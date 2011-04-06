@@ -32,6 +32,7 @@ man_MANS = \
 		   qarray_iter.3 \
 		   qarray_iter_constloop.3 \
 		   qarray_iter_loop.3 \
+		   qarray_iter_loop_nb.3 \
 		   qarray_iter_loopaccum.3 \
 		   qarray_set_shepof.3 \
 		   qarray_shepof.3 \
@@ -64,11 +65,13 @@ man_MANS = \
 		   qt_loop_balance.3 \
 		   qt_loop_balance_future.3 \
 		   qt_loop_future.3 \
-		   qt_loopaccum_balance.3 \
 		   qt_loop_queue_addworker.3 \
 		   qt_loop_queue_create.3 \
 		   qt_loop_queue_run.3 \
 		   qt_loop_queue_run_there.3 \
+		   qt_loop_step.3 \
+		   qt_loop_step_future.3 \
+		   qt_loopaccum_balance.3 \
 		   qt_loopaccum_balance_future.3 \
 		   qt_uint_max.3 \
 		   qt_uint_min.3 \
@@ -83,6 +86,10 @@ man_MANS = \
 		   qthread_distance.3 \
 		   qthread_empty.3 \
 		   qthread_enable_shepherd.3 \
+		   qthread_feb_barrier_create.3 \
+		   qthread_feb_barrier_destroy.3 \
+		   qthread_feb_barrier_enter.3 \
+		   qthread_feb_barrier_resize.3 \
 		   qthread_feb_status.3 \
 		   qthread_fill.3 \
 		   qthread_finalize.3 \
