@@ -106,15 +106,10 @@ man_MANS = \
 		   qthread_lock.3 \
 		   qthread_migrate_to.3 \
 		   qthread_num_shepherds.3 \
-		   qthread_prepare.3 \
-		   qthread_prepare_for.3 \
 		   qthread_readFE.3 \
 		   qthread_readFF.3 \
 		   qthread_readstate.3 \
 		   qthread_retloc.3 \
-		   qthread_schedule.3 \
-		   qthread_schedule_on.3 \
-		   qthread_self.3 \
 		   qthread_shep.3 \
 		   qthread_shep_ok.3 \
 		   qthread_sorted_sheps.3 \
