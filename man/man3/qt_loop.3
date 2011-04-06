@@ -8,16 +8,29 @@
 .I void
 .br
 .B qt_loop
-.RI "(const size_t " start ", const size_t " stop ", const size_t " stride ,
+.RI "(const size_t " start ", const size_t " stop ,
 .ti +9
 .RI "const qt_loop_f " func ", void *" argptr );
+.PP
+.I void
+.br
+.B qt_loop_step
+.RI "(const size_t " start ", const size_t " stop ,
+.ti +14
+.RI "const size_t " stride ", const qt_loop_f " func ", void *" argptr );
 .SH DESCRIPTION
-This function provides a simple C implementation of a threaded loop. This is
+These functions provide a simple C implementation of a threaded loop. This is
 similar to
 .BR mt_loop ,
 but does not provide much of the convenience and isomorphism that a C++
 implementation can provide. On the other hand, it is more portable, and more
-predictable.
+predictable. The difference is that
+.BR qt_loop_step ()
+supports a
+.I stride
+argument, while
+.BR qt_loop ()
+assumes a stride of one.
 .PP
 This function can be thought of as akin to the following code:
 .RS
