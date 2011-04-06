@@ -3,7 +3,7 @@
 
 #include "qthread/common.h"
 
-#include <osx_compat/taskimpl.h>
+#include "fastcontext/taskimpl.h"
 #include "qthread_prefetch.h"
 
 #ifdef NEEDPOWERMAKECONTEXT

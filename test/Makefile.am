@@ -88,7 +88,7 @@ noinst_HEADERS = argparsing.h
 INCLUDES = -I$(top_srcdir)/include
 OUTPUTDIR = $(top_builddir)/src
 QTHREADLIB = $(OUTPUTDIR)/libqthread.la
-#CONTEXTLIB = $(OUTPUTDIR)/osx_compat/libosx_compat.la
+#CONTEXTLIB = $(OUTPUTDIR)/fastcontext/libfastcontext.la
 
 LDADD = $(QTHREADLIB)
 

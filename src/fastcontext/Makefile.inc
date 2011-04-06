@@ -7,7 +7,7 @@
 if QTHREAD_NEED_OWN_MAKECONTEXT
 
 libqthread_la_SOURCES += \
-						osx_compat/asm.S \
-						osx_compat/context.c
+			 fastcontext/asm.S \
+			 fastcontext/context.c
 
 endif

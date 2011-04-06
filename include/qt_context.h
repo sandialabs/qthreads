@@ -5,7 +5,7 @@
 # include <ucontext.h>                 /* for ucontext_t */
 typedef ucontext_t qt_context_t;
 #else
-# include "osx_compat/taskimpl.h"
+# include "fastcontext/taskimpl.h"
 typedef uctxt_t qt_context_t;
 #endif
 

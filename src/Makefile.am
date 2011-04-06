@@ -72,7 +72,7 @@ libqthread_la_SOURCES += qt_mpool.c
 endif
 
 if QTHREAD_NEED_OWN_MAKECONTEXT
-include osx_compat/Makefile.inc
+include fastcontext/Makefile.inc
 endif
 
 EXTRA_DIST = \

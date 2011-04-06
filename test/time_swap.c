@@ -7,7 +7,7 @@
 #if defined(HAVE_UCONTEXT_H) && defined(HAVE_NATIVE_MAKECONTEXT)
 # include <ucontext.h>
 #else
-# include "osx_compat/taskimpl.h"
+# include "fastcontext/taskimpl.h"
 #endif
 #include <qthread/qtimer.h>
 #include "argparsing.h"
