@@ -33,7 +33,7 @@ struct ucontext
 	struct ucontext * uc_link; /* unused */
 };
 
-void makecontext(ucontext_t*, void(*)(void), int, ...);
+void qt_makectxt(ucontext_t*, void(*)(void), int, ...);
 int qt_swapctxt(ucontext_t*, ucontext_t*);
 int _getmcontext(mcontext_t*);
 void _setmcontext(mcontext_t*);

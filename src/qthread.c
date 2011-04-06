@@ -1198,21 +1198,23 @@ static QINLINE void qthread_makecontext(ucontext_t *const c,
      * why? no idea */
     c->uc_link = returnc;          /* NULL pthread_exit() */
 #endif
-#ifdef QTHREAD_MAKECONTEXT_SPLIT
-# ifdef EXTRA_MAKECONTEXT_ARGC
-    makecontext(c, func, 3, high, low);
-# else
-    makecontext(c, func, 2, high, low);
-# endif /* EXTRA_MAKECONTEXT_ARGC */
-#else /* QTHREAD_MAKECONTEXT_SPLIT */
-# ifdef EXTRA_MAKECONTEXT_ARGC
-    makecontext(c, func, 2, arg);
-# else
-    makecontext(c, func, 1, arg);
-# endif /* EXTRA_MAKECONTEXT_ARGC */
-#endif  /* QTHREAD_MAKECONTEXT_SPLIT */
 #ifdef HAVE_NATIVE_MAKECONTEXT
+# ifdef QTHREAD_MAKECONTEXT_SPLIT
+#  ifdef EXTRA_MAKECONTEXT_ARGC
+    makecontext(c, func, 3, high, low);
+#  else
+    makecontext(c, func, 2, high, low);
+#  endif /* EXTRA_MAKECONTEXT_ARGC */
+# else /* QTHREAD_MAKECONTEXT_SPLIT */
+#  ifdef EXTRA_MAKECONTEXT_ARGC
+    makecontext(c, func, 2, arg);
+#  else
+    makecontext(c, func, 1, arg);
+#  endif /* EXTRA_MAKECONTEXT_ARGC */
+# endif  /* QTHREAD_MAKECONTEXT_SPLIT */
     assert((void *)c->uc_link == (void *)returnc);
+#else
+    qt_makectxt(c, func, 1, arg);
 #endif
 }                      /*}}} */
 

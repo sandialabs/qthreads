@@ -7,7 +7,7 @@
 #include "qthread_prefetch.h"
 
 #ifdef NEEDPOWERMAKECONTEXT
-void makecontext(ucontext_t *ucp, void (*func)(void), int argc, ...)
+void qt_makectxt(ucontext_t *ucp, void (*func)(void), int argc, ...)
 {
 	unsigned long *sp, *tos;
 	va_list arg;
@@ -21,7 +21,7 @@ void makecontext(ucontext_t *ucp, void (*func)(void), int argc, ...)
 	va_end(arg);
 }
 #elif defined(NEEDX86MAKECONTEXT)
-void makecontext(ucontext_t *ucp, void (*func)(void), int argc, ...)
+void qt_makectxt(ucontext_t *ucp, void (*func)(void), int argc, ...)
 {
 	uintptr_t *sp;
 #ifdef NEEDX86REGISTERARGS
@@ -62,7 +62,7 @@ void makecontext(ucontext_t *ucp, void (*func)(void), int argc, ...)
 }
 #elif defined(NEEDTILEMAKECONTEXT)
 /* This function is entirely copyright Sandia National Laboratories */
-void makecontext(ucontext_t *ucp, void (*func)(void), int argc, ...)
+void qt_makectxt(ucontext_t *ucp, void (*func)(void), int argc, ...)
 {
 	unsigned long *sp;
 	unsigned long *tos = ucp->uc_stack.ss_sp;
