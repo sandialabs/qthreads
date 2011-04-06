@@ -69,6 +69,7 @@ man_MANS = \
 		   qt_loop_queue_create.3 \
 		   qt_loop_queue_run.3 \
 		   qt_loop_queue_run_there.3 \
+		   qt_loop_queue_setchunk.3 \
 		   qt_loop_step.3 \
 		   qt_loop_step_future.3 \
 		   qt_loopaccum_balance.3 \

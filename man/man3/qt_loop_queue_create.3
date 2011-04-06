@@ -66,15 +66,17 @@ argument defines which adaptive scheduling technique should be used to schedule 
 .B CHUNK
 This is the lowest-overhead method, but is the least adaptive. A small default
 chunk size will be chosen by the library, and all available worker threads will
-process loop iterations in groups of that size.
+process loop iterations in groups of that size. The chunk size can be specified with the
+.BR qt_loop_queue_setchunk ()
+function.
 .TP
 .B GUIDED
-This specifies an implementation of guided self-scheduled loops; iterations are
+This specifies an implementation of guided self-scheduled loops, invented by Constantine D. Polychronopoulos and David J. Kuck in 1987. Iterations are
 executed in chunks that are halved in size as the loop progresses. This is
 particularly efficient at slightly imbalanced loops.
 .TP
 .B FACTORED
-This specifies an implementation of factored self-scheduled loops; iterations are executed in chunks that are specified in sets. First, half of the iteration space is handed out in equal-sized chunks to all threads, then half of the remaining iterations are handed out in equal-sized chunks, and so forth. This is more effective than GUIDED when loops are more imbalanced.
+This specifies an implementation of factored self-scheduled loops, invented by Susan F. Hummel, and Edith Schonberg, and Lawrence E. Flynn in 1992. Iterations are executed in chunks that are specified in sets. First, half of the iteration space is handed out in equal-sized chunks to all threads, then half of the remaining iterations are handed out in equal-sized chunks, and so forth. This is more effective than GUIDED when loops are more imbalanced.
 .TP
 .B TIMED
 This specifies an implementation of timed self-scheduled loops; iterations are timed and subsequent chunks of iterations are given to worker threads based on the length of time required by the previous iteration chunks. This method can account for overhead better and can potentially handle wildly imbalanced loops more efficiently than FACTORED.
