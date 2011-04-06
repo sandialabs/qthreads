@@ -1,14 +1,14 @@
-#define	setcontext(u)	_setmcontext(&(u)->mc)
-#define	getcontext(u)	_getmcontext(&(u)->mc)
-typedef struct mcontext mcontext_t;
-typedef struct ucontext ucontext_t;
+#define	setcontext(u)	_qt_setmctxt(&(u)->mc)
+#define	getcontext(u)	_qt_getmctxt(&(u)->mc)
+typedef struct mctxt mctxt_t;
+typedef struct uctxt uctxt_t;
 /*
  * This struct defines the way the registers are stored on the stack during a
  * system call/exception.  It should be a multiple of 8 bytes to preserve
  * normal stack alignment rules.
  *
  */
-struct mcontext {
+struct mctxt {
     /* Saved main processor registers; 56..63 are special. */
     /* tp, sp, and lr must immediately follow regs[] for aliasing. */
     unsigned long regs[23]; /* callee saves r30-r52 */
@@ -26,16 +26,16 @@ struct mcontext {
 };
 
 
-struct ucontext
+struct uctxt
 {
 	struct {
 		void *ss_sp;
 		size_t ss_size;
 	} uc_stack;
 	//sigset_t uc_sigmask;
-	mcontext_t mc;
-	struct ucontext * uc_link; /* unused */
+	mctxt_t mc;
+	struct uctxt * uc_link; /* unused */
 };
 
-int _getmcontext(mcontext_t*);
-void _setmcontext(mcontext_t*);
+int _qt_getmctxt(mctxt_t*);
+void _qt_setmctxt(mctxt_t*);

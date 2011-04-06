@@ -1,8 +1,8 @@
 #define	setcontext(u)	_qt_setmctxt(&(u)->mc)
 #define	getcontext(u)	_qt_getmctxt(&(u)->mc)
-typedef struct mcontext mcontext_t;
-typedef struct ucontext ucontext_t;
-struct mcontext
+typedef struct mctxt mctxt_t;
+typedef struct uctxt uctxt_t;
+struct mctxt
 {
 	unsigned long	pc;		/* lr */
 	unsigned long	cr;		/* condition register (mfcr) */
@@ -22,19 +22,19 @@ struct mcontext
 */
 };
 
-struct ucontext
+struct uctxt
 {
 	struct {
 		void *ss_sp;
 		uint ss_size;
 	} uc_stack;
 	sigset_t uc_sigmask;
-	mcontext_t mc;
-	struct ucontext * uc_link; /* unused */
+	mctxt_t mc;
+	struct uctxt * uc_link; /* unused */
 };
 
-void qt_makectxt(ucontext_t*, void(*)(void), int, ...);
-int qt_swapctxt(ucontext_t*, ucontext_t*);
-int _qt_getmctxt(mcontext_t*);
-void _qt_setmctxt(mcontext_t*);
+void qt_makectxt(uctxt_t*, void(*)(void), int, ...);
+int qt_swapctxt(uctxt_t*, uctxt_t*);
+int _qt_getmctxt(mctxt_t*);
+void _qt_setmctxt(mctxt_t*);
 

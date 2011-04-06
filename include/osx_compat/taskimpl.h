@@ -79,12 +79,12 @@
 #endif
 
 #if defined(__FreeBSD__) && __FreeBSD__ < 5
-extern	int		qt_getmctxt(mcontext_t*);
-extern	void		qt_setmctxt(mcontext_t*);
+extern	int		qt_getmctxt(mctxt_t*);
+extern	void		qt_setmctxt(mctxt_t*);
 #define	setcontext(u)	qt_setmctxt(&(u)->uc_mcontext)
 #define	getcontext(u)	qt_getmctxt(&(u)->uc_mcontext)
-extern	int		qt_swapctxt(ucontext_t*, ucontext_t*);
-extern	void		qt_makectxt(ucontext_t*, void(*)(), int, ...);
+extern	int		qt_swapctxt(uctxt_t*, uctxt_t*);
+extern	void		qt_makectxt(uctxt_t*, void(*)(), int, ...);
 #endif
 
 #ifdef __CYGWIN32__
@@ -111,10 +111,10 @@ extern	void		qt_makectxt(ucontext_t*, void(*)(), int, ...);
 #endif
 
 #if defined(__APPLE__) || defined(__linux__) || defined(__CYGWIN32__)
-#	define mcontext libthread_mcontext
-#	define mcontext_t libthread_mcontext_t
-#	define ucontext libthread_ucontext
-#	define ucontext_t libthread_ucontext_t
+#	define mctxt libthread_mctxt
+#	define mctxt_t libthread_mctxt_t
+#	define uctxt libthread_uctxt
+#	define uctxt_t libthread_uctxt_t
 #	if defined(__i386__) || defined(__x86_64__)
 #		include "386-ucontext.h"
 #       elif defined(__tile__)
@@ -125,10 +125,10 @@ extern	void		qt_makectxt(ucontext_t*, void(*)(), int, ...);
 #endif
 
 #if defined(__OpenBSD__)
-#	define mcontext libthread_mcontext
-#	define mcontext_t libthread_mcontext_t
-#	define ucontext libthread_ucontext
-#	define ucontext_t libthread_ucontext_t
+#	define mctxt libthread_mctxt
+#	define mctxt_t libthread_mctxt_t
+#	define uctxt libthread_uctxt
+#	define uctxt_t libthread_uctxt_t
 #	if defined(__i386__) || defined(__x86_64__)
 #		include "386-ucontext.h"
 #	else
@@ -138,16 +138,16 @@ extern pid_t rfork_thread(int, void*, int(*)(void*), void*);
 #endif
 
 #if 0 &&  defined(__sun__)
-#	define mcontext libthread_mcontext
-#	define mcontext_t libthread_mcontext_t
-#	define ucontext libthread_ucontext
-#	define ucontext_t libthread_ucontext_t
+#	define mctxt libthread_mctxt
+#	define mctxt_t libthread_mctxt_t
+#	define uctxt libthread_uctxt
+#	define uctxt_t libthread_uctxt_t
 #	include "sparc-ucontext.h"
 #endif
 
 #if defined(__arm__)
-int qt_getmctxt(mcontext_t*);
-void qt_setmctxt(const mcontext_t*);
+int qt_getmctxt(mctxt_t*);
+void qt_setmctxt(const mctxt_t*);
 #define	setcontext(u)	qt_setmctxt(&(u)->uc_mcontext)
 #define	getcontext(u)	qt_getmctxt(&(u)->uc_mcontext)
 #endif

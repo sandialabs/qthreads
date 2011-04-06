@@ -5,12 +5,7 @@
 # include "config.h"
 #endif
 
-#if defined(HAVE_UCONTEXT_H) && defined(HAVE_NATIVE_MAKECONTEXT)
-# include <ucontext.h>                 /* for make/get/swap-context functions */
-#else
-# include "osx_compat/taskimpl.h"
-#endif
-
+#include "qt_context.h"
 #include "qt_shepherd_innards.h"
 
 #define ARGCOPY_MAX 1024
@@ -36,8 +31,8 @@ enum threadstate {
 
 struct qthread_runtime_data_s {
     void       *stack;          /* the thread's stack */
-    ucontext_t  context;        /* the context switch info */
-    ucontext_t *return_context; /* context of parent shepherd */
+    qt_context_t  context;        /* the context switch info */
+    qt_context_t *return_context; /* context of parent shepherd */
 
     /* a pointer used for passing information back to the shepherd when
      * becoming blocked */

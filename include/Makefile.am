@@ -21,6 +21,7 @@ noinst_HEADERS = \
 	qt_atomics.h \
 	qt_barrier.h \
 	qt_blocking_structs.h \
+	qt_context.h \
 	qt_gcd.h \
 	qt_hash.h \
 	qt_locks.h \

@@ -7,7 +7,7 @@
 #include "qthread_prefetch.h"
 
 #ifdef NEEDPOWERMAKECONTEXT
-void qt_makectxt(ucontext_t *ucp, void (*func)(void), int argc, ...)
+void qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...)
 {
 	unsigned long *sp, *tos;
 	va_list arg;
@@ -21,7 +21,7 @@ void qt_makectxt(ucontext_t *ucp, void (*func)(void), int argc, ...)
 	va_end(arg);
 }
 #elif defined(NEEDX86MAKECONTEXT)
-void qt_makectxt(ucontext_t *ucp, void (*func)(void), int argc, ...)
+void qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...)
 {
 	uintptr_t *sp;
 #ifdef NEEDX86REGISTERARGS
@@ -62,7 +62,7 @@ void qt_makectxt(ucontext_t *ucp, void (*func)(void), int argc, ...)
 }
 #elif defined(NEEDTILEMAKECONTEXT)
 /* This function is entirely copyright Sandia National Laboratories */
-void qt_makectxt(ucontext_t *ucp, void (*func)(void), int argc, ...)
+void qt_makectxt(uctxt_t *ucp, void (*func)(void), int argc, ...)
 {
 	unsigned long *sp;
 	unsigned long *tos = ucp->uc_stack.ss_sp;
@@ -90,7 +90,7 @@ void qt_makectxt(ucontext_t *ucp, void (*func)(void), int argc, ...)
 #endif
 
 #ifdef NEEDSWAPCONTEXT
-int qt_swapctxt(ucontext_t *oucp, ucontext_t *ucp)
+int qt_swapctxt(uctxt_t *oucp, uctxt_t *ucp)
 {
     /* note that my getcontext implementation has only two possible return
      * values: 1 and 0. If it's 0, then I successfully got the context. If it's

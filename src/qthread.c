@@ -114,12 +114,12 @@ static void qthread_wrapper(unsigned int high,
 static void qthread_wrapper(void *ptr);
 #endif
 
-static QINLINE void qthread_makecontext(ucontext_t *const c,
+static QINLINE void qthread_makecontext(qt_context_t *const c,
                                         void *const       stack,
                                         const size_t      stacksize,
                                         void              (*func)(void),
                                         const void *const arg,
-                                        ucontext_t *const returnc);
+                                        qt_context_t *const returnc);
 static QINLINE qthread_t *qthread_thread_new(qthread_f             f,
                                              const void           *arg,
                                              size_t                arg_size,
@@ -131,7 +131,7 @@ static qthread_shepherd_t *qthread_find_active_shepherd(qthread_shepherd_id_t *l
 static QINLINE void qthread_enqueue(qthread_queue_t *q,
                                     qthread_t       *t);
 static QINLINE void qthread_exec(qthread_t  *t,
-                                 ucontext_t *c);
+                                 qt_context_t *c);
 
 #if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED)
 # define ALLOC_QTHREAD(shep) (qthread_t *)malloc(sizeof(qthread_t))
@@ -330,7 +330,7 @@ static void *qthread_shepherd(void *arg)
 #else
     qthread_shepherd_t *me = (qthread_shepherd_t *)arg;
 #endif
-    ucontext_t my_context;
+    qt_context_t my_context;
     qthread_t *t;
     int        done = 0;
 
@@ -1053,10 +1053,10 @@ int qthread_initialize(void)
 /* this launches shepherd 0 */
     qthread_debug(ALL_DETAILS, "launching shepherd 0\n");
 #ifdef QTHREAD_USE_VALGRIND
-    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&qlib->mccoy_thread->rdata->context, sizeof(ucontext_t));
-    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&(qlib->master_context), sizeof(ucontext_t));
-    VALGRIND_MAKE_MEM_DEFINED(&qlib->mccoy_thread->rdata->context, sizeof(ucontext_t));
-    VALGRIND_MAKE_MEM_DEFINED(&(qlib->master_context), sizeof(ucontext_t));
+    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&qlib->mccoy_thread->rdata->context, sizeof(qt_context_t));
+    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&(qlib->master_context), sizeof(qt_context_t));
+    VALGRIND_MAKE_MEM_DEFINED(&qlib->mccoy_thread->rdata->context, sizeof(qt_context_t));
+    VALGRIND_MAKE_MEM_DEFINED(&(qlib->master_context), sizeof(qt_context_t));
 #endif
     qthread_debug(ALL_DETAILS, "calling swapcontext\n");
 #ifdef HAVE_NATIVE_MAKECONTEXT
@@ -1169,12 +1169,12 @@ int qthread_initialize(void)
 /* This initializes a context (c) to run the function (func) with a single
  * argument (arg). This is just a wrapper around makecontext that isolates some
  * of the portability garbage. */
-static QINLINE void qthread_makecontext(ucontext_t *const c,
+static QINLINE void qthread_makecontext(qt_context_t *const c,
                                         void *const       stack,
                                         const size_t      stacksize,
                                         void              (*func)(void),
                                         const void *const arg,
-                                        ucontext_t *const returnc)
+                                        qt_context_t *const returnc)
 {                      /*{{{ */
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
     const unsigned int high = ((uintptr_t)arg) >> 32;
@@ -1955,7 +1955,7 @@ int in_qthread_fence(void *addr)
 /* This function means "run thread t". The second argument (c) is a pointer
  * to the current context. */
 static QINLINE void qthread_exec(qthread_t  *t,
-                                 ucontext_t *c)
+                                 qt_context_t *c)
 {                      /*{{{ */
 #ifdef NEED_RLIMIT
     struct rlimit rlp;
@@ -1998,10 +1998,10 @@ static QINLINE void qthread_exec(qthread_t  *t,
                   "t(%p): executing swapcontext(%p, %p)...\n", t, t->rdata->return_context, &t->rdata->context);
     /* return_context (aka "c") is being written over with the current context */
 #ifdef QTHREAD_USE_VALGRIND
-    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&t->rdata->context, sizeof(ucontext_t));
-    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(t->rdata->return_context, sizeof(ucontext_t));
-    VALGRIND_MAKE_MEM_DEFINED(&t->rdata->context, sizeof(ucontext_t));
-    VALGRIND_MAKE_MEM_DEFINED(t->rdata->return_context, sizeof(ucontext_t));
+    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&t->rdata->context, sizeof(qt_context_t));
+    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(t->rdata->return_context, sizeof(qt_context_t));
+    VALGRIND_MAKE_MEM_DEFINED(&t->rdata->context, sizeof(qt_context_t));
+    VALGRIND_MAKE_MEM_DEFINED(t->rdata->return_context, sizeof(qt_context_t));
 #endif
 #ifdef HAVE_NATIVE_MAKECONTEXT
     qassert(swapcontext(t->rdata->return_context, &t->rdata->context), 0);
@@ -2443,10 +2443,10 @@ void qthread_back_to_master(qthread_t *t)
 #endif /* ifdef NEED_RLIMIT */
        /* now back to your regularly scheduled master thread */
 #ifdef QTHREAD_USE_VALGRIND
-    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&t->rdata->context, sizeof(ucontext_t));
-    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(t->rdata->return_context, sizeof(ucontext_t));
-    VALGRIND_MAKE_MEM_DEFINED(&t->rdata->context, sizeof(ucontext_t));
-    VALGRIND_MAKE_MEM_DEFINED(t->rdata->return_context, sizeof(ucontext_t));
+    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&t->rdata->context, sizeof(qt_context_t));
+    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(t->rdata->return_context, sizeof(qt_context_t));
+    VALGRIND_MAKE_MEM_DEFINED(&t->rdata->context, sizeof(qt_context_t));
+    VALGRIND_MAKE_MEM_DEFINED(t->rdata->return_context, sizeof(qt_context_t));
 #endif
 #ifdef HAVE_NATIVE_MAKECONTEXT
     qassert(swapcontext(&t->rdata->context, t->rdata->return_context), 0);

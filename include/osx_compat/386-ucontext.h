@@ -10,15 +10,15 @@
 
 #define setcontext(u) qt_setmctxt(&(u)->uc_mcontext)
 #define getcontext(u) qt_getmctxt(&(u)->uc_mcontext)
-typedef struct mcontext mcontext_t;
-typedef struct ucontext ucontext_t;
+typedef struct mctxt mctxt_t;
+typedef struct uctxt uctxt_t;
 
 typedef void (MakeContextCallback)(void);
 
-int qt_swapctxt(ucontext_t *, ucontext_t *);
-void qt_makectxt(ucontext_t *, MakeContextCallback *, int, ...);
-int qt_getmctxt(mcontext_t *);
-void qt_setmctxt(mcontext_t *);
+int qt_swapctxt(uctxt_t *, uctxt_t *);
+void qt_makectxt(uctxt_t *, MakeContextCallback *, int, ...);
+int qt_getmctxt(mctxt_t *);
+void qt_setmctxt(mctxt_t *);
 
 /*-
  * Copyright (c) 1999 Marcel Moolenaar
@@ -50,7 +50,7 @@ void qt_setmctxt(mcontext_t *);
  * $FreeBSD: src/sys/sys/ucontext.h,v 1.4 1999/10/11 20:33:17 luoqi Exp $
  */
 
-struct mcontext {
+struct mctxt {
 	unsigned long mc_edi;  /* 0: 1st arg (mandatory) */
 	unsigned long mc_ebp;  /* 1: Stack frame pointer (esi) */
 	unsigned long mc_ebx;  /* 2: PIC base register, also general-purp. reg */
@@ -68,8 +68,8 @@ struct mcontext {
 	unsigned long mc_eip;  /* 10/6: function pointer */
 };
 
-struct ucontext {
-	mcontext_t	uc_mcontext;
+struct uctxt {
+	mctxt_t	uc_mcontext;
 	struct {
 	    void * ss_sp;
 	    size_t ss_size;
