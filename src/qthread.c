@@ -1059,7 +1059,11 @@ int qthread_initialize(void)
     VALGRIND_MAKE_MEM_DEFINED(&(qlib->master_context), sizeof(ucontext_t));
 #endif
     qthread_debug(ALL_DETAILS, "calling swapcontext\n");
+#ifdef HAVE_NATIVE_MAKECONTEXT
     qassert(swapcontext(&qlib->mccoy_thread->rdata->context, &(qlib->master_context)), 0);
+#else
+    qassert(qt_swapctxt(&qlib->mccoy_thread->rdata->context, &(qlib->master_context)), 0);
+#endif
 
 #ifdef QTHREAD_RCRTOOL
     QTHREAD_FASTLOCK_INIT(rcrtool_lock);
@@ -1997,7 +2001,11 @@ static QINLINE void qthread_exec(qthread_t  *t,
     VALGRIND_MAKE_MEM_DEFINED(&t->rdata->context, sizeof(ucontext_t));
     VALGRIND_MAKE_MEM_DEFINED(t->rdata->return_context, sizeof(ucontext_t));
 #endif
+#ifdef HAVE_NATIVE_MAKECONTEXT
     qassert(swapcontext(t->rdata->return_context, &t->rdata->context), 0);
+#else
+    qassert(qt_swapctxt(t->rdata->return_context, &t->rdata->context), 0);
+#endif
 #ifdef NEED_RLIMIT
     qthread_debug(ALL_DETAILS,
                   "t(%p): setting stack size limits back to normal...\n",
@@ -2438,7 +2446,11 @@ void qthread_back_to_master(qthread_t *t)
     VALGRIND_MAKE_MEM_DEFINED(&t->rdata->context, sizeof(ucontext_t));
     VALGRIND_MAKE_MEM_DEFINED(t->rdata->return_context, sizeof(ucontext_t));
 #endif
+#ifdef HAVE_NATIVE_MAKECONTEXT
     qassert(swapcontext(&t->rdata->context, t->rdata->return_context), 0);
+#else
+    qassert(qt_swapctxt(&t->rdata->context, t->rdata->return_context), 0);
+#endif
 #ifdef NEED_RLIMIT
     qthread_debug(ALL_DETAILS,
                   "t(%p): setting stack size limits back to qthread size...\n",

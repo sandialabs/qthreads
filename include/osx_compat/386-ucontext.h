@@ -15,7 +15,7 @@ typedef struct ucontext ucontext_t;
 
 typedef void (MakeContextCallback)(void);
 
-int swapcontext(ucontext_t *, ucontext_t *);
+int qt_swapctxt(ucontext_t *, ucontext_t *);
 void makecontext(ucontext_t *, MakeContextCallback *, int, ...);
 int getmcontext(mcontext_t *);
 void setmcontext(mcontext_t *);

@@ -90,7 +90,7 @@ void makecontext(ucontext_t *ucp, void (*func)(void), int argc, ...)
 #endif
 
 #ifdef NEEDSWAPCONTEXT
-int swapcontext(ucontext_t *oucp, ucontext_t *ucp)
+int qt_swapctxt(ucontext_t *oucp, ucontext_t *ucp)
 {
     /* note that my getcontext implementation has only two possible return
      * values: 1 and 0. If it's 0, then I successfully got the context. If it's

@@ -34,7 +34,7 @@ struct ucontext
 };
 
 void makecontext(ucontext_t*, void(*)(void), int, ...);
-int swapcontext(ucontext_t*, ucontext_t*);
+int qt_swapctxt(ucontext_t*, ucontext_t*);
 int _getmcontext(mcontext_t*);
 void _setmcontext(mcontext_t*);
 

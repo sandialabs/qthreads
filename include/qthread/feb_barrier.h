@@ -1,7 +1,13 @@
 #ifndef QT_FEB_BARRIER_H
 #define QT_FEB_BARRIER_H
 
-#include <qthread/qthread.h>
+#ifdef __cplusplus
+#define Q_STARTCXX extern "C" {
+#define Q_ENDCXX }
+#else
+#define Q_STARTCXX
+#define Q_ENDCXX
+#endif
 
 Q_STARTCXX
 typedef struct qt_feb_barrier_s qt_feb_barrier_t;

@@ -83,7 +83,7 @@ extern	int		getmcontext(mcontext_t*);
 extern	void		setmcontext(mcontext_t*);
 #define	setcontext(u)	setmcontext(&(u)->uc_mcontext)
 #define	getcontext(u)	getmcontext(&(u)->uc_mcontext)
-extern	int		swapcontext(ucontext_t*, ucontext_t*);
+extern	int		qt_swapctxt(ucontext_t*, ucontext_t*);
 extern	void		makecontext(ucontext_t*, void(*)(), int, ...);
 #endif
 
