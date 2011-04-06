@@ -1,5 +1,5 @@
-#define	setcontext(u)	_setmcontext(&(u)->mc)
-#define	getcontext(u)	_getmcontext(&(u)->mc)
+#define	setcontext(u)	_qt_setmctxt(&(u)->mc)
+#define	getcontext(u)	_qt_getmctxt(&(u)->mc)
 typedef struct mcontext mcontext_t;
 typedef struct ucontext ucontext_t;
 struct mcontext
@@ -35,6 +35,6 @@ struct ucontext
 
 void qt_makectxt(ucontext_t*, void(*)(void), int, ...);
 int qt_swapctxt(ucontext_t*, ucontext_t*);
-int _getmcontext(mcontext_t*);
-void _setmcontext(mcontext_t*);
+int _qt_getmctxt(mcontext_t*);
+void _qt_setmctxt(mcontext_t*);
 

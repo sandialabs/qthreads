@@ -8,8 +8,8 @@
 # include <sys/ucontext.h>
 #endif
 
-#define setcontext(u) setmcontext(&(u)->uc_mcontext)
-#define getcontext(u) getmcontext(&(u)->uc_mcontext)
+#define setcontext(u) qt_setmctxt(&(u)->uc_mcontext)
+#define getcontext(u) qt_getmctxt(&(u)->uc_mcontext)
 typedef struct mcontext mcontext_t;
 typedef struct ucontext ucontext_t;
 
@@ -17,8 +17,8 @@ typedef void (MakeContextCallback)(void);
 
 int qt_swapctxt(ucontext_t *, ucontext_t *);
 void qt_makectxt(ucontext_t *, MakeContextCallback *, int, ...);
-int getmcontext(mcontext_t *);
-void setmcontext(mcontext_t *);
+int qt_getmctxt(mcontext_t *);
+void qt_setmctxt(mcontext_t *);
 
 /*-
  * Copyright (c) 1999 Marcel Moolenaar

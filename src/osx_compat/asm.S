@@ -3,62 +3,62 @@
 
 #if defined(__FreeBSD__) && defined(__i386__) && __FreeBSD__ < 5
 #define NEEDX86CONTEXT 1
-#define SET setmcontext
-#define GET getmcontext
+#define SET qt_setmctxt
+#define GET qt_getmctxt
 #endif
 
 #if defined(__APPLE__)
 # if defined(__i386__)
 #  define NEEDX86CONTEXT 1
-#  define SET _setmcontext
-#  define GET _getmcontext
+#  define SET _qt_setmctxt
+#  define GET _qt_getmctxt
 # elif defined(__x86_64__)
 #  define NEEDX86_64CONTEXT 1
-#  define SET _setmcontext
-#  define GET _getmcontext
+#  define SET _qt_setmctxt
+#  define GET _qt_getmctxt
 # elif defined(__ppc64__)
 #  define NEEDPOWER64CONTEXT 1
-#  define SET __setmcontext
-#  define GET __getmcontext
+#  define SET __qt_setmctxt
+#  define GET __qt_getmctxt
 # else /* why not detect __ppc__? */
 #  define NEEDPOWERCONTEXT 1
-#  define SET __setmcontext
-#  define GET __getmcontext
+#  define SET __qt_setmctxt
+#  define GET __qt_getmctxt
 # endif
 #endif
 
 #if defined(__linux__)
 # if defined(__arm__)
 #  define NEEDARMCONTEXT 1
-#  define SET setmcontext
-#  define GET getmcontext
+#  define SET qt_setmctxt
+#  define GET qt_getmctxt
 # elif defined(__tile__)
 #  define NEEDTILECONTEXT 1
-#  define SET _setmcontext
-#  define GET _getmcontext
+#  define SET _qt_setmctxt
+#  define GET _qt_getmctxt
 # elif defined (__i386__)
 #  define NEEDX86CONTEXT 1
-#  define SET setmcontext
-#  define GET getmcontext
+#  define SET qt_setmctxt
+#  define GET qt_getmctxt
 # elif defined (__x86_64__)
 #  define NEEDX86_64CONTEXT 1
-#  define SET setmcontext
-#  define GET getmcontext
+#  define SET qt_setmctxt
+#  define GET qt_getmctxt
 # elif defined (__ppc64__)
 #  define NEEDPOWER64CONTEXT 1
-#  define SET setmcontext
-#  define GET getmcontext
+#  define SET qt_setmctxt
+#  define GET qt_getmctxt
 # elif defined (__ppc__)
 #  define NEEDPOWERCONTEXT 1
-#  define SET setmcontext
-#  define GET getmcontext
+#  define SET qt_setmctxt
+#  define GET qt_getmctxt
 # endif
 #endif
 
 #if defined(__CYGWIN32__)
 # define NEEDX86CONTEXT
-# define SET _setmcontext
-# define GET _getmcontext
+# define SET _qt_setmctxt
+# define GET _qt_getmctxt
 #endif
 
 #ifdef NEEDX86CONTEXT
@@ -356,7 +356,7 @@ GET:				/* xxx: instruction scheduling */
 
 	stw	r1, 4*4(r3) /* sp */
 	stw	r2, 5*4(r3) /* toc */
-	li	r5, 1			/* return value for setmcontext */
+	li	r5, 1			/* return value for qt_setmctxt */
 	stw	r5, 6*4(r3) /* arg1 & return-value */
 
 	stw	r13, (0+7)*4(r3)	/* callee-save GPRs */
@@ -482,7 +482,7 @@ GET:				/* xxx: instruction scheduling */
 
 	std	r1, 4*8(r3)
 	std	r2, 5*8(r3)
-	li	r5, 1			/* return value for setmcontext */
+	li	r5, 1			/* return value for qt_setmctxt */
 	std	r5, 6*8(r3)
 
 	/*std	r13, (0+7)*8(r3) not saving r13 because I want thread migration */
