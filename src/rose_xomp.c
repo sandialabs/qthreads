@@ -291,6 +291,7 @@ void XOMP_parallel_start(
     void (*func) (void *),
     void *data,
     unsigned ifClause,
+
     unsigned numThread,
     const char* funcName)
 #else
@@ -317,9 +318,18 @@ void XOMP_parallel_start(
 #else
   qthread_shepherd_id_t parallelWidth = qthread_num_shepherds();
 #endif
-
+  int save_thread_cnt = 0;  // double duty - non-zero we changed thread count - value is the old thread count
+  if ( numThread & (parallelWidth != numThread)) {
+    save_thread_cnt = parallelWidth;
+    omp_set_num_threads(numThread);
+    parallelWidth = numThread;
+  }
   qt_loop_step_f f = (qt_loop_step_f) func;
   qt_parallel_step(f, parallelWidth, data);
+
+  if (save_thread_cnt) {
+    omp_set_num_threads(save_thread_cnt);
+  }
 
   return;
 }
@@ -328,16 +338,16 @@ void XOMP_parallel_start(
 void XOMP_parallel_end(
     void)
 {
-  XOMP_taskwait();
+    XOMP_taskwait();
 
 #ifdef QTHREAD_RCRTOOL
     //Here we log leaving an open MP section into the RCRTool RAT Table.
     rcrtool_log(RCR_RATTABLE, XOMP_PARALLEL_END, -1, 0, 0);
 #endif
 
-  qt_omp_parallel_region_destroy();  //  need to free parallel region and all it contains
+    qt_omp_parallel_region_destroy();  //  need to free parallel region and all it contains
 
-  return;
+    return;
 }
 
 static qqloop_step_handle_t *testLoop; // akp - temp needs rose change to pass
@@ -581,7 +591,7 @@ void XOMP_spin_lock(
     qthread_parallel_region_t *pr = qt_parallel_region();
     pr->forLoop = NULL;
     lp = NULL;
-  }  
+  } 
 
   val = qthread_incr(&spinLock,-1);
   if (val == 1) spinLock_rel = 0;
@@ -595,7 +605,18 @@ void XOMP_loop_end(
     qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
     XOMP_loop_end_nowait(loop);
 
-    XOMP_spin_lock(loop); // need barrier to make sure loop is freed 
+    if (!xomp_get_nested(&xomp_status)) {
+        XOMP_spin_lock(loop); // need barrier to make sure loop is freed 
+    }
+    else {
+      XOMP_barrier(); // need barrier to make sure loop is freed after everyone has used it
+      if (XOMP_master()) {
+	qthread_parallel_region_t *pr = qt_parallel_region();
+	pr->forLoop = NULL;
+	loop = NULL;
+      }
+      XOMP_barrier(); // need barrier to make sure loop is freed after everyone has used it
+    }
 }
 
 // Openmp parallel for loop is completed

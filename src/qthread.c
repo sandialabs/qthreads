@@ -298,6 +298,8 @@ static void *qthread_shepherd_wrapper(unsigned int high,
 #endif /* ifdef QTHREAD_MAKECONTEXT_SPLIT */
 
 /* pulled from qthread_shepherd in case needed by stealing/run specific code */
+extern const syncvar_t SYNCVAR_EMPTY_INITIALIZER;
+
 static QINLINE void alloc_rdata(qthread_shepherd_t *me,
                                 qthread_t          *t)
 {
@@ -318,7 +320,8 @@ static QINLINE void alloc_rdata(qthread_shepherd_t *me,
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     t->rdata->openmpTaskRetVar = NULL;
     //    t->rdata->taskWaitLock.u.w = 0;
-    qthread_syncvar_empty(&t->rdata->taskWaitLock);
+    //qthread_syncvar_empty(&t->rdata->taskWaitLock);
+    t->rdata->taskWaitLock = SYNCVAR_EMPTY_INITIALIZER;
 #endif
 }
 
@@ -1018,6 +1021,10 @@ int qthread_initialize(void)
     assert(qlib->mccoy_thread->rdata != NULL);
     qlib->mccoy_thread->rdata->shepherd_ptr = &(qlib->shepherds[0]);
     qlib->mccoy_thread->rdata->stack        = NULL;
+
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    qlib->mccoy_thread->rdata->taskWaitLock = SYNCVAR_EMPTY_INITIALIZER;
+#endif
 
     qthread_debug(ALL_DETAILS, "enqueueing mccoy thread\n");
     qt_threadqueue_enqueue(qlib->shepherds[0].ready, qlib->mccoy_thread, &(qlib->shepherds[0]));
@@ -2189,9 +2196,9 @@ int qthread_fork_syncvar_copyargs_to(const qthread_f             f,
     qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id,
                   target_shep);
     t->flags |= QTHREAD_RET_IS_SYNCVAR;
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    t->currentParallelRegion = qlib->shepherds[0].currentParallelRegion; // saved in shepherd
-#endif
+
+    qthread_t *me = qthread_internal_self();
+    t->currentParallelRegion = me->currentParallelRegion; // saved in shepherd
     t->id = preferred_shep;  // used in barrier and arrive_first, NOT the thread-id
                              // may be extraneous in both when parallel region
                              // barriers in place (not will to pull it now
@@ -2518,14 +2525,9 @@ void qt_set_unstealable()
 /* These are just accessor functions */
 qthread_parallel_region_t *qt_parallel_region() // get active parallel region
 {                                               /*{{{ */
-# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    qthread_worker_t *worker = qthread_internal_getworker();
-    return worker->current->currentParallelRegion;
+    qthread_t *t = qthread_internal_self();
+    return t->currentParallelRegion;
 
-# else
-    qthread_shepherd_t *shep = qthread_internal_getshep();
-    return shep->currentParallelRegion;
-# endif
 }                      /*}}} */
 
 int qt_omp_parallel_region_create()
@@ -2550,11 +2552,12 @@ int qt_omp_parallel_region_create()
 #  endif
 # endif /* ifdef QTHREAD_LOG_BARRIER */
 
-    pr->last                                = myshep->currentParallelRegion;
-    myshep->currentParallelRegion           = pr;
-    myshep->currentParallelRegion->barrier  = gb;
-    myshep->currentParallelRegion->forLoop  = NULL;
-    myshep->currentParallelRegion->loopList = NULL;
+    qthread_t *t = qthread_internal_self(); 
+    pr->last = t->currentParallelRegion;
+    t->currentParallelRegion           = pr;
+    t->currentParallelRegion->barrier  = gb;
+    t->currentParallelRegion->forLoop  = NULL;
+    t->currentParallelRegion->loopList = NULL;
 
     return 0;
 }                              /*}}} */
@@ -2571,16 +2574,14 @@ void qt_move_to_orig()
 
 void qt_omp_parallel_region_destroy()
 {                      /*{{{ */
-    qthread_shepherd_t *myshep    = qthread_internal_getshep();
-    qthread_parallel_region_t *pr = myshep->currentParallelRegion;
-
-    if (!pr) { return; }
 
 # if 0 // race condition on cleanup - commented out until found - akp 3/16/11
        // it looks like one thread reaches cleanup code before completing loop
        // I thought it was related to threads moving (affinity reduces the
        // likelyhood of the hang -- but does not make it go away) but have not
        // found it.
+    qthread_shepherd_t *myshep    = qthread_internal_getshep();
+    if (!pr) { return; }
     qt_free_loop(pr->loopList);
 
     if (pr->barrier) {
@@ -2591,8 +2592,14 @@ void qt_omp_parallel_region_destroy()
 #  endif
     }
     myshep->currentParallelRegion = pr->last;
+
     free(pr);
 # endif /* if 0 */
+
+    qthread_t *t = qthread_internal_self(); 
+
+    qthread_parallel_region_t *pr = t->currentParallelRegion;
+    t->currentParallelRegion = pr->last;
 }                                      /*}}} */
 
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */

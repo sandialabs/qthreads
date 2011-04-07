@@ -70,9 +70,6 @@ struct qthread_shepherd_s
     unsigned int stealing_mode;  /* Specifies when a shepherd may steal */
 #endif
 #endif
- #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-   qthread_parallel_region_t *currentParallelRegion;
-#endif
 #ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
     size_t steal_called;
     size_t steal_attempted;
