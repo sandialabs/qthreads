@@ -305,7 +305,9 @@ void XOMP_parallel_start(
   // allocate block to hold parallel for loop pointer for any loop directly created within this region
   //    --- parallel for loops directly created within other for loops will be handled by passing
   //   this value in as part of the XOMP_loop_*_init function
-  qt_omp_parallel_region_create();
+  if (qt_omp_parallel_region_create()) {
+    set_inside_xomp_parallel(&xomp_status, TRUE);
+  }
 
 #ifdef QTHREAD_RCRTOOL
     //Here we log entering an open MP section into the RCRTool RAT Table.
@@ -605,7 +607,7 @@ void XOMP_loop_end(
     qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
     XOMP_loop_end_nowait(loop);
 
-    if (!xomp_get_nested(&xomp_status)) {
+    if (!get_inside_xomp_parallel(&xomp_status)) {
         XOMP_spin_lock(loop); // need barrier to make sure loop is freed 
     }
     else {
@@ -1159,7 +1161,6 @@ void XOMP_flush_one(
 void omp_set_num_threads (
     int omp_num_threads_requested)
 {
-  set_inside_xomp_parallel(&xomp_status, TRUE);
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   qthread_worker_id_t workerid = qthread_worker(NULL);

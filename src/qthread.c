@@ -2532,6 +2532,7 @@ qthread_parallel_region_t *qt_parallel_region() // get active parallel region
 
 int qt_omp_parallel_region_create()
 {                      /*{{{ */
+    int ret = 0;
     qthread_shepherd_t *myshep = qthread_internal_getshep();
 
     qthread_parallel_region_t *pr = malloc(sizeof(qthread_parallel_region_t));
@@ -2553,13 +2554,16 @@ int qt_omp_parallel_region_create()
 # endif /* ifdef QTHREAD_LOG_BARRIER */
 
     qthread_t *t = qthread_internal_self(); 
+    if (t->currentParallelRegion != NULL) { // we have nested parallelism
+      ret = 1;
+    }
     pr->last = t->currentParallelRegion;
-    t->currentParallelRegion           = pr;
-    t->currentParallelRegion->barrier  = gb;
-    t->currentParallelRegion->forLoop  = NULL;
-    t->currentParallelRegion->loopList = NULL;
+    t->currentParallelRegion = pr;
+    pr->barrier              = gb;
+    pr->forLoop              = NULL;
+    pr->loopList             = NULL;
 
-    return 0;
+    return ret;
 }                              /*}}} */
 
 void qt_free_loop(void *lp);
