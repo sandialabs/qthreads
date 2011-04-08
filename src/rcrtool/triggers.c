@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include "triggers.h"
 
 /***********************************************************************
 * definition for the trigger map; used by all methods
@@ -6,15 +7,58 @@
 Trigger** triggerMap  = NULL; // allocated and pupulated in buildTriggerMap()
 int       numTriggers = 0;    // populated in buildTriggerMap()
 
-/***********************************************************************************************
-* Reads from a trigger file and builds the triggerMap
-* triggerMap is an array of TriggerMap structs
-***********************************************************************************************/
-/**
+/**************************************************************************************
+Trim strings with white spaces
+***************************************************************************************/
+/* Remove leading whitespaces */
+static char *ltrim(char *const s)
+{
+    size_t len;
+    char *cur;
+
+    if (s && *s) {
+        len = strlen(s);
+        cur = s;
+
+        while (*cur && isspace(*cur))
+            ++cur, --len;
+
+        if (s != cur)
+            memmove(s, cur, len + 1);
+    }
+
+    return s;
+}
+
+/* Remove trailing whitespaces */
+static char *rtrim(char *const s)
+{
+    if (s && *s) {
+        char *cur = s + strlen(s) - 1;
+
+        while (cur != s && isspace(*cur))
+            --cur;
+
+        cur[isspace(*cur) ? 0 : 1] = '\0';
+    }
+
+    return s;
+}
+
+/* Remove leading and trailing whitespaces */
+static char *trim(char *const s)
+{
+    rtrim(s);
+    ltrim(s);
+
+    return s;
+}
+
+/*!
  * Reads from a trigger file and builds the <i>triggerMap<i/>. <i>triggerMap</i>
- * is an array of TriggerMap structs 
+ * is an array of TriggerMap structs .
  * 
- * @param fileName Name of the trigger definition file.
+ * \param fileName Name of the trigger definition file.
  */
 void buildTriggerMap(const char *fileName){
     int triggerCount = 0; // counts the number of triggers in the triggerFile

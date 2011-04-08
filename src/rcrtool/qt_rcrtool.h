@@ -45,6 +45,13 @@ void rcrtool_log(qt_rcrtool_level level, XOMP_Type type, unsigned thread_id, uin
 #define RCR_HASH_LOOKUP_FAILURE -1
 #define RCR_APP_NAME_MAX_SIZE   1024
 
+typedef struct _ShepWorkerInfo {
+    int nshepherds;
+    int nworkerspershep;
+} ShepWorkerInfo;
+
+extern ShepWorkerInfo swinfo;
+
 typedef struct _RCRHashEntry {
     char funcName[RCR_HASH_ENTRY_SIZE];
     unsigned int count;

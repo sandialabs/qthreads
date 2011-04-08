@@ -6,14 +6,9 @@
 
 #include "bcGen.h"
 #include "qt_rcrtool.h"
+#include "triggers.h"
 #include <stdio.h>
 #include <errno.h>
-
-/***********************************************************************
-* definition for the trigger map; used by all methods
-***********************************************************************/
-Trigger** triggerMap  = NULL; // allocated and pupulated in buildTriggerMap()
-int       numTriggers = 0;    // populated in buildTriggerMap()
 
 int getNumTriggers(void) {
     return numTriggers;
@@ -21,90 +16,6 @@ int getNumTriggers(void) {
 
 Trigger** getTriggers(void) {
     return triggerMap;
-}
-
-/***********************************************************************************************
-* Reads from a trigger file and builds the triggerMap
-* triggerMap is an array of TriggerMap structs
-***********************************************************************************************/
-/**
- * Reads from a trigger file and builds the <i>triggerMap<i/>. <i>triggerMap</i>
- * is an array of TriggerMap structs 
- * 
- * @param fileName Name of the trigger definition file.
- */
-void buildTriggerMap(const char *fileName){
-    int triggerCount = 0; // counts the number of triggers in the triggerFile
-    char line[BUFSIZ];
-    char *nextField;
-
-    printf("Reading from trigger file: %s \n", fileName);
-
-    // Check if file exists
-    FILE *triggerFile = fopen(fileName, "r");
-    if (triggerFile == NULL) {
-        printf("Can't open trigger file !! \n");
-        return;
-    }
-
-    // Read each line, allocate memory for triggerMap and populate elements of the triggerMap array
-    while (fgets(line, BUFSIZ, triggerFile) != NULL) {
-
-        // Allocate memory for the next trigger entry
-        triggerMap = (Trigger **) realloc(triggerMap, (triggerCount + 1) * sizeof(Trigger *));
-        triggerMap[triggerCount] = (Trigger *) malloc(sizeof(Trigger));
-
-        // Parsing type
-        nextField = (char *) strtok(line, ",");
-        nextField = trim(nextField); // remove trailing and leading white spaces
-        if (strcmp(nextField, "TYPE_CORE") == 0) {
-            triggerMap[triggerCount]->type = TYPE_CORE;
-        } else if (strcmp(nextField, "TYPE_SOCKET") == 0) {
-            triggerMap[triggerCount]->type = TYPE_SOCKET;
-        } else if (strcmp(nextField, "TYPE_NODE") == 0) {
-            triggerMap[triggerCount]->type = TYPE_NODE;
-        } else {
-            printf("Unknown trigger type: type must be TYPE_CORE or TYPE_SOCKET or TYPE_NODE \n");
-            printf("Ignoring the rest of the trigger file \n");
-            break;
-        }
-
-        // Parsing id
-        nextField = (char *) strtok(NULL, ",");
-        triggerMap[triggerCount]->id = atoi(nextField);
-
-        // Parsing trigger flag shared memory key
-        nextField = (char *) strtok(NULL, ",");
-        triggerMap[triggerCount]->flagShmKey = atoi(nextField);
-
-        // Parsing application state shared memory key
-        nextField = (char *) strtok(NULL, ",");
-        triggerMap[triggerCount]->appStateShmKey = atoi(nextField);
-
-        // Parsing meterName
-        nextField = (char *) strtok(NULL, ",");
-        nextField = trim(nextField);
-        triggerMap[triggerCount]->meterName = (char *) malloc((1+strlen(nextField))*sizeof(char));
-        strcpy(triggerMap[triggerCount]->meterName , nextField);
-
-        // Parsing threshold lower bound
-        nextField = (char *) strtok(NULL, ",");
-        triggerMap[triggerCount]->threshold_lb = atof(nextField);
-
-        // Parsing threshold upper bound
-        nextField = (char *) strtok(NULL, ",");
-        triggerMap[triggerCount]->threshold_ub = atof(nextField);
-
-        triggerCount++;
-
-    } // End reading from trigger file
-
-    fclose(triggerFile);
-
-    numTriggers = triggerCount;
-
-    printTriggerMap();
-
 }
 
 /*!
@@ -138,8 +49,7 @@ int putBreadcrumbs(rcrtool_trigger_type triggerType, int socketOrCoreID, const c
 #ifdef QTHREAD_RCRTOOL
                 if (i < MAX_TRIGGERS && flipped[i] != 1) {
                     flipped[i] = 1;
-                    rcrtool_log(RCR_RATTABLE_DEBUG, XOMP_RAT_DEBUG, -1, 0, triggerMap[i]->meterName);
-                    rcrtool_log(RCR_RATTABLE_DEBUG, XOMP_RAT_DEBUG, -1, triggerMap[i]->id, " %d ****************************************************\n");
+                    //rcrtool_debug(RCR_RATTABLE_DEBUG," Hit trigger for %s on %d\n,", triggerMap[i]->meterName, triggerMap[i]->id);
                 }
                 dumpAppState(triggerMap[i]->appStateShmKey, triggerType, socketOrCoreID, meterName);
 #endif
@@ -150,8 +60,7 @@ int putBreadcrumbs(rcrtool_trigger_type triggerType, int socketOrCoreID, const c
 #ifdef QTHREAD_RCRTOOL
                 if (i < MAX_TRIGGERS && flipped[i] != 0) {
                     flipped[i] = 0;
-                    rcrtool_log(RCR_RATTABLE_DEBUG, XOMP_RAT_DEBUG, -1, 0, triggerMap[i]->meterName);
-                    rcrtool_log(RCR_RATTABLE_DEBUG, XOMP_RAT_DEBUG, -1, triggerMap[i]->id, " %d ####################################################\n");
+                    //rcrtool_debug(RCR_RATTABLE_DEBUG," Left trigger for %s on %d\n,", triggerMap[i]->meterName, triggerMap[i]->id);
                 }
 #endif
                 c = '0'; // Unset
@@ -262,7 +171,6 @@ void shmPutFlag(key_t key, char val){
 }
 
 char* getShmStringLoc(key_t key, size_t size) {
-    static size_t allocatedSize = 0;
     key = 9253;
     size = 64;
     //if (size <= allocatedSize) {
@@ -279,8 +187,8 @@ char* getShmStringLoc(key_t key, size_t size) {
                 perror("shmget");
                 return 0;
             }
-            struct shmid_ds my_shmid_ds;
-            shmctl(shmid, IPC_RMID, &my_shmid_ds);
+            //struct shmid_ds my_shmid_ds;
+            //shmctl(shmid, IPC_RMID, &my_shmid_ds);
             //if (shmdt(shm) == -1) {
             //    printf("shmdt failed\n");
             //    return 0;
@@ -296,7 +204,7 @@ char* getShmStringLoc(key_t key, size_t size) {
         }
     }
 
-    if ((shm = shmat(shmid, NULL, 0)) == (void*)-1) {
+    if ((shm = shmat(shmid, NULL, 0)) == (char *)-1) {
         perror("shmat");
         printf("** BC: Could not attach to the shared memory segment with shmid: %d \n ", shmid);
         return 0;
@@ -331,7 +239,7 @@ void dumpAppState(key_t key, rcrtool_trigger_type triggerType, int socketOrCoreI
     strncpy(shmRover, RCRAppName, RCR_APP_NAME_MAX_SIZE);
     shmRover += strlen(RCRAppName);
     for (i = 0; i <= RCRParallelSectionStackPos; i++) {
-        printf("%s %d ^^^^\n", hashTable[RCRParallelSectionStack[i]].funcName, hashTable[RCRParallelSectionStack[i]].count);
+        //printf("%s %d ^^^^\n", hashTable[RCRParallelSectionStack[i]].funcName, hashTable[RCRParallelSectionStack[i]].count);
         *shmRover++ = '|';
         strncpy(shmRover, hashTable[RCRParallelSectionStack[i]].funcName, RCR_HASH_ENTRY_SIZE);
         shmRover += strlen(hashTable[RCRParallelSectionStack[i]].funcName);
@@ -354,50 +262,4 @@ void printTriggerMap(){
     for (i = 0; i < numTriggers; i++) {
         printf("%d \t %d \t %d \t %d \t %s \t %f \t %f \n", triggerMap[i]->type, triggerMap[i]->id, triggerMap[i]->flagShmKey, triggerMap[i]->appStateShmKey, triggerMap[i]->meterName, triggerMap[i]->threshold_lb, triggerMap[i]->threshold_ub);
     }
-}
-/**************************************************************************************
-Trim strings with white spaces
-***************************************************************************************/
-/* Remove leading whitespaces */
-char *ltrim(char *const s)
-{
-    size_t len;
-    char *cur;
-
-    if (s && *s) {
-        len = strlen(s);
-        cur = s;
-
-        while (*cur && isspace(*cur))
-            ++cur, --len;
-
-        if (s != cur)
-            memmove(s, cur, len + 1);
-    }
-
-    return s;
-}
-
-/* Remove trailing whitespaces */
-char *rtrim(char *const s)
-{
-    if (s && *s) {
-        char *cur = s + strlen(s) - 1;
-
-        while (cur != s && isspace(*cur))
-            --cur;
-
-        cur[isspace(*cur) ? 0 : 1] = '\0';
-    }
-
-    return s;
-}
-
-/* Remove leading and trailing whitespaces */
-char *trim(char *const s)
-{
-    rtrim(s);
-    ltrim(s);
-
-    return s;
 }

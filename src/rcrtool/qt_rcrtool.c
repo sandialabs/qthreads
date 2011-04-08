@@ -18,7 +18,9 @@ int RCRParallelSectionStack[RCR_STACK_SIZE];
 int RCRParallelSectionStackPos = -1;
 char RCRAppName[RCR_APP_NAME_MAX_SIZE];
 
-void *rcrtoolDaemon(void *arg) {
+ShepWorkerInfo swinfo;
+
+void *rcrtoolDaemon(void *swinfo) {
     if (pfm_initialize() != PFM_SUCCESS)
         errx(1, "libpfm initialization failed");
     //empty the hash table
@@ -27,7 +29,7 @@ void *rcrtoolDaemon(void *arg) {
         hashTable[i].funcName[0] = 0;
     }
 	buildTriggerMap("triggers.config");
-    doWork();
+    doWork(((ShepWorkerInfo*)swinfo)->nshepherds, ((ShepWorkerInfo*)swinfo)->nworkerspershep);
     return 0;
 }
 
@@ -134,11 +136,11 @@ void rcrtool_log(qt_rcrtool_level level, XOMP_Type type, unsigned thread_id, uin
         //Do some logging.
         switch (type) {
         case XOMP_PARALLEL_START:
-            printf("Entering parallel section %s.\n", data2);
+            //printf("Entering parallel section %s.\n", data2);
             RCREnterParallelSection(data, data2);
             break;
         case XOMP_PARALLEL_END:
-            printf("Leaving parallel section.\n");
+            //printf("Leaving parallel section.\n");
             RCRLeaveParallelSection();
             break;
         case XOMP_INIT:
@@ -147,7 +149,7 @@ void rcrtool_log(qt_rcrtool_level level, XOMP_Type type, unsigned thread_id, uin
             break;
         case XOMP_RAT_DEBUG:
             //use call to built-in debug system. Only allows printing one variable.
-            qthread_debug_(0, data2, (int)data); 
+            //qthread_debug(0, data2, (int)data); 
             break;
         case XOMP_UNK:       
         case XOMP_TASK_START:

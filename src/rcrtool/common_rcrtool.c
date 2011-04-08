@@ -20,7 +20,9 @@ typedef struct _parallelRegion{
 #define TITLE "RCR Daemon (RCRdaemon) 1.00"
 
 // Maximum number of processors
-#define MAX_PROCESSORS 256
+#define MAX_PROCESSORS  128
+// Length of buffer for storing paths into the debug file system
+#define PATH_BUF_LENGTH 256
 
 // Intel Nehalem supports 3 generic counters and 4 selectable counters concurrently
 // AMD Opteron supports 4 selectable counters concurrently
@@ -38,14 +40,6 @@ typedef struct _parallelRegion{
 #define DFS_ROOTDIR_RCR "/sys/kernel/debug/RCRTool"
 #define DFS_ROOTDIR_RAT "/sys/kernel/debug/RCRToolRat"
 
-// RCRTool meter types
-typedef enum _rcr_type {
-    RCR_TYPE_IMMEDIATE = 0,
-    RCR_TYPE_AVERAGE,
-    RCR_TYPE_MAXIMUM,
-    RCR_TYPE_SUM,
-} rcr_type;
-
 // Maximum time window in RCRDaemon (in nanosecond).  Currently set to 60
 // seconds.  Increasing this value may affect overall overhead in memory size
 // and latency.  This value must be carefully selected.
@@ -53,7 +47,7 @@ typedef enum _rcr_type {
 
 #define AMD_OPTERON
 
-/**
+/*!
  * Define the relevant metrics and the performance counters required to
  * calculate them
  */
@@ -78,8 +72,8 @@ static const int   eventsNumPerSocket[] = {1};
 static const int   numOfMetersPerCore   = 2;
 static const int   numOfMetersPerSocket = 4;
 
-static const char* meterspercore[]      = {"CPI", "L2MissRatio"};
-static const char* meterspersocket[]    = {"L3MissRatio", "MemoryBandwidth", "MemoryConcurrency", "MemoryLatency"};
+static const char* metersPerCore[]      = {"CPI", "L2MissRatio"};
+static const char* metersPerSocket[]    = {"L3MissRatio", "MemoryBandwidth", "MemoryConcurrency", "MemoryLatency"};
 
 static const char* eventsPerCore[]      = {
     "PERF_COUNT_HW_CPU_CYCLES,PERF_COUNT_HW_INSTRUCTIONS",
@@ -92,51 +86,52 @@ static const char* eventsPerSocket[]    = {
     "CPU_CLK_UNHALTED,L3_CACHE_MISSES:ALL,CPU_READ_COMMAND_REQUESTS_TO_TARGET_NODE_0_3:ALL",
     "CPU_CLK_UNHALTED,CPU_READ_COMMAND_LATENCY_TO_TARGET_NODE_0_3:ALL,CPU_READ_COMMAND_REQUESTS_TO_TARGET_NODE_0_3:ALL"};
 
-static const int eventsNumPerSocket[]   = {4, 2, 3, 3};
+//static const int eventsNumPerSocket[]   = {4, 2, 3, 3};
+static const int eventsNumPerSocket[]   = {3, 2, 3, 3};
 #endif
 
-/**
+/*!
  * Add a meter value.
  *
- * @param q
- * @param val
- * @param ts
+ * \param q
+ * \param val
+ * \param ts
  *
- * @return void
+ * \return void
  */
-void addMeterValue(struct MeterValue **q, double val, uint64_t ts) {
+void addMeterValue(MeterValue **q, double val, uint64_t ts) {
 
-    struct MeterValue *tempMeterValue;
+    MeterValue* tempMeterValue;
 
-    tempMeterValue = (struct MeterValue*)malloc(sizeof(struct MeterValue));
-    tempMeterValue->data      = val;
+    tempMeterValue            = (MeterValue*)malloc(sizeof(MeterValue));
+    tempMeterValue->value     = val;
     tempMeterValue->timestamp = ts;
     tempMeterValue->next      = *q;
-    *q = tempMeterValue;
+    *q                        = tempMeterValue;
 }
 
 
-/**
+/*!
  * Get average meter value.
  *
- * @param MeterValue** Pointer to a list of core meter
- *  			  <I>MeterValue</I> structures.
- * @param tw time window size (in nanosecond)
+ * \param MeterValue** Pointer to a list of core meter
+ *                <I>MeterValue</I> structures.
+ * \param tw time window size (in nanosecond)
  *
- * @return Average meter value or 0 on error.
+ * \return Average meter value or 0 on error.
  */
-double getAvgMeterValue(struct MeterValue **q, uint64_t tw) {
+double getAvgMeterValue(MeterValue **q, uint64_t tw) {
     double val = 0.0;
     double sum = 0.0;
     int    cnt = 0;
-    struct MeterValue *temp, *r, *prev;
+    MeterValue *temp, *r, *prev;
     uint64_t latestts;
 
     if (*q == NULL)
         return(0.0);
 
     temp = *q;
-    sum += temp->data;
+    sum += temp->value;
     latestts = temp->timestamp;
     cnt++;
 
@@ -147,7 +142,7 @@ double getAvgMeterValue(struct MeterValue **q, uint64_t tw) {
     temp = temp->next;
 
     while (temp != NULL && (latestts - temp->timestamp) <= tw) {
-        sum += temp->data;
+        sum += temp->value;
         cnt++;
         temp = temp->next;
     }
@@ -170,28 +165,28 @@ double getAvgMeterValue(struct MeterValue **q, uint64_t tw) {
 }
 
 
-/**
+/*!
  * Get max meter value.
  *
- * @param MeterValue** Pointer to a list of core meter
- *  			  <I>MeterValue</I> structures.
- * @param tw time window size (in nanosecond)
+ * \param MeterValue** Pointer to a list of core meter
+ *                <I>MeterValue</I> structures.
+ * \param tw time window size (in nanosecond)
  *
- * @return Maximum meter value or 0 on error.
+ * \return Maximum meter value or 0 on error.
  */
-double getMaxMeterValue(struct MeterValue **q, uint64_t tw) {
+double getMaxMeterValue(MeterValue **q, uint64_t tw) {
     double max = 0.0;
-    struct MeterValue *tempMeterValue,*r,*prevMeterValue;
+    MeterValue *tempMeterValue,*r,*prevMeterValue;
     uint64_t latestts;
 
     if (*q == NULL)
         return(0.0);
 
     tempMeterValue     = *q;
-    max      = tempMeterValue->data;
+    max      = tempMeterValue->value;
     latestts = tempMeterValue->timestamp;
 
-//    printf("max %f\n", temp->data);
+//    printf("max %f\n", temp->value);
 
     if (tw > MAX_TIME_WINDOW)
         tw = MAX_TIME_WINDOW;
@@ -201,9 +196,9 @@ double getMaxMeterValue(struct MeterValue **q, uint64_t tw) {
 
 
     while (tempMeterValue != NULL && (latestts - tempMeterValue->timestamp) <= tw) {
-//  	  printf("max %f, %llu\n", temp->data, temp->timestamp);
-        if (tempMeterValue->data > max)
-            max = tempMeterValue->data;
+//        printf("max %f, %llu\n", temp->value, temp->timestamp);
+        if (tempMeterValue->value > max)
+            max = tempMeterValue->value;
         prevMeterValue = tempMeterValue;
         tempMeterValue = tempMeterValue->next;
     }
@@ -233,17 +228,22 @@ typedef struct _CPUINFO {
     int nodeID;
     int socketID;
     int coreID;
+    char dfsPath[PATH_BUF_LENGTH];
 } CPUINFO;
 
-static CPUINFO cpu_mapping_table[MAX_PROCESSORS];
+//static CPUINFO cpu_mapping_table[MAX_PROCESSORS];
+static CPUINFO* cpu_mapping_table;
 
 typedef struct _SOCKETINFO {
     int nodeID;
     int numOfProcessors;
-    int processorIDs[MAX_PROCESSORS];
+    //int processorIDs[MAX_PROCESSORS];
+    int* processorIDs;
+    char dfsPath[PATH_BUF_LENGTH];
 } SOCKETINFO;
 
-static SOCKETINFO socket_mapping_table[MAX_PROCESSORS];
+//static SOCKETINFO socket_mapping_table[MAX_PROCESSORS];
+static SOCKETINFO* socket_mapping_table;
 
 // Hardware configurations
 static int numOfProcessors;
@@ -276,12 +276,17 @@ int initSystemConfiguration(void) {
     int   coreID      = 0;
     int   maxSocketID = 0;
     int   maxCoreID   = 0;
-    int   i, j, k, first;
+    int   i, j, coreNum, first;
 
     if (bVerbose) printf("Initializing RCRdaemon.\n");
 
-    for (i = 0; i < numOfSockets; i++)
+    //Allocate and fill in the socket and cpu mapping tables.
+    socket_mapping_table = (SOCKETINFO*)malloc(numOfSockets * sizeof(SOCKETINFO));
+    cpu_mapping_table    = (CPUINFO*)malloc(numOfProcessors * sizeof(CPUINFO));
+    for (i = 0; i < numOfSockets; i++) {
         socket_mapping_table[i].numOfProcessors = 0;
+        socket_mapping_table[i].processorIDs    = (int*)malloc(numOfProcessors * sizeof(int));
+    }
 
     FILE *fd = fopen("/proc/cpuinfo", "r");
 
@@ -324,7 +329,8 @@ int initSystemConfiguration(void) {
     numOfSockets    = maxSocketID + 1;
     numOfProcessors = processorID + 1;
 
-    if (numOfProcessors == (numOfSockets * numOfCoresPerSocket))
+    //Assume no hyperthreading for now
+    if (0 && numOfProcessors == (numOfSockets * numOfCoresPerSocket))
         HTenabled = 0;
     else {
         HTenabled = 1;
@@ -332,68 +338,73 @@ int initSystemConfiguration(void) {
         for (i = 0; i < numOfSockets; i++) {
             for (j = 0; j < numOfCoresPerSocket; j++) {
                 first = 1;
-                for (k = 0; k < numOfProcessors; k++) {
-                    if ((first == 1) && (cpu_mapping_table[k].socketID == i) && (cpu_mapping_table[k].coreID == j)) {
+                for (coreNum = 0; coreNum < numOfProcessors; coreNum++) {
+                    if ((first == 1) && (cpu_mapping_table[coreNum].socketID == i) && (cpu_mapping_table[coreNum].coreID == j)) {
                         first = 0;
                         continue;
                     }
-                    if ((first == 0) && (cpu_mapping_table[k].socketID == i) && (cpu_mapping_table[k].coreID == j)) {
-                        cpu_mapping_table[k].coreID = j + numOfCoresPerSocket;
+                    if ((first == 0) && (cpu_mapping_table[coreNum].socketID == i) && (cpu_mapping_table[coreNum].coreID == j)) {
+                        cpu_mapping_table[coreNum].coreID = j + numOfCoresPerSocket;
                     }
                 }
             }
         }
     }
 
+    //Precompute the core directory paths.
+    for (coreNum = 0; coreNum < numOfProcessors; coreNum++) {
+        getCoreDirPath(coreNum, cpu_mapping_table[coreNum].dfsPath);
+    }
+
     if (bVerbose) {
         printf("Nodes = %d  Sockets = %d  Processors = %d  CoresPreSocket = %d\n", numOfNodes, numOfSockets, numOfProcessors, numOfCoresPerSocket);
-        for (k = 0; k < numOfProcessors; k++) {
-            printf("[%d, %d, %d]\n", cpu_mapping_table[k].nodeID, cpu_mapping_table[k].socketID, cpu_mapping_table[k].coreID);
+        for (coreNum = 0; coreNum < numOfProcessors; coreNum++) {
+            printf("[%d, %d, %d]\n", cpu_mapping_table[coreNum].nodeID, cpu_mapping_table[coreNum].socketID, cpu_mapping_table[coreNum].coreID);
         }
     }
     return(0);
 }
 
-/**
+/*!
  *
  *
- * @param processorID
- * @param str
+ * \param processorID
+ * \param str
  *
- * @return int
+ * \return int
  */
-int getNodeDirPath(int processorID, char *str) {
+int getNodeDirPath(int processorID, char* nodeDirPath) {
 
-    sprintf(str, "%s/Node_%04d", DFS_ROOTDIR_RCR, cpu_mapping_table[processorID].nodeID);
+    sprintf(nodeDirPath, "%s/Node_%04d", DFS_ROOTDIR_RCR, cpu_mapping_table[processorID].nodeID);
 
     return(0);
 }
 
-/**
+/*!
  *
  *
- * @param processorID
- * @param str
+ * \param processorID
+ * \param str
  *
- * @return int
+ * \return int
  */
-int getSocketDirPath(int processorID, char *str) {
+int getSocketDirPath(int processorID, char* socketDirPath) {
 
-    sprintf(str, "%s/Node_%04d/Socket_%04d", DFS_ROOTDIR_RCR, cpu_mapping_table[processorID].nodeID, cpu_mapping_table[processorID].socketID);
+    sprintf(socketDirPath, "%s/Node_%04d/Socket_%04d", DFS_ROOTDIR_RCR, cpu_mapping_table[processorID].nodeID, cpu_mapping_table[processorID].socketID);
 
     return(0);
 }
 
-/**
+/*!
  * Returns the path in the debug file system that corresponds to the processor
  * whose ID is <I>processorID</I>
  *
- * @param processorID ID of processor to find the debug file system directory
- *  				  for.
- * @param coreDirPath Returns the debug file system directory path of the
- *  				  processor in question.
+ * \param processorID ID of processor to find the debug file system directory
+ *                    for.
+ * \param coreDirPath Returns the debug file system directory path of the
+ *                    processor in question.
  *
- * @return int Returns 0.
+ * \return int Returns 0.
  */
 int getCoreDirPath(int processorID, char *coreDirPath) {
 
@@ -403,17 +414,17 @@ int getCoreDirPath(int processorID, char *coreDirPath) {
 }
 
 
-/**
+/*!
  *
  *
- * @param processorID
- * @param meterNum
+ * \param processorID
+ * \param meterNum
  *
- * @return int
+ * \return int
  */
 int getCoreMeterState(int processorID, int meterNum) {
-    char dfsFilename[256];
-    char coreDirPath[256];
+    char dfsFilename[PATH_BUF_LENGTH];
+    //char coreDirPath[PATH_BUF_LENGTH];
     uint64_t nodeEnabled, coreMeterEnabled;
 
     if ((meterNum < 0) && (meterNum >= numOfMetersPerCore))
@@ -427,8 +438,8 @@ int getCoreMeterState(int processorID, int meterNum) {
     fscanf(fp, "%lu", &nodeEnabled);
     fclose(fp);
 
-    getCoreDirPath(processorID, coreDirPath);
-    sprintf(dfsFilename, "%s/%s/enable", coreDirPath, meterspercore[meterNum]);
+    //getCoreDirPath(processorID, coreDirPath);
+    sprintf(dfsFilename, "%s/%s/enable", cpu_mapping_table[processorID].dfsPath, metersPerCore[meterNum]);
 
     fp = fopen(dfsFilename, "r");
     if (!fp) return(-1);
@@ -440,24 +451,24 @@ int getCoreMeterState(int processorID, int meterNum) {
 }
 
 
-/**
+/*!
  *
  *
- * @param processorID
- * @param meterNum
+ * \param processorID
+ * \param meterNum
  *
- * @return uint64_t Returns the core metere value, of -1 on failure.
+ * \return uint64_t Returns the core metere value, of -1 on failure.
  */
 uint64_t getCoreMeterInterval(int processorID, int meterNum) {
-    char     dfsMeterName[256];
-    char     coreDirPath[256];
+    char     dfsMeterName[PATH_BUF_LENGTH];
+    //char     coreDirPath[PATH_BUF_LENGTH];
     uint64_t coreMeterInterval;
 
     if ((meterNum < 0) && (meterNum >= numOfMetersPerCore))
         return(0);
 
-    getCoreDirPath(processorID, coreDirPath);
-    sprintf(dfsMeterName, "%s/%s/interval", coreDirPath, meterspercore[meterNum]);
+    //getCoreDirPath(processorID, coreDirPath);
+    sprintf(dfsMeterName, "%s/%s/interval", cpu_mapping_table[processorID].dfsPath, metersPerCore[meterNum]);
 
     FILE* fp = fopen(dfsMeterName, "r");
     if (!fp) return(-1);
@@ -469,30 +480,30 @@ uint64_t getCoreMeterInterval(int processorID, int meterNum) {
     // a minimum monitoring interval should be specified
     // By default, it is 1 millisecond.
 //    if (buf == 0)
-//  	  buf = 1000;
+//        buf = 1000;
 
     return(coreMeterInterval);
 }
 
 
-/**
+/*!
  *
  *
- * @param processorID
- * @param meterNum
+ * \param processorID
+ * \param meterNum
  *
- * @return uint64_t
+ * \return uint64_t
  */
 uint64_t getCoreMeterTimeWindow(int processorID, int meterNum) {
-    char     dfsMeterName[256];
-    char     coreDirPath[256];
+    char     dfsMeterName[PATH_BUF_LENGTH];
+    //char     coreDirPath[PATH_BUF_LENGTH];
     uint64_t coreMeterTimeWindow;
 
     if (meterNum < 0 && meterNum >= numOfMetersPerCore)
         return(0);
 
-    getCoreDirPath(processorID, coreDirPath);
-    sprintf(dfsMeterName, "%s/%s/timewindow", coreDirPath, meterspercore[meterNum]);
+    //getCoreDirPath(processorID, coreDirPath);
+    sprintf(dfsMeterName, "%s/%s/timewindow", cpu_mapping_table[processorID].dfsPath, metersPerCore[meterNum]);
 
     FILE* fp = fopen(dfsMeterName, "r");
     if (!fp) return(-1);
@@ -504,36 +515,36 @@ uint64_t getCoreMeterTimeWindow(int processorID, int meterNum) {
 }
 
 
-/**
+/*!
  *
  *
- * @param processorID
- * @param meterNum
- * @param type
+ * \param processorID
+ * \param meterNum
+ * \param type
  *
- * @return uint64_t
+ * \return uint64_t
  */
-uint64_t getCoreMeter(int processorID, int meterNum, int type) {
-    char     dfsMeterName[256];
-    char     coreDirPath[256];
+uint64_t getCoreMeter(int processorID, int meterNum, RCR_type meterType) {
+    char     dfsMeterName[PATH_BUF_LENGTH];
+    //char     coreDirPath[PATH_BUF_LENGTH];
     uint64_t coreMeter;
 
     if ((meterNum < 0) && (meterNum >= numOfMetersPerCore))
         return(0);
 
-    getCoreDirPath(processorID, coreDirPath);
+    //getCoreDirPath(processorID, coreDirPath);
 
-    switch (type) {
+    switch (meterType) {
         case RCR_TYPE_IMMEDIATE:
-            sprintf(dfsMeterName, "%s/%s/current", coreDirPath, meterspercore[meterNum]);
+            sprintf(dfsMeterName, "%s/%s/current", cpu_mapping_table[processorID].dfsPath, metersPerCore[meterNum]);
             break;
         case RCR_TYPE_AVERAGE:
-            sprintf(dfsMeterName, "%s/%s/average", coreDirPath, meterspercore[meterNum]);
+            sprintf(dfsMeterName, "%s/%s/average", cpu_mapping_table[processorID].dfsPath, metersPerCore[meterNum]);
             break;
         case RCR_TYPE_SUM:
             break;
         case RCR_TYPE_MAXIMUM:
-            sprintf(dfsMeterName, "%s/%s/maximum", coreDirPath, meterspercore[meterNum]);
+            sprintf(dfsMeterName, "%s/%s/maximum", cpu_mapping_table[processorID].dfsPath, metersPerCore[meterNum]);
             break;
     }
 
@@ -548,36 +559,36 @@ uint64_t getCoreMeter(int processorID, int meterNum, int type) {
 }
 
 
-/**
+/*!
  *
  *
- * @param processorID
- * @param meterNum
- * @param type
- * @param value
+ * \param processorID
+ * \param meterNum
+ * \param type
+ * \param value
  *
- * @return int 0 on success, or -1 on failure.
+ * \return int 0 on success, or -1 on failure.
  */
-int setCoreMeter(int processorID, int meterNum, int type, uint64_t value) {
-    char dfsMeterName[256];
-    char coreDirPath[256];
+int setCoreMeter(int processorID, int meterNum, RCR_type meterType, uint64_t value) {
+    char dfsMeterName[PATH_BUF_LENGTH];
+    //char coreDirPath[PATH_BUF_LENGTH];
 
     if (meterNum < 0 && meterNum >= numOfMetersPerCore)
         return(-1);
 
-    getCoreDirPath(processorID, coreDirPath);
+    //getCoreDirPath(processorID, coreDirPath);
 
-    switch (type) {
+    switch (meterType) {
         case RCR_TYPE_IMMEDIATE:
-            sprintf(dfsMeterName, "%s/%s/current", coreDirPath, meterspercore[meterNum]);
+            sprintf(dfsMeterName, "%s/%s/current", cpu_mapping_table[processorID].dfsPath, metersPerCore[meterNum]);
             break;
         case RCR_TYPE_AVERAGE:
-            sprintf(dfsMeterName, "%s/%s/average", coreDirPath, meterspercore[meterNum]);
+            sprintf(dfsMeterName, "%s/%s/average", cpu_mapping_table[processorID].dfsPath, metersPerCore[meterNum]);
             break;
         case RCR_TYPE_SUM:
             break;
         case RCR_TYPE_MAXIMUM:
-            sprintf(dfsMeterName, "%s/%s/maximum", coreDirPath, meterspercore[meterNum]);
+            sprintf(dfsMeterName, "%s/%s/maximum", cpu_mapping_table[processorID].dfsPath, metersPerCore[meterNum]);
             break;
     }
 
@@ -594,17 +605,17 @@ int setCoreMeter(int processorID, int meterNum, int type, uint64_t value) {
 }
 
 
-/**
+/*!
  *
  *
- * @param processorID
- * @param meterNum
+ * \param processorID
+ * \param meterNum
  *
- * @return int
+ * \return int
  */
 int getSocketMeterState(int processorID, int meterNum) {
-    char dfsMeterName[256];
-    char socketDirPath[256];
+    char dfsMeterName[PATH_BUF_LENGTH];
+    char socketDirPath[PATH_BUF_LENGTH];
     uint64_t buf1, buf2;
 
     if (meterNum < 0 && meterNum >= numOfMetersPerSocket)
@@ -620,7 +631,7 @@ int getSocketMeterState(int processorID, int meterNum) {
 
 
     getSocketDirPath(processorID, socketDirPath);
-    sprintf(dfsMeterName, "%s/%s/enable", socketDirPath, meterspersocket[meterNum]);
+    sprintf(dfsMeterName, "%s/%s/enable", socketDirPath, metersPerSocket[meterNum]);
 
     fp = fopen(dfsMeterName, "r");
     if (!fp) return(-1);
@@ -632,24 +643,24 @@ int getSocketMeterState(int processorID, int meterNum) {
 }
 
 
-/**
+/*!
  *
  *
- * @param processorID
- * @param meterNum
+ * \param processorID
+ * \param meterNum
  *
- * @return uint64_t
+ * \return uint64_t
  */
 uint64_t getSocketMeterInterval(int processorID, int meterNum) {
-    char dfsMeterName[256];
+    char dfsMeterName[PATH_BUF_LENGTH];
     uint64_t buf;
-    char str[256];
+    char str[PATH_BUF_LENGTH];
 
     if (meterNum < 0 && meterNum >= numOfMetersPerSocket)
         return(0);
 
     getSocketDirPath(processorID, str);
-    sprintf(dfsMeterName, "%s/%s/interval", str, meterspersocket[meterNum]);
+    sprintf(dfsMeterName, "%s/%s/interval", str, metersPerSocket[meterNum]);
 
     FILE* fp = fopen(dfsMeterName, "r");
     if (!fp) return(-1);
@@ -661,30 +672,30 @@ uint64_t getSocketMeterInterval(int processorID, int meterNum) {
     // a minimum monitoring interval should be specified
     // By default, it is 1 millisecond.
 //    if (buf == 0)
-//  	  buf = 1000;
+//        buf = 1000;
 
     return(buf);
 }
 
 
-/**
+/*!
  *
  *
- * @param processorID
- * @param meterNum
+ * \param processorID
+ * \param meterNum
  *
- * @return uint64_t
+ * \return uint64_t
  */
 uint64_t getSocketMeterTimeWindow(int processorID, int meterNum) {
-    char dfsMeterName[256];
+    char dfsMeterName[PATH_BUF_LENGTH];
     uint64_t buf;
-    char str[256];
+    char str[PATH_BUF_LENGTH];
 
     if (meterNum < 0 && meterNum >= numOfMetersPerSocket)
         return(0);
 
     getSocketDirPath(processorID, str);
-    sprintf(dfsMeterName, "%s/%s/timewindow", str, meterspersocket[meterNum]);
+    sprintf(dfsMeterName, "%s/%s/timewindow", str, metersPerSocket[meterNum]);
 
     FILE* fp = fopen(dfsMeterName, "r");
     if (!fp) return(-1);
@@ -695,18 +706,18 @@ uint64_t getSocketMeterTimeWindow(int processorID, int meterNum) {
     return(buf);
 }
 
-/**
+/*!
  *
  *
- * @param processorID
- * @param meterNum
- * @param type
+ * \param processorID
+ * \param meterNum
+ * \param type
  *
- * @return uint64_t
+ * \return uint64_t
  */
-uint64_t getSocketMeter(int processorID, int meterNum, int type) {
-    char dfsMeterName[256];
-    char socketDirPath[256];
+uint64_t getSocketMeter(int processorID, int meterNum, RCR_type meterType) {
+    char dfsMeterName[PATH_BUF_LENGTH];
+    char socketDirPath[PATH_BUF_LENGTH];
     uint64_t socketMeterValue;
 
     if (meterNum < 0 && meterNum >= numOfMetersPerSocket)
@@ -714,17 +725,17 @@ uint64_t getSocketMeter(int processorID, int meterNum, int type) {
 
     getSocketDirPath(processorID, socketDirPath);
 
-    switch (type) {
+    switch (meterType) {
         case RCR_TYPE_IMMEDIATE:
-            sprintf(dfsMeterName, "%s/%s/current", socketDirPath, meterspersocket[meterNum]);
+            sprintf(dfsMeterName, "%s/%s/current", socketDirPath, metersPerSocket[meterNum]);
             break;
         case RCR_TYPE_AVERAGE:
-            sprintf(dfsMeterName, "%s/%s/average", socketDirPath, meterspersocket[meterNum]);
+            sprintf(dfsMeterName, "%s/%s/average", socketDirPath, metersPerSocket[meterNum]);
             break;
         case RCR_TYPE_SUM:
             break;
         case RCR_TYPE_MAXIMUM:
-            sprintf(dfsMeterName, "%s/%s/maximum", socketDirPath, meterspersocket[meterNum]);
+            sprintf(dfsMeterName, "%s/%s/maximum", socketDirPath, metersPerSocket[meterNum]);
             break;
     }
 
@@ -738,36 +749,36 @@ uint64_t getSocketMeter(int processorID, int meterNum, int type) {
     return(socketMeterValue);
 }
 
-/**
+/*!
  *
  *
- * @param processorID
- * @param meterNum
- * @param type
- * @param value
+ * \param processorID
+ * \param meterNum
+ * \param type
+ * \param value
  *
- * @return int
+ * \return int
  */
-int setSocketMeter(int processorID, int meterNum, int type, uint64_t value) {
-    char dfsMeterName[256];
-    char socketDirPath[256];
+int setSocketMeter(int processorID, int meterNum, RCR_type meterType, uint64_t value) {
+    char dfsMeterName[PATH_BUF_LENGTH];
+    char socketDirPath[PATH_BUF_LENGTH];
 
     if (meterNum < 0 && meterNum >= numOfMetersPerSocket)
         return(-1);
 
     getSocketDirPath(processorID, socketDirPath);
 
-    switch (type) {
+    switch (meterType) {
         case RCR_TYPE_IMMEDIATE:
-            sprintf(dfsMeterName, "%s/%s/current", socketDirPath, meterspersocket[meterNum]);
+            sprintf(dfsMeterName, "%s/%s/current", socketDirPath, metersPerSocket[meterNum]);
             break;
         case RCR_TYPE_AVERAGE:
-            sprintf(dfsMeterName, "%s/%s/average", socketDirPath, meterspersocket[meterNum]);
+            sprintf(dfsMeterName, "%s/%s/average", socketDirPath, metersPerSocket[meterNum]);
             break;
         case RCR_TYPE_SUM:
             break;
         case RCR_TYPE_MAXIMUM:
-            sprintf(dfsMeterName, "%s/%s/maximum", socketDirPath, meterspersocket[meterNum]);
+            sprintf(dfsMeterName, "%s/%s/maximum", socketDirPath, metersPerSocket[meterNum]);
             break;
     }
 
@@ -784,35 +795,36 @@ int setSocketMeter(int processorID, int meterNum, int type, uint64_t value) {
 }
 
 
-/**
+/*!
+ * Returns the reset value, stored at node level in the debug filesystem.
  *
- *
- * @return uint64_t
+ * \return uint64_t Returns the value of the reset flag, otherwise return -1 
+ *         on error
  */
 uint64_t getResetValue(void) {
-    char dfsMeterName[256];
-    uint64_t buf;
+    char dfsMeterName[PATH_BUF_LENGTH];
+    uint64_t resetValue;
 
     sprintf(dfsMeterName, "%s/reset", DFS_ROOTDIR_RCR);
 
     FILE* fp = fopen(dfsMeterName, "r");
     if (!fp) return(-1);
 
-    fscanf(fp,"%lu", &buf);
+    fscanf(fp,"%lu", &resetValue);
 
     fclose(fp);
 
-    return(buf);
+    return(resetValue);
 }
 
 
-/**
+/*!
+ * Set the reset flag in the dfs system to 0.  This is at the node level.
  *
- *
- * @return int
+ * \return int Returns 0 on success, or -1 on error.
  */
 int setResetValue(void) {
-    char dfsMeterName[256];
+    char dfsMeterName[PATH_BUF_LENGTH];
 
     sprintf(dfsMeterName, "%s/reset", DFS_ROOTDIR_RCR);
 
@@ -826,8 +838,9 @@ int setResetValue(void) {
     return(0);
 }
 
+/*
 int createAppDFSEntry(const char* appName) {
-    char filename[256];
+    char filename[PATH_BUF_LENGTH];
 
     sprintf(filename, "%s/%s", DFS_ROOTDIR_RAT, appName);
 
@@ -837,6 +850,7 @@ int createAppDFSEntry(const char* appName) {
     fclose(fp);
     return 0;
 }
+*/
 
 /*!
  * Complain with perror, then exit.
@@ -882,7 +896,10 @@ void daemonize(char bOutputToNull) {
 /*!
  * 
  */
-void doWork(void) {
+void doWork(int nshepherds, int nworkerspershep) {
+    
+    numOfSockets    = nshepherds;
+    numOfProcessors = nshepherds * nworkerspershep;
 
     initSystemConfiguration();
 
@@ -897,11 +914,11 @@ void doWork(void) {
 
     double currentVal, maxVal, avgVal;
 
-    struct MeterValue **core_meter_list   = malloc(numOfProcessors * numOfMetersPerCore   * sizeof(struct MeterValue *));
+    MeterValue **core_meter_list   = malloc(numOfProcessors * numOfMetersPerCore   * sizeof(MeterValue *));
     for (i=0; i<numOfProcessors * numOfMetersPerCore; i++)
         core_meter_list[i] = NULL;
 
-    struct MeterValue **socket_meter_list = malloc(numOfSockets    * numOfMetersPerSocket * sizeof(struct MeterValue *));
+    MeterValue **socket_meter_list = malloc(numOfSockets    * numOfMetersPerSocket * sizeof(MeterValue *));
     for (i=0; i<numOfSockets * numOfMetersPerSocket; i++)
         socket_meter_list[i] = NULL;
 
@@ -914,9 +931,9 @@ void doWork(void) {
     // Open performance descriptors for all events
     if (bVerbose) printf("Setup the perf events.\n");
 
-    perf_event_desc_t *fds = NULL;
-    perf_event_desc_t **core_fds          = malloc(numOfProcessors * numOfMetersPerCore   * sizeof(perf_event_desc_t));
-    perf_event_desc_t **socket_fds        = malloc(numOfSockets    * numOfMetersPerSocket * sizeof(perf_event_desc_t));
+    perf_event_desc_t *fds         = NULL;
+    perf_event_desc_t **core_fds   = malloc(numOfProcessors * numOfMetersPerCore   * sizeof(perf_event_desc_t));
+    perf_event_desc_t **socket_fds = malloc(numOfSockets    * numOfMetersPerSocket * sizeof(perf_event_desc_t));
 
     // for per-core events
     for (cpu=0; cpu<numOfProcessors; cpu++) {
@@ -926,7 +943,7 @@ void doWork(void) {
                 errx(1, "cannot setup per-core events\n");
 
             core_fds[numOfMetersPerCore*cpu+meternum] = fds;
-            fds[0].fd = -1;
+            fds->fd = -1;
 
             for (i=0; i < eventsNumPerCore[meternum]; i++) {
                 fds[i].hw.disabled = 1;
@@ -1014,6 +1031,7 @@ void doWork(void) {
 
             enabledcnt = 0;
 
+            //Read events per core
             for (i=0; i < numOfProcessors; i++) {
                 if (getCoreMeterState(i, meternum)) {
                     enabled[i] = 1;
@@ -1051,13 +1069,14 @@ void doWork(void) {
                     timePerCore[i*MAXNUMOFEVENTS+j] = value[1];
                 }
             }
+            //Finished reading events
 
             // The interval is supposed to set individually for each meter.
             // However, in this version, the intervals set to the meters of each core are used
-//  		  if (bVerbose)
-//  			  if (interval.tv_sec != getCoreMeterInterval(0, meternum)/1000000 ||
-//  				  interval.tv_nsec != (getCoreMeterInterval(0, meternum) - interval.tv_sec*1000000) * 1000)
-//  				  printf("[Core] %s meter monitoring interval is changed\n", meterspercore[meternum]);
+//            if (bVerbose)
+//                if (interval.tv_sec != getCoreMeterInterval(0, meternum)/1000000 ||
+//                    interval.tv_nsec != (getCoreMeterInterval(0, meternum) - interval.tv_sec*1000000) * 1000)
+//                    printf("[Core] %s meter monitoring interval is changed\n", meterspercore[meternum]);
 
             //printf("Before core sleep\n");
             //printf("%lu, %lu\n", getCoreMeterInterval(0, meternum)/1000000, (getCoreMeterInterval(0, meternum) - interval.tv_sec*1000000) * 1000);
@@ -1065,7 +1084,7 @@ void doWork(void) {
             interval.tv_nsec = (getCoreMeterInterval(0, meternum) - interval.tv_sec*1000000) * 1000;
             if (enabledcnt > 0 &&  (interval.tv_sec > 0 || interval.tv_nsec > 0)) {
                 nanosleep(&interval, &remainder);
-//  			  //printf("nanosleep during %lu.%09lu\n", interval.tv_sec, interval.tv_nsec);
+//                //printf("nanosleep during %lu.%09lu\n", interval.tv_sec, interval.tv_nsec);
             }
             //printf("After core sleep\n");
 
@@ -1087,11 +1106,11 @@ void doWork(void) {
                     elapsedtime[j] =  value[1] - timePerCore[i*MAXNUMOFEVENTS+j];
                     //timePerCore[j] = value[1];
 
-//  				  printf("%llu, %llu\n", delta[j], elapsedtime[j]);
+//                    printf("%llu, %llu\n", delta[j], elapsedtime[j]);
                 }
 
                 // Update CPI for each core
-                if (strncmp(meterspercore[meternum], "CPI", 3) == 0) {
+                if (strncmp(metersPerCore[meternum], "CPI", 3) == 0) {
                     if (delta[1] != 0) {
                         currentVal = delta[0] * 1.0  / delta[1];
                     } else {
@@ -1117,7 +1136,7 @@ void doWork(void) {
                     if (bVerbose)
                         printf("[Core %d] CPI: Current=%f, Max=%f, Avg=%f.\n", i, currentVal, maxVal, avgVal);
 
-                } else if (strncmp(meterspercore[meternum], "L2MissCycleRatio", 16) == 0) {
+                } else if (strncmp(metersPerCore[meternum], "L2MissCycleRatio", 16) == 0) {
                     if (delta[0] != 0) {
                         currentVal = (delta[1] * 35.0 +  delta[2] * 74.0)/ delta[0];
                     } else {
@@ -1144,7 +1163,7 @@ void doWork(void) {
                     if (bVerbose)
                         printf("[Core %d] L2 Miss Cycle Ratio: Current=%f, Max=%f, Avg=%f.\n", i, currentVal, maxVal, avgVal);
 
-                } else if (strncmp(meterspercore[meternum], "L3MissCycleRatio", 16) == 0) {
+                } else if (strncmp(metersPerCore[meternum], "L3MissCycleRatio", 16) == 0) {
                     if (delta[0] != 0) {
                         currentVal = (delta[1] * 180.0)/ delta[0];
                     } else {
@@ -1171,7 +1190,7 @@ void doWork(void) {
                     if (bVerbose)
                         printf("[Core %d] L3 Miss Cycle Ratio: Current=%f, Max=%f, Avg=%f.\n", i, currentVal, maxVal, avgVal);
 
-                } else if (strncmp(meterspercore[meternum], "L2MissRatio", 11) == 0) {
+                } else if (strncmp(metersPerCore[meternum], "L2MissRatio", 11) == 0) {
                     if (delta[1]+delta[3] != 0) {
                         currentVal = (double) delta[2] / (delta[1] + delta[3]);
                     } else {
@@ -1265,21 +1284,21 @@ void doWork(void) {
                     }
                     valuesPerSocket[i*MAXNUMOFEVENTS+j] = value[0];
                     timePerSocket[i*MAXNUMOFEVENTS+j] = value[1];
-//  				  printf("[Socket %d BEFORE] %llu\n", i, value[0]);
+//                    printf("[Socket %d BEFORE] %llu\n", i, value[0]);
                 }
             }
 
-//  		  if (bVerbose)
-//  			  if (interval.tv_sec != getSocketMeterInterval(0, meternum)/1000000 ||
-//  				  interval.tv_nsec != (getSocketMeterInterval(0, meternum) - interval.tv_sec*1000000) * 1000)
-//  				  printf("[Socket] %s meter monitoring interval is changed\n", meterspersocket[meternum]);
+//            if (bVerbose)
+//                if (interval.tv_sec != getSocketMeterInterval(0, meternum)/1000000 ||
+//                    interval.tv_nsec != (getSocketMeterInterval(0, meternum) - interval.tv_sec*1000000) * 1000)
+//                    printf("[Socket] %s meter monitoring interval is changed\n", meterspersocket[meternum]);
 
             //printf("Before socket sleep\n");
             interval.tv_sec = getSocketMeterInterval(0, meternum)/1000000;
             interval.tv_nsec = (getSocketMeterInterval(0, meternum) - interval.tv_sec*1000000) * 1000;
             if (enabledcnt > 0 &&  (interval.tv_sec > 0 || interval.tv_nsec > 0)) {
                 nanosleep(&interval, &remainder);
-//  			  //printf("nanosleep during %lu.%09lu\n", interval.tv_sec, interval.tv_nsec);
+//                //printf("nanosleep during %lu.%09lu\n", interval.tv_sec, interval.tv_nsec);
             }
             //printf("After socket sleep\n");
 
@@ -1301,23 +1320,23 @@ void doWork(void) {
                     elapsedtime[j] =  value[1] - timePerSocket[i*MAXNUMOFEVENTS+j];
                     //timePerSocket[j] = value[1];
 
-//  				  printf("[Socket %d AFTER] %llu\n", i, value[0]);
-//  				  printf("[Socket %d DIFF] %llu\n", i, delta[j]);
+//                    printf("[Socket %d AFTER] %llu\n", i, value[0]);
+//                    printf("[Socket %d DIFF] %llu\n", i, delta[j]);
                 }
 
 
                 // Update MemoryBandwidth for each socket
-                if (strncmp(meterspersocket[meternum], "MemoryBandwidth", 15) == 0) {
+                if (strncmp(metersPerSocket[meternum], "MemoryBandwidth", 15) == 0) {
 #ifdef INTEL_NEHALEM
-//  		  if (elapsedtime[0] != 0.0) {
-//  			  MemoryBandwidth[i] = (delta[0] * 1.0 * cacheLineSize)  / elapsedtime[0];
+//            if (elapsedtime[0] != 0.0) {
+//                MemoryBandwidth[i] = (delta[0] * 1.0 * cacheLineSize)  / elapsedtime[0];
 //
-//  			  if (bVerbose)
-//  				  printf("[Socket %d] Memory Bandwidth (B/s) %f, %f.\n", i, getMemoryBandwidth(i)/1000000.0, MemoryBandwidth[i]);
-//  			setMemoryBandwidth(i, MemoryBandwidth[i]*1000000);
-//  		  } else
-//  			  if (bVerbose)
-//  				  printf("[Socket %d] Could not get Memory Bandwidth.\n", i);
+//                if (bVerbose)
+//                    printf("[Socket %d] Memory Bandwidth (B/s) %f, %f.\n", i, getMemoryBandwidth(i)/1000000.0, MemoryBandwidth[i]);
+//              setMemoryBandwidth(i, MemoryBandwidth[i]*1000000);
+//            } else
+//                if (bVerbose)
+//                    printf("[Socket %d] Could not get Memory Bandwidth.\n", i);
 //
 #elif defined(AMD_OPTERON)
                     if (elapsedtime[1] != 0) {
@@ -1347,7 +1366,7 @@ void doWork(void) {
                         printf("[Socket %d] Memory Bandwidth (B/s): Current=%f, Max=%f, Avg=%f.\n", i, currentVal, maxVal, avgVal);
 
 #endif
-                } else if (strncmp(meterspersocket[meternum], "L3MissRatio", 11) == 0) {
+                } else if (strncmp(metersPerSocket[meternum], "L3MissRatio", 11) == 0) {
                     if (delta[1] != 0) {
                         currentVal = (double) delta[2] / (double) delta[1];
                     } else {
@@ -1374,7 +1393,7 @@ void doWork(void) {
                     if (bVerbose)
                         printf("[Socket %d] L3 Miss Ratio: Current=%f, Max=%f, Avg=%f.\n", i, currentVal, maxVal, avgVal);
 
-                } else if (strncmp(meterspersocket[meternum], "MemoryConcurrency", 17) == 0) {
+                } else if (strncmp(metersPerSocket[meternum], "MemoryConcurrency", 17) == 0) {
                     if (delta[2] != 0) {
                         currentVal = (double) delta[1] / (double) delta[2];
                     } else {
@@ -1401,7 +1420,7 @@ void doWork(void) {
                     if (bVerbose)
                         printf("[Socket %d] Memory Concurrency: Current=%f, Max=%f, Avg=%f.\n", i, currentVal, maxVal, avgVal);
 
-                } else if (strncmp(meterspersocket[meternum], "MemoryLatency", 13) == 0) {
+                } else if (strncmp(metersPerSocket[meternum], "MemoryLatency", 13) == 0) {
                     if (delta[2] != 0) {
                         currentVal = (double) delta[1] / (double) delta[2];
                     } else {

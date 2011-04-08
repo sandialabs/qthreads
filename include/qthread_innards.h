@@ -174,14 +174,30 @@ extern enum qthread_debug_levels debuglevel;
 
 extern QTHREAD_FASTLOCK_TYPE output_lock;
 
-#ifdef HAVE_GNU_VAMACROS
-#define qthread_debug(level, format, args...) qthread_debug_(level, "%s(%u): " format, __FUNCTION__, __LINE__, ##args)
-static QINLINE void qthread_debug_(int level, const char *format, ...)
-#elif defined( HAVE_C99_VAMACROS )
-#define qthread_debug(level, format, ...) qthread_debug_(level, "%s(%u): " format, __FUNCTION__, __LINE__, __VA_ARGS__)
-static QINLINE void qthread_debug_(int level, const char *format, ...)
+#ifdef QTHREAD_RCRTOOL
+# ifdef HAVE_GNU_VAMACROS
+# define qthread_debug(level, format, args...) qthread_debug_(level, debuglevel, "QDEBUG: ", "%s(%u): " format, __FUNCTION__, __LINE__, ##args)
+# define rcrtool_debug(level, format, args...) qthread_debug_(level, rcrtoollevel, "RCRDEBUG: ", "%s(%u): " format, __FUNCTION__, __LINE__, ##args)
+static QINLINE void qthread_debug_(int level, int debuglevel, const char* msgPrefix, const char *format, ...)
+# elif defined( HAVE_C99_VAMACROS )
+# define qthread_debug(level, format, ...) qthread_debug_(level, debuglevel, "QDEBUG: ", "%s(%u): " format, __FUNCTION__, __LINE__, __VA_ARGS__)
+# define rcrtool_debug(level, format, ...) qthread_debug_(level, rcrtoollevel, "RCRDEBUG: ", "%s(%u): " format, __FUNCTION__, __LINE__, __VA_ARGS__)
+static QINLINE void qthread_debug_(int level, int debuglevel, const char* msgPrefix, const char *format, ...)
+# else
+# define qthread_debug(level, format, ...) qthread_debug_(level, debuglevel, "QDEBUG: ", format, __FUNCTION__, __LINE__, __VA_ARGS__)
+# define rcrtool_debug(level, format, ...) qthread_debug_(level, rcrtoollevel, "RCRDEBUG: ", format, __FUNCTION__, __LINE__, __VA_ARGS__)
+static QINLINE void qthread_debug_(int level, int debuglevel, const char* msgPrefix, const char *format, ...)
+# endif
 #else
+# ifdef HAVE_GNU_VAMACROS
+# define qthread_debug(level, format, args...) qthread_debug_(level, "%s(%u): " format, __FUNCTION__, __LINE__, ##args)
+static QINLINE void qthread_debug_(int level, const char *format, ...)
+# elif defined( HAVE_C99_VAMACROS )
+# define qthread_debug(level, format, ...) qthread_debug_(level, "%s(%u): " format, __FUNCTION__, __LINE__, __VA_ARGS__)
+static QINLINE void qthread_debug_(int level, const char *format, ...)
+# else
 static QINLINE void qthread_debug(int level, const char *format, ...)
+# endif
 #endif
 {				       /*{{{ */
     va_list args;
@@ -193,7 +209,11 @@ static QINLINE void qthread_debug(int level, const char *format, ...)
 
 	QTHREAD_FASTLOCK_LOCK(&output_lock);
 
+#ifdef QTHREAD_RCRTOOL
+	while (write(2, msgPrefix, 8) != 8) ;
+#else
 	while (write(2, "QDEBUG: ", 8) != 8) ;
+#endif
 
 	va_start(args, format);
 	/* avoiding the obvious method, to save on memory

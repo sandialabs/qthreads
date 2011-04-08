@@ -443,7 +443,7 @@ uint64_t getCoreMeterTimeWindow(int processorID, int meterNum) {
  * 
  * @return uint64_t 
  */
-uint64_t getCoreMeter(int processorID, int meterNum, int type) {
+uint64_t getCoreMeter(int processorID, int meterNum, RCR_type meterType) {
     char filename[256];
     uint64_t buf;
     char str[256];
@@ -453,7 +453,7 @@ uint64_t getCoreMeter(int processorID, int meterNum, int type) {
 
     getCoreDirPath(processorID, str);
 
-    switch (type) {
+    switch (meterType) {
     case RCR_TYPE_IMMEDIATE:
         sprintf(filename, "%s/%s/current", str, metersPerCore[meterNum]);
         break;
@@ -488,7 +488,7 @@ uint64_t getCoreMeter(int processorID, int meterNum, int type) {
  * 
  * @return uint64_t
  */
-uint64_t getNodeMeter(int nodeID, int meterNum, int type) {
+uint64_t getNodeMeter(int nodeID, int meterNum, RCR_type meterType) {
     char filename[256];
     uint64_t buf;
     char str[256];
@@ -498,7 +498,7 @@ uint64_t getNodeMeter(int nodeID, int meterNum, int type) {
 
     getNodeDirPath(nodeID, str);
 
-    switch (type) {
+    switch (meterType) {
     case RCR_TYPE_IMMEDIATE:
         sprintf(filename, "%s/%s/current", str, metersPerCore[meterNum]);
         break;
@@ -832,7 +832,7 @@ void doLoggingWork(void) {
 
         logAppState = 0;
         gettimeofday(&curts, NULL);
-//        printf("%f", (curts.tv_sec+curts.tv_usec/1000000.0)-(startts.tv_sec+startts.tv_usec/1000000.0));
+        printf("%f", (curts.tv_sec+curts.tv_usec/1000000.0)-(startts.tv_sec+startts.tv_usec/1000000.0));
 
         for (triggerNum = 0; triggerNum < numTriggers; triggerNum++) {
             switch (triggerMap[triggerNum]->type) {
@@ -847,21 +847,20 @@ void doLoggingWork(void) {
                 break;
             }
             currentVal_d = currentVal_ll / 1000000.0;
-//            printf("\t%f", currentVal_d);
+            printf("\t%f", currentVal_d);
 
             logAppState = shmGet(triggerMap[triggerNum]->flagShmKey) == '1';
         }
         //Check for application state
         if (logAppState) {
-            printf("TRIGGER BLOWN\n");
-            char *shmDest = getShmStringLoc(triggerMap[triggerNum]->appStateShmKey, 64);
+            char *shmDest = getShmStringLoc(triggerMap[0]->appStateShmKey, 64);
             if (shmDest) {
-                //strncpy(appStateBuf, shmDest, 64);
-                //printf("\t%s\n", shmDest);
-                //releaseShmLoc(shmDest);
+                strncpy(appStateBuf, shmDest, 64);
+                printf("\t%s\n", shmDest);
+                releaseShmLoc(shmDest);
             }
         } else {
-//            printf("\t0\n");
+            printf("\t0\n");
         }
 
         //printf("Before loop sleep\n");

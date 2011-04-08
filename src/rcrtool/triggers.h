@@ -1,6 +1,19 @@
 #ifndef QTHREAD_RCRTOOL_TRIGGERS_H
 #define QTHREAD_RCRTOOL_TRIGGERS_H
 
+#include <sys/types.h>
+#include <inttypes.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <stdarg.h>
+#include <sys/wait.h>
+#include <err.h>
+#include <fcntl.h>
+
+#include <sys/ipc.h>
+#include <sys/shm.h>
+
 /*! 
  * 
  */

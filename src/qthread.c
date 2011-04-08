@@ -1105,7 +1105,9 @@ int qthread_initialize(void)
 # ifdef QTHREAD_RCRTOOL
             if (rcrtoollevel > 0) {
                 if ((i == nshepherds - 1) && (j == nworkerspershep - 1)) {
-                    if ((r = pthread_create(&rcrToolPThreadID, NULL, rcrtoolDaemon, NULL)) != 0) {
+                    swinfo.nshepherds      = nshepherds;
+                    swinfo.nworkerspershep = nworkerspershep;
+                    if ((r = pthread_create(&rcrToolPThreadID, NULL, rcrtoolDaemon, &swinfo)) != 0) {
                         fprintf(stderr, "qthread_init: pthread_create() failed (%d)\n", r);
                         perror("qthread_init spawning rcrTool");
                         return r;

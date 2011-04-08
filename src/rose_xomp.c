@@ -290,7 +290,7 @@ void XOMP_terminate(
 void XOMP_parallel_start(
     void (*func) (void *),
     void *data,
-    unsigned ifClause,
+//    unsigned ifClause,
 
     unsigned numThread,
     const char* funcName)
@@ -298,7 +298,7 @@ void XOMP_parallel_start(
 void XOMP_parallel_start(
     void (*func) (void *),
     void *data,
-    unsigned ifClause,
+//    unsigned ifClause,
     unsigned numThread)
 #endif
 {
