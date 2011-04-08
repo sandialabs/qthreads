@@ -14,14 +14,14 @@ void XOMP_terminate(
 void XOMP_parallel_start(
     void (*func) (void *),
     void *data,
-//    unsigned ifClause,     /* rose added argument - 4/1/11 AKP */
+    unsigned ifClause,     /* rose added argument - 4/1/11 AKP */
     unsigned numThread,
     const char* funcName);
 #else
 void XOMP_parallel_start(
     void (*func) (void *),
     void *data,
-//    unsigned ifClause,     /* rose added argument - 4/1/11 AKP */
+    unsigned ifClause,     /* rose added argument - 4/1/11 AKP */
     unsigned numThread);
 #endif
 void XOMP_parallel_end(
