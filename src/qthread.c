@@ -2138,8 +2138,7 @@ int qthread_fork_syncvar_copyargs_to(const qthread_f             f,
                                      const void *const           arg,
                                      const size_t                arg_size,
                                      syncvar_t *const            ret,
-                                     const qthread_shepherd_id_t preferred_shep
-                                     )
+                                     const qthread_shepherd_id_t preferred_shep)
 {                      /*{{{ */
     qthread_t *t;
     qthread_shepherd_id_t target_shep;
@@ -2199,8 +2198,10 @@ int qthread_fork_syncvar_copyargs_to(const qthread_f             f,
                   target_shep);
     t->flags |= QTHREAD_RET_IS_SYNCVAR;
 
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
     qthread_t *me = qthread_internal_self();
     t->currentParallelRegion = me->currentParallelRegion; // saved in shepherd
+#endif
     t->id = preferred_shep;  // used in barrier and arrive_first, NOT the thread-id
                              // may be extraneous in both when parallel region
                              // barriers in place (not will to pull it now
