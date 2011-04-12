@@ -15,6 +15,7 @@ TESTS = test_basic \
 		test_incr test_fincr test_dincr \
 		test_stackleft \
 		test_external_fork \
+		test_external_syncvar \
 		test_migrate \
 		test_disabled \
 		test_qtimer \
@@ -266,3 +267,6 @@ test_log_barrier_DEPENDENCIES = $(QTHREADLIB)
 
 test_external_fork_SOURCES = test_external_fork.c
 test_external_fork_DEPENDENCIES = $(QTHREADLIB)
+
+test_external_syncvar_SOURCES = test_external_syncvar.c
+test_external_syncvar_DEPENDENCIES = $(QTHREADLIB)
