@@ -3,13 +3,14 @@
 #include <assert.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <qthread/qthread.h>
+#include <qthread.h>
 #include "argparsing.h"
 
 static aligned_t x;
-static aligned_t id = 1;
+static aligned_t id      = 1;
 static aligned_t readout = 0;
 static aligned_t t;
+static aligned_t doneforking;
 
 static aligned_t consumer(void *arg)
 {
@@ -46,10 +47,11 @@ static void *external_thread(void *junk)
 {
     qthread_fork(consumer, NULL, NULL);
     qthread_fork(producer, NULL, &t);
+    qthread_fill(&doneforking);
     return NULL;
 }
 
-int main(int argc,
+int main(int   argc,
          char *argv[])
 {
     pthread_t external;
@@ -62,10 +64,13 @@ int main(int argc,
     iprintf("%i threads...\n", qthread_num_shepherds());
     iprintf("Initial value of x: %lu\n", (unsigned long)x);
 
+    qthread_empty(&doneforking);
+
     pthread_create(&external, NULL, external_thread, NULL);
     pthread_detach(external);
 
-    qthread_readFF(NULL, &t);
+    qthread_readFF(NULL, &doneforking); // wait for the pthread to finish without using pthread_join();
+    qthread_readFF(NULL, &t);           // wait for the consumer/producer pair to finish
 
     if (x == 55) {
         iprintf("Success! x==55\n");
