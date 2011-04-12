@@ -63,7 +63,7 @@ int main(int argc,
     iprintf("Initial value of x: %lu\n", (unsigned long)x);
 
     pthread_create(&external, NULL, external_thread, NULL);
-    pthread_join(external, NULL);
+    pthread_detach(external);
 
     qthread_readFF(NULL, &t);
 
