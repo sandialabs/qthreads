@@ -28,7 +28,7 @@ typedef enum _rcrtool_trigger_type {
  * thresholds for each kind of metric and the key for the shared mem location.
  */
 typedef struct trigger {
-	int    type;           // TYPE_CORE, TYPE_SOCKET or TYPE_NODE
+	int    meterType;           // TYPE_CORE, TYPE_SOCKET or TYPE_NODE
 	int    id;             // core/socket/node id
 	char*  meterName;      // metric name, for eg. "MemoryConcurrency"
 	int    meterNum;       // index into array of meter names

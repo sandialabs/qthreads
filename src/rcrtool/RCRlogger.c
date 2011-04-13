@@ -21,6 +21,7 @@
 #include <fcntl.h>
 
 #include "bcGen.h"
+#include "common_rcrtool.h"
 
 #define LATENCYTEST 10000
 
@@ -44,13 +45,14 @@
 // Filesystem hooks to CPU scaling system
 #define ROOTDIR "/sys/kernel/debug/RCRTool"
 
+/*
 typedef enum _rcrtool_meter_type {
     RCR_TYPE_IMMEDIATE = 0,
     RCR_TYPE_AVERAGE,
     RCR_TYPE_MAXIMUM,
     RCR_TYPE_SUM
 } rcrtool_meter_type;
-
+*/
 
 // Maximum time window in RCRDaemon (in nanosecond)
 // Now, 60 seconds
@@ -628,11 +630,11 @@ uint64_t getSocketMeterTimeWindow(int processorID, int meterNum) {
  * 
  * @param processorID 
  * @param meterNum 
- * @param type 
+ * @param MeterType 
  * 
  * @return uint64_t 
  */
-uint64_t getSocketMeter(int processorID, int meterNum, int type) {
+uint64_t getSocketMeter(int processorID, int meterNum, RCR_type MeterType) {
     char filename[256];
     uint64_t buf;
     char str[256];
@@ -642,7 +644,7 @@ uint64_t getSocketMeter(int processorID, int meterNum, int type) {
 
     getSocketDirPath(processorID, str);
 
-    switch (type) {
+    switch (MeterType) {
     case RCR_TYPE_IMMEDIATE:
         sprintf(filename, "%s/%s/current", str, metersPerSocket[meterNum]);
         break;
@@ -676,6 +678,7 @@ uint64_t getSocketMeter(int processorID, int meterNum, int type) {
  * 
  * @return int 
  */
+/*
 int setSocketMeter(int processorID, int meterNum, int type, uint64_t value) {
     char filename[256];
     char str[256];
@@ -710,6 +713,7 @@ int setSocketMeter(int processorID, int meterNum, int type, uint64_t value) {
 
     return 0;
 }
+*/
 
 /**
  * 
@@ -792,7 +796,7 @@ void doLoggingWork(void) {
     printf("Time");
     for (triggerNum = 0; triggerNum < numTriggers; triggerNum++) {
         triggerMap[triggerNum]->meterNum = 0; //Set a default
-        switch (triggerMap[triggerNum]->type) {
+        switch (triggerMap[triggerNum]->meterType) {
         case TYPE_CORE:
             printf("\t%s_%s_%04i", triggerMap[triggerNum]->meterName, "Core", triggerMap[triggerNum]->id);
             for (meternum = 0; meternum < numOfMetersPerCore; meternum++) {
@@ -835,7 +839,7 @@ void doLoggingWork(void) {
         printf("%f", (curts.tv_sec+curts.tv_usec/1000000.0)-(startts.tv_sec+startts.tv_usec/1000000.0));
 
         for (triggerNum = 0; triggerNum < numTriggers; triggerNum++) {
-            switch (triggerMap[triggerNum]->type) {
+            switch (triggerMap[triggerNum]->meterType) {
             case TYPE_CORE:
                 currentVal_ll = getCoreMeter(triggerMap[triggerNum]->id, triggerMap[triggerNum]->meterNum, RCR_TYPE_IMMEDIATE);
                 break;
@@ -860,7 +864,8 @@ void doLoggingWork(void) {
                 releaseShmLoc(shmDest);
             }
         } else {
-            printf("\t0\n");
+            //printf("\t0\n");
+            printf("\t\n");
         }
 
         //printf("Before loop sleep\n");
@@ -933,7 +938,7 @@ int main(int argc, char** argv) {
         daemonize(bOutputToNull);
     }
 
-    printf("Up and running!\n");
+    //printf("Up and running!\n");
     // Build the triggerMap for breadcrumbs insertion
     // FIXME: hard-coded fileName for trigger info
     buildTriggerMap("/hpc_shared/home/dobrien/work/RCRTool/RCRdaemon/triggers.config");

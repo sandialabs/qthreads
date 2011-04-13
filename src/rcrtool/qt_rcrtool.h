@@ -3,6 +3,7 @@
 #endif
 
 void *rcrtoolDaemon(void *arg);
+//void *rcrtoolDaemon(void);
 
 extern pthread_t rcrToolPThreadID;
 
@@ -10,6 +11,9 @@ extern int rcrToolContinue;
 
 typedef enum _qt_rcrtool_level {
     RCR_NONE = 0,
+    RCR_METERS,
+    RCR_TRIGGERS,
+    RCR_APP_STATE_DUMP,
     RCR_XOMP_SECTIONS,
     RCR_RATTABLE,
     RCR_RATTABLE_DEBUG,
@@ -37,7 +41,7 @@ typedef enum _XOMP_Type {
     XOMP_RAT_DEBUG
 } XOMP_Type;
 
-void rcrtool_log(qt_rcrtool_level level, XOMP_Type type, unsigned thread_id, uint64_t data, const char* data2);
+void rcrtool_log(qt_rcrtool_level level, XOMP_Type type, unsigned int thread_id, uint64_t data, const char* data2);
 
 #define RCR_HASH_TABLE_SIZE     256
 #define RCR_STACK_SIZE          RCR_HASH_TABLE_SIZE
@@ -46,8 +50,10 @@ void rcrtool_log(qt_rcrtool_level level, XOMP_Type type, unsigned thread_id, uin
 #define RCR_APP_NAME_MAX_SIZE   1024
 
 typedef struct _ShepWorkerInfo {
-    int nshepherds;
-    int nworkerspershep;
+    int   nshepherds;
+    int   nworkerspershep;
+    void* worker;
+    int   qaffinity;
 } ShepWorkerInfo;
 
 extern ShepWorkerInfo swinfo;
@@ -55,6 +61,7 @@ extern ShepWorkerInfo swinfo;
 typedef struct _RCRHashEntry {
     char funcName[RCR_HASH_ENTRY_SIZE];
     unsigned int count;
+    unsigned int numOMPassignedThreads;
 } RCRHashEntry;
 
 extern RCRHashEntry hashTable[RCR_HASH_TABLE_SIZE];

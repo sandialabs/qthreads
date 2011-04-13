@@ -310,7 +310,9 @@ void XOMP_parallel_start(
 
 #ifdef QTHREAD_RCRTOOL
     //Here we log entering an open MP section into the RCRTool RAT Table.
-    rcrtool_log(RCR_RATTABLE, XOMP_PARALLEL_START, numThread, (uint64_t) func, funcName);
+    int numberOfThreads = numThread;
+    if (numberOfThreads == 0) numberOfThreads = qthread_num_workers();
+    rcrtool_log(RCR_RATTABLE, XOMP_PARALLEL_START, numberOfThreads, (uint64_t) func, funcName);
 #endif
 
   // allocate and set new feb barrier

@@ -1,7 +1,6 @@
 #ifndef __COMMON_RCRTOOL_H__
 #define __COMMON_RCRTOOL_H__
 
-#include "perf_util.h"
 #include "bcGen.h"
 
 /**

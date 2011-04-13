@@ -369,7 +369,7 @@ static void *qthread_shepherd(void *arg)
     }
 #endif
 
-    if (qaffinity & (me->node != -1)) {
+    if (qaffinity && (me->node != -1)) {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
         qt_affinity_set(me_worker);
 #else
@@ -1102,11 +1102,17 @@ int qthread_initialize(void)
             if ((i == 0) && (j == 0)) {
                 continue;                       // original pthread becomes shep 0 worker 0
             }
+            qlib->shepherds[i].workers[j].shepherd         = &qlib->shepherds[i];
+            qlib->shepherds[i].workers[j].worker_id        = j;
+            qlib->shepherds[i].workers[j].packed_worker_id = j + (i * nworkerspershep);
+            qlib->shepherds[i].workers[j].active           = 1;
 # ifdef QTHREAD_RCRTOOL
             if (rcrtoollevel > 0) {
                 if ((i == nshepherds - 1) && (j == nworkerspershep - 1)) {
                     swinfo.nshepherds      = nshepherds;
                     swinfo.nworkerspershep = nworkerspershep;
+                    swinfo.worker          = &qlib->shepherds[i].workers[j];
+                    swinfo.qaffinity       = qaffinity;
                     if ((r = pthread_create(&rcrToolPThreadID, NULL, rcrtoolDaemon, &swinfo)) != 0) {
                         fprintf(stderr, "qthread_init: pthread_create() failed (%d)\n", r);
                         perror("qthread_init spawning rcrTool");
@@ -1116,10 +1122,6 @@ int qthread_initialize(void)
                 }
             }
 # endif     /* ifdef QTHREAD_RCRTOOL */
-            qlib->shepherds[i].workers[j].shepherd         = &qlib->shepherds[i];
-            qlib->shepherds[i].workers[j].worker_id        = j;
-            qlib->shepherds[i].workers[j].packed_worker_id = j + (i * nworkerspershep);
-            qlib->shepherds[i].workers[j].active           = 1;
             if ((r = pthread_create(&qlib->shepherds[i].workers[j].worker, NULL,
                                     qthread_shepherd, &qlib->shepherds[i].workers[j])) != 0) {
                 fprintf(stderr, "qthread_init: pthread_create() failed (%d)\n", r);

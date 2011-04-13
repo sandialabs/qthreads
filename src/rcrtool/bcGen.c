@@ -30,6 +30,9 @@ Trigger** getTriggers(void) {
  * \return 1 if a a trigger is hit, otherwise return 0.
  */
 int putBreadcrumbs(rcrtool_trigger_type triggerType, int socketOrCoreID, const char *meterName, double currentVal){
+    if (RCR_TRIGGERS > rcrtoollevel) 
+        return 0;
+
 #ifdef QTHREAD_RCRTOOL
 #define MAX_TRIGGERS 64
     static int flipped[MAX_TRIGGERS];// = 0;
@@ -44,7 +47,7 @@ int putBreadcrumbs(rcrtool_trigger_type triggerType, int socketOrCoreID, const c
     }
 
     for (i = 0; i < numTriggers; i++) {
-        if ((triggerMap[i]->type == triggerType) && (triggerMap[i]->id == socketOrCoreID) && (strcmp(triggerMap[i]->meterName, meterName) == 0)) {
+        if ((triggerMap[i]->meterType == triggerType) && (triggerMap[i]->id == socketOrCoreID) && (strcmp(triggerMap[i]->meterName, meterName) == 0)) {
             if ((currentVal < triggerMap[i]->threshold_lb) || (currentVal > triggerMap[i]->threshold_ub)) {//trigger cond
 #ifdef QTHREAD_RCRTOOL
                 if (i < MAX_TRIGGERS && flipped[i] != 1) {
@@ -92,7 +95,7 @@ char getBreadcrumbs(rcrtool_trigger_type triggerType, int id, char *meterName){
     }
 
     for (i = 0; i < numTriggers; i++) {
-        if ((triggerMap[i]->type == triggerType) && (triggerMap[i]->id == id) && (strcmp(triggerMap[i]->meterName, meterName) == 0)) {
+        if ((triggerMap[i]->meterType == triggerType) && (triggerMap[i]->id == id) && (strcmp(triggerMap[i]->meterName, meterName) == 0)) {
             return shmGet(triggerMap[i]->flagShmKey);
         }
     }
@@ -240,6 +243,8 @@ void dumpAppState(key_t key, rcrtool_trigger_type triggerType, int socketOrCoreI
     shmRover += strlen(RCRAppName);
     for (i = 0; i <= RCRParallelSectionStackPos; i++) {
         //printf("%s %d ^^^^\n", hashTable[RCRParallelSectionStack[i]].funcName, hashTable[RCRParallelSectionStack[i]].count);
+        sprintf(shmRover, "|%8d", hashTable[RCRParallelSectionStack[i]].numOMPassignedThreads);
+        shmRover += 9;
         *shmRover++ = '|';
         strncpy(shmRover, hashTable[RCRParallelSectionStack[i]].funcName, RCR_HASH_ENTRY_SIZE);
         shmRover += strlen(hashTable[RCRParallelSectionStack[i]].funcName);
@@ -260,6 +265,6 @@ void printTriggerMap(){
     int i;
     printf("Number of triggers: %d\n", numTriggers);
     for (i = 0; i < numTriggers; i++) {
-        printf("%d \t %d \t %d \t %d \t %s \t %f \t %f \n", triggerMap[i]->type, triggerMap[i]->id, triggerMap[i]->flagShmKey, triggerMap[i]->appStateShmKey, triggerMap[i]->meterName, triggerMap[i]->threshold_lb, triggerMap[i]->threshold_ub);
+        printf("%d \t %d \t %d \t %d \t %s \t %f \t %f \n", triggerMap[i]->meterType, triggerMap[i]->id, triggerMap[i]->flagShmKey, triggerMap[i]->appStateShmKey, triggerMap[i]->meterName, triggerMap[i]->threshold_lb, triggerMap[i]->threshold_ub);
     }
 }

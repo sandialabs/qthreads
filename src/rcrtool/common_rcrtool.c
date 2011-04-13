@@ -4,6 +4,7 @@
 #include <err.h>
 #include <time.h>
 #include <sys/time.h>
+#include "perf_util.h"
 #include "common_rcrtool.h"
 #include "qt_rcrtool.h"
 #include "bcGen.h"

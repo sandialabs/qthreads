@@ -65,7 +65,7 @@ void buildTriggerMap(const char *fileName){
     char line[BUFSIZ];
     char *nextField;
 
-    printf("Reading from trigger file: %s \n", fileName);
+    //printf("Reading from trigger file: %s \n", fileName);
 
     // Check if file exists
     FILE *triggerFile = fopen(fileName, "r");
@@ -85,11 +85,11 @@ void buildTriggerMap(const char *fileName){
         nextField = (char *) strtok(line, ",");
         nextField = trim(nextField); // remove trailing and leading white spaces
         if (strcmp(nextField, "TYPE_CORE") == 0) {
-            triggerMap[triggerCount]->type = TYPE_CORE;
+            triggerMap[triggerCount]->meterType = TYPE_CORE;
         } else if (strcmp(nextField, "TYPE_SOCKET") == 0) {
-            triggerMap[triggerCount]->type = TYPE_SOCKET;
+            triggerMap[triggerCount]->meterType = TYPE_SOCKET;
         } else if (strcmp(nextField, "TYPE_NODE") == 0) {
-            triggerMap[triggerCount]->type = TYPE_NODE;
+            triggerMap[triggerCount]->meterType = TYPE_NODE;
         } else {
             printf("Unknown trigger type: type must be TYPE_CORE or TYPE_SOCKET or TYPE_NODE \n");
             printf("Ignoring the rest of the trigger file \n");
@@ -131,7 +131,7 @@ void buildTriggerMap(const char *fileName){
 
     numTriggers = triggerCount;
 
-    printTriggerMap();
+    //printTriggerMap();
 
 }
 
