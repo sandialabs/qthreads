@@ -9,5 +9,6 @@ libqthread_la_SOURCES += rcrtool/common_rcrtool.c \
 			 rcrtool/perf_util.c \
 			 rcrtool/bcGen.c \
 			 rcrtool/triggers.c \
-			 rcrtool/qt_rcrtool.c
+			 rcrtool/qt_rcrtool.c \
+			 rcrtool/maestro_sched.c 
 endif

@@ -1416,7 +1416,7 @@ void doWork(int nshepherds, int nworkerspershep) {
                     /*
                        leave breadcrumbs
                     */
-                    putBreadcrumbs(TYPE_CORE, i, "MemoryConcurrency", currentVal);
+                    putBreadcrumbs(TYPE_SOCKET, i, "MemoryConcurrency", currentVal);
 
                     if (bVerbose)
                         printf("[Socket %d] Memory Concurrency: Current=%f, Max=%f, Avg=%f.\n", i, currentVal, maxVal, avgVal);

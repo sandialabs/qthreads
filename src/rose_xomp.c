@@ -39,6 +39,7 @@
 
 #ifdef QTHREAD_RCRTOOL
 #include "rcrtool/qt_rcrtool.h"
+#include "maestro_sched.h"
 #endif
 
 #if defined(__i386__) || defined(__x86_64__)
@@ -443,6 +444,12 @@ void xomp_internal_loop_init(
     t->chunkSize = 1;
     t->type = type;
     t->iterations = 0;
+    int i;
+    int numSheps = qthread_num_shepherds();
+    for (i =0; i < numSheps; i++) {
+      t->current_workers[i] = 0; // not me
+    }
+    t->allowed_workers = maestro_allowed_workers();
     if (pr) pr->forLoop = t;
   }
   // akp - this feels more than should be needed but I was having problems with simpler
@@ -528,24 +535,26 @@ int compute_XOMP_block(
 
 
 // start Qthreads default openmp loop execution
-bool XOMP_loop_guided_start(
-    void * lp,
-    long startLower,
-    long startUpper,
-    long stride,
-    long chunk_size,
+
+// get next iteration(if any) for Qthreads default openmp loop execution
+bool xomp_internal_guided_next(
+    qqloop_step_handle_t * loop,
     long *returnLower,
     long *returnUpper)
 {
-
-    int dynamicBlock;
-
-    if (lp == NULL){
-      return FALSE;
+    // spin waiting for either 
+  qthread_shepherd_id_t myShepId = qthread_shep();
+  if (loop->current_workers[myShepId] > maestro_current_workers(myShepId)) {
+      qthread_incr(&loop->current_workers[myShepId],-1); // not working spinning
+      printf("spin thread on socket %d (%d)\n", myShepId,loop->assignNext);
+      while ((loop->current_workers[myShepId] + 1) > maestro_current_workers(myShepId)) { // A) the number of workers to be increased
+	if(loop->departed_workers) break; // B) some worker to notice the loop is done  -- could repeat code and return instead of breaking
+      }
+      qthread_incr(&loop->current_workers[myShepId],1); // back at work  -- skipped in departed workers case OK since everyone leaving
+      printf("\tfree thread on socket %d (%d)\n", myShepId,loop->assignNext);
     }
-    qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
 
-    dynamicBlock = compute_XOMP_block(loop);
+    int dynamicBlock = compute_XOMP_block(loop);
 
     dynamicBlock = (dynamicBlock <= 1) ? 1:(dynamicBlock - 1); // min size 1
     aligned_t iterationNumber = qthread_incr(&loop->assignNext, dynamicBlock);
@@ -556,6 +565,7 @@ bool XOMP_loop_guided_start(
       *returnLower = 0;
       *returnUpper = 0;
       qthread_incr(&loop->departed_workers,1);
+      qthread_incr(&loop->current_workers[myShepId],-1);
      return FALSE;
     }
     if (*returnUpper > loop->assignStop) {// this iteration goes past end of loop
@@ -570,13 +580,35 @@ bool XOMP_loop_guided_start(
     return TRUE;
 }
 
+
+bool XOMP_loop_guided_start(
+    void * lp,
+    long startLower,
+    long startUpper,
+    long stride,
+    long chunk_size,
+    long *returnLower,
+    long *returnUpper)
+{
+    if (lp == NULL){
+      return FALSE;
+    }
+
+    qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
+    qthread_shepherd_id_t myShepId = qthread_shep();
+    
+    qthread_incr(&loop->current_workers[myShepId],1);
+    return xomp_internal_guided_next(loop, returnLower, returnUpper);
+
+}
+
 // get next iteration(if any) for Qthreads default openmp loop execution
 bool XOMP_loop_guided_next(
     void * loop,
     long *returnLower,
     long *returnUpper)
 {
-  return XOMP_loop_guided_start(loop, -1, -1, -1, -1, returnLower, returnUpper);
+    return xomp_internal_guided_next(loop, returnLower, returnUpper);
 }
 
 volatile aligned_t spinLock = 0;

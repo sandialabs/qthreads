@@ -7,6 +7,7 @@
 #include "bcGen.h"
 #include "qt_rcrtool.h"
 #include "triggers.h"
+#include "maestro_sched.h"
 #include <stdio.h>
 #include <errno.h>
 
@@ -29,14 +30,18 @@ Trigger** getTriggers(void) {
  * 
  * \return 1 if a a trigger is hit, otherwise return 0.
  */
+
+#ifdef QTHREAD_RCRTOOL
+// enable memory between calls to reduce calls to modify scheduling -- akp
+enum TriggerValues{SET_INIT = 0, SET_LOW=1, SET_HIGH=2};
+#define MAX_TRIGGERS 64
+static int flipped[MAX_TRIGGERS];// = 0;
+#endif
+
 int putBreadcrumbs(rcrtool_trigger_type triggerType, int socketOrCoreID, const char *meterName, double currentVal){
     if (RCR_TRIGGERS > rcrtoollevel) 
         return 0;
 
-#ifdef QTHREAD_RCRTOOL
-#define MAX_TRIGGERS 64
-    static int flipped[MAX_TRIGGERS];// = 0;
-#endif
     int i = 0;
     int triggerHit = 0;
     char c;
@@ -48,28 +53,42 @@ int putBreadcrumbs(rcrtool_trigger_type triggerType, int socketOrCoreID, const c
 
     for (i = 0; i < numTriggers; i++) {
         if ((triggerMap[i]->meterType == triggerType) && (triggerMap[i]->id == socketOrCoreID) && (strcmp(triggerMap[i]->meterName, meterName) == 0)) {
-            if ((currentVal < triggerMap[i]->threshold_lb) || (currentVal > triggerMap[i]->threshold_ub)) {//trigger cond
+
+            if ((currentVal < triggerMap[i]->threshold_lb)) {//trigger cond
 #ifdef QTHREAD_RCRTOOL
-                if (i < MAX_TRIGGERS && flipped[i] != 1) {
-                    flipped[i] = 1;
-                    //rcrtool_debug(RCR_RATTABLE_DEBUG," Hit trigger for %s on %d\n,", triggerMap[i]->meterName, triggerMap[i]->id);
-                }
                 dumpAppState(triggerMap[i]->appStateShmKey, triggerType, socketOrCoreID, meterName);
 #endif
+		if (flipped[i] != SET_LOW) {
+		    flipped[i] = SET_LOW;
+		    maestro_sched(MTT_SOCKET, MTA_RAISE_STREAM_COUNT,socketOrCoreID);
+		}
+                triggerHit = 1;  
+                c = '0'; // Unset the flag
+                shmPutFlag(triggerMap[i]->flagShmKey , c);
+            } else {
+	      if ((currentVal > triggerMap[i]->threshold_ub)) {//trigger cond
+#ifdef QTHREAD_RCRTOOL
+                dumpAppState(triggerMap[i]->appStateShmKey, triggerType, socketOrCoreID, meterName);
+#endif
+		if (flipped[i] != SET_HIGH) {
+		  flipped[i] = SET_HIGH;
+		  maestro_sched(MTT_SOCKET, MTA_LOWER_STREAM_COUNT,socketOrCoreID);
+		}
                 triggerHit = 1;
                 c = '1'; // Set the flag
                 shmPutFlag(triggerMap[i]->flagShmKey , c);
-            } else {
+	      } else {
 #ifdef QTHREAD_RCRTOOL
                 if (i < MAX_TRIGGERS && flipped[i] != 0) {
-                    flipped[i] = 0;
-                    //rcrtool_debug(RCR_RATTABLE_DEBUG," Left trigger for %s on %d\n,", triggerMap[i]->meterName, triggerMap[i]->id);
+		  //		  flipped[i] = 0;
+		  //rcrtool_debug(RCR_RATTABLE_DEBUG," Left trigger for %s on %d\n,", triggerMap[i]->meterName, triggerMap[i]->id);
                 }
 #endif
                 c = '0'; // Unset
                 shmPutFlag(triggerMap[i]->flagShmKey , c);
-            }
-        }
+	      }
+	    }
+	}
     }
     return triggerHit;
 }

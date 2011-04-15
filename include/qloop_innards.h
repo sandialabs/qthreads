@@ -68,6 +68,8 @@ struct qqloop_step_handle_s {
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     aligned_t                        workers;
     aligned_t                        departed_workers;
+    aligned_t                        current_workers[4]; // need to make variable size -- number of shepherds AKP 4/15/11
+    aligned_t                        allowed_workers;
     struct qqloop_step_handle_s     *next;
     enum qloop_handle_type           type;
     aligned_t                        assignNext;
