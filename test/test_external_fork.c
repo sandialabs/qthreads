@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <pthread.h>
-#include <qthread.h>
+#include "qthread/qthread.h"
 #include "argparsing.h"
 
 static aligned_t x;

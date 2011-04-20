@@ -8,7 +8,7 @@
  */
 #include <stdio.h>
 #include <pthread.h>
-#include <qthread.h>
+#include "qthread/qthread.h"
 #include "argparsing.h"
 
 syncvar_t x = SYNCVAR_STATIC_EMPTY_INITIALIZER;
