@@ -449,7 +449,9 @@ void xomp_internal_loop_init(
     for (i =0; i < numSheps; i++) {
       t->current_workers[i] = 0; // not me
     }
+#ifdef QTHREAD_RCRTOOL
     t->allowed_workers = maestro_allowed_workers();
+#endif
     if (pr) pr->forLoop = t;
   }
   // akp - this feels more than should be needed but I was having problems with simpler
@@ -544,15 +546,15 @@ bool xomp_internal_guided_next(
 {
     // spin waiting for either 
   qthread_shepherd_id_t myShepId = qthread_shep();
+#ifdef QTHREAD_RCRTOOL
   if (loop->current_workers[myShepId] > maestro_current_workers(myShepId)) {
       qthread_incr(&loop->current_workers[myShepId],-1); // not working spinning
-      printf("spin thread on socket %d (%d)\n", myShepId,loop->assignNext);
       while ((loop->current_workers[myShepId] + 1) > maestro_current_workers(myShepId)) { // A) the number of workers to be increased
 	if(loop->departed_workers) break; // B) some worker to notice the loop is done  -- could repeat code and return instead of breaking
       }
       qthread_incr(&loop->current_workers[myShepId],1); // back at work  -- skipped in departed workers case OK since everyone leaving
-      printf("\tfree thread on socket %d (%d)\n", myShepId,loop->assignNext);
     }
+#endif
 
     int dynamicBlock = compute_XOMP_block(loop);
 
