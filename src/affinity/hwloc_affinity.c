@@ -159,12 +159,10 @@ void qt_affinity_init(
 		    hwloc_obj_type_t t =
 			hwloc_get_depth_type(topology, realdepth);
 		    if (t == HWLOC_OBJ_CACHE) {
-			unsigned int num =
-			    hwloc_get_nbobjs_by_depth(topology, realdepth);
 			level++;
 			qthread_debug(ALL_DETAILS,
 				      "L%u at depth %u (nbobjs is %u)\n",
-				      level, realdepth, num);
+				      level, realdepth, (unsigned int) hwloc_get_nbobjs_by_depth(topology, realdepth));
 			/* default choice (1): pick the outermost layer of cache */
 			/* if user requested L-specific cache, then count & compare */
 			/* L1 is _not_ the same as 'pu' _if_ we have hyperthreading */
@@ -213,10 +211,9 @@ void qt_affinity_init(
 		      *nbshepherds);
 	for (realdepth = 0; realdepth < maxdepth && shep_depth == -1;
 	     ++realdepth) {
-	    hwloc_obj_type_t t = hwloc_get_depth_type(topology, realdepth);
 	    unsigned int num = hwloc_get_nbobjs_by_depth(topology, realdepth);
 	    qthread_debug(ALL_DETAILS, "%s at depth %u (nbobjs is %u%s)\n",
-			  hwloc_obj_type_string(t), realdepth, num, (num==HWLOC_TYPE_DEPTH_UNKNOWN)?" (unknown)":((num==HWLOC_TYPE_DEPTH_MULTIPLE)?" (multiple)":""));
+			  hwloc_obj_type_string(hwloc_get_depth_type(topology, realdepth)), realdepth, num, (num==HWLOC_TYPE_DEPTH_UNKNOWN)?" (unknown)":((num==HWLOC_TYPE_DEPTH_MULTIPLE)?" (multiple)":""));
 	    if (num == *nbshepherds) {
 		shep_depth = realdepth;
 		DEBUG_ONLY(typename = hwloc_obj_type_string(t));
@@ -349,21 +346,19 @@ void qt_affinity_set(
 {				       /*{{{ */
     hwloc_const_cpuset_t allowed_cpuset = hwloc_topology_get_allowed_cpuset(topology);	// where am I allowed to run?
     qthread_shepherd_t *const myshep = me->shepherd;
-    size_t nb_shepobjs =
-	hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset,
-						shep_depth);
     hwloc_obj_t obj =
 	hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset,
 					     shep_depth, myshep->node);
-    hwloc_obj_type_t t = hwloc_get_depth_type(topology, shep_depth);
-    unsigned npu =
-	hwloc_get_nbobjs_inside_cpuset_by_type(topology, allowed_cpuset,
-					       HWLOC_OBJ_PU);
     qthread_debug(ALL_DETAILS,
 		  "shep %i worker %i [%i], there are %i %s [%i pu]\n",
 		  (int)myshep->shepherd_id, (int)me->worker_id,
-		  (int)me->packed_worker_id, (int)nb_shepobjs,
-		  hwloc_obj_type_string(t), (int)npu);
+		  (int)me->packed_worker_id,
+		  (int)hwloc_get_nbobjs_inside_cpuset_by_depth(topology,
+		      allowed_cpuset, shep_depth),
+		  hwloc_obj_type_string(hwloc_get_depth_type(topology,
+			  shep_depth)),
+		  (int)hwloc_get_nbobjs_inside_cpuset_by_type(topology,
+		      allowed_cpuset, HWLOC_OBJ_PU));
     unsigned int weight = WEIGHT(obj->allowed_cpuset);
     hwloc_obj_t sub_obj =
 	hwloc_get_obj_inside_cpuset_by_type(topology, obj->allowed_cpuset,
