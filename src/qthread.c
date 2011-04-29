@@ -2538,8 +2538,6 @@ qthread_parallel_region_t *qt_parallel_region() // get active parallel region
 int qt_omp_parallel_region_create()
 {                      /*{{{ */
     int ret = 0;
-    qthread_shepherd_t *myshep = qthread_internal_getshep();
-
     qthread_parallel_region_t *pr = malloc(sizeof(qthread_parallel_region_t));
 
     qassert_ret(pr, QTHREAD_MALLOC_ERROR);
