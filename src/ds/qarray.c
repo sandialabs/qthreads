@@ -455,7 +455,7 @@ static qarray *qarray_create_internal(const size_t count,
     madvise(ret->base_ptr, segment_count * ret->segment_bytes,
 	    MADV_ACCESS_LWP);
 #endif
-    for (int i = 0; i < qthread_num_shepherds(); i++) {
+    for (unsigned int i = 0; i < qthread_num_shepherds(); i++) {
 	qthread_debug(ALL_DETAILS,
 		      "qarray_create(): shep %i has %i segments\n", i,
 		      chunk_distribution_tracker[i]);

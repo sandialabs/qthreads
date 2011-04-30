@@ -44,7 +44,7 @@ struct qloop_step_wrapper_args {
     size_t         startat, stopat, step, id;
     void          *arg;
     size_t         level;
-    void *         rets;
+    void          *rets;
 };
 
 # ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
@@ -76,25 +76,24 @@ static aligned_t qloop_step_wrapper_future(struct qloop_step_wrapper_args *const
 
 static aligned_t qloop_step_wrapper(struct qloop_step_wrapper_args *const restrict arg)
 {                                      /*{{{ */
-
 # ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
     MONITOR_ASM_LABEL(qthread_step_fence3); // add label for HPCToolkit unwind
 # endif
     size_t tot_workers = qthread_num_workers() - 1; // I'm already here
 
-    size_t level = arg->level;
-    size_t my_id = arg->id;
-    size_t new_id =my_id + (1 << level); 
+    size_t level  = arg->level;
+    size_t my_id  = arg->id;
+    size_t new_id = my_id + (1 << level);
     while (new_id <= tot_workers) {       // create some children? (tot_workers zero based)
-      size_t offset = new_id - my_id;       // need how much past current locations
-      (arg + offset)->level = ++level;    // increase depth for created thread
-      qthread_fork_syncvar_copyargs_to((qthread_f) qloop_step_wrapper,
-				       arg + offset,
-				       0,
-				       arg->rets + (new_id*sizeof(syncvar_t)),
-				       new_id);
+        size_t offset = new_id - my_id;   // need how much past current locations
+        (arg + offset)->level = ++level;  // increase depth for created thread
+        qthread_fork_syncvar_copyargs_to((qthread_f)qloop_step_wrapper,
+                                         arg + offset,
+                                         0,
+                                         arg->rets + (new_id * sizeof(syncvar_t)),
+                                         new_id);
 
-      new_id = (1 << level)+ my_id;       // level has been incremented
+        new_id = (1 << level) + my_id;    // level has been incremented
     }
 
     // and every one executes their piece
@@ -196,45 +195,44 @@ static void qt_loop_step_inner(const size_t         start,
         qwa[threadct].step    = stride;
         qwa[threadct].arg     = argptr;
         qwa[threadct].id      = threadct;
-	qwa[threadct].level   = 0;
-	qwa[threadct].rets    = rets;
-	threadct++;
+        qwa[threadct].level   = 0;
+        qwa[threadct].rets    = rets;
+        threadct++;
     }
     threadct = 0;
 
     if (future) {  // haven't change this yet - use new name - who uses? 4/4/11 AKP
-      for (i = start; i < stop; i += stride) {
-	future_fork_syncvar_to((qthread_f)qloop_step_wrapper_future,
-			       qwa + threadct,
-			       rets + i,
-			       (qthread_shepherd_id_t)(threadct % qthread_num_shepherds()));
-        threadct++;
-	
-      }
-    } else {
-      qassert(qthread_fork_syncvar_copyargs_to
-	      ((qthread_f) qloop_step_wrapper, qwa, 0, rets, (qthread_shepherd_id_t)0),QTHREAD_SUCCESS);
-    }
-    
-    /* qloop_step_wrapper now tree forks all of the children rather than having to do all of them here - 4/1/11 AKP */
-    /* need to do something about future forks 4/1/11 AKP */
-    /*
-        if (future) {
-            future_fork_syncvar_to((qthread_f)qloop_step_wrapper,
+        for (i = start; i < stop; i += stride) {
+            future_fork_syncvar_to((qthread_f)qloop_step_wrapper_future,
                                    qwa + threadct,
                                    rets + i,
                                    (qthread_shepherd_id_t)(threadct % qthread_num_shepherds()));
-        } else {
-            qassert(qthread_fork_syncvar_copyargs_to((qthread_f)qloop_step_wrapper,
-                                                     qwa + threadct,
-                                                     0,
-                                                     rets + i,
-                                                     (qthread_shepherd_id_t)threadct),
-                    QTHREAD_SUCCESS);
+            threadct++;
         }
-        threadct++;
+    } else {
+        qassert(qthread_fork_syncvar_copyargs_to
+                    ((qthread_f)qloop_step_wrapper, qwa, 0, rets, (qthread_shepherd_id_t)0), QTHREAD_SUCCESS);
     }
-    */
+
+    /* qloop_step_wrapper now tree forks all of the children rather than having to do all of them here - 4/1/11 AKP */
+    /* need to do something about future forks 4/1/11 AKP */
+    /*
+     *  if (future) {
+     *      future_fork_syncvar_to((qthread_f)qloop_step_wrapper,
+     *                             qwa + threadct,
+     *                             rets + i,
+     *                             (qthread_shepherd_id_t)(threadct % qthread_num_shepherds()));
+     *  } else {
+     *      qassert(qthread_fork_syncvar_copyargs_to((qthread_f)qloop_step_wrapper,
+     *                                               qwa + threadct,
+     *                                               0,
+     *                                               rets + i,
+     *                                               (qthread_shepherd_id_t)threadct),
+     *              QTHREAD_SUCCESS);
+     *  }
+     *  threadct++;
+     * }
+     */
     for (i = 0; i < steps; i++) {
         qthread_syncvar_readFF(NULL, rets + i);
     }
@@ -962,8 +960,7 @@ struct qt_qsort_args {
     aligned_t *restrict furthest_rightwall;
 };
 
-static aligned_t qt_qsort_partition(qthread_t            *me,
-                                    struct qt_qsort_args *args)
+static aligned_t qt_qsort_partition(struct qt_qsort_args *args)
 {   /*{{{*/
     double      *a         = args->array;
     const double pivot     = args->pivot;
@@ -1447,7 +1444,7 @@ void qt_parallel_for(const qt_loop_step_f func,
 
 static void qt_naked_parallel_for(void *nakedArg) // This function must match qt_loop_step_f prototype so it can be called with qt_step_loop()
 {                                                 /*{{{*/
-    void              * *funcArgs = (void * *)nakedArg;
+    void               **funcArgs = (void **)nakedArg;
     const qt_loop_step_f func     = (const qt_loop_step_f)(funcArgs[0]);
     const size_t         startat  = (size_t)funcArgs[1]; // get the for loop bounds from the argument
     const size_t         stopat   = (size_t)funcArgs[2];

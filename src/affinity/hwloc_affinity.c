@@ -466,12 +466,12 @@ int qt_affinity_gendists(
     }
     /* assign nodes by iterating over cpus_left_per_node array (which is of
      * size num_extant_nodes rather than of size nodes_i_can_use) */
-    int obj = 0;
+    unsigned int obj = 0;
     for (size_t i = 0; i < nshepherds; ++i) {
 	switch (over_subscribing) {
 	    case 0:
 	    {
-		int count = 0;
+		unsigned int count = 0;
 		while (count < num_extant_objs && cpus_left_per_obj[obj] == 0) {
 		    obj++;
 		    obj *= (obj < num_extant_objs);
