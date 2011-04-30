@@ -1,5 +1,5 @@
 #ifdef HAVE_CONFIG_H
-#include "config.h"
+# include "config.h"
 #endif
 
 #include <qthread/qtimer.h>
@@ -15,11 +15,10 @@
 # endif
 #endif
 #ifdef HAVE_STDLIB_H
-#include <stdlib.h>
+# include <stdlib.h>
 #endif
 
-struct qtimer_s
-{
+struct qtimer_s {
     struct timeval start, stop;
 };
 
@@ -31,6 +30,7 @@ void qtimer_start(qtimer_t q)
 long qtimer_fastrand(void)
 {
     struct timeval s;
+
     gettimeofday(&(s), NULL);
     return (long)(s.tv_usec);
 }
@@ -42,7 +42,7 @@ void qtimer_stop(qtimer_t q)
 
 double qtimer_secs(qtimer_t q)
 {
-    return (q->stop.tv_sec + q->stop.tv_usec*1e-6) - (q->start.tv_sec + q->start.tv_usec*1e-6);
+    return (q->stop.tv_sec + q->stop.tv_usec * 1e-6) - (q->start.tv_sec + q->start.tv_usec * 1e-6);
 }
 
 qtimer_t qtimer_create()
@@ -54,3 +54,5 @@ void qtimer_destroy(qtimer_t q)
 {
     free(q);
 }
+
+/* vim:set expandtab: */

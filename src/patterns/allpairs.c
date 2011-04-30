@@ -93,7 +93,7 @@ static aligned_t qt_ap_worker(struct qt_ap_wargs *restrict args)
                  * } */
                 distances[shep].i += cur_dist;
             }
-#endif /* ifdef QTHREAD_TRACK_DISTANCES */
+#endif      /* ifdef QTHREAD_TRACK_DISTANCES */
             if (args->outfunc_style == 1) {
                 const dist_out_f f = args->f.od;
 
@@ -211,7 +211,7 @@ static void qt_ap_genwork2(const size_t           startat,
         qdqueue_enqueue_there(gargs->wq, workunit,
                               halfway[qthread_shep()][shep]);
         // qthread_incr(&mindistances, halfway_dist[qthread_shep()][shep]);
-#endif /* if 0 */
+#endif  /* if 0 */
     }
 }
 

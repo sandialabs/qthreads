@@ -9,12 +9,12 @@
 
 #include "shepcomp.h"
 
-static nodemask_t * mccoy_bitmask = NULL;
+static nodemask_t *mccoy_bitmask = NULL;
 
 static qthread_shepherd_id_t guess_num_shepherds(void);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-qthread_worker_id_t   guess_num_workers_per_shep(qthread_shepherd_id_t
-                                                 nshepherds);
+qthread_worker_id_t guess_num_workers_per_shep(qthread_shepherd_id_t
+                                               nshepherds);
 #endif
 
 static void qt_affinity_internal_numa_teardown(void)
@@ -23,14 +23,14 @@ static void qt_affinity_internal_numa_teardown(void)
     free(mccoy_bitmask);
 }
 
-void qt_affinity_init(qthread_shepherd_id_t * nbshepherds
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+void qt_affinity_init(qthread_shepherd_id_t *nbshepherds
+#ifdef                                     QTHREAD_MULTITHREADED_SHEPHERDS
                       ,
-                      qthread_worker_id_t * nbworkers
+                      qthread_worker_id_t *nbworkers
 #endif
                       )
 {                                      /*{{{ */
-    mccoy_bitmask = malloc(sizeof(nodemask_t));
+    mccoy_bitmask  = malloc(sizeof(nodemask_t));
     *mccoy_bitmask = numa_get_run_node_mask();
     qthread_internal_cleanup(qt_affinity_internal_numa_teardown);
     if (*nbshepherds == 0) {
@@ -43,9 +43,9 @@ void qt_affinity_init(qthread_shepherd_id_t * nbshepherds
 #endif
 }                                      /*}}} */
 
-void qt_affinity_mem_tonode(void *addr,
+void qt_affinity_mem_tonode(void  *addr,
                             size_t bytes,
-                            int node)
+                            int    node)
 {                                      /*{{{ */
     numa_tonode_memory(addr, bytes, node);
 }                                      /*}}} */
@@ -56,12 +56,12 @@ void *qt_affinity_alloc(size_t bytes)
 }                                      /*}}} */
 
 void *qt_affinity_alloc_onnode(size_t bytes,
-                               int node)
+                               int    node)
 {                                      /*{{{ */
     return numa_alloc_onnode(bytes, node);
 }                                      /*}}} */
 
-void qt_affinity_free(void *ptr,
+void qt_affinity_free(void  *ptr,
                       size_t bytes)
 {                                      /*{{{ */
     numa_free(ptr, bytes);
@@ -139,7 +139,7 @@ static qthread_shepherd_id_t guess_num_shepherds(void)
 }                                      /*}}} */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-void qt_affinity_set(qthread_worker_t * me)
+void qt_affinity_set(qthread_worker_t *me)
 {                                      /*{{{ */
     if (numa_run_on_node(me->shepherd->node) != 0) {
         numa_error("setting thread affinity");
@@ -148,7 +148,7 @@ void qt_affinity_set(qthread_worker_t * me)
 }                                      /*}}} */
 
 #else
-void qt_affinity_set(qthread_shepherd_t * me)
+void qt_affinity_set(qthread_shepherd_t *me)
 {                                      /*{{{ */
     if (numa_run_on_node(me->node) != 0) {
         numa_error("setting thread affinity");
@@ -161,8 +161,8 @@ void qt_affinity_set(qthread_shepherd_t * me)
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 unsigned int guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
-    size_t cpu_count = 1;
-    unsigned int guess = 1;
+    size_t       cpu_count = 1;
+    unsigned int guess     = 1;
 
     qthread_debug(ALL_DETAILS, "guessing workers for %i shepherds\n",
                   (int)nshepherds);
@@ -196,11 +196,11 @@ unsigned int guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
-int qt_affinity_gendists(qthread_shepherd_t * sheps,
+int qt_affinity_gendists(qthread_shepherd_t   *sheps,
                          qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
     const size_t num_extant_nodes = numa_max_node() + 1;
-    nodemask_t bmask;
+    nodemask_t   bmask;
 
     if (numa_available() == -1) {
         return QTHREAD_THIRD_PARTY_ERROR;
@@ -217,7 +217,7 @@ int qt_affinity_gendists(qthread_shepherd_t * sheps,
      * considered "pre-history") do not have numa_distance() */
     for (qthread_shepherd_id_t i = 0; i < nshepherds; i++) {
         const unsigned int node_i = sheps[i].node;
-        size_t j, k;
+        size_t             j, k;
         sheps[i].shep_dists = calloc(nshepherds, sizeof(unsigned int));
         assert(sheps[i].shep_dists);
         for (j = 0; j < nshepherds; j++) {
