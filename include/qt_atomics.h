@@ -272,7 +272,7 @@ static QINLINE saligned_t qthread_internal_atomic_read_s(volatile saligned_t   *
 #endif /* ifndef QTHREAD_MUTEX_INCREMENT */
 
 static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t *operand,
-                                                    const int max       QTHREAD_OPTIONAL_LOCKARG)
+                                                    const unsigned int max       QTHREAD_OPTIONAL_LOCKARG)
 {                                      /*{{{ */
     aligned_t retval;
 

@@ -50,7 +50,7 @@ qt_feb_barrier_t *qt_feb_barrier_create(size_t max_threads)
 
 #ifndef UNPOOLED
     if (fbp.pool == NULL) {
-        qt_mpool bp = qt_mpool_create(qthread_num_shepherds() > 1, sizeof(struct qt_feb_barrier_s));
+        qt_mpool bp = qt_mpool_create(sizeof(struct qt_feb_barrier_s));
         if (QT_CAS_(fbp.vp, NULL, bp, fbp_caslock) != NULL) {
             /* someone else created an mpool first */
             qt_mpool_destroy(bp);

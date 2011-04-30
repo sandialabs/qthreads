@@ -138,8 +138,7 @@ static QINLINE void qt_mpool_internal_aligned_free(void        *freeme,
 // sync means lock-protected
 // item_size is how many bytes to return
 // ...memory is always allocated in multiples of getpagesize()
-qt_mpool qt_mpool_create_aligned(const int sync,
-                                 size_t    item_size,
+qt_mpool qt_mpool_create_aligned(size_t    item_size,
                                  size_t    alignment)
 {                                      /*{{{ */
     qt_mpool pool = (qt_mpool)calloc(1, sizeof(struct qt_mpool_s));
@@ -218,10 +217,9 @@ qt_mpool qt_mpool_create_aligned(const int sync,
     return NULL;
 }                                      /*}}} */
 
-qt_mpool qt_mpool_create(int    sync,
-                         size_t item_size)
+qt_mpool qt_mpool_create(size_t item_size)
 {                                      /*{{{ */
-    return qt_mpool_create_aligned(sync, item_size, 0);
+    return qt_mpool_create_aligned(item_size, 0);
 }                                      /*}}} */
 
 /* to avoid ABA reinsertion trouble, each pointer in the pool needs to have a

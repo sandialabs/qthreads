@@ -187,7 +187,7 @@ const syncvar_t SYNCVAR_EMPTY_INITIALIZER = SYNCVAR_STATIC_EMPTY_INITIALIZER;
 
 int qthread_syncvar_status(syncvar_t *const v)
 {                                      /*{{{ */
-    eflags_t     e = { 0 };
+    eflags_t     e = { 0, 0, 0, 0, 0 };
     unsigned int realret;
 
 #ifdef __tile__
@@ -292,7 +292,7 @@ static void qthread_syncvar_blocker_func(void        *dest,
 int qthread_syncvar_readFF(uint64_t *restrict const  dest,
                            syncvar_t *restrict const src)
 {                                      /*{{{ */
-    eflags_t   e = { 0 };
+    eflags_t   e = { 0, 0, 0, 0, 0 };
     uint64_t   ret;
     qthread_t *me = qthread_internal_self();
 
@@ -389,7 +389,7 @@ locked_full:
 
 int qthread_syncvar_fill(syncvar_t *restrict const addr)
 {                                      /*{{{ */
-    eflags_t   e = { 0 };
+    eflags_t   e = { 0, 0, 0, 0, 0 };
     uint64_t   ret;
     qthread_t *me = qthread_internal_self();
 
@@ -441,7 +441,7 @@ int qthread_syncvar_fill(syncvar_t *restrict const addr)
 
 int qthread_syncvar_empty(syncvar_t *restrict const addr)
 {                                      /*{{{ */
-    eflags_t   e = { 0 };
+    eflags_t   e = { 0, 0, 0, 0, 0 };
     uint64_t   ret;
     qthread_t *me = qthread_internal_self();
 
@@ -496,7 +496,7 @@ int qthread_syncvar_empty(syncvar_t *restrict const addr)
 int qthread_syncvar_readFE(uint64_t *restrict const  dest,
                            syncvar_t *restrict const src)
 {                                      /*{{{ */
-    eflags_t   e = { 0 };
+    eflags_t   e = { 0, 0, 0, 0, 0 };
     uint64_t   ret;
     const int  lockbin = QTHREAD_CHOOSE_STRIPE(src);
     qthread_t *me      = qthread_internal_self();
@@ -736,7 +736,7 @@ static QINLINE void qthread_syncvar_gotlock_fill(qthread_shepherd_t *shep,
 int qthread_syncvar_writeF(syncvar_t *restrict const      dest,
                            const uint64_t *restrict const src)
 {                                      /*{{{ */
-    eflags_t   e   = { 0 };
+    eflags_t   e   = { 0, 0, 0, 0, 0 };
     uint64_t   ret = *src;
     qthread_t *me  = qthread_internal_self();
 
@@ -788,7 +788,7 @@ int qthread_syncvar_writeF_const(syncvar_t *restrict const dest,
 int qthread_syncvar_writeEF(syncvar_t *restrict const      dest,
                             const uint64_t *restrict const src)
 {                                      /*{{{ */
-    eflags_t   e = { 0 };
+    eflags_t   e = { 0, 0, 0, 0, 0 };
     uint64_t   ret;
     const int  lockbin = QTHREAD_CHOOSE_STRIPE(dest);
     qthread_t *me      = qthread_internal_self();
@@ -907,7 +907,7 @@ int qthread_syncvar_writeEF_const(syncvar_t *restrict const dest,
 uint64_t qthread_syncvar_incrF(syncvar_t *restrict const operand,
                                const uint64_t            inc)
 {                                      /*{{{ */
-    eflags_t   e = { 0 };
+    eflags_t   e = { 0, 0, 0, 0, 0 };
     uint64_t   newv;
     qthread_t *me = qthread_internal_self();
 

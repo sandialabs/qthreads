@@ -12,10 +12,9 @@ void qt_mpool_free(qt_mpool pool, void *mem);
 /* sync means pthread-protected
  * allocation_bytes is how many bytes to return
  * ...memory is always allocated in multiples of getpagesize() */
-qt_mpool qt_mpool_create(const int sync, size_t item_size);
+qt_mpool qt_mpool_create(size_t item_size);
 
-qt_mpool qt_mpool_create_aligned(const int sync, size_t item_size,
-				 const size_t alignment);
+qt_mpool qt_mpool_create_aligned(size_t item_size, const size_t alignment);
 void qt_mpool_destroy(qt_mpool pool);
 
 #endif
