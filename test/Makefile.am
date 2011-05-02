@@ -10,7 +10,6 @@ TESTS = test_basic \
 		test_reinit \
 		test_cas \
 		test_cacheline \
-		test_internal_mod \
 		test_id \
 		test_incr test_fincr test_dincr \
 		test_stackleft \
@@ -137,9 +136,6 @@ test_cacheline_DEPENDENCIES = $(QTHREADLIB)
 
 test_id_SOURCES = test_id.c
 test_id_DEPENDENCIES = $(QTHREADLIB)
-
-test_internal_mod_SOURCES = test_internal_mod.c
-test_internal_mod_DEPENDENCIES = $(QTHREADLIB)
 
 test_allpairs_SOURCES = test_allpairs.c
 test_allpairs_DEPENDENCIES = $(QTHREADLIB)
