@@ -88,11 +88,11 @@ int main(int argc,
     rets = (aligned_t *)calloc(threadcount, sizeof(aligned_t));
     assert(rets != NULL);
     for (i = 0; i < threadcount; i++) {
-        assert(qthread_fork(dequeuer, q, &(rets[i])) == QTHREAD_SUCCESS);
+        assert(qthread_fork_to(dequeuer, q, &(rets[i]), i%qthread_num_shepherds()) == QTHREAD_SUCCESS);
     }
     iprintf("dequeuers forked\n");
     for (i = 0; i < threadcount; i++) {
-        assert(qthread_fork(queuer, q, NULL) == QTHREAD_SUCCESS);
+        assert(qthread_fork_to(queuer, q, NULL, i%qthread_num_shepherds()) == QTHREAD_SUCCESS);
     }
     iprintf("queuers forked\n");
     for (i = 0; i < threadcount; i++) {

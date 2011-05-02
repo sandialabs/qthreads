@@ -91,10 +91,10 @@ int main(int argc,
     rets = (aligned_t *)calloc(THREAD_COUNT, sizeof(aligned_t));
     assert(rets != NULL);
     for (i = 0; i < THREAD_COUNT; i++) {
-        assert(qthread_fork(dequeuer, q, &(rets[i])) == QTHREAD_SUCCESS);
+        assert(qthread_fork_to(dequeuer, q, &(rets[i]), i%qthread_num_shepherds()) == QTHREAD_SUCCESS);
     }
     for (i = 0; i < THREAD_COUNT; i++) {
-        assert(qthread_fork(queuer, q, NULL) == QTHREAD_SUCCESS);
+        assert(qthread_fork_to(queuer, q, NULL, i%qthread_num_shepherds()) == QTHREAD_SUCCESS);
     }
     for (i = 0; i < THREAD_COUNT; i++) {
         assert(qthread_readFF(NULL, &(rets[i])) == QTHREAD_SUCCESS);
