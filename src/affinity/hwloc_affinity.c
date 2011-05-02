@@ -213,7 +213,7 @@ loop_top:
                           hwloc_obj_type_string(hwloc_get_depth_type(topology, realdepth)), realdepth, num, (num == HWLOC_TYPE_DEPTH_UNKNOWN) ? " (unknown)" : ((num == HWLOC_TYPE_DEPTH_MULTIPLE) ? " (multiple)" : ""));
             if (num == *nbshepherds) {
                 shep_depth = realdepth;
-                DEBUG_ONLY(typename = hwloc_obj_type_string(t));
+                DEBUG_ONLY(typename = hwloc_obj_type_string(hwloc_get_depth_type(topology, realdepth)));
             } else if ((num > *nbshepherds) && (fl_depth == -1)) {
                 fl_depth = realdepth;
             }
