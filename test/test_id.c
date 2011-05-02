@@ -34,7 +34,7 @@ static aligned_t thread(void *arg)
     ret2 = qthread_incr(&counter, 1);
     // printf("second inc = %i\n", ret2);
     assert(ret2 == 1);
-    return 0;
+    return ret ^ ret2;
 }
 
 static aligned_t checkid(void *arg)
