@@ -332,6 +332,7 @@ AC_CHECK_SIZEOF(pthread_mutex_t)
 dnl BWB - FIX ME - shouldn't we actually make sure on this size thing?
 AC_DEFINE([PTHREAD_MUTEX_SMALL_ENOUGH], [1],
    [this signifies that pthread_mutex_t is small enough to fit in the existing data structures])
+AC_CHECK_DECLS([SYS_nanosleep,SYS_sleep,SYS_usleep,SYS_system],[],[],[[#include <sys/syscall.h>]])
 
 AC_CACHE_SAVE
 
