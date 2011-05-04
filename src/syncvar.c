@@ -395,7 +395,7 @@ int qthread_syncvar_fill(syncvar_t *restrict const addr)
 
     assert(addr);
 
-    qthread_debug(LOCK_DETAILS, "me(%p), addr(%p) = %x\n", me, addr,
+    qthread_debug(LOCK_BEHAVIOR, "me(%p), addr(%p) = %x\n", me, addr,
                   (uintptr_t)addr->u.w);
     if (!me) {
         qthread_syncvar_blocker_func(addr, NULL, FILL);
@@ -427,7 +427,7 @@ int qthread_syncvar_fill(syncvar_t *restrict const addr)
             UNLOCK_THIS_MODIFIED_SYNCVAR(addr, ret, (e.pf << 1) | e.sf);
             assert(m->FFQ || m->FEQ);      // otherwise there weren't really any waiters
             assert(m->EFQ == NULL);        // someone snuck in!
-            qthread_syncvar_gotlock_fill(me->rdata->shepherd_ptr, m, addr, BUILD_UNLOCKED_SYNCVAR(ret, (e.pf << 1) | e.sf));
+            qthread_syncvar_gotlock_fill(me->rdata->shepherd_ptr, m, addr, ret);
         } else {
             assert(e.sf == 0);         /* no waiters */
             UNLOCK_THIS_MODIFIED_SYNCVAR(addr, ret, 0);
