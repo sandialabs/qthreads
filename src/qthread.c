@@ -64,6 +64,7 @@
 #include "qt_threadqueues.h"
 #include "qt_affinity.h"
 #include "qt_locks.h"
+#include "qt_io.h"
 
 #ifdef QTHREAD_RCRTOOL
 # include "rcrtool/qt_rcrtool.h"
@@ -537,6 +538,14 @@ static void *qthread_shepherd(void *arg)
                                       me->shepherd_id, t->thread_id);
                         qthread_enqueue((qthread_queue_t *)t->rdata->blockedon->waiting, t);
                         QTHREAD_FASTLOCK_UNLOCK(&(t->rdata->blockedon->lock));
+                        break;
+
+                    case QTHREAD_STATE_SYSCALL:
+                        t->thread_state = QTHREAD_STATE_RUNNING;
+                        qthread_debug(THREAD_DETAILS,
+                                "id(%u): thread %i made a syscall\n",
+                                me->shepherd_id, t->thread_id);
+                        qt_blocking_subsystem_enqueue((qt_blocking_queue_node_t*)t->rdata->blockedon);
                         break;
 
                     case QTHREAD_STATE_TERMINATED:

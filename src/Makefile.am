@@ -15,6 +15,7 @@ libqthread_la_SOURCES = \
 	qt_c_hash.c \
 	qt_feb_barrier.c \
 	qutil.c \
+	io.c \
 	locks.c \
 	feb.c \
 	syncvar.c
