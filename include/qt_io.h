@@ -31,10 +31,10 @@ typedef struct _qt_blocking_queue_node_s {
     int                               ret;
 } qt_blocking_queue_node_t;
 
+extern qt_mpool syscall_job_pool;
 
 void qt_blocking_subsystem_init(void);
 void qt_process_blocking_calls(void);
-
 void qt_blocking_subsystem_enqueue(qt_blocking_queue_node_t *job);
 
 #endif // ifndef QT_IO_H

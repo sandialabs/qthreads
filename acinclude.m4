@@ -28,6 +28,7 @@ m4_include([config/qthread_check_swapcontext.m4])
 m4_include([config/qthread_vamacros.m4])
 m4_include([config/qthread_check_bitfield_order.m4])
 m4_include([config/qthread_check_FUNCTION.m4])
+m4_include([config/qthread_check_syscalltypes.m4])
 dnl Topology interfaces
 m4_include([config/qthread_check_libnuma.m4])
 m4_include([config/qthread_check_plpa.m4])

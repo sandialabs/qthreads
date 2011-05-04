@@ -3,16 +3,21 @@
 #endif
 
 /* System Headers */
-#include <qthread/qthread-int.h>       /* for uint64_t */
+#include <qthread/qthread-int.h> /* for uint64_t */
+#include <sys/syscall.h>         /* for SYS_accept and others */
 
 /* Internal Headers */
 #include "qt_io.h"
 #include "qthread_asserts.h"
+#include "qthread_innards.h" /* for qlib */
 #include "qthread/qthread.h"
 #include "qthread/qtimer.h"
 
+typedef QT_SOCKLENTYPE_T socklen_t;
+struct sockaddr {};
+
 unsigned int sleep(unsigned int seconds)
-{
+{   /*{{{*/
     if ((qlib != NULL) && (qthread_internal_self() != NULL)) {
         qtimer_t t = qtimer_create();
         qtimer_start(t);
@@ -35,10 +40,10 @@ unsigned int sleep(unsigned int seconds)
         return 0;
 #endif
     }
-}
+} /*}}}*/
 
 int usleep(useconds_t useconds)
-{
+{   /*{{{*/
     if ((qlib != NULL) && (qthread_internal_self() != NULL)) {
         qtimer_t t       = qtimer_create();
         double   seconds = useconds * 1e-6;
@@ -59,11 +64,11 @@ int usleep(useconds_t useconds)
         return 0;
 #endif
     }
-}
+} /*}}}*/
 
 int nanosleep(const struct timespec *rqtp,
               struct timespec       *rmtp)
-{
+{   /*{{{*/
     if ((qlib != NULL) && (qthread_internal_self() != NULL)) {
         qtimer_t t       = qtimer_create();
         double   seconds = rqtp->tv_sec + (rqtp->tv_nsec * 1e-9);
@@ -81,6 +86,32 @@ int nanosleep(const struct timespec *rqtp,
 #else
         return 0;
 #endif
+    }
+} /*}}}*/
+
+int accept(int                       socket,
+           struct sockaddr *restrict address,
+           socklen_t *restrict       address_len)
+{
+    qthread_t *me;
+
+    if ((qlib != NULL) && ((me = qthread_internal_self()) != NULL)) {
+        qt_blocking_queue_node_t *job = qt_mpool_alloc(syscall_job_pool);
+        int                       ret;
+
+        job->thread  = me;
+        job->op      = ACCEPT;
+        job->args[0] = socket;
+        job->args[1] = (uintptr_t)address;
+        job->args[2] = (uintptr_t)address_len;
+
+        me->rdata->blockedon = (struct qthread_lock_s *)job;
+        qthread_back_to_master(me);
+        ret = job->ret;
+        qt_mpool_free(syscall_job_pool, job);
+        return ret;
+    } else {
+        return syscall(SYS_accept, socket, address, address_len);
     }
 }
 

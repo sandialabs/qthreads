@@ -35,15 +35,18 @@ typedef struct {
 } qt_blocking_queue_t;
 
 static qt_blocking_queue_t theQueue;
+qt_mpool                   syscall_job_pool = NULL;
 
 static void qt_blocking_subsystem_internal_teardown(void)
 {
+    qt_mpool_destroy(syscall_job_pool);
     QTHREAD_DESTROYLOCK(&theQueue.lock);
     QTHREAD_DESTROYCOND(&theQueue.notempty);
 }
 
 void qt_blocking_subsystem_init(void)
 {
+    syscall_job_pool = qt_mpool_create(sizeof(qt_blocking_queue_node_t));
     theQueue.head = NULL;
     theQueue.tail = NULL;
     qassert(pthread_mutex_init(&theQueue.lock, NULL), 0);
@@ -106,9 +109,9 @@ void qt_process_blocking_calls(void)
                                 (fd_set *)item->args[3],
                                 (struct timeval *)item->args[4]);
             break;
-        /* case SEND:
-         * case SENDTO: */
-        /* case SIGWAIT: */
+            /* case SEND:
+             * case SENDTO: */
+            /* case SIGWAIT: */
 #if HAVE_DECL_SYS_SYSTEM
         case SYSTEM:
             item->ret = syscall(SYS_system,
@@ -120,7 +123,7 @@ void qt_process_blocking_calls(void)
                                 (pid_t)item->args[0],
                                 (int *)item->args[1],
                                 (int)item->args[2],
-                                (struct rusage*)item->args[3]);
+                                (struct rusage *)item->args[3]);
             break;
         case WRITE:
             item->ret = syscall(SYS_write,
