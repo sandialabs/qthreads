@@ -84,13 +84,6 @@ void qt_process_blocking_calls(void)
         case FORK:
             fprintf(stderr, "What the heck does fork() mean in this context?\n");
             abort();
-#if HAVE_DECL_SYS_NANOSLEEP
-        case NANOSLEEP:
-            item->ret = syscall(SYS_nanosleep,
-                                (const struct timespec *)item->args[0],
-                                (struct timespec *)item->args[1]);
-            break;
-#endif
         case POLL:
             item->ret = syscall(SYS_poll,
                                 (struct pollfd *)item->args[0],
@@ -116,22 +109,10 @@ void qt_process_blocking_calls(void)
         /* case SEND:
          * case SENDTO: */
         /* case SIGWAIT: */
-#if HAVE_DECL_SYS_SLEEP
-        case SLEEP:
-            item->ret = syscall(SYS_sleep,
-                                (unsigned int)item->args[0]); // XXX: item->ret should be unsigned
-            break;
-#endif
 #if HAVE_DECL_SYS_SYSTEM
         case SYSTEM:
             item->ret = syscall(SYS_system,
                                 (const char *)item->args[0]);
-            break;
-#endif
-#if HAVE_DECL_SYS_USLEEP
-        case USLEEP:
-            item->ret = syscall(SYS_usleep,
-                                (useconds_t)item->args[0]);
             break;
 #endif
         case WAIT4:
