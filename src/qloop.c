@@ -147,6 +147,7 @@ static void qt_loop_inner(const size_t    start,
         qthread_syncvar_readFF(NULL, rets + i);
     }
     free(qwa);
+    free(rets);
 }                                      /*}}} */
 
 void qt_loop(const size_t    start,
