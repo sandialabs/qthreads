@@ -4,6 +4,7 @@
 
 /* System Headers */
 #include <qthread/qthread-int.h>       /* for uint64_t */
+#include <stdio.h>                     /* for fprintf() */
 /* - syscall(2) */
 #include <sys/syscall.h>
 #include <unistd.h>

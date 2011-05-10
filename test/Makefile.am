@@ -73,7 +73,8 @@ EXTRA_PROGRAMS += \
 	 time_cncthr_bench_pthread \
 	 time_swap \
 	 time_threading \
-	 time_gcd
+	 time_gcd \
+	 test_cpp_interface
 CLEANFILES += $(EXTRA_PROGRAMS)
 
 buildall: $(TESTS) $(EXTRA_PROGRAMS)
@@ -109,6 +110,9 @@ test_qalloc_DEPENDENCIES = $(QTHREADLIB)
 
 testloop_SOURCES = testloop.cpp
 testloop_DEPENDENCIES = $(QTHREADLIB)
+
+test_cpp_interface_SOURCES = test_cpp_interface.cpp
+test_cpp_interface_DEPENDENCIES = $(QTHREADLIB)
 
 testqloop_SOURCES = testqloop.c
 testqloop_DEPENDENCIES = $(QTHREADLIB)
