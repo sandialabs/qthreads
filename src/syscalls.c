@@ -99,9 +99,36 @@ int accept(int                       socket,
         qt_blocking_queue_node_t *job = qt_mpool_alloc(syscall_job_pool);
         int                       ret;
 
-        job->thread  = me;
-        job->op      = ACCEPT;
-        job->args[0] = socket;
+        job->thread = me;
+        job->op     = ACCEPT;
+        memcpy(&job->args[0], &socket, sizeof(int));
+        job->args[1] = (uintptr_t)address;
+        job->args[2] = (uintptr_t)address_len;
+
+        me->rdata->blockedon = (struct qthread_lock_s *)job;
+        me->thread_state     = QTHREAD_STATE_SYSCALL;
+        qthread_back_to_master(me);
+        ret = job->ret;
+        qt_mpool_free(syscall_job_pool, job);
+        return ret;
+    } else {
+        return syscall(SYS_accept, socket, address, address_len);
+    }
+}
+
+int connect(int                       socket,
+            struct sockaddr *restrict address,
+            socklen_t *restrict       address_len)
+{
+    qthread_t *me;
+
+    if ((qlib != NULL) && ((me = qthread_internal_self()) != NULL)) {
+        qt_blocking_queue_node_t *job = qt_mpool_alloc(syscall_job_pool);
+        int                       ret;
+
+        job->thread = me;
+        job->op     = CONNECT;
+        memcpy(&job->args[0], &socket, sizeof(int));
         job->args[1] = (uintptr_t)address;
         job->args[2] = (uintptr_t)address_len;
 
@@ -112,6 +139,36 @@ int accept(int                       socket,
         return ret;
     } else {
         return syscall(SYS_accept, socket, address, address_len);
+    }
+}
+
+ssize_t read(int    filedes,
+             void  *buf,
+             size_t nbyte)
+{
+    qthread_t *me;
+
+    if ((qlib != NULL) && ((me = qthread_internal_self()) != NULL)) {
+        qt_blocking_queue_node_t *job = qt_mpool_alloc(syscall_job_pool);
+        int                       ret;
+
+        assert(job);
+        job->thread = me;
+        job->op     = READ;
+        memcpy(&job->args[0], &filedes, sizeof(int));
+        job->args[1] = (uintptr_t)buf;
+        job->args[2] = (uintptr_t)nbyte;
+
+        assert(me->rdata);
+
+        me->rdata->blockedon = (struct qthread_lock_s *)job;
+        me->thread_state     = QTHREAD_STATE_SYSCALL;
+        qthread_back_to_master(me);
+        ret = job->ret;
+        qt_mpool_free(syscall_job_pool, job);
+        return ret;
+    } else {
+        return syscall(SYS_read, filedes, buf, nbyte);
     }
 }
 

@@ -32,7 +32,8 @@ TESTS = test_basic \
 		test_qdqueue \
 		test_allpairs \
 		test_qalloc \
-		test_cpp
+		test_cpp \
+		test_read
 
 EXTRA_PROGRAMS = test_wavefront
 
@@ -274,3 +275,6 @@ test_external_fork_DEPENDENCIES = $(QTHREADLIB)
 
 test_external_syncvar_SOURCES = test_external_syncvar.c
 test_external_syncvar_DEPENDENCIES = $(QTHREADLIB)
+
+test_read_SOURCES = test_read.c
+test_read_DEPENDENCIES = $(QTHEADLIB)

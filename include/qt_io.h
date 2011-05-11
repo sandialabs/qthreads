@@ -6,7 +6,6 @@
 typedef enum blocking_syscalls {
     ACCEPT,
     CONNECT,
-    FORK,
     NANOSLEEP,
     POLL,
     READ,

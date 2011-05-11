@@ -494,9 +494,7 @@ static void *qthread_shepherd(void *arg)
 #else
                 me->current = NULL;
 #endif
-                qthread_debug(ALL_DETAILS,
-                              "id(%u): back from qthread_exec\n",
-                              me->shepherd_id);
+                qthread_debug(ALL_DETAILS, "id(%u): back from qthread_exec, state is %i\n", me->shepherd_id, t->thread_state);
                 /* now clean up, based on the thread's state */
                 switch (t->thread_state) {
                     case QTHREAD_STATE_MIGRATING:
@@ -512,6 +510,7 @@ static void *qthread_shepherd(void *arg)
                     default:
                         qthread_debug(THREAD_DETAILS, "id(%u): thread in state %i; that's illegal!\n", me->shepherd_id, t->thread_state);
                         assert(0);
+                        break;
                     case QTHREAD_STATE_YIELDED: /* reschedule it */
                         t->thread_state = QTHREAD_STATE_RUNNING;
                         qthread_debug(THREAD_DETAILS,
@@ -972,6 +971,7 @@ int qthread_initialize(void)
     generic_lock_pool             = qt_mpool_create(sizeof(qthread_lock_t));
     generic_addrstat_pool         = qt_mpool_create(sizeof(qthread_addrstat_t));
 #endif /* ifndef UNPOOLED */
+    qt_blocking_subsystem_init();
 
 /* initialize the shepherd structures */
     for (i = 0; i < nshepherds; i++) {
@@ -2039,7 +2039,7 @@ static QINLINE void qthread_exec(qthread_t  *t,
     assert(t != NULL);
     assert(c != NULL);
 
-    qthread_debug(ALL_DETAILS, "t(%p): finished\n", t);
+    qthread_debug(ALL_DETAILS, "t(%p): finished, t->thread_state = %i\n", t, t->thread_state);
 }                      /*}}} */
 
 /* this function yields thread t to the master kernel thread */
@@ -2451,9 +2451,7 @@ void qthread_back_to_master(qthread_t *t)
 #ifdef NEED_RLIMIT
     struct rlimit rlp;
 
-    qthread_debug(ALL_DETAILS,
-                  "t(%p): setting stack size limits for master thread...\n",
-                  t);
+    qthread_debug(ALL_DETAILS, "t(%p): setting stack size limits for master thread...\n", t);
     if (!(t->flags & QTHREAD_REAL_MCCOY)) {
         rlp.rlim_cur = qlib->master_stack_size;
         rlp.rlim_max = qlib->max_stack_size;
@@ -2473,9 +2471,7 @@ void qthread_back_to_master(qthread_t *t)
     qassert(qt_swapctxt(&t->rdata->context, t->rdata->return_context), 0);
 #endif
 #ifdef NEED_RLIMIT
-    qthread_debug(ALL_DETAILS,
-                  "t(%p): setting stack size limits back to qthread size...\n",
-                  t);
+    qthread_debug(ALL_DETAILS, "t(%p): setting stack size limits back to qthread size...\n", t);
     if (!(t->flags & QTHREAD_REAL_MCCOY)) {
         rlp.rlim_cur = qlib->qthread_stack_size;
         qassert(setrlimit(RLIMIT_STACK, &rlp), 0);
