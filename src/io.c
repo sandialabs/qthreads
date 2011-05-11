@@ -84,6 +84,7 @@ void qt_process_blocking_calls(void)
         struct timeval  tv;
         struct timespec ts;
         int             ret;
+
         gettimeofday(&tv, NULL);
         ts.tv_sec  = tv.tv_sec;
         ts.tv_nsec = (tv.tv_usec + 100) * 1000;
@@ -92,10 +93,12 @@ void qt_process_blocking_calls(void)
             case ETIMEDOUT:
                 QTHREAD_UNLOCK(&theQueue.lock);
                 return;
+
             case EINVAL:
                 /* chances are, this is because ts is in the past */
                 QTHREAD_UNLOCK(&theQueue.lock);
                 return;
+
             default:
                 break;
         }
