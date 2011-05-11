@@ -28,7 +28,7 @@ typedef struct _qt_blocking_queue_node_s {
     qthread_t                        *thread;
     syscall_t                         op;
     uintptr_t                         args[5];
-    int                               ret;
+    ssize_t                           ret;
 } qt_blocking_queue_node_t;
 
 extern qt_mpool syscall_job_pool;

@@ -5,8 +5,6 @@
 /* System Headers */
 #include <qthread/qthread-int.h> /* for uint64_t */
 
-#include <sys/types.h>
-#include <sys/uio.h>
 #include <unistd.h>
 
 #include <sys/syscall.h>         /* for SYS_accept and others */
@@ -16,9 +14,9 @@
 #include "qthread_asserts.h"
 #include "qthread_innards.h" /* for qlib */
 
-ssize_t read(int    filedes,
-             void  *buf,
-             size_t nbyte)
+ssize_t write(int         filedes,
+              const void *buf,
+              size_t      nbyte)
 {
     qthread_t *me;
 
@@ -28,10 +26,10 @@ ssize_t read(int    filedes,
 
         assert(job);
         job->thread = me;
-        job->op     = READ;
+        job->op     = WRITE;
         memcpy(&job->args[0], &filedes, sizeof(int));
         job->args[1] = (uintptr_t)buf;
-        job->args[2] = (uintptr_t)nbyte;
+        memcpy(&job->args[2], &nbyte, sizeof(size_t));
 
         assert(me->rdata);
 
@@ -42,7 +40,7 @@ ssize_t read(int    filedes,
         qt_mpool_free(syscall_job_pool, job);
         return ret;
     } else {
-        return syscall(SYS_read, filedes, buf, nbyte);
+        return syscall(SYS_write, filedes, buf, nbyte);
     }
 }
 

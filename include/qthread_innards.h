@@ -20,6 +20,7 @@
 #include "qt_context.h"
 
 #ifdef QTHREAD_DEBUG
+# include <sys/syscall.h>         /* for SYS_accept and others */
 # ifdef HAVE_UNISTD_H
 #  include <unistd.h>		       /* for write() */
 # endif
@@ -211,9 +212,9 @@ static QINLINE void qthread_debug(int level, const char *format, ...)
 	QTHREAD_FASTLOCK_LOCK(&output_lock);
 
 #ifdef QTHREAD_RCRTOOL
-	while (write(2, msgPrefix, 8) != 8) ;
+	while (syscall(SYS_write, 2, msgPrefix, 8) != 8) ;
 #else
-	while (write(2, "QDEBUG: ", 8) != 8) ;
+	while (syscall(SYS_write, 2, "QDEBUG: ", 8) != 8) ;
 #endif
 
 	va_start(args, format);
@@ -228,9 +229,9 @@ static QINLINE void qthread_debug(int level, const char *format, ...)
 		    {
 			char *str = va_arg(args, char *);
 
-			qassert(write(2, buf, head - buf), head - buf);
+			qassert(syscall(SYS_write, 2, buf, head - buf), head - buf);
 			head = buf;
-			qassert(write(2, str, strlen(str)), strlen(str));
+			qassert(syscall(SYS_write, 2, str, strlen(str)), strlen(str));
 			break;
 		    }
 		    case 'p':
@@ -323,7 +324,7 @@ static QINLINE void qthread_debug(int level, const char *format, ...)
 	    }
 	}
 	/* XXX: not checking for extra long values of head */
-	qassert(write(2, buf, head - buf), head - buf);
+	qassert(syscall(SYS_write, 2, buf, head - buf), head - buf);
 	va_end(args);
 	/*fflush(stderr); */
 

@@ -86,13 +86,19 @@ void qt_process_blocking_calls(void)
         int             ret;
         gettimeofday(&tv, NULL);
         ts.tv_sec  = tv.tv_sec;
-        ts.tv_nsec = (tv.tv_usec + 10) * 1000;
+        ts.tv_nsec = (tv.tv_usec + 100) * 1000;
         ret        = pthread_cond_timedwait(&theQueue.notempty, &theQueue.lock, &ts);
-        if (ret == ETIMEDOUT) {
-            QTHREAD_UNLOCK(&theQueue.lock);
-            return;
+        switch(ret) {
+            case ETIMEDOUT:
+                QTHREAD_UNLOCK(&theQueue.lock);
+                return;
+            case EINVAL:
+                /* chances are, this is because ts is in the past */
+                QTHREAD_UNLOCK(&theQueue.lock);
+                return;
+            default:
+                break;
         }
-        assert(ret == 0);
     }
     item = theQueue.head;
     assert(item != NULL);
@@ -101,6 +107,9 @@ void qt_process_blocking_calls(void)
     item->next = NULL;
     /* do something with <item> */
     switch(item->op) {
+        default:
+            fprintf(stderr, "Unhandled syscall: %i\n", item->op);
+            abort();
         case ACCEPT:
         {
             int socket;
@@ -121,15 +130,18 @@ void qt_process_blocking_calls(void)
                                 (socklen_t)item->args[2]);
             break;
         }
-        default:
-            fprintf(stderr, "Unhandled syscall: %i\n", item->op);
-            abort();
         case POLL:
+        {
+            nfds_t nfds;
+            int    timeout;
+            memcpy(&nfds, &item->args[1], sizeof(nfds_t));
+            memcpy(&timeout, &item->args[2], sizeof(int));
             item->ret = syscall(SYS_poll,
                                 (struct pollfd *)item->args[0],
-                                (nfds_t)item->args[1],
-                                (int)item->args[2]);
+                                nfds,
+                                timeout);
             break;
+        }
         case READ:
         {
             int fd;
@@ -143,13 +155,17 @@ void qt_process_blocking_calls(void)
         /* case RECV:
          * case RECVFROM: */
         case SELECT:
+        {
+            int nfds;
+            memcpy(&nfds, &item->args[0], sizeof(int));
             item->ret = syscall(SYS_select,
-                                (int)item->args[0],
+                                nfds,
                                 (fd_set *)item->args[1],
                                 (fd_set *)item->args[2],
                                 (fd_set *)item->args[3],
                                 (struct timeval *)item->args[4]);
             break;
+        }
             /* case SEND:
              * case SENDTO: */
             /* case SIGWAIT: */
@@ -160,12 +176,18 @@ void qt_process_blocking_calls(void)
             break;
 #endif
         case WAIT4:
+        {
+            pid_t pid;
+            int   options;
+            memcpy(&pid, &item->args[0], sizeof(pid_t));
+            memcpy(&options, &item->args[2], sizeof(int));
             item->ret = syscall(SYS_wait4,
-                                (pid_t)item->args[0],
+                                pid,
                                 (int *)item->args[1],
-                                (int)item->args[2],
+                                options,
                                 (struct rusage *)item->args[3]);
             break;
+        }
         case WRITE:
             item->ret = syscall(SYS_write,
                                 (int)item->args[0],

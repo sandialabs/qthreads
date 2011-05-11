@@ -5,9 +5,7 @@
 /* System Headers */
 #include <qthread/qthread-int.h> /* for uint64_t */
 
-#include <sys/types.h>
-#include <sys/uio.h>
-#include <unistd.h>
+#include <poll.h>
 
 #include <sys/syscall.h>         /* for SYS_accept and others */
 
@@ -16,22 +14,22 @@
 #include "qthread_asserts.h"
 #include "qthread_innards.h" /* for qlib */
 
-ssize_t read(int    filedes,
-             void  *buf,
-             size_t nbyte)
+int poll(struct pollfd fds[],
+         nfds_t        nfds,
+         int           timeout)
 {
     qthread_t *me;
 
     if ((qlib != NULL) && ((me = qthread_internal_self()) != NULL)) {
         qt_blocking_queue_node_t *job = qt_mpool_alloc(syscall_job_pool);
-        ssize_t                   ret;
+        int                       ret;
 
         assert(job);
-        job->thread = me;
-        job->op     = READ;
-        memcpy(&job->args[0], &filedes, sizeof(int));
-        job->args[1] = (uintptr_t)buf;
-        job->args[2] = (uintptr_t)nbyte;
+        job->thread  = me;
+        job->op      = POLL;
+        job->args[0] = (uintptr_t)&(fds[0]);
+        memcpy(&job->args[1], &nfds, sizeof(nfds_t));
+        memcpy(&job->args[2], &timeout, sizeof(int));
 
         assert(me->rdata);
 
@@ -42,7 +40,7 @@ ssize_t read(int    filedes,
         qt_mpool_free(syscall_job_pool, job);
         return ret;
     } else {
-        return syscall(SYS_read, filedes, buf, nbyte);
+        return syscall(SYS_poll, fds, nfds, timeout);
     }
 }
 
