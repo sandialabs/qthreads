@@ -16,7 +16,6 @@ libqthread_la_SOURCES = \
 	qt_feb_barrier.c \
 	qutil.c \
 	io.c \
-	syscalls.c \
 	locks.c \
 	feb.c \
 	syncvar.c
@@ -24,6 +23,7 @@ libqthread_la_SOURCES = \
 include qtimer/Makefile.inc
 include ds/Makefile.inc
 include patterns/Makefile.inc
+include syscalls/Makefile.inc
 include rcrtool/Makefile.inc
 
 # version-info fields are:
