@@ -1,7 +1,7 @@
 #ifndef MTGL_READ_DIMACS_HPP
 #define MTGL_READ_DIMACS_HPP
 
-#include <qloop.h>
+#include <qthread/qloop.h>
 
 template <typename T>
 void qloop_cpp_wrapper(size_t startat,
