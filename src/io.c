@@ -85,8 +85,8 @@ void qt_process_blocking_calls(void)
         struct timespec ts;
         int             ret;
         gettimeofday(&tv, NULL);
-        ts.tv_sec  = tv.tv_sec + 1;
-        ts.tv_nsec = 0;
+        ts.tv_sec  = tv.tv_sec;
+        ts.tv_nsec = (tv.tv_usec + 10) * 1000;
         ret        = pthread_cond_timedwait(&theQueue.notempty, &theQueue.lock, &ts);
         if (ret == ETIMEDOUT) {
             QTHREAD_UNLOCK(&theQueue.lock);
