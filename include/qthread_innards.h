@@ -118,6 +118,7 @@ int qthread_fork_future_to(const qthread_f f, const void *arg,
 			   aligned_t * ret,
 			   const qthread_shepherd_id_t shepherd);
 unsigned int qthread_internal_shep_to_node(const qthread_shepherd_id_t shep);
+void qthread_exec(qthread_t *t, qt_context_t *c);
 
 #define QTHREAD_NO_NODE ((unsigned int)(-1))
 #ifdef QTHREAD_SST_PRIMITIVES

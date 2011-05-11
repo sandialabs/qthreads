@@ -10,4 +10,5 @@ libqthread_la_SOURCES += \
 			 syscalls/sys_accept.c \
 			 syscalls/sys_sleep.c \
 			 syscalls/sys_nanosleep.c \
-			 syscalls/sys_usleep.c
+			 syscalls/sys_usleep.c \
+			 syscalls/sys_user_defined.c

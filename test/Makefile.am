@@ -33,7 +33,8 @@ TESTS = test_basic \
 		test_allpairs \
 		test_qalloc \
 		test_cpp \
-		test_read
+		test_read \
+		test_user_defined_block
 
 EXTRA_PROGRAMS = test_wavefront
 

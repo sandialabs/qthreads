@@ -17,7 +17,7 @@
 #include "qthread/qtimer.h"
 
 unsigned int sleep(unsigned int seconds)
-{   /*{{{*/
+{
     if ((qlib != NULL) && (qthread_internal_self() != NULL)) {
         qtimer_t t = qtimer_create();
         qtimer_start(t);
@@ -40,6 +40,6 @@ unsigned int sleep(unsigned int seconds)
         return 0;
 #endif
     }
-} /*}}}*/
+}
 
 /* vim:set expandtab: */

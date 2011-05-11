@@ -131,8 +131,6 @@ static qthread_shepherd_t *qthread_find_active_shepherd(qthread_shepherd_id_t *l
                                                         unsigned int          *d);
 static QINLINE void qthread_enqueue(qthread_queue_t *q,
                                     qthread_t       *t);
-static QINLINE void qthread_exec(qthread_t  *t,
-                                 qt_context_t *c);
 
 #if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED)
 # define ALLOC_QTHREAD(shep) (qthread_t *)malloc(sizeof(qthread_t))
@@ -1972,7 +1970,7 @@ int in_qthread_fence(void *addr)
 
 /* This function means "run thread t". The second argument (c) is a pointer
  * to the current context. */
-static QINLINE void qthread_exec(qthread_t  *t,
+QINLINE void qthread_exec(qthread_t  *t,
                                  qt_context_t *c)
 {                      /*{{{ */
 #ifdef NEED_RLIMIT

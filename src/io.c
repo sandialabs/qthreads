@@ -172,6 +172,16 @@ void qt_process_blocking_calls(void)
                                 (const void *)item->args[1],
                                 (size_t)item->args[2],
                                 (off_t)item->args[3]);
+        case USER_DEFINED:
+        {
+            qt_context_t my_context;
+            getcontext(&my_context);
+            qthread_debug(THREAD_DETAILS, "blocking proxy context is %p\n", &my_context);
+            qthread_exec(item->thread, &my_context);
+            qthread_debug(THREAD_DETAILS, "proxy back from qthread_exec\n");
+            qt_mpool_free(syscall_job_pool, item);
+            break;
+        }
     }
     /* and now, re-queue */
     qt_threadqueue_enqueue(item->thread->rdata->shepherd_ptr->ready, item->thread, item->thread->rdata->shepherd_ptr);
