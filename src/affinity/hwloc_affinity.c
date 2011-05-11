@@ -14,9 +14,12 @@ static int            shep_depth = -1;
 static hwloc_cpuset_t mccoy_thread_bindings;
 #ifdef QTHREAD_DEBUG
 # define DEBUG_ONLY(x) x
-static const char *typename;
 #else
 # define DEBUG_ONLY(x)
+#endif
+
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+DEBUG_ONLY(static const char *typename);
 #endif
 
 #if HWLOC_API_VERSION == 0x00010000
