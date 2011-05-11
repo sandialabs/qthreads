@@ -31,7 +31,8 @@ TESTS = test_basic \
 		test_qlfqueue \
 		test_qdqueue \
 		test_allpairs \
-		test_qalloc
+		test_qalloc \
+		test_cpp
 
 EXTRA_PROGRAMS = test_wavefront
 
@@ -110,6 +111,9 @@ test_qalloc_DEPENDENCIES = $(QTHREADLIB)
 
 testloop_SOURCES = testloop.cpp
 testloop_DEPENDENCIES = $(QTHREADLIB)
+
+test_cpp_SOURCES = test_cpp.cpp
+test_cpp_DEPENDENCIES = $(QTHREADLIB)
 
 test_cpp_interface_SOURCES = test_cpp_interface.cpp
 test_cpp_interface_DEPENDENCIES = $(QTHREADLIB)
