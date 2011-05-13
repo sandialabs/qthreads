@@ -72,7 +72,7 @@ void qt_blocking_subsystem_init(void)
             abort();
         }
     }
-    qthread_internal_cleanup(qt_blocking_subsystem_internal_teardown);
+    qthread_internal_cleanup_early(qt_blocking_subsystem_internal_teardown);
 }
 
 void qt_process_blocking_calls(void)

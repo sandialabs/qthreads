@@ -163,6 +163,7 @@ void qthread_steal_stat(void);
 /* internal initialization functions */
 void qt_feb_barrier_internal_init(void);
 void qthread_internal_cleanup(void (*function)(void));
+void qthread_internal_cleanup_early(void (*function)(void));
 
 /* for debugging */
 #ifdef QTHREAD_DEBUG
