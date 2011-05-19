@@ -252,7 +252,7 @@ const qthread_shepherd_id_t *qthread_sorted_sheps_remote(const
 							 qthread_shepherd_id_t
 							 src);
 /* returns the number of actively-scheduling shepherds */
-qthread_shepherd_id_t /*Q_DEPRECATED*/ qthread_num_shepherds(void);
+qthread_shepherd_id_t qthread_num_shepherds(void);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 qthread_worker_id_t qthread_num_workers(void); /* how many threads working on problem */
 #endif
