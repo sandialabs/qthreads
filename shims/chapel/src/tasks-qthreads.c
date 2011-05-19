@@ -186,9 +186,7 @@ static aligned_t chapel_wrapper(void *arg)
 {
     void **rarg = (void **)arg;
 
-    // printf("calling chpl_fn_p (%p)\n", rarg[0]);
     (*(chpl_fn_p)(rarg[0]))(rarg[1]);
-    // printf("returning from chpl_fn_p (%p)\n", rarg[0]);
 
     return 0;
 }
@@ -206,7 +204,6 @@ void chpl_task_begin(chpl_fn_p        fp,
         // thread is to wait on that function and coordinate the exiting
         // of the main Chapel thread.
         void *const wrapper_args[2] = { fp, arg };
-        // printf("spawning to call %p\n", fp);
         qthread_fork_syncvar_copyargs(chapel_wrapper, wrapper_args, sizeof(void *) * 2, NULL);
     }
 }
@@ -231,7 +228,7 @@ void chpl_task_sleep(int secs)
     qtimer_destroy(t);
 }
 
-/* This is for manipulating thread-specific data (a single boolean value) */
+/* This is for manipulating task-specific data (a single boolean value) */
 chpl_bool chpl_task_getSerial(void)
 {
     /*chpl_bool *p = NULL;
@@ -245,6 +242,7 @@ chpl_bool chpl_task_getSerial(void)
     return false;
 }
 
+// XXX: this implies task-specific data
 void chpl_task_setSerial(chpl_bool state)
 {
     /*chpl_bool *p = NULL;
@@ -269,13 +267,16 @@ uint32_t chpl_task_getNumQueuedTasks(void)
     return qthread_readstate(BUSYNESS);
 }
 
-// XXX: Should this reflect all shepherds?
 uint32_t chpl_task_getNumRunningTasks(void)
 {
-    return 1;
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    return (uint32_t)qthread_num_workers();
+#else
+    return (uint32_t)qthread_num_shepherds();
+#endif
 }                                                         /* 1, i.e. this one */
 
-// not sure what the correct value should be here!
+// XXX: not sure what the correct value should be here!
 int32_t chpl_task_getNumBlockedTasks(void)
 {
     return -1;
@@ -283,23 +284,28 @@ int32_t chpl_task_getNumBlockedTasks(void)
 
 // Threads
 
+// XXX: what does this mean?
 int32_t chpl_task_getMaxThreads(void)
 {
     return 0;
 }
 
+// XXX: what's the difference between this and the previous function?
 int32_t chpl_task_getMaxThreadsLimit(void)
 {
     return 0;
 }
 
-// This bookkeeping would be too expensive, so let's not and say we did.
 uint32_t chpl_task_getNumThreads(void)
 {
-    return 1;
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    return (uint32_t)qthread_num_workers();
+#else
+    return (uint32_t)qthread_num_shepherds();
+#endif
 }
 
-// There seems to be some different notion of threads here
+// Ew. Talk about excessive bookkeeping.
 uint32_t chpl_task_getNumIdleThreads(void)
 {
     return 0;
