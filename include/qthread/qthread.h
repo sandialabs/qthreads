@@ -206,6 +206,10 @@ int qthread_fork_to(const qthread_f f, const void *const arg, aligned_t * const 
 int qthread_fork_syncvar_to(const qthread_f f, const void *const arg,
 			    syncvar_t * ret,
 			    const qthread_shepherd_id_t shepherd);
+int qthread_fork_syncvar_copyargs(const qthread_f   f,
+                                  const void *const arg,
+                                  const size_t      arg_size,
+                                  syncvar_t *const  ret);
 
 /* This is a function to move a thread from one shepherd to another. */
 int qthread_migrate_to(const qthread_shepherd_id_t shepherd);
