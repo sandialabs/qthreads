@@ -120,7 +120,7 @@ static void *initializer(void *junk)
 
     qthread_syncvar_readFF(NULL, &canexit);
 
-    //qthread_finalize();
+    // qthread_finalize();
     __sync_synchronize();
     done_finalizing = 1;
     return NULL;
@@ -190,8 +190,6 @@ static aligned_t chapel_wrapper(void *arg)
     (*(chpl_fn_p)(rarg[0]))(rarg[1]);
     // printf("returning from chpl_fn_p (%p)\n", rarg[0]);
 
-    chpl_free(arg, __LINE__, __FILE__);
-
     return 0;
 }
 
@@ -207,11 +205,9 @@ void chpl_task_begin(chpl_fn_p        fp,
         // Will call the real begin statement function. Only purpose of this
         // thread is to wait on that function and coordinate the exiting
         // of the main Chapel thread.
-        void **wrapper_args = chpl_malloc(2, sizeof(void *), 0, __LINE__, __FILE__);
-        wrapper_args[0] = fp;
-        wrapper_args[1] = arg;
+        void *const wrapper_args[2] = { fp, arg };
         // printf("spawning to call %p\n", fp);
-        qthread_fork(chapel_wrapper, wrapper_args, NULL);
+        qthread_fork_syncvar_copyargs(chapel_wrapper, wrapper_args, sizeof(void *) * 2, NULL);
     }
 }
 
