@@ -5,6 +5,8 @@
 /* System Headers */
 #include <qthread/qthread-int.h>       /* for uint64_t */
 #include <stdio.h>                     /* for fprintf() */
+#include <stdlib.h>                    /* for abort() */
+#include <sys/time.h>                  /* for gettimeofday() */
 /* - syscall(2) */
 #include <sys/syscall.h>
 #include <unistd.h>
