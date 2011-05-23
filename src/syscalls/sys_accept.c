@@ -5,8 +5,10 @@
 /* System Headers */
 #include <qthread/qthread-int.h> /* for uint64_t */
 
+#include <sys/types.h>
 #include <sys/socket.h>
 
+#include <unistd.h>
 #include <sys/syscall.h>         /* for SYS_accept and others */
 
 /* Internal Headers */
