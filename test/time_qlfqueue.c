@@ -169,11 +169,11 @@ int main(int argc, char *argv[])
     qtimer_start(timer);
     qt_loop_balance(0, THREAD_COUNT * ELEMENT_COUNT, loop_queuer, q);
     qtimer_stop(timer);
-    printf("loop balance enqueue: %f secs\n", qtimer_secs(timer));
+    printf("loop balance enqueue: %g secs (%g nsecs/enqueue)\n", qtimer_secs(timer), 1e9*qtimer_secs(timer)/(THREAD_COUNT*ELEMENT_COUNT));
     qtimer_start(timer);
     qt_loop_balance(0, THREAD_COUNT * ELEMENT_COUNT, loop_dequeuer, q);
     qtimer_stop(timer);
-    printf("loop balance dequeue: %f secs\n", qtimer_secs(timer));
+    printf("loop balance dequeue: %g secs (%g nsecs/dequeue)\n", qtimer_secs(timer), 1e9*qtimer_secs(timer)/(THREAD_COUNT*ELEMENT_COUNT));
     if (!qlfqueue_empty(q)) {
         fprintf(stderr, "qlfqueue not empty after loop balance test!\n");
         exit(-2);
