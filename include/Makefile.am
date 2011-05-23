@@ -24,6 +24,7 @@ noinst_HEADERS = \
 	qt_context.h \
 	qt_gcd.h \
 	qt_hash.h \
+	qt_io.h \
 	qt_locks.h \
 	qt_mpool.h \
 	qt_profiling.h \
