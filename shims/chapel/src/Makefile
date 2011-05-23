@@ -1,8 +1,4 @@
-#
-# Copyright (c) 2004-2010 Cray Inc.  (See LICENSE file for more details)
-#
-
-RUNTIME_ROOT = ../../..
+RUNTIME_ROOT = $(CHPL_HOME)/runtime
 RUNTIME_SUBDIR = src/tasks/$(CHPL_MAKE_TASKS)
 
 #
