@@ -160,6 +160,7 @@ void qt_process_blocking_calls(void)
         }
         /* case RECV:
          * case RECVFROM: */
+#if HAVE_DECL_SYS_SELECT
         case SELECT:
         {
             int nfds;
@@ -172,6 +173,7 @@ void qt_process_blocking_calls(void)
                                 (struct timeval *)item->args[4]);
             break;
         }
+#endif
             /* case SEND:
              * case SENDTO: */
             /* case SIGWAIT: */
