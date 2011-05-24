@@ -9,6 +9,7 @@ typedef enum blocking_syscalls {
     NANOSLEEP,
     POLL,
     READ,
+    PREAD,
     /*RECV,
      * RECVFROM,*/
     SELECT,

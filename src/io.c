@@ -158,6 +158,21 @@ void qt_process_blocking_calls(void)
                                 (size_t)item->args[2]);
             break;
         }
+#if HAVE_DECL_SYS_PREAD
+        case PREAD:
+        {
+            int fd;
+            off_t offset;
+            memcpy(&fd, &item->args[0], sizeof(int));
+            memcpy(&offset, &item->args[3], sizeof(off_t));
+            item->ret = syscall(SYS_pread,
+                                fd,
+                                (void *)item->args[1],
+                                (size_t)item->args[2],
+                                offset);
+            break;
+        }
+#endif
         /* case RECV:
          * case RECVFROM: */
 #if HAVE_DECL_SYS_SELECT

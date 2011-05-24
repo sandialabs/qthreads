@@ -16,16 +16,17 @@ libqthread_la_SOURCES += \
 			 syscalls/sys_user_defined.c
 
 if HAVE_DECL_SYS_WAIT4
-libqthread_la_SOURCES += \
-			 syscalls/sys_wait4.c
+libqthread_la_SOURCES += syscalls/sys_wait4.c
 endif
 
 if HAVE_DECL_SYS_SELECT
-libqthread_la_SOURCES += \
-			 syscalls/sys_select.c
+libqthread_la_SOURCES += syscalls/sys_select.c
 endif
 
 if HAVE_DECL_SYS_SYSTEM
-libqthread_la_SOURCES += \
-			 syscalls/sys_system.c
+libqthread_la_SOURCES += syscalls/sys_system.c
+endif
+
+if HAVE_DECL_SYS_PREAD
+libqthread_la_SOURCES += syscalls/sys_pread.c
 endif
