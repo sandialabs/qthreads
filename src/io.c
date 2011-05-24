@@ -56,6 +56,7 @@ static void *qt_blocking_subsystem_proxy_thread(void *arg)
     while (proxy_exit == 0) {
         qt_process_blocking_calls();
     }
+    pthread_exit(NULL);
     return 0;
 }
 
