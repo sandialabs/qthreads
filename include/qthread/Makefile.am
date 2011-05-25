@@ -42,5 +42,6 @@ endif
 distclean-local:
 	$(RM) -f qthread-int.h
 
-uninstall-local:
+# ensure that this happens after the rest of the uninstall is done
+uninstall-hook:
 	test -d "$(pkgincludedir)" && rmdir $(pkgincludedir) || true
