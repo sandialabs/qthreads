@@ -153,7 +153,7 @@ int qthread_fork_syncvar_copyargs_to(const qthread_f   f,
  */
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 void INTERNAL qthread_getTaskListLock(void);
-void INTENRAL qthread_releaseTaskListLock(void);
+void INTERNAL qthread_releaseTaskListLock(void);
 
 extern int __qthreads_temp;
 void INTERNAL qthread_reset_forCount(void);
