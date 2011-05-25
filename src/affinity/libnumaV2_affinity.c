@@ -162,7 +162,7 @@ unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherd
 
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
-static void INTERNAL assign_nodes(qthread_shepherd_t *sheps,
+static void assign_nodes(qthread_shepherd_t *sheps,
                                   size_t              nsheps)
 {                                      /*{{{ */
     const size_t    num_extant_nodes   = numa_max_node() + 1;
