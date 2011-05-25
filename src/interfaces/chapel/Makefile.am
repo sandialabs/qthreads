@@ -6,7 +6,7 @@
 
 lib_LIBRARIES = libqthread_chpl.a
 
-libqthread_chpl_a_SOURCES = src/tasks-qthreads.c
-libqthread_chpl_a_CFLAGS = -I@CHPL_HOME@/runtime/include -I$(top_srcdir)/src/interfaces/chapel/include -I$(top_srcdir)/include
+libqthread_chpl_a_SOURCES = tasks-qthreads.c
+libqthread_chpl_a_CFLAGS = -I@CHPL_HOME@/runtime/include -I$(top_srcdir)/include
 
-pkginclude_HEADERS = include/tasks-qthreads.h
+pkginclude_HEADERS = tasks-qthreads.h
