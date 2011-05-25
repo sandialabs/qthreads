@@ -110,7 +110,7 @@ AC_DEFUN([QTHREAD_BUILTIN_SYNCHRONIZE],[dnl
 AC_CACHE_CHECK(
  [support for __sync_synchronize],
  [qt_cv_builtin_synchronize],
- [AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+ [AC_LINK_IFELSE([AC_LANG_SOURCE([[
 int main(void) {
 __sync_synchronize();
 return 0;
@@ -120,7 +120,7 @@ return 0;
  [qt_cv_builtin_synchronize=no])])
  AS_IF([test "x$qt_cv_builtin_synchronize" == xyes],
 	   [defstr='__sync_synchronize()'],
-       [defstr='__asm__ __volatile__ ("":::"memory");'])
+       [defstr='__asm__ __volatile__ ("":::"memory")'])
  AC_DEFINE_UNQUOTED([COMPILER_FENCE], [$defstr],
    [if the compiler supports __sync_synchronize])
  AS_IF([test "x$qt_cv_builtin_synchronize" == xyes], [$1], [$2])
