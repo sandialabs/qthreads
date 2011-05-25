@@ -3,6 +3,8 @@
 #endif
 #include <stdlib.h>                    /* for calloc() */
 #include <unistd.h>                    /* for getpagesize() */
+#include <sys/types.h>
+#include <sys/mman.h>
 #include <qthread/qarray.h>
 #include "qt_visibility.h"
 #include "qthread_asserts.h"

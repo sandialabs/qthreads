@@ -198,6 +198,7 @@ void INTERNAL qt_process_blocking_calls(void)
                                 (const char *)item->args[0]);
             break;
 #endif
+#if HAVE_DECL_SYS_WAIT4
         case WAIT4:
         {
             pid_t pid;
@@ -211,6 +212,7 @@ void INTERNAL qt_process_blocking_calls(void)
                                 (struct rusage *)item->args[3]);
             break;
         }
+#endif
         case WRITE:
             item->ret = syscall(SYS_write,
                                 (int)item->args[0],
