@@ -7,6 +7,7 @@ AM_CPPFLAGS = $(SST_INCLUDE) -I$(top_srcdir)/include
 AM_LDFLAGS = $(SST_LIBS)
 
 lib_LTLIBRARIES = libqthread.la
+SUBDIRS =
 
 libqthread_la_SOURCES = \
 	cacheline.c \
@@ -25,6 +26,10 @@ include ds/Makefile.inc
 include patterns/Makefile.inc
 include syscalls/Makefile.inc
 include rcrtool/Makefile.inc
+
+if COMPILE_CHAPEL_INTERFACE
+SUBDIRS += interfaces/chapel
+endif
 
 # version-info fields are:
 # 1. the current interface revision number (i.e. whenever arguments of existing

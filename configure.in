@@ -52,6 +52,29 @@ AC_ARG_ENABLE([setrlimit],
   [],
   [enable_setrlimit=no])
 
+AC_ARG_ENABLE([interfaces],
+			  [AS_HELP_STRING([--enable-interfaces=[[list]]],
+							  [Comma separated list of compiler interfaces to
+							   support. Available interfaces include chapel and
+							   rose.])],
+			  [for iface in $(echo "$enable_interfaces" | sed 's/,/ /g') ; do
+			     case "$iface" in
+					 chapel)
+					 compile_chapel_interface=yes
+					 ;;
+					 rose)
+					 enable_rose_extensions=yes
+					 ;;
+					 *)
+					 AC_MSG_ERROR([Unsupported interface ($iface) selected.])
+					 ;;
+				 esac
+			   done
+			   EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --enable-interfaces=$enable_interfaces"])
+
+AC_ARG_VAR([CHPL_HOME],
+		   [Provide the path to the Chapel build directory. Only used if the Chapel compiler interface is enabled.])
+
 ## ------------------- ##
 ## Checks for programs ##
 ## ------------------- ##
@@ -434,14 +457,14 @@ AS_IF([test "x$qthread_implementation" = "xunix"], [
 ])
 
 AC_ARG_WITH([topology],
-			[AS_HELP_STRING([--with-topology=<topologylib>],
+			[AS_HELP_STRING([--with-topology=[[topologylib]]],
 							[specify which topology library to use])],
 			[AS_IF([test "x$with_topology" == xyes],
 				   [with_topology=none_specified])
 			 qthread_topo="$with_topology"],
 			[qthread_topo=none_specified])
 AC_ARG_WITH([gcd],
-			[AS_HELP_STRING([--with-gcd=[gcd_style]],
+			[AS_HELP_STRING([--with-gcd=[[gcd_style]]],
 							[specify which algorithm for computing greatest common denominator. Current options are: "mod" (default) and "shift". The mod option uses modulo operations, and is usually the fastest option. On some systems, modulo operations are particularly slow, and so the "shift" algorithm is faster. The difference is usually minor, and probably will not impact overall performance significantly, but this option is for true speed-demons who want to get the last word in speed.])],
 			[],
 			[with_gcd=mod])
@@ -582,11 +605,13 @@ AM_CONDITIONAL([COMPILE_POOLED_MEMORY], [test "x$enable_pooled_memory" = "xyes"]
 AM_CONDITIONAL([COMPILE_ROSE_EXTENSIONS], [test "x$enable_rose_extensions" == xyes])
 AM_CONDITIONAL([COMPILE_RCRTOOL], [test "x$enable_rcrtool" == xyes])
 AM_CONDITIONAL([QTHREAD_MULTITHREADED_SHEPHERDS], [test "x$enable_multithreaded_shepherds" == xyes])
+AM_CONDITIONAL([COMPILE_CHAPEL_INTERFACE], [test "x$compile_chapel_interface" == xyes])
 
 AC_CONFIG_HEADERS([include/config.h include/qthread/common.h])
 AC_CONFIG_FILES([
     Makefile
     src/Makefile
+	src/interfaces/chapel/Makefile
     man/Makefile
     man/man3/Makefile
     include/Makefile

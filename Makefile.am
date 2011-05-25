@@ -9,12 +9,6 @@
 EXTRA_DIST = \
 			 config/ac_prog_cc_c99.m4 \
 			 config/ac_use_system_extensions.m4 \
-			 shims/chapel/include/tasks-qthreads.h \
-			 shims/chapel/src/tasks-qthreads.c \
-			 shims/chapel/src/Makefile.include \
-			 shims/chapel/src/Makefile \
-			 shims/chapel/src/Makefile.share \
-			 shims/chapel/README \
 			 autogen.sh
 
 SUBDIRS = man include src test

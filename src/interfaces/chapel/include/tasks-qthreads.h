@@ -6,8 +6,8 @@
 **************************************************************************/
 
 
-#ifndef _tasks_fifo_h_
-#define _tasks_fifo_h_
+#ifndef _tasks_qthreads_h_
+#define _tasks_qthreads_h_
 
 #include <stdint.h>
 
@@ -16,7 +16,7 @@
 
 
 #define CHPL_COMM_YIELD_TASK_WHILE_POLLING
-static inline void CHPL_TASK_YIELD(void) { /* fprintf(stdout, "In qthread's yield" );*/ qthread_yield(); }
+void chpl_task_yield(void);
 
 // For mutexes
 //   type(s)
