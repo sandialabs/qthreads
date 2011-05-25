@@ -32,14 +32,14 @@ TESTS = test_basic \
 		test_qdqueue \
 		test_allpairs \
 		test_qalloc \
-		test_cpp \
 		test_read \
 		test_user_defined_block
 
 EXTRA_PROGRAMS = test_wavefront
 
 if ENABLE_CXX_TESTS
-TESTS += testloop
+TESTS += testloop \
+		 test_cpp
 endif
 
 if COMPILE_ROSE_EXTENSIONS
