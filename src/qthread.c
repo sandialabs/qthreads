@@ -1989,8 +1989,8 @@ int in_qthread_fence(void *addr)
 
 /* This function means "run thread t". The second argument (c) is a pointer
  * to the current context. */
-QINLINE void qthread_exec(qthread_t    *t,
-                          qt_context_t *c)
+void INTERNAL qthread_exec(qthread_t    *t,
+                           qt_context_t *c)
 {                      /*{{{ */
 #ifdef NEED_RLIMIT
     struct rlimit rlp;
@@ -2549,7 +2549,7 @@ void INTERNAL qt_set_unstealable()
 
 /* These are just accessor functions */
 qthread_parallel_region_t INTERNAL *qt_parallel_region() // get active parallel region
-{                                               /*{{{ */
+{                                                        /*{{{ */
     qthread_t *t = qthread_internal_self();
 
     return t->currentParallelRegion;
