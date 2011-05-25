@@ -116,6 +116,7 @@ void INTERNAL qt_process_blocking_calls(void)
         default:
             fprintf(stderr, "Unhandled syscall: %i\n", item->op);
             abort();
+#if HAVE_DECL_SYS_ACCEPT
         case ACCEPT:
         {
             int socket;
@@ -126,6 +127,7 @@ void INTERNAL qt_process_blocking_calls(void)
                                 (socklen_t *)item->args[2]);
             break;
         }
+#endif
         case CONNECT:
         {
             int socket;
