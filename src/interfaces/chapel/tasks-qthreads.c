@@ -30,6 +30,7 @@
 #include <unistd.h>
 #include "qthread/qthread.h"
 #include "qthread/qtimer.h"
+#include "qthread_innards.h" // not strictly necessary (yet)
 
 #include <pthread.h>
 
