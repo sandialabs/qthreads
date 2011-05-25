@@ -8,6 +8,15 @@ AS_IF([test "$ac_cv_sizeof_socklen_t" -eq 4],
 	         [socklentype=uint64_t],
 			 [AC_MSG_ERROR([socklen_t is an unfortunate size])])])
 AC_DEFINE_UNQUOTED([QT_SOCKLENTYPE_T],[$socklentype],[socklen_t compatible uint])
+AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+#include <sys/types.h>
+#include <sys/socket.h>
+int accept(int socket, struct sockaddr *restrict address, socklen_t *restrict address_len)
+{
+return 0;
+}
+]])],
+				  [],[ac_cv_have_decl_SYS_select=no])
 AM_CONDITIONAL([HAVE_DECL_SYS_SYSTEM], [test "x$ac_cv_have_decl_SYS_system" == xyes])
 AM_CONDITIONAL([HAVE_DECL_SYS_SELECT], [test "x$ac_cv_have_decl_SYS_select" == xyes])
 AM_CONDITIONAL([HAVE_DECL_SYS_WAIT4], [test "x$ac_cv_have_decl_SYS_wait4" == xyes])
