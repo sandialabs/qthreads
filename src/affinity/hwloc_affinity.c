@@ -62,7 +62,7 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds
     if (qthread_cas(&initialized, 0, 1) == 0) {
         qassert(hwloc_topology_init(&topology), 0);
         qassert(hwloc_topology_load(topology), 0);
-        __sync_synchronize();
+        COMPILER_FENCE;
         initialized = 2;
     } else {
         while (initialized == 1) ;

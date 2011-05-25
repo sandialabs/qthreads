@@ -117,13 +117,13 @@ static volatile int done_finalizing   = 0;
 static void *initializer(void *junk)
 {
     qthread_initialize();
-    __sync_synchronize();
+    COMPILER_FENCE;
     done_initializing = 1;
 
     qthread_syncvar_readFF(NULL, &canexit);
 
     // qthread_finalize();
-    __sync_synchronize();
+    COMPILER_FENCE;
     done_finalizing = 1;
     return NULL;
 }
