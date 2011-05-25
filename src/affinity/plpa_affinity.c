@@ -23,12 +23,12 @@ qthread_shepherd_id_t guess_num_shepherds(void);
 qthread_worker_id_t guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds);
 #endif
 
-void qt_affinity_init(qthread_shepherd_id_t *nbshepherds
-#ifdef                                     QTHREAD_MULTITHREADED_SHEPHERDS
-                      ,
-                      qthread_worker_id_t *nbworkers
+void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds
+#ifdef                                              QTHREAD_MULTITHREADED_SHEPHERDS
+                               ,
+                               qthread_worker_id_t *nbworkers
 #endif
-                      )
+                               )
 {                                      /*{{{ */
     if (*nbshepherds == 0) {
         *nbshepherds = guess_num_shepherds();
@@ -46,7 +46,7 @@ void qt_affinity_init(qthread_shepherd_id_t *nbshepherds
 #endif
 }                                      /*}}} */
 
-qthread_shepherd_id_t guess_num_shepherds(void)
+qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
 {                                      /*{{{ */
     qthread_shepherd_id_t nshepherds = 1;
 
@@ -66,7 +66,7 @@ qthread_shepherd_id_t guess_num_shepherds(void)
 }                                      /*}}} */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-void qt_affinity_set(qthread_worker_t *me)
+void INTERNAL qt_affinity_set(qthread_worker_t *me)
 {                                      /*{{{ */
     plpa_cpu_set_t *cpuset =
         (plpa_cpu_set_t *)malloc(sizeof(plpa_cpu_set_t));
@@ -81,7 +81,7 @@ void qt_affinity_set(qthread_worker_t *me)
 }                                      /*}}} */
 
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-void qt_affinity_set(qthread_shepherd_t *me)
+void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
 {                                      /*{{{ */
     plpa_cpu_set_t *cpuset =
         (plpa_cpu_set_t *)malloc(sizeof(plpa_cpu_set_t));
@@ -98,16 +98,16 @@ void qt_affinity_set(qthread_shepherd_t *me)
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-unsigned int guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
+unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
     return 1;
 }                                      /*}}} */
 
 #endif
 
-int qt_affinity_gendists(qthread_shepherd_t   *sheps,
-                         qthread_shepherd_id_t nshepherds)
-{
+int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
+                                  qthread_shepherd_id_t nshepherds)
+{   /*{{{*/
     for (size_t i = 0; i < nshepherds; ++i) {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
         sheps[i].node = i * qlib->nworkerspershep;
@@ -117,6 +117,6 @@ int qt_affinity_gendists(qthread_shepherd_t   *sheps,
     }
     /* there is no inherent way to detect distances, so unfortunately we must assume that they're all equidistant */
     return QTHREAD_SUCCESS;
-}
+} /*}}}*/
 
 /* vim:set expandtab: */

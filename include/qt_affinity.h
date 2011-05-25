@@ -3,6 +3,7 @@
 #endif
 
 #include "qthread/qthread.h"
+#include "qt_visibility.h"
 #include "qt_shepherd_innards.h"
 
 #ifndef QTHREAD_SHEPHERD_TYPEDEF
@@ -26,13 +27,13 @@ typedef struct qthread_shepherd_s qthread_shepherd_t;
 # define MEM_AFFINITY_ONLY(x)
 #endif
 
-void qt_affinity_init(
+void INTERNAL qt_affinity_init(
     qthread_shepherd_id_t *nbshepherds
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     , qthread_worker_id_t *nbworkers
 #endif
     );
-void qt_affinity_set(
+void INTERNAL qt_affinity_set(
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t * me
 #else
@@ -44,8 +45,8 @@ int qt_affinity_gendists(
     qthread_shepherd_id_t nshepherds);
 
 #ifdef QTHREAD_HAVE_MEM_AFFINITY
-void * qt_affinity_alloc(size_t bytes);
-void * qt_affinity_alloc_onnode(size_t bytes, int node);
-void qt_affinity_mem_tonode(void * addr, size_t bytes, int node);
-void qt_affinity_free(void * ptr, size_t bytes);
+void INTERNAL * qt_affinity_alloc(size_t bytes);
+void INTERNAL * qt_affinity_alloc_onnode(size_t bytes, int node);
+void INTERNAL qt_affinity_mem_tonode(void * addr, size_t bytes, int node);
+void INTERNAL qt_affinity_free(void * ptr, size_t bytes);
 #endif

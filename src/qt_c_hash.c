@@ -1,6 +1,7 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
+#include "qt_visibility.h"
 #include "qt_hash.h"
 #include "qthread_asserts.h"
 #include "qthread_prefetch.h"
@@ -49,17 +50,17 @@ static size_t bucketmask;
 #define KEY_DELETED ((qt_key_t)1)
 
 static inline size_t encompassing_power_of_two(size_t k)
-{
+{   /*{{{*/
     size_t z = 1;
 
     while (z < k) z <<= 1;
     assert((z >> 1) <= k && z >= k);
     return z;
-}
+} /*}}}*/
 
 static inline void qt_hash_internal_create(qt_hash ret,
                                            size_t  entries)
-{
+{   /*{{{*/
     size_t min_entries = 2 * getpagesize() / sizeof(hash_entry);
 
     /* meta data */
@@ -96,12 +97,12 @@ static inline void qt_hash_internal_create(qt_hash ret,
         free(ret);
         ret = NULL;
     }
-}
+} /*}}}*/
 
 /* this function based on http://burtleburtle.net/bob/hash/evahash.html */
 #define rot(x, k) (((x) << (k)) | ((x) >> (32 - (k))))
 static uint64_t qt_hashword(uint64_t key)
-{
+{   /*{{{*/
     uint32_t a, b, c;
 
     const union {
@@ -138,11 +139,11 @@ static uint64_t qt_hashword(uint64_t key)
     c ^= b;
     c -= rot(b, 24);
     return ((uint64_t)c + ((uint64_t)b << 32));
-}
+} /*}}}*/
 
 static inline void **qt_hash_internal_find(qt_hash  h,
                                            qt_key_t key)
-{
+{   /*{{{*/
     const hash_entry *z      = h->entries;
     const uint64_t    mask   = h->mask;
     const uint64_t    hashed = qt_hashword((uint64_t)(uintptr_t)key);
@@ -178,10 +179,10 @@ static inline void **qt_hash_internal_find(qt_hash  h,
         }
     } while (bucket != quit);
     return NULL;
-}
+} /*}}}*/
 
-qt_hash qt_hash_create(int needSync)
-{
+qt_hash INTERNAL qt_hash_create(int needSync)
+{   /*{{{*/
     qt_hash ret;
 
     if (linesize == 0) {
@@ -200,10 +201,10 @@ qt_hash qt_hash_create(int needSync)
         qt_hash_internal_create(ret, 100);
     }
     return ret;
-}
+} /*}}}*/
 
-void qt_hash_destroy(qt_hash h)
-{
+void INTERNAL qt_hash_destroy(qt_hash h)
+{   /*{{{*/
     assert(h);
     if (h->lock) {
         QTHREAD_FASTLOCK_DESTROY_PTR(h->lock);
@@ -212,13 +213,13 @@ void qt_hash_destroy(qt_hash h)
     assert(h->entries);
     free(h->entries);
     free(h);
-}
+} /*}}}*/
 
 /* This function destroys the hash and applies the given deallocator function
  * to each value stored in the hash */
-void qt_hash_destroy_deallocate(qt_hash                h,
-                                qt_hash_deallocator_fn f)
-{
+void INTERNAL qt_hash_destroy_deallocate(qt_hash                h,
+                                         qt_hash_deallocator_fn f)
+{   /*{{{*/
     size_t visited = 0;
 
     assert(h);
@@ -250,12 +251,12 @@ void qt_hash_destroy_deallocate(qt_hash                h,
         QTHREAD_FASTLOCK_UNLOCK(h->lock);
     }
     qt_hash_destroy(h);
-}
+} /*}}}*/
 
-void *qt_hash_put(qt_hash        h,
-                  const qt_key_t key,
-                  void          *value)
-{
+void INTERNAL *qt_hash_put(qt_hash        h,
+                           const qt_key_t key,
+                           void          *value)
+{   /*{{{*/
     void *v;
 
     assert(h);
@@ -268,11 +269,11 @@ void *qt_hash_put(qt_hash        h,
         QTHREAD_FASTLOCK_UNLOCK(h->lock);
     }
     return v;
-}
+} /*}}}*/
 
 static void brehash(qt_hash h,
                     size_t  len)
-{
+{   /*{{{*/
     qt_hash d = calloc(1, sizeof(struct qt_hash_s));
     size_t  i, copied;
 
@@ -306,14 +307,14 @@ static void brehash(qt_hash h,
     h->has_key[0]   = d->has_key[0];
     h->has_key[1]   = d->has_key[1];
     free(d);
-}
+} /*}}}*/
 
-void *qt_hash_put_locked(qt_hash        h,
-                         const qt_key_t key,
-                         void          *value)
-{
-    hash_entry *z;              // for speed, to avoid extra ptr dereferences
-    uint64_t    mask;           // for speed, to avoid extra ptr dereferences
+void INTERNAL *qt_hash_put_locked(qt_hash        h,
+                                  const qt_key_t key,
+                                  void          *value)
+{                     /*{{{*/
+    hash_entry *z;    // for speed, to avoid extra ptr dereferences
+    uint64_t    mask; // for speed, to avoid extra ptr dereferences
     int         done;
     ssize_t     f;
     size_t      i;
@@ -393,11 +394,11 @@ restart:
     z[f].value = value;
     ++h->population;
     return &z[f].value;
-}
+} /*}}}*/
 
-void qt_hash_remove(qt_hash        h,
-                    const qt_key_t key)
-{
+void INTERNAL qt_hash_remove(qt_hash        h,
+                             const qt_key_t key)
+{   /*{{{*/
     assert(h);
     if (h->lock) {
         QTHREAD_FASTLOCK_LOCK(h->lock);
@@ -406,11 +407,11 @@ void qt_hash_remove(qt_hash        h,
     if (h->lock) {
         QTHREAD_FASTLOCK_UNLOCK(h->lock);
     }
-}
+} /*}}}*/
 
-void qt_hash_remove_locked(qt_hash        h,
-                           const qt_key_t key)
-{
+void INTERNAL qt_hash_remove_locked(qt_hash        h,
+                                    const qt_key_t key)
+{   /*{{{*/
     hash_entry *p;
     void      **value;
 
@@ -428,11 +429,11 @@ void qt_hash_remove_locked(qt_hash        h,
     } else if (h->population < h->shrink_size) {
         brehash(h, h->num_entries / 2);
     }
-}
+} /*}}}*/
 
-void *qt_hash_get(qt_hash        h,
-                  const qt_key_t key)
-{
+void INTERNAL *qt_hash_get(qt_hash        h,
+                           const qt_key_t key)
+{   /*{{{*/
     void *ret;
 
     assert(h);
@@ -444,11 +445,11 @@ void *qt_hash_get(qt_hash        h,
         QTHREAD_FASTLOCK_UNLOCK(h->lock);
     }
     return (void *)ret;
-}
+} /*}}}*/
 
-void *qt_hash_get_locked(qt_hash        h,
-                         const qt_key_t key)
-{
+void INTERNAL *qt_hash_get_locked(qt_hash        h,
+                                  const qt_key_t key)
+{   /*{{{*/
     void **value;
 
     assert(h);
@@ -458,12 +459,12 @@ void *qt_hash_get_locked(qt_hash        h,
     } else {
         return *value;
     }
-}
+} /*}}}*/
 
-void qt_hash_callback(qt_hash             h,
-                      qt_hash_callback_fn f,
-                      void               *arg)
-{
+void INTERNAL qt_hash_callback(qt_hash             h,
+                               qt_hash_callback_fn f,
+                               void               *arg)
+{   /*{{{*/
     size_t visited = 0;
 
     assert(h);
@@ -493,10 +494,10 @@ void qt_hash_callback(qt_hash             h,
     if (h->lock) {
         QTHREAD_FASTLOCK_UNLOCK(h->lock);
     }
-}
+} /*}}}*/
 
-size_t qt_hash_count(qt_hash h)
-{
+size_t INTERNAL qt_hash_count(qt_hash h)
+{   /*{{{*/
     size_t ct;
 
     assert(h);
@@ -508,22 +509,22 @@ size_t qt_hash_count(qt_hash h)
         QTHREAD_FASTLOCK_UNLOCK(h->lock);
     }
     return ct;
-}
+} /*}}}*/
 
-void qt_hash_lock(qt_hash h)
-{
+void INTERNAL qt_hash_lock(qt_hash h)
+{   /*{{{*/
     assert(h);
     if (h->lock) {
         QTHREAD_FASTLOCK_LOCK(h->lock);
     }
-}
+} /*}}}*/
 
-void qt_hash_unlock(qt_hash h)
-{
+void INTERNAL qt_hash_unlock(qt_hash h)
+{   /*{{{*/
     assert(h);
     if (h->lock) {
         QTHREAD_FASTLOCK_UNLOCK(h->lock);
     }
-}
+} /*}}}*/
 
 /* vim:set expandtab: */

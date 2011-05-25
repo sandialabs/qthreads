@@ -9,6 +9,7 @@
 
 /* Internal Headers */
 #include "qthread/qthread.h"
+#include "qt_visibility.h"
 #include "qthread_innards.h"           /* for qlib (only used in steal_chunksize) */
 #include "qt_shepherd_innards.h"
 #include "qt_qthread_struct.h"
@@ -135,7 +136,7 @@ static QINLINE void FREE_TQNODE(qt_threadqueue_node_t *t)
 #  define QCOMPOSE(x, y) (void *)(((uintptr_t)QPTR(x)) | ((QCTR(y) + 1)&QCTR_MASK))
 # endif
 
-qt_threadqueue_t *qt_threadqueue_new(qthread_shepherd_t *shepherd)
+qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd)
 {                                      /*{{{ */
     qt_threadqueue_t *q = ALLOC_THREADQUEUE(shepherd);
 
@@ -157,7 +158,7 @@ qt_threadqueue_t *qt_threadqueue_new(qthread_shepherd_t *shepherd)
             q->tail       = q->head;
             q->head->next = NULL;
         }
-# else /* ifdef QTHREAD_MUTEX_INCREMENT */
+# else  /* ifdef QTHREAD_MUTEX_INCREMENT */
 #  ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
         if (pthread_mutex_init(&q->lock, NULL) != 0) {
             FREE_THREADQUEUE(q);
@@ -187,7 +188,7 @@ qt_threadqueue_t *qt_threadqueue_new(qthread_shepherd_t *shepherd)
     return q;
 }                                      /*}}} */
 
-void qt_threadqueue_free(qt_threadqueue_t *q)
+void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 {                                      /*{{{ */
 # ifdef QTHREAD_MUTEX_INCREMENT
     while (q->head != q->tail) {
@@ -210,9 +211,9 @@ void qt_threadqueue_free(qt_threadqueue_t *q)
     FREE_THREADQUEUE(q);
 }                                      /*}}} */
 
-void qt_threadqueue_enqueue(qt_threadqueue_t   *q,
-                            qthread_t          *t,
-                            qthread_shepherd_t *shep)
+void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
+                                     qthread_t          *t,
+                                     qthread_shepherd_t *shep)
 {                                      /*{{{ */
 # ifdef QTHREAD_MUTEX_INCREMENT
     qt_threadqueue_node_t *node;
@@ -275,7 +276,7 @@ void qt_threadqueue_enqueue(qt_threadqueue_t   *q,
 # endif /* ifdef QTHREAD_MUTEX_INCREMENT */
 }                                      /*}}} */
 
-qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q)
+qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
 {                                      /*{{{ */
     qthread_t *p = NULL;
 
@@ -333,7 +334,7 @@ qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q)
  * by allowing idle shepherds to sit for a while while still allowing for
  * low-overhead for busy shepherds. This is a hybrid approach: normally, it
  * functions as a spinlock, but if it spins too much, it waits for a signal */
-qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q)
+qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q)
 {                                      /*{{{ */
     qthread_t *p = NULL;
 
@@ -367,7 +368,7 @@ threadqueue_dequeue_restart:
                         sched_yield();
 #   endif
                     }
-#  endif /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
+#  endif            /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
                     goto threadqueue_dequeue_restart;
                 }
                 (void)qt_cas((void *volatile *)&(q->tail), (void *)tail, QCOMPOSE(next_ptr, tail)); // advance tail ptr
@@ -395,7 +396,7 @@ threadqueue_dequeue_restart:
 static QINLINE long qthread_steal_chunksize(void);
 static QINLINE void qthread_steal(void);
 
-qt_threadqueue_t *qt_threadqueue_new(qthread_shepherd_t *shepherd)
+qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd)
 {   /*{{{*/
     qt_threadqueue_t *q = ALLOC_THREADQUEUE(shepherd);
 
@@ -409,7 +410,7 @@ qt_threadqueue_t *qt_threadqueue_new(qthread_shepherd_t *shepherd)
     return q;
 } /*}}}*/
 
-void qt_threadqueue_free(qt_threadqueue_t *q)
+void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 {   /*{{{*/
     assert(q->head == q->tail);
     QTHREAD_FASTLOCK_DESTROY(q->qlock);
@@ -417,9 +418,9 @@ void qt_threadqueue_free(qt_threadqueue_t *q)
 } /*}}}*/
 
 /* enqueue at tail */
-void qt_threadqueue_enqueue(qt_threadqueue_t   *q,
-                            qthread_t          *t,
-                            qthread_shepherd_t *shep)
+void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
+                                     qthread_t          *t,
+                                     qthread_shepherd_t *shep)
 {   /*{{{*/
     qt_threadqueue_node_t *node;
 
@@ -446,9 +447,9 @@ void qt_threadqueue_enqueue(qt_threadqueue_t   *q,
 } /*}}}*/
 
 /* yielded threads enqueue at head */
-void qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
-                                    qthread_t          *t,
-                                    qthread_shepherd_t *shep)
+void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
+                                             qthread_t          *t,
+                                             qthread_shepherd_t *shep)
 {   /*{{{*/
     qt_threadqueue_node_t *node;
 
@@ -475,8 +476,8 @@ void qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
 } /*}}}*/
 
 /* dequeue at tail, unlike original qthreads implementation */
-qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
-                                           size_t            active)
+qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
+                                                    size_t            active)
 {   /*{{{*/
     volatile qt_threadqueue_node_t *node;
     qthread_t                      *t;
@@ -526,9 +527,9 @@ qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
 } /*}}}*/
 
 /* enqueue multiple (from steal) */
-void qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
-                                     qt_threadqueue_node_t *first,
-                                     qthread_shepherd_t    *shep)
+void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
+                                              qt_threadqueue_node_t *first,
+                                              qthread_shepherd_t    *shep)
 {   /*{{{*/
     volatile qt_threadqueue_node_t *last;
     size_t                          addCnt = 1;
@@ -559,7 +560,7 @@ void qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
 } /*}}}*/
 
 /* dequeue stolen threads at head, skip yielded threads */
-qt_threadqueue_node_t *qt_threadqueue_dequeue_steal(qt_threadqueue_t *q)
+qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *q)
 {                                      /*{{{ */
     qt_threadqueue_node_t *node;
     qt_threadqueue_node_t *first     = NULL;
@@ -699,7 +700,7 @@ static QINLINE void qthread_steal(void)
 } /*}}}*/
 
 # ifdef STEAL_PROFILE                  // should give mechanism to make steal profiling optional
-void qthread_steal_stat(void)
+void INTERNAL qthread_steal_stat(void)
 {
     int i;
 
@@ -720,8 +721,8 @@ void qthread_steal_stat(void)
 /* walk queue looking for a specific value  -- if found remove it (and start
  * it running)  -- if not return NULL
  */
-qt_threadqueue_node_t *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
-                                                       void             *value)
+qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
+                                                                void             *value)
 {
     qt_threadqueue_node_t *node = NULL;
     qthread_t             *t;
@@ -744,7 +745,7 @@ qt_threadqueue_node_t *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
             if (node != q->tail) {
                 if (node == q->head) {
                     q->head = node->next;       // reset front ptr
-                } else                                      {
+                } else {
                     node->prev->next = node->next;
                 }
                 node->next->prev = node->prev;  // reset back ptr (know we're not tail

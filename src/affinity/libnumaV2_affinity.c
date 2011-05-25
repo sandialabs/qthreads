@@ -21,12 +21,12 @@ static void qt_affinity_internal_numaV2_teardown(void)
     numa_run_on_node_mask(mccoy_bitmask);
 }
 
-void qt_affinity_init(qthread_shepherd_id_t *nbshepherds
-#ifdef                                     QTHREAD_MULTITHREADED_SHEPHERDS
-                      ,
-                      qthread_worker_id_t *nbworkers
+void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds
+#ifdef                                              QTHREAD_MULTITHREADED_SHEPHERDS
+                               ,
+                               qthread_worker_id_t *nbworkers
 #endif
-                      )
+                               )
 {                                      /*{{{ */
     qassert(numa_available(), 0);
     mccoy_bitmask = numa_get_run_node_mask();
@@ -41,31 +41,31 @@ void qt_affinity_init(qthread_shepherd_id_t *nbshepherds
 #endif
 }                                      /*}}} */
 
-void qt_affinity_mem_tonode(void  *addr,
-                            size_t bytes,
-                            int    node)
+void INTERNAL qt_affinity_mem_tonode(void  *addr,
+                                     size_t bytes,
+                                     int    node)
 {                                      /*{{{ */
     numa_tonode_memory(addr, bytes, node);
 }                                      /*}}} */
 
-void *qt_affinity_alloc(size_t bytes)
+void INTERNAL *qt_affinity_alloc(size_t bytes)
 {                                      /*{{{ */
     return numa_alloc(bytes);
 }                                      /*}}} */
 
-void *qt_affinity_alloc_onnode(size_t bytes,
-                               int    node)
+void INTERNAL *qt_affinity_alloc_onnode(size_t bytes,
+                                        int    node)
 {                                      /*{{{ */
     return numa_alloc_onnode(bytes, node);
 }                                      /*}}} */
 
-void qt_affinity_free(void  *ptr,
-                      size_t bytes)
+void INTERNAL qt_affinity_free(void  *ptr,
+                               size_t bytes)
 {                                      /*{{{ */
     numa_free(ptr, bytes);
 }                                      /*}}} */
 
-qthread_shepherd_id_t guess_num_shepherds(void)
+qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
 {                                      /*{{{ */
     qthread_shepherd_id_t nshepherds = 1;
 
@@ -92,7 +92,7 @@ qthread_shepherd_id_t guess_num_shepherds(void)
         qthread_debug(ALL_DETAILS,
                       "after checking through the all_cpus_ptr, I counted %i cpus\n",
                       nshepherds);
-# else /* ifdef HAVE_NUMA_NUM_THREAD_CPUS */
+# else  /* ifdef HAVE_NUMA_NUM_THREAD_CPUS */
         nshepherds = numa_max_node() + 1;
         qthread_debug(ALL_DETAILS, "numa_max_node() returned %i\n",
                       nshepherds);
@@ -106,7 +106,7 @@ qthread_shepherd_id_t guess_num_shepherds(void)
 }                                      /*}}} */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-void qt_affinity_set(qthread_worker_t *me)
+void INTERNAL qt_affinity_set(qthread_worker_t *me)
 {                                      /*{{{ */
     if (numa_run_on_node(me->shepherd->node) != 0) {
         numa_error("setting thread affinity");
@@ -115,7 +115,7 @@ void qt_affinity_set(qthread_worker_t *me)
 }                                      /*}}} */
 
 #else
-void qt_affinity_set(qthread_shepherd_t *me)
+void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
 {                                      /*{{{ */
     if (numa_run_on_node(me->node) != 0) {
         numa_error("setting thread affinity");
@@ -126,7 +126,7 @@ void qt_affinity_set(qthread_shepherd_t *me)
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-unsigned int guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
+unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
     size_t       cpu_count = 1;
     unsigned int guess     = 1;
@@ -162,8 +162,8 @@ unsigned int guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
-static void assign_nodes(qthread_shepherd_t *sheps,
-                         size_t              nsheps)
+static void INTERNAL assign_nodes(qthread_shepherd_t *sheps,
+                                  size_t              nsheps)
 {                                      /*{{{ */
     const size_t    num_extant_nodes   = numa_max_node() + 1;
     struct bitmask *nmask              = numa_get_run_node_mask();
@@ -219,8 +219,8 @@ static void assign_nodes(qthread_shepherd_t *sheps,
     free(cpus_left_per_node);
 }                                      /*}}} */
 
-int qt_affinity_gendists(qthread_shepherd_t   *sheps,
-                         qthread_shepherd_id_t nshepherds)
+int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
+                                  qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
     if (numa_available() == -1) {
         return QTHREAD_THIRD_PARTY_ERROR;
@@ -269,7 +269,7 @@ int qt_affinity_gendists(qthread_shepherd_t   *sheps,
         qsort_r(sheps[i].sorted_sheplist, nshepherds - 1,
                 sizeof(qthread_shepherd_id_t), &qthread_internal_shepcomp,
                 (void *)(intptr_t)i);
-# else /* if defined(HAVE_QSORT_R) && defined(QTHREAD_QSORT_BSD) */
+# else  /* if defined(HAVE_QSORT_R) && defined(QTHREAD_QSORT_BSD) */
         shepcomp_src = (qthread_shepherd_id_t)i;
         qsort(sheps[i].sorted_sheplist, nshepherds - 1,
               sizeof(qthread_shepherd_id_t), qthread_internal_shepcomp);

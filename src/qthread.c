@@ -1698,7 +1698,7 @@ void qthread_enable_shepherd(const qthread_shepherd_id_t shep)
     (void)QT_CAS(qlib->shepherds[shep].active, 0, 1);
 }                      /*}}} */
 
-qthread_t *qthread_internal_self(void)
+qthread_t INTERNAL *qthread_internal_self(void)
 {                      /*{{{ */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t *worker = qthread_internal_getworker();
@@ -2463,7 +2463,7 @@ int qthread_fork_syncvar_future(const qthread_f f,
     return qthread_fork_syncvar_future_to(f, arg, ret, shep);
 }
 
-void qthread_back_to_master(qthread_t *t)
+void INTERNAL qthread_back_to_master(qthread_t *t)
 {                      /*{{{ */
 #ifdef NEED_RLIMIT
     struct rlimit rlp;
@@ -2529,9 +2529,9 @@ int qthread_migrate_to(const qthread_shepherd_id_t shepherd)
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 /* These are just accessor functions */
 # ifdef QTHREAD_LOG_BARRIER
-qt_barrier_t *qt_thread_barrier()            // get barrier active for this thread
+qt_barrier_t INTERNAL *qt_thread_barrier()            // get barrier active for this thread
 # else
-qt_feb_barrier_t * qt_thread_barrier()            // get barrier active for this thread
+qt_feb_barrier_t INTERNAL * qt_thread_barrier()            // get barrier active for this thread
 # endif
 {                      /*{{{ */
     qthread_t *t = qthread_internal_self();
@@ -2539,8 +2539,8 @@ qt_feb_barrier_t * qt_thread_barrier()            // get barrier active for this
     return t->currentParallelRegion->barrier;
 }                      /*}}} */
 
-void qt_set_unstealable(void);
-void qt_set_unstealable()
+void INTERNAL qt_set_unstealable(void);
+void INTERNAL qt_set_unstealable()
 {                      /*{{{ */
     qthread_t *t = qthread_internal_self();
 
@@ -2548,14 +2548,14 @@ void qt_set_unstealable()
 }                      /*}}} */
 
 /* These are just accessor functions */
-qthread_parallel_region_t *qt_parallel_region() // get active parallel region
+qthread_parallel_region_t INTERNAL *qt_parallel_region() // get active parallel region
 {                                               /*{{{ */
     qthread_t *t = qthread_internal_self();
 
     return t->currentParallelRegion;
 }                      /*}}} */
 
-int qt_omp_parallel_region_create()
+int INTERNAL qt_omp_parallel_region_create()
 {                      /*{{{ */
     int                        ret = 0;
     qthread_parallel_region_t *pr  = malloc(sizeof(qthread_parallel_region_t));
@@ -2589,9 +2589,9 @@ int qt_omp_parallel_region_create()
     return ret;
 }                              /*}}} */
 
-void qt_free_loop(void *lp);
+void INTERNAL qt_free_loop(void *lp);
 
-void qt_move_to_orig()
+void INTERNAL qt_move_to_orig()
 {
     qthread_t *t = qthread_internal_self();
 
@@ -2599,7 +2599,7 @@ void qt_move_to_orig()
     qthread_back_to_master(t);
 }
 
-void qt_omp_parallel_region_destroy()
+void INTERNAL qt_omp_parallel_region_destroy()
 {      /*{{{ */
 # if 0 // race condition on cleanup - commented out until found - akp 3/16/11
        // it looks like one thread reaches cleanup code before completing loop
@@ -2654,7 +2654,7 @@ unsigned qthread_id(void)
 #endif /* ifdef QTHREAD_NONLAZY_THREADIDS */
 }                      /*}}} */
 
-unsigned qthread_barrier_id(void)
+unsigned INTERNAL qthread_barrier_id(void)
 {                      /*{{{ */
     qthread_t *t = qthread_internal_self();
 
@@ -2675,7 +2675,7 @@ qthread_shepherd_id_t qthread_shep(void)
 }                      /*}}} */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *shepherd_id)
+qthread_worker_id_t INTERNAL qthread_worker(qthread_shepherd_id_t *shepherd_id)
 {                                      /*{{{ */
     qthread_worker_t *worker = (qthread_worker_t *)pthread_getspecific(shepherd_structs);
 
@@ -2698,7 +2698,7 @@ int qthread_shep_ok(void)
     }
 }                      /*}}} */
 
-unsigned int qthread_internal_shep_to_node(const qthread_shepherd_id_t shep)
+unsigned int INTERNAL qthread_internal_shep_to_node(const qthread_shepherd_id_t shep)
 {                      /*{{{ */
     return qlib->shepherds[shep].node;
 }                      /*}}} */
@@ -2763,19 +2763,19 @@ qthread_worker_id_t qthread_num_workers(void)
 
 /* these two functions are helper functions for futurelib
  * (nobody else gets to have 'em!) */
-unsigned int qthread_isfuture(void)
+unsigned int INTERNAL qthread_isfuture(void)
 {                      /*{{{ */
     qthread_t *t = qthread_internal_self();
 
     return t ? (t->flags & QTHREAD_FUTURE) : 0;
 }                      /*}}} */
 
-void qthread_assertfuture(qthread_t *t)
+void INTERNAL qthread_assertfuture(qthread_t *t)
 {                      /*{{{ */
     t->flags |= QTHREAD_FUTURE;
 }                      /*}}} */
 
-void qthread_assertnotfuture(void)
+void INTERNAL qthread_assertnotfuture(void)
 {                      /*{{{ */
     qthread_t *t = qthread_internal_self();
 
@@ -2787,7 +2787,7 @@ void qthread_assertnotfuture(void)
 #  pragma warning (disable:1418)
 # endif
 
-int qthread_forCount(int inc)
+int INTERNAL qthread_forCount(int inc)
 {                                    /*{{{ */
     qthread_t *t = qthread_internal_self();
 
@@ -2795,7 +2795,7 @@ int qthread_forCount(int inc)
     return (t->rdata->forCount += inc);
 }                                    /*}}} */
 
-void qthread_getTaskListLock(void)
+void INTERNAL qthread_getTaskListLock(void)
 {                      /*{{{ */
     qthread_t *t = qthread_internal_self();
 
@@ -2803,7 +2803,7 @@ void qthread_getTaskListLock(void)
     qthread_syncvar_writeEF_const(&t->rdata->taskWaitLock, 1);
 }                      /*}}} */
 
-void qthread_releaseTaskListLock(void)
+void INTERNAL qthread_releaseTaskListLock(void)
 {                      /*{{{ */
     qthread_t *t = qthread_internal_self();
 
@@ -2811,7 +2811,7 @@ void qthread_releaseTaskListLock(void)
     qthread_syncvar_readFE(NULL, &t->rdata->taskWaitLock);
 }                      /*}}} */
 
-taskSyncvar_t *qthread_getTaskRetVar(void)
+taskSyncvar_t INTERNAL *qthread_getTaskRetVar(void)
 {                      /*{{{ */
     qthread_t *t = qthread_internal_self();
 
@@ -2819,7 +2819,7 @@ taskSyncvar_t *qthread_getTaskRetVar(void)
     return t->rdata->openmpTaskRetVar;
 }                      /*}}} */
 
-void qthread_setTaskRetVar(taskSyncvar_t *v)
+void INTERNAL qthread_setTaskRetVar(taskSyncvar_t *v)
 {                      /*{{{ */
     qthread_t *t = qthread_internal_self();
 

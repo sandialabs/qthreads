@@ -17,7 +17,7 @@ qthread_shepherd_id_t guess_num_shepherds(void);
 qthread_worker_id_t guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds);
 #endif
 
-void qt_affinity_init(qthread_shepherd_id_t *nbshepherds
+void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds
 #ifdef                                     QTHREAD_MULTITHREADED_SHEPHERDS
                       ,
                       qthread_worker_id_t *nbworkers
@@ -40,7 +40,7 @@ void qt_affinity_init(qthread_shepherd_id_t *nbshepherds
 #endif
 }                                      /*}}} */
 
-qthread_shepherd_id_t guess_num_shepherds(void)
+qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
 {                                      /*{{{ */
     cpu_set_t online_cpus;
 
@@ -49,7 +49,7 @@ qthread_shepherd_id_t guess_num_shepherds(void)
 }                                      /*}}} */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-void qt_affinity_set(qthread_worker_t *me)
+void INTERNAL qt_affinity_set(qthread_worker_t *me)
 {                                      /*{{{ */
     if (tmc_cpus_set_my_cpu(me->packed_worker_id) < 0) {
         perror("tmc_cpus_set_my_affinity() failed");
@@ -58,7 +58,7 @@ void qt_affinity_set(qthread_worker_t *me)
 }                                      /*}}} */
 
 #else
-void qt_affinity_set(qthread_shepherd_t *me)
+void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
 {                                      /*{{{ */
     if (tmc_cpus_set_my_cpu(me->node) < 0) {
         perror("tmc_cpus_set_my_affinity() failed");
@@ -69,14 +69,14 @@ void qt_affinity_set(qthread_shepherd_t *me)
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-unsigned int guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
+unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
     return 1;
 }                                      /*}}} */
 
 #endif
 
-int qt_affinity_gendists(qthread_shepherd_t   *sheps,
+int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                          qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
     cpu_set_t     online_cpus;

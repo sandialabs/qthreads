@@ -43,25 +43,25 @@ static pthread_t           proxy_thread;
 static volatile int        proxy_exit = 0;
 
 static void qt_blocking_subsystem_internal_teardown(void)
-{
+{   /*{{{*/
     proxy_exit = 1;
     pthread_join(proxy_thread, NULL);
     qt_mpool_destroy(syscall_job_pool);
     QTHREAD_DESTROYLOCK(&theQueue.lock);
     QTHREAD_DESTROYCOND(&theQueue.notempty);
-}
+} /*}}}*/
 
 static void *qt_blocking_subsystem_proxy_thread(void *arg)
-{
+{   /*{{{*/
     while (proxy_exit == 0) {
         qt_process_blocking_calls();
     }
     pthread_exit(NULL);
     return 0;
-}
+} /*}}}*/
 
-void qt_blocking_subsystem_init(void)
-{
+void INTERNAL qt_blocking_subsystem_init(void)
+{   /*{{{*/
     syscall_job_pool = qt_mpool_create(sizeof(qt_blocking_queue_node_t));
     theQueue.head    = NULL;
     theQueue.tail    = NULL;
@@ -76,10 +76,10 @@ void qt_blocking_subsystem_init(void)
         }
     }
     qthread_internal_cleanup_early(qt_blocking_subsystem_internal_teardown);
-}
+} /*}}}*/
 
-void qt_process_blocking_calls(void)
-{
+void INTERNAL qt_process_blocking_calls(void)
+{   /*{{{*/
     qt_blocking_queue_node_t *item;
 
     QTHREAD_LOCK(&theQueue.lock);
@@ -161,7 +161,7 @@ void qt_process_blocking_calls(void)
 #if HAVE_DECL_SYS_PREAD
         case PREAD:
         {
-            int fd;
+            int   fd;
             off_t offset;
             memcpy(&fd, &item->args[0], sizeof(int));
             memcpy(&offset, &item->args[3], sizeof(off_t));
@@ -172,9 +172,9 @@ void qt_process_blocking_calls(void)
                                 offset);
             break;
         }
-#endif
-        /* case RECV:
-         * case RECVFROM: */
+#endif /* if HAVE_DECL_SYS_PREAD */
+       /* case RECV:
+        * case RECVFROM: */
 #if HAVE_DECL_SYS_SELECT
         case SELECT:
         {
@@ -188,7 +188,7 @@ void qt_process_blocking_calls(void)
                                 (struct timeval *)item->args[4]);
             break;
         }
-#endif
+#endif /* if HAVE_DECL_SYS_SELECT */
             /* case SEND:
              * case SENDTO: */
             /* case SIGWAIT: */
@@ -230,10 +230,10 @@ void qt_process_blocking_calls(void)
     }
     /* and now, re-queue */
     qt_threadqueue_enqueue(item->thread->rdata->shepherd_ptr->ready, item->thread, item->thread->rdata->shepherd_ptr);
-}
+} /*}}}*/
 
-void qt_blocking_subsystem_enqueue(qt_blocking_queue_node_t *job)
-{
+void INTERNAL qt_blocking_subsystem_enqueue(qt_blocking_queue_node_t *job)
+{   /*{{{*/
     qt_blocking_queue_node_t *prev;
 
     QTHREAD_LOCK(&theQueue.lock);
@@ -246,6 +246,6 @@ void qt_blocking_subsystem_enqueue(qt_blocking_queue_node_t *job)
     }
     QTHREAD_SIGNAL(&theQueue.notempty);
     QTHREAD_UNLOCK(&theQueue.lock);
-}
+} /*}}}*/
 
 /* vim:set expandtab: */

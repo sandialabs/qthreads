@@ -4,6 +4,7 @@
 #include <stdlib.h>                    /* for calloc() */
 #include <unistd.h>                    /* for getpagesize() */
 #include <qthread/qarray.h>
+#include "qt_visibility.h"
 #include "qthread_asserts.h"
 #include "qthread_innards.h"           /* for shep_to_node && qthread_debug */
 #if defined(HAVE_MALLOC_H) && defined(HAVE_MEMALIGN)
@@ -148,7 +149,7 @@ static void qarray_free_cdt(void)
     }
 }                                      /*}}} */
 
-static qarray *qarray_create_internal(const size_t         count,
+static qarray * qarray_create_internal(const size_t         count,
                                       const size_t         obj_size,
                                       const distribution_t d,
                                       const char           tight,

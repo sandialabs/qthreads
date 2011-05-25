@@ -52,12 +52,12 @@ static void qt_affinity_internal_hwloc_teardown(void)
     initialized = 0;
 } /*}}}*/
 
-void qt_affinity_init(qthread_shepherd_id_t *nbshepherds
-#ifdef                                     QTHREAD_MULTITHREADED_SHEPHERDS
-                      ,
-                      qthread_worker_id_t *nbworkers
+void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds
+#ifdef                                              QTHREAD_MULTITHREADED_SHEPHERDS
+                               ,
+                               qthread_worker_id_t *nbworkers
 #endif
-                      )
+                               )
 {                                      /*{{{ */
     if (qthread_cas(&initialized, 0, 1) == 0) {
         qassert(hwloc_topology_init(&topology), 0);
@@ -251,9 +251,9 @@ loop_top:
 }                                      /*}}} */
 
 #ifdef QTHREAD_HAVE_MEM_AFFINITY
-void qt_affinity_mem_tonode(void  *addr,
-                            size_t bytes,
-                            int    node)
+void INTERNAL qt_affinity_mem_tonode(void  *addr,
+                                     size_t bytes,
+                                     int    node)
 {                                      /*{{{ */
     hwloc_nodeset_t nodeset = hwloc_bitmap_alloc();
 
@@ -264,13 +264,13 @@ void qt_affinity_mem_tonode(void  *addr,
     hwloc_bitmap_free(nodeset);
 }                                      /*}}} */
 
-void *qt_affinity_alloc(size_t bytes)
+void INTERNAL *qt_affinity_alloc(size_t bytes)
 {                                      /*{{{ */
     return hwloc_alloc(topology, bytes);
 }                                      /*}}} */
 
-void *qt_affinity_alloc_onnode(size_t bytes,
-                               int    node)
+void INTERNAL *qt_affinity_alloc_onnode(size_t bytes,
+                                        int    node)
 {                                      /*{{{ */
     void           *ret;
     hwloc_nodeset_t nodeset = hwloc_bitmap_alloc();
@@ -284,15 +284,15 @@ void *qt_affinity_alloc_onnode(size_t bytes,
     return ret;
 }                                      /*}}} */
 
-void qt_affinity_free(void  *ptr,
-                      size_t bytes)
+void INTERNAL qt_affinity_free(void  *ptr,
+                               size_t bytes)
 {                                      /*{{{ */
     hwloc_free(topology, ptr, bytes);
 }                                      /*}}} */
 
 #endif /* ifdef QTHREAD_HAVE_MEM_AFFINITY */
 
-qthread_shepherd_id_t guess_num_shepherds(void)
+qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
 {                                      /*{{{ */
     qthread_shepherd_id_t ret = 1;
 
@@ -314,7 +314,7 @@ qthread_shepherd_id_t guess_num_shepherds(void)
 }                                      /*}}} */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-qthread_worker_id_t guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
+qthread_worker_id_t INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
     qthread_worker_id_t ret        = 0;
     size_t              total      = 0;
@@ -343,7 +343,7 @@ qthread_worker_id_t guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
     return ret;
 }                                      /*}}} */
 
-void qt_affinity_set(qthread_worker_t *me)
+void INTERNAL qt_affinity_set(qthread_worker_t *me)
 {                                                                                           /*{{{ */
     hwloc_const_cpuset_t      allowed_cpuset = hwloc_topology_get_allowed_cpuset(topology); // where am I allowed to run?
     qthread_shepherd_t *const myshep         = me->shepherd;
@@ -394,7 +394,7 @@ void qt_affinity_set(qthread_worker_t *me)
 }                                      /*}}} */
 
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-void qt_affinity_set(qthread_shepherd_t *me)
+void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
 {                                                                                      /*{{{ */
     hwloc_const_cpuset_t allowed_cpuset = hwloc_topology_get_allowed_cpuset(topology); // where am I allowed to run?
     hwloc_obj_t          obj            =
@@ -419,8 +419,8 @@ void qt_affinity_set(qthread_shepherd_t *me)
 
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
-int qt_affinity_gendists(qthread_shepherd_t   *sheps,
-                         qthread_shepherd_id_t nshepherds)
+int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
+                                  qthread_shepherd_id_t nshepherds)
 {                                                                                      /*{{{ */
     hwloc_const_cpuset_t allowed_cpuset = hwloc_topology_get_allowed_cpuset(topology); // where am I allowed to run?
     size_t               num_extant_objs;

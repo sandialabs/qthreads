@@ -28,12 +28,12 @@ kern_return_t thread_policy_get(thread_t                thread,
 #include "qthread_asserts.h"
 #include "qt_affinity.h"
 
-qthread_shepherd_id_t guess_num_shepherds(void);
+qthread_shepherd_id_t INTERNAL guess_num_shepherds(void);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-qthread_worker_id_t guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds);
+qthread_worker_id_t INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds);
 #endif
 
-void qt_affinity_init(qthread_shepherd_id_t *nbshepherds
+void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds
 #ifdef                                     QTHREAD_MULTITHREADED_SHEPHERDS
                       ,
                       qthread_worker_id_t *nbworkers
@@ -50,7 +50,7 @@ void qt_affinity_init(qthread_shepherd_id_t *nbshepherds
 #endif
 }                                      /*}}} */
 
-qthread_shepherd_id_t guess_num_shepherds(void)
+qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
 {                                      /*{{{ */
     qthread_shepherd_id_t nshepherds = 1;
 
@@ -74,7 +74,7 @@ qthread_shepherd_id_t guess_num_shepherds(void)
 }                                      /*}}} */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-void qt_affinity_set(qthread_worker_t *me)
+void INTERNAL qt_affinity_set(qthread_worker_t *me)
 {                                      /*{{{ */
 # ifndef SST
     mach_msg_type_number_t        Count = THREAD_AFFINITY_POLICY_COUNT;
@@ -94,7 +94,7 @@ void qt_affinity_set(qthread_worker_t *me)
 }                                      /*}}} */
 
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-void qt_affinity_set(qthread_shepherd_t *me)
+void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
 {                                      /*{{{ */
 # ifndef SST
     mach_msg_type_number_t        Count = THREAD_AFFINITY_POLICY_COUNT;
@@ -132,14 +132,14 @@ void qt_affinity_set(qthread_shepherd_t *me)
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-unsigned int guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
+unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
     return 1;
 }                                      /*}}} */
 
 #endif
 
-int qt_affinity_gendists(qthread_shepherd_t   *sheps,
+int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                          qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
     /* there is no native way to detect distances, so unfortunately we must assume that they're all equidistant */

@@ -2,6 +2,7 @@
 # include "config.h"
 #endif
 #include "qthread/qthread.h"
+#include "qt_visibility.h"
 #include "qthread/futurelib.h"
 #include "qt_atomics.h"
 #include <stdlib.h>
@@ -17,6 +18,8 @@ location_t   *future_bookkeeping_array = NULL;
 
 static qthread_shepherd_id_t shep_for_new_futures = 0;
 static QTHREAD_FASTLOCK_TYPE sfnf_lock;
+
+static void blocking_vp_incr(location_t * loc);
 
 /* This function is critical to futurelib, and as such must be as fast as
  * possible.
@@ -110,7 +113,7 @@ void future_init(int vp_per_loc)
  * 2. if there is no available slot, it adds itself to the waiter
  *    queue to get one.
  */
-void blocking_vp_incr(location_t *loc)
+static void blocking_vp_incr(location_t *loc)
 {
     qassert(pthread_mutex_lock(&(loc->vp_count_lock)), 0);
     qthread_debug(ALL_DETAILS, "thread %i attempting a blocking increment on loc %d vps %d\n", (int)qthread_id(), loc->id, loc->vp_count);

@@ -13,6 +13,7 @@
 #include <stdio.h>                     /* for perror() */
 #include <stdlib.h>                    /* for malloc() */
 
+#include "qt_visibility.h"
 #include "qthread_innards.h"
 #include "qt_affinity.h"
 
@@ -111,12 +112,12 @@ static void qt_affinity_internal_lgrp_teardown(void)
     lgrp_affinity_set(P_LWPID, P_MYID, mccoy_thread_home, mccoy_thread_home_affinity);
 }
 
-void qt_affinity_init(qthread_shepherd_id_t *nbshepherds
-#ifdef                                     QTHREAD_MULTITHREADED_SHEPHERDS
-                      ,
-                      qthread_worker_id_t *nbworkers
+void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds
+#ifdef                                              QTHREAD_MULTITHREADED_SHEPHERDS
+                               ,
+                               qthread_worker_id_t *nbworkers
 #endif
-                      )
+                               )
 {                                      /*{{{ */
     lgrp_cookie                = lgrp_init(LGRP_VIEW_OS);
     mccoy_thread_home          = lgrp_home(P_LWPID, P_MYID);
@@ -132,7 +133,7 @@ void qt_affinity_init(qthread_shepherd_id_t *nbshepherds
 #endif
 }                                      /*}}} */
 
-qthread_shepherd_id_t guess_num_shepherds(void)
+qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
 {                                      /*{{{ */
     qthread_shepherd_id_t guess = 1;
 
@@ -151,7 +152,7 @@ qthread_shepherd_id_t guess_num_shepherds(void)
 }                                      /*}}} */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-void qt_affinity_set(qthread_worker_t *me)
+void INTERNAL qt_affinity_set(qthread_worker_t *me)
 {                                      /*{{{ */
     /* if this seems wrong, first answer: why should workers have more than socket affinity? */
     qthread_debug(0, "set shep %i worker %i to lgrp %i\n",
@@ -164,7 +165,7 @@ void qt_affinity_set(qthread_worker_t *me)
 }                                      /*}}} */
 
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-void qt_affinity_set(qthread_shepherd_t *me)
+void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
 {                                      /*{{{ */
     if (lgrp_affinity_set(P_LWPID, P_MYID, me->lgrp, LGRP_AFF_STRONG) != 0) {
         perror("lgrp_affinity_set");
@@ -174,7 +175,7 @@ void qt_affinity_set(qthread_shepherd_t *me)
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-unsigned int guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
+unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
     unsigned int guess     = 1;
     int          tot_nodes = lgrp_walk(lgrp_root(lgrp_cookie), NULL, NULL, 0);
@@ -198,8 +199,8 @@ unsigned int guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
-int qt_affinity_gendists(qthread_shepherd_t   *sheps,
-                         qthread_shepherd_id_t nshepherds)
+int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
+                                  qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
     unsigned int    lgrp_offset;
     int             lgrp_count_grps;
@@ -312,7 +313,7 @@ int qt_affinity_gendists(qthread_shepherd_t   *sheps,
         shepcomp_src = (qthread_shepherd_id_t)i;
         qsort(sheps[i].sorted_sheplist, nshepherds - 1,
               sizeof(qthread_shepherd_id_t), qthread_internal_shepcomp);
-#endif /* if defined(HAVE_QSORT_R) && !defined(__linux__) */
+#endif  /* if defined(HAVE_QSORT_R) && !defined(__linux__) */
     }
     if (cpus) {
         for (int i = 0; i < lgrp_count_grps; i++) {

@@ -32,6 +32,7 @@ noinst_HEADERS = \
 	qt_shepherd_innards.h \
 	qt_threadqueues.h \
 	qt_touch.h \
+	qt_visibility.h \
 	rose_xomp.h \
 	rose_log_arrivaldetector.h \
 	futurelib_innards.h
