@@ -5,7 +5,6 @@
 #
 
 libqthread_la_SOURCES += \
-			 syscalls/sys_connect.c \
 			 syscalls/sys_nanosleep.c \
 			 syscalls/sys_poll.c \
 			 syscalls/sys_read.c \
@@ -13,6 +12,10 @@ libqthread_la_SOURCES += \
 			 syscalls/sys_usleep.c \
 			 syscalls/sys_write.c \
 			 syscalls/sys_user_defined.c
+
+if HAVE_DECL_SYS_CONNECT
+libqthread_la_SOURCES += syscalls/sys_connect.c
+endif
 
 if HAVE_DECL_SYS_ACCEPT
 libqthread_la_SOURCES += syscalls/sys_accept.c

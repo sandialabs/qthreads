@@ -128,6 +128,7 @@ void INTERNAL qt_process_blocking_calls(void)
             break;
         }
 #endif
+#if HAVE_DECL_SYS_CONNECT
         case CONNECT:
         {
             int socket;
@@ -138,6 +139,7 @@ void INTERNAL qt_process_blocking_calls(void)
                                 (socklen_t)item->args[2]);
             break;
         }
+#endif
         case POLL:
         {
             nfds_t nfds;

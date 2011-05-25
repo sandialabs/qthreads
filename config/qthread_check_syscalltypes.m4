@@ -1,5 +1,5 @@
 AC_DEFUN([QTHREAD_CHECK_SYSCALLTYPES],[
-AC_CHECK_DECLS([SYS_nanosleep,SYS_sleep,SYS_usleep,SYS_system,SYS_select,SYS_wait4,SYS_pread,SYS_accept],
+AC_CHECK_DECLS([SYS_nanosleep,SYS_sleep,SYS_usleep,SYS_system,SYS_select,SYS_wait4,SYS_pread,SYS_accept,SYS_connect],
     [],[],[[#include <sys/syscall.h>]])
 AC_CHECK_SIZEOF([socklen_t],[],[[#include <sys/socket.h>]])
 AS_IF([test "$ac_cv_sizeof_socklen_t" -eq 4],
@@ -18,6 +18,7 @@ return 0;
 ]])],
 				  [],[ac_cv_have_decl_SYS_accept=no])
 AM_CONDITIONAL([HAVE_DECL_SYS_ACCEPT], [test "x$ac_cv_have_decl_SYS_accept" == xyes])
+AM_CONDITIONAL([HAVE_DECL_SYS_CONNECT], [test "x$ac_cv_have_decl_SYS_connect" == xyes])
 AM_CONDITIONAL([HAVE_DECL_SYS_SYSTEM], [test "x$ac_cv_have_decl_SYS_system" == xyes])
 AM_CONDITIONAL([HAVE_DECL_SYS_SELECT], [test "x$ac_cv_have_decl_SYS_select" == xyes])
 AM_CONDITIONAL([HAVE_DECL_SYS_WAIT4], [test "x$ac_cv_have_decl_SYS_wait4" == xyes])
