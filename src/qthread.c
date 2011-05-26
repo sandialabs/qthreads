@@ -692,6 +692,8 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
  *
  * @error ENOMEM Not enough memory could be allocated.
  */
+int rcrSchedulingOff = 1;
+
 int qthread_initialize(void)
 {                      /*{{{ */
     int                   r;
@@ -765,6 +767,14 @@ int qthread_initialize(void)
             }
         }
 # endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
+# ifdef QTHREAD_RCRTOOL
+        qsh  = getenv("QTHREAD_RCR_SCHED_OFF");
+        qshe = NULL;
+
+        if (qsh) {
+	  rcrSchedulingOff = 0; // treat as True if it exists
+        }
+# endif /* ifdef QTHREAD_RCRTOOL */
     }
     qt_affinity_init(&nshepherds
 # ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -2596,7 +2606,10 @@ void INTERNAL qt_move_to_orig()
     qthread_t *t = qthread_internal_self();
 
     t->flags |= QTHREAD_MUST_BE_WORKER_ZERO;
-    qthread_back_to_master(t);
+    qt_threadqueue_enqueue(qlib->shepherds[0].ready, t, 0); // put work back (having marked that
+                                                            // it must be run by thread 0) -- put
+                                                            // on queue that 0 looks at by default
+    qthread_back_to_master(t);                              // return to work pile
 }
 
 void INTERNAL qt_omp_parallel_region_destroy()

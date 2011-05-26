@@ -1018,6 +1018,14 @@ void doWork(int nshepherds, int nworkerspershep) {
 
 //    int testcnt = 0;
 //    for (testcnt = 0; testcnt<LATENCYTEST; testcnt++) {
+    int firstTimeThroughLoop[16];
+    unsigned long int totalL3CacheMissesEnd[16];
+    unsigned long int totalL3CacheMissesStart[16];
+    for (i=0; i<numOfSockets; i++) {
+        firstTimeThroughLoop[i] = 1;
+        totalL3CacheMissesEnd[i] = 0;
+        totalL3CacheMissesStart[i] = 0;
+    }
     while (rcrToolContinue) {
 
         if (getResetValue() == 1) {
@@ -1283,6 +1291,14 @@ void doWork(int nshepherds, int nworkerspershep) {
                         else
                             warnx("could not read shared event %d on %d", j, i);
                     }
+
+                    if (meternum == 2 && j == 1) {
+                        if (firstTimeThroughLoop[i]) {
+                            totalL3CacheMissesStart[i] = value[0];
+                            firstTimeThroughLoop[i] = 0;
+                        }
+                        totalL3CacheMissesEnd[i] = value[0];
+                    }
                     valuesPerSocket[i*MAXNUMOFEVENTS+j] = value[0];
                     timePerSocket[i*MAXNUMOFEVENTS+j] = value[1];
 //                    printf("[Socket %d BEFORE] %llu\n", i, value[0]);
@@ -1361,7 +1377,7 @@ void doWork(int nshepherds, int nworkerspershep) {
                     /*
                        leave breadcrumbs
                     */
-                    putBreadcrumbs(TYPE_CORE, i, "MemoryBandwidth", currentVal);
+                    putBreadcrumbs(TYPE_SOCKET, i, "MemoryBandwidth", currentVal);
 
                     if (bVerbose)
                         printf("[Socket %d] Memory Bandwidth (B/s): Current=%f, Max=%f, Avg=%f.\n", i, currentVal, maxVal, avgVal);
@@ -1389,7 +1405,7 @@ void doWork(int nshepherds, int nworkerspershep) {
                     /*
                        leave breadcrumbs
                     */
-                    putBreadcrumbs(TYPE_CORE, i, "L3MissRatio", currentVal);
+                    putBreadcrumbs(TYPE_SOCKET, i, "L3MissRatio", currentVal);
 
                     if (bVerbose)
                         printf("[Socket %d] L3 Miss Ratio: Current=%f, Max=%f, Avg=%f.\n", i, currentVal, maxVal, avgVal);
@@ -1443,7 +1459,7 @@ void doWork(int nshepherds, int nworkerspershep) {
                     /*
                        leave breadcrumbs
                     */
-                    putBreadcrumbs(TYPE_CORE, i, "MemoryLatency", currentVal);
+                    putBreadcrumbs(TYPE_SOCKET, i, "MemoryLatency", currentVal);
 
                     if (bVerbose)
                         printf("[Socket %d] Memory Latency: Current=%f, Max=%f, Avg=%f.\n", i, currentVal, maxVal, avgVal);
@@ -1479,6 +1495,11 @@ void doWork(int nshepherds, int nworkerspershep) {
         if (bVerbose) {
             printf("\n##################################################################\n");
         }
+    }
+
+
+    for (i=0; i<numOfSockets; i++) {
+        printf("Total L3 misses for Socket %d = %lu.\n", i, totalL3CacheMissesEnd[i]-totalL3CacheMissesStart[i]);
     }
 
 //    gettimeofday(&curts, NULL);

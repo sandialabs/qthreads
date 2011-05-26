@@ -537,7 +537,6 @@ int compute_XOMP_block(
 
 
 // start Qthreads default openmp loop execution
-
 // get next iteration(if any) for Qthreads default openmp loop execution
 bool xomp_internal_guided_next(
     qqloop_step_handle_t * loop,
@@ -545,14 +544,16 @@ bool xomp_internal_guided_next(
     long *returnUpper)
 {
     // spin waiting for either 
-  qthread_shepherd_id_t myShepId = qthread_shep();
+    qthread_shepherd_id_t myShepId = qthread_shep();
 #ifdef QTHREAD_RCRTOOL
-  if (loop->current_workers[myShepId] > maestro_current_workers(myShepId)) {
-      qthread_incr(&loop->current_workers[myShepId],-1); // not working spinning
-      while ((loop->current_workers[myShepId] + 1) > maestro_current_workers(myShepId)) { // A) the number of workers to be increased
-	if(loop->departed_workers) break; // B) some worker to notice the loop is done  -- could repeat code and return instead of breaking
-      }
-      qthread_incr(&loop->current_workers[myShepId],1); // back at work  -- skipped in departed workers case OK since everyone leaving
+    if (rcrSchedulingOff) { // has cache control been turned off by an environment variable?
+        if (loop->current_workers[myShepId] > maestro_current_workers(myShepId)) {
+	    qthread_incr(&loop->current_workers[myShepId],-1); // not working spinning
+	    while ((loop->current_workers[myShepId] + 1) > maestro_current_workers(myShepId)) { // A) the number of workers to be increased
+	      if(loop->departed_workers) break; // B) some worker to notice the loop is done  -- could repeat code and return instead of breaking
+	    }
+	    qthread_incr(&loop->current_workers[myShepId],1); // back at work  -- skipped in departed workers case OK since everyone leaving
+	}
     }
 #endif
 
@@ -564,14 +565,14 @@ bool xomp_internal_guided_next(
     *returnUpper = iterationNumber + (dynamicBlock-1); // top is inclusive
 
     if (iterationNumber > loop->assignStop) {  // already assigned everything
-      *returnLower = 0;
-      *returnUpper = 0;
-      qthread_incr(&loop->departed_workers,1);
-      qthread_incr(&loop->current_workers[myShepId],-1);
-     return FALSE;
+        *returnLower = 0;
+	*returnUpper = 0;
+	qthread_incr(&loop->departed_workers,1);
+	qthread_incr(&loop->current_workers[myShepId],-1);
+	return FALSE;
     }
     if (*returnUpper > loop->assignStop) {// this iteration goes past end of loop
-      *returnUpper = loop->assignStop;
+        *returnUpper = loop->assignStop;
     }
 
     qthread_debug(ALL_DETAILS,

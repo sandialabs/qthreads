@@ -172,6 +172,13 @@ void INTERNAL qt_feb_barrier_internal_init(void);
 void INTERNAL qthread_internal_cleanup(void (*function)(void));
 void INTERNAL qthread_internal_cleanup_early(void (*function)(void));
 
+# ifdef QTHREAD_RCRTOOL 
+/* allow environment variable to control whether dynamic thread count
+ *  adjustment active - akp 5/26/11
+ */
+extern int rcrSchedulingOff;
+#endif
+
 /* for debugging */
 #ifdef QTHREAD_DEBUG
 enum qthread_debug_levels {
