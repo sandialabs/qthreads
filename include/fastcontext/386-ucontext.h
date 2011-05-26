@@ -4,9 +4,6 @@
 #ifdef HAVE_STDARG_H
 # include <stdarg.h>
 #endif
-#ifdef HAVE_SYS_UCONTEXT_H
-# include <sys/ucontext.h>
-#endif
 
 #define setcontext(u) qt_setmctxt(&(u)->uc_mcontext)
 #define getcontext(u) qt_getmctxt(&(u)->uc_mcontext)

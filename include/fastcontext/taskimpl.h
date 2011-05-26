@@ -72,11 +72,6 @@
 #ifdef HAVE_INTTYPES_H
 # include <inttypes.h>
 #endif
-#ifndef __tile__
-# ifdef HAVE_SYS_UCONTEXT_H
-#  include <sys/ucontext.h>
-# endif
-#endif
 
 #if defined(__FreeBSD__) && __FreeBSD__ < 5
 extern	int		qt_getmctxt(mctxt_t*);
