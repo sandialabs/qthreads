@@ -39,7 +39,7 @@ int connect(int                    socket,
         qt_mpool_free(syscall_job_pool, job);
         return ret;
     } else {
-        return syscall(SYS_accept, socket, address, address_len);
+        return syscall(SYS_connect, socket, address, address_len);
     }
 }
 
