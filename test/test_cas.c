@@ -64,9 +64,17 @@ int main(int argc,
                 (long unsigned)master);
     }
 
-    assert(qthread_cas(&four, 4, 5) == 4);
+    assert(qthread_cas32(&four, 4, 0xdeadbeef) == 4);
 #if (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
-    assert(qthread_cas(&eight, 8, 9) == 8);
+    assert(qthread_cas64(&eight, (uint64_t)8, (uint64_t)0xdeadbeefc0d1f1edULL) == 8);
+#endif
+    assert(read_vol32(&four) == 0xdeadbeef);
+#if (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
+    assert(read_vol64(&eight) == (uint64_t)0xdeadbeefc0d1f1edULL);
+#endif
+    assert(qthread_cas32(&four, 0xdeadbeef, 5) == 0xdeadbeef);
+#if (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
+    assert(qthread_cas64(&eight, (uint64_t)0xdeadbeefc0d1f1edULL, (uint64_t)9) == (uint64_t)0xdeadbeefc0d1f1edULL);
 #endif
     assert(read_vol32(&four) == 5);
 #if (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)

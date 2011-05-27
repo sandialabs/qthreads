@@ -335,15 +335,51 @@ static QINLINE void qthread_debug(int         level,
                             places = 0;
                             while (num >= base) {
                                 uintptr_t tmp = num % base;
-                                *(head - places) =
-                                    (tmp <
-                                     10) ? ('0' + tmp) : ('a' + tmp - 10);
-                                num /= base;
+                                *(head - places) = (tmp < 10) ? ('0' + tmp) : ('a' + tmp - 10);
+                                num             /= base;
                                 places++;
                             }
                             num             %= base;
-                            *(head - places) =
-                                (num < 10) ? ('0' + num) : ('a' + num - 10);
+                            *(head - places) = (num < 10) ? ('0' + num) : ('a' + num - 10);
+                            head++;
+                        }
+                        break;
+                    }
+                    case 'X':
+                        *head++ = '0';
+                        *head++ = 'x';
+                    case 'U':
+                    case 'D':
+                    case 'I':
+                    {
+                        uint64_t num = va_arg(args, uint64_t);
+                        unsigned base;
+
+                        base = (ch == 'X') ? 16 : 10;
+                        if (!num) {
+                            *head++ = '0';
+                        } else {
+                            /* count places */
+                            unsigned places = 0;
+                            uint64_t tmpnum = num;
+
+                            /* yes, this is dumb, but its guaranteed to take
+                             * less than 10 iterations on 32-bit numbers and
+                             * doesn't involve floating point */
+                            while (tmpnum >= base) {
+                                tmpnum /= base;
+                                places++;
+                            }
+                            head  += places;
+                            places = 0;
+                            while (num >= base) {
+                                uintptr_t tmp = num % base;
+                                *(head - places) = (tmp < 10) ? ('0' + tmp) : ('a' + tmp - 10);
+                                num             /= base;
+                                places++;
+                            }
+                            num             %= base;
+                            *(head - places) = (num < 10) ? ('0' + num) : ('a' + num - 10);
                             head++;
                         }
                         break;

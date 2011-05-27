@@ -148,7 +148,7 @@ static uint64_t qthread_mwaitc(volatile syncvar_t *const restrict addr,
             locked            = unlocked;
             unlocked.u.s.lock = 0;     // create the unlocked version
             locked.u.s.lock   = 1;     // create the locked version
-        } while (qthread_cas((uint64_t *)addr, unlocked.u.w, locked.u.w) !=
+        } while (qthread_cas64((uint64_t *)addr, unlocked.u.w, locked.u.w) !=
                  unlocked.u.w);
 #endif  /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILE) */
         /***************************************************

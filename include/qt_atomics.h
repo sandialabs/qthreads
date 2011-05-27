@@ -445,26 +445,26 @@ static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t *operand,
     do {
 #  ifdef __PIC__
         /* this saves off %ebx to make PIC code happy :P */
-#   define QTHREAD_PIC_PREFIX "pushl %%ebx\n\tmovl %4, %%ebx\n\t"
+#   define QTHREAD_INTERNAL_PIC_PREFIX /*"xchg %%ebx, %4\n\t"*/ "pushl %%ebx\n\tmovl %4, %%ebx\n\t"
         /* this restores it */
-#   define QTHREAD_PIC_SUFFIX "\n\tpopl %%ebx"
-#   define QTHREAD_PIC_REG    "m"
+#   define QTHREAD_INTERNAL_PIC_SUFFIX /*"\n\txchg %%ebx, %4"*/ "\n\tpopl %%ebx"
+#   define QTHREAD_INTERNAL_PIC_REG_4  "m"
 #  else
-#   define QTHREAD_PIC_PREFIX
-#   define QTHREAD_PIC_SUFFIX
-#   define QTHREAD_PIC_REG "b"
+#   define QTHREAD_INTERNAL_PIC_PREFIX
+#   define QTHREAD_INTERNAL_PIC_SUFFIX
+#   define QTHREAD_INTERNAL_PIC_REG_4 "b"
 #  endif
         oldval.i  = *operand;
         newval.i  = oldval.i + 1;
         newval.i *= (newval.i < max);
-        __asm__ __volatile__ (QTHREAD_PIC_PREFIX
+        __asm__ __volatile__ (QTHREAD_INTERNAL_PIC_PREFIX
                               "lock; cmpxchg8b (%1)\n\t"
                               "setne %0" /* test = (ZF==0) */
-                              QTHREAD_PIC_SUFFIX
+                              QTHREAD_INTERNAL_PIC_SUFFIX
                               : "=q" (test)
                               : "r"    (operand), /*EAX*/ "a" (oldval.s.l),
                               /*EDX*/ "d" (oldval.s.h),
-                              /*EBX*/ QTHREAD_PIC_REG(newval.s.l),
+                              /*EBX*/ QTHREAD_INTERNAL_PIC_REG_4(newval.s.l),
                               /*ECX*/ "c" (newval.s.h)
                               : "memory");
     } while (test);

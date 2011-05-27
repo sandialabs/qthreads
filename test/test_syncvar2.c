@@ -6,6 +6,8 @@
 #include <qthread/qthread.h>
 #include "argparsing.h"
 
+#include <inttypes.h>
+
 /* More or less, this code matches the prodCons.chpl code from the open-source
  * Chapel compiler. This is a demonstration generated in an attempt to figure
  * out whether a given race condition is in qthreads on in Chapel */
@@ -35,6 +37,7 @@ static aligned_t producer(void *arg)
     }
     qthread_syncvar_writeEF_const(&buff[numItems % bufferSize],
                                   INT64TOINT60(-1));
+    iprintf("producer wrote terminus value #%"PRIu64"\n", INT64TOINT60(-1));
 
     return 0;
 }
