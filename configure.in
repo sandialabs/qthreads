@@ -568,8 +568,9 @@ AS_IF([test "x$enable_omp_affinity" = xyes],
       [AC_DEFINE([QTHREAD_OMP_AFFINITY], [1], [Enable experimental OpenMP affinity extensions. Under development])],
       [enable_omp_affinity="no"])
 
-AS_IF([test "x$enable_asserts" = "xno"],
-      [AC_DEFINE([QTHREAD_NO_ASSERTS], [1], [removes sanity checks from most qthread functions])],
+AS_IF([test "x$enable_asserts" != "xyes"],
+      [AC_DEFINE([QTHREAD_NO_ASSERTS], [1], [removes sanity checks from most qthread functions])
+       enable_asserts=no],
       [enable_asserts=yes])
 
 AS_IF([test "x$enable_debug_trace" = "xyes"],
