@@ -460,7 +460,7 @@ static qarray * qarray_create_internal(const size_t         count,
             qthread_incr(&chunk_distribution_tracker[target_shep], 1);
         }
     }
-#if defined(HAVE_MADVISE) && defined(HAVE_MADV_ACCESS_LWP)
+#if defined(HAVE_MADVISE) && defined(HAVE_DECL_MADV_ACCESS_LWP)
     madvise(ret->base_ptr, segment_count * ret->segment_bytes,
             MADV_ACCESS_LWP);
 #endif
