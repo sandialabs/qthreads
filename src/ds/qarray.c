@@ -460,9 +460,8 @@ static qarray * qarray_create_internal(const size_t         count,
             qthread_incr(&chunk_distribution_tracker[target_shep], 1);
         }
     }
-#if defined(HAVE_MADVISE) && defined(HAVE_DECL_MADV_ACCESS_LWP)
-    madvise(ret->base_ptr, segment_count * ret->segment_bytes,
-            MADV_ACCESS_LWP);
+#if defined(HAVE_MADVISE) && HAVE_DECL_MADV_ACCESS_LWP
+    madvise(ret->base_ptr, segment_count * ret->segment_bytes, MADV_ACCESS_LWP);
 #endif
     for (unsigned int i = 0; i < qthread_num_shepherds(); i++) {
         qthread_debug(ALL_DETAILS,
@@ -1419,10 +1418,9 @@ void qarray_set_shepof(qarray               *a,
                     size_t array_size   = a->segment_bytes * num_segments;
                     qt_affinity_mem_tonode(a->base_ptr, array_size, target_node);
                 }
-#elif defined(HAVE_MADVISE) && defined(HAVE_MADV_ACCESS_LWP)
+#elif defined(HAVE_MADVISE) && HAVE_DECL_MADV_ACCESS_LWP
                 madvise(a->base_ptr,
-                        (a->count / a->segment_size) * a->segment_bytes,
-                        MADV_ACCESS_LWP);
+                        (a->count / a->segment_size) * a->segment_bytes, MADV_ACCESS_LWP);
 #endif      /* ifdef QTHREAD_HAVE_MEM_AFFINITY */
                 qthread_incr(&chunk_distribution_tracker[shep],
                              segment_count);
@@ -1450,9 +1448,8 @@ void qarray_set_shepof(qarray               *a,
                                            (a->segment_bytes * segment),
                                            a->segment_bytes, target_node);
                 }
-#elif defined(HAVE_MADVISE) && defined(HAVE_MADV_ACCESS_LWP)
-                madvise(a->base_ptr +
-                        (a->segment_bytes * (i / a->segment_size)),
+#elif defined(HAVE_MADVISE) && HAVE_DECL_MADV_ACCESS_LWP
+                madvise(a->base_ptr + (a->segment_bytes * (i / a->segment_size)),
                         a->segment_bytes, MADV_ACCESS_LWP);
 #endif          /* ifdef QTHREAD_HAVE_MEM_AFFINITY */
                 qthread_incr(&chunk_distribution_tracker[shep], 1);

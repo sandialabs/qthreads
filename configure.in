@@ -32,6 +32,7 @@ CLEANFILES="*~ .\#* .gdb_history"
 AC_SUBST(CLEANFILES)
 
 AC_CANONICAL_HOST
+AC_PROG_SED
 
 ## ----------------- ##
 ## Check the options ##
@@ -113,19 +114,30 @@ AC_ARG_ENABLE([thread-count],
                                qthread_finalize() is run; slows down
                                computation])])
 
-AC_ARG_ENABLE([shepherd-profiling],
-              [AS_HELP_STRING([--enable-shepherd-profiling],
-                              [counts the amount of wall-clock time that each shepherd spends idle])])
-
-AC_ARG_ENABLE([lock-profiling],
-              [AS_HELP_STRING([--enable-lock-profiling],
-                              [counts the amount of wall-clock time that is
-                               spent aquiring locks])])
-
-AC_ARG_ENABLE([steal_profile],
-              [AS_HELP_STRING([--enable-steal-profile],
-                              [Enable profiling of steal includes printing to
-                               stderr at program conclusion.])])
+AC_ARG_ENABLE([profiling],
+              [AS_HELP_STRING([--enable-profiling=[[areas]]],
+                              [turn on the specified comma-separated types of
+                               profiling. Available types are: shepherd, lock,
+                               steal. Shepherd profiling counts the wall-clock
+                               time that each shepherd spends idle. Lock
+                               profiling counts the time spent aquiring locks.
+                               Steal profiling counts the amount of
+                               workstealing that was done (only applies to
+                               multithreaded shepherds).])],
+              [for area in $(echo "$enable_profiling" | sed 's/,/ /g') ; do
+                 case "$area" in
+                   shepherd)
+                     enable_shepherd_profiling=yes
+                     ;;
+                   lock)
+                     enable_lock_profiling=yes
+                     ;;
+                   steal)
+                     enable_steal_profiling=yes
+                     ;;
+                 esac
+               done],
+              [enable_profiling=none])
 
 AC_ARG_ENABLE([cxx-tests],
               [AS_HELP_STRING([--disable-cxx-tests],
@@ -148,7 +160,6 @@ AC_ARG_ENABLE([64bit-aligned_t],
                                is 8 bytes on all platforms except PowerPC32,
                                where it is 4 bytes (due to a lack of native
                                64-bit atomic operations)])])
-dnl deal with result once we figure out the hardware sizes
 
 AC_ARG_ENABLE([64bit-alignment],
               [AS_HELP_STRING([--enable-64bit-alignment],
@@ -156,7 +167,6 @@ AC_ARG_ENABLE([64bit-alignment],
                                4 bytes long.  Default is to align to
                                sizeof(aligned_t). Alignment cannot be smaller
                                than aligned_t.])])
-dnl deal with result once we figure out the hardware sizes
 
 AC_ARG_ENABLE([pthreads],
               [AC_HELP_STRING([--disable-pthreads],
@@ -464,7 +474,7 @@ AC_CACHE_SAVE
 ## --------------------------- ##
 AC_FUNC_VPRINTF
 AC_FUNC_MMAP
-AS_IF([test "x$enable_setrlimit" != xno],
+AS_IF([test "x$enable_setrlimit" = "xyes"],
       [AC_CHECK_FUNCS([getrlimit setrlimit],
                       [AC_DEFINE([NEED_RLIMIT], [1], [Whether the library should use get/set rlimit functions])],
                       [AC_MSG_ERROR([setrlimit() calls enabled, but function is unavailable])])])
@@ -706,7 +716,7 @@ echo    "Safety/Debugging:"
 echo    "      Sanity assert() Calls: $enable_asserts"
 echo    "    Check address alignment: $enable_aligncheck"
 echo    "            Thread Counting: $enable_thread_count"
-echo    "         Shepherd profiling: $enable_shepherd_profiling"
+echo    "                  Profiling: $enable_profiling"
 echo    " Debugging Trace Capability: $enable_debug_trace"
 echo    "                Guard Pages: $enable_guard_pages"
 echo    ""
