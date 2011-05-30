@@ -92,7 +92,9 @@ GET:
         movl    %esi, (3*4)(%eax) /* save ESI: general 32-bit register */
         stmxcsr       (4*4)(%eax) /* save SSE2 control and status word */
         fnstcw        (5*4)(%eax) /* save x87 control word */
-        movl    %esp, (6*4)(%eax) /* save stack pointer */
+
+        leal    4(%esp), %ecx     /* load the stack pointer without the return address */
+	movl    %ecx, (6*4)(%eax) /* save the stack pointer */
 
         movl    (%esp), %ecx      /* load the current return location, which is stored on the stack */
         movl    %ecx, (7*4)(%eax) /* store the current return location */
