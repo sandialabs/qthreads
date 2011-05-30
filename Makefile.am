@@ -18,3 +18,8 @@ ACLOCAL_AMFLAGS = -I config
 DISTCHECK_CONFIGURE_FLAGS = $(EXTRA_DISTCHECK_OPTIONS)
 
 CONFIGURE_DEPENDENCIES = config/version-gen NEWS
+
+.PHONY: buildtests
+
+buildtests:
+	$(MAKE) -C test buildtests
