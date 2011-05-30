@@ -32,10 +32,13 @@ TESTS = test_basic \
 		test_qdqueue \
 		test_allpairs \
 		test_qalloc \
-		test_read \
 		test_user_defined_block
 
 EXTRA_PROGRAMS = test_wavefront
+
+if USE_SYSCALL_INTERCEPT
+TESTS += test_read
+endif
 
 if ENABLE_CXX_TESTS
 TESTS += testloop \
