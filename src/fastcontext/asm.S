@@ -75,12 +75,10 @@ SET:
         fldcw   (5*4)(%eax)       /* restore x87 control word */
 
         movl    (6*4)(%eax), %esp /* set the stack */
-        /*pushl (7*4)(%eax)*/             /* push the function pointer (aka where to return to, aka new %eip) onto the stack */
         movl    (7*4)(%eax), %ecx /* get the new PC to jump to */
 
         movl    $1,          %eax /* return value (allows us to escape the swapcontext loop) */
-        /*ret*/
-        jmp     *%ecx   /* jump to the new PC */
+        jmp     *%ecx             /* jump to the new PC */
 
 .globl GET
 GET:
@@ -99,7 +97,7 @@ GET:
         movl    (%esp), %ecx      /* load the current return location, which is stored on the stack */
         movl    %ecx, (7*4)(%eax) /* store the current return location */
 
-        movl    $0,   %eax /* return value (allows us to escape the swapcontext loop) */
+        movl    $0,   %eax        /* return value (allows us to escape the swapcontext loop) */
         ret
 #endif
 
