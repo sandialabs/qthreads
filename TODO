@@ -53,6 +53,10 @@ These are ideas for things to do (in no particular order):
 	  thread to identify the "home" so that we can send the necessary messages
 	  to make those operations happen on the right "home" node
 
+21. Coalesce system calls
+
+22. Implement MAMA malloc?
+
 Things to think about:
 
  1. Non-executing shepherds to allow for memory locales without associated
