@@ -29,7 +29,7 @@ certain rights in this software.
 
 The qthreads library contains parts of an earlier library (libtask, by Russ
 Cox) that requires the propogation of its copyright information. This sofware
-is in the osx_compat directory, namely the files:
+is in the fastcontext directory, namely the files:
 
 	asm.S
 	power-ucontext.h
@@ -37,10 +37,11 @@ is in the osx_compat directory, namely the files:
 	context.c
 	taskimpl.h
 
+However, those files have been extensively modified.
+
 The rest of the qthread library, which will function on any Unix system with
 the makecontext()-family of functions, can stand alone. Those files are simply
-implementations of the makecontext() family of functions for MacOS X, which
-doesn't have them (as of OSX 10.4).
+implementations of the makecontext() family of functions for performance.
 
 ~~~~~~~~~~~~~
 
