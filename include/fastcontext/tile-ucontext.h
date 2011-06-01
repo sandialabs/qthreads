@@ -1,5 +1,11 @@
-#define	setcontext(u)	_qt_setmctxt(&(u)->mc)
-#define	getcontext(u)	_qt_getmctxt(&(u)->mc)
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
+#include <stddef.h> /* for size_t, per C89 */
+
+#define setcontext(u) _qt_setmctxt(&(u)->mc)
+#define getcontext(u) _qt_getmctxt(&(u)->mc)
 typedef struct mctxt mctxt_t;
 typedef struct uctxt uctxt_t;
 /*
@@ -15,27 +21,26 @@ struct mctxt {
     unsigned long tp;       /* thread-local data pointer (23*4) */
     unsigned long sp;       /* stack pointer (grows DOWNWARD) (23*4)+4 */
     unsigned long lr;       /* aka link register (where to go when returning from a function)
-                               (23*4)+(2*4) */
+                             * (23*4)+(2*4) */
 
     /* Saved special registers. */
     unsigned long pc;       /* (23*4)+(3*4) */
     unsigned long r0;       /* (23*4)+(4*4) */
-    //unsigned long ex1;      /* stored in EX_CONTEXT_1_1 (PL and ICS bit) */
+    // unsigned long ex1;      /* stored in EX_CONTEXT_1_1 (PL and ICS bit) */
     unsigned long arg0;     /* (23*4)+(5*4) only used for first function invocation */
     unsigned long first;    /* (23*4)+(6*4) */
 };
 
-
-struct uctxt
-{
-	struct {
-		void *ss_sp;
-		size_t ss_size;
-	} uc_stack;
-	//sigset_t uc_sigmask;
-	mctxt_t mc;
-	struct uctxt * uc_link; /* unused */
+struct uctxt {
+    struct {
+        void  *ss_sp;
+        size_t ss_size;
+    } uc_stack;
+    // sigset_t uc_sigmask;
+    mctxt_t       mc;
+    struct uctxt *uc_link;      /* unused */
 };
 
-int _qt_getmctxt(mctxt_t*);
-void _qt_setmctxt(mctxt_t*);
+int  _qt_getmctxt(mctxt_t *);
+void _qt_setmctxt(mctxt_t *);
+/* vim:set expandtab: */

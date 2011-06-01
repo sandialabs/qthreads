@@ -1,6 +1,11 @@
+#ifdef HAVE_CONFIG_H
+# include <config.h>
+#endif
+
 #ifdef HAVE_STDARG_H
 # include <stdarg.h> /* for the qt_makectxt prototype */
 #endif
+#include <stddef.h> /* for size_t, per C89 */
 
 #define setcontext(u) qt_setmctxt(&(u)->uc_mcontext)
 #define getcontext(u) qt_getmctxt(&(u)->uc_mcontext)
