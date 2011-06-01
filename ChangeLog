@@ -1,3 +1,594 @@
+2011-05-30 17:45  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/fastcontext/asm.S: I *THINK* this fixes the %esi problem. If
+	  so, it was actually a stack location problem. I was using a
+	  slightly wrong stack pointer (I was including a stale return
+	  location) which made function calls corrupt the stack, when ended
+	  up manifesting as a wrong %esi for reasons I don't entirely
+	  understand.
+
+2011-05-30 17:44  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* Makefile.am: convenience target for building tests
+
+2011-05-30 17:24  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am: only test the read feature if syscall
+	  intercepting is turned on
+
+2011-05-30 17:21  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/fastcontext/386-ucontext.h, src/fastcontext/asm.S: this
+	  is not at all Marcell's code anymore, so remove the copyright
+	  notice. And store/restore SSE2 control and status word on 32-bit
+	  platforms. <sigh> (this is not the %esi bug)
+
+2011-05-28 06:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: fix the assert-enable logic
+
+2011-05-28 01:39  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, src/ds/qarray.c: change the way profiling is
+	  enabled; also fix rlimit logic
+
+2011-05-28 01:21  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, src/ds/qarray.c: reorganized configure.in to make
+	  it easier to maintain and to follow the logic
+
+2011-05-27 22:17  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: beginning a reorganization of configure to be
+	  easier to read
+
+2011-05-27 22:16  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h, include/qthread/qthread.h,
+	  include/qthread_innards.h, src/syncvar.c, test/test_cas.c,
+	  test/test_syncvar2.c, test/testincr.c: fix atomic behavior on old
+	  compilers (<= gcc4.0) in 32-bit environments
+
+2011-05-26 18:40  Allan Porterfield <akp@renci.org>
+
+	* include/qthread_innards.h, src/qthread.c,
+	  src/rcrtool/common_rcrtool.c, src/rose_xomp.c: insert code to
+	  change the number of active workers on demand from rcrtool
+	  (qthread_innerds,h) add flag to allow dynamic thread control to
+	  be turned off
+	  (common_rcrtool.c) add optional output statements giving L3
+	  misses per socket
+	  (rose_xomp.c) add dynamic control of active workers
+	  (qthread.c) add flag to allow dynamic thread control to be turned
+	  off
+	  fix code on termination forces worker 0 (leave with same thread
+	  that
+	  enters -- makes the stack correct during termination)
+
+2011-05-26 01:40  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, src/syscalls/Makefile.inc: do not intercept
+	  syscalls by default (needs testing)
+
+2011-05-26 01:39  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/fastcontext/386-ucontext.h,
+	  include/fastcontext/taskimpl.h: why was this in here?
+
+2011-05-26 00:46  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/syscalls/sys_connect.c: connect != accept
+
+2011-05-25 23:27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_attributes.m4: __sync_synchronize() failure
+	  only happens when you link...
+
+2011-05-25 23:18  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_attributes.m4, configure.in,
+	  src/affinity/hwloc_affinity.c,
+	  src/interfaces/chapel/tasks-qthreads.c: be a little more portable
+	  with __sync_synchronize()
+
+2011-05-25 23:13  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am: make CXX test flag work again
+
+2011-05-25 22:57  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_syscalltypes.m4, src/io.c,
+	  src/syscalls/Makefile.inc: connect may not exist
+
+2011-05-25 22:42  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: qthread_exec is internal
+
+2011-05-25 14:10  Allan Porterfield <akp@renci.org>
+
+	* include/qthread_innards.h: fix typo inside ROSE ifdef section
+
+2011-05-25 08:31  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_syscalltypes.m4, src/io.c,
+	  src/syscalls/Makefile.inc: wrong syscall; need to check
+	  accept()... because solaris is being dumb and has a *close* but
+	  not equivalent declaration. <sigh>
+
+2011-05-25 08:21  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_syscalltypes.m4: extra testing for accept()
+	  intercepting (this is dumb)
+
+2011-05-25 08:14  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/ds/qarray.c, src/io.c: fixing some Solaris compiling issues
+	  (not done)
+
+2011-05-25 07:51  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/affinity/libnumaV2_affinity.c: fix the compiler warning
+
+2011-05-25 07:50  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/interfaces/chapel/Makefile.am: install the header to the
+	  correct location
+
+2011-05-25 06:53  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/interfaces/chapel/Makefile.am: compile without an installed
+	  qthreads
+
+2011-05-25 06:41  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/Makefile.am: fix ordering on the uninstall-local
+	  target
+
+2011-05-25 06:34  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_syscalltypes.m4: fix typo that prevented
+	  optional syscalls from being built
+
+2011-05-25 06:18  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/Makefile.am, include/futurelib_innards.h,
+	  include/qt_affinity.h, include/qt_visibility.h,
+	  include/qthread_innards.h, src/affinity/hwloc_affinity.c,
+	  src/affinity/lgrp_affinity.c, src/affinity/libnumaV2_affinity.c,
+	  src/affinity/libnuma_affinity.c, src/affinity/mach_affinity.c,
+	  src/affinity/no_affinity.c, src/affinity/plpa_affinity.c,
+	  src/affinity/tile_affinity.c, src/ds/qarray.c,
+	  src/fastcontext/context.c, src/futurelib.c, src/io.c,
+	  src/qt_c_hash.c, src/qthread.c, src/threadqueues.c: add GCC
+	  visibility support
+
+2011-05-25 05:31  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/interfaces/chapel/tasks-qthreads.c: avoid a dumb compiler
+	  warning in some circumstances
+
+2011-05-25 05:27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/interfaces/chapel/Makefile.am,
+	  src/interfaces/chapel/include/tasks-qthreads.h,
+	  src/interfaces/chapel/src/tasks-qthreads.c,
+	  src/interfaces/chapel/tasks-qthreads.c,
+	  src/interfaces/chapel/tasks-qthreads.h: simplifying the file
+	  structure
+
+2011-05-25 05:24  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/interfaces/chapel/Makefile.inc, src/interfaces/chapel/README,
+	  src/interfaces/chapel/src, src/interfaces/chapel/src/Makefile,
+	  src/interfaces/chapel/src/Makefile.include,
+	  src/interfaces/chapel/src/Makefile.share: remove extraneous
+	  Chapel files
+
+2011-05-25 05:21  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* Makefile.am, configure.in, include/qthread/Makefile.am, shims,
+	  src/Makefile.am, src/interfaces, src/interfaces/chapel,
+	  src/interfaces/chapel/Makefile.am,
+	  src/interfaces/chapel/Makefile.inc,
+	  src/interfaces/chapel/include/tasks-qthreads.h,
+	  src/interfaces/chapel/src/tasks-qthreads.c: change the way we do
+	  support for Chapel; this way Brad seems to like better, and makes
+	  a more convincing case that the Chapel support code actually part
+	  of qthreads
+
+2011-05-24 22:40  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_syscalltypes.m4, include/qt_io.h, src/io.c,
+	  src/syscalls/Makefile.inc, src/syscalls/sys_pread.c: intercept
+	  pread() too
+
+2011-05-24 22:32  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_syscalltypes.m4, configure.in, src/io.c,
+	  src/syscalls/Makefile.inc: fix compile on Solaris
+
+2011-05-24 21:30  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/io.c: this seems to avoid segfaults... not sure why yet
+
+2011-05-23 17:22  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* shims/chapel/src/Makefile, shims/chapel/src/Makefile.include,
+	  shims/chapel/src/Makefile.share: remove Cray copyright (whoops!)
+
+2011-05-23 17:22  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* shims/chapel/src/tasks-qthreads.c: match current Chapel svn
+
+2011-05-23 12:22  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/io.c: header files for abort and gettimeofday
+
+2011-05-23 11:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/time_qlfqueue.c: formatting
+
+2011-05-23 11:53  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_qtimer.c: machines are fast enough now... zero-length
+	  qtimer results may just mean sub-micro-second execution
+
+2011-05-23 11:45  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/Makefile.am: include qt_io.h header
+
+2011-05-23 11:38  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/syscalls/sys_accept.c, src/syscalls/sys_connect.c,
+	  src/syscalls/sys_nanosleep.c, src/syscalls/sys_poll.c,
+	  src/syscalls/sys_select.c, src/syscalls/sys_wait4.c: on Linux,
+	  syscall() requires unistd.h
+
+2011-05-19 16:45  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: remove unnecessary Q_DEPRECATED
+	  comment (qthread_num_shepherds is here to stay)
+
+2011-05-19 05:01  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* shims/chapel/src/tasks-qthreads.c: better comments and some
+	  debugging functions implemented
+
+2011-05-19 04:44  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* shims/chapel/src/tasks-qthreads.c: avoid using malloc in spawning
+	  tasks
+
+2011-05-19 04:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: make copyargs fork function public
+
+2011-05-13 00:15  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread_innards.h, src/io.c, src/qthread.c: correctly
+	  shut down the IO interface *BEFORE* shutting down the worker
+	  threads (otherwise bad things can happen)
+
+2011-05-11 22:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/io.c: whitespace
+
+2011-05-11 22:52  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_syscalltypes.m4, include/qt_io.h,
+	  include/qthread_innards.h, src/io.c, src/syscalls/Makefile.inc,
+	  src/syscalls/sys_poll.c, src/syscalls/sys_read.c,
+	  src/syscalls/sys_select.c, src/syscalls/sys_system.c,
+	  src/syscalls/sys_wait4.c, src/syscalls/sys_write.c: the rest of
+	  the important syscalls
+
+2011-05-11 22:05  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_io.h, include/qthread_innards.h, src/io.c,
+	  src/qthread.c, src/syscalls/Makefile.inc,
+	  src/syscalls/sys_accept.c, src/syscalls/sys_nanosleep.c,
+	  src/syscalls/sys_sleep.c, src/syscalls/sys_user_defined.c,
+	  src/syscalls/sys_usleep.c, test/Makefile.am,
+	  test/test_user_defined_block.c: allow/enable arbitrary blocking
+	  operations
+
+2011-05-11 22:05  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/affinity/hwloc_affinity.c: fix compiler warning
+
+2011-05-11 21:17  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/io.c: change the latency arbitrarily
+
+2011-05-11 21:14  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/Makefile.am, src/syscalls, src/syscalls.c,
+	  src/syscalls/Makefile.inc, src/syscalls/sys_accept.c,
+	  src/syscalls/sys_connect.c, src/syscalls/sys_nanosleep.c,
+	  src/syscalls/sys_read.c, src/syscalls/sys_sleep.c,
+	  src/syscalls/sys_usleep.c: re-organize syscall functions into
+	  files, to make it easier to turn them on and off
+
+2011-05-11 20:56  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_io.h, src/io.c, src/qthread.c, src/syscalls.c,
+	  test/Makefile.am, test/test_read.c: basic proof-of-concept read
+	  operation proven to work
+
+2011-05-11 18:55  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am, test/test_cpp.cpp: always test C++
+
+2011-05-11 18:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qloop.hpp: fix the #include
+
+2011-05-10 15:54  gmackey@gmail.com
+
+	* README: Oops! Didn't mean to commit on that last one. Was just
+	  testing something
+	  out. This reverts the previous commit.
+
+2011-05-10 15:53  gmackey@gmail.com
+
+	* README: lsdkfj
+
+2011-05-10 15:50  gmackey@gmail.com
+
+	* src/io.c, test/Makefile.am, test/test_cpp_interface.cpp: Adding a
+	  test of the new C++ interface, and adding the test as an extra
+	  program in the makefile. Include stdio.h in src/io.c so things
+	  will compile.
+
+2011-05-09 19:38  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/Makefile.am, include/qthread/qloop.hpp: C++ qloop
+	  interface
+
+2011-05-09 19:30  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: fix memory leak (thanks Greg!)
+
+2011-05-04 21:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* acinclude.m4, config/qthread_check_syscalltypes.m4, configure.in,
+	  include/qt_io.h, src/io.c, src/syscalls.c: first real syscall
+	  (untested)
+
+2011-05-04 21:10  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/syscalls.c: sleep should work outside of qthreads
+
+2011-05-04 21:05  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/Makefile.am, src/io.c, src/syscalls.c: sleep syscalls
+
+2011-05-04 20:21  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, src/io.c: detect missing syscalls
+
+2011-05-04 20:10  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* acinclude.m4, config/qthread_hash_maps.m4: no external hash maps
+
+2011-05-04 20:08  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_io.h, include/qt_qthread_struct.h, src/Makefile.am,
+	  src/io.c, src/qthread.c: io.c now compiles; still does nothing
+
+2011-05-04 19:12  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/syncvar.c: whitespace readability
+
+2011-05-04 19:07  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/syncvar.c: how did this EVER work???
+
+2011-05-03 23:04  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/io.c: not yet functional
+
+2011-05-02 15:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_syncvar.c: make test faster on systems with lots of
+	  processors
+
+2011-05-02 15:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_qdqueue.c, test/test_qlfqueue.c: work faster on
+	  work-stealing shepherds
+
+2011-05-02 15:19  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am, test/test_internal_mod.c: this test does not
+	  work under work-stealing regimes
+
+2011-05-02 14:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_id.c: fix compiler warning w/ gcc 4.6
+
+2011-05-02 14:52  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/affinity/hwloc_affinity.c: compile with debug turned on
+
+2011-04-30 07:07  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/affinity/hwloc_affinity.c, src/affinity/lgrp_affinity.c,
+	  src/affinity/libnumaV2_affinity.c,
+	  src/affinity/libnuma_affinity.c, src/affinity/mach_affinity.c,
+	  src/affinity/no_affinity.c, src/affinity/plpa_affinity.c,
+	  src/affinity/tile_affinity.c, src/ds/qarray.c, src/ds/qdqueue.c,
+	  src/ds/qlfqueue.c, src/ds/qpool.c, src/patterns/allpairs.c,
+	  src/qtimer/altix.c, src/qtimer/gethrtime.c, src/qtimer/gettime.c,
+	  src/qtimer/gettimeofday.c, src/qtimer/mach.c: reformatting
+
+2011-04-30 06:57  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/affinity/hwloc_affinity.c, src/cacheline.c, src/ds/qarray.c,
+	  src/patterns/allpairs.c, src/patterns/wavefront.c, src/qloop.c:
+	  fix misc compiler warnings (-Wextra)
+
+2011-04-30 06:47  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h, include/qt_mpool.h, src/qt_feb_barrier.c,
+	  src/qt_mpool.c, src/qthread.c, src/syncvar.c: fix misc compiler
+	  warnings (-Wextra)
+
+2011-04-29 14:30  Allan Porterfield <akp@renci.org>
+
+	* src/rose_xomp.c: added needed ifdef and remove debugging printfs
+
+2011-04-29 14:10  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/affinity/hwloc_affinity.c: remove debug variables
+
+2011-04-29 14:09  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: remove unused variable in
+	  qt_omp_parallel_region_create
+
+2011-04-20 20:49  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_external_fork.c, test/test_external_syncvar.c: fix the
+	  includes
+
+2011-04-18 14:38  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* TODO: new thoughts
+
+2011-04-18 14:38  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/qthread_shep_ok.3: typo
+
+2011-04-15 18:28  Allan Porterfield <akp@renci.org>
+
+	* include/maestro_sched.h, include/qloop_innards.h,
+	  src/rcrtool/Makefile.inc, src/rcrtool/bcGen.c,
+	  src/rcrtool/common_rcrtool.c, src/rcrtool/maestro_sched.c,
+	  src/rose_xomp.c: Start at rcrdaemon infomation changing MAESTRO
+	  scheduling of loops
+	  (tasks later). Adding prototype interface between daemon and
+	  scheduler
+	  and making changes in both the daemon and scheduler to use the
+	  interface.
+	  (qloop_innards.h) modify loop structure to track active thread
+	  per socket
+	  (maestro_sched.h) add interface include file between daemon and
+	  scheduler
+	  (bcGen.c) use new interface in daemon and reduce calls to
+	  interface
+	  (maestro_sched.c) initial prototype of interface
+	  (Makefile.inc) add new files to compilation
+	  (common_rcrtool.c) fix bug
+	  (rose_xomp.c) use interface to limit threads when memory
+	  concurrency is high
+
+2011-04-13 15:20  debiddo99
+
+	* src/qthread.c, src/rcrtool/RCRlogger.c, src/rcrtool/bcGen.c,
+	  src/rcrtool/common_rcrtool.c, src/rcrtool/common_rcrtool.h,
+	  src/rcrtool/qt_rcrtool.c, src/rcrtool/qt_rcrtool.h,
+	  src/rcrtool/triggers.c, src/rcrtool/triggers.h, src/rose_xomp.c:
+	  Fix to log the numberOfThreads in a call to XOMP_parallel_start.
+	  Fixed use of rcrtoollevel. Attempt to pin rcrtool daemon.
+
+2011-04-12 19:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/Makefile.am, test/test_external_syncvar.c: external syncvar
+	  test
+
+2011-04-12 19:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_external_fork.c: <sigh> now make it *really* work
+
+2011-04-12 19:38  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_external_fork.c: pthread_join is a blocking call;
+	  cannot use it in the main thread
+
+2011-04-11 21:05  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/qthread_shep_ok.3: fix typo
+
+2011-04-11 19:01  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: make it compile
+
+2011-04-08 17:52  Allan Porterfield <akp@renci.org>
+
+	* include/rose_xomp.h: need the ifClause argument to compile
+
+2011-04-08 12:02  debiddo99
+
+	* src/rose_xomp.c: Fix to rose_xomp.c. Previous check-in left off a
+	  function parameter.
+
+2011-04-08 11:59  debiddo99
+
+	* include/qthread_innards.h, include/rose_xomp.h, src/qthread.c,
+	  src/rcrtool/RCRlogger.c, src/rcrtool/bcGen.c,
+	  src/rcrtool/common_rcrtool.c, src/rcrtool/common_rcrtool.h,
+	  src/rcrtool/qt_rcrtool.c, src/rcrtool/qt_rcrtool.h,
+	  src/rcrtool/triggers.c, src/rcrtool/triggers.h, src/rose_xomp.c:
+	  Some clean up and organization of code in the RCRTool files.
+
+2011-04-07 18:28  Allan Porterfield <akp@renci.org>
+
+	* src/qthread.c, src/rose_xomp.c: (rose_xomp.c) switch to
+	  interruptable barrier from spin lock when nested
+	  parallelism has been detected someplace in the code
+	  (qthread.c) return 1 qt_omp_parallel_region_create from if nested
+	  parallelism
+	  fix previous pointer so that works when not nested
+
+2011-04-07 15:44  Allan Porterfield <akp@renci.org>
+
+	* include/qt_shepherd_innards.h, src/qthread.c, src/rose_xomp.c:
+	  (qt_shepherd_innards.h) remove unneeded member (parallel region
+	  now
+	  all in threads)
+	  (rose_xomp.c) add if clause to parallel_start (from ROSE)
+	  add num_threads caluse support
+	  if nested allow switch to non spin barriers
+	  (qthread.c) all parallel region control now in threads
+
+2011-04-06 15:10  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/feb.c: external threads may use basic (original) FEBs
+
+2011-04-06 14:59  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/locks.c: external threads may use lock/unlock
+
+2011-04-06 14:27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* AUTHORS, ChangeLog, NEWS: update ChangeLog - 1.5.2b
+
+2011-04-06 14:19  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/osx_compat: remove clutter
+
+2011-04-06 14:18  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/osx_compat: remove clutter
+
+2011-04-06 13:40  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/Makefile.am, include/fastcontext,
+	  include/fastcontext/386-ucontext.h,
+	  include/fastcontext/power-ucontext.h,
+	  include/fastcontext/taskimpl.h,
+	  include/fastcontext/tile-ucontext.h,
+	  include/osx_compat/386-ucontext.h,
+	  include/osx_compat/power-ucontext.h,
+	  include/osx_compat/taskimpl.h,
+	  include/osx_compat/tile-ucontext.h, include/qt_context.h,
+	  src/Makefile.am, src/fastcontext, src/fastcontext/Makefile.inc,
+	  src/fastcontext/asm.S, src/fastcontext/context.c,
+	  src/osx_compat/COPYRIGHT, src/osx_compat/Makefile.inc,
+	  src/osx_compat/asm.S, src/osx_compat/context.c, test/Makefile.am,
+	  test/time_swap.c: its not OSX compatibility anymore
+
 2011-04-06 13:24  Kyle Wheeler <kbwheel@sandia.gov>
 
 	* src/feb.c: fix compiler complaint about stdio

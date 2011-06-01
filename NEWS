@@ -1,13 +1,21 @@
---- 1.5.2b ---
+--- 1.6b ---
 New Features:
- - Support for OpenMP affinity extensions
+ - Brand new C++ qloop interface
  - Supports multi-locale Chapel
- - Support for RCRDaemon
+ - Experimental support for RCRDaemon
+ - Experimental support for OpenMP affinity extensions
+ - Experimental support for system call intercepting
 Improvements:
- - Support for external blocking operations
+ - Support for external threads using qthread blocking operations
  - Renamed internal context functions, to improve dynamic library loading
- - Better C++ wrappers
+ - Chapel interface built as a secondary (static-only) library
+ - Reduced exported symbols
  - Updated documentation
+Bugfixes:
+ - Fixed critical fastcontext bug on 32-bit x86
+ - Fixed incorrect rounding in atomic operations on old compilers in 32-bit systems
+ - Eliminated the faulty test_internal_mod test
+ - Fixed qloop memory leak
 --- 1.5.1 ---
 New Features:
  - Chapel shims
