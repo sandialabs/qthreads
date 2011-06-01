@@ -10,7 +10,9 @@ These are ideas for things to do (in no particular order):
 
  4. Lock-free double-ended queue for Gatling scheduler
 
- 5. Task-local data
+ 5. Task-local data (runtime configurable static size (similar to stack size));
+	share space with argument space, fall back to malloc for exceeding the
+	preallocated space
 
  6. Qthreads with in/out vectors for cross-node workstealing
 
