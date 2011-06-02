@@ -4,9 +4,6 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
-#ifdef HAVE_CPROPS
-# include <cprops/hashlist.h>
-#endif
 
 #include <stddef.h> /* for size_t (according to C89) */
 #include <stdint.h> /* for uintptr_t (according to C99) */
@@ -16,13 +13,8 @@ extern "C" {
 #endif
 
 typedef const void *qt_key_t;
-#ifndef HAVE_CPROPS
 typedef struct qt_hash_s *qt_hash;
 typedef void (*qt_hash_callback_fn)(const qt_key_t, void *, void *);
-#else
-typedef cp_hashlist *qt_hash;
-typedef int (*qt_hash_callback_fn)(void *, void *, void *);
-#endif
 typedef void (*qt_hash_deallocator_fn)(void *);
 
 /*!
@@ -50,7 +42,8 @@ void qt_hash_destroy_deallocate(qt_hash                h,
  * @fn qt_hash_put(qt_hash        h,
  *                 const qt_key_t key,
  *                 void          *value)
- * @brief Insert a mapping from <key> to <value> into the hash map.
+ * @brief Insert a mapping from <key> to <value> into the hash map. This
+ *      function returns a pointer to the location where <value> is stored.
  */
 void *qt_hash_put(qt_hash        h,
                   const qt_key_t key,

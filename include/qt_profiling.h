@@ -42,18 +42,10 @@
     ret->empty_time += secs; \
     ret->empty_count ++; } while (0)
 # define QTHREAD_LOCK_UNIQUERECORD(TYPE, ADDR, ME) qt_hash_put((ME)->shepherd_ptr->unique##TYPE##addrs, (void*)(ADDR), (void*)(ADDR))
-# ifndef HAVE_CPROPS
 static QINLINE void qthread_unique_collect(const qt_key_t key, void *value, void *id)
 {/*{{{*/
     qt_hash_put_locked((qt_hash) id, key, value);
-}
-# else /* HAVE_CPROPS */
-static QINLINE int qthread_unique_collect(void *key, void *value, void *id)
-{
-    qt_hash_put_locked((qt_hash) id, key, value);
-    return 0;
 }/*}}}*/
-# endif
 #else
 # define QTHREAD_WAIT_TIMER_DECLARATION
 # define QTHREAD_WAIT_TIMER_START() do{ }while(0)
