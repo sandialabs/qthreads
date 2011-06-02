@@ -114,7 +114,7 @@ void INTERNAL qt_process_blocking_calls(void)
     /* do something with <item> */
     switch(item->op) {
         default:
-            fprintf(stderr, "Unhandled syscall: %i\n", item->op);
+            fprintf(stderr, "Unhandled syscall: %u\n", (unsigned int)item->op);
             abort();
 #if HAVE_DECL_SYS_ACCEPT
         case ACCEPT:
