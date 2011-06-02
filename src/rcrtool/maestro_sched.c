@@ -6,10 +6,22 @@
 #include <stdio.h>
 #include "maestro_sched.h"
 
-static int allowed_workers[4] = {0,0,0,0};
+static int maestro_sched_init = 0;
+static int * allowed_workers;
+
+static void ms_init(void);
+static void ms_init(){
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+  int workers = qthread_num_workers();
+#else
+  int workers = qthread_num_shepherds();
+#endif
+  allowed_workers = (int*) malloc(workers*sizeof(int));
+}
 
 void maestro_sched(enum trigger_type type, enum trigger_action action, int val){
 
+  if (!maestro_sched_init) ms_init();
     switch (action){
       case(MTA_LOWER_STREAM_COUNT):
 	{
@@ -39,6 +51,7 @@ int maestro_allowed_workers() {
 #else
     int parallelWidth = sheps();
 #endif
+  if (!maestro_sched_init) ms_init();
     if (allowed_workers[0] == 0) {
       int i;
       for (i = 0; i < sheps; i ++) {

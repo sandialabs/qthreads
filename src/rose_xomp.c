@@ -371,9 +371,10 @@ qqloop_step_handle_t *qt_loop_rose_queue_create(
 #endif
     int malloc_size = sizeof(qqloop_step_handle_t) + // base size
       array_size * sizeof(aligned_t) + // static iteration array size
-      array_size * sizeof(aligned_t);  // current iteration array size 
+      array_size * sizeof(aligned_t) + // current iteration array size 
+      array_size * sizeof(aligned_t);  // table for current_worker array
     ret = (qqloop_step_handle_t *) malloc(malloc_size);
-
+    
     ret->workers = 0;
     ret->next = NULL;
     ret->departed_workers = 0;
@@ -383,6 +384,7 @@ qqloop_step_handle_t *qt_loop_rose_queue_create(
     ret->assignStep = incr;
     ret->assignDone = stop;
     ret->work_array_size = array_size;
+    ret->current_workers = ((aligned_t*)&(ret->work_array)) + (2 * array_size);
     // zero work array
     int i; 
     aligned_t * tmp = &ret->work_array;
@@ -444,8 +446,8 @@ void xomp_internal_loop_init(
     t->chunkSize = 1;
     t->type = type;
     t->iterations = 0;
-    int i;
     int numSheps = qthread_num_shepherds();
+    int i;
     for (i =0; i < numSheps; i++) {
       t->current_workers[i] = 0; // not me
     }
@@ -553,6 +555,7 @@ bool xomp_internal_guided_next(
 	      if(loop->departed_workers) break; // B) some worker to notice the loop is done  -- could repeat code and return instead of breaking
 	    }
 	    qthread_incr(&loop->current_workers[myShepId],1); // back at work  -- skipped in departed workers case OK since everyone leaving
+
 	}
     }
 #endif
