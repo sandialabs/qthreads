@@ -333,7 +333,7 @@ int qthread_syncvar_readFF(uint64_t *restrict const  dest,
                 qt_hash_unlock(qlib->syncvars[lockbin]);
                 return ENOMEM;
             }
-            qt_hash_put_locked(qlib->syncvars[lockbin], (void *)src, m);
+            qassertnot(qt_hash_put_locked(qlib->syncvars[lockbin], (void *)src, m), 0);
         }
         QTHREAD_FASTLOCK_LOCK(&(m->lock));
         qt_hash_unlock(qlib->syncvars[lockbin]);
@@ -521,7 +521,7 @@ int qthread_syncvar_readFE(uint64_t *restrict const  dest,
                 qt_hash_unlock(qlib->syncvars[lockbin]);
                 return ENOMEM;
             }
-            qt_hash_put_locked(qlib->syncvars[lockbin], (void *)src, m);
+            qassertnot(qt_hash_put_locked(qlib->syncvars[lockbin], (void *)src, m), 0);
         }
         QTHREAD_FASTLOCK_LOCK(&(m->lock));
         qt_hash_unlock(qlib->syncvars[lockbin]);
@@ -616,7 +616,7 @@ static QINLINE void qthread_syncvar_gotlock_empty(qthread_shepherd_t *shep,
             QTHREAD_FASTLOCK_LOCK(&(m->lock));
             if ((m->FEQ == NULL) && (m->EFQ == NULL) && (m->FFQ == NULL)) {
                 qthread_debug(LOCK_DETAILS, "all lists are empty\n");
-                qt_hash_remove_locked(qlib->syncvars[lockbin], (void *)maddr);
+                qassertnot(qt_hash_remove_locked(qlib->syncvars[lockbin], (void *)maddr), 0);
             } else {
                 QTHREAD_FASTLOCK_UNLOCK(&(m->lock));
                 qthread_debug(LOCK_DETAILS, "addr cannot be removed; in use\n");
@@ -794,7 +794,7 @@ int qthread_syncvar_writeEF(syncvar_t *restrict const      dest,
                 qt_hash_unlock(qlib->syncvars[lockbin]);
                 return ENOMEM;
             }
-            qt_hash_put_locked(qlib->syncvars[lockbin], (void *)dest, m);
+            qassertnot(qt_hash_put_locked(qlib->syncvars[lockbin], (void *)dest, m), 0);
         }
         /* lock the addrstat (already within the hash) and then unlock the hash */
         QTHREAD_FASTLOCK_LOCK(&(m->lock));

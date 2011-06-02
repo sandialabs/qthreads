@@ -161,7 +161,7 @@ static QINLINE void qthread_FEB_remove(void *maddr)
                 (m->full == 1)) {
                 qthread_debug(LOCK_DETAILS,
                               "all lists are empty, and status is full\n");
-                qt_hash_remove_locked(qlib->FEBs[lockbin], maddr);
+                qassertnot(qt_hash_remove_locked(qlib->FEBs[lockbin], maddr), 0);
             } else {
                 QTHREAD_FASTLOCK_UNLOCK(&(m->lock));
                 qthread_debug(LOCK_DETAILS,
@@ -303,7 +303,7 @@ int qthread_empty(const aligned_t *dest)
             }
             m->full = 0;
             QTHREAD_EMPTY_TIMER_START(m);
-            qt_hash_put_locked(FEBbin, (void *)alignedaddr, m);
+            qassertnot(qt_hash_put_locked(FEBbin, (void *)alignedaddr, m), 0);
             m = NULL;
         } else {
             /* it could be either full or not, don't know */
@@ -390,7 +390,7 @@ int qthread_writeF(aligned_t *restrict const       dest,
                 qt_hash_unlock(qlib->FEBs[lockbin]);
                 return QTHREAD_MALLOC_ERROR;
             }
-            qt_hash_put_locked(qlib->FEBs[lockbin], alignedaddr, m);
+            qassertnot(qt_hash_put_locked(qlib->FEBs[lockbin], alignedaddr, m), 0);
         }
         QTHREAD_FASTLOCK_LOCK(&m->lock);
     }
@@ -451,7 +451,7 @@ int qthread_writeEF(aligned_t *restrict const       dest,
                 qt_hash_unlock(qlib->FEBs[lockbin]);
                 return QTHREAD_MALLOC_ERROR;
             }
-            qt_hash_put_locked(qlib->FEBs[lockbin], alignedaddr, m);
+            qassertnot(qt_hash_put_locked(qlib->FEBs[lockbin], alignedaddr, m), 0);
         }
         QTHREAD_FASTLOCK_LOCK(&(m->lock));
     }
@@ -616,7 +616,7 @@ int qthread_readFE(aligned_t *restrict const       dest,
                 qt_hash_unlock(qlib->FEBs[lockbin]);
                 return QTHREAD_MALLOC_ERROR;
             }
-            qt_hash_put_locked(qlib->FEBs[lockbin], alignedaddr, m);
+            qassertnot(qt_hash_put_locked(qlib->FEBs[lockbin], alignedaddr, m), 0);
         }
         QTHREAD_FASTLOCK_LOCK(&(m->lock));
     }

@@ -253,22 +253,22 @@ void INTERNAL qt_hash_destroy_deallocate(qt_hash                h,
     qt_hash_destroy(h);
 } /*}}}*/
 
-void INTERNAL *qt_hash_put(qt_hash        h,
-                           const qt_key_t key,
-                           void          *value)
+int INTERNAL qt_hash_put(qt_hash  h,
+                         qt_key_t key,
+                         void    *value)
 {   /*{{{*/
-    void *v;
+    int ret;
 
     assert(h);
-    qassert_ret(key != KEY_DELETED && key != KEY_NULL, NULL);
+    qassert_ret(key != KEY_DELETED && key != KEY_NULL, 0);
     if (h->lock) {
         QTHREAD_FASTLOCK_LOCK(h->lock);
     }
-    v = qt_hash_put_locked(h, key, value);
+    ret = qt_hash_put_locked(h, key, value);
     if (h->lock) {
         QTHREAD_FASTLOCK_UNLOCK(h->lock);
     }
-    return v;
+    return ret;
 } /*}}}*/
 
 static void brehash(qt_hash h,
@@ -285,7 +285,7 @@ static void brehash(qt_hash h,
     if (copied < h->population) {
         for (i = 0; i < h->num_entries; ++i) {
             if (h->entries[i].key > KEY_DELETED) {
-                qassertnot(qt_hash_put_locked(d, h->entries[i].key, h->entries[i].value), NULL);
+                qassertnot(qt_hash_put_locked(d, h->entries[i].key, h->entries[i].value), 0);
                 ++copied;
                 if (copied == h->population) {
                     break;
@@ -309,9 +309,9 @@ static void brehash(qt_hash h,
     free(d);
 } /*}}}*/
 
-void INTERNAL *qt_hash_put_locked(qt_hash        h,
-                                  const qt_key_t key,
-                                  void          *value)
+int INTERNAL qt_hash_put_locked(qt_hash  h,
+                                qt_key_t key,
+                                void    *value)
 {                     /*{{{*/
     hash_entry *z;    // for speed, to avoid extra ptr dereferences
     uint64_t    mask; // for speed, to avoid extra ptr dereferences
@@ -321,7 +321,7 @@ void INTERNAL *qt_hash_put_locked(qt_hash        h,
     uint64_t    hw, bucket, step;
 
     assert(h);
-    qassert_ret(key != KEY_DELETED && key != KEY_NULL, NULL);
+    qassert_ret(key != KEY_DELETED && key != KEY_NULL, 0);
 
 restart:
     z    = h->entries;
@@ -339,7 +339,7 @@ restart:
     for (i = 0; i < bucketsize; ++i) {
         if (z[bucket + i].key == key) {
             z[bucket + i].value = value;
-            return &z[bucket + i].value;
+            return 1;
         } else if (z[bucket + i].key == KEY_DELETED) {
             if (f == -1) {
                 f = bucket + i;
@@ -362,7 +362,7 @@ restart:
                  * cacheline)... should be cheap, though */
                 if (z[bucket + i].key == key) {
                     z[bucket + i].value = value;
-                    return &z[bucket + i].value;
+                    return 1;
                 } else if (z[bucket + i].key == KEY_DELETED) {
                     if (f == -1) {
                         f = bucket + i;
@@ -393,24 +393,27 @@ restart:
     z[f].key   = key;
     z[f].value = value;
     ++h->population;
-    return &z[f].value;
+    return 1;
 } /*}}}*/
 
-void INTERNAL qt_hash_remove(qt_hash        h,
-                             const qt_key_t key)
+int INTERNAL qt_hash_remove(qt_hash        h,
+                            const qt_key_t key)
 {   /*{{{*/
+    int ret;
+
     assert(h);
     if (h->lock) {
         QTHREAD_FASTLOCK_LOCK(h->lock);
     }
-    qt_hash_remove_locked(h, key);
+    ret = qt_hash_remove_locked(h, key);
     if (h->lock) {
         QTHREAD_FASTLOCK_UNLOCK(h->lock);
     }
+    return ret;
 } /*}}}*/
 
-void INTERNAL qt_hash_remove_locked(qt_hash        h,
-                                    const qt_key_t key)
+int INTERNAL qt_hash_remove_locked(qt_hash        h,
+                                   const qt_key_t key)
 {   /*{{{*/
     hash_entry *p;
     void      **value;
@@ -418,7 +421,7 @@ void INTERNAL qt_hash_remove_locked(qt_hash        h,
     assert(h);
     value = qt_hash_internal_find(h, key);
     if (value == NULL) {
-        return;
+        return 0;
     }
     p      = (hash_entry *)(value - 1); // sneaky way to recover the hash_entry ptr
     p->key = KEY_DELETED;
@@ -429,6 +432,7 @@ void INTERNAL qt_hash_remove_locked(qt_hash        h,
     } else if (h->population < h->shrink_size) {
         brehash(h, h->num_entries / 2);
     }
+    return 1;
 } /*}}}*/
 
 void INTERNAL *qt_hash_get(qt_hash        h,

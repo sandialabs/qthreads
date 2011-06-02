@@ -43,11 +43,12 @@ void qt_hash_destroy_deallocate(qt_hash                h,
  *                 const qt_key_t key,
  *                 void          *value)
  * @brief Insert a mapping from <key> to <value> into the hash map. This
- *      function returns a pointer to the location where <value> is stored.
+ *      function returns 1 if the insertion succeeded, or 0 is the insertion
+ *      failed.
  */
-void *qt_hash_put(qt_hash        h,
-                  const qt_key_t key,
-                  void          *value);
+int qt_hash_put(qt_hash  h,
+                qt_key_t key,
+                void    *value);
 
 /*!
  * @fn qt_hash_put_locked(qt_hash        h,
@@ -55,17 +56,17 @@ void *qt_hash_put(qt_hash        h,
  *                        void          *value)
  * @brief Same as qt_hash_put(), but assumes that the hash map has been
  *	locked already. */
-void *qt_hash_put_locked(qt_hash        h,
-                         const qt_key_t key,
-                         void          *value);
+int qt_hash_put_locked(qt_hash  h,
+                       qt_key_t key,
+                       void    *value);
 
 /*!
  * @fn qt_hash_remove(qt_hash        h,
  *                    const qt_key_t key)
  * @brief Remove the mapping for <key> from the hash map.
  */
-void qt_hash_remove(qt_hash        h,
-                    const qt_key_t key);
+int qt_hash_remove(qt_hash        h,
+                   const qt_key_t key);
 
 /*!
  * @fn qt_hash_remove_locked(qt_hash        h,
@@ -73,8 +74,8 @@ void qt_hash_remove(qt_hash        h,
  * @brief Same as qt_hash_remove(), but assumes that the hash map has been
  *	locked already.
  */
-void qt_hash_remove_locked(qt_hash        h,
-                           const qt_key_t key);
+int qt_hash_remove_locked(qt_hash        h,
+                          const qt_key_t key);
 
 /*!
  * @fn qt_hash_get(qt_hash        h,

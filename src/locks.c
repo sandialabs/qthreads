@@ -160,7 +160,7 @@ int qthread_lock(const aligned_t *a)
         }
         QTHREAD_FASTLOCK_INIT(m->lock);
         QTHREAD_HOLD_TIMER_INIT(m);
-        qt_hash_put_locked(qlib->locks[lockbin], (void *)a, m);
+        qassertnot(qt_hash_put_locked(qlib->locks[lockbin], (void *)a, m), 0);
         /* since we just created it, we own it */
         QTHREAD_FASTLOCK_LOCK(&m->lock);
         /* can only unlock the hash after we've locked the address, because
@@ -240,7 +240,7 @@ int qthread_unlock(const aligned_t *a)
         qthread_debug(LOCK_DETAILS,
                       "tid(%u), a(%p): deleting waiting queue\n",
                       me->thread_id, a);
-        qt_hash_remove_locked(qlib->locks[lockbin], (void *)a);
+        qassertnot(qt_hash_remove_locked(qlib->locks[lockbin], (void *)a), 0);
         qt_hash_unlock(qlib->locks[lockbin]);
         QTHREAD_HOLD_TIMER_DESTROY(m);
         QTHREAD_UNLOCK(&m->waiting->lock);
