@@ -12,7 +12,7 @@
 # endif
 #endif
 
-#if AKP_DEBUG
+#if defined(AKP_DEBUG) && AKP_DEBUG
 
 typedef struct qt_spin_exclusive_s { /* added to allow fast critical section ordering */
     volatile uint64_t enter;         /* and not call pthreads spin_lock -- hard to debug */

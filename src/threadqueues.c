@@ -17,7 +17,7 @@
 #include "qthread_prefetch.h"
 #include "qt_threadqueues.h"
 
-#if AKP_DEBUG
+#if defined(AKP_DEBUG) && AKP_DEBUG
 /* function added to ease debugging and tuning around queue critical sections - 4/1/11 AKP */
 
 void qt_spin_exclusive_lock(qt_spin_exclusive_t *l)
