@@ -30,15 +30,16 @@ void              qt_threadqueue_free(qt_threadqueue_t *q);
 void              qt_threadqueue_enqueue(qt_threadqueue_t   *q,
                                          qthread_t          *t,
                                          qthread_shepherd_t *shep);
-ssize_t    qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q);
-qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q);
-qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q
-                                           QMS_ARG(size_t active));
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-/* Functions for work stealing functionality */
 void qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
                                     qthread_t          *t,
                                     qthread_shepherd_t *shep);
+ssize_t    qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q);
+qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q);
+
+qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q QMS_ARG(size_t active));
+
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+/* Functions for work stealing functionality */
 void qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
                                      qt_threadqueue_node_t *first,
                                      qthread_shepherd_t    *shep);
@@ -46,8 +47,6 @@ qt_threadqueue_node_t *qt_threadqueue_dequeue_steal(qt_threadqueue_t *q);
 qt_threadqueue_node_t *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
                                                        void             *value);
 void qthread_steal_stat(void);
-#else // ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-# define qt_threadqueue_enqueue_yielded(q, t, s) qt_threadqueue_enqueue((q), (t), (s))
 #endif // ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 
 #endif // ifndef QT_THREADQUEUES_H

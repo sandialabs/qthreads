@@ -148,21 +148,21 @@ static QINLINE void FREE_TQNODE(qt_threadqueue_node_t *t)
 #endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 
 void qt_threadqueue_init_pools(qt_threadqueue_pools_t *p)
-{
+{   /*{{{*/
     p->nodes  = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), 16);
     p->queues = qt_mpool_create(sizeof(qt_threadqueue_t));
-}
+} /*}}}*/
 
 void qt_threadqueue_destroy_pools(qt_threadqueue_pools_t *p)
-{
+{   /*{{{*/
     qt_mpool_destroy(p->nodes);
     qt_mpool_destroy(p->queues);
-}
+} /*}}}*/
 
 ssize_t qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
-{
+{   /*{{{*/
     return qthread_internal_atomic_read_s(&q->advisory_queuelen, &q->advisory_queuelen_m);
-}
+} /*}}}*/
 
 #define QTHREAD_INITLOCK(l) do { if (pthread_mutex_init(l, NULL) != 0) { return QTHREAD_PTHREAD_ERROR; } } while(0)
 #define QTHREAD_LOCK(l)     qassert(pthread_mutex_lock(l), 0)
@@ -338,6 +338,13 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
 #  endif
 # endif /* ifdef QTHREAD_MUTEX_INCREMENT */
 }                                      /*}}} */
+
+void qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
+                                    qthread_t          *t,
+                                    qthread_shepherd_t *shep)
+{   /*{{{*/
+    qt_threadqueue_enqueue(q, t, shep);
+} /*}}}*/
 
 qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
 {                                      /*{{{ */
