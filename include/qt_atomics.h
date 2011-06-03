@@ -12,6 +12,13 @@
 # endif
 #endif
 
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
+    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
+# define SPINLOCK_BODY() do { __asm__ __volatile__ ("pause" ::: "memory"); } while (0)
+#else
+# define SPINLOCK_BODY() do { } while (0)
+#endif
+
 #if defined(AKP_DEBUG) && AKP_DEBUG
 
 typedef struct qt_spin_exclusive_s { /* added to allow fast critical section ordering */
