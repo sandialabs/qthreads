@@ -17,6 +17,25 @@
 #include "qthread_prefetch.h"
 #include "qt_threadqueues.h"
 
+/* Data Structures */
+struct _qt_threadqueue_node {
+#ifdef QTHREAD_MUTEX_INCREMENT
+    struct _qt_threadqueue_node                   *next;
+#else
+    volatile struct _qt_threadqueue_node *volatile next;
+#endif
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    /* used for the work stealing queue implementation */
+# ifdef QTHREAD_MUTEX_INCREMENT
+    struct _qt_threadqueue_node                   *prev;
+# else
+    volatile struct _qt_threadqueue_node *volatile prev;
+# endif
+#endif
+    qthread_t          *value;
+    qthread_shepherd_t *creator_ptr;
+} /* qt_threadqueue_node_t */;
+
 #if defined(AKP_DEBUG) && AKP_DEBUG
 /* function added to ease debugging and tuning around queue critical sections - 4/1/11 AKP */
 
@@ -99,6 +118,16 @@ static QINLINE void FREE_TQNODE(qt_threadqueue_node_t *t)
 }                                      /*}}} */
 
 #endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
+
+void qt_threadqueue_init_pool(qt_mpool *pool)
+{
+    *pool = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), 16);
+}
+
+void qt_threadqueue_destroy_pool(qt_mpool *pool)
+{
+    qt_mpool_destroy(*pool);
+}
 
 #define QTHREAD_INITLOCK(l) do { if (pthread_mutex_init(l, NULL) != 0) { return QTHREAD_PTHREAD_ERROR; } } while(0)
 #define QTHREAD_LOCK(l)     qassert(pthread_mutex_lock(l), 0)

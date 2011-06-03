@@ -959,7 +959,7 @@ int qthread_initialize(void)
 # endif
         qlib->shepherds[i].queue_pool            = qt_mpool_create(sizeof(qthread_queue_t));
         qlib->shepherds[i].threadqueue_pool      = qt_mpool_create(sizeof(qt_threadqueue_t));
-        qlib->shepherds[i].threadqueue_node_pool = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), 16);
+        qt_threadqueue_init_pool(&(qlib->shepherds[i].threadqueue_node_pool));
         qlib->shepherds[i].lock_pool             = qt_mpool_create(sizeof(qthread_lock_t));
         qlib->shepherds[i].addrres_pool          = qt_mpool_create(sizeof(qthread_addrres_t));
         qlib->shepherds[i].addrstat_pool         = qt_mpool_create(sizeof(qthread_addrstat_t));
@@ -975,7 +975,7 @@ int qthread_initialize(void)
 # endif
     generic_queue_pool            = qt_mpool_create(sizeof(qthread_queue_t));
     generic_threadqueue_pool      = qt_mpool_create(sizeof(qt_threadqueue_t));
-    generic_threadqueue_node_pool = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), 16);
+    qt_threadqueue_init_pool(&generic_threadqueue_node_pool);
     generic_lock_pool             = qt_mpool_create(sizeof(qthread_lock_t));
     generic_addrstat_pool         = qt_mpool_create(sizeof(qthread_addrstat_t));
 #endif /* ifndef UNPOOLED */
@@ -1587,7 +1587,7 @@ void qthread_finalize(void)
         qthread_debug(ALL_DETAILS, "destroy shep %i threadqueue pool\n", (int)i);
         qt_mpool_destroy(qlib->shepherds[i].threadqueue_pool);
         qthread_debug(ALL_DETAILS, "destroy shep %i threadqueue_node pool\n", (int)i);
-        qt_mpool_destroy(qlib->shepherds[i].threadqueue_node_pool);
+        qt_threadqueue_destroy_pool(&qlib->shepherds[i].threadqueue_node_pool);
         qthread_debug(ALL_DETAILS, "destroy shep %i lock pool\n", (int)i);
         qt_mpool_destroy(qlib->shepherds[i].lock_pool);
         qthread_debug(ALL_DETAILS, "destroy shep %i addrres pool\n", (int)i);
@@ -1604,7 +1604,7 @@ void qthread_finalize(void)
     generic_stack_pool = NULL;
     qt_mpool_destroy(generic_queue_pool);
     generic_queue_pool = NULL;
-    qt_mpool_destroy(generic_threadqueue_pool);
+    qt_threadqueue_destroy_pool(&generic_threadqueue_pool);
     generic_threadqueue_pool = NULL;
     qt_mpool_destroy(generic_threadqueue_node_pool);
     generic_threadqueue_node_pool = NULL;

@@ -3,23 +3,7 @@
 
 #include "qt_atomics.h"
 
-typedef struct _qt_threadqueue_node {
-    qthread_t *value;
-#ifdef QTHREAD_MUTEX_INCREMENT
-    struct _qt_threadqueue_node *next;
-#else
-    volatile struct _qt_threadqueue_node *volatile next;
-#endif
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    /* used for the work stealing queue implementation */
-#ifdef QTHREAD_MUTEX_INCREMENT
-    struct _qt_threadqueue_node *prev;
-#else
-    volatile struct _qt_threadqueue_node *volatile prev;
-#endif
-#endif
-    qthread_shepherd_t *creator_ptr;
-} qt_threadqueue_node_t;
+typedef struct _qt_threadqueue_node qt_threadqueue_node_t;
 
 struct qt_threadqueue_s {
 #ifdef QTHREAD_MUTEX_INCREMENT
@@ -56,6 +40,9 @@ struct qt_threadqueue_s {
 #else
 # define QMS_ARG(x)
 #endif
+
+void qt_threadqueue_init_pool(qt_mpool *pool);
+void qt_threadqueue_destroy_pool(qt_mpool *pool);
 
 qt_threadqueue_t *qt_threadqueue_new(qthread_shepherd_t * shepherd);
 void qt_threadqueue_free(qt_threadqueue_t * q);
