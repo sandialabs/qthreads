@@ -266,6 +266,16 @@ AC_ARG_ENABLE([valgrind],
               [AS_HELP_STRING([--enable-valgrind],
                               [compile with valgrind macros to assist with debugging])])
 
+AC_ARG_WITH([cacheline-width],
+			[AS_HELP_STRING([--with-cacheline-width=bytes],
+							[Specify the cacheline width for the target
+							 machine. Defaults to 64. Used only for optimizing
+							 internal data structure layout;
+							 qthread_cacheline() still detects this at
+							 runtime.])],
+			[],
+			[with_cacheline_width=64])
+
 AC_ARG_VAR([CHPL_HOME],
            [Provide the path to the Chapel build directory. Only used if the Chapel compiler interface is enabled.])
 AS_IF([test "x$CHPL_HOME" != "x"],
@@ -426,6 +436,9 @@ AC_CACHE_SAVE
 ## -------------------- ##
 ## Check for structures ##
 ## -------------------- ##
+AC_MSG_CHECKING([cacheline width])
+AC_MSG_RESULT([$with_cacheline_width])
+AC_DEFINE_UNQUOTED([CACHELINE_WIDTH],[$with_cacheline_width],[The cacheline width])
 AC_CHECK_SIZEOF(pthread_mutex_t)
 dnl BWB - FIX ME - shouldn't we actually make sure on this size thing?
 AC_DEFINE([PTHREAD_MUTEX_SMALL_ENOUGH], [1],
