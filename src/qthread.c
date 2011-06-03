@@ -81,13 +81,11 @@ extern QTHREAD_FASTLOCK_TYPE rcrtool_lock;
 #endif
 
 /* shared globals (w/ futurelib) */
-pthread_key_t shepherd_structs;
-qlib_t        qlib                          = NULL;
-int           qaffinity                     = 1;
-qt_mpool      generic_lock_pool             = NULL;
-qt_mpool      generic_queue_pool            = NULL;
-qt_mpool      generic_threadqueue_pool      = NULL;
-qt_mpool      generic_threadqueue_node_pool = NULL;
+pthread_key_t          shepherd_structs;
+qlib_t                 qlib                      = NULL;
+int                    qaffinity                 = 1;
+qt_mpool               generic_lock_pool         = NULL;
+qt_mpool               generic_queue_pool        = NULL;
 
 struct qt_cleanup_funcs_s {
     void                       (*func)(void);
@@ -586,9 +584,7 @@ static qthread_shepherd_t *qthread_find_active_shepherd(qthread_shepherd_id_t *l
 
         for (size_t i = 0; i < nsheps; i++) {
             if (QTHREAD_CASLOCK_READ_UI(sheps[i].active)) {
-                ssize_t shep_busy_level =
-                    qthread_internal_atomic_read_s(&sheps[i].ready->advisory_queuelen,
-                                                   &sheps[i].ready->advisory_queuelen_m);
+                ssize_t shep_busy_level = qt_threadqueue_advisory_queuelen(sheps[i].ready);
 
                 if (found == 0) {
                     found = 1;
@@ -635,14 +631,10 @@ static qthread_shepherd_t *qthread_find_active_shepherd(qthread_shepherd_id_t *l
         qthread_debug(ALL_FUNCTIONS,
                       "l(%p): nearest active shepherd (%i) is %i away\n",
                       l, (int)l[target], (int)d[l[target]]);
-        busyness =
-            qthread_internal_atomic_read_s(&sheps[l[target]].ready->advisory_queuelen,
-                                           &sheps[l[target]].ready->advisory_queuelen_m);
+        busyness = qt_threadqueue_advisory_queuelen(sheps[l[target]].ready);
         for (alt = target + 1; alt < (nsheps - 1) && d[l[alt]] == d[l[target]];
              alt++) {
-            saligned_t shep_busy_level =
-                qthread_internal_atomic_read_s(&sheps[l[alt]].ready->advisory_queuelen,
-                                               &sheps[l[alt]].ready->advisory_queuelen_m);
+            saligned_t shep_busy_level = qt_threadqueue_advisory_queuelen(sheps[l[alt]].ready);
             if ((shep_busy_level < busyness) ||
                 ((shep_busy_level == busyness) && (random() % 2 == 0))) {
                 qthread_debug(ALL_FUNCTIONS,
@@ -772,7 +764,7 @@ int qthread_initialize(void)
         qshe = NULL;
 
         if (qsh) {
-	  rcrSchedulingOff = 0; // treat as True if it exists
+            rcrSchedulingOff = 0; // treat as True if it exists
         }
 # endif /* ifdef QTHREAD_RCRTOOL */
     }
@@ -957,12 +949,10 @@ int qthread_initialize(void)
 # else
             qt_mpool_create(qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s));
 # endif
-        qlib->shepherds[i].queue_pool            = qt_mpool_create(sizeof(qthread_queue_t));
-        qlib->shepherds[i].threadqueue_pool      = qt_mpool_create(sizeof(qt_threadqueue_t));
-        qt_threadqueue_init_pool(&(qlib->shepherds[i].threadqueue_node_pool));
-        qlib->shepherds[i].lock_pool             = qt_mpool_create(sizeof(qthread_lock_t));
-        qlib->shepherds[i].addrres_pool          = qt_mpool_create(sizeof(qthread_addrres_t));
-        qlib->shepherds[i].addrstat_pool         = qt_mpool_create(sizeof(qthread_addrstat_t));
+        qt_threadqueue_init_pools(&(qlib->shepherds[i].threadqueue_pools));
+        qlib->shepherds[i].lock_pool     = qt_mpool_create(sizeof(qthread_lock_t));
+        qlib->shepherds[i].addrres_pool  = qt_mpool_create(sizeof(qthread_addrres_t));
+        qlib->shepherds[i].addrstat_pool = qt_mpool_create(sizeof(qthread_addrstat_t));
     }                      /*}}} */
 /* these are used when qthread_fork() is called from a non-qthread. */
     generic_qthread_pool = qt_mpool_create(sizeof(qthread_t));
@@ -973,11 +963,13 @@ int qthread_initialize(void)
 # else
         qt_mpool_create(sizeof(struct qthread_runtime_data_s) + qlib->qthread_stack_size);
 # endif
-    generic_queue_pool            = qt_mpool_create(sizeof(qthread_queue_t));
-    generic_threadqueue_pool      = qt_mpool_create(sizeof(qt_threadqueue_t));
-    qt_threadqueue_init_pool(&generic_threadqueue_node_pool);
-    generic_lock_pool             = qt_mpool_create(sizeof(qthread_lock_t));
-    generic_addrstat_pool         = qt_mpool_create(sizeof(qthread_addrstat_t));
+    generic_queue_pool       = qt_mpool_create(sizeof(qthread_queue_t));
+    {
+        extern qt_threadqueue_pools_t generic_threadqueue_pools;
+        qt_threadqueue_init_pools(&generic_threadqueue_pools);
+    }
+    generic_lock_pool     = qt_mpool_create(sizeof(qthread_lock_t));
+    generic_addrstat_pool = qt_mpool_create(sizeof(qthread_addrstat_t));
 #endif /* ifndef UNPOOLED */
     qt_blocking_subsystem_init();
 
@@ -1584,10 +1576,8 @@ void qthread_finalize(void)
         qt_mpool_destroy(qlib->shepherds[i].qthread_pool);
         qthread_debug(ALL_DETAILS, "destroy shep %i queue pool\n", (int)i);
         qt_mpool_destroy(qlib->shepherds[i].queue_pool);
-        qthread_debug(ALL_DETAILS, "destroy shep %i threadqueue pool\n", (int)i);
-        qt_mpool_destroy(qlib->shepherds[i].threadqueue_pool);
-        qthread_debug(ALL_DETAILS, "destroy shep %i threadqueue_node pool\n", (int)i);
-        qt_threadqueue_destroy_pool(&qlib->shepherds[i].threadqueue_node_pool);
+        qthread_debug(ALL_DETAILS, "destroy shep %i threadqueue pools\n", (int)i);
+        qt_threadqueue_destroy_pools(&qlib->shepherds[i].threadqueue_pools);
         qthread_debug(ALL_DETAILS, "destroy shep %i lock pool\n", (int)i);
         qt_mpool_destroy(qlib->shepherds[i].lock_pool);
         qthread_debug(ALL_DETAILS, "destroy shep %i addrres pool\n", (int)i);
@@ -1604,10 +1594,10 @@ void qthread_finalize(void)
     generic_stack_pool = NULL;
     qt_mpool_destroy(generic_queue_pool);
     generic_queue_pool = NULL;
-    qt_threadqueue_destroy_pool(&generic_threadqueue_pool);
-    generic_threadqueue_pool = NULL;
-    qt_mpool_destroy(generic_threadqueue_node_pool);
-    generic_threadqueue_node_pool = NULL;
+    {
+        extern qt_threadqueue_pools_t generic_threadqueue_pools;
+        qt_threadqueue_destroy_pools(&generic_threadqueue_pools);
+    }
     qt_mpool_destroy(generic_lock_pool);
     generic_lock_pool = NULL;
     qt_mpool_destroy(generic_addrstat_pool);
@@ -1768,11 +1758,7 @@ size_t qthread_readstate(const enum introspective_state type)
             if (shep == NULL) {
                 return (size_t)(-1);
             } else {
-                return qthread_internal_atomic_read_s(&
-                                                      (shep->
-                                                       ready->advisory_queuelen),
-                                                      &(shep->
-                                                        ready->advisory_queuelen_m));
+                return qt_threadqueue_advisory_queuelen(shep->ready);
             }
         }
         case ACTIVE_SHEPHERDS:

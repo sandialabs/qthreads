@@ -36,6 +36,36 @@ struct _qt_threadqueue_node {
     qthread_shepherd_t *creator_ptr;
 } /* qt_threadqueue_node_t */;
 
+struct _qt_threadqueue {
+#ifdef QTHREAD_MUTEX_INCREMENT
+    qt_threadqueue_node_t                   *head;
+    qt_threadqueue_node_t                   *tail;
+    QTHREAD_FASTLOCK_TYPE                    head_lock;
+    QTHREAD_FASTLOCK_TYPE                    tail_lock;
+    QTHREAD_FASTLOCK_TYPE                    advisory_queuelen_m;
+#else
+    volatile qt_threadqueue_node_t *volatile head;
+    volatile qt_threadqueue_node_t *volatile tail;
+# ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
+    volatile aligned_t                       fruitless;
+    pthread_mutex_t                          lock;
+    pthread_cond_t                           notempty;
+# endif                         /* CONDWAIT */
+#endif                          /* MUTEX_INCREMENT */
+    /* the following is for estimating a queue's "busy" level, and is not
+     * guaranteed accurate (that would be a race condition) */
+    volatile saligned_t advisory_queuelen;
+    qthread_shepherd_t *creator_ptr;
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    /* used for the work stealing queue implementation */
+    QTHREAD_FASTLOCK_TYPE qlock;
+    long                  qlength;
+    long                  qlength_stealable; /* number of stealable tasks on queue - stop steal attempts
+                                              * that will fail because tasks cannot be moved - 4/1/11 AKP
+                                              */
+#endif
+} /* qt_threadqueue_t */;
+
 #if defined(AKP_DEBUG) && AKP_DEBUG
 /* function added to ease debugging and tuning around queue critical sections - 4/1/11 AKP */
 
@@ -76,13 +106,12 @@ static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret,
 
 # define FREE_TQNODE(t) free(t)
 #else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
-extern qt_mpool generic_threadqueue_pool;
-extern qt_mpool generic_threadqueue_node_pool;
+qt_threadqueue_pools_t generic_threadqueue_pools;
 static QINLINE qt_threadqueue_t *ALLOC_THREADQUEUE(qthread_shepherd_t *shep)
 {                                      /*{{{ */
-    qt_threadqueue_t *tmp =
-        (qt_threadqueue_t *)qt_mpool_alloc(shep ? (shep->threadqueue_pool) :
-                                           generic_threadqueue_pool);
+    qt_threadqueue_t *tmp = (qt_threadqueue_t *)qt_mpool_alloc(shep
+                                                               ? (shep->threadqueue_pools.queues)
+                                                               : generic_threadqueue_pools.queues);
 
     if (tmp != NULL) {
         tmp->creator_ptr = shep;
@@ -92,19 +121,16 @@ static QINLINE qt_threadqueue_t *ALLOC_THREADQUEUE(qthread_shepherd_t *shep)
 
 static QINLINE void FREE_THREADQUEUE(qt_threadqueue_t *t)
 {                                      /*{{{ */
-    qt_mpool_free(t->creator_ptr ? (t->creator_ptr->threadqueue_pool) :
-                  generic_threadqueue_pool, t);
+    qt_mpool_free(t->creator_ptr ? (t->creator_ptr->threadqueue_pools.queues) :
+                  generic_threadqueue_pools.queues, t);
 }                                      /*}}} */
 
 static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret,
                                  qthread_shepherd_t     *shep)
 {                                      /*{{{ */
-    *ret =
-        (qt_threadqueue_node_t *)qt_mpool_alloc(shep
-                                                ? (shep->
-                                                   threadqueue_node_pool)
-                                                :
-                                                generic_threadqueue_node_pool);
+    *ret = (qt_threadqueue_node_t *)qt_mpool_alloc(shep
+                                                   ? (shep->threadqueue_pools.nodes)
+                                                   : generic_threadqueue_pools.nodes);
     if (*ret != NULL) {
         memset(*ret, 0, sizeof(qt_threadqueue_node_t));
         (*ret)->creator_ptr = shep;
@@ -113,20 +139,29 @@ static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret,
 
 static QINLINE void FREE_TQNODE(qt_threadqueue_node_t *t)
 {                                      /*{{{ */
-    qt_mpool_free(t->creator_ptr ? (t->creator_ptr->threadqueue_node_pool) :
-                  generic_threadqueue_node_pool, t);
+    qt_mpool_free(t->creator_ptr
+                  ? (t->creator_ptr->threadqueue_pools.nodes)
+                  : generic_threadqueue_pools.nodes,
+                  t);
 }                                      /*}}} */
 
 #endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 
-void qt_threadqueue_init_pool(qt_mpool *pool)
+void qt_threadqueue_init_pools(qt_threadqueue_pools_t *p)
 {
-    *pool = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), 16);
+    p->nodes  = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), 16);
+    p->queues = qt_mpool_create(sizeof(qt_threadqueue_t));
 }
 
-void qt_threadqueue_destroy_pool(qt_mpool *pool)
+void qt_threadqueue_destroy_pools(qt_threadqueue_pools_t *p)
 {
-    qt_mpool_destroy(*pool);
+    qt_mpool_destroy(p->nodes);
+    qt_mpool_destroy(p->queues);
+}
+
+ssize_t qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
+{
+    return qthread_internal_atomic_read_s(&q->advisory_queuelen, &q->advisory_queuelen_m);
 }
 
 #define QTHREAD_INITLOCK(l) do { if (pthread_mutex_init(l, NULL) != 0) { return QTHREAD_PTHREAD_ERROR; } } while(0)
@@ -170,7 +205,6 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd)
     qt_threadqueue_t *q = ALLOC_THREADQUEUE(shepherd);
 
     if (q != NULL) {
-        q->creator_ptr = shepherd;
 # ifdef QTHREAD_MUTEX_INCREMENT
         QTHREAD_FASTLOCK_INIT(q->head_lock);
         QTHREAD_FASTLOCK_INIT(q->tail_lock);

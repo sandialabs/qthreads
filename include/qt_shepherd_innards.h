@@ -7,13 +7,11 @@
 /* Internal Pre-requisites */
 #include "qt_mpool.h"
 #include "qt_atomics.h"
+#include "qt_threadqueues.h"
 
 #ifdef QTHREAD_OMP_AFFINITY
 #include "omp_affinity.h"
 #endif
-
-/* pre-declarations */
-typedef struct qt_threadqueue_s qt_threadqueue_t;
 
 #ifndef QTHREAD_SHEPHERD_TYPEDEF
 #define QTHREAD_SHEPHERD_TYPEDEF
@@ -48,8 +46,7 @@ struct qthread_shepherd_s
     /* memory pools */
     qt_mpool qthread_pool;
     qt_mpool queue_pool;
-    qt_mpool threadqueue_pool;
-    qt_mpool threadqueue_node_pool;
+    qt_threadqueue_pools_t threadqueue_pools;
     qt_mpool lock_pool;
     qt_mpool addrres_pool;
     qt_mpool addrstat_pool;
