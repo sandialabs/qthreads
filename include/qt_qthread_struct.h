@@ -31,9 +31,9 @@ enum threadstate {
 #define QTHREAD_MUST_BE_WORKER_ZERO (1 << 4)     /* force thread to shepherd 0 worker 0 for termination 4/1/11 akp */
 
 struct qthread_runtime_data_s {
-    void       *stack;          /* the thread's stack */
-    qt_context_t  context;        /* the context switch info */
-    qt_context_t *return_context; /* context of parent shepherd */
+    void          *stack;          /* the thread's stack */
+    qt_context_t   context;        /* the context switch info */
+    qt_context_t  *return_context; /* context of parent shepherd */
 
     /* a pointer used for passing information back to the shepherd when
      * becoming blocked */
@@ -53,7 +53,7 @@ struct qthread_runtime_data_s {
 typedef enum {NO, YES} yesno_t;
 
 struct qthread_s {
-    struct qthread_s   *next;
+    struct qthread_s   *volatile next;
     /* the shepherd our memory comes from */
     qthread_shepherd_t *creator_ptr;
 
