@@ -65,7 +65,7 @@ endif
 if COMPILE_TARGET_UNIX
 libqthread_la_SOURCES += \
 	qthread.c \
-	threadqueues.c \
+	threadqueues/@with_scheduler@_threadqueues.c \
 	affinity/@qthread_topo@_affinity.c \
 	futurelib.c
 if QTHREAD_MULTITHREADED_SHEPHERDS

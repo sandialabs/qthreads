@@ -258,6 +258,14 @@ AC_ARG_ENABLE([multithreaded_shepherds],
                                QTHREAD_NUM_WORKERS_PER_SHEPHERD environment
                                variable at init time.])])
 
+AC_ARG_WITH([scheduler],
+			[AS_HELP_STRING([--with-scheduler=[[type]]],
+							[Specify the scheduler. Options when using
+							 single-threaded shepherds are: default (FIFO),
+							 nemesis (FIFO), and lifo. Options when using
+							 multi-threaded shepherds are: default
+							 (FIFO/LIFO).])])
+
 AC_ARG_ENABLE([hpctoolkit],
               [AS_HELP_STRING([--enable-hpctoolkit-support],
                               [Enable modifications so that HPCToolkit can unwind Qthreads threads.])])
@@ -575,6 +583,18 @@ AS_IF([test "x$enable_multithreaded_shepherds" = xyes],
        EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --enable-multithreaded-shepherds"],
       [enable_multithreaded_shepherds="no"])
 
+AS_IF([test "x$with_scheduler" != "x"],
+	  [AS_IF([test "x$enable_multithreaded_shepherds" = xyes],
+			 [AC_MSG_ERROR([Multithreaded shepherds must use the default scheduler.])])],
+			 [with_scheduler="default"])
+	   case "$with_scheduler" in
+	     nemesis|default|lifo)
+		   ;;
+		 *)
+		   AC_MSG_ERROR([Unknown scheduler option])
+		   ;;
+	   esac])
+
 AS_IF([test "x$enable_steal_profile" = xyes],
       [AC_DEFINE([STEAL_PROFILE], [1], [Support dynamic profile of steal infomation])],
       [enable_steal_profile="no"])
@@ -686,6 +706,7 @@ AS_IF([test "x$qthread_implementation" = "xunix"],
 ## --------------- ##
 AC_SUBST(EXTRA_DISTCHECK_OPTIONS)
 AC_SUBST(qthread_topo)
+AC_SUBST(with_scheduler)
 
 AM_CONDITIONAL([ENABLE_CXX_TESTS], [test "x$enable_cxx_tests" != "xno"])
 AM_CONDITIONAL([COMPILE_TARGET_SST], [test "x$qthread_implementation" = "xsst"])

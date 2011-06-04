@@ -81,11 +81,11 @@ extern QTHREAD_FASTLOCK_TYPE rcrtool_lock;
 #endif
 
 /* shared globals (w/ futurelib) */
-pthread_key_t          shepherd_structs;
-qlib_t                 qlib                      = NULL;
-int                    qaffinity                 = 1;
-qt_mpool               generic_lock_pool         = NULL;
-qt_mpool               generic_queue_pool        = NULL;
+pthread_key_t shepherd_structs;
+qlib_t        qlib               = NULL;
+int           qaffinity          = 1;
+qt_mpool      generic_lock_pool  = NULL;
+qt_mpool      generic_queue_pool = NULL;
 
 struct qt_cleanup_funcs_s {
     void                       (*func)(void);
@@ -137,11 +137,12 @@ static QINLINE void qthread_enqueue(qthread_queue_t *q,
 static qt_mpool generic_qthread_pool = NULL;
 static QINLINE qthread_t *ALLOC_QTHREAD(qthread_shepherd_t *shep)
 {                      /*{{{ */
-    qthread_t *tmp =
-        (qthread_t *)qt_mpool_alloc(shep ? (shep->qthread_pool) :
-                                    generic_qthread_pool);
+    qthread_t *tmp = (qthread_t *)qt_mpool_alloc(shep
+                                                 ? (shep->qthread_pool)
+                                                 : generic_qthread_pool);
 
     if (tmp != NULL) {
+        tmp->next        = NULL;
         tmp->creator_ptr = shep;
     }
     return tmp;
@@ -949,6 +950,7 @@ int qthread_initialize(void)
 # else
             qt_mpool_create(qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s));
 # endif
+        qlib->shepherds[i].queue_pool = qt_mpool_create(sizeof(qthread_queue_t));
         qt_threadqueue_init_pools(&(qlib->shepherds[i].threadqueue_pools));
         qlib->shepherds[i].lock_pool     = qt_mpool_create(sizeof(qthread_lock_t));
         qlib->shepherds[i].addrres_pool  = qt_mpool_create(sizeof(qthread_addrres_t));
@@ -963,7 +965,7 @@ int qthread_initialize(void)
 # else
         qt_mpool_create(sizeof(struct qthread_runtime_data_s) + qlib->qthread_stack_size);
 # endif
-    generic_queue_pool       = qt_mpool_create(sizeof(qthread_queue_t));
+    generic_queue_pool = qt_mpool_create(sizeof(qthread_queue_t));
     {
         extern qt_threadqueue_pools_t generic_threadqueue_pools;
         qt_threadqueue_init_pools(&generic_threadqueue_pools);
@@ -1862,6 +1864,7 @@ static QINLINE void qthread_enqueue(qthread_queue_t *q,
 {                      /*{{{ */
     assert(t != NULL);
     assert(q != NULL);
+    assert(t->next == NULL);
 
     qthread_debug(ALL_FUNCTIONS, "q(%p), t(%p): started\n", q, t);
 

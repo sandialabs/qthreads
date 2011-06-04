@@ -278,8 +278,8 @@ static QINLINE saligned_t qthread_internal_atomic_read_s(volatile saligned_t   *
 
 #endif /* ifndef QTHREAD_MUTEX_INCREMENT */
 
-static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t *operand,
-                                                    const unsigned int max       QTHREAD_OPTIONAL_LOCKARG)
+static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t    *operand,
+                                                    const unsigned int max QTHREAD_OPTIONAL_LOCKARG)
 {                                      /*{{{ */
     aligned_t retval;
 
@@ -506,6 +506,38 @@ static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t *operand,
 
     return retval;
 }                                      /*}}} */
+
+static QINLINE void *qt_internal_atomic_swap_ptr(void *volatile *addr,
+                                                 void           *newval)
+{   /*{{{*/
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
+    register uint32_t newv = newval;
+    __asm__ __volatile__
+    ("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
+     "swap [%1], %2, %0"
+     : "+r" (newv)
+     : "r" (operand), "r" (oldval)
+     : "cc", "memory");
+    return newv;
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
+    register uint64_t newv = newval;
+    __asm__ __volatile__
+    ("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
+     "swapx [%1], %2, %0"
+     : "+r" (newv)
+     : "r" (operand), "r" (oldval)
+     : "cc", "memory");
+    return newv;
+#else
+    void *oldval = *addr;
+    void *tmp;
+
+    while ((tmp = qthread_cas_ptr(addr, oldval, newval)) != oldval) {
+        oldval = tmp;
+    }
+    return oldval;
+#endif
+} /*}}}*/
 
 #endif /* ifndef QT_ATOMICS_H */
 
