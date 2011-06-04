@@ -217,7 +217,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q)
     if (retval == NULL) {
         while (q->q.shadow_head == NULL && q->q.head == NULL) {
 #ifndef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-            __asm__ __volatile__ ("pause" ::: "memory");
+            SPINLOCK_BODY();
 #else
             if (qthread_incr(&q->frustration, 1) > 1000) {
                 ptl_assert(pthread_mutex_lock(&q->trigger_lock), 0);
@@ -230,7 +230,6 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q)
 #endif      /* ifdef USE_HARD_POLLING */
         }
         retval = qt_internal_NEMESIS_dequeue(&q->q);
-        assert(retval != NULL);
     }
     assert(retval);
     assert(retval->next == NULL);
