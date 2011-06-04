@@ -147,19 +147,19 @@ static QINLINE void FREE_TQNODE(qt_threadqueue_node_t *t)
 
 #endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 
-void qt_threadqueue_init_pools(qt_threadqueue_pools_t *p)
+void INTERNAL qt_threadqueue_init_pools(qt_threadqueue_pools_t *p)
 {   /*{{{*/
     p->nodes  = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), 16);
     p->queues = qt_mpool_create(sizeof(qt_threadqueue_t));
 } /*}}}*/
 
-void qt_threadqueue_destroy_pools(qt_threadqueue_pools_t *p)
+void INTERNAL qt_threadqueue_destroy_pools(qt_threadqueue_pools_t *p)
 {   /*{{{*/
     qt_mpool_destroy(p->nodes);
     qt_mpool_destroy(p->queues);
 } /*}}}*/
 
-ssize_t qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
+ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 {   /*{{{*/
     return qthread_internal_atomic_read_s(&q->advisory_queuelen, &q->advisory_queuelen_m);
 } /*}}}*/
