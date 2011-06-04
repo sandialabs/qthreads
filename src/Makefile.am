@@ -83,6 +83,9 @@ include fastcontext/Makefile.inc
 endif
 
 EXTRA_DIST = \
+			 threadqueues/lifo_threadqueues.c\
+			 threadqueues/nemesis_threadqueues.c\
+			 threadqueues/default_threadqueues.c\
 			 affinity/hwloc_affinity.c \
 			 affinity/no_affinity.c \
 			 affinity/libnuma_affinity.c \
