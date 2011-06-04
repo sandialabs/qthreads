@@ -584,11 +584,12 @@ AS_IF([test "x$enable_multithreaded_shepherds" = xyes],
       [enable_multithreaded_shepherds="no"])
 
 AS_IF([test "x$with_scheduler" != "x"],
-	  [AS_IF([test "x$enable_multithreaded_shepherds" = xyes],
-			 [AC_MSG_ERROR([Multithreaded shepherds must use the default scheduler.])])],
-			 [with_scheduler="default"])
-	   case "$with_scheduler" in
-	     nemesis|default|lifo)
+	  [case "$with_scheduler" in
+		 default)
+           ;;
+	     nemesis|lifo)
+           AS_IF([test "x$enable_multithreaded_shepherds" = "xyes"],
+				 [AC_MSG_ERROR([Multithreaded shepherds must use the default scheduler.])])
 		   ;;
 		 *)
 		   AC_MSG_ERROR([Unknown scheduler option])
