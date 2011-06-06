@@ -443,7 +443,7 @@ void xomp_internal_loop_init(
   
   if (t == NULL) { // am I first?
     t  =  qt_loop_rose_queue_create(lower, upper, stride);
-    t->chunkSize = 1;
+    t->chunkSize = chunk_size;
     t->type = type;
     t->iterations = 0;
     int numSheps = qthread_num_shepherds();
@@ -824,8 +824,6 @@ void XOMP_taskwait(
   walkSyncTaskList();
 }
 
-int staticChunkSize = 0;
-
 void XOMP_loop_static_init(
     void ** loop,
     int lower,
@@ -961,12 +959,13 @@ bool XOMP_loop_static_start(
     long *returnLower,
     long *returnUpper)
 {
+  bool ret = 0;
   qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
-  int myid = qthread_barrier_id();
+  aligned_t myid = qthread_barrier_id();
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-  int parallelWidth = qthread_num_workers();
+  aligned_t parallelWidth = qthread_num_workers();
 #else
-  int parallelWidth = qthread_num_shepherds();
+  aligned_t parallelWidth = qthread_num_shepherds();
 #endif
 
   if (!loop){
@@ -978,18 +977,20 @@ bool XOMP_loop_static_start(
 
   aligned_t *myIteration = &loop->work_array + myid;
   int iterationNum = qthread_incr(myIteration,1);
-  *returnLower = start + (iterationNum * step * parallelWidth) // start
-    + (myid*step);                                     // + offset
-  *returnUpper = (stop - (*returnLower + (chunkSize-1)) < 0) ?
-    stop                              // hit loop upper bound
-    : (*returnLower + (step-1)); // returned upper bound is executed
+  *returnLower = (start * chunkSize) + (iterationNum * chunkSize * parallelWidth) // start
+    + (myid * chunkSize);                                                         // + offset
 
-  long t = (long)stop - *returnLower;  // casting problem simpler methods getting
-                                       // wrong answers
-  if (t >= 0) return 1;
-  else{
-    qthread_incr(&loop->departed_workers,1);
-    return 0;
+  if ((*returnLower + (chunkSize-1)) >= stop) { // hit limit
+    *returnUpper = stop;
+    if (*returnLower  > stop) {              // nothing to do quit
+      qthread_incr(&loop->departed_workers,1);
+      return 0;
+    }
+    return 1;
+  }
+  else {                                     // compute upper bound
+    *returnUpper = *returnLower + chunkSize; 
+    return 1;
   }
 }
 
@@ -1066,11 +1067,12 @@ bool XOMP_loop_ordered_runtime_start(
 
 // next
 bool XOMP_loop_static_next(
-    void * loop,
+    void * lp,
     long *a,
     long *b)
 {
-  return XOMP_loop_static_start(loop, 0, 0, 0, staticChunkSize, a, b);
+  qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
+  return XOMP_loop_static_start(loop, 0, 0, 0, loop->chunkSize,  a, b);
 }
 
 bool XOMP_loop_dynamic_next(
