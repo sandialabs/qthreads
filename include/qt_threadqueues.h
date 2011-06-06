@@ -33,7 +33,6 @@ void              qt_threadqueue_enqueue(qt_threadqueue_t   *q,
 void qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
                                     qthread_t          *t,
                                     qthread_shepherd_t *shep);
-ssize_t    qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q);
 qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q);
 
 qthread_t *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q QMS_ARG(size_t active));
