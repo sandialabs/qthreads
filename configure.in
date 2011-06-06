@@ -594,7 +594,8 @@ AS_IF([test "x$with_scheduler" != "x"],
 		 *)
 		   AC_MSG_ERROR([Unknown scheduler option])
 		   ;;
-	   esac])
+	   esac],
+	  [with_scheduler="default"])
 
 AS_IF([test "x$enable_steal_profile" = xyes],
       [AC_DEFINE([STEAL_PROFILE], [1], [Support dynamic profile of steal infomation])],
