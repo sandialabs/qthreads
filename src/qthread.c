@@ -76,7 +76,7 @@ extern QTHREAD_FASTLOCK_TYPE rcrtool_lock;
      (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32 &&     \
       QTHREAD_ASSEMBLY_ARCH != QTHREAD_SPARCV9_32))) && \
     !defined(QTHREAD_MUTEX_INCREMENT)
-# warn QTHREAD_MUTEX_INCREMENT not defined. It probably should be.
+# warning QTHREAD_MUTEX_INCREMENT not defined. It probably should be.
 # define QTHREAD_MUTEX_INCREMENT 1
 #endif
 
@@ -2831,7 +2831,9 @@ void INTERNAL qthread_setTaskRetVar(taskSyncvar_t *v)
 
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
 
-#if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
+#if defined(QTHREAD_MUTEX_INCREMENT) || \
+    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
+    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
 uint32_t qthread_incr32_(volatile uint32_t *op,
                          const int32_t      incr)
 {                      /*{{{ */
