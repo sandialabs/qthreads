@@ -1,6 +1,8 @@
 #ifndef QT_THREADQUEUES_H
 #define QT_THREADQUEUES_H
 
+#include <sys/types.h> /* for ssize_t (P90) */
+
 #include "qt_atomics.h"
 #include "qt_mpool.h"
 
