@@ -370,7 +370,9 @@ int qthread_syncvar_readFE(uint64_t *restrict const  dest,
 int qthread_lock(const aligned_t *a);
 int qthread_unlock(const aligned_t *a);
 
-# if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
+# if defined(QTHREAD_MUTEX_INCREMENT) || \
+    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
+    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
 uint32_t qthread_incr32_(volatile uint32_t *,
                          const    int32_t);
 uint64_t qthread_incr64_(volatile uint64_t *,
