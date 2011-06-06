@@ -895,11 +895,11 @@ static inline qutil_qsort_iprets_t qutil_aligned_qsort_inner_partitioner(aligned
 
     size_t                           megachunks = length / (MT_CHUNKSIZE * numthreads);
     qutil_qsort_iprets_t             retval     = { ((aligned_t)-1), 0 };
-    aligned_t                       *rets;
+    syncvar_t                       *rets;
     struct qutil_aligned_qsort_args *args;
     size_t                           i;
 
-    rets = malloc(sizeof(aligned_t) * numthreads);
+    rets = calloc(numthreads, sizeof(syncvar_t));
     args = malloc(sizeof(struct qutil_aligned_qsort_args) * numthreads);
     /* spawn threads to do the partitioning */
     for (i = 0; i < numthreads; i++) {
@@ -920,11 +920,12 @@ static inline qutil_qsort_iprets_t qutil_aligned_qsort_inner_partitioner(aligned
         }
         /* qutil_aligned_qsort_partition(args+i); */
         /* future_fork((qthread_f)qutil_aligned_qsort_partition, args+i, rets+i); */
-        qthread_fork((qthread_f)qutil_aligned_qsort_partition, args + i,
-                     rets + i);
+        qthread_fork_syncvar((qthread_f)qutil_aligned_qsort_partition,
+                             args + i,
+                             rets + i);
     }
     for (i = 0; i < numthreads; i++) {
-        qthread_readFF(NULL, rets + i);
+        qthread_syncvar_readFF(NULL, rets + i);
     }
     free(args);
     free(rets);
