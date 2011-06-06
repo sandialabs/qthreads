@@ -1,7 +1,8 @@
---- 1.6b ---
+--- 1.6 ---
 New Features:
  - Brand new C++ qloop interface
  - Supports multi-locale Chapel
+ - New scheduling queue options (faster FIFO, and new LIFO)
  - Experimental support for RCRDaemon
  - Experimental support for OpenMP affinity extensions
  - Experimental support for system call intercepting
@@ -16,6 +17,7 @@ Bugfixes:
  - Fixed incorrect rounding in atomic operations on old compilers in 32-bit systems
  - Eliminated the faulty test_internal_mod test
  - Fixed qloop memory leak
+ - Fixed compiling on 32-bit SparcV9
 --- 1.5.1 ---
 New Features:
  - Chapel shims
