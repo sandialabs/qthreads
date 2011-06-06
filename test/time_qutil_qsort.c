@@ -33,7 +33,8 @@ int main(int argc, char *argv[])
     double *d_array, *d_array2;
     size_t len = 1000000;
     qtimer_t timer = qtimer_create();
-    double cumulative_time = 0.0;
+    double cumulative_time_qutil = 0.0;
+    double cumulative_time_libc = 0.0;
     int using_doubles = 0;
     unsigned long iterations = 10;
 
@@ -62,24 +63,25 @@ int main(int argc, char *argv[])
             qtimer_start(timer);
             qutil_qsort(d_array2, len);
             qtimer_stop(timer);
-            cumulative_time += qtimer_secs(timer);
+            cumulative_time_qutil += qtimer_secs(timer);
             iprintf("\t%u: sorting %lu doubles with qutil took: %f seconds\n",
                     i, (unsigned long)len, qtimer_secs(timer));
         }
+        cumulative_time_qutil /= (double)iterations;
         printf("sorting %lu doubles with qutil took: %f seconds (avg)\n",
-               (unsigned long)len, cumulative_time / (double)iterations);
-        cumulative_time = 0;
+               (unsigned long)len, cumulative_time_qutil);
         for (unsigned int i = 0; i < iterations; i++) {
             memcpy(d_array2, d_array, len * sizeof(double));
             qtimer_start(timer);
             qsort(d_array2, len, sizeof(double), dcmp);
             qtimer_stop(timer);
-            cumulative_time += qtimer_secs(timer);
+            cumulative_time_libc += qtimer_secs(timer);
             iprintf("\t%u: sorting %lu doubles with libc took: %f seconds\n",
                     i, (unsigned long)len, qtimer_secs(timer));
         }
+	cumulative_time_libc /= (double)iterations;
         printf("sorting %lu doubles with libc took: %f seconds\n",
-               (unsigned long)len, cumulative_time / (double)iterations);
+               (unsigned long)len, cumulative_time_libc);
         free(d_array);
         free(d_array2);
     } else {
@@ -94,22 +96,28 @@ int main(int argc, char *argv[])
             qtimer_start(timer);
             qutil_aligned_qsort(ui_array2, len);
             qtimer_stop(timer);
-            cumulative_time += qtimer_secs(timer);
+            cumulative_time_qutil += qtimer_secs(timer);
         }
+	cumulative_time_qutil /= (double)iterations;
         printf("sorting %lu aligned_ts with qutil took: %f seconds\n",
-               (unsigned long)len, cumulative_time / (double)iterations);
-        cumulative_time = 0;
+               (unsigned long)len, cumulative_time_qutil);
         for (int i = 0; i < 10; i++) {
             memcpy(ui_array2, ui_array, len * sizeof(aligned_t));
             qtimer_start(timer);
             qsort(ui_array2, len, sizeof(double), acmp);
             qtimer_stop(timer);
-            cumulative_time += qtimer_secs(timer);
+            cumulative_time_libc += qtimer_secs(timer);
         }
+	cumulative_time_libc /= (double)iterations;
         printf("sorting %lu aligned_ts with libc took: %f seconds (avg)\n",
-               (unsigned long)len, cumulative_time / (double)iterations);
+               (unsigned long)len, cumulative_time_libc);
         free(ui_array);
         free(ui_array2);
+    }
+    if (cumulative_time_qutil < cumulative_time_libc) {
+	printf("qutil with %lu threads provides a %0.2fx speedup.\n", (unsigned long)qthread_num_shepherds(), cumulative_time_libc/cumulative_time_qutil);
+    } else {
+	printf("qutil with %lu threads provides a %0.2fx slowdown.\n", (unsigned long)qthread_num_shepherds(), cumulative_time_libc/cumulative_time_qutil);
     }
 
     qtimer_destroy(timer);
