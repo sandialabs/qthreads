@@ -666,7 +666,7 @@ AS_IF([test "x$enable_lock_profiling" = "xyes"],
       [AC_DEFINE([QTHREAD_LOCK_PROFILING], [1], [adds code to monitor how much time is spent aquiring locks])],
       [enable_lock_profiling="no"])
 
-AS_IF([test "x$enable_lazy_threadids" = "xno" -o "x$enable_debug_trace" = "xyes"],
+AS_IF([test "x$enable_lazy_threadids" = "xno" -o "x$enable_debug" = "xyes"],
       [AC_DEFINE([QTHREAD_NONLAZY_THREADIDS], [1], [makes sure every thread gets an id at creation time])
        enable_lazy_threadids=no],
       [enable_lazy_threadids=yes])
@@ -756,7 +756,7 @@ echo    "      Sanity assert() Calls: $enable_asserts"
 echo    "    Check address alignment: $enable_aligncheck"
 echo    "            Thread Counting: $enable_thread_count"
 echo    "                  Profiling: $enable_profiling"
-echo    " Debugging Trace Capability: $enable_debug_trace"
+echo    " Debugging Trace Capability: $enable_debug"
 echo    "                Guard Pages: $enable_guard_pages"
 echo    ""
 echo    "Speed:"
