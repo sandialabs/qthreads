@@ -315,6 +315,9 @@ static QINLINE void alloc_rdata(qthread_shepherd_t *me,
 #ifdef QTHREAD_USE_VALGRIND
     t->rdata->valgrind_stack_id = VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
 #endif
+#ifdef QTHREAD_OMP_AFFINITY
+    t->rdata->child_affinity = OMP_NO_CHILD_TASK_AFFINITY;
+#endif
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     t->rdata->openmpTaskRetVar = NULL;
     //    t->rdata->taskWaitLock.u.w = 0;
@@ -1817,9 +1820,6 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
     t->thread_state    = QTHREAD_STATE_NEW;
     t->flags           = 0;
     t->target_shepherd = NULL;
-#ifdef QTHREAD_OMP_AFFINITY
-    t->child_affinity = OMP_NO_CHILD_TASK_AFFINITY;
-#endif
     t->f     = f;
     t->arg   = (void *)arg;
     t->ret   = ret;

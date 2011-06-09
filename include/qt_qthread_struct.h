@@ -43,6 +43,10 @@ struct qthread_runtime_data_s {
 #ifdef QTHREAD_USE_VALGRIND
     unsigned int valgrind_stack_id;
 #endif
+#ifdef QTHREAD_OMP_AFFINITY
+    /* affinity for children created by this task */
+    qthread_shepherd_id_t child_affinity;
+#endif
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     int            forCount;         /* added akp */
     taskSyncvar_t *openmpTaskRetVar; /* ptr to linked list if task's I started -- used in openMP taskwait */
@@ -63,10 +67,6 @@ struct qthread_s {
 
     /* the shepherd we'd rather run on */
     qthread_shepherd_t *target_shepherd;
-#ifdef QTHREAD_OMP_AFFINITY
-    /* affinity for children created by this task */
-    qthread_shepherd_id_t child_affinity;
-#endif
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     /* parallel region barrier this thread should use */
     qthread_parallel_region_t *currentParallelRegion;
