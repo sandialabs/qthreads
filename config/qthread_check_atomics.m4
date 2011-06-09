@@ -72,22 +72,41 @@ AS_IF([test "x$qthread_cv_atomic_CAS32" = "xyes" && test "x$qthread_cv_atomic_CA
 	  [qthread_cv_atomic_CAS=no])
 AC_CACHE_CHECK([whether compiler supports builtin atomic incr],
   [qthread_cv_atomic_incr],
-  [AC_LINK_IFELSE([AC_LANG_SOURCE([[
+  [AS_IF([test "$1" -eq 8],
+         [AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #ifdef HAVE_IA64INTRIN_H
 # include <ia64intrin.h>
 #elif HAVE_IA32INTRIN_H
 # include <ia32intrin.h>
 #endif
 #include <stdlib.h>
+#include <stdint.h> /* for uint64_t */
 
 int main()
 {
-long bar=1;
-long foo = __sync_fetch_and_add(&bar, 1);
+uint64_t bar=1;
+uint64_t foo = __sync_fetch_and_add(&bar, 1);
 return foo;
 }]])],
-		[qthread_cv_atomic_incr="yes"],
-		[qthread_cv_atomic_incr="no"])
+		   [qthread_cv_atomic_incr="yes"],
+		   [qthread_cv_atomic_incr="no"])],
+         [AC_LINK_IFELSE([AC_LANG_SOURCE([[
+#ifdef HAVE_IA64INTRIN_H
+# include <ia64intrin.h>
+#elif HAVE_IA32INTRIN_H
+# include <ia32intrin.h>
+#endif
+#include <stdlib.h>
+#include <stdint.h> /* for uint32_t */
+
+int main()
+{
+uint32_t bar=1;
+uint32_t foo = __sync_fetch_and_add(&bar, 1);
+return foo;
+}]])],
+		   [qthread_cv_atomic_incr="yes"],
+		   [qthread_cv_atomic_incr="no"])])
    ])
 AS_IF([test "$qthread_cv_atomic_CAS" = "yes"],
 	  [AC_CACHE_CHECK([whether ia64intrin.h is required],

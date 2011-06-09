@@ -357,49 +357,6 @@ AC_CACHE_SAVE
 # MTA here when the time comes.
 QTHREAD_CHECK_SST([qthread_implementation="sst"], [qthread_implementation="unix"])
 
-# Figure out whether the compiler has builtin atomic operations
-AS_IF([test "x$enable_hardware_increments" != xno],
-      [QTHREAD_CHECK_ATOMICS])
-QTHREAD_BUILTIN_EXPECT
-QTHREAD_VAMACROS
-QTHREAD_CHECK_BITFIELDS
-
-## -------------------- ##
-## Checks for libraries ##
-## -------------------- ##
-AS_IF([test "x$ac_cv_enable_pthreads" != "xno"],
-      [AC_SEARCH_LIBS([pthread_create], [pthread])
-       AS_IF([test "$ac_cv_search_pthread_create" != "no"],
-             [AC_DEFINE([QTHREAD_USE_PTHREADS], [1], [allowed to spawn worker threads])])
-       AC_CHECK_FUNCS([pthread_yield pthread_spin_init])])
-AS_IF([test "x$qthread_implementation" = "xsst"],
-      [AC_DEFINE([QTHREAD_SST_PRIMITIVES],[1],[Define to use the SST primitives])
-       enable_pooled_memory="no"
-       LDFLAGS="$LDFLAGS $SST_LIBS"
-       AC_SEARCH_LIBS([ceil],[m_ppc],[],[AC_MSG_ERROR([Cannot find ceil()])])],
-      [AS_IF([test "x$qthread_implementation" = "xunix"],
-             [AC_SEARCH_LIBS([ceil],[m],[],[AC_MSG_ERROR([Cannot find ceil()])])])])
-
-AS_IF([test "x$enable_pooled_memory" = "xno"],
-      [AC_DEFINE([UNPOOLED], [1], [prevents most uses of memory pools])],
-      [enable_pooled_memory=yes])
-
-AC_CACHE_SAVE
-
-## ----------------------- ##
-## Checks for header files ##
-## ----------------------- ##
-AC_HEADER_STDC
-AC_HEADER_SYS_WAIT
-AC_HEADER_TIME
-AC_CHECK_HEADERS([stdlib.h fcntl.h ucontext.h sys/time.h sys/resource.h mach/mach_time.h malloc.h math.h sys/types.h sys/sysctl.h unistd.h])
-AX_CREATE_STDINT_H([include/qthread/qthread-int.h])
-AC_SYS_LARGEFILE
-
-QTHREAD_CHECK_FUNCTION
-
-AC_CACHE_SAVE
-
 ## --------------- ##
 ## Check for types ##
 ## --------------- ##
@@ -438,6 +395,49 @@ AS_IF([test "x$enable_64bit_alignment" = "xyes"],
 
 AC_DEFINE_UNQUOTED([QTHREAD_SIZEOF_ALIGNED_T], [$sizeof_aligned_t], [size of aligned_t])
 AC_DEFINE_UNQUOTED([QTHREAD_ALIGNMENT_ALIGNED_T], [$align_aligned_t], [alignment of aligned_t])
+
+AC_CACHE_SAVE
+
+# Figure out whether the compiler has builtin atomic operations
+AS_IF([test "x$enable_hardware_increments" != xno],
+      [QTHREAD_CHECK_ATOMICS($sizeof_aligned_t)])
+QTHREAD_BUILTIN_EXPECT
+QTHREAD_VAMACROS
+QTHREAD_CHECK_BITFIELDS
+
+## -------------------- ##
+## Checks for libraries ##
+## -------------------- ##
+AS_IF([test "x$ac_cv_enable_pthreads" != "xno"],
+      [AC_SEARCH_LIBS([pthread_create], [pthread])
+       AS_IF([test "$ac_cv_search_pthread_create" != "no"],
+             [AC_DEFINE([QTHREAD_USE_PTHREADS], [1], [allowed to spawn worker threads])])
+       AC_CHECK_FUNCS([pthread_yield pthread_spin_init])])
+AS_IF([test "x$qthread_implementation" = "xsst"],
+      [AC_DEFINE([QTHREAD_SST_PRIMITIVES],[1],[Define to use the SST primitives])
+       enable_pooled_memory="no"
+       LDFLAGS="$LDFLAGS $SST_LIBS"
+       AC_SEARCH_LIBS([ceil],[m_ppc],[],[AC_MSG_ERROR([Cannot find ceil()])])],
+      [AS_IF([test "x$qthread_implementation" = "xunix"],
+             [AC_SEARCH_LIBS([ceil],[m],[],[AC_MSG_ERROR([Cannot find ceil()])])])])
+
+AS_IF([test "x$enable_pooled_memory" = "xno"],
+      [AC_DEFINE([UNPOOLED], [1], [prevents most uses of memory pools])],
+      [enable_pooled_memory=yes])
+
+AC_CACHE_SAVE
+
+## ----------------------- ##
+## Checks for header files ##
+## ----------------------- ##
+AC_HEADER_STDC
+AC_HEADER_SYS_WAIT
+AC_HEADER_TIME
+AC_CHECK_HEADERS([stdlib.h fcntl.h ucontext.h sys/time.h sys/resource.h mach/mach_time.h malloc.h math.h sys/types.h sys/sysctl.h unistd.h])
+AX_CREATE_STDINT_H([include/qthread/qthread-int.h])
+AC_SYS_LARGEFILE
+
+QTHREAD_CHECK_FUNCTION
 
 AC_CACHE_SAVE
 
