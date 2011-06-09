@@ -315,14 +315,15 @@ static QINLINE void alloc_rdata(qthread_shepherd_t *me,
 #ifdef QTHREAD_USE_VALGRIND
     t->rdata->valgrind_stack_id = VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
 #endif
-#ifdef QTHREAD_OMP_AFFINITY
-    t->rdata->child_affinity = OMP_NO_CHILD_TASK_AFFINITY;
-#endif
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
+# ifdef QTHREAD_OMP_AFFINITY
+    t->rdata->child_affinity = OMP_NO_CHILD_TASK_AFFINITY;
+# endif
     t->rdata->openmpTaskRetVar = NULL;
     //    t->rdata->taskWaitLock.u.w = 0;
     // qthread_syncvar_empty(&t->rdata->taskWaitLock);
-    t->rdata->taskWaitLock = SYNCVAR_EMPTY_INITIALIZER;
+    t->rdata->taskWaitLock          = SYNCVAR_EMPTY_INITIALIZER;
+    t->rdata->currentParallelRegion = NULL;
 #endif
 }
 
@@ -1820,13 +1821,10 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
     t->thread_state    = QTHREAD_STATE_NEW;
     t->flags           = 0;
     t->target_shepherd = NULL;
-    t->f     = f;
-    t->arg   = (void *)arg;
-    t->ret   = ret;
-    t->rdata = NULL;
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    t->currentParallelRegion = NULL;
-#endif
+    t->f               = f;
+    t->arg             = (void *)arg;
+    t->ret             = ret;
+    t->rdata           = NULL;
     // should I use the builtin block for args?
     t->free_arg = NO;
     if (arg_size > 0) {
@@ -2225,7 +2223,7 @@ int qthread_fork_syncvar_copyargs_to(const qthread_f             f,
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     qthread_t *me = qthread_internal_self();
-    t->currentParallelRegion = me->currentParallelRegion; // saved in shepherd
+    t->rdata->currentParallelRegion = me->rdata->currentParallelRegion; // saved in shepherd
 #endif
     t->id = preferred_shep;  // used in barrier and arrive_first, NOT the thread-id
                              // may be extraneous in both when parallel region
@@ -2533,9 +2531,7 @@ qt_barrier_t INTERNAL *qt_thread_barrier()            // get barrier active for 
 qt_feb_barrier_t INTERNAL * qt_thread_barrier()            // get barrier active for this thread
 # endif
 {                      /*{{{ */
-    qthread_t *t = qthread_internal_self();
-
-    return t->currentParallelRegion->barrier;
+    return qt_parallel_region()->barrier;
 }                      /*}}} */
 
 void INTERNAL qt_set_unstealable(void);
@@ -2551,7 +2547,7 @@ qthread_parallel_region_t INTERNAL *qt_parallel_region() // get active parallel 
 {                                                        /*{{{ */
     qthread_t *t = qthread_internal_self();
 
-    return t->currentParallelRegion;
+    return t->rdata->currentParallelRegion;
 }                      /*}}} */
 
 int INTERNAL qt_omp_parallel_region_create()
@@ -2576,14 +2572,14 @@ int INTERNAL qt_omp_parallel_region_create()
 # endif /* ifdef QTHREAD_LOG_BARRIER */
 
     qthread_t *t = qthread_internal_self();
-    if (t->currentParallelRegion != NULL) { // we have nested parallelism
+    if (t->rdata->currentParallelRegion != NULL) { // we have nested parallelism
         ret = 1;
     }
-    pr->last                 = t->currentParallelRegion;
-    t->currentParallelRegion = pr;
-    pr->barrier              = gb;
-    pr->forLoop              = NULL;
-    pr->loopList             = NULL;
+    pr->last                        = t->rdata->currentParallelRegion;
+    t->rdata->currentParallelRegion = pr;
+    pr->barrier                     = gb;
+    pr->forLoop                     = NULL;
+    pr->loopList                    = NULL;
 
     return ret;
 }                              /*}}} */
@@ -2626,8 +2622,8 @@ void INTERNAL qt_omp_parallel_region_destroy()
 
     qthread_t *t = qthread_internal_self();
 
-    qthread_parallel_region_t *pr = t->currentParallelRegion;
-    t->currentParallelRegion = pr->last;
+    qthread_parallel_region_t *pr = t->rdata->currentParallelRegion;
+    t->rdata->currentParallelRegion = pr->last;
 }                                      /*}}} */
 
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
@@ -2831,7 +2827,7 @@ void INTERNAL qthread_setTaskRetVar(taskSyncvar_t *v)
 
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
 
-#if defined(QTHREAD_MUTEX_INCREMENT) || \
+#if defined(QTHREAD_MUTEX_INCREMENT) ||             \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
 uint32_t qthread_incr32_(volatile uint32_t *op,

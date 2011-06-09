@@ -31,9 +31,9 @@ enum threadstate {
 #define QTHREAD_MUST_BE_WORKER_ZERO (1 << 4)     /* force thread to shepherd 0 worker 0 for termination 4/1/11 akp */
 
 struct qthread_runtime_data_s {
-    void          *stack;          /* the thread's stack */
-    qt_context_t   context;        /* the context switch info */
-    qt_context_t  *return_context; /* context of parent shepherd */
+    void         *stack;           /* the thread's stack */
+    qt_context_t  context;         /* the context switch info */
+    qt_context_t *return_context;  /* context of parent shepherd */
 
     /* a pointer used for passing information back to the shepherd when
      * becoming blocked */
@@ -43,34 +43,32 @@ struct qthread_runtime_data_s {
 #ifdef QTHREAD_USE_VALGRIND
     unsigned int valgrind_stack_id;
 #endif
-#ifdef QTHREAD_OMP_AFFINITY
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    int                        forCount;         /* added akp */
+    taskSyncvar_t             *openmpTaskRetVar; /* ptr to linked list if task's I started -- used in openMP taskwait */
+    syncvar_t                  taskWaitLock;
+    /* parallel region barrier this thread should use */
+    qthread_parallel_region_t *currentParallelRegion;
+# ifdef QTHREAD_OMP_AFFINITY
     /* affinity for children created by this task */
     qthread_shepherd_id_t child_affinity;
-#endif
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    int            forCount;         /* added akp */
-    taskSyncvar_t *openmpTaskRetVar; /* ptr to linked list if task's I started -- used in openMP taskwait */
-    syncvar_t      taskWaitLock;
+# endif
 #endif
 };
 
 typedef enum {NO, YES} yesno_t;
 
 struct qthread_s {
-    struct qthread_s   *volatile next;
+    struct qthread_s *volatile next;
     /* the shepherd our memory comes from */
-    qthread_shepherd_t *creator_ptr;
+    qthread_shepherd_t        *creator_ptr;
 
-    unsigned int        thread_id;
-    enum threadstate    thread_state;
-    unsigned char       flags;
+    unsigned int               thread_id;
+    enum threadstate           thread_state;
+    unsigned char              flags;
 
     /* the shepherd we'd rather run on */
     qthread_shepherd_t *target_shepherd;
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    /* parallel region barrier this thread should use */
-    qthread_parallel_region_t *currentParallelRegion;
-#endif
 
     /* the function to call (that defines this thread) */
     qthread_f                      f;
