@@ -610,9 +610,9 @@ AS_IF([test "x$enable_asserts" != "xyes"],
        enable_asserts=no],
       [enable_asserts=yes])
 
-AS_IF([test "x$enable_debug_trace" = "xyes"],
+AS_IF([test "x$enable_debug" = "xyes"],
       [AC_DEFINE([QTHREAD_DEBUG], [1], [prints out debugging information at runtime])],
-      [enable_debug_trace=no])
+      [enable_debug=no])
 
 AS_IF([test "x$enable_rcrtool" = "xyes"],
       [AC_DEFINE([QTHREAD_RCRTOOL], [1], [logs performance with tht RCRTool monitor])],
