@@ -14,6 +14,8 @@
 #if defined(CLOCK_REALTIME) || defined(CLOCK_MONOTONIC)
 // Otherwise get tick resolution from sysconf
 #include <unistd.h>                    // for omp_get_wtick
+#else
+# include <sys/time.h>                 // for gettimeofday()
 #endif
 #include <string.h>                    // for strcmp
 
@@ -540,7 +542,7 @@ int compute_XOMP_block(
 
 // start Qthreads default openmp loop execution
 // get next iteration(if any) for Qthreads default openmp loop execution
-bool xomp_internal_guided_next(
+static bool xomp_internal_guided_next(
     qqloop_step_handle_t * loop,
     long *returnLower,
     long *returnUpper)
@@ -959,7 +961,7 @@ bool XOMP_loop_static_start(
     long *returnLower,
     long *returnUpper)
 {
-  bool ret = 0;
+  //bool ret = 0;
   qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
   aligned_t myid = qthread_barrier_id();
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -973,7 +975,7 @@ bool XOMP_loop_static_start(
   }
   aligned_t start = loop->assignStart;
   aligned_t stop = loop->assignStop;
-  aligned_t step = loop->assignStep;
+  //aligned_t step = loop->assignStep;
 
   aligned_t *myIteration = &loop->work_array + myid;
   int iterationNum = qthread_incr(myIteration,1);
