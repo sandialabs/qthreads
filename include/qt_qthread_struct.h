@@ -8,7 +8,8 @@
 #include "qt_context.h"
 #include "qt_shepherd_innards.h"
 
-#define ARGCOPY_MAX 1024
+#define ARGCOPY_DEFAULT   1024
+#define TASKLOCAL_DEFAULT 64
 
 enum threadstate {
     QTHREAD_STATE_NEW,
@@ -29,6 +30,7 @@ enum threadstate {
 #define QTHREAD_RET_IS_SYNCVAR      (1 << 2)
 #define QTHREAD_UNSTEALABLE         (1 << 3)
 #define QTHREAD_MUST_BE_WORKER_ZERO (1 << 4)     /* force thread to shepherd 0 worker 0 for termination 4/1/11 akp */
+#define QTHREAD_HAS_ARGCOPY         (1 << 5)
 
 struct qthread_runtime_data_s {
     void         *stack;           /* the thread's stack */
@@ -56,8 +58,6 @@ struct qthread_runtime_data_s {
 #endif
 };
 
-typedef enum {NO, YES} yesno_t;
-
 struct qthread_s {
     struct qthread_s *volatile next;
     /* the shepherd our memory comes from */
@@ -76,8 +76,8 @@ struct qthread_s {
     void                          *arg; /* user defined data */
     void                          *ret; /* user defined retval location */
     struct qthread_runtime_data_s *rdata;
-    yesno_t                        free_arg;                  /* flag that says arg was malloced and needs to be freed */
-    char                           argcopy_data[ARGCOPY_MAX]; /* space so that I can avoid malloc in most small cases */
+    unsigned                       tasklocal_size;
+    uint8_t                        data[];
 };
 
 #endif // ifndef QT_QTHREAD_STRUCT_H

@@ -938,6 +938,48 @@ int qthread_initialize(void)
             return ret;
         }
     }
+
+    // Set task argument buffer size
+    {
+        char  *argcopy_size = getenv("QTHREAD_ARGCOPY_SIZE");
+        size_t tmp_size     = 0;
+
+        if (argcopy_size && *argcopy_size) {
+            char *eptr;
+
+            tmp_size = strtoul(argcopy_size, &eptr, 0);
+            if (*eptr != 0) {
+                tmp_size = ARGCOPY_DEFAULT;
+            }
+        } else   {
+            tmp_size = ARGCOPY_DEFAULT;
+        }
+        qlib->qthread_argcopy_size = tmp_size;
+    }
+    qthread_debug(THREAD_DETAILS, "qthread task argcopy size: %u\n", qlib->qthread_argcopy_size);
+
+    // Set task-local data size
+    {
+        char  *tasklocal_size = getenv("QTHREAD_TASKLOCAL_SIZE");
+        size_t tmp_size       = 0;
+
+        if (tasklocal_size && *tasklocal_size) {
+            char *eptr;
+
+            tmp_size = strtoul(tasklocal_size, &eptr, 0);
+            if (*eptr != 0) {
+                tmp_size = TASKLOCAL_DEFAULT;
+            }
+            if (tmp_size == 0) {
+                tmp_size = sizeof(void *);
+            }
+        } else   {
+            tmp_size = TASKLOCAL_DEFAULT;
+        }
+        qlib->qthread_tasklocal_size = tmp_size;
+    }
+    qthread_debug(THREAD_DETAILS, "qthread task-local size: %u\n", qlib->qthread_tasklocal_size);
+
 #ifndef UNPOOLED
 /* set up the memory pools */
     qthread_debug(ALL_DETAILS, "shepherd pools sync = %i\n", need_sync);
@@ -945,7 +987,7 @@ int qthread_initialize(void)
         /* the following SHOULD only be accessed by one thread at a time, so
          * should be quite safe unsynchronized. If things fail, though...
          * resynchronize them and see if that fixes it. */
-        qlib->shepherds[i].qthread_pool = qt_mpool_create(sizeof(qthread_t));
+        qlib->shepherds[i].qthread_pool = qt_mpool_create(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size);
         qlib->shepherds[i].stack_pool   =
 # ifdef QTHREAD_GUARD_PAGES
             qt_mpool_create_aligned(qlib->qthread_stack_size +
@@ -961,7 +1003,7 @@ int qthread_initialize(void)
         qlib->shepherds[i].addrstat_pool = qt_mpool_create(sizeof(qthread_addrstat_t));
     }                      /*}}} */
 /* these are used when qthread_fork() is called from a non-qthread. */
-    generic_qthread_pool = qt_mpool_create(sizeof(qthread_t));
+    generic_qthread_pool = qt_mpool_create(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size);
     generic_stack_pool   =
 # ifdef QTHREAD_GUARD_PAGES
         qt_mpool_create_aligned(qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s) +
@@ -1728,6 +1770,56 @@ qthread_t *qthread_self(void)
 #endif
 }                      /*}}} */
 
+void *qthread_get_tasklocal(unsigned int size)
+{
+    qthread_t *f = qthread_internal_self();
+
+    if (NULL != f) {
+        // Get pointer to task-local segment in data blob
+        void **data = (void **)&f->data + qlib->qthread_argcopy_size;
+
+        if (0 == f->tasklocal_size) {
+            // Do not have alloc'd data (yet)
+            if (size > qlib->qthread_tasklocal_size) {
+                // Allocate space and copy old data
+                void *tmp_data = malloc(size);
+                assert(NULL != tmp_data);
+
+                memcpy(tmp_data, data, size);
+                *data             = tmp_data;
+                f->tasklocal_size = size;
+
+                return *data;
+            } else {
+                // Use default data space
+                return data;
+            }
+        } else if (size <= f->tasklocal_size) {
+            // Use alloc'd data, no need to resize
+            return *data;
+        } else {
+            // Use alloc'd data, after resizing
+            *data = realloc(*data, size);
+            assert(NULL != *data);
+
+            f->tasklocal_size = size;
+
+            return *data;
+        }
+    } else   {
+        return NULL;
+    }
+}
+
+unsigned qthread_size_tasklocal(void)
+{
+    const qthread_t *f = qthread_internal_self();
+
+    assert(NULL != f);
+
+    return f->tasklocal_size ? f->tasklocal_size : qlib->qthread_tasklocal_size;
+}
+
 size_t qthread_stackleft(void)
 {                      /*{{{ */
     const qthread_t *f = qthread_internal_self();
@@ -1826,16 +1918,17 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
     t->ret             = ret;
     t->rdata           = NULL;
     // should I use the builtin block for args?
-    t->free_arg = NO;
+    t->flags &= ~QTHREAD_HAS_ARGCOPY;
     if (arg_size > 0) {
-        if (arg_size <= ARGCOPY_MAX) {
-            t->arg = (void *)(&t->argcopy_data);
+        if (arg_size <= qlib->qthread_argcopy_size) {
+            t->arg = (void *)(&t->data);
         } else {
-            t->arg      = malloc(arg_size);
-            t->free_arg = YES;
+            t->arg    = malloc(arg_size);
+            t->flags |= QTHREAD_HAS_ARGCOPY;
         }
         memcpy(t->arg, arg, arg_size);
     }
+    t->tasklocal_size = 0;
 
     qthread_debug(ALL_DETAILS, "returning\n");
     return t;
@@ -1852,6 +1945,14 @@ static QINLINE void qthread_thread_free(qthread_t *t)
 #endif
         qthread_debug(ALL_DETAILS, "t(%p): releasing stack %p to %p\n", t, t->rdata->stack, t->creator_ptr);
         FREE_STACK(t->creator_ptr, t->rdata->stack);
+    }
+    if (t->flags & QTHREAD_HAS_ARGCOPY) {
+        assert(&t->data != t->arg);
+        free(t->arg);
+    }
+    if (t->tasklocal_size > sizeof(void *)) {
+        void **data = (void **)&t->data + qlib->qthread_argcopy_size;
+        free(*data);
     }
     qthread_debug(ALL_DETAILS, "t(%p): releasing thread handle %p\n", t, t);
     FREE_QTHREAD(t);
@@ -1935,10 +2036,6 @@ static void qthread_wrapper(void *ptr)
             /* this should avoid problems with irresponsible return values */
             qassert(qthread_syncvar_writeEF_const((syncvar_t *)t->ret,
                                                   INT64TOINT60((t->f)(t->arg))), QTHREAD_SUCCESS);
-            if (t->free_arg) {
-                assert(&t->argcopy_data != t->arg);
-                free(t->arg);
-            }
         } else {
             qassert(qthread_writeEF_const((aligned_t *)t->ret, (t->f)(t->arg)), QTHREAD_SUCCESS);
         }

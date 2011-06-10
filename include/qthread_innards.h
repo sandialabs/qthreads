@@ -53,6 +53,9 @@ typedef struct qlib_s {
     unsigned                   master_stack_size;
     unsigned                   max_stack_size;
 
+    unsigned                   qthread_argcopy_size;
+    unsigned                   qthread_tasklocal_size;
+
     qthread_t                 *mccoy_thread; /* free when exiting */
 
     void                      *master_stack;

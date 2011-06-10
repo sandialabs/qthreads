@@ -243,6 +243,9 @@ void  qt_omp_parallel_region_destroy(void);
 void  qt_set_unstealable(void);
 # endif // ifdef QTHREAD_USE_ROSE_EXTENSIONS
 
+void     *qthread_get_tasklocal(unsigned int);
+unsigned  qthread_size_tasklocal(void);
+
 size_t     qthread_stackleft(void);
 aligned_t *qthread_retloc(void);
 int        qthread_shep_ok(void);

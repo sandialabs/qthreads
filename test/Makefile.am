@@ -32,7 +32,10 @@ TESTS = test_basic \
 		test_qdqueue \
 		test_allpairs \
 		test_qalloc \
-		test_user_defined_block
+		test_user_defined_block \
+		test_tasklocal \
+		test_tasklocal_no_default \
+		test_tasklocal_no_argcopy
 
 EXTRA_PROGRAMS = test_wavefront
 
@@ -107,6 +110,15 @@ test_stackleft_DEPENDENCIES = $(QTHREADLIB)
 
 test_basic_SOURCES = test_basic.c
 test_basic_DEPENDENCIES = $(QTHREADLIB)
+
+test_tasklocal_SOURCES = test_tasklocal.c
+test_tasklocal_DEPENDENCIES = $(QTHREADLIB)
+
+test_tasklocal_no_default_SOURCES = test_tasklocal_no_default.c
+test_tasklocal_no_default_DEPENDENCIES = $(QTHREADLIB)
+
+test_tasklocal_no_argcopy_SOURCES = test_tasklocal_no_argcopy.c
+test_tasklocal_no_argcopy_DEPENDENCIES = $(QTHREADLIB)
 
 test_reinit_SOURCES = test_reinit.c
 test_reinit_DEPENDENCIES = $(QTHREADLIB)
