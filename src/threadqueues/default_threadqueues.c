@@ -19,39 +19,23 @@
 
 /* Data Structures */
 struct _qt_threadqueue_node {
-#ifdef QTHREAD_MUTEX_INCREMENT
-    struct _qt_threadqueue_node                   *next;
-#else
     volatile struct _qt_threadqueue_node *volatile next;
-#endif
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     /* used for the work stealing queue implementation */
-# ifdef QTHREAD_MUTEX_INCREMENT
-    struct _qt_threadqueue_node                   *prev;
-# else
     volatile struct _qt_threadqueue_node *volatile prev;
-# endif
 #endif
-    qthread_t          *value;
-    qthread_shepherd_t *creator_ptr;
+    qthread_t                                     *value;
+    qthread_shepherd_t                            *creator_ptr;
 } /* qt_threadqueue_node_t */;
 
 struct _qt_threadqueue {
-#ifdef QTHREAD_MUTEX_INCREMENT
-    qt_threadqueue_node_t                   *head;
-    qt_threadqueue_node_t                   *tail;
-    QTHREAD_FASTLOCK_TYPE                    head_lock;
-    QTHREAD_FASTLOCK_TYPE                    tail_lock;
-    QTHREAD_FASTLOCK_TYPE                    advisory_queuelen_m;
-#else
     volatile qt_threadqueue_node_t *volatile head;
     volatile qt_threadqueue_node_t *volatile tail;
-# ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
+#ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     volatile aligned_t                       fruitless;
     pthread_mutex_t                          lock;
     pthread_cond_t                           notempty;
-# endif                         /* CONDWAIT */
-#endif                          /* MUTEX_INCREMENT */
+#endif                          /* CONDWAIT */
     /* the following is for estimating a queue's "busy" level, and is not
      * guaranteed accurate (that would be a race condition) */
     volatile saligned_t advisory_queuelen;
@@ -205,24 +189,7 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd)
     qt_threadqueue_t *q = ALLOC_THREADQUEUE(shepherd);
 
     if (q != NULL) {
-# ifdef QTHREAD_MUTEX_INCREMENT
-        QTHREAD_FASTLOCK_INIT(q->head_lock);
-        QTHREAD_FASTLOCK_INIT(q->tail_lock);
-        QTHREAD_FASTLOCK_INIT(q->advisory_queuelen_m);
-        ALLOC_TQNODE(((qt_threadqueue_node_t **)&(q->head)), shepherd);
-        assert(q->head != NULL);
-        if (q->head == NULL) {
-            QTHREAD_FASTLOCK_DESTROY(q->advisory_queuelen_m);
-            QTHREAD_FASTLOCK_DESTROY(q->head_lock);
-            QTHREAD_FASTLOCK_DESTROY(q->tail_lock);
-            FREE_THREADQUEUE(q);
-            q = NULL;
-        } else {
-            q->tail       = q->head;
-            q->head->next = NULL;
-        }
-# else  /* ifdef QTHREAD_MUTEX_INCREMENT */
-#  ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
+# ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
         if (pthread_mutex_init(&q->lock, NULL) != 0) {
             FREE_THREADQUEUE(q);
             return NULL;
@@ -233,43 +200,33 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd)
             return NULL;
         }
         q->fruitless = 0;
-#  endif /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
+# endif  /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
         ALLOC_TQNODE(((qt_threadqueue_node_t **)&(q->head)), shepherd);
         assert(QPTR(q->head) != NULL);
         if (QPTR(q->head) == NULL) {   // if we're not using asserts, fail nicely
-#  ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
+# ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
             QTHREAD_DESTROYLOCK(&q->lock);
             QTHREAD_DESTROYCOND(&q->notempty);
-#  endif
+# endif
             FREE_THREADQUEUE(q);
             q = NULL;
         }
         q->tail             = q->head;
         QPTR(q->tail)->next = NULL;
-# endif /* ifdef QTHREAD_MUTEX_INCREMENT */
     }
     return q;
 }                                      /*}}} */
 
 void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 {                                      /*{{{ */
-# ifdef QTHREAD_MUTEX_INCREMENT
-    while (q->head != q->tail) {
-        qt_threadqueue_dequeue(q);
-    }
-    QTHREAD_FASTLOCK_DESTROY(q->head_lock);
-    QTHREAD_FASTLOCK_DESTROY(q->tail_lock);
-    QTHREAD_FASTLOCK_DESTROY(q->advisory_queuelen_m);
-# else
     while (QPTR(q->head) != QPTR(q->tail)) {
         qt_threadqueue_dequeue(q);
     }
     assert(QPTR(q->head) == QPTR(q->tail));
-#  ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
+# ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     QTHREAD_DESTROYLOCK(&q->lock);
     QTHREAD_DESTROYCOND(&q->notempty);
-#  endif
-# endif /* MUTEX queue */
+# endif
     FREE_TQNODE((qt_threadqueue_node_t *)QPTR(q->head));
     FREE_THREADQUEUE(q);
 }                                      /*}}} */
@@ -278,20 +235,6 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
                                      qthread_t          *t,
                                      qthread_shepherd_t *shep)
 {                                      /*{{{ */
-# ifdef QTHREAD_MUTEX_INCREMENT
-    qt_threadqueue_node_t *node;
-
-    ALLOC_TQNODE(&node, shep);
-    assert(node != NULL);
-    node->value = t;
-    node->next  = NULL;
-    QTHREAD_FASTLOCK_LOCK(&q->tail_lock);
-    {
-        q->tail->next = node;
-        q->tail       = node;
-    }
-    QTHREAD_FASTLOCK_UNLOCK(&q->tail_lock);
-# else /* ifdef QTHREAD_MUTEX_INCREMENT */
     volatile qt_threadqueue_node_t *tail;
     volatile qt_threadqueue_node_t *next;
     qt_threadqueue_node_t          *node;
@@ -326,7 +269,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
     (void)qt_cas((void *volatile *)&(q->tail), (void *)tail,
                  QCOMPOSE(node, tail));
     (void)qthread_incr(&q->advisory_queuelen, 1);
-#  ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
+# ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     if (q->fruitless) {
         QTHREAD_LOCK(&q->lock);
         if (q->fruitless) {
@@ -335,8 +278,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
         }
         QTHREAD_UNLOCK(&q->lock);
     }
-#  endif
-# endif /* ifdef QTHREAD_MUTEX_INCREMENT */
+# endif
 }                                      /*}}} */
 
 void qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
@@ -350,21 +292,6 @@ qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
 {                                      /*{{{ */
     qthread_t *p = NULL;
 
-# ifdef QTHREAD_MUTEX_INCREMENT
-    qt_threadqueue_node_t *node, *new_head;
-
-    assert(q != NULL);
-    QTHREAD_FASTLOCK_LOCK(&q->head_lock);
-    {
-        node     = q->head;
-        new_head = node->next;
-        if (new_head != NULL) {
-            p       = new_head->value;
-            q->head = new_head;
-        }
-    }
-    QTHREAD_FASTLOCK_UNLOCK(&q->head_lock);
-# else /* ifdef QTHREAD_MUTEX_INCREMENT */
     volatile qt_threadqueue_node_t *head;
     volatile qt_threadqueue_node_t *tail;
     volatile qt_threadqueue_node_t *next_ptr;
@@ -392,7 +319,6 @@ qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
         }
     }
     FREE_TQNODE((qt_threadqueue_node_t *)QPTR(head));
-# endif /* ifdef QTHREAD_MUTEX_INCREMENT */
     if (p != NULL) {
         Q_PREFETCH(&(p->thread_state));
         (void)qthread_internal_incr_s(&q->advisory_queuelen, &q->advisory_queuelen_m, -1);
@@ -408,9 +334,6 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q)
 {                                      /*{{{ */
     qthread_t *p = NULL;
 
-# ifdef QTHREAD_MUTEX_INCREMENT
-    while ((p = qt_threadqueue_dequeue(q)) == NULL) {}
-# else
     volatile qt_threadqueue_node_t *head;
     volatile qt_threadqueue_node_t *tail;
     volatile qt_threadqueue_node_t *next_ptr;
@@ -424,7 +347,7 @@ threadqueue_dequeue_restart:
         if (head == q->head) {              // are head, tail, and next consistent?
             if (QPTR(head) == QPTR(tail)) { // is queue empty or tail falling behind?
                 if (next_ptr == NULL) {     // is queue empty?
-#  ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
+# ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
                     if (qthread_internal_incr(&q->fruitless, &q->fruitless_m, 1) > 1000) {
                         QTHREAD_LOCK(&q->lock);
                         while (q->fruitless > 1000) {
@@ -432,13 +355,13 @@ threadqueue_dequeue_restart:
                         }
                         QTHREAD_UNLOCK(&q->lock);
                     } else {
-#   ifdef HAVE_PTHREAD_YIELD
+#  ifdef HAVE_PTHREAD_YIELD
                         pthread_yield();
-#   elif HAVE_SHED_YIELD
+#  elif HAVE_SHED_YIELD
                         sched_yield();
-#   endif
+#  endif
                     }
-#  endif            /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
+# endif             /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
                     goto threadqueue_dequeue_restart;
                 }
                 (void)qt_cas((void *volatile *)&(q->tail), (void *)tail, QCOMPOSE(next_ptr, tail)); // advance tail ptr
@@ -457,7 +380,6 @@ threadqueue_dequeue_restart:
     if (p != NULL) {
         (void)qthread_internal_incr_s(&q->advisory_queuelen, &q->advisory_queuelen_m, -1);
     }
-# endif /* ifdef QTHREAD_MUTEX_INCREMENT */
     return p;
 }                                      /*}}} */
 

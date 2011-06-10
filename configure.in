@@ -596,6 +596,9 @@ AS_IF([test "x$with_scheduler" != "x"],
 		   ;;
 	   esac],
 	  [with_scheduler="default"])
+AS_IF([test "x$enable_hardware_increments" = "xno" -a "x$with_scheduler" != "xmutexfifo"],
+	  [with_scheduler="mutexfifo"
+	   AC_MSG_WARN([Forcing scheduler to be mutexfifo, since hardware atomic support is lacking.])])
 
 AS_IF([test "x$enable_steal_profile" = xyes],
       [AC_DEFINE([STEAL_PROFILE], [1], [Support dynamic profile of steal infomation])],
