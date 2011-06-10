@@ -19,6 +19,7 @@ libqthread_la_SOURCES = \
 	io.c \
 	locks.c \
 	feb.c \
+	hazardptrs.c \
 	syncvar.c
 
 include qtimer/Makefile.inc

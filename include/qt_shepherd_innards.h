@@ -8,6 +8,7 @@
 #include "qt_mpool.h"
 #include "qt_atomics.h"
 #include "qt_threadqueues.h"
+#include "qt_hazardptrs.h"
 
 #ifdef QTHREAD_OMP_AFFINITY
 #include "omp_affinity.h"
@@ -26,6 +27,8 @@ struct qthread_worker_s
     qthread_worker_id_t worker_id;
     qthread_worker_id_t packed_worker_id;
     qthread_shepherd_t *shepherd;
+    void* hazard_ptrs[HAZARD_PTRS_PER_SHEP]; /* hazard pointers (see http://portal.acm.org/citation.cfm?id=987524.987595) */
+    hazard_freelist_t hazard_free_list;
     qthread_t *current;
     volatile size_t active;
 };
@@ -58,6 +61,10 @@ struct qthread_shepherd_s
     unsigned int node;		/* whereami */
 #ifdef QTHREAD_HAVE_LGRP
     unsigned int lgrp;
+#endif
+#ifndef QTHREAD_MULTITHREADED_SHEPHERDS // needs to be "per pthread"
+    void* hazard_ptrs[HAZARD_PTRS_PER_SHEP]; /* hazard pointers (see http://portal.acm.org/citation.cfm?id=987524.987595) */
+    hazard_freelist_t hazard_free_list;
 #endif
     unsigned int *shep_dists;
     qthread_shepherd_id_t *sorted_sheplist;
