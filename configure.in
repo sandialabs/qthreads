@@ -587,7 +587,7 @@ AS_IF([test "x$with_scheduler" != "x"],
 	  [case "$with_scheduler" in
 		 default)
            ;;
-	     nemesis|lifo)
+	     nemesis|lifo|mutexfifo)
            AS_IF([test "x$enable_multithreaded_shepherds" = "xyes"],
 				 [AC_MSG_ERROR([Multithreaded shepherds must use the default scheduler.])])
 		   ;;
