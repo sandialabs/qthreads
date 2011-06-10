@@ -577,25 +577,34 @@ AS_IF([test "x$enable_aligncheck" = "xno"],
       [AC_DEFINE([QTHREAD_NOALIGNCHECK], [1], [Do not check the alignment of synchronization addresses])],
       [enable_aligncheck=yes])
 
+AS_IF([test "x$enable_hardware_increments" != "xno" -a "x$enable_multithreaded_shepherds" = "xyes"],
+	  [AC_MSG_WARN([Cannot use multithreaded shepherds without hardware increments.])
+	   enable_multithreaded_shepherds="no"])
 AS_IF([test "x$enable_multithreaded_shepherds" = xyes],
       [AC_DEFINE([QTHREAD_MULTITHREADED_SHEPHERDS], [1], [Support multithreaded shepherds])
        AC_SEARCH_LIBS([nanosleep],[rt],[],[AC_MSG_ERROR([Cannot find nanosleep])])
+	   AS_IF([test "x$with_scheduler" != "x" -a "x$with_scheduler" != "xdefault"],
+			 [AC_MSG_ERROR([Multithreaded shepherds must use the default scheduler.])],
+			 [with_scheduler="default"])
        EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --enable-multithreaded-shepherds"],
       [enable_multithreaded_shepherds="no"])
 
 AS_IF([test "x$with_scheduler" != "x"],
 	  [case "$with_scheduler" in
 		 default)
+           AS_IF([test "x$enable_multithreaded_shepherds" != "xyes"],
+				 [with_scheduler="nemesis"])
            ;;
 	     nemesis|lifo|mutexfifo)
-           AS_IF([test "x$enable_multithreaded_shepherds" = "xyes"],
-				 [AC_MSG_ERROR([Multithreaded shepherds must use the default scheduler.])])
+		   # all valid options
 		   ;;
 		 *)
 		   AC_MSG_ERROR([Unknown scheduler option])
 		   ;;
 	   esac],
-	  [with_scheduler="default"])
+	  [AS_IF([test "x$enable_multithreaded_shepherds" != "xyes"],
+			 [with_scheduler="nemesis"],
+			 [with_scheduler="default"])])
 AS_IF([test "x$enable_hardware_increments" = "xno" -a "x$with_scheduler" != "xmutexfifo"],
 	  [with_scheduler="mutexfifo"
 	   AC_MSG_WARN([Forcing scheduler to be mutexfifo, since hardware atomic support is lacking.])])
