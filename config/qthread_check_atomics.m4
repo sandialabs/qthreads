@@ -139,7 +139,5 @@ AS_IF([test "x$qthread_cv_atomic_CAS" = "xyes"],
 AS_IF([test "$qthread_cv_atomic_incr" = "yes"],
 	[AC_DEFINE([QTHREAD_ATOMIC_INCR],[1],[if the compiler supports __sync_fetch_and_add])])
 AS_IF([test "$qthread_cv_atomic_CAS" = "yes" -a "$qthread_cv_atomic_incr" = "yes"],
-  		[AC_DEFINE([QTHREAD_ATOMIC_BUILTINS],[1],[if the compiler supports __sync_val_compare_and_swap])
-		 $1],
-		[$2])
+  		[AC_DEFINE([QTHREAD_ATOMIC_BUILTINS],[1],[if the compiler supports __sync_val_compare_and_swap])])
 ])
