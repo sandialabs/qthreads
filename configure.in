@@ -483,7 +483,9 @@ AS_IF([test "x$have_assembly" = "x0"],
              [AC_MSG_NOTICE(turning on software increments ($have_assembly))
               enable_hardware_increments=no],
              [AS_IF([test "x$enable_hardware_increments" = "xyes"],
-                    [AC_MSG_ERROR([No assembly available and software increments disabled.])])])])
+                    [AC_MSG_ERROR([No assembly available and software increments disabled.])])])],
+	  [AS_IF([test "x$enable_hardware_increments" = x],
+			 [enable_hardware_increments="yes"])])
 AS_IF([test "x$enable_hardware_increments" = "xno"],
       [AC_DEFINE([QTHREAD_MUTEX_INCREMENT], [1], [Use mutexes instead of assembly for atomic increment])])
 AS_IF([test "x$enable_guard_pages" = "xyes"],
@@ -577,8 +579,8 @@ AS_IF([test "x$enable_aligncheck" = "xno"],
       [AC_DEFINE([QTHREAD_NOALIGNCHECK], [1], [Do not check the alignment of synchronization addresses])],
       [enable_aligncheck=yes])
 
-AS_IF([test "x$enable_hardware_increments" != "xno" -a "x$enable_multithreaded_shepherds" = "xyes"],
-	  [AC_MSG_WARN([Cannot use multithreaded shepherds without hardware increments.])
+AS_IF([test "x$enable_hardware_increments" == "xno" -a "x$enable_multithreaded_shepherds" = "xyes"],
+	  [AC_MSG_ERROR([Cannot use multithreaded shepherds without hardware increments.])
 	   enable_multithreaded_shepherds="no"])
 AS_IF([test "x$enable_multithreaded_shepherds" = xyes],
       [AC_DEFINE([QTHREAD_MULTITHREADED_SHEPHERDS], [1], [Support multithreaded shepherds])
