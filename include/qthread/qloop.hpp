@@ -1,5 +1,5 @@
-#ifndef MTGL_READ_DIMACS_HPP
-#define MTGL_READ_DIMACS_HPP
+#ifndef QLOOP_HPP
+#define QLOOP_HPP
 
 #include <qthread/qloop.h>
 
@@ -46,5 +46,5 @@ void qt_loop_balance_future(const size_t start,
                            &(const_cast<T&>(obj)));
 }                                       /*}}} */
 
-#endif // ifndef MTGL_READ_DIMACS_HPP
+#endif // ifndef QLOOP_HPP
 /* vim:set expandtab: */
