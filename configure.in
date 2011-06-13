@@ -261,10 +261,10 @@ AC_ARG_ENABLE([multithreaded_shepherds],
 AC_ARG_WITH([scheduler],
 			[AS_HELP_STRING([--with-scheduler=[[type]]],
 							[Specify the scheduler. Options when using
-							 single-threaded shepherds are: default (FIFO),
-							 nemesis (FIFO), and lifo. Options when using
-							 multi-threaded shepherds are: default
-							 (FIFO/LIFO).])])
+							 single-threaded shepherds are: nemesis
+							 (default/FIFO), lifo, mutexfifo, and mtsfifo.
+							 Options when using multi-threaded shepherds are:
+							 default (FIFO/LIFO combo).])])
 
 AC_ARG_ENABLE([hpctoolkit],
               [AS_HELP_STRING([--enable-hpctoolkit-support],
@@ -597,7 +597,7 @@ AS_IF([test "x$with_scheduler" != "x"],
            AS_IF([test "x$enable_multithreaded_shepherds" != "xyes"],
 				 [with_scheduler="nemesis"])
            ;;
-	     nemesis|lifo|mutexfifo)
+	     nemesis|lifo|mutexfifo|mtsfifo)
 		   # all valid options
 		   ;;
 		 *)
