@@ -2321,7 +2321,7 @@ int qthread_fork_syncvar_copyargs_to(const qthread_f             f,
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     qthread_t *me = qthread_internal_self();
     if (t->rdata == NULL) {
-        alloc_rdata(me, t);
+        alloc_rdata(myshep, t);
     }
     t->rdata->currentParallelRegion = me->rdata->currentParallelRegion; // saved in shepherd
 #endif
