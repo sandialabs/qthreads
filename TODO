@@ -1,7 +1,5 @@
 These are ideas for things to do (in no particular order):
 
- 0. Intercept blocking syscalls (solidify, expand)
-
  1. Qthread teams (for synchronization, e.g. barrier)
 
  2. Mass thread-kill (e.g. eurekas)
@@ -10,9 +8,7 @@ These are ideas for things to do (in no particular order):
 
  4. Lock-free double-ended queue for Gatling scheduler
 
- 5. Task-local data (runtime configurable static size (similar to stack size));
-	share space with argument space, fall back to malloc for exceeding the
-	preallocated space
+ 5. Intercept blocking syscalls (solidify, expand)
 
  6. Qthreads with in/out vectors for cross-node workstealing
 
