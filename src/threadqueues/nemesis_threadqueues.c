@@ -108,19 +108,19 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd)
     q->frustration = 0;
     {
         pthread_mutexattr_t ma;
-        ptl_assert(pthread_mutexattr_init(&ma), 0);
-        ptl_assert(pthread_mutexattr_setpshared(&ma, PTHREAD_PROCESS_SHARED),
+        qassert(pthread_mutexattr_init(&ma), 0);
+        qassert(pthread_mutexattr_setpshared(&ma, PTHREAD_PROCESS_SHARED),
                    0);
-        ptl_assert(pthread_mutex_init(&q->trigger_lock, &ma), 0);
-        ptl_assert(pthread_mutexattr_destroy(&ma), 0);
+        qassert(pthread_mutex_init(&q->trigger_lock, &ma), 0);
+        qassert(pthread_mutexattr_destroy(&ma), 0);
     }
     {
         pthread_condattr_t ca;
-        ptl_assert(pthread_condattr_init(&ca), 0);
-        ptl_assert(pthread_condattr_setpshared(&ca, PTHREAD_PROCESS_SHARED),
+        qassert(pthread_condattr_init(&ca), 0);
+        qassert(pthread_condattr_setpshared(&ca, PTHREAD_PROCESS_SHARED),
                    0);
-        ptl_assert(pthread_cond_init(&q->trigger, &ca), 0);
-        ptl_assert(pthread_condattr_destroy(&ca), 0);
+        qassert(pthread_cond_init(&q->trigger, &ca), 0);
+        qassert(pthread_condattr_destroy(&ca), 0);
     }
 #endif /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
 
@@ -154,12 +154,12 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict   q,
     /* awake waiter */
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     if (q->frustration) {
-        ptl_assert(pthread_mutex_lock(&q->trigger_lock), 0);
+        qassert(pthread_mutex_lock(&q->trigger_lock), 0);
         if (q->frustration) {
             q->frustration = 0;
-            ptl_assert(pthread_cond_signal(&q->trigger), 0);
+            qassert(pthread_cond_signal(&q->trigger), 0);
         }
-        ptl_assert(pthread_mutex_unlock(&q->trigger_lock), 0);
+        qassert(pthread_mutex_unlock(&q->trigger_lock), 0);
     }
 #endif
 }/*}}}*/
@@ -220,12 +220,12 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q)
             SPINLOCK_BODY();
 #else
             if (qthread_incr(&q->frustration, 1) > 1000) {
-                ptl_assert(pthread_mutex_lock(&q->trigger_lock), 0);
+                qassert(pthread_mutex_lock(&q->trigger_lock), 0);
                 if (q->frustration > 1000) {
-                    ptl_assert(pthread_cond_wait
+                    qassert(pthread_cond_wait
                                    (&q->trigger, &q->trigger_lock), 0);
                 }
-                ptl_assert(pthread_mutex_unlock(&q->trigger_lock), 0);
+                qassert(pthread_mutex_unlock(&q->trigger_lock), 0);
             }
 #endif      /* ifdef USE_HARD_POLLING */
         }
