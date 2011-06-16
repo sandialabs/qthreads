@@ -99,6 +99,7 @@ man_MANS = \
 		   qthread_fork_syncvar.3 \
 		   qthread_fork_to.3 \
 		   qthread_fork_syncvar_to.3 \
+		   qthread_get_tasklocal.3 \
 		   qthread_id.3 \
 		   qthread_incr.3 \
 		   qthread_init.3 \
@@ -112,6 +113,7 @@ man_MANS = \
 		   qthread_retloc.3 \
 		   qthread_shep.3 \
 		   qthread_shep_ok.3 \
+		   qthread_size_tasklocal.3 \
 		   qthread_sorted_sheps.3 \
 		   qthread_sorted_sheps_remote.3 \
 		   qthread_stackleft.3 \
