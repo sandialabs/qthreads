@@ -10,36 +10,91 @@
 #include "maestro_sched.h"
 #include <stdio.h>
 #include <errno.h>
+#include <string.h>
 
-int getNumTriggers(void) {
-    return numTriggers;
+#include "blackboard.h"
+
+/**
+ * Get a pointer to the shared memory blackboard structure.
+ * 
+ * @return RCRBlackboard* 
+ */
+struct _RCRBlackboard* getShmBlackboard(int mode) {
+    key_t key          = BLACKBOARDSHMKEY;
+    static size_t size = sizeof(struct _RCRBlackboard);
+    int shmid;
+    struct _RCRBlackboard* shmRCRBB;
+
+    if ((shmid = shmget(key, size, mode)) < 0) {
+        printf("** RCRBB2: Could not locate shared memory segment for RCRTool blackboard.\n");
+        perror("shmget");
+        return 0;
+    }
+
+    if ((shmRCRBB = (struct _RCRBlackboard*)shmat(shmid, NULL, 0)) == (struct _RCRBlackboard*)-1) {
+        perror("shmat");
+        printf("** RCRBB: Could not attach to the shared memory segment for RCRTool blackboard.\n");
+        return 0;
+    }
+
+    //printf("segment is size %d.\n", (int)shmRCRBB->shmSize);
+    if (size < shmRCRBB->shmSize) {
+        //printf("Resizing to %d.\n", (int)shmRCRBB->shmSize);
+        size = shmRCRBB->shmSize;
+        if (shmdt(shmRCRBB) == -1) {
+            //perror("shmdt");
+            printf("shmdt failed\n");
+        }
+        //releaseShmLoc(shmRCRBB);
+        //Try again with the proper size
+        if ((shmid = shmget(key, size, mode)) < 0) {
+            printf("** RCRBB3: Could not locate shared memory segment for RCRTool blackboard.\n");
+            perror("shmget");
+            return 0;
+        }
+
+        if ((shmRCRBB = (struct _RCRBlackboard *)shmat(shmid, NULL, 0)) == (struct _RCRBlackboard *)-1) {
+            perror("shmat");
+            printf("** RCRBB: Could not attach to the shared memory segment for RCRTool blackboard.\n");
+            return 0;
+        }
+    }
+    //printf("Got shm segment.\n");
+    return (struct _RCRBlackboard*)shmRCRBB;
 }
 
-Trigger** getTriggers(void) {
-    return triggerMap;
+struct _RCRBlackboard* getShmBlackboardRW(void) {
+    return getShmBlackboard(0644);
 }
 
+struct _RCRBlackboard* getShmBlackboardRO(void) {
+    return getShmBlackboard(0444);
+}
+
+#ifdef QTHREAD_RCRTOOL
+
+// enable memory between calls to reduce calls to modify scheduling -- akp
+typedef enum _TriggerValues {SET_INIT = 0, SET_LOW=1, SET_HIGH=2} TriggerValues;
+
+#define MAX_TRIGGERS 256
+static int flipped[MAX_TRIGGERS];// = 0;
+
+#endif
+
+#if 0
 /*!
  * Check if condition for leaving breadcrumbs is met and leave breadcrumbs. Will
  * only put breadcrumbs for meters appearing in the trigger file.
  * 
- * \param triggerType
+ * \param triggerType Either TYPE_CORE, TYPE_SOCKET, or TYPE_NODE.
  * \param socketOrCoreID
  * \param meterName
  * \param currentVal
  * 
  * \return 1 if a a trigger is hit, otherwise return 0.
  */
-
-#ifdef QTHREAD_RCRTOOL
-// enable memory between calls to reduce calls to modify scheduling -- akp
-enum TriggerValues{SET_INIT = 0, SET_LOW=1, SET_HIGH=2};
-#define MAX_TRIGGERS 64
-static int flipped[MAX_TRIGGERS];// = 0;
-#endif
-
 int putBreadcrumbs(rcrtool_trigger_type triggerType, int socketOrCoreID, const char *meterName, double currentVal){
-    if (RCR_TRIGGERS > rcrtoollevel) 
+    if (RCR_TRIGGERS > rcrtoollevel)
         return 0;
 
     int i = 0;
@@ -92,6 +147,50 @@ int putBreadcrumbs(rcrtool_trigger_type triggerType, int socketOrCoreID, const c
     }
     return triggerHit;
 }
+#endif
+
+/*!
+ * Check if condition for leaving breadcrumbs is met and leave breadcrumbs. Will
+ * only put breadcrumbs for meters appearing in the trigger file.
+ * 
+ * \param appStateShmKey
+ * \param triggerType Either TYPE_CORE, TYPE_SOCKET, or TYPE_NODE.
+ * \param socketOrCoreID
+ * \param meterName
+ * \param currentVal
+ */
+void throwTrigger(key_t appStateShmKey, rcrtool_trigger_type triggerType, rcrtool_trigger_throw_type throwKind, int socketOrCoreID, int triggerNum) {
+    if (RCR_TRIGGERS > rcrtoollevel)
+        return;
+
+    if (throwKind == T_TYPE_LOW) { //trigger cond low
+#ifdef QTHREAD_RCRTOOL
+        dumpAppState(appStateShmKey, triggerType, socketOrCoreID);
+#endif
+        if (flipped[triggerNum] != SET_LOW) {
+            flipped[triggerNum] = SET_LOW;
+            maestro_sched(MTT_SOCKET, MTA_RAISE_STREAM_COUNT, socketOrCoreID);
+        }
+    } else if (throwKind == T_TYPE_HIGH) { //trigger cond high
+#ifdef QTHREAD_RCRTOOL
+        dumpAppState(appStateShmKey, triggerType, socketOrCoreID);
+#endif
+        if (flipped[triggerNum] != SET_HIGH) {
+            flipped[triggerNum] = SET_HIGH;
+            maestro_sched(MTT_SOCKET, MTA_LOWER_STREAM_COUNT, socketOrCoreID);
+        }
+    } else {
+#ifdef QTHREAD_RCRTOOL
+        if (triggerNum < MAX_TRIGGERS && flipped[triggerNum] != 0) {
+            //		  flipped[i] = 0;
+            //rcrtool_debug(RCR_RATTABLE_DEBUG," Left trigger for %s on %d\n,", triggerMap[i]->meterName, triggerMap[i]->id);
+        }
+#endif
+    }
+    return;
+}
+
+
 
 /**
  * Check if any breadcrumbs have been dropped. Will only check breadcrumbs for
@@ -158,10 +257,12 @@ char shmGet(key_t key){
     return returnVal;
 }
 
-/***********************************************************************************************
-* shared memory put function
-***********************************************************************************************/
-
+/*!
+ * Shared memory put function
+ * 
+ * \param key 
+ * \param val 
+ */
 void shmPutFlag(key_t key, char val){
 
     int shmid;
@@ -192,6 +293,14 @@ void shmPutFlag(key_t key, char val){
     releaseShmLoc(shm);
 }
 
+/*!
+ * 
+ * 
+ * \param key 
+ * \param size 
+ * 
+ * \return char* 
+ */
 char* getShmStringLoc(key_t key, size_t size) {
     key = 9253;
     size = 64;
@@ -235,6 +344,11 @@ char* getShmStringLoc(key_t key, size_t size) {
     return (char*)shm;
 }
 
+/*!
+ * 
+ * 
+ * \param shm 
+ */
 void releaseShmLoc(const void* shm) {
   if (shmdt(shm) == -1) {
       perror("shmdt");
@@ -251,7 +365,7 @@ void releaseShmLoc(const void* shm) {
  * \param socketOrCoreID Not currently used.
  * \param meterName Not currently used.
  */
-void dumpAppState(key_t key, rcrtool_trigger_type triggerType, int socketOrCoreID, const char *meterName) {
+void dumpAppState(key_t key, rcrtool_trigger_type triggerType, int socketOrCoreID) {
     size_t appStateSize = 1024;
     int i = 0;
     //printf("%d @@\n", RCRParallelSectionStackPos);
@@ -277,9 +391,9 @@ void dumpAppState(key_t key, rcrtool_trigger_type triggerType, int socketOrCoreI
 }
 # endif
 
-/***********************************************************************************************
-* Prints triggerMap
-***********************************************************************************************/
+/*!
+ * Prints triggerMap
+ */
 void printTriggerMap(){
     int i;
     printf("Number of triggers: %d\n", numTriggers);

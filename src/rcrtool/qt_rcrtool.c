@@ -49,7 +49,7 @@ void *rcrtoolDaemon(void* arg) {
     for (; i < RCR_HASH_TABLE_SIZE; i++) {
         hashTable[i].funcName[0] = 0;
     }
-	buildTriggerMap("triggers.config");
+	//buildTriggerMap("triggers.config");
     //doWork(((ShepWorkerInfo*)swinfo)->nshepherds, ((ShepWorkerInfo*)swinfo)->nworkerspershep);
     doWork(swinfo.nshepherds, swinfo.nworkerspershep);
     return 0;

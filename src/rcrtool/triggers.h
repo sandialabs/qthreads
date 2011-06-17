@@ -2,26 +2,31 @@
 #define QTHREAD_RCRTOOL_TRIGGERS_H
 
 #include <sys/types.h>
-#include <inttypes.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <string.h>
-#include <stdarg.h>
-#include <sys/wait.h>
-#include <err.h>
-#include <fcntl.h>
-
-#include <sys/ipc.h>
-#include <sys/shm.h>
+//#include <inttypes.h>
+//#include <stdlib.h>
+//#include <unistd.h>
+//#include <string.h>
+//#include <stdarg.h>
+//#include <sys/wait.h>
+//#include <err.h>
+//#include <fcntl.h>
+//
+//#include <sys/ipc.h>
+//#include <sys/shm.h>
 
 /*! 
  * 
  */
 typedef enum _rcrtool_trigger_type {
-    TYPE_CORE = 0,
-    TYPE_SOCKET,
-    TYPE_NODE
+    T_TYPE_CORE = 0,
+    T_TYPE_SOCKET,
+    T_TYPE_NODE
 } rcrtool_trigger_type;
+
+typedef enum _rcrtool_trigger_throw_type {
+    T_TYPE_LOW = 0,
+    T_TYPE_HIGH
+} rcrtool_trigger_throw_type;
 
 /*!
  * Data structure holding the trigger information.  Includes info about 
@@ -43,5 +48,7 @@ typedef struct trigger {
 ***********************************************************************/
 extern Trigger** triggerMap;   // allocated and pupulated in buildTriggerMap()
 extern int       numTriggers;  // populated in buildTriggerMap()
+
+void buildTriggerMap(const char *fileName);
 
 #endif

@@ -1,4 +1,7 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <ctype.h>
 #include "triggers.h"
 
 /***********************************************************************
@@ -84,12 +87,12 @@ void buildTriggerMap(const char *fileName){
         // Parsing type
         nextField = (char *) strtok(line, ",");
         nextField = trim(nextField); // remove trailing and leading white spaces
-        if (strcmp(nextField, "TYPE_CORE") == 0) {
-            triggerMap[triggerCount]->meterType = TYPE_CORE;
-        } else if (strcmp(nextField, "TYPE_SOCKET") == 0) {
-            triggerMap[triggerCount]->meterType = TYPE_SOCKET;
-        } else if (strcmp(nextField, "TYPE_NODE") == 0) {
-            triggerMap[triggerCount]->meterType = TYPE_NODE;
+        if (strcmp(nextField, "T_TYPE_CORE") == 0) {
+            triggerMap[triggerCount]->meterType = T_TYPE_CORE;
+        } else if (strcmp(nextField, "T_TYPE_SOCKET") == 0) {
+            triggerMap[triggerCount]->meterType = T_TYPE_SOCKET;
+        } else if (strcmp(nextField, "T_TYPE_NODE") == 0) {
+            triggerMap[triggerCount]->meterType = T_TYPE_NODE;
         } else {
             printf("Unknown trigger type: type must be TYPE_CORE or TYPE_SOCKET or TYPE_NODE \n");
             printf("Ignoring the rest of the trigger file \n");
