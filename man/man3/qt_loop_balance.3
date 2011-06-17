@@ -26,22 +26,6 @@ and
 .BR qt_loop_balance_future ()
 is that the former uses qthreads and the latter uses futures.
 .PP
-These function can be thought of as akin to the following code:
-.RS
-.PP
-unsigned int i;
-.br
-for (i =
-.IR start ;
-i <
-.IR stop ;
-i ++) {
-.RS
-.IR func "(NULL, " argptr );
-.RE
-}
-.RE
-.PP
 One qthread (or future) is spawned for each shepherd. The set of values of
 .I i
 (iterations) is divided evenly among the shepherds, and each qthread (or future) is assigned a set of iterations to perform.
