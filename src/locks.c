@@ -5,6 +5,9 @@
 /* The API */
 #include "qthread/qthread.h"
 
+/* System Headers */
+#include <stdlib.h>            /* for malloc() and free() */
+
 /* Internal Headers */
 #include "qthread_innards.h"
 #include "qt_blocking_structs.h"

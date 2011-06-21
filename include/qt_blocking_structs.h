@@ -1,6 +1,8 @@
 #ifndef QT_BLOCKING_STRUCTS_H
 #define QT_BLOCKING_STRUCTS_H
 
+#include <stdlib.h>            /* for malloc() and free() */
+
 #include "qt_mpool.h"
 #include "qt_shepherd_innards.h"
 #include "qt_profiling.h"

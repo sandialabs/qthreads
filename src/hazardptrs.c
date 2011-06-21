@@ -5,6 +5,9 @@
 /* The API */
 #include "qthread/qthread.h"
 
+/* System Headers */
+#include <stdlib.h>            /* for qsort(), malloc() and abort() */
+
 /* Internal Headers */
 #include "qt_hazardptrs.h"
 #include "qt_shepherd_innards.h"
