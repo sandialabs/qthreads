@@ -38,7 +38,9 @@ typedef struct {
 } qt_blocking_queue_t;
 
 static qt_blocking_queue_t theQueue;
+#if !defined(UNPOOLED)
 qt_mpool                   syscall_job_pool = NULL;
+#endif
 static pthread_t           proxy_thread;
 static volatile int        proxy_exit = 0;
 
@@ -46,7 +48,9 @@ static void qt_blocking_subsystem_internal_teardown(void)
 {   /*{{{*/
     proxy_exit = 1;
     pthread_join(proxy_thread, NULL);
+#if !defined(UNPOOLED)
     qt_mpool_destroy(syscall_job_pool);
+#endif
     QTHREAD_DESTROYLOCK(&theQueue.lock);
     QTHREAD_DESTROYCOND(&theQueue.notempty);
 } /*}}}*/
@@ -62,7 +66,9 @@ static void *qt_blocking_subsystem_proxy_thread(void *arg)
 
 void INTERNAL qt_blocking_subsystem_init(void)
 {   /*{{{*/
+#if !defined(UNPOOLED)
     syscall_job_pool = qt_mpool_create(sizeof(qt_blocking_queue_node_t));
+#endif
     theQueue.head    = NULL;
     theQueue.tail    = NULL;
     qassert(pthread_mutex_init(&theQueue.lock, NULL), 0);
@@ -230,7 +236,7 @@ void INTERNAL qt_process_blocking_calls(void)
             qthread_debug(THREAD_DETAILS, "blocking proxy context is %p\n", &my_context);
             qthread_exec(item->thread, &my_context);
             qthread_debug(THREAD_DETAILS, "proxy back from qthread_exec\n");
-            qt_mpool_free(syscall_job_pool, item);
+            FREE_SYSCALLJOB(item);
             break;
         }
     }

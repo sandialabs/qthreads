@@ -1,7 +1,17 @@
 #ifndef QT_IO_H
 #define QT_IO_H
 
+#include "stdlib.h"                  /* malloc() and free() */
+
 #include "qt_qthread_struct.h"
+
+#if defined(UNPOOLED)
+# define ALLOC_SYSCALLJOB (qt_blocking_queue_node_t *)malloc(sizeof(qt_blocking_queue_node_t))
+# define FREE_SYSCALLJOB(s) free(s)
+#else
+# define ALLOC_SYSCALLJOB qt_mpool_alloc(syscall_job_pool);
+# define FREE_SYSCALLJOB(j) qt_mpool_free(syscall_job_pool, j);
+#endif
 
 typedef enum blocking_syscalls {
     ACCEPT,
