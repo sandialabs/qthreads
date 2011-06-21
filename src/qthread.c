@@ -131,7 +131,7 @@ static QINLINE void qthread_enqueue(qthread_queue_t *q,
                                     qthread_t       *t);
 
 #if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED)
-# define ALLOC_QTHREAD(shep) (qthread_t *)malloc(sizeof(qthread_t))
+# define ALLOC_QTHREAD(shep) (qthread_t *)malloc(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size)
 # define FREE_QTHREAD(t)     free(t)
 #else
 static qt_mpool generic_qthread_pool = NULL;
@@ -142,7 +142,6 @@ static QINLINE qthread_t *ALLOC_QTHREAD(qthread_shepherd_t *shep)
                                                  : generic_qthread_pool);
 
     if (tmp != NULL) {
-        tmp->next        = NULL;
         tmp->creator_ptr = shep;
     }
     return tmp;
@@ -1898,6 +1897,7 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
 #endif
 
     t = ALLOC_QTHREAD(myshep);
+    t->next = NULL;
     qthread_debug(ALL_DETAILS, "t = %p\n", t);
     qassert_ret(t, NULL);
 
