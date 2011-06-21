@@ -78,8 +78,6 @@ static QINLINE void FREE_THREADQUEUE(qt_threadqueue_t *t)
                   generic_threadqueue_pools.queues, t);
 }                                      /*}}} */
 
-#endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
-
 void INTERNAL qt_threadqueue_init_pools(qt_threadqueue_pools_t *p)
 {   /*{{{*/
     assert(p);
@@ -93,6 +91,8 @@ void INTERNAL qt_threadqueue_destroy_pools(qt_threadqueue_pools_t *p)
     assert(p->queues);
     qt_mpool_destroy(p->queues);
 } /*}}}*/
+
+#endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 
 /* Thankfully, NEMESIS does not suffer from the ABA problem. */
 
