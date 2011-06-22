@@ -29,7 +29,7 @@ include syscalls/Makefile.inc
 include rcrtool/Makefile.inc
 
 if COMPILE_CHAPEL_INTERFACE
-SUBDIRS += interfaces/chapel
+include interfaces/chapel/Makefile.inc
 endif
 
 # version-info fields are:
