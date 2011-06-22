@@ -1667,7 +1667,7 @@ void qthread_finalize(void)
     qthread_debug(ALL_DETAILS, "finished.\n");
 }                      /*}}} */
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
 void qthread_pack_workerid(const qthread_worker_id_t w,
                            const qthread_worker_id_t newId)
 {
@@ -1678,9 +1678,11 @@ void qthread_pack_workerid(const qthread_worker_id_t w,
     assert((worker < qlib->nworkerspershep));
     qlib->shepherds[shep].workers[worker].packed_worker_id = newId;
 }
+#endif
 
 int qthread_disable_worker(const qthread_worker_id_t w)
 {
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     int shep   = w % qlib->nshepherds;
     int worker = w / qlib->nshepherds;
 
@@ -1705,10 +1707,14 @@ int qthread_disable_worker(const qthread_worker_id_t w)
     if (worker == 0) { qthread_disable_shepherd(shep); }
 
     return QTHREAD_SUCCESS;
+#else
+    return qthread_disable_shepherd(w);
+#endif
 }
 
-int qthread_enable_worker(const qthread_worker_id_t w)
+void qthread_enable_worker(const qthread_worker_id_t w)
 {                      /*{{{ */
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     int shep   = w % qlib->nshepherds;
     int worker = w / qlib->nshepherds;
 
@@ -1718,10 +1724,10 @@ int qthread_enable_worker(const qthread_worker_id_t w)
     qthread_debug(ALL_CALLS, "began on shep(%i)\n", shep);
     qthread_internal_incr(&(qlib->nshepherds_active), &(qlib->nshepherds_active_lock), 1);
     (void)QT_CAS(qlib->shepherds[shep].workers[worker].active, 0, 1);
-    return QTHREAD_SUCCESS;
-}                      /*}}} */
-
+#else
+    qthread_enable_shepherd(w);
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
+}                      /*}}} */
 
 int qthread_disable_shepherd(const qthread_shepherd_id_t shep)
 {                      /*{{{ */
@@ -3031,18 +3037,20 @@ qthread_shepherd_id_t qthread_shep(void)
     }
 }                      /*}}} */
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-qthread_worker_id_t INTERNAL qthread_worker(qthread_shepherd_id_t *shepherd_id)
+qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *shepherd_id)
 {                                      /*{{{ */
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t *worker = (qthread_worker_t *)pthread_getspecific(shepherd_structs);
 
     if(shepherd_id != NULL) {
         *shepherd_id = worker->shepherd->shepherd_id;
     }
     return worker ? (worker->packed_worker_id) : NO_WORKER;
+#else
+    return qthread_shep();
+#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 }                                      /*}}} */
 
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
 int qthread_shep_ok(void)
 {                      /*{{{ */

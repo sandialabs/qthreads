@@ -50,7 +50,7 @@
 # define QTHREAD_OVERFLOW -6
 #endif
 #define NO_SHEPHERD ((qthread_shepherd_id_t)-1)
-#define NO_WORKER ((qthread_worker_id_t)-1)
+#define NO_WORKER   ((qthread_worker_id_t)-1)
 
 #ifdef __cplusplus
 # define Q_STARTCXX extern "C" {
@@ -179,10 +179,10 @@ void qthread_finalize(void);
  * qthread on that shepherd next stops executing */
 int  qthread_disable_shepherd(const qthread_shepherd_id_t shep);
 void qthread_enable_shepherd(const qthread_shepherd_id_t shep);
-# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 /* add calls to allow workers in addition to shepherds to be disabled and renumber */
 int  qthread_disable_worker(const qthread_worker_id_t worker);
-int  qthread_enable_worker(const qthread_worker_id_t worker);
+void qthread_enable_worker(const qthread_worker_id_t worker);
+# ifdef QTHREAD_USE_ROSE_EXTENSIONS
 void qthread_pack_workerid(const qthread_worker_id_t worker,
                            const qthread_worker_id_t newId);
 # endif
@@ -210,10 +210,11 @@ qthread_t Q_DEPRECATED *qthread_self(void);
 int qthread_fork(const qthread_f   f,
                  const void *const arg,
                  aligned_t        *ret);
-int qthread_fork_precond(const qthread_f   f,
-                         const void       *arg,
-                         aligned_t        *ret,
-                         const int         npreconds, ...);
+int qthread_fork_precond(const qthread_f f,
+                         const void     *arg,
+                         aligned_t      *ret,
+                         const int       npreconds,
+                         ...);
 int qthread_fork_syncvar(const qthread_f   f,
                          const void *const arg,
                          syncvar_t *const  ret);
@@ -225,7 +226,8 @@ int qthread_fork_precond_to(const qthread_f             f,
                             const void *const           arg,
                             aligned_t *const            ret,
                             const qthread_shepherd_id_t shepherd,
-                            const int                   npreconds, ...);
+                            const int                   npreconds,
+                            ...);
 int qthread_fork_syncvar_to(const qthread_f             f,
                             const void *const           arg,
                             syncvar_t                  *ret,
@@ -246,9 +248,7 @@ int qthread_debuglevel(int);
 unsigned              qthread_id(void);
 unsigned              qthread_barrier_id(void);
 qthread_shepherd_id_t qthread_shep(void);
-# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *s);
-# endif
+qthread_worker_id_t   qthread_worker(qthread_shepherd_id_t *s);
 # ifdef QTHREAD_USE_ROSE_EXTENSIONS
 struct qthread_parallel_region_s *qt_parallel_region(void);
 #  ifdef QTHREAD_LOG_BARRIER
@@ -262,8 +262,8 @@ void  qt_omp_parallel_region_destroy(void);
 void  qt_set_unstealable(void);
 # endif // ifdef QTHREAD_USE_ROSE_EXTENSIONS
 
-void     *qthread_get_tasklocal(unsigned int);
-unsigned  qthread_size_tasklocal(void);
+void *   qthread_get_tasklocal(unsigned int);
+unsigned qthread_size_tasklocal(void);
 
 size_t     qthread_stackleft(void);
 aligned_t *qthread_retloc(void);
@@ -280,7 +280,7 @@ const qthread_shepherd_id_t *qthread_sorted_sheps_remote(const
                                                          src);
 /* returns the number of actively-scheduling shepherds */
 qthread_shepherd_id_t qthread_num_shepherds(void);
-qthread_worker_id_t qthread_num_workers(void); /* how many threads working on problem */
+qthread_worker_id_t   qthread_num_workers(void); /* how many kernel-level threads are running */
 /* queries the current state */
 enum introspective_state {
     STACK_SIZE,
@@ -392,7 +392,7 @@ int qthread_syncvar_readFE(uint64_t *restrict const  dest,
 int qthread_lock(const aligned_t *a);
 int qthread_unlock(const aligned_t *a);
 
-# if defined(QTHREAD_MUTEX_INCREMENT) || \
+# if defined(QTHREAD_MUTEX_INCREMENT) ||            \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
 uint32_t qthread_incr32_(volatile uint32_t *,
