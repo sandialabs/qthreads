@@ -12,6 +12,7 @@
 #define TASKLOCAL_DEFAULT 64
 
 enum threadstate {
+    QTHREAD_STATE_NASCENT,
     QTHREAD_STATE_NEW,
     QTHREAD_STATE_RUNNING,
     QTHREAD_STATE_YIELDED,
@@ -69,6 +70,10 @@ struct qthread_s {
 
     /* the shepherd we'd rather run on */
     qthread_shepherd_t *target_shepherd;
+
+    /* input preconds for lazy tasks */
+    void * preconds;
+    unsigned npreconds;
 
     /* the function to call (that defines this thread) */
     qthread_f                      f;

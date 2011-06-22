@@ -45,19 +45,6 @@ static QINLINE void qthread_gotlock_empty(qthread_shepherd_t *shep,
 
 /* functions to implement FEB locking/unlocking */
 
-#ifndef QTHREAD_NOALIGNCHECK
-# define QALIGN(d, s) do {                                                   \
-        s = (aligned_t *)(((size_t)d) & (~(sizeof(aligned_t) - 1)));         \
-        if (s != d) {                                                        \
-            fprintf(stderr,                                                  \
-                    "WARNING: %s(): unaligned address %p ... assuming %p\n", \
-                    __FUNCTION__, (void *)d, (void *)s);                     \
-        }                                                                    \
-} while(0)
-#else /* QTHREAD_NOALIGNCHECK */
-# define QALIGN(d, s) (s) = (d)
-#endif /* ifndef QTHREAD_NOALIGNCHECK */
-
 #ifdef QTHREAD_COUNT_THREADS
 # define QTHREAD_COUNT_THREADS_BINCOUNTER(TYPE, BIN) qthread_internal_incr(&qlib->TYPE ## _stripes[(BIN)], &qlib->TYPE ## _stripes_locks[(BIN)], 1)
 #else
@@ -236,8 +223,14 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t *shep,
             memcpy(X->addr, maddr, sizeof(aligned_t));
         }
         /* schedule */
-        X->waiter->thread_state = QTHREAD_STATE_RUNNING;
-        qt_threadqueue_enqueue(X->waiter->rdata->shepherd_ptr->ready, X->waiter, shep);
+        if (QTHREAD_STATE_NASCENT == X->waiter->thread_state)
+        {
+            // Waiter does not have rdata set, so use this shep
+            qt_threadqueue_enqueue(shep->ready, X->waiter, shep);
+        } else {
+            X->waiter->thread_state = QTHREAD_STATE_RUNNING;
+            qt_threadqueue_enqueue(X->waiter->rdata->shepherd_ptr->ready, X->waiter, shep);
+        }
         FREE_ADDRRES(X);
     }
     if (m->FEQ != NULL) {

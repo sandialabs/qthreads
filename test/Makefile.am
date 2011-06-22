@@ -35,7 +35,8 @@ TESTS = test_basic \
 		test_user_defined_block \
 		test_tasklocal \
 		test_tasklocal_no_default \
-		test_tasklocal_no_argcopy
+		test_tasklocal_no_argcopy \
+		test_precond
 
 EXTRA_PROGRAMS = test_wavefront
 
@@ -119,6 +120,9 @@ test_tasklocal_no_default_DEPENDENCIES = $(QTHREADLIB)
 
 test_tasklocal_no_argcopy_SOURCES = test_tasklocal_no_argcopy.c
 test_tasklocal_no_argcopy_DEPENDENCIES = $(QTHREADLIB)
+
+test_precond_SOURCES = test_precond.c
+test_precond_DEPENDENCIES = $(QTHREADLIB)
 
 test_reinit_SOURCES = test_reinit.c
 test_reinit_DEPENDENCIES = $(QTHREADLIB)

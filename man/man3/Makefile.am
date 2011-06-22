@@ -96,8 +96,10 @@ man_MANS = \
 		   qthread_finalize.3 \
 		   qthread_fincr.3 \
 		   qthread_fork.3 \
+		   qthread_fork_precond.3 \
 		   qthread_fork_syncvar.3 \
 		   qthread_fork_to.3 \
+		   qthread_fork_precond_to.3 \
 		   qthread_fork_syncvar_to.3 \
 		   qthread_get_tasklocal.3 \
 		   qthread_id.3 \

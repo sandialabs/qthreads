@@ -80,6 +80,19 @@ typedef int64_t Q_ALIGNED (QTHREAD_ALIGNMENT_ALIGNED_T) saligned_t;
 # error "Don't know type for sizeof aligned_t"
 #endif
 
+#ifndef QTHREAD_NOALIGNCHECK
+# define QALIGN(d, s) do {                                                   \
+        s = (aligned_t *)(((size_t)d) & (~(sizeof(aligned_t) - 1)));         \
+        if (s != d) {                                                        \
+            fprintf(stderr,                                                  \
+                    "WARNING: %s(): unaligned address %p ... assuming %p\n", \
+                    __FUNCTION__, (void *)d, (void *)s);                     \
+        }                                                                    \
+} while(0)
+#else /* QTHREAD_NOALIGNCHECK */
+# define QALIGN(d, s) (s) = (d)
+#endif /* ifndef QTHREAD_NOALIGNCHECK */
+
 typedef struct _syncvar_s {
     volatile union {
         volatile uint64_t w;
@@ -200,6 +213,10 @@ qthread_t Q_DEPRECATED *qthread_self(void);
 int qthread_fork(const qthread_f   f,
                  const void *const arg,
                  aligned_t        *ret);
+int qthread_fork_precond(const qthread_f   f,
+                         const void       *arg,
+                         aligned_t        *ret,
+                         const int         npreconds, ...);
 int qthread_fork_syncvar(const qthread_f   f,
                          const void *const arg,
                          syncvar_t *const  ret);
@@ -207,6 +224,11 @@ int qthread_fork_to(const qthread_f             f,
                     const void *const           arg,
                     aligned_t *const            ret,
                     const qthread_shepherd_id_t shepherd);
+int qthread_fork_precond_to(const qthread_f             f,
+                            const void *const           arg,
+                            aligned_t *const            ret,
+                            const qthread_shepherd_id_t shepherd,
+                            const int                   npreconds, ...);
 int qthread_fork_syncvar_to(const qthread_f             f,
                             const void *const           arg,
                             syncvar_t                  *ret,
