@@ -50,6 +50,7 @@
 # define QTHREAD_OVERFLOW -6
 #endif
 #define NO_SHEPHERD ((qthread_shepherd_id_t)-1)
+#define NO_WORKER ((qthread_worker_id_t)-1)
 
 #ifdef __cplusplus
 # define Q_STARTCXX extern "C" {
@@ -150,11 +151,7 @@ Q_STARTCXX /* */
 typedef struct qthread_s qthread_t;
 
 typedef unsigned int qthread_shepherd_id_t;
-
-# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 typedef unsigned int qthread_worker_id_t;
-#  define NO_WORKER ((qthread_worker_id_t)-1)
-# endif
 
 /* for convenient arguments to qthread_fork */
 typedef aligned_t (*qthread_f)(void *arg);
@@ -283,15 +280,15 @@ const qthread_shepherd_id_t *qthread_sorted_sheps_remote(const
                                                          src);
 /* returns the number of actively-scheduling shepherds */
 qthread_shepherd_id_t qthread_num_shepherds(void);
-# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 qthread_worker_id_t qthread_num_workers(void); /* how many threads working on problem */
-# endif
 /* queries the current state */
 enum introspective_state {
     STACK_SIZE,
     BUSYNESS,
     ACTIVE_SHEPHERDS,
     TOTAL_SHEPHERDS,
+    ACTIVE_WORKERS,
+    TOTAL_WORKERS
 };
 size_t qthread_readstate(const enum introspective_state type);
 

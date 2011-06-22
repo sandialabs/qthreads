@@ -1870,6 +1870,20 @@ size_t qthread_readstate(const enum introspective_state type)
         case TOTAL_SHEPHERDS:
             return (size_t)(qlib->nshepherds);
 
+        case ACTIVE_WORKERS:
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+            return (size_t)(qlib->nworkers_active);
+#else
+            return (size_t)(qlib->nshepherds_active);
+#endif
+
+        case TOTAL_WORKERS:
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+            return (size_t)(qlib->nworkerspershep * qlib->nshepherds);
+#else
+            return (size_t)(qlib->nshepherds);
+#endif
+
         default:
             return (size_t)(-1);
     }
@@ -3095,14 +3109,11 @@ qthread_shepherd_id_t qthread_num_shepherds(void)
     return (qthread_shepherd_id_t)(qlib->nshepherds_active);
 }                      /*}}} */
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 /* returns the number of shepherds actively scheduling work */
 qthread_worker_id_t qthread_num_workers(void)
 {                      /*{{{ */
-    return (qthread_worker_id_t)(qlib->nworkers_active);
+    return (qthread_worker_id_t)qthread_readstate(ACTIVE_WORKERS);
 }                      /*}}} */
-
-#endif
 
 /* these two functions are helper functions for futurelib
  * (nobody else gets to have 'em!) */
