@@ -6,7 +6,7 @@ These are ideas for things to do (in no particular order):
 
  3. Lock-free hash table for FEB synchronization
 
- 4. Lock-free double-ended queue for Gatling scheduler
+ 4. Lock-free double-ended queue for sherwood scheduler
 
  5. Intercept blocking syscalls (solidify, expand)
 
