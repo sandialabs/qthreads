@@ -91,7 +91,7 @@ int main(int argc, char *argv[])
         }
         ui_array2 = calloc(len, sizeof(aligned_t));
         iprintf("ui_array generated...\n");
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < iterations; i++) {
             memcpy(ui_array2, ui_array, len * sizeof(aligned_t));
             qtimer_start(timer);
             qutil_aligned_qsort(ui_array2, len);
@@ -101,7 +101,7 @@ int main(int argc, char *argv[])
 	cumulative_time_qutil /= (double)iterations;
         printf("sorting %lu aligned_ts with qutil took: %f seconds\n",
                (unsigned long)len, cumulative_time_qutil);
-        for (int i = 0; i < 10; i++) {
+        for (int i = 0; i < iterations; i++) {
             memcpy(ui_array2, ui_array, len * sizeof(aligned_t));
             qtimer_start(timer);
             qsort(ui_array2, len, sizeof(double), acmp);
