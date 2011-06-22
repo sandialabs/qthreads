@@ -568,7 +568,13 @@ AS_IF([test "x$enable_valgrind" = "xyes"],
                         [AC_DEFINE([QTHREAD_USE_VALGRIND], [1], [Use Valgrind Macros])])])
 
 AS_IF([test "x$enable_rose_extensions" = xyes],
-      [AC_DEFINE([QTHREAD_USE_ROSE_EXTENSIONS], [1], [Define to enable ROSE extensions])])
+      [AC_DEFINE([QTHREAD_USE_ROSE_EXTENSIONS], [1], [Define to enable ROSE extensions])
+	   AS_IF([test "x$with_scheduler" != "x" -a "x$with_scheduler" != "xsherwood"],
+			 [AC_MSG_ERROR([ROSE XOMP implementation *REQUIRES* the sherwood scheduler.])],
+			 [with_scheduler="sherwood"])
+	   AS_IF([test "x$enable_multithreaded_shepherds" != "x" -a "x$enable_multithreaded_shepherds" != "xyes"],
+			 [AC_MSG_ERROR([ROSE XOMP implementation *REQUIRES* multithreaded shepherds.])],
+			 [enable_multithreaded_shepherds="yes"])])
 
 AS_IF([test "x$enable_hpctoolkit_support" = xyes],
       [AC_DEFINE([QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING], [1], [Support HPCToolkit stack unwinding])])
