@@ -15,7 +15,7 @@ scheduling.
 The library's metaphor is that there are many qthreads and several "shepherds".
 Shepherds generally map to specific processors or memory regions, but this is
 not an explicit part of the API. Qthreads are assigned to specific shepherds
-and do not migrate (yet).
+and do not generally migrate.
 
 The API includes utility functions for making threaded loops, sorting, and
 similar operations convenient.
@@ -28,22 +28,17 @@ handle 350,000 qthreads. With some modifications (mostly in stack-size), it was
 able to handle 1,000,000 qthreads. It may be able to do more, but swapping will
 become an issue, and you may start to run out of address space.
 
-This library has been tested, and runs well, on a 64-bit machine.
-
-On many machines, the stack is required to be page-aligned and there are
-usually strict requirements for the alignment of the ucontext_t structure
-(particularly on a 64-bit machine). Thus, the stack and context generally take
-at least 2 pages (8k). The stack can be limited even further (it has been
-tested with a 2k stack on a 32-bit machine, which is how it handled 1,000,000
-threads).
+This library has been tested, and runs well, on a 64-bit machine. It is
+occasionally tested on 32-bit machines, and has even been tested under Cygwin.
 
 Currently, the only real limiting factor on the number of threads is the amount
 of memory and address space you have available. For more than 2^32 threads, the
 thread_id value will need to be made larger (or eliminated, as it is not
-required by the library itself).
+*required* for correct operation by the library itself).
 
 For information on how to use qthread or qalloc, there is A LOT of information
-in the header files (qthread.h and qalloc.h).
+in the header files (qthread.h and qalloc.h), but the primary documentation is
+man pages.
 
 *******************************************************
 FUTURELIB DOCUMENTATION (the 10-minute version)
