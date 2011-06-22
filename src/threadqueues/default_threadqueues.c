@@ -404,6 +404,9 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd)
 
 void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 {   /*{{{*/
+    while (q->head != q->tail) {
+        qt_threadqueue_dequeue_blocking(q, 1);
+    }
     assert(q->head == q->tail);
     QTHREAD_FASTLOCK_DESTROY(q->qlock);
     FREE_THREADQUEUE(q);
