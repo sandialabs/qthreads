@@ -956,7 +956,7 @@ int qthread_initialize(void)
             if (*eptr != 0) {
                 tmp_size = ARGCOPY_DEFAULT;
             }
-        } else   {
+        } else {
             tmp_size = ARGCOPY_DEFAULT;
         }
         qlib->qthread_argcopy_size = tmp_size;
@@ -978,7 +978,7 @@ int qthread_initialize(void)
             if (tmp_size == 0) {
                 tmp_size = sizeof(void *);
             }
-        } else   {
+        } else {
             tmp_size = TASKLOCAL_DEFAULT;
         }
         qlib->qthread_tasklocal_size = tmp_size;
@@ -1678,7 +1678,8 @@ void qthread_pack_workerid(const qthread_worker_id_t w,
     assert((worker < qlib->nworkerspershep));
     qlib->shepherds[shep].workers[worker].packed_worker_id = newId;
 }
-#endif
+
+#endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
 
 int qthread_disable_worker(const qthread_worker_id_t w)
 {
@@ -1707,9 +1708,10 @@ int qthread_disable_worker(const qthread_worker_id_t w)
     if (worker == 0) { qthread_disable_shepherd(shep); }
 
     return QTHREAD_SUCCESS;
-#else
+
+#else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     return qthread_disable_shepherd(w);
-#endif
+#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 }
 
 void qthread_enable_worker(const qthread_worker_id_t w)
@@ -1817,7 +1819,7 @@ void *qthread_get_tasklocal(unsigned int size)
 
             return *data;
         }
-    } else   {
+    } else {
         return NULL;
     }
 }
@@ -1879,6 +1881,7 @@ size_t qthread_readstate(const enum introspective_state type)
         case ACTIVE_WORKERS:
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
             return (size_t)(qlib->nworkers_active);
+
 #else
             return (size_t)(qlib->nshepherds_active);
 #endif
@@ -1886,6 +1889,7 @@ size_t qthread_readstate(const enum introspective_state type)
         case TOTAL_WORKERS:
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
             return (size_t)(qlib->nworkerspershep * qlib->nshepherds);
+
 #else
             return (size_t)(qlib->nshepherds);
 #endif
@@ -1922,7 +1926,7 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
     qthread_shepherd_t *myshep = &(qlib->shepherds[shepherd]);
 #endif
 
-    t = ALLOC_QTHREAD(myshep);
+    t       = ALLOC_QTHREAD(myshep);
     t->next = NULL;
     qthread_debug(ALL_DETAILS, "t = %p\n", t);
     qassert_ret(t, NULL);
@@ -2280,10 +2284,11 @@ int qthread_fork(const qthread_f f,
     return QTHREAD_MALLOC_ERROR;
 }                      /*}}} */
 
-int qthread_fork_precond(const qthread_f   f,
-                         const void       *arg,
-                         aligned_t        *ret,
-                         const int         npreconds, ...)
+int qthread_fork_precond(const qthread_f f,
+                         const void     *arg,
+                         aligned_t      *ret,
+                         const int       npreconds,
+                         ...)
 {
     qthread_t            *t;
     qthread_shepherd_id_t shep;
@@ -2370,8 +2375,9 @@ int qthread_fork_precond(const qthread_f   f,
         qthread_check_precond(t);
 
         // All preconds are full, go ahead and just enqueue
-        if (0 == t->npreconds)
+        if (0 == t->npreconds) {
             qt_threadqueue_enqueue(qlib->shepherds[shep].ready, t, myshep);
+        }
 
         return QTHREAD_SUCCESS;
     }
@@ -2523,7 +2529,8 @@ int qthread_fork_precond_to(const qthread_f             f,
                             const void                 *arg,
                             aligned_t                  *ret,
                             const qthread_shepherd_id_t shepherd,
-                            const int                   npreconds, ...)
+                            const int                   npreconds,
+                            ...)
 {                      /*{{{ */
     qthread_t          *t;
     qthread_shepherd_t *shep;
@@ -2585,9 +2592,10 @@ int qthread_fork_precond_to(const qthread_f             f,
     qthread_check_precond(t);
 
     // All preconds are full, go ahead and just enqueue
-    if (0 == t->npreconds)
+    if (0 == t->npreconds) {
         qt_threadqueue_enqueue(shep->ready, t,
                                qthread_internal_getshep());
+    }
 
     return QTHREAD_SUCCESS;
 }                      /*}}} */
@@ -2769,17 +2777,16 @@ int qthread_fork_syncvar_future(const qthread_f f,
  */
 int INTERNAL qthread_check_precond(qthread_t *t)
 {
-    qthread_shepherd_t *myshep = qthread_internal_getshep();
-    aligned_t **these_preconds = (aligned_t **)t->preconds;
+    qthread_shepherd_t *myshep         = qthread_internal_getshep();
+    aligned_t         **these_preconds = (aligned_t **)t->preconds;
 
     // Process input preconds
-    while (t->npreconds > 0)
-    {
-        aligned_t *this_sync = these_preconds[t->npreconds-1];
+    while (t->npreconds > 0) {
+        aligned_t *this_sync = these_preconds[t->npreconds - 1];
 
-        if (1 == qthread_feb_status(this_sync))
+        if (1 == qthread_feb_status(this_sync)) {
             t->npreconds--;
-        else {
+        } else {
             // Need to wait on this one, add to appropriate FFQ
             qthread_addrstat_t *m       = NULL;
             qthread_addrres_t  *X       = NULL;
@@ -2793,8 +2800,9 @@ int INTERNAL qthread_check_precond(qthread_t *t)
             qt_hash_lock(qlib->FEBs[lockbin]);
             {
                 m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->FEBs[lockbin], (void *)alignedaddr);
-                if (m)
+                if (m) {
                     QTHREAD_FASTLOCK_LOCK(&m->lock);
+                }
             }
             qt_hash_unlock(qlib->FEBs[lockbin]);
             qthread_debug(LOCK_DETAILS, "data structure locked\n");
@@ -2807,11 +2815,11 @@ int INTERNAL qthread_check_precond(qthread_t *t)
                     QTHREAD_FASTLOCK_UNLOCK(&m->lock);
                     return QTHREAD_MALLOC_ERROR;
                 }
-                X->addr   = this_sync;
-                X->waiter = t;
-                X->next   = m->FFQ;
-                m->FFQ    = X;
-                t->thread_state = QTHREAD_STATE_NASCENT; 
+                X->addr         = this_sync;
+                X->waiter       = t;
+                X->next         = m->FFQ;
+                m->FFQ          = X;
+                t->thread_state = QTHREAD_STATE_NASCENT;
                 QTHREAD_FASTLOCK_UNLOCK(&m->lock);
 
                 return QTHREAD_SUCCESS;
@@ -3046,11 +3054,11 @@ qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *shepherd_id)
         *shepherd_id = worker->shepherd->shepherd_id;
     }
     return worker ? (worker->packed_worker_id) : NO_WORKER;
+
 #else
     return qthread_shep();
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 }                                      /*}}} */
-
 
 int qthread_shep_ok(void)
 {                      /*{{{ */
