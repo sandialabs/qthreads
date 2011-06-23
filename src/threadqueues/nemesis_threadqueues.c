@@ -97,7 +97,7 @@ void INTERNAL qt_threadqueue_destroy_pools(qt_threadqueue_pools_t *p)
 /* Thankfully, NEMESIS does not suffer from the ABA problem. */
 
 qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd)
-{/*{{{*/
+{   /*{{{*/
     qt_threadqueue_t *q = ALLOC_THREADQUEUE(shepherd);
 
     qassert_ret(q != NULL, NULL);
@@ -109,26 +109,24 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd)
     {
         pthread_mutexattr_t ma;
         qassert(pthread_mutexattr_init(&ma), 0);
-        qassert(pthread_mutexattr_setpshared(&ma, PTHREAD_PROCESS_SHARED),
-                   0);
+        qassert(pthread_mutexattr_setpshared(&ma, PTHREAD_PROCESS_SHARED), 0);
         qassert(pthread_mutex_init(&q->trigger_lock, &ma), 0);
         qassert(pthread_mutexattr_destroy(&ma), 0);
     }
     {
         pthread_condattr_t ca;
         qassert(pthread_condattr_init(&ca), 0);
-        qassert(pthread_condattr_setpshared(&ca, PTHREAD_PROCESS_SHARED),
-                   0);
+        qassert(pthread_condattr_setpshared(&ca, PTHREAD_PROCESS_SHARED), 0);
         qassert(pthread_cond_init(&q->trigger, &ca), 0);
         qassert(pthread_condattr_destroy(&ca), 0);
     }
 #endif /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
 
     return q;
-}/*}}}*/
+} /*}}}*/
 
 void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
-{/*{{{*/
+{   /*{{{*/
     assert(q);
     while (qt_threadqueue_dequeue(q)) ;
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
@@ -136,12 +134,12 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
     QTHREAD_DESTROYCOND(&q->trigger);
 #endif
     FREE_THREADQUEUE(q);
-}/*}}}*/
+} /*}}}*/
 
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict   q,
                                      qthread_t *restrict          t,
                                      qthread_shepherd_t *restrict shep)
-{/*{{{*/
+{   /*{{{*/
     assert(t->next == NULL);
     NEMESIS_entry *prev = qt_internal_atomic_swap_ptr((void *volatile *)&(q->q.tail), t);
 
@@ -162,23 +160,23 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict   q,
         qassert(pthread_mutex_unlock(&q->trigger_lock), 0);
     }
 #endif
-}/*}}}*/
+} /*}}}*/
 
 void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
-                                    qthread_t          *t,
-                                    qthread_shepherd_t *shep)
-{/*{{{*/
+                                             qthread_t          *t,
+                                             qthread_shepherd_t *shep)
+{   /*{{{*/
     qt_threadqueue_enqueue(q, t, shep);
-}/*}}}*/
+} /*}}}*/
 
 ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
-{/*{{{*/
+{   /*{{{*/
     assert(q);
     return q->advisory_queuelen;
-}/*}}}*/
+} /*}}}*/
 
 static inline NEMESIS_entry *qt_internal_NEMESIS_dequeue(NEMESIS_queue *q)
-{/*{{{*/
+{   /*{{{*/
     NEMESIS_entry *retval = q->head;
 
     if ((retval != NULL) && (retval != (void *)1)) {
@@ -197,21 +195,21 @@ static inline NEMESIS_entry *qt_internal_NEMESIS_dequeue(NEMESIS_queue *q)
         }
     }
     return retval;
-}/*}}}*/
+} /*}}}*/
 
 qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
-{/*{{{*/
+{   /*{{{*/
     NEMESIS_entry *retval = qt_internal_NEMESIS_dequeue(&q->q);
 
     if (retval) {
-	assert(retval->next == NULL);
+        assert(retval->next == NULL);
         qthread_incr(&(q->advisory_queuelen), -1);
     }
     return (qthread_t *)retval;
-}/*}}}*/
+} /*}}}*/
 
 qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q)
-{/*{{{*/
+{   /*{{{*/
     NEMESIS_entry *retval = qt_internal_NEMESIS_dequeue(&q->q);
 
     if (retval == NULL) {
@@ -222,8 +220,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q)
             if (qthread_incr(&q->frustration, 1) > 1000) {
                 qassert(pthread_mutex_lock(&q->trigger_lock), 0);
                 if (q->frustration > 1000) {
-                    qassert(pthread_cond_wait
-                                   (&q->trigger, &q->trigger_lock), 0);
+                    qassert(pthread_cond_wait(&q->trigger, &q->trigger_lock), 0);
                 }
                 qassert(pthread_mutex_unlock(&q->trigger_lock), 0);
             }
@@ -235,6 +232,6 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q)
     assert(retval->next == NULL);
     qthread_incr(&(q->advisory_queuelen), -1);
     return (qthread_t *)retval;
-}/*}}}*/
+} /*}}}*/
 
 /* vim:set expandtab: */
