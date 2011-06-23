@@ -2793,7 +2793,6 @@ int INTERNAL qthread_check_precond(qthread_t *t)
             const int           lockbin = QTHREAD_CHOOSE_STRIPE(this_sync);
             const aligned_t    *alignedaddr;
 
-            qthread_debug(LOCK_BEHAVIOR, "tid %u dest=%p src=%p...\n", me->thread_id, this_sync, this_sync);
             QTHREAD_LOCK_UNIQUERECORD(feb, this_sync, t);
             QALIGN(this_sync, alignedaddr);
             QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
