@@ -32,6 +32,10 @@ if COMPILE_CHAPEL_INTERFACE
 include interfaces/chapel/Makefile.inc
 endif
 
+if COMPILE_ROSE_EXTENSIONS
+include interfaces/rose/Makefile.inc
+endif
+
 # version-info fields are:
 # 1. the current interface revision number (i.e. whenever arguments of existing
 #    functions change, increment this number)
@@ -50,12 +54,6 @@ libqthread_la_LDFLAGS = -version-info 13:0:0 -no-undefined
 
 libqthread_la_LIBADD =
 libqthread_la_DEPENDENCIES =
-
-if COMPILE_ROSE_EXTENSIONS
-libqthread_la_SOURCES += qt_barrier.c \
-						 rose_xomp.c \
-						 rose_log_arrivaldetector.c
-endif
 
 if COMPILE_TARGET_SST
 libqthread_la_SOURCES += \
