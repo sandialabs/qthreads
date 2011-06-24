@@ -161,7 +161,9 @@ void chpl_task_exit(void)
 
 void chpl_task_callMain(void (*chpl_main)(void))
 {
-    chpl_task_begin((chpl_fn_p)chpl_main, NULL, false, false, NULL);
+    syncvar_t ret;
+    qthread_fork_syncvar(chpl_main, NULL, &ret);
+    qthread_syncvar_readFF(&ret, &ret);
 }
 
 int chpl_task_createCommTask(chpl_fn_p fn, void* arg) {
