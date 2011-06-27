@@ -327,6 +327,9 @@ static QINLINE void alloc_rdata(qthread_shepherd_t *me,
 #endif
 }
 
+static int rcr_gate = 0;
+static volatile int rcr_ready = 0;
+
 static void *qthread_shepherd(void *arg)
 {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -378,12 +381,42 @@ static void *qthread_shepherd(void *arg)
         qt_affinity_set(me);
 #endif
     }
+
+#ifdef QTHREAD_RCRTOOL
+    if (rcrtoollevel) { // has cache control been turned off by an environment variable?
+      // if so need to initialize -- inside of call (call also forces is to happen only once)
+      // care needs to be taken so no one makes it into workhorse loop before allocation 
+      // has actually happened
+      int gate = qthread_incr(&rcr_gate,1);
+      if(gate == 0){
+	maestro_allowed_workers();
+	rcr_ready = 1;
+      }
+      else while(!rcr_ready){} //spin until ready
+    }
+#endif
     /* workhorse loop */
     while (!done) {
 #ifdef QTHREAD_SHEPHERD_PROFILING
         qtimer_start(idle);
 #endif
         qthread_debug(ALL_DETAILS, "id(%i): fetching a thread from my queue...\n", me->shepherd_id);
+
+#ifdef QTHREAD_RCRTOOL
+	if (rcrtoollevel) { // has cache control been turned off by an environment variable?
+
+	  if (me_worker->packed_worker_id != 0) { // never idle shepherd 0 worker 0  -- needs to be active for termination
+	    if (qlib->shepherds[me->shepherd_id].active_workers > maestro_current_workers(me->shepherd_id)) {
+	      qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers,-1); // not working spinning	      
+	      while ((qlib->shepherds[me->shepherd_id].active_workers + 1) > maestro_current_workers(me->shepherd_id)) { // A) the number of workers to be increased
+		if(done) break; // B) somebodies noticed the job is done
+	      }
+	      qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers,1); // back at work  -- skipped in departed workers case OK since everyone leaving
+	    }
+	  }
+	}
+#endif
+
         assert(me->ready);
         t = qt_threadqueue_dequeue_blocking(me->ready QMS_ARG(me_worker->active));
         assert(t);
@@ -410,6 +443,7 @@ static void *qthread_shepherd(void *arg)
             qtimer_stop(me->total_time);
 #endif
             done = 1;
+	    qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers,-1); // not working spinning
             qthread_thread_free(t);
         } else if (t->thread_state != QTHREAD_STATE_NASCENT) {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -694,7 +728,6 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
  *
  * @error ENOMEM Not enough memory could be allocated.
  */
-int rcrSchedulingOff = 1;
 
 int qthread_initialize(void)
 {                      /*{{{ */
@@ -769,14 +802,6 @@ int qthread_initialize(void)
             }
         }
 # endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-# ifdef QTHREAD_RCRTOOL
-        qsh  = getenv("QTHREAD_RCR_SCHED_OFF");
-        qshe = NULL;
-
-        if (qsh) {
-            rcrSchedulingOff = 0; // treat as True if it exists
-        }
-# endif /* ifdef QTHREAD_RCRTOOL */
     }
     qt_affinity_init(&nshepherds
 # ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -1149,7 +1174,14 @@ int qthread_initialize(void)
             rcrtoollevel = 0;
         }
     }
-#endif /* ifdef QTHREAD_RCRTOOL */
+    if (rcrtoollevel > 0) {
+        qlib->nworkers_active = nshepherds * nworkerspershep - 1;
+    } else {
+        qlib->nworkers_active = nshepherds * nworkerspershep;
+    }
+# else
+    qlib->nworkers_active = nshepherds * nworkerspershep;
+# endif
 
 /* spawn the shepherds */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -1158,15 +1190,16 @@ int qthread_initialize(void)
         qthread_debug(ALL_DETAILS,
                       "forking workers for shepherd %i (%p)\n", i,
                       &qlib->shepherds[i]);
+#ifdef QTHREAD_RCRTOOL
+	qlib->shepherds[i].active_workers         = nworkerspershep; // race? between creation and workhorse loop putting guys to sleep??? akp 6/10/11
+	if (i == nshepherds-1) qlib->shepherds[i].active_workers--; // the daemon uses up one worker
+#endif
         for (j = 0; j < nworkerspershep; ++j) {
             if ((i == 0) && (j == 0)) {
                 continue;                       // original pthread becomes shep 0 worker 0
             }
-            qlib->shepherds[i].workers[j].shepherd         = &qlib->shepherds[i];
-            qlib->shepherds[i].workers[j].worker_id        = j;
-            qlib->shepherds[i].workers[j].packed_worker_id = j + (i * nworkerspershep);
-            qlib->shepherds[i].workers[j].active           = 1;
 # ifdef QTHREAD_RCRTOOL
+            qlib->shepherds[i].workers[j].shepherd         = &qlib->shepherds[i];
             if (rcrtoollevel > 0) {
                 if ((i == nshepherds - 1) && (j == nworkerspershep - 1)) {
                     swinfo.nshepherds      = nshepherds;
@@ -1182,6 +1215,9 @@ int qthread_initialize(void)
                 }
             }
 # endif     /* ifdef QTHREAD_RCRTOOL */
+            qlib->shepherds[i].workers[j].worker_id        = j;
+            qlib->shepherds[i].workers[j].packed_worker_id = j + (i * nworkerspershep);
+            qlib->shepherds[i].workers[j].active           = 1;
             if ((r = pthread_create(&qlib->shepherds[i].workers[j].worker, NULL,
                                     qthread_shepherd, &qlib->shepherds[i].workers[j])) != 0) {
                 fprintf(stderr, "qthread_init: pthread_create() failed (%d)\n", r);
@@ -1191,15 +1227,6 @@ int qthread_initialize(void)
             qthread_debug(ALL_DETAILS, "spawned shep %i worker %i\n", (int)i, (int)j);
         }
     }
-# ifdef QTHREAD_RCRTOOL
-    if (rcrtoollevel > 0) {
-        qlib->nworkers_active = nshepherds * nworkerspershep - 1;
-    } else {
-        qlib->nworkers_active = nshepherds * nworkerspershep;
-    }
-# else
-    qlib->nworkers_active = nshepherds * nworkerspershep;
-# endif
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     for (i = 1; i < nshepherds; ++i) {
         qthread_debug(ALL_DETAILS,
@@ -3025,6 +3052,7 @@ unsigned INTERNAL qthread_barrier_id(void)
 
     qthread_debug(ALL_CALLS, "tid(%u)\n",
                   t ? t->id : (unsigned)-1);
+    if (t && (t->id == NO_SHEPHERD)) return  qthread_internal_getshep()->shepherd_id; 
     return t ? t->id : (unsigned int)-1;
 }                      /*}}} */
 
