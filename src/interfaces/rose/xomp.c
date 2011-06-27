@@ -1496,7 +1496,7 @@ void omp_child_task_affinity (
     unsigned int shep)
 {
   qthread_t *t = qthread_internal_self();   
-  t->child_affinity = (qthread_shepherd_id_t) shep;
+  t->rdata->child_affinity = (qthread_shepherd_id_t) shep;
 }  
 
 // In the following functions, we just return null if hwloc is not avaiable
@@ -1523,8 +1523,6 @@ void omp_affinity_mem_toshep(void * addr, size_t bytes, unsigned int shep)
 {
 #ifdef QTHREAD_HAVE_MEM_AFFINITY
   return qt_affinity_mem_tonode(addr, bytes, qlib->shepherds[shep].node);
-#else
-  return NULL;
 #endif
 }
 
