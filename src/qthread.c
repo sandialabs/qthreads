@@ -443,7 +443,9 @@ static void *qthread_shepherd(void *arg)
             qtimer_stop(me->total_time);
 #endif
             done = 1;
+#ifdef QTHREAD_RCRTOOL
 	    qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers,-1); // not working spinning
+#endif
             qthread_thread_free(t);
         } else if (t->thread_state != QTHREAD_STATE_NASCENT) {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
