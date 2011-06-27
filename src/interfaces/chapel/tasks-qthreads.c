@@ -159,11 +159,22 @@ void chpl_task_exit(void)
     while (done_finalizing == 0) ;
 }
 
+static aligned_t chapel_wrapper(void *arg)
+{
+    void **rarg = (void **)arg;
+
+    (*(chpl_fn_p)(rarg[0]))(rarg[1]);
+
+    return 0;
+}
+
 void chpl_task_callMain(void (*chpl_main)(void))
 {
+    void *const wrapper_args[2] = { chpl_main, NULL };
+
     syncvar_t ret;
-    qthread_fork_syncvar(chpl_main, NULL, &ret);
-    qthread_syncvar_readFF(&ret, &ret);
+    qthread_fork_syncvar(chapel_wrapper, wrapper_args, &ret);
+    qthread_syncvar_readFF(NULL, &ret);
 }
 
 int chpl_task_createCommTask(chpl_fn_p fn, void* arg) {
@@ -187,15 +198,6 @@ void chpl_task_processTaskList(chpl_task_list_p task_list) { }
 void chpl_task_executeTasksInList(chpl_task_list_p task_list) { }
 
 void chpl_task_freeTaskList(chpl_task_list_p task_list) { }
-
-static aligned_t chapel_wrapper(void *arg)
-{
-    void **rarg = (void **)arg;
-
-    (*(chpl_fn_p)(rarg[0]))(rarg[1]);
-
-    return 0;
-}
 
 void chpl_task_begin(chpl_fn_p        fp,
                      void            *arg,
