@@ -1788,40 +1788,36 @@ void *qthread_get_tasklocal(unsigned int size)
     qthread_t *f = qthread_internal_self();
 
     if (NULL != f) {
-        // Get pointer to task-local segment in data blob
-        void **data = (void **)&f->data + qlib->qthread_argcopy_size;
-
-        if (0 == f->tasklocal_size) {
-            // Do not have alloc'd data (yet)
-            if (size > qlib->qthread_tasklocal_size) {
+        if (0 == f->tasklocal_size && size <= qlib->qthread_tasklocal_size) {
+            // Use default space
+            return &f->data[qlib->qthread_argcopy_size];
+        } else {
+            void **data_blob = (void**)&f->data[qlib->qthread_argcopy_size];
+            if (0 == f->tasklocal_size) {
                 // Allocate space and copy old data
                 void *tmp_data = malloc(size);
                 assert(NULL != tmp_data);
 
-                memcpy(tmp_data, data, size);
-                *data             = tmp_data;
+                memcpy(tmp_data, data_blob, qlib->qthread_tasklocal_size);
+                *data_blob = tmp_data;
+
                 f->tasklocal_size = size;
-
-                return *data;
+                return *data_blob;
+            } else if (size <= f->tasklocal_size) {
+                // Use alloc'd data blob, no need to resize
+                return *data_blob;
             } else {
-                // Use default data space
-                return data;
+                // Resize alloc'd data blob
+                *data_blob = realloc(*data_blob, size);
+                assert(NULL != *data_blob);
+
+                f->tasklocal_size = size;
+                return *data_blob;
             }
-        } else if (size <= f->tasklocal_size) {
-            // Use alloc'd data, no need to resize
-            return *data;
-        } else {
-            // Use alloc'd data, after resizing
-            *data = realloc(*data, size);
-            assert(NULL != *data);
-
-            f->tasklocal_size = size;
-
-            return *data;
         }
-    } else {
-        return NULL;
     }
+
+    return NULL;
 }
 
 unsigned qthread_size_tasklocal(void)
@@ -1981,8 +1977,7 @@ static QINLINE void qthread_thread_free(qthread_t *t)
         free(t->arg);
     }
     if (t->tasklocal_size > sizeof(void *)) {
-        void **data = (void **)&t->data + qlib->qthread_argcopy_size;
-        free(*data);
+        free(*(void **)&t->data[qlib->qthread_argcopy_size]);
     }
     qthread_debug(ALL_DETAILS, "t(%p): releasing thread handle %p\n", t, t);
     FREE_QTHREAD(t);
