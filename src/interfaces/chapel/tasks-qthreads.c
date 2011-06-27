@@ -206,7 +206,12 @@ void chpl_task_begin(chpl_fn_p        fp,
                      chpl_task_list_p task_list_entry)
 {
     if (!ignore_serial && chpl_task_getSerial()) {
-        (*fp)(arg);
+        syncvar_t ret;
+        void *const wrapper_args[2] = { fp, arg };
+        qthread_fork_syncvar_copyargs_to(chapel_wrapper, wrapper_args, 
+                                         sizeof(void *) * 2, &ret,
+                                         qthread_shep());
+        qthread_syncvar_readFF(NULL, &ret);
     } else {
         // Will call the real begin statement function. Only purpose of this
         // thread is to wait on that function and coordinate the exiting
@@ -236,32 +241,24 @@ void chpl_task_sleep(int secs)
     qtimer_destroy(t);
 }
 
-/* This is for manipulating task-specific data (a single boolean value) */
+/* The get- and setSerial() methods assume the beginning of the task-local 
+   data segment holds a chpl_bool denoting the serial state. */
 chpl_bool chpl_task_getSerial(void)
 {
-    /*chpl_bool *p = NULL;
-     * p = (chpl_bool*) mta_register_task_data(p);
-     * if (p == NULL)
-     * return false;
-     * else {
-     * mta_register_task_data(p); // Put back the value retrieved above.
-     * return *p;
-     * }*/
-    return false;
+    chpl_bool *state = (chpl_bool *)qthread_get_tasklocal(sizeof(chpl_bool));
+    if (NULL == state)
+        chpl_internal_error("could not access serial state");
+
+    return *state;
 }
 
-// XXX: this implies task-specific data
 void chpl_task_setSerial(chpl_bool state)
 {
-    /*chpl_bool *p = NULL;
-     * p = (chpl_bool*) mta_register_task_data(p);
-     * if (p == NULL)
-     * p = (chpl_bool*) chpl_alloc(sizeof(chpl_bool), CHPL_RT_MD_SERIAL_FLAG, 0, 0);
-     * if (p) {
-     * *p = state;
-     * mta_register_task_data(p);
-     * } else
-     * chpl_internal_error("out of memory while creating serial state");*/
+     chpl_bool *data = (chpl_bool *)qthread_get_tasklocal(sizeof(chpl_bool));
+     if (NULL != data)
+         *data = state;
+     else
+         chpl_internal_error("could not access serial state");
 }
 
 uint64_t chpl_task_getCallStackSize(void)
