@@ -82,7 +82,7 @@ struct qthread_s {
     void                          *ret; /* user defined retval location */
     struct qthread_runtime_data_s *rdata;
     unsigned                       tasklocal_size;
-    uint8_t                        data[];
+    Q_ALIGNED(8) uint8_t           data[];
 };
 
 #endif // ifndef QT_QTHREAD_STRUCT_H
