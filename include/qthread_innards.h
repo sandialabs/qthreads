@@ -157,16 +157,16 @@ int qthread_fork_syncvar_copyargs_to(const qthread_f   f,
 /* functions added by akp to hand openMP task completion
  */
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-void INTERNAL qthread_getTaskListLock(void);
-void INTERNAL qthread_releaseTaskListLock(void);
+void qthread_getTaskListLock(void);
+void qthread_releaseTaskListLock(void);
 
 extern int __qthreads_temp;
 void INTERNAL qthread_reset_forCount(void);
 
 int INTERNAL            qthread_forCount(int inc);
-taskSyncvar_t INTERNAL *qthread_getTaskRetVar(void);
-void INTERNAL           qthread_setTaskRetVar(taskSyncvar_t *v);
-void INTERNAL           qt_move_to_orig(void); /* reschedule this thread on shepherd 0 worker 0 -- for termination 4/1/11 AKP */
+taskSyncvar_t *qthread_getTaskRetVar(void);
+void qthread_setTaskRetVar(taskSyncvar_t *v);
+void qt_move_to_orig(void); /* reschedule this thread on shepherd 0 worker 0 -- for termination 4/1/11 AKP */
 #endif // ifdef QTHREAD_USE_ROSE_EXTENSIONS
 #ifdef STEAL_PROFILE
 void INTERNAL qthread_steal_stat(void);
