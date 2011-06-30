@@ -327,8 +327,10 @@ static QINLINE void alloc_rdata(qthread_shepherd_t *me,
 #endif
 }
 
+#ifdef QTHREAD_RCRTOOL
 static int rcr_gate = 0;
 static volatile int rcr_ready = 0;
+#endif
 
 static void *qthread_shepherd(void *arg)
 {
@@ -1159,7 +1161,8 @@ int qthread_initialize(void)
     qassert(qt_swapctxt(&qlib->mccoy_thread->rdata->context, &(qlib->master_context)), 0);
 #endif
 
-#ifdef QTHREAD_RCRTOOL
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+# ifdef QTHREAD_RCRTOOL
     QTHREAD_FASTLOCK_INIT(rcrtool_lock);
     {
         char *qrcrtl  = getenv("QTHREAD_RCRTOOL_LEVEL");
@@ -1184,6 +1187,7 @@ int qthread_initialize(void)
 # else
     qlib->nworkers_active = nshepherds * nworkerspershep;
 # endif
+#endif /* QTHREAD_MULTITHREADED_SHEPHERDS */
 
 /* spawn the shepherds */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
