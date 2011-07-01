@@ -60,6 +60,9 @@ extern ShepWorkerInfo swinfo;
 
 typedef struct _RCRHashEntry {
     char funcName[RCR_HASH_ENTRY_SIZE];
+    int loopCount;
+    int loopQueue[64];
+    int loopQueueDepth;
     unsigned int count;
     unsigned int numOMPassignedThreads;
 } RCRHashEntry;

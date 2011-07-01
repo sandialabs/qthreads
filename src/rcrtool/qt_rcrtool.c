@@ -15,7 +15,6 @@
 # include "omp_affinity.h"
 #endif
 #include "qt_affinity.h"
-#include "perf_util.h"
 
 pthread_t rcrToolPThreadID;
 
@@ -42,14 +41,6 @@ void *rcrtoolDaemon(void* arg) {
         qt_affinity_set(me);
 #endif
     }
-    if (pfm_initialize() != PFM_SUCCESS)
-        errx(1, "libpfm initialization failed");
-    //empty the hash table
-    int i = 0;
-    for (; i < RCR_HASH_TABLE_SIZE; i++) {
-        hashTable[i].funcName[0] = 0;
-    }
-	//buildTriggerMap("triggers.config");
     //doWork(((ShepWorkerInfo*)swinfo)->nshepherds, ((ShepWorkerInfo*)swinfo)->nworkerspershep);
     doWork(swinfo.nshepherds, swinfo.nworkerspershep);
     return 0;
@@ -82,38 +73,28 @@ static int storeRCRAppEntry (const char* appName) {
 
 extern qt_rcrtool_level rcrtoollevel;
 
-/*!
- * Simple hash function based on djb2 function by Dan Bernstein.  Altered to 
- * avoid compiler warnings. 
+/**
+ * Simple hash function taking function pointer to int. 
  * 
- * \param str Sting key.
+ * @param funcPointer Sting key.
  * 
- * \return unsigned int Hash code in range of 0 to RCR_HASH_TABLE_SIZE - 1.
+ * @return int Hash code in range of 0 to RCR_HASH_TABLE_SIZE - 1.
  */
-static unsigned int hash_old(const unsigned char *str) {
-    unsigned long hash = 5381;
-
-    for (; *str; str++)
-        hash = ((hash << 5) + hash) + *str; /* hash * 33 + c */
-
-    return(unsigned int)(hash % RCR_HASH_TABLE_SIZE);
-}
-
-/*!
- * Simple hash function based on djb2 function by Dan Bernstein.  Altered to 
- * avoid compiler warnings. 
- * 
- * \param str Sting key.
- * 
- * \return unsigned int Hash code in range of 0 to RCR_HASH_TABLE_SIZE - 1.
- */
-static unsigned int hash(uint64_t funcPointer) {
-    return(unsigned int)(funcPointer % RCR_HASH_TABLE_SIZE);
+static int hash(uint64_t funcPointer) {
+    return(int)(funcPointer % RCR_HASH_TABLE_SIZE);
 }
 
 static int getHashRecord(uint64_t funcPointer, const char* funcName) {
-    unsigned int hashCode = hash(funcPointer);
-    unsigned int hashCode2 = hashCode;
+    static int firstTime = 1;
+    if (firstTime) { //then clear the hash table
+        int i = 0;
+        for (; i < RCR_HASH_TABLE_SIZE; i++) {
+            hashTable[i].funcName[0] = 0;
+        }
+        firstTime = 0;
+    }
+    int hashCode = hash(funcPointer);
+    int hashCode2 = hashCode;
     for (; hashCode < RCR_HASH_TABLE_SIZE; hashCode++) {
         if (hashTable[hashCode].funcName[0] == 0) {
             hashTable[hashCode].count = 0;
@@ -142,6 +123,8 @@ static void RCREnterParallelSection(unsigned int numOMPassignedThreads, uint64_t
     if (hashRecord > RCR_HASH_LOOKUP_FAILURE) {
         hashTable[hashRecord].count++;
         hashTable[hashRecord].numOMPassignedThreads = numOMPassignedThreads;
+        hashTable[hashRecord].loopCount = 0;
+        hashTable[hashRecord].loopQueueDepth = 0;
     }
     //push on stack even if failure
     RCRParallelSectionStackPos++;
@@ -155,6 +138,23 @@ static void RCRLeaveParallelSection(void) {
     RCRParallelSectionStackPos--;
 }
 
+static void RCREnterParallelLoop(void) {
+    hashTable[RCRParallelSectionStack[RCRParallelSectionStackPos]].loopQueueDepth++;
+    if (hashTable[RCRParallelSectionStack[RCRParallelSectionStackPos]].loopQueueDepth < 64) {
+
+        hashTable[RCRParallelSectionStack[RCRParallelSectionStackPos]].loopQueue[hashTable[RCRParallelSectionStack[RCRParallelSectionStackPos]].loopQueueDepth] = 
+            hashTable[RCRParallelSectionStack[RCRParallelSectionStackPos]].loopCount;
+    }
+    hashTable[RCRParallelSectionStack[RCRParallelSectionStackPos]].loopCount++;
+}
+
+static void RCRLeaveParallelLoop(void) {
+    hashTable[RCRParallelSectionStack[RCRParallelSectionStackPos]].loopQueueDepth--;
+    if (hashTable[RCRParallelSectionStack[RCRParallelSectionStackPos]].loopQueueDepth < 0) {
+        hashTable[RCRParallelSectionStack[RCRParallelSectionStackPos]].loopQueueDepth = 0;
+    }
+}
+
 /*!
  * 
  * 
@@ -166,12 +166,11 @@ static void RCRLeaveParallelSection(void) {
  */
 void rcrtool_log(qt_rcrtool_level level, XOMP_Type type, unsigned int data1, uint64_t data2, const char* data3) {
 
-    int i, j; i = 234; j=2542;
     if (level <= rcrtoollevel || level == 0) {
         //Do some logging.
         switch (type) {
         case XOMP_PARALLEL_START:
-            //printf("Entering parallel section %s.\n", data2);
+            //printf("Entering parallel section %s.\n", data3);
             RCREnterParallelSection(data1, data2, data3);
             break;
         case XOMP_PARALLEL_END:
@@ -186,12 +185,18 @@ void rcrtool_log(qt_rcrtool_level level, XOMP_Type type, unsigned int data1, uin
             //use call to built-in debug system. Only allows printing one variable.
             //qthread_debug(0, data2, (int)data); 
             break;
+        case XOMP_FOR_LOOP_START:
+            //printf("Entering parallel loop.\n");
+            RCREnterParallelLoop();
+            break;
+        case XOMP_FOR_LOOP_END:
+            //printf("Exiting parallel loop.\n");
+            RCRLeaveParallelLoop();
+            break;
         case XOMP_UNK:       
         case XOMP_TASK_START:
         case XOMP_TASKWAIT:
         case XOMP_TASK_END:
-        case XOMP_FOR_LOOP_START:
-        case XOMP_FOR_LOOP_END:
         case XOMP_BARRIER:
         case XOMP_STREAM_START:
         case XOMP_STREAM_END:

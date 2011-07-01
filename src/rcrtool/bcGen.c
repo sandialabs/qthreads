@@ -1,3 +1,7 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 /**
  * Breadcrumbs generation for RCR Daemon. 
  * By Anirban Mandal
@@ -366,6 +370,7 @@ void releaseShmLoc(const void* shm) {
  * \param meterName Not currently used.
  */
 void dumpAppState(key_t key, rcrtool_trigger_type triggerType, int socketOrCoreID) {
+//    printf("dumpAppState\n");
     size_t appStateSize = 1024;
     int i = 0;
     //printf("%d @@\n", RCRParallelSectionStackPos);
@@ -374,17 +379,44 @@ void dumpAppState(key_t key, rcrtool_trigger_type triggerType, int socketOrCoreI
     char *shmRover = shmDest;
     strncpy(shmRover, RCRAppName, RCR_APP_NAME_MAX_SIZE);
     shmRover += strlen(RCRAppName);
+    //sprintf(shmRover, "|%8d", hashTable[RCRParallelSectionStack[i]].numOMPassignedThreads);
+    //shmRover += 9;
     for (i = 0; i <= RCRParallelSectionStackPos; i++) {
         //printf("%s %d ^^^^\n", hashTable[RCRParallelSectionStack[i]].funcName, hashTable[RCRParallelSectionStack[i]].count);
-        sprintf(shmRover, "|%8d", hashTable[RCRParallelSectionStack[i]].numOMPassignedThreads);
-        shmRover += 9;
         *shmRover++ = '|';
         strncpy(shmRover, hashTable[RCRParallelSectionStack[i]].funcName, RCR_HASH_ENTRY_SIZE);
         shmRover += strlen(hashTable[RCRParallelSectionStack[i]].funcName);
         *shmRover++ = '|';
         sprintf(shmRover, "%8d", hashTable[RCRParallelSectionStack[i]].count);
         shmRover += 8;
+        //printf("TEST dump parallel loop.\n");
+        if (hashTable[RCRParallelSectionStack[i]].loopQueueDepth > 0) {
+            int depth = 0;
+            //printf("Should dump parallel loop %d.\n", depth);
+            for (;depth < hashTable[RCRParallelSectionStack[i]].loopQueueDepth; depth++) {
+                if (depth < 64) {
+                    *shmRover++ = '|';
+                    //printf("P-loop %8d", hashTable[RCRParallelSectionStack[i]].loopQueue[depth - 1]);
+                    sprintf(shmRover, "P-loop %8d", hashTable[RCRParallelSectionStack[i]].loopQueue[depth]);
+                    shmRover += 15;
+                }
+            }
+        }
     }
+
+    //Do the writing.
+    releaseShmLoc(shmDest);
+}
+/*!
+ * Clear the application state from shared memory.
+ * 
+ */
+void clearAppState(void) {
+    size_t appStateSize = 1024;
+    //printf("%d @@\n", RCRParallelSectionStackPos);
+    appStateSize += (RCR_HASH_ENTRY_SIZE + 10) * RCRParallelSectionStackPos + RCR_APP_NAME_MAX_SIZE;
+    char *shmDest = getShmStringLoc(APPSTATESHMKEY, appStateSize);
+    shmDest[0] = '\0';
 
     //Do the writing.
     releaseShmLoc(shmDest);

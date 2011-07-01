@@ -432,6 +432,10 @@ void xomp_internal_loop_init(
 		    int stride,
 		    int chunk_size)
 {
+#ifdef QTHREAD_RCRTOOL
+    //Here we log entering a loop section.
+    rcrtool_log(RCR_RATTABLE, XOMP_FOR_LOOP_START, 0, (uint64_t)0, "");
+#endif
   qthread_parallel_region_t *pr = qt_parallel_region();
 
   qqloop_step_handle_t *t = NULL;
@@ -660,6 +664,10 @@ void XOMP_loop_end(
       }
       XOMP_barrier(); // need barrier to make sure loop is freed after everyone has used it
     }
+#ifdef QTHREAD_RCRTOOL
+    //Here we log exiting a loop section.
+    rcrtool_log(RCR_RATTABLE, XOMP_FOR_LOOP_END, 0, (uint64_t)0, "");
+#endif
 }
 
 // Openmp parallel for loop is completed

@@ -24,7 +24,7 @@ void     die(char* msg);
 void     daemonize(char bOutputToNull);
 void     doWork(int nshepherds, int nworkerspershep);
 
-static const char TITLE[] = "RCR Daemon (RCRdaemon) 2.00";
+//static const char TITLE[] = "RCR Daemon (RCRdaemon) 2.00";
 
 // Maximum number of processors
 static const int MAX_PROCESSORS = 128;
@@ -59,7 +59,7 @@ static const uint64_t MAX_TIME_WINDOW = 60000000000;
 #define tf(b) ((b)?"TRUE":"FALSE")
 
 //#define INTEL_NEHALEM
-#define AMD_OPTERON
+//#define AMD_OPTERON
 
 // Core meter types
 typedef enum _RCRCoreMeter {
@@ -72,7 +72,38 @@ typedef enum _RCRCoreMeter {
     //must be last item in the enum
     C_NUMBER_OF_CORE_METERS
 } RCRCoreMeter;
+
+#ifndef QTHREAD_RCRTOOL
 static const char* RCRCoreMeters[]      = {"CPI", "L2MissRatio", "L2MissCycleRatio", "L3MissCycleRatio"};
+
+# ifdef AMD_OPTERON
+static const char* RCRSocketMeters[]    = {"L3MissRatio", "MemoryBandwidth", "MemoryConcurrency", "MemoryLatency"};
+# endif
+
+# ifdef INTEL_NEHALEM
+static const char* RCRSocketMeters[]    = {"L3MissRatio", "MemoryBandwidth", "IMTOccupancy0", "IMTOccupancy1"};
+# endif
+
+static const char* RCRCoreEvents[] = {
+    "PERF_COUNT_HW_CPU_CYCLES",
+    "PERF_COUNT_HW_INSTRUCTIONS",
+    "REQUESTS_TO_L2:ALL",
+    "L2_CACHE_MISS:ALL",
+    "L2_FILL_WRITEBACK:ALL"
+};
+
+static const char* RCRSocketEvents[] = {
+    "PERF_COUNT_HW_INSTRUCTIONS",
+    "READ_REQUEST_TO_L3_CACHE:ALL",
+    "L3_CACHE_MISSES:ALL",
+    "DRAM_ACCESSES_PAGE:ALL",
+    "CPU_CLK_UNHALTED",
+    "CPU_READ_COMMAND_REQUESTS_TO_TARGET_NODE_0_3:ALL",
+    "CPU_READ_COMMAND_LATENCY_TO_TARGET_NODE_0_3:ALL",
+};
+
+#endif
+
 /////////////////////////////////////////////////////////////////////////////////////
 // Define the relevant metrics and the performance counters required to calculate them
 /////////////////////////////////////////////////////////////////////////////////////
@@ -95,6 +126,8 @@ int eventsNumPerSocket[] = {1};
 #endif
 #elif defined(AMD_OPTERON)
 
+# endif
+
 // Socket meter types
 typedef enum _RCRSocketMeter {
     S_ERROR       = -1,
@@ -106,9 +139,6 @@ typedef enum _RCRSocketMeter {
     //must be last item in the enum
     S_NUMBER_OF_SOCKET_METERS
 } RCRSocketMeter;
-static const char* RCRSocketMeters[]    = {"L3MissRatio", "MemoryBandwidth", "MemoryConcurrency", "MemoryLatency"};
-//static const char* metersPerCore[]      = {"CPI", "L2MissRatio"};
-//static const char* metersPerSocket[]    = {"L3MissRatio", "MemoryBandwidth", "MemoryConcurrency", "MemoryLatency"};
 
 // Core event types
 typedef enum _RCRCoreEvent {
@@ -120,14 +150,6 @@ typedef enum _RCRCoreEvent {
     //must be last item in the enum
     C_NUMBER_OF_CORE_EVENTS
 } RCRCoreEvent;
-
-static const char* RCRCoreEvents[] = {
-    "PERF_COUNT_HW_CPU_CYCLES",
-    "PERF_COUNT_HW_INSTRUCTIONS",
-    "REQUESTS_TO_L2:ALL",
-    "L2_CACHE_MISS:ALL",
-    "L2_FILL_WRITEBACK:ALL"
-};
 
 static const int eventsPerCoreMeter[][4] = {
     {C_PERF_COUNT_HW_CPU_CYCLES, C_PERF_COUNT_HW_INSTRUCTIONS},
@@ -148,16 +170,7 @@ typedef enum _RCRSocketEvent {
     S_NUMBER_OF_SOCKET_EVENTS
 } RCRSocketEvent;
 
-static const char* RCRSocketEvents[] = {
-    "PERF_COUNT_HW_INSTRUCTIONS",
-    "READ_REQUEST_TO_L3_CACHE:ALL",
-    "L3_CACHE_MISSES:ALL",
-    "DRAM_ACCESSES_PAGE:ALL",
-    "CPU_CLK_UNHALTED",
-    "CPU_READ_COMMAND_REQUESTS_TO_TARGET_NODE_0_3:ALL",
-    "CPU_READ_COMMAND_LATENCY_TO_TARGET_NODE_0_3:ALL",
-};
-
+//static const char* RCRSocketMeters[]    = {"L3MissRatio", "MemoryBandwidth", "MemoryConcurrency", "MemoryLatency"};
 static const int eventsPerSocketMeter[][3] = {
     {S_PERF_COUNT_HW_INSTRUCTIONS, S_READ_REQUEST_TO_L3_CACHE_ALL, S_L3_CACHE_MISSES_ALL},
     {S_PERF_COUNT_HW_INSTRUCTIONS, S_DRAM_ACCESSES_PAGE_ALL},
@@ -166,7 +179,7 @@ static const int eventsPerSocketMeter[][3] = {
 
 static const int numOfEventsPerSocketMeter[] = {3, 2, 3, 3};
 
-# endif
+//# endif
 
 RCRSocketMeter getSocketMeterEnumFromStr(const char* meterName);
 RCRCoreMeter   getCoreMeterEnumFromStr(const char* meterName);

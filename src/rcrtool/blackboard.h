@@ -1,6 +1,10 @@
 #ifndef __BLACKBOARD_H__
 #define __BLACKBOARD_H__
 
+#ifdef __cplusplus
+//extern "C" {
+#endif
+
 #include <sys/shm.h>
 #include "common_rcrtool.h"
 
@@ -30,6 +34,8 @@ typedef enum _RCRLogginLevel {
     RCR_LOG_NONE = 0,
     RCR_LOG_ALL,
 } RCRLogginLevel;
+
+
 
 struct RCRMeter {
     int           enable;              // 0 or 1 
@@ -95,5 +101,8 @@ struct _RCRBlackboard {
     unsigned long   coreMeterInterval;    // time in microsecs between samples. 
 };
 
+#ifdef __cplusplus
+//}
+#endif
 
 #endif

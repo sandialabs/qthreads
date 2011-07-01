@@ -1,3 +1,7 @@
+#ifdef HAVE_CONFIG_H
+#include "config.h"
+#endif
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
@@ -7,7 +11,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
-#include "perf_util.h"
 #include "common_rcrtool.h"
 #include "qt_rcrtool.h"
 #include "bcGen.h"
@@ -22,9 +25,7 @@ typedef struct _parallelRegion{
 
 #define LATENCYTEST 10000
 
-
 #define AMD_OPTERON
-
 
 /*!
  * Complain with perror, then exit.
@@ -34,37 +35,6 @@ typedef struct _parallelRegion{
 void die(char* msg) {
     perror(msg);
     exit(EXIT_FAILURE);
-}
-
-/*!
- * 
- * 
- * \param bOutputToNull 
- */
-void daemonize(char bOutputToNull) {
-    int fd;
-
-    switch (fork()) {
-    case -1:
-        die("Unable to fork");
-    case 0:
-        break;
-    default:
-        exit(0);
-    }
-
-    if (setsid() == -1) {
-        die("Unable to set process group");
-    }
-
-    if ((fd = open("/dev/null", O_RDWR, 0)) != -1) {
-        dup2(fd, STDIN_FILENO);
-        if (bOutputToNull) dup2(fd, STDOUT_FILENO);
-        if (bOutputToNull) dup2(fd, STDERR_FILENO);
-        if (fd > 2) close(fd);
-    } else {
-        die("Unable to detach file discriptors");
-    }
 }
 
 /*!
@@ -121,8 +91,14 @@ void doWork(int nshepherds, int nworkerspershep) {
                 return;
             }
         }
+
+#ifdef QTHREAD_RCRTOOL
+        int dummySocketOrCoreID = 0;
+        dumpAppState(APPSTATESHMKEY, T_TYPE_SOCKET, dummySocketOrCoreID);
+#endif
         nanosleep(&interval, &remainder);
     }
+    clearAppState();
 }
 
 
