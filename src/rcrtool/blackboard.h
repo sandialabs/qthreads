@@ -8,8 +8,9 @@
 #include <sys/shm.h>
 #include "common_rcrtool.h"
 
-#define BLACKBOARDSHMKEY 8234
-#define APPSTATESHMKEY   8235
+#define BLACKBOARDSHMKEY       8234
+#define APPSTATESHMKEY         8235
+#define METERTEXTFIELDLENGTH   64
 struct RCRMeter;
 struct _RCRBlackboard;
 struct RCRNode;
@@ -38,14 +39,17 @@ typedef enum _RCRLogginLevel {
 
 
 struct RCRMeter {
-    int           enable;              // 0 or 1 
-    unsigned long interval;            // time in microsecs between samples. 
-    unsigned long window;              // in microsecs. 
-    double        average;             // average value over time window. 
-    double        current;             // latest sample value of meter. 
-    double        maximum;             // max sampled value over window.
-    double        uBound;              // upper bound of accepted values. 
-    double        lBound;              // lower bound of accepted values. 
+    int           enable;                          // 0 or 1 
+    unsigned long interval;                        // time in microsecs between samples. 
+    unsigned long window;                          // in microsecs. 
+    double        average;                         // average value over time window. 
+    double        current;                         // latest sample value of meter. 
+    double        maximum;                         // max sampled value over window.
+    double        uBound;                          // upper bound of accepted values. 
+    double        lBound;                          // lower bound of accepted values. 
+    char          meterName[METERTEXTFIELDLENGTH+1]; // text name of meter.
+    char          xAxisName[METERTEXTFIELDLENGTH+1]; // text name of x-axis.
+    char          yAxisName[METERTEXTFIELDLENGTH+1]; // text name of y-axis.
 };
 
 struct RCRNode {
