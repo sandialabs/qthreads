@@ -818,7 +818,7 @@ void XOMP_task(
 #endif
   syncvar_t *ret = getSyncTaskVar(); // get new syncvar_t -- setup openmpThreadId (if needed)
 #ifdef QTHREAD_OMP_AFFINITY
-  qthread_t *t = qthread_internal_self();
+  qthread_t *t = qthread_self();
   if (t->rdata->child_affinity != OMP_NO_CHILD_TASK_AFFINITY)
     qthread_fork_syncvar_copyargs_to((qthread_f)func, arg, arg_size, ret, t->rdata->child_affinity);
   else
@@ -1503,7 +1503,7 @@ void qthread_enable_stealing_on_shep (
 void omp_child_task_affinity (
     unsigned int shep)
 {
-  qthread_t *t = qthread_internal_self();   
+  qthread_t *t = qthread_self();   
   t->rdata->child_affinity = (qthread_shepherd_id_t) shep;
 }  
 
