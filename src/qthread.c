@@ -1204,8 +1204,8 @@ int qthread_initialize(void)
             if ((i == 0) && (j == 0)) {
                 continue;                       // original pthread becomes shep 0 worker 0
             }
-# ifdef QTHREAD_RCRTOOL
             qlib->shepherds[i].workers[j].shepherd         = &qlib->shepherds[i];
+# ifdef QTHREAD_RCRTOOL
             if (rcrtoollevel > 0) {
                 if ((i == nshepherds - 1) && (j == nworkerspershep - 1)) {
                     swinfo.nshepherds      = nshepherds;
