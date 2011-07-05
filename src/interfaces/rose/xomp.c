@@ -235,7 +235,7 @@ void XOMP_init(
 
 #ifdef QTHREAD_RCRTOOL
     //Log the XOMP initialization and the application name into the RCRTool RAT Table.
-    rcrtool_log(RCR_RATTABLE, XOMP_INIT, 0, 0, argv[0]);
+    rcrtool_log(RCR_APP_STATE_DUMP, XOMP_INIT, 0, 0, argv[0]);
 #endif
 
     XOMP_Status_init(&xomp_status);  // Initialize XOMP_Status
@@ -315,7 +315,7 @@ void XOMP_parallel_start(
     //Here we log entering an open MP section into the RCRTool RAT Table.
     int numberOfThreads = numThread;
     if (numberOfThreads == 0) numberOfThreads = qthread_num_workers();
-    rcrtool_log(RCR_RATTABLE, XOMP_PARALLEL_START, numberOfThreads, (uint64_t) func, funcName);
+    rcrtool_log(RCR_APP_STATE_DUMP, XOMP_PARALLEL_START, numberOfThreads, (uint64_t) func, funcName);
 #endif
 
   // allocate and set new feb barrier
@@ -348,7 +348,7 @@ void XOMP_parallel_end(
 
 #ifdef QTHREAD_RCRTOOL
     //Here we log leaving an open MP section into the RCRTool RAT Table.
-    rcrtool_log(RCR_RATTABLE, XOMP_PARALLEL_END, -1, 0, 0);
+    rcrtool_log(RCR_APP_STATE_DUMP, XOMP_PARALLEL_END, -1, 0, 0);
 #endif
 
     qt_omp_parallel_region_destroy();  //  need to free parallel region and all it contains
@@ -434,7 +434,7 @@ void xomp_internal_loop_init(
 {
 #ifdef QTHREAD_RCRTOOL
     //Here we log entering a loop section.
-    rcrtool_log(RCR_RATTABLE, XOMP_FOR_LOOP_START, 0, (uint64_t)0, "");
+    rcrtool_log(RCR_APP_STATE_DUMP, XOMP_FOR_LOOP_START, 0, (uint64_t)0, "");
 #endif
   qthread_parallel_region_t *pr = qt_parallel_region();
 
@@ -666,7 +666,7 @@ void XOMP_loop_end(
     }
 #ifdef QTHREAD_RCRTOOL
     //Here we log exiting a loop section.
-    rcrtool_log(RCR_RATTABLE, XOMP_FOR_LOOP_END, 0, (uint64_t)0, "");
+    rcrtool_log(RCR_APP_STATE_DUMP, XOMP_FOR_LOOP_END, 0, (uint64_t)0, "");
 #endif
 }
 

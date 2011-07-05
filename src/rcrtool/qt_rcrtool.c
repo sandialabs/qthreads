@@ -46,7 +46,8 @@ void *rcrtoolDaemon(void* arg) {
     return 0;
 }
 
-qt_rcrtool_level rcrtoollevel = 0;
+qt_rcrtool_level      rcrtoollevel    = 0;
+qt_rcrtool_log_level  rcrtoolloglevel = 0;
 QTHREAD_FASTLOCK_TYPE rcrtool_lock;
 
 int qthread_rcrtoollevel(int d);
@@ -164,9 +165,9 @@ static void RCRLeaveParallelLoop(void) {
  * \param data2 
  * \param data3 
  */
-void rcrtool_log(qt_rcrtool_level level, XOMP_Type type, unsigned int data1, uint64_t data2, const char* data3) {
+void rcrtool_log(qt_rcrtool_log_level level, XOMP_Type type, unsigned int data1, uint64_t data2, const char* data3) {
 
-    if (level <= rcrtoollevel || level == 0) {
+    if (level <= rcrtoolloglevel || level == 0) {
         //Do some logging.
         switch (type) {
         case XOMP_PARALLEL_START:

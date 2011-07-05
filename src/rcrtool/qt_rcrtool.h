@@ -13,14 +13,19 @@ typedef enum _qt_rcrtool_level {
     RCR_NONE = 0,
     RCR_METERS,
     RCR_TRIGGERS,
-    RCR_APP_STATE_DUMP,
-    RCR_XOMP_SECTIONS,
-    RCR_RATTABLE,
-    RCR_RATTABLE_DEBUG,
-    RCR_ALL_DETAILS
+    RCR_THROTTLE
 } qt_rcrtool_level;
 
 extern qt_rcrtool_level rcrtoollevel;
+
+typedef enum _qt_rcrtool_log_level {
+    //RCR_NONE = 0,
+    RCR_XOMP_SECTIONS = 1,
+    RCR_XOMP_LOOPS,
+    RCR_APP_STATE_DUMP
+} qt_rcrtool_log_level;
+
+extern qt_rcrtool_log_level rcrtoolloglevel;
 
 typedef enum _XOMP_Type {
     XOMP_UNK = 0,
@@ -41,7 +46,7 @@ typedef enum _XOMP_Type {
     XOMP_RAT_DEBUG
 } XOMP_Type;
 
-void rcrtool_log(qt_rcrtool_level level, XOMP_Type type, unsigned int thread_id, uint64_t data, const char* data2);
+void rcrtool_log(qt_rcrtool_log_level level, XOMP_Type type, unsigned int thread_id, uint64_t data, const char* data2);
 
 #define RCR_HASH_TABLE_SIZE     256
 #define RCR_STACK_SIZE          RCR_HASH_TABLE_SIZE

@@ -68,6 +68,7 @@
 #include "qt_io.h"
 
 #ifdef QTHREAD_RCRTOOL
+# include "maestro_sched.h"
 # include "rcrtool/qt_rcrtool.h"
 extern QTHREAD_FASTLOCK_TYPE rcrtool_lock;
 #endif
@@ -409,7 +410,7 @@ static void *qthread_shepherd(void *arg)
 
 	  if (me_worker->packed_worker_id != 0) { // never idle shepherd 0 worker 0  -- needs to be active for termination
 	    if (qlib->shepherds[me->shepherd_id].active_workers > maestro_current_workers(me->shepherd_id)) {
-	      qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers,-1); // not working spinning	      
+	      qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers,-1); // not working spinning
 	      while ((qlib->shepherds[me->shepherd_id].active_workers + 1) > maestro_current_workers(me->shepherd_id)) { // A) the number of workers to be increased
 		if(done) break; // B) somebodies noticed the job is done
 	      }
@@ -1165,18 +1166,32 @@ int qthread_initialize(void)
 # ifdef QTHREAD_RCRTOOL
     QTHREAD_FASTLOCK_INIT(rcrtool_lock);
     {
-        char *qrcrtl  = getenv("QTHREAD_RCRTOOL_LEVEL");
-        char *qrcrtle = NULL;
+        char* qrcrtl  = getenv("QTHREAD_RCRTOOL_LEVEL");
+        char* qrcrtle = NULL;
 
-        qthread_debug(ALL_DETAILS, "qthread_init: RCRTool logging initialization.\n");
+        qthread_debug(ALL_DETAILS, "qthread_init: RCRTool throttling initialization.\n");
         if (qrcrtl) {
             rcrtoollevel = strtol(qrcrtl, &qrcrtle, 0);
             if ((qrcrtle == NULL) || (qrcrtle == qrcrtl)) {
-                fprintf(stderr, "unparseable RCRTool logging level (%s)\n", qrcrtl);
+                fprintf(stderr, "unparseable RCRTool throttle level (%s)\n", qrcrtl);
                 rcrtoollevel = 0;
             }
         } else {
             rcrtoollevel = 0;
+        }
+
+        qrcrtl  = getenv("QTHREAD_RCRTOOL_LOG_LEVEL");
+        qrcrtle = NULL;
+
+        qthread_debug(ALL_DETAILS, "qthread_init: RCRTool logging initialization.\n");
+        if (qrcrtl) {
+            rcrtoolloglevel = strtol(qrcrtl, &qrcrtle, 0);
+            if ((qrcrtle == NULL) || (qrcrtle == qrcrtl)) {
+                fprintf(stderr, "unparseable RCRTool logging level (%s)\n", qrcrtl);
+                rcrtoolloglevel = 0;
+            }
+        } else {
+            rcrtoolloglevel = 0;
         }
     }
     if (rcrtoollevel > 0) {

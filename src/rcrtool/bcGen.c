@@ -1,6 +1,8 @@
 #ifdef HAVE_CONFIG_H
 #include "config.h"
 #endif
+#include "qthread_innards.h"
+#include "qt_shepherd_innards.h"
 
 /**
  * Breadcrumbs generation for RCR Daemon. 
@@ -8,6 +10,7 @@
  *
  */
 
+//#include "qt_shepherd_innards.h"       // for active_workers
 #include "bcGen.h"
 #include "qt_rcrtool.h"
 #include "triggers.h"
@@ -17,6 +20,10 @@
 #include <string.h>
 
 #include "blackboard.h"
+
+#ifdef QTHREAD_RCRTOOL
+    extern unsigned int active_workers;
+#endif
 
 /**
  * Get a pointer to the shared memory blackboard structure.
@@ -377,10 +384,23 @@ void dumpAppState(key_t key, rcrtool_trigger_type triggerType, int socketOrCoreI
     appStateSize += (RCR_HASH_ENTRY_SIZE + 10) * RCRParallelSectionStackPos + RCR_APP_NAME_MAX_SIZE;
     char *shmDest = getShmStringLoc(key, appStateSize);
     char *shmRover = shmDest;
+    if(RCRParallelSectionStackPos >= 0) {
+        *shmRover++ = 'P';
+    } else {
+        *shmRover++ = 'S';
+    }
+    *shmRover++ = '|';
     strncpy(shmRover, RCRAppName, RCR_APP_NAME_MAX_SIZE);
     shmRover += strlen(RCRAppName);
     //sprintf(shmRover, "|%8d", hashTable[RCRParallelSectionStack[i]].numOMPassignedThreads);
-    //shmRover += 9;
+    if (qlib != NULL) {
+        int active_workers = 0;
+        int shepNum;
+        for (shepNum = 0; shepNum < qlib->nshepherds; shepNum++)
+            active_workers += (int)qlib->shepherds[shepNum].active_workers;
+        sprintf(shmRover, "|%8d", active_workers);
+    }
+    shmRover += 9;
     for (i = 0; i <= RCRParallelSectionStackPos; i++) {
         //printf("%s %d ^^^^\n", hashTable[RCRParallelSectionStack[i]].funcName, hashTable[RCRParallelSectionStack[i]].count);
         *shmRover++ = '|';
