@@ -171,21 +171,21 @@ int putBreadcrumbs(rcrtool_trigger_type triggerType, int socketOrCoreID, const c
  * \param currentVal
  */
 void throwTrigger(key_t appStateShmKey, rcrtool_trigger_type triggerType, rcrtool_trigger_throw_type throwKind, int socketOrCoreID, int triggerNum) {
-    if (RCR_TRIGGERS > rcrtoollevel)
+#ifdef QTHREAD_RCRTOOL
+    if ((RCR_APP_STATE_DUMP_ALWAYS > rcrtoolloglevel) && (rcrtoolloglevel >= RCR_APP_STATE_DUMP)) {
+        dumpAppState(appStateShmKey, triggerType, socketOrCoreID);
+    }
+#endif
+
+    if (RCR_THROTTLE > rcrtoollevel)
         return;
 
     if (throwKind == T_TYPE_LOW) { //trigger cond low
-#ifdef QTHREAD_RCRTOOL
-        dumpAppState(appStateShmKey, triggerType, socketOrCoreID);
-#endif
         if (flipped[triggerNum] != SET_LOW) {
             flipped[triggerNum] = SET_LOW;
             maestro_sched(MTT_SOCKET, MTA_RAISE_STREAM_COUNT, socketOrCoreID);
         }
     } else if (throwKind == T_TYPE_HIGH) { //trigger cond high
-#ifdef QTHREAD_RCRTOOL
-        dumpAppState(appStateShmKey, triggerType, socketOrCoreID);
-#endif
         if (flipped[triggerNum] != SET_HIGH) {
             flipped[triggerNum] = SET_HIGH;
             maestro_sched(MTT_SOCKET, MTA_LOWER_STREAM_COUNT, socketOrCoreID);
@@ -321,7 +321,7 @@ char* getShmStringLoc(key_t key, size_t size) {
     char *shm;
 
     if ((shmid = shmget(key, sizeof(char) * size, 0666)) < 0) {
-        printf("** BC: Could not locate shared memory segment for key: %d\n", key);
+        printf("*^* BC: Could not locate shared memory segment for key: %d\n", key);
         if (0 && errno == EINVAL) {
             //exists but size too small.  Get it by asking for smallest size and delete it.
             if ((shmid = shmget(key, 1, 0666)) < 0) {

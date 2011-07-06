@@ -11,7 +11,7 @@ extern int rcrToolContinue;
 
 typedef enum _qt_rcrtool_level {
     RCR_NONE = 0,
-    RCR_METERS,
+    //RCR_METERS,
     RCR_TRIGGERS,
     RCR_THROTTLE
 } qt_rcrtool_level;
@@ -22,7 +22,8 @@ typedef enum _qt_rcrtool_log_level {
     //RCR_NONE = 0,
     RCR_XOMP_SECTIONS = 1,
     RCR_XOMP_LOOPS,
-    RCR_APP_STATE_DUMP
+    RCR_APP_STATE_DUMP,
+    RCR_APP_STATE_DUMP_ALWAYS
 } qt_rcrtool_log_level;
 
 extern qt_rcrtool_log_level rcrtoolloglevel;

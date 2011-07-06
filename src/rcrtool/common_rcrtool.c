@@ -94,7 +94,9 @@ void doWork(int nshepherds, int nworkerspershep) {
 
 #ifdef QTHREAD_RCRTOOL
         int dummySocketOrCoreID = 0;
-        dumpAppState(APPSTATESHMKEY, T_TYPE_SOCKET, dummySocketOrCoreID);
+        if (rcrtoolloglevel >= RCR_APP_STATE_DUMP_ALWAYS) {
+            dumpAppState(APPSTATESHMKEY, T_TYPE_SOCKET, dummySocketOrCoreID);
+        }
 #endif
         nanosleep(&interval, &remainder);
     }
