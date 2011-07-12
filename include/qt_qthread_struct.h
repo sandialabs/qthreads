@@ -12,17 +12,16 @@
 #define TASKLOCAL_DEFAULT 64
 
 enum threadstate {
-    QTHREAD_STATE_NASCENT,
-    QTHREAD_STATE_NEW,
-    QTHREAD_STATE_RUNNING,
-    QTHREAD_STATE_YIELDED,
-    QTHREAD_STATE_BLOCKED,
-    QTHREAD_STATE_FEB_BLOCKED,
-    QTHREAD_STATE_TERMINATED,
-    QTHREAD_STATE_DONE,
-    QTHREAD_STATE_MIGRATING,
-    QTHREAD_STATE_SYSCALL,
-    QTHREAD_STATE_TERM_SHEP = UINT8_MAX
+    QTHREAD_STATE_NASCENT,              /* awaiting preconds */
+    QTHREAD_STATE_NEW,                  /* first ready-to-run state */
+    QTHREAD_STATE_RUNNING,              /* ready-to-run */
+    QTHREAD_STATE_YIELDED,              /* reschedule, otherwise ready-to-run */
+    QTHREAD_STATE_BLOCKED,              /* waiting for lock */
+    QTHREAD_STATE_FEB_BLOCKED,          /* waiting for feb */
+    QTHREAD_STATE_TERMINATED,           /* thread function returned */
+    QTHREAD_STATE_MIGRATING,            /* thread needs to be moved, otherwise ready-to-run */
+    QTHREAD_STATE_SYSCALL,              /* thread performing external blocking operation */
+    QTHREAD_STATE_TERM_SHEP = UINT8_MAX /* special flag to terminate the shepherd */
 };
 
 /* flags (must be different bits) */
@@ -60,29 +59,26 @@ struct qthread_runtime_data_s {
 };
 
 struct qthread_s {
-    struct qthread_s *volatile next;
-    /* the shepherd our memory comes from */
-    qthread_shepherd_t        *creator_ptr;
+    struct qthread_s *volatile     next;
+    qthread_shepherd_t            *creator_ptr; /* the shepherd our memory comes from */
 
-    unsigned int               thread_id;
-    enum threadstate           thread_state;
-    unsigned char              flags;
+    unsigned int                   thread_id;
+    enum threadstate               thread_state;
+    uint8_t                        flags;
+    qthread_shepherd_t            *target_shepherd; /* the shepherd we'd rather run on */
 
-    /* the shepherd we'd rather run on */
-    qthread_shepherd_t *target_shepherd;
-
-    /* input preconds for lazy tasks */
-    void * preconds;
-    unsigned npreconds;
-
-    /* the function to call (that defines this thread) */
-    qthread_f                      f;
-    aligned_t                      id;  /* id used in barrier and arrive_first */
-    void                          *arg; /* user defined data */
-    void                          *ret; /* user defined retval location */
+    qthread_f                      f;               /* the function to call (that defines this thread) */
+    void                          *arg;             /* user defined data */
+    void                          *ret;             /* user defined retval location */
     struct qthread_runtime_data_s *rdata;
     unsigned                       tasklocal_size;
-    Q_ALIGNED(8) uint8_t           data[];
+
+    aligned_t                      id;  /* id used in barrier and arrive_first */
+    /* preconditions for data-dependent tasks */
+    unsigned                       npreconds;
+    void                          *preconds;
+
+    Q_ALIGNED(8) uint8_t data[]; /* this is where we stick argcopy and tasklocal data */
 };
 
 #endif // ifndef QT_QTHREAD_STRUCT_H
