@@ -12,11 +12,11 @@
 #define NUM_CONSUMERS 3
 #define NUM_MULTI     3
 
-////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////
 static aligned_t consumer(void *arg)
 {
     aligned_t *v = (aligned_t *)arg;
-    aligned_t value;
+    aligned_t  value;
 
     value = *v; // Not using readFF() since we know it is ready?
     iprintf("Consumer: got value %d\n", value);
@@ -24,22 +24,22 @@ static aligned_t consumer(void *arg)
     return value;
 }
 
-static aligned_t producer(void *arg) 
-{       
-      aligned_t *v = (aligned_t *)arg;
-      const aligned_t value = 42;
-              
-      iprintf("Producer: setting value %d\n", value);
-      qthread_writeEF_const(v, value);
-                          
-      return 0;
-}   
+static aligned_t producer(void *arg)
+{
+    aligned_t      *v     = (aligned_t *)arg;
+    const aligned_t value = 42;
 
-////////////////////////////////////////////////////////////////////////////////
+    iprintf("Producer: setting value %d\n", value);
+    qthread_writeEF_const(v, value);
+
+    return 0;
+}
+
+// //////////////////////////////////////////////////////////////////////////////
 static aligned_t multi_consumer(void *arg)
 {
-    aligned_t **m = (aligned_t **)arg;
-    aligned_t sum = 0;
+    aligned_t **m   = (aligned_t **)arg;
+    aligned_t   sum = 0;
 
     for (int i = 0; i < 3; i++) {
         iprintf("Multi-consumer: got value %d\n", *m[i]);
@@ -51,7 +51,7 @@ static aligned_t multi_consumer(void *arg)
 
 static aligned_t multi_producer(void *arg)
 {
-    aligned_t *m = (aligned_t *)arg;
+    aligned_t      *m     = (aligned_t *)arg;
     const aligned_t value = 42;
 
     iprintf("Multi-producer: setting value %d\n", value);
@@ -60,11 +60,11 @@ static aligned_t multi_producer(void *arg)
     return 0;
 }
 
-////////////////////////////////////////////////////////////////////////////////
+// //////////////////////////////////////////////////////////////////////////////
 static aligned_t array_consumer(void *arg)
 {
-    aligned_t *m = (aligned_t *)arg;
-    aligned_t sum = 0;
+    aligned_t *m   = (aligned_t *)arg;
+    aligned_t  sum = 0;
 
     for (int i = 0; i < NUM_MULTI; i++) {
         iprintf("Multi-consumer: got value %d\n", m[i]);
@@ -76,7 +76,7 @@ static aligned_t array_consumer(void *arg)
 
 static aligned_t array_producer(void *arg)
 {
-    aligned_t *m = (aligned_t *)arg;
+    aligned_t      *m     = (aligned_t *)arg;
     const aligned_t value = 42;
 
     iprintf("Multi-producer: setting value %d\n", value);
@@ -88,10 +88,10 @@ static aligned_t array_producer(void *arg)
 #ifdef __INTEL_COMPILER
 int setenv(const char *name,
            const char *value,
-           int overwrite);
+           int         overwrite);
 #endif
 
-int main(int argc,
+int main(int   argc,
          char *argv[])
 {
     setenv("QTHREAD_NUM_SHEPHERDS", "2", 1);
@@ -101,21 +101,20 @@ int main(int argc,
 
     iprintf("\n***** Test multiple consumers, single producer *****\n");
     {
-        aligned_t rets[NUM_CONSUMERS+1];
+        aligned_t rets[NUM_CONSUMERS + 1];
 
         // Initialize values and empty
         aligned_t v = 1;
         qthread_empty(&v);
 
-        for (int i = 0; i < NUM_CONSUMERS; i++)
-            qthread_fork_precond(consumer, &v, &rets[i], 1, &v);
+        for (int i = 0; i < NUM_CONSUMERS; i++) qthread_fork_precond(consumer, &v, &rets[i], 1, &v);
         qthread_fork(producer, &v, &rets[NUM_CONSUMERS]);
 
         for (int i = 0; i < NUM_CONSUMERS; i++) {
             qthread_readFF(&rets[i], &rets[i]);
 
             // Verify return values
-            if (rets[i] != 42) return 1;
+            if (rets[i] != 42) { return 1; }
         }
     }
 
@@ -142,7 +141,7 @@ int main(int argc,
         qthread_readFF(&ret, &ret);
 
         // Verify return value
-        if (ret != 3*42) return 1;
+        if (ret != 3 * 42) { return 1; }
     }
 
     iprintf("\n***** Test single consumer, multiple producers (array) *****\n");
@@ -152,39 +151,37 @@ int main(int argc,
         // Initialize values and empty
         aligned_t v[NUM_MULTI];
         for (int i = 0; i < NUM_MULTI; i++) {
-            v[i] = i+1;
+            v[i] = i + 1;
             qthread_empty(&v[i]);
         }
 
         qthread_fork_precond(array_consumer, v, &ret, -NUM_MULTI, v);
-        for (int i = 0; i < NUM_MULTI; i++) 
-            qthread_fork(array_producer, &v[i], NULL);
+        for (int i = 0; i < NUM_MULTI; i++) qthread_fork(array_producer, &v[i], NULL);
 
         qthread_readFF(&ret, &ret);
 
         // Verify return value
-        if (ret != NUM_MULTI*42) return 1;
+        if (ret != NUM_MULTI * 42) { return 1; }
     }
 
     iprintf("\n***** Test migration: MC/SP with C on 1 and S on 0 *****\n");
     {
         assert(qthread_num_shepherds() == 2);
 
-        aligned_t rets[NUM_CONSUMERS+1];
+        aligned_t rets[NUM_CONSUMERS + 1];
 
         // Initialize values and empty
         aligned_t v = 1;
         qthread_empty(&v);
 
-        for (int i = 0; i < NUM_CONSUMERS; i++)
-            qthread_fork_precond_to(consumer, &v, &rets[i], 1, 1, &v);
+        for (int i = 0; i < NUM_CONSUMERS; i++) qthread_fork_precond_to(consumer, &v, &rets[i], 1, 1, &v);
         qthread_fork_to(producer, &v, &rets[NUM_CONSUMERS], 0);
 
         for (int i = 0; i < NUM_CONSUMERS; i++) {
             qthread_readFF(&rets[i], &rets[i]);
 
             // Verify return values
-            if (rets[i] != 42) return 1;
+            if (rets[i] != 42) { return 1; }
         }
     }
 
@@ -205,7 +202,7 @@ int main(int argc,
         qthread_empty(&v3);
 
         aligned_t *args[3] = { &v1, &v2, &v3 };
-        qthread_fork_precond_to(multi_consumer, &args, &ret, 1, 3, &v1,&v2,&v3);
+        qthread_fork_precond_to(multi_consumer, &args, &ret, 1, 3, &v1, &v2, &v3);
         qthread_fork_to(multi_producer, &v1, NULL, 0);
         qthread_fork_to(multi_producer, &v2, NULL, 0);
         qthread_fork_to(multi_producer, &v3, NULL, 0);
@@ -213,7 +210,7 @@ int main(int argc,
         qthread_readFF(&ret, &ret);
 
         // Verify return value
-        if (ret != 3*42) return 1;
+        if (ret != 3 * 42) { return 1; }
     }
 
     iprintf("\n***** Test migration: SC/MP with C on 1 and S on 0 (array) *****\n");
@@ -225,18 +222,17 @@ int main(int argc,
         // Initialize values and empty
         aligned_t v[NUM_MULTI];
         for (int i = 0; i < NUM_MULTI; i++) {
-            v[i] = i+1;
+            v[i] = i + 1;
             qthread_empty(&v[i]);
         }
 
         qthread_fork_precond_to(array_consumer, v, &ret, 1, -NUM_MULTI, v);
-        for (int i = 0; i < NUM_MULTI; i++) 
-            qthread_fork_to(array_producer, &v[i], NULL, 0);
+        for (int i = 0; i < NUM_MULTI; i++) qthread_fork_to(array_producer, &v[i], NULL, 0);
 
         qthread_readFF(&ret, &ret);
 
         // Verify return value
-        if (ret != NUM_MULTI*42) return 1;
+        if (ret != NUM_MULTI * 42) { return 1; }
     }
 
     return 0;
