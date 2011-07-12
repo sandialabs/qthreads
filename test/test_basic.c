@@ -48,6 +48,7 @@ int main(int argc,
          char *argv[])
 {
     aligned_t t;
+    int ret;
 
     assert(qthread_initialize() == 0);
 
@@ -60,15 +61,18 @@ int main(int argc,
 #endif
     iprintf("Initial value of x: %lu\n", (unsigned long)x);
 
-    qthread_fork(consumer, NULL, NULL);
-    qthread_fork(producer, NULL, &t);
-    qthread_readFF(&t, &t);
+    ret = qthread_fork(consumer, NULL, NULL);
+    assert(ret == QTHREAD_SUCCESS);
+    ret = qthread_fork(producer, NULL, &t);
+    assert(ret == QTHREAD_SUCCESS);
+    ret = qthread_readFF(&t, &t);
+    assert(ret == QTHREAD_SUCCESS);
 
     if (x == 55) {
         iprintf("Success! x==55\n");
         return 0;
     } else {
-        fprintf(stderr, "Final value of x=%lu\n", (unsigned long)x);
+        fprintf(stderr, "Final value of x=%lu (expected 55)\n", (unsigned long)x);
         return -1;
     }
 }
