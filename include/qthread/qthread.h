@@ -207,35 +207,35 @@ qthread_t Q_DEPRECATED *qthread_self(void);
  *     (which will be stored with a qthread_writeF call). The qthread_fork_to
  *     function spawns the thread to a specific shepherd.
  */
-int qthread_fork(const qthread_f   f,
-                 const void *const arg,
-                 aligned_t        *ret);
-int qthread_fork_precond(const qthread_f f,
-                         const void     *arg,
-                         aligned_t      *ret,
-                         const int       npreconds,
+int qthread_fork(qthread_f   f,
+                 const void *arg,
+                 aligned_t  *ret);
+int qthread_fork_precond(qthread_f   f,
+                         const void *arg,
+                         aligned_t  *ret,
+                         int         npreconds,
                          ...);
-int qthread_fork_syncvar(const qthread_f   f,
-                         const void *const arg,
-                         syncvar_t *const  ret);
-int qthread_fork_to(const qthread_f             f,
-                    const void *const           arg,
-                    aligned_t *const            ret,
-                    const qthread_shepherd_id_t shepherd);
-int qthread_fork_precond_to(const qthread_f             f,
-                            const void *const           arg,
-                            aligned_t *const            ret,
-                            const qthread_shepherd_id_t shepherd,
-                            const int                   npreconds,
+int qthread_fork_syncvar(qthread_f   f,
+                         const void *arg,
+                         syncvar_t  *ret);
+int qthread_fork_to(const qthread_f       f,
+                    const void           *arg,
+                    aligned_t            *ret,
+                    qthread_shepherd_id_t shepherd);
+int qthread_fork_precond_to(qthread_f             f,
+                            const void           *arg,
+                            aligned_t            *ret,
+                            qthread_shepherd_id_t shepherd,
+                            int                   npreconds,
                             ...);
-int qthread_fork_syncvar_to(const qthread_f             f,
-                            const void *const           arg,
-                            syncvar_t                  *ret,
-                            const qthread_shepherd_id_t shepherd);
-int qthread_fork_syncvar_copyargs(const qthread_f   f,
-                                  const void *const arg,
-                                  const size_t      arg_size,
-                                  syncvar_t *const  ret);
+int qthread_fork_syncvar_to(qthread_f             f,
+                            const void           *arg,
+                            syncvar_t            *ret,
+                            qthread_shepherd_id_t shepherd);
+int qthread_fork_syncvar_copyargs(qthread_f   f,
+                                  const void *arg,
+                                  size_t      arg_size,
+                                  syncvar_t  *ret);
 
 /* This is a function to move a thread from one shepherd to another. */
 int qthread_migrate_to(const qthread_shepherd_id_t shepherd);

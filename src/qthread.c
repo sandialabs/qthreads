@@ -45,6 +45,7 @@
 /* Internal Headers */
 #include "qt_mpool.h"
 #include "qt_atomics.h"
+#include "qthread_expect.h"
 
 #include "qthread/futurelib.h"
 #include "qthread_innards.h"
@@ -161,7 +162,7 @@ static QINLINE void FREE_QTHREAD(qthread_t *t)
 # ifdef QTHREAD_GUARD_PAGES
 static QINLINE void *ALLOC_STACK(qthread_shepherd_t *shep)
 {                      /*{{{ */
-    char *tmp = valloc(qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s) + (2 * getpagesize()));
+    uint8_t *tmp = valloc(qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s) + (2 * getpagesize()));
 
     assert(tmp != NULL);
     if (tmp == NULL) {
@@ -179,7 +180,7 @@ static QINLINE void *ALLOC_STACK(qthread_shepherd_t *shep)
 static QINLINE void FREE_STACK(qthread_shepherd_t *shep,
                                void               *t)
 {                      /*{{{ */
-    char *tmp = t;
+    uint8_t *tmp = t;
 
     assert(t);
     tmp -= getpagesize();
@@ -203,8 +204,7 @@ static qt_mpool generic_stack_pool = NULL;
 # ifdef QTHREAD_GUARD_PAGES
 static QINLINE void *ALLOC_STACK(qthread_shepherd_t *shep)
 {                      /*{{{ */
-    char *tmp =
-        qt_mpool_alloc(shep ? (shep->stack_pool) : generic_stack_pool);
+    uint8_t *tmp = qt_mpool_alloc(shep ? (shep->stack_pool) : generic_stack_pool);
 
     assert(tmp);
     if (tmp == NULL) {
@@ -224,7 +224,7 @@ static QINLINE void *ALLOC_STACK(qthread_shepherd_t *shep)
 static QINLINE void FREE_STACK(qthread_shepherd_t *shep,
                                void               *t)
 {                      /*{{{ */
-    char *tmp = t;
+    uint8_t *tmp = t;
 
     assert(t);
     tmp -= getpagesize();
@@ -306,9 +306,9 @@ static QINLINE void alloc_rdata(qthread_shepherd_t *me,
 
     assert(stack);
 #ifdef QTHREAD_GUARD_PAGES
-    t->rdata = (struct qthread_runtime_data_s *)(((char *)stack) + getpagesize() + qlib->qthread_stack_size);
+    t->rdata = (struct qthread_runtime_data_s *)(((uint8_t *)stack) + getpagesize() + qlib->qthread_stack_size);
 #else
-    t->rdata = (struct qthread_runtime_data_s *)(((char *)stack) + qlib->qthread_stack_size);
+    t->rdata = (struct qthread_runtime_data_s *)(((uint8_t *)stack) + qlib->qthread_stack_size);
 #endif
     t->rdata->stack        = stack;
     t->rdata->shepherd_ptr = me;
@@ -598,7 +598,6 @@ static void *qthread_shepherd(void *arg)
                         qthread_debug(THREAD_DETAILS,
                                       "id(%u): thread %i terminated\n",
                                       me->shepherd_id, t->thread_id);
-                        t->thread_state = QTHREAD_STATE_DONE;
                         /* we can remove the stack and the context... */
                         qthread_thread_free(t);
                         break;
@@ -700,9 +699,24 @@ static qthread_shepherd_t *qthread_find_active_shepherd(qthread_shepherd_id_t *l
     }
 }                      /*}}} */
 
+#define GET_ENV_NUM(envariable, num, dflt, zerodflt) do {                \
+        char         *str = getenv(envariable);                          \
+        unsigned long tmp = dflt;                                        \
+        if (str && *str) {                                               \
+            char *errptr;                                                \
+            tmp = strtoul(str, &errptr, 0);                              \
+            if (*errptr != 0) {                                          \
+                fprintf(stderr, "unparsable "envariable " (%s)\n", str); \
+                tmp = dflt;                                              \
+            }                                                            \
+            if (tmp == 0) { tmp = zerodflt; }                            \
+        }                                                                \
+        num = tmp;                                                       \
+} while (0)
+
 int qthread_init(qthread_shepherd_id_t nshepherds)
 {                      /*{{{ */
-    char newenv[100] = { 0 };
+    char newenv[100];
 
     snprintf(newenv, 99, "QTHREAD_NUM_SHEPHERDS=%i", (int)nshepherds);
     putenv(newenv);
@@ -749,20 +763,7 @@ int qthread_initialize(void)
 
 #ifdef QTHREAD_DEBUG
     QTHREAD_FASTLOCK_INIT(output_lock);
-    {
-        char *qdl  = getenv("QTHREAD_DEBUG_LEVEL");
-        char *qdle = NULL;
-
-        if (qdl) {
-            debuglevel = strtol(qdl, &qdle, 0);
-            if ((qdle == NULL) || (qdle == qdl)) {
-                fprintf(stderr, "unparseable debug level (%s)\n", qdl);
-                debuglevel = 0;
-            }
-        } else {
-            debuglevel = 0;
-        }
-    }
+    GET_ENV_NUM("QTHREAD_DEBUG_LEVEL", debuglevel, 0, 0);
 # ifdef SST
     debuglevel = 7;
 # endif
@@ -777,39 +778,19 @@ int qthread_initialize(void)
     qassert_ret(qlib, QTHREAD_MALLOC_ERROR);
 
 #ifdef QTHREAD_USE_PTHREADS
-    {
-        char *qsh  = getenv("QTHREAD_NUM_SHEPHERDS");
-        char *qshe = NULL;
-
-        if (qsh) {
-            nshepherds = strtol(qsh, &qshe, 0);
-            if ((qshe == NULL) || (qshe == qsh)) {
-                fprintf(stderr, "unparsable number of shepherds (%s)\n", qsh);
-                nshepherds = 0;
-            } else if (nshepherds > 0) {
-                fprintf(stderr, "Forced %i Shepherds\n", (int)nshepherds);
-            }
-        } else {
-            nshepherds = 0;
-        }
-# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-        qsh  = getenv("QTHREAD_NUM_WORKERS_PER_SHEPHERD");
-        qshe = NULL;
-
-        if (qsh) {
-            nworkerspershep = strtol(qsh, &qshe, 0);
-            if ((qshe == NULL) || (qshe == qsh)) {
-                fprintf(stderr, "unparsable number of workers (%s)\n", qsh);
-                nworkerspershep = 1;
-            } else if (nworkerspershep > 0) {
-                fprintf(stderr, "Forced %i Workers per Shepherd\n", (int)nworkerspershep);
-                if (nshepherds == 0) {
-                    fprintf(stderr, "Number of shepherds not specified - number of workers may be ignored\n");
-                }
-            }
-        }
-# endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
+    GET_ENV_NUM("QTHREAD_NUM_SHEPHERDS", nshepherds, 0, 0);
+    if (nshepherds > 0) {
+        fprintf(stderr, "Forced %i Shepherds\n", (int)nshepherds);
     }
+# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    GET_ENV_NUM("QTHREAD_NUM_WORKERS_PER_SHEPHERD", nworkerspershep, 0, 0);
+    if (nworkerspershep > 0) {
+        fprintf(stderr, "Forced %i Workers per Shepherd\n", (int)nworkerspershep);
+        if (nshepherds == 0) {
+            fprintf(stderr, "Number of shepherds not specified - number of workers may be ignored\n");
+        }
+    }
+# endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     qt_affinity_init(&nshepherds
 # ifdef QTHREAD_MULTITHREADED_SHEPHERDS
                      , &nworkerspershep
@@ -896,25 +877,8 @@ int qthread_initialize(void)
     qlib->shepherds         = (qthread_shepherd_t *)calloc(nshepherds, sizeof(qthread_shepherd_t));
     qassert_ret(qlib->shepherds, QTHREAD_MALLOC_ERROR);
 
-    {
-        char  *stacksize = getenv("QTHREAD_STACK_SIZE");
-        size_t ss        = 0;
-
-        if (stacksize && *stacksize) {
-            char *eptr;
-
-            ss = strtoul(stacksize, &eptr, 0);
-            if (*eptr != 0) {
-                ss = 0;
-            }
-        }
-        if (ss != 0) {
-            qlib->qthread_stack_size = ss;
-        } else {
-            qlib->qthread_stack_size = QTHREAD_DEFAULT_STACK_SIZE;
-        }
-        qthread_debug(THREAD_DETAILS, "qthread stack size: %u\n", qlib->qthread_stack_size);
-    }
+    GET_ENV_NUM("QTHREAD_STACK_SIZE", qlib->qthread_stack_size, QTHREAD_DEFAULT_STACK_SIZE, QTHREAD_DEFAULT_STACK_SIZE);
+    qthread_debug(THREAD_DETAILS, "qthread stack size: %u\n", qlib->qthread_stack_size);
 #ifdef QTHREAD_GUARD_PAGES
     {
         size_t pagesize = getpagesize();
@@ -977,44 +941,11 @@ int qthread_initialize(void)
     }
 
     // Set task argument buffer size
-    {
-        char  *argcopy_size = getenv("QTHREAD_ARGCOPY_SIZE");
-        size_t tmp_size     = 0;
-
-        if (argcopy_size && *argcopy_size) {
-            char *eptr;
-
-            tmp_size = strtoul(argcopy_size, &eptr, 0);
-            if (*eptr != 0) {
-                tmp_size = ARGCOPY_DEFAULT;
-            }
-        } else {
-            tmp_size = ARGCOPY_DEFAULT;
-        }
-        qlib->qthread_argcopy_size = tmp_size;
-    }
-    qthread_debug(THREAD_DETAILS, "qthread task argcopy size: %u\n", qlib->qthread_argcopy_size);
+    GET_ENV_NUM("QTHREAD_ARGCOPY_SIZE", qlib->qthread_argcopy_size, ARGCOPY_DEFAULT, 0);
+    qthread_debug(THREAD_DETAILS, "qthread task argcopy size: %u\n", (unsigned)qlib->qthread_argcopy_size);
 
     // Set task-local data size
-    {
-        char  *tasklocal_size = getenv("QTHREAD_TASKLOCAL_SIZE");
-        size_t tmp_size       = 0;
-
-        if (tasklocal_size && *tasklocal_size) {
-            char *eptr;
-
-            tmp_size = strtoul(tasklocal_size, &eptr, 0);
-            if (*eptr != 0) {
-                tmp_size = TASKLOCAL_DEFAULT;
-            }
-            if (tmp_size == 0) {
-                tmp_size = sizeof(void *);
-            }
-        } else {
-            tmp_size = TASKLOCAL_DEFAULT;
-        }
-        qlib->qthread_tasklocal_size = tmp_size;
-    }
+    GET_ENV_NUM("QTHREAD_TASKLOCAL_SIZE", qlib->qthread_tasklocal_size, TASKLOCAL_DEFAULT, sizeof(void *));
     qthread_debug(THREAD_DETAILS, "qthread task-local size: %u\n", qlib->qthread_tasklocal_size);
 
 #ifndef UNPOOLED
@@ -1167,35 +1098,8 @@ int qthread_initialize(void)
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 # ifdef QTHREAD_RCRTOOL
     QTHREAD_FASTLOCK_INIT(rcrtool_lock);
-    {
-        char *qrcrtl  = getenv("QTHREAD_RCRTOOL_LEVEL");
-        char *qrcrtle = NULL;
-
-        qthread_debug(ALL_DETAILS, "qthread_init: RCRTool throttling initialization.\n");
-        if (qrcrtl) {
-            rcrtoollevel = strtol(qrcrtl, &qrcrtle, 0);
-            if ((qrcrtle == NULL) || (qrcrtle == qrcrtl)) {
-                fprintf(stderr, "unparseable RCRTool throttle level (%s)\n", qrcrtl);
-                rcrtoollevel = 0;
-            }
-        } else {
-            rcrtoollevel = 0;
-        }
-
-        qrcrtl  = getenv("QTHREAD_RCRTOOL_LOG_LEVEL");
-        qrcrtle = NULL;
-
-        qthread_debug(ALL_DETAILS, "qthread_init: RCRTool logging initialization.\n");
-        if (qrcrtl) {
-            rcrtoolloglevel = strtol(qrcrtl, &qrcrtle, 0);
-            if ((qrcrtle == NULL) || (qrcrtle == qrcrtl)) {
-                fprintf(stderr, "unparseable RCRTool logging level (%s)\n", qrcrtl);
-                rcrtoolloglevel = 0;
-            }
-        } else {
-            rcrtoolloglevel = 0;
-        }
-    }
+    GET_ENV_NUM("QTHREAD_RCRTOOL_LEVEL", rcrtoollevel, 0, 0);
+    GET_ENV_NUM("QTHREAD_RCRTOOL_LOG_LEVEL", 0, 0);
     if (rcrtoollevel > 0) {
         qlib->nworkers_active = nshepherds * nworkerspershep - 1;
     } else {
@@ -2272,172 +2176,174 @@ void qthread_yield(void)
  *
  * @return int Returns QTHREAD_SUCCESS (0) on success or a non-zero error value.
  */
-int qthread_fork(const qthread_f f,
-                 const void     *arg,
-                 aligned_t      *ret)
-{                      /*{{{ */
-    qthread_t            *t;
-    qthread_shepherd_id_t shep;
-    qthread_shepherd_t   *myshep = qthread_internal_getshep();
+typedef enum {
+    ALIGNED_T,
+    SYNCVAR_T,
+    NO_SYNC
+} synctype_t;
 
-    qthread_debug(THREAD_BEHAVIOR, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
+static int qthread_uberfork(qthread_f             f,
+                            const void           *arg,
+                            size_t                arg_size,
+                            synctype_t            ret_type,
+                            void                 *ret,
+                            synctype_t            precond_type,
+                            size_t                npreconds,
+                            void                 *preconds,
+                            qthread_shepherd_id_t target_shep,
+                            uint_fast8_t          future_flag)
+{
+    qthread_t                  *t;
+    qthread_shepherd_t         *myshep = qthread_internal_getshep();
+    qthread_shepherd_id_t       dest_shep;
+    const qthread_shepherd_id_t max_sheps = qlib->nshepherds;
+
+    /* Step 1: Check arguments */
+    qthread_debug(THREAD_BEHAVIOR,
+                  "f(%p), arg(%p), arg_size(%z), rt(%s), ret(%p), pt(%s), np(%z), pc(%p), ts(%u), %s\n",
+                  f,
+                  arg,
+                  arg_size,
+                  ((ret_type == ALIGNED_T) ? "aligned_t" : ((ret_type == SYNCVAR_T) ? "syncvar_t" : "none")),
+                  ret,
+                  ((precond_type == ALIGNED_T) ? "aligned_t" : ((precond_type == SYNCVAR_T) ? "syncvar_t" : "none")),
+                  npreconds,
+                  preconds,
+                  target_shep,
+                  (future_flag ? "future" : "qthread"));
+    if (QTHREAD_UNLIKELY((target_shep != NO_SHEPHERD) && (target_shep >= max_sheps))) {
+        target_shep %= max_sheps;
+    }
     assert(qlib);
+#ifdef QTHREAD_DEBUG
+    qassert_ret(((target_shep == NO_SHEPHERD) || (target_shep < max_sheps)), QTHREAD_BADARGS);
+    qassert_ret(f == NULL, QTHREAD_BADARGS);
+    if (npreconds > 0) {
+        qassert_ret(preconds != NULL, QTHREAD_BADARGS);
+        qassert_ret(precond_type != NO_SYNC, QTHREAD_BADARGS);
+    } else {
+        qassert_ret(preconds == NULL, QTHREAD_BADARGS);
+        qassert_ret(precond_type == NO_SYNC, QTHREAD_BADARGS);
+    }
+#endif
+    /* Step 2: Pick a destination */
+    if (target_shep != NO_SHEPHERD) {
+        dest_shep = target_shep;
+    } else {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    if (myshep) {
-        shep = myshep->shepherd_id; // rely on work-stealing
-    } else {
-        shep = 0;
-    }
-#else
-    unsigned int loopctr = 0;
-    if (myshep) {
-        do {
-            shep = (qthread_shepherd_id_t)(myshep->sched_shepherd++);
-            if (myshep->sched_shepherd == qlib->nshepherds) {
-                myshep->sched_shepherd = 0;
-            }
-            loopctr++;
-        } while (QTHREAD_CASLOCK_READ_UI(qlib->shepherds[shep].active) != 1 &&
-                 loopctr <= qlib->nshepherds);
-    } else {
-        do {
-            shep = (qthread_shepherd_id_t)qthread_internal_incr_mod(&qlib->sched_shepherd, qlib->nshepherds, &qlib->sched_shepherd_lock);
-            loopctr++;
-        } while (QTHREAD_CASLOCK_READ_UI(qlib->shepherds[shep].active) != 1 &&
-                 loopctr <= qlib->nshepherds);
-    }
-    if (loopctr > qlib->nshepherds) {
-        qthread_debug(THREAD_BEHAVIOR, "could not find an active shepherd\n");
-        return QTHREAD_NOT_ALLOWED;
-    }
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-    t = qthread_thread_new(f, arg, 0, ret, shep);
-    if (t) {
-        qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n",
-                      t->thread_id, shep);
-
-        if (ret) {
-            int test = qthread_empty(ret);
-
-            if (test != QTHREAD_SUCCESS) {
-                qthread_thread_free(t);
-                return test;
-            }
-        }
-        qt_threadqueue_enqueue(qlib->shepherds[shep].ready, t, myshep);
-        return QTHREAD_SUCCESS;
-    }
-    qthread_debug(THREAD_BEHAVIOR, "malloc error\n");
-    return QTHREAD_MALLOC_ERROR;
-}                      /*}}} */
-
-int qthread_fork_precond(const qthread_f f,
-                         const void     *arg,
-                         aligned_t      *ret,
-                         const int       npreconds,
-                         ...)
-{   /*{{{*/
-    qthread_t            *t;
-    qthread_shepherd_id_t shep;
-    qthread_shepherd_t   *myshep = qthread_internal_getshep();
-
-    // Pick a shepherd to receive this task
-    qthread_debug(THREAD_BEHAVIOR, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
-    assert(qlib);
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    if (myshep) {
-        shep = myshep->shepherd_id; // rely on work-stealing
-    } else {
-        shep = 0;
-    }
-#else
-    unsigned int loopctr = 0;
-    if (myshep) {
-        do {
-            shep = (qthread_shepherd_id_t)(myshep->sched_shepherd++);
-            if (myshep->sched_shepherd == qlib->nshepherds) {
-                myshep->sched_shepherd = 0;
-            }
-            loopctr++;
-        } while (QTHREAD_CASLOCK_READ_UI(qlib->shepherds[shep].active) != 1 &&
-                 loopctr <= qlib->nshepherds);
-    } else {
-        do {
-            shep = (qthread_shepherd_id_t)qthread_internal_incr_mod(&qlib->sched_shepherd, qlib->nshepherds, &qlib->sched_shepherd_lock);
-            loopctr++;
-        } while (QTHREAD_CASLOCK_READ_UI(qlib->shepherds[shep].active) != 1 &&
-                 loopctr <= qlib->nshepherds);
-    }
-    if (loopctr > qlib->nshepherds) {
-        qthread_debug(THREAD_BEHAVIOR, "could not find an active shepherd\n");
-        return QTHREAD_NOT_ALLOWED;
-    }
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-
-    // Create action (task structure)
-    t = qthread_thread_new(f, arg, 0, ret, shep);
-
-    if (t) {
-        qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n",
-                      t->thread_id, shep);
-
-        // Empty the ret location
-        if (ret) {
-            int test = qthread_empty(ret);
-
-            if (test != QTHREAD_SUCCESS) {
-                qthread_thread_free(t);
-                return test;
-            }
-        }
-
-        // Collect sync info
-        va_list args;
-        va_start(args, npreconds);
-        if (npreconds > 0) {
-            t->preconds = malloc(npreconds * sizeof(aligned_t *));
-            assert(t->preconds != NULL);
-            for (int i = 0; i < npreconds; i++) {
-                ((aligned_t **)t->preconds)[i] = va_arg(args, aligned_t *);
-            }
-            t->npreconds = npreconds;
-        } else if (npreconds < 0) {
-            unsigned count = -npreconds;
-            t->preconds = malloc(count * sizeof(aligned_t *));
-            assert(t->preconds != NULL);
-            aligned_t *tmp = va_arg(args, aligned_t *);
-            for (int i = 0; i < count; i++) {
-                ((aligned_t **)t->preconds)[i] = &tmp[i];
-            }
-            t->npreconds = count;
+        if (myshep) {
+            dest_shep = myshep; // rely on work-stealing
         } else {
-            t->npreconds = npreconds;
+            dest_shep = 0;
         }
-        va_end(args);
-
-        // Set new nascent state
-        t->thread_state = QTHREAD_STATE_NASCENT;
-
-        // Begin processing preconds
-        qthread_check_precond(t);
-
-        // All preconds are full, go ahead and just enqueue
-        if (0 == t->npreconds) {
-            qt_threadqueue_enqueue(qlib->shepherds[shep].ready, t, myshep);
+#else
+        if (QTHREAD_LIKELY(myshep)) {
+            dest_shep               = myshep->sched_shepherd++;
+            myshep->sched_shepherd *= (max_sheps > (dest_shep + 1));
+        } else {
+            dest_shep = (qthread_shepherd_id_t)qthread_internal_incr_mod(&qlib->sched_shepherd,
+                                                                         max_sheps,
+                                                                         &qlib->sched_shepherd_lock);
         }
-
-        return QTHREAD_SUCCESS;
+#endif  /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     }
+    /* Step 3: Allocate & init the structure */
+    t = qthread_thread_new(f, arg, arg_size, (aligned_t *)ret, dest_shep);
+    qassert_ret(t, QTHREAD_MALLOC_ERROR);
+    if (target_shep != NO_SHEPHERD) {
+        t->target_shepherd = &qlib->shepherds[target_shep];
+        t->flags          |= QTHREAD_UNSTEALABLE;
+    }
+    if (QTHREAD_UNLIKELY(npreconds != 0)) {
+        t->thread_state = QTHREAD_STATE_NASCENT; // special non-executable state
+        t->preconds     = preconds;
+        t->npreconds    = npreconds;
+    }
+    t->id = dest_shep;  /* used in barrier and arrive_first, NOT the
+                         * thread-id may be extraneous in both when parallel
+                         * region barriers in place (not will to pull it now
+                         * maybe late) akp */
+    if (QTHREAD_UNLIKELY(future_flag)) {
+        t->flags |= QTHREAD_FUTURE;
+    }
+    qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id, target_shep);
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    qthread_t *me = qthread_internal_self();
+    if (t->rdata == NULL) {
+        alloc_rdata(myshep, t);
+    }
+    t->rdata->currentParallelRegion = me->rdata->currentParallelRegion; // saved in shepherd
+#endif
+    /* Step 4: Prepare the return value location (if necessary) */
+    if (ret) {
+        int test = QTHREAD_SUCCESS;
+        switch(ret_type) {
+            case SYNCVAR_T:
+                t->flags |= QTHREAD_RET_IS_SYNCVAR;
+                test      = qthread_syncvar_empty((syncvar_t *)ret);
+                break;
+            case ALIGNED_T:
+                test = qthread_empty(ret);
+                break;
+            default: abort(); /* this should never happen */
+        }
+        if (QTHREAD_UNLIKELY(test != QTHREAD_SUCCESS)) {
+            qthread_thread_free(t);
+            return test;
+        }
+    }
+    /* Step 5: Prepare the input preconditions (if necessary) */
+    if (QTHREAD_LIKELY(!preconds) || (qthread_check_precond(t) == 0)) {
+        /* Step 6: Set it going */
+        qt_threadqueue_enqueue(qlib->shepherds[dest_shep].ready, t, myshep);
+    }
+    return QTHREAD_SUCCESS;
+}
 
-    qthread_debug(THREAD_BEHAVIOR, "malloc error\n");
-    return QTHREAD_MALLOC_ERROR;
+int qthread_fork(qthread_f   f,
+                 const void *arg,
+                 aligned_t  *ret)
+{   /*{{{*/
+    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, 0);
 } /*}}}*/
 
-int qthread_fork_syncvar_copyargs_to(const qthread_f             f,
-                                     const void *const           arg,
-                                     const size_t                arg_size,
-                                     syncvar_t *const            ret,
-                                     const qthread_shepherd_id_t preferred_shep)
+int qthread_fork_precond(qthread_f   f,
+                         const void *arg,
+                         aligned_t  *ret,
+                         int         npreconds,
+                         ...)
+{   /*{{{*/
+    // Collect sync info
+    va_list     args;
+    aligned_t **preconds = NULL;
+
+    va_start(args, npreconds);
+    if (npreconds > 0) {
+        preconds = malloc(npreconds * sizeof(aligned_t *));
+        assert(preconds != NULL);
+        for (int i = 0; i < npreconds; ++i) {
+            preconds[i] = va_arg(args, aligned_t *);
+        }
+    } else if (npreconds < 0) {
+        npreconds *= -1;
+        preconds   = malloc(npreconds * sizeof(aligned_t *));
+        assert(preconds != NULL);
+        aligned_t *tmp = va_arg(args, aligned_t *);
+        for (int i = 0; i < npreconds; ++i) {
+            preconds[i] = &tmp[i];
+        }
+    }
+    va_end(args);
+
+    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, ALIGNED_T, npreconds, preconds, NO_SHEPHERD, 0);
+} /*}}}*/
+
+int qthread_fork_syncvar_copyargs_to(qthread_f             f,
+                                     const void           *arg,
+                                     size_t                arg_size,
+                                     syncvar_t            *ret,
+                                     qthread_shepherd_id_t preferred_shep)
+#if 0
 {                      /*{{{ */
     qthread_t            *t;
     qthread_shepherd_id_t target_shep;
@@ -2446,7 +2352,7 @@ int qthread_fork_syncvar_copyargs_to(const qthread_f             f,
     qthread_debug(THREAD_BEHAVIOR, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
     assert(qlib);
     assert(f);
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     if (preferred_shep != NO_SHEPHERD) {
         target_shep = preferred_shep % qthread_num_shepherds();
     } else if (myshep != NULL) {
@@ -2454,7 +2360,7 @@ int qthread_fork_syncvar_copyargs_to(const qthread_f             f,
     } else {
         target_shep = 0;
     }
-#else
+# else
     if (preferred_shep != NO_SHEPHERD) {
         target_shep = preferred_shep % qthread_num_shepherds();
     } else {
@@ -2487,7 +2393,7 @@ int qthread_fork_syncvar_copyargs_to(const qthread_f             f,
             return QTHREAD_NOT_ALLOWED;
         }
     }
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
+# endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     t = qthread_thread_new(f, arg, arg_size, (aligned_t *)ret, target_shep);
     if (!t) {
         qthread_debug(THREAD_BEHAVIOR, "malloc error\n");
@@ -2497,13 +2403,13 @@ int qthread_fork_syncvar_copyargs_to(const qthread_f             f,
                   target_shep);
     t->flags |= QTHREAD_RET_IS_SYNCVAR;
 
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+# ifdef QTHREAD_USE_ROSE_EXTENSIONS
     qthread_t *me = qthread_internal_self();
     if (t->rdata == NULL) {
         alloc_rdata(myshep, t);
     }
     t->rdata->currentParallelRegion = me->rdata->currentParallelRegion; // saved in shepherd
-#endif
+# endif
     t->id = preferred_shep;  // used in barrier and arrive_first, NOT the thread-id
                              // may be extraneous in both when parallel region
                              // barriers in place (not will to pull it now
@@ -2521,297 +2427,96 @@ int qthread_fork_syncvar_copyargs_to(const qthread_f             f,
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
-int qthread_fork_syncvar_copyargs(const qthread_f   f,
-                                  const void *const arg,
-                                  const size_t      arg_size,
-                                  syncvar_t *const  ret)
+#else /* if 0 */
+{ /*{{{*/
+    return qthread_uberfork(f, (void *const)arg, arg_size, SYNCVAR_T, ret, NO_SYNC, 0, NULL, preferred_shep, 0);
+} /*}}}*/
+#endif /* if 0 */
+
+int qthread_fork_syncvar_copyargs(qthread_f   f,
+                                  const void *arg,
+                                  size_t      arg_size,
+                                  syncvar_t  *ret)
 {                      /*{{{ */
-    return qthread_fork_syncvar_copyargs_to(f, arg, arg_size, ret,
-                                            NO_SHEPHERD);
+    return qthread_uberfork(f, (void *const)arg, arg_size, SYNCVAR_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, 0);
 }                      /*}}} */
 
-int qthread_fork_syncvar(const qthread_f   f,
-                         const void *const arg,
-                         syncvar_t *const  ret)
+int qthread_fork_syncvar(qthread_f   f,
+                         const void *arg,
+                         syncvar_t  *ret)
 {                      /*{{{ */
-    return qthread_fork_syncvar_copyargs(f, arg, 0, ret);
+    return qthread_uberfork(f, (void *const)arg, 0, SYNCVAR_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, 0);
 }                      /*}}} */
 
-int qthread_fork_to(const qthread_f             f,
-                    const void                 *arg,
-                    aligned_t                  *ret,
-                    const qthread_shepherd_id_t shepherd)
-{                      /*{{{ */
-    qthread_t          *t;
-    qthread_shepherd_t *shep;
+int qthread_fork_to(qthread_f             f,
+                    const void           *arg,
+                    aligned_t            *ret,
+                    qthread_shepherd_id_t shepherd)
+{   /*{{{*/
+    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, shepherd, 0);
+} /*}}}*/
 
-    assert(shepherd < qlib->nshepherds);
-    assert(f != NULL);
-    if ((shepherd >= qlib->nshepherds) || (f == NULL)) {
-        return QTHREAD_BADARGS;
-    }
-    t = qthread_thread_new(f, arg, 0, ret, shepherd);
-    qassert_ret(t, QTHREAD_MALLOC_ERROR);
-    shep               = &(qlib->shepherds[shepherd]);
-    t->target_shepherd = shep;
-    t->flags          |= QTHREAD_UNSTEALABLE;
-    qthread_debug(THREAD_BEHAVIOR,
-                  "new-tid %u shep %u\n", t->thread_id,
-                  shepherd);
-
-    if (ret) {
-        int test = qthread_empty(ret);
-
-        if (test != QTHREAD_SUCCESS) {
-            qthread_thread_free(t);
-            return test;
-        }
-    }
-    qt_threadqueue_enqueue(shep->ready, t,
-                           qthread_internal_getshep());
-    return QTHREAD_SUCCESS;
-}                      /*}}} */
-
-int qthread_fork_precond_to(const qthread_f             f,
-                            const void                 *arg,
-                            aligned_t                  *ret,
-                            const qthread_shepherd_id_t shepherd,
-                            const int                   npreconds,
+int qthread_fork_precond_to(qthread_f             f,
+                            const void           *arg,
+                            aligned_t            *ret,
+                            qthread_shepherd_id_t shepherd,
+                            int                   npreconds,
                             ...)
 {                      /*{{{ */
-    qthread_t          *t;
-    qthread_shepherd_t *shep;
-
-    assert(shepherd < qlib->nshepherds);
-    assert(f != NULL);
-    if ((shepherd >= qlib->nshepherds) || (f == NULL)) {
-        return QTHREAD_BADARGS;
-    }
-
-    // Create action (task structure)
-    t = qthread_thread_new(f, arg, 0, ret, shepherd);
-    qassert_ret(t, QTHREAD_MALLOC_ERROR);
-    shep               = &(qlib->shepherds[shepherd]);
-    t->target_shepherd = shep;
-    t->flags          |= QTHREAD_UNSTEALABLE;
-    qthread_debug(THREAD_BEHAVIOR,
-                  "new-tid %u shep %u\n", t->thread_id,
-                  shepherd);
-
-    // Empty the ret location
-    if (ret) {
-        int test = qthread_empty(ret);
-
-        if (test != QTHREAD_SUCCESS) {
-            qthread_thread_free(t);
-            return test;
-        }
-    }
-
     // Collect sync info
-    va_list args;
+    va_list     args;
+    aligned_t **preconds = NULL;
+
     va_start(args, npreconds);
     if (npreconds > 0) {
-        t->preconds = malloc(npreconds * sizeof(aligned_t *));
-        assert(t->preconds != NULL);
-        for (int i = 0; i < npreconds; i++) {
-            ((aligned_t **)t->preconds)[i] = va_arg(args, aligned_t *);
+        preconds = malloc(npreconds * sizeof(aligned_t *));
+        assert(preconds != NULL);
+        for (int i = 0; i < npreconds; ++i) {
+            preconds[i] = va_arg(args, aligned_t *);
         }
-        t->npreconds = npreconds;
     } else if (npreconds < 0) {
-        unsigned count = -npreconds;
-        t->preconds = malloc(count * sizeof(aligned_t *));
-        assert(t->preconds != NULL);
+        npreconds *= -1;
+        preconds   = malloc(npreconds * sizeof(aligned_t *));
+        assert(preconds != NULL);
         aligned_t *tmp = va_arg(args, aligned_t *);
-        for (int i = 0; i < count; i++) {
-            ((aligned_t **)t->preconds)[i] = &tmp[i];
+        for (int i = 0; i < npreconds; ++i) {
+            preconds[i] = &tmp[i];
         }
-        t->npreconds = count;
-    } else {
-        t->npreconds = npreconds;
     }
     va_end(args);
 
-    // Set new nascent state
-    t->thread_state = QTHREAD_STATE_NASCENT;
-
-    // Begin processing preconds
-    qthread_check_precond(t);
-
-    // All preconds are full, go ahead and just enqueue
-    if (0 == t->npreconds) {
-        qt_threadqueue_enqueue(shep->ready, t,
-                               qthread_internal_getshep());
-    }
-
-    return QTHREAD_SUCCESS;
+    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, ALIGNED_T, npreconds, preconds, shepherd, 0);
 }                      /*}}} */
 
-int qthread_fork_syncvar_to(const qthread_f             f,
-                            const void *const           arg,
-                            syncvar_t                  *ret,
-                            const qthread_shepherd_id_t s)
-{                      /*{{{ */
-    qthread_t          *t;
-    qthread_shepherd_t *shep;
-
-    const qthread_shepherd_id_t shepherd = s % qthread_num_shepherds();
-
-    if ((shepherd >= qlib->nshepherds) || (f == NULL)) {
-        return QTHREAD_BADARGS;
-    }
-    assert(f != NULL);
-    assert(shepherd < qlib->nshepherds);
-    t = qthread_thread_new(f, arg, 0, ret, shepherd);
-    qassert_ret(t, QTHREAD_MALLOC_ERROR);
-    t->target_shepherd = shep = &(qlib->shepherds[shepherd]);
-    t->flags          |= QTHREAD_UNSTEALABLE;
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    t->id = s % (qthread_num_workers());
-#else
-    t->id = shepherd;
-#endif
-    qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id,
-                  shepherd);
-
-    if (ret) {
-        int test = qthread_syncvar_empty(ret);
-
-        if (test != QTHREAD_SUCCESS) {
-            qthread_thread_free(t);
-            return test;
-        }
-        t->flags |= QTHREAD_RET_IS_SYNCVAR;
-    }
-    if (QTHREAD_CASLOCK_READ_UI(shep->active) == 0) {
-        shep =
-            qthread_find_active_shepherd(shep->sorted_sheplist,
-                                         shep->shep_dists);
-    }
-    qt_threadqueue_enqueue(shep->ready, t, qthread_internal_getshep());
-    return QTHREAD_SUCCESS;
-}                      /*}}} */
-
-int qthread_fork_future_to(const qthread_f             f,
-                           const void                 *arg,
-                           aligned_t                  *ret,
-                           const qthread_shepherd_id_t shepherd)
-{                      /*{{{ */
-    qthread_t          *t;
-    qthread_shepherd_t *shep;
-
-    assert(shepherd < qlib->nshepherds);
-    assert(f != NULL);
-    if ((shepherd >= qlib->nshepherds) || (f == NULL)) {
-        return QTHREAD_BADARGS;
-    }
-    t = qthread_thread_new(f, arg, 0, ret, shepherd);
-    qassert_ret(t, QTHREAD_MALLOC_ERROR);
-    shep               = &(qlib->shepherds[shepherd]);
-    t->flags          |= QTHREAD_FUTURE;
-    t->target_shepherd = &(qlib->shepherds[shepherd]);
-    qthread_debug(THREAD_BEHAVIOR,
-                  "new-tid %u shep %u\n",
-                  t->thread_id, shepherd);
-
-    if (ret) {
-        int test = qthread_empty(ret);
-
-        if (test != QTHREAD_SUCCESS) {
-            qthread_thread_free(t);
-            return test;
-        }
-    }
-    if (QTHREAD_CASLOCK_READ_UI(shep->active) == 0) {
-        shep =
-            qthread_find_active_shepherd(shep->sorted_sheplist,
-                                         shep->shep_dists);
-    }
-    qt_threadqueue_enqueue(shep->ready, t, qthread_internal_getshep());
-    return QTHREAD_SUCCESS;
-}                      /*}}} */
-
-int qthread_fork_syncvar_future_to(const qthread_f             f,
-                                   const void                 *arg,
-                                   syncvar_t                  *ret,
-                                   const qthread_shepherd_id_t shepherd)
-{                      /*{{{ */
-    qthread_t          *t;
-    qthread_shepherd_t *shep;
-
-    assert(shepherd < qlib->nshepherds);
-    assert(f != NULL);
-    if ((shepherd >= qlib->nshepherds) || (f == NULL)) {
-        return QTHREAD_BADARGS;
-    }
-    if (QTHREAD_CASLOCK_READ_UI(qlib->shepherds[shepherd].active) != 1) {
-        return QTHREAD_NOT_ALLOWED;
-    }
-    t = qthread_thread_new(f, arg, 0, ret, shepherd);
-    qassert_ret(t, QTHREAD_MALLOC_ERROR);
-    shep               = &(qlib->shepherds[shepherd]);
-    t->flags          |= QTHREAD_FUTURE;
-    t->target_shepherd = &(qlib->shepherds[shepherd]);
-    qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id,
-                  shepherd);
-    if (ret) {
-        int test = qthread_syncvar_empty(ret);
-
-        if (test != QTHREAD_SUCCESS) {
-            qthread_thread_free(t);
-            return test;
-        }
-        t->flags |= QTHREAD_RET_IS_SYNCVAR;
-    }
-    if (QTHREAD_CASLOCK_READ_UI(shep->active) == 0) {
-        shep =
-            qthread_find_active_shepherd(shep->sorted_sheplist,
-                                         shep->shep_dists);
-    }
-    qt_threadqueue_enqueue(shep->ready, t, qthread_internal_getshep());
-    return QTHREAD_SUCCESS;
-}                      /*}}} */
-
-int qthread_fork_syncvar_future(const qthread_f f,
-                                const void     *arg,
-                                syncvar_t      *ret)
+int qthread_fork_syncvar_to(qthread_f             f,
+                            const void           *arg,
+                            syncvar_t            *ret,
+                            qthread_shepherd_id_t s)
 {   /*{{{*/
-    qthread_shepherd_id_t shep;
-    qthread_shepherd_t   *myshep = qthread_internal_getshep();
+    return qthread_uberfork(f, arg, 0, SYNCVAR_T, ret, NO_SYNC, 0, NULL, s, 0);
+} /*}}}*/
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    if (myshep) {
-        shep = myshep->shepherd_id; // rely on work-stealing
-    } else {
-        shep = 0;
-    }
-#else
-    unsigned int loopctr = 0;
-    if (myshep) {              /* note: for forking from a qthread, NO LOCKS! */
-        do {
-            shep = (qthread_shepherd_id_t)(myshep->sched_shepherd++);
-            if (myshep->sched_shepherd == qlib->nshepherds) {
-                myshep->sched_shepherd = 0;
-            }
-            loopctr++;
-        } while (QTHREAD_CASLOCK_READ_UI(qlib->shepherds[shep].active) != 1 &&
-                 loopctr <= qlib->nshepherds);
-    } else {
-        do {
-            shep = (qthread_shepherd_id_t)
-                   qthread_internal_incr_mod(&qlib->sched_shepherd,
-                                             qlib->nshepherds,
-                                             &qlib->sched_shepherd_lock);
-            loopctr++;
-        } while (QTHREAD_CASLOCK_READ_UI(qlib->shepherds[shep].active) != 1 &&
-                 loopctr <= qlib->nshepherds);
-    }
-    if (loopctr > qlib->nshepherds) {
-        qthread_debug(THREAD_BEHAVIOR, "could not find an active shepherd\n");
-        return QTHREAD_NOT_ALLOWED;
-    }
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-    return qthread_fork_syncvar_future_to(f, arg, ret, shep);
+int qthread_fork_future_to(qthread_f             f,
+                           const void           *arg,
+                           aligned_t            *ret,
+                           qthread_shepherd_id_t shepherd)
+{   /*{{{*/
+    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, shepherd, 1);
+} /*}}}*/
+
+int qthread_fork_syncvar_future_to(qthread_f             f,
+                                   const void           *arg,
+                                   syncvar_t            *ret,
+                                   qthread_shepherd_id_t shepherd)
+{   /*{{{*/
+    return qthread_uberfork(f, arg, 0, SYNCVAR_T, ret, NO_SYNC, 0, NULL, shepherd, 1);
+} /*}}}*/
+
+int qthread_fork_syncvar_future(qthread_f   f,
+                                const void *arg,
+                                syncvar_t  *ret)
+{   /*{{{*/
+    return qthread_uberfork(f, arg, 0, SYNCVAR_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, 1);
 } /*}}}*/
 
 /*
@@ -2859,7 +2564,7 @@ int INTERNAL qthread_check_precond(qthread_t *t)
                 X = ALLOC_ADDRRES(myshep);
                 if (X == NULL) {
                     QTHREAD_FASTLOCK_UNLOCK(&m->lock);
-                    return QTHREAD_MALLOC_ERROR;
+                    return 2;
                 }
                 X->addr         = this_sync;
                 X->waiter       = t;
@@ -2868,7 +2573,7 @@ int INTERNAL qthread_check_precond(qthread_t *t)
                 t->thread_state = QTHREAD_STATE_NASCENT;
                 QTHREAD_FASTLOCK_UNLOCK(&m->lock);
 
-                return QTHREAD_SUCCESS;
+                return 1;
             }
         }
     }
@@ -2876,7 +2581,7 @@ int INTERNAL qthread_check_precond(qthread_t *t)
     // All input preconds are full
     t->thread_state = QTHREAD_STATE_NEW;
 
-    return QTHREAD_SUCCESS;
+    return 0;
 }
 
 void INTERNAL qthread_back_to_master(qthread_t *t)

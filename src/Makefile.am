@@ -50,7 +50,7 @@ endif
 #   and reset the revision and age numbers to 0
 # - If you support all the same functions (just bugfixes or whatnot), increment
 #   the revision number
-libqthread_la_LDFLAGS = -version-info 13:0:0 -no-undefined
+libqthread_la_LDFLAGS = -version-info 14:0:0 -no-undefined
 
 libqthread_la_LIBADD =
 libqthread_la_DEPENDENCIES =
