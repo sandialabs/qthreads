@@ -19,7 +19,13 @@ DISTCHECK_CONFIGURE_FLAGS = $(EXTRA_DISTCHECK_OPTIONS)
 
 CONFIGURE_DEPENDENCIES = config/version-gen NEWS
 
-.PHONY: buildtests
+.PHONY: buildtests buildextra buildall
 
 buildtests:
 	$(MAKE) -C test buildtests
+
+buildextra:
+	$(MAKE) -C test buildextra
+
+buildall:
+	$(MAKE) -C test buildall
