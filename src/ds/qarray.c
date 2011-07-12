@@ -1180,8 +1180,7 @@ void qarray_iter_constloop(const qarray *a,
     qassert_retvoid((startat <= stopat));
     switch (a->dist_type) {
         case ALL_SAME:
-            qthread_fork_to((qthread_f)qarray_loop_strider, &qfwa, NULL,
-                            a->dist_specific.dist_shep);
+            qthread_fork_to((qthread_f)qarray_loop_strider, &qfwa, NULL, a->dist_specific.dist_shep);
             while (_(donecount) == 0) {
                 qthread_yield();
             }
