@@ -7,19 +7,17 @@
 
 unsigned long THREADS = 1000000;
 
-static aligned_t null_thread(
-    void *arg)
+static aligned_t null_thread(void *arg)
 {
     return 0;
 }
 
-int main(
-    void)
+int main(void)
 {
-    qtimer_t timer = qtimer_create();
-    double spawn;
-    aligned_t *rets;
-    syncvar_t *srets;
+    qtimer_t     timer = qtimer_create();
+    double       spawn;
+    aligned_t   *rets;
+    syncvar_t   *srets;
     unsigned int shepherds = 1;
 
     qthread_initialize();
@@ -61,11 +59,9 @@ int main(
         qthread_readFE(NULL, rets + i);
     }
     qtimer_stop(timer);
-    printf("\tCold spawn time: %f usecs, %f/sec\n", 1000000 * spawn / THREADS,
-           THREADS / spawn);
+    printf("\tCold spawn time: %f usecs, %f/sec\n", 1000000 * spawn / THREADS, THREADS / spawn);
     spawn = qtimer_secs(timer) - spawn;
-    printf("\tCold sync time : %f usecs, %f/sec\n", 1000000 * spawn / THREADS,
-           THREADS / spawn);
+    printf("\tCold sync time : %f usecs, %f/sec\n", 1000000 * spawn / THREADS, THREADS / spawn);
 
     printf("Timing forking...\n");
     qtimer_start(timer);
@@ -81,16 +77,14 @@ int main(
     }
     qtimer_stop(timer);
 
-    printf("\tWarm spawn time: %f usecs, %f/sec\n", 1000000 * spawn / THREADS,
-           THREADS / spawn);
+    printf("\tWarm spawn time: %f usecs, %f/sec\n", 1000000 * spawn / THREADS, THREADS / spawn);
     spawn = qtimer_secs(timer) - spawn;
-    printf("\tWarm sync time : %f usecs, %f/sec\n", 1000000 * spawn / THREADS,
-           THREADS / spawn);
+    printf("\tWarm sync time : %f usecs, %f/sec\n", 1000000 * spawn / THREADS, THREADS / spawn);
     free(rets);
 
     srets = calloc(THREADS, sizeof(syncvar_t));
     {
-        const syncvar_t empty = { .u.s = {.data = 0, .state = 2, .lock = 0} };
+        const syncvar_t empty = { .u.s = { .data = 0, .state = 2, .lock = 0 } };
         for (unsigned long i = 0; i < THREADS; ++i) {
             srets[i] = empty;
         }
@@ -108,11 +102,9 @@ int main(
     }
     qtimer_stop(timer);
 
-    printf("\tWarm syncvar_t spawn time: %f usecs, %f/sec\n",
-           1000000 * spawn / THREADS, THREADS / spawn);
+    printf("\tWarm syncvar_t spawn time: %f usecs, %f/sec\n", 1000000 * spawn / THREADS, THREADS / spawn);
     spawn = qtimer_secs(timer) - spawn;
-    printf("\tWarm syncvar_t sync time : %f usecs, %f/sec\n",
-           1000000 * spawn / THREADS, THREADS / spawn);
+    printf("\tWarm syncvar_t sync time : %f usecs, %f/sec\n", 1000000 * spawn / THREADS, THREADS / spawn);
     free(srets);
 
     qtimer_start(timer);
@@ -121,8 +113,7 @@ int main(
     }
     qtimer_stop(timer);
     spawn = qtimer_secs(timer);
-    printf("\tWarm null spawn time: %f usecs, %f/sec\n",
-           1000000 * spawn / THREADS, THREADS / spawn);
+    printf("\tWarm null spawn time: %f usecs, %f/sec\n", 1000000 * spawn / THREADS, THREADS / spawn);
 
     qtimer_destroy(timer);
     return 0;
