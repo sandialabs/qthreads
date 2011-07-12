@@ -4,9 +4,9 @@ AC_DEFUN([QTHREAD_BUILTIN_EXPECT],
   [SAVE_CFLAGS="$CFLAGS"
    CFLAGS="-Werror $CFLAGS"
    AC_LINK_IFELSE([AC_LANG_SOURCE([[
-int main()
+int main(void)
 {
-	int i;
+	int i=1;
 	if (__builtin_expect(i==0, 0)) { return 0; }
 	return 1;
 }]])],
