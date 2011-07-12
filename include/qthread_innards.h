@@ -72,7 +72,7 @@ typedef struct qlib_s {
     aligned_t             sched_shepherd;
     QTHREAD_FASTLOCK_TYPE sched_shepherd_lock;
 
-#if defined(QTHREAD_MUTEX_INCREMENT) || \
+#if defined(QTHREAD_MUTEX_INCREMENT) ||             \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
     QTHREAD_FASTLOCK_TYPE *atomic_locks;
@@ -163,10 +163,10 @@ void qthread_releaseTaskListLock(void);
 extern int __qthreads_temp;
 void INTERNAL qthread_reset_forCount(void);
 
-int INTERNAL            qthread_forCount(int inc);
+int INTERNAL   qthread_forCount(int inc);
 taskSyncvar_t *qthread_getTaskRetVar(void);
-void qthread_setTaskRetVar(taskSyncvar_t *v);
-void qt_move_to_orig(void); /* reschedule this thread on shepherd 0 worker 0 -- for termination 4/1/11 AKP */
+void           qthread_setTaskRetVar(taskSyncvar_t *v);
+void           qt_move_to_orig(void); /* reschedule this thread on shepherd 0 worker 0 -- for termination 4/1/11 AKP */
 #endif // ifdef QTHREAD_USE_ROSE_EXTENSIONS
 #ifdef STEAL_PROFILE
 void INTERNAL qthread_steal_stat(void);
@@ -177,7 +177,7 @@ void INTERNAL qt_feb_barrier_internal_init(void);
 void INTERNAL qthread_internal_cleanup(void (*function)(void));
 void INTERNAL qthread_internal_cleanup_early(void (*function)(void));
 
-# ifdef QTHREAD_RCRTOOL 
+#ifdef QTHREAD_RCRTOOL
 /* allow environment variable to control whether dynamic thread count
  *  adjustment active - akp 5/26/11
  */
@@ -187,7 +187,7 @@ extern int rcrSchedulingOff;
 /* for debugging */
 #ifdef QTHREAD_DEBUG
 enum qthread_debug_levels {
-    NONE = 0,
+    NO_DEBUG_OUTPUT = 0,
     THREAD_BEHAVIOR, LOCK_BEHAVIOR, ALL_CALLS, ALL_FUNCTIONS,
     THREAD_DETAILS, LOCK_DETAILS, ALL_DETAILS
 };
@@ -269,7 +269,11 @@ static QINLINE void qthread_debug(int         level,
 
                         qassert(syscall(SYS_write, 2, buf, head - buf), head - buf);
                         head = buf;
-                        qassert(syscall(SYS_write, 2, str, strlen(str)), strlen(str));
+                        if (str == NULL) {
+                            qassert(syscall(SYS_write, 2, "(null)", 6), 6);
+                        } else {
+                            qassert(syscall(SYS_write, 2, str, strlen(str)), strlen(str));
+                        }
                         break;
                     }
                     case 'p':
@@ -310,6 +314,32 @@ static QINLINE void qthread_debug(int         level,
                             }
                         }
                         break;
+                    case 'z':
+                    {
+                        size_t num = va_arg(args, size_t);
+                        /* count places */
+                        unsigned  places = 0;
+                        size_t tmpnum = num;
+                            /* yes, this is dumb, but its guaranteed to take
+                             * less than 10 iterations on 32-bit numbers and
+                             * doesn't involve floating point */
+                            while (tmpnum >= 10) {
+                                tmpnum /= 10;
+                                places++;
+                            }
+                            head  += places;
+                            places = 0;
+                            while (num >= 10) {
+                                uintptr_t tmp = num % 10;
+                                *(head - places) = (tmp < 10) ? ('0' + tmp) : ('a' + tmp - 10);
+                                num             /= 10;
+                                places++;
+                            }
+                            num             %= 10;
+                            *(head - places) = (num < 10) ? ('0' + num) : ('a' + num - 10);
+                            head++;
+                        break;
+                    }
                     case 'x':
                         *head++ = '0';
                         *head++ = 'x';
