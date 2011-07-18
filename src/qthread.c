@@ -2219,7 +2219,7 @@ static int qthread_uberfork(qthread_f             f,
     assert(qlib);
 #ifdef QTHREAD_DEBUG
     qassert_ret(((target_shep == NO_SHEPHERD) || (target_shep < max_sheps)), QTHREAD_BADARGS);
-    qassert_ret(f == NULL, QTHREAD_BADARGS);
+    qassert_ret(f != NULL, QTHREAD_BADARGS);
     if (npreconds > 0) {
         qassert_ret(preconds != NULL, QTHREAD_BADARGS);
         qassert_ret(precond_type != NO_SYNC, QTHREAD_BADARGS);
