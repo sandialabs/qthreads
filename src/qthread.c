@@ -1680,8 +1680,10 @@ void qthread_enable_worker(const qthread_worker_id_t w)
 
     if (worker == 0) { qthread_enable_shepherd(shep); }
     qthread_debug(ALL_CALLS, "began on shep(%i)\n", shep);
-    qthread_internal_incr(&(qlib->nshepherds_active), &(qlib->nshepherds_active_lock), 1);
-    (void)QT_CAS(qlib->shepherds[shep].workers[worker].active, 0, 1);
+    if (worker < qlib->nworkerspershep) {
+        qthread_internal_incr(&(qlib->nshepherds_active), &(qlib->nshepherds_active_lock), 1);
+        (void)QT_CAS(qlib->shepherds[shep].workers[worker].active, 0, 1);
+    }
 #else
     qthread_enable_shepherd(w);
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
