@@ -46,11 +46,15 @@ void INTERNAL qt_makectxt(uctxt_t *ucp,
     va_start(argp, argc);
 # endif
 
-    sp  = (uintptr_t *)ucp->uc_stack.ss_sp + ucp->uc_stack.ss_size / sizeof(void *); /* sp = top of stack */
+    sp  = (uintptr_t *)(ucp->uc_stack.ss_sp + ucp->uc_stack.ss_size); /* sp = top of stack */
     sp -= argc;                                                                      /* count down to where 8(%rsp) should be */
     sp  = (void *)((uintptr_t)sp - (uintptr_t)sp % 16);                              /* 16-align for OS X */
     /* now copy from my arg list to the function's arglist */
     memmove(sp, &argc + 1, argc * sizeof(uintptr_t));
+    /*for (i=0; i<argc; ++i) {
+        uintptr_t tmp = va_arg(argp, uintptr_t);
+        sp[i] = tmp;
+    }*/
 
 # ifdef NEEDX86REGISTERARGS
     /* HOWEVER, the function may not be expecting to pull from the stack,
