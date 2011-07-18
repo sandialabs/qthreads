@@ -247,6 +247,7 @@ loop_top:
     if (*nbshepherds == 0) {
         *nbshepherds = guess_num_shepherds();
     }
+    shep_depth = hwloc_get_type_depth(topology, HWLOC_OBJ_PU);
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 }                                      /*}}} */
 
@@ -401,6 +402,8 @@ void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
         hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset,
                                              shep_depth, me->node);
 
+    assert(hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth) >= 1);
+
     if (hwloc_set_cpubind
             (topology, obj->allowed_cpuset, HWLOC_CPUBIND_THREAD)) {
         char *str;
@@ -443,7 +446,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
         // printf("#objs at shep_depth %i is: %i\n", shep_depth, hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth));
         if (hwloc_get_nbobjs_inside_cpuset_by_depth
                 (topology, allowed_cpuset, shep_depth) <= 1) {
-            shep_depth++;
+            //shep_depth++;
             break;
         } else {
             shep_depth--;
