@@ -1223,6 +1223,11 @@ void omp_set_num_threads (
 
   qt_num_threads_requested = (qthread_shepherd_id_t) omp_num_threads_requested;
 
+  // KBW: Sanity
+  if (qt_num_threads_requested > qthread_readstate(TOTAL_WORKERS)) {
+      qt_num_threads_requested = qthread_readstate(TOTAL_WORKERS);
+  }
+
   if ( qt_num_threads_requested > num_active)
     {
       for(i=num_active; i < qt_num_threads_requested; i++)
