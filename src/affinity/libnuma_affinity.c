@@ -74,8 +74,6 @@ static qthread_shepherd_id_t guess_num_shepherds(void)
     qthread_shepherd_id_t nshepherds = 1;
 
     if (numa_available() != 1) {
-        unsigned long bmask[BMASK_WORDS];
-        unsigned long count = 0;
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
         /* this is (probably) correct if/when we have multithreaded shepherds,
          * ... BUT ONLY IF ALL NODES HAVE CPUS!!!!!! */
@@ -100,6 +98,9 @@ static qthread_shepherd_id_t guess_num_shepherds(void)
                       "after checking through the all_cpus_ptr, I counted %i cpus\n",
                       nshepherds);
 # else  /* ifdef HAVE_NUMA_NUM_THREAD_CPUS */
+        unsigned long bmask[BMASK_WORDS];
+        unsigned long count = 0;
+
         nshepherds = numa_max_node() + 1;
         qthread_debug(ALL_DETAILS, "numa_max_node() returned %i\n",
                       nshepherds);
