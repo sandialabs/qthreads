@@ -2234,7 +2234,7 @@ static int qthread_uberfork(qthread_f             f,
     } else {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
         if (myshep) {
-            dest_shep = myshep; // rely on work-stealing
+            dest_shep = myshep->shepherd_id; // rely on work-stealing
         } else {
             dest_shep = 0;
         }
