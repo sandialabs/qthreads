@@ -46,11 +46,9 @@ struct qthread_runtime_data_s {
     unsigned int valgrind_stack_id;
 #endif
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    int                        forCount;         /* added akp */
-    taskSyncvar_t             *openmpTaskRetVar; /* ptr to linked list if task's I started -- used in openMP taskwait */
-    syncvar_t                  taskWaitLock;
-    /* parallel region barrier this thread should use */
-    qthread_parallel_region_t *currentParallelRegion;
+    int            forCount;                     /* added akp */
+    taskSyncvar_t *openmpTaskRetVar;             /* ptr to linked list if task's I started -- used in openMP taskwait */
+    syncvar_t      taskWaitLock;
 # ifdef QTHREAD_OMP_AFFINITY
     /* affinity for children created by this task */
     qthread_shepherd_id_t child_affinity;
@@ -77,6 +75,9 @@ struct qthread_s {
     /* preconditions for data-dependent tasks */
     unsigned                       npreconds;
     void                          *preconds;
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    qthread_parallel_region_t     *currentParallelRegion; /* parallel region barrier this thread should use */
+#endif
 
     Q_ALIGNED(8) uint8_t data[]; /* this is where we stick argcopy and tasklocal data */
 };

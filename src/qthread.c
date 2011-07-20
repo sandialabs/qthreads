@@ -321,10 +321,7 @@ static QINLINE void alloc_rdata(qthread_shepherd_t *me,
     t->rdata->child_affinity = OMP_NO_CHILD_TASK_AFFINITY;
 # endif
     t->rdata->openmpTaskRetVar = NULL;
-    //    t->rdata->taskWaitLock.u.w = 0;
-    // qthread_syncvar_empty(&t->rdata->taskWaitLock);
-    t->rdata->taskWaitLock          = SYNCVAR_EMPTY_INITIALIZER;
-    t->rdata->currentParallelRegion = NULL;
+    t->rdata->taskWaitLock     = SYNCVAR_EMPTY_INITIALIZER;
 #endif
 }
 
@@ -2198,7 +2195,9 @@ static int qthread_uberfork(qthread_f             f,
     qthread_t                  *t;
     qthread_shepherd_t         *myshep = qthread_internal_getshep();
     qthread_shepherd_id_t       dest_shep;
+#if defined(QTHREAD_DEBUG) || !defined(QTHREAD_MULTITHREADED_SHEPHERDS)
     const qthread_shepherd_id_t max_sheps = qlib->nshepherds;
+#endif
 
     /* Step 1: Check arguments */
     qthread_debug(THREAD_BEHAVIOR,
@@ -2213,9 +2212,6 @@ static int qthread_uberfork(qthread_f             f,
                   preconds,
                   target_shep,
                   (future_flag ? "future" : "qthread"));
-    if (QTHREAD_UNLIKELY((target_shep != NO_SHEPHERD) && (target_shep >= max_sheps))) {
-        target_shep %= max_sheps;
-    }
     assert(qlib);
 #ifdef QTHREAD_DEBUG
     qassert_ret(((target_shep == NO_SHEPHERD) || (target_shep < max_sheps)), QTHREAD_BADARGS);
@@ -2252,7 +2248,7 @@ static int qthread_uberfork(qthread_f             f,
     /* Step 3: Allocate & init the structure */
     t = qthread_thread_new(f, arg, arg_size, (aligned_t *)ret, dest_shep);
     qassert_ret(t, QTHREAD_MALLOC_ERROR);
-    if (target_shep != NO_SHEPHERD) {
+    if (QTHREAD_UNLIKELY(target_shep != NO_SHEPHERD)) {
         t->target_shepherd = &qlib->shepherds[target_shep];
         t->flags          |= QTHREAD_UNSTEALABLE;
     }
@@ -2271,10 +2267,9 @@ static int qthread_uberfork(qthread_f             f,
     qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id, target_shep);
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     qthread_t *me = qthread_internal_self();
-    if (t->rdata == NULL) {
-        alloc_rdata(myshep, t);
+    if (me) {
+        t->currentParallelRegion = me->currentParallelRegion; // saved in shepherd
     }
-    t->rdata->currentParallelRegion = me->rdata->currentParallelRegion; // saved in shepherd
 #endif
     /* Step 4: Prepare the return value location (if necessary) */
     if (ret) {
@@ -2410,7 +2405,7 @@ int qthread_fork_syncvar_copyargs_to(qthread_f             f,
     if (t->rdata == NULL) {
         alloc_rdata(myshep, t);
     }
-    t->rdata->currentParallelRegion = me->rdata->currentParallelRegion; // saved in shepherd
+    t->currentParallelRegion = me->currentParallelRegion; // saved in shepherd
 # endif
     t->id = preferred_shep;  // used in barrier and arrive_first, NOT the thread-id
                              // may be extraneous in both when parallel region
@@ -2431,6 +2426,9 @@ int qthread_fork_syncvar_copyargs_to(qthread_f             f,
 
 #else /* if 0 */
 { /*{{{*/
+    if ((preferred_shep != NO_SHEPHERD) && (preferred_shep >= qlib->nshepherds)) {
+        preferred_shep %= qlib->nshepherds;
+    }
     return qthread_uberfork(f, (void *const)arg, arg_size, SYNCVAR_T, ret, NO_SYNC, 0, NULL, preferred_shep, 0);
 } /*}}}*/
 #endif /* if 0 */
@@ -2455,6 +2453,9 @@ int qthread_fork_to(qthread_f             f,
                     aligned_t            *ret,
                     qthread_shepherd_id_t shepherd)
 {   /*{{{*/
+    if ((shepherd != NO_SHEPHERD) && (shepherd >= qlib->nshepherds)) {
+        shepherd %= qlib->nshepherds;
+    }
     return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, shepherd, 0);
 } /*}}}*/
 
@@ -2487,6 +2488,9 @@ int qthread_fork_precond_to(qthread_f             f,
     }
     va_end(args);
 
+    if ((shepherd != NO_SHEPHERD) && (shepherd >= qlib->nshepherds)) {
+        shepherd %= qlib->nshepherds;
+    }
     return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, ALIGNED_T, npreconds, preconds, shepherd, 0);
 }                      /*}}} */
 
@@ -2495,6 +2499,9 @@ int qthread_fork_syncvar_to(qthread_f             f,
                             syncvar_t            *ret,
                             qthread_shepherd_id_t s)
 {   /*{{{*/
+    if ((s != NO_SHEPHERD) && (s >= qlib->nshepherds)) {
+        s %= qlib->nshepherds;
+    }
     return qthread_uberfork(f, arg, 0, SYNCVAR_T, ret, NO_SYNC, 0, NULL, s, 0);
 } /*}}}*/
 
@@ -2503,6 +2510,9 @@ int qthread_fork_future_to(qthread_f             f,
                            aligned_t            *ret,
                            qthread_shepherd_id_t shepherd)
 {   /*{{{*/
+    if ((shepherd != NO_SHEPHERD) && (shepherd >= qlib->nshepherds)) {
+        shepherd %= qlib->nshepherds;
+    }
     return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, shepherd, 1);
 } /*}}}*/
 
@@ -2511,6 +2521,9 @@ int qthread_fork_syncvar_future_to(qthread_f             f,
                                    syncvar_t            *ret,
                                    qthread_shepherd_id_t shepherd)
 {   /*{{{*/
+    if ((shepherd != NO_SHEPHERD) && (shepherd >= qlib->nshepherds)) {
+        shepherd %= qlib->nshepherds;
+    }
     return qthread_uberfork(f, arg, 0, SYNCVAR_T, ret, NO_SYNC, 0, NULL, shepherd, 1);
 } /*}}}*/
 
@@ -2673,7 +2686,7 @@ qthread_parallel_region_t *qt_parallel_region() // get active parallel region
 {                                               /*{{{ */
     qthread_t *t = qthread_internal_self();
 
-    return t->rdata->currentParallelRegion;
+    return t->currentParallelRegion;
 }                      /*}}} */
 
 int qt_omp_parallel_region_create()
@@ -2698,14 +2711,14 @@ int qt_omp_parallel_region_create()
 # endif /* ifdef QTHREAD_LOG_BARRIER */
 
     qthread_t *t = qthread_internal_self();
-    if (t->rdata->currentParallelRegion != NULL) { // we have nested parallelism
+    if (t->currentParallelRegion != NULL) { // we have nested parallelism
         ret = 1;
     }
-    pr->last                        = t->rdata->currentParallelRegion;
-    t->rdata->currentParallelRegion = pr;
-    pr->barrier                     = gb;
-    pr->forLoop                     = NULL;
-    pr->loopList                    = NULL;
+    pr->last                 = t->currentParallelRegion;
+    t->currentParallelRegion = pr;
+    pr->barrier              = gb;
+    pr->forLoop              = NULL;
+    pr->loopList             = NULL;
 
     return ret;
 }                              /*}}} */
@@ -2748,8 +2761,8 @@ void qt_omp_parallel_region_destroy()
 
     qthread_t *t = qthread_internal_self();
 
-    qthread_parallel_region_t *pr = t->rdata->currentParallelRegion;
-    t->rdata->currentParallelRegion = pr->last;
+    qthread_parallel_region_t *pr = t->currentParallelRegion;
+    t->currentParallelRegion = pr->last;
 }                                      /*}}} */
 
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
