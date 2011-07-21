@@ -276,25 +276,6 @@ int qthread_debuglevel(int Q_UNUSED d)
 #ifndef QTHREAD_NO_ASSERTS
 void *shep0arg = NULL;
 #endif
-/* the qthread_shepherd() is the pthread responsible for actually
- * executing the work units
- *
- * this function is the workhorse of the library: this is the function that
- * gets spawned several times and runs all the qthreads. */
-#ifdef QTHREAD_MAKECONTEXT_SPLIT
-static void *qthread_shepherd(void *arg);
-static void *qthread_shepherd_wrapper(unsigned int high,
-                                      unsigned int low)
-{                      /*{{{ */
-    qthread_shepherd_t *me =
-        (qthread_shepherd_t *)((((uintptr_t)high) << 32) | low);
-
-    qthread_debug(ALL_DETAILS, "high(%x), low(%x): me = %p\n",
-                  high, low, me);
-    return qthread_shepherd(me);
-}
-
-#endif /* ifdef QTHREAD_MAKECONTEXT_SPLIT */
 
 /* pulled from qthread_shepherd in case needed by stealing/run specific code */
 extern const syncvar_t SYNCVAR_EMPTY_INITIALIZER;
@@ -329,6 +310,26 @@ static QINLINE void alloc_rdata(qthread_shepherd_t *me,
 static int          rcr_gate  = 0;
 static volatile int rcr_ready = 0;
 #endif
+
+/* the qthread_shepherd() is the pthread responsible for actually
+ * executing the work units
+ *
+ * this function is the workhorse of the library: this is the function that
+ * gets spawned several times and runs all the qthreads. */
+#ifdef QTHREAD_MAKECONTEXT_SPLIT
+static void *qthread_shepherd(void *arg);
+static void *qthread_shepherd_wrapper(unsigned int high,
+                                      unsigned int low)
+{                      /*{{{ */
+    qthread_shepherd_t *me =
+        (qthread_shepherd_t *)((((uintptr_t)high) << 32) | low);
+
+    qthread_debug(ALL_DETAILS, "high(%x), low(%x): me = %p\n",
+                  high, low, me);
+    return qthread_shepherd(me);
+}
+
+#endif /* ifdef QTHREAD_MAKECONTEXT_SPLIT */
 
 static void *qthread_shepherd(void *arg)
 {
@@ -569,10 +570,7 @@ static void *qthread_shepherd(void *arg)
                                       "id(%u): thread %i blocked on FEB\n",
                                       me->shepherd_id, t->thread_id);
                         t->thread_state = QTHREAD_STATE_BLOCKED;
-                        QTHREAD_FASTLOCK_UNLOCK(&
-                                                (((qthread_addrstat_t *)(t->
-                                                                         rdata->blockedon))->
-                                                 lock));
+                        QTHREAD_FASTLOCK_UNLOCK(&(((qthread_addrstat_t *)(t->rdata->blockedon))->lock));
                         break;
 
                     case QTHREAD_STATE_BLOCKED: /* put it in the blocked queue */
@@ -2581,7 +2579,7 @@ int INTERNAL qthread_check_precond(qthread_t *t)
                     QTHREAD_FASTLOCK_UNLOCK(&m->lock);
                     return 2;
                 }
-                X->addr         = this_sync;
+                X->addr         = NULL;
                 X->waiter       = t;
                 X->next         = m->FFQ;
                 m->FFQ          = X;
@@ -2589,6 +2587,10 @@ int INTERNAL qthread_check_precond(qthread_t *t)
                 QTHREAD_FASTLOCK_UNLOCK(&m->lock);
 
                 return 1;
+            } else {
+                // m->full == 1
+                t->preconds--;
+                QTHREAD_FASTLOCK_UNLOCK(&m->lock);
             }
         }
     }
