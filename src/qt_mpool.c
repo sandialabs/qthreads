@@ -274,8 +274,7 @@ start:
             cur = cur2;
             if (base != pool->alloc_block) { goto start; }
         }
-        if (QTHREAD_EXPECT(cur == max + pool->item_size, 0)) {
-            while (pool->alloc_block_ptr == cur) ;
+        if (QTHREAD_EXPECT(cur > max, 0)) {
             goto start;
         } else if (QTHREAD_EXPECT(cur == max, 0)) {
             /* realloc */
