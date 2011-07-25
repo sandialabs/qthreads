@@ -5,38 +5,42 @@
 
 AM_CXXFLAGS = @RESTRICT_CXXFLAGS@
 
-TESTS = test_basic \
-		test_basic_syncvar \
-		test_reinit \
-		test_cas \
-		test_cacheline \
-		test_id \
-		test_incr test_fincr test_dincr \
-		test_stackleft \
-		test_external_fork \
-		test_external_syncvar \
-		test_migrate \
-		test_disabled \
-		test_qtimer \
-		test_syncvar \
-		test_syncvar2 \
-		test_qutil \
-		test_qutil_qsort \
-		test_feb_barrier \
-		testqloop \
-		test_queue_loop \
-		test_qpool \
-		test_qarray \
-		test_qarray_accum \
-		test_qlfqueue \
-		test_qdqueue \
-		test_allpairs \
-		test_qalloc \
-		test_user_defined_block \
-		test_tasklocal \
-		test_tasklocal_no_default \
-		test_tasklocal_no_argcopy \
-		test_precond
+BASIC_TESTS = test_basic \
+			  test_basic_syncvar \
+			  test_reinit \
+			  test_cas \
+			  test_cacheline \
+			  test_id \
+			  test_incr test_fincr test_dincr \
+			  test_stackleft \
+			  test_external_fork \
+			  test_external_syncvar \
+			  test_migrate \
+			  test_disabled \
+			  test_qtimer \
+			  test_syncvar \
+			  test_syncvar2 \
+			  test_precond \
+			  test_qalloc \
+			  test_user_defined_block \
+			  test_tasklocal \
+			  test_tasklocal_no_default \
+			  test_tasklocal_no_argcopy
+
+COMPLEX_TESTS = test_qutil \
+				test_qutil_qsort \
+				test_precond_fib \
+				test_feb_barrier \
+				testqloop \
+				test_queue_loop \
+				test_qpool \
+				test_qarray \
+				test_qarray_accum \
+				test_qlfqueue \
+				test_qdqueue \
+				test_allpairs
+
+TESTS =  $(BASIC_TESTS) $(COMPLEX_TESTS)
 
 EXTRA_PROGRAMS = test_wavefront
 
@@ -123,6 +127,9 @@ test_tasklocal_no_argcopy_DEPENDENCIES = $(QTHREADLIB)
 
 test_precond_SOURCES = test_precond.c
 test_precond_DEPENDENCIES = $(QTHREADLIB)
+
+test_precond_fib_SOURCES = test_precond_fib.c
+test_precond_fib_DEPENDENCIES = $(QTHREADLIB)
 
 test_reinit_SOURCES = test_reinit.c
 test_reinit_DEPENDENCIES = $(QTHREADLIB)
