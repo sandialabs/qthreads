@@ -478,14 +478,14 @@ QTHREAD_DEPRECATED_ATTRIBUTE
 QTHREAD_BUILTIN_PREFETCH
 QTHREAD_BUILTIN_SYNCHRONIZE
 
-AS_IF([test "x$have_assembly" = "x0"],
-      [AC_MSG_NOTICE(Compiling on a system without inline assembly support. This will be slow!)
-       AS_IF([test "x$enable_hardware_increments" = x],
-             [AC_MSG_NOTICE(turning on software increments ($have_assembly))
-              enable_hardware_increments=no],
-             [AS_IF([test "x$enable_hardware_increments" = "xyes"],
-                    [AC_MSG_ERROR([No assembly available and software increments disabled.])])])],
-	  [AS_IF([test "x$enable_hardware_increments" = x],
+AS_IF([test "x$have_assembly" = "x0" -a "x$qthread_cv_atomic_CAS32" = "xno" -a "x$qthread_cv_atomic_CAS64" = "xno" -a "x$qthread_cv_atomic_incr" = "xno"],
+	  [AC_MSG_NOTICE(Compiling on a compiler without inline assembly support and without builtin atomics. This will be slow!)
+	   AS_IF([test "x$enable_hardware_increments" = x],
+			 [AC_MSG_NOTICE(turning on software increments ($have_assembly))
+			  enable_hardware_increments=no],
+			 [AS_IF([test "x$enable_hardware_increments" = "xyes"],
+					[AC_MSG_ERROR([No assembly available and software increments disabled.])])])],
+ 	  [AS_IF([test "x$enable_hardware_increments" = x],
 			 [enable_hardware_increments="yes"])])
 AS_IF([test "x$enable_hardware_increments" = "xno"],
       [AC_DEFINE([QTHREAD_MUTEX_INCREMENT], [1], [Use mutexes instead of assembly for atomic increment])])
