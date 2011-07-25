@@ -973,13 +973,10 @@ int qthread_initialize(void)
         qt_mpool_create(sizeof(struct qthread_runtime_data_s) + qlib->qthread_stack_size);
 # endif
     generic_queue_pool = qt_mpool_create(sizeof(qthread_queue_t));
-    {
-        extern qt_threadqueue_pools_t generic_threadqueue_pools;
-        qt_threadqueue_init_pools(&generic_threadqueue_pools);
-    }
     generic_lock_pool     = qt_mpool_create(sizeof(qthread_lock_t));
     generic_addrstat_pool = qt_mpool_create(sizeof(qthread_addrstat_t));
 #endif /* ifndef UNPOOLED */
+    qt_threadqueue_subsystem_init();
     qt_blocking_subsystem_init();
 
 /* initialize the shepherd structures */
@@ -1596,10 +1593,6 @@ void qthread_finalize(void)
     generic_stack_pool = NULL;
     qt_mpool_destroy(generic_queue_pool);
     generic_queue_pool = NULL;
-    {
-        extern qt_threadqueue_pools_t generic_threadqueue_pools;
-        qt_threadqueue_destroy_pools(&generic_threadqueue_pools);
-    }
     qt_mpool_destroy(generic_lock_pool);
     generic_lock_pool = NULL;
     qt_mpool_destroy(generic_addrstat_pool);
