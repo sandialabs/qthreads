@@ -25,6 +25,24 @@ struct _qt_threadqueue_node {
     qthread_shepherd_t                            *creator_ptr;
 } /* qt_threadqueue_node_t */;
 
+typedef enum {
+    STABLE,
+    RPUSH,
+    LPUSH
+} status_t;
+
+typedef struct _qt_lfdeque_node {
+    volatile struct _qt_lfdeque_node *volatile right;
+    volatile struct _qt_lfdeque_node *volatile left;
+    qthread_t                                 *value;
+    qthread_shepherd_t                        *creator_ptr;
+} qt_lfdeque_node_t;
+
+typedef struct _qt_lfdeque_anchor {
+    qt_lfdeque_node *one, *two;
+    status_t         stat;
+} qt_lfdeque_anchor_t;
+
 struct _qt_threadqueue {
     volatile qt_threadqueue_node_t *volatile head;
     volatile qt_threadqueue_node_t *volatile tail;
@@ -35,8 +53,8 @@ struct _qt_threadqueue {
 #endif                          /* CONDWAIT */
     /* the following is for estimating a queue's "busy" level, and is not
      * guaranteed accurate (that would be a race condition) */
-    volatile saligned_t advisory_queuelen;
-    qthread_shepherd_t *creator_ptr;
+    volatile saligned_t   advisory_queuelen;
+    qthread_shepherd_t   *creator_ptr;
     /* used for the work stealing queue implementation */
     QTHREAD_FASTLOCK_TYPE qlock;
     long                  qlength;
@@ -84,6 +102,7 @@ static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret,
 }                                      /*}}} */
 
 # define FREE_TQNODE(t) free(t)
+void INTERNAL qt_threadqueue_subsystem_init(void) {}
 #else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 qt_threadqueue_pools_t generic_threadqueue_pools;
 static QINLINE qt_threadqueue_t *ALLOC_THREADQUEUE(qthread_shepherd_t *shep)
@@ -123,6 +142,19 @@ static QINLINE void FREE_TQNODE(qt_threadqueue_node_t *t)
                   : generic_threadqueue_pools.nodes,
                   t);
 }                                      /*}}} */
+
+static void qt_threadqueue_subsystem_shutdown(void)
+{
+    qt_mpool_destroy(generic_threadqueue_pools.nodes);
+    qt_mpool_destroy(generic_threadqueue_pools.queues);
+}
+
+void INTERNAL qt_threadqueue_subsystem_init(void)
+{
+    generic_threadqueue_pools.nodes  = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), 16);
+    generic_threadqueue_pools.queues = qt_mpool_create(sizeof(qt_threadqueue_t));
+    qthread_internal_cleanup_early(qt_threadqueue_subsystem_shutdown);
+}
 
 void INTERNAL qt_threadqueue_init_pools(qt_threadqueue_pools_t *p)
 {   /*{{{*/
@@ -198,6 +230,8 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
     assert(q != NULL);
     assert(t != NULL);
 
+#if 0
+#else
     QTHREAD_FASTLOCK_LOCK(&q->qlock);
     node->next = NULL;
     node->prev = q->tail;
@@ -210,6 +244,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
     q->qlength++;
     if (!(t->flags & QTHREAD_UNSTEALABLE)) { q->qlength_stealable++; }
     QTHREAD_FASTLOCK_UNLOCK(&q->qlock);
+#endif /* if 0 */
 } /*}}}*/
 
 /* yielded threads enqueue at head */
@@ -374,9 +409,9 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *q
         }
     }
     QTHREAD_FASTLOCK_UNLOCK(&q->qlock);
-# ifdef STEAL_PROFILE                  // should give mechanism to make steal profiling optional
+#ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
     qthread_incr(&q->creator_ptr->steal_amount_stolen, amtStolen);
-# endif
+#endif
 
     return (first);
 }                                      /*}}} */
@@ -418,13 +453,13 @@ static QINLINE void qthread_steal(void)
     qthread_shepherd_t *thief_shepherd =
         (qthread_shepherd_t *)worker->shepherd;
 
-# ifdef STEAL_PROFILE                  // should give mechanism to make steal profiling optional
+#ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
     qthread_incr(&thief_shepherd->steal_called, 1);
-# endif
+#endif
     if (thief_shepherd->stealing) {
         return;
     } else {
-# ifdef QTHREAD_OMP_AFFINITY
+#ifdef QTHREAD_OMP_AFFINITY
         if (thief_shepherd->stealing_mode == QTHREAD_STEAL_ON_ALL_IDLE) {
             for (i = 0; i < qlib->nworkerspershep; i++)
                 if (thief_shepherd->workers[i].current != NULL) {
@@ -432,12 +467,12 @@ static QINLINE void qthread_steal(void)
                 }
             thief_shepherd->stealing_mode = QTHREAD_STEAL_ON_ANY_IDLE;
         }
-# endif
+#endif
         thief_shepherd->stealing = 1;
     }
-# ifdef STEAL_PROFILE                  // should give mechanism to make steal profiling optional
+#ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
     qthread_incr(&thief_shepherd->steal_attempted, 1);
-# endif
+#endif
     for (i = 1; i < qlib->nshepherds; i++) {
         victim_shepherd =
             &qlib->shepherds[(thief_shepherd->shepherd_id + i) %
@@ -447,16 +482,16 @@ static QINLINE void qthread_steal(void)
             if (first) {
                 qt_threadqueue_enqueue_multiple(thief_shepherd->ready, first,
                                                 thief_shepherd);
-# ifdef STEAL_PROFILE                  // should give mechanism to make steal profiling optional
+#ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
                 qthread_incr(&thief_shepherd->steal_successful, 1);
-# endif
+#endif
                 break;
             }
-# ifdef STEAL_PROFILE                  // should give mechanism to make steal profiling optional
+#ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
             else {
                 qthread_incr(&thief_shepherd->steal_failed, 1);
             }
-# endif
+#endif
         }
         if (0 < thief_shepherd->ready->qlength) {  // work at home quit steal attempt
             break;
@@ -465,7 +500,7 @@ static QINLINE void qthread_steal(void)
     thief_shepherd->stealing = 0;
 } /*}}}*/
 
-# ifdef STEAL_PROFILE                  // should give mechanism to make steal profiling optional
+#ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
 void INTERNAL qthread_steal_stat(void)
 {
     int i;
@@ -482,7 +517,7 @@ void INTERNAL qthread_steal_stat(void)
     }
 }
 
-# endif /* ifdef STEAL_PROFILE */
+#endif  /* ifdef STEAL_PROFILE */
 
 /* walk queue looking for a specific value  -- if found remove it (and start
  * it running)  -- if not return NULL

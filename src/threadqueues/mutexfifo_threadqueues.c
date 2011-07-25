@@ -75,6 +75,7 @@ static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret,
 }                                      /*}}} */
 
 # define FREE_TQNODE(t) free(t)
+void INTERNAL qt_threadqueue_subsystem_init(void) {}
 #else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 qt_threadqueue_pools_t generic_threadqueue_pools;
 static QINLINE qt_threadqueue_t *ALLOC_THREADQUEUE(qthread_shepherd_t *shep)
@@ -114,6 +115,19 @@ static QINLINE void FREE_TQNODE(qt_threadqueue_node_t *t)
                   : generic_threadqueue_pools.nodes,
                   t);
 }                                      /*}}} */
+
+static void qt_threadqueue_subsystem_shutdown(void)
+{
+    qt_mpool_destroy(generic_threadqueue_pools.nodes);
+    qt_mpool_destroy(generic_threadqueue_pools.queues);
+}
+
+void INTERNAL qt_threadqueue_subsystem_init(void)
+{
+    generic_threadqueue_pools.nodes  = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), 16);
+    generic_threadqueue_pools.queues = qt_mpool_create(sizeof(qt_threadqueue_t));
+    qthread_internal_cleanup_early(qt_threadqueue_subsystem_shutdown);
+}
 
 void INTERNAL qt_threadqueue_init_pools(qt_threadqueue_pools_t *p)
 {   /*{{{*/

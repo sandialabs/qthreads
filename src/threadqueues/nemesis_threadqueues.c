@@ -62,6 +62,7 @@ struct _qt_threadqueue {
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
 # define ALLOC_THREADQUEUE(shep) (qt_threadqueue_t *)calloc(1, sizeof(qt_threadqueue_t))
 # define FREE_THREADQUEUE(t)     free(t)
+void INTERNAL qt_threadqueue_subsystem_init(void) {}
 #else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 qt_threadqueue_pools_t generic_threadqueue_pools = { NULL, NULL };
 

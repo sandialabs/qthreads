@@ -41,8 +41,9 @@ struct _qt_threadqueue {
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
 # define ALLOC_THREADQUEUE(shep) (qt_threadqueue_t *)calloc(1, sizeof(qt_threadqueue_t))
 # define FREE_THREADQUEUE(t)     free(t)
+void INTERNAL qt_threadqueue_subsystem_init(void) {}
 #else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
-qt_threadqueue_pools_t generic_threadqueue_pools;
+qt_threadqueue_pools_t generic_threadqueue_pools = { NULL, NULL };
 static QINLINE qt_threadqueue_t *ALLOC_THREADQUEUE(qthread_shepherd_t *shep)
 {                                      /*{{{ */
     qt_threadqueue_t *tmp = (qt_threadqueue_t *)qt_mpool_alloc(shep
@@ -60,6 +61,17 @@ static QINLINE void FREE_THREADQUEUE(qt_threadqueue_t *t)
     qt_mpool_free(t->creator_ptr ? (t->creator_ptr->threadqueue_pools.queues) :
                   generic_threadqueue_pools.queues, t);
 }                                      /*}}} */
+
+static void qt_threadqueue_subsystem_shutdown(void)
+{
+    qt_mpool_destroy(generic_threadqueue_pools.queues);
+}
+
+void INTERNAL qt_threadqueue_subsystem_init(void)
+{
+    generic_threadqueue_pools.queues = qt_mpool_create(sizeof(qt_threadqueue_t));
+    qthread_internal_cleanup_early(qt_threadqueue_subsystem_shutdown);
+}
 
 void INTERNAL qt_threadqueue_init_pools(qt_threadqueue_pools_t *p)
 {   /*{{{*/
