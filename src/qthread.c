@@ -88,8 +88,6 @@ extern QTHREAD_FASTLOCK_TYPE rcrtool_lock;
 pthread_key_t shepherd_structs;
 qlib_t        qlib               = NULL;
 int           qaffinity          = 1;
-qt_mpool      generic_lock_pool  = NULL;
-qt_mpool      generic_queue_pool = NULL;
 
 struct qt_cleanup_funcs_s {
     void                       (*func)(void);
@@ -972,10 +970,9 @@ int qthread_initialize(void)
 # else
         qt_mpool_create(sizeof(struct qthread_runtime_data_s) + qlib->qthread_stack_size);
 # endif
-    generic_queue_pool = qt_mpool_create(sizeof(qthread_queue_t));
-    generic_lock_pool     = qt_mpool_create(sizeof(qthread_lock_t));
     generic_addrstat_pool = qt_mpool_create(sizeof(qthread_addrstat_t));
 #endif /* ifndef UNPOOLED */
+    qt_lock_subsystem_init();
     qt_threadqueue_subsystem_init();
     qt_blocking_subsystem_init();
 
@@ -1591,10 +1588,6 @@ void qthread_finalize(void)
     generic_qthread_pool = NULL;
     qt_mpool_destroy(generic_stack_pool);
     generic_stack_pool = NULL;
-    qt_mpool_destroy(generic_queue_pool);
-    generic_queue_pool = NULL;
-    qt_mpool_destroy(generic_lock_pool);
-    generic_lock_pool = NULL;
     qt_mpool_destroy(generic_addrstat_pool);
     generic_addrstat_pool = NULL;
 #endif /* ifndef UNPOOLED */

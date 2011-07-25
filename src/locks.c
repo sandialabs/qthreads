@@ -26,6 +26,10 @@ typedef struct {
     blocker_type    type;
 } qthread_lock_blocker_t;
 
+/* Static (global) data structures */
+qt_mpool generic_lock_pool  = NULL;
+qt_mpool generic_queue_pool = NULL;
+
 /* Function Prototypes */
 static QINLINE qthread_queue_t *qthread_queue_new(qthread_shepherd_t *shepherd);
 static QINLINE void             qthread_queue_free(qthread_queue_t *q);
@@ -37,7 +41,6 @@ static QINLINE qthread_t *      qthread_dequeue(qthread_queue_t *q);
 #else
 static QINLINE qthread_lock_t *ALLOC_LOCK(qthread_shepherd_t *shep)
 {                      /*{{{ */
-    extern qt_mpool generic_lock_pool;
     qthread_lock_t *tmp = (qthread_lock_t *)qt_mpool_alloc(shep ? (shep->lock_pool) : generic_lock_pool);
 
     if (tmp != NULL) {
@@ -48,8 +51,6 @@ static QINLINE qthread_lock_t *ALLOC_LOCK(qthread_shepherd_t *shep)
 
 static QINLINE void FREE_LOCK(qthread_lock_t *t)
 {                      /*{{{ */
-    extern qt_mpool generic_lock_pool;
-
     qt_mpool_free(t->creator_ptr ? (t->creator_ptr->lock_pool) : generic_lock_pool, t);
 }                      /*}}} */
 
@@ -61,7 +62,6 @@ static QINLINE void FREE_LOCK(qthread_lock_t *t)
 #else
 static QINLINE qthread_queue_t *ALLOC_QUEUE(qthread_shepherd_t *shep)
 {                      /*{{{ */
-    extern qt_mpool  generic_queue_pool;
     qthread_queue_t *tmp = (qthread_queue_t *)qt_mpool_alloc(shep ? (shep->queue_pool) : generic_queue_pool);
 
     if (tmp != NULL) {
@@ -72,8 +72,6 @@ static QINLINE qthread_queue_t *ALLOC_QUEUE(qthread_shepherd_t *shep)
 
 static QINLINE void FREE_QUEUE(qthread_queue_t *t)
 {                      /*{{{ */
-    extern qt_mpool generic_queue_pool;
-
     qt_mpool_free(t->creator_ptr ? (t->creator_ptr->queue_pool) : generic_queue_pool, t);
 }                      /*}}} */
 
@@ -84,6 +82,19 @@ static QINLINE void FREE_QUEUE(qthread_queue_t *t)
 #else
 # define QTHREAD_COUNT_THREADS_BINCOUNTER(TYPE, BIN) do { } while(0)
 #endif
+
+static void qt_lock_subsystem_shutdown(void)
+{
+    qt_mpool_destroy(generic_queue_pool);
+    qt_mpool_destroy(generic_lock_pool);
+}
+
+void INTERNAL qt_lock_subsystem_init(void)
+{
+    generic_queue_pool = qt_mpool_create(sizeof(qthread_queue_t));
+    generic_lock_pool  = qt_mpool_create(sizeof(qthread_lock_t));
+    qthread_internal_cleanup_early(qt_lock_subsystem_shutdown);
+}
 
 static aligned_t qthread_lock_blocker_thread(void *arg)
 {                                      /*{{{ */

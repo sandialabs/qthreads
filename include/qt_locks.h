@@ -10,5 +10,7 @@ struct qthread_queue_s {
     pthread_cond_t      notempty;
 };
 
+void INTERNAL qt_lock_subsystem_init(void);
+
 #endif // ifndef QT_LOCKS_H
 /* vim:set expandtab: */
