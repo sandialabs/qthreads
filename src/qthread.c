@@ -278,9 +278,6 @@ int qthread_debuglevel(int Q_UNUSED d)
 void *shep0arg = NULL;
 #endif
 
-/* pulled from qthread_shepherd in case needed by stealing/run specific code */
-extern const syncvar_t SYNCVAR_EMPTY_INITIALIZER;
-
 static QINLINE void alloc_rdata(qthread_shepherd_t *me,
                                 qthread_t          *t)
 {
