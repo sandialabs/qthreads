@@ -500,6 +500,16 @@ static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t    *opera
     *operand *= (*operand < max);
     QTHREAD_FASTLOCK_UNLOCK(lock);
 
+#elif QTHREAD_ATOMIC_CAS
+    aligned_t oldval, newval;
+
+    retval = *operand;
+    do {
+        oldval  = retval;
+        newval  = retval + 1;
+        newval *= (newval < max);
+	retval = __sync_val_compare_and_swap(operand, oldval, newval);
+    } while (retval != oldval);
 #else /* if defined(HAVE_GCC_INLINE_ASSEMBLY) */
 # error "Neither atomic or mutex increment enabled"
 #endif /* if defined(HAVE_GCC_INLINE_ASSEMBLY) */

@@ -423,7 +423,20 @@ static QINLINE float qthread_fincr(volatile float *operand,
 {                                      /*{{{ */
 # if defined(QTHREAD_MUTEX_INCREMENT)
     return qthread_fincr_(operand, incr);
+# elif !defined(HAVE_GCC_INLINE_ASSEMBLY) && QTHREAD_ATOMIC_CAS
+    union {
+        float    f;
+        uint32_t i;
+    } oldval, newval, res;
 
+    do {
+        oldval.f = *operand;
+        newval.f = oldval.f + incr;
+        res.i = __sync_val_compare_and_swap(operand, oldval.i, newval.i);
+    } while (res.i != oldval.i);       /* if res!=old, the calc is out of date */
+    return oldval.f;
+# elif !defined(HAVE_GCC_INLINE_ASSEMBLY)
+# error Qthreads requires either mutex increments, inline assembly, or compiler CAS builtins
 # else
 #  if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
     union {
@@ -530,7 +543,20 @@ static QINLINE double qthread_dincr(volatile double *operand,
 {                                      /*{{{ */
 # if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
     return qthread_dincr_(operand, incr);
+# elif !defined(HAVE_GCC_INLINE_ASSEMBLY) && QTHREAD_ATOMIC_CAS
+    union {
+        uint64_t i;
+        double   d;
+    } oldval, newval, res;
 
+    do {
+        oldval.d = *operand;
+        newval.d = oldval.d + incr;
+        res.i = __sync_val_compare_and_swap(operand, oldval.i, newval.i);
+    } while (res.i != oldval.i);       /* if res!=old, the calc is out of date */
+    return oldval.d;
+# elif !defined(HAVE_GCC_INLINE_ASSEMBLY)
+# error Qthreads requires either mutex increments, inline assembly, or compiler CAS builtins
 # else
 #  if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
     register uint64_t scratch_int;
@@ -730,7 +756,18 @@ static QINLINE uint32_t qthread_incr32(volatile uint32_t *operand,
 {                                      /*{{{ */
 # ifdef QTHREAD_MUTEX_INCREMENT
     return qthread_incr32_(operand, incr);
-
+# elif !defined(HAVE_GCC_INLINE_ASSEMBLY) && defined(QTHREAD_ATOMIC_INCR)
+    return __sync_fetch_and_add(operand, incr);
+# elif !defined(HAVE_GCC_INLINE_ASSEMBLY) && QTHREAD_ATOMIC_CAS
+    uint32_t oldval, newval;
+    do {
+        oldval = *operand;
+        newval = oldval + incr;
+        newval = __sync_val_compare_and_swap(operand, oldval, newval);
+    } while (oldval != newval);
+    return oldval;
+# elif !defined(HAVE_GCC_INLINE_ASSEMBLY)
+# error Qthreads requires either mutex increments, inline assembly, or compiler atomic builtins
 # else
 #  if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
@@ -823,7 +860,18 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t *operand,
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
     return qthread_incr64_(operand, incr);
-
+# elif !defined(HAVE_GCC_INLINE_ASSEMBLY) && defined(QTHREAD_ATOMIC_INCR)
+    return __sync_fetch_and_add(operand, incr);
+# elif !defined(HAVE_GCC_INLINE_ASSEMBLY) && QTHREAD_ATOMIC_CAS
+    uint64_t oldval, newval;
+    do {
+        oldval = *operand;
+        newval = oldval + incr;
+        newval = __sync_val_compare_and_swap(operand, oldval, newval);
+    } while (oldval != newval);
+    return oldval;
+# elif !defined(HAVE_GCC_INLINE_ASSEMBLY)
+# error Qthreads requires either mutex increments, inline assembly, or compiler atomic builtins
 # else
 #  if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
     uint64_t          retval;
