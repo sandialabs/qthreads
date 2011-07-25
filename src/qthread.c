@@ -78,6 +78,7 @@ extern QTHREAD_FASTLOCK_TYPE rcrtool_lock;
     (QTHREAD_SIZEOF_ALIGNED_T == 4 ||                   \
      (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32 &&     \
       QTHREAD_ASSEMBLY_ARCH != QTHREAD_SPARCV9_32))) && \
+    !defined(QTHREAD_ATOMIC_CAS) && \
     !defined(QTHREAD_MUTEX_INCREMENT)
 # warning QTHREAD_MUTEX_INCREMENT not defined. It probably should be.
 # define QTHREAD_MUTEX_INCREMENT 1
