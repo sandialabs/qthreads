@@ -2588,7 +2588,7 @@ int INTERNAL qthread_check_precond(qthread_t *t)
             qthread_debug(LOCK_DETAILS, "data structure locked\n");
             /* now m, if it exists, is locked - if m is NULL, then we're done! */
             if (m == NULL) {               /* already full! */
-                t->preconds--;
+                t->npreconds--;
             } else if (m->full != 1) {     /* not full... so we must block */
                 X = ALLOC_ADDRRES(myshep);
                 if (X == NULL) {
@@ -2605,7 +2605,7 @@ int INTERNAL qthread_check_precond(qthread_t *t)
                 return 1;
             } else {
                 // m->full == 1
-                t->preconds--;
+                t->npreconds--;
                 QTHREAD_FASTLOCK_UNLOCK(&m->lock);
             }
         }
