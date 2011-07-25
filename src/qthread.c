@@ -2286,6 +2286,38 @@ int qthread_fork(qthread_f   f,
     return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, 0);
 } /*}}}*/
 
+int qthread_fork_copyargs_precond(qthread_f   f,
+                                  const void *arg,
+                                  size_t      arg_size,
+                                  syncvar_t  *ret,
+                                  int         npreconds,
+                                  ...)
+{   /*{{{*/
+    // Collect sync info
+    va_list     args;
+    aligned_t **preconds = NULL;
+
+    va_start(args, npreconds);
+    if (npreconds > 0) {
+        preconds = malloc(npreconds * sizeof(aligned_t *));
+        assert(preconds != NULL);
+        for (int i = 0; i < npreconds; ++i) {
+            preconds[i] = va_arg(args, aligned_t *);
+        }
+    } else if (npreconds < 0) {
+        npreconds *= -1;
+        preconds   = malloc(npreconds * sizeof(aligned_t *));
+        assert(preconds != NULL);
+        aligned_t *tmp = va_arg(args, aligned_t *);
+        for (int i = 0; i < npreconds; ++i) {
+            preconds[i] = &tmp[i];
+        }
+    }
+    va_end(args);
+
+    return qthread_uberfork(f, arg, arg_size, SYNCVAR_T, ret, ALIGNED_T, npreconds, preconds, NO_SHEPHERD, 0);
+} /*}}}*/
+
 int qthread_fork_precond(qthread_f   f,
                          const void *arg,
                          aligned_t  *ret,
