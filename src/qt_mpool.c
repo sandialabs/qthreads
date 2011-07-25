@@ -37,7 +37,7 @@ static QINLINE int getpagesize()
 
 #endif
 
-#ifdef QTHREAD_MUTEX_INCREMENT
+#ifndef HAVE_GCC_INLINE_ASSEMBLY
 # define ASM_ALLOWED(x)
 #else
 # define ASM_ALLOWED(x) x
