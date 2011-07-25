@@ -40,17 +40,17 @@ COMPLEX_TESTS = test_qutil \
 				test_qdqueue \
 				test_allpairs
 
+if ENABLE_CXX_TESTS
+BASIC_TESTS += test_cpp
+COMPLEX_TESTS += testloop
+endif
+
 TESTS =  $(BASIC_TESTS) $(COMPLEX_TESTS)
 
 EXTRA_PROGRAMS = test_wavefront
 
 if USE_SYSCALL_INTERCEPT
 TESTS += test_read
-endif
-
-if ENABLE_CXX_TESTS
-TESTS += testloop \
-		 test_cpp
 endif
 
 if COMPILE_ROSE_EXTENSIONS
