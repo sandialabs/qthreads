@@ -53,7 +53,7 @@ typedef struct {
 /* Internal Macros */
 #define BUILD_UNLOCKED_SYNCVAR(data, state) (((data) << 4) | ((state) << 1))
 
-#ifdef QTHREAD_MUTEX_INCREMENT
+#ifndef HAVE_GCC_INLINE_ASSEMBLY
 # define ASM_ALLOWED(x)
 #else
 # define ASM_ALLOWED(x) x
