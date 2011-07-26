@@ -10,6 +10,14 @@
 #include "qt_threadqueues.h"
 #include "qt_hazardptrs.h"
 
+#ifdef QTHREAD_SHEPHERD_PROFILING
+# include "qthread/qtimer.h"
+#endif
+
+#ifdef QTHREAD_LOCK_PROFILING
+# include "qt_hash.h"
+#endif
+
 #ifdef QTHREAD_OMP_AFFINITY
 #include "omp_affinity.h"
 #endif
