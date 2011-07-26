@@ -83,17 +83,21 @@ static QINLINE void FREE_QUEUE(qthread_queue_t *t)
 # define QTHREAD_COUNT_THREADS_BINCOUNTER(TYPE, BIN) do { } while(0)
 #endif
 
+#if !defined(UNPOOLED_QUEUES) && !defined(UNPOOLED)
 static void qt_lock_subsystem_shutdown(void)
 {
     qt_mpool_destroy(generic_queue_pool);
     qt_mpool_destroy(generic_lock_pool);
 }
+#endif
 
 void INTERNAL qt_lock_subsystem_init(void)
 {
+#if !defined(UNPOOLED_QUEUES) && !defined(UNPOOLED)
     generic_queue_pool = qt_mpool_create(sizeof(qthread_queue_t));
     generic_lock_pool  = qt_mpool_create(sizeof(qthread_lock_t));
     qthread_internal_cleanup_early(qt_lock_subsystem_shutdown);
+#endif
 }
 
 static aligned_t qthread_lock_blocker_thread(void *arg)
