@@ -18,6 +18,7 @@
 # define VALGRIND_DESTROY_MEMPOOL(a)
 # define VALGRIND_MAKE_MEM_NOACCESS(a, b)
 # define VALGRIND_MAKE_MEM_DEFINED(a, b)
+# define VALGRIND_MAKE_MEM_UNDEFINED(a, b)
 # define VALGRIND_CREATE_MEMPOOL(a, b, c)
 # define VALGRIND_MEMPOOL_ALLOC(a, b, c)
 # define VALGRIND_MEMPOOL_FREE(a, b)
@@ -198,7 +199,9 @@ qt_mpool qt_mpool_create_aligned(size_t    item_size,
                                                                 alignment);
     assert(((unsigned long)(pool->alloc_block) & (alignment - 1)) == 0);
     qassert_goto((pool->alloc_block != NULL), errexit);
+    VALGRIND_MAKE_MEM_DEFINED(pool->alloc_block, sizeof(void**));
     *(void **)(pool->alloc_block) = NULL; // just in case aligned_alloc doesn't memset
+    VALGRIND_MAKE_MEM_NOACCESS(pool->alloc_block, sizeof(void**));
     pool->alloc_block_ptr         = pool->alloc_block;
     /* this assumes that pagesize is a multiple of sizeof(void*) */
     pool->alloc_list = calloc(1, pagesize);
@@ -296,6 +299,7 @@ start:
             pool->alloc_block                      = (void *)p;
             pool->alloc_list[pool->alloc_list_pos] = pool->alloc_block;
             pool->alloc_list_pos++;
+            VALGRIND_MAKE_MEM_UNDEFINED(p, pool->item_size);
             ASM_ALLOWED(__asm__ __volatile__ ("" ::: "memory"));
             pool->alloc_block_ptr = ((char *)p) + pool->item_size;
             QTHREAD_FASTLOCK_UNLOCK(&pool->pool_lock);
