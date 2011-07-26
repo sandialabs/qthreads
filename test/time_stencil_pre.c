@@ -9,7 +9,7 @@
 
 #include "argparsing.h"
 
-#define NUM_NEIGHBORS 9
+#define NUM_NEIGHBORS 5
 #define NUM_STAGES 3
 #define BOUNDARY 42
 
@@ -35,9 +35,9 @@ typedef struct update_args {
 static inline void print_stage(stencil_t *points, size_t stage)
 {
     for (int i = 0; i < points->N; i++) {
-        fprintf(stderr, "%llu", points->stage[stage][i][0]);
+        fprintf(stderr, "%lu", (unsigned long)points->stage[stage][i][0]);
         for (int j = 1; j < points->M; j++) {
-            fprintf(stderr, "\t%llu", points->stage[stage][i][j]);
+            fprintf(stderr, "\t%lu", (unsigned long)points->stage[stage][i][j]);
         }
         fprintf(stderr, "\n");
     }
@@ -79,12 +79,12 @@ static aligned_t update(void *arg)
     if (step < num_timesteps) {
         // Spawn next stage
         update_args_t args = {points, i, j, next, step+1};
-        for (size_t x = 0; x < 3; x++) {
-            for (size_t y = 0; y < 3; y++) {
-                args.neighbors[3*x + y] = &points->stage[0][i-1+x][j-1+y];
-            }
-        }
-        qthread_fork_copyargs_precond(update, &args, sizeof(update_args_t), NULL, -9, args.neighbors);
+        args.neighbors[0] = &points->stage[stage][i  ][j-1];
+        args.neighbors[1] = &points->stage[stage][i-1][j  ];
+        args.neighbors[2] = &points->stage[stage][i  ][j  ];
+        args.neighbors[3] = &points->stage[stage][i+1][j  ];
+        args.neighbors[4] = &points->stage[stage][i  ][j+1];
+        qthread_fork_copyargs_precond(update, &args, sizeof(update_args_t), NULL, -NUM_NEIGHBORS, args.neighbors);
     }
     else
         qt_feb_barrier_enter(points->barrier);
@@ -172,15 +172,14 @@ int main(int argc, char *argv[])
     update_args_t args = {&points, -1, -1, 1, 1};
     for (int i = 1; i < points.N-1; i++) {
         for (int j = 1; j < points.M-1; j++) {
-            for (size_t x = 0; x < 3; x++) {
-                for (size_t y = 0; y < 3; y++) {
-                    args.neighbors[3*x + y] = &points.stage[0][i-1+x][j-1+y];
-                }
-            }
-
+            args.neighbors[0] = &points.stage[0][i  ][j-1];
+            args.neighbors[1] = &points.stage[0][i-1][j  ];
+            args.neighbors[2] = &points.stage[0][i  ][j  ];
+            args.neighbors[3] = &points.stage[0][i+1][j  ];
+            args.neighbors[4] = &points.stage[0][i  ][j+1];
             args.i = i;
             args.j = j;
-            qthread_fork_copyargs_precond(update, &args, sizeof(update_args_t), NULL, -9, args.neighbors);
+            qthread_fork_copyargs_precond(update, &args, sizeof(update_args_t), NULL, -NUM_NEIGHBORS, args.neighbors);
         }
     }
 

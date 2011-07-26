@@ -9,7 +9,7 @@
 
 #include "argparsing.h"
 
-#define NUM_NEIGHBORS 9
+#define NUM_NEIGHBORS 5
 #define NUM_STAGES 3
 #define BOUNDARY 42
 
@@ -66,13 +66,22 @@ static aligned_t update(void *arg)
 
     // Sum all neighboring values from previous stage
     aligned_t sum = 0;
-    for (size_t x = 0; x < 3; x++) {
-        for (size_t y = 0; y < 3; y++) {
-            aligned_t *neighbor = &points->stage[prev][i-1+x][j-1+y];
-            qthread_readFF(neighbor, neighbor);
-            sum += *neighbor;
-        }
-    }
+    aligned_t *neighbor;
+    neighbor = &points->stage[prev][i  ][j-1];
+    qthread_readFF(neighbor, neighbor);
+    sum += *neighbor;
+    neighbor = &points->stage[prev][i-1][j  ];
+    qthread_readFF(neighbor, neighbor);
+    sum += *neighbor;
+    neighbor = &points->stage[prev][i  ][j  ];
+    qthread_readFF(neighbor, neighbor);
+    sum += *neighbor;
+    neighbor = &points->stage[prev][i+1][j  ];
+    qthread_readFF(neighbor, neighbor);
+    sum += *neighbor;
+    neighbor = &points->stage[prev][i  ][j+1];
+    qthread_readFF(neighbor, neighbor);
+    sum += *neighbor;
 
     // Empty the next stage for this index
     qthread_empty(&points->stage[next][i][j]);

@@ -8,7 +8,7 @@
 
 #include "argparsing.h"
 
-#define NUM_NEIGHBORS 9
+#define NUM_NEIGHBORS 5
 #define NUM_STAGES 2
 #define BOUNDARY 42
 
@@ -63,12 +63,12 @@ static void update(const size_t start, const size_t stop, void *arg)
 
     size_t prev = prev_stage(stage);
 
-    //fprintf(stderr, "\tStepping (%lu,%lu)\n", i, j);
+    aligned_t sum = points->stage[prev][i  ][j-1];
+    sum          += points->stage[prev][i-1][j  ];
+    sum          += points->stage[prev][i  ][j  ];
+    sum          += points->stage[prev][i+1][j  ];
+    sum          += points->stage[prev][i  ][j+1];
 
-    aligned_t sum = 0;
-    for (size_t x = 0; x < 3; x++)
-        for (size_t y = 0; y < 3; y++)
-            sum += points->stage[prev][i-1+x][j-1+y];
     points->stage[stage][i][j] = sum/NUM_NEIGHBORS;
 }
 
@@ -76,7 +76,6 @@ static void spawn_rows(const size_t start, const size_t stop, void *arg) {
     stencil_t *points = ((rows_args_t *)arg)->points;
     size_t stage = ((rows_args_t *)arg)->stage;
 
-    //fprintf(stderr, "Spawning: %lu %lu\n", start, stage);
     update_args_t args = {points, start, stage};
     qt_loop(1, points->M-1, update, &args);
 }
@@ -147,9 +146,8 @@ int main(int argc, char *argv[])
     qtimer_start(exec_timer);
     rows_args_t args = {&points, 1};
     for (int t = 1; t <= num_timesteps; t++) {
-        //fprintf(stderr, "Starting step %d\n", t);
         qt_loop(1, points.N-1, spawn_rows, &args);
-        //fprintf(stderr, "\t done step %d\n", t);
+        args.stage = next_stage(args.stage);
     }
     qtimer_stop(exec_timer);
 
