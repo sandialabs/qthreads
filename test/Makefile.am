@@ -87,6 +87,9 @@ EXTRA_PROGRAMS += \
 	 time_cncthr_bench_pthread \
 	 time_swap \
 	 time_threading \
+	 time_stencil_bsp \
+	 time_stencil_feb \
+	 time_stencil_pre \
 	 time_gcd \
 	 test_cpp_interface
 CLEANFILES += $(EXTRA_PROGRAMS)
@@ -305,3 +308,12 @@ test_external_syncvar_DEPENDENCIES = $(QTHREADLIB)
 
 test_read_SOURCES = test_read.c
 test_read_DEPENDENCIES = $(QTHEADLIB)
+
+time_stencil_bsp_SOURCES = time_stencil_bsp.c
+time_stencil_bsp_DEPENDENCIES = $(QTHREADLIB)
+
+time_stencil_feb_SOURCES = time_stencil_feb.c
+time_stencil_feb_DEPENDENCIES = $(QTHREADLIB)
+
+time_stencil_pre_SOURCES = time_stencil_pre.c
+time_stencil_pre_DEPENDENCIES = $(QTHREADLIB)
