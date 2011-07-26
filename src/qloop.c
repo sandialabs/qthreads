@@ -121,7 +121,7 @@ static void qt_loop_inner(const size_t    start,
                           int             future)
 {                                      /*{{{ */
     size_t                     i, threadct = 0;
-    size_t                     steps = (stop - start) + 1;
+    size_t                     steps = stop - start;
     struct qloop_wrapper_args *qwa;
     syncvar_t                 *rets;
 
