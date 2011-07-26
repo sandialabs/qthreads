@@ -25,24 +25,6 @@ struct _qt_threadqueue_node {
     qthread_shepherd_t                            *creator_ptr;
 } /* qt_threadqueue_node_t */;
 
-typedef enum {
-    STABLE,
-    RPUSH,
-    LPUSH
-} status_t;
-
-typedef struct _qt_lfdeque_node {
-    volatile struct _qt_lfdeque_node *volatile right;
-    volatile struct _qt_lfdeque_node *volatile left;
-    qthread_t                                 *value;
-    qthread_shepherd_t                        *creator_ptr;
-} qt_lfdeque_node_t;
-
-typedef struct _qt_lfdeque_anchor {
-    qt_lfdeque_node *one, *two;
-    status_t         stat;
-} qt_lfdeque_anchor_t;
-
 struct _qt_threadqueue {
     volatile qt_threadqueue_node_t *volatile head;
     volatile qt_threadqueue_node_t *volatile tail;
