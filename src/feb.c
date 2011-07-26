@@ -11,6 +11,7 @@
 #endif
 
 /* Internal Headers */
+#include "qt_hash.h"
 #include "qthread_innards.h"
 #include "qt_qthread_struct.h"
 #include "qt_blocking_structs.h"
@@ -472,7 +473,7 @@ int qthread_writeEF(aligned_t *restrict const       dest,
         qthread_debug(LOCK_BEHAVIOR, "tid %u succeeded on %p=%p after waiting\n", me->thread_id, dest, src);
     } else {
         if (dest && (dest != src)) {
-            memcpy(dest, src, sizeof(aligned_t));
+            *(aligned_t*)dest = *(aligned_t*)src;
         }
         qthread_debug(LOCK_BEHAVIOR, "tid %u succeeded on %p=%p\n", me->thread_id, dest, src);
         qthread_gotlock_fill(me->rdata->shepherd_ptr, m, alignedaddr, 0);

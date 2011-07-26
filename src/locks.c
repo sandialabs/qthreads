@@ -9,6 +9,7 @@
 #include <stdlib.h>            /* for malloc() and free() */
 
 /* Internal Headers */
+#include "qt_hash.h"
 #include "qthread_innards.h"
 #include "qt_blocking_structs.h"
 #include "qt_qthread_struct.h"

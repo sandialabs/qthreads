@@ -7,6 +7,7 @@
 #include <qthread/qthread-int.h>       /* for uint64_t */
 
 /* Internal Headers */
+#include "qt_hash.h"
 #include "qthread/qthread.h"
 #include "qthread_innards.h"
 #include "qt_profiling.h"
