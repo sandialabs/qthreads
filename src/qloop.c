@@ -121,7 +121,7 @@ static void qt_loop_inner(const size_t    start,
                           int             future)
 {                                      /*{{{ */
     size_t                     i, threadct = 0;
-    size_t                     steps = stop - start;
+    size_t                     steps = (stop - start) + 1;
     struct qloop_wrapper_args *qwa;
     syncvar_t                 *rets;
 
@@ -137,9 +137,9 @@ static void qt_loop_inner(const size_t    start,
         qwa[threadct].stopat  = i + 1;
         qwa[threadct].arg     = argptr;
         if (future) {
-            qassert(qthread_fork_syncvar_future((qthread_f)qloop_wrapper, qwa + threadct, rets + i), QTHREAD_SUCCESS);
+            qassert(qthread_fork_syncvar_future((qthread_f)qloop_wrapper, qwa + threadct, rets + (i - start)), QTHREAD_SUCCESS);
         } else {
-            qassert(qthread_fork_syncvar((qthread_f)qloop_wrapper, qwa + threadct, rets + i), QTHREAD_SUCCESS);
+            qassert(qthread_fork_syncvar((qthread_f)qloop_wrapper, qwa + threadct, rets + (i - start)), QTHREAD_SUCCESS);
         }
         threadct++;
     }
@@ -1151,16 +1151,16 @@ static aligned_t qt_qsort_inner(const struct qt_qsort_iargs *a)
             size_t leftwall  = furthest.leftwall;
             size_t rightwall = furthest.rightwall;
 
-            while (leftwall < rightwall && array[leftwall] <= pivot) leftwall++;
-            while (leftwall < rightwall && array[rightwall] > pivot) rightwall--;
+            while ((leftwall < rightwall) && (array[leftwall] <= pivot)) leftwall++;
+            while ((leftwall < rightwall) && (array[rightwall] > pivot)) rightwall--;
             if (leftwall < rightwall) {
                 SWAP(array, leftwall, rightwall);
                 for (;;) {
-                    while (++leftwall < rightwall && array[leftwall] <= pivot) ;
+                    while ((++leftwall < rightwall) && (array[leftwall] <= pivot)) ;
                     if (rightwall < leftwall) {
                         break;
                     }
-                    while (leftwall < --rightwall && array[rightwall] > pivot) ;
+                    while ((leftwall < --rightwall) && (array[rightwall] > pivot)) ;
                     if (rightwall < leftwall) {
                         break;
                     }
