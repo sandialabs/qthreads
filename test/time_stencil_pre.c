@@ -120,20 +120,13 @@ int main(int argc, char *argv[])
     points.N = n + 2;
     points.M = m + 2;
 
-    points.stage[0] = malloc(points.N*sizeof(aligned_t *));
-    assert(NULL != points.stage[0]);
-    points.stage[1] = malloc(points.N*sizeof(aligned_t *));
-    assert(NULL != points.stage[1]);
-    points.stage[2] = malloc(points.N*sizeof(aligned_t *));
-    assert(NULL != points.stage[2]);
-
-    for (int i = 0; i < points.N; i++) {
-        points.stage[0][i] = calloc(points.M, sizeof(aligned_t));
-        assert(NULL != points.stage[0][i]);
-        points.stage[1][i] = calloc(points.M, sizeof(aligned_t));
-        assert(NULL != points.stage[1][i]);
-        points.stage[2][i] = calloc(points.M, sizeof(aligned_t));
-        assert(NULL != points.stage[2][i]);
+    for (int s = 0; s < NUM_STAGES; s++) {
+        points.stage[s] = malloc(points.N*sizeof(aligned_t *));
+        assert(NULL != points.stage[s]);
+        for (int i = 0; i < points.N; i++) {
+            points.stage[s][i] = calloc(points.M, sizeof(aligned_t));
+            assert(NULL != points.stage[s][i]);
+        }
     }
     qtimer_stop(alloc_timer);
 
@@ -142,25 +135,21 @@ int main(int argc, char *argv[])
     for (int i = 1; i < points.N-1; i++) {
         for (int j = 1; j < points.M-1; j++) {
             qthread_writeF_const(&points.stage[0][i][j], 0);
-            qthread_empty(&points.stage[1][i][j]);
-            qthread_empty(&points.stage[2][i][j]);
+            for (int s = 1; s < NUM_STAGES; s++)
+                qthread_empty(&points.stage[s][i][j]);
         }
     }
     for (int i = 0; i < points.N; i++) {
-        qthread_writeF_const(&points.stage[0][i][0], BOUNDARY);
-        qthread_writeF_const(&points.stage[0][i][points.M-1], BOUNDARY);
-        qthread_writeF_const(&points.stage[1][i][0], BOUNDARY);
-        qthread_writeF_const(&points.stage[1][i][points.M-1], BOUNDARY);
-        qthread_writeF_const(&points.stage[2][i][0], BOUNDARY);
-        qthread_writeF_const(&points.stage[2][i][points.M-1], BOUNDARY);
+        for (int s = 0; s < NUM_STAGES; s++) {
+            qthread_writeF_const(&points.stage[s][i][0], BOUNDARY);
+            qthread_writeF_const(&points.stage[s][i][points.M-1], BOUNDARY);
+        }
     }
     for (int j = 0; j < points.M; j++) {
-        qthread_writeF_const(&points.stage[0][0][j], BOUNDARY);
-        qthread_writeF_const(&points.stage[0][points.N-1][j], BOUNDARY);
-        qthread_writeF_const(&points.stage[1][0][j], BOUNDARY);
-        qthread_writeF_const(&points.stage[1][points.N-1][j], BOUNDARY);
-        qthread_writeF_const(&points.stage[2][0][j], BOUNDARY);
-        qthread_writeF_const(&points.stage[2][points.N-1][j], BOUNDARY);
+        for (int s = 0; s < NUM_STAGES; s++) {
+            qthread_writeF_const(&points.stage[s][0][j], BOUNDARY);
+            qthread_writeF_const(&points.stage[s][points.N-1][j], BOUNDARY);
+        }
     }
     qtimer_stop(init_timer);
 
