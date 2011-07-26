@@ -100,8 +100,10 @@ void qt_feb_barrier_enter(qt_feb_barrier_t *b)
 
 void qt_feb_barrier_destroy(qt_feb_barrier_t *b)
 {
+#ifndef UNPOOLED
     assert(fbp.pool != NULL);
-    assert(b->blockers == 0);
+#endif
+    while (b->blockers > 0) ;
     qthread_syncvar_fill(&b->out_gate);
     qthread_syncvar_fill(&b->in_gate);
 #ifndef UNPOOLED
