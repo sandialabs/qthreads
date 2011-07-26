@@ -78,7 +78,7 @@ extern QTHREAD_FASTLOCK_TYPE rcrtool_lock;
     (QTHREAD_SIZEOF_ALIGNED_T == 4 ||                   \
      (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32 &&     \
       QTHREAD_ASSEMBLY_ARCH != QTHREAD_SPARCV9_32))) && \
-    !defined(QTHREAD_ATOMIC_CAS) && \
+    !defined(QTHREAD_ATOMIC_CAS) &&                     \
     !defined(QTHREAD_MUTEX_INCREMENT)
 # warning QTHREAD_MUTEX_INCREMENT not defined. It probably should be.
 # define QTHREAD_MUTEX_INCREMENT 1
@@ -956,6 +956,7 @@ int qthread_initialize(void)
             qt_mpool_create(qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s));
 # endif
         qlib->shepherds[i].queue_pool = qt_mpool_create(sizeof(qthread_queue_t));
+        //printf("stack_pool = %p, queue_pool = %p\n", qlib->shepherds[i].stack_pool, qlib->shepherds[i].queue_pool); fflush(stdout);
         qt_threadqueue_init_pools(&(qlib->shepherds[i].threadqueue_pools));
         qlib->shepherds[i].lock_pool     = qt_mpool_create(sizeof(qthread_lock_t));
         qlib->shepherds[i].addrres_pool  = qt_mpool_create(sizeof(qthread_addrres_t));
@@ -1548,7 +1549,7 @@ void qthread_finalize(void)
     QTHREAD_FASTLOCK_DESTROY(qlib->sched_shepherd_lock);
 
 #ifdef QTHREAD_USE_VALGRIND
-    VALGRIND_STACK_DEREGISTER(qlib->mccoy_thread->valgrind_stack_id);
+    VALGRIND_STACK_DEREGISTER(qlib->mccoy_thread->rdata->valgrind_stack_id);
     VALGRIND_STACK_DEREGISTER(qlib->valgrind_masterstack_id);
 #endif
     assert(qlib->mccoy_thread->rdata->stack == NULL);
@@ -1663,7 +1664,7 @@ void qthread_enable_worker(const qthread_worker_id_t w)
         qthread_internal_incr(&(qlib->nshepherds_active), &(qlib->nshepherds_active_lock), 1);
         (void)QT_CAS(qlib->shepherds[shep].workers[worker].active, 0, 1);
     }
-#else
+#else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     qthread_enable_shepherd(w);
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 }                      /*}}} */
@@ -1904,7 +1905,7 @@ static QINLINE void qthread_thread_free(qthread_t *t)
     qthread_debug(ALL_FUNCTIONS, "t(%p): destroying thread id %i\n", t, t->thread_id);
     if (t->rdata != NULL) {
 #ifdef QTHREAD_USE_VALGRIND
-        VALGRIND_STACK_DEREGISTER(t->valgrind_stack_id);
+        VALGRIND_STACK_DEREGISTER(t->rdata->valgrind_stack_id);
 #endif
         qthread_debug(ALL_DETAILS, "t(%p): releasing stack %p to %p\n", t, t->rdata->stack, t->creator_ptr);
         FREE_STACK(t->creator_ptr, t->rdata->stack);
@@ -2173,10 +2174,11 @@ static int qthread_uberfork(qthread_f             f,
                             void                 *preconds,
                             qthread_shepherd_id_t target_shep,
                             uint_fast8_t          future_flag)
-{
-    qthread_t                  *t;
-    qthread_shepherd_t         *myshep = qthread_internal_getshep();
-    qthread_shepherd_id_t       dest_shep;
+{   /*{{{*/
+    qthread_t            *t;
+    qthread_shepherd_t   *myshep = qthread_internal_getshep();
+    qthread_shepherd_id_t dest_shep;
+
 #if defined(QTHREAD_DEBUG) || !defined(QTHREAD_MULTITHREADED_SHEPHERDS)
     const qthread_shepherd_id_t max_sheps = qlib->nshepherds;
 #endif
@@ -2277,7 +2279,7 @@ static int qthread_uberfork(qthread_f             f,
         qt_threadqueue_enqueue(qlib->shepherds[dest_shep].ready, t, myshep);
     }
     return QTHREAD_SUCCESS;
-}
+} /*}}}*/
 
 int qthread_fork(qthread_f   f,
                  const void *arg,
