@@ -59,7 +59,7 @@ AC_ARG_ENABLE([hardware-timer],
                                better timer available])])
 
 AC_ARG_ENABLE([aligncheck],
-              [AS_HELP_STRING([--disable-aligncheck],
+              [AS_HELP_STRING([--enable-aligncheck],
                               [check the alignment of synchronization addresses])])
 
 AC_ARG_ENABLE([guard-pages],
@@ -582,9 +582,10 @@ AS_IF([test "x$enable_hpctoolkit_support" = xyes],
 AS_IF([test "x$enable_log_barrier" = xyes],
       [AC_DEFINE([QTHREAD_LOG_BARRIER], [1], [Define to use Logrithmic barrier inside XOMP support])])
 
-AS_IF([test "x$enable_aligncheck" = "xno"],
-      [AC_DEFINE([QTHREAD_NOALIGNCHECK], [1], [Do not check the alignment of synchronization addresses])],
-      [enable_aligncheck=yes])
+AS_IF([test "x$enable_aligncheck" = "xyes"],
+	  [],
+      [AC_DEFINE([QTHREAD_NOALIGNCHECK], [1], [Do not check the alignment of synchronization addresses])
+       enable_aligncheck=no])
 
 AS_IF([test "x$enable_hardware_increments" == "xno" -a "x$enable_multithreaded_shepherds" = "xyes"],
 	  [AC_MSG_ERROR([Cannot use multithreaded shepherds without hardware increments.])
