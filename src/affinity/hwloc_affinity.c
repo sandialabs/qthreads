@@ -75,16 +75,17 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds
     hwloc_get_cpubind(topology, mccoy_thread_bindings, HWLOC_CPUBIND_THREAD);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     const char  *typenames[] = {
-        "node", "cache", "socket", "pu", "L1cache", "L2cache", "L3cache",
+        "node", "cache", "socket", "core", "pu", "L1cache", "L2cache", "L3cache",
         "L4cache"
     };
     const size_t numtypes = sizeof(typenames) / sizeof(char *);
     int              shep_type_idx = -1;
     /* BEWARE: L*cache must be consecutive of ascending levels, as the index
      * below is used to compare to the cache level */
-    const size_t     shepindexofL1cache  = 4;
+    const size_t     shepindexofL1cache  = 5;
     hwloc_obj_type_t shep_type_options[] = {
-        HWLOC_OBJ_NODE, HWLOC_OBJ_CACHE, HWLOC_OBJ_SOCKET, HWLOC_OBJ_PU,
+        HWLOC_OBJ_NODE, HWLOC_OBJ_CACHE, HWLOC_OBJ_SOCKET, HWLOC_OBJ_CORE,
+        HWLOC_OBJ_PU,
         HWLOC_OBJ_CACHE, HWLOC_OBJ_CACHE, HWLOC_OBJ_CACHE, HWLOC_OBJ_CACHE
     };
     {
@@ -360,8 +361,9 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me)
                                              shep_depth, myshep->node);
 
     qthread_debug(ALL_DETAILS,
-                  "shep %i worker %i [%i], there are %i %s [%i pu]\n",
+                  "shep %i(%i) worker %i [%i], there are %i %s [%i pu]\n",
                   (int)myshep->shepherd_id,
+                  (int)myshep->node,
                   (int)me->worker_id,
                   (int)me->packed_worker_id,
                   (int)hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth),
