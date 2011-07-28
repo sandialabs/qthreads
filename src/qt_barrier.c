@@ -14,8 +14,8 @@
 #include "qt_barrier.h"
 #include "qthread_asserts.h"
 #include "qt_atomics.h"
-#include <qthread/qthread.h>
-#include <qthread_innards.h>
+#include "qthread/qthread.h"
+#include "qt_debug.h"
 
 struct qt_barrier_s {
     int        count;           // size of barrier
@@ -73,7 +73,7 @@ qt_barrier_t *qt_barrier_create(int              size,
 {                                      /*{{{ */
     qt_barrier_t *b = calloc(1, sizeof(qt_barrier_t));
 
-    qthread_debug(ALL_CALLS, "size(%i), type(%i), debug(%i): begin\n", size,
+    qthread_debug(BARRIER_CALLS, "size(%i), type(%i), debug(%i): begin\n", size,
                   (int)type, debug);
     assert(b);
     if (b) {

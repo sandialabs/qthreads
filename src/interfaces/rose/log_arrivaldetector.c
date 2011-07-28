@@ -7,7 +7,7 @@
 #include <stdlib.h>		       // for calloc()
 #include <stdio.h>		       // for perror()
 
-#include "qthread_innards.h"	       // for qthread_debug()
+#include "qt_debug.h"	               // for qthread_debug()
 
 #include <qthread/qloop.h>
 #include "qt_arrive_first.h"
