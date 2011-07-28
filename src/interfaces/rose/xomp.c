@@ -705,7 +705,7 @@ void XOMP_loop_end_nowait(
     void * lp)
 {
     qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
-    int last = qthread_incr(&loop->workers,-1); 
+    qthread_incr(&loop->workers,-1);
 }
 
 // Qthread implementation of a OpenMP global barrier
