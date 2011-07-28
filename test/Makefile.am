@@ -29,7 +29,6 @@ BASIC_TESTS = test_basic \
 
 COMPLEX_TESTS = test_qutil \
 				test_qutil_qsort \
-				test_precond_fib \
 				test_feb_barrier \
 				testqloop \
 				test_queue_loop \
