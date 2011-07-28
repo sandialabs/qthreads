@@ -44,6 +44,10 @@
 #include "maestro_sched.h"
 #endif
 
+#ifdef STEAL_PROFILE
+void qthread_steal_stat(void);
+#endif
+
 #if defined(__i386__) || defined(__x86_64__)
 #define USE_RDTSC 1
 #endif
@@ -63,7 +67,7 @@ void xomp_internal_set_ordered_iter(qqloop_step_handle_t *loop, int lower);
 
 int compute_XOMP_block(qqloop_step_handle_t * loop);
 void qt_omp_parallel_region_add_loop(qqloop_step_handle_t *loop);
-syncvar_t *getSyncTaskVar(void);
+taskSyncvar_t *getSyncTaskVar(void);
 
 typedef enum xomp_nest_level{NO_NEST=0, ALLOW_NEST, AUTO_NEST}xomp_nest_level_t;
 
@@ -101,6 +105,9 @@ static void set_xomp_dynamic(int, XOMP_Status *);
 static int64_t get_xomp_dynamic(XOMP_Status *);
 static void xomp_set_nested(XOMP_Status *, bool val);
 static xomp_nest_level_t xomp_get_nested(XOMP_Status *);
+static int qt_parallel_loop(qthread_parallel_region_t *,int);
+static int qt_parallel_loop_incr(qthread_parallel_region_t *,int);
+static qqloop_step_handle_t *qt_get_parallel_loop_structure(qthread_parallel_region_t *,int);
 
 // Initalize the structure to a known state
 static void XOMP_Status_init(
@@ -282,9 +289,6 @@ void XOMP_terminate(
   if (qthread_worker(NULL) !=0) {
     qt_move_to_orig();  // for termination need to be on the original thread - 4/1/11 AKP
   }
-#ifdef STEAL_PROFILE
-  qthread_steal_stat();  // qthread_finalize called by at_exit handler
-#endif
   return;
 }
 
@@ -385,7 +389,9 @@ qqloop_step_handle_t *qt_loop_rose_queue_create(
     ret->assignStop = stop;
     ret->assignStep = incr;
     ret->assignDone = stop;
+    ret->ready = -1;                     // set to negative so that first use does not hang
     ret->work_array_size = array_size;
+    ret->whichLoop = -1;                 // set to allow preincreamenting to be positive monotonic
     ret->current_workers = ((aligned_t*)&(ret->work_array)) + (2 * array_size);
     // zero work array
     int i; 
@@ -422,7 +428,24 @@ return (uint64_t)hi << 32 | lo;
 // NOTE: need to replace these magic numbers with #defs 
 #endif
 
+int qt_parallel_loop(qthread_parallel_region_t *pr, int myid){
+  int t = pr->currentLoopNum[myid];
+  return t;
+}
+
+int qt_parallel_loop_incr(qthread_parallel_region_t *pr, int myid){
+  int t = pr->currentLoopNum[myid]++;
+  return t;
+}
+
+qqloop_step_handle_t *qt_get_parallel_loop_structure(qthread_parallel_region_t *pr, int num){
+
+  qqloop_step_handle_t * t = (qqloop_step_handle_t *)(pr->currentLoopStruct[num%pr->clsSize]);
+  return t;
+}
+
 // handle Qthread default openmp loop initialization
+
 void xomp_internal_loop_init(
 		    enum qloop_handle_type type,
 		    int ordered,
@@ -433,56 +456,58 @@ void xomp_internal_loop_init(
 		    int chunk_size)
 {
 #ifdef QTHREAD_RCRTOOL
-    //Here we log entering a loop section.
-    rcrtool_log(RCR_APP_STATE_DUMP, XOMP_FOR_LOOP_START, 0, (uint64_t)0, "");
+  //Here we log entering a loop section.
+  rcrtool_log(RCR_APP_STATE_DUMP, XOMP_FOR_LOOP_START, 0, (uint64_t)0, "");
 #endif
   qthread_parallel_region_t *pr = qt_parallel_region();
 
-  qqloop_step_handle_t *t = NULL;
+  // get barrier id
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+  qthread_worker_id_t myid = qthread_barrier_id();
+#else
+  qthread_shepherd_id_t myid = qthread_barrier_id();
+#endif
 
-  if (pr) { // have active parallel region -- one parallel for loop structure per region
-    t = qthread_cas(&pr->forLoop, NULL, -1);
-  }
-  else { // already within parallel loop -- use loop argument to store loop structure
-    t = qthread_cas(loop, NULL, -1);
-  }
-  
-  if (t == NULL) { // am I first?
-    t  =  qt_loop_rose_queue_create(lower, upper, stride);
-    t->chunkSize = chunk_size;
-    t->type = type;
-    t->iterations = 0;
+  // in parallel region look up loop number with id
+
+  int loopNum = qt_parallel_loop_incr(pr,myid);
+
+  qqloop_step_handle_t *lp = qt_get_parallel_loop_structure(pr,loopNum);
+
+  int first = qthread_incr(&lp->workers,1); 
+  if ((first == 0) & (lp->whichLoop != loopNum)) { // set up loop if first
+    //printf("build structure %p\n", lp);
+    lp->chunkSize = chunk_size;
+    lp->type = type;
+    lp->iterations = 0;
+    lp->whichLoop = loopNum;
+    lp->departed_workers = 0;
+    lp->assignNext = lower;
+    lp->assignStart = lower;
+    lp->assignStop = upper;
+    lp->assignStep = stride;
+    lp->assignDone = upper;
+
     int numSheps = qthread_num_shepherds();
     int i;
     for (i =0; i < numSheps; i++) {
-      t->current_workers[i] = 0; // not me
+      lp->current_workers[i] = 0; // not me
     }
 #ifdef QTHREAD_RCRTOOL
-    t->allowed_workers = maestro_allowed_workers();
+    lp->allowed_workers = maestro_allowed_workers();
 #endif
-    if (pr) pr->forLoop = t;
+    lp->ready = loopNum;         // use the loop number to allow other workers to start 
   }
-  // akp - this feels more than should be needed but I was having problems with simpler
-  //       waiting mechanisms (at both compilation and execution) 
-  if ((int64_t)pr->forLoop == -1) { // wait for region to be created 
-    t = qthread_cas(&pr->forLoop, -1, -1);
-    while( (int64_t)t == -1){
-      t = qthread_cas(&pr->forLoop, -1, -1);
-    }
-  }
-  else t = pr->forLoop; // t got no value but pr->forLoop was full by the time we got here
-  // just use the value
 
-  if (t && ((t->departed_workers == 0)|(type == STATIC_SCHED))) {
-    qthread_incr(&t->workers,1);
-    *loop = (void*)t;
-  }
-  else {
-    *loop = NULL;
-  }
+  while (lp->ready != loopNum){} // spin waiting for loop structure to be setup
+                                 // ready contains the last value updated -- must match my loop
+
+  *loop = (void*)lp;  // return value
+
   return;
 }
-  
+
+
 void xomp_internal_set_ordered_iter(qqloop_step_handle_t *loop, int lower) {
   if (loop == NULL) return; // loop is completed (and destroyed) we just need to
                             // complete -- no more work
@@ -554,7 +579,7 @@ static bool xomp_internal_guided_next(
     // spin waiting for either 
     qthread_shepherd_id_t myShepId = qthread_shep();
 #ifdef QTHREAD_RCRTOOL
-    if (rcrSchedulingOff) { // has cache control been turned off by an environment variable?
+    if (rcrtoollevel) { // has cache control been turned off by an environment variable?
         if (loop->current_workers[myShepId] > maestro_current_workers(myShepId)) {
 	    qthread_incr(&loop->current_workers[myShepId],-1); // not working spinning
 	    while ((loop->current_workers[myShepId] + 1) > maestro_current_workers(myShepId)) { // A) the number of workers to be increased
@@ -650,8 +675,12 @@ void XOMP_loop_end(
     void * lp)
 {
     qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
+    XOMP_barrier(); // need barrier to make sure loop is freed after everyone has used it
     XOMP_loop_end_nowait(loop);
 
+    /*  -- spin lock seems to do the right thing when I watch it in the debugger -- but
+	   does not cause the barrier to happen outside the debugger -- use hard barrier for the
+	   time being AKP 7/28/11
     if (!get_inside_xomp_parallel(&xomp_status)) {
         XOMP_spin_lock(loop); // need barrier to make sure loop is freed 
     }
@@ -664,6 +693,7 @@ void XOMP_loop_end(
       }
       XOMP_barrier(); // need barrier to make sure loop is freed after everyone has used it
     }
+    */
 #ifdef QTHREAD_RCRTOOL
     //Here we log exiting a loop section.
     rcrtool_log(RCR_APP_STATE_DUMP, XOMP_FOR_LOOP_END, 0, (uint64_t)0, "");
@@ -672,8 +702,10 @@ void XOMP_loop_end(
 
 // Openmp parallel for loop is completed
 void XOMP_loop_end_nowait(
-    void * loop)
+    void * lp)
 {
+    qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
+    int last = qthread_incr(&loop->workers,-1); 
 }
 
 // Qthread implementation of a OpenMP global barrier
@@ -745,60 +777,6 @@ bool XOMP_loop_ordered_guided_next(
   return ret;
 }
 
-syncvar_t *getSyncTaskVar(void)
-{
-  taskSyncvar_t * syncVar = (taskSyncvar_t *)calloc(1,sizeof(taskSyncvar_t));
-  qthread_getTaskListLock();
-  //  qthread_syncvar_empty(me,&(syncVar->retValue));
-  syncVar->next_task = qthread_getTaskRetVar();
-  qthread_setTaskRetVar(syncVar);
-  qthread_releaseTaskListLock();
-  
-  return &(syncVar->retValue);
-}
-
-
-void qthread_run_needed_task(syncvar_t *value);
-void walkSyncTaskList(void)
-{
-  qthread_getTaskListLock();
-  taskSyncvar_t * syncVar;
-  while ((syncVar = qthread_getTaskRetVar())) {
-
-    // manually check for empty -- check if present in current shepherds ready queue
-    //   if present take and start executing
-    syncvar_t *lc_p = &syncVar->retValue;
-
-#if AKP_TOUCH_EXECUTION
-#if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || \
-     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) || \
-     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || \
-     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64))
-    {
-      // taken from qthread_syncvar_readFF in qthread.c - I want empty not full
-      /* I'm being  optimistic here; this only works if a basic 64-bit load is
-       * atomic (on most platforms it is). Thus, if I've done an atomic read
-       * and the syncvar is both unlocked and full, then I figure I can trust
-       * that state and do not need to do a locked atomic operation of any
-       * kind (e.g. cas) */
-      syncvar_t lc_syncVar = *lc_p;
-      if (lc_syncVar.u.s.lock == 0 && (lc_syncVar.u.s.state & 2) ) { /* empty and unlocked */
-	qthread_releaseTaskListLock();
-	qthread_run_needed_task(lc_p);
-	qthread_getTaskListLock();
-	syncVar = qthread_getTaskRetVar();
-      }
-    }
-#endif
-#endif
-    qthread_syncvar_readFF(NULL, lc_p);
-    qthread_setTaskRetVar(syncVar->next_task);
-    free(syncVar);
-  }
-  qthread_releaseTaskListLock();
-  return;
-}
-
 aligned_t taskId = 1; // start at first non-master shepherd
 
 void XOMP_task(
@@ -816,7 +794,8 @@ void XOMP_task(
   qthread_incr(&taskId,1);
   qthread_debug(LOCK_DETAILS, "me(%p) creating task for shepherd %d\n", me, id%qthread_num_shepherds());
 #endif
-  syncvar_t *ret = getSyncTaskVar(); // get new syncvar_t -- setup openmpThreadId (if needed)
+  taskSyncvar_t *ret = getSyncTaskVar(); // get new syncvar_t -- setup openmpThreadId (if needed)
+
 #ifdef QTHREAD_OMP_AFFINITY
   qthread_t *t = qthread_self();
   if (t->rdata->child_affinity != OMP_NO_CHILD_TASK_AFFINITY)
@@ -824,7 +803,7 @@ void XOMP_task(
   else
     qthread_fork_syncvar_copyargs((qthread_f)func, arg, arg_size, ret);
 #else
-  qthread_fork_syncvar_copyargs((qthread_f)func, arg, arg_size, ret);
+  qthread_fork_syncvar_copyargs((qthread_f)func, arg, arg_size, &ret->retValue);
 #endif
 }
 

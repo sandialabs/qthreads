@@ -168,9 +168,6 @@ taskSyncvar_t *qthread_getTaskRetVar(void);
 void           qthread_setTaskRetVar(taskSyncvar_t *v);
 void           qt_move_to_orig(void); /* reschedule this thread on shepherd 0 worker 0 -- for termination 4/1/11 AKP */
 #endif // ifdef QTHREAD_USE_ROSE_EXTENSIONS
-#ifdef STEAL_PROFILE
-void INTERNAL qthread_steal_stat(void);
-#endif
 
 /* internal initialization functions */
 void INTERNAL qt_feb_barrier_internal_init(void);

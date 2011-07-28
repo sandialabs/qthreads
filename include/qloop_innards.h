@@ -79,6 +79,8 @@ struct qqloop_step_handle_s {
     aligned_t                        chunkSize;
     volatile aligned_t               assignDone; // start+offset
     aligned_t                        iterations;
+    aligned_t                        whichLoop;  // value used to pair workers with correct loop structure
+    volatile aligned_t               ready;      // what is the last whichLoop that has been initialized (usable)
 #endif /* QTHREAD_USE_ROSE_EXTENSIONS */
     aligned_t                        work_array_size;
     aligned_t                        work_array; // really an address to reach an array

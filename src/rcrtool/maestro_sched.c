@@ -4,6 +4,7 @@
 
 #include <stdlib.h>		       // for malloc()
 #include <stdio.h>
+#include "qthread_innards.h"           // for qthread_num_shepherds/qthread_num_workers
 #include "maestro_sched.h"
 
 static int maestro_sched_init = 0;
@@ -28,21 +29,32 @@ static void ms_init(void){
   for ( i = 0; i < sheps; i ++) {
     allowed_workers[i] = parallelWidth;
   }
-  printf("test workers %d sheps %d width %d\n", workers, sheps, parallelWidth);
 }
 
-void maestro_sched(enum trigger_type type, enum trigger_action action, int val){
+// NEED REAL MODEL HERE (maybe can get one with collaboration with UDelaware - John Cavazos)
 
+void maestro_sched(enum trigger_type type, enum trigger_action action, int val){
+  int i;
   if (!maestro_sched_init) ms_init();
+  int sheps = qthread_num_shepherds();
   switch (action){
   case(MTA_LOWER_STREAM_COUNT):
     {
-      allowed_workers[val] = maestro_current_workers(val)/2;
+      // drop all to 3/4 -- works better on ldmapper2 test 
+      for ( i = 0; i < sheps; i ++) {
+	allowed_workers[i] = (maestro_allowed_workers()*3)/4;
+      }
+      // previous model -- drop local to 1/2
+      //      allowed_workers[val] = maestro_current_workers(val)/2;
       break;
     }
   case(MTA_RAISE_STREAM_COUNT):
     {
-      allowed_workers[val] = maestro_allowed_workers();
+      for ( i = 0; i < sheps; i ++) {
+	allowed_workers[i] = maestro_allowed_workers();
+      }
+      // previous model -- raise local to max
+      // allowed_workers[val] = maestro_allowed_workers();
       break;
     } 
   case (MTA_OTHER):

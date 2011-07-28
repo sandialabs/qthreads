@@ -121,6 +121,7 @@ extern const syncvar_t SYNCVAR_EMPTY_INITIALIZER;
 #define DBL60TODBL64(in, out) do { in <<= 4; memcpy(&(out), &(in), 8); } while(0)
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
+
 typedef struct taskSyncvar_s { /* added akp for openmp taskwait */
     syncvar_t             retValue;
     struct taskSyncvar_s *next_task;
@@ -135,6 +136,11 @@ struct qthread_parallel_region_s {
 # else
     qt_feb_barrier_t                 *barrier;
 # endif
+    int                              *currentLoopNum;     // really an array of values (number workers long)
+                                                          //   which Loop current active 
+    int                               clsSize;            // size of following array
+    struct qqloop_step_handle_t      **currentLoopStruct; // really an array of pointers to loop
+                                                          //    structures for use by omp
 };
 typedef struct qthread_parallel_region_s qthread_parallel_region_t;
 
