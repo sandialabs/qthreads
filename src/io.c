@@ -29,6 +29,7 @@
 #include "qthread_asserts.h"
 #include "qthread_innards.h"
 #include "qt_threadqueues.h"
+#include "qt_debug.h"
 
 typedef struct {
     qt_blocking_queue_node_t *head;
@@ -233,9 +234,9 @@ void INTERNAL qt_process_blocking_calls(void)
         {
             qt_context_t my_context;
             getcontext(&my_context);
-            qthread_debug(THREAD_DETAILS, "blocking proxy context is %p\n", &my_context);
+            qthread_debug(IO_DETAILS, "blocking proxy context is %p\n", &my_context);
             qthread_exec(item->thread, &my_context);
-            qthread_debug(THREAD_DETAILS, "proxy back from qthread_exec\n");
+            qthread_debug(IO_DETAILS, "proxy back from qthread_exec\n");
             FREE_SYSCALLJOB(item);
             break;
         }

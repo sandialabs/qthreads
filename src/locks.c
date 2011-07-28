@@ -15,6 +15,7 @@
 #include "qt_qthread_struct.h"
 #include "qt_threadqueues.h"
 #include "qt_locks.h"
+#include "qt_debug.h"
 
 /* Types */
 typedef enum bt {
@@ -155,7 +156,7 @@ int qthread_lock(const aligned_t *a)
         qthread_lock_blocker_func((void *)a, LOCK);
         return QTHREAD_SUCCESS;
     }
-    qthread_debug(LOCK_BEHAVIOR, "tid(%u), a(%p): starting...\n",
+    qthread_debug(LOCK_CALLS, "tid(%u), a(%p): starting...\n",
                   me->thread_id, a);
     QTHREAD_LOCK_UNIQUERECORD(lock, a, me);
     QTHREAD_LOCK_TIMER_START(aquirelock);
@@ -316,10 +317,10 @@ static QINLINE qthread_t *qthread_dequeue(qthread_queue_t *q)
     qthread_t *t = NULL;
 
     /* NOTE: it's up to the caller to lock/unlock the queue! */
-    qthread_debug(ALL_FUNCTIONS, "q(%p), t(%p): started\n", q, t);
+    qthread_debug(LOCK_FUNCTIONS, "q(%p), t(%p): started\n", q, t);
 
     if (q->head == NULL) {
-        qthread_debug(ALL_DETAILS, "q(%p), t(%p): finished (nobody in list)\n", q, t);
+        qthread_debug(LOCK_DETAILS, "q(%p), t(%p): finished (nobody in list)\n", q, t);
         return (NULL);
     }
 
@@ -332,7 +333,7 @@ static QINLINE qthread_t *qthread_dequeue(qthread_queue_t *q)
     }
     t->next = NULL;
 
-    qthread_debug(ALL_DETAILS, "q(%p), t(%p): finished\n", q, t);
+    qthread_debug(LOCK_DETAILS, "q(%p), t(%p): finished\n", q, t);
     return (t);
 }                      /*}}} */
 

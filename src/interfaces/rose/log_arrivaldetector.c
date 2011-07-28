@@ -116,7 +116,7 @@ static qt_arrive_first_t *qt_arrive_first_create(
 {				       /*{{{ */
     qt_arrive_first_t *b = calloc(1, sizeof(qt_arrive_first_t));
 
-    qthread_debug(ALL_CALLS,
+    qthread_debug(XOMP_CALLS,
 		  "qt_arrive_first_create:size(%i), type(%i), debug(%i): begin\n",
 		  size, (int)type, debug);
     assert(b);
@@ -168,7 +168,7 @@ static int64_t qtar_internal_up(
     if (b->activeSize == 0) return 1; // only one thread -- It's first by definition
     assert(b->activeSize > 1);
 
-    qthread_debug(ALL_CALLS,
+    qthread_debug(XOMP_CALLS,
 		  "on lock %d paired with %d level %d lock value %ld  paired %ld\n",
 		  myLock, pairedLock, level, b->present[level][myLock],
 		  b->present[level][pairedLock]);
@@ -184,7 +184,7 @@ static int64_t qtar_internal_up(
 	  b->present[level][nextLevelLock] = 0;
 	  return t; 
 	} else if (myLock == 0) {
-	  qthread_debug(ALL_CALLS, "First arrived %d\n", myLock);
+	  qthread_debug(XOMP_CALLS, "First arrived %d\n", myLock);
 	  b->present[level][nextLevelLock] = 0;
 	  return 1;
 	}

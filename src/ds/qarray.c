@@ -9,6 +9,7 @@
 #include "qt_visibility.h"
 #include "qthread_asserts.h"
 #include "qthread_innards.h"           /* for shep_to_node && qthread_debug */
+#include "qt_debug.h"
 #if defined(HAVE_MALLOC_H) && defined(HAVE_MEMALIGN)
 # include <malloc.h>
 #endif
@@ -288,7 +289,7 @@ static qarray * qarray_create_internal(const size_t         count,
         count / ret->segment_size + ((count % ret->segment_size) ? 1 : 0);
 
     /* figure out dist_specific data */
-    qthread_debug(ALL_DETAILS,
+    qthread_debug(QARRAY_DETAILS,
                   "qarray_create(): figuring out dist_specific data (d=%i)\n",
                   (int)d);
     switch (d) {
@@ -390,7 +391,7 @@ static qarray * qarray_create_internal(const size_t         count,
         size_t                      segment, target_shep;
         const qthread_shepherd_id_t max_sheps = qthread_num_shepherds();
 
-        qthread_debug(ALL_DETAILS, "qarray_create(): segment_count = %i\n",
+        qthread_debug(QARRAY_DETAILS, "qarray_create(): segment_count = %i\n",
                       (int)segment_count);
         for (segment = 0; segment < segment_count; segment++) {
             switch (d) {
@@ -440,7 +441,7 @@ static qarray * qarray_create_internal(const size_t         count,
                 qarray_internal_segment_shep_write(ret, seghead, target_shep);
             }
             assert(target_shep < max_sheps);
-            qthread_debug(ALL_DETAILS,
+            qthread_debug(QARRAY_DETAILS,
                           "qarray_create(): segment %i assigned to shep %i\n",
                           segment, target_shep);
 #ifdef QTHREAD_HAVE_MEM_AFFINITY
@@ -464,11 +465,11 @@ static qarray * qarray_create_internal(const size_t         count,
     madvise(ret->base_ptr, segment_count * ret->segment_bytes, MADV_ACCESS_LWP);
 #endif
     for (unsigned int i = 0; i < qthread_num_shepherds(); i++) {
-        qthread_debug(ALL_DETAILS,
+        qthread_debug(QARRAY_DETAILS,
                       "qarray_create(): shep %i has %i segments\n", i,
                       chunk_distribution_tracker[i]);
     }
-    qthread_debug(ALL_DETAILS,
+    qthread_debug(QARRAY_DETAILS,
                   "qarray_create(): done assigning segments, returning\n");
     return ret;
 

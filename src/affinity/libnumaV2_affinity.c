@@ -6,6 +6,7 @@
 
 #include "qthread_innards.h"
 #include "qt_affinity.h"
+#include "qt_debug.h"
 
 #include "shepcomp.h"
 
@@ -74,14 +75,14 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
         /* this is (probably) correct if/when we have multithreaded shepherds,
          * ... BUT ONLY IF ALL NODES HAVE CPUS!!!!!! */
         nshepherds = numa_max_node() + 1;
-        qthread_debug(ALL_DETAILS, "numa_max_node() returned %i\n",
+        qthread_debug(AFFINITY_DETAILS, "numa_max_node() returned %i\n",
                       nshepherds);
 #else
 # ifdef HAVE_NUMA_NUM_THREAD_CPUS
         /* note: not numa_num_configured_cpus(), just in case an
          * artificial limit has been imposed. */
         nshepherds = numa_num_thread_cpus();
-        qthread_debug(ALL_DETAILS, "numa_num_thread_cpus returned %i\n",
+        qthread_debug(AFFINITY_DETAILS, "numa_num_thread_cpus returned %i\n",
                       nshepherds);
 # elif defined(HAVE_NUMA_BITMASK_NBYTES)
         nshepherds = 0;
@@ -89,12 +90,12 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
              b++) {
             nshepherds += numa_bitmask_isbitset(numa_all_cpus_ptr, b);
         }
-        qthread_debug(ALL_DETAILS,
+        qthread_debug(AFFINITY_DETAILS,
                       "after checking through the all_cpus_ptr, I counted %i cpus\n",
                       nshepherds);
 # else  /* ifdef HAVE_NUMA_NUM_THREAD_CPUS */
         nshepherds = numa_max_node() + 1;
-        qthread_debug(ALL_DETAILS, "numa_max_node() returned %i\n",
+        qthread_debug(AFFINITY_DETAILS, "numa_max_node() returned %i\n",
                       nshepherds);
 # endif /* ifdef HAVE_NUMA_NUM_THREAD_CPUS */
 #endif  /* MULTITHREADED */
@@ -131,31 +132,31 @@ unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherd
     size_t       cpu_count = 1;
     unsigned int guess     = 1;
 
-    qthread_debug(ALL_DETAILS, "guessing workers for %i shepherds\n",
+    qthread_debug(AFFINITY_DETAILS, "guessing workers for %i shepherds\n",
                   (int)nshepherds);
 # ifdef HAVE_NUMA_NUM_THREAD_CPUS
     /* note: not numa_num_configured_cpus(), just in case an
      * artificial limit has been imposed. */
     cpu_count = numa_num_thread_cpus();
-    qthread_debug(ALL_DETAILS, "numa_num_thread_cpus returned %i\n",
+    qthread_debug(AFFINITY_DETAILS, "numa_num_thread_cpus returned %i\n",
                   nshepherds);
 # elif defined(HAVE_NUMA_BITMASK_NBYTES)
     cpu_count = 0;
     for (size_t b = 0; b < numa_bitmask_nbytes(numa_all_cpus_ptr) * 8; b++) {
         cpu_count += numa_bitmask_isbitset(numa_all_cpus_ptr, b);
     }
-    qthread_debug(ALL_DETAILS,
+    qthread_debug(AFFINITY_DETAILS,
                   "after checking through the all_cpus_ptr, I counted %i cpus\n",
                   (int)cpu_count);
 # else /* ifdef HAVE_NUMA_NUM_THREAD_CPUS */
     cpu_count = numa_max_node() + 1;
-    qthread_debug(ALL_DETAILS, "numa_max_node() returned %i\n", nshepherds);
+    qthread_debug(AFFINITY_DETAILS, "numa_max_node() returned %i\n", nshepherds);
 # endif /* ifdef HAVE_NUMA_NUM_THREAD_CPUS */
     guess = cpu_count / nshepherds;
     if (guess == 0) {
         guess = 1;
     }
-    qthread_debug(ALL_DETAILS, "guessing %i workers per shepherd\n",
+    qthread_debug(AFFINITY_DETAILS, "guessing %i workers per shepherd\n",
                   (int)guess);
     return guess;
 }                                      /*}}} */
@@ -183,7 +184,7 @@ static void assign_nodes(qthread_shepherd_t *sheps,
                 cpus_left_per_node[i] +=
                     numa_bitmask_isbitset(cmask, j) ? 1 : 0;
             }
-            qthread_debug(ALL_DETAILS, "there are %i CPUs on node %i\n",
+            qthread_debug(AFFINITY_DETAILS, "there are %i CPUs on node %i\n",
                           (int)cpus_left_per_node[i], (int)i);
         }
     }
@@ -208,7 +209,7 @@ static void assign_nodes(qthread_shepherd_t *sheps,
             }
                 over_subscribing = 1;
         }
-        qthread_debug(ALL_DETAILS, "setting shep %i to numa node %i\n",
+        qthread_debug(AFFINITY_DETAILS, "setting shep %i to numa node %i\n",
                       (int)i, (int)node);
         sheps[i].node = node;
         node++;

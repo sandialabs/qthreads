@@ -4,6 +4,7 @@
 
 #include "qthread_innards.h"
 #include "qt_affinity.h"
+#include "qt_debug.h"
 
 qthread_shepherd_id_t guess_num_shepherds(void);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -37,7 +38,7 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
 {                                                          /*{{{ */
 #if defined(HAVE_SYSCONF) && defined(_SC_NPROCESSORS_CONF) /* Linux */
     long ret = sysconf(_SC_NPROCESSORS_CONF);
-    qthread_debug(ALL_DETAILS, "based on sysconf(), guessing %i shepherds\n",
+    qthread_debug(AFFINITY_CALLS, "based on sysconf(), guessing %i shepherds\n",
                   (int)ret);
     return (ret > 0) ? ret : 1;
 
@@ -47,13 +48,13 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
     size_t   oldvlen = sizeof(oldv);
     if (sysctl(name, 2, &oldv, &oldvlen, NULL, 0) >= 0) {
         assert(oldvlen == sizeof(oldv));
-        qthread_debug(ALL_DETAILS,
+        qthread_debug(AFFINITY_CALLS,
                       "based on sysctl(), guessing %i shepherds\n",
                       (int)oldv);
         return oldv;
     }
 #endif /* if defined(HAVE_SYSCONF) && defined(_SC_NPROCESSORS_CONF) */
-    qthread_debug(ALL_DETAILS,
+    qthread_debug(AFFINITY_CALLS,
                   "no useful interfaces present; assuming a single shepherd\n");
     return 1;
 }                                      /*}}} */
@@ -74,11 +75,11 @@ unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherd
     size_t num_procs = 1;
     size_t guess     = 1;
 
-    qthread_debug(ALL_DETAILS, "guessing workers for %i shepherds\n",
+    qthread_debug(AFFINITY_CALLS, "guessing workers for %i shepherds\n",
                   (int)nshepherds);
 # if defined(HAVE_SYSCONF) && defined(_SC_NPROCESSORS_CONF)     /* Linux */
     long ret = sysconf(_SC_NPROCESSORS_CONF);
-    qthread_debug(ALL_DETAILS, "sysconf() says %i processors\n", (int)ret);
+    qthread_debug(AFFINITY_DETAILS, "sysconf() says %i processors\n", (int)ret);
     num_procs = (ret > 0) ? (size_t)ret : 1;
 # elif defined(HAVE_SYSCTL) && defined(CTL_HW) && defined(HW_NCPU)
     int      name[2] = { CTL_HW, HW_NCPU };
@@ -86,7 +87,7 @@ unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherd
     size_t   oldvlen = sizeof(oldv);
     if (sysctl(name, 2, &oldv, &oldvlen, NULL, 0) >= 0) {
         assert(oldvlen == sizeof(oldv));
-        qthread_debug(ALL_DETAILS, "sysctl() says %i CPUs\n", (int)oldv);
+        qthread_debug(AFFINITY_DETAILS, "sysctl() says %i CPUs\n", (int)oldv);
         num_procs = (size_t)oldv;
     }
 # endif /* if defined(HAVE_SYSCONF) && defined(_SC_NPROCESSORS_CONF) */
@@ -94,7 +95,7 @@ unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherd
     if (guess == 0) {
         guess = 1;
     }
-    qthread_debug(ALL_DETAILS, "guessing %i workers per shepherd\n",
+    qthread_debug(AFFINITY_DETAILS, "guessing %i workers per shepherd\n",
                   (int)guess);
     return (qthread_shepherd_id_t)guess;
 }                                      /*}}} */

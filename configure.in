@@ -75,14 +75,6 @@ AC_ARG_ENABLE([setrlimit],
                                applications that consult rlimit for the stack
                                size, such as some printf implementations)])])
 
-AC_ARG_ENABLE([debug],
-              [AS_HELP_STRING([--enable-debug],
-                              [prints out debugging information as programs
-                               run, tracing their qthread-related behavior.
-                               Uses the environment variable
-                               QTHREAD_DEBUG_LEVEL. The higher the level, the
-                               greater the detail])])
-
 AC_ARG_ENABLE([syscall-interception],
               [AS_HELP_STRING([--enable-syscall-interception],
                               [Intercept blocking syscalls (or attempt to). Experimental.])])
@@ -113,6 +105,54 @@ AC_ARG_ENABLE([thread-count],
                                concurrent threads and prints it out when
                                qthread_finalize() is run; slows down
                                computation])])
+
+AC_ARG_ENABLE([debug],
+              [AS_HELP_STRING([--enable-debug=[[areas]]],
+                              [prints out debugging information as programs
+                               run, tracing their qthread-related behavior.
+                               Uses the environment variable
+							   QTHREAD_DEBUG_LEVEL. The higher the level, the
+							   greater the detail. This enables debugging in
+							   the specified areas. Default area is "all".
+							   Other available areas are:
+							   affinity,
+							   threadqueues,
+							   thread,
+							   shepherd,
+							   core,
+							   syscalls,
+							   locks,
+							   febs,
+							   syncvars,
+							   io,
+							   loops,
+							   barrier,
+							   qarray,
+							   rcrtool,
+							   futurelib,
+							   xomp])],
+              [for area in $(echo "$enable_debug" | sed 's/,/ /g') ; do
+                 case "$area" in
+					 affinity) enable_debug_affinity=yes ;;
+					 threadqueues) enable_debug_threadqueues=yes ;;
+					 thread) enable_debug_threads=yes ;;
+					 shepherd) enable_debug_shepherd=yes ;;
+					 core) enable_debug_core=yes ;;
+					 syscalls) enable_debug_syscalls=yes ;;
+					 locks) enable_debug_locks=yes ;;
+					 febs) enable_debug_febs=yes ;;
+					 syncvars) enable_debug_syncvars=yes ;;
+					 io) enable_debug_io=yes ;;
+					 loops) enable_debug_loops=yes ;;
+					 barrier) enable_debug_barrier=yes ;;
+					 qarray) enable_debug_qarray=yes ;;
+					 rcrtool) enable_debug_rcrtool=yes ;;
+					 futurelib) enable_debug_futurelib=yes ;;
+					 xomp) enable_debug_xomp=yes ;;
+					 *) AC_MSG_ERROR([Unrecognized debug category.]) ;;
+                 esac
+               done],
+              [enable_debug=no])
 
 AC_ARG_ENABLE([profiling],
               [AS_HELP_STRING([--enable-profiling=[[areas]]],
@@ -633,9 +673,42 @@ AS_IF([test "x$enable_asserts" != "xyes"],
        enable_asserts=no],
       [enable_asserts=yes])
 
-AS_IF([test "x$enable_debug" = "xyes"],
-      [AC_DEFINE([QTHREAD_DEBUG], [1], [prints out debugging information at runtime])],
-      [enable_debug=no])
+AS_IF([test "x$enable_debug" = x -o "x$enable_debug" = xno],
+	  [enable_debug=no],
+      [AC_DEFINE([QTHREAD_DEBUG], [1], [enables printing debugging information at runtime])
+	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_affinity" = xyes],
+			 [AC_DEFINE([QTHREAD_DEBUG_AFFINITY], [1], [prints out affinity debugging information at runtime])])
+	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_threadqueues" = xyes],
+			 [AC_DEFINE([QTHREAD_DEBUG_THREADQUEUES], [1], [prints out threadqueue debugging information at runtime])])
+	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_threads" = xyes],
+			 [AC_DEFINE([QTHREAD_DEBUG_THREADS], [1], [prints out thread debugging information at runtime])])
+	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_core" = xyes],
+			 [AC_DEFINE([QTHREAD_DEBUG_CORE], [1], [prints out core debugging information at runtime])])
+	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_shepherd" = xyes],
+			 [AC_DEFINE([QTHREAD_DEBUG_SHEPHERD], [1], [prints out shepherd debugging information at runtime])])
+	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_syscalls" = xyes],
+			 [AC_DEFINE([QTHREAD_DEBUG_SYSCALLS], [1], [prints out syscall debugging information at runtime])])
+	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_locks" = xyes],
+			 [AC_DEFINE([QTHREAD_DEBUG_LOCKS], [1], [prints out lock debugging information at runtime])])
+	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_febs" = xyes],
+			 [AC_DEFINE([QTHREAD_DEBUG_FEBS], [1], [prints out feb debugging information at runtime])])
+	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_syncvars" = xyes],
+			 [AC_DEFINE([QTHREAD_DEBUG_SYNCVARS], [1], [prints out syncvar debugging information at runtime])])
+	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_loops" = xyes],
+			 [AC_DEFINE([QTHREAD_DEBUG_LOOPS], [1], [prints out loop debugging information at runtime])])
+	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_io" = xyes],
+			 [AC_DEFINE([QTHREAD_DEBUG_IO], [1], [prints out I/O debugging information at runtime])])
+	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_barrier" = xyes],
+			 [AC_DEFINE([QTHREAD_DEBUG_BARRIER], [1], [prints out barrier debugging information at runtime])])
+	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_qarray" = xyes],
+			 [AC_DEFINE([QTHREAD_DEBUG_QARRAY], [1], [prints out qarray debugging information at runtime])])
+	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_rcrtool" = xyes],
+			 [AC_DEFINE([QTHREAD_DEBUG_RCRTOOL], [1], [prints out rcrtool debugging information at runtime])])
+	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_futurelib" = xyes],
+			 [AC_DEFINE([QTHREAD_DEBUG_FUTURELIB], [1], [prints out futurelib debugging information at runtime])])
+	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_xomp" = xyes],
+			 [AC_DEFINE([QTHREAD_DEBUG_XOMP], [1], [prints out xomp debugging information at runtime])])
+	   ])
 
 AS_IF([test "x$enable_rcrtool" = "xyes"],
       [AC_DEFINE([QTHREAD_RCRTOOL], [1], [logs performance with tht RCRTool monitor])],

@@ -11,6 +11,7 @@
 
 #include "qloop_innards.h"
 #include "qthread_expect.h"
+#include "qt_debug.h"
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 # include "qt_atomics.h"
@@ -689,7 +690,7 @@ static aligned_t qqloop_wrapper(const struct qqloop_wrapper_args *arg)
             }
             if (!qthread_shep_ok() || (qthread_shep() != shep)) {
                 /* my shepherd has been disabled while I was running */
-                qthread_debug(ALL_DETAILS, "my shepherd (%i) has been disabled!\n", (int)shep);
+                qthread_debug(LOOP_DETAILS, "my shepherd (%i) has been disabled!\n", (int)shep);
                 safeexit = 0;
                 qthread_incr(&(stat->activesheps), -1);
                 break;

@@ -17,6 +17,7 @@
 #include "qt_blocking_structs.h"
 #include "qt_addrstat.h"
 #include "qt_threadqueues.h"
+#include "qt_debug.h"
 
 /* Local Types */
 typedef enum bt {

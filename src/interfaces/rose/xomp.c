@@ -24,7 +24,7 @@
 #include "qt_barrier.h"	               // for qt_global_barrier
 #include "qt_arrive_first.h"           // for qt_global_arrive_first
 #include "qthread/qloop.h"	       // for qt_loop_f
-#include "qthread_innards.h"	       // for qthread_debug()
+#include "qt_debug.h"	               // for qthread_debug()
 #include "qt_shepherd_innards.h"       // for qthread_shepherd_t
 #include "qloop_innards.h"	       // for qqloop_handle_t
 #include "qt_qthread_struct.h"	       // for qthread_t
@@ -609,7 +609,7 @@ static bool xomp_internal_guided_next(
         *returnUpper = loop->assignStop;
     }
 
-    qthread_debug(ALL_DETAILS,
+    qthread_debug(XOMP_DETAILS,
 		  "limit %10d lower %10d upper %10d block %10d id %d\n",
 		  loop->assignDone, *returnLower, *returnUpper, dynamicBlock,
 		  qthread_shep()

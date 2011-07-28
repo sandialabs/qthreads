@@ -16,6 +16,7 @@
 #include "qt_visibility.h"
 #include "qthread_innards.h"
 #include "qt_affinity.h"
+#include "qt_debug.h"
 
 #include "shepcomp.h"
 
@@ -147,7 +148,7 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
     if (guess <= 0) {
         guess = 1;
     }
-    qthread_debug(ALL_DETAILS, "guessing %i shepherds\n", (int)guess);
+    qthread_debug(AFFINITY_DETAILS, "guessing %i shepherds\n", (int)guess);
     return guess;
 }                                      /*}}} */
 
@@ -155,7 +156,7 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
 void INTERNAL qt_affinity_set(qthread_worker_t *me)
 {                                      /*{{{ */
     /* if this seems wrong, first answer: why should workers have more than socket affinity? */
-    qthread_debug(0, "set shep %i worker %i to lgrp %i\n",
+    qthread_debug(AFFINITY_DETAILS, "set shep %i worker %i to lgrp %i\n",
                   (int)me->shepherd->shepherd_id, (int)me->worker_id,
                   (int)me->shepherd->lgrp);
     if (lgrp_affinity_set
@@ -182,7 +183,7 @@ unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherd
 
     guess = lgrp_maxcpus(lgrp_root(lgrp_cookie), 0);
 
-    qthread_debug(ALL_DETAILS,
+    qthread_debug(AFFINITY_DETAILS,
                   "guessing num workers for %i sheps (nodes:%i max:%i)\n",
                   (int)nshepherds, tot_nodes, (int)guess);
 
@@ -193,7 +194,7 @@ unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherd
         guess = 1;
     }
 
-    qthread_debug(ALL_DETAILS, "guessing %i workers per shep\n", (int)guess);
+    qthread_debug(AFFINITY_DETAILS, "guessing %i workers per shep\n", (int)guess);
     return guess;
 }                                      /*}}} */
 
@@ -210,14 +211,14 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
     switch (lgrp_cookie) {
         case EINVAL:
         case ENOMEM:
-            qthread_debug(ALL_DETAILS, "lgrp_cookie is invalid!\n");
+            qthread_debug(AFFINITY_DETAILS, "lgrp_cookie is invalid!\n");
             return QTHREAD_THIRD_PARTY_ERROR;
     }
     {
         size_t max_lgrps = lgrp_nlgrps(lgrp_cookie);
 
         if (max_lgrps <= 0) {
-            qthread_debug(ALL_DETAILS, "max_lgrps is <= zero! (%i)\n",
+            qthread_debug(AFFINITY_DETAILS, "max_lgrps is <= zero! (%i)\n",
                           max_lgrps);
             return QTHREAD_THIRD_PARTY_ERROR;
         }
@@ -228,7 +229,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
     }
     lgrp_count_grps = lgrp_walk(lgrp_root(lgrp_cookie), cpus, lgrp_ids, 0);
     if (lgrp_count_grps <= 0) {
-        qthread_debug(ALL_DETAILS, "lgrp_count_grps is <= zero ! (%i)\n",
+        qthread_debug(AFFINITY_DETAILS, "lgrp_count_grps is <= zero ! (%i)\n",
                       lgrp_count_grps);
         return QTHREAD_THIRD_PARTY_ERROR;
     }
