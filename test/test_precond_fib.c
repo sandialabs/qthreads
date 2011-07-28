@@ -121,7 +121,7 @@ int main(int   argc,
 
     assert(qthread_initialize() == 0);
     CHECK_VERBOSE();
-    NUMARG(n, "N");
+    NUMARG(n, "FIB_INPUT");
 
     r = fib(n);
     iprintf("fib(%3lu) =            %lu\n", (unsigned long)n, (unsigned long)r);

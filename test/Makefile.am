@@ -30,6 +30,7 @@ BASIC_TESTS = test_basic \
 COMPLEX_TESTS = test_qutil \
 				test_qutil_qsort \
 				test_feb_barrier \
+				test_precond_fib \
 				testqloop \
 				test_queue_loop \
 				test_qpool \
@@ -84,7 +85,6 @@ EXTRA_PROGRAMS += \
 	 time_thrcrt_bench_pthread \
 	 time_cncthr_bench \
 	 time_cncthr_bench_pthread \
-	 time_swap \
 	 time_threading \
 	 time_stencil_bsp \
 	 time_stencil_feb \
@@ -130,8 +130,8 @@ test_tasklocal_no_argcopy_DEPENDENCIES = $(QTHREADLIB)
 test_precond_SOURCES = test_precond.c
 test_precond_DEPENDENCIES = $(QTHREADLIB)
 
-#test_precond_fib_SOURCES = test_precond_fib.c
-#test_precond_fib_DEPENDENCIES = $(QTHREADLIB)
+test_precond_fib_SOURCES = test_precond_fib.c
+test_precond_fib_DEPENDENCIES = $(QTHREADLIB)
 
 test_reinit_SOURCES = test_reinit.c
 test_reinit_DEPENDENCIES = $(QTHREADLIB)
@@ -209,14 +209,6 @@ time_gcd_SOURCES = time_gcd.c
 
 time_threading_SOURCES = time_threading.c
 time_threading_DEPENDENCIES = $(QTHREADLIB)
-
-time_swap_SOURCES = time_swap.c
-time_swap_LDADD = $(QTHREADLIB)
-time_swap_DEPENDENCIES = $(QTHREADLIB)
-#if QTHREAD_NEED_OWN_MAKECONTEXT
-#time_swap_LDADD += $(CONTEXTLIB)
-#time_swap_DEPENDENCIES += $(CONTEXTLIB)
-#endif
 
 time_producerconsumer_SOURCES = time_producerconsumer.c
 time_producerconsumer_DEPENDENCIES = $(QTHREADLIB)
