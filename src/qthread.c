@@ -2644,20 +2644,12 @@ int qt_omp_parallel_region_create()
 
     qassert_ret(pr, QTHREAD_MALLOC_ERROR);
 
-# ifdef QTHREAD_LOG_BARRIER
-#  ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     workers = qthread_num_workers();
-    qt_barrier_t *gb = qt_barrier_create(workers, REGION_BARRIER, 0); // allocate barrier for region (workers)
-#  else
-    workers = qthread_num_shepherds();
+
+# ifdef QTHREAD_LOG_BARRIER
     qt_barrier_t *gb = qt_barrier_create(workers, REGION_BARRIER, 0); // allocate barrier for region (shepherds)
-#  endif
 # else
-#  ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    qt_feb_barrier_t *gb = qt_feb_barrier_create(qthread_num_workers()); // allocate barrier for region (workers)
-#  else
-    qt_feb_barrier_t *gb = qt_feb_barrier_create(qthread_num_shepherds()); // allocate barrier for region (sheperds)
-#  endif
+    qt_feb_barrier_t *gb = qt_feb_barrier_create(workers); // allocate barrier for region (sheperds)
 # endif /* ifdef QTHREAD_LOG_BARRIER */
 
     qthread_t *t = qthread_internal_self();
