@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <unistd.h>
+#include <time.h>
+
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
 #include <qthread/qtimer.h>
@@ -12,7 +14,14 @@
 #define NUM_STAGES 2
 #define BOUNDARY 42
 
+#define ADD_WORKLOAD
+//#define TIME_WORKLOAD
+
 static int num_timesteps;
+
+#ifdef ADD_WORKLOAD
+static int workload;
+#endif // ADD_WORKLOAD
 
 typedef struct stencil {
     size_t N;
@@ -32,12 +41,35 @@ typedef struct rows_args {
 } rows_args_t;
 
 ////////////////////////////////////////////////////////////////////////////////
+#ifdef ADD_WORKLOAD
+static inline void perform_local_work(void)
+{
+    struct timespec duration, remainder;
+
+# ifdef TIME_WORKLOAD
+    qtimer_t work_timer = qtimer_create();
+    qtimer_start(work_timer);
+# endif // TIME_WORKLOAD
+    duration.tv_nsec = workload % 1000000000;
+    duration.tv_sec = 0;
+    while (0 != nanosleep(&duration, &remainder)) {
+        duration.tv_nsec = remainder.tv_nsec;
+        duration.tv_sec = remainder.tv_sec;
+    }
+# ifdef TIME_WORKLOAD
+    qtimer_stop(work_timer);
+    fprintf(stdout, "Worked for %f\n", qtimer_secs(work_timer));
+    qtimer_destroy(work_timer);
+# endif // TIME_WORKLOAD
+}
+#endif // ADD_WORKLOAD
+
 static inline void print_stage(stencil_t *points, size_t stage)
 {
     for (int i = 0; i < points->N; i++) {
-        fprintf(stderr, "%lu", (unsigned long)points->stage[stage][i][0]);
+        fprintf(stderr, "%02lu", (unsigned long)points->stage[stage][i][0]);
         for (int j = 1; j < points->M; j++) {
-            fprintf(stderr, "\t%lu", (unsigned long)points->stage[stage][i][j]);
+            fprintf(stderr, "  %02lu", (unsigned long)points->stage[stage][i][j]);
         }
         fprintf(stderr, "\n");
     }
@@ -63,6 +95,10 @@ static void update(const size_t start, const size_t stop, void *arg)
 
     size_t prev = prev_stage(stage);
 
+    // Perform local work
+#ifdef ADD_WORKLOAD
+    perform_local_work();
+#endif // ADD_WORKLOAD
     aligned_t sum = points->stage[prev][i  ][j-1];
     sum          += points->stage[prev][i-1][j  ];
     sum          += points->stage[prev][i  ][j  ];
@@ -85,13 +121,17 @@ int main(int argc, char *argv[])
     int n = 10;
     int m = 10;
     num_timesteps = 10;
+    workload = 0;
     int alltime = 0;
 
     CHECK_VERBOSE();
-    NUMARG(alltime, "ALL_TIME");
     NUMARG(n, "N");
     NUMARG(m, "M");
     NUMARG(num_timesteps, "TIMESTEPS");
+#ifdef ADD_WORKLOAD
+    NUMARG(workload, "WORKLOAD");
+#endif // ADD_WORKLOAD
+    NUMARG(alltime, "ALL_TIME");
 
     assert (n > 0 && m > 0);
 

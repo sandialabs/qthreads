@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <unistd.h>
+#include <time.h>
+
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
 #include <qthread/feb_barrier.h>
@@ -9,11 +11,28 @@
 
 #include "argparsing.h"
 
-#define NUM_NEIGHBORS 5
 #define NUM_STAGES 3
 #define BOUNDARY 42
+//#define BOUNDARY_SYNC
+
+#define ADD_WORKLOAD
+//#define TIME_WORKLOAD
+
+#define NUM_NEIGHBORS 5
+#if NUM_NEIGHBORS == 5
+# define NORTH(stage,i,j) &stage[i-1][j  ]
+# define WEST(stage,i,j)  &stage[i  ][j-1]
+# define HERE(stage,i,j)  &stage[i  ][j  ]
+# define EAST(stage,i,j)  &stage[i  ][j+1]
+# define SOUTH(stage,i,j) &stage[i+1][j  ]
+# define NEIGHBORS(stage,i,j) NORTH(stage,i,j), WEST(stage,i,j), EAST(stage,i,j), SOUTH(stage,i,j)
+#endif // NUM_NEIGHBORS == 5
 
 static int num_timesteps;
+
+#ifdef ADD_WORKLOAD
+static int workload;
+#endif // ADD_WORKLOAD
 
 typedef struct stencil {
     size_t N;
@@ -28,16 +47,38 @@ typedef struct update_args {
     size_t j;
     size_t stage;
     size_t step;
-    aligned_t *neighbors[NUM_NEIGHBORS];
 } update_args_t;
 
 ////////////////////////////////////////////////////////////////////////////////
+#ifdef ADD_WORKLOAD
+static inline void perform_local_work(void)
+{
+    struct timespec duration, remainder;
+
+# ifdef TIME_WORKLOAD
+    qtimer_t work_timer = qtimer_create();
+    qtimer_start(work_timer);
+# endif // TIME_WORKLOAD
+    duration.tv_nsec = workload % 1000000000;
+    duration.tv_sec = 0;
+    while (0 != nanosleep(&duration, &remainder)) {
+        duration.tv_nsec = remainder.tv_nsec;
+        duration.tv_sec = remainder.tv_sec;
+    }
+# ifdef TIME_WORKLOAD
+    qtimer_stop(work_timer);
+    fprintf(stdout, "Worked for %f\n", qtimer_secs(work_timer));
+    qtimer_destroy(work_timer);
+# endif // TIME_WORKLOAD
+}
+#endif // ADD_WORKLOAD
+
 static inline void print_stage(stencil_t *points, size_t stage)
 {
     for (int i = 0; i < points->N; i++) {
-        fprintf(stderr, "%lu", (unsigned long)points->stage[stage][i][0]);
+        fprintf(stderr, "%02lu", (unsigned long)points->stage[stage][i][0]);
         for (int j = 1; j < points->M; j++) {
-            fprintf(stderr, "\t%lu", (unsigned long)points->stage[stage][i][j]);
+            fprintf(stderr, "  %02lu", (unsigned long)points->stage[stage][i][j]);
         }
         fprintf(stderr, "\n");
     }
@@ -59,32 +100,57 @@ static aligned_t update(void *arg)
     stencil_t *points = ((update_args_t *)arg)->points;
     size_t i = ((update_args_t *)arg)->i;
     size_t j = ((update_args_t *)arg)->j;
-    size_t stage = ((update_args_t *)arg)->stage;
+    size_t this_stage = ((update_args_t *)arg)->stage;
     size_t step = ((update_args_t *)arg)->step;
-    aligned_t **neighbors = ((update_args_t *)arg)->neighbors;
 
-    size_t next = next_stage(stage);
+    size_t next_stage_id = next_stage(this_stage);
 
+#ifdef ADD_WORKLOAD
+    perform_local_work();
+#endif // ADD_WORKLOAD
     // Sum all neighboring values from previous stage
-    aligned_t sum = 0;
-    for (int i = 0; i < NUM_NEIGHBORS; i++)
-        sum += *(neighbors[i]);
+    aligned_t **prev = points->stage[prev_stage(this_stage)];
+    aligned_t sum = *(NORTH(prev, i, j)) 
+                  + *(WEST(prev, i, j)) 
+                  + *(HERE(prev, i, j)) 
+                  + *(EAST(prev, i, j)) 
+                  + *(SOUTH(prev, i, j));
 
     // Empty the next stage for this index
-    qthread_empty(&points->stage[next][i][j]);
+    qthread_empty(&points->stage[next_stage_id][i][j]);
 
     // Update this point
-    qthread_writeEF_const(&points->stage[stage][i][j], sum/NUM_NEIGHBORS);
+    qthread_writeEF_const(&points->stage[this_stage][i][j], sum/NUM_NEIGHBORS);
     
     if (step < num_timesteps) {
         // Spawn next stage
-        update_args_t args = {points, i, j, next, step+1};
-        args.neighbors[0] = &points->stage[stage][i  ][j-1];
-        args.neighbors[1] = &points->stage[stage][i-1][j  ];
-        args.neighbors[2] = &points->stage[stage][i  ][j  ];
-        args.neighbors[3] = &points->stage[stage][i+1][j  ];
-        args.neighbors[4] = &points->stage[stage][i  ][j+1];
-        qthread_fork_copyargs_precond(update, &args, sizeof(update_args_t), NULL, -NUM_NEIGHBORS, args.neighbors);
+        update_args_t args = {points, i, j, next_stage_id, step+1};
+#ifdef BOUNDARY_SYNC 
+        qthread_fork_copyargs_precond(update, &args, sizeof(update_args_t), NULL, NUM_NEIGHBORS, NEIGHBORS(points->stage[this_stage],i,j));
+#else
+        if (i == 1) {                   // North edge
+            if (j == 1)                     // West edge: EAST & SOUTH
+                qthread_fork_copyargs_precond(update, &args, sizeof(update_args_t), NULL, 2, EAST(points->stage[this_stage],i,j), SOUTH(points->stage[this_stage],i,j));
+            else if (j == points->M-2)      // East edge: WEST & SOUTH
+                qthread_fork_copyargs_precond(update, &args, sizeof(update_args_t), NULL, 2, WEST(points->stage[this_stage],i,j), SOUTH(points->stage[this_stage],i,j));
+            else                            // Interior: WEST & EAST & SOUTH
+                qthread_fork_copyargs_precond(update, &args, sizeof(update_args_t), NULL, 3, WEST(points->stage[this_stage],i,j), EAST(points->stage[this_stage],i,j), SOUTH(points->stage[this_stage],i,j));
+        } else if (i == points->N-2) {  // South edge
+            if (j == 1)                     // West edge: NORTH & EAST
+                qthread_fork_copyargs_precond(update, &args, sizeof(update_args_t), NULL, 2, NORTH(points->stage[this_stage],i,j), EAST(points->stage[this_stage],i,j));
+            else if (j == points->M-2)      // East edge: NORTH & WEST
+                qthread_fork_copyargs_precond(update, &args, sizeof(update_args_t), NULL, 2, NORTH(points->stage[this_stage],i,j), WEST(points->stage[this_stage],i,j));
+            else                            // Interior: NORTH & WEST & EAST
+                qthread_fork_copyargs_precond(update, &args, sizeof(update_args_t), NULL, 3, NORTH(points->stage[this_stage],i,j), WEST(points->stage[this_stage],i,j), EAST(points->stage[this_stage],i,j));
+        } else {                        // Interior
+            if (j == 1)                     // West edge: NORTH & EAST & SOUTH
+                qthread_fork_copyargs_precond(update, &args, sizeof(update_args_t), NULL, 3 , NORTH(points->stage[this_stage],i,j), EAST(points->stage[this_stage],i,j), SOUTH(points->stage[this_stage],i,j));
+            else if (j == points->M-2)      // East edge: NORTH & WEST & SOUTH
+                qthread_fork_copyargs_precond(update, &args, sizeof(update_args_t), NULL, 3, NORTH(points->stage[this_stage],i,j), WEST(points->stage[this_stage],i,j), SOUTH(points->stage[this_stage],i,j));
+            else                            // Interior: ALL
+                qthread_fork_copyargs_precond(update, &args, sizeof(update_args_t), NULL, 4, NORTH(points->stage[this_stage],i,j), EAST(points->stage[this_stage],i,j), WEST(points->stage[this_stage],i,j), SOUTH(points->stage[this_stage],i,j));
+        }
+#endif
     }
     else
         qt_feb_barrier_enter(points->barrier);
@@ -103,6 +169,9 @@ int main(int argc, char *argv[])
     NUMARG(n, "N");
     NUMARG(m, "M");
     NUMARG(num_timesteps, "TIMESTEPS");
+#ifdef ADD_WORKLOAD
+    NUMARG(workload, "WORKLOAD");
+#endif // ADD_WORKLOAD
     NUMARG(alltime, "ALL_TIME");
 
     assert (n > 0 && m > 0);
@@ -141,14 +210,24 @@ int main(int argc, char *argv[])
     }
     for (int i = 0; i < points.N; i++) {
         for (int s = 0; s < NUM_STAGES; s++) {
+#ifdef BOUNDARY_SYNC
             qthread_writeF_const(&points.stage[s][i][0], BOUNDARY);
             qthread_writeF_const(&points.stage[s][i][points.M-1], BOUNDARY);
+#else
+            points.stage[s][i][0] = BOUNDARY;
+            points.stage[s][i][points.M-1] = BOUNDARY;
+#endif
         }
     }
     for (int j = 0; j < points.M; j++) {
         for (int s = 0; s < NUM_STAGES; s++) {
+#ifdef BOUNDARY_SYNC
             qthread_writeF_const(&points.stage[s][0][j], BOUNDARY);
             qthread_writeF_const(&points.stage[s][points.N-1][j], BOUNDARY);
+#else
+            points.stage[s][0][j] = BOUNDARY;
+            points.stage[s][points.N-1][j] = BOUNDARY;
+#endif
         }
     }
     qtimer_stop(init_timer);
@@ -161,14 +240,9 @@ int main(int argc, char *argv[])
     update_args_t args = {&points, -1, -1, 1, 1};
     for (int i = 1; i < points.N-1; i++) {
         for (int j = 1; j < points.M-1; j++) {
-            args.neighbors[0] = &points.stage[0][i  ][j-1];
-            args.neighbors[1] = &points.stage[0][i-1][j  ];
-            args.neighbors[2] = &points.stage[0][i  ][j  ];
-            args.neighbors[3] = &points.stage[0][i+1][j  ];
-            args.neighbors[4] = &points.stage[0][i  ][j+1];
             args.i = i;
             args.j = j;
-            qthread_fork_copyargs_precond(update, &args, sizeof(update_args_t), NULL, -NUM_NEIGHBORS, args.neighbors);
+            qthread_fork_syncvar_copyargs(update, &args, sizeof(update_args_t), NULL);
         }
     }
 
