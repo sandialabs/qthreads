@@ -130,8 +130,8 @@ test_tasklocal_no_argcopy_DEPENDENCIES = $(QTHREADLIB)
 test_precond_SOURCES = test_precond.c
 test_precond_DEPENDENCIES = $(QTHREADLIB)
 
-test_precond_fib_SOURCES = test_precond_fib.c
-test_precond_fib_DEPENDENCIES = $(QTHREADLIB)
+#test_precond_fib_SOURCES = test_precond_fib.c
+#test_precond_fib_DEPENDENCIES = $(QTHREADLIB)
 
 test_reinit_SOURCES = test_reinit.c
 test_reinit_DEPENDENCIES = $(QTHREADLIB)
