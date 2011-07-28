@@ -1,14 +1,8 @@
-#ifdef HAVE_CONFIG_H
-# include <config.h>
-#endif
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <qthread/qthread.h>
-#ifdef QTHREAD_DEBUG
-# include <qthread_innards.h>          /* for qthread_debug() */
-#endif
 #include "argparsing.h"
 
 aligned_t counter = 0;
@@ -20,11 +14,9 @@ static aligned_t thread(void *arg)
     int ret2;
 
     // printf("first id = %i\n", id);
-#ifdef QTHREAD_DEBUG
     if (id != 1) {
-        qthread_debug(0, "id == %i (expected 1)\n", id);
+        iprintf(0, "id == %i (expected 1)\n", id);
     }
-#endif
     assert(id == 1);
 
     ret = qthread_incr(&counter, 1);
