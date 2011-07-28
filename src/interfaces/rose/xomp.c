@@ -11,12 +11,8 @@
 
 
 #include <time.h>                      // for omp_get_wtick/wtime
-#if defined(CLOCK_REALTIME) || defined(CLOCK_MONOTONIC)
-// Otherwise get tick resolution from sysconf
 #include <unistd.h>                    // for omp_get_wtick
-#else
-# include <sys/time.h>                 // for gettimeofday()
-#endif
+#include <sys/time.h>                  // for gettimeofday()
 #include <string.h>                    // for strcmp
 
 #include "qthread/qthread.h"
@@ -25,6 +21,7 @@
 #include "qt_arrive_first.h"           // for qt_global_arrive_first
 #include "qthread/qloop.h"	       // for qt_loop_f
 #include "qt_debug.h"	               // for qthread_debug()
+#include "qthread_innards.h"           // for qthread_internal_self()
 #include "qt_shepherd_innards.h"       // for qthread_shepherd_t
 #include "qloop_innards.h"	       // for qqloop_handle_t
 #include "qt_qthread_struct.h"	       // for qthread_t
@@ -67,7 +64,6 @@ void xomp_internal_set_ordered_iter(qqloop_step_handle_t *loop, int lower);
 
 int compute_XOMP_block(qqloop_step_handle_t * loop);
 void qt_omp_parallel_region_add_loop(qqloop_step_handle_t *loop);
-taskSyncvar_t *getSyncTaskVar(void);
 
 typedef enum xomp_nest_level{NO_NEST=0, ALLOW_NEST, AUTO_NEST}xomp_nest_level_t;
 
@@ -105,7 +101,9 @@ static void set_xomp_dynamic(int, XOMP_Status *);
 static int64_t get_xomp_dynamic(XOMP_Status *);
 static void xomp_set_nested(XOMP_Status *, bool val);
 static xomp_nest_level_t xomp_get_nested(XOMP_Status *);
+#ifdef NEED_QT_PARALLEL_LOOP
 static int qt_parallel_loop(qthread_parallel_region_t *,int);
+#endif
 static int qt_parallel_loop_incr(qthread_parallel_region_t *,int);
 static qqloop_step_handle_t *qt_get_parallel_loop_structure(qthread_parallel_region_t *,int);
 
@@ -428,10 +426,12 @@ return (uint64_t)hi << 32 | lo;
 // NOTE: need to replace these magic numbers with #defs 
 #endif
 
+#ifdef NEED_QT_PARALLEL_LOOP
 int qt_parallel_loop(qthread_parallel_region_t *pr, int myid){
   int t = pr->currentLoopNum[myid];
   return t;
 }
+#endif
 
 int qt_parallel_loop_incr(qthread_parallel_region_t *pr, int myid){
   int t = pr->currentLoopNum[myid]++;
@@ -709,7 +709,24 @@ void XOMP_loop_end_nowait(
 }
 
 // Qthread implementation of a OpenMP global barrier
-void walkSyncTaskList(void);
+static void walkSyncTaskList(void)
+{
+    qthread_t *t = qthread_internal_self();
+
+    qthread_syncvar_writeEF_const(&t->rdata->taskWaitLock, 1);
+    taskSyncvar_t *syncVar;
+    while ((syncVar = t->rdata->openmpTaskRetVar)) {
+        // manually check for empty -- check if present in current shepherds ready queue
+        //   if present take and start executing
+        syncvar_t *lc_p = &syncVar->retValue;
+
+        qthread_syncvar_readFF(NULL, lc_p);
+        t->rdata->openmpTaskRetVar = syncVar->next_task;
+        //      free(syncVar);
+    }
+    qthread_syncvar_readFE(NULL, &t->rdata->taskWaitLock);
+}
+
 extern int activeParallelLoop;
 
 void XOMP_barrier(void)
@@ -779,6 +796,22 @@ bool XOMP_loop_ordered_guided_next(
 
 aligned_t taskId = 1; // start at first non-master shepherd
 
+// moved to this file to compile when rose_xomp moved to interfaces/rose directory
+static syncvar_t *getSyncTaskVar(void)
+{
+    qthread_t *t = qthread_internal_self();
+
+    assert(t);
+    taskSyncvar_t *syncVar = (taskSyncvar_t *)calloc(1, sizeof(taskSyncvar_t));
+    qthread_syncvar_writeEF_const(&t->rdata->taskWaitLock, 1);
+    syncVar->next_task         = t->rdata->openmpTaskRetVar;
+    t->rdata->openmpTaskRetVar = syncVar;
+    qthread_syncvar_readFE(NULL, &t->rdata->taskWaitLock);
+
+    return &(syncVar->retValue);
+}
+
+
 void XOMP_task(
     void (*func) (void *),
     void *arg,
@@ -794,7 +827,7 @@ void XOMP_task(
   qthread_incr(&taskId,1);
   qthread_debug(LOCK_DETAILS, "me(%p) creating task for shepherd %d\n", me, id%qthread_num_shepherds());
 #endif
-  taskSyncvar_t *ret = getSyncTaskVar(); // get new syncvar_t -- setup openmpThreadId (if needed)
+  syncvar_t *ret = getSyncTaskVar(); // get new syncvar_t -- setup openmpThreadId (if needed)
 
 #ifdef QTHREAD_OMP_AFFINITY
   qthread_t *t = qthread_self();
@@ -803,7 +836,7 @@ void XOMP_task(
   else
     qthread_fork_syncvar_copyargs((qthread_f)func, arg, arg_size, ret);
 #else
-  qthread_fork_syncvar_copyargs((qthread_f)func, arg, arg_size, &ret->retValue);
+  qthread_fork_syncvar_copyargs((qthread_f)func, arg, arg_size, ret);
 #endif
 }
 

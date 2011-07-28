@@ -2890,40 +2890,6 @@ int INTERNAL qthread_forCount(int inc)
     return (t->rdata->forCount += inc);
 }                                    /*}}} */
 
-// moved to this file to compile when rose_xomp moved to interfaces/rose directory
-syncvar_t *getSyncTaskVar(void)
-{
-    qthread_t *t = qthread_internal_self();
-
-    assert(t);
-    taskSyncvar_t *syncVar = (taskSyncvar_t *)calloc(1, sizeof(taskSyncvar_t));
-    qthread_syncvar_writeEF_const(&t->rdata->taskWaitLock, 1);
-    syncVar->next_task         = t->rdata->openmpTaskRetVar;
-    t->rdata->openmpTaskRetVar = syncVar;
-    qthread_syncvar_readFE(NULL, &t->rdata->taskWaitLock);
-
-    return &(syncVar->retValue);
-}
-
-// moved to this file to compile when rose_xomp moved to interfaces/rose directory
-void walkSyncTaskList(void)
-{
-    qthread_t *t = qthread_internal_self();
-
-    qthread_syncvar_writeEF_const(&t->rdata->taskWaitLock, 1);
-    taskSyncvar_t *syncVar;
-    while ((syncVar = t->rdata->openmpTaskRetVar)) {
-        // manually check for empty -- check if present in current shepherds ready queue
-        //   if present take and start executing
-        syncvar_t *lc_p = &syncVar->retValue;
-
-        qthread_syncvar_readFF(NULL, lc_p);
-        t->rdata->openmpTaskRetVar = syncVar->next_task;
-        //      free(syncVar);
-    }
-    qthread_syncvar_readFE(NULL, &t->rdata->taskWaitLock);
-}
-
 void qthread_getTaskListLock(void)
 {                      /*{{{ */
     qthread_t *t = qthread_internal_self();
