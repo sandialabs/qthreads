@@ -116,50 +116,52 @@ static aligned_t update(void *arg)
 
     // Sum all neighboring values from previous stage
     aligned_t **prev = points->stage[prev_stage(stage)];
+    if (1 < step) {
 #ifdef BOUNDARY_SYNC
-    qthread_readFF(NORTH(prev, i, j), NORTH(prev, i, j));
-    qthread_readFF(WEST(prev, i, j), WEST(prev, i, j));
-    qthread_readFF(EAST(prev, i, j), EAST(prev, i, j));
-    qthread_readFF(SOUTH(prev, i, j), SOUTH(prev, i, j));
+        qthread_readFF(NORTH(prev, i, j), NORTH(prev, i, j));
+        qthread_readFF(WEST(prev, i, j), WEST(prev, i, j));
+        qthread_readFF(EAST(prev, i, j), EAST(prev, i, j));
+        qthread_readFF(SOUTH(prev, i, j), SOUTH(prev, i, j));
 #else
-    if (i == 1) {                   // North edge
-        if (j == 1) {                   // West edge: EAST & SOUTH
-            qthread_readFF(EAST(prev, i, j), EAST(prev, i, j));
-            qthread_readFF(SOUTH(prev, i, j), SOUTH(prev, i, j));
-        } else if (j == points->M-2) {    // East edge: WEST & SOUTH
-            qthread_readFF(WEST(prev, i, j), WEST(prev, i, j));
-            qthread_readFF(SOUTH(prev, i, j), SOUTH(prev, i, j));
-        } else                            // Interior: WEST & EAST & SOUTH
-            qthread_readFF(WEST(prev, i, j), WEST(prev, i, j));
-            qthread_readFF(EAST(prev, i, j), EAST(prev, i, j));
-            qthread_readFF(SOUTH(prev, i, j), SOUTH(prev, i, j));
-    } else if (i == points->N-2) {  // South edge
-        if (j == 1) {                   // West edge: NORTH & EAST
-            qthread_readFF(NORTH(prev, i, j), NORTH(prev, i, j));
-            qthread_readFF(EAST(prev, i, j), EAST(prev, i, j));
-        } else if (j == points->M-2) {    // East edge: NORTH & WEST
-            qthread_readFF(NORTH(prev, i, j), NORTH(prev, i, j));
-            qthread_readFF(WEST(prev, i, j), WEST(prev, i, j));
-        } else                            // Interior: NORTH & WEST & EAST
-            qthread_readFF(NORTH(prev, i, j), NORTH(prev, i, j));
-            qthread_readFF(WEST(prev, i, j), WEST(prev, i, j));
-            qthread_readFF(EAST(prev, i, j), EAST(prev, i, j));
-    } else {                        // Interior
-        if (j == 1) {                   // West edge: NORTH & EAST & SOUTH
-            qthread_readFF(NORTH(prev, i, j), NORTH(prev, i, j));
-            qthread_readFF(EAST(prev, i, j), EAST(prev, i, j));
-            qthread_readFF(SOUTH(prev, i, j), SOUTH(prev, i, j));
-        } else if (j == points->M-2) {    // East edge: NORTH & WEST & SOUTH
-            qthread_readFF(NORTH(prev, i, j), NORTH(prev, i, j));
-            qthread_readFF(WEST(prev, i, j), WEST(prev, i, j));
-            qthread_readFF(SOUTH(prev, i, j), SOUTH(prev, i, j));
-        } else                            // Interior: ALL
-            qthread_readFF(NORTH(prev, i, j), NORTH(prev, i, j));
-            qthread_readFF(WEST(prev, i, j), WEST(prev, i, j));
-            qthread_readFF(EAST(prev, i, j), EAST(prev, i, j));
-            qthread_readFF(SOUTH(prev, i, j), SOUTH(prev, i, j));
-    }
+        if (i == 1) {                   // North edge
+            if (j == 1) {                   // West edge: EAST & SOUTH
+                qthread_readFF(EAST(prev, i, j), EAST(prev, i, j));
+                qthread_readFF(SOUTH(prev, i, j), SOUTH(prev, i, j));
+            } else if (j == points->M-2) {    // East edge: WEST & SOUTH
+                qthread_readFF(WEST(prev, i, j), WEST(prev, i, j));
+                qthread_readFF(SOUTH(prev, i, j), SOUTH(prev, i, j));
+            } else                            // Interior: WEST & EAST & SOUTH
+                qthread_readFF(WEST(prev, i, j), WEST(prev, i, j));
+                qthread_readFF(EAST(prev, i, j), EAST(prev, i, j));
+                qthread_readFF(SOUTH(prev, i, j), SOUTH(prev, i, j));
+        } else if (i == points->N-2) {  // South edge
+            if (j == 1) {                   // West edge: NORTH & EAST
+                qthread_readFF(NORTH(prev, i, j), NORTH(prev, i, j));
+                qthread_readFF(EAST(prev, i, j), EAST(prev, i, j));
+            } else if (j == points->M-2) {    // East edge: NORTH & WEST
+                qthread_readFF(NORTH(prev, i, j), NORTH(prev, i, j));
+                qthread_readFF(WEST(prev, i, j), WEST(prev, i, j));
+            } else                            // Interior: NORTH & WEST & EAST
+                qthread_readFF(NORTH(prev, i, j), NORTH(prev, i, j));
+                qthread_readFF(WEST(prev, i, j), WEST(prev, i, j));
+                qthread_readFF(EAST(prev, i, j), EAST(prev, i, j));
+        } else {                        // Interior
+            if (j == 1) {                   // West edge: NORTH & EAST & SOUTH
+                qthread_readFF(NORTH(prev, i, j), NORTH(prev, i, j));
+                qthread_readFF(EAST(prev, i, j), EAST(prev, i, j));
+                qthread_readFF(SOUTH(prev, i, j), SOUTH(prev, i, j));
+            } else if (j == points->M-2) {    // East edge: NORTH & WEST & SOUTH
+                qthread_readFF(NORTH(prev, i, j), NORTH(prev, i, j));
+                qthread_readFF(WEST(prev, i, j), WEST(prev, i, j));
+                qthread_readFF(SOUTH(prev, i, j), SOUTH(prev, i, j));
+            } else                            // Interior: ALL
+                qthread_readFF(NORTH(prev, i, j), NORTH(prev, i, j));
+                qthread_readFF(WEST(prev, i, j), WEST(prev, i, j));
+                qthread_readFF(EAST(prev, i, j), EAST(prev, i, j));
+                qthread_readFF(SOUTH(prev, i, j), SOUTH(prev, i, j));
+        }
 #endif // BOUNDARY_SYNC
+    }
 
 #ifdef ADD_WORKLOAD
     perform_local_work();
@@ -332,7 +334,7 @@ int main(int argc, char *argv[])
         print_stage(&points, final);
     }
 
-    qt_feb_barrier_destroy(points.barrier);
+    //qt_feb_barrier_destroy(points.barrier);
     qtimer_destroy(alloc_timer);
     qtimer_destroy(init_timer);
     qtimer_destroy(exec_timer);
