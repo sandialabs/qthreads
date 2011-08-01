@@ -4,6 +4,8 @@
 #ifdef QTHREAD_DEBUG
 # define DEBUG_ONLY(x) x
 
+#include <limits.h> // for INT_MAX, per C89
+
 enum qthread_debug_levels {
     ALWAYS_OUTPUT = 0,
     DEBUG_CALLS,
