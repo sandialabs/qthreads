@@ -419,7 +419,6 @@ static void *qthread_shepherd(void *arg)
         }
 #endif  /* ifdef QTHREAD_RCRTOOL */
 
-
         assert(me->ready);
         t = qt_threadqueue_dequeue_blocking(me->ready QMS_ARG(me_worker->active));
         assert(t);
@@ -2795,6 +2794,56 @@ int qthread_shep_ok(void)
         return QTHREAD_CASLOCK_READ_UI(ret->active);
     }
 }                      /*}}} */
+
+void qthread_shep_next(qthread_shepherd_id_t *shep)
+{   /*{{{*/
+ /* This will mean something slightly different in a multinode world. */
+    qthread_shepherd_id_t cur = *shep;
+
+    assert(cur != NO_SHEPHERD);
+    cur++;
+    cur  *= cur < qlib->nshepherds;
+    *shep = cur;
+} /*}}}*/
+
+void qthread_shep_prev(qthread_shepherd_id_t *shep)
+{   /*{{{*/
+ /* This will mean something slightly different in a multinode world. */
+    qthread_shepherd_id_t cur = *shep;
+
+    assert(cur != NO_SHEPHERD);
+    if (0 == cur) {
+        cur = qlib->nshepherds - 1;
+    } else {
+        cur--;
+    }
+    *shep = cur;
+} /*}}}*/
+
+void qthread_shep_next_local(qthread_shepherd_id_t *shep)
+{   /*{{{*/
+ /* This is node-local */
+    qthread_shepherd_id_t cur = *shep;
+
+    assert(cur != NO_SHEPHERD);
+    cur++;
+    cur  *= cur < qlib->nshepherds;
+    *shep = cur;
+} /*}}}*/
+
+void qthread_shep_prev_local(qthread_shepherd_id_t *shep)
+{   /*{{{*/
+ /* This is node-local */
+    qthread_shepherd_id_t cur = *shep;
+
+    assert(cur != NO_SHEPHERD);
+    if (0 == cur) {
+        cur = qlib->nshepherds - 1;
+    } else {
+        cur--;
+    }
+    *shep = cur;
+} /*}}}*/
 
 unsigned int INTERNAL qthread_internal_shep_to_node(const qthread_shepherd_id_t shep)
 {                      /*{{{ */

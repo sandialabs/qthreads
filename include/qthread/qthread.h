@@ -280,6 +280,10 @@ unsigned qthread_size_tasklocal(void);
 size_t     qthread_stackleft(void);
 aligned_t *qthread_retloc(void);
 int        qthread_shep_ok(void);
+void       qthread_shep_next(qthread_shepherd_id_t *shep);
+void       qthread_shep_prev(qthread_shepherd_id_t *shep);
+void       qthread_shep_next_local(qthread_shepherd_id_t *shep);
+void       qthread_shep_prev_local(qthread_shepherd_id_t *shep);
 
 /* returns the distance from one shepherd to another */
 int qthread_distance(const qthread_shepherd_id_t src,
