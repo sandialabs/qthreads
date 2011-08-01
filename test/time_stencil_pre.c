@@ -16,7 +16,10 @@
 //#define BOUNDARY_SYNC
 
 #define ADD_WORKLOAD
-//#define TIME_WORKLOAD
+#ifdef ADD_WORKLOAD
+# define ADD_WORKLOAD_VAR
+//# define TIME_WORKLOAD
+#endif // ADD_WORKLOAD
 
 #define NUM_NEIGHBORS 5
 #if NUM_NEIGHBORS == 5
@@ -32,6 +35,9 @@ static int num_timesteps;
 
 #ifdef ADD_WORKLOAD
 static int workload;
+# ifdef ADD_WORKLOAD_VAR
+static long workload_var;
+# endif // ADD_WORKLOAD_VAR
 #endif // ADD_WORKLOAD
 
 typedef struct stencil {
@@ -59,7 +65,11 @@ static inline void perform_local_work(void)
     qtimer_t work_timer = qtimer_create();
     qtimer_start(work_timer);
 # endif // TIME_WORKLOAD
+# ifdef ADD_WORKLOAD_VAR
+    duration.tv_nsec = (workload % 1000000000) + (workload_var % 1000000000)*(qtimer_fastrand()%100)*0.01; 
+# else
     duration.tv_nsec = workload % 1000000000;
+# endif // ADD_WORKLOAD_VAR
     duration.tv_sec = 0;
     while (0 != nanosleep(&duration, &remainder)) {
         duration.tv_nsec = remainder.tv_nsec;
@@ -163,6 +173,9 @@ int main(int argc, char *argv[])
     int n = 10;
     int m = 10;
     num_timesteps = 10;
+    workload = 0;
+    workload_var = 0;
+    int print_final = 0;
     int alltime = 0;
 
     CHECK_VERBOSE();
@@ -171,7 +184,11 @@ int main(int argc, char *argv[])
     NUMARG(num_timesteps, "TIMESTEPS");
 #ifdef ADD_WORKLOAD
     NUMARG(workload, "WORKLOAD");
+# ifdef ADD_WORKLOAD_VAR
+    NUMARG(workload_var, "WORKLOAD_VAR");
+# endif // ADD_WORKLOAD_VAR
 #endif // ADD_WORKLOAD
+    NUMARG(print_final, "PRINT_FINAL");
     NUMARG(alltime, "ALL_TIME");
 
     assert (n > 0 && m > 0);
@@ -260,7 +277,7 @@ int main(int argc, char *argv[])
     }
 
     // Print stencils
-    if (verbose) {
+    if (print_final) {
         size_t final = (num_timesteps % NUM_STAGES);
         iprintf("Stage %lu:\n", prev_stage(prev_stage(final)));
         print_stage(&points, prev_stage(prev_stage(final)));
