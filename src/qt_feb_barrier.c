@@ -103,7 +103,7 @@ void qt_feb_barrier_destroy(qt_feb_barrier_t *b)
 #ifndef UNPOOLED
     assert(fbp.pool != NULL);
 #endif
-    while (b->blockers > 0) ;
+    while (b->blockers > 0) qthread_yield();
     qthread_syncvar_fill(&b->out_gate);
     qthread_syncvar_fill(&b->in_gate);
 #ifndef UNPOOLED
