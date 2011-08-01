@@ -15,7 +15,7 @@
 #define BOUNDARY 42
 //#define BOUNDARY_SYNC
 
-#define ADD_WORKLOAD
+//#define ADD_WORKLOAD
 #ifdef ADD_WORKLOAD
 # define ADD_WORKLOAD_VAR
 //# define TIME_WORKLOAD
@@ -173,8 +173,12 @@ int main(int argc, char *argv[])
     int n = 10;
     int m = 10;
     num_timesteps = 10;
+#ifdef ADD_WORKLOAD
     workload = 0;
+# ifdef ADD_WORKLOAD_VAR
     workload_var = 0;
+# endif // ADD_WORKLOAD_VAR
+#endif // ADD_WORKLOAD
     int print_final = 0;
     int alltime = 0;
 
@@ -287,7 +291,7 @@ int main(int argc, char *argv[])
         print_stage(&points, final);
     }
 
-    qt_feb_barrier_destroy(points.barrier);
+    //qt_feb_barrier_destroy(points.barrier);
     qtimer_destroy(alloc_timer);
     qtimer_destroy(init_timer);
     qtimer_destroy(exec_timer);

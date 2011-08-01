@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <time.h>
+
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
 #include <qthread/feb_barrier.h>
@@ -10,7 +11,6 @@
 
 #include "argparsing.h"
 
-#define NUM_NEIGHBORS 5
 #define NUM_STAGES 3
 #define BOUNDARY 42
 //#define BOUNDARY_SYNC
