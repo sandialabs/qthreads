@@ -109,9 +109,7 @@ static inline qthread_shepherd_id_t qarray_internal_shepof_segidx(const qarray *
                                                                            segment_size));
 
         default:
-            /* This should never happen, so deliberately cause a seg fault for
-             * corefile analysis */
-            *(int *)(0) = 0;
+            __builtin_trap();
             return 0;
     }
 }                                      /*}}} */
@@ -846,9 +844,7 @@ static aligned_t qarray_loop_strider(const struct qarray_func_wrapper_args *arg)
         }
         switch (dist_type) {
             default:
-                /* This should never happen, so deliberately cause a seg fault
-                 * for corefile analysis */
-                *(int *)(0) = 0;
+                __builtin_trap();
                 break;
             case FIXED_HASH:
                 count += segment_size * qthread_num_shepherds();
@@ -970,7 +966,7 @@ static aligned_t qarray_loopaccum_strider(const struct qarray_accumfunc_wrapper_
             default:
                 /* This should never happen, so deliberately cause a seg fault
                  * for corefile analysis */
-                *(int *)(0) = 0;
+                __builtin_trap();
                 break;
             case FIXED_HASH:
                 count += segment_size * qthread_num_shepherds();
@@ -1460,7 +1456,7 @@ void qarray_set_shepof(qarray               *a,
             return;
 
         default:                       /* should never happen; cause segfault for corefile analysis */
-            *(int *)0 = 0;
+            __builtin_trap();
             return;
     }
 }                                      /*}}} */
@@ -1490,7 +1486,7 @@ void qarray_dist_like(const qarray *ref,
                     }
                     break;
                 default:               /* should not happen *ever*, so trigger a segfault for corefile analysis */
-                    *(int *)0 = 0;
+                    __builtin_trap();
             }
             break;
         }
@@ -1506,11 +1502,11 @@ void qarray_dist_like(const qarray *ref,
                 }
             } else {
                 /* should not happen *ever*, so trigger a segfault for corefile analysis */
-                *(int *)0 = 0;
+                __builtin_trap();
             }
             break;
         default:                       /* should not happen *ever*, so trigger a segfault for corefile analysis */
-            *(int *)0 = 0;
+            __builtin_trap();
         case FIXED_HASH:
         case FIXED_FIELDS:
 #if 0

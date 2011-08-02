@@ -1089,9 +1089,7 @@ static QINLINE int64_t qthread_incr_xx(volatile void *addr,
             return qthread_incr64((volatile uint64_t *)addr, incr);
 
         default:
-            /* This should never happen, so deliberately cause a seg fault
-             * for corefile analysis */
-            *(int *)(0) = 0;
+            __builtin_trap();
     }
     return 0;                          /* compiler check */
 }                                      /*}}} */

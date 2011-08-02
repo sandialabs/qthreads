@@ -97,6 +97,15 @@
 # define __restrict__
 #endif
 
+/* If __builtin_trap can be used */
+#undef QTHREAD_TRAP_OKAY
+
+#ifdef QTHREAD_TRAP_OKAY
+# define QTHREAD_TRAP() __builtin_trap()
+#else
+# define QTHREAD_TRAP() *(volatile int *)0 = 0
+#endif
+
 /* Work around another bug in Sun C++: it does not support __asm__, even though
  * their C compiler DOES. */
 #if defined(__SUNPRO_CC)
