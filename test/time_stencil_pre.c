@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <unistd.h>
-#include <time.h>
 
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
@@ -15,11 +14,7 @@
 #define BOUNDARY 42
 //#define BOUNDARY_SYNC
 
-//#define ADD_WORKLOAD
-#ifdef ADD_WORKLOAD
-# define ADD_WORKLOAD_VAR
-//# define TIME_WORKLOAD
-#endif // ADD_WORKLOAD
+//#define TIME_WORKLOAD
 
 #define NUM_NEIGHBORS 5
 #if NUM_NEIGHBORS == 5
@@ -33,12 +28,9 @@
 
 static int num_timesteps;
 
-#ifdef ADD_WORKLOAD
 static int workload;
-# ifdef ADD_WORKLOAD_VAR
-static long workload_var;
-# endif // ADD_WORKLOAD_VAR
-#endif // ADD_WORKLOAD
+static int workload_per;
+static int workload_var;
 
 typedef struct stencil {
     size_t N;
@@ -56,32 +48,25 @@ typedef struct update_args {
 } update_args_t;
 
 ////////////////////////////////////////////////////////////////////////////////
-#ifdef ADD_WORKLOAD
 static inline void perform_local_work(void)
 {
-    struct timespec duration, remainder;
-
 # ifdef TIME_WORKLOAD
     qtimer_t work_timer = qtimer_create();
     qtimer_start(work_timer);
 # endif // TIME_WORKLOAD
-# ifdef ADD_WORKLOAD_VAR
-    duration.tv_nsec = (workload % 1000000000) + (workload_var % 1000000000)*(qtimer_fastrand()%100)*0.01; 
-# else
-    duration.tv_nsec = workload % 1000000000;
-# endif // ADD_WORKLOAD_VAR
-    duration.tv_sec = 0;
-    while (0 != nanosleep(&duration, &remainder)) {
-        duration.tv_nsec = remainder.tv_nsec;
-        duration.tv_sec = remainder.tv_sec;
+    int tmp = workload;
+    if (qtimer_fastrand()%100 < workload_per)
+        tmp *= (workload_var*0.01);
+    for (int i = 0; i < tmp; i++) {
+        tmp = tmp % 1000000000;
     }
+    tmp++;
 # ifdef TIME_WORKLOAD
     qtimer_stop(work_timer);
     fprintf(stdout, "Worked for %f\n", qtimer_secs(work_timer));
     qtimer_destroy(work_timer);
 # endif // TIME_WORKLOAD
 }
-#endif // ADD_WORKLOAD
 
 static inline void print_stage(stencil_t *points, size_t stage)
 {
@@ -115,10 +100,8 @@ static aligned_t update(void *arg)
 
     size_t next_stage_id = next_stage(this_stage);
 
-#ifdef ADD_WORKLOAD
+    // Perform local work
     perform_local_work();
-#endif // ADD_WORKLOAD
-    // Sum all neighboring values from previous stage
     aligned_t **prev = points->stage[prev_stage(this_stage)];
     aligned_t sum = *(NORTH(prev, i, j)) 
                   + *(WEST(prev, i, j)) 
@@ -173,12 +156,9 @@ int main(int argc, char *argv[])
     int n = 10;
     int m = 10;
     num_timesteps = 10;
-#ifdef ADD_WORKLOAD
     workload = 0;
-# ifdef ADD_WORKLOAD_VAR
+    workload_per = 0;
     workload_var = 0;
-# endif // ADD_WORKLOAD_VAR
-#endif // ADD_WORKLOAD
     int print_final = 0;
     int alltime = 0;
 
@@ -186,12 +166,9 @@ int main(int argc, char *argv[])
     NUMARG(n, "N");
     NUMARG(m, "M");
     NUMARG(num_timesteps, "TIMESTEPS");
-#ifdef ADD_WORKLOAD
     NUMARG(workload, "WORKLOAD");
-# ifdef ADD_WORKLOAD_VAR
+    NUMARG(workload_per, "WORKLOAD_PER");
     NUMARG(workload_var, "WORKLOAD_VAR");
-# endif // ADD_WORKLOAD_VAR
-#endif // ADD_WORKLOAD
     NUMARG(print_final, "PRINT_FINAL");
     NUMARG(alltime, "ALL_TIME");
 
