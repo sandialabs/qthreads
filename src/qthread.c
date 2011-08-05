@@ -798,16 +798,20 @@ int qthread_initialize(void)
         ) {
         need_sync = 0;
     }
+# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    QTHREAD_LOCKING_STRIPES = 1 << ((unsigned int)(log2(nshepherds*nworkerspershep)) + 1);
+# else
+    QTHREAD_LOCKING_STRIPES = 1 << ((unsigned int)(log2(nshepherds)) + 1);
+# endif
 #else /* i.e. not using pthreads aka all serial. */
     nshepherds = 1;
 # ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     nworkerspershep = 1;
 # endif
     need_sync = 0;
+    QTHREAD_LOCKING_STRIPES = 1;
 #endif /* ifdef QTHREAD_USE_PTHREADS */
     qthread_debug(CORE_BEHAVIOR, "there will be %u shepherd(s)\n", (unsigned)nshepherds);
-
-    QTHREAD_LOCKING_STRIPES = 1 << ((unsigned int)(log2(nshepherds)) + 1);
 
 #ifdef QTHREAD_COUNT_THREADS
     threadcount            = 0;
