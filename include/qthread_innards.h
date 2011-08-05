@@ -45,8 +45,8 @@ typedef struct qlib_s {
 #endif
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     unsigned int               nworkers_active;
-    unsigned int               nworkerspershep;
 #endif
+    unsigned int               nworkerspershep;
     struct qthread_shepherd_s *shepherds;
 
     unsigned                   qthread_stack_size;

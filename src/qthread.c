@@ -750,10 +750,7 @@ int qthread_initialize(void)
     size_t                i;
     int                   need_sync  = 1;
     qthread_shepherd_id_t nshepherds = 0;
-
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_id_t nworkerspershep = 0;
-#endif
 
 #ifdef QTHREAD_DEBUG
     QTHREAD_FASTLOCK_INIT(output_lock);
@@ -784,6 +781,8 @@ int qthread_initialize(void)
             fprintf(stderr, "Number of shepherds not specified - number of workers may be ignored\n");
         }
     }
+# else
+    nworkerspershep = 1;
 # endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     qt_affinity_init(&nshepherds
 # ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -791,23 +790,13 @@ int qthread_initialize(void)
 # endif
                      );
 
-    if ((nshepherds == 1)
-# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-       && (nworkerspershep == 1)
-# endif
-        ) {
+    if ((nshepherds == 1) && (nworkerspershep == 1)) {
         need_sync = 0;
     }
-# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     QTHREAD_LOCKING_STRIPES = 1 << ((unsigned int)(log2(nshepherds*nworkerspershep)) + 1);
-# else
-    QTHREAD_LOCKING_STRIPES = 1 << ((unsigned int)(log2(nshepherds)) + 1);
-# endif
 #else /* i.e. not using pthreads aka all serial. */
     nshepherds = 1;
-# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     nworkerspershep = 1;
-# endif
     need_sync = 0;
     QTHREAD_LOCKING_STRIPES = 1;
 #endif /* ifdef QTHREAD_USE_PTHREADS */
@@ -868,9 +857,7 @@ int qthread_initialize(void)
     /* initialize the kernel threads and scheduler */
     qassert(pthread_key_create(&shepherd_structs, NULL), 0);
     qlib->nshepherds = nshepherds;
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qlib->nworkerspershep = nworkerspershep;
-#endif
     qlib->nshepherds_active = nshepherds;
     qlib->shepherds         = (qthread_shepherd_t *)calloc(nshepherds, sizeof(qthread_shepherd_t));
     qassert_ret(qlib->shepherds, QTHREAD_MALLOC_ERROR);
@@ -925,12 +912,7 @@ int qthread_initialize(void)
         }
     }
     qthread_debug(AFFINITY_DETAILS, "qaffinity = %i\n", qaffinity);
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-# define NUM_PTHREADS_REQUESTED nshepherds * nworkerspershep
-#else
-# define NUM_PTHREADS_REQUESTED nshepherds
-#endif
-    if ((qaffinity == 1) && (NUM_PTHREADS_REQUESTED > 1)) {
+    if ((qaffinity == 1) && ((nshepherds * nworkerspershep) > 1)) {
         int ret = qt_affinity_gendists(qlib->shepherds, nshepherds);
         if (ret != QTHREAD_SUCCESS) {
             qthread_debug(AFFINITY_DETAILS, "gendists returned non-success (%i)\n", (int)ret);
