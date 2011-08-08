@@ -7,16 +7,10 @@
 #include "qt_debug.h"
 
 qthread_shepherd_id_t guess_num_shepherds(void);
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 qthread_worker_id_t guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds);
-#endif
 
-void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds
-#ifdef                                              QTHREAD_MULTITHREADED_SHEPHERDS
-                               ,
-                               qthread_worker_id_t *nbworkers
-#endif
-                               )
+void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
+                               qthread_worker_id_t *nbworkers)
 {                                      /*{{{ */
     if (*nbshepherds == 0) {
         *nbshepherds = guess_num_shepherds();
@@ -24,14 +18,12 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds
             *nbshepherds = 1;
         }
     }
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     if (*nbworkers == 0) {
         *nbworkers = guess_num_workers_per_shep(*nbshepherds);
         if (*nbworkers <= 0) {
             *nbworkers = 1;
         }
     }
-#endif
 }                                      /*}}} */
 
 qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
@@ -69,7 +61,6 @@ void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
 
 #endif
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
     size_t num_procs = 1;
@@ -99,8 +90,6 @@ unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherd
                   (int)guess);
     return (qthread_shepherd_id_t)guess;
 }                                      /*}}} */
-
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
 int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                                   qthread_shepherd_id_t nshepherds)

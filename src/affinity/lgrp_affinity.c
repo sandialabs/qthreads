@@ -25,9 +25,7 @@ static lgrp_id_t       mccoy_thread_home;
 static lgrp_affinity_t mccoy_thread_home_affinity;
 
 qthread_shepherd_id_t guess_num_shepherds(void);
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 qthread_worker_id_t guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds);
-#endif
 
 static int lgrp_maxcpus(const lgrp_id_t lgrp,
                         int             cpu_max)
@@ -113,12 +111,8 @@ static void qt_affinity_internal_lgrp_teardown(void)
     lgrp_affinity_set(P_LWPID, P_MYID, mccoy_thread_home, mccoy_thread_home_affinity);
 }
 
-void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds
-#ifdef                                              QTHREAD_MULTITHREADED_SHEPHERDS
-                               ,
-                               qthread_worker_id_t *nbworkers
-#endif
-                               )
+void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
+                               qthread_worker_id_t   *nbworkers)
 {                                      /*{{{ */
     lgrp_cookie                = lgrp_init(LGRP_VIEW_OS);
     mccoy_thread_home          = lgrp_home(P_LWPID, P_MYID);
@@ -127,11 +121,9 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds
     if (*nbshepherds == 0) {
         *nbshepherds = guess_num_shepherds();
     }
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     if (*nbworkers == 0) {
         *nbworkers = guess_num_workers_per_shep(*nbshepherds);
     }
-#endif
 }                                      /*}}} */
 
 qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
@@ -175,7 +167,6 @@ void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
 
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
     unsigned int guess     = 1;
@@ -197,8 +188,6 @@ unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherd
     qthread_debug(AFFINITY_DETAILS, "guessing %i workers per shep\n", (int)guess);
     return guess;
 }                                      /*}}} */
-
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
 int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                                   qthread_shepherd_id_t nshepherds)

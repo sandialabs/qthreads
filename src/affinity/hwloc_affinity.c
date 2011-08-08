@@ -48,12 +48,8 @@ static void qt_affinity_internal_hwloc_teardown(void)
     initialized = 0;
 } /*}}}*/
 
-void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds
-#ifdef                                              QTHREAD_MULTITHREADED_SHEPHERDS
-                               ,
-                               qthread_worker_id_t *nbworkers
-#endif
-                               )
+void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
+                               qthread_worker_id_t *nbworkers)
 {                                      /*{{{ */
     if (qthread_cas(&initialized, 0, 1) == 0) {
         qassert(hwloc_topology_init(&topology), 0);
@@ -251,6 +247,9 @@ loop_top:
         *nbshepherds = guess_num_shepherds();
     }
     shep_depth = hwloc_get_type_depth(topology, HWLOC_OBJ_PU);
+    if (*nbworkers == 0) {
+        *nbworkers = 1;
+    }
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 }                                      /*}}} */
 

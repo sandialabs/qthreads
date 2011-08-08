@@ -13,10 +13,7 @@
 static nodemask_t *mccoy_bitmask = NULL;
 
 static qthread_shepherd_id_t guess_num_shepherds(void);
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-qthread_worker_id_t guess_num_workers_per_shep(qthread_shepherd_id_t
-                                               nshepherds);
-#endif
+qthread_worker_id_t guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds);
 
 static void qt_affinity_internal_numa_teardown(void)
 {
@@ -24,12 +21,8 @@ static void qt_affinity_internal_numa_teardown(void)
     free(mccoy_bitmask);
 }
 
-void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds
-#ifdef                                              QTHREAD_MULTITHREADED_SHEPHERDS
-                               ,
-                               qthread_worker_id_t *nbworkers
-#endif
-                               )
+void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
+                               qthread_worker_id_t *nbworkers)
 {                                      /*{{{ */
     mccoy_bitmask  = malloc(sizeof(nodemask_t));
     *mccoy_bitmask = numa_get_run_node_mask();
@@ -37,11 +30,9 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds
     if (*nbshepherds == 0) {
         *nbshepherds = guess_num_shepherds();
     }
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     if (*nbworkers == 0) {
         *nbworkers = guess_num_workers_per_shep(*nbshepherds);
     }
-#endif
 }                                      /*}}} */
 
 void INTERNAL qt_affinity_mem_tonode(void  *addr,
@@ -159,7 +150,6 @@ void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
 
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
     size_t       cpu_count = 1;
@@ -193,8 +183,6 @@ unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherd
                   (int)guess);
     return guess;
 }                                      /*}}} */
-
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
 int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                                   qthread_shepherd_id_t nshepherds)

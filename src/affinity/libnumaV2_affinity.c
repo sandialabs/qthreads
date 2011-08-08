@@ -13,21 +13,15 @@
 static struct bitmask *mccoy_bitmask = NULL;
 
 qthread_shepherd_id_t guess_num_shepherds(void);
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 qthread_worker_id_t guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds);
-#endif
 
 static void qt_affinity_internal_numaV2_teardown(void)
 {
     numa_run_on_node_mask(mccoy_bitmask);
 }
 
-void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds
-#ifdef                                              QTHREAD_MULTITHREADED_SHEPHERDS
-                               ,
-                               qthread_worker_id_t *nbworkers
-#endif
-                               )
+void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
+                               qthread_worker_id_t *nbworkers)
 {                                      /*{{{ */
     qassert(numa_available(), 0);
     mccoy_bitmask = numa_get_run_node_mask();
@@ -35,11 +29,9 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds
     if (*nbshepherds == 0) {
         *nbshepherds = guess_num_shepherds();
     }
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     if (*nbworkers == 0) {
         *nbworkers = guess_num_workers_per_shep(*nbshepherds);
     }
-#endif
 }                                      /*}}} */
 
 void INTERNAL qt_affinity_mem_tonode(void  *addr,
@@ -126,7 +118,6 @@ void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
 
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
     size_t       cpu_count = 1;
@@ -160,8 +151,6 @@ unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherd
                   (int)guess);
     return guess;
 }                                      /*}}} */
-
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
 static void assign_nodes(qthread_shepherd_t *sheps,
                                   size_t              nsheps)

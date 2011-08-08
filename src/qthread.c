@@ -784,11 +784,7 @@ int qthread_initialize(void)
 # else
     nworkerspershep = 1;
 # endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-    qt_affinity_init(&nshepherds
-# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-                     , &nworkerspershep
-# endif
-                     );
+    qt_affinity_init(&nshepherds, &nworkerspershep);
 
     if ((nshepherds == 1) && (nworkerspershep == 1)) {
         need_sync = 0;
