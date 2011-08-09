@@ -436,9 +436,7 @@ static void *qthread_shepherd(void *arg)
                       me->shepherd_id, t, t->thread_id, t->thread_state);
 
         // Process input preconds if this is a nascent thread
-        if (t->thread_state == QTHREAD_STATE_NASCENT) {
-            qthread_check_precond(t);
-        }
+        if (t->thread_state == QTHREAD_STATE_NASCENT && (qthread_check_precond(t) == 1)) continue;
 
         if (t->thread_state == QTHREAD_STATE_TERM_SHEP) {
 #ifdef QTHREAD_SHEPHERD_PROFILING
@@ -449,7 +447,7 @@ static void *qthread_shepherd(void *arg)
             qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers, -1); // not working spinning
 #endif
             qthread_thread_free(t);
-        } else if (t->thread_state != QTHREAD_STATE_NASCENT) {
+        } else {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
             if(!*(volatile size_t *)&me_worker->active) {
                 qt_threadqueue_enqueue(me->ready, t, me);
@@ -473,10 +471,9 @@ static void *qthread_shepherd(void *arg)
             assert(t->rdata->shepherd_ptr != NULL);
             if (t->rdata->shepherd_ptr != me) {
                 // fprintf(stderr, "shepherd_ptr = %p, me = %p\n", t->rdata->shepherd_ptr, me);
-                fflush(stderr);
+                // fflush(stderr);
                 t->rdata->shepherd_ptr = me;
             }
-            assert(t->rdata->shepherd_ptr == me);
 
             if ((t->target_shepherd != NULL) && (t->target_shepherd != me) &&
                 QTHREAD_CASLOCK_READ_UI(t->target_shepherd->active)) {
@@ -1839,12 +1836,11 @@ aligned_t *qthread_retloc(void)
 /************************************************************/
 /* functions to manage thread stack allocation/deallocation */
 /************************************************************/
-static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
-                                             const void     *arg,
-                                             size_t          arg_size,
-                                             void           *ret,
-                                             const qthread_shepherd_id_t
-                                             shepherd)
+static QINLINE qthread_t *qthread_thread_new(const qthread_f             f,
+                                             const void                 *arg,
+                                             size_t                      arg_size,
+                                             void                       *ret,
+                                             const qthread_shepherd_id_t shepherd)
 {                      /*{{{ */
     qthread_t *t;
 
@@ -2498,7 +2494,8 @@ int INTERNAL qthread_check_precond(qthread_t *t)
                 X = ALLOC_ADDRRES(myshep);
                 if (X == NULL) {
                     QTHREAD_FASTLOCK_UNLOCK(&m->lock);
-                    return 2;
+                    abort();
+                    return 2; // memory allocation failure
                 }
                 X->addr         = NULL;
                 X->waiter       = t;

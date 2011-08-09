@@ -225,10 +225,23 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t *shep,
             memcpy(X->addr, maddr, sizeof(aligned_t));
         }
         /* schedule */
-        if (QTHREAD_STATE_NASCENT == X->waiter->thread_state)
-        {
-            // Waiter does not have rdata set, so use this shep
-            qt_threadqueue_enqueue(shep->ready, X->waiter, shep);
+        if (QTHREAD_STATE_NASCENT == X->waiter->thread_state) {
+            /* Note: the nascent thread is being tossed into a real live ready
+             * queue for one big fat reason: the alternative involves
+             * potentially locking multiple parts of the FEB hash table, not to
+             * mention needing to avoid re-locking the portion we've already
+             * got locked. By allowing the precond thread to have its
+             * conditions checked by a shepherd, we can ensure that we don't
+             * have this problem. Also, this allows the "work" of checking
+             * preconds to be load-balanced by workstealing schedulers, if
+             * that's important or useful. */
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+            qthread_shepherd_id_t dest_shep = shep->shepherd_id; // rely on work-stealing
+#else
+            qthread_shepherd_id_t dest_shep = shep->sched_shepherd++;
+            shep->sched_shepherd *= (qlib->nshepherds > (dest_shep + 1));
+#endif          /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
+            qt_threadqueue_enqueue(qlib->shepherds[dest_shep].ready, X->waiter, shep);
         } else {
             X->waiter->thread_state = QTHREAD_STATE_RUNNING;
             qt_threadqueue_enqueue(X->waiter->rdata->shepherd_ptr->ready, X->waiter, shep);
