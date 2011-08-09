@@ -438,9 +438,6 @@ static void *qthread_shepherd(void *arg)
         // Process input preconds if this is a nascent thread
         if (t->thread_state == QTHREAD_STATE_NASCENT) {
             if (qthread_check_precond(t) == 1) continue;
-            else if ((uintptr_t)t->target_shepherd < qlib->nshepherds) {
-                t->target_shepherd = NULL;
-            }
         }
 
         if (t->thread_state == QTHREAD_STATE_TERM_SHEP) {
@@ -2523,6 +2520,9 @@ int INTERNAL qthread_check_precond(qthread_t *t)
 
     // All input preconds are full
     t->thread_state = QTHREAD_STATE_NEW;
+    if ((uintptr_t)t->target_shepherd < qlib->nshepherds) {
+        t->target_shepherd = NULL;
+    }
 
     return 0;
 }
