@@ -235,13 +235,12 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t *shep,
              * have this problem. Also, this allows the "work" of checking
              * preconds to be load-balanced by workstealing schedulers, if
              * that's important or useful. */
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-            qthread_shepherd_id_t dest_shep = shep->shepherd_id; // rely on work-stealing
-#else
-            qthread_shepherd_id_t dest_shep = shep->sched_shepherd++;
-            shep->sched_shepherd *= (qlib->nshepherds > (dest_shep + 1));
-#endif          /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-            qt_threadqueue_enqueue(qlib->shepherds[dest_shep].ready, X->waiter, shep);
+            if ((uintptr_t)(X->waiter->target_shepherd) < qlib->nshepherds) {
+                qthread_shepherd_id_t dest_shep = (uintptr_t)X->waiter->target_shepherd;
+                qt_threadqueue_enqueue(qlib->shepherds[dest_shep].ready, X->waiter, shep);
+            } else {
+                qt_threadqueue_enqueue(X->waiter->target_shepherd->ready, X->waiter, shep);
+            }
         } else {
             X->waiter->thread_state = QTHREAD_STATE_RUNNING;
             qt_threadqueue_enqueue(X->waiter->rdata->shepherd_ptr->ready, X->waiter, shep);

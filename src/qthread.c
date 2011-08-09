@@ -436,7 +436,12 @@ static void *qthread_shepherd(void *arg)
                       me->shepherd_id, t, t->thread_id, t->thread_state);
 
         // Process input preconds if this is a nascent thread
-        if (t->thread_state == QTHREAD_STATE_NASCENT && (qthread_check_precond(t) == 1)) continue;
+        if (t->thread_state == QTHREAD_STATE_NASCENT) {
+            if (qthread_check_precond(t) == 1) continue;
+            else if ((uintptr_t)t->target_shepherd < qlib->nshepherds) {
+                t->target_shepherd = NULL;
+            }
+        }
 
         if (t->thread_state == QTHREAD_STATE_TERM_SHEP) {
 #ifdef QTHREAD_SHEPHERD_PROFILING
@@ -2228,6 +2233,9 @@ static int qthread_uberfork(qthread_f             f,
         t->thread_state = QTHREAD_STATE_NASCENT; // special non-executable state
         t->preconds     = preconds;
         t->npreconds    = npreconds;
+        if (t->target_shepherd == NULL) {
+            t->target_shepherd = (void *)(uintptr_t)dest_shep;
+        }
     }
     t->id = target_shep;  /* used in barrier and arrive_first, NOT the
                            * thread-id may be extraneous in both when parallel
