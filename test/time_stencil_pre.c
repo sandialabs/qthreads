@@ -54,13 +54,20 @@ static inline void perform_local_work(void)
     qtimer_t work_timer = qtimer_create();
     qtimer_start(work_timer);
 # endif // TIME_WORKLOAD
-    int tmp = workload;
-    if (qtimer_fastrand()%100 < workload_per)
-        tmp *= (workload_var*0.01);
-    for (int i = 0; i < tmp; i++) {
-        tmp = tmp % 1000000000;
+    volatile unsigned long work = workload;
+    long rand_per = (long)qtimer_fastrand();
+    long rand_var = (long)qtimer_fastrand();
+
+    rand_per = (rand_per<0) ? (-rand_per)%100 : rand_per%100;
+    if (rand_per < workload_per) {
+        rand_var = (rand_var<0) ? (-rand_var)%100 : rand_var%100;
+        work += (workload * (workload_var * 0.01)) * (rand_var * 0.01);
     }
-    tmp++;
+
+    for (int i = 0; i < work; i++) {
+        work = work % 1000000000;
+    }
+    work++;
 # ifdef TIME_WORKLOAD
     qtimer_stop(work_timer);
     fprintf(stdout, "Worked for %f\n", qtimer_secs(work_timer));
@@ -268,7 +275,7 @@ int main(int argc, char *argv[])
         print_stage(&points, final);
     }
 
-    //qt_feb_barrier_destroy(points.barrier);
+    qt_feb_barrier_destroy(points.barrier);
     qtimer_destroy(alloc_timer);
     qtimer_destroy(init_timer);
     qtimer_destroy(exec_timer);
