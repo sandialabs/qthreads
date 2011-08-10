@@ -36,6 +36,11 @@ if COMPILE_ROSE_EXTENSIONS
 include interfaces/rose/Makefile.inc
 endif
 
+if WANT_MULTINODE
+include net/Makefile.inc
+include net/portals4/Makefile.inc
+endif
+
 # version-info fields are:
 # 1. the current interface revision number (i.e. whenever arguments of existing
 #    functions change, increment this number)

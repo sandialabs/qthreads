@@ -68,6 +68,9 @@
 #include "qt_locks.h"
 #include "qt_io.h"
 #include "qt_debug.h"
+#ifdef QTHREAD_MULTINODE
+#include "net/net.h"
+#endif
 
 #ifdef QTHREAD_RCRTOOL
 # include "maestro_sched.h"
@@ -766,6 +769,12 @@ int qthread_initialize(void)
     }
     qlib = (qlib_t)malloc(sizeof(struct qlib_s));
     qassert_ret(qlib, QTHREAD_MALLOC_ERROR);
+
+#ifdef QTHREAD_MULTINODE
+    if (NULL != getenv("QTHREAD_MULTINODE")) {
+        qthread_internal_net_initialize();
+    }
+#endif
 
 #ifdef QTHREAD_USE_PTHREADS
     GET_ENV_NUM("QTHREAD_NUM_SHEPHERDS", nshepherds, 0, 0);
