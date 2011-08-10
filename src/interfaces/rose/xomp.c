@@ -709,22 +709,35 @@ void XOMP_loop_end_nowait(
 }
 
 // Qthread implementation of a OpenMP global barrier
+void qthread_walkTaskList(void);
+
+// AKP 08/11/11 -- this function wants to manipulate qthread data structures, but is a
+// Rose specific  function.  The commented out statements modify the data structure (which 
+// is not visible directly, the calls perform the same actions though the qthread.c exported
+// functions, but every one calls qthread_internal_self (and pthread_getspecfic). 
+// Seems like a bunch of wasted effort.  
+
 static void walkSyncTaskList(void)
 {
-    qthread_t *t = qthread_internal_self();
+    //    qthread_walkTaskList();     
+    //    qthread_t *t = qthread_internal_self();
 
-    qthread_syncvar_writeEF_const(&t->rdata->taskWaitLock, 1);
+    qthread_getTaskListLock();
+    //qthread_syncvar_writeEF_const(&t->rdata->taskWaitLock, 1);
     taskSyncvar_t *syncVar;
-    while ((syncVar = t->rdata->openmpTaskRetVar)) {
+    while ((syncVar = qthread_getTaskRetVar()//t->rdata->openmpTaskRetVar
+           )) {
         // manually check for empty -- check if present in current shepherds ready queue
         //   if present take and start executing
         syncvar_t *lc_p = &syncVar->retValue;
 
         qthread_syncvar_readFF(NULL, lc_p);
-        t->rdata->openmpTaskRetVar = syncVar->next_task;
+	qthread_setTaskRetVar(syncVar->next_task);
+	//        t->rdata->openmpTaskRetVar = syncVar->next_task;
         //      free(syncVar);
     }
-    qthread_syncvar_readFE(NULL, &t->rdata->taskWaitLock);
+    qthread_releaseTaskListLock();
+    //    qthread_syncvar_readFE(NULL, &t->rdata->taskWaitLock);
 }
 
 extern int activeParallelLoop;
@@ -796,17 +809,27 @@ bool XOMP_loop_ordered_guided_next(
 
 aligned_t taskId = 1; // start at first non-master shepherd
 
-// moved to this file to compile when rose_xomp moved to interfaces/rose directory
+// AKP 08/11/11 -- this function wants to manipulate qthread data structures, but is a
+// Rose specific  function.  The commented out statements modify the data structure (which 
+// is not visible directly, the calls perform the same actions though the qthread.c exported
+// functions, but every one calls qthread_internal_self (and pthread_getspecfic). 
+// Seems like a bunch of wasted effort.  
+
 static syncvar_t *getSyncTaskVar(void)
 {
-    qthread_t *t = qthread_internal_self();
+  //    qthread_t *t = qthread_internal_self();
 
-    assert(t);
+  //    assert(t);
+  
     taskSyncvar_t *syncVar = (taskSyncvar_t *)calloc(1, sizeof(taskSyncvar_t));
-    qthread_syncvar_writeEF_const(&t->rdata->taskWaitLock, 1);
-    syncVar->next_task         = t->rdata->openmpTaskRetVar;
-    t->rdata->openmpTaskRetVar = syncVar;
-    qthread_syncvar_readFE(NULL, &t->rdata->taskWaitLock);
+    qthread_getTaskListLock();
+    //qthread_syncvar_writeEF_const(&t->rdata->taskWaitLock, 1);
+    syncVar->next_task = qthread_getTaskRetVar();
+    //syncVar->next_task         = t->rdata->openmpTaskRetVar;
+    qthread_setTaskRetVar(syncVar);
+    //t->rdata->openmpTaskRetVar = syncVar;
+    qthread_releaseTaskListLock();
+    //qthread_syncvar_readFE(NULL, &t->rdata->taskWaitLock);
 
     return &(syncVar->retValue);
 }

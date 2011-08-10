@@ -672,7 +672,7 @@ static QINLINE void qthread_syncvar_gotlock_fill(qthread_shepherd_t *shep,
         qt_threadqueue_enqueue(X->waiter->rdata->shepherd_ptr->ready, X->waiter, shep);
         FREE_ADDRRES(X);
     }
-    if ((m->EFQ == NULL) && (m->FEQ == NULL)) {
+    if ((m->EFQ == NULL) && (m->FEQ == NULL) && (m->FFQ == NULL)) {
         removeable = 1;
     } else {
         removeable = 0;

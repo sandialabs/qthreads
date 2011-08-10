@@ -111,6 +111,7 @@ static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
     memset(ret, 0, alloc_size);
 #endif
     VALGRIND_MAKE_MEM_NOACCESS(ret, alloc_size);
+    if(ret == NULL) printf("aligned malloc failed\n");
     return ret;
 }                                      /*}}} */
 
@@ -241,6 +242,7 @@ qt_mpool qt_mpool_create(size_t item_size)
 # define QCOMPOSE(x, y) (x)
 #endif
 
+
 void *qt_mpool_alloc(qt_mpool pool)
 {                                      /*{{{ */
     void **p = (void **)QTHREAD_CASLOCK_READ(pool->reuse_pool);
@@ -261,7 +263,7 @@ void *qt_mpool_alloc(qt_mpool pool)
             VALGRIND_MAKE_MEM_DEFINED(QPTR(p), pool->item_size);
             new = *(QPTR(p));
             p   = QT_CAS(pool->reuse_pool, old, QCOMPOSE(new, p));
-        } while (p != old && QPTR(p) != NULL);
+        } while ((p != old) && (QPTR(p) != NULL));
     }
     if (QPTR(p) == NULL) {             /* this is not an else on purpose */
         char *base, *max, *cur;
@@ -311,6 +313,7 @@ start:
     VALGRIND_MEMPOOL_ALLOC(pool, QPTR(p), pool->item_size);
     return (void *)QPTR(p);
 }                                      /*}}} */
+
 
 void qt_mpool_free(qt_mpool pool,
                    void    *mem)

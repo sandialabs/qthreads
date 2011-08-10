@@ -292,13 +292,16 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
                     switch(qthread_worker(NULL)) {
                         case NO_WORKER:
                             *(int *)0 = 0; // should never happen
+			    t = NULL;
+                            continue; // keep looking
                         case 0:
-                            return (t);
-
+		  	    return(t);
+ 
                         default:
                             /* McCoy thread can only run on worker 0 */
                             qt_threadqueue_enqueue_yielded(q, t, t->rdata->shepherd_ptr);
-                            break;
+			    t = NULL;
+                            continue; // keep looking
                     }
                 } else {
                     break;

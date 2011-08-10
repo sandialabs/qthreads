@@ -2551,6 +2551,7 @@ void INTERNAL qthread_back_to_master(qthread_t *t)
 #else
     qassert(qt_swapctxt(&t->rdata->context, t->rdata->return_context), 0);
 #endif
+    
 #ifdef NEED_RLIMIT
     qthread_debug(SHEPHERD_DETAILS, "t(%p): setting stack size limits back to qthread size...\n", t);
     if (!(t->flags & QTHREAD_REAL_MCCOY)) {
@@ -2671,6 +2672,7 @@ void qt_move_to_orig()
 {
     qthread_t *t = qthread_internal_self();
 
+    t->thread_state = QTHREAD_STATE_YIELDED;
     t->flags |= QTHREAD_MUST_BE_WORKER_ZERO;
     qt_threadqueue_enqueue(qlib->shepherds[0].ready, t, 0); // put work back (having marked that
                                                             // it must be run by thread 0) -- put

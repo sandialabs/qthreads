@@ -100,7 +100,7 @@ static aligned_t qloop_step_wrapper(struct qloop_step_wrapper_args *const restri
     // and every one executes their piece
     arg->func(arg->arg);
 
-    XOMP_barrier();
+    XOMP_barrier(); // needed to correct stop omp parallel regions from exiting early
 
 # ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
     MONITOR_ASM_LABEL(qthread_step_fence4); // add label for HPCToolkit unwind
