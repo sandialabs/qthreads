@@ -1,6 +1,8 @@
 #ifndef QT_LOCKS_H
 #define QT_LOCKS_H
 
+#include <qt_shepherd_innards.h>
+
 typedef struct qthread_lock_s qthread_lock_t;
 struct qthread_queue_s {
     qthread_t          *head;

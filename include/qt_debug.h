@@ -5,6 +5,11 @@
 # define DEBUG_ONLY(x) x
 
 #include <limits.h> // for INT_MAX, per C89
+#include <sys/syscall.h>
+#include <syscall.h>
+#include <stdarg.h>
+#include <qt_locks.h>
+#include <qthread_asserts.h>
 
 enum qthread_debug_levels {
     ALWAYS_OUTPUT = 0,
