@@ -830,7 +830,7 @@ AS_IF([test "x$qthread_implementation" = "xunix"],
 
 AS_IF([test "$enable_multinode" = "yes"], 
   [AC_DEFINE([QTHREAD_MULTINODE], [1], [Defined if multinode support desired])
-   QTHREAD_CHECK_PORTALS4([], [AC_ERROR([Could not find Portals 4 library])])
+   QTHREAD_CHECK_PORTALS4([], [AC_MSG_ERROR([Could not find Portals 4 library])])
    CPPFLAGS="$CPPFLAGS $portals4_CPPFLAGS"
    LDFLAGS="$LDFLAGS $portals4_LDFLAGS"
    LIBS="$LIBS $portals4_LIBS"
