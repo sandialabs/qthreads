@@ -139,7 +139,7 @@ struct qthread_parallel_region_s {
     int                              *currentLoopNum;     // really an array of values (number workers long)
                                                           //   which Loop current active 
     int                               clsSize;            // size of following array
-    struct qqloop_step_handle_t      **currentLoopStruct; // really an array of pointers to loop
+    void                             **currentLoopStruct; // really an array of pointers to loop
                                                           //    structures for use by omp
 };
 typedef struct qthread_parallel_region_s qthread_parallel_region_t;
