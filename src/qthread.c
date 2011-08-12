@@ -2196,17 +2196,6 @@ static int qthread_uberfork(qthread_f             f,
                   target_shep,
                   (future_flag ? "future" : "qthread"));
     assert(qlib);
-#ifdef QTHREAD_DEBUG
-    qassert_ret(((target_shep == NO_SHEPHERD) || (target_shep < max_sheps)), QTHREAD_BADARGS);
-    qassert_ret(f != NULL, QTHREAD_BADARGS);
-    if (npreconds > 0) {
-        qassert_ret(preconds != NULL, QTHREAD_BADARGS);
-        qassert_ret(precond_type != NO_SYNC, QTHREAD_BADARGS);
-    } else {
-        qassert_ret(preconds == NULL, QTHREAD_BADARGS);
-        qassert_ret(precond_type == NO_SYNC, QTHREAD_BADARGS);
-    }
-#endif
     /* Step 2: Pick a destination */
     if (target_shep != NO_SHEPHERD) {
         dest_shep = target_shep % qlib->nshepherds;
@@ -2227,6 +2216,20 @@ static int qthread_uberfork(qthread_f             f,
                                                                          &qlib->sched_shepherd_lock);
         }
 #endif  /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
+#ifdef QTHREAD_DEBUG
+    // debug moved until after destination shepherd is picked for multithreaded shepherds
+    // check to make sure destination shepherd is in range (not target_shep which is
+    // really worker number for multithreaded shepherds) -- AKP 08/12/11 
+    qassert_ret(((target_shep == NO_SHEPHERD) || (dest_shep < max_sheps)), QTHREAD_BADARGS);
+    qassert_ret(f != NULL, QTHREAD_BADARGS);
+    if (npreconds > 0) {
+        qassert_ret(preconds != NULL, QTHREAD_BADARGS);
+        qassert_ret(precond_type != NO_SYNC, QTHREAD_BADARGS);
+    } else {
+        qassert_ret(preconds == NULL, QTHREAD_BADARGS);
+        qassert_ret(precond_type == NO_SYNC, QTHREAD_BADARGS);
+    }
+#endif
     }
     /* Step 3: Allocate & init the structure */
     t = qthread_thread_new(f, arg, arg_size, (aligned_t *)ret, dest_shep);

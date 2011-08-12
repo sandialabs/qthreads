@@ -4,6 +4,10 @@
 #ifdef QTHREAD_DEBUG
 # define DEBUG_ONLY(x) x
 
+#include <syscall.h>
+#include <sys/syscall.h>
+#include <stdarg.h>
+#include "qt_locks.h"
 #include <limits.h> // for INT_MAX, per C89
 #include <sys/syscall.h>
 #include <syscall.h>
