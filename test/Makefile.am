@@ -89,6 +89,7 @@ EXTRA_PROGRAMS += \
 	 time_stencil_bsp \
 	 time_stencil_feb \
 	 time_stencil_pre \
+	 time_halo_swap_all \
 	 time_gcd \
 	 test_cpp_interface
 CLEANFILES += $(EXTRA_PROGRAMS)
@@ -308,3 +309,6 @@ time_stencil_feb_DEPENDENCIES = $(QTHREADLIB)
 
 time_stencil_pre_SOURCES = time_stencil_pre.c
 time_stencil_pre_DEPENDENCIES = $(QTHREADLIB)
+
+time_halo_swap_all_SOURCES = time_halo_swap_all.c
+time_halo_swap_all_DEPENDENCIES = $(QTHREADLIB)
