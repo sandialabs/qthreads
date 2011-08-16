@@ -2507,7 +2507,7 @@ int INTERNAL qthread_check_precond(qthread_t *t)
             if (m == NULL) {               /* already full! */
                 t->npreconds--;
             } else if (m->full != 1) {     /* not full... so we must block */
-                X = ALLOC_ADDRRES(myshep);
+                X = ALLOC_ADDRRES(qthread_internal_getshep());
                 if (X == NULL) {
                     QTHREAD_FASTLOCK_UNLOCK(&m->lock);
                     abort();
