@@ -27,7 +27,9 @@ BASIC_TESTS = test_basic \
 			  test_tasklocal_no_default \
 			  test_tasklocal_no_argcopy
 
-COMPLEX_TESTS = test_qutil \
+COMPLEX_TESTS = test_qt_loop \
+				test_qt_loop_balance \
+				test_qutil \
 				test_qutil_qsort \
 				test_feb_barrier \
 				test_precond_fib \
@@ -109,6 +111,12 @@ QTHREADLIB = $(OUTPUTDIR)/libqthread.la
 #CONTEXTLIB = $(OUTPUTDIR)/fastcontext/libfastcontext.la
 
 LDADD = $(QTHREADLIB)
+
+test_qt_loop_SOURCES = test_qt_loop.c
+test_qt_loop_DEPENDENCIES = $(QTHREADLIB)
+
+test_qt_loop_balance_SOURCES = test_qt_loop_balance.c
+test_qt_loop_balance_DEPENDENCIES = $(QTHREADLIB)
 
 test_qutil_SOURCES = test_qutil.c
 test_qutil_DEPENDENCIES = $(QTHREADLIB)
