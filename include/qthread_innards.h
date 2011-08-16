@@ -21,13 +21,6 @@
 
 #include "qt_context.h"
 
-#ifdef QTHREAD_DEBUG
-# include <sys/syscall.h>         /* for SYS_accept and others */
-# ifdef HAVE_UNISTD_H
-#  include <unistd.h>                  /* for write() */
-# endif
-# include <stdarg.h>                   /* for va_start and va_end */
-#endif
 #include <pthread.h>
 #include <qt_hash.h>
 
