@@ -8,6 +8,7 @@
 #include <limits.h> // for INT_MAX, per C89
 #include <sys/syscall.h> // for syscall()
 #include <unistd.h> // for SYS_write
+#include <stdarg.h> // for va_start and friends
 
 /* Internal headers */
 #include <qt_locks.h>
