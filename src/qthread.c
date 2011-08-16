@@ -2476,7 +2476,6 @@ int qthread_fork_syncvar_future(qthread_f   f,
  */
 int INTERNAL qthread_check_precond(qthread_t *t)
 {
-    qthread_shepherd_t *myshep         = qthread_internal_getshep();
     aligned_t         **these_preconds = (aligned_t **)t->preconds;
 
     // Process input preconds
