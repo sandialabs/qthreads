@@ -25,16 +25,32 @@ static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t *ptr)
 
 #define _(x) vol_read_a(&(x))
 
-/* So, the idea here is that this is a (braindead) C version of Megan's
- * mt_loop. */
 struct qloop_wrapper_args {
-    qt_loop_f func;
-    size_t    startat, stopat;
-    void     *arg;
+    qt_loop_f  func;
+    size_t     startat, stopat, id, level, spawnthreads;
+    void      *arg;
+    syncvar_t *rets;
 };
 
 static aligned_t qloop_wrapper(struct qloop_wrapper_args *const restrict arg)
 {                                      /*{{{ */
+    /* tree-based spawning (credit: AKP) */
+    size_t tot_workers = arg->spawnthreads - 1; // -1 because I already exist
+    size_t level       = arg->level;
+    size_t my_id       = arg->id;
+    size_t new_id      = my_id + (1 << level);
+
+    while (new_id <= tot_workers) {      // create some children? (tot_workers zero based)
+        size_t offset = new_id - my_id;  // need how much past current locations
+        (arg + offset)->level = ++level; // increase depth for created thread
+        qthread_fork_syncvar_to((qthread_f)qloop_wrapper,
+                                arg + offset,
+                                arg->rets + new_id,
+                                new_id);
+        new_id = (1 << level) + my_id; // level has been incremented
+    }
+
+    // and now, we execute the function
     arg->func(arg->startat, arg->stopat, arg->arg);
     return 0;
 }                                      /*}}} */
@@ -129,22 +145,27 @@ static void qt_loop_inner(const size_t    start,
     syncvar_t                 *rets;
 
     qwa  = (struct qloop_wrapper_args *)malloc(sizeof(struct qloop_wrapper_args) * steps);
-    rets = calloc(steps, sizeof(syncvar_t));
+    rets = malloc(steps * sizeof(syncvar_t));
     assert(qwa);
     assert(rets);
     assert(func);
 
     for (i = start; i < stop; ++i) {
-        qwa[threadct].func    = func;
-        qwa[threadct].startat = i;
-        qwa[threadct].stopat  = i + 1;
-        qwa[threadct].arg     = argptr;
-        if (future) {
-            qassert(qthread_fork_syncvar_future((qthread_f)qloop_wrapper, qwa + threadct, rets + (i - start)), QTHREAD_SUCCESS);
-        } else {
-            qassert(qthread_fork_syncvar((qthread_f)qloop_wrapper, qwa + threadct, rets + (i - start)), QTHREAD_SUCCESS);
-        }
+        qwa[threadct].func         = func;
+        qwa[threadct].startat      = i;
+        qwa[threadct].stopat       = i + 1;
+        qwa[threadct].arg          = argptr;
+        qwa[threadct].id           = threadct;
+        qwa[threadct].rets         = rets;
+        qwa[threadct].level        = 0;
+        qwa[threadct].spawnthreads = steps;
+        rets[threadct]             = SYNCVAR_EMPTY_INITIALIZER;
         threadct++;
+    }
+    if (future) {
+        qassert(qthread_fork_syncvar_future_to((qthread_f)qloop_wrapper, qwa, rets, 0), QTHREAD_SUCCESS);
+    } else {
+        qassert(qthread_fork_syncvar_to((qthread_f)qloop_wrapper, qwa, rets, 0), QTHREAD_SUCCESS);
     }
     for (i = 0; i < steps; i++) {
         qthread_syncvar_readFF(NULL, rets + i);
@@ -243,6 +264,7 @@ static void qt_loop_step_inner(const size_t         start,
         qthread_syncvar_readFF(NULL, rets + i);
     }
     free(qwa);
+    free(rets);
 }                                      /*}}} */
 
 #endif /* QTHREAD_USE_ROSE_EXTENSIONS */
@@ -264,32 +286,37 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
                                           const int       future)
 {                                      /*{{{ */
     qthread_shepherd_id_t            i;
-    const qthread_shepherd_id_t      maxsheps = qthread_num_shepherds();
-    struct qloop_wrapper_args *const qwa      = (struct qloop_wrapper_args *)malloc(sizeof(struct qloop_wrapper_args) * maxsheps);
-    syncvar_t *const                 rets     = calloc(maxsheps, sizeof(syncvar_t));
-    const size_t                     each     = (stop - start) / maxsheps;
-    size_t                           extra    = (stop - start) - (each * maxsheps);
-    size_t                           iterend  = start;
+    const qthread_shepherd_id_t      maxworkers = qthread_num_workers();
+    struct qloop_wrapper_args *const qwa        = (struct qloop_wrapper_args *)malloc(sizeof(struct qloop_wrapper_args) * maxworkers);
+    syncvar_t *const                 rets       = malloc(maxworkers * sizeof(syncvar_t));
+    const size_t                     each       = (stop - start) / maxworkers;
+    size_t                           extra      = (stop - start) - (each * maxworkers);
+    size_t                           iterend    = start;
 
     assert(func);
     assert(qwa);
-    for (i = 0; i < maxsheps; i++) {
-        qwa[i].func    = func;
-        qwa[i].arg     = argptr;
-        qwa[i].startat = iterend;
-        qwa[i].stopat  = iterend + each;
+    for (i = 0; i < maxworkers; i++) {
+        qwa[i].func         = func;
+        qwa[i].arg          = argptr;
+        qwa[i].startat      = iterend;
+        qwa[i].stopat       = iterend + each;
+        qwa[i].id           = i;
+        qwa[i].rets         = rets;
+        qwa[i].level        = 0;
+        qwa[i].spawnthreads = maxworkers;
+        rets[i]             = SYNCVAR_EMPTY_INITIALIZER;
         if (extra > 0) {
             qwa[i].stopat++;
             extra--;
         }
         iterend = qwa[i].stopat;
-        if (!future) {
-            qassert(qthread_fork_syncvar_to((qthread_f)qloop_wrapper, qwa + i, rets + i, i), QTHREAD_SUCCESS);
-        } else {
-            qassert(qthread_fork_syncvar_future_to((qthread_f)qloop_wrapper, qwa + i, rets + i, i), QTHREAD_SUCCESS);
-        }
     }
-    for (i = 0; i < maxsheps; i++) {
+    if (!future) {
+        qassert(qthread_fork_syncvar_to((qthread_f)qloop_wrapper, qwa, rets, i), QTHREAD_SUCCESS);
+    } else {
+        qassert(qthread_fork_syncvar_future_to((qthread_f)qloop_wrapper, qwa, rets, i), QTHREAD_SUCCESS);
+    }
+    for (i = 0; i < maxworkers; i++) {
         qthread_syncvar_readFF(NULL, rets + i);
     }
     free(qwa);
