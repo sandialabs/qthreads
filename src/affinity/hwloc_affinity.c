@@ -49,7 +49,7 @@ static void qt_affinity_internal_hwloc_teardown(void)
 } /*}}}*/
 
 void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
-                               qthread_worker_id_t *nbworkers)
+                               qthread_worker_id_t   *nbworkers)
 {                                      /*{{{ */
     if (qthread_cas(&initialized, 0, 1) == 0) {
         qassert(hwloc_topology_init(&topology), 0);
@@ -350,32 +350,37 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me)
 {                                                                                           /*{{{ */
     hwloc_const_cpuset_t      allowed_cpuset = hwloc_topology_get_allowed_cpuset(topology); // where am I allowed to run?
     qthread_shepherd_t *const myshep         = me->shepherd;
+    unsigned int              maxshepobjs    = hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth);
     hwloc_obj_t               obj            =
         hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset,
                                              shep_depth, myshep->node);
 
-    qthread_debug(AFFINITY_DETAILS,
-                  "shep %i(%i) worker %i [%i], there are %i %s [%i pu]\n",
+    qthread_debug(AFFINITY_CALLS,
+                  "shep %i(%i) worker %i [%i], there are %u %s [%i pu]\n",
                   (int)myshep->shepherd_id,
                   (int)myshep->node,
                   (int)me->worker_id,
                   (int)me->packed_worker_id,
-                  (int)hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth),
+                  maxshepobjs,
                   hwloc_obj_type_string(hwloc_get_depth_type(topology, shep_depth)),
                   (int)hwloc_get_nbobjs_inside_cpuset_by_type(topology, allowed_cpuset, HWLOC_OBJ_PU));
     unsigned int weight  = WEIGHT(obj->allowed_cpuset);
+    unsigned int wraparounds = me->packed_worker_id / maxshepobjs;
     hwloc_obj_t  sub_obj =
         hwloc_get_obj_inside_cpuset_by_type(topology, obj->allowed_cpuset,
                                             HWLOC_OBJ_PU,
-                                            me->worker_id % weight);
-# ifdef QTHREAD_DEBUG_THREADQUEUES
+                                            (me->worker_id + (wraparounds * qlib->nworkerspershep)) % weight);
+
+# ifdef QTHREAD_DEBUG_AFFINITY
     {
         char *str;
         ASPRINTF(&str, sub_obj->allowed_cpuset);
         qthread_debug(AFFINITY_DETAILS,
                       "binding shep %i worker %i (%i) to PU %i, mask %s\n",
                       (int)myshep->shepherd_id, (int)me->worker_id,
-                      (int)me->packed_worker_id, (weight * myshep->node) + (me->worker_id % weight), str);
+                      (int)me->packed_worker_id,
+                      (weight * myshep->node) + ((me->worker_id + (wraparounds * qlib->nworkerspershep)) % weight),
+                      str);
         free(str);
     }
 # endif
