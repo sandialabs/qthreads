@@ -1089,7 +1089,7 @@ static QINLINE int64_t qthread_incr_xx(volatile void *addr,
             return qthread_incr64((volatile uint64_t *)addr, incr);
 
         default:
-            __builtin_trap();
+            QTHREAD_TRAP();
     }
     return 0;                          /* compiler check */
 }                                      /*}}} */
