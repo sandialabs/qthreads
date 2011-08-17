@@ -24,6 +24,7 @@ void qt_blocking_subsystem_begin_blocking_action(void)
         qt_blocking_queue_node_t *job = ALLOC_SYSCALLJOB;
 
         assert(job);
+        job->next   = NULL;
         job->thread = me;
         job->op     = USER_DEFINED;
 

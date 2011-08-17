@@ -21,10 +21,11 @@ ssize_t write(int         filedes,
     qthread_t *me;
 
     if ((qlib != NULL) && ((me = qthread_internal_self()) != NULL)) {
-        qt_blocking_queue_node_t *job = qt_mpool_alloc(syscall_job_pool);
+        qt_blocking_queue_node_t *job = ALLOC_SYSCALLJOB;
         ssize_t                   ret;
 
         assert(job);
+        job->next   = NULL;
         job->thread = me;
         job->op     = WRITE;
         memcpy(&job->args[0], &filedes, sizeof(int));

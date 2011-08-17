@@ -23,15 +23,18 @@ int connect(int                    socket,
     qthread_t *me;
 
     if ((qlib != NULL) && ((me = qthread_internal_self()) != NULL)) {
-        qt_blocking_queue_node_t *job = qt_mpool_alloc(syscall_job_pool);
+        qt_blocking_queue_node_t *job = ALLOC_SYSCALLJOB;
         int                       ret;
 
+        assert(job);
+        job->next   = NULL;
         job->thread = me;
         job->op     = CONNECT;
         memcpy(&job->args[0], &socket, sizeof(int));
         job->args[1] = (uintptr_t)address;
         job->args[2] = (uintptr_t)address_len;
 
+        assert(me->rdata);
         me->rdata->blockedon = (struct qthread_lock_s *)job;
         me->thread_state     = QTHREAD_STATE_SYSCALL;
         qthread_back_to_master(me);
