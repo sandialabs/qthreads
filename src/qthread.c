@@ -69,7 +69,7 @@
 #include "qt_io.h"
 #include "qt_debug.h"
 #ifdef QTHREAD_MULTINODE
-#include "net/net.h"
+# include "net/net.h"
 #endif
 
 #ifdef QTHREAD_RCRTOOL
@@ -440,7 +440,7 @@ static void *qthread_shepherd(void *arg)
 
         // Process input preconds if this is a nascent thread
         if (t->thread_state == QTHREAD_STATE_NASCENT) {
-            if (qthread_check_precond(t) == 1) continue;
+            if (qthread_check_precond(t) == 1) { continue; }
         }
 
         if (t->thread_state == QTHREAD_STATE_TERM_SHEP) {
@@ -750,9 +750,9 @@ int qthread_initialize(void)
 {                      /*{{{ */
     int                   r;
     size_t                i;
-    int                   need_sync  = 1;
-    qthread_shepherd_id_t nshepherds = 0;
-    qthread_worker_id_t nworkerspershep = 0;
+    int                   need_sync       = 1;
+    qthread_shepherd_id_t nshepherds      = 0;
+    qthread_worker_id_t   nworkerspershep = 0;
 
 #ifdef QTHREAD_DEBUG
     QTHREAD_FASTLOCK_INIT(output_lock);
@@ -797,11 +797,11 @@ int qthread_initialize(void)
     if ((nshepherds == 1) && (nworkerspershep == 1)) {
         need_sync = 0;
     }
-    QTHREAD_LOCKING_STRIPES = 1 << ((unsigned int)(log2(nshepherds*nworkerspershep)) + 1);
+    QTHREAD_LOCKING_STRIPES = 1 << ((unsigned int)(log2(nshepherds * nworkerspershep)) + 1);
 #else /* i.e. not using pthreads aka all serial. */
-    nshepherds = 1;
-    nworkerspershep = 1;
-    need_sync = 0;
+    nshepherds              = 1;
+    nworkerspershep         = 1;
+    need_sync               = 0;
     QTHREAD_LOCKING_STRIPES = 1;
 #endif /* ifdef QTHREAD_USE_PTHREADS */
     qthread_debug(CORE_BEHAVIOR, "there will be %u shepherd(s)\n", (unsigned)nshepherds);
@@ -860,8 +860,8 @@ int qthread_initialize(void)
 
     /* initialize the kernel threads and scheduler */
     qassert(pthread_key_create(&shepherd_structs, NULL), 0);
-    qlib->nshepherds = nshepherds;
-    qlib->nworkerspershep = nworkerspershep;
+    qlib->nshepherds        = nshepherds;
+    qlib->nworkerspershep   = nworkerspershep;
     qlib->nshepherds_active = nshepherds;
     qlib->shepherds         = (qthread_shepherd_t *)calloc(nshepherds, sizeof(qthread_shepherd_t));
     qassert_ret(qlib->shepherds, QTHREAD_MALLOC_ERROR);
@@ -2217,19 +2217,19 @@ static int qthread_uberfork(qthread_f             f,
         }
 #endif  /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 #ifdef QTHREAD_DEBUG
-    // debug moved until after destination shepherd is picked for multithreaded shepherds
-    // check to make sure destination shepherd is in range (not target_shep which is
-    // really worker number for multithreaded shepherds) -- AKP 08/12/11 
-    qassert_ret(((target_shep == NO_SHEPHERD) || (dest_shep < max_sheps)), QTHREAD_BADARGS);
-    qassert_ret(f != NULL, QTHREAD_BADARGS);
-    if (npreconds > 0) {
-        qassert_ret(preconds != NULL, QTHREAD_BADARGS);
-        qassert_ret(precond_type != NO_SYNC, QTHREAD_BADARGS);
-    } else {
-        qassert_ret(preconds == NULL, QTHREAD_BADARGS);
-        qassert_ret(precond_type == NO_SYNC, QTHREAD_BADARGS);
-    }
-#endif
+        // debug moved until after destination shepherd is picked for multithreaded shepherds
+        // check to make sure destination shepherd is in range (not target_shep which is
+        // really worker number for multithreaded shepherds) -- AKP 08/12/11
+        qassert_ret(((target_shep == NO_SHEPHERD) || (dest_shep < max_sheps)), QTHREAD_BADARGS);
+        qassert_ret(f != NULL, QTHREAD_BADARGS);
+        if (npreconds > 0) {
+            qassert_ret(preconds != NULL, QTHREAD_BADARGS);
+            qassert_ret(precond_type != NO_SYNC, QTHREAD_BADARGS);
+        } else {
+            qassert_ret(preconds == NULL, QTHREAD_BADARGS);
+            qassert_ret(precond_type == NO_SYNC, QTHREAD_BADARGS);
+        }
+#endif /* ifdef QTHREAD_DEBUG */
     }
     /* Step 3: Allocate & init the structure */
     t = qthread_thread_new(f, arg, arg_size, (aligned_t *)ret, dest_shep);
@@ -2476,7 +2476,7 @@ int qthread_fork_syncvar_future(qthread_f   f,
  */
 int INTERNAL qthread_check_precond(qthread_t *t)
 {
-    aligned_t         **these_preconds = (aligned_t **)t->preconds;
+    aligned_t **these_preconds = (aligned_t **)t->preconds;
 
     // Process input preconds
     while (t->npreconds > 0) {
@@ -2562,7 +2562,7 @@ void INTERNAL qthread_back_to_master(qthread_t *t)
 #else
     qassert(qt_swapctxt(&t->rdata->context, t->rdata->return_context), 0);
 #endif
-    
+
 #ifdef NEED_RLIMIT
     qthread_debug(SHEPHERD_DETAILS, "t(%p): setting stack size limits back to qthread size...\n", t);
     if (!(t->flags & QTHREAD_REAL_MCCOY)) {
@@ -2579,6 +2579,7 @@ int qthread_migrate_to(const qthread_shepherd_id_t shepherd)
 
     if (me->rdata->shepherd_ptr->shepherd_id == shepherd) {
         me->target_shepherd = me->rdata->shepherd_ptr;
+        me->flags          |= QTHREAD_UNSTEALABLE;
         return QTHREAD_SUCCESS;
     }
     if (me->flags & QTHREAD_REAL_MCCOY) {
@@ -2590,6 +2591,7 @@ int qthread_migrate_to(const qthread_shepherd_id_t shepherd)
                       me->thread_id, me->rdata->shepherd_ptr->shepherd_id, shepherd);
         me->target_shepherd  = &(qlib->shepherds[shepherd]);
         me->thread_state     = QTHREAD_STATE_MIGRATING;
+        me->flags           |= QTHREAD_UNSTEALABLE;
         me->rdata->blockedon = (struct qthread_lock_s *)(intptr_t)shepherd;
         qthread_back_to_master(me);
 
@@ -2684,7 +2686,7 @@ void qt_move_to_orig()
     qthread_t *t = qthread_internal_self();
 
     t->thread_state = QTHREAD_STATE_YIELDED;
-    t->flags |= QTHREAD_MUST_BE_WORKER_ZERO;
+    t->flags       |= QTHREAD_MUST_BE_WORKER_ZERO;
     qt_threadqueue_enqueue(qlib->shepherds[0].ready, t, 0); // put work back (having marked that
                                                             // it must be run by thread 0) -- put
                                                             // on queue that 0 looks at by default
@@ -2797,7 +2799,7 @@ int qthread_shep_ok(void)
 
 void qthread_shep_next(qthread_shepherd_id_t *shep)
 {   /*{{{*/
- /* This will mean something slightly different in a multinode world. */
+    /* This will mean something slightly different in a multinode world. */
     qthread_shepherd_id_t cur = *shep;
 
     assert(cur != NO_SHEPHERD);
@@ -2808,7 +2810,7 @@ void qthread_shep_next(qthread_shepherd_id_t *shep)
 
 void qthread_shep_prev(qthread_shepherd_id_t *shep)
 {   /*{{{*/
- /* This will mean something slightly different in a multinode world. */
+    /* This will mean something slightly different in a multinode world. */
     qthread_shepherd_id_t cur = *shep;
 
     assert(cur != NO_SHEPHERD);
@@ -2822,7 +2824,7 @@ void qthread_shep_prev(qthread_shepherd_id_t *shep)
 
 void qthread_shep_next_local(qthread_shepherd_id_t *shep)
 {   /*{{{*/
- /* This is node-local */
+    /* This is node-local */
     qthread_shepherd_id_t cur = *shep;
 
     assert(cur != NO_SHEPHERD);
@@ -2833,7 +2835,7 @@ void qthread_shep_next_local(qthread_shepherd_id_t *shep)
 
 void qthread_shep_prev_local(qthread_shepherd_id_t *shep)
 {   /*{{{*/
- /* This is node-local */
+    /* This is node-local */
     qthread_shepherd_id_t cur = *shep;
 
     assert(cur != NO_SHEPHERD);
