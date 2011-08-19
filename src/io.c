@@ -122,7 +122,7 @@ void INTERNAL qt_process_blocking_calls(void)
     switch(item->op) {
         default:
             fprintf(stderr, "Unhandled syscall: %u\n", (unsigned int)item->op);
-            abort();
+            //abort();
 #if HAVE_DECL_SYS_ACCEPT
         case ACCEPT:
         {
@@ -249,6 +249,7 @@ void INTERNAL qt_blocking_subsystem_enqueue(qt_blocking_queue_node_t *job)
 {   /*{{{*/
     qt_blocking_queue_node_t *prev;
 
+    assert(job->next == NULL);
     QTHREAD_LOCK(&theQueue.lock);
     prev          = theQueue.tail;
     theQueue.tail = job;
