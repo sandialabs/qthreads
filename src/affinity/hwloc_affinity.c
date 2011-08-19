@@ -409,9 +409,11 @@ void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
     hwloc_const_cpuset_t allowed_cpuset = hwloc_topology_get_allowed_cpuset(topology); // where am I allowed to run?
     hwloc_obj_t          obj            = hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset,
                                                                                shep_depth, me->node);
+#ifdef QTHREAD_DEBUG_AFFINITY
     unsigned int maxshepobjs = hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth);
-    unsigned int weight      = WEIGHT(obj->allowed_cpuset);
-    unsigned int wraparounds = me->shepherd_id / maxshepobjs;
+#endif
+    //unsigned int weight      = WEIGHT(obj->allowed_cpuset);
+    //unsigned int wraparounds = me->shepherd_id / maxshepobjs;
 
     assert(hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth) >= 1);
 
