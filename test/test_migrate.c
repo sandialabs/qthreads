@@ -63,7 +63,7 @@ int main(int argc,
     qthread_readFF(&ret, &ret);
     iprintf("success in forking to shepherd 1!\n");
     iprintf("now to fork the migrant...\n");
-    qthread_fork_to(migrant, NULL, &ret);
+    qthread_fork(migrant, NULL, &ret);
     iprintf("success in forking migrant!\n");
     qthread_readFF(&ret, &ret);
     iprintf("migrant returned successfully!\n");
