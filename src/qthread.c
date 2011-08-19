@@ -2229,7 +2229,7 @@ static int qthread_uberfork(qthread_f             f,
             qassert_ret(preconds == NULL, QTHREAD_BADARGS);
             qassert_ret(precond_type == NO_SYNC, QTHREAD_BADARGS);
         }
-#endif /* ifdef QTHREAD_DEBUG */
+#endif  /* ifdef QTHREAD_DEBUG */
     }
     /* Step 3: Allocate & init the structure */
     t = qthread_thread_new(f, arg, arg_size, (aligned_t *)ret, dest_shep);
@@ -2585,13 +2585,18 @@ int qthread_migrate_to(const qthread_shepherd_id_t shepherd)
 {                      /*{{{ */
     qthread_t *me = qthread_internal_self();
 
+    if (me->flags & QTHREAD_REAL_MCCOY) {
+        return QTHREAD_NOT_ALLOWED;
+    }
     if (me->rdata->shepherd_ptr->shepherd_id == shepherd) {
         me->target_shepherd = me->rdata->shepherd_ptr;
         me->flags          |= QTHREAD_UNSTEALABLE;
         return QTHREAD_SUCCESS;
     }
-    if (me->flags & QTHREAD_REAL_MCCOY) {
-        return QTHREAD_NOT_ALLOWED;
+    if (shepherd == NO_SHEPHERD) {
+        me->target_shepherd = NULL;
+        me->flags          &= ~ (uint8_t)QTHREAD_UNSTEALABLE;
+        return QTHREAD_SUCCESS;
     }
     if (me && (shepherd < qlib->nshepherds)) {
         qthread_debug(THREAD_BEHAVIOR,
