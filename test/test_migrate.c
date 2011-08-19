@@ -24,11 +24,14 @@ static aligned_t migrant(void *arg)
 
     assert(myshep == 1 || myshep == 0);
 
+    iprintf("migrant running on shep %i\n", myshep);
     if (myshep == 1) {
         qthread_migrate_to(0);
+	iprintf("migrant now running on shep %i\n", (int)qthread_shep());
         assert(qthread_shep() == 0);
     } else {
         qthread_migrate_to(1);
+	iprintf("migrant now running on shep %i\n", (int)qthread_shep());
         assert(qthread_shep() == 1);
     }
 
@@ -46,8 +49,7 @@ int main(int argc,
 {
     aligned_t ret;
 
-    setenv("QTHREAD_NUM_SHEPHERDS", "2", 1);
-    qthread_initialize();
+    qthread_init(2);
 
     CHECK_VERBOSE();
 
@@ -61,7 +63,7 @@ int main(int argc,
     qthread_readFF(&ret, &ret);
     iprintf("success in forking to shepherd 1!\n");
     iprintf("now to fork the migrant...\n");
-    qthread_fork(migrant, NULL, &ret);
+    qthread_fork_to(migrant, NULL, &ret);
     iprintf("success in forking migrant!\n");
     qthread_readFF(&ret, &ret);
     iprintf("migrant returned successfully!\n");
