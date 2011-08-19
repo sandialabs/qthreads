@@ -2365,6 +2365,14 @@ int qthread_fork_syncvar_copyargs_to(qthread_f             f,
     return qthread_uberfork(f, (void *const)arg, arg_size, SYNCVAR_T, ret, NO_SYNC, 0, NULL, preferred_shep, 0);
 } /*}}}*/
 
+int qthread_fork_copyargs(qthread_f   f,
+                          const void *arg,
+                          size_t      arg_size,
+                          aligned_t  *ret)
+{   /*{{{*/
+    return qthread_uberfork(f, (void *const)arg, arg_size, ALIGNED_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, 0);
+}   /*}}}*/
+
 int qthread_fork_syncvar_copyargs(qthread_f   f,
                                   const void *arg,
                                   size_t      arg_size,
