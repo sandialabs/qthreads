@@ -367,23 +367,28 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me)
                   maxshepobjs,
                   hwloc_obj_type_string(hwloc_get_depth_type(topology, shep_depth)),
                   (int)hwloc_get_nbobjs_inside_cpuset_by_type(topology, allowed_cpuset, HWLOC_OBJ_PU));
-    unsigned int weight      = hwloc_get_nbobjs_inside_cpuset_by_type(topology, obj->allowed_cpuset, HWLOC_OBJ_PU);
-    unsigned int wraparounds = me->packed_worker_id / maxshepobjs;
+    unsigned int shep_pus      = hwloc_get_nbobjs_inside_cpuset_by_type(topology, obj->allowed_cpuset, HWLOC_OBJ_PU);
+    unsigned int wraparounds = me->packed_worker_id / (maxshepobjs * shep_pus);
     hwloc_obj_t  sub_obj     =
         hwloc_get_obj_inside_cpuset_by_type(topology, obj->allowed_cpuset,
                                             HWLOC_OBJ_PU,
-                                            (me->worker_id + (wraparounds * qlib->nworkerspershep)) % weight);
+                                            (me->worker_id + (wraparounds * qlib->nworkerspershep)) % shep_pus);
 
 # ifdef QTHREAD_DEBUG_AFFINITY
     {
         char *str;
-        qthread_debug(AFFINITY_DETAILS, "weight=%u, wraparounds=%u\n", weight, wraparounds);
+        qthread_debug(AFFINITY_DETAILS, "%u: shep_pus=%u, wraparounds=%u\n",
+                (unsigned)me->packed_worker_id,
+                shep_pus, wraparounds);
+        qthread_debug(AFFINITY_DETAILS, "%u: (%i*%i) + ((%i + (%i * %i)) %% %i)\n", 
+                (unsigned)me->packed_worker_id,
+                (int)shep_pus, (int)myshep->node, (int)me->worker_id, (int)wraparounds, (int)qlib->nworkerspershep, (int)shep_pus);
         ASPRINTF(&str, sub_obj->allowed_cpuset);
         qthread_debug(AFFINITY_CALLS,
                       "binding shep %i worker %i (%i) to PU %i, mask %s\n",
                       (int)myshep->shepherd_id, (int)me->worker_id,
                       (int)me->packed_worker_id,
-                      (weight * myshep->node) + ((me->worker_id + (wraparounds * qlib->nworkerspershep)) % weight),
+                      (shep_pus * myshep->node) + ((me->worker_id + (wraparounds * qlib->nworkerspershep)) % shep_pus),
                       str);
         free(str);
     }
