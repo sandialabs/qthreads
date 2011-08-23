@@ -368,7 +368,7 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me)
                   hwloc_obj_type_string(hwloc_get_depth_type(topology, shep_depth)),
                   (int)hwloc_get_nbobjs_inside_cpuset_by_type(topology, allowed_cpuset, HWLOC_OBJ_PU));
     unsigned int shep_pus      = hwloc_get_nbobjs_inside_cpuset_by_type(topology, obj->allowed_cpuset, HWLOC_OBJ_PU);
-    unsigned int wraparounds = me->packed_worker_id / (maxshepobjs * shep_pus);
+    unsigned int wraparounds = me->packed_worker_id / (maxshepobjs * qlib->nworkerspershep);
     hwloc_obj_t  sub_obj     =
         hwloc_get_obj_inside_cpuset_by_type(topology, obj->allowed_cpuset,
                                             HWLOC_OBJ_PU,
