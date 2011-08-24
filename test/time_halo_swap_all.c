@@ -135,20 +135,20 @@ static inline void get_position(stencil_t *points, partition_t *part)
                 part->pos = EAST;
             else
                 part->pos = CENTER;
-    } else if (prows == 1) {
+    } else if (prows == 1 && pcols > 1) {
         if (j == 0)
             part->pos = ROW_WEST;
         else if (j == pcols-1)
             part->pos = ROW_EAST;
         else
             part->pos = ROW_CENTER;
-    } else if (points->pcols == 1) {
+    } else if (pcols == 1 && prows > 1) {
         if (i == 0)
             part->pos = COL_SOUTH;
         else if (i == prows-1)
             part->pos = COL_NORTH;
         else
-            part->pos = CENTER;
+            part->pos = COL_CENTER;
     } else {
         part->pos = NWES;
     }
