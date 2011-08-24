@@ -96,18 +96,18 @@ static inline void print_stencil(stencil_t *stencil, size_t step)
 }
 
 static inline size_t prev_stage(size_t stage)
-{
+{ /*{{{*/
     return (stage == 0) ? NUM_STAGES-1 : stage - 1;
-}
+} /*}}}*/
 
 static inline size_t next_stage(size_t stage)
-{
+{ /*{{{*/
     return (stage == NUM_STAGES-1) ? 0 : stage + 1;
-}
+} /*}}}*/
 
 // Find the position of the partition in the partition matrix
 static inline void get_position(stencil_t *points, partition_t *part)
-{
+{ /*{{{*/
     const size_t i = part->row;
     const size_t j = part->col;
     const size_t prows = points->prows;
@@ -152,19 +152,19 @@ static inline void get_position(stencil_t *points, partition_t *part)
     } else {
         part->pos = NWES;
     }
-}
+} /*}}}*/
 
 // Logical-to-physical mapping assumes point (0,0) is in bottom left corner.
 static inline void get_pid(size_t lid, size_t ncols, size_t *row, size_t *col)
-{
+{/*{{{*/
     *row = lid / ncols;
     *col = lid - (*row * ncols);
-}
+}/*}}}*/
 
 static inline size_t get_lid(size_t row, size_t col, size_t ncols)
-{
+{/*{{{*/
     return (row * ncols) + col;
-}
+}/*}}}*/
 
 ////////////////////////////////////////////////////////////////////////////////
 static void setup_stencil(const size_t start, const size_t stop, void *arg)
@@ -212,34 +212,22 @@ static void setup_stencil(const size_t start, const size_t stop, void *arg)
         const size_t nrows = part->nrows;
         const size_t ncols = part->ncols;
 
-        if (SW == pos || SOUTH == pos || SE == pos ||
-            ROW_EAST == pos || ROW_CENTER == pos || ROW_WEST == pos ||
-            COL_SOUTH == pos || NWES == pos)
-            // Set southern boundary
+        if (!GHOST_SOUTH(pos))
             for (int j = 1; j < ncols-1; j++) {
                 part->stages[0][0][j] = BOUNDARY;
                 part->stages[1][0][j] = BOUNDARY;
             }
-        if (SW == pos || WEST == pos || NW == pos ||
-            COL_NORTH == pos || COL_CENTER == pos || COL_SOUTH == pos ||
-            ROW_WEST == pos || NWES == pos)
-            // Set western boundary
+        if (!GHOST_WEST(pos))
             for (int i = 1; i < nrows-1; i++) {
                 part->stages[0][i][0] = BOUNDARY;
                 part->stages[1][i][0] = BOUNDARY;
             }
-        if (SE == pos || EAST == pos || NE == pos ||
-            COL_NORTH == pos || COL_CENTER == pos || COL_SOUTH == pos ||
-            ROW_EAST == pos || NWES == pos)
-            // Set eastern boundary
+        if (!GHOST_EAST(pos))
             for (int i = 1; i < nrows-1; i++) {
                 part->stages[0][i][ncols-1] = BOUNDARY;
                 part->stages[1][i][ncols-1] = BOUNDARY;
             }
-        if (NE == pos || NORTH == pos || NW == pos ||
-            ROW_EAST == pos || ROW_CENTER == pos || ROW_WEST == pos ||
-            COL_NORTH == pos || NWES == pos)
-            // Set northern boundary
+        if (!GHOST_NORTH(pos))
             for (int j = 1; j < ncols-1; j++) {
                 part->stages[0][nrows-1][j] = BOUNDARY;
                 part->stages[1][nrows-1][j] = BOUNDARY;
