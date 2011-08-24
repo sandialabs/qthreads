@@ -185,7 +185,7 @@ static inline size_t get_lid(size_t row, size_t col, size_t ncols)
 
 ////////////////////////////////////////////////////////////////////////////////
 static void setup_stencil(const size_t start, const size_t stop, void *arg)
-{
+{/*{{{*/
     const size_t part_lid = start;
     stencil_t *points = (stencil_t *)arg;
 
@@ -304,10 +304,10 @@ static void setup_stencil(const size_t start, const size_t stop, void *arg)
             }
         }
     }
-}
+}/*}}}*/
 
 static inline void destroy_stencil(stencil_t *points)
-{
+{/*{{{*/
     const size_t num_parts = points->prows * points->pcols;
     for (int i = 0; i < num_parts; i ++) {
         partition_t *part = points->parts[i];
@@ -321,7 +321,7 @@ static inline void destroy_stencil(stencil_t *points)
         free(part);
     }
     free(points->parts);
-}
+}/*}}}*/
 
 ////////////////////////////////////////////////////////////////////////////////
 typedef struct up_args_s {
@@ -635,7 +635,8 @@ static aligned_t send_block(void *arg_) {
 }
 
 // Corner case is needed so we don't readFE() the same source twice
-static aligned_t send_block_corner(void *arg_) {
+static aligned_t send_block_corner(void *arg_) 
+{
     const sbc_args_t *arg = (sbc_args_t *)arg_;
 
     uint64_t value;
@@ -659,6 +660,7 @@ static aligned_t send_updates(void *arg_)
     const size_t       src_nrows = src_part->nrows;
     const size_t       src_ncols = src_part->ncols;
 
+    // Send updates along edges
     if (GHOST_NORTH(src_pos)) {
         const size_t tgt_lid = 
             get_lid(src_part->row + 1, src_part->col, points->pcols);
@@ -670,8 +672,8 @@ static aligned_t send_updates(void *arg_)
         const size_t ub = GHOST_EAST(src_pos) ? src_ncols-2 : src_ncols-1;
         for (size_t j = lb; j < ub; j++) {
             const sb_args_t sb_args = {&tgt_stage[0][j], &src_stage[i][j]};
-            qthread_fork_copyargs_precond(send_block, &sb_args, 
-                sizeof(sb_args_t), NULL, 1, &src_stage[i][j]);
+            qthread_fork_copyargs(send_block, &sb_args, 
+                sizeof(sb_args_t), NULL);
         }
     }
     if (GHOST_SOUTH(src_pos)) {
@@ -687,8 +689,8 @@ static aligned_t send_updates(void *arg_)
         for (size_t j = lb; j < ub; j++) {
             const sb_args_t sb_args = 
                 {&tgt_stage[tgt_nrows-1][j], &src_stage[i][j]};
-            qthread_fork_copyargs_precond(send_block, &sb_args, 
-                sizeof(sb_args_t), NULL, 1, &src_stage[i][j]);
+            qthread_fork_copyargs(send_block, &sb_args, 
+                sizeof(sb_args_t), NULL);
         }
     }
     if (GHOST_WEST(src_pos)) {
@@ -704,8 +706,8 @@ static aligned_t send_updates(void *arg_)
         for (size_t i = lb; i < ub; i++) {
             const sb_args_t sb_args = 
                 {&tgt_stage[i][tgt_ncols-1], &src_stage[i][j]};
-            qthread_fork_copyargs_precond(send_block, &sb_args, 
-                sizeof(sb_args_t), NULL, 1, &src_stage[i][j]);
+            qthread_fork_copyargs(send_block, &sb_args, 
+                sizeof(sb_args_t), NULL);
         }
     }
 
@@ -721,11 +723,12 @@ static aligned_t send_updates(void *arg_)
         for (size_t i = lb; i < ub; i++) {
             const sb_args_t sb_args = 
                 {&tgt_stage[i][0], &src_stage[i][j]};
-            qthread_fork_copyargs_precond(send_block, &sb_args, 
-                sizeof(sb_args_t), NULL, 1, &src_stage[i][j]);
+            qthread_fork_copyargs(send_block, &sb_args, 
+                sizeof(sb_args_t), NULL);
         }
     }
 
+    // Send updates at corners
     if (GHOST_WEST(src_pos) && GHOST_NORTH(src_pos)) {
         const size_t tgt1_lid = 
             get_lid(src_part->row, src_part->col-1, points->pcols);
@@ -744,8 +747,8 @@ static aligned_t send_updates(void *arg_)
             {&tgt1_stage[i][tgt1_ncols-1], 
              &tgt2_stage[0][j],
              &src_stage[i][j]};
-        qthread_fork_copyargs_precond(send_block_corner, &sbc_args, 
-            sizeof(sbc_args_t), NULL, 1, &src_stage[i][j]);
+        qthread_fork_copyargs(send_block_corner, &sbc_args, 
+            sizeof(sbc_args_t), NULL);
     }
 
     if (GHOST_WEST(src_pos) && GHOST_SOUTH(src_pos)) {
@@ -767,8 +770,8 @@ static aligned_t send_updates(void *arg_)
             {&tgt1_stage[i][tgt1_ncols-1], 
              &tgt2_stage[tgt2_nrows-1][j],
              &src_stage[i][j]};
-        qthread_fork_copyargs_precond(send_block_corner, &sbc_args, 
-            sizeof(sbc_args_t), NULL, 1, &src_stage[i][j]);
+        qthread_fork_copyargs(send_block_corner, &sbc_args, 
+            sizeof(sbc_args_t), NULL);
     }
 
     if (GHOST_EAST(src_pos) && GHOST_NORTH(src_pos)) {
@@ -788,8 +791,8 @@ static aligned_t send_updates(void *arg_)
             {&tgt1_stage[i][0], 
              &tgt2_stage[0][j],
              &src_stage[i][j]};
-        qthread_fork_copyargs_precond(send_block_corner, &sbc_args, 
-            sizeof(sbc_args_t), NULL, 1, &src_stage[i][j]);
+        qthread_fork_copyargs(send_block_corner, &sbc_args, 
+            sizeof(sbc_args_t), NULL);
     }
 
     if (GHOST_EAST(src_pos) && GHOST_SOUTH(src_pos)) {
@@ -810,8 +813,8 @@ static aligned_t send_updates(void *arg_)
             {&tgt1_stage[i][0], 
              &tgt2_stage[tgt2_nrows-1][j], 
              &src_stage[i][j]};
-        qthread_fork_copyargs_precond(send_block_corner, &sbc_args, 
-            sizeof(sbc_args_t), NULL, 1, &src_stage[i][j]);
+        qthread_fork_copyargs(send_block_corner, &sbc_args, 
+            sizeof(sbc_args_t), NULL);
     }
 
     return 0;
@@ -830,7 +833,10 @@ static aligned_t update_stage(void *arg_)
     const size_t num_cols = arg->part->ncols;
     const size_t now      = arg->timestep % 2;
 
-    aligned_t rets[8];
+    syncvar_t rets[8];
+    for (int i = 0; i < 8; i++)
+        rets[i] = SYNCVAR_INITIALIZER;
+
     up_args_t up_args = {arg->part->stages, now, 0, 0, 0};
     const size_t args_size = sizeof(up_args_t);
 
@@ -839,22 +845,26 @@ static aligned_t update_stage(void *arg_)
         if (GHOST_NORTH(pos) && GHOST_WEST(pos)) {
             up_args.i = num_rows - 2;
             up_args.j = 1;
-            qthread_fork_copyargs(update_point_nw,&up_args,args_size,&rets[0]);
+            qthread_fork_syncvar_copyargs(
+				update_point_nw,&up_args,args_size,&rets[0]);
         }
         if (GHOST_NORTH(pos) && GHOST_EAST(pos)) { 
             up_args.i = num_rows - 2;
             up_args.j = num_cols - 2;;
-            qthread_fork_copyargs(update_point_ne,&up_args,args_size,&rets[1]);
+            qthread_fork_syncvar_copyargs(
+				update_point_ne,&up_args,args_size,&rets[1]);
         }
         if (GHOST_SOUTH(pos) && GHOST_WEST(pos)) {
             up_args.i = 1;
             up_args.j = 1;
-            qthread_fork_copyargs(update_point_sw,&up_args,args_size,&rets[2]);
+            qthread_fork_syncvar_copyargs(
+				update_point_sw,&up_args,args_size,&rets[2]);
         }
         if (GHOST_SOUTH(pos) && GHOST_EAST(pos)) {
             up_args.i = 1;
             up_args.j = num_cols - 2;
-            qthread_fork_copyargs(update_point_se,&up_args,args_size,&rets[3]);
+            qthread_fork_syncvar_copyargs(
+				update_point_se,&up_args,args_size,&rets[3]);
         }
     }
 
@@ -864,29 +874,29 @@ static aligned_t update_stage(void *arg_)
             up_args.i = num_rows-2;
             up_args.j = GHOST_WEST(pos) ? 2 : 1;
             up_args.k = GHOST_EAST(pos) ? num_cols-2 : num_cols-1;
-            qthread_fork_copyargs(update_point_edge_n, &up_args, args_size, 
-                                  &rets[4]);
+            qthread_fork_syncvar_copyargs(
+				update_point_edge_n, &up_args, args_size, &rets[4]);
         }
         if (GHOST_SOUTH(pos)) {
             up_args.i = 1;
             up_args.j = GHOST_WEST(pos) ? 2 : 1;
             up_args.k = GHOST_EAST(pos) ? num_cols-2 : num_cols-1;
-            qthread_fork_copyargs(update_point_edge_s, &up_args, args_size,
-                                  &rets[5]);
+            qthread_fork_syncvar_copyargs(
+				update_point_edge_s, &up_args, args_size, &rets[5]);
         }
         if (GHOST_WEST(pos)) {
             up_args.i = GHOST_SOUTH(pos) ? 2 : 1;
             up_args.j = 1;
             up_args.k = GHOST_NORTH(pos) ? num_rows-2 : num_rows-1;
-            qthread_fork_copyargs(update_point_edge_w, &up_args, args_size,
-                                  &rets[6]);
+            qthread_fork_syncvar_copyargs(
+				update_point_edge_w, &up_args, args_size, &rets[6]);
         }
         if (GHOST_EAST(pos)) {
             up_args.i = GHOST_SOUTH(pos) ? 2 : 1;
             up_args.j = num_cols-2;
             up_args.k = GHOST_NORTH(pos) ? num_rows-2 : num_rows-1;
-            qthread_fork_copyargs(update_point_edge_e, &up_args, args_size,
-                                  &rets[7]);
+            qthread_fork_syncvar_copyargs(
+                update_point_edge_e, &up_args, args_size, &rets[7]);
         }
     }
 
@@ -901,7 +911,7 @@ static aligned_t update_stage(void *arg_)
 
     // Wait for corner and edge cases to finish
     for (int i = 0; i < 8; i++)
-        qthread_readFF(&rets[i], &rets[i]);
+        qthread_syncvar_readFF(NULL, &rets[i]);
 
     return 0;
 }
@@ -923,15 +933,14 @@ static void begin(const size_t start, const size_t stop, void *arg_)
 
         // Compute a step
         const us_args_t us_args = {part_lid, t, arg->parts[part_lid], arg};
-        aligned_t up_ret;
-        qthread_fork(update_stage, &us_args, &up_ret);
-        qthread_readFF(&up_ret, &up_ret);
+        syncvar_t up_ret = SYNCVAR_EMPTY_INITIALIZER;
+        qthread_fork_syncvar(update_stage, &us_args, &up_ret);
+        qthread_syncvar_readFF(NULL, &up_ret);
     }
 }
 
-////////////////////////////////////////////////////////////////////////////////
 int main(int argc, char *argv[])
-{
+{/*{{{*/
     int nrows = 10;
     int ncols = 10;
     int prows = 1;
@@ -1003,6 +1012,6 @@ int main(int argc, char *argv[])
     destroy_stencil(&points);
 
     return 0;
-}
+}/*}}}*/
 
 /* vim:set expandtab */
