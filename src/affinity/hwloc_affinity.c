@@ -258,7 +258,7 @@ loop_top:
             *nbworkers = guess_num_workers_per_shep(*nbshepherds);
         }
     }
-    if (DEBUG_ONLY(1 || ) wkr_index != -1) {
+    if (DEBUG_ONLY(1 ||) wkr_index != -1) {
         hwloc_const_cpuset_t allowed_cpuset      = hwloc_topology_get_allowed_cpuset(topology);
         hwloc_obj_t          obj                 = hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth, 0);
         unsigned int         workerobjs_per_shep = hwloc_get_nbobjs_inside_cpuset_by_type(topology, obj->allowed_cpuset, wkr_type);
@@ -408,7 +408,9 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me)
     hwloc_obj_t  sub_obj            =
         hwloc_get_obj_inside_cpuset_by_type(topology, obj->allowed_cpuset,
                                             HWLOC_OBJ_PU,
-                                            (me->worker_id + (wraparounds * qlib->nworkerspershep)) % shep_pus);
+                                            ((me->worker_id * worker_pus) +
+                                             (wraparounds * qlib->nworkerspershep) +
+                                             worker_wraparounds) % shep_pus);
 
 # ifdef QTHREAD_DEBUG_AFFINITY
     {
