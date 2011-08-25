@@ -764,23 +764,38 @@ static void begin(const size_t start, const size_t stop, void *arg_)
 ////////////////////////////////////////////////////////////////////////////////
 // Stencil setup and tear down
 
-static void setup_stencil(const size_t start, const size_t stop, void *arg)
+typedef struct ss_args_s {
+    stencil_t *points;
+    size_t *row_splits;
+    size_t *col_splits;
+} ss_args_t;
+
+static void setup_stencil(const size_t start, const size_t stop, void *arg_)
 {/*{{{*/
+    ss_args_t *arg = (ss_args_t *)arg_;
+    stencil_t *points = arg->points;
+    size_t *row_splits = arg->row_splits;
+    size_t *col_splits = arg->col_splits;
+
     const size_t part_lid = start;
-    stencil_t *points = (stencil_t *)arg;
 
     points->parts[part_lid] = malloc(sizeof(partition_t));
     assert(points->parts[part_lid]);
 
     partition_t *part = points->parts[part_lid];
-    part->nrows = points->nrows / points->prows;
-    part->ncols = points->ncols / points->pcols;
-    part->brows = points->brows;
-    part->bcols = points->bcols;
 
     // Calculate position
     get_pid(part_lid, points->pcols, &part->row, &part->col);
     get_position(points, part);
+
+    // Setup partition info
+    const double row_per = row_splits[part->row] * 0.01;
+    const double col_per = col_splits[part->col] * 0.01;
+    part->nrows = (points->nrows / points->prows) * row_per;
+    part->ncols = (points->ncols / points->pcols) * col_per;
+    assert(part->nrows > 3 && part->ncols > 3);
+    part->brows = points->brows;
+    part->bcols = points->bcols;
 
     // Allocate points
     {
@@ -926,6 +941,11 @@ int main(int argc, char *argv[])
     NUMARG(print_final, "PRINT_FINAL");
     NUMARG(alltime, "ALL_TIME");
 
+    size_t row_splits[prows];
+    size_t col_splits[pcols];
+    NUMARRARG(row_splits, "ROW_SPLITS", prows);
+    NUMARRARG(col_splits, "COL_SPLITS", pcols);
+
     const size_t num_parts = prows * pcols;
 
     // Check sanity
@@ -947,7 +967,8 @@ int main(int argc, char *argv[])
         points.parts = malloc(num_parts * sizeof(partition_t*));
         assert(points.parts);
 
-        qt_loop(0, num_parts, setup_stencil, &points);
+        ss_args_t ss_args = {&points, row_splits, col_splits};
+        qt_loop(0, num_parts, setup_stencil, &ss_args);
         qtimer_stop(setup_timer);
     }
 
