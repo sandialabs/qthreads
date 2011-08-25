@@ -943,8 +943,8 @@ int main(int argc, char *argv[])
 
     size_t row_splits[prows];
     size_t col_splits[pcols];
-    NUMARRARG(row_splits, "ROW_SPLITS", prows);
-    NUMARRARG(col_splits, "COL_SPLITS", pcols);
+    NUMARRARG(row_splits, "ROW_SPLITS", prows, 100);
+    NUMARRARG(col_splits, "COL_SPLITS", pcols, 100);
 
     const size_t num_parts = prows * pcols;
 

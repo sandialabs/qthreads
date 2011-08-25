@@ -25,17 +25,33 @@
     iprintf(name" = %lu\n", (unsigned long)var); \
 } while (0)
 
-#define NUMARRARG(var,name,size) do { \
-    char *split_str = getenv(name); \
-    if (split_str != NULL) { \
-        char *rest = NULL; \
-        for (int i = 0; i < size; i++) { \
-            var[i] = strtoul(split_str, &rest, 0); \
-            assert(rest != NULL && rest != split_str); \
-            split_str = rest + 1; \
+// Given an environment variable "FOO=,,,80,,"
+// And buffer "size_t foo[5]"
+// Then NUMARRARG(foo, bar, 5, 100) 
+//   => foo = {100,100,100,80,100}
+#define NUMARRARG(var,name,size,val) do { \
+    char *str = getenv(name); \
+    if (str != NULL) { \
+        int i = 0; \
+        if (*str != '\0') { \
+            char *rest = NULL; \
+            do { \
+                var[i] = strtoul(str, &rest, 0); \
+                if (rest == str) var[i] = val; \
+                if (*rest == ',') rest++; \
+                else if (*rest != '\0') { \
+                    fprintf(stderr, "malformed "name" ending (%s)\n", rest); \
+                    abort(); \
+                    } \
+                i++; \
+                str = rest; \
+            } while (*rest != '\0' && i < size); \
+            if (*rest != '\0') \
+                fprintf(stderr, "extra values in "name" (%s)\n", rest); \
         } \
-        if (*rest != '\0') { \
-            fprintf(stderr, "too many "name" arguments.\n"); \
+        while (i < size) { \
+            var[i] = val; \
+            i++; \
         } \
     } \
     iprintf(name" = [%lu", (unsigned long)var[0]); \
