@@ -34,10 +34,9 @@ struct mctxt {
 
 struct uctxt {
     struct {
-        void *ss_sp;
-        uint  ss_size;
+        void        *ss_sp;
+        unsigned int ss_size;
     } uc_stack;
-    sigset_t      uc_sigmask;
     mctxt_t       mc;
     struct uctxt *uc_link;      /* unused */
 };
