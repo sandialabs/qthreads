@@ -27,25 +27,8 @@ static const syncvar_t boundary_value =
 #define EDGE_POINT_EMPTY  SYNCVAR_EMPTY_INITIALIZER
 #define EDGE_POINT_FULL   SYNCVAR_INITIALIZER
 
-// Position-related helper stuff
+// Stencil and partition and position data structures
 /*{{{*/
-#define NORTH_OF(stage, i, j) stage[i+1][j  ]
-#define WEST_OF(stage, i, j)  stage[i  ][j-1]
-#define EAST_OF(stage, i, j)  stage[i  ][j+1]
-#define SOUTH_OF(stage, i, j) stage[i-1][j  ]
-
-#define GHOST_NORTH(pos) (WEST == pos || CENTER == pos || EAST == pos || \
-                          SW == pos || SOUTH == pos || SE == pos || \
-                          COL_CENTER == pos || COL_SOUTH == pos)
-#define GHOST_WEST(pos) (NORTH == pos || NE == pos || CENTER == pos || \
-                         EAST == pos || SOUTH == pos || SE == pos || \
-                         ROW_CENTER == pos || ROW_EAST == pos)
-#define GHOST_EAST(pos) (NW == pos || NORTH == pos || WEST == pos || \
-                         CENTER == pos || SW == pos || SOUTH == pos || \
-                         ROW_WEST == pos || ROW_CENTER == pos)
-#define GHOST_SOUTH(pos) (NW == pos || NORTH == pos || NE == pos || \
-                          WEST == pos || CENTER == pos || EAST == pos || \
-                          COL_NORTH == pos || COL_CENTER == pos)
 typedef enum position {
     NW=0, NORTH, NE, WEST, CENTER, EAST, SW, SOUTH, SE, 
     COL_NORTH, COL_SOUTH, COL_CENTER, 
@@ -59,10 +42,6 @@ static char *pos_strs[16] = {
     "ROW-WEST", "ROW-EAST", "ROW-CENTER",
     "NWES"};
 
-/*}}}*/
-
-// Stencil and partition data structures
-/*{{{*/
 typedef struct partition_s {
     Q_ALIGNED(8) position_t pos;    // Position of this partition in matrix
     size_t row;                     // Row index in partition matrix
@@ -83,6 +62,39 @@ typedef struct stencil_s {
     size_t bcols;         // Total number of col blocks
     partition_t **parts;  // The stencil partitions
 } stencil_t;
+/*}}}*/
+
+////////////////////////////////////////////////////////////////////////////////
+// Helpers
+
+// Position-related helper stuff
+/*{{{*/
+#define NORTH_OF(stage, i, j) stage[i+1][j  ]
+#define WEST_OF(stage, i, j)  stage[i  ][j-1]
+#define EAST_OF(stage, i, j)  stage[i  ][j+1]
+#define SOUTH_OF(stage, i, j) stage[i-1][j  ]
+
+#define GHOST_NORTH(pos) (WEST == pos || CENTER == pos || EAST == pos || \
+                          SW == pos || SOUTH == pos || SE == pos || \
+                          COL_CENTER == pos || COL_SOUTH == pos)
+#define GHOST_WEST(pos) (NORTH == pos || NE == pos || CENTER == pos || \
+                         EAST == pos || SOUTH == pos || SE == pos || \
+                         ROW_CENTER == pos || ROW_EAST == pos)
+#define GHOST_EAST(pos) (NW == pos || NORTH == pos || WEST == pos || \
+                         CENTER == pos || SW == pos || SOUTH == pos || \
+                         ROW_WEST == pos || ROW_CENTER == pos)
+#define GHOST_SOUTH(pos) (NW == pos || NORTH == pos || NE == pos || \
+                          WEST == pos || CENTER == pos || EAST == pos || \
+                          COL_NORTH == pos || COL_CENTER == pos)
+
+#define HAS_NW_CORNER(pos) (CENTER == pos || \
+                           EAST == pos || SOUTH == pos || SE == pos)
+#define HAS_SW_CORNER(pos) (CENTER == pos || \
+                           NORTH == pos || NE == pos || EAST == pos)
+#define HAS_NE_CORNER(pos) (CENTER == pos || \
+                           WEST == pos || SW == pos || SOUTH == pos)
+#define HAS_SE_CORNER(pos) (CENTER == pos || \
+                           NW == pos || NORTH == pos || WEST == pos)
 /*}}}*/
 
 // Syncvar-related stuff
@@ -184,183 +196,32 @@ static inline size_t get_lid(size_t row, size_t col, size_t ncols)
 }/*}}}*/
 
 ////////////////////////////////////////////////////////////////////////////////
-static void setup_stencil(const size_t start, const size_t stop, void *arg)
-{/*{{{*/
-    const size_t part_lid = start;
-    stencil_t *points = (stencil_t *)arg;
+// Stencil point update code
 
-    points->parts[part_lid] = malloc(sizeof(partition_t));
-    assert(points->parts[part_lid]);
+typedef struct upx_args_s {
+    syncvar_t            ***stages;
+    size_t                  now;
+    Q_ALIGNED(8) position_t dir;
+    Q_ALIGNED(8) position_t pos;
+    size_t                  num_rows;
+    size_t                  num_cols;
+} upx_args_t;
 
-    partition_t *part = points->parts[part_lid];
-    part->nrows = points->nrows / points->prows;
-    part->ncols = points->ncols / points->pcols;
-    part->brows = points->brows;
-    part->bcols = points->bcols;
-
-    // Calculate position
-    get_pid(part_lid, points->pcols, &part->row, &part->col);
-    get_position(points, part);
-
-    // Allocate points
-    {
-        part->nrows += 2;  // Padding for boundary and ghost points
-        part->ncols += 2;  // Padding for boundary and ghost points
-
-        part->stages[0] = malloc(part->nrows * sizeof(syncvar_t *));
-        assert(part->stages[0]);
-        part->stages[1] = malloc(part->nrows * sizeof(syncvar_t *));
-        assert(part->stages[1]);
-        for (int pi = 0; pi < part->nrows; pi++) {
-            part->stages[0][pi] = malloc(part->ncols * sizeof(syncvar_t));
-            assert(part->stages[0][pi]);
-            part->stages[1][pi] = malloc(part->ncols * sizeof(syncvar_t));
-            assert(part->stages[1][pi]);
-            for (int pj = 0; pj < part->ncols; pj++) {
-                part->stages[0][pi][pj] = INTERNAL_POINT;
-                part->stages[1][pi][pj] = INTERNAL_POINT;
-            }
-        }
-    }
-
-    // Setup boundary
-    {
-        const position_t pos = part->pos;
-        const size_t nrows = part->nrows;
-        const size_t ncols = part->ncols;
-
-        if (!GHOST_SOUTH(pos))
-            for (int j = 1; j < ncols-1; j++) {
-                part->stages[0][0][j] = boundary_value;
-                part->stages[1][0][j] = boundary_value;
-            }
-        if (!GHOST_WEST(pos))
-            for (int i = 1; i < nrows-1; i++) {
-                part->stages[0][i][0] = boundary_value;
-                part->stages[1][i][0] = boundary_value;
-            }
-        if (!GHOST_EAST(pos))
-            for (int i = 1; i < nrows-1; i++) {
-                part->stages[0][i][ncols-1] = boundary_value;
-                part->stages[1][i][ncols-1] = boundary_value;
-            }
-        if (!GHOST_NORTH(pos))
-            for (int j = 1; j < ncols-1; j++) {
-                part->stages[0][nrows-1][j] = boundary_value;
-                part->stages[1][nrows-1][j] = boundary_value;
-            }
-    }
-
-    // Setup ghostzones and edges:
-    // 1) empty ghost points for both stages
-    // 2) empty edge points only in second stage
-    {
-        const position_t pos = part->pos;
-        const size_t num_rows = part->nrows;
-        const size_t num_cols = part->ncols;
-    
-        if (GHOST_SOUTH(pos)) {
-            const size_t i = 0;
-            for (int j = 1; j < num_cols-1; j++) {
-                // Ghost points
-                part->stages[0][i][j] = GHOST_POINT_EMPTY;
-                part->stages[1][i][j] = GHOST_POINT_EMPTY;
-                // Edge points
-                part->stages[0][i+1][j] = EDGE_POINT_FULL;
-                part->stages[1][i+1][j] = EDGE_POINT_EMPTY;
-            }
-        }
-        if (GHOST_NORTH(pos)) {
-            const size_t i = num_rows - 1;
-            for (int j = 1; j < num_cols-1; j++) {
-                // Ghost points
-                part->stages[0][i][j] = GHOST_POINT_EMPTY;
-                part->stages[1][i][j] = GHOST_POINT_EMPTY;
-                // Edge points
-                part->stages[0][i-1][j] = EDGE_POINT_FULL;
-                part->stages[1][i-1][j] = EDGE_POINT_EMPTY;
-            }
-        }
-        if (GHOST_WEST(pos)) {
-            const size_t j = 0;
-            for (int i = 1; i < num_rows-1; i++) {
-                // Ghost points
-                part->stages[0][i][j] = GHOST_POINT_EMPTY;
-                part->stages[1][i][j] = GHOST_POINT_EMPTY;
-                // Edge points
-                part->stages[0][i][j+1] = EDGE_POINT_FULL;
-                part->stages[1][i][j+1] = EDGE_POINT_EMPTY;
-            }
-        }
-        if (GHOST_EAST(pos)) {
-            const size_t j = num_cols - 1;
-            for (int i = 1; i < num_rows-1; i++) {
-                // Ghost points
-                part->stages[0][i][j] = GHOST_POINT_EMPTY;
-                part->stages[1][i][j] = GHOST_POINT_EMPTY;
-                // Edge points
-                part->stages[0][i][j-1] = EDGE_POINT_FULL;
-                part->stages[1][i][j-1] = EDGE_POINT_EMPTY;
-            }
-        }
-    }
-}/*}}}*/
-
-static inline void destroy_stencil(stencil_t *points)
-{/*{{{*/
-    const size_t num_parts = points->prows * points->pcols;
-    for (int i = 0; i < num_parts; i ++) {
-        partition_t *part = points->parts[i];
-        const size_t nrows = part->nrows;
-        for (int pi = 0; pi < nrows; pi++) {
-            free(part->stages[0][pi]);
-            free(part->stages[1][pi]);
-        }
-        free(part->stages[0]);
-        free(part->stages[1]);
-        free(part);
-    }
-    free(points->parts);
-}/*}}}*/
-
-////////////////////////////////////////////////////////////////////////////////
-typedef struct up_args_s {
+typedef struct upi_args_s {
     syncvar_t ***stages;
     size_t       now;
-    size_t       i;
-    size_t       j;
-    size_t       k;       // Upper bound of row
-} up_args_t;
-
-typedef struct upil_args_s {
-    size_t num_rows;
-    size_t num_cols;
-    position_t pos;
-    up_args_t *up_args;
-} upil_args_t;
-
-typedef struct us_args_s {
-    size_t part_lid;
-    size_t timestep;
-    partition_t *part;
-    const stencil_t *points;
-} us_args_t;
-
-typedef struct su_args_s {
-    size_t part_lid;
-    size_t stage;
-    const stencil_t *points;
-} su_args_t;
+    size_t       col;
+} upi_args_t;
 
 // Update internal point
 static void update_point_internal(const size_t start, const size_t stop,
                                   void *arg_)
 {
-    const up_args_t *arg = (up_args_t *)arg_;
+    const upi_args_t *arg = (upi_args_t *)arg_;
     syncvar_t ***stages = arg->stages;
     const size_t now    = arg->now;
     const size_t i      = start;
-    const size_t j      = arg->j;
+    const size_t j      = arg->col;
 
     syncvar_t **S = stages[prev_stage(now)];
 
@@ -377,236 +238,286 @@ static void update_point_internal(const size_t start, const size_t stop,
 static void update_point_internal_loop(const size_t start, const size_t stop,
                                        void *arg_)
 {
-    const upil_args_t *arg = (upil_args_t *)arg_;
+    const upx_args_t *arg = (upx_args_t *)arg_;
     const size_t num_rows = arg->num_rows;
     const position_t pos  = arg->pos;
 
     const size_t col_start = GHOST_SOUTH(pos) ? 2 : 1;
     const size_t col_stop  = GHOST_NORTH(pos) ? num_rows-2 : num_rows-1;
 
-    up_args_t up_args = {arg->up_args->stages, arg->up_args->now, 0, start, 0};
-    qt_loop(col_start, col_stop, update_point_internal, &up_args);
+    upi_args_t upi_args = {arg->stages, arg->now, start};
+    qt_loop(col_start, col_stop, update_point_internal, &upi_args);
 }
 
-// Update NW corner point
-static aligned_t update_point_nw(void *arg_)
+static aligned_t update_point_corner(void *arg_)
 {
-    const up_args_t *arg = (up_args_t *)arg_;
-    syncvar_t ***stages = arg->stages;
-    const size_t now    = arg->now;
-    const size_t i      = arg->i;
-    const size_t j      = arg->j;
+    const upx_args_t *arg = (upx_args_t *)arg_;
+    syncvar_t ***stages   = arg->stages;
+    const position_t dir  = arg->dir;
+    const size_t now      = arg->now;
+    const size_t num_rows = arg->num_rows;
+    const size_t num_cols = arg->num_cols;
 
-    syncvar_t **S = stages[prev_stage(now)];
-
-    uint64_t sum = SYNCVAR_EVAL(S[i][j]) +
-                   SYNCVAR_EVAL(SOUTH_OF(S,i,j)) +
-                   SYNCVAR_EVAL(EAST_OF(S,i,j));
+    syncvar_t **S  = stages[prev_stage(now)];
+    size_t i       = 0;
+    size_t j       = 0;
+    uint64_t sum   = 0;
     uint64_t value = 0;
-    qthread_syncvar_readFE(&value, &NORTH_OF(S,i,j));
-    sum += value;
-    qthread_syncvar_readFE(&value, &WEST_OF(S,i,j));
-    sum += value;
 
-    qthread_syncvar_writeEF_const(&stages[now][i][j], sum/NUM_NEIGHBORS);
+    switch (dir) {
+        case NW: 
+            i = num_rows - 2;
+            j = 1;
+            sum = SYNCVAR_EVAL(S[i][j]) +
+                  SYNCVAR_EVAL(SOUTH_OF(S,i,j)) +
+                  SYNCVAR_EVAL(EAST_OF(S,i,j));
+            qthread_syncvar_readFE(&value, &NORTH_OF(S,i,j));
+            sum += value;
+            qthread_syncvar_readFE(&value, &WEST_OF(S,i,j));
+            sum += value;
+            break;
+        case NE:
+            i = num_rows - 2;
+            j = num_cols - 2;
+            sum = SYNCVAR_EVAL(S[i][j]) +
+                  SYNCVAR_EVAL(SOUTH_OF(S,i,j)) +
+                  SYNCVAR_EVAL(WEST_OF(S,i,j));
+            qthread_syncvar_readFE(&value, &NORTH_OF(S,i,j));
+            sum += value;
+            qthread_syncvar_readFE(&value, &EAST_OF(S,i,j));
+            sum += value;
+            break;
+        case SW:
+            i = 1;
+            j = 1;
+            sum = SYNCVAR_EVAL(S[i][j]) +
+                  SYNCVAR_EVAL(NORTH_OF(S,i,j)) +
+                  SYNCVAR_EVAL(EAST_OF(S,i,j));
+            qthread_syncvar_readFE(&value, &SOUTH_OF(S,i,j));
+            sum += value;
+            qthread_syncvar_readFE(&value, &WEST_OF(S,i,j));
+            sum += value;
+            break;
+        case SE:
+            i = 1;
+            j = num_cols - 2;
+            sum = SYNCVAR_EVAL(S[i][j]) +
+                  SYNCVAR_EVAL(NORTH_OF(S,i,j)) +
+                  SYNCVAR_EVAL(WEST_OF(S,i,j));
+            qthread_syncvar_readFE(&value, &SOUTH_OF(S,i,j));
+            sum += value;
+            qthread_syncvar_readFE(&value, &EAST_OF(S,i,j));
+            sum += value;
+            break;
+        default:
+            abort();
+            break;
+    }
+
+    qthread_syncvar_writeEF_const(&stages[now][i][j],sum/NUM_NEIGHBORS);
 
     return 0;
 }
 
-// Update NE corner point
-static aligned_t update_point_ne(void *arg_)
+static void update_point_edge(const size_t start, const size_t stop, void *arg_)
 {
-    const up_args_t *arg = (up_args_t *)arg_;
+    const upx_args_t *arg = (upx_args_t *)arg_;
     syncvar_t ***stages = arg->stages;
     const size_t now    = arg->now;
-    const size_t i      = arg->i;
-    const size_t j      = arg->j;
+    const position_t dir = arg->dir;
+    const size_t num_rows = arg->num_rows;
+    const size_t num_cols = arg->num_cols;
 
     syncvar_t **S = stages[prev_stage(now)];
+    size_t i       = 0;
+    size_t j       = 0;
+    uint64_t sum   = 0;
 
-    uint64_t sum = SYNCVAR_EVAL(S[i][j]) +
+    switch (dir) {
+        case NORTH:
+            i = num_rows-2;
+            j = start;
+            qthread_syncvar_readFE(&sum, &NORTH_OF(S,i,j));
+            sum += SYNCVAR_EVAL(S[i][j]) +
+                   SYNCVAR_EVAL(SOUTH_OF(S,i,j)) +
+                   SYNCVAR_EVAL(WEST_OF(S,i,j)) +
+                   SYNCVAR_EVAL(EAST_OF(S,i,j));
+            break;
+        case SOUTH:
+            i = 1;
+            j = start;
+            qthread_syncvar_readFE(&sum, &SOUTH_OF(S,i,j));
+            sum += SYNCVAR_EVAL(S[i][j]) +
+                   SYNCVAR_EVAL(NORTH_OF(S,i,j)) +
+                   SYNCVAR_EVAL(WEST_OF(S,i,j)) +
+                   SYNCVAR_EVAL(EAST_OF(S,i,j));
+            break;
+        case WEST:
+            i = start;
+            j = 1;
+            qthread_syncvar_readFE(&sum, &WEST_OF(S,i,j));
+            sum += SYNCVAR_EVAL(S[i][j]) +
+                   SYNCVAR_EVAL(NORTH_OF(S,i,j)) +
+                   SYNCVAR_EVAL(SOUTH_OF(S,i,j)) +
+                   SYNCVAR_EVAL(EAST_OF(S,i,j));
+            break;
+        case EAST:
+            i = start;
+            j = num_cols - 2;
+            qthread_syncvar_readFE(&sum, &EAST_OF(S,i,j));
+            sum += SYNCVAR_EVAL(S[i][j]) +
+                   SYNCVAR_EVAL(NORTH_OF(S,i,j)) +
                    SYNCVAR_EVAL(SOUTH_OF(S,i,j)) +
                    SYNCVAR_EVAL(WEST_OF(S,i,j));
-    uint64_t value = 0;
-    qthread_syncvar_readFE(&value, &NORTH_OF(S,i,j));
-    sum += value;
-    qthread_syncvar_readFE(&value, &EAST_OF(S,i,j));
-    sum += value;
-
-    qthread_syncvar_writeEF_const(&stages[now][i][j], sum/NUM_NEIGHBORS);
+            break;
+        default:
+            abort();
+            break;
+    }
     
-    return 0;
-}
-
-// Update SW corner point
-static aligned_t update_point_sw(void *arg_)
-{
-    const up_args_t *arg = (up_args_t *)arg_;
-    syncvar_t ***stages = arg->stages;
-    const size_t now    = arg->now;
-    const size_t i      = arg->i;
-    const size_t j      = arg->j;
-
-    syncvar_t **S = stages[prev_stage(now)];
-
-    uint64_t sum = SYNCVAR_EVAL(S[i][j]) +
-                   SYNCVAR_EVAL(NORTH_OF(S,i,j)) +
-                   SYNCVAR_EVAL(EAST_OF(S,i,j));
-    uint64_t value = 0;
-    qthread_syncvar_readFE(&value, &SOUTH_OF(S,i,j));
-    sum += value;
-    qthread_syncvar_readFE(&value, &WEST_OF(S,i,j));
-    sum += value;
-
-    qthread_syncvar_writeEF_const(&stages[now][i][j], sum/NUM_NEIGHBORS);
-
-    return 0;
-}
-
-// Update SE corner point
-static aligned_t update_point_se(void *arg_)
-{
-    const up_args_t *arg = (up_args_t *)arg_;
-    syncvar_t ***stages = arg->stages;
-    const size_t now    = arg->now;
-    const size_t i      = arg->i;
-    const size_t j      = arg->j;
-
-    syncvar_t **S = stages[prev_stage(now)];
-
-    uint64_t sum = SYNCVAR_EVAL(S[i][j]) +
-                   SYNCVAR_EVAL(NORTH_OF(S,i,j)) +
-                   SYNCVAR_EVAL(WEST_OF(S,i,j));
-    uint64_t value = 0;
-    qthread_syncvar_readFE(&value, &SOUTH_OF(S,i,j));
-    sum += value;
-    qthread_syncvar_readFE(&value, &EAST_OF(S,i,j));
-    sum += value;
-
-    qthread_syncvar_writeEF_const(&stages[now][i][j], sum/NUM_NEIGHBORS);
-
-    return 0;
-}
-
-////////////////////////////////////////////////////////////////////////////////
-static void update_point_n(const size_t start, const size_t stop, void *arg_)
-{
-    const up_args_t *arg = (up_args_t *)arg_;
-    syncvar_t ***stages = arg->stages;
-    const size_t now    = arg->now;
-    const size_t i      = arg->i;
-    const size_t j      = start;
-
-    syncvar_t **S = stages[prev_stage(now)];
-
-    uint64_t sum = 0;
-    qthread_syncvar_readFE(&sum, &NORTH_OF(S,i,j));
-    sum += SYNCVAR_EVAL(S[i][j]) +
-           SYNCVAR_EVAL(SOUTH_OF(S,i,j)) +
-           SYNCVAR_EVAL(WEST_OF(S,i,j)) +
-           SYNCVAR_EVAL(EAST_OF(S,i,j));
-
-    qthread_syncvar_writeEF_const(&stages[now][i][j], sum/NUM_NEIGHBORS);
-}
-
-static void update_point_s(const size_t start, const size_t stop, void *arg_)
-{
-    const up_args_t *arg = (up_args_t *)arg_;
-    syncvar_t ***stages = arg->stages;
-    const size_t now    = arg->now;
-    const size_t i      = arg->i;
-    const size_t j      = start;
-
-    syncvar_t **S = stages[prev_stage(now)];
-
-    uint64_t sum = 0;
-    qthread_syncvar_readFE(&sum, &SOUTH_OF(S,i,j));
-    sum += SYNCVAR_EVAL(S[i][j]) +
-           SYNCVAR_EVAL(NORTH_OF(S,i,j)) +
-           SYNCVAR_EVAL(WEST_OF(S,i,j)) +
-           SYNCVAR_EVAL(EAST_OF(S,i,j));
-
-    qthread_syncvar_writeEF_const(&stages[now][i][j], sum/NUM_NEIGHBORS);
-}
-
-static void update_point_w(const size_t start, const size_t stop, void *arg_)
-{
-    const up_args_t *arg = (up_args_t *)arg_;
-    syncvar_t ***stages = arg->stages;
-    const size_t now    = arg->now;
-    const size_t i      = start;
-    const size_t j      = arg->j;
-
-    syncvar_t **S = stages[prev_stage(now)];
-
-    uint64_t sum = 0;
-    qthread_syncvar_readFE(&sum, &WEST_OF(S,i,j));
-    sum += SYNCVAR_EVAL(S[i][j]) +
-           SYNCVAR_EVAL(NORTH_OF(S,i,j)) +
-           SYNCVAR_EVAL(SOUTH_OF(S,i,j)) +
-           SYNCVAR_EVAL(EAST_OF(S,i,j));
-
-    qthread_syncvar_writeEF_const(&stages[now][i][j], sum/NUM_NEIGHBORS);
-}
-
-static void update_point_e(const size_t start, const size_t stop, void *arg_)
-{
-    const up_args_t *arg = (up_args_t *)arg_;
-    syncvar_t ***stages = arg->stages;
-    const size_t now    = arg->now;
-    const size_t i      = start;
-    const size_t j      = arg->j;
-
-    syncvar_t **S = stages[prev_stage(now)];
-
-    uint64_t sum = 0;
-    qthread_syncvar_readFE(&sum, &EAST_OF(S,i,j));
-    sum += SYNCVAR_EVAL(S[i][j]) +
-           SYNCVAR_EVAL(NORTH_OF(S,i,j)) +
-           SYNCVAR_EVAL(SOUTH_OF(S,i,j)) +
-           SYNCVAR_EVAL(WEST_OF(S,i,j));
-
-    qthread_syncvar_writeEF_const(&stages[now][i][j], sum/NUM_NEIGHBORS);
+    qthread_syncvar_writeEF_const(&stages[now][i][j],sum/NUM_NEIGHBORS);
 }
 
 // Spawn tasks along edges
-static aligned_t update_point_edge_n(void *arg_)
+static aligned_t update_point_edge_loop(void *arg_)
 {
-    up_args_t *arg = (up_args_t *)arg_;
+    upx_args_t *arg = (upx_args_t *)arg_;
+    const position_t dir = arg->dir;
+    const position_t pos = arg->pos;
+    const size_t num_rows = arg->num_rows;
+    const size_t num_cols = arg->num_cols;
 
-    qt_loop(arg->j, arg->k, update_point_n, arg);
+    switch (dir) {
+        case NORTH:
+        {
+            const size_t lb = GHOST_WEST(pos) ? 2 : 1;
+            const size_t ub = GHOST_EAST(pos) ? num_cols-2 : num_cols-1;
+
+            qt_loop(lb, ub, update_point_edge, arg);
+            break;
+        }
+        case SOUTH:
+        {
+            const size_t lb = GHOST_WEST(pos) ? 2 : 1;
+            const size_t ub = GHOST_EAST(pos) ? num_cols-2 : num_cols-1;
+
+            qt_loop(lb, ub, update_point_edge, arg);
+            break;
+        }
+        case WEST:
+        {
+            const size_t lb = GHOST_SOUTH(pos) ? 2 : 1;
+            const size_t ub = GHOST_NORTH(pos) ? num_rows-2 : num_rows-1;
+
+            qt_loop(lb, ub, update_point_edge, arg);
+            break;
+        }
+        case EAST:
+        {
+            const size_t lb = GHOST_SOUTH(pos) ? 2 : 1;
+            const size_t ub = GHOST_NORTH(pos) ? num_rows-2 : num_rows-1;
+
+            qt_loop(lb, ub, update_point_edge, arg);
+            break;
+        }
+        default:
+            abort();
+    }
 
     return 0;
 }
 
-static aligned_t update_point_edge_s(void *arg_)
+typedef struct us_args_s {
+    size_t part_lid;
+    size_t timestep;
+    partition_t *part;
+    const stencil_t *points;
+} us_args_t;
+
+/*
+* - tasks for updating all points are spawned when called
+* - this task does not return until all 
+*/
+static aligned_t update_stage(void *arg_)
 {
-    up_args_t *arg = (up_args_t *)arg_;
+    const us_args_t *arg = (us_args_t *)arg_;
+    const position_t pos = arg->part->pos;
+    const size_t num_rows = arg->part->nrows;
+    const size_t num_cols = arg->part->ncols;
+    const size_t now      = arg->timestep % 2;
 
-    qt_loop(arg->j, arg->k, update_point_s, arg);
+    syncvar_t ***const stages = arg->part->stages;
 
-    return 0;
-}
+    syncvar_t rets[8];
+    for (int i = 0; i < 8; i++)
+        rets[i] = SYNCVAR_INITIALIZER;
 
-static aligned_t update_point_edge_w(void *arg_)
-{
-    up_args_t *arg = (up_args_t *)arg_;
+    upx_args_t upx_args = {stages, now, 0, pos, num_rows, num_cols};
 
-    qt_loop(arg->i, arg->k, update_point_w, arg);
+    // Process (up to) four corner cases
+    if (HAS_NW_CORNER(pos)) {
+        upx_args.dir = NW;
+        qthread_fork_syncvar_copyargs(update_point_corner, 
+            &upx_args, sizeof(upx_args), &rets[0]);
+    }
+    if (HAS_NE_CORNER(pos)) {
+        upx_args.dir = NE;
+        qthread_fork_syncvar_copyargs(update_point_corner, 
+            &upx_args, sizeof(upx_args), &rets[1]);
+    }
+    if (HAS_SW_CORNER(pos)) {
+        upx_args.dir = SW;
+        qthread_fork_syncvar_copyargs(update_point_corner, 
+            &upx_args, sizeof(upx_args), &rets[2]);
+    }
+    if (HAS_SE_CORNER(pos)) {
+        upx_args.dir = SE;
+        qthread_fork_syncvar_copyargs(update_point_corner, 
+            &upx_args, sizeof(upx_args), &rets[3]);
+    }
 
-    return 0;
-}
+    // Process edge cases
+    if (GHOST_NORTH(pos)) {
+        upx_args.dir = NORTH;
+        qthread_fork_syncvar_copyargs(
+			update_point_edge_loop, &upx_args, sizeof(upx_args_t), &rets[4]);
+    }
+    if (GHOST_SOUTH(pos)) {
+        upx_args.dir = SOUTH;
+        qthread_fork_syncvar_copyargs(
+			update_point_edge_loop, &upx_args, sizeof(upx_args_t), &rets[5]);
+    }
+    if (GHOST_WEST(pos)) {
+        upx_args.dir = WEST;
+        qthread_fork_syncvar_copyargs(
+			update_point_edge_loop, &upx_args, sizeof(upx_args_t), &rets[6]);
+    }
+    if (GHOST_EAST(pos)) {
+        upx_args.dir = EAST;
+        qthread_fork_syncvar_copyargs(
+			update_point_edge_loop, &upx_args, sizeof(upx_args_t), &rets[7]);
+    }
 
-static aligned_t update_point_edge_e(void *arg_)
-{
-    up_args_t *arg = (up_args_t *)arg_;
+    // Process internal points
+    //up_args_t up_args = {arg->part->stages, now, 0, 0, 0};
+    //upil_args_t upil_args = {num_rows, num_cols, pos, &up_args};
+    upx_args.dir = 0;
+    upx_args.pos = pos;
 
-    qt_loop(arg->i, arg->k, update_point_e, arg);
+    const size_t start = GHOST_WEST(pos) ? 2 : 1;
+    const size_t stop  = GHOST_EAST(pos) ? num_cols-2 : num_cols-1;
+    qt_loop(start, stop, update_point_internal_loop, &upx_args);
+
+    // Wait for corner and edge cases to finish
+    for (int i = 0; i < 8; i++)
+        qthread_syncvar_readFF(NULL, &rets[i]);
 
     return 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////
+// Halo exchange
+
 typedef struct sb_args_s {
     syncvar_t *const target;
     syncvar_t *const source;
@@ -617,6 +528,12 @@ typedef struct sbc_args_s {
     syncvar_t *const target2;
     syncvar_t *const source;
 } sbc_args_t;
+
+typedef struct su_args_s {
+    size_t part_lid;
+    size_t stage;
+    const stencil_t *points;
+} su_args_t;
 
 /*
  * Pre: source is filled
@@ -821,107 +738,12 @@ static aligned_t send_updates(void *arg_)
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-/*
-* - tasks for updating all points are spawned when called
-* - this task does not return until all 
-*/
-static aligned_t update_stage(void *arg_)
-{
-    const us_args_t *arg = (us_args_t *)arg_;
-    const position_t pos = arg->part->pos;
-    const size_t num_rows = arg->part->nrows;
-    const size_t num_cols = arg->part->ncols;
-    const size_t now      = arg->timestep % 2;
-
-    syncvar_t rets[8];
-    for (int i = 0; i < 8; i++)
-        rets[i] = SYNCVAR_INITIALIZER;
-
-    up_args_t up_args = {arg->part->stages, now, 0, 0, 0};
-    const size_t args_size = sizeof(up_args_t);
-
-    // Process corner cases
-    {
-        if (GHOST_NORTH(pos) && GHOST_WEST(pos)) {
-            up_args.i = num_rows - 2;
-            up_args.j = 1;
-            qthread_fork_syncvar_copyargs(
-				update_point_nw,&up_args,args_size,&rets[0]);
-        }
-        if (GHOST_NORTH(pos) && GHOST_EAST(pos)) { 
-            up_args.i = num_rows - 2;
-            up_args.j = num_cols - 2;;
-            qthread_fork_syncvar_copyargs(
-				update_point_ne,&up_args,args_size,&rets[1]);
-        }
-        if (GHOST_SOUTH(pos) && GHOST_WEST(pos)) {
-            up_args.i = 1;
-            up_args.j = 1;
-            qthread_fork_syncvar_copyargs(
-				update_point_sw,&up_args,args_size,&rets[2]);
-        }
-        if (GHOST_SOUTH(pos) && GHOST_EAST(pos)) {
-            up_args.i = 1;
-            up_args.j = num_cols - 2;
-            qthread_fork_syncvar_copyargs(
-				update_point_se,&up_args,args_size,&rets[3]);
-        }
-    }
-
-    // Process edge cases
-    {
-        if (GHOST_NORTH(pos)) {
-            up_args.i = num_rows-2;
-            up_args.j = GHOST_WEST(pos) ? 2 : 1;
-            up_args.k = GHOST_EAST(pos) ? num_cols-2 : num_cols-1;
-            qthread_fork_syncvar_copyargs(
-				update_point_edge_n, &up_args, args_size, &rets[4]);
-        }
-        if (GHOST_SOUTH(pos)) {
-            up_args.i = 1;
-            up_args.j = GHOST_WEST(pos) ? 2 : 1;
-            up_args.k = GHOST_EAST(pos) ? num_cols-2 : num_cols-1;
-            qthread_fork_syncvar_copyargs(
-				update_point_edge_s, &up_args, args_size, &rets[5]);
-        }
-        if (GHOST_WEST(pos)) {
-            up_args.i = GHOST_SOUTH(pos) ? 2 : 1;
-            up_args.j = 1;
-            up_args.k = GHOST_NORTH(pos) ? num_rows-2 : num_rows-1;
-            qthread_fork_syncvar_copyargs(
-				update_point_edge_w, &up_args, args_size, &rets[6]);
-        }
-        if (GHOST_EAST(pos)) {
-            up_args.i = GHOST_SOUTH(pos) ? 2 : 1;
-            up_args.j = num_cols-2;
-            up_args.k = GHOST_NORTH(pos) ? num_rows-2 : num_rows-1;
-            qthread_fork_syncvar_copyargs(
-                update_point_edge_e, &up_args, args_size, &rets[7]);
-        }
-    }
-
-    // Process internal points
-    {
-        upil_args_t upil_args = {num_rows, num_cols, pos, &up_args};
-
-        const size_t start = GHOST_WEST(pos) ? 2 : 1;
-        const size_t stop  = GHOST_EAST(pos) ? num_cols-2 : num_cols-1;
-        qt_loop(start, stop, update_point_internal_loop, &upil_args);
-    }
-
-    // Wait for corner and edge cases to finish
-    for (int i = 0; i < 8; i++)
-        qthread_syncvar_readFF(NULL, &rets[i]);
-
-    return 0;
-}
-
-////////////////////////////////////////////////////////////////////////////////
+// Local work
 /*
  *  -   Starts off local processing for a partition
  */
 static void begin(const size_t start, const size_t stop, void *arg_)
-{
+{/*{{{*/
     const stencil_t *arg = (stencil_t *)arg_;
 
     const size_t part_lid = start;
@@ -937,7 +759,149 @@ static void begin(const size_t start, const size_t stop, void *arg_)
         qthread_fork_syncvar(update_stage, &us_args, &up_ret);
         qthread_syncvar_readFF(NULL, &up_ret);
     }
-}
+}/*}}}*/
+
+////////////////////////////////////////////////////////////////////////////////
+// Stencil setup and tear down
+
+static void setup_stencil(const size_t start, const size_t stop, void *arg)
+{/*{{{*/
+    const size_t part_lid = start;
+    stencil_t *points = (stencil_t *)arg;
+
+    points->parts[part_lid] = malloc(sizeof(partition_t));
+    assert(points->parts[part_lid]);
+
+    partition_t *part = points->parts[part_lid];
+    part->nrows = points->nrows / points->prows;
+    part->ncols = points->ncols / points->pcols;
+    part->brows = points->brows;
+    part->bcols = points->bcols;
+
+    // Calculate position
+    get_pid(part_lid, points->pcols, &part->row, &part->col);
+    get_position(points, part);
+
+    // Allocate points
+    {
+        part->nrows += 2;  // Padding for boundary and ghost points
+        part->ncols += 2;  // Padding for boundary and ghost points
+
+        part->stages[0] = malloc(part->nrows * sizeof(syncvar_t *));
+        assert(part->stages[0]);
+        part->stages[1] = malloc(part->nrows * sizeof(syncvar_t *));
+        assert(part->stages[1]);
+        for (int pi = 0; pi < part->nrows; pi++) {
+            part->stages[0][pi] = malloc(part->ncols * sizeof(syncvar_t));
+            assert(part->stages[0][pi]);
+            part->stages[1][pi] = malloc(part->ncols * sizeof(syncvar_t));
+            assert(part->stages[1][pi]);
+            for (int pj = 0; pj < part->ncols; pj++) {
+                part->stages[0][pi][pj] = INTERNAL_POINT;
+                part->stages[1][pi][pj] = INTERNAL_POINT;
+            }
+        }
+    }
+
+    // Setup boundary
+    {
+        const position_t pos = part->pos;
+        const size_t nrows = part->nrows;
+        const size_t ncols = part->ncols;
+
+        if (!GHOST_SOUTH(pos))
+            for (int j = 1; j < ncols-1; j++) {
+                part->stages[0][0][j] = boundary_value;
+                part->stages[1][0][j] = boundary_value;
+            }
+        if (!GHOST_WEST(pos))
+            for (int i = 1; i < nrows-1; i++) {
+                part->stages[0][i][0] = boundary_value;
+                part->stages[1][i][0] = boundary_value;
+            }
+        if (!GHOST_EAST(pos))
+            for (int i = 1; i < nrows-1; i++) {
+                part->stages[0][i][ncols-1] = boundary_value;
+                part->stages[1][i][ncols-1] = boundary_value;
+            }
+        if (!GHOST_NORTH(pos))
+            for (int j = 1; j < ncols-1; j++) {
+                part->stages[0][nrows-1][j] = boundary_value;
+                part->stages[1][nrows-1][j] = boundary_value;
+            }
+    }
+
+    // Setup ghostzones and edges:
+    // 1) empty ghost points for both stages
+    // 2) empty edge points only in second stage
+    {
+        const position_t pos = part->pos;
+        const size_t num_rows = part->nrows;
+        const size_t num_cols = part->ncols;
+    
+        if (GHOST_SOUTH(pos)) {
+            const size_t i = 0;
+            for (int j = 1; j < num_cols-1; j++) {
+                // Ghost points
+                part->stages[0][i][j] = GHOST_POINT_EMPTY;
+                part->stages[1][i][j] = GHOST_POINT_EMPTY;
+                // Edge points
+                part->stages[0][i+1][j] = EDGE_POINT_FULL;
+                part->stages[1][i+1][j] = EDGE_POINT_EMPTY;
+            }
+        }
+        if (GHOST_NORTH(pos)) {
+            const size_t i = num_rows - 1;
+            for (int j = 1; j < num_cols-1; j++) {
+                // Ghost points
+                part->stages[0][i][j] = GHOST_POINT_EMPTY;
+                part->stages[1][i][j] = GHOST_POINT_EMPTY;
+                // Edge points
+                part->stages[0][i-1][j] = EDGE_POINT_FULL;
+                part->stages[1][i-1][j] = EDGE_POINT_EMPTY;
+            }
+        }
+        if (GHOST_WEST(pos)) {
+            const size_t j = 0;
+            for (int i = 1; i < num_rows-1; i++) {
+                // Ghost points
+                part->stages[0][i][j] = GHOST_POINT_EMPTY;
+                part->stages[1][i][j] = GHOST_POINT_EMPTY;
+                // Edge points
+                part->stages[0][i][j+1] = EDGE_POINT_FULL;
+                part->stages[1][i][j+1] = EDGE_POINT_EMPTY;
+            }
+        }
+        if (GHOST_EAST(pos)) {
+            const size_t j = num_cols - 1;
+            for (int i = 1; i < num_rows-1; i++) {
+                // Ghost points
+                part->stages[0][i][j] = GHOST_POINT_EMPTY;
+                part->stages[1][i][j] = GHOST_POINT_EMPTY;
+                // Edge points
+                part->stages[0][i][j-1] = EDGE_POINT_FULL;
+                part->stages[1][i][j-1] = EDGE_POINT_EMPTY;
+            }
+        }
+    }
+}/*}}}*/
+
+static inline void destroy_stencil(stencil_t *points)
+{/*{{{*/
+    const size_t num_parts = points->prows * points->pcols;
+    for (int i = 0; i < num_parts; i ++) {
+        partition_t *part = points->parts[i];
+        const size_t nrows = part->nrows;
+        for (int pi = 0; pi < nrows; pi++) {
+            free(part->stages[0][pi]);
+            free(part->stages[1][pi]);
+        }
+        free(part->stages[0]);
+        free(part->stages[1]);
+        free(part);
+    }
+    free(points->parts);
+}/*}}}*/
 
 int main(int argc, char *argv[])
 {/*{{{*/
