@@ -25,6 +25,25 @@
     iprintf(name" = %lu\n", (unsigned long)var); \
 } while (0)
 
+#define NUMARRARG(var,name,size) do { \
+    char *split_str = getenv(name); \
+    if (split_str != NULL) { \
+        char *rest = NULL; \
+        for (int i = 0; i < size; i++) { \
+            var[i] = strtoul(split_str, &rest, 0); \
+            assert(rest != NULL && rest != split_str); \
+            split_str = rest + 1; \
+        } \
+        if (*rest != '\0') { \
+            fprintf(stderr, "too many "name" arguments.\n"); \
+        } \
+    } \
+    iprintf(name" = [%lu", (unsigned long)var[0]); \
+    for (int i = 1; i < size; i++) \
+        iprintf(", %lu", (unsigned long)var[i]); \
+    iprintf("]\n"); \
+} while (0)
+
 #ifdef SST
 static int verbose = 1;
 #else
