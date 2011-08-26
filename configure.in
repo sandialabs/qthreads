@@ -303,11 +303,8 @@ AC_ARG_ENABLE([omp_affinity],
                               [Enable experimental OpenMP affinity extensions (part of ROSE interface). Under development])])
 
 AC_ARG_ENABLE([multithreaded_shepherds],
-              [AS_HELP_STRING([--enable-multithreaded-shepherds],
-                              [Enable multithreaded shepherds. Number of
-                               workers per shepherd is controlled via
-                               QTHREAD_NUM_WORKERS_PER_SHEPHERD environment
-                               variable at init time.])])
+              [AS_HELP_STRING([--disable-multithreaded-shepherds],
+                              [Disnable multithreaded shepherds.])])
 
 AC_ARG_WITH([scheduler],
 			[AS_HELP_STRING([--with-scheduler=[[type]]],
@@ -642,17 +639,17 @@ AS_IF([test "x$enable_aligncheck" = "xyes"],
 	  [],
       [AC_DEFINE([QTHREAD_NOALIGNCHECK], [1], [Do not check the alignment of synchronization addresses])
        enable_aligncheck=no])
-
 AS_IF([test "x$enable_hardware_increments" == "xno" -a "x$enable_multithreaded_shepherds" = "xyes"],
 	  [AC_MSG_ERROR([Cannot use multithreaded shepherds without hardware increments.])
 	   enable_multithreaded_shepherds="no"])
-AS_IF([test "x$enable_multithreaded_shepherds" = xyes],
+AS_IF([test "x$enable_multithreaded_shepherds" = xyes -o "x$enable_multithreaded_shepherds" = x],
       [AC_DEFINE([QTHREAD_MULTITHREADED_SHEPHERDS], [1], [Support multithreaded shepherds])
        AC_SEARCH_LIBS([nanosleep],[rt],[],[AC_MSG_ERROR([Cannot find nanosleep])])
 	   AS_IF([test "x$with_scheduler" != "x" -a "x$with_scheduler" != "xsherwood" -a "x$with_scheduler" != "xdefault"],
 			 [AC_MSG_ERROR([Multithreaded shepherds must use the sherwood scheduler.])],
 			 [with_scheduler="sherwood"])
-       EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --enable-multithreaded-shepherds"],
+       EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --enable-multithreaded-shepherds"
+	   enable_multithreaded_shepherds="yes"],
       [enable_multithreaded_shepherds="no"])
 
 AS_IF([test "x$with_scheduler" != "x"],
