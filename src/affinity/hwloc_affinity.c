@@ -264,6 +264,9 @@ loop_top:
         unsigned int         workerobjs_per_shep = hwloc_get_nbobjs_inside_cpuset_by_type(topology, obj->allowed_cpuset, wkr_type);
         qthread_debug(AFFINITY_CALLS, "workerobjs = %s, per_shep = %u\n", hwloc_obj_type_string(wkr_type), workerobjs_per_shep);
         assert(workerobjs_per_shep > 0);
+        if (workerobjs_per_shep == 0) {
+            abort();
+        }
         unsigned int worker_depth = hwloc_get_type_depth(topology, wkr_type);
         assert(worker_depth >= shep_depth);
         if (worker_depth < shep_depth) {
