@@ -5,7 +5,13 @@
 /* System Headers */
 #include <pthread.h>
 #include <stdio.h>
+#if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
+# ifdef HAVE_MEMALIGN
+#include <malloc.h>
+# else
 #include <stdlib.h>
+# endif
+#endif
 
 /* Internal Headers */
 #include "qthread/qthread.h"
