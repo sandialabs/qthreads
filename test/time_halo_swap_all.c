@@ -58,11 +58,13 @@ typedef struct stencil_s {
     size_t ncols;         // Number of cols in stencil
     size_t prows;         // Number of rows in partition matrix
     size_t pcols;         // Number of cols in partition matrix
-    size_t brows;         // Total number of row blocks
-    size_t bcols;         // Total number of col blocks
+    size_t bsize;         // Size of a message block
     partition_t **parts;  // The stencil partitions
 } stencil_t;
 /*}}}*/
+
+static stencil_t *debug_points;
+static size_t debug_timestep;
 
 ////////////////////////////////////////////////////////////////////////////////
 // Helpers
@@ -100,6 +102,7 @@ typedef struct stencil_s {
 // Syncvar-related stuff
 #define SYNCVAR_EVAL(x) INT60TOINT64(x.u.s.data)
 #define SYNCVAR_BIND(x,v) x.u.s.data = INT64TOINT60(v)
+#define SYNCVAR_COPY(dest,src) dest.u.s.data = src.u.s.data;
 
 static inline void print_stencil(stencil_t *stencil, size_t step)
 {/*{{{*/
@@ -110,14 +113,39 @@ static inline void print_stencil(stencil_t *stencil, size_t step)
     const size_t num_parts = stencil->prows * stencil->pcols;
     for (int pi = 0; pi < num_parts; pi++) {
         const partition_t *part = stencil->parts[pi];
-        fprintf(stderr, "\tPartition: (%lu,%lu) %s, %lu x %lu\n",
-            part->row, part->col, pos_strs[part->pos], part->nrows,part->ncols);
+        fprintf(stderr, "\tPartition: (%lu,%lu) %s, %lu x %lu, %lu x %lu\n",
+            part->row, part->col, pos_strs[part->pos], part->nrows,part->ncols,
+            part->brows, part->bcols);
         for (int i = part->nrows-1; i >= 0; i--) {
             fprintf(stderr, "\t\t%02lu", 
                 SYNCVAR_EVAL(part->stages[step][i][0]));
             for (int j = 1; j < part->ncols; j++) {
                 fprintf(stderr, " %02lu", 
                     SYNCVAR_EVAL(part->stages[step][i][j]));
+            }
+            fprintf(stderr, "\n");
+        }
+    }
+}/*}}}*/
+
+static inline void print_status(stencil_t *stencil, size_t step)
+{/*{{{*/
+    fprintf(stderr, "Stencil:\n");
+    fprintf(stderr, "\tpoints:     %lu x %lu\n",stencil->nrows,stencil->ncols);
+    fprintf(stderr, "\tpartitions: %lu x %lu\n",stencil->prows,stencil->pcols);
+
+    const size_t num_parts = stencil->prows * stencil->pcols;
+    for (int pi = 0; pi < num_parts; pi++) {
+        const partition_t *part = stencil->parts[pi];
+        fprintf(stderr, "\tPartition: (%lu,%lu) %s, %lu x %lu, %lu x %lu\n",
+            part->row, part->col, pos_strs[part->pos], part->nrows,part->ncols,
+            part->brows, part->bcols);
+        for (int i = part->nrows-1; i >= 0; i--) {
+            fprintf(stderr, "\t\t%d", 
+                qthread_syncvar_status(&part->stages[step][i][0]));
+            for (int j = 1; j < part->ncols; j++) {
+                fprintf(stderr, " %d", 
+                    qthread_syncvar_status(&part->stages[step][i][j]));
             }
             fprintf(stderr, "\n");
         }
@@ -205,6 +233,7 @@ typedef struct upx_args_s {
     Q_ALIGNED(8) position_t pos;
     size_t                  num_rows;
     size_t                  num_cols;
+    size_t                  part_lid;
 } upx_args_t;
 
 typedef struct upi_args_s {
@@ -257,6 +286,7 @@ static aligned_t update_point_corner(void *arg_)
     const size_t now      = arg->now;
     const size_t num_rows = arg->num_rows;
     const size_t num_cols = arg->num_cols;
+    const size_t part_lid = arg->part_lid;
 
     syncvar_t **S  = stages[prev_stage(now)];
     size_t i       = 0;
@@ -264,6 +294,11 @@ static aligned_t update_point_corner(void *arg_)
     uint64_t sum   = 0;
     uint64_t value = 0;
 
+    /*
+     * - ReadFE     x-ghost-value   prev. stage
+     * - ReadFE     y-ghost-value   prev. stage
+     * - WriteEF    this-value      this stage
+     */
     switch (dir) {
         case NW: 
             i = num_rows - 2;
@@ -333,6 +368,10 @@ static void update_point_edge(const size_t start, const size_t stop, void *arg_)
     size_t j       = 0;
     uint64_t sum   = 0;
 
+    /*
+     * - ReadFE     x-value         prev. stage
+     * - WriteEF    this-value      this stage
+     */
     switch (dir) {
         case NORTH:
             i = num_rows-2;
@@ -386,6 +425,7 @@ static aligned_t update_point_edge_loop(void *arg_)
     const position_t pos = arg->pos;
     const size_t num_rows = arg->num_rows;
     const size_t num_cols = arg->num_cols;
+    const size_t part_lid = arg->part_lid;
 
     switch (dir) {
         case NORTH:
@@ -452,7 +492,7 @@ static aligned_t update_stage(void *arg_)
     for (int i = 0; i < 8; i++)
         rets[i] = SYNCVAR_INITIALIZER;
 
-    upx_args_t upx_args = {stages, now, 0, pos, num_rows, num_cols};
+    upx_args_t upx_args = {stages, now, 0, pos, num_rows, num_cols, arg->part_lid};
 
     // Process (up to) four corner cases
     if (HAS_NW_CORNER(pos)) {
@@ -499,8 +539,6 @@ static aligned_t update_stage(void *arg_)
     }
 
     // Process internal points
-    //up_args_t up_args = {arg->part->stages, now, 0, 0, 0};
-    //upil_args_t upil_args = {num_rows, num_cols, pos, &up_args};
     upx_args.dir = 0;
     upx_args.pos = pos;
 
@@ -519,8 +557,16 @@ static aligned_t update_stage(void *arg_)
 // Halo exchange
 
 typedef struct sb_args_s {
-    syncvar_t *const target;
-    syncvar_t *const source;
+    syncvar_t ***target;
+    syncvar_t ***source;
+    Q_ALIGNED(8) position_t dir;
+    size_t stage;
+    size_t timestep;
+    size_t lb;
+    size_t ub;
+    size_t sk;
+    size_t tk;
+    size_t part_lid;
 } sb_args_t;
 
 typedef struct sbc_args_s {
@@ -531,7 +577,6 @@ typedef struct sbc_args_s {
 
 typedef struct su_args_s {
     size_t part_lid;
-    size_t stage;
     const stencil_t *points;
 } su_args_t;
 
@@ -540,26 +585,95 @@ typedef struct su_args_s {
  * Post: target is filled
  * 1) empty source
  * 2) fill target
+ * Sync is on first element in block.
  */
 static aligned_t send_block(void *arg_) {
-    const sb_args_t *arg = (sb_args_t *)arg_;
+    sb_args_t *arg = (sb_args_t *)arg_;
+    const position_t dir = arg->dir;
+    size_t stage = arg->stage;
+    size_t timestep = arg->timestep;
+    const size_t lb = arg->lb;
+    const size_t ub = arg->ub;
+    const size_t sk  = arg->sk;
+    const size_t tk  = arg->tk;
+    const size_t part_lid = arg->part_lid;
 
     uint64_t value;
-    qthread_syncvar_readFE(&value, arg->source);
-    qthread_syncvar_writeEF(arg->target, &value);
 
-    return 0;
-}
+    /* - ReadFF     edge-value      this stage
+     * - Empty      edge-value      next stage
+     * - ReadFF     edge-value      this stage
+     * - WriteEF    ghost-value     this stage
+     */
+    switch (dir) {
+        case NORTH:
+            while (timestep <= num_timesteps) {
+                for (int j = lb; j < ub; j++) {
+                    qthread_syncvar_readFF(NULL, &arg->source[stage][sk][j]);
+                    assert(0==qthread_syncvar_empty(&arg->source[next_stage(stage)][sk][j]));
+                }
+                for (int j = lb; j < ub; j++) {
+                    SYNCVAR_COPY(arg->target[stage][tk][j], arg->source[stage][sk][j]);
+                    qthread_syncvar_readFF(&value, &arg->source[stage][sk][j]);
+                    qthread_syncvar_writeEF(&arg->target[stage][tk][j], &value);
+                }
 
-// Corner case is needed so we don't readFE() the same source twice
-static aligned_t send_block_corner(void *arg_) 
-{
-    const sbc_args_t *arg = (sbc_args_t *)arg_;
+                timestep += 1;
+                stage = next_stage(stage);
+            }
+            break;
+        case SOUTH:
+            while (timestep <= num_timesteps) {
+                for (int j = lb; j < ub; j++) {
+                    qthread_syncvar_readFF(NULL, &arg->source[stage][sk][j]);
+                    assert(0==qthread_syncvar_empty(&arg->source[next_stage(stage)][sk][j]));
+                }
+                for (int j = lb; j < ub; j++) {
+                    SYNCVAR_COPY(arg->target[stage][tk][j], arg->source[stage][sk][j]);
+                    qthread_syncvar_readFF(&value, &arg->source[stage][sk][j]);
+                    qthread_syncvar_writeEF(&arg->target[stage][tk][j], &value);
+                }
 
-    uint64_t value;
-    qthread_syncvar_readFE(&value, arg->source);
-    qthread_syncvar_writeEF(arg->target1, &value);
-    qthread_syncvar_writeEF(arg->target2, &value);
+                timestep += 1;
+                stage = next_stage(stage);
+            }
+            break;
+        case WEST:
+            while (timestep <= num_timesteps) {
+                for (int i = lb; i < ub; i++) {
+                    qthread_syncvar_readFF(NULL, &arg->source[stage][i][sk]);
+                    assert(0==qthread_syncvar_empty(&arg->source[next_stage(stage)][i][sk]));
+                }
+                for (int i = lb; i < ub; i++) {
+                    SYNCVAR_COPY(arg->target[stage][i][tk], arg->source[stage][i][sk]);
+                    qthread_syncvar_readFF(&value, &arg->source[stage][i][sk]);
+                    qthread_syncvar_writeEF(&arg->target[stage][i][tk], &value);
+                }
+
+                timestep += 1;
+                stage = next_stage(stage);
+            }
+            break;
+        case EAST:
+            while (timestep <= num_timesteps) {
+                for (int i = lb; i < ub; i++) {
+                    qthread_syncvar_readFF(NULL, &arg->source[stage][i][sk]);
+                    assert(0==qthread_syncvar_empty(&arg->source[next_stage(stage)][i][sk]));
+                }
+                for (int i = lb; i < ub; i++) {
+                    SYNCVAR_COPY(arg->target[stage][i][tk], arg->source[stage][i][sk]);
+                    qthread_syncvar_readFF(&value, &arg->source[stage][i][sk]);
+                    qthread_syncvar_writeEF(&arg->target[stage][i][tk], &value);
+                }
+
+                timestep += 1;
+                stage = next_stage(stage);
+            }
+            break;
+        default:
+            abort();
+            break;
+    }
 
     return 0;
 }
@@ -568,27 +682,40 @@ static aligned_t send_updates(void *arg_)
 {
     const su_args_t *arg = (su_args_t *)arg_;
     const size_t src_lid    = arg->part_lid;
-    const size_t stage      = arg->stage;
     const stencil_t *points = arg->points;
 
-    const partition_t *src_part  = points->parts[src_lid];
+    partition_t *src_part  = points->parts[src_lid];
     const position_t   src_pos   = src_part->pos;
-    syncvar_t **const  src_stage = src_part->stages[stage];
+    syncvar_t       ***src_stage = src_part->stages;
     const size_t       src_nrows = src_part->nrows;
     const size_t       src_ncols = src_part->ncols;
+
+    const size_t bsize  = points->bsize;
+
+    const size_t stage = 0;
+    const size_t timestep = 1;
 
     // Send updates along edges
     if (GHOST_NORTH(src_pos)) {
         const size_t tgt_lid = 
             get_lid(src_part->row + 1, src_part->col, points->pcols);
-        const partition_t *tgt_part   = points->parts[tgt_lid];
-        syncvar_t **const  tgt_stage  = tgt_part->stages[stage];
+        partition_t *tgt_part   = points->parts[tgt_lid];
+        syncvar_t ***tgt_stage   = tgt_part->stages;
 
-        const size_t i = src_nrows - 2;
-        const size_t lb = GHOST_WEST(src_pos) ? 2 : 1;
-        const size_t ub = GHOST_EAST(src_pos) ? src_ncols-2 : src_ncols-1;
-        for (size_t j = lb; j < ub; j++) {
-            const sb_args_t sb_args = {&tgt_stage[0][j], &src_stage[i][j]};
+        const size_t lb = 1;
+        const size_t ub = src_ncols-1;
+        for (size_t j = lb; j < ub; j+=bsize) {
+            sb_args_t sb_args;
+            sb_args.stage = stage;
+            sb_args.timestep = timestep;
+            sb_args.target = tgt_stage;
+            sb_args.source = src_stage;
+            sb_args.dir    = NORTH;
+            sb_args.lb     = j;
+            sb_args.ub     = j + bsize;
+            sb_args.sk     = src_nrows - 2;
+            sb_args.tk     = 0;
+            sb_args.part_lid = src_lid;
             qthread_fork_copyargs(send_block, &sb_args, 
                 sizeof(sb_args_t), NULL);
         }
@@ -596,16 +723,24 @@ static aligned_t send_updates(void *arg_)
     if (GHOST_SOUTH(src_pos)) {
         const size_t tgt_lid = 
             get_lid(src_part->row - 1, src_part->col, points->pcols);
-        const partition_t *tgt_part   = points->parts[tgt_lid];
-        syncvar_t  **const tgt_stage  = tgt_part->stages[stage];
+        partition_t *tgt_part   = points->parts[tgt_lid];
+        syncvar_t  ***tgt_stage  = tgt_part->stages;
         const size_t       tgt_nrows  = tgt_part->nrows;
 
-        const size_t i = 1;
-        const size_t lb = GHOST_WEST(src_pos) ? 2 : 1;
-        const size_t ub = GHOST_EAST(src_pos) ? src_ncols-2 : src_ncols-1;
-        for (size_t j = lb; j < ub; j++) {
-            const sb_args_t sb_args = 
-                {&tgt_stage[tgt_nrows-1][j], &src_stage[i][j]};
+        const size_t lb = 1;
+        const size_t ub = src_ncols-1;
+        for (size_t j = lb; j < ub; j+=bsize) {
+            sb_args_t sb_args;
+            sb_args.stage = stage;
+            sb_args.timestep = timestep;
+            sb_args.target = tgt_stage;
+            sb_args.source = src_stage;
+            sb_args.dir    = SOUTH;
+            sb_args.lb     = j;
+            sb_args.ub     = j + bsize;
+            sb_args.sk     = 1;
+            sb_args.tk     = tgt_nrows-1;
+            sb_args.part_lid = src_lid;
             qthread_fork_copyargs(send_block, &sb_args, 
                 sizeof(sb_args_t), NULL);
         }
@@ -613,125 +748,51 @@ static aligned_t send_updates(void *arg_)
     if (GHOST_WEST(src_pos)) {
         const size_t tgt_lid = 
             get_lid(src_part->row, src_part->col-1, points->pcols);
-        const partition_t *tgt_part   = points->parts[tgt_lid];
-        syncvar_t  **const tgt_stage  = tgt_part->stages[stage];
+        partition_t *tgt_part   = points->parts[tgt_lid];
+        syncvar_t  ***tgt_stage  = tgt_part->stages;
         const size_t       tgt_ncols  = tgt_part->ncols;
 
-        const size_t j = 1;
-        const size_t lb = GHOST_SOUTH(src_pos) ? 2 : 1;
-        const size_t ub = GHOST_NORTH(src_pos) ? src_nrows-2 : src_nrows-1;
-        for (size_t i = lb; i < ub; i++) {
-            const sb_args_t sb_args = 
-                {&tgt_stage[i][tgt_ncols-1], &src_stage[i][j]};
+        const size_t lb = 1;
+        const size_t ub = src_nrows-1;
+        for (size_t i = lb; i < ub; i+=bsize) {
+            sb_args_t sb_args;
+            sb_args.stage = stage;
+            sb_args.timestep = timestep;
+            sb_args.target = tgt_stage;
+            sb_args.source = src_stage;
+            sb_args.dir    = WEST;
+            sb_args.lb     = i;
+            sb_args.ub     = i + bsize;
+            sb_args.sk     = 1;
+            sb_args.tk     = tgt_ncols-1;
+            sb_args.part_lid = src_lid;
             qthread_fork_copyargs(send_block, &sb_args, 
                 sizeof(sb_args_t), NULL);
         }
     }
-
     if (GHOST_EAST(src_pos)) {
         const size_t tgt_lid = 
             get_lid(src_part->row, src_part->col+1, points->pcols);
-        const partition_t *tgt_part   = points->parts[tgt_lid];
-        syncvar_t  **const tgt_stage  = tgt_part->stages[stage];
+        partition_t *tgt_part   = points->parts[tgt_lid];
+        syncvar_t  ***tgt_stage  = tgt_part->stages;
 
-        const size_t j = src_ncols-2;
-        const size_t lb = GHOST_SOUTH(src_pos) ? 2 : 1;
-        const size_t ub = GHOST_NORTH(src_pos) ? src_nrows-2 : src_nrows-1;
-        for (size_t i = lb; i < ub; i++) {
-            const sb_args_t sb_args = 
-                {&tgt_stage[i][0], &src_stage[i][j]};
+        const size_t lb = 1;
+        const size_t ub = src_nrows-1;
+        for (size_t i = lb; i < ub; i+=bsize) {
+            sb_args_t sb_args;
+            sb_args.stage = stage;
+            sb_args.timestep = timestep;
+            sb_args.target = tgt_stage;
+            sb_args.source = src_stage;
+            sb_args.dir    = EAST;
+            sb_args.lb     = i;
+            sb_args.ub     = i + bsize;
+            sb_args.sk     = src_ncols-2;
+            sb_args.tk     = 0;
+            sb_args.part_lid = src_lid;
             qthread_fork_copyargs(send_block, &sb_args, 
                 sizeof(sb_args_t), NULL);
         }
-    }
-
-    // Send updates at corners
-    if (GHOST_WEST(src_pos) && GHOST_NORTH(src_pos)) {
-        const size_t tgt1_lid = 
-            get_lid(src_part->row, src_part->col-1, points->pcols);
-        const partition_t *tgt1_part   = points->parts[tgt1_lid];
-        syncvar_t  **const tgt1_stage  = tgt1_part->stages[stage];
-        const size_t       tgt1_ncols  = tgt1_part->ncols;
-
-        const size_t tgt2_lid = 
-            get_lid(src_part->row + 1, src_part->col, points->pcols);
-        const partition_t *tgt2_part   = points->parts[tgt2_lid];
-        syncvar_t **const  tgt2_stage  = tgt2_part->stages[stage];
-
-        const size_t i = src_nrows-2;
-        const size_t j = 1;
-        const sbc_args_t sbc_args = 
-            {&tgt1_stage[i][tgt1_ncols-1], 
-             &tgt2_stage[0][j],
-             &src_stage[i][j]};
-        qthread_fork_copyargs(send_block_corner, &sbc_args, 
-            sizeof(sbc_args_t), NULL);
-    }
-
-    if (GHOST_WEST(src_pos) && GHOST_SOUTH(src_pos)) {
-        const size_t tgt1_lid = 
-            get_lid(src_part->row, src_part->col-1, points->pcols);
-        const partition_t *tgt1_part   = points->parts[tgt1_lid];
-        syncvar_t  **const tgt1_stage  = tgt1_part->stages[stage];
-        const size_t       tgt1_ncols  = tgt1_part->ncols;
-
-        const size_t tgt2_lid = 
-            get_lid(src_part->row - 1, src_part->col, points->pcols);
-        const partition_t *tgt2_part   = points->parts[tgt2_lid];
-        syncvar_t **const  tgt2_stage  = tgt2_part->stages[stage];
-        const size_t       tgt2_nrows  = tgt2_part->nrows;
-
-        const size_t i = 1;
-        const size_t j = 1;
-        const sbc_args_t sbc_args = 
-            {&tgt1_stage[i][tgt1_ncols-1], 
-             &tgt2_stage[tgt2_nrows-1][j],
-             &src_stage[i][j]};
-        qthread_fork_copyargs(send_block_corner, &sbc_args, 
-            sizeof(sbc_args_t), NULL);
-    }
-
-    if (GHOST_EAST(src_pos) && GHOST_NORTH(src_pos)) {
-        const size_t tgt1_lid = 
-            get_lid(src_part->row, src_part->col+1, points->pcols);
-        const partition_t *tgt1_part   = points->parts[tgt1_lid];
-        syncvar_t  **const tgt1_stage  = tgt1_part->stages[stage];
-
-        const size_t tgt2_lid = 
-            get_lid(src_part->row + 1, src_part->col, points->pcols);
-        const partition_t *tgt2_part   = points->parts[tgt2_lid];
-        syncvar_t  **const tgt2_stage  = tgt2_part->stages[stage];
-
-        const size_t i = src_nrows-2;
-        const size_t j = src_ncols-2;
-        const sbc_args_t sbc_args = 
-            {&tgt1_stage[i][0], 
-             &tgt2_stage[0][j],
-             &src_stage[i][j]};
-        qthread_fork_copyargs(send_block_corner, &sbc_args, 
-            sizeof(sbc_args_t), NULL);
-    }
-
-    if (GHOST_EAST(src_pos) && GHOST_SOUTH(src_pos)) {
-        const size_t tgt1_lid = 
-            get_lid(src_part->row, src_part->col+1, points->pcols);
-        const partition_t *tgt1_part   = points->parts[tgt1_lid];
-        syncvar_t  **const tgt1_stage  = tgt1_part->stages[stage];
-
-        const size_t tgt2_lid = 
-            get_lid(src_part->row - 1, src_part->col, points->pcols);
-        const partition_t *tgt2_part   = points->parts[tgt2_lid];
-        syncvar_t  **const tgt2_stage  = tgt2_part->stages[stage];
-        const size_t       tgt2_nrows  = tgt2_part->nrows;
-
-        const size_t j = src_ncols-2;
-        const size_t i = 1;
-        const sbc_args_t sbc_args = 
-            {&tgt1_stage[i][0], 
-             &tgt2_stage[tgt2_nrows-1][j], 
-             &src_stage[i][j]};
-        qthread_fork_copyargs(send_block_corner, &sbc_args, 
-            sizeof(sbc_args_t), NULL);
     }
 
     return 0;
@@ -748,16 +809,26 @@ static void begin(const size_t start, const size_t stop, void *arg_)
 
     const size_t part_lid = start;
 
-    for (size_t t = 1; t <= num_timesteps; t++) {
-        // Send outgoing values to neighboring ghost cells
-        const su_args_t su_args = {part_lid, (t-1)%2, arg};
-        qthread_fork(send_updates, &su_args, NULL);
+    debug_points = arg;
 
+    // Send outgoing values to neighboring ghost cells
+    const su_args_t su_args = {part_lid, arg};
+    qthread_fork(send_updates, &su_args, NULL);
+
+    for (size_t t = 1; t <= num_timesteps; t++) {
         // Compute a step
         const us_args_t us_args = {part_lid, t, arg->parts[part_lid], arg};
         syncvar_t up_ret = SYNCVAR_EMPTY_INITIALIZER;
         qthread_fork_syncvar(update_stage, &us_args, &up_ret);
         qthread_syncvar_readFF(NULL, &up_ret);
+   
+        if (part_lid == 0) {
+            print_status(arg, num_timesteps-1 % 2);
+            print_status(arg, num_timesteps % 2);
+        }
+//
+//    syncvar_t s = SYNCVAR_EMPTY_INITIALIZER;
+//    qthread_syncvar_readFE(NULL, &s);
     }
 }/*}}}*/
 
@@ -794,8 +865,10 @@ static void setup_stencil(const size_t start, const size_t stop, void *arg_)
     part->nrows = (points->nrows / points->prows) * row_per;
     part->ncols = (points->ncols / points->pcols) * col_per;
     assert(part->nrows > 3 && part->ncols > 3);
-    part->brows = points->brows;
-    part->bcols = points->bcols;
+    assert(0 == part->nrows % points->bsize);
+    assert(0 == part->ncols % points->bsize);
+    part->brows = points->nrows / points->bsize;
+    part->bcols = points->ncols / points->bsize;
 
     // Allocate points
     {
@@ -924,8 +997,7 @@ int main(int argc, char *argv[])
     int ncols = 10;
     int prows = 1;
     int pcols = 1;
-    int brows = 1;
-    int bcols = 1;
+    int bsize = 1;
     num_timesteps = 10;
     int print_final = 0;
     int alltime = 0;
@@ -935,8 +1007,7 @@ int main(int argc, char *argv[])
     NUMARG(ncols, "NCOLS");
     NUMARG(prows, "PROWS");
     NUMARG(pcols, "PCOLS");
-    NUMARG(brows, "BROWS");
-    NUMARG(bcols, "BCOLS");
+    NUMARG(bsize, "BSIZE");
     NUMARG(num_timesteps, "TIMESTEPS");
     NUMARG(print_final, "PRINT_FINAL");
     NUMARG(alltime, "ALL_TIME");
@@ -951,7 +1022,6 @@ int main(int argc, char *argv[])
     // Check sanity
     assert(nrows > 0 && ncols > 0 && num_timesteps > 0);
     assert(nrows % prows == 0 && ncols % pcols == 0);
-    assert((nrows/prows) % brows == 0 && (ncols/pcols) % bcols == 0);
     assert(nrows/prows > 1 && ncols/pcols > 1);
 
     // Initialize Qthreads
@@ -961,7 +1031,7 @@ int main(int argc, char *argv[])
     qtimer_t exec_timer = qtimer_create();
 
     // Setup stencil and partitions
-    stencil_t points = {nrows, ncols, prows, pcols, brows, bcols, NULL};
+    stencil_t points = {nrows, ncols, prows, pcols, bsize, NULL};
     {
         qtimer_start(setup_timer);
         points.parts = malloc(num_parts * sizeof(partition_t*));
