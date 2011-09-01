@@ -31,28 +31,26 @@
 //   => foo = {100,100,100,80,100}
 #define NUMARRARG(var,name,size,val) do { \
     char *str = getenv(name); \
-    if (str != NULL) { \
-        int i = 0; \
-        if (*str != '\0') { \
-            char *rest = NULL; \
-            do { \
-                var[i] = strtoul(str, &rest, 0); \
-                if (rest == str) var[i] = val; \
-                if (*rest == ',') rest++; \
-                else if (*rest != '\0') { \
-                    fprintf(stderr, "malformed "name" ending (%s)\n", rest); \
-                    abort(); \
-                    } \
-                i++; \
-                str = rest; \
-            } while (*rest != '\0' && i < size); \
-            if (*rest != '\0') \
-                fprintf(stderr, "extra values in "name" (%s)\n", rest); \
-        } \
-        while (i < size) { \
-            var[i] = val; \
+    int i = 0; \
+    if (str != NULL && *str != '\0') { \
+        char *rest = NULL; \
+        do { \
+            var[i] = strtoul(str, &rest, 0); \
+            if (rest == str) var[i] = val; \
+            if (*rest == ',') rest++; \
+            else if (*rest != '\0') { \
+                fprintf(stderr, "malformed "name" ending (%s)\n", rest); \
+                abort(); \
+                } \
             i++; \
-        } \
+            str = rest; \
+        } while (*rest != '\0' && i < size); \
+        if (*rest != '\0') \
+            fprintf(stderr, "extra values in "name" (%s)\n", rest); \
+    } \
+    while (i < size) { \
+        var[i] = val; \
+        i++; \
     } \
     iprintf(name" = [%lu", (unsigned long)var[0]); \
     for (int i = 1; i < size; i++) \
