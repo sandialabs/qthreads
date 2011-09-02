@@ -137,7 +137,7 @@ void chpl_task_init(int32_t  numThreadsPerLocale, int32_t maxThreadsPerLocale,
     //
     pthread_t initer;
 
-    if (numThreadsPerLocale == 0) {
+    if (numThreadsPerLocale == 0 && getenv("QTHREAD_NUM_SHEPHERDS") == NULL) {
       numThreadsPerLocale = chpl_numCoresOnThisLocale();
     }
 
@@ -145,10 +145,13 @@ void chpl_task_init(int32_t  numThreadsPerLocale, int32_t maxThreadsPerLocale,
       char newenv[100] = { 0 };
       snprintf(newenv, 99, "QTHREAD_NUM_SHEPHERDS=%i", (int)numThreadsPerLocale);
       putenv(newenv);
+      
+      if (getenv("QTHREAD_NUM_WORKERS_PER_SHEPHERD") == NULL)
+        putenv("QTHREAD_NUM_WORKERS_PER_SHEPHERD=1");
     }
 
-    if (callStackSize == 0) {
-      callStackSize = 32*1024*sizeof(size_t);
+    if (callStackSize == 0 && getenv("QTHREAD_STACK_SIZE") == NULL) {
+        callStackSize = 32*1024*sizeof(size_t);
     }
 
     if (callStackSize != 0) {
