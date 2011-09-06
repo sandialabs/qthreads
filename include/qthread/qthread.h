@@ -113,6 +113,8 @@ typedef struct _syncvar_s {
 
 #define SYNCVAR_STATIC_INITIALIZER       { { 0 } }
 #define SYNCVAR_STATIC_EMPTY_INITIALIZER { .u.s = { .data = 0, .state = 2, .lock = 0 } }
+#define SYNCVAR_STATIC_INITIALIZE_TO(value) { .u.s = { .data = value, .state = 0, .lock = 0 } }
+#define SYNCVAR_STATIC_EMPTY_INITIALIZE_TO(value) { .u.s = { .data = value, .state = 2, .lock = 0 } }
 extern const syncvar_t SYNCVAR_INITIALIZER;
 extern const syncvar_t SYNCVAR_EMPTY_INITIALIZER;
 #define INT64TOINT60(x)       ((uint64_t)((x) & (uint64_t)0xfffffffffffffffULL))
