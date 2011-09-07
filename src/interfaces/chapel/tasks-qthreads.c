@@ -131,45 +131,49 @@ static void *initializer(void *junk)
 void chpl_task_init(int32_t  numThreadsPerLocale, int32_t maxThreadsPerLocale,
                     int numCommTasks, uint64_t callStackSize)
 {
-    //
-    // If a value was specified for the call stack size config const, warn
-    // the user that it's ignored on this system.
-    //
     pthread_t initer;
+    char newenv_sheps[100] = { 0 };
+    char newenv_stack[100] = { 0 };
 
-    if (numThreadsPerLocale == 0 && getenv("QTHREAD_NUM_SHEPHERDS") == NULL) {
-      numThreadsPerLocale = chpl_numCoresOnThisLocale();
-    }
-
+    // Precendence (high-to-low):
+    // 1) --numThreadsPerLocale option
+    // 2) QTHREAD_NUM_SHEPHERDS
+    // 3) chpl_numCoresOnThisLocale()
     if (numThreadsPerLocale != 0) {
-      char newenv[100] = { 0 };
-      snprintf(newenv, 99, "QTHREAD_NUM_SHEPHERDS=%i", (int)numThreadsPerLocale);
-      putenv(newenv);
-      
-      if (getenv("QTHREAD_NUM_WORKERS_PER_SHEPHERD") == NULL)
+        snprintf(newenv_sheps, 99, "QTHREAD_NUM_SHEPHERDS=%i",
+            (int)numThreadsPerLocale);
+        putenv(newenv_sheps);
+        putenv("QTHREAD_NUM_WORKERS_PER_SHEPHERD=1");
+    } else if (getenv("QTHREAD_NUM_SHEPHERDS") != NULL) {
+        if (getenv("QTHREAD_NUM_WORKERS_PER_SHEPHERD") == NULL)
+            putenv("QTHREAD_NUM_WORKERS_PER_SHEPHERD=1");
+    } else {
+        numThreadsPerLocale = chpl_numCoresOnThisLocale();
+
+        snprintf(newenv_sheps, 99, "QTHREAD_NUM_SHEPHERDS=%i",
+            (int)numThreadsPerLocale);
+        putenv(newenv_sheps);
         putenv("QTHREAD_NUM_WORKERS_PER_SHEPHERD=1");
     }
 
-    if (callStackSize == 0 && getenv("QTHREAD_STACK_SIZE") == NULL) {
-        callStackSize = 32*1024*sizeof(size_t);
-    }
-
+    // Precendence (high-to-low):
+    // 1) --callStackSize option
+    // 2) QTHREAD_STACK_SIZE
+    // 3) Chapel default
     if (callStackSize != 0) {
-        char newenv[100] = { 0 };
-        snprintf(newenv, 99, "QTHREAD_STACK_SIZE=%lu", (unsigned long)callStackSize);
-        putenv(newenv);
+        snprintf(newenv_stack, 99, "QTHREAD_STACK_SIZE=%lu",
+            (unsigned long)callStackSize);
+        putenv(newenv_stack);
+    } else if (getenv("QTHREAD_STACK_SIZE") == NULL) {
+        callStackSize = 32*1024*sizeof(size_t);
+        snprintf(newenv_stack, 99, "QTHREAD_STACK_SIZE=%lu",
+            (unsigned long)callStackSize);
+        putenv(newenv_stack);
     }
-
-    /*
-    printf("numThreadsPerLocale = %d, callStackSize = %d\n", 
-           numThreadsPerLocale, 
-           callStackSize);
-    */
 
     pthread_create(&initer, NULL, initializer, NULL);
     while (done_initializing == 0) ;
 }
-
 
 void chpl_task_exit(void)
 {
