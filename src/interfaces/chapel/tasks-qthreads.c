@@ -190,7 +190,7 @@ void chpl_task_callMain(void (*chpl_main)(void))
 {
     void *const wrapper_args[2] = { chpl_main, NULL };
 
-    syncvar_t ret;
+    syncvar_t ret = SYNCVAR_STATIC_EMPTY_INITIALIZER;
     qthread_fork_syncvar(chapel_wrapper, wrapper_args, &ret);
     qthread_syncvar_readFF(NULL, &ret);
 }
@@ -224,7 +224,7 @@ void chpl_task_begin(chpl_fn_p        fp,
                      chpl_task_list_p task_list_entry)
 {
     if (!ignore_serial && chpl_task_getSerial()) {
-        syncvar_t ret;
+        syncvar_t ret = SYNCVAR_STATIC_EMPTY_INITIALIZER;
         void *const wrapper_args[2] = { fp, arg };
         qthread_fork_syncvar_copyargs_to(chapel_wrapper, wrapper_args, 
                                          sizeof(void *) * 2, &ret,
