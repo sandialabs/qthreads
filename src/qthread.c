@@ -1272,7 +1272,7 @@ void qthread_finalize(void)
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     worker = qthread_internal_getworker();
-    if (worker->packed_worker_id != 0) {                       /* Only run finalize on shepherd 0 worker 0*/
+    if (worker && worker->packed_worker_id != 0) {                       /* Only run finalize on shepherd 0 worker 0*/
         worker->current->thread_state = QTHREAD_STATE_YIELDED; /* Otherwise, put back */
         //      qt_threadqueue_enqueue(shep0->ready, worker->current,
         //             shep0);
