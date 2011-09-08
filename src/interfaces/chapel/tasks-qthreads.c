@@ -171,6 +171,10 @@ void chpl_task_init(int32_t  numThreadsPerLocale, int32_t maxThreadsPerLocale,
         putenv(newenv_stack);
     }
 
+    // Turn on informative Qthreads setting messages with Chapel's verbose flag
+    if (verbosity == 2)
+        putenv("QTHREAD_INFO=1");
+
     pthread_create(&initer, NULL, initializer, NULL);
     while (done_initializing == 0) ;
 }
