@@ -778,12 +778,12 @@ int qthread_initialize(void)
 
 #ifdef QTHREAD_USE_PTHREADS
     GET_ENV_NUM("QTHREAD_NUM_SHEPHERDS", nshepherds, 0, 0);
-    if (nshepherds > 0) {
+    if (nshepherds > 0 && getenv("QTHREAD_INFO")) {
         fprintf(stderr, "Forced %i Shepherds\n", (int)nshepherds);
     }
 # ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     GET_ENV_NUM("QTHREAD_NUM_WORKERS_PER_SHEPHERD", nworkerspershep, 0, 0);
-    if (nworkerspershep > 0) {
+    if (nworkerspershep > 0 && getenv("QTHREAD_INFO")) {
         fprintf(stderr, "Forced %i Workers per Shepherd\n", (int)nworkerspershep);
         if (nshepherds == 0) {
             fprintf(stderr, "Number of shepherds not specified - number of workers may be ignored\n");
