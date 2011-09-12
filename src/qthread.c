@@ -778,13 +778,9 @@ int qthread_initialize(void)
 
 #ifdef QTHREAD_USE_PTHREADS
     GET_ENV_NUM("QTHREAD_NUM_SHEPHERDS", nshepherds, 0, 0);
-    if (nshepherds > 0 && getenv("QTHREAD_INFO")) {
-        fprintf(stderr, "Forced %i Shepherds\n", (int)nshepherds);
-    }
 # ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     GET_ENV_NUM("QTHREAD_NUM_WORKERS_PER_SHEPHERD", nworkerspershep, 0, 0);
-    if (nworkerspershep > 0 && getenv("QTHREAD_INFO")) {
-        fprintf(stderr, "Forced %i Workers per Shepherd\n", (int)nworkerspershep);
+    if (nworkerspershep > 0) {
         if (nshepherds == 0) {
             fprintf(stderr, "Number of shepherds not specified - number of workers may be ignored\n");
         }
@@ -792,7 +788,19 @@ int qthread_initialize(void)
 # else
     nworkerspershep = 1;
 # endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
+
     qt_affinity_init(&nshepherds, &nworkerspershep);
+
+#ifdef QTHREAD_USE_PTHREADS
+    if (getenv("QTHREAD_INFO")) {
+        fprintf(stderr, "Using %i Shepherds\n", (int)nshepherds);
+    }
+# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    if (getenv("QTHREAD_INFO")) {
+        fprintf(stderr, "Using %i Workers per Shepherd\n", (int)nworkerspershep);
+    }
+# endif
+#endif
 
     if ((nshepherds == 1) && (nworkerspershep == 1)) {
         need_sync = 0;
@@ -868,6 +876,9 @@ int qthread_initialize(void)
 
     GET_ENV_NUM("QTHREAD_STACK_SIZE", qlib->qthread_stack_size, QTHREAD_DEFAULT_STACK_SIZE, QTHREAD_DEFAULT_STACK_SIZE);
     qthread_debug(CORE_DETAILS, "qthread stack size: %u\n", qlib->qthread_stack_size);
+    if (getenv("QTHREAD_INFO"))
+        fprintf(stderr, "Using %u byte stack size.\n", qlib->qthread_stack_size);
+
 #ifdef QTHREAD_GUARD_PAGES
     {
         size_t pagesize = getpagesize();
