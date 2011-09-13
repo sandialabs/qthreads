@@ -454,10 +454,10 @@ static void *qthread_shepherd(void *arg)
 #ifdef QTHREAD_RCRTOOL
             qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers, -1); // not working spinning
 #endif
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
 	    qthread_thread_free(t); /* free qthread data structures */
-#endif
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
             qthread_task_free(t);   /* mark as ready for freeing -- may free qthread itself */
+#endif
         } else {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
             if(!*(volatile size_t *)&me_worker->active) {
@@ -603,7 +603,9 @@ static void *qthread_shepherd(void *arg)
                         /* we can remove the stack etc. */ 
 			qthread_thread_free(t);
 			/*   and the context... */
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
                         qthread_task_free(t);
+#endif
                         break;
                 }
             }
@@ -1945,7 +1947,9 @@ static QINLINE void qthread_thread_free(qthread_t *t)
         free(*(void **)&t->data[qlib->qthread_argcopy_size]);
     }
     qthread_debug(THREAD_DETAILS, "t(%p): releasing thread handle %p\n", t, t);
-    //FREE_QTHREAD(t);   -- thread cannot be freed until parent approves -- see qthread_task_free
+#ifndef QTHREAD_USE_ROSE_EXTENSIONS
+    FREE_QTHREAD(t);   // under xomp thread cannot be freed until parent approves -- see qthread_task_free
+#endif
 }                      /*}}} */
 
 static QINLINE void qthread_enqueue(qthread_queue_t *q,
@@ -3006,15 +3010,6 @@ void qthread_releaseTaskListLock(void)
     assert(t);
     qthread_syncvar_readFE(NULL, &t->rdata->taskWaitLock);
 }                      /*}}} */
-
-// check to see if task freeable 1) QTHREAD_STATE_TERMINATED 2) parent has noticed it's completion
-void qthread_task_free(qthread_t * t){
-  assert(t);
-  int tc = qthread_incr(&t->task_completed,1);
-  if (tc == 1) { // needs to be freed from both workhorse loop and taskwait
-    FREE_QTHREAD(t);  // everything else is freed when QTHREAD_STATE_TERMINATED
-  }
-}
 
 // get child
 qthread_t * qthread_child_task(void)
