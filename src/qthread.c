@@ -3011,6 +3011,16 @@ void qthread_releaseTaskListLock(void)
     qthread_syncvar_readFE(NULL, &t->rdata->taskWaitLock);
 }                      /*}}} */
 
+// check to see if task freeable 1) QTHREAD_STATE_TERMINATED 2) parent has noticed it's completion
+void qthread_task_free(qthread_t * t) {
+    assert(t);
+    int tc = qthread_incr(&t->task_completed,1);
+    if (tc == 1) { // needs to be freed from both workhorse loop and taskwait
+        FREE_QTHREAD(t);  // everything else is freed when QTHREAD_STATE_TERMINATED
+    }
+}
+
+
 // get child
 qthread_t * qthread_child_task(void)
 {                      /*{{{ */
