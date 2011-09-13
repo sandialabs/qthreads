@@ -8,10 +8,9 @@
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
 # ifdef HAVE_MEMALIGN
 #include <malloc.h>
-# else
-#include <stdlib.h>
 # endif
 #endif
+#include <stdlib.h>
 
 /* Internal Headers */
 #include "qthread/qthread.h"

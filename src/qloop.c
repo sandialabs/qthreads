@@ -116,8 +116,6 @@ static aligned_t qloop_step_wrapper(struct qloop_step_wrapper_args *const restri
     // and every one executes their piece
     arg->func(arg->arg);
 
-    XOMP_barrier(); // needed to correct stop omp parallel regions from exiting early
-
 # ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
     MONITOR_ASM_LABEL(qthread_step_fence4); // add label for HPCToolkit unwind
 # endif
@@ -1475,6 +1473,8 @@ void qt_parallel_for(const qt_loop_step_f func,
     //    qtimer_destroy(qt);
 } /*}}}*/
 
+
+
 static void qt_naked_parallel_for(void *nakedArg) // This function must match qt_loop_step_f prototype so it can be called with qt_step_loop()
 {                                                 /*{{{*/
     void               **funcArgs = (void **)nakedArg;
@@ -1486,6 +1486,53 @@ static void qt_naked_parallel_for(void *nakedArg) // This function must match qt
 
     qt_parallel_qfor(func, startat, stopat, step, argptr);
 } /*}}}*/
+
+qqloop_step_handle_t *qt_loop_rose_queue_create(
+    int64_t start,
+    int64_t stop,
+    int64_t incr)
+{
+    qqloop_step_handle_t *ret;
+    int array_size = 0;
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    array_size = qthread_num_workers(); 
+#else
+    array_size = qthread_num_shepherds(); 
+#endif
+    int malloc_size = sizeof(qqloop_step_handle_t) + // base size
+      array_size * sizeof(aligned_t) + // static iteration array size
+      array_size * sizeof(aligned_t) + // current iteration array size 
+      array_size * sizeof(aligned_t);  // table for current_worker array
+    ret = (qqloop_step_handle_t *) malloc(malloc_size);
+    
+    ret->workers = 0;
+    ret->next = NULL;
+    ret->departed_workers = 0;
+    ret->assignNext = start;
+    ret->assignStart = start;
+    ret->assignStop = stop;
+    ret->assignStep = incr;
+    ret->assignDone = stop;
+    ret->ready = -1;                     // set to negative so that first use does not hang
+    ret->work_array_size = array_size;
+    ret->whichLoop = -1;                 // set to allow preincreamenting to be positive monotonic
+    ret->current_workers = ((aligned_t*)&(ret->work_array)) + (2 * array_size);
+    // zero work array
+    int i; 
+    aligned_t * tmp = &ret->work_array;
+    for (i = 0; i < 2*array_size; i++) {
+      *tmp++ = 0;
+    }
+
+    // add to linked list so that I can delete all the loops when the parallel region
+    qt_omp_parallel_region_add_loop(ret);
+    return ret;
+}
+
+void qt_loop_rose_queue_free(qqloop_step_handle_t * qqloop)
+{  
+  return;
+}
 
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
 /* vim:set expandtab: */

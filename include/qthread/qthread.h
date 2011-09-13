@@ -193,6 +193,9 @@ void qthread_enable_worker(const qthread_worker_id_t worker);
 # ifdef QTHREAD_USE_ROSE_EXTENSIONS
 void qthread_pack_workerid(const qthread_worker_id_t worker,
                            const qthread_worker_id_t newId);
+qthread_t * qthread_child_task(void);  /* used by XOMP to access list of child tasks*/
+syncvar_t * qthread_return_value(qthread_t * t); /* return value for a task */
+void qthread_remove_child(qthread_t * child); /* remove child - completed */
 # endif
 
 /* this function allows a qthread to specifically give up control of the

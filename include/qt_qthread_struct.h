@@ -79,6 +79,10 @@ struct qthread_s {
     void                          *preconds;
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     qthread_parallel_region_t     *currentParallelRegion; /* parallel region barrier this thread should use */
+    struct qthread_s              *child;            /* pointer to list task created */
+    struct qthread_s              *sibling;          /* previous task created by same parent */
+    syncvar_t                      ret_value;        /* return value for task -- don't need to allocated it seperately */
+    int                            task_completed;   /* counter of task completes - 1) in workhorse loop (state QTHREAD_STATE_TERMINATED) 2) parent has seen result and completes cannot free until both happen */
 #endif
 
     Q_ALIGNED(8) uint8_t data[]; /* this is where we stick argcopy and tasklocal data */

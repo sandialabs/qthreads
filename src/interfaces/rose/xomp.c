@@ -95,6 +95,11 @@ typedef struct XOMP_Status
 } XOMP_Status;
 static XOMP_Status xomp_status;
 
+struct XOMP_parallel_wrapper_args {
+    qt_loop_step_f func;
+    void *arg;
+};
+
 static void XOMP_Status_init(XOMP_Status *);
 static void set_inside_xomp_parallel(XOMP_Status *, bool);
 static void set_xomp_dynamic(int, XOMP_Status *);
@@ -106,6 +111,7 @@ static int qt_parallel_loop(qthread_parallel_region_t *,int);
 #endif
 static int qt_parallel_loop_incr(qthread_parallel_region_t *,int);
 static qqloop_step_handle_t *qt_get_parallel_loop_structure(qthread_parallel_region_t *,int);
+void XOMP_parallel_wrapper(void * arg); /* wrapper for XOMP parallel functions -- add required barrier on completion */
 
 // Initalize the structure to a known state
 static void XOMP_Status_init(
@@ -291,6 +297,13 @@ void XOMP_terminate(
 }
 
 // start a parallel task
+void XOMP_parallel_wrapper(void * arg)
+{
+    struct XOMP_parallel_wrapper_args * wrapper = arg;
+    wrapper->func(wrapper->arg);
+    XOMP_barrier();
+}
+
 #ifdef QTHREAD_RCRTOOL
 void XOMP_parallel_start(
     void (*func) (void *),
@@ -332,8 +345,8 @@ void XOMP_parallel_start(
     omp_set_num_threads(numThread);
     parallelWidth = numThread;
   }
-  qt_loop_step_f f = (qt_loop_step_f) func;
-  qt_parallel_step(f, parallelWidth, data);
+  struct XOMP_parallel_wrapper_args foo = {func, data};
+  qt_parallel_step(XOMP_parallel_wrapper, parallelWidth, &foo);
 
   if (save_thread_cnt) {
     omp_set_num_threads(save_thread_cnt);
@@ -356,57 +369,6 @@ void XOMP_parallel_end(
     qt_omp_parallel_region_destroy();  //  need to free parallel region and all it contains
 
     return;
-}
-
-static qqloop_step_handle_t *testLoop; // akp - temp needs rose change to pass
-                                       // loop value to ordered_start function
-
-qqloop_step_handle_t *qt_loop_rose_queue_create(
-    int64_t start,
-    int64_t stop,
-    int64_t incr)
-{
-    qqloop_step_handle_t *ret;
-    int array_size = 0;
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    array_size = qthread_num_workers(); 
-#else
-    array_size = qthread_num_shepherds(); 
-#endif
-    int malloc_size = sizeof(qqloop_step_handle_t) + // base size
-      array_size * sizeof(aligned_t) + // static iteration array size
-      array_size * sizeof(aligned_t) + // current iteration array size 
-      array_size * sizeof(aligned_t);  // table for current_worker array
-    ret = (qqloop_step_handle_t *) malloc(malloc_size);
-    
-    ret->workers = 0;
-    ret->next = NULL;
-    ret->departed_workers = 0;
-    ret->assignNext = start;
-    ret->assignStart = start;
-    ret->assignStop = stop;
-    ret->assignStep = incr;
-    ret->assignDone = stop;
-    ret->ready = -1;                     // set to negative so that first use does not hang
-    ret->work_array_size = array_size;
-    ret->whichLoop = -1;                 // set to allow preincreamenting to be positive monotonic
-    ret->current_workers = ((aligned_t*)&(ret->work_array)) + (2 * array_size);
-    // zero work array
-    int i; 
-    aligned_t * tmp = &ret->work_array;
-    for (i = 0; i < 2*array_size; i++) {
-      *tmp++ = 0;
-    }
-
-    testLoop = ret;
-    // add to linked list so that I can delete all the loops when the parallel region
-    qt_omp_parallel_region_add_loop(ret);
-    return ret;
-}
-
-void qt_loop_rose_queue_free(qqloop_step_handle_t * qqloop)
-{  
-  return;
 }
 
 // used to compute time to dynamically determine minimum effective block size 
@@ -711,40 +673,28 @@ void XOMP_loop_end_nowait(
 // Qthread implementation of a OpenMP global barrier
 void qthread_walkTaskList(void);
 
-// AKP 08/11/11 -- this function wants to manipulate qthread data structures, but is a
-// Rose specific  function.  The commented out statements modify the data structure (which 
-// is not visible directly, the calls perform the same actions though the qthread.c exported
-// functions, but every one calls qthread_internal_self (and pthread_getspecfic). 
-// Seems like a bunch of wasted effort.  
-
 static void walkSyncTaskList(void)
 {
-    //    qthread_walkTaskList();     
-    //    qthread_t *t = qthread_internal_self();
-
     qthread_getTaskListLock();
-    //qthread_syncvar_writeEF_const(&t->rdata->taskWaitLock, 1);
-    taskSyncvar_t *syncVar;
-    while ((syncVar = qthread_getTaskRetVar()//t->rdata->openmpTaskRetVar
-           )) {
-        // manually check for empty -- check if present in current shepherds ready queue
-        //   if present take and start executing
-        syncvar_t *lc_p = &syncVar->retValue;
+    syncvar_t *syncVar;
+    qthread_t *child;
+    uint64_t ret = 0;
+    qthread_t *prev_child = NULL;
 
-        qthread_syncvar_readFF(NULL, lc_p);
-	qthread_setTaskRetVar(syncVar->next_task);
-	//        t->rdata->openmpTaskRetVar = syncVar->next_task;
-        //      free(syncVar);
+    while ((child = qthread_child_task()) ) {
+        syncVar = qthread_return_value(child);
+	qthread_syncvar_readFF(&ret, syncVar);
+	prev_child = child;
+	qthread_remove_child(child);
     }
     qthread_releaseTaskListLock();
-    //    qthread_syncvar_readFE(NULL, &t->rdata->taskWaitLock);
 }
 
 extern int activeParallelLoop;
 
 void XOMP_barrier(void)
 {
-    walkSyncTaskList(); // wait for outstanding tasks to complete
+  if(XOMP_master()) walkSyncTaskList(); // wait for outstanding tasks to complete
 
 #ifdef QTHREAD_LOG_BARRIER
     size_t myid = qthread_barrier_id();
@@ -809,32 +759,6 @@ bool XOMP_loop_ordered_guided_next(
 
 aligned_t taskId = 1; // start at first non-master shepherd
 
-// AKP 08/11/11 -- this function wants to manipulate qthread data structures, but is a
-// Rose specific  function.  The commented out statements modify the data structure (which 
-// is not visible directly, the calls perform the same actions though the qthread.c exported
-// functions, but every one calls qthread_internal_self (and pthread_getspecfic). 
-// Seems like a bunch of wasted effort.  
-
-static syncvar_t *getSyncTaskVar(void)
-{
-  //    qthread_t *t = qthread_internal_self();
-
-  //    assert(t);
-  
-    taskSyncvar_t *syncVar = (taskSyncvar_t *)calloc(1, sizeof(taskSyncvar_t));
-    qthread_getTaskListLock();
-    //qthread_syncvar_writeEF_const(&t->rdata->taskWaitLock, 1);
-    syncVar->next_task = qthread_getTaskRetVar();
-    //syncVar->next_task         = t->rdata->openmpTaskRetVar;
-    qthread_setTaskRetVar(syncVar);
-    //t->rdata->openmpTaskRetVar = syncVar;
-    qthread_releaseTaskListLock();
-    //qthread_syncvar_readFE(NULL, &t->rdata->taskWaitLock);
-
-    return &(syncVar->retValue);
-}
-
-
 void XOMP_task(
     void (*func) (void *),
     void *arg,
@@ -850,16 +774,16 @@ void XOMP_task(
   qthread_incr(&taskId,1);
   qthread_debug(LOCK_DETAILS, "me(%p) creating task for shepherd %d\n", me, id%qthread_num_shepherds());
 #endif
-  syncvar_t *ret = getSyncTaskVar(); // get new syncvar_t -- setup openmpThreadId (if needed)
 
 #ifdef QTHREAD_OMP_AFFINITY
   qthread_t *t = qthread_self();
   if (t->rdata->child_affinity != OMP_NO_CHILD_TASK_AFFINITY)
-    qthread_fork_syncvar_copyargs_to((qthread_f)func, arg, arg_size, ret, t->rdata->child_affinity);
-  else
-    qthread_fork_syncvar_copyargs((qthread_f)func, arg, arg_size, ret);
+    qthread_fork_syncvar_copyargs_to((qthread_f)func, arg, arg_size, NULL, t->rdata->child_affinity);/* NULL return value -- let copyargs assign inside thread structure -- which it allocates*/
+  else {
+    qthread_fork_syncvar_copyargs((qthread_f)func, arg, arg_size, NULL); /* NULL return value -- let copyargs assign inside thread structure -- which it allocates*/
+  }
 #else
-  qthread_fork_syncvar_copyargs((qthread_f)func, arg, arg_size, ret);
+  qthread_fork_syncvar_copyargs((qthread_f)func, arg, arg_size, NULL); /* NULL return value -- let copyargs assign inside thread structure -- which it allocates*/
 #endif
 }
 
@@ -976,7 +900,10 @@ void XOMP_loop_ordered_runtime_init(
 void XOMP_ordered_start(
     void)
 {
-  qqloop_step_handle_t * loop = testLoop;
+  // BUSTED at the moment -- need to use the new mechanism to get the loop structure
+  fprintf(stderr,"Ordered start is busted at the moment\n");
+  return;
+  qqloop_step_handle_t * loop = NULL;
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   qthread_worker_id_t myid = qthread_barrier_id();
   aligned_t *iter = ((aligned_t*)&loop->work_array) + qthread_num_workers() + myid;

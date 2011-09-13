@@ -92,6 +92,15 @@ int qloop_internal_computeNextBlock(qqloop_step_handle_t *loop);
 
 double *cnbTimeMin_(void);
 int *   cnbWorkers_(void);
+
+
+qqloop_step_handle_t *qt_loop_rose_queue_create(
+    int64_t start,
+    int64_t stop,
+    int64_t incr);
+void qt_loop_rose_queue_free(
+    qqloop_step_handle_t *);
+
 #endif /* QTHREAD_USE_ROSE_EXTENSIONS */
 
 #endif // ifndef QLOOP_INNARDS_H
