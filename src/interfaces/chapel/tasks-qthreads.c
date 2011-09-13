@@ -34,6 +34,8 @@
 
 #include <pthread.h>
 
+static syncvar_t exit_ret = SYNCVAR_STATIC_EMPTY_INITIALIZER;
+
 void chpl_task_yield(void)
 {
     /* fprintf(stdout, "In qthread's yield" );*/
@@ -122,7 +124,7 @@ static void *initializer(void *junk)
 
     qthread_syncvar_readFF(NULL, &canexit);
 
-    // qthread_finalize();
+    qthread_finalize();
     COMPILER_FENCE;
     done_finalizing = 1;
     return NULL;
@@ -181,8 +183,12 @@ void chpl_task_init(int32_t  numThreadsPerLocale, int32_t maxThreadsPerLocale,
 
 void chpl_task_exit(void)
 {
-    qthread_syncvar_fill(&canexit);
-    while (done_finalizing == 0) ;
+    if (qthread_shep() == NO_SHEPHERD) {
+        qthread_syncvar_fill(&canexit);
+        while (done_finalizing == 0) ;
+    } else {
+        qthread_syncvar_fill(&exit_ret);
+    }
 }
 
 static aligned_t chapel_wrapper(void *arg)
@@ -198,9 +204,8 @@ void chpl_task_callMain(void (*chpl_main)(void))
 {
     void *const wrapper_args[2] = { chpl_main, NULL };
 
-    syncvar_t ret = SYNCVAR_STATIC_EMPTY_INITIALIZER;
-    qthread_fork_syncvar(chapel_wrapper, wrapper_args, &ret);
-    qthread_syncvar_readFF(NULL, &ret);
+    qthread_fork_syncvar(chapel_wrapper, wrapper_args, &exit_ret);
+    qthread_syncvar_readFF(NULL, &exit_ret);
 }
 
 int chpl_task_createCommTask(chpl_fn_p fn, void* arg) {
