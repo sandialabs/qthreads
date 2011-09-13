@@ -1275,8 +1275,13 @@ void qthread_finalize(void)
     qthread_steal_stat();
 #endif
 
-    if (qlib == NULL) {
+    if (qlib == NULL || qthread_shep() != 0 || qthread_worker(NULL) != 0) {
         return;
+    } else {
+        qthread_t *t = qthread_internal_self();
+        if (0 == (t->flags & QTHREAD_REAL_MCCOY)) {
+            return;
+        }
     }
 
     qthread_shepherd_t *shep0 = &(qlib->shepherds[0]);
