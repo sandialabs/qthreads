@@ -31,6 +31,8 @@ enum threadstate {
 #define QTHREAD_UNSTEALABLE         (1 << 3)
 #define QTHREAD_MUST_BE_WORKER_ZERO (1 << 4)     /* force thread to shepherd 0 worker 0 for termination 4/1/11 akp */
 #define QTHREAD_HAS_ARGCOPY         (1 << 5)
+#define QTHREAD_RESERVED_1          (1 << 6)
+#define QTHREAD_RESERVED_2          (1 << 7)
 
 struct qthread_runtime_data_s {
     void         *stack;           /* the thread's stack */
