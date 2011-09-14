@@ -1908,6 +1908,8 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f             f,
     t->rdata           = NULL;
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     t->task_completed  = 0;
+    t->child           = NULL;
+    t->sibling         = NULL;
 #endif
     // should I use the builtin block for args?
     t->flags &= ~QTHREAD_HAS_ARGCOPY;
@@ -1948,7 +1950,7 @@ static QINLINE void qthread_thread_free(qthread_t *t)
     }
     qthread_debug(THREAD_DETAILS, "t(%p): releasing thread handle %p\n", t, t);
 #ifndef QTHREAD_USE_ROSE_EXTENSIONS
-    FREE_QTHREAD(t);   // under xomp thread cannot be freed until parent approves -- see qthread_task_free
+    FREE_QTHREAD(t);   // if ROSE -- thread cannot be freed until parent approves -- see qthread_task_free
 #endif
 }                      /*}}} */
 
@@ -2986,6 +2988,15 @@ void INTERNAL qthread_assertnotfuture(void)
 # ifdef __INTEL_COMPILER
 #  pragma warning (disable:1418)
 # endif
+
+// check to see if task freeable 1) QTHREAD_STATE_TERMINATED 2) parent has noticed it's completion
+void qthread_task_free(qthread_t * t){
+  assert(t);
+  int tc = qthread_incr(&t->task_completed,1);
+  if (tc == 1) { // needs to be freed from both workhorse loop and taskwait
+    FREE_QTHREAD(t);  // everything else is freed when QTHREAD_STATE_TERMINATED
+  }
+}
 
 int INTERNAL qthread_forCount(int inc)
 {                                    /*{{{ */

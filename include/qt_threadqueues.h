@@ -13,7 +13,6 @@
 typedef struct qthread_shepherd_s qthread_shepherd_t;
 #endif
 
-typedef struct _qt_threadqueue_node qt_threadqueue_node_t;
 typedef struct _qt_threadqueue qt_threadqueue_t;
 typedef struct _qt_threadqueue_pools {
     qt_mpool nodes;
@@ -47,12 +46,8 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q QMS_ARG
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 /* Functions for work stealing functionality */
-void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
-                                              qt_threadqueue_node_t *first,
-                                              qthread_shepherd_t    *shep);
-qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *q);
-qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
-                                                                void             *value);
+qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
+                                                    void             *value);
 void INTERNAL qthread_steal_stat(void);
 #endif // ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 

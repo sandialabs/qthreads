@@ -93,6 +93,7 @@ EXTRA_DIST = \
 			 threadqueues/mutexfifo_threadqueues.c \
 			 threadqueues/mtsfifo_threadqueues.c \
 			 threadqueues/sherwood_threadqueues.c \
+			 threadqueues/nottingham_threadqueues.c \
 			 affinity/hwloc_affinity.c \
 			 affinity/no_affinity.c \
 			 affinity/libnuma_affinity.c \

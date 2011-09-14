@@ -30,6 +30,8 @@ struct _qt_threadqueue_node {
     qthread_shepherd_t                            *creator_ptr;
 } /* qt_threadqueue_node_t */;
 
+typedef struct _qt_threadqueue_node qt_threadqueue_node_t;
+
 struct _qt_threadqueue {
     volatile qt_threadqueue_node_t *volatile head;
     volatile qt_threadqueue_node_t *volatile tail;
@@ -49,6 +51,13 @@ struct _qt_threadqueue {
                                               * that will fail because tasks cannot be moved - 4/1/11 AKP
                                               */
 } /* qt_threadqueue_t */;
+
+// Forward declarations
+qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *q);
+
+void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
+                                              qt_threadqueue_node_t *first,
+                                              qthread_shepherd_t    *shep);
 
 #if defined(AKP_DEBUG) && AKP_DEBUG
 /* function added to ease debugging and tuning around queue critical sections - 4/1/11 AKP */
@@ -514,25 +523,21 @@ void qthread_steal_stat(void)
 /* walk queue looking for a specific value  -- if found remove it (and start
  * it running)  -- if not return NULL
  */
-qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
-                                                                void             *value)
+qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
+                                                    void             *value)
 {
     qt_threadqueue_node_t *node = NULL;
-    qthread_t             *t;
+    qthread_t             *t = NULL;
 
     assert(q != NULL);
 
     QTHREAD_FASTLOCK_LOCK(&q->qlock);
     if (q->qlength > 0) {
-        node = (qt_threadqueue_node_t *)q->tail;
-        if (node) {
-            t = (qthread_t *)node->value;
-        }
-        while ((node != NULL) && (t->ret != value)) {
+        node = (qt_threadqueue_node_t *) q->tail;
+        t = (node) ? (qthread_t *) node->value : NULL;
+        while ((t != NULL) && (t->ret != value)) {
             node = (qt_threadqueue_node_t *)node->prev;
-            if (node) {
-                t = (qthread_t *)node->value;
-            }
+            t = (node) ? (qthread_t *) node->value : NULL;
         }
         if ((node != NULL)) {
             if (node != q->tail) {
@@ -547,13 +552,11 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t
                 q->tail->next    = node;
                 q->tail          = node;
             }
-        } else {
-            node = NULL;
         }
     }
     QTHREAD_FASTLOCK_UNLOCK(&q->qlock);
 
-    return (node);
+    return (t);
 }
 
 /* vim:set expandtab: */

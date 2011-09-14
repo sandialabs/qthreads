@@ -267,7 +267,7 @@ static void qthread_syncvar_blocker_func(void        *dest,
 #define SYNCFEB_EMPTY_WAITERS            0x8 /* 011 */
 #define SYNCFEB_EMPTY                    0xc /* 01x */
 #define SYNCFEB_ANY                      0xf /* 0xx */
-#define INITIAL_TIMEOUT                  1000
+#define INITIAL_TIMEOUT                  100
 #define SYNCFEB_STATE_FULL_NO_WAITERS    0x0
 #define SYNCFEB_STATE_FULL_WITH_WAITERS  0x1
 #define SYNCFEB_STATE_EMPTY_NO_WAITERS   0x2

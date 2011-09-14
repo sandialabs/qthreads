@@ -24,6 +24,8 @@ struct _qt_threadqueue_node {
     qthread_shepherd_t          *creator_ptr;
 } /* qt_threadqueue_node_t */;
 
+typedef struct _qt_threadqueue_node qt_threadqueue_node_t;
+
 struct _qt_threadqueue {
     qt_threadqueue_node_t                   *head;
     qt_threadqueue_node_t                   *tail;

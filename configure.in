@@ -311,9 +311,9 @@ AC_ARG_WITH([scheduler],
 							[Specify the scheduler. Options when using
 							 single-threaded shepherds are: nemesis (default),
 							 lifo, mutexfifo, and mtsfifo. Options when using
-							 multi-threaded shepherds are: sherwood (default).
-							 Details on these options are in the SCHEDULING
-							 file.])])
+							 multi-threaded shepherds are: sherwood (default),
+							 and nottingham. Details on these options
+							 are in the SCHEDULING file.])])
 
 AC_ARG_ENABLE([hpctoolkit],
               [AS_HELP_STRING([--enable-hpctoolkit-support],
@@ -622,9 +622,10 @@ AS_IF([test "x$enable_valgrind" = "xyes"],
 
 AS_IF([test "x$enable_rose_extensions" = xyes],
       [AC_DEFINE([QTHREAD_USE_ROSE_EXTENSIONS], [1], [Define to enable ROSE extensions])
-	   AS_IF([test "x$with_scheduler" != "x" -a "x$with_scheduler" != "xsherwood"],
-			 [AC_MSG_ERROR([ROSE XOMP implementation *REQUIRES* the sherwood scheduler.])],
+	   AS_IF([test "x$with_scheduler" = "x"],
 			 [with_scheduler="sherwood"])
+	   AS_IF([test "x$with_scheduler" != "xsherwood" -a "x$with_scheduler" != "xnottingham"],
+			 [AC_MSG_ERROR([ROSE XOMP implementation *REQUIRES* the sherwood or nottingham schedulers.])])
 	   AS_IF([test "x$enable_multithreaded_shepherds" != "x" -a "x$enable_multithreaded_shepherds" != "xyes"],
 			 [AC_MSG_ERROR([ROSE XOMP implementation *REQUIRES* multithreaded shepherds.])],
 			 [enable_multithreaded_shepherds="yes"])])
@@ -645,8 +646,7 @@ AS_IF([test "x$enable_hardware_increments" == "xno" -a "x$enable_multithreaded_s
 AS_IF([test "x$enable_multithreaded_shepherds" = xyes -o "x$enable_multithreaded_shepherds" = x],
       [AC_DEFINE([QTHREAD_MULTITHREADED_SHEPHERDS], [1], [Support multithreaded shepherds])
        AC_SEARCH_LIBS([nanosleep],[rt],[],[AC_MSG_ERROR([Cannot find nanosleep])])
-	   AS_IF([test "x$with_scheduler" != "x" -a "x$with_scheduler" != "xsherwood" -a "x$with_scheduler" != "xdefault"],
-			 [AC_MSG_ERROR([Multithreaded shepherds must use the sherwood scheduler.])],
+	   AS_IF([test "x$with_scheduler" = "x"],
 			 [with_scheduler="sherwood"])
        EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --enable-multithreaded-shepherds"
 	   enable_multithreaded_shepherds="yes"],
@@ -659,7 +659,7 @@ AS_IF([test "x$with_scheduler" != "x"],
 				 [with_scheduler="nemesis"],
 				 [with_scheduler="sherwood"])
            ;;
-	     nemesis|lifo|mutexfifo|mtsfifo|sherwood)
+	     nemesis|lifo|mutexfifo|mtsfifo|sherwood|nottingham)
 		   # all valid options
 		   ;;
 		 *)

@@ -13,12 +13,12 @@
 void qthread_run_needed_task(syncvar_t *value)
 {
     qthread_shepherd_t    *shep   = qthread_internal_getshep();
-    qt_threadqueue_node_t *n      = NULL;
+    qthread_t             *target = NULL;
     qthread_t             *orig_t = qthread_internal_self();
 
     //  ucontext_t my_context;
 
-    if ((n = qt_threadqueue_dequeue_specific(shep->ready, value))) {
+    if ((target = qt_threadqueue_dequeue_specific(shep->ready, value))) {
         // switch to task and run -- else missing and return
         //    qthread_t * t = n->value;
 
