@@ -15,6 +15,9 @@
 #include <limits.h>              /* for INT_MAX */
 #include <qthread/qthread-int.h> /* for UINT8_MAX */
 #include <string.h>              /* for memset() */
+#ifdef QTHREAD_GUARD_PAGES
+#include <unistd.h>            /* for getpagesize() */
+#endif
 #if !HAVE_MEMCPY
 # define memcpy(d, s, n)  bcopy((s), (d), (n))
 # define memmove(d, s, n) bcopy((s), (d), (n))
