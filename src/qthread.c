@@ -1930,7 +1930,6 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f             f,
     t->tasklocal_size = 0;
 
     qthread_debug(THREAD_DETAILS, "returning\n");
-    alloc_rdata(myshep,t);
     return t;
 }                      /*}}} */
 
