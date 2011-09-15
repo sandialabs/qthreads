@@ -1554,6 +1554,7 @@ void qthread_finalize(void)
     qthread_debug(LOCK_DETAILS, "destroy lock infrastructure arrays\n");
     free(qlib->locks);
     free(qlib->FEBs);
+    free(qlib->syncvars);
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
     free(qlib->atomic_locks);
 #endif
