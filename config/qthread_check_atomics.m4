@@ -70,6 +70,43 @@ return (int)(long)foo;
 AS_IF([test "x$qthread_cv_atomic_CAS32" = "xyes" && test "x$qthread_cv_atomic_CAS64" = "xyes" && test "x$qthread_cv_atomic_CASptr" = "xyes"],
 	  [qthread_cv_atomic_CAS=yes],
 	  [qthread_cv_atomic_CAS=no])
+AC_CACHE_CHECK([whether the compiler supports CMPXCHG16B],
+  [qthread_cv_cmpxchg16b],
+  [AC_RUN_IFELSE([AC_LANG_SOURCE([[
+#include <stdint.h> /* for uint64_t and intptr_t (C99) */
+struct m128 {
+uint64_t a,b;
+};
+int main(void)
+{
+char blob[sizeof(struct m128)*4];
+intptr_t b2 = (intptr_t)blob;
+struct m128 *one, *two, *three;
+if (b2 & 0xf) { // fix alignment
+b2 += 0xf - (b2 & 0xf);
+}
+one = (struct m128*)b2;
+two = one+1;
+three = two+1;
+one->a = 1;
+one->b = 2;
+two->a = 3;
+two->b = 4;
+three->a = 5;
+three->b = 6;
+__asm__ __volatile__ ("lock cmpxchg16b %2"
+:"=a"(three->a),"=d"(three->b),"+m"(*two)
+:"a"(two->a),"d"(two->b),"b"(one->a),"c"(one->b)
+:"cc", "memory");
+if (three->a != 3) {
+return -1;
+} else {
+return 0;
+}
+}]])],
+    [qthread_cv_cmpxchg16b="yes"],
+	[qthread_cv_cmpxchg16b="no"])])
+qthread_cv_atomic_CAS128="$qthread_cv_cmpxchg16b"
 AC_CACHE_CHECK([whether compiler supports builtin atomic incr],
   [qthread_cv_atomic_incr],
   [AS_IF([test "$1" -eq 8],

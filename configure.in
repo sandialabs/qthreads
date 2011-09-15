@@ -659,8 +659,12 @@ AS_IF([test "x$with_scheduler" != "x"],
 				 [with_scheduler="nemesis"],
 				 [with_scheduler="sherwood"])
            ;;
-	     nemesis|lifo|mutexfifo|mtsfifo|sherwood|nottingham)
+	     nemesis|lifo|mutexfifo|mtsfifo|sherwood)
 		   # all valid options
+		   ;;
+		 nottingham)
+		   AS_IF([test "x$qthread_cv_atomic_CAS128" != xyes],
+				 [AC_MSG_ERROR([Nottingham requires a 128-bit CAS.])])
 		   ;;
 		 *)
 		   AC_MSG_ERROR([Unknown scheduler option])
