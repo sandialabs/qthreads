@@ -134,22 +134,24 @@ static uint64_t qthread_mwaitc(volatile syncvar_t *const restrict addr,
             uint32_t  low_unlocked, low_locked;
             uint32_t *addrptr = (uint32_t *)addr;
             do {
+loop_start:
                 if (timeout-- <= 0) { goto errexit; }
-                low_unlocked  = addrptr[1]; // atomic read
-                low_unlocked &= 0xfffffffe;
+                low_unlocked = addrptr[1];  // atomic read
+                if ((low_unlocked & 1) == 0) { goto loop_start; }
                 low_locked    = low_unlocked | 1;
             } while (qthread_cas32(&(addrptr[1]), low_unlocked, low_locked) != low_unlocked);
             locked.u.w = addr->u.w; // I locked it, so I can read it
         }
 #else   /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILE) */
         do {
+loop_start:
             if (timeout-- <= 0) {
                 goto errexit;
             }
-            unlocked          = *addr; // may be locked or unlocked, we don't know
-            locked            = unlocked;
-            unlocked.u.s.lock = 0;     // create the unlocked version
-            locked.u.s.lock   = 1;     // create the locked version
+            unlocked = *addr;          // may be locked or unlocked, we don't know
+            if (unlocked.u.s.lock == 1) { goto loop_start; }
+            locked          = unlocked;
+            locked.u.s.lock = 1;       // create the locked version
         } while (qthread_cas64((uint64_t *)addr, unlocked.u.w, locked.u.w) !=
                  unlocked.u.w);
 #endif  /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILE) */
@@ -841,7 +843,7 @@ locked_empty_waiters:
             UNLOCK_THIS_MODIFIED_SYNCVAR(dest, val, (e.pf << 1) | e.sf);
             qthread_syncvar_gotlock_fill(me->rdata->shepherd_ptr, m, dest, val);
             qthread_debug(SYNCVAR_DETAILS, "writeEF(%p) => %x ...1\n", dest,
-                          (uintptr_t)BUILD_UNLOCKED_SYNCVAR(val, (e.pf << 1) | e. sf));
+                          (uintptr_t)BUILD_UNLOCKED_SYNCVAR(val, (e.pf << 1) | e.sf));
         }
     } else {
         uint64_t val;
