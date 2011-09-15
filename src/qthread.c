@@ -1410,6 +1410,7 @@ void qthread_finalize(void)
                 abort();
             }
         }
+        free(qlib->shepherds[i].workers);
         if (i == 0) { continue; }
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     for (i = 1; i < qlib->nshepherds; i++) {
