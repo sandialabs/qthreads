@@ -70,9 +70,7 @@ static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
     switch (alignment) {
         case 0:
             ret = calloc(1, alloc_size);
-            VALGRIND_MAKE_MEM_NOACCESS(ret, alloc_size);
-            return ret;
-
+            goto return_clean;
         case 16:
         case 8:
         case 4:
@@ -84,8 +82,8 @@ static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
 #elif defined(HAVE_WORKING_VALLOC)
             ret = valloc(alloc_size);
 #elif defined(HAVE_16ALIGNED_CALLOC)
-            return calloc(1, alloc_size);
-
+            ret = calloc(1, alloc_size);
+            goto return_clean;
 #elif defined(HAVE_16ALIGNED_MALLOC)
             ret = malloc(alloc_size);
 #elif defined(HAVE_PAGE_ALIGNED_MALLOC)
@@ -110,8 +108,8 @@ static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
 #ifndef QTHREAD_USE_ROSE_EXTENSIONS
     memset(ret, 0, alloc_size);
 #endif
+return_clean:
     VALGRIND_MAKE_MEM_NOACCESS(ret, alloc_size);
-    if(ret == NULL) printf("aligned malloc failed\n");
     return ret;
 }                                      /*}}} */
 
@@ -228,7 +226,7 @@ qt_mpool qt_mpool_create(size_t item_size)
 
 /* to avoid ABA reinsertion trouble, each pointer in the pool needs to have a
  * monotonically increasing counter associated with it. The counter doesn't
- * need to be huge, just big enough to make the APA problem sufficiently
+ * need to be huge, just big enough to make the ABA problem sufficiently
  * unlikely. We'll just claim 4, to be conservative. Thus, an allocated block
  * of memory must be aligned to 16 bytes. */
 #ifndef QTHREAD_USE_VALGRIND
