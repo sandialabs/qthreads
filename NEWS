@@ -1,4 +1,29 @@
 --- 1.6.1b ---
+New Features:
+ - Experimental multi-node support with Portals4
+ - Task-local data
+ - Preconditioned task spawning
+ - More control with hwloc: QTHREAD_WORKER_UNIT
+ - Several new schedulers: mutexfifo, mtsfifo, nemesis, nottingham
+Improvements:
+ - Default scheduler: sherwood
+ - Updated to new Chapel tasking API
+ - Works with Chapel multi-node
+ - Better Chapel behavior (e.g. bigger default stack)
+ - Faster qsort
+ - Even faster thread spawns
+ - Better syncvar behavior under contention
+ - qthread_num_workers() works independent of scheduler
+ - Better debug-output control
+ - Tree-based qloop spawning
+ - Better behavior in shepherd over-subscription case
+ - Use hash to improve qtimer_fastrand() output (still not cryptographically sound)
+ - Suppress "Forced X" messages unless QTHREAD_INFO is set
+ - Prevents errors if qthread_finalize() is called from the wrong thread
+Bugfixes:
+ - Fix 64-bit increment detection on 32-bit architectures
+ - Fix valgrind building
+ - Fix PPC building
 --- 1.6 ---
 New Features:
  - Brand new C++ qloop interface
