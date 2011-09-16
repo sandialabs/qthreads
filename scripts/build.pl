@@ -15,6 +15,7 @@ my @conf_names;
 my @user_configs;
 my $qt_src_dir = '';
 my $qt_bld_dir = '';
+my $repeat = 1;
 my $make_flags = '';
 my $force_configure = 0;
 my $force_clean = 0;
@@ -36,6 +37,8 @@ if (scalar @ARGV == 0) {
             $qt_src_dir = $1;
         } elsif ($flag =~ m/--build-dir=(.*)/) {
             $qt_bld_dir = $1;
+        } elsif ($flag =~ m/--repeat=(.*)/) {
+            $repeat = int($1);
         } elsif ($flag =~ m/--make-flags=(.*)/) {
             $make_flags = $1;
         } elsif ($flag eq '--force-configure') {
@@ -77,6 +80,7 @@ if ($need_help) {
     print "\t                        names; options are: 'default' and 'opt'.\n";
     print "\t--source-dir=<dir>      absolute path to Qthreads source.\n";
     print "\t--build-dir=<dir>       absolute path to target build directory.\n";
+    print "\t--repeat=<n>            run `make check` <n> times per configuration.\n";
     print "\t--make-flags=<options>  options to pass to make (e.g. '-j 4').\n";
     print "\t--force-configure       run `configure` again.\n";
     print "\t--force-clean           run `make clean` before rebuilding.\n";
@@ -157,36 +161,40 @@ sub run_tests {
     print "### Log: $configure_log\n";
     
     # Build testsuite
-    print "###\tBuilding and testing '$conf_name' ...\n";
-    my $results_log = "$test_dir/build.results.log";
-    my $build_command = "cd $test_dir";
-    $build_command .= " && make clean > /dev/null" if ($force_clean);
-    $build_command .= " && make $make_flags check 2>&1 | tee $results_log";
-    my_system($build_command);
-    print "### Log: $results_log\n";
-    my $build_warnings = qx/awk '\/warning:\/' $results_log/;
-    if (length $build_warnings > 0) {
-        print "Build warnings! Check log and/or run again with --force-clean and --verbose for more information.\n";
-        print $build_warnings;
-    }
-    my $build_errors = qx/awk '\/error:\/' $results_log/;
-    if (length $build_errors > 0) {
-        print "Build error! Check log and/or run again with --verbose for more information.\n";
-        print $build_errors;
-        exit(1);
-    }
+    my $pass = 0;
+    while ($pass < $repeat) {
+        print "###\tBuilding and testing '$conf_name' pass $pass ...\n";
+        my $results_log = "$test_dir/build.$pass.results.log";
+        my $build_command = "cd $test_dir";
+        $build_command .= " && make clean > /dev/null" if ($force_clean);
+        $build_command .= " && make $make_flags check 2>&1 | tee $results_log";
+        my_system($build_command);
+        print "### Log: $results_log\n";
+        my $build_warnings = qx/awk '\/warning:\/' $results_log/;
+        if (length $build_warnings > 0) {
+            print "Build warnings! Check log and/or run again with --force-clean and --verbose for more information.\n";
+            print $build_warnings;
+        }
+        my $build_errors = qx/awk '\/error:\/' $results_log/;
+        if (length $build_errors > 0) {
+            print "Build error! Check log and/or run again with --verbose for more information.\n";
+            print $build_errors;
+            exit(1);
+        }
 
-    # Display filtered results
-    print "### Results for '$conf_name'\n";
-    my $digest = qx/grep 'tests passed' $results_log/;
-    if ($digest eq '') {
-        $digest = qx/grep 'tests failed' $results_log/; chomp($digest);
-        my $fails = qx/cat $results_log | awk '\/FAIL\/{print \$2}'/;
-        $digest .= " (" . join(',', split(/\n/, $fails)) . ")";
+        # Display filtered results
+        print "### Results for '$conf_name'\n";
+        my $digest = qx/grep 'tests passed' $results_log/;
+        if ($digest eq '') {
+            $digest = qx/grep 'tests failed' $results_log/; chomp($digest);
+            my $fails = qx/cat $results_log | awk '\/FAIL\/{print \$2}'/;
+            $digest .= " (" . join(',', split(/\n/, $fails)) . ")";
+        }
+        chomp $digest;
+        my $banner = '=' x 50;
+        print "$banner\n$digest\n$banner\n";
+        $pass++;
     }
-    chomp $digest;
-    my $banner = '=' x length $digest;
-    print "$banner\n$digest\n$banner\n";
 }
 
 sub my_system {
