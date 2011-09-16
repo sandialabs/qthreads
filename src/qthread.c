@@ -591,7 +591,7 @@ static void *qthread_shepherd(void *arg)
 
                     case QTHREAD_STATE_SYSCALL:
                         t->thread_state = QTHREAD_STATE_RUNNING;
-                        qthread_debug(THREAD_DETAILS,
+                        qthread_debug(THREAD_DETAILS | IO_DETAILS,
                                       "id(%u): thread %i made a syscall\n",
                                       me->shepherd_id, t->thread_id);
                         qt_blocking_subsystem_enqueue((qt_blocking_queue_node_t *)t->rdata->blockedon);
@@ -2814,7 +2814,7 @@ qthread_shepherd_id_t qthread_shep(void)
 {                      /*{{{ */
     qthread_shepherd_t *ret = qthread_internal_getshep();
 
-    if (ret == NULL) {
+    if (qlib == NULL || ret == NULL) {
         return NO_SHEPHERD;
     } else {
         return ret->shepherd_id;

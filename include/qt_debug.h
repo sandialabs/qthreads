@@ -5,22 +5,22 @@
 # define DEBUG_ONLY(x) x
 
 /* System headers */
-#include <limits.h> // for INT_MAX, per C89
-#include <sys/syscall.h> // for syscall()
-#include <unistd.h> // for SYS_write
-#include <stdarg.h> // for va_start and friends
+# include <limits.h>      // for INT_MAX, per C89
+# include <sys/syscall.h> // for syscall()
+# include <unistd.h>      // for SYS_write
+# include <stdarg.h>      // for va_start and friends
 
 /* Internal headers */
-#include <qt_locks.h>
-#include <qthread_asserts.h>
+# include <qt_locks.h>
+# include <qthread_asserts.h>
 
 enum qthread_debug_levels {
-    ALWAYS_OUTPUT = 0,
-    DEBUG_CALLS,
-    DEBUG_FUNCTIONS,
-    DEBUG_BEHAVIOR,
-    DEBUG_DETAILS,
-    NO_DEBUG_OUTPUT = INT_MAX
+    NO_DEBUG_OUTPUT = 0,
+    DEBUG_CALLS     = 1,
+    DEBUG_FUNCTIONS = 3,
+    DEBUG_BEHAVIOR  = 7,
+    DEBUG_DETAILS   = 15,
+    ALWAYS_OUTPUT   = INT_MAX,
 };
 extern enum qthread_debug_levels debuglevel;
 
@@ -249,7 +249,7 @@ static QINLINE void qthread_debug(int         level,
 {                                      /*{{{ */
     va_list args;
 
-    if ((level <= debuglevel) || (level == 0)) {
+    if (level & debuglevel) {
         static char buf[1024];  /* protected by the output_lock */
         char       *head = buf;
         char        ch;
