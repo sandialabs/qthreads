@@ -22,10 +22,13 @@ CONFIGURE_DEPENDENCIES = config/version-gen NEWS
 .PHONY: buildtests buildextra buildall
 
 buildtests:
+	$(MAKE) -C src
 	$(MAKE) -C test buildtests
 
 buildextra:
+	$(MAKE) -C src
 	$(MAKE) -C test buildextra
 
 buildall:
+	$(MAKE) -C src
 	$(MAKE) -C test buildall
