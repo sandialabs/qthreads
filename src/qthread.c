@@ -27,9 +27,7 @@
 #if (defined(QTHREAD_SHEPHERD_PROFILING) || defined(QTHREAD_LOCK_PROFILING))
 # include <qthread/qtimer.h>
 #endif
-#ifdef QTHREAD_USE_PTHREADS
-# include <pthread.h>
-#endif
+#include <pthread.h>
 #ifdef HAVE_SCHED_H
 # include <sched.h>
 #endif
@@ -789,7 +787,6 @@ int qthread_initialize(void)
     }
 #endif
 
-#ifdef QTHREAD_USE_PTHREADS
     GET_ENV_NUM("QTHREAD_NUM_SHEPHERDS", nshepherds, 0, 0);
 # ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     GET_ENV_NUM("QTHREAD_NUM_WORKERS_PER_SHEPHERD", nworkerspershep, 0, 0);
@@ -804,27 +801,17 @@ int qthread_initialize(void)
 
     qt_affinity_init(&nshepherds, &nworkerspershep);
 
-#ifdef QTHREAD_USE_PTHREADS
     if (getenv("QTHREAD_INFO")) {
         fprintf(stderr, "Using %i Shepherds\n", (int)nshepherds);
-    }
 # ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    if (getenv("QTHREAD_INFO")) {
         fprintf(stderr, "Using %i Workers per Shepherd\n", (int)nworkerspershep);
-    }
 # endif
-#endif
+    }
 
     if ((nshepherds == 1) && (nworkerspershep == 1)) {
         need_sync = 0;
     }
     QTHREAD_LOCKING_STRIPES = 1 << ((unsigned int)(log2(nshepherds * nworkerspershep)) + 1);
-#else /* i.e. not using pthreads aka all serial. */
-    nshepherds              = 1;
-    nworkerspershep         = 1;
-    need_sync               = 0;
-    QTHREAD_LOCKING_STRIPES = 1;
-#endif /* ifdef QTHREAD_USE_PTHREADS */
     qthread_debug(CORE_BEHAVIOR, "there will be %u shepherd(s)\n", (unsigned)nshepherds);
 
 #ifdef QTHREAD_COUNT_THREADS
@@ -1253,7 +1240,8 @@ static QINLINE void qthread_makecontext(qt_context_t *const c,
 #endif /* ifdef HAVE_NATIVE_MAKECONTEXT */
 }                      /*}}} */
 
-/* this adds a function to the list of cleanup functions to call at finalize */
+/* this adds a function to the list of cleanup functions to call at finalize;
+ * these functions get called AFTER shepherds are torn down */
 void qthread_internal_cleanup(void (*function)(void))
 {   /*{{{*/
     struct qt_cleanup_funcs_s *ng = malloc(sizeof(struct qt_cleanup_funcs_s));
@@ -1264,6 +1252,8 @@ void qthread_internal_cleanup(void (*function)(void))
     qt_cleanup_funcs = ng;
 } /*}}}*/
 
+/* this adds a function to the list of cleanup functions to call at finalize;
+ * these functions get called BEFORE shepherds are torn down */
 void qthread_internal_cleanup_early(void (*function)(void))
 {   /*{{{*/
     struct qt_cleanup_funcs_s *ng = malloc(sizeof(struct qt_cleanup_funcs_s));
