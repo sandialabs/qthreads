@@ -551,7 +551,7 @@ static void *qthread_shepherd(void *arg)
                 /* now clean up, based on the thread's state */
                 switch (t->thread_state) {
                     case QTHREAD_STATE_MIGRATING:
-                        qthread_debug(THREAD_DETAILS,
+                        qthread_debug(THREAD_DETAILS | AFFINITY_DETAILS,
                                       "id(%u): thread %u migrating to shep %u\n",
                                       me->shepherd_id, t->thread_id,
                                       t->target_shepherd->shepherd_id);
@@ -574,7 +574,7 @@ static void *qthread_shepherd(void *arg)
                         break;
 
                     case QTHREAD_STATE_FEB_BLOCKED: /* unlock the related FEB address locks, and re-arrange memory to be correct */
-                        qthread_debug(LOCK_DETAILS,
+                        qthread_debug(THREAD_DETAILS | LOCK_DETAILS,
                                       "id(%u): thread %i blocked on FEB\n",
                                       me->shepherd_id, t->thread_id);
                         t->thread_state = QTHREAD_STATE_BLOCKED;
@@ -582,7 +582,7 @@ static void *qthread_shepherd(void *arg)
                         break;
 
                     case QTHREAD_STATE_BLOCKED: /* put it in the blocked queue */
-                        qthread_debug(LOCK_DETAILS,
+                        qthread_debug(THREAD_DETAILS | LOCK_DETAILS,
                                       "id(%u): thread %i blocked on LOCK\n",
                                       me->shepherd_id, t->thread_id);
                         qthread_enqueue((qthread_queue_t *)t->rdata->blockedon->waiting, t);
