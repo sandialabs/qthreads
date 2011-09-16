@@ -40,15 +40,21 @@ typedef struct {
 
 static qt_blocking_queue_t theQueue;
 #if !defined(UNPOOLED)
-qt_mpool                   syscall_job_pool = NULL;
+qt_mpool syscall_job_pool = NULL;
 #endif
-static pthread_t           proxy_thread;
-static volatile int        proxy_exit = 0;
+static pthread_t     proxy_thread;
+static volatile int  proxy_exit = 0;
+pthread_key_t        IO_task_struct;
+extern pthread_key_t shepherd_structs;
 
-static void qt_blocking_subsystem_internal_teardown(void)
+static void qt_blocking_subsystem_internal_stopwork(void)
 {   /*{{{*/
     proxy_exit = 1;
     pthread_join(proxy_thread, NULL);
+} /*}}}*/
+
+static void qt_blocking_subsystem_internal_freemem(void)
+{   /*{{{*/
 #if !defined(UNPOOLED)
     qt_mpool_destroy(syscall_job_pool);
 #endif
@@ -58,9 +64,12 @@ static void qt_blocking_subsystem_internal_teardown(void)
 
 static void *qt_blocking_subsystem_proxy_thread(void *arg)
 {   /*{{{*/
+    pthread_setspecific(shepherd_structs, (void *)1);
     while (proxy_exit == 0) {
+        pthread_setspecific(IO_task_struct, NULL);
         qt_process_blocking_calls();
     }
+    qthread_debug(IO_DETAILS, "proxy_exit = %i, exiting\n", proxy_exit);
     pthread_exit(NULL);
     return 0;
 } /*}}}*/
@@ -70,8 +79,9 @@ void INTERNAL qt_blocking_subsystem_init(void)
 #if !defined(UNPOOLED)
     syscall_job_pool = qt_mpool_create(sizeof(qt_blocking_queue_node_t));
 #endif
-    theQueue.head    = NULL;
-    theQueue.tail    = NULL;
+    theQueue.head = NULL;
+    theQueue.tail = NULL;
+    qassert(pthread_key_create(&IO_task_struct, NULL), 0);
     qassert(pthread_mutex_init(&theQueue.lock, NULL), 0);
     qassert(pthread_cond_init(&theQueue.notempty, NULL), 0);
     {
@@ -82,7 +92,12 @@ void INTERNAL qt_blocking_subsystem_init(void)
             abort();
         }
     }
-    qthread_internal_cleanup_early(qt_blocking_subsystem_internal_teardown);
+    /* thread(s) must be stopped *before* shepherds die, to keep them from
+     * trying to push orphan threads into shepherd queues */
+    qthread_internal_cleanup_early(qt_blocking_subsystem_internal_stopwork);
+    /* must be torn down *after* shepherds die, because live shepherd might try
+     * to enqueue into my queue during shutdown */
+    qthread_internal_cleanup(qt_blocking_subsystem_internal_freemem);
 } /*}}}*/
 
 void INTERNAL qt_process_blocking_calls(void)
@@ -101,6 +116,7 @@ void INTERNAL qt_process_blocking_calls(void)
         ret        = pthread_cond_timedwait(&theQueue.notempty, &theQueue.lock, &ts);
         switch(ret) {
             case ETIMEDOUT:
+                // qthread_debug(IO_DETAILS, "condwait timed out\n");
                 QTHREAD_UNLOCK(&theQueue.lock);
                 return;
 
@@ -116,13 +132,18 @@ void INTERNAL qt_process_blocking_calls(void)
     item = theQueue.head;
     assert(item != NULL);
     theQueue.head = item->next;
+    if (theQueue.tail == item) {
+        theQueue.tail = theQueue.head;
+    }
+    qthread_debug(IO_DETAILS, "dequeue... theQueue.head = %p, .tail = %p, item = %p\n", theQueue.head, theQueue.tail, item);
     QTHREAD_UNLOCK(&theQueue.lock);
     item->next = NULL;
     /* do something with <item> */
+    qassert(pthread_setspecific(IO_task_struct, item->thread), 0);
     switch(item->op) {
         default:
             fprintf(stderr, "Unhandled syscall: %u\n", (unsigned int)item->op);
-            //abort();
+            // abort();
 #if HAVE_DECL_SYS_ACCEPT
         case ACCEPT:
         {
@@ -134,7 +155,7 @@ void INTERNAL qt_process_blocking_calls(void)
                                 (socklen_t *)item->args[2]);
             break;
         }
-#endif
+#endif  /* if HAVE_DECL_SYS_ACCEPT */
 #if HAVE_DECL_SYS_CONNECT
         case CONNECT:
         {
@@ -146,7 +167,7 @@ void INTERNAL qt_process_blocking_calls(void)
                                 (socklen_t)item->args[2]);
             break;
         }
-#endif
+#endif  /* if HAVE_DECL_SYS_CONNECT */
         case POLL:
         {
             nfds_t nfds;
@@ -183,9 +204,9 @@ void INTERNAL qt_process_blocking_calls(void)
                                 offset);
             break;
         }
-#endif /* if HAVE_DECL_SYS_PREAD */
-       /* case RECV:
-        * case RECVFROM: */
+#endif  /* if HAVE_DECL_SYS_PREAD */
+        /* case RECV:
+         * case RECVFROM: */
 #if HAVE_DECL_SYS_SELECT
         case SELECT:
         {
@@ -199,7 +220,7 @@ void INTERNAL qt_process_blocking_calls(void)
                                 (struct timeval *)item->args[4]);
             break;
         }
-#endif /* if HAVE_DECL_SYS_SELECT */
+#endif  /* if HAVE_DECL_SYS_SELECT */
             /* case SEND:
              * case SENDTO: */
             /* case SIGWAIT: */
@@ -223,7 +244,7 @@ void INTERNAL qt_process_blocking_calls(void)
                                 (struct rusage *)item->args[3]);
             break;
         }
-#endif
+#endif  /* if HAVE_DECL_SYS_WAIT4 */
         case WRITE:
             item->ret = syscall(SYS_write,
                                 (int)item->args[0],
@@ -249,8 +270,10 @@ void INTERNAL qt_blocking_subsystem_enqueue(qt_blocking_queue_node_t *job)
 {   /*{{{*/
     qt_blocking_queue_node_t *prev;
 
+    qthread_debug(IO_FUNCTIONS, "entering, job = %p\n", job);
     assert(job->next == NULL);
     QTHREAD_LOCK(&theQueue.lock);
+    qthread_debug(IO_DETAILS, "1) theQueue.head = %p, .tail = %p, job = %p\n", theQueue.head, theQueue.tail, job);
     prev          = theQueue.tail;
     theQueue.tail = job;
     if (prev == NULL) {
@@ -258,8 +281,10 @@ void INTERNAL qt_blocking_subsystem_enqueue(qt_blocking_queue_node_t *job)
     } else {
         prev->next = job;
     }
+    qthread_debug(IO_DETAILS, "2) theQueue.head = %p, .tail = %p, job = %p\n", theQueue.head, theQueue.tail, job);
     QTHREAD_SIGNAL(&theQueue.notempty);
     QTHREAD_UNLOCK(&theQueue.lock);
+    qthread_debug(IO_FUNCTIONS, "exiting, job = %p\n", job);
 } /*}}}*/
 
 /* vim:set expandtab: */
