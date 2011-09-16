@@ -136,9 +136,11 @@ static QINLINE qthread_shepherd_t *qthread_internal_getshep(void)
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t *w =
 	(qthread_worker_t *) pthread_getspecific(shepherd_structs);
-    return w ? w->shepherd : NULL;
+    return ((uintptr_t)w > 1) ? w->shepherd : NULL;
 #else
-    return (qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
+    qthread_shepherd_t *s =
+	(qthread_shepherd_t *) pthread_getspecific(shepherd_structs);
+    return ((uintptr_t)s > 1) ? s : NULL;
 #endif
 }
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
