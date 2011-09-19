@@ -1623,6 +1623,7 @@ void qthread_finalize(void)
     qassert(pthread_key_delete(shepherd_structs), 0);
 
     qthread_debug(CORE_DETAILS, "finished.\n");
+    fflush(stdout);
 }                      /*}}} */
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
