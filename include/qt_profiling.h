@@ -46,6 +46,7 @@
     ret->empty_time += secs; \
     ret->empty_count ++; } while (0)
 # define QTHREAD_LOCK_UNIQUERECORD(TYPE, ADDR, ME) qt_hash_put((ME)->rdata->shepherd_ptr->unique##TYPE##addrs, (void*)(ADDR), (void*)(ADDR))
+# define QTHREAD_LOCK_UNIQUERECORD2(TYPE, ADDR, SHEP) qt_hash_put((SHEP)->unique##TYPE##addrs, (void*)(ADDR), (void*)(ADDR))
 static QINLINE void qthread_unique_collect(const qt_key_t key, void *value, void *id)
 {/*{{{*/
     qt_hash_put_locked((qt_hash) id, key, value);
@@ -65,6 +66,7 @@ static QINLINE void qthread_unique_collect(const qt_key_t key, void *value, void
 # define QTHREAD_EMPTY_TIMER_START(LOCKSTRUCT_P) do{ }while(0)
 # define QTHREAD_EMPTY_TIMER_STOP(LOCKSTRUCT_P) do{ }while(0)
 # define QTHREAD_LOCK_UNIQUERECORD(TYPE, ADDR, ME) do{ }while(0)
+# define QTHREAD_LOCK_UNIQUERECORD2(TYPE, ADDR, SHEP) do{ }while(0)
 #endif
 
 #endif
