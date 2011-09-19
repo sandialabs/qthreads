@@ -7,18 +7,18 @@ use Cwd qw/getcwd/;
 
 # Setup configuration options
 my %config = (
-	'default', '',
-	'opt',   'CFLAGS="-O3" CXXFLAGS="-O3"',
-	'st_shep', '--disable-multithreaded-shepherds',
-	'rose', '--enable-interfaces=rose',
-	'slowcontext', '--disable-fastcontext',
-	'shep_profile', '--enable-profiling=shepherd',
-	'lock_profile', '--enable-profiling=lock',
-	'steal_profile', '--enable-profiling=steal',
-	'tc_profile', '--enable-profiling=threadc',
-	'hi_st', '--disable-hardware-increments --disable-multithreaded-shepherds',
-	'hi_mt', '--disable-hardware-increments',
-	'dev', 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-debug --enable-guard-pages --enable-asserts --enable-static --disable-shared --enable-valgrind --disable-pooled-memory --enable-aligncheck'
+	default       => '',
+	opt           => 'CFLAGS="-O3" CXXFLAGS="-O3"',
+	st_shep       => '--disable-multithreaded-shepherds',
+	rose          => '--enable-interfaces=rose',
+	slowcontext   => '--disable-fastcontext',
+	shep_profile  => '--enable-profiling=shepherd',
+	lock_profile  => '--enable-profiling=lock',
+	steal_profile => '--enable-profiling=steal',
+	tc_profile    => '--enable-profiling=threadc',
+	hi_st         => '--disable-hardware-increments --disable-multithreaded-shepherds',
+	hi_mt         => '--disable-hardware-increments',
+	dev           => 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-debug --enable-guard-pages --enable-asserts --enable-static --disable-shared --enable-valgrind --disable-pooled-memory --enable-aligncheck'
 );
 
 # Collect command-line options
