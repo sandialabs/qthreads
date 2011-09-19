@@ -201,7 +201,7 @@ qt_mpool qt_mpool_create_aligned(size_t    item_size,
     VALGRIND_MAKE_MEM_DEFINED(pool->alloc_block, sizeof(void**));
     *(void **)(pool->alloc_block) = NULL; // just in case aligned_alloc doesn't memset
     VALGRIND_MAKE_MEM_NOACCESS(pool->alloc_block, sizeof(void**));
-    pool->alloc_block_ptr         = pool->alloc_block;
+    QTHREAD_CASLOCK_INIT(pool->alloc_block_ptr, pool->alloc_block);
     /* this assumes that pagesize is a multiple of sizeof(void*) */
     pool->alloc_list = calloc(1, pagesize);
     qassert_goto((pool->alloc_list != NULL), errexit);
