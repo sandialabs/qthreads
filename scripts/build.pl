@@ -6,9 +6,20 @@ use warnings;
 use Cwd qw/getcwd/;
 
 # Setup configuration options
-my %config;
-$config{'opt'} = 'CFLAGS="-O3" CXXFLAGS="-O3"';
-$config{'dev'} = 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-guard-pages --enable-asserts --enable-static --disable-shared --enable-valgrind --disable-pooled-memory --enable-aligncheck';
+my %config = (
+	'default', '',
+	'opt',   'CFLAGS="-O3" CXXFLAGS="-O3"',
+	'st_shep', '--disable-multithreaded-shepherds',
+	'rose', '--enable-interfaces=rose',
+	'slowcontext', '--disable-fastcontext',
+	'shep_profile', '--enable-profiling=shepherd',
+	'lock_profile', '--enable-profiling=lock',
+	'steal_profile', '--enable-profiling=steal',
+	'tc_profile', '--enable-profiling=threadc',
+	'hi_st', '--disable-hardware-increments --disable-multithreaded-shepherds',
+	'hi_mt', '--disable-hardware-increments',
+	'dev', 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-debug --enable-guard-pages --enable-asserts --enable-static --disable-shared --enable-valgrind --disable-pooled-memory --enable-aligncheck'
+);
 
 # Collect command-line options
 my @conf_names;
@@ -73,11 +84,14 @@ if (scalar @conf_names == 0) { push @conf_names, 'default' };
 if ($need_help) {
     print "usage: perl build.pl [options]\n";
     print "Options:\n";
-    print "\t--configs=<config-name> comma-separated list of configuration\n";
-    print "\t--with-config=<string>  either 'all' or a user-specified string of\n";
-    print "\t                        configuration options. This option can be used\n";
-    print "\t                        multiple times.\n";
-    print "\t                        names; options are: 'default' and 'opt'.\n";
+    print "\t--configs=<config-name> comma-separated list of configurations.\n";
+	print "\t                        'all' may be used as an alias for all known\n";
+	print "\t                        configurations.\n";
+    print "\t--with-config=<string>  a user-specified string of configuration\n";
+    print "\t                        options. Essentially, this is used to define\n";
+	print "\t                        an unnamed 'config', whereas the previous\n";
+	print "\t                        uses pre-defined, named configs. This option\n";
+	print "\t                        can be used multiple times.\n";
     print "\t--source-dir=<dir>      absolute path to Qthreads source.\n";
     print "\t--build-dir=<dir>       absolute path to target build directory.\n";
     print "\t--repeat=<n>            run `make check` <n> times per configuration.\n";
@@ -183,7 +197,7 @@ sub run_tests {
         }
         my $build_errors = qx/awk '\/error:\/' $results_log/;
         if (length $build_errors > 0) {
-            print "Build error! Check log and/or run again with --verbose for more information.\n";
+            print "Build error in config $conf_name! Check log and/or run again with --verbose for more information.\n";
             print $build_errors;
             exit(1);
         }
