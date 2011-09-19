@@ -990,10 +990,10 @@ int qthread_initialize(void)
         qassert_ret(qlib->shepherds[i].ready, QTHREAD_MALLOC_ERROR);
 #ifdef QTHREAD_LOCK_PROFILING
 # ifdef QTHREAD_MUTEX_INCREMENT
-        qlib->shepherds[i].uniqueincraddrs = qt_hash_create(0);
+        qlib->shepherds[i].uniqueincraddrs = qt_hash_create(need_sync);
 # endif
-        qlib->shepherds[i].uniquelockaddrs = qt_hash_create(0);
-        qlib->shepherds[i].uniquefebaddrs  = qt_hash_create(0);
+        qlib->shepherds[i].uniquelockaddrs = qt_hash_create(need_sync);
+        qlib->shepherds[i].uniquefebaddrs  = qt_hash_create(need_sync);
 #endif
 
         qthread_debug(SHEPHERD_DETAILS, "shepherd %i set up (%p)\n", i, &qlib->shepherds[i]);
@@ -2535,8 +2535,9 @@ int INTERNAL qthread_check_precond(qthread_t *t)
             qthread_addrres_t  *X       = NULL;
             const int           lockbin = QTHREAD_CHOOSE_STRIPE(this_sync);
             const aligned_t    *alignedaddr;
+            qthread_shepherd_t *const curshep = qthread_internal_getshep();
 
-            QTHREAD_LOCK_UNIQUERECORD(feb, this_sync, t);
+            QTHREAD_LOCK_UNIQUERECORD2(feb, this_sync, curshep);
             QALIGN(this_sync, alignedaddr);
             QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
             qt_hash_lock(qlib->FEBs[lockbin]);
@@ -2552,7 +2553,7 @@ int INTERNAL qthread_check_precond(qthread_t *t)
             if (m == NULL) {               /* already full! */
                 t->npreconds--;
             } else if (m->full != 1) {     /* not full... so we must block */
-                X = ALLOC_ADDRRES(qthread_internal_getshep());
+                X = ALLOC_ADDRRES(curshep);
                 if (X == NULL) {
                     QTHREAD_FASTLOCK_UNLOCK(&m->lock);
                     abort();
