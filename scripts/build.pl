@@ -8,7 +8,7 @@ use Cwd qw/getcwd/;
 # Setup configuration options
 my %config;
 $config{'opt'} = 'CFLAGS="-O3" CXXFLAGS="-O3"';
-$config{'default'} = 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-guard-pages --enable-asserts --enable-static --disable-shared --enable-valgrind --disable-pooled-memory --enable-aligncheck';
+$config{'dev'} = 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-guard-pages --enable-asserts --enable-static --disable-shared --enable-valgrind --disable-pooled-memory --enable-aligncheck';
 
 # Collect command-line options
 my @conf_names;
@@ -74,9 +74,9 @@ if ($need_help) {
     print "usage: perl build.pl [options]\n";
     print "Options:\n";
     print "\t--configs=<config-name> comma-separated list of configuration\n";
-    print "\t--with-config=<string>  a user-specified string of configuration\n";
-    print "\t                        options. This option can be used multiple\n";
-    print "\t                        times.\n";
+    print "\t--with-config=<string>  either 'all' or a user-specified string of\n";
+    print "\t                        configuration options. This option can be used\n";
+    print "\t                        multiple times.\n";
     print "\t                        names; options are: 'default' and 'opt'.\n";
     print "\t--source-dir=<dir>      absolute path to Qthreads source.\n";
     print "\t--build-dir=<dir>       absolute path to target build directory.\n";
@@ -98,11 +98,17 @@ if ($need_help) {
 }
 
 # Clean up and sanity check script options
+my $use_all = 0;
 foreach my $name (@conf_names) {
-    if (not exists $config{$name}) {
+    if ($name eq 'all') {
+        $use_all = 1;
+    } elsif (not exists $config{$name}) {
         print "Invalid configuration option '$name'\n";
         exit(1);
     }
+}
+if ($use_all) {
+    @conf_names = keys %config;
 }
 
 if ($qt_src_dir eq '') {
