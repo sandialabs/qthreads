@@ -7,7 +7,7 @@
 #include <stdio.h>
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
 # ifdef HAVE_MEMALIGN
-#include <malloc.h>
+#  include <malloc.h>
 # endif
 #endif
 #include <stdlib.h>
@@ -35,14 +35,6 @@ typedef struct _qt_threadqueue_node qt_threadqueue_node_t;
 struct _qt_threadqueue {
     volatile qt_threadqueue_node_t *volatile head;
     volatile qt_threadqueue_node_t *volatile tail;
-#ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-    volatile aligned_t                       fruitless;
-    pthread_mutex_t                          lock;
-    pthread_cond_t                           notempty;
-#endif                          /* CONDWAIT */
-    /* the following is for estimating a queue's "busy" level, and is not
-     * guaranteed accurate (that would be a race condition) */
-    volatile saligned_t   advisory_queuelen;
     qthread_shepherd_t   *creator_ptr;
     /* used for the work stealing queue implementation */
     QTHREAD_FASTLOCK_TYPE qlock;
@@ -168,7 +160,19 @@ void INTERNAL qt_threadqueue_destroy_pools(qt_threadqueue_pools_t *p)
 
 ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 {   /*{{{*/
-    return qthread_internal_atomic_read_s(&q->advisory_queuelen, &q->advisory_queuelen_m);
+#if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||    \
+    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) ||      \
+    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || \
+    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64))
+    /* only works if a basic load is atomic */
+    return q->qlength;
+#else
+    ssize_t tmp;
+    QTHREAD_FASTLOCK_LOCK(&q->qlock);
+    tmp = q->qlength;
+    QTHREAD_FASTLOCK_UNLOCK(&q->lock);
+    return tmp;
+#endif
 } /*}}}*/
 
 #define QTHREAD_INITLOCK(l) do { if (pthread_mutex_init(l, NULL) != 0) { return QTHREAD_PTHREAD_ERROR; } } while(0)
@@ -306,15 +310,15 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
                     switch(qthread_worker(NULL)) {
                         case NO_WORKER:
                             *(int *)0 = 0; // should never happen
-			    t = NULL;
+                            t         = NULL;
                             continue; // keep looking
                         case 0:
-		  	    return(t);
- 
+                            return(t);
+
                         default:
                             /* McCoy thread can only run on worker 0 */
                             qt_threadqueue_enqueue_yielded(q, t, t->rdata->shepherd_ptr);
-			    t = NULL;
+                            t = NULL;
                             continue; // keep looking
                     }
                 } else {
@@ -527,17 +531,17 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
                                                     void             *value)
 {
     qt_threadqueue_node_t *node = NULL;
-    qthread_t             *t = NULL;
+    qthread_t             *t    = NULL;
 
     assert(q != NULL);
 
     QTHREAD_FASTLOCK_LOCK(&q->qlock);
     if (q->qlength > 0) {
-        node = (qt_threadqueue_node_t *) q->tail;
-        t = (node) ? (qthread_t *) node->value : NULL;
+        node = (qt_threadqueue_node_t *)q->tail;
+        t    = (node) ? (qthread_t *)node->value : NULL;
         while ((t != NULL) && (t->ret != value)) {
             node = (qt_threadqueue_node_t *)node->prev;
-            t = (node) ? (qthread_t *) node->value : NULL;
+            t    = (node) ? (qthread_t *)node->value : NULL;
         }
         if ((node != NULL)) {
             if (node != q->tail) {
