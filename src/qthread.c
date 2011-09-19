@@ -802,6 +802,9 @@ int qthread_initialize(void)
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
     qlib->atomic_locks = malloc(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
     qassert_ret(qlib->atomic_locks, QTHREAD_MALLOC_ERROR);
+    for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
+        QTHREAD_FASTLOCK_INIT(qlib->atomic_locks[i]);
+    }
 #endif
 
     qt_affinity_init(&nshepherds, &nworkerspershep);
@@ -848,9 +851,6 @@ int qthread_initialize(void)
     qlib->syncvars = malloc(sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
     qassert_ret(qlib->syncvars, QTHREAD_MALLOC_ERROR);
     for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
-#if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-        QTHREAD_FASTLOCK_INIT(qlib->atomic_locks[i]);
-#endif
 #ifdef QTHREAD_COUNT_THREADS
         qlib->locks_stripes[i] = 0;
         qlib->febs_stripes[i]  = 0;
@@ -874,6 +874,9 @@ int qthread_initialize(void)
     qlib->nshepherds_active = nshepherds;
     qlib->shepherds         = (qthread_shepherd_t *)calloc(nshepherds, sizeof(qthread_shepherd_t));
     qassert_ret(qlib->shepherds, QTHREAD_MALLOC_ERROR);
+#ifdef QTHREAD_MUTEX_INCREMENT
+    QTHREAD_FASTLOCK_INIT(qlib->nshepherds_active_lock);
+#endif
 
     GET_ENV_NUM("QTHREAD_STACK_SIZE", qlib->qthread_stack_size, QTHREAD_DEFAULT_STACK_SIZE, QTHREAD_DEFAULT_STACK_SIZE);
     qthread_debug(CORE_DETAILS, "qthread stack size: %u\n", qlib->qthread_stack_size);
@@ -1548,7 +1551,7 @@ void qthread_finalize(void)
     free(qlib->FEBs);
     free(qlib->syncvars);
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-    free(qlib->atomic_locks);
+    free((void*)qlib->atomic_locks);
 #endif
 #ifdef QTHREAD_COUNT_THREADS
     free(qlib->locks_stripes);
