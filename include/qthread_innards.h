@@ -32,7 +32,7 @@ extern unsigned int QTHREAD_LOCKING_STRIPES;
 
 typedef struct qlib_s {
     unsigned int          nshepherds;
-    unsigned int          nshepherds_active;
+    volatile aligned_t    nshepherds_active;
 #ifdef QTHREAD_MUTEX_INCREMENT
     QTHREAD_FASTLOCK_TYPE nshepherds_active_lock;
 #endif

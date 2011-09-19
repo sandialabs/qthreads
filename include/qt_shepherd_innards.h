@@ -38,7 +38,7 @@ struct qthread_worker_s
     void* hazard_ptrs[HAZARD_PTRS_PER_SHEP]; /* hazard pointers (see http://portal.acm.org/citation.cfm?id=987524.987595) */
     hazard_freelist_t hazard_free_list;
     qthread_t *current;
-    volatile size_t active;
+    volatile uintptr_t QTHREAD_CASLOCK(active);
 };
 typedef struct qthread_worker_s qthread_worker_t;
 

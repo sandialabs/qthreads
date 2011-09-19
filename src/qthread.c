@@ -799,6 +799,11 @@ int qthread_initialize(void)
     nworkerspershep = 1;
 # endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
+#if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
+    qlib->atomic_locks = malloc(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
+    qassert_ret(qlib->atomic_locks, QTHREAD_MALLOC_ERROR);
+#endif
+
     qt_affinity_init(&nshepherds, &nworkerspershep);
 
     if (getenv("QTHREAD_INFO")) {
@@ -824,10 +829,6 @@ int qthread_initialize(void)
 #endif
 
     /* initialize the FEB-like locking structures */
-#if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-    qlib->atomic_locks = malloc(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
-    qassert_ret(qlib->atomic_locks, QTHREAD_MALLOC_ERROR);
-#endif
 #ifdef QTHREAD_COUNT_THREADS
     qlib->locks_stripes = malloc(sizeof(aligned_t) * QTHREAD_LOCKING_STRIPES);
     qassert_ret(qlib->locks_stripes, QTHREAD_MALLOC_ERROR);
