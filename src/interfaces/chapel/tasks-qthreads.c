@@ -130,12 +130,14 @@ static void *initializer(void *junk)
     return NULL;
 }
 
-void chpl_task_init(int32_t  numThreadsPerLocale, int32_t maxThreadsPerLocale,
-                    int numCommTasks, uint64_t callStackSize)
+void chpl_task_init(int32_t  numThreadsPerLocale,
+                    int32_t  maxThreadsPerLocale,
+                    int      numCommTasks,
+                    uint64_t callStackSize)
 {
     pthread_t initer;
-    char newenv_sheps[100] = { 0 };
-    char newenv_stack[100] = { 0 };
+    char      newenv_sheps[100] = { 0 };
+    char      newenv_stack[100] = { 0 };
 
     // Precendence (high-to-low):
     // 1) --numThreadsPerLocale option
@@ -143,17 +145,18 @@ void chpl_task_init(int32_t  numThreadsPerLocale, int32_t maxThreadsPerLocale,
     // 3) chpl_numCoresOnThisLocale()
     if (numThreadsPerLocale != 0) {
         snprintf(newenv_sheps, 99, "QTHREAD_NUM_SHEPHERDS=%i",
-            (int)numThreadsPerLocale);
+                 (int)numThreadsPerLocale);
         putenv(newenv_sheps);
         putenv("QTHREAD_NUM_WORKERS_PER_SHEPHERD=1");
     } else if (getenv("QTHREAD_NUM_SHEPHERDS") != NULL) {
-        if (getenv("QTHREAD_NUM_WORKERS_PER_SHEPHERD") == NULL)
+        if (getenv("QTHREAD_NUM_WORKERS_PER_SHEPHERD") == NULL) {
             putenv("QTHREAD_NUM_WORKERS_PER_SHEPHERD=1");
+        }
     } else {
         numThreadsPerLocale = chpl_numCoresOnThisLocale();
 
         snprintf(newenv_sheps, 99, "QTHREAD_NUM_SHEPHERDS=%i",
-            (int)numThreadsPerLocale);
+                 (int)numThreadsPerLocale);
         putenv(newenv_sheps);
         putenv("QTHREAD_NUM_WORKERS_PER_SHEPHERD=1");
     }
@@ -164,18 +167,19 @@ void chpl_task_init(int32_t  numThreadsPerLocale, int32_t maxThreadsPerLocale,
     // 3) Chapel default
     if (callStackSize != 0) {
         snprintf(newenv_stack, 99, "QTHREAD_STACK_SIZE=%lu",
-            (unsigned long)callStackSize);
+                 (unsigned long)callStackSize);
         putenv(newenv_stack);
     } else if (getenv("QTHREAD_STACK_SIZE") == NULL) {
-        callStackSize = 32*1024*sizeof(size_t);
+        callStackSize = 32 * 1024 * sizeof(size_t);
         snprintf(newenv_stack, 99, "QTHREAD_STACK_SIZE=%lu",
-            (unsigned long)callStackSize);
+                 (unsigned long)callStackSize);
         putenv(newenv_stack);
     }
 
     // Turn on informative Qthreads setting messages with Chapel's verbose flag
-    if (verbosity == 2)
+    if (verbosity == 2) {
         putenv("QTHREAD_INFO=1");
+    }
 
     pthread_create(&initer, NULL, initializer, NULL);
     while (done_initializing == 0) ;
@@ -184,8 +188,12 @@ void chpl_task_init(int32_t  numThreadsPerLocale, int32_t maxThreadsPerLocale,
 void chpl_task_exit(void)
 {
     if (qthread_shep() == NO_SHEPHERD) {
-        qthread_syncvar_fill(&canexit);
-        while (done_finalizing == 0) ;
+        /* sometimes, tasking is told to shutdown even though it hasn't been
+         * told to start yet */
+        if (done_initializing == 1) {
+            qthread_syncvar_fill(&canexit);
+            while (done_finalizing == 0) ;
+        }
     } else {
         qthread_syncvar_fill(&exit_ret);
     }
@@ -208,9 +216,12 @@ void chpl_task_callMain(void (*chpl_main)(void))
     qthread_syncvar_readFF(NULL, &exit_ret);
 }
 
-int chpl_task_createCommTask(chpl_fn_p fn, void* arg) {
-  pthread_t polling_thread;
-  return pthread_create(&polling_thread, NULL, (void*(*)(void*))fn, arg);
+int chpl_task_createCommTask(chpl_fn_p fn,
+                             void     *arg)
+{
+    pthread_t polling_thread;
+
+    return pthread_create(&polling_thread, NULL, (void *(*)(void *))fn, arg);
 }
 
 void chpl_task_addToTaskList(chpl_fn_int_t     fid,
@@ -237,9 +248,9 @@ void chpl_task_begin(chpl_fn_p        fp,
                      chpl_task_list_p task_list_entry)
 {
     if (!ignore_serial && chpl_task_getSerial()) {
-        syncvar_t ret = SYNCVAR_STATIC_EMPTY_INITIALIZER;
+        syncvar_t   ret             = SYNCVAR_STATIC_EMPTY_INITIALIZER;
         void *const wrapper_args[2] = { fp, arg };
-        qthread_fork_syncvar_copyargs_to(chapel_wrapper, wrapper_args, 
+        qthread_fork_syncvar_copyargs_to(chapel_wrapper, wrapper_args,
                                          sizeof(void *) * 2, &ret,
                                          qthread_shep());
         qthread_syncvar_readFF(NULL, &ret);
@@ -272,24 +283,28 @@ void chpl_task_sleep(int secs)
     qtimer_destroy(t);
 }
 
-/* The get- and setSerial() methods assume the beginning of the task-local 
-   data segment holds a chpl_bool denoting the serial state. */
+/* The get- and setSerial() methods assume the beginning of the task-local
+ * data segment holds a chpl_bool denoting the serial state. */
 chpl_bool chpl_task_getSerial(void)
 {
     chpl_bool *state = (chpl_bool *)qthread_get_tasklocal(sizeof(chpl_bool));
-    if (NULL == state)
+
+    if (NULL == state) {
         chpl_internal_error("could not access serial state");
+    }
 
     return *state;
 }
 
 void chpl_task_setSerial(chpl_bool state)
 {
-     chpl_bool *data = (chpl_bool *)qthread_get_tasklocal(sizeof(chpl_bool));
-     if (NULL != data)
-         *data = state;
-     else
-         chpl_internal_error("could not access serial state");
+    chpl_bool *data = (chpl_bool *)qthread_get_tasklocal(sizeof(chpl_bool));
+
+    if (NULL != data) {
+        *data = state;
+    } else {
+        chpl_internal_error("could not access serial state");
+    }
 }
 
 uint64_t chpl_task_getCallStackSize(void)
@@ -307,6 +322,7 @@ uint32_t chpl_task_getNumRunningTasks(void)
 {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     return (uint32_t)qthread_num_workers();
+
 #else
     return (uint32_t)qthread_num_shepherds();
 #endif
@@ -324,6 +340,7 @@ uint32_t chpl_task_getNumThreads(void)
 {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     return (uint32_t)qthread_num_workers();
+
 #else
     return (uint32_t)qthread_num_shepherds();
 #endif
