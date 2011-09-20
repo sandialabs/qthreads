@@ -15,7 +15,7 @@ typedef struct v_args_s {
     qt_sinc_t *sinc;
 } v_args_t;
 
-aligned_t visit(void *arg_) {
+static aligned_t visit(void *arg_) {
     v_args_t *arg = (v_args_t *)arg_;
 
     if (arg->depth > 2) {
@@ -49,13 +49,14 @@ aligned_t visit(void *arg_) {
 int main(int argc,
          char *argv[])
 {
+    size_t depth = 3;
     assert(qthread_initialize() == 0);
 
     CHECK_VERBOSE();
+    NUMARG(depth, "TEST_DEPTH");
 
     qt_sinc_t *sinc = qt_sinc_create();
 
-    size_t depth = 3;
     {
         v_args_t args = {depth, sinc};
 

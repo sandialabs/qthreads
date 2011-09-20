@@ -39,7 +39,7 @@ void qt_sinc_willspawn(qt_sinc_t *sinc, size_t count) {
     qthread_incr(&sinc->counts[qthread_worker(NULL) * sinc->factor], count);
 }
 
-void qt_sinc_check(qt_sinc_t *sinc) {
+static void qt_sinc_check(qt_sinc_t *sinc) {
     aligned_t sum = 0;
     const size_t num_workers = qthread_readstate(TOTAL_WORKERS);
     for (size_t i = 0; i < num_workers; i++) {
