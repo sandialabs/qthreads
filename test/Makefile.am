@@ -23,6 +23,7 @@ BASIC_TESTS = test_basic \
 			  test_precond \
 			  test_qalloc \
 			  test_user_defined_block \
+			  test_sinc \
 			  test_tasklocal \
 			  test_tasklocal_no_default \
 			  test_tasklocal_no_argcopy
@@ -320,3 +321,6 @@ time_stencil_pre_DEPENDENCIES = $(QTHREADLIB)
 
 time_halo_swap_all_SOURCES = time_halo_swap_all.c
 time_halo_swap_all_DEPENDENCIES = $(QTHREADLIB)
+
+test_sinc_SOURCES = test_sinc.c
+test_sinc_DEPENDENCIES = $(QTHREADLIB)
