@@ -109,6 +109,7 @@ man_MANS = \
 		   qthread_lock.3 \
 		   qthread_migrate_to.3 \
 		   qthread_num_shepherds.3 \
+		   qthread_num_workers.3 \
 		   qthread_readFE.3 \
 		   qthread_readFF.3 \
 		   qthread_readstate.3 \
