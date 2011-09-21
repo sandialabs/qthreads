@@ -11,6 +11,7 @@ my %config = (
 	opt           => 'CFLAGS="-O3" CXXFLAGS="-O3"',
 	st_shep       => '--disable-multithreaded-shepherds',
 	rose          => '--enable-interfaces=rose',
+	chapel        => '--enable-interfaces=chapel',
 	slowcontext   => '--disable-fastcontext',
 	shep_profile  => '--enable-profiling=shepherd',
 	lock_profile  => '--enable-profiling=lock',
