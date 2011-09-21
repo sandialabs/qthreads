@@ -8,6 +8,7 @@ use Cwd qw/getcwd/;
 # Setup configuration options
 my %config = (
 	default       => '',
+	unpooled      => '--disable-pooled-memory',
 	opt           => 'CFLAGS="-O3" CXXFLAGS="-O3"',
 	st_shep       => '--disable-multithreaded-shepherds',
 	rose          => '--enable-interfaces=rose',
