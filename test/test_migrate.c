@@ -31,8 +31,11 @@ static aligned_t migrant(void *arg)
         assert(qthread_shep() == 0);
     } else {
         qthread_migrate_to(1);
-	iprintf("migrant now running on shep %i\n", (int)qthread_shep());
-        assert(qthread_shep() == 1);
+	if (qthread_shep() != 1) {
+	    fprintf(stderr, "Expected to be on shepherd 1, actually on shepherd %i\n", qthread_shep());
+	    assert(qthread_shep() == 1);
+	    abort();
+	}
     }
 
     return 0;
