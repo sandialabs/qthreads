@@ -17,6 +17,15 @@
 # include "qt_atomics.h"
 #endif
 
+#include "qthread/qt_sinc.h"
+
+typedef enum {
+    ALIGNED_T,
+    SYNCVAR_T,
+    SINC_T,
+    NO_SYNC
+} synctype_t;
+
 /* avoid compiler bugs with volatile... */
 static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t *ptr)
 {
@@ -26,32 +35,40 @@ static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t *ptr)
 #define _(x) vol_read_a(&(x))
 
 struct qloop_wrapper_args {
-    qt_loop_f  func;
-    size_t     startat, stopat, id, level, spawnthreads;
-    void      *arg;
-    syncvar_t *rets;
+    qt_loop_f   func;
+    size_t      startat, stopat, id, level, spawnthreads;
+    void       *arg;
+    synctype_t  sync_type;
+    void       *sync;
 };
 
 static aligned_t qloop_wrapper(struct qloop_wrapper_args *const restrict arg)
 {                                      /*{{{ */
     /* tree-based spawning (credit: AKP) */
-    size_t tot_workers = arg->spawnthreads - 1; // -1 because I already exist
-    size_t level       = arg->level;
-    size_t my_id       = arg->id;
-    size_t new_id      = my_id + (1 << level);
+    size_t tot_workers   = arg->spawnthreads - 1; // -1 because I already exist
+    size_t level         = arg->level;
+    size_t my_id         = arg->id;
+    size_t new_id        = my_id + (1 << level);
+    synctype_t sync_type = arg->sync_type;
+    void *sync           = arg->sync;
 
     while (new_id <= tot_workers) {      // create some children? (tot_workers zero based)
         size_t offset = new_id - my_id;  // need how much past current locations
         (arg + offset)->level = ++level; // increase depth for created thread
         qthread_fork_syncvar_to((qthread_f)qloop_wrapper,
                                 arg + offset,
-                                arg->rets + new_id,
+                                ((SYNCVAR_T == sync_type) ? 
+                                    (syncvar_t *)arg->sync + new_id : NULL),
                                 new_id);
         new_id = (1 << level) + my_id; // level has been incremented
     }
 
     // and now, we execute the function
     arg->func(arg->startat, arg->stopat, arg->arg);
+
+    if (SINC_T == sync_type)
+        qt_sinc_submit(arg->sync, NULL);
+
     return 0;
 }                                      /*}}} */
 
@@ -131,22 +148,29 @@ int in_qthread_step_fence(void *addr)
 # endif
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
 
-static void qt_loop_inner(const size_t    start,
-                          const size_t    stop,
-                          const qt_loop_f func,
-                          void           *argptr,
-                          int             future)
+static void qt_loop_inner(const size_t     start,
+                          const size_t     stop,
+                          const qt_loop_f  func,
+                          void            *argptr,
+                          int              future,
+                          const synctype_t sync_type)
 {                                      /*{{{ */
     size_t                     i, threadct = 0;
     size_t                     steps = stop - start;
     struct qloop_wrapper_args *qwa;
-    syncvar_t                 *rets;
 
     qwa  = (struct qloop_wrapper_args *)malloc(sizeof(struct qloop_wrapper_args) * steps);
-    rets = malloc(steps * sizeof(syncvar_t));
     assert(qwa);
-    assert(rets);
     assert(func);
+
+    void *sync = NULL;
+    if (SYNCVAR_T == sync_type) {
+        sync = malloc(steps * sizeof(syncvar_t));
+        assert(sync);
+    } else if (SINC_T == sync_type) {
+        sync = qt_sinc_create();
+        qt_sinc_willspawn(sync, steps);
+    }
 
     for (i = start; i < stop; ++i) {
         qwa[threadct].func         = func;
@@ -154,22 +178,29 @@ static void qt_loop_inner(const size_t    start,
         qwa[threadct].stopat       = i + 1;
         qwa[threadct].arg          = argptr;
         qwa[threadct].id           = threadct;
-        qwa[threadct].rets         = rets;
         qwa[threadct].level        = 0;
         qwa[threadct].spawnthreads = steps;
-        rets[threadct]             = SYNCVAR_EMPTY_INITIALIZER;
+        qwa[threadct].sync_type    = sync_type;
+        qwa[threadct].sync         = sync;
+        if (SYNCVAR_T == sync_type)
+            ((syncvar_t *)sync)[threadct] = SYNCVAR_EMPTY_INITIALIZER;
         threadct++;
     }
     if (future) {
-        qassert(qthread_fork_syncvar_future_to((qthread_f)qloop_wrapper, qwa, rets, 0), QTHREAD_SUCCESS);
+        qassert(qthread_fork_syncvar_future_to((qthread_f)qloop_wrapper, qwa, ((SYNCVAR_T) == sync_type ? (syncvar_t *)sync : NULL), 0), QTHREAD_SUCCESS);
     } else {
-        qassert(qthread_fork_syncvar_to((qthread_f)qloop_wrapper, qwa, rets, 0), QTHREAD_SUCCESS);
+        qassert(qthread_fork_syncvar_to((qthread_f)qloop_wrapper, qwa, ((SYNCVAR_T) == sync_type ? (syncvar_t *)sync : NULL), 0), QTHREAD_SUCCESS);
     }
-    for (i = 0; i < steps; i++) {
-        qthread_syncvar_readFF(NULL, rets + i);
+    if (SYNCVAR_T == sync_type) {
+        for (i = 0; i < steps; i++) {
+            qthread_syncvar_readFF(NULL, (syncvar_t *)sync + i);
+        }
+        free(sync);
+    } else if (SINC_T == sync_type) {
+        qt_sinc_wait(sync, NULL);
+        qt_sinc_destroy(sync);
     }
     free(qwa);
-    free(rets);
 }                                      /*}}} */
 
 void qt_loop(const size_t    start,
@@ -177,7 +208,15 @@ void qt_loop(const size_t    start,
              const qt_loop_f func,
              void           *argptr)
 {                                      /*{{{ */
-    qt_loop_inner(start, stop, func, argptr, 0);
+    qt_loop_inner(start, stop, func, argptr, 0, SYNCVAR_T);
+}                                      /*}}} */
+
+void qt_loop_sinc(const size_t    start,
+                  const size_t    stop,
+                  const qt_loop_f func,
+                  void           *argptr)
+{                                      /*{{{ */
+    qt_loop_inner(start, stop, func, argptr, 0, SINC_T);
 }                                      /*}}} */
 
 /* So, the idea here is that this is a (braindead) C version of Megan's
@@ -187,7 +226,7 @@ void qt_loop_future(const size_t    start,
                     const qt_loop_f func,
                     void           *argptr)
 {                                      /*{{{ */
-    qt_loop_inner(start, stop, func, argptr, 1);
+    qt_loop_inner(start, stop, func, argptr, 1, SYNCVAR_T);
 }                                      /*}}} */
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
@@ -281,28 +320,40 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
                                           const size_t    stop,
                                           const qt_loop_f func,
                                           void           *argptr,
-                                          const int       future)
+                                          const int       future,
+                                          synctype_t      sync_type)
 {                                      /*{{{ */
     qthread_shepherd_id_t            i;
     const qthread_shepherd_id_t      maxworkers = qthread_num_workers();
     struct qloop_wrapper_args *const qwa        = (struct qloop_wrapper_args *)malloc(sizeof(struct qloop_wrapper_args) * maxworkers);
-    syncvar_t *const                 rets       = malloc(maxworkers * sizeof(syncvar_t));
     const size_t                     each       = (stop - start) / maxworkers;
     size_t                           extra      = (stop - start) - (each * maxworkers);
     size_t                           iterend    = start;
 
     assert(func);
     assert(qwa);
+
+    void *sync = NULL;
+    if (SYNCVAR_T == sync_type) {
+        sync = malloc(maxworkers * sizeof(syncvar_t));
+        assert(sync);
+    } else if (SINC_T == sync_type) {
+        sync = qt_sinc_create();
+        qt_sinc_willspawn(sync, maxworkers);
+    }
+
     for (i = 0; i < maxworkers; i++) {
         qwa[i].func         = func;
         qwa[i].arg          = argptr;
         qwa[i].startat      = iterend;
         qwa[i].stopat       = iterend + each;
         qwa[i].id           = i;
-        qwa[i].rets         = rets;
         qwa[i].level        = 0;
         qwa[i].spawnthreads = maxworkers;
-        rets[i]             = SYNCVAR_EMPTY_INITIALIZER;
+        qwa[i].sync_type    = sync_type;
+        qwa[i].sync         = sync;
+        if (SYNCVAR_T == sync_type)
+            ((syncvar_t *)sync)[i] = SYNCVAR_EMPTY_INITIALIZER;
         if (extra > 0) {
             qwa[i].stopat++;
             extra--;
@@ -310,15 +361,20 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
         iterend = qwa[i].stopat;
     }
     if (!future) {
-        qassert(qthread_fork_syncvar_to((qthread_f)qloop_wrapper, qwa, rets, i), QTHREAD_SUCCESS);
+        qassert(qthread_fork_syncvar_to((qthread_f)qloop_wrapper, qwa, ((SYNCVAR_T == sync_type) ? (syncvar_t *)sync : NULL), i), QTHREAD_SUCCESS);
     } else {
-        qassert(qthread_fork_syncvar_future_to((qthread_f)qloop_wrapper, qwa, rets, i), QTHREAD_SUCCESS);
+        qassert(qthread_fork_syncvar_future_to((qthread_f)qloop_wrapper, qwa, ((SYNCVAR_T == sync_type) ? (syncvar_t *)sync : NULL), i), QTHREAD_SUCCESS);
     }
-    for (i = 0; i < maxworkers; i++) {
-        qthread_syncvar_readFF(NULL, rets + i);
+    if (SYNCVAR_T == sync_type) {
+        for (i = 0; i < maxworkers; i++) {
+            qthread_syncvar_readFF(NULL, (syncvar_t *)sync + i);
+        }
+        free(sync);
+    } else if (SINC_T == sync_type) {
+        qt_sinc_wait(sync, NULL);
+        qt_sinc_destroy(sync);
     }
     free(qwa);
-    free(rets);
 }                                      /*}}} */
 
 void qt_loop_balance(const size_t    start,
@@ -326,7 +382,15 @@ void qt_loop_balance(const size_t    start,
                      const qt_loop_f func,
                      void           *argptr)
 {                                      /*{{{ */
-    qt_loop_balance_inner(start, stop, func, argptr, 0);
+    qt_loop_balance_inner(start, stop, func, argptr, 0, SYNCVAR_T);
+}                                      /*}}} */
+
+void qt_loop_balance_sinc(const size_t    start,
+                          const size_t    stop,
+                          const qt_loop_f func,
+                          void           *argptr)
+{                                      /*{{{ */
+    qt_loop_balance_inner(start, stop, func, argptr, 0, SINC_T);
 }                                      /*}}} */
 
 void qt_loop_balance_future(const size_t    start,
@@ -334,7 +398,7 @@ void qt_loop_balance_future(const size_t    start,
                             const qt_loop_f func,
                             void           *argptr)
 {                                      /*{{{ */
-    qt_loop_balance_inner(start, stop, func, argptr, 1);
+    qt_loop_balance_inner(start, stop, func, argptr, 1, SYNCVAR_T);
 }                                      /*}}} */
 
 struct qloopaccum_wrapper_args {
@@ -1259,7 +1323,7 @@ void qt_parallel(const qt_loop_f    func,
                  void              *argptr)
 {   /*{{{*/
     activeParallel = 1;
-    qt_loop_inner(0, threads, func, argptr, 0);
+    qt_loop_inner(0, threads, func, argptr, 0, SYNCVAR_T);
     activeParallel = 0;
 } /*}}}*/
 

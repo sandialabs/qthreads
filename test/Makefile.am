@@ -29,7 +29,9 @@ BASIC_TESTS = test_basic \
 			  test_tasklocal_no_argcopy
 
 COMPLEX_TESTS = test_qt_loop \
+				test_qt_loop_sinc \
 				test_qt_loop_balance \
+				test_qt_loop_balance_sinc \
 				test_qutil \
 				test_qutil_qsort \
 				test_feb_barrier \
@@ -94,7 +96,8 @@ EXTRA_PROGRAMS += \
 	 time_stencil_pre \
 	 time_halo_swap_all \
 	 time_gcd \
-	 test_cpp_interface
+	 test_cpp_interface \
+	 time_qt_loops
 CLEANFILES += $(EXTRA_PROGRAMS)
 
 buildall: $(TESTS) $(EXTRA_PROGRAMS)
@@ -116,8 +119,14 @@ LDADD = $(QTHREADLIB)
 test_qt_loop_SOURCES = test_qt_loop.c
 test_qt_loop_DEPENDENCIES = $(QTHREADLIB)
 
+test_qt_loop_sinc_SOURCES = test_qt_loop_sinc.c
+test_qt_loop_sinc_DEPENDENCIES = $(QTHREADLIB)
+
 test_qt_loop_balance_SOURCES = test_qt_loop_balance.c
 test_qt_loop_balance_DEPENDENCIES = $(QTHREADLIB)
+
+test_qt_loop_balance_sinc_SOURCES = test_qt_loop_balance_sinc.c
+test_qt_loop_balance_sinc_DEPENDENCIES = $(QTHREADLIB)
 
 test_qutil_SOURCES = test_qutil.c
 test_qutil_DEPENDENCIES = $(QTHREADLIB)
@@ -321,6 +330,9 @@ time_stencil_pre_DEPENDENCIES = $(QTHREADLIB)
 
 time_halo_swap_all_SOURCES = time_halo_swap_all.c
 time_halo_swap_all_DEPENDENCIES = $(QTHREADLIB)
+
+time_qt_loops_SOURCES = time_qt_loops.c
+time_qt_loops_DEPENDENCIES = $(QTHREADLIB)
 
 test_sinc_SOURCES = test_sinc.c
 test_sinc_DEPENDENCIES = $(QTHREADLIB)
