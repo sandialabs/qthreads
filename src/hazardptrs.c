@@ -22,14 +22,14 @@ void INTERNAL initialize_hazardptrs(void)
     for (qthread_shepherd_id_t i = 0; i < qthread_num_shepherds(); ++i) {
         for (qthread_worker_id_t j = 0; j < qlib->nworkerspershep; ++j) {
 	    for (size_t k=0; k<HAZARD_PTRS_PER_SHEP; ++k)
-		qlib->shepherds[i].workers[j].hazard_ptrs[k] = NULL;
+		qlib->shepherds[i].workers[j].hazard_ptrs[k] = 0;
 	    memset(&qlib->shepherds[i].workers[j].hazard_free_list, 0, sizeof(hazard_freelist_t));
         }
     }
 #else
     for (qthread_shepherd_id_t i = 0; i < qthread_num_shepherds(); ++i) {
 	for (size_t k=0; k<HAZARD_PTRS_PER_SHEP; ++k)
-	    qlib->shepherds[i].hazard_ptrs[k] = NULL;
+	    qlib->shepherds[i].hazard_ptrs[k] = 0;
         memset(&qlib->shepherds[i].hazard_free_list, 0, sizeof(hazard_freelist_t));
     }
 #endif
@@ -37,12 +37,12 @@ void INTERNAL initialize_hazardptrs(void)
 }
 
 void INTERNAL hazardous_ptr(unsigned int which,
-                            void        *ptr)
+                            uintptr_t    ptr)
 {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    void **hzptrs = qthread_internal_getworker()->hazard_ptrs;
+    uintptr_t *hzptrs = qthread_internal_getworker()->hazard_ptrs;
 #else
-    void **hzptrs = qthread_internal_getshep()->hazard_ptrs;
+    uintptr_t *hzptrs = qthread_internal_getshep()->hazard_ptrs;
 #endif
 
     assert(hzptrs);
@@ -70,7 +70,7 @@ static int binary_search(uintptr_t *list,
         } else if (list[curs] < findme) {
             min = curs;
         }
-        if (max == min) { break; }
+        if (max == min+1) { break; }
         curs = (max + min) / 2;
     }
     return (list[curs] == findme);

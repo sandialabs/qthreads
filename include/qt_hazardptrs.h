@@ -4,7 +4,7 @@
 #include "qt_visibility.h"
 
 #define FREELIST_DEPTH 8
-#define HAZARD_PTRS_PER_SHEP 2
+#define HAZARD_PTRS_PER_SHEP 3
 
 typedef struct {
     void (*free)(void *);
@@ -17,7 +17,7 @@ typedef struct {
 } hazard_freelist_t;
 
 void INTERNAL initialize_hazardptrs(void);
-void INTERNAL hazardous_ptr(unsigned int which, void *ptr);
+void INTERNAL hazardous_ptr(unsigned int which, uintptr_t ptr);
 void INTERNAL hazardous_release_node(void (*freefunc)(void*), void *ptr);
 
 #endif

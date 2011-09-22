@@ -35,7 +35,7 @@ struct qthread_worker_s
     qthread_worker_id_t worker_id;
     qthread_worker_id_t packed_worker_id;
     qthread_shepherd_t *shepherd;
-    void* hazard_ptrs[HAZARD_PTRS_PER_SHEP]; /* hazard pointers (see http://portal.acm.org/citation.cfm?id=987524.987595) */
+    uintptr_t hazard_ptrs[HAZARD_PTRS_PER_SHEP]; /* hazard pointers (see http://portal.acm.org/citation.cfm?id=987524.987595) */
     hazard_freelist_t hazard_free_list;
     qthread_t *current;
     volatile uintptr_t QTHREAD_CASLOCK(active);
