@@ -22,7 +22,7 @@ qt_sinc_t *qt_sinc_create(void)
         sinc->values = malloc(sinc->factor * num_workers * sizeof(aligned_t));
         assert(sinc->values);
 
-        sinc->counts = malloc(sinc->factor * num_workers * sizeof(aligned_t));
+        sinc->counts = calloc(sinc->factor * num_workers, sizeof(aligned_t));
         assert(sinc->counts);
     }
 
@@ -54,7 +54,7 @@ static void qt_sinc_check(qt_sinc_t *sinc)
     }
 
     if (0 == sum) {
-        qthread_syncvar_writeEF_const(&sinc->result, 42);
+        qthread_syncvar_writeF_const(&sinc->result, 42);
     }
 }
 
