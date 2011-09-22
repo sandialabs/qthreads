@@ -981,6 +981,7 @@ int qthread_initialize(void)
 # endif
     generic_addrstat_pool = qt_mpool_create(sizeof(qthread_addrstat_t));
 #endif /* ifndef UNPOOLED */
+    initialize_hazardptrs();
     qt_lock_subsystem_init();
     qt_threadqueue_subsystem_init();
     qt_blocking_subsystem_init();
