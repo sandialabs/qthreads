@@ -201,32 +201,34 @@ sub run_tests {
         $build_command .= " && make clean > /dev/null" if ($force_clean);
         $build_command .= " && make $make_flags check 2>&1 | tee $results_log";
         my_system($build_command);
-        print "### Log: $results_log\n";
-        my $build_warnings = qx/awk '\/warning:\/' $results_log/;
-        if (length $build_warnings > 0) {
-            print "Build warnings! Check log and/or run again with --force-clean and --verbose for more information.\n";
-            print $build_warnings;
-        }
-        my $build_errors = qx/awk '\/error:\/' $results_log/;
-        if (length $build_errors > 0) {
-            print "Build error in config $conf_name! Check log and/or run again with --verbose for more information.\n";
-            print $build_errors;
-            exit(1);
-        }
+        if (not $dry_run) {
+            print "### Log: $results_log\n";
+            my $build_warnings = qx/awk '\/warning:\/' $results_log/;
+            if (length $build_warnings > 0) {
+                print "Build warnings! Check log and/or run again with --force-clean and --verbose for more information.\n";
+                print $build_warnings;
+            }
+            my $build_errors = qx/awk '\/error:\/' $results_log/;
+            if (length $build_errors > 0) {
+                print "Build error in config $conf_name! Check log and/or run again with --verbose for more information.\n";
+                print $build_errors;
+                exit(1);
+            }
 
-        # Display filtered results
-        print "### Results for '$conf_name'\n";
-        my $digest = qx/grep 'tests passed' $results_log/;
-        if ($digest eq '') {
-            $digest = qx/grep 'tests failed' $results_log/; chomp($digest);
-            my $fails = qx/cat $results_log | awk '\/FAIL\/{print \$2}'/;
-            $digest .= " (" . join(',', split(/\n/, $fails)) . ")";
-        }
-        chomp $digest;
-        my $banner = '=' x 50;
-        print "$banner\n$digest\n$banner\n";
+            # Display filtered results
+            print "### Results for '$conf_name'\n";
+            my $digest = qx/grep 'tests passed' $results_log/;
+            if ($digest eq '') {
+                $digest = qx/grep 'tests failed' $results_log/; chomp($digest);
+                my $fails = qx/cat $results_log | awk '\/FAIL\/{print \$2}'/;
+                $digest .= " (" . join(',', split(/\n/, $fails)) . ")";
+            }
+            chomp $digest;
+            my $banner = '=' x 50;
+            print "$banner\n$digest\n$banner\n";
 
-        push @summaries, "$digest $conf_name (pass $pass)";
+            push @summaries, "$digest $conf_name (pass $pass)";
+        }
 
         $pass++;
     }
