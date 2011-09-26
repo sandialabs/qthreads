@@ -309,12 +309,10 @@ start:
 void qt_mpool_free(qt_mpool pool,
                    void    *mem)
 {                                      /*{{{ */
-    void *p, *old, *new;
-
     qassert_retvoid((mem != NULL));
     qassert_retvoid((pool != NULL));
     QTHREAD_FASTLOCK_LOCK(&pool->reuse_lock);
-    *(uint64_t*)mem = pool->reuse_pool;
+    *(void *volatile*)mem = pool->reuse_pool;
     pool->reuse_pool = mem;
     QTHREAD_FASTLOCK_UNLOCK(&pool->reuse_lock);
     VALGRIND_MEMPOOL_FREE(pool, mem);
