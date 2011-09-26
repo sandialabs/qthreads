@@ -23,6 +23,8 @@ my %config = (
 	dev           => 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-debug --enable-guard-pages --enable-asserts --enable-static --disable-shared --enable-valgrind --disable-pooled-memory --enable-aligncheck'
 );
 
+my @summaries;
+
 # Collect command-line options
 my @conf_names;
 my @user_configs;
@@ -153,9 +155,18 @@ if ($print_info) {
     print "Build directory:  $qt_bld_dir\n";
 }
 
+# Run the test configurations
 foreach my $conf_name (@conf_names) {
     run_tests($conf_name);
 }
+
+# Print a summary report
+print "\n" . '=' x 50;
+print "\nSummary:\n";
+foreach my $summary (@summaries) {
+    print "$summary\n";
+}
+print '=' x 50 . "\n";
 
 exit(0);
 
@@ -215,6 +226,9 @@ sub run_tests {
         chomp $digest;
         my $banner = '=' x 50;
         print "$banner\n$digest\n$banner\n";
+
+        push @summaries, "$digest $conf_name (pass $pass)";
+
         $pass++;
     }
 }
