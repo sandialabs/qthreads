@@ -19,8 +19,6 @@
 # define SPINLOCK_BODY() do { } while (0)
 #endif
 
-#define USE_INTERNAL_SPINLOCK 1
-
 #if defined(__tile__)
 # include <tmc/sync.h>
 # define QTHREAD_FASTLOCK_INIT(x)     tmc_sync_mutex_init(&(x))
@@ -39,7 +37,6 @@ typedef struct qt_spin_exclusive_s { /* added to allow fast critical section ord
 } qt_spin_exclusive_t;
 void qt_spin_exclusive_lock(qt_spin_exclusive_t *);
 void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
-
 # define QTHREAD_FASTLOCK_INIT(x)     { (x).enter = 0; (x).exit = 0; }
 # define QTHREAD_FASTLOCK_INIT_PTR(x) { (x)->enter = 0; (x)->exit = 0; }
 # define QTHREAD_FASTLOCK_LOCK(x)     { uint64_t val = qthread_incr(& (x)->enter, 1); \
