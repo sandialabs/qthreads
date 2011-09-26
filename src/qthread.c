@@ -1940,13 +1940,16 @@ static QINLINE void qthread_thread_free(qthread_t *t)
 #endif
         qthread_debug(THREAD_DETAILS, "t(%p): releasing stack %p to %p\n", t, t->rdata->stack, t->creator_ptr);
 	FREE_STACK(t->creator_ptr, t->rdata->stack);
+	t->rdata = NULL;
     }
     if (t->flags & QTHREAD_HAS_ARGCOPY) {
         assert(&t->data != t->arg);
         free(t->arg);
+	t->arg = NULL;
     }
     if (t->tasklocal_size > sizeof(void *)) {
         free(*(void **)&t->data[qlib->qthread_argcopy_size]);
+	t->data[qlib->qthread_argcopy_size] = NULL;
     }
     qthread_debug(THREAD_DETAILS, "t(%p): releasing thread handle %p\n", t, t);
 #ifndef QTHREAD_USE_ROSE_EXTENSIONS
