@@ -19,7 +19,19 @@
 # define SPINLOCK_BODY() do { } while (0)
 #endif
 
-#if defined(AKP_DEBUG) && AKP_DEBUG
+#define USE_INTERNAL_SPINLOCK 1
+
+#if defined(__tile__)
+# include <tmc/sync.h>
+# define QTHREAD_FASTLOCK_INIT(x)     tmc_sync_mutex_init(&(x))
+# define QTHREAD_FASTLOCK_INIT_PTR(x) tmc_sync_mutex_init((x))
+# define QTHREAD_FASTLOCK_LOCK(x)     tmc_sync_mutex_lock((x))
+# define QTHREAD_FASTLOCK_UNLOCK(x)   tmc_sync_mutex_unlock((x))
+# define QTHREAD_FASTLOCK_DESTROY(x)
+# define QTHREAD_FASTLOCK_DESTROY_PTR(x)
+# define QTHREAD_FASTLOCK_TYPE        tmc_sync_mutex_t
+# define QTHREAD_FASTLOCK_INITIALIZER TMC_SYNC_MUTEX_INIT
+#elif defined(USE_INTERNAL_SPINLOCK) && USE_INTERNAL_SPINLOCK
 
 typedef struct qt_spin_exclusive_s { /* added to allow fast critical section ordering */
     volatile uint64_t enter;         /* and not call pthreads spin_lock -- hard to debug */
@@ -30,22 +42,13 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
 
 # define QTHREAD_FASTLOCK_INIT(x)     { (x).enter = 0; (x).exit = 0; }
 # define QTHREAD_FASTLOCK_INIT_PTR(x) { (x)->enter = 0; (x)->exit = 0; }
-# define QTHREAD_FASTLOCK_LOCK(x)     qt_spin_exclusive_lock((x))
-# define QTHREAD_FASTLOCK_UNLOCK(x)   qt_spin_exclusive_unlock((x))
+# define QTHREAD_FASTLOCK_LOCK(x)     { uint64_t val = qthread_incr(& (x)->enter, 1); \
+                                        while (val != (x)->exit) SPINLOCK_BODY(); /* spin waiting for my turn */ }
+# define QTHREAD_FASTLOCK_UNLOCK(x)   qthread_incr(& (x)->exit, 1); /* allow next guy's turn */
 # define QTHREAD_FASTLOCK_DESTROY(x)
 # define QTHREAD_FASTLOCK_DESTROY_PTR(x)
-# define QTHREAD_FASTLOCK_TYPE qt_spin_exclusive_t
-# define QTHREAD_FASTLOCK_INITIALIZER
-#elif defined(__tile__)
-# include <tmc/sync.h>
-# define QTHREAD_FASTLOCK_INIT(x)     tmc_sync_mutex_init(& (x))
-# define QTHREAD_FASTLOCK_INIT_PTR(x) tmc_sync_mutex_init((x))
-# define QTHREAD_FASTLOCK_LOCK(x)     tmc_sync_mutex_lock((x))
-# define QTHREAD_FASTLOCK_UNLOCK(x)   tmc_sync_mutex_unlock((x))
-# define QTHREAD_FASTLOCK_DESTROY(x)
-# define QTHREAD_FASTLOCK_DESTROY_PTR(x)
-# define QTHREAD_FASTLOCK_TYPE        tmc_sync_mutex_t
-# define QTHREAD_FASTLOCK_INITIALIZER TMC_SYNC_MUTEX_INIT
+# define QTHREAD_FASTLOCK_TYPE        qt_spin_exclusive_t
+# define QTHREAD_FASTLOCK_INITIALIZER (qt_spin_exclusive_t) { 0, 0 }
 #elif defined(HAVE_PTHREAD_SPIN_INIT)
 # include <pthread.h>
 # define QTHREAD_FASTLOCK_INIT(x)        pthread_spin_init(& (x), PTHREAD_PROCESS_PRIVATE)
@@ -508,7 +511,7 @@ static QINLINE aligned_t qthread_internal_incr_mod_(volatile aligned_t    *opera
         oldval  = retval;
         newval  = retval + 1;
         newval *= (newval < max);
-	retval = __sync_val_compare_and_swap(operand, oldval, newval);
+        retval  = __sync_val_compare_and_swap(operand, oldval, newval);
     } while (retval != oldval);
 #else /* if defined(HAVE_GCC_INLINE_ASSEMBLY) */
 # error "Neither atomic or mutex increment enabled"
