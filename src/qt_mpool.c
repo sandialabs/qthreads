@@ -50,6 +50,7 @@ struct qt_mpool_s {
     size_t         items_per_alloc;
     size_t         alignment;
 
+    QTHREAD_FASTLOCK_TYPE reuse_lock;
     void *volatile QTHREAD_CASLOCK(reuse_pool);
     QTHREAD_FASTLOCK_TYPE pool_lock;
     char                 *alloc_block;
@@ -202,6 +203,7 @@ qt_mpool qt_mpool_create_aligned(size_t    item_size,
     *(void **)(pool->alloc_block) = NULL; // just in case aligned_alloc doesn't memset
     VALGRIND_MAKE_MEM_NOACCESS(pool->alloc_block, sizeof(void**));
     QTHREAD_CASLOCK_INIT(pool->alloc_block_ptr, pool->alloc_block);
+    QTHREAD_FASTLOCK_INIT(pool->reuse_lock);
     /* this assumes that pagesize is a multiple of sizeof(void*) */
     pool->alloc_list = calloc(1, pagesize);
     qassert_goto((pool->alloc_list != NULL), errexit);
@@ -226,7 +228,7 @@ qt_mpool qt_mpool_create(size_t item_size)
 
 /* to avoid ABA reinsertion trouble, each pointer in the pool needs to have a
  * monotonically increasing counter associated with it. The counter doesn't
- * need to be huge, just big enough to make the ABA problem sufficiently
+ * need to be huge, just big enough to make the APA problem sufficiently
  * unlikely. We'll just claim 4, to be conservative. Thus, an allocated block
  * of memory must be aligned to 16 bytes. */
 #ifndef QTHREAD_USE_VALGRIND
@@ -240,29 +242,20 @@ qt_mpool qt_mpool_create(size_t item_size)
 # define QCOMPOSE(x, y) (x)
 #endif
 
-
 void *qt_mpool_alloc(qt_mpool pool)
 {                                      /*{{{ */
-    void **p = (void **)QTHREAD_CASLOCK_READ(pool->reuse_pool);
-
+    void **p = NULL;
     qassert_ret((pool != NULL), NULL);
-    if (QPTR(p) != NULL) {
-        void *old, *new;
-
-        /* note that this is only "safe" as long as there is no chance that the
-         * pool has been destroyed. There's a small chance that p was allocated
-         * and popped back into the queue so that the CAS works but "new" is
-         * the wrong value... (also known among lock-free wonks as The ABA
-         * Problem). Using the QPTR stuff reduces this chance to an acceptable
-         * probability.
-         */
-        do {
-            old = p;
-            VALGRIND_MAKE_MEM_DEFINED(QPTR(p), pool->item_size);
-            new = *(QPTR(p));
-            p   = QT_CAS(pool->reuse_pool, old, QCOMPOSE(new, p));
-        } while ((p != old) && (QPTR(p) != NULL));
+    if (pool->reuse_pool){
+      QTHREAD_FASTLOCK_LOCK(&pool->reuse_lock);
+      if (pool->reuse_pool){
+	p = pool->reuse_pool;
+	pool->reuse_pool = *(uint64_t **)p;
+      }
+      else p = NULL;
+      QTHREAD_FASTLOCK_UNLOCK(&pool->reuse_lock);
     }
+
     if (QPTR(p) == NULL) {             /* this is not an else on purpose */
         char *base, *max, *cur;
 start:
@@ -320,12 +313,10 @@ void qt_mpool_free(qt_mpool pool,
 
     qassert_retvoid((mem != NULL));
     qassert_retvoid((pool != NULL));
-    do {
-        old                    = (void *)QTHREAD_CASLOCK_READ(pool->reuse_pool); /* should be an atomic read */
-        *(void *volatile *)mem = old;
-        new                    = QCOMPOSE(mem, old);
-        p                      = QT_CAS(pool->reuse_pool, old, new);
-    } while (p != old);
+    QTHREAD_FASTLOCK_LOCK(&pool->reuse_lock);
+    *(uint64_t*)mem = pool->reuse_pool;
+    pool->reuse_pool = mem;
+    QTHREAD_FASTLOCK_UNLOCK(&pool->reuse_lock);
     VALGRIND_MEMPOOL_FREE(pool, mem);
 }                                      /*}}} */
 
