@@ -5,23 +5,24 @@
 
 include_HEADERS = qthread.h
 pkginclude_HEADERS = \
-	qthread.h \
-	qthread.hpp \
-	syncvar.hpp \
 	allpairs.h \
-	wavefront.h \
 	cacheline.h \
-	qalloc.h \
-	qarray.h \
-	qlfqueue.h \
-	qdqueue.h \
-	qpool.h \
-	qutil.h \
-	qloop.h \
-	qloop.hpp \
 	feb_barrier.h \
 	futurelib.h \
+	qalloc.h \
+	qarray.h \
+	qdqueue.h \
+	qlfqueue.h \
+	qloop.h \
+	qloop.hpp \
+	qpool.h \
+	qt_sinc.h \
+	qthread.h \
+	qthread.hpp \
 	qtimer.h \
+	qutil.h \
+	syncvar.hpp \
+	wavefront.h \
 	loop_templates.hpp \
 	loop_iter.hpp \
 	loop.hpp
