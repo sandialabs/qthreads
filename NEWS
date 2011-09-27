@@ -1,10 +1,11 @@
---- 1.6.1b ---
+--- 1.7 ---
 New Features:
  - Experimental multi-node support with Portals4
  - Task-local data
  - Preconditioned task spawning
  - More control with hwloc: QTHREAD_WORKER_UNIT
  - Several new schedulers: mutexfifo, mtsfifo, nemesis, nottingham
+ - Experimental sinc support (counting synchronization, proto-thread-teams)
 Improvements:
  - Default scheduler: sherwood
  - Updated to new Chapel tasking API
@@ -24,6 +25,8 @@ Bugfixes:
  - Fix 64-bit increment detection on 32-bit architectures
  - Fix valgrind building
  - Fix PPC building
+ - Fix I/O subsystem queueing
+ - Many stability improvements
 --- 1.6 ---
 New Features:
  - Brand new C++ qloop interface

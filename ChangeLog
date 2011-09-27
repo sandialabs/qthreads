@@ -1,3 +1,244 @@
+2011-09-26 19:27  Allan Porterfield <akp@renci.org>
+
+	* src/qthread.c: I don't know if these three NULLs are required I
+	  just feel alot better with
+	  them present to stop possible reuse of freed memory
+
+2011-09-26 18:46  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_mpool.c: tidy up compiler warnings
+
+2011-09-26 18:42  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, include/qt_atomics.h: configure now detects
+	  preconditions for internal spinlock
+
+2011-09-26 18:38  Allan Porterfield <akp@renci.org>
+
+	* src/qt_mpool.c: changing reuse pool to be locked -- was having
+	  lots of random memory problems
+	  with previous implementation. Lock should not cause problems for
+	  any
+	  level of concurrency that was not having problems with the linked
+	  list
+	  that is used within the reuse pool
+
+2011-09-26 18:30  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_atomics.h: Allan's spinlock kicks butt, so lets use it
+	  all the time (probably need to have configure turn it off when we
+	  don't have hardware atomics)
+
+2011-09-26 18:28  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: remove compiler warning in qloop_wrapper; rework
+	  qloop_wrapper to avoid repeated branches
+
+2011-09-26 16:11  dylan.stark@gmail.com
+
+	* scripts/build.pl: Fixes issue when doing --dry-runs.
+
+2011-09-26 15:41  dylan.stark@gmail.com
+
+	* scripts/build.pl: Removes Chapel configuration option because it
+	  does not build outside the Chapel source tree.
+
+2011-09-26 15:35  dylan.stark@gmail.com
+
+	* scripts/build.pl: Adds summary to end of build session.
+
+2011-09-22 21:47  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: initialize hazardptrs
+
+2011-09-22 21:47  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_hazardptrs.h, include/qt_shepherd_innards.h,
+	  src/hazardptrs.c: fix hazardptrs; avoid infinite loop in binary
+	  search (corrected the boundary condition), use uintptr_ts instead
+	  of void* to avoid compiler warnings
+
+2011-09-22 21:11  dylan.stark@gmail.com
+
+	* include/qthread/qloop.h, src/qloop.c, test/Makefile.am,
+	  test/test_qt_loop_balance_sinc.c, test/test_qt_loop_sinc.c,
+	  test/time_qt_loops.c: Adds qt_loop_sinc() and
+	  qt_loop_balance_sinc(), with associated testing and timing code.
+
+2011-09-22 21:11  dylan.stark@gmail.com
+
+	* src/qt_sinc.c: Initializes counts array to all 0's and relaxes
+	  writing of result to allow for corner case when two or more lucky
+	  threads call qt_sinc_check() simultaneously when the sum will be
+	  0.
+
+2011-09-21 22:26  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* scripts/build.pl: unpooled
+
+2011-09-21 22:25  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am: install qthread_num_workers man page
+
+2011-09-21 21:27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* scripts/build.pl: add chapel
+
+2011-09-21 15:34  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/test_migrate.c: better detection/reporting of migration
+	  badness
+
+2011-09-21 14:15  dylan.stark@gmail.com
+
+	* man/man3/qthread_num_workers.3: Adds a manpage entry for
+	  qthread_num_workers().
+
+2011-09-20 22:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_sinc.c, test/test_sinc.c: uncrustified
+
+2011-09-20 22:53  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_sinc.c, test/test_sinc.c: fix some minor compiler warnings
+
+2011-09-20 21:12  dylan.stark@gmail.com
+
+	* include/qthread/qt_sinc.h, src/Makefile.am, src/qt_sinc.c,
+	  test/Makefile.am, test/test_sinc.c: Adds rudimentary sinc
+	  construct, with test.
+
+2011-09-20 20:17  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/interfaces/chapel/tasks-qthreads.c: fix the early-exit thing
+	  Brad brought up (not technically our fault, but we can detect and
+	  avoid the problem easily enough)
+
+2011-09-19 22:51  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_mpool.c: properly initialize locks for MUTEX_INCREMENT
+	  situations
+
+2011-09-19 22:49  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: properly initialize locks for MUTEX_INCREMENT
+	  situations
+
+2011-09-19 21:39  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* scripts/build.pl: prettier configs
+
+2011-09-19 21:27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* scripts/build.pl: more configs
+
+2011-09-19 21:23  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: missing comma
+
+2011-09-19 19:56  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: merge thread_count into the "profiling" umbrella
+
+2011-09-19 19:55  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: surprisingly, in atexit(), there appears to be a
+	  certain probability that stdout wont flush by default
+
+2011-09-19 19:35  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, src/threadqueues/sherwood_threadqueues.c: make
+	  sherwood work in situations where I do not have atomic hardware
+	  increments and such
+
+2011-09-19 19:23  dylan.stark@gmail.com
+
+	* scripts/build.pl: Adds an 'all' configs target; removes 'default'
+	  target.
+
+2011-09-19 19:17  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_shepherd_innards.h, include/qthread_innards.h,
+	  src/qthread.c: fix single-threaded-shepherd behavior when we do
+	  not have hardware atomic operations
+
+2011-09-19 18:24  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: with multithreaded shepherds, the profiling hashes
+	  may need synchronization (this probably needs to be
+	  re-architected to be profiling on a per-worker basis)
+
+2011-09-19 18:23  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_profiling.h: in the precond case, I am doing this work
+	  on behalf of another non-running thread; so allow me to specify
+	  *my* shepherd to use
+
+2011-09-19 17:52  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: oooookay.... Allan added a second copy of this
+	  function up higher in the file, so I will just remove this one;
+	  otherwise, it doesnt compile
+
+2011-09-16 21:58  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_mpool.c: slightly cleaner
+
+2011-09-16 21:57  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/ds/qpool.c: sync logic with the more heavily tested qt_mpool
+
+2011-09-16 21:15  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/io.c, src/syscalls/sys_user_defined.c,
+	  test/test_user_defined_block.c: fix IO subsystem queueing (there
+	  were some pretty fundamental bugs there)
+
+2011-09-16 21:13  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_shepherd_innards.h: work with IO subsystem, qthread
+	  pthreads that are not shepherds
+
+2011-09-16 21:11  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: show debugging information in multiple contexts
+
+2011-09-16 20:44  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_debug.h, src/qthread.c: change the way debug level is
+	  handled, to make it more powerful
+
+2011-09-16 20:15  dylan.stark@gmail.com
+
+	* scripts/build.pl: Adds support for running a configuration
+	  multiple times.
+
+2011-09-16 19:40  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: *require* pthreads, dont muddy the water here
+
+2011-09-16 19:39  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* Makefile.am: build the library before tests
+
+2011-09-16 19:39  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: admit it, we will require pthreads for the
+	  forseeable future
+
+2011-09-16 18:40  dylan.stark@gmail.com
+
+	* scripts, scripts/build.pl: Adds a script to make it easy to build
+	  and check multiple configurations.
+
+2011-09-16 17:29  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* ChangeLog, NEWS: update, preparing for next release
+
+2011-09-16 17:17  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* SCHEDULING: describe nottingham
+
 2011-09-15 21:35  Kyle Wheeler <kbwheel@sandia.gov>
 
 	* configure.in: correct comment
