@@ -1949,7 +1949,7 @@ static QINLINE void qthread_thread_free(qthread_t *t)
     }
     if (t->tasklocal_size > sizeof(void *)) {
         free(*(void **)&t->data[qlib->qthread_argcopy_size]);
-	t->data[qlib->qthread_argcopy_size] = NULL;
+	*(void**)&t->data[qlib->qthread_argcopy_size] = NULL;
     }
     qthread_debug(THREAD_DETAILS, "t(%p): releasing thread handle %p\n", t, t);
 #ifndef QTHREAD_USE_ROSE_EXTENSIONS
