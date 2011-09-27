@@ -170,7 +170,7 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
     ssize_t tmp;
     QTHREAD_FASTLOCK_LOCK(&q->qlock);
     tmp = q->qlength;
-    QTHREAD_FASTLOCK_UNLOCK(&q->lock);
+    QTHREAD_FASTLOCK_UNLOCK(&q->qlock);
     return tmp;
 #endif
 } /*}}}*/
