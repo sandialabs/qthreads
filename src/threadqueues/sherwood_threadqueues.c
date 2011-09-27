@@ -309,7 +309,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
                 if ((t->flags & QTHREAD_MUST_BE_WORKER_ZERO)) { // only needs to be on worker 0 for termination
                     switch(qthread_worker(NULL)) {
                         case NO_WORKER:
-                            *(int *)0 = 0; // should never happen
+                            QTHREAD_TRAP(); // should never happen
                             t         = NULL;
                             continue; // keep looking
                         case 0:
