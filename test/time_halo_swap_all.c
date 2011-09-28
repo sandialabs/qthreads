@@ -254,7 +254,7 @@ typedef struct upi_args_s {
 } upi_args_t;
 
 // Update internal point
-static void update_point_internal(const size_t start, const size_t stop,
+/*static void update_point_internal(const size_t start, const size_t stop,
                                   void *arg_)
 {
     const upi_args_t *arg = (upi_args_t *)arg_;
@@ -272,10 +272,10 @@ static void update_point_internal(const size_t start, const size_t stop,
                          SYNCVAR_EVAL(EAST_OF(S,i,j));
 
     SYNCVAR_BIND(stages[now][i][j], sum/NUM_NEIGHBORS);
-}
+}*/
 
 // Spawn internal point tasks over columns
-static void update_point_internal_loop(const size_t start, const size_t stop,
+/*static void update_point_internal_loop(const size_t start, const size_t stop,
                                        void *arg_)
 {
     const upx_args_t *arg = (upx_args_t *)arg_;
@@ -287,7 +287,7 @@ static void update_point_internal_loop(const size_t start, const size_t stop,
 
     upi_args_t upi_args = {arg->stages, arg->now, start};
     qt_loop(col_start, col_stop, update_point_internal, &upi_args);
-}
+}*/
 
 typedef struct cpc_args_s {
     syncvar_t *prev;
@@ -336,7 +336,7 @@ static aligned_t update_point_corner(void *arg_)
     size_t timestep = arg->timestep;
     const size_t num_rows = arg->num_rows;
     const size_t num_cols = arg->num_cols;
-    const size_t part_lid = arg->part_lid;
+    //const size_t part_lid = arg->part_lid;
 
     size_t i       = 0;
     size_t j       = 0;
@@ -347,9 +347,6 @@ static aligned_t update_point_corner(void *arg_)
 
     size_t prev_stage_id = prev_stage(arg->now);
     size_t this_stage_id = prev_stage_id;
-
-    syncvar_t **prev;
-    syncvar_t **curr;
 
     while (timestep <= num_timesteps) {
         prev_stage_id = this_stage_id;
@@ -560,7 +557,7 @@ static aligned_t update_point_edge_loop(void *arg_)
     size_t timestep = arg->timestep;
     const size_t num_rows = arg->num_rows;
     const size_t num_cols = arg->num_cols;
-    const size_t part_lid = arg->part_lid;
+    //const size_t part_lid = arg->part_lid;
 
     size_t next = next_stage(now);
 
@@ -629,7 +626,7 @@ typedef struct us_args_s {
 * - tasks for updating all points are spawned when called
 * - this task does not return until all 
 */
-static aligned_t update_stage(void *arg_)
+/*static aligned_t update_stage(void *arg_)
 {
     const us_args_t *arg = (us_args_t *)arg_;
     const position_t pos = arg->part->pos;
@@ -658,7 +655,7 @@ static aligned_t update_stage(void *arg_)
         qthread_syncvar_readFF(NULL, &rets[i]);
 
     return 0;
-}
+}*/
 
 ////////////////////////////////////////////////////////////////////////////////
 // Halo exchange
@@ -704,7 +701,7 @@ static aligned_t send_block(void *arg_) {
     const size_t ub = arg->ub;
     const size_t sk  = arg->sk;
     const size_t tk  = arg->tk;
-    const size_t part_lid = arg->part_lid;
+    //const size_t part_lid = arg->part_lid;
 
     syncvar_t ***local  = arg->source;
     syncvar_t ***remote = arg->target;
