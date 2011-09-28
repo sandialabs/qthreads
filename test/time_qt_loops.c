@@ -4,18 +4,23 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
+#include <unistd.h>
 #include <qthread/qloop.h>
 #include <qthread/qtimer.h>
 #include "argparsing.h"
 
 static aligned_t threads  = 0;
 static aligned_t numincrs = 1024;
+static size_t *sleeplen;
 
 static void sum(const size_t startat,
                 const size_t stopat,
                 void        *arg_)
 {
     qthread_incr(&threads, stopat - startat);
+    for (size_t i=startat; i<stopat; ++i) {
+	usleep(sleeplen[i]);
+    }
 }
 
 int main(int   argc,
@@ -30,6 +35,11 @@ int main(int   argc,
     NUMARG(numiters, "NUM_ITERS");
     iprintf("%i shepherds\n", qthread_num_shepherds());
     iprintf("%i threads\n", qthread_num_workers());
+
+    sleeplen = malloc(sizeof(size_t) * numincrs);
+    for (int i = 0; i < numincrs; ++i) {
+	sleeplen[i] = qtimer_fastrand()%1000;
+    }
 
     iprintf("version    sync    iters    time\n");
     qtimer_t timer = qtimer_create();
