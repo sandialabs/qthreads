@@ -1,4 +1,4 @@
---- 1.7 ---
+--- 1.7.1b ---
 New Features:
  - Experimental multi-node support with Portals4
  - Task-local data
