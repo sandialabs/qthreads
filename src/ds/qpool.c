@@ -32,11 +32,13 @@
 #endif
 
 struct qpool_shepspec_s {
-    void *volatile reuse_pool;
-    char          *alloc_block;
-    char *volatile alloc_block_ptr;
-    void         **alloc_list;
-    size_t         alloc_list_pos;
+    QTHREAD_FASTLOCK_TYPE reuse_lock;
+    void *volatile        reuse_pool;
+    QTHREAD_FASTLOCK_TYPE pool_lock;
+    char                 *alloc_block;
+    char *volatile        alloc_block_ptr;
+    void                **alloc_list;
+    size_t                alloc_list_pos;
 
     MEM_AFFINITY_ONLY(unsigned int node; )
     syncvar_t lock;
@@ -213,7 +215,8 @@ qpool *qpool_create_aligned(const size_t isize,
     for (pindex = 0; pindex < numsheps; pindex++) {
         MEM_AFFINITY_ONLY(pool->pools[pindex].node = qthread_internal_shep_to_node(pindex));
         _(pool->pools[pindex].reuse_pool) = NULL;
-        pool->pools[pindex].alloc_block   =
+        QTHREAD_FASTLOCK_INIT(pool->pools[pindex].pool_lock);
+        pool->pools[pindex].alloc_block =
             (char *)qpool_internal_aligned_alloc(alloc_size,
                                                  MEM_AFFINITY_ONLY_ARG(pool->pools[pindex].node)
                                                  alignment);
@@ -223,6 +226,7 @@ qpool *qpool_create_aligned(const size_t isize,
         qassert_goto((((unsigned long)(pool->pools[pindex].
                                        alloc_block) & (alignment - 1)) == 0), errexit_killpool);
         pool->pools[pindex].alloc_block_ptr = pool->pools[pindex].alloc_block;
+        QTHREAD_FASTLOCK_INIT(pool->pools[pindex].reuse_lock);
         /* this assumes that pagesize is a multiple of sizeof(void*) */
         pool->pools[pindex].alloc_list = calloc(1, pagesize);
         qassert_goto((pool->pools[pindex].alloc_list != NULL), errexit_killpool);
@@ -285,15 +289,25 @@ void *qpool_alloc(qpool *pool)
     p      = (void *)_(mypool->reuse_pool);
 
     if (QPTR(p) != NULL) {
-        void *old, *new;
-
-        do {
-            old = p;
-            VALGRIND_MAKE_MEM_DEFINED(QPTR(p), pool->item_size);
-            new = *(QPTR(p));
-            p   = (void *)qthread_cas_ptr(&(mypool->reuse_pool), old,
-                                          QCOMPOSE(new, p));
-        } while (p != old && QPTR(p) != NULL);
+        QTHREAD_FASTLOCK_LOCK(&mypool->reuse_lock);
+        if (mypool->reuse_pool) {
+            p                  = mypool->reuse_pool;
+            mypool->reuse_pool = *(void **)p;
+        } else {
+            p = NULL;
+        }
+        QTHREAD_FASTLOCK_UNLOCK(&mypool->reuse_lock);
+        /*
+         * void *old, *new;
+         *
+         * do {
+         *  old = p;
+         *  VALGRIND_MAKE_MEM_DEFINED(QPTR(p), pool->item_size);
+         *  new = *(QPTR(p));
+         *  p   = (void *)qthread_cas_ptr(&(mypool->reuse_pool), old,
+         *                                QCOMPOSE(new, p));
+         * } while (p != old && QPTR(p) != NULL);
+         */
     }
     if (QPTR(p) == NULL) {             /* this is not an else on purpose */
         /* XXX: *SHOULD* pull from other pools that are "nearby" - at minimum, any
@@ -301,24 +315,19 @@ void *qpool_alloc(qpool *pool)
         char *base, *max, *cur;
 
 start:
-        /* on a single-threaded shepherd, locking is unnecessary */
-#if defined(QTHREAD_SST_PRIMITIVES) || defined(QTHREAD_MULTITHREADED_SHEPHERDS)
-        qassert(qthread_syncvar_readFE(NULL, &mypool->lock), 0);
-#endif
+        /* XXX: on a single-threaded shepherd, locking is unnecessary */
+        QTHREAD_FASTLOCK_LOCK(&mypool->pool_lock);
         base = mypool->alloc_block;
-        max = base + (pool->item_size * pool->items_per_alloc);
-        cur = mypool->alloc_block_ptr;
-#if defined(QTHREAD_SST_PRIMITIVES) || defined(QTHREAD_MULTITHREADED_SHEPHERDS)
-        qassert(qthread_syncvar_writeF_const(&mypool->lock, 1), 0);
-#endif
+        max  = base + (pool->item_size * pool->items_per_alloc);
+        cur  = mypool->alloc_block_ptr;
+        QTHREAD_FASTLOCK_UNLOCK(&mypool->pool_lock);
         while (cur <= max && cur >= base) {
             char *cur2 = qthread_cas_ptr(&mypool->alloc_block_ptr, cur, cur + pool->item_size);
             if (cur2 == cur) { break; }
             cur = cur2;
             if (base != mypool->alloc_block) { goto start; }
         }
-        if (cur > max) { goto start; }
-        else if (cur == max) {
+        if (cur > max) { goto start; } else if (cur == max) {
             /* realloc */
             if (mypool->alloc_list_pos == (pagesize / sizeof(void *) - 1)) {
                 void **tmp = calloc(1, pagesize);
@@ -335,17 +344,13 @@ start:
             assert(pool->alignment == 0 ||
                    (((unsigned long)p) & (pool->alignment - 1)) == 0);
             assert(QCTR(p) == 0);
-#if defined(QTHREAD_SST_PRIMITIVES) || defined(QTHREAD_MULTITHREADED_SHEPHERDS)
-            qassert(qthread_syncvar_readFE(NULL, &mypool->lock), 0);
-#endif
+            QTHREAD_FASTLOCK_LOCK(&mypool->pool_lock);
             mypool->alloc_block                        = p;
             mypool->alloc_list[mypool->alloc_list_pos] = mypool->alloc_block;
             mypool->alloc_list_pos++;
             VALGRIND_MAKE_MEM_NOACCESS(p, pool->alloc_size);
             mypool->alloc_block_ptr = ((char *)p) + pool->item_size;
-#if defined(QTHREAD_SST_PRIMITIVES) || defined(QTHREAD_MULTITHREADED_SHEPHERDS)
-            qassert(qthread_syncvar_writeF_const(&mypool->lock, 1), 0);
-#endif
+            QTHREAD_FASTLOCK_UNLOCK(&mypool->pool_lock);
         } else {
             p = (void **)cur;
         }
@@ -358,18 +363,15 @@ start:
 void qpool_free(qpool *pool,
                 void  *mem)
 {                                      /*{{{ */
-    void                    *p, *old, *new;
     qthread_shepherd_id_t    shep   = qthread_shep();
     struct qpool_shepspec_s *mypool = &(pool->pools[shep]);
 
     qassert_retvoid((mem != NULL));
     qassert_retvoid((pool != NULL));
-    do {
-        old           = (void *)_(mypool->reuse_pool); // should be an atomic read
-        *(void **)mem = old;
-        new           = QCOMPOSE(mem, old);
-        p             = (void *)qthread_cas_ptr(&(mypool->reuse_pool), old, new);
-    } while (p != old);
+    QTHREAD_FASTLOCK_LOCK(&mypool->reuse_lock);
+    *(void *volatile *)mem = mypool->reuse_pool;
+    mypool->reuse_pool     = mem;
+    QTHREAD_FASTLOCK_UNLOCK(&mypool->reuse_lock);
     VALGRIND_MEMPOOL_FREE(pool, mem);
 }                                      /*}}} */
 
@@ -398,6 +400,8 @@ void qpool_destroy(qpool *pool)
             mypool->alloc_list = mypool->alloc_list[pagesize / sizeof(void *) - 1];
             free(p);
         }
+        QTHREAD_FASTLOCK_DESTROY(mypool->pool_lock);
+        QTHREAD_FASTLOCK_DESTROY(mypool->reuse_lock);
     }
     VALGRIND_DESTROY_MEMPOOL(pool);
     free(pool->pools);
