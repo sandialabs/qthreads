@@ -6,7 +6,7 @@
 
 libqthread_la_SOURCES += \
 	net/portals4/portals4.c \
-	runtime.h
+	net/portals4/runtime.h
 
 if WANT_PORTALS_SHMEM_RUNTIME
 libqthread_la_SOURCES += \
