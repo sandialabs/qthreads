@@ -19,7 +19,7 @@ qt_sinc_t *qt_sinc_create(void)
 
         sinc->factor = cacheline / sizeof(aligned_t);
 
-        sinc->values = malloc(sinc->factor * num_workers * sizeof(aligned_t));
+        sinc->values = malloc(sinc->factor * num_workers, sizeof(aligned_t));
         assert(sinc->values);
 
         sinc->counts = calloc(sinc->factor * num_workers, sizeof(aligned_t));
