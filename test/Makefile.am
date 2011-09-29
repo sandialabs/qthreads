@@ -50,6 +50,10 @@ BASIC_TESTS += test_cpp
 COMPLEX_TESTS += testloop
 endif
 
+if COMPILE_ROSE_EXTENSIONS
+SUBDIRS = rose_bots_benchmarks
+endif
+
 TESTS =  $(BASIC_TESTS) $(COMPLEX_TESTS)
 
 EXTRA_PROGRAMS = test_wavefront
@@ -100,9 +104,17 @@ EXTRA_PROGRAMS += \
 	 time_qt_loops
 CLEANFILES += $(EXTRA_PROGRAMS)
 
-buildall: $(TESTS) $(EXTRA_PROGRAMS)
 buildtests: $(TESTS)
+if COMPILE_ROSE_EXTENSIONS
+buildall: $(TESTS) $(EXTRA_PROGRAMS)
+	$(MAKE) -C rose_bots_benchmarks buildall
 buildextra: $(EXTRA_PROGRAMS)
+	$(MAKE) -C rose_bots_benchmarks buildextra
+else
+buildall: $(TESTS) $(EXTRA_PROGRAMS)
+buildextra: $(EXTRA_PROGRAMS)
+endif
+
 .PHONY: buildall buildtests buildextra
 
 check_PROGRAMS = $(TESTS)
