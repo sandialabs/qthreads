@@ -12,6 +12,7 @@ DEFINES=-D_OPENMP -DMANUAL_CUTOFF
 AM_CXXFLAGS = @RESTRICT_CXXFLAGS@ $(DEFINES)
 
 TESTS = \
+		fft \
 		fib \
 		nqueens \
 		sort \
@@ -73,3 +74,8 @@ alignment_task_SOURCES = $(GLOBAL_COMMON) \
 						alignment/task/rose_alignment_task.cc \
 						alignment/task/rose_sequence_alignmenttask.cc
 alignment_task_DEPENDENCIES = $(LIBS)
+
+fft_SOURCES = $(GLOBAL_COMMON) \
+			  fft/rose_bots_main_fft.cc \
+			  fft/rose_fft.cc
+fft_DEPENDENCIES = $(LIBS)

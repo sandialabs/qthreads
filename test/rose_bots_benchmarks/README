@@ -14,6 +14,11 @@ outputs rather than tidy them up.
 
 The benchmarks that do not require input files are:
 
+FFT:
+| This is a Fast Fourier Transformation benchmark, using the spectral method,
+| based on a Cilk example algorithm.
+| Benchmark runs are often done with the arguments "-n 67108864"
+
 Fib:
 | This is a basic fibbonacci implementation.
 | Benchmark runs are often done with the arguments "-n 50".
