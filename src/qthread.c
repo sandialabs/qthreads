@@ -2311,9 +2311,10 @@ static int qthread_uberfork(qthread_f             f,
     /* Step 4: Prepare the return value location (if necessary) */
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     if (!ret && (ret_type == SYNCVAR_T)){  // if no ret specified and syncvar requested
-      ret = &t->ret_value;                 // use the one inside the thread
-      t->ret = ret;                        // and set thread's return address
-    }
+        t->ret_value = SYNCVAR_EMPTY_INITIALIZER;
+        ret = &t->ret_value;                 // use the one inside the thread
+        t->ret = ret;                        // and set thread's return address
+    } else
 #endif
     if (ret) {
         int test = QTHREAD_SUCCESS;
