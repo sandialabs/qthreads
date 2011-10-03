@@ -7,7 +7,10 @@ for size reasons. You don't need them for all of the benchmarks, but for those
 that do, you can go download the original benchmark suite and use those.
 
 Not all of the benchmarks are included here, in large part because not all of
-them compile cleanly with ROSE.
+them compile cleanly with ROSE. You may also notice that there are lots of
+compiler warnings when building these. I had the choice between fixing them,
+and leaving them; I chose to make this code more closely match what ROSE
+outputs rather than tidy them up.
 
 The benchmarks that do not require input files are:
 
