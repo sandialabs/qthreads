@@ -1914,6 +1914,7 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f             f,
     t->task_completed  = 0;
     t->child           = NULL;
     t->sibling         = NULL;
+    t->currentParallelRegion = NULL;
 #endif
     // should I use the builtin block for args?
     t->flags &= ~QTHREAD_HAS_ARGCOPY;
