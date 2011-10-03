@@ -118,7 +118,7 @@ static void XOMP_Status_init(
     XOMP_Status *p_status)
 {
   p_status->inside_xomp_parallel = FALSE;
-  p_status->allow_xomp_nested_parallel = 0;
+  p_status->allow_xomp_nested_parallel = NO_NEST;
   p_status->xomp_nested_parallel_level = NO_NEST;
   p_status->start_time = clock();
   p_status->num_omp_threads = qthread_num_shepherds();
@@ -166,7 +166,7 @@ static bool get_inside_xomp_parallel(
 // increasing level of nesting of OMP parallel regions -- returns new level
 static void xomp_set_nested (XOMP_Status *p_status, bool val)
 {
-  p_status->allow_xomp_nested_parallel =  val;
+  p_status->allow_xomp_nested_parallel =  (val?ALLOW_NEST:NO_NEST);
 }
 
 static xomp_nest_level_t xomp_get_nested (XOMP_Status *p_status)
@@ -679,12 +679,10 @@ static void walkSyncTaskList(void)
     syncvar_t *syncVar;
     qthread_t *child;
     uint64_t ret = 0;
-    qthread_t *prev_child = NULL;
 
     while ((child = qthread_child_task()) ) {
         syncVar = qthread_return_value(child);
 	qthread_syncvar_readFF(&ret, syncVar);
-	prev_child = child;
 	qthread_remove_child(child);
     }
     qthread_releaseTaskListLock();
