@@ -59,7 +59,7 @@ enum qloop_handle_type {
     STATIC_SCHED,
     GUIDED_SCHED,
     DYNAMIC_SCHED,
-    RUNTIME_SCHED,
+    RUNTIME_SCHED
 };
 
 struct qqloop_step_handle_s {
