@@ -373,7 +373,7 @@ void XOMP_parallel_end(
 
 // used to compute time to dynamically determine minimum effective block size 
 #ifdef USE_RDTSC
-#include <stdint.h>
+#include "qthread-int.h"
 static uint64_t rdtsc(void);
 static QINLINE uint64_t rdtsc() {
 uint32_t lo, hi;

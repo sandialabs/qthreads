@@ -12,7 +12,7 @@
  * behavior will happen.
  **/
 
-#include <stdint.h>
+#include "qthread-int.h"
 
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)

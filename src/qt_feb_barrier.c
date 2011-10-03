@@ -3,7 +3,7 @@
 #endif
 
 #include <stdlib.h>
-#include <stdint.h>
+#include "qthread-int.h"
 #include <stdio.h>
 
 #include "qthread_asserts.h"

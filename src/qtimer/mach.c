@@ -6,7 +6,7 @@
 
 #include <stdlib.h> /* calloc() & free()*/
 
-#include <stdint.h>
+#include "qthread-int.h"
 #include <mach/mach_time.h>
 
 struct qtimer_s {

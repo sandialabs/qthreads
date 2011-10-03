@@ -8,7 +8,7 @@
 // here and had no available F/E implementation - 12/17/09 akp
 
 #include <stdlib.h>
-#include <stdint.h>
+#include "qthread-int.h"
 #include <stdio.h>
 
 #include "qt_barrier.h"

@@ -9,7 +9,7 @@
 #ifndef _tasks_qthreads_h_
 #define _tasks_qthreads_h_
 
-#include <stdint.h>
+#include "qthread-int.h"
 
 #include <qthread.h>
 #include <stdio.h>

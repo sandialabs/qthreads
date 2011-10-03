@@ -6,7 +6,7 @@
 #endif
 
 #include <stddef.h> /* for size_t (according to C89) */
-#include <stdint.h> /* for uintptr_t (according to C99) */
+#include "qthread-int.h" /* for uintptr_t (standin for C99's stdint.h) */
 
 #ifdef __cplusplus
 extern "C" {

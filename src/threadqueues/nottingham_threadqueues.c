@@ -4,7 +4,7 @@
 
 /* System Headers */
 #include <pthread.h>
-#include <stdint.h>
+#include "qthread-int.h"
 #include <emmintrin.h>
 #include <stdio.h>
 
