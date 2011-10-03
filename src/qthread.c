@@ -2675,16 +2675,16 @@ int qthread_migrate_to(const qthread_shepherd_id_t shepherd)
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 /* These are just accessor functions */
 # ifdef QTHREAD_LOG_BARRIER
-qt_barrier_t *qt_thread_barrier()            // get barrier active for this thread
+qt_barrier_t *qt_thread_barrier(void)            // get barrier active for this thread
 # else
-qt_feb_barrier_t * qt_thread_barrier()            // get barrier active for this thread
+qt_feb_barrier_t * qt_thread_barrier(void)            // get barrier active for this thread
 # endif
 {                      /*{{{ */
     return qt_parallel_region()->barrier;
 }                      /*}}} */
 
 void INTERNAL qt_set_unstealable(void);
-void INTERNAL qt_set_unstealable()
+void INTERNAL qt_set_unstealable(void)
 {                      /*{{{ */
     qthread_t *t = qthread_internal_self();
 
@@ -2692,7 +2692,7 @@ void INTERNAL qt_set_unstealable()
 }                      /*}}} */
 
 /* These are just accessor functions */
-qthread_parallel_region_t *qt_parallel_region() // get active parallel region
+qthread_parallel_region_t *qt_parallel_region(void) // get active parallel region
 {                                               /*{{{ */
     qthread_t *t = qthread_internal_self();
 
@@ -2704,7 +2704,7 @@ struct qqloop_step_handle_t *qt_loop_rose_queue_create(int64_t start,
                                                        int64_t incr);
 # define QTHREAD_NUM_LOOP_STRUCT 16
 
-int qt_omp_parallel_region_create()
+int qt_omp_parallel_region_create(void)
 {                      /*{{{ */
     int                        ret = 0;
     int                        workers;
@@ -2761,7 +2761,7 @@ void qt_move_to_orig()
     qthread_back_to_master(t);                              // return to work pile
 }
 
-void qt_omp_parallel_region_destroy()
+void qt_omp_parallel_region_destroy(void)
 {      /*{{{ */
 # if 0 // race condition on cleanup - commented out until found - akp 3/16/11
        // it looks like one thread reaches cleanup code before completing loop

@@ -28,7 +28,7 @@ void qtar_resize(aligned_t size){
                  // the size to first init is for the max thread number(0 based) -- so subtract one
 }
 
-aligned_t qtar_size(){
+aligned_t qtar_size(void){
   if(MArrFirst) return MArrFirst->activeSize;
   else return 0;
 }
@@ -200,7 +200,7 @@ static int64_t qtar_internal_up(
 
 // actual arrive first entry point
 
-int64_t qt_arrive_first_enter(
+static int64_t qt_arrive_first_enter(
     qt_arrive_first_t * b,
     qthread_shepherd_id_t shep)
 {				       /*{{{ */

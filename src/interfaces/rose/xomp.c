@@ -375,7 +375,7 @@ void XOMP_parallel_end(
 #ifdef USE_RDTSC
 #include "qthread-int.h"
 static uint64_t rdtsc(void);
-static QINLINE uint64_t rdtsc() {
+static QINLINE uint64_t rdtsc(void) {
 uint32_t lo, hi;
 __asm__ __volatile__ (      // serialize
 "xorl %%eax,%%eax \n        cpuid"
@@ -395,12 +395,12 @@ int qt_parallel_loop(qthread_parallel_region_t *pr, int myid){
 }
 #endif
 
-int qt_parallel_loop_incr(qthread_parallel_region_t *pr, int myid){
+static int qt_parallel_loop_incr(qthread_parallel_region_t *pr, int myid){
   int t = pr->currentLoopNum[myid]++;
   return t;
 }
 
-qqloop_step_handle_t *qt_get_parallel_loop_structure(qthread_parallel_region_t *pr, int num){
+static qqloop_step_handle_t *qt_get_parallel_loop_structure(qthread_parallel_region_t *pr, int num){
 
   qqloop_step_handle_t * t = (qqloop_step_handle_t *)(pr->currentLoopStruct[num%pr->clsSize]);
   return t;
