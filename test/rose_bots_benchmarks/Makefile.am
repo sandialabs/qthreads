@@ -5,7 +5,7 @@
 
 GLOBAL_COMMON = common/rose_bots_common.cc
 OUTPUTDIR = $(top_builddir)/src
-LIBS = $(OUTPUTDIR)/libqthread.la $(OUTPUTDIR)/libqthread_xomp.la
+LIBS = $(OUTPUTDIR)/libqthread_xomp.la $(OUTPUTDIR)/libqthread.la
 INCLUDES = -I$(top_srcdir)/test/rose_bots_benchmarks/common
 DEFINES=-D_OPENMP -DMANUAL_CUTOFF
 
