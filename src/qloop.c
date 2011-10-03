@@ -138,7 +138,7 @@ static aligned_t qloop_step_wrapper(struct qloop_step_wrapper_args *const restri
         qthread_fork_syncvar_copyargs_to((qthread_f)qloop_step_wrapper,
                                          arg + offset,
                                          0,
-                                         arg->rets + (new_id * sizeof(syncvar_t)),
+                                         ((syncvar_t*)arg->rets) + new_id,
                                          new_id);
 
         new_id = (1 << level) + my_id;    // level has been incremented
@@ -1556,7 +1556,7 @@ void qt_parallel_for(const qt_loop_step_f func,
 static void qt_naked_parallel_for(void *nakedArg) // This function must match qt_loop_step_f prototype so it can be called with qt_step_loop()
 {                                                 /*{{{*/
     void               **funcArgs = (void **)nakedArg;
-    const qt_loop_step_f func     = (const qt_loop_step_f)(funcArgs[0]);
+    const qt_loop_step_f func     = (qt_loop_step_f)(funcArgs[0]);
     const size_t         startat  = (size_t)funcArgs[1]; // get the for loop bounds from the argument
     const size_t         stopat   = (size_t)funcArgs[2];
     const size_t         step     = (size_t)funcArgs[3];

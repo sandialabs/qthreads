@@ -149,10 +149,13 @@ void qthread_task_free(qthread_t *);
 static qt_mpool generic_qthread_pool = NULL;
 static QINLINE qthread_t *ALLOC_QTHREAD(qthread_shepherd_t *shep)
 {                      /*{{{ */
-    qthread_t *tmp = (qthread_t *)qt_mpool_alloc(shep
-                                                 ? (shep->qthread_pool)
-                                                 : generic_qthread_pool);
+    qthread_t *tmp;
 
+    if (shep) {
+        tmp = (qthread_t *)qt_mpool_alloc(shep->qthread_pool);
+    } else {
+        tmp = (qthread_t *)qt_mpool_alloc(generic_qthread_pool);
+    }
     if (tmp != NULL) {
         tmp->creator_ptr = shep;
     }
@@ -1212,9 +1215,9 @@ static QINLINE void qthread_makecontext(qt_context_t *const c,
      * of the stack for some reason. To avoid problems, I'll also do this (even
      * though I have no idea why they do this). */
 #ifdef INVERSE_STACK_POINTER
-    c->uc_stack.ss_sp = (char *)(stack) + stacksize - 8;
+    c->uc_stack.ss_sp = (uint8_t *)(stack) + stacksize - 8;
 #else
-    c->uc_stack.ss_sp = (char *)(stack) + 8;
+    c->uc_stack.ss_sp = (uint8_t *)(stack) + 8;
 #endif
     c->uc_stack.ss_size = stacksize - 64;
 #ifdef UCSTACK_HAS_SSFLAGS
@@ -2199,6 +2202,11 @@ typedef enum {
     SYNCVAR_T,
     NO_SYNC
 } synctype_t;
+
+#ifdef __INTEL_COMPILER
+/* don't complain about meaningless qualifiers on casts (read: void*const) */
+# pragma warning (disable:191)
+#endif
 
 static int qthread_uberfork(qthread_f             f,
                             const void           *arg,

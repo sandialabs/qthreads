@@ -7,6 +7,8 @@
 #endif
 #include <stddef.h> /* for size_t, per C89 */
 
+#include "qthread-int.h"
+
 #define setcontext(u) qt_setmctxt(&(u)->uc_mcontext)
 #define getcontext(u) qt_getmctxt(&(u)->uc_mcontext)
 typedef struct mctxt mctxt_t;
@@ -39,9 +41,9 @@ struct mctxt {
 struct uctxt {
     mctxt_t uc_mcontext;
     struct {
-        void  *ss_sp;
-        size_t ss_size;
-        int    ss_flags;
+        uint8_t *ss_sp;
+        size_t   ss_size;
+        int      ss_flags;
     } uc_stack;
 };
 
