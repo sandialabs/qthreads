@@ -11,7 +11,7 @@ DEFINES=-D_OPENMP -DMANUAL_CUTOFF
 
 AM_CXXFLAGS = @RESTRICT_CXXFLAGS@ $(DEFINES)
 
-TESTS = \
+BOTS_TESTS = \
 		fft \
 		fib \
 		nqueens \
@@ -23,10 +23,10 @@ TESTS = \
 		alignment_task \
 		alignment_forloop
 
-buildall: $(TESTS)
-buildextra: $(TESTS)
+buildall: $(BOTS_TESTS)
+buildextra: $(BOTS_TESTS)
 
-EXTRA_PROGRAMS = $(TESTS)
+EXTRA_PROGRAMS = $(BOTS_TESTS)
 
 fib_SOURCES = $(GLOBAL_COMMON) \
 			  fib/rose_bots_main_fib.cc \
