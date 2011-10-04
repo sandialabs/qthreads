@@ -182,8 +182,7 @@ static void qt_loop_inner(const size_t     start,
         sync = malloc(steps * sizeof(syncvar_t));
         assert(sync);
     } else if (SINC_T == sync_type) {
-        sync = qt_sinc_create();
-        qt_sinc_willspawn(sync, steps);
+        sync = qt_sinc_create(0,NULL,NULL,steps);
     }
 
     for (i = start; i < stop; ++i) {
@@ -353,8 +352,7 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
         sync = malloc(maxworkers * sizeof(syncvar_t));
         assert(sync);
     } else if (SINC_T == sync_type) {
-        sync = qt_sinc_create();
-        qt_sinc_willspawn(sync, maxworkers);
+        sync = qt_sinc_create(0,NULL,NULL,maxworkers);
     }
 
     for (i = 0; i < maxworkers; i++) {
