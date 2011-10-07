@@ -104,6 +104,10 @@ EXTRA_PROGRAMS += \
 	 time_qt_loops
 CLEANFILES += $(EXTRA_PROGRAMS)
 
+if HAVE_PROG_TIMELIMIT
+TESTS_ENVIRONMENT = timelimit -T 30
+endif
+
 buildtests: $(TESTS)
 if COMPILE_ROSE_EXTENSIONS
 buildall: $(TESTS) $(EXTRA_PROGRAMS)

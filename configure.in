@@ -33,6 +33,7 @@ AC_SUBST(CLEANFILES)
 
 AC_CANONICAL_HOST
 AC_PROG_SED
+AC_CHECK_PROGS([timelimit_path],[timelimit])
 
 ## ----------------- ##
 ## Check the options ##
@@ -847,6 +848,7 @@ AS_IF([test "$enable_multinode" = "yes"],
 AM_CONDITIONAL([WANT_MULTINODE], [test "$enable_multinode" = "yes"])
 AM_CONDITIONAL([WANT_PORTALS_SHMEM_RUNTIME], [test "$with_multinode_runtime" = "shmemrt"])
 AM_CONDITIONAL([WANT_MPI_RUNTIME], [test "$with_multinode_runtime" = "mpi"])
+AM_CONDITIONAL([HAVE_PROG_TIMELIMIT], [test "x$ac_cv_prog_timelimit_path" != "x"])
 
 
 ## --------------- ##
