@@ -12,7 +12,7 @@
 
 typedef uint32_t my_value_t;
 
-void my_incr(void *tgt, void *src) {
+static void my_incr(void *tgt, void *src) {
     qthread_incr((my_value_t *)tgt, *(my_value_t *)src);
 }
 
