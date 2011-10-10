@@ -2852,7 +2852,12 @@ qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *shepherd_id)
     return worker ? (worker->packed_worker_id) : NO_WORKER;
 
 #else
-    return qthread_shep();
+    if (shepherd_id != NULL) {
+        *shepherd_id = qthread_shep();
+        return *shepherd_id;
+    } else {
+        return qthread_shep();
+    }
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 }                                      /*}}} */
 
