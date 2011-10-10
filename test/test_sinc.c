@@ -10,12 +10,11 @@
 #include <qthread/qt_sinc.h>
 #include "argparsing.h"
 
-typedef struct v_args_s {
-    size_t     depth;
-    qt_sinc_t *sinc;
-} v_args_t;
-
 typedef uint32_t my_value_t;
+
+void my_incr(void *tgt, void *src) {
+    qthread_incr((my_value_t *)tgt, *(my_value_t *)src);
+}
 
 static aligned_t wait_on_sinc(void *arg_)
 {
@@ -24,10 +23,13 @@ static aligned_t wait_on_sinc(void *arg_)
     my_value_t x;
     qt_sinc_wait(sinc, &x);
 
-    iprintf("Waited on x = %lu\n", (unsigned long)x);
-
     return 0;
 }
+
+typedef struct v_args_s {
+    size_t     depth;
+    qt_sinc_t *sinc;
+} v_args_t;
 
 static aligned_t visit(void *arg_)
 {
@@ -58,10 +60,6 @@ static aligned_t visit(void *arg_)
     }
 
     return 0;
-}
-
-void my_incr(void *tgt, void *src) {
-    *(my_value_t *)tgt += *(my_value_t *)src;
 }
 
 // //////////////////////////////////////////////////////////////////////////////
@@ -127,7 +125,7 @@ int main(int   argc,
             (unsigned long)total);
         return 0;
     } else {
-        iprintf("FAILED with x = %lu\n", (unsigned long)x);
+        iprintf("FAILED with total = %lu\n", (unsigned long)total);
         return 1;
     }
 }

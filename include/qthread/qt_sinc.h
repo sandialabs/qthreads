@@ -1,7 +1,8 @@
 #ifndef QT_SINC_H
 #define QT_SINC_H
 
-typedef long qt_sinc_count_t;
+//typedef long qt_sinc_count_t;
+typedef aligned_t qt_sinc_count_t;
 
 typedef void (*qt_sinc_op_f)(void *tgt, void *src);
 
@@ -12,6 +13,7 @@ typedef struct qt_sinc_s {
     syncvar_t     ready;
     void         *result;
     void         *initial_value;
+    aligned_t     remaining;
     size_t        sizeof_value;
     size_t        sizeof_count;
     size_t        sizeof_shep_value_part;
