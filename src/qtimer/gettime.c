@@ -72,7 +72,7 @@ static uint64_t qt_hashword(uint64_t key)
     return ((uint64_t)c + ((uint64_t)b << 32));
 } /*}}}*/
 
-long qtimer_fastrand(void)
+unsigned long qtimer_fastrand(void)
 {
     struct timespec s;
 

@@ -7,10 +7,10 @@ extern "C" {
 
 typedef struct qtimer_s *qtimer_t;
 
-long qtimer_fastrand(void);
-void   qtimer_start(qtimer_t);
-void   qtimer_stop(qtimer_t);
-double qtimer_secs(qtimer_t);
+unsigned long qtimer_fastrand(void);
+void          qtimer_start(qtimer_t);
+void          qtimer_stop(qtimer_t);
+double        qtimer_secs(qtimer_t);
 
 qtimer_t qtimer_create(void);
 void qtimer_destroy(qtimer_t);

@@ -81,9 +81,9 @@ void qtimer_start(qtimer_t q)
     q->start = vol_read_ul(timer_address);
 }
 
-long qtimer_fastrand(void)
+unsigned long qtimer_fastrand(void)
 {
-    return (long)(vol_read_ul(timer_address));
+    return vol_read_ul(timer_address);
 }
 
 void qtimer_stop(qtimer_t q)

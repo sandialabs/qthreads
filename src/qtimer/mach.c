@@ -18,9 +18,9 @@ void qtimer_start(qtimer_t q)
     q->start = mach_absolute_time();
 }
 
-long qtimer_fastrand(void)
+unsigned long qtimer_fastrand(void)
 {
-    return (long)(mach_absolute_time());
+    return (unsigned long)(mach_absolute_time());
 }
 
 void qtimer_stop(qtimer_t q)
