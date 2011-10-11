@@ -13,7 +13,7 @@
 typedef uint32_t my_value_t;
 
 static void my_incr(void *tgt, void *src) {
-    qthread_incr((my_value_t *)tgt, *(my_value_t *)src);
+    *(my_value_t *)tgt += *(my_value_t *)src;
 }
 
 static aligned_t wait_on_sinc(void *arg_)
