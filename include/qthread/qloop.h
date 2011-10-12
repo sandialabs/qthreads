@@ -61,6 +61,13 @@ void qt_loopaccum_balance(const size_t     start,
                           const qt_loopr_f func,
                           void *restrict   argptr,
                           const qt_accum_f acc);
+void qt_loopaccum_balance_sinc(const size_t     start,
+                               const size_t     stop,
+                               const size_t     size,
+                               void *restrict   out,
+                               const qt_loopr_f func,
+                               void *restrict   argptr,
+                               const qt_accum_f acc);
 void qt_loopaccum_balance_future(const size_t     start,
                                  const size_t     stop,
                                  const size_t     size,

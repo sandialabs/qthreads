@@ -101,7 +101,8 @@ EXTRA_PROGRAMS += \
 	 time_halo_swap_all \
 	 time_gcd \
 	 test_cpp_interface \
-	 time_qt_loops
+	 time_qt_loops \
+	 time_qt_loopaccums
 CLEANFILES += $(EXTRA_PROGRAMS)
 
 if HAVE_PROG_TIMELIMIT
@@ -349,6 +350,9 @@ time_halo_swap_all_DEPENDENCIES = $(QTHREADLIB)
 
 time_qt_loops_SOURCES = time_qt_loops.c
 time_qt_loops_DEPENDENCIES = $(QTHREADLIB)
+
+time_qt_loopaccums_SOURCES = time_qt_loopaccums.c
+time_qt_loopaccums_DEPENDENCIES = $(QTHREADLIB)
 
 test_sinc_SOURCES = test_sinc.c
 test_sinc_DEPENDENCIES = $(QTHREADLIB)

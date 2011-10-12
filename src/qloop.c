@@ -422,9 +422,27 @@ struct qloopaccum_wrapper_args {
     void *restrict ret;
 };
 
+struct qloopaccum_sinc_wrapper_args {
+    qt_loopr_f     func;
+    size_t         startat, stopat;
+    void *restrict arg;
+    void *restrict ret;
+    qt_sinc_t     *sinc;
+};
+
 static aligned_t qloopaccum_wrapper(const struct qloopaccum_wrapper_args *arg)
 {                                      /*{{{ */
     arg->func(arg->startat, arg->stopat, arg->arg, arg->ret);
+    return 0;
+}                                      /*}}} */
+
+static aligned_t qloopaccum_sinc_wrapper(
+    const struct qloopaccum_sinc_wrapper_args *arg)
+{                                      /*{{{ */
+    arg->func(arg->startat, arg->stopat, arg->arg, arg->ret);
+
+    qt_sinc_submit(arg->sinc, arg->ret);
+
     return 0;
 }                                      /*}}} */
 
@@ -488,6 +506,63 @@ static QINLINE void qt_loopaccum_balance_inner(const size_t     start,
     free(qwa);
 }                                      /*}}} */
 
+static QINLINE void qt_loopaccum_balance_sinc_inner(const size_t     start,
+                                                    const size_t     stop,
+                                                    const size_t     size,
+                                                    void *restrict   out,
+                                                    const qt_loopr_f func,
+                                                    void *restrict   argptr,
+                                                    const qt_accum_f acc,
+                                                    const int        future)
+{                                      /*{{{ */
+    qthread_shepherd_id_t                 i;
+    struct qloopaccum_sinc_wrapper_args *const qwa      = (struct qloopaccum_sinc_wrapper_args *)malloc(sizeof(struct qloopaccum_sinc_wrapper_args) * qthread_num_shepherds());
+    aligned_t initial_value = 0;
+    qt_sinc_t *sinc = 
+        qt_sinc_create(size, &initial_value, acc, qthread_num_shepherds());
+    char                                 *realrets = NULL;
+    const size_t                          each     = (stop - start) / qthread_num_shepherds();
+    size_t                                extra    = (stop - start) - (each * qthread_num_shepherds());
+    size_t                                iterend  = start;
+
+    if (qthread_num_shepherds() > 1) {
+        realrets = (char *)malloc(size * (qthread_num_shepherds() - 1));
+        assert(realrets);
+    }
+    assert(qwa);
+    assert(func);
+    assert(acc);
+
+    for (i = 0; i < qthread_num_shepherds(); i++) {
+        qwa[i].func = func;
+        qwa[i].arg  = argptr;
+        if (i == 0) {
+            qwa[0].ret = out;
+        } else {
+            qwa[i].ret = realrets + ((i - 1) * size);
+        }
+        qwa[i].startat = iterend;
+        qwa[i].stopat  = iterend + each;
+        if (extra > 0) {
+            qwa[i].stopat++;
+            extra--;
+        }
+        iterend = qwa[i].stopat;
+        qwa[i].sinc = sinc;
+        if (!future) {
+            qassert(qthread_fork_syncvar_to((qthread_f)qloopaccum_sinc_wrapper, qwa + i, NULL, i), QTHREAD_SUCCESS);
+        } else {
+            qassert(qthread_fork_syncvar_future_to((qthread_f)qloopaccum_sinc_wrapper, qwa + i, NULL, i), QTHREAD_SUCCESS);
+        }
+    }
+    qt_sinc_wait(sinc, out);
+    qt_sinc_destroy(sinc);
+    if (realrets) {
+        free(realrets);
+    }
+    free(qwa);
+}                                      /*}}} */
+
 void qt_loopaccum_balance(const size_t     start,
                           const size_t     stop,
                           const size_t     size,
@@ -497,6 +572,17 @@ void qt_loopaccum_balance(const size_t     start,
                           const qt_accum_f acc)
 {                                      /*{{{ */
     qt_loopaccum_balance_inner(start, stop, size, out, func, argptr, acc, 0);
+}                                      /*}}} */
+
+void qt_loopaccum_balance_sinc(const size_t     start,
+                               const size_t     stop,
+                               const size_t     size,
+                               void *restrict   out,
+                               const qt_loopr_f func,
+                               void *restrict   argptr,
+                               const qt_accum_f acc)
+{                                      /*{{{ */
+    qt_loopaccum_balance_sinc_inner(start, stop, size, out, func, argptr, acc, 0);
 }                                      /*}}} */
 
 void qt_loopaccum_balance_future(const size_t     start,
