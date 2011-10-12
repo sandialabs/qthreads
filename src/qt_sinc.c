@@ -57,8 +57,9 @@ qt_sinc_t *qt_sinc_create(const size_t  sizeof_value,
         }
     } else {
         sinc->values = NULL;
-        sinc->result = NULL;
     }
+    
+    sinc->result = NULL;
 
     // Allocate counts array
     const size_t sizeof_count = sizeof(qt_sinc_count_t);
