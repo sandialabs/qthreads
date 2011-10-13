@@ -83,6 +83,12 @@ void qtimer_start(qtimer_t q)
 
 unsigned long qtimer_fastrand(void)
 {
+    if (NULL == timer_address) {
+        if (0 != qtimer_init()) {
+            return 0;
+        }
+    }
+
     return vol_read_ul(timer_address);
 }
 
