@@ -24,6 +24,10 @@ void qt_loop(const size_t    start,
              const size_t    stop,
              const qt_loop_f func,
              void           *argptr);
+void qt_loop_aligned(const size_t    start,
+                  const size_t    stop,
+                  const qt_loop_f func,
+                  void           *argptr);
 void qt_loop_sinc(const size_t    start,
                   const size_t    stop,
                   const qt_loop_f func,
@@ -46,6 +50,10 @@ void qt_loop_balance(const size_t    start,
                      const size_t    stop,
                      const qt_loop_f func,
                      void           *argptr);
+void qt_loop_balance_aligned(const size_t    start,
+			  const size_t    stop,
+                     	  const qt_loop_f func,
+                     	  void           *argptr);
 void qt_loop_balance_sinc(const size_t    start,
 			  const size_t    stop,
                      	  const qt_loop_f func,
