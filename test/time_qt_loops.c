@@ -12,12 +12,12 @@
 static aligned_t threads  = 0;
 static aligned_t numincrs = 1024;
 static size_t   *sleeplen;
-static qtimer_t timer;
-static size_t numiters = 10;
+static qtimer_t  timer;
+static size_t    numiters = 10;
 
 static void sumsleep(const size_t startat,
-                const size_t stopat,
-                void        *arg_)
+                     const size_t stopat,
+                     void        *arg_)
 {
     qthread_incr(&threads, stopat - startat);
     for (size_t i = startat; i < stopat; ++i) {
@@ -32,9 +32,16 @@ static void sum(const size_t startat,
     qthread_incr(&threads, stopat - startat);
 }
 
-static void run_iterations(void (*loop)(const size_t a, const size_t b, const qt_loop_f f, void * c), qt_loop_f func, double overhead, const char *type, const char* name)
+static void run_iterations(void                                                 (*loop)(const size_t a,
+                                                                const size_t    b,
+                                                                const qt_loop_f f,
+                                                                void           *c),
+                           qt_loop_f                                            func,
+                           double                                               overhead,
+                           const char                                          *type,
+                           const char                                          *name)
 {
-    double total    = 0;
+    double total = 0;
 
     for (int i = 0; i < numiters; ++i) {
         threads = 0;
@@ -44,7 +51,7 @@ static void run_iterations(void (*loop)(const size_t a, const size_t b, const qt
         qtimer_stop(timer);
         total += qtimer_secs(timer);
     }
-    printf("%-21s %-7s %8lu %f\n", type, name, (unsigned long)numincrs,
+    printf("%-21s %-9s %8lu %f\n", type, name, (unsigned long)numincrs,
            (total / numiters) - overhead);
 }
 
@@ -69,26 +76,30 @@ int main(int   argc,
     overhead /= qthread_num_workers();
 
     printf("Pure Increment\n");
-    printf("%-21s %-7s %8s time\n", "version", "sync", "iters");
+    printf("%-21s %-9s %8s time\n", "version", "sync", "iters");
 
     qt_loop(0, numincrs, sum, NULL);
-    run_iterations(qt_loop,         sum,0, "thread per iteration", "syncvar");
-    run_iterations(qt_loop_aligned, sum,0, "thread per iteration", "aligned");
-    run_iterations(qt_loop_sinc,    sum,0, "thread per iteration", "sinc");
-    run_iterations(qt_loop_balance, sum,0, "balanced",             "syncvar");
-    run_iterations(qt_loop_balance_aligned, sum,0, "balanced", "aligned");
-    run_iterations(qt_loop_balance_sinc, sum,0, "balanced", "sinc");
+    run_iterations(qt_loop_dc,              sum, 0, "thread per iteration", "donecount");
+    run_iterations(qt_loop_aligned,         sum, 0, "thread per iteration", "aligned");
+    run_iterations(qt_loop,                 sum, 0, "thread per iteration", "syncvar");
+    run_iterations(qt_loop_sinc,            sum, 0, "thread per iteration", "sinc");
+    run_iterations(qt_loop_balance_dc,      sum, 0, "balanced",             "donecount");
+    run_iterations(qt_loop_balance_aligned, sum, 0, "balanced",             "aligned");
+    run_iterations(qt_loop_balance,         sum, 0, "balanced",             "syncvar");
+    run_iterations(qt_loop_balance_sinc,    sum, 0, "balanced",             "sinc");
 
     printf("\n");
     printf("Increment with Sleep (%f secs overhead)\n", overhead);
-    printf("%-21s %-7s %8s time\n", "version", "sync", "iters");
+    printf("%-21s %-9s %8s time\n", "version", "sync", "iters");
 
-    run_iterations(qt_loop, sumsleep, overhead, "thread per iteration", "syncvar");
-    run_iterations(qt_loop_aligned, sumsleep, overhead, "thread per iteration", "aligned");
-    run_iterations(qt_loop_sinc, sumsleep, overhead, "thread per iteration", "sinc");
-    run_iterations(qt_loop_balance, sumsleep, overhead, "balanced", "syncvar");
-    run_iterations(qt_loop_balance_aligned, sumsleep, overhead, "balanced", "aligned");
-    run_iterations(qt_loop_balance_sinc, sumsleep, overhead, "balanced", "sinc");
+    run_iterations(qt_loop_dc,              sumsleep, overhead, "thread per iteration", "donecount");
+    run_iterations(qt_loop_aligned,         sumsleep, overhead, "thread per iteration", "aligned");
+    run_iterations(qt_loop,                 sumsleep, overhead, "thread per iteration", "syncvar");
+    run_iterations(qt_loop_sinc,            sumsleep, overhead, "thread per iteration", "sinc");
+    run_iterations(qt_loop_balance_dc,      sumsleep, overhead, "balanced",             "donecount");
+    run_iterations(qt_loop_balance_aligned, sumsleep, overhead, "balanced",             "aligned");
+    run_iterations(qt_loop_balance,         sumsleep, overhead, "balanced",             "syncvar");
+    run_iterations(qt_loop_balance_sinc,    sumsleep, overhead, "balanced",             "sinc");
 
     qtimer_destroy(timer);
     return 0;

@@ -24,10 +24,14 @@ void qt_loop(const size_t    start,
              const size_t    stop,
              const qt_loop_f func,
              void           *argptr);
+void qt_loop_dc(const size_t    start,
+                const size_t    stop,
+                const qt_loop_f func,
+                void           *argptr);
 void qt_loop_aligned(const size_t    start,
-                  const size_t    stop,
-                  const qt_loop_f func,
-                  void           *argptr);
+                     const size_t    stop,
+                     const qt_loop_f func,
+                     void           *argptr);
 void qt_loop_sinc(const size_t    start,
                   const size_t    stop,
                   const qt_loop_f func,
@@ -50,14 +54,18 @@ void qt_loop_balance(const size_t    start,
                      const size_t    stop,
                      const qt_loop_f func,
                      void           *argptr);
+void qt_loop_balance_dc(const size_t    start,
+                        const size_t    stop,
+                        const qt_loop_f func,
+                        void           *argptr);
 void qt_loop_balance_aligned(const size_t    start,
-			  const size_t    stop,
-                     	  const qt_loop_f func,
-                     	  void           *argptr);
+                             const size_t    stop,
+                             const qt_loop_f func,
+                             void           *argptr);
 void qt_loop_balance_sinc(const size_t    start,
-			  const size_t    stop,
-                     	  const qt_loop_f func,
-                     	  void           *argptr);
+                          const size_t    stop,
+                          const qt_loop_f func,
+                          void           *argptr);
 void qt_loop_balance_future(const size_t    start,
                             const size_t    stop,
                             const qt_loop_f func,
