@@ -25,12 +25,13 @@ void foo(void) { printf("%s\n", __func__); }],
 	AS_IF([test x$qt_cv_c99_FUNCTION = xyes],
     	  [AC_DEFINE([HAVE_GNU_FUNCTION], [1],
 			  		 [Define if the compiler supports GNU-style __FUNCTION__.])
-		   found_fname=yes])
-	AS_IF([test x$qt_cv_c99_func = xyes],
-    	  [AC_DEFINE([HAVE_C99_FUNC], [1],
-			  		 [Define if the compiler supports GNU-style __FUNCTION__.])
-		   AC_DEFINE([__FUNCTION__], [__func__], [Map __func__ to __FUNCTION__, if available])
-		   found_fname=yes])
+		   found_fname=yes],
+		  [AS_IF([test x$qt_cv_c99_func = xyes],
+    	  		 [AC_DEFINE([HAVE_C99_FUNC], [1],
+			  		        [Define if the compiler supports GNU-style __FUNCTION__.])
+				  AC_DEFINE([__FUNCTION__], [__func__],
+					        [Map __func__ to __FUNCTION__, if available and necessary])
+				  found_fname=yes])])
 	AS_IF([test x$found_fname = xno],
 		  [AC_DEFINE([__FUNCTION__], ["unknown_func"], [Last resort, if no function name macros can be found])])
 ])
