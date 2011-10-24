@@ -89,7 +89,9 @@ int main(int   argc,
     run_iterations(qt_loop_balance_sinc,    sum, 0, "balanced",             "sinc");
 
     printf("\n");
-    printf("Increment with Sleep (%f secs overhead)\n", overhead);
+    printf("Increment with Sleep (%f secs overhead, %f secs per worker)\n",
+	    overhead * qthread_num_workers(),
+	    overhead);
     printf("%-21s %-9s %8s time\n", "version", "sync", "iters");
 
     run_iterations(qt_loop_dc,              sumsleep, overhead, "thread per iteration", "donecount");
