@@ -381,6 +381,9 @@ AS_IF([test "x$enable_picky" = xyes],
          IBM_XL)
            CFLAGS="$CFLAGS"
            ;;
+         Convey)
+           CFLAGS="-W -Wall $CFLAGS"
+           ;;
          *)
            CFLAGS="-Wall $CFLAGS"
            ;;
@@ -400,6 +403,9 @@ AS_IF([test "x$enable_picky" = xyes],
            ;;
          IBM_XL)
            CFLAGS="$CFLAGS"
+           ;;
+         Convey)
+           CFLAGS="-W -Wall $CFLAGS"
            ;;
          *)
            CXXFLAGS="-Wall $CXXFLAGS"
