@@ -18,6 +18,10 @@ AC_CACHE_CHECK([what kind of C compiler $CC is],
   [qthread_cv_c_compiler_type],
   [AC_LANG_PUSH([C])
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
+     [_QTHREAD_CHECK_IFDEF([__CONVEY],[qthread_cv_c_compiler_type=Convey])])
+   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
+     [_QTHREAD_CHECK_IFDEF([__OPEN64__],[qthread_cv_c_compiler_type=Open64])])
+   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__TURBO_C__],[qthread_cv_c_compiler_type=Borland])])
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__DECC],[qthread_cv_c_compiler_type=Compaq])])
@@ -113,6 +117,10 @@ AC_CACHE_CHECK([what kind of C compiler $CC is],
 AC_CACHE_CHECK([what kind of C++ compiler $CXX is],
   [qthread_cv_cxx_compiler_type],
   [AC_LANG_PUSH([C++])
+   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
+     [_QTHREAD_CHECK_IFDEF([__CONVEY],[qthread_cv_cxx_compiler_type=Convey])])
+   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
+     [_QTHREAD_CHECK_IFDEF([__OPEN64__],[qthread_cv_cxx_compiler_type=Open64])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__BORLANDC__],[qthread_cv_cxx_compiler_type=Borland])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
