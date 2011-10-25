@@ -26,7 +26,8 @@ BASIC_TESTS = test_basic \
 			  test_sinc \
 			  test_tasklocal \
 			  test_tasklocal_no_default \
-			  test_tasklocal_no_argcopy
+			  test_tasklocal_no_argcopy \
+			  test_read
 
 COMPLEX_TESTS = test_qt_loop \
 				test_qt_loop_sinc \
@@ -57,10 +58,6 @@ endif
 TESTS =  $(BASIC_TESTS) $(COMPLEX_TESTS)
 
 EXTRA_PROGRAMS = test_wavefront
-
-if USE_SYSCALL_INTERCEPT
-TESTS += test_read
-endif
 
 if COMPILE_ROSE_EXTENSIONS
 TESTS += test_log_barrier

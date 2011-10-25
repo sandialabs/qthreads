@@ -15,7 +15,7 @@ libqthread_la_SOURCES += \
 			 syscalls/sys_select.c \
 			 syscalls/sys_sleep.c \
 			 syscalls/sys_system.c \
-			 syscalls/sys_usleep.c \
 			 syscalls/sys_user_defined.c \
+			 syscalls/sys_usleep.c \
 			 syscalls/sys_wait4.c \
 			 syscalls/sys_write.c

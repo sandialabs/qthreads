@@ -80,6 +80,10 @@ AC_ARG_ENABLE([syscall-interception],
               [AS_HELP_STRING([--enable-syscall-interception],
                               [Intercept blocking syscalls (or attempt to). Experimental.])])
 
+AC_ARG_ENABLE([header-syscall-interception],
+			  [AS_HELP_STRING([--enable-header-syscall-interception],
+							  [Intercept blocking syscalls by mangling them via #defs. Experimental.])])
+
 AC_ARG_ENABLE([rcrtool],
               [AS_HELP_STRING([--enable-rcrtool],
                               [Includes support for using qthreads with the
@@ -800,6 +804,10 @@ AS_IF([test "x$enable_inlined_functions" != "xno"],
       [qinline_define=""])
 AC_DEFINE_UNQUOTED([QINLINE], [$qinline_define], [Allow function inlining to be toggled])
 
+AS_IF([test "x$enable_header_syscall_interception" == xyes],
+	  [AC_DEFINE([USE_HEADER_SYSCALLS], [1],
+				 [Define to allow blocking syscalls to be mangled into qthread-specific variants])])
+
 AC_CACHE_SAVE
 
 ## External libraries that help on some architectures
@@ -884,7 +892,6 @@ AM_CONDITIONAL([COMPILE_ROSE_EXTENSIONS], [test "x$enable_rose_extensions" = "xy
 AM_CONDITIONAL([COMPILE_RCRTOOL], [test "x$enable_rcrtool" = "xyes"])
 AM_CONDITIONAL([QTHREAD_MULTITHREADED_SHEPHERDS], [test "x$enable_multithreaded_shepherds" = "xyes"])
 AM_CONDITIONAL([COMPILE_CHAPEL_INTERFACE], [test "x$compile_chapel_interface" = "xyes"])
-AM_CONDITIONAL([USE_SYSCALL_INTERCEPT], [test "x$enable_syscall_interception" = "xyes"])
 
 AC_CONFIG_HEADERS([include/config.h include/qthread/common.h])
 AC_CONFIG_FILES([Makefile
