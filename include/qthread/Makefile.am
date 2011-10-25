@@ -17,6 +17,7 @@ pkginclude_HEADERS = \
 	qloop.hpp \
 	qpool.h \
 	qt_sinc.h \
+	qt_syscalls.h \
 	qthread.h \
 	qthread.hpp \
 	qtimer.h \

@@ -28,15 +28,19 @@ int usleep(useconds_t useconds)
         } while (qtimer_secs(t) < seconds);
         return 0;
     } else {
-#if HAVE_DECL_SYS_USLEEP
+#if HAVE_SYSCALL
+# if HAVE_DECL_SYS_USLEEP
         return syscall(SYS_usleep, useconds);
 
-#elif HAVE_DECL_SYS_NANOSLEEP
+# elif HAVE_DECL_SYS_NANOSLEEP
         return syscall(SYS_nanosleep, useconds * 1e3);
 
+# else
+        return 0;
+# endif
 #else
         return 0;
-#endif
+#endif /* if HAVE_SYSCALL */
     }
 }
 

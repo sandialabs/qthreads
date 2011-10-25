@@ -4,52 +4,18 @@
 # Copyright (c) 2011 Sandia Corporation
 #
 
-libqthread_la_SOURCES += syscalls/sys_user_defined.c
-
-if USE_SYSCALL_INTERCEPT
 libqthread_la_SOURCES += \
+			 syscalls/sys_accept.c \
+			 syscalls/sys_connect.c \
 			 syscalls/sys_nanosleep.c \
+			 syscalls/sys_poll.c \
+			 syscalls/sys_pread.c \
+			 syscalls/sys_pwrite.c \
+			 syscalls/sys_read.c \
+			 syscalls/sys_select.c \
 			 syscalls/sys_sleep.c \
-			 syscalls/sys_usleep.c
-
-if HAVE_DECL_SYS_WRITE
-libqthread_la_SOURCES += syscalls/sys_write.c
-endif
-
-if HAVE_DECL_SYS_PWRITE
-libqthread_la_SOURCES += syscalls/sys_pwrite.c
-endif
-
-if HAVE_DECL_SYS_READ
-libqthread_la_SOURCES += syscalls/sys_read.c
-endif
-
-if HAVE_DECL_SYS_POLL
-libqthread_la_SOURCES += syscalls/sys_poll.c
-endif
-
-if HAVE_DECL_SYS_CONNECT
-libqthread_la_SOURCES += syscalls/sys_connect.c
-endif
-
-if HAVE_DECL_SYS_ACCEPT
-libqthread_la_SOURCES += syscalls/sys_accept.c
-endif
-
-if HAVE_DECL_SYS_WAIT4
-libqthread_la_SOURCES += syscalls/sys_wait4.c
-endif
-
-if HAVE_DECL_SYS_SELECT
-libqthread_la_SOURCES += syscalls/sys_select.c
-endif
-
-if HAVE_DECL_SYS_SYSTEM
-libqthread_la_SOURCES += syscalls/sys_system.c
-endif
-
-if HAVE_DECL_SYS_PREAD
-libqthread_la_SOURCES += syscalls/sys_pread.c
-endif
-
-endif
+			 syscalls/sys_system.c \
+			 syscalls/sys_usleep.c \
+			 syscalls/sys_user_defined.c \
+			 syscalls/sys_wait4.c \
+			 syscalls/sys_write.c

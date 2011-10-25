@@ -27,18 +27,22 @@ unsigned int sleep(unsigned int seconds)
         } while (qtimer_secs(t) < seconds);
         return 0;
     } else {
-#if HAVE_DECL_SYS_SLEEP
+#if HAVE_SYSCALL
+# if HAVE_DECL_SYS_SLEEP
         return syscall(SYS_sleep, seconds);
 
-#elif HAVE_DECL_SYS_USLEEP
+# elif HAVE_DECL_SYS_USLEEP
         return syscall(SYS_usleep, seconds * 1e6);
 
-#elif HAVE_DECL_SYS_NANOSLEEP
+# elif HAVE_DECL_SYS_NANOSLEEP
         return syscall(SYS_nanosleep, seconds * 1e9);
 
-#else
+# else
         return 0;
-#endif
+# endif
+#else /* if HAVE_SYSCALL */
+        return 0;
+#endif /* if HAVE_SYSCALL */
     }
 }
 

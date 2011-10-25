@@ -31,7 +31,7 @@ int nanosleep(const struct timespec *rqtp,
         } while (qtimer_secs(t) < seconds);
         return 0;
     } else {
-#if HAVE_DECL_SYS_NANOSLEEP
+#if HAVE_SYSCALL && HAVE_DECL_SYS_NANOSLEEP
         return syscall(SYS_nanosleep, rqtp, rmtp);
 
 #else
