@@ -7,9 +7,11 @@
 #include <stdio.h>                     /* for fprintf() */
 #include <stdlib.h>                    /* for abort() */
 #include <sys/time.h>                  /* for gettimeofday() */
+#ifdef HAVE_SYS_SYSCALL_H
 /* - syscall(2) */
-#include <sys/syscall.h>
-#include <unistd.h>
+# include <sys/syscall.h>
+# include <unistd.h>
+#endif
 /* - accept(2) */
 #include <sys/socket.h>
 /* - connect(2) */
@@ -143,114 +145,171 @@ void INTERNAL qt_process_blocking_calls(void)
     switch(item->op) {
         default:
             fprintf(stderr, "Unhandled syscall: %u\n", (unsigned int)item->op);
-            // abort();
-#if HAVE_DECL_SYS_ACCEPT
+        // abort();
         case ACCEPT:
         {
             int socket;
             memcpy(&socket, &item->args[0], sizeof(int));
+#if HAVE_SYSCALL && HAVE_DECL_SYS_ACCEPT
             item->ret = syscall(SYS_accept,
                                 socket,
                                 (struct sockaddr *)item->args[1],
                                 (socklen_t *)item->args[2]);
+#else
+            item->ret = accept(socket,
+                               (struct sockaddr *)item->args[1],
+                               (socklen_t *)item->args[2]);
+#endif
             break;
         }
-#endif  /* if HAVE_DECL_SYS_ACCEPT */
-#if HAVE_DECL_SYS_CONNECT
         case CONNECT:
         {
             int socket;
             memcpy(&socket, &item->args[0], sizeof(int));
+#if HAVE_SYSCALL && HAVE_DECL_SYS_CONNECT
             item->ret = syscall(SYS_connect,
                                 socket,
                                 (const struct sockaddr *)item->args[1],
                                 (socklen_t)item->args[2]);
+#else
+            item->ret = connect(socket,
+                                (const struct sockaddr *)item->args[1],
+                                (socklen_t)item->args[2]);
+#endif      /* if HAVE_DECL_SYS_CONNECT */
             break;
         }
-#endif  /* if HAVE_DECL_SYS_CONNECT */
         case POLL:
         {
             nfds_t nfds;
             int    timeout;
             memcpy(&nfds, &item->args[1], sizeof(nfds_t));
             memcpy(&timeout, &item->args[2], sizeof(int));
+#if HAVE_SYSCALL && HAVE_DECL_SYS_POLL
             item->ret = syscall(SYS_poll,
                                 (struct pollfd *)item->args[0],
                                 nfds,
                                 timeout);
+#else
+            item->ret = poll((struct pollfd *)item->args[0],
+                             nfds,
+                             timeout);
+#endif
             break;
         }
         case READ:
         {
             int fd;
             memcpy(&fd, &item->args[0], sizeof(int));
+#if HAVE_SYSCALL && HAVE_DECL_SYS_READ
             item->ret = syscall(SYS_read,
                                 fd,
                                 (void *)item->args[1],
                                 (size_t)item->args[2]);
+#else
+            item->ret = read(fd,
+                             (void *)item->args[1],
+                             (size_t)item->args[2]);
+#endif
             break;
         }
-#if HAVE_DECL_SYS_PREAD
         case PREAD:
         {
             int   fd;
             off_t offset;
             memcpy(&fd, &item->args[0], sizeof(int));
             memcpy(&offset, &item->args[3], sizeof(off_t));
+#if HAVE_SYSCALL && HAVE_DECL_SYS_PREAD
             item->ret = syscall(SYS_pread,
                                 fd,
                                 (void *)item->args[1],
                                 (size_t)item->args[2],
                                 offset);
+#else
+            item->ret = pread(fd,
+                              (void *)item->args[1],
+                              (size_t)item->args[2],
+                              offset);
+#endif
             break;
         }
-#endif  /* if HAVE_DECL_SYS_PREAD */
         /* case RECV:
          * case RECVFROM: */
-#if HAVE_DECL_SYS_SELECT
         case SELECT:
         {
             int nfds;
             memcpy(&nfds, &item->args[0], sizeof(int));
+#if HAVE_SYSCALL && HAVE_DECL_SYS_SELECT
             item->ret = syscall(SYS_select,
                                 nfds,
                                 (fd_set *)item->args[1],
                                 (fd_set *)item->args[2],
                                 (fd_set *)item->args[3],
                                 (struct timeval *)item->args[4]);
+#else
+            item->ret = select(nfds,
+                               (fd_set *)item->args[1],
+                               (fd_set *)item->args[2],
+                               (fd_set *)item->args[3],
+                               (struct timeval *)item->args[4]);
+#endif      /* if HAVE_DECL_SYS_SELECT */
             break;
         }
-#endif  /* if HAVE_DECL_SYS_SELECT */
-            /* case SEND:
-             * case SENDTO: */
-            /* case SIGWAIT: */
-#if HAVE_DECL_SYS_SYSTEM
+        /* case SEND:
+         * case SENDTO: */
+        /* case SIGWAIT: */
         case SYSTEM:
+#if HAVE_SYSCALL && HAVE_DECL_SYS_SYSTEM
             item->ret = syscall(SYS_system,
                                 (const char *)item->args[0]);
-            break;
+#else
+            item->ret = system((const char *)item->args[0]);
 #endif
-#if HAVE_DECL_SYS_WAIT4
+            break;
         case WAIT4:
         {
             pid_t pid;
             int   options;
             memcpy(&pid, &item->args[0], sizeof(pid_t));
             memcpy(&options, &item->args[2], sizeof(int));
+#if HAVE_SYSCALL && HAVE_DECL_SYS_WAIT4
             item->ret = syscall(SYS_wait4,
                                 pid,
                                 (int *)item->args[1],
                                 options,
                                 (struct rusage *)item->args[3]);
+#else
+            item->ret = wait4(pid,
+                              (int *)item->args[1],
+                              options,
+                              (struct rusage *)item->args[3]);
+#endif
             break;
         }
-#endif  /* if HAVE_DECL_SYS_WAIT4 */
         case WRITE:
+#if HAVE_SYSCALL && HAVE_DECL_SYS_WRITE
             item->ret = syscall(SYS_write,
+                                (int)item->args[0],
+                                (const void *)item->args[1],
+                                (size_t)item->args[2]);
+#else
+            item->ret = write((int)item->args[0],
+                              (const void *)item->args[1],
+                              (size_t)item->args[2]);
+#endif
+        case PWRITE:
+#if HAVE_SYSCALL && HAVE_DECL_SYS_PWRITE
+            item->ret = syscall(SYS_pwrite,
                                 (int)item->args[0],
                                 (const void *)item->args[1],
                                 (size_t)item->args[2],
                                 (off_t)item->args[3]);
+#else
+            item->ret = pwrite((int)item->args[0],
+                               (const void *)item->args[1],
+                               (size_t)item->args[2],
+                               (off_t)item->args[3]);
+#endif
+            break;
         case USER_DEFINED:
         {
             qt_context_t my_context;

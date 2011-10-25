@@ -31,6 +31,7 @@ typedef enum blocking_syscalls {
     USLEEP,
     WAIT4,
     WRITE,
+    PWRITE,
     USER_DEFINED
 } syscall_t;
 
