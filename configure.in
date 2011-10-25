@@ -402,10 +402,10 @@ AS_IF([test "x$enable_picky" = xyes],
            CXXFLAGS="-Minform=inform $CXXFLAGS"
            ;;
          IBM_XL)
-           CFLAGS="$CFLAGS"
+           CXXFLAGS="$CXXFLAGS"
            ;;
          Convey)
-           CFLAGS="-W -Wall $CFLAGS"
+           CXXFLAGS="-W -Wall $CXXFLAGS"
            ;;
          *)
            CXXFLAGS="-Wall $CXXFLAGS"
