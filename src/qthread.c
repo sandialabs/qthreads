@@ -903,7 +903,7 @@ int qthread_initialize(void)
 
         qassert(getrlimit(RLIMIT_STACK, &rlp), 0);
         qthread_debug(CORE_DETAILS, "stack sizes ... cur: %u max: %u\n", rlp.rlim_cur, rlp.rlim_max);
-        if (rlp.rlim_cur == RLIM_INFINITY) {
+        if (rlp.rlim_cur == RLIM_INFINITY || rlp.rlim_cur == 0) {
             qlib->master_stack_size = 8 * 1024 * 1024;
         } else {
             qlib->master_stack_size = (unsigned int)(rlp.rlim_cur);
@@ -1023,6 +1023,7 @@ int qthread_initialize(void)
     qassert_ret(qlib->mccoy_thread, QTHREAD_MALLOC_ERROR);
 
     qthread_debug(CORE_DETAILS, "master_context = %p\n", &(qlib->master_context));
+    qthread_debug(CORE_DETAILS, "master_stack_size = %u\n", (unsigned)(qlib->master_stack_size));
     qlib->master_stack = calloc(1, qlib->master_stack_size);
     qassert_ret(qlib->master_stack, QTHREAD_MALLOC_ERROR);
     qthread_debug(CORE_DETAILS, "master_stack = %p\n", qlib->master_stack);
