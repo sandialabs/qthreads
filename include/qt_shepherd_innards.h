@@ -29,12 +29,16 @@ typedef struct qthread_shepherd_s qthread_shepherd_t;
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 
+#define STEAL_BUFFER_LENGTH 128
+
 struct qthread_worker_s
 {
     pthread_t worker;
     qthread_worker_id_t worker_id;
     qthread_worker_id_t packed_worker_id;
     qthread_shepherd_t *shepherd;
+    struct qthread_s  **nostealbuffer;    
+    struct qthread_s  **stealbuffer;    
     uintptr_t hazard_ptrs[HAZARD_PTRS_PER_SHEP]; /* hazard pointers (see http://portal.acm.org/citation.cfm?id=987524.987595) */
     hazard_freelist_t hazard_free_list;
     qthread_t *current;

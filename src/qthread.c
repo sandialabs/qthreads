@@ -149,13 +149,10 @@ void qthread_task_free(qthread_t *);
 static qt_mpool generic_qthread_pool = NULL;
 static QINLINE qthread_t *ALLOC_QTHREAD(qthread_shepherd_t *shep)
 {                      /*{{{ */
-    qthread_t *tmp;
+    qthread_t *tmp = (qthread_t *)qt_mpool_alloc(shep
+                                                 ? (shep->qthread_pool)
+                                                 : generic_qthread_pool);
 
-    if (shep) {
-        tmp = (qthread_t *)qt_mpool_alloc(shep->qthread_pool);
-    } else {
-        tmp = (qthread_t *)qt_mpool_alloc(generic_qthread_pool);
-    }
     if (tmp != NULL) {
         tmp->creator_ptr = shep;
     }
@@ -1050,6 +1047,7 @@ int qthread_initialize(void)
 #endif
 
     qthread_debug(CORE_DETAILS, "enqueueing mccoy thread\n");
+    pthread_setspecific(shepherd_structs, &(qlib->shepherds[0].workers[0]));
     qt_threadqueue_enqueue(qlib->shepherds[0].ready, qlib->mccoy_thread, &(qlib->shepherds[0]));
     qassert(getcontext(&(qlib->mccoy_thread->rdata->context)), 0);
     qassert(getcontext(&(qlib->master_context)), 0);
@@ -1124,6 +1122,10 @@ int qthread_initialize(void)
         }
 # endif
         for (j = 0; j < nworkerspershep; ++j) {
+            qlib->shepherds[i].workers[j].nostealbuffer    = calloc(STEAL_BUFFER_LENGTH,
+                                                                    sizeof(qthread_t*));
+            qlib->shepherds[i].workers[j].stealbuffer    = calloc(STEAL_BUFFER_LENGTH,
+                                                                    sizeof(qthread_t*));
             if ((i == 0) && (j == 0)) {
                 continue;                       // original pthread becomes shep 0 worker 0
             }
@@ -1215,9 +1217,9 @@ static QINLINE void qthread_makecontext(qt_context_t *const c,
      * of the stack for some reason. To avoid problems, I'll also do this (even
      * though I have no idea why they do this). */
 #ifdef INVERSE_STACK_POINTER
-    c->uc_stack.ss_sp = (uint8_t *)(stack) + stacksize - 8;
+    c->uc_stack.ss_sp = (char *)(stack) + stacksize - 8;
 #else
-    c->uc_stack.ss_sp = (uint8_t *)(stack) + 8;
+    c->uc_stack.ss_sp = (char *)(stack) + 8;
 #endif
     c->uc_stack.ss_size = stacksize - 64;
 #ifdef UCSTACK_HAS_SSFLAGS
@@ -1909,12 +1911,13 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f             f,
     t->f               = f;
     t->arg             = (void *)arg;
     t->ret             = ret;
+    *(uint64_t*)&(t->ret_value) = 0;
     t->rdata           = NULL;
+
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     t->task_completed  = 0;
     t->child           = NULL;
     t->sibling         = NULL;
-    t->currentParallelRegion = NULL;
 #endif
     // should I use the builtin block for args?
     t->flags &= ~QTHREAD_HAS_ARGCOPY;
@@ -2204,11 +2207,6 @@ typedef enum {
     NO_SYNC
 } synctype_t;
 
-#ifdef __INTEL_COMPILER
-/* don't complain about meaningless qualifiers on casts (read: void*const) */
-# pragma warning (disable:191)
-#endif
-
 static int qthread_uberfork(qthread_f             f,
                             const void           *arg,
                             size_t                arg_size,
@@ -2312,10 +2310,9 @@ static int qthread_uberfork(qthread_f             f,
     /* Step 4: Prepare the return value location (if necessary) */
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     if (!ret && (ret_type == SYNCVAR_T)){  // if no ret specified and syncvar requested
-        t->ret_value = SYNCVAR_EMPTY_INITIALIZER;
-        ret = &t->ret_value;                 // use the one inside the thread
-        t->ret = ret;                        // and set thread's return address
-    } else
+      ret = &t->ret_value;                 // use the one inside the thread
+      t->ret = ret;                        // and set thread's return address
+    }
 #endif
     if (ret) {
         int test = QTHREAD_SUCCESS;
@@ -2677,16 +2674,16 @@ int qthread_migrate_to(const qthread_shepherd_id_t shepherd)
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 /* These are just accessor functions */
 # ifdef QTHREAD_LOG_BARRIER
-qt_barrier_t *qt_thread_barrier(void)            // get barrier active for this thread
+qt_barrier_t *qt_thread_barrier()            // get barrier active for this thread
 # else
-qt_feb_barrier_t * qt_thread_barrier(void)            // get barrier active for this thread
+qt_feb_barrier_t * qt_thread_barrier()            // get barrier active for this thread
 # endif
 {                      /*{{{ */
     return qt_parallel_region()->barrier;
 }                      /*}}} */
 
 void INTERNAL qt_set_unstealable(void);
-void INTERNAL qt_set_unstealable(void)
+void INTERNAL qt_set_unstealable()
 {                      /*{{{ */
     qthread_t *t = qthread_internal_self();
 
@@ -2694,7 +2691,7 @@ void INTERNAL qt_set_unstealable(void)
 }                      /*}}} */
 
 /* These are just accessor functions */
-qthread_parallel_region_t *qt_parallel_region(void) // get active parallel region
+qthread_parallel_region_t *qt_parallel_region() // get active parallel region
 {                                               /*{{{ */
     qthread_t *t = qthread_internal_self();
 
@@ -2706,7 +2703,7 @@ struct qqloop_step_handle_t *qt_loop_rose_queue_create(int64_t start,
                                                        int64_t incr);
 # define QTHREAD_NUM_LOOP_STRUCT 16
 
-int qt_omp_parallel_region_create(void)
+int qt_omp_parallel_region_create()
 {                      /*{{{ */
     int                        ret = 0;
     int                        workers;
@@ -2763,7 +2760,7 @@ void qt_move_to_orig()
     qthread_back_to_master(t);                              // return to work pile
 }
 
-void qt_omp_parallel_region_destroy(void)
+void qt_omp_parallel_region_destroy()
 {      /*{{{ */
 # if 0 // race condition on cleanup - commented out until found - akp 3/16/11
        // it looks like one thread reaches cleanup code before completing loop
@@ -2846,18 +2843,13 @@ qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *shepherd_id)
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t *worker = (qthread_worker_t *)pthread_getspecific(shepherd_structs);
 
-    if(shepherd_id != NULL) {
+    if(shepherd_id != NULL && worker != NULL) {
         *shepherd_id = worker->shepherd->shepherd_id;
     }
     return worker ? (worker->packed_worker_id) : NO_WORKER;
 
 #else
-    if (shepherd_id != NULL) {
-        *shepherd_id = qthread_shep();
-        return *shepherd_id;
-    } else {
-        return qthread_shep();
-    }
+    return qthread_shep();
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 }                                      /*}}} */
 
@@ -3062,7 +3054,6 @@ void qthread_remove_child(qthread_t * child)
 {                      /*{{{ */
     qthread_t *t = qthread_internal_self();
     assert(t);
-    assert(t->next_child == child);
     if (t->child == child) {
       t->child = t->child->sibling;
       qthread_task_free(child);// task now freeable check to see if QTHREAD_STATE_TERMINATED

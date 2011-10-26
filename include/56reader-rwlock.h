@@ -12,7 +12,12 @@
  * behavior will happen.
  **/
 
-#include "qthread-int.h"
+
+#include <stdint.h>
+
+#ifndef NOINLINE
+#define NOINLINE __attribute__((noinline))
+#endif
 
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
@@ -22,8 +27,8 @@
 #endif
 
 struct tlrw_lock {
-    unsigned int owner;
-    uint8_t  readers[64 - sizeof(unsigned int) * 2] __attribute__((aligned(8)));
+    uint64_t owner;
+    uint8_t  readers[128 - sizeof(uint64_t)];
 };
 
 typedef struct tlrw_lock rwlock_t;
@@ -38,9 +43,7 @@ static QINLINE void rwlock_init(rwlock_t *l) {
     return;
 }
 
-static QINLINE void rwlock_rdlock(rwlock_t *l) {
-    int id = qthread_worker(NULL);
-
+static QINLINE void rwlock_rdlock(rwlock_t *l, int id) {
     for (;;) {
         l->readers[id] = 1;
         COMPILER_FENCE; 
@@ -58,19 +61,20 @@ static QINLINE void rwlock_rdlock(rwlock_t *l) {
     return;
 }
 
-static QINLINE void rwlock_rdunlock(rwlock_t *l) {
-    int id = qthread_worker(NULL);
+static QINLINE void rwlock_rdunlock(rwlock_t *l, int id) {
     l->readers[id] = 0;
 }
 
-static QINLINE void rwlock_wrlock(rwlock_t *l) {
-    int id = qthread_worker(NULL) + 1;
+static QINLINE void rwlock_wrlock(rwlock_t *l, int id) {
+
+    id = id + 1;
+
     uint64_t *readers = (void *) l->readers;
     while(qthread_cas32(&(l->owner), 0, id) != id)
         cpu_relax();
 
     COMPILER_FENCE; 
-    for (int i = 0; i < sizeof(l->readers) / 8; i++) {
+    for (int i = 0; i < sizeof(l->readers) / sizeof(uint64_t); i++) {
         while (readers[i] != 0) 
             cpu_relax();
     }
