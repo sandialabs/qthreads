@@ -8,6 +8,13 @@
 #include <unistd.h>
 #include <sys/syscall.h>         /* for SYS_accept and others */
 
+#if HAVE_SYSCALL && HAVE_DECL_SYS_WAIT4
+# include <sys/types.h>
+# include <sys/time.h>
+# include <sys/resource.h>
+# include <sys/wait.h>
+#endif
+
 /* Public Headers */
 #include "qthread/qt_syscalls.h"
 
