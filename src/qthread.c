@@ -16,7 +16,7 @@
 #include <qthread/qthread-int.h> /* for UINT8_MAX */
 #include <string.h>              /* for memset() */
 #ifdef QTHREAD_GUARD_PAGES
-#include <unistd.h>            /* for getpagesize() */
+# include <unistd.h>           /* for getpagesize() */
 #endif
 #if !HAVE_MEMCPY
 # define memcpy(d, s, n)  bcopy((s), (d), (n))
@@ -139,7 +139,7 @@ static QINLINE void qthread_enqueue(qthread_queue_t *q,
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 void       walkSyncTaskList(void);
 syncvar_t *getSyncTaskVar(void);
-void qthread_task_free(qthread_t *);
+void       qthread_task_free(qthread_t *);
 #endif
 
 #if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED)
@@ -455,7 +455,7 @@ static void *qthread_shepherd(void *arg)
 #ifdef QTHREAD_RCRTOOL
             qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers, -1); // not working spinning
 #endif
-	    qthread_thread_free(t); /* free qthread data structures */
+            qthread_thread_free(t); /* free qthread data structures */
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
             qthread_task_free(t);   /* mark as ready for freeing -- may free qthread itself */
 #endif
@@ -601,9 +601,9 @@ static void *qthread_shepherd(void *arg)
                         qthread_debug(THREAD_DETAILS,
                                       "id(%u): thread %i terminated\n",
                                       me->shepherd_id, t->thread_id);
-                        /* we can remove the stack etc. */ 
-			qthread_thread_free(t);
-			/*   and the context... */
+                        /* we can remove the stack etc. */
+                        qthread_thread_free(t);
+                        /*   and the context... */
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
                         qthread_task_free(t);
 #endif
@@ -788,16 +788,16 @@ int qthread_initialize(void)
 #endif
 
     GET_ENV_NUM("QTHREAD_NUM_SHEPHERDS", nshepherds, 0, 0);
-# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     GET_ENV_NUM("QTHREAD_NUM_WORKERS_PER_SHEPHERD", nworkerspershep, 0, 0);
     if (nworkerspershep > 0) {
         if (nshepherds == 0) {
             fprintf(stderr, "Number of shepherds not specified - number of workers may be ignored\n");
         }
     }
-# else
+#else
     nworkerspershep = 1;
-# endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
+#endif  /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
     qlib->atomic_locks = malloc(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
@@ -811,9 +811,9 @@ int qthread_initialize(void)
 
     if (getenv("QTHREAD_INFO")) {
         fprintf(stderr, "Using %i Shepherds\n", (int)nshepherds);
-# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
         fprintf(stderr, "Using %i Workers per Shepherd\n", (int)nworkerspershep);
-# endif
+#endif
     }
 
     if ((nshepherds == 1) && (nworkerspershep == 1)) {
@@ -880,8 +880,9 @@ int qthread_initialize(void)
 
     GET_ENV_NUM("QTHREAD_STACK_SIZE", qlib->qthread_stack_size, QTHREAD_DEFAULT_STACK_SIZE, QTHREAD_DEFAULT_STACK_SIZE);
     qthread_debug(CORE_DETAILS, "qthread stack size: %u\n", qlib->qthread_stack_size);
-    if (getenv("QTHREAD_INFO"))
+    if (getenv("QTHREAD_INFO")) {
         fprintf(stderr, "Using %u byte stack size.\n", qlib->qthread_stack_size);
+    }
 
 #ifdef QTHREAD_GUARD_PAGES
     {
@@ -903,7 +904,7 @@ int qthread_initialize(void)
 
         qassert(getrlimit(RLIMIT_STACK, &rlp), 0);
         qthread_debug(CORE_DETAILS, "stack sizes ... cur: %u max: %u\n", rlp.rlim_cur, rlp.rlim_max);
-        if (rlp.rlim_cur == RLIM_INFINITY || rlp.rlim_cur == 0) {
+        if ((rlp.rlim_cur == RLIM_INFINITY) || (rlp.rlim_cur == 0)) {
             qlib->master_stack_size = 8 * 1024 * 1024;
         } else {
             qlib->master_stack_size = (unsigned int)(rlp.rlim_cur);
@@ -1123,10 +1124,10 @@ int qthread_initialize(void)
         }
 # endif
         for (j = 0; j < nworkerspershep; ++j) {
-            qlib->shepherds[i].workers[j].nostealbuffer    = calloc(STEAL_BUFFER_LENGTH,
-                                                                    sizeof(qthread_t*));
-            qlib->shepherds[i].workers[j].stealbuffer    = calloc(STEAL_BUFFER_LENGTH,
-                                                                    sizeof(qthread_t*));
+            qlib->shepherds[i].workers[j].nostealbuffer = calloc(STEAL_BUFFER_LENGTH,
+                                                                 sizeof(qthread_t *));
+            qlib->shepherds[i].workers[j].stealbuffer = calloc(STEAL_BUFFER_LENGTH,
+                                                               sizeof(qthread_t *));
             if ((i == 0) && (j == 0)) {
                 continue;                       // original pthread becomes shep 0 worker 0
             }
@@ -1289,7 +1290,7 @@ void qthread_finalize(void)
     qthread_steal_stat();
 #endif
 
-    if (qlib == NULL || qthread_shep() != 0 || qthread_worker(NULL) != 0) {
+    if ((qlib == NULL) || (qthread_shep() != 0) || (qthread_worker(NULL) != 0)) {
         return;
     } else {
         qthread_t *t = qthread_internal_self();
@@ -1302,7 +1303,7 @@ void qthread_finalize(void)
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     worker = qthread_internal_getworker();
-    if (worker && worker->packed_worker_id != 0) {                       /* Only run finalize on shepherd 0 worker 0*/
+    if (worker && (worker->packed_worker_id != 0)) {           /* Only run finalize on shepherd 0 worker 0*/
         worker->current->thread_state = QTHREAD_STATE_YIELDED; /* Otherwise, put back */
         //      qt_threadqueue_enqueue(shep0->ready, worker->current,
         //             shep0);
@@ -1558,7 +1559,7 @@ void qthread_finalize(void)
     free(qlib->FEBs);
     free(qlib->syncvars);
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-    free((void*)qlib->atomic_locks);
+    free((void *)qlib->atomic_locks);
 #endif
 #ifdef QTHREAD_COUNT_THREADS
     free(qlib->locks_stripes);
@@ -1906,19 +1907,19 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f             f,
     t->thread_id = (unsigned int)-1;
 #endif
 
-    t->thread_state    = QTHREAD_STATE_NEW;
-    t->flags           = 0;
-    t->target_shepherd = NULL;
-    t->f               = f;
-    t->arg             = (void *)arg;
-    t->ret             = ret;
-    *(uint64_t*)&(t->ret_value) = 0;
-    t->rdata           = NULL;
+    t->thread_state              = QTHREAD_STATE_NEW;
+    t->flags                     = 0;
+    t->target_shepherd           = NULL;
+    t->f                         = f;
+    t->arg                       = (void *)arg;
+    t->ret                       = ret;
+    *(uint64_t *)&(t->ret_value) = 0;
+    t->rdata                     = NULL;
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    t->task_completed  = 0;
-    t->child           = NULL;
-    t->sibling         = NULL;
+    t->task_completed = 0;
+    t->child          = NULL;
+    t->sibling        = NULL;
 #endif
     // should I use the builtin block for args?
     t->flags &= ~QTHREAD_HAS_ARGCOPY;
@@ -1947,17 +1948,17 @@ static QINLINE void qthread_thread_free(qthread_t *t)
         VALGRIND_STACK_DEREGISTER(t->rdata->valgrind_stack_id);
 #endif
         qthread_debug(THREAD_DETAILS, "t(%p): releasing stack %p to %p\n", t, t->rdata->stack, t->creator_ptr);
-	FREE_STACK(t->creator_ptr, t->rdata->stack);
-	t->rdata = NULL;
+        FREE_STACK(t->creator_ptr, t->rdata->stack);
+        t->rdata = NULL;
     }
     if (t->flags & QTHREAD_HAS_ARGCOPY) {
         assert(&t->data != t->arg);
         free(t->arg);
-	t->arg = NULL;
+        t->arg = NULL;
     }
     if (t->tasklocal_size > sizeof(void *)) {
         free(*(void **)&t->data[qlib->qthread_argcopy_size]);
-	*(void**)&t->data[qlib->qthread_argcopy_size] = NULL;
+        *(void **)&t->data[qlib->qthread_argcopy_size] = NULL;
     }
     qthread_debug(THREAD_DETAILS, "t(%p): releasing thread handle %p\n", t, t);
 #ifndef QTHREAD_USE_ROSE_EXTENSIONS
@@ -2303,16 +2304,16 @@ static int qthread_uberfork(qthread_f             f,
     qthread_t *me = qthread_internal_self();
     if (me) {
         t->currentParallelRegion = me->currentParallelRegion; // saved in shepherd
-	t->sibling = me->child;  // add to parents tsk list
-	t->child = NULL;
-	me->child = t;
+        t->sibling               = me->child;                 // add to parents tsk list
+        t->child                 = NULL;
+        me->child                = t;
     }
 #endif
     /* Step 4: Prepare the return value location (if necessary) */
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    if (!ret && (ret_type == SYNCVAR_T)){  // if no ret specified and syncvar requested
-      ret = &t->ret_value;                 // use the one inside the thread
-      t->ret = ret;                        // and set thread's return address
+    if (!ret && (ret_type == SYNCVAR_T)) { // if no ret specified and syncvar requested
+        ret    = &t->ret_value;            // use the one inside the thread
+        t->ret = ret;                      // and set thread's return address
     }
 #endif
     if (ret) {
@@ -2548,10 +2549,10 @@ int INTERNAL qthread_check_precond(qthread_t *t)
             t->npreconds--;
         } else {
             // Need to wait on this one, add to appropriate FFQ
-            qthread_addrstat_t *m       = NULL;
-            qthread_addrres_t  *X       = NULL;
-            const int           lockbin = QTHREAD_CHOOSE_STRIPE(this_sync);
-            const aligned_t    *alignedaddr;
+            qthread_addrstat_t       *m       = NULL;
+            qthread_addrres_t        *X       = NULL;
+            const int                 lockbin = QTHREAD_CHOOSE_STRIPE(this_sync);
+            const aligned_t          *alignedaddr;
             qthread_shepherd_t *const curshep = qthread_internal_getshep();
 
             QTHREAD_LOCK_UNIQUERECORD2(feb, this_sync, curshep);
@@ -2650,7 +2651,7 @@ int qthread_migrate_to(const qthread_shepherd_id_t shepherd)
     }
     if (shepherd == NO_SHEPHERD) {
         me->target_shepherd = NULL;
-        me->flags          &= ~ (uint8_t)QTHREAD_UNSTEALABLE;
+        me->flags          &= ~(uint8_t)QTHREAD_UNSTEALABLE;
         return QTHREAD_SUCCESS;
     }
     if (me && (shepherd < qlib->nshepherds)) {
@@ -2832,7 +2833,7 @@ qthread_shepherd_id_t qthread_shep(void)
 {                      /*{{{ */
     qthread_shepherd_t *ret = qthread_internal_getshep();
 
-    if (qlib == NULL || ret == NULL) {
+    if ((qlib == NULL) || (ret == NULL)) {
         return NO_SHEPHERD;
     } else {
         return ret->shepherd_id;
@@ -2844,7 +2845,7 @@ qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *shepherd_id)
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t *worker = (qthread_worker_t *)pthread_getspecific(shepherd_structs);
 
-    if(shepherd_id != NULL && worker != NULL) {
+    if((shepherd_id != NULL) && (worker != NULL)) {
         *shepherd_id = worker->shepherd->shepherd_id;
     }
     return worker ? (worker->packed_worker_id) : NO_WORKER;
@@ -3002,12 +3003,13 @@ void INTERNAL qthread_assertnotfuture(void)
 # endif
 
 // check to see if task freeable 1) QTHREAD_STATE_TERMINATED 2) parent has noticed it's completion
-void qthread_task_free(qthread_t * t){
-  assert(t);
-  int tc = qthread_incr(&t->task_completed,1);
-  if (tc == 1) { // needs to be freed from both workhorse loop and taskwait
-    FREE_QTHREAD(t);  // everything else is freed when QTHREAD_STATE_TERMINATED
-  }
+void qthread_task_free(qthread_t *t)
+{
+    assert(t);
+    int tc = qthread_incr(&t->task_completed, 1);
+    if (tc == 1) {       // needs to be freed from both workhorse loop and taskwait
+        FREE_QTHREAD(t); // everything else is freed when QTHREAD_STATE_TERMINATED
+    }
 }
 
 int INTERNAL qthread_forCount(int inc)
@@ -3035,7 +3037,7 @@ void qthread_releaseTaskListLock(void)
 }                      /*}}} */
 
 // get child
-qthread_t * qthread_child_task(void)
+qthread_t *qthread_child_task(void)
 {                      /*{{{ */
     qthread_t *t = qthread_internal_self();
 
@@ -3044,22 +3046,22 @@ qthread_t * qthread_child_task(void)
 }                      /*}}} */
 
 // look at task return value -- used by parent to determine child's completion
-syncvar_t * qthread_return_value(qthread_t * t)
+syncvar_t *qthread_return_value(qthread_t *t)
 {                      /*{{{ */
     assert(t);
     return &t->ret_value;
 }                      /*}}} */
 
 // used by parent when child complete to remove from it's child list
-void qthread_remove_child(qthread_t * child)
+void qthread_remove_child(qthread_t *child)
 {                      /*{{{ */
     qthread_t *t = qthread_internal_self();
+
     assert(t);
     if (t->child == child) {
-      t->child = t->child->sibling;
-      qthread_task_free(child);// task now freeable check to see if QTHREAD_STATE_TERMINATED
+        t->child = t->child->sibling;
+        qthread_task_free(child); // task now freeable check to see if QTHREAD_STATE_TERMINATED
     }
-    
 }                      /*}}} */
 
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
