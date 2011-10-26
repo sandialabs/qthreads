@@ -7,8 +7,10 @@
 
 #include <time.h>
 
-#include <unistd.h>
-#include <sys/syscall.h>         /* for SYS_accept and others */
+#ifdef HAVE_SYS_SYSCALL_H
+# include <unistd.h>
+# include <sys/syscall.h>        /* for SYS_accept and others */
+#endif
 
 /* Internal Headers */
 #include "qt_io.h"

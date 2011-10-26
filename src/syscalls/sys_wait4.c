@@ -5,8 +5,10 @@
 /* System Headers */
 #include <qthread/qthread-int.h> /* for uint64_t */
 
-#include <unistd.h>
-#include <sys/syscall.h>         /* for SYS_accept and others */
+#ifdef HAVE_SYS_SYSCALL_H
+# include <unistd.h>
+# include <sys/syscall.h>        /* for SYS_accept and others */
+#endif
 
 #if HAVE_SYSCALL && HAVE_DECL_SYS_WAIT4
 # include <sys/types.h>

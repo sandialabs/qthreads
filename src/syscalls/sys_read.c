@@ -5,8 +5,10 @@
 /* System Headers */
 #include <qthread/qthread-int.h> /* for uint64_t */
 
-#include <unistd.h>
-#include <sys/syscall.h>         /* for SYS_accept and others */
+#ifdef HAVE_SYS_SYSCALL_H
+# include <unistd.h>
+# include <sys/syscall.h>        /* for SYS_accept and others */
+#endif
 
 /* Public Headers */
 #include "qthread/qt_syscalls.h"
@@ -53,6 +55,7 @@ ssize_t read(int    filedes,
         return syscall(SYS_read, filedes, buf, nbyte);
     }
 }
-#endif
+
+#endif /* if HAVE_SYSCALL && HAVE_DECL_SYS_READ */
 
 /* vim:set expandtab: */

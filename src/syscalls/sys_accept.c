@@ -5,8 +5,10 @@
 /* System Headers */
 #include <qthread/qthread-int.h> /* for uint64_t */
 
-#include <unistd.h>
-#include <sys/syscall.h>         /* for SYS_accept and others */
+#ifdef HAVE_SYS_SYSCALL_H
+# include <unistd.h>
+# include <sys/syscall.h>        /* for SYS_accept and others */
+#endif
 
 /* Public Headers */
 #include "qthread/qt_syscalls.h"
@@ -52,6 +54,7 @@ int accept(int                       socket,
         return syscall(SYS_accept, socket, address, address_len);
     }
 }
-#endif
+
+#endif /* if HAVE_SYSCALL && HAVE_DECL_SYS_ACCEPT */
 
 /* vim:set expandtab: */

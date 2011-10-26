@@ -5,9 +5,10 @@
 /* System Headers */
 #include <qthread/qthread-int.h> /* for uint64_t */
 
-#include <unistd.h>
-
-#include <sys/syscall.h>         /* for SYS_accept and others */
+#ifdef HAVE_SYS_SYSCALL_H
+# include <unistd.h>
+# include <sys/syscall.h>        /* for SYS_accept and others */
+#endif
 
 /* Internal Headers */
 #include "qt_io.h"
@@ -40,7 +41,7 @@ int usleep(useconds_t useconds)
 # endif
 #else
         return 0;
-#endif /* if HAVE_SYSCALL */
+#endif  /* if HAVE_SYSCALL */
     }
 }
 
