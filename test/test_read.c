@@ -5,7 +5,7 @@
 #include <qthread/qthread.h>
 #include "argparsing.h"
 
-const char cfilename[] = "test_qthread_read_XXXXXXXXXXXXX";
+const char cfilename[] = "test_qthread_read.XXXXXXXXXXXXX";
 
 static aligned_t reader(void *arg)
 {
@@ -35,6 +35,8 @@ int main(int argc,
     char filename[strlen(cfilename)+1];
     ssize_t ret;
 
+    CHECK_VERBOSE();
+
     for (int i=0; i<strlen(cfilename); ++i) {
 	filename[i] = cfilename[i];
     }
@@ -44,6 +46,9 @@ int main(int argc,
     fd = mkstemp(filename);
     iprintf("filename = '%s'\n", filename);
     iprintf("fd = %i\n", fd);
+    if (fd < 0) {
+	perror("mkstemp failed");
+    }
     assert(fd >= 0);
 
     ret = write(fd, cfilename, strlen(cfilename));
