@@ -1221,7 +1221,7 @@ static QINLINE void qthread_makecontext(qt_context_t *const c,
 #ifdef INVERSE_STACK_POINTER
     c->uc_stack.ss_sp = (char *)(stack) + stacksize - 8;
 #else
-    c->uc_stack.ss_sp = (char *)(stack) + 8;
+    c->uc_stack.ss_sp = (uint8_t *)(stack) + 8;
 #endif
     c->uc_stack.ss_size = stacksize - 64;
 #ifdef UCSTACK_HAS_SSFLAGS
@@ -1907,16 +1907,16 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f             f,
     t->thread_id = (unsigned int)-1;
 #endif
 
-    t->thread_state              = QTHREAD_STATE_NEW;
-    t->flags                     = 0;
-    t->target_shepherd           = NULL;
-    t->f                         = f;
-    t->arg                       = (void *)arg;
-    t->ret                       = ret;
-    *(uint64_t *)&(t->ret_value) = 0;
-    t->rdata                     = NULL;
+    t->thread_state    = QTHREAD_STATE_NEW;
+    t->flags           = 0;
+    t->target_shepherd = NULL;
+    t->f               = f;
+    t->arg             = (void *)arg;
+    t->ret             = ret;
+    t->rdata           = NULL;
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    t->ret_value      = SYNCVAR_INITIALIZER;
     t->task_completed = 0;
     t->child          = NULL;
     t->sibling        = NULL;
