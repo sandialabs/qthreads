@@ -47,25 +47,26 @@ void chpl_task_yield(void)
 // Sync variables
 void chpl_sync_lock(chpl_sync_aux_t *s)
 {
-    qthread_syncvar_readFE(NULL, &(s->is_full));
+    aligned_t l;
+
+    l = qthread_incr(&s->lockers_in, 1);
+    while (l != s->lockers_out) SPINLOCK_BODY();
 }
 
 void chpl_sync_unlock(chpl_sync_aux_t *s)
 {
-    qthread_syncvar_fill(&(s->is_full));
+    qthread_incr(&s->lockers_out, 1);
 }
 
 void chpl_sync_waitFullAndLock(chpl_sync_aux_t *s,
                                int32_t          lineno,
                                chpl_string      filename)
 {
-    uint64_t is_full;
-
-    qthread_syncvar_readFE(&is_full, &(s->is_full));
-    while (is_full == 0) {
-        qthread_syncvar_fill(&(s->is_full));
+    chpl_sync_lock(s);
+    while (s->is_full == 0) {
+        chpl_sync_unlock(s);
         qthread_syncvar_readFE(NULL, &(s->signal_full));
-        qthread_syncvar_readFE(&is_full, &(s->is_full));
+        chpl_sync_lock(s);
     }
 }
 
@@ -73,26 +74,26 @@ void chpl_sync_waitEmptyAndLock(chpl_sync_aux_t *s,
                                 int32_t          lineno,
                                 chpl_string      filename)
 {
-    uint64_t is_full;
-
-    qthread_syncvar_readFE(&is_full, &(s->is_full));
-    while (is_full != 0) {
-        qthread_syncvar_fill(&(s->is_full));
+    chpl_sync_lock(s);
+    while (s->is_full != 0) {
+        chpl_sync_unlock(s);
         qthread_syncvar_readFE(NULL, &(s->signal_empty));
-        qthread_syncvar_readFE(&is_full, &(s->is_full));
+        chpl_sync_lock(s);
     }
 }
 
 void chpl_sync_markAndSignalFull(chpl_sync_aux_t *s)         // and unlock
 {
     qthread_syncvar_fill(&(s->signal_full));
-    qthread_syncvar_writeEF_const(&(s->is_full), 1);
+    s->is_full = 1;
+    chpl_sync_unlock(s);
 }
 
 void chpl_sync_markAndSignalEmpty(chpl_sync_aux_t *s)         // and unlock
 {
     qthread_syncvar_fill(&(s->signal_empty));
-    qthread_syncvar_writeEF_const(&(s->is_full), 0);
+    s->is_full = 0;
+    chpl_sync_unlock(s);
 }
 
 chpl_bool chpl_sync_isFull(void            *val_ptr,

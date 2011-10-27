@@ -91,7 +91,9 @@ typedef syncvar_t chpl_mutex_t;
 // refer to this type or the tl_aux member at all.
 //
 typedef struct {
-    syncvar_t is_full;
+    volatile aligned_t lockers_in;
+    volatile aligned_t lockers_out;
+    int is_full;
     syncvar_t signal_full;
     syncvar_t signal_empty;
 } chpl_sync_aux_t;
