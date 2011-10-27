@@ -37,9 +37,7 @@ int main(int argc,
 
     CHECK_VERBOSE();
 
-    for (int i=0; i<strlen(cfilename); ++i) {
-	filename[i] = cfilename[i];
-    }
+    snprintf(filename, strlen(cfilename), "%s", cfilename);
     iprintf("filename = '%s'\n", filename);
 
     /* First, set up a temporary file */
