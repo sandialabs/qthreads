@@ -964,6 +964,19 @@ bool XOMP_loop_static_start(
   }
 }
 
+void XOMP_loop_default(
+    int lower,
+    int upper,
+    int stride,
+    long *returnLower,
+    long *returnUpper)
+{
+  qqloop_step_handle_t loop;
+
+  xomp_internal_loop_init(STATIC_SCHED, TRUE, (void*)&loop, lower, upper, stride, 1);
+  XOMP_loop_static_start(&loop, lower, upper, stride, 1, returnLower, returnUpper);
+}
+
 bool XOMP_loop_dynamic_start(
     void * loop,
     long a,

@@ -88,6 +88,12 @@ void XOMP_task(
     unsigned g);
 void XOMP_taskwait(
     void);
+void XOMP_loop_default(
+    int lower,
+    int upper,
+    int stride,
+    long *returnLower,
+    long *returnUpper);
 void XOMP_loop_static_init(
     void ** loop,
     int lower,
