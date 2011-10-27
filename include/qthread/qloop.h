@@ -2,7 +2,6 @@
 #define QTHREAD_QLOOP
 
 #include <qthread/qthread.h>
-#include <qthread/futurelib.h>
 
 Q_STARTCXX                             /* */
 /* for convenient arguments to qt_loop_future */
