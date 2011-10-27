@@ -50,8 +50,8 @@ static QINLINE qthread_shepherd_id_t *qarray_internal_segment_shep(const qarray 
         ptr += 4 - (((uintptr_t)ptr) & 3);
     }
     /* first, do we have the space? */
-    qassert_ret((((ptr + sizeof(qthread_shepherd_id_t) - 1) -
-                  (const char *)segment_head) < a->segment_bytes), NULL);
+    qassert_ret((((ptr + sizeof(qthread_shepherd_id_t) - 1)
+                  < a->segment_bytes + (const char *)segment_head)), NULL);
     return (qthread_shepherd_id_t *)ptr;
 }                                      /*}}} */
 
@@ -150,7 +150,7 @@ static void qarray_free_cdt(void)
     }
 }                                      /*}}} */
 
-static qarray * qarray_create_internal(const size_t         count,
+static qarray *qarray_create_internal(const size_t         count,
                                       const size_t         obj_size,
                                       const distribution_t d,
                                       const char           tight,
