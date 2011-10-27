@@ -15,8 +15,10 @@
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 # define SPINLOCK_BODY() do { __asm__ __volatile__ ("pause" ::: "memory"); } while (0)
+#elif defined(COMPILER_FENCE)
+# define SPINLOCK_BODY() do { COMPILER_FENCE } while (0)
 #else
-# define SPINLOCK_BODY() do { } while (0)
+# define SPINLOCK_BODY() do { __asm__ __volatile__ (:::"memory"); } while (0)
 #endif
 
 #if defined(__tile__)
