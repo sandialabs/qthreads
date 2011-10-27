@@ -464,9 +464,7 @@ static void *qthread_shepherd(void *arg)
             if(!*(volatile size_t *)&me_worker->active) {
                 qt_threadqueue_enqueue(me->ready, t, me);
                 // short stall to prevent worker from monoplizing queue
-                struct timespec req = { 0 };
-                req.tv_sec  = 0;
-                req.tv_nsec = 10000000L;
+                struct timespec req = { .tv_sec = 0, .tv_nsec = 10000000L };
                 nanosleep(&req, &req);
             } else {
 #endif
@@ -1654,8 +1652,8 @@ void qthread_pack_workerid(const qthread_worker_id_t w,
 int qthread_disable_worker(const qthread_worker_id_t w)
 {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    int shep   = w % qlib->nshepherds;
-    int worker = w / qlib->nshepherds;
+    unsigned int shep   = w % qlib->nshepherds;
+    unsigned int worker = w / qlib->nshepherds;
 
     qassert_ret((shep < qlib->nshepherds), QTHREAD_BADARGS);
     qassert_ret((worker < qlib->nworkerspershep), QTHREAD_BADARGS);
@@ -1687,8 +1685,8 @@ int qthread_disable_worker(const qthread_worker_id_t w)
 void qthread_enable_worker(const qthread_worker_id_t w)
 {                      /*{{{ */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    int shep   = w % qlib->nshepherds;
-    int worker = w / qlib->nshepherds;
+    unsigned int shep   = w % qlib->nshepherds;
+    unsigned int worker = w / qlib->nshepherds;
 
     assert(shep < qlib->nshepherds);
 
