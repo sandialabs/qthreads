@@ -12,23 +12,23 @@ static aligned_t incr(void *arg)
     ret = master;
     do {
         localmaster = ret;
-        addition = localmaster + 1;
-        ret = qthread_cas(&master, ret, addition);
+        addition    = localmaster + 1;
+        ret         = qthread_cas(&master, ret, addition);
     } while (ret != localmaster);
     return 0;
 }
 
-volatile uint32_t four = 4;
+volatile uint32_t four  = 4;
 volatile uint64_t eight = 8;
-void *volatile ptr = NULL;
+void *volatile    ptr   = NULL;
 
-static uint32_t read_vol32(volatile uint32_t * ptr)
+static uint32_t read_vol32(volatile uint32_t *ptr)
 {
     return *ptr;
 }
 
 #if (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
-static uint64_t read_vol64(volatile uint64_t * ptr)
+static uint64_t read_vol64(volatile uint64_t *ptr)
 {
     return *ptr;
 }
@@ -40,16 +40,17 @@ static void *read_volptr(void *volatile *ptr)
     return *ptr;
 }
 
-int main(int argc,
+int main(int   argc,
          char *argv[])
 {
-    int i;
+    int       i;
     aligned_t rets[30];
 
+    memset(rets, 0, sizeof(aligned_t) * 30);
     assert(qthread_initialize() == QTHREAD_SUCCESS);
     CHECK_VERBOSE();
 
-    rets[0] = qthread_cas(&master, master, 1);
+    rets[0] = qthread_cas(&master, 0, 1);
     assert(master == 1);
     assert(rets[0] == 0);
     master = 0;
