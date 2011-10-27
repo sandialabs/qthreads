@@ -725,6 +725,7 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 
     snprintf(newenv, 99, "QTHREAD_NUM_SHEPHERDS=%i", (int)nshepherds);
     putenv(newenv);
+    putenv("QTHREAD_NUM_WORKERS_PER_SHEPHERD=1");
     return qthread_initialize();
 }                      /*}}} */
 
