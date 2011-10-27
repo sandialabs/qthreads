@@ -23,7 +23,7 @@ dnl and have no equivalent to AC_CONFIG_HEADERS (the plural version),
 dnl which is a pain.  AM 1.7 also added support for putting target
 dnl information in AM_CONDITIONAL blocks and using the += modifier.
 dnl ... removed "check-news" because of automatic version generation
-AM_INIT_AUTOMAKE([foreign dist-bzip2 color-tests no-define 1.7])
+AM_INIT_AUTOMAKE([foreign dist-bzip2 no-define 1.7])
 # If Automake supports silent rules, enable them (credit to Brian)
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
@@ -385,7 +385,7 @@ AS_IF([test "x$enable_picky" = xyes],
          IBM_XL)
            CFLAGS="$CFLAGS"
            ;;
-         Convey)
+         Convey|EKOPath)
            CFLAGS="-W -Wall $CFLAGS"
            ;;
          *)
@@ -408,7 +408,7 @@ AS_IF([test "x$enable_picky" = xyes],
          IBM_XL)
            CXXFLAGS="$CXXFLAGS"
            ;;
-         Convey)
+         Convey|EKOPath)
            CXXFLAGS="-W -Wall $CXXFLAGS"
            ;;
          *)
