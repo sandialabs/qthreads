@@ -119,7 +119,7 @@ int main(int   argc,
 
     qt_sinc_destroy(sinc);
 
-    if (total == 2*(1 << depth)) {
+    if (total == (1UL << (depth+1))) {
         iprintf("SUCCEEDED with total = 2*(2^%lu) = %lu\n", 
             (unsigned long)depth,
             (unsigned long)total);

@@ -106,19 +106,21 @@ static double chisquare_alphafive(int v /* degfreedom */)
 
 static void runs (void)
 {   /*{{{*/
-    int      a       = 0, n1 = 0, n2 = 0, meanruns = 0;
-    int      lastdir = 0;
-    double   mua, sigmaa2, Zzeroa, Zzerob, mub, sigmab2;
-    double   sum = 0.0, mean, chisquare;
-    int     *runlengths, rl, maxrun = 0;
-    double **oi;
-    size_t   i;
-    double *restrict A = malloc(sizeof(double)*ITER);
+    unsigned int     a       = 0;
+    int              n1      = 0, n2 = 0, meanruns = 0;
+    int              lastdir = 0;
+    double           mua, sigmaa2, Zzeroa, Zzerob, mub, sigmab2;
+    double           sum    = 0.0, mean, chisquare;
+    unsigned int     *runlengths, maxrun = 0;
+    int             rl;
+    double         **oi;
+    size_t           i;
+    double *restrict A = malloc(sizeof(double) * ITER);
 
     iprintf("\nRuns Test:\n");
     for (i = 0; i < ITER; ++i) {
         A[i] = qtimer_fastrand();
-        sum    += A[i];
+        sum += A[i];
         if (i > 0) {
             if (A[i] > A[i - 1]) {
                 if (lastdir == -1) {
@@ -162,7 +164,7 @@ static void runs (void)
     sigmab2 = (2.0 * n1 * n2 * ((2.0 * n1 * n2) - ITER)) / (double)(ITER * ITER * (ITER - 1));
     Zzerob  = (meanruns - mub) / sqrt(sigmab2);
 
-    runlengths     = (int *)calloc(sizeof(int), ITER);
+    runlengths     = (unsigned int *)calloc(sizeof(unsigned int), ITER);
     rl             = 0;
     runlengths[rl] = 1;
     lastdir        = 1;
@@ -209,10 +211,10 @@ static void runs (void)
     if (maxrun > 2) {
         for (i = maxrun - 1; i > 0; --i) {
             if (oi[1][i] < 5) {
-                int j;
+                size_t j;
                 oi[1][i - 1] += oi[1][i];
                 // oi[2][i-1] += oi[2][i];
-                for (j = i; j < (maxrun - 1); ++j) {
+                for (j = i; j + 1 < maxrun; ++j) {
                     oi[1][j] = oi[1][j + 1];
                     // oi[2][j] = oi[1][j+1];
                 }
@@ -243,12 +245,12 @@ static void runs (void)
 
 static void ks_test(void)
 {   /*{{{*/
-    double Dplus, Dminus, D, Dalpha1, Dalpha2, Dalpha3;
+    double  Dplus, Dminus, D, Dalpha1, Dalpha2, Dalpha3;
     double *A[2];
 
     iprintf("Kolmogorov-Smirnov test:\n");
-    A[0] = malloc(sizeof(double)*ITER);
-    A[1] = malloc(sizeof(double)*ITER);
+    A[0] = malloc(sizeof(double) * ITER);
+    A[1] = malloc(sizeof(double) * ITER);
     for (size_t i = 0; i < ITER; ++i) {
         A[0][i] = qtimer_fastrand();
         A[1][i] = (double)i / (double)ITER;

@@ -5,8 +5,8 @@
 #include <qthread/qlfqueue.h>
 #include "argparsing.h"
 
-static int elementcount = 10000;
-static int threadcount = 128;
+static size_t elementcount = 10000;
+static size_t threadcount = 128;
 
 static aligned_t queuer(void *arg)
 {
