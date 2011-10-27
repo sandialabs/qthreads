@@ -127,7 +127,7 @@ class syncvar
 class loose_syncvar : public syncvar
 {
     /* constructors */
-    QINLINE loose_syncvar(const loose_syncvar &val) {
+    QINLINE loose_syncvar(const loose_syncvar &val) : syncvar() {
 	the_syncvar_t.u.w = val.the_syncvar_t.u.w;
     }
 
@@ -188,11 +188,11 @@ class loose_syncvar : public syncvar
 class strict_syncvar : public syncvar
 {
     /* constructors */
-    QINLINE strict_syncvar(const uint64_t &val) {
+    QINLINE strict_syncvar(const uint64_t &val) : syncvar() {
 	the_syncvar_t.u.w = 0;
 	the_syncvar_t.u.s.data = val;
     }
-    QINLINE strict_syncvar(const syncvar_t &val) {
+    QINLINE strict_syncvar(const syncvar_t &val) : syncvar() {
 	the_syncvar_t.u.w = val.u.w;
     }
 
