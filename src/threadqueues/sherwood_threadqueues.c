@@ -35,13 +35,13 @@ typedef struct _qt_threadqueue_node qt_threadqueue_node_t;
 struct _qt_threadqueue {
     volatile qt_threadqueue_node_t *volatile head;
     volatile qt_threadqueue_node_t *volatile tail;
-    qthread_shepherd_t   *creator_ptr;
+    qthread_shepherd_t                      *creator_ptr;
     /* used for the work stealing queue implementation */
-    QTHREAD_FASTLOCK_TYPE qlock;
-    long                  qlength;
-    long                  qlength_stealable; /* number of stealable tasks on queue - stop steal attempts
-                                              * that will fail because tasks cannot be moved - 4/1/11 AKP
-                                              */
+    QTHREAD_FASTLOCK_TYPE                    qlock;
+    long                                     qlength;
+    long                                     qlength_stealable; /* number of stealable tasks on queue - stop steal attempts
+                                                                 * that will fail because tasks cannot be moved - 4/1/11 AKP
+                                                                 */
 } /* qt_threadqueue_t */;
 
 // Forward declarations
@@ -166,13 +166,14 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64))
     /* only works if a basic load is atomic */
     return q->qlength;
+
 #else
     ssize_t tmp;
     QTHREAD_FASTLOCK_LOCK(&q->qlock);
     tmp = q->qlength;
     QTHREAD_FASTLOCK_UNLOCK(&q->qlock);
     return tmp;
-#endif
+#endif /* if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)) */
 } /*}}}*/
 
 #define QTHREAD_INITLOCK(l) do { if (pthread_mutex_init(l, NULL) != 0) { return QTHREAD_PTHREAD_ERROR; } } while(0)
@@ -310,7 +311,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
                     switch(qthread_worker(NULL)) {
                         case NO_WORKER:
                             QTHREAD_TRAP(); // should never happen
-                            t         = NULL;
+                            t = NULL;
                             continue; // keep looking
                         case 0:
                             return(t);
@@ -447,7 +448,7 @@ static QINLINE long qthread_steal_chunksize(void)
  */
 static QINLINE void qthread_steal(void)
 {   /*{{{*/
-    int                    i;
+    unsigned int           i;
     extern pthread_key_t   shepherd_structs;
     qt_threadqueue_node_t *first;
     qthread_shepherd_t    *victim_shepherd;
