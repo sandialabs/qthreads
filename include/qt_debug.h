@@ -6,8 +6,13 @@
 
 /* System headers */
 # include <limits.h>      // for INT_MAX, per C89
-# include <sys/syscall.h> // for syscall()
-# include <unistd.h>      // for SYS_write
+# ifdef HAVE_SYS_SYSCALL_H
+#  include <sys/syscall.h> // for syscall()
+#  include <unistd.h>      // for SYS_write
+#  define WRITE(fd, ch, len) syscall(SYS_write, (fd), (ch), (len))
+# else
+#  define WRITE(fd, ch, len) write((fd), (ch), (len))
+# endif
 # include <stdarg.h>      // for va_start and friends
 
 /* Internal headers */
@@ -257,9 +262,9 @@ static QINLINE void qthread_debug(int         level,
         QTHREAD_FASTLOCK_LOCK(&output_lock);
 
 # ifdef QTHREAD_RCRTOOL
-        while (syscall(SYS_write, 2, msgPrefix, 8) != 8) ;
+        while (WRITE(2, msgPrefix, 8) != 8) ;
 # else
-        while (syscall(SYS_write, 2, "QDEBUG: ", 8) != 8) ;
+        while (WRITE(2, "QDEBUG: ", 8) != 8) ;
 # endif
 
         va_start(args, format);
@@ -274,12 +279,12 @@ static QINLINE void qthread_debug(int         level,
                     {
                         char *str = va_arg(args, char *);
 
-                        qassert(syscall(SYS_write, 2, buf, head - buf), head - buf);
+                        qassert(WRITE(2, buf, head - buf), head - buf);
                         head = buf;
                         if (str == NULL) {
-                            qassert(syscall(SYS_write, 2, "(null)", 6), 6);
+                            qassert(WRITE(2, "(null)", 6), 6);
                         } else {
-                            qassert(syscall(SYS_write, 2, str, strlen(str)), strlen(str));
+                            qassert(WRITE(2, str, strlen(str)), strlen(str));
                         }
                         break;
                     }
@@ -435,7 +440,7 @@ static QINLINE void qthread_debug(int         level,
             }
         }
         /* XXX: not checking for extra long values of head */
-        qassert(syscall(SYS_write, 2, buf, head - buf), head - buf);
+        qassert(WRITE(2, buf, head - buf), head - buf);
         va_end(args);
         /*fflush(stderr); */
 
