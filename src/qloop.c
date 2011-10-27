@@ -306,7 +306,7 @@ void qt_loop(const size_t    start,
              const qt_loop_f func,
              void           *argptr)
 {                                      /*{{{ */
-    qt_loop_inner(start, stop, func, argptr, 0, SYNCVAR_T);
+    qt_loop_inner(start, stop, func, argptr, 0, DONECOUNT);
 }                                      /*}}} */
 
 void qt_loop_dc(const size_t    start,
@@ -562,7 +562,7 @@ void qt_loop_balance(const size_t    start,
                      const qt_loop_f func,
                      void           *argptr)
 {                                      /*{{{ */
-    qt_loop_balance_inner(start, stop, func, argptr, 0, SYNCVAR_T);
+    qt_loop_balance_inner(start, stop, func, argptr, 0, DONECOUNT);
 }                                      /*}}} */
 
 void qt_loop_balance_dc(const size_t    start,
