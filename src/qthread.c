@@ -1048,7 +1048,6 @@ int qthread_initialize(void)
 #endif
 
     qthread_debug(CORE_DETAILS, "enqueueing mccoy thread\n");
-    pthread_setspecific(shepherd_structs, &(qlib->shepherds[0].workers[0]));
     qt_threadqueue_enqueue(qlib->shepherds[0].ready, qlib->mccoy_thread, &(qlib->shepherds[0]));
     qassert(getcontext(&(qlib->mccoy_thread->rdata->context)), 0);
     qassert(getcontext(&(qlib->master_context)), 0);
@@ -2850,7 +2849,10 @@ qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *shepherd_id)
     return worker ? (worker->packed_worker_id) : NO_WORKER;
 
 #else
-    return qthread_shep();
+    if (shepherd_id != NULL) {
+        *shepherd_id = qthread_shep();
+    }
+    return 0;
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 }                                      /*}}} */
 
