@@ -24,7 +24,7 @@ static union {
     qt_mpool pool;
     void    *vp;
 } fbp;
-QTHREAD_CASLOCK_EXPLICIT_DECL(fbp_caslock);
+QTHREAD_CASLOCK_EXPLICIT_DECL(fbp_caslock)
 static Q_UNUSED qt_feb_barrier_t *global_barrier = NULL;
 
 #ifndef UNPOOLED
