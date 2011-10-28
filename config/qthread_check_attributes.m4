@@ -94,7 +94,7 @@ AC_CACHE_CHECK(
  [qt_cv_builtin_prefetch],
  [AS_IF([test "$qthread_cv_c_compiler_type" == PortlandGroup],
         [qt_cv_builtin_prefetch=no],
-		[AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
+		[AC_LINK_IFELSE([AC_LANG_SOURCE([[
 int x;
 void * f (int i)
 { __builtin_prefetch(&x, 0, 0);
