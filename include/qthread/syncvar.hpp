@@ -50,7 +50,16 @@ class uint60_t {
 class syncvar
 {
     public:
-	QINLINE syncvar(void) { the_syncvar_t.u.w = 0; }
+	QINLINE syncvar(void) : the_syncvar_t(SYNCVAR_STATIC_INITIALIZER) { ; }
+	QINLINE syncvar(const uint60_t &val) {
+	    the_syncvar_t.u.s.data = val;
+	}
+	QINLINE syncvar(const syncvar &val) {
+	    the_syncvar_t.u.w = val.the_syncvar_t.u.w;
+	}
+	QINLINE syncvar(const syncvar_t &val) {
+	    the_syncvar_t.u.w = val.u.w;
+	}
 	virtual ~syncvar(void) {;}
 
 	int empty(void) { return qthread_syncvar_empty(&the_syncvar_t); }
@@ -126,11 +135,6 @@ class syncvar
 
 class loose_syncvar : public syncvar
 {
-    /* constructors */
-    QINLINE loose_syncvar(const loose_syncvar &val) : syncvar() {
-	the_syncvar_t.u.w = val.the_syncvar_t.u.w;
-    }
-
     /************************/
     /* overloaded operators */
     /************************/
@@ -187,15 +191,6 @@ class loose_syncvar : public syncvar
 
 class strict_syncvar : public syncvar
 {
-    /* constructors */
-    QINLINE strict_syncvar(const uint64_t &val) : syncvar() {
-	the_syncvar_t.u.w = 0;
-	the_syncvar_t.u.s.data = val;
-    }
-    QINLINE strict_syncvar(const syncvar_t &val) : syncvar() {
-	the_syncvar_t.u.w = val.u.w;
-    }
-
     /************************/
     /* overloaded operators */
     /************************/
