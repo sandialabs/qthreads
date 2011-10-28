@@ -25,6 +25,10 @@
 #include <sys/uio.h>
 /* - select(2) */
 #include <sys/select.h>
+/* - wait4(2) */
+#include <sys/time.h>
+#include <sys/resource.h>
+#include <sys/wait.h>
 
 /* Internal Headers */
 #include "qt_io.h"
