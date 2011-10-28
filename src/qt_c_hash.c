@@ -151,6 +151,13 @@ static inline void **qt_hash_internal_find(qt_hash  h,
     uint64_t bucket = hashed & mask;
     uint64_t step, quit;
 
+    if (key == KEY_DELETED || key == KEY_NULL) {
+        if (h->has_key[(uintptr_t)key]) {
+            return &(h->value[(uintptr_t)key]);
+        } else {
+            return NULL;
+        }
+    }
     for (unsigned i = 0; i < bucketsize; ++i) {
         Q_PREFETCH(&z[bucket + i + 1].key, 0, 1);
         Q_PREFETCH(&z[bucket + i + 1].value, 1, 1);
@@ -260,7 +267,6 @@ int INTERNAL qt_hash_put(qt_hash  h,
     int ret;
 
     assert(h);
-    qassert_ret(key != KEY_DELETED && key != KEY_NULL, 0);
     if (h->lock) {
         QTHREAD_FASTLOCK_LOCK(h->lock);
     }
@@ -321,7 +327,11 @@ int INTERNAL qt_hash_put_locked(qt_hash  h,
     uint64_t    hw, bucket, step;
 
     assert(h);
-    qassert_ret(key != KEY_DELETED && key != KEY_NULL, 0);
+    if (key == KEY_DELETED || key == KEY_NULL) {
+        h->has_key[(uintptr_t)key] = 1;
+        h->value[(uintptr_t)key] = value;
+        return 1;
+    }
 
 restart:
     z    = h->entries;
@@ -419,6 +429,15 @@ int INTERNAL qt_hash_remove_locked(qt_hash        h,
     void      **value;
 
     assert(h);
+    if (key == KEY_DELETED || key == KEY_NULL) {
+        if (h->has_key[(uintptr_t)key] == 0) {
+            return 0;
+        } else {
+            h->has_key[(uintptr_t)key] = 0;
+            h->value[(uintptr_t)key] = NULL;
+        }
+        return 1;
+    }
     value = qt_hash_internal_find(h, key);
     if (value == NULL) {
         return 0;
