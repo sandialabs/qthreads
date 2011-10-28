@@ -1,5 +1,9 @@
+#if 0
 /* Portions of this file are Copyright (c) 2005-2006 Russ Cox, MIT; see COPYRIGHT */
 /* Portions of this file are Copyright Sandia National Laboratories */
+#endif
+
+#define _(x)
 
 #if defined(__FreeBSD__) && defined(__i386__) && __FreeBSD__ < 5
 #define NEEDX86CONTEXT 1
@@ -20,7 +24,7 @@
 #  define NEEDPOWER64CONTEXT 1
 #  define SET __qt_setmctxt
 #  define GET __qt_getmctxt
-# else /* why not detect __ppc__? */
+# else _(/* why not detect __ppc__? */)
 #  define NEEDPOWERCONTEXT 1
 #  define SET __qt_setmctxt
 #  define GET __qt_getmctxt
@@ -64,40 +68,41 @@
 #ifdef NEEDX86CONTEXT
 .globl SET
 SET:
-        movl    4(%esp), %eax     /* get the offset of the uc_mcontext component
-                                                                 (arguments are passed via the stack) */
+		movl    4(%esp), %eax     _(/* get the offset of the uc_mcontext
+									   component (arguments are passed via the
+									   stack) */)
 
-        movl    (0*4)(%eax), %edi /* restore EDI: general 32-bit register */
-        movl    (1*4)(%eax), %ebp /* restore EBP: Stack frame pointer */
-        movl    (2*4)(%eax), %ebx /* restore EBX: PIC base register */
-        movl    (3*4)(%eax), %esi /* restore ESI: general 32-bit register */
-        ldmxcsr (4*4)(%eax)       /* restore SSE2 control and status word */
-        fldcw   (5*4)(%eax)       /* restore x87 control word */
+        movl    (0*4)(%eax), %edi _(/* restore EDI: general 32-bit register */)
+        movl    (1*4)(%eax), %ebp _(/* restore EBP: Stack frame pointer */)
+        movl    (2*4)(%eax), %ebx _(/* restore EBX: PIC base register */)
+        movl    (3*4)(%eax), %esi _(/* restore ESI: general 32-bit register */)
+        ldmxcsr (4*4)(%eax)       _(/* restore SSE2 control and status word */)
+        fldcw   (5*4)(%eax)       _(/* restore x87 control word */)
 
-        movl    (6*4)(%eax), %esp /* set the stack */
-        movl    (7*4)(%eax), %ecx /* get the new PC to jump to */
+        movl    (6*4)(%eax), %esp _(/* set the stack */)
+        movl    (7*4)(%eax), %ecx _(/* get the new PC to jump to */)
 
-        movl    $1,          %eax /* return value (allows us to escape the swapcontext loop) */
-        jmp     *%ecx             /* jump to the new PC */
+        movl    $1,          %eax _(/* return value (allows us to escape the swapcontext loop) */)
+        jmp     *%ecx             _(/* jump to the new PC */)
 
 .globl GET
 GET:
-        movl    4(%esp), %eax     /* get the offset of the uc_mcontext component */
+        movl    4(%esp), %eax     _(/* get the offset of the uc_mcontext component */)
 
-        movl    %edi, (0*4)(%eax) /* save EDI: general 32-bit register */
-        movl    %ebp, (1*4)(%eax) /* save EBP: Stack frame pointer */
-        movl    %ebx, (2*4)(%eax) /* save EBX: PIC base register */
-        movl    %esi, (3*4)(%eax) /* save ESI: general 32-bit register */
-        stmxcsr       (4*4)(%eax) /* save SSE2 control and status word */
-        fnstcw        (5*4)(%eax) /* save x87 control word */
+        movl    %edi, (0*4)(%eax) _(/* save EDI: general 32-bit register */)
+        movl    %ebp, (1*4)(%eax) _(/* save EBP: Stack frame pointer */)
+        movl    %ebx, (2*4)(%eax) _(/* save EBX: PIC base register */)
+        movl    %esi, (3*4)(%eax) _(/* save ESI: general 32-bit register */)
+        stmxcsr       (4*4)(%eax) _(/* save SSE2 control and status word */)
+        fnstcw        (5*4)(%eax) _(/* save x87 control word */)
 
-        leal    4(%esp), %ecx     /* load the stack pointer without the return address */
-	movl    %ecx, (6*4)(%eax) /* save the stack pointer */
+        leal    4(%esp), %ecx     _(/* load the stack pointer without the return address */)
+	movl    %ecx, (6*4)(%eax) _(/* save the stack pointer */)
 
-        movl    (%esp), %ecx      /* load the current return location, which is stored on the stack */
-        movl    %ecx, (7*4)(%eax) /* store the current return location */
+        movl    (%esp), %ecx      _(/* load the current return location, which is stored on the stack */)
+        movl    %ecx, (7*4)(%eax) _(/* store the current return location */)
 
-        movl    $0,   %eax        /* return value (allows us to escape the swapcontext loop) */
+        movl    $0,   %eax        _(/*) return value (allows us to escape the swapcontext loop) */)
         ret
 #endif
 
@@ -130,50 +135,50 @@ GET:
  */
 .globl SET
 SET:
-        /* the argument is %rdi, so we do not need to load it from the stack */
+        _(/*) the argument is %rdi, so we do not need to load it from the stack */)
 
-        movq    (1*8)(%rdi), %rbp /* frame pointer */
-        movq    (2*8)(%rdi), %rbx /* base pointer */
-        /* extra caller-saved registers in AMD */
+        movq    (1*8)(%rdi), %rbp _(/*) frame pointer */)
+        movq    (2*8)(%rdi), %rbx _(/*) base pointer */)
+        _(/*) extra caller-saved registers in AMD */)
         movq    (3*8)(%rdi), %r12
         movq    (4*8)(%rdi), %r13
         movq    (5*8)(%rdi), %r14
         movq    (6*8)(%rdi), %r15
-        ldmxcsr (7*8)(%rdi)                     /* restore SSE2 control and status word */
-        fldcw   (8*8)(%rdi)                     /* restore x87 control word */
-        movq    (9*8)(%rdi), %rsp /* stack pointer */
-        pushq   (10*8)(%rdi) /* push new $pc onto stack for `ret` */
-        movq    (0*8)(%rdi), %rdi /* 1st int arg (arg passing) */
+        ldmxcsr (7*8)(%rdi)                     _(/*) restore SSE2 control and status word */)
+        fldcw   (8*8)(%rdi)                     _(/*) restore x87 control word */)
+        movq    (9*8)(%rdi), %rsp _(/*) stack pointer */)
+        pushq   (10*8)(%rdi) _(/*) push new $pc onto stack for `ret` */)
+        movq    (0*8)(%rdi), %rdi _(/*) 1st int arg (arg passing) */)
 
-        movq    $1,          %rax /* return value (allows us to escape the swapcontext loop) */
+        movq    $1,          %rax _(/*) return value (allows us to escape the swapcontext loop) */)
         ret
 
 .globl GET
 GET:
-        /* arg0 is in %rdi, DO NOT load from stack */
-        movq    %rdi, (0*8)(%rdi) /* set rdi properly (???) */
+        _(/*) arg0 is in %rdi, DO NOT load from stack */)
+        movq    %rdi, (0*8)(%rdi) _(/*) set rdi properly (???) */)
 
-        movq    %rbp, (1*8)(%rdi) /* frame pointer */
-        movq    %rbx, (2*8)(%rdi) /* base pointer */
+        movq    %rbp, (1*8)(%rdi) _(/*) frame pointer */)
+        movq    %rbx, (2*8)(%rdi) _(/*) base pointer */)
 
-        /* extra registers in AMD - callee saved */
-        movq    %r12, (3*8)(%rdi) /* in the __spare__ area */
+        _(/*) extra registers in AMD - callee saved */)
+        movq    %r12, (3*8)(%rdi) _(/*) in the __spare__ area */)
         movq    %r13, (4*8)(%rdi)
         movq    %r14, (5*8)(%rdi)
         movq    %r15, (6*8)(%rdi)
-        stmxcsr           (7*8)(%rdi) /* save SSE2 control and status word */
-        fnstcw            (8*8)(%rdi) /* save x86 control word */
+        stmxcsr           (7*8)(%rdi) _(/*) save SSE2 control and status word */)
+        fnstcw            (8*8)(%rdi) _(/*) save x86 control word */)
 
-        /* the following is broken into two instructions
-         * because we can only dereference one memory op at a time */
+        _(/* the following is broken into two instructions
+           * because we can only dereference one memory op at a time */)
         movq    (%rsp), %rcx
         movq    %rcx, (10*8)(%rdi)
 
-        /* I don't entirely understand why this is correct */
-        leaq    8(%rsp), %rcx    /* %rsp */
+        _(/*) I don't entirely understand why this is correct */)
+        leaq    8(%rsp), %rcx    _(/*) %rsp */)
         movq    %rcx, (9*8)(%rdi)
 
-        mov             $0, %rax /* set return value - success! */
+        mov             $0, %rax _(/*) set return value - success! */)
         ret
 #endif
 
@@ -189,12 +194,12 @@ GET:
         # .caller_caller_sp = 12
         addli   r23, sp, -8     # the arg
         sw              r23, r0         #
-        /* prologue end */
-        /* setup the pointer */
+        _(/*) prologue end */)
+        _(/*) setup the pointer */)
         addli   r1, sp, -8
         lw              r1, r1
-        /* note that each of these uses different temporary
-         * registers, to allow efficient scheduling */
+        _(/* note that each of these uses different temporary
+           * registers, to allow efficient scheduling */)
         addi    r2, r1, (0*4)
         sw              r2, r30
         addi    r3, r1, (1*4)
@@ -241,23 +246,23 @@ GET:
         sw              r23, r51
         addi    r24, r1, (22*4)
         sw              r24, r52
-        /* gotten contexts are not function calls */
+        _(/*) gotten contexts are not function calls */)
         addi    r6, r1, (23*4)+(6*4)
         sw              r6, zero
-        /* store the link register as the new pc */
+        _(/*) store the link register as the new pc */)
         move    r25, lr
         addi    r27, r1, (23*4)+(3*4)
         sw              r27, r25
-        /* store the stack pointer */
+        _(/*) store the stack pointer */)
         addi    r27, sp, 0
         addi    r28, r1, (23*4)+(1*4)
         sw              r28, r27
-        /* store the return for swapcontext */
+        _(/*) store the return for swapcontext */)
         addi    r3, r1, (23*4)+(4*4)
         movei   r4, 1
         sw              r3, r4
-        /* return value */
-        move    r0, zero /* success! */
+        _(/*) return value */)
+        move    r0, zero _(/*) success! */)
         jrp     lr
 .type  SET,@function
 .globl SET
@@ -267,12 +272,12 @@ SET:
         # .caller_caller_sp = 12
         addli   r6, sp, -8
         sw              r6, r0
-        /* prologue end */
-        /* setup the pointer */
+        _(/*) prologue end */)
+        _(/*) setup the pointer */)
         addli   r1, sp, -8
         lw              r1, r1
-        /* note that each of these uses different temporary
-         * registers, to allow efficient scheduling */
+        _(/* note that each of these uses different temporary
+           * registers, to allow efficient scheduling */)
         addi    r2, r1, (0*4)
         lw              r30, r2
         addi    r3, r1, (1*4)
@@ -319,14 +324,14 @@ SET:
         lw              r51, r24
         addi    r25, r1, (22*4)
         lw              r52, r25
-        /* fiddle with the stack */
+        _(/*) fiddle with the stack */)
         addi    r2, r1, (23*4)+(1*4)
         lw              r3, r2
         move    sp, r3
-        /* retrieve the new PC */
+        _(/*) retrieve the new PC */)
         addi    r6, r1, (23*4)+(3*4)
         lw              r7, r6
-        /* first argument? */
+        _(/*) first argument? */)
         addi    r4, r1, (23*4)+(6*4)
         lw              r5, r4
         bz              r5, 1f
@@ -348,23 +353,23 @@ SET:
 .align 2
 
 .globl GET
-GET:                            /* xxx: instruction scheduling */
+GET:                            _(/*) xxx: instruction scheduling */)
         mflr    r0
         mfcr    r5
         mfctr   r6
         mfxer   r7
-        stw     r0, 0*4(r3) /* pc - program counter */
-        stw     r5, 1*4(r3) /* cr - condition register */
-        stw     r6, 2*4(r3) /* ctr - count register */
-        stw     r7, 3*4(r3) /* xer */
+        stw     r0, 0*4(r3) _(/*) pc - program counter */)
+        stw     r5, 1*4(r3) _(/*) cr - condition register */)
+        stw     r6, 2*4(r3) _(/*) ctr - count register */)
+        stw     r7, 3*4(r3) _(/*) xer */)
 
-        stw     r1, 4*4(r3) /* sp */
-        stw     r2, 5*4(r3) /* toc */
-        li      r5, 1                   /* return value for qt_setmctxt */
-        stw     r5, 6*4(r3) /* arg1 & return-value */
+        stw     r1, 4*4(r3) _(/*) sp */)
+        stw     r2, 5*4(r3) _(/*) toc */)
+        li      r5, 1                   _(/*) return value for qt_setmctxt */)
+        stw     r5, 6*4(r3) _(/*) arg1 & return-value */)
 
-        stw     r13, (0+7)*4(r3)        /* callee-save GPRs */
-        stw     r14, (1+7)*4(r3)        /* not a block move b/c that could be slower */
+        stw     r13, (0+7)*4(r3)        _(/*) callee-save GPRs */)
+        stw     r14, (1+7)*4(r3)        _(/*) not a block move b/c that could be slower */)
         stw     r15, (2+7)*4(r3)
         stw     r16, (3+7)*4(r3)
         stw     r17, (4+7)*4(r3)
@@ -383,9 +388,9 @@ GET:                            /* xxx: instruction scheduling */
         stw     r30, (17+7)*4(r3)
         stw     r31, (18+7)*4(r3)
 
-        /* skip 4 bytes for pad... 19+7 = 26 */
+        _(/*) skip 4 bytes for pad... 19+7 = 26 */)
 
-        stfd f14, (0)*8+(26*4)(r3)      /* callee-save FPRs */
+        stfd f14, (0)*8+(26*4)(r3)      _(/*) callee-save FPRs */)
         stfd f15, (1)*8+(26*4)(r3)
         stfd f16, (2)*8+(26*4)(r3)
         stfd f17, (3)*8+(26*4)(r3)
@@ -404,13 +409,13 @@ GET:                            /* xxx: instruction scheduling */
         stfd f30, (16)*8+(26*4)(r3)
         stfd f31, (17)*8+(26*4)(r3)
 
-        li      r3, 0                   /* return */
+        li      r3, 0                   _(/*) return */)
         blr
 
 .globl SET
 SET:
-        lwz     r13, (0+7)*4(r3)        /* callee-save GPRs */
-        lwz     r14, (1+7)*4(r3)        /* not a block move b/c that could be slower */
+        lwz     r13, (0+7)*4(r3)        _(/*) callee-save GPRs */)
+        lwz     r14, (1+7)*4(r3)        _(/*) not a block move b/c that could be slower */)
         lwz     r15, (2+7)*4(r3)
         lwz     r16, (3+7)*4(r3)
         lwz     r17, (4+7)*4(r3)
@@ -429,9 +434,9 @@ SET:
         lwz     r30, (17+7)*4(r3)
         lwz     r31, (18+7)*4(r3)
 
-        /* skip 4 bytes for pad... 19+7 = 26 */
+        _(/*) skip 4 bytes for pad... 19+7 = 26 */)
 
-        lfd f14, (0)*8+(26*4)(r3)       /* callee-save FPRs */
+        lfd f14, (0)*8+(26*4)(r3)       _(/*) callee-save FPRs */)
         lfd f15, (1)*8+(26*4)(r3)
         lfd f16, (2)*8+(26*4)(r3)
         lfd f17, (3)*8+(26*4)(r3)
@@ -456,7 +461,7 @@ SET:
         lwz     r0, 0*4(r3)
         mtlr    r0
         lwz     r0, 1*4(r3)
-        mtcr    r0                      /* mtcrf 0xFF, r0 */
+        mtcr    r0                      _(/*) mtcrf 0xFF, r0 */)
         lwz     r0, 2*4(r3)
         mtctr   r0
         lwz     r0, 3*4(r3)
@@ -474,7 +479,7 @@ SET:
 .align 2
 
 .globl GET
-GET:                            /* xxx: instruction scheduling */
+GET:                            _(/*) xxx: instruction scheduling */)
         mflr    r0
         mfcr    r5
         mfctr   r6
@@ -486,12 +491,12 @@ GET:                            /* xxx: instruction scheduling */
 
         std     r1, 4*8(r3)
         std     r2, 5*8(r3)
-        li      r5, 1                   /* return value for qt_setmctxt */
+        li      r5, 1                   _(/*) return value for qt_setmctxt */)
         std     r5, 6*8(r3)
 
-        /*std   r13, (0+7)*8(r3) not saving r13 because I want thread migration */
-        std     r14, (1+7)*8(r3)        /* callee-save GPRs */
-        std     r15, (2+7)*8(r3)        /* xxx: block move */
+        _(/*)std   r13, (0+7)*8(r3) not saving r13 because I want thread migration */)
+        std     r14, (1+7)*8(r3)        _(/*) callee-save GPRs */)
+        std     r15, (2+7)*8(r3)        _(/*) xxx: block move */)
         std     r16, (3+7)*8(r3)
         std     r17, (4+7)*8(r3)
         std     r18, (5+7)*8(r3)
@@ -509,9 +514,9 @@ GET:                            /* xxx: instruction scheduling */
         std     r30, (17+7)*8(r3)
         std     r31, (18+7)*8(r3)
 
-        /* the pad is unnecessary in 64 bit mode ... (minor bug!) */
+        _(/*) the pad is unnecessary in 64 bit mode ... (minor bug!) */)
 
-        stfd f14, (0+26)*8(r3) /* callee-save FPRs */
+        stfd f14, (0+26)*8(r3) _(/*) callee-save FPRs */)
         stfd f15, (1+26)*8(r3)
         stfd f16, (2+26)*8(r3)
         stfd f17, (3+26)*8(r3)
@@ -530,14 +535,14 @@ GET:                            /* xxx: instruction scheduling */
         stfd f30, (16+26)*8(r3)
         stfd f31, (17+26)*8(r3)
 
-        li      r3, 0                   /* return */
+        li      r3, 0                   _(/*) return */)
         blr
 
 .globl SET
 SET:
-        /*ld    r13, (0+7)*8(r3) not restoring r13 because I want thread migration */
-        ld      r14, (1+7)*8(r3)        /* callee-save GPRs */
-        ld      r15, (2+7)*8(r3)        /* xxx: block move */
+        _(/*)ld    r13, (0+7)*8(r3) not restoring r13 because I want thread migration */)
+        ld      r14, (1+7)*8(r3)        _(/*) callee-save GPRs */)
+        ld      r15, (2+7)*8(r3)        _(/*) xxx: block move */)
         ld      r16, (3+7)*8(r3)
         ld      r17, (4+7)*8(r3)
         ld      r18, (5+7)*8(r3)
@@ -555,7 +560,7 @@ SET:
         ld      r30, (17+7)*8(r3)
         ld      r31, (18+7)*8(r3)
 
-        lfd f14, (0+26)*8(r3) /* callee-save FPRs */
+        lfd f14, (0+26)*8(r3) _(/*) callee-save FPRs */)
         lfd f15, (1+26)*8(r3)
         lfd f16, (2+26)*8(r3)
         lfd f17, (3+26)*8(r3)
@@ -580,7 +585,7 @@ SET:
         ld      r0, 0*8(r3)
         mtlr    r0
         ld      r0, 1*8(r3)
-        mtcr    r0                      /* mtcrf 0xFF, r0 */
+        mtcr    r0                      _(/*) mtcrf 0xFF, r0 */)
         ld      r0, 2*8(r3)
         mtctr   r0
         ld      r0, 3*8(r3)
@@ -607,10 +612,10 @@ GET:
         str     r12, [r0,#48]
         str     r13, [r0,#52]
         str     r14, [r0,#56]
-        /* store 1 as r0-to-restore */
+        _(/*) store 1 as r0-to-restore */)
         mov     r1, #1
         str     r1, [r0]
-        /* return 0 */
+        _(/*) return 0 */)
         mov     r0, #0
         mov     pc, lr
 
@@ -634,7 +639,7 @@ SET:
         mov     pc, lr
 #endif
 
-#ifdef __ELF__
+#if defined(__ELF__) && !defined(__SUNPRO_C)
 .section .note.GNU-stack,"",%progbits
 #endif
 
