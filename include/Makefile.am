@@ -11,6 +11,7 @@ noinst_HEADERS = \
 	fastcontext/power-ucontext.h \
 	fastcontext/386-ucontext.h \
 	fastcontext/tile-ucontext.h \
+	net/net.h \
 	qthread_innards.h \
 	qloop_innards.h \
 	qthread_asserts.h \

@@ -63,6 +63,10 @@ if COMPILE_ROSE_EXTENSIONS
 TESTS += test_log_barrier
 endif
 
+if WANT_MULTINODE
+TESTS += test_multinode_init
+endif
+
 EXTRA_PROGRAMS += \
 	 time_increments \
 	 time_febs \
@@ -353,3 +357,6 @@ time_qt_loopaccums_DEPENDENCIES = $(QTHREADLIB)
 
 test_sinc_SOURCES = test_sinc.c
 test_sinc_DEPENDENCIES = $(QTHREADLIB)
+
+test_multinode_init_SOURCES = test_multinode_init.c
+test_multinode_init_DEPENDENCIES = $(QTHREADLIB)

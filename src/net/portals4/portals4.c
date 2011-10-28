@@ -11,9 +11,9 @@
 #include <errno.h>
 
 #include "net/net.h"
-#include "net/driver.h"
 #include "runtime.h"
 #include "qt_mpool.h"
+#include "qt_debug.h"
 
 struct recv_block_t {
     void *start;
@@ -71,14 +71,11 @@ qthread_internal_net_driver_initialize(void)
     ptl_md_t md;
     ptl_me_t me;
 
+    qthread_debug(MULTINODE_CALLS, "begin internal_net_driver_initialize\n");
+
     GET_ENV_NUM("QTHREAD_PORTALS_RECV_BLOCKS", num_recv_blocks, 3, 3);
     GET_ENV_NUM("QTHREAD_PORTALS_RECV_BLOCK_SIZE", size_recv_block, 1024 * 1024, 1024 * 1024);
     GET_ENV_NUM("QTHREAD_PORTALS_MAX_MSG_SIZE", max_msg_size, 4096, 4096);
-
-    fprintf(stderr, "begin net_driver_init\n");
-
-    printf("max msg size %d\n", max_msg_size);
-    printf("recv_block_size %d\n", size_recv_block);
 
     mpool = qt_mpool_create(sizeof(struct net_pkt_t));
 
@@ -129,10 +126,6 @@ qthread_internal_net_driver_initialize(void)
         return ret;
     }
 
-    for (i = 0 ; i < qthread_internal_net_driver_get_size() ; ++i) {
-        fprintf(stderr, "map[%d] = %d,%d\n", i, desired[i].phys.nid, desired[i].phys.pid);
-    }
-
     ret = PtlSetMap(ni_h,
                     qthread_internal_net_driver_get_size(),
                     desired);
@@ -169,7 +162,7 @@ qthread_internal_net_driver_initialize(void)
     me.length = 0;
     me.ct_handle = PTL_CT_NONE;
     me.min_free = 0;
-    me.ac_id.uid = PTL_UID_ANY;
+    me.uid = PTL_UID_ANY;
     me.options = PTL_ME_OP_PUT | 
         PTL_ME_UNEXPECTED_HDR_DISABLE;
     me.match_id.rank = PTL_RANK_ANY;
@@ -178,7 +171,7 @@ qthread_internal_net_driver_initialize(void)
     ret = PtlMEAppend(ni_h,
                       data_pt,
                       &me,
-                      PTL_OVERFLOW,
+                      PTL_OVERFLOW_LIST,
                       NULL,
                       &overflow_me_h);
     if (PTL_OK != ret) {
@@ -221,7 +214,7 @@ qthread_internal_net_driver_initialize(void)
     /* finish up */
     qthread_internal_net_driver_runtime_barrier();
 
-    fprintf(stderr, "end net_driver_init\n");
+    qthread_debug(MULTINODE_CALLS, "end internal_net_driver_initialize\n" );
 
     return 0;
 }
@@ -254,11 +247,18 @@ qthread_internal_net_driver_register(int tag,
     return 0;
 }
 
+int
+qthread_internal_net_driver_barrier(void)
+{
+    qthread_internal_net_driver_runtime_barrier();
+    return 0;
+}
+
 
 int
 qthread_internal_net_driver_finalize(void)
 {
-    int ret;
+    int ret, i;
     struct net_pkt_t *pkt;
     void *dummy;
     
@@ -272,14 +272,42 @@ qthread_internal_net_driver_finalize(void)
 
     ret = transmit_packet(pkt);
     if (0 != ret) {
-        fprintf(stderr, "shutdown internal send: %d\n", ret);
+        qthread_debug(MULTINODE_DETAILS, "shutdown internal send: %d\n", ret);
         return ret;
     }
 
     pthread_join(progress_thread, &dummy);
 
+    for (i = 0 ; i < num_recv_blocks ; ++i) {
+        ret = PtlMEUnlink(recv_blocks[i].me_h);
+        if (PTL_OK != ret) {
+            qthread_debug(MULTINODE_DETAILS, "PtlMEUnlink returned %d\n", ret);
+        }
+    }
+
+    ret = PtlMEUnlink(overflow_me_h);
+    if (PTL_OK != ret) {
+        qthread_debug(MULTINODE_DETAILS, "PtlMEUnlink returned %d\n", ret);
+    }
+
+    ret = PtlMDRelease(md_h);
+    if (PTL_OK != ret) {
+        qthread_debug(MULTINODE_DETAILS, "PtlMDRelease returned %d\n", ret);
+    }
+
+    ret = PtlPTFree(ni_h, data_pt);
+    if (PTL_OK != ret) {
+        qthread_debug(MULTINODE_DETAILS, "PtlPTFree returned %d\n", ret);
+    }
+
+    ret = PtlEQFree(eq_h);
+    if (PTL_OK != ret) {
+        qthread_debug(MULTINODE_DETAILS, "PtlEQFree returned %d\n", ret);
+    }
+
     qthread_internal_net_driver_runtime_fini();
 
+    PtlNIFini(ni_h);
     PtlFini();
 
     qt_mpool_destroy(mpool);
@@ -294,40 +322,45 @@ progress_function(void *data)
     int ret;
     ptl_event_t ev;
 
-    fprintf(stderr, "begin progress function\n");
+    qthread_debug(MULTINODE_CALLS, "begin progress function\n");
     while (1) {
         ret = PtlEQWait(eq_h, &ev);
         if (PTL_OK != ret) {
-            fprintf(stderr, "PtlEQWait: %d\n", ret);
+            qthread_debug(MULTINODE_CALLS, "PtlEQWait: %d\n", ret);
         }
-        fprintf(stderr, "Handling event type %d\n", ev.type);
+        //        qthread_debug(MULTINODE_CALLS, "Handling event type %d\n", ev.type);
         switch (ev.type) {
         case PTL_EVENT_PUT:
             assert(ev.mlength == ev.rlength);
-            handlers[ev.hdr_data](ev.hdr_data, ev.start, ev.mlength);
+            if (NULL == handlers[ev.hdr_data]) {
+                qthread_debug(MULTINODE_CALLS, "Got message with unregistered tag %ld, ignoring\n", 
+                        (long unsigned)ev.hdr_data);
+            } else {
+                handlers[ev.hdr_data](ev.hdr_data, ev.start, ev.mlength);
+            }
             break;
         case PTL_EVENT_SEND:
             if (PTL_OK != ev.ni_fail_type) {
-                fprintf(stderr, "SEND event with fail type %d\n", ev.ni_fail_type);
+                qthread_debug(MULTINODE_CALLS, "SEND event with fail type %d\n", ev.ni_fail_type);
             }
             break;
         case PTL_EVENT_ACK:
             if (PTL_OK != ev.ni_fail_type) {
-                fprintf(stderr, "SEND event with fail type %d\n", ev.ni_fail_type);
+                qthread_debug(MULTINODE_CALLS, "SEND event with fail type %d\n", ev.ni_fail_type);
             } else {
                 struct net_pkt_t *pkt = (struct net_pkt_t*) ev.user_ptr;
                 if (ev.mlength != pkt->len) {
                     ret = transmit_packet(pkt);
                     if (PTL_OK != ret) {
-                        fprintf(stderr, "transmit packet failed: %d\n", ret);
+                        qthread_debug(MULTINODE_CALLS, "transmit packet failed: %d\n", ret);
                     }
                 } else {
-                    qt_mpool_destroy(mpool);
+                    qt_mpool_free(mpool, pkt);
                 }
             }
             break;
         default:
-            fprintf(stderr, "Unexpected event type %d\n", ev.type);
+            break;
         }
     }
     return NULL;
@@ -337,7 +370,7 @@ progress_function(void *data)
 static void
 exit_handler(int tag, void *start, size_t len)
 {
-    fprintf(stderr, "end progress function\n");
+    qthread_debug(MULTINODE_CALLS, "end progress function\n");
     pthread_exit(NULL);
 }
 
@@ -348,12 +381,11 @@ repost_recv_block(struct recv_block_t* block)
     ptl_me_t me;
     int ret;
 
-    printf("recv block posted\n");
     me.start = block->start;
     me.length = size_recv_block;
     me.ct_handle = PTL_CT_NONE;
     me.min_free = max_msg_size;
-    me.ac_id.uid = PTL_UID_ANY;
+    me.uid = PTL_UID_ANY;
     me.options = PTL_ME_OP_PUT | 
         PTL_ME_MANAGE_LOCAL | 
         PTL_ME_NO_TRUNCATE | 
@@ -378,7 +410,6 @@ transmit_packet(struct net_pkt_t *pkt)
     ptl_process_t peer;
 
     peer.rank = pkt->peer;
-    printf("sending to rank %d %d\n", pkt->peer, (int) pkt->len);
     ret = PtlPut(md_h,
                  (ptl_size_t) pkt->start,
                  pkt->len,
@@ -390,8 +421,9 @@ transmit_packet(struct net_pkt_t *pkt)
                  pkt,
                  pkt->tag);
     if (PTL_OK != ret) {
-        fprintf(stderr, "PtlPut failed: %d\n", ret);
+        qthread_debug(MULTINODE_CALLS, "PtlPut failed: %d\n", ret);
     }
 
     return ret;
 }
+

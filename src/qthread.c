@@ -70,7 +70,7 @@
 #include "qt_io.h"
 #include "qt_debug.h"
 #ifdef QTHREAD_MULTINODE
-# include "net/net.h"
+# include "qthread/qthread_multinode.h"
 #endif
 
 #ifdef QTHREAD_RCRTOOL
@@ -780,12 +780,6 @@ int qthread_initialize(void)
     qlib = (qlib_t)malloc(sizeof(struct qlib_s));
     qassert_ret(qlib, QTHREAD_MALLOC_ERROR);
 
-#ifdef QTHREAD_MULTINODE
-    if (NULL != getenv("QTHREAD_MULTINODE")) {
-        qthread_internal_net_initialize();
-    }
-#endif
-
     GET_ENV_NUM("QTHREAD_NUM_SHEPHERDS", nshepherds, 0, 0);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     GET_ENV_NUM("QTHREAD_NUM_WORKERS_PER_SHEPHERD", nworkerspershep, 0, 0);
@@ -1193,6 +1187,12 @@ int qthread_initialize(void)
     qt_global_arrive_first_init(nshepherds - 1, 0);
 # endif
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
+
+#ifdef QTHREAD_MULTINODE
+    if (NULL != getenv("QTHREAD_MULTINODE")) {
+        qthread_multinode_initialize();
+    }
+#endif
 
     qthread_debug(CORE_DETAILS, "finished.\n");
     return QTHREAD_SUCCESS;
