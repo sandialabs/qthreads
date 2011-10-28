@@ -8,6 +8,8 @@
 #include <float.h>                     /* for DBL_MIN & friends (according to C89) */
 #include <sys/time.h>
 #include <time.h>
+#include <qthread/qthread.h>
+#include <qthread/futurelib.h>
 #include <qthread/qloop.h>
 #include "argparsing.h"
 
