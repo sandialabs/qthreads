@@ -50,7 +50,11 @@ class uint60_t {
 class syncvar
 {
     public:
-	QINLINE syncvar(void) : the_syncvar_t(SYNCVAR_STATIC_INITIALIZER) { ; }
+	QINLINE syncvar(void) {
+	    // Doint it this way because extended initializers (e.g.
+	    // SYNCVAR_STATIC_INITIALIZER) are not (yet) supported by C++
+	    the_syncvar_t.u.w = 0;
+	}
 	QINLINE syncvar(const uint60_t &val) {
 	    the_syncvar_t.u.s.data = val;
 	}
