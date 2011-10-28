@@ -40,7 +40,7 @@ ssize_t qt_write(int         filedes,
     me->thread_state     = QTHREAD_STATE_SYSCALL;
     qthread_back_to_master(me);
     ret = job->ret;
-    qt_mpool_free(syscall_job_pool, job);
+    FREE_SYSCALLJOB(job);
     return ret;
 }
 
