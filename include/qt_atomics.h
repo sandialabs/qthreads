@@ -80,7 +80,7 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
 
 #ifdef QTHREAD_MUTEX_INCREMENT
 # define QTHREAD_CASLOCK(var)                var; QTHREAD_FASTLOCK_TYPE var ## _caslock
-# define QTHREAD_CASLOCK_EXPLICIT_DECL(name) QTHREAD_FASTLOCK_TYPE name
+# define QTHREAD_CASLOCK_EXPLICIT_DECL(name) QTHREAD_FASTLOCK_TYPE name;
 # define QTHREAD_CASLOCK_EXPLICIT_INIT(name) QTHREAD_FASTLOCK_INIT(name)
 # define QTHREAD_CASLOCK_INIT(var, i)        var = i; QTHREAD_FASTLOCK_INIT(var ## _caslock)
 # define QTHREAD_CASLOCK_DESTROY(var)        QTHREAD_FASTLOCK_DESTROY(var ## _caslock)
