@@ -467,8 +467,11 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
 
             if ((t->flags & QTHREAD_MUST_BE_WORKER_ZERO)) { // only needs to be on worker 0 for termination
                 switch(qthread_worker(NULL)) {
-                    case NO_WORKER:
-                        *(int *)0 = 0; // should never happen
+                    case NO_WORKER: // only happens during termination -- keep trying
+	  	       rwlock_rdunlock(rwlock, id); // release lock and get new value
+		       rwlock_rdlock(rwlock, id);
+                       oldtop.sse = q->top;
+ 		       continue;
                     case 0:
                        rwlock_rdunlock(rwlock, id);
                        return(t);
