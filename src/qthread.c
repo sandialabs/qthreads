@@ -889,8 +889,10 @@ int qthread_initialize(void)
     }
 #endif
     qlib->max_thread_id  = 0;
+    qlib->max_unique_id  = 0;
     qlib->sched_shepherd = 0;
     QTHREAD_FASTLOCK_INIT(qlib->max_thread_id_lock);
+    QTHREAD_FASTLOCK_INIT(qlib->max_unique_id_lock);
     QTHREAD_FASTLOCK_INIT(qlib->sched_shepherd_lock);
     {
         struct rlimit rlp;
@@ -1042,6 +1044,9 @@ int qthread_initialize(void)
 #endif
 
     qthread_debug(CORE_DETAILS, "enqueueing mccoy thread\n");
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    pthread_setspecific(shepherd_structs, &(qlib->shepherds[0].workers[0]));
+#endif
     qt_threadqueue_enqueue(qlib->shepherds[0].ready, qlib->mccoy_thread, &(qlib->shepherds[0]));
     qassert(getcontext(&(qlib->mccoy_thread->rdata->context)), 0);
     qassert(getcontext(&(qlib->master_context)), 0);
@@ -1051,6 +1056,8 @@ int qthread_initialize(void)
     qlib->shepherds[0].workers[0].shepherd  = &qlib->shepherds[0];
     qlib->shepherds[0].workers[0].active    = 1;
     qlib->shepherds[0].workers[0].worker_id = 0;
+    qlib->shepherds[0].workers[0].unique_id =  qthread_internal_incr(&(qlib->max_unique_id),
+								     &qlib->max_unique_id_lock, 1);
 #endif
     qthread_makecontext(&(qlib->master_context), qlib->master_stack,
                         qlib->master_stack_size,
@@ -1140,8 +1147,11 @@ int qthread_initialize(void)
                 }
             }
 # endif     /* ifdef QTHREAD_RCRTOOL */
-            qlib->shepherds[i].workers[j].worker_id        = j;
+            qlib->shepherds[i].workers[j].worker_id = j;
+            qlib->shepherds[i].workers[j].unique_id = qthread_internal_incr(&(qlib->max_unique_id),
+								      &qlib->max_unique_id_lock, 1);
             qlib->shepherds[i].workers[j].packed_worker_id = j + (i * nworkerspershep);
+
             qlib->shepherds[i].workers[j].active           = 1;
 # ifndef QTHREAD_RCRTOOL
             qlib->shepherds[i].workers[j].shepherd = &qlib->shepherds[i];
@@ -1577,6 +1587,7 @@ void qthread_finalize(void)
 
     qthread_debug(LOCK_DETAILS, "destroy scheduling locks\n");
     QTHREAD_FASTLOCK_DESTROY(qlib->max_thread_id_lock);
+    QTHREAD_FASTLOCK_DESTROY(qlib->max_unique_id_lock);
     QTHREAD_FASTLOCK_DESTROY(qlib->sched_shepherd_lock);
 
 #ifdef QTHREAD_USE_VALGRIND
@@ -2855,6 +2866,24 @@ qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *shepherd_id)
     return 0;
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 }                                      /*}}} */
+
+qthread_worker_id_t qthread_worker_unique(qthread_shepherd_id_t *shepherd_id)
+{                     /*{{{ */
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    qthread_worker_t *worker = (qthread_worker_t *)pthread_getspecific(shepherd_structs);
+
+    if((shepherd_id != NULL) && (worker != NULL)) {
+        *shepherd_id = worker->shepherd->shepherd_id;
+    }
+    return worker ? (worker->unique_id) : NO_WORKER;
+
+#else
+    if (shepherd_id != NULL) {
+        *shepherd_id = qthread_shep();
+    }
+    return 0;
+#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
+}                      /*}}} */
 
 int qthread_shep_ok(void)
 {                      /*{{{ */

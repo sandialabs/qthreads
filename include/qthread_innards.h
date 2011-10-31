@@ -60,6 +60,11 @@ typedef struct qlib_s {
     /* assigns a unique thread_id mostly for debugging! */
     aligned_t             max_thread_id;
     QTHREAD_FASTLOCK_TYPE max_thread_id_lock;
+ 
+    /* assigns a unique worker_id */
+    aligned_t             max_unique_id;
+    QTHREAD_FASTLOCK_TYPE max_unique_id_lock;
+
 
     /* round robin scheduler - can probably be smarter */
     aligned_t             sched_shepherd;

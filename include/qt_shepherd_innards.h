@@ -33,6 +33,7 @@ typedef struct qthread_shepherd_s qthread_shepherd_t;
 
 struct qthread_worker_s {
     pthread_t           worker;
+    qthread_worker_id_t unique_id;
     qthread_worker_id_t worker_id;
     qthread_worker_id_t packed_worker_id;
     qthread_shepherd_t *shepherd;

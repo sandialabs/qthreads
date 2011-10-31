@@ -206,7 +206,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
     qt_threadqueue_entry_t newtop;
     uint32_t nextindex;
 
-    int id = qthread_worker(NULL);    
+    int id = qthread_worker_unique(NULL);    
 
 
     rwlock_rdlock(q->rwlock, id);
@@ -316,7 +316,7 @@ void INTERNAL qt_threadqueue_resize_and_enqueue(qt_threadqueue_t   *q,
                                                 qthread_shepherd_t *shep)
 {   /*{{{*/
 
-    int id = qthread_worker(NULL);  
+    int id = qthread_worker_unique(NULL);  
 
     rwlock_wrlock(q->rwlock, id);
 
@@ -358,7 +358,7 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
                                              qthread_t          *t,
                                              qthread_shepherd_t *shep)
 {   /*{{{*/
-    int id = qthread_worker(NULL);  
+    int id = qthread_worker_unique(NULL);  
 
     rwlock_wrlock(q->rwlock, id);
   
@@ -443,7 +443,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
     qthread_t             *t = NULL;
     rwlock_t              *rwlock = q->rwlock;
     qt_threadqueue_union_t oldtop, lastchance;
-    int id = qthread_worker(NULL);  
+    int id = qthread_worker_unique(NULL);  
 
     assert(q != NULL);
     
@@ -555,7 +555,7 @@ INTERNAL int qt_threadqueue_dequeue_steal(qt_threadqueue_t *q,
 
     int amtStolen = 0, amtNotStolen = 0;
 
-    int id = qthread_worker(NULL);  
+    int id = qthread_worker_unique(NULL);  
 
     if (q->empty) return(0);
 
@@ -736,7 +736,7 @@ void qthread_steal_stat(void)
 qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
                                                     void             *value)
 {   /*{{{*/
-    int id = qthread_worker(NULL);  
+    int id = qthread_worker_unique(NULL);  
 
     assert(q != NULL);
 

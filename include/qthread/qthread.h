@@ -272,6 +272,7 @@ unsigned              qthread_id(void);
 unsigned              qthread_barrier_id(void);
 qthread_shepherd_id_t qthread_shep(void);
 qthread_worker_id_t   qthread_worker(qthread_shepherd_id_t *s);
+qthread_worker_id_t   qthread_worker_unique(qthread_shepherd_id_t *s);
 # ifdef QTHREAD_USE_ROSE_EXTENSIONS
 struct qthread_parallel_region_s *qt_parallel_region(void);
 #  ifdef QTHREAD_LOG_BARRIER

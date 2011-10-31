@@ -931,7 +931,7 @@ bool XOMP_loop_static_start(
 {
   //bool ret = 0;
   qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
-  aligned_t myid = qthread_barrier_id();
+  aligned_t myid = qthread_worker(NULL);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   aligned_t parallelWidth = qthread_num_workers();
 #else
@@ -959,7 +959,7 @@ bool XOMP_loop_static_start(
     return 1;
   }
   else {                                     // compute upper bound
-    *returnUpper = *returnLower + chunkSize; 
+    *returnUpper = *returnLower + chunkSize-1; 
     return 1;
   }
 }
