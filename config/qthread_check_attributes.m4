@@ -107,6 +107,7 @@ return malloc(i); }]])],
 ])
 
 AC_DEFUN([QTHREAD_BUILTIN_SYNCHRONIZE],[dnl
+AC_REQUIRE([QTHREAD_CHECK_ASSEMBLY])
 AC_CACHE_CHECK(
  [support for __sync_synchronize],
  [qt_cv_builtin_synchronize],
@@ -119,9 +120,19 @@ return 0;
  [qt_cv_builtin_synchronize=yes],
  [qt_cv_builtin_synchronize=no])])
  AS_IF([test "x$qt_cv_builtin_synchronize" == xyes],
-	   [defstr='__sync_synchronize()'],
-       [defstr='__asm__ __volatile__ ("":::"memory")'])
- AC_DEFINE_UNQUOTED([COMPILER_FENCE], [$defstr],
-   [if the compiler supports __sync_synchronize])
+	   [mdefstr='__sync_synchronize()'],
+       [AS_IF([test "x$qthread_cv_asm_arch" = xAMD64],
+	          [mdefstr='__asm__ __volatile__ ("mfence":::"memory")'],
+			  [mdefstr='__asm__ __volatile__ ("":::"memory")'])
+	    AS_IF([test "x$qthread_cv_asm_arch" = xSPARCV9_32 -o "x$qthread_cv_asm_arch" = xSPARCV9_64],
+		      [mdefstr='__asm__ __volatile__ ("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad":::"memory")'])
+			  ])
+ AC_DEFINE_UNQUOTED([MACHINE_FENCE], [$mdefstr],
+   [if the compiler supports __sync_synchronize (fallback to COMPILER_FENCE)])
+ AS_IF([test "x$qthread_cv_asm_arch" != xUNSUPPORTED],
+       [cdefstr='__asm__ __volatile__ ("":::"memory")'],
+	   [cdefstr='do { } while(0)'])
+ AC_DEFINE_UNQUOTED([COMPILER_FENCE], [$cdefstr],
+   [if the compiler supports inline assembly, we can prevent reordering])
  AS_IF([test "x$qt_cv_builtin_synchronize" == xyes], [$1], [$2])
 ])
