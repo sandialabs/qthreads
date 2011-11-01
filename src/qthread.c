@@ -313,8 +313,8 @@ static QINLINE void alloc_rdata(qthread_shepherd_t *me,
 }
 
 #ifdef QTHREAD_RCRTOOL
-static int          rcr_gate  = 0;
-static volatile int rcr_ready = 0;
+static int rcr_gate  = 0;
+static int rcr_ready = 0;
 #endif
 
 /* the qthread_shepherd() is the pthread responsible for actually
@@ -399,7 +399,7 @@ static void *qthread_shepherd(void *arg)
             maestro_allowed_workers();
             rcr_ready = 1;
         } else {
-            while(!rcr_ready) {} // spin until ready
+            while(!rcr_ready) SPINLOCK_BODY();  // spin until ready
         }
     }
 #endif /* ifdef QTHREAD_RCRTOOL */
@@ -2009,9 +2009,9 @@ int in_qthread_fence(void *addr);
 extern void *qthread_fence1;
 extern void *qthread_fence2;
 
-# define MONITOR_ASM_LABEL(name)     \
-    asm volatile (".globl " # name); \
-    asm volatile (# name ":")
+# define MONITOR_ASM_LABEL(name)             \
+    __asm__ __volatile__ (".globl " # name); \
+    __asm__ __volatile__ (# name ":")
 #endif /* ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING */
 
 /* this function runs a thread until it completes or yields */
@@ -2171,10 +2171,11 @@ void INTERNAL qthread_exec(qthread_t    *t,
 }                      /*}}} */
 
 /* this function yields thread t to the master kernel thread */
-void qthread_yield(void)
+void qthread_yield_(void)
 {                      /*{{{ */
     qthread_t *t = qthread_internal_self();
 
+    MACHINE_FENCE;
     if (t != NULL) {
         qthread_debug(THREAD_CALLS,
                       "tid %u yielding...\n", t->thread_id);
@@ -3117,8 +3118,8 @@ void qthread_remove_child(qthread_t *child)
 #if defined(QTHREAD_MUTEX_INCREMENT) ||             \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
-uint32_t qthread_incr32_(volatile uint32_t *op,
-                         const int32_t      incr)
+uint32_t qthread_incr32_(uint32_t     *op,
+                         const int32_t incr)
 {                      /*{{{ */
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
     uint32_t     retval;
@@ -3136,8 +3137,8 @@ uint32_t qthread_incr32_(volatile uint32_t *op,
     return retval;
 }                      /*}}} */
 
-uint64_t qthread_incr64_(volatile uint64_t *op,
-                         const int64_t      incr)
+uint64_t qthread_incr64_(uint64_t     *op,
+                         const int64_t incr)
 {                      /*{{{ */
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
     uint64_t     retval;
@@ -3155,8 +3156,8 @@ uint64_t qthread_incr64_(volatile uint64_t *op,
     return retval;
 }                      /*}}} */
 
-double qthread_dincr_(volatile double *op,
-                      const double     incr)
+double qthread_dincr_(double      *op,
+                      const double incr)
 {                      /*{{{ */
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
     double       retval;
@@ -3168,8 +3169,8 @@ double qthread_dincr_(volatile double *op,
     return retval;
 }                      /*}}} */
 
-float qthread_fincr_(volatile float *op,
-                     const float     incr)
+float qthread_fincr_(float      *op,
+                     const float incr)
 {                      /*{{{ */
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
     float        retval;
@@ -3181,9 +3182,9 @@ float qthread_fincr_(volatile float *op,
     return retval;
 }                      /*}}} */
 
-uint32_t qthread_cas32_(volatile uint32_t *operand,
-                        const uint32_t     oldval,
-                        const uint32_t     newval)
+uint32_t qthread_cas32_(uint32_t      *operand,
+                        const uint32_t oldval,
+                        const uint32_t newval)
 {                      /*{{{ */
     uint32_t     retval;
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(operand);
@@ -3197,9 +3198,9 @@ uint32_t qthread_cas32_(volatile uint32_t *operand,
     return retval;
 }                      /*}}} */
 
-uint64_t qthread_cas64_(volatile uint64_t *operand,
-                        const uint64_t     oldval,
-                        const uint64_t     newval)
+uint64_t qthread_cas64_(uint64_t      *operand,
+                        const uint64_t oldval,
+                        const uint64_t newval)
 {                      /*{{{ */
     uint64_t     retval;
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(operand);
