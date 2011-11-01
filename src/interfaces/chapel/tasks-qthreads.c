@@ -122,13 +122,13 @@ static volatile int done_finalizing   = 0;
 static void *initializer(void *junk)
 {
     qthread_initialize();
-    COMPILER_FENCE;
+    MACHINE_FENCE;
     done_initializing = 1;
 
     qthread_syncvar_readFF(NULL, &canexit);
 
     qthread_finalize();
-    COMPILER_FENCE;
+    MACHINE_FENCE;
     done_finalizing = 1;
     return NULL;
 }
