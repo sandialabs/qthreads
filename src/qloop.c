@@ -27,14 +27,6 @@ typedef enum {
     NO_SYNC
 } synctype_t;
 
-/* avoid compiler bugs with volatile... */
-static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t *ptr)
-{
-    return *ptr;
-}
-
-#define _(x) vol_read_a(&(x))
-
 struct qloop_wrapper_args {
     qt_loop_f  func;
     size_t     startat, stopat, id, level, spawnthreads;
@@ -122,9 +114,9 @@ int in_qthread_step_fence(void *addr);
 extern void *qthread_step_fence1;
 extern void *qthread_step_fence2;
 
-#  define MONITOR_ASM_LABEL(name)    \
-    asm volatile (".globl " # name); \
-    asm volatile (# name ":")
+#  define MONITOR_ASM_LABEL(name)            \
+    __asm__ __volatile__ (".globl " # name); \
+    __asm__ __volatile__ (# name ":")
 # endif /* ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING */
 
 static aligned_t qloop_step_wrapper_future(struct qloop_step_wrapper_args *const restrict arg)
@@ -290,7 +282,7 @@ static void qt_loop_inner(const size_t     start,
             qt_sinc_destroy(sync.sinc);
             break;
         case DONECOUNT:
-            while (*(volatile aligned_t *)sync.aligned != threadct) {
+            while (*sync.aligned != threadct) {
                 qthread_yield();
             }
             free(sync.aligned);
@@ -381,10 +373,10 @@ static void qt_loop_step_inner(const size_t         start,
 
     if (future) {  // haven't change this yet - use new name - who uses? 4/4/11 AKP
         for (i = start; i < stop; i += stride) {
-            future_fork_syncvar_to((qthread_f)qloop_step_wrapper_future,
-                                   qwa + threadct,
-                                   rets + i,
-                                   (qthread_shepherd_id_t)(threadct % qthread_num_shepherds()));
+            qthread_fork_syncvar_future_to((qthread_f)qloop_step_wrapper_future,
+                                           qwa + threadct,
+                                           rets + i,
+                                           (qthread_shepherd_id_t)(threadct % qthread_num_shepherds()));
             threadct++;
         }
     } else {
@@ -546,7 +538,7 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
             qt_sinc_destroy(sync.sinc);
             break;
         case DONECOUNT:
-            while (*(volatile aligned_t *)sync.aligned != maxworkers) {
+            while (*sync.aligned != maxworkers) {
                 qthread_yield();
             }
             free(sync.aligned);
@@ -1041,7 +1033,7 @@ static aligned_t qqloop_wrapper(const struct qqloop_wrapper_args *arg)
     qqloop_iteration_queue_t *const restrict  iq        = stat->iq;
     const qt_loop_f                           func      = stat->func;
     void *const restrict                      a         = stat->arg;
-    volatile aligned_t *const                 dc        = &(stat->donecount);
+    aligned_t *const                          dc        = &(stat->donecount);
     const qq_getiter_f                        get_iters = stat->get;
     const qthread_shepherd_id_t               shep      = arg->shep;
 
@@ -1176,8 +1168,8 @@ void qt_loop_queue_run(qqloop_handle_t *loop)
     {
         qthread_shepherd_id_t       i;
         const qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
-        volatile aligned_t *const   dc       = &(loop->stat.donecount);
-        volatile aligned_t *const   as       = &(loop->stat.activesheps);
+        aligned_t *const            dc       = &(loop->stat.donecount);
+        aligned_t *const            as       = &(loop->stat.activesheps);
 
         for (i = 0; i < maxsheps; i++) {
             qthread_fork_to((qthread_f)qqloop_wrapper, loop->qwa + i, NULL, i);
@@ -1185,7 +1177,7 @@ void qt_loop_queue_run(qqloop_handle_t *loop)
         /* turning this into a spinlock :P
          * I *would* do readFF, except shepherds can join and leave
          * during the loop */
-        while (_(*dc) < _(*as)) {
+        while (*dc < *as) {
             qthread_yield();
         }
         qqloop_destroy_iq(loop->stat.iq);
@@ -1200,14 +1192,14 @@ void qt_loop_queue_run_there(qqloop_handle_t      *loop,
     qassert_retvoid(loop);
     qassert_retvoid(shep < qthread_num_shepherds());
     {
-        volatile aligned_t *const dc = &(loop->stat.donecount);
-        volatile aligned_t *const as = &(loop->stat.activesheps);
+        aligned_t *const dc = &(loop->stat.donecount);
+        aligned_t *const as = &(loop->stat.activesheps);
 
         qthread_fork_to((qthread_f)qqloop_wrapper, loop->qwa + shep, NULL, shep);
         /* turning this into a spinlock :P
          * I *would* do readFF, except shepherds can join and leave
          * during the loop */
-        while (_(*dc) < _(*as)) {
+        while (*dc < *as) {
             qthread_yield();
         }
         qqloop_destroy_iq(loop->stat.iq);
@@ -1222,7 +1214,8 @@ void qt_loop_queue_addworker(qqloop_handle_t            *loop,
                              const qthread_shepherd_id_t shep)
 {   /*{{{*/
     qthread_incr(&(loop->stat.activesheps), 1);
-    if (_(loop->stat.donecount) == 0) {
+    MACHINE_FENCE;
+    if (loop->stat.donecount == 0) {
         qthread_fork_to((qthread_f)qqloop_wrapper, loop->qwa + shep, NULL, shep);
     } else {
         qthread_incr(&(loop->stat.activesheps), -1);
@@ -1632,7 +1625,7 @@ void qt_parallel_step(const qt_loop_step_f func,
  */
 int                   forLockInitialized = 0;
 QTHREAD_FASTLOCK_TYPE forLock;             // used for mutual exclusion in qt_parallel_for - needs init
-volatile int          forLoopsStarted = 0; // used for active loop in qt_parallel_for
+int                   forLoopsStarted = 0; // used for active loop in qt_parallel_for
 
 // written by AKP
 static int    cnbWorkers;
@@ -1686,7 +1679,7 @@ void qt_free_loop(void *lp)
 
     if (loop) {
         do {
-            while(loop->workers != *(volatile aligned_t *)&(loop->departed_workers)) {}
+            while(loop->workers != loop->departed_workers) SPINLOCK_BODY();
             t    = loop;
             loop = qt_next_loop(loop);
             free(t);
@@ -1765,7 +1758,8 @@ static void qt_parallel_qfor(const qt_loop_step_f func,
 
     QTHREAD_FASTLOCK_LOCK(&forLock);                                                             // KBW: XXX: need to find a way to avoid locking
     if (forLoopsStarted < forCount) {                                                            // is this a new loop? - if so, add work
-        qqhandle        = qt_loop_step_queue_create(TIMED, startat, stopat, incr, func, argptr); // put loop on the queue
+        qqhandle = qt_loop_step_queue_create(TIMED, startat, stopat, incr, func, argptr);        // put loop on the queue
+        MACHINE_FENCE;
         forLoopsStarted = forCount;                                                              // set current loop number
         activeLoop      = qqhandle;
     } else {
