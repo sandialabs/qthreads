@@ -340,6 +340,10 @@ void XOMP_parallel_start(
   qthread_shepherd_id_t parallelWidth = qthread_num_shepherds();
 #endif
   int save_thread_cnt = 0;  // double duty - non-zero we changed thread count - value is the old thread count
+  if (!ifClause) { //  if if clause false don't start parallel region
+      // but still need to do the work (serially)
+      numThread = 1;
+  }
   if ( numThread & (parallelWidth != numThread)) {
     save_thread_cnt = parallelWidth;
     omp_set_num_threads(numThread);
@@ -1237,6 +1241,7 @@ void omp_set_num_threads (
   if (qt_num_threads_requested != num_active){ 
     // need to reset the barrier size and the first arrival size (if larger or smaller)
     qtar_resize(qt_num_threads_requested);
+    if (qt_parallel_region()) qt_thread_barrier_resize(qt_num_threads_requested);
     qt_barrier_resize(qt_num_threads_requested);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_id_t newId = 0;

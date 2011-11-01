@@ -277,8 +277,10 @@ qthread_worker_id_t   qthread_worker_unique(qthread_shepherd_id_t *s);
 struct qthread_parallel_region_s *qt_parallel_region(void);
 #  ifdef QTHREAD_LOG_BARRIER
 qt_barrier_t *qt_thread_barrier(void);
+qt_barrier_t *qt_thread_barrier_resize(size_t size);
 #  else
 qt_feb_barrier_t *qt_thread_barrier(void);
+qt_feb_barrier_t *qt_thread_barrier_resize(size_t size);
 #  endif
 void *qt_next_loop(void *loop);
 int   qt_omp_parallel_region_create(void);

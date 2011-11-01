@@ -2692,6 +2692,24 @@ qt_feb_barrier_t * qt_thread_barrier()            // get barrier active for this
 {                      /*{{{ */
     return qt_parallel_region()->barrier;
 }                      /*}}} */
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+/* These are just accessor functions */
+# ifdef QTHREAD_LOG_BARRIER
+qt_barrier_t *qt_thread_barrier_resize(size_t size)  // resize barrier for current parallel region
+# else
+qt_feb_barrier_t * qt_thread_barrier_resize(size_t size) // resize barrier for current parallel region
+#endif
+{                      /*{{{ */
+    qt_barrier_destroy(qt_parallel_region()->barrier);
+#ifdef QTHREAD_LOG_BARRIER
+    qt_parallel_region()->barrier = qt_barrier_create(size, REGION_BARRIER, 0);
+#else
+    qt_feb_barrier_t *gb = qt_feb_barrier_create(size);
+#endif /* ifdef QTHREAD_LOG_BARRIER */
+    return qt_parallel_region()->barrier;
+
+}                      /*}}} */
+#endif
 
 void INTERNAL qt_set_unstealable(void);
 void INTERNAL qt_set_unstealable()
