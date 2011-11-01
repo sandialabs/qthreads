@@ -26,14 +26,6 @@
 static unsigned short pageshift                  = 0;
 static aligned_t     *chunk_distribution_tracker = NULL;
 
-/* avoid compiler bugs with volatile... */
-static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t *ptr)
-{                                      /*{{{ */
-    return *ptr;
-}                                      /*}}} */
-
-#define _(x) vol_read_a(& (x))
-
 /* local funcs */
 /* this function is for DIST *ONLY*; it returns a pointer to the location that
  * the bookkeeping data is stored (i.e. the record of where this segment is
@@ -618,10 +610,10 @@ struct qarray_func_wrapper_args {
         qa_loop_f ql;
         qthread_f qt;
     } func;
-    qarray             *a;
-    void               *arg;
-    volatile aligned_t *donecount;
-    const size_t        startat, stopat;
+    qarray      *a;
+    void        *arg;
+    aligned_t   *donecount;
+    const size_t startat, stopat;
 };
 struct qarray_accumfunc_wrapper_args {
     union {
@@ -638,10 +630,10 @@ struct qarray_constfunc_wrapper_args {
         qa_cloop_f ql;
         qthread_f  qt;
     } func;
-    const qarray       *a;
-    void               *arg;
-    volatile aligned_t *donecount;
-    const size_t        startat, stopat;
+    const qarray *a;
+    void         *arg;
+    aligned_t    *donecount;
+    const size_t  startat, stopat;
 };
 
 static aligned_t qarray_strider(const struct qarray_func_wrapper_args *arg)
@@ -1000,9 +992,8 @@ void qarray_iter(qarray      *a,
                  const size_t stopat,
                  qthread_f    func)
 {                                      /*{{{ */
-    volatile aligned_t              donecount = 0;
-    struct qarray_func_wrapper_args qfwa      =
-    { { NULL }, a, NULL, &donecount, startat, stopat };
+    aligned_t                       donecount = 0;
+    struct qarray_func_wrapper_args qfwa      = { { NULL }, a, NULL, &donecount, startat, stopat };
 
     qassert_retvoid((a != NULL));
     qassert_retvoid((func != NULL));
@@ -1012,7 +1003,7 @@ void qarray_iter(qarray      *a,
         case ALL_SAME:
             qthread_fork_to((qthread_f)qarray_strider, &qfwa, NULL,
                             a->dist_specific.dist_shep);
-            while (_(donecount) == 0) {
+            while (donecount == 0) {
                 qthread_yield();
             }
             break;
@@ -1025,7 +1016,7 @@ void qarray_iter(qarray      *a,
                 qthread_fork_to((qthread_f)qarray_strider, &qfwa, NULL, s);
                 num_spawns++;
             }
-            while (_(donecount) < num_spawns) {
+            while (donecount < num_spawns) {
                 qthread_yield();
             }
             break;
@@ -1041,7 +1032,7 @@ void qarray_iter(qarray      *a,
             if (stopat - startat < a->segment_size) {
                 qthread_fork_to((qthread_f)qarray_strider, &qfwa, NULL,
                                 qarray_shepof(a, startat));
-                while (_(donecount) == 0) {
+                while (donecount == 0) {
                     qthread_yield();
                 }
             } else {
@@ -1053,7 +1044,7 @@ void qarray_iter(qarray      *a,
                     qthread_fork_to((qthread_f)qarray_strider, &qfwa, NULL,
                                     i);
                 }
-                while (_(donecount) < maxsheps) {
+                while (donecount < maxsheps) {
                     qthread_yield();
                 }
             }
@@ -1067,9 +1058,8 @@ void qarray_iter_loop(qarray      *a,
                       qa_loop_f    func,
                       void        *arg)
 {                                      /*{{{ */
-    volatile aligned_t              donecount = 0;
-    struct qarray_func_wrapper_args qfwa      =
-    { { func }, a, arg, &donecount, startat, stopat };
+    aligned_t                       donecount = 0;
+    struct qarray_func_wrapper_args qfwa      = { { func }, a, arg, &donecount, startat, stopat };
 
     qassert_retvoid((a != NULL));
     qassert_retvoid((func != NULL));
@@ -1078,7 +1068,7 @@ void qarray_iter_loop(qarray      *a,
         case ALL_SAME:
             qthread_fork_to((qthread_f)qarray_loop_strider, &qfwa, NULL,
                             a->dist_specific.dist_shep);
-            while (_(donecount) == 0) {
+            while (donecount == 0) {
                 qthread_yield();
             }
             break;
@@ -1092,7 +1082,7 @@ void qarray_iter_loop(qarray      *a,
                                 s);
                 num_spawns++;
             }
-            while (_(donecount) < num_spawns) {
+            while (donecount < num_spawns) {
                 qthread_yield();
             }
             break;
@@ -1108,7 +1098,7 @@ void qarray_iter_loop(qarray      *a,
             if (stopat - startat < a->segment_size) {
                 qthread_fork_to((qthread_f)qarray_loop_strider, &qfwa, NULL,
                                 qarray_shepof(a, startat));
-                while (_(donecount) == 0) {
+                while (donecount == 0) {
                     qthread_yield();
                 }
             } else {
@@ -1120,7 +1110,7 @@ void qarray_iter_loop(qarray      *a,
                     qthread_fork_to((qthread_f)qarray_loop_strider, &qfwa,
                                     NULL, i);
                 }
-                while (_(donecount) < maxsheps) {
+                while (donecount < maxsheps) {
                     qthread_yield();
                 }
             }
@@ -1168,9 +1158,8 @@ void qarray_iter_constloop(const qarray *a,
                            qa_cloop_f    func,
                            void         *arg)
 {                                      /*{{{ */
-    volatile aligned_t                         donecount = 0;
-    const struct qarray_constfunc_wrapper_args qfwa      =
-    { { func }, a, arg, &donecount, startat, stopat };
+    aligned_t                                  donecount = 0;
+    const struct qarray_constfunc_wrapper_args qfwa      = { { func }, a, arg, &donecount, startat, stopat };
 
     qassert_retvoid((a != NULL));
     qassert_retvoid((func != NULL));
@@ -1178,7 +1167,7 @@ void qarray_iter_constloop(const qarray *a,
     switch (a->dist_type) {
         case ALL_SAME:
             qthread_fork_to((qthread_f)qarray_loop_strider, &qfwa, NULL, a->dist_specific.dist_shep);
-            while (_(donecount) == 0) {
+            while (donecount == 0) {
                 qthread_yield();
             }
             break;
@@ -1192,7 +1181,7 @@ void qarray_iter_constloop(const qarray *a,
                                 s);
                 num_spawns++;
             }
-            while (_(donecount) < num_spawns) {
+            while (donecount < num_spawns) {
                 qthread_yield();
             }
             break;
@@ -1208,7 +1197,7 @@ void qarray_iter_constloop(const qarray *a,
             if (stopat - startat < a->segment_size) {
                 qthread_fork_to((qthread_f)qarray_loop_strider, &qfwa, NULL,
                                 qarray_shepof(a, startat));
-                while (_(donecount) == 0) {
+                while (donecount == 0) {
                     qthread_yield();
                 }
             } else {
@@ -1220,7 +1209,7 @@ void qarray_iter_constloop(const qarray *a,
                     qthread_fork_to((qthread_f)qarray_loop_strider, &qfwa,
                                     NULL, i);
                 }
-                while (_(donecount) < maxsheps) {
+                while (donecount < maxsheps) {
                     qthread_yield();
                 }
             }
