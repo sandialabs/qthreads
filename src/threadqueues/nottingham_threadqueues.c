@@ -473,8 +473,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
                        oldtop.sse = q->top;
  		       continue;
                     case 0:
-                       rwlock_rdunlock(rwlock, id);
-                       return(t);
+		      break;
                     default:
                        /* McCoy thread can only run on worker 0 */
                        rwlock_rdunlock(rwlock, id);
@@ -545,7 +544,6 @@ void INTERNAL qt_threadqueue_enqueue_unstealable(qt_threadqueue_t *q,
         q->base[bottom] = snapshot.sse;
         bottom = (bottom - 1) % q->size;
     }
-
     q->bottom = bottom;
 }
 

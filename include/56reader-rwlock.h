@@ -13,6 +13,7 @@
  **/
 
 #include <stdint.h>
+#include <qt_atomics.h>
 
 #ifndef NOINLINE
 # define NOINLINE __attribute__((noinline))
