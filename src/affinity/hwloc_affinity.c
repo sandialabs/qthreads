@@ -56,10 +56,10 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
     if (qthread_cas(&initialized, 0, 1) == 0) {
         qassert(hwloc_topology_init(&topology), 0);
         qassert(hwloc_topology_load(topology), 0);
-        COMPILER_FENCE;
+        MACHINE_FENCE;
         initialized = 2;
     } else {
-        while (initialized == 1) ;
+        while (initialized == 1) SPINLOCK_BODY();
     }
 
     qthread_internal_cleanup(qt_affinity_internal_hwloc_teardown);
