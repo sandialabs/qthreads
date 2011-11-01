@@ -68,7 +68,7 @@ void qt_omp_parallel_region_add_loop(qqloop_step_handle_t *loop);
 typedef enum xomp_nest_level{NO_NEST=0, ALLOW_NEST, AUTO_NEST}xomp_nest_level_t;
 
 static uint64_t *staticStartCount;
-static volatile int orderedLoopCount = 0;
+static int orderedLoopCount = 0;
 QTHREAD_FASTLOCK_TYPE critLock;
 syncvar_t XOMP_critical;
 
@@ -462,10 +462,11 @@ void xomp_internal_loop_init(
 #ifdef QTHREAD_RCRTOOL
     lp->allowed_workers = maestro_allowed_workers();
 #endif
+    MACHINE_FENCE;
     lp->ready = loopNum;         // use the loop number to allow other workers to start 
   }
 
-  while (lp->ready != loopNum){} // spin waiting for loop structure to be setup
+  while (lp->ready != loopNum) SPINLOCK_BODY(); // spin waiting for loop structure to be setup
                                  // ready contains the last value updated -- must match my loop
 
   *loop = (void*)lp;  // return value
@@ -614,16 +615,19 @@ bool XOMP_loop_guided_next(
     return xomp_internal_guided_next(loop, returnLower, returnUpper);
 }
 
-volatile aligned_t spinLock = 0;
-volatile aligned_t spinLock_rel = 0;
+aligned_t spinLock = 0;
+aligned_t spinLock_rel = 0;
 
 void XOMP_spin_lock(
     void * lp)
 {
   int val = qthread_incr(&spinLock,1);
   int limit = qthread_num_workers()-1;
-  if (val == limit) spinLock_rel = 1;
-  while (!spinLock_rel){}; // spin until my turn
+  if (val == limit) {
+      MACHINE_FENCE;
+      spinLock_rel = 1;
+  }
+  while (!spinLock_rel) SPINLOCK_BODY(); // spin until my turn
 
   if(XOMP_master()) {
     qthread_parallel_region_t *pr = qt_parallel_region();
@@ -632,8 +636,11 @@ void XOMP_spin_lock(
   } 
 
   val = qthread_incr(&spinLock,-1);
-  if (val == 1) spinLock_rel = 0;
-  while (spinLock_rel){}; // spin until my turn
+  if (val == 1) {
+      MACHINE_FENCE;
+      spinLock_rel = 0;
+  }
+  while (spinLock_rel) SPINLOCK_BODY(); // spin until my turn
 }
 
 // Openmp parallel for loop is completed (waits for all to complete)
@@ -914,7 +921,7 @@ void XOMP_ordered_start(
   aligned_t *iter = ((aligned_t*)&loop->work_array) + qthread_num_shepherds() + myid;
 #endif
 
-  while (orderedLoopCount != *iter){}; // spin until my turn
+  while (orderedLoopCount != *iter) SPINLOCK_BODY(); // spin until my turn
   *iter += loop->assignStep;
 }
 
