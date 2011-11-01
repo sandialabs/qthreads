@@ -89,10 +89,10 @@ typedef struct {
 } while (0)
 #endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) */
 
-static uint64_t qthread_mwaitc(volatile syncvar_t *const restrict addr,
-                               unsigned char const                statemask,
-                               unsigned int                       timeout,
-                               eflags_t *const restrict           err)
+static uint64_t qthread_mwaitc(syncvar_t *const restrict addr,
+                               unsigned char const       statemask,
+                               unsigned int              timeout,
+                               eflags_t *const restrict  err)
 {                                      /*{{{ */
 #if ((QTHREAD_ASSEMBLY_ARCH != QTHREAD_TILE) && \
     (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32))
@@ -116,11 +116,13 @@ static uint64_t qthread_mwaitc(volatile syncvar_t *const restrict addr,
          * addrptr+1 */
         while ((low = __insn_tns(addrptr)) == 1) {
             if (timeout-- <= 0) { goto errexit; }
+            SPINLOCK_BODY();
         }
         /* now addrptr[0] is 1 and low is the "real" (unlocked) addrptr[0]
          * value. */
         high       = addrptr[1];
         locked.u.w = (((uint64_t)high) << 32) | low;
+        MACHINE_FENCE;
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
         {
             /* This applies for any 32-bit architecture with a valid 32-bit CAS
@@ -129,25 +131,32 @@ static uint64_t qthread_mwaitc(volatile syncvar_t *const restrict addr,
             uint32_t *addrptr = (uint32_t *)addr;
             do {
 loop_start:
-                if (timeout-- <= 0) { goto errexit; }
                 low_unlocked = addrptr[1];  // atomic read
-                if ((low_unlocked & 1) == 0) { goto loop_start; }
+                if ((low_unlocked & 1) == 0) {
+                    if (timeout-- <= 0) { goto errexit; }
+                    SPINLOCK_BODY();
+                    goto loop_start;
+                }
                 low_locked = low_unlocked | 1;
-            } while (qthread_cas32(&(addrptr[1]), low_unlocked, low_locked) != low_unlocked);
+                if (qthread_cas32(&(addrptr[1]), low_unlocked, low_locked) != low_unlocked) { break; }
+                if (timeout-- <= 0) { goto errexit; }
+            } while (1);
             locked.u.w = addr->u.w; // I locked it, so I can read it
         }
 #else   /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILE) */
         do {
 loop_start:
-            if (timeout-- <= 0) {
-                goto errexit;
-            }
             unlocked = *addr;          // may be locked or unlocked, we don't know
-            if (unlocked.u.s.lock == 1) { goto loop_start; }
+            if (unlocked.u.s.lock == 1) {
+                if (timeout-- <= 0) { goto errexit; }
+                SPINLOCK_BODY();
+                goto loop_start;
+            }
             locked          = unlocked;
             locked.u.s.lock = 1;       // create the locked version
-        } while (qthread_cas64((uint64_t *)addr, unlocked.u.w, locked.u.w) !=
-                 unlocked.u.w);
+            if (qthread_cas64((uint64_t *)addr, unlocked.u.w, locked.u.w) == unlocked.u.w) { break; }
+            if (timeout-- <= 0) { goto errexit; }
+        } while (1);
 #endif  /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILE) */
         /***************************************************
         * now locked == unlocked, and the lock bit is set *
