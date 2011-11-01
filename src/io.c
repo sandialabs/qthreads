@@ -49,13 +49,14 @@ static qt_blocking_queue_t theQueue;
 qt_mpool syscall_job_pool = NULL;
 #endif
 static pthread_t     proxy_thread;
-static volatile int  proxy_exit = 0;
+static int           proxy_exit = 0;
 pthread_key_t        IO_task_struct;
 extern pthread_key_t shepherd_structs;
 
 static void qt_blocking_subsystem_internal_stopwork(void)
 {   /*{{{*/
     proxy_exit = 1;
+    MACHINE_FENCE;
     pthread_join(proxy_thread, NULL);
 } /*}}}*/
 
@@ -74,6 +75,7 @@ static void *qt_blocking_subsystem_proxy_thread(void *arg)
     while (proxy_exit == 0) {
         pthread_setspecific(IO_task_struct, NULL);
         qt_process_blocking_calls();
+        MACHINE_FENCE;
     }
     qthread_debug(IO_DETAILS, "proxy_exit = %i, exiting\n", proxy_exit);
     pthread_exit(NULL);
