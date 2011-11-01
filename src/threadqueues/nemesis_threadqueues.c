@@ -49,10 +49,10 @@ struct _qt_threadqueue {
     NEMESIS_queue q;
     /* the following is for estimating a queue's "busy" level, and is not
      * guaranteed accurate (that would be a race condition) */
-    volatile saligned_t advisory_queuelen;
+    saligned_t          advisory_queuelen;
     qthread_shepherd_t *creator_ptr;
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-    volatile uint32_t   frustration;
+    uint32_t            frustration;
     pthread_cond_t      trigger;
     pthread_mutex_t     trigger_lock;
 #endif
@@ -170,8 +170,11 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict   q,
         prev->next = t;
     }
     qthread_incr(&(q->advisory_queuelen), 1);
-    /* awake waiter */
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
+    /* awake waiter */ 
+    /* Yes, this needs to be here, to prevent reading frustration being hoisted
+     * to before the enqueue operations. */
+    __sync_synchronize();
     if (q->frustration) {
         qassert(pthread_mutex_lock(&q->trigger_lock), 0);
         if (q->frustration) {
