@@ -24,10 +24,12 @@
 #  define NEEDPOWER64CONTEXT 1
 #  define SET __qt_setmctxt
 #  define GET __qt_getmctxt
-# else _(/* why not detect __ppc__? */)
+# elif defined(__ppc__)
 #  define NEEDPOWERCONTEXT 1
 #  define SET __qt_setmctxt
 #  define GET __qt_getmctxt
+# else
+#  error What kind of a machine is this?
 # endif
 #endif
 
