@@ -115,7 +115,7 @@ typedef struct _syncvar_s {
 
 #define SYNCVAR_STATIC_INITIALIZER       { { 0 } }
 #define SYNCVAR_STATIC_EMPTY_INITIALIZER { .u.s = { .data = 0, .state = 2, .lock = 0 } }
-#define SYNCVAR_STATIC_INITIALIZE_TO(value) { .u.s = { .data = value, .state = 0, .lock = 0 } }
+#define SYNCVAR_STATIC_INITIALIZE_TO(value)       { .u.s = { .data = value, .state = 0, .lock = 0 } }
 #define SYNCVAR_STATIC_EMPTY_INITIALIZE_TO(value) { .u.s = { .data = value, .state = 2, .lock = 0 } }
 extern const syncvar_t SYNCVAR_INITIALIZER;
 extern const syncvar_t SYNCVAR_EMPTY_INITIALIZER;
@@ -141,9 +141,9 @@ struct qthread_parallel_region_s {
     qt_feb_barrier_t                 *barrier;
 # endif
     int                              *currentLoopNum;     // really an array of values (number workers long)
-                                                          //   which Loop current active 
+                                                          //   which Loop current active
     int                               clsSize;            // size of following array
-    void                             **currentLoopStruct; // really an array of pointers to loop
+    void                            **currentLoopStruct;  // really an array of pointers to loop
                                                           //    structures for use by omp
 };
 typedef struct qthread_parallel_region_s qthread_parallel_region_t;
@@ -195,9 +195,9 @@ void qthread_enable_worker(const qthread_worker_id_t worker);
 # ifdef QTHREAD_USE_ROSE_EXTENSIONS
 void qthread_pack_workerid(const qthread_worker_id_t worker,
                            const qthread_worker_id_t newId);
-qthread_t * qthread_child_task(void);  /* used by XOMP to access list of child tasks*/
-syncvar_t * qthread_return_value(qthread_t * t); /* return value for a task */
-void qthread_remove_child(qthread_t * child); /* remove child - completed */
+qthread_t *qthread_child_task(void);               /* used by XOMP to access list of child tasks*/
+syncvar_t *qthread_return_value(qthread_t *t);     /* return value for a task */
+void       qthread_remove_child(qthread_t *child); /* remove child - completed */
 # endif
 
 /* this function allows a qthread to specifically give up control of the
@@ -205,7 +205,8 @@ void qthread_remove_child(qthread_t * child); /* remove child - completed */
  * busy-waits or cooperative multitasking. Without this function, threads will
  * only ever allow other threads assigned to the same pthread to execute when
  * they block. */
-void qthread_yield(void);
+#define qthread_yield() do { COMPILER_FENCE; qthread_yield_(); } while (0)
+void qthread_yield_(void);
 
 /* this function allows a qthread to retrieve its qthread_t pointer if it has
  * been lost for some reason */
@@ -425,20 +426,20 @@ int qthread_unlock(const aligned_t *a);
 # if defined(QTHREAD_MUTEX_INCREMENT) ||            \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
-uint32_t qthread_incr32_(volatile uint32_t *,
-                         const    int32_t);
-uint64_t qthread_incr64_(volatile uint64_t *,
-                         const    int64_t);
-float qthread_fincr_(volatile float *,
-                     const    float);
-double qthread_dincr_(volatile double *,
-                      const    double);
-uint32_t qthread_cas32_(volatile uint32_t *,
-                        const    uint32_t,
-                        const    uint32_t);
-uint64_t qthread_cas64_(volatile uint64_t *,
-                        const    uint64_t,
-                        const    uint64_t);
+uint32_t qthread_incr32_(uint32_t *,
+                         const int32_t);
+uint64_t qthread_incr64_(uint64_t *,
+                         const int64_t);
+float qthread_fincr_(float *,
+                     const float);
+double qthread_dincr_(double *,
+                      const double);
+uint32_t qthread_cas32_(uint32_t *,
+                        const uint32_t,
+                        const uint32_t);
+uint64_t qthread_cas64_(uint64_t *,
+                        const uint64_t,
+                        const uint64_t);
 # endif // if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
 
 /* the following three functions implement variations on atomic increment. It
@@ -453,6 +454,7 @@ static QINLINE float qthread_fincr(volatile float *operand,
 {                                      /*{{{ */
 # if defined(QTHREAD_MUTEX_INCREMENT)
     return qthread_fincr_(operand, incr);
+
 # elif !defined(HAVE_GCC_INLINE_ASSEMBLY) && QTHREAD_ATOMIC_CAS
     union {
         float    f;
@@ -462,12 +464,13 @@ static QINLINE float qthread_fincr(volatile float *operand,
     do {
         oldval.f = *operand;
         newval.f = oldval.f + incr;
-        res.i = __sync_val_compare_and_swap(operand, oldval.i, newval.i);
+        res.i    = __sync_val_compare_and_swap(operand, oldval.i, newval.i);
     } while (res.i != oldval.i);       /* if res!=old, the calc is out of date */
     return oldval.f;
+
 # elif !defined(HAVE_GCC_INLINE_ASSEMBLY)
-# error Qthreads requires either mutex increments, inline assembly, or compiler CAS builtins
-# else
+#  error Qthreads requires either mutex increments, inline assembly, or compiler CAS builtins
+# else // if defined(QTHREAD_MUTEX_INCREMENT)
 #  if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
     union {
         float    f;
@@ -573,6 +576,7 @@ static QINLINE double qthread_dincr(volatile double *operand,
 {                                      /*{{{ */
 # if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
     return qthread_dincr_(operand, incr);
+
 # elif !defined(HAVE_GCC_INLINE_ASSEMBLY) && QTHREAD_ATOMIC_CAS
     union {
         uint64_t i;
@@ -582,12 +586,13 @@ static QINLINE double qthread_dincr(volatile double *operand,
     do {
         oldval.d = *operand;
         newval.d = oldval.d + incr;
-        res.i = __sync_val_compare_and_swap(operand, oldval.i, newval.i);
+        res.i    = __sync_val_compare_and_swap(operand, oldval.i, newval.i);
     } while (res.i != oldval.i);       /* if res!=old, the calc is out of date */
     return oldval.d;
+
 # elif !defined(HAVE_GCC_INLINE_ASSEMBLY)
-# error Qthreads requires either mutex increments, inline assembly, or compiler CAS builtins
-# else
+#  error Qthreads requires either mutex increments, inline assembly, or compiler CAS builtins
+# else // if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
 #  if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
     register uint64_t scratch_int;
     register double   incremented_value;
@@ -786,8 +791,10 @@ static QINLINE uint32_t qthread_incr32(volatile uint32_t *operand,
 {                                      /*{{{ */
 # ifdef QTHREAD_MUTEX_INCREMENT
     return qthread_incr32_(operand, incr);
+
 # elif !defined(HAVE_GCC_INLINE_ASSEMBLY) && defined(QTHREAD_ATOMIC_INCR)
     return __sync_fetch_and_add(operand, incr);
+
 # elif !defined(HAVE_GCC_INLINE_ASSEMBLY) && QTHREAD_ATOMIC_CAS
     uint32_t oldval, newval;
     do {
@@ -796,9 +803,10 @@ static QINLINE uint32_t qthread_incr32(volatile uint32_t *operand,
         newval = __sync_val_compare_and_swap(operand, oldval, newval);
     } while (oldval != newval);
     return oldval;
+
 # elif !defined(HAVE_GCC_INLINE_ASSEMBLY)
-# error Qthreads requires either mutex increments, inline assembly, or compiler atomic builtins
-# else
+#  error Qthreads requires either mutex increments, inline assembly, or compiler atomic builtins
+# else // ifdef QTHREAD_MUTEX_INCREMENT
 #  if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
     uint32_t              retval;
@@ -890,8 +898,10 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t *operand,
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
     return qthread_incr64_(operand, incr);
+
 # elif !defined(HAVE_GCC_INLINE_ASSEMBLY) && defined(QTHREAD_ATOMIC_INCR)
     return __sync_fetch_and_add(operand, incr);
+
 # elif !defined(HAVE_GCC_INLINE_ASSEMBLY) && QTHREAD_ATOMIC_CAS
     uint64_t oldval, newval;
     do {
@@ -900,9 +910,10 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t *operand,
         newval = __sync_val_compare_and_swap(operand, oldval, newval);
     } while (oldval != newval);
     return oldval;
+
 # elif !defined(HAVE_GCC_INLINE_ASSEMBLY)
-# error Qthreads requires either mutex increments, inline assembly, or compiler atomic builtins
-# else
+#  error Qthreads requires either mutex increments, inline assembly, or compiler atomic builtins
+# else // if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
 #  if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
     uint64_t          retval;
     register uint64_t incrd = incrd;    /* no initializing */
