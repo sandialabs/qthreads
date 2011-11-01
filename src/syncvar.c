@@ -55,20 +55,14 @@ typedef struct {
 /* Internal Macros */
 #define BUILD_UNLOCKED_SYNCVAR(data, state) (((data) << 4) | ((state) << 1))
 
-#ifndef HAVE_GCC_INLINE_ASSEMBLY
-# define ASM_ALLOWED(x)
-#else
-# define ASM_ALLOWED(x) x
-#endif
-
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
-# define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked) do {  \
-        ASM_ALLOWED(__asm__ __volatile__ ("" ::: "memory"); ) \
-        (addr)->u.s.lock = 0;                                 \
+# define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked) do { \
+        MACHINE_FENCE;                                       \
+        (addr)->u.s.lock = 0;                                \
 } while (0)
-# define UNLOCK_THIS_MODIFIED_SYNCVAR(addr, val, state) do {  \
-        ASM_ALLOWED(__asm__ __volatile__ ("" ::: "memory"); ) \
-        (addr)->u.w = BUILD_UNLOCKED_SYNCVAR(val, state);     \
+# define UNLOCK_THIS_MODIFIED_SYNCVAR(addr, val, state) do { \
+        MACHINE_FENCE;                                       \
+        (addr)->u.w = BUILD_UNLOCKED_SYNCVAR(val, state);    \
 } while (0)
 #elif ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) ||    \
@@ -76,13 +70,13 @@ typedef struct {
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) ||         \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) ||   \
     defined(__tile__))
-# define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked) do {  \
-        ASM_ALLOWED(__asm__ __volatile__ ("" ::: "memory"); ) \
-        (addr)->u.w = (unlocked);                             \
+# define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked) do { \
+        MACHINE_FENCE;                                       \
+        (addr)->u.w = (unlocked);                            \
 } while (0)
-# define UNLOCK_THIS_MODIFIED_SYNCVAR(addr, val, state) do {  \
-        ASM_ALLOWED(__asm__ __volatile__ ("" ::: "memory"); ) \
-        (addr)->u.w = BUILD_UNLOCKED_SYNCVAR(val, state);     \
+# define UNLOCK_THIS_MODIFIED_SYNCVAR(addr, val, state) do { \
+        MACHINE_FENCE;                                       \
+        (addr)->u.w = BUILD_UNLOCKED_SYNCVAR(val, state);    \
 } while (0)
 #else /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) */
 # define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked) do {                \
@@ -138,7 +132,7 @@ loop_start:
                 if (timeout-- <= 0) { goto errexit; }
                 low_unlocked = addrptr[1];  // atomic read
                 if ((low_unlocked & 1) == 0) { goto loop_start; }
-                low_locked    = low_unlocked | 1;
+                low_locked = low_unlocked | 1;
             } while (qthread_cas32(&(addrptr[1]), low_unlocked, low_locked) != low_unlocked);
             locked.u.w = addr->u.w; // I locked it, so I can read it
         }
@@ -170,7 +164,7 @@ loop_start:
         } else {
             /* this is NOT a state of interest, so unlock the locked bit */
 #ifdef __tile__
-            __asm__ __volatile__ ("" ::: "memory");
+            MACHINE_FENCE;
             addrptr[0] = low;
 #else
             UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked.u.w);
@@ -194,7 +188,7 @@ int qthread_syncvar_status(syncvar_t *const v)
     uint64_t ret = qthread_mwaitc(v, 0xff, INT_MAX, &e);
     qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
     realret = (e.of << 2) | (e.pf << 1) | e.sf;
-    __asm__ __volatile__ ("" ::: "memory");
+    MACHINE_FENCE;
     v->u.w = BUILD_UNLOCKED_SYNCVAR(ret, realret);
     return (realret & 0x2) ? 0 : 1;
 
