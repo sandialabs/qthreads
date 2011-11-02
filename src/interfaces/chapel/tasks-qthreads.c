@@ -32,11 +32,12 @@
 #include "qthread/qthread.h"
 #include "qthread/qtimer.h"
 #include "qthread_innards.h" // not strictly necessary (yet)
+#include "qt_atomics.h" /* for SPINLOCK_BODY() */
 
 #include <pthread.h>
 
 static chpl_bool initial_serial_state = true;
-static syncvar_t exit_ret = SYNCVAR_STATIC_EMPTY_INITIALIZER;
+static syncvar_t exit_ret             = SYNCVAR_STATIC_EMPTY_INITIALIZER;
 
 void chpl_task_yield(void)
 {
@@ -115,9 +116,9 @@ void chpl_sync_destroyAux(chpl_sync_aux_t *s)
 
 // Tasks
 
-static volatile int done_initializing = 0;
-static syncvar_t    canexit           = SYNCVAR_STATIC_EMPTY_INITIALIZER;
-static volatile int done_finalizing   = 0;
+static int       done_initializing = 0;
+static syncvar_t canexit           = SYNCVAR_STATIC_EMPTY_INITIALIZER;
+static int       done_finalizing   = 0;
 
 static void *initializer(void *junk)
 {
@@ -185,7 +186,7 @@ void chpl_task_init(int32_t  numThreadsPerLocale,
     }
 
     pthread_create(&initer, NULL, initializer, NULL);
-    while (done_initializing == 0) ;
+    while (done_initializing == 0) SPINLOCK_BODY();
 }
 
 void chpl_task_exit(void)
@@ -195,7 +196,7 @@ void chpl_task_exit(void)
          * told to start yet */
         if (done_initializing == 1) {
             qthread_syncvar_fill(&canexit);
-            while (done_finalizing == 0) ;
+            while (done_finalizing == 0) SPINLOCK_BODY();
         }
     } else {
         qthread_syncvar_fill(&exit_ret);
