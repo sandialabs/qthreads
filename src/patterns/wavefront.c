@@ -15,29 +15,6 @@
 
 static qpool *workunit_pool = NULL;
 
-/* to avoid compiler bugs regarding volatile... */
-static Q_NOINLINE aligned_t vol_read_a(volatile aligned_t *ptr)
-{
-    return *ptr;
-}
-
-static Q_NOINLINE volatile aligned_t *vol_id_a(volatile aligned_t *ptr)
-{
-    return ptr;
-}
-
-static Q_NOINLINE qarray *vol_read_qa(qarray *volatile *volatile ptr)
-{
-    return *ptr;
-}
-
-static Q_NOINLINE qarray *volatile *vol_id_qa(qarray *volatile *volatile ptr)
-{
-    return ptr;
-}
-
-#define _(x) (vol_read_a(&(x)))
-
 static void qt_wavefront_regionworker(qarray *restrict left,
                                       qarray *restrict below,
                                       char *restrict  *R,
@@ -74,10 +51,10 @@ static void qt_wavefront_regionworker(qarray *restrict left,
 }
 
 struct qt_wavefront_laths_s {
-    qarray *volatile /*restrict */ *restrict *strips;
-    size_t                                    num;     /* the number of strips */
-    size_t                                    segs;    /* qarray*'s per strip */
-    size_t                                    seg_len; /* elements per qarray */
+    qarray * /*restrict */ *restrict *strips;
+    size_t                            num;             /* the number of strips */
+    size_t                            segs;            /* qarray*'s per strip */
+    size_t                            seg_len;         /* elements per qarray */
 };
 
 struct qt_wavefront_lattice_s {
@@ -87,11 +64,11 @@ struct qt_wavefront_lattice_s {
 };
 
 struct qt_wavefront_wargs {
-    qdqueue_t *const                   work_queue;
-    volatile aligned_t *restrict const no_more_work;
-    volatile aligned_t *restrict const donecount;
-    wave_comp_f                        func;
-    qt_wavefront_lattice              *L;
+    qdqueue_t *const          work_queue;
+    aligned_t *restrict const no_more_work;
+    aligned_t *restrict const donecount;
+    wave_comp_f               func;
+    qt_wavefront_lattice     *L;
 };
 
 struct qt_wavefront_workunit {
@@ -99,7 +76,7 @@ struct qt_wavefront_workunit {
     struct qt_wavefront_workunit *next;
 };
 
-// volatile aligned_t requeued=0;
+// aligned_t requeued=0;
 
 static void qt_wavefront_worker(struct qt_wavefront_wargs *const arg)
 {
@@ -125,7 +102,7 @@ static void qt_wavefront_worker(struct qt_wavefront_wargs *const arg)
         struct qt_wavefront_workunit *const wu = qdqueue_dequeue(arg->work_queue);
 
         if (wu == NULL) {
-            if (vol_read_a(arg->no_more_work)) {
+            if (arg->no_more_work) {
                 qthread_incr(arg->donecount, 1);
                 break;
             }
@@ -134,15 +111,15 @@ static void qt_wavefront_worker(struct qt_wavefront_wargs *const arg)
             // printf("worker pulled col %i, row %i\n", (int)wu->col, (int)wu->row);
             /* step 1: locate the input and output qarrays */
             qarray *left, *below, *right, *above;
-            left  = vol_read_qa(&L->struts.strips[wu->col][wu->row]);
-            below = vol_read_qa(&L->slats.strips[wu->row][wu->col]);
-            right = vol_read_qa(&L->struts.strips[wu->col + 1][wu->row]);
-            above = vol_read_qa(&L->slats.strips[wu->row + 1][wu->col]);
+            left  = L->struts.strips[wu->col][wu->row];
+            below = L->slats.strips[wu->row][wu->col];
+            right = L->struts.strips[wu->col + 1][wu->row];
+            above = L->slats.strips[wu->row + 1][wu->col];
             assert(below);
             assert(left);
-            if (qthread_cas_ptr
-                    ((void *volatile *)&(L->slats.strips[wu->row + 1][wu->col]),
-                    NULL, (void *)1) == NULL) {
+            if (qthread_cas_ptr((void **)&(L->slats.strips[wu->row + 1][wu->col]),
+                                NULL,
+                                (void *)1) == NULL) {
                 /* I win! time to compute! */
                 assert(right == NULL);
                 right = qarray_create_configured(left->count, L->unit_size, ALL_LOCAL, 1, 1);
@@ -162,45 +139,36 @@ static void qt_wavefront_worker(struct qt_wavefront_wargs *const arg)
                            R[col] + ((left->count - 1) * L->unit_size),
                            L->unit_size);
                 }
-                assert(vol_read_qa(&L->slats.strips[wu->row + 1][wu->col]) == (void *)1);
-                assert(vol_read_qa(&L->struts.strips[wu->col + 1][wu->row]) == NULL);
-                *vol_id_qa(&L->slats.strips[wu->row + 1][wu->col])  = above;
-                *vol_id_qa(&L->struts.strips[wu->col + 1][wu->row]) = right;
+                assert(L->slats.strips[wu->row + 1][wu->col] == (void *)1);
+                assert(L->struts.strips[wu->col + 1][wu->row] == NULL);
+                L->slats.strips[wu->row + 1][wu->col]  = above;
+                L->struts.strips[wu->col + 1][wu->row] = right;
                 /* -- don't have to copy {right}, because data was placed in there directly */
                 /* step 4: enqueue work unit for right (maybe) */
                 if ((wu->col < L->slats.segs - 1) && /* there is a next column */
-                    ((intptr_t)vol_read_qa(&L->
-                                           slats.strips[wu->row][wu->col +
-                                                                 1]) > 1)) {
+                    ((intptr_t)L->slats.strips[wu->row][wu->col + 1] > 1)) {
                     /* data is ready! yay! */
                     struct qt_wavefront_workunit *wu2 = qpool_alloc(workunit_pool);
 
                     wu2->row = wu->row;
                     wu2->col = wu->col + 1;
                     qdqueue_enqueue_there(arg->work_queue, wu2,
-                                          qarray_shepof(vol_read_qa
-                                                            (&L->
-                                                            slats.strips[wu2->
-                                                                         row]
-                                                            [wu2->col]), 0));
+                                          qarray_shepof(L->slats.strips[wu2->row][wu2->col], 0));
                 }
                 /* step 5: enqueue work unit for next up (maybe) */
                 if ((wu->row < L->struts.segs - 1) &&
-                    (vol_read_qa(&L->struts.strips[wu->col][wu->row + 1]) != NULL)) {
+                    (L->struts.strips[wu->col][wu->row + 1] != NULL)) {
                     struct qt_wavefront_workunit *wu2 = qpool_alloc(workunit_pool);
 
                     wu2->row = wu->row + 1;
                     wu2->col = wu->col;
                     qdqueue_enqueue_there(arg->work_queue, wu2,
-                                          qarray_shepof(vol_read_qa
-                                                            (&L->
-                                                            slats.strips[wu2->
-                                                                         row]
-                                                            [wu2->col]), 0));
+                                          qarray_shepof(L->slats.strips[wu2->row][wu2->col], 0));
                 }
                 if ((wu->col == L->slats.segs - 1) &&
                     (wu->row == L->struts.segs - 1)) {
-                    *vol_id_a(arg->no_more_work) = 1;
+                    MACHINE_FENCE;
+                    *arg->no_more_work = 1;
                 }
                 // } else {
                 // qthread_incr(&requeued, 1);
@@ -239,8 +207,8 @@ qt_wavefront_lattice *qt_wavefront(qarray *restrict const vertical,
     assert(func);
     {
         qt_wavefront_lattice         *L;
-        volatile aligned_t            no_more_work = 0;
-        volatile aligned_t            donecount    = 0;
+        aligned_t                     no_more_work = 0;
+        aligned_t                     donecount    = 0;
         qthread_shepherd_id_t         maxsheps     = qthread_num_shepherds();
         struct qt_wavefront_wargs     wargs        = {
             qdqueue_create(), &no_more_work, &donecount, func, NULL /*L*/
@@ -296,7 +264,7 @@ qt_wavefront_lattice *qt_wavefront(qarray *restrict const vertical,
             memcpy(qarray_elem_nomigrate(tmp, 0),
                    qarray_elem_nomigrate(vertical, i * (L->struts.seg_len)),
                    L->unit_size * array_len);
-            *vol_id_qa(&L->struts.strips[0][i]) = tmp;
+            L->struts.strips[0][i] = tmp;
         }
         for (size_t i = 0; i < L->slats.segs; i++) {
             const size_t array_len = (horizontal->count - (i * L->slats.seg_len) > L->slats.seg_len) ?
@@ -312,7 +280,7 @@ qt_wavefront_lattice *qt_wavefront(qarray *restrict const vertical,
                    qarray_elem_nomigrate(horizontal,
                                          i * (L->slats.seg_len - 1)),
                    L->unit_size * array_len);
-            *vol_id_qa(&L->slats.strips[0][i]) = tmp;
+            L->slats.strips[0][i] = tmp;
         }
         /* step 2: create the qdqueue for coordinating workers */
         /* -- work queue set up as part of initialization stuff, above */
@@ -329,7 +297,7 @@ qt_wavefront_lattice *qt_wavefront(qarray *restrict const vertical,
         wu->next = NULL;
         qdqueue_enqueue(wargs.work_queue, wu);
         /* step 5: wait for the workers to get done */
-        while (_(donecount) < maxsheps) {
+        while (donecount < maxsheps) {
             qthread_yield();
         }
         qdqueue_destroy(wargs.work_queue);
@@ -347,7 +315,7 @@ void qt_wavefront_destroy_lattice(qt_wavefront_lattice *const L)
 
     for (size_t i = 0; i < slatCount; i++) {
         for (size_t seg = 0; seg < slatSegCount; seg++) {
-            qarray_destroy(vol_read_qa(&L->slats.strips[i][seg]));
+            qarray_destroy(L->slats.strips[i][seg]);
         }
         free((void *)(L->slats.strips[i]));
     }
