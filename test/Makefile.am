@@ -103,7 +103,8 @@ EXTRA_PROGRAMS += \
 	 time_gcd \
 	 test_cpp_interface \
 	 time_qt_loops \
-	 time_qt_loopaccums
+	 time_qt_loopaccums \
+	 time_uts
 CLEANFILES += $(EXTRA_PROGRAMS)
 
 if HAVE_PROG_TIMELIMIT
@@ -354,6 +355,9 @@ time_qt_loops_DEPENDENCIES = $(QTHREADLIB)
 
 time_qt_loopaccums_SOURCES = time_qt_loopaccums.c
 time_qt_loopaccums_DEPENDENCIES = $(QTHREADLIB)
+
+time_uts_SOURCES = time_uts.c rng/devine_sha1.c
+time_uts_DEPENDENCIES = $(QTHREADLIB)
 
 test_sinc_SOURCES = test_sinc.c
 test_sinc_DEPENDENCIES = $(QTHREADLIB)
