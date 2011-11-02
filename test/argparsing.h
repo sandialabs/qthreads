@@ -25,6 +25,20 @@
     iprintf(name" = %lu\n", (unsigned long)var); \
 } while (0)
 
+#define DBLARG(var,name) do { \
+    char *str; \
+    if ((str = getenv(name)) != NULL) { \
+	char *stre = NULL; \
+    double tmp = strtod(str, &stre); \
+	if (stre == NULL || stre == str) { \
+	    fprintf(stderr, "unparsable "name" (%s)\n", str); \
+	} else { \
+	    var = tmp; \
+	} \
+    } \
+    iprintf(name" = %f\n", (double)var); \
+} while (0)
+
 // Given an environment variable "FOO=,,,80,,"
 // And buffer "size_t foo[5]"
 // Then NUMARRARG(foo, bar, 5, 100) 
