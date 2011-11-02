@@ -168,7 +168,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict   q,
     } else {
         prev->next = t;
     }
-    qthread_incr(&(q->advisory_queuelen), 1);
+    (void)qthread_incr(&(q->advisory_queuelen), 1);
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     /* awake waiter */
     /* Yes, this needs to be here, to prevent reading frustration being hoisted
@@ -226,7 +226,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
 
     if (retval) {
         assert(retval->next == NULL);
-        qthread_incr(&(q->advisory_queuelen), -1);
+        (void)qthread_incr(&(q->advisory_queuelen), -1);
     }
     return (qthread_t *)retval;
 }                                      /*}}} */
@@ -254,7 +254,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q)
     }
     assert(retval);
     assert(retval->next == NULL);
-    qthread_incr(&(q->advisory_queuelen), -1);
+    (void)qthread_incr(&(q->advisory_queuelen), -1);
     return (qthread_t *)retval;
 }                                      /*}}} */
 
