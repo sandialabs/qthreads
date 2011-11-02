@@ -2703,11 +2703,12 @@ qt_barrier_t *qt_thread_barrier_resize(size_t size)  // resize barrier for curre
 qt_feb_barrier_t * qt_thread_barrier_resize(size_t size) // resize barrier for current parallel region
 #endif
 {                      /*{{{ */
-    qt_barrier_destroy(qt_parallel_region()->barrier);
 #ifdef QTHREAD_LOG_BARRIER
+    qt_barrier_destroy(qt_parallel_region()->barrier);
     qt_parallel_region()->barrier = qt_barrier_create(size, REGION_BARRIER, 0);
 #else
-    qt_feb_barrier_t *gb = qt_feb_barrier_create(size);
+    qt_feb_barrier_destroy(qt_parallel_region()->barrier);
+    qt_parallel_region()->barrier = qt_feb_barrier_create(size);
 #endif /* ifdef QTHREAD_LOG_BARRIER */
     return qt_parallel_region()->barrier;
 
