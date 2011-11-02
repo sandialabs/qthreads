@@ -8,6 +8,11 @@
 #include "qthread/qt_sinc.h"
 #include "qt_visibility.h"
 
+static size_t num_sheps;
+static size_t num_workers;
+static size_t num_wps;
+static unsigned int cacheline;
+
 qt_sinc_t *qt_sinc_create(const size_t  sizeof_value,
                           const void   *initial_value,
                           qt_sinc_op_f  op,
@@ -15,6 +20,13 @@ qt_sinc_t *qt_sinc_create(const size_t  sizeof_value,
 {
     qt_sinc_t *sinc = malloc(sizeof(qt_sinc_t));
     assert(sinc);
+
+    if (num_sheps == 0) {
+        num_sheps = qthread_readstate(TOTAL_SHEPHERDS);
+        num_workers = qthread_readstate(TOTAL_WORKERS);
+        num_wps = num_workers / num_sheps;
+        cacheline = qthread_cacheline();
+    }
 
     sinc->op = op;
     sinc->sizeof_value = sizeof_value;
@@ -24,17 +36,10 @@ qt_sinc_t *qt_sinc_create(const size_t  sizeof_value,
         memcpy(sinc->initial_value, initial_value, sizeof_value);
     }
 
-    // Create cacheline-buffered values and counts arrays
-    const int    cacheline                = qthread_cacheline();
-    const size_t num_sheps                = qthread_readstate(TOTAL_SHEPHERDS);
-    const size_t num_workers              = qthread_readstate(TOTAL_WORKERS);
-    const size_t num_wps = num_workers / num_sheps;
-
     // Allocate values array
     if (sizeof_value > 0) {
         const size_t sizeof_shep_values = num_wps * sizeof_value;
-        const size_t num_lines_per_shep =
-            ceil(sizeof_shep_values*1.0 / cacheline);
+        const size_t num_lines_per_shep = ceil(sizeof_shep_values*1.0 / cacheline);
         const size_t num_lines = num_sheps * num_lines_per_shep;
         const size_t sizeof_shep_value_part = num_lines_per_shep * cacheline;
 
@@ -66,8 +71,7 @@ qt_sinc_t *qt_sinc_create(const size_t  sizeof_value,
     sinc->sizeof_count = sizeof_count;
 
     const size_t sizeof_shep_counts = num_wps * sizeof_count;
-    const size_t num_lines_per_shep =
-        ceil(sizeof_shep_counts*1.0 / cacheline);
+    const size_t num_lines_per_shep = ceil(sizeof_shep_counts*1.0 / cacheline);
     const size_t sizeof_shep_count_part = num_lines_per_shep * cacheline;
     const size_t num_count_array_lines = num_sheps * num_lines_per_shep;
 
@@ -114,10 +118,6 @@ qt_sinc_t *qt_sinc_create(const size_t  sizeof_value,
 void qt_sinc_reset(qt_sinc_t *sinc,
                    const size_t will_spawn)
 {
-    const size_t num_sheps   = qthread_readstate(TOTAL_SHEPHERDS);
-    const size_t num_workers = qthread_readstate(TOTAL_WORKERS);
-    const size_t num_wps     = num_workers / num_sheps;
-
     // Reset values
     for (size_t s = 0; s < num_sheps; s++) {
         const size_t shep_offset = s * sinc->sizeof_shep_value_part;
@@ -182,9 +182,6 @@ void qt_sinc_destroy(qt_sinc_t *sinc)
 void qt_sinc_willspawn(qt_sinc_t *sinc,
                        size_t     count)
 {
-    const size_t num_sheps = qthread_readstate(TOTAL_SHEPHERDS);
-    const size_t num_workers = qthread_readstate(TOTAL_WORKERS);
-
     qthread_shepherd_id_t shep_id;
     const qthread_worker_id_t worker_id = qthread_worker(&shep_id);
 
@@ -213,10 +210,6 @@ void qt_sinc_willspawn(qt_sinc_t *sinc,
 void qt_sinc_submit(qt_sinc_t *sinc,
                     void      *value)
 {
-    const size_t num_sheps = qthread_readstate(TOTAL_SHEPHERDS);
-    const size_t num_workers = qthread_readstate(TOTAL_WORKERS);
-    const size_t num_wps = num_workers / num_sheps;
-
     qthread_shepherd_id_t shep_id;
     qthread_worker_id_t worker_id = qthread_worker(&shep_id);
 
@@ -294,8 +287,6 @@ void qt_sinc_wait(qt_sinc_t *sinc,
             assert(sinc->result);
             memcpy(sinc->result, sinc->initial_value, sinc->sizeof_value);
 
-            const size_t num_sheps = qthread_readstate(TOTAL_SHEPHERDS);
-            const size_t num_workers = qthread_readstate(TOTAL_WORKERS);
             for (size_t s = 0; s < num_sheps; s++) {
                 const size_t shep_offset = s * sinc->sizeof_shep_value_part;
                 for (size_t w = 0; w < (num_workers/num_sheps); w++) {
