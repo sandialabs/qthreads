@@ -392,7 +392,7 @@ AS_IF([test "x$enable_picky" = xyes],
            CFLAGS="-Minform=inform $CFLAGS"
            ;;
          IBM_XL)
-           CFLAGS="$CFLAGS"
+           CFLAGS="-q64 $CFLAGS"
            ;;
          Convey|EKOPath)
            CFLAGS="-W -Wall $CFLAGS"
@@ -415,7 +415,7 @@ AS_IF([test "x$enable_picky" = xyes],
            CXXFLAGS="-Minform=inform $CXXFLAGS"
            ;;
          IBM_XL)
-           CXXFLAGS="$CXXFLAGS"
+           CXXFLAGS="-q64 $CXXFLAGS"
            ;;
          Convey|EKOPath)
            CXXFLAGS="-W -Wall $CXXFLAGS"
