@@ -233,9 +233,9 @@ void qt_sinc_submit(qt_sinc_t *sinc,
     while (1) {
         // Calculate offset in counts array
         const size_t shep_offset = shep_id * sinc->sizeof_shep_count_part;
-        const size_t worker_offset = shep_id == 0 ? 
-            worker_id * sinc->sizeof_count : 
-            (worker_id % (num_wps)) * sinc->sizeof_count;
+        const size_t worker_offset = (shep_id == 0) ? 
+            (worker_id * sinc->sizeof_count) : 
+            ((worker_id % (num_wps)) * sinc->sizeof_count);
         qt_sinc_count_t *count = 
             (qt_sinc_count_t *)((uint8_t *)sinc->counts + shep_offset + worker_offset);
 
