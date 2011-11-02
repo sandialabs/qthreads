@@ -660,36 +660,55 @@ AS_IF([test "x$enable_aligncheck" = "xyes"],
 	  [],
       [AC_DEFINE([QTHREAD_NOALIGNCHECK], [1], [Do not check the alignment of synchronization addresses])
        enable_aligncheck=no])
-AS_IF([test "x$enable_multithreaded_shepherds" = xyes -o "x$enable_multithreaded_shepherds" = x],
-      [AC_DEFINE([QTHREAD_MULTITHREADED_SHEPHERDS], [1], [Support multithreaded shepherds])
-       AC_SEARCH_LIBS([nanosleep],[rt],[],[AC_MSG_ERROR([Cannot find nanosleep])])
-	   AS_IF([test "x$with_scheduler" = "x"],
-			 [with_scheduler="sherwood"])
-       EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --enable-multithreaded-shepherds"
-	   enable_multithreaded_shepherds="yes"],
-      [enable_multithreaded_shepherds="no"])
 
+# check scheduler requirements
 AS_IF([test "x$with_scheduler" != "x"],
 	  [case "$with_scheduler" in
 		 default)
-           AS_IF([test "x$enable_multithreaded_shepherds" != "xyes"],
+           AS_IF([test "x$enable_multithreaded_shepherds" = "xno"],
 				 [with_scheduler="nemesis"],
-				 [with_scheduler="sherwood"])
+				 [with_scheduler="sherwood"
+				  enable_multithreaded_shepherds="yes"])
            ;;
-	     nemesis|lifo|mutexfifo|mtsfifo|sherwood)
-		   # all valid options that require no additional configuration
+	     nemesis|lifo|mutexfifo|mtsfifo)
+		   # all valid single-threaded options that require no additional configuration
+		   AS_IF([test "x$enable_multithreaded_shepherds" != "xyes"],
+				 [enable_multithreaded_shepherds=no],
+				 [AC_MSG_ERROR([The $with_scheduler scheduler is incompatible with multithreaded shepherds.])])
+		   ;;
+		 sherwood)
+		   # all valid multithreaded options that require no additional configuration
+		   AS_IF([test "x$enable_multithreaded_shepherds" != "xno"],
+				 [enable_multithreaded_shepherds=yes],
+				 [AC_MSG_ERROR([The $with_scheduler scheduler requires multithreaded shepherds.])])
 		   ;;
 		 nottingham)
+		   AS_IF([test "x$enable_multithreaded_shepherds" != "xno"],
+				 [enable_multithreaded_shepherds=yes],
+				 [AC_MSG_ERROR([The $with_scheduler scheduler requires multithreaded shepherds.])])
 		   AS_IF([test "x$qthread_cv_atomic_CAS128" != xyes],
 				 [AC_MSG_ERROR([Nottingham requires a 128-bit CAS.])])
 		   ;;
 		 *)
 		   AC_MSG_ERROR([Unknown scheduler option])
 		   ;;
-	   esac],
-	  [AS_IF([test "x$enable_multithreaded_shepherds" != "xyes"],
-			 [with_scheduler="nemesis"],
-			 [with_scheduler="sherwood"])])
+	   esac
+	   EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --with-scheduler=$with_scheduler"],
+	  [AS_IF([test "x$enable_multithreaded_shepherds" != "xno"],
+			 [with_scheduler="sherwood"
+			  enable_multithreaded_shepherds="yes"],
+			 [with_scheduler="nemesis"])])
+
+AS_IF([test "x$enable_multithreaded_shepherds" = xyes],
+      [AC_DEFINE([QTHREAD_MULTITHREADED_SHEPHERDS], [1], [Support multithreaded shepherds])
+       AC_SEARCH_LIBS([nanosleep],[rt],[],[AC_MSG_ERROR([Cannot find nanosleep])])
+	   AS_IF([test "x$with_scheduler" = "x"],
+			 [AC_MSG_ERROR([something broke in the configure script (hit the developer with a 2-by-four)])])
+       EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --enable-multithreaded-shepherds"
+	   enable_multithreaded_shepherds="yes"],
+      [enable_multithreaded_shepherds="no"
+       EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --disable-multithreaded-shepherds"])
+
 AS_IF([test "x$enable_hardware_increments" = "xno"],
 	  [AS_IF([test "x$enable_multithreaded_shepherds" = "xno"],
 			 [AS_IF([test "x$with_scheduler" != "xmutexfifo"],
