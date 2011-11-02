@@ -25,13 +25,13 @@
 
 /* Data Structures */
 struct _qt_threadqueue {
-    qthread_t *volatile stack;
+    qthread_t *stack;
     /* the following is for estimating a queue's "busy" level, and is not
      * guaranteed accurate (that would be a race condition) */
-    volatile saligned_t advisory_queuelen;
+    saligned_t          advisory_queuelen;
     qthread_shepherd_t *creator_ptr;
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-    volatile uint32_t   frustration;
+    uint32_t            frustration;
     pthread_cond_t      trigger;
     pthread_mutex_t     trigger_lock;
 #endif
@@ -224,6 +224,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q)
 #ifndef QTHREAD_CONDWAIT_BLOCKING_QUEUE
             SPINLOCK_BODY();
 #else
+            COMPILER_FENCE;
             if (qthread_incr(&q->frustration, 1) > 1000) {
                 ptl_assert(pthread_mutex_lock(&q->trigger_lock), 0);
                 if (q->frustration > 1000) {
