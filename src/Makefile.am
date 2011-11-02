@@ -90,7 +90,6 @@ endif
 EXTRA_DIST = \
 			 threadqueues/lifo_threadqueues.c \
 			 threadqueues/nemesis_threadqueues.c \
-			 threadqueues/default_threadqueues.c \
 			 threadqueues/mutexfifo_threadqueues.c \
 			 threadqueues/mtsfifo_threadqueues.c \
 			 threadqueues/sherwood_threadqueues.c \
