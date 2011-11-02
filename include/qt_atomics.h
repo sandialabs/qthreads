@@ -40,8 +40,10 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
 # define QTHREAD_FASTLOCK_INIT(x)     { (x).enter = 0; (x).exit = 0; }
 # define QTHREAD_FASTLOCK_INIT_PTR(x) { (x)->enter = 0; (x)->exit = 0; }
 # define QTHREAD_FASTLOCK_LOCK(x)     { uint64_t val = qthread_incr(& (x)->enter, 1); \
+                                        MACHINE_FENCE;                                \
                                         while (val != (x)->exit) SPINLOCK_BODY(); /* spin waiting for my turn */ }
-# define QTHREAD_FASTLOCK_UNLOCK(x)   qthread_incr(& (x)->exit, 1); /* allow next guy's turn */
+# define QTHREAD_FASTLOCK_UNLOCK(x)   do { qthread_incr(& (x)->exit, 1); /* allow next guy's turn */ \
+                                           MACHINE_FENCE; } while (0)
 # define QTHREAD_FASTLOCK_DESTROY(x)
 # define QTHREAD_FASTLOCK_DESTROY_PTR(x)
 # define QTHREAD_FASTLOCK_TYPE        qt_spin_exclusive_t
