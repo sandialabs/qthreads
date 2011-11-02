@@ -38,12 +38,6 @@ static QINLINE int getpagesize()
 
 #endif
 
-#ifndef HAVE_GCC_INLINE_ASSEMBLY
-# define ASM_ALLOWED(x)
-#else
-# define ASM_ALLOWED(x) x
-#endif
-
 struct qt_mpool_s {
     size_t                item_size;
     size_t                alloc_size;
