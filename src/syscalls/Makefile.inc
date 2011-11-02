@@ -5,17 +5,17 @@
 #
 
 libqthread_la_SOURCES += \
-			 syscalls/sys_accept.c \
-			 syscalls/sys_connect.c \
-			 syscalls/sys_nanosleep.c \
-			 syscalls/sys_poll.c \
-			 syscalls/sys_pread.c \
-			 syscalls/sys_pwrite.c \
-			 syscalls/sys_read.c \
-			 syscalls/sys_select.c \
-			 syscalls/sys_sleep.c \
-			 syscalls/sys_system.c \
-			 syscalls/sys_user_defined.c \
-			 syscalls/sys_usleep.c \
-			 syscalls/sys_wait4.c \
-			 syscalls/sys_write.c
+			 syscalls/accept.c \
+			 syscalls/connect.c \
+			 syscalls/nanosleep.c \
+			 syscalls/poll.c \
+			 syscalls/pread.c \
+			 syscalls/pwrite.c \
+			 syscalls/read.c \
+			 syscalls/select.c \
+			 syscalls/sleep.c \
+			 syscalls/system.c \
+			 syscalls/user_defined.c \
+			 syscalls/usleep.c \
+			 syscalls/wait4.c \
+			 syscalls/write.c
