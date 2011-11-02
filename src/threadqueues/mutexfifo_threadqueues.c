@@ -27,14 +27,14 @@ struct _qt_threadqueue_node {
 typedef struct _qt_threadqueue_node qt_threadqueue_node_t;
 
 struct _qt_threadqueue {
-    qt_threadqueue_node_t                   *head;
-    qt_threadqueue_node_t                   *tail;
-    QTHREAD_FASTLOCK_TYPE                    head_lock;
-    QTHREAD_FASTLOCK_TYPE                    tail_lock;
-    QTHREAD_FASTLOCK_TYPE                    advisory_queuelen_m;
+    qt_threadqueue_node_t *head;
+    qt_threadqueue_node_t *tail;
+    QTHREAD_FASTLOCK_TYPE  head_lock;
+    QTHREAD_FASTLOCK_TYPE  tail_lock;
+    QTHREAD_FASTLOCK_TYPE  advisory_queuelen_m;
     /* the following is for estimating a queue's "busy" level, and is not
      * guaranteed accurate (that would be a race condition) */
-    volatile saligned_t advisory_queuelen;
+    saligned_t          advisory_queuelen;
     qthread_shepherd_t *creator_ptr;
 } /* qt_threadqueue_t */;
 
