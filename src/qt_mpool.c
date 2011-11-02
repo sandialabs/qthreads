@@ -51,10 +51,10 @@ struct qt_mpool_s {
     size_t                alignment;
 
     QTHREAD_FASTLOCK_TYPE reuse_lock;
-    void *volatile        QTHREAD_CASLOCK(reuse_pool);
+    void                 *QTHREAD_CASLOCK(reuse_pool);
     QTHREAD_FASTLOCK_TYPE pool_lock;
     char                 *alloc_block;
-    char *volatile QTHREAD_CASLOCK(alloc_block_ptr);
+    char                 *QTHREAD_CASLOCK(alloc_block_ptr);
     void                **alloc_list;
     size_t                alloc_list_pos;
 };
@@ -233,7 +233,7 @@ qt_mpool qt_mpool_create(size_t item_size)
  * of memory must be aligned to 16 bytes. */
 #ifndef QTHREAD_USE_VALGRIND
 # define QCTR_MASK (15)
-# define QPTR(x)        ((void *volatile *)(((uintptr_t)(x))& ~(uintptr_t)QCTR_MASK))
+# define QPTR(x)        ((void **)(((uintptr_t)(x))& ~(uintptr_t)QCTR_MASK))
 # define QCTR(x)        (((uintptr_t)(x))&QCTR_MASK)
 # define QCOMPOSE(x, y) (void *)(((uintptr_t)QPTR(x)) | ((QCTR(y) + 1)&QCTR_MASK))
 #else
@@ -293,7 +293,7 @@ start:
             pool->alloc_list[pool->alloc_list_pos] = pool->alloc_block;
             pool->alloc_list_pos++;
             VALGRIND_MAKE_MEM_UNDEFINED(p, pool->item_size);
-            ASM_ALLOWED(__asm__ __volatile__ ("" ::: "memory"));
+            MACHINE_FENCE;
             pool->alloc_block_ptr = ((char *)p) + pool->item_size;
             QTHREAD_FASTLOCK_UNLOCK(&pool->pool_lock);
         } else {
@@ -311,8 +311,8 @@ void qt_mpool_free(qt_mpool pool,
     qassert_retvoid((mem != NULL));
     qassert_retvoid((pool != NULL));
     QTHREAD_FASTLOCK_LOCK(&pool->reuse_lock);
-    *(void *volatile *)mem = pool->reuse_pool;
-    pool->reuse_pool       = mem;
+    *(void **)mem    = pool->reuse_pool;
+    pool->reuse_pool = mem;
     QTHREAD_FASTLOCK_UNLOCK(&pool->reuse_lock);
     VALGRIND_MEMPOOL_FREE(pool, mem);
 }                                      /*}}} */
