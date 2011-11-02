@@ -24,22 +24,22 @@
 
 /* Data Structures */
 struct _qt_threadqueue_node {
-    volatile struct _qt_threadqueue_node *volatile next;
-    volatile struct _qt_threadqueue_node *volatile prev;
-    qthread_t                                     *value;
-    qthread_shepherd_t                            *creator_ptr;
+    struct _qt_threadqueue_node *next;
+    struct _qt_threadqueue_node *prev;
+    qthread_t                   *value;
+    qthread_shepherd_t          *creator_ptr;
 } /* qt_threadqueue_node_t */;
 
 typedef struct _qt_threadqueue_node qt_threadqueue_node_t;
 
 struct _qt_threadqueue {
-    volatile qt_threadqueue_node_t *volatile head;
-    volatile qt_threadqueue_node_t *volatile tail;
-    qthread_shepherd_t                      *creator_ptr;
+    qt_threadqueue_node_t *head;
+    qt_threadqueue_node_t *tail;
+    qthread_shepherd_t    *creator_ptr;
     /* used for the work stealing queue implementation */
-    QTHREAD_FASTLOCK_TYPE                    qlock;
-    long                                     qlength;
-    long                                     qlength_stealable; /* number of stealable tasks on queue - stop steal attempts
+    QTHREAD_FASTLOCK_TYPE  qlock;
+    long                   qlength;
+    long                   qlength_stealable;                   /* number of stealable tasks on queue - stop steal attempts
                                                                  * that will fail because tasks cannot be moved - 4/1/11 AKP
                                                                  */
 } /* qt_threadqueue_t */;
@@ -281,8 +281,8 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
 qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
                                                     size_t            active)
 {   /*{{{*/
-    volatile qt_threadqueue_node_t *node;
-    qthread_t                      *t;
+    qt_threadqueue_node_t *node;
+    qthread_t             *t;
 
     assert(q != NULL);
 
@@ -306,7 +306,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
         } else {
             if (node) {                // watch out for inactive node not stealling
                 t = node->value;
-                FREE_TQNODE((qt_threadqueue_node_t *)node);
+                FREE_TQNODE(node);
                 if ((t->flags & QTHREAD_MUST_BE_WORKER_ZERO)) { // only needs to be on worker 0 for termination
                     switch(qthread_worker(NULL)) {
                         case NO_WORKER:
@@ -336,8 +336,8 @@ void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
                                               qt_threadqueue_node_t *first,
                                               qthread_shepherd_t    *shep)
 {   /*{{{*/
-    volatile qt_threadqueue_node_t *last;
-    size_t                          addCnt = 1;
+    qt_threadqueue_node_t *last;
+    size_t                 addCnt = 1;
 
     assert(first != NULL);
     assert(q != NULL);
