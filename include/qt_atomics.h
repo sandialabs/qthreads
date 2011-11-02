@@ -32,8 +32,8 @@
 #elif defined(USE_INTERNAL_SPINLOCK) && USE_INTERNAL_SPINLOCK
 
 typedef struct qt_spin_exclusive_s { /* added to allow fast critical section ordering */
-    volatile uint64_t enter;         /* and not call pthreads spin_lock -- hard to debug */
-    volatile uint64_t exit;          /* near the lock under gdb -- 4/1/11 akp */
+    uint64_t enter;                  /* and not call pthreads spin_lock -- hard to debug */
+    uint64_t exit;                   /* near the lock under gdb -- 4/1/11 akp */
 } qt_spin_exclusive_t;
 void qt_spin_exclusive_lock(qt_spin_exclusive_t *);
 void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
