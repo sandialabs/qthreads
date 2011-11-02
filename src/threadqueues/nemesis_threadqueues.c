@@ -24,20 +24,20 @@
 
 /* Data Structures */
 typedef struct {
-    void *volatile next;
-    char           data[];
+    void *next;
+    char  data[];
 } NEMESIS_entry;
 
 typedef struct {
     /* The First Cacheline */
-    void *volatile head;
-    void *volatile tail;
-    uint8_t        pad1[CACHELINE_WIDTH - (2 * sizeof(void *))];
+    void   *head;
+    void   *tail;
+    uint8_t pad1[CACHELINE_WIDTH - (2 * sizeof(void *))];
     /* The Second Cacheline */
-    void *volatile shadow_head;
+    void   *shadow_head;
     /* the following is for estimating a queue's "busy" level, and is not
      * guaranteed accurate (that would be a race condition) */
-    volatile saligned_t advisory_queuelen;
+    saligned_t          advisory_queuelen;
     qthread_shepherd_t *creator_ptr;
     uint8_t             pad2[CACHELINE_WIDTH - sizeof(void *) - sizeof(saligned_t) -
                              sizeof(qthread_shepherd_t *)];
@@ -161,8 +161,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict   q,
                                      qthread_shepherd_t *restrict shep)
 {                                      /*{{{ */
     assert(t->next == NULL);
-    NEMESIS_entry *prev =
-        qt_internal_atomic_swap_ptr((void *volatile *)&(q->q.tail), t);
+    NEMESIS_entry *prev = qt_internal_atomic_swap_ptr((void **)&(q->q.tail), t);
 
     if (prev == NULL) {
         q->q.head = t;
@@ -171,10 +170,10 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict   q,
     }
     qthread_incr(&(q->advisory_queuelen), 1);
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-    /* awake waiter */ 
+    /* awake waiter */
     /* Yes, this needs to be here, to prevent reading frustration being hoisted
      * to before the enqueue operations. */
-    __sync_synchronize();
+    MACHINE_FENCE;
     if (q->frustration) {
         qassert(pthread_mutex_lock(&q->trigger_lock), 0);
         if (q->frustration) {
@@ -183,7 +182,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict   q,
         }
         qassert(pthread_mutex_unlock(&q->trigger_lock), 0);
     }
-#endif
+#endif /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
 }                                      /*}}} */
 
 void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
