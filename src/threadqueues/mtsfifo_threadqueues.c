@@ -16,27 +16,28 @@
 #include "qthread_asserts.h"
 #include "qthread_prefetch.h"
 #include "qt_threadqueues.h"
+#include "qthread_innards.h" /* for qthread_internal_cleanup_early() */
 
 /* Data Structures */
 struct _qt_threadqueue_node {
-    volatile struct _qt_threadqueue_node *volatile next;
-    qthread_t                                     *value;
-    qthread_shepherd_t                            *creator_ptr;
+    struct _qt_threadqueue_node *next;
+    qthread_t                   *value;
+    qthread_shepherd_t          *creator_ptr;
 } /* qt_threadqueue_node_t */;
 
 typedef struct _qt_threadqueue_node qt_threadqueue_node_t;
 
 struct _qt_threadqueue {
-    volatile qt_threadqueue_node_t *volatile head;
-    volatile qt_threadqueue_node_t *volatile tail;
+    qt_threadqueue_node_t *head;
+    qt_threadqueue_node_t *tail;
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-    volatile aligned_t                       fruitless;
-    pthread_mutex_t                          lock;
-    pthread_cond_t                           notempty;
+    aligned_t              fruitless;
+    pthread_mutex_t        lock;
+    pthread_cond_t         notempty;
 #endif                          /* CONDWAIT */
     /* the following is for estimating a queue's "busy" level, and is not
      * guaranteed accurate (that would be a race condition) */
-    volatile saligned_t advisory_queuelen;
+    saligned_t          advisory_queuelen;
     qthread_shepherd_t *creator_ptr;
 } /* qt_threadqueue_t */;
 
@@ -165,7 +166,7 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 # define QCOMPOSE(x, y) (x)
 #else
 # define QCTR_MASK (15)
-# define QPTR(x)        ((volatile qt_threadqueue_node_t *)(((uintptr_t)(x))& ~(uintptr_t)QCTR_MASK))
+# define QPTR(x)        ((qt_threadqueue_node_t *)(((uintptr_t)(x))& ~(uintptr_t)QCTR_MASK))
 # define QCTR(x)        (((uintptr_t)(x))&QCTR_MASK)
 # define QCOMPOSE(x, y) (void *)(((uintptr_t)QPTR(x)) | ((QCTR(y) + 1)&QCTR_MASK))
 #endif
@@ -221,9 +222,9 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
                                      qthread_t          *t,
                                      qthread_shepherd_t *shep)
 {                                      /*{{{ */
-    volatile qt_threadqueue_node_t *tail;
-    volatile qt_threadqueue_node_t *next;
-    qt_threadqueue_node_t          *node;
+    qt_threadqueue_node_t *tail;
+    qt_threadqueue_node_t *next;
+    qt_threadqueue_node_t *node;
 
     assert(t != NULL);
     assert(q != NULL);
@@ -239,20 +240,23 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
     while (1) {
         tail = q->tail;
         next = QPTR(tail)->next;
+        COMPILER_FENCE;
         if (tail == q->tail) {        // are tail and next consistent?
             if (QPTR(next) == NULL) { // was tail pointing to the last node?
-                if (qt_cas
-                        ((void *volatile *)&(QPTR(tail)->next), (void *)next,
-                        QCOMPOSE(node, next)) == next) {
+                if (qt_cas((void **)&(QPTR(tail)->next),
+                           (void *)next,
+                           QCOMPOSE(node, next)) == next) {
                     break;             // success!
                 }
             } else {                   // tail not pointing to last node
-                (void)qt_cas((void *volatile *)&(q->tail), (void *)tail,
+                (void)qt_cas((void **)&(q->tail),
+                             (void *)tail,
                              QCOMPOSE(next, tail));
             }
         }
     }
-    (void)qt_cas((void *volatile *)&(q->tail), (void *)tail,
+    (void)qt_cas((void **)&(q->tail),
+                 (void *)tail,
                  QCOMPOSE(node, tail));
     (void)qthread_incr(&q->advisory_queuelen, 1);
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
@@ -278,27 +282,30 @@ qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
 {                                      /*{{{ */
     qthread_t *p = NULL;
 
-    volatile qt_threadqueue_node_t *head;
-    volatile qt_threadqueue_node_t *tail;
-    volatile qt_threadqueue_node_t *next_ptr;
+    qt_threadqueue_node_t *head;
+    qt_threadqueue_node_t *tail;
+    qt_threadqueue_node_t *next_ptr;
 
     assert(q != NULL);
     while (1) {
         head     = q->head;
         tail     = q->tail;
         next_ptr = QPTR(QPTR(head)->next);
+        COMPILER_FENCE;
         if (head == q->head) {              // are head, tail, and next consistent?
             if (QPTR(head) == QPTR(tail)) { // is queue empty or tail falling behind?
                 if (next_ptr == NULL) {     // is queue empty?
                     return NULL;
                 }
-                (void)qt_cas((void *volatile *)&(q->tail), (void *)tail, QCOMPOSE(next_ptr, tail)); // advance tail ptr
-            } else {                                                                                // no need to deal with tail
+                (void)qt_cas((void **)&(q->tail),
+                             (void *)tail,
+                             QCOMPOSE(next_ptr, tail)); // advance tail ptr
+            } else {                                    // no need to deal with tail
                 // read value before CAS, otherwise another dequeue might free the next node
                 p = next_ptr->value;
-                if (qt_cas
-                        ((void *volatile *)&(q->head), (void *)head,
-                        QCOMPOSE(next_ptr, head)) == head) {
+                if (qt_cas((void **)&(q->head),
+                           (void *)head,
+                           QCOMPOSE(next_ptr, head)) == head) {
                     break;             // success!
                 }
             }
@@ -320,9 +327,9 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q)
 {                                      /*{{{ */
     qthread_t *p = NULL;
 
-    volatile qt_threadqueue_node_t *head;
-    volatile qt_threadqueue_node_t *tail;
-    volatile qt_threadqueue_node_t *next_ptr;
+    qt_threadqueue_node_t *head;
+    qt_threadqueue_node_t *tail;
+    qt_threadqueue_node_t *next_ptr;
 
     assert(q != NULL);
 threadqueue_dequeue_restart:
@@ -330,6 +337,7 @@ threadqueue_dequeue_restart:
         head     = q->head;
         tail     = q->tail;
         next_ptr = QPTR(QPTR(head)->next);
+        COMPILER_FENCE;
         if (head == q->head) {              // are head, tail, and next consistent?
             if (QPTR(head) == QPTR(tail)) { // is queue empty or tail falling behind?
                 if (next_ptr == NULL) {     // is queue empty?
@@ -350,13 +358,15 @@ threadqueue_dequeue_restart:
 #endif              /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
                     goto threadqueue_dequeue_restart;
                 }
-                (void)qt_cas((void *volatile *)&(q->tail), (void *)tail, QCOMPOSE(next_ptr, tail)); // advance tail ptr
-            } else {                                                                                // no need to deal with tail
+                (void)qt_cas((void **)&(q->tail),
+                             (void *)tail,
+                             QCOMPOSE(next_ptr, tail)); // advance tail ptr
+            } else {                                    // no need to deal with tail
                 // read value before CAS, otherwise another dequeue might free the next node
                 p = next_ptr->value;
-                if (qt_cas
-                        ((void *volatile *)&(q->head), (void *)head,
-                        QCOMPOSE(next_ptr, head)) == head) {
+                if (qt_cas((void **)&(q->head),
+                           (void *)head,
+                           QCOMPOSE(next_ptr, head)) == head) {
                     break;             // success!
                 }
             }
