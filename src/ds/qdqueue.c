@@ -36,7 +36,7 @@ struct qdqueue_adheap_s {
 
 struct qdsubqueue_s {
     qlfqueue_t             *theQ;
-    void *volatile          last_consumed;
+    void                   *last_consumed;
 
     struct qdqueue_adheap_s ads;
     aligned_t               last_ad_issued;
@@ -52,14 +52,6 @@ struct qdqueue_s {
 };
 
 static qthread_shepherd_id_t maxsheps = 0;
-
-/* avoid compiler bugs with volatile... */
-static Q_NOINLINE void *volatile *vol_id_qdsqptr(void *volatile *ptr)
-{                                      /*{{{ */
-    return ptr;
-}                                      /*}}} */
-
-#define _(x) *vol_id_qdsqptr(&(x))
 
 static qdqueue_adstruct_t qdqueue_adheap_pop(struct qdqueue_adheap_s *heap)
 {   /*{{{ */
@@ -228,7 +220,7 @@ static void qdqueue_internal_sortedsheps(qthread_shepherd_id_t shep,
 
 static struct qdsubqueue_s **qdqueue_internal_getneighbors(qthread_shepherd_id_t shep,
                                                            struct qdsubqueue_s  *Qs,
-                                                           size_t *numNeighbors,
+                                                           size_t               *numNeighbors,
                                                            int *Q_UNUSED         distances) /*{{{ */
 {
     struct qdsubqueue_s **ret;
@@ -483,17 +475,17 @@ void *qdqueue_dequeue(qdqueue_t *q)
     myq = &(q->Qs[qthread_shep()]);
     if ((ret = qlfqueue_dequeue(myq->theQ)) != NULL) {
         /* this write MUST be atomic */
-        _(myq->last_consumed) = myq;
+        myq->last_consumed = myq;
         return ret;
     } else {
         /* this write MUST be atomic */
-        _(myq->last_consumed) = NULL;
+        myq->last_consumed = NULL;
 checkads:
         {
             qdqueue_adstruct_t ad;
 
             while ((ad = qdqueue_adheap_pop(&myq->ads)).shep != NULL) {
-                struct qdsubqueue_s *lc = (struct qdsubqueue_s *)_(ad.shep->last_consumed);
+                struct qdsubqueue_s *lc = (struct qdsubqueue_s *)ad.shep->last_consumed;
 
                 if (lc == ad.shep) {
                     /* it's working on its own queue */
@@ -505,15 +497,14 @@ checkads:
                                         ad.generation);
                     }
                     if ((ret = qlfqueue_dequeue(ad.shep->theQ)) != NULL) {
-                        _(myq->last_consumed) = ad.shep;
+                        myq->last_consumed = ad.shep;
                         return ret;
                     }
                 } else if (lc != NULL) {
                     /* it got work from somewhere! */
                     qdqueue_adheap_push(&myq->ads, lc, 0);
                     /* reset the remote host's last_consumed counter, to avoid infinite loops */
-                    (void)qthread_cas_ptr((void *volatile *)&(ad.shep->last_consumed),
-                                          (void *)lc, NULL);
+                    (void)qthread_cas_ptr(&(ad.shep->last_consumed), (void *)lc, NULL);
                 }
             }
         }
@@ -522,15 +513,15 @@ checkads:
 
             for (shep = 0; shep < (maxsheps - 1); shep++) {
                 struct qdsubqueue_s *remoteshep = myq->allsheps[shep];
-                struct qdsubqueue_s *lc         = _(remoteshep->last_consumed);
+                struct qdsubqueue_s *lc         = remoteshep->last_consumed;
 
                 if ((ret = qlfqueue_dequeue(remoteshep->theQ)) != NULL) {
-                    _(myq->last_consumed) = remoteshep;
+                    myq->last_consumed = remoteshep;
                     return ret;
                 } else if ((lc != NULL) && (lc != remoteshep)) {
                     /* it got work from somewhere! */
                     if ((ret = qlfqueue_dequeue(lc->theQ)) != NULL) {
-                        _(myq->last_consumed) = lc;
+                        myq->last_consumed = lc;
                         return ret;
                     }
                 }
@@ -559,7 +550,7 @@ int qdqueue_empty(qdqueue_t *q)
             struct qdsubqueue_s *remoteshep = myq->allsheps[shep];
 
             assert(remoteshep);
-            if (_(remoteshep->last_consumed) == remoteshep) {
+            if (remoteshep->last_consumed == remoteshep) {
                 /* it's working on its own queue */
                 if (!qlfqueue_empty(remoteshep->theQ)) {
                     return 0;
