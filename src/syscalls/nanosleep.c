@@ -31,12 +31,20 @@ int nanosleep(const struct timespec *rqtp,
             qthread_yield();
             qtimer_stop(t);
         } while (qtimer_secs(t) < seconds);
+        if (rmtp) {
+            time_t secs = (time_t)qtimer_secs(t);
+            rmtp->tv_sec = rqtp->tv_sec - secs;
+            rmtp->tv_nsec = (long)(qtimer_secs(t) - (double)secs) * 1e9;
+        }
         return 0;
     } else {
 #if HAVE_SYSCALL && HAVE_DECL_SYS_NANOSLEEP
         return syscall(SYS_nanosleep, rqtp, rmtp);
 
 #else
+        if (rmtp) {
+            *rmtp = *rqtp;
+        }
         return 0;
 #endif
     }
