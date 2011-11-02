@@ -141,9 +141,9 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
     free((void*) q);
 } /*}}}*/
 
-static QINLINE int qt_threadqueue_cas128( volatile uint128_t *src, 
-                                          uint128_t        *cmp,
-                                          uint128_t        *with )
+static QINLINE int qt_threadqueue_cas128( uint128_t *src,
+                                          uint128_t *cmp,
+                                          uint128_t *with )
 {   /*{{{*/
     char result;
     // (AT&T syntax)
