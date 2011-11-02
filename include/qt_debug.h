@@ -6,7 +6,7 @@
 
 /* System headers */
 # include <limits.h>      // for INT_MAX, per C89
-# ifdef HAVE_SYS_SYSCALL_H
+# if defined(HAVE_SYS_SYSCALL_H) && defined(HAVE_DECL_SYS_WRITE)
 #  include <sys/syscall.h> // for syscall()
 #  include <unistd.h>      // for SYS_write
 #  define WRITE(fd, ch, len) syscall(SYS_write, (fd), (ch), (len))
