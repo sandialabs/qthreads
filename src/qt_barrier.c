@@ -24,10 +24,10 @@ struct qt_barrier_s {
     int        doneLevel;       // height of the tree
     char       barrierDebug;    // flag to turn on internal printf debugging
     syncvar_t *upLock;
-    //    volatile int64_t *upLock;	// array of counters to track number of people that have arrived
+    //    int64_t *upLock;	// array of counters to track number of people that have arrived
 
     syncvar_t *downLock;
-    //    volatile int64_t *downLock;	// array of counters that allows threads to leave
+    //    int64_t *downLock;	// array of counters that allows threads to leave
 } /* qt_barrier_t */;
 
 static void qtb_internal_initialize_variable(qt_barrier_t *b,
