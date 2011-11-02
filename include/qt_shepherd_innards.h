@@ -42,7 +42,7 @@ struct qthread_worker_s {
     uintptr_t           hazard_ptrs[HAZARD_PTRS_PER_SHEP]; /* hazard pointers (see http://portal.acm.org/citation.cfm?id=987524.987595) */
     hazard_freelist_t   hazard_free_list;
     qthread_t          *current;
-    volatile uintptr_t  QTHREAD_CASLOCK(active);
+    uintptr_t           QTHREAD_CASLOCK(active);
 };
 typedef struct qthread_worker_s qthread_worker_t;
 
@@ -67,7 +67,7 @@ struct qthread_shepherd_s {
     qt_mpool               stack_pool;
     /* round robin scheduler - can probably be smarter */
     aligned_t              sched_shepherd;
-    volatile uintptr_t     QTHREAD_CASLOCK(active);
+    uintptr_t              QTHREAD_CASLOCK(active);
     /* affinity information */
     unsigned int           node; /* whereami */
 #ifdef QTHREAD_HAVE_LGRP

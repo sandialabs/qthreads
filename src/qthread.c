@@ -461,7 +461,7 @@ static void *qthread_shepherd(void *arg)
 #endif
         } else {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-            if(!*(volatile size_t *)&me_worker->active) {
+            if(!QTHREAD_CASLOCK_READ_UI(me_worker->active)) {
                 qt_threadqueue_enqueue(me->ready, t, me);
                 // short stall to prevent worker from monoplizing queue
                 struct timespec req = { .tv_sec = 0, .tv_nsec = 10000000L };
