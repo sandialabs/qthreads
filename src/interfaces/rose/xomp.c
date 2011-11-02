@@ -290,9 +290,6 @@ void XOMP_init(
 void XOMP_terminate(
     int exitcode)
 {
-  if (qthread_worker(NULL) !=0) {
-    qt_move_to_orig();  // for termination need to be on the original thread - 4/1/11 AKP
-  }
   return;
 }
 

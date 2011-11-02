@@ -1030,7 +1030,7 @@ int qthread_initialize(void)
 
 /* the context will have its own stack ptr */
     qlib->mccoy_thread->thread_state = QTHREAD_STATE_YIELDED;                    /* avoid re-launching */
-    qlib->mccoy_thread->flags        = QTHREAD_REAL_MCCOY | QTHREAD_UNSTEALABLE; /* i.e. this is THE parent thread */
+    qlib->mccoy_thread->flags        = QTHREAD_REAL_MCCOY | QTHREAD_UNSTEALABLE | QTHREAD_MUST_BE_WORKER_ZERO; /* i.e. this is THE parent thread */
     assert(qlib->mccoy_thread->rdata == NULL);
 
     qlib->mccoy_thread->rdata = malloc(sizeof(struct qthread_runtime_data_s));
@@ -1315,7 +1315,9 @@ void qthread_finalize(void)
         worker->current->thread_state = QTHREAD_STATE_YIELDED; /* Otherwise, put back */
         //      qt_threadqueue_enqueue(shep0->ready, worker->current,
         //             shep0);
-        return;
+        return; // AKP 11/2/11 I think that is if statement catches the case that exit is called within a
+	// parallel region so a random stream reaches here.  we return rather than requeue because we just 
+	// want to exit (something bad happened) [my speculation]
     }
 #endif
 
@@ -2777,18 +2779,6 @@ int qt_omp_parallel_region_create()
 }                              /*}}} */
 
 void INTERNAL qt_free_loop(void *lp);
-
-void qt_move_to_orig()
-{
-    qthread_t *t = qthread_internal_self();
-
-    t->thread_state = QTHREAD_STATE_YIELDED;
-    t->flags       |= QTHREAD_MUST_BE_WORKER_ZERO;
-    qt_threadqueue_enqueue(qlib->shepherds[0].ready, t, 0); // put work back (having marked that
-                                                            // it must be run by thread 0) -- put
-                                                            // on queue that 0 looks at by default
-    qthread_back_to_master(t);                              // return to work pile
-}
 
 void qt_omp_parallel_region_destroy()
 {      /*{{{ */
