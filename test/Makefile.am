@@ -56,8 +56,9 @@ SUBDIRS = rose_bots_benchmarks
 endif
 
 TESTS =  $(BASIC_TESTS) $(COMPLEX_TESTS)
+EXTRA_PROGRAMS = 
 
-EXTRA_PROGRAMS = test_wavefront
+UNBUILDABLE = test_wavefront
 
 if COMPILE_ROSE_EXTENSIONS
 TESTS += test_log_barrier
@@ -67,7 +68,7 @@ if WANT_MULTINODE
 TESTS += test_multinode_init
 endif
 
-EXTRA_PROGRAMS += \
+BENCHMARKS = \
 	 time_increments \
 	 time_febs \
 	 time_qarray \
@@ -103,9 +104,12 @@ EXTRA_PROGRAMS += \
 	 time_gcd \
 	 test_cpp_interface \
 	 time_qt_loops \
-	 time_qt_loopaccums \
-	 time_uts
-CLEANFILES += $(EXTRA_PROGRAMS)
+	 time_qt_loopaccums
+
+UNBUILDABLE += time_uts
+EXTRA_PROGRAMS += $(UNBUILDABLE) $(BENCHMARKS)
+
+CLEANFILES += $(UNBUILDABLE) $(BENCHMARKS)
 
 if HAVE_PROG_TIMELIMIT
 TESTS_ENVIRONMENT = timelimit -T 30
@@ -113,13 +117,13 @@ endif
 
 buildtests: $(TESTS)
 if COMPILE_ROSE_EXTENSIONS
-buildall: $(TESTS) $(EXTRA_PROGRAMS)
+buildall: $(TESTS) $(BENCHMARKS)
 	$(MAKE) -C rose_bots_benchmarks buildall
-buildextra: $(EXTRA_PROGRAMS)
+buildextra: $(BENCHMARKS)
 	$(MAKE) -C rose_bots_benchmarks buildextra
 else
-buildall: $(TESTS) $(EXTRA_PROGRAMS)
-buildextra: $(EXTRA_PROGRAMS)
+buildall: $(TESTS) $(BENCHMARKS)
+buildextra: $(BENCHMARKS)
 endif
 
 .PHONY: buildall buildtests buildextra
