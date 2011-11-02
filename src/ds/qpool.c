@@ -33,10 +33,10 @@
 
 struct qpool_shepspec_s {
     QTHREAD_FASTLOCK_TYPE reuse_lock;
-    void *volatile        reuse_pool;
+    void                 *reuse_pool;
     QTHREAD_FASTLOCK_TYPE pool_lock;
     char                 *alloc_block;
-    char *volatile        alloc_block_ptr;
+    char                 *alloc_block_ptr;
     void                **alloc_list;
     size_t                alloc_list_pos;
 
@@ -55,14 +55,6 @@ struct qpool_s {
 
 /* local constants */
 static size_t pagesize = 0;
-
-/* avoid compiler bugs with volatile... */
-static Q_NOINLINE void *volatile *vol_id_void(void *volatile *const ptr)
-{                                      /*{{{ */
-    return ptr;
-}                                      /*}}} */
-
-#define _(x) (*vol_id_void(& (x)))
 
 /* local funcs */
 static QINLINE void *qpool_internal_aligned_alloc(size_t alloc_size,
@@ -214,7 +206,7 @@ qpool *qpool_create_aligned(const size_t isize,
     /* now that we have all the information, set up the pools */
     for (pindex = 0; pindex < numsheps; pindex++) {
         MEM_AFFINITY_ONLY(pool->pools[pindex].node = qthread_internal_shep_to_node(pindex));
-        _(pool->pools[pindex].reuse_pool) = NULL;
+        pool->pools[pindex].reuse_pool = NULL;
         QTHREAD_FASTLOCK_INIT(pool->pools[pindex].pool_lock);
         pool->pools[pindex].alloc_block =
             (char *)qpool_internal_aligned_alloc(alloc_size,
@@ -266,16 +258,16 @@ qpool *qpool_create(const size_t item_size)
  * need to be huge, just big enough to make the ABA problem sufficiently
  * unlikely. We'll just claim 4, to be conservative. Thus, an allocated block
  * of memory must be aligned to 16 bytes. */
-#if defined(QTHREAD_USE_VALGRIND) && NO_ABA_PROTECTION
-# define QPTR(x)        (x)
-# define QCTR(x)        0
-# define QCOMPOSE(x, y) (x)
-#else
-# define QCTR_MASK (15)
-# define QPTR(x)        ((void *volatile *)(((uintptr_t)(x))& ~(uintptr_t)QCTR_MASK))
-# define QCTR(x)        (((uintptr_t)(x))&QCTR_MASK)
-# define QCOMPOSE(x, y) (void *)(((uintptr_t)QPTR(x)) | ((QCTR(y) + 1)&QCTR_MASK))
-#endif
+// #if defined(QTHREAD_USE_VALGRIND) && NO_ABA_PROTECTION
+#define QPTR(x)        (void **)(x)
+#define QCTR(x)        0
+#define QCOMPOSE(x, y) (x)
+/*#else
+ # define QCTR_MASK (15)
+ # define QPTR(x)        ((void **)(((uintptr_t)(x))& ~(uintptr_t)QCTR_MASK))
+ # define QCTR(x)        (((uintptr_t)(x))&QCTR_MASK)
+ # define QCOMPOSE(x, y) (void *)(((uintptr_t)QPTR(x)) | ((QCTR(y) + 1)&QCTR_MASK))
+ #endif*/
 
 void *qpool_alloc(qpool *pool)
 {                                      /*{{{ */
@@ -286,7 +278,7 @@ void *qpool_alloc(qpool *pool)
     qassert_ret((pool != NULL), NULL);
     shep   = qthread_shep();
     mypool = &(pool->pools[shep]);
-    p      = (void *)_(mypool->reuse_pool);
+    p      = (void *)mypool->reuse_pool;
 
     if (QPTR(p) != NULL) {
         QTHREAD_FASTLOCK_LOCK(&mypool->reuse_lock);
@@ -349,6 +341,7 @@ start:
             mypool->alloc_list[mypool->alloc_list_pos] = mypool->alloc_block;
             mypool->alloc_list_pos++;
             VALGRIND_MAKE_MEM_NOACCESS(p, pool->alloc_size);
+            MACHINE_FENCE;
             mypool->alloc_block_ptr = ((char *)p) + pool->item_size;
             QTHREAD_FASTLOCK_UNLOCK(&mypool->pool_lock);
         } else {
@@ -369,8 +362,8 @@ void qpool_free(qpool *pool,
     qassert_retvoid((mem != NULL));
     qassert_retvoid((pool != NULL));
     QTHREAD_FASTLOCK_LOCK(&mypool->reuse_lock);
-    *(void *volatile *)mem = mypool->reuse_pool;
-    mypool->reuse_pool     = mem;
+    *(void **)mem      = mypool->reuse_pool;
+    mypool->reuse_pool = mem;
     QTHREAD_FASTLOCK_UNLOCK(&mypool->reuse_lock);
     VALGRIND_MEMPOOL_FREE(pool, mem);
 }                                      /*}}} */
