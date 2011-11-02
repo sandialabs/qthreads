@@ -13,13 +13,13 @@
 
 /* queue declarations */
 typedef struct _qlfqueue_node {
-    void          *value;
-    void *volatile next;
+    void *value;
+    void *next;
 } qlfqueue_node_t;
 
 struct qlfqueue_s {             /* typedef'd to qlfqueue_t */
-    volatile qlfqueue_node_t *volatile head;
-    volatile qlfqueue_node_t *volatile tail;
+    qlfqueue_node_t *head;
+    qlfqueue_node_t *tail;
 };
 
 static qpool *qlfqueue_node_pool = NULL;
@@ -35,18 +35,10 @@ static qpool *qlfqueue_node_pool = NULL;
 # define QCOMPOSE(x, y) (x)
 #else
 # define QCTR_MASK (15)
-# define QPTR(x)        ((volatile qlfqueue_node_t *)(((uintptr_t)(x))& ~(uintptr_t)QCTR_MASK))
+# define QPTR(x)        ((qlfqueue_node_t *)(((uintptr_t)(x))& ~(uintptr_t)QCTR_MASK))
 # define QCTR(x)        (((uintptr_t)(x))&QCTR_MASK)
 # define QCOMPOSE(x, y) (void *)(((uintptr_t)QPTR(x)) | ((QCTR(y) + 1)&QCTR_MASK))
 #endif
-
-/* to avoid compiler bugs regarding volatile... */
-static Q_NOINLINE volatile qlfqueue_node_t *volatile *vol_id_qlfqn(volatile qlfqueue_node_t *volatile *ptr)
-{                                      /*{{{ */
-    return ptr;
-}                                      /*}}} */
-
-#define _(x) *vol_id_qlfqn((volatile qlfqueue_node_t *volatile *)& (x))
 
 qlfqueue_t *qlfqueue_create(void)
 {                                      /*{{{ */
@@ -63,8 +55,7 @@ qlfqueue_t *qlfqueue_create(void)
 
     q = malloc(sizeof(struct qlfqueue_s));
     if (q != NULL) {
-        q->head =
-            (volatile qlfqueue_node_t *)qpool_alloc(qlfqueue_node_pool);
+        q->head = (qlfqueue_node_t *)qpool_alloc(qlfqueue_node_pool);
         assert(QPTR(q->head) != NULL);
         if (QPTR(q->head) == NULL) {   // if we're not using asserts, fail nicely
             free(q);
@@ -79,10 +70,12 @@ qlfqueue_t *qlfqueue_create(void)
 int qlfqueue_destroy(qlfqueue_t *q)
 {                                      /*{{{ */
     qassert_ret((q != NULL), QTHREAD_BADARGS);
-    while (QPTR(_(q->head)) != QPTR(_(q->tail))) {
+    while (QPTR(q->head) != QPTR(q->tail)) {
         qlfqueue_dequeue(q);
+        COMPILER_FENCE;
     }
-    qpool_free(qlfqueue_node_pool, (void *)(QPTR(_(q->head))));
+    COMPILER_FENCE;
+    qpool_free(qlfqueue_node_pool, (void *)(QPTR(q->head)));
     free(q);
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
@@ -90,9 +83,9 @@ int qlfqueue_destroy(qlfqueue_t *q)
 int qlfqueue_enqueue(qlfqueue_t *q,
                      void       *elem)
 {                                      /*{{{ */
-    volatile qlfqueue_node_t *tail;
-    volatile qlfqueue_node_t *next;
-    qlfqueue_node_t          *node;
+    qlfqueue_node_t *tail;
+    qlfqueue_node_t *next;
+    qlfqueue_node_t *node;
 
     qassert_ret((elem != NULL), QTHREAD_BADARGS);
     qassert_ret((q != NULL), QTHREAD_BADARGS);
@@ -106,50 +99,56 @@ int qlfqueue_enqueue(qlfqueue_t *q,
     node->value = elem;
 
     while (1) {
-        tail = _(q->tail);
-        next = _(QPTR(tail)->next);
-        if (tail == _(q->tail)) {      // are tail and next consistent?
+        tail = q->tail;
+        next = QPTR(tail)->next;
+        MACHINE_FENCE;
+        if (tail == q->tail) {      // are tail and next consistent?
             if (QPTR(next) == NULL) {  // was tail pointing to the last node?
-                if (qthread_cas_ptr
-                        ((void *volatile *)&(QPTR(tail)->next), (void *)next,
-                        QCOMPOSE(node, next)) == next) {
+                if (qthread_cas_ptr((void **)&(QPTR(tail)->next),
+                                    (void *)next,
+                                    QCOMPOSE(node, next)) == next) {
                     break;             // success!
                 }
             } else {                   // tail not pointing to last node
-                (void)qthread_cas_ptr((void *volatile *)&(q->tail),
-                                      (void *)tail, QCOMPOSE(next, tail));
+                (void)qthread_cas_ptr((void **)&(q->tail),
+                                      (void *)tail,
+                                      QCOMPOSE(next, tail));
             }
         }
     }
-    (void)qthread_cas_ptr((void *volatile *)&(q->tail), (void *)tail,
+    (void)qthread_cas_ptr((void **)&(q->tail),
+                          (void *)tail,
                           QCOMPOSE(node, tail));
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
 
 void *qlfqueue_dequeue(qlfqueue_t *q)
 {                                      /*{{{ */
-    void                     *p = NULL;
-    volatile qlfqueue_node_t *head;
-    volatile qlfqueue_node_t *tail;
-    volatile qlfqueue_node_t *next_ptr;
+    void            *p = NULL;
+    qlfqueue_node_t *head;
+    qlfqueue_node_t *tail;
+    qlfqueue_node_t *next_ptr;
 
     qassert_ret((q != NULL), NULL);
     while (1) {
-        head     = _(q->head);
-        tail     = _(q->tail);
-        next_ptr = QPTR(_(QPTR(head)->next));
-        if (head == _(q->head)) {           // are head, tail, and next consistent?
+        head     = q->head;
+        tail     = q->tail;
+        next_ptr = QPTR(QPTR(head)->next);
+        MACHINE_FENCE;
+        if (head == q->head) {           // are head, tail, and next consistent?
             if (QPTR(head) == QPTR(tail)) { // is queue empty or tail falling behind?
                 if (next_ptr == NULL) {     // is queue empty?
                     return NULL;
                 }
-                (void)qthread_cas_ptr((void *volatile *)&(q->tail), (void *)tail, QCOMPOSE(next_ptr, tail)); // advance tail ptr
-            } else if (next_ptr != NULL) {                                                                   // no need to deal with tail
+                (void)qthread_cas_ptr((void **)&(q->tail),
+                                      (void *)tail,
+                                      QCOMPOSE(next_ptr, tail)); // advance tail ptr
+            } else if (next_ptr != NULL) {                       // no need to deal with tail
                 // read value before CAS, otherwise another dequeue might free the next node
                 p = next_ptr->value;
-                if (qthread_cas_ptr
-                        ((void *volatile *)&(q->head), (void *)head,
-                        QCOMPOSE(next_ptr, head)) == head) {
+                if (qthread_cas_ptr((void **)&(q->head),
+                                    (void *)head,
+                                    QCOMPOSE(next_ptr, head)) == head) {
                     break;             // success!
                 }
             }
@@ -161,17 +160,18 @@ void *qlfqueue_dequeue(qlfqueue_t *q)
 
 int qlfqueue_empty(qlfqueue_t *q)
 {                                      /*{{{ */
-    volatile qlfqueue_node_t *head;
-    volatile qlfqueue_node_t *tail;
-    volatile qlfqueue_node_t *next;
+    qlfqueue_node_t *head;
+    qlfqueue_node_t *tail;
+    qlfqueue_node_t *next;
 
     qassert_ret((q != NULL), QTHREAD_BADARGS);
 
     while (1) {
-        head = _(q->head);
-        tail = _(q->tail);
-        next = _(QPTR(head)->next);
-        if (head == _(q->head)) {           // are head, tail, and next consistent?
+        head = q->head;
+        tail = q->tail;
+        next = QPTR(head)->next;
+        MACHINE_FENCE;
+        if (head == q->head) {           // are head, tail, and next consistent?
             if (QPTR(head) == QPTR(tail)) { // is queue empty or tail falling behind?
                 if (QPTR(next) == NULL) {   // queue is empty!
                     return 1;
