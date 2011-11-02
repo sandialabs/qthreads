@@ -4,8 +4,11 @@
 #include <assert.h>
 #include <qthread/qthread.h>
 
+class syncvar;
+
 class uint60_t {
     public:
+	friend class syncvar;
 	uint60_t(void) { v = 0; }
 	uint60_t(uint64_t u) {
 	    assert((u>>60) == 0);
@@ -56,7 +59,7 @@ class syncvar
 	    the_syncvar_t.u.w = 0;
 	}
 	QINLINE syncvar(const uint60_t &val) {
-	    the_syncvar_t.u.s.data = val;
+	    the_syncvar_t.u.s.data = val.v;
 	}
 	QINLINE syncvar(const syncvar &val) {
 	    the_syncvar_t.u.w = val.the_syncvar_t.u.w;
