@@ -1029,7 +1029,7 @@ int qthread_initialize(void)
 #endif
 
 /* the context will have its own stack ptr */
-    qlib->mccoy_thread->thread_state = QTHREAD_STATE_YIELDED;                    /* avoid re-launching */
+    qlib->mccoy_thread->thread_state = QTHREAD_STATE_YIELDED;                                                  /* avoid re-launching */
     qlib->mccoy_thread->flags        = QTHREAD_REAL_MCCOY | QTHREAD_UNSTEALABLE | QTHREAD_MUST_BE_WORKER_ZERO; /* i.e. this is THE parent thread */
     assert(qlib->mccoy_thread->rdata == NULL);
 
@@ -1056,8 +1056,8 @@ int qthread_initialize(void)
     qlib->shepherds[0].workers[0].shepherd  = &qlib->shepherds[0];
     qlib->shepherds[0].workers[0].active    = 1;
     qlib->shepherds[0].workers[0].worker_id = 0;
-    qlib->shepherds[0].workers[0].unique_id =  qthread_internal_incr(&(qlib->max_unique_id),
-								     &qlib->max_unique_id_lock, 1);
+    qlib->shepherds[0].workers[0].unique_id = qthread_internal_incr(&(qlib->max_unique_id),
+                                                                    &qlib->max_unique_id_lock, 1);
 #endif
     qthread_makecontext(&(qlib->master_context), qlib->master_stack,
                         qlib->master_stack_size,
@@ -1149,10 +1149,10 @@ int qthread_initialize(void)
 # endif     /* ifdef QTHREAD_RCRTOOL */
             qlib->shepherds[i].workers[j].worker_id = j;
             qlib->shepherds[i].workers[j].unique_id = qthread_internal_incr(&(qlib->max_unique_id),
-								      &qlib->max_unique_id_lock, 1);
+                                                                            &qlib->max_unique_id_lock, 1);
             qlib->shepherds[i].workers[j].packed_worker_id = j + (i * nworkerspershep);
 
-            qlib->shepherds[i].workers[j].active           = 1;
+            qlib->shepherds[i].workers[j].active = 1;
 # ifndef QTHREAD_RCRTOOL
             qlib->shepherds[i].workers[j].shepherd = &qlib->shepherds[i];
 # endif     /* ifndef QTHREAD_RCRTOOL */
@@ -1316,8 +1316,8 @@ void qthread_finalize(void)
         //      qt_threadqueue_enqueue(shep0->ready, worker->current,
         //             shep0);
         return; // AKP 11/2/11 I think that is if statement catches the case that exit is called within a
-	// parallel region so a random stream reaches here.  we return rather than requeue because we just 
-	// want to exit (something bad happened) [my speculation]
+        // parallel region so a random stream reaches here.  we return rather than requeue because we just
+        // want to exit (something bad happened) [my speculation]
     }
 #endif
 
@@ -2695,25 +2695,24 @@ qt_feb_barrier_t * qt_thread_barrier()            // get barrier active for this
 {                      /*{{{ */
     return qt_parallel_region()->barrier;
 }                      /*}}} */
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+# ifdef QTHREAD_USE_ROSE_EXTENSIONS
 /* These are just accessor functions */
-# ifdef QTHREAD_LOG_BARRIER
+#  ifdef QTHREAD_LOG_BARRIER
 qt_barrier_t *qt_thread_barrier_resize(size_t size)  // resize barrier for current parallel region
-# else
+#  else
 qt_feb_barrier_t * qt_thread_barrier_resize(size_t size) // resize barrier for current parallel region
-#endif
+#  endif
 {                      /*{{{ */
-#ifdef QTHREAD_LOG_BARRIER
+#  ifdef QTHREAD_LOG_BARRIER
     qt_barrier_destroy(qt_parallel_region()->barrier);
     qt_parallel_region()->barrier = qt_barrier_create(size, REGION_BARRIER, 0);
-#else
+#  else
     qt_feb_barrier_destroy(qt_parallel_region()->barrier);
     qt_parallel_region()->barrier = qt_feb_barrier_create(size);
-#endif /* ifdef QTHREAD_LOG_BARRIER */
+#  endif /* ifdef QTHREAD_LOG_BARRIER */
     return qt_parallel_region()->barrier;
-
 }                      /*}}} */
-#endif
+# endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
 
 void INTERNAL qt_set_unstealable(void);
 void INTERNAL qt_set_unstealable()
@@ -2870,10 +2869,11 @@ qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *shepherd_id)
     return worker ? (worker->packed_worker_id) : NO_WORKER;
 
 #else
+    qthread_shepherd_id_t id = qthread_shep();
     if (shepherd_id != NULL) {
-        *shepherd_id = qthread_shep();
+        *shepherd_id = id;
     }
-    return 0;
+    return id;
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 }                                      /*}}} */
 
@@ -2888,10 +2888,11 @@ qthread_worker_id_t qthread_worker_unique(qthread_shepherd_id_t *shepherd_id)
     return worker ? (worker->unique_id) : NO_WORKER;
 
 #else
+    qthread_shepherd_id_t id = qthread_shep();
     if (shepherd_id != NULL) {
-        *shepherd_id = qthread_shep();
+        *shepherd_id = id;
     }
-    return 0;
+    return id;
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 }                      /*}}} */
 
