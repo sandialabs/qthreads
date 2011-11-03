@@ -427,7 +427,7 @@ static void *qthread_shepherd(void *arg)
 #endif  /* ifdef QTHREAD_RCRTOOL */
 
         assert(me->ready);
-        t = qt_threadqueue_dequeue_blocking(me->ready QMS_ARG(me_worker->active));
+        t = qt_threadqueue_dequeue_blocking(me->ready QMS_ARG(QTHREAD_CASLOCK_READ_UI(me_worker->active)));
         assert(t);
 #ifdef QTHREAD_SHEPHERD_PROFILING
         qtimer_stop(idle);
@@ -1054,7 +1054,8 @@ int qthread_initialize(void)
     qthread_debug(CORE_DETAILS, "calling qthread_makecontext\n");
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qlib->shepherds[0].workers[0].shepherd  = &qlib->shepherds[0];
-    qlib->shepherds[0].workers[0].active    = 1;
+    QTHREAD_CASLOCK_INIT(qlib->shepherds[0].workers[0].active, 1);
+    qthread_debug(CORE_DETAILS, "initialized caslock 0,0 %p\n", &qlib->shepherds[0].workers[0].active);
     qlib->shepherds[0].workers[0].worker_id = 0;
     qlib->shepherds[0].workers[0].unique_id = qthread_internal_incr(&(qlib->max_unique_id),
                                                                     &qlib->max_unique_id_lock, 1);
@@ -1152,7 +1153,8 @@ int qthread_initialize(void)
                                                                             &qlib->max_unique_id_lock, 1);
             qlib->shepherds[i].workers[j].packed_worker_id = j + (i * nworkerspershep);
 
-            qlib->shepherds[i].workers[j].active = 1;
+            QTHREAD_CASLOCK_INIT(qlib->shepherds[i].workers[j].active, 1);
+            qthread_debug(CORE_DETAILS, "initialized caslock %i,%i %p\n", i, j, &qlib->shepherds[i].workers[j].active);
 # ifndef QTHREAD_RCRTOOL
             qlib->shepherds[i].workers[j].shepherd = &qlib->shepherds[i];
 # endif     /* ifndef QTHREAD_RCRTOOL */
