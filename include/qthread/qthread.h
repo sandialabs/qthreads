@@ -97,17 +97,17 @@ typedef int64_t Q_ALIGNED (QTHREAD_ALIGNMENT_ALIGNED_T) saligned_t;
 #endif /* ifndef QTHREAD_NOALIGNCHECK */
 
 typedef struct _syncvar_s {
-    volatile union {
-        volatile uint64_t w;
-        volatile struct {
+    union {
+        uint64_t w;
+        struct {
 #ifdef                        BITFIELD_ORDER_FORWARD
-            volatile uint64_t data  : 60;
-            volatile unsigned state : 3;
-            volatile unsigned lock  : 1;
+            uint64_t data  : 60;
+            unsigned state : 3;
+            unsigned lock  : 1;
 #else
-            volatile unsigned lock  : 1;
-            volatile unsigned state : 3;
-            volatile uint64_t data  : 60;
+            unsigned lock  : 1;
+            unsigned state : 3;
+            uint64_t data  : 60;
 #endif
         } s;
     } u;
@@ -205,7 +205,7 @@ void       qthread_remove_child(qthread_t *child); /* remove child - completed *
  * busy-waits or cooperative multitasking. Without this function, threads will
  * only ever allow other threads assigned to the same pthread to execute when
  * they block. */
-#define qthread_yield() do { COMPILER_FENCE; qthread_yield_(); } while (0)
+# define qthread_yield() do { COMPILER_FENCE; qthread_yield_(); } while (0)
 void qthread_yield_(void);
 
 /* this function allows a qthread to retrieve its qthread_t pointer if it has
@@ -449,8 +449,8 @@ uint64_t qthread_cas64_(uint64_t *,
  * All of these functions return the value of the contents of the operand
  * *after* incrementing.
  */
-static QINLINE float qthread_fincr(volatile float *operand,
-                                   const float     incr)
+static QINLINE float qthread_fincr(float      *operand,
+                                   const float incr)
 {                                      /*{{{ */
 # if defined(QTHREAD_MUTEX_INCREMENT)
     return qthread_fincr_(operand, incr);
@@ -571,8 +571,8 @@ static QINLINE float qthread_fincr(volatile float *operand,
 # endif  // if defined(QTHREAD_MUTEX_INCREMENT)
 }                                      /*}}} */
 
-static QINLINE double qthread_dincr(volatile double *operand,
-                                    const double     incr)
+static QINLINE double qthread_dincr(double      *operand,
+                                    const double incr)
 {                                      /*{{{ */
 # if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
     return qthread_dincr_(operand, incr);
@@ -786,8 +786,8 @@ static QINLINE double qthread_dincr(volatile double *operand,
 # endif  // if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
 }                                      /*}}} */
 
-static QINLINE uint32_t qthread_incr32(volatile uint32_t *operand,
-                                       const uint32_t     incr)
+static QINLINE uint32_t qthread_incr32(uint32_t      *operand,
+                                       const uint32_t incr)
 {                                      /*{{{ */
 # ifdef QTHREAD_MUTEX_INCREMENT
     return qthread_incr32_(operand, incr);
@@ -891,8 +891,8 @@ static QINLINE uint32_t qthread_incr32(volatile uint32_t *operand,
 # endif  // ifdef QTHREAD_MUTEX_INCREMENT
 }                                      /*}}} */
 
-static QINLINE uint64_t qthread_incr64(volatile uint64_t *operand,
-                                       const uint64_t     incr)
+static QINLINE uint64_t qthread_incr64(uint64_t      *operand,
+                                       const uint64_t incr)
 {                                      /*{{{ */
 # if defined(QTHREAD_MUTEX_INCREMENT) ||            \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
@@ -1108,10 +1108,10 @@ static QINLINE int64_t qthread_incr_xx(volatile void *addr,
 {                                      /*{{{ */
     switch (length) {
         case 4:
-            return qthread_incr32((volatile uint32_t *)addr, incr);
+            return qthread_incr32((uint32_t *)addr, incr);
 
         case 8:
-            return qthread_incr64((volatile uint64_t *)addr, incr);
+            return qthread_incr64((uint64_t *)addr, incr);
 
         default:
             QTHREAD_TRAP();
@@ -1123,9 +1123,9 @@ uint64_t qthread_syncvar_incrF(syncvar_t *restrict const operand,
                                const uint64_t            inc);
 
 # if !defined(QTHREAD_ATOMIC_CAS) || defined(QTHREAD_MUTEX_INCREMENT)
-static QINLINE uint32_t qthread_cas32(volatile uint32_t *operand,
-                                      const uint32_t     oldval,
-                                      const uint32_t     newval)
+static QINLINE uint32_t qthread_cas32(uint32_t      *operand,
+                                      const uint32_t oldval,
+                                      const uint32_t newval)
 {                                /*{{{ */
 #  ifdef QTHREAD_MUTEX_INCREMENT // XXX: this is only valid if you don't read *operand without the lock
     return qthread_cas32_(operand, oldval, newval);
@@ -1188,9 +1188,9 @@ static QINLINE uint32_t qthread_cas32(volatile uint32_t *operand,
 #  endif  // ifdef QTHREAD_MUTEX_INCREMENT
 }                                      /*}}} */
 
-static QINLINE uint64_t qthread_cas64(volatile uint64_t *operand,
-                                      const uint64_t     oldval,
-                                      const uint64_t     newval)
+static QINLINE uint64_t qthread_cas64(uint64_t      *operand,
+                                      const uint64_t oldval,
+                                      const uint64_t newval)
 {                                      /*{{{ */
 #  ifdef QTHREAD_MUTEX_INCREMENT
     return qthread_cas64_(operand, oldval, newval);
@@ -1332,17 +1332,17 @@ static QINLINE uint64_t qthread_cas64(volatile uint64_t *operand,
 #  endif  // ifdef QTHREAD_MUTEX_INCREMENT
 }                                      /*}}} */
 
-static QINLINE aligned_t qthread_cas_xx(volatile aligned_t *addr,
-                                        const aligned_t     oldval,
-                                        const aligned_t     newval,
-                                        const size_t        length)
+static QINLINE aligned_t qthread_cas_xx(aligned_t      *addr,
+                                        const aligned_t oldval,
+                                        const aligned_t newval,
+                                        const size_t    length)
 {                                      /*{{{ */
     switch (length) {
         case 4:
-            return qthread_cas32((volatile uint32_t *)addr, oldval, newval);
+            return qthread_cas32((uint32_t *)addr, oldval, newval);
 
         case 8:
-            return qthread_cas64((volatile uint64_t *)addr, oldval, newval);
+            return qthread_cas64((uint64_t *)addr, oldval, newval);
 
         default:
             /* This should never happen, so deliberately cause a seg fault
@@ -1352,17 +1352,17 @@ static QINLINE aligned_t qthread_cas_xx(volatile aligned_t *addr,
     return 0;                          /* compiler check */
 }                                      /*}}} */
 
-static QINLINE void *qthread_cas_ptr_(void *volatile *const addr,
-                                      void *const           oldval,
-                                      void *const           newval)
+static QINLINE void *qthread_cas_ptr_(void **const addr,
+                                      void *const  oldval,
+                                      void *const  newval)
 {   /*{{{*/
 #  if (SIZEOF_VOIDP == 4)
-    return (void *)(uintptr_t)qthread_cas32((volatile uint32_t *)addr,
+    return (void *)(uintptr_t)qthread_cas32((uint32_t *)addr,
                                             (uint32_t)(uintptr_t)oldval,
                                             (uint32_t)(uintptr_t)newval);
 
 #  elif (SIZEOF_VOIDP == 8)
-    return (void *)(uintptr_t)qthread_cas64((volatile uint64_t *)addr,
+    return (void *)(uintptr_t)qthread_cas64((uint64_t *)addr,
                                             (uint64_t)(uintptr_t)oldval,
                                             (uint64_t)(uintptr_t)newval);
 
@@ -1388,13 +1388,13 @@ static QINLINE void *qthread_cas_ptr_(void *volatile *const addr,
     (void *)__sync_val_compare_and_swap((ADDR), (OLDV), (NEWV))
 # else
 #  define qthread_cas(ADDR, OLDV, NEWV) \
-    qthread_cas_xx((volatile aligned_t *)(ADDR), (aligned_t)(OLDV), (aligned_t)(NEWV), sizeof(*(ADDR)))
+    qthread_cas_xx((aligned_t *)(ADDR), (aligned_t)(OLDV), (aligned_t)(NEWV), sizeof(*(ADDR)))
 #  ifdef QTHREAD_ATOMIC_CAS_PTR
 #   define qthread_cas_ptr(ADDR, OLDV, NEWV) \
     (void *)__sync_val_compare_and_swap((ADDR), (OLDV), (NEWV))
 #  else
 #   define qthread_cas_ptr(ADDR, OLDV, NEWV) \
-    qthread_cas_ptr_((void *volatile *const)(ADDR), (void *const)(OLDV), (void *const)(NEWV))
+    qthread_cas_ptr_((void **const)(ADDR), (void *const)(OLDV), (void *const)(NEWV))
 #  endif
 # endif // ifdef QTHREAD_ATOMIC_CAS
 
@@ -1407,7 +1407,7 @@ Q_ENDCXX /* */
     __sync_fetch_and_add(ADDR, INCVAL)
 #  else
 #   define qthread_incr(ADDR, INCVAL) \
-    qthread_incr_xx((volatile void *)(ADDR), (int64_t)(INCVAL), sizeof(*(ADDR)))
+    qthread_incr_xx((void *)(ADDR), (int64_t)(INCVAL), sizeof(*(ADDR)))
 #  endif
 
 # else /* ifdef __cplusplus */
