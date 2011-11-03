@@ -39,6 +39,7 @@ my $force_configure = 0;
 my $force_clean = 0;
 my $print_info = 0;
 my $dry_run = 0;
+my $quietly = 0;
 my $need_help = 0;
 
 if (scalar @ARGV == 0) {
@@ -67,6 +68,8 @@ if (scalar @ARGV == 0) {
             $print_info = 1;
         } elsif ($flag eq '--dry-run') {
             $dry_run = 1;
+        } elsif ($flag eq '--quietly') {
+            $quietly = 1;
         } elsif ($flag eq '--help' || $flag eq '-h') {
             $need_help = 1;
         } else {
@@ -105,6 +108,7 @@ if ($need_help) {
     print "\t--make-flags=<options>  options to pass to make (e.g. '-j 4').\n";
     print "\t--force-configure       run `configure` again.\n";
     print "\t--force-clean           run `make clean` before rebuilding.\n";
+    print "\t--quietly               only report warnings, errors, and summary stats.\n";
     print "\t--verbose\n";
     print "\t--dry-run\n";
     print "\t--help\n";
@@ -179,8 +183,8 @@ sub run_tests {
     my $conf_name = $_[0];
     my $test_dir = "$qt_bld_dir/$conf_name";
 
-    print "\n### Test: $conf_name\n";
-    print "### Build directory: $test_dir\n";
+    print "\n### Test: $conf_name\n" unless $quietly;
+    print "### Build directory: $test_dir\n" unless $quietly;
 
     # Setup for configuration
     if (not -e "$qt_src_dir/configure") {
@@ -189,27 +193,28 @@ sub run_tests {
     }
     
     # Setup build space
-    print "###\tConfiguring '$conf_name' ...\n";
+    print "###\tConfiguring '$conf_name' ...\n" unless $quietly;
     my $configure_log = "$test_dir/build.configure.log";
     my_system("mkdir -p $test_dir") if (not -e $test_dir);
     my_system("cd $test_dir && $qt_src_dir/configure $config{$conf_name} 2>&1 | tee $configure_log")
         if ($force_configure || not -e "$test_dir/config.log");
-    print "### Log: $configure_log\n";
+    print "### Log: $configure_log\n" unless $quietly;
     
     # Build testsuite
     my $pass = 0;
     while ($pass < $repeat) {
-        print "###\tBuilding and testing '$conf_name' pass $pass ...\n";
+        print "###\tBuilding and testing '$conf_name' pass $pass ...\n"
+            unless $quietly;
         my $results_log = "$test_dir/build.$pass.results.log";
         my $build_command = "cd $test_dir";
         $build_command .= " && make clean > /dev/null" if ($force_clean);
         $build_command .= " && make $make_flags check 2>&1 | tee $results_log";
         my_system($build_command);
         if (not $dry_run) {
-            print "### Log: $results_log\n";
+            print "### Log: $results_log\n" unless $quietly;
             my $build_warnings = qx/awk '\/warning:\/' $results_log/;
             if (length $build_warnings > 0) {
-                print "Build warnings! Check log and/or run again with --force-clean and --verbose for more information.\n";
+                print "Build warnings in config $conf_name! Check log and/or run again with --force-clean and --verbose for more information.\n";
                 print $build_warnings;
             }
             my $build_errors = qx/awk '\/error:\/' $results_log/;
@@ -220,7 +225,7 @@ sub run_tests {
             }
 
             # Display filtered results
-            print "### Results for '$conf_name'\n";
+            print "### Results for '$conf_name'\n" unless $quietly;
             my $digest = qx/grep 'tests passed' $results_log/;
             if ($digest eq '') {
                 $digest = qx/grep 'tests failed' $results_log/; chomp($digest);
@@ -229,7 +234,7 @@ sub run_tests {
             }
             chomp $digest;
             my $banner = '=' x 50;
-            print "$banner\n$digest\n$banner\n";
+            print "$banner\n$digest\n$banner\n" unless $quietly;
 
             push @summaries, "$digest $conf_name (pass $pass)";
         }
