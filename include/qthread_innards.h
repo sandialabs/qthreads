@@ -32,7 +32,7 @@ extern unsigned int QTHREAD_LOCKING_STRIPES;
 
 typedef struct qlib_s {
     unsigned int          nshepherds;
-    volatile aligned_t    nshepherds_active;
+    aligned_t             nshepherds_active;
 #ifdef QTHREAD_MUTEX_INCREMENT
     QTHREAD_FASTLOCK_TYPE nshepherds_active_lock;
 #endif
@@ -60,11 +60,10 @@ typedef struct qlib_s {
     /* assigns a unique thread_id mostly for debugging! */
     aligned_t             max_thread_id;
     QTHREAD_FASTLOCK_TYPE max_thread_id_lock;
- 
+
     /* assigns a unique worker_id */
     aligned_t             max_unique_id;
     QTHREAD_FASTLOCK_TYPE max_unique_id_lock;
-
 
     /* round robin scheduler - can probably be smarter */
     aligned_t             sched_shepherd;
@@ -161,7 +160,7 @@ void qthread_releaseTaskListLock(void);
 extern int __qthreads_temp;
 void INTERNAL qthread_reset_forCount(void);
 
-int INTERNAL   qthread_forCount(int inc);
+int INTERNAL qthread_forCount(int inc);
 #endif // ifdef QTHREAD_USE_ROSE_EXTENSIONS
 
 /* internal initialization functions */
