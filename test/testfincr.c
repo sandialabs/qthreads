@@ -3,7 +3,7 @@
 #include <qthread/qthread.h>
 #include "argparsing.h"
 
-volatile float master[3] = { 0 };
+float master[3] = { 0 };
 
 static aligned_t incr(void *arg)
 {
@@ -17,12 +17,12 @@ static aligned_t incr5(void *arg)
     return 0;
 }
 
-int main(int argc,
+int main(int   argc,
          char *argv[])
 {
-    int i;
+    int       i;
     aligned_t rets[30];
-    float ret_test = 4.5;
+    float     ret_test = 4.5;
 
     qthread_initialize();
     iprintf("%i shepherds\n", qthread_num_shepherds());
