@@ -18,27 +18,9 @@ static aligned_t incr(void *arg)
     return 0;
 }
 
-volatile uint32_t four  = 4;
-volatile uint64_t eight = 8;
-void *volatile    ptr   = NULL;
-
-static uint32_t read_vol32(volatile uint32_t *ptr)
-{
-    return *ptr;
-}
-
-#if (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
-static uint64_t read_vol64(volatile uint64_t *ptr)
-{
-    return *ptr;
-}
-
-#endif
-
-static void *read_volptr(void *volatile *ptr)
-{
-    return *ptr;
-}
+uint32_t four  = 4;
+uint64_t eight = 8;
+void    *ptr   = NULL;
 
 int main(int   argc,
          char *argv[])
@@ -69,21 +51,21 @@ int main(int   argc,
 #if (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
     assert(qthread_cas64(&eight, (uint64_t)8, (uint64_t)0xdeadbeefc0d1f1edULL) == 8);
 #endif
-    assert(read_vol32(&four) == 0xdeadbeef);
+    assert(four == 0xdeadbeef);
 #if (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
-    assert(read_vol64(&eight) == (uint64_t)0xdeadbeefc0d1f1edULL);
+    assert(eight == (uint64_t)0xdeadbeefc0d1f1edULL);
 #endif
     assert(qthread_cas32(&four, 0xdeadbeef, 5) == 0xdeadbeef);
 #if (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
     assert(qthread_cas64(&eight, (uint64_t)0xdeadbeefc0d1f1edULL, (uint64_t)9) == (uint64_t)0xdeadbeefc0d1f1edULL);
 #endif
-    assert(read_vol32(&four) == 5);
+    assert(four == 5);
 #if (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32)
-    assert(read_vol64(&eight) == 9);
+    assert(eight == 9);
 #endif
 
     assert(qthread_cas_ptr(&ptr, NULL, &i) == NULL);
-    assert(read_volptr(&ptr) == &i);
+    assert(ptr == &i);
     iprintf("success!\n");
 
     return 0;

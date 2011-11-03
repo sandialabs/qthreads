@@ -193,26 +193,26 @@ inline int qthread_unlock(const T * const a)
 /**************************************************************************
  * incr
  **************************************************************************/
-inline float qthread_incr(volatile float *operand, const float incr)
+inline float qthread_incr(float *operand, const float incr)
 {
     return qthread_fincr(operand, incr);
 }
-inline double qthread_incr(volatile double *operand, const double incr)
+inline double qthread_incr(double *operand, const double incr)
 {
     return qthread_dincr(operand, incr);
 }
 
 template <typename T, typename T2>
-inline T qthread_incr(volatile T * operand, const T2 incr)
+inline T qthread_incr(T * operand, const T2 incr)
 {
     QTHREAD_STATIC_ASSERT(sizeof(T) == 4 || sizeof(T) == 8);
     QTHREAD_CHECKINTEGER(T);
     QTHREAD_CHECKINTEGER(T2);
     switch (sizeof(T)) {
 	case 4:
-	    return qthread_incr32((volatile uint32_t *)operand, incr);
+	    return qthread_incr32((uint32_t *)operand, incr);
 	case 8:
-	    return qthread_incr64((volatile uint64_t *)operand, incr);
+	    return qthread_incr64((uint64_t *)operand, incr);
 	default:
 	    *(int *)(0) = 0;
     }
