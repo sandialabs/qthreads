@@ -25,12 +25,13 @@ int main(int argc, char* argv[]) {
     }
 }
   ]])],
-  [plpa_happy=yes
-   AC_DEFINE([QTHREAD_USE_PLPA],[1],[define to 1 if PLPA is available and works])],
+  [plpa_happy=yes],
+  [plpa_happy=no],
   [plpa_happy=no])
   AC_MSG_RESULT($plpa_happy)
   ])
   AS_IF([test "x$plpa_happy" = "xyes"],
-		[$1],
+		[AC_DEFINE([QTHREAD_USE_PLPA],[1],[define to 1 if PLPA is available and works])
+		 $1],
 		[$2])
 ])

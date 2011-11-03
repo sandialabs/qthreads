@@ -127,18 +127,16 @@ AC_DEFUN([QTHREAD_CHECK_INLINE_C_GCC],[
   asm_result="unknown"
 
   AC_MSG_CHECKING([if $CC supports GCC inline assembly])
-  if test ! "$assembly" = "" ; then
-    AC_RUN_IFELSE([AC_LANG_SOURCE([[
+  AS_IF([test ! "$assembly" = ""],
+        [AC_RUN_IFELSE([AC_LANG_SOURCE([[
 int main() {
 int ret = 1;
 __asm__ __volatile__ ($assembly);
 return ret;
 }]])],
       [asm_result="yes"], [asm_result="no"], 
-      [asm_result="unknown"])
-  else
-    assembly="test skipped - assuming no"
-  fi
+      [asm_result="unknown"])],
+	    [assembly="test skipped - assuming no"])
 
   # if we're cross compiling, just try to compile and figure good enough
   AS_IF([test "$asm_result" = "unknown"],
