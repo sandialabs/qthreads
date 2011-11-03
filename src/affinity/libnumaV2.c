@@ -264,6 +264,24 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
         qsort(sheps[i].sorted_sheplist, nshepherds - 1,
               sizeof(qthread_shepherd_id_t), qthread_internal_shepcomp);
 # endif /* if defined(HAVE_QSORT_R) && defined(QTHREAD_QSORT_BSD) */
+        {
+            int prev_dist = qthread_distance(i, sheps[i].sorted_sheplist[0]);
+            size_t count = 1;
+            for (size_t j = 1; j < nshepherds-1; ++j) {
+                if (qthread_distance(i, sheps[i].sorted_sheplist[j]) == prev_dist) {
+                    count++;
+                } else {
+                    if (count > 1) {
+                        shuffle_sheps(sheps[i].sorted_sheplist + (j - count), count);
+                    }
+                    count = 1;
+		    prev_dist = qthread_distance(i, sheps[i].sorted_sheplist[j]);
+                }
+            }
+	    if (count > 1) {
+		shuffle_sheps(sheps[i].sorted_sheplist + (nshepherds - 1 - count), count);
+	    }
+        }
     }
 #endif /* ifdef HAVE_NUMA_DISTANCE */
     return QTHREAD_SUCCESS;

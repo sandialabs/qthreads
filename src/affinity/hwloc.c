@@ -507,6 +507,17 @@ void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
 
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
+static void shuffle_sheps(qthread_shepherd_id_t*s, size_t len)
+{/*{{{*/
+    for (size_t i = 0; i < len; ++i) {
+        qthread_shepherd_id_t tmp;
+        size_t j = rand() % len;
+        tmp = s[j];
+        s[j] = s[i];
+        s[i] = tmp;
+    }
+}/*}}}*/
+
 int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                                   qthread_shepherd_id_t nshepherds)
 {                                                                                      /*{{{ */
@@ -519,6 +530,13 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                                                 shep_depth);
     for (size_t i = 0; i < nshepherds; ++i) {
         sheps[i].node = i % num_extant_objs;
+        sheps[i].sorted_sheplist = calloc(nshepherds-1,sizeof(qthread_shepherd_id_t));
+        for (size_t j = 0, k = 0; j < nshepherds; ++j) {
+            if (j != i) {
+                sheps[i].sorted_sheplist[k++] = j;
+            }
+        }
+        shuffle_sheps(sheps[i].sorted_sheplist, nshepherds-1);
     }
 #else
     /* Find the number of bigger-than-PU objects in the CPU set */
@@ -583,6 +601,15 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
         obj *= (obj < num_extant_objs);
     }
     free(cpus_left_per_obj);
+    for (size_t i = 0; i < nshepherds; ++i) {
+        sheps[i].sorted_sheplist = calloc(nshepherds-1,sizeof(qthread_shepherd_id_t));
+        for (size_t j = 0, k = 0; j < nshepherds; ++j) {
+            if (j != i) {
+                sheps[i].sorted_sheplist[k++] = j;
+            }
+        }
+        shuffle_sheps(sheps[i].sorted_sheplist, nshepherds-1);
+    }
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
        /* there does not seem to be a way to extract distances... <sigh> */
     return QTHREAD_SUCCESS;

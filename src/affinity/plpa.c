@@ -103,6 +103,13 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
 #else
         sheps[i].node = i;
 #endif
+        sheps[i].sorted_sheplist = calloc(nshepherds-1,sizeof(qthread_shepherd_id_t));
+        for (size_t j = 0, k = 0; j < nshepherds; ++j) {
+            if (j != i) {
+                sheps[i].sorted_sheplist[k++] = j;
+            }
+        }
+        shuffle_sheps(sheps[i].sorted_sheplist, nshepherds-1);
     }
     /* there is no inherent way to detect distances, so unfortunately we must assume that they're all equidistant */
     return QTHREAD_SUCCESS;
