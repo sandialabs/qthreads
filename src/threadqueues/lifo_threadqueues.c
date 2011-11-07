@@ -148,7 +148,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict   q,
         t->next = old;
         new     = qthread_cas_ptr(&(q->stack), old, t);
     } while (new != old);
-    qthread_incr(&(q->advisory_queuelen), 1);
+    (void)qthread_incr(&(q->advisory_queuelen), 1);
 
     /* awake waiter */
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
