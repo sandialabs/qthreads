@@ -212,6 +212,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
     }
     if (retval != NULL) {
         retval->next = NULL;
+        (void)qthread_incr(&(q->advisory_queuelen), -1);
     }
     return retval;
 } /*}}}*/
