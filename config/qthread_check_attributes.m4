@@ -94,11 +94,10 @@ AC_CACHE_CHECK(
  [qt_cv_builtin_prefetch],
  [AS_IF([test "$qthread_cv_c_compiler_type" == PortlandGroup],
         [qt_cv_builtin_prefetch=no],
-		[AC_LINK_IFELSE([AC_LANG_SOURCE([[
-int x;
-void * f (int i)
-{ __builtin_prefetch(&x, 0, 0);
-return malloc(i); }]])],
+		[AC_LINK_IFELSE([AC_LANG_PROGRAM([[#include <stdlib.h>
+int x;]],[[
+__builtin_prefetch(&x, 0, 0);
+return malloc(x)?1:0;]])],
  [qt_cv_builtin_prefetch=yes],
  [qt_cv_builtin_prefetch=no])])])
  AS_IF([test "x$qt_cv_builtin_prefetch" = xyes],
@@ -111,12 +110,7 @@ AC_REQUIRE([QTHREAD_CHECK_ASSEMBLY])
 AC_CACHE_CHECK(
  [support for __sync_synchronize],
  [qt_cv_builtin_synchronize],
- [AC_LINK_IFELSE([AC_LANG_SOURCE([[
-int main(void) {
-__sync_synchronize();
-return 0;
-}
-]])],
+ [AC_LINK_IFELSE([AC_LANG_PROGRAM([[]],[[__sync_synchronize();]])],
  [qt_cv_builtin_synchronize=yes],
  [qt_cv_builtin_synchronize=no])])
  AS_IF([test "x$qt_cv_builtin_synchronize" == xyes],
