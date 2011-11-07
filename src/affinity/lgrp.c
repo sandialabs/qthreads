@@ -19,6 +19,7 @@
 #include "qt_debug.h"
 
 #include "shepcomp.h"
+#include "shufflesheps.h"
 
 static lgrp_cookie_t   lgrp_cookie;
 static lgrp_id_t       mccoy_thread_home;

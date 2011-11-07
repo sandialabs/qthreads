@@ -7,6 +7,7 @@
 #include "qthread_innards.h"
 #include "qt_affinity.h"
 #include "qt_debug.h"
+#include "shufflesheps.h"
 
 static hwloc_topology_t topology;
 static uint32_t         initialized = 0;

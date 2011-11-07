@@ -5,6 +5,7 @@
 #include "qthread_innards.h"
 #include "qt_affinity.h"
 #include "qt_debug.h"
+#include "shufflesheps.h"
 
 qthread_shepherd_id_t guess_num_shepherds(void);
 qthread_worker_id_t guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds);

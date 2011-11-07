@@ -9,6 +9,7 @@
 #include "qt_debug.h"
 
 #include "shepcomp.h"
+#include "shufflesheps.h"
 
 static struct bitmask *mccoy_bitmask = NULL;
 

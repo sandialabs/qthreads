@@ -9,6 +9,7 @@
 #include "qt_debug.h"
 
 #include "shepcomp.h"
+#include "shufflesheps.h"
 
 static nodemask_t *mccoy_bitmask = NULL;
 

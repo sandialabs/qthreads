@@ -27,6 +27,7 @@ kern_return_t thread_policy_get(thread_t                thread,
 
 #include "qthread_asserts.h"
 #include "qt_affinity.h"
+#include "shufflesheps.h"
 
 qthread_shepherd_id_t INTERNAL guess_num_shepherds(void);
 qthread_worker_id_t INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds);
