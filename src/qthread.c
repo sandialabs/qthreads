@@ -2567,7 +2567,9 @@ int INTERNAL qthread_check_precond(qthread_t *t)
             qthread_addrres_t        *X       = NULL;
             const int                 lockbin = QTHREAD_CHOOSE_STRIPE(this_sync);
             const aligned_t          *alignedaddr;
+#if !defined(UNPOOLED_ADDRRES) || defined(QTHREAD_LOCK_PROFILING)
             qthread_shepherd_t *const curshep = qthread_internal_getshep();
+#endif
 
             QTHREAD_LOCK_UNIQUERECORD2(feb, this_sync, curshep);
             QALIGN(this_sync, alignedaddr);
