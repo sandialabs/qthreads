@@ -106,7 +106,7 @@ BENCHMARKS = \
 	 time_qt_loops \
 	 time_qt_loopaccums
 
-UNBUILDABLE += time_uts_syncvar time_uts_sinc
+UNBUILDABLE += time_uts_syncvar time_uts_sinc time_uts_donecount
 EXTRA_PROGRAMS += $(UNBUILDABLE) $(BENCHMARKS)
 
 CLEANFILES += $(UNBUILDABLE) $(BENCHMARKS)
@@ -365,6 +365,9 @@ time_uts_syncvar_DEPENDENCIES = $(QTHREADLIB)
 
 time_uts_sinc_SOURCES = time_uts_sinc.c rng/devine_sha1.c
 time_uts_sinc_DEPENDENCIES = $(QTHREADLIB)
+
+time_uts_donecount_SOURCES = time_uts_donecount.c rng/devine_sha1.c
+time_uts_donecount_DEPENDENCIES = $(QTHREADLIB)
 
 test_sinc_SOURCES = test_sinc.c
 test_sinc_DEPENDENCIES = $(QTHREADLIB)
