@@ -11,6 +11,7 @@
 #  include <unistd.h>      // for SYS_write
 #  define WRITE(fd, ch, len) syscall(SYS_write, (fd), (ch), (len))
 # else
+#  include <unistd.h>      // for write()
 #  define WRITE(fd, ch, len) write((fd), (ch), (len))
 # endif
 # include <stdarg.h>      // for va_start and friends
@@ -22,9 +23,9 @@
 enum qthread_debug_levels {
     NO_DEBUG_OUTPUT = 0,
     DEBUG_CALLS     = 1,
-    DEBUG_FUNCTIONS = 3,
-    DEBUG_BEHAVIOR  = 7,
-    DEBUG_DETAILS   = 15,
+    DEBUG_FUNCTIONS = 2,
+    DEBUG_BEHAVIOR  = 4,
+    DEBUG_DETAILS   = 8,
     ALWAYS_OUTPUT   = INT_MAX,
 };
 extern enum qthread_debug_levels debuglevel;
@@ -277,6 +278,49 @@ static QINLINE void qthread_debug(int         level,
 # else
         while (WRITE(2, "QDEBUG: ", 8) != 8) ;
 # endif
+        *head++ = '(';
+        {
+            int num = level;
+            unsigned  places = 0;
+            uintptr_t tmpnum = level;
+            while (tmpnum >= 10) {
+                tmpnum /= 10;
+                places++;
+            }
+            head  += places;
+            places = 0;
+            while (num >= 10) {
+                uintptr_t tmp = num % 10;
+                *(head - places) = (tmp < 10) ? ('0' + tmp) : ('a' + tmp - 10);
+                num             /= 10;
+                places++;
+            }
+            num             %= 10;
+            *(head - places) = (num < 10) ? ('0' + num) : ('a' + num - 10);
+            head++;
+        }
+        *head++ = ':';
+        {
+            int num = debuglevel;
+            unsigned  places = 0;
+            uintptr_t tmpnum = debuglevel;
+            while (tmpnum >= 10) {
+                tmpnum /= 10;
+                places++;
+            }
+            head  += places;
+            places = 0;
+            while (num >= 10) {
+                uintptr_t tmp = num % 10;
+                *(head - places) = (tmp < 10) ? ('0' + tmp) : ('a' + tmp - 10);
+                num             /= 10;
+                places++;
+            }
+            num             %= 10;
+            *(head - places) = (num < 10) ? ('0' + num) : ('a' + num - 10);
+            head++;
+        }
+        *head++ = ')';
 
         va_start(args, format);
         /* avoiding the obvious method, to save on memory
