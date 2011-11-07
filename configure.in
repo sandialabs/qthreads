@@ -458,14 +458,10 @@ AS_IF([test "x$qthread_cv_asm_arch" = "xPOWERPC32"],
        align_aligned_t=4],
       [sizeof_aligned_t=8
        align_aligned_t=8])
-AS_IF([test "x$enable_64bit_aligned_t" = "xyes"],
-      [sizeof_aligned_t="8"
-       align_aligned_t="8"],
-      [AS_IF([test "x$enable_64bit_aligned_t" = "xno"],
-             [sizeof_aligned_t="$ac_cv_sizeof_int"
-              align_aligned_t="$ac_cv_sizeof_int"])])
-AS_IF([test "x$enable_64bit_alignment" = "xyes"],
-      [align_aligned_t=8])
+AS_IF([test "x$enable_64bit_aligned_t" = "xyes"], [sizeof_aligned_t="8"
+                                                   align_aligned_t="8"],
+      [test "x$enable_64bit_aligned_t" = "xno"],  [sizeof_aligned_t="$ac_cv_sizeof_int"
+                                                   align_aligned_t="$ac_cv_sizeof_int"])
 
 AC_DEFINE_UNQUOTED([QTHREAD_SIZEOF_ALIGNED_T], [$sizeof_aligned_t], [size of aligned_t])
 AC_DEFINE_UNQUOTED([QTHREAD_ALIGNMENT_ALIGNED_T], [$align_aligned_t], [alignment of aligned_t])
@@ -488,12 +484,12 @@ AC_SEARCH_LIBS([pthread_create], [pthread], [],
 AC_CHECK_FUNCS([pthread_yield pthread_spin_init])
 
 AS_IF([test "x$qthread_implementation" = "xsst"],
-      [AC_DEFINE([QTHREAD_SST_PRIMITIVES],[1],[Define to use the SST primitives])
-       enable_pooled_memory="no"
-       LDFLAGS="$LDFLAGS $SST_LIBS"
-       AC_SEARCH_LIBS([ceil],[m_ppc],[],[AC_MSG_ERROR([Cannot find ceil()])])],
-      [AS_IF([test "x$qthread_implementation" = "xunix"],
-             [AC_SEARCH_LIBS([ceil],[m],[],[AC_MSG_ERROR([Cannot find ceil()])])])])
+          [AC_DEFINE([QTHREAD_SST_PRIMITIVES],[1],[Define to use the SST primitives])
+           enable_pooled_memory="no"
+           LDFLAGS="$LDFLAGS $SST_LIBS"
+           AC_SEARCH_LIBS([ceil],[m_ppc],[],[AC_MSG_ERROR([Cannot find ceil()])])],
+      [test "x$qthread_implementation" = "xunix"],
+          [AC_SEARCH_LIBS([ceil],[m],[],[AC_MSG_ERROR([Cannot find ceil()])])])
 
 AS_IF([test "x$enable_pooled_memory" = "xno"],
       [AC_DEFINE([UNPOOLED], [1], [prevents most uses of memory pools])],
@@ -552,14 +548,14 @@ QTHREAD_BUILTIN_PREFETCH
 QTHREAD_BUILTIN_SYNCHRONIZE
 
 AS_IF([test "x$have_assembly" = "x0" -a "x$qthread_cv_atomic_CAS32" = "xno" -a "x$qthread_cv_atomic_CAS64" = "xno" -a "x$qthread_cv_atomic_incr" = "xno"],
-	  [AC_MSG_NOTICE(Compiling on a compiler without inline assembly support and without builtin atomics. This will be slow!)
-	   AS_IF([test "x$enable_hardware_increments" = x],
-			 [AC_MSG_NOTICE(turning on software increments ($have_assembly))
-			  enable_hardware_increments=no],
-			 [AS_IF([test "x$enable_hardware_increments" = "xyes"],
-					[AC_MSG_ERROR([No assembly available and software increments disabled.])])])],
- 	  [AS_IF([test "x$enable_hardware_increments" = x],
-			 [enable_hardware_increments="yes"])])
+	      [AC_MSG_NOTICE(Compiling on a compiler without inline assembly support and without builtin atomics. This will be slow!)
+	       AS_IF([test "x$enable_hardware_increments" = x],
+				     [AC_MSG_NOTICE(turning on software increments ($have_assembly))
+			          enable_hardware_increments=no],
+				 [test "x$enable_hardware_increments" = "xyes"],
+				     [AC_MSG_ERROR([No assembly available and software increments disabled.])])],
+ 	  [test "x$enable_hardware_increments" = x], [enable_hardware_increments="yes"])
+
 AS_IF([test "x$enable_hardware_increments" = "xno"],
       [AC_DEFINE([QTHREAD_MUTEX_INCREMENT], [1], [Use mutexes instead of assembly for atomic increment])])
 AS_IF([test "x$enable_guard_pages" = "xyes"],
@@ -736,40 +732,40 @@ AS_IF([test "x$enable_asserts" != "xyes"],
 AS_IF([test "x$enable_debug" = x -o "x$enable_debug" = xno],
 	  [enable_debug=no],
       [AC_DEFINE([QTHREAD_DEBUG], [1], [enables printing debugging information at runtime])
-	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_affinity" = xyes],
-			 [AC_DEFINE([QTHREAD_DEBUG_AFFINITY], [1], [prints out affinity debugging information at runtime])])
-	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_threadqueues" = xyes],
-			 [AC_DEFINE([QTHREAD_DEBUG_THREADQUEUES], [1], [prints out threadqueue debugging information at runtime])])
-	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_threads" = xyes],
-			 [AC_DEFINE([QTHREAD_DEBUG_THREADS], [1], [prints out thread debugging information at runtime])])
-	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_core" = xyes],
-			 [AC_DEFINE([QTHREAD_DEBUG_CORE], [1], [prints out core debugging information at runtime])])
-	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_shepherd" = xyes],
-			 [AC_DEFINE([QTHREAD_DEBUG_SHEPHERD], [1], [prints out shepherd debugging information at runtime])])
-	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_syscalls" = xyes],
-			 [AC_DEFINE([QTHREAD_DEBUG_SYSCALLS], [1], [prints out syscall debugging information at runtime])])
-	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_locks" = xyes],
-			 [AC_DEFINE([QTHREAD_DEBUG_LOCKS], [1], [prints out lock debugging information at runtime])])
-	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_febs" = xyes],
-			 [AC_DEFINE([QTHREAD_DEBUG_FEBS], [1], [prints out feb debugging information at runtime])])
-	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_syncvars" = xyes],
-			 [AC_DEFINE([QTHREAD_DEBUG_SYNCVARS], [1], [prints out syncvar debugging information at runtime])])
-	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_loops" = xyes],
-			 [AC_DEFINE([QTHREAD_DEBUG_LOOPS], [1], [prints out loop debugging information at runtime])])
-	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_io" = xyes],
-			 [AC_DEFINE([QTHREAD_DEBUG_IO], [1], [prints out I/O debugging information at runtime])])
-	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_barrier" = xyes],
-			 [AC_DEFINE([QTHREAD_DEBUG_BARRIER], [1], [prints out barrier debugging information at runtime])])
-	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_qarray" = xyes],
-			 [AC_DEFINE([QTHREAD_DEBUG_QARRAY], [1], [prints out qarray debugging information at runtime])])
-	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_rcrtool" = xyes],
-			 [AC_DEFINE([QTHREAD_DEBUG_RCRTOOL], [1], [prints out rcrtool debugging information at runtime])])
-	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_futurelib" = xyes],
-			 [AC_DEFINE([QTHREAD_DEBUG_FUTURELIB], [1], [prints out futurelib debugging information at runtime])])
-	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_xomp" = xyes],
-			 [AC_DEFINE([QTHREAD_DEBUG_XOMP], [1], [prints out xomp debugging information at runtime])])
-	   AS_IF([test "x$enable_debug" = xyes -o "x$enable_debug_multinode" = xyes],
-			 [AC_DEFINE([QTHREAD_DEBUG_MULTINODE], [1], [prints out multinode debugging information at runtime])])
+	   QT_COND_DEFINE([$enable_debug_affinity],
+					  [QTHREAD_DEBUG_AFFINITY], [prints out affinity debugging information at runtime])
+	   QT_COND_DEFINE([$enable_debug_threadqueues],
+					  [QTHREAD_DEBUG_THREADQUEUES], [prints out threadqueue debugging information at runtime])
+	   QT_COND_DEFINE([$enable_debug_threads],
+					  [QTHREAD_DEBUG_THREADS], [prints out thread debugging information at runtime])
+	   QT_COND_DEFINE([$enable_debug_core],
+			          [QTHREAD_DEBUG_CORE], [prints out core debugging information at runtime])
+	   QT_COND_DEFINE([$enable_debug_shepherd],
+			          [QTHREAD_DEBUG_SHEPHERD], [prints out shepherd debugging information at runtime])
+	   QT_COND_DEFINE([$enable_debug_syscalls],
+			          [QTHREAD_DEBUG_SYSCALLS], [prints out syscall debugging information at runtime])
+	   QT_COND_DEFINE([$enable_debug_locks],
+			          [QTHREAD_DEBUG_LOCKS], [prints out lock debugging information at runtime])
+	   QT_COND_DEFINE([$enable_debug_febs],
+			          [QTHREAD_DEBUG_FEBS], [prints out feb debugging information at runtime])
+	   QT_COND_DEFINE([$enable_debug_syncvars],
+			          [QTHREAD_DEBUG_SYNCVARS], [prints out syncvar debugging information at runtime])
+	   QT_COND_DEFINE([$enable_debug_loops],
+			          [QTHREAD_DEBUG_LOOPS], [prints out loop debugging information at runtime])
+	   QT_COND_DEFINE([$enable_debug_io],
+			          [QTHREAD_DEBUG_IO], [prints out I/O debugging information at runtime])
+	   QT_COND_DEFINE([$enable_debug_barrier],
+			          [QTHREAD_DEBUG_BARRIER], [prints out barrier debugging information at runtime])
+	   QT_COND_DEFINE([$enable_debug_qarray],
+			          [QTHREAD_DEBUG_QARRAY], [prints out qarray debugging information at runtime])
+	   QT_COND_DEFINE([$enable_debug_rcrtool],
+			          [QTHREAD_DEBUG_RCRTOOL], [prints out rcrtool debugging information at runtime])
+	   QT_COND_DEFINE([$enable_debug_futurelib],
+			          [QTHREAD_DEBUG_FUTURELIB], [prints out futurelib debugging information at runtime])
+	   QT_COND_DEFINE([$enable_debug_xomp],
+			          [QTHREAD_DEBUG_XOMP], [prints out xomp debugging information at runtime])
+	   QT_COND_DEFINE([$enable_debug_multinode],
+			          [QTHREAD_DEBUG_MULTINODE], [prints out multinode debugging information at runtime])
 	   ])
 
 AS_IF([test "x$enable_rcrtool" = "xyes"],
