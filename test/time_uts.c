@@ -248,6 +248,48 @@ static aligned_t visit(void * args_)
     return 1 + num_descendants;
 }
 
+#ifdef PRINT_STATS
+static void print_stats(void)
+{
+    printf("tree-type %d\ntree-type-name %s\n", 
+        tree_type, type_names[tree_type]);
+    printf("root-bf %.1f\nroot-seed %d\n",
+        bf_0, root_seed);
+
+    if (tree_type == GEO || tree_type == HYBRID) {
+        printf("gen_mx %d\nshape-fn %d\nshape-fn-name %s\n",
+            tree_depth, shape_fn, shape_names[shape_fn]);
+    }
+
+    if (tree_type == BIN || tree_type == HYBRID) {
+        double q = non_leaf_prob;
+        int m = non_leaf_bf;
+        double es = (1.0 / (1.0 - q *m));
+        printf("q %f\nm %d\nE(n) %f\nE(s) %.2f\n",
+            q, m, q * m, es);
+    }
+
+    if (tree_type == HYBRID) {
+        printf("root-to-depth %d\n",
+            (int)ceil(shift_depth * tree_depth));
+    }
+
+    if (tree_type == BALANCED) {
+        printf("gen_mx %d\n", tree_depth);
+        printf("expected-num-nodes %llu\nexpected-num-leaves %llu\n",
+            (unsigned long long)((pow(bf_0, tree_depth+1) - 1.0)/(bf_0 - 1.0)),
+            (unsigned long long)pow(bf_0, tree_depth));
+    }
+
+    printf("compute-granularity %d\n", num_samples);
+    printf("num-sheps %d\n", qthread_num_shepherds());
+    printf("num-workers %d\n", qthread_num_workers());
+    
+    printf("\n");
+
+    fflush(stdout);
+}
+#else
 static void print_banner(void)
 {
     printf("UTS - Unbalanced Tree Search 2.1 (C/Qthreads)\n");
@@ -292,47 +334,7 @@ static void print_banner(void)
 
     fflush(stdout);
 }
-
-static void print_stats(void)
-{
-    printf("tree-type %d\ntree-type-name %s\n", 
-        tree_type, type_names[tree_type]);
-    printf("root-bf %.1f\nroot-seed %d\n",
-        bf_0, root_seed);
-
-    if (tree_type == GEO || tree_type == HYBRID) {
-        printf("gen_mx %d\nshape-fn %d\nshape-fn-name %s\n",
-            tree_depth, shape_fn, shape_names[shape_fn]);
-    }
-
-    if (tree_type == BIN || tree_type == HYBRID) {
-        double q = non_leaf_prob;
-        int m = non_leaf_bf;
-        double es = (1.0 / (1.0 - q *m));
-        printf("q %f\nm %d\nE(n) %f\nE(s) %.2f\n",
-            q, m, q * m, es);
-    }
-
-    if (tree_type == HYBRID) {
-        printf("root-to-depth %d\n",
-            (int)ceil(shift_depth * tree_depth));
-    }
-
-    if (tree_type == BALANCED) {
-        printf("gen_mx %d\n", tree_depth);
-        printf("expected-num-nodes %llu\nexpected-num-leaves %llu\n",
-            (unsigned long long)((pow(bf_0, tree_depth+1) - 1.0)/(bf_0 - 1.0)),
-            (unsigned long long)pow(bf_0, tree_depth));
-    }
-
-    printf("compute-granularity %d\n", num_samples);
-    printf("num-sheps %d\n", qthread_num_shepherds());
-    printf("num-workers %d\n", qthread_num_workers());
-    
-    printf("\n");
-
-    fflush(stdout);
-}
+#endif
 
 int main(int argc, char *argv[])
 {
