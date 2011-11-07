@@ -519,19 +519,19 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
         hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset,
                                                 shep_depth);
     for (size_t i = 0; i < nshepherds; ++i) {
-        sheps[i].node = i % num_extant_objs;
-        sheps[i].sorted_sheplist = calloc(nshepherds-1,sizeof(qthread_shepherd_id_t));
-        sheps[i].shep_dists = calloc(nshepherds-1,sizeof(qthread_shepherd_id_t));
+        sheps[i].node            = i % num_extant_objs;
+        sheps[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
+        sheps[i].shep_dists      = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
         for (size_t j = 0, k = 0; j < nshepherds; ++j) {
             if (j != i) {
-                sheps[i].shep_dists[k] = 10;
+                sheps[i].shep_dists[k]        = 10;
                 sheps[i].sorted_sheplist[k++] = j;
             }
         }
-        shuffle_sheps(sheps[i].sorted_sheplist, nshepherds-1);
+        shuffle_sheps(sheps[i].sorted_sheplist, nshepherds - 1);
     }
-#else
-    /* Find the number of bigger-than-PU objects in the CPU set */
+#else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
+      /* Find the number of bigger-than-PU objects in the CPU set */
     assert(hwloc_get_nbobjs_inside_cpuset_by_type
                (topology, allowed_cpuset, HWLOC_OBJ_PU) >= 1);
     size_t *cpus_left_per_obj;  // handle heterogeneous core counts
@@ -594,13 +594,13 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
     }
     free(cpus_left_per_obj);
     for (size_t i = 0; i < nshepherds; ++i) {
-        sheps[i].sorted_sheplist = calloc(nshepherds-1,sizeof(qthread_shepherd_id_t));
+        sheps[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
         for (size_t j = 0, k = 0; j < nshepherds; ++j) {
             if (j != i) {
                 sheps[i].sorted_sheplist[k++] = j;
             }
         }
-        shuffle_sheps(sheps[i].sorted_sheplist, nshepherds-1);
+        shuffle_sheps(sheps[i].sorted_sheplist, nshepherds - 1);
     }
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
        /* there does not seem to be a way to extract distances... <sigh> */

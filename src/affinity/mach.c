@@ -30,10 +30,10 @@ kern_return_t thread_policy_get(thread_t                thread,
 #include "shufflesheps.h"
 
 qthread_shepherd_id_t INTERNAL guess_num_shepherds(void);
-qthread_worker_id_t INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds);
+qthread_worker_id_t INTERNAL   guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds);
 
 void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
-                      qthread_worker_id_t *nbworkers)
+                               qthread_worker_id_t   *nbworkers)
 {                                      /*{{{ */
     if (*nbshepherds == 0) {
         *nbshepherds = guess_num_shepherds();
@@ -130,17 +130,19 @@ unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherd
 }                                      /*}}} */
 
 int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
-                         qthread_shepherd_id_t nshepherds)
+                                  qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
     /* there is no native way to detect distances, so unfortunately we must assume that they're all equidistant */
     for (size_t i = 0; i < nshepherds; ++i) {
-        sheps[i].sorted_sheplist = calloc(nshepherds-1,sizeof(qthread_shepherd_id_t));
+        sheps[i].shep_dists      = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
+        sheps[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
         for (size_t j = 0, k = 0; j < nshepherds; ++j) {
             if (j != i) {
+                sheps[i].shep_dists[k]        = 10;
                 sheps[i].sorted_sheplist[k++] = j;
             }
         }
-        shuffle_sheps(sheps[i].sorted_sheplist, nshepherds-1);
+        shuffle_sheps(sheps[i].sorted_sheplist, nshepherds - 1);
     }
     return QTHREAD_SUCCESS;
 }                                      /*}}} */

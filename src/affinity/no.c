@@ -8,10 +8,10 @@
 #include "shufflesheps.h"
 
 qthread_shepherd_id_t guess_num_shepherds(void);
-qthread_worker_id_t guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds);
+qthread_worker_id_t   guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds);
 
 void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
-                               qthread_worker_id_t *nbworkers)
+                               qthread_worker_id_t   *nbworkers)
 {                                      /*{{{ */
     if (*nbshepherds == 0) {
         *nbshepherds = guess_num_shepherds();
@@ -69,11 +69,11 @@ unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherd
 
     qthread_debug(AFFINITY_CALLS, "guessing workers for %i shepherds\n",
                   (int)nshepherds);
-# if defined(HAVE_SYSCONF) && defined(_SC_NPROCESSORS_CONF)     /* Linux */
+#if defined(HAVE_SYSCONF) && defined(_SC_NPROCESSORS_CONF)      /* Linux */
     long ret = sysconf(_SC_NPROCESSORS_CONF);
     qthread_debug(AFFINITY_DETAILS, "sysconf() says %i processors\n", (int)ret);
     num_procs = (ret > 0) ? (size_t)ret : 1;
-# elif defined(HAVE_SYSCTL) && defined(CTL_HW) && defined(HW_NCPU)
+#elif defined(HAVE_SYSCTL) && defined(CTL_HW) && defined(HW_NCPU)
     int      name[2] = { CTL_HW, HW_NCPU };
     uint32_t oldv;
     size_t   oldvlen = sizeof(oldv);
@@ -82,7 +82,7 @@ unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherd
         qthread_debug(AFFINITY_DETAILS, "sysctl() says %i CPUs\n", (int)oldv);
         num_procs = (size_t)oldv;
     }
-# endif /* if defined(HAVE_SYSCONF) && defined(_SC_NPROCESSORS_CONF) */
+#endif  /* if defined(HAVE_SYSCONF) && defined(_SC_NPROCESSORS_CONF) */
     guess = num_procs / nshepherds;
     if (guess == 0) {
         guess = 1;
@@ -96,13 +96,15 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                                   qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
     for (size_t i = 0; i < nshepherds; ++i) {
-        sheps[i].sorted_sheplist = calloc(nshepherds-1,sizeof(qthread_shepherd_id_t));
+        sheps[i].shep_dists      = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
+        sheps[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
         for (size_t j = 0, k = 0; j < nshepherds; ++j) {
             if (j != i) {
+                sheps[i].shep_dists[k]        = 10;
                 sheps[i].sorted_sheplist[k++] = j;
             }
         }
-        shuffle_sheps(sheps[i].sorted_sheplist, nshepherds-1);
+        shuffle_sheps(sheps[i].sorted_sheplist, nshepherds - 1);
     }
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
