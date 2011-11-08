@@ -74,14 +74,8 @@ endif
 BENCHMARKS = \
 	 time_increments \
 	 time_febs \
-	 time_qarray \
-	 time_qarray_sizes \
 	 time_producerconsumer \
 	 time_syncvar_producerconsumer \
-	 time_qpool \
-	 time_qlfqueue \
-	 time_qdqueue \
-	 time_qdqueue_sizes \
 	 time_qutil_qsort \
 	 time_allpairs \
 	 time_wavefront \
@@ -255,21 +249,6 @@ time_increments_DEPENDENCIES = $(QTHREADLIB)
 
 time_febs_SOURCES = time_febs.c
 time_febs_DEPENDENCIES = $(QTHREADLIB)
-
-time_qarray_SOURCES = time_qarray.c
-time_qarray_DEPENDENCIES = $(QTHREADLIB)
-
-time_qarray_sizes_SOURCES = time_qarray_sizes.c
-time_qarray_sizes_DEPENDENCIES = $(QTHREADLIB)
-
-time_qpool_SOURCES = time_qpool.c
-time_qpool_DEPENDENCIES = $(QTHREADLIB)
-
-time_qlfqueue_SOURCES = time_qlfqueue.c
-time_qlfqueue_DEPENDENCIES = $(QTHREADLIB)
-
-time_qdqueue_SOURCES = time_qdqueue.c
-time_qdqueue_DEPENDENCIES = $(QTHREADLIB)
 
 time_allpairs_SOURCES = time_allpairs.c
 time_allpairs_DEPENDENCIES = $(QTHREADLIB)

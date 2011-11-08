@@ -1,6 +1,12 @@
 .PHONY: buildall buildtests buildextra
 
 EXTRA_PROGRAMS = \
+	 time_qarray \
+	 time_qarray_sizes \
+	 time_qpool \
+	 time_qlfqueue \
+	 time_qdqueue \
+	 time_qdqueue_sizes \
 	 time_incr_bench \
 	 time_incr_bench_pthread \
 	 time_lul_bench \
@@ -16,6 +22,10 @@ EXTRA_PROGRAMS = \
 	 time_cncthr_bench \
 	 time_cncthr_bench_pthread
 
+EXTRA_DIST = \
+			 pmea09/time_tbbq.cpp \
+			 pmea09/time_tbbq_sizes.cpp
+
 buildextra: $(EXTRA_PROGRAMS)
 
 INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/test/
@@ -23,6 +33,24 @@ OUTPUTDIR = $(top_builddir)/src
 QTHREADLIB = $(OUTPUTDIR)/libqthread.la
 
 LDADD = $(QTHREADLIB)
+
+time_qarray_SOURCES = pmea09/time_qarray.c
+time_qarray_DEPENDENCIES = $(QTHREADLIB)
+
+time_qarray_sizes_SOURCES = pmea09/time_qarray_sizes.c
+time_qarray_sizes_DEPENDENCIES = $(QTHREADLIB)
+
+time_qpool_SOURCES = pmea09/time_qpool.c
+time_qpool_DEPENDENCIES = $(QTHREADLIB)
+
+time_qlfqueue_SOURCES = pmea09/time_qlfqueue.c
+time_qlfqueue_DEPENDENCIES = $(QTHREADLIB)
+
+time_qdqueue_SOURCES = pmea09/time_qdqueue.c
+time_qdqueue_DEPENDENCIES = $(QTHREADLIB)
+
+time_qdqueue_sizes_SOURCES = pmea09/time_qdqueue_sizes.c
+time_qdqueue_sizes_DEPENDENCIES = $(QTHREADLIB)
 
 time_incr_bench_SOURCES = mtaap08/time_incr_bench.c
 time_incr_bench_DEPENDENCIES = $(QTHREADLIB)
