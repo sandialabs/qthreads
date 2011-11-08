@@ -928,7 +928,7 @@ AC_CONFIG_FILES([Makefile
                  include/qthread/Makefile
                  test/Makefile
 				 test/benchmarks/Makefile
-				 test/rose_bots_benchmarks/Makefile])
+				 test/benchmarks/rose_bots/Makefile])
 AC_OUTPUT
 
 echo ""

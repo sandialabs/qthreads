@@ -54,10 +54,6 @@ endif
 SUBDIRS = 
 DIST_SUBDIRS = benchmarks
 
-if COMPILE_ROSE_EXTENSIONS
-SUBDIRS += rose_bots_benchmarks
-endif
-
 TESTS =  $(BASIC_TESTS) $(COMPLEX_TESTS)
 EXTRA_PROGRAMS = 
 
@@ -99,19 +95,10 @@ TESTS_ENVIRONMENT = timelimit -T 30
 endif
 
 buildtests: $(TESTS)
-if COMPILE_ROSE_EXTENSIONS
-buildall: $(TESTS)
-	$(MAKE) -C benchmarks buildall
-	$(MAKE) -C rose_bots_benchmarks buildall
-buildextra: $(BENCHMARKS)
-	$(MAKE) -C benchmarks buildextra
-	$(MAKE) -C rose_bots_benchmarks buildextra
-else
 buildall: $(TESTS) $(BENCHMARKS)
 	$(MAKE) -C benchmarks buildall
 buildextra: $(BENCHMARKS)
 	$(MAKE) -C benchmarks buildextra
-endif
 
 .PHONY: buildall buildtests buildextra
 

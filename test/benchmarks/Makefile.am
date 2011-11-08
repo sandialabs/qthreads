@@ -26,13 +26,22 @@ EXTRA_DIST = \
 			 pmea09/time_tbbq.cpp \
 			 pmea09/time_tbbq_sizes.cpp
 
-buildextra: $(EXTRA_PROGRAMS)
 
 INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/test/
 OUTPUTDIR = $(top_builddir)/src
 QTHREADLIB = $(OUTPUTDIR)/libqthread.la
 
 LDADD = $(QTHREADLIB)
+
+if COMPILE_ROSE_EXTENSIONS
+buildall: $(EXTRA_PROGRAMS)
+	$(MAKE) -C rose_bots_benchmarks buildall
+buildextra: $(EXTRA_PROGRAMS)
+	$(MAKE) -C rose_bots_benchmarks buildextra
+else
+buildall: $(EXTRA_PROGRAMS)
+buildextra: $(EXTRA_PROGRAMS)
+endif
 
 time_qarray_SOURCES = pmea09/time_qarray.c
 time_qarray_DEPENDENCIES = $(QTHREADLIB)
