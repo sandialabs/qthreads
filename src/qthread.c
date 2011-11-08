@@ -766,10 +766,14 @@ int qthread_initialize(void)
 
 #ifdef QTHREAD_DEBUG
     QTHREAD_FASTLOCK_INIT(output_lock);
-    GET_ENV_NUM("QTHREAD_DEBUG_LEVEL", debuglevel, 0, 0);
+    {
+        size_t dl = 0;
+        GET_ENV_NUM("QTHREAD_DEBUG_LEVEL", dl, 0, 0);
 # ifdef SST
-    debuglevel = 7;
+        dl = 7;
 # endif
+        debuglevel = (1 << dl) - 1;
+    }
 #endif /* ifdef QTHREAD_DEBUG */
 
     qthread_debug(CORE_CALLS, "began.\n");
@@ -1053,7 +1057,7 @@ int qthread_initialize(void)
 /* now build the context for the shepherd 0 */
     qthread_debug(CORE_DETAILS, "calling qthread_makecontext\n");
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    qlib->shepherds[0].workers[0].shepherd  = &qlib->shepherds[0];
+    qlib->shepherds[0].workers[0].shepherd = &qlib->shepherds[0];
     QTHREAD_CASLOCK_INIT(qlib->shepherds[0].workers[0].active, 1);
     qthread_debug(CORE_DETAILS, "initialized caslock 0,0 %p\n", &qlib->shepherds[0].workers[0].active);
     qlib->shepherds[0].workers[0].worker_id = 0;
@@ -2563,10 +2567,10 @@ int INTERNAL qthread_check_precond(qthread_t *t)
             t->npreconds--;
         } else {
             // Need to wait on this one, add to appropriate FFQ
-            qthread_addrstat_t       *m       = NULL;
-            qthread_addrres_t        *X       = NULL;
-            const int                 lockbin = QTHREAD_CHOOSE_STRIPE(this_sync);
-            const aligned_t          *alignedaddr;
+            qthread_addrstat_t *m       = NULL;
+            qthread_addrres_t  *X       = NULL;
+            const int           lockbin = QTHREAD_CHOOSE_STRIPE(this_sync);
+            const aligned_t    *alignedaddr;
 #if !defined(UNPOOLED_ADDRRES) || defined(QTHREAD_LOCK_PROFILING)
             qthread_shepherd_t *const curshep = qthread_internal_getshep();
 #endif

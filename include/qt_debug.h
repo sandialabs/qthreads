@@ -36,185 +36,185 @@ extern enum qthread_debug_levels debuglevel;
 #  define AFFINITY_BEHAVIOR  DEBUG_BEHAVIOR
 #  define AFFINITY_DETAILS   DEBUG_DETAILS
 # else
-#  define AFFINITY_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define AFFINITY_CALLS     NO_DEBUG_OUTPUT
 #  define AFFINITY_FUNCTIONS NO_DEBUG_OUTPUT
+#  define AFFINITY_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define AFFINITY_DETAILS   NO_DEBUG_OUTPUT
 # endif
 # ifdef QTHREAD_DEBUG_THREADQUEUES
-#  define THREADQUEUE_BEHAVIOR  DEBUG_BEHAVIOR
 #  define THREADQUEUE_CALLS     DEBUG_CALLS
 #  define THREADQUEUE_FUNCTIONS DEBUG_FUNCTIONS
+#  define THREADQUEUE_BEHAVIOR  DEBUG_BEHAVIOR
 #  define THREADQUEUE_DETAILS   DEBUG_DETAILS
 # else
-#  define THREADQUEUE_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define THREADQUEUE_CALLS     NO_DEBUG_OUTPUT
 #  define THREADQUEUE_FUNCTIONS NO_DEBUG_OUTPUT
+#  define THREADQUEUE_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define THREADQUEUE_DETAILS   NO_DEBUG_OUTPUT
 # endif
 # ifdef QTHREAD_DEBUG_CORE
-#  define CORE_BEHAVIOR  DEBUG_BEHAVIOR
 #  define CORE_CALLS     DEBUG_CALLS
 #  define CORE_FUNCTIONS DEBUG_FUNCTIONS
+#  define CORE_BEHAVIOR  DEBUG_BEHAVIOR
 #  define CORE_DETAILS   DEBUG_DETAILS
 # else
-#  define CORE_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define CORE_CALLS     NO_DEBUG_OUTPUT
 #  define CORE_FUNCTIONS NO_DEBUG_OUTPUT
+#  define CORE_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define CORE_DETAILS   NO_DEBUG_OUTPUT
 # endif
 # ifdef QTHREAD_DEBUG_THREADS
-#  define THREAD_BEHAVIOR  DEBUG_BEHAVIOR
 #  define THREAD_CALLS     DEBUG_CALLS
 #  define THREAD_FUNCTIONS DEBUG_FUNCTIONS
+#  define THREAD_BEHAVIOR  DEBUG_BEHAVIOR
 #  define THREAD_DETAILS   DEBUG_DETAILS
 # else
-#  define THREAD_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define THREAD_CALLS     NO_DEBUG_OUTPUT
 #  define THREAD_FUNCTIONS NO_DEBUG_OUTPUT
+#  define THREAD_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define THREAD_DETAILS   NO_DEBUG_OUTPUT
 # endif
 # ifdef QTHREAD_DEBUG_SYSCALLS
-#  define SYSCDEBUG_BEHAVIOR  DEBUG_BEHAVIOR
 #  define SYSCDEBUG_CALLS     DEBUG_CALLS
 #  define SYSCDEBUG_FUNCTIONS DEBUG_FUNCTIONS
+#  define SYSCDEBUG_BEHAVIOR  DEBUG_BEHAVIOR
 #  define SYSCDEBUG_DETAILS   DEBUG_DETAILS
 # else
-#  define SYSCDEBUG_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define SYSCDEBUG_CALLS     NO_DEBUG_OUTPUT
 #  define SYSCDEBUG_FUNCTIONS NO_DEBUG_OUTPUT
+#  define SYSCDEBUG_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define SYSCDEBUG_DETAILS   NO_DEBUG_OUTPUT
 # endif
 # ifdef QTHREAD_DEBUG_LOCKS
-#  define LOCK_BEHAVIOR  DEBUG_BEHAVIOR
 #  define LOCK_CALLS     DEBUG_CALLS
 #  define LOCK_FUNCTIONS DEBUG_FUNCTIONS
+#  define LOCK_BEHAVIOR  DEBUG_BEHAVIOR
 #  define LOCK_DETAILS   DEBUG_DETAILS
 # else
-#  define LOCK_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define LOCK_CALLS     NO_DEBUG_OUTPUT
 #  define LOCK_FUNCTIONS NO_DEBUG_OUTPUT
+#  define LOCK_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define LOCK_DETAILS   NO_DEBUG_OUTPUT
 # endif
 # ifdef QTHREAD_DEBUG_FEBS
-#  define FEB_BEHAVIOR  DEBUG_BEHAVIOR
 #  define FEB_CALLS     DEBUG_CALLS
 #  define FEB_FUNCTIONS DEBUG_FUNCTIONS
+#  define FEB_BEHAVIOR  DEBUG_BEHAVIOR
 #  define FEB_DETAILS   DEBUG_DETAILS
 # else
-#  define FEB_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define FEB_CALLS     NO_DEBUG_OUTPUT
 #  define FEB_FUNCTIONS NO_DEBUG_OUTPUT
+#  define FEB_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define FEB_DETAILS   NO_DEBUG_OUTPUT
 # endif
 # ifdef QTHREAD_DEBUG_SYNCVARS
-#  define SYNCVAR_BEHAVIOR  DEBUG_BEHAVIOR
 #  define SYNCVAR_CALLS     DEBUG_CALLS
 #  define SYNCVAR_FUNCTIONS DEBUG_FUNCTIONS
+#  define SYNCVAR_BEHAVIOR  DEBUG_BEHAVIOR
 #  define SYNCVAR_DETAILS   DEBUG_DETAILS
 # else
-#  define SYNCVAR_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define SYNCVAR_CALLS     NO_DEBUG_OUTPUT
 #  define SYNCVAR_FUNCTIONS NO_DEBUG_OUTPUT
+#  define SYNCVAR_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define SYNCVAR_DETAILS   NO_DEBUG_OUTPUT
 # endif
 # ifdef QTHREAD_DEBUG_LOOPS
-#  define LOOP_BEHAVIOR  DEBUG_BEHAVIOR
 #  define LOOP_CALLS     DEBUG_CALLS
 #  define LOOP_FUNCTIONS DEBUG_FUNCTIONS
+#  define LOOP_BEHAVIOR  DEBUG_BEHAVIOR
 #  define LOOP_DETAILS   DEBUG_DETAILS
 # else
-#  define LOOP_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define LOOP_CALLS     NO_DEBUG_OUTPUT
 #  define LOOP_FUNCTIONS NO_DEBUG_OUTPUT
+#  define LOOP_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define LOOP_DETAILS   NO_DEBUG_OUTPUT
 # endif
 # ifdef QTHREAD_DEBUG_IO
-#  define IO_BEHAVIOR  DEBUG_BEHAVIOR
 #  define IO_CALLS     DEBUG_CALLS
 #  define IO_FUNCTIONS DEBUG_FUNCTIONS
+#  define IO_BEHAVIOR  DEBUG_BEHAVIOR
 #  define IO_DETAILS   DEBUG_DETAILS
 # else
-#  define IO_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define IO_CALLS     NO_DEBUG_OUTPUT
 #  define IO_FUNCTIONS NO_DEBUG_OUTPUT
+#  define IO_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define IO_DETAILS   NO_DEBUG_OUTPUT
 # endif
 # ifdef QTHREAD_DEBUG_BARRIER
-#  define BARRIER_BEHAVIOR  DEBUG_BEHAVIOR
 #  define BARRIER_CALLS     DEBUG_CALLS
 #  define BARRIER_FUNCTIONS DEBUG_FUNCTIONS
+#  define BARRIER_BEHAVIOR  DEBUG_BEHAVIOR
 #  define BARRIER_DETAILS   DEBUG_DETAILS
 # else
-#  define BARRIER_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define BARRIER_CALLS     NO_DEBUG_OUTPUT
 #  define BARRIER_FUNCTIONS NO_DEBUG_OUTPUT
+#  define BARRIER_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define BARRIER_DETAILS   NO_DEBUG_OUTPUT
 # endif
 # ifdef QTHREAD_DEBUG_QARRAY
-#  define QARRAY_BEHAVIOR  DEBUG_BEHAVIOR
 #  define QARRAY_CALLS     DEBUG_CALLS
 #  define QARRAY_FUNCTIONS DEBUG_FUNCTIONS
+#  define QARRAY_BEHAVIOR  DEBUG_BEHAVIOR
 #  define QARRAY_DETAILS   DEBUG_DETAILS
 # else
-#  define QARRAY_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define QARRAY_CALLS     NO_DEBUG_OUTPUT
 #  define QARRAY_FUNCTIONS NO_DEBUG_OUTPUT
+#  define QARRAY_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define QARRAY_DETAILS   NO_DEBUG_OUTPUT
 # endif
 # ifdef QTHREAD_DEBUG_RCRTOOL
-#  define RCRTOOL_BEHAVIOR  DEBUG_BEHAVIOR
 #  define RCRTOOL_CALLS     DEBUG_CALLS
 #  define RCRTOOL_FUNCTIONS DEBUG_FUNCTIONS
+#  define RCRTOOL_BEHAVIOR  DEBUG_BEHAVIOR
 #  define RCRTOOL_DETAILS   DEBUG_DETAILS
 # else
-#  define RCRTOOL_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define RCRTOOL_CALLS     NO_DEBUG_OUTPUT
 #  define RCRTOOL_FUNCTIONS NO_DEBUG_OUTPUT
+#  define RCRTOOL_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define RCRTOOL_DETAILS   NO_DEBUG_OUTPUT
 # endif
 # ifdef QTHREAD_DEBUG_SHEPHERD
-#  define SHEPHERD_BEHAVIOR  DEBUG_BEHAVIOR
 #  define SHEPHERD_CALLS     DEBUG_CALLS
 #  define SHEPHERD_FUNCTIONS DEBUG_FUNCTIONS
+#  define SHEPHERD_BEHAVIOR  DEBUG_BEHAVIOR
 #  define SHEPHERD_DETAILS   DEBUG_DETAILS
 # else
-#  define SHEPHERD_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define SHEPHERD_CALLS     NO_DEBUG_OUTPUT
 #  define SHEPHERD_FUNCTIONS NO_DEBUG_OUTPUT
+#  define SHEPHERD_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define SHEPHERD_DETAILS   NO_DEBUG_OUTPUT
 # endif
 # ifdef QTHREAD_DEBUG_FUTURELIB
-#  define FUTURELIB_BEHAVIOR  DEBUG_BEHAVIOR
 #  define FUTURELIB_CALLS     DEBUG_CALLS
 #  define FUTURELIB_FUNCTIONS DEBUG_FUNCTIONS
+#  define FUTURELIB_BEHAVIOR  DEBUG_BEHAVIOR
 #  define FUTURELIB_DETAILS   DEBUG_DETAILS
 # else
-#  define FUTURELIB_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define FUTURELIB_CALLS     NO_DEBUG_OUTPUT
 #  define FUTURELIB_FUNCTIONS NO_DEBUG_OUTPUT
+#  define FUTURELIB_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define FUTURELIB_DETAILS   NO_DEBUG_OUTPUT
 # endif
 # ifdef QTHREAD_DEBUG_XOMP
-#  define XOMP_BEHAVIOR  DEBUG_BEHAVIOR
 #  define XOMP_CALLS     DEBUG_CALLS
 #  define XOMP_FUNCTIONS DEBUG_FUNCTIONS
+#  define XOMP_BEHAVIOR  DEBUG_BEHAVIOR
 #  define XOMP_DETAILS   DEBUG_DETAILS
 # else
-#  define XOMP_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define XOMP_CALLS     NO_DEBUG_OUTPUT
 #  define XOMP_FUNCTIONS NO_DEBUG_OUTPUT
+#  define XOMP_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define XOMP_DETAILS   NO_DEBUG_OUTPUT
 # endif
 # ifdef QTHREAD_DEBUG_MULTINODE
-#  define MULTINODE_BEHAVIOR  DEBUG_BEHAVIOR
 #  define MULTINODE_CALLS     DEBUG_CALLS
 #  define MULTINODE_FUNCTIONS DEBUG_FUNCTIONS
+#  define MULTINODE_BEHAVIOR  DEBUG_BEHAVIOR
 #  define MULTINODE_DETAILS   DEBUG_DETAILS
 # else
-#  define MULTINODE_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define MULTINODE_CALLS     NO_DEBUG_OUTPUT
 #  define MULTINODE_FUNCTIONS NO_DEBUG_OUTPUT
+#  define MULTINODE_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define MULTINODE_DETAILS   NO_DEBUG_OUTPUT
 # endif
 
@@ -278,49 +278,6 @@ static QINLINE void qthread_debug(int         level,
 # else
         while (WRITE(2, "QDEBUG: ", 8) != 8) ;
 # endif
-        *head++ = '(';
-        {
-            int num = level;
-            unsigned  places = 0;
-            uintptr_t tmpnum = level;
-            while (tmpnum >= 10) {
-                tmpnum /= 10;
-                places++;
-            }
-            head  += places;
-            places = 0;
-            while (num >= 10) {
-                uintptr_t tmp = num % 10;
-                *(head - places) = (tmp < 10) ? ('0' + tmp) : ('a' + tmp - 10);
-                num             /= 10;
-                places++;
-            }
-            num             %= 10;
-            *(head - places) = (num < 10) ? ('0' + num) : ('a' + num - 10);
-            head++;
-        }
-        *head++ = ':';
-        {
-            int num = debuglevel;
-            unsigned  places = 0;
-            uintptr_t tmpnum = debuglevel;
-            while (tmpnum >= 10) {
-                tmpnum /= 10;
-                places++;
-            }
-            head  += places;
-            places = 0;
-            while (num >= 10) {
-                uintptr_t tmp = num % 10;
-                *(head - places) = (tmp < 10) ? ('0' + tmp) : ('a' + tmp - 10);
-                num             /= 10;
-                places++;
-            }
-            num             %= 10;
-            *(head - places) = (num < 10) ? ('0' + num) : ('a' + num - 10);
-            head++;
-        }
-        *head++ = ')';
 
         va_start(args, format);
         /* avoiding the obvious method, to save on memory
