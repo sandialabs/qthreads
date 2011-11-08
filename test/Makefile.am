@@ -51,8 +51,11 @@ BASIC_TESTS += test_cpp
 COMPLEX_TESTS += testloop
 endif
 
+SUBDIRS = 
+DIST_SUBDIRS = benchmarks
+
 if COMPILE_ROSE_EXTENSIONS
-SUBDIRS = rose_bots_benchmarks
+SUBDIRS += rose_bots_benchmarks
 endif
 
 TESTS =  $(BASIC_TESTS) $(COMPLEX_TESTS)
@@ -82,20 +85,6 @@ BENCHMARKS = \
 	 time_qutil_qsort \
 	 time_allpairs \
 	 time_wavefront \
-	 time_incr_bench \
-	 time_incr_bench_pthread \
-	 time_lul_bench \
-	 time_lul_bench_pthread \
-	 time_mutex_bench \
-	 time_mutex_bench_pthread \
-	 time_spin_bench \
-	 time_spin_bench_pthread \
-	 time_chain_bench \
-	 time_chain_bench_pthread \
-	 time_thrcrt_bench \
-	 time_thrcrt_bench_pthread \
-	 time_cncthr_bench \
-	 time_cncthr_bench_pthread \
 	 time_threading \
 	 time_stencil_bsp \
 	 time_stencil_feb \
@@ -117,13 +106,17 @@ endif
 
 buildtests: $(TESTS)
 if COMPILE_ROSE_EXTENSIONS
-buildall: $(TESTS) $(BENCHMARKS)
+buildall: $(TESTS)
+	$(MAKE) -C benchmarks buildall
 	$(MAKE) -C rose_bots_benchmarks buildall
 buildextra: $(BENCHMARKS)
+	$(MAKE) -C benchmarks buildextra
 	$(MAKE) -C rose_bots_benchmarks buildextra
 else
 buildall: $(TESTS) $(BENCHMARKS)
+	$(MAKE) -C benchmarks buildall
 buildextra: $(BENCHMARKS)
+	$(MAKE) -C benchmarks buildextra
 endif
 
 .PHONY: buildall buildtests buildextra
@@ -135,7 +128,6 @@ noinst_HEADERS = argparsing.h
 INCLUDES = -I$(top_srcdir)/include
 OUTPUTDIR = $(top_builddir)/src
 QTHREADLIB = $(OUTPUTDIR)/libqthread.la
-#CONTEXTLIB = $(OUTPUTDIR)/fastcontext/libfastcontext.la
 
 LDADD = $(QTHREADLIB)
 
@@ -284,48 +276,6 @@ time_allpairs_DEPENDENCIES = $(QTHREADLIB)
 
 time_wavefront_SOURCES = time_wavefront.c
 time_wavefront_DEPENDENCIES = $(QTHREADLIB)
-
-time_incr_bench_SOURCES = time_incr_bench.c
-time_incr_bench_DEPENDENCIES = $(QTHREADLIB)
-
-time_incr_bench_pthread_SOURCES = time_incr_bench_pthread.c
-time_incr_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
-
-time_lul_bench_SOURCES = time_lul_bench.c
-time_lul_bench_DEPENDENCIES = $(QTHREADLIB)
-
-time_lul_bench_pthread_SOURCES = time_lul_bench_pthread.c
-time_lul_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
-
-time_mutex_bench_SOURCES = time_mutex_bench.c
-time_mutex_bench_DEPENDENCIES = $(QTHREADLIB)
-
-time_mutex_bench_pthread_SOURCES = time_mutex_bench_pthread.c
-time_mutex_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
-
-time_spin_bench_SOURCES = time_spin_bench.c
-time_spin_bench_DEPENDENCIES = $(QTHREADLIB)
-
-time_spin_bench_pthread_SOURCES = time_spin_bench_pthread.c
-time_spin_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
-
-time_chain_bench_SOURCES = time_chain_bench.c
-time_chain_bench_DEPENDENCIES = $(QTHREADLIB)
-
-time_chain_bench_pthread_SOURCES = time_chain_bench_pthread.c
-time_chain_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
-
-time_thrcrt_bench_SOURCES = time_thrcrt_bench.c
-time_thrcrt_bench_DEPENDENCIES = $(QTHREADLIB)
-
-time_thrcrt_bench_pthread_SOURCES = time_thrcrt_bench_pthread.c
-time_thrcrt_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
-
-time_cncthr_bench_SOURCES = time_cncthr_bench.c
-time_cncthr_bench_DEPENDENCIES = $(QTHREADLIB)
-
-time_cncthr_bench_pthread_SOURCES = time_cncthr_bench_pthread.c
-time_cncthr_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
 
 test_feb_barrier_SOURCES = test_feb_barrier.c
 test_feb_barrier_DEPENDENCIES = $(QTHREADLIB)

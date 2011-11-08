@@ -185,7 +185,7 @@ void bots_print_results()
       break; 
     }
   }
-  sprintf(str_time_program,"%f",bots_time_program);
+  snprintf(str_time_program, 15UL, "%f",bots_time_program);
   if (bots_sequential_flag) 
     sprintf(str_time_sequential,"%f",bots_time_sequential);
   else 

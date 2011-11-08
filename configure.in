@@ -927,6 +927,7 @@ AC_CONFIG_FILES([Makefile
                  include/Makefile
                  include/qthread/Makefile
                  test/Makefile
+				 test/benchmarks/Makefile
 				 test/rose_bots_benchmarks/Makefile])
 AC_OUTPUT
 
