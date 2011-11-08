@@ -12,7 +12,7 @@ if [ -d autom4te.cache ] ; then
 fi
 
 autoreconf --install --symlink --warnings=gnu,obsolete,override,portability,no-obsolete "$@" && \
-  echo "Preparing was successful if there was no error messages above." && \
+  echo "Preparing was successful if there were no error messages above." && \
   exit 0
 
 echo "It appears that configure file generation failed.  Sorry :(."
