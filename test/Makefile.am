@@ -360,13 +360,13 @@ time_qt_loops_DEPENDENCIES = $(QTHREADLIB)
 time_qt_loopaccums_SOURCES = time_qt_loopaccums.c
 time_qt_loopaccums_DEPENDENCIES = $(QTHREADLIB)
 
-time_uts_syncvar_SOURCES = time_uts_syncvar.c rng/devine_sha1.c
+time_uts_syncvar_SOURCES = time_uts_syncvar.c rng/brg_sha1.c
 time_uts_syncvar_DEPENDENCIES = $(QTHREADLIB)
 
-time_uts_sinc_SOURCES = time_uts_sinc.c rng/devine_sha1.c
+time_uts_sinc_SOURCES = time_uts_sinc.c rng/brg_sha1.c
 time_uts_sinc_DEPENDENCIES = $(QTHREADLIB)
 
-time_uts_donecount_SOURCES = time_uts_donecount.c rng/devine_sha1.c
+time_uts_donecount_SOURCES = time_uts_donecount.c rng/brg_sha1.c
 time_uts_donecount_DEPENDENCIES = $(QTHREADLIB)
 
 test_sinc_SOURCES = test_sinc.c

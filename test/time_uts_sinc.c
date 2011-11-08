@@ -18,7 +18,7 @@
 #include <qthread/qt_sinc.h>
 #include "argparsing.h"
 
-#define DEVINE_RNG // Select RNG
+#define BRG_RNG // Select RNG
 #include "rng/rng.h"
 
 #define PRINT_STATS 1
