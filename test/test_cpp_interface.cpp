@@ -3,14 +3,14 @@
 #include <qthread/qloop.hpp>
 #include <qthread/qloop.h>
 
-#define NUM_SHEPHERDS 3
+#include "argparsing.h"
 
 struct test_struct {
     test_struct(int _x, int* _answer) : x(_x), answer(_answer) {}
 
     void operator() (int start, int stop)
     {
-      printf("start: %4d    stop: %4d\n", start, stop);
+      iprintf("start: %4d    stop: %4d\n", start, stop);
 
       for (int i = start; i < stop; ++i) answer[i] = x * i;
     }
@@ -29,20 +29,22 @@ void test_func()
     qt_loop_balance(0, 100, test_struct(3, answer));
 //    qt_loop_balance_future(0, 100, test_struct(3, answer));
 
-    printf("\nanswer:");
+    iprintf("\nanswer:");
     for (int i = 0; i < 100; ++i)
     {
-      printf("%6d", answer[i]);
-      if (i % 10 == 9) printf("\n       ");
+      iprintf("%6d", answer[i]);
+      if (i % 10 == 9) iprintf("\n       ");
     }
-    printf("\n");
+    iprintf("\n");
 
     delete [] answer;
 }
 
 int main(int argc, char **argv)
 {
-    qthread_init(NUM_SHEPHERDS);
+    assert(qthread_initialize() == 0);
+
+    CHECK_VERBOSE();
 
     test_func();
 
