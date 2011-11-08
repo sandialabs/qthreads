@@ -182,28 +182,30 @@ void qt_sinc_destroy(qt_sinc_t *sinc)
 void qt_sinc_willspawn(qt_sinc_t *sinc,
                        size_t     count)
 {
-    qthread_shepherd_id_t shep_id;
-    const qthread_worker_id_t worker_id = qthread_worker(&shep_id);
+    if (count > 0) {
+        qthread_shepherd_id_t shep_id;
+        const qthread_worker_id_t worker_id = qthread_worker(&shep_id);
 
-    const size_t shep_offset = shep_id * sinc->sizeof_shep_count_part;
-    const size_t worker_offset = shep_id == 0 ? 
-        worker_id * sinc->sizeof_count : 
-        (worker_id % (num_workers/num_sheps)) * sinc->sizeof_count;
-    qt_sinc_count_t *counts = (qt_sinc_count_t *)(
-        (uint8_t *)sinc->counts + shep_offset + worker_offset);
+        const size_t shep_offset = shep_id * sinc->sizeof_shep_count_part;
+        const size_t worker_offset = shep_id == 0 ? 
+            worker_id * sinc->sizeof_count : 
+            (worker_id % (num_workers/num_sheps)) * sinc->sizeof_count;
+        qt_sinc_count_t *counts = (qt_sinc_count_t *)(
+            (uint8_t *)sinc->counts + shep_offset + worker_offset);
 
-    // Increment count
-    qt_sinc_count_t old;
-    do {
-        old = *counts;
-    } while (old != qthread_cas(counts, old, old + count));
-
-    // Increment remaining, if necessary
-    if (old == 0) {
-        aligned_t old;
+        // Increment count
+        qt_sinc_count_t old;
         do {
-            old = sinc->remaining;
-        } while (old != qthread_cas(&sinc->remaining, old, old + 1));
+            old = *counts;
+        } while (old != qthread_cas(counts, old, old + count));
+
+        // Increment remaining, if necessary
+        if (old == 0) {
+            aligned_t old;
+            do {
+                old = sinc->remaining;
+            } while (old != qthread_cas(&sinc->remaining, old, old + 1));
+        }
     }
 }
 
