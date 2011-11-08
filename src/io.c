@@ -73,7 +73,6 @@ static void *qt_blocking_subsystem_proxy_thread(void *arg)
 {   /*{{{*/
     pthread_setspecific(shepherd_structs, (void *)1);
     while (proxy_exit == 0) {
-        pthread_setspecific(IO_task_struct, NULL);
         qt_process_blocking_calls();
         MACHINE_FENCE;
     }
@@ -147,7 +146,6 @@ void INTERNAL qt_process_blocking_calls(void)
     QTHREAD_UNLOCK(&theQueue.lock);
     item->next = NULL;
     /* do something with <item> */
-    qassert(pthread_setspecific(IO_task_struct, item->thread), 0);
     switch(item->op) {
         default:
             fprintf(stderr, "Unhandled syscall: %u\n", (unsigned int)item->op);
@@ -319,11 +317,13 @@ void INTERNAL qt_process_blocking_calls(void)
         case USER_DEFINED:
         {
             qt_context_t my_context;
+            qassert(pthread_setspecific(IO_task_struct, item->thread), 0);
             getcontext(&my_context);
             qthread_debug(IO_DETAILS, "blocking proxy context is %p\n", &my_context);
             qthread_exec(item->thread, &my_context);
             qthread_debug(IO_DETAILS, "proxy back from qthread_exec\n");
             FREE_SYSCALLJOB(item);
+            //pthread_setspecific(IO_task_struct, NULL);
             break;
         }
     }
