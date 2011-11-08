@@ -54,6 +54,8 @@ typedef struct {
     int     type;         // Type of distribution of child nodes
     int     height;       // Depth of node in the tree
     struct state_t state; // Local RNG state
+    int     num_children;
+    int     child_type;
 } node_t;
 
 // Default values
@@ -207,19 +209,22 @@ static aligned_t visit(void * args_)
 {
     node_t   *parent = (node_t *)args_;
     int       parent_height = parent->height;
-    int       num_children = calc_num_children(parent);
-    int       child_type = calc_child_type(parent);
+    int       num_children = parent->num_children;
     uint64_t  num_descendants = 0;
     uint64_t  child_descendants = 0;
     node_t    child;
     syncvar_t rets[num_children];
+
     // Spawn children, if any
     for (int i = 0; i < num_children; i++) {
-        child.type = child_type;
         child.height = parent_height + 1;
+
         for (int j = 0; j < num_samples; j++) {
             rng_spawn(parent->state.state, child.state.state, i);
         }
+
+        child.num_children = calc_num_children(&child);
+        child.type = calc_child_type(&child);
 
         rets[i] = SYNCVAR_EMPTY_INITIALIZER;
         qthread_fork_syncvar_copyargs(visit, &child, sizeof(node_t), &rets[i]);
@@ -229,20 +234,6 @@ static aligned_t visit(void * args_)
     for (int i = 0; i < num_children; i++) {
         qthread_syncvar_readFF(&child_descendants, &rets[i]);
         num_descendants += child_descendants;
-    }
-
-    // Calculate leaf stats, if this is one
-    if (num_children == 0) {
-        qthread_incr(&num_leaves, 1);
-
-        uint64_t old_tree_height;
-        uint64_t new_tree_height;
-        do {
-            old_tree_height = tree_height;
-            new_tree_height = old_tree_height > parent_height ?
-                old_tree_height : parent_height;
-        } while (old_tree_height != 
-                 qthread_cas(&tree_height, old_tree_height, new_tree_height));
     }
 
     return 1 + num_descendants;
@@ -369,6 +360,8 @@ int main(int argc, char *argv[])
     root.type = tree_type;
     root.height = 0;
     rng_init(root.state.state, root_seed);
+    root.num_children = calc_num_children(&root);
+    root.child_type = calc_child_type(&root);
 
     syncvar_t ret = SYNCVAR_EMPTY_INITIALIZER;
     qthread_fork_syncvar(visit, &root, &ret);
