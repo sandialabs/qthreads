@@ -47,7 +47,8 @@ COMPLEX_TESTS = test_qt_loop \
 				test_allpairs
 
 if ENABLE_CXX_TESTS
-BASIC_TESTS += test_cpp
+BASIC_TESTS += test_cpp \
+	 test_cpp_interface
 COMPLEX_TESTS += testloop
 endif
 
@@ -72,16 +73,12 @@ BENCHMARKS = \
 	 time_febs \
 	 time_producerconsumer \
 	 time_syncvar_producerconsumer \
-	 time_qutil_qsort \
-	 time_allpairs \
-	 time_wavefront \
 	 time_threading \
 	 time_stencil_bsp \
 	 time_stencil_feb \
 	 time_stencil_pre \
 	 time_halo_swap_all \
 	 time_gcd \
-	 test_cpp_interface \
 	 time_qt_loops \
 	 time_qt_loopaccums
 
@@ -202,9 +199,6 @@ test_migrate_DEPENDENCIES = $(QTHREADLIB)
 test_qutil_qsort_SOURCES = test_qutil_qsort.c
 test_qutil_qsort_DEPENDENCIES = $(QTHREADLIB)
 
-time_qutil_qsort_SOURCES = time_qutil_qsort.c
-time_qutil_qsort_DEPENDENCIES = $(QTHREADLIB)
-
 test_qarray_SOURCES = test_qarray.c
 test_qarray_DEPENDENCIES = $(QTHREADLIB)
 
@@ -236,12 +230,6 @@ time_increments_DEPENDENCIES = $(QTHREADLIB)
 
 time_febs_SOURCES = time_febs.c
 time_febs_DEPENDENCIES = $(QTHREADLIB)
-
-time_allpairs_SOURCES = time_allpairs.c
-time_allpairs_DEPENDENCIES = $(QTHREADLIB)
-
-time_wavefront_SOURCES = time_wavefront.c
-time_wavefront_DEPENDENCIES = $(QTHREADLIB)
 
 test_feb_barrier_SOURCES = test_feb_barrier.c
 test_feb_barrier_DEPENDENCIES = $(QTHREADLIB)

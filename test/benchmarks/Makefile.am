@@ -1,6 +1,10 @@
+
 .PHONY: buildall buildtests buildextra
 
-EXTRA_PROGRAMS = \
+BENCHMARKS = \
+	 time_allpairs \
+     time_wavefront \
+	 time_qutil_qsort \
 	 time_qarray \
 	 time_qarray_sizes \
 	 time_qpool \
@@ -22,6 +26,8 @@ EXTRA_PROGRAMS = \
 	 time_cncthr_bench \
 	 time_cncthr_bench_pthread
 
+EXTRA_PROGRAMS = $(BENCHMARKS) $(UNBUILDABLE)
+
 EXTRA_DIST = \
 			 pmea09/time_tbbq.cpp \
 			 pmea09/time_tbbq_sizes.cpp
@@ -34,14 +40,23 @@ QTHREADLIB = $(OUTPUTDIR)/libqthread.la
 LDADD = $(QTHREADLIB)
 
 if COMPILE_ROSE_EXTENSIONS
-buildall: $(EXTRA_PROGRAMS)
+buildall: $(BENCHMARKS)
 	$(MAKE) -C rose_bots_benchmarks buildall
-buildextra: $(EXTRA_PROGRAMS)
+buildextra: $(BENCHMARKS)
 	$(MAKE) -C rose_bots_benchmarks buildextra
 else
-buildall: $(EXTRA_PROGRAMS)
-buildextra: $(EXTRA_PROGRAMS)
+buildall: $(BENCHMARKS)
+buildextra: $(BENCHMARKS)
 endif
+
+time_allpairs_SOURCES = thesis/time_allpairs.c
+time_allpairs_DEPENDENCIES = $(QTHREADLIB)
+
+time_wavefront_SOURCES = thesis/time_wavefront.c
+time_wavefront_DEPENDENCIES = $(QTHREADLIB)
+
+time_qutil_qsort_SOURCES = thesis/time_qutil_qsort.c
+time_qutil_qsort_DEPENDENCIES = $(QTHREADLIB)
 
 time_qarray_SOURCES = pmea09/time_qarray.c
 time_qarray_DEPENDENCIES = $(QTHREADLIB)
@@ -102,4 +117,3 @@ time_cncthr_bench_DEPENDENCIES = $(QTHREADLIB)
 
 time_cncthr_bench_pthread_SOURCES = mtaap08/time_cncthr_bench_pthread.c
 time_cncthr_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
-
