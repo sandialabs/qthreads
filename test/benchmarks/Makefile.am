@@ -1,32 +1,53 @@
 
 .PHONY: buildall buildtests buildextra
 
-BENCHMARKS = \
-	 time_allpairs \
-     time_wavefront \
-	 time_qutil_qsort \
-	 time_qarray \
-	 time_qarray_sizes \
-	 time_qpool \
-	 time_qlfqueue \
-	 time_qdqueue \
-	 time_qdqueue_sizes \
-	 time_incr_bench \
-	 time_incr_bench_pthread \
-	 time_lul_bench \
-	 time_lul_bench_pthread \
-	 time_mutex_bench \
-	 time_mutex_bench_pthread \
-	 time_spin_bench \
-	 time_spin_bench_pthread \
-	 time_chain_bench \
-	 time_chain_bench_pthread \
-	 time_thrcrt_bench \
-	 time_thrcrt_bench_pthread \
-	 time_cncthr_bench \
-	 time_cncthr_bench_pthread
+generic_benchmarks = \
+                     time_gcd \
+                     time_increments \
+                     time_febs \
+                     time_producerconsumer \
+                     time_syncvar_producerconsumer \
+                     time_threading \
+                     time_stencil_bsp \
+                     time_stencil_feb \
+                     time_stencil_pre \
+                     time_halo_swap_all \
+                     time_qt_loops \
+                     time_qt_loopaccums
+thesis_benchmarks = \
+                    time_allpairs \
+                    time_wavefront \
+                    time_qutil_qsort
+pmea09_benchmarks = \
+                    time_qarray \
+                    time_qarray_sizes \
+                    time_qpool \
+                    time_qlfqueue \
+                    time_qdqueue \
+                    time_qdqueue_sizes
+mtaap08_benchmarks = \
+                     time_incr_bench \
+                     time_incr_bench_pthread \
+                     time_lul_bench \
+                     time_lul_bench_pthread \
+                     time_mutex_bench \
+                     time_mutex_bench_pthread \
+                     time_spin_bench \
+                     time_spin_bench_pthread \
+                     time_chain_bench \
+                     time_chain_bench_pthread \
+                     time_thrcrt_bench \
+                     time_thrcrt_bench_pthread \
+                     time_cncthr_bench \
+                     time_cncthr_bench_pthread
 
-EXTRA_PROGRAMS = $(BENCHMARKS) $(UNBUILDABLE)
+benchmarks = \
+             $(generic_benchmarks) \
+             $(thesis_benchmarks) \
+             $(pmea09_benchmarks) \
+             $(mtaap08_benchmarks)
+
+EXTRA_PROGRAMS = $(benchmarks)
 
 EXTRA_DIST = \
 			 pmea09/time_tbbq.cpp \
@@ -34,86 +55,121 @@ EXTRA_DIST = \
 
 
 INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/test/
-OUTPUTDIR = $(top_builddir)/src
-QTHREADLIB = $(OUTPUTDIR)/libqthread.la
+outputdir = $(top_builddir)/src
+qthreadlib = $(outputdir)/libqthread.la
 
-LDADD = $(QTHREADLIB)
+LDADD = $(qthreadlib)
 
 if COMPILE_ROSE_EXTENSIONS
-buildall: $(BENCHMARKS)
+buildall: $(benchmarks)
 	$(MAKE) -C rose_bots_benchmarks buildall
-buildextra: $(BENCHMARKS)
+buildextra: $(benchmarks)
 	$(MAKE) -C rose_bots_benchmarks buildextra
 else
-buildall: $(BENCHMARKS)
-buildextra: $(BENCHMARKS)
+buildall: $(benchmarks)
+buildextra: $(benchmarks)
 endif
 
 time_allpairs_SOURCES = thesis/time_allpairs.c
-time_allpairs_DEPENDENCIES = $(QTHREADLIB)
+time_allpairs_DEPENDENCIES = $(qthreadlib)
 
 time_wavefront_SOURCES = thesis/time_wavefront.c
-time_wavefront_DEPENDENCIES = $(QTHREADLIB)
+time_wavefront_DEPENDENCIES = $(qthreadlib)
 
 time_qutil_qsort_SOURCES = thesis/time_qutil_qsort.c
-time_qutil_qsort_DEPENDENCIES = $(QTHREADLIB)
+time_qutil_qsort_DEPENDENCIES = $(qthreadlib)
 
 time_qarray_SOURCES = pmea09/time_qarray.c
-time_qarray_DEPENDENCIES = $(QTHREADLIB)
+time_qarray_DEPENDENCIES = $(qthreadlib)
 
 time_qarray_sizes_SOURCES = pmea09/time_qarray_sizes.c
-time_qarray_sizes_DEPENDENCIES = $(QTHREADLIB)
+time_qarray_sizes_DEPENDENCIES = $(qthreadlib)
 
 time_qpool_SOURCES = pmea09/time_qpool.c
-time_qpool_DEPENDENCIES = $(QTHREADLIB)
+time_qpool_DEPENDENCIES = $(qthreadlib)
 
 time_qlfqueue_SOURCES = pmea09/time_qlfqueue.c
-time_qlfqueue_DEPENDENCIES = $(QTHREADLIB)
+time_qlfqueue_DEPENDENCIES = $(qthreadlib)
 
 time_qdqueue_SOURCES = pmea09/time_qdqueue.c
-time_qdqueue_DEPENDENCIES = $(QTHREADLIB)
+time_qdqueue_DEPENDENCIES = $(qthreadlib)
 
 time_qdqueue_sizes_SOURCES = pmea09/time_qdqueue_sizes.c
-time_qdqueue_sizes_DEPENDENCIES = $(QTHREADLIB)
+time_qdqueue_sizes_DEPENDENCIES = $(qthreadlib)
 
 time_incr_bench_SOURCES = mtaap08/time_incr_bench.c
-time_incr_bench_DEPENDENCIES = $(QTHREADLIB)
+time_incr_bench_DEPENDENCIES = $(qthreadlib)
 
 time_incr_bench_pthread_SOURCES = mtaap08/time_incr_bench_pthread.c
-time_incr_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
+time_incr_bench_pthread_DEPENDENCIES = $(qthreadlib)
 
 time_lul_bench_SOURCES = mtaap08/time_lul_bench.c
-time_lul_bench_DEPENDENCIES = $(QTHREADLIB)
+time_lul_bench_DEPENDENCIES = $(qthreadlib)
 
 time_lul_bench_pthread_SOURCES = mtaap08/time_lul_bench_pthread.c
-time_lul_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
+time_lul_bench_pthread_DEPENDENCIES = $(qthreadlib)
 
 time_mutex_bench_SOURCES = mtaap08/time_mutex_bench.c
-time_mutex_bench_DEPENDENCIES = $(QTHREADLIB)
+time_mutex_bench_DEPENDENCIES = $(qthreadlib)
 
 time_mutex_bench_pthread_SOURCES = mtaap08/time_mutex_bench_pthread.c
-time_mutex_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
+time_mutex_bench_pthread_DEPENDENCIES = $(qthreadlib)
 
 time_spin_bench_SOURCES = mtaap08/time_spin_bench.c
-time_spin_bench_DEPENDENCIES = $(QTHREADLIB)
+time_spin_bench_DEPENDENCIES = $(qthreadlib)
 
 time_spin_bench_pthread_SOURCES = mtaap08/time_spin_bench_pthread.c
-time_spin_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
+time_spin_bench_pthread_DEPENDENCIES = $(qthreadlib)
 
 time_chain_bench_SOURCES = mtaap08/time_chain_bench.c
-time_chain_bench_DEPENDENCIES = $(QTHREADLIB)
+time_chain_bench_DEPENDENCIES = $(qthreadlib)
 
 time_chain_bench_pthread_SOURCES = mtaap08/time_chain_bench_pthread.c
-time_chain_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
+time_chain_bench_pthread_DEPENDENCIES = $(qthreadlib)
 
 time_thrcrt_bench_SOURCES = mtaap08/time_thrcrt_bench.c
-time_thrcrt_bench_DEPENDENCIES = $(QTHREADLIB)
+time_thrcrt_bench_DEPENDENCIES = $(qthreadlib)
 
 time_thrcrt_bench_pthread_SOURCES = mtaap08/time_thrcrt_bench_pthread.c
-time_thrcrt_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
+time_thrcrt_bench_pthread_DEPENDENCIES = $(qthreadlib)
 
 time_cncthr_bench_SOURCES = mtaap08/time_cncthr_bench.c
-time_cncthr_bench_DEPENDENCIES = $(QTHREADLIB)
+time_cncthr_bench_DEPENDENCIES = $(qthreadlib)
 
 time_cncthr_bench_pthread_SOURCES = mtaap08/time_cncthr_bench_pthread.c
-time_cncthr_bench_pthread_DEPENDENCIES = $(QTHREADLIB)
+time_cncthr_bench_pthread_DEPENDENCIES = $(qthreadlib)
+
+time_gcd_SOURCES = generic/time_gcd.c
+
+time_increments_SOURCES = generic/time_increments.c
+time_increments_DEPENDENCIES = $(qthreadlib)
+
+time_febs_SOURCES = generic/time_febs.c
+time_febs_DEPENDENCIES = $(qthreadlib)
+
+time_producerconsumer_SOURCES = generic/time_producerconsumer.c
+time_producerconsumer_DEPENDENCIES = $(qthreadlib)
+
+time_syncvar_producerconsumer_SOURCES = generic/time_syncvar_producerconsumer.c
+time_syncvar_producerconsumer_DEPENDENCIES = $(qthreadlib)
+
+time_threading_SOURCES = generic/time_threading.c
+time_threading_DEPENDENCIES = $(qthreadlib)
+
+time_stencil_bsp_SOURCES = generic/time_stencil_bsp.c
+time_stencil_bsp_DEPENDENCIES = $(qthreadlib)
+
+time_stencil_feb_SOURCES = generic/time_stencil_feb.c
+time_stencil_feb_DEPENDENCIES = $(qthreadlib)
+
+time_stencil_pre_SOURCES = generic/time_stencil_pre.c
+time_stencil_pre_DEPENDENCIES = $(qthreadlib)
+
+time_halo_swap_all_SOURCES = generic/time_halo_swap_all.c
+time_halo_swap_all_DEPENDENCIES = $(qthreadlib)
+
+time_qt_loops_SOURCES = generic/time_qt_loops.c
+time_qt_loops_DEPENDENCIES = $(qthreadlib)
+
+time_qt_loopaccums_SOURCES = generic/time_qt_loopaccums.c
+time_qt_loopaccums_DEPENDENCIES = $(qthreadlib)
