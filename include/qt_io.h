@@ -46,7 +46,7 @@ typedef struct _qt_blocking_queue_node_s {
 extern qt_mpool syscall_job_pool;
 
 void qt_blocking_subsystem_init(void);
-void qt_process_blocking_calls(void);
+int  qt_process_blocking_calls(void);
 void qt_blocking_subsystem_enqueue(qt_blocking_queue_node_t *job);
 
 void qt_blocking_subsystem_begin_blocking_action(void);

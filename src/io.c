@@ -98,7 +98,7 @@ static void qt_blocking_subsystem_spawnworker(void)
         perror("qt_blocking_subsystem_init spawning proxy thread");
         abort();
     }
-    qthread_incr(&io_worker_count, 1);
+    (void)qthread_incr(&io_worker_count, 1);
     pthread_detach(thr);
 }
 
