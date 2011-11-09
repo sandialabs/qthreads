@@ -78,7 +78,9 @@ static void *qt_blocking_subsystem_proxy_thread(void *arg)
 {   /*{{{*/
     pthread_setspecific(shepherd_structs, (void *)1);
     while (proxy_exit == 0) {
-        qt_process_blocking_calls();
+        if (qt_process_blocking_calls()) {
+            break;
+        }
         COMPILER_FENCE;
     }
     qthread_debug(IO_DETAILS, "proxy_exit = %i, exiting\n", proxy_exit);
@@ -88,8 +90,9 @@ static void *qt_blocking_subsystem_proxy_thread(void *arg)
 
 static void qt_blocking_subsystem_spawnworker(void)
 {
-    int r;
+    int       r;
     pthread_t thr;
+
     if ((r = pthread_create(&thr, NULL, qt_blocking_subsystem_proxy_thread, NULL)) != 0) {
         fprintf(stderr, "qt_blocking_subsystem_init: pthread_create() failed (%d)\n", r);
         perror("qt_blocking_subsystem_init spawning proxy thread");
@@ -118,7 +121,7 @@ void INTERNAL qt_blocking_subsystem_init(void)
     qthread_internal_cleanup(qt_blocking_subsystem_internal_freemem);
 } /*}}}*/
 
-void INTERNAL qt_process_blocking_calls(void)
+int INTERNAL qt_process_blocking_calls(void)
 {   /*{{{*/
     qt_blocking_queue_node_t *item;
 
@@ -138,13 +141,17 @@ void INTERNAL qt_process_blocking_calls(void)
                 qthread_debug(IO_BEHAVIOR, "condwait timed out\n");
                 if (theQueue.head == NULL) {
                     qthread_debug(IO_BEHAVIOR, "------------------------------------- exit()\n");
+#ifdef QTHREAD_DEBUG
                     qthread_debug(IO_BEHAVIOR, "worker_count post exit is %u\n", (unsigned)qthread_incr(&io_worker_count, -1) - 1);
+#else
+                    (void)qthread_incr(&io_worker_count, -1);
+#endif
                     QTHREAD_UNLOCK(&theQueue.lock);
-                    pthread_exit(NULL);
+                    return 1;
                 } else {
                     QTHREAD_UNLOCK(&theQueue.lock);
+                    return 0;
                 }
-                return;
 
             case EINVAL:
                 /* chances are, this is because ts is in the past */
@@ -349,6 +356,7 @@ void INTERNAL qt_process_blocking_calls(void)
     }
     /* and now, re-queue */
     qt_threadqueue_enqueue(item->thread->rdata->shepherd_ptr->ready, item->thread, item->thread->rdata->shepherd_ptr);
+    return 0;
 } /*}}}*/
 
 void INTERNAL qt_blocking_subsystem_enqueue(qt_blocking_queue_node_t *job)
