@@ -11,6 +11,7 @@ SUBDIRS =
 
 libqthread_la_SOURCES = \
 	cacheline.c \
+	envariables.c \
 	qalloc.c \
 	qloop.c \
 	qt_c_hash.c \

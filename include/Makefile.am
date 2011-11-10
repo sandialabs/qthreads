@@ -25,6 +25,7 @@ noinst_HEADERS = \
 	qt_blocking_structs.h \
 	qt_context.h \
 	qt_debug.h \
+	qt_envariables.h \
 	qt_gcd.h \
 	qt_hash.h \
 	qt_hazardptrs.h \
