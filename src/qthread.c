@@ -791,7 +791,7 @@ int qthread_initialize(void)
 
     qt_affinity_init(&nshepherds, &nworkerspershep);
 
-    if (qt_internal_get_env_num("INFO",0,1) == 1) {
+    if (qt_internal_get_env_num("INFO", 0, 1) == 1) {
         fprintf(stderr, "Using %i Shepherds\n", (int)nshepherds);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
         fprintf(stderr, "Using %i Workers per Shepherd\n", (int)nworkerspershep);
@@ -864,7 +864,7 @@ int qthread_initialize(void)
                                                        QTHREAD_DEFAULT_STACK_SIZE,
                                                        QTHREAD_DEFAULT_STACK_SIZE);
     qthread_debug(CORE_DETAILS, "qthread stack size: %u\n", qlib->qthread_stack_size);
-    if (qt_internal_get_env_num("INFO",0,1) == 1) {
+    if (qt_internal_get_env_num("INFO", 0, 1) == 1) {
         fprintf(stderr, "Using %u byte stack size.\n", qlib->qthread_stack_size);
     }
 
@@ -1091,7 +1091,7 @@ int qthread_initialize(void)
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 # ifdef QTHREAD_RCRTOOL
     QTHREAD_FASTLOCK_INIT(rcrtool_lock);
-    rcrtoollevel = qt_internal_get_env_num("RCRTOOL_LEVEL", 0, 0);
+    rcrtoollevel    = qt_internal_get_env_num("RCRTOOL_LEVEL", 0, 0);
     rcrtoolloglevel = qt_internal_get_env_num("RCRTOOL_LOG_LEVEL", 0, 0);
     if (rcrtoollevel > 0) {
         qlib->nworkers_active = nshepherds * nworkerspershep - 1;
@@ -2809,12 +2809,11 @@ void qt_omp_parallel_region_destroy()
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
 
 /* These are just accessor functions */
-unsigned qthread_id(void)
+unsigned int qthread_id(void)
 {                      /*{{{ */
     qthread_t *t = qthread_internal_self();
 
-    qthread_debug(THREAD_CALLS, "tid(%u)\n",
-                  t ? t->thread_id : (unsigned)-1);
+    qthread_debug(THREAD_CALLS, "tid(%u)\n", t ? t->thread_id : (unsigned int)-1);
 #ifdef QTHREAD_NONLAZY_THREADIDS
     return t ? t->thread_id : (unsigned int)-1;
 
@@ -2825,9 +2824,8 @@ unsigned qthread_id(void)
     if (t->thread_id != (unsigned int)-1) {
         return t->thread_id;
     }
-    ((qthread_t *)t)->thread_id =
-        qthread_internal_incr(&(qlib->max_thread_id),
-                              &qlib->max_thread_id_lock, 1);
+    t->thread_id = qthread_internal_incr(&(qlib->max_thread_id),
+                                         &qlib->max_thread_id_lock, 1);
     return t->thread_id;
 #endif /* ifdef QTHREAD_NONLAZY_THREADIDS */
 }                      /*}}} */
