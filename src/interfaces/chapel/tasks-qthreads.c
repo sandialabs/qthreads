@@ -174,7 +174,7 @@ void chpl_task_init(int32_t  numThreadsPerLocale,
         snprintf(newenv_stack, 99, "QT_STACK_SIZE=%lu",
                  (unsigned long)callStackSize);
         putenv(newenv_stack);
-    } else if (getenv("QT_STACK_SIZE") == NULL) {
+    } else if (qt_internal_get_env_str("STACK_SIZE") == NULL) {
         callStackSize = 32 * 1024 * sizeof(size_t);
         snprintf(newenv_stack, 99, "QT_STACK_SIZE=%lu",
                  (unsigned long)callStackSize);
