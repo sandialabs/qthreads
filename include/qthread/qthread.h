@@ -49,6 +49,7 @@
 #else
 # define QTHREAD_OVERFLOW -6
 #endif
+#define QTHREAD_OPFAIL            -7
 #define NO_SHEPHERD ((qthread_shepherd_id_t)-1)
 #define NO_WORKER   ((qthread_worker_id_t)-1)
 
