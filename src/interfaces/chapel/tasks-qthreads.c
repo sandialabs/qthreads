@@ -33,6 +33,7 @@
 #include "qthread/qtimer.h"
 #include "qthread_innards.h" // not strictly necessary (yet)
 #include "qt_atomics.h" /* for SPINLOCK_BODY() */
+#include "qt_envariables.h"
 
 #include <pthread.h>
 
@@ -148,21 +149,21 @@ void chpl_task_init(int32_t  numThreadsPerLocale,
     // 2) QTHREAD_NUM_SHEPHERDS
     // 3) chpl_numCoresOnThisLocale()
     if (numThreadsPerLocale != 0) {
-        snprintf(newenv_sheps, 99, "QTHREAD_NUM_SHEPHERDS=%i",
+        snprintf(newenv_sheps, 99, "QT_NUM_SHEPHERDS=%i",
                  (int)numThreadsPerLocale);
         putenv(newenv_sheps);
-        putenv("QTHREAD_NUM_WORKERS_PER_SHEPHERD=1");
+        putenv("QT_NUM_WORKERS_PER_SHEPHERD=1");
     } else if (getenv("QTHREAD_NUM_SHEPHERDS") != NULL) {
-        if (getenv("QTHREAD_NUM_WORKERS_PER_SHEPHERD") == NULL) {
-            putenv("QTHREAD_NUM_WORKERS_PER_SHEPHERD=1");
+        if (qt_internal_get_env_num("NUM_WORKERS_PER_SHEPHERD", -1, -1) == -1) {
+            putenv("QT_NUM_WORKERS_PER_SHEPHERD=1");
         }
     } else {
         numThreadsPerLocale = chpl_numCoresOnThisLocale();
 
-        snprintf(newenv_sheps, 99, "QTHREAD_NUM_SHEPHERDS=%i",
+        snprintf(newenv_sheps, 99, "QT_NUM_SHEPHERDS=%i",
                  (int)numThreadsPerLocale);
         putenv(newenv_sheps);
-        putenv("QTHREAD_NUM_WORKERS_PER_SHEPHERD=1");
+        putenv("QT_NUM_WORKERS_PER_SHEPHERD=1");
     }
 
     // Precendence (high-to-low):
@@ -170,19 +171,19 @@ void chpl_task_init(int32_t  numThreadsPerLocale,
     // 2) QTHREAD_STACK_SIZE
     // 3) Chapel default
     if (callStackSize != 0) {
-        snprintf(newenv_stack, 99, "QTHREAD_STACK_SIZE=%lu",
+        snprintf(newenv_stack, 99, "QT_STACK_SIZE=%lu",
                  (unsigned long)callStackSize);
         putenv(newenv_stack);
-    } else if (getenv("QTHREAD_STACK_SIZE") == NULL) {
+    } else if (getenv("QT_STACK_SIZE") == NULL) {
         callStackSize = 32 * 1024 * sizeof(size_t);
-        snprintf(newenv_stack, 99, "QTHREAD_STACK_SIZE=%lu",
+        snprintf(newenv_stack, 99, "QT_STACK_SIZE=%lu",
                  (unsigned long)callStackSize);
         putenv(newenv_stack);
     }
 
     // Turn on informative Qthreads setting messages with Chapel's verbose flag
     if (verbosity == 2) {
-        putenv("QTHREAD_INFO=1");
+        putenv("QT_INFO=1");
     }
 
     pthread_create(&initer, NULL, initializer, NULL);

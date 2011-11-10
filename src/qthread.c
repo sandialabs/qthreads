@@ -709,9 +709,9 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 {                      /*{{{ */
     char newenv[100];
 
-    snprintf(newenv, 99, "QTHREAD_NUM_SHEPHERDS=%i", (int)nshepherds);
+    snprintf(newenv, 99, "QT_NUM_SHEPHERDS=%i", (int)nshepherds);
     putenv(newenv);
-    putenv("QTHREAD_NUM_WORKERS_PER_SHEPHERD=1");
+    putenv("QT_NUM_WORKERS_PER_SHEPHERD=1");
     return qthread_initialize();
 }                      /*}}} */
 
@@ -753,7 +753,7 @@ int qthread_initialize(void)
 #ifdef QTHREAD_DEBUG
     QTHREAD_FASTLOCK_INIT(output_lock);
     {
-        unsigned long dl = qt_internal_get_env_num("QTHREAD_DEBUG_LEVEL", 0, 0);
+        unsigned long dl = qt_internal_get_env_num("DEBUG_LEVEL", 0, 0);
 # ifdef SST
         dl = 7;
 # endif
@@ -769,9 +769,9 @@ int qthread_initialize(void)
     qlib = (qlib_t)malloc(sizeof(struct qlib_s));
     qassert_ret(qlib, QTHREAD_MALLOC_ERROR);
 
-    nshepherds = qt_internal_get_env_num("QTHREAD_NUM_SHEPHERDS", 0, 0);
+    nshepherds = qt_internal_get_env_num("NUM_SHEPHERDS", 0, 0);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    nworkerspershep = qt_internal_get_env_num("QTHREAD_NUM_WORKERS_PER_SHEPHERD", 0, 0);
+    nworkerspershep = qt_internal_get_env_num("NUM_WORKERS_PER_SHEPHERD", 0, 0);
     if (nworkerspershep > 0) {
         if (nshepherds == 0) {
             fprintf(stderr, "Number of shepherds not specified - number of workers may be ignored\n");
@@ -791,7 +791,7 @@ int qthread_initialize(void)
 
     qt_affinity_init(&nshepherds, &nworkerspershep);
 
-    if (getenv("QTHREAD_INFO")) {
+    if (qt_internal_get_env_num("INFO",0,1) == 1) {
         fprintf(stderr, "Using %i Shepherds\n", (int)nshepherds);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
         fprintf(stderr, "Using %i Workers per Shepherd\n", (int)nworkerspershep);
@@ -860,11 +860,11 @@ int qthread_initialize(void)
     QTHREAD_FASTLOCK_INIT(qlib->nshepherds_active_lock);
 #endif
 
-    qlib->qthread_stack_size = qt_internal_get_env_num("QTHREAD_STACK_SIZE",
+    qlib->qthread_stack_size = qt_internal_get_env_num("STACK_SIZE",
                                                        QTHREAD_DEFAULT_STACK_SIZE,
                                                        QTHREAD_DEFAULT_STACK_SIZE);
     qthread_debug(CORE_DETAILS, "qthread stack size: %u\n", qlib->qthread_stack_size);
-    if (getenv("QTHREAD_INFO")) {
+    if (qt_internal_get_env_num("INFO",0,1) == 1) {
         fprintf(stderr, "Using %u byte stack size.\n", qlib->qthread_stack_size);
     }
 
@@ -927,11 +927,11 @@ int qthread_initialize(void)
     }
 
     // Set task argument buffer size
-    qlib->qthread_argcopy_size = qt_internal_get_env_num("QTHREAD_ARGCOPY_SIZE", ARGCOPY_DEFAULT, 0);
+    qlib->qthread_argcopy_size = qt_internal_get_env_num("ARGCOPY_SIZE", ARGCOPY_DEFAULT, 0);
     qthread_debug(CORE_DETAILS, "qthread task argcopy size: %u\n", (unsigned)qlib->qthread_argcopy_size);
 
     // Set task-local data size
-    qlib->qthread_tasklocal_size = qt_internal_get_env_num("QTHREAD_TASKLOCAL_SIZE",
+    qlib->qthread_tasklocal_size = qt_internal_get_env_num("TASKLOCAL_SIZE",
                                                            TASKLOCAL_DEFAULT,
                                                            sizeof(void *));
     qthread_debug(CORE_DETAILS, "qthread task-local size: %u\n", qlib->qthread_tasklocal_size);
@@ -1091,8 +1091,8 @@ int qthread_initialize(void)
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 # ifdef QTHREAD_RCRTOOL
     QTHREAD_FASTLOCK_INIT(rcrtool_lock);
-    rcrtoollevel = qt_internal_get_env_num("QTHREAD_RCRTOOL_LEVEL", 0, 0);
-    rcrtoolloglevel = qt_internal_get_env_num("QTHREAD_RCRTOOL_LOG_LEVEL", 0, 0);
+    rcrtoollevel = qt_internal_get_env_num("RCRTOOL_LEVEL", 0, 0);
+    rcrtoolloglevel = qt_internal_get_env_num("RCRTOOL_LOG_LEVEL", 0, 0);
     if (rcrtoollevel > 0) {
         qlib->nworkers_active = nshepherds * nworkerspershep - 1;
     } else {
