@@ -7,6 +7,7 @@
 #include "qthread_innards.h"
 #include "qt_affinity.h"
 #include "qt_debug.h"
+#include "qt_envariables.h"
 #include "shufflesheps.h"
 
 static hwloc_topology_t topology;
@@ -82,7 +83,7 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
         HWLOC_OBJ_CACHE, HWLOC_OBJ_CACHE, HWLOC_OBJ_CACHE, HWLOC_OBJ_CACHE
     };
     {
-        char *qsh = getenv("QTHREAD_SHEPHERD_BOUNDARY");
+        char *qsh = qt_internal_get_env_str("SHEPHERD_BOUNDARY");
 
         if (qsh) {
             for (int ti = 0; ti < numtypes; ++ti) {
@@ -95,7 +96,7 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
             }
         }
 
-        qsh = getenv("QTHREAD_WORKER_UNIT");
+        qsh = qt_internal_get_env_str("WORKER_UNIT");
         if (qsh) {
             for (int ti = 0; ti < numtypes; ++ti) {
                 if (!strncmp(typenames[ti], qsh, strlen(typenames[ti]))) {

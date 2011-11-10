@@ -909,7 +909,7 @@ int qthread_initialize(void)
 #endif
     }
     {
-        char *aff = getenv("QTHREAD_AFFINITY");
+        char *aff = qt_internal_get_env_str("AFFINITY");
 
         if (aff && !strncmp(aff, "no", 3)) {
             qaffinity = 0;
@@ -1194,7 +1194,7 @@ int qthread_initialize(void)
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
 
 #ifdef QTHREAD_MULTINODE
-    if (NULL != getenv("QTHREAD_MULTINODE")) {
+    if (NULL != qt_internal_get_env_str("MULTINODE")) {
         qthread_multinode_initialize();
     }
 #endif

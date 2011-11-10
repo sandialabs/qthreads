@@ -18,6 +18,7 @@
 #include "qthread_asserts.h"
 #include "qthread_prefetch.h"
 #include "qt_threadqueues.h"
+#include "qt_envariables.h"
 
 #ifndef NOINLINE
 #define NOINLINE __attribute__ ((noinline))
@@ -633,18 +634,7 @@ static QINLINE long qthread_steal_chunksize(void)
     static long chunksize = 0;
 
     if (chunksize == 0) {
-        char *qsc  = getenv("QTHREAD_STEAL_CHUNKSIZE");
-        char *qsce = NULL;
-
-        if (qsc) {
-            chunksize = strtol(qsc, &qsce, 0);
-            if ((qsce == NULL) || (qsce == qsc)) {
-                fprintf(stderr, "unparseable steal chunksize (%s)\n", qsc);
-                chunksize = 1;
-            }
-        } else {
-            chunksize = qlib->nworkerspershep;
-        }
+        chunksize = qt_internal_get_env_num("STEAL_CHUNKSIZE", qlib->nworkerspershep, 1);
     }
 
     return chunksize;

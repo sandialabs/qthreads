@@ -153,8 +153,8 @@ void chpl_task_init(int32_t  numThreadsPerLocale,
                  (int)numThreadsPerLocale);
         putenv(newenv_sheps);
         putenv("QT_NUM_WORKERS_PER_SHEPHERD=1");
-    } else if (getenv("QTHREAD_NUM_SHEPHERDS") != NULL) {
-        if (qt_internal_get_env_num("NUM_WORKERS_PER_SHEPHERD", -1, -1) == -1) {
+    } else if (qt_internal_get_env_str("NUM_SHEPHERDS") != NULL) {
+        if (qt_internal_get_env_str("NUM_WORKERS_PER_SHEPHERD") == NULL) {
             putenv("QT_NUM_WORKERS_PER_SHEPHERD=1");
         }
     } else {

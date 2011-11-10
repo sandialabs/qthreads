@@ -14,6 +14,7 @@
 #include "runtime.h"
 #include "qt_mpool.h"
 #include "qt_debug.h"
+#include "qt_envariables.h"
 
 struct recv_block_t {
     void *start;
@@ -46,21 +47,6 @@ static pthread_t progress_thread;
 static qt_mpool mpool;
 static int shutdown_msg = 1;
 
-#define GET_ENV_NUM(envariable, num, dflt, zerodflt) do {                \
-        char         *str = getenv(envariable);                          \
-        unsigned long tmp = dflt;                                        \
-        if (str && *str) {                                               \
-            char *errptr;                                                \
-            tmp = strtoul(str, &errptr, 0);                              \
-            if (*errptr != 0) {                                          \
-                fprintf(stderr, "unparsable "envariable " (%s)\n", str); \
-                tmp = dflt;                                              \
-            }                                                            \
-            if (tmp == 0) { tmp = zerodflt; }                            \
-        }                                                                \
-        num = tmp;                                                       \
-} while (0)
-
 int
 qthread_internal_net_driver_initialize(void)
 {
@@ -73,9 +59,9 @@ qthread_internal_net_driver_initialize(void)
 
     qthread_debug(MULTINODE_CALLS, "begin internal_net_driver_initialize\n");
 
-    GET_ENV_NUM("QTHREAD_PORTALS_RECV_BLOCKS", num_recv_blocks, 3, 3);
-    GET_ENV_NUM("QTHREAD_PORTALS_RECV_BLOCK_SIZE", size_recv_block, 1024 * 1024, 1024 * 1024);
-    GET_ENV_NUM("QTHREAD_PORTALS_MAX_MSG_SIZE", max_msg_size, 4096, 4096);
+    num_recv_blocks = qt_internal_get_env_num("PORTALS_RECV_BLOCKS", 3, 3);
+    size_recv_block = qt_internal_get_env_num("PORTALS_RECV_BLOCK_SIZE", 1024 * 1024, 1024 * 1024);
+    max_msg_size = qt_internal_get_env_num("PORTALS_MAX_MSG_SIZE", 4096, 4096);
 
     mpool = qt_mpool_create(sizeof(struct net_pkt_t));
 
