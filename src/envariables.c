@@ -9,7 +9,7 @@
 #include "qt_envariables.h"
 #include "qt_debug.h"
 
-char *INTERNAL qt_internal_get_env_str(const char *envariable)
+const char INTERNAL *qt_internal_get_env_str(const char *envariable)
 {
     char        mod_envariable[100];
     const char *str;
@@ -35,7 +35,7 @@ unsigned long INTERNAL qt_internal_get_env_num(const char   *envariable,
                                                unsigned long dflt,
                                                unsigned long zerodflt)
 {
-    char         *str = qt_internal_get_env_str(envariable);
+    const char   *str = qt_internal_get_env_str(envariable);
     unsigned long tmp = dflt;
 
     if (str && *str) {
