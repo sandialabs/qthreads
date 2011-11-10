@@ -102,12 +102,12 @@ chpl_bool chpl_sync_isFull(void            *val_ptr,
                            chpl_sync_aux_t *s,
                            chpl_bool        simple_sync_var)
 {
-    return s->is_full.u.s.data;
+    return s->is_full;
 }
 
 void chpl_sync_initAux(chpl_sync_aux_t *s)
 {
-    s->is_full      = SYNCVAR_INITIALIZER;
+    s->is_full      = 0;
     s->signal_empty = SYNCVAR_EMPTY_INITIALIZER;
     s->signal_full  = SYNCVAR_EMPTY_INITIALIZER;
 }
