@@ -89,7 +89,7 @@ static void *qt_blocking_subsystem_proxy_thread(void *arg)
 } /*}}}*/
 
 static void qt_blocking_subsystem_spawnworker(void)
-{
+{   /*{{{*/
     int       r;
     pthread_t thr;
 
@@ -100,7 +100,7 @@ static void qt_blocking_subsystem_spawnworker(void)
     }
     (void)qthread_incr(&io_worker_count, 1);
     pthread_detach(thr);
-}
+} /*}}}*/
 
 void INTERNAL qt_blocking_subsystem_init(void)
 {   /*{{{*/
@@ -110,7 +110,7 @@ void INTERNAL qt_blocking_subsystem_init(void)
     theQueue.head   = NULL;
     theQueue.tail   = NULL;
     io_worker_count = 0;
-    io_worker_max = qt_internal_get_env_num("MAX_IO_WORKERS", 10, 1);
+    io_worker_max   = qt_internal_get_env_num("MAX_IO_WORKERS", 10, 1);
     qassert(pthread_key_create(&IO_task_struct, NULL), 0);
     qassert(pthread_mutex_init(&theQueue.lock, NULL), 0);
     qassert(pthread_cond_init(&theQueue.notempty, NULL), 0);

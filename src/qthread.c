@@ -1739,13 +1739,28 @@ void qthread_enable_shepherd(const qthread_shepherd_id_t shep)
 
 qthread_t INTERNAL *qthread_internal_self(void)
 {                      /*{{{ */
+    extern pthread_key_t IO_task_struct;
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t *worker = qthread_internal_getworker();
-    return worker ? worker->current : NULL;
+    switch ((uintptr_t)worker) {
+        case 0:
+            return NULL;
+        case 1:
+            return pthread_getspecific(IO_task_struct);
+        default:
+            return worker->current;
+    }
 
 #else
     qthread_shepherd_t *shep = qthread_internal_getshep();
-    return shep ? shep->current : NULL;
+    switch ((uintptr_t)shep) {
+        case 0:
+            return NULL;
+        case 1:
+            return pthread_getspecific(IO_task_struct);
+        default:
+            return shep->current;
+    }
 #endif
 }                      /*}}} */
 
@@ -2826,6 +2841,11 @@ unsigned int qthread_id(void)
     }
     t->thread_id = qthread_internal_incr(&(qlib->max_thread_id),
                                          &qlib->max_thread_id_lock, 1);
+    if (QTHREAD_UNLIKELY(t->thread_id == (unsigned int)-1)) {
+        /* yes, this is wrapping around, but... thread_id should be prevented from being -1 */
+        t->thread_id = qthread_internal_incr(&(qlib->max_thread_id),
+                                             &qlib->max_thread_id_lock, 1);
+    }
     return t->thread_id;
 #endif /* ifdef QTHREAD_NONLAZY_THREADIDS */
 }                      /*}}} */
