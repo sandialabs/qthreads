@@ -909,7 +909,7 @@ int qthread_initialize(void)
 #endif
     }
     {
-        char *aff = qt_internal_get_env_str("AFFINITY");
+        const char *aff = qt_internal_get_env_str("AFFINITY");
 
         if (aff && !strncmp(aff, "no", 3)) {
             qaffinity = 0;

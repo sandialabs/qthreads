@@ -986,7 +986,6 @@ int INTERNAL qthread_syncvar_writeEF_nb(syncvar_t *restrict const      dest,
                                         const uint64_t *restrict const src)
 {                                      /*{{{ */
     eflags_t   e = { 0, 0, 0, 0, 0 };
-    uint64_t   ret;
     const int  lockbin = QTHREAD_CHOOSE_STRIPE(dest);
     qthread_t *me      = qthread_internal_self();
 
@@ -996,7 +995,7 @@ int INTERNAL qthread_syncvar_writeEF_nb(syncvar_t *restrict const      dest,
     if (!me) {
         return qthread_syncvar_blocker_func(dest, (void *)src, WRITEEF_NB);
     }
-    ret = qthread_mwaitc(dest, SYNCFEB_EMPTY, 1, &e);
+    (void)qthread_mwaitc(dest, SYNCFEB_EMPTY, 1, &e);
     if (e.cf) {                        /* there was a timeout */
         qthread_debug(SYNCVAR_BEHAVIOR, "tid %u non-blocking fail\n", me->thread_id);
         return QTHREAD_OPFAIL;
