@@ -5,6 +5,7 @@
 #include <stdlib.h> /* for getenv() and strtoul() */
 #include <stdio.h>  /* for fprintf() */
 #include <assert.h>
+#include <string.h>
 
 #include "qt_visibility.h"
 #include "qt_envariables.h"
