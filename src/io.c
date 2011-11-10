@@ -36,8 +36,7 @@
 #include "qthread_innards.h"
 #include "qt_threadqueues.h"
 #include "qt_debug.h"
-
-#define MAX_WORKERS 10
+#include "qt_envariables.h"
 
 typedef struct {
     qt_blocking_queue_node_t *head;
@@ -49,6 +48,7 @@ typedef struct {
 
 static qt_blocking_queue_t theQueue;
 static saligned_t          io_worker_count = -1;
+static aligned_t           io_worker_max   = 10;
 #if !defined(UNPOOLED)
 qt_mpool syscall_job_pool = NULL;
 #endif
@@ -110,6 +110,7 @@ void INTERNAL qt_blocking_subsystem_init(void)
     theQueue.head   = NULL;
     theQueue.tail   = NULL;
     io_worker_count = 0;
+    io_worker_max = qt_internal_get_env_num("QTHREAD_MAX_IO_WORKERS", 10, 1);
     qassert(pthread_key_create(&IO_task_struct, NULL), 0);
     qassert(pthread_mutex_init(&theQueue.lock, NULL), 0);
     qassert(pthread_cond_init(&theQueue.notempty, NULL), 0);
@@ -377,7 +378,7 @@ void INTERNAL qt_blocking_subsystem_enqueue(qt_blocking_queue_node_t *job)
     theQueue.length++;
     qthread_debug(IO_DETAILS, "2) theQueue.head = %p, .tail = %p, job = %p\n", theQueue.head, theQueue.tail, job);
     if (io_worker_count < theQueue.length) {
-        if (io_worker_count < MAX_WORKERS) {
+        if (io_worker_count < io_worker_max) {
             qthread_debug(IO_DETAILS, "++++++++++++++++++++ I think I oughta spawn a worker\n");
             qt_blocking_subsystem_spawnworker();
         }
