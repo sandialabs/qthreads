@@ -52,6 +52,7 @@ static aligned_t           io_worker_max   = 10;
 #if !defined(UNPOOLED)
 qt_mpool syscall_job_pool = NULL;
 #endif
+static unsigned long timeout    = 100; // in microseconds
 static int           proxy_exit = 0;
 pthread_key_t        IO_task_struct;
 extern pthread_key_t shepherd_structs;
@@ -111,6 +112,7 @@ void INTERNAL qt_blocking_subsystem_init(void)
     theQueue.tail   = NULL;
     io_worker_count = 0;
     io_worker_max   = qt_internal_get_env_num("MAX_IO_WORKERS", 10, 1);
+    timeout         = qt_internal_get_env_num("IO_TIMEOUT", 100, 100);
     qassert(pthread_key_create(&IO_task_struct, NULL), 0);
     qassert(pthread_mutex_init(&theQueue.lock, NULL), 0);
     qassert(pthread_cond_init(&theQueue.notempty, NULL), 0);
@@ -135,7 +137,7 @@ int INTERNAL qt_process_blocking_calls(void)
         COMPILER_FENCE;
         gettimeofday(&tv, NULL);
         ts.tv_sec  = tv.tv_sec;
-        ts.tv_nsec = (tv.tv_usec + 100) * 1000;
+        ts.tv_nsec = (tv.tv_usec + timeout) * 1000;
         ret        = pthread_cond_timedwait(&theQueue.notempty, &theQueue.lock, &ts);
         switch(ret) {
             case ETIMEDOUT:
