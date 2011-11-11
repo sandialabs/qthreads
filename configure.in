@@ -459,8 +459,8 @@ AS_IF([test "x$qthread_cv_asm_arch" = "xPOWERPC32"],
       [sizeof_aligned_t=8
        align_aligned_t=8])
 AS_IF([test "x$enable_64bit_aligned_t" = "xyes"], [sizeof_aligned_t="8"
-                                                   align_aligned_t="8"],
-      [test "x$enable_64bit_aligned_t" = "xno"],  [sizeof_aligned_t="$ac_cv_sizeof_int"
+                                                   align_aligned_t="8"])
+AS_IF([test "x$enable_64bit_aligned_t" = "xno"],  [sizeof_aligned_t="$ac_cv_sizeof_int"
                                                    align_aligned_t="$ac_cv_sizeof_int"])
 
 AC_DEFINE_UNQUOTED([QTHREAD_SIZEOF_ALIGNED_T], [$sizeof_aligned_t], [size of aligned_t])
@@ -487,8 +487,8 @@ AS_IF([test "x$qthread_implementation" = "xsst"],
           [AC_DEFINE([QTHREAD_SST_PRIMITIVES],[1],[Define to use the SST primitives])
            enable_pooled_memory="no"
            LDFLAGS="$LDFLAGS $SST_LIBS"
-           AC_SEARCH_LIBS([ceil],[m_ppc],[],[AC_MSG_ERROR([Cannot find ceil()])])],
-      [test "x$qthread_implementation" = "xunix"],
+           AC_SEARCH_LIBS([ceil],[m_ppc],[],[AC_MSG_ERROR([Cannot find ceil()])])])
+AS_IF([test "x$qthread_implementation" = "xunix"],
           [AC_SEARCH_LIBS([ceil],[m],[],[AC_MSG_ERROR([Cannot find ceil()])])])
 
 AS_IF([test "x$enable_pooled_memory" = "xno"],
@@ -551,10 +551,10 @@ AS_IF([test "x$have_assembly" = "x0" -a "x$qthread_cv_atomic_CAS32" = "xno" -a "
 	      [AC_MSG_NOTICE(Compiling on a compiler without inline assembly support and without builtin atomics. This will be slow!)
 	       AS_IF([test "x$enable_hardware_increments" = x],
 				     [AC_MSG_NOTICE(turning on software increments ($have_assembly))
-			          enable_hardware_increments=no],
-				 [test "x$enable_hardware_increments" = "xyes"],
+			          enable_hardware_increments=no])
+		   AS_IF([test "x$enable_hardware_increments" = "xyes"],
 				     [AC_MSG_ERROR([No assembly available and software increments disabled.])])],
- 	  [test "x$enable_hardware_increments" = x], [enable_hardware_increments="yes"])
+ 	  [AS_IF([test "x$enable_hardware_increments" = x], [enable_hardware_increments="yes"])])
 
 AS_IF([test "x$enable_hardware_increments" = "xno"],
       [AC_DEFINE([QTHREAD_MUTEX_INCREMENT], [1], [Use mutexes instead of assembly for atomic increment])])
