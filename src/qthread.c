@@ -746,6 +746,7 @@ int qthread_initialize(void)
 {                      /*{{{ */
     int                   r;
     size_t                i;
+    uint_fast8_t          print_info      = 0;
     uint_fast8_t          need_sync       = 1;
     qthread_shepherd_id_t nshepherds      = 0;
     qthread_worker_id_t   nworkerspershep = 0;
@@ -791,7 +792,8 @@ int qthread_initialize(void)
 
     qt_affinity_init(&nshepherds, &nworkerspershep);
 
-    if (qt_internal_get_env_num("INFO", 0, 1) == 1) {
+    print_info = qt_internal_get_env_num("INFO", 0, 1);
+    if (print_info) {
         fprintf(stderr, "Using %i Shepherds\n", (int)nshepherds);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
         fprintf(stderr, "Using %i Workers per Shepherd\n", (int)nworkerspershep);
@@ -864,7 +866,7 @@ int qthread_initialize(void)
                                                        QTHREAD_DEFAULT_STACK_SIZE,
                                                        QTHREAD_DEFAULT_STACK_SIZE);
     qthread_debug(CORE_DETAILS, "qthread stack size: %u\n", qlib->qthread_stack_size);
-    if (qt_internal_get_env_num("INFO", 0, 1) == 1) {
+    if (print_info) {
         fprintf(stderr, "Using %u byte stack size.\n", qlib->qthread_stack_size);
     }
 

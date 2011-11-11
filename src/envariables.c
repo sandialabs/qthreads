@@ -11,26 +11,65 @@
 #include "qt_envariables.h"
 #include "qt_debug.h"
 
-const char INTERNAL *qt_internal_get_env_str(const char *envariable)
+static int info = -1;
+
+static const char *qt_internal_envstr(const char *envariable)
 {
     char        mod_envariable[100];
     const char *str;
-
-    assert(strlen(envariable) < 90);
 
     snprintf(mod_envariable, 100, "QT_%s", envariable);
     str = getenv(mod_envariable);
     qthread_debug(CORE_BEHAVIOR, "checking envariable %s\n", envariable);
     if (str && *str) {
+        if (info) {
+            printf("%s = %s\n", mod_envariable, str);
+        }
         return str;
     } else {
         snprintf(mod_envariable, 100, "QTHREAD_%s", envariable);
         str = getenv(mod_envariable);
         if (str && *str) {
+            if (info) {
+                printf("%s = %s\n", mod_envariable, str);
+            }
             return str;
         }
     }
+    if (info) {
+        printf("[QT|QTHREAD]_%s = (unset)\n", envariable);
+    }
     return NULL;
+}
+
+static inline void check_info(void)
+{
+    if (-1 == info) {
+        const char *str;
+        str = getenv("QT_INFO");
+        if (str == NULL) {
+            str = getenv("QTHREAD_INFO");
+        }
+        if (str != NULL) {
+            int   tmp;
+            char *errptr;
+            tmp = strtol(str, &errptr, 0);
+            if (*errptr != 0) {
+                info = 0;
+            } else {
+                info = (tmp > 1) ? 1 : 0;
+            }
+        } else {
+            info = 0;
+        }
+    }
+}
+
+const char INTERNAL *qt_internal_get_env_str(const char *envariable)
+{
+    assert(strlen(envariable) < 90);
+    check_info();
+    return qt_internal_envstr(envariable);
 }
 
 unsigned long INTERNAL qt_internal_get_env_num(const char   *envariable,
