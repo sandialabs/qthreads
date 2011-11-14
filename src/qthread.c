@@ -902,9 +902,15 @@ int qthread_initialize(void)
         qassert(getrlimit(RLIMIT_STACK, &rlp), 0);
         qthread_debug(CORE_DETAILS, "stack sizes ... cur: %u max: %u\n", rlp.rlim_cur, rlp.rlim_max);
         if ((rlp.rlim_cur == RLIM_INFINITY) || (rlp.rlim_cur == 0)) {
-            qlib->master_stack_size = 8 * 1024 * 1024;
-        } else {
-            qlib->master_stack_size = (unsigned int)(rlp.rlim_cur);
+            if (rlp.rlim_cur == 0) {
+                qthread_debug(CORE_DETAILS, "correcting stack cur (you have a broken OS)...\n");
+            }
+            rlp.rlim_cur = 8 * 1024 * 1024;
+        }
+        qlib->master_stack_size = rlp.rlim_cur;
+        if (rlp.rlim_max < rlp.rlim_cur) {
+            qthread_debug(CORE_DETAILS, "correcting stack max (you have a broken OS)...\n");
+            rlp.rlim_max = rlp.rlim_cur;
         }
         qlib->max_stack_size = rlp.rlim_max;
     }
