@@ -18,7 +18,7 @@ static aligned_t user_func(void *arg)
     iprintf("\t\tinside blocking action\n");
     foo = 1;
     iprintf("\t\tshep=%i\n", (signed)qthread_shep());
-    assert(qthread_shep() == NO_SHEPHERD);
+    assert(qthread_shep() == NO_SHEPHERD); // because we're in a blocking action
     if (initialized) {
 	iprintf("\t\tid=%i\n", (signed)qthread_id());
 	assert(qthread_id() != (unsigned int)-1);
