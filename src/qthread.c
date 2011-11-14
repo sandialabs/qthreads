@@ -450,7 +450,9 @@ static void *qthread_shepherd(void *arg)
 
         if (t->thread_state == QTHREAD_STATE_TERM_SHEP) {
 #ifdef QTHREAD_SHEPHERD_PROFILING
-            qtimer_stop(me->total_time);
+            if ((me->shepherd_id != 0)) {
+                qtimer_stop(me->total_time);
+            }
 #endif
             done = 1;
 #ifdef QTHREAD_RCRTOOL
@@ -552,7 +554,7 @@ static void *qthread_shepherd(void *arg)
                 /* now clean up, based on the thread's state */
                 switch (t->thread_state) {
                     case QTHREAD_STATE_MIGRATING:
-                        qthread_debug(THREAD_DETAILS | AFFINITY_DETAILS,
+                        qthread_debug(THREAD_DETAILS | AFFINITY_DETAILS | SHEPHERD_DETAILS,
                                       "id(%u): thread %u migrating to shep %u\n",
                                       me->shepherd_id, t->thread_id,
                                       t->target_shepherd->shepherd_id);
@@ -567,7 +569,7 @@ static void *qthread_shepherd(void *arg)
                         break;
                     case QTHREAD_STATE_YIELDED: /* reschedule it */
                         t->thread_state = QTHREAD_STATE_RUNNING;
-                        qthread_debug(THREAD_DETAILS,
+                        qthread_debug(THREAD_DETAILS | SHEPHERD_DETAILS,
                                       "id(%u): thread %i yielded; rescheduling\n",
                                       me->shepherd_id, t->thread_id);
                         assert(me->ready != NULL);
@@ -575,7 +577,7 @@ static void *qthread_shepherd(void *arg)
                         break;
 
                     case QTHREAD_STATE_FEB_BLOCKED: /* unlock the related FEB address locks, and re-arrange memory to be correct */
-                        qthread_debug(THREAD_DETAILS | LOCK_DETAILS,
+                        qthread_debug(THREAD_DETAILS | LOCK_DETAILS | SHEPHERD_DETAILS,
                                       "id(%u): thread %i blocked on FEB\n",
                                       me->shepherd_id, t->thread_id);
                         t->thread_state = QTHREAD_STATE_BLOCKED;
@@ -583,7 +585,7 @@ static void *qthread_shepherd(void *arg)
                         break;
 
                     case QTHREAD_STATE_BLOCKED: /* put it in the blocked queue */
-                        qthread_debug(THREAD_DETAILS | LOCK_DETAILS,
+                        qthread_debug(THREAD_DETAILS | LOCK_DETAILS | SHEPHERD_DETAILS,
                                       "id(%u): thread %i blocked on LOCK\n",
                                       me->shepherd_id, t->thread_id);
                         qthread_enqueue((qthread_queue_t *)t->rdata->blockedon->waiting, t);
@@ -592,14 +594,14 @@ static void *qthread_shepherd(void *arg)
 
                     case QTHREAD_STATE_SYSCALL:
                         t->thread_state = QTHREAD_STATE_RUNNING;
-                        qthread_debug(THREAD_DETAILS | IO_DETAILS,
+                        qthread_debug(THREAD_DETAILS | IO_DETAILS | SHEPHERD_DETAILS,
                                       "id(%u): thread %i made a syscall\n",
                                       me->shepherd_id, t->thread_id);
                         qt_blocking_subsystem_enqueue((qt_blocking_queue_node_t *)t->rdata->blockedon);
                         break;
 
                     case QTHREAD_STATE_TERMINATED:
-                        qthread_debug(THREAD_DETAILS,
+                        qthread_debug(THREAD_DETAILS | SHEPHERD_DETAILS,
                                       "id(%u): thread %i terminated\n",
                                       me->shepherd_id, t->thread_id);
                         /* we can remove the stack etc. */
@@ -620,8 +622,13 @@ static void *qthread_shepherd(void *arg)
 #ifdef QTHREAD_SHEPHERD_PROFILING
     qtimer_destroy(idle);
 #endif
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    qthread_debug(SHEPHERD_DETAILS, "id(%u): wkr(%u): finished\n",
+                  me->shepherd_id, me_worker->worker_id);
+#else
     qthread_debug(SHEPHERD_DETAILS, "id(%u): finished\n",
                   me->shepherd_id);
+#endif
     pthread_exit(NULL);
     return NULL;
 }                      /*}}} */
@@ -1352,8 +1359,7 @@ void qthread_finalize(void)
             assert(t != NULL);         /* what else can we do? */
             t->thread_state = QTHREAD_STATE_TERM_SHEP;
             t->thread_id    = (unsigned int)-1;
-            qt_threadqueue_enqueue(qlib->shepherds[i].ready, t,
-                                   shep0);
+            qt_threadqueue_enqueue(qlib->shepherds[i].ready, t, shep0);
         }
     }
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
@@ -1401,6 +1407,8 @@ void qthread_finalize(void)
         qthread_shepherd_t *shep = &(qlib->shepherds[i]);
         qthread_debug(SHEPHERD_DETAILS, "waiting for shepherd %i to exit\n", (int)i);
         for (j = 0; j < qlib->nworkerspershep; j++) {
+            free(shep->workers[j].nostealbuffer);
+            free(shep->workers[j].stealbuffer);
             if ((i == 0) && (j == 0)) {
                 continue;  /* This leaves out shepard 0's worker 0 */
             }
@@ -1439,14 +1447,15 @@ void qthread_finalize(void)
         QTHREAD_CASLOCK_DESTROY(shep->active);
         qt_threadqueue_free(shep->ready);
 #ifdef QTHREAD_SHEPHERD_PROFILING
-        printf
-            ("QTHREADS: Shepherd %i spent %f%% of the time idle, handling %lu threads\n",
-            i, shep->idle_time / qtimer_secs(shep->total_time) *
-            100.0, (unsigned long)shep->num_threads);
+        printf("QTHREADS: Shepherd %i spent %f%% of the time idle, handling %lu threads\n",
+               i,
+               shep->idle_time / qtimer_secs(shep->total_time) * 100.0,
+               (unsigned long)shep->num_threads);
         qtimer_destroy(shep->total_time);
-        printf
-            ("QTHREADS: Shepherd %i averaged %g secs to find a new thread, max %g secs\n",
-            i, shep->idle_time / shep->idle_count, shep->idle_maxtime);
+        printf("QTHREADS: Shepherd %i averaged %g secs to find a new thread, max %g secs\n",
+               i,
+               shep->idle_time / shep->idle_count,
+               shep->idle_maxtime);
 #endif
 #ifdef QTHREAD_LOCK_PROFILING
 # ifdef QTHREAD_MUTEX_INCREMENT
@@ -1746,28 +1755,33 @@ void qthread_enable_shepherd(const qthread_shepherd_id_t shep)
 qthread_t INTERNAL *qthread_internal_self(void)
 {                      /*{{{ */
     extern pthread_key_t IO_task_struct;
+
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t *worker = qthread_internal_getworker();
     switch ((uintptr_t)worker) {
         case 0:
             return NULL;
+
         case 1:
             return pthread_getspecific(IO_task_struct);
+
         default:
             return worker->current;
     }
 
-#else
+#else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     qthread_shepherd_t *shep = qthread_internal_getshep();
     switch ((uintptr_t)shep) {
         case 0:
             return NULL;
+
         case 1:
             return pthread_getspecific(IO_task_struct);
+
         default:
             return shep->current;
     }
-#endif
+#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 }                      /*}}} */
 
 qthread_t *qthread_self(void)
@@ -2872,7 +2886,7 @@ qthread_shepherd_id_t qthread_shep(void)
 {                      /*{{{ */
     qthread_shepherd_t *ret = qthread_internal_getshep();
 
-    if ((qlib == NULL) || (ret == NULL)) {
+    if ((qlib == NULL) || ((uintptr_t)ret <= 1)) {
         return NO_SHEPHERD;
     } else {
         return ret->shepherd_id;
