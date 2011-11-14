@@ -502,6 +502,8 @@ static void *qthread_shepherd(void *arg)
                               me->shepherd_id);
                 if ((t->target_shepherd == NULL) || (t->target_shepherd == me)) {
                     /* send to the closest shepherd */
+                    assert(me->sorted_sheplist);
+                    assert(me->shep_dists);
                     t->rdata->shepherd_ptr = qthread_find_active_shepherd(me->sorted_sheplist, me->shep_dists);
                 } else {
                     /* find a shepherd somewhere near the preferred shepherd
@@ -926,6 +928,8 @@ int qthread_initialize(void)
             qthread_debug(AFFINITY_DETAILS, "gendists returned non-success (%i)\n", (int)ret);
             return ret;
         }
+        assert(qlib->shepherds[0].sorted_sheps);
+        assert(qlib->shepherds[0].shep_dists);
     }
 
     // Set task argument buffer size
