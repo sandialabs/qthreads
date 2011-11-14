@@ -928,7 +928,7 @@ int qthread_initialize(void)
             qthread_debug(AFFINITY_DETAILS, "gendists returned non-success (%i)\n", (int)ret);
             return ret;
         }
-        assert(qlib->shepherds[0].sorted_sheps);
+        assert(qlib->shepherds[0].sorted_sheplist);
         assert(qlib->shepherds[0].shep_dists);
     }
 
