@@ -19,8 +19,8 @@ static aligned_t user_func(void *arg)
     foo = 1;
     iprintf("\t\tshep=%i\n", (signed)qthread_shep());
     assert(qthread_shep() == NO_SHEPHERD);
-    iprintf("\t\tid=%i\n", (signed)qthread_id());
     if (initialized) {
+	iprintf("\t\tid=%i\n", (signed)qthread_id());
 	assert(qthread_id() != (unsigned int)-1);
     }
     qt_blocking_subsystem_end_blocking_action();
