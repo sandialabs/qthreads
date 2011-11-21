@@ -33,7 +33,7 @@ static void count(const size_t startat,
                   void        *arg_,
                   void        *ret_)
 {
-    multiple_op_t *ret;
+    multiple_op_t ret;
 
     ret.max  = random_numbers[startat];
     ret.min  = random_numbers[startat];
