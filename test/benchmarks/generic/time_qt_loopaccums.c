@@ -12,11 +12,13 @@
 static aligned_t threads  = 0;
 static aligned_t numincrs = 1024;
 static size_t   *sleeplen;
+static size_t    numiters = 10;
+static qtimer_t  timer;
 
 static void count(const size_t startat,
                   const size_t stopat,
                   void        *arg_,
-		  void        *ret_)
+                  void        *ret_)
 {
     for (size_t i = startat; i < stopat; ++i) {
         usleep(sleeplen[i]);
@@ -24,22 +26,67 @@ static void count(const size_t startat,
     *(size_t *)ret_ = stopat - startat;
 }
 
-static void sum(void *a_, void *b_)
+static void sum(void *a_,
+                void *b_)
 {
-    qthread_incr((size_t *)a_, *(size_t *)b_);
+    *(size_t*)a_ += *(size_t*)b_;
+    //qthread_incr((size_t *)a_, *(size_t *)b_);
 }
 
-static void sum_sinc(void *a_, void *b_)
+#if 0
+static void sum_sinc(void *a_,
+                     void *b_)
 {
     *(size_t *)a_ += *(size_t *)b_;
+}
+
+#endif
+
+static void run_iterations(void                                                   (*loop)(const size_t a,
+                                                                 const size_t     b,
+                                                                 const size_t     sz,
+                                                                 void            *out,
+                                                                 const qt_loopr_f f,
+                                                                 void            *c,
+                                                                 const qt_accum_f acc),
+                           qt_loopr_f                                             func,
+                           qt_accum_f                                             acc,
+                           double                                                 overhead,
+                           const char                                            *type,
+                           const char                                            *name)
+{
+    double total  = 0;
+    int    passed = 0;
+    int    i;
+
+    // to warm the caches
+    threads=0;
+    loop(0, numincrs, sizeof(aligned_t), &threads, func, NULL, acc);
+    // now, to time it
+    for (i = 0; i < numiters; ++i) {
+        threads = 0;
+        qtimer_start(timer);
+        loop(0, numincrs, sizeof(aligned_t), &threads, func, NULL, acc);
+        qtimer_stop(timer);
+        passed = threads == numincrs;
+        total += qtimer_secs(timer);
+        if (!passed) {
+            break;
+        }
+    }
+    printf("%-21s %-9s %5lu %8lu %8f %s\n", type, name, (unsigned long)numiters,
+           (unsigned long)numincrs,
+           (total / i) - overhead,
+           passed ? "PASSED" : "FAILED");
+    if (!passed) {
+	printf("threads = %lu, numincrs = %lu\n", (unsigned long)threads, (unsigned long)numincrs);
+    }
 }
 
 int main(int   argc,
          char *argv[])
 {
-    double total    = 0;
     double overhead = 0;
-    size_t numiters = 10;
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
     CHECK_VERBOSE();
@@ -55,41 +102,12 @@ int main(int   argc,
     }
     overhead /= qthread_num_workers();
 
-    iprintf("version              sync    iters    time\n");
-    qtimer_t timer = qtimer_create();
+    timer = qtimer_create();
 
-    int passed = 0;
-
-    for (int i = 0; i < numiters; ++i) {
-        threads = 0;
-        qtimer_start(timer);
-        qt_loopaccum_balance(0, numincrs, 
-                             sizeof(aligned_t),
-                             &threads,
-                             count, NULL,
-                             sum);
-        passed = threads == numincrs;
-        qtimer_stop(timer);
-        total += qtimer_secs(timer);
-    }
-    printf("thread per iteration syncvar %8lu %f %s\n", (unsigned long)numincrs,
-           (total / numiters) - overhead, passed ? "PASSED" : "FAILED");
-
-    total = 0;
-    for (int i = 0; i < numiters; ++i) {
-        threads = 0;
-        qtimer_start(timer);
-        qt_loopaccum_balance_sinc(0, numincrs, 
-                                  sizeof(aligned_t),
-                                  &threads,
-                                  count, NULL,
-                                  sum);
-        passed = threads == numincrs;
-        qtimer_stop(timer);
-        total += qtimer_secs(timer);
-    }
-    printf("thread per iteration sinc    %8lu %f %s\n", (unsigned long)numincrs,
-           (total / numiters) - overhead, passed ? "PASSED" : "FAILED");
+    printf("%-21s %-9s %5s %8s %s\n", "version", "sync", "iters", "incrs", "time");
+    run_iterations(qt_loopaccum_balance_syncvar,      count, sum, overhead, "balanced", "syncvar");
+    run_iterations(qt_loopaccum_balance_sinc, count, sum, overhead, "balanced", "sinc");
+    run_iterations(qt_loopaccum_balance_dc, count, sum, overhead, "balanced", "donecount");
 
     return 0;
 }
