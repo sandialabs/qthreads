@@ -439,7 +439,6 @@ void xomp_internal_loop_init(
 
   int first = qthread_incr(&lp->workers,1); 
   if ((first == 0) & (lp->whichLoop != loopNum)) { // set up loop if first
-    //printf("build structure %p\n", lp);
     lp->chunkSize = chunk_size;
     lp->type = type;
     lp->iterations = 0;
@@ -937,9 +936,8 @@ bool XOMP_loop_static_start(
     long *returnLower,
     long *returnUpper)
 {
-  //bool ret = 0;
   qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
-  aligned_t myid = qthread_worker(NULL);
+  aligned_t myid = qthread_barrier_id();
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   aligned_t parallelWidth = qthread_num_workers();
 #else
@@ -951,17 +949,15 @@ bool XOMP_loop_static_start(
   }
   aligned_t start = loop->assignStart;
   aligned_t stop = loop->assignStop;
-  //aligned_t step = loop->assignStep;
 
   aligned_t *myIteration = &loop->work_array + myid;
   int iterationNum = qthread_incr(myIteration,1);
-  *returnLower = (start * chunkSize) + (iterationNum * chunkSize * parallelWidth) // start
-    + (myid * chunkSize);                                                         // + offset
+  *returnLower = (start) + (iterationNum * chunkSize * parallelWidth) // start
+    + (myid * chunkSize);                                             // + offset
 
   if ((*returnLower + (chunkSize-1)) >= stop) { // hit limit
     *returnUpper = stop;
     if (*returnLower  > stop) {              // nothing to do quit
-      qthread_incr(&loop->departed_workers,1);
       return 0;
     }
     return 1;
@@ -980,9 +976,15 @@ void XOMP_loop_default(
     long *returnUpper)
 {
   qqloop_step_handle_t **loop = NULL;
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+  aligned_t parallelWidth = qthread_num_workers();
+#else
+  aligned_t parallelWidth = qthread_num_shepherds();
+#endif
+  aligned_t chunksize = ((upper-lower)/(stride*parallelWidth))+1;
 
-  xomp_internal_loop_init(STATIC_SCHED, TRUE, (void*)&loop, lower, upper, stride, 1);
-  XOMP_loop_static_start(loop, lower, upper, stride, 1, returnLower, returnUpper);
+  xomp_internal_loop_init(STATIC_SCHED, TRUE, (void*)&loop, lower, upper, stride, chunksize);
+  XOMP_loop_static_start(loop, lower, upper, stride, chunksize, returnLower, returnUpper);
 }
 
 bool XOMP_loop_dynamic_start(
