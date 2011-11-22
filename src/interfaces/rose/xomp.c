@@ -979,10 +979,10 @@ void XOMP_loop_default(
     long *returnLower,
     long *returnUpper)
 {
-  qqloop_step_handle_t loop;
+  qqloop_step_handle_t **loop = NULL;
 
   xomp_internal_loop_init(STATIC_SCHED, TRUE, (void*)&loop, lower, upper, stride, 1);
-  XOMP_loop_static_start(&loop, lower, upper, stride, 1, returnLower, returnUpper);
+  XOMP_loop_static_start(loop, lower, upper, stride, 1, returnLower, returnUpper);
 }
 
 bool XOMP_loop_dynamic_start(
