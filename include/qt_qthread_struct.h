@@ -74,6 +74,9 @@ struct qthread_s {
     unsigned                       tasklocal_size;
 
     aligned_t                      id;  /* id used in barrier and arrive_first */
+
+    qt_team_t                      *team; /* reference to task team */
+
     /* preconditions for data-dependent tasks */
     unsigned                       npreconds;
     void                          *preconds;

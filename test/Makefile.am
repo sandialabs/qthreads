@@ -27,7 +27,8 @@ basic_tests = test_basic \
 			  test_tasklocal \
 			  test_tasklocal_no_default \
 			  test_tasklocal_no_argcopy \
-			  test_read
+			  test_read \
+			  test_teams
 
 complex_tests = test_qt_loop \
 				test_qt_loop_sinc \
@@ -216,7 +217,10 @@ test_external_syncvar_SOURCES = test_external_syncvar.c
 test_external_syncvar_DEPENDENCIES = $(qthreadlib)
 
 test_read_SOURCES = test_read.c
-test_read_DEPENDENCIES = $(QTHEADLIB)
+test_read_DEPENDENCIES = $(qthreadlib)
+
+test_teams_SOURCES = test_teams.c
+test_teams_DEPENDENCIES = $(qthreadlib)
 
 time_uts_syncvar_SOURCES = time_uts_syncvar.c rng/brg_sha1.c
 time_uts_syncvar_DEPENDENCIES = $(qthreadlib)

@@ -61,6 +61,10 @@ typedef struct qlib_s {
     aligned_t             max_thread_id;
     QTHREAD_FASTLOCK_TYPE max_thread_id_lock;
 
+    /* assigns a unique team id */
+    aligned_t             max_team_id;
+    QTHREAD_FASTLOCK_TYPE max_team_id_lock;
+
     /* assigns a unique worker_id */
     aligned_t             max_unique_id;
     QTHREAD_FASTLOCK_TYPE max_unique_id_lock;

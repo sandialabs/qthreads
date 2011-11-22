@@ -158,11 +158,20 @@ Q_ENDCXX /* */
 # include <qthread/qthread-sst.h>
 #else
 
+#include <qthread/qt_sinc.h>
+
 Q_STARTCXX /* */
+
 typedef struct qthread_s qthread_t;
 
 typedef unsigned int qthread_shepherd_id_t;
 typedef unsigned int qthread_worker_id_t;
+
+typedef size_t qt_team_id_t;
+typedef struct qt_team_s {
+    qt_sinc_t   *sinc;
+    qt_team_id_t team_id;
+} qt_team_t;
 
 /* for convenient arguments to qthread_fork */
 typedef aligned_t (*qthread_f)(void *arg);
@@ -323,6 +332,22 @@ enum introspective_state {
     TOTAL_WORKERS
 };
 size_t qthread_readstate(const enum introspective_state type);
+
+/* Task team interface. */
+qt_team_id_t qt_team_id(void);
+aligned_t qt_team_destroy(void *arg);
+int qthread_fork_in_team(qthread_f f,
+                         const void *arg,
+                         aligned_t *ret);
+int qthread_fork_new_team(qthread_f f,
+                          const void *arg,
+                          aligned_t *ret);
+int qthread_fork_syncvar_in_team(qthread_f   f,
+                                 const void *arg,
+                                 syncvar_t  *ret);
+int qthread_fork_syncvar_new_team(qthread_f   f,
+                                  const void *arg,
+                                  syncvar_t  *ret);
 
 /****************************************************************************
  * functions to implement FEB locking/unlocking
