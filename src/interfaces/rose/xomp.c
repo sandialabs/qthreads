@@ -981,8 +981,15 @@ void XOMP_loop_default(
 #else
   aligned_t parallelWidth = qthread_num_shepherds();
 #endif
-  aligned_t chunksize = ((upper-lower)/(stride*parallelWidth))+1;
-
+  aligned_t chunksize ;
+  if (stride > 0){ // normal case -- postive stride
+    if (upper >= lower) chunksize = ((upper-lower)/(stride*parallelWidth))+1;
+    else chunksize = 1; //loop is not going to iterate so fixed default ok
+  }
+  else {  // handle negative stride
+    if (lower >= upper) chunksize = ((lower-upper)/(stride*parallelWidth))+1;
+    else chunksize = 1; //loop is not going to iterate so fixed default ok
+  }
   xomp_internal_loop_init(STATIC_SCHED, TRUE, (void*)&loop, lower, upper, stride, chunksize);
   XOMP_loop_static_start(loop, lower, upper, stride, chunksize, returnLower, returnUpper);
 }
