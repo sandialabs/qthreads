@@ -489,7 +489,8 @@ AS_IF([test "x$qthread_implementation" = "xsst"],
            LDFLAGS="$LDFLAGS $SST_LIBS"
            AC_SEARCH_LIBS([ceil],[m_ppc],[],[AC_MSG_ERROR([Cannot find ceil()])])])
 AS_IF([test "x$qthread_implementation" = "xunix"],
-          [AC_SEARCH_LIBS([ceil],[m],[],[AC_MSG_ERROR([Cannot find ceil()])])])
+          [AC_SEARCH_LIBS([ceil],[m],[],[AC_MSG_ERROR([Cannot find ceil()])])
+		   AC_SEARCH_LIBS([accept], [xnet "socket -lnsl"])])
 
 AS_IF([test "x$enable_pooled_memory" = "xno"],
       [AC_DEFINE([UNPOOLED], [1], [prevents most uses of memory pools])],
