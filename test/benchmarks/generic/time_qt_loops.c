@@ -19,10 +19,12 @@ static void sumsleep(const size_t startat,
                      const size_t stopat,
                      void        *arg_)
 {
+    size_t totalsleep = 0;
     qthread_incr(&threads, stopat - startat);
     for (size_t i = startat; i < stopat; ++i) {
-        usleep(sleeplen[i]);
+        totalsleep += sleeplen[i];
     }
+    usleep(totalsleep);
 }
 
 static void sum(const size_t startat,
