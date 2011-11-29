@@ -176,9 +176,15 @@ void qt_sinc_reset(qt_sinc_t   *sinc,
 
 void qt_sinc_destroy(qt_sinc_t *sinc)
 {
+    assert(sinc);
+    assert(sinc->counts);
     free(sinc->counts);
-    free(sinc->result);
-    free(sinc->values);
+    if (sinc->result || sinc->values) {
+        assert(sinc->result);
+        free(sinc->result);
+        assert(sinc->values);
+        free(sinc->values);
+    }
     free(sinc);
 }
 
@@ -189,6 +195,7 @@ void qt_sinc_destroy(qt_sinc_t *sinc)
 void qt_sinc_willspawn(qt_sinc_t *sinc,
                        size_t     count)
 {
+    assert(sinc);
     if (count > 0) {
         qthread_shepherd_id_t     shep_id;
         const qthread_worker_id_t worker_id = qthread_worker(&shep_id);
@@ -197,8 +204,7 @@ void qt_sinc_willspawn(qt_sinc_t *sinc,
         const size_t worker_offset = shep_id == 0 ?
                                      worker_id * sinc->sizeof_count :
                                      (worker_id % (num_workers / num_sheps)) * sinc->sizeof_count;
-        qt_sinc_count_t *counts = (qt_sinc_count_t *)(
-                                                      (uint8_t *)sinc->counts + shep_offset + worker_offset);
+        qt_sinc_count_t *counts = (qt_sinc_count_t *)((uint8_t *)sinc->counts + shep_offset + worker_offset);
 
         // Increment count
         qt_sinc_count_t old;
