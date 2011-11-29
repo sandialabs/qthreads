@@ -15,9 +15,18 @@ static aligned_t use_default_space(void *arg)
     iprintf("use_default_space(): size_tasklocal() is %d\n", qthread_size_tasklocal());
     iprintf("use_default_space(): local_int_arr at %p\n", local_int_arr);
     local_int_arr = (int *)qthread_get_tasklocal(size);
-    assert(42 != local_int_arr[42]);
-    iprintf("use_default_space(): retrieved tasklocal data successfully (42 != %d)\n", local_int_arr[42]);
+    for (int i=0; i<64; ++i) {
+	local_int_arr[i] = i;
+    }
+    iprintf("use_default_space(): assigned tasklocal data successfully (42 = %d)\n", local_int_arr[42]);
     local_int_arr = NULL;
+    qthread_yield();
+    local_int_arr = (int *)qthread_get_tasklocal(size);
+    iprintf("use_default_space(): local_int_arr at %p\n", local_int_arr);
+    for (int i=0; i<64; ++i) {
+	assert(local_int_arr[i] == i);
+    }
+    iprintf("use_default_space(): all assertions passed!\n");
 
     return 0;
 }
@@ -32,9 +41,18 @@ static aligned_t use_allocated_space(void *arg)
     iprintf("use_allocated_space(): size_tasklocal() is %d\n", qthread_size_tasklocal());
     iprintf("use_allocated_space(): local_int_arr at %p\n", local_int_arr);
     local_int_arr = (int *)qthread_get_tasklocal(size);
-    assert(42 != local_int_arr[42]);
-    iprintf("use_allocated_space(): retrieved tasklocal data successfully (42 != %d)\n", local_int_arr[42]);
+    for (int i=0; i<2048; ++i) {
+	local_int_arr[i] = 2048 - i;
+    }
+    iprintf("use_allocated_space(): assigned tasklocal data successfully (42 = %d)\n", local_int_arr[42]);
     local_int_arr = NULL;
+    qthread_yield();
+    local_int_arr = (int *)qthread_get_tasklocal(size);
+    iprintf("use_allocated_space(): local_int_arr at %p\n", local_int_arr);
+    for (int i=0; i<2048; ++i) {
+	assert(local_int_arr[i] == 2048 - i);
+    }
+    iprintf("use_allocated_space(): all assertions passed!\n");
 
     return 0;
 }
