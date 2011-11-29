@@ -8,6 +8,7 @@ use Cwd qw/getcwd/;
 # Setup configuration options
 my %config = (
 	default       => '',
+	compat        => 'CFLAGS="-m32" CXXFLAGS="-m32" LDFLAGS="-m32" CPPFLAGS="-m32"',
 	unpooled      => '--disable-pooled-memory',
 	opt           => 'CFLAGS="-O3" CXXFLAGS="-O3"',
 	nemesis       => '--with-scheduler=nemesis',
