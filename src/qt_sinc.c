@@ -23,7 +23,6 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
                           const size_t will_spawn)
 {
     qt_sinc_t *sinc = malloc(sizeof(qt_sinc_t));
-
     assert(sinc);
 
     if (num_sheps == 0) {
@@ -36,13 +35,20 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
     sinc->op           = op;
     sinc->sizeof_value = sizeof_value;
 
+    assert((0 == sizeof_value && NULL == initial_value) ||
+           (0 != sizeof_value && NULL != initial_value));
+
     if (NULL != initial_value) {
         sinc->initial_value = malloc(sizeof_value);
         memcpy(sinc->initial_value, initial_value, sizeof_value);
+    } else {
+        sinc->initial_value = initial_value;
+        sinc->values = NULL;
+        sinc->sizeof_shep_value_part = 0;
     }
 
     // Allocate values array
-    if (sizeof_value > 0) {
+    if (NULL != initial_value) {
         const size_t sizeof_shep_values     = num_wps * sizeof_value;
         const size_t num_lines_per_shep     = ceil(sizeof_shep_values * 1.0 / cacheline);
         const size_t num_lines              = num_sheps * num_lines_per_shep;
@@ -65,8 +71,6 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
                        sizeof_value);
             }
         }
-    } else {
-        sinc->values = NULL;
     }
 
     sinc->result = NULL;
@@ -125,15 +129,17 @@ void qt_sinc_reset(qt_sinc_t   *sinc,
                    const size_t will_spawn)
 {
     // Reset values
-    for (size_t s = 0; s < num_sheps; s++) {
-        const size_t shep_offset = s * sinc->sizeof_shep_value_part;
-        for (size_t w = 0; w < num_wps; w++) {
-            const size_t worker_offset = s == 0 ?
-                                         w * sinc->sizeof_value :
-                                         (w % num_wps) * sinc->sizeof_value;
-            memcpy((uint8_t *)sinc->values + shep_offset + worker_offset,
-                   sinc->initial_value,
-                   sinc->sizeof_value);
+    if (NULL != sinc->values) {
+        for (size_t s = 0; s < num_sheps; s++) {
+            const size_t shep_offset = s * sinc->sizeof_shep_value_part;
+            for (size_t w = 0; w < num_wps; w++) {
+                const size_t worker_offset = s == 0 ?
+                                             w * sinc->sizeof_value :
+                                             (w % num_wps) * sinc->sizeof_value;
+                memcpy((uint8_t *)sinc->values + shep_offset + worker_offset,
+                       sinc->initial_value,
+                       sinc->sizeof_value);
+            }
         }
     }
 
@@ -240,9 +246,12 @@ void *qt_sinc_tmpdata(qt_sinc_t *sinc)
 void qt_sinc_submit(qt_sinc_t *sinc,
                     void      *value)
 {
+    assert(NULL != sinc->values || NULL == value);
+
     qthread_shepherd_id_t shep_id;
     qthread_worker_id_t   worker_id = qthread_worker(&shep_id);
 
+    if (NULL != sinc->values && NULL != value)
     {
         const size_t shep_offset   = shep_id * sinc->sizeof_shep_value_part;
         const size_t worker_offset = (shep_id == 0) ?
@@ -250,9 +259,7 @@ void qt_sinc_submit(qt_sinc_t *sinc,
                                      ((worker_id % (num_workers / num_sheps)) * sinc->sizeof_value);
         void *values = (uint8_t *)sinc->values + shep_offset + worker_offset;
 
-        if ((NULL != sinc->values) && (NULL != value) && (values != value)) {
-            sinc->op(values, value);
-        }
+        sinc->op(values, value);
     }
 
     while (1) {
