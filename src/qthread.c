@@ -269,6 +269,10 @@ static qt_mpool generic_team_pool = NULL;
 qt_mpool generic_addrstat_pool = NULL;
 #endif
 
+#if !defined(UNPOOLED_ADDRRES) && !defined(UNPOOLED)
+qt_mpool generic_addrres_pool = NULL;
+#endif
+
 /* guaranteed to be between 0 and 128, using the first parts of addr that are
  * significant */
 unsigned int QTHREAD_LOCKING_STRIPES = 128;
@@ -984,8 +988,6 @@ int qthread_initialize(void)
         qlib->shepherds[i].queue_pool = qt_mpool_create(sizeof(qthread_queue_t));
         // printf("stack_pool = %p, queue_pool = %p\n", qlib->shepherds[i].stack_pool, qlib->shepherds[i].queue_pool); fflush(stdout);
         qt_threadqueue_init_pools(&(qlib->shepherds[i].threadqueue_pools));
-        qlib->shepherds[i].addrres_pool  = qt_mpool_create(sizeof(qthread_addrres_t));
-        qlib->shepherds[i].addrstat_pool = qt_mpool_create(sizeof(qthread_addrstat_t));
     }                      /*}}} */
 /* these are used when qthread_fork() is called from a non-qthread. */
     generic_qthread_pool = qt_mpool_create(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size);
@@ -997,6 +999,7 @@ int qthread_initialize(void)
         qt_mpool_create(sizeof(struct qthread_runtime_data_s) + qlib->qthread_stack_size);
 # endif
     generic_addrstat_pool = qt_mpool_create(sizeof(qthread_addrstat_t));
+    generic_addrres_pool = qt_mpool_create(sizeof(qthread_addrres_t));
     generic_team_pool     = qt_mpool_create(sizeof(qt_team_t));
 #endif /* ifndef UNPOOLED */
     initialize_hazardptrs();
@@ -1646,10 +1649,6 @@ void qthread_finalize(void)
         qt_mpool_destroy(qlib->shepherds[i].queue_pool);
         qthread_debug(CORE_DETAILS, "destroy shep %i threadqueue pools\n", (int)i);
         qt_threadqueue_destroy_pools(&qlib->shepherds[i].threadqueue_pools);
-        qthread_debug(CORE_DETAILS, "destroy shep %i addrres pool\n", (int)i);
-        qt_mpool_destroy(qlib->shepherds[i].addrres_pool);
-        qthread_debug(CORE_DETAILS, "destroy shep %i addrstat pool\n", (int)i);
-        qt_mpool_destroy(qlib->shepherds[i].addrstat_pool);
         qthread_debug(CORE_DETAILS, "destroy shep %i stack pool\n", (int)i);
         qt_mpool_destroy(qlib->shepherds[i].stack_pool);
     }
@@ -1660,6 +1659,8 @@ void qthread_finalize(void)
     generic_stack_pool = NULL;
     qt_mpool_destroy(generic_addrstat_pool);
     generic_addrstat_pool = NULL;
+    qt_mpool_destroy(generic_addrres_pool);
+    generic_addrres_pool = NULL;
     qt_mpool_destroy(generic_team_pool);
     generic_team_pool = NULL;
 #endif /* ifndef UNPOOLED */

@@ -61,8 +61,6 @@ struct qthread_shepherd_s {
     qt_mpool               qthread_pool;
     qt_mpool               queue_pool;
     qt_threadqueue_pools_t threadqueue_pools;
-    qt_mpool               addrres_pool;
-    qt_mpool               addrstat_pool;
     qt_mpool               stack_pool;
     /* round robin scheduler - can probably be smarter */
     aligned_t              sched_shepherd;
