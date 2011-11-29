@@ -336,15 +336,9 @@ size_t qthread_readstate(const enum introspective_state type);
 /* Task team interface. */
 qt_team_id_t qt_team_id(void);
 aligned_t qt_team_destroy(void *arg);
-int qthread_fork_in_team(qthread_f f,
-                         const void *arg,
-                         aligned_t *ret);
 int qthread_fork_new_team(qthread_f f,
                           const void *arg,
                           aligned_t *ret);
-int qthread_fork_syncvar_in_team(qthread_f   f,
-                                 const void *arg,
-                                 syncvar_t  *ret);
 int qthread_fork_syncvar_new_team(qthread_f   f,
                                   const void *arg,
                                   syncvar_t  *ret);

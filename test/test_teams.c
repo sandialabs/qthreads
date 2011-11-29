@@ -36,7 +36,7 @@ static aligned_t hello_new_team_in_team(void *arg_) {
         (unsigned long)id);
 
     aligned_t ret;
-    qthread_fork_in_team(hello_in_team, NULL, &ret);
+    qthread_fork(hello_in_team, NULL, &ret);
     qthread_readFF(&ret, &ret);
 
     return MAX(id, ret);
@@ -72,7 +72,7 @@ int main(int   argc,
     iprintf("Main executing in team %lu\n", (unsigned long)qt_team_id());
 
     aligned_t hello_in_team_ret;
-    qthread_fork_in_team(hello_in_team, NULL, &hello_in_team_ret);
+    qthread_fork(hello_in_team, NULL, &hello_in_team_ret);
     qthread_readFF(&tmp, &hello_in_team_ret);
     max = MAX(max, tmp);
 

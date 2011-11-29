@@ -256,6 +256,15 @@ static QINLINE void FREE_STACK(qthread_shepherd_t *shep,
 # endif /* ifdef QTHREAD_GUARD_PAGES */
 #endif  /* if defined(UNPOOLED_STACKS) || defined(UNPOOLED) */
 
+#if defined(UNPOOLED) || 1
+# define ALLOC_TEAM(shep)   (qt_team_t *)malloc(sizeof(qt_team_t))
+# define FREE_TEAM(t, shep) free(t)
+#else
+static qt_mpool generic_team_pool = NULL;
+# define ALLOC_TEAM(shep)   (qt_team_t *)qt_mpool_alloc(shep ? (shep->team_pool) : generic_team_pool)
+# define FREE_TEAM(t, shep) qt_mpool_free(shep ? (shep->team_pool) : generic_team_pool)
+#endif
+
 #if !defined(UNPOOLED_ADDRSTAT) && !defined(UNPOOLED)
 qt_mpool generic_addrstat_pool = NULL;
 #endif
@@ -540,7 +549,7 @@ static void *qthread_shepherd(void *arg)
                 me->current = t;
 #endif
                 getcontext(&my_context);
-                qthread_debug(THREAD_DETAILS, "id(%u): shepherd context is %p\n", me->shepherd_id, &my_context);
+                qthread_debug(THREAD_DETAILS, "id(%u): shepherd context is %p, current = %p\n", me->shepherd_id, &my_context);
                 /* note: there's a good argument that the following should
                  * be: (*t->f)(t), however the state management would be
                  * more complex
@@ -1094,19 +1103,20 @@ int qthread_initialize(void)
 # endif
 #endif
 /* this launches shepherd 0 */
-    qthread_debug(SHEPHERD_DETAILS, "launching shepherd 0\n");
+    qthread_debug(CORE_DETAILS | SHEPHERD_DETAILS, "launching shepherd 0\n");
 #ifdef QTHREAD_USE_VALGRIND
     VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&qlib->mccoy_thread->rdata->context, sizeof(qt_context_t));
     VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&(qlib->master_context), sizeof(qt_context_t));
     VALGRIND_MAKE_MEM_DEFINED(&qlib->mccoy_thread->rdata->context, sizeof(qt_context_t));
     VALGRIND_MAKE_MEM_DEFINED(&(qlib->master_context), sizeof(qt_context_t));
 #endif
-    qthread_debug(CORE_DETAILS, "calling swapcontext\n");
+    qthread_debug(CORE_DETAILS, "calling swapcontext into master_context\n");
 #ifdef HAVE_NATIVE_MAKECONTEXT
     qassert(swapcontext(&qlib->mccoy_thread->rdata->context, &(qlib->master_context)), 0);
 #else
     qassert(qt_swapctxt(&qlib->mccoy_thread->rdata->context, &(qlib->master_context)), 0);
 #endif
+    qthread_debug(CORE_DETAILS, "back from master_context\n");
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 # ifdef QTHREAD_RCRTOOL
@@ -1804,7 +1814,7 @@ qthread_t *qthread_self(void)
 }                      /*}}} */
 
 void *qthread_get_tasklocal(unsigned int size)
-{
+{   /*{{{*/
     qthread_t *f = qthread_internal_self();
 
     if (NULL != f) {
@@ -1814,7 +1824,7 @@ void *qthread_get_tasklocal(unsigned int size)
         } else {
             void **data_blob = (void **)&f->data[qlib->qthread_argcopy_size];
             if (0 == f->tasklocal_size) {
-                // Allocate space and copy old data
+                qthread_debug(THREAD_DETAILS, "Allocate space and copy old data\n");
                 void *tmp_data = malloc(size);
                 assert(NULL != tmp_data);
 
@@ -1824,10 +1834,10 @@ void *qthread_get_tasklocal(unsigned int size)
                 f->tasklocal_size = size;
                 return *data_blob;
             } else if (size <= f->tasklocal_size) {
-                // Use alloc'd data blob, no need to resize
+                qthread_debug(THREAD_DETAILS, "Use alloc'd data blob, no need to resize\n");
                 return *data_blob;
             } else {
-                // Resize alloc'd data blob
+                qthread_debug(THREAD_DETAILS, "Resize alloc'd data blob\n");
                 *data_blob = realloc(*data_blob, size);
                 assert(NULL != *data_blob);
 
@@ -1838,16 +1848,16 @@ void *qthread_get_tasklocal(unsigned int size)
     }
 
     return NULL;
-}
+} /*}}}*/
 
 unsigned qthread_size_tasklocal(void)
-{
+{   /*{{{*/
     const qthread_t *f = qthread_internal_self();
 
     assert(NULL != f);
 
     return f->tasklocal_size ? f->tasklocal_size : qlib->qthread_tasklocal_size;
-}
+} /*}}}*/
 
 size_t qthread_stackleft(void)
 {                      /*{{{ */
@@ -1927,20 +1937,27 @@ aligned_t *qthread_retloc(void)
 }                      /*}}} */
 
 /* Returns the team id. If there is no team structure associated with the task,
-   it is considered to be in the default team with id 0. */
-qt_team_id_t qt_team_id(void) {
-    qthread_t *self = qthread_internal_self();
+ * it is considered to be in the default team with id 0. */
+qt_team_id_t qt_team_id(void)
+{   /*{{{*/
+    if (NULL != qlib) {
+        qthread_t *self = qthread_internal_self();
 
-    if (NULL != self && NULL != self->team)
-        return self->team->team_id;
-    else
+        if ((NULL != self) && (NULL != self->team)) {
+            return self->team->team_id;
+        } else {
+            return 0;
+        }
+    } else {
         return 0;
-}
+    }
+} /*}}}*/
 
 /* Destroys the team and associated team structure. This action is spawned as
-   a task when the team is created, and simply waits until the sinc is ready
-   before freeing the associated resources. */
-aligned_t qt_team_destroy(void *arg_) {
+ * a task when the team is created, and simply waits until the sinc is ready
+ * before freeing the associated resources. */
+aligned_t qt_team_destroy(void *arg_)
+{   /*{{{*/
     qt_team_t *team = (qt_team_t *)arg_;
 
     qt_sinc_wait(team->sinc, NULL);
@@ -1948,7 +1965,7 @@ aligned_t qt_team_destroy(void *arg_) {
     free(team);
 
     return 0;
-}
+} /*}}}*/
 
 /************************************************************/
 /* functions to manage thread stack allocation/deallocation */
@@ -2131,7 +2148,7 @@ static void qthread_wrapper(void *ptr)
     if (NULL != t->team) {
         qt_sinc_submit(t->team->sinc, NULL);
     }
-    
+
 #ifdef QTHREAD_COUNT_THREADS
     QTHREAD_FASTLOCK_LOCK(&concurrentthreads_lock);
     concurrentthreads--;
@@ -2288,6 +2305,10 @@ typedef enum {
     SYNCVAR_T,
     NO_SYNC
 } synctype_t;
+typedef enum {
+    SAME_TEAM,
+    NEW_TEAM
+} desired_team_t;
 
 static int qthread_uberfork(qthread_f             f,
                             const void           *arg,
@@ -2298,12 +2319,14 @@ static int qthread_uberfork(qthread_f             f,
                             size_t                npreconds,
                             void                 *preconds,
                             qthread_shepherd_id_t target_shep,
-                            qt_team_t            *team,
+                            desired_team_t        dteam,
                             uint_fast8_t          future_flag)
 {   /*{{{*/
     qthread_t            *t;
     qthread_shepherd_t   *myshep = qthread_internal_getshep();
+    qthread_t            *me     = qthread_internal_self(); // note: cannot be myshep->current on multithreaded shepherds
     qthread_shepherd_id_t dest_shep;
+    qt_team_t            *team = NULL;
 
 #if defined(QTHREAD_DEBUG) || !defined(QTHREAD_MULTITHREADED_SHEPHERDS)
     const qthread_shepherd_id_t max_sheps = qlib->nshepherds;
@@ -2311,7 +2334,7 @@ static int qthread_uberfork(qthread_f             f,
 
     /* Step 1: Check arguments */
     qthread_debug(THREAD_BEHAVIOR,
-                  "f(%p), arg(%p), arg_size(%z), rt(%s), ret(%p), pt(%s), np(%z), pc(%p), ts(%u), %s\n",
+                  "f(%p), arg(%p), arg_size(%z), rt(%s), ret(%p), pt(%s), np(%z), pc(%p), ts(%u), %s, %s\n",
                   f,
                   arg,
                   arg_size,
@@ -2321,6 +2344,7 @@ static int qthread_uberfork(qthread_f             f,
                   npreconds,
                   preconds,
                   target_shep,
+                  (dteam == SAME_TEAM) ? "same_team" : "new_team",
                   (future_flag ? "future" : "qthread"));
     assert(qlib);
     /* Step 2: Pick a destination */
@@ -2359,6 +2383,20 @@ static int qthread_uberfork(qthread_f             f,
 #endif  /* ifdef QTHREAD_DEBUG */
     }
     /* Step 3: Allocate & init the structure */
+    if (dteam == SAME_TEAM) {
+        if (me) {
+            team = me->team;
+            if (team) {
+                qt_sinc_willspawn(team->sinc, 1);
+            }
+        }
+    } else { // NEW_TEAM
+        team          = ALLOC_TEAM(myshep);
+        team->team_id = qthread_internal_incr(&(qlib->max_team_id),
+                                              &qlib->max_team_id_lock, 1);
+        team->sinc = qt_sinc_create(0, NULL, NULL, 1);
+        qthread_fork(qt_team_destroy, team, NULL);
+    }
     t = qthread_thread_new(f, arg, arg_size, (aligned_t *)ret, dest_shep, team);
     qassert_ret(t, QTHREAD_MALLOC_ERROR);
     if (QTHREAD_UNLIKELY(target_shep != NO_SHEPHERD)) {
@@ -2382,7 +2420,6 @@ static int qthread_uberfork(qthread_f             f,
     }
     qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id, target_shep);
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    qthread_t *me = qthread_internal_self();
     if (me) {
         t->currentParallelRegion = me->currentParallelRegion; // saved in shepherd
         t->sibling               = me->child;                 // add to parents tsk list
@@ -2422,71 +2459,18 @@ static int qthread_uberfork(qthread_f             f,
     return QTHREAD_SUCCESS;
 } /*}}}*/
 
-static int qthread_uberfork_in_team(qthread_f             f,
-                                    const void           *arg,
-                                    size_t                arg_size,
-                                    synctype_t            ret_type,
-                                    void                 *ret,
-                                    synctype_t            precond_type,
-                                    size_t                npreconds,
-                                    void                 *preconds,
-                                    qthread_shepherd_id_t target_shep,
-                                    uint_fast8_t          future_flag)
-{   /*{{{*/
-    qthread_t *me = qthread_internal_self();
-    qt_team_t *team = NULL != me ? me->team : NULL;
-
-    // Increase the team sinc membership
-    if (NULL != team) {
-        qt_sinc_willspawn(me->team->sinc, 1);
-    }
-
-    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, team, 0);
-}
-
-static int qthread_uberfork_new_team(qthread_f             f,
-                                     const void           *arg,
-                                     size_t                arg_size,
-                                     synctype_t            ret_type,
-                                     void                 *ret,
-                                     synctype_t            precond_type,
-                                     size_t                npreconds,
-                                     void                 *preconds,
-                                     qthread_shepherd_id_t target_shep,
-                                     uint_fast8_t          future_flag)
-{   /*{{{*/
-
-    // Create and initialize a new team
-    qt_team_t *new_team = malloc(sizeof(qt_team_t));
-    assert(NULL != new_team);
-
-    new_team->team_id = qthread_internal_incr(&(qlib->max_team_id),
-                                              &qlib->max_thread_id_lock, 1);
-    new_team->sinc = qt_sinc_create(0, NULL, NULL, 1);
-    qthread_fork(qt_team_destroy, new_team, NULL);
-
-    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, new_team, 0);
-}
-
 int qthread_fork(qthread_f   f,
                  const void *arg,
                  aligned_t  *ret)
 {   /*{{{*/
-    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, NULL, 0);
-} /*}}}*/
-
-int qthread_fork_in_team(qthread_f   f,
-                         const void *arg,
-                         aligned_t  *ret)
-{   /*{{{*/
-    return qthread_uberfork_in_team(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, 0);
+    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, SAME_TEAM, 0);
 } /*}}}*/
 
 int qthread_fork_new_team(qthread_f   f,
                           const void *arg,
                           aligned_t  *ret)
 {   /*{{{*/
-    return qthread_uberfork_new_team(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, 0);
+    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, NEW_TEAM, 0);
 } /*}}}*/
 
 int qthread_fork_copyargs_precond(qthread_f   f,
@@ -2518,7 +2502,7 @@ int qthread_fork_copyargs_precond(qthread_f   f,
     }
     va_end(args);
 
-    return qthread_uberfork(f, arg, arg_size, SYNCVAR_T, ret, ALIGNED_T, npreconds, preconds, NO_SHEPHERD, NULL, 0);
+    return qthread_uberfork(f, arg, arg_size, SYNCVAR_T, ret, ALIGNED_T, npreconds, preconds, NO_SHEPHERD, SAME_TEAM, 0);
 } /*}}}*/
 
 int qthread_fork_precond(qthread_f   f,
@@ -2549,7 +2533,7 @@ int qthread_fork_precond(qthread_f   f,
     }
     va_end(args);
 
-    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, ALIGNED_T, npreconds, preconds, NO_SHEPHERD, NULL, 0);
+    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, ALIGNED_T, npreconds, preconds, NO_SHEPHERD, SAME_TEAM, 0);
 } /*}}}*/
 
 int qthread_fork_syncvar_copyargs_to(qthread_f             f,
@@ -2558,7 +2542,7 @@ int qthread_fork_syncvar_copyargs_to(qthread_f             f,
                                      syncvar_t            *ret,
                                      qthread_shepherd_id_t preferred_shep)
 {   /*{{{*/
-    return qthread_uberfork(f, (void *const)arg, arg_size, SYNCVAR_T, ret, NO_SYNC, 0, NULL, preferred_shep, NULL, 0);
+    return qthread_uberfork(f, (void *const)arg, arg_size, SYNCVAR_T, ret, NO_SYNC, 0, NULL, preferred_shep, SAME_TEAM, 0);
 } /*}}}*/
 
 int qthread_fork_copyargs(qthread_f   f,
@@ -2566,7 +2550,7 @@ int qthread_fork_copyargs(qthread_f   f,
                           size_t      arg_size,
                           aligned_t  *ret)
 {   /*{{{*/
-    return qthread_uberfork(f, (void *const)arg, arg_size, ALIGNED_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, NULL, 0);
+    return qthread_uberfork(f, (void *const)arg, arg_size, ALIGNED_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, SAME_TEAM, 0);
 }   /*}}}*/
 
 int qthread_fork_syncvar_copyargs(qthread_f   f,
@@ -2574,28 +2558,21 @@ int qthread_fork_syncvar_copyargs(qthread_f   f,
                                   size_t      arg_size,
                                   syncvar_t  *ret)
 {                      /*{{{ */
-    return qthread_uberfork(f, (void *const)arg, arg_size, SYNCVAR_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, NULL, 0);
+    return qthread_uberfork(f, (void *const)arg, arg_size, SYNCVAR_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, SAME_TEAM, 0);
 }                      /*}}} */
 
 int qthread_fork_syncvar(qthread_f   f,
                          const void *arg,
                          syncvar_t  *ret)
 {                      /*{{{ */
-    return qthread_uberfork(f, (void *const)arg, 0, SYNCVAR_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, NULL, 0);
-}                      /*}}} */
-
-int qthread_fork_syncvar_in_team(qthread_f   f,
-                                 const void *arg,
-                                 syncvar_t  *ret)
-{                      /*{{{ */
-    return qthread_uberfork_in_team(f, (void *const)arg, 0, SYNCVAR_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, 0);
+    return qthread_uberfork(f, (void *const)arg, 0, SYNCVAR_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, SAME_TEAM, 0);
 }                      /*}}} */
 
 int qthread_fork_syncvar_new_team(qthread_f   f,
                                   const void *arg,
                                   syncvar_t  *ret)
 {                      /*{{{ */
-    return qthread_uberfork_new_team(f, (void *const)arg, 0, SYNCVAR_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, 0);
+    return qthread_uberfork(f, (void *const)arg, 0, SYNCVAR_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, NEW_TEAM, 0);
 }                      /*}}} */
 
 int qthread_fork_to(qthread_f             f,
@@ -2606,7 +2583,7 @@ int qthread_fork_to(qthread_f             f,
     if ((shepherd != NO_SHEPHERD) && (shepherd >= qlib->nshepherds)) {
         shepherd %= qlib->nshepherds;
     }
-    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, shepherd, NULL, 0);
+    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, shepherd, SAME_TEAM, 0);
 } /*}}}*/
 
 int qthread_fork_precond_to(qthread_f             f,
@@ -2641,7 +2618,7 @@ int qthread_fork_precond_to(qthread_f             f,
     if ((shepherd != NO_SHEPHERD) && (shepherd >= qlib->nshepherds)) {
         shepherd %= qlib->nshepherds;
     }
-    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, ALIGNED_T, npreconds, preconds, shepherd, NULL, 0);
+    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, ALIGNED_T, npreconds, preconds, shepherd, SAME_TEAM, 0);
 }                      /*}}} */
 
 int qthread_fork_syncvar_to(qthread_f             f,
@@ -2652,7 +2629,7 @@ int qthread_fork_syncvar_to(qthread_f             f,
     if ((s != NO_SHEPHERD) && (s >= qlib->nshepherds)) {
         s %= qlib->nshepherds;
     }
-    return qthread_uberfork(f, arg, 0, SYNCVAR_T, ret, NO_SYNC, 0, NULL, s, NULL, 0);
+    return qthread_uberfork(f, arg, 0, SYNCVAR_T, ret, NO_SYNC, 0, NULL, s, SAME_TEAM, 0);
 } /*}}}*/
 
 int qthread_fork_future_to(qthread_f             f,
@@ -2663,7 +2640,7 @@ int qthread_fork_future_to(qthread_f             f,
     if ((shepherd != NO_SHEPHERD) && (shepherd >= qlib->nshepherds)) {
         shepherd %= qlib->nshepherds;
     }
-    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, shepherd, NULL, 1);
+    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, shepherd, SAME_TEAM, 1);
 } /*}}}*/
 
 int qthread_fork_syncvar_future_to(qthread_f             f,
@@ -2674,14 +2651,14 @@ int qthread_fork_syncvar_future_to(qthread_f             f,
     if ((shepherd != NO_SHEPHERD) && (shepherd >= qlib->nshepherds)) {
         shepherd %= qlib->nshepherds;
     }
-    return qthread_uberfork(f, arg, 0, SYNCVAR_T, ret, NO_SYNC, 0, NULL, shepherd, NULL, 1);
+    return qthread_uberfork(f, arg, 0, SYNCVAR_T, ret, NO_SYNC, 0, NULL, shepherd, SAME_TEAM, 1);
 } /*}}}*/
 
 int qthread_fork_syncvar_future(qthread_f   f,
                                 const void *arg,
                                 syncvar_t  *ret)
 {   /*{{{*/
-    return qthread_uberfork(f, arg, 0, SYNCVAR_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, NULL, 1);
+    return qthread_uberfork(f, arg, 0, SYNCVAR_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, SAME_TEAM, 1);
 } /*}}}*/
 
 /*
@@ -2693,7 +2670,7 @@ int qthread_fork_syncvar_future(qthread_f   f,
  * simply enqueues the specified qthread in the FFQ associated with the target.
  */
 int INTERNAL qthread_check_precond(qthread_t *t)
-{
+{   /*{{{*/
     aligned_t **these_preconds = (aligned_t **)t->preconds;
 
     // Process input preconds
@@ -2757,7 +2734,7 @@ int INTERNAL qthread_check_precond(qthread_t *t)
     }
 
     return 0;
-}
+} /*}}}*/
 
 void INTERNAL qthread_back_to_master(qthread_t *t)
 {                      /*{{{ */
@@ -3193,13 +3170,13 @@ void INTERNAL qthread_assertnotfuture(void)
 
 // check to see if task freeable 1) QTHREAD_STATE_TERMINATED 2) parent has noticed it's completion
 void qthread_task_free(qthread_t *t)
-{
+{   /*{{{*/
     assert(t);
     int tc = qthread_incr(&t->task_completed, 1);
     if (tc == 1) {       // needs to be freed from both workhorse loop and taskwait
         FREE_QTHREAD(t); // everything else is freed when QTHREAD_STATE_TERMINATED
     }
-}
+} /*}}}*/
 
 int INTERNAL qthread_forCount(int inc)
 {                                    /*{{{ */
