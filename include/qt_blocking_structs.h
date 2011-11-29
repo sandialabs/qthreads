@@ -32,7 +32,6 @@ typedef struct qthread_addrstat_s {
     qthread_addrres_t    *EFQ;
     qthread_addrres_t    *FEQ;
     qthread_addrres_t    *FFQ;
-    qthread_shepherd_t   *creator_ptr;
 #ifdef QTHREAD_LOCK_PROFILING
     qtimer_t              empty_timer;
 #endif
@@ -51,20 +50,14 @@ typedef struct qthread_addrstat_s {
 extern qt_mpool generic_addrstat_pool;
 static QINLINE qthread_addrstat_t *ALLOC_ADDRSTAT(qthread_shepherd_t *shep)
 {                                      /*{{{ */
-    qthread_addrstat_t *tmp =
-        (qthread_addrstat_t *)qt_mpool_alloc(shep ? (shep->addrstat_pool) :
-                                             generic_addrstat_pool);
+    qthread_addrstat_t *tmp = (qthread_addrstat_t *)qt_mpool_cached_alloc(generic_addrstat_pool);
 
-    if (tmp != NULL) {
-        tmp->creator_ptr = shep;
-    }
     return tmp;
 }                                      /*}}} */
 
 static QINLINE void FREE_ADDRSTAT(qthread_addrstat_t *t)
 {                                      /*{{{ */
-    qt_mpool_free(t->creator_ptr ? (t->creator_ptr->addrstat_pool) :
-                  generic_addrstat_pool, t);
+    qt_mpool_cached_free(generic_addrstat_pool, t);
 }                                      /*}}} */
 
 #endif // ifdef UNPOOLED_ADDRSTAT
