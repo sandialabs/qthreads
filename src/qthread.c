@@ -256,13 +256,13 @@ static QINLINE void FREE_STACK(qthread_shepherd_t *shep,
 # endif /* ifdef QTHREAD_GUARD_PAGES */
 #endif  /* if defined(UNPOOLED_STACKS) || defined(UNPOOLED) */
 
-#if defined(UNPOOLED) || 1
+#if defined(UNPOOLED)
 # define ALLOC_TEAM(shep)   (qt_team_t *)malloc(sizeof(qt_team_t))
 # define FREE_TEAM(t, shep) free(t)
 #else
 static qt_mpool generic_team_pool = NULL;
 # define ALLOC_TEAM(shep)   (qt_team_t *)qt_mpool_alloc(shep ? (shep->team_pool) : generic_team_pool)
-# define FREE_TEAM(t, shep) qt_mpool_free(shep ? (shep->team_pool) : generic_team_pool)
+# define FREE_TEAM(t, shep) qt_mpool_free(shep ? (shep->team_pool) : generic_team_pool, t)
 #endif
 
 #if !defined(UNPOOLED_ADDRSTAT) && !defined(UNPOOLED)
@@ -987,6 +987,7 @@ int qthread_initialize(void)
         qlib->shepherds[i].lock_pool     = qt_mpool_create(sizeof(qthread_lock_t));
         qlib->shepherds[i].addrres_pool  = qt_mpool_create(sizeof(qthread_addrres_t));
         qlib->shepherds[i].addrstat_pool = qt_mpool_create(sizeof(qthread_addrstat_t));
+        qlib->shepherds[i].team_pool     = qt_mpool_create(sizeof(qt_team_t));
     }                      /*}}} */
 /* these are used when qthread_fork() is called from a non-qthread. */
     generic_qthread_pool = qt_mpool_create(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size);
@@ -998,6 +999,7 @@ int qthread_initialize(void)
         qt_mpool_create(sizeof(struct qthread_runtime_data_s) + qlib->qthread_stack_size);
 # endif
     generic_addrstat_pool = qt_mpool_create(sizeof(qthread_addrstat_t));
+    generic_team_pool     = qt_mpool_create(sizeof(qt_team_t));
 #endif /* ifndef UNPOOLED */
     initialize_hazardptrs();
     qt_lock_subsystem_init();
@@ -1654,6 +1656,8 @@ void qthread_finalize(void)
         qt_mpool_destroy(qlib->shepherds[i].addrstat_pool);
         qthread_debug(CORE_DETAILS, "destroy shep %i stack pool\n", (int)i);
         qt_mpool_destroy(qlib->shepherds[i].stack_pool);
+        qthread_debug(CORE_DETAILS, "destroy shep %i team pool\n", (int)i);
+        qt_mpool_destroy(qlib->shepherds[i].team_pool);
     }
     qthread_debug(CORE_DETAILS, "destroy global memory pools\n");
     qt_mpool_destroy(generic_qthread_pool);
@@ -1662,6 +1666,8 @@ void qthread_finalize(void)
     generic_stack_pool = NULL;
     qt_mpool_destroy(generic_addrstat_pool);
     generic_addrstat_pool = NULL;
+    qt_mpool_destroy(generic_team_pool);
+    generic_team_pool = NULL;
 #endif /* ifndef UNPOOLED */
     qthread_debug(CORE_DETAILS, "destroy global shepherd array\n");
     free(qlib->shepherds);
@@ -1958,11 +1964,12 @@ qt_team_id_t qt_team_id(void)
  * before freeing the associated resources. */
 aligned_t qt_team_destroy(void *arg_)
 {   /*{{{*/
-    qt_team_t *team = (qt_team_t *)arg_;
+    qt_team_t          *team = (qt_team_t *)arg_;
+    qthread_shepherd_t *shep = qthread_internal_getshep();
 
     qt_sinc_wait(team->sinc, NULL);
     qt_sinc_destroy(team->sinc);
-    free(team);
+    FREE_TEAM(team, shep);
 
     return 0;
 } /*}}}*/
