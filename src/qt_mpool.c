@@ -280,7 +280,7 @@ void *qt_mpool_cached_alloc(qt_mpool pool)
             QTHREAD_FASTLOCK_LOCK(&pool->pool_lock);
             if (pool->alloc_list_pos == (pagesize / sizeof(void *) - 1)) {
                 void **tmp = calloc(1, pagesize);
-                qassert_goto((tmp != NULL), alloc_exit);
+                qassert_ret((tmp != NULL), NULL);
                 tmp[pagesize / sizeof(void *) - 1] = pool->alloc_list;
                 pool->alloc_list                   = tmp;
                 pool->alloc_list_pos               = 0;
