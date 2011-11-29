@@ -249,7 +249,6 @@ qt_mpool qt_mpool_create(size_t item_size)
 
 void *qt_mpool_cached_alloc(qt_mpool pool)
 {
-    void             *ret   = NULL;
     qt_mpool_cache_t *cache = NULL;
     uintptr_t         cnt;
 
@@ -258,11 +257,12 @@ void *qt_mpool_cached_alloc(qt_mpool pool)
     cache = pthread_getspecific(pool->threadlocal_cache);
     cnt   = (uintptr_t)pthread_getspecific(pool->threadlocal_count);
     if (cache) {
-        ret   = (void *)cache;
+        void *ret = (void *)cache;
         cache = cache->next;
         cnt--;
         pthread_setspecific(pool->threadlocal_cache, cache);
         pthread_setspecific(pool->threadlocal_count, (void *)cnt);
+        return ret;
     } else {
         /* cache is empty; need to fill it */
         if (pool->reuse_pool) { // global cache
@@ -297,22 +297,23 @@ void *qt_mpool_cached_alloc(qt_mpool pool)
             for (size_t i = 1; i < pool->items_per_alloc; ++i) {
                 cache = (qt_mpool_cache_t *)&p[i * pool->item_size];
                 if (i + 1 < pool->items_per_alloc) {
-                    cache->next = cache + 1; // heh, pointer math
+                    cache->next = (qt_mpool_cache_t *)&p[(i + 1) * pool->item_size];
+                } else {
+                    cache->next = NULL;
                 }
                 cache->block_next = NULL;
             }
             pthread_setspecific(pool->threadlocal_cache, &p[pool->item_size]);
             pthread_setspecific(pool->threadlocal_count, (void *)(uintptr_t)(pool->items_per_alloc - 1));
-            ret = p;
+            return p;
         } else {
             pthread_setspecific(pool->threadlocal_cache, cache->next);
             pthread_setspecific(pool->threadlocal_count, (void *)(uintptr_t)(cnt - 1));
             cache->next       = NULL;
             cache->block_next = NULL;
-            ret               = cache;
+            return cache;
         }
     }
-    return ret;
 }
 
 void *qt_mpool_alloc(qt_mpool pool)
