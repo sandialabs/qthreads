@@ -11,7 +11,6 @@ typedef struct qthread_queue_s qthread_queue_t;
 
 struct qthread_lock_s {
     qthread_queue_t      *waiting;
-    qthread_shepherd_t   *creator_ptr;
 #ifdef QTHREAD_DEBUG
     unsigned              owner;
 #endif

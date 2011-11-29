@@ -257,12 +257,12 @@ static QINLINE void FREE_STACK(qthread_shepherd_t *shep,
 #endif  /* if defined(UNPOOLED_STACKS) || defined(UNPOOLED) */
 
 #if defined(UNPOOLED)
-# define ALLOC_TEAM(shep)   (qt_team_t *)malloc(sizeof(qt_team_t))
-# define FREE_TEAM(t) free(t)
+# define ALLOC_TEAM(shep) (qt_team_t *)malloc(sizeof(qt_team_t))
+# define FREE_TEAM(t)     free(t)
 #else
 static qt_mpool generic_team_pool = NULL;
-# define ALLOC_TEAM(shep)   (qt_team_t *)qt_mpool_cached_alloc(generic_team_pool)
-# define FREE_TEAM(t) qt_mpool_cached_free(generic_team_pool, t)
+# define ALLOC_TEAM(shep) (qt_team_t *)qt_mpool_cached_alloc(generic_team_pool)
+# define FREE_TEAM(t)     qt_mpool_cached_free(generic_team_pool, t)
 #endif
 
 #if !defined(UNPOOLED_ADDRSTAT) && !defined(UNPOOLED)
@@ -588,8 +588,8 @@ static void *qthread_shepherd(void *arg)
 
                     case QTHREAD_STATE_FEB_BLOCKED: /* unlock the related FEB address locks, and re-arrange memory to be correct */
                         qthread_debug(THREAD_DETAILS | LOCK_DETAILS | SHEPHERD_DETAILS,
-                                      "id(%u): thread %i blocked on FEB\n",
-                                      me->shepherd_id, t->thread_id);
+                                      "id(%u): thread %i(%p) blocked on FEB\n",
+                                      me->shepherd_id, t->thread_id, t);
                         t->thread_state = QTHREAD_STATE_BLOCKED;
                         QTHREAD_FASTLOCK_UNLOCK(&(((qthread_addrstat_t *)(t->rdata->blockedon))->lock));
                         break;
@@ -984,7 +984,6 @@ int qthread_initialize(void)
         qlib->shepherds[i].queue_pool = qt_mpool_create(sizeof(qthread_queue_t));
         // printf("stack_pool = %p, queue_pool = %p\n", qlib->shepherds[i].stack_pool, qlib->shepherds[i].queue_pool); fflush(stdout);
         qt_threadqueue_init_pools(&(qlib->shepherds[i].threadqueue_pools));
-        qlib->shepherds[i].lock_pool     = qt_mpool_create(sizeof(qthread_lock_t));
         qlib->shepherds[i].addrres_pool  = qt_mpool_create(sizeof(qthread_addrres_t));
         qlib->shepherds[i].addrstat_pool = qt_mpool_create(sizeof(qthread_addrstat_t));
     }                      /*}}} */
@@ -1647,8 +1646,6 @@ void qthread_finalize(void)
         qt_mpool_destroy(qlib->shepherds[i].queue_pool);
         qthread_debug(CORE_DETAILS, "destroy shep %i threadqueue pools\n", (int)i);
         qt_threadqueue_destroy_pools(&qlib->shepherds[i].threadqueue_pools);
-        qthread_debug(CORE_DETAILS, "destroy shep %i lock pool\n", (int)i);
-        qt_mpool_destroy(qlib->shepherds[i].lock_pool);
         qthread_debug(CORE_DETAILS, "destroy shep %i addrres pool\n", (int)i);
         qt_mpool_destroy(qlib->shepherds[i].addrres_pool);
         qthread_debug(CORE_DETAILS, "destroy shep %i addrstat pool\n", (int)i);
@@ -1961,7 +1958,7 @@ qt_team_id_t qt_team_id(void)
  * before freeing the associated resources. */
 aligned_t qt_team_destroy(void *arg_)
 {   /*{{{*/
-    qt_team_t          *team = (qt_team_t *)arg_;
+    qt_team_t *team = (qt_team_t *)arg_;
 
     qt_sinc_wait(team->sinc, NULL);
     qt_sinc_destroy(team->sinc);
@@ -2336,7 +2333,7 @@ static int qthread_uberfork(qthread_f             f,
 #endif
 
     /* Step 1: Check arguments */
-    qthread_debug(THREAD_BEHAVIOR,
+    qthread_debug(THREAD_FUNCTIONS,
                   "f(%p), arg(%p), arg_size(%z), rt(%s), ret(%p), pt(%s), np(%z), pc(%p), ts(%u), %s, %s\n",
                   f,
                   arg,
@@ -2385,6 +2382,7 @@ static int qthread_uberfork(qthread_f             f,
         }
 #endif  /* ifdef QTHREAD_DEBUG */
     }
+    qthread_debug(THREAD_BEHAVIOR, "target_shep(%i) => dest_shep(%i)\n", target_shep, dest_shep);
     /* Step 3: Allocate & init the structure */
     if (dteam == SAME_TEAM) {
         if (me) {
@@ -2466,6 +2464,7 @@ int qthread_fork(qthread_f   f,
                  const void *arg,
                  aligned_t  *ret)
 {   /*{{{*/
+    qthread_debug(THREAD_CALLS, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
     return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, SAME_TEAM, 0);
 } /*}}}*/
 
@@ -2473,6 +2472,7 @@ int qthread_fork_new_team(qthread_f   f,
                           const void *arg,
                           aligned_t  *ret)
 {   /*{{{*/
+    qthread_debug(THREAD_CALLS, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
     return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, NEW_TEAM, 0);
 } /*}}}*/
 

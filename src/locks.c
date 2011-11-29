@@ -43,17 +43,14 @@ static QINLINE qthread_t *      qthread_dequeue(qthread_queue_t *q);
 #else
 static QINLINE qthread_lock_t *ALLOC_LOCK(qthread_shepherd_t *shep)
 {                      /*{{{ */
-    qthread_lock_t *tmp = (qthread_lock_t *)qt_mpool_alloc(shep ? (shep->lock_pool) : generic_lock_pool);
+    qthread_lock_t *tmp = (qthread_lock_t *)qt_mpool_cached_alloc(generic_lock_pool);
 
-    if (tmp != NULL) {
-        tmp->creator_ptr = shep;
-    }
     return tmp;
 }                      /*}}} */
 
 static QINLINE void FREE_LOCK(qthread_lock_t *t)
 {                      /*{{{ */
-    qt_mpool_free(t->creator_ptr ? (t->creator_ptr->lock_pool) : generic_lock_pool, t);
+    qt_mpool_cached_free(generic_lock_pool, t);
 }                      /*}}} */
 
 #endif /* if defined(UNPOOLED_LOCKS) || defined(UNPOOLED) */
