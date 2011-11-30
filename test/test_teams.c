@@ -99,7 +99,7 @@ int main(int   argc,
 
     iprintf("max is %lu\n", (unsigned long)max);
 
-    if (count + 2 == max) {
+    if (count + 3 == max) {
         iprintf("SUCCEEDED with count %lu and max team id %lu\n",
             (unsigned long)count,
             (unsigned long)max);

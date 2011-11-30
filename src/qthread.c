@@ -888,6 +888,7 @@ int qthread_initialize(void)
 #endif
     qlib->max_thread_id  = 0;
     qlib->max_unique_id  = 0;
+    qlib->max_team_id    = 1; /* team 0 is the default team */
     qlib->sched_shepherd = 0;
     QTHREAD_FASTLOCK_INIT(qlib->max_thread_id_lock);
     QTHREAD_FASTLOCK_INIT(qlib->max_unique_id_lock);
@@ -2099,12 +2100,13 @@ static void qthread_wrapper(void *ptr)
         assert(t->f);
         (t->f)(t->arg);
     }
-    t->thread_state = QTHREAD_STATE_TERMINATED;
 
     // Signal team sinc that member has finished
     if (NULL != t->team) {
         qt_sinc_submit(t->team->sinc, NULL);
     }
+
+    t->thread_state = QTHREAD_STATE_TERMINATED;
 
 #ifdef QTHREAD_COUNT_THREADS
     QTHREAD_FASTLOCK_LOCK(&concurrentthreads_lock);
