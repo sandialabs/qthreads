@@ -57,8 +57,6 @@ struct qthread_shepherd_s {
 #endif
     qthread_t             *current;
     qt_threadqueue_t      *ready;
-    /* memory pools */
-    qt_threadqueue_pools_t threadqueue_pools;
     /* round robin scheduler - can probably be smarter */
     aligned_t              sched_shepherd;
     uintptr_t              QTHREAD_CASLOCK(active);

@@ -952,11 +952,6 @@ int qthread_initialize(void)
     qthread_debug(CORE_DETAILS, "qthread task-local size: %u\n", qlib->qthread_tasklocal_size);
 
 #ifndef UNPOOLED
-/* set up the memory pools */
-    qthread_debug(CORE_DETAILS, "shepherd pools sync = %i\n", need_sync);
-    for (i = 0; i < nshepherds; i++) { /*{{{ */
-        qt_threadqueue_init_pools(&(qlib->shepherds[i].threadqueue_pools));
-    }                      /*}}} */
 /* these are used when qthread_fork() is called from a non-qthread. */
     generic_qthread_pool = qt_mpool_create(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size);
     generic_stack_pool   =
@@ -1361,8 +1356,7 @@ void qthread_finalize(void)
         assert(t != NULL);     /* what else can we do? */
         t->thread_state = QTHREAD_STATE_TERM_SHEP;
         t->thread_id    = (unsigned int)-1;
-        qt_threadqueue_enqueue(qlib->shepherds[i].ready, t,
-                               shep0);
+        qt_threadqueue_enqueue(qlib->shepherds[i].ready, t, shep0);
     }
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
@@ -1614,10 +1608,6 @@ void qthread_finalize(void)
         }
     }
 #ifndef UNPOOLED
-    for (i = 0; i < qlib->nshepherds; ++i) {
-        qthread_debug(CORE_DETAILS, "destroy shep %i threadqueue pools\n", (int)i);
-        qt_threadqueue_destroy_pools(&qlib->shepherds[i].threadqueue_pools);
-    }
     qthread_debug(CORE_DETAILS, "destroy global memory pools\n");
     qt_mpool_destroy(generic_qthread_pool);
     generic_qthread_pool = NULL;
@@ -2005,7 +1995,7 @@ static QINLINE void qthread_thread_free(qthread_t *t)
 #ifdef QTHREAD_USE_VALGRIND
         VALGRIND_STACK_DEREGISTER(t->rdata->valgrind_stack_id);
 #endif
-        qthread_debug(THREAD_DETAILS, "t(%p): releasing stack %p to %p\n", t, t->rdata->stack, t->creator_ptr);
+        qthread_debug(THREAD_DETAILS, "t(%p): releasing stack %p\n", t, t->rdata->stack);
         FREE_STACK(t->rdata->stack);
         t->rdata = NULL;
     }

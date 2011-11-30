@@ -28,7 +28,6 @@ struct _qt_threadqueue_node {
     struct _qt_threadqueue_node *next;
     struct _qt_threadqueue_node *prev;
     qthread_t                   *value;
-    qthread_shepherd_t          *creator_ptr;
 } /* qt_threadqueue_node_t */;
 
 typedef struct _qt_threadqueue_node qt_threadqueue_node_t;
@@ -36,7 +35,6 @@ typedef struct _qt_threadqueue_node qt_threadqueue_node_t;
 struct _qt_threadqueue {
     qt_threadqueue_node_t *head;
     qt_threadqueue_node_t *tail;
-    qthread_shepherd_t    *creator_ptr;
     /* used for the work stealing queue implementation */
     QTHREAD_FASTLOCK_TYPE  qlock;
     long                   qlength;
@@ -72,14 +70,12 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *l)
 
 /* Memory Management */
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
-# define ALLOC_THREADQUEUE(shep) (qt_threadqueue_t *)calloc(1, sizeof(qt_threadqueue_t))
-# define FREE_THREADQUEUE(t)     free(t)
-static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret,
-                                 qthread_shepherd_t     *shep)
+# define ALLOC_THREADQUEUE() (qt_threadqueue_t *)calloc(1, sizeof(qt_threadqueue_t))
+# define FREE_THREADQUEUE(t) free(t)
+static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret)
 {                                      /*{{{ */
 # ifdef HAVE_MEMALIGN
-    *ret =
-        (qt_threadqueue_node_t *)memalign(16, sizeof(qt_threadqueue_node_t));
+    *ret = (qt_threadqueue_node_t *)memalign(16, sizeof(qt_threadqueue_node_t));
 # elif defined(HAVE_POSIX_MEMALIGN)
     qassert(posix_memalign((void **)ret, 16, sizeof(qt_threadqueue_node_t)),
             0);
@@ -94,43 +90,18 @@ static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret,
 void INTERNAL qt_threadqueue_subsystem_init(void) {}
 #else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 qt_threadqueue_pools_t generic_threadqueue_pools;
-static QINLINE qt_threadqueue_t *ALLOC_THREADQUEUE(qthread_shepherd_t *shep)
-{                                      /*{{{ */
-    qt_threadqueue_t *tmp = (qt_threadqueue_t *)qt_mpool_alloc(shep
-                                                               ? (shep->threadqueue_pools.queues)
-                                                               : generic_threadqueue_pools.queues);
+# define ALLOC_THREADQUEUE() (qt_threadqueue_t *)qt_mpool_cached_alloc(generic_threadqueue_pools.queues)
+# define FREE_THREADQUEUE(t) qt_mpool_cached_free(generic_threadqueue_pools.queues, t)
 
-    if (tmp != NULL) {
-        tmp->creator_ptr = shep;
-    }
-    return tmp;
-}                                      /*}}} */
-
-static QINLINE void FREE_THREADQUEUE(qt_threadqueue_t *t)
+static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret)
 {                                      /*{{{ */
-    qt_mpool_free(t->creator_ptr ? (t->creator_ptr->threadqueue_pools.queues) :
-                  generic_threadqueue_pools.queues, t);
-}                                      /*}}} */
-
-static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret,
-                                 qthread_shepherd_t     *shep)
-{                                      /*{{{ */
-    *ret = (qt_threadqueue_node_t *)qt_mpool_alloc(shep
-                                                   ? (shep->threadqueue_pools.nodes)
-                                                   : generic_threadqueue_pools.nodes);
+    *ret = (qt_threadqueue_node_t *)qt_mpool_cached_alloc(generic_threadqueue_pools.nodes);
     if (*ret != NULL) {
         memset(*ret, 0, sizeof(qt_threadqueue_node_t));
-        (*ret)->creator_ptr = shep;
     }
 }                                      /*}}} */
 
-static QINLINE void FREE_TQNODE(qt_threadqueue_node_t *t)
-{                                      /*{{{ */
-    qt_mpool_free(t->creator_ptr
-                  ? (t->creator_ptr->threadqueue_pools.nodes)
-                  : generic_threadqueue_pools.nodes,
-                  t);
-}                                      /*}}} */
+# define FREE_TQNODE(t) qt_mpool_cached_free(generic_threadqueue_pools.nodes, t)
 
 static void qt_threadqueue_subsystem_shutdown(void)
 {
@@ -142,7 +113,7 @@ void INTERNAL qt_threadqueue_subsystem_init(void)
 {
     generic_threadqueue_pools.nodes  = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), 16);
     generic_threadqueue_pools.queues = qt_mpool_create(sizeof(qt_threadqueue_t));
-    qthread_internal_cleanup_early(qt_threadqueue_subsystem_shutdown);
+    qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
 }
 
 void INTERNAL qt_threadqueue_init_pools(qt_threadqueue_pools_t *p)
@@ -195,10 +166,9 @@ static QINLINE void qthread_steal(void);
 
 qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd)
 {   /*{{{*/
-    qt_threadqueue_t *q = ALLOC_THREADQUEUE(shepherd);
+    qt_threadqueue_t *q = ALLOC_THREADQUEUE();
 
     if (q != NULL) {
-        q->creator_ptr       = shepherd;
         q->head              = q->tail = NULL;
         q->qlength           = 0;
         q->qlength_stealable = 0;
@@ -224,7 +194,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
 {   /*{{{*/
     qt_threadqueue_node_t *node;
 
-    ALLOC_TQNODE(&node, shep);
+    ALLOC_TQNODE(&node);
     assert(node != NULL);
 
     node->value = t;
@@ -256,7 +226,7 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
 {   /*{{{*/
     qt_threadqueue_node_t *node;
 
-    ALLOC_TQNODE(&node, shep);
+    ALLOC_TQNODE(&node);
     assert(node != NULL);
 
     node->value = t;
@@ -319,7 +289,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
 
                         default:
                             /* McCoy thread can only run on worker 0 */
-                            qt_threadqueue_enqueue_yielded(q, t, t->rdata->shepherd_ptr);
+                            qt_threadqueue_enqueue_yielded(q, t, (t->rdata) ? (t->rdata->shepherd_ptr) : NULL);
                             t = NULL;
                             continue; // keep looking
                     }
@@ -468,9 +438,9 @@ static QINLINE void qthread_steal(void)
     qthread_incr(&thief_shepherd->steal_attempted, 1);
 #endif
     for (i = 1; i < qlib->nshepherds; i++) {
-        victim_shepherd = &qlib->shepherds[thief_shepherd->sorted_sheplist[i-1]];
-            /*&qlib->shepherds[(thief_shepherd->shepherd_id + i) %
-                             qlib->nshepherds];*/
+        victim_shepherd = &qlib->shepherds[thief_shepherd->sorted_sheplist[i - 1]];
+        /*&qlib->shepherds[(thief_shepherd->shepherd_id + i) %
+         *               qlib->nshepherds];*/
         if (0 < victim_shepherd->ready->qlength_stealable) {
             first = qt_threadqueue_dequeue_steal(victim_shepherd->ready);
             if (first) {

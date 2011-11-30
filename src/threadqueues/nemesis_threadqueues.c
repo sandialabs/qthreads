@@ -37,55 +37,32 @@ typedef struct {
     void   *shadow_head;
     /* the following is for estimating a queue's "busy" level, and is not
      * guaranteed accurate (that would be a race condition) */
-    saligned_t          advisory_queuelen;
-    qthread_shepherd_t *creator_ptr;
-    uint8_t             pad2[CACHELINE_WIDTH - sizeof(void *) - sizeof(saligned_t) -
-                             sizeof(qthread_shepherd_t *)];
+    saligned_t advisory_queuelen;
+    uint8_t    pad2[CACHELINE_WIDTH - sizeof(void *) - sizeof(saligned_t)];
 }
-NEMESIS_queue Q_ALIGNED (
-                         CACHELINE_WIDTH);
+NEMESIS_queue Q_ALIGNED (CACHELINE_WIDTH);
 
 struct _qt_threadqueue {
     NEMESIS_queue q;
     /* the following is for estimating a queue's "busy" level, and is not
      * guaranteed accurate (that would be a race condition) */
-    saligned_t          advisory_queuelen;
-    qthread_shepherd_t *creator_ptr;
+    saligned_t      advisory_queuelen;
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-    uint32_t            frustration;
-    pthread_cond_t      trigger;
-    pthread_mutex_t     trigger_lock;
+    uint32_t        frustration;
+    pthread_cond_t  trigger;
+    pthread_mutex_t trigger_lock;
 #endif
 } /* qt_threadqueue_t */;
 
 /* Memory Management */
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
-# define ALLOC_THREADQUEUE(shep) (qt_threadqueue_t *)calloc(1, sizeof(qt_threadqueue_t))
-# define FREE_THREADQUEUE(t)     free(t)
+# define ALLOC_THREADQUEUE() (qt_threadqueue_t *)calloc(1, sizeof(qt_threadqueue_t))
+# define FREE_THREADQUEUE(t) free(t)
 void INTERNAL qt_threadqueue_subsystem_init(void) {}
 #else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 qt_threadqueue_pools_t generic_threadqueue_pools = { NULL, NULL };
-
-static QINLINE qt_threadqueue_t *ALLOC_THREADQUEUE(qthread_shepherd_t *shep)
-{                                      /*{{{ */
-    qt_threadqueue_t *tmp =
-        (qt_threadqueue_t *)qt_mpool_alloc(shep
-                                           ? (shep->threadqueue_pools.queues)
-                                           : generic_threadqueue_pools.queues);
-
-    if (tmp != NULL) {
-        tmp->creator_ptr = shep;
-    }
-    return tmp;
-}                                      /*}}} */
-
-static QINLINE void FREE_THREADQUEUE(qt_threadqueue_t *t)
-{                                      /*{{{ */
-    qt_mpool_free(t->
-                  creator_ptr ? (t->creator_ptr->threadqueue_pools.
-                                 queues) : generic_threadqueue_pools.queues,
-                  t);
-}                                      /*}}} */
+# define ALLOC_THREADQUEUE() (qt_threadqueue_t *)qt_mpool_cached_alloc(generic_threadqueue_pools.queues)
+# define FREE_THREADQUEUE(t) qt_mpool_cached_free(generic_threadqueue_pools.queues, t)
 
 static void qt_threadqueue_subsystem_shutdown(void)
 {
@@ -95,7 +72,7 @@ static void qt_threadqueue_subsystem_shutdown(void)
 void INTERNAL qt_threadqueue_subsystem_init(void)
 {
     generic_threadqueue_pools.queues = qt_mpool_create(sizeof(qt_threadqueue_t));
-    qthread_internal_cleanup_early(qt_threadqueue_subsystem_shutdown);
+    qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
 }
 
 void INTERNAL qt_threadqueue_init_pools(qt_threadqueue_pools_t *p)
@@ -118,7 +95,7 @@ void INTERNAL qt_threadqueue_destroy_pools(qt_threadqueue_pools_t *p)
 
 qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd)
 {                                      /*{{{ */
-    qt_threadqueue_t *q = ALLOC_THREADQUEUE(shepherd);
+    qt_threadqueue_t *q = ALLOC_THREADQUEUE();
 
     qassert_ret(q != NULL, NULL);
 

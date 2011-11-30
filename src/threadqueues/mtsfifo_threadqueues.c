@@ -38,19 +38,16 @@ struct _qt_threadqueue {
     /* the following is for estimating a queue's "busy" level, and is not
      * guaranteed accurate (that would be a race condition) */
     saligned_t          advisory_queuelen;
-    qthread_shepherd_t *creator_ptr;
 } /* qt_threadqueue_t */;
 
 /* Memory Management */
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
-# define ALLOC_THREADQUEUE(shep) (qt_threadqueue_t *)calloc(1, sizeof(qt_threadqueue_t))
+# define ALLOC_THREADQUEUE() (qt_threadqueue_t *)calloc(1, sizeof(qt_threadqueue_t))
 # define FREE_THREADQUEUE(t)     free(t)
-static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret,
-                                 qthread_shepherd_t     *shep)
+static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret)
 {                                      /*{{{ */
 # ifdef HAVE_MEMALIGN
-    *ret =
-        (qt_threadqueue_node_t *)memalign(16, sizeof(qt_threadqueue_node_t));
+    *ret = (qt_threadqueue_node_t *)memalign(16, sizeof(qt_threadqueue_node_t));
 # elif defined(HAVE_POSIX_MEMALIGN)
     qassert(posix_memalign((void **)ret, 16, sizeof(qt_threadqueue_node_t)),
             0);
@@ -65,43 +62,18 @@ static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret,
 void INTERNAL qt_threadqueue_subsystem_init(void) {}
 #else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 qt_threadqueue_pools_t generic_threadqueue_pools;
-static QINLINE qt_threadqueue_t *ALLOC_THREADQUEUE(qthread_shepherd_t *shep)
-{                                      /*{{{ */
-    qt_threadqueue_t *tmp = (qt_threadqueue_t *)qt_mpool_alloc(shep
-                                                               ? (shep->threadqueue_pools.queues)
-                                                               : generic_threadqueue_pools.queues);
+# define ALLOC_THREADQUEUE() (qt_threadqueue_t *)qt_mpool_cached_alloc(generic_threadqueue_pools.queues)
+# define FREE_THREADQUEUE(t) qt_mpool_cached_free(generic_threadqueue_pools.queues, t)
 
-    if (tmp != NULL) {
-        tmp->creator_ptr = shep;
-    }
-    return tmp;
-}                                      /*}}} */
-
-static QINLINE void FREE_THREADQUEUE(qt_threadqueue_t *t)
+static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret)
 {                                      /*{{{ */
-    qt_mpool_free(t->creator_ptr ? (t->creator_ptr->threadqueue_pools.queues) :
-                  generic_threadqueue_pools.queues, t);
-}                                      /*}}} */
-
-static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret,
-                                 qthread_shepherd_t     *shep)
-{                                      /*{{{ */
-    *ret = (qt_threadqueue_node_t *)qt_mpool_alloc(shep
-                                                   ? (shep->threadqueue_pools.nodes)
-                                                   : generic_threadqueue_pools.nodes);
+    *ret = (qt_threadqueue_node_t *)qt_mpool_cached_alloc(generic_threadqueue_pools.nodes);
     if (*ret != NULL) {
         memset(*ret, 0, sizeof(qt_threadqueue_node_t));
-        (*ret)->creator_ptr = shep;
     }
 }                                      /*}}} */
 
-static QINLINE void FREE_TQNODE(qt_threadqueue_node_t *t)
-{                                      /*{{{ */
-    qt_mpool_free(t->creator_ptr
-                  ? (t->creator_ptr->threadqueue_pools.nodes)
-                  : generic_threadqueue_pools.nodes,
-                  t);
-}                                      /*}}} */
+#define FREE_TQNODE(t) qt_mpool_cached_free(generic_threadqueue_pools.nodes, t)
 
 static void qt_threadqueue_subsystem_shutdown(void)
 {
@@ -113,7 +85,7 @@ void INTERNAL qt_threadqueue_subsystem_init(void)
 {
     generic_threadqueue_pools.nodes  = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), 16);
     generic_threadqueue_pools.queues = qt_mpool_create(sizeof(qt_threadqueue_t));
-    qthread_internal_cleanup_early(qt_threadqueue_subsystem_shutdown);
+    qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
 }
 
 void INTERNAL qt_threadqueue_init_pools(qt_threadqueue_pools_t *p)
@@ -173,7 +145,7 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 
 qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd)
 {                                      /*{{{ */
-    qt_threadqueue_t *q = ALLOC_THREADQUEUE(shepherd);
+    qt_threadqueue_t *q = ALLOC_THREADQUEUE();
 
     if (q != NULL) {
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
@@ -188,7 +160,7 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd)
         }
         q->fruitless = 0;
 #endif   /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
-        ALLOC_TQNODE(((qt_threadqueue_node_t **)&(q->head)), shepherd);
+        ALLOC_TQNODE(((qt_threadqueue_node_t **)&(q->head)));
         assert(QPTR(q->head) != NULL);
         if (QPTR(q->head) == NULL) {   // if we're not using asserts, fail nicely
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
@@ -229,7 +201,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
     assert(t != NULL);
     assert(q != NULL);
 
-    ALLOC_TQNODE(&node, shep);
+    ALLOC_TQNODE(&node);
     assert(node != NULL);
     assert(QCTR(node) == 0);           // node MUST be aligned
 
