@@ -955,7 +955,6 @@ int qthread_initialize(void)
 /* set up the memory pools */
     qthread_debug(CORE_DETAILS, "shepherd pools sync = %i\n", need_sync);
     for (i = 0; i < nshepherds; i++) { /*{{{ */
-        qlib->shepherds[i].queue_pool = qt_mpool_create(sizeof(qthread_queue_t));
         qt_threadqueue_init_pools(&(qlib->shepherds[i].threadqueue_pools));
     }                      /*}}} */
 /* these are used when qthread_fork() is called from a non-qthread. */
@@ -1616,8 +1615,6 @@ void qthread_finalize(void)
     }
 #ifndef UNPOOLED
     for (i = 0; i < qlib->nshepherds; ++i) {
-        qthread_debug(CORE_DETAILS, "destroy shep %i queue pool\n", (int)i);
-        qt_mpool_destroy(qlib->shepherds[i].queue_pool);
         qthread_debug(CORE_DETAILS, "destroy shep %i threadqueue pools\n", (int)i);
         qt_threadqueue_destroy_pools(&qlib->shepherds[i].threadqueue_pools);
     }

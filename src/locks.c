@@ -33,47 +33,24 @@ qt_mpool generic_lock_pool  = NULL;
 qt_mpool generic_queue_pool = NULL;
 
 /* Function Prototypes */
-static QINLINE qthread_queue_t *qthread_queue_new(qthread_shepherd_t *shepherd);
+static QINLINE qthread_queue_t *qthread_queue_new(void);
 static QINLINE void             qthread_queue_free(qthread_queue_t *q);
 static QINLINE qthread_t *      qthread_dequeue(qthread_queue_t *q);
 
 #if defined(UNPOOLED_LOCKS) || defined(UNPOOLED)
-# define ALLOC_LOCK(shep) (qthread_lock_t *)malloc(sizeof(qthread_lock_t))
-# define FREE_LOCK(t)     free(t)
+# define ALLOC_LOCK() (qthread_lock_t *)malloc(sizeof(qthread_lock_t))
+# define FREE_LOCK(t) free(t)
 #else
-static QINLINE qthread_lock_t *ALLOC_LOCK(qthread_shepherd_t *shep)
-{                      /*{{{ */
-    qthread_lock_t *tmp = (qthread_lock_t *)qt_mpool_cached_alloc(generic_lock_pool);
-
-    return tmp;
-}                      /*}}} */
-
-static QINLINE void FREE_LOCK(qthread_lock_t *t)
-{                      /*{{{ */
-    qt_mpool_cached_free(generic_lock_pool, t);
-}                      /*}}} */
-
+# define ALLOC_LOCK() (qthread_lock_t *)qt_mpool_cached_alloc(generic_lock_pool)
+# define FREE_LOCK(t) qt_mpool_cached_free(generic_lock_pool, t)
 #endif /* if defined(UNPOOLED_LOCKS) || defined(UNPOOLED) */
 
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
-# define ALLOC_QUEUE(shep) (qthread_queue_t *)malloc(sizeof(qthread_queue_t))
-# define FREE_QUEUE(t)     free(t)
+# define ALLOC_QUEUE() (qthread_queue_t *)malloc(sizeof(qthread_queue_t))
+# define FREE_QUEUE(t) free(t)
 #else
-static QINLINE qthread_queue_t *ALLOC_QUEUE(qthread_shepherd_t *shep)
-{                      /*{{{ */
-    qthread_queue_t *tmp = (qthread_queue_t *)qt_mpool_alloc(shep ? (shep->queue_pool) : generic_queue_pool);
-
-    if (tmp != NULL) {
-        tmp->creator_ptr = shep;
-    }
-    return tmp;
-}                      /*}}} */
-
-static QINLINE void FREE_QUEUE(qthread_queue_t *t)
-{                      /*{{{ */
-    qt_mpool_free(t->creator_ptr ? (t->creator_ptr->queue_pool) : generic_queue_pool, t);
-}                      /*}}} */
-
+# define ALLOC_QUEUE() (qthread_queue_t *)qt_mpool_cached_alloc(generic_queue_pool)
+# define FREE_QUEUE(t)  qt_mpool_cached_free(generic_queue_pool, t)
 #endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 
 #ifdef QTHREAD_COUNT_THREADS
@@ -88,6 +65,7 @@ static void qt_lock_subsystem_shutdown(void)
     qt_mpool_destroy(generic_queue_pool);
     qt_mpool_destroy(generic_lock_pool);
 }
+
 #endif
 
 void INTERNAL qt_lock_subsystem_init(void)
@@ -162,14 +140,14 @@ int qthread_lock(const aligned_t *a)
     qt_hash_lock(qlib->locks[lockbin]);
     m = (qthread_lock_t *)qt_hash_get_locked(qlib->locks[lockbin], (void *)a);
     if (m == NULL) {
-        m = ALLOC_LOCK(me->rdata->shepherd_ptr);
+        m = ALLOC_LOCK();
         if (m == NULL) {
             qt_hash_unlock(qlib->locks[lockbin]);
             return QTHREAD_MALLOC_ERROR;
         }
 
         assert(me->rdata->shepherd_ptr == qthread_internal_getshep());
-        m->waiting = qthread_queue_new(me->rdata->shepherd_ptr);
+        m->waiting = qthread_queue_new();
         if (m->waiting == NULL) {
             FREE_LOCK(m);
             qt_hash_unlock(qlib->locks[lockbin]);
@@ -288,11 +266,11 @@ int qthread_unlock(const aligned_t *a)
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
-static QINLINE qthread_queue_t *qthread_queue_new(qthread_shepherd_t *shepherd)
+static QINLINE qthread_queue_t *qthread_queue_new(void)
 {                      /*{{{ */
     qthread_queue_t *q;
 
-    q = ALLOC_QUEUE(shepherd);
+    q = ALLOC_QUEUE();
     if (q != NULL) {
         q->head = NULL;
         q->tail = NULL;

@@ -58,7 +58,7 @@ qt_feb_barrier_t *qt_feb_barrier_create(size_t max_threads)
             qthread_internal_cleanup(cleanup_feb_barrier);
         }
     }
-    b = qt_mpool_alloc(fbp.pool);
+    b = qt_mpool_cached_alloc(fbp.pool);
 #else /* ifndef UNPOOLED */
     b = malloc(sizeof(struct qt_feb_barrier_s));
 #endif /* ifndef UNPOOLED */
@@ -107,7 +107,7 @@ void qt_feb_barrier_destroy(qt_feb_barrier_t *b)
     qthread_syncvar_fill(&b->out_gate);
     qthread_syncvar_fill(&b->in_gate);
 #ifndef UNPOOLED
-    qt_mpool_free(fbp.pool, b);
+    qt_mpool_cached_free(fbp.pool, b);
 #else
     free(b);
 #endif
