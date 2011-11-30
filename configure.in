@@ -129,6 +129,7 @@ AC_ARG_ENABLE([debug],
 							   thread,
 							   shepherd,
 							   core,
+							   mpool,
 							   syscalls,
 							   locks,
 							   febs,
@@ -141,7 +142,7 @@ AC_ARG_ENABLE([debug],
 							   futurelib,
 							   xomp])],
               [AS_IF([test "x$enable_debug" = "xyes"],
-					 [enable_debug="affinity,threadqueues,thread,shepherd,core,syscalls,locks,febs,syncvars,io,loops,barrier,qarray,rcrtool,futurelib,xomp"])
+					 [enable_debug="affinity,threadqueues,thread,shepherd,core,mpool,syscalls,locks,febs,syncvars,io,loops,barrier,qarray,rcrtool,futurelib,xomp"])
 			   for area in $(echo "$enable_debug" | sed 's/,/ /g') ; do
                  case "$area" in
 					 affinity) enable_debug_affinity=yes ;;
@@ -149,6 +150,7 @@ AC_ARG_ENABLE([debug],
 					 thread) enable_debug_threads=yes ;;
 					 shepherd) enable_debug_shepherd=yes ;;
 					 core) enable_debug_core=yes ;;
+					 mpool) enable_debug_mpool=yes ;;
 					 syscalls) enable_debug_syscalls=yes ;;
 					 locks) enable_debug_locks=yes ;;
 					 febs) enable_debug_febs=yes ;;
@@ -741,6 +743,8 @@ AS_IF([test "x$enable_debug" = x -o "x$enable_debug" = xno],
 					  [QTHREAD_DEBUG_THREADS], [prints out thread debugging information at runtime])
 	   QT_COND_DEFINE([$enable_debug_core],
 			          [QTHREAD_DEBUG_CORE], [prints out core debugging information at runtime])
+	   QT_COND_DEFINE([$enable_debug_mpool],
+			  [QTHREAD_DEBUG_MPOOL], [prints out memory pool debugging information at runtime])
 	   QT_COND_DEFINE([$enable_debug_shepherd],
 			          [QTHREAD_DEBUG_SHEPHERD], [prints out shepherd debugging information at runtime])
 	   QT_COND_DEFINE([$enable_debug_syscalls],
