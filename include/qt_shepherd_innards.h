@@ -58,7 +58,6 @@ struct qthread_shepherd_s {
     qthread_t             *current;
     qt_threadqueue_t      *ready;
     /* memory pools */
-    qt_mpool               qthread_pool;
     qt_mpool               queue_pool;
     qt_threadqueue_pools_t threadqueue_pools;
     qt_mpool               stack_pool;

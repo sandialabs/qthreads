@@ -151,9 +151,7 @@ void       qthread_task_free(qthread_t *);
 static qt_mpool generic_qthread_pool = NULL;
 static QINLINE qthread_t *ALLOC_QTHREAD(qthread_shepherd_t *shep)
 {                      /*{{{ */
-    qthread_t *tmp = (qthread_t *)qt_mpool_alloc(shep
-                                                 ? (shep->qthread_pool)
-                                                 : generic_qthread_pool);
+    qthread_t *tmp = (qthread_t *)qt_mpool_cached_alloc(generic_qthread_pool);
 
     if (tmp != NULL) {
         tmp->creator_ptr = shep;
@@ -163,8 +161,7 @@ static QINLINE qthread_t *ALLOC_QTHREAD(qthread_shepherd_t *shep)
 
 static QINLINE void FREE_QTHREAD(qthread_t *t)
 {                      /*{{{ */
-    qt_mpool_free(t->creator_ptr ? (t->creator_ptr->qthread_pool) :
-                  generic_qthread_pool, t);
+    qt_mpool_cached_free(generic_qthread_pool, t);
 }                      /*}}} */
 
 #endif /* if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED) */
@@ -973,10 +970,6 @@ int qthread_initialize(void)
 /* set up the memory pools */
     qthread_debug(CORE_DETAILS, "shepherd pools sync = %i\n", need_sync);
     for (i = 0; i < nshepherds; i++) { /*{{{ */
-        /* the following SHOULD only be accessed by one thread at a time, so
-         * should be quite safe unsynchronized. If things fail, though...
-         * resynchronize them and see if that fixes it. */
-        qlib->shepherds[i].qthread_pool = qt_mpool_create(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size);
         qlib->shepherds[i].stack_pool   =
 # ifdef QTHREAD_GUARD_PAGES
             qt_mpool_create_aligned(qlib->qthread_stack_size +
@@ -998,8 +991,12 @@ int qthread_initialize(void)
 # else
         qt_mpool_create(sizeof(struct qthread_runtime_data_s) + qlib->qthread_stack_size);
 # endif
+#if !defined(UNPOOLED_ADDRSTAT)
     generic_addrstat_pool = qt_mpool_create(sizeof(qthread_addrstat_t));
+#endif
+#if !defined(UNPOOLED_ADDRRES)
     generic_addrres_pool = qt_mpool_create(sizeof(qthread_addrres_t));
+#endif
     generic_team_pool     = qt_mpool_create(sizeof(qt_team_t));
 #endif /* ifndef UNPOOLED */
     initialize_hazardptrs();
@@ -1643,8 +1640,6 @@ void qthread_finalize(void)
     }
 #ifndef UNPOOLED
     for (i = 0; i < qlib->nshepherds; ++i) {
-        qthread_debug(CORE_DETAILS, "destroy shep %i qthread pool\n", (int)i);
-        qt_mpool_destroy(qlib->shepherds[i].qthread_pool);
         qthread_debug(CORE_DETAILS, "destroy shep %i queue pool\n", (int)i);
         qt_mpool_destroy(qlib->shepherds[i].queue_pool);
         qthread_debug(CORE_DETAILS, "destroy shep %i threadqueue pools\n", (int)i);
@@ -1657,10 +1652,14 @@ void qthread_finalize(void)
     generic_qthread_pool = NULL;
     qt_mpool_destroy(generic_stack_pool);
     generic_stack_pool = NULL;
+#if !defined(UNPOOLED_ADDRSTAT) && !defined(UNPOOLED)
     qt_mpool_destroy(generic_addrstat_pool);
     generic_addrstat_pool = NULL;
+#endif
+#if !defined(UNPOOLED_ADDRRES) && !defined(UNPOOLED)
     qt_mpool_destroy(generic_addrres_pool);
     generic_addrres_pool = NULL;
+#endif
     qt_mpool_destroy(generic_team_pool);
     generic_team_pool = NULL;
 #endif /* ifndef UNPOOLED */
