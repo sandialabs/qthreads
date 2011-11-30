@@ -42,7 +42,7 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
         sinc->initial_value = malloc(sizeof_value);
         memcpy(sinc->initial_value, initial_value, sizeof_value);
     } else {
-        sinc->initial_value = initial_value;
+        sinc->initial_value = NULL;
         sinc->values = NULL;
         sinc->sizeof_shep_value_part = 0;
     }
