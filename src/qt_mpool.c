@@ -270,12 +270,12 @@ void *qt_mpool_cached_alloc(qt_mpool pool)
     }
     cache = tc->cache;
     cnt   = tc->count;
-    qthread_debug(MPOOL_CALLS, "%i->cache:%p cnt:%u\n", qthread_shep(), cache, (unsigned int)cnt);
+    qthread_debug(MPOOL_CALLS, "->cache:%p cnt:%u\n", cache, (unsigned int)cnt);
     if (cache) {
         void *ret = (void *)cache;
         cache = cache->next;
         cnt--;
-        qthread_debug(MPOOL_BEHAVIOR, "%i->...cached count:%zu\n", qthread_shep(), (size_t)cnt);
+        qthread_debug(MPOOL_BEHAVIOR, "->...cached count:%zu\n", (size_t)cnt);
         tc->cache = cache;
         tc->count = cnt;
         return ret;
@@ -283,7 +283,7 @@ void *qt_mpool_cached_alloc(qt_mpool pool)
         /* cache is empty; need to fill it */
         assert(cnt == 0);
         if (pool->reuse_pool) { // global cache
-            qthread_debug(MPOOL_DETAILS, "%i->...pull from reuse\n", qthread_shep());
+            qthread_debug(MPOOL_DETAILS, "->...pull from reuse\n");
             QTHREAD_FASTLOCK_LOCK(&pool->reuse_lock);
             if (pool->reuse_pool) {
                 cache                   = pool->reuse_pool;
@@ -297,7 +297,7 @@ void *qt_mpool_cached_alloc(qt_mpool pool)
             uint8_t *p;
 
             /* need to allocate a new block and record that I did so in the central pool */
-            qthread_debug(MPOOL_DETAILS, "%i->...allocating new block\n", qthread_shep());
+            qthread_debug(MPOOL_DETAILS, "->...allocating new block\n");
             QTHREAD_FASTLOCK_LOCK(&pool->pool_lock);
             if (pool->alloc_list_pos == (pagesize / sizeof(void *) - 1)) {
                 void **tmp = calloc(1, pagesize);
@@ -330,12 +330,12 @@ void *qt_mpool_cached_alloc(qt_mpool pool)
                 assert(cache->block_tail);
                 assert(cache->block_tail->next == NULL);
             }
-            qthread_debug(MPOOL_BEHAVIOR, "%i->...new_malloc count:%zu (alloc'd:%zu)\n", qthread_shep(), (size_t)(pool->items_per_alloc - 1), (size_t)pool->items_per_alloc);
+            qthread_debug(MPOOL_BEHAVIOR, "->...new_malloc count:%zu (alloc'd:%zu)\n", (size_t)(pool->items_per_alloc - 1), (size_t)pool->items_per_alloc);
             tc->cache = (qt_mpool_cache_t *)&p[pool->item_size];
             tc->count = pool->items_per_alloc - 1;
             return p;
         } else {
-            qthread_debug(MPOOL_BEHAVIOR, "%i->...from_global_pool count:%zu\n", qthread_shep(), (size_t)(cnt - 1));
+            qthread_debug(MPOOL_BEHAVIOR, "->...from_global_pool count:%zu\n", (size_t)(cnt - 1));
             tc->cache = cache->next;
             tc->count = cnt - 1;
             cache->next       = NULL; // unnecessary
@@ -426,7 +426,7 @@ void qt_mpool_cached_free(qt_mpool pool,
     }
     cache = tc->cache;
     cnt   = tc->count;
-    qthread_debug(MPOOL_CALLS, "%i->cache:%p cnt:%u\n", qthread_shep(), cache, (unsigned int)cnt);
+    qthread_debug(MPOOL_CALLS, "->cache:%p cnt:%u\n", cache, (unsigned int)cnt);
     if (cache) {
         assert(cnt != 0);
         n->next       = cache;
@@ -440,7 +440,7 @@ void qt_mpool_cached_free(qt_mpool pool,
     if (cnt >= (pool->items_per_alloc * 2)) {
         qt_mpool_cache_t *toglobal;
         /* push to global */
-        qthread_debug(MPOOL_DETAILS, "%i->push to global! cnt:%u\n", qthread_shep(), (unsigned)cnt);
+        qthread_debug(MPOOL_DETAILS, "->push to global! cnt:%u\n", (unsigned)cnt);
         assert(n);
         assert(n->block_tail);
         toglobal            = n->block_tail->next;
@@ -454,12 +454,12 @@ void qt_mpool_cached_free(qt_mpool pool,
         cnt -= pool->items_per_alloc;
     }
     if (cnt == pool->items_per_alloc + 1) {
-        qthread_debug(MPOOL_DETAILS, "%i->chop_block\n", qthread_shep());
+        qthread_debug(MPOOL_DETAILS, "->chop_block\n");
         n->block_tail = n;
     }
     tc->cache = n;
     tc->count = cnt;
-    qthread_debug(MPOOL_BEHAVIOR, "%i->free count = %zu\n", qthread_shep(), (size_t)cnt);
+    qthread_debug(MPOOL_BEHAVIOR, "->free count = %zu\n", (size_t)cnt);
     VALGRIND_MEMPOOL_FREE(pool, mem);
 }
 
