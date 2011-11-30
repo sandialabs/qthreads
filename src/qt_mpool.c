@@ -298,6 +298,11 @@ void *qt_mpool_cached_alloc(qt_mpool pool)
 
             /* need to allocate a new block and record that I did so in the central pool */
             qthread_debug(MPOOL_DETAILS, "->...allocating new block\n");
+            p = qt_mpool_internal_aligned_alloc(pool->alloc_size,
+                                                pool->alignment);
+            qassert_ret((p != NULL), NULL);
+            assert(pool->alignment == 0 ||
+                   (((uintptr_t)p) & (pool->alignment - 1)) == 0);
             QTHREAD_FASTLOCK_LOCK(&pool->pool_lock);
             if (pool->alloc_list_pos == (pagesize / sizeof(void *) - 1)) {
                 void **tmp = calloc(1, pagesize);
@@ -306,11 +311,6 @@ void *qt_mpool_cached_alloc(qt_mpool pool)
                 pool->alloc_list                   = tmp;
                 pool->alloc_list_pos               = 0;
             }
-            p = qt_mpool_internal_aligned_alloc(pool->alloc_size,
-                                                pool->alignment);
-            qassert_ret((p != NULL), NULL);
-            assert(pool->alignment == 0 ||
-                   (((uintptr_t)p) & (pool->alignment - 1)) == 0);
             pool->alloc_list[pool->alloc_list_pos] = p;
             pool->alloc_list_pos++;
             QTHREAD_FASTLOCK_UNLOCK(&pool->pool_lock);
