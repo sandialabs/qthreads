@@ -264,7 +264,7 @@ void *qt_mpool_cached_alloc(qt_mpool pool)
 
     tc = pthread_getspecific(pool->threadlocal_cache);
     if (NULL == tc) {
-        tc = malloc(sizeof(qt_mpool_threadlocal_cache_t));
+        tc = calloc(1, sizeof(qt_mpool_threadlocal_cache_t));
         assert(tc);
         pthread_setspecific(pool->threadlocal_cache, tc);
     }
@@ -420,7 +420,7 @@ void qt_mpool_cached_free(qt_mpool pool,
     qassert_retvoid((pool != NULL));
     tc = pthread_getspecific(pool->threadlocal_cache);
     if (NULL == tc) {
-        tc = malloc(sizeof(qt_mpool_threadlocal_cache_t));
+        tc = calloc(1, sizeof(qt_mpool_threadlocal_cache_t));
         assert(tc);
         pthread_setspecific(pool->threadlocal_cache, tc);
     }
