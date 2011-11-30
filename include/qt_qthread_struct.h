@@ -60,7 +60,6 @@ struct qthread_runtime_data_s {
 
 struct qthread_s {
     struct qthread_s *volatile     next;
-    qthread_shepherd_t            *creator_ptr; /* the shepherd our memory comes from */
 
     unsigned int                   thread_id;
     enum threadstate               thread_state;

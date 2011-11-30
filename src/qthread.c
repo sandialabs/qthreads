@@ -145,30 +145,17 @@ void       qthread_task_free(qthread_t *);
 #endif
 
 #if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED)
-# define ALLOC_QTHREAD(shep) (qthread_t *)malloc(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size)
-# define FREE_QTHREAD(t)     free(t)
+# define ALLOC_QTHREAD() (qthread_t *)malloc(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size)
+# define FREE_QTHREAD(t) free(t)
 #else
 static qt_mpool generic_qthread_pool = NULL;
-static QINLINE qthread_t *ALLOC_QTHREAD(qthread_shepherd_t *shep)
-{                      /*{{{ */
-    qthread_t *tmp = (qthread_t *)qt_mpool_cached_alloc(generic_qthread_pool);
-
-    if (tmp != NULL) {
-        tmp->creator_ptr = shep;
-    }
-    return tmp;
-}                      /*}}} */
-
-static QINLINE void FREE_QTHREAD(qthread_t *t)
-{                      /*{{{ */
-    qt_mpool_cached_free(generic_qthread_pool, t);
-}                      /*}}} */
-
+# define ALLOC_QTHREAD() (qthread_t *)qt_mpool_cached_alloc(generic_qthread_pool)
+# define FREE_QTHREAD(t) qt_mpool_cached_free(generic_qthread_pool, t)
 #endif /* if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED) */
 
 #if defined(UNPOOLED_STACKS) || defined(UNPOOLED)
 # ifdef QTHREAD_GUARD_PAGES
-static QINLINE void *ALLOC_STACK(qthread_shepherd_t *shep)
+static QINLINE void *ALLOC_STACK(void)
 {                      /*{{{ */
     uint8_t *tmp = valloc(qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s) + (2 * getpagesize()));
 
@@ -185,8 +172,7 @@ static QINLINE void *ALLOC_STACK(qthread_shepherd_t *shep)
     return tmp + getpagesize();
 }                      /*}}} */
 
-static QINLINE void FREE_STACK(qthread_shepherd_t *shep,
-                               void               *t)
+static QINLINE void FREE_STACK(void *t)
 {                      /*{{{ */
     uint8_t *tmp = t;
 
@@ -195,24 +181,24 @@ static QINLINE void FREE_STACK(qthread_shepherd_t *shep,
     if (mprotect(tmp, getpagesize(), PROT_READ | PROT_WRITE) != 0) {
         perror("mprotect in FREE_STACK (1)");
     }
-    if (mprotect
-            (tmp + qlib->qthread_stack_size + getpagesize(), getpagesize(),
-            PROT_READ | PROT_WRITE) != 0) {
+    if (mprotect(tmp + qlib->qthread_stack_size + getpagesize(),
+                 getpagesize(),
+                 PROT_READ | PROT_WRITE) != 0) {
         perror("mprotect in FREE_STACK (2)");
     }
     free(tmp);
 }                      /*}}} */
 
 # else /* ifdef QTHREAD_GUARD_PAGES */
-#  define ALLOC_STACK(shep)   malloc(qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s))
-#  define FREE_STACK(shep, t) free(t)
+#  define ALLOC_STACK() malloc(qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s))
+#  define FREE_STACK(t) free(t)
 # endif /* ifdef QTHREAD_GUARD_PAGES */
 #else /* if defined(UNPOOLED_STACKS) || defined(UNPOOLED) */
 static qt_mpool generic_stack_pool = NULL;
 # ifdef QTHREAD_GUARD_PAGES
-static QINLINE void *ALLOC_STACK(qthread_shepherd_t *shep)
+static QINLINE void *ALLOC_STACK(void)
 {                      /*{{{ */
-    uint8_t *tmp = qt_mpool_alloc(shep ? (shep->stack_pool) : generic_stack_pool);
+    uint8_t *tmp = qt_mpool_cached_alloc(generic_stack_pool);
 
     assert(tmp);
     if (tmp == NULL) {
@@ -221,16 +207,15 @@ static QINLINE void *ALLOC_STACK(qthread_shepherd_t *shep)
     if (mprotect(tmp, getpagesize(), PROT_NONE) != 0) {
         perror("mprotect in ALLOC_STACK (1)");
     }
-    if (mprotect
-            (tmp + qlib->qthread_stack_size + getpagesize(), getpagesize(),
-            PROT_NONE) != 0) {
+    if (mprotect(tmp + qlib->qthread_stack_size + getpagesize(),
+                 getpagesize(),
+                 PROT_NONE) != 0) {
         perror("mprotect in ALLOC_STACK (2)");
     }
     return tmp + getpagesize();
 }                      /*}}} */
 
-static QINLINE void FREE_STACK(qthread_shepherd_t *shep,
-                               void               *t)
+static QINLINE void FREE_STACK(void *t)
 {                      /*{{{ */
     uint8_t *tmp = t;
 
@@ -239,17 +224,17 @@ static QINLINE void FREE_STACK(qthread_shepherd_t *shep,
     if (mprotect(tmp, getpagesize(), PROT_READ | PROT_WRITE) != 0) {
         perror("mprotect in FREE_STACK (1)");
     }
-    if (mprotect
-            (tmp + qlib->qthread_stack_size + getpagesize(), getpagesize(),
-            PROT_READ | PROT_WRITE) != 0) {
+    if (mprotect(tmp + qlib->qthread_stack_size + getpagesize(),
+                 getpagesize(),
+                 PROT_READ | PROT_WRITE) != 0) {
         perror("mprotect in FREE_STACK (2)");
     }
-    qt_mpool_free(shep ? (shep->stack_pool) : generic_stack_pool, tmp);
+    qt_mpool_cached_free(generic_stack_pool, tmp);
 }                      /*}}} */
 
 # else /* ifdef QTHREAD_GUARD_PAGES */
-#  define ALLOC_STACK(shep)   qt_mpool_alloc(shep ? (shep->stack_pool) : generic_stack_pool)
-#  define FREE_STACK(shep, t) qt_mpool_free(shep ? (shep->stack_pool) : generic_stack_pool, t)
+#  define ALLOC_STACK() qt_mpool_cached_alloc(generic_stack_pool)
+#  define FREE_STACK(t) qt_mpool_cached_free(generic_stack_pool, t)
 # endif /* ifdef QTHREAD_GUARD_PAGES */
 #endif  /* if defined(UNPOOLED_STACKS) || defined(UNPOOLED) */
 
@@ -301,7 +286,7 @@ void *shep0arg = NULL;
 static QINLINE void alloc_rdata(qthread_shepherd_t *me,
                                 qthread_t          *t)
 {
-    void *stack = ALLOC_STACK(me);
+    void *stack = ALLOC_STACK();
 
     assert(stack);
 #ifdef QTHREAD_GUARD_PAGES
@@ -970,16 +955,7 @@ int qthread_initialize(void)
 /* set up the memory pools */
     qthread_debug(CORE_DETAILS, "shepherd pools sync = %i\n", need_sync);
     for (i = 0; i < nshepherds; i++) { /*{{{ */
-        qlib->shepherds[i].stack_pool   =
-# ifdef QTHREAD_GUARD_PAGES
-            qt_mpool_create_aligned(qlib->qthread_stack_size +
-                                    sizeof(struct qthread_runtime_data_s) + (2 * getpagesize()),
-                                    getpagesize());
-# else
-            qt_mpool_create(qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s));
-# endif
         qlib->shepherds[i].queue_pool = qt_mpool_create(sizeof(qthread_queue_t));
-        // printf("stack_pool = %p, queue_pool = %p\n", qlib->shepherds[i].stack_pool, qlib->shepherds[i].queue_pool); fflush(stdout);
         qt_threadqueue_init_pools(&(qlib->shepherds[i].threadqueue_pools));
     }                      /*}}} */
 /* these are used when qthread_fork() is called from a non-qthread. */
@@ -991,13 +967,13 @@ int qthread_initialize(void)
 # else
         qt_mpool_create(sizeof(struct qthread_runtime_data_s) + qlib->qthread_stack_size);
 # endif
-#if !defined(UNPOOLED_ADDRSTAT)
+# if !defined(UNPOOLED_ADDRSTAT)
     generic_addrstat_pool = qt_mpool_create(sizeof(qthread_addrstat_t));
-#endif
-#if !defined(UNPOOLED_ADDRRES)
+# endif
+# if !defined(UNPOOLED_ADDRRES)
     generic_addrres_pool = qt_mpool_create(sizeof(qthread_addrres_t));
-#endif
-    generic_team_pool     = qt_mpool_create(sizeof(qt_team_t));
+# endif
+    generic_team_pool = qt_mpool_create(sizeof(qt_team_t));
 #endif /* ifndef UNPOOLED */
     initialize_hazardptrs();
     qt_lock_subsystem_init();
@@ -1644,22 +1620,20 @@ void qthread_finalize(void)
         qt_mpool_destroy(qlib->shepherds[i].queue_pool);
         qthread_debug(CORE_DETAILS, "destroy shep %i threadqueue pools\n", (int)i);
         qt_threadqueue_destroy_pools(&qlib->shepherds[i].threadqueue_pools);
-        qthread_debug(CORE_DETAILS, "destroy shep %i stack pool\n", (int)i);
-        qt_mpool_destroy(qlib->shepherds[i].stack_pool);
     }
     qthread_debug(CORE_DETAILS, "destroy global memory pools\n");
     qt_mpool_destroy(generic_qthread_pool);
     generic_qthread_pool = NULL;
     qt_mpool_destroy(generic_stack_pool);
     generic_stack_pool = NULL;
-#if !defined(UNPOOLED_ADDRSTAT) && !defined(UNPOOLED)
+# if !defined(UNPOOLED_ADDRSTAT) && !defined(UNPOOLED)
     qt_mpool_destroy(generic_addrstat_pool);
     generic_addrstat_pool = NULL;
-#endif
-#if !defined(UNPOOLED_ADDRRES) && !defined(UNPOOLED)
+# endif
+# if !defined(UNPOOLED_ADDRRES) && !defined(UNPOOLED)
     qt_mpool_destroy(generic_addrres_pool);
     generic_addrres_pool = NULL;
-#endif
+# endif
     qt_mpool_destroy(generic_team_pool);
     generic_team_pool = NULL;
 #endif /* ifndef UNPOOLED */
@@ -1979,11 +1953,7 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f             f,
 {                      /*{{{ */
     qthread_t *t;
 
-#ifndef UNPOOLED
-    qthread_shepherd_t *myshep = &(qlib->shepherds[shepherd]);
-#endif
-
-    t       = ALLOC_QTHREAD(myshep);
+    t       = ALLOC_QTHREAD();
     t->next = NULL;
     qthread_debug(THREAD_DETAILS, "t = %p\n", t);
     qassert_ret(t, NULL);
@@ -2039,7 +2009,7 @@ static QINLINE void qthread_thread_free(qthread_t *t)
         VALGRIND_STACK_DEREGISTER(t->rdata->valgrind_stack_id);
 #endif
         qthread_debug(THREAD_DETAILS, "t(%p): releasing stack %p to %p\n", t, t->rdata->stack, t->creator_ptr);
-        FREE_STACK(t->creator_ptr, t->rdata->stack);
+        FREE_STACK(t->rdata->stack);
         t->rdata = NULL;
     }
     if (t->flags & QTHREAD_HAS_ARGCOPY) {
