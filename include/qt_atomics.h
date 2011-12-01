@@ -30,14 +30,9 @@
 # define QTHREAD_FASTLOCK_TYPE        tmc_sync_mutex_t
 # define QTHREAD_FASTLOCK_INITIALIZER TMC_SYNC_MUTEX_INIT
 #elif defined(USE_INTERNAL_SPINLOCK) && USE_INTERNAL_SPINLOCK
-# if (SIZEOF_VOIDP == 8) /* 64-bit architecture */
-typedef uint64_t qt_spin_internal_int_t;
-# else /* 32-bit architecture */
-typedef uint32_t qt_spin_internal_int_t;
-# endif
 typedef struct qt_spin_exclusive_s { /* added to allow fast critical section ordering */
-    qt_spin_internal_int_t enter;    /* and not call pthreads spin_lock -- hard to debug */
-    qt_spin_internal_int_t exit;     /* near the lock under gdb -- 4/1/11 akp */
+    aligned_t enter;    /* and not call pthreads spin_lock -- hard to debug */
+    aligned_t exit;     /* near the lock under gdb -- 4/1/11 akp */
 } qt_spin_exclusive_t;
 void qt_spin_exclusive_lock(qt_spin_exclusive_t *);
 void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
