@@ -301,6 +301,14 @@ void qt_loop(const size_t    start,
     qt_loop_inner(start, stop, func, argptr, 0, DONECOUNT);
 }                                      /*}}} */
 
+void qt_loop_sv(const size_t    start,
+                const size_t    stop,
+                const qt_loop_f func,
+                void           *argptr)
+{                                      /*{{{ */
+    qt_loop_inner(start, stop, func, argptr, 0, SYNCVAR_T);
+}                                      /*}}} */
+
 void qt_loop_dc(const size_t    start,
                 const size_t    stop,
                 const qt_loop_f func,
@@ -555,6 +563,14 @@ void qt_loop_balance(const size_t    start,
                      void           *argptr)
 {                                      /*{{{ */
     qt_loop_balance_inner(start, stop, func, argptr, 0, DONECOUNT);
+}                                      /*}}} */
+
+void qt_loop_balance_sv(const size_t    start,
+                        const size_t    stop,
+                        const qt_loop_f func,
+                        void           *argptr)
+{                                      /*{{{ */
+    qt_loop_balance_inner(start, stop, func, argptr, 0, SYNCVAR_T);
 }                                      /*}}} */
 
 void qt_loop_balance_dc(const size_t    start,
@@ -832,6 +848,17 @@ void qt_loopaccum_balance_sinc(const size_t     start,
                                const qt_accum_f acc)
 {                                      /*{{{ */
     qt_loopaccum_balance_inner(start, stop, size, out, func, argptr, acc, 0, SINC_T);
+}                                      /*}}} */
+
+void qt_loopaccum_balance_sv(const size_t     start,
+                             const size_t     stop,
+                             const size_t     size,
+                             void *restrict   out,
+                             const qt_loopr_f func,
+                             void *restrict   argptr,
+                             const qt_accum_f acc)
+{                                      /*{{{ */
+    qt_loopaccum_balance_inner(start, stop, size, out, func, argptr, acc, 0, SYNCVAR_T);
 }                                      /*}}} */
 
 void qt_loopaccum_balance_dc(const size_t     start,

@@ -83,11 +83,11 @@ int main(int   argc,
     qt_loop(0, numincrs, sum, NULL);
     run_iterations(qt_loop_dc,              sum, 0, "thread per iteration", "donecount");
     run_iterations(qt_loop_aligned,         sum, 0, "thread per iteration", "aligned");
-    run_iterations(qt_loop,                 sum, 0, "thread per iteration", "syncvar");
+    run_iterations(qt_loop_sv,              sum, 0, "thread per iteration", "syncvar");
     run_iterations(qt_loop_sinc,            sum, 0, "thread per iteration", "sinc");
     run_iterations(qt_loop_balance_dc,      sum, 0, "balanced",             "donecount");
     run_iterations(qt_loop_balance_aligned, sum, 0, "balanced",             "aligned");
-    run_iterations(qt_loop_balance,         sum, 0, "balanced",             "syncvar");
+    run_iterations(qt_loop_balance_sv,      sum, 0, "balanced",             "syncvar");
     run_iterations(qt_loop_balance_sinc,    sum, 0, "balanced",             "sinc");
 
     printf("\n");
@@ -98,11 +98,11 @@ int main(int   argc,
 
     run_iterations(qt_loop_dc,              sumsleep, overhead, "thread per iteration", "donecount");
     run_iterations(qt_loop_aligned,         sumsleep, overhead, "thread per iteration", "aligned");
-    run_iterations(qt_loop,                 sumsleep, overhead, "thread per iteration", "syncvar");
+    run_iterations(qt_loop_sv,              sumsleep, overhead, "thread per iteration", "syncvar");
     run_iterations(qt_loop_sinc,            sumsleep, overhead, "thread per iteration", "sinc");
     run_iterations(qt_loop_balance_dc,      sumsleep, overhead, "balanced",             "donecount");
     run_iterations(qt_loop_balance_aligned, sumsleep, overhead, "balanced",             "aligned");
-    run_iterations(qt_loop_balance,         sumsleep, overhead, "balanced",             "syncvar");
+    run_iterations(qt_loop_balance_sv,      sumsleep, overhead, "balanced",             "syncvar");
     run_iterations(qt_loop_balance_sinc,    sumsleep, overhead, "balanced",             "sinc");
 
     qtimer_destroy(timer);
