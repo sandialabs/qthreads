@@ -38,7 +38,7 @@ void qt_spin_exclusive_lock(qt_spin_exclusive_t *);
 void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
 # define QTHREAD_FASTLOCK_INIT(x)     { (x).enter = 0; (x).exit = 0; }
 # define QTHREAD_FASTLOCK_INIT_PTR(x) { (x)->enter = 0; (x)->exit = 0; }
-# define QTHREAD_FASTLOCK_LOCK(x)     { qt_spin_internal_int_t val = qthread_incr(& (x)->enter, 1); \
+# define QTHREAD_FASTLOCK_LOCK(x)     { aligned_t val = qthread_incr(& (x)->enter, 1); \
                                         MACHINE_FENCE;                                              \
                                         while (val != (x)->exit) SPINLOCK_BODY(); /* spin waiting for my turn */ }
 # define QTHREAD_FASTLOCK_UNLOCK(x)   do { qthread_incr(& (x)->exit, 1); /* allow next guy's turn */ \
