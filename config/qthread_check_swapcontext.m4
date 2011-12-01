@@ -6,6 +6,14 @@
 # QTHREAD_CHECK_SWAPCONTEXT([action-if-found], [action-if-not-found])
 # ------------------------------------------------------------------------------
 AC_DEFUN([QTHREAD_CHECK_SWAPCONTEXT], [
+AC_ARG_ENABLE([fastcontext],
+              [AS_HELP_STRING([--disable-fastcontext],
+                              [use a lighter-weight non-system-based context
+                               swapping mechanism that does not make system
+                               calls. If you run into bugs, you can disable it
+                               on some systems to use the slower libc-provided
+                               version.])])
+
 AS_IF([test "x$ac_cv_func_getcontext" = "xyes"], [
 	QTHREAD_CHECK_UCSTACK_SSFLAGS(
 		[AC_DEFINE([QTHREAD_UCSTACK_HAS_SSFLAGS],[1],
@@ -42,7 +50,9 @@ int main()
 }]])],
 	[qthread_cv_swapcontext_works=yes],
 	[qthread_cv_swapcontext_works=no],
-	[qthread_cv_swapcontext_works=no])
+	[AS_IF([test "x$enable_fastcontext" != "x"],
+	       [qthread_cv_swapcontext_works=$enable_fastcontext],
+	       [qthread_cv_swapcontext_works=yes])])
 	;;
 	esac])
 AS_IF([test "$qthread_cv_swapcontext_works" = yes],

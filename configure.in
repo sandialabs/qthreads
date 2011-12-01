@@ -228,14 +228,6 @@ AC_ARG_ENABLE([64bit-alignment],
                                sizeof(aligned_t). Alignment cannot be smaller
                                than aligned_t.])])
 
-AC_ARG_ENABLE([fastcontext],
-              [AS_HELP_STRING([--disable-fastcontext],
-                              [use a lighter-weight non-system-based context
-                               swapping mechanism that does not make system
-                               calls. If you run into bugs, you can disable it
-                               on some systems to use the slower libc-provided
-                               version.])])
-
 AC_ARG_WITH([topology],
             [AS_HELP_STRING([--with-topology=[[topologylib]]],
 							[specify which topology interface to use. Supported
