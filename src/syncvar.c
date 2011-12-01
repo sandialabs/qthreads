@@ -129,25 +129,23 @@ static uint64_t qthread_mwaitc(syncvar_t *const restrict addr,
         locked.u.w = (((uint64_t)high) << 32) | low;
         MACHINE_FENCE;
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-        {
-            /* This applies for any 32-bit architecture with a valid 32-bit CAS
-             * (though I'm making some big-endian assumptions at the moment) */
-            uint32_t  low_unlocked, low_locked;
-            uint32_t *addrptr = (uint32_t *)addr;
-            do {
+        /* This applies for any 32-bit architecture with a valid 32-bit CAS
+         * (though I'm making some big-endian assumptions at the moment) */
+        uint32_t  low_unlocked, low_locked;
+        uint32_t *addrptr = (uint32_t *)addr;
+        do {
 loop_start:
-                low_unlocked = addrptr[1];  // atomic read
-                if ((low_unlocked & 1) == 0) {
-                    if (timeout-- <= 0) { goto errexit; }
-                    SPINLOCK_BODY();
-                    goto loop_start;
-                }
-                low_locked = low_unlocked | 1;
-                if (qthread_cas32(&(addrptr[1]), low_unlocked, low_locked) != low_unlocked) { break; }
+            low_unlocked = addrptr[1];  // atomic read
+            if ((low_unlocked & 1) != 0) {
                 if (timeout-- <= 0) { goto errexit; }
-            } while (1);
-            locked.u.w = addr->u.w; // I locked it, so I can read it
-        }
+                SPINLOCK_BODY();
+                goto loop_start;
+            }
+            low_locked = low_unlocked | 1;
+            if (qthread_cas32(&(addrptr[1]), low_unlocked, low_locked) == low_unlocked) { break; }
+            if (timeout-- <= 0) { goto errexit; }
+        } while (1);
+        locked.u.w = addr->u.w; // I locked it, so I can read it
 #else   /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILE) */
         do {
 loop_start:
@@ -177,9 +175,12 @@ loop_start:
             return locked.u.s.data;
         } else {
             /* this is NOT a state of interest, so unlock the locked bit */
-#ifdef __tile__
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILE)
             MACHINE_FENCE;
             addrptr[0] = low;
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
+            MACHINE_FENCE;
+            addrptr[1] = low_unlocked;
 #else
             UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked.u.w);
 #endif
