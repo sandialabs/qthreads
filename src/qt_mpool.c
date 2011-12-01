@@ -96,12 +96,7 @@ static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
             posix_memalign(&(ret), 16, alloc_size);
 #elif defined(HAVE_WORKING_VALLOC)
             ret = valloc(alloc_size);
-#elif defined(HAVE_16ALIGNED_CALLOC)
-            ret = calloc(1, alloc_size);
-            goto return_clean;
-#elif defined(HAVE_16ALIGNED_MALLOC)
-            ret = malloc(alloc_size);
-#elif defined(HAVE_PAGE_ALIGNED_MALLOC)
+#elif defined(HAVE_16ALIGNED_MALLOC) || defined(HAVE_PAGE_ALIGNED_MALLOC)
             ret = malloc(alloc_size);
 #else                                 /* if defined(HAVE_MEMALIGN) */
             ret = valloc(alloc_size); /* cross your fingers */
@@ -120,9 +115,6 @@ static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
             ret = valloc(alloc_size);  /* cross your fingers */
 #endif
     }
-#ifndef QTHREAD_USE_ROSE_EXTENSIONS
-    memset(ret, 0, alloc_size);
-#endif
 return_clean:
     VALGRIND_MAKE_MEM_NOACCESS(ret, alloc_size);
     return ret;
