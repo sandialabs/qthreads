@@ -36,15 +36,15 @@ typedef uint64_t qt_spin_internal_int_t;
 typedef uint32_t qt_spin_internal_int_t;
 # endif
 typedef struct qt_spin_exclusive_s { /* added to allow fast critical section ordering */
-    uint32_t enter;                  /* and not call pthreads spin_lock -- hard to debug */
-    uint32_t exit;                   /* near the lock under gdb -- 4/1/11 akp */
+    qt_spin_internal_int_t enter;    /* and not call pthreads spin_lock -- hard to debug */
+    qt_spin_internal_int_t exit;     /* near the lock under gdb -- 4/1/11 akp */
 } qt_spin_exclusive_t;
 void qt_spin_exclusive_lock(qt_spin_exclusive_t *);
 void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
 # define QTHREAD_FASTLOCK_INIT(x)     { (x).enter = 0; (x).exit = 0; }
 # define QTHREAD_FASTLOCK_INIT_PTR(x) { (x)->enter = 0; (x)->exit = 0; }
 # define QTHREAD_FASTLOCK_LOCK(x)     { qt_spin_internal_int_t val = qthread_incr(& (x)->enter, 1); \
-                                        MACHINE_FENCE;                                \
+                                        MACHINE_FENCE;                                              \
                                         while (val != (x)->exit) SPINLOCK_BODY(); /* spin waiting for my turn */ }
 # define QTHREAD_FASTLOCK_UNLOCK(x)   do { qthread_incr(& (x)->exit, 1); /* allow next guy's turn */ \
                                            MACHINE_FENCE; } while (0)
