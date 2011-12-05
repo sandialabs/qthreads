@@ -716,9 +716,7 @@ extern int activeParallelLoop;
 
 void XOMP_barrier(void)
 {
-  if(XOMP_master()) {
-      waitCompletionOutstandingTasks(); // wait for outstanding tasks to complete
-  }
+    waitCompletionOutstandingTasks(); // wait for outstanding tasks to complete
 
 #ifdef QTHREAD_LOG_BARRIER
     size_t myid = qthread_barrier_id();
