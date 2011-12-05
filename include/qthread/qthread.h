@@ -22,6 +22,7 @@
 # endif
 #endif
 
+
 /*****************************************************************************
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *
@@ -127,11 +128,6 @@ extern const syncvar_t SYNCVAR_EMPTY_INITIALIZER;
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 
-typedef struct taskSyncvar_s { /* added akp for openmp taskwait */
-    syncvar_t             retValue;
-    struct taskSyncvar_s *next_task;
-} taskSyncvar_t;
-
 struct qthread_parallel_region_s {
     struct qthread_parallel_region_s *last;
     void                             *forLoop;  // current loop really qqloop_step_handle_t * -- void to save include ordering problems
@@ -204,10 +200,11 @@ int  qthread_disable_worker(const qthread_worker_id_t worker);
 void qthread_enable_worker(const qthread_worker_id_t worker);
 # ifdef QTHREAD_USE_ROSE_EXTENSIONS
 void qthread_pack_workerid(const qthread_worker_id_t worker,
-                           const qthread_worker_id_t newId);
-qthread_t *qthread_child_task(void);               /* used by XOMP to access list of child tasks*/
-syncvar_t *qthread_return_value(qthread_t *t);     /* return value for a task */
-void       qthread_remove_child(qthread_t *child); /* remove child - completed */
+                                    const qthread_worker_id_t newId);
+void qthread_go_back_to_master(void);              /* context switch back to master loop */
+void qthread_parent_yield_state(void);             /* save thread state enum and then set PARENT_YIELD */
+aligned_t* qthread_task_counter(void);             /* task_counter CAS reference */
+syncvar_t* qthread_return_value(qthread_t *t);     /* return value for a task */
 # endif
 
 /* this function allows a qthread to specifically give up control of the
