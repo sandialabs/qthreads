@@ -7,22 +7,10 @@
 
 #include "qt_context.h"
 #include "qt_shepherd_innards.h"
+#include "qt_threadstate.h"
 
 #define ARGCOPY_DEFAULT   1024
 #define TASKLOCAL_DEFAULT 64
-
-enum threadstate {
-    QTHREAD_STATE_NASCENT,              /* awaiting preconds */
-    QTHREAD_STATE_NEW,                  /* first ready-to-run state */
-    QTHREAD_STATE_RUNNING,              /* ready-to-run */
-    QTHREAD_STATE_YIELDED,              /* reschedule, otherwise ready-to-run */
-    QTHREAD_STATE_BLOCKED,              /* waiting for lock */
-    QTHREAD_STATE_FEB_BLOCKED,          /* waiting for feb */
-    QTHREAD_STATE_TERMINATED,           /* thread function returned */
-    QTHREAD_STATE_MIGRATING,            /* thread needs to be moved, otherwise ready-to-run */
-    QTHREAD_STATE_SYSCALL,              /* thread performing external blocking operation */
-    QTHREAD_STATE_TERM_SHEP = UINT8_MAX /* special flag to terminate the shepherd */
-};
 
 /* flags (must be different bits) */
 #define QTHREAD_FUTURE              (1 << 0)
@@ -49,8 +37,6 @@ struct qthread_runtime_data_s {
 #endif
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     int            forCount;                     /* added akp */
-    taskSyncvar_t *openmpTaskRetVar;             /* ptr to linked list if task's I started -- used in openMP taskwait */
-    syncvar_t      taskWaitLock;
 # ifdef QTHREAD_OMP_AFFINITY
     /* affinity for children created by this task */
     qthread_shepherd_id_t child_affinity;
@@ -81,10 +67,9 @@ struct qthread_s {
     void                          *preconds;
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     qthread_parallel_region_t     *currentParallelRegion; /* parallel region barrier this thread should use */
-    struct qthread_s              *child;            /* pointer to list task created */
-    struct qthread_s              *sibling;          /* previous task created by same parent */
-    syncvar_t                      ret_value;        /* return value for task -- don't need to allocated it seperately */
-    int                            task_completed;   /* counter of task completes - 1) in workhorse loop (state QTHREAD_STATE_TERMINATED) 2) parent has seen result and completes cannot free until both happen */
+    aligned_t                      task_counter;
+    struct qthread_s              *parent;             /* pointer to parent task */
+    enum threadstate               prev_thread_state;  /* save the previous thread state */
 #endif
 
     Q_ALIGNED(8) uint8_t data[]; /* this is where we stick argcopy and tasklocal data */

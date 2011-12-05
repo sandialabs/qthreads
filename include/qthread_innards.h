@@ -155,12 +155,9 @@ int qthread_fork_syncvar_copyargs_to(const qthread_f   f,
                                      preferred_shep);
 #endif // ifdef QTHREAD_SST_PRIMITIVES
 
-/* functions added by akp to hand openMP task completion
+/* functions added by akp to handle OpenMP task completion
  */
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-void qthread_getTaskListLock(void);
-void qthread_releaseTaskListLock(void);
-
 extern int __qthreads_temp;
 void INTERNAL qthread_reset_forCount(void);
 

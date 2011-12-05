@@ -26,6 +26,7 @@
 #include "qloop_innards.h"	       // for qqloop_handle_t
 #include "qt_qthread_struct.h"	       // for qthread_t
 #include "qt_touch.h"		       // for qthread_run_needed_task()
+#include "qt_task_counter.h"
 #include <qthread/qthread.h>           // for syncvar_t
 #include <qthread/feb_barrier.h>
 #include <qthread/omp_defines.h>       // Wrappered OMP functions from omp.h
@@ -680,26 +681,44 @@ void XOMP_loop_end_nowait(
 // Qthread implementation of a OpenMP global barrier
 void qthread_walkTaskList(void);
 
-static void walkSyncTaskList(void)
+static void waitCompletionOutstandingTasks(void)
 {
-    qthread_getTaskListLock();
-    syncvar_t *syncVar;
-    qthread_t *child;
-    uint64_t ret = 0;
+    aligned_t* task_counter = qthread_task_counter();
+    aligned_t  newval, test;
 
-    while ((child = qthread_child_task()) ) {
-        syncVar = qthread_return_value(child);
-	qthread_syncvar_readFF(&ret, syncVar);
-	qthread_remove_child(child);
+    aligned_t  oldval = *task_counter;
+
+    assert(tcount_get_waiting(oldval) == 0);
+    if (tcount_get_children(oldval) > 0) {
+ 
+        while (1) {
+            aligned_t children = tcount_get_children(oldval);
+            newval = tcount_create(1, children);
+            test = qthread_cas(task_counter, oldval, newval);
+            if (test == oldval) break;
+            oldval = test;
+            assert(tcount_get_waiting(oldval) == 0);
+        }
+
+        if (newval != tcount_finished_state) {            
+            // next line will save thred_state in prev_thread_state
+            qthread_parent_yield_state();
+            qthread_go_back_to_master();
+            // child will have set thred_state to prev_thread_state
+        }
+
+        *task_counter = 0; // reset the waiting bit on the task counter
     }
-    qthread_releaseTaskListLock();
+
 }
 
 extern int activeParallelLoop;
 
 void XOMP_barrier(void)
 {
-  if(XOMP_master()) walkSyncTaskList(); // wait for outstanding tasks to complete
+  if(XOMP_master()) {
+      waitCompletionOutstandingTasks(); // wait for outstanding tasks to complete
+  }
 
 #ifdef QTHREAD_LOG_BARRIER
     size_t myid = qthread_barrier_id();
@@ -795,7 +814,7 @@ void XOMP_task(
 void XOMP_taskwait(
     void)
 {
-  walkSyncTaskList();
+  waitCompletionOutstandingTasks();
 }
 
 void XOMP_loop_static_init(
