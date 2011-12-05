@@ -96,6 +96,8 @@ if ($need_help) {
     print "usage: perl build.pl [options]\n";
     print "Options:\n";
     print "\t--configs=<config-name> comma-separated list of configurations.\n";
+    print "\t                        configuration options can be concatenated using\n";
+    print "\t                        the '+' operator (e.g., 'conf1+conf2').\n";
 	print "\t                        'all' may be used as an alias for all known\n";
 	print "\t                        configurations.\n";
     print "\t--with-config=<string>  a user-specified string of configuration\n";
@@ -129,8 +131,18 @@ foreach my $name (@conf_names) {
     if ($name eq 'all') {
         $use_all = 1;
     } elsif (not exists $config{$name}) {
-        print "Invalid configuration option '$name'\n";
-        exit(1);
+        my @subconf_names = split(/\+/, $name);
+        my @subconf_profiles = ();
+        foreach my $subname (@subconf_names) {
+            if (exists $config{$subname}) {
+                push @subconf_profiles, $config{$subname};
+            } else {
+                print "Invalid configuration option '$subname'\n";
+                exit(1);
+            }
+        }
+
+        $config{$name} = join(' ', @subconf_profiles);
     }
 }
 if ($use_all) {
