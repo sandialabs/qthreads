@@ -133,7 +133,8 @@ static QINLINE qthread_t *qthread_thread_new(qthread_f             f,
                                              size_t                arg_size,
                                              void                 *ret,
                                              qthread_shepherd_id_t shepherd,
-                                             qt_team_t            *team);
+                                             qt_team_t            *team,
+                                             int                   team_leader);
 static QINLINE void        qthread_thread_free(qthread_t *t);
 static qthread_shepherd_t *qthread_find_active_shepherd(qthread_shepherd_id_t *l,
                                                         unsigned int          *d);
@@ -1009,7 +1010,7 @@ int qthread_initialize(void)
  * this weirdness is so that the current thread can block the same way that
  * a qthread can. */
     qthread_debug(SHEPHERD_DETAILS, "allocating shep0\n");
-    qlib->mccoy_thread = qthread_thread_new(NULL, NULL, 0, NULL, 0, NULL);
+    qlib->mccoy_thread = qthread_thread_new(NULL, NULL, 0, NULL, 0, NULL, 0);
     qthread_debug(CORE_DETAILS, "mccoy thread = %p\n", qlib->mccoy_thread);
     qassert_ret(qlib->mccoy_thread, QTHREAD_MALLOC_ERROR);
 
@@ -1341,7 +1342,7 @@ void qthread_finalize(void)
             }
 # endif
             qthread_debug(SHEPHERD_DETAILS, "terminating shepherd %i worker %i\n", (int)i, j);
-            t = qthread_thread_new(NULL, NULL, 0, NULL, i, NULL);
+            t = qthread_thread_new(NULL, NULL, 0, NULL, i, NULL, 0);
             assert(t != NULL);         /* what else can we do? */
             t->thread_state = QTHREAD_STATE_TERM_SHEP;
             t->thread_id    = (unsigned int)-1;
@@ -1351,7 +1352,7 @@ void qthread_finalize(void)
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     for (i = 1; i < qlib->nshepherds; i++) {
         qthread_debug(SHEPHERD_DETAILS, "terminating shepherd %i\n", (int)i);
-        t = qthread_thread_new(NULL, NULL, 0, NULL, i, NULL);
+        t = qthread_thread_new(NULL, NULL, 0, NULL, i, NULL, 0);
         assert(t != NULL);     /* what else can we do? */
         t->thread_state = QTHREAD_STATE_TERM_SHEP;
         t->thread_id    = (unsigned int)-1;
@@ -1913,20 +1914,6 @@ qt_team_id_t qt_team_id(void)
     }
 } /*}}}*/
 
-/* Destroys the team and associated team structure. This action is spawned as
- * a task when the team is created, and simply waits until the sinc is ready
- * before freeing the associated resources. */
-aligned_t qt_team_destroy(void *arg_)
-{   /*{{{*/
-    qt_team_t *team = (qt_team_t *)arg_;
-
-    qt_sinc_wait(team->sinc, NULL);
-    qt_sinc_destroy(team->sinc);
-    FREE_TEAM(team);
-
-    return 0;
-} /*}}}*/
-
 /************************************************************/
 /* functions to manage thread stack allocation/deallocation */
 /************************************************************/
@@ -1935,7 +1922,8 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f             f,
                                              size_t                      arg_size,
                                              void                       *ret,
                                              const qthread_shepherd_id_t shepherd,
-                                             qt_team_t                  *team)
+                                             qt_team_t                  *team,
+                                             int                         team_leader)
 {                      /*{{{ */
     qthread_t *t;
 
@@ -1979,6 +1967,11 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f             f,
         memcpy(t->arg, arg, arg_size);
     }
     t->tasklocal_size = 0;
+
+    // am I the team leader?
+    if (team_leader) {
+        t->flags |= QTHREAD_TEAM_LEADER;
+    }
 
     qthread_debug(THREAD_DETAILS, "returning\n");
     return t;
@@ -2099,6 +2092,12 @@ static void qthread_wrapper(void *ptr)
     // Signal team sinc that member has finished
     if (NULL != t->team) {
         qt_sinc_submit(t->team->sinc, NULL);
+        if (QTHREAD_TEAM_LEADER & t->flags) {
+            // Destroy team
+            qt_sinc_wait(t->team->sinc, NULL);
+            qt_sinc_destroy(t->team->sinc);
+            FREE_TEAM(t->team);
+        }
     }
 
     t->thread_state = QTHREAD_STATE_TERMINATED;
@@ -2363,6 +2362,7 @@ static int qthread_uberfork(qthread_f             f,
     }
     qthread_debug(THREAD_BEHAVIOR, "target_shep(%i) => dest_shep(%i)\n", target_shep, dest_shep);
     /* Step 3: Allocate & init the structure */
+    int team_leader = 0;
     if (dteam == SAME_TEAM) {
         if (me) {
             team = me->team;
@@ -2375,9 +2375,9 @@ static int qthread_uberfork(qthread_f             f,
         team->team_id = qthread_internal_incr(&(qlib->max_team_id),
                                               &qlib->max_team_id_lock, 1);
         team->sinc = qt_sinc_create(0, NULL, NULL, 1);
-        qthread_fork(qt_team_destroy, team, NULL);
+        team_leader = 1;
     }
-    t = qthread_thread_new(f, arg, arg_size, (aligned_t *)ret, dest_shep, team);
+    t = qthread_thread_new(f, arg, arg_size, (aligned_t *)ret, dest_shep, team, team_leader);
     qassert_ret(t, QTHREAD_MALLOC_ERROR);
     if (QTHREAD_UNLIKELY(target_shep != NO_SHEPHERD)) {
         t->target_shepherd = &qlib->shepherds[dest_shep];
