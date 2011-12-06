@@ -2521,7 +2521,17 @@ int qthread_fork_track_syncvar_copyargs_to(qthread_f             f,
 					   syncvar_t            *ret,
 					   qthread_shepherd_id_t preferred_shep)
 {   /*{{{*/
-  return qthread_uberfork(f, (void *const)arg, arg_size, SYNCVAR_T, ret, NO_SYNC, 0, NULL, preferred_shep, SAME_TEAM, QTHREAD_UBERFORK_FEATURE_MASK_PARENT);
+  return qthread_uberfork(f,
+                          arg,
+                          arg_size,
+                          SYNCVAR_T,
+                          ret,
+                          NO_SYNC,
+                          0,
+                          NULL,
+                          preferred_shep,
+                          SAME_TEAM,
+                          QTHREAD_UBERFORK_FEATURE_MASK_PARENT);
 } /*}}}*/
 
 int qthread_fork_track_syncvar_copyargs(qthread_f   f,
@@ -2529,7 +2539,17 @@ int qthread_fork_track_syncvar_copyargs(qthread_f   f,
                                         size_t      arg_size,
                                         syncvar_t  *ret)
 {                      /*{{{ */
-  return qthread_uberfork(f, (void *const)arg, arg_size, SYNCVAR_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, SAME_TEAM, QTHREAD_UBERFORK_FEATURE_MASK_PARENT);
+  return qthread_uberfork(f,
+                          arg,
+                          arg_size,
+                          SYNCVAR_T,
+                          ret,
+                          NO_SYNC,
+                          0,
+                          NULL,
+                          NO_SHEPHERD,
+                          SAME_TEAM,
+                          QTHREAD_UBERFORK_FEATURE_MASK_PARENT);
 }                      /*}}} */
 
 int qthread_fork_syncvar_copyargs_to(qthread_f             f,
@@ -2538,7 +2558,17 @@ int qthread_fork_syncvar_copyargs_to(qthread_f             f,
                                      syncvar_t            *ret,
                                      qthread_shepherd_id_t preferred_shep)
 {   /*{{{*/
-    return qthread_uberfork(f, (void *const)arg, arg_size, SYNCVAR_T, ret, NO_SYNC, 0, NULL, preferred_shep, SAME_TEAM, 0);
+    return qthread_uberfork(f,
+                            arg,
+                            arg_size,
+                            SYNCVAR_T,
+                            ret,
+                            NO_SYNC,
+                            0,
+                            NULL,
+                            preferred_shep,
+                            SAME_TEAM,
+                            0);
 } /*}}}*/
 
 int qthread_fork_copyargs(qthread_f   f,
@@ -2546,7 +2576,17 @@ int qthread_fork_copyargs(qthread_f   f,
                           size_t      arg_size,
                           aligned_t  *ret)
 {   /*{{{*/
-    return qthread_uberfork(f, (void *const)arg, arg_size, ALIGNED_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, SAME_TEAM, 0);
+    return qthread_uberfork(f,
+                            arg,
+                            arg_size,
+                            ALIGNED_T,
+                            ret,
+                            NO_SYNC,
+                            0,
+                            NULL,
+                            NO_SHEPHERD,
+                            SAME_TEAM,
+                            0);
 }   /*}}}*/
 
 int qthread_fork_syncvar_copyargs(qthread_f   f,
@@ -2554,21 +2594,51 @@ int qthread_fork_syncvar_copyargs(qthread_f   f,
                                   size_t      arg_size,
                                   syncvar_t  *ret)
 {                      /*{{{ */
-    return qthread_uberfork(f, (void *const)arg, arg_size, SYNCVAR_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, SAME_TEAM, 0);
+    return qthread_uberfork(f,
+                            arg,
+                            arg_size,
+                            SYNCVAR_T,
+                            ret,
+                            NO_SYNC,
+                            0,
+                            NULL,
+                            NO_SHEPHERD,
+                            SAME_TEAM,
+                            0);
 }                      /*}}} */
 
 int qthread_fork_syncvar(qthread_f   f,
                          const void *arg,
                          syncvar_t  *ret)
 {                      /*{{{ */
-    return qthread_uberfork(f, (void *const)arg, 0, SYNCVAR_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, SAME_TEAM, 0);
+    return qthread_uberfork(f,
+                            arg,
+                            0,
+                            SYNCVAR_T,
+                            ret,
+                            NO_SYNC,
+                            0,
+                            NULL,
+                            NO_SHEPHERD,
+                            SAME_TEAM,
+                            0);
 }                      /*}}} */
 
 int qthread_fork_syncvar_new_team(qthread_f   f,
                                   const void *arg,
                                   syncvar_t  *ret)
 {                      /*{{{ */
-    return qthread_uberfork(f, (void *const)arg, 0, SYNCVAR_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, NEW_TEAM, 0);
+    return qthread_uberfork(f,
+                            arg,
+                            0,
+                            SYNCVAR_T,
+                            ret,
+                            NO_SYNC,
+                            0,
+                            NULL,
+                            NO_SHEPHERD,
+                            NEW_TEAM,
+                            0);
 }                      /*}}} */
 
 int qthread_fork_to(qthread_f             f,
@@ -2579,7 +2649,17 @@ int qthread_fork_to(qthread_f             f,
     if ((shepherd != NO_SHEPHERD) && (shepherd >= qlib->nshepherds)) {
         shepherd %= qlib->nshepherds;
     }
-    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, shepherd, SAME_TEAM, 0);
+    return qthread_uberfork(f,
+                            arg,
+                            0,
+                            ALIGNED_T,
+                            ret,
+                            NO_SYNC,
+                            0,
+                            NULL,
+                            shepherd,
+                            SAME_TEAM,
+                            0);
 } /*}}}*/
 
 int qthread_fork_precond_to(qthread_f             f,
@@ -2614,7 +2694,17 @@ int qthread_fork_precond_to(qthread_f             f,
     if ((shepherd != NO_SHEPHERD) && (shepherd >= qlib->nshepherds)) {
         shepherd %= qlib->nshepherds;
     }
-    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, ALIGNED_T, npreconds, preconds, shepherd, SAME_TEAM, 0);
+    return qthread_uberfork(f,
+                            arg,
+                            0,
+                            ALIGNED_T,
+                            ret,
+                            ALIGNED_T,
+                            npreconds,
+                            preconds,
+                            shepherd,
+                            SAME_TEAM,
+                            0);
 }                      /*}}} */
 
 int qthread_fork_syncvar_to(qthread_f             f,
@@ -2625,7 +2715,17 @@ int qthread_fork_syncvar_to(qthread_f             f,
     if ((s != NO_SHEPHERD) && (s >= qlib->nshepherds)) {
         s %= qlib->nshepherds;
     }
-    return qthread_uberfork(f, arg, 0, SYNCVAR_T, ret, NO_SYNC, 0, NULL, s, SAME_TEAM, 0);
+    return qthread_uberfork(f,
+                            arg,
+                            0,
+                            SYNCVAR_T,
+                            ret,
+                            NO_SYNC,
+                            0,
+                            NULL,
+                            s,
+                            SAME_TEAM,
+                            0);
 } /*}}}*/
 
 int qthread_fork_future_to(qthread_f             f,
@@ -2636,7 +2736,17 @@ int qthread_fork_future_to(qthread_f             f,
     if ((shepherd != NO_SHEPHERD) && (shepherd >= qlib->nshepherds)) {
         shepherd %= qlib->nshepherds;
     }
-    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, shepherd, SAME_TEAM, 1);
+    return qthread_uberfork(f,
+                            arg,
+                            0,
+                            ALIGNED_T,
+                            ret,
+                            NO_SYNC,
+                            0,
+                            NULL,
+                            shepherd,
+                            SAME_TEAM,
+                            1);
 } /*}}}*/
 
 int qthread_fork_syncvar_future_to(qthread_f             f,
@@ -2647,14 +2757,34 @@ int qthread_fork_syncvar_future_to(qthread_f             f,
     if ((shepherd != NO_SHEPHERD) && (shepherd >= qlib->nshepherds)) {
         shepherd %= qlib->nshepherds;
     }
-    return qthread_uberfork(f, arg, 0, SYNCVAR_T, ret, NO_SYNC, 0, NULL, shepherd, SAME_TEAM, 1);
+    return qthread_uberfork(f,
+                            arg,
+                            0,
+                            SYNCVAR_T,
+                            ret,
+                            NO_SYNC,
+                            0,
+                            NULL,
+                            shepherd,
+                            SAME_TEAM,
+                            1);
 } /*}}}*/
 
 int qthread_fork_syncvar_future(qthread_f   f,
                                 const void *arg,
                                 syncvar_t  *ret)
 {   /*{{{*/
-    return qthread_uberfork(f, arg, 0, SYNCVAR_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, SAME_TEAM, 1);
+    return qthread_uberfork(f,
+                            arg,
+                            0,
+                            SYNCVAR_T,
+                            ret,
+                            NO_SYNC,
+                            0,
+                            NULL,
+                            NO_SHEPHERD,
+                            SAME_TEAM,
+                            1);
 } /*}}}*/
 
 /*
