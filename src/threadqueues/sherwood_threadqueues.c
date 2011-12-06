@@ -37,6 +37,7 @@ struct _qt_threadqueue {
     qt_threadqueue_node_t *tail;
     /* used for the work stealing queue implementation */
     QTHREAD_FASTLOCK_TYPE  qlock;
+    qthread_shepherd_t    *creator_ptr;
     long                   qlength;
     long                   qlength_stealable;                   /* number of stealable tasks on queue - stop steal attempts
                                                                  * that will fail because tasks cannot be moved - 4/1/11 AKP
@@ -174,6 +175,8 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd)
         q->qlength_stealable = 0;
         QTHREAD_FASTLOCK_INIT(q->qlock);
     }
+    q->creator_ptr = shepherd;
+
     return q;
 } /*}}}*/
 

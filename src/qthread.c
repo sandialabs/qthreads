@@ -2387,21 +2387,22 @@ static int qthread_uberfork(qthread_f             f,
     }
     qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id, target_shep);
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    if (me != NULL)
+    if (me != NULL){
       t->currentParallelRegion = me->currentParallelRegion; // saved in shepherd
-    if (ret == NULL) {
+      if (ret == NULL) {
         aligned_t next, previous, test;
         t->parent                = me;
         previous                 = me->task_counter;
         while(1) {
-            assert(tcount_get_waiting(previous) == 0);
-            next = tcount_create(0, tcount_get_children(previous) + 1);
-            // atomic increment cannot be used because
-            // the get_waiting() mask must be preserved
-            test = qthread_cas(&me->task_counter, previous, next);
-            if (test == previous) break;
-            previous = test;
+	  assert(tcount_get_waiting(previous) == 0);
+	  next = tcount_create(0, tcount_get_children(previous) + 1);
+	  // atomic increment cannot be used because
+	  // the get_waiting() mask must be preserved
+	  test = qthread_cas(&me->task_counter, previous, next);
+	  if (test == previous) break;
+	  previous = test;
         }
+      }
     }
 #endif
     /* Step 4: Prepare the return value location (if necessary) */
