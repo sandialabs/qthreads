@@ -1766,18 +1766,6 @@ qthread_t INTERNAL *qthread_internal_self(void)
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 }                      /*}}} */
 
-qthread_t *qthread_self(void)
-{                      /*{{{ */
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    qthread_worker_t *worker = qthread_internal_getworker();
-    return worker ? worker->current : NULL;
-
-#else
-    qthread_shepherd_t *shep = qthread_internal_getshep();
-    return shep ? shep->current : NULL;
-#endif
-}                      /*}}} */
-
 void *qthread_get_tasklocal(unsigned int size)
 {   /*{{{*/
     qthread_t *f = qthread_internal_self();
