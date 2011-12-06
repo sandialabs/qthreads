@@ -418,7 +418,9 @@ static void *qthread_shepherd(void *arg)
         }
 #endif
 
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
 qt_run:
+#endif
 
         qthread_debug(THREAD_DETAILS,
                       "id(%u): dequeued thread %p: id %d/state %d\n",
