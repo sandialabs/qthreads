@@ -4,7 +4,7 @@
 #include <sys/types.h> /* for ssize_t (according to P90) */
 
 #include "qt_visibility.h"
-
+#include "qt_qthread_t.h" /* for qthread_t */
 #include "qt_atomics.h"
 #include "qt_mpool.h"
 

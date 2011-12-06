@@ -15,11 +15,10 @@
 #endif
 
 #include "qt_visibility.h"
-
 #include "qthread_asserts.h"
 #include "qt_atomics.h"
-
 #include "qt_context.h"
+#include "qt_qthread_t.h"
 
 #include <pthread.h>
 #include <qt_hash.h>

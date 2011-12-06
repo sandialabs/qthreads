@@ -412,10 +412,9 @@ static QINLINE void qthread_steal(void)
     extern pthread_key_t   shepherd_structs;
     qt_threadqueue_node_t *first;
     qthread_shepherd_t    *victim_shepherd;
-    qthread_worker_t      *worker =
-        (qthread_worker_t *)pthread_getspecific(shepherd_structs);
-    qthread_shepherd_t *thief_shepherd =
-        (qthread_shepherd_t *)worker->shepherd;
+    qthread_worker_t      *worker = qthread_internal_getworker();
+    assert(worker != NULL);
+    qthread_shepherd_t *thief_shepherd = worker->shepherd;
 
 #ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
     qthread_incr(&thief_shepherd->steal_called, 1);

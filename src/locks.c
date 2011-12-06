@@ -219,7 +219,7 @@ int qthread_unlock(const aligned_t *a)
     if (m == NULL) {
         /* unlocking an address that's already unlocked */
         qt_hash_unlock(qlib->locks[lockbin]);
-        return QTHREAD_REDUNDANT;
+        return QTHREAD_SUCCESS;
     }
     QTHREAD_FASTLOCK_LOCK(&m->lock);
 

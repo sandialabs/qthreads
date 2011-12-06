@@ -1136,7 +1136,7 @@ int qthread_initialize(void)
                     if ((r = pthread_create(&rcrToolPThreadID, NULL, rcrtoolDaemon, &swinfo)) != 0) {
                         fprintf(stderr, "qthread_init: pthread_create() failed (%d)\n", r);
                         perror("qthread_init spawning rcrTool");
-                        return r;
+                        return QTHREAD_THIRD_PARTY_ERROR;
                     }
                     continue;
                 }
@@ -1156,7 +1156,7 @@ int qthread_initialize(void)
                                     qthread_shepherd, &qlib->shepherds[i].workers[j])) != 0) {
                 fprintf(stderr, "qthread_init: pthread_create() failed (%d)\n", r);
                 perror("qthread_init spawning worker");
-                return r;
+                return QTHREAD_THIRD_PARTY_ERROR;
             }
             qthread_debug(SHEPHERD_DETAILS, "spawned shep %i worker %i\n", (int)i, (int)j);
         }
@@ -1169,7 +1169,7 @@ int qthread_initialize(void)
         if ((r = pthread_create(&qlib->shepherds[i].shepherd, NULL, qthread_shepherd, &qlib->shepherds[i])) != 0) {
             fprintf(stderr, "qthread_init: pthread_create() failed (%d)\n", r);
             perror("qthread_init spawning shepherd");
-            return r;
+            return QTHREAD_THIRD_PARTY_ERROR;
         }
     }
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */

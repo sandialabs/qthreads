@@ -22,7 +22,6 @@
 # endif
 #endif
 
-
 /*****************************************************************************
 * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *   *
@@ -37,7 +36,6 @@
 *****************************************************************************/
 
 /* Return Codes */
-#define QTHREAD_REDUNDANT         1
 #define QTHREAD_SUCCESS           0
 #define QTHREAD_BADARGS           -1
 #define QTHREAD_PTHREAD_ERROR     -2
@@ -50,9 +48,9 @@
 #else
 # define QTHREAD_OVERFLOW -6
 #endif
-#define QTHREAD_OPFAIL            -7
-#define NO_SHEPHERD ((qthread_shepherd_id_t)-1)
-#define NO_WORKER   ((qthread_worker_id_t)-1)
+#define QTHREAD_OPFAIL -7
+#define NO_SHEPHERD    ((qthread_shepherd_id_t)-1)
+#define NO_WORKER      ((qthread_worker_id_t)-1)
 
 #define QTHREAD_VERSION 1007000
 
@@ -154,11 +152,9 @@ Q_ENDCXX /* */
 # include <qthread/qthread-sst.h>
 #else
 
-#include <qthread/qt_sinc.h>
+# include <qthread/qt_sinc.h>
 
 Q_STARTCXX /* */
-
-typedef struct qthread_s qthread_t;
 
 typedef unsigned int qthread_shepherd_id_t;
 typedef unsigned int qthread_worker_id_t;
@@ -200,11 +196,12 @@ int  qthread_disable_worker(const qthread_worker_id_t worker);
 void qthread_enable_worker(const qthread_worker_id_t worker);
 # ifdef QTHREAD_USE_ROSE_EXTENSIONS
 void qthread_pack_workerid(const qthread_worker_id_t worker,
-                                    const qthread_worker_id_t newId);
-void qthread_go_back_to_master(void);              /* context switch back to master loop */
-void qthread_parent_yield_state(void);             /* save thread state enum and then set PARENT_YIELD */
-aligned_t* qthread_task_counter(void);             /* task_counter CAS reference */
-syncvar_t* qthread_return_value(qthread_t *t);     /* return value for a task */
+                           const qthread_worker_id_t newId);
+void       qthread_go_back_to_master(void);        /* context switch back to master loop */
+void       qthread_parent_yield_state(void);       /* save thread state enum and then set PARENT_YIELD */
+aligned_t *qthread_task_counter(void);             /* task_counter CAS reference */
+typedef struct qthread_s qthread_t;
+syncvar_t *qthread_return_value(qthread_t *t);     /* return value for a task */
 # endif
 
 /* this function allows a qthread to specifically give up control of the
@@ -214,10 +211,6 @@ syncvar_t* qthread_return_value(qthread_t *t);     /* return value for a task */
  * they block. */
 # define qthread_yield() do { COMPILER_FENCE; qthread_yield_(); } while (0)
 void qthread_yield_(void);
-
-/* this function allows a qthread to retrieve its qthread_t pointer if it has
- * been lost for some reason */
-qthread_t Q_DEPRECATED *qthread_self(void);
 
 /* these are the functions for generating a new qthread.
  *
@@ -332,10 +325,10 @@ size_t qthread_readstate(const enum introspective_state type);
 
 /* Task team interface. */
 qt_team_id_t qt_team_id(void);
-aligned_t qt_team_destroy(void *arg);
-int qthread_fork_new_team(qthread_f f,
-                          const void *arg,
-                          aligned_t *ret);
+aligned_t    qt_team_destroy(void *arg);
+int          qthread_fork_new_team(qthread_f   f,
+                                   const void *arg,
+                                   aligned_t  *ret);
 int qthread_fork_syncvar_new_team(qthread_f   f,
                                   const void *arg,
                                   syncvar_t  *ret);
