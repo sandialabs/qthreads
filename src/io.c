@@ -55,7 +55,6 @@ qt_mpool syscall_job_pool = NULL;
 static unsigned long timeout    = 100; // in microseconds
 static int           proxy_exit = 0;
 pthread_key_t        IO_task_struct;
-extern pthread_key_t shepherd_structs;
 
 static void qt_blocking_subsystem_internal_stopwork(void)
 {   /*{{{*/
@@ -77,6 +76,8 @@ static void qt_blocking_subsystem_internal_freemem(void)
 
 static void *qt_blocking_subsystem_proxy_thread(void *arg)
 {   /*{{{*/
+    extern pthread_key_t shepherd_structs;
+
     pthread_setspecific(shepherd_structs, (void *)1);
     while (proxy_exit == 0) {
         if (qt_process_blocking_calls()) {

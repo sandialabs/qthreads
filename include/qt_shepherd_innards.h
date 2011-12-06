@@ -50,20 +50,20 @@ typedef struct qthread_worker_s qthread_worker_t;
 
 /* The Shepherd Struct */
 struct qthread_shepherd_s {
-    pthread_t              shepherd;
-    qthread_shepherd_id_t  shepherd_id; /* whoami */
+    pthread_t             shepherd;
+    qthread_shepherd_id_t shepherd_id;  /* whoami */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    qthread_worker_t      *workers; // dymanic length qlib->nworkerspershep
+    qthread_worker_t     *workers;  // dymanic length qlib->nworkerspershep
 #endif
-    qthread_t             *current;
-    qt_threadqueue_t      *ready;
+    qthread_t            *current;
+    qt_threadqueue_t     *ready;
     /* round robin scheduler - can probably be smarter */
-    aligned_t              sched_shepherd;
-    uintptr_t              QTHREAD_CASLOCK(active);
+    aligned_t             sched_shepherd;
+    uintptr_t             QTHREAD_CASLOCK(active);
     /* affinity information */
-    unsigned int           node; /* whereami */
+    unsigned int          node;  /* whereami */
 #ifdef QTHREAD_HAVE_LGRP
-    unsigned int           lgrp;
+    unsigned int          lgrp;
 #endif
 #ifndef QTHREAD_MULTITHREADED_SHEPHERDS                       // needs to be "per pthread"
     uintptr_t              hazard_ptrs[HAZARD_PTRS_PER_SHEP]; /* hazard pointers (see http://portal.acm.org/citation.cfm?id=987524.987595) */
@@ -129,28 +129,21 @@ extern pthread_key_t shepherd_structs;
 static QINLINE qthread_shepherd_t *qthread_internal_getshep(void)
 {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    qthread_worker_t *w =
-        (qthread_worker_t *)pthread_getspecific(shepherd_structs);
-    if ((uintptr_t)w <= 1) {
-        return (qthread_shepherd_t*)w;
+    qthread_worker_t *w = (qthread_worker_t *)pthread_getspecific(shepherd_structs);
+    if (w == NULL) {
+        return NULL;
     } else {
         return w->shepherd;
     }
-
 #else
-    qthread_shepherd_t *s =
-        (qthread_shepherd_t *)pthread_getspecific(shepherd_structs);
-    return s;
+    return (qthread_shepherd_t *)pthread_getspecific(shepherd_structs);
 #endif
 }
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 static QINLINE qthread_worker_t *qthread_internal_getworker(void)
 {
-    qthread_worker_t *w =
-        (qthread_worker_t *)pthread_getspecific(shepherd_structs);
-
-    return w;
+    return (qthread_worker_t *)pthread_getspecific(shepherd_structs);
 }
 
 #endif

@@ -19,7 +19,6 @@
 #include "qt_debug.h"
 #include "qthread_innards.h" /* for qlib */
 
-extern pthread_key_t shepherd_structs;
 extern pthread_key_t IO_task_struct;
 
 void qt_blocking_subsystem_begin_blocking_action(void)
@@ -48,17 +47,14 @@ void qt_blocking_subsystem_begin_blocking_action(void)
 
 void qt_blocking_subsystem_end_blocking_action(void)
 {
-    void *ss = pthread_getspecific(shepherd_structs);
+    qthread_t *me = pthread_getspecific(IO_task_struct);
 
-    if ((qlib != NULL) && (ss != NULL)) {
-        qthread_t *me = pthread_getspecific(IO_task_struct);
-
+    if ((qlib != NULL) && (me != NULL)) {
         qthread_debug(IO_CALLS, "in qthreads, me=%p\n", me);
-        assert(ss == (void *)1); // indicates an IO worker
         assert(me != NULL);
         qthread_back_to_master(me);
     } else {
-        qthread_debug(IO_CALLS, "NOT in qthreads\n");
+        qthread_debug(IO_CALLS, "NOT in qthreads' IO subsystem\n");
     }
 }
 
