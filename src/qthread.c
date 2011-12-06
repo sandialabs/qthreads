@@ -1292,13 +1292,15 @@ void qthread_finalize(void)
     qthread_worker_t *worker;
 #endif
 
-#ifdef STEAL_PROFILE
-    qthread_steal_stat();
-#endif
-
+    /* Sanity check */
     if ((qlib == NULL) || (qthread_shep() != 0) || (qthread_worker(NULL) != 0)) {
+        /* in essence, qthread_finalize can easily be called by threads
+         * external to qthreads (via the atexit() setup); if that happens, we
+         * need to ignore it. */
         return;
     } else {
+        /* also, if a thread other than worker0, shep0, real-mccoy calls it, we
+         * should ignore that too. */
         qthread_t *t = qthread_internal_self();
         if (0 == (t->flags & QTHREAD_REAL_MCCOY)) {
             return;
@@ -1308,6 +1310,9 @@ void qthread_finalize(void)
     qthread_shepherd_t *shep0 = &(qlib->shepherds[0]);
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+# ifdef STEAL_PROFILE
+    qthread_steal_stat();
+# endif
     worker = qthread_internal_getworker();
     if (worker && (worker->packed_worker_id != 0)) {           /* Only run finalize on shepherd 0 worker 0*/
         worker->current->thread_state = QTHREAD_STATE_YIELDED; /* Otherwise, put back */
