@@ -14,6 +14,7 @@
 
 #include <stdint.h>
 #include <qt_atomics.h>
+#include <assert.h>
 
 #ifndef NOINLINE
 # define NOINLINE __attribute__((noinline))
@@ -37,6 +38,7 @@ static QINLINE void rwlock_init(rwlock_t *l)
 static QINLINE void rwlock_rdlock(rwlock_t *l,
                                   int       id)
 {
+    assert(id >= 0);
     for (;;) {
         l->readers[id] = 1;
         MACHINE_FENCE;
@@ -54,12 +56,14 @@ static QINLINE void rwlock_rdlock(rwlock_t *l,
 static QINLINE void rwlock_rdunlock(rwlock_t *l,
                                     int       id)
 {
+    assert(id >= 0);
     l->readers[id] = 0;
 }
 
 static QINLINE void rwlock_wrlock(rwlock_t *l,
                                   int       id)
 {
+    assert(id >= 0);
     id = id + 1;
 
     uint64_t *readers = (void *)l->readers;

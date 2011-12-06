@@ -800,12 +800,12 @@ void XOMP_task(
 #ifdef QTHREAD_OMP_AFFINITY
   qthread_t *t = qthread_self();
   if (t->rdata->child_affinity != OMP_NO_CHILD_TASK_AFFINITY)
-    qthread_fork_syncvar_copyargs_to((qthread_f)func, arg, arg_size, NULL, t->rdata->child_affinity);/* NULL return value -- let copyargs assign inside thread structure -- which it allocates*/
+    qthread_fork_track_syncvar_copyargs_to((qthread_f)func, arg, arg_size, NULL, t->rdata->child_affinity);/* NULL return value -- let copyargs assign inside thread structure -- which it allocates*/
   else {
-    qthread_fork_syncvar_copyargs((qthread_f)func, arg, arg_size, NULL); /* NULL return value -- let copyargs assign inside thread structure -- which it allocates*/
+    qthread_fork_track_syncvar_copyargs((qthread_f)func, arg, arg_size, NULL); /* NULL return value -- let copyargs assign inside thread structure -- which it allocates*/
   }
 #else
-  qthread_fork_syncvar_copyargs((qthread_f)func, arg, arg_size, NULL); /* NULL return value -- let copyargs assign inside thread structure -- which it allocates*/
+  qthread_fork_track_syncvar_copyargs((qthread_f)func, arg, arg_size, NULL); /* NULL return value -- let copyargs assign inside thread structure -- which it allocates*/
 #endif
 }
 

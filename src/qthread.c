@@ -2290,6 +2290,9 @@ typedef enum {
     NEW_TEAM
 } desired_team_t;
 
+#define QTHREAD_UBERFORK_FEATURE_MASK_FUTURE 0x1
+#define QTHREAD_UBERFORK_FEATURE_MASK_PARENT 0x2
+
 static int qthread_uberfork(qthread_f             f,
                             const void           *arg,
                             size_t                arg_size,
@@ -2402,7 +2405,8 @@ static int qthread_uberfork(qthread_f             f,
     }
     qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id, target_shep);
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    t->currentParallelRegion = me->currentParallelRegion; // saved in shepherd
+    if (me != NULL)
+      t->currentParallelRegion = me->currentParallelRegion; // saved in shepherd
     if (ret == NULL) {
         aligned_t next, previous, test;
         t->parent                = me;
@@ -2522,6 +2526,23 @@ int qthread_fork_precond(qthread_f   f,
 
     return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, ALIGNED_T, npreconds, preconds, NO_SHEPHERD, SAME_TEAM, 0);
 } /*}}}*/
+
+int qthread_fork_track_syncvar_copyargs_to(qthread_f             f,
+					   const void           *arg,
+					   size_t                arg_size,
+					   syncvar_t            *ret,
+					   qthread_shepherd_id_t preferred_shep)
+{   /*{{{*/
+  return qthread_uberfork(f, (void *const)arg, arg_size, SYNCVAR_T, ret, NO_SYNC, 0, NULL, preferred_shep, SAME_TEAM, QTHREAD_UBERFORK_FEATURE_MASK_PARENT);
+} /*}}}*/
+
+int qthread_fork_track_syncvar_copyargs(qthread_f   f,
+                                        const void *arg,
+                                        size_t      arg_size,
+                                        syncvar_t  *ret)
+{                      /*{{{ */
+  return qthread_uberfork(f, (void *const)arg, arg_size, SYNCVAR_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, SAME_TEAM, QTHREAD_UBERFORK_FEATURE_MASK_PARENT);
+}                      /*}}} */
 
 int qthread_fork_syncvar_copyargs_to(qthread_f             f,
                                      const void           *arg,

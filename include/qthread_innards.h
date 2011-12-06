@@ -153,6 +153,16 @@ int qthread_fork_syncvar_copyargs_to(const qthread_f   f,
                                      syncvar_t *const  ret,
                                      const qthread_shepherd_id_t
                                      preferred_shep);
+int qthread_fork_track_syncvar_copyargs(const qthread_f   f,
+                                  const void *const arg,
+                                  const size_t      arg_size,
+                                  syncvar_t *const  ret);
+int qthread_fork_track_syncvar_copyargs_to(const qthread_f   f,
+                                     const void *const arg,
+                                     const size_t      arg_size,
+                                     syncvar_t *const  ret,
+                                     const qthread_shepherd_id_t
+                                     preferred_shep);
 #endif // ifdef QTHREAD_SST_PRIMITIVES
 
 /* functions added by akp to handle OpenMP task completion
