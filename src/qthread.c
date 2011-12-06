@@ -1739,7 +1739,7 @@ void qthread_enable_shepherd(const qthread_shepherd_id_t shep)
     (void)QT_CAS(qlib->shepherds[shep].active, 0, 1);
 }                      /*}}} */
 
-qthread_t INTERNAL *qthread_internal_self(void)
+qthread_t *qthread_internal_self(void)
 {                      /*{{{ */
     extern pthread_key_t IO_task_struct;
 
@@ -2862,7 +2862,7 @@ int INTERNAL qthread_check_precond(qthread_t *t)
     return 0;
 } /*}}}*/
 
-void INTERNAL qthread_back_to_master(qthread_t *t)
+void qthread_back_to_master(qthread_t *t)
 {                      /*{{{ */
 #ifdef NEED_RLIMIT
     struct rlimit rlp;
