@@ -707,6 +707,7 @@ void qthread_steal_stat(void)
 {
     int i;
 
+    if (!qlib) return; // protect for some odd cases -- external threads only?
     for (i = 0; i < qlib->nshepherds; i++) {
         fprintf(stdout,
                 "shepherd %d - steals called %ld attempted %ld failed %ld successful %ld work stolen %ld\n",
