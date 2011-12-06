@@ -200,8 +200,6 @@ void qthread_pack_workerid(const qthread_worker_id_t worker,
 void       qthread_go_back_to_master(void);        /* context switch back to master loop */
 void       qthread_parent_yield_state(void);       /* save thread state enum and then set PARENT_YIELD */
 aligned_t *qthread_task_counter(void);             /* task_counter CAS reference */
-typedef struct qthread_s qthread_t;
-syncvar_t *qthread_return_value(qthread_t *t);     /* return value for a task */
 # endif
 
 /* this function allows a qthread to specifically give up control of the
