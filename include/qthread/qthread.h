@@ -197,7 +197,6 @@ void qthread_enable_worker(const qthread_worker_id_t worker);
 # ifdef QTHREAD_USE_ROSE_EXTENSIONS
 void qthread_pack_workerid(const qthread_worker_id_t worker,
                            const qthread_worker_id_t newId);
-void       qthread_go_back_to_master(void);        /* context switch back to master loop */
 void       qthread_parent_yield_state(void);       /* save thread state enum and then set PARENT_YIELD */
 aligned_t *qthread_task_counter(void);             /* task_counter CAS reference */
 # endif
