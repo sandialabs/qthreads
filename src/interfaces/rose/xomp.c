@@ -699,7 +699,6 @@ static void waitCompletionOutstandingTasks(void)
         if (newval != tcount_finished_state) {            
             // next line will save thred_state in prev_thread_state
             qthread_parent_yield_state();
-            qthread_back_to_master(qthread_internal_self());
             // child will have set thred_state to prev_thread_state
         }
 

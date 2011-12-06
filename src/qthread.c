@@ -2862,7 +2862,7 @@ int INTERNAL qthread_check_precond(qthread_t *t)
     return 0;
 } /*}}}*/
 
-void qthread_back_to_master(qthread_t *t)
+void INTERNAL qthread_back_to_master(qthread_t *t)
 {                      /*{{{ */
 #ifdef NEED_RLIMIT
     struct rlimit rlp;
@@ -3309,6 +3309,7 @@ void qthread_parent_yield_state()
     assert(t);
     t->prev_thread_state = t->thread_state;
     t->thread_state = QTHREAD_STATE_PARENT_YIELD;
+    qthread_back_to_master(t);
 }
 
 aligned_t *qthread_task_counter(void)
