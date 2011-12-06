@@ -2,29 +2,39 @@
 /* Portions of this file are Copyright (c) 2005-2006 Russ Cox, MIT; see COPYRIGHT */
 /* Portions of this file are Copyright Sandia National Laboratories */
 #endif
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#else
+# error no config.h
+#endif
+#include "qthread/common.h"
 
 #define _(x)
 
-#if defined(__FreeBSD__) && defined(__i386__) && __FreeBSD__ < 5
-#define NEEDX86CONTEXT 1
-#define SET qt_setmctxt
-#define GET qt_getmctxt
+#if defined(__FreeBSD__) &&  __FreeBSD__ < 5
+# if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
+#  define NEEDX86CONTEXT 1
+#  define SET qt_setmctxt
+#  define GET qt_getmctxt
+# else
+#  error Unsupported version of FreeBSD
+# endif
 #endif
 
 #if defined(__APPLE__)
-# if defined(__i386__)
+# if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
 #  define NEEDX86CONTEXT 1
 #  define SET _qt_setmctxt
 #  define GET _qt_getmctxt
-# elif defined(__x86_64__)
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 #  define NEEDX86_64CONTEXT 1
 #  define SET _qt_setmctxt
 #  define GET _qt_getmctxt
-# elif defined(__ppc64__)
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
 #  define NEEDPOWER64CONTEXT 1
 #  define SET __qt_setmctxt
 #  define GET __qt_getmctxt
-# elif defined(__ppc__)
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
 #  define NEEDPOWERCONTEXT 1
 #  define SET __qt_setmctxt
 #  define GET __qt_getmctxt
@@ -38,26 +48,34 @@
 #  define NEEDARMCONTEXT 1
 #  define SET qt_setmctxt
 #  define GET qt_getmctxt
-# elif defined(__tile__)
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILE)
 #  define NEEDTILECONTEXT 1
 #  define SET _qt_setmctxt
 #  define GET _qt_getmctxt
-# elif defined (__i386__)
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
 #  define NEEDX86CONTEXT 1
 #  define SET qt_setmctxt
 #  define GET qt_getmctxt
-# elif defined (__x86_64__)
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 #  define NEEDX86_64CONTEXT 1
 #  define SET qt_setmctxt
 #  define GET qt_getmctxt
-# elif defined (__ppc64__)
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
 #  define NEEDPOWER64CONTEXT 1
 #  define SET qt_setmctxt
 #  define GET qt_getmctxt
 # elif defined (__ppc__)
 #  define NEEDPOWERCONTEXT 1
+#  define r(x) r##x
+#  define f(x) f##x
 #  define SET qt_setmctxt
 #  define GET qt_getmctxt
+# elif defined (__PPC__)
+#  define NEEDPOWERCONTEXT 1
+#  define r(x) x
+#  define f(x) x
+#  define SET _qt_setmctxt
+#  define GET _qt_getmctxt
 # endif
 #endif
 
@@ -356,120 +374,120 @@ SET:
 
 .globl GET
 GET:                            _(/*) xxx: instruction scheduling */)
-        mflr    r0
-        mfcr    r5
-        mfctr   r6
-        mfxer   r7
-        stw     r0, 0*4(r3) _(/*) pc - program counter */)
-        stw     r5, 1*4(r3) _(/*) cr - condition register */)
-        stw     r6, 2*4(r3) _(/*) ctr - count register */)
-        stw     r7, 3*4(r3) _(/*) xer */)
+        mflr    r(0)
+        mfcr    r(5)
+        mfctr   r(6)
+        mfxer   r(7)
+        stw     r(0), 0*4(r(3)) _(/*) pc - program counter */)
+        stw     r(5), 1*4(r(3)) _(/*) cr - condition register */)
+        stw     r(6), 2*4(r(3)) _(/*) ctr - count register */)
+        stw     r(7), 3*4(r(3)) _(/*) xer */)
 
-        stw     r1, 4*4(r3) _(/*) sp */)
-        stw     r2, 5*4(r3) _(/*) toc */)
-        li      r5, 1                   _(/*) return value for qt_setmctxt */)
-        stw     r5, 6*4(r3) _(/*) arg1 & return-value */)
+        stw     r(1), 4*4(r(3)) _(/*) sp */)
+        stw     r(2), 5*4(r(3)) _(/*) toc */)
+        li      r(5), 1                   _(/*) return value for qt_setmctxt */)
+        stw     r(5), 6*4(r(3)) _(/*) arg1 & return-value */)
 
-        stw     r13, (0+7)*4(r3)        _(/*) callee-save GPRs */)
-        stw     r14, (1+7)*4(r3)        _(/*) not a block move b/c that could be slower */)
-        stw     r15, (2+7)*4(r3)
-        stw     r16, (3+7)*4(r3)
-        stw     r17, (4+7)*4(r3)
-        stw     r18, (5+7)*4(r3)
-        stw     r19, (6+7)*4(r3)
-        stw     r20, (7+7)*4(r3)
-        stw     r21, (8+7)*4(r3)
-        stw     r22, (9+7)*4(r3)
-        stw     r23, (10+7)*4(r3)
-        stw     r24, (11+7)*4(r3)
-        stw     r25, (12+7)*4(r3)
-        stw     r26, (13+7)*4(r3)
-        stw     r27, (14+7)*4(r3)
-        stw     r28, (15+7)*4(r3)
-        stw     r29, (16+7)*4(r3)
-        stw     r30, (17+7)*4(r3)
-        stw     r31, (18+7)*4(r3)
+        stw     r(13), (0+7)*4(r(3))        _(/*) callee-save GPRs */)
+        stw     r(14), (1+7)*4(r(3))        _(/*) not a block move b/c that could be slower */)
+        stw     r(15), (2+7)*4(r(3))
+        stw     r(16), (3+7)*4(r(3))
+        stw     r(17), (4+7)*4(r(3))
+        stw     r(18), (5+7)*4(r(3))
+        stw     r(19), (6+7)*4(r(3))
+        stw     r(20), (7+7)*4(r(3))
+        stw     r(21), (8+7)*4(r(3))
+        stw     r(22), (9+7)*4(r(3))
+        stw     r(23), (10+7)*4(r(3))
+        stw     r(24), (11+7)*4(r(3))
+        stw     r(25), (12+7)*4(r(3))
+        stw     r(26), (13+7)*4(r(3))
+        stw     r(27), (14+7)*4(r(3))
+        stw     r(28), (15+7)*4(r(3))
+        stw     r(29), (16+7)*4(r(3))
+        stw     r(30), (17+7)*4(r(3))
+        stw     r(31), (18+7)*4(r(3))
 
         _(/*) skip 4 bytes for pad... 19+7 = 26 */)
 
-        stfd f14, (0)*8+(26*4)(r3)      _(/*) callee-save FPRs */)
-        stfd f15, (1)*8+(26*4)(r3)
-        stfd f16, (2)*8+(26*4)(r3)
-        stfd f17, (3)*8+(26*4)(r3)
-        stfd f18, (4)*8+(26*4)(r3)
-        stfd f19, (5)*8+(26*4)(r3)
-        stfd f20, (6)*8+(26*4)(r3)
-        stfd f21, (7)*8+(26*4)(r3)
-        stfd f22, (8)*8+(26*4)(r3)
-        stfd f23, (9)*8+(26*4)(r3)
-        stfd f24, (10)*8+(26*4)(r3)
-        stfd f25, (11)*8+(26*4)(r3)
-        stfd f26, (12)*8+(26*4)(r3)
-        stfd f27, (13)*8+(26*4)(r3)
-        stfd f28, (14)*8+(26*4)(r3)
-        stfd f29, (15)*8+(26*4)(r3)
-        stfd f30, (16)*8+(26*4)(r3)
-        stfd f31, (17)*8+(26*4)(r3)
+        stfd f(14), (0)*8+(26*4)(r(3))      _(/*) callee-save FPRs */)
+        stfd f(15), (1)*8+(26*4)(r(3))
+        stfd f(16), (2)*8+(26*4)(r(3))
+        stfd f(17), (3)*8+(26*4)(r(3))
+        stfd f(18), (4)*8+(26*4)(r(3))
+        stfd f(19), (5)*8+(26*4)(r(3))
+        stfd f(20), (6)*8+(26*4)(r(3))
+        stfd f(21), (7)*8+(26*4)(r(3))
+        stfd f(22), (8)*8+(26*4)(r(3))
+        stfd f(23), (9)*8+(26*4)(r(3))
+        stfd f(24), (10)*8+(26*4)(r(3))
+        stfd f(25), (11)*8+(26*4)(r(3))
+        stfd f(26), (12)*8+(26*4)(r(3))
+        stfd f(27), (13)*8+(26*4)(r(3))
+        stfd f(28), (14)*8+(26*4)(r(3))
+        stfd f(29), (15)*8+(26*4)(r(3))
+        stfd f(30), (16)*8+(26*4)(r(3))
+        stfd f(31), (17)*8+(26*4)(r(3))
 
-        li      r3, 0                   _(/*) return */)
+        li      r(3), 0                   _(/*) return */)
         blr
 
 .globl SET
 SET:
-        lwz     r13, (0+7)*4(r3)        _(/*) callee-save GPRs */)
-        lwz     r14, (1+7)*4(r3)        _(/*) not a block move b/c that could be slower */)
-        lwz     r15, (2+7)*4(r3)
-        lwz     r16, (3+7)*4(r3)
-        lwz     r17, (4+7)*4(r3)
-        lwz     r18, (5+7)*4(r3)
-        lwz     r19, (6+7)*4(r3)
-        lwz     r20, (7+7)*4(r3)
-        lwz     r21, (8+7)*4(r3)
-        lwz     r22, (9+7)*4(r3)
-        lwz     r23, (10+7)*4(r3)
-        lwz     r24, (11+7)*4(r3)
-        lwz     r25, (12+7)*4(r3)
-        lwz     r26, (13+7)*4(r3)
-        lwz     r27, (14+7)*4(r3)
-        lwz     r28, (15+7)*4(r3)
-        lwz     r29, (16+7)*4(r3)
-        lwz     r30, (17+7)*4(r3)
-        lwz     r31, (18+7)*4(r3)
+        lwz     r(13), (0+7)*4(r(3))        _(/*) callee-save GPRs */)
+        lwz     r(14), (1+7)*4(r(3))        _(/*) not a block move b/c that could be slower */)
+        lwz     r(15), (2+7)*4(r(3))
+        lwz     r(16), (3+7)*4(r(3))
+        lwz     r(17), (4+7)*4(r(3))
+        lwz     r(18), (5+7)*4(r(3))
+        lwz     r(19), (6+7)*4(r(3))
+        lwz     r(20), (7+7)*4(r(3))
+        lwz     r(21), (8+7)*4(r(3))
+        lwz     r(22), (9+7)*4(r(3))
+        lwz     r(23), (10+7)*4(r(3))
+        lwz     r(24), (11+7)*4(r(3))
+        lwz     r(25), (12+7)*4(r(3))
+        lwz     r(26), (13+7)*4(r(3))
+        lwz     r(27), (14+7)*4(r(3))
+        lwz     r(28), (15+7)*4(r(3))
+        lwz     r(29), (16+7)*4(r(3))
+        lwz     r(30), (17+7)*4(r(3))
+        lwz     r(31), (18+7)*4(r(3))
 
         _(/*) skip 4 bytes for pad... 19+7 = 26 */)
 
-        lfd f14, (0)*8+(26*4)(r3)       _(/*) callee-save FPRs */)
-        lfd f15, (1)*8+(26*4)(r3)
-        lfd f16, (2)*8+(26*4)(r3)
-        lfd f17, (3)*8+(26*4)(r3)
-        lfd f18, (4)*8+(26*4)(r3)
-        lfd f19, (5)*8+(26*4)(r3)
-        lfd f20, (6)*8+(26*4)(r3)
-        lfd f21, (7)*8+(26*4)(r3)
-        lfd f22, (8)*8+(26*4)(r3)
-        lfd f23, (9)*8+(26*4)(r3)
-        lfd f24, (10)*8+(26*4)(r3)
-        lfd f25, (11)*8+(26*4)(r3)
-        lfd f26, (12)*8+(26*4)(r3)
-        lfd f27, (13)*8+(26*4)(r3)
-        lfd f28, (14)*8+(26*4)(r3)
-        lfd f29, (15)*8+(26*4)(r3)
-        lfd f30, (16)*8+(26*4)(r3)
-        lfd f31, (17)*8+(26*4)(r3)
+        lfd f(14), (0)*8+(26*4)(r(3))       _(/*) callee-save FPRs */)
+        lfd f(15), (1)*8+(26*4)(r(3))
+        lfd f(16), (2)*8+(26*4)(r(3))
+        lfd f(17), (3)*8+(26*4)(r(3))
+        lfd f(18), (4)*8+(26*4)(r(3))
+        lfd f(19), (5)*8+(26*4)(r(3))
+        lfd f(20), (6)*8+(26*4)(r(3))
+        lfd f(21), (7)*8+(26*4)(r(3))
+        lfd f(22), (8)*8+(26*4)(r(3))
+        lfd f(23), (9)*8+(26*4)(r(3))
+        lfd f(24), (10)*8+(26*4)(r(3))
+        lfd f(25), (11)*8+(26*4)(r(3))
+        lfd f(26), (12)*8+(26*4)(r(3))
+        lfd f(27), (13)*8+(26*4)(r(3))
+        lfd f(28), (14)*8+(26*4)(r(3))
+        lfd f(29), (15)*8+(26*4)(r(3))
+        lfd f(30), (16)*8+(26*4)(r(3))
+        lfd f(31), (17)*8+(26*4)(r(3))
 
-        lwz     r1, 4*4(r3)
-        lwz     r2, 5*4(r3)
+        lwz     r(1), 4*4(r(3))
+        lwz     r(2), 5*4(r(3))
 
-        lwz     r0, 0*4(r3)
-        mtlr    r0
-        lwz     r0, 1*4(r3)
-        mtcr    r0                      _(/*) mtcrf 0xFF, r0 */)
-        lwz     r0, 2*4(r3)
-        mtctr   r0
-        lwz     r0, 3*4(r3)
-        mtxer   r0
+        lwz     r(0), 0*4(r(3))
+        mtlr    r(0)
+        lwz     r(0), 1*4(r(3))
+        mtcr    r(0)                      _(/*) mtcrf 0xFF, r(0) */)
+        lwz     r(0), 2*4(r(3))
+        mtctr   r(0)
+        lwz     r(0), 3*4(r(3))
+        mtxer   r(0)
 
-        lwz     r3,     6*4(r3)
+        lwz     r(3),     6*4(r(3))
         blr
 #endif
 
