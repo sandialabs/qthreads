@@ -3,9 +3,9 @@
 # Copyright (c)      2008  Sandia Corporation
 #
 
-# QTHREAD_CHECK_SWAPCONTEXT([action-if-found], [action-if-not-found])
+# QTHREAD_PICK_CONTEXT_TYPE([variable-to-set])
 # ------------------------------------------------------------------------------
-AC_DEFUN([QTHREAD_CHECK_SWAPCONTEXT], [
+AC_DEFUN([QTHREAD_PICK_CONTEXT_TYPE], [
 AC_ARG_ENABLE([fastcontext],
               [AS_HELP_STRING([--disable-fastcontext],
                               [use a lighter-weight non-system-based context
@@ -13,7 +13,44 @@ AC_ARG_ENABLE([fastcontext],
                                calls. If you run into bugs, you can disable it
                                on some systems to use the slower libc-provided
                                version.])])
+case "$host" in
+  *-solaris2.8)
+    AC_DEFINE([EXTRA_MAKECONTEXT_ARGC], [1], 
+			  [solaris 8 requires argc be one larger than the actual count of
+			   arguments])
+	AC_DEFINE([INVERSE_STACK_POINTER], [1], 
+			  [make the ss_sp member of uc_stack be the high-address of the
+			  stack, rather than the low-address of the stack])
+    qt_host_based_enable_fastcontext=no
+	;;
+  *-solaris2.9|*-solaris2.10)
+    AC_DEFINE([__MAKECONTEXT_V2_SOURCE], [1], [force the Sun makecontext to behave correctly])
+    qt_host_based_enable_fastcontext=no
+	;;
+  ia64-*|tile-*)
+    qt_host_based_enable_fastcontext=no
+	;;
+  *)
+    qt_host_based_enable_fastcontext=yes
+    ;;
+esac
+AS_IF([test "x$qt_host_based_enable_fastcontext" = "xno"],
+      [AS_IF([test "x$enable_fastcontext" = xyes],
+	         [AC_MSG_ERROR([Do not have an implementation of fastcontext for $host])],
+			 [enable_fastcontext=no])])
+qt_cv_pick_ctxt="none"
+AS_IF([test "x$enable_fastcontext" = "xno"],
+	  [QTHREAD_CHECK_SWAPCONTEXT([qt_cv_pick_ctxt="native"],
+		                         [qt_cv_pick_ctxt="own"])],
+	  [QTHREAD_CHECK_COMPAT_MAKECONTEXT([qt_cv_pick_ctxt="own"])])
+AS_IF([test "x$qt_cv_pick_ctxt" = "xnone"], 
+	  [AC_MSG_ERROR([Can not find working makecontext.])])
+$1=$qt_cv_pick_ctxt
+])
 
+# QTHREAD_CHECK_SWAPCONTEXT([action-if-found], [action-if-not-found])
+# ------------------------------------------------------------------------------
+AC_DEFUN([QTHREAD_CHECK_SWAPCONTEXT], [
 AS_IF([test "x$ac_cv_func_getcontext" = "xyes"], [
 	QTHREAD_CHECK_UCSTACK_SSFLAGS(
 		[AC_DEFINE([QTHREAD_UCSTACK_HAS_SSFLAGS],[1],
@@ -51,7 +88,9 @@ int main()
 	[qthread_cv_swapcontext_works=yes],
 	[qthread_cv_swapcontext_works=no],
 	[AS_IF([test "x$enable_fastcontext" != "x"],
-	       [qthread_cv_swapcontext_works=$enable_fastcontext],
+	       [AS_IF([test "x$enable_fastcontext" = xyes],
+		          [qthread_cv_swapcontext_works=no],
+				  [qthread_cv_swapcontext_works=yes])],
 	       [qthread_cv_swapcontext_works=yes])])
 	;;
 	esac])
