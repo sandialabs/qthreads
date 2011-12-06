@@ -2734,12 +2734,6 @@ int INTERNAL qthread_check_precond(qthread_t *t)
     return 0;
 } /*}}}*/
 
-void qthread_go_back_to_master()
-{
-    qthread_t *me = qthread_internal_self();
-    qthread_back_to_master(me);
-}
-
 void INTERNAL qthread_back_to_master(qthread_t *t)
 {                      /*{{{ */
 #ifdef NEED_RLIMIT
