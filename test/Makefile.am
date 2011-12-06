@@ -235,8 +235,8 @@ time_uts_donecount_DEPENDENCIES = $(qthreadlib)
 test_sinc_SOURCES = test_sinc.c
 test_sinc_DEPENDENCIES = $(qthreadlib)
 
-test_sinc_SOURCES = test_sinc_null.c
-test_sinc_DEPENDENCIES = $(qthreadlib)
+test_sinc_null_SOURCES = test_sinc_null.c
+test_sinc_null_DEPENDENCIES = $(qthreadlib)
 
 test_multinode_init_SOURCES = test_multinode_init.c
 test_multinode_init_DEPENDENCIES = $(qthreadlib)
