@@ -701,9 +701,7 @@ static QINLINE qthread_t* qthread_steal(qt_threadqueue_t *thiefq)
 } /*}}}*/
 
 # ifdef STEAL_PROFILE                  // should give mechanism to make steal profiling optional
-void qthread_steal_stat(void);
-
-void qthread_steal_stat(void)
+void INTERNAL qthread_steal_stat(void)
 {
     int i;
 

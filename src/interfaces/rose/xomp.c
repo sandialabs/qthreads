@@ -42,10 +42,6 @@
 #include "maestro_sched.h"
 #endif
 
-#ifdef STEAL_PROFILE
-void qthread_steal_stat(void);
-#endif
-
 #if defined(__i386__) || defined(__x86_64__)
 #define USE_RDTSC 1
 #endif
