@@ -27,7 +27,7 @@ case "$host" in
     AC_DEFINE([__MAKECONTEXT_V2_SOURCE], [1], [force the Sun makecontext to behave correctly])
     qt_host_based_enable_fastcontext=no
 	;;
-  powerpc-*|x86-*|x86_64-*|tile-*)
+  powerpc-*|powerpc64-*|x86-*|x86_64-*|tile-*)
     # Yes, we have these platforms
     qt_host_based_enable_fastcontext=yes
     ;;
