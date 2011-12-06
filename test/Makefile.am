@@ -24,6 +24,7 @@ basic_tests = test_basic \
 			  test_qalloc \
 			  test_user_defined_block \
 			  test_sinc \
+			  test_sinc_null \
 			  test_tasklocal \
 			  test_tasklocal_no_default \
 			  test_tasklocal_no_argcopy \
@@ -232,6 +233,9 @@ time_uts_donecount_SOURCES = time_uts_donecount.c rng/brg_sha1.c
 time_uts_donecount_DEPENDENCIES = $(qthreadlib)
 
 test_sinc_SOURCES = test_sinc.c
+test_sinc_DEPENDENCIES = $(qthreadlib)
+
+test_sinc_SOURCES = test_sinc_null.c
 test_sinc_DEPENDENCIES = $(qthreadlib)
 
 test_multinode_init_SOURCES = test_multinode_init.c
