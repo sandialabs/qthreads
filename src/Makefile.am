@@ -4,6 +4,7 @@
 #
 
 AM_CPPFLAGS = $(SST_INCLUDE) -I$(top_srcdir)/include
+AM_CCASFLAGS = $(SST_INCLUDE) -I$(top_srcdir)/include -I$(top_builddir)/include -DHAVE_CONFIG_H
 AM_LDFLAGS = $(SST_LIBS)
 
 lib_LTLIBRARIES = libqthread.la
