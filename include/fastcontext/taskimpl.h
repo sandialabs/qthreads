@@ -6,7 +6,7 @@
 # include <config.h>
 #endif
 
-#if defined(__tile__)
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILE)
 # ifdef HAVE_STDARG_H
 #  include <stdarg.h>
 # endif
@@ -15,26 +15,32 @@
 # define NEEDSWAPCONTEXT
 #endif
 
-#if (defined(__i386__) || defined(__x86_64__))
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
 # define NEEDX86MAKECONTEXT
 # define NEEDSWAPCONTEXT
-# if defined(__x86_64__)
-#  define NEEDX86REGISTERARGS
-# endif
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
+# define NEEDX86MAKECONTEXT
+# define NEEDSWAPCONTEXT
+# define NEEDX86REGISTERARGS
 #endif
 
-#if (defined(__ppc__) || defined(__ppc64__))
+#if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
+     (QTHREAD_ASSEMBlY_ARCH == QTHREAD_POWERPC64))
 # define NEEDPOWERMAKECONTEXT
 # define NEEDSWAPCONTEXT
 #endif
 
 #if defined(__APPLE__) || defined(__linux__) || defined(__CYGWIN32__)
-# if defined(__i386__) || defined(__x86_64__)
+# if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
+      (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64))
 #  include "386-ucontext.h"
-# elif defined(__tile__)
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILE)
 #  include "tile-ucontext.h"
-# else
+# elif ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
+        (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64))
 #  include "power-ucontext.h"
+# else
+#  error This platform has no ucontext.h header
 # endif
 #endif
 
