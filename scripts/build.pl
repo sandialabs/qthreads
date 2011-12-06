@@ -24,6 +24,7 @@ my %config = (
 	tc_profile    => '--enable-profiling=threadc',
 	hi_st         => '--disable-hardware-increments --disable-multithreaded-shepherds',
 	hi_mt         => '--disable-hardware-increments',
+    debug         => 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-debug --enable-static --disable-shared',
 	dev           => 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-debug --enable-guard-pages --enable-asserts --enable-static --disable-shared --enable-valgrind --disable-pooled-memory --enable-aligncheck'
 );
 
