@@ -711,9 +711,9 @@ AS_IF([test "x$enable_hardware_increments" = "xno"],
 	  [AS_IF([test "x$enable_internal_spinlock" = xyes -o "x$enable_internal_spinlock" = x],
 			 [AC_DEFINE([USE_INTERNAL_SPINLOCK], [1], [Use Porterfield spinlock])])])
 
-AS_IF([test "x$enable_steal_profile" = xyes],
+AS_IF([test "x$enable_steal_profiling" = xyes],
       [AC_DEFINE([STEAL_PROFILE], [1], [Support dynamic profile of steal infomation])],
-      [enable_steal_profile="no"])
+      [enable_steal_profiling="no"])
 
 AS_IF([test "x$enable_omp_affinity" = xyes],
       [AC_DEFINE([QTHREAD_OMP_AFFINITY], [1], [Enable experimental OpenMP affinity extensions. Under development])],
