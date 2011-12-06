@@ -471,7 +471,7 @@ static QINLINE float qthread_fincr(float      *operand,
     do {
         oldval.f = *operand;
         newval.f = oldval.f + incr;
-        res.i    = __sync_val_compare_and_swap(operand, oldval.i, newval.i);
+        res.i    = __sync_val_compare_and_swap((uint32_t *)operand, oldval.i, newval.i);
     } while (res.i != oldval.i);       /* if res!=old, the calc is out of date */
     return oldval.f;
 
@@ -593,7 +593,7 @@ static QINLINE double qthread_dincr(double      *operand,
     do {
         oldval.d = *operand;
         newval.d = oldval.d + incr;
-        res.i    = __sync_val_compare_and_swap(operand, oldval.i, newval.i);
+        res.i    = __sync_val_compare_and_swap((uint64_t *)operand, oldval.i, newval.i);
     } while (res.i != oldval.i);       /* if res!=old, the calc is out of date */
     return oldval.d;
 
