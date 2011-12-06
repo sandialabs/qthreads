@@ -165,7 +165,7 @@ int main(int   argc,
     timer = qtimer_create();
 
     printf("%-21s %-9s %5s %8s %s\n", "version", "sync", "iters", "incrs", "time");
-    run_iterations(qt_loopaccum_balance_syncvar, count, multi_op, overhead, "balanced", "syncvar");
+    run_iterations(qt_loopaccum_balance_sv, count, multi_op, overhead, "balanced", "syncvar");
     run_iterations(qt_loopaccum_balance_sinc, count, multi_op, overhead, "balanced", "sinc");
     run_iterations(qt_loopaccum_balance_dc, count, multi_op, overhead, "balanced", "donecount");
 
