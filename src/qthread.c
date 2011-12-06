@@ -2290,7 +2290,7 @@ static int qthread_uberfork(qthread_f             f,
                             void                 *preconds,
                             qthread_shepherd_id_t target_shep,
                             desired_team_t        dteam,
-                            uint_fast8_t          future_flag)
+                            uint_fast8_t          feature_flag)
 {   /*{{{*/
     qthread_t            *t;
     qthread_shepherd_t   *myshep = qthread_internal_getshep();
@@ -2315,7 +2315,7 @@ static int qthread_uberfork(qthread_f             f,
                   preconds,
                   target_shep,
                   (dteam == SAME_TEAM) ? "same_team" : "new_team",
-                  (future_flag ? "future" : "qthread"));
+                  ((feature_flag & QTHREAD_UBERFORK_FEATURE_MASK_FUTURE) ? "future" : "qthread"));
     assert(qlib);
     /* Step 2: Pick a destination */
     if (target_shep != NO_SHEPHERD) {
@@ -2387,14 +2387,14 @@ static int qthread_uberfork(qthread_f             f,
                            * thread-id may be extraneous in both when parallel
                            * region barriers in place (not will to pull it now
                            * maybe later) akp */
-    if (QTHREAD_UNLIKELY(future_flag)) {
+    if (QTHREAD_UNLIKELY(feature_flag & QTHREAD_UBERFORK_FEATURE_MASK_FUTURE)) {
         t->flags |= QTHREAD_FUTURE;
     }
     qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id, target_shep);
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    if (me != NULL){
+    if (me != NULL) {
       t->currentParallelRegion = me->currentParallelRegion; // saved in shepherd
-      if (ret == NULL) {
+      if (ret == NULL && (feature_flag & QTHREAD_UBERFORK_FEATURE_MASK_PARENT)) {
         aligned_t next, previous, test;
         t->parent                = me;
         previous                 = me->task_counter;
