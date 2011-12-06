@@ -27,12 +27,13 @@ case "$host" in
     AC_DEFINE([__MAKECONTEXT_V2_SOURCE], [1], [force the Sun makecontext to behave correctly])
     qt_host_based_enable_fastcontext=no
 	;;
-  ia64-*|tile-*)
-    qt_host_based_enable_fastcontext=no
-	;;
-  *)
+  powerpc-*|x86-*|x86_64-*|tile-*)
+    # Yes, we have these platforms
     qt_host_based_enable_fastcontext=yes
     ;;
+  *)
+    qt_host_based_enable_fastcontext=no
+	;;
 esac
 AS_IF([test "x$qt_host_based_enable_fastcontext" = "xno"],
       [AS_IF([test "x$enable_fastcontext" = xyes],
