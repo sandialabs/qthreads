@@ -76,9 +76,6 @@ static void qt_blocking_subsystem_internal_freemem(void)
 
 static void *qt_blocking_subsystem_proxy_thread(void *arg)
 {   /*{{{*/
-    extern pthread_key_t shepherd_structs;
-
-    pthread_setspecific(shepherd_structs, (void *)1);
     while (proxy_exit == 0) {
         if (qt_process_blocking_calls()) {
             break;

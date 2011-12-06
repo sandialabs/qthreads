@@ -1740,28 +1740,20 @@ qthread_t INTERNAL *qthread_internal_self(void)
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t *worker = qthread_internal_getworker();
-    switch ((uintptr_t)worker) {
-        case 0:
-            return NULL;
-
-        case 1:
-            return pthread_getspecific(IO_task_struct);
-
-        default:
-            return worker->current;
+    if (worker == NULL) {
+        // this may also be null, but in the slow path, the logic is sound
+        return pthread_getspecific(IO_task_struct);
+    } else {
+        return worker->current;
     }
 
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     qthread_shepherd_t *shep = qthread_internal_getshep();
-    switch ((uintptr_t)shep) {
-        case 0:
-            return NULL;
-
-        case 1:
-            return pthread_getspecific(IO_task_struct);
-
-        default:
-            return shep->current;
+    if (shep == NULL) {
+        // this may also be null, but in the slow path, the logic is sound
+        return pthread_getspecific(IO_task_struct);
+    } else {
+        return shep->current;
     }
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 }                      /*}}} */
