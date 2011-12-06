@@ -894,6 +894,7 @@ int qthread_initialize(void)
     qlib->max_team_id    = 1; /* team 0 is the default team */
     qlib->sched_shepherd = 0;
     QTHREAD_FASTLOCK_INIT(qlib->max_thread_id_lock);
+    QTHREAD_FASTLOCK_INIT(qlib->max_team_id_lock);
     QTHREAD_FASTLOCK_INIT(qlib->max_unique_id_lock);
     QTHREAD_FASTLOCK_INIT(qlib->sched_shepherd_lock);
     {
@@ -1585,6 +1586,7 @@ void qthread_finalize(void)
 
     qthread_debug(LOCK_DETAILS, "destroy scheduling locks\n");
     QTHREAD_FASTLOCK_DESTROY(qlib->max_thread_id_lock);
+    QTHREAD_FASTLOCK_DESTROY(qlib->max_team_id_lock);
     QTHREAD_FASTLOCK_DESTROY(qlib->max_unique_id_lock);
     QTHREAD_FASTLOCK_DESTROY(qlib->sched_shepherd_lock);
 
