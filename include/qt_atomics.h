@@ -283,8 +283,29 @@ static QINLINE aligned_t qthread_internal_incr_mod_(aligned_t             *opera
                                                     const unsigned int max QTHREAD_OPTIONAL_LOCKARG)
 {                                      /*{{{ */
     aligned_t retval;
+#if QTHREAD_ATOMIC_CAS && (QTHREAD_SIZEOF_ALIGNED_T == 4)
+    register uint32_t oldval, newval;
 
-#if defined(HAVE_GCC_INLINE_ASSEMBLY)
+    newval = *operand;
+    do {
+        retval  = oldval = newval;
+        newval  = oldval + 1;
+        newval *= (newval < max);
+
+	newval = __sync_val_compare_and_swap((uint32_t*)operand, oldval, newval);
+    } while (oldval != newval);
+#elif QTHREAD_ATOMIC_CAS && (QTHREAD_SIZEOF_ALIGNED_T == 8)
+    register uint64_t oldval, newval;
+
+    newval = *operand;
+    do {
+        retval  = oldval = newval;
+        newval  = oldval + 1;
+        newval *= (newval < max);
+
+	newval = __sync_val_compare_and_swap((uint64_t*)operand, oldval, newval);
+    } while (oldval != newval);
+#elif defined(HAVE_GCC_INLINE_ASSEMBLY)
 # if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
     ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64) && (QTHREAD_SIZEOF_ALIGNED_T == 4))
 
