@@ -13,8 +13,6 @@ basic_tests = test_basic \
 			  test_id \
 			  test_incr test_fincr test_dincr \
 			  test_stackleft \
-			  test_external_fork \
-			  test_external_syncvar \
 			  test_migrate \
 			  test_disabled \
 			  test_qtimer \
@@ -28,6 +26,8 @@ basic_tests = test_basic \
 			  test_tasklocal \
 			  test_tasklocal_no_default \
 			  test_tasklocal_no_argcopy \
+			  test_external_fork \
+			  test_external_syncvar \
 			  test_read \
 			  test_teams
 
