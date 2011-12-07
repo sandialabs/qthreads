@@ -370,7 +370,6 @@ SET:
 #endif
 
 #ifdef NEEDTILEGXCONTEXT
-# warning this does not work
 .text
 .align 2
 
