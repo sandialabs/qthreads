@@ -4,6 +4,8 @@
 
 #include <stddef.h> /* for size_t, per C89 */
 
+#include "qt_visibility.h"
+
 #define setcontext(u) _qt_setmctxt(&(u)->mc)
 #define getcontext(u) _qt_getmctxt(&(u)->mc)
 typedef struct mctxt mctxt_t;
@@ -41,6 +43,9 @@ struct uctxt {
     struct uctxt *uc_link;      /* unused */
 };
 
-int  _qt_getmctxt(mctxt_t *);
-void _qt_setmctxt(mctxt_t *);
+int INTERNAL qt_swapctxt(uctxt_t *,
+                uctxt_t *);
+void INTERNAL qt_makectxt(uctxt_t *, void (*)(void), int, ...);
+int  INTERNAL _qt_getmctxt(mctxt_t *);
+void INTERNAL _qt_setmctxt(mctxt_t *);
 /* vim:set expandtab: */
