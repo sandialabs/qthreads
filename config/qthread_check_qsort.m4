@@ -34,7 +34,17 @@ int main()
 }]])],
                                                      [qthread_cv_qsort_r_style="BSD"],
                                                      [qthread_cv_qsort_r_style="glibc"],
-                                                     [qthread_cv_qsort_r_style="unknown"])],
+                                                     [case "$host" in
+													    *-gnu|*-linux)
+														  qthread_cv_qsort_r_style="glibc"
+														  ;;
+														*bsd)
+														  qthread_cv_qsort_r_style="BSD"
+														  ;;
+														*)
+														  qthread_cv_qsort_r_style="unknown"
+														  ;;
+													  esac])],
                                       [AS_IF([test "x$with_bsd_qsort_r" = xyes],
                                              [qthread_cv_qsort_r_style=BSD],
                                              [qthread_cv_qsort_r_style=glibc])])])
