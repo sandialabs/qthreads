@@ -6,11 +6,14 @@ use warnings;
 use Cwd qw/getcwd/;
 
 # Setup configuration options
+my @default_conf_names = ('compat', 'unpooled', 'opt', 'nemesis', 'lifo', 'mutexfifo', 'nottingham', 'rose', 'slowcontext', 'shep_profile', 'lock_profile', 'steal_profile', 'tc_profile', 'hi_st', 'hi_mt', 'dev');
+
 my %config = (
 	default       => '',
 	compat        => 'CFLAGS="-m32" CXXFLAGS="-m32" LDFLAGS="-m32" CPPFLAGS="-m32"',
 	unpooled      => '--disable-pooled-memory',
 	opt           => 'CFLAGS="-O3" CXXFLAGS="-O3"',
+	opt2           => 'CFLAGS="-O3" CXXFLAGS="-O3" --enable-guard-pages',
 	nemesis       => '--with-scheduler=nemesis',
     lifo          => '--with-scheduler=lifo',
     mutexfifo     => '--with-scheduler=mutexfifo',
@@ -24,8 +27,10 @@ my %config = (
 	tc_profile    => '--enable-profiling=threadc',
 	hi_st         => '--disable-hardware-increments --disable-multithreaded-shepherds',
 	hi_mt         => '--disable-hardware-increments',
+	dev           => 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-debug --enable-guard-pages --enable-asserts --enable-static --disable-shared --enable-valgrind --disable-pooled-memory --enable-aligncheck',
+	dev2          => 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-debug --enable-guard-pages --enable-asserts --enable-static --disable-shared --enable-valgrind --enable-aligncheck',
     debug         => 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-debug --enable-static --disable-shared',
-	dev           => 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-debug --enable-guard-pages --enable-asserts --enable-static --disable-shared --enable-valgrind --disable-pooled-memory --enable-aligncheck'
+    hwloc         => '--with-topology=hwloc',
 );
 
 my @summaries;
@@ -147,7 +152,7 @@ foreach my $name (@conf_names) {
     }
 }
 if ($use_all) {
-    @conf_names = keys %config;
+    @conf_names = @default_conf_names;
 }
 
 if ($qt_src_dir eq '') {
