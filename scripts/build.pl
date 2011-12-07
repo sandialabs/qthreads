@@ -13,7 +13,6 @@ my %config = (
 	compat        => 'CFLAGS="-m32" CXXFLAGS="-m32" LDFLAGS="-m32" CPPFLAGS="-m32"',
 	unpooled      => '--disable-pooled-memory',
 	opt           => 'CFLAGS="-O3" CXXFLAGS="-O3"',
-	opt2           => 'CFLAGS="-O3" CXXFLAGS="-O3" --enable-guard-pages',
 	nemesis       => '--with-scheduler=nemesis',
     lifo          => '--with-scheduler=lifo',
     mutexfifo     => '--with-scheduler=mutexfifo',
@@ -28,7 +27,6 @@ my %config = (
 	hi_st         => '--disable-hardware-increments --disable-multithreaded-shepherds',
 	hi_mt         => '--disable-hardware-increments',
 	dev           => 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-debug --enable-guard-pages --enable-asserts --enable-static --disable-shared --enable-valgrind --disable-pooled-memory --enable-aligncheck',
-	dev2          => 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-debug --enable-guard-pages --enable-asserts --enable-static --disable-shared --enable-valgrind --enable-aligncheck',
     debug         => 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-debug --enable-static --disable-shared',
     hwloc         => '--with-topology=hwloc',
 );
