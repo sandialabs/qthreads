@@ -8,26 +8,26 @@
 #include <qthread/qtimer.h>
 #include "argparsing.h"
 
-aligned_t initme_idx = 0;
-volatile aligned_t *initme = NULL;
-qt_feb_barrier_t *wait_on_me;
+aligned_t           initme_idx = 0;
+volatile aligned_t *initme     = NULL;
+qt_feb_barrier_t   *wait_on_me;
 
 static aligned_t barrier_thread(void *arg)
 {
-    qt_feb_barrier_t *b = (qt_feb_barrier_t *)arg;
-    aligned_t idx = qthread_incr(&initme_idx, 1);
+    qt_feb_barrier_t *b   = (qt_feb_barrier_t *)arg;
+    aligned_t         idx = qthread_incr(&initme_idx, 1);
 
     qthread_incr(&(initme[idx]), 1);
     qt_feb_barrier_enter(b);
     return 0;
 }
 
-int main(int argc,
+int main(int   argc,
          char *argv[])
 {
-    size_t threads = 1000, i;
+    size_t     threads = 1000, i;
     aligned_t *rets;
-    qtimer_t t;
+    qtimer_t   t;
 
     assert(qthread_initialize() == 0);
     t = qtimer_create();
