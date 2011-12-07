@@ -96,12 +96,12 @@ EXTRA_DIST = \
 			 threadqueues/mtsfifo_threadqueues.c \
 			 threadqueues/sherwood_threadqueues.c \
 			 threadqueues/nottingham_threadqueues.c \
-			 affinity/hwloc_affinity.c \
-			 affinity/no_affinity.c \
-			 affinity/libnuma_affinity.c \
-			 affinity/libnumaV2_affinity.c \
-			 affinity/mach_affinity.c \
-			 affinity/tile_affinity.c \
-			 affinity/plpa_affinity.c \
-			 affinity/lgrp_affinity.c \
+			 affinity/hwloc.c \
+			 affinity/no.c \
+			 affinity/libnuma.c \
+			 affinity/libnumaV2.c \
+			 affinity/mach.c \
+			 affinity/tilera.c \
+			 affinity/plpa.c \
+			 affinity/lgrp.c \
 			 affinity/shepcomp.h
