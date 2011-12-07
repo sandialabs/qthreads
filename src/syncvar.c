@@ -99,7 +99,7 @@ static uint64_t qthread_mwaitc(syncvar_t *const restrict addr,
                                unsigned int              timeout,
                                eflags_t *const restrict  err)
 {                                      /*{{{ */
-#if ((QTHREAD_ASSEMBLY_ARCH != QTHREAD_TILE) && \
+#if ((QTHREAD_ASSEMBLY_ARCH != QTHREAD_TILEPRO) && \
     (QTHREAD_ASSEMBLY_ARCH != QTHREAD_POWERPC32))
     syncvar_t unlocked;
 #endif
@@ -114,7 +114,7 @@ static uint64_t qthread_mwaitc(syncvar_t *const restrict addr,
     e.zf = 0;
     e.cf = 1;
     do {
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILE)
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO)
         uint32_t low, high;
         int32_t *addrptr = (int32_t *)addr;
         /* note that the tilera is little-endian, otherwise this would be
@@ -146,7 +146,7 @@ loop_start:
             if (timeout-- <= 0) { goto errexit; }
         } while (1);
         locked.u.w = addr->u.w; // I locked it, so I can read it
-#else   /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILE) */
+#else   /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO) */
         do {
 loop_start:
             unlocked = *addr;          // may be locked or unlocked, we don't know
@@ -160,7 +160,7 @@ loop_start:
             if (qthread_cas64((uint64_t *)addr, unlocked.u.w, locked.u.w) == unlocked.u.w) { break; }
             if (timeout-- <= 0) { goto errexit; }
         } while (1);
-#endif  /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILE) */
+#endif  /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO) */
         /***************************************************
         * now locked == unlocked, and the lock bit is set *
         ***************************************************/
@@ -175,7 +175,7 @@ loop_start:
             return locked.u.s.data;
         } else {
             /* this is NOT a state of interest, so unlock the locked bit */
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILE)
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO)
             MACHINE_FENCE;
             addrptr[0] = low;
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)

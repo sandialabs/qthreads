@@ -74,7 +74,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
     size_t        cpu_count, offset;
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-# error The logic for node assignment is completely wrong for multithreaded shepherds
+# warning The logic for node assignment is completely wrong for multithreaded shepherds
 #endif
     qassert(tmc_cpus_get_online_cpus(&online_cpus), 0);
     cpu_count = tmc_cpus_count(&online_cpus);
@@ -110,16 +110,20 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                 sheps[i].sorted_sheplist[k++] = j;
             }
         }
-#if defined(HAVE_QSORT_R) && defined(QTHREAD_QSORT_BSD)
+#if defined(HAVE_QSORT_R)
+# if defined(QTHREAD_QSORT_BSD)
         assert(sheps[i].sorted_sheplist);
         qsort_r(sheps[i].sorted_sheplist, nshepherds - 1,
                 sizeof(qthread_shepherd_id_t), (void *)(intptr_t)i,
                 &qthread_internal_shepcomp);
-#elif defined(HAVE_QSORT_R) && defined(QTHREAD_QSORT_GLIBC)
+# elif defined(QTHREAD_QSORT_GLIBC)
         assert(sheps[i].sorted_sheplist);
         qsort_r(sheps[i].sorted_sheplist, nshepherds - 1,
                 sizeof(qthread_shepherd_id_t), &qthread_internal_shepcomp,
                 (void *)(intptr_t)i);
+# else
+#  error BAD QSORT
+# endif
 #else
         shepcomp_src = (qthread_shepherd_id_t)i;
         qsort(sheps[i].sorted_sheplist, nshepherds - 1,

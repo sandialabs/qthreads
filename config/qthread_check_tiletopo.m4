@@ -11,14 +11,10 @@ AC_DEFUN([QTHREAD_CHECK_TILETOPO], [
   			       [qt_allgoodsofar=no
 				    break])
   AS_IF([test "x$qt_allgoodsofar" = xyes],
-        [saved_libs="$LIBS"
-		 LIBS="$LIBS -lilib"
-		 AC_MSG_CHECKING(for libilib)
-		 AC_LINK_IFELSE([AC_LANG_PROGRAM([#include <tmc/cpus.h>],
-		 								 [tmc_cpus_set_my_cpu(0)])],
-						[],[LIBS="$SAVED_LIBS"
-						qt_allgoodsofar=no])
-		 AC_MSG_RESULT($qt_allgoodsofar)])
+        [AC_SEARCH_LIBS([tmc_cpus_set_task_cpu],
+		               [ilib tmc],
+					   [],
+					   [qt_allgoodsofar=no])])
   
   AS_IF([test "x$qt_allgoodsofar" = xyes],
 	    [AC_DEFINE([QTHREAD_HAVE_TILETOPO],[1],[if the machine has a Tilera-style topology interface])

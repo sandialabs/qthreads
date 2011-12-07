@@ -48,8 +48,12 @@
 #  define NEEDARMCONTEXT 1
 #  define SET qt_setmctxt
 #  define GET qt_getmctxt
-# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILE)
-#  define NEEDTILECONTEXT 1
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO)
+#  define NEEDTILEPROCONTEXT 1
+#  define SET _qt_setmctxt
+#  define GET _qt_getmctxt
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEGX)
+#  define NEEDTILEGXCONTEXT 1
 #  define SET _qt_setmctxt
 #  define GET _qt_getmctxt
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
@@ -202,7 +206,7 @@ GET:
         ret
 #endif
 
-#ifdef NEEDTILECONTEXT
+#ifdef NEEDTILEPROCONTEXT
 .text
 .align 2
 
@@ -212,8 +216,172 @@ GET:
         ## .frame $sp, 8, $sp
         # .caller_lr = 8
         # .caller_caller_sp = 12
-        addli   r23, sp, -8     # the arg
-        sw              r23, r0         #
+        addli   r23, sp, -8     _(the arg)
+        sw              r23, r0
+        _(/*) prologue end */)
+        _(/*) setup the pointer */)
+        addli   r1, sp, -8
+        lw              r1, r1
+        _(/* note that each of these uses different temporary
+           * registers, to allow efficient scheduling */)
+        addi    r2, r1, (0*4)
+        sw              r2, r30
+        addi    r3, r1, (1*4)
+        sw              r3, r31
+        addi    r4, r1, (2*4)
+        sw              r4, r32
+        addi    r5, r1, (3*4)
+        sw              r5, r33
+        addi    r6, r1, (4*4)
+        sw              r6, r34
+        addi    r7, r1, (5*4)
+        sw              r7, r35
+        addi    r8, r1, (6*4)
+        sw              r8, r36
+        addi    r9, r1, (7*4)
+        sw              r9, r37
+        addi    r10, r1, (8*4)
+        sw              r10, r38
+        addi    r11, r1, (9*4)
+        sw              r11, r39
+        addi    r12, r1, (10*4)
+        sw              r12, r40
+        addi    r13, r1, (11*4)
+        sw              r13, r41
+        addi    r14, r1, (12*4)
+        sw              r14, r42
+        addi    r15, r1, (13*4)
+        sw              r15, r43
+        addi    r16, r1, (14*4)
+        sw              r16, r44
+        addi    r17, r1, (15*4)
+        sw              r17, r45
+        addi    r18, r1, (16*4)
+        sw              r18, r46
+        addi    r19, r1, (17*4)
+        sw              r19, r47
+        addi    r20, r1, (18*4)
+        sw              r20, r48
+        addi    r21, r1, (19*4)
+        sw              r21, r49
+        addi    r22, r1, (20*4)
+        sw              r22, r50
+        addi    r23, r1, (21*4)
+        sw              r23, r51
+        addi    r24, r1, (22*4)
+        sw              r24, r52
+        _(/*) gotten contexts are not function calls */)
+        addi    r6, r1, (23*4)+(6*4)
+        sw              r6, zero
+        _(/*) store the link register as the new pc */)
+        move    r25, lr
+        addi    r27, r1, (23*4)+(3*4)
+        sw              r27, r25
+        _(/*) store the stack pointer */)
+        addi    r27, sp, 0
+        addi    r28, r1, (23*4)+(1*4)
+        sw              r28, r27
+        _(/*) store the return for swapcontext */)
+        addi    r3, r1, (23*4)+(4*4)
+        movei   r4, 1
+        sw              r3, r4
+        _(/*) return value */)
+        move    r0, zero _(/*) success! */)
+        jrp     lr
+.type  SET,@function
+.globl SET
+SET:
+        ## .frame $sp, 8, $sp
+        # .caller_lr = 8
+        # .caller_caller_sp = 12
+        addli   r6, sp, -8
+        sw              r6, r0
+        _(/*) prologue end */)
+        _(/*) setup the pointer */)
+        addli   r1, sp, -8
+        lw              r1, r1
+        _(/* note that each of these uses different temporary
+           * registers, to allow efficient scheduling */)
+        addi    r2, r1, (0*4)
+        lw              r30, r2
+        addi    r3, r1, (1*4)
+        lw              r31, r3
+        addi    r4, r1, (2*4)
+        lw              r32, r4
+        addi    r5, r1, (3*4)
+        lw              r33, r5
+        addi    r6, r1, (4*4)
+        lw              r34, r6
+        addi    r7, r1, (5*4)
+        lw              r35, r7
+        addi    r8, r1, (6*4)
+        lw              r36, r8
+        addi    r9, r1, (7*4)
+        lw              r37, r9
+        addi    r10, r1, (8*4)
+        lw              r38, r10
+        addi    r11, r1, (9*4)
+        lw              r39, r11
+        addi    r12, r1, (10*4)
+        lw              r40, r12
+        addi    r13, r1, (11*4)
+        lw              r41, r13
+        addi    r14, r1, (12*4)
+        lw              r42, r14
+        addi    r15, r1, (13*4)
+        lw              r43, r15
+        addi    r16, r1, (14*4)
+        lw              r44, r17
+        addi    r18, r1, (15*4)
+        lw              r45, r18
+        addi    r19, r1, (16*4)
+        lw              r46, r19
+        addi    r20, r1, (17*4)
+        lw              r47, r20
+        addi    r21, r1, (18*4)
+        lw              r48, r21
+        addi    r22, r1, (19*4)
+        lw              r49, r22
+        addi    r23, r1, (20*4)
+        lw              r50, r23
+        addi    r24, r1, (21*4)
+        lw              r51, r24
+        addi    r25, r1, (22*4)
+        lw              r52, r25
+        _(/*) fiddle with the stack */)
+        addi    r2, r1, (23*4)+(1*4)
+        lw              r3, r2
+        move    sp, r3
+        _(/*) retrieve the new PC */)
+        addi    r6, r1, (23*4)+(3*4)
+        lw              r7, r6
+        _(/*) first argument? */)
+        addi    r4, r1, (23*4)+(6*4)
+        lw              r5, r4
+        bz              r5, 1f
+        addi    r0, r1, (23*4)+(5*4)
+        lw              r0, r0
+        jf              2f
+1:
+        addi    r0, r1, (23*4)+(4*4)
+        lw              r0, r0
+2:
+        jrp     r7
+#endif
+
+#ifdef NEEDTILEGXCONTEXT
+# error this does not work
+.text
+.align 2
+
+.type  GET,@function
+.globl GET
+GET:
+        ## .frame $sp, 8, $sp
+        # .caller_lr = 8
+        # .caller_caller_sp = 12
+        addli   r23, sp, -8     _(the arg)
+        sw              r23, r0
         _(/*) prologue end */)
         _(/*) setup the pointer */)
         addli   r1, sp, -8

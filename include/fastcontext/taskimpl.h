@@ -7,7 +7,8 @@
 #endif
 #include "qthread/common.h"
 
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILE)
+#if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO) || \
+     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEGX))
 # ifdef HAVE_STDARG_H
 #  include <stdarg.h>
 # endif
@@ -35,7 +36,8 @@
 # if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64))
 #  include "386-ucontext.h"
-# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILE)
+# elif ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO) || \
+        (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEGX))
 #  include "tile-ucontext.h"
 # elif ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
         (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64))

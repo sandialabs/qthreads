@@ -232,11 +232,11 @@ AC_ARG_WITH([topology],
             [AS_HELP_STRING([--with-topology=[[topologylib]]],
 							[specify which topology interface to use. Supported
 							 interfaces include hwloc, lgrp, libnuma,
-							 libnumaV2, mach, plpa, and tile.])],
+							 libnumaV2, mach, plpa, and tilera.])],
 			[AS_IF([test "x$with_topology" = xyes],
                    [with_topology=none_specified])
 			 case "$with_topology" in
-				 hwloc|lgrp|libnuma|libnumaV2|mach|no|plpa|tile) ;;
+				 hwloc|lgrp|libnuma|libnumaV2|mach|no|plpa|tilera) ;;
 				 none_specified) ;;
 			     *)
 				 AC_MSG_ERROR([Unsupported topology library ($with_topology)])
@@ -824,8 +824,8 @@ AS_IF([test "x$qthread_implementation" = "xunix"],
 									[qthread_topo=libnumaV2],
 									[AS_IF([test "x$qthread_topo" != xno],
 										   [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
-       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xtile],
-             [QTHREAD_CHECK_TILETOPO([qthread_topo=tile],
+       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xtilera],
+             [QTHREAD_CHECK_TILETOPO([qthread_topo=tilera],
 									 [AS_IF([test "x$qthread_topo" != xno],
 											[AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
        # Second, check for the ones that only give me CPU affinity control/information

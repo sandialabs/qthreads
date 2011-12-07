@@ -170,11 +170,9 @@ AC_DEFUN([QTHREAD_CHECK_ASSEMBLY],[
   qthread_gcc_inline_assign=""
   case "${host}" in
     i?86-*|x86_64*)
-      if test "$ac_cv_sizeof_long" = "4" ; then
-        qthread_cv_asm_arch="IA32"
-      else
-        qthread_cv_asm_arch="AMD64"
-      fi
+      AS_IF([test "$ac_cv_sizeof_long" = "4"],
+            [qthread_cv_asm_arch="IA32"],
+			[qthread_cv_asm_arch="AMD64"])
       qthread_gcc_inline_assign='"movl [$]0, %0" : "=&r"(ret)'
     ;;
 
@@ -189,7 +187,9 @@ AC_DEFUN([QTHREAD_CHECK_ASSEMBLY],[
     ;;
 
 	tile-*)
-	  qthread_cv_asm_arch="TILE"
+      AS_IF([test "$ac_cv_sizeof_long" = "4"],
+            [qthread_cv_asm_arch="TILE"],
+            [qthread_cv_asm_arch="TILEGX"])
 	  qthread_gcc_inline_assign='"movei %0, 5" : "=&r"(ret)'
 	;;
 
@@ -201,11 +201,9 @@ AC_DEFUN([QTHREAD_CHECK_ASSEMBLY],[
     ;;
 
     powerpc-*|powerpc64-*)
-      if test "$ac_cv_sizeof_long" = "4" ; then
-        qthread_cv_asm_arch="POWERPC32"
-      elif test "$ac_cv_sizeof_long" = "8" ; then
-        qthread_cv_asm_arch="POWERPC64"
-      fi
+      AS_IF([test "$ac_cv_sizeof_long" = "4"],
+            [qthread_cv_asm_arch="POWERPC32"],
+            [qthread_cv_asm_arch="POWERPC64"])
       qthread_gcc_inline_assign='"1: li %0,0" : "=&r"(ret)'
     ;;
 
@@ -213,11 +211,9 @@ AC_DEFUN([QTHREAD_CHECK_ASSEMBLY],[
       # SPARC v9 (and above) are the only ones with 64bit support
       # if compiling 32 bit, see if we are v9 (aka v8plus) or
       # earlier (casa is v8+/v9). 
-      if test "$ac_cv_sizeof_long" = "4" ; then
-        QTHREAD_CHECK_SPARCV8PLUS([qthread_cv_asm_arch="SPARCV9_32"])
-      elif test "$ac_cv_sizeof_long" = "8" ; then
-        qthread_cv_asm_arch="SPARCV9_64"
-      fi
+      AS_IF([test "$ac_cv_sizeof_long" = "4"],
+            [QTHREAD_CHECK_SPARCV8PLUS([qthread_cv_asm_arch="SPARCV9_32"])],
+            [qthread_cv_asm_arch="SPARCV9_64"])
       qthread_gcc_inline_assign='"mov 0,%0" : "=&r"(ret)'
     ;;
   esac

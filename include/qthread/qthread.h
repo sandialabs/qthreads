@@ -462,7 +462,8 @@ static QINLINE float qthread_fincr(float      *operand,
 # if defined(QTHREAD_MUTEX_INCREMENT)
     return qthread_fincr_(operand, incr);
 
-# elif !defined(HAVE_GCC_INLINE_ASSEMBLY) && QTHREAD_ATOMIC_CAS
+# elif QTHREAD_ATOMIC_CAS && \
+      (!defined(HAVE_GCC_INLINE_ASSEMBLY) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEGX))
     union {
         float    f;
         uint32_t i;
@@ -584,7 +585,8 @@ static QINLINE double qthread_dincr(double      *operand,
 # if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
     return qthread_dincr_(operand, incr);
 
-# elif !defined(HAVE_GCC_INLINE_ASSEMBLY) && QTHREAD_ATOMIC_CAS
+# elif QTHREAD_ATOMIC_CAS && \
+      (!defined(HAVE_GCC_INLINE_ASSEMBLY) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEGX))
     union {
         uint64_t i;
         double   d;
@@ -799,7 +801,7 @@ static QINLINE uint32_t qthread_incr32(uint32_t      *operand,
 # ifdef QTHREAD_MUTEX_INCREMENT
     return qthread_incr32_(operand, incr);
 
-# elif !defined(HAVE_GCC_INLINE_ASSEMBLY) && defined(QTHREAD_ATOMIC_INCR)
+# elif defined(QTHREAD_ATOMIC_INCR)
     return __sync_fetch_and_add(operand, incr);
 
 # elif !defined(HAVE_GCC_INLINE_ASSEMBLY) && QTHREAD_ATOMIC_CAS
@@ -906,7 +908,7 @@ static QINLINE uint64_t qthread_incr64(uint64_t      *operand,
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
     return qthread_incr64_(operand, incr);
 
-# elif !defined(HAVE_GCC_INLINE_ASSEMBLY) && defined(QTHREAD_ATOMIC_INCR)
+# elif defined(QTHREAD_ATOMIC_INCR)
     return __sync_fetch_and_add(operand, incr);
 
 # elif !defined(HAVE_GCC_INLINE_ASSEMBLY) && QTHREAD_ATOMIC_CAS
