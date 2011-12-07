@@ -25,6 +25,7 @@ int main(int argc,
     aligned_t rets[30];
     double ret_test;
 
+    CHECK_VERBOSE();
     qthread_initialize();
     iprintf("%i shepherds\n", qthread_num_shepherds());
 
