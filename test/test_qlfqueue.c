@@ -96,7 +96,7 @@ int main(int argc,
     }
     iprintf("queuers forked\n");
     for (i = 0; i < threadcount; i++) {
-        iprintf("waiting for %i\n", i);
+        iprintf("waiting for %zu\n", i);
         assert(qthread_readFF(NULL, &(rets[i])) == QTHREAD_SUCCESS);
     }
     free(rets);

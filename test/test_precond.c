@@ -19,7 +19,7 @@ static aligned_t consumer(void *arg)
     aligned_t  value;
 
     value = *v; // Not using readFF() since we know it is ready?
-    iprintf("Consumer: got value %d\n", value);
+    iprintf("Consumer: got value %u\n", (unsigned)value);
 
     return value;
 }
@@ -29,7 +29,7 @@ static aligned_t producer(void *arg)
     aligned_t      *v     = (aligned_t *)arg;
     const aligned_t value = 42;
 
-    iprintf("Producer: setting value %d\n", value);
+    iprintf("Producer: setting value %u\n", (unsigned)value);
     qthread_writeEF_const(v, value);
 
     return 0;
@@ -42,7 +42,7 @@ static aligned_t multi_consumer(void *arg)
     aligned_t   sum = 0;
 
     for (int i = 0; i < 3; i++) {
-        iprintf("Multi-consumer: got value %d\n", *m[i]);
+        iprintf("Multi-consumer: got value %u\n", (unsigned)*m[i]);
         sum += *m[i];
     }
 
@@ -54,7 +54,7 @@ static aligned_t multi_producer(void *arg)
     aligned_t      *m     = (aligned_t *)arg;
     const aligned_t value = 42;
 
-    iprintf("Multi-producer: setting value %d\n", value);
+    iprintf("Multi-producer: setting value %u\n", (unsigned)value);
     qthread_writeEF_const(m, value);
 
     return 0;
@@ -67,7 +67,7 @@ static aligned_t array_consumer(void *arg)
     aligned_t  sum = 0;
 
     for (int i = 0; i < NUM_MULTI; i++) {
-        iprintf("Multi-consumer: got value %d\n", m[i]);
+        iprintf("Multi-consumer: got value %u\n", (unsigned)m[i]);
         sum += m[i];
     }
 
@@ -79,7 +79,7 @@ static aligned_t array_producer(void *arg)
     aligned_t      *m     = (aligned_t *)arg;
     const aligned_t value = 42;
 
-    iprintf("Multi-producer: setting value %d\n", value);
+    iprintf("Multi-producer: setting value %u\n", (unsigned)value);
     qthread_writeEF_const(m, value);
 
     return 0;

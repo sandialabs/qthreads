@@ -44,7 +44,7 @@ int main(int   argc,
     rets = (aligned_t *)malloc(threads * sizeof(aligned_t));
     assert(rets);
 
-    iprintf("creating the barrier for %i threads\n", threads + 1);
+    iprintf("creating the barrier for %zu threads\n", threads + 1);
     wait_on_me = qt_feb_barrier_create(threads + 1);    // all my spawnees plus me
     assert(wait_on_me);
 

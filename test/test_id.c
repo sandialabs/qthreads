@@ -15,7 +15,7 @@ static aligned_t thread(void *arg)
 
     // printf("first id = %i\n", id);
     if (id != 1) {
-        iprintf(0, "id == %i (expected 1)\n", id);
+        iprintf("id == %i (expected 1)\n", id);
     }
     assert(id == 1);
 
