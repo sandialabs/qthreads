@@ -691,6 +691,11 @@ AS_IF([test "x$enable_steal_profiling" = xyes],
       [AC_DEFINE([STEAL_PROFILE], [1], [Support dynamic profile of steal infomation])],
       [enable_steal_profiling="no"])
 
+AS_IF([test "x$enable_cas_steal_profiling" = xyes],
+      [AC_DEFINE([CAS_STEAL_PROFILE], [1], [Support dynamic profile of CAS steal infomation])],
+      [enable_cas_steal_profiling="no"])
+
+
 AS_IF([test "x$enable_omp_affinity" = xyes],
       [AC_DEFINE([QTHREAD_OMP_AFFINITY], [1], [Enable experimental OpenMP affinity extensions. Under development])],
       [enable_omp_affinity="no"])
