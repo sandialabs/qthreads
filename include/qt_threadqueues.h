@@ -49,6 +49,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q QMS_ARG
 qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
                                                     void             *value);
 void INTERNAL qthread_steal_stat(void);
+void INTERNAL qthread_cas_steal_stat(void);
 #endif // ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 
 #endif // ifndef QT_THREADQUEUES_H

@@ -93,6 +93,22 @@ void INTERNAL qt_threadqueue_init_pools(qt_threadqueue_pools_t *p) {}
 
 void INTERNAL qt_threadqueue_destroy_pools(qt_threadqueue_pools_t *p) {}
 
+#ifdef CAS_STEAL_PROFILE
+static void cas_profile_update(int id, int retries) {
+    uint64_strip_t *cas_steal_profile = qlib->cas_steal_profile;
+    if (cas_steal_profile == NULL) return;
+    if (retries >= CAS_STEAL_PROFILE_LENGTH) {
+        cas_steal_profile[id].fields[CAS_STEAL_PROFILE_LENGTH - 1]++;
+    } else {
+        cas_steal_profile[id].fields[retries]++;
+    }
+}
+#else
+#define cas_profile_update(x,y) do{} while(0)
+#endif
+
+
+
 ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 {   /*{{{*/
     return 0;
@@ -207,6 +223,10 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
     qt_threadqueue_entry_t newtop;
     uint32_t nextindex;
 
+#ifdef CAS_STEAL_PROFILE
+    int cycles = 0;
+#endif
+
     int id = qthread_worker_unique(NULL);    
 
 
@@ -215,6 +235,11 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
     oldtop.sse = q->top;
 
     while(1) {
+
+#ifdef CAS_STEAL_PROFILE
+        cycles++;
+#endif
+
         qt_threadqueue_finish(q, oldtop.entry);
 
         nextindex = (oldtop.entry.index + 1) % q->size;
@@ -224,6 +249,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
             // on lock promotion attempts.
             rwlock_rdunlock(q->rwlock, id);
             qt_threadqueue_resize_and_enqueue(q, t, shep);
+            cas_profile_update(id, cycles - 1);
             return;
         }
     
@@ -247,6 +273,8 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
     q->empty = 0;
 
     rwlock_rdunlock(q->rwlock, id);
+
+    cas_profile_update(id, cycles - 1);
 
 } /*}}}*/
 
@@ -444,6 +472,11 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
     qthread_t             *t = NULL;
     rwlock_t              *rwlock = q->rwlock;
     qt_threadqueue_union_t oldtop, lastchance;
+
+#ifdef CAS_STEAL_PROFILE
+    int cycles = 0;
+#endif
+
     int id = qthread_worker_unique(NULL);  
 
     assert(q != NULL);
@@ -454,11 +487,18 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
     
     while(1) {
 
+#ifdef CAS_STEAL_PROFILE
+        cycles++;
+#endif
+
         if (oldtop.entry.index == q->bottom) {
             rwlock_rdunlock(rwlock, id);
             if (active) {
                 t = qt_threadqueue_dequeue_helper(q);
-                if (t != NULL) return(t);
+                if (t != NULL) {
+                    cas_profile_update(id, cycles - 1);
+                    return(t);
+                }
             }
             rwlock_rdlock(rwlock, id);
             oldtop.sse = q->top;
@@ -480,7 +520,10 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
                        rwlock_rdunlock(rwlock, id);
                        if (active) {
                            t = qt_threadqueue_dequeue_helper(q);
-                           if (t != NULL) return(t);
+                           if (t != NULL) {
+                               cas_profile_update(id, cycles - 1);
+                               return(t);
+                           }
                        }
                        rwlock_rdlock(rwlock, id);
                        oldtop.sse = q->top;
@@ -510,6 +553,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
                (uint128_t*) &oldtop, (uint128_t*) &newtop)) {
                    rwlock_rdunlock(rwlock, id);
                    assert(t != NULL);
+                   cas_profile_update(id, cycles - 1);
                    return (t);
             }
         }
@@ -699,6 +743,38 @@ static QINLINE qthread_t* qthread_steal(qt_threadqueue_t *thiefq)
     thiefq->stealing = 0;
     return(NULL);
 } /*}}}*/
+
+# ifdef CAS_STEAL_PROFILE
+void INTERNAL qthread_cas_steal_stat(void)
+{
+    int i, j;
+    uint64_strip_t accum;
+    uint64_t total = 0;
+    double weighted_sum = 0.0;
+
+    for(j = 0; j < CAS_STEAL_PROFILE_LENGTH; j++) {
+        accum.fields[j] = 0;
+    }
+    for (i = 0; i < qlib->nshepherds * qlib->nworkerspershep; i++) {
+        for(j = 0; j < CAS_STEAL_PROFILE_LENGTH; j++) {
+            accum.fields[j] += qlib->cas_steal_profile[i].fields[j];
+        }
+    }
+    for(j = 0; j < CAS_STEAL_PROFILE_LENGTH; j++) {
+        total += accum.fields[j];
+        weighted_sum += (accum.fields[j] * j);
+    }
+
+    fprintf(stdout, "threadqueue distribution of CAS retries\n");
+    for(j = 0; j < (CAS_STEAL_PROFILE_LENGTH - 1); j++) {
+        fprintf(stdout, "%d  - %4.2f%%\n", j, ((double) accum.fields[j]) / total * 100.0); 
+    }
+    fprintf(stdout, "%d+ - %4.2f%%\n", j, ((double) accum.fields[j]) / total * 100.0); 
+    fprintf(stdout, "approximate mean is %4.2f \n", weighted_sum / total); 
+    fprintf(stdout, "\n");
+}
+
+#endif
 
 # ifdef STEAL_PROFILE                  // should give mechanism to make steal profiling optional
 void INTERNAL qthread_steal_stat(void)

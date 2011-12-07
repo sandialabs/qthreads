@@ -29,6 +29,14 @@ qthread_t *qthread_internal_self(void);
 
 extern unsigned int QTHREAD_LOCKING_STRIPES;
 
+#ifdef CAS_STEAL_PROFILE
+// stripe this array across a cache line    
+#define CAS_STEAL_PROFILE_LENGTH (CACHELINE_WIDTH / sizeof(uint64_t))
+typedef struct uint64_strip_s { 
+    uint64_t fields[CAS_STEAL_PROFILE_LENGTH];
+}   uint64_strip_t;
+#endif
+
 typedef struct qlib_s {
     unsigned int          nshepherds;
     aligned_t             nshepherds_active;
@@ -54,6 +62,9 @@ typedef struct qlib_s {
     qt_context_t               master_context;
 #ifdef QTHREAD_USE_VALGRIND
     unsigned int               valgrind_masterstack_id;
+#endif
+#ifdef CAS_STEAL_PROFILE
+    uint64_strip_t            *cas_steal_profile;
 #endif
 
     /* assigns a unique thread_id mostly for debugging! */

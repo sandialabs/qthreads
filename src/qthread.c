@@ -825,6 +825,11 @@ int qthread_initialize(void)
     QTHREAD_FASTLOCK_INIT(concurrentthreads_lock);
 #endif
 
+#ifdef CAS_STEAL_PROFILE
+    posix_memalign((void **) &qlib->cas_steal_profile, 64, 
+        sizeof(uint64_strip_t) * nshepherds * nworkerspershep);
+#endif
+
     /* initialize the FEB-like locking structures */
 #ifdef QTHREAD_COUNT_THREADS
     qlib->locks_stripes = malloc(sizeof(aligned_t) * QTHREAD_LOCKING_STRIPES);
@@ -1312,6 +1317,12 @@ void qthread_finalize(void)
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 # ifdef STEAL_PROFILE
     qthread_steal_stat();
+# endif
+# ifdef CAS_STEAL_PROFILE
+    qthread_cas_steal_stat();
+    // outstanding threads remain
+    // free(qlib->cas_steal_profile);
+    qlib->cas_steal_profile = NULL;
 # endif
     worker = qthread_internal_getworker();
     if (worker && (worker->packed_worker_id != 0)) {           /* Only run finalize on shepherd 0 worker 0*/
