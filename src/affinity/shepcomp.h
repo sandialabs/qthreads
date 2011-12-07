@@ -5,7 +5,7 @@
 static int qthread_internal_shepcomp(void *src, const void *a, const void *b)
 # else
 static int qthread_internal_shepcomp(const void *a, const void *b, void *src)
-#endif
+# endif
 {
     int a_dist =
 	qthread_distance((qthread_shepherd_id_t) (intptr_t) src,
