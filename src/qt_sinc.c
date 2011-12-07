@@ -313,17 +313,14 @@ void qt_sinc_submit(qt_sinc_t *sinc,
         // Find shep_id for this worker
         if (worker_id % num_wps == 0) {
             shep_id = (shep_id == num_sheps - 1) ? 0 : shep_id + 1;
-            qthread_migrate_to(shep_id);
         }
 #else   /* ifndef PUREWS_SINCS */
         if (*count > 0) {
             *count -= 1;
             break;
         } else {
-            // need to migrate elsewhere
             // Find shep_id for this worker
             shep_id = (shep_id == num_sheps - 1) ? 0 : shep_id + 1;
-            qthread_migrate_to(shep_id);
         }
 #endif  /* ifndef PUREWS_SINCS */
     }
