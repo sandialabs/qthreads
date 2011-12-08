@@ -94,8 +94,7 @@ int setenv(const char *name,
 int main(int   argc,
          char *argv[])
 {
-    setenv("QTHREAD_NUM_SHEPHERDS", "2", 1);
-    assert(qthread_initialize() == 0);
+    assert(qthread_init(2) == 0);
 
     CHECK_VERBOSE();
 
