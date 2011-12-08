@@ -163,7 +163,7 @@ test_incr_DEPENDENCIES = $(qthreadlib)
 test_fincr_SOURCES = testfincr.c
 test_fincr_DEPENDENCIES = $(qthreadlib)
 
-test_dincr_SOURCES = testdincr.c
+test_dincr_SOURCES = test_dincr.c
 test_dincr_DEPENDENCIES = $(qthreadlib)
 
 test_disabled_SOURCES = test_disabled.c
