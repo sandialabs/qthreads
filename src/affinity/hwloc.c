@@ -549,23 +549,21 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
             shep_depth--;
         }
     } while (1);
-    qthread_debug(AFFINITY_DETAILS, "top shep_depth is %i\n", shep_depth);
+    qthread_debug(AFFINITY_BEHAVIOR, "top shep_depth is %i\n", shep_depth);
     num_extant_objs = hwloc_get_nbobjs_inside_cpuset_by_depth(topology,
                                                               allowed_cpuset,
                                                               shep_depth);
     cpus_left_per_obj = calloc(num_extant_objs, sizeof(size_t));
     /* Count how many PUs are in each obj */
     for (size_t i = 0; i < num_extant_objs; ++i) {
-        unsigned int j;
         hwloc_obj_t  obj =
             hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset,
                                                  shep_depth, i);
-        hwloc_cpuset_t obj_cpuset = obj->allowed_cpuset;
         /* count how many PUs in this obj */
-        FOREACH_START(j, obj_cpuset)
-        cpus_left_per_obj[i]++;
-        FOREACH_END();
-        // qthread_debug(AFFINITY_DETAILS, "count[%i] = %i\n", (int)i, (int)cpus_left_per_obj[i]);
+        cpus_left_per_obj[i] = hwloc_get_nbobjs_inside_cpuset_by_type(topology,
+                                                                      obj->allowed_cpuset,
+                                                                      HWLOC_OBJ_PU);
+        qthread_debug(AFFINITY_DETAILS, "count[%i] = %i\n", (int)i, (int)cpus_left_per_obj[i]);
     }
     /* assign nodes by iterating over cpus_left_per_node array (which is of
      * size num_extant_nodes rather than of size nodes_i_can_use) */
@@ -600,7 +598,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
         sheps[i].shep_dists = calloc(nshepherds - 1, sizeof(unsigned int));
         for (size_t j = 0, k = 0; j < nshepherds; ++j) {
             if (j != i) {
-                sheps[i].shep_dists[k] = 10;
+                sheps[i].shep_dists[k]        = 10;
                 sheps[i].sorted_sheplist[k++] = j;
             }
         }
