@@ -2042,6 +2042,19 @@ extern void *qthread_fence2;
     __asm__ __volatile__ (# name ":")
 #endif /* ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING */
 
+static QINLINE void qthread_internal_teamfinish(qt_team_t *team, uint8_t flags)
+{
+    assert(team != NULL);
+    // Signal team sinc that member has finished
+    qt_sinc_submit(team->sinc, NULL);
+    if (QTHREAD_TEAM_LEADER & flags) {
+        // Destroy team
+        qt_sinc_wait(team->sinc, NULL);
+        qt_sinc_destroy(team->sinc);
+        FREE_TEAM(team);
+    }
+}
+
 /* this function runs a thread until it completes or yields */
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
 static void qthread_wrapper(unsigned int high,
@@ -2076,28 +2089,20 @@ static void qthread_wrapper(void *ptr)
     QTHREAD_FASTLOCK_UNLOCK(&concurrentthreads_lock);
 #endif /* ifdef QTHREAD_COUNT_THREADS */
     if (t->ret) {
-        /* XXX: if this fails, we should probably do something */
         if (t->flags & QTHREAD_RET_IS_SYNCVAR) {
             /* this should avoid problems with irresponsible return values */
-            qassert(qthread_syncvar_writeEF_const((syncvar_t *)t->ret,
-                                                  INT64TOINT60((t->f)(t->arg))), QTHREAD_SUCCESS);
+            uint64_t retval = INT64TOINT60((t->f)(t->arg));
+            if (NULL != t->team) qthread_internal_teamfinish(t->team, t->flags);
+            qassert(qthread_syncvar_writeEF_const((syncvar_t *)t->ret, retval), QTHREAD_SUCCESS);
         } else {
-            qassert(qthread_writeEF_const((aligned_t *)t->ret, (t->f)(t->arg)), QTHREAD_SUCCESS);
+            aligned_t retval = (t->f)(t->arg);
+            if (NULL != t->team) qthread_internal_teamfinish(t->team, t->flags);
+            qassert(qthread_writeEF_const((aligned_t *)t->ret, retval), QTHREAD_SUCCESS);
         }
     } else {
         assert(t->f);
         (t->f)(t->arg);
-    }
-
-    // Signal team sinc that member has finished
-    if (NULL != t->team) {
-        qt_sinc_submit(t->team->sinc, NULL);
-        if (QTHREAD_TEAM_LEADER & t->flags) {
-            // Destroy team
-            qt_sinc_wait(t->team->sinc, NULL);
-            qt_sinc_destroy(t->team->sinc);
-            FREE_TEAM(t->team);
-        }
+        if (NULL != t->team) qthread_internal_teamfinish(t->team, t->flags);
     }
 
     t->thread_state = QTHREAD_STATE_TERMINATED;
