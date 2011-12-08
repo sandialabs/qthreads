@@ -59,8 +59,7 @@ int main(int argc,
     aligned_t ret;
     int qret;
 
-    setenv("QTHREAD_NUM_SHEPHERDS", "3", 1);
-    qthread_initialize();
+    qthread_init(3);
     qthread_disable_shepherd(1);
 
     CHECK_VERBOSE();
