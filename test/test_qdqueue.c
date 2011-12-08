@@ -37,12 +37,19 @@ static aligned_t dequeuer(void *arg)
     return 0;
 }
 
+static aligned_t spawn_dequeuers(void *arg)
+{
+    for (size_t i = 0; i < THREAD_COUNT; i++) {
+        assert(qthread_fork(dequeuer, arg, NULL) == QTHREAD_SUCCESS);
+    }
+    return 0;
+}
+
 int main(int argc,
          char *argv[])
 {
     qdqueue_t *q;
     size_t i;
-    aligned_t *rets;
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
     CHECK_VERBOSE();
@@ -88,18 +95,13 @@ int main(int argc,
     }
     iprintf("ordering test succeeded\n");
 
-    rets = (aligned_t *)calloc(THREAD_COUNT, sizeof(aligned_t));
-    assert(rets != NULL);
-    for (i = 0; i < THREAD_COUNT; i++) {
-        assert(qthread_fork_to(dequeuer, q, &(rets[i]), i%qthread_num_shepherds()) == QTHREAD_SUCCESS);
-    }
+    aligned_t ret;
+    assert(qthread_fork_new_team(spawn_dequeuers, q, &ret) == QTHREAD_SUCCESS);
+    iprintf("dequeuers forked\n");
     for (i = 0; i < THREAD_COUNT; i++) {
         assert(qthread_fork_to(queuer, q, NULL, i%qthread_num_shepherds()) == QTHREAD_SUCCESS);
     }
-    for (i = 0; i < THREAD_COUNT; i++) {
-        assert(qthread_readFF(NULL, &(rets[i])) == QTHREAD_SUCCESS);
-    }
-    free(rets);
+    assert(qthread_readFF(NULL, &ret) == QTHREAD_SUCCESS);
     if (!qdqueue_empty(q)) {
         fprintf(stderr, "qdqueue not empty after threaded test!\n");
         exit(-2);
