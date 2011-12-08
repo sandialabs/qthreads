@@ -160,7 +160,7 @@ test_queue_loop_DEPENDENCIES = $(qthreadlib)
 test_incr_SOURCES = testincr.c
 test_incr_DEPENDENCIES = $(qthreadlib)
 
-test_fincr_SOURCES = testfincr.c
+test_fincr_SOURCES = test_fincr.c
 test_fincr_DEPENDENCIES = $(qthreadlib)
 
 test_dincr_SOURCES = test_dincr.c
