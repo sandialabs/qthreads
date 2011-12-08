@@ -139,7 +139,7 @@ test_precond_fib_DEPENDENCIES = $(qthreadlib)
 test_reinit_SOURCES = test_reinit.c
 test_reinit_DEPENDENCIES = $(qthreadlib)
 
-test_qalloc_SOURCES = testq.c
+test_qalloc_SOURCES = test_qalloc.c
 test_qalloc_DEPENDENCIES = $(qthreadlib)
 
 test_cxx_oldapi_SOURCES = test_cxx_oldapi.cpp
