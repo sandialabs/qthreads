@@ -151,8 +151,8 @@ test_cpp_DEPENDENCIES = $(qthreadlib)
 test_cpp_interface_SOURCES = test_cpp_interface.cpp
 test_cpp_interface_DEPENDENCIES = $(qthreadlib)
 
-testqloop_SOURCES = testqloop.c
-testqloop_DEPENDENCIES = $(qthreadlib)
+test_qloop_utils_SOURCES = test_qloop_utils.c
+test_qloop_utils_DEPENDENCIES = $(qthreadlib)
 
 test_queue_loop_SOURCES = test_queue_loop.c
 test_queue_loop_DEPENDENCIES = $(qthreadlib)
