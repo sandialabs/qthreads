@@ -8,34 +8,33 @@
 #include <qthread/qtimer.h>
 #include "argparsing.h"
 
-aligned_t initme_idx = 0;
-volatile aligned_t *initme = NULL;
-qt_barrier_t *wait_on_me;
+aligned_t           initme_idx = 0;
+volatile aligned_t *initme     = NULL;
+qt_barrier_t       *wait_on_me;
 
 static aligned_t barrier_thread(void *arg)
 {
-    qt_barrier_t *b = (qt_barrier_t *)arg;
-    aligned_t idx = qthread_incr(&initme_idx, 1);
+    qt_barrier_t *b   = (qt_barrier_t *)arg;
+    aligned_t     idx = qthread_incr(&initme_idx, 1);
 
     qthread_incr(&(initme[idx]), 1);
     qt_barrier_enter(b, qthread_shep());
     return 0;
 }
 
-int main(int argc, char *argv[])
+int main(int   argc,
+         char *argv[])
 {
-    size_t threads = 1000, i;
+    size_t     threads = 1000, i;
     aligned_t *rets;
-    qtimer_t t;
+    qtimer_t   t;
 
     assert(qthread_initialize() == 0);
     t = qtimer_create();
 
     CHECK_VERBOSE();
     NUMARG(threads, "THREADS");
-    printf
-    (
-        "run \"export VERBOSE=1\" to make test_log_barrier run (it's currently broken)\n");
+    printf("run \"export VERBOSE=1\" to make test_log_barrier run (it's currently broken)\n");
     if (!verbose) {
         exit(0);
     }                                  // XXX don't break the trunk
