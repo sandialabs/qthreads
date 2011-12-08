@@ -39,7 +39,7 @@ complex_tests = test_qt_loop \
 				test_qutil_qsort \
 				test_feb_barrier \
 				test_precond_fib \
-				testqloop \
+				test_qloop_utils \
 				test_queue_loop \
 				test_qpool \
 				test_qarray \
