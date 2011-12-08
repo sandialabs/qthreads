@@ -8,7 +8,6 @@
 
 static size_t elementcount = 10000;
 static size_t threadcount = 128;
-static qt_sinc_t *dequeue_sinc = NULL;
 
 static aligned_t queuer(void *arg)
 {
@@ -36,8 +35,15 @@ static aligned_t dequeuer(void *arg)
             qthread_yield();
         }
     }
-    qt_sinc_submit(dequeue_sinc, NULL);
     iprintf("dequeuer %i exiting\n", qthread_id());
+    return 0;
+}
+
+static aligned_t spawn_dequeuers(void *arg)
+{
+    for (size_t i = 0; i < threadcount; i++) {
+        assert(qthread_fork(dequeuer, arg, NULL) == QTHREAD_SUCCESS);
+    }
     return 0;
 }
 
@@ -87,17 +93,14 @@ int main(int argc,
     }
     iprintf("ordering test succeeded\n");
 
-    dequeue_sinc = qt_sinc_create(0, NULL, NULL, threadcount);
-    assert(dequeue_sinc != NULL);
-    for (i = 0; i < threadcount; i++) {
-        assert(qthread_fork(dequeuer, q, NULL) == QTHREAD_SUCCESS);
-    }
+    aligned_t ret;
+    assert(qthread_fork_new_team(spawn_dequeuers, q, &ret) == QTHREAD_SUCCESS);
     iprintf("dequeuers forked\n");
     for (i = 0; i < threadcount; i++) {
         assert(qthread_fork(queuer, q, NULL) == QTHREAD_SUCCESS);
     }
     iprintf("queuers forked\n");
-    qt_sinc_wait(dequeue_sinc, NULL);
+    qthread_readFF(NULL, &ret);
     iprintf("dequeuers returned\n");
 
     if (!qlfqueue_empty(q)) {
