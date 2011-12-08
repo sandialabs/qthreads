@@ -35,6 +35,8 @@
 #  define SET __qt_setmctxt
 #  define GET __qt_getmctxt
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
+#  define r(x) r##x
+#  define f(x) f##x
 #  define NEEDPOWERCONTEXT 1
 #  define SET __qt_setmctxt
 #  define GET __qt_getmctxt
@@ -68,13 +70,13 @@
 #  define NEEDPOWER64CONTEXT 1
 #  define SET qt_setmctxt
 #  define GET qt_getmctxt
-# elif defined (__ppc__)
+# elif defined (__ppc__) _(LinuxPPC)
 #  define NEEDPOWERCONTEXT 1
 #  define r(x) r##x
 #  define f(x) f##x
 #  define SET qt_setmctxt
 #  define GET qt_getmctxt
-# elif defined (__PPC__)
+# elif defined (__PPC__) _(BG/P)
 #  define NEEDPOWERCONTEXT 1
 #  define r(x) x
 #  define f(x) x
