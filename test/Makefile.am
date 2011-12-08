@@ -50,8 +50,8 @@ complex_tests = test_qt_loop \
 
 if ENABLE_CXX_TESTS
 basic_tests += \
-			   test_cpp \
-			   test_cpp_interface
+			   test_cxx_1 \
+			   test_cxx_2
 complex_tests += test_cxx_oldapi
 endif
 
@@ -145,11 +145,11 @@ test_qalloc_DEPENDENCIES = $(qthreadlib)
 test_cxx_oldapi_SOURCES = test_cxx_oldapi.cpp
 test_cxx_oldapi_DEPENDENCIES = $(qthreadlib)
 
-test_cpp_SOURCES = test_cpp.cpp
-test_cpp_DEPENDENCIES = $(qthreadlib)
+test_cxx_1_SOURCES = test_cxx_1.cpp
+test_cxx_1_DEPENDENCIES = $(qthreadlib)
 
-test_cpp_interface_SOURCES = test_cpp_interface.cpp
-test_cpp_interface_DEPENDENCIES = $(qthreadlib)
+test_cxx_2_SOURCES = test_cxx_2.cpp
+test_cxx_2_DEPENDENCIES = $(qthreadlib)
 
 test_qloop_utils_SOURCES = test_qloop_utils.c
 test_qloop_utils_DEPENDENCIES = $(qthreadlib)
