@@ -52,7 +52,7 @@ if ENABLE_CXX_TESTS
 basic_tests += \
 			   test_cpp \
 			   test_cpp_interface
-complex_tests += testloop
+complex_tests += test_cxx_oldapi
 endif
 
 SUBDIRS = 
@@ -142,8 +142,8 @@ test_reinit_DEPENDENCIES = $(qthreadlib)
 test_qalloc_SOURCES = testq.c
 test_qalloc_DEPENDENCIES = $(qthreadlib)
 
-testloop_SOURCES = testloop.cpp
-testloop_DEPENDENCIES = $(qthreadlib)
+test_cxx_oldapi_SOURCES = test_cxx_oldapi.cpp
+test_cxx_oldapi_DEPENDENCIES = $(qthreadlib)
 
 test_cpp_SOURCES = test_cpp.cpp
 test_cpp_DEPENDENCIES = $(qthreadlib)
