@@ -44,6 +44,11 @@ struct qthread_runtime_data_s {
 #endif
 };
 
+typedef struct qt_team_s {
+    qt_sinc_t   *sinc;
+    qt_team_id_t team_id;
+} qt_team_t;
+
 struct qthread_s {
     struct qthread_s *volatile     next;
 

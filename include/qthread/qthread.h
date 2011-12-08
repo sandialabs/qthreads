@@ -158,12 +158,7 @@ Q_STARTCXX /* */
 
 typedef unsigned int qthread_shepherd_id_t;
 typedef unsigned int qthread_worker_id_t;
-
 typedef size_t qt_team_id_t;
-typedef struct qt_team_s {
-    qt_sinc_t   *sinc;
-    qt_team_id_t team_id;
-} qt_team_t;
 
 /* for convenient arguments to qthread_fork */
 typedef aligned_t (*qthread_f)(void *arg);
