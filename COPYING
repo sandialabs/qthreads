@@ -43,6 +43,13 @@ The rest of the qthread library, which will function on any Unix system with
 the makecontext()-family of functions, can stand alone. Those files are simply
 implementations of the makecontext() family of functions for performance.
 
+The qthreads test and benchmark suite also contains some code from the
+Unbalanced Tree Search benchmark; specifically their random number generator.
+This code is entirely contained in the test/benchmarks/uts/rng directory and is
+used only by the UTS implementation in test/benchmarks/uts. The license for the
+random number generator code is in the LICENSE file in the
+test/benchmarks/uts/rng directory.
+
 ~~~~~~~~~~~~~
 
 The libtask copyright is as follows:

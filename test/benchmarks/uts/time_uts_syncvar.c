@@ -18,14 +18,11 @@
 #include "argparsing.h"
 
 #define BRG_RNG // Select RNG
-#include "rng/rng.h"
+#include "uts/rng/rng.h"
 
 #define PRINT_STATS 1
 
 #define MAXNUMCHILDREN 100
-
-static aligned_t donecount;
-static size_t nodecount;
 
 typedef enum {
     BIN = 0,
@@ -213,9 +210,10 @@ static aligned_t visit(void * args_)
     node_t   *parent = (node_t *)args_;
     int       parent_height = parent->height;
     int       num_children = parent->num_children;
+    uint64_t  num_descendants = 0;
+    uint64_t  child_descendants = 0;
     node_t    child;
-    
-    qthread_incr(&nodecount, num_children);
+    syncvar_t rets[num_children];
 
     // Spawn children, if any
     for (int i = 0; i < num_children; i++) {
@@ -228,12 +226,17 @@ static aligned_t visit(void * args_)
         child.num_children = calc_num_children(&child);
         child.type = calc_child_type(&child);
 
-        qthread_fork_syncvar_copyargs(visit, &child, sizeof(node_t), NULL);
+        rets[i] = SYNCVAR_EMPTY_INITIALIZER;
+        qthread_fork_syncvar_copyargs(visit, &child, sizeof(node_t), &rets[i]);
     }
 
-    qthread_incr(&donecount, 1);
+    // Wait for children to finish up, accumulate descendants counts
+    for (int i = 0; i < num_children; i++) {
+        qthread_syncvar_readFF(&child_descendants, &rets[i]);
+        num_descendants += child_descendants;
+    }
 
-    return 0;
+    return 1 + num_descendants;
 }
 
 #ifdef PRINT_STATS
@@ -360,14 +363,9 @@ int main(int argc, char *argv[])
     root.num_children = calc_num_children(&root);
     root.child_type = calc_child_type(&root);
 
-    nodecount = 1;
-    donecount = 0;
-    qthread_fork_syncvar(visit, &root, NULL);
-    while (donecount != nodecount) {
-        qthread_yield();
-    }
-
-    total_num_nodes = donecount;
+    syncvar_t ret = SYNCVAR_EMPTY_INITIALIZER;
+    qthread_fork_syncvar(visit, &root, &ret);
+    qthread_syncvar_readFF(&total_num_nodes, &ret);
 
     qtimer_stop(timer);
 

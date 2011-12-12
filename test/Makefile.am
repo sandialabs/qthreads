@@ -223,15 +223,6 @@ test_read_DEPENDENCIES = $(qthreadlib)
 test_teams_SOURCES = test_teams.c
 test_teams_DEPENDENCIES = $(qthreadlib)
 
-time_uts_syncvar_SOURCES = time_uts_syncvar.c rng/brg_sha1.c
-time_uts_syncvar_DEPENDENCIES = $(qthreadlib)
-
-time_uts_sinc_SOURCES = time_uts_sinc.c rng/brg_sha1.c
-time_uts_sinc_DEPENDENCIES = $(qthreadlib)
-
-time_uts_donecount_SOURCES = time_uts_donecount.c rng/brg_sha1.c
-time_uts_donecount_DEPENDENCIES = $(qthreadlib)
-
 test_sinc_SOURCES = test_sinc.c
 test_sinc_DEPENDENCIES = $(qthreadlib)
 

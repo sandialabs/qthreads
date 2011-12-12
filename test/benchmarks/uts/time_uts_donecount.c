@@ -15,17 +15,17 @@
 #include <math.h> /* for floor, log, sin */
 #include <qthread/qthread.h>
 #include <qthread/qtimer.h>
-#include <qthread/qt_sinc.h>
 #include "argparsing.h"
 
 #define BRG_RNG // Select RNG
-#include "rng/rng.h"
+#include "uts/rng/rng.h"
 
 #define PRINT_STATS 1
 
 #define MAXNUMCHILDREN 100
 
-static qt_sinc_t *sinc;
+static aligned_t donecount;
+static size_t nodecount;
 
 typedef enum {
     BIN = 0,
@@ -53,12 +53,10 @@ static char *shape_names[] = {
     "Fixed branching factor"
 };
 
-typedef aligned_t my_value_t;
-
 typedef struct {
-    int            type;   // Type of distribution of child nodes
-    int            height; // Depth of node in the tree
-    struct state_t state;  // Local RNG state
+    int     type;         // Type of distribution of child nodes
+    int     height;       // Depth of node in the tree
+    struct state_t state; // Local RNG state
     int     num_children;
     int     child_type;
 } node_t;
@@ -216,8 +214,8 @@ static aligned_t visit(void * args_)
     int       parent_height = parent->height;
     int       num_children = parent->num_children;
     node_t    child;
-
-    qt_sinc_willspawn(sinc, num_children);
+    
+    qthread_incr(&nodecount, num_children);
 
     // Spawn children, if any
     for (int i = 0; i < num_children; i++) {
@@ -233,8 +231,7 @@ static aligned_t visit(void * args_)
         qthread_fork_syncvar_copyargs(visit, &child, sizeof(node_t), NULL);
     }
 
-    my_value_t value = 1;
-    qt_sinc_submit(sinc, &value);
+    qthread_incr(&donecount, 1);
 
     return 0;
 }
@@ -327,10 +324,6 @@ static void print_banner(void)
 }
 #endif
 
-static void my_incr(void *tgt, void *src) {
-    *(my_value_t *)tgt += *(my_value_t *)src;
-}
-
 int main(int argc, char *argv[])
 {
     uint64_t total_num_nodes = 0;
@@ -367,11 +360,14 @@ int main(int argc, char *argv[])
     root.num_children = calc_num_children(&root);
     root.child_type = calc_child_type(&root);
 
-    my_value_t initial_value = 0;
-    sinc = qt_sinc_create(sizeof(my_value_t), &initial_value, my_incr, 1);
+    nodecount = 1;
+    donecount = 0;
     qthread_fork_syncvar(visit, &root, NULL);
-    qt_sinc_wait(sinc, &total_num_nodes);
-    qt_sinc_destroy(sinc);
+    while (donecount != nodecount) {
+        qthread_yield();
+    }
+
+    total_num_nodes = donecount;
 
     qtimer_stop(timer);
 

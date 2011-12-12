@@ -40,9 +40,14 @@ mtaap08_benchmarks = \
                      time_thrcrt_bench_pthread \
                      time_cncthr_bench \
                      time_cncthr_bench_pthread
+uts_benchmarks = \
+				 time_uts_syncvar \
+				 time_uts_sinc \
+				 time_uts_donecount
 
 benchmarks = \
              $(generic_benchmarks) \
+			 $(uts_benchmarks) \
              $(thesis_benchmarks) \
              $(pmea09_benchmarks) \
              $(mtaap08_benchmarks)
@@ -173,3 +178,12 @@ time_qt_loops_DEPENDENCIES = $(qthreadlib)
 
 time_qt_loopaccums_SOURCES = generic/time_qt_loopaccums.c
 time_qt_loopaccums_DEPENDENCIES = $(qthreadlib)
+
+time_uts_syncvar_SOURCES = uts/time_uts_syncvar.c uts/rng/brg_sha1.c
+time_uts_syncvar_DEPENDENCIES = $(qthreadlib)
+
+time_uts_sinc_SOURCES = uts/time_uts_sinc.c uts/rng/brg_sha1.c
+time_uts_sinc_DEPENDENCIES = $(qthreadlib)
+
+time_uts_donecount_SOURCES = uts/time_uts_donecount.c uts/rng/brg_sha1.c
+time_uts_donecount_DEPENDENCIES = $(qthreadlib)
