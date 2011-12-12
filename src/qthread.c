@@ -1412,10 +1412,8 @@ void qthread_finalize(void)
         qthread_shepherd_t *shep = &(qlib->shepherds[i]);
         qthread_debug(SHEPHERD_DETAILS, "waiting for shepherd %i to exit\n", (int)i);
         for (j = 0; j < qlib->nworkerspershep; j++) {
-            free(shep->workers[j].nostealbuffer);
-            free(shep->workers[j].stealbuffer);
             if ((i == 0) && (j == 0)) {
-                continue;  /* This leaves out shepard 0's worker 0 */
+                continue;  /* This leaves out shepherd 0's worker 0 */
             }
 # ifdef QTHREAD_RCRTOOL
             if ((rcrtoollevel > 0) && ((i == qlib->nshepherds - 1) && (j == qlib->nworkerspershep - 1))) {
@@ -1434,6 +1432,9 @@ void qthread_finalize(void)
                         (int)i, (int)j, r, strerror(r));
                 fflush(stderr);
                 abort();
+            } else {
+                free(shep->workers[j].nostealbuffer);
+                free(shep->workers[j].stealbuffer);
             }
         }
         free(qlib->shepherds[i].workers);
