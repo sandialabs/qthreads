@@ -30,6 +30,8 @@ noinst_HEADERS = \
 	qt_hash.h \
 	qt_hazardptrs.h \
 	qt_io.h \
+	qt_internal_feb.h \
+	qt_internal_syncvar.h \
 	qt_locks.h \
 	qt_mpool.h \
 	qt_profiling.h \
@@ -37,6 +39,7 @@ noinst_HEADERS = \
 	qt_qthread_t.h \
 	qt_shepherd_innards.h \
 	qt_threadqueues.h \
+	qt_threadstate.h \
 	qt_touch.h \
 	qt_visibility.h \
 	rose_xomp.h \
