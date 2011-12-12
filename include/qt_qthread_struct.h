@@ -22,6 +22,16 @@
 #define QTHREAD_TEAM_LEADER         (1 << 6)
 #define QTHREAD_RESERVED_2          (1 << 7)
 
+/* flags for teams (must be different bits) */
+#define QTHREAD_TEAM_DEAD           (1 << 0)
+#define QTHREAD_TEAM_RESERVED_1     (1 << 1)
+#define QTHREAD_TEAM_RESERVED_2     (1 << 2)
+#define QTHREAD_TEAM_RESERVED_3     (1 << 3)
+#define QTHREAD_TEAM_RESERVED_4     (1 << 4)
+#define QTHREAD_TEAM_RESERVED_5     (1 << 5)
+#define QTHREAD_TEAM_RESERVED_6     (1 << 6)
+#define QTHREAD_TEAM_RESERVED_7     (1 << 7)
+
 struct qthread_runtime_data_s {
     void         *stack;           /* the thread's stack */
     qt_context_t  context;         /* the context switch info */
@@ -47,6 +57,7 @@ struct qthread_runtime_data_s {
 typedef struct qt_team_s {
     qt_sinc_t   *sinc;
     qt_team_id_t team_id;
+    uint_fast8_t flags;
 } qt_team_t;
 
 struct qthread_s {
