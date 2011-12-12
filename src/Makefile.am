@@ -9,6 +9,7 @@ AM_LDFLAGS = $(SST_LIBS)
 
 lib_LTLIBRARIES = libqthread.la
 SUBDIRS =
+noinst_HEADERS = affinity/shufflesheps.h
 
 libqthread_la_SOURCES = \
 	cacheline.c \
