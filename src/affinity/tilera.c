@@ -14,10 +14,10 @@
 #include "shufflesheps.h"
 
 qthread_shepherd_id_t guess_num_shepherds(void);
-qthread_worker_id_t guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds);
+qthread_worker_id_t   guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds);
 
 void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
-                      qthread_worker_id_t *nbworkers)
+                               qthread_worker_id_t   *nbworkers)
 {                                      /*{{{ */
     if (*nbshepherds == 0) {
         *nbshepherds = guess_num_shepherds();
@@ -67,7 +67,7 @@ unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherd
 }                                      /*}}} */
 
 int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
-                         qthread_shepherd_id_t nshepherds)
+                                  qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
     cpu_set_t     online_cpus;
     unsigned int *cpu_array;
@@ -123,29 +123,29 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                 (void *)(intptr_t)i);
 # else
 #  error BAD QSORT
-# endif
-#else
+# endif /* if defined(QTHREAD_QSORT_BSD) */
+#else /* if defined(HAVE_QSORT_R) */
         shepcomp_src = (qthread_shepherd_id_t)i;
         qsort(sheps[i].sorted_sheplist, nshepherds - 1,
               sizeof(qthread_shepherd_id_t), qthread_internal_shepcomp);
-#endif /* if defined(HAVE_QSORT_R) && defined(QTHREAD_QSORT_BSD) */
+#endif  /* if defined(HAVE_QSORT_R) && defined(QTHREAD_QSORT_BSD) */
         {
-            int prev_dist = qthread_distance(i, sheps[i].sorted_sheplist[0]);
-            size_t count = 1;
-            for (size_t j = 1; j < nshepherds-1; ++j) {
+            int    prev_dist = qthread_distance(i, sheps[i].sorted_sheplist[0]);
+            size_t count     = 1;
+            for (size_t j = 1; j < nshepherds - 1; ++j) {
                 if (qthread_distance(i, sheps[i].sorted_sheplist[j]) == prev_dist) {
                     count++;
                 } else {
                     if (count > 1) {
                         shuffle_sheps(sheps[i].sorted_sheplist + (j - count), count);
                     }
-                    count = 1;
-		    prev_dist = qthread_distance(i, sheps[i].sorted_sheplist[j]);
+                    count     = 1;
+                    prev_dist = qthread_distance(i, sheps[i].sorted_sheplist[j]);
                 }
             }
-	    if (count > 1) {
-		shuffle_sheps(sheps[i].sorted_sheplist + (nshepherds - 1 - count), count);
-	    }
+            if (count > 1) {
+                shuffle_sheps(sheps[i].sorted_sheplist + (nshepherds - 1 - count), count);
+            }
         }
     }
     return QTHREAD_SUCCESS;
