@@ -73,7 +73,6 @@ endif
 
 benchmarks =
 
-unbuildable += time_uts_syncvar time_uts_sinc time_uts_donecount
 EXTRA_PROGRAMS += $(unbuildable) $(benchmarks)
 
 CLEANFILES += $(unbuildable) $(benchmarks)

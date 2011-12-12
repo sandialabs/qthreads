@@ -1,6 +1,8 @@
 
 .PHONY: buildall buildtests buildextra
 
+DIST_SUBDIRS = rose_bots
+
 generic_benchmarks = \
                      time_gcd \
                      time_increments \
