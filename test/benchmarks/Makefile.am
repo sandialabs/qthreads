@@ -7,6 +7,7 @@ generic_benchmarks = \
                      time_gcd \
                      time_increments \
                      time_febs \
+		     time_fib \
                      time_producerconsumer \
                      time_syncvar_producerconsumer \
                      time_threading \
@@ -153,6 +154,9 @@ time_increments_DEPENDENCIES = $(qthreadlib)
 
 time_febs_SOURCES = generic/time_febs.c
 time_febs_DEPENDENCIES = $(qthreadlib)
+
+time_fib_SOURCES = generic/time_fib.c
+time_fib_DEPENDENCIES = $(qthreadlib)
 
 time_producerconsumer_SOURCES = generic/time_producerconsumer.c
 time_producerconsumer_DEPENDENCIES = $(qthreadlib)
