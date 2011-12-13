@@ -134,13 +134,13 @@ static QINLINE void *qt_cas(void **const ptr,
 #  if defined(HAVE_GCC_INLINE_ASSEMBLY)
 #   if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
     void *result;
-    __asm__ __volatile__ ("1:\n\t"
+    __asm__ __volatile__ ("A_%=:\n\t"
                           "lwarx  %0,0,%3\n\t"
                           "cmpw   %0,%1\n\t"
-                          "bne    2f\n\t"
+                          "bne    B_%=\n\t"
                           "stwcx. %2,0,%3\n\t"
-                          "bne-   1b\n"
-                          "2:"
+                          "bne-   A_%=\n"
+                          "B_%=:"
                           : "=&b" (result)
                           : "r" (oldv), "r" (newv), "r" (ptr)
                           : "cc", "memory");
@@ -148,13 +148,13 @@ static QINLINE void *qt_cas(void **const ptr,
 
 #   elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
     void *result;
-    __asm__ __volatile__ ("1:\n\t"
+    __asm__ __volatile__ ("A_%=:\n\t"
                           "ldarx  %0,0,%3\n\t"
                           "cmpw   %0,%1\n\t"
-                          "bne    2f\n\t"
+                          "bne    B_%=\n\t"
                           "stdcx. %2,0,%3\n\t"
-                          "bne-   1b\n"
-                          "2:"
+                          "bne-   A_%=\n"
+                          "B_%=:"
                           : "=&b" (result)
                           : "r" (oldv), "r" (newv), "r" (ptr)
                           : "cc", "memory");
@@ -335,7 +335,7 @@ static QINLINE aligned_t qthread_internal_incr_mod_(aligned_t             *opera
     register uint64_t incrd = incrd;
     register uint64_t compd = compd;
 
-    asm volatile ("1:\n\t"                /* local label */
+    asm volatile ("A_%=:\n\t"                /* local label */
                   "ldarx  %0,0,%3\n\t"    /* load operand */
                   "addi   %2,%0,1\n\t"    /* increment it into incrd */
                   "cmpl   7,1,%2,%4\n\t"  /* compare incrd to the max */
@@ -343,7 +343,7 @@ static QINLINE aligned_t qthread_internal_incr_mod_(aligned_t             *opera
                   "rlwinm %1,%1,29,1\n\t" /* isolate the result bit */
                   "mulld  %2,%2,%1\n\t"   /* incrd *= compd */
                   "stdcx. %2,0,%3\n\t"    /* *operand = incrd */
-                  "bne-   1b\n\t"         /* if it failed, to to label 1 back */
+                  "bne-   A_%=\n\t"         /* if it failed, to to label 1 back */
                   "isync"                 /* make sure it wasn't all just a dream */
                   : "=&b"   (retval), "=&r" (compd), "=&r" (incrd)
                   : "r"     (operand), "r" (max)

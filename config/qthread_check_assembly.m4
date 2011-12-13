@@ -204,7 +204,7 @@ AC_DEFUN([QTHREAD_CHECK_ASSEMBLY],[
       AS_IF([test "$ac_cv_sizeof_long" = "4"],
             [qthread_cv_asm_arch="POWERPC32"],
             [qthread_cv_asm_arch="POWERPC64"])
-      qthread_gcc_inline_assign='"1: li %0,0" : "=&r"(ret)'
+      qthread_gcc_inline_assign='"A_%=: li %0,0" : "=&r"(ret)'
     ;;
 
     sparc*-*)
