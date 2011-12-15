@@ -74,11 +74,13 @@ Q_STARTCXX /* */
  * isn't too much of an inconvenience. On 64-bit architectures, it's a pain in
  * the BUTT! This is here to try and help a little bit. */
 #if QTHREAD_SIZEOF_ALIGNED_T == 4
-typedef uint32_t Q_ALIGNED (QTHREAD_ALIGNMENT_ALIGNED_T) aligned_t;
-typedef int32_t Q_ALIGNED (QTHREAD_ALIGNMENT_ALIGNED_T) saligned_t;
+typedef uint32_t Q_ALIGNED (QTHREAD_ALIGNMENT_ALIGNED_T)      aligned_t;
+typedef uint16_t Q_ALIGNED (QTHREAD_ALIGNMENT_ALIGNED_T / 2) haligned_t;
+typedef int32_t Q_ALIGNED (QTHREAD_ALIGNMENT_ALIGNED_T)      saligned_t;
 #elif QTHREAD_SIZEOF_ALIGNED_T == 8
-typedef uint64_t Q_ALIGNED (QTHREAD_ALIGNMENT_ALIGNED_T) aligned_t;
-typedef int64_t Q_ALIGNED (QTHREAD_ALIGNMENT_ALIGNED_T) saligned_t;
+typedef uint64_t Q_ALIGNED (QTHREAD_ALIGNMENT_ALIGNED_T)      aligned_t;
+typedef uint32_t Q_ALIGNED (QTHREAD_ALIGNMENT_ALIGNED_T / 2) haligned_t;
+typedef int64_t Q_ALIGNED (QTHREAD_ALIGNMENT_ALIGNED_T)      saligned_t;
 #else
 # error "Don't know type for sizeof aligned_t"
 #endif

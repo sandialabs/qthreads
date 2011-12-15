@@ -69,6 +69,83 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
 # define QTHREAD_FASTLOCK_INITIALIZER PTHREAD_MUTEX_INITIALIZER
 #endif /* */
 
+
+// Trylock declarations
+
+#if defined(__tile__)
+
+/* For the followimg implementation of try-locks,
+ * it is necessary that qthread_incr() be defined on 
+ * haligned_t types. This requirement is satisfied when
+ * defined(QTHREAD_ATOMIC_INCR), it remains to be determined
+ * whether it is satisfied in some circumstances when
+ * !defined(QTHREAD_ATOMIC_INCR).
+ */
+#elif defined(USE_INTERNAL_SPINLOCK) && USE_INTERNAL_SPINLOCK \
+                                     && defined(QTHREAD_ATOMIC_INCR) \
+                                     && !defined(QTHREAD_MUTEX_INCREMENT)
+
+typedef union qt_spin_trylock_s {
+    aligned_t u;
+    struct {
+        haligned_t ticket;
+        haligned_t users;
+    } s;
+} qt_spin_trylock_t;
+
+# define QTHREAD_TRYLOCK_TYPE         qt_spin_trylock_t
+# define QTHREAD_TRYLOCK_INIT(x)     { (x).u = 0; }
+# define QTHREAD_TRYLOCK_INIT_PTR(x) { (x)->u = 0; }
+# define QTHREAD_TRYLOCK_LOCK(x)     { uint32_t val = qthread_incr(&(x)->s.users, 1); \
+                                        MACHINE_FENCE;                                \
+                                        while (val != (x)->s.ticket) SPINLOCK_BODY(); /* spin waiting for my turn */ }
+# define QTHREAD_TRYLOCK_UNLOCK(x)   do { qthread_incr(&(x)->s.ticket, 1); /* allow next guy's turn */ \
+                                           MACHINE_FENCE; } while (0)
+# define QTHREAD_TRYLOCK_DESTROY(x)
+# define QTHREAD_TRYLOCK_DESTROY_PTR(x)
+
+static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t* x)
+{
+    haligned_t val = (x)->s.users;
+    haligned_t newval = val + 1;
+    qt_spin_trylock_t cmp, newcmp;
+    cmp.s.ticket    = val;
+    cmp.s.users     = val;
+    newcmp.s.ticket = val;
+    newcmp.s.users  = newval;
+    return(qthread_cas(&(x->u), cmp.u, newcmp.u) == cmp.u);
+}
+
+#elif defined(HAVE_PTHREAD_SPIN_INIT)
+
+# define QTHREAD_TRYLOCK_TYPE           pthread_spinlock_t
+# define QTHREAD_TRYLOCK_INIT(x)        pthread_spin_init(&(x), PTHREAD_PROCESS_PRIVATE)
+# define QTHREAD_TRYLOCK_INIT_PTR(x)    pthread_spin_init((x), PTHREAD_PROCESS_PRIVATE)
+# define QTHREAD_TRYLOCK_LOCK(x)        pthread_spin_lock((x))
+# define QTHREAD_TRYLOCK_UNLOCK(x)      pthread_spin_unlock((x))
+# define QTHREAD_TRYLOCK_DESTROY(x)     pthread_spin_destroy(& (x))
+# define QTHREAD_TRYLOCK_DESTROY_PTR(x) pthread_spin_destroy((x))
+
+static inline int QTHREAD_TRYLOCK_TRY(pthread_spinlock_t* x)
+{    return(pthread_spin_trylock(x) == 0);  }
+
+#else /* fallback */
+
+# define QTHREAD_TRYLOCK_TYPE           pthread_mutex_t
+# define QTHREAD_TRYLOCK_INIT(x)        pthread_mutex_init((&(x), PTHREAD_PROCESS_PRIVATE)
+# define QTHREAD_TRYLOCK_INIT_PTR(x)    pthread_mutex_init(((x), PTHREAD_PROCESS_PRIVATE)
+# define QTHREAD_TRYLOCK_LOCK(x)        pthread_mutex_lock((x))
+# define QTHREAD_TRYLOCK_UNLOCK(x)      pthread_mutex_unlock((x))
+# define QTHREAD_TRYLOCK_DESTROY(x)     pthread_mutex_destroy(& (x))
+# define QTHREAD_TRYLOCK_DESTROY_PTR(x) pthread_mutex_destroy((x))
+
+static inline int QTHREAD_TRYLOCK_TRY(pthread_mutex_t* x)
+{    return(pthread_mutex_trylock(x) == 0);  }
+
+#endif
+
+
+
 #define QTHREAD_INITLOCK(l)    do { if (pthread_mutex_init(l, NULL) != 0) { return QTHREAD_PTHREAD_ERROR; } } while(0)
 #define QTHREAD_LOCK(l)        qassert(pthread_mutex_lock(l), 0)
 #define QTHREAD_UNLOCK(l)      qassert(pthread_mutex_unlock(l), 0)
