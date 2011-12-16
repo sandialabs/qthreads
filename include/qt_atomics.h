@@ -125,9 +125,7 @@ static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t* x)
 # define QTHREAD_TRYLOCK_UNLOCK(x)      pthread_spin_unlock((x))
 # define QTHREAD_TRYLOCK_DESTROY(x)     pthread_spin_destroy(& (x))
 # define QTHREAD_TRYLOCK_DESTROY_PTR(x) pthread_spin_destroy((x))
-
-static inline int QTHREAD_TRYLOCK_TRY(pthread_spinlock_t* x)
-{    return(pthread_spin_trylock(x) == 0);  }
+# define QTHREAD_TRYLOCK_TRY(x)        (pthread_spin_trylock((x)) == 0)
 
 #else /* fallback */
 
@@ -138,9 +136,7 @@ static inline int QTHREAD_TRYLOCK_TRY(pthread_spinlock_t* x)
 # define QTHREAD_TRYLOCK_UNLOCK(x)      pthread_mutex_unlock((x))
 # define QTHREAD_TRYLOCK_DESTROY(x)     pthread_mutex_destroy(& (x))
 # define QTHREAD_TRYLOCK_DESTROY_PTR(x) pthread_mutex_destroy((x))
-
-static inline int QTHREAD_TRYLOCK_TRY(pthread_mutex_t* x)
-{    return(pthread_mutex_trylock(x) == 0);  }
+# define  QTHREAD_TRYLOCK_TRY(x)       (pthread_mutex_trylock((x)) == 0)
 
 #endif
 

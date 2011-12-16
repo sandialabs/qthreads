@@ -223,7 +223,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
             QTHREAD_TRYLOCK_UNLOCK(&q->trylock);
             if (t != NULL) return(t);
         } else {
-            QTHREAD_TRYLOCK_LOCK(&q->trylock)
+            QTHREAD_TRYLOCK_LOCK(&q->trylock);
             t        = qt_stack_pop(&q->shared_stack);
             retainer = qt_stack_pop(&q->shared_stack);
             QTHREAD_TRYLOCK_UNLOCK(&q->trylock);
