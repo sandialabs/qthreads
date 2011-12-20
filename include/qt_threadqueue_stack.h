@@ -16,6 +16,7 @@ struct qt_stack_s {
     unsigned int base;
     unsigned int top;
     unsigned int capacity;
+    unsigned int empty;
 };
 
 typedef struct qt_stack_s qt_stack_t;
@@ -27,6 +28,7 @@ static void qt_stack_create(qt_stack_t *stack,
     stack->base     = 0;
     stack->top      = 0;
     stack->capacity = capacity;
+    stack->empty    = 1;
 }
 
 static void qt_stack_free(qt_stack_t *stack)
@@ -37,7 +39,7 @@ static void qt_stack_free(qt_stack_t *stack)
 
 static QINLINE int qt_stack_is_empty(qt_stack_t *stack)
 {
-    return(stack->base == stack->top);
+    return(stack->empty);
 }
 
 static QINLINE int qt_stack_is_full(qt_stack_t *stack)
@@ -80,6 +82,7 @@ static QINLINE void qt_stack_push(qt_stack_t *stack, qthread_t *t)
     }
     stack->top = (stack->top + 1) % (stack->capacity);
     stack->storage[stack->top] = t;
+    stack->empty = 0;
 }
 
 static QINLINE void qt_stack_enq_base(qt_stack_t *stack, qthread_t *t)
@@ -89,6 +92,7 @@ static QINLINE void qt_stack_enq_base(qt_stack_t *stack, qthread_t *t)
     }
     stack->storage[stack->base] = t;
     stack->base = (stack->base - 1 + stack->capacity) % (stack->capacity);
+    stack->empty = 0;
 }
 
 static QINLINE qthread_t* qt_stack_pop(qt_stack_t *stack)
@@ -102,6 +106,7 @@ static QINLINE qthread_t* qt_stack_pop(qt_stack_t *stack)
         return(NULL);
     }
     stack->top = (stack->top - 1 + stack->capacity) % (stack->capacity);
+    if (stack->top == stack->base) stack->empty = 1;
     return(t);
 }
 
