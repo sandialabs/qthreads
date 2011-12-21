@@ -71,6 +71,7 @@ void INTERNAL qt_threadqueue_destroy_pools(qt_threadqueue_pools_t *p) {}
 /*****************************************/
 
 static QINLINE long qthread_steal_chunksize(void);
+static QINLINE long qthread_bias_penalty(void);
 static QINLINE qthread_t* qthread_steal(qt_threadqueue_t *thiefq);
 
 qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd)
@@ -148,7 +149,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
             QTHREAD_FASTLOCK_LOCK(local_lock);
             qt_stack_push(local_stack, t);
             QTHREAD_FASTLOCK_UNLOCK(local_lock);
-            *local_bias--;
+            (*local_bias)--;
     } else {
         if(QTHREAD_TRYLOCK_TRY(&q->trylock)) {
             qt_stack_push(&q->shared_stack, t);
@@ -157,7 +158,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
             QTHREAD_FASTLOCK_LOCK(local_lock);
             qt_stack_push(local_stack, t);
             QTHREAD_FASTLOCK_UNLOCK(local_lock);
-            *local_bias = 2;
+            *local_bias = qthread_bias_penalty();
         }
     }
 
@@ -284,6 +285,18 @@ static QINLINE long qthread_steal_chunksize(void)
     }
 
     return chunksize;
+}   /*}}}*/
+
+/* Returns the number of tasks to steal per steal operation (chunk size) */
+static QINLINE long qthread_bias_penalty(void)
+{   /*{{{*/
+    static long penalty = 0;
+
+    if (penalty == 0) {
+        penalty = qt_internal_get_env_num("BIAS_PENALTY", qlib->nworkerspershep, 1);
+    }
+
+    return penalty;
 }   /*}}}*/
 
 static void qt_threadqueue_enqueue_unstealable(qt_stack_t   *stack,
