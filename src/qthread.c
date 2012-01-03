@@ -719,9 +719,9 @@ int qthread_init(qthread_shepherd_id_t nshepherds)
 {                      /*{{{ */
     char newenv[100];
 
-    snprintf(newenv, 99, "QT_NUM_SHEPHERDS=%i", (int)nshepherds);
-    putenv(newenv);
-    putenv("QT_NUM_WORKERS_PER_SHEPHERD=1");
+    snprintf(newenv, 99, "%i", (int)nshepherds);
+    qassert(setenv("QT_NUM_SHEPHERDS", newenv, 1), 0);
+    qassert(setenv("QT_NUM_WORKERS_PER_SHEPHERD", "1", 1), 0);
     return qthread_initialize();
 }                      /*}}} */
 

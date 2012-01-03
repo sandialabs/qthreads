@@ -7,7 +7,7 @@
 // license from the United States Government
 //
 
-// For SVID definitions (putenv)
+// For SVID definitions (setenv)
 #define _SVID_SOURCE
 
 #ifdef __OPTIMIZE__
@@ -23,7 +23,7 @@
 #include "config.h"   // for chpl_config_get_value()
 #include "error.h"    // for chpl_warning()
 #include <stdio.h>
-#include <stdlib.h> // for putenv()
+#include <stdlib.h> // for setenv()
 #include <assert.h>
 #include <inttypes.h>
 #include <errno.h>
@@ -149,21 +149,18 @@ void chpl_task_init(int32_t  numThreadsPerLocale,
     // 2) QTHREAD_NUM_SHEPHERDS
     // 3) chpl_numCoresOnThisLocale()
     if (numThreadsPerLocale != 0) {
-        snprintf(newenv_sheps, 99, "QT_NUM_SHEPHERDS=%i",
-                 (int)numThreadsPerLocale);
-        putenv(newenv_sheps);
-        putenv("QT_NUM_WORKERS_PER_SHEPHERD=1");
+        snprintf(newenv_sheps, 99, "%i", (int)numThreadsPerLocale);
+        setenv("QT_NUM_SHEPHERDS", newenv_sheps, 1);
+        setenv("QT_NUM_WORKERS_PER_SHEPHERD", "1", 1);
     } else if (qt_internal_get_env_str("NUM_SHEPHERDS") != NULL) {
         if (qt_internal_get_env_str("NUM_WORKERS_PER_SHEPHERD") == NULL) {
-            putenv("QT_NUM_WORKERS_PER_SHEPHERD=1");
+            setenv("QT_NUM_WORKERS_PER_SHEPHERD", "1", 1);
         }
     } else {
         numThreadsPerLocale = chpl_numCoresOnThisLocale();
-
-        snprintf(newenv_sheps, 99, "QT_NUM_SHEPHERDS=%i",
-                 (int)numThreadsPerLocale);
-        putenv(newenv_sheps);
-        putenv("QT_NUM_WORKERS_PER_SHEPHERD=1");
+        snprintf(newenv_sheps, 99, "%i", (int)numThreadsPerLocale);
+        setenv("QT_NUM_SHEPHERDS", newenv_sheps, 1);
+        setenv("QT_NUM_WORKERS_PER_SHEPHERD", "1", 1);
     }
 
     // Precendence (high-to-low):
@@ -171,19 +168,17 @@ void chpl_task_init(int32_t  numThreadsPerLocale,
     // 2) QTHREAD_STACK_SIZE
     // 3) Chapel default
     if (callStackSize != 0) {
-        snprintf(newenv_stack, 99, "QT_STACK_SIZE=%lu",
-                 (unsigned long)callStackSize);
-        putenv(newenv_stack);
+        snprintf(newenv_stack, 99, "%lu", (unsigned long)callStackSize);
+        setenv("QT_STACK_SIZE", newenv_stack, 1);
     } else if (qt_internal_get_env_str("STACK_SIZE") == NULL) {
         callStackSize = 32 * 1024 * sizeof(size_t);
-        snprintf(newenv_stack, 99, "QT_STACK_SIZE=%lu",
-                 (unsigned long)callStackSize);
-        putenv(newenv_stack);
+        snprintf(newenv_stack, 99, "%lu", (unsigned long)callStackSize);
+        setenv("QT_STACK_SIZE", newenv_stack, 1);
     }
 
     // Turn on informative Qthreads setting messages with Chapel's verbose flag
     if (verbosity == 2) {
-        putenv("QT_INFO=1");
+        setenv("QT_INFO", "1", 1);
     }
 
     pthread_create(&initer, NULL, initializer, NULL);
