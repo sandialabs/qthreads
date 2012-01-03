@@ -42,6 +42,7 @@
 #ifdef SST
 # include <ppcPimCalls.h>
 #endif
+#include <signal.h>
 
 /* Internal Headers */
 #include "qt_mpool.h"
@@ -307,6 +308,16 @@ static int rcr_gate  = 0;
 static int rcr_ready = 0;
 #endif
 
+static void hup_handler(int sig)
+{
+    qthread_worker_t * w = qthread_internal_getworker();
+    //qthread_shepherd_t * s = w->shepherd;
+    qthread_t *t = w->current;
+
+    t->thread_state = QTHREAD_STATE_ASSASSINATED;
+    qthread_back_to_master(t);
+}
+
 /* the qthread_shepherd() is the pthread responsible for actually
  * executing the work units
  *
@@ -358,8 +369,11 @@ static void *qthread_shepherd(void *arg)
     }
 #endif
 
-    /* Initialize myself */
+    /*******************************************************************************/
+    /* Initialize myself                                                           */
+    /*******************************************************************************/
     pthread_setspecific(shepherd_structs, arg);
+    signal(SIGUSR1, hup_handler);
 
     if (qaffinity && (me->node != UINT_MAX)) {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -383,7 +397,10 @@ static void *qthread_shepherd(void *arg)
         }
     }
 #endif /* ifdef QTHREAD_RCRTOOL */
-       /* workhorse loop */
+
+    /*******************************************************************************/
+    /* Workhorse Loop                                                              */
+    /*******************************************************************************/
     while (!done) {
 #ifdef QTHREAD_SHEPHERD_PROFILING
         qtimer_start(idle);
@@ -603,6 +620,29 @@ qt_run:
                                       "id(%u): thread %i made a syscall\n",
                                       me->shepherd_id, t->thread_id);
                         qt_blocking_subsystem_enqueue((qt_blocking_queue_node_t *)t->rdata->blockedon);
+                        break;
+
+                    case QTHREAD_STATE_ASSASSINATED:
+                        qthread_debug(THREAD_DETAILS | SHEPHERD_DETAILS,
+                                      "id(%u): thread %i assassinated\n",
+                                      me->shepherd_id, t->thread_id);
+                        /* need to clean up return value */
+                        if (t->ret) {
+                            if (t->flags & QTHREAD_RET_IS_SYNCVAR) {
+                                qassert(qthread_syncvar_fill((syncvar_t*)t->ret), QTHREAD_SUCCESS);
+                            } else {
+                                qassert(qthread_fill((aligned_t*)t->ret), QTHREAD_SUCCESS);
+                            }
+                        }
+                        /* we can remove the stack etc. */
+                        qthread_thread_free(t);
+                        /* now, we're done cleaning, so we can unblock the assassination signal */
+                        {
+                            sigset_t iset;
+                            qassert(sigemptyset(&iset), 0);
+                            qassert(sigaddset(&iset, SIGUSR1), 0);
+                            qassert(sigprocmask(SIG_UNBLOCK, &iset, NULL), 0);
+                        }
                         break;
 
                     case QTHREAD_STATE_TERMINATED:
@@ -3119,7 +3159,7 @@ qthread_shepherd_id_t qthread_shep(void)
 {                      /*{{{ */
     qthread_shepherd_t *ret = qthread_internal_getshep();
 
-    if ((qlib == NULL) || ((uintptr_t)ret <= 1)) {
+    if ((qlib == NULL) || (ret == NULL)) {
         return NO_SHEPHERD;
     } else {
         return ret->shepherd_id;

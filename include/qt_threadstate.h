@@ -11,6 +11,7 @@ typedef enum threadstate {
     QTHREAD_STATE_PARENT_YIELD,         /* parent is moving into QTHREAD_STATE_PARENT_BLOCKED */
     QTHREAD_STATE_PARENT_BLOCKED,       /* waiting for child to take this execution */
     QTHREAD_STATE_PARENT_UNBLOCKED,     /* child is picking up parent execution */
+    QTHREAD_STATE_ASSASSINATED,         /* thread destroyed via signal; needs cleanup */
     QTHREAD_STATE_TERMINATED,           /* thread function returned */
     QTHREAD_STATE_MIGRATING,            /* thread needs to be moved, otherwise ready-to-run */
     QTHREAD_STATE_SYSCALL,              /* thread performing external blocking operation */
@@ -18,5 +19,5 @@ typedef enum threadstate {
     QTHREAD_STATE_TERM_SHEP = UINT8_MAX /* special flag to terminate the shepherd */
 } threadstate_t;
 
-
-#endif 
+#endif // ifndef _QT_THREADSTATE_H_
+/* vim:set expandtab: */

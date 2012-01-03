@@ -7,6 +7,7 @@ AM_CXXFLAGS = @RESTRICT_CXXFLAGS@
 
 basic_tests = test_basic \
 			  test_basic_syncvar \
+			  test_signal \
 			  test_reinit \
 			  test_cas \
 			  test_cacheline \
@@ -119,6 +120,9 @@ test_stackleft_DEPENDENCIES = $(qthreadlib)
 
 test_basic_SOURCES = test_basic.c
 test_basic_DEPENDENCIES = $(qthreadlib)
+
+test_signal_SOURCES = test_signal.c
+test_signal_DEPENDENCIES = $(qthreadlib)
 
 test_tasklocal_SOURCES = test_tasklocal.c
 test_tasklocal_DEPENDENCIES = $(qthreadlib)
