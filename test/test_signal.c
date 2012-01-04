@@ -32,7 +32,11 @@ int main(int   argc,
 {
     int ret = 0;
 
-    assert(qthread_init(2) == 0);
+    ret = qthread_init(2);
+    if (ret != QTHREAD_SUCCESS) {
+	fprintf(stderr, "initialization error\n");
+	abort();
+    }
 
     CHECK_VERBOSE();
 
@@ -49,8 +53,8 @@ int main(int   argc,
     ret = pthread_kill(qlib->shepherds[1].workers[0].worker, SIGUSR1);
     if (ret != 0) {
         perror("pthread_kill");
+	abort();
     }
-    assert(ret == 0);
     iprintf("sent signal\n");
 
     sleep(1);
