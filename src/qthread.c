@@ -310,9 +310,14 @@ static int rcr_ready = 0;
 
 static void hup_handler(int sig)
 {
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t * w = qthread_internal_getworker();
     //qthread_shepherd_t * s = w->shepherd;
     qthread_t *t = w->current;
+#else
+    qthread_shepherd_t *s = qthread_internal_getshep();
+    qthread_t *t = s->current;
+#endif
 
     t->thread_state = QTHREAD_STATE_ASSASSINATED;
     qthread_back_to_master(t);

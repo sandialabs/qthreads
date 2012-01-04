@@ -50,7 +50,11 @@ int main(int   argc,
     qthread_readFF(NULL, &t);
 
     iprintf("killing waiter task (on shep 1, wkr 0)\n");
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     ret = pthread_kill(qlib->shepherds[1].workers[0].worker, SIGUSR1);
+#else
+    ret = pthread_kill(qlib->shepherds[1].shepherd, SIGUSR1);
+#endif
     if (ret != 0) {
         perror("pthread_kill");
 	abort();
