@@ -313,7 +313,8 @@ enum introspective_state {
     ACTIVE_SHEPHERDS,
     TOTAL_SHEPHERDS,
     ACTIVE_WORKERS,
-    TOTAL_WORKERS
+    TOTAL_WORKERS,
+    CURRENT_WORKER
 };
 size_t qthread_readstate(const enum introspective_state type);
 

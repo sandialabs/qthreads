@@ -1927,6 +1927,17 @@ size_t qthread_readstate(const enum introspective_state type)
             return (size_t)(qlib->nshepherds);
 #endif
 
+        case CURRENT_WORKER:
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+            {
+                qthread_worker_t *worker = (qthread_worker_t *)pthread_getspecific(shepherd_structs);
+
+                return worker ? (worker->worker_id) : NO_WORKER;
+            }
+#else
+            return 0;
+#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
+
         default:
             return (size_t)(-1);
     }
