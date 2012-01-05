@@ -24,6 +24,7 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
                           const size_t will_spawn)
 {
     qt_sinc_t *sinc = malloc(sizeof(qt_sinc_t));
+
     assert(sinc);
 
     if (num_sheps == 0) {
@@ -59,9 +60,7 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
         for (size_t s = 0; s < num_sheps; s++) {
             const size_t shep_offset = s * sizeof_shep_value_part;
             for (size_t w = 0; w < num_wps; w++) {
-                const size_t worker_offset = s == 0 ?
-                                             w * sinc->sizeof_value :
-                                             (w % num_wps) * sinc->sizeof_value;
+                const size_t worker_offset = w * sinc->sizeof_value;
                 memcpy((uint8_t *)sinc->values + shep_offset + worker_offset,
                        initial_value,
                        sizeof_value);
@@ -70,20 +69,17 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
         sinc->result = malloc(sinc->sizeof_value);
         assert(sinc->result);
     } else {
-        sinc->initial_value = NULL;
-        sinc->values = NULL;
+        sinc->initial_value          = NULL;
+        sinc->values                 = NULL;
         sinc->sizeof_shep_value_part = 0;
-        sinc->result = NULL;
+        sinc->result                 = NULL;
     }
     assert((sinc->result && sinc->initial_value) || (!sinc->result && !sinc->initial_value));
 
     // Allocate counts array
-    const size_t sizeof_count = sizeof(qt_sinc_count_t);
-    sinc->sizeof_count = sizeof_count;
-
-    const size_t sizeof_shep_counts     = num_wps * sizeof_count;
+    const size_t sizeof_shep_counts     = num_wps * QTHREAD_SIZEOF_ALIGNED_T;
     const size_t num_lines_per_shep     = ceil(sizeof_shep_counts * 1.0 / cacheline);
-    const size_t sizeof_shep_count_part = num_lines_per_shep * cacheline;
+    const size_t sizeof_shep_count_part = (num_lines_per_shep * cacheline) / QTHREAD_SIZEOF_ALIGNED_T;
     const size_t num_count_array_lines  = num_sheps * num_lines_per_shep;
 
     sinc->sizeof_shep_count_part = sizeof_shep_count_part;
@@ -104,16 +100,12 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
 
         for (size_t s = 0; s < num_sheps; s++) {
             for (size_t w = 0; w < num_wps; w++) {
-                const size_t shep_offset   = s * sinc->sizeof_shep_count_part;
-                const size_t worker_offset = s == 0 ?
-                                             w * sinc->sizeof_count :
-                                             (w % num_wps) * sinc->sizeof_count;
-                const size_t offset = shep_offset + worker_offset;
+                const size_t shep_offset = s * sinc->sizeof_shep_count_part;
+                const size_t offset      = shep_offset + w;
 
-                *(qt_sinc_count_t *)((uint8_t *)sinc->counts + offset) =
-                    num_per_worker;
+                sinc->counts[offset] = num_per_worker;
                 if (extras > 0) {
-                    *(qt_sinc_count_t *)((uint8_t *)sinc->counts + offset) += 1;
+                    sinc->counts[offset]++;
                     extras--;
                 }
             }
@@ -133,7 +125,7 @@ void qt_sinc_reset(qt_sinc_t   *sinc,
     // Reset values
     if (NULL != sinc->values) {
         const size_t sizeof_shep_value_part = sinc->sizeof_shep_value_part;
-        const size_t sizeof_value = sinc->sizeof_value;
+        const size_t sizeof_value           = sinc->sizeof_value;
         for (size_t s = 0; s < num_sheps; s++) {
             const size_t shep_offset = s * sizeof_shep_value_part;
             for (size_t w = 0; w < num_wps; w++) {
@@ -156,18 +148,15 @@ void qt_sinc_reset(qt_sinc_t   *sinc,
     }
 
     const size_t sizeof_shep_count_part = sinc->sizeof_shep_count_part;
-    const size_t sizeof_count = sinc->sizeof_count;
     for (size_t s = 0; s < num_sheps; s++) {
         for (size_t w = 0; w < num_wps; w++) {
-            const size_t shep_offset   = s * sizeof_shep_count_part;
-            const size_t worker_offset = w * sizeof_count;
-            const size_t offset = shep_offset + worker_offset;
+            const size_t shep_offset = s * sizeof_shep_count_part;
+            const size_t offset      = shep_offset + w;
 
-            *(qt_sinc_count_t *)((uint8_t *)sinc->counts + offset) =
-                num_per_worker;
+            sinc->counts[offset] = num_per_worker;
             if (extras > 0) {
                 extras--;
-                *(qt_sinc_count_t *)((uint8_t *)sinc->counts + offset) += 1;
+                sinc->counts[offset]++;
             }
         }
     }
@@ -199,14 +188,9 @@ void qt_sinc_willspawn(qt_sinc_t *sinc,
 {
     assert(sinc);
     if (count > 0) {
-        qthread_shepherd_id_t     shep_id;
-        const qthread_worker_id_t worker_id = qthread_worker(&shep_id);
-
-        const size_t shep_offset   = shep_id * sinc->sizeof_shep_count_part;
-        const size_t worker_offset = shep_id == 0 ?
-                                     worker_id * sinc->sizeof_count :
-                                     (worker_id % (num_workers / num_sheps)) * sinc->sizeof_count;
-        qt_sinc_count_t *counts = (qt_sinc_count_t *)((uint8_t *)sinc->counts + shep_offset + worker_offset);
+        const qthread_worker_id_t worker_id   = qthread_readstate(CURRENT_WORKER);
+        const size_t              shep_offset = qthread_shep() * sinc->sizeof_shep_count_part;
+        qt_sinc_count_t          *counts      = sinc->counts + shep_offset + worker_id;
 
         // Increment count
         qt_sinc_count_t old = qthread_incr(counts, count);
@@ -221,12 +205,8 @@ void qt_sinc_willspawn(qt_sinc_t *sinc,
 void *qt_sinc_tmpdata(qt_sinc_t *sinc)
 {
     if (NULL != sinc->values) {
-        qthread_shepherd_id_t shep_id;
-        qthread_worker_id_t   worker_id     = qthread_worker(&shep_id);
-        const size_t          shep_offset   = shep_id * sinc->sizeof_shep_value_part;
-        const size_t          worker_offset = (shep_id == 0) ?
-                                              (worker_id * sinc->sizeof_value) :
-                                              ((worker_id % (num_workers / num_sheps)) * sinc->sizeof_value);
+        const size_t shep_offset   = qthread_shep() * sinc->sizeof_shep_value_part;
+        const size_t worker_offset = qthread_readstate(CURRENT_WORKER) * sinc->sizeof_value;
         return (uint8_t *)sinc->values + shep_offset + worker_offset;
     } else {
         return NULL;
@@ -241,27 +221,23 @@ void qt_sinc_submit(qt_sinc_t *sinc,
 
     const size_t sizeof_shep_value_part = sinc->sizeof_shep_value_part;
     const size_t sizeof_shep_count_part = sinc->sizeof_shep_count_part;
-    const size_t sizeof_value = sinc->sizeof_value;
-    const size_t sizeof_count = sinc->sizeof_count;
+    const size_t sizeof_value           = sinc->sizeof_value;
 
-    qthread_shepherd_id_t shep_id = qthread_shep();
+    qthread_shepherd_id_t shep_id   = qthread_shep();
     qthread_worker_id_t   worker_id = qthread_readstate(CURRENT_WORKER);
 
-    if (NULL != value)
-    {
+    if (NULL != value) {
         const size_t shep_offset   = shep_id * sizeof_shep_value_part;
-        const size_t worker_offset = (worker_id * sizeof_value);
-        void *values = (uint8_t *)sinc->values + shep_offset + worker_offset;
+        const size_t worker_offset = worker_id * sizeof_value;
+        void        *values        = (uint8_t *)sinc->values + shep_offset + worker_offset;
 
         sinc->op(values, value);
     }
 
     while (1) {
         // Calculate offset in counts array
-        const size_t shep_offset   = shep_id * sizeof_shep_count_part;
-        const size_t worker_offset = worker_id * sizeof_count;
-        qt_sinc_count_t *count =
-            (qt_sinc_count_t *)((uint8_t *)sinc->counts + shep_offset + worker_offset);
+        const size_t     shep_offset = shep_id * sizeof_shep_count_part;
+        qt_sinc_count_t *count       = sinc->counts + shep_offset + worker_id;
 
         // Try to decrement this worker's count
         qt_sinc_count_t old_count;
@@ -291,16 +267,14 @@ void qt_sinc_submit(qt_sinc_t *sinc,
                  * job to collate the results and release any waiters. */
                 if (sinc->values) {
                     // step 1: collate results
-                    memcpy(sinc->result, sinc->initial_value, sinc->sizeof_value);
+                    memcpy(sinc->result, sinc->initial_value, sizeof_value);
                     for (qthread_shepherd_id_t s = 0; s < num_sheps; ++s) {
                         const size_t shep_offset = s * sizeof_shep_value_part;
                         for (size_t w = 0; w < num_wps; ++w) {
                             sinc->op(sinc->result,
-                                    (uint8_t *)sinc->values + shep_offset +
-                                    (w * sinc->sizeof_value));
+                                     (uint8_t *)sinc->values + shep_offset + (w * sizeof_value));
                         }
                     }
-
                 }
                 // step 2: release waiters
                 qthread_syncvar_writeF_const(&sinc->ready, 42);
@@ -313,14 +287,14 @@ void qt_sinc_submit(qt_sinc_t *sinc,
         }
 
         // Try the next worker
-        //worker_id = (worker_id == num_workers - 1) ? 0 : worker_id + 1;
+        // worker_id = (worker_id == num_workers - 1) ? 0 : worker_id + 1;
         if (worker_id == num_wps - 1) {
             // next shep
             worker_id = 0;
-            shep_id = shep_id + 1;
-            shep_id *= (shep_id != num_sheps);
+            shep_id   = shep_id + 1;
+            shep_id  *= (shep_id != num_sheps);
         } else {
-            worker_id ++;
+            worker_id++;
         }
 
 #else   /* ifndef PUREWS_SINCS */
