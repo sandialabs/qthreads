@@ -2,7 +2,7 @@
 #define QT_SINC_H
 
 // typedef long qt_sinc_count_t;
-typedef aligned_t qt_sinc_count_t;
+typedef saligned_t qt_sinc_count_t;
 
 typedef void (*qt_sinc_op_f)(void *tgt, void *src);
 
