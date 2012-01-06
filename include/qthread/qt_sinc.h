@@ -16,6 +16,9 @@ typedef struct qt_sinc_s {
     size_t           sizeof_value;
     size_t           sizeof_shep_value_part;
     size_t           sizeof_shep_count_part;
+#if defined(QT_SINC_STATS)
+    void        *count_incrs;
+#endif /* defined(QT_SINC_STATS) */
 } qt_sinc_t;
 
 qt_sinc_t *qt_sinc_create(const size_t sizeof_value,

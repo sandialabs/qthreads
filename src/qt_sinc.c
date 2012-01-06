@@ -86,6 +86,11 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
     sinc->counts                 = calloc(num_count_array_lines, cacheline);
     assert(sinc->counts);
 
+#if defined(QT_SINC_STATS)
+    sinc->count_incrs          = calloc(num_count_array_lines, cacheline);
+    assert(sinc->count_incrs);
+#endif /* defined(QT_SINC_STATS) */
+
     // Initialize counts array
     if (will_spawn > 0) {
         const size_t num_per_worker = will_spawn / num_workers;
@@ -167,6 +172,23 @@ void qt_sinc_reset(qt_sinc_t   *sinc,
 
 void qt_sinc_destroy(qt_sinc_t *sinc)
 {
+#if defined(QT_SINC_STATS)
+    const size_t sizeof_shep_count_part = sinc->sizeof_shep_count_part;
+    for (size_t s = 0; s < num_sheps; s++) {
+        for (size_t w = 0; w < num_wps; w++) {
+            const size_t shep_offset   = s * sizeof_shep_count_part;
+            const size_t offset = shep_offset + w;
+
+            qt_sinc_count_t *count_incr =
+                (qt_sinc_count_t *)((uint8_t *)sinc->count_incrs + offset);
+
+            fprintf(stderr, "CI %lu %lu %lu\n", s, w, (unsigned long)*count_incr);
+        }
+    }
+
+    free(sinc->count_incrs);
+#endif /* defined(QT_SINC_STATS) */
+
     assert(sinc);
     assert(sinc->counts);
     free(sinc->counts);
@@ -194,6 +216,9 @@ void qt_sinc_willspawn(qt_sinc_t *sinc,
 
         // Increment count
         qt_sinc_count_t old = qthread_incr(counts, count);
+#if defined(QT_SINC_STATS)
+        (void)qthread_incr((qt_sinc_count_t *)(sinc->count_incrs + shep_offset + worker_id), 1);
+#endif /* defined(QT_SINC_STATS) */
 
         // Increment remaining, if necessary
         if (old == 0) {
@@ -238,6 +263,9 @@ void qt_sinc_submit(qt_sinc_t *sinc,
         // Calculate offset in counts array
         const size_t     shep_offset = shep_id * sizeof_shep_count_part;
         qt_sinc_count_t *count       = sinc->counts + shep_offset + worker_id;
+#if defined(QT_SINC_STATS)
+        qt_sinc_count_t *count_incr =  sinc->count_incrs + shep_offset + worker_id;
+#endif /* defined(QT_SINC_STATS) */
 
         // Try to decrement this worker's count
         qt_sinc_count_t old_count;
@@ -245,9 +273,16 @@ void qt_sinc_submit(qt_sinc_t *sinc,
         old_count = *count;
         if (old_count > 0) {
             old_count = qthread_incr(count, -1);
+#if defined(QT_SINC_STATS)
+            (void)qthread_incr(count_incr, 1);
+#endif /* defined(QT_SINC_STATS) */
+            
             if (old_count < 1) {
                 // decrement was unsuccessful, so restore state
                 (void)qthread_incr(count, 1);
+#if defined(QT_SINC_STATS)
+                (void)qthread_incr(count_incr, 1);
+#endif /* defined(QT_SINC_STATS) */
                 old_count = 0;
             }
         } else {
