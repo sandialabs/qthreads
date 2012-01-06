@@ -87,6 +87,7 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
     assert(sinc->counts);
 
 #if defined(SINCS_PROFILE)
+    printf("count_incrs is %lu long\n", (num_count_array_lines * cacheline)/QTHREAD_SIZEOF_ALIGNED_T);
     sinc->count_incrs          = calloc(num_count_array_lines, cacheline);
     assert(sinc->count_incrs);
 #endif /* defined(SINCS_PROFILE) */
@@ -179,10 +180,7 @@ void qt_sinc_destroy(qt_sinc_t *sinc)
             const size_t shep_offset   = s * sizeof_shep_count_part;
             const size_t offset = shep_offset + w;
 
-            qt_sinc_count_t *count_incr =
-                (qt_sinc_count_t *)((uint8_t *)sinc->count_incrs + offset);
-
-            fprintf(stderr, "CI %lu %lu %lu\n", s, w, (unsigned long)*count_incr);
+            fprintf(stderr, "CI %lu %lu %lu\n", s, w, (unsigned long)sinc->count_incrs[offset]);
         }
     }
 
@@ -217,7 +215,7 @@ void qt_sinc_willspawn(qt_sinc_t *sinc,
         // Increment count
         qt_sinc_count_t old = qthread_incr(counts, count);
 #if defined(SINCS_PROFILE)
-        (void)qthread_incr((qt_sinc_count_t *)(sinc->count_incrs + shep_offset + worker_id), 1);
+        (void)qthread_incr(&sinc->count_incrs[shep_offset + worker_id], 1);
 #endif /* defined(SINCS_PROFILE) */
 
         // Increment remaining, if necessary
@@ -238,8 +236,8 @@ void *qt_sinc_tmpdata(qt_sinc_t *sinc)
     }
 }
 
-void qt_sinc_submit(qt_sinc_t *sinc,
-                    void      *value)
+void qt_sinc_submit(qt_sinc_t *restrict sinc,
+                    void      *restrict value)
 {
     assert(NULL != sinc->values || NULL == value);
     assert((sinc->result && sinc->initial_value) || (!sinc->result && !sinc->initial_value));
@@ -344,8 +342,8 @@ void qt_sinc_submit(qt_sinc_t *sinc,
     }
 }
 
-void qt_sinc_wait(qt_sinc_t *sinc,
-                  void      *target)
+void qt_sinc_wait(qt_sinc_t *restrict sinc,
+                  void      *restrict target)
 {
     qthread_syncvar_readFF(NULL, &sinc->ready);
 
