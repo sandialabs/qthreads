@@ -293,8 +293,10 @@ void qt_sinc_willspawn(qt_sinc_t *sinc,
         // Increment remaining, if necessary
         if (old == 0) {
             (void)qthread_incr(&sinc->remaining, 1);
+#if defined(SINCS_PROFILE)
             (void)qthread_incr(sinc->count_incrs + (shep_id * sinc->sizeof_shep_count_part) + worker_id, 1);
             (void)qthread_incr(sinc->count_remaining + (shep_id * sinc->sizeof_shep_count_part) + worker_id, 1);
+#endif
         }
     }
 }
