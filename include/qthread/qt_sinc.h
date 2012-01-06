@@ -18,6 +18,13 @@ typedef struct qt_sinc_s {
     size_t           sizeof_shep_count_part;
 #if defined(SINCS_PROFILE)
     qt_sinc_count_t *count_incrs;
+    qt_sinc_count_t *count_decrs;
+    qt_sinc_count_t *count_remaining;
+    qt_sinc_count_t *count_locals;
+    qt_sinc_count_t *count_spawns;
+    qt_sinc_count_t *dist_max;
+    qt_sinc_count_t *dist_ttl;
+    qt_sinc_count_t *dist_cnt;
 #endif /* defined(SINCS_PROFILE) */
 } qt_sinc_t;
 

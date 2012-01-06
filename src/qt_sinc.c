@@ -104,9 +104,38 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
     memset(sinc->counts, 0, num_count_array_lines * cacheline);
 
 #if defined(SINCS_PROFILE)
+    sinc->count_incrs     = calloc(num_count_array_lines, cacheline);
     ALIGNED_ALLOC(sinc->count_incrs, num_count_array_lines * cacheline, cacheline);
     assert(sinc->count_incrs);
-    memset(sinc->counts, 0, num_count_array_lines * cacheline);
+    memset(sinc->count_incrs, 0, num_count_array_lines * cacheline);
+    sinc->count_locals    = calloc(num_count_array_lines, cacheline);
+    ALIGNED_ALLOC(sinc->count_locals, num_count_array_lines * cacheline, cacheline);
+    assert(sinc->count_locals);
+    memset(sinc->count_locals, 0, num_count_array_lines * cacheline);
+    sinc->count_decrs     = calloc(num_count_array_lines, cacheline);
+    ALIGNED_ALLOC(sinc->count_decrs, num_count_array_lines * cacheline, cacheline);
+    assert(sinc->count_decrs);
+    memset(sinc->count_decrs, 0, num_count_array_lines * cacheline);
+    sinc->count_remaining = calloc(num_count_array_lines, cacheline);
+    ALIGNED_ALLOC(sinc->count_remaining, num_count_array_lines * cacheline, cacheline);
+    assert(sinc->count_remaining);
+    memset(sinc->count_remaining, 0, num_count_array_lines * cacheline);
+    sinc->count_spawns    = calloc(num_count_array_lines, cacheline);
+    ALIGNED_ALLOC(sinc->count_spawns, num_count_array_lines * cacheline, cacheline);
+    assert(sinc->count_spawns);
+    memset(sinc->count_spawns, 0, num_count_array_lines * cacheline);
+    sinc->dist_max        = calloc(num_count_array_lines, cacheline);
+    ALIGNED_ALLOC(sinc->dist_max, num_count_array_lines * cacheline, cacheline);
+    assert(sinc->dist_max);
+    memset(sinc->dist_max, 0, num_count_array_lines * cacheline);
+    sinc->dist_ttl        = calloc(num_count_array_lines, cacheline);
+    ALIGNED_ALLOC(sinc->dist_ttl, num_count_array_lines * cacheline, cacheline);
+    assert(sinc->dist_ttl);
+    memset(sinc->dist_ttl, 0, num_count_array_lines * cacheline);
+    sinc->dist_cnt        = calloc(num_count_array_lines, cacheline);
+    ALIGNED_ALLOC(sinc->dist_cnt, num_count_array_lines * cacheline, cacheline);
+    assert(sinc->dist_cnt);
+    memset(sinc->dist_cnt, 0, num_count_array_lines * cacheline);
 #endif /* defined(SINCS_PROFILE) */
 
     // Initialize counts array
@@ -131,6 +160,13 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
                     sinc->counts[offset]++;
                     extras--;
                 }
+#if defined(SINCS_PROFILE)
+                sinc->count_spawns[offset] = num_per_worker;
+                if (extras > 0) {
+                    sinc->count_spawns[offset]++;
+                    extras--;
+                }
+#endif /* defined(SINCS_PROFILE) */
             }
         }
     } else {
@@ -198,10 +234,26 @@ void qt_sinc_destroy(qt_sinc_t *sinc)
             const size_t offset = shep_offset + w;
 
             fprintf(stderr, "CI %lu %lu %lu\n", s, w, (unsigned long)sinc->count_incrs[offset]);
+            fprintf(stderr, "CL %lu %lu %lu\n", s, w, (unsigned long)sinc->count_locals[offset]);
+            fprintf(stderr, "CD %lu %lu %lu\n", s, w, (unsigned long)sinc->count_decrs[offset]);
+            fprintf(stderr, "CR %lu %lu %lu\n", s, w, (unsigned long)sinc->count_remaining[offset]);
+            fprintf(stderr, "CS %lu %lu %lu\n", s, w, (unsigned long)sinc->count_spawns[offset]);
+            fprintf(stderr, "DM %lu %lu %lu\n", s, w, (unsigned long)sinc->dist_max[offset]);
+            fprintf(stderr, "DT %lu %lu %lu\n", s, w, (unsigned long)sinc->dist_ttl[offset]);
+            fprintf(stderr, "DC %lu %lu %lu\n", s, w, (unsigned long)sinc->dist_cnt[offset]);
+            fprintf(stderr, "DA %lu %lu %f\n", s, w, 
+                ((unsigned long)sinc->dist_ttl[offset]*1.0) / 
+                ((unsigned long)sinc->dist_cnt[offset]*1.0));
         }
     }
 
     free(sinc->count_incrs);
+    free(sinc->count_locals);
+    free(sinc->count_decrs);
+    free(sinc->count_remaining);
+    free(sinc->count_spawns);
+    free(sinc->dist_max);
+    free(sinc->dist_ttl);
 #endif /* defined(SINCS_PROFILE) */
 
     assert(sinc);
@@ -233,10 +285,16 @@ void qt_sinc_willspawn(qt_sinc_t *sinc,
 
         // Increment count
         qt_sinc_count_t old = qthread_incr(counts, count);
+#if defined(SINCS_PROFILE)
+        (void)qthread_incr(sinc->count_incrs + (shep_id * sinc->sizeof_shep_count_part) + worker_id, 1);
+        (void)qthread_incr(sinc->count_spawns + (shep_id * sinc->sizeof_shep_count_part) + worker_id, count);
+#endif /* defined(SINCS_PROFILE) */
 
         // Increment remaining, if necessary
         if (old == 0) {
             (void)qthread_incr(&sinc->remaining, 1);
+            (void)qthread_incr(sinc->count_incrs + (shep_id * sinc->sizeof_shep_count_part) + worker_id, 1);
+            (void)qthread_incr(sinc->count_remaining + (shep_id * sinc->sizeof_shep_count_part) + worker_id, 1);
         }
     }
 }
@@ -295,20 +353,57 @@ void qt_sinc_submit(qt_sinc_t *restrict sinc,
         sinc->op(values, value);
     }
 
+#if defined(SINCS_PROFILE)
+    int dist = 0;
+#endif /* defined(SINCS_PROFILE) */
+
     // first check just this shepherd
     {
         const size_t shep_offset = shep_id * sizeof_shep_count_part;
         for (qthread_worker_id_t wkr_delta = 0; wkr_delta < num_wps; ++wkr_delta) {
             qthread_worker_id_t cur_wkr = (worker_id + wkr_delta) % num_wps;
             qt_sinc_count_t *count = sinc->counts + shep_offset + cur_wkr;
+#if defined(SINCS_PROFILE)
+            qt_sinc_count_t *count_incr = sinc->count_incrs + shep_offset + worker_id;
+            qt_sinc_count_t *count_decr = sinc->count_decrs + shep_offset + worker_id;
+            qt_sinc_count_t *count_remaining = sinc->count_remaining + shep_offset + worker_id;
+            qt_sinc_count_t *count_local = sinc->count_locals + shep_offset + worker_id;
+            qt_sinc_count_t *dist_max =  sinc->dist_max + shep_offset + worker_id;
+            qt_sinc_count_t *dist_ttl =  sinc->dist_ttl + shep_offset + worker_id;
+            qt_sinc_count_t *dist_cnt =  sinc->dist_cnt + shep_offset + worker_id;
+#endif /* defined(SINCS_PROFILE) */
             // Try to decrement this worker's count
             qt_sinc_count_t old_count = *count;
             if (old_count > 0) {
                 old_count = qthread_incr(count, -1);
+#if defined(SINCS_PROFILE)
+                (void)qthread_incr(count_incr, 1);
+                if (dist == 0) (void)qthread_incr(count_local, 1);
+#endif /* defined(SINCS_PROFILE) */
+
                 if (old_count < 1) {
                     (void)qthread_incr(count, 1);
+#if defined(SINCS_PROFILE)
+                    (void)qthread_incr(count_incr, 1);
+                    (void)qthread_incr(count_decr, 1);
+                    if (dist == 0) (void)qthread_incr(count_local, 1);
+#endif /* defined(SINCS_PROFILE) */
                     old_count = 0;
                 }
+#if defined(SINCS_PROFILE)
+                else {
+                    (void)qthread_incr(dist_ttl, dist);
+                    (void)qthread_incr(dist_cnt, 1);
+                    if (dist > 0 && dist > *dist_max) {
+                        qt_sinc_count_t old_max = *dist_max, new_max = 0;
+                        while ((new_max = qthread_cas(dist_max, old_max, dist)) 
+                               != old_max) {
+                            old_max = *dist_max;
+                            if (dist <= old_max) break;
+                        }
+                    }
+                }
+#endif /* defined(SINCS_PROFILE) */
             } else {
                 old_count = 0;
             }
@@ -316,12 +411,20 @@ void qt_sinc_submit(qt_sinc_t *restrict sinc,
                 /* My counter went to zero, therefore I ned to decrement the global
                  * count of workers with non-zero counts (aka "remaining") */
                 aligned_t oldr = qthread_incr(&sinc->remaining, -1);
+#if defined(SINCS_PROFILE)
+            (void)qthread_incr(count_incr, 1);
+            (void)qthread_incr(count_remaining, 1);
+#endif /* defined(SINCS_PROFILE) */
                 assert(oldr > 0);
                 if (oldr == 1) qt_sinc_internal_collate(sinc);
                 return;
             } else if (old_count != 0) {
                 return;
             }
+
+#if defined(SINCS_PROFILE)
+            dist++;
+#endif /* defined(SINCS_PROFILE) */
         }
     }
     // now check other shepherds
@@ -332,6 +435,12 @@ void qt_sinc_submit(qt_sinc_t *restrict sinc,
             qt_sinc_count_t *count = sinc->counts + shep_offset + wkr;
 #if defined(SINCS_PROFILE)
             qt_sinc_count_t *count_incr =  sinc->count_incrs + shep_offset + wkr;
+            qt_sinc_count_t *count_decr = sinc->count_decrs + shep_offset + worker_id;
+            qt_sinc_count_t *count_remaining = sinc->count_remaining + shep_offset + worker_id;
+            qt_sinc_count_t *count_local = sinc->count_locals + shep_offset + worker_id;
+            qt_sinc_count_t *dist_max =  sinc->dist_max + shep_offset + worker_id;
+            qt_sinc_count_t *dist_ttl =  sinc->dist_ttl + shep_offset + worker_id;
+            qt_sinc_count_t *dist_cnt =  sinc->dist_cnt + shep_offset + worker_id;
 #endif /* defined(SINCS_PROFILE) */
             // Try to decrement this worker's count
             qt_sinc_count_t old_count = *count;
@@ -339,14 +448,31 @@ void qt_sinc_submit(qt_sinc_t *restrict sinc,
                 old_count = qthread_incr(count, -1);
 #if defined(SINCS_PROFILE)
                 (void)qthread_incr(count_incr, 1);
+                if (dist == 0) (void)qthread_incr(count_local, 1);
 #endif /* defined(SINCS_PROFILE) */
                 if (old_count < 1) {
                     (void)qthread_incr(count, 1);
 #if defined(SINCS_PROFILE)
                     (void)qthread_incr(count_incr, 1);
+                    (void)qthread_incr(count_decr, 1);
+                    if (dist == 0) (void)qthread_incr(count_local, 1);
 #endif /* defined(SINCS_PROFILE) */
                     old_count = 0;
                 }
+#if defined(SINCS_PROFILE)
+                else {
+                    (void)qthread_incr(dist_ttl, dist);
+                    (void)qthread_incr(dist_cnt, 1);
+                    if (dist > 0 && dist > *dist_max) {
+                        qt_sinc_count_t old_max = *dist_max, new_max = 0;
+                        while ((new_max = qthread_cas(dist_max, old_max, dist)) 
+                               != old_max) {
+                            old_max = *dist_max;
+                            if (dist <= old_max) break;
+                        }
+                    }
+                }
+#endif /* defined(SINCS_PROFILE) */
             } else {
                 old_count = 0;
             }
@@ -354,12 +480,20 @@ void qt_sinc_submit(qt_sinc_t *restrict sinc,
                 /* My counter went to zero, therefore I ned to decrement the global
                  * count of workers with non-zero counts (aka "remaining") */
                 aligned_t oldr = qthread_incr(&sinc->remaining, -1);
+#if defined(SINCS_PROFILE)
+                (void)qthread_incr(count_incr, 1);
+                (void)qthread_incr(count_remaining, 1);
+#endif /* defined(SINCS_PROFILE) */
                 assert(oldr > 0);
                 if (oldr == 1) qt_sinc_internal_collate(sinc);
                 return;
             } else if (old_count != 0) {
                 return;
             }
+
+#if defined(SINCS_PROFILE)
+            dist++;
+#endif /* defined(SINCS_PROFILE) */
         }
     }
 }
