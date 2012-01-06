@@ -6,17 +6,33 @@
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
+#if (HAVE_MEMALIGN && HAVE_MALLOC_H)
+# include <malloc.h>                   /* for memalign() */
+#endif
 
 #include "qthread/qthread.h"
 #include "qthread/cacheline.h"
 #include "qthread/qt_sinc.h"
 #include "qthread_asserts.h"
+#include "qt_shepherd_innards.h"
 #include "qt_visibility.h"
 
 static size_t       num_sheps;
 static size_t       num_workers;
 static size_t       num_wps;
 static unsigned int cacheline;
+
+#ifdef HAVE_MEMALIGN
+#define ALIGNED_ALLOC(val, size, align) (val) = memalign((align), (size))
+#elif defined(HAVE_POSIX_MEMALIGN)
+#define ALIGNED_ALLOC(val, size, align) posix_memalign(&(val), (align), (size))
+#elif defined(HAVE_WORKING_VALLOC)
+#define ALIGNED_ALLOC(val, size, align) (val) = valloc((size))
+#elif defined(HAVE_PAGE_ALIGNED_MALLOC)
+#define ALIGNED_ALLOC(val, size, align) (val) = malloc((size))
+#else
+#define ALIGNED_ALLOC(val, size, align) (val) = valloc((size)) /* cross your fingers! */
+#endif
 
 qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
                           const void  *initial_value,
@@ -53,7 +69,7 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
 
         sinc->sizeof_shep_value_part = sizeof_shep_value_part;
 
-        sinc->values = malloc(num_lines * cacheline);
+        ALIGNED_ALLOC(sinc->values, num_lines * cacheline, cacheline);
         assert(sinc->values);
 
         // Initialize values
@@ -83,13 +99,14 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
     const size_t num_count_array_lines  = num_sheps * num_lines_per_shep;
 
     sinc->sizeof_shep_count_part = sizeof_shep_count_part;
-    sinc->counts                 = calloc(num_count_array_lines, cacheline);
+    ALIGNED_ALLOC(sinc->counts, num_count_array_lines * cacheline, cacheline);
     assert(sinc->counts);
+    memset(sinc->counts, 0, num_count_array_lines * cacheline);
 
 #if defined(SINCS_PROFILE)
-    printf("count_incrs is %lu long\n", (num_count_array_lines * cacheline)/QTHREAD_SIZEOF_ALIGNED_T);
-    sinc->count_incrs          = calloc(num_count_array_lines, cacheline);
+    ALIGNED_ALLOC(sinc->count_incrs, num_count_array_lines * cacheline, cacheline);
     assert(sinc->count_incrs);
+    memset(sinc->counts, 0, num_count_array_lines * cacheline);
 #endif /* defined(SINCS_PROFILE) */
 
     // Initialize counts array
@@ -208,15 +225,14 @@ void qt_sinc_willspawn(qt_sinc_t *sinc,
 {
     assert(sinc);
     if (count > 0) {
-        const qthread_worker_id_t worker_id   = qthread_readstate(CURRENT_WORKER);
-        const size_t              shep_offset = qthread_shep() * sinc->sizeof_shep_count_part;
-        qt_sinc_count_t          *counts      = sinc->counts + shep_offset + worker_id;
+        const qthread_worker_id_t worker_id = qthread_readstate(CURRENT_WORKER);
+        const size_t              shep_id   = qthread_shep();
+        qt_sinc_count_t *counts = sinc->counts
+            + (shep_id * sinc->sizeof_shep_count_part)
+            + worker_id;
 
         // Increment count
         qt_sinc_count_t old = qthread_incr(counts, count);
-#if defined(SINCS_PROFILE)
-        (void)qthread_incr(&sinc->count_incrs[shep_offset + worker_id], 1);
-#endif /* defined(SINCS_PROFILE) */
 
         // Increment remaining, if necessary
         if (old == 0) {
@@ -236,6 +252,26 @@ void *qt_sinc_tmpdata(qt_sinc_t *sinc)
     }
 }
 
+static void qt_sinc_internal_collate(qt_sinc_t *sinc)
+{
+    if (sinc->values) {
+        // step 1: collate results
+        const size_t sizeof_value           = sinc->sizeof_value;
+        const size_t sizeof_shep_value_part = sinc->sizeof_shep_value_part;
+
+        memcpy(sinc->result, sinc->initial_value, sizeof_value);
+        for (qthread_shepherd_id_t s = 0; s < num_sheps; ++s) {
+            const size_t shep_offset = s * sizeof_shep_value_part;
+            for (size_t w = 0; w < num_wps; ++w) {
+                sinc->op(sinc->result,
+                        (uint8_t *)sinc->values + shep_offset + (w * sizeof_value));
+            }
+        }
+    }
+    // step 2: release waiters
+    qthread_syncvar_writeF_const(&sinc->ready, 42);
+}
+
 void qt_sinc_submit(qt_sinc_t *restrict sinc,
                     void      *restrict value)
 {
@@ -245,6 +281,8 @@ void qt_sinc_submit(qt_sinc_t *restrict sinc,
     const size_t sizeof_shep_value_part = sinc->sizeof_shep_value_part;
     const size_t sizeof_shep_count_part = sinc->sizeof_shep_count_part;
     const size_t sizeof_value           = sinc->sizeof_value;
+    qthread_shepherd_t *this_shep = qthread_internal_getshep();
+    assert(this_shep);
 
     qthread_shepherd_id_t shep_id   = qthread_shep();
     qthread_worker_id_t   worker_id = qthread_readstate(CURRENT_WORKER);
@@ -257,88 +295,74 @@ void qt_sinc_submit(qt_sinc_t *restrict sinc,
         sinc->op(values, value);
     }
 
-    while (1) {
-        // Calculate offset in counts array
-        const size_t     shep_offset = shep_id * sizeof_shep_count_part;
-        qt_sinc_count_t *count       = sinc->counts + shep_offset + worker_id;
+    // first check just this shepherd
+    {
+        const size_t shep_offset = shep_id * sizeof_shep_count_part;
+        for (qthread_worker_id_t wkr_delta = 0; wkr_delta < num_wps; ++wkr_delta) {
+            qthread_worker_id_t cur_wkr = (worker_id + wkr_delta) % num_wps;
+            qt_sinc_count_t *count = sinc->counts + shep_offset + cur_wkr;
+            // Try to decrement this worker's count
+            qt_sinc_count_t old_count = *count;
+            if (old_count > 0) {
+                old_count = qthread_incr(count, -1);
+                if (old_count < 1) {
+                    (void)qthread_incr(count, 1);
+                    old_count = 0;
+                }
+            } else {
+                old_count = 0;
+            }
+            if (old_count == 1) {
+                aligned_t oldr = sinc->remaining;
+                /* My counter went to zero, therefore I ned to decrement the global
+                 * count of workers with non-zero counts (aka "remaining") */
+                assert(oldr > 0);
+                oldr = qthread_incr(&sinc->remaining, -1);
+                if (oldr == 1) qt_sinc_internal_collate(sinc);
+                return;
+            } else if (old_count != 0) {
+                return;
+            }
+        }
+    }
+    // now check other shepherds
+    for (qthread_shepherd_id_t shep_delta = 0; shep_delta < (num_sheps-1); ++shep_delta) {
+        qthread_shepherd_id_t cur_shep = this_shep->sorted_sheplist[shep_delta];
+        const size_t shep_offset = cur_shep * sizeof_shep_count_part;
+        for (qthread_worker_id_t wkr = 0; wkr < num_wps; ++wkr) {
+            qt_sinc_count_t *count = sinc->counts + shep_offset + wkr;
 #if defined(SINCS_PROFILE)
-        qt_sinc_count_t *count_incr =  sinc->count_incrs + shep_offset + worker_id;
+            qt_sinc_count_t *count_incr =  sinc->count_incrs + shep_offset + wkr;
 #endif /* defined(SINCS_PROFILE) */
-
-        // Try to decrement this worker's count
-        qt_sinc_count_t old_count;
-#ifndef PUREWS_SINCS
-        old_count = *count;
-        if (old_count > 0) {
-            old_count = qthread_incr(count, -1);
-#if defined(SINCS_PROFILE)
-            (void)qthread_incr(count_incr, 1);
-#endif /* defined(SINCS_PROFILE) */
-            
-            if (old_count < 1) {
-                // decrement was unsuccessful, so restore state
-                (void)qthread_incr(count, 1);
+            // Try to decrement this worker's count
+            qt_sinc_count_t old_count = *count;
+            if (old_count > 0) {
+                old_count = qthread_incr(count, -1);
 #if defined(SINCS_PROFILE)
                 (void)qthread_incr(count_incr, 1);
 #endif /* defined(SINCS_PROFILE) */
+                if (old_count < 1) {
+                    (void)qthread_incr(count, 1);
+#if defined(SINCS_PROFILE)
+                    (void)qthread_incr(count_incr, 1);
+#endif /* defined(SINCS_PROFILE) */
+                    old_count = 0;
+                }
+            } else {
                 old_count = 0;
             }
-        } else {
-            old_count = 0;
-        }
-
-        // Decrement remaining if successfully decremented to zero, and stop
-        if (old_count == 1) {
-            aligned_t oldr = sinc->remaining;
-            /* My counter went to zero, therefore I ned to decrement the global
-             * count of workers with non-zero counts (aka "remaining") */
-            assert(oldr > 0);
-            oldr = qthread_incr(&sinc->remaining, -1);
-
-            if (oldr == 1) {
-                /* Since I'm the one who reduced "remaining" to zero, it's my
-                 * job to collate the results and release any waiters. */
-                if (sinc->values) {
-                    // step 1: collate results
-                    memcpy(sinc->result, sinc->initial_value, sizeof_value);
-                    for (qthread_shepherd_id_t s = 0; s < num_sheps; ++s) {
-                        const size_t shep_offset = s * sizeof_shep_value_part;
-                        for (size_t w = 0; w < num_wps; ++w) {
-                            sinc->op(sinc->result,
-                                     (uint8_t *)sinc->values + shep_offset + (w * sizeof_value));
-                        }
-                    }
-                }
-                // step 2: release waiters
-                qthread_syncvar_writeF_const(&sinc->ready, 42);
+            if (old_count == 1) {
+                aligned_t oldr = sinc->remaining;
+                /* My counter went to zero, therefore I ned to decrement the global
+                 * count of workers with non-zero counts (aka "remaining") */
+                assert(oldr > 0);
+                oldr = qthread_incr(&sinc->remaining, -1);
+                if (oldr == 1) qt_sinc_internal_collate(sinc);
+                return;
+            } else if (old_count != 0) {
+                return;
             }
-
-            break;
-        } else if (old_count != 0) {
-            // Stop if successfully decremented
-            break;
         }
-
-        // Try the next worker
-        // worker_id = (worker_id == num_workers - 1) ? 0 : worker_id + 1;
-        if (worker_id == num_wps - 1) {
-            // next shep
-            worker_id = 0;
-            shep_id   = shep_id + 1;
-            shep_id  *= (shep_id != num_sheps);
-        } else {
-            worker_id++;
-        }
-
-#else   /* ifndef PUREWS_SINCS */
-        if (*count > 0) {
-            *count -= 1;
-            break;
-        } else {
-            // Find shep_id for this worker
-            shep_id = (shep_id == num_sheps - 1) ? 0 : shep_id + 1;
-        }
-#endif  /* ifndef PUREWS_SINCS */
     }
 }
 
