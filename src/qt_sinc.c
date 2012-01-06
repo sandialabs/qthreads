@@ -197,7 +197,7 @@ void qt_sinc_willspawn(qt_sinc_t *sinc,
 
         // Increment remaining, if necessary
         if (old == 0) {
-            qthread_incr(&sinc->remaining, 1);
+            (void)qthread_incr(&sinc->remaining, 1);
         }
     }
 }
@@ -247,7 +247,7 @@ void qt_sinc_submit(qt_sinc_t *sinc,
             old_count = qthread_incr(count, -1);
             if (old_count < 1) {
                 // decrement was unsuccessful, so restore state
-                qthread_incr(count, 1);
+                (void)qthread_incr(count, 1);
                 old_count = 0;
             }
         } else {
