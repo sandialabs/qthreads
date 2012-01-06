@@ -371,9 +371,10 @@ int main(int argc, char *argv[])
     sinc = qt_sinc_create(sizeof(my_value_t), &initial_value, my_incr, 1);
     qthread_fork_syncvar(visit, &root, NULL);
     qt_sinc_wait(sinc, &total_num_nodes);
-    qt_sinc_destroy(sinc);
 
     qtimer_stop(timer);
+
+    qt_sinc_destroy(sinc);
 
     total_time = qtimer_secs(timer);
 
