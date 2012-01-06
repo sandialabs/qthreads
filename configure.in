@@ -233,6 +233,10 @@ AC_ARG_ENABLE([64bit-alignment],
                                sizeof(aligned_t). Alignment cannot be smaller
                                than aligned_t.])])
 
+AC_ARG_ENABLE([sinc-stats],
+              [AS_HELP_STRING([--enable-sinc-stats],
+                              [output sinc statistics])])
+
 AC_ARG_WITH([topology],
             [AS_HELP_STRING([--with-topology=[[topologylib]]],
 							[specify which topology interface to use. Supported
@@ -820,6 +824,11 @@ AC_DEFINE_UNQUOTED([QINLINE], [$qinline_define], [Allow function inlining to be 
 AS_IF([test "x$enable_header_syscall_interception" == xyes],
 	  [AC_DEFINE([USE_HEADER_SYSCALLS], [1],
 				 [Define to allow blocking syscalls to be mangled into qthread-specific variants])])
+
+AS_IF([test "x$enable_sinc_stats" = "xyes"],
+      [AC_DEFINE([QT_SINC_STATS], [1], [Calculate sinc stats])
+       enable_sinc_stats=yes],
+      [])
 
 AC_CACHE_SAVE
 
