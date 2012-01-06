@@ -29,7 +29,7 @@ my %config = (
 	dev           => 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-debug --enable-guard-pages --enable-asserts --enable-static --disable-shared --enable-valgrind --disable-pooled-memory --enable-aligncheck',
     debug         => 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-debug --enable-static --disable-shared',
     hwloc         => '--with-topology=hwloc',
-    sinc_stats    => '--enable-sinc-stats',
+    sinc_stats    => '--enable-profiling=sincs',
 );
 
 my @summaries;
