@@ -155,18 +155,17 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
                 const size_t shep_offset = s * sinc->sizeof_shep_count_part;
                 const size_t offset      = shep_offset + w;
 
+#if defined(SINCS_PROFILE)
+                sinc->count_spawns[offset] = num_per_worker;
+                if (extras > 0) {
+                    sinc->count_spawns[offset]++;
+                }
+#endif /* defined(SINCS_PROFILE) */
                 sinc->counts[offset] = num_per_worker;
                 if (extras > 0) {
                     sinc->counts[offset]++;
                     extras--;
                 }
-#if defined(SINCS_PROFILE)
-                sinc->count_spawns[offset] = num_per_worker;
-                if (extras > 0) {
-                    sinc->count_spawns[offset]++;
-                    extras--;
-                }
-#endif /* defined(SINCS_PROFILE) */
             }
         }
     } else {
