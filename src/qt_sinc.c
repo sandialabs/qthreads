@@ -313,11 +313,10 @@ void qt_sinc_submit(qt_sinc_t *restrict sinc,
                 old_count = 0;
             }
             if (old_count == 1) {
-                aligned_t oldr = sinc->remaining;
                 /* My counter went to zero, therefore I ned to decrement the global
                  * count of workers with non-zero counts (aka "remaining") */
+                aligned_t oldr = qthread_incr(&sinc->remaining, -1);
                 assert(oldr > 0);
-                oldr = qthread_incr(&sinc->remaining, -1);
                 if (oldr == 1) qt_sinc_internal_collate(sinc);
                 return;
             } else if (old_count != 0) {
@@ -352,11 +351,10 @@ void qt_sinc_submit(qt_sinc_t *restrict sinc,
                 old_count = 0;
             }
             if (old_count == 1) {
-                aligned_t oldr = sinc->remaining;
                 /* My counter went to zero, therefore I ned to decrement the global
                  * count of workers with non-zero counts (aka "remaining") */
+                aligned_t oldr = qthread_incr(&sinc->remaining, -1);
                 assert(oldr > 0);
-                oldr = qthread_incr(&sinc->remaining, -1);
                 if (oldr == 1) qt_sinc_internal_collate(sinc);
                 return;
             } else if (old_count != 0) {
