@@ -1,13 +1,8 @@
 #ifndef QT_SINC_H
 #define QT_SINC_H
 
-#include "config.h"
-
-#if defined(SINCS_DONECOUNT)
-#include "sincs/donecount.h"
-#elif defined(SINCS_ORIGINAL)
-#include "sincs/original.h"
-#endif
+typedef void (*qt_sinc_op_f)(void *tgt, void *src);
+typedef struct qt_sinc_s qt_sinc_t;
 
 qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
                           const void  *initial_value,
