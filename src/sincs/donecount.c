@@ -43,7 +43,7 @@ static unsigned int cacheline;
 #ifdef HAVE_MEMALIGN
 #define ALIGNED_ALLOC(val, size, align) (val) = memalign((align), (size))
 #elif defined(HAVE_POSIX_MEMALIGN)
-#define ALIGNED_ALLOC(val, size, align) posix_memalign(&(val), (align), (size))
+#define ALIGNED_ALLOC(val, size, align) posix_memalign((void **)&(val), (align), (size))
 #elif defined(HAVE_WORKING_VALLOC)
 #define ALIGNED_ALLOC(val, size, align) (val) = valloc((size))
 #elif defined(HAVE_PAGE_ALIGNED_MALLOC)
@@ -201,10 +201,7 @@ void qt_sinc_submit(qt_sinc_t *restrict sinc,
     assert((sinc->result && sinc->initial_value) || (!sinc->result && !sinc->initial_value));
 
     const size_t sizeof_shep_value_part = sinc->sizeof_shep_value_part;
-    const size_t sizeof_shep_count_part = sinc->sizeof_shep_count_part;
     const size_t sizeof_value           = sinc->sizeof_value;
-    qthread_shepherd_t *this_shep = qthread_internal_getshep();
-    assert(this_shep);
 
     qthread_shepherd_id_t shep_id   = qthread_shep();
     qthread_worker_id_t   worker_id = qthread_readstate(CURRENT_WORKER);
