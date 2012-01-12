@@ -23,8 +23,7 @@ libqthread_la_SOURCES = \
 	locks.c \
 	feb.c \
 	hazardptrs.c \
-	syncvar.c \
-	qt_sinc.c
+	syncvar.c
 
 include qtimer/Makefile.inc
 include ds/Makefile.inc
@@ -74,6 +73,7 @@ if COMPILE_TARGET_UNIX
 libqthread_la_SOURCES += \
 	qthread.c \
 	threadqueues/@with_scheduler@_threadqueues.c \
+	sincs/@with_sinc@.c \
 	affinity/@qthread_topo@.c \
 	futurelib.c
 if QTHREAD_MULTITHREADED_SHEPHERDS
@@ -97,6 +97,8 @@ EXTRA_DIST = \
 			 threadqueues/mtsfifo_threadqueues.c \
 			 threadqueues/sherwood_threadqueues.c \
 			 threadqueues/nottingham_threadqueues.c \
+			 sincs/donecount.c \
+			 sincs/original.c \
 			 affinity/hwloc.c \
 			 affinity/no.c \
 			 affinity/libnuma.c \

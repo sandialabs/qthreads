@@ -1,32 +1,13 @@
 #ifndef QT_SINC_H
 #define QT_SINC_H
 
-typedef saligned_t qt_sinc_count_t;
+#include "config.h"
 
-typedef void (*qt_sinc_op_f)(void *tgt, void *src);
-
-typedef struct qt_sinc_s {
-    void            *restrict values;
-    qt_sinc_count_t *restrict counts;
-    qt_sinc_op_f     op;
-    syncvar_t        ready;
-    void            *restrict result;
-    void            *restrict initial_value;
-    aligned_t        remaining;
-    size_t           sizeof_value;
-    size_t           sizeof_shep_value_part;
-    size_t           sizeof_shep_count_part;
-#if defined(SINCS_PROFILE)
-    qt_sinc_count_t *count_incrs;
-    qt_sinc_count_t *count_decrs;
-    qt_sinc_count_t *count_remaining;
-    qt_sinc_count_t *count_locals;
-    qt_sinc_count_t *count_spawns;
-    qt_sinc_count_t *dist_max;
-    qt_sinc_count_t *dist_ttl;
-    qt_sinc_count_t *dist_cnt;
-#endif /* defined(SINCS_PROFILE) */
-} qt_sinc_t;
+#if defined(SINCS_DONECOUNT)
+#include "sincs/donecount.h"
+#elif defined(SINCS_ORIGINAL)
+#include "sincs/original.h"
+#endif
 
 qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
                           const void  *initial_value,
