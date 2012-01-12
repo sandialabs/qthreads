@@ -722,14 +722,6 @@ AS_IF([test "x$with_sinc" = "x"],
       [with_sinc="donecount"],
       [])
 
-AS_IF([test "x$with_sinc" = "xdonecount"],
-      [AC_DEFINE([SINCS_DONECOUNT], [1], [Use donecount sinc implementation.])],
-      [])
-
-AS_IF([test "x$with_sinc" = "xoriginal"],
-      [AC_DEFINE([SINCS_ORIGINAL], [1], [Use original sinc implementation.])],
-      [])
-
 AS_IF([test "x$enable_omp_affinity" = xyes],
       [AC_DEFINE([QTHREAD_OMP_AFFINITY], [1], [Enable experimental OpenMP affinity extensions. Under development])],
       [enable_omp_affinity="no"])
