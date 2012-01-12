@@ -329,7 +329,7 @@ AC_ARG_WITH([scheduler],
 AC_ARG_WITH([sinc],
 			[AS_HELP_STRING([--with-sinc=[[type]]],
 							[Specify the sinc implementation. Options are
-                             'donecount' (default) and 'original'.])])
+                             'donecount' (default), 'donecount_cas', and 'original'.])])
 
 AC_ARG_ENABLE([hpctoolkit],
               [AS_HELP_STRING([--enable-hpctoolkit-support],
