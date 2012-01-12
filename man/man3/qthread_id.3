@@ -16,10 +16,15 @@ This is used mostly for debugging, as obtaining a global identifier requires
 synchronization. Unless otherwise configured, the qthread library assigns
 thread ids only when they are asked for. Generally they are monotonically
 increasing values, but the value can wrap around after
-.B UINT_MAX
+.BR UINT_MAX -2
 threads.
 .SH RETURN VALUE
-On success, the thread's identifying number is returned.
+On success, the thread's identifying number is returned. If called from outside
+the Qthreads library,
+.B QTHREAD_NON_TASK_ID
+is returned. The special value
+.B QTHREAD_NULL_TASK_ID
+will never be returned.
 .SH SEE ALSO
 .BR qthread_retloc (3),
 .BR qthread_shep (3),

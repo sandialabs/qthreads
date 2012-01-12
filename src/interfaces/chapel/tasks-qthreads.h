@@ -73,7 +73,7 @@ void chpl_task_yield(void);
 // between C code and Chapel code in the runtime.
 //
 typedef unsigned int chpl_taskID_t;
-#define chpl_nullTaskID ((chpl_taskID_t)(-1))
+#define chpl_nullTaskID QTHREAD_NULL_TASK_ID
 
 
 //

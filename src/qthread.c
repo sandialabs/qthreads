@@ -941,8 +941,8 @@ int qthread_initialize(void)
         }
     }
 #endif
-    qlib->max_thread_id  = 0;
-    qlib->max_unique_id  = 0;
+    qlib->max_thread_id  = 1;
+    qlib->max_unique_id  = 1;
     qlib->max_team_id    = 1; /* team 0 is the default team */
     qlib->sched_shepherd = 0;
     QTHREAD_FASTLOCK_INIT(qlib->max_thread_id_lock);
@@ -1409,7 +1409,7 @@ void qthread_finalize(void)
             t = qthread_thread_new(NULL, NULL, 0, NULL, i, NULL, 0);
             assert(t != NULL);         /* what else can we do? */
             t->thread_state = QTHREAD_STATE_TERM_SHEP;
-            t->thread_id    = (unsigned int)-1;
+            t->thread_id    = QTHREAD_NON_TASK_ID;
             qt_threadqueue_enqueue(qlib->shepherds[i].ready, t, shep0);
         }
     }
@@ -1419,7 +1419,7 @@ void qthread_finalize(void)
         t = qthread_thread_new(NULL, NULL, 0, NULL, i, NULL, 0);
         assert(t != NULL);     /* what else can we do? */
         t->thread_state = QTHREAD_STATE_TERM_SHEP;
-        t->thread_id    = (unsigned int)-1;
+        t->thread_id    = QTHREAD_NON_TASK_ID;
         qt_threadqueue_enqueue(qlib->shepherds[i].ready, t, shep0);
     }
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
@@ -1994,8 +1994,17 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f             f,
     t->thread_id =
         qthread_internal_incr(&(qlib->max_thread_id),
                               &qlib->max_thread_id_lock, 1);
+    if (QTHREAD_UNLIKELY(t->thread_id == QTHREAD_NULL_TASK_ID)) {
+        /* yes, this is wrapping around, but... thread_id should be prevented from being NULL */
+        t->thread_id = qthread_internal_incr(&(qlib->max_thread_id),
+                                             &qlib->max_thread_id_lock, 2);
+    } else if (QTHREAD_UNLIKELY(t->thread_id == QTHREAD_NON_TASK_ID)) {
+        /* yes, this is wrapping around, but... thread_id should be prevented from being NON */
+        t->thread_id = qthread_internal_incr(&(qlib->max_thread_id),
+                                             &qlib->max_thread_id_lock, 1);
+    }
 #else
-    t->thread_id = (unsigned int)-1;
+    t->thread_id = QTHREAD_NON_TASK_ID;
 #endif
 
     t->thread_state    = QTHREAD_STATE_NEW;
@@ -3137,21 +3146,25 @@ unsigned int qthread_id(void)
 {                      /*{{{ */
     qthread_t *t = qthread_internal_self();
 
-    qthread_debug(THREAD_CALLS, "tid(%u)\n", t ? t->thread_id : (unsigned int)-1);
+    qthread_debug(THREAD_CALLS, "tid(%u)\n", t ? t->thread_id : QTHREAD_NON_TASK_ID);
 #ifdef QTHREAD_NONLAZY_THREADIDS
-    return t ? t->thread_id : (unsigned int)-1;
+    return t ? t->thread_id : QTHREAD_NON_TASK_ID;
 
 #else
     if (!t) {
-        return (unsigned int)-1;
+        return QTHREAD_NON_TASK_ID;
     }
-    if (t->thread_id != (unsigned int)-1) {
+    if (t->thread_id != QTHREAD_NON_TASK_ID) {
         return t->thread_id;
     }
     t->thread_id = qthread_internal_incr(&(qlib->max_thread_id),
                                          &qlib->max_thread_id_lock, 1);
-    if (QTHREAD_UNLIKELY(t->thread_id == (unsigned int)-1)) {
-        /* yes, this is wrapping around, but... thread_id should be prevented from being -1 */
+    if (QTHREAD_UNLIKELY(t->thread_id == QTHREAD_NULL_TASK_ID)) {
+        /* yes, this is wrapping around, but... thread_id should be prevented from being NULL */
+        t->thread_id = qthread_internal_incr(&(qlib->max_thread_id),
+                                             &qlib->max_thread_id_lock, 2);
+    } else if (QTHREAD_UNLIKELY(t->thread_id == QTHREAD_NON_TASK_ID)) {
+        /* yes, this is wrapping around, but... thread_id should be prevented from being NON */
         t->thread_id = qthread_internal_incr(&(qlib->max_thread_id),
                                              &qlib->max_thread_id_lock, 1);
     }
@@ -3164,11 +3177,11 @@ unsigned qthread_barrier_id(void)
     qthread_t *t = qthread_internal_self();
 
     qthread_debug(THREAD_CALLS, "tid(%u)\n",
-                  t ? t->id : (unsigned)-1);
+                  t ? t->id : QTHREAD_NON_TASK_ID);
     if (t && (t->id == NO_SHEPHERD)) {
         return qthread_internal_getshep()->shepherd_id;
     }
-    return t ? t->id : (unsigned int)-1;
+    return t ? t->id : QTHREAD_NON_TASK_ID;
 }                      /*}}} */
 
 qthread_shepherd_id_t qthread_shep(void)
