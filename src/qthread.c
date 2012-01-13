@@ -142,6 +142,10 @@ static qthread_shepherd_t *qthread_find_active_shepherd(qthread_shepherd_id_t *l
 static QINLINE void qthread_enqueue(qthread_queue_t *q,
                                     qthread_t       *t);
 
+#ifdef QTHREAD_RCRTOOL_STAT
+extern int adaptiveSetHigh;
+#endif
+
 #if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED)
 # define ALLOC_QTHREAD() (qthread_t *)malloc(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size)
 # define FREE_QTHREAD(t) free(t)
@@ -337,12 +341,12 @@ static void *qthread_shepherd_wrapper(unsigned int high,
         (qthread_shepherd_t *)((((uintptr_t)high) << 32) | low);
 
     qthread_debug(SHEPHERD_DETAILS, "high(%x), low(%x): me = %p\n",
-                  high, low, me);
+		   high, low, me);
     return qthread_shepherd(me);
 }
 
 #endif /* ifdef QTHREAD_MAKECONTEXT_SPLIT */
-
+#include <time.h>
 static void *qthread_shepherd(void *arg)
 {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -358,6 +362,13 @@ static void *qthread_shepherd(void *arg)
 #ifdef QTHREAD_SHEPHERD_PROFILING
     me->total_time = qtimer_create();
     qtimer_t idle = qtimer_create();
+#endif
+#ifdef QTHREAD_RCRTOOL
+#ifdef QTHREAD_RCRTOOL_STAT
+    struct timespec adaptTimeStart;
+    struct timespec adaptTimeStop;
+    double time = 0;
+#endif
 #endif
 
     qthread_debug(SHEPHERD_DETAILS, "alive! me = %p\n", me);
@@ -413,16 +424,23 @@ static void *qthread_shepherd(void *arg)
         qthread_debug(SHEPHERD_DETAILS, "id(%i): fetching a thread from my queue...\n", me->shepherd_id);
 
 #ifdef QTHREAD_RCRTOOL
-        if (rcrtoollevel) {                         // has cache control been turned off by an environment variable?
+        if (rcrtoollevel > 1) {                         // has cache control been turned off by an environment variable?
             if (me_worker->packed_worker_id != 0) { // never idle shepherd 0 worker 0  -- needs to be active for termination
                 if (qlib->shepherds[me->shepherd_id].active_workers > maestro_current_workers(me->shepherd_id)) {
+#ifdef QTHREAD_RCRTOOL_STAT
+		    clock_gettime(CLOCK_MONOTONIC, &adaptTimeStart);
+#endif
                     qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers, -1);                                        // not working spinning
-                    while ((qlib->shepherds[me->shepherd_id].active_workers + 1) > maestro_current_workers(me->shepherd_id)) { // A) the number of workers to be increased
-                        if(done) {
-                            break; // B) somebodies noticed the job is done
-                        }
-                    }
+                    while (((qlib->shepherds[me->shepherd_id].active_workers + 1) > maestro_current_workers(me->shepherd_id)) // A) the number of workers to be increased
+			     && (!done)) {  // B exit flag set -- everybody needs to leave
+			 SPINLOCK_BODY();
+		    }
                     qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers, 1); // back at work  -- skipped in departed workers case OK since everyone leaving
+		    // printf("stream returned from idle\n");
+#ifdef QTHREAD_RCRTOOL_STAT
+		    clock_gettime(CLOCK_MONOTONIC, &adaptTimeStop);
+		    time += (adaptTimeStop.tv_sec + adaptTimeStop.tv_nsec * 1e-9) - (adaptTimeStart.tv_sec + adaptTimeStart.tv_nsec * 1e-9);
+#endif
                 }
             }
         }
@@ -674,6 +692,9 @@ qt_run:
 #else
     qthread_debug(SHEPHERD_DETAILS, "id(%u): finished\n",
                   me->shepherd_id);
+#endif
+#ifdef QTHREAD_RCRTOOL_STAT
+    if (rcrtoollevel > 2) printf ("idle time (%d) %10f\n", me_worker->packed_worker_id,time);
 #endif
     pthread_exit(NULL);
     return NULL;
@@ -1178,6 +1199,14 @@ int qthread_initialize(void)
                 continue;                       // original pthread becomes shep 0 worker 0
             }
             qlib->shepherds[i].workers[j].shepherd = &qlib->shepherds[i];
+            qlib->shepherds[i].workers[j].worker_id = j;
+            qlib->shepherds[i].workers[j].unique_id = qthread_internal_incr(&(qlib->max_unique_id),
+                                                                            &qlib->max_unique_id_lock, 1);
+            qlib->shepherds[i].workers[j].packed_worker_id = j + (i * nworkerspershep);
+
+	    QTHREAD_CASLOCK_INIT(qlib->shepherds[i].workers[j].active, 1);
+            qthread_debug(CORE_DETAILS, "initialized caslock %i,%i %p\n", i, j, &qlib->shepherds[i].workers[j].active);
+            qlib->shepherds[i].workers[j].shepherd = &qlib->shepherds[i];
 # ifdef QTHREAD_RCRTOOL
             if (rcrtoollevel > 0) {
                 if ((i == nshepherds - 1) && (j == nworkerspershep - 1)) {
@@ -1185,25 +1214,15 @@ int qthread_initialize(void)
                     swinfo.nworkerspershep = nworkerspershep;
                     swinfo.worker          = &qlib->shepherds[i].workers[j];
                     swinfo.qaffinity       = qaffinity;
-                    if ((r = pthread_create(&rcrToolPThreadID, NULL, rcrtoolDaemon, &swinfo)) != 0) {
-                        fprintf(stderr, "qthread_init: pthread_create() failed (%d)\n", r);
-                        perror("qthread_init spawning rcrTool");
-                        return QTHREAD_THIRD_PARTY_ERROR;
-                    }
-                    continue;
+		    if ((r = pthread_create(&rcrToolPThreadID, NULL, rcrtoolDaemon, &swinfo)) != 0) {
+		      fprintf(stderr, "qthread_init: pthread_create() failed (%d)\n", r);
+		      perror("qthread_init spawning rcrTool");
+		      return QTHREAD_THIRD_PARTY_ERROR;
+		    }
+		    continue;
                 }
             }
 # endif     /* ifdef QTHREAD_RCRTOOL */
-            qlib->shepherds[i].workers[j].worker_id = j;
-            qlib->shepherds[i].workers[j].unique_id = qthread_internal_incr(&(qlib->max_unique_id),
-                                                                            &qlib->max_unique_id_lock, 1);
-            qlib->shepherds[i].workers[j].packed_worker_id = j + (i * nworkerspershep);
-
-            QTHREAD_CASLOCK_INIT(qlib->shepherds[i].workers[j].active, 1);
-            qthread_debug(CORE_DETAILS, "initialized caslock %i,%i %p\n", i, j, &qlib->shepherds[i].workers[j].active);
-# ifndef QTHREAD_RCRTOOL
-            qlib->shepherds[i].workers[j].shepherd = &qlib->shepherds[i];
-# endif     /* ifndef QTHREAD_RCRTOOL */
             if ((r = pthread_create(&qlib->shepherds[i].workers[j].worker, NULL,
                                     qthread_shepherd, &qlib->shepherds[i].workers[j])) != 0) {
                 fprintf(stderr, "qthread_init: pthread_create() failed (%d)\n", r);
@@ -1359,6 +1378,9 @@ void qthread_finalize(void)
 
     qthread_shepherd_t *shep0 = &(qlib->shepherds[0]);
 
+#ifdef QTHREAD_RCRTOOL_STAT
+    if (rcrtoollevel > 0) printf("Limited thread count %d times\n", adaptiveSetHigh);
+#endif
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 # ifdef STEAL_PROFILE
     qthread_steal_stat();
@@ -2192,7 +2214,7 @@ static void qthread_wrapper(void *ptr)
         }
         if (newval == tcount_finished_state) {
             while(parent->thread_state != QTHREAD_STATE_PARENT_BLOCKED)
-                SPINLOCK_BODY();
+	         SPINLOCK_BODY();
             t->thread_state = QTHREAD_STATE_PARENT_UNBLOCKED;
         }
     }

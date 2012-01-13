@@ -773,8 +773,12 @@ AS_IF([test "x$enable_debug" = x -o "x$enable_debug" = xno],
 	   ])
 
 AS_IF([test "x$enable_rcrtool" = "xyes"],
-      [AC_DEFINE([QTHREAD_RCRTOOL], [1], [logs performance with tht RCRTool monitor])],
+      [AC_DEFINE([QTHREAD_RCRTOOL], [1], [enables RCR logging and scheduling])],
       [enable_rcrtool=no])
+
+AS_IF([test "x$enable_rcrtool_stats" = "xyes"],
+      [AC_DEFINE([QTHREAD_RCRTOOL_STAT], [1], [logs RCR stats])],
+      [enable_rcrtool_stats=no])
 
 AS_IF([test "x$enable_hardware_timer" != "xno"],
       [# Which timer do we want to use

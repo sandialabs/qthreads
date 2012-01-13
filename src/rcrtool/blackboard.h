@@ -89,20 +89,28 @@ struct RCRCore {
  * \return RCRBlackboard* 
  */
 struct _RCRBlackboard* getShmBlackboard(int mode);
+#define LOGFILENAMEBUFFERLENGTH  256
 
 struct _RCRBlackboard {
-    int             enable;               // 0 or 1 
-    size_t          shmSize;              // size of this shared memory blackboard 
-    RCRMonitorLevel mLevel;               // Level of monitoring.
-    RCRLogginLevel  lLevel;               // Type or Level of meter logging.
-    int             numOfNodes;           // Number of nodes on system
-    int             numOfSockets;         // Number of nodes on system
-    int             numOfCores;           // Number of nodes on system
-    int             numOfMetersPerCore;   // Number of meters per core 
-    int             numOfMetersPerSocket; // Number of meters per socket
-    RCRNode_v       nodes;                // Array of nodes on the system
-    unsigned long   socketMeterInterval;  // time in microsecs between samples. 
-    unsigned long   coreMeterInterval;    // time in microsecs between samples. 
+  // insert copy from Logger - akp 01/13/12 should match C++ header in RCRdaemon 
+    int             enable;                                // 0 or 1 Blackboard globally on or off
+    int             paramsUpdated;                         // 0 or 1, whether BB params changed via dashboard
+    size_t          shmSize;                               // size of this shared memory blackboard 
+    RCRMonitorLevel mLevel;                                // Level of monitoring.
+    RCRLogginLevel  lLevel;                                // Type or Level of meter logging.
+    int             numOfNodes;                            // Number of nodes on system
+    int             numOfSockets;                          // Number of sockets on system
+    int             numOfCores;                            // Number of cores on system (not per socket)
+    int             numOfMetersPerCore;                    // Number of meters per core 
+    int             numOfMetersPerSocket;                  // Number of meters per socket
+    unsigned long   socketMeterInterval;                   // time in microsecs between samples. 
+    unsigned long   coreMeterInterval;                     // time in microsecs between samples. 
+    char            logFilename[LOGFILENAMEBUFFERLENGTH];  //Name of log file
+    //char            locationName[LOCATIONTEXTFIELDLENGTH]; //Last manually set program location
+    //int             locationFlag;                          //Flag used to control how daemon records locations
+    //pid_t           locationPid;
+    int             nextLocationIndex;
+    int             logFlag;                               //Flag used to control how daemon does 
 };
 
 #ifdef __cplusplus

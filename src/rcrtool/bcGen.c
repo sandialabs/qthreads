@@ -23,6 +23,9 @@
 
 #ifdef QTHREAD_RCRTOOL
     extern unsigned int active_workers;
+#ifdef QTHREAD_RCRTOOL_STAT
+    int adaptiveSetHigh = 0;
+#endif
 #endif
 
 /**
@@ -188,6 +191,9 @@ void throwTrigger(key_t appStateShmKey, rcrtool_trigger_type triggerType, rcrtoo
     } else if (throwKind == T_TYPE_HIGH) { //trigger cond high
         if (flipped[triggerNum] != SET_HIGH) {
             flipped[triggerNum] = SET_HIGH;
+#ifdef QTHREAD_RCRTOOL_STAT
+	    adaptiveSetHigh++;
+#endif
             maestro_sched(MTT_SOCKET, MTA_LOWER_STREAM_COUNT, socketOrCoreID);
         }
     } else {

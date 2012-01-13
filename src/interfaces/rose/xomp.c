@@ -542,8 +542,9 @@ static bool xomp_internal_guided_next(
     if (rcrtoollevel) { // has cache control been turned off by an environment variable?
         if (loop->current_workers[myShepId] > maestro_current_workers(myShepId)) {
 	    qthread_incr(&loop->current_workers[myShepId],-1); // not working spinning
-	    while ((loop->current_workers[myShepId] + 1) > maestro_current_workers(myShepId)) { // A) the number of workers to be increased
-	      if(loop->departed_workers) break; // B) some worker to notice the loop is done  -- could repeat code and return instead of breaking
+	    while (((loop->current_workers[myShepId] + 1) > maestro_current_workers(myShepId)) // A) the number of workers to be increased
+		   && (!(loop->departed_workers))) {   // B loop done and workers departing
+	      SPINLOCK_BODY();
 	    }
 	    qthread_incr(&loop->current_workers[myShepId],1); // back at work  -- skipped in departed workers case OK since everyone leaving
 
