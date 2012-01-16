@@ -19,6 +19,7 @@
 #include "qt_atomics.h"
 #include "qt_context.h"
 #include "qt_qthread_t.h"
+#include "qt_threadqueues.h"
 
 #include <pthread.h>
 #include <qt_hash.h>
@@ -48,6 +49,7 @@ typedef struct qlib_s {
 #endif
     unsigned int               nworkerspershep;
     struct qthread_shepherd_s *shepherds;
+    qt_threadqueue_t          **threadqueues;  
 
     unsigned                   qthread_stack_size;
     unsigned                   master_stack_size;

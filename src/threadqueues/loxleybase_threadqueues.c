@@ -27,9 +27,7 @@
 struct _qt_threadqueue {
 
     QTHREAD_FASTLOCK_TYPE spinlock;
-    uint32_t              padding1[(CACHELINE_WIDTH - sizeof(QTHREAD_FASTLOCK_TYPE)) / sizeof(uint32_t)];
     QTHREAD_FASTLOCK_TYPE steallock;
-    uint32_t              padding2[(CACHELINE_WIDTH - sizeof(QTHREAD_FASTLOCK_TYPE)) / sizeof(uint32_t)];
 
     qthread_shepherd_t  *creator_ptr;
     qt_stack_t stack;

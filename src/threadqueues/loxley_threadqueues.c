@@ -30,22 +30,21 @@ struct qt_threadqueue_local_s {
     unsigned int           bias;
     unsigned int           penalty;
     unsigned int           track;
-    uint32_t               padding[(CACHELINE_WIDTH - sizeof(QTHREAD_FASTLOCK_TYPE) 
-                                   - sizeof(qt_stack_t) - 3 * sizeof(unsigned int)) / sizeof(uint32_t)];
 };
 
 typedef struct qt_threadqueue_local_s qt_threadqueue_local_t;
 
 struct _qt_threadqueue {
 
+    qt_threadqueue_local_t   **local;
+
+    uint32_t padding[(CACHELINE_WIDTH - sizeof(qt_threadqueue_local_t**)) / sizeof(uint32_t)];
+
     QTHREAD_TRYLOCK_TYPE  trylock;
-    uint32_t              padding1[(CACHELINE_WIDTH - sizeof(QTHREAD_TRYLOCK_TYPE)) / sizeof(uint32_t)];
     QTHREAD_FASTLOCK_TYPE steallock;
-    uint32_t              padding2[(CACHELINE_WIDTH - sizeof(QTHREAD_FASTLOCK_TYPE)) / sizeof(uint32_t)];
 
     qthread_shepherd_t       *creator_ptr;
     qt_stack_t                shared_stack;
-    qt_threadqueue_local_t   *local;
 
     /* used for the work stealing queue implementation */
     uint32_t empty;
@@ -93,13 +92,14 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd)
         qt_stack_create(&(q->shared_stack), 1024);
         QTHREAD_TRYLOCK_INIT(q->trylock);
         QTHREAD_FASTLOCK_INIT(q->steallock);
-        posix_memalign((void **) &q->local, 64, local_length * sizeof(qt_threadqueue_local_t));
+        q->local = calloc(local_length, sizeof(qt_threadqueue_local_t*));
         for(i = 0; i < local_length; i++) {
-            qt_stack_create(&(q->local[i].stack), 1024);
-            QTHREAD_FASTLOCK_INIT(q->local[i].lock);
-            q->local[i].bias    = 0;
-            q->local[i].penalty = enqueue_penalty_min;
-            q->local[i].track   = 0;
+            posix_memalign((void **) &q->local[i], 64, sizeof(qt_threadqueue_local_t));
+            qt_stack_create(&(q->local[i]->stack), 1024);
+            QTHREAD_FASTLOCK_INIT(q->local[i]->lock);
+            q->local[i]->bias    = 0;
+            q->local[i]->penalty = enqueue_penalty_min;
+            q->local[i]->track   = 0;
         }
     }
     return q;
@@ -112,7 +112,8 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 
     qt_stack_free(&q->shared_stack);
     for(i = 0; i < local_length; i++) {
-        qt_stack_free(&(q->local[i].stack));
+        qt_stack_free(&(q->local[i]->stack));
+        free(q->local[i]);
     }
     free(q->local);
     free(q);
@@ -148,36 +149,32 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
                                      qthread_shepherd_t *shep)
 {   /*{{{*/
     int id = qt_threadqueue_worker_id();
-    QTHREAD_FASTLOCK_TYPE *local_lock  = &q->local[id].lock;
-    qt_stack_t            *local_stack = &q->local[id].stack;
-    unsigned int          *local_bias     = &q->local[id].bias;
-    unsigned int          *local_penalty  = &q->local[id].penalty;
-    unsigned int          *local_track    = &q->local[id].track;    
+    qt_threadqueue_local_t*  local = q->local[id];
 
-    if (*local_bias) {
-            QTHREAD_FASTLOCK_LOCK(local_lock);
-            qt_stack_push(local_stack, t);
-            QTHREAD_FASTLOCK_UNLOCK(local_lock);
-            (*local_bias)--;
+    if (local->bias) {
+            QTHREAD_FASTLOCK_LOCK(&local->lock);
+            qt_stack_push(&local->stack, t);
+            QTHREAD_FASTLOCK_UNLOCK(&local->lock);
+            (local->bias)--;
     } else {
         if(QTHREAD_TRYLOCK_TRY(&q->trylock)) {
             qt_stack_push(&q->shared_stack, t);
             QTHREAD_TRYLOCK_UNLOCK(&q->trylock);
-            if(++(*local_track) > enqueue_penalty_limit) {
-                if (*local_penalty > enqueue_penalty_min)
-                    *local_penalty /= 2;
-                *local_track = 0;
+            if(++(local->track) > enqueue_penalty_limit) {
+                if (local->penalty > enqueue_penalty_min)
+                    local->penalty /= 2;
+                local->track = 0;
             }
         } else {
-            QTHREAD_FASTLOCK_LOCK(local_lock);
-            qt_stack_push(local_stack, t);
-            QTHREAD_FASTLOCK_UNLOCK(local_lock);
-            if(--(*local_track) < -enqueue_penalty_limit) {
-                if (*local_penalty < enqueue_penalty_max)
-                    *local_penalty *= 2;
-                *local_track = 0;
+            QTHREAD_FASTLOCK_LOCK(&local->lock);
+            qt_stack_push(&local->stack, t);
+            QTHREAD_FASTLOCK_UNLOCK(&local->lock);
+            if(--(local->track) < -enqueue_penalty_limit) {
+                if (local->penalty < enqueue_penalty_max)
+                    local->penalty *= 2;
+                local->track = 0;
             }
-            *local_bias = *local_penalty;
+            local->bias = local->penalty;
         }
     }
 
@@ -227,10 +224,10 @@ qthread_t static QINLINE *qt_threadqueue_dequeue_helper(qt_threadqueue_t *q)
 
     for(i = 1; i < local_length; i++) {
         next = (id + i) % local_length;
-        if (!q->local[next].stack.empty) {
-            QTHREAD_FASTLOCK_LOCK(&q->local[next].lock);
-            t = qt_stack_pop(&q->local[next].stack);
-            QTHREAD_FASTLOCK_UNLOCK(&q->local[next].lock);
+        if (!q->local[next]->stack.empty) {
+            QTHREAD_FASTLOCK_LOCK(&q->local[next]->lock);
+            t = qt_stack_pop(&q->local[next]->stack);
+            QTHREAD_FASTLOCK_UNLOCK(&q->local[next]->lock);
             if (t != NULL) return(t);
         }
     }
@@ -253,15 +250,14 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
                                                     size_t            active)
 {   /*{{{*/
     int id = qt_threadqueue_worker_id();
-    QTHREAD_FASTLOCK_TYPE *local_lock  = &q->local[id].lock;
-    qt_stack_t            *local_stack = &q->local[id].stack;
+    qt_threadqueue_local_t   *local = q->local[id];
     qthread_t  *t = NULL, *retainer;
 
     for(;;) {
-        if (!local_stack->empty) {
-            QTHREAD_FASTLOCK_LOCK(local_lock);
-            t = qt_stack_pop(local_stack);
-            QTHREAD_FASTLOCK_UNLOCK(local_lock);
+        if (!local->stack.empty) {
+            QTHREAD_FASTLOCK_LOCK(&local->lock);
+            t = qt_stack_pop(&local->stack);
+            QTHREAD_FASTLOCK_UNLOCK(&local->lock);
             if (t != NULL) return(t);
         }
         if (QTHREAD_TRYLOCK_TRY(&q->trylock)) {
@@ -273,9 +269,9 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
             retainer = qt_stack_pop(&q->shared_stack);
             QTHREAD_TRYLOCK_UNLOCK(&q->trylock);
             if (retainer != NULL) {
-                QTHREAD_FASTLOCK_LOCK(local_lock);
-                qt_stack_push(local_stack, retainer);
-                QTHREAD_FASTLOCK_UNLOCK(local_lock);
+                QTHREAD_FASTLOCK_LOCK(&local->lock);
+                qt_stack_push(&local->stack, retainer);
+                QTHREAD_FASTLOCK_UNLOCK(&local->lock);
             }
         }
         if (t != NULL) return(t);
@@ -388,7 +384,7 @@ static int qt_threadqueue_steal(qt_threadqueue_t *victim_queue,
                                             stealbuffer, amtStolen);
 
     for(i = 0; (i < local_length) && (amtStolen < maxStolen); i++) {
-        amtStolen = qt_threadqueue_steal_helper(&victim_queue->local[i].stack,
+        amtStolen = qt_threadqueue_steal_helper(&victim_queue->local[i]->stack,
                                                 nostealbuffer, 
                                                 stealbuffer,
                                                 amtStolen);
@@ -452,11 +448,11 @@ static QINLINE qthread_t* qthread_steal(qt_threadqueue_t *thiefq)
 
         QTHREAD_TRYLOCK_LOCK(&victim_queue->trylock);
         for (j = 0; j < local_length; j++) {
-            QTHREAD_FASTLOCK_LOCK(&victim_queue->local[j].lock);
+            QTHREAD_FASTLOCK_LOCK(&victim_queue->local[j]->lock);
         }
         amtStolen = qt_threadqueue_steal(victim_queue, nostealbuffer, stealbuffer);
         for (j = 0; j < local_length; j++) {
-            QTHREAD_FASTLOCK_UNLOCK(&victim_queue->local[j].lock);
+            QTHREAD_FASTLOCK_UNLOCK(&victim_queue->local[j]->lock);
         }
         QTHREAD_TRYLOCK_UNLOCK(&victim_queue->trylock);
 
@@ -506,9 +502,9 @@ void INTERNAL qthread_steal_stat(void)
         for (j = 0; j < qlib->nworkerspershep; j++) {
             fprintf(stdout,
                 "shepherd %d worker %d - enqueue penalty %d bias %d track %d\n", i, j, 
-                qlib->shepherds[i].ready->local[j].penalty,
-                qlib->shepherds[i].ready->local[j].bias,
-                qlib->shepherds[i].ready->local[j].track);
+                qlib->shepherds[i].ready->local[j]->penalty,
+                qlib->shepherds[i].ready->local[j]->bias,
+                qlib->shepherds[i].ready->local[j]->track);
         }
     }
 

@@ -123,6 +123,7 @@ struct qthread_shepherd_s {
     double  empty_time;         /* total time addresses spent empty */
     size_t  empty_count;        /* num times addresses were empty */
 #endif // ifdef QTHREAD_LOCK_PROFILING
+    uint32_t padding[CACHELINE_WIDTH / sizeof(uint32_t)];
 };
 
 extern pthread_key_t shepherd_structs;

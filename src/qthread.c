@@ -133,7 +133,6 @@ static QINLINE qthread_t *qthread_thread_new(qthread_f             f,
                                              const void           *arg,
                                              size_t                arg_size,
                                              void                 *ret,
-                                             qthread_shepherd_id_t shepherd,
                                              qt_team_t            *team,
                                              int                   team_leader);
 static QINLINE void        qthread_thread_free(qthread_t *t);
@@ -355,9 +354,10 @@ static void *qthread_shepherd(void *arg)
 #else
     qthread_shepherd_t *me = (qthread_shepherd_t *)arg;
 #endif
-    qt_context_t my_context;
-    qthread_t   *t;
-    int          done = 0;
+    qt_context_t       my_context;
+    qt_threadqueue_t  *threadqueue;
+    qthread_t         *t;
+    int                done = 0;
 
 #ifdef QTHREAD_SHEPHERD_PROFILING
     me->total_time = qtimer_create();
@@ -417,6 +417,10 @@ static void *qthread_shepherd(void *arg)
     /*******************************************************************************/
     /* Workhorse Loop                                                              */
     /*******************************************************************************/
+
+    threadqueue = me->ready;
+    assert(threadqueue);
+
     while (!done) {
 #ifdef QTHREAD_SHEPHERD_PROFILING
         qtimer_start(idle);
@@ -445,9 +449,7 @@ static void *qthread_shepherd(void *arg)
             }
         }
 #endif  /* ifdef QTHREAD_RCRTOOL */
-
-        assert(me->ready);
-        t = qt_threadqueue_dequeue_blocking(me->ready QMS_ARG(QTHREAD_CASLOCK_READ_UI(me_worker->active)));
+        t = qt_threadqueue_dequeue_blocking(threadqueue QMS_ARG(QTHREAD_CASLOCK_READ_UI(me_worker->active)));
         assert(t);
 #ifdef QTHREAD_SHEPHERD_PROFILING
         qtimer_stop(idle);
@@ -517,7 +519,7 @@ qt_run:
                               t->target_shepherd->shepherd_id);
                 t->rdata->shepherd_ptr = t->target_shepherd;
                 assert(t->rdata->shepherd_ptr->ready != NULL);
-                qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t, me);
+                qt_threadqueue_enqueue(t->target_shepherd->ready, t, me);
             } else if (!QTHREAD_CASLOCK_READ_UI(me->active)) {
                 qthread_debug(THREAD_DETAILS,
                               "id(%u): skipping thread exec because I've been disabled!\n",
@@ -673,6 +675,7 @@ qt_run:
                                       "id(%u): thread %i terminated\n",
                                       me->shepherd_id, t->thread_id);
                         /* we can remove the stack etc. */
+                        Q_PREFETCH(threadqueue);
                         qthread_thread_free(t);
                         break;
                 }
@@ -938,6 +941,7 @@ int qthread_initialize(void)
     qlib->nworkerspershep   = nworkerspershep;
     qlib->nshepherds_active = nshepherds;
     qlib->shepherds         = (qthread_shepherd_t *)calloc(nshepherds, sizeof(qthread_shepherd_t));
+    qlib->threadqueues      = (qt_threadqueue_t **)calloc(nshepherds, sizeof(qt_threadqueue_t*));
     qassert_ret(qlib->shepherds, QTHREAD_MALLOC_ERROR);
 #ifdef QTHREAD_MUTEX_INCREMENT
     QTHREAD_FASTLOCK_INIT(qlib->nshepherds_active_lock);
@@ -1059,6 +1063,7 @@ int qthread_initialize(void)
         QTHREAD_CASLOCK_INIT(qlib->shepherds[i].active, 1);
         qlib->shepherds[i].ready = qt_threadqueue_new(&(qlib->shepherds[i]));
         qassert_ret(qlib->shepherds[i].ready, QTHREAD_MALLOC_ERROR);
+        qlib->threadqueues[i] = qlib->shepherds[i].ready;
 #ifdef QTHREAD_LOCK_PROFILING
 # ifdef QTHREAD_MUTEX_INCREMENT
         qlib->shepherds[i].uniqueincraddrs = qt_hash_create(need_sync);
@@ -1084,7 +1089,7 @@ int qthread_initialize(void)
  * this weirdness is so that the current thread can block the same way that
  * a qthread can. */
     qthread_debug(SHEPHERD_DETAILS, "allocating shep0\n");
-    qlib->mccoy_thread = qthread_thread_new(NULL, NULL, 0, NULL, 0, NULL, 0);
+    qlib->mccoy_thread = qthread_thread_new(NULL, NULL, 0, NULL, NULL, 0);
     qthread_debug(CORE_DETAILS, "mccoy thread = %p\n", qlib->mccoy_thread);
     qassert_ret(qlib->mccoy_thread, QTHREAD_MALLOC_ERROR);
 
@@ -1428,7 +1433,7 @@ void qthread_finalize(void)
             }
 # endif
             qthread_debug(SHEPHERD_DETAILS, "terminating shepherd %i worker %i\n", (int)i, j);
-            t = qthread_thread_new(NULL, NULL, 0, NULL, i, NULL, 0);
+            t = qthread_thread_new(NULL, NULL, 0, NULL, NULL, 0);
             assert(t != NULL);         /* what else can we do? */
             t->thread_state = QTHREAD_STATE_TERM_SHEP;
             t->thread_id    = QTHREAD_NON_TASK_ID;
@@ -1438,7 +1443,7 @@ void qthread_finalize(void)
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     for (i = 1; i < qlib->nshepherds; i++) {
         qthread_debug(SHEPHERD_DETAILS, "terminating shepherd %i\n", (int)i);
-        t = qthread_thread_new(NULL, NULL, 0, NULL, i, NULL, 0);
+        t = qthread_thread_new(NULL, NULL, 0, NULL, NULL, 0);
         assert(t != NULL);     /* what else can we do? */
         t->thread_state = QTHREAD_STATE_TERM_SHEP;
         t->thread_id    = QTHREAD_NON_TASK_ID;
@@ -1714,6 +1719,7 @@ void qthread_finalize(void)
 #endif /* ifndef UNPOOLED */
     qthread_debug(CORE_DETAILS, "destroy global shepherd array\n");
     free(qlib->shepherds);
+    free(qlib->threadqueues);
     qthread_debug(CORE_DETAILS, "destroy global data\n");
     free(qlib);
     qlib = NULL;
@@ -2000,7 +2006,6 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f             f,
                                              const void                 *arg,
                                              size_t                      arg_size,
                                              void                       *ret,
-                                             const qthread_shepherd_id_t shepherd,
                                              qt_team_t                  *team,
                                              int                         team_leader)
 {                      /*{{{ */
@@ -2427,7 +2432,17 @@ static int qthread_uberfork(qthread_f             f,
     } else {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
         if (QTHREAD_LIKELY(myshep)) {
-            dest_shep = myshep->shepherd_id; // rely on work-stealing
+            /* Accessing the field myshep->shepherd_id incurs
+             * false sharing due to a conflict with
+             * an as-yet-to-be-determined field in qthread_shepherd_t
+
+             * In the meantime, use pointer-arithmetic to determine
+             * dest_shep.
+             */
+            // dest_shep = myshep->shepherd_id; // rely on work-stealing
+
+            uintptr_t offset = ((uintptr_t) myshep) - ((uintptr_t) &(qlib->shepherds[0]));
+            dest_shep = offset / sizeof(qthread_shepherd_t); 
         } else {
             dest_shep = 0;
         }
@@ -2473,7 +2488,7 @@ static int qthread_uberfork(qthread_f             f,
         team->sinc = qt_sinc_create(0, NULL, NULL, 1);
         team_leader = 1;
     }
-    t = qthread_thread_new(f, arg, arg_size, (aligned_t *)ret, dest_shep, team, team_leader);
+    t = qthread_thread_new(f, arg, arg_size, (aligned_t *)ret, team, team_leader);
     qassert_ret(t, QTHREAD_MALLOC_ERROR);
     if (QTHREAD_UNLIKELY(target_shep != NO_SHEPHERD)) {
         t->target_shepherd = &qlib->shepherds[dest_shep];
@@ -2535,7 +2550,7 @@ static int qthread_uberfork(qthread_f             f,
     /* Step 5: Prepare the input preconditions (if necessary) */
     if (QTHREAD_LIKELY(!preconds) || (qthread_check_precond(t) == 0)) {
         /* Step 6: Set it going */
-        qt_threadqueue_enqueue(qlib->shepherds[dest_shep].ready, t, myshep);
+        qt_threadqueue_enqueue(qlib->threadqueues[dest_shep], t, myshep);
     }
     return QTHREAD_SUCCESS;
 } /*}}}*/

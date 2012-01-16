@@ -24,9 +24,6 @@ static const aligned_t tcount_children_mask  = ((QT_TCOUNT_BASE << QT_TCOUNT_OFF
 static const aligned_t tcount_finished_state = (QT_TCOUNT_BASE << QT_TCOUNT_OFFSET);
 
 static inline aligned_t tcount_create(aligned_t waiting, aligned_t children) {
-    if ((waiting > 1) || (children > tcount_children_mask)) {
-        abort();
-    }
     return((waiting << QT_TCOUNT_OFFSET) + children);
 }
 
