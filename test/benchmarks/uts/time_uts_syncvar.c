@@ -51,11 +51,9 @@ static char *shape_names[] = {
 };
 
 typedef struct {
-    int     type;         // Type of distribution of child nodes
     int     height;       // Depth of node in the tree
     struct state_t state; // Local RNG state
     int     num_children;
-    int     child_type;
 } node_t;
 
 // Default values
@@ -89,89 +87,22 @@ static int calc_num_children_bin(node_t *parent)
     return (d < non_leaf_prob) ? non_leaf_bf : 0;
 }
 
-static int calc_num_children_geo(node_t *parent)
-{
-    double bf_i = bf_0;
-    int    depth = parent->height;
-    int    num_children;
-    int    h;
-    double p;
-    double u;
-
-    if (depth > 0) {
-        switch (shape_fn) {
-            case EXPDEC:
-                bf_i = bf_0 * 
-                    pow((double)depth, -log(bf_0)/log((double)tree_depth));
-                break;
-            case CYCLIC:
-                if (depth > 5 * tree_depth) {
-                    bf_i = 0.0;
-                    break;
-                }
-                bf_i = pow(bf_0,
-                          sin(2.0 * 3.141592653589793
-                              * (double)depth / (double)tree_depth));
-                break;
-            case FIXED:
-                bf_i = (depth < tree_depth) ? bf_0 : 0;
-                break;
-            case LINEAR:
-                bf_i = bf_0 * (1.0 - (double)depth / (double)tree_depth);
-                break;
-            default:
-                fprintf(stderr, "Unknown shape function %d\n", shape_fn);
-                exit(1);
-        }
-    }
-
-    p = 1.0 / (1.0 + bf_i);
-
-    h = rng_rand(parent->state.state);
-    u = normalize(h);
-
-    num_children = (int)floor(log(1-u) / log(1-p));
-
-    return num_children;
-}
-
 static int calc_num_children(node_t *parent)
 {
     int num_children = 0;
 
-    switch (tree_type) {
-        case BIN:
-            if (parent->height == 0)
-                num_children = (int)floor(bf_0);
-            else
-                num_children = calc_num_children_bin(parent);
-            break;
-        case GEO:
-            num_children = calc_num_children_geo(parent);
-            break;
-        case HYBRID:
-            if (parent->height < shift_depth * tree_depth)
-                num_children = calc_num_children_geo(parent);
-            else
-                num_children = calc_num_children_bin(parent);
-            break;
-        case BALANCED:
-            if (parent->height < tree_depth)
-                num_children = (int)bf_0;
-            break;
-        default:
-            fprintf(stderr, "Unknown tree type %d\n", tree_type);
-            exit(1);
-    }
+    if (parent->height == 0) num_children = (int)floor(bf_0);
+    else num_children = calc_num_children_bin(parent);
 
-    if (parent->height == 0 && parent->type == BIN) {
+    if (parent->height == 0) {
         int root_bf = (int)ceil(bf_0);
         if (num_children > root_bf) {
             printf("*** Number of children truncated from %d to %d\n",
                 num_children, root_bf);
-        num_children = root_bf;
+            num_children = root_bf;
         }
-    } else if (tree_type != BALANCED) {
+    }
+    else {
         if (num_children > MAXNUMCHILDREN) {
             printf("*** Number of children truncated from %d to %d\n",
                 num_children, MAXNUMCHILDREN);
@@ -180,26 +111,6 @@ static int calc_num_children(node_t *parent)
     }
 
     return num_children;
-}
-
-static int calc_child_type(node_t *parent)
-{
-    switch (tree_type) {
-        case BIN:
-            return BIN;
-        case GEO:
-            return GEO;
-        case HYBRID:
-            if (parent->height < shift_depth * tree_depth)
-                return GEO;
-            else
-                return BALANCED;
-        case BALANCED:
-            return BALANCED;
-        default:
-            printf("Unknown type %d\n", tree_type);
-            exit(1);
-    }
 }
 
 // Notes:
@@ -224,7 +135,6 @@ static aligned_t visit(void * args_)
         }
 
         child.num_children = calc_num_children(&child);
-        child.type = calc_child_type(&child);
 
         rets[i] = SYNCVAR_EMPTY_INITIALIZER;
         qthread_fork_syncvar_copyargs(visit, &child, sizeof(node_t), &rets[i]);
@@ -357,11 +267,9 @@ int main(int argc, char *argv[])
     qtimer_start(timer);
 
     node_t root;
-    root.type = tree_type;
     root.height = 0;
     rng_init(root.state.state, root_seed);
     root.num_children = calc_num_children(&root);
-    root.child_type = calc_child_type(&root);
 
     syncvar_t ret = SYNCVAR_EMPTY_INITIALIZER;
     qthread_fork_syncvar(visit, &root, &ret);
