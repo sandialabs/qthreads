@@ -160,11 +160,12 @@ static inline void **qt_hash_internal_find(qt_hash  h,
     }
     for (unsigned i = 0; i < bucketsize; ++i) {
         Q_PREFETCH(&z[bucket + i + 1].key, 0, 1);
-        Q_PREFETCH(&z[bucket + i + 1].value, 1, 1);
-        if (z[bucket + i].key == key) {
+        //Q_PREFETCH(&z[bucket + i + 1].value, 1, 1);
+        const qt_key_t zkey = z[bucket + i].key;
+        if (zkey == key) {
             return (void *)&z[bucket + i].value;
         }
-        if (z[bucket + i].key == KEY_NULL) {
+        if (zkey == KEY_NULL) {
             return NULL;
         }
     }
@@ -176,11 +177,12 @@ static inline void **qt_hash_internal_find(qt_hash  h,
         bucket = (bucket + step) & mask;
         for (i = 0; i < bucketsize; ++i) {
             Q_PREFETCH(&z[bucket + i + 1].key, 0, 1);
-            Q_PREFETCH(&z[bucket + i + 1].value, 1, 1);
-            if (z[bucket + i].key == key) {
+            //Q_PREFETCH(&z[bucket + i + 1].value, 1, 1);
+            const qt_key_t zkey = z[bucket + i].key;
+            if (zkey == key) {
                 return (void *)&z[bucket + i].value;
             }
-            if (z[bucket + i].key == KEY_NULL) {
+            if (zkey == KEY_NULL) {
                 return NULL;
             }
         }
