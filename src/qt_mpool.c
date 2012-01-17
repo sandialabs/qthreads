@@ -261,17 +261,17 @@ void *qt_mpool_cached_alloc(qt_mpool pool)
         pthread_setspecific(pool->threadlocal_cache, tc);
     }
     cache = tc->cache;
-    cnt   = tc->count;
     qthread_debug(MPOOL_CALLS, "->cache:%p cnt:%u\n", cache, (unsigned int)cnt);
     if (cache) {
         void *ret = (void *)cache;
         cache = cache->next;
-        cnt--;
-        qthread_debug(MPOOL_BEHAVIOR, "->...cached count:%zu\n", (size_t)cnt);
+        qthread_debug(MPOOL_BEHAVIOR, "->...cached count:%zu\n", (size_t)cnt - 1);
         tc->cache = cache;
-        tc->count = cnt;
+        --tc->count;
         return ret;
     } else {
+        const size_t items_per_alloc = pool->items_per_alloc;
+        cnt   = tc->count;
         /* cache is empty; need to fill it */
         assert(cnt == 0);
         if (pool->reuse_pool) { // global cache
@@ -283,10 +283,11 @@ void *qt_mpool_cached_alloc(qt_mpool pool)
                 cache->block_tail->next = NULL;
             }
             QTHREAD_FASTLOCK_UNLOCK(&pool->reuse_lock);
-            cnt = pool->items_per_alloc;
+            cnt = items_per_alloc;
         }
         if (NULL == cache) {
             uint8_t *p;
+            const size_t item_size = pool->item_size;
 
             /* need to allocate a new block and record that I did so in the central pool */
             qthread_debug(MPOOL_DETAILS, "->...allocating new block\n");
@@ -308,23 +309,23 @@ void *qt_mpool_cached_alloc(qt_mpool pool)
             QTHREAD_FASTLOCK_UNLOCK(&pool->pool_lock);
             /* set all the pointers for this block of memory */
             {
-                qt_mpool_cache_t *const block_tail = (qt_mpool_cache_t *)&p[(pool->items_per_alloc - 1) * pool->item_size];
-                for (size_t i = 1; i < pool->items_per_alloc; ++i) {
-                    cache = (qt_mpool_cache_t *)&p[i * pool->item_size];
-                    cache->next = (qt_mpool_cache_t *)&p[(i + 1) * pool->item_size];
+                qt_mpool_cache_t *const block_tail = (qt_mpool_cache_t *)&p[(items_per_alloc - 1) * item_size];
+                for (size_t i = 1; i < items_per_alloc; ++i) {
+                    cache = (qt_mpool_cache_t *)&p[i * item_size];
+                    cache->next = (qt_mpool_cache_t *)&p[(i + 1) * item_size];
                     cache->block_tail = block_tail;
                 }
                 cache->next = NULL; // last one (this logic eliminates a branch in the loop)
                 // now for a quick sanity check
-                cache = (qt_mpool_cache_t *)&p[pool->item_size];
+                cache = (qt_mpool_cache_t *)&p[item_size];
                 assert(cache);
                 assert(cache->next);
                 assert(cache->block_tail);
                 assert(cache->block_tail->next == NULL);
             }
-            qthread_debug(MPOOL_BEHAVIOR, "->...new_malloc count:%zu (alloc'd:%zu)\n", (size_t)(pool->items_per_alloc - 1), (size_t)pool->items_per_alloc);
-            tc->cache = (qt_mpool_cache_t *)&p[pool->item_size];
-            tc->count = pool->items_per_alloc - 1;
+            qthread_debug(MPOOL_BEHAVIOR, "->...new_malloc count:%zu (alloc'd:%zu)\n", (size_t)(items_per_alloc - 1), items_per_alloc);
+            tc->cache = (qt_mpool_cache_t *)&p[item_size];
+            tc->count = items_per_alloc - 1;
             return p;
         } else {
             qthread_debug(MPOOL_BEHAVIOR, "->...from_global_pool count:%zu\n", (size_t)(cnt - 1));
