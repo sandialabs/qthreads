@@ -47,13 +47,17 @@ uts_benchmarks = \
 				 time_uts_syncvar \
 				 time_uts_sinc \
 				 time_uts_donecount
+mt_benchmarks = \
+		time_task_spawn \
+		time_eager_future
 
 benchmarks = \
              $(generic_benchmarks) \
 			 $(uts_benchmarks) \
              $(thesis_benchmarks) \
              $(pmea09_benchmarks) \
-             $(mtaap08_benchmarks)
+             $(mtaap08_benchmarks) \
+	     $(mt_benchmarks)
 
 EXTRA_PROGRAMS = $(benchmarks)
 
@@ -193,3 +197,9 @@ time_uts_sinc_DEPENDENCIES = $(qthreadlib)
 
 time_uts_donecount_SOURCES = uts/time_uts_donecount.c uts/rng/brg_sha1.c
 time_uts_donecount_DEPENDENCIES = $(qthreadlib)
+
+time_task_spawn_SOURCES = mt/time_task_spawn.c
+time_task_spawn_DEPENDENCIES = $(qthreadlib)
+
+time_eager_future_SOURCES = mt/time_eager_future.c
+time_eager_future_DEPENDENCIES = $(qthreadlib)
