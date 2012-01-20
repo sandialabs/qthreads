@@ -11,6 +11,7 @@ generic_benchmarks = \
                      time_producerconsumer \
                      time_syncvar_producerconsumer \
                      time_threading \
+                     time_threading.omp \
                      time_stencil_bsp \
                      time_stencil_feb \
                      time_stencil_pre \
@@ -49,7 +50,9 @@ uts_benchmarks = \
 				 time_uts_donecount
 mt_benchmarks = \
 		time_task_spawn \
-		time_eager_future
+		time_omp_task_spawn \
+		time_eager_future \
+		time_omp_eager_future
 
 benchmarks = \
              $(generic_benchmarks) \
@@ -171,6 +174,10 @@ time_syncvar_producerconsumer_DEPENDENCIES = $(qthreadlib)
 time_threading_SOURCES = generic/time_threading.c
 time_threading_DEPENDENCIES = $(qthreadlib)
 
+time_threading_omp_SOURCES = generic/time_threading.omp.c
+time_threading_omp_DEPENDENCIES = $(qthreadlib)
+time_threading_omp_CFLAGS = @OPENMP_CFLAGS@
+
 time_stencil_bsp_SOURCES = generic/time_stencil_bsp.c
 time_stencil_bsp_DEPENDENCIES = $(qthreadlib)
 
@@ -201,5 +208,13 @@ time_uts_donecount_DEPENDENCIES = $(qthreadlib)
 time_task_spawn_SOURCES = mt/time_task_spawn.c
 time_task_spawn_DEPENDENCIES = $(qthreadlib)
 
+time_omp_task_spawn_SOURCES = mt/time_omp_task_spawn.c
+time_omp_task_spawn_DEPENDENCIES = $(qthreadlib)
+time_omp_task_spawn_CFLAGS = @OPENMP_CFLAGS@
+
 time_eager_future_SOURCES = mt/time_eager_future.c
 time_eager_future_DEPENDENCIES = $(qthreadlib)
+
+time_omp_eager_future_SOURCES = mt/time_omp_eager_future.c
+time_omp_eager_future_DEPENDENCIES = $(qthreadlib)
+time_omp_eager_future_CFLAGS = @OPENMP_CFLAGS@

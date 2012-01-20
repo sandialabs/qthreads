@@ -4,6 +4,8 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <omp.h>
+
 #include <qthread/qthread.h>
 #include <qthread/qtimer.h>
 #include "argparsing.h"
@@ -42,27 +44,37 @@ int main(int   argc,
     NUMARG(count, "MT_COUNT");
     assert(0 != count);
 
-    assert(qthread_initialize() == 0);
+#pragma omp parallel
+#pragma omp single
+    {
+        timer = qtimer_create();
+        qtimer_start(timer);
 
-    timer = qtimer_create();
-    qtimer_start(timer);
+#pragma omp parallel for
+        for (uint64_t i = 0; i < count; i++) {
+#pragma omp task untied
+            null_task(NULL);
+        }
 
-    for (uint64_t i = 0; i < count; i++) qthread_fork(null_task, NULL, NULL);
-    do {
-        qthread_yield();
-    } while (donecount != count);
+        /*while (donecount != count) {
+         *  __asm__ __volatile__ ("":::"memory");
+         * #pragma omp taskyield
+         * }*/
+#pragma omp taskwait
 
-    qtimer_stop(timer);
+        qtimer_stop(timer);
 
-    total_time = qtimer_secs(timer);
+        total_time = qtimer_secs(timer);
 
-    qtimer_destroy(timer);
+        qtimer_destroy(timer);
 
-    printf("%lu %lu %lu %f\n",
-           (unsigned long)qthread_num_workers(),
-           (unsigned long)count,
-           (unsigned long)num_iterations,
-           total_time);
+        printf("%lu %lu %lu %f %f\n",
+               (unsigned long)omp_get_num_threads(),
+               (unsigned long)count,
+               (unsigned long)num_iterations,
+               total_time,
+               total_time / count);
+    }
 
     return 0;
 }

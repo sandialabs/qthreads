@@ -9,17 +9,18 @@
 #include "argparsing.h"
 
 static aligned_t global_scratch = 0;
-static uint64_t num_iterations = 0;
+static uint64_t  num_iterations = 0;
 
 static aligned_t null_task(void *args_)
 {
     aligned_t d = 0;
-    for (uint64_t i = 0; i < num_iterations; i++)
-        d += (2.0 * i + 1);
+
+    for (uint64_t i = 0; i < num_iterations; i++) d += (2.0 * i + 1);
     return d;
 }
 
-int main(int argc, char *argv[])
+int main(int   argc,
+         char *argv[])
 {
     uint64_t count = 0;
 
@@ -29,20 +30,18 @@ int main(int argc, char *argv[])
     CHECK_VERBOSE();
 
     NUMARG(num_iterations, "MT_NUM_ITERATIONS");
-    NUMARG(count,          "MT_COUNT");
+    NUMARG(count, "MT_COUNT");
     assert(0 != count);
 
     assert(qthread_initialize() == 0);
 
     syncvar_t rets[count];
-    for (uint64_t i = 0; i < count; i++)
-        rets[i] = SYNCVAR_EMPTY_INITIALIZER;
+    for (uint64_t i = 0; i < count; i++) rets[i] = SYNCVAR_EMPTY_INITIALIZER;
 
     timer = qtimer_create();
     qtimer_start(timer);
 
-    for (uint64_t i = 0; i < count; i++)
-        qthread_fork_syncvar(null_task, NULL, &rets[i]);
+    for (uint64_t i = 0; i < count; i++) qthread_fork_syncvar(null_task, NULL, &rets[i]);
 
     aligned_t tmp;
     for (uint64_t i = 0; i < count; i++) {
@@ -57,10 +56,10 @@ int main(int argc, char *argv[])
     qtimer_destroy(timer);
 
     printf("%lu %lu %lu %f\n",
-        (unsigned long)qthread_num_workers(),
-        count,
-        num_iterations,
-        total_time);
+           (unsigned long)qthread_num_workers(),
+           (unsigned long)count,
+           (unsigned long)num_iterations,
+           total_time);
 
     return 0;
 }
