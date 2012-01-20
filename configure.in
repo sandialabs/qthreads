@@ -547,6 +547,7 @@ AC_C_CONST
 AC_C_INLINE
 AX_C_RESTRICT
 AC_C_VOLATILE
+AX_OPENMP([have_openmp=yes], [have_openmp=no])
 
 QTHREAD_MALLOC_ATTRIBUTE
 QTHREAD_UNUSED_ATTRIBUTE
@@ -916,6 +917,7 @@ AC_SUBST(EXTRA_DISTCHECK_OPTIONS)
 AC_SUBST(qthread_topo)
 AC_SUBST(with_scheduler)
 AC_SUBST(with_sinc)
+AC_SUBST(OPENMP_CFLAGS)
 
 AM_CONDITIONAL([ENABLE_CXX_TESTS], [test "x$enable_cxx_tests" != "xno"])
 AM_CONDITIONAL([COMPILE_TARGET_SST], [test "x$qthread_implementation" = "xsst"])
@@ -931,6 +933,7 @@ AM_CONDITIONAL([COMPILE_ROSE_EXTENSIONS], [test "x$enable_rose_extensions" = "xy
 AM_CONDITIONAL([COMPILE_RCRTOOL], [test "x$enable_rcrtool" = "xyes"])
 AM_CONDITIONAL([QTHREAD_MULTITHREADED_SHEPHERDS], [test "x$enable_multithreaded_shepherds" = "xyes"])
 AM_CONDITIONAL([COMPILE_CHAPEL_INTERFACE], [test "x$compile_chapel_interface" = "xyes"])
+AM_CONDITIONAL([COMPILE_OPENMP_BENCHMARKS], [test "x$have_openmp" = "xyes"])
 
 AC_CONFIG_HEADERS([include/config.h include/qthread/common.h])
 AC_CONFIG_FILES([Makefile
