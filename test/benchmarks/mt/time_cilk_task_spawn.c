@@ -5,11 +5,12 @@
 #include <assert.h>
 #include <stdio.h>
 #include <cilk/cilk.h>
+#include <cilk/cilk_api.h>
 #include <qthread/qthread.h>
 #include <qthread/qtimer.h>
 #include "argparsing.h"
 
-static aligned_t donecount = 0;
+//static aligned_t donecount = 0;
 
 static double   global_scratch = 0;
 static unsigned long num_iterations = 0;
@@ -27,7 +28,7 @@ static aligned_t null_task(void *args_)
 {
     global_scratch = delay();
 
-    return qthread_incr(&donecount, 1);
+    return 0;
 }
 
 int main(int   argc,
@@ -62,8 +63,8 @@ int main(int   argc,
 
     qtimer_destroy(timer);
 
-    printf("%lu %lu %lu %f\n",
-           (unsigned long)qthread_num_workers(),
+    printf("%d %lu %lu %f\n",
+           __cilkrts_get_nworkers(),
            (unsigned long)count,
            (unsigned long)num_iterations,
            total_time);
