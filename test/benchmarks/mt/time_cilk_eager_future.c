@@ -4,8 +4,8 @@
 
 #include <assert.h>
 #include <stdio.h>
-#include <omp.h>
-#include <pthread.h>
+#include <cilk/cilk.h>
+#include <cilk/cilk_api.h>
 #include <qthread/qthread.h>
 #include <qthread/qtimer.h>
 #include "argparsing.h"
@@ -20,7 +20,7 @@ static aligned_t null_task(void *args_)
     aligned_t d = 0;
 
     for (uint64_t i = 0; i < num_iterations; i++) {
-        d += (2.0 * i + 1);
+	d += (2.0 * i + 1);
     }
     rets[(uintptr_t)args_] = d;
     pthread_mutex_unlock(&ret_sync[(uintptr_t)args_]);
@@ -49,42 +49,29 @@ int main(int   argc,
         pthread_mutex_lock(&ret_sync[i]);
     }
 
-#pragma omp parallel
-#pragma omp single
-    {
-        timer = qtimer_create();
-        qtimer_start(timer);
+    timer = qtimer_create();
+    qtimer_start(timer);
 
-#pragma omp parallel for
-        for (uint64_t i = 0; i < count; i++) {
-#pragma omp task untied
-            null_task((void *)(uintptr_t)i);
-        }
-
-        for (uint64_t i = 0; i < count; i++) {
-            pthread_mutex_lock(&ret_sync[i]);
-            global_scratch += rets[i];
-        }
-
-        qtimer_stop(timer);
-
-        total_time = qtimer_secs(timer);
-
-        qtimer_destroy(timer);
-
-        printf("%lu %lu %lu %f %f\n",
-               (unsigned long)omp_get_num_threads(),
-               (unsigned long)count,
-               (unsigned long)num_iterations,
-               total_time,
-               total_time / count);
+    for (uint64_t i = 0; i < count; i++) {
+        rets[i] = _Cilk_spawn null_task((void*)(uintptr_t)i);
     }
 
-    for (uint64_t i = 0; i < count; ++i) {
-        pthread_mutex_destroy(&ret_sync[i]);
+    for (uint64_t i = 0; i < count; i++) {
+        pthread_mutex_lock(&ret_sync[i]);
+        global_scratch += rets[i];
     }
-    free(ret_sync);
-    free(rets);
+
+    qtimer_stop(timer);
+
+    total_time = qtimer_secs(timer);
+
+    qtimer_destroy(timer);
+
+    printf("%lu %lu %lu %f\n",
+           (unsigned long)qthread_num_workers(),
+           (unsigned long)count,
+           (unsigned long)num_iterations,
+           total_time);
 
     return 0;
 }
