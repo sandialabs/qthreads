@@ -7,7 +7,6 @@ generic_benchmarks = \
                      time_gcd \
                      time_increments \
                      time_febs \
-		     time_fib \
                      time_producerconsumer \
                      time_syncvar_producerconsumer \
                      time_threading \
@@ -49,11 +48,13 @@ uts_benchmarks = \
 				 time_uts_sinc \
 				 time_uts_donecount
 mt_benchmarks = \
-		time_task_spawn \
-		time_omp_nofor_task_spawn \
-		time_omp_for_task_spawn \
-		time_eager_future \
-		time_omp_eager_future
+				time_task_spawn \
+				time_eager_future \
+				time_fib \
+				time_omp_nofor_task_spawn \
+				time_omp_for_task_spawn \
+				time_omp_eager_future \
+				time_omp_fib
 
 benchmarks = \
              $(generic_benchmarks) \
@@ -163,7 +164,7 @@ time_increments_DEPENDENCIES = $(qthreadlib)
 time_febs_SOURCES = generic/time_febs.c
 time_febs_DEPENDENCIES = $(qthreadlib)
 
-time_fib_SOURCES = generic/time_fib.c
+time_fib_SOURCES = mt/time_fib.c
 time_fib_DEPENDENCIES = $(qthreadlib)
 
 time_producerconsumer_SOURCES = generic/time_producerconsumer.c
@@ -219,6 +220,10 @@ time_omp_for_task_spawn_CFLAGS = @OPENMP_CFLAGS@
 
 time_eager_future_SOURCES = mt/time_eager_future.c
 time_eager_future_DEPENDENCIES = $(qthreadlib)
+
+time_omp_fib_SOURCES = mt/time_omp_fib.c
+time_omp_fib_DEPENDENCIES = $(qthreadlib)
+time_omp_fib_CFLAGS = @OPENMP_CFLAGS@
 
 time_omp_eager_future_SOURCES = mt/time_omp_eager_future.c
 time_omp_eager_future_DEPENDENCIES = $(qthreadlib)
