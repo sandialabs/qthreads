@@ -51,8 +51,7 @@ mt_benchmarks = \
 				time_task_spawn \
 				time_eager_future \
 				time_fib \
-				time_omp_nofor_task_spawn \
-				time_omp_for_task_spawn \
+				time_omp_task_spawn \
 				time_omp_eager_future \
 				time_omp_fib
 
@@ -210,13 +209,9 @@ time_uts_donecount_DEPENDENCIES = $(qthreadlib)
 time_task_spawn_SOURCES = mt/time_task_spawn.c
 time_task_spawn_DEPENDENCIES = $(qthreadlib)
 
-time_omp_nofor_task_spawn_SOURCES = mt/time_omp_nofor_task_spawn.c
-time_omp_nofor_task_spawn_DEPENDENCIES = $(qthreadlib)
-time_omp_nofor_task_spawn_CFLAGS = @OPENMP_CFLAGS@
-
-time_omp_for_task_spawn_SOURCES = mt/time_omp_for_task_spawn.c
-time_omp_for_task_spawn_DEPENDENCIES = $(qthreadlib)
-time_omp_for_task_spawn_CFLAGS = @OPENMP_CFLAGS@
+time_omp_task_spawn_SOURCES = mt/time_omp_task_spawn.c
+time_omp_task_spawn_DEPENDENCIES = $(qthreadlib)
+time_omp_task_spawn_CFLAGS = @OPENMP_CFLAGS@
 
 time_eager_future_SOURCES = mt/time_eager_future.c
 time_eager_future_DEPENDENCIES = $(qthreadlib)

@@ -31,6 +31,7 @@ int main(int   argc,
          char *argv[])
 {
     uint64_t count = 0;
+    int par_fork = 0;
 
     qtimer_t timer;
     double   total_time = 0.0;
@@ -39,6 +40,7 @@ int main(int   argc,
 
     NUMARG(num_iterations, "MT_NUM_ITERATIONS");
     NUMARG(count, "MT_COUNT");
+    NUMARG(par_fork, "MT_PAR_FORK");
     assert(0 != count);
 
     rets     = malloc(sizeof(uint64_t) * count);
@@ -53,13 +55,21 @@ int main(int   argc,
 #pragma omp single
     {
         timer = qtimer_create();
-        qtimer_start(timer);
 
+	if (par_fork) {
+	    qtimer_start(timer);
 #pragma omp parallel for
-        for (uint64_t i = 0; i < count; i++) {
+	    for (uint64_t i = 0; i < count; i++) {
 #pragma omp task untied
-            null_task((void *)(uintptr_t)i);
-        }
+		null_task((void *)(uintptr_t)i);
+	    }
+	} else {
+	    qtimer_start(timer);
+	    for (uint64_t i = 0; i < count; i++) {
+#pragma omp task untied
+		null_task((void *)(uintptr_t)i);
+	    }
+	}
 
         for (uint64_t i = 0; i < count; i++) {
             pthread_mutex_lock(&ret_sync[i]);

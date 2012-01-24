@@ -27,13 +27,14 @@ static aligned_t null_task(void *args_)
 {
     global_scratch = delay();
 
-    return qthread_incr(&donecount, 1);
+    return 0;
 }
 
 int main(int   argc,
          char *argv[])
 {
     uint64_t count = 0;
+    int par_fork = 0;
 
     qtimer_t timer;
     double   total_time = 0.0;
@@ -42,24 +43,29 @@ int main(int   argc,
 
     NUMARG(num_iterations, "MT_NUM_ITERATIONS");
     NUMARG(count, "MT_COUNT");
+    NUMARG(par_fork, "MT_PAR_FORK");
     assert(0 != count);
 
 #pragma omp parallel
 #pragma omp single
     {
         timer = qtimer_create();
-        qtimer_start(timer);
 
+	if (par_fork) {
+	    qtimer_start(timer);
 #pragma omp parallel for
-        for (uint64_t i = 0; i < count; i++) {
+	    for (uint64_t i = 0; i < count; i++) {
 #pragma omp task untied
-            null_task(NULL);
-        }
+		null_task(NULL);
+	    }
+	} else {
+	    qtimer_start(timer);
+	    for (uint64_t i = 0; i < count; i++) {
+#pragma omp task untied
+		null_task(NULL);
+	    }
+	}
 
-        /*while (donecount != count) {
-         *  __asm__ __volatile__ ("":::"memory");
-         * #pragma omp taskyield
-         * }*/
 #pragma omp taskwait
 
         qtimer_stop(timer);
