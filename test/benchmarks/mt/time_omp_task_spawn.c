@@ -10,8 +10,6 @@
 #include <qthread/qtimer.h>
 #include "argparsing.h"
 
-static aligned_t donecount = 0;
-
 static double   global_scratch = 0;
 static uint64_t num_iterations = 0;
 
