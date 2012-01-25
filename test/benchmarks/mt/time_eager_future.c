@@ -11,7 +11,6 @@
 #include <qthread/qtimer.h>
 #include "argparsing.h"
 
-static aligned_t global_scratch = 0;
 static uint64_t  num_iterations = 0;
 
 static aligned_t null_task(void *args_)
