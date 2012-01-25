@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
     qtimer_stop(timer);
 
     if (validation[n] == ret) {
-        fprintf(stdout, "%d %lu %lu %f\n", qthread_num_shepherds(), (unsigned long)n, (unsigned long)ret, qtimer_secs(timer));
+        fprintf(stdout, "%d %lu %lu %f\n", qthread_num_workers(), (unsigned long)n, (unsigned long)ret, qtimer_secs(timer));
     } else {
         iprintf("Fail %lu (== %lu) in %f sec\n", (unsigned long)ret, (unsigned long)validation[n], qtimer_secs(timer));
     }
