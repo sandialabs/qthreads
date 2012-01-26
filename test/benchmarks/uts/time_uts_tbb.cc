@@ -176,6 +176,7 @@ class UTSvisit : public task {
 
 	    set_ref_count(parent.num_children + 1);
 
+	    task_list list;
 	    for (int i = 0; i < parent.num_children; i++) {
 		child.height = parent.height + 1;
 
@@ -185,11 +186,12 @@ class UTSvisit : public task {
 
 		child.num_children = calc_num_children(&child);
 
-		UTSvisit &a = *new(allocate_child())UTSvisit(&child, &child_descendants[i]);
-		spawn(a);
+		//UTSvisit &a = *new(allocate_child())UTSvisit(&child, &child_descendants[i]);
+		list.push_back(*new(allocate_child())UTSvisit(&child, &child_descendants[i]));
+		//spawn(a);
 	    }
 
-	    wait_for_all();
+	    spawn_and_wait_for_all(list);
 
 	    // Wait for children to finish up, accumulate descendants counts
 	    for (int i = 0; i < parent.num_children; i++) {
