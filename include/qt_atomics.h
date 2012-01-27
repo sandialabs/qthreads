@@ -31,59 +31,68 @@
 # define QTHREAD_FASTLOCK_INITIALIZER TMC_SYNC_MUTEX_INIT
 #elif defined(USE_INTERNAL_SPINLOCK) && USE_INTERNAL_SPINLOCK
 typedef struct qt_spin_exclusive_s { /* added to allow fast critical section ordering */
-    aligned_t enter;    /* and not call pthreads spin_lock -- hard to debug */
-    aligned_t exit;     /* near the lock under gdb -- 4/1/11 akp */
+    aligned_t enter;                 /* and not call pthreads spin_lock -- hard to debug */
+    aligned_t exit;                  /* near the lock under gdb -- 4/1/11 akp */
 } qt_spin_exclusive_t;
 void qt_spin_exclusive_lock(qt_spin_exclusive_t *);
 void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
 # define QTHREAD_FASTLOCK_INIT(x)     { (x).enter = 0; (x).exit = 0; }
 # define QTHREAD_FASTLOCK_INIT_PTR(x) { (x)->enter = 0; (x)->exit = 0; }
-# define QTHREAD_FASTLOCK_LOCK(x)     { aligned_t val = qthread_incr(& (x)->enter, 1); \
-                                        MACHINE_FENCE;                                              \
+# define QTHREAD_FASTLOCK_LOCK(x)     { aligned_t val = qthread_incr(&(x)->enter, 1); \
+                                        MACHINE_FENCE;                                \
                                         while (val != (x)->exit) SPINLOCK_BODY(); /* spin waiting for my turn */ }
-# define QTHREAD_FASTLOCK_UNLOCK(x)   do { qthread_incr(& (x)->exit, 1); /* allow next guy's turn */ \
+# define QTHREAD_FASTLOCK_UNLOCK(x)   do { qthread_incr(&(x)->exit, 1);  /* allow next guy's turn */ \
                                            MACHINE_FENCE; } while (0)
 # define QTHREAD_FASTLOCK_DESTROY(x)
 # define QTHREAD_FASTLOCK_DESTROY_PTR(x)
 # define QTHREAD_FASTLOCK_TYPE        qt_spin_exclusive_t
-# define QTHREAD_FASTLOCK_INITIALIZER (qt_spin_exclusive_t) { 0, 0 }
+# define QTHREAD_FASTLOCK_INITIALIZER (qt_spin_exclusive_t) {0, 0 }
 #elif defined(HAVE_PTHREAD_SPIN_INIT)
 # include <pthread.h>
-# define QTHREAD_FASTLOCK_INIT(x)        pthread_spin_init(& (x), PTHREAD_PROCESS_PRIVATE)
+# define QTHREAD_FASTLOCK_INIT(x)        pthread_spin_init(&(x), PTHREAD_PROCESS_PRIVATE)
 # define QTHREAD_FASTLOCK_INIT_PTR(x)    pthread_spin_init((x), PTHREAD_PROCESS_PRIVATE)
 # define QTHREAD_FASTLOCK_LOCK(x)        pthread_spin_lock((x))
 # define QTHREAD_FASTLOCK_UNLOCK(x)      pthread_spin_unlock((x))
-# define QTHREAD_FASTLOCK_DESTROY(x)     pthread_spin_destroy(& (x))
+# define QTHREAD_FASTLOCK_DESTROY(x)     pthread_spin_destroy(&(x))
 # define QTHREAD_FASTLOCK_DESTROY_PTR(x) pthread_spin_destroy((x))
 # define QTHREAD_FASTLOCK_TYPE        pthread_spinlock_t
 # define QTHREAD_FASTLOCK_INITIALIZER PTHREAD_SPINLOCK_INITIALIZER
 #else /* fallback */
 # include <pthread.h>
-# define QTHREAD_FASTLOCK_INIT(x)        pthread_mutex_init(& (x), NULL)
+# define QTHREAD_FASTLOCK_INIT(x)        pthread_mutex_init(&(x), NULL)
 # define QTHREAD_FASTLOCK_INIT_PTR(x)    pthread_mutex_init((x), NULL)
 # define QTHREAD_FASTLOCK_LOCK(x)        pthread_mutex_lock((x))
 # define QTHREAD_FASTLOCK_UNLOCK(x)      pthread_mutex_unlock((x))
-# define QTHREAD_FASTLOCK_DESTROY(x)     pthread_mutex_destroy(& (x))
+# define QTHREAD_FASTLOCK_DESTROY(x)     pthread_mutex_destroy(&(x))
 # define QTHREAD_FASTLOCK_DESTROY_PTR(x) pthread_mutex_destroy((x))
 # define QTHREAD_FASTLOCK_TYPE        pthread_mutex_t
 # define QTHREAD_FASTLOCK_INITIALIZER PTHREAD_MUTEX_INITIALIZER
 #endif /* */
 
-
 // Trylock declarations
 
 #if defined(__tile__)
+# include <tmc/sync.h>
+# define QTHREAD_TRYLOCK_INIT(x)     tmc_sync_mutex_init(&(x))
+# define QTHREAD_TRYLOCK_INIT_PTR(x) tmc_sync_mutex_init((x))
+# define QTHREAD_TRYLOCK_LOCK(x)     tmc_sync_mutex_lock((x))
+# define QTHREAD_TRYLOCK_TRY(x)      (tmc_sync_mutex_trylock((x)) == 0)
+# define QTHREAD_TRYLOCK_UNLOCK(x)   tmc_sync_mutex_unlock((x))
+# define QTHREAD_TRYLOCK_DESTROY(x)
+# define QTHREAD_TRYLOCK_DESTROY_PTR(x)
+# define QTHREAD_TRYLOCK_TYPE        tmc_sync_mutex_t
+# define QTHREAD_TRYLOCK_INITIALIZER TMC_SYNC_MUTEX_INIT
 
 /* For the followimg implementation of try-locks,
- * it is necessary that qthread_incr() be defined on 
+ * it is necessary that qthread_incr() be defined on
  * haligned_t types. This requirement is satisfied when
  * defined(QTHREAD_ATOMIC_INCR), it remains to be determined
  * whether it is satisfied in some circumstances when
  * !defined(QTHREAD_ATOMIC_INCR).
  */
 #elif defined(USE_INTERNAL_SPINLOCK) && USE_INTERNAL_SPINLOCK \
-                                     && defined(QTHREAD_ATOMIC_INCR) \
-                                     && !defined(QTHREAD_MUTEX_INCREMENT)
+    && defined(QTHREAD_ATOMIC_INCR)                           \
+    && !defined(QTHREAD_MUTEX_INCREMENT)
 
 typedef union qt_spin_trylock_s {
     aligned_t u;
@@ -93,22 +102,24 @@ typedef union qt_spin_trylock_s {
     } s;
 } qt_spin_trylock_t;
 
-# define QTHREAD_TRYLOCK_TYPE         qt_spin_trylock_t
+# define QTHREAD_TRYLOCK_TYPE qt_spin_trylock_t
 # define QTHREAD_TRYLOCK_INIT(x)     { (x).u = 0; }
 # define QTHREAD_TRYLOCK_INIT_PTR(x) { (x)->u = 0; }
 # define QTHREAD_TRYLOCK_LOCK(x)     { uint32_t val = qthread_incr(&(x)->s.users, 1); \
-                                        MACHINE_FENCE;                                \
-                                        while (val != (x)->s.ticket) SPINLOCK_BODY(); /* spin waiting for my turn */ }
-# define QTHREAD_TRYLOCK_UNLOCK(x)   do { qthread_incr(&(x)->s.ticket, 1); /* allow next guy's turn */ \
-                                           MACHINE_FENCE; } while (0)
+                                       MACHINE_FENCE;                                 \
+                                       while (val != (x)->s.ticket) SPINLOCK_BODY(); /* spin waiting for my turn */ }
+# define QTHREAD_TRYLOCK_UNLOCK(x)   do { MACHINE_FENCE;                                               \
+                                          qthread_incr(&(x)->s.ticket, 1); /* allow next guy's turn */ \
+} while (0)
 # define QTHREAD_TRYLOCK_DESTROY(x)
 # define QTHREAD_TRYLOCK_DESTROY_PTR(x)
 
-static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t* x)
+static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t *x)
 {
-    haligned_t val = (x)->s.users;
-    haligned_t newval = val + 1;
+    haligned_t        val    = (x)->s.users;
+    haligned_t        newval = val + 1;
     qt_spin_trylock_t cmp, newcmp;
+
     cmp.s.ticket    = val;
     cmp.s.users     = val;
     newcmp.s.ticket = val;
@@ -118,29 +129,27 @@ static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t* x)
 
 #elif defined(HAVE_PTHREAD_SPIN_INIT)
 
-# define QTHREAD_TRYLOCK_TYPE           pthread_spinlock_t
-# define QTHREAD_TRYLOCK_INIT(x)        pthread_spin_init(&(x), PTHREAD_PROCESS_PRIVATE)
+# define QTHREAD_TRYLOCK_TYPE pthread_spinlock_t
+# define QTHREAD_TRYLOCK_INIT(x)        pthread_spin_init(& (x), PTHREAD_PROCESS_PRIVATE)
 # define QTHREAD_TRYLOCK_INIT_PTR(x)    pthread_spin_init((x), PTHREAD_PROCESS_PRIVATE)
 # define QTHREAD_TRYLOCK_LOCK(x)        pthread_spin_lock((x))
 # define QTHREAD_TRYLOCK_UNLOCK(x)      pthread_spin_unlock((x))
 # define QTHREAD_TRYLOCK_DESTROY(x)     pthread_spin_destroy(& (x))
 # define QTHREAD_TRYLOCK_DESTROY_PTR(x) pthread_spin_destroy((x))
-# define QTHREAD_TRYLOCK_TRY(x)        (pthread_spin_trylock((x)) == 0)
+# define QTHREAD_TRYLOCK_TRY(x)         (pthread_spin_trylock((x)) == 0)
 
 #else /* fallback */
 
-# define QTHREAD_TRYLOCK_TYPE           pthread_mutex_t
-# define QTHREAD_TRYLOCK_INIT(x)        pthread_mutex_init((&(x), PTHREAD_PROCESS_PRIVATE)
+# define QTHREAD_TRYLOCK_TYPE pthread_mutex_t
+# define QTHREAD_TRYLOCK_INIT(x)        pthread_mutex_init((& (x), PTHREAD_PROCESS_PRIVATE)
 # define QTHREAD_TRYLOCK_INIT_PTR(x)    pthread_mutex_init(((x), PTHREAD_PROCESS_PRIVATE)
 # define QTHREAD_TRYLOCK_LOCK(x)        pthread_mutex_lock((x))
 # define QTHREAD_TRYLOCK_UNLOCK(x)      pthread_mutex_unlock((x))
 # define QTHREAD_TRYLOCK_DESTROY(x)     pthread_mutex_destroy(& (x))
 # define QTHREAD_TRYLOCK_DESTROY_PTR(x) pthread_mutex_destroy((x))
-# define  QTHREAD_TRYLOCK_TRY(x)       (pthread_mutex_trylock((x)) == 0)
+# define  QTHREAD_TRYLOCK_TRY(x)        (pthread_mutex_trylock((x)) == 0)
 
-#endif
-
-
+#endif // if defined(__tile__)
 
 #define QTHREAD_INITLOCK(l)    do { if (pthread_mutex_init(l, NULL) != 0) { return QTHREAD_PTHREAD_ERROR; } } while(0)
 #define QTHREAD_LOCK(l)        qassert(pthread_mutex_lock(l), 0)
@@ -356,6 +365,7 @@ static QINLINE aligned_t qthread_internal_incr_mod_(aligned_t             *opera
                                                     const unsigned int max QTHREAD_OPTIONAL_LOCKARG)
 {                                      /*{{{ */
     aligned_t retval;
+
 #if QTHREAD_ATOMIC_CAS && (QTHREAD_SIZEOF_ALIGNED_T == 4)
     register uint32_t oldval, newval;
 
@@ -365,7 +375,7 @@ static QINLINE aligned_t qthread_internal_incr_mod_(aligned_t             *opera
         newval  = oldval + 1;
         newval *= (newval < max);
 
-	newval = __sync_val_compare_and_swap((uint32_t*)operand, oldval, newval);
+        newval = __sync_val_compare_and_swap((uint32_t *)operand, oldval, newval);
     } while (oldval != newval);
 #elif QTHREAD_ATOMIC_CAS && (QTHREAD_SIZEOF_ALIGNED_T == 8)
     register uint64_t oldval, newval;
@@ -376,7 +386,7 @@ static QINLINE aligned_t qthread_internal_incr_mod_(aligned_t             *opera
         newval  = oldval + 1;
         newval *= (newval < max);
 
-	newval = __sync_val_compare_and_swap((uint64_t*)operand, oldval, newval);
+        newval = __sync_val_compare_and_swap((uint64_t *)operand, oldval, newval);
     } while (oldval != newval);
 #elif defined(HAVE_GCC_INLINE_ASSEMBLY)
 # if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
@@ -408,7 +418,7 @@ static QINLINE aligned_t qthread_internal_incr_mod_(aligned_t             *opera
     register uint64_t incrd = incrd;
     register uint64_t compd = compd;
 
-    asm volatile ("A_%=:\n\t"                /* local label */
+    asm volatile ("A_%=:\n\t"             /* local label */
                   "ldarx  %0,0,%3\n\t"    /* load operand */
                   "addi   %2,%0,1\n\t"    /* increment it into incrd */
                   "cmpl   7,1,%2,%4\n\t"  /* compare incrd to the max */
@@ -416,7 +426,7 @@ static QINLINE aligned_t qthread_internal_incr_mod_(aligned_t             *opera
                   "rlwinm %1,%1,29,1\n\t" /* isolate the result bit */
                   "mulld  %2,%2,%1\n\t"   /* incrd *= compd */
                   "stdcx. %2,0,%3\n\t"    /* *operand = incrd */
-                  "bne-   A_%=\n\t"         /* if it failed, to to label 1 back */
+                  "bne-   A_%=\n\t"       /* if it failed, to to label 1 back */
                   "isync"                 /* make sure it wasn't all just a dream */
                   : "=&b"   (retval), "=&r" (compd), "=&r" (incrd)
                   : "r"     (operand), "r" (max)
