@@ -489,7 +489,10 @@ QTHREAD_CHECK_BITFIELDS
 ## -------------------- ##
 AC_SEARCH_LIBS([pthread_create], [pthread], [],
 			   [AC_MSG_ERROR([Qthreads requires a working pthreads implementation.])])
-AC_CHECK_FUNCS([pthread_yield pthread_spin_init])
+AC_CHECK_FUNCS([pthread_yield])
+AC_CHECK_FUNCS([pthread_spin_init],
+			   [have_pthread_spinlocks=yes],
+			   [have_pthread_spinlocks=no])
 
 AS_IF([test "x$qthread_implementation" = "xsst"],
           [AC_DEFINE([QTHREAD_SST_PRIMITIVES],[1],[Define to use the SST primitives])
@@ -704,7 +707,11 @@ AS_IF([test "x$enable_hardware_increments" = "xno"],
 			 [AS_IF([test "x$with_scheduler" != "xsherwood"],
 					[with_scheduler="sherwood"
 					 AC_MSG_WARN([Forcing scheduler to be sherwood, since hardware atomic support is lacking.])])])],
-	  [AS_IF([test "x$enable_internal_spinlock" = xyes -o "x$enable_internal_spinlock" = x],
+	  [AS_IF([test "x$enable_internal_spinlock" = x],
+			 [AS_IF([test "x$have_pthread_spinlocks" = xyes],
+					[enable_internal_spinlock=no],
+					[enable_internal_spinlock=yes])])
+	   AS_IF([test "x$enable_internal_spinlock" = xyes],
 			 [AC_DEFINE([USE_INTERNAL_SPINLOCK], [1], [Use Porterfield spinlock])])])
 
 AS_IF([test "x$enable_steal_profiling" = xyes],
