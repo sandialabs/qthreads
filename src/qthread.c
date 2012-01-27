@@ -309,6 +309,10 @@ static QINLINE void alloc_rdata(qthread_shepherd_t *me,
 #ifdef QTHREAD_RCRTOOL
 static int rcr_gate  = 0;
 static int rcr_ready = 0;
+#ifdef QTHREAD_RCRTOOL_STAT
+static double totalIdleTime = 0.0; // added for RCRTOOL level >= 3 stats
+static int idleCheckin = 0;// added for RCRTOOL level >= 3 stats
+#endif
 #endif
 
 static void hup_handler(int sig)
@@ -697,7 +701,17 @@ qt_run:
                   me->shepherd_id);
 #endif
 #ifdef QTHREAD_RCRTOOL_STAT
-    if (rcrtoollevel > 2) printf ("idle time (%d) %10f\n", me_worker->packed_worker_id,time);
+    if (rcrtoollevel > 2) {
+      totalIdleTime += time;
+      if (--idleCheckin == 1) { // next to last thread checkin (other than
+	                        // master and I don't see how to include master
+                                // thread time (it calls qthread_finalize/exit 
+	                        // and never completes the workhorse loop 
+	printf("\tTotal Idle time = %10f (%10f)\n",
+	       totalIdleTime,
+	       totalIdleTime/((qlib->nworkerspershep * qlib->nshepherds)-2)); // rcrthread + master missing
+      }
+    }
 #endif
     pthread_exit(NULL);
     return NULL;
@@ -954,6 +968,10 @@ int qthread_initialize(void)
     if (print_info) {
         fprintf(stderr, "Using %u byte stack size.\n", qlib->qthread_stack_size);
     }
+
+#ifdef QTHREAD_RCRTOOL_STAT
+    idleCheckin = (nshepherds * nworkerspershep) - 1; // don't wait for RCR thread
+#endif
 
 #ifdef QTHREAD_GUARD_PAGES
     {
@@ -1384,7 +1402,9 @@ void qthread_finalize(void)
     qthread_shepherd_t *shep0 = &(qlib->shepherds[0]);
 
 #ifdef QTHREAD_RCRTOOL_STAT
-    if (rcrtoollevel > 0) printf("Limited thread count %d times\n", adaptiveSetHigh);
+    if (rcrtoollevel > 0) {
+      printf("RCR resource contenton managment limited thread count %d times\n", adaptiveSetHigh);
+    }
 #endif
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 # ifdef STEAL_PROFILE
@@ -3100,7 +3120,10 @@ qthread_parallel_region_t *qt_parallel_region() // get active parallel region
 struct qqloop_step_handle_t *qt_loop_rose_queue_create(int64_t start,
                                                        int64_t stop,
                                                        int64_t incr);
-# define QTHREAD_NUM_LOOP_STRUCT 16
+// number of loops to allow concurrently active - unfinished because someone
+// is late starting is the normal reason more than 1 or 2
+// lowered when code to actually protect against reuse in place AKP 1/26/12
+# define QTHREAD_NUM_LOOP_STRUCT 64 
 
 int qt_omp_parallel_region_create()
 {                      /*{{{ */
@@ -3128,10 +3151,15 @@ int qt_omp_parallel_region_create()
     pr->forLoop              = NULL;
     pr->loopList             = NULL;
 
-    // create and initialize a fixed number of loop sturctures that will be used as a circular buffer to handle
-    // omp parallel for loops -- the number of different active for loops is specified by QTHREAD_NUM_LOOP_STRUCT
-    // which should be turned into an environment variable -- also we should check for the limit being hit and
-    // fail with a message rather than just giving wrong answers which may now be the case AKP 7/26/11
+    // create and initialize a fixed number of loop structures that
+    // will be used as a circular buffer to handle omp parallel for
+    // loops -- the number of different active for loops is specified
+    // by QTHREAD_NUM_LOOP_STRUCT which should be turned into an
+    // environment variable -- also we should check for the limit
+    // being hit and fail with a message rather than just giving
+    // wrong answers which may now be the case AKP 7/26/11
+
+    // Protection against reuse working AKP 1/26/12
     pr->clsSize           = QTHREAD_NUM_LOOP_STRUCT;
     pr->currentLoopNum    = malloc(sizeof(int) * workers);
     pr->currentLoopStruct = malloc(sizeof(struct qqloop_step_handle_t *) * pr->clsSize);

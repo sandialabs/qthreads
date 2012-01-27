@@ -405,7 +405,6 @@ static qqloop_step_handle_t *qt_get_parallel_loop_structure(qthread_parallel_reg
 }
 
 // handle Qthread default openmp loop initialization
-
 void xomp_internal_loop_init(
 		    enum qloop_handle_type type,
 		    int ordered,
@@ -431,16 +430,29 @@ void xomp_internal_loop_init(
   // in parallel region look up loop number with id
 
   int loopNum = qt_parallel_loop_incr(pr,myid);
-
+ 
   qqloop_step_handle_t *lp = qt_get_parallel_loop_structure(pr,loopNum);
 
+  // make sure previous use of data structure is done before reuse
+  // allowed AKP 1/26/12
+  while((lp->ready < loopNum)                     // my loop not started yet
+	&& (lp->departed_workers != lp->expected_workers) // loop not done
+	)  SPINLOCK_BODY();        // not first time though 
+  
+  // set up loop if first
   int first = qthread_incr(&lp->workers,1); 
-  if ((first == 0) & (lp->whichLoop != loopNum)) { // set up loop if first
+  if (((first) == 0) // if reusing structure previous use done and workers and departed workers values equal 
+      & (lp->whichLoop != loopNum)          // I'm looking at the correct loop
+      ) {
+
+    lp->expected_workers = qthread_num_workers();
     lp->chunkSize = chunk_size;
     lp->type = type;
     lp->iterations = 0;
     lp->whichLoop = loopNum;
-    lp->departed_workers = 0;
+    //printf("In first previous use %d\n", lp->departed_workers);
+    qthread_incr(&lp->workers,-lp->departed_workers);  // reset workers to remove previous use
+    lp->departed_workers = 0;  // no workers from this use even started yet
     lp->assignNext = lower;
     lp->assignStart = lower;
     lp->assignStop = upper;
@@ -452,12 +464,20 @@ void xomp_internal_loop_init(
     for (i =0; i < numSheps; i++) {
       lp->current_workers[i] = 0; // not me
     }
+
+    // find static scheduling interation number for each thread and reset
+    // for new loop AKP 1/26/12
+    for (i =0; i < lp->expected_workers; i++) {
+      aligned_t *myIteration = &lp->work_array + i;
+      *myIteration = 0;
+    }
 #ifdef QTHREAD_RCRTOOL
     lp->allowed_workers = maestro_allowed_workers();
 #endif
     MACHINE_FENCE;
     lp->ready = loopNum;         // use the loop number to allow other workers to start 
   }
+  //  printf("first %d departed %d myid %d\n", first ,lp->departed_workers,myid);
 
   while (lp->ready != loopNum) SPINLOCK_BODY(); // spin waiting for loop structure to be setup
                                  // ready contains the last value updated -- must match my loop
@@ -672,7 +692,7 @@ void XOMP_loop_end_nowait(
     void * lp)
 {
     qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
-    qthread_incr(&loop->workers,-1);
+    //   qthread_incr(&loop->workers,-1);
 }
 
 // Qthread implementation of a OpenMP global barrier
@@ -988,7 +1008,7 @@ void XOMP_loop_default(
     long *returnLower,
     long *returnUpper)
 {
-  qqloop_step_handle_t **loop = NULL;
+  qqloop_step_handle_t *loop = NULL;
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   aligned_t parallelWidth = qthread_num_workers();
 #else
@@ -1005,6 +1025,9 @@ void XOMP_loop_default(
   }
   xomp_internal_loop_init(STATIC_SCHED, TRUE, (void*)&loop, lower, upper, stride, chunksize);
   XOMP_loop_static_start(loop, lower, upper, stride, chunksize, returnLower, returnUpper);
+
+  // need to count down so data structure can be reused
+  qthread_incr(&loop->departed_workers,1);
 }
 
 bool XOMP_loop_dynamic_start(

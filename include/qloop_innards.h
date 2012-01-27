@@ -68,6 +68,7 @@ struct qqloop_step_handle_s {
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     aligned_t                        workers;
     aligned_t                        departed_workers;
+    aligned_t                        expected_workers; // used to decide when the data structure can be reused (expected_workers == departed_workers) AKP 1/26/12
     aligned_t                       *current_workers;  // actually allocated at end of work_array
     aligned_t                        allowed_workers;
     struct qqloop_step_handle_s     *next;
