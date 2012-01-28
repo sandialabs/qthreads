@@ -358,7 +358,8 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h
     long                   amtStolen      = 0;
     long                   desired_stolen = v->qlength_stealable / 2;
 
-    assert(q != NULL);
+    assert(h != NULL);
+    assert(v != NULL);
 
     if (desired_stolen == 0) { desired_stolen = 1; }
 
