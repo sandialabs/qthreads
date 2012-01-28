@@ -12,22 +12,8 @@
 
 //static aligned_t donecount = 0;
 
-static double   global_scratch = 0;
-static unsigned long num_iterations = 0;
-
-static double delay(void)
-{
-    double d = 0;
-    unsigned long i;
-
-    for (i = 0; i < num_iterations; i++) d += 1 / (2.0 * i + 1);
-    return d;
-}
-
 static aligned_t null_task(void *args_)
 {
-    global_scratch = delay();
-
     return 0;
 }
 
@@ -43,7 +29,6 @@ int main(int   argc,
 
     CHECK_VERBOSE();
 
-    NUMARG(num_iterations, "MT_NUM_ITERATIONS");
     NUMARG(count, "MT_COUNT");
     NUMARG(par_fork, "MT_PAR_FORK");
     assert(0 != count);
@@ -68,10 +53,9 @@ int main(int   argc,
 
     qtimer_destroy(timer);
 
-    printf("%d %lu %lu %f\n",
+    printf("%d %lu %f\n",
            __cilkrts_get_nworkers(),
            (unsigned long)count,
-           (unsigned long)num_iterations,
            total_time);
 
     return 0;

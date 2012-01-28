@@ -11,8 +11,6 @@
 #include <qthread/qtimer.h>
 #include "argparsing.h"
 
-static aligned_t        global_scratch = 0;
-static uint64_t         num_iterations = 0;
 static uint64_t        *rets           = NULL;
 static pthread_mutex_t *ret_sync       = NULL;
 
@@ -20,9 +18,6 @@ static aligned_t null_task(void *args_)
 {
     aligned_t d = 0;
 
-    for (uint64_t i = 0; i < num_iterations; i++) {
-	d += (2.0 * i + 1);
-    }
     rets[(uintptr_t)args_] = d;
     pthread_mutex_unlock(&ret_sync[(uintptr_t)args_]);
     return d;
@@ -39,7 +34,6 @@ int main(int   argc,
 
     CHECK_VERBOSE();
 
-    NUMARG(num_iterations, "MT_NUM_ITERATIONS");
     NUMARG(count, "MT_COUNT");
     NUMARG(par_fork, "MT_PAR_FORK");
     assert(0 != count);
@@ -67,7 +61,6 @@ int main(int   argc,
 
     for (uint64_t i = 0; i < count; i++) {
         pthread_mutex_lock(&ret_sync[i]);
-        global_scratch += rets[i];
     }
 
     qtimer_stop(timer);
@@ -76,10 +69,9 @@ int main(int   argc,
 
     qtimer_destroy(timer);
 
-    printf("%lu %lu %lu %f\n",
+    printf("%lu %lu %f\n",
            (unsigned long)__cilkrts_get_nworkers(),
            (unsigned long)count,
-           (unsigned long)num_iterations,
            total_time);
 
     return 0;

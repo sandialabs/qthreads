@@ -10,21 +10,8 @@
 #include <qthread/qtimer.h>
 #include "argparsing.h"
 
-static double   global_scratch = 0;
-static uint64_t num_iterations = 0;
-
-static double delay(void)
-{
-    double d = 0;
-
-    for (uint64_t i = 0; i < num_iterations; i++) d += 1 / (2.0 * i + 1);
-    return d;
-}
-
 static aligned_t null_task(void *args_)
 {
-    global_scratch = delay();
-
     return 0;
 }
 
@@ -39,7 +26,6 @@ int main(int   argc,
 
     CHECK_VERBOSE();
 
-    NUMARG(num_iterations, "MT_NUM_ITERATIONS");
     NUMARG(count, "MT_COUNT");
     NUMARG(par_fork, "MT_PAR_FORK");
     assert(0 != count);
@@ -72,10 +58,9 @@ int main(int   argc,
 
         qtimer_destroy(timer);
 
-        printf("%lu %lu %lu %f %f\n",
+        printf("%lu %lu %f %f\n",
                (unsigned long)omp_get_num_threads(),
                (unsigned long)count,
-               (unsigned long)num_iterations,
                total_time,
                total_time / count);
     }

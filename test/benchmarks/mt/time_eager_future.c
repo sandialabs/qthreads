@@ -11,26 +11,16 @@
 #include <qthread/qtimer.h>
 #include "argparsing.h"
 
-static uint64_t  num_iterations = 0;
 
 static aligned_t null_task(void *args_)
 {
-    aligned_t d = 0;
+    aligned_t tmp = 42;
 
-    for (uint64_t i = 0; i < num_iterations; i++) d += (2.0 * i + 1);
-    return d;
+    return tmp;
 }
 
-static aligned_t global_junk = 0;
 static void par_null_task(size_t start, size_t stop, void *args_)
-{
-    aligned_t d = 0;
-
-    for (uint64_t i = 0; i < num_iterations; i++) {
-	d += (2.0 * i + 1);
-    }
-    global_junk = d;
-}
+{}
 
 int main(int   argc,
          char *argv[])
@@ -43,7 +33,6 @@ int main(int   argc,
 
     CHECK_VERBOSE();
 
-    NUMARG(num_iterations, "MT_NUM_ITERATIONS");
     NUMARG(count, "MT_COUNT");
     NUMARG(par_fork, "MT_PAR_FORK");
     assert(0 != count);
@@ -75,10 +64,9 @@ int main(int   argc,
 
     qtimer_destroy(timer);
 
-    printf("%lu %lu %lu %f\n",
+    printf("%lu %lu %f\n",
            (unsigned long)qthread_num_workers(),
            (unsigned long)count,
-           (unsigned long)num_iterations,
            total_time);
 
     return 0;

@@ -19,9 +19,6 @@
 
 using namespace tbb;
 
-static aligned_t global_scratch = 0;
-static uint64_t  num_iterations = 0;
-
 class EagerFuture : public task
 {
 public:
@@ -30,7 +27,6 @@ public:
 
     task *execute(void)
     {
-        for (uint64_t i = 0; i < num_iterations; i++) d += (2.0 * i + 1);
         wait_for_me.unlock();
         return NULL;
     }
@@ -115,7 +111,6 @@ int main(int   argc,
 
     CHECK_VERBOSE();
 
-    NUMARG(num_iterations, "MT_NUM_ITERATIONS");
     NUMARG(count, "MT_COUNT");
     NUMARG(par_fork, "MT_PAR_FORK");
     NUMARG(threads, "TBB_NTHREADS");
@@ -146,10 +141,9 @@ int main(int   argc,
 
     qtimer_destroy(timer);
 
-    printf("%lu %lu %lu %f\n",
+    printf("%lu %lu %f\n",
            (unsigned long)threads,
            (unsigned long)count,
-           (unsigned long)num_iterations,
            total_time);
 
     return 0;
