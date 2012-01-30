@@ -116,14 +116,14 @@ typedef union qt_spin_trylock_s {
 
 static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t *x)
 {
-    haligned_t        val    = (x)->s.users;
-    haligned_t        newval = val + 1;
-    qt_spin_trylock_t cmp, newcmp;
+    qt_spin_trylock_t newcmp, cmp = *(x);
 
-    cmp.s.ticket    = val;
-    cmp.s.users     = val;
-    newcmp.s.ticket = val;
-    newcmp.s.users  = newval;
+    if (cmp.s.users != cmp.s.ticket) {
+        return 0;
+    }
+
+    newcmp = cmp;
+    newcmp.s.users = newcmp.s.ticket + 1;
     return(qthread_cas(&(x->u), cmp.u, newcmp.u) == cmp.u);
 }
 
