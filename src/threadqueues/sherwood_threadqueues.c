@@ -166,7 +166,7 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 /* functions to manage the thread queues */
 /*****************************************/
 
-static QINLINE void qthread_steal(qthread_shepherd_t *thief_shepherd);
+static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_shepherd);
 
 qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd)
 {   /*{{{*/
@@ -286,29 +286,28 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
         }
 
         if ((node == NULL) && (active)) {
-            qthread_steal(my_shepherd);
-        } else {
-            if (node) {                // watch out for inactive node not stealling
-                t = node->value;
-                FREE_TQNODE(node);
-                if ((t->flags & QTHREAD_MUST_BE_WORKER_ZERO)) { // only needs to be on worker 0 for termination
-                    switch(qthread_worker(NULL)) {
-                        case NO_WORKER:
-                            QTHREAD_TRAP(); // should never happen
-                            t = NULL;
-                            continue; // keep looking
-                        case 0:
-                            return(t);
+            node = qthread_steal(my_shepherd);
+        }
+        if (node) {
+            t = node->value;
+            FREE_TQNODE(node);
+            if ((t->flags & QTHREAD_MUST_BE_WORKER_ZERO)) { // only needs to be on worker 0 for termination
+                switch(qthread_worker(NULL)) {
+                    case NO_WORKER:
+                        QTHREAD_TRAP(); // should never happen
+                        t = NULL;
+                        continue; // keep looking
+                    case 0:
+                        return(t);
 
-                        default:
-                            /* McCoy thread can only run on worker 0 */
-                            qt_threadqueue_enqueue_yielded(q, t, (t->rdata) ? (t->rdata->shepherd_ptr) : NULL);
-                            t = NULL;
-                            continue; // keep looking
-                    }
-                } else {
-                    break;
+                    default:
+                        /* McCoy thread can only run on worker 0 */
+                        qt_threadqueue_enqueue_yielded(q, t, (t->rdata) ? (t->rdata->shepherd_ptr) : NULL);
+                        t = NULL;
+                        continue; // keep looking
                 }
+            } else {
+                break;
             }
         }
     }
@@ -414,8 +413,9 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h
 /*  Steal work from another shepherd's queue
  *    Returns the amount of work stolen
  */
-static QINLINE void qthread_steal(qthread_shepherd_t *thief_shepherd)
+static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_shepherd)
 {   /*{{{*/
+    qt_threadqueue_node_t *stolen = NULL;
     assert(thief_shepherd);
 
 #ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
@@ -423,7 +423,7 @@ static QINLINE void qthread_steal(qthread_shepherd_t *thief_shepherd)
 #endif
     if (thief_shepherd->stealing) {
         // this means that someone else on this shepherd is already stealing; I will spin on my own queue.
-        return;
+        return NULL;
     } else {
 #ifdef QTHREAD_OMP_AFFINITY /*{{{*/
         if (thief_shepherd->stealing_mode == QTHREAD_STEAL_ON_ALL_IDLE) {
@@ -435,7 +435,7 @@ static QINLINE void qthread_steal(qthread_shepherd_t *thief_shepherd)
         }
 #endif  /*}}}*/
         if (qthread_cas(&thief_shepherd->stealing, 0, 1) != 0) { // avoid unnecessary stealing with a CAS
-            return;
+            return NULL;
         }
     }
 #ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
@@ -445,14 +445,18 @@ static QINLINE void qthread_steal(qthread_shepherd_t *thief_shepherd)
         qthread_shepherd_t *victim_shepherd =
             &qlib->shepherds[thief_shepherd->sorted_sheplist[i - 1]];
         if (0 < victim_shepherd->ready->qlength_stealable) {
-            qt_threadqueue_node_t *stolen =
-                qt_threadqueue_dequeue_steal(thief_shepherd->ready, victim_shepherd->ready);
+            stolen = qt_threadqueue_dequeue_steal(thief_shepherd->ready, victim_shepherd->ready);
             if (stolen) {
-                qt_threadqueue_enqueue_multiple(thief_shepherd->ready, stolen,
-                                                thief_shepherd);
+                qt_threadqueue_node_t *surplus = stolen->next;
+                if (surplus) {
+                    stolen->next = NULL;
+                    surplus->prev = NULL;
+                    qt_threadqueue_enqueue_multiple(thief_shepherd->ready, surplus,
+                            thief_shepherd);
 #ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
-                qthread_incr(&thief_shepherd->steal_successful, 1);
+                    qthread_incr(&thief_shepherd->steal_successful, 1);
 #endif
+                }
                 break;
             }
 #ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
@@ -466,6 +470,7 @@ static QINLINE void qthread_steal(qthread_shepherd_t *thief_shepherd)
         }
     }
     thief_shepherd->stealing = 0;
+    return stolen;
 } /*}}}*/
 
 #ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
