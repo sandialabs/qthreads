@@ -115,7 +115,7 @@ static void qt_threadqueue_subsystem_shutdown(void)
 
 void INTERNAL qt_threadqueue_subsystem_init(void)
 {
-    steal_chunksize                  = qt_internal_get_env_num("STEAL_CHUNKSIZE", qlib->nworkerspershep, 1);
+    //steal_chunksize                  = qt_internal_get_env_num("STEAL_CHUNKSIZE", qlib->nworkerspershep, 1);
     generic_threadqueue_pools.nodes  = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), 16);
     generic_threadqueue_pools.queues = qt_mpool_create(sizeof(qt_threadqueue_t));
     qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
