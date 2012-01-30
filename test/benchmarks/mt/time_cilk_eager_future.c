@@ -11,8 +11,8 @@
 #include <qthread/qtimer.h>
 #include "argparsing.h"
 
-static uint64_t        *rets           = NULL;
-static pthread_mutex_t *ret_sync       = NULL;
+static uint64_t        *rets     = NULL;
+static pthread_mutex_t *ret_sync = NULL;
 
 static aligned_t null_task(void *args_)
 {
@@ -26,8 +26,8 @@ static aligned_t null_task(void *args_)
 int main(int   argc,
          char *argv[])
 {
-    uint64_t count = 0;
-    int par_fork = 0;
+    uint64_t count    = 0;
+    int      par_fork = 0;
 
     qtimer_t timer;
     double   total_time = 0.0;
@@ -50,13 +50,13 @@ int main(int   argc,
     qtimer_start(timer);
 
     if (par_fork) {
-	_Cilk_for (uint64_t i = 0; i < count; i++) {
-	    rets[i] = _Cilk_spawn null_task((void*)(uintptr_t)i);
-	}
+        _Cilk_for(uint64_t i = 0; i < count; i++) {
+            rets[i] = _Cilk_spawn null_task((void *)(uintptr_t)i);
+        }
     } else {
-	for (uint64_t i = 0; i < count; i++) {
-	    rets[i] = _Cilk_spawn null_task((void*)(uintptr_t)i);
-	}
+        for (uint64_t i = 0; i < count; i++) {
+            rets[i] = _Cilk_spawn null_task((void *)(uintptr_t)i);
+        }
     }
 
     for (uint64_t i = 0; i < count; i++) {

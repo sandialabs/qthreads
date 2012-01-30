@@ -67,11 +67,12 @@ static aligned_t fib(void *arg_)
     return ret1 + ret2;
 }
 
-int main(int argc, char *argv[])
+int main(int   argc,
+         char *argv[])
 {
-    qtimer_t timer = qtimer_create();
-    aligned_t n = 20;
-    aligned_t ret = 0;
+    qtimer_t  timer = qtimer_create();
+    aligned_t n     = 20;
+    aligned_t ret   = 0;
 
     /* setup */
     assert(qthread_initialize() == QTHREAD_SUCCESS);

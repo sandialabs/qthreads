@@ -18,8 +18,8 @@ static aligned_t null_task(void *args_)
 int main(int   argc,
          char *argv[])
 {
-    uint64_t count = 0;
-    int par_fork = 0;
+    uint64_t count    = 1048576;
+    int      par_fork = 0;
 
     qtimer_t timer;
     double   total_time = 0.0;
@@ -35,35 +35,34 @@ int main(int   argc,
     {
         timer = qtimer_create();
 
-	if (par_fork) {
-	    qtimer_start(timer);
+        if (par_fork) {
+            qtimer_start(timer);
 #pragma omp parallel for
-	    for (uint64_t i = 0; i < count; i++) {
+            for (uint64_t i = 0; i < count; i++) {
 #pragma omp task untied
-		null_task(NULL);
-	    }
-	} else {
-	    qtimer_start(timer);
-	    for (uint64_t i = 0; i < count; i++) {
+                null_task(NULL);
+            }
+        } else {
+            qtimer_start(timer);
+            for (uint64_t i = 0; i < count; i++) {
 #pragma omp task untied
-		null_task(NULL);
-	    }
-	}
+                null_task(NULL);
+            }
+        }
 
 #pragma omp taskwait
 
         qtimer_stop(timer);
-
-        total_time = qtimer_secs(timer);
-
-        qtimer_destroy(timer);
-
-        printf("%lu %lu %f %f\n",
-               (unsigned long)omp_get_num_threads(),
-               (unsigned long)count,
-               total_time,
-               total_time / count);
     }
+
+    total_time = qtimer_secs(timer);
+
+    qtimer_destroy(timer);
+
+    printf("%lu %lu %f\n",
+           (unsigned long)omp_get_num_threads(),
+           (unsigned long)count,
+           total_time);
 
     return 0;
 }

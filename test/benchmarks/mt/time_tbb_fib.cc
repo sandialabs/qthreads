@@ -89,9 +89,9 @@ int main(int   argc,
          char *argv[])
 {
     unsigned  threads = tbb::task_scheduler_init::default_num_threads();
-    qtimer_t  timer = qtimer_create();
-    aligned_t n     = 20;
-    aligned_t ret   = 0;
+    qtimer_t  timer   = qtimer_create();
+    aligned_t n       = 20;
+    aligned_t ret     = 0;
 
     /* setup */
     CHECK_VERBOSE();

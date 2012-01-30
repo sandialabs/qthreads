@@ -10,7 +10,7 @@
 #include <qthread/qtimer.h>
 #include "argparsing.h"
 
-//static aligned_t donecount = 0;
+// static aligned_t donecount = 0;
 
 static aligned_t null_task(void *args_)
 {
@@ -22,7 +22,7 @@ int main(int   argc,
 {
     unsigned long count = 0;
     unsigned long i;
-    int par_fork = 0;
+    int           par_fork = 0;
 
     qtimer_t timer;
     double   total_time = 0.0;
@@ -37,13 +37,13 @@ int main(int   argc,
     qtimer_start(timer);
 
     if (par_fork) {
-	_Cilk_for (i = 0; i < count; i++) {
-	    _Cilk_spawn null_task(NULL);
-	}
+        _Cilk_for(i = 0; i < count; i++) {
+            _Cilk_spawn null_task(NULL);
+        }
     } else {
-	for (i = 0; i < count; i++) {
-	    _Cilk_spawn null_task(NULL);
-	}
+        for (i = 0; i < count; i++) {
+            _Cilk_spawn null_task(NULL);
+        }
     }
     _Cilk_sync;
 

@@ -75,7 +75,7 @@ public:
         // note the -2; this task counts as one of the ones we're spawning
         parallel_for(blocked_range<uint64_t>(0, count - 2),
                      NullTaskRangeSpawner(*this),
-		     tbb::auto_partitioner());
+                     tbb::auto_partitioner());
         {
             NullTask&a = *new(allocate_child())NullTask();
 
@@ -88,9 +88,9 @@ public:
 int main(int   argc,
          char *argv[])
 {
-    unsigned long threads = task_scheduler_init::default_num_threads();
-    uint64_t count    = 0;
-    int      par_fork = 0;
+    unsigned long threads  = task_scheduler_init::default_num_threads();
+    uint64_t      count    = 0;
+    int           par_fork = 0;
 
     qtimer_t timer;
     double   total_time = 0.0;

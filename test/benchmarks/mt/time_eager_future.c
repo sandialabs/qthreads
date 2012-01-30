@@ -11,7 +11,6 @@
 #include <qthread/qtimer.h>
 #include "argparsing.h"
 
-
 static aligned_t null_task(void *args_)
 {
     aligned_t tmp = 42;
@@ -19,14 +18,16 @@ static aligned_t null_task(void *args_)
     return tmp;
 }
 
-static void par_null_task(size_t start, size_t stop, void *args_)
+static void par_null_task(size_t start,
+                          size_t stop,
+                          void  *args_)
 {}
 
 int main(int   argc,
          char *argv[])
 {
-    uint64_t count = 0;
-    int par_fork = 0;
+    uint64_t count    = 0;
+    int      par_fork = 0;
 
     qtimer_t timer;
     double   total_time = 0.0;
@@ -45,19 +46,19 @@ int main(int   argc,
     timer = qtimer_create();
 
     if (par_fork) {
-	qtimer_start(timer);
-	qt_loop_sv(0, count, par_null_task, NULL);
-	qtimer_stop(timer);
+        qtimer_start(timer);
+        qt_loop_sv(0, count, par_null_task, NULL);
+        qtimer_stop(timer);
     } else {
-	qtimer_start(timer);
-	for (uint64_t i = 0; i < count; i++) {
-	    qthread_fork_syncvar(null_task, NULL, &rets[i]);
-	}
+        qtimer_start(timer);
+        for (uint64_t i = 0; i < count; i++) {
+            qthread_fork_syncvar(null_task, NULL, &rets[i]);
+        }
 
-	for (uint64_t i = 0; i < count; i++) {
-	    qthread_syncvar_readFF(NULL, &rets[i]);
-	}
-	qtimer_stop(timer);
+        for (uint64_t i = 0; i < count; i++) {
+            qthread_syncvar_readFF(NULL, &rets[i]);
+        }
+        qtimer_stop(timer);
     }
 
     total_time = qtimer_secs(timer);

@@ -45,7 +45,7 @@ public:
         count(_count) {}
     task *execute(void)
     {
-        EagerFuture **a = new EagerFuture*[count];
+        EagerFuture **a = new EagerFuture *[count];
 
         set_ref_count(count); // note the lack of a +1
         // note the -1; this task counts as one of the ones we're spawning
@@ -57,7 +57,7 @@ public:
         for (uint64_t i = 0; i < count - 1; i++) {
             a[i]->wait_for_me.lock();
         }
-	wait_for_all();
+        wait_for_all();
         return NULL;
     }
 };
@@ -119,22 +119,22 @@ int main(int   argc,
     timer = qtimer_create();
 
     {
-	task_scheduler_init init(threads);
+        task_scheduler_init init(threads);
 
-	if (par_fork) {
-	    /*qtimer_start(timer);
-	     * qt_loop_sv(0, count, par_null_task, NULL);
-	     * qtimer_stop(timer);*/
-	    abort();
-	} else {
-	    qtimer_start(timer);
+        if (par_fork) {
+            /*qtimer_start(timer);
+             * qt_loop_sv(0, count, par_null_task, NULL);
+             * qtimer_stop(timer);*/
+            abort();
+        } else {
+            qtimer_start(timer);
 
-	    // we do it this way because the main task cannot wait on multiple sub-tasks
-	    EagerFutureSpawner &a = *new(task::allocate_root())EagerFutureSpawner(count);
+            // we do it this way because the main task cannot wait on multiple sub-tasks
+            EagerFutureSpawner &a = *new(task::allocate_root())EagerFutureSpawner(count);
 
-	    task::spawn_root_and_wait(a);
-	    qtimer_stop(timer);
-	}
+            task::spawn_root_and_wait(a);
+            qtimer_stop(timer);
+        }
     }
 
     total_time = qtimer_secs(timer);

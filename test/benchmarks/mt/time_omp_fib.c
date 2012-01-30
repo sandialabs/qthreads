@@ -68,11 +68,12 @@ static aligned_t fib(void *arg_)
     return ret1 + ret2;
 }
 
-int main(int argc, char *argv[])
+int main(int   argc,
+         char *argv[])
 {
-    qtimer_t timer = qtimer_create();
-    aligned_t n = 20;
-    aligned_t ret = 0;
+    qtimer_t  timer = qtimer_create();
+    aligned_t n     = 20;
+    aligned_t ret   = 0;
 
     /* setup */
     CHECK_VERBOSE();
@@ -81,11 +82,11 @@ int main(int argc, char *argv[])
 #pragma omp parallel
 #pragma omp single
     {
-	qtimer_start(timer);
+        qtimer_start(timer);
 #pragma omp task default(none) shared(ret,n)
-	ret = fib(&n);
+        ret = fib(&n);
 #pragma omp taskwait
-	qtimer_stop(timer);
+        qtimer_stop(timer);
     }
 
     if (validation[n] == ret) {

@@ -16,14 +16,16 @@ static aligned_t null_task(void *args_)
     return qthread_incr(&donecount, 1);
 }
 
-static void par_null_task(size_t start, size_t stop, void *args_)
+static void par_null_task(size_t start,
+                          size_t stop,
+                          void  *args_)
 {}
 
 int main(int   argc,
          char *argv[])
 {
-    uint64_t count = 0;
-    int par_fork = 0;
+    uint64_t count    = 1048576;
+    int      par_fork = 0;
 
     qtimer_t timer;
     double   total_time = 0.0;
@@ -39,16 +41,16 @@ int main(int   argc,
     timer = qtimer_create();
 
     if (par_fork) {
-	qtimer_start(timer);
+        qtimer_start(timer);
 
-	qt_loop(0, count, par_null_task, NULL);
+        qt_loop(0, count, par_null_task, NULL);
     } else {
-	qtimer_start(timer);
+        qtimer_start(timer);
 
-	for (uint64_t i = 0; i < count; i++) qthread_fork(null_task, NULL, NULL);
-	do {
-	    qthread_yield();
-	} while (donecount != count);
+        for (uint64_t i = 0; i < count; i++) qthread_fork(null_task, NULL, NULL);
+        do {
+            qthread_yield();
+        } while (donecount != count);
     }
 
     qtimer_stop(timer);
