@@ -44,7 +44,7 @@ struct _qt_threadqueue {
                                                                  */
 } /* qt_threadqueue_t */;
 
-static long steal_chunksize = 0;
+//static long steal_chunksize = 0;
 
 // Forward declarations
 qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h,
