@@ -861,7 +861,12 @@ AS_IF([test "x$qthread_topo" != xno],[
 AS_IF([test "x$qthread_topo" = "xnone_specified"],
       [qthread_topo=no])
 AS_IF([test "x$qthread_implementation" = "xunix"],
-      [# First, check for the ones that will give me distance information
+      [# First, check for hwloc, since it gives me the most portable/flexible/reliable/detailed information. Eventually, it will also give me distance information
+       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xhwloc],
+             [QTHREAD_CHECK_HWLOC([qthread_topo=hwloc],
+								  [AS_IF([test "x$qthread_topo" != xno],
+										 [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
+	   # Second, check for the ones that will give me distance information
        AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xlgrp],
              [QTHREAD_CHECK_LIBLGRP([qthread_topo=lgrp],
 									[AS_IF([test "x$qthread_topo" != xno],
@@ -875,13 +880,7 @@ AS_IF([test "x$qthread_implementation" = "xunix"],
              [QTHREAD_CHECK_TILETOPO([qthread_topo=tilera],
 									 [AS_IF([test "x$qthread_topo" != xno],
 											[AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
-       # Second, check for the ones that only give me CPU affinity control/information
-       # At the moment, hwloc does not support Mach very well,
-       # so I need to use the Mach interface directly (i.e. check it first)
-       AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xhwloc],
-             [QTHREAD_CHECK_HWLOC([qthread_topo=hwloc],
-								  [AS_IF([test "x$qthread_topo" != xno],
-										 [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
+	   # Third, check any others.
        AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xmach],
              [QTHREAD_CHECK_MACHTOPO([qthread_topo=mach],
 									 [AS_IF([test "x$qthread_topo" != xno],
