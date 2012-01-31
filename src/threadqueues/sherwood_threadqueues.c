@@ -366,41 +366,83 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h
         return NULL;
     }
     while (v->qlength_stealable > 0 && amtStolen < desired_stolen) {
+        int threadstate;
+        qthread_t *val;
         node = (qt_threadqueue_node_t *)v->head;
-        while (node != NULL &&
-               (node->value->thread_state == QTHREAD_STATE_YIELDED ||
-                node->value->thread_state == QTHREAD_STATE_TERM_SHEP ||
-                (node->value->flags & QTHREAD_UNSTEALABLE))
-               ) {
-            node = (qt_threadqueue_node_t *)node->next;
-        }
-        if (node != NULL) {
-            if (node == v->head) {
-                v->head = node->next;
-            } else {
-                node->prev->next = node->next;
+        do {
+            // Find next stealable node (if one exists)
+            while (node) {
+                val = node->value;
+                threadstate = val->thread_state;
+                if (threadstate == QTHREAD_STATE_YIELDED ||
+                        threadstate == QTHREAD_STATE_TERM_SHEP ||
+                        val->flags & QTHREAD_UNSTEALABLE) {
+                    node = node->next;
+                } else {
+                    break;
+                }
             }
-            if (node == v->tail) {
-                v->tail = node->prev;
-            } else {
-                node->next->prev = node->prev;
-            }
+            if (node != NULL) {
+                qt_threadqueue_node_t *first_stolen = node;
+                qt_threadqueue_node_t *last_stolen = node;
 
-            v->qlength--;
-            v->qlength_stealable--;
+                amtStolen++;
 
-            node->prev = node->next = NULL;
-            if (first == NULL) {
-                first = last = node;
+                // Adjust queue length(s)
+                v->qlength--;
+                v->qlength_stealable--;
+
+                // Find next unstealable node, or amount we want to steal
+                qt_threadqueue_node_t *next_to_steal = last_stolen->next;
+                while (amtStolen < desired_stolen && next_to_steal) {
+                    val = next_to_steal->value;
+                    threadstate = val->thread_state;
+                    if (threadstate == QTHREAD_STATE_YIELDED ||
+                            threadstate == QTHREAD_STATE_TERM_SHEP ||
+                            val->flags & QTHREAD_UNSTEALABLE) {
+                        break;
+                    } else {
+                        last_stolen = next_to_steal;
+
+                        amtStolen++;
+
+                        // Adjust queue length(s)
+                        v->qlength--;
+                        v->qlength_stealable--;
+
+                        next_to_steal = next_to_steal->next;
+                    }
+                }
+
+                // Patch up the victim queue
+                if (first_stolen == v->head) {
+                    v->head = last_stolen->next;
+                } else {
+                    first_stolen->prev->next = last_stolen->next;
+                }
+                if (last_stolen == v->tail) {
+                    v->tail = first_stolen->prev;
+                } else {
+                    last_stolen->next->prev = first_stolen->prev;
+                }
+
+                node = last_stolen->next;
+
+                // Update steal list (first & last)
+                first_stolen->prev = last_stolen->next = NULL;
+                if (first == NULL) {
+                    first = first_stolen;
+                    last = last_stolen;
+                } else {
+                    last->next = first_stolen;
+                    first_stolen->prev = last;
+                    last = last_stolen;
+                }
             } else {
-                last->next = node;
-                node->prev = last;
-                last       = node;
+                break;
             }
-            amtStolen++;
-        } else {
-            break;
-        }
+        } while (v->qlength_stealable > 0 && amtStolen < desired_stolen);
+        break;
     }
     QTHREAD_TRYLOCK_UNLOCK(&v->qlock);
 #ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
