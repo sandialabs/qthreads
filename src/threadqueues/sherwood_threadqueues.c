@@ -188,8 +188,6 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
     assert(q != NULL);
     assert(t != NULL);
 
-#if 0
-#else
     QTHREAD_TRYLOCK_LOCK(&q->qlock);
     node->next = NULL;
     node->prev = q->tail;
@@ -202,7 +200,6 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
     q->qlength++;
     if (node->stealable) { q->qlength_stealable++; }
     QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
-#endif /* if 0 */
 } /*}}}*/
 
 /* yielded threads enqueue at head */
