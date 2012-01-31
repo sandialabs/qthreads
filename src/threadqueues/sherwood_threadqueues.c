@@ -27,6 +27,7 @@
 struct _qt_threadqueue_node {
     struct _qt_threadqueue_node *next;
     struct _qt_threadqueue_node *prev;
+    uintptr_t                   stealable;
     qthread_t                   *value;
 } /* qt_threadqueue_node_t */;
 
@@ -116,7 +117,7 @@ static void qt_threadqueue_subsystem_shutdown(void)
 void INTERNAL qt_threadqueue_subsystem_init(void)
 {
     //steal_chunksize                  = qt_internal_get_env_num("STEAL_CHUNKSIZE", qlib->nworkerspershep, 1);
-    generic_threadqueue_pools.nodes  = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), 16);
+    generic_threadqueue_pools.nodes  = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), 32);
     generic_threadqueue_pools.queues = qt_mpool_create(sizeof(qt_threadqueue_t));
     qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
 }
@@ -193,6 +194,13 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
     FREE_THREADQUEUE(q);
 } /*}}}*/
 
+static QINLINE int qt_threadqueue_isstealable(qthread_t *t)
+{
+    return (t->thread_state != QTHREAD_STATE_YIELDED &&
+            t->thread_state != QTHREAD_STATE_TERM_SHEP &&
+            (t->flags & QTHREAD_UNSTEALABLE) == 0);
+}
+
 /* enqueue at tail */
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
                                      qthread_t          *t,
@@ -204,6 +212,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
     assert(node != NULL);
 
     node->value = t;
+    node->stealable = qt_threadqueue_isstealable(t);
 
     assert(q != NULL);
     assert(t != NULL);
@@ -220,7 +229,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
         node->prev->next = node;
     }
     q->qlength++;
-    if (!(t->flags & QTHREAD_UNSTEALABLE)) { q->qlength_stealable++; }
+    if (node->stealable) { q->qlength_stealable++; }
     QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
 #endif /* if 0 */
 } /*}}}*/
@@ -236,6 +245,7 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
     assert(node != NULL);
 
     node->value = t;
+    node->stealable = qt_threadqueue_isstealable(t);
 
     assert(q != NULL);
     assert(t != NULL);
@@ -250,7 +260,7 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
         node->next->prev = node;
     }
     q->qlength++;
-    if (!(t->flags & QTHREAD_UNSTEALABLE)) { q->qlength_stealable++; }
+    if (node->stealable) { q->qlength_stealable++; }
     QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
 } /*}}}*/
 
@@ -280,7 +290,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
                     q->tail->next = NULL;
                 }
                 q->qlength--;
-                if (!(node->value->flags & QTHREAD_UNSTEALABLE)) { q->qlength_stealable--; }
+                if (node->stealable) { q->qlength_stealable--; }
             }
             QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
         }
@@ -366,17 +376,11 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h
         return NULL;
     }
     while (v->qlength_stealable > 0 && amtStolen < desired_stolen) {
-        int threadstate;
-        qthread_t *val;
         node = (qt_threadqueue_node_t *)v->head;
         do {
             // Find next stealable node (if one exists)
             while (node) {
-                val = node->value;
-                threadstate = val->thread_state;
-                if (threadstate == QTHREAD_STATE_YIELDED ||
-                        threadstate == QTHREAD_STATE_TERM_SHEP ||
-                        val->flags & QTHREAD_UNSTEALABLE) {
+                if (!node->stealable) {
                     node = node->next;
                 } else {
                     break;
@@ -395,11 +399,7 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h
                 // Find next unstealable node, or amount we want to steal
                 qt_threadqueue_node_t *next_to_steal = last_stolen->next;
                 while (amtStolen < desired_stolen && next_to_steal) {
-                    val = next_to_steal->value;
-                    threadstate = val->thread_state;
-                    if (threadstate == QTHREAD_STATE_YIELDED ||
-                            threadstate == QTHREAD_STATE_TERM_SHEP ||
-                            val->flags & QTHREAD_UNSTEALABLE) {
+                    if (!next_to_steal->stealable) {
                         break;
                     } else {
                         last_stolen = next_to_steal;
