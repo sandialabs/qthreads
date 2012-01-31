@@ -29,12 +29,10 @@ void INTERNAL qt_threadqueue_subsystem_init(void);
 
 qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd);
 void INTERNAL              qt_threadqueue_free(qt_threadqueue_t *q);
-void INTERNAL              qt_threadqueue_enqueue(qt_threadqueue_t   *q,
-                                                  qthread_t          *t,
-                                                  qthread_shepherd_t *shep);
-void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
-                                             qthread_t          *t,
-                                             qthread_shepherd_t *shep);
+void INTERNAL              qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
+                                                  qthread_t *restrict        t);
+void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
+                                             qthread_t *restrict        t);
 ssize_t INTERNAL    qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q);
 qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q);
 

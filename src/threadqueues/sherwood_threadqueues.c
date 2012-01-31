@@ -55,8 +55,7 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h
                                                              qt_threadqueue_t *v);
 
 void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
-                                              qt_threadqueue_node_t *first,
-                                              qthread_shepherd_t    *shep);
+                                              qt_threadqueue_node_t *first);
 
 #if defined(AKP_DEBUG) && AKP_DEBUG
 /* function added to ease debugging and tuning around queue critical sections - 4/1/11 AKP */
@@ -173,9 +172,8 @@ static QINLINE int qt_threadqueue_isstealable(qthread_t *t)
 } /*}}}*/
 
 /* enqueue at tail */
-void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
-                                     qthread_t          *t,
-                                     qthread_shepherd_t *shep)
+void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
+                                     qthread_t *restrict        t)
 {   /*{{{*/
     qt_threadqueue_node_t *node;
 
@@ -203,9 +201,8 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
 } /*}}}*/
 
 /* yielded threads enqueue at head */
-void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
-                                             qthread_t          *t,
-                                             qthread_shepherd_t *shep)
+void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
+                                             qthread_t *restrict        t)
 {   /*{{{*/
     qt_threadqueue_node_t *node;
 
@@ -280,7 +277,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
 
                     default:
                         /* McCoy thread can only run on worker 0 */
-                        qt_threadqueue_enqueue_yielded(q, t, (t->rdata) ? (t->rdata->shepherd_ptr) : NULL);
+                        qt_threadqueue_enqueue_yielded(q, t);
                         t = NULL;
                         continue; // keep looking
                 }
@@ -294,8 +291,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
 
 /* enqueue multiple (from steal) */
 void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
-                                              qt_threadqueue_node_t *first,
-                                              qthread_shepherd_t    *shep)
+                                              qt_threadqueue_node_t *first)
 {   /*{{{*/
     qt_threadqueue_node_t *last;
     size_t                 addCnt = 1;
@@ -303,11 +299,9 @@ void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
     assert(first != NULL);
     assert(q != NULL);
 
-    last                         = first;
-    last->value->target_shepherd = shep;        // Defeats default of "sending home" to original shepherd
+    last = first;
     while (last->next) {
         last                         = last->next;
-        last->value->target_shepherd = shep;    // Defeats default of "sending home" to original shepherd
         addCnt++;
     }
 
@@ -421,7 +415,7 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h
 }                                      /*}}} */
 
 /*  Steal work from another shepherd's queue
- *    Returns the amount of work stolen
+ *  Returns the work stolen
  */
 static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_shepherd)
 {   /*{{{*/
@@ -462,8 +456,7 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
                 if (surplus) {
                     stolen->next  = NULL;
                     surplus->prev = NULL;
-                    qt_threadqueue_enqueue_multiple(thief_shepherd->ready, surplus,
-                                                    thief_shepherd);
+                    qt_threadqueue_enqueue_multiple(thief_shepherd->ready, surplus);
 #ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
                     qthread_incr(&thief_shepherd->steal_successful, 1);
 #endif

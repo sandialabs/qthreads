@@ -76,8 +76,7 @@ INTERNAL int qt_threadqueue_dequeue_steal(qt_threadqueue_t *q,
 
 
 void INTERNAL qt_threadqueue_resize_and_enqueue(qt_threadqueue_t   *q,
-                                                qthread_t          *t,
-                                                qthread_shepherd_t *shep);
+                                                qthread_t          *t);
 
 int static QINLINE qt_threadqueue_stealable(qthread_t *t);
 
@@ -210,9 +209,8 @@ static QINLINE void qt_threadqueue_finish(qt_threadqueue_t      *q,
 } /*}}}*/
 
 /* enqueue at tail */
-void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
-                                     qthread_t          *t,
-                                     qthread_shepherd_t *shep)
+void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *restrict q,
+                                     qthread_t          *restrict t)
 {   /*{{{*/
 
     qt_threadqueue_union_t oldtop, snapshot, lastchance;
@@ -244,7 +242,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
             // Pthread reader-writer locks will deadlock
             // on lock promotion attempts.
             rwlock_rdunlock(q->rwlock, id);
-            qt_threadqueue_resize_and_enqueue(q, t, shep);
+            qt_threadqueue_resize_and_enqueue(q, t);
             cas_profile_update(id, cycles - 1);
             return;
         }
@@ -285,7 +283,7 @@ void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
     for(int i = 1; i < stealcount; i++) {
         qthread_t *t = stealbuffer[i];
         t->target_shepherd = shep;
-        qt_threadqueue_enqueue(q, t, shep);
+        qt_threadqueue_enqueue(q, t);
     }
 
 } /*}}}*/
@@ -337,8 +335,7 @@ static QINLINE void qt_threadqueue_resize(qt_threadqueue_t *q)
 }
 
 void INTERNAL qt_threadqueue_resize_and_enqueue(qt_threadqueue_t   *q,
-                                                qthread_t          *t,
-                                                qthread_shepherd_t *shep)
+                                                qthread_t          *t)
 {   /*{{{*/
 
     int id = qthread_worker_unique(NULL);  
@@ -379,9 +376,8 @@ void INTERNAL qt_threadqueue_resize_and_enqueue(qt_threadqueue_t   *q,
 } /*}}}*/
 
 /* yielded threads enqueue at head */
-void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
-                                             qthread_t          *t,
-                                             qthread_shepherd_t *shep)
+void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *restrict q,
+                                             qthread_t          *restrict t)
 {   /*{{{*/
     int id = qthread_worker_unique(NULL);  
 
@@ -891,7 +887,7 @@ int qt_threadqueue_test() {
     qthread_t *task = qthread_thread_new(NULL, NULL, 0, NULL, 0);
 
     printf("Enqueueing task.\n");
-    qt_threadqueue_enqueue(threadqueue, task, &(qlib->shepherds[0]));
+    qt_threadqueue_enqueue(threadqueue, task);
 
     assert(threadqueue->empty != 1);
 
@@ -915,7 +911,7 @@ int qt_threadqueue_test() {
     printf("Enqueueing the same task %d times\n", size);
 
     for(int i = 0; i < size; i++) {
-        qt_threadqueue_enqueue(threadqueue, task, &(qlib->shepherds[0]));
+        qt_threadqueue_enqueue(threadqueue, task);
     }
 
     uint32_t newsize = threadqueue->size;

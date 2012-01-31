@@ -178,9 +178,8 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
     FREE_THREADQUEUE(q);
 }                                      /*}}} */
 
-void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
-                                     qthread_t          *t,
-                                     qthread_shepherd_t *shep)
+void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *restrict q,
+                                     qthread_t          *restrict t)
 {                                      /*{{{ */
     qt_threadqueue_node_t *tail;
     qt_threadqueue_node_t *next;
@@ -231,11 +230,10 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
 #endif
 }                                      /*}}} */
 
-void qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
-                                    qthread_t          *t,
-                                    qthread_shepherd_t *shep)
+void qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *restrict q,
+                                    qthread_t          *restrict t)
 {   /*{{{*/
-    qt_threadqueue_enqueue(q, t, shep);
+    qt_threadqueue_enqueue(q, t);
 } /*}}}*/
 
 qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)

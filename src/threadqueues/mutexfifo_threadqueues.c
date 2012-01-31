@@ -33,7 +33,7 @@ struct _qt_threadqueue {
     QTHREAD_FASTLOCK_TYPE  advisory_queuelen_m;
     /* the following is for estimating a queue's "busy" level, and is not
      * guaranteed accurate (that would be a race condition) */
-    saligned_t          advisory_queuelen;
+    saligned_t advisory_queuelen;
 } /* qt_threadqueue_t */;
 
 #if defined(AKP_DEBUG) && AKP_DEBUG
@@ -57,7 +57,7 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *l)
 /* Memory Management */
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
 # define ALLOC_THREADQUEUE() (qt_threadqueue_t *)calloc(1, sizeof(qt_threadqueue_t))
-# define FREE_THREADQUEUE(t)     free(t)
+# define FREE_THREADQUEUE(t) free(t)
 static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret)
 {                                      /*{{{ */
 # ifdef HAVE_MEMALIGN
@@ -161,9 +161,8 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
     FREE_THREADQUEUE(q);
 }                                      /*}}} */
 
-void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
-                                     qthread_t          *t,
-                                     qthread_shepherd_t *shep)
+void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
+                                     qthread_t *restrict        t)
 {                                      /*{{{ */
     qt_threadqueue_node_t *node;
 
@@ -179,11 +178,10 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
     QTHREAD_FASTLOCK_UNLOCK(&q->tail_lock);
 }                                      /*}}} */
 
-void qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
-                                    qthread_t          *t,
-                                    qthread_shepherd_t *shep)
+void qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
+                                    qthread_t *restrict        t)
 {   /*{{{*/
-    qt_threadqueue_enqueue(q, t, shep);
+    qt_threadqueue_enqueue(q, t);
 } /*}}}*/
 
 qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)

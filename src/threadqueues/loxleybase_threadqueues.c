@@ -90,11 +90,10 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 
 
 /* enqueue at tail */
-void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
-                                     qthread_t          *t,
-                                     qthread_shepherd_t *shep)
+void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *restrict q,
+                                     qthread_t          *restrict t)
 {   /*{{{*/
-    QTHREAD_FASTLOCK_LOCK(&q->spinlock);    
+    QTHREAD_FASTLOCK_LOCK(&q->spinlock);
     qt_stack_push(&q->stack, t);
     QTHREAD_FASTLOCK_UNLOCK(&q->spinlock);
     q->empty = 0;
@@ -121,9 +120,8 @@ void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
 } /*}}}*/
 
 /* yielded threads enqueue at head */
-void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
-                                             qthread_t          *t,
-                                             qthread_shepherd_t *shep)
+void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *restrict q,
+                                             qthread_t          *restrict t)
 {   /*{{{*/
 
     QTHREAD_FASTLOCK_LOCK(&q->spinlock);

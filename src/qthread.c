@@ -491,7 +491,7 @@ qt_run:
         } else {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
             if(!QTHREAD_CASLOCK_READ_UI(me_worker->active)) {
-                qt_threadqueue_enqueue(me->ready, t, me);
+                qt_threadqueue_enqueue(me->ready, t);
                 // short stall to prevent worker from monoplizing queue
                 struct timespec req = { .tv_sec = 0, .tv_nsec = 10000000L };
                 nanosleep(&req, &req);
@@ -523,7 +523,7 @@ qt_run:
                               t->target_shepherd->shepherd_id);
                 t->rdata->shepherd_ptr = t->target_shepherd;
                 assert(t->rdata->shepherd_ptr->ready != NULL);
-                qt_threadqueue_enqueue(t->target_shepherd->ready, t, me);
+                qt_threadqueue_enqueue(t->target_shepherd->ready, t);
             } else if (!QTHREAD_CASLOCK_READ_UI(me->active)) {
                 qthread_debug(THREAD_DETAILS,
                               "id(%u): skipping thread exec because I've been disabled!\n",
@@ -552,7 +552,7 @@ qt_run:
                               me->shepherd_id, t->thread_id,
                               t->rdata->shepherd_ptr->shepherd_id);
                 assert(t->rdata->shepherd_ptr->ready != NULL);
-                qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t, me);
+                qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t);
             } else {           /* me->active */
 
 #ifdef QTHREAD_SHEPHERD_PROFILING
@@ -589,7 +589,7 @@ qt_run:
                         t->thread_state        = QTHREAD_STATE_RUNNING;
                         t->rdata->shepherd_ptr = t->target_shepherd;
                         assert(t->rdata->shepherd_ptr->ready != NULL);
-                        qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t, me);
+                        qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t);
                         break;
                     default:
                         qthread_debug(THREAD_DETAILS, "id(%u): thread in state %i; that's illegal!\n", me->shepherd_id, t->thread_state);
@@ -601,7 +601,7 @@ qt_run:
                                       "id(%u): thread %i yielded; rescheduling\n",
                                       me->shepherd_id, t->thread_id);
                         assert(me->ready != NULL);
-                        qt_threadqueue_enqueue_yielded(me->ready, t, me);
+                        qt_threadqueue_enqueue_yielded(me->ready, t);
                         break;
 
                     case QTHREAD_STATE_FEB_BLOCKED: /* unlock the related FEB address locks, and re-arrange memory to be correct */
@@ -1136,7 +1136,7 @@ int qthread_initialize(void)
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     pthread_setspecific(shepherd_structs, &(qlib->shepherds[0].workers[0]));
 #endif
-    qt_threadqueue_enqueue(qlib->shepherds[0].ready, qlib->mccoy_thread, &(qlib->shepherds[0]));
+    qt_threadqueue_enqueue(qlib->shepherds[0].ready, qlib->mccoy_thread);
     qassert(getcontext(&(qlib->mccoy_thread->rdata->context)), 0);
     qassert(getcontext(&(qlib->master_context)), 0);
 /* now build the context for the shepherd 0 */
@@ -1419,8 +1419,7 @@ void qthread_finalize(void)
     worker = qthread_internal_getworker();
     if (worker && (worker->packed_worker_id != 0)) {           /* Only run finalize on shepherd 0 worker 0*/
         worker->current->thread_state = QTHREAD_STATE_YIELDED; /* Otherwise, put back */
-        //      qt_threadqueue_enqueue(shep0->ready, worker->current,
-        //             shep0);
+        //      qt_threadqueue_enqueue(shep0->ready, worker->current);
         return; // AKP 11/2/11 I think that is if statement catches the case that exit is called within a
         // parallel region so a random stream reaches here.  we return rather than requeue because we just
         // want to exit (something bad happened) [my speculation]
@@ -1457,7 +1456,7 @@ void qthread_finalize(void)
             assert(t != NULL);         /* what else can we do? */
             t->thread_state = QTHREAD_STATE_TERM_SHEP;
             t->thread_id    = QTHREAD_NON_TASK_ID;
-            qt_threadqueue_enqueue(qlib->shepherds[i].ready, t, shep0);
+            qt_threadqueue_enqueue(qlib->shepherds[i].ready, t);
         }
     }
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
@@ -1467,7 +1466,7 @@ void qthread_finalize(void)
         assert(t != NULL);     /* what else can we do? */
         t->thread_state = QTHREAD_STATE_TERM_SHEP;
         t->thread_id    = QTHREAD_NON_TASK_ID;
-        qt_threadqueue_enqueue(qlib->shepherds[i].ready, t, shep0);
+        qt_threadqueue_enqueue(qlib->shepherds[i].ready, t);
     }
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
@@ -2518,9 +2517,6 @@ static int qthread_uberfork(qthread_f             f,
         t->thread_state = QTHREAD_STATE_NASCENT; // special non-executable state
         t->preconds     = preconds;
         t->npreconds    = npreconds;
-        if (t->target_shepherd == NULL) {
-            t->target_shepherd = (void *)(uintptr_t)dest_shep;
-        }
     }
     t->id = target_shep;  /* used in barrier and arrive_first, NOT the
                            * thread-id may be extraneous in both when parallel
@@ -2570,7 +2566,7 @@ static int qthread_uberfork(qthread_f             f,
     /* Step 5: Prepare the input preconditions (if necessary) */
     if (QTHREAD_LIKELY(!preconds) || (qthread_check_precond(t) == 0)) {
         /* Step 6: Set it going */
-        qt_threadqueue_enqueue(qlib->threadqueues[dest_shep], t, myshep);
+        qt_threadqueue_enqueue(qlib->threadqueues[dest_shep], t);
     }
     return QTHREAD_SUCCESS;
 } /*}}}*/
@@ -2994,9 +2990,6 @@ int INTERNAL qthread_check_precond(qthread_t *t)
 
     // All input preconds are full
     t->thread_state = QTHREAD_STATE_NEW;
-    if ((uintptr_t)t->target_shepherd < qlib->nshepherds) {
-        t->target_shepherd = NULL;
-    }
 
     return 0;
 } /*}}}*/

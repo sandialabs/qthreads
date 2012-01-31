@@ -257,7 +257,7 @@ int qthread_unlock(const aligned_t *a)
          * return to the shepherd that setcontext()'d into them, so they
          * must remain in that queue.
          */
-        qt_threadqueue_enqueue(u->rdata->shepherd_ptr->ready, u, me->rdata->shepherd_ptr);
+        qt_threadqueue_enqueue(u->rdata->shepherd_ptr->ready, u);
 
         QTHREAD_UNLOCK(&m->waiting->lock);
         QTHREAD_FASTLOCK_UNLOCK(&m->lock);

@@ -119,9 +119,8 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
     FREE_THREADQUEUE(q);
 }                                      /*}}} */
 
-void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict   q,
-                                     qthread_t *restrict          t,
-                                     qthread_shepherd_t *restrict shep)
+void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
+                                     qthread_t *restrict        t)
 {                                      /*{{{ */
     assert(t->next == NULL);
     NEMESIS_entry *prev = qt_internal_atomic_swap_ptr((void **)&(q->q.tail), t);
@@ -148,11 +147,10 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict   q,
 #endif /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
 }                                      /*}}} */
 
-void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
-                                             qthread_t          *t,
-                                             qthread_shepherd_t *shep)
+void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
+                                             qthread_t *restrict        t)
 {                                      /*{{{ */
-    qt_threadqueue_enqueue(q, t, shep);
+    qt_threadqueue_enqueue(q, t);
 }                                      /*}}} */
 
 ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)

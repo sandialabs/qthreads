@@ -201,7 +201,7 @@ static QINLINE void qthread_gotlock_empty(qthread_shepherd_t *shep,
         }
         /* requeue */
         X->waiter->thread_state = QTHREAD_STATE_RUNNING;
-        qt_threadqueue_enqueue(X->waiter->rdata->shepherd_ptr->ready, X->waiter, shep);
+        qt_threadqueue_enqueue(X->waiter->rdata->shepherd_ptr->ready, X->waiter);
         FREE_ADDRRES(X);
         qthread_gotlock_fill(shep, m, maddr, 1);
     }
@@ -250,15 +250,14 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t *shep,
              * have this problem. Also, this allows the "work" of checking
              * preconds to be load-balanced by workstealing schedulers, if
              * that's important or useful. */
-            if ((uintptr_t)(X->waiter->target_shepherd) < qlib->nshepherds) {
-                qthread_shepherd_id_t dest_shep = (uintptr_t)X->waiter->target_shepherd;
-                qt_threadqueue_enqueue(qlib->shepherds[dest_shep].ready, X->waiter, shep);
+            if (X->waiter->target_shepherd == NULL) {
+                qt_threadqueue_enqueue(shep->ready, X->waiter);
             } else {
-                qt_threadqueue_enqueue(X->waiter->target_shepherd->ready, X->waiter, shep);
+                qt_threadqueue_enqueue(X->waiter->target_shepherd->ready, X->waiter);
             }
         } else {
             X->waiter->thread_state = QTHREAD_STATE_RUNNING;
-            qt_threadqueue_enqueue(X->waiter->rdata->shepherd_ptr->ready, X->waiter, shep);
+            qt_threadqueue_enqueue(X->waiter->rdata->shepherd_ptr->ready, X->waiter);
         }
         FREE_ADDRRES(X);
     }
@@ -275,7 +274,7 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t *shep,
         }
         waiter               = X->waiter;
         waiter->thread_state = QTHREAD_STATE_RUNNING;
-        qt_threadqueue_enqueue(waiter->rdata->shepherd_ptr->ready, waiter, shep);
+        qt_threadqueue_enqueue(waiter->rdata->shepherd_ptr->ready, waiter);
         FREE_ADDRRES(X);
         qthread_gotlock_empty(shep, m, maddr, 1);
     }

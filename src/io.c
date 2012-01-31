@@ -356,7 +356,7 @@ int INTERNAL qt_process_blocking_calls(void)
         }
     }
     /* and now, re-queue */
-    qt_threadqueue_enqueue(item->thread->rdata->shepherd_ptr->ready, item->thread, item->thread->rdata->shepherd_ptr);
+    qt_threadqueue_enqueue(item->thread->rdata->shepherd_ptr->ready, item->thread);
     return 0;
 } /*}}}*/
 

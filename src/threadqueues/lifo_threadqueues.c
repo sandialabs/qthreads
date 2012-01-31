@@ -29,18 +29,18 @@ struct _qt_threadqueue {
     qthread_t *stack;
     /* the following is for estimating a queue's "busy" level, and is not
      * guaranteed accurate (that would be a race condition) */
-    saligned_t          advisory_queuelen;
+    saligned_t      advisory_queuelen;
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-    uint32_t            frustration;
-    pthread_cond_t      trigger;
-    pthread_mutex_t     trigger_lock;
+    uint32_t        frustration;
+    pthread_cond_t  trigger;
+    pthread_mutex_t trigger_lock;
 #endif
 } /* qt_threadqueue_t */;
 
 /* Memory Management */
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
 # define ALLOC_THREADQUEUE() (qt_threadqueue_t *)calloc(1, sizeof(qt_threadqueue_t))
-# define FREE_THREADQUEUE(t)     free(t)
+# define FREE_THREADQUEUE(t) free(t)
 void INTERNAL qt_threadqueue_subsystem_init(void) {}
 #else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 qt_threadqueue_pools_t generic_threadqueue_pools = { NULL, NULL };
@@ -104,9 +104,8 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
     FREE_THREADQUEUE(q);
 } /*}}}*/
 
-void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict   q,
-                                     qthread_t *restrict          t,
-                                     qthread_shepherd_t *restrict shep)
+void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
+                                     qthread_t *restrict        t)
 {   /*{{{*/
     assert(q);
     assert(t);
@@ -133,18 +132,17 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict   q,
 #endif
 } /*}}}*/
 
-void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
-                                             qthread_t          *t,
-                                             qthread_shepherd_t *shep)
+void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
+                                             qthread_t *restrict        t)
 {   /*{{{*/
     assert(q);
     assert(t);
     assert(t->next == NULL);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_t *top = qt_threadqueue_dequeue(q);
-    qt_threadqueue_enqueue(q, t, shep);
+    qt_threadqueue_enqueue(q, t);
     if (top) {
-        qt_threadqueue_enqueue(q, top, shep);
+        qt_threadqueue_enqueue(q, top);
     }
 #else
     /* THIS is not safe for multiple dequeuers */
@@ -156,7 +154,7 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
         assert(cursor->next == NULL);
         cursor->next = t;
     } else {
-        qt_threadqueue_enqueue(q, t, shep);
+        qt_threadqueue_enqueue(q, t);
     }
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 } /*}}}*/

@@ -139,9 +139,8 @@ static QINLINE qthread_worker_id_t qt_threadqueue_worker_id(void)
 
 
 /* enqueue at tail */
-void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *q,
-                                     qthread_t          *t,
-                                     qthread_shepherd_t *shep)
+void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *restrict q,
+                                     qthread_t          *restrict t)
 {   /*{{{*/
     int id = qt_threadqueue_worker_id();
     qt_threadqueue_local_t*  local = q->local[id];
@@ -197,9 +196,8 @@ void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
 } /*}}}*/
 
 /* yielded threads enqueue at head */
-void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *q,
-                                             qthread_t          *t,
-                                             qthread_shepherd_t *shep)
+void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *restrict q,
+                                             qthread_t          *restrict t)
 {   /*{{{*/
 
     QTHREAD_TRYLOCK_LOCK(&q->trylock);
