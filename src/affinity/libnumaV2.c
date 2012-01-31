@@ -3,6 +3,7 @@
 #endif
 
 #include <numa.h>
+#include <stdio.h>
 
 #include "qthread_innards.h"
 #include "qt_affinity.h"
@@ -14,7 +15,7 @@
 static struct bitmask *mccoy_bitmask = NULL;
 
 qthread_shepherd_id_t guess_num_shepherds(void);
-qthread_worker_id_t guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds);
+qthread_worker_id_t   guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds);
 
 static void qt_affinity_internal_numaV2_teardown(void)
 {
@@ -22,8 +23,9 @@ static void qt_affinity_internal_numaV2_teardown(void)
 }
 
 void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
-                               qthread_worker_id_t *nbworkers)
+                               qthread_worker_id_t   *nbworkers)
 {                                      /*{{{ */
+    qthread_debug(AFFINITY_FUNCTIONS, "start\n");
     qassert(numa_available(), 0);
     mccoy_bitmask = numa_get_run_node_mask();
     qthread_internal_cleanup(qt_affinity_internal_numaV2_teardown);
@@ -64,6 +66,7 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
     qthread_shepherd_id_t nshepherds = 1;
 
     if (numa_available() != 1) {
+        qthread_debug(AFFINITY_FUNCTIONS, "numa_available != 1\n");
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
         /* this is (probably) correct if/when we have multithreaded shepherds,
          * ... BUT ONLY IF ALL NODES HAVE CPUS!!!!!! */
@@ -96,25 +99,116 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
     if (nshepherds <= 0) {
         nshepherds = 1;
     }
+    qthread_debug(AFFINITY_FUNCTIONS, "guessing %i shepherds\n", (int)nshepherds);
     return nshepherds;
 }                                      /*}}} */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 void INTERNAL qt_affinity_set(qthread_worker_t *me)
 {                                      /*{{{ */
-    if (numa_run_on_node(me->shepherd->node) != 0) {
-        numa_error("setting thread affinity");
+    assert(me);
+
+    qthread_shepherd_t *const myshep      = me->shepherd;
+    struct bitmask           *shep_cpuset = numa_allocate_cpumask();
+    assert(shep_cpuset);
+    unsigned int maxshepobjs         = guess_num_shepherds();
+    unsigned int workerobjs_per_shep = 0;
+
+    numa_node_to_cpus(myshep->node, shep_cpuset);
+    for (size_t j = 0; j < numa_bitmask_nbytes(shep_cpuset) * 8; j++) {
+        workerobjs_per_shep += numa_bitmask_isbitset(shep_cpuset, j) ? 1 : 0;
     }
-    numa_set_preferred(me->shepherd->node);
+# ifdef QTHREAD_DEBUG_AFFINITY
+    {
+        char bitmask_str[numa_bitmask_nbytes(shep_cpuset) * 2];
+        for (size_t byte = 0; byte < numa_bitmask_nbytes(shep_cpuset); byte++) {
+            int byte_mask = 0;
+            int cnt       = 0;
+            for (int bit = 0; bit < 8; bit++) {
+                if (numa_bitmask_isbitset(shep_cpuset, (byte * 8) + bit)) {
+                    byte_mask |= 1 << bit;
+                    qthread_debug(AFFINITY_DETAILS, "byte %i, bit %i\n", byte, bit);
+                    cnt++;
+                }
+            }
+            sprintf(&bitmask_str[byte * 2], "%02x", byte_mask);
+        }
+        qthread_debug(AFFINITY_CALLS, "set %i(%i) worker %i [%i], there are %u PUs, shepmask = %s\n",
+                      (int)myshep->shepherd_id,
+                      (int)myshep->node,
+                      (int)me->worker_id,
+                      (int)me->packed_worker_id,
+                      workerobjs_per_shep,
+                      bitmask_str);
+    }
+# endif /* ifdef QTHREAD_DEBUG_AFFINITY */
+
+    unsigned int    shep_pus           = workerobjs_per_shep;
+    unsigned int    worker_pus         = 1;
+    unsigned int    wraparounds        = me->packed_worker_id / (maxshepobjs * qlib->nworkerspershep);
+    unsigned int    worker_wraparounds = me->worker_id / workerobjs_per_shep;
+    struct bitmask *wkr_cpuset         = numa_allocate_cpumask();
+    assert(wkr_cpuset);
+    {
+        size_t cnt_within_shep = ((me->worker_id * worker_pus) +
+                                  (wraparounds * qlib->nworkerspershep) +
+                                  worker_wraparounds) % shep_pus;
+        size_t bit_offset = 0;
+        for (size_t i = 0; i <= cnt_within_shep; i++) {
+            while (numa_bitmask_isbitset(shep_cpuset, bit_offset) == 0) {
+                bit_offset++;
+            }
+        }
+        qthread_debug(AFFINITY_DETAILS, "wkr bit = %i, cnt_within_shep = %i\n", (int)bit_offset, (int)cnt_within_shep);
+        numa_bitmask_setbit(wkr_cpuset, bit_offset);
+    }
+
+# ifdef QTHREAD_DEBUG_AFFINITY
+    {
+        char bitmask_str[numa_bitmask_nbytes(wkr_cpuset) * 2];
+        for (size_t byte = 0; byte < numa_bitmask_nbytes(wkr_cpuset); byte++) {
+            int byte_mask = 0;
+            int cnt       = 0;
+            for (int bit = 0; bit < 8; bit++) {
+                if (numa_bitmask_isbitset(wkr_cpuset, (byte * 8) + bit)) {
+                    byte_mask |= 1 << bit;
+                    cnt++;
+                }
+            }
+            sprintf(&bitmask_str[byte * 2], "%02x", byte_mask);
+        }
+        qthread_debug(AFFINITY_CALLS,
+                      "binding shep %i worker %i (%i) to node %i, PU %i, mask %s\n",
+                      (int)myshep->shepherd_id, (int)me->worker_id,
+                      (int)me->packed_worker_id,
+                      myshep->node,
+                      (shep_pus * myshep->node) + (((me->worker_id * worker_pus) + (wraparounds * qlib->nworkerspershep) + (worker_wraparounds)) % shep_pus),
+                      bitmask_str);
+    }
+# endif /* ifdef QTHREAD_DEBUG_AFFINITY */
+
+    numa_bind(wkr_cpuset);
+    numa_bitmask_free(shep_cpuset);
+    numa_bitmask_free(wkr_cpuset);
 }                                      /*}}} */
 
-#else
+#else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
 {                                      /*{{{ */
-    if (numa_run_on_node(me->node) != 0) {
-        numa_error("setting thread affinity");
+    struct bitmask *cmask       = numa_allocate_cpumask();
+    unsigned int    maxshepobjs = 0;
+
+    numa_node_to_cpus(me->node, cmask);
+    for (size_t j = 0; j < numa_bitmask_nbytes(cmask) * 8; j++) {
+        maxshepobjs += numa_bitmask_isbitset(cmask, j) ? 1 : 0;
     }
-    numa_set_preferred(me->node);
+    numa_bind(cmask);
+    qthread_debug(AFFINITY_CALLS, "set %i(%i) worker 0 [%i], there are %u PUs\n",
+                  (int)me->shepherd_id,
+                  (int)me->node,
+                  (int)me->shepherd_id,
+                  maxshepobjs);
+    numa_bitmask_free(cmask);
 }                                      /*}}} */
 
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
@@ -126,13 +220,13 @@ unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherd
 
     qthread_debug(AFFINITY_DETAILS, "guessing workers for %i shepherds\n",
                   (int)nshepherds);
-# ifdef HAVE_NUMA_NUM_THREAD_CPUS
+#ifdef HAVE_NUMA_NUM_THREAD_CPUS
     /* note: not numa_num_configured_cpus(), just in case an
      * artificial limit has been imposed. */
     cpu_count = numa_num_thread_cpus();
     qthread_debug(AFFINITY_DETAILS, "numa_num_thread_cpus returned %i\n",
-                  nshepherds);
-# elif defined(HAVE_NUMA_BITMASK_NBYTES)
+                  (int)cpu_count);
+#elif defined(HAVE_NUMA_BITMASK_NBYTES)
     cpu_count = 0;
     for (size_t b = 0; b < numa_bitmask_nbytes(numa_all_cpus_ptr) * 8; b++) {
         cpu_count += numa_bitmask_isbitset(numa_all_cpus_ptr, b);
@@ -140,21 +234,21 @@ unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherd
     qthread_debug(AFFINITY_DETAILS,
                   "after checking through the all_cpus_ptr, I counted %i cpus\n",
                   (int)cpu_count);
-# else /* ifdef HAVE_NUMA_NUM_THREAD_CPUS */
+#else  /* ifdef HAVE_NUMA_NUM_THREAD_CPUS */
     cpu_count = numa_max_node() + 1;
-    qthread_debug(AFFINITY_DETAILS, "numa_max_node() returned %i\n", nshepherds);
-# endif /* ifdef HAVE_NUMA_NUM_THREAD_CPUS */
+    qthread_debug(AFFINITY_DETAILS, "numa_max_node() returned %i\n", (int)cpu_count);
+#endif  /* ifdef HAVE_NUMA_NUM_THREAD_CPUS */
     guess = cpu_count / nshepherds;
     if (guess == 0) {
         guess = 1;
     }
-    qthread_debug(AFFINITY_DETAILS, "guessing %i workers per shepherd\n",
+    qthread_debug(AFFINITY_FUNCTIONS, "guessing %i workers per shepherd\n",
                   (int)guess);
     return guess;
 }                                      /*}}} */
 
 static void assign_nodes(qthread_shepherd_t *sheps,
-                                  size_t              nsheps)
+                         size_t              nsheps)
 {                                      /*{{{ */
     const size_t    num_extant_nodes   = numa_max_node() + 1;
     struct bitmask *nmask              = numa_get_run_node_mask();
@@ -266,22 +360,22 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
               sizeof(qthread_shepherd_id_t), qthread_internal_shepcomp);
 # endif /* if defined(HAVE_QSORT_R) && defined(QTHREAD_QSORT_BSD) */
         {
-            int prev_dist = qthread_distance(i, sheps[i].sorted_sheplist[0]);
-            size_t count = 1;
-            for (size_t j = 1; j < nshepherds-1; ++j) {
+            int    prev_dist = qthread_distance(i, sheps[i].sorted_sheplist[0]);
+            size_t count     = 1;
+            for (size_t j = 1; j < nshepherds - 1; ++j) {
                 if (qthread_distance(i, sheps[i].sorted_sheplist[j]) == prev_dist) {
                     count++;
                 } else {
                     if (count > 1) {
                         shuffle_sheps(sheps[i].sorted_sheplist + (j - count), count);
                     }
-                    count = 1;
-		    prev_dist = qthread_distance(i, sheps[i].sorted_sheplist[j]);
+                    count     = 1;
+                    prev_dist = qthread_distance(i, sheps[i].sorted_sheplist[j]);
                 }
             }
-	    if (count > 1) {
-		shuffle_sheps(sheps[i].sorted_sheplist + (nshepherds - 1 - count), count);
-	    }
+            if (count > 1) {
+                shuffle_sheps(sheps[i].sorted_sheplist + (nshepherds - 1 - count), count);
+            }
         }
     }
 #endif /* ifdef HAVE_NUMA_DISTANCE */
