@@ -446,9 +446,13 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
 #ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
     qthread_incr(&thief_shepherd->steal_attempted, 1);
 #endif
-    for (qthread_shepherd_id_t i = 1; i < qlib->nshepherds; i++) {
-        qthread_shepherd_t *victim_shepherd =
-            &qlib->shepherds[thief_shepherd->sorted_sheplist[i - 1]];
+
+    qthread_shepherd_id_t i = 0;
+    qthread_shepherd_t * const shepherds = qlib->shepherds;
+    qthread_shepherd_id_t * const sorted_sheplist = thief_shepherd->sorted_sheplist;
+
+    while (stolen == NULL) {
+        qthread_shepherd_t *victim_shepherd = &shepherds[sorted_sheplist[i]];
         if (0 < victim_shepherd->ready->qlength_stealable) {
             stolen = qt_threadqueue_dequeue_steal(thief_shepherd->ready, victim_shepherd->ready);
             if (stolen) {
@@ -472,6 +476,9 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
         if (0 < thief_shepherd->ready->qlength) {  // work at home quit steal attempt
             break;
         }
+
+        i++;
+        i *= (i < qlib->nshepherds-1);
     }
     thief_shepherd->stealing = 0;
     return stolen;
