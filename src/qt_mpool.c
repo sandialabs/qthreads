@@ -261,11 +261,11 @@ void *qt_mpool_cached_alloc(qt_mpool pool)
         pthread_setspecific(pool->threadlocal_cache, tc);
     }
     cache = tc->cache;
-    qthread_debug(MPOOL_CALLS, "->cache:%p cnt:%u\n", cache, (unsigned int)cnt);
+    qthread_debug(MPOOL_CALLS, "->cache:%p cnt:%u\n", cache, (unsigned int)tc->count);
     if (cache) {
         void *ret = (void *)cache;
         cache = cache->next;
-        qthread_debug(MPOOL_BEHAVIOR, "->...cached count:%zu\n", (size_t)cnt - 1);
+        qthread_debug(MPOOL_BEHAVIOR, "->...cached count:%zu\n", (size_t)tc->count - 1);
         tc->cache = cache;
         --tc->count;
         return ret;
