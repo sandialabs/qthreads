@@ -25,10 +25,6 @@ typedef struct _qt_threadqueue_pools {
 # define QMS_ARG(x)
 #endif
 
-#if !defined(UNPOOLED_QUEUES) && !defined(UNPOOLED)
-void INTERNAL qt_threadqueue_init_pools(qt_threadqueue_pools_t *p);
-void INTERNAL qt_threadqueue_destroy_pools(qt_threadqueue_pools_t *p);
-#endif
 void INTERNAL qt_threadqueue_subsystem_init(void);
 
 qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd);

@@ -65,11 +65,6 @@ void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
 
 void INTERNAL qt_threadqueue_subsystem_init(void) {}
 
-void INTERNAL qt_threadqueue_init_pools(qt_threadqueue_pools_t *p) {}
-
-void INTERNAL qt_threadqueue_destroy_pools(qt_threadqueue_pools_t *p) {}
-
-
 /*****************************************/
 /* functions to manage the thread queues */
 /*****************************************/

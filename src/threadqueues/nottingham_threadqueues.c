@@ -89,10 +89,6 @@ void INTERNAL qt_threadqueue_enqueue_unstealable(qt_threadqueue_t *q,
 
 void INTERNAL qt_threadqueue_subsystem_init(void) {}
 
-void INTERNAL qt_threadqueue_init_pools(qt_threadqueue_pools_t *p) {}
-
-void INTERNAL qt_threadqueue_destroy_pools(qt_threadqueue_pools_t *p) {}
-
 #ifdef CAS_STEAL_PROFILE
 static void cas_profile_update(int id, int retries) {
     uint64_strip_t *cas_steal_profile = qlib->cas_steal_profile;

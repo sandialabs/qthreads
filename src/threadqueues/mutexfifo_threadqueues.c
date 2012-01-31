@@ -105,18 +105,6 @@ void INTERNAL qt_threadqueue_subsystem_init(void)
     qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
 }
 
-void INTERNAL qt_threadqueue_init_pools(qt_threadqueue_pools_t *p)
-{   /*{{{*/
-    p->nodes  = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), 16);
-    p->queues = qt_mpool_create(sizeof(qt_threadqueue_t));
-} /*}}}*/
-
-void INTERNAL qt_threadqueue_destroy_pools(qt_threadqueue_pools_t *p)
-{   /*{{{*/
-    qt_mpool_destroy(p->nodes);
-    qt_mpool_destroy(p->queues);
-} /*}}}*/
-
 #endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 
 ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
