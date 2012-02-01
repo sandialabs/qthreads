@@ -1,8 +1,8 @@
 /******************************************************
- * Unbalanced Tree Search v2.1                        *
- * Based on the implementation available at           *
- *     http://sourceforge.net/projects/uts-benchmark  *
- ******************************************************/
+* Unbalanced Tree Search v2.1                        *
+* Based on the implementation available at           *
+*     http://sourceforge.net/projects/uts-benchmark  *
+******************************************************/
 
 #ifdef HAVE_CONFIG_H
 # include "config.h" /* for _GNU_SOURCE */
@@ -12,7 +12,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <limits.h> /* for INT_MAX */
-#include <math.h> /* for floor, log, sin */
+#include <math.h>   /* for floor, log, sin */
 #include <omp.h>
 #include <qthread/qthread.h>
 #include <qthread/qtimer.h>
@@ -34,9 +34,9 @@ typedef enum {
     BALANCED
 } tree_t;
 static char *type_names[] = {
-    "Binomial", 
-    "Geometric", 
-    "Hybrid", 
+    "Binomial",
+    "Geometric",
+    "Hybrid",
     "Balanced"
 };
 
@@ -54,32 +54,33 @@ static char *shape_names[] = {
 };
 
 typedef struct {
-    int     height;       // Depth of node in the tree
-    struct state_t state; // Local RNG state
-    int     num_children;
+    int            height; // Depth of node in the tree
+    struct state_t state;  // Local RNG state
+    int            num_children;
 } node_t;
 
 // Default values
-static tree_t  tree_type = GEO;
-static double  bf_0 = 4.0;
-static int     root_seed = 0;
-static int     num_samples = 1;
-static int     tree_depth = 6;
-static shape_t shape_fn = LINEAR;
-static int     non_leaf_bf = 4;
+static tree_t  tree_type     = GEO;
+static double  bf_0          = 4.0;
+static int     root_seed     = 0;
+static int     num_samples   = 1;
+static int     tree_depth    = 6;
+static shape_t shape_fn      = LINEAR;
+static int     non_leaf_bf   = 4;
 static double  non_leaf_prob = 15.0 / 64.0;
-static double  shift_depth = 0.5;
+static double  shift_depth   = 0.5;
 
 // Tree metrics
 static uint64_t tree_height = 0;
-static uint64_t num_leaves = 0;
+static uint64_t num_leaves  = 0;
 
-static double normalize(int n) {
+static double normalize(int n)
+{
     if (n < 0) {
         printf("*** toProb: rand n = %d out of range\n", n);
     }
 
-    return ((n<0)? 0.0 : ((double)n)/(double)INT_MAX);
+    return ((n < 0) ? 0.0 : ((double)n) / (double)INT_MAX);
 }
 
 static int calc_num_children_bin(node_t *parent)
@@ -94,21 +95,19 @@ static int calc_num_children(node_t *parent)
 {
     int num_children = 0;
 
-    if (parent->height == 0) num_children = (int)floor(bf_0);
-    else num_children = calc_num_children_bin(parent);
+    if (parent->height == 0) { num_children = (int)floor(bf_0); } else { num_children = calc_num_children_bin(parent); }
 
     if (parent->height == 0) {
         int root_bf = (int)ceil(bf_0);
         if (num_children > root_bf) {
             printf("*** Number of children truncated from %d to %d\n",
-                num_children, root_bf);
+                   num_children, root_bf);
             num_children = root_bf;
         }
-    }
-    else {
+    } else   {
         if (num_children > MAXNUMCHILDREN) {
             printf("*** Number of children truncated from %d to %d\n",
-                num_children, MAXNUMCHILDREN);
+                   num_children, MAXNUMCHILDREN);
             num_children = MAXNUMCHILDREN;
         }
     }
@@ -122,7 +121,7 @@ static int calc_num_children(node_t *parent)
 static long visit(node_t parent)
 {
     node_t    child;
-    uint64_t num_descendants = 1;
+    uint64_t  num_descendants   = 1;
     uint64_t *child_descendants = calloc(sizeof(long), parent.num_children);
 
     // Spawn children, if any
@@ -136,15 +135,14 @@ static long visit(node_t parent)
         child.num_children = calc_num_children(&child);
 
 #pragma omp task untied
-	child_descendants[i] = visit(child);
+        child_descendants[i] = visit(child);
     }
 
 #pragma omp taskwait
 
-
 #pragma omp parallel for reduction(+:num_descendants)
     for (int i = 0; i < parent.num_children; i++) {
-	num_descendants += child_descendants[i];
+        num_descendants += child_descendants[i];
     }
 
     return num_descendants;
@@ -153,76 +151,77 @@ static long visit(node_t parent)
 #ifdef PRINT_STATS
 static void print_stats(void)
 {
-    printf("tree-type %d\ntree-type-name %s\n", 
-        tree_type, type_names[tree_type]);
+    printf("tree-type %d\ntree-type-name %s\n",
+           tree_type, type_names[tree_type]);
     printf("root-bf %.1f\nroot-seed %d\n",
-        bf_0, root_seed);
+           bf_0, root_seed);
 
-    if (tree_type == GEO || tree_type == HYBRID) {
+    if ((tree_type == GEO) || (tree_type == HYBRID)) {
         printf("gen_mx %d\nshape-fn %d\nshape-fn-name %s\n",
-            tree_depth, shape_fn, shape_names[shape_fn]);
+               tree_depth, shape_fn, shape_names[shape_fn]);
     }
 
-    if (tree_type == BIN || tree_type == HYBRID) {
-        double q = non_leaf_prob;
-        int m = non_leaf_bf;
-        double es = (1.0 / (1.0 - q *m));
+    if ((tree_type == BIN) || (tree_type == HYBRID)) {
+        double q  = non_leaf_prob;
+        int    m  = non_leaf_bf;
+        double es = (1.0 / (1.0 - q * m));
         printf("q %f\nm %d\nE(n) %f\nE(s) %.2f\n",
-            q, m, q * m, es);
+               q, m, q * m, es);
     }
 
     if (tree_type == HYBRID) {
         printf("root-to-depth %d\n",
-            (int)ceil(shift_depth * tree_depth));
+               (int)ceil(shift_depth * tree_depth));
     }
 
     if (tree_type == BALANCED) {
         printf("gen_mx %d\n", tree_depth);
         printf("expected-num-nodes %llu\nexpected-num-leaves %llu\n",
-            (unsigned long long)((pow(bf_0, tree_depth+1) - 1.0)/(bf_0 - 1.0)),
-            (unsigned long long)pow(bf_0, tree_depth));
+               (unsigned long long)((pow(bf_0, tree_depth + 1) - 1.0) / (bf_0 - 1.0)),
+               (unsigned long long)pow(bf_0, tree_depth));
     }
 
     printf("compute-granularity %d\n", num_samples);
     printf("num-workers %d\n", omp_get_num_threads());
     assert(omp_get_num_threads() > 1);
-    
+
     printf("\n");
 
     fflush(stdout);
 }
-#else
+
+#else /* ifdef PRINT_STATS */
 static void print_banner(void)
 {
     printf("UTS - Unbalanced Tree Search 2.1 (C/Qthreads)\n");
     printf("Tree type:%3d (%s)\n", tree_type, type_names[tree_type]);
     printf("Tree shape parameters:\n");
     printf("  root branching factor b_0 = %.1f, root seed = %d\n",
-        bf_0, root_seed);
+           bf_0, root_seed);
 
-    if (tree_type == GEO || tree_type == HYBRID) {
+    if ((tree_type == GEO) || (tree_type == HYBRID)) {
         printf("  GEO parameters: gen_mx = %d, shape function = %d (%s)\n",
-            tree_depth, shape_fn, shape_names[shape_fn]);
+               tree_depth, shape_fn, shape_names[shape_fn]);
     }
 
-    if (tree_type == BIN || tree_type == HYBRID) {
-        double q = non_leaf_prob;
-        int m = non_leaf_bf;
-        double es = (1.0 / (1.0 - q *m));
+    if ((tree_type == BIN) || (tree_type == HYBRID)) {
+        double q  = non_leaf_prob;
+        int    m  = non_leaf_bf;
+        double es = (1.0 / (1.0 - q * m));
         printf("  BIN parameters: q = %f, m = %d, E(n) = %f, E(s) = %.2f\n",
-            q, m, q * m, es);
+               q, m, q * m, es);
     }
 
     if (tree_type == HYBRID) {
         printf("  HYBRID: GEO from root to depth %d, then BIN\n",
-            (int)ceil(shift_depth * tree_depth));
+               (int)ceil(shift_depth * tree_depth));
     }
 
     if (tree_type == BALANCED) {
         printf("  BALANCED parameters: gen_mx = %d\n", tree_depth);
         printf("    Expected size: %llu nodes, %llu leaves\n",
-            (unsigned long long)((pow(bf_0, tree_depth+1) - 1.0)/(bf_0 - 1.0)),
-            (unsigned long long)pow(bf_0, tree_depth));
+               (unsigned long long)((pow(bf_0, tree_depth + 1) - 1.0) / (bf_0 - 1.0)),
+               (unsigned long long)pow(bf_0, tree_depth));
     }
 
     printf("Random number generator: ");
@@ -230,14 +229,16 @@ static void print_banner(void)
     printf("Compute granularity: %d\n", num_samples);
     printf("Execution strategy:\n");
     printf("  Workers:   %d\n", omp_get_num_threads());
-    
+
     printf("\n");
 
     fflush(stdout);
 }
-#endif
 
-int main(int argc, char *argv[])
+#endif /* ifdef PRINT_STATS */
+
+int main(int   argc,
+         char *argv[])
 {
     uint64_t total_num_nodes = 0;
     qtimer_t timer;
@@ -245,15 +246,31 @@ int main(int argc, char *argv[])
 
     CHECK_VERBOSE();
 
-    NUMARG(tree_type,     "UTS_TREE_TYPE");
-    DBLARG(bf_0,          "UTS_BF_0");
-    NUMARG(root_seed,     "UTS_ROOT_SEED");
-    NUMARG(shape_fn,      "UTS_SHAPE_FN");
-    NUMARG(tree_depth,    "UTS_TREE_DEPTH");
+    {
+        unsigned int tmp = (unsigned int)tree_type;
+        NUMARG(tmp, "UTS_TREE_TYPE");
+        if (tmp <= BALANCED) {
+            tree_type = (tree_t)tmp;
+        } else {
+            fprintf(stderr, "invalid tree type\n");
+            return EXIT_FAILURE;
+        }
+        tmp = (unsigned int)shape_fn;
+        NUMARG(tmp, "UTS_SHAPE_FN");
+        if (tmp <= FIXED) {
+            shape_fn = (shape_t)tmp;
+        } else {
+            fprintf(stderr, "invalid shape function\n");
+            return EXIT_FAILURE;
+        }
+    }
+    DBLARG(bf_0, "UTS_BF_0");
+    NUMARG(root_seed, "UTS_ROOT_SEED");
+    NUMARG(tree_depth, "UTS_TREE_DEPTH");
     DBLARG(non_leaf_prob, "UTS_NON_LEAF_PROB");
-    NUMARG(non_leaf_bf,   "UTS_NON_LEAF_NUM");
-    NUMARG(shift_depth,   "UTS_SHIFT_DEPTH");
-    NUMARG(num_samples,   "UTS_NUM_SAMPLES");
+    NUMARG(non_leaf_bf, "UTS_NON_LEAF_NUM");
+    NUMARG(shift_depth, "UTS_SHIFT_DEPTH");
+    NUMARG(num_samples, "UTS_NUM_SAMPLES");
 
 #pragma omp parallel
 #pragma omp single
@@ -277,7 +294,7 @@ int main(int argc, char *argv[])
 #pragma omp single
     {
 #pragma omp task untied shared(root)
-	retval = visit(root);
+        retval = visit(root);
 
 #pragma omp taskwait
     }
@@ -291,27 +308,27 @@ int main(int argc, char *argv[])
     qtimer_destroy(timer);
 
 #ifdef PRINT_STATS
-    printf("tree-size %lu\ntree-depth %d\nnum-leaves %llu\nperc-leaves %.2f\n", 
-        (unsigned long)total_num_nodes,
-        (int)tree_height,
-        (unsigned long long)num_leaves,
-        num_leaves / (float)total_num_nodes*100.0);
-    printf("exec-time %.3f\ntotal-perf %.0f\npu-perf %.0f\n\n", 
-        total_time,
-        total_num_nodes / total_time,
-        total_num_nodes / total_time / omp_get_num_threads());
+    printf("tree-size %lu\ntree-depth %d\nnum-leaves %llu\nperc-leaves %.2f\n",
+           (unsigned long)total_num_nodes,
+           (int)tree_height,
+           (unsigned long long)num_leaves,
+           num_leaves / (float)total_num_nodes * 100.0);
+    printf("exec-time %.3f\ntotal-perf %.0f\npu-perf %.0f\n\n",
+           total_time,
+           total_num_nodes / total_time,
+           total_num_nodes / total_time / omp_get_num_threads());
 #else
-    printf("Tree size = %lu, tree depth = %d, num leaves = %llu (%.2f%%)\n", 
-        (unsigned long)total_num_nodes,
-        (int)tree_height,
-        (unsigned long long)num_leaves,
-        num_leaves / (float)total_num_nodes*100.0);
+    printf("Tree size = %lu, tree depth = %d, num leaves = %llu (%.2f%%)\n",
+           (unsigned long)total_num_nodes,
+           (int)tree_height,
+           (unsigned long long)num_leaves,
+           num_leaves / (float)total_num_nodes * 100.0);
     printf("Wallclock time = %.3f sec, performance = %.0f "
-           "nodes/sec (%.0f nodes/sec per PE)\n\n", 
-        total_time,
-        total_num_nodes / total_time,
-        total_num_nodes / total_time / omp_get_num_threads());
-#endif
+           "nodes/sec (%.0f nodes/sec per PE)\n\n",
+           total_time,
+           total_num_nodes / total_time,
+           total_num_nodes / total_time / omp_get_num_threads());
+#endif /* ifdef PRINT_STATS */
 
     return 0;
 }
