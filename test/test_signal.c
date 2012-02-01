@@ -20,7 +20,7 @@ static aligned_t waiter(void *arg)
     iprintf("waiter alive!\n");
     qthread_writeF_const(&t, 1);
     while(t == 1) {
-        __asm__ __volatile__ ("" ::: "memory");
+	COMPILER_FENCE;
     }
     iprintf("waiter exiting!\n");
 
@@ -62,7 +62,7 @@ int main(int   argc,
     iprintf("sent signal\n");
 
     sleep(1);
-    __sync_synchronize();
+    MACHINE_FENCE;
     iprintf("setting t=2\n");
     t = 2;
 
