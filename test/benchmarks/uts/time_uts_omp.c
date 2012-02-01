@@ -104,7 +104,7 @@ static int calc_num_children(node_t *parent)
                    num_children, root_bf);
             num_children = root_bf;
         }
-    } else   {
+    } else {
         if (num_children > MAXNUMCHILDREN) {
             printf("*** Number of children truncated from %d to %d\n",
                    num_children, MAXNUMCHILDREN);
@@ -115,35 +115,58 @@ static int calc_num_children(node_t *parent)
     return num_children;
 }
 
+#define BIG_STACKS
+
 // Notes:
 // -    Each task receives distinct copy of parent
 // -    Copy of child is shallow, be careful with `state` member
-static long visit(node_t parent)
+static long visit(node_t *parent,
+                  int     num_children)
 {
-    node_t    child;
-    uint64_t  num_descendants   = 1;
-    uint64_t *child_descendants = calloc(sizeof(long), parent.num_children);
+    uint64_t num_descendants = 1;
+
+#ifdef BIG_STACKS
+    uint64_t child_descendants[num_children];
+    node_t   child_nodes[num_children];
+#else
+    uint64_t *child_descendants;
+    node_t   *child_nodes;
+
+    if (num_children > 0) {
+        child_descendants = calloc(sizeof(uint64_t), num_children);
+        child_nodes       = malloc(sizeof(node_t) * num_children);
+    }
+#endif
 
     // Spawn children, if any
-    for (int i = 0; i < parent.num_children; i++) {
-        child.height = parent.height + 1;
+    for (int i = 0; i < num_children; i++) {
+        node_t *child = &child_nodes[i];
+
+        child->height = parent->height + 1;
 
         for (int j = 0; j < num_samples; j++) {
-            rng_spawn(parent.state.state, child.state.state, i);
+            rng_spawn(parent->state.state, child->state.state, i);
         }
 
-        child.num_children = calc_num_children(&child);
+        child->num_children = calc_num_children(child);
 
-#pragma omp task untied
-        child_descendants[i] = visit(child);
+#pragma omp task untied firstprivate(i, child) shared(child_descendants)
+        child_descendants[i] = visit(child, child->num_children);
     }
 
 #pragma omp taskwait
 
-#pragma omp parallel for reduction(+:num_descendants)
-    for (int i = 0; i < parent.num_children; i++) {
+// #pragma omp parallel for reduction(+:num_descendants)
+    for (int i = 0; i < num_children; i++) {
         num_descendants += child_descendants[i];
     }
+
+#ifndef BIG_STACKS
+    if (num_children > 0) {
+        free(child_descendants);
+        free(child_nodes);
+    }
+#endif
 
     return num_descendants;
 }
@@ -291,13 +314,9 @@ int main(int   argc,
     nodecount = 1;
     long retval;
 #pragma omp parallel
-#pragma omp single
-    {
-#pragma omp task untied shared(root)
-        retval = visit(root);
-
-#pragma omp taskwait
-    }
+#pragma omp single nowait
+#pragma omp task untied
+    retval = visit(&root, root.num_children);
 
     total_num_nodes = retval;
 
