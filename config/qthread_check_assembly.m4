@@ -123,10 +123,14 @@ dnl                support
 dnl
 dnl #################################################################
 AC_DEFUN([QTHREAD_CHECK_INLINE_C_GCC],[
+  AC_CACHE_CHECK([support for __asm__ __volatile__],
+	             [qt_cv_asm_volatile],
+				 [AC_LINK_IFELSE([AC_LANG_PROGRAM([[]],[[__asm__ __volatile__ ("":::"memory");]])],
+					             [qt_cv_asm_volatile=yes],
+								 [qt_cv_asm_volatile=no])])
+  AC_CACHE_CHECK([$CC support for GCC inline assembly],[qt_cv_gcc_inline_assembly],[
   assembly="$1"
   asm_result="unknown"
-
-  AC_MSG_CHECKING([if $CC supports GCC inline assembly])
   AS_IF([test ! "$assembly" = ""],
         [AC_RUN_IFELSE([AC_LANG_SOURCE([[
 int main() {
@@ -149,15 +153,14 @@ return ret;
 }]])],
       [asm_result="yes"], [asm_result="no"])
   ])
+  qt_cv_gcc_inline_assembly="$asm_result"
+  unset assembly asm_result])
 
-  AC_MSG_RESULT([$asm_result])
 
-  AS_IF([test "$asm_result" = "yes"],
+  AS_IF([test "x$qt_cv_gcc_inline_assembly" = "xyes"],
     [AC_DEFINE([HAVE_GCC_INLINE_ASSEMBLY], [1],
        [Whether C compiler supports GCC style inline assembly])
      $2], [$3])
-
-  unset have_c_gcc_inline_asm assembly asm_result
 ])dnl
 
 
