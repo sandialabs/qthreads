@@ -921,7 +921,7 @@ static void begin(const size_t start, const size_t stop, void *arg_)
     upx_args.stages = part->stages;
     upx_args.now = 1;
     upx_args.timestep = 1;
-    upx_args.dir = 0;
+    upx_args.dir = NW;
     upx_args.pos = part->pos;
     upx_args.num_rows = part->nrows;
     upx_args.num_cols = part->ncols;
