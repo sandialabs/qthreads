@@ -47,7 +47,8 @@ int f(int i) { return i; }]])],
  [qt_cv_unused_attr=yes],
  [qt_cv_unused_attr=no])])
  AS_IF([test "x$qt_cv_unused_attr" = xyes],
- 	   [unusedstr="__attribute__((unused))"],
+ 	   [unusedstr="__attribute__((unused))"
+	    AC_DEFINE([HAVE_UNUSED], [1], [compiler understands __attribute__((unused))])],
 	   [unusedstr=""])
  AC_DEFINE_UNQUOTED([Q_UNUSED], [$unusedstr],
 		   [most gcc compilers know a function __attribute__((unused))])
