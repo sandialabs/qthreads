@@ -301,7 +301,7 @@ void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
 
     last = first;
     while (last->next) {
-        last                         = last->next;
+        last = last->next;
         addCnt++;
     }
 
@@ -447,9 +447,9 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
     qthread_incr(&thief_shepherd->steal_attempted, 1);
 #endif
 
-    qthread_shepherd_id_t i = 0;
-    qthread_shepherd_t * const shepherds = qlib->shepherds;
-    qthread_shepherd_id_t * const sorted_sheplist = thief_shepherd->sorted_sheplist;
+    qthread_shepherd_id_t        i               = 0;
+    qthread_shepherd_t *const    shepherds       = qlib->shepherds;
+    qthread_shepherd_id_t *const sorted_sheplist = thief_shepherd->sorted_sheplist;
 
     while (stolen == NULL) {
         qthread_shepherd_t *victim_shepherd = &shepherds[sorted_sheplist[i]];
@@ -478,7 +478,7 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
         }
 
         i++;
-        i *= (i < qlib->nshepherds-1);
+        i *= (i < qlib->nshepherds - 1);
     }
     thief_shepherd->stealing = 0;
     return stolen;
