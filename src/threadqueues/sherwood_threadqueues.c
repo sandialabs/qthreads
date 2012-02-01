@@ -231,7 +231,7 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
 
 /* dequeue at tail, unlike original qthreads implementation */
 qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
-                                                    size_t            active)
+                                                    uint_fast8_t      active)
 {   /*{{{*/
     qthread_shepherd_t *my_shepherd = qthread_internal_getshep();
     qthread_t          *t;

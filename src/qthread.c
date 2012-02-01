@@ -453,7 +453,11 @@ static void *qthread_shepherd(void *arg)
             }
         }
 #endif  /* ifdef QTHREAD_RCRTOOL */
-        t = qt_threadqueue_dequeue_blocking(threadqueue QMS_ARG(QTHREAD_CASLOCK_READ_UI(me_worker->active)));
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+        t = qt_threadqueue_dequeue_blocking(threadqueue, QTHREAD_CASLOCK_READ_UI(me_worker->active));
+#else
+        t = qt_threadqueue_dequeue_blocking(threadqueue, QTHREAD_CASLOCK_READ_UI(me->active));
+#endif
         assert(t);
 #ifdef QTHREAD_SHEPHERD_PROFILING
         qtimer_stop(idle);

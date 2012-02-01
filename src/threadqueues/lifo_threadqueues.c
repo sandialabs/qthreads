@@ -10,6 +10,7 @@
 
 /* Internal Headers */
 #include "qthread/qthread.h"
+#include "qt_macros.h"
 #include "qt_visibility.h"
 #include "qthread_asserts.h"
 #include "qthread_prefetch.h"
@@ -185,7 +186,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
     return retval;
 } /*}}}*/
 
-qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q)
+qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q, uint_fast8_t QUNUSED(active))
 {   /*{{{*/
     qthread_t *retval = qt_threadqueue_dequeue(q);
 

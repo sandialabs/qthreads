@@ -10,6 +10,7 @@
 
 /* Internal Headers */
 #include "qthread/qthread.h"
+#include "qt_macros.h"
 #include "qt_visibility.h"
 #include "qthread_innards.h"
 #include "qthread_asserts.h"
@@ -192,7 +193,8 @@ qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
     return (qthread_t *)retval;
 }                                      /*}}} */
 
-qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q)
+qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
+                                                    uint_fast8_t      QUNUSED(active))
 {                                      /*{{{ */
     NEMESIS_entry *retval = qt_internal_NEMESIS_dequeue(&q->q);
 

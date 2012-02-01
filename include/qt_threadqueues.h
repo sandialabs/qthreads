@@ -2,6 +2,7 @@
 #define QT_THREADQUEUES_H
 
 #include <sys/types.h> /* for ssize_t (according to P90) */
+#include <qthread-int.h>
 
 #include "qt_visibility.h"
 #include "qt_qthread_t.h" /* for qthread_t */
@@ -19,12 +20,6 @@ typedef struct _qt_threadqueue_pools {
     qt_mpool queues;
 } qt_threadqueue_pools_t;
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-# define QMS_ARG(x) , x
-#else
-# define QMS_ARG(x)
-#endif
-
 void INTERNAL qt_threadqueue_subsystem_init(void);
 
 qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd);
@@ -36,7 +31,8 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
 ssize_t INTERNAL    qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q);
 qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q);
 
-qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t * q QMS_ARG(size_t active));
+qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
+                                                    uint_fast8_t      active);
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 /* Functions for work stealing functionality */

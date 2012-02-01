@@ -459,7 +459,7 @@ qthread_t static QINLINE *qt_threadqueue_dequeue_helper(qt_threadqueue_t *q)
 
 /* dequeue at tail, unlike original qthreads implementation */
 qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
-                                                    size_t            active)
+                                                    uint_fast8_t      active)
 {   /*{{{*/
     qthread_t             *t = NULL;
     rwlock_t              *rwlock = q->rwlock;

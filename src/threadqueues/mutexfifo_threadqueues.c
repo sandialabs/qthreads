@@ -9,6 +9,7 @@
 
 /* Internal Headers */
 #include "qthread/qthread.h"
+#include "qt_macros.h"
 #include "qt_visibility.h"
 #include "qthread_innards.h"           /* for qlib (only used in steal_chunksize) */
 #include "qt_shepherd_innards.h"
@@ -212,7 +213,8 @@ qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
  * by allowing idle shepherds to sit for a while while still allowing for
  * low-overhead for busy shepherds. This is a hybrid approach: normally, it
  * functions as a spinlock, but if it spins too much, it waits for a signal */
-qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q)
+qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
+                                                    uint_fast8_t      UNUSED(active))
 {                                      /*{{{ */
     qthread_t *p = NULL;
 

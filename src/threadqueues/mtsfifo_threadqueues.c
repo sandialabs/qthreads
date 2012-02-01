@@ -10,6 +10,7 @@
 
 /* Internal Headers */
 #include "qthread/qthread.h"
+#include "qt_macros.h"
 #include "qt_visibility.h"
 #include "qt_shepherd_innards.h"
 #include "qt_qthread_struct.h"
@@ -37,13 +38,13 @@ struct _qt_threadqueue {
 #endif                          /* CONDWAIT */
     /* the following is for estimating a queue's "busy" level, and is not
      * guaranteed accurate (that would be a race condition) */
-    saligned_t          advisory_queuelen;
+    saligned_t advisory_queuelen;
 } /* qt_threadqueue_t */;
 
 /* Memory Management */
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
 # define ALLOC_THREADQUEUE() (qt_threadqueue_t *)calloc(1, sizeof(qt_threadqueue_t))
-# define FREE_THREADQUEUE(t)     free(t)
+# define FREE_THREADQUEUE(t) free(t)
 static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret)
 {                                      /*{{{ */
 # ifdef HAVE_MEMALIGN
@@ -73,7 +74,7 @@ static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret)
     }
 }                                      /*}}} */
 
-#define FREE_TQNODE(t) qt_mpool_cached_free(generic_threadqueue_pools.nodes, t)
+# define FREE_TQNODE(t) qt_mpool_cached_free(generic_threadqueue_pools.nodes, t)
 
 static void qt_threadqueue_subsystem_shutdown(void)
 {
@@ -126,9 +127,9 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 # define QCOMPOSE(x, y) (x)
 #else
 # define QCTR_MASK (15)
-# define QPTR(x)        ((qt_threadqueue_node_t *)(((uintptr_t)(x))& ~(uintptr_t)QCTR_MASK))
-# define QCTR(x)        (((uintptr_t)(x))&QCTR_MASK)
-# define QCOMPOSE(x, y) (void *)(((uintptr_t)QPTR(x)) | ((QCTR(y) + 1)&QCTR_MASK))
+# define QPTR(x)        ((qt_threadqueue_node_t *)(((uintptr_t)(x)) & ~(uintptr_t)QCTR_MASK))
+# define QCTR(x)        (((uintptr_t)(x)) &QCTR_MASK)
+# define QCOMPOSE(x, y) (void *)(((uintptr_t)QPTR(x)) | ((QCTR(y) + 1) &QCTR_MASK))
 #endif
 
 qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd)
@@ -178,8 +179,8 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
     FREE_THREADQUEUE(q);
 }                                      /*}}} */
 
-void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *restrict q,
-                                     qthread_t          *restrict t)
+void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
+                                     qthread_t *restrict        t)
 {                                      /*{{{ */
     qt_threadqueue_node_t *tail;
     qt_threadqueue_node_t *next;
@@ -230,8 +231,8 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *restrict q,
 #endif
 }                                      /*}}} */
 
-void qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *restrict q,
-                                    qthread_t          *restrict t)
+void qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
+                                    qthread_t *restrict        t)
 {   /*{{{*/
     qt_threadqueue_enqueue(q, t);
 } /*}}}*/
@@ -281,7 +282,8 @@ qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
  * by allowing idle shepherds to sit for a while while still allowing for
  * low-overhead for busy shepherds. This is a hybrid approach: normally, it
  * functions as a spinlock, but if it spins too much, it waits for a signal */
-qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q)
+qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
+                                                    uint_fast8_t      UNUSED(active))
 {                                      /*{{{ */
     qthread_t *p = NULL;
 
