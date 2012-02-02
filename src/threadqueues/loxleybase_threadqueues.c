@@ -38,6 +38,8 @@ struct _qt_threadqueue {
 
 } /* qt_threadqueue_t */;
 
+struct _qt_threadqueue_private {} /* qt_threadqueue_private_t */;
+
 
 // Forward declarations
 
@@ -88,6 +90,14 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 
 } /*}}}*/
 
+qt_threadqueue_private_t INTERNAL *qt_threadqueue_private_create(void)
+{   /*{{{*/
+    return NULL;
+} /*}}}*/
+
+void INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
+                                             qthread_t *restrict                t)
+{}
 
 /* enqueue at tail */
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *restrict q,
@@ -151,6 +161,7 @@ qthread_t static QINLINE *qt_threadqueue_dequeue_helper(qt_threadqueue_t *q)
 
 /* dequeue at tail, unlike original qthreads implementation */
 qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
+                                                    qt_threadqueue_private_t *QUNUSED(qc),
                                                     uint_fast8_t      active)
 {   /*{{{*/
     qthread_t  *t;

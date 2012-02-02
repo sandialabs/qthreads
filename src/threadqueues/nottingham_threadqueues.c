@@ -10,6 +10,7 @@
 
 /* Internal Headers */
 #include "qthread/qthread.h"
+#include "qt_macros.h"
 #include "56reader-rwlock.h"
 #include "qt_visibility.h"
 #include "qthread_innards.h"           /* for qlib (only used in steal_chunksize) */
@@ -62,6 +63,7 @@ struct _qt_threadqueue {
 
 } /* qt_threadqueue_t */;
 
+struct _qt_threadqueue_private {} /* qt_threadqueue_private_t */;
 
 // Forward declarations
 
@@ -207,6 +209,15 @@ static QINLINE void qt_threadqueue_finish(qt_threadqueue_t      *q,
        (uint128_t*) &oldnode, (uint128_t*) &top_entry);
 
 } /*}}}*/
+
+qt_threadqueue_private_t INTERNAL *qt_threadqueue_private_create(void)
+{   /*{{{*/
+    return NULL;
+} /*}}}*/
+
+void INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
+                                             qthread_t *restrict                t)
+{}
 
 /* enqueue at tail */
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *restrict q,
@@ -458,8 +469,9 @@ qthread_t static QINLINE *qt_threadqueue_dequeue_helper(qt_threadqueue_t *q)
 
 
 /* dequeue at tail, unlike original qthreads implementation */
-qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
-                                                    uint_fast8_t      active)
+qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
+                                                    qt_threadqueue_private_t *QUNUSED(qc),
+                                                    uint_fast8_t              active)
 {   /*{{{*/
     qthread_t             *t = NULL;
     rwlock_t              *rwlock = q->rwlock;

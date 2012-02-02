@@ -38,6 +38,8 @@ struct _qt_threadqueue {
 #endif
 } /* qt_threadqueue_t */;
 
+struct _qt_threadqueue_private {} /* qt_threadqueue_private_t */;
+
 /* Memory Management */
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
 # define ALLOC_THREADQUEUE() (qt_threadqueue_t *)calloc(1, sizeof(qt_threadqueue_t))
@@ -104,6 +106,15 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 #endif
     FREE_THREADQUEUE(q);
 } /*}}}*/
+
+qt_threadqueue_private_t INTERNAL *qt_threadqueue_private_create(void)
+{   /*{{{*/
+    return NULL;
+} /*}}}*/
+
+void INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
+                                             qthread_t *restrict                t)
+{}
 
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
                                      qthread_t *restrict        t)
@@ -186,7 +197,9 @@ qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
     return retval;
 } /*}}}*/
 
-qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q, uint_fast8_t QUNUSED(active))
+qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
+                                                    qt_threadqueue_private_t *QUNUSED(qc),
+                                                    uint_fast8_t              QUNUSED(active))
 {   /*{{{*/
     qthread_t *retval = qt_threadqueue_dequeue(q);
 

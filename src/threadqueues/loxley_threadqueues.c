@@ -10,6 +10,7 @@
 
 /* Internal Headers */
 #include "qthread/qthread.h"
+#include "qt_macros.h"
 #include "qt_visibility.h"
 #include "qthread_innards.h"           /* for qlib (only used in steal_chunksize) */
 #include "qt_shepherd_innards.h"
@@ -49,6 +50,8 @@ struct _qt_threadqueue {
     uint32_t empty;
     uint32_t stealing;
 } /* qt_threadqueue_t */;
+
+struct _qt_threadqueue_private {} /* qt_threadqueue_private_t */;
 
 static const int enqueue_penalty_max   = 1048576;
 static const int enqueue_penalty_min   = 1;
@@ -135,6 +138,15 @@ static QINLINE qthread_worker_id_t qt_threadqueue_worker_id(void)
     assert(id >= 0 && id < qlib->nworkerspershep);
     return(id);
 }
+
+qt_threadqueue_private_t INTERNAL *qt_threadqueue_private_create(void)
+{   /*{{{*/
+    return NULL;
+} /*}}}*/
+
+void INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
+                                             qthread_t *restrict                t)
+{}
 
 /* enqueue at tail */
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
@@ -232,6 +244,7 @@ qthread_t static QINLINE *qt_threadqueue_dequeue_helper(qt_threadqueue_t *q)
 
 /* dequeue at tail, unlike original qthreads implementation */
 qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
+                                                    qt_threadqueue_private_t *QUNUSED(qc),
                                                     uint_fast8_t      active)
 {   /*{{{*/
     int                     id    = qt_threadqueue_worker_id();

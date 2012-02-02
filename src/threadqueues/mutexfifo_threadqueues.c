@@ -37,6 +37,8 @@ struct _qt_threadqueue {
     saligned_t advisory_queuelen;
 } /* qt_threadqueue_t */;
 
+struct _qt_threadqueue_private {} /* qt_threadqueue_private_t */;
+
 #if defined(AKP_DEBUG) && AKP_DEBUG
 /* function added to ease debugging and tuning around queue critical sections - 4/1/11 AKP */
 
@@ -162,6 +164,15 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
     FREE_THREADQUEUE(q);
 }                                      /*}}} */
 
+qt_threadqueue_private_t INTERNAL *qt_threadqueue_private_create(void)
+{   /*{{{*/
+    return NULL;
+} /*}}}*/
+
+void INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
+                                             qthread_t *restrict                t)
+{}
+
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
                                      qthread_t *restrict        t)
 {                                      /*{{{ */
@@ -213,8 +224,9 @@ qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
  * by allowing idle shepherds to sit for a while while still allowing for
  * low-overhead for busy shepherds. This is a hybrid approach: normally, it
  * functions as a spinlock, but if it spins too much, it waits for a signal */
-qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
-                                                    uint_fast8_t      QUNUSED(active))
+qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
+                                                    qt_threadqueue_private_t *QUNUSED(qc),
+                                                    uint_fast8_t              QUNUSED(active))
 {                                      /*{{{ */
     qthread_t *p = NULL;
 
