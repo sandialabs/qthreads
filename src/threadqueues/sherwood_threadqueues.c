@@ -57,11 +57,13 @@ struct _qt_threadqueue_private {
 // static long steal_chunksize = 0;
 
 // Forward declarations
-qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h,
-                                                             qt_threadqueue_t *v);
+qt_threadqueue_private_t INTERNAL qt_threadqueue_dequeue_steal(qt_threadqueue_t *h,
+                                                               qt_threadqueue_t *v);
 
 void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
-                                              qt_threadqueue_node_t *first);
+                                              qt_threadqueue_node_t *first,
+                                              qt_threadqueue_node_t *last,
+                                              size_t                 count);
 
 #if defined(AKP_DEBUG) && AKP_DEBUG
 /* function added to ease debugging and tuning around queue critical sections - 4/1/11 AKP */
@@ -292,8 +294,8 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
             qc->head = node->next;
             if (qc->head) {
                 qt_threadqueue_node_t *first = qc->head;
-                qt_threadqueue_node_t *last = qc->tail;
-                node->next     = NULL;
+                qt_threadqueue_node_t *last  = qc->tail;
+                node->next  = NULL;
                 first->prev = NULL;
                 QTHREAD_TRYLOCK_LOCK(&q->qlock);
                 last->next  = NULL;
@@ -307,7 +309,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
                 q->qlength           += qc->qlength;
                 q->qlength_stealable += qc->qlength_stealable;
                 QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
-                qc->head = qc->tail = NULL;
+                qc->head    = qc->tail = NULL;
                 qc->qlength = qc->qlength_stealable = 0;
             }
         } else if (q->head) {
@@ -326,7 +328,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
             QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
         }
 
-        if (node == NULL && my_shepherd->stealing) {
+        if ((node == NULL) && my_shepherd->stealing) {
             while (my_shepherd->stealing) SPINLOCK_BODY();  // no sense contending for the lock
             continue;
         }
@@ -362,18 +364,20 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
 
 /* enqueue multiple (from steal) */
 void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
-                                              qt_threadqueue_node_t *first)
+                                              qt_threadqueue_node_t *first,
+                                              qt_threadqueue_node_t *last,
+                                              size_t                 addCnt)
 {   /*{{{*/
-    qt_threadqueue_node_t *last;
-    size_t                 addCnt = 1;
-
     assert(first != NULL);
     assert(q != NULL);
 
-    last = first;
-    while (last->next) {
-        last = last->next;
-        addCnt++;
+    if (last == NULL) {
+        last   = first;
+        addCnt = 1;
+        while (last->next) {
+            last = last->next;
+            addCnt++;
+        }
     }
 
     QTHREAD_TRYLOCK_LOCK(&q->qlock);
@@ -391,14 +395,12 @@ void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
 } /*}}}*/
 
 /* dequeue stolen threads at head, skip yielded threads */
-qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h,
-                                                             qt_threadqueue_t *v)
+qt_threadqueue_private_t INTERNAL qt_threadqueue_dequeue_steal(qt_threadqueue_t *h,
+                                                               qt_threadqueue_t *v)
 {                                      /*{{{ */
-    qt_threadqueue_node_t *node;
-    qt_threadqueue_node_t *first          = NULL;
-    qt_threadqueue_node_t *last           = NULL;
-    long                   amtStolen      = 0;
-    long                   desired_stolen = v->qlength_stealable / 2;
+    qt_threadqueue_node_t   *node;
+    qt_threadqueue_private_t stolenq        = { NULL, NULL, 0, 0 };
+    long                     desired_stolen = v->qlength_stealable / 2;
 
     assert(h != NULL);
     assert(v != NULL);
@@ -406,9 +408,9 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h
     if (desired_stolen == 0) { desired_stolen = 1; }
 
     if (!QTHREAD_TRYLOCK_TRY(&v->qlock)) {
-        return NULL;
+        return stolenq;
     }
-    while (v->qlength_stealable > 0 && amtStolen < desired_stolen) {
+    while (v->qlength_stealable > 0 && stolenq.qlength < desired_stolen) {
         node = (qt_threadqueue_node_t *)v->head;
         do {
             // Find next stealable node (if one exists)
@@ -423,7 +425,7 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h
                 qt_threadqueue_node_t *first_stolen = node;
                 qt_threadqueue_node_t *last_stolen  = node;
 
-                amtStolen++;
+                stolenq.qlength++;
 
                 // Adjust queue length(s)
                 v->qlength--;
@@ -431,13 +433,13 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h
 
                 // Find next unstealable node, or amount we want to steal
                 qt_threadqueue_node_t *next_to_steal = last_stolen->next;
-                while (amtStolen < desired_stolen && next_to_steal) {
+                while (stolenq.qlength < desired_stolen && next_to_steal) {
                     if (!next_to_steal->stealable) {
                         break;
                     } else {
                         last_stolen = next_to_steal;
 
-                        amtStolen++;
+                        stolenq.qlength++;
 
                         // Adjust queue length(s)
                         v->qlength--;
@@ -463,26 +465,27 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h
 
                 // Update steal list (first & last)
                 first_stolen->prev = last_stolen->next = NULL;
-                if (first == NULL) {
-                    first = first_stolen;
-                    last  = last_stolen;
+                if (stolenq.head == NULL) {
+                    stolenq.head = first_stolen;
+                    stolenq.tail = last_stolen;
                 } else {
-                    last->next         = first_stolen;
-                    first_stolen->prev = last;
-                    last               = last_stolen;
+                    stolenq.head->next = first_stolen;
+                    first_stolen->prev = stolenq.tail;
+                    stolenq.tail       = last_stolen;
                 }
             } else {
                 break;
             }
-        } while (v->qlength_stealable > 0 && amtStolen < desired_stolen);
+        } while (v->qlength_stealable > 0 && stolenq.qlength < desired_stolen);
         break;
     }
     QTHREAD_TRYLOCK_UNLOCK(&v->qlock);
 #ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
-    qthread_incr(&v->creator_ptr->steal_amount_stolen, amtStolen);
+    qthread_incr(&v->creator_ptr->steal_amount_stolen, stolenq.qlength);
 #endif
 
-    return (first);
+    stolenq.qlength_stealable = stolenq.qlength;
+    return (stolenq);
 }                                      /*}}} */
 
 /*  Steal work from another shepherd's queue
@@ -525,13 +528,15 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
     while (stolen == NULL) {
         qthread_shepherd_t *victim_shepherd = &shepherds[sorted_sheplist[i]];
         if (0 < victim_shepherd->ready->qlength_stealable) {
-            stolen = qt_threadqueue_dequeue_steal(thief_shepherd->ready, victim_shepherd->ready);
+            qt_threadqueue_private_t whatIstole;
+            whatIstole = qt_threadqueue_dequeue_steal(thief_shepherd->ready, victim_shepherd->ready);
+            stolen     = whatIstole.head;
             if (stolen) {
-                qt_threadqueue_node_t *surplus = stolen->next;
-                if (surplus) {
-                    stolen->next  = NULL;
-                    surplus->prev = NULL;
-                    qt_threadqueue_enqueue_multiple(thief_shepherd->ready, surplus);
+                whatIstole.head = stolen->next;
+                if (whatIstole.head) {
+                    stolen->next          = NULL;
+                    whatIstole.head->prev = NULL;
+                    qt_threadqueue_enqueue_multiple(thief_shepherd->ready, whatIstole.head, whatIstole.tail, whatIstole.qlength);
 #ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
                     qthread_incr(&thief_shepherd->steal_successful, 1);
 #endif
