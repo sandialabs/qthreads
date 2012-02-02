@@ -138,6 +138,7 @@ static aligned_t visit(void *args_)
         child.num_children = calc_num_children(&child);
 
         qthread_fork_syncvar_copyargs(visit, &child, sizeof(node_t), NULL);
+	qthread_yield();
     }
 
     qthread_incr(&donecount, 1);
