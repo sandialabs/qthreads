@@ -21,6 +21,8 @@
 
 #if defined(__tile__)
 # include <tmc/sync.h>
+# define QTHREAD_FASTLOCK_ATTRVAR
+# define QTHREAD_FASTLOCK_SETUP()     do { } while (0)
 # define QTHREAD_FASTLOCK_INIT(x)     tmc_sync_mutex_init(&(x))
 # define QTHREAD_FASTLOCK_INIT_PTR(x) tmc_sync_mutex_init((x))
 # define QTHREAD_FASTLOCK_LOCK(x)     tmc_sync_mutex_lock((x))
@@ -30,6 +32,8 @@
 # define QTHREAD_FASTLOCK_TYPE        tmc_sync_mutex_t
 # define QTHREAD_FASTLOCK_INITIALIZER TMC_SYNC_MUTEX_INIT
 #elif defined(USE_INTERNAL_SPINLOCK) && USE_INTERNAL_SPINLOCK
+# define QTHREAD_FASTLOCK_SETUP() do { } while (0)
+# define QTHREAD_FASTLOCK_ATTRVAR
 typedef struct qt_spin_exclusive_s { /* added to allow fast critical section ordering */
     aligned_t enter;                 /* and not call pthreads spin_lock -- hard to debug */
     aligned_t exit;                  /* near the lock under gdb -- 4/1/11 akp */
@@ -49,8 +53,14 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
 # define QTHREAD_FASTLOCK_INITIALIZER (qt_spin_exclusive_t) {0, 0 }
 #elif defined(HAVE_PTHREAD_SPIN_INIT)
 # include <pthread.h>
-# define QTHREAD_FASTLOCK_INIT(x)        pthread_spin_init(&(x), PTHREAD_PROCESS_PRIVATE)
-# define QTHREAD_FASTLOCK_INIT_PTR(x)    pthread_spin_init((x), PTHREAD_PROCESS_PRIVATE)
+extern pthread_mutexattr_t _fastlock_attr;
+# define QTHREAD_FASTLOCK_ATTRVAR pthread_mutexattr_t _fastlock_attr
+# define QTHREAD_FASTLOCK_SETUP()        do {                                   \
+        pthread_mutexattr_init(&_fastlock_attr);                                \
+        pthread_mutexattr_setpshared(&_fastlock_attr, PTHREAD_PROCESS_PRIVATE); \
+} while (0)
+# define QTHREAD_FASTLOCK_INIT(x)        pthread_spin_init(&(x), &_fastlock_attr)
+# define QTHREAD_FASTLOCK_INIT_PTR(x)    pthread_spin_init((x), &_fastlock_attr)
 # define QTHREAD_FASTLOCK_LOCK(x)        pthread_spin_lock((x))
 # define QTHREAD_FASTLOCK_UNLOCK(x)      pthread_spin_unlock((x))
 # define QTHREAD_FASTLOCK_DESTROY(x)     pthread_spin_destroy(&(x))
@@ -59,8 +69,14 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
 # define QTHREAD_FASTLOCK_INITIALIZER PTHREAD_SPINLOCK_INITIALIZER
 #else /* fallback */
 # include <pthread.h>
-# define QTHREAD_FASTLOCK_INIT(x)        pthread_mutex_init(&(x), NULL)
-# define QTHREAD_FASTLOCK_INIT_PTR(x)    pthread_mutex_init((x), NULL)
+extern pthread_mutexattr_t _fastlock_attr;
+# define QTHREAD_FASTLOCK_ATTRVAR pthread_mutexattr_t _fastlock_attr
+# define QTHREAD_FASTLOCK_SETUP()        do {                                   \
+        pthread_mutexattr_init(&_fastlock_attr);                                \
+        pthread_mutexattr_setpshared(&_fastlock_attr, PTHREAD_PROCESS_PRIVATE); \
+} while (0)
+# define QTHREAD_FASTLOCK_INIT(x)        pthread_mutex_init(&(x), &_fastlock_attr)
+# define QTHREAD_FASTLOCK_INIT_PTR(x)    pthread_mutex_init((x), &_fastlock_attr)
 # define QTHREAD_FASTLOCK_LOCK(x)        pthread_mutex_lock((x))
 # define QTHREAD_FASTLOCK_UNLOCK(x)      pthread_mutex_unlock((x))
 # define QTHREAD_FASTLOCK_DESTROY(x)     pthread_mutex_destroy(&(x))
@@ -122,7 +138,7 @@ static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t *x)
         return 0;
     }
 
-    newcmp = cmp;
+    newcmp         = cmp;
     newcmp.s.users = newcmp.s.ticket + 1;
     return(qthread_cas(&(x->u), cmp.u, newcmp.u) == cmp.u);
 }
@@ -130,22 +146,22 @@ static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t *x)
 #elif defined(HAVE_PTHREAD_SPIN_INIT)
 
 # define QTHREAD_TRYLOCK_TYPE pthread_spinlock_t
-# define QTHREAD_TRYLOCK_INIT(x)        pthread_spin_init(& (x), PTHREAD_PROCESS_PRIVATE)
-# define QTHREAD_TRYLOCK_INIT_PTR(x)    pthread_spin_init((x), PTHREAD_PROCESS_PRIVATE)
+# define QTHREAD_TRYLOCK_INIT(x)        pthread_spin_init( & (x), &_fastlock_attr)
+# define QTHREAD_TRYLOCK_INIT_PTR(x)    pthread_spin_init((x), &_fastlock_attr)
 # define QTHREAD_TRYLOCK_LOCK(x)        pthread_spin_lock((x))
 # define QTHREAD_TRYLOCK_UNLOCK(x)      pthread_spin_unlock((x))
-# define QTHREAD_TRYLOCK_DESTROY(x)     pthread_spin_destroy(& (x))
+# define QTHREAD_TRYLOCK_DESTROY(x)     pthread_spin_destroy( & (x))
 # define QTHREAD_TRYLOCK_DESTROY_PTR(x) pthread_spin_destroy((x))
 # define QTHREAD_TRYLOCK_TRY(x)         (pthread_spin_trylock((x)) == 0)
 
 #else /* fallback */
 
 # define QTHREAD_TRYLOCK_TYPE pthread_mutex_t
-# define QTHREAD_TRYLOCK_INIT(x)        pthread_mutex_init((& (x), PTHREAD_PROCESS_PRIVATE)
-# define QTHREAD_TRYLOCK_INIT_PTR(x)    pthread_mutex_init(((x), PTHREAD_PROCESS_PRIVATE)
+# define QTHREAD_TRYLOCK_INIT(x)        pthread_mutex_init(( & (x)), &_fastlock_attr)
+# define QTHREAD_TRYLOCK_INIT_PTR(x)    pthread_mutex_init((x), &_fastlock_attr)
 # define QTHREAD_TRYLOCK_LOCK(x)        pthread_mutex_lock((x))
 # define QTHREAD_TRYLOCK_UNLOCK(x)      pthread_mutex_unlock((x))
-# define QTHREAD_TRYLOCK_DESTROY(x)     pthread_mutex_destroy(& (x))
+# define QTHREAD_TRYLOCK_DESTROY(x)     pthread_mutex_destroy( & (x))
 # define QTHREAD_TRYLOCK_DESTROY_PTR(x) pthread_mutex_destroy((x))
 # define  QTHREAD_TRYLOCK_TRY(x)        (pthread_mutex_trylock((x)) == 0)
 
@@ -165,10 +181,10 @@ static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t *x)
 # define QTHREAD_CASLOCK_EXPLICIT_INIT(name) QTHREAD_FASTLOCK_INIT(name)
 # define QTHREAD_CASLOCK_INIT(var, i)        var = i; QTHREAD_FASTLOCK_INIT(var ## _caslock)
 # define QTHREAD_CASLOCK_DESTROY(var)        QTHREAD_FASTLOCK_DESTROY(var ## _caslock)
-# define QTHREAD_CASLOCK_READ(var)           (void *)qt_cas_read_ui((uintptr_t *)& (var), & (var ## _caslock))
-# define QTHREAD_CASLOCK_READ_UI(var)        qt_cas_read_ui((uintptr_t *)& (var), & (var ## _caslock))
-# define QT_CAS(var, oldv, newv)             qt_cas((void **)& (var), (void *)(oldv), (void *)(newv), & (var ## _caslock))
-# define QT_CAS_(var, oldv, newv, caslock)   qt_cas((void **)& (var), (void *)(oldv), (void *)(newv), & (caslock))
+# define QTHREAD_CASLOCK_READ(var)           (void *)qt_cas_read_ui((uintptr_t *) & (var), & (var ## _caslock))
+# define QTHREAD_CASLOCK_READ_UI(var)        qt_cas_read_ui((uintptr_t *) & (var), & (var ## _caslock))
+# define QT_CAS(var, oldv, newv)             qt_cas((void **) & (var), (void *)(oldv), (void *)(newv), & (var ## _caslock))
+# define QT_CAS_(var, oldv, newv, caslock)   qt_cas((void **) & (var), (void *)(oldv), (void *)(newv), & (caslock))
 static QINLINE void *qt_cas(void **const           ptr,
                             void *const            oldv,
                             void *const            newv,
@@ -204,8 +220,8 @@ static QINLINE uintptr_t qt_cas_read_ui(uintptr_t *const       ptr,
 # define QTHREAD_CASLOCK_DESTROY(var)
 # define QTHREAD_CASLOCK_READ(var)         (var)
 # define QTHREAD_CASLOCK_READ_UI(var)      (var)
-# define QT_CAS(var, oldv, newv)           qt_cas((void **)& (var), (void *)(oldv), (void *)(newv))
-# define QT_CAS_(var, oldv, newv, caslock) qt_cas((void **)& (var), (void *)(oldv), (void *)(newv))
+# define QT_CAS(var, oldv, newv)           qt_cas((void **) & (var), (void *)(oldv), (void *)(newv))
+# define QT_CAS_(var, oldv, newv, caslock) qt_cas((void **) & (var), (void *)(oldv), (void *)(newv))
 # ifdef QTHREAD_ATOMIC_CAS_PTR
 #  define qt_cas(P, O, N) (void *)__sync_val_compare_and_swap((P), (O), (N))
 # else
