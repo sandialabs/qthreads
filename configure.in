@@ -493,6 +493,7 @@ AC_CHECK_FUNCS([pthread_yield])
 AC_CHECK_FUNCS([pthread_spin_init],
 			   [have_pthread_spinlocks=yes],
 			   [have_pthread_spinlocks=no])
+QTHREAD_PTHREAD_PROCESS_PRIVATE
 
 AS_IF([test "x$qthread_implementation" = "xsst"],
           [AC_DEFINE([QTHREAD_SST_PRIMITIVES],[1],[Define to use the SST primitives])
