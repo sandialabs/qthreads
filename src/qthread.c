@@ -96,6 +96,7 @@ extern QTHREAD_FASTLOCK_TYPE rcrtool_lock;
 pthread_key_t shepherd_structs;
 qlib_t        qlib      = NULL;
 int           qaffinity = 1;
+QTHREAD_FASTLOCK_ATTRVAR;
 
 struct qt_cleanup_funcs_s {
     void                       (*func)(void);
@@ -848,6 +849,7 @@ int qthread_initialize(void)
     qthread_shepherd_id_t nshepherds      = 0;
     qthread_worker_id_t   nworkerspershep = 0;
 
+    QTHREAD_FASTLOCK_SETUP();
 #ifdef QTHREAD_DEBUG
     QTHREAD_FASTLOCK_INIT(output_lock);
     {
