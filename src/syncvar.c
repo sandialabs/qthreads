@@ -146,7 +146,7 @@ loop_start:
             if (timeout-- <= 0) { goto errexit; }
         } while (1);
         locked.u.w = addr->u.w; // I locked it, so I can read it
-#else   /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO) */
+#else                           /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO) */
         do {
 loop_start:
             unlocked = *addr;          // may be locked or unlocked, we don't know
@@ -433,19 +433,19 @@ int INTERNAL qthread_syncvar_readFF_nb(uint64_t *restrict const  dest,
 
 int API_FUNC qthread_syncvar_fill(syncvar_t *restrict const addr)
 {                                      /*{{{ */
-    eflags_t   e = { 0, 0, 0, 0, 0 };
-    uint64_t   ret;
-    qthread_t *me = qthread_internal_self();
+    eflags_t            e = { 0, 0, 0, 0, 0 };
+    uint64_t            ret;
+    qthread_shepherd_t *shep = qthread_internal_getshep();
 
     assert(addr);
 
-    qthread_debug(SYNCVAR_BEHAVIOR, "me(%p), addr(%p) = %x\n", me, addr,
+    qthread_debug(SYNCVAR_BEHAVIOR, "shep(%p), addr(%p) = %x\n", shep, addr,
                   (uintptr_t)addr->u.w);
-    if (!me) {
+    if (!shep) {
         return qthread_syncvar_blocker_func(addr, NULL, FILL);
     }
     ret = qthread_mwaitc(addr, SYNCFEB_ANY, INT_MAX, &e);
-    qthread_debug(SYNCVAR_DETAILS, "me(%p), addr(%p) = %x (b)\n", me, addr,
+    qthread_debug(SYNCVAR_DETAILS, "shep(%p), addr(%p) = %x (b)\n", shep, addr,
                   (uintptr_t)addr->u.w);
     qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
     if (e.pf == 1) {                         /* currently empty, so it needs to change state */
@@ -469,7 +469,7 @@ int API_FUNC qthread_syncvar_fill(syncvar_t *restrict const addr)
             UNLOCK_THIS_MODIFIED_SYNCVAR(addr, ret, (e.pf << 1) | e.sf);
             assert(m->FFQ || m->FEQ);      // otherwise there weren't really any waiters
             assert(m->EFQ == NULL);        // someone snuck in!
-            qthread_syncvar_gotlock_fill(me->rdata->shepherd_ptr, m, addr, ret);
+            qthread_syncvar_gotlock_fill(shep, m, addr, ret);
         } else {
             assert(e.sf == 0);         /* no waiters */
             UNLOCK_THIS_MODIFIED_SYNCVAR(addr, ret, 0);
@@ -483,18 +483,18 @@ int API_FUNC qthread_syncvar_fill(syncvar_t *restrict const addr)
 
 int API_FUNC qthread_syncvar_empty(syncvar_t *restrict const addr)
 {                                      /*{{{ */
-    eflags_t   e = { 0, 0, 0, 0, 0 };
-    uint64_t   ret;
-    qthread_t *me = qthread_internal_self();
+    eflags_t            e = { 0, 0, 0, 0, 0 };
+    uint64_t            ret;
+    qthread_shepherd_t *shep = qthread_internal_getshep();
 
     assert(addr);
 
-    qthread_debug(SYNCVAR_DETAILS, "me(%p), addr(%p) = %x\n", me, addr, (uintptr_t)addr->u.w);
-    if (!me) {
+    qthread_debug(SYNCVAR_DETAILS, "shep(%p), addr(%p) = %x\n", shep, addr, (uintptr_t)addr->u.w);
+    if (!shep) {
         return qthread_syncvar_blocker_func(addr, NULL, EMPTY);
     }
     ret = qthread_mwaitc(addr, SYNCFEB_ANY, INT_MAX, &e);
-    qthread_debug(SYNCVAR_DETAILS, "me(%p), addr(%p) = %x (b)\n", me, addr, (uintptr_t)addr->u.w);
+    qthread_debug(SYNCVAR_DETAILS, "shep(%p), addr(%p) = %x (b)\n", shep, addr, (uintptr_t)addr->u.w);
     qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
     if (e.pf == 0) {                         /* currently full, so it needs to change state */
         if (e.sf == 1) {                     /* waiters! */
@@ -516,7 +516,7 @@ int API_FUNC qthread_syncvar_empty(syncvar_t *restrict const addr)
             qthread_debug(SYNCVAR_DETAILS, "m->FEQ = %p, m->FFQ = %p, m->EFQ = %p\n",
                           m->FEQ, m->FFQ, m->EFQ);
             // addr->u.w = BUILD_UNLOCKED_SYNCVAR(ret, e.sf); // this must be done by gotlock_empty so we know what value to write
-            qthread_syncvar_gotlock_empty(me->rdata->shepherd_ptr, m, addr, e.sf);
+            qthread_syncvar_gotlock_empty(shep, m, addr, e.sf);
             qthread_debug(SYNCVAR_DETAILS, "empty(%p) => %x\n", addr,
                           (uintptr_t)BUILD_UNLOCKED_SYNCVAR(ret, (e.pf << 1) | e.sf));
         } else {
@@ -825,15 +825,15 @@ static QINLINE void qthread_syncvar_gotlock_fill(qthread_shepherd_t *shep,
 int API_FUNC qthread_syncvar_writeF(syncvar_t *restrict const      dest,
                                     const uint64_t *restrict const src)
 {                                      /*{{{ */
-    eflags_t   e   = { 0, 0, 0, 0, 0 };
-    uint64_t   ret = *src;
-    qthread_t *me  = qthread_internal_self();
+    eflags_t            e    = { 0, 0, 0, 0, 0 };
+    uint64_t            ret  = *src;
+    qthread_shepherd_t *shep = qthread_internal_getshep();
 
     qassert_ret((*src >> 60) == 0, QTHREAD_OVERFLOW);
 
-    qthread_debug(SYNCVAR_BEHAVIOR, "me(%p), dest(%p) = %x, src(%p) = %x\n", me,
+    qthread_debug(SYNCVAR_BEHAVIOR, "shep(%p), dest(%p) = %x, src(%p) = %x\n", shep,
                   dest, (unsigned long)dest->u.w, src, *src);
-    if (!me) {
+    if (!shep) {
         return qthread_syncvar_blocker_func(dest, (void *)src, WRITEF);
     }
     qthread_mwaitc(dest, SYNCFEB_ANY, INT_MAX, &e);
@@ -858,7 +858,7 @@ int API_FUNC qthread_syncvar_writeF(syncvar_t *restrict const      dest,
         UNLOCK_THIS_MODIFIED_SYNCVAR(dest, ret, (e.pf << 1) | e.sf);
         assert(m->FFQ || m->FEQ);      // otherwise there weren't really any waiters
         assert(m->EFQ == NULL);        // someone snuck in!
-        qthread_syncvar_gotlock_fill(me->rdata->shepherd_ptr, m, dest, ret);
+        qthread_syncvar_gotlock_fill(shep, m, dest, ret);
     } else {
         UNLOCK_THIS_MODIFIED_SYNCVAR(dest, ret, 0);
     }
@@ -985,7 +985,7 @@ int API_FUNC qthread_syncvar_writeEF_const(syncvar_t *restrict const dest,
 int INTERNAL qthread_syncvar_writeEF_nb(syncvar_t *restrict const      dest,
                                         const uint64_t *restrict const src)
 {                                      /*{{{ */
-    eflags_t   e = { 0, 0, 0, 0, 0 };
+    eflags_t   e       = { 0, 0, 0, 0, 0 };
     const int  lockbin = QTHREAD_CHOOSE_STRIPE(dest);
     qthread_t *me      = qthread_internal_self();
 

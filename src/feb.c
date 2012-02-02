@@ -299,9 +299,9 @@ int API_FUNC qthread_empty(const aligned_t *dest)
 #ifndef SST
     qthread_addrstat_t *m;
     qt_hash             FEBbin;
-    qthread_t          *me = qthread_internal_self();
+    qthread_shepherd_t *shep = qthread_internal_getshep();
 
-    if (!me) {
+    if (!shep) {
         return qthread_feb_blocker_func((void *)dest, NULL, EMPTY);
     }
     {
@@ -316,7 +316,7 @@ int API_FUNC qthread_empty(const aligned_t *dest)
         m = (qthread_addrstat_t *)qt_hash_get_locked(FEBbin, (void *)alignedaddr);
         if (!m) {
             /* currently full, and must be added to the hash to empty */
-            m = qthread_addrstat_new(me ? (me->rdata->shepherd_ptr) : qthread_internal_getshep());
+            m = qthread_addrstat_new(shep);
             if (!m) {
                 qt_hash_unlock(FEBbin);
                 return QTHREAD_MALLOC_ERROR;
@@ -333,7 +333,7 @@ int API_FUNC qthread_empty(const aligned_t *dest)
     qt_hash_unlock(FEBbin);
     qthread_debug(LOCK_BEHAVIOR, "%p is now empty\n", dest);
     if (m) {
-        qthread_gotlock_empty(me->rdata->shepherd_ptr, m, (void *)alignedaddr, 0);
+        qthread_gotlock_empty(shep, m, (void *)alignedaddr, 0);
     }
 #else /* ifndef SST */
     QALIGN(dest, alignedaddr);
@@ -349,9 +349,9 @@ int API_FUNC qthread_fill(const aligned_t *dest)
 #ifndef SST
     qthread_addrstat_t *m;
     const int           lockbin = QTHREAD_CHOOSE_STRIPE(dest);
-    qthread_t          *me      = qthread_internal_self();
+    qthread_shepherd_t *shep    = qthread_internal_getshep();
 
-    if (!me) {
+    if (!shep) {
         return qthread_feb_blocker_func((void *)dest, NULL, FILL);
     }
     QALIGN(dest, alignedaddr);
@@ -369,7 +369,7 @@ int API_FUNC qthread_fill(const aligned_t *dest)
     if (m) {
         /* if dest wasn't in the hash, it was already full. Since it was,
          * we need to fill it. */
-        qthread_gotlock_fill(me->rdata->shepherd_ptr, m, (void *)alignedaddr, 0);
+        qthread_gotlock_fill(shep, m, (void *)alignedaddr, 0);
     }
 #else /* ifndef SST */
     QALIGN(dest, alignedaddr);
@@ -391,19 +391,19 @@ int API_FUNC qthread_writeF(aligned_t *restrict const       dest,
 #ifndef SST
     qthread_addrstat_t *m;
     const int           lockbin = QTHREAD_CHOOSE_STRIPE(dest);
-    qthread_t          *me      = qthread_internal_self();
+    qthread_shepherd_t *shep    = qthread_internal_getshep();
 
-    if (!me) {
+    if (!shep) {
         return qthread_feb_blocker_func(dest, (void *)src, WRITEF);
     }
-    qthread_debug(LOCK_BEHAVIOR, "tid %u dest=%p src=%p...\n", me->thread_id, dest, src);
+    qthread_debug(LOCK_BEHAVIOR, "tid %u dest=%p src=%p...\n", shep->current->thread_id, dest, src);
     QALIGN(dest, alignedaddr);
-    QTHREAD_LOCK_UNIQUERECORD(feb, dest, me);
+    QTHREAD_LOCK_UNIQUERECORD2(feb, dest, shep);
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]); {    /* lock hash */
         m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->FEBs[lockbin], (void *)alignedaddr);
         if (!m) {
-            m = qthread_addrstat_new(me->rdata->shepherd_ptr);
+            m = qthread_addrstat_new(shep);
             if (!m) {
                 qt_hash_unlock(qlib->FEBs[lockbin]);
                 return QTHREAD_MALLOC_ERROR;
@@ -417,8 +417,8 @@ int API_FUNC qthread_writeF(aligned_t *restrict const       dest,
     if (dest && (dest != src)) {
         memcpy(dest, src, sizeof(aligned_t));
     }
-    qthread_debug(LOCK_BEHAVIOR, "tid %u succeeded on %p=%p\n", me->thread_id, dest, src);
-    qthread_gotlock_fill(me->rdata->shepherd_ptr, m, alignedaddr, 0);
+    qthread_debug(LOCK_BEHAVIOR, "tid %u succeeded on %p=%p\n", shep->current->thread_id, dest, src);
+    qthread_gotlock_fill(shep, m, alignedaddr, 0);
 #else /* ifndef SST */
     QALIGN(dest, alignedaddr);
     PIM_feb_empty((void *)alignedaddr);
