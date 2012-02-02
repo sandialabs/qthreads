@@ -283,7 +283,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
  * low-overhead for busy shepherds. This is a hybrid approach: normally, it
  * functions as a spinlock, but if it spins too much, it waits for a signal */
 qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
-                                                    uint_fast8_t      UNUSED(active))
+                                                    uint_fast8_t      QUNUSED(active))
 {                                      /*{{{ */
     qthread_t *p = NULL;
 
