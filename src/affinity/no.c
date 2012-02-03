@@ -95,6 +95,7 @@ unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherd
 int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                                   qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
+    qthread_debug(AFFINITY_CALLS, "start (%p, %i)\n", sheps, (int)nshepherds);
     for (size_t i = 0; i < nshepherds; ++i) {
         sheps[i].shep_dists      = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
         sheps[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
