@@ -1,4 +1,22 @@
---- 1.7.1b ---
+--- 1.7.1 ---
+New Features:
+ - New experimental scheduler: loxley
+ - Experimental task team support
+ - Provide QTHREAD_VERSION in qthread.h
+Improvements
+ - Significant performance improvements in the scheduler
+ - Task-spawn caching
+ - More benchmarks in the tests tree
+ - Improved memory pool (still not perfect, but now more reliable)
+ - Lots of OpenMP support improvements
+ - Removed 'volatile' in favor of explicit memory fences (for speed)
+ - TilePro/TileGX support
+ - Experimental signal-based task termination
+ - Updates task ID support with distinct NULL and "not really a qthread" identifiers
+Bugfixes
+ - Fixed cross-compilation behavior
+ - Lots of minor fixes
+--- 1.7 ---
 New Features:
  - Experimental multi-node support with Portals4
  - Task-local data
