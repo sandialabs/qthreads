@@ -1,6 +1,6 @@
 These are ideas for things to do (in no particular order):
 
- 1. Qthread teams (for synchronization, e.g. barrier)
+ 1. Use LockBox mutexes on BlueGene/P
 
  2. Mass thread-kill (e.g. eurekas)
 
@@ -25,22 +25,17 @@ These are ideas for things to do (in no particular order):
 11. Add a qthread_replace(me, func, arg, argsize) function to enable convenient
     tail-recursion algorithms
 
-12. Add a qthread_forker(func, ret, ...) that accepts multiple arguments. How
-    painful would this be?
+12. Make futurelib limits dynamic
 
-13. Make futurelib limits dynamic
+13. Further optimize memory pooling (steal ideas from tcmalloc?)
 
-14. Rework qpool strategy
+14. Port to XMT (is this even possible???)
 
-15. Port to XMT (is this even possible???)
+15. Rework futures to use preallocated contexts
 
-16. Rework futures to use preallocated contexts
+16. Rework most qutil/qloop functions to deal with deactivated shepherds
 
-17. Rework futures to use small structs for queueing new futures
-
-18. Rework most qutil/qloop functions to deal with deactivated shepherds
-
-19. Continuation passing (start with cross-node migration, with the agreement
+17. Continuation passing (start with cross-node migration, with the agreement
     that no pointers will work after a migration)... CAN BE DONE WITH MPI
 
 	- Can allow for qthread_incr/feb/etc operation IFF we can identify them
@@ -48,9 +43,9 @@ These are ideas for things to do (in no particular order):
 	  thread to identify the "home" so that we can send the necessary messages
 	  to make those operations happen on the right "home" node
 
-20. Coalesce system calls
+18. Coalesce system calls
 
-21. Implement MAMA malloc?
+19. Implement MAMA malloc?
 
 Things to think about:
 
