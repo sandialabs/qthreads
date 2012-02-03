@@ -3,6 +3,9 @@ if ! type rman 2>&1 ; then
 	echo "Please install rman"
 	exit -1
 fi
+mkdir html
 for F in man3/*.3 ; do
-	rman -f html -r '%s.html' -S $F > ${F%.3}.html || (echo $F && break)
+	newfile="${F%.3}.html"
+	newfile="html/${newfile#man3/}"
+	rman -f html -r '%s.html' -S "$F" > "${newfile}" || (echo "$F" && break)
 done
