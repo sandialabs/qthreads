@@ -1049,7 +1049,7 @@ int qthread_initialize(void)
         }
     }
     qthread_debug(AFFINITY_DETAILS, "qaffinity = %i\n", qaffinity);
-    if ((qaffinity == 1) && ((nshepherds * nworkerspershep) > 1)) {
+    {
         int ret = qt_affinity_gendists(qlib->shepherds, nshepherds);
         if (ret != QTHREAD_SUCCESS) {
             qthread_debug(AFFINITY_DETAILS, "gendists returned non-success (%i)\n", (int)ret);
