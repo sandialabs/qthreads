@@ -396,7 +396,7 @@ int API_FUNC qthread_writeF(aligned_t *restrict const       dest,
     if (!shep) {
         return qthread_feb_blocker_func(dest, (void *)src, WRITEF);
     }
-    qthread_debug(LOCK_BEHAVIOR, "tid %u dest=%p src=%p...\n", shep->current->thread_id, dest, src);
+    qthread_debug(LOCK_BEHAVIOR, "tid %u dest=%p src=%p...\n", (shep->current)?(shep->current->thread_id):UINT_MAX, dest, src);
     QALIGN(dest, alignedaddr);
     QTHREAD_LOCK_UNIQUERECORD2(feb, dest, shep);
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
@@ -417,7 +417,7 @@ int API_FUNC qthread_writeF(aligned_t *restrict const       dest,
     if (dest && (dest != src)) {
         memcpy(dest, src, sizeof(aligned_t));
     }
-    qthread_debug(LOCK_BEHAVIOR, "tid %u succeeded on %p=%p\n", shep->current->thread_id, dest, src);
+    qthread_debug(LOCK_BEHAVIOR, "tid %u succeeded on %p=%p\n", (shep->current)?(shep->current->thread_id):UINT_MAX, dest, src);
     qthread_gotlock_fill(shep, m, alignedaddr, 0);
 #else /* ifndef SST */
     QALIGN(dest, alignedaddr);
