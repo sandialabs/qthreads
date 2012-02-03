@@ -7,7 +7,6 @@ AM_CXXFLAGS = @RESTRICT_CXXFLAGS@
 
 basic_tests = test_basic \
 			  test_basic_syncvar \
-			  test_signal \
 			  test_reinit \
 			  test_cas \
 			  test_cacheline \
@@ -74,7 +73,9 @@ endif
 
 benchmarks =
 
-EXTRA_PROGRAMS += $(unbuildable) $(benchmarks)
+EXTRA_PROGRAMS += $(unbuildable) \
+				  $(benchmarks) \
+				  test_signal
 
 CLEANFILES += $(unbuildable) $(benchmarks)
 
