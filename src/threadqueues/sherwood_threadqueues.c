@@ -282,7 +282,9 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
     qthread_t          *t;
 
     assert(q != NULL);
+    assert(my_shepherd);
     assert(my_shepherd->ready == q);
+    assert(my_shepherd->sorted_sheplist);
 
     while (1) {
         qt_threadqueue_node_t *node = NULL;
@@ -521,6 +523,7 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
     qthread_shepherd_id_t        i               = 0;
     qthread_shepherd_t *const    shepherds       = qlib->shepherds;
     qthread_shepherd_id_t *const sorted_sheplist = thief_shepherd->sorted_sheplist;
+    assert(sorted_sheplist);
 
     while (stolen == NULL) {
         qthread_shepherd_t *victim_shepherd = &shepherds[sorted_sheplist[i]];
