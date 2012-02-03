@@ -119,12 +119,20 @@ AC_CACHE_CHECK([support for __sync_synchronize],
  AS_IF([test "x$qt_cv_builtin_synchronize" == xyes],
 	   [mdefstr='__sync_synchronize()'],
        [AS_IF([test "x$qt_cv_gcc_inline_assembly" = "xyes"],
-	          [AS_IF([test "x$qthread_cv_asm_arch" = xAMD64],
-				     [mdefstr='__asm__ __volatile__ ("mfence":::"memory")'],
-					 [mdefstr='__asm__ __volatile__ ("":::"memory")'])
-			   AS_IF([test "x$qthread_cv_asm_arch" = xSPARCV9_32 -o "x$qthread_cv_asm_arch" = xSPARCV9_64],
-				     [mdefstr='__asm__ __volatile__ ("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad":::"memory")'])],
-			  [mdefstr="$cdefstr"])])
+	          [case "$qthread_cv_asm_arch" in
+		     AMD64)
+                       mdefstr='__asm__ __volatile__ ("mfence":::"memory")'
+		       ;;
+		     POWERPC*)
+                       mdefstr='__asm__ __volatile__ ("sync":::"memory")'
+		       ;;
+		     SPARCV9_32|SPARCV9_64)
+                       mdefstr='__asm__ __volatile__ ("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad":::"memory")'
+                       ;;
+		    *)
+                       mdefstr="$cdefstr"
+		       ;;
+		       esac])])
  AC_DEFINE_UNQUOTED([MACHINE_FENCE], [$mdefstr],
    [if the compiler supports __sync_synchronize (fallback to COMPILER_FENCE)])
  AC_DEFINE_UNQUOTED([COMPILER_FENCE], [$cdefstr],
