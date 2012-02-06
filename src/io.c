@@ -32,6 +32,7 @@
 
 /* Internal Headers */
 #include "qt_io.h"
+#include "qt_macros.h"
 #include "qthread_asserts.h"
 #include "qthread_innards.h"
 #include "qt_threadqueues.h"
@@ -74,10 +75,10 @@ static void qt_blocking_subsystem_internal_freemem(void)
     QTHREAD_DESTROYCOND(&theQueue.notempty);
 } /*}}}*/
 
-static void *qt_blocking_subsystem_proxy_thread(void *arg)
+static void *qt_blocking_subsystem_proxy_thread(void *QUNUSED(arg))
 {   /*{{{*/
     while (proxy_exit == 0) {
-        if (qt_process_blocking_calls()) {
+        if (qt_process_blocking_call()) {
             break;
         }
         COMPILER_FENCE;
@@ -122,7 +123,7 @@ void INTERNAL qt_blocking_subsystem_init(void)
     qthread_internal_cleanup(qt_blocking_subsystem_internal_freemem);
 } /*}}}*/
 
-int INTERNAL qt_process_blocking_calls(void)
+int INTERNAL qt_process_blocking_call(void)
 {   /*{{{*/
     qt_blocking_queue_node_t *item;
 
@@ -170,7 +171,7 @@ int INTERNAL qt_process_blocking_calls(void)
         theQueue.tail = theQueue.head;
     }
     theQueue.length--;
-    qthread_debug(IO_DETAILS, "dequeue... theQueue.head = %p, .tail = %p, item = %p\n", theQueue.head, theQueue.tail, item);
+    qthread_debug(IO_DETAILS, "dequeue... theQueue.head = %p, .tail = %p, item:%p, thread:%p, rdata:%p\n", theQueue.head, theQueue.tail, item, item->thread, item->thread->rdata);
     QTHREAD_UNLOCK(&theQueue.lock);
     item->next = NULL;
     /* do something with <item> */
@@ -347,16 +348,16 @@ int INTERNAL qt_process_blocking_calls(void)
             qt_context_t my_context;
             qassert(pthread_setspecific(IO_task_struct, item->thread), 0);
             getcontext(&my_context);
-            qthread_debug(IO_DETAILS, "blocking proxy context is %p\n", &my_context);
+            qthread_debug(IO_DETAILS, "blocking proxy context is %p (item:%p, thread:%p, rdata:%p)\n", &my_context, item, item->thread, item->thread->rdata);
             qthread_exec(item->thread, &my_context);
-            qthread_debug(IO_DETAILS, "proxy back from qthread_exec\n");
-            FREE_SYSCALLJOB(item);
+            qthread_debug(IO_DETAILS, "proxy back from qthread_exec (item:%p, thread:%p, rdata:%p)\n", item, item->thread, item->thread->rdata);
             // pthread_setspecific(IO_task_struct, NULL);
             break;
         }
     }
     /* and now, re-queue */
     qt_threadqueue_enqueue(item->thread->rdata->shepherd_ptr->ready, item->thread);
+    FREE_SYSCALLJOB(item);
     return 0;
 } /*}}}*/
 
@@ -364,8 +365,9 @@ void INTERNAL qt_blocking_subsystem_enqueue(qt_blocking_queue_node_t *job)
 {   /*{{{*/
     qt_blocking_queue_node_t *prev;
 
-    qthread_debug(IO_FUNCTIONS, "entering, job = %p\n", job);
+    qthread_debug(IO_FUNCTIONS, "entering, job = %p, thread:%p, rdata:%p\n", job, job->thread, job->thread->rdata);
     assert(job->next == NULL);
+    assert(job->thread->rdata);
     QTHREAD_LOCK(&theQueue.lock);
     qthread_debug(IO_DETAILS, "1) theQueue.head = %p, .tail = %p, job = %p\n", theQueue.head, theQueue.tail, job);
     prev          = theQueue.tail;
