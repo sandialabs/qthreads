@@ -10,7 +10,7 @@
 # define FREE_SYSCALLJOB(s) free(s)
 #else
 # define ALLOC_SYSCALLJOB qt_mpool_alloc(syscall_job_pool);
-# define FREE_SYSCALLJOB(j) qt_mpool_free(syscall_job_pool, j);
+# define FREE_SYSCALLJOB(j) qt_mpool_cached_free(syscall_job_pool, j);
 #endif
 
 typedef enum blocking_syscalls {
