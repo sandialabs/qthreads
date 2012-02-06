@@ -128,7 +128,7 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 /* functions to manage the thread queues */
 /*****************************************/
 
-qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd)
+qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
 {                                      /*{{{ */
     qt_threadqueue_t *q = ALLOC_THREADQUEUE();
 
@@ -172,6 +172,11 @@ qt_threadqueue_private_t INTERNAL *qt_threadqueue_private_create(void)
 void INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
                                              qthread_t *restrict                t)
 {}
+
+void INTERNAL qt_threadqueue_private_destroy(void *q)
+{   /*{{{*/
+    assert(q == NULL);
+} /*}}}*/
 
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
                                      qthread_t *restrict        t)

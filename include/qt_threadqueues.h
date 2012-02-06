@@ -6,29 +6,24 @@
 
 #include "qt_visibility.h"
 #include "qt_qthread_t.h" /* for qthread_t */
-#include "qt_atomics.h"
 #include "qt_mpool.h"
-
-#ifndef QTHREAD_SHEPHERD_TYPEDEF
-# define QTHREAD_SHEPHERD_TYPEDEF
-typedef struct qthread_shepherd_s qthread_shepherd_t;
-#endif
 
 typedef struct _qt_threadqueue_private qt_threadqueue_private_t;
 typedef struct _qt_threadqueue qt_threadqueue_t;
 typedef struct _qt_threadqueue_pools {
     qt_mpool nodes;
     qt_mpool queues;
+    qt_mpool spawncache_queues;
 } qt_threadqueue_pools_t;
 
 void INTERNAL qt_threadqueue_subsystem_init(void);
 
 qt_threadqueue_private_t INTERNAL *qt_threadqueue_private_create(void);
+void INTERNAL                      qt_threadqueue_private_destroy(void *q);
 void INTERNAL                      qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
                                                                   qthread_t *restrict                t);
-void INTERNAL qt_threadqueue_private_destroy(qt_threadqueue_private_t *q);
 
-qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd);
+qt_threadqueue_t INTERNAL *qt_threadqueue_new(void);
 void INTERNAL              qt_threadqueue_free(qt_threadqueue_t *q);
 
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,

@@ -29,7 +29,6 @@ struct _qt_threadqueue {
     QTHREAD_FASTLOCK_TYPE spinlock;
     QTHREAD_FASTLOCK_TYPE steallock;
 
-    qthread_shepherd_t  *creator_ptr;
     qt_stack_t stack;
 
     /* used for the work stealing queue implementation */
@@ -57,13 +56,12 @@ void INTERNAL qt_threadqueue_subsystem_init(void) {}
 static QINLINE long qthread_steal_chunksize(void);
 static QINLINE qthread_t* qthread_steal(qt_threadqueue_t *thiefq);
 
-qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd)
+qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
 {   /*{{{*/
     qt_threadqueue_t *q;
     posix_memalign((void **) &q, 64, sizeof(qt_threadqueue_t));
 
     if (q != NULL) {
-        q->creator_ptr       = shepherd;
         q->empty             = 1;
         q->stealing          = 0;
         qt_stack_create(&(q->stack), 1024);
@@ -98,6 +96,11 @@ qt_threadqueue_private_t INTERNAL *qt_threadqueue_private_create(void)
 void INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
                                              qthread_t *restrict                t)
 {}
+
+void INTERNAL qt_threadqueue_private_destroy(void *q)
+{   /*{{{*/
+    assert(q == NULL);
+} /*}}}*/
 
 /* enqueue at tail */
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *restrict q,
@@ -254,7 +257,7 @@ static int qt_threadqueue_steal(qt_threadqueue_t *victim_queue,
     qt_threadqueue_enqueue_unstealable(stack, nostealbuffer, amtNotStolen, index);
 
 # ifdef STEAL_PROFILE   // should give mechanism to make steal profiling optional
-    qthread_incr(&victim_queue->creator_ptr->steal_amount_stolen, amtStolen);
+    qthread_incr(&victim_queue->steal_amount_stolen, amtStolen);
 # endif
 
     return(amtStolen);

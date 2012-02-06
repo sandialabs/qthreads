@@ -41,11 +41,17 @@ struct _qt_threadqueue {
     qt_threadqueue_node_t *tail;
     /* used for the work stealing queue implementation */
     QTHREAD_TRYLOCK_TYPE   qlock;
-    qthread_shepherd_t    *creator_ptr;
     long                   qlength;
     long                   qlength_stealable;                   /* number of stealable tasks on queue - stop steal attempts
                                                                  * that will fail because tasks cannot be moved - 4/1/11 AKP
                                                                  */
+#ifdef STEAL_PROFILE
+    aligned_t steal_amount_stolen;
+    aligned_t steal_called;
+    aligned_t steal_attempted;
+    aligned_t steal_failed;
+    aligned_t steal_successful;
+#endif
 } /* qt_threadqueue_t */;
 
 struct _qt_threadqueue_private {
@@ -83,6 +89,8 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *l)
 
 /* Memory Management */
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
+# define ALLOC_SPAWNCACHE()  (qt_threadqueue_private_t *)malloc(sizeof(qt_threadqueue_private_t))
+# define FREE_SPAWNCACHE(t)  free(t)
 # define ALLOC_THREADQUEUE() (qt_threadqueue_t *)calloc(1, sizeof(qt_threadqueue_t))
 # define FREE_THREADQUEUE(t) free(t)
 static QINLINE qt_threadqueue_node_t *ALLOC_TQNODE(void)
@@ -94,6 +102,8 @@ static QINLINE qt_threadqueue_node_t *ALLOC_TQNODE(void)
 void INTERNAL qt_threadqueue_subsystem_init(void) {}
 #else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 qt_threadqueue_pools_t generic_threadqueue_pools;
+# define ALLOC_SPAWNCACHE()  (qt_threadqueue_private_t *)qt_mpool_cached_alloc(generic_threadqueue_pools.spawncache_queues)
+# define FREE_SPAWNCACHE(t)  qt_mpool_cached_free(generic_threadqueue_pools.spawncache_queues, t)
 # define ALLOC_THREADQUEUE() (qt_threadqueue_t *)qt_mpool_cached_alloc(generic_threadqueue_pools.queues)
 # define FREE_THREADQUEUE(t) qt_mpool_cached_free(generic_threadqueue_pools.queues, t)
 
@@ -108,6 +118,7 @@ static void qt_threadqueue_subsystem_shutdown(void)
 {
     qt_mpool_destroy(generic_threadqueue_pools.nodes);
     qt_mpool_destroy(generic_threadqueue_pools.queues);
+    qt_mpool_destroy(generic_threadqueue_pools.spawncache_queues);
 }
 
 void INTERNAL qt_threadqueue_subsystem_init(void)
@@ -116,6 +127,8 @@ void INTERNAL qt_threadqueue_subsystem_init(void)
                                                                qthread_cacheline());
     generic_threadqueue_pools.nodes = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t),
                                                               qthread_cacheline());
+    generic_threadqueue_pools.spawncache_queues = qt_mpool_create_aligned(sizeof(qt_threadqueue_private_t),
+                                                                          qthread_cacheline());
     qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
 }
 
@@ -145,24 +158,24 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 
 static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_shepherd);
 
-qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd)
+qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
 {   /*{{{*/
     qt_threadqueue_t *q = ALLOC_THREADQUEUE();
 
     if (q != NULL) {
-        q->head              = q->tail = NULL;
+        q->head              = NULL;
+        q->tail              = NULL;
         q->qlength           = 0;
         q->qlength_stealable = 0;
         QTHREAD_TRYLOCK_INIT(q->qlock);
     }
-    q->creator_ptr = shepherd;
 
     return q;
 } /*}}}*/
 
 qt_threadqueue_private_t INTERNAL *qt_threadqueue_private_create(void)
-{
-    qt_threadqueue_private_t *q = malloc(qthread_cacheline());
+{   /*{{{*/
+    qt_threadqueue_private_t *q = ALLOC_SPAWNCACHE();
 
     q->head              = NULL;
     q->tail              = NULL;
@@ -170,6 +183,11 @@ qt_threadqueue_private_t INTERNAL *qt_threadqueue_private_create(void)
     q->qlength_stealable = 0;
 
     return q;
+} /*}}}*/
+
+void INTERNAL qt_threadqueue_private_destroy(void *q)
+{
+    FREE_SPAWNCACHE(q);
 }
 
 void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
@@ -294,8 +312,8 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
             qc->head = node->next;
             if (qc->head) {
                 qt_threadqueue_node_t *first = qc->head;
-                qt_threadqueue_node_t *last = qc->tail;
-                node->next     = NULL;
+                qt_threadqueue_node_t *last  = qc->tail;
+                node->next  = NULL;
                 first->prev = NULL;
                 QTHREAD_TRYLOCK_LOCK(&q->qlock);
                 last->next  = NULL;
@@ -309,7 +327,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
                 q->qlength           += qc->qlength;
                 q->qlength_stealable += qc->qlength_stealable;
                 QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
-                qc->head = qc->tail = NULL;
+                qc->head    = qc->tail = NULL;
                 qc->qlength = qc->qlength_stealable = 0;
             }
         } else if (q->head) {
@@ -328,7 +346,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
             QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
         }
 
-        if (node == NULL && my_shepherd->stealing) {
+        if ((node == NULL) && my_shepherd->stealing) {
             while (my_shepherd->stealing) SPINLOCK_BODY();  // no sense contending for the lock
             continue;
         }
@@ -481,7 +499,7 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h
     }
     QTHREAD_TRYLOCK_UNLOCK(&v->qlock);
 #ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
-    qthread_incr(&v->creator_ptr->steal_amount_stolen, amtStolen);
+    qthread_incr(&v->steal_amount_stolen, amtStolen);
 #endif
 
     return (first);
@@ -535,10 +553,10 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
                     stolen->next  = NULL;
                     surplus->prev = NULL;
                     qt_threadqueue_enqueue_multiple(thief_shepherd->ready, surplus);
-#ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
-                    qthread_incr(&thief_shepherd->steal_successful, 1);
-#endif
                 }
+#ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
+                qthread_incr(&thief_shepherd->steal_successful, 1);
+#endif
                 break;
             }
 #ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
@@ -572,7 +590,7 @@ void INTERNAL qthread_steal_stat(void)
                 qlib->shepherds[i].steal_attempted,
                 qlib->shepherds[i].steal_failed,
                 qlib->shepherds[i].steal_successful,
-                qlib->shepherds[i].steal_amount_stolen);
+                qlib->shepherds[i].ready->steal_amount_stolen);
     }
 } /*}}}*/
 

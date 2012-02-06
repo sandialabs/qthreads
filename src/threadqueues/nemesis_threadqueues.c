@@ -82,7 +82,7 @@ void INTERNAL qt_threadqueue_subsystem_init(void)
 
 /* Thankfully, NEMESIS does not suffer from the ABA problem. */
 
-qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd)
+qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
 {                                      /*{{{ */
     qt_threadqueue_t *q = ALLOC_THREADQUEUE();
 
@@ -95,14 +95,14 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(qthread_shepherd_t *shepherd)
     {
         pthread_mutexattr_t ma;
         qassert(pthread_mutexattr_init(&ma), 0);
-        qassert(pthread_mutexattr_setpshared(&ma, PTHREAD_PROCESS_SHARED), 0);
+        qassert(pthread_mutexattr_setpshared(&ma, PTHREAD_PROCESS_PRIVATE), 0);
         qassert(pthread_mutex_init(&q->trigger_lock, &ma), 0);
         qassert(pthread_mutexattr_destroy(&ma), 0);
     }
     {
         pthread_condattr_t ca;
         qassert(pthread_condattr_init(&ca), 0);
-        qassert(pthread_condattr_setpshared(&ca, PTHREAD_PROCESS_SHARED), 0);
+        qassert(pthread_condattr_setpshared(&ca, PTHREAD_PROCESS_PRIVATE), 0);
         qassert(pthread_cond_init(&q->trigger, &ca), 0);
         qassert(pthread_condattr_destroy(&ca), 0);
     }
@@ -130,6 +130,11 @@ qt_threadqueue_private_t INTERNAL *qt_threadqueue_private_create(void)
 void INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
                                              qthread_t *restrict                t)
 {}
+
+void INTERNAL qt_threadqueue_private_destroy(void *q)
+{   /*{{{*/
+    assert(q == NULL);
+} /*}}}*/
 
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
                                      qthread_t *restrict        t)

@@ -400,7 +400,6 @@ static void *qthread_shepherd(void *arg)
     pthread_setspecific(shepherd_structs, arg);
 #ifdef QTHREAD_USE_PRIVATE_QUEUES
     localqueue = qt_threadqueue_private_create();
-    assert(localqueue);
     pthread_setspecific(spawn_cache, localqueue);
 #endif
     signal(SIGUSR1, hup_handler);
@@ -967,7 +966,7 @@ int qthread_initialize(void)
     /* initialize the kernel threads and scheduler */
     qassert(pthread_key_create(&shepherd_structs, NULL), 0);
 #ifdef QTHREAD_USE_PRIVATE_QUEUES
-    qassert(pthread_key_create(&spawn_cache, NULL), 0);
+    qassert(pthread_key_create(&spawn_cache, qt_threadqueue_private_destroy), 0);
 #endif
     qlib->nshepherds        = nshepherds;
     qlib->nworkerspershep   = nworkerspershep;
@@ -1097,7 +1096,7 @@ int qthread_initialize(void)
         qthread_debug(SHEPHERD_DETAILS, "setting up shepherd %i (%p)\n", i, &qlib->shepherds[i]);
         qlib->shepherds[i].shepherd_id = (qthread_shepherd_id_t)i;
         QTHREAD_CASLOCK_INIT(qlib->shepherds[i].active, 1);
-        qlib->shepherds[i].ready = qt_threadqueue_new(&(qlib->shepherds[i]));
+        qlib->shepherds[i].ready = qt_threadqueue_new();
         qassert_ret(qlib->shepherds[i].ready, QTHREAD_MALLOC_ERROR);
         qlib->threadqueues[i] = qlib->shepherds[i].ready;
 #ifdef QTHREAD_LOCK_PROFILING
@@ -2146,21 +2145,20 @@ static QINLINE void qthread_enqueue(qthread_queue_t *q,
 
     qthread_debug(THREAD_FUNCTIONS, "q(%p), t(%p): started\n", q, t);
 
-    QTHREAD_LOCK(&q->lock);
+    QTHREAD_FASTLOCK_LOCK(&q->lock);
 
     t->next = NULL;
 
     if (q->head == NULL) {         /* surely then tail is also null; no need to check */
         q->head = t;
         q->tail = t;
-        QTHREAD_SIGNAL(&q->notempty);
     } else {
         q->tail->next = t;
         q->tail       = t;
     }
 
     qthread_debug(THREAD_DETAILS, "q(%p), t(%p): finished\n", q, t);
-    QTHREAD_UNLOCK(&q->lock);
+    QTHREAD_FASTLOCK_UNLOCK(&q->lock);
 }                      /*}}} */
 
 #ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
