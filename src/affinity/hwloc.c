@@ -462,7 +462,7 @@ void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
     hwloc_obj_t          obj            = hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset,
                                                                                shep_depth, me->node);
 
-# ifdef QTHREAD_DEBUG_AFFINITY
+# ifdef QTHREAD_DEBUG
     unsigned int maxshepobjs = hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth);
 # endif
     // unsigned int weight      = WEIGHT(obj->allowed_cpuset);
