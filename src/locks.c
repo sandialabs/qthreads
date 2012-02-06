@@ -229,7 +229,7 @@ int qthread_unlock(const aligned_t *a)
      * and put them in a ready queue.  If not, delete the lock structure.
      */
 
-    QTHREAD_LOCK(&m->waiting->lock);
+    QTHREAD_FASTLOCK_LOCK(&m->waiting->lock);
     u = qthread_dequeue(m->waiting);
     if (u == NULL) {
         qthread_debug(LOCK_DETAILS,
@@ -238,7 +238,7 @@ int qthread_unlock(const aligned_t *a)
         qassertnot(qt_hash_remove_locked(qlib->locks[lockbin], (void *)a), 0);
         qt_hash_unlock(qlib->locks[lockbin]);
         QTHREAD_HOLD_TIMER_DESTROY(m);
-        QTHREAD_UNLOCK(&m->waiting->lock);
+        QTHREAD_FASTLOCK_UNLOCK(&m->waiting->lock);
         qthread_queue_free(m->waiting);
         QTHREAD_FASTLOCK_UNLOCK(&m->lock);
         QTHREAD_FASTLOCK_DESTROY(m->lock);
@@ -259,7 +259,7 @@ int qthread_unlock(const aligned_t *a)
          */
         qt_threadqueue_enqueue(u->rdata->shepherd_ptr->ready, u);
 
-        QTHREAD_UNLOCK(&m->waiting->lock);
+        QTHREAD_FASTLOCK_UNLOCK(&m->waiting->lock);
         QTHREAD_FASTLOCK_UNLOCK(&m->lock);
     }
 
@@ -274,15 +274,7 @@ static QINLINE qthread_queue_t *qthread_queue_new(void)
     if (q != NULL) {
         q->head = NULL;
         q->tail = NULL;
-        if (pthread_mutex_init(&q->lock, NULL) != 0) {
-            FREE_QUEUE(q);
-            return NULL;
-        }
-        if (pthread_cond_init(&q->notempty, NULL) != 0) {
-            QTHREAD_DESTROYLOCK(&q->lock);
-            FREE_QUEUE(q);
-            return NULL;
-        }
+        QTHREAD_FASTLOCK_INIT(q->lock);
     }
     return q;
 }                      /*}}} */
@@ -315,8 +307,7 @@ static QINLINE qthread_t *qthread_dequeue(qthread_queue_t *q)
 static QINLINE void qthread_queue_free(qthread_queue_t *q)
 {                      /*{{{ */
     assert((q->head == NULL) && (q->tail == NULL));
-    QTHREAD_DESTROYLOCK(&q->lock);
-    QTHREAD_DESTROYCOND(&q->notempty);
+    QTHREAD_FASTLOCK_DESTROY(q->lock);
     FREE_QUEUE(q);
 }                      /*}}} */
 
