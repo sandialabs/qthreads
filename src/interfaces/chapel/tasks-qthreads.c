@@ -106,6 +106,8 @@ chpl_bool chpl_sync_isFull(void            *val_ptr,
 
 void chpl_sync_initAux(chpl_sync_aux_t *s)
 {
+    s->lockers_in   = 0;
+    s->lockers_out  = 0;
     s->is_full      = 0;
     s->signal_empty = SYNCVAR_EMPTY_INITIALIZER;
     s->signal_full  = SYNCVAR_EMPTY_INITIALIZER;
