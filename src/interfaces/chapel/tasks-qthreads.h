@@ -98,32 +98,6 @@ typedef struct {
     syncvar_t signal_empty;
 } chpl_sync_aux_t;
 
-// Hijacking signal_full to be THE syncvar for native types
-#define chpl_sync_reset(x) qthread_syncvar_empty(&(x)->sync_aux.signal_full)
-
-#define chpl_read_FE(x) ({  \
-  uint64_t y;               \
-  qthread_syncvar_readFE(&y,&(x)->sync_aux.signal_full);  \
-  y; })
-
-#define chpl_read_XX(x)({  \
-  uint64_t y=0;              \
-  if(qthread_syncvar_status(&(x)->sync_aux.signal_full))  \
-  { \
-  qthread_syncvar_readFE(&y,&(x)->sync_aux.signal_full);  \
-  } \
-  y; })
-
-#define chpl_write_EF(x,y) do { \
-  uint64_t z = (uint64_t)(y); \
-  qthread_syncvar_writeEF(&(x)->sync_aux.signal_full,&z); \
-  } while(0)
-
-#define chpl_write_XF(x,y) do {\
-  uint64_t z = (uint64_t)(y); \
-  qthread_syncvar_writeF(&(x)->sync_aux.signal_full,&z);  \
-  } while(0)
-
 // Tasks
 
 //
