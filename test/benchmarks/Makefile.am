@@ -52,6 +52,7 @@ mt_benchmarks = \
 				time_task_spawn \
 				time_eager_future \
 				time_fib \
+				time_fib2 \
 				time_omp_task_spawn \
 				time_omp_eager_future \
 				time_omp_fib
@@ -166,6 +167,9 @@ time_febs_DEPENDENCIES = $(qthreadlib)
 
 time_fib_SOURCES = mt/time_fib.c
 time_fib_DEPENDENCIES = $(qthreadlib)
+
+time_fib2_SOURCES = mt/time_fib2.c
+time_fib2_DEPENDENCIES = $(qthreadlib)
 
 time_producerconsumer_SOURCES = generic/time_producerconsumer.c
 time_producerconsumer_DEPENDENCIES = $(qthreadlib)
