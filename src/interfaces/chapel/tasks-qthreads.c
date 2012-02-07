@@ -36,7 +36,15 @@
 
 #include <pthread.h>
 
-static chpl_bool initial_serial_state = true;
+typedef struct {
+    void     *fn;
+    void     *args;
+    chpl_bool serial_state;
+} chapel_wrapper_args_t;
+
+// Default serial state is used outside of the tasking layer.
+static chpl_bool default_serial_state = true;
+
 static syncvar_t exit_ret             = SYNCVAR_STATIC_EMPTY_INITIALIZER;
 
 void chpl_task_yield(void)
@@ -202,20 +210,24 @@ void chpl_task_exit(void)
 
 static aligned_t chapel_wrapper(void *arg)
 {
-    void **rarg = (void **)arg;
+    chapel_wrapper_args_t *rarg = arg;
 
-    (*(chpl_fn_p)(rarg[0]))(rarg[1]);
+    chpl_task_setSerial(rarg->serial_state);
+
+    (*(chpl_fn_p)(rarg->fn))(rarg->args);
 
     return 0;
 }
 
 void chpl_task_callMain(void (*chpl_main)(void))
 {
-    chpl_task_setSerial(false);
+    const chpl_bool serial_state = false;
 
-    void *const wrapper_args[2] = { chpl_main, NULL };
+    chpl_task_setSerial(serial_state);
 
-    qthread_fork_syncvar(chapel_wrapper, wrapper_args, &exit_ret);
+    const chapel_wrapper_args_t wrapper_args = { chpl_main, NULL, serial_state};
+
+    qthread_fork_syncvar(chapel_wrapper, &wrapper_args, &exit_ret);
     qthread_syncvar_readFF(NULL, &exit_ret);
 }
 
@@ -235,7 +247,7 @@ void chpl_task_addToTaskList(chpl_fn_int_t     fid,
                              int               lineno,
                              chpl_string       filename)
 {
-    chpl_task_begin(chpl_ftable[fid], arg, false, false, NULL);
+    chpl_task_begin(chpl_ftable[fid], arg, false, chpl_task_getSerial(), NULL);
 }
 
 void chpl_task_processTaskList(chpl_task_list_p task_list) { }
@@ -250,19 +262,20 @@ void chpl_task_begin(chpl_fn_p        fp,
                      chpl_bool        serial_state,
                      chpl_task_list_p task_list_entry)
 {
-    if (!ignore_serial && chpl_task_getSerial()) {
+    if (!ignore_serial && serial_state) {
         syncvar_t   ret             = SYNCVAR_STATIC_EMPTY_INITIALIZER;
-        void *const wrapper_args[2] = { fp, arg };
-        qthread_fork_syncvar_copyargs_to(chapel_wrapper, wrapper_args,
-                                         sizeof(void *) * 2, &ret,
+        const chapel_wrapper_args_t wrapper_args = { fp, arg, serial_state};
+        qthread_fork_syncvar_copyargs_to(chapel_wrapper, &wrapper_args,
+                                         sizeof(chapel_wrapper_args_t), &ret,
                                          qthread_shep());
         qthread_syncvar_readFF(NULL, &ret);
     } else {
         // Will call the real begin statement function. Only purpose of this
         // thread is to wait on that function and coordinate the exiting
         // of the main Chapel thread.
-        void *const wrapper_args[2] = { fp, arg };
-        qthread_fork_syncvar_copyargs(chapel_wrapper, wrapper_args, sizeof(void *) * 2, NULL);
+        const chapel_wrapper_args_t wrapper_args = { fp, arg, serial_state};
+        qthread_fork_syncvar_copyargs(chapel_wrapper, &wrapper_args, 
+                                      sizeof(chapel_wrapper_args_t), NULL);
     }
 }
 
@@ -293,7 +306,7 @@ chpl_bool chpl_task_getSerial(void)
 {
     chpl_bool *state = (chpl_bool *)qthread_get_tasklocal(sizeof(chpl_bool));
 
-    return state == NULL ? initial_serial_state : *state;
+    return state == NULL ? default_serial_state : *state;
 }
 
 void chpl_task_setSerial(chpl_bool state)
@@ -303,7 +316,7 @@ void chpl_task_setSerial(chpl_bool state)
     if (NULL != data) {
         *data = state;
     } else {
-        initial_serial_state = state;
+        default_serial_state = state;
     }
 }
 
