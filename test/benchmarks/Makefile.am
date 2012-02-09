@@ -46,6 +46,7 @@ mtaap08_benchmarks = \
 uts_benchmarks = \
 				 time_uts_omp \
 				 time_uts_syncvar \
+				 time_uts_aligned \
 				 time_uts_sinc \
 				 time_uts_donecount
 mt_benchmarks = \
@@ -208,6 +209,9 @@ time_uts_omp_CFLAGS = @OPENMP_CFLAGS@
 
 time_uts_syncvar_SOURCES = uts/time_uts_syncvar.c uts/rng/brg_sha1.c
 time_uts_syncvar_DEPENDENCIES = $(qthreadlib)
+
+time_uts_aligned_SOURCES = uts/time_uts_aligned.c uts/rng/brg_sha1.c
+time_uts_aligned_DEPENDENCIES = $(qthreadlib)
 
 time_uts_sinc_SOURCES = uts/time_uts_sinc.c uts/rng/brg_sha1.c
 time_uts_sinc_DEPENDENCIES = $(qthreadlib)
