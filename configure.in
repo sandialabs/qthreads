@@ -453,6 +453,11 @@ AC_TYPE_PID_T
 AC_CHECK_SIZEOF([int])
 AC_CHECK_SIZEOF([void*])
 QTHREAD_CHECK_ASSEMBLY([have_assembly=1], [have_assembly=0])
+case "$qthread_cv_asm_arch" in
+	POWERPC32|SPARCV9_32)
+	compile_compat_atomic=yes
+	;;
+esac
 
 # Default behavior:
 #   sizeof(aligned_t)    = 8 (unless POWERPC32, then 4)
@@ -579,7 +584,8 @@ AS_IF([test "x$have_assembly" = "x0" -a "x$qthread_cv_atomic_CAS32" = "xno" -a "
  	  [AS_IF([test "x$enable_hardware_increments" = x], [enable_hardware_increments="yes"])])
 
 AS_IF([test "x$enable_hardware_increments" = "xno"],
-      [AC_DEFINE([QTHREAD_MUTEX_INCREMENT], [1], [Use mutexes instead of assembly for atomic increment])])
+      [compile_compat_atomic=yes
+	   AC_DEFINE([QTHREAD_MUTEX_INCREMENT], [1], [Use mutexes instead of assembly for atomic increment])])
 AS_IF([test "x$enable_guard_pages" = "xyes"],
       [AC_DEFINE([QTHREAD_GUARD_PAGES], [1], [Use guard pages to detect stack overruns])],
       [enable_guard_pages="no"])
@@ -949,6 +955,7 @@ AM_CONDITIONAL([COMPILE_RCRTOOL], [test "x$enable_rcrtool" = "xyes"])
 AM_CONDITIONAL([QTHREAD_MULTITHREADED_SHEPHERDS], [test "x$enable_multithreaded_shepherds" = "xyes"])
 AM_CONDITIONAL([COMPILE_CHAPEL_INTERFACE], [test "x$compile_chapel_interface" = "xyes"])
 AM_CONDITIONAL([COMPILE_OPENMP_BENCHMARKS], [test "x$have_openmp" = "xyes"])
+AM_CONDITIONAL([COMPILE_COMPAT_ATOMIC], [test "x$compile_compat_atomic" = "xyes"])
 
 AC_CONFIG_HEADERS([include/config.h include/qthread/common.h])
 AC_CONFIG_FILES([Makefile

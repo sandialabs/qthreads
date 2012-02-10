@@ -69,4 +69,10 @@ static QINLINE void qthread_unique_collect(const qt_key_t key, void *value, void
 # define QTHREAD_LOCK_UNIQUERECORD2(TYPE, ADDR, SHEP) do{ }while(0)
 #endif
 
+#ifdef QTHREAD_COUNT_THREADS
+# define QTHREAD_COUNT_THREADS_BINCOUNTER(TYPE, BIN) qthread_internal_incr(&qlib->TYPE ## _stripes[(BIN)], &qlib->TYPE ## _stripes_locks[(BIN)], 1)
+#else
+# define QTHREAD_COUNT_THREADS_BINCOUNTER(TYPE, BIN) do { } while(0)
+#endif
+
 #endif

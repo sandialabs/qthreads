@@ -80,6 +80,9 @@ if QTHREAD_MULTITHREADED_SHEPHERDS
 libqthread_la_SOURCES += \
 	touch.c
 endif
+if COMPILE_COMPAT_ATOMIC
+libqthread_la_SOURCES += compat_atomics.c
+endif
 endif
 
 if COMPILE_POOLED_MEMORY

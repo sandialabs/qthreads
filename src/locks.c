@@ -11,6 +11,7 @@
 /* Internal Headers */
 #include "qt_hash.h"
 #include "qthread_innards.h"
+#include "qt_profiling.h"
 #include "qt_blocking_structs.h"
 #include "qt_qthread_struct.h"
 #include "qt_threadqueues.h"
@@ -52,12 +53,6 @@ static QINLINE qthread_t *      qthread_dequeue(qthread_queue_t *q);
 # define ALLOC_QUEUE() (qthread_queue_t *)qt_mpool_cached_alloc(generic_queue_pool)
 # define FREE_QUEUE(t)  qt_mpool_cached_free(generic_queue_pool, t)
 #endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
-
-#ifdef QTHREAD_COUNT_THREADS
-# define QTHREAD_COUNT_THREADS_BINCOUNTER(TYPE, BIN) qthread_internal_incr(&qlib->TYPE ## _stripes[(BIN)], &qlib->TYPE ## _stripes_locks[(BIN)], 1)
-#else
-# define QTHREAD_COUNT_THREADS_BINCOUNTER(TYPE, BIN) do { } while(0)
-#endif
 
 #if !defined(UNPOOLED_QUEUES) && !defined(UNPOOLED)
 static void qt_lock_subsystem_shutdown(void)

@@ -13,6 +13,7 @@
 /* Internal Headers */
 #include "qt_hash.h"
 #include "qthread_innards.h"
+#include "qt_profiling.h"
 #include "qt_qthread_struct.h"
 #include "qt_blocking_structs.h"
 #include "qt_addrstat.h"
@@ -51,12 +52,6 @@ static QINLINE void qthread_gotlock_empty(qthread_shepherd_t *shep,
                                           const char          recursive);
 
 /* functions to implement FEB locking/unlocking */
-
-#ifdef QTHREAD_COUNT_THREADS
-# define QTHREAD_COUNT_THREADS_BINCOUNTER(TYPE, BIN) qthread_internal_incr(&qlib->TYPE ## _stripes[(BIN)], &qlib->TYPE ## _stripes_locks[(BIN)], 1)
-#else
-# define QTHREAD_COUNT_THREADS_BINCOUNTER(TYPE, BIN) do { } while(0)
-#endif
 
 static aligned_t qthread_feb_blocker_thread(void *arg)
 {                                      /*{{{ */
