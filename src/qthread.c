@@ -113,10 +113,6 @@ static double                avg_concurrent_threads;
 static aligned_t             avg_count;
 static aligned_t             concurrentthreads;
 static QTHREAD_FASTLOCK_TYPE concurrentthreads_lock;
-
-# define QTHREAD_COUNT_THREADS_BINCOUNTER(TYPE, BIN) qthread_internal_incr(&qlib->TYPE ## _stripes[(BIN)], &qlib->TYPE ## _stripes_locks[(BIN)], 1)
-#else
-# define QTHREAD_COUNT_THREADS_BINCOUNTER(TYPE, BIN) do { } while(0)
 #endif
 
 /* Internal Prototypes */
@@ -1473,6 +1469,7 @@ void qthread_finalize(void)
             assert(t != NULL);         /* what else can we do? */
             t->thread_state = QTHREAD_STATE_TERM_SHEP;
             t->thread_id    = QTHREAD_NON_TASK_ID;
+            t->flags        = QTHREAD_UNSTEALABLE;
             qt_threadqueue_enqueue(qlib->shepherds[i].ready, t);
         }
     }
@@ -1483,6 +1480,7 @@ void qthread_finalize(void)
         assert(t != NULL);     /* what else can we do? */
         t->thread_state = QTHREAD_STATE_TERM_SHEP;
         t->thread_id    = QTHREAD_NON_TASK_ID;
+        t->flags        = QTHREAD_UNSTEALABLE;
         qt_threadqueue_enqueue(qlib->shepherds[i].ready, t);
     }
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
@@ -3493,104 +3491,4 @@ aligned_t *qthread_task_counter(void)
 
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
 
-#if defined(QTHREAD_MUTEX_INCREMENT) ||             \
-    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
-    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
-uint32_t qthread_incr32_(uint32_t     *op,
-                         const int32_t incr)
-{                      /*{{{ */
-    unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
-    uint32_t     retval;
-
-    QTHREAD_LOCK_TIMER_DECLARATION(incr);
-
-    QTHREAD_COUNT_THREADS_BINCOUNTER(atomic, stripe);
-    QTHREAD_LOCK_UNIQUERECORD(incr, op, qthread_internal_self());
-    QTHREAD_LOCK_TIMER_START(incr);
-    QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
-    retval = *op;
-    *op   += incr;
-    QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
-    QTHREAD_LOCK_TIMER_STOP(incr, qthread_internal_self());
-    return retval;
-}                      /*}}} */
-
-uint64_t qthread_incr64_(uint64_t     *op,
-                         const int64_t incr)
-{                      /*{{{ */
-    unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
-    uint64_t     retval;
-
-    QTHREAD_LOCK_TIMER_DECLARATION(incr);
-
-    QTHREAD_COUNT_THREADS_BINCOUNTER(atomic, stripe);
-    QTHREAD_LOCK_UNIQUERECORD(incr, op, qthread_internal_self());
-    QTHREAD_LOCK_TIMER_START(incr);
-    QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
-    retval = *op;
-    *op   += incr;
-    QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
-    QTHREAD_LOCK_TIMER_STOP(incr, qthread_internal_self());
-    return retval;
-}                      /*}}} */
-
-double qthread_dincr_(double      *op,
-                      const double incr)
-{                      /*{{{ */
-    unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
-    double       retval;
-
-    QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
-    retval = *op;
-    *op   += incr;
-    QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
-    return retval;
-}                      /*}}} */
-
-float qthread_fincr_(float      *op,
-                     const float incr)
-{                      /*{{{ */
-    unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
-    float        retval;
-
-    QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
-    retval = *op;
-    *op   += incr;
-    QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
-    return retval;
-}                      /*}}} */
-
-uint32_t qthread_cas32_(uint32_t      *operand,
-                        const uint32_t oldval,
-                        const uint32_t newval)
-{                      /*{{{ */
-    uint32_t     retval;
-    unsigned int stripe = QTHREAD_CHOOSE_STRIPE(operand);
-
-    QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
-    retval = *operand;
-    if (retval == oldval) {
-        *operand = newval;
-    }
-    QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
-    return retval;
-}                      /*}}} */
-
-uint64_t qthread_cas64_(uint64_t      *operand,
-                        const uint64_t oldval,
-                        const uint64_t newval)
-{                      /*{{{ */
-    uint64_t     retval;
-    unsigned int stripe = QTHREAD_CHOOSE_STRIPE(operand);
-
-    QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
-    retval = *operand;
-    if (retval == oldval) {
-        *operand = newval;
-    }
-    QTHREAD_FASTLOCK_UNLOCK(&(qlib->atomic_locks[stripe]));
-    return retval;
-}                      /*}}} */
-
-#endif /* if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) */
 /* vim:set expandtab: */
