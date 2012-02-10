@@ -106,6 +106,7 @@ uint64_t qthread_cas64_(uint64_t      *operand,
     return retval;
 }                      /*}}} */
 
-#else
-#error Building this file erroneously.
+#else /* if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32) */
+# error Building this file erroneously.
 #endif /* if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) */
+/* vim:set expandtab: */
