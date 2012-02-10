@@ -202,9 +202,7 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 
 static QINLINE int qt_threadqueue_isstealable(qthread_t *t)
 {   /*{{{*/
-    return (t->thread_state != QTHREAD_STATE_YIELDED &&
-            t->thread_state != QTHREAD_STATE_TERM_SHEP &&
-            (t->flags & QTHREAD_UNSTEALABLE) == 0);
+    return ((t->flags & QTHREAD_UNSTEALABLE) == 0);
 } /*}}}*/
 
 /* enqueue at tail */
