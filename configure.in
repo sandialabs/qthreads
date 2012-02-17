@@ -129,24 +129,25 @@ AC_ARG_ENABLE([debug],
 							   the specified areas. Default area is "all".
 							   Other available areas are:
 							   affinity,
-							   threadqueues,
-							   thread,
-							   shepherd,
-							   core,
-							   mpool,
-							   syscalls,
-							   locks,
-							   febs,
-							   syncvars,
-							   io,
-							   loops,
 							   barrier,
+							   core,
+							   febs,
+							   futurelib,
+							   io,
+							   locks,
+							   loops,
+							   mpool,
+                               multinode,
 							   qarray,
 							   rcrtool,
-							   futurelib,
+							   shepherd,
+							   syncvars,
+							   syscalls,
+							   thread,
+							   threadqueues,
 							   xomp])],
               [AS_IF([test "x$enable_debug" = "xyes"],
-					 [enable_debug="affinity,threadqueues,thread,shepherd,core,mpool,syscalls,locks,febs,syncvars,io,loops,barrier,qarray,rcrtool,futurelib,xomp"])
+					 [enable_debug="affinity,threadqueues,thread,shepherd,core,mpool,syscalls,locks,febs,syncvars,io,loops,barrier,qarray,rcrtool,futurelib,xomp,multinode"])
 			   for area in $(echo "$enable_debug" | sed 's/,/ /g') ; do
                  case "$area" in
 					 affinity) enable_debug_affinity=yes ;;
