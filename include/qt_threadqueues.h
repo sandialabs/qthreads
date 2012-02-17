@@ -13,7 +13,6 @@ typedef struct _qt_threadqueue qt_threadqueue_t;
 typedef struct _qt_threadqueue_pools {
     qt_mpool nodes;
     qt_mpool queues;
-    qt_mpool spawncache_queues;
 } qt_threadqueue_pools_t;
 
 void INTERNAL qt_threadqueue_subsystem_init(void);
