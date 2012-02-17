@@ -93,7 +93,6 @@ extern QTHREAD_FASTLOCK_TYPE rcrtool_lock;
 #endif
 
 /* shared globals (w/ futurelib) */
-pthread_key_t shepherd_structs;
 qlib_t        qlib      = NULL;
 int           qaffinity = 1;
 QTHREAD_FASTLOCK_ATTRVAR;
@@ -1685,72 +1684,6 @@ void qthread_finalize(void)
     fflush(stdout);
 }                      /*}}} */
 
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-void qthread_pack_workerid(const qthread_worker_id_t w,
-                           const qthread_worker_id_t newId)
-{/*{{{*/
-    int shep   = w % qlib->nshepherds;
-    int worker = w / qlib->nshepherds;
-
-    assert((shep < qlib->nshepherds));
-    assert((worker < qlib->nworkerspershep));
-    qlib->shepherds[shep].workers[worker].packed_worker_id = newId;
-}/*}}}*/
-
-#endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
-
-int qthread_disable_worker(const qthread_worker_id_t w)
-{   /*{{{*/
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    unsigned int shep   = w % qlib->nshepherds;
-    unsigned int worker = w / qlib->nshepherds;
-
-    qassert_ret((shep < qlib->nshepherds), QTHREAD_BADARGS);
-    qassert_ret((worker < qlib->nworkerspershep), QTHREAD_BADARGS);
-    if ((worker == 0) & (shep == 0)) {
-        /* currently, the "real mccoy" original thread cannot be migrated
-         * (because I don't know what issues that could cause on all
-         * architectures). For similar reasons, therefore, the original
-         * shepherd cannot be disabled. One of the nice aspects of this is that
-         * therefore it is impossible to disable ALL shepherds.
-         *
-         * ... it's entirely possible that I'm being overly cautious. This is a
-         * policy based on gut feeling rather than specific issues. */
-        return QTHREAD_NOT_ALLOWED;
-    }
-    qthread_debug(SHEPHERD_CALLS, "began on worker(%i-%i)\n", shep, worker);
-
-    (void)QT_CAS(qlib->shepherds[shep].workers[worker].active, 1, 0);
-    qlib->nworkers_active--; // decrement active count
-
-    if (worker == 0) { qthread_disable_shepherd(shep); }
-
-    return QTHREAD_SUCCESS;
-
-#else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-    return qthread_disable_shepherd(w);
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-}   /*}}}*/
-
-void qthread_enable_worker(const qthread_worker_id_t w)
-{                      /*{{{ */
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    unsigned int shep   = w % qlib->nshepherds;
-    unsigned int worker = w / qlib->nshepherds;
-
-    assert(shep < qlib->nshepherds);
-
-    if (worker == 0) { qthread_enable_shepherd(shep); }
-    qthread_debug(SHEPHERD_CALLS, "began on shep(%i)\n", shep);
-    if (worker < qlib->nworkerspershep) {
-        qthread_internal_incr(&(qlib->nshepherds_active), &(qlib->nshepherds_active_lock), 1);
-        (void)QT_CAS(qlib->shepherds[shep].workers[worker].active, 0, 1);
-    }
-#else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-    qthread_enable_shepherd(w);
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-}                      /*}}} */
-
 qthread_t *qthread_internal_self(void)
 {                      /*{{{ */
     extern pthread_key_t IO_task_struct;
@@ -2062,7 +1995,7 @@ extern void *qthread_fence2;
 #endif /* ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING */
 
 static QINLINE void qthread_internal_teamfinish(qt_team_t *team, uint8_t flags)
-{
+{/*{{{*/
     assert(team != NULL);
     // Signal team sinc that member has finished
     qt_sinc_submit(team->sinc, NULL);
@@ -2072,7 +2005,7 @@ static QINLINE void qthread_internal_teamfinish(qt_team_t *team, uint8_t flags)
         qt_sinc_destroy(team->sinc);
         FREE_TEAM(team);
     }
-}
+}/*}}}*/
 
 /* this function runs a thread until it completes or yields */
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
@@ -3154,50 +3087,6 @@ unsigned qthread_barrier_id(void)
         return qthread_internal_getshep()->shepherd_id;
     }
     return t ? t->id : QTHREAD_NON_TASK_ID;
-}                      /*}}} */
-
-qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *shepherd_id)
-{                                      /*{{{ */
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    qthread_worker_t *worker = (qthread_worker_t *)pthread_getspecific(shepherd_structs);
-
-    if((shepherd_id != NULL) && (worker != NULL)) {
-        *shepherd_id = worker->shepherd->shepherd_id;
-    }
-    return worker ? (worker->packed_worker_id) : NO_WORKER;
-
-#else
-    qthread_shepherd_id_t id = qthread_shep();
-    if (shepherd_id != NULL) {
-        *shepherd_id = id;
-    }
-    return id;
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-}                                      /*}}} */
-
-qthread_worker_id_t qthread_worker_unique(qthread_shepherd_id_t *shepherd_id)
-{                     /*{{{ */
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    qthread_worker_t *worker = (qthread_worker_t *)pthread_getspecific(shepherd_structs);
-
-    if((shepherd_id != NULL) && (worker != NULL)) {
-        *shepherd_id = worker->shepherd->shepherd_id;
-    }
-    return worker ? (worker->unique_id) : NO_WORKER;
-
-#else
-    qthread_shepherd_id_t id = qthread_shep();
-    if (shepherd_id != NULL) {
-        *shepherd_id = id;
-    }
-    return id;
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-}                      /*}}} */
-
-/* returns the number of workers actively scheduling work */
-qthread_worker_id_t qthread_num_workers(void)
-{                      /*{{{ */
-    return (qthread_worker_id_t)qthread_readstate(ACTIVE_WORKERS);
 }                      /*}}} */
 
 /* these two functions are helper functions for futurelib
