@@ -11,6 +11,9 @@
 # endif
 #endif
 #include <stdlib.h>
+#ifdef HAVE_MALLOC_H
+# include <malloc.h>               /* for memalign() */
+#endif
 
 /* Public Headers */
 #include "qthread/qthread.h"
@@ -89,8 +92,6 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *l)
 
 /* Memory Management */
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
-# define ALLOC_SPAWNCACHE()  (qt_threadqueue_private_t *)malloc(sizeof(qt_threadqueue_private_t))
-# define FREE_SPAWNCACHE(t)  free(t)
 # define ALLOC_THREADQUEUE() (qt_threadqueue_t *)calloc(1, sizeof(qt_threadqueue_t))
 # define FREE_THREADQUEUE(t) free(t)
 static QINLINE qt_threadqueue_node_t *ALLOC_TQNODE(void)
@@ -102,8 +103,6 @@ static QINLINE qt_threadqueue_node_t *ALLOC_TQNODE(void)
 void INTERNAL qt_threadqueue_subsystem_init(void) {}
 #else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 qt_threadqueue_pools_t generic_threadqueue_pools;
-# define ALLOC_SPAWNCACHE()  (qt_threadqueue_private_t *)qt_mpool_cached_alloc(generic_threadqueue_pools.spawncache_queues)
-# define FREE_SPAWNCACHE(t)  qt_mpool_cached_free(generic_threadqueue_pools.spawncache_queues, t)
 # define ALLOC_THREADQUEUE() (qt_threadqueue_t *)qt_mpool_cached_alloc(generic_threadqueue_pools.queues)
 # define FREE_THREADQUEUE(t) qt_mpool_cached_free(generic_threadqueue_pools.queues, t)
 
@@ -115,24 +114,40 @@ static QINLINE qt_threadqueue_node_t *ALLOC_TQNODE(void)
 # define FREE_TQNODE(t) qt_mpool_cached_free(generic_threadqueue_pools.nodes, t)
 
 static void qt_threadqueue_subsystem_shutdown(void)
-{
+{   /*{{{*/
     qt_mpool_destroy(generic_threadqueue_pools.nodes);
     qt_mpool_destroy(generic_threadqueue_pools.queues);
-    qt_mpool_destroy(generic_threadqueue_pools.spawncache_queues);
-}
+} /*}}}*/
 
 void INTERNAL qt_threadqueue_subsystem_init(void)
-{
+{   /*{{{*/
     generic_threadqueue_pools.queues = qt_mpool_create_aligned(sizeof(qt_threadqueue_t),
                                                                qthread_cacheline());
     generic_threadqueue_pools.nodes = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t),
                                                               qthread_cacheline());
-    generic_threadqueue_pools.spawncache_queues = qt_mpool_create_aligned(sizeof(qt_threadqueue_private_t),
-                                                                          qthread_cacheline());
     qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
-}
+} /*}}}*/
 
 #endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
+
+static QINLINE qt_threadqueue_private_t *ALLOC_SPAWNCACHE(void)
+{   /*{{{*/
+#ifdef HAVE_MEMALIGN
+    void *const ret = memalign(qthread_cacheline(), sizeof(qt_threadqueue_private_t));
+#elif defined(HAVE_POSIX_MEMALIGN)
+    void *ret = NULL;
+    posix_memalign(&(ret), qthread_cacheline(), sizeof(qt_threadqueue_private_t));
+#elif defined(HAVE_WORKING_VALLOC)
+    void *const ret = valloc(sizeof(qt_threadqueue_private_t));
+#elif defined(HAVE_PAGE_ALIGNED_MALLOC)
+    void *const ret = malloc(sizeof(qt_threadqueue_private_t));
+#else
+    void *const ret = valloc(sizeof(qt_threadqueue_private_t));  /* cross your fingers */
+#endif
+    return (qt_threadqueue_private_t *)ret;
+} /*}}}*/
+
+#define FREE_SPAWNCACHE(t) free(t)
 
 ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 {   /*{{{*/
@@ -187,6 +202,11 @@ qt_threadqueue_private_t INTERNAL *qt_threadqueue_private_create(void)
 
 void INTERNAL qt_threadqueue_private_destroy(void *q)
 {
+    assert(((qt_threadqueue_private_t *)q)->head == NULL &&
+           ((qt_threadqueue_private_t *)q)->tail == NULL &&
+           ((qt_threadqueue_private_t *)q)->qlength == 0 &&
+           ((qt_threadqueue_private_t *)q)->qlength_stealable == 0);
+
     FREE_SPAWNCACHE(q);
 }
 
@@ -237,18 +257,22 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
 void INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
                                              qthread_t *restrict                t)
 {   /*{{{*/
+    assert(q != NULL &&
+           ((q->head == q->tail && q->qlength < 2) ||
+            (q->head != NULL && q->tail != NULL && q->qlength > 1)));
+    assert(t != NULL);
+
     qt_threadqueue_node_t *node;
 
     node = ALLOC_TQNODE();
     assert(node != NULL);
 
+    node->next      = NULL;
+    node->prev      = NULL;
     node->value     = t;
     node->stealable = qt_threadqueue_isstealable(t);
 
-    assert(q != NULL);
-    assert(t != NULL);
-
-    node->next = NULL;
+    // Add to the tail of the `q`
     node->prev = q->tail;
     q->tail    = node;
     if (q->head == NULL) {
@@ -305,16 +329,30 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
     while (1) {
         qt_threadqueue_node_t *node = NULL;
 
-        if (qc && qc->head) {
-            node     = qc->head;
-            qc->head = node->next;
-            if (qc->head) {
+        if (qc && (qc->qlength != 0)) {
+            if (qc->qlength == 1) {
+                node = qc->head;
+            } else {
+                // Pull off one node for me to do now
+                node = qc->head;
+
+                // Fix up cache structure
+                qc->head       = node->next;
+                qc->head->prev = NULL;
+
+                qc->qlength -= 1;
+                if (node->stealable) {
+                    qc->qlength_stealable -= 1;
+                }
+
+                // Fix up node structure
+                node->next = NULL;
+                node->prev = NULL; // Obviously, this should already be the case
+
+                // Push remaining items onto the real queue
                 qt_threadqueue_node_t *first = qc->head;
                 qt_threadqueue_node_t *last  = qc->tail;
-                node->next  = NULL;
-                first->prev = NULL;
                 QTHREAD_TRYLOCK_LOCK(&q->qlock);
-                last->next  = NULL;
                 first->prev = q->tail;
                 q->tail     = last;
                 if (q->head == NULL) {
@@ -325,9 +363,10 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
                 q->qlength           += qc->qlength;
                 q->qlength_stealable += qc->qlength_stealable;
                 QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
-                qc->head    = qc->tail = NULL;
-                qc->qlength = qc->qlength_stealable = 0;
             }
+
+            qc->head    = qc->tail = NULL;
+            qc->qlength = qc->qlength_stealable = 0;
         } else if (q->head) {
             QTHREAD_TRYLOCK_LOCK(&q->qlock);
             node = q->tail;
