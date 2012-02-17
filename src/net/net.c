@@ -5,8 +5,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "qthread.h"
-#include "qthread_multinode.h"
+#include "qthread/qthread.h"
+#include "qthread/qthread_multinode.h"
 #include "qthread_innards.h"
 #include "qt_debug.h"
 #include "qt_atomics.h"
