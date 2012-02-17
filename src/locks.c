@@ -51,7 +51,7 @@ static QINLINE qthread_t *      qthread_dequeue(qthread_queue_t *q);
 # define FREE_QUEUE(t) free(t)
 #else
 # define ALLOC_QUEUE() (qthread_queue_t *)qt_mpool_cached_alloc(generic_queue_pool)
-# define FREE_QUEUE(t)  qt_mpool_cached_free(generic_queue_pool, t)
+# define FREE_QUEUE(t) qt_mpool_cached_free(generic_queue_pool, t)
 #endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 
 #if !defined(UNPOOLED_QUEUES) && !defined(UNPOOLED)

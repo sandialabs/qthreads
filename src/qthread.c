@@ -1862,12 +1862,12 @@ qt_team_id_t qt_team_id(void)
 /************************************************************/
 /* functions to manage thread stack allocation/deallocation */
 /************************************************************/
-static QINLINE qthread_t *qthread_thread_new(const qthread_f             f,
-                                             const void                 *arg,
-                                             size_t                      arg_size,
-                                             void                       *ret,
-                                             qt_team_t                  *team,
-                                             int                         team_leader)
+static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
+                                             const void     *arg,
+                                             size_t          arg_size,
+                                             void           *ret,
+                                             qt_team_t      *team,
+                                             int             team_leader)
 {                      /*{{{ */
     qthread_t *t;
 
