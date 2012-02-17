@@ -72,6 +72,7 @@ endif
 if COMPILE_TARGET_UNIX
 libqthread_la_SOURCES += \
 	qthread.c \
+	shepherds.c \
 	threadqueues/@with_scheduler@_threadqueues.c \
 	sincs/@with_sinc@.c \
 	affinity/@qthread_topo@.c \

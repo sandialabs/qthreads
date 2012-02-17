@@ -136,8 +136,6 @@ static QINLINE qthread_t *qthread_thread_new(qthread_f             f,
                                              qt_team_t            *team,
                                              int                   team_leader);
 static QINLINE void        qthread_thread_free(qthread_t *t);
-static qthread_shepherd_t *qthread_find_active_shepherd(qthread_shepherd_id_t *l,
-                                                        unsigned int          *d);
 static QINLINE void qthread_enqueue(qthread_queue_t *q,
                                     qthread_t       *t);
 
@@ -330,14 +328,14 @@ static void hup_handler(int sig)
     qthread_back_to_master(t);
 }
 
-/* the qthread_shepherd() is the pthread responsible for actually
+/* the qthread_master() function is the loop responsible for actually
  * executing the work units
  *
  * this function is the workhorse of the library: this is the function that
  * gets spawned several times and runs all the qthreads. */
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
-static void *qthread_shepherd(void *arg);
-static void *qthread_shepherd_wrapper(unsigned int high,
+static void *qthread_master(void *arg);
+static void *qthread_master_wrapper(unsigned int high,
                                       unsigned int low)
 {                      /*{{{ */
     qthread_shepherd_t *me =
@@ -345,12 +343,12 @@ static void *qthread_shepherd_wrapper(unsigned int high,
 
     qthread_debug(SHEPHERD_DETAILS, "high(%x), low(%x): me = %p\n",
 		   high, low, me);
-    return qthread_shepherd(me);
+    return qthread_master(me);
 }
 
 #endif /* ifdef QTHREAD_MAKECONTEXT_SPLIT */
 #include <time.h>
-static void *qthread_shepherd(void *arg)
+static void *qthread_master(void *arg)
 {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t   *me_worker = (qthread_worker_t *)arg;
@@ -726,87 +724,6 @@ qt_run:
     return NULL;
 }                      /*}}} */
 
-static qthread_shepherd_t *qthread_find_active_shepherd(qthread_shepherd_id_t *l,
-                                                        unsigned int          *d)
-{                      /*{{{ */
-    qthread_shepherd_id_t       target = 0;
-    qthread_shepherd_t         *sheps  = qlib->shepherds;
-    const qthread_shepherd_id_t nsheps =
-        (qthread_shepherd_id_t)qlib->nshepherds;
-
-    qthread_debug(SHEPHERD_FUNCTIONS, "l(%p): from %i sheps\n", l, (int)nsheps);
-    if (l == NULL) {
-        /* if l==NULL, there's no locality info, so just find the least-busy active shepherd */
-        saligned_t busyness = 0;
-        int        found    = 0;
-
-        for (size_t i = 0; i < nsheps; i++) {
-            if (QTHREAD_CASLOCK_READ_UI(sheps[i].active)) {
-                ssize_t shep_busy_level = qt_threadqueue_advisory_queuelen(sheps[i].ready);
-
-                if (found == 0) {
-                    found = 1;
-                    qthread_debug(SHEPHERD_FUNCTIONS,
-                                  "l(%p): shep %i is the least busy (%i) so far\n",
-                                  l, (int)i, shep_busy_level);
-                    busyness = shep_busy_level;
-                    target   = i;
-                } else if ((shep_busy_level < busyness) ||
-                           ((shep_busy_level == busyness) &&
-                            (random() % 2 == 0))) {
-                    qthread_debug(SHEPHERD_FUNCTIONS,
-                                  "l(%p): shep %i is the least busy (%i) so far\n",
-                                  l, (int)i, shep_busy_level);
-                    busyness = shep_busy_level;
-                    target   = i;
-                }
-            }
-        }
-        assert(found);
-        if (found == 0) {
-            qthread_debug(SHEPHERD_FUNCTIONS,
-                          "l(%p): DID NOT FIND ANY ACTIVE SHEPHERDS!!!\n", l);
-            return NULL;
-        } else {
-            qthread_debug(SHEPHERD_FUNCTIONS,
-                          "l(%p): found bored target %i\n",
-                          l, (int)target);
-            return &(sheps[target]);
-        }
-    } else {
-        /* if we have locality info, use it to identify the closest shepherd(s)
-         * and if there's more than one that is equidistant, pick the least busy
-         */
-        qthread_shepherd_id_t alt;
-        saligned_t            busyness;
-
-        while (target < (nsheps - 1) && QTHREAD_CASLOCK_READ_UI(sheps[l[target]].active) == 0) {
-            target++;
-        }
-        if (target >= (nsheps - 1)) {
-            return NULL;
-        }
-        qthread_debug(SHEPHERD_FUNCTIONS,
-                      "l(%p): nearest active shepherd (%i) is %i away\n",
-                      l, (int)l[target], (int)d[l[target]]);
-        busyness = qt_threadqueue_advisory_queuelen(sheps[l[target]].ready);
-        for (alt = target + 1; alt < (nsheps - 1) && d[l[alt]] == d[l[target]];
-             alt++) {
-            saligned_t shep_busy_level = qt_threadqueue_advisory_queuelen(sheps[l[alt]].ready);
-            if ((shep_busy_level < busyness) ||
-                ((shep_busy_level == busyness) && (random() % 2 == 0))) {
-                qthread_debug(SHEPHERD_FUNCTIONS,
-                              "l(%p): shep %i is the least busy (%i) so far\n",
-                              l, (int)d[l[alt]], shep_busy_level);
-                busyness = shep_busy_level;
-                target   = alt;
-            }
-        }
-        qthread_debug(SHEPHERD_FUNCTIONS, "l(%p): found target %i\n", l, (int)target);
-        return &(sheps[l[target]]);
-    }
-}                      /*}}} */
-
 int qthread_init(qthread_shepherd_id_t nshepherds)
 {                      /*{{{ */
     char newenv[100];
@@ -1165,9 +1082,9 @@ int qthread_initialize(void)
     qthread_makecontext(&(qlib->master_context), qlib->master_stack,
                         qlib->master_stack_size,
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
-                        (void (*)(void))qthread_shepherd_wrapper,
+                        (void (*)(void))qthread_master_wrapper,
 #else
-                        (void (*)(void))qthread_shepherd,
+                        (void (*)(void))qthread_master,
 #endif
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
                         &(qlib->shepherds[0].workers[0]),
@@ -1260,7 +1177,7 @@ int qthread_initialize(void)
             }
 # endif     /* ifdef QTHREAD_RCRTOOL */
             if ((r = pthread_create(&qlib->shepherds[i].workers[j].worker, NULL,
-                                    qthread_shepherd, &qlib->shepherds[i].workers[j])) != 0) {
+                                    qthread_master, &qlib->shepherds[i].workers[j])) != 0) {
                 fprintf(stderr, "qthread_init: pthread_create() failed (%d)\n", r);
                 perror("qthread_init spawning worker");
                 return QTHREAD_THIRD_PARTY_ERROR;
@@ -1273,7 +1190,7 @@ int qthread_initialize(void)
         qthread_debug(SHEPHERD_DETAILS,
                       "forking shepherd %i (%p)\n", i,
                       &qlib->shepherds[i]);
-        if ((r = pthread_create(&qlib->shepherds[i].shepherd, NULL, qthread_shepherd, &qlib->shepherds[i])) != 0) {
+        if ((r = pthread_create(&qlib->shepherds[i].shepherd, NULL, qthread_master, &qlib->shepherds[i])) != 0) {
             fprintf(stderr, "qthread_init: pthread_create() failed (%d)\n", r);
             perror("qthread_init spawning shepherd");
             return QTHREAD_THIRD_PARTY_ERROR;
@@ -1771,19 +1688,19 @@ void qthread_finalize(void)
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 void qthread_pack_workerid(const qthread_worker_id_t w,
                            const qthread_worker_id_t newId)
-{
+{/*{{{*/
     int shep   = w % qlib->nshepherds;
     int worker = w / qlib->nshepherds;
 
     assert((shep < qlib->nshepherds));
     assert((worker < qlib->nworkerspershep));
     qlib->shepherds[shep].workers[worker].packed_worker_id = newId;
-}
+}/*}}}*/
 
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
 
 int qthread_disable_worker(const qthread_worker_id_t w)
-{
+{   /*{{{*/
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     unsigned int shep   = w % qlib->nshepherds;
     unsigned int worker = w / qlib->nshepherds;
@@ -1813,7 +1730,7 @@ int qthread_disable_worker(const qthread_worker_id_t w)
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     return qthread_disable_shepherd(w);
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-}
+}   /*}}}*/
 
 void qthread_enable_worker(const qthread_worker_id_t w)
 {                      /*{{{ */
@@ -1832,34 +1749,6 @@ void qthread_enable_worker(const qthread_worker_id_t w)
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     qthread_enable_shepherd(w);
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-}                      /*}}} */
-
-int qthread_disable_shepherd(const qthread_shepherd_id_t shep)
-{                      /*{{{ */
-    qassert_ret((shep < qlib->nshepherds), QTHREAD_BADARGS);
-    if (shep == 0) {
-        /* currently, the "real mccoy" original thread cannot be migrated
-         * (because I don't know what issues that could cause on all
-         * architectures). For similar reasons, therefore, the original
-         * shepherd cannot be disabled. One of the nice aspects of this is that
-         * therefore it is impossible to disable ALL shepherds.
-         *
-         * ... it's entirely possible that I'm being overly cautious. This is a
-         * policy based on gut feeling rather than specific issues. */
-        return QTHREAD_NOT_ALLOWED;
-    }
-    qthread_debug(SHEPHERD_CALLS, "began on shep(%i)\n", shep);
-    qthread_internal_incr(&(qlib->nshepherds_active), &(qlib->nshepherds_active_lock), -1);
-    (void)QT_CAS(qlib->shepherds[shep].active, 1, 0);
-    return QTHREAD_SUCCESS;
-}                      /*}}} */
-
-void qthread_enable_shepherd(const qthread_shepherd_id_t shep)
-{                      /*{{{ */
-    assert(shep < qlib->nshepherds);
-    qthread_debug(SHEPHERD_CALLS, "began on shep(%i)\n", shep);
-    qthread_internal_incr(&(qlib->nshepherds_active), &(qlib->nshepherds_active_lock), 1);
-    (void)QT_CAS(qlib->shepherds[shep].active, 0, 1);
 }                      /*}}} */
 
 qthread_t *qthread_internal_self(void)
@@ -3267,17 +3156,6 @@ unsigned qthread_barrier_id(void)
     return t ? t->id : QTHREAD_NON_TASK_ID;
 }                      /*}}} */
 
-qthread_shepherd_id_t qthread_shep(void)
-{                      /*{{{ */
-    qthread_shepherd_t *ret = qthread_internal_getshep();
-
-    if ((qlib == NULL) || (ret == NULL)) {
-        return NO_SHEPHERD;
-    } else {
-        return ret->shepherd_id;
-    }
-}                      /*}}} */
-
 qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *shepherd_id)
 {                                      /*{{{ */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -3316,122 +3194,7 @@ qthread_worker_id_t qthread_worker_unique(qthread_shepherd_id_t *shepherd_id)
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 }                      /*}}} */
 
-int qthread_shep_ok(void)
-{                      /*{{{ */
-    qthread_shepherd_t *ret = qthread_internal_getshep();
-
-    if (ret == NULL) {
-        return QTHREAD_PTHREAD_ERROR;
-    } else {
-        return QTHREAD_CASLOCK_READ_UI(ret->active);
-    }
-}                      /*}}} */
-
-void qthread_shep_next(qthread_shepherd_id_t *shep)
-{   /*{{{*/
-    /* This will mean something slightly different in a multinode world. */
-    qthread_shepherd_id_t cur = *shep;
-
-    assert(cur != NO_SHEPHERD);
-    cur++;
-    cur  *= cur < qlib->nshepherds;
-    *shep = cur;
-} /*}}}*/
-
-void qthread_shep_prev(qthread_shepherd_id_t *shep)
-{   /*{{{*/
-    /* This will mean something slightly different in a multinode world. */
-    qthread_shepherd_id_t cur = *shep;
-
-    assert(cur != NO_SHEPHERD);
-    if (0 == cur) {
-        cur = qlib->nshepherds - 1;
-    } else {
-        cur--;
-    }
-    *shep = cur;
-} /*}}}*/
-
-void qthread_shep_next_local(qthread_shepherd_id_t *shep)
-{   /*{{{*/
-    /* This is node-local */
-    qthread_shepherd_id_t cur = *shep;
-
-    assert(cur != NO_SHEPHERD);
-    cur++;
-    cur  *= cur < qlib->nshepherds;
-    *shep = cur;
-} /*}}}*/
-
-void qthread_shep_prev_local(qthread_shepherd_id_t *shep)
-{   /*{{{*/
-    /* This is node-local */
-    qthread_shepherd_id_t cur = *shep;
-
-    assert(cur != NO_SHEPHERD);
-    if (0 == cur) {
-        cur = qlib->nshepherds - 1;
-    } else {
-        cur--;
-    }
-    *shep = cur;
-} /*}}}*/
-
-unsigned int INTERNAL qthread_internal_shep_to_node(const qthread_shepherd_id_t shep)
-{                      /*{{{ */
-    return qlib->shepherds[shep].node;
-}                      /*}}} */
-
-/* returns the distance between two shepherds */
-int qthread_distance(const qthread_shepherd_id_t src,
-                     const qthread_shepherd_id_t dest)
-{                      /*{{{ */
-    assert(src < qlib->nshepherds);
-    assert(dest < qlib->nshepherds);
-    if ((src >= qlib->nshepherds) || (dest >= qlib->nshepherds)) {
-        return QTHREAD_BADARGS;
-    }
-    if (qlib->shepherds[src].shep_dists == NULL) {
-        return 0;
-    } else {
-        return qlib->shepherds[src].shep_dists[dest];
-    }
-}                      /*}}} */
-
-/* returns a list of shepherds, sorted by their distance from this qthread;
- * if NULL, then all sheps are equidistant */
-const qthread_shepherd_id_t *qthread_sorted_sheps(void)
-{                      /*{{{ */
-    qthread_t *t = qthread_internal_self();
-
-    if (t == NULL) {
-        return NULL;
-    }
-    assert(t->rdata);
-    assert(t->rdata->shepherd_ptr);
-    return t->rdata->shepherd_ptr->sorted_sheplist;
-}                      /*}}} */
-
-/* returns a list of shepherds, sorted by their distance from the specified shepherd;
- * if NULL, then all sheps are equidistant */
-const qthread_shepherd_id_t *qthread_sorted_sheps_remote(const
-                                                         qthread_shepherd_id_t
-                                                         src)
-{                      /*{{{ */
-    assert(src < qlib->nshepherds);
-    if (src >= qlib->nshepherds) {
-        return NULL;
-    }
-    return qlib->shepherds[src].sorted_sheplist;
-}                      /*}}} */
-
-/* returns the number of shepherds actively scheduling work */
-qthread_shepherd_id_t qthread_num_shepherds(void)
-{                      /*{{{ */
-    return (qthread_shepherd_id_t)(qlib->nshepherds_active);
-}                      /*}}} */
-
-/* returns the number of shepherds actively scheduling work */
+/* returns the number of workers actively scheduling work */
 qthread_worker_id_t qthread_num_workers(void)
 {                      /*{{{ */
     return (qthread_worker_id_t)qthread_readstate(ACTIVE_WORKERS);

@@ -101,26 +101,26 @@ struct qthread_shepherd_s {
     size_t  incr_count;         /* number of increments */
 # endif
 
-    qt_hash uniquelockaddrs;    /* the unique addresses that are locked */
-    double  aquirelock_maxtime; /* max time spent aquiring locks */
-    double  aquirelock_time;    /* total time spent aquiring locks */
-    size_t  aquirelock_count;   /* num locks aquired */
-    double  lockwait_maxtime;   /* max time spent blocked on a lock */
-    double  lockwait_time;      /* total time spent blocked on a lock */
-    size_t  lockwait_count;     /* num times blocked on a lock */
-    double  hold_maxtime;       /* max time spent holding locks */
-    double  hold_time;          /* total time spent holding locks (use aquirelock_count) */
+    qt_hash  uniquelockaddrs;    /* the unique addresses that are locked */
+    double   aquirelock_maxtime; /* max time spent aquiring locks */
+    double   aquirelock_time;    /* total time spent aquiring locks */
+    size_t   aquirelock_count;   /* num locks aquired */
+    double   lockwait_maxtime;   /* max time spent blocked on a lock */
+    double   lockwait_time;      /* total time spent blocked on a lock */
+    size_t   lockwait_count;     /* num times blocked on a lock */
+    double   hold_maxtime;       /* max time spent holding locks */
+    double   hold_time;          /* total time spent holding locks (use aquirelock_count) */
 
-    qt_hash uniquefebaddrs;     /* unique addresses that are associated with febs */
-    double  febblock_maxtime;   /* max time spent aquiring FEB words */
-    double  febblock_time;      /* total time spent aquiring FEB words */
-    size_t  febblock_count;     /* num FEB words aquired */
-    double  febwait_maxtime;    /* max time spent blocking on FEBs */
-    double  febwait_time;       /* total time spent blocking on FEBs */
-    size_t  febwait_count;      /* num FEB blocking waits required */
-    double  empty_maxtime;      /* max time addresses spent empty */
-    double  empty_time;         /* total time addresses spent empty */
-    size_t  empty_count;        /* num times addresses were empty */
+    qt_hash  uniquefebaddrs;    /* unique addresses that are associated with febs */
+    double   febblock_maxtime;  /* max time spent aquiring FEB words */
+    double   febblock_time;     /* total time spent aquiring FEB words */
+    size_t   febblock_count;    /* num FEB words aquired */
+    double   febwait_maxtime;   /* max time spent blocking on FEBs */
+    double   febwait_time;      /* total time spent blocking on FEBs */
+    size_t   febwait_count;     /* num FEB blocking waits required */
+    double   empty_maxtime;     /* max time addresses spent empty */
+    double   empty_time;        /* total time addresses spent empty */
+    size_t   empty_count;       /* num times addresses were empty */
 #endif // ifdef QTHREAD_LOCK_PROFILING
     uint32_t padding[CACHELINE_WIDTH / sizeof(uint32_t)];
 };
@@ -147,6 +147,9 @@ static QINLINE qthread_worker_t *qthread_internal_getworker(void)
 }
 
 #endif
+
+qthread_shepherd_t INTERNAL *qthread_find_active_shepherd(qthread_shepherd_id_t *l,
+                                                          unsigned int          *d);
 
 void qthread_back_to_master(qthread_t *t);
 
