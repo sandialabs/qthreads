@@ -6,9 +6,6 @@
 #include "qthread/qthread.h"
 
 /* System Headers */
-#ifndef QTHREAD_NOALIGNCHECK
-# include <stdio.h>
-#endif
 
 /* Internal Headers */
 #include "qt_hash.h"
@@ -21,7 +18,9 @@
 #include "qt_debug.h"
 #include "qt_internal_feb.h"
 
-/* Local Types */
+/********************************************************************
+ * Local Types
+ *********************************************************************/
 typedef enum bt {
     WRITEEF,
     WRITEEF_NB,
@@ -41,7 +40,9 @@ typedef struct {
     int             retval;
 } qthread_feb_blocker_t;
 
-/* Local Prototypes */
+/********************************************************************
+ * Local Prototypes
+ *********************************************************************/
 static QINLINE void qthread_gotlock_fill(qthread_shepherd_t *shep,
                                          qthread_addrstat_t *m,
                                          void               *maddr,
@@ -50,6 +51,43 @@ static QINLINE void qthread_gotlock_empty(qthread_shepherd_t *shep,
                                           qthread_addrstat_t *m,
                                           void               *maddr,
                                           const char          recursive);
+
+/********************************************************************
+ * Shared Globals
+ *********************************************************************/
+#if !defined(UNPOOLED_ADDRSTAT) && !defined(UNPOOLED)
+qt_mpool generic_addrstat_pool = NULL;
+#endif
+#if !defined(UNPOOLED_ADDRRES) && !defined(UNPOOLED)
+qt_mpool generic_addrres_pool = NULL;
+#endif
+
+/********************************************************************
+ * Functions
+ *********************************************************************/
+
+static void qt_feb_subsystem_shutdown(void)
+{
+# if !defined(UNPOOLED_ADDRSTAT) && !defined(UNPOOLED)
+    qt_mpool_destroy(generic_addrstat_pool);
+    generic_addrstat_pool = NULL;
+# endif
+# if !defined(UNPOOLED_ADDRRES) && !defined(UNPOOLED)
+    qt_mpool_destroy(generic_addrres_pool);
+    generic_addrres_pool = NULL;
+# endif
+}
+
+void INTERNAL qt_feb_subsystem_init(void)
+{
+#if !defined(UNPOOLED_ADDRSTAT) && !defined(UNPOOLED)
+    generic_addrstat_pool = qt_mpool_create(sizeof(qthread_addrstat_t));
+#endif
+#if !defined(UNPOOLED_ADDRRES) && !defined(UNPOOLED)
+    generic_addrres_pool = qt_mpool_create(sizeof(qthread_addrres_t));
+#endif
+    qthread_internal_cleanup(qt_feb_subsystem_shutdown);
+}
 
 /* functions to implement FEB locking/unlocking */
 
@@ -184,6 +222,7 @@ static QINLINE void qthread_gotlock_empty(qthread_shepherd_t *shep,
     qthread_addrres_t *X = NULL;
     int                removeable;
 
+    assert(m);
     m->full = 0;
     QTHREAD_EMPTY_TIMER_START(m);
     if (m->EFQ != NULL) {
@@ -222,6 +261,7 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t *shep,
     int                removeable;
 
     qthread_debug(LOCK_DETAILS, "m(%p), addr(%p)\n", m, maddr);
+    assert(m);
     m->full = 1;
     QTHREAD_EMPTY_TIMER_STOP(m);
     /* dequeue all FFQ, do their operation, and schedule them */
@@ -391,7 +431,7 @@ int API_FUNC qthread_writeF(aligned_t *restrict const       dest,
     if (!shep) {
         return qthread_feb_blocker_func(dest, (void *)src, WRITEF);
     }
-    qthread_debug(LOCK_BEHAVIOR, "tid %u dest=%p src=%p...\n", (shep->current)?(shep->current->thread_id):UINT_MAX, dest, src);
+    qthread_debug(LOCK_BEHAVIOR, "tid %u dest=%p src=%p...\n", (shep->current) ? (shep->current->thread_id) : UINT_MAX, dest, src);
     QALIGN(dest, alignedaddr);
     QTHREAD_LOCK_UNIQUERECORD2(feb, dest, shep);
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
@@ -412,7 +452,7 @@ int API_FUNC qthread_writeF(aligned_t *restrict const       dest,
     if (dest && (dest != src)) {
         memcpy(dest, src, sizeof(aligned_t));
     }
-    qthread_debug(LOCK_BEHAVIOR, "tid %u succeeded on %p=%p\n", (shep->current)?(shep->current->thread_id):UINT_MAX, dest, src);
+    qthread_debug(LOCK_BEHAVIOR, "tid %u succeeded on %p=%p\n", (shep->current) ? (shep->current->thread_id) : UINT_MAX, dest, src);
     qthread_gotlock_fill(shep, m, alignedaddr, 0);
 #else /* ifndef SST */
     QALIGN(dest, alignedaddr);

@@ -245,14 +245,6 @@ static qt_mpool generic_team_pool = NULL;
 # define FREE_TEAM(t)     qt_mpool_cached_free(generic_team_pool, t)
 #endif
 
-#if !defined(UNPOOLED_ADDRSTAT) && !defined(UNPOOLED)
-qt_mpool generic_addrstat_pool = NULL;
-#endif
-
-#if !defined(UNPOOLED_ADDRRES) && !defined(UNPOOLED)
-qt_mpool generic_addrres_pool = NULL;
-#endif
-
 /* guaranteed to be between 0 and 128, using the first parts of addr that are
  * significant */
 unsigned int QTHREAD_LOCKING_STRIPES = 128;
@@ -990,16 +982,11 @@ int qthread_initialize(void)
 # else
         qt_mpool_create(sizeof(struct qthread_runtime_data_s) + qlib->qthread_stack_size);
 # endif
-# if !defined(UNPOOLED_ADDRSTAT)
-    generic_addrstat_pool = qt_mpool_create(sizeof(qthread_addrstat_t));
-# endif
-# if !defined(UNPOOLED_ADDRRES)
-    generic_addrres_pool = qt_mpool_create(sizeof(qthread_addrres_t));
-# endif
     generic_team_pool = qt_mpool_create(sizeof(qt_team_t));
 #endif /* ifndef UNPOOLED */
     initialize_hazardptrs();
     qt_lock_subsystem_init();
+    qt_feb_subsystem_init();
     qt_threadqueue_subsystem_init();
     qt_blocking_subsystem_init();
 
@@ -1656,14 +1643,6 @@ void qthread_finalize(void)
     generic_qthread_pool = NULL;
     qt_mpool_destroy(generic_stack_pool);
     generic_stack_pool = NULL;
-# if !defined(UNPOOLED_ADDRSTAT) && !defined(UNPOOLED)
-    qt_mpool_destroy(generic_addrstat_pool);
-    generic_addrstat_pool = NULL;
-# endif
-# if !defined(UNPOOLED_ADDRRES) && !defined(UNPOOLED)
-    qt_mpool_destroy(generic_addrres_pool);
-    generic_addrres_pool = NULL;
-# endif
     qt_mpool_destroy(generic_team_pool);
     generic_team_pool = NULL;
 #endif /* ifndef UNPOOLED */
