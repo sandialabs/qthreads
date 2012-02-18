@@ -4,6 +4,7 @@
 DIST_SUBDIRS = 
 
 general_multinode = \
+	multinode_hello_world \
 	test_uts_multinode
 
 multinode = \
@@ -21,6 +22,9 @@ LDADD = $(qthreadlib)
 
 buildall: $(multinode)
 buildextra: $(multinode)
+
+multinode_hello_world_SOURCES = multinode_hello_world.c ../benchmarks/uts/rng/brg_sha1.c
+multinode_hello_world_DEPENDENCIES = $(qthreadlib)
 
 test_uts_multinode_SOURCES = test_uts_multinode.c ../benchmarks/uts/rng/brg_sha1.c
 test_uts_multinode_DEPENDENCIES = $(qthreadlib)
