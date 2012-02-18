@@ -22,6 +22,8 @@ int main(int argc,
     int retval;
     long foobar = 1234567890;
 
+    setenv("QT_MULTINODE","yes",1);
+
     qthread_init(1);
 
     my_id = qthread_multinode_rank();
