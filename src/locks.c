@@ -68,7 +68,7 @@ void INTERNAL qt_lock_subsystem_init(void)
 #if !defined(UNPOOLED_QUEUES) && !defined(UNPOOLED)
     generic_queue_pool = qt_mpool_create(sizeof(qthread_queue_t));
     generic_lock_pool  = qt_mpool_create(sizeof(qthread_lock_t));
-    qthread_internal_cleanup_early(qt_lock_subsystem_shutdown);
+    qthread_internal_cleanup(qt_lock_subsystem_shutdown);
 #endif
 }
 
