@@ -72,6 +72,7 @@
 #include "qt_io.h"
 #include "qt_debug.h"
 #include "qt_envariables.h"
+#include "qt_internal_feb.h"
 #ifdef QTHREAD_MULTINODE
 # include "qthread/qthread_multinode.h"
 #endif

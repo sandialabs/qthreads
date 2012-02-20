@@ -6,6 +6,7 @@
 #include "qthread/qthread.h"
 
 /* System Headers */
+#include <stdlib.h> /* for random(), according to P2001 */
 
 /* Internal Headers */
 #include "qt_visibility.h"
