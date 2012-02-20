@@ -101,7 +101,7 @@ static int calc_num_children(node_t *parent)
                    num_children, root_bf);
             num_children = root_bf;
         }
-    } else   {
+    } else {
         if (num_children > MAXNUMCHILDREN) {
             printf("*** Number of children truncated from %d to %d\n",
                    num_children, MAXNUMCHILDREN);
@@ -112,55 +112,60 @@ static int calc_num_children(node_t *parent)
     return num_children;
 }
 
-#define BIG_STACKS
+// #define BIG_STACKS
+
 // Notes:
 // -    Each task receives distinct copy of parent
 // -    Copy of child is shallow, be careful with `state` member
 static aligned_t visit(void *args_)
 {
-    node_t   *parent            = (node_t *)args_;
-    int       parent_height     = parent->height;
-    int       num_children      = parent->num_children;
-    uint64_t  num_descendants   = 1;
-    node_t    child;
+    node_t  *parent          = (node_t *)args_;
+    int      parent_height   = parent->height;
+    int      num_children    = parent->num_children;
+    uint64_t num_descendants = 1;
+
+    if (num_children != 0) {
+        node_t child;
 #ifdef BIG_STACKS
-    syncvar_t rets[num_children];
+        syncvar_t rets[num_children];
+
+        for (int i = 0; i < num_children; i++) {
+            rets[i] = SYNCVAR_EMPTY_INITIALIZER;
+        }
 #else
-    syncvar_t *rets;
+        syncvar_t *rets = malloc(sizeof(syncvar_t) * num_children);
 
-    if (num_children > 0) {
-	rets = malloc(sizeof(syncvar_t) * num_children);
-    }
-#endif
+        for (int i = 0; i < num_children; i++) {
+            rets[i] = SYNCVAR_EMPTY_INITIALIZER;
+        }
+#endif  /* ifdef BIG_STACKS */
 
-    // Spawn children, if any
-    for (int i = 0; i < num_children; i++) {
-	rets[i] = SYNCVAR_EMPTY_INITIALIZER;
-    }
-    child.height = parent_height + 1;
-    for (int i = 0; i < num_children; i++) {
-        for (int j = 0; j < num_samples; j++) {
-            rng_spawn(parent->state.state, child.state.state, i);
+        // Spawn children, if any
+        child.height = parent_height + 1;
+        for (int i = 0; i < num_children; i++) {
+            for (int j = 0; j < num_samples; j++) {
+                rng_spawn(parent->state.state, child.state.state, i);
+            }
+
+            child.num_children = calc_num_children(&child);
+
+            qthread_fork_syncvar_copyargs(visit, &child, sizeof(node_t), &rets[i]);
+        }
+        qthread_yield();
+
+        // Wait for children to finish up, accumulate descendants counts
+        for (int i = 0; i < num_children; i++) {
+            uint64_t child_descendants = 0;
+            qthread_syncvar_readFF(&child_descendants, &rets[i]);
+            num_descendants += child_descendants;
         }
 
-        child.num_children = calc_num_children(&child);
-
-        qthread_fork_syncvar_copyargs(visit, &child, sizeof(node_t), &rets[i]);
-	qthread_yield();
-    }
-
-    // Wait for children to finish up, accumulate descendants counts
-    for (int i = 0; i < num_children; i++) {
-	uint64_t  child_descendants = 0;
-        qthread_syncvar_readFF(&child_descendants, &rets[i]);
-        num_descendants += child_descendants;
-    }
-
 #ifndef BIG_STACKS
-    if (num_children > 0) {
-	free(rets);
-    }
+        if (num_children > 0) {
+            free(rets);
+        }
 #endif
+    }
     return num_descendants;
 }
 
