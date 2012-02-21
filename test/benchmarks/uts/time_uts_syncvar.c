@@ -161,9 +161,7 @@ static aligned_t visit(void *args_)
         }
 
 #ifndef BIG_STACKS
-        if (num_children > 0) {
-            free(rets);
-        }
+	free(rets);
 #endif
     }
     return num_descendants;
