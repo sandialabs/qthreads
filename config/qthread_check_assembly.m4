@@ -172,7 +172,7 @@ AC_DEFUN([QTHREAD_CHECK_ASSEMBLY],[
   qthread_cv_asm_arch="UNSUPPORTED"
   qthread_gcc_inline_assign=""
   case "${host}" in
-    i?86-*|x86_64*)
+    i?86-*|x86_64*|mic-*)
       AS_IF([test "$ac_cv_sizeof_long" = "4"],
             [qthread_cv_asm_arch="IA32"],
 			[qthread_cv_asm_arch="AMD64"])
