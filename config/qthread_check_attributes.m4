@@ -132,8 +132,11 @@ AC_CACHE_CHECK([support for __sync_synchronize],
 			 UNSUPPORTED)
 			   case "$host" in
 			     mic-*)
-				 mdefstr='{ register int _a_ = 0; __asm__ __volatile__ ("lock orl $0, %0"::"m"(_a_):"memory"); }'
-				 ;;
+				   mdefstr='do { register int _a_ = 0; __asm__ __volatile__ ("lock orl %0, %0"::"m"(_a_):"memory"); } while(0)'
+				   ;;
+				 *)
+				   mdefstr="$cdefstr"
+				   ;;
 			   esac
 			   ;;
 		    *)
