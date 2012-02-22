@@ -145,8 +145,9 @@ loop_top:
         } else {
             shep_depth = hwloc_get_type_depth(topology, shep_type_options[shep_type_idx]);
             qthread_debug(AFFINITY_DETAILS, "depth of type %i (%s) = %d\n",
+                          shep_type_idx,
                           hwloc_obj_type_string(shep_type_options[shep_type_idx]),
-                          shep_type_idx, shep_depth);
+                          shep_depth);
         }
         DEBUG_ONLY(typename = typenames[shep_type_idx]);
         if ((shep_depth == HWLOC_TYPE_DEPTH_UNKNOWN) ||
@@ -515,17 +516,33 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
     hwloc_const_cpuset_t allowed_cpuset = hwloc_topology_get_allowed_cpuset(topology); // where am I allowed to run?
     size_t               num_extant_objs;
 
+    qthread_debug(AFFINITY_CALLS, "generating distances for %i sheps (%p)\n", (int)nshepherds, sheps);
+
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     num_extant_objs =
         hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset,
                                                 shep_depth);
+#ifdef QTHREAD_HAVE_HWLOC_DISTS
+    const struct hwloc_distances_s *matrix = hwloc_get_whole_distance_matrix_by_depth(topology, shep_depth);
+    const size_t nbobjs = hwloc_get_nbobjs_by_depth(topology, shep_depth);
+    assert(nbobjs > 0);
+#endif
     for (size_t i = 0; i < nshepherds; ++i) {
         sheps[i].node            = i % num_extant_objs;
         sheps[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
         sheps[i].shep_dists      = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
         for (size_t j = 0, k = 0; j < nshepherds; ++j) {
             if (j != i) {
+#ifdef QTHREAD_HAVE_HWLOC_DISTS
+                if (matrix) {
+                    sheps[i].shep_dists[k] = matrix[i+nbobjs*j].nbobjs;
+                } else {
+                    sheps[i].shep_dists[k]        = 10;
+                }
+                qthread_debug(AFFINITY_CALLS, "distance from %i to %i is %i\n", (int)i, (int)j, (int)sheps[i].shep_dists[k]);
+#else
                 sheps[i].shep_dists[k]        = 10;
+#endif
                 sheps[i].sorted_sheplist[k++] = j;
             }
         }
