@@ -519,32 +519,31 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
     qthread_debug(AFFINITY_CALLS, "generating distances for %i sheps (%p)\n", (int)nshepherds, sheps);
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    num_extant_objs =
-        hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset,
-                                                shep_depth);
+    num_extant_objs = hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth);
+
     for (size_t i = 0; i < nshepherds; ++i) {
-#ifdef QTHREAD_HAVE_HWLOC_DISTS
+# ifdef QTHREAD_HAVE_HWLOC_DISTS
         hwloc_obj_t obj1 = hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset,
-                shep_depth, i);
-#endif
+                                                                shep_depth, i);
+# endif
         sheps[i].node            = i % num_extant_objs;
         sheps[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
         sheps[i].shep_dists      = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
         for (size_t j = 0, k = 0; j < nshepherds; ++j) {
             if (j != i) {
-#ifdef QTHREAD_HAVE_HWLOC_DISTS
-                float l1, l2;
+# ifdef QTHREAD_HAVE_HWLOC_DISTS
+                float       l1, l2;
                 hwloc_obj_t obj2 = hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset,
-                                                                               shep_depth, j);
+                                                                        shep_depth, j);
                 if (hwloc_get_latency(topology, obj1, obj2, &l1, &l2) != -1) {
-                    sheps[i].shep_dists[k] = l1*10;
+                    sheps[i].shep_dists[k] = l1 * 10;
                 } else {
-                    sheps[i].shep_dists[k]        = 10;
+                    sheps[i].shep_dists[k] = 10;
                 }
                 qthread_debug(AFFINITY_CALLS, "distance from %i to %i is %i\n", (int)i, (int)j, (int)(sheps[i].shep_dists[k]));
-#else
-                sheps[i].shep_dists[k]        = 10;
-#endif
+# else
+                sheps[i].shep_dists[k] = 10;
+# endif         /* ifdef QTHREAD_HAVE_HWLOC_DISTS */
                 sheps[i].sorted_sheplist[k++] = j;
             }
         }
@@ -575,7 +574,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
     cpus_left_per_obj = calloc(num_extant_objs, sizeof(size_t));
     /* Count how many PUs are in each obj */
     for (size_t i = 0; i < num_extant_objs; ++i) {
-        hwloc_obj_t  obj =
+        hwloc_obj_t obj =
             hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset,
                                                  shep_depth, i);
         /* count how many PUs in this obj */
