@@ -71,9 +71,10 @@ static aligned_t fib(void *arg_)
 int main(int   argc,
          char *argv[])
 {
-    qtimer_t  timer = qtimer_create();
-    aligned_t n     = 20;
-    aligned_t ret   = 0;
+    qtimer_t  timer   = qtimer_create();
+    aligned_t n       = 20;
+    aligned_t ret     = 0;
+    int       threads = 1;
 
     /* setup */
     CHECK_VERBOSE();
@@ -82,6 +83,7 @@ int main(int   argc,
 #pragma omp parallel
 #pragma omp single
     {
+	threads = omp_get_num_threads();
         qtimer_start(timer);
 #pragma omp task default(none) shared(ret,n)
         ret = fib(&n);
@@ -90,7 +92,7 @@ int main(int   argc,
     }
 
     if (validation[n] == ret) {
-        fprintf(stdout, "%d %lu %lu %f\n", omp_get_num_threads(), (unsigned long)n, (unsigned long)ret, qtimer_secs(timer));
+        fprintf(stdout, "%d %lu %lu %f\n", threads, (unsigned long)n, (unsigned long)ret, qtimer_secs(timer));
     } else {
         iprintf("Fail %lu (== %lu) in %f sec\n", (unsigned long)ret, (unsigned long)validation[n], qtimer_secs(timer));
     }
