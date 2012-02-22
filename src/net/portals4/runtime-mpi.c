@@ -40,9 +40,6 @@ qthread_internal_net_driver_runtime_init(void)
                     PTL_PID_ANY,
                     NULL,
                     NULL,
-                    0,
-                    NULL,
-                    NULL,
                     &phys_ni_h);
     if (PTL_OK != ret) return 1;
 
