@@ -190,6 +190,7 @@ int INTERNAL qthread_forCount(int inc);
 void INTERNAL qt_feb_barrier_internal_init(void);
 void INTERNAL qthread_internal_cleanup(void (*function)(void));
 void INTERNAL qthread_internal_cleanup_early(void (*function)(void));
+void INTERNAL qthread_internal_cleanup_late(void (*function)(void));
 
 #ifdef QTHREAD_RCRTOOL
 /* allow environment variable to control whether dynamic thread count

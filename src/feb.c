@@ -86,7 +86,7 @@ void INTERNAL qt_feb_subsystem_init(void)
 #if !defined(UNPOOLED_ADDRRES) && !defined(UNPOOLED)
     generic_addrres_pool = qt_mpool_create(sizeof(qthread_addrres_t));
 #endif
-    qthread_internal_cleanup(qt_feb_subsystem_shutdown);
+    qthread_internal_cleanup_late(qt_feb_subsystem_shutdown);
 }
 
 /* functions to implement FEB locking/unlocking */

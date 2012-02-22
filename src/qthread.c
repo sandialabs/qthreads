@@ -104,7 +104,8 @@ pthread_key_t spawn_cache;
 struct qt_cleanup_funcs_s {
     void                       (*func)(void);
     struct qt_cleanup_funcs_s *next;
-} *qt_cleanup_funcs = NULL, *qt_cleanup_early_funcs = NULL;
+} *qt_cleanup_funcs = NULL, *qt_cleanup_early_funcs = NULL,
+  *qt_cleanup_late_funcs = NULL;
 
 #ifdef QTHREAD_COUNT_THREADS
 static aligned_t             threadcount;
@@ -1268,6 +1269,18 @@ static QINLINE void qthread_makecontext(qt_context_t *const c,
 }                      /*}}} */
 
 /* this adds a function to the list of cleanup functions to call at finalize;
+ * these functions get called *way* AFTER shepherds are torn down */
+void qthread_internal_cleanup_late(void (*function)(void))
+{   /*{{{*/
+    struct qt_cleanup_funcs_s *ng = malloc(sizeof(struct qt_cleanup_funcs_s));
+
+    assert(ng);
+    ng->func              = function;
+    ng->next              = qt_cleanup_late_funcs;
+    qt_cleanup_late_funcs = ng;
+} /*}}}*/
+
+/* this adds a function to the list of cleanup functions to call at finalize;
  * these functions get called AFTER shepherds are torn down */
 void qthread_internal_cleanup(void (*function)(void))
 {   /*{{{*/
@@ -1579,6 +1592,7 @@ void qthread_finalize(void)
         qt_hash_destroy_deallocate(qlib->syncvars[i],
                                    (qt_hash_deallocator_fn)
                                    qthread_addrstat_delete);
+
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
         QTHREAD_FASTLOCK_DESTROY(qlib->atomic_locks[i]);
 #endif
@@ -1590,6 +1604,13 @@ void qthread_finalize(void)
         QTHREAD_FASTLOCK_DESTROY(qlib->febs_stripes_locks[i]);
 # endif
 #endif
+    }
+    qthread_debug(CORE_DETAILS, "calling late cleanup functions\n");
+    while (qt_cleanup_late_funcs != NULL) {
+        struct qt_cleanup_funcs_s *tmp = qt_cleanup_late_funcs;
+        qt_cleanup_late_funcs = tmp->next;
+        tmp->func();
+        free(tmp);
     }
     qthread_debug(LOCK_DETAILS, "destroy lock infrastructure arrays\n");
     free(qlib->locks);
@@ -1639,6 +1660,7 @@ void qthread_finalize(void)
             free(qlib->shepherds[i].sorted_sheplist);
         }
     }
+
 #ifndef UNPOOLED
     qthread_debug(CORE_DETAILS, "destroy global memory pools\n");
     qt_mpool_destroy(generic_qthread_pool);
@@ -2846,7 +2868,6 @@ void INTERNAL qthread_back_to_master(qthread_t *t)
 #else
     qassert(qt_swapctxt(&t->rdata->context, t->rdata->return_context), 0);
 #endif
-
 #ifdef NEED_RLIMIT
     qthread_debug(SHEPHERD_DETAILS, "t(%p): setting stack size limits back to qthread size...\n", t);
     if (!(t->flags & QTHREAD_REAL_MCCOY)) {
