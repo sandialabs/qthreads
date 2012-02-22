@@ -13,6 +13,7 @@ AC_ARG_ENABLE([fastcontext],
                                calls. If you run into bugs, you can disable it
                                on some systems to use the slower libc-provided
                                version.])])
+AC_MSG_CHECKING([whether we have a fast context swap for this system])
 case "$host" in
   *-solaris2.8)
     AC_DEFINE([EXTRA_MAKECONTEXT_ARGC], [1], 
@@ -35,6 +36,7 @@ case "$host" in
     qt_host_based_enable_fastcontext=no
 	;;
 esac
+AC_MSG_RESULT([$qt_host_based_enable_fastcontext])
 AS_IF([test "x$qt_host_based_enable_fastcontext" = "xno"],
       [AS_IF([test "x$enable_fastcontext" = xyes],
 	         [AC_MSG_ERROR([Do not have an implementation of fastcontext for $host])],
