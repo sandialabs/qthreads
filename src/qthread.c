@@ -251,13 +251,13 @@ static qt_mpool generic_team_pool = NULL;
 unsigned int QTHREAD_LOCKING_STRIPES = 128;
 
 #ifdef QTHREAD_DEBUG
-enum qthread_debug_levels debuglevel = 0;
+enum qthread_debug_levels debuglevel = NO_DEBUG_OUTPUT;
 QTHREAD_FASTLOCK_TYPE     output_lock;
 
 int qthread_debuglevel(int d)
 {
-    if (d >= 0) { debuglevel = d; }
-    return debuglevel;
+    if (d >= 0) { debuglevel = (enum qthread_debug_levels)d; }
+    return (int)debuglevel;
 }
 
 #else
@@ -770,7 +770,7 @@ int qthread_initialize(void)
 # ifdef SST
         dl = 7;
 # endif
-        debuglevel = (1 << dl) - 1;
+        debuglevel = (enum qthread_debug_levels)((1 << dl) - 1);
     }
 #endif /* ifdef QTHREAD_DEBUG */
 
@@ -1412,6 +1412,7 @@ void qthread_finalize(void)
         tmp->func();
         free(tmp);
     }
+    qthread_debug(CORE_DETAILS, "done calling early cleanup functions\n");
 
     /* wait for each SPAWNED shepherd to drain it's queue
      * (note: not shepherd 0, because that one wasn't spawned) */
