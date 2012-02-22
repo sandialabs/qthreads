@@ -162,6 +162,67 @@ return foo;
 		   [qthread_cv_atomic_incr="yes"],
 		   [qthread_cv_atomic_incr="no"])])
    ])
+AS_IF([test "$qthread_cv_atomic_incr" = "yes"],
+	  [AC_CACHE_CHECK([whether builtin atomic increment works correctly],
+	      [qt_cv_atomic_incr_works],
+		  [AS_IF([test "$1" -eq 8],
+         [AC_RUN_IFELSE([AC_LANG_SOURCE([[
+#ifdef HAVE_IA64INTRIN_H
+# include <ia64intrin.h>
+#elif HAVE_IA32INTRIN_H
+# include <ia32intrin.h>
+#endif
+#include <stdlib.h>
+#include <stdint.h> /* for uint64_t */
+
+int main(int argc, char *argv[])
+{
+uint64_t master = 0;
+uint64_t test;
+if ((__sync_fetch_and_add(&master, 1) != 0) || (master != 1)) {
+  return -1;
+}
+master = 0xFFFFFFFF;
+if ((__sync_fetch_and_add(&master, 1) != 0xFFFFFFFF) ||
+    (master != 0x100000000ULL)) {
+	return -2;
+}
+master = 0;
+if ((__sync_fetch_and_add(&master, 0x100000000ULL) != 0) ||
+    (master != 0x100000000ULL)) {
+	return -3;
+}
+master = 0;
+__sync_fetch_and_add(&master, 0x100000000ULL);
+if (master != 0x100000000ULL) {
+	return -4;
+}
+return 0;
+}]])],
+		   [qt_cv_atomic_incr_works="yes"],
+		   [qt_cv_atomic_incr_works="no"],
+		   [qt_cv_atomic_incr_works="assuming yes"])],
+         [AC_RUN_IFELSE([AC_LANG_SOURCE([[
+#ifdef HAVE_IA64INTRIN_H
+# include <ia64intrin.h>
+#elif HAVE_IA32INTRIN_H
+# include <ia32intrin.h>
+#endif
+#include <stdlib.h>
+#include <stdint.h> /* for uint32_t */
+
+int main()
+{
+uint64_t master = 0;
+if ((__sync_fetch_and_add(&master, 1) != 0) || (master != 1)) {
+  return -1;
+}
+return 0;
+}]])],
+		   [qt_cv_atomic_incr_works="yes"],
+		   [qt_cv_atomic_incr_works="no"],
+		   [qt_cv_atomic_incr_works="assuming yes"])])
+   ])])
 AS_IF([test "$qthread_cv_atomic_CAS" = "yes"],
 	  [AC_CACHE_CHECK([whether ia64intrin.h is required],
 	    [qthread_cv_require_ia64intrin_h],
@@ -190,8 +251,6 @@ AS_IF([test "x$qthread_cv_atomic_CAS64" = "xyes"],
 	  	[if the compiler supports __sync_val_compare_and_swap on 64-bit ints])])
 AS_IF([test "x$qthread_cv_atomic_CAS" = "xyes"],
 	[AC_DEFINE([QTHREAD_ATOMIC_CAS],[1],[if the compiler supports __sync_val_compare_and_swap])])
-AS_IF([test "$qthread_cv_atomic_incr" = "yes"],
+AS_IF([test "$qthread_cv_atomic_incr" = "yes" -a "$qt_cv_atomic_incr_works" != "no"],
 	[AC_DEFINE([QTHREAD_ATOMIC_INCR],[1],[if the compiler supports __sync_fetch_and_add])])
-AS_IF([test "$qthread_cv_atomic_CAS" = "yes" -a "$qthread_cv_atomic_incr" = "yes"],
-  		[AC_DEFINE([QTHREAD_ATOMIC_BUILTINS],[1],[if the compiler supports __sync_val_compare_and_swap])])
 ])
