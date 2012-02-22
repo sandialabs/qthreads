@@ -525,6 +525,8 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
         sheps[i].node            = i % num_extant_objs;
         sheps[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
         sheps[i].shep_dists      = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
+    }
+    for (size_t i = 0; i < nshepherds; ++i) {
 # ifdef QTHREAD_HAVE_HWLOC_DISTS
         hwloc_obj_t obj1 = hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset,
                                                                 shep_depth, sheps[i].node);
