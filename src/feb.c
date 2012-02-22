@@ -68,14 +68,14 @@ qt_mpool generic_addrres_pool = NULL;
 
 static void qt_feb_subsystem_shutdown(void)
 {
-# if !defined(UNPOOLED_ADDRSTAT) && !defined(UNPOOLED)
+#if !defined(UNPOOLED_ADDRSTAT) && !defined(UNPOOLED)
     qt_mpool_destroy(generic_addrstat_pool);
     generic_addrstat_pool = NULL;
-# endif
-# if !defined(UNPOOLED_ADDRRES) && !defined(UNPOOLED)
+#endif
+#if !defined(UNPOOLED_ADDRRES) && !defined(UNPOOLED)
     qt_mpool_destroy(generic_addrres_pool);
     generic_addrres_pool = NULL;
-# endif
+#endif
 }
 
 void INTERNAL qt_feb_subsystem_init(void)

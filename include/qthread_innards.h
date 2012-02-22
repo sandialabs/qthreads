@@ -31,9 +31,9 @@ qthread_t *qthread_internal_self(void);
 extern unsigned int QTHREAD_LOCKING_STRIPES;
 
 #ifdef CAS_STEAL_PROFILE
-// stripe this array across a cache line    
-#define CAS_STEAL_PROFILE_LENGTH (CACHELINE_WIDTH / sizeof(uint64_t))
-typedef struct uint64_strip_s { 
+// stripe this array across a cache line
+# define CAS_STEAL_PROFILE_LENGTH (CACHELINE_WIDTH / sizeof(uint64_t))
+typedef struct uint64_strip_s {
     uint64_t fields[CAS_STEAL_PROFILE_LENGTH];
 }   uint64_strip_t;
 #endif
@@ -49,7 +49,7 @@ typedef struct qlib_s {
 #endif
     unsigned int               nworkerspershep;
     struct qthread_shepherd_s *shepherds;
-    qt_threadqueue_t          **threadqueues;  
+    qt_threadqueue_t         **threadqueues;
 
     unsigned                   qthread_stack_size;
     unsigned                   master_stack_size;
@@ -66,7 +66,7 @@ typedef struct qlib_s {
     unsigned int               valgrind_masterstack_id;
 #endif
 #ifdef CAS_STEAL_PROFILE
-    uint64_strip_t            *cas_steal_profile;
+    uint64_strip_t *cas_steal_profile;
 #endif
 
     /* assigns a unique thread_id mostly for debugging! */
@@ -166,15 +166,15 @@ int qthread_fork_syncvar_copyargs_to(const qthread_f   f,
                                      const qthread_shepherd_id_t
                                      preferred_shep);
 int qthread_fork_track_syncvar_copyargs(const qthread_f   f,
-                                  const void *const arg,
-                                  const size_t      arg_size,
-                                  syncvar_t *const  ret);
+                                        const void *const arg,
+                                        const size_t      arg_size,
+                                        syncvar_t *const  ret);
 int qthread_fork_track_syncvar_copyargs_to(const qthread_f   f,
-                                     const void *const arg,
-                                     const size_t      arg_size,
-                                     syncvar_t *const  ret,
-                                     const qthread_shepherd_id_t
-                                     preferred_shep);
+                                           const void *const arg,
+                                           const size_t      arg_size,
+                                           syncvar_t *const  ret,
+                                           const qthread_shepherd_id_t
+                                           preferred_shep);
 #endif // ifdef QTHREAD_SST_PRIMITIVES
 
 /* functions added by akp to handle OpenMP task completion
