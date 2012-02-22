@@ -129,6 +129,13 @@ AC_CACHE_CHECK([support for __sync_synchronize],
 		     SPARCV9_32|SPARCV9_64)
                        mdefstr='__asm__ __volatile__ ("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad":::"memory")'
                        ;;
+			 UNSUPPORTED)
+			   case "$host" in
+			     mic-*)
+				 mdefstr='{ register int _a_ = 0; __asm__ __volatile__ ("lock orl $0, %0"::"m"(_a_):"memory"); }'
+				 ;;
+			   esac
+			   ;;
 		    *)
                        mdefstr="$cdefstr"
 		       ;;
