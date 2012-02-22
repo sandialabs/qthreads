@@ -121,7 +121,14 @@ AC_CACHE_CHECK([support for __sync_synchronize],
        [AS_IF([test "x$qt_cv_gcc_inline_assembly" = "xyes"],
 	          [case "$qthread_cv_asm_arch" in
 		     AMD64)
+			   case "$host" in
+			     mic-*)
+				   mdefstr='do { unsigned int eax_ptr, ebx_ptr, ecx_ptr, edx_ptr; int op = 0; __asm__ __volatile__ ("cpuid" : "=a" (eax_ptr), "=b" (ebx_ptr), "=c" (ecx_ptr), "=d" (edx_ptr) : "a" (op) : "memory"); } while(0)'
+				   ;;
+				 *)
                        mdefstr='__asm__ __volatile__ ("mfence":::"memory")'
+				   ;;
+			   esac
 		       ;;
 		     POWERPC*)
                        mdefstr='__asm__ __volatile__ ("sync":::"memory")'
@@ -129,17 +136,8 @@ AC_CACHE_CHECK([support for __sync_synchronize],
 		     SPARCV9_32|SPARCV9_64)
                        mdefstr='__asm__ __volatile__ ("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad":::"memory")'
                        ;;
-			 UNSUPPORTED)
-			   case "$host" in
-			     mic-*)
-				   mdefstr='do { register int _a_ = 0; __asm__ __volatile__ ("lock orl %0, %0"::"m"(_a_):"memory"); } while(0)'
-				   ;;
-				 *)
-				   mdefstr="$cdefstr"
-				   ;;
-			   esac
-			   ;;
 		    *)
+				 AC_MSG_ERROR([ASM $qthread_cv_asm_arch])
                        mdefstr="$cdefstr"
 		       ;;
 		       esac])])
