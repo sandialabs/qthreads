@@ -53,9 +53,6 @@
 /* size of aligned_t */
 #undef QTHREAD_SIZEOF_ALIGNED_T
 
-/* builtins supported */
-#undef QTHREAD_ATOMIC_BUILTINS
-
 /* builtin cas supported */
 #undef QTHREAD_ATOMIC_CAS
 
