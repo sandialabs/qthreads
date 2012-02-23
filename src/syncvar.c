@@ -701,6 +701,22 @@ int INTERNAL qthread_syncvar_readFE_nb(uint64_t *restrict const  dest,
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
 
+static QINLINE void qthread_syncvar_schedule(qthread_t          *waiter,
+                                             qthread_shepherd_t *shep)
+{/*{{{*/
+    assert(waiter);
+    assert(shep);
+    waiter->thread_state = QTHREAD_STATE_RUNNING;
+    if (waiter->flags & QTHREAD_UNSTEALABLE) {
+        qt_threadqueue_enqueue(waiter->rdata->shepherd_ptr->ready, waiter);
+    } else {
+#ifdef QTHREAD_USE_SPAWNCACHE
+        if (!qt_spawncache_spawn(waiter))
+#endif
+            qt_threadqueue_enqueue(shep->ready, waiter);
+    }
+}/*}}}*/
+
 static QINLINE void qthread_syncvar_gotlock_empty(qthread_shepherd_t *shep,
                                                   qthread_addrstat_t *m,
                                                   syncvar_t          *maddr,
@@ -721,18 +737,7 @@ static QINLINE void qthread_syncvar_gotlock_empty(qthread_shepherd_t *shep,
         if (maddr && (maddr != (syncvar_t *)X->addr)) {
             UNLOCK_THIS_MODIFIED_SYNCVAR(maddr, *((uint64_t *)X->addr), sf);
         }
-        {
-            qthread_t *waiter = X->waiter;
-            waiter->thread_state = QTHREAD_STATE_RUNNING;
-            if (waiter->flags & QTHREAD_UNSTEALABLE) {
-                qt_threadqueue_enqueue(waiter->rdata->shepherd_ptr->ready, waiter);
-            } else {
-#ifdef QTHREAD_USE_SPAWNCACHE
-                if (!qt_spawncache_spawn(waiter))
-#endif
-                qt_threadqueue_enqueue(shep->ready, waiter);
-            }
-        }
+        qthread_syncvar_schedule(X->waiter, shep);
         FREE_ADDRRES(X);
     }
     if ((m->EFQ == NULL) && (m->FEQ == NULL) && (m->FFQ == NULL)) {
@@ -786,8 +791,7 @@ static QINLINE void qthread_syncvar_gotlock_fill(qthread_shepherd_t *shep,
             *(uint64_t *)X->addr = ret;
         }
         /* schedule */
-        X->waiter->thread_state = QTHREAD_STATE_RUNNING;
-        qt_threadqueue_enqueue(X->waiter->rdata->shepherd_ptr->ready, X->waiter);
+        qthread_syncvar_schedule(X->waiter, shep);
         FREE_ADDRRES(X);
     }
     if (m->FEQ != NULL) {
@@ -799,8 +803,7 @@ static QINLINE void qthread_syncvar_gotlock_fill(qthread_shepherd_t *shep,
         if (X->addr) {
             *(uint64_t *)X->addr = ret;
         }
-        X->waiter->thread_state = QTHREAD_STATE_RUNNING;
-        qt_threadqueue_enqueue(X->waiter->rdata->shepherd_ptr->ready, X->waiter);
+        qthread_syncvar_schedule(X->waiter, shep);
         FREE_ADDRRES(X);
     }
     if ((m->EFQ == NULL) && (m->FEQ == NULL) && (m->FFQ == NULL)) {

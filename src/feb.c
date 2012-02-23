@@ -89,6 +89,20 @@ void INTERNAL qt_feb_subsystem_init(void)
     qthread_internal_cleanup_late(qt_feb_subsystem_shutdown);
 }
 
+static inline void qt_feb_schedule(qthread_t          *waiter,
+                                   qthread_shepherd_t *shep)
+{
+    waiter->thread_state = QTHREAD_STATE_RUNNING;
+    if (waiter->flags & QTHREAD_UNSTEALABLE) {
+        qt_threadqueue_enqueue(waiter->rdata->shepherd_ptr->ready, waiter);
+    } else {
+#ifdef QTHREAD_USE_SPAWNCACHE
+        if (!qt_spawncache_spawn(waiter))
+#endif
+            qt_threadqueue_enqueue(shep->ready, waiter);
+    }
+}
+
 /* functions to implement FEB locking/unlocking */
 
 static aligned_t qthread_feb_blocker_thread(void *arg)
@@ -234,18 +248,7 @@ static QINLINE void qthread_gotlock_empty(qthread_shepherd_t *shep,
             *(aligned_t *)maddr = *(X->addr);
         }
         /* requeue */
-        {
-            qthread_t *waiter = X->waiter;
-            waiter->thread_state = QTHREAD_STATE_RUNNING;
-            if (waiter->flags & QTHREAD_UNSTEALABLE) {
-                qt_threadqueue_enqueue(waiter->rdata->shepherd_ptr->ready, waiter);
-            } else {
-#ifdef QTHREAD_USE_SPAWNCACHE
-                if (!qt_spawncache_spawn(waiter))
-#endif
-                qt_threadqueue_enqueue(shep->ready, waiter);
-            }
-        }
+        qt_feb_schedule(X->waiter, shep);
         FREE_ADDRRES(X);
         qthread_gotlock_fill(shep, m, maddr, 1);
     }
@@ -301,15 +304,12 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t *shep,
                 qt_threadqueue_enqueue(X->waiter->target_shepherd->ready, X->waiter);
             }
         } else {
-            X->waiter->thread_state = QTHREAD_STATE_RUNNING;
-            qt_threadqueue_enqueue(X->waiter->rdata->shepherd_ptr->ready, X->waiter);
+            qt_feb_schedule(X->waiter, shep);
         }
         FREE_ADDRRES(X);
     }
     if (m->FEQ != NULL) {
         /* dequeue one FEQ, do their operation, and schedule them */
-        qthread_t *waiter;
-
         qthread_debug(LOCK_DETAILS, "dQ 1 FEQ\n");
         X      = m->FEQ;
         m->FEQ = X->next;
@@ -317,9 +317,7 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t *shep,
         if (X->addr && (X->addr != maddr)) {
             memcpy(X->addr, maddr, sizeof(aligned_t));
         }
-        waiter               = X->waiter;
-        waiter->thread_state = QTHREAD_STATE_RUNNING;
-        qt_threadqueue_enqueue(waiter->rdata->shepherd_ptr->ready, waiter);
+        qt_feb_schedule(X->waiter, shep);
         FREE_ADDRRES(X);
         qthread_gotlock_empty(shep, m, maddr, 1);
     }
