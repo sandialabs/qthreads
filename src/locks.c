@@ -195,6 +195,20 @@ int qthread_lock(const aligned_t *a)
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
+static inline void qthread_lock_schedule(qthread_t          *waiter,
+                                         qthread_shepherd_t *shep)
+{
+    waiter->thread_state = QTHREAD_STATE_RUNNING;
+    if (waiter->flags & QTHREAD_UNSTEALABLE) {
+        qt_threadqueue_enqueue(waiter->rdata->shepherd_ptr->ready, waiter);
+    } else {
+#ifdef QTHREAD_USE_SPAWNCACHE
+        if (!qt_spawncache_spawn(waiter))
+#endif
+        qt_threadqueue_enqueue(shep->ready, waiter);
+    }
+}
+
 int qthread_unlock(const aligned_t *a)
 {                      /*{{{ */
     qthread_lock_t *m;
@@ -243,16 +257,11 @@ int qthread_unlock(const aligned_t *a)
         qthread_debug(LOCK_DETAILS,
                       "tid(%u), a(%p): pulling thread from queue (%p)\n",
                       me->thread_id, a, u);
-        u->thread_state = QTHREAD_STATE_RUNNING;
 #ifdef QTHREAD_DEBUG
         m->owner = u->thread_id;
 #endif
 
-        /* NOTE: because of the use of getcontext()/setcontext(), threads
-         * return to the shepherd that setcontext()'d into them, so they
-         * must remain in that queue.
-         */
-        qt_threadqueue_enqueue(u->rdata->shepherd_ptr->ready, u);
+        qthread_lock_schedule(u, me->rdata->shepherd_ptr);
 
         QTHREAD_FASTLOCK_UNLOCK(&m->waiting->lock);
         QTHREAD_FASTLOCK_UNLOCK(&m->lock);
