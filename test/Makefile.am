@@ -67,10 +67,6 @@ if COMPILE_ROSE_EXTENSIONS
 TESTS += test_log_barrier
 endif
 
-if WANT_MULTINODE
-TESTS += test_multinode_init
-endif
-
 benchmarks =
 
 EXTRA_PROGRAMS += $(unbuildable) \
