@@ -343,7 +343,8 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
         }
 
         if ((node == NULL) && (active)) {
-            node = qthread_steal(my_shepherd);
+            if (qlib->nshepherds > 1)
+                node = qthread_steal(my_shepherd);
         }
         if (node) {
             t = node->value;
