@@ -71,7 +71,8 @@ benchmarks =
 
 EXTRA_PROGRAMS += $(unbuildable) \
 				  $(benchmarks) \
-				  test_signal
+				  test_signal \
+				  test_multinode_init
 
 CLEANFILES += $(unbuildable) $(benchmarks)
 
