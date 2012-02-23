@@ -24,7 +24,7 @@ int main(int argc,
 
     setenv("QT_MULTINODE","yes",1);
 
-    qthread_init(1);
+    qthread_initialize();
 
     my_id = qthread_multinode_rank();
     world_size = qthread_multinode_size();
@@ -36,7 +36,7 @@ int main(int argc,
         fprintf(stderr, "(%03d) multinode_register returned %d\n", my_id, retval);
         return 1;
     }
-    
+
     qthread_multinode_run();
     if (my_id != 0) return 2;
 
