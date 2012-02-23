@@ -234,8 +234,18 @@ static QINLINE void qthread_gotlock_empty(qthread_shepherd_t *shep,
             *(aligned_t *)maddr = *(X->addr);
         }
         /* requeue */
-        X->waiter->thread_state = QTHREAD_STATE_RUNNING;
-        qt_threadqueue_enqueue(X->waiter->rdata->shepherd_ptr->ready, X->waiter);
+        {
+            qthread_t *waiter = X->waiter;
+            waiter->thread_state = QTHREAD_STATE_RUNNING;
+            if (waiter->flags & QTHREAD_UNSTEALABLE) {
+                qt_threadqueue_enqueue(waiter->rdata->shepherd_ptr->ready, waiter);
+            } else {
+#ifdef QTHREAD_USE_SPAWNCACHE
+                if (!qt_spawncache_spawn(waiter))
+#endif
+                qt_threadqueue_enqueue(shep->ready, waiter);
+            }
+        }
         FREE_ADDRRES(X);
         qthread_gotlock_fill(shep, m, maddr, 1);
     }
