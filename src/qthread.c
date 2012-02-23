@@ -73,6 +73,7 @@
 #include "qt_debug.h"
 #include "qt_envariables.h"
 #include "qt_internal_feb.h"
+#include "qt_spawncache.h"
 #ifdef QTHREAD_MULTINODE
 # include "qthread/qthread_multinode.h"
 #endif
@@ -97,9 +98,6 @@ extern QTHREAD_FASTLOCK_TYPE rcrtool_lock;
 qlib_t        qlib      = NULL;
 int           qaffinity = 1;
 QTHREAD_FASTLOCK_ATTRVAR;
-#ifdef QTHREAD_USE_PRIVATE_QUEUES
-pthread_key_t spawn_cache;
-#endif
 
 struct qt_cleanup_funcs_s {
     void                       (*func)(void);
@@ -349,11 +347,11 @@ static void *qthread_master(void *arg)
 #else
     qthread_shepherd_t *me = (qthread_shepherd_t *)arg;
 #endif
-    qt_context_t       my_context;
-    qt_threadqueue_t  *threadqueue;
+    qt_context_t              my_context;
+    qt_threadqueue_t         *threadqueue;
     qt_threadqueue_private_t *localqueue = NULL;
-    qthread_t         *t;
-    int                done = 0;
+    qthread_t                *t;
+    int                       done = 0;
 
 #ifdef QTHREAD_SHEPHERD_PROFILING
     me->total_time = qtimer_create();
@@ -385,9 +383,8 @@ static void *qthread_master(void *arg)
     /* Initialize myself                                                           */
     /*******************************************************************************/
     pthread_setspecific(shepherd_structs, arg);
-#ifdef QTHREAD_USE_PRIVATE_QUEUES
-    localqueue = qt_threadqueue_private_create();
-    pthread_setspecific(spawn_cache, localqueue);
+#ifdef QTHREAD_USE_SPAWNCACHE
+    localqueue = qt_init_local_spawncache();
 #endif
     signal(SIGUSR1, hup_handler);
 
@@ -449,11 +446,13 @@ static void *qthread_master(void *arg)
             }
         }
 #endif  /* ifdef QTHREAD_RCRTOOL */
+        t = qt_threadqueue_dequeue_blocking(threadqueue, localqueue, QTHREAD_CASLOCK_READ_UI(
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-        t = qt_threadqueue_dequeue_blocking(threadqueue, localqueue, QTHREAD_CASLOCK_READ_UI(me_worker->active));
+                    me_worker->active
 #else
-        t = qt_threadqueue_dequeue_blocking(threadqueue, localqueue, QTHREAD_CASLOCK_READ_UI(me->active));
+                    me->active
 #endif
+        ));
         assert(t);
 #ifdef QTHREAD_SHEPHERD_PROFILING
         qtimer_stop(idle);
@@ -871,8 +870,8 @@ int qthread_initialize(void)
 
     /* initialize the kernel threads and scheduler */
     qassert(pthread_key_create(&shepherd_structs, NULL), 0);
-#ifdef QTHREAD_USE_PRIVATE_QUEUES
-    qassert(pthread_key_create(&spawn_cache, qt_threadqueue_private_destroy), 0);
+#ifdef QTHREAD_USE_SPAWNCACHE
+    qt_spawncache_init();
 #endif
     qlib->nshepherds        = nshepherds;
     qlib->nworkerspershep   = nworkerspershep;
@@ -1678,10 +1677,6 @@ void qthread_finalize(void)
     qlib = NULL;
     qthread_debug(CORE_DETAILS, "destroy shepherd thread-local data\n");
     qassert(pthread_key_delete(shepherd_structs), 0);
-#ifdef QTHREAD_USE_PRIVATE_QUEUES
-    qthread_debug(CORE_DETAILS, "destroy thread-local task queue\n");
-    qassert(pthread_key_delete(spawn_cache), 0);
-#endif
 
     qthread_debug(CORE_DETAILS, "finished.\n");
     fflush(stdout);
@@ -2408,14 +2403,14 @@ static int qthread_uberfork(qthread_f             f,
     }
     /* Step 5: Prepare the input preconditions (if necessary) */
     if (QTHREAD_LIKELY(!preconds) || (qthread_check_precond(t) == 0)) {
-#ifdef QTHREAD_USE_PRIVATE_QUEUES
-        qt_threadqueue_private_t *cache = NULL;
-        if (target_shep == NO_SHEPHERD) cache = pthread_getspecific(spawn_cache);
-        if (cache) {
-            qt_threadqueue_private_enqueue(cache, t);
+        /* Step 6: Set it going */
+#ifdef QTHREAD_USE_SPAWNCACHE
+        if (target_shep == NO_SHEPHERD) {
+            if (!qt_spawncache_spawn(t)) {
+                qt_threadqueue_enqueue(qlib->threadqueues[dest_shep], t);
+            }
         } else
 #endif
-        /* Step 6: Set it going */
         qt_threadqueue_enqueue(qlib->threadqueues[dest_shep], t);
     }
     return QTHREAD_SUCCESS;

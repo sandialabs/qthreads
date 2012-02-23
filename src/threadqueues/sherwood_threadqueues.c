@@ -37,8 +37,6 @@ struct _qt_threadqueue_node {
     qthread_t                   *value;
 } /* qt_threadqueue_node_t */;
 
-typedef struct _qt_threadqueue_node qt_threadqueue_node_t;
-
 struct _qt_threadqueue {
     qt_threadqueue_node_t *head;
     qt_threadqueue_node_t *tail;
@@ -56,12 +54,6 @@ struct _qt_threadqueue {
     aligned_t steal_successful;
 #endif
 } /* qt_threadqueue_t */;
-
-struct _qt_threadqueue_private {
-    qt_threadqueue_node_t *head, *tail;
-    long                   qlength;
-    long                   qlength_stealable;
-} /* qt_threadqueue_private_t */;
 
 // static long steal_chunksize = 0;
 
@@ -130,25 +122,6 @@ void INTERNAL qt_threadqueue_subsystem_init(void)
 
 #endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 
-static QINLINE qt_threadqueue_private_t *ALLOC_SPAWNCACHE(void)
-{   /*{{{*/
-#ifdef HAVE_MEMALIGN
-    void *const ret = memalign(qthread_cacheline(), sizeof(qt_threadqueue_private_t));
-#elif defined(HAVE_POSIX_MEMALIGN)
-    void *ret = NULL;
-    posix_memalign(&(ret), qthread_cacheline(), sizeof(qt_threadqueue_private_t));
-#elif defined(HAVE_WORKING_VALLOC)
-    void *const ret = valloc(sizeof(qt_threadqueue_private_t));
-#elif defined(HAVE_PAGE_ALIGNED_MALLOC)
-    void *const ret = malloc(sizeof(qt_threadqueue_private_t));
-#else
-    void *const ret = valloc(sizeof(qt_threadqueue_private_t));  /* cross your fingers */
-#endif
-    return (qt_threadqueue_private_t *)ret;
-} /*}}}*/
-
-#define FREE_SPAWNCACHE(t) free(t)
-
 ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 {   /*{{{*/
 #if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||    \
@@ -187,28 +160,6 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
 
     return q;
 } /*}}}*/
-
-qt_threadqueue_private_t INTERNAL *qt_threadqueue_private_create(void)
-{   /*{{{*/
-    qt_threadqueue_private_t *q = ALLOC_SPAWNCACHE();
-
-    q->head              = NULL;
-    q->tail              = NULL;
-    q->qlength           = 0;
-    q->qlength_stealable = 0;
-
-    return q;
-} /*}}}*/
-
-void INTERNAL qt_threadqueue_private_destroy(void *q)
-{
-    assert(((qt_threadqueue_private_t *)q)->head == NULL &&
-           ((qt_threadqueue_private_t *)q)->tail == NULL &&
-           ((qt_threadqueue_private_t *)q)->qlength == 0 &&
-           ((qt_threadqueue_private_t *)q)->qlength_stealable == 0);
-
-    FREE_SPAWNCACHE(q);
-}
 
 void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 {   /*{{{*/
@@ -254,8 +205,9 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
     QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
 } /*}}}*/
 
-void INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
-                                             qthread_t *restrict                t)
+#ifdef QTHREAD_USE_SPAWNCACHE
+int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
+                                            qthread_t *restrict                t)
 {   /*{{{*/
     assert(q != NULL &&
            ((q->head == q->tail && q->qlength < 2) ||
@@ -282,7 +234,9 @@ void INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict 
     }
     q->qlength++;
     if (node->stealable) { q->qlength_stealable++; }
+    return 1;
 } /*}}}*/
+#endif
 
 /* yielded threads enqueue at head */
 void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,

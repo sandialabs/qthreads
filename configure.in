@@ -519,7 +519,7 @@ AS_IF([test "x$enable_pooled_memory" = "xno"],
       [enable_pooled_memory=yes])
 
 AS_IF([test "x$enable_spawn_cache" != "xno"],
-	  [AC_DEFINE([QTHREAD_USE_PRIVATE_QUEUES],[1],[Define to use worker-specific spawn queues])
+	  [AC_DEFINE([QTHREAD_USE_SPAWNCACHE],[1],[Define to use worker-specific spawn cache])
 	   enable_spawn_cache=yes])
 
 AC_CACHE_SAVE
@@ -957,6 +957,7 @@ AM_CONDITIONAL([QTHREAD_MULTITHREADED_SHEPHERDS], [test "x$enable_multithreaded_
 AM_CONDITIONAL([COMPILE_CHAPEL_INTERFACE], [test "x$compile_chapel_interface" = "xyes"])
 AM_CONDITIONAL([COMPILE_OPENMP_BENCHMARKS], [test "x$have_openmp" = "xyes"])
 AM_CONDITIONAL([COMPILE_COMPAT_ATOMIC], [test "x$compile_compat_atomic" = "xyes"])
+AM_CONDITIONAL([COMPILE_SPAWNCACHE], [test "x$enable_spawn_cache" = "xyes"])
 
 AC_CONFIG_HEADERS([include/config.h include/qthread/common.h])
 AC_CONFIG_FILES([Makefile

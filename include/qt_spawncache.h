@@ -1,0 +1,20 @@
+#ifndef QT_SPAWNCACHE_H
+#define QT_SPAWNCACHE_H
+
+#include "qt_visibility.h"
+#include "qt_qthread_t.h" /* for qthread_t */
+
+/* Internal Structures */
+typedef struct _qt_threadqueue_node qt_threadqueue_node_t;
+typedef struct _qt_threadqueue_private {
+    qt_threadqueue_node_t *head, *tail;
+    long                   qlength;
+    long                   qlength_stealable;
+} qt_threadqueue_private_t;
+
+void INTERNAL                      qt_spawncache_init(void);
+qt_threadqueue_private_t INTERNAL *qt_init_local_spawncache(void);
+int INTERNAL                       qt_spawncache_spawn(qthread_t *t);
+
+#endif // ifndef QT_SPAWNCACHE_H
+/* vim:set expandtab: */

@@ -6,9 +6,9 @@
 
 #include "qt_visibility.h"
 #include "qt_qthread_t.h" /* for qthread_t */
+#include "qt_spawncache.h"
 #include "qt_mpool.h"
 
-typedef struct _qt_threadqueue_private qt_threadqueue_private_t;
 typedef struct _qt_threadqueue qt_threadqueue_t;
 typedef struct _qt_threadqueue_pools {
     qt_mpool nodes;
@@ -17,11 +17,6 @@ typedef struct _qt_threadqueue_pools {
 
 void INTERNAL qt_threadqueue_subsystem_init(void);
 
-qt_threadqueue_private_t INTERNAL *qt_threadqueue_private_create(void);
-void INTERNAL                      qt_threadqueue_private_destroy(void *q);
-void INTERNAL                      qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
-                                                                  qthread_t *restrict                t);
-
 qt_threadqueue_t INTERNAL *qt_threadqueue_new(void);
 void INTERNAL              qt_threadqueue_free(qt_threadqueue_t *q);
 
@@ -29,6 +24,8 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
                                      qthread_t *restrict        t);
 void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
                                              qthread_t *restrict        t);
+int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
+                                            qthread_t *restrict                t);
 
 ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q);
 

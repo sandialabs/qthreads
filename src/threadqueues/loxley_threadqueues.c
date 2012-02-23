@@ -50,8 +50,6 @@ struct _qt_threadqueue {
     uint32_t stealing;
 } /* qt_threadqueue_t */;
 
-struct _qt_threadqueue_private {} /* qt_threadqueue_private_t */;
-
 static const int enqueue_penalty_max   = 1048576;
 static const int enqueue_penalty_min   = 1;
 static const int enqueue_penalty_limit = 20;
@@ -137,19 +135,13 @@ static QINLINE qthread_worker_id_t qt_threadqueue_worker_id(void)
     return(id);
 }
 
-qt_threadqueue_private_t INTERNAL *qt_threadqueue_private_create(void)
-{   /*{{{*/
-    return NULL;
-} /*}}}*/
-
-void INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
-                                             qthread_t *restrict                t)
-{}
-
-void INTERNAL qt_threadqueue_private_destroy(void *q)
-{   /*{{{*/
-    assert(q == NULL);
-} /*}}}*/
+#ifdef QTHREAD_USE_SPAWNCACHE
+int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
+                                            qthread_t *restrict                t)
+{
+    return 0;
+}
+#endif
 
 /* enqueue at tail */
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,

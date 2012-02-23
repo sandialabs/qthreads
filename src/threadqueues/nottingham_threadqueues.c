@@ -22,7 +22,7 @@
 #include "qt_envariables.h"
 
 #ifndef NOINLINE
-#define NOINLINE __attribute__ ((noinline))
+# define NOINLINE __attribute__ ((noinline))
 #endif
 
 /* Data Structures */
@@ -34,50 +34,47 @@ struct uint128 {
 typedef struct uint128 uint128_t;
 
 struct _qt_threadqueue_entry {
-    qthread_t  *value;
-    uint32_t    index;
-    uint32_t    counter;
+    qthread_t *value;
+    uint32_t   index;
+    uint32_t   counter;
 };
 
 typedef struct _qt_threadqueue_entry qt_threadqueue_entry_t;
 
 typedef __m128i m128i;
 
-typedef union {m128i sse; qt_threadqueue_entry_t entry;} qt_threadqueue_union_t;
+typedef union {
+    m128i sse; qt_threadqueue_entry_t entry;
+} qt_threadqueue_union_t;
 
 struct _qt_threadqueue {
-    m128i top;
-    m128i blanks[3];
-    m128i *base;
-    uint32_t size;
-    uint32_t bottom;
-    rwlock_t            *rwlock;
+    m128i                 top;
+    m128i                 blanks[3];
+    m128i                *base;
+    uint32_t              size;
+    uint32_t              bottom;
+    rwlock_t             *rwlock;
     QTHREAD_FASTLOCK_TYPE spinlock;
 
     /* used for the work stealing queue implementation */
     m128i    flush[1];
     uint32_t empty;
     uint32_t stealing;
-
-
 } /* qt_threadqueue_t */;
-
-struct _qt_threadqueue_private {} /* qt_threadqueue_private_t */;
 
 // Forward declarations
 
-void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
-                                              int                    stealcount,
-                                              qthread_t **stealbuffer,
-                                              qthread_shepherd_t    *shep);
+void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t   *q,
+                                              int                 stealcount,
+                                              qthread_t         **stealbuffer,
+                                              qthread_shepherd_t *shep);
 
-INTERNAL int qt_threadqueue_dequeue_steal(qt_threadqueue_t *q, 
+INTERNAL int qt_threadqueue_dequeue_steal(qt_threadqueue_t *q,
                                           qthread_t       **nostealbuffer,
                                           qthread_t       **stealbuffer);
 
-
-void INTERNAL qt_threadqueue_resize_and_enqueue(qt_threadqueue_t   *q,
-                                                qthread_t          *t);
+void INTERNAL qt_threadqueue_resize_and_enqueue(qt_threadqueue_t *q,
+                                                qthread_t        *t);
 
 int static QINLINE qt_threadqueue_stealable(qthread_t *t);
 
@@ -90,20 +87,22 @@ void INTERNAL qt_threadqueue_enqueue_unstealable(qt_threadqueue_t *q,
 void INTERNAL qt_threadqueue_subsystem_init(void) {}
 
 #ifdef CAS_STEAL_PROFILE
-static void cas_profile_update(int id, int retries) {
+static void cas_profile_update(int id,
+                               int retries)
+{
     uint64_strip_t *cas_steal_profile = qlib->cas_steal_profile;
-    if (cas_steal_profile == NULL) return;
+
+    if (cas_steal_profile == NULL) { return; }
     if (retries >= CAS_STEAL_PROFILE_LENGTH) {
         cas_steal_profile[id].fields[CAS_STEAL_PROFILE_LENGTH - 1]++;
     } else {
         cas_steal_profile[id].fields[retries]++;
     }
 }
-#else
-#define cas_profile_update(x,y) do{} while(0)
-#endif
 
-
+#else /* ifdef CAS_STEAL_PROFILE */
+# define cas_profile_update(x, y) do {} while(0)
+#endif /* ifdef CAS_STEAL_PROFILE */
 
 ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 {   /*{{{*/
@@ -114,28 +113,29 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 /* functions to manage the thread queues */
 /*****************************************/
 
-static QINLINE long qthread_steal_chunksize(void);
-static QINLINE qthread_t* qthread_steal(qt_threadqueue_t *thiefq);
+static QINLINE long       qthread_steal_chunksize(void);
+static QINLINE qthread_t *qthread_steal(qt_threadqueue_t *thiefq);
 
 qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
 {   /*{{{*/
     qt_threadqueue_t *q;
-    posix_memalign((void **) &q, 64, sizeof(qt_threadqueue_t));
+
+    posix_memalign((void **)&q, 64, sizeof(qt_threadqueue_t));
 
     if (q != NULL) {
         qt_threadqueue_union_t top;
-        top.entry.value         = NULL;
-        top.entry.index         = 0;
-        top.entry.counter       = 0; 
+        top.entry.value   = NULL;
+        top.entry.index   = 0;
+        top.entry.counter = 0;
 
-        q->top               = top.sse;
-        q->size              = 1024;
-        q->bottom            = 0;
-        q->empty             = 1;
-        q->stealing          = 0;
+        q->top      = top.sse;
+        q->size     = 1024;
+        q->bottom   = 0;
+        q->empty    = 1;
+        q->stealing = 0;
         QTHREAD_FASTLOCK_INIT(q->spinlock);
-        posix_memalign((void **) &(q->base), 64, q->size * sizeof(m128i));
-        posix_memalign((void **) &(q->rwlock), 64, sizeof(rwlock_t));
+        posix_memalign((void **)&(q->base), 64, q->size * sizeof(m128i));
+        posix_memalign((void **)&(q->rwlock), 64, sizeof(rwlock_t));
         rwlock_init(q->rwlock);
         memset(q->base, 0, q->size * sizeof(m128i));
     }
@@ -144,106 +144,95 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
 
 void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 {   /*{{{*/
-
     // mspiegel: is it necessary to drain the queue?
     /* while (q->head != q->tail) {
-        qt_threadqueue_dequeue_blocking(q, 1);
-    } */    
-    free((void*) q->base);
-    free((void*) q);
+     *  qt_threadqueue_dequeue_blocking(q, 1);
+     * } */
+    free((void *)q->base);
+    free((void *)q);
 } /*}}}*/
 
-static QINLINE int qt_threadqueue_cas128( uint128_t *src,
-                                          uint128_t *cmp,
-                                          uint128_t *with )
+static QINLINE int qt_threadqueue_cas128(uint128_t *src,
+                                         uint128_t *cmp,
+                                         uint128_t *with)
 {   /*{{{*/
     char result;
-    // (AT&T syntax)
-	__asm__ __volatile__("lock; cmpxchg16b (%6);"
-		     "setz %7; "
-		     : "=a" (cmp->lo),
-		       "=d" (cmp->hi)
-		     : "0" (cmp->lo),
-		       "1" (cmp->hi),
-		       "b" (with->lo),
-		       "c" (with->hi),
-		       "r" (src),
-		       "m" (result)
-		     : "cc", "memory");
-    /* (Intel syntax)
-    __asm__ __volatile__
-    (
-        "lock cmpxchg16b oword ptr %1\n\t"
-        "setz %0"
-        : "=q" ( result )
-        , "+m" ( *src )
-        , "+d" ( cmp->hi )
-        , "+a" ( cmp->lo )
-        : "c" ( with->hi )
-        , "b" ( with->lo )
-        : "cc"
-    );    */
-    return result;
 
+    // (AT&T syntax)
+    __asm__ __volatile__ ("lock; cmpxchg16b (%6);"
+                          "setz %7; "
+                          : "=a" (cmp->lo),
+                          "=d" (cmp->hi)
+                          : "0" (cmp->lo),
+                          "1" (cmp->hi),
+                          "b" (with->lo),
+                          "c" (with->hi),
+                          "r" (src),
+                          "m" (result)
+                          : "cc", "memory");
+    /* (Intel syntax)
+     * __asm__ __volatile__
+     * (
+     *  "lock cmpxchg16b oword ptr %1\n\t"
+     *  "setz %0"
+     *  : "=q" ( result )
+     *  , "+m" ( *src )
+     *  , "+d" ( cmp->hi )
+     *  , "+a" ( cmp->lo )
+     *  : "c" ( with->hi )
+     *  , "b" ( with->lo )
+     *  : "cc"
+     * );    */
+    return result;
 } /*}}}*/
 
-static QINLINE void qt_threadqueue_finish(qt_threadqueue_t      *q, 
-                                         qt_threadqueue_entry_t top_entry)
-{   /*{{{*/    
+static QINLINE void qt_threadqueue_finish(qt_threadqueue_t      *q,
+                                          qt_threadqueue_entry_t top_entry)
+{   /*{{{*/
     qt_threadqueue_union_t snapshot, oldnode;
 
     uint32_t index = top_entry.index;
 
     snapshot.sse = q->base[index];
-       
-    oldnode.entry.value = snapshot.entry.value;
+
+    oldnode.entry.value   = snapshot.entry.value;
     oldnode.entry.counter = top_entry.counter - 1;
-    oldnode.entry.index = top_entry.index = 0;
+    oldnode.entry.index   = top_entry.index = 0;
 
-    if(snapshot.entry.counter > oldnode.entry.counter) return;
-    if(snapshot.entry.counter == top_entry.counter) return;
+    if(snapshot.entry.counter > oldnode.entry.counter) { return; }
+    if(snapshot.entry.counter == top_entry.counter) { return; }
 
-    qt_threadqueue_cas128((uint128_t*) q->base + index, 
-       (uint128_t*) &oldnode, (uint128_t*) &top_entry);
-
+    qt_threadqueue_cas128((uint128_t *)q->base + index,
+                          (uint128_t *)&oldnode, (uint128_t *)&top_entry);
 } /*}}}*/
 
-qt_threadqueue_private_t INTERNAL *qt_threadqueue_private_create(void)
-{   /*{{{*/
-    return NULL;
-} /*}}}*/
-
-void INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
-                                             qthread_t *restrict                t)
-{}
-
-void INTERNAL qt_threadqueue_private_destroy(void *q)
-{   /*{{{*/
-    assert(q == NULL);
-} /*}}}*/
+#ifdef QTHREAD_USE_SPAWNCACHE
+int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
+                                            qthread_t *restrict                t)
+{
+    return 0;
+}
+#endif
 
 /* enqueue at tail */
-void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *restrict q,
-                                     qthread_t          *restrict t)
+void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
+                                     qthread_t *restrict        t)
 {   /*{{{*/
-
     qt_threadqueue_union_t oldtop, snapshot, lastchance;
     qt_threadqueue_entry_t newtop;
-    uint32_t nextindex;
+    uint32_t               nextindex;
 
 #ifdef CAS_STEAL_PROFILE
     int cycles = 0;
 #endif
 
-    int id = qthread_worker_unique(NULL);    
-
+    int id = qthread_worker_unique(NULL);
 
     rwlock_rdlock(q->rwlock, id);
 
     oldtop.sse = q->top;
 
     while(1) {
-
 #ifdef CAS_STEAL_PROFILE
         cycles++;
 #endif
@@ -251,7 +240,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *restrict q,
         qt_threadqueue_finish(q, oldtop.entry);
 
         nextindex = (oldtop.entry.index + 1) % q->size;
- 
+
         if (nextindex == q->bottom) {
             // Pthread reader-writer locks will deadlock
             // on lock promotion attempts.
@@ -260,10 +249,10 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *restrict q,
             cas_profile_update(id, cycles - 1);
             return;
         }
-    
-        snapshot.sse = q->base[nextindex];
-        newtop.value = t;
-        newtop.index = nextindex;
+
+        snapshot.sse   = q->base[nextindex];
+        newtop.value   = t;
+        newtop.index   = nextindex;
         newtop.counter = snapshot.entry.counter + 1;
 
         lastchance.sse = q->top;
@@ -273,9 +262,8 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *restrict q,
             continue;
         }
 
-        if(qt_threadqueue_cas128((uint128_t*) &(q->top), 
-           (uint128_t*) &oldtop, (uint128_t*) &newtop)) break;
-
+        if(qt_threadqueue_cas128((uint128_t *)&(q->top),
+                                 (uint128_t *)&oldtop, (uint128_t *)&newtop)) { break; }
     }
 
     q->empty = 0;
@@ -283,27 +271,21 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t   *restrict q,
     rwlock_rdunlock(q->rwlock, id);
 
     cas_profile_update(id, cycles - 1);
-
 } /*}}}*/
 
 /* enqueue multiple (from steal) */
-void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
-                                              int                    stealcount,
-                                              qthread_t **stealbuffer,
-                                              qthread_shepherd_t    *shep)
+void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t   *q,
+                                              int                 stealcount,
+                                              qthread_t         **stealbuffer,
+                                              qthread_shepherd_t *shep)
 {   /*{{{*/
-
     /* save element 0 for the thief */
     for(int i = 1; i < stealcount; i++) {
         qthread_t *t = stealbuffer[i];
         t->target_shepherd = shep;
         qt_threadqueue_enqueue(q, t);
     }
-
 } /*}}}*/
-
-
-
 
 /* This function is called when the queue is full.
  * Either a thread is enqueuing at the tail,
@@ -316,11 +298,12 @@ static QINLINE void qt_threadqueue_resize(qt_threadqueue_t *q)
     // If oldsize == UINT32_MAX, then indicate an error.
     // If memory allocation returns NULL, then indicate an error.
 
-    uint32_t oldsize = q->size, bottom = q->bottom;
-    uint32_t newsize = (oldsize > (UINT32_MAX / 2)) ? UINT32_MAX : oldsize * 2;
-    m128i *newloc;
+    uint32_t               oldsize = q->size, bottom = q->bottom;
+    uint32_t               newsize = (oldsize > (UINT32_MAX / 2)) ? UINT32_MAX : oldsize * 2;
+    m128i                 *newloc;
     qt_threadqueue_union_t top;
-    qassert(posix_memalign((void **) &(newloc), 64, newsize * sizeof(m128i)), 0);
+
+    qassert(posix_memalign((void **)&(newloc), 64, newsize * sizeof(m128i)), 0);
 
     assert(newsize > oldsize);
     assert(newloc != NULL);
@@ -331,8 +314,8 @@ static QINLINE void qt_threadqueue_resize(qt_threadqueue_t *q)
     m128i *dest1 = newloc;
     m128i *dest2 = newloc + len1;
 
-    m128i *src1 =  q->base + bottom;
-    m128i *src2 =  q->base;
+    m128i *src1 = q->base + bottom;
+    m128i *src2 = q->base;
 
     memcpy(dest1, src1, len1 * sizeof(m128i));
     memcpy(dest2, src2, len2 * sizeof(m128i));
@@ -348,55 +331,54 @@ static QINLINE void qt_threadqueue_resize(qt_threadqueue_t *q)
     q->bottom = 0;
 }
 
-void INTERNAL qt_threadqueue_resize_and_enqueue(qt_threadqueue_t   *q,
-                                                qthread_t          *t)
+void INTERNAL qt_threadqueue_resize_and_enqueue(qt_threadqueue_t *q,
+                                                qthread_t        *t)
 {   /*{{{*/
-
-    int id = qthread_worker_unique(NULL);  
+    int id = qthread_worker_unique(NULL);
 
     rwlock_wrlock(q->rwlock, id);
 
     qt_threadqueue_union_t top, newtop, snapshot;
-    uint32_t nextindex, oldsize, bottom;
+    uint32_t               nextindex, oldsize, bottom;
 
     top.sse = q->top;
 
     qt_threadqueue_finish(q, top.entry);
- 
-    oldsize = q->size;
-    bottom = q->bottom;
+
+    oldsize   = q->size;
+    bottom    = q->bottom;
     nextindex = (top.entry.index + 1) % oldsize;
 
     if (nextindex == bottom) {
         qt_threadqueue_resize(q);
         nextindex = oldsize;
     }
-   
-    snapshot.sse             = q->base[nextindex];
 
-    newtop.entry.value       = t;
-    newtop.entry.index       = nextindex;
-    newtop.entry.counter     = snapshot.entry.counter + 1;
+    snapshot.sse = q->base[nextindex];
 
-    snapshot.entry.value     = t;
-    snapshot.entry.counter   = snapshot.entry.counter + 1;
-  
-    q->top                   = newtop.sse;
-    q->base[nextindex]       = snapshot.sse;
+    newtop.entry.value   = t;
+    newtop.entry.index   = nextindex;
+    newtop.entry.counter = snapshot.entry.counter + 1;
 
-    q->empty                 = 0;
+    snapshot.entry.value   = t;
+    snapshot.entry.counter = snapshot.entry.counter + 1;
+
+    q->top             = newtop.sse;
+    q->base[nextindex] = snapshot.sse;
+
+    q->empty = 0;
 
     rwlock_wrunlock(q->rwlock);
 } /*}}}*/
 
 /* yielded threads enqueue at head */
-void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *restrict q,
-                                             qthread_t          *restrict t)
+void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
+                                             qthread_t *restrict        t)
 {   /*{{{*/
-    int id = qthread_worker_unique(NULL);  
+    int id = qthread_worker_unique(NULL);
 
     rwlock_wrlock(q->rwlock, id);
-  
+
     qt_threadqueue_union_t top;
 
     top.sse = q->top;
@@ -404,11 +386,11 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *restrict q,
     qt_threadqueue_finish(q, top.entry);
 
     /* Three cases to consider:
-       (a) The queue is empty. Move the 
-           new thread into q->top and return.
-       (b) The queue is full. Resize the
-           queue and then continue to part (c).
-       (c) otherwise.
+     * (a) The queue is empty. Move the
+     *     new thread into q->top and return.
+     * (b) The queue is full. Resize the
+     *     queue and then continue to part (c).
+     * (c) otherwise.
      */
     if (top.entry.index == q->bottom) {
         qt_threadqueue_union_t snapshot, newtop;
@@ -417,14 +399,14 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *restrict q,
         snapshot.sse = q->base[nextindex];
         uint32_t nextcounter = snapshot.entry.counter + 1;
 
-        newtop.entry.index         = nextindex;
-        newtop.entry.value         = t;
-        newtop.entry.counter       = nextcounter;
+        newtop.entry.index   = nextindex;
+        newtop.entry.value   = t;
+        newtop.entry.counter = nextcounter;
 
-        snapshot.entry.value       = t;
-        snapshot.entry.counter     = nextcounter;
+        snapshot.entry.value   = t;
+        snapshot.entry.counter = nextcounter;
 
-        q->top = newtop.sse;
+        q->top             = newtop.sse;
         q->base[nextindex] = snapshot.sse;
         rwlock_wrunlock(q->rwlock);
         return;
@@ -432,28 +414,26 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t   *restrict q,
         qt_threadqueue_resize(q);
     }
 
-    uint32_t bot = q->bottom, size = q->size;
-    uint32_t newbot = (bot - 1) % size; 
+    uint32_t bot    = q->bottom, size = q->size;
+    uint32_t newbot = (bot - 1) % size;
 
-    qt_threadqueue_union_t bottom, newbottom; 
+    qt_threadqueue_union_t bottom, newbottom;
 
-    bottom.sse                = q->base[bot];
-    newbottom.sse             = q->base[newbot];
-    bottom.entry.counter     += 1;
-    newbottom.entry.counter  += 1;
-    bottom.entry.value        = t;
-    newbottom.entry.value     = NULL;
+    bottom.sse               = q->base[bot];
+    newbottom.sse            = q->base[newbot];
+    bottom.entry.counter    += 1;
+    newbottom.entry.counter += 1;
+    bottom.entry.value       = t;
+    newbottom.entry.value    = NULL;
 
-    q->base[bot]              = bottom.sse;
-    q->base[newbot]           = newbottom.sse;
-    q->bottom                 = newbot;
+    q->base[bot]    = bottom.sse;
+    q->base[newbot] = newbottom.sse;
+    q->bottom       = newbot;
 
-    q->empty                  = 0;
+    q->empty = 0;
 
     rwlock_wrunlock(q->rwlock);
 } /*}}}*/
-
-
 
 qthread_t static QINLINE *qt_threadqueue_dequeue_helper(qt_threadqueue_t *q)
 {
@@ -462,21 +442,20 @@ qthread_t static QINLINE *qt_threadqueue_dequeue_helper(qt_threadqueue_t *q)
     q->stealing = 1;
 
     QTHREAD_FASTLOCK_LOCK(&q->spinlock);
-    if (q->stealing) { 
+    if (q->stealing) {
         t = qthread_steal(q);
     }
     QTHREAD_FASTLOCK_UNLOCK(&q->spinlock);
 
     return(t);
-}  
-
+}
 
 /* dequeue at tail, unlike original qthreads implementation */
 qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
                                                     qt_threadqueue_private_t *QUNUSED(qc),
                                                     uint_fast8_t              active)
 {   /*{{{*/
-    qthread_t             *t = NULL;
+    qthread_t             *t      = NULL;
     rwlock_t              *rwlock = q->rwlock;
     qt_threadqueue_union_t oldtop, lastchance;
 
@@ -484,16 +463,15 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
     int cycles = 0;
 #endif
 
-    int id = qthread_worker_unique(NULL);  
+    int id = qthread_worker_unique(NULL);
 
     assert(q != NULL);
-    
+
     rwlock_rdlock(rwlock, id);
 
     oldtop.sse = q->top;
-    
-    while(1) {
 
+    while(1) {
 #ifdef CAS_STEAL_PROFILE
         cycles++;
 #endif
@@ -510,31 +488,30 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
             rwlock_rdlock(rwlock, id);
             oldtop.sse = q->top;
         } else {
-
             t = oldtop.entry.value;
 
             if ((t->flags & QTHREAD_MUST_BE_WORKER_ZERO)) { // only needs to be on worker 0 for termination
                 switch(qthread_worker(NULL)) {
-                    case NO_WORKER: // only happens during termination -- keep trying
-	  	       rwlock_rdunlock(rwlock, id); // release lock and get new value
-		       rwlock_rdlock(rwlock, id);
-                       oldtop.sse = q->top;
- 		       continue;
+                    case NO_WORKER:                  // only happens during termination -- keep trying
+                        rwlock_rdunlock(rwlock, id); // release lock and get new value
+                        rwlock_rdlock(rwlock, id);
+                        oldtop.sse = q->top;
+                        continue;
                     case 0:
-		      break;
+                        break;
                     default:
-                       /* McCoy thread can only run on worker 0 */
-                       rwlock_rdunlock(rwlock, id);
-                       if (active) {
-                           t = qt_threadqueue_dequeue_helper(q);
-                           if (t != NULL) {
-                               cas_profile_update(id, cycles - 1);
-                               return(t);
-                           }
-                       }
-                       rwlock_rdlock(rwlock, id);
-                       oldtop.sse = q->top;
-                       continue;
+                        /* McCoy thread can only run on worker 0 */
+                        rwlock_rdunlock(rwlock, id);
+                        if (active) {
+                            t = qt_threadqueue_dequeue_helper(q);
+                            if (t != NULL) {
+                                cas_profile_update(id, cycles - 1);
+                                return(t);
+                            }
+                        }
+                        rwlock_rdlock(rwlock, id);
+                        oldtop.sse = q->top;
+                        continue;
                 }
             }
 
@@ -548,27 +525,27 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
             newtop.index   = previndex;
             newtop.value   = belowtop.entry.value;
             newtop.counter = belowtop.entry.counter + 1;
-       
+
             lastchance.sse = q->top;
- 
+
             if(lastchance.entry.counter != oldtop.entry.counter) {
                 oldtop.entry = lastchance.entry;
                 continue;
             }
 
-            if(qt_threadqueue_cas128((uint128_t*) &(q->top), 
-               (uint128_t*) &oldtop, (uint128_t*) &newtop)) {
-                   rwlock_rdunlock(rwlock, id);
-                   assert(t != NULL);
-                   cas_profile_update(id, cycles - 1);
-                   return (t);
+            if(qt_threadqueue_cas128((uint128_t *)&(q->top),
+                                     (uint128_t *)&oldtop, (uint128_t *)&newtop)) {
+                rwlock_rdunlock(rwlock, id);
+                assert(t != NULL);
+                cas_profile_update(id, cycles - 1);
+                return (t);
             }
         }
     }
 } /*}}}*/
 
-
-int static QINLINE qt_threadqueue_stealable(qthread_t *t) {
+int static QINLINE qt_threadqueue_stealable(qthread_t *t)
+{
     return(t->thread_state != QTHREAD_STATE_YIELDED &&
            t->thread_state != QTHREAD_STATE_TERM_SHEP &&
            !(t->flags & QTHREAD_UNSTEALABLE));
@@ -576,14 +553,15 @@ int static QINLINE qt_threadqueue_stealable(qthread_t *t) {
 
 void INTERNAL qt_threadqueue_enqueue_unstealable(qt_threadqueue_t *q,
                                                  qthread_t       **nostealbuffer,
-                                                 int               amtNotStolen) {
-    if (amtNotStolen == 0) return;
+                                                 int               amtNotStolen)
+{
+    if (amtNotStolen == 0) { return; }
 
     uint32_t bottom = q->bottom;
 
-    qt_threadqueue_union_t top;   
+    qt_threadqueue_union_t top;
     top.sse = q->top;
-    
+
     if(top.entry.index == bottom) {
         top.entry.value = nostealbuffer[amtNotStolen - 1];
         q->top          = top.sse;
@@ -591,48 +569,47 @@ void INTERNAL qt_threadqueue_enqueue_unstealable(qt_threadqueue_t *q,
 
     qt_threadqueue_union_t snapshot;
     for(int i = amtNotStolen - 1; i >= 0; i--) {
-        snapshot.sse = q->base[bottom];
+        snapshot.sse         = q->base[bottom];
         snapshot.entry.value = nostealbuffer[i];
-        q->base[bottom] = snapshot.sse;
-        bottom = (bottom - 1) % q->size;
+        q->base[bottom]      = snapshot.sse;
+        bottom               = (bottom - 1) % q->size;
     }
     q->bottom = bottom;
 }
 
 /* dequeue stolen threads at head, skip yielded threads */
-INTERNAL int qt_threadqueue_dequeue_steal(qt_threadqueue_t *q, 
-                                          qthread_t **nostealbuffer,
-                                          qthread_t **stealbuffer)
+INTERNAL int qt_threadqueue_dequeue_steal(qt_threadqueue_t *q,
+                                          qthread_t       **nostealbuffer,
+                                          qthread_t       **stealbuffer)
 {                                      /*{{{ */
     assert(q != NULL);
 
     int amtStolen = 0, amtNotStolen = 0;
 
-    int id = qthread_worker_unique(NULL);  
+    int id = qthread_worker_unique(NULL);
 
-    if (q->empty) return(0);
+    if (q->empty) { return(0); }
 
     rwlock_wrlock(q->rwlock, id);
 
     qt_threadqueue_union_t top;
-    
+
     top.sse = q->top;
     qt_threadqueue_finish(q, top.entry);
 
-    uint32_t bottom = q->bottom;
+    uint32_t bottom  = q->bottom;
     uint32_t current = (bottom + 1) % q->size;
 
     qt_threadqueue_union_t snapshot;
 
-    while (amtStolen < qthread_steal_chunksize()) {       
-
+    while (amtStolen < qthread_steal_chunksize()) {
         snapshot.sse = q->base[current];
 
         /* Three cases to consider:
-           (a) The queue is empty.
-           (b) The queue contains a single element.
-           (c) Otherwise.
-        */
+         * (a) The queue is empty.
+         * (b) The queue contains a single element.
+         * (c) Otherwise.
+         */
         if (bottom == top.entry.index) {
             q->empty = 1;
             break;
@@ -645,7 +622,7 @@ INTERNAL int qt_threadqueue_dequeue_steal(qt_threadqueue_t *q,
                 top.entry.value          = NULL;
                 top.entry.counter        = snapshot.entry.counter;
                 q->base[current]         = snapshot.sse;
-                q->top                   = top.sse; 
+                q->top                   = top.sse;
                 bottom                   = current;
             }
             q->empty = 1;
@@ -659,11 +636,11 @@ INTERNAL int qt_threadqueue_dequeue_steal(qt_threadqueue_t *q,
             } else {
                 nostealbuffer[amtNotStolen++] = candidate;
             }
-            snapshot.entry.value     = NULL;
-            snapshot.entry.counter   = snapshot.entry.counter + 1;
-            q->base[current]         = snapshot.sse;
-            bottom = current;
-            current = (current + 1) % q->size;
+            snapshot.entry.value   = NULL;
+            snapshot.entry.counter = snapshot.entry.counter + 1;
+            q->base[current]       = snapshot.sse;
+            bottom                 = current;
+            current                = (current + 1) % q->size;
         }
     }
     q->bottom = bottom;
@@ -672,9 +649,9 @@ INTERNAL int qt_threadqueue_dequeue_steal(qt_threadqueue_t *q,
 
     rwlock_wrunlock(q->rwlock);
 
-# ifdef STEAL_PROFILE                  // should give mechanism to make steal profiling optional
+#ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
     qthread_incr(&q->steal_amount_stolen, amtStolen);
-# endif
+#endif
 
     return(amtStolen);
 }                                      /*}}} */
@@ -695,22 +672,22 @@ static QINLINE long qthread_steal_chunksize(void)
  *    Returns the amount of work stolen
  *  PRECONDITION: the readlock must be aquired.
  */
-static QINLINE qthread_t* qthread_steal(qt_threadqueue_t *thiefq)
+static QINLINE qthread_t *qthread_steal(qt_threadqueue_t *thiefq)
 {   /*{{{*/
-    int                    i;
-    extern pthread_key_t   shepherd_structs;
-    qthread_shepherd_t    *victim_shepherd;
-    qthread_worker_t      *worker =
+    int                  i;
+    extern pthread_key_t shepherd_structs;
+    qthread_shepherd_t  *victim_shepherd;
+    qthread_worker_t    *worker =
         (qthread_worker_t *)pthread_getspecific(shepherd_structs);
-    qthread_shepherd_t    *thief_shepherd =
+    qthread_shepherd_t *thief_shepherd =
         (qthread_shepherd_t *)worker->shepherd;
-    qthread_t            **nostealbuffer = worker->nostealbuffer;
-    qthread_t            **stealbuffer   = worker->stealbuffer;
+    qthread_t **nostealbuffer = worker->nostealbuffer;
+    qthread_t **stealbuffer   = worker->stealbuffer;
 
-# ifdef STEAL_PROFILE                  // should give mechanism to make steal profiling optional
+#ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
     qthread_incr(&thief_shepherd->steal_called, 1);
-# endif
-# ifdef QTHREAD_OMP_AFFINITY
+#endif
+#ifdef QTHREAD_OMP_AFFINITY
     if (thief_shepherd->stealing_mode == QTHREAD_STEAL_ON_ALL_IDLE) {
         for (i = 0; i < qlib->nworkerspershep; i++)
             if (thief_shepherd->workers[i].current != NULL) {
@@ -719,10 +696,10 @@ static QINLINE qthread_t* qthread_steal(qt_threadqueue_t *thiefq)
             }
         thief_shepherd->stealing_mode = QTHREAD_STEAL_ON_ANY_IDLE;
     }
-# endif
-# ifdef STEAL_PROFILE                  // should give mechanism to make steal profiling optional
+#endif
+#ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
     qthread_incr(&thief_shepherd->steal_attempted, 1);
-# endif
+#endif
     int shepherd_offset = qthread_worker(NULL) % qlib->nshepherds;
     for (i = 1; i < qlib->nshepherds; i++) {
         shepherd_offset = (shepherd_offset + 1) % qlib->nshepherds;
@@ -730,34 +707,34 @@ static QINLINE qthread_t* qthread_steal(qt_threadqueue_t *thiefq)
             shepherd_offset = (shepherd_offset + 1) % qlib->nshepherds;
         }
         victim_shepherd = &qlib->shepherds[shepherd_offset];
-        if (victim_shepherd->ready->empty) continue;
-        int amtStolen = qt_threadqueue_dequeue_steal(victim_shepherd->ready, 
+        if (victim_shepherd->ready->empty) { continue; }
+        int amtStolen = qt_threadqueue_dequeue_steal(victim_shepherd->ready,
                                                      nostealbuffer, stealbuffer);
         if (amtStolen > 0) {
-# ifdef STEAL_PROFILE                  // should give mechanism to make steal profiling optional
+#ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
             qthread_incr(&thief_shepherd->steal_successful, 1);
-# endif
+#endif
             qt_threadqueue_enqueue_multiple(thiefq, amtStolen, stealbuffer, thief_shepherd);
             thiefq->stealing = 0;
             return(stealbuffer[0]);
         }
-# ifdef STEAL_PROFILE                  // should give mechanism to make steal profiling optional
+#ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
         else {
-             qthread_incr(&thief_shepherd->steal_failed, 1);
+            qthread_incr(&thief_shepherd->steal_failed, 1);
         }
-# endif
+#endif
     }
     thiefq->stealing = 0;
     return(NULL);
 } /*}}}*/
 
-# ifdef CAS_STEAL_PROFILE
+#ifdef CAS_STEAL_PROFILE
 void INTERNAL qthread_cas_steal_stat(void)
 {
-    int i, j;
+    int            i, j;
     uint64_strip_t accum;
-    uint64_t total = 0;
-    double weighted_sum = 0.0;
+    uint64_t       total        = 0;
+    double         weighted_sum = 0.0;
 
     for(j = 0; j < CAS_STEAL_PROFILE_LENGTH; j++) {
         accum.fields[j] = 0;
@@ -768,22 +745,22 @@ void INTERNAL qthread_cas_steal_stat(void)
         }
     }
     for(j = 0; j < CAS_STEAL_PROFILE_LENGTH; j++) {
-        total += accum.fields[j];
+        total        += accum.fields[j];
         weighted_sum += (accum.fields[j] * j);
     }
 
     fprintf(stdout, "threadqueue distribution of CAS retries\n");
     for(j = 0; j < (CAS_STEAL_PROFILE_LENGTH - 1); j++) {
-        fprintf(stdout, "%d  - %4.2f%%\n", j, ((double) accum.fields[j]) / total * 100.0); 
+        fprintf(stdout, "%d  - %4.2f%%\n", j, ((double)accum.fields[j]) / total * 100.0);
     }
-    fprintf(stdout, "%d+ - %4.2f%%\n", j, ((double) accum.fields[j]) / total * 100.0); 
-    fprintf(stdout, "approximate mean is %4.2f \n", weighted_sum / total); 
+    fprintf(stdout, "%d+ - %4.2f%%\n", j, ((double)accum.fields[j]) / total * 100.0);
+    fprintf(stdout, "approximate mean is %4.2f \n", weighted_sum / total);
     fprintf(stdout, "\n");
 }
 
-#endif
+#endif /* ifdef CAS_STEAL_PROFILE */
 
-# ifdef STEAL_PROFILE                  // should give mechanism to make steal profiling optional
+#ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
 void INTERNAL qthread_steal_stat(void)
 {
     int i;
@@ -801,7 +778,7 @@ void INTERNAL qthread_steal_stat(void)
     }
 }
 
-# endif /* ifdef STEAL_PROFILE */
+#endif  /* ifdef STEAL_PROFILE */
 
 /* walk queue looking for a specific value  -- if found remove it (and start
  * it running)  -- if not return NULL
@@ -809,14 +786,14 @@ void INTERNAL qthread_steal_stat(void)
 qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
                                                     void             *value)
 {   /*{{{*/
-    int id = qthread_worker_unique(NULL);  
+    int id = qthread_worker_unique(NULL);
 
     assert(q != NULL);
 
     rwlock_wrlock(q->rwlock, id);
 
     qt_threadqueue_union_t top;
-    
+
     top.sse = q->top;
     qt_threadqueue_finish(q, top.entry);
 
@@ -828,47 +805,47 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
     if (top.entry.value->ret == value) {
         qt_threadqueue_union_t snapshot;
 
-        qthread_t *retval  = top.entry.value;
-        uint32_t previndex = (top.entry.index - 1) % q->size;
-        snapshot.sse       = q->base[previndex];
-      
-        top.entry.index    = previndex;
-        top.entry.value    = snapshot.entry.value;
-        top.entry.counter  = snapshot.entry.counter; 
-  
-        q->top             = top.sse;
+        qthread_t *retval    = top.entry.value;
+        uint32_t   previndex = (top.entry.index - 1) % q->size;
+        snapshot.sse = q->base[previndex];
+
+        top.entry.index   = previndex;
+        top.entry.value   = snapshot.entry.value;
+        top.entry.counter = snapshot.entry.counter;
+
+        q->top = top.sse;
 
         rwlock_wrunlock(q->rwlock);
         return(retval);
     } else {
         uint32_t current = (q->bottom + 1) % q->size;
-        uint32_t size = q->size;
-        uint32_t bottom = q->bottom;
+        uint32_t size    = q->size;
+        uint32_t bottom  = q->bottom;
         while (current != top.entry.index) {
             qt_threadqueue_union_t snapshot;
 
-            snapshot.sse      = q->base[current];
-            qthread_t *t      = snapshot.entry.value;
+            snapshot.sse = q->base[current];
+            qthread_t *t = snapshot.entry.value;
             if (t->ret == value) {
                 /* Two cases:
-                 (i)  The current index is below the top 
-                      index in the array. It is easier to 
-                      slide the elements above current, and
-                      decrement the top index.
-                 (ii) The current index is above the top 
-                      index in the array. It is easier to
-                      slide the elements below current, and
-                      increment the bottom index.
-                */                        
+                 * (i)  The current index is below the top
+                 *    index in the array. It is easier to
+                 *    slide the elements above current, and
+                 *    decrement the top index.
+                 * (ii) The current index is above the top
+                 *    index in the array. It is easier to
+                 *    slide the elements below current, and
+                 *    increment the bottom index.
+                 */
                 if (current < top.entry.index) {
-                    memmove((void*) (q->base + current), (const void*) (q->base + current + 1), 
+                    memmove((void *)(q->base + current), (const void *)(q->base + current + 1),
                             (top.entry.index - current - 1) * sizeof(qt_threadqueue_entry_t));
                     top.entry.index = (top.entry.index - 1) % q->size;
                     q->top          = top.sse;
                 } else {
-                    memmove((void*) (q->base + bottom + 1), (const void*) (q->base + bottom), 
+                    memmove((void *)(q->base + bottom + 1), (const void *)(q->base + bottom),
                             (current - bottom) * sizeof(qt_threadqueue_entry_t));
-                    q->bottom = (bottom + 1) % q->size;  
+                    q->bottom = (bottom + 1) % q->size;
                 }
                 rwlock_wrunlock(q->rwlock);
                 return(t);
@@ -881,14 +858,13 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
     return (NULL);
 } /*}}}*/
 
-
 #if 0 // begin test code, because this function
       // can't go in the test suite as it calls internal functions
 
-#include <stdio.h>
+# include <stdio.h>
 
-int qt_threadqueue_test() {
-
+int qt_threadqueue_test()
+{
     printf("Initializing test\n");
     qthread_initialize();
     qt_threadqueue_t *threadqueue = qt_threadqueue_new(&(qlib->shepherds[0]));
@@ -915,7 +891,7 @@ int qt_threadqueue_test() {
     qthread_t *result = qt_threadqueue_dequeue_blocking(threadqueue, 1);
 
     assert(result == task);
- 
+
     if(result != task) {
         fprintf(stderr, "Task enqueued to stack is not identical to task dequeued from stack\n");
         return -1;
@@ -940,8 +916,8 @@ int qt_threadqueue_test() {
 
     return 0;
 }
-// end test code
-#endif 
 
+// end test code
+#endif /* if 0 */
 
 /* vim:set expandtab: */
