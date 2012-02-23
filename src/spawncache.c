@@ -5,6 +5,9 @@
 /* System Headers */
 #include <pthread.h> /* for pthread_key_*() */
 #include <string.h>  /* for memset() */
+#ifdef HAVE_MALLOC_H
+# include <malloc.h> /* for memalign() */
+#endif
 
 /* Internal Headers */
 #include "qt_spawncache.h"
