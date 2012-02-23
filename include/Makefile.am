@@ -33,6 +33,7 @@ noinst_HEADERS = \
 	qt_internal_feb.h \
 	qt_internal_syncvar.h \
 	qt_locks.h \
+	qt_macros.h \
 	qt_mpool.h \
 	qt_profiling.h \
 	qt_qthread_struct.h \
