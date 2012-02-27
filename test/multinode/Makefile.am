@@ -4,9 +4,10 @@
 DIST_SUBDIRS = 
 
 general_multinode = \
-	multinode_hello_world \
+	test_init \
+	hello_world \
 	ring \
-	test_uts_multinode
+	uts
 
 multinode = \
 	$(general_multinode)
@@ -24,12 +25,15 @@ LDADD = $(qthreadlib)
 buildall: $(multinode)
 buildextra: $(multinode)
 
-multinode_hello_world_SOURCES = multinode_hello_world.c ../benchmarks/uts/rng/brg_sha1.c
-multinode_hello_world_DEPENDENCIES = $(qthreadlib)
+test_init_SOURCES = test_init.c ../benchmarks/uts/rng/brg_sha1.c
+test_init_DEPENDENCIES = $(qthreadlib)
+
+hello_world_SOURCES = hello_world.c ../benchmarks/uts/rng/brg_sha1.c
+hello_world_DEPENDENCIES = $(qthreadlib)
 
 ring_SOURCES = ring.c ../benchmarks/uts/rng/brg_sha1.c
 ring_DEPENDENCIES = $(qthreadlib)
 
-test_uts_multinode_SOURCES = test_uts_multinode.c ../benchmarks/uts/rng/brg_sha1.c
-test_uts_multinode_DEPENDENCIES = $(qthreadlib)
+uts_SOURCES = uts.c ../benchmarks/uts/rng/brg_sha1.c
+uts_DEPENDENCIES = $(qthreadlib)
 
