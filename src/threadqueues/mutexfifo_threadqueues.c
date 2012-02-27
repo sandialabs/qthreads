@@ -24,8 +24,6 @@ struct _qt_threadqueue_node {
     qthread_t                   *value;
 } /* qt_threadqueue_node_t */;
 
-typedef struct _qt_threadqueue_node qt_threadqueue_node_t;
-
 struct _qt_threadqueue {
     qt_threadqueue_node_t *head;
     qt_threadqueue_node_t *tail;
@@ -168,6 +166,7 @@ int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q
 {
     return 0;
 }
+
 #endif
 
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
