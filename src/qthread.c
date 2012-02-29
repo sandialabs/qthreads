@@ -2451,9 +2451,11 @@ static int qthread_uberfork(qthread_f             f,
         // Spawn in this team
         // 1. increment team.sinc, if this is a non-default team; otherwise,
         //    do nothing -- default team does not maintain a sinc
+        // 2. Set `new_team` to `this_team` so this task is spawned in here
         if (this_team) {
             qt_sinc_willspawn(this_team->sinc, 1);
         }
+        new_team = this_team;
     } else {
         // Create a new team
         // 1. create the new team
