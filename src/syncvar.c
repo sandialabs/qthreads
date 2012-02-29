@@ -147,19 +147,23 @@ loop_start:
         } while (1);
         locked.u.w = addr->u.w; // I locked it, so I can read it
 #else                           /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO) */
-        do {
+        {
+            register syncvar_t tmp;
 loop_start:
-            unlocked = *addr;          // may be locked or unlocked, we don't know
-            if (unlocked.u.s.lock == 1) {
+            tmp = *addr;
+            do {
+                unlocked = tmp;          // may be locked or unlocked, we don't know
+                if (unlocked.u.s.lock == 1) {
+                    if (timeout-- <= 0) { goto errexit; }
+                    SPINLOCK_BODY();
+                    goto loop_start;
+                }
+                locked          = unlocked;
+                locked.u.s.lock = 1;       // create the locked version
+                if ((tmp.u.w = qthread_cas64((uint64_t *)addr, unlocked.u.w, locked.u.w)) == unlocked.u.w) { break; }
                 if (timeout-- <= 0) { goto errexit; }
-                SPINLOCK_BODY();
-                goto loop_start;
-            }
-            locked          = unlocked;
-            locked.u.s.lock = 1;       // create the locked version
-            if (qthread_cas64((uint64_t *)addr, unlocked.u.w, locked.u.w) == unlocked.u.w) { break; }
-            if (timeout-- <= 0) { goto errexit; }
-        } while (1);
+            } while (1);
+        }
 #endif  /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO) */
         /***************************************************
         * now locked == unlocked, and the lock bit is set *
