@@ -11,29 +11,41 @@
 
 #define MAX(a,b) a >= b ? a : b
 
+static const qt_team_id_t non_team_id     = 0;
+static const qt_team_id_t default_team_id = 1;
+
 static aligned_t hello_new_team(void *arg_) {
     qt_team_id_t id = qt_team_id();
+    qt_team_id_t parent_id = qt_team_parent_id();
 
-    iprintf("`hello_new_team` executing in team %lu\n", 
-        (unsigned long)id);
+    iprintf("`hello_new_team` executing in team %lu (w/ parent %lu)\n", 
+        (unsigned long)id, (unsigned long)parent_id);
+    assert(id != non_team_id && id != default_team_id);
+    assert(parent_id == non_team_id);
 
     return id;
 }
 
 static aligned_t hello_in_team(void *arg_) {
     qt_team_id_t id = qt_team_id();
+    qt_team_id_t parent_id = qt_team_parent_id();
 
-    iprintf("`hello_in_team` executing in team %lu\n", 
-        (unsigned long)id);
+    iprintf("`hello_in_team` executing in team %lu (w/ parent %lu)\n", 
+        (unsigned long)id, (unsigned long)parent_id);
+    assert(id != non_team_id);
+    assert(parent_id == non_team_id);
 
     return id;
 }
 
 static aligned_t hello_new_team_in_team(void *arg_) {
     qt_team_id_t id = qt_team_id();
+    qt_team_id_t parent_id = qt_team_parent_id();
 
-    iprintf("`hello_new_team_in_team` executing in team %lu\n", 
-        (unsigned long)id);
+    iprintf("`hello_new_team_in_team` executing in team %lu (w/ parent %lu)\n", 
+        (unsigned long)id, (unsigned long)parent_id);
+    assert(id != non_team_id && id != default_team_id);
+    assert(parent_id == non_team_id);
 
     aligned_t ret;
     qthread_fork(hello_in_team, NULL, &ret);
@@ -44,9 +56,12 @@ static aligned_t hello_new_team_in_team(void *arg_) {
 
 static aligned_t hello_new_team_new_team(void *arg_) {
     qt_team_id_t id = qt_team_id();
+    qt_team_id_t parent_id = qt_team_parent_id();
 
-    iprintf("`hello_new_team_new_team` executing in team %lu\n", 
-        (unsigned long)id);
+    iprintf("`hello_new_team_new_team` executing in team %lu (w/ parent %lu)\n", 
+        (unsigned long)id, (unsigned long)parent_id);
+    assert(id != non_team_id && id != default_team_id);
+    assert(parent_id == non_team_id);
 
     aligned_t ret;
     qthread_fork_new_team(hello_new_team, NULL, &ret);
@@ -69,7 +84,10 @@ int main(int   argc,
     CHECK_VERBOSE();
     NUMARG(count, "COUNT");
 
-    iprintf("Main executing in team %lu\n", (unsigned long)qt_team_id());
+    iprintf("Main executing in team %lu (w/ parent %lu)\n", 
+        (unsigned long)qt_team_id(), (unsigned long)qt_team_parent_id());
+    assert(qt_team_id() == default_team_id);
+    assert(qt_team_parent_id() == non_team_id);
 
     aligned_t hello_in_team_ret;
     qthread_fork(hello_in_team, NULL, &hello_in_team_ret);
@@ -99,7 +117,7 @@ int main(int   argc,
 
     iprintf("max is %lu\n", (unsigned long)max);
 
-    if (count + 3 == max) {
+    if (count + 4 == max) {
         iprintf("SUCCEEDED with count %lu and max team id %lu\n",
             (unsigned long)count,
             (unsigned long)max);

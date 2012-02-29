@@ -20,7 +20,7 @@
 #define QTHREAD_MUST_BE_WORKER_ZERO (1 << 4)     /* force thread to shepherd 0 worker 0 for termination 4/1/11 akp */
 #define QTHREAD_HAS_ARGCOPY         (1 << 5)
 #define QTHREAD_TEAM_LEADER         (1 << 6)
-#define QTHREAD_RESERVED_2          (1 << 7)
+#define QTHREAD_TEAM_WATCHER        (1 << 7)
 
 /* flags for teams (must be different bits) */
 #define QTHREAD_TEAM_DEAD           (1 << 0)
@@ -56,7 +56,12 @@ struct qthread_runtime_data_s {
 
 typedef struct qt_team_s {
     qt_sinc_t   *sinc;
+    qt_sinc_t   *subteams_sinc;
+    qt_sinc_t   *parent_subteams_sinc;
     qt_team_id_t team_id;
+    qt_team_id_t parent_id;
+    aligned_t    eureka;
+    aligned_t   *parent_eureka;
     uint_fast8_t flags;
 } qt_team_t;
 

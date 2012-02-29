@@ -29,7 +29,8 @@ basic_tests = test_basic \
 			  test_external_fork \
 			  test_external_syncvar \
 			  test_read \
-			  test_teams
+			  test_teams \
+			  test_subteams
 
 complex_tests = test_qt_loop \
 				test_qt_loop_sinc \
@@ -223,6 +224,9 @@ test_read_DEPENDENCIES = $(qthreadlib)
 
 test_teams_SOURCES = test_teams.c
 test_teams_DEPENDENCIES = $(qthreadlib)
+
+test_subteams_SOURCES = test_subteams.c
+test_subteams_DEPENDENCIES = $(qthreadlib)
 
 test_sinc_SOURCES = test_sinc.c
 test_sinc_DEPENDENCIES = $(qthreadlib)

@@ -263,8 +263,10 @@ int qthread_debuglevel(int);
 
 /* these are accessor functions for use by the qthreads to retrieve information
  * about themselves */
-#define QTHREAD_NULL_TASK_ID ((unsigned)-1)
-#define QTHREAD_NON_TASK_ID  0
+#define QTHREAD_NULL_TASK_ID    ((unsigned)-1)
+#define QTHREAD_NON_TASK_ID     0
+#define QTHREAD_DEFAULT_TEAM_ID 1
+#define QTHREAD_NON_TEAM_ID     0
 unsigned              qthread_id(void);
 unsigned              qthread_barrier_id(void);
 qthread_shepherd_id_t qthread_shep(void);
@@ -322,11 +324,19 @@ size_t qthread_readstate(const enum introspective_state type);
 
 /* Task team interface. */
 qt_team_id_t qt_team_id(void);
+qt_team_id_t qt_team_parent_id(void);
+aligned_t    qt_team_watcher(void *arg);
 aligned_t    qt_team_destroy(void *arg);
 int          qthread_fork_new_team(qthread_f   f,
                                    const void *arg,
                                    aligned_t  *ret);
+int          qthread_fork_new_subteam(qthread_f   f,
+                                   const void *arg,
+                                   aligned_t  *ret);
 int qthread_fork_syncvar_new_team(qthread_f   f,
+                                  const void *arg,
+                                  syncvar_t  *ret);
+int qthread_fork_syncvar_new_subteam(qthread_f   f,
                                   const void *arg,
                                   syncvar_t  *ret);
 
