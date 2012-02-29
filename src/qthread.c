@@ -1460,6 +1460,10 @@ void qthread_finalize(void)
                 free(shep->workers[j].stealbuffer);
             }
         }
+        if (i == 0) {
+            free(shep0->workers[0].nostealbuffer);
+            free(shep0->workers[0].stealbuffer);
+        }
         free(qlib->shepherds[i].workers);
         if (i == 0) { continue; }
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
