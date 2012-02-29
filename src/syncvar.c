@@ -62,7 +62,6 @@ typedef struct {
 
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 # define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked) do { \
-        MACHINE_FENCE;                                       \
         (addr)->u.s.lock = 0;                                \
 } while (0)
 # define UNLOCK_THIS_MODIFIED_SYNCVAR(addr, val, state) do { \
@@ -76,7 +75,6 @@ typedef struct {
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) ||   \
     defined(__tile__))
 # define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked) do { \
-        MACHINE_FENCE;                                       \
         (addr)->u.w = (unlocked);                            \
 } while (0)
 # define UNLOCK_THIS_MODIFIED_SYNCVAR(addr, val, state) do { \
