@@ -48,7 +48,8 @@ uts_benchmarks = \
 				 time_uts_syncvar \
 				 time_uts_aligned \
 				 time_uts_sinc \
-				 time_uts_donecount
+				 time_uts_donecount \
+				 time_uts_donecount2
 mt_benchmarks = \
 				time_task_spawn \
 				time_eager_future \
@@ -218,6 +219,9 @@ time_uts_sinc_DEPENDENCIES = $(qthreadlib)
 
 time_uts_donecount_SOURCES = uts/time_uts_donecount.c uts/rng/brg_sha1.c
 time_uts_donecount_DEPENDENCIES = $(qthreadlib)
+
+time_uts_donecount2_SOURCES = uts/time_uts_donecount2.c uts/rng/brg_sha1.c
+time_uts_donecount2_DEPENDENCIES = $(qthreadlib)
 
 time_task_spawn_SOURCES = mt/time_task_spawn.c
 time_task_spawn_DEPENDENCIES = $(qthreadlib)
