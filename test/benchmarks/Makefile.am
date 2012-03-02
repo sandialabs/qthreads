@@ -68,6 +68,7 @@ benchmarks = \
 	     $(mt_benchmarks)
 
 EXTRA_PROGRAMS = $(benchmarks)
+CLEANFILES = $(benchmarks)
 
 EXTRA_DIST = \
 			 pmea09/time_tbbq.cpp \

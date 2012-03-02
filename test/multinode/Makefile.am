@@ -17,7 +17,7 @@ multinode = \
 TESTS = $(multinode)
 check_PROGRAMS = $(TESTS)
 
-TESTS_ENVIRONMENT = @yod@
+TESTS_ENVIRONMENT = @yod@ env QT_STACK_SIZE=65536 
 
 EXTRA_DIST = 
 
@@ -41,4 +41,3 @@ ring_DEPENDENCIES = $(qthreadlib)
 
 uts_SOURCES = uts.c ../benchmarks/uts/rng/brg_sha1.c
 uts_DEPENDENCIES = $(qthreadlib)
-

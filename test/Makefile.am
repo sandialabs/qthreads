@@ -57,11 +57,14 @@ complex_tests += test_cxx_oldapi
 endif
 
 SUBDIRS = .
+ALLDIRS =
 if COMPILE_MULTINODE
 SUBDIRS += multinode
+ALLDIRS += multinode
 endif
 
 DIST_SUBDIRS = benchmarks multinode
+ALLDIRS += benchmarks
 
 TESTS =  $(basic_tests) $(complex_tests)
 EXTRA_PROGRAMS = 
@@ -87,9 +90,15 @@ endif
 
 buildtests: $(TESTS)
 buildall: $(TESTS) $(benchmarks)
-	$(MAKE) -C benchmarks buildall
+	@list='$(ALLDIRS)'; for subdir in $$list ; do \
+	 $(MAKE) -C $$subdir buildall; \
+	 done
+
 buildextra: $(benchmarks)
 	$(MAKE) -C benchmarks buildextra
+
+clean-local:
+	$(MAKE) -C benchmarks clean
 
 .PHONY: buildall buildtests buildextra
 
