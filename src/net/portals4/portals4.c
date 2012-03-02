@@ -326,12 +326,12 @@ progress_function(void *data)
             }
             break;
         case PTL_EVENT_SEND:
-            if (PTL_OK != ev.ni_fail_type) {
+            if (PTL_NI_OK != ev.ni_fail_type) {
                 qthread_debug(MULTINODE_CALLS, "SEND event with fail type %d\n", ev.ni_fail_type);
             }
             break;
         case PTL_EVENT_ACK:
-            if (PTL_OK != ev.ni_fail_type) {
+            if (PTL_NI_OK != ev.ni_fail_type) {
                 qthread_debug(MULTINODE_CALLS, "SEND event with fail type %d\n", ev.ni_fail_type);
             } else {
                 struct net_pkt_t *pkt = (struct net_pkt_t*) ev.user_ptr;
