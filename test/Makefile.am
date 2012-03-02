@@ -56,7 +56,7 @@ basic_tests += \
 complex_tests += test_cxx_oldapi
 endif
 
-SUBDIRS = 
+SUBDIRS = .
 if COMPILE_MULTINODE
 SUBDIRS += multinode
 endif

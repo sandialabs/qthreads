@@ -12,7 +12,12 @@ general_multinode = \
 multinode = \
 	$(general_multinode)
 
-EXTRA_PROGRAMS = $(multinode)
+#EXTRA_PROGRAMS = $(multinode)
+
+TESTS = $(multinode)
+check_PROGRAMS = $(TESTS)
+
+TESTS_ENVIRONMENT = @yod@
 
 EXTRA_DIST = 
 
