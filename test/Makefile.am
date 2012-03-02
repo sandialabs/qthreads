@@ -57,6 +57,10 @@ complex_tests += test_cxx_oldapi
 endif
 
 SUBDIRS = 
+if COMPILE_MULTINODE
+SUBDIRS += multinode
+endif
+
 DIST_SUBDIRS = benchmarks multinode
 
 TESTS =  $(basic_tests) $(complex_tests)

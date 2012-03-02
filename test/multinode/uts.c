@@ -15,7 +15,7 @@
 #include <math.h>   /* for floor, log, sin */
 #include <qthread/qthread.h>
 #include <qthread/qtimer.h>
-#include <qthread/qthread_multinode.h>
+#include <qthread/multinode.h>
 #include "argparsing.h"
 
 #define BRG_RNG // Select RNG

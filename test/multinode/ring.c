@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <qthread/qthread.h>
-#include <qthread/qthread_multinode.h>
+#include <qthread/multinode.h>
 #include "argparsing.h"
 
 static aligned_t done;

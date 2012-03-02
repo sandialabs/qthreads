@@ -39,7 +39,7 @@ if COMPILE_ROSE_EXTENSIONS
 include interfaces/rose/Makefile.inc
 endif
 
-if WANT_MULTINODE
+if COMPILE_MULTINODE
 include net/Makefile.inc
 include net/portals4/Makefile.inc
 endif

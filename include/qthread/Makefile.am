@@ -41,8 +41,8 @@ if COMPILE_TARGET_SST
 pkginclude_HEADERS += qthread-sst.h
 endif
 
-if WANT_MULTINODE
-pkginclude_HEADERS += qthread_multinode.h
+if COMPILE_MULTINODE
+pkginclude_HEADERS += multinode.h
 endif
 
 distclean-local:

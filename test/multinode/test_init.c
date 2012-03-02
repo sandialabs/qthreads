@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <qthread/qthread.h>
-#include <qthread/qthread_multinode.h>
+#include <qthread/multinode.h>
 
 int my_id, world_size;
 

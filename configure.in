@@ -914,26 +914,24 @@ AS_IF([test "x$qthread_implementation" = "xunix"],
 ])
 
 AS_IF([test "$enable_multinode" = "yes"], 
-  [AC_DEFINE([QTHREAD_MULTINODE], [1], [Defined if multinode support desired])
-   QTHREAD_CHECK_PORTALS4([], [AC_MSG_ERROR([Could not find Portals 4 library])])
-   CPPFLAGS="$CPPFLAGS $portals4_CPPFLAGS"
-   LDFLAGS="$LDFLAGS $portals4_LDFLAGS"
-   LIBS="$LIBS $portals4_LIBS"
-   AC_ARG_WITH([multinode-runtime],
-   	       [AC_HELP_STRING([--with-multinode-runtime@<:@=OPTION@:>@],
-		               [Use OPTION as runtime support, current options are shmemrt and mpi @<:@default=shmemrt@:>@])])
-   if test "$with_multinode_runtime" = ""; then with_multinode_runtime=shmemrt ; fi
-   dnl (((  make parens from case statement match something
-   case "$with_multinode_runtime" in
-     shmemrt)  ;;
-     mpi)   ;;
-     *) AC_MSG_ERROR([bad value ${with_multinode_runtime} for --with-multinode-runtime]) ;;
-   esac
-  ], [enable_multinode="no"])
-AM_CONDITIONAL([WANT_MULTINODE], [test "$enable_multinode" = "yes"])
-AM_CONDITIONAL([WANT_PORTALS_SHMEM_RUNTIME], [test "$with_multinode_runtime" = "shmemrt"])
-AM_CONDITIONAL([WANT_MPI_RUNTIME], [test "$with_multinode_runtime" = "mpi"])
-AM_CONDITIONAL([HAVE_PROG_TIMELIMIT], [test "x$ac_cv_prog_timelimit_path" != "x"])
+	  [AC_DEFINE([QTHREAD_MULTINODE], [1], [Defined if multinode support desired])
+	   QTHREAD_CHECK_PORTALS4([], [AC_MSG_ERROR([Could not find Portals 4 library])])
+	   CPPFLAGS="$CPPFLAGS $portals4_CPPFLAGS"
+	   LDFLAGS="$LDFLAGS $portals4_LDFLAGS"
+	   LIBS="$LIBS $portals4_LIBS"
+	   AC_ARG_WITH([multinode-runtime],
+				   [AC_HELP_STRING([--with-multinode-runtime@<:@=OPTION@:>@],
+								   [Use OPTION as runtime support, current options
+									are shmemrt and mpi @<:@default=shmemrt@:>@])])
+	   AS_IF([test "x$with_multinode_runtime" = "x"],
+			 [with_multinode_runtime=shmemrt])
+	   dnl (((  make parens from case statement match something
+	   case "$with_multinode_runtime" in
+		   shmemrt)  ;;
+	       mpi)   ;;
+		   *) AC_MSG_ERROR([bad value ${with_multinode_runtime} for --with-multinode-runtime]) ;;
+	   esac],
+	  [enable_multinode="no"])
 
 
 ## --------------- ##
@@ -962,6 +960,10 @@ AM_CONDITIONAL([COMPILE_CHAPEL_INTERFACE], [test "x$compile_chapel_interface" = 
 AM_CONDITIONAL([COMPILE_OPENMP_BENCHMARKS], [test "x$have_openmp" = "xyes"])
 AM_CONDITIONAL([COMPILE_COMPAT_ATOMIC], [test "x$compile_compat_atomic" = "xyes"])
 AM_CONDITIONAL([COMPILE_SPAWNCACHE], [test "x$enable_spawn_cache" = "xyes"])
+AM_CONDITIONAL([HAVE_PROG_TIMELIMIT], [test "x$ac_cv_prog_timelimit_path" != "x"])
+AM_CONDITIONAL([COMPILE_MULTINODE], [test "$enable_multinode" = "yes"])
+AM_CONDITIONAL([WANT_PORTALS_SHMEM_RUNTIME], [test "$with_multinode_runtime" = "shmemrt"])
+AM_CONDITIONAL([WANT_MPI_RUNTIME], [test "$with_multinode_runtime" = "mpi"])
 
 AC_CONFIG_HEADERS([include/config.h include/qthread/common.h])
 AC_CONFIG_FILES([Makefile
@@ -976,47 +978,55 @@ AC_CONFIG_FILES([Makefile
 		 test/multinode/Makefile])
 AC_OUTPUT
 
+case "$qthread_cv_stack_size" in
+        8388608) stack_string="8MB" ;;
+        2096)    stack_string="2kB" ;;
+        4096)    stack_string="4kB" ;;
+        *)       stack_string="${qthread_cv_stack_size} bytes" ;;
+esac
 echo ""
 echo    "System Characteristics:"
-echo    "               Target Style: $qthread_implementation"
-echo    "                 Multi-node: $enable_multinode"
-echo    "         Topology Interface: ${qthread_topo:-none}"
-echo    "                Qtimer type: ${qthread_timer_type:-none}"
-echo    "             Aligned_t size: $sizeof_aligned_t (aligned on $align_aligned_t byte boundaries)"
-qthread_stackprefix="         Default Stack size: "
-case "$qthread_cv_stack_size" in
-        8388608) echo "${qthread_stackprefix}8MB" ;;
-        2096)    echo "${qthread_stackprefix}2kB" ;;
-        4096)    echo "${qthread_stackprefix}4kB" ;;
-        *)       echo "${qthread_stackprefix}${qthread_cv_stack_size} bytes" ;;
-esac
+echo    "       Target Style: $qthread_implementation"
+echo    "         Multi-node: $enable_multinode, $with_multinode_runtime"
+echo    "       Topology API: ${qthread_topo:-none}"
+echo    "        Qtimer type: ${qthread_timer_type:-none}"
+echo    "     Aligned_t size: $sizeof_aligned_t (aligned on $align_aligned_t byte boundaries)"
+echo    " Default Stack size: $stack_string"
 echo    ""
 echo    "Safety/Debugging:"
-echo    "      Sanity assert() Calls: $enable_asserts"
-echo    "    Check address alignment: $enable_aligncheck"
-echo    "                  Profiling: $enable_profiling"
-echo    " Debugging Trace Capability: $enable_debug"
-echo    "                Guard Pages: $enable_guard_pages"
+echo    "   Sanity assert()s: $enable_asserts"
+echo    "    Check alignment: $enable_aligncheck"
+echo    "          Profiling: $enable_profiling"
+echo    "   Debugging Output: $enable_debug"
+echo    "        Guard Pages: $enable_guard_pages"
 echo    ""
-echo    "Speed:"
-echo    "                  Scheduler: $with_scheduler"
-echo    "                       Sinc: $with_sinc"
-echo    "            Lazy Thread IDs: $enable_lazy_threadids"
-echo    "              Pooled Memory: $enable_pooled_memory"
-echo    "              Pooled Spawns: $enable_spawn_cache"
-echo    "    Multithreaded Shepherds: $enable_multithreaded_shepherds"
-echo    "                    RCRTool: $enable_rcrtool"
-qthread_incprefix="             Increments/CAS: "
+AS_IF([test "x$enable_multithreaded_shepherds" = "xyes"],
+	  [mts_string="multiworker shepherds"],
+	  [mts_string="single worker shepherds"])
+AS_IF([test "x$enable_pooled_memory" = "xyes"],
+	  [pool_string="memory"],
+	  [pool_string=""])
+AS_IF([test "x$enable_spawn_cache" = "xyes"],
+	  [AS_IF([test "x$pool_string" != "x"],
+			 [pool_string="$pool_string, spawns"],
+			 [pool_string="spawns"])])
 AS_IF([test "x$enable_hardware_increments" = "xno"],
-          [AS_IF([test "x$ac_cv_func_pthread_spin_init" = "xyes"],
-                         [echo "${qthread_incprefix}Spin (software)"],
-                         [echo "${qthread_incprefix}Mutex (software)"])],
-          [AS_IF([test "x$qthread_cv_atomic_incr" = "xyes" -a "x$qthread_cv_atomic_CAS" = "xyes"],
-                         [echo "${qthread_incprefix}Compiler Builtin (both)"],
-                         [AS_IF([test "x$qthread_cv_atomic_incr" = "xyes"],
-                                        [echo "${qthread_incprefix}Compiler Builtin/$qthread_cv_asm_arch"],
-                                        [AS_IF([test "x$qthread_cv_atomic_CAS" = "xyes"],
-                                                   [echo "${qthread_incprefix}$qthread_cv_asm_arch/Compiler Builtin"],
-                                                   [echo "${qthread_incprefix}$qthread_cv_asm_arch"])])])])
+	  [AS_IF([test "x$ac_cv_func_pthread_spin_init" = "xyes"],
+			 [incr_string="Spin (software)"],
+			 [incr_string="Mutex (software)"])],
+	  [AS_IF([test "x$qthread_cv_atomic_incr" = "xyes" -a "x$qthread_cv_atomic_CAS" = "xyes"],
+			 [incr_string="Compiler Builtin (both)"],
+			 [AS_IF([test "x$qthread_cv_atomic_incr" = "xyes"],
+					[incr_string="Compiler Builtin/$qthread_cv_asm_arch"],
+					[AS_IF([test "x$qthread_cv_atomic_CAS" = "xyes"],
+						   [incr_string="$qthread_cv_asm_arch/Compiler Builtin"],
+						   [incr_string="$qthread_cv_asm_arch"])])])])
+echo    "Speed:"
+echo    "          Scheduler: $with_scheduler ($mts_string)"
+echo    "         Sinc Style: $with_sinc"
+echo    "    Lazy Thread IDs: $enable_lazy_threadids"
+echo    "       Pools/caches: $pool_string"
+echo    "            RCRTool: $enable_rcrtool"
+echo    "     Increments/CAS: $incr_string"
 echo ""
 dnl vim:set expandtab

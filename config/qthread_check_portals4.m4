@@ -7,7 +7,7 @@
 # --------------------------------------------------------
 AC_DEFUN([QTHREAD_CHECK_PORTALS4],[
     AC_ARG_WITH([portals4],
-        [AC_HELP_STRING([--with-portals4(=DIR)],
+        [AC_HELP_STRING([--with-portals4[[=DIR]]],
              [Build Portals4 support, with optional install prefix DIR])])
 
     check_portals4_save_CPPFLAGS="$CPPFLAGS"
