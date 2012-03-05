@@ -143,6 +143,8 @@ void qt_sinc_destroy(qt_sinc_t *sinc)
 {
     assert(sinc);
     if (sinc->result || sinc->values) {
+        assert(sinc->initial_value);
+        free(sinc->initial_value);
         assert(sinc->result);
         free(sinc->result);
         assert(sinc->values);
