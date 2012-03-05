@@ -24,6 +24,8 @@ pthread_key_t spawn_cache;
 static void qt_spawncache_shutdown(void)
 {
     qthread_debug(CORE_DETAILS, "destroy thread-local task queue\n");
+    void * freeme = pthread_getspecific(spawn_cache);
+    free(freeme);
     qassert(pthread_key_delete(spawn_cache), 0);
 }
 
