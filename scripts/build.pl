@@ -10,6 +10,7 @@ my @default_conf_names = ('compat', 'unpooled', 'opt', 'nemesis', 'lifo', 'mutex
 
 my %config = (
 	default       => '',
+	oldgcc        => 'CC=gcc34 CXX=g++34',
 	compat        => 'CFLAGS="-m32" CXXFLAGS="-m32" LDFLAGS="-m32" CPPFLAGS="-m32"',
 	unpooled      => '--disable-pooled-memory',
 	opt           => 'CFLAGS="-O3" CXXFLAGS="-O3"',
