@@ -981,9 +981,12 @@ AC_CONFIG_FILES([Makefile
                  include/Makefile
                  include/qthread/Makefile
                  test/Makefile
-		 test/benchmarks/Makefile
-		 test/benchmarks/rose_bots/Makefile
-		 test/multinode/Makefile])
+                 test/basics/Makefile
+                 test/features/Makefile
+                 test/stress/Makefile
+				 test/benchmarks/Makefile
+				 test/benchmarks/rose_bots/Makefile
+				 test/multinode/Makefile])
 AC_OUTPUT
 
 case "$qthread_cv_stack_size" in
@@ -992,10 +995,13 @@ case "$qthread_cv_stack_size" in
         4096)    stack_string="4kB" ;;
         *)       stack_string="${qthread_cv_stack_size} bytes" ;;
 esac
+AS_IF([test "x$enable_multinode" = "xyes"],
+	  [multinode_string="$enable_multinode, $with_multinode_runtime"],
+	  [multinode_string="no"])
 echo ""
 echo    "System Characteristics:"
 echo    "       Target Style: $qthread_implementation"
-echo    "         Multi-node: $enable_multinode, $with_multinode_runtime"
+echo    "         Multi-node: $multinode_string"
 echo    "       Topology API: ${qthread_topo:-none}"
 echo    "        Qtimer type: ${qthread_timer_type:-none}"
 echo    "     Aligned_t size: $sizeof_aligned_t (aligned on $align_aligned_t byte boundaries)"

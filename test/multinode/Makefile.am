@@ -1,3 +1,7 @@
+# -*- Makefile -*-
+#
+# Copyright (c)      2012  Sandia Corporation
+#
 
 .PHONY: buildall buildtests buildextra
 
