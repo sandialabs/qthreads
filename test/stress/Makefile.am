@@ -8,6 +8,7 @@ AM_CXXFLAGS = @RESTRICT_CXXFLAGS@
 .PHONY: buildall buildtests buildextra
 
 TESTS = \
+		syncvar_prodcons_contended \
 		test_precond_fib \
 		test_task_spawn \
 		test_syncvar_stream
@@ -28,6 +29,9 @@ buildall: $(TESTS)
 buildtests: $(TESTS)
 
 buildextra: $(TESTS)
+
+syncvar_prodcons_contended_SOURCES = syncvar_prodcons_contended.c
+syncvar_prodcons_contended_DEPENDENCIES = $(qthreadlib)
 
 test_precond_fib_SOURCES = test_precond_fib.c
 test_precond_fib_DEPENDENCIES = $(qthreadlib)

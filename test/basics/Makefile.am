@@ -8,29 +8,28 @@ AM_CXXFLAGS = @RESTRICT_CXXFLAGS@
 .PHONY: buildall buildtests buildextra
 
 TESTS = \
-		test_basic \
-		test_basic_syncvar \
-		test_reinit \
-		test_cas \
-		test_cacheline \
-		test_id \
-		test_incr test_fincr test_dincr \
-		test_stackleft \
-		test_migrate \
-		test_disabled \
-		test_qtimer \
-		test_syncvar \
-		test_precond \
-		test_qalloc \
-		test_user_defined_block \
-		test_sinc_null \
-		test_sinc \
-		test_tasklocal \
-		test_tasklocal_no_default \
-		test_tasklocal_no_argcopy \
-		test_external_fork \
-		test_external_syncvar \
-		test_read \
+		aligned_prodcons \
+		syncvar_prodcons \
+		reinitialization \
+		qthread_cas \
+		qthread_cacheline \
+		qthread_id \
+		qthread_incr qthread_fincr qthread_dincr \
+		qthread_stackleft \
+		qthread_migrate_to \
+		qthread_disable_shepherd \
+		qtimer \
+		qthread_fork_precond \
+		qalloc \
+		arbitrary_blocking_operation \
+		sinc_null \
+		sinc \
+		tasklocal_data \
+		tasklocal_data_no_default \
+		tasklocal_data_no_argcopy \
+		external_fork \
+		external_syncvar \
+		read \
 		test_teams \
 		test_subteams
 
@@ -53,80 +52,77 @@ buildtests: $(TESTS)
 
 buildextra: $(TESTS)
 
-test_basic_SOURCES = test_basic.c
-test_basic_DEPENDENCIES = $(qthreadlib)
+aligned_prodcons_SOURCES = aligned_prodcons.c
+aligned_prodcons_DEPENDENCIES = $(qthreadlib)
 
-test_basic_syncvar_SOURCES = test_basic_syncvar.c
-test_basic_syncvar_DEPENDENCIES = $(qthreadlib)
+syncvar_prodcons_SOURCES = syncvar_prodcons.c
+syncvar_prodcons_DEPENDENCIES = $(qthreadlib)
 
-test_reinit_SOURCES = test_reinit.c
-test_reinit_DEPENDENCIES = $(qthreadlib)
+reinitialization_SOURCES = reinitialization.c
+reinitialization_DEPENDENCIES = $(qthreadlib)
 
-test_cas_SOURCES = test_cas.c
-test_cas_DEPENDENCIES = $(qthreadlib)
+qthread_cas_SOURCES = qthread_cas.c
+qthread_cas_DEPENDENCIES = $(qthreadlib)
 
-test_cacheline_SOURCES = test_cacheline.c
-test_cacheline_DEPENDENCIES = $(qthreadlib)
+qthread_cacheline_SOURCES = qthread_cacheline.c
+qthread_cacheline_DEPENDENCIES = $(qthreadlib)
 
-test_id_SOURCES = test_id.c
-test_id_DEPENDENCIES = $(qthreadlib)
+qthread_id_SOURCES = qthread_id.c
+qthread_id_DEPENDENCIES = $(qthreadlib)
 
-test_incr_SOURCES = test_incr.c
-test_incr_DEPENDENCIES = $(qthreadlib)
+qthread_incr_SOURCES = qthread_incr.c
+qthread_incr_DEPENDENCIES = $(qthreadlib)
 
-test_fincr_SOURCES = test_fincr.c
-test_fincr_DEPENDENCIES = $(qthreadlib)
+qthread_fincr_SOURCES = qthread_fincr.c
+qthread_fincr_DEPENDENCIES = $(qthreadlib)
 
-test_dincr_SOURCES = test_dincr.c
-test_dincr_DEPENDENCIES = $(qthreadlib)
+qthread_dincr_SOURCES = qthread_dincr.c
+qthread_dincr_DEPENDENCIES = $(qthreadlib)
 
-test_stackleft_SOURCES = test_stackleft.c
-test_stackleft_DEPENDENCIES = $(qthreadlib)
+qthread_stackleft_SOURCES = qthread_stackleft.c
+qthread_stackleft_DEPENDENCIES = $(qthreadlib)
 
-test_migrate_SOURCES = test_migrate.c
-test_migrate_DEPENDENCIES = $(qthreadlib)
+qthread_migrate_to_SOURCES = qthread_migrate_to.c
+qthread_migrate_to_DEPENDENCIES = $(qthreadlib)
 
-test_disabled_SOURCES = test_disabled.c
-test_disabled_DEPENDENCIES = $(qthreadlib)
+qthread_disable_shepherd_SOURCES = qthread_disable_shepherd.c
+qthread_disable_shepherd_DEPENDENCIES = $(qthreadlib)
 
-test_qtimer_SOURCES = test_qtimer.c
-test_qtimer_DEPENDENCIES = $(qthreadlib)
+qtimer_SOURCES = qtimer.c
+qtimer_DEPENDENCIES = $(qthreadlib)
 
-test_syncvar_SOURCES = test_syncvar.c
-test_syncvar_DEPENDENCIES = $(qthreadlib)
+qthread_fork_precond_SOURCES = qthread_fork_precond.c
+qthread_fork_precond_DEPENDENCIES = $(qthreadlib)
 
-test_precond_SOURCES = test_precond.c
-test_precond_DEPENDENCIES = $(qthreadlib)
+qalloc_SOURCES = qalloc.c
+qalloc_DEPENDENCIES = $(qthreadlib)
 
-test_qalloc_SOURCES = test_qalloc.c
-test_qalloc_DEPENDENCIES = $(qthreadlib)
+arbitrary_blocking_operation_SOURCES = arbitrary_blocking_operation.c
+arbitrary_blocking_operation_DEPENDENCIES = $(qthreadlib)
 
-test_user_defined_block_SOURCES = test_user_defined_block.c
-test_user_defined_block_DEPENDENCIES = $(qthreadlib)
+sinc_null_SOURCES = sinc_null.c
+sinc_null_DEPENDENCIES = $(qthreadlib)
 
-test_sinc_null_SOURCES = test_sinc_null.c
-test_sinc_null_DEPENDENCIES = $(qthreadlib)
+sinc_SOURCES = sinc.c
+sinc_DEPENDENCIES = $(qthreadlib)
 
-test_sinc_SOURCES = test_sinc.c
-test_sinc_DEPENDENCIES = $(qthreadlib)
+tasklocal_data_SOURCES = tasklocal_data.c
+tasklocal_data_DEPENDENCIES = $(qthreadlib)
 
-test_tasklocal_SOURCES = test_tasklocal.c
-test_tasklocal_DEPENDENCIES = $(qthreadlib)
+tasklocal_data_no_default_SOURCES = tasklocal_data_no_default.c
+tasklocal_data_no_default_DEPENDENCIES = $(qthreadlib)
 
-test_tasklocal_no_default_SOURCES = test_tasklocal_no_default.c
-test_tasklocal_no_default_DEPENDENCIES = $(qthreadlib)
+tasklocal_data_no_argcopy_SOURCES = tasklocal_data_no_argcopy.c
+tasklocal_data_no_argcopy_DEPENDENCIES = $(qthreadlib)
 
-test_tasklocal_no_argcopy_SOURCES = test_tasklocal_no_argcopy.c
-test_tasklocal_no_argcopy_DEPENDENCIES = $(qthreadlib)
+external_fork_SOURCES = external_fork.c
+external_fork_DEPENDENCIES = $(qthreadlib)
 
-test_external_fork_SOURCES = test_external_fork.c
-test_external_fork_DEPENDENCIES = $(qthreadlib)
+external_syncvar_SOURCES = external_syncvar.c
+external_syncvar_DEPENDENCIES = $(qthreadlib)
 
-test_external_syncvar_SOURCES = test_external_syncvar.c
-test_external_syncvar_DEPENDENCIES = $(qthreadlib)
-
-test_read_SOURCES = test_read.c
-test_read_DEPENDENCIES = $(qthreadlib)
+read_SOURCES = read.c
+read_DEPENDENCIES = $(qthreadlib)
 
 test_teams_SOURCES = test_teams.c
 test_teams_DEPENDENCIES = $(qthreadlib)
