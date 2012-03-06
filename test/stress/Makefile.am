@@ -9,9 +9,9 @@ AM_CXXFLAGS = @RESTRICT_CXXFLAGS@
 
 TESTS = \
 		syncvar_prodcons_contended \
-		test_precond_fib \
-		test_task_spawn \
-		test_syncvar_stream
+		syncvar_stream \
+		precond_fib \
+		task_spawn
 
 check_PROGRAMS = $(TESTS)
 
@@ -33,11 +33,11 @@ buildextra: $(TESTS)
 syncvar_prodcons_contended_SOURCES = syncvar_prodcons_contended.c
 syncvar_prodcons_contended_DEPENDENCIES = $(qthreadlib)
 
-test_precond_fib_SOURCES = test_precond_fib.c
-test_precond_fib_DEPENDENCIES = $(qthreadlib)
+precond_fib_SOURCES = precond_fib.c
+precond_fib_DEPENDENCIES = $(qthreadlib)
 
-test_task_spawn_SOURCES = test_task_spawn.c
-test_task_spawn_DEPENDENCIES = $(qthreadlib)
+task_spawn_SOURCES = task_spawn.c
+task_spawn_DEPENDENCIES = $(qthreadlib)
 
-test_syncvar_stream_SOURCES = test_syncvar_stream.c
-test_syncvar_stream_DEPENDENCIES = $(qthreadlib)
+syncvar_stream_SOURCES = syncvar_stream.c
+syncvar_stream_DEPENDENCIES = $(qthreadlib)
