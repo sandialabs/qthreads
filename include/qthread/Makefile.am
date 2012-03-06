@@ -9,6 +9,7 @@ pkginclude_HEADERS = \
 	cacheline.h \
 	feb_barrier.h \
 	futurelib.h \
+	macros.h \
 	qalloc.h \
 	qarray.h \
 	qdqueue.h \
