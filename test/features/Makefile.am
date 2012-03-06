@@ -8,32 +8,31 @@ AM_CXXFLAGS = @RESTRICT_CXXFLAGS@
 .PHONY: buildall buildtests buildextra
 
 TESTS = \
-		test_qt_loop \
-		test_qt_loop_sinc \
-		test_qt_loop_balance \
-		test_qt_loop_balance_sinc \
-		test_qutil \
-		test_qutil_qsort \
-		test_feb_barrier \
-		test_qloop_utils \
-		test_queue_loop \
-		test_qpool \
-		test_qarray \
-		test_qarray_accum \
-		test_qlfqueue \
-		test_qdqueue \
-		test_allpairs
+		qt_loop \
+		qt_loop_sinc \
+		qt_loop_balance \
+		qt_loop_balance_sinc \
+		qutil \
+		qutil_qsort \
+		feb_barrier \
+		qloop_utils \
+		qt_loop_queue \
+		qpool \
+		qarray \
+		qarray_accum \
+		qlfqueue \
+		qdqueue \
+		allpairs
 
-EXTRA_PROGRAMS = \
-				 test_wavefront
+EXTRA_PROGRAMS = wavefront
 
 if ENABLE_CXX_TESTS
-TESTS += test_cxx_oldapi \
-		 test_cxx_1 \
-		 test_cxx_2
+TESTS += cxx_futurelib \
+		 cxx_qt_loop \
+		 cxx_qt_loop_balance
 endif
 if COMPILE_ROSE_EXTENSIONS
-TESTS += test_log_barrier
+TESTS += log_barrier
 endif
 
 check_PROGRAMS = $(TESTS)
@@ -53,62 +52,62 @@ buildtests: $(TESTS)
 
 buildextra: $(TESTS)
 
-test_qt_loop_SOURCES = test_qt_loop.c
-test_qt_loop_DEPENDENCIES = $(qthreadlib)
+qt_loop_SOURCES = qt_loop.c
+qt_loop_DEPENDENCIES = $(qthreadlib)
 
-test_qt_loop_sinc_SOURCES = test_qt_loop_sinc.c
-test_qt_loop_sinc_DEPENDENCIES = $(qthreadlib)
+qt_loop_sinc_SOURCES = qt_loop_sinc.c
+qt_loop_sinc_DEPENDENCIES = $(qthreadlib)
 
-test_qt_loop_balance_SOURCES = test_qt_loop_balance.c
-test_qt_loop_balance_DEPENDENCIES = $(qthreadlib)
+qt_loop_balance_SOURCES = qt_loop_balance.c
+qt_loop_balance_DEPENDENCIES = $(qthreadlib)
 
-test_qt_loop_balance_sinc_SOURCES = test_qt_loop_balance_sinc.c
-test_qt_loop_balance_sinc_DEPENDENCIES = $(qthreadlib)
+qt_loop_balance_sinc_SOURCES = qt_loop_balance_sinc.c
+qt_loop_balance_sinc_DEPENDENCIES = $(qthreadlib)
 
-test_qutil_SOURCES = test_qutil.c
-test_qutil_DEPENDENCIES = $(qthreadlib)
+qutil_SOURCES = qutil.c
+qutil_DEPENDENCIES = $(qthreadlib)
 
-test_qutil_qsort_SOURCES = test_qutil_qsort.c
-test_qutil_qsort_DEPENDENCIES = $(qthreadlib)
+qutil_qsort_SOURCES = qutil_qsort.c
+qutil_qsort_DEPENDENCIES = $(qthreadlib)
 
-test_feb_barrier_SOURCES = test_feb_barrier.c
-test_feb_barrier_DEPENDENCIES = $(qthreadlib)
+feb_barrier_SOURCES = feb_barrier.c
+feb_barrier_DEPENDENCIES = $(qthreadlib)
 
-test_qloop_utils_SOURCES = test_qloop_utils.c
-test_qloop_utils_DEPENDENCIES = $(qthreadlib)
+qloop_utils_SOURCES = qloop_utils.c
+qloop_utils_DEPENDENCIES = $(qthreadlib)
 
-test_queue_loop_SOURCES = test_queue_loop.c
-test_queue_loop_DEPENDENCIES = $(qthreadlib)
+qt_loop_queue_SOURCES = qt_loop_queue.c
+qt_loop_queue_DEPENDENCIES = $(qthreadlib)
 
-test_qpool_SOURCES = test_qpool.c
-test_qpool_DEPENDENCIES = $(qthreadlib)
+qpool_SOURCES = qpool.c
+qpool_DEPENDENCIES = $(qthreadlib)
 
-test_qarray_SOURCES = test_qarray.c
-test_qarray_DEPENDENCIES = $(qthreadlib)
+qarray_SOURCES = qarray.c
+qarray_DEPENDENCIES = $(qthreadlib)
 
-test_qarray_accum_SOURCES = test_qarray_accum.c
-test_qarray_accum_DEPENDENCIES = $(qthreadlib)
+qarray_accum_SOURCES = qarray_accum.c
+qarray_accum_DEPENDENCIES = $(qthreadlib)
 
-test_qlfqueue_SOURCES = test_qlfqueue.c
-test_qlfqueue_DEPENDENCIES = $(qthreadlib)
+qlfqueue_SOURCES = qlfqueue.c
+qlfqueue_DEPENDENCIES = $(qthreadlib)
 
-test_qdqueue_SOURCES = test_qdqueue.c
-test_qdqueue_DEPENDENCIES = $(qthreadlib)
+qdqueue_SOURCES = qdqueue.c
+qdqueue_DEPENDENCIES = $(qthreadlib)
 
-test_log_barrier_SOURCES = test_log_barrier.c
-test_log_barrier_DEPENDENCIES = $(qthreadlib)
+log_barrier_SOURCES = log_barrier.c
+log_barrier_DEPENDENCIES = $(qthreadlib)
 
-test_allpairs_SOURCES = test_allpairs.c
-test_allpairs_DEPENDENCIES = $(qthreadlib)
+allpairs_SOURCES = allpairs.c
+allpairs_DEPENDENCIES = $(qthreadlib)
 
-test_cxx_oldapi_SOURCES = test_cxx_oldapi.cpp
-test_cxx_oldapi_DEPENDENCIES = $(qthreadlib)
+cxx_futurelib_SOURCES = cxx_futurelib.cpp
+cxx_futurelib_DEPENDENCIES = $(qthreadlib)
 
-test_cxx_1_SOURCES = test_cxx_1.cpp
-test_cxx_1_DEPENDENCIES = $(qthreadlib)
+cxx_qt_loop_SOURCES = cxx_qt_loop.cpp
+cxx_qt_loop_DEPENDENCIES = $(qthreadlib)
 
-test_cxx_2_SOURCES = test_cxx_2.cpp
-test_cxx_2_DEPENDENCIES = $(qthreadlib)
+cxx_qt_loop_balance_SOURCES = cxx_qt_loop_balance.cpp
+cxx_qt_loop_balance_DEPENDENCIES = $(qthreadlib)
 
-test_wavefront_SOURCES = test_wavefront.c
-test_wavefront_DEPENDENCIES = $(qthreadlib)
+wavefront_SOURCES = wavefront.c
+wavefront_DEPENDENCIES = $(qthreadlib)
