@@ -42,16 +42,16 @@ static QINLINE qthread_t *      qthread_dequeue(qthread_queue_t *q);
 # define ALLOC_LOCK() (qthread_lock_t *)malloc(sizeof(qthread_lock_t))
 # define FREE_LOCK(t) free(t)
 #else
-# define ALLOC_LOCK() (qthread_lock_t *)qt_mpool_cached_alloc(generic_lock_pool)
-# define FREE_LOCK(t) qt_mpool_cached_free(generic_lock_pool, t)
+# define ALLOC_LOCK() (qthread_lock_t *)qt_mpool_alloc(generic_lock_pool)
+# define FREE_LOCK(t) qt_mpool_free(generic_lock_pool, t)
 #endif /* if defined(UNPOOLED_LOCKS) || defined(UNPOOLED) */
 
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
 # define ALLOC_QUEUE() (qthread_queue_t *)malloc(sizeof(qthread_queue_t))
 # define FREE_QUEUE(t) free(t)
 #else
-# define ALLOC_QUEUE() (qthread_queue_t *)qt_mpool_cached_alloc(generic_queue_pool)
-# define FREE_QUEUE(t) qt_mpool_cached_free(generic_queue_pool, t)
+# define ALLOC_QUEUE() (qthread_queue_t *)qt_mpool_alloc(generic_queue_pool)
+# define FREE_QUEUE(t) qt_mpool_free(generic_queue_pool, t)
 #endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 
 #if !defined(UNPOOLED_QUEUES) && !defined(UNPOOLED)

@@ -214,7 +214,7 @@ qthread_internal_net_driver_send(int peer, int tag,
 
     if (tag <= 0 || tag >= 256) { return -1; }
 
-    pkt = qt_mpool_cached_alloc(mpool);
+    pkt = qt_mpool_alloc(mpool);
     pkt->peer = peer;
     pkt->tag = tag;
     pkt->start = start;
@@ -250,7 +250,7 @@ qthread_internal_net_driver_finalize(void)
     
 
     /* mark progress thread as time to go away, notify it, and wait */
-    pkt = qt_mpool_cached_alloc(mpool);
+    pkt = qt_mpool_alloc(mpool);
     pkt->peer = qthread_internal_net_driver_get_rank();
     pkt->tag = 0;
     pkt->start = &shutdown_msg;
@@ -341,7 +341,7 @@ progress_function(void *data)
                         qthread_debug(MULTINODE_CALLS, "transmit packet failed: %d\n", ret);
                     }
                 } else {
-                    qt_mpool_cached_free(mpool, pkt);
+                    qt_mpool_free(mpool, pkt);
                 }
             }
             break;

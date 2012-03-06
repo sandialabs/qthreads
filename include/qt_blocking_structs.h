@@ -43,20 +43,20 @@ typedef struct qthread_addrstat_s {
 #endif
 
 #ifdef UNPOOLED_ADDRSTAT
-# define ALLOC_ADDRSTAT(shep) (qthread_addrstat_t *)malloc(sizeof(qthread_addrstat_t))
+# define ALLOC_ADDRSTAT(shep) (qthread_addrstat_t *)calloc(1, sizeof(qthread_addrstat_t))
 # define FREE_ADDRSTAT(t)     free(t)
 #else
 extern qt_mpool generic_addrstat_pool;
 static QINLINE qthread_addrstat_t *ALLOC_ADDRSTAT(qthread_shepherd_t *shep)
 {                                      /*{{{ */
-    qthread_addrstat_t *tmp = (qthread_addrstat_t *)qt_mpool_cached_alloc(generic_addrstat_pool);
+    qthread_addrstat_t *tmp = (qthread_addrstat_t *)qt_mpool_alloc(generic_addrstat_pool);
 
     return tmp;
 }                                      /*}}} */
 
 static QINLINE void FREE_ADDRSTAT(qthread_addrstat_t *t)
 {                                      /*{{{ */
-    qt_mpool_cached_free(generic_addrstat_pool, t);
+    qt_mpool_free(generic_addrstat_pool, t);
 }                                      /*}}} */
 
 #endif // ifdef UNPOOLED_ADDRSTAT
@@ -68,14 +68,14 @@ static QINLINE void FREE_ADDRSTAT(qthread_addrstat_t *t)
 extern qt_mpool generic_addrres_pool;
 static QINLINE qthread_addrres_t *ALLOC_ADDRRES(qthread_shepherd_t *shep)
 {                                      /*{{{ */
-    qthread_addrres_t *tmp = (qthread_addrres_t *)qt_mpool_cached_alloc(generic_addrres_pool);
+    qthread_addrres_t *tmp = (qthread_addrres_t *)qt_mpool_alloc(generic_addrres_pool);
 
     return tmp;
 }                                      /*}}} */
 
 static QINLINE void FREE_ADDRRES(qthread_addrres_t *t)
 {                                      /*{{{ */
-    qt_mpool_cached_free(generic_addrres_pool, t);
+    qt_mpool_free(generic_addrres_pool, t);
 }                                      /*}}} */
 
 #endif // ifdef UNPOOLED_ADDRRES

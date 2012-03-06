@@ -84,26 +84,26 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *l)
 
 /* Memory Management */
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
-# define ALLOC_THREADQUEUE() (qt_threadqueue_t *)calloc(1, sizeof(qt_threadqueue_t))
+# define ALLOC_THREADQUEUE() (qt_threadqueue_t *)malloc(sizeof(qt_threadqueue_t))
 # define FREE_THREADQUEUE(t) free(t)
 static QINLINE qt_threadqueue_node_t *ALLOC_TQNODE(void)
 {                                      /*{{{ */
-    return (qt_threadqueue_node_t *)malloc(sizeof(qt_threadqueue_node_t));
+    return (qt_threadqueue_node_t *)calloc(1, sizeof(qt_threadqueue_node_t));
 }                                      /*}}} */
 
 # define FREE_TQNODE(t) free(t)
 void INTERNAL qt_threadqueue_subsystem_init(void) {}
 #else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 qt_threadqueue_pools_t generic_threadqueue_pools;
-# define ALLOC_THREADQUEUE() (qt_threadqueue_t *)qt_mpool_cached_alloc(generic_threadqueue_pools.queues)
-# define FREE_THREADQUEUE(t) qt_mpool_cached_free(generic_threadqueue_pools.queues, t)
+# define ALLOC_THREADQUEUE() (qt_threadqueue_t *)qt_mpool_alloc(generic_threadqueue_pools.queues)
+# define FREE_THREADQUEUE(t) qt_mpool_free(generic_threadqueue_pools.queues, t)
 
 static QINLINE qt_threadqueue_node_t *ALLOC_TQNODE(void)
 {                                      /*{{{ */
-    return (qt_threadqueue_node_t *)qt_mpool_cached_alloc(generic_threadqueue_pools.nodes);
+    return (qt_threadqueue_node_t *)qt_mpool_alloc(generic_threadqueue_pools.nodes);
 }                                      /*}}} */
 
-# define FREE_TQNODE(t) qt_mpool_cached_free(generic_threadqueue_pools.nodes, t)
+# define FREE_TQNODE(t) qt_mpool_free(generic_threadqueue_pools.nodes, t)
 
 static void qt_threadqueue_subsystem_shutdown(void)
 {   /*{{{*/

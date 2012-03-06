@@ -12,6 +12,7 @@
 #endif
 #include <string.h>
 
+/* External Headers */
 #ifdef QTHREAD_USE_VALGRIND
 # include <valgrind/memcheck.h>
 #else
@@ -53,9 +54,6 @@ struct qt_mpool_s {
 
     QTHREAD_FASTLOCK_TYPE reuse_lock;
     void                 *reuse_pool;
-
-    char                 *alloc_block;
-    char                 *QTHREAD_CASLOCK(alloc_block_ptr);
 
     QTHREAD_FASTLOCK_TYPE pool_lock;
     void                **alloc_list;
@@ -125,7 +123,6 @@ return_clean:
 }                                      /*}}} */
 
 static QINLINE void qt_mpool_internal_aligned_free(void        *freeme,
-                                                   /*const size_t alloc_size, */
                                                    const size_t alignment)
 {                                      /*{{{ */
     switch (alignment) {
@@ -204,54 +201,22 @@ qt_mpool qt_mpool_create_aligned(size_t item_size,
     QTHREAD_FASTLOCK_INIT(pool->reuse_lock);
     QTHREAD_FASTLOCK_INIT(pool->pool_lock);
     pthread_key_create(&pool->threadlocal_cache, free);
-    pool->alloc_block = (char *)qt_mpool_internal_aligned_alloc(alloc_size,
-                                                                alignment);
-    assert(((unsigned long)(pool->alloc_block) & (alignment - 1)) == 0);
-    qassert_goto((pool->alloc_block != NULL), errexit);
-    VALGRIND_MAKE_MEM_DEFINED(pool->alloc_block, sizeof(void **));
-    *(void **)(pool->alloc_block) = NULL; // just in case aligned_alloc doesn't memset
-    VALGRIND_MAKE_MEM_NOACCESS(pool->alloc_block, sizeof(void **));
-    QTHREAD_CASLOCK_INIT(pool->alloc_block_ptr, pool->alloc_block);
     /* this assumes that pagesize is a multiple of sizeof(void*) */
     pool->alloc_list = calloc(1, pagesize);
     qassert_goto((pool->alloc_list != NULL), errexit);
-    pool->alloc_list[0]  = pool->alloc_block;
+    pool->alloc_list[0]  = NULL;
     pool->alloc_list_pos = 1;
     return pool;
 
     qgoto(errexit);
     if (pool) {
-        if (pool->alloc_block) {
-            qt_mpool_internal_aligned_free(pool->alloc_block, /* alloc_size, */ alignment);
-        }
         free(pool);
     }
     return NULL;
 }                                      /*}}} */
 
-qt_mpool qt_mpool_create(size_t item_size)
-{                                      /*{{{ */
-    return qt_mpool_create_aligned(item_size, 0);
-}                                      /*}}} */
-
-/* to avoid ABA reinsertion trouble, each pointer in the pool needs to have a
- * monotonically increasing counter associated with it. The counter doesn't
- * need to be huge, just big enough to make the APA problem sufficiently
- * unlikely. We'll just claim 4, to be conservative. Thus, an allocated block
- * of memory must be aligned to 16 bytes. */
-#ifndef QTHREAD_USE_VALGRIND
-# define QCTR_MASK (15)
-# define QPTR(x)        ((void **)(((uintptr_t)(x)) & ~(uintptr_t)QCTR_MASK))
-# define QCTR(x)        (((uintptr_t)(x)) &QCTR_MASK)
-# define QCOMPOSE(x, y) (void *)(((uintptr_t)QPTR(x)) | ((QCTR(y) + 1) &QCTR_MASK))
-#else
-# define QPTR(x)        (x)
-# define QCTR(x)        0
-# define QCOMPOSE(x, y) (x)
-#endif
-
-void *qt_mpool_cached_alloc(qt_mpool pool)
-{
+void *qt_mpool_alloc(qt_mpool pool)
+{   /*{{{*/
     qt_mpool_threadlocal_cache_t *tc;
     qt_mpool_cache_t             *cache = NULL;
     size_t                        cnt;
@@ -332,74 +297,11 @@ void *qt_mpool_cached_alloc(qt_mpool pool)
             return cache;
         }
     }
-}
+} /*}}}*/
 
-void *qt_mpool_alloc(qt_mpool pool)
-{                                      /*{{{ */
-    void **p = NULL;
-
-    qassert_ret((pool != NULL), NULL);
-    if (pool->reuse_pool) {
-        QTHREAD_FASTLOCK_LOCK(&pool->reuse_lock);
-        if (pool->reuse_pool) {
-            p                = pool->reuse_pool;
-            pool->reuse_pool = *(uint64_t **)p;
-        } else { p = NULL; }
-        QTHREAD_FASTLOCK_UNLOCK(&pool->reuse_lock);
-    }
-
-    if (QPTR(p) == NULL) {             /* this is not an else on purpose */
-        char *base, *max, *cur;
-start:
-        QTHREAD_FASTLOCK_LOCK(&pool->pool_lock);
-        base = pool->alloc_block;
-        max  = base + (pool->item_size * pool->items_per_alloc);
-        cur  = pool->alloc_block_ptr;
-        QTHREAD_FASTLOCK_UNLOCK(&pool->pool_lock);
-        while (cur <= max && cur >= base) {
-            char *cur2 = QT_CAS(pool->alloc_block_ptr, cur, cur + pool->item_size);
-            if (cur2 == cur) { break; }
-            cur = cur2;
-            if (base != pool->alloc_block) { goto start; }
-        }
-        if (QTHREAD_EXPECT((cur > max), 0)) {
-            goto start;
-        } else if (QTHREAD_EXPECT((cur == max), 0)) {
-            /* realloc */
-            if (pool->alloc_list_pos == (pagesize / sizeof(void *) - 1)) {
-                void **tmp = calloc(1, pagesize);
-
-                qassert_goto((tmp != NULL), alloc_exit);
-                tmp[pagesize / sizeof(void *) - 1] = pool->alloc_list;
-                pool->alloc_list                   = tmp;
-                pool->alloc_list_pos               = 0;
-            }
-            p = qt_mpool_internal_aligned_alloc(pool->alloc_size,
-                                                pool->alignment);
-            qassert_ret((p != NULL), NULL);
-            qassert_ret((QCTR(p) == 0), NULL);
-            assert(pool->alignment == 0 ||
-                   (((unsigned long)p) & (pool->alignment - 1)) == 0);
-            QTHREAD_FASTLOCK_LOCK(&pool->pool_lock);
-            pool->alloc_block                      = (void *)p;
-            pool->alloc_list[pool->alloc_list_pos] = pool->alloc_block;
-            pool->alloc_list_pos++;
-            VALGRIND_MAKE_MEM_UNDEFINED(p, pool->item_size);
-            MACHINE_FENCE;
-            pool->alloc_block_ptr = ((char *)p) + pool->item_size;
-            QTHREAD_FASTLOCK_UNLOCK(&pool->pool_lock);
-        } else {
-            p = (void **)cur;
-        }
-    }
-    qgoto(alloc_exit);
-    VALGRIND_MEMPOOL_ALLOC(pool, QPTR(p), pool->item_size);
-    return (void *)QPTR(p);
-}                                      /*}}} */
-
-void qt_mpool_cached_free(qt_mpool pool,
-                          void    *mem)
-{
+void qt_mpool_free(qt_mpool pool,
+                   void    *mem)
+{   /*{{{*/
     qt_mpool_threadlocal_cache_t *tc;
     qt_mpool_cache_t             *cache = NULL;
     qt_mpool_cache_t             *n     = (qt_mpool_cache_t *)mem;
@@ -453,19 +355,7 @@ void qt_mpool_cached_free(qt_mpool pool,
     tc->count = cnt;
     qthread_debug(MPOOL_BEHAVIOR, "->free count = %zu\n", (size_t)cnt);
     VALGRIND_MEMPOOL_FREE(pool, mem);
-}
-
-void qt_mpool_free(qt_mpool pool,
-                   void    *mem)
-{                                      /*{{{ */
-    qassert_retvoid((mem != NULL));
-    qassert_retvoid((pool != NULL));
-    QTHREAD_FASTLOCK_LOCK(&pool->reuse_lock);
-    *(void **)mem    = pool->reuse_pool;
-    pool->reuse_pool = mem;
-    QTHREAD_FASTLOCK_UNLOCK(&pool->reuse_lock);
-    VALGRIND_MEMPOOL_FREE(pool, mem);
-}                                      /*}}} */
+} /*}}}*/
 
 void qt_mpool_destroy(qt_mpool pool)
 {                                      /*{{{ */
@@ -476,7 +366,7 @@ void qt_mpool_destroy(qt_mpool pool)
         void *p = pool->alloc_list[0];
 
         while (p && i < (pagesize / sizeof(void *) - 1)) {
-            qt_mpool_internal_aligned_free((void *)QPTR(p),     /* pool->alloc_size, */
+            qt_mpool_internal_aligned_free(p,
                                            pool->alignment);
             i++;
             p = pool->alloc_list[i];

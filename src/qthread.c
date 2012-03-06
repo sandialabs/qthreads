@@ -147,8 +147,8 @@ extern int adaptiveSetHigh;
 # define FREE_QTHREAD(t) free(t)
 #else
 static qt_mpool generic_qthread_pool = NULL;
-# define ALLOC_QTHREAD() (qthread_t *)qt_mpool_cached_alloc(generic_qthread_pool)
-# define FREE_QTHREAD(t) qt_mpool_cached_free(generic_qthread_pool, t)
+# define ALLOC_QTHREAD() (qthread_t *)qt_mpool_alloc(generic_qthread_pool)
+# define FREE_QTHREAD(t) qt_mpool_free(generic_qthread_pool, t)
 #endif /* if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED) */
 
 #if defined(UNPOOLED_STACKS) || defined(UNPOOLED)
@@ -196,7 +196,7 @@ static qt_mpool generic_stack_pool = NULL;
 # ifdef QTHREAD_GUARD_PAGES
 static QINLINE void *ALLOC_STACK(void)
 {                      /*{{{ */
-    uint8_t *tmp = qt_mpool_cached_alloc(generic_stack_pool);
+    uint8_t *tmp = qt_mpool_alloc(generic_stack_pool);
 
     assert(tmp);
     if (tmp == NULL) {
@@ -227,12 +227,12 @@ static QINLINE void FREE_STACK(void *t)
                  PROT_READ | PROT_WRITE) != 0) {
         perror("mprotect in FREE_STACK (2)");
     }
-    qt_mpool_cached_free(generic_stack_pool, tmp);
+    qt_mpool_free(generic_stack_pool, tmp);
 }                      /*}}} */
 
 # else /* ifdef QTHREAD_GUARD_PAGES */
-#  define ALLOC_STACK() qt_mpool_cached_alloc(generic_stack_pool)
-#  define FREE_STACK(t) qt_mpool_cached_free(generic_stack_pool, t)
+#  define ALLOC_STACK() qt_mpool_alloc(generic_stack_pool)
+#  define FREE_STACK(t) qt_mpool_free(generic_stack_pool, t)
 # endif /* ifdef QTHREAD_GUARD_PAGES */
 #endif  /* if defined(UNPOOLED_STACKS) || defined(UNPOOLED) */
 
@@ -241,8 +241,8 @@ static QINLINE void FREE_STACK(void *t)
 # define FREE_TEAM(t)     free(t)
 #else
 static qt_mpool generic_team_pool = NULL;
-# define ALLOC_TEAM(shep) (qt_team_t *)qt_mpool_cached_alloc(generic_team_pool)
-# define FREE_TEAM(t)     qt_mpool_cached_free(generic_team_pool, t)
+# define ALLOC_TEAM(shep) (qt_team_t *)qt_mpool_alloc(generic_team_pool)
+# define FREE_TEAM(t)     qt_mpool_free(generic_team_pool, t)
 #endif
 
 /* guaranteed to be between 0 and 128, using the first parts of addr that are
@@ -277,21 +277,22 @@ static QINLINE void alloc_rdata(qthread_shepherd_t *me,
                                 qthread_t          *t)
 {
     void *stack = ALLOC_STACK();
+    struct qthread_runtime_data_s *rdata;
 
     assert(stack);
 #ifdef QTHREAD_GUARD_PAGES
-    t->rdata = (struct qthread_runtime_data_s *)(((uint8_t *)stack) + getpagesize() + qlib->qthread_stack_size);
+    rdata = t->rdata = (struct qthread_runtime_data_s *)(((uint8_t *)stack) + getpagesize() + qlib->qthread_stack_size);
 #else
-    t->rdata = (struct qthread_runtime_data_s *)(((uint8_t *)stack) + qlib->qthread_stack_size);
+    rdata = t->rdata = (struct qthread_runtime_data_s *)(((uint8_t *)stack) + qlib->qthread_stack_size);
 #endif
-    t->rdata->stack        = stack;
-    t->rdata->shepherd_ptr = me;
-    t->rdata->blockedon    = NULL;
+    rdata->stack        = stack;
+    rdata->shepherd_ptr = me;
+    rdata->blockedon    = NULL;
 #ifdef QTHREAD_USE_VALGRIND
-    t->rdata->valgrind_stack_id = VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
+    rdata->valgrind_stack_id = VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
 #endif
 #if defined(QTHREAD_USE_ROSE_EXTENSIONS) && defined(QTHREAD_OMP_AFFINITY)
-    t->rdata->child_affinity = OMP_NO_CHILD_TASK_AFFINITY;
+    rdata->child_affinity = OMP_NO_CHILD_TASK_AFFINITY;
 #endif
 }
 
@@ -1976,6 +1977,7 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
     t->arg             = (void *)arg;
     t->ret             = ret;
     t->rdata           = NULL;
+    t->tasklocal_size  = 0;
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     t->task_counter      = 0;
@@ -1993,7 +1995,6 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
         }
         memcpy(t->arg, arg, arg_size);
     }
-    t->tasklocal_size = 0;
 
     // am I the team leader?
     if (team_leader) {
