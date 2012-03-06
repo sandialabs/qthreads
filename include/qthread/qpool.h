@@ -5,7 +5,7 @@
 
 Q_STARTCXX /* */
 
-typedef struct qpool_s qpool;
+typedef struct qt_mpool_s qpool;
 
 void *qpool_alloc(qpool *pool);
 
