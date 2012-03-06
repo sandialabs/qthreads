@@ -14,18 +14,22 @@ DIST_SUBDIRS = $(SUBDIRS) benchmarks
 
 EXTRA_PROGRAMS = test_signal
 
-buildbasics:
+basictests:
 	$(MAKE) -C basics buildtests
 
-buildfeatures:
+featuretests:
 	$(MAKE) -C features buildtests
 
-buildstress:
+stresstests:
 	$(MAKE) -C stress buildtests
 
-buildtests: buildbasics buildfeatures buildstress
+tests: basictests featuretests stresstests
 
-buildextra:
+buildtests: tests
+
+buildextra: benchmarks
+
+benchmarks:
 	$(MAKE) -C benchmarks buildextra
 
 buildall: buildtests buildextra
@@ -33,7 +37,7 @@ buildall: buildtests buildextra
 clean-local:
 	$(MAKE) -C benchmarks clean
 
-.PHONY: buildall buildtests buildextra buildbasics buildfeatures buildstress
+.PHONY: buildall tests buildtests benchmarks buildextra basictests featuretests stresstests
 
 noinst_HEADERS = argparsing.h
 
