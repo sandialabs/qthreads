@@ -3,14 +3,16 @@
 
 #include <stddef.h>                    /* for size_t (according to C89) */
 
+#include <qthread/macros.h>
+
 Q_STARTCXX /* */
 
 typedef struct qt_mpool_s qpool;
 
 void *qpool_alloc(qpool *pool);
 
-void qpool_free(qpool *pool,
-                void  *mem);
+void qpool_free(qpool *restrict pool,
+                void  *restrict mem);
 
 qpool *qpool_create(const size_t item_size);
 qpool *qpool_create_aligned(const size_t item_size,

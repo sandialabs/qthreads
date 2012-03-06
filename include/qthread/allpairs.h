@@ -1,7 +1,7 @@
 #ifndef QTHREAD_ALLPAIRS_H
 #define QTHREAD_ALLPAIRS_H
 
-#include <qthread/qthread.h>
+#include <qthread/macros.h>
 #include <qthread/qarray.h>
 
 Q_STARTCXX                             /* */

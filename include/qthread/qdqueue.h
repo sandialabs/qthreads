@@ -1,6 +1,8 @@
 #ifndef QTHREAD_QDQUEUE_H
 #define QTHREAD_QDQUEUE_H
 
+#include <qthread/macros.h>
+
 Q_STARTCXX                             /* */
 typedef struct qdqueue_s qdqueue_t;
 

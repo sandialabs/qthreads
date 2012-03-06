@@ -22,13 +22,7 @@
  * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * *
  *****************************************************************************/
 
-#ifdef __cplusplus
-#define Q_STARTCXX extern "C" {
-#define Q_ENDCXX }
-#else
-#define Q_STARTCXX
-#define Q_ENDCXX
-#endif
+#include <qthread/macros.h>
 
 Q_STARTCXX /* */
 typedef unsigned short qthread_shepherd_id_t;	/* doubt we'll run more than 65k shepherds */

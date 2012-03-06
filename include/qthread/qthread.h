@@ -54,13 +54,7 @@
 
 #define QTHREAD_VERSION 1007001
 
-#ifdef __cplusplus
-# define Q_STARTCXX extern "C" {
-# define Q_ENDCXX   }
-#else
-# define Q_STARTCXX
-# define Q_ENDCXX
-#endif
+#include <qthread/macros.h>
 
 #ifdef QTHREAD_ALIGNEDDATA_ALLOWED
 # define Q_ALIGNED(x) __attribute__((aligned(x)))

@@ -1,6 +1,8 @@
 #ifndef QTHREAD_QLFQUEUE_H
 #define QTHREAD_QLFQUEUE_H
 
+#include <qthread/macros.h>
+
 Q_STARTCXX /* */
 
 typedef struct qlfqueue_s qlfqueue_t;

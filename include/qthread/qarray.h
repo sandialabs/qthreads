@@ -2,7 +2,7 @@
 #define QTHREAD_QARRAY_H
 
 #include <qthread/qthread-int.h>
-#include <qthread/qthread.h>
+#include <qthread/macros.h>
 #include <qthread/qloop.h>
 
 Q_STARTCXX                             /* */
