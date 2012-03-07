@@ -227,8 +227,8 @@ sub run_tests {
     print "### Log: $configure_log\n" unless $quietly;
     
     # Build testsuite
-    my $pass = 0;
-    while ($pass < $repeat) {
+    my $pass = 1;
+    while ($pass <= $repeat) {
         print "###\tBuilding and testing '$conf_name' pass $pass ...\n"
             unless $quietly;
         my $results_log = "$test_dir/build.$pass.results.log";
