@@ -17,12 +17,16 @@ TESTS = \
 		feb_barrier \
 		qloop_utils \
 		qt_loop_queue \
-		qpool \
 		qarray \
-		qarray_accum \
+		qarray_accum
+
+if COMPILE_POOLED_MEMORY
+TESTS += \
+		qpool \
 		qlfqueue \
 		qdqueue \
 		allpairs
+endif
 
 EXTRA_PROGRAMS = wavefront
 
