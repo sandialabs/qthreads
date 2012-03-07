@@ -11,7 +11,8 @@ TESTS = \
 		syncvar_prodcons_contended \
 		syncvar_stream \
 		precond_fib \
-		task_spawn
+		task_spawn \
+		subteams_uts
 
 check_PROGRAMS = $(TESTS)
 
@@ -41,3 +42,6 @@ task_spawn_DEPENDENCIES = $(qthreadlib)
 
 syncvar_stream_SOURCES = syncvar_stream.c
 syncvar_stream_DEPENDENCIES = $(qthreadlib)
+
+subteams_uts_SOURCES = subteams_uts.c ../benchmarks/uts/rng/brg_sha1.c
+subteams_uts_DEPENDENCIES = $(qthreadlib)
