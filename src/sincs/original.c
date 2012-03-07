@@ -193,11 +193,12 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
                 }
             }
         }
+
+        sinc->ready = SYNCVAR_EMPTY_INITIALIZER;
     } else {
+        sinc->ready = SYNCVAR_INITIALIZER;
         sinc->remaining = 0;
     }
-
-    sinc->ready = SYNCVAR_EMPTY_INITIALIZER;
 
     return sinc;
 }
@@ -314,8 +315,9 @@ void qt_sinc_willspawn(qt_sinc_t *sinc,
         (void)qthread_incr(sinc->count_spawns + (shep_id * sinc->sizeof_shep_count_part) + worker_id, count);
 #endif /* defined(SINCS_PROFILE) */
 
-        // Increment remaining, if necessary
+        // Increment remaining and empty ready FEB, if necessary
         if (old == 0) {
+            qthread_syncvar_empty(&sinc->ready);
             (void)qthread_incr(&sinc->remaining, 1);
 #if defined(SINCS_PROFILE)
             (void)qthread_incr(sinc->count_incrs + (shep_id * sinc->sizeof_shep_count_part) + worker_id, 1);

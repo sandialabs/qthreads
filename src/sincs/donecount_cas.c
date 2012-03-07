@@ -111,7 +111,8 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
 
     // Initialize termination detection
     sinc->counter = will_spawn;
-    sinc->ready = SYNCVAR_EMPTY_INITIALIZER;
+    sinc->ready = 
+        (sinc->counter != 0) ? SYNCVAR_EMPTY_INITIALIZER : SYNCVAR_INITIALIZER;
 
     return sinc;
 }
@@ -163,6 +164,9 @@ void qt_sinc_willspawn(qt_sinc_t *sinc,
     qt_sinc_count_t oldc = sinc->counter, newc = 0;
     while ((newc = qthread_cas(&sinc->counter, oldc, oldc+count)) != oldc)
         oldc = newc;
+    if (oldc == 0) {
+        qthread_syncvar_empty(&sinc->ready);
+    }
 }
 
 void *qt_sinc_tmpdata(qt_sinc_t *sinc)

@@ -10,6 +10,13 @@
 #include <qthread/qt_sinc.h>
 #include "argparsing.h"
 
+static aligned_t submit_to_sinc(void *arg_)
+{
+    qt_sinc_submit((qt_sinc_t *)arg_, NULL);
+
+    return 0;
+}
+
 static aligned_t wait_on_sinc(void *arg_)
 {
     qt_sinc_t *sinc = (qt_sinc_t *)arg_;
@@ -65,7 +72,22 @@ int main(int   argc,
     CHECK_VERBOSE();
     NUMARG(depth, "TEST_DEPTH");
 
-    qt_sinc_t *sinc = 
+    // Test creating an empty sinc
+    {
+        qt_sinc_t *zero_sinc = qt_sinc_create(0, NULL, NULL, 0);
+        qt_sinc_wait(zero_sinc, NULL);
+        qt_sinc_destroy(zero_sinc);
+
+        qt_sinc_t *three_sinc = qt_sinc_create(0, NULL, NULL, 0);
+        qt_sinc_willspawn(three_sinc, 3);
+        qthread_fork(submit_to_sinc, three_sinc, NULL);
+        qthread_fork(submit_to_sinc, three_sinc, NULL);
+        qthread_fork(submit_to_sinc, three_sinc, NULL);
+        qt_sinc_wait(three_sinc, NULL);
+        qt_sinc_destroy(three_sinc);
+    }
+
+    qt_sinc_t *sinc =
         qt_sinc_create(0, NULL, NULL, 2);
 
     // Spawn additional waits
