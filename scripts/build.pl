@@ -38,6 +38,7 @@ my @summaries;
 
 # Collect command-line options
 my @conf_names;
+my @check_tests;
 my @user_configs;
 my $qt_src_dir = '';
 my $qt_bld_dir = '';
@@ -78,6 +79,8 @@ if (scalar @ARGV == 0) {
             $dry_run = 1;
         } elsif ($flag eq '--quietly') {
             $quietly = 1;
+        } elsif ($flag =~ m/--tests=(.*)/) {
+            @check_tests = split(/,/,$1) unless ($1 eq 'all')
         } elsif ($flag eq '--help' || $flag eq '-h') {
             $need_help = 1;
         } else {
@@ -112,6 +115,9 @@ if ($need_help) {
 	print "\t                        an unnamed 'config', whereas the previous\n";
 	print "\t                        uses pre-defined, named configs. This option\n";
 	print "\t                        can be used multiple times.\n";
+    print "\t--tests=<test-suite>    comma-separated list of test suites. Valid\n";
+    print "\t                        test suites are 'basics', 'features', and\n";
+    print "\t                        'stress'. The default is to run all three.\n";
     print "\t--source-dir=<dir>      absolute path to Qthreads source.\n";
     print "\t--build-dir=<dir>       absolute path to target build directory.\n";
     print "\t--repeat=<n>            run `make check` <n> times per configuration.\n";
@@ -226,38 +232,45 @@ sub run_tests {
         print "###\tBuilding and testing '$conf_name' pass $pass ...\n"
             unless $quietly;
         my $results_log = "$test_dir/build.$pass.results.log";
-        my $build_command = "cd $test_dir";
-        $build_command .= " && make clean > /dev/null" if ($force_clean);
-        $build_command .= " && make $make_flags check 2>&1 | tee $results_log";
-        my_system($build_command);
-        if (not $dry_run) {
-            print "### Log: $results_log\n" unless $quietly;
-            my $build_warnings = qx/awk '\/warning:\/' $results_log/;
-            if (length $build_warnings > 0) {
-                print "Build warnings in config $conf_name! Check log and/or run again with --force-clean and --verbose for more information.\n";
-                print $build_warnings;
-            }
-            my $build_errors = qx/awk '\/error:\/' $results_log/;
-            if (length $build_errors > 0) {
-                print "Build error in config $conf_name! Check log and/or run again with --verbose for more information.\n";
-                print $build_errors;
-                exit(1);
-            }
+        print "### Log: $results_log\n" unless $quietly;
+        print "### Results for '$conf_name'\n" unless $quietly;
+        my $banner = '=' x 50;
+        print "$banner\n" unless $quietly;
 
-            # Display filtered results
-            print "### Results for '$conf_name'\n" unless $quietly;
-            my $digest = qx/grep 'tests passed' $results_log/;
-            if ($digest eq '') {
-                $digest = qx/grep 'tests failed' $results_log/; chomp($digest);
-                my $fails = qx/cat $results_log | awk '\/FAIL\/{print \$2}'/;
-                $digest .= " (" . join(',', split(/\n/, $fails)) . ")";
-            }
-            chomp $digest;
-            my $banner = '=' x 50;
-            print "$banner\n$digest\n$banner\n" unless $quietly;
+        my @make_test_suites = ('basics', 'features', 'stress');
+        if (scalar @check_tests == 0) { @check_tests = @make_test_suites};
+        foreach my $make_test_suite (@check_tests) {
+            my $build_command = "cd $test_dir";
+            $build_command .= " && make clean > /dev/null" if ($force_clean);
+            $build_command .= " && make $make_flags -C test/$make_test_suite check 2>&1 | tee $results_log";
+            my_system($build_command);
+            if (not $dry_run) {
+                my $build_warnings = qx/awk '\/warning:\/' $results_log/;
+                if (length $build_warnings > 0) {
+                    print "Build warnings in config $conf_name! Check log and/or run again with --force-clean and --verbose for more information.\n";
+                    print $build_warnings;
+                }
+                my $build_errors = qx/awk '\/error:\/' $results_log/;
+                if (length $build_errors > 0) {
+                    print "Build error in config $conf_name! Check log and/or run again with --verbose for more information.\n";
+                    print $build_errors;
+                    exit(1);
+                }
 
-            push @summaries, "$digest $conf_name (pass $pass)";
+                # Display filtered results
+                my $digest = qx/grep 'tests passed' $results_log/;
+                if ($digest eq '') {
+                    $digest = qx/grep 'tests failed' $results_log/; chomp($digest);
+                    my $fails = qx/cat $results_log | awk '\/FAIL\/{print \$2}'/;
+                    $digest .= " (" . join(',', split(/\n/, $fails)) . ")";
+                }
+                chomp $digest;
+                print "$digest - $make_test_suite\n" unless $quietly;
+
+                push @summaries, "$digest - $make_test_suite - $conf_name (pass $pass)";
+            }
         }
+        print "$banner\n" unless $quietly;
 
         $pass++;
     }
