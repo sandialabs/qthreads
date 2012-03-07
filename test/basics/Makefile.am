@@ -8,7 +8,9 @@ AM_CXXFLAGS = @RESTRICT_CXXFLAGS@
 .PHONY: buildall buildtests buildextra
 
 TESTS = \
+		hello_world \
 		aligned_prodcons \
+		hello_world_multi \
 		syncvar_prodcons \
 		reinitialization \
 		qthread_cas \
@@ -52,8 +54,14 @@ buildtests: $(TESTS)
 
 buildextra: $(TESTS)
 
+hello_world_SOURCES = hello_world.c
+hello_world_DEPENDENCIES = $(qthreadlib)
+
 aligned_prodcons_SOURCES = aligned_prodcons.c
 aligned_prodcons_DEPENDENCIES = $(qthreadlib)
+
+hello_world_multi_SOURCES = hello_world_multi.c
+hello_world_multi_DEPENDENCIES = $(qthreadlib)
 
 syncvar_prodcons_SOURCES = syncvar_prodcons.c
 syncvar_prodcons_DEPENDENCIES = $(qthreadlib)
