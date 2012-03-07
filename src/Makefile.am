@@ -72,6 +72,7 @@ endif
 if COMPILE_TARGET_UNIX
 libqthread_la_SOURCES += \
 	qthread.c \
+	qt_mpool.c \
 	shepherds.c \
 	workers.c \
 	threadqueues/@with_scheduler@_threadqueues.c \
@@ -87,10 +88,6 @@ endif
 if COMPILE_COMPAT_ATOMIC
 libqthread_la_SOURCES += compat_atomics.c
 endif
-endif
-
-if COMPILE_POOLED_MEMORY
-libqthread_la_SOURCES += qt_mpool.c
 endif
 
 if QTHREAD_NEED_OWN_MAKECONTEXT

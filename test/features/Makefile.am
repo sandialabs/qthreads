@@ -18,15 +18,11 @@ TESTS = \
 		qloop_utils \
 		qt_loop_queue \
 		qarray \
-		qarray_accum
-
-if COMPILE_POOLED_MEMORY
-TESTS += \
+		qarray_accum \
 		qpool \
 		qlfqueue \
 		qdqueue \
 		allpairs
-endif
 
 EXTRA_PROGRAMS = wavefront
 
