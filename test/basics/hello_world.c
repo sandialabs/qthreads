@@ -33,7 +33,7 @@ int main(int   argc,
     status = qthread_fork(greeter, (void*)123456789, &return_value);
     assert(status == QTHREAD_SUCCESS);
 
-    ret = qthread_readFF(NULL, &return_value);
+    int ret = qthread_readFF(NULL, &return_value);
     assert(ret == QTHREAD_SUCCESS);
 
     iprintf("greeter returned %lu\n", (unsigned long)return_value);
