@@ -2769,6 +2769,25 @@ int qthread_fork_syncvar_copyargs(qthread_f   f,
                             0);
 }                      /*}}} */
 
+int qthread_fork_copyargs_new_subteam(qthread_f   f,
+                                      const void *arg,
+                                      size_t      arg_size,
+                                      aligned_t  *ret)
+{                      /*{{{*/
+    qthread_debug(TEAM_CALLS, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
+    return qthread_uberfork(f,
+                            arg,
+                            arg_size,
+                            ALIGNED_T,
+                            ret,
+                            NO_SYNC,
+                            0,
+                            NULL,
+                            NO_SHEPHERD,
+                            NEW_SUBTEAM,
+                            0);
+}                      /*}}} */
+
 int qthread_fork_syncvar(qthread_f   f,
                          const void *arg,
                          syncvar_t  *ret)
