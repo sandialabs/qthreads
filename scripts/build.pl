@@ -250,7 +250,6 @@ sub run_tests {
         foreach my $make_test_suite (@check_tests) {
             my $build_command = "cd $test_dir";
             $build_command .= " && make clean > /dev/null" if ($force_clean);
-			$build_command .= " && make build$make_test_suite 2>&1 | tee -a $results_log"
             $build_command .= " && make $make_flags -C test/$make_test_suite check 2>&1 | tee -a $results_log";
             my_system($build_command);
             if (not $dry_run) {
