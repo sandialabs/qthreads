@@ -225,6 +225,14 @@ sub run_tests {
     my_system("cd $test_dir && $qt_src_dir/configure $config{$conf_name} 2>&1 | tee $configure_log")
         if ($force_configure || not -e "$test_dir/config.log");
     print "### Log: $configure_log\n" unless $quietly;
+
+	# Build library
+	print "###\tBuilding '$conf_name' ...\n" unless $quietly;
+	my $results_log = "$test_dir/build.results.log";
+	my $build_command = "cd $test_dir";
+	$build_command .= " && make clean > /dev/null" if ($force_clean);
+	$build_command .= " && make $make_flags 2>&1 | tee $results_log";
+	my_system($build_command);
     
     # Build testsuite
     my $pass = 1;
@@ -242,7 +250,8 @@ sub run_tests {
         foreach my $make_test_suite (@check_tests) {
             my $build_command = "cd $test_dir";
             $build_command .= " && make clean > /dev/null" if ($force_clean);
-            $build_command .= " && make $make_flags -C test/$make_test_suite check 2>&1 | tee $results_log";
+			$build_command .= " && make build$make_test_suite 2>&1 | tee -a $results_log"
+            $build_command .= " && make $make_flags -C test/$make_test_suite check 2>&1 | tee -a $results_log";
             my_system($build_command);
             if (not $dry_run) {
                 my $build_warnings = qx/awk '\/warning:\/' $results_log/;
