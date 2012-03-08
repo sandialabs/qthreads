@@ -228,11 +228,25 @@ sub run_tests {
 
 	# Build library
 	print "###\tBuilding '$conf_name' ...\n" unless $quietly;
-	my $results_log = "$test_dir/build.results.log";
+	my $build_log = "$test_dir/build.make.log";
 	my $build_command = "cd $test_dir";
 	$build_command .= " && make clean > /dev/null" if ($force_clean);
-	$build_command .= " && make $make_flags 2>&1 | tee $results_log";
+	$build_command .= " && make $make_flags 2>&1 | tee $build_log";
 	my_system($build_command);
+    if (not $dry_run) {
+        my $build_warnings = qx/awk '\/warning:\/' $build_log/;
+        if (length $build_warnings > 0) {
+            print "Build warnings in config $conf_name! Check log and/or run again with --force-clean and --verbose for more information.\n";
+            print $build_warnings;
+        }
+        my $build_errors = qx/awk '\/error:\/' $build_log/;
+        if (length $build_errors > 0) {
+            print "Build error in config $conf_name! Check log and/or run again with --verbose for more information.\n";
+            print $build_errors;
+            exit(1);
+        }
+    }
+
     
     # Build testsuite
     my $pass = 1;
@@ -248,20 +262,20 @@ sub run_tests {
         my @make_test_suites = ('basics', 'features', 'stress');
         if (scalar @check_tests == 0) { @check_tests = @make_test_suites};
         foreach my $make_test_suite (@check_tests) {
-            my $build_command = "cd $test_dir";
-            $build_command .= " && make clean > /dev/null" if ($force_clean);
-            $build_command .= " && make $make_flags -C test/$make_test_suite check 2>&1 | tee -a $results_log";
-            my_system($build_command);
+            my $check_command = "cd $test_dir";
+            $check_command .= " && make clean > /dev/null" if ($force_clean);
+            $check_command .= " && make $make_flags -C test/$make_test_suite check 2>&1 | tee $results_log";
+            my_system($check_command);
             if (not $dry_run) {
-                my $build_warnings = qx/awk '\/warning:\/' $results_log/;
-                if (length $build_warnings > 0) {
+                my $check_warnings = qx/awk '\/warning:\/' $results_log/;
+                if (length $check_warnings > 0) {
                     print "Build warnings in config $conf_name! Check log and/or run again with --force-clean and --verbose for more information.\n";
-                    print $build_warnings;
+                    print $check_warnings;
                 }
-                my $build_errors = qx/awk '\/error:\/' $results_log/;
-                if (length $build_errors > 0) {
+                my $check_errors = qx/awk '\/error:\/' $results_log/;
+                if (length $check_errors > 0) {
                     print "Build error in config $conf_name! Check log and/or run again with --verbose for more information.\n";
-                    print $build_errors;
+                    print $check_errors;
                     exit(1);
                 }
 
