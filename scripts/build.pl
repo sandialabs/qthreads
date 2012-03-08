@@ -9,25 +9,25 @@ use Cwd qw/getcwd/;
 my @default_conf_names = ('compat', 'unpooled', 'opt', 'nemesis', 'lifo', 'mutexfifo', 'nottingham', 'rose', 'slowcontext', 'shep_profile', 'lock_profile', 'steal_profile', 'tc_profile', 'hi_st', 'hi_mt', 'dev');
 
 my %config = (
-	default       => '',
-	oldgcc        => 'CC=gcc34 CXX=g++34',
-	compat        => 'CFLAGS="-m32" CXXFLAGS="-m32" LDFLAGS="-m32" CPPFLAGS="-m32"',
-	unpooled      => '--disable-pooled-memory',
-	opt           => 'CFLAGS="-O3" CXXFLAGS="-O3"',
-	nemesis       => '--with-scheduler=nemesis',
+    default       => '',
+    oldgcc        => 'CC=gcc34 CXX=g++34',
+    compat        => 'CFLAGS="-m32" CXXFLAGS="-m32" LDFLAGS="-m32" CPPFLAGS="-m32"',
+    unpooled      => '--disable-pooled-memory',
+    opt           => 'CFLAGS="-O3" CXXFLAGS="-O3"',
+    nemesis       => '--with-scheduler=nemesis',
     lifo          => '--with-scheduler=lifo',
     mutexfifo     => '--with-scheduler=mutexfifo',
     mtsfifo       => '--with-scheduler=mtsfifo',
-	nottingham    => '--with-scheduler=nottingham',
-	rose          => '--enable-interfaces=rose',
-	slowcontext   => '--disable-fastcontext',
-	shep_profile  => '--enable-profiling=shepherd',
-	lock_profile  => '--enable-profiling=lock',
-	steal_profile => '--enable-profiling=steal',
-	tc_profile    => '--enable-profiling=threadc',
-	hi_st         => '--disable-hardware-increments --disable-multithreaded-shepherds',
-	hi_mt         => '--disable-hardware-increments',
-	dev           => 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-debug --enable-guard-pages --enable-asserts --enable-static --disable-shared --enable-valgrind --disable-pooled-memory --enable-aligncheck',
+    nottingham    => '--with-scheduler=nottingham',
+    rose          => '--enable-interfaces=rose',
+    slowcontext   => '--disable-fastcontext',
+    shep_profile  => '--enable-profiling=shepherd',
+    lock_profile  => '--enable-profiling=lock',
+    steal_profile => '--enable-profiling=steal',
+    tc_profile    => '--enable-profiling=threadc',
+    hi_st         => '--disable-hardware-increments --disable-multithreaded-shepherds',
+    hi_mt         => '--disable-hardware-increments',
+    dev           => 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-debug --enable-guard-pages --enable-asserts --enable-static --disable-shared --enable-valgrind --disable-pooled-memory --enable-aligncheck',
     debug         => 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-debug --enable-static --disable-shared',
     hwloc         => '--with-topology=hwloc',
     sinc_stats    => '--enable-profiling=sincs',
@@ -108,13 +108,13 @@ if ($need_help) {
     print "\t--configs=<config-name> comma-separated list of configurations.\n";
     print "\t                        configuration options can be concatenated using\n";
     print "\t                        the '+' operator (e.g., 'conf1+conf2').\n";
-	print "\t                        'all' may be used as an alias for all known\n";
-	print "\t                        configurations.\n";
+    print "\t                        'all' may be used as an alias for all known\n";
+    print "\t                        configurations.\n";
     print "\t--with-config=<string>  a user-specified string of configuration\n";
     print "\t                        options. Essentially, this is used to define\n";
-	print "\t                        an unnamed 'config', whereas the previous\n";
-	print "\t                        uses pre-defined, named configs. This option\n";
-	print "\t                        can be used multiple times.\n";
+    print "\t                        an unnamed 'config', whereas the previous\n";
+    print "\t                        uses pre-defined, named configs. This option\n";
+    print "\t                        can be used multiple times.\n";
     print "\t--tests=<test-suite>    comma-separated list of test suites. Valid\n";
     print "\t                        test suites are 'basics', 'features', and\n";
     print "\t                        'stress'. The default is to run all three.\n";
@@ -226,13 +226,13 @@ sub run_tests {
         if ($force_configure || not -e "$test_dir/config.log");
     print "### Log: $configure_log\n" unless $quietly;
 
-	# Build library
-	print "###\tBuilding '$conf_name' ...\n" unless $quietly;
-	my $build_log = "$test_dir/build.make.log";
-	my $build_command = "cd $test_dir";
-	$build_command .= " && make clean > /dev/null" if ($force_clean);
-	$build_command .= " && make $make_flags 2>&1 | tee $build_log";
-	my_system($build_command);
+    # Build library
+    print "###\tBuilding '$conf_name' ...\n" unless $quietly;
+    my $build_log = "$test_dir/build.make.log";
+    my $build_command = "cd $test_dir";
+    $build_command .= " && make clean > /dev/null" if ($force_clean);
+    $build_command .= " && make $make_flags 2>&1 | tee $build_log";
+    my_system($build_command);
     if (not $dry_run) {
         my $build_warnings = qx/awk '\/warning:\/' $build_log/;
         if (length $build_warnings > 0) {
@@ -249,6 +249,9 @@ sub run_tests {
 
     
     # Build testsuite
+    my %failcounts;
+    my $failing_tests = 0;
+    my $passing_tests = 0;
     my $pass = 1;
     while ($pass <= $repeat) {
         print "###\tBuilding and testing '$conf_name' pass $pass ...\n"
@@ -283,18 +286,42 @@ sub run_tests {
                 my $digest = qx/grep 'tests passed' $results_log/;
                 if ($digest eq '') {
                     $digest = qx/grep 'tests failed' $results_log/; chomp($digest);
-                    my $fails = qx/cat $results_log | awk '\/FAIL\/{print \$2}'/;
-                    $digest .= " (" . join(',', split(/\n/, $fails)) . ")";
+                    $digest =~ /([0-9]+) of ([0-9]+) tests failed/;
+                    $failing_tests += $1;
+                    $passing_tests += $2 - $1;
+                    my $fails = qx/awk '\/FAIL\/{print \$2}' $results_log/;
+                    my $fail_list .= join(',', split(/\n/, $fails));
+                    foreach my $test (split(/\n/, $fails)) {
+                        $failcounts{$test} ++;
+                    }
+                    $digest .= " ($fail_list)";
+                } else {
+                    chomp $digest;
+                    $digest =~ /All ([0-9]+) tests passed/;
+                    $passing_tests += $1;
                 }
-                chomp $digest;
                 print "$digest - $make_test_suite\n" unless $quietly;
-
-                push @summaries, "$digest - $make_test_suite - $conf_name (pass $pass)";
             }
         }
         print "$banner\n" unless $quietly;
 
         $pass++;
+    }
+    if (not $dry_run) {
+        if ($failing_tests eq 0) {
+            push @summaries, "$conf_name: All $passing_tests tests passed";
+        } elsif ($passing_tests eq 0) {
+            push @summaries, "$conf_name: All $failing_tests tests FAILED!!!";
+        } else {
+            my $summary = "$conf_name: $passing_tests test".(($passing_tests!=1)?"s":"")." passed,";
+            $summary   .= " $failing_tests test".(($failing_tests!=1)?"s":"")." failed (";
+            foreach my $test (keys(%failcounts)) {
+                $summary .= "$test:$failcounts{$test} ";
+            }
+            chop($summary);
+            $summary .= ")";
+            push @summaries, $summary;
+        }
     }
 }
 
@@ -308,4 +335,4 @@ sub my_system {
 
     return $status;
 }
-
+# vim:expandtab
