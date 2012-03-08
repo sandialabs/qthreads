@@ -6,14 +6,15 @@
 #include <qthread/qtimer.h>
 #include "argparsing.h"
 
-size_t TEST_SELECTION = 0xffffffff;
-size_t ITERATIONS = 100000;
-size_t MAXPARALLELISM = 256;
-aligned_t incrementme = 0;
-aligned_t *increments = NULL;
+size_t     TEST_SELECTION = 0xffffffff;
+size_t     ITERATIONS     = 100000;
+size_t     MAXPARALLELISM = 256;
+aligned_t  incrementme    = 0;
+aligned_t *increments     = NULL;
 
-static void balanced_readFF(const size_t startat, const size_t stopat,
-                            void *arg)
+static void balanced_readFF(const size_t startat,
+                            const size_t stopat,
+                            void        *arg)
 {                                      /*{{{ */
     size_t i;
 
@@ -22,8 +23,9 @@ static void balanced_readFF(const size_t startat, const size_t stopat,
     }
 }                                      /*}}} */
 
-static void balanced_syncvar_readFF(const size_t startat, const size_t stopat,
-                                    void *arg)
+static void balanced_syncvar_readFF(const size_t startat,
+                                    const size_t stopat,
+                                    void        *arg)
 {                                      /*{{{ */
     size_t i;
 
@@ -33,11 +35,12 @@ static void balanced_syncvar_readFF(const size_t startat, const size_t stopat,
 }                                      /*}}} */
 
 static void balanced_falseshare_syncreadFF(const size_t startat,
-                                           const size_t stopat, void *arg)
+                                           const size_t stopat,
+                                           void        *arg)
 {                                      /*{{{ */
-    size_t i;
-    qthread_shepherd_id_t shep = qthread_shep();
-    syncvar_t *myloc = ((syncvar_t *)arg) + shep;
+    size_t                i;
+    qthread_shepherd_id_t shep  = qthread_shep();
+    syncvar_t            *myloc = ((syncvar_t *)arg) + shep;
 
     for (i = startat; i < stopat; i++) {
         qthread_syncvar_readFF(NULL, myloc);
@@ -45,11 +48,12 @@ static void balanced_falseshare_syncreadFF(const size_t startat,
 }                                      /*}}} */
 
 static void balanced_falseshare_readFF(const size_t startat,
-                                       const size_t stopat, void *arg)
+                                       const size_t stopat,
+                                       void        *arg)
 {                                      /*{{{ */
-    size_t i;
-    qthread_shepherd_id_t shep = qthread_shep();
-    aligned_t *myloc = ((aligned_t *)arg) + shep;
+    size_t                i;
+    qthread_shepherd_id_t shep  = qthread_shep();
+    aligned_t            *myloc = ((aligned_t *)arg) + shep;
 
     for (i = startat; i < stopat; i++) {
         qthread_readFF(NULL, myloc);
@@ -57,9 +61,10 @@ static void balanced_falseshare_readFF(const size_t startat,
 }                                      /*}}} */
 
 static void balanced_noncomp_syncreadFF(const size_t startat,
-                                        const size_t stopat, void *arg)
+                                        const size_t stopat,
+                                        void        *arg)
 {                                      /*{{{ */
-    size_t i;
+    size_t    i;
     syncvar_t myinc = SYNCVAR_STATIC_INITIALIZER;
 
     for (i = startat; i < stopat; i++) {
@@ -67,10 +72,11 @@ static void balanced_noncomp_syncreadFF(const size_t startat,
     }
 }                                      /*}}} */
 
-static void balanced_noncomp_readFF(const size_t startat, const size_t stopat,
-                                    void *arg)
+static void balanced_noncomp_readFF(const size_t startat,
+                                    const size_t stopat,
+                                    void        *arg)
 {                                      /*{{{ */
-    size_t i;
+    size_t    i;
     aligned_t myinc = 0;
 
     for (i = startat; i < stopat; i++) {
@@ -78,17 +84,17 @@ static void balanced_noncomp_readFF(const size_t startat, const size_t stopat,
     }
 }                                      /*}}} */
 
-static aligned_t justreturn(void * arg)
-{
+static aligned_t justreturn(void *arg)
+{   /*{{{*/
     return 7;
-}
+} /*}}}*/
 
 static char *human_readable_rate(double rate)
-{
-    static char readable_string[100] = { 0 };
-    const double GB = 1024 * 1024 * 1024;
-    const double MB = 1024 * 1024;
-    const double kB = 1024;
+{   /*{{{*/
+    static char  readable_string[100] = { 0 };
+    const double GB                   = 1024 * 1024 * 1024;
+    const double MB                   = 1024 * 1024;
+    const double kB                   = 1024;
 
     if (rate > GB) {
         snprintf(readable_string, 100, "(%.1f GB/s)", rate / GB);
@@ -100,13 +106,14 @@ static char *human_readable_rate(double rate)
         memset(readable_string, 0, 100 * sizeof(char));
     }
     return readable_string;
-}
+} /*}}}*/
 
-int main(int argc, char *argv[])
+int main(int   argc,
+         char *argv[])
 {
-    qtimer_t timer = qtimer_create();
-    double rate;
-    aligned_t *rets;
+    qtimer_t     timer = qtimer_create();
+    double       rate;
+    aligned_t   *rets;
     unsigned int shepherds = 1;
 
     /* setup */
@@ -192,7 +199,7 @@ int main(int argc, char *argv[])
                (ITERATIONS * MAXPARALLELISM) / qtimer_secs(timer));
         rate =
             (ITERATIONS * MAXPARALLELISM * sizeof(aligned_t)) / qtimer_secs(
-                timer);
+                                                                            timer);
         printf("\t = data throughput: %30g bytes/sec %s\n", rate,
                human_readable_rate(rate));
     }
@@ -217,7 +224,7 @@ int main(int argc, char *argv[])
                (ITERATIONS * MAXPARALLELISM) / qtimer_secs(timer));
         rate =
             (ITERATIONS * MAXPARALLELISM * sizeof(aligned_t)) / qtimer_secs(
-                timer);
+                                                                            timer);
         printf("\t = data throughput: %30g bytes/sec %s\n", rate,
                human_readable_rate(rate));
     }
@@ -240,7 +247,7 @@ int main(int argc, char *argv[])
                (ITERATIONS * MAXPARALLELISM) / qtimer_secs(timer));
         rate =
             (ITERATIONS * MAXPARALLELISM * sizeof(aligned_t)) / qtimer_secs(
-                timer);
+                                                                            timer);
         printf("\t = data throughput: %30g bytes/sec %s\n", rate,
                human_readable_rate(rate));
     }
@@ -268,20 +275,20 @@ int main(int argc, char *argv[])
                (ITERATIONS * MAXPARALLELISM) / qtimer_secs(timer));
         rate =
             (ITERATIONS * MAXPARALLELISM * sizeof(aligned_t)) / qtimer_secs(
-                timer);
+                                                                            timer);
         printf("\t = data throughput: %30g bytes/sec %s\n", rate,
                human_readable_rate(rate));
     }
 
     if (TEST_SELECTION & (1 << 6)) {
         syncvar_t *rets = calloc(ITERATIONS, sizeof(syncvar_t));
-        size_t i;
+        size_t     i;
         /* LOOP SYNCHRONIZATION */
         printf("\tLoop syncvar synchronization: ");
         fflush(stdout);
         /* prime it */
         for (i = 0; i < ITERATIONS; i++) {
-            qthread_fork_syncvar(justreturn, (void*)(intptr_t)i, rets + i);
+            qthread_fork_syncvar(justreturn, (void *)(intptr_t)i, rets + i);
         }
         for (i = 0; i < ITERATIONS; i++) {
             uint64_t r = 0;
@@ -291,7 +298,7 @@ int main(int argc, char *argv[])
         /* time it */
         qtimer_start(timer);
         for (i = 0; i < ITERATIONS; i++) {
-            qthread_fork_syncvar(justreturn, (void*)(intptr_t)i, rets + i);
+            qthread_fork_syncvar(justreturn, (void *)(intptr_t)i, rets + i);
         }
         for (i = 0; i < ITERATIONS; i++) {
             qthread_syncvar_readFF(NULL, rets + i);
@@ -312,13 +319,13 @@ int main(int argc, char *argv[])
 
     if (TEST_SELECTION & (1 << 7)) {
         aligned_t *rets = calloc(ITERATIONS, sizeof(aligned_t));
-        size_t i;
+        size_t     i;
         /* LOOP SYNCHRONIZATION */
         printf("\tLoop synchronization: ");
         fflush(stdout);
         /* prime it */
         for (i = 0; i < ITERATIONS; i++) {
-            qthread_fork(justreturn, (void*)(intptr_t)i, rets + i);
+            qthread_fork(justreturn, (void *)(intptr_t)i, rets + i);
         }
         for (i = 0; i < ITERATIONS; i++) {
             aligned_t r = 0;
@@ -328,7 +335,7 @@ int main(int argc, char *argv[])
         /* time it */
         qtimer_start(timer);
         for (i = 0; i < ITERATIONS; i++) {
-            qthread_fork(justreturn, (void*)(intptr_t)i, rets + i);
+            qthread_fork(justreturn, (void *)(intptr_t)i, rets + i);
         }
         for (i = 0; i < ITERATIONS; i++) {
             qthread_readFF(NULL, rets + i);
