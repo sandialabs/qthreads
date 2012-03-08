@@ -308,20 +308,21 @@ sub run_tests {
         $pass++;
     }
     if (not $dry_run) {
+        my $summary = sprintf("%17s: ", $conf_name);
         if ($failing_tests eq 0) {
-            push @summaries, "$conf_name: All $passing_tests tests passed";
+            $summary .= "All $passing_tests tests passed";
         } elsif ($passing_tests eq 0) {
-            push @summaries, "$conf_name: All $failing_tests tests FAILED!!!";
+            $summary .= "All $failing_tests tests FAILED!!!";
         } else {
-            my $summary = "$conf_name: $passing_tests test".(($passing_tests!=1)?"s":"")." passed,";
-            $summary   .= " $failing_tests test".(($failing_tests!=1)?"s":"")." failed (";
+            $summary .= "$passing_tests test".(($passing_tests!=1)?"s":"")." passed, ";
+            $summary .= "$failing_tests test".(($failing_tests!=1)?"s":"")." failed (";
             foreach my $test (keys(%failcounts)) {
                 $summary .= "$test:$failcounts{$test} ";
             }
             chop($summary);
             $summary .= ")";
-            push @summaries, $summary;
         }
+        push @summaries, $summary;
     }
 }
 
