@@ -15,6 +15,7 @@ generic_benchmarks = \
                      time_stencil_feb \
                      time_stencil_pre \
                      time_halo_swap_all \
+					 time_prodcons_comm \
                      time_qt_loops \
                      time_qt_loopaccums
 thesis_benchmarks = \
@@ -198,6 +199,9 @@ time_stencil_pre_DEPENDENCIES = $(qthreadlib)
 
 time_halo_swap_all_SOURCES = generic/time_halo_swap_all.c
 time_halo_swap_all_DEPENDENCIES = $(qthreadlib)
+
+time_prodcons_comm_SOURCES = generic/time_prodcons_comm.c
+time_prodcons_comm_DEPENDENCIES = $(qthreadlib)
 
 time_qt_loops_SOURCES = generic/time_qt_loops.c
 time_qt_loops_DEPENDENCIES = $(qthreadlib)

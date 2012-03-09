@@ -114,7 +114,7 @@ int main(int   argc,
     qtimer_t     timer = qtimer_create();
     double       rate;
     aligned_t   *rets;
-    unsigned int shepherds = 1;
+    unsigned int workers = 1;
 
     /* setup */
     assert(qthread_initialize() == QTHREAD_SUCCESS);
@@ -123,8 +123,8 @@ int main(int   argc,
     NUMARG(ITERATIONS, "ITERATIONS");
     NUMARG(MAXPARALLELISM, "MAXPARALLELISM");
     NUMARG(TEST_SELECTION, "TEST_SELECTION");
-    shepherds = qthread_num_shepherds();
-    printf("%u shepherds...\n", shepherds);
+    workers = qthread_num_workers();
+    printf("%u threads...\n", workers);
     rets = malloc(sizeof(aligned_t) * MAXPARALLELISM);
     assert(rets);
 
@@ -143,7 +143,7 @@ int main(int   argc,
         free(shared);
 
         printf("%15g secs (%u-threads %u iters)\n", qtimer_secs(timer),
-               shepherds, (unsigned)(ITERATIONS * MAXPARALLELISM));
+               workers, (unsigned)(ITERATIONS * MAXPARALLELISM));
         iprintf("\t + average read time: %28g secs\n",
                 qtimer_secs(timer) / (ITERATIONS * MAXPARALLELISM));
         printf("\t = read throughput: %30f reads/sec\n",
@@ -167,7 +167,7 @@ int main(int   argc,
         free(shared);
 
         printf("%23g secs (%u-threads %u iters)\n", qtimer_secs(timer),
-               shepherds, (unsigned)(ITERATIONS * MAXPARALLELISM));
+               workers, (unsigned)(ITERATIONS * MAXPARALLELISM));
         iprintf("\t + average read time: %28g secs\n",
                 qtimer_secs(timer) / (ITERATIONS * MAXPARALLELISM));
         printf("\t = read throughput: %30f reads/sec\n",
@@ -183,7 +183,7 @@ int main(int   argc,
         syncvar_t *shared;
         printf("\tBalanced false-sharing syncvar readFF: ");
         fflush(stdout);
-        shared = (syncvar_t *)calloc(shepherds, sizeof(syncvar_t));
+        shared = (syncvar_t *)calloc(workers, sizeof(syncvar_t));
         qtimer_start(timer);
         qt_loop_balance(0, ITERATIONS * MAXPARALLELISM,
                         balanced_falseshare_syncreadFF,
@@ -192,7 +192,7 @@ int main(int   argc,
         free(shared);
 
         printf("%11g secs (%u-threads %u iters)\n", qtimer_secs(timer),
-               shepherds, (unsigned)(ITERATIONS * MAXPARALLELISM));
+               workers, (unsigned)(ITERATIONS * MAXPARALLELISM));
         iprintf("\t + average read time: %28g secs\n",
                 qtimer_secs(timer) / (ITERATIONS * MAXPARALLELISM));
         printf("\t = read throughput: %30f reads/sec\n",
@@ -208,7 +208,7 @@ int main(int   argc,
         aligned_t *shared;
         printf("\tBalanced false-sharing readFF: ");
         fflush(stdout);
-        shared = (aligned_t *)calloc(shepherds, sizeof(aligned_t));
+        shared = (aligned_t *)calloc(workers, sizeof(aligned_t));
         qtimer_start(timer);
         qt_loop_balance(0, ITERATIONS * MAXPARALLELISM,
                         balanced_falseshare_readFF,
@@ -217,7 +217,7 @@ int main(int   argc,
         free(shared);
 
         printf("%19g secs (%u-threads %u iters)\n", qtimer_secs(timer),
-               shepherds, (unsigned)(ITERATIONS * MAXPARALLELISM));
+               workers, (unsigned)(ITERATIONS * MAXPARALLELISM));
         iprintf("\t + average read time: %28g secs\n",
                 qtimer_secs(timer) / (ITERATIONS * MAXPARALLELISM));
         printf("\t = read throughput: %30f reads/sec\n",
@@ -240,7 +240,7 @@ int main(int   argc,
         qtimer_stop(timer);
 
         printf("%13g secs (%u-threads %u iters)\n", qtimer_secs(timer),
-               shepherds, (unsigned)(ITERATIONS * MAXPARALLELISM));
+               workers, (unsigned)(ITERATIONS * MAXPARALLELISM));
         iprintf("\t + average read time: %28g secs\n",
                 qtimer_secs(timer) / (ITERATIONS * MAXPARALLELISM));
         printf("\t = read throughput: %30f reads/sec\n",
@@ -268,7 +268,7 @@ int main(int   argc,
         qtimer_stop(timer);
 
         printf("%21g secs (%u-threads %u iters)\n", qtimer_secs(timer),
-               shepherds, (unsigned)(ITERATIONS * MAXPARALLELISM));
+               workers, (unsigned)(ITERATIONS * MAXPARALLELISM));
         iprintf("\t + average read time: %28g secs\n",
                 qtimer_secs(timer) / (ITERATIONS * MAXPARALLELISM));
         printf("\t = read throughput: %30f reads/sec\n",
@@ -307,7 +307,7 @@ int main(int   argc,
         free(rets);
 
         printf("%21g secs (%u-threads %u-qthreads)\n", qtimer_secs(timer),
-               shepherds, (unsigned)(ITERATIONS));
+               workers, (unsigned)(ITERATIONS));
         iprintf("\t + average read time: %28g secs\n",
                 qtimer_secs(timer) / (ITERATIONS));
         printf("\t = read throughput: %30f reads/sec\n",
@@ -344,7 +344,7 @@ int main(int   argc,
         free(rets);
 
         printf("%21g secs (%u-threads %u-qthreads)\n", qtimer_secs(timer),
-               shepherds, (unsigned)(ITERATIONS));
+               workers, (unsigned)(ITERATIONS));
         iprintf("\t + average read time: %28g secs\n",
                 qtimer_secs(timer) / (ITERATIONS));
         printf("\t = read throughput: %30f reads/sec\n",
