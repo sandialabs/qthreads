@@ -116,7 +116,6 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
          * boundary, unless the user has specified a shepherd boundary */
         if (shep_type_idx == -1) {
             do {
-loop_top:
                 shep_type_idx++;
                 shep_depth = hwloc_get_type_depth(topology, shep_type_options[shep_type_idx]);
                 qthread_debug(AFFINITY_DETAILS, "depth of type %i (%s) = %d\n", shep_type_idx,
@@ -134,7 +133,7 @@ loop_top:
                                               shep_type_options[0]) == 1)) {
                     qthread_debug(AFFINITY_DETAILS,
                                   "only one node; assuming multiple shepherds\n");
-                    goto loop_top;
+                    continue;
                 }
             } while (shep_depth == HWLOC_TYPE_DEPTH_UNKNOWN ||
                      shep_depth == HWLOC_TYPE_DEPTH_MULTIPLE);
