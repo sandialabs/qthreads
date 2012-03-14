@@ -122,12 +122,12 @@ static void qthread_wrapper(unsigned int high,
 static void qthread_wrapper(void *ptr);
 #endif
 
-static QINLINE void qthread_makecontext(qt_context_t *const c,
-                                        void *const         stack,
-                                        const size_t        stacksize,
-                                        void                (*func)(void),
-                                        const void *const   arg,
-                                        qt_context_t *const returnc);
+static QINLINE void       qthread_makecontext(qt_context_t *const c,
+                                              void *const         stack,
+                                              const size_t        stacksize,
+                                              void                (*func)(void),
+                                              const void *const   arg,
+                                              qt_context_t *const returnc);
 static QINLINE qthread_t *qthread_thread_new(qthread_f             f,
                                              const void           *arg,
                                              size_t                arg_size,
@@ -135,8 +135,8 @@ static QINLINE qthread_t *qthread_thread_new(qthread_f             f,
                                              qt_team_t            *team,
                                              int                   team_leader);
 static QINLINE void        qthread_thread_free(qthread_t *t);
-static QINLINE void qthread_enqueue(qthread_queue_t *q,
-                                    qthread_t       *t);
+static QINLINE void        qthread_enqueue(qthread_queue_t *q,
+                                           qthread_t       *t);
 
 #ifdef QTHREAD_RCRTOOL_STAT
 extern int adaptiveSetHigh;
@@ -447,13 +447,12 @@ static void *qthread_master(void *arg)
             }
         }
 #endif  /* ifdef QTHREAD_RCRTOOL */
-        t = qt_threadqueue_dequeue_blocking(threadqueue, localqueue, QTHREAD_CASLOCK_READ_UI(
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-                    me_worker->active
-#else
-                    me->active
+        while (!QTHREAD_CASLOCK_READ_UI(me_worker->active)) {
+            SPINLOCK_BODY();
+        }
 #endif
-        ));
+        t = qt_threadqueue_dequeue_blocking(threadqueue, localqueue, QTHREAD_CASLOCK_READ_UI(me->active));
         assert(t);
 #ifdef QTHREAD_SHEPHERD_PROFILING
         qtimer_stop(idle);
@@ -489,14 +488,6 @@ qt_run:
 #endif
             qthread_thread_free(t); /* free qthread data structures */
         } else {
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-            if(!QTHREAD_CASLOCK_READ_UI(me_worker->active)) {
-                qt_threadqueue_enqueue(me->ready, t);
-                // short stall to prevent worker from monoplizing queue
-                struct timespec req = { .tv_sec = 0, .tv_nsec = 10000000L };
-                nanosleep(&req, &req);
-            } else {
-#endif
             /* yielded only happens for the first thread */
             assert((t->thread_state == QTHREAD_STATE_NEW) ||
                    (t->thread_state == QTHREAD_STATE_RUNNING) ||
@@ -684,9 +675,6 @@ qt_run:
                         break;
                 }
             }
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-        }
-#endif
         }
     }
 
