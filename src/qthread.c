@@ -320,6 +320,11 @@ static void hup_handler(int sig)
     qthread_back_to_master(t);
 }
 
+#define print_status(format, ...) printf("QTHREADS: " format , ##__VA_ARGS__)
+#define print_warning(format, ...) fprintf(stderr, "QTHREADS: " format , ##__VA_ARGS__)
+#define print_error(format, ...) do { fprintf(stderr, "QTHREADS ERROR: " format , ##__VA_ARGS__); \
+    fflush(stderr); } while (0)
+
 /* the qthread_master() function is the loop responsible for actually
  * executing the work units
  *
@@ -373,7 +378,7 @@ static void *qthread_master(void *arg)
 #ifndef QTHREAD_NO_ASSERTS
     if ((shep0arg != NULL) && (me->shepherd_id == 0)) {
         if (arg != shep0arg) {
-            fprintf(stderr, "arg = %p, shep0arg = %p\n", arg, shep0arg);
+            print_error("arg = %p, shep0arg = %p\n", arg, shep0arg);
         }
         assert(arg == shep0arg);
         shep0arg = NULL;
@@ -438,7 +443,6 @@ static void *qthread_master(void *arg)
 			 SPINLOCK_BODY();
 		    }
                     qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers, 1); // back at work  -- skipped in departed workers case OK since everyone leaving
-		    // printf("stream returned from idle\n");
 #ifdef QTHREAD_RCRTOOL_STAT
 		    clock_gettime(CLOCK_MONOTONIC, &adaptTimeStop);
 		    time += (adaptTimeStop.tv_sec + adaptTimeStop.tv_nsec * 1e-9) - (adaptTimeStart.tv_sec + adaptTimeStart.tv_nsec * 1e-9);
@@ -500,8 +504,6 @@ qt_run:
             }
             assert(t->rdata->shepherd_ptr != NULL);
             if (t->rdata->shepherd_ptr != me) {
-                // fprintf(stderr, "shepherd_ptr = %p, me = %p\n", t->rdata->shepherd_ptr, me);
-                // fflush(stderr);
                 t->rdata->shepherd_ptr = me;
             }
 
@@ -695,9 +697,9 @@ qt_run:
 	                        // master and I don't see how to include master
                                 // thread time (it calls qthread_finalize/exit 
 	                        // and never completes the workhorse loop 
-	printf("\tTotal Idle time = %10f (%10f)\n",
-	       totalIdleTime,
-	       totalIdleTime/((qlib->nworkerspershep * qlib->nshepherds)-2)); // rcrthread + master missing
+	print_status("\tTotal Idle time = %10f (%10f)\n",
+                     totalIdleTime,
+                     totalIdleTime/((qlib->nworkerspershep * qlib->nshepherds)-2)); // rcrthread + master missing
       }
     }
 #endif
@@ -777,7 +779,7 @@ int qthread_initialize(void)
     nworkerspershep = qt_internal_get_env_num("NUM_WORKERS_PER_SHEPHERD", 0, 0);
     if (nworkerspershep > 0) {
         if (nshepherds == 0) {
-            fprintf(stderr, "Number of shepherds not specified - number of workers may be ignored\n");
+            print_warning("Number of shepherds not specified - number of workers may be ignored\n");
         }
     }
 #else
@@ -787,7 +789,7 @@ int qthread_initialize(void)
     hw_par = qt_internal_get_env_num("HWPAR", nshepherds * nworkerspershep, nshepherds * nworkerspershep);
     if ((hw_par != 0) && (nshepherds != 0) && (nworkerspershep != 0)) {
         if (hw_par != (nshepherds * nworkerspershep)) {
-            fprintf(stderr, "Shepherd/worker parallelism directly specified; ignoring HWPAR\n");
+            print_warning("Shepherd/worker parallelism directly specified; ignoring HWPAR\n");
             hw_par = nshepherds * nworkerspershep;
         }
     }
@@ -806,13 +808,10 @@ int qthread_initialize(void)
         if ((hw_par < nshepherds) || (hw_par == 1)) {
             nworkerspershep = 1;
             nshepherds = hw_par;
-        } else if (hw_par < (nshepherds * nworkerspershep)) {
-            printf("need to disable workers past hw_par\n");
         } else if (hw_par > (nshepherds * nworkerspershep)) {
             nworkerspershep = (hw_par / nshepherds);
             if ((hw_par % nshepherds) != 0) {
                 nworkerspershep ++;
-                printf("need to disable workers past hw_par\n");
             }
         }
     } else {
@@ -821,9 +820,9 @@ int qthread_initialize(void)
 
     print_info = qt_internal_get_env_num("INFO", 0, 1);
     if (print_info) {
-        fprintf(stderr, "Using %i Shepherds\n", (int)nshepherds);
+        print_status("Using %i Shepherds\n", (int)nshepherds);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-        fprintf(stderr, "Using %i Workers per Shepherd\n", (int)nworkerspershep);
+        print_status("Using %i Workers per Shepherd\n", (int)nworkerspershep);
 #endif
     }
 
@@ -903,7 +902,7 @@ int qthread_initialize(void)
                                                        QTHREAD_DEFAULT_STACK_SIZE);
     qthread_debug(CORE_DETAILS, "qthread stack size: %u\n", qlib->qthread_stack_size);
     if (print_info) {
-        fprintf(stderr, "Using %u byte stack size.\n", qlib->qthread_stack_size);
+        print_status("Using %u byte stack size.\n", qlib->qthread_stack_size);
     }
 
 #ifdef QTHREAD_RCRTOOL_STAT
@@ -1177,8 +1176,7 @@ int qthread_initialize(void)
                     swinfo.worker          = &qlib->shepherds[i].workers[j];
                     swinfo.qaffinity       = qaffinity;
 		    if ((r = pthread_create(&rcrToolPThreadID, NULL, rcrtoolDaemon, &swinfo)) != 0) {
-		      fprintf(stderr, "qthread_init: pthread_create() failed (%d)\n", r);
-		      perror("qthread_init spawning rcrTool");
+		      print_error("qthread_init: pthread_create() failed (%d): %s\n", r, strerror(errno));
 		      return QTHREAD_THIRD_PARTY_ERROR;
 		    }
 		    continue;
@@ -1187,8 +1185,7 @@ int qthread_initialize(void)
 # endif     /* ifdef QTHREAD_RCRTOOL */
             if ((r = pthread_create(&qlib->shepherds[i].workers[j].worker, NULL,
                                     qthread_master, &qlib->shepherds[i].workers[j])) != 0) {
-                fprintf(stderr, "qthread_init: pthread_create() failed (%d)\n", r);
-                perror("qthread_init spawning worker");
+                print_error("qthread_init: pthread_create() failed (%d): %s\n", r, strerror(errno));
                 return QTHREAD_THIRD_PARTY_ERROR;
             }
             qthread_debug(SHEPHERD_DETAILS, "spawned shep %i worker %i\n", (int)i, (int)j);
@@ -1200,8 +1197,7 @@ int qthread_initialize(void)
                       "forking shepherd %i (%p)\n", i,
                       &qlib->shepherds[i]);
         if ((r = pthread_create(&qlib->shepherds[i].shepherd, NULL, qthread_master, &qlib->shepherds[i])) != 0) {
-            fprintf(stderr, "qthread_init: pthread_create() failed (%d)\n", r);
-            perror("qthread_init spawning shepherd");
+            print_error("qthread_init: pthread_create() failed (%d): %s\n", r, strerror(errno));
             return QTHREAD_THIRD_PARTY_ERROR;
         }
     }
@@ -1354,7 +1350,7 @@ void qthread_finalize(void)
 
 #ifdef QTHREAD_RCRTOOL_STAT
     if (rcrtoollevel > 0) {
-      printf("RCR resource contenton managment limited thread count %d times\n", adaptiveSetHigh);
+      print_status("RCR resource contenton managment limited thread count %d times\n", adaptiveSetHigh);
     }
 #endif
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -1432,14 +1428,12 @@ void qthread_finalize(void)
     qt_global_barrier_destroy();
 #endif
 #ifdef QTHREAD_SHEPHERD_PROFILING
-    printf
-        ("QTHREADS: Shepherd 0 spent %f%% of the time idle, handling %lu threads\n",
-        shep0->idle_time / qtimer_secs(shep0->total_time) * 100.0,
-        (unsigned long)shep0->num_threads);
-    printf
-        ("QTHREADS: Shepherd 0 averaged %g secs to find a new thread, max %g secs\n",
-        shep0->idle_time / shep0->idle_count,
-        shep0->idle_maxtime);
+    print_status("Shepherd 0 spent %f%% of the time idle, handling %lu threads\n",
+                 shep0->idle_time / qtimer_secs(shep0->total_time) * 100.0,
+                 (unsigned long)shep0->num_threads);
+    print_status("Shepherd 0 averaged %g secs to find a new thread, max %g secs\n",
+                 shep0->idle_time / shep0->idle_count,
+                 shep0->idle_maxtime);
     qtimer_destroy(shep0->total_time);
 #endif
 
@@ -1467,8 +1461,7 @@ void qthread_finalize(void)
 # ifdef QTHREAD_RCRTOOL
             if ((rcrtoollevel > 0) && ((i == qlib->nshepherds - 1) && (j == qlib->nworkerspershep - 1))) {
                 if ((r = pthread_join(rcrToolPThreadID, NULL)) != 0) {
-                    fprintf(stderr, "qthread_finalize: pthread_join() of rcrTool failed (%d, or \"%s\")\n", r, strerror(r));
-                    fflush(stderr);
+                    print_error("qthread_finalize: pthread_join() of rcrTool failed (%d, or \"%s\")\n", r, strerror(r));
                     abort();
                 }
                 continue;
@@ -1476,10 +1469,8 @@ void qthread_finalize(void)
 # endif
             qthread_debug(SHEPHERD_DETAILS, "000\n");
             if ((r = pthread_join(shep->workers[j].worker, NULL)) != 0) {
-                fprintf(stderr,
-                        "qthread_finalize: pthread_join() of shep %i worker %i failed (%d, or \"%s\")\n",
-                        (int)i, (int)j, r, strerror(r));
-                fflush(stderr);
+                print_error("qthread_finalize: pthread_join() of shep %i worker %i failed (%d, or \"%s\")\n",
+                            (int)i, (int)j, r, strerror(r));
                 abort();
             } else {
                 free(shep->workers[j].nostealbuffer);
@@ -1497,8 +1488,7 @@ void qthread_finalize(void)
         qthread_shepherd_t *shep = &(qlib->shepherds[i]);
         qthread_debug(SHEPHERD_DETAILS, "waiting for shepherd %i to exit\n", (int)i);
         if ((r = pthread_join(shep->shepherd, NULL)) != 0) {
-            fprintf(stderr,
-                    "qthread_finalize: pthread_join() of shep %i failed (%d, or \"%s\")\n",
+            print_error("qthread_finalize: pthread_join() of shep %i failed (%d, or \"%s\")\n",
                     (int)i, r, strerror(r));
             abort();
         }
@@ -1506,15 +1496,15 @@ void qthread_finalize(void)
         QTHREAD_CASLOCK_DESTROY(shep->active);
         qt_threadqueue_free(shep->ready);
 #ifdef QTHREAD_SHEPHERD_PROFILING
-        printf("QTHREADS: Shepherd %i spent %f%% of the time idle, handling %lu threads\n",
-               i,
-               shep->idle_time / qtimer_secs(shep->total_time) * 100.0,
-               (unsigned long)shep->num_threads);
+        print_status("Shepherd %i spent %f%% of the time idle, handling %lu threads\n",
+                     i,
+                     shep->idle_time / qtimer_secs(shep->total_time) * 100.0,
+                     (unsigned long)shep->num_threads);
         qtimer_destroy(shep->total_time);
-        printf("QTHREADS: Shepherd %i averaged %g secs to find a new thread, max %g secs\n",
-               i,
-               shep->idle_time / shep->idle_count,
-               shep->idle_maxtime);
+        print_status("Shepherd %i averaged %g secs to find a new thread, max %g secs\n",
+                     i,
+                     shep->idle_time / shep->idle_count,
+                     shep->idle_maxtime);
 #endif
 #ifdef QTHREAD_LOCK_PROFILING
 # ifdef QTHREAD_MUTEX_INCREMENT
@@ -1570,46 +1560,40 @@ void qthread_finalize(void)
 
 #ifdef QTHREAD_LOCK_PROFILING
 # ifdef QTHREAD_MUTEX_INCREMENT
-    printf
-        ("QTHREADS: %llu increments performed (%ld unique), average %g secs, max %g secs\n",
-        (unsigned long long)shep0->incr_count, qt_hash_count(shep0->uniqueincraddrs),
-        (shep0->incr_count == 0) ? 0 : (shep0->incr_time / shep0->incr_count),
-        shep0->incr_maxtime);
+    print_status("%llu increments performed (%ld unique), average %g secs, max %g secs\n",
+                 (unsigned long long)shep0->incr_count, qt_hash_count(shep0->uniqueincraddrs),
+                 (shep0->incr_count == 0) ? 0 : (shep0->incr_time / shep0->incr_count),
+                 shep0->incr_maxtime);
     qt_hash_destroy(shep0->uniqueincraddrs);
 # endif
-    printf
-        ("QTHREADS: %llu locks aquired (%ld unique), average %g secs, max %g secs\n",
-        (unsigned long long)shep0->aquirelock_count, qt_hash_count(shep0->uniquelockaddrs),
-        (shep0->aquirelock_count == 0) ? 0 : (shep0->aquirelock_time /
-                                              shep0->aquirelock_count), shep0->aquirelock_maxtime);
+    print_status("%llu locks aquired (%ld unique), average %g secs, max %g secs\n",
+                 (unsigned long long)shep0->aquirelock_count, qt_hash_count(shep0->uniquelockaddrs),
+                 (shep0->aquirelock_count == 0) ? 0 : (shep0->aquirelock_time /
+                                                       shep0->aquirelock_count), shep0->aquirelock_maxtime);
     qt_hash_destroy(shep0->uniquelockaddrs);
-    printf
-        ("QTHREADS: Blocked on a lock %llu times, average %g secs, max %g secs\n",
-        (unsigned long long)shep0->lockwait_count,
-        (shep0->lockwait_count == 0) ? 0 : (shep0->lockwait_time / shep0->lockwait_count),
-        shep0->lockwait_maxtime);
-    printf("QTHREADS: Locks held an average of %g seconds, max %g seconds\n",
-           (shep0->aquirelock_count == 0) ? 0 : (shep0->hold_time / shep0->aquirelock_count),
-           shep0->hold_maxtime);
-    printf("QTHREADS: %ld unique addresses used with FEB, blocked %g secs\n",
-           qt_hash_count(shep0->uniquefebaddrs),
-           (shep0->febblock_count == 0) ? 0 : shep0->febblock_time);
+    print_status("Blocked on a lock %llu times, average %g secs, max %g secs\n",
+                 (unsigned long long)shep0->lockwait_count,
+                 (shep0->lockwait_count == 0) ? 0 : (shep0->lockwait_time / shep0->lockwait_count),
+                 shep0->lockwait_maxtime);
+    print_status("Locks held an average of %g seconds, max %g seconds\n",
+                 (shep0->aquirelock_count == 0) ? 0 : (shep0->hold_time / shep0->aquirelock_count),
+                 shep0->hold_maxtime);
+    print_status("%ld unique addresses used with FEB, blocked %g secs\n",
+                 qt_hash_count(shep0->uniquefebaddrs),
+                 (shep0->febblock_count == 0) ? 0 : shep0->febblock_time);
     qt_hash_destroy(shep0->uniquefebaddrs);
-    printf
-        ("QTHREADS: %llu potentially-blocking FEB operations, average %g secs, max %g secs\n",
-        (unsigned long long)shep0->febblock_count,
-        (shep0->febblock_count == 0) ? 0 : (shep0->febblock_time / shep0->febblock_count),
-        shep0->febblock_maxtime);
-    printf
-        ("QTHREADS: %llu FEB operations blocked, average wait %g secs, max %g secs\n",
-        (unsigned long long)shep0->febwait_count,
-        (shep0->febwait_count == 0) ? 0 : (shep0->febwait_time / shep0->febwait_count),
-        shep0->febwait_maxtime);
-    printf
-        ("QTHREADS: %llu FEB bits emptied, stayed empty average %g secs, max %g secs\n",
-        (unsigned long long)shep0->empty_count,
-        (shep0->empty_count == 0) ? 0 : (shep0->empty_time /
-                                         shep0->empty_count), shep0->empty_maxtime);
+    print_status("%llu potentially-blocking FEB operations, average %g secs, max %g secs\n",
+                 (unsigned long long)shep0->febblock_count,
+                 (shep0->febblock_count == 0) ? 0 : (shep0->febblock_time / shep0->febblock_count),
+                 shep0->febblock_maxtime);
+    print_status("%llu FEB operations blocked, average wait %g secs, max %g secs\n",
+                 (unsigned long long)shep0->febwait_count,
+                 (shep0->febwait_count == 0) ? 0 : (shep0->febwait_time / shep0->febwait_count),
+                 shep0->febwait_maxtime);
+    print_status("%llu FEB bits emptied, stayed empty average %g secs, max %g secs\n",
+                 (unsigned long long)shep0->empty_count,
+                 (shep0->empty_count == 0) ? 0 : (shep0->empty_time /
+                                                  shep0->empty_count), shep0->empty_maxtime);
 #endif /* ifdef QTHREAD_LOCK_PROFILING */
 
     for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
@@ -1626,8 +1610,8 @@ void qthread_finalize(void)
         QTHREAD_FASTLOCK_DESTROY(qlib->atomic_locks[i]);
 #endif
 #ifdef QTHREAD_COUNT_THREADS
-        printf("QTHREADS: bin %i used %u times for locks, %u times for FEBs\n", i,
-               (unsigned int)qlib->locks_stripes[i], (unsigned int)qlib->febs_stripes[i]);
+        print_status("bin %i used %u times for locks, %u times for FEBs\n", i,
+                     (unsigned int)qlib->locks_stripes[i], (unsigned int)qlib->febs_stripes[i]);
 # ifdef QTHREAD_MUTEX_INCREMENT
         QTHREAD_FASTLOCK_DESTROY(qlib->locks_stripes_locks[i]);
         QTHREAD_FASTLOCK_DESTROY(qlib->febs_stripes_locks[i]);
@@ -1658,9 +1642,9 @@ void qthread_finalize(void)
 #endif
 
 #ifdef QTHREAD_COUNT_THREADS
-    printf("QTHREADS: spawned %lu threads, max concurrency %lu, avg concurrency %g\n",
-           (unsigned long)threadcount, (unsigned long)maxconcurrentthreads,
-           avg_concurrent_threads);
+    print_status("spawned %lu threads, max concurrency %lu, avg concurrency %g\n",
+                 (unsigned long)threadcount, (unsigned long)maxconcurrentthreads,
+                 avg_concurrent_threads);
     QTHREAD_FASTLOCK_DESTROY(concurrentthreads_lock);
 #endif
 
