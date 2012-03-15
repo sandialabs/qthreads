@@ -895,6 +895,9 @@ int qthread_initialize(void)
     qassert_ret(qlib->shepherds, QTHREAD_MALLOC_ERROR);
 #ifdef QTHREAD_MUTEX_INCREMENT
     QTHREAD_FASTLOCK_INIT(qlib->nshepherds_active_lock);
+# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    QTHREAD_FASTLOCK_INIT(qlib->nworkers_active_lock);
+# endif
 #endif
 
     qlib->qthread_stack_size = qt_internal_get_env_num("STACK_SIZE",
@@ -1618,6 +1621,12 @@ void qthread_finalize(void)
 # endif
 #endif
     }
+#ifdef QTHREAD_MUTEX_INCREMENT
+    QTHREAD_FASTLOCK_DESTROY(qlib->nshepherds_active_lock);
+# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    QTHREAD_FASTLOCK_DESTROY(qlib->nworkers_active_lock);
+# endif
+#endif
     qthread_debug(CORE_DETAILS, "calling late cleanup functions\n");
     while (qt_cleanup_late_funcs != NULL) {
         struct qt_cleanup_funcs_s *tmp = qt_cleanup_late_funcs;
