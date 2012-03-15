@@ -73,7 +73,7 @@ void qthread_enable_worker(const qthread_worker_id_t w)
     if (worker == 0) { qthread_enable_shepherd(shep); }
     qthread_debug(SHEPHERD_CALLS, "began on shep(%i)\n", shep);
     if (worker < qlib->nworkerspershep) {
-        qthread_internal_incr(&(qlib->nshepherds_active), &(qlib->nshepherds_active_lock), 1);
+        qthread_internal_incr(&(qlib->nworkers_active), &(qlib->nworkers_active_lock), 1);
         (void)QT_CAS(qlib->shepherds[shep].workers[worker].active, 0, 1);
     }
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
