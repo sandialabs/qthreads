@@ -750,6 +750,7 @@ int qthread_initialize(void)
     uint_fast8_t          need_sync       = 1;
     qthread_shepherd_id_t nshepherds      = 0;
     qthread_worker_id_t   nworkerspershep = 0;
+    size_t                hw_par          = 0;
 
     QTHREAD_FASTLOCK_SETUP();
 #ifdef QTHREAD_DEBUG
@@ -783,6 +784,14 @@ int qthread_initialize(void)
     nworkerspershep = 1;
 #endif  /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
+    hw_par = qt_internal_get_env_num("HWPAR", nshepherds * nworkerspershep, nshepherds * nworkerspershep);
+    if ((hw_par != 0) && (nshepherds != 0) && (nworkerspershep != 0)) {
+        if (hw_par != (nshepherds * nworkerspershep)) {
+            fprintf(stderr, "Shepherd/worker parallelism directly specified; ignoring HWPAR\n");
+            hw_par = nshepherds * nworkerspershep;
+        }
+    }
+
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
     qlib->atomic_locks = malloc(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
     qassert_ret(qlib->atomic_locks, QTHREAD_MALLOC_ERROR);
@@ -792,6 +801,23 @@ int qthread_initialize(void)
 #endif
 
     qt_affinity_init(&nshepherds, &nworkerspershep);
+
+    if (hw_par != 0) {
+        if ((hw_par < nshepherds) || (hw_par == 1)) {
+            nworkerspershep = 1;
+            nshepherds = hw_par;
+        } else if (hw_par < (nshepherds * nworkerspershep)) {
+            printf("need to disable workers past hw_par\n");
+        } else if (hw_par > (nshepherds * nworkerspershep)) {
+            nworkerspershep = (hw_par / nshepherds);
+            if ((hw_par % nshepherds) != 0) {
+                nworkerspershep ++;
+                printf("need to disable workers past hw_par\n");
+            }
+        }
+    } else {
+        hw_par = nshepherds * nworkerspershep;
+    }
 
     print_info = qt_internal_get_env_num("INFO", 0, 1);
     if (print_info) {
@@ -1102,7 +1128,8 @@ int qthread_initialize(void)
         qlib->nworkers_active = nshepherds * nworkerspershep;
     }
 # else /* ifdef QTHREAD_RCRTOOL */
-    qlib->nworkers_active = nshepherds * nworkerspershep;
+    assert(hw_par > 0);
+    qlib->nworkers_active = hw_par;
 # endif /* ifdef QTHREAD_RCRTOOL */
 #endif  /* QTHREAD_MULTITHREADED_SHEPHERDS */
 
@@ -1133,7 +1160,13 @@ int qthread_initialize(void)
                                                                             &qlib->max_unique_id_lock, 1);
             qlib->shepherds[i].workers[j].packed_worker_id = j + (i * nworkerspershep);
 
-	    QTHREAD_CASLOCK_INIT(qlib->shepherds[i].workers[j].active, 1);
+            if ((j*nshepherds)+i+1 > hw_par) {
+                qthread_debug(CORE_DETAILS, "deactivate shep %i's worker %i\n", (int)i, (int)j);
+                QTHREAD_CASLOCK_INIT(qlib->shepherds[i].workers[j].active, 0);
+            } else {
+                qthread_debug(CORE_DETAILS, "activate shep %i's worker %i\n", (int)i, (int)j);
+                QTHREAD_CASLOCK_INIT(qlib->shepherds[i].workers[j].active, 1);
+            }
             qthread_debug(CORE_DETAILS, "initialized caslock %i,%i %p\n", i, j, &qlib->shepherds[i].workers[j].active);
             qlib->shepherds[i].workers[j].shepherd = &qlib->shepherds[i];
 # ifdef QTHREAD_RCRTOOL
@@ -1369,13 +1402,17 @@ void qthread_finalize(void)
                 continue;
             }
 # endif
-            qthread_debug(SHEPHERD_DETAILS, "terminating shepherd %i worker %i\n", (int)i, j);
+            qthread_debug(SHEPHERD_DETAILS, "terminating worker %i:%i\n", (int)i, (int)j);
             t = qthread_thread_new(NULL, NULL, 0, NULL, NULL, 0);
             assert(t != NULL);         /* what else can we do? */
             t->thread_state = QTHREAD_STATE_TERM_SHEP;
             t->thread_id    = QTHREAD_NON_TASK_ID;
             t->flags        = QTHREAD_UNSTEALABLE;
             qt_threadqueue_enqueue(qlib->shepherds[i].ready, t);
+            if (!QTHREAD_CASLOCK_READ_UI(qlib->shepherds[i].workers[j].active)) {
+                qthread_debug(SHEPHERD_DETAILS, "re-enabling worker %i:%i, so he can exit\n", (int)i, (int)j);
+                (void)QT_CAS(qlib->shepherds[i].workers[j].active, 0, 1);
+            }
         }
     }
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
