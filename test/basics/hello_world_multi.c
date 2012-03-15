@@ -19,12 +19,13 @@ static aligned_t greeter(void *arg)
 int main(int   argc,
          char *argv[])
 {
-    long       spawn = 100000;
+    long       spawn = 0;
     aligned_t *rets  = NULL;
 
     assert(qthread_initialize() == 0);
 
     CHECK_VERBOSE();
+    spawn = qthread_num_workers() * 2;
     NUMARG(spawn, "THREADS");
 
     iprintf("%i shepherds...\n", qthread_num_shepherds());
