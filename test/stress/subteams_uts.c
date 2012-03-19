@@ -68,7 +68,7 @@ static int     num_samples   = 1;
 static int     tree_depth    = 6;
 static shape_t shape_fn      = LINEAR;
 static int     non_leaf_bf   = 8;
-static double  non_leaf_prob = 0.124875;
+static double  non_leaf_prob = 0.124;
 static double  shift_depth   = 0.5;
 
 static double  subteam_prob  = 0.005;
