@@ -235,7 +235,7 @@ void *qt_mpool_alloc(qt_mpool pool)
         void *ret = (void *)cache;
         qthread_debug(MPOOL_BEHAVIOR, "->...cached count:%zu\n", (size_t)tc->count - 1);
         tc->cache      = cache->next;
-        tc->block_tail = cache->block_tail;
+        tc->block_tail = (cache->next) ? cache->next->block_tail : NULL;
         --tc->count;
         return ret;
     } else if (tc->block) {
@@ -290,7 +290,7 @@ void *qt_mpool_alloc(qt_mpool pool)
         } else {
             qthread_debug(MPOOL_BEHAVIOR, "->...from_global_pool count:%zu\n", (size_t)(cnt - 1));
             tc->cache      = cache->next;
-            tc->block_tail = tc->cache->block_tail;
+            tc->block_tail = cache->block_tail;
             tc->count      = cnt - 1;
             // cache->next       = NULL; // unnecessary
             // cache->block_tail = NULL; // unnecessary
