@@ -33,10 +33,10 @@ int main(int   argc,
     assert(qthread_initialize() == 0);
 
     for (uint64_t i = 0; i < count; i++) {
-	qthread_fork(null_task, NULL, NULL);
+        qthread_fork(null_task, NULL, NULL);
     }
     do {
-	iprintf("donecount = %i\n", donecount);
+        iprintf("donecount = %i\n", donecount);
         qthread_yield();
     } while (donecount != count);
 
