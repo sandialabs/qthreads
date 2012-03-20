@@ -288,6 +288,13 @@ int main(int   argc,
     NUMARG(shift_depth, "UTS_SHIFT_DEPTH");
     NUMARG(num_samples, "UTS_NUM_SAMPLES");
 
+#ifdef BIG_STACKS
+    // If the operator did not attempt to set a stack size, force
+    // a reasonable lower bound
+    if (!getenv("QT_STACK_SIZE") && !getenv("QTHREAD_STACK_SIZE"))
+        setenv("QT_STACK_SIZE", "32768", 0);
+#endif
+
     assert(qthread_initialize() == 0);
 
 #ifdef PRINT_STATS
