@@ -5,6 +5,7 @@
 /* System Headers */
 #include <pthread.h> /* for pthread_key_*() */
 #include <string.h>  /* for memset() */
+#include <stdlib.h>  /* for malloc() and free(), per C89 */
 #ifdef HAVE_MALLOC_H
 # include <malloc.h> /* for memalign() */
 #endif
@@ -24,7 +25,7 @@ pthread_key_t spawn_cache;
 static void qt_spawncache_shutdown(void)
 {
     qthread_debug(CORE_DETAILS, "destroy thread-local task queue\n");
-    void * freeme = pthread_getspecific(spawn_cache);
+    void *freeme = pthread_getspecific(spawn_cache);
     free(freeme);
     qassert(pthread_key_delete(spawn_cache), 0);
 }
