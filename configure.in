@@ -395,7 +395,7 @@ AM_PROG_CC_C_O
 
 AS_IF([test "x$enable_picky" = xyes],
       [case "$qthread_cv_c_compiler_type" in
-         GNU)
+         GNU|LLVM)
            CFLAGS="-Wall -Wno-strict-aliasing -Wmissing-prototypes -Wstrict-prototypes $CFLAGS"
            ;;
          Intel)
@@ -418,7 +418,7 @@ AS_IF([test "x$enable_picky" = xyes],
            ;;
        esac
        case "$qthread_cv_cxx_compiler_type" in
-         GNU)
+         GNU|LLVM)
            CXXFLAGS="-Wall $CXXFLAGS"
            ;;
          Intel)
