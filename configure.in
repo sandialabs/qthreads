@@ -371,7 +371,6 @@ AC_CACHE_SAVE
 ## ------------------- ##
 ## Checks for programs ##
 ## ------------------- ##
-AC_PROG_LIBTOOL
 AC_PROG_CC
 dnl We use system extensions.  This includes setting _GNU_SOURCE
 AC_USE_SYSTEM_EXTENSIONS
@@ -980,6 +979,7 @@ AM_CONDITIONAL([HAVE_PROG_TIMELIMIT], [test "x$ac_cv_prog_timelimit_path" != "x"
 AM_CONDITIONAL([COMPILE_MULTINODE], [test "$enable_multinode" = "yes"])
 AM_CONDITIONAL([WANT_PORTALS_SHMEM_RUNTIME], [test "$with_multinode_runtime" = "shmemrt"])
 AM_CONDITIONAL([WANT_MPI_RUNTIME], [test "$with_multinode_runtime" = "mpi"])
+AM_CONDITIONAL([COMPILE_OMP_BENCHMARKS], [test "$have_openmp" = "yes"])
 
 AC_CONFIG_HEADERS([include/config.h include/qthread/common.h])
 AC_CONFIG_FILES([Makefile

@@ -12,7 +12,6 @@ generic_benchmarks = \
                      time_producerconsumer \
                      time_syncvar_producerconsumer \
                      time_threading \
-                     time_threading.omp \
                      time_stencil_bsp \
                      time_stencil_feb \
                      time_stencil_pre \
@@ -47,7 +46,6 @@ mtaap08_benchmarks = \
                      time_cncthr_bench \
                      time_cncthr_bench_pthread
 uts_benchmarks = \
-				 time_uts_omp \
 				 time_uts_syncvar \
 				 time_uts_aligned \
 				 time_uts_sinc \
@@ -57,10 +55,16 @@ mt_benchmarks = \
 				time_task_spawn \
 				time_eager_future \
 				time_fib \
-				time_fib2 \
+				time_fib2
+
+if COMPILE_OMP_BENCHMARKS
+generic_benchmarks += time_threading.omp
+uts_benchmarks += time_uts_omp
+mt_benchmarks += \
 				time_omp_task_spawn \
 				time_omp_eager_future \
 				time_omp_fib
+endif
 
 benchmarks = \
              $(generic_benchmarks) \
