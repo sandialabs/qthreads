@@ -106,7 +106,7 @@ inline int qthread_writeF(syncvar *const dest,
                           const T *const src)
 {
     QTHREAD_CHECKSIZE(T);
-    return dest->writeF((uint64_t *)src);
+    return dest->writeF(*(uint64_t *)src);
 }
 
 template <typename T>
@@ -123,7 +123,7 @@ inline int qthread_writeF(syncvar *const dest,
                           const T        src)
 {
     QTHREAD_CHECKSIZE(T);
-    return dest->writeF((uint64_t *)&src);
+    return dest->writeF(*(uint64_t *)&src);
 }
 
 /**************************************************************************
