@@ -345,6 +345,8 @@ static void *qthread_master_wrapper(unsigned int high,
 
 #endif /* ifdef QTHREAD_MAKECONTEXT_SPLIT */
 #include <time.h>
+extern volatile int * allowed_workers;
+
 static void *qthread_master(void *arg)
 {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -368,6 +370,7 @@ static void *qthread_master(void *arg)
     struct timespec adaptTimeStart;
     struct timespec adaptTimeStop;
     double time = 0;
+    int64_t spin = 0; // count for deciding how much a thread was idled
 #endif
 #endif
 
@@ -403,7 +406,7 @@ static void *qthread_master(void *arg)
     }
 
 #ifdef QTHREAD_RCRTOOL
-    if (rcrtoollevel) { // has cache control been turned off by an environment variable?
+    if (rcrtoollevel > 0) { // has cache control been turned off by an environment variable?
         // if so need to initialize -- inside of call (call also forces is to happen only once)
         // care needs to be taken so no one makes it into workhorse loop before allocation
         // has actually happened
@@ -433,22 +436,29 @@ static void *qthread_master(void *arg)
 #ifdef QTHREAD_RCRTOOL
         if (rcrtoollevel > 1) {                         // has cache control been turned off by an environment variable?
             if (me_worker->packed_worker_id != 0) { // never idle shepherd 0 worker 0  -- needs to be active for termination
-                if (qlib->shepherds[me->shepherd_id].active_workers > maestro_current_workers(me->shepherd_id)) {
+	      maestro_allowed_workers();
+	      if (qlib->shepherds[me->shepherd_id].active_workers > maestro_current_workers(me->shepherd_id)) {
 #ifdef QTHREAD_RCRTOOL_STAT
 		    clock_gettime(CLOCK_MONOTONIC, &adaptTimeStart);
 #endif
-                    qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers, -1);                                        // not working spinning
-                    while (((qlib->shepherds[me->shepherd_id].active_workers + 1) > maestro_current_workers(me->shepherd_id)) // A) the number of workers to be increased
+                    qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers, -1);  // not working spinning
+		    int active = me->active_workers + 1;
+		    int current = maestro_current_workers(me->shepherd_id);
+		    int64_t cnt = 0;
+                    while ((active > current) // A) the number of workers to be increased
 			     && (!done)) {  // B exit flag set -- everybody needs to leave
-			 SPINLOCK_BODY();
+		      for(int i=0; i < 100; i ++)  qthread_incr(&cnt, 1);
+		      active = me->active_workers + 1;
+		      current = allowed_workers[me->shepherd_id];
 		    }
                     qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers, 1); // back at work  -- skipped in departed workers case OK since everyone leaving
 #ifdef QTHREAD_RCRTOOL_STAT
 		    clock_gettime(CLOCK_MONOTONIC, &adaptTimeStop);
 		    time += (adaptTimeStop.tv_sec + adaptTimeStop.tv_nsec * 1e-9) - (adaptTimeStart.tv_sec + adaptTimeStart.tv_nsec * 1e-9);
+		    spin += cnt;
 #endif
                 }
-            }
+	      }
         }
 #endif  /* ifdef QTHREAD_RCRTOOL */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -488,7 +498,9 @@ qt_run:
 #endif
             done = 1;
 #ifdef QTHREAD_RCRTOOL
-            qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers, -1); // not working spinning
+	    if (rcrtoollevel > 0) {
+	      qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers, -1); // not working spinning
+	    }
 #endif
             qthread_thread_free(t); /* free qthread data structures */
         } else {
@@ -697,10 +709,16 @@ qt_run:
 	                        // master and I don't see how to include master
                                 // thread time (it calls qthread_finalize/exit 
 	                        // and never completes the workhorse loop 
-	print_status("\tTotal Idle time = %10f (%10f)\n",
-                     totalIdleTime,
-                     totalIdleTime/((qlib->nworkerspershep * qlib->nshepherds)-2)); // rcrthread + master missing
+	printf("\tTotal Idle time = %10f (%10f)\n",
+               totalIdleTime,
+               totalIdleTime/((qlib->nworkerspershep * qlib->nshepherds)-2)); // rcrthread + master missing
       }
+
+    if (rcrtoollevel > 2) {
+      //     printf("\t spin count %ld\n", spin);
+         printf("\tIdle time (%d) = %10f\n", me_worker->packed_worker_id, time);
+    }
+ 
     }
 #endif
     pthread_exit(NULL);
@@ -909,7 +927,9 @@ int qthread_initialize(void)
     }
 
 #ifdef QTHREAD_RCRTOOL_STAT
-    idleCheckin = (nshepherds * nworkerspershep) - 1; // don't wait for RCR thread
+    if (rcrtoollevel > 0) {
+      idleCheckin = (nshepherds * nworkerspershep) - 1; // don't wait for RCR thread
+    }
 #endif
 
 #ifdef QTHREAD_GUARD_PAGES
@@ -1144,9 +1164,11 @@ int qthread_initialize(void)
                       &qlib->shepherds[i]);
 # ifdef QTHREAD_RCRTOOL
         qlib->shepherds[i].active_workers = nworkerspershep;         // race? between creation and workhorse loop putting guys to sleep??? akp 6/10/11
-        if (i == nshepherds - 1) {
+	if (rcrtoollevel > 0) {
+	  if (i == nshepherds - 1) {
             qlib->shepherds[i].active_workers--;                    // the daemon uses up one worker
-        }
+	  }
+	}
 # endif
         for (j = 0; j < nworkerspershep; ++j) {
             qlib->shepherds[i].workers[j].nostealbuffer = calloc(STEAL_BUFFER_LENGTH,
@@ -1182,7 +1204,7 @@ int qthread_initialize(void)
 		      print_error("qthread_init: pthread_create() failed (%d): %s\n", r, strerror(errno));
 		      return QTHREAD_THIRD_PARTY_ERROR;
 		    }
-		    continue;
+		    if (rcrtoollevel > 0) continue;
                 }
             }
 # endif     /* ifdef QTHREAD_RCRTOOL */
@@ -1398,7 +1420,6 @@ void qthread_finalize(void)
             if ((rcrtoollevel > 0) && ((i == qlib->nshepherds - 1) && (j == qlib->nworkerspershep - 1))) {
                 // Tell RCRTool thread to stop
                 rcrToolContinue = 0;
-                continue;
             }
 # endif
             qthread_debug(SHEPHERD_DETAILS, "terminating worker %i:%i\n", (int)i, (int)j);
@@ -3212,7 +3233,7 @@ struct qqloop_step_handle_t *qt_loop_rose_queue_create(int64_t start,
 // number of loops to allow concurrently active - unfinished because someone
 // is late starting is the normal reason more than 1 or 2
 // lowered when code to actually protect against reuse in place AKP 1/26/12
-# define QTHREAD_NUM_LOOP_STRUCT 64 
+# define QTHREAD_NUM_LOOP_STRUCT 16
 
 int qt_omp_parallel_region_create()
 {                      /*{{{ */

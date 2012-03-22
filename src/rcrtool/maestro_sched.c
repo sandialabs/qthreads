@@ -8,7 +8,7 @@
 #include "maestro_sched.h"
 
 static int maestro_sched_init = 0;
-static int * allowed_workers = NULL;
+volatile int * allowed_workers = NULL;
 
 static void ms_init(void);
 
@@ -41,17 +41,21 @@ void maestro_sched(enum trigger_type type, enum trigger_action action, int val){
   case(MTA_LOWER_STREAM_COUNT):
     {
       // drop all to 3/4 -- works better on ldmapper2 test 
+      size_t size = (maestro_allowed_workers()*3)/4;
+      
       for ( i = 0; i < sheps; i ++) {
-	allowed_workers[i] = (maestro_allowed_workers()*3)/4;
+      	allowed_workers[i] = size;
       }
+
       // previous model -- drop local to 1/2
       //      allowed_workers[val] = maestro_current_workers(val)/2;
       break;
     }
   case(MTA_RAISE_STREAM_COUNT):
     {
+      size_t size = maestro_allowed_workers();
       for ( i = 0; i < sheps; i ++) {
-	allowed_workers[i] = maestro_allowed_workers();
+	allowed_workers[i] = size;
       }
       // previous model -- raise local to max
       // allowed_workers[val] = maestro_allowed_workers();

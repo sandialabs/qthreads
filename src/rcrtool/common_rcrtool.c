@@ -40,10 +40,8 @@ void die(char* msg) {
 /*!
  * 
  */
+volatile int foo;
 void doWork(int nshepherds, int nworkerspershep) {
-    struct timespec interval, remainder;
-    interval.tv_sec = 0;
-    interval.tv_nsec = 5000000;
 
     // get the blackboard once and use for the life of RCRdaemon
     struct _RCRBlackboard* bb = (struct _RCRBlackboard*)getShmBlackboardRO();
@@ -69,40 +67,81 @@ void doWork(int nshepherds, int nworkerspershep) {
       struct RCRMeter*  coreMeter   = &(firstMeter[bb->numOfSockets * S_NUMBER_OF_SOCKET_METERS]);
       
       int sm, cm;
+      int highCnt = 0;
+      int midCnt = 0;
+      int lowCnt = 0;
+
+      throwTrigger(APPSTATESHMKEY, T_TYPE_CORE, T_TYPE_LOW, 0, 0); // high aggressive 
       
       for (sm = 0; sm < bb->numOfSockets * S_NUMBER_OF_SOCKET_METERS; sm++) {
 	if (socketMeter[sm].enable) {
-	  if (socketMeter[sm].current < socketMeter[sm].lBound) {
-	    throwTrigger(APPSTATESHMKEY, T_TYPE_SOCKET, T_TYPE_LOW, sm / S_NUMBER_OF_SOCKET_METERS, sm);
-	    //printf("Blown socket Trigger. %f %f %f!\n", socketMeter[sm].lBound, socketMeter[sm].current, socketMeter[sm].uBound);
+	  if (socketMeter[sm].current > socketMeter[sm].lBound) {  // not low
+	    midCnt++;
 	  }
-	  if (socketMeter[sm].current > socketMeter[sm].uBound) {
-	    throwTrigger(APPSTATESHMKEY, T_TYPE_SOCKET, T_TYPE_HIGH, sm / S_NUMBER_OF_SOCKET_METERS, sm);
-	    //printf("Blown socket Trigger. %f %f %f!\n", socketMeter[sm].lBound, socketMeter[sm].current, socketMeter[sm].uBound);
+	  else{ // low
+	    lowCnt++;
 	  }
-	}
-      }
-      for (cm = 0; cm < bb->numOfCores * C_NUMBER_OF_CORE_METERS; cm++) {
-	if (coreMeter[cm].enable) {
-	  if (coreMeter[cm].current < coreMeter[cm].lBound) {
-	    throwTrigger(APPSTATESHMKEY, T_TYPE_CORE, T_TYPE_LOW, cm / C_NUMBER_OF_CORE_METERS, sm + cm);
-	    //printf("Blown core Trigger! %f %f %f\n", coreMeter[cm].lBound, coreMeter[cm].current, coreMeter[cm].uBound);
-	  }
-	  if (coreMeter[cm].current > coreMeter[cm].uBound) {
-	    throwTrigger(APPSTATESHMKEY, T_TYPE_CORE, T_TYPE_HIGH, cm / C_NUMBER_OF_CORE_METERS, sm + cm);
-	    //printf("Blown core Trigger! %f %f %f\n", coreMeter[cm].lBound, coreMeter[cm].current, coreMeter[cm].uBound);
-	  }
-	}
-      }
 
+	  if (socketMeter[sm].current > socketMeter[sm].uBound) {
+	    throwTrigger(APPSTATESHMKEY, T_TYPE_SOCKET,
+			 T_TYPE_HIGH, sm / S_NUMBER_OF_SOCKET_METERS, sm);
+	    highCnt++;
+	    //	    printf("sm %d bound %f value %f\n",sm, socketMeter[sm].uBound, socketMeter[sm].current);
+	    break;
+	  }
+	}
+
+      }
+      if (highCnt) {
+	throwTrigger(APPSTATESHMKEY, T_TYPE_SOCKET,
+		     T_TYPE_HIGH, sm / S_NUMBER_OF_SOCKET_METERS, sm);
+      }
+      else {
+	if (midCnt == 0) {
+	  for (cm = 0; cm < bb->numOfCores * C_NUMBER_OF_CORE_METERS; cm++) {
+	    if (coreMeter[cm].enable) {
+	      if (coreMeter[cm].current < coreMeter[cm].lBound) {
+	        midCnt++;
+	      }
+	      else {
+		lowCnt++;
+	      }
+	      if (coreMeter[cm].current > coreMeter[cm].uBound) {
+		highCnt++;
+		//printf("\t\t cm %d bound %f value %f\n", cm, coreMeter[cm].uBound, coreMeter[cm].current);
+		break;
+	      }
+	    }
+	  }
+	  if (highCnt) {
+	    throwTrigger(APPSTATESHMKEY, T_TYPE_CORE,
+			 T_TYPE_HIGH, cm / C_NUMBER_OF_CORE_METERS, sm + cm);
+	  }
+	}  
+      }
+      //  if (midCnt == 0) {
+      //if (!highCnt) {  // low aggressive
+      //if (!highCnt && lowCnt) {
+      if ( lowCnt) { // this gives us the medium aggressive case
+	    throwTrigger(APPSTATESHMKEY, T_TYPE_CORE, T_TYPE_LOW, sm, sm);
+      }
 #ifdef QTHREAD_RCRTOOL
       int dummySocketOrCoreID = 0;
       if (rcrtoolloglevel >= RCR_APP_STATE_DUMP_ALWAYS) {
 	dumpAppState(APPSTATESHMKEY, T_TYPE_SOCKET, dummySocketOrCoreID);
       }
 #endif
-      nanosleep(&interval, &remainder);
+      {
+	//struct timespec interval, remainder;
+	//interval.tv_sec = 0;
+	//interval.tv_nsec = 5000000;
+	//	nanosleep(&interval, &remainder);
+	foo = 1000000; // use hard countdown -- nanosleep seems to give interesting results
+	while (--foo);
+      }
     }
+
+    throwTrigger(APPSTATESHMKEY, T_TYPE_CORE, T_TYPE_LOW, 0, 0); // release any throttled threads
 
     if(shmdt(bb) == -1){  // Release Shared Memory region when shutting down - akp
       printf("shmdt failed\n");
@@ -110,5 +149,3 @@ void doWork(int nshepherds, int nworkerspershep) {
     }
     clearAppState();
 }
-
-

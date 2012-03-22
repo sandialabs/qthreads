@@ -77,7 +77,7 @@ struct qthread_shepherd_s {
     unsigned int           stealing_mode; /* Specifies when a shepherd may steal */
 # endif
 # ifdef QTHREAD_RCRTOOL
-    unsigned int active_workers;
+    volatile unsigned int active_workers;
 # endif
 #endif
 #ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional

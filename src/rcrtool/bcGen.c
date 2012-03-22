@@ -174,19 +174,13 @@ int putBreadcrumbs(rcrtool_trigger_type triggerType, int socketOrCoreID, const c
  * \param currentVal
  */
 void throwTrigger(key_t appStateShmKey, rcrtool_trigger_type triggerType, rcrtool_trigger_throw_type throwKind, int socketOrCoreID, int triggerNum) {
-#ifdef QTHREAD_RCRTOOL
-    if ((RCR_APP_STATE_DUMP_ALWAYS > rcrtoolloglevel) && (rcrtoolloglevel >= RCR_APP_STATE_DUMP)) {
-        dumpAppState(appStateShmKey, triggerType, socketOrCoreID);
-    }
-#endif
 
-    if (RCR_THROTTLE > rcrtoollevel)
-        return;
+    if (RCR_THROTTLE > rcrtoollevel) return;
 
     if (throwKind == T_TYPE_LOW) { //trigger cond low
         if (flipped[triggerNum] != SET_LOW) {
             flipped[triggerNum] = SET_LOW;
-            maestro_sched(MTT_SOCKET, MTA_RAISE_STREAM_COUNT, socketOrCoreID);
+	    maestro_sched(MTT_SOCKET, MTA_RAISE_STREAM_COUNT, socketOrCoreID);
         }
     } else if (throwKind == T_TYPE_HIGH) { //trigger cond high
         if (flipped[triggerNum] != SET_HIGH) {
@@ -196,13 +190,6 @@ void throwTrigger(key_t appStateShmKey, rcrtool_trigger_type triggerType, rcrtoo
 #endif
             maestro_sched(MTT_SOCKET, MTA_LOWER_STREAM_COUNT, socketOrCoreID);
         }
-    } else {
-#ifdef QTHREAD_RCRTOOL
-        if (triggerNum < MAX_TRIGGERS && flipped[triggerNum] != 0) {
-            //		  flipped[i] = 0;
-            //rcrtool_debug(RCR_RATTABLE_DEBUG," Left trigger for %s on %d\n,", triggerMap[i]->meterName, triggerMap[i]->id);
-        }
-#endif
     }
     return;
 }

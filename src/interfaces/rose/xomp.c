@@ -440,7 +440,7 @@ void xomp_internal_loop_init(
 	)  SPINLOCK_BODY();        // not first time though 
   
   // set up loop if first
-  int first = qthread_incr(&lp->workers,1); 
+  int first = lp->expected_workers - qthread_incr(&lp->workers,1); 
   if (((first) == 0) // if reusing structure previous use done and workers and departed workers values equal 
       & (lp->whichLoop != loopNum)          // I'm looking at the correct loop
       ) {
@@ -559,8 +559,8 @@ static bool xomp_internal_guided_next(
     // spin waiting for either 
     qthread_shepherd_id_t myShepId = qthread_shep();
 #ifdef QTHREAD_RCRTOOL
-    if (rcrtoollevel) { // has cache control been turned off by an environment variable?
-        if (loop->current_workers[myShepId] > maestro_current_workers(myShepId)) {
+    if (rcrtoollevel > 1){ // has cache control been turned off by an environment variable?
+       if (loop->current_workers[myShepId] > maestro_current_workers(myShepId)) {
 	    qthread_incr(&loop->current_workers[myShepId],-1); // not working spinning
 	    while (((loop->current_workers[myShepId] + 1) > maestro_current_workers(myShepId)) // A) the number of workers to be increased
 		   && (!(loop->departed_workers))) {   // B loop done and workers departing
@@ -613,11 +613,7 @@ bool XOMP_loop_guided_start(
     }
 
     qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
-    qthread_shepherd_id_t myShepId = qthread_shep();
-    
-    qthread_incr(&loop->current_workers[myShepId],1);
     return xomp_internal_guided_next(loop, returnLower, returnUpper);
-
 }
 
 // get next iteration(if any) for Qthreads default openmp loop execution
@@ -687,12 +683,10 @@ void XOMP_loop_end(
 #endif
 }
 
-// Openmp parallel for loop is completed
+// Openmp parallel for loop is completed - nothing to do at the current time
 void XOMP_loop_end_nowait(
     void * lp)
 {
-    qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
-    //   qthread_incr(&loop->workers,-1);
 }
 
 // Qthread implementation of a OpenMP global barrier
