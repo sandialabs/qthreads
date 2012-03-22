@@ -45,7 +45,7 @@ typedef struct qlib_s {
     QTHREAD_FASTLOCK_TYPE nshepherds_active_lock;
 #endif
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    unsigned int               nworkers_active;
+    aligned_t                  nworkers_active;
 #ifdef QTHREAD_MUTEX_INCREMENT
     QTHREAD_FASTLOCK_TYPE      nworkers_active_lock;
 #endif
