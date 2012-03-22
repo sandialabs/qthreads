@@ -12,33 +12,38 @@ static size_t rvs_count, rvs_size;
 static aligned_t *aligned_elems = NULL;
 static syncvar_t *syncvar_elems = NULL;
 
-aligned_t aligned_visit(void *args_) {
+aligned_t aligned_visit(void *args_)
+{
     size_t *rvs = (size_t *)args_;
 
     aligned_t tmp;
-    size_t i;
+    size_t    i;
 
     for (i = 0; i < rvs_count; i++) {
         qthread_readFE(&tmp, aligned_elems + rvs[i]);
         qthread_writeF_const(aligned_elems + rvs[i], tmp + 1);
     }
+    return 0;
 }
 
-aligned_t syncvar_visit(void *args_) {
+aligned_t syncvar_visit(void *args_)
+{
     size_t *rvs = (size_t *)args_;
 
     aligned_t tmp;
-    size_t i;
+    size_t    i;
 
     for (i = 0; i < rvs_count; i++) {
         qthread_syncvar_readFE(&tmp, syncvar_elems + rvs[i]);
         qthread_syncvar_writeF_const(syncvar_elems + rvs[i], tmp + 1);
     }
+    return 0;
 }
 
-int main(int argc, char *argv[])
+int main(int   argc,
+         char *argv[])
 {
-    aligned_t *rets;
+    aligned_t   *rets;
     unsigned int shepherds = 1;
     unsigned int workers   = 1;
 
@@ -50,7 +55,7 @@ int main(int argc, char *argv[])
     NUMARG(NUM_ELEMS, "NUM_ELEMS");
 
     shepherds = qthread_num_shepherds();
-    workers = qthread_num_workers();
+    workers   = qthread_num_workers();
 
     rets = malloc(sizeof(aligned_t) * NUM_TASKS);
     assert(rets);
@@ -67,10 +72,10 @@ int main(int argc, char *argv[])
     // Aligned FEB
     {
         qtimer_t timer = qtimer_create();
-        size_t i;
+        size_t   i;
         aligned_elems = malloc(sizeof(aligned_t) * NUM_ELEMS);
         assert(aligned_elems);
-   
+
         for (i = 0; i < NUM_TASKS; i++) {
             for (size_t j = 0; j < rvs_count; j++) {
                 rvs[j] = rand() % NUM_ELEMS;
@@ -86,9 +91,10 @@ int main(int argc, char *argv[])
             qthread_readFF(NULL, rets + i);
         }
         qtimer_stop(timer);
-        printf("aligned_t %g %u %u %u %u %u %u\n", qtimer_secs(timer), 
-            NUM_TASKS, NUM_ELEMS, rvs_count, shepherds, workers,
-            workers/shepherds);
+        printf("aligned_t %g %u %u %u %u %u %u\n", qtimer_secs(timer),
+               (unsigned)NUM_TASKS, (unsigned)NUM_ELEMS, (unsigned)rvs_count,
+               (unsigned)shepherds, (unsigned)workers,
+               (unsigned)(workers / shepherds));
 
         free(aligned_elems);
         qtimer_destroy(timer);
@@ -97,14 +103,14 @@ int main(int argc, char *argv[])
     // Syncvar FEB
     {
         qtimer_t timer = qtimer_create();
-        size_t i;
+        size_t   i;
 
         syncvar_elems = malloc(sizeof(syncvar_t) * NUM_ELEMS);
         assert(syncvar_elems);
         for (i = 0; i < NUM_ELEMS; i++) {
             syncvar_elems[i] = SYNCVAR_INITIALIZER;
         }
-   
+
         for (i = 0; i < NUM_TASKS; i++) {
             for (size_t j = 0; j < rvs_count; j++) {
                 rvs[j] = rand() % NUM_ELEMS;
@@ -120,8 +126,10 @@ int main(int argc, char *argv[])
             qthread_readFF(NULL, rets + i);
         }
         qtimer_stop(timer);
-        printf("syncvar %g %u %u %u %u %u %u\n", qtimer_secs(timer), NUM_TASKS, 
-            NUM_ELEMS, rvs_count, shepherds, workers, workers/shepherds);
+        printf("syncvar %g %u %u %u %u %u %u\n", qtimer_secs(timer),
+               (unsigned)NUM_TASKS, (unsigned)NUM_ELEMS, (unsigned)rvs_count,
+	       (unsigned)shepherds, (unsigned)workers,
+	       (unsigned)(workers / shepherds));
 
         free(syncvar_elems);
         qtimer_destroy(timer);
