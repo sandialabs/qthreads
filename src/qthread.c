@@ -370,7 +370,6 @@ static void *qthread_master(void *arg)
     struct timespec adaptTimeStart;
     struct timespec adaptTimeStop;
     double time = 0;
-    int64_t spin = 0; // count for deciding how much a thread was idled
 #endif
 #endif
 
@@ -438,24 +437,27 @@ static void *qthread_master(void *arg)
             if (me_worker->packed_worker_id != 0) { // never idle shepherd 0 worker 0  -- needs to be active for termination
 	      maestro_allowed_workers();
 	      if (qlib->shepherds[me->shepherd_id].active_workers > maestro_current_workers(me->shepherd_id)) {
+
 #ifdef QTHREAD_RCRTOOL_STAT
 		    clock_gettime(CLOCK_MONOTONIC, &adaptTimeStart);
 #endif
-                    qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers, -1);  // not working spinning
-		    int active = me->active_workers + 1;
-		    int current = maestro_current_workers(me->shepherd_id);
-		    int64_t cnt = 0;
-                    while ((active > current) // A) the number of workers to be increased
-			     && (!done)) {  // B exit flag set -- everybody needs to leave
-		      for(int i=0; i < 100; i ++)  qthread_incr(&cnt, 1);
-		      active = me->active_workers + 1;
-		      current = allowed_workers[me->shepherd_id];
-		    }
-                    qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers, 1); // back at work  -- skipped in departed workers case OK since everyone leaving
+
+		int active = qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers, -1);
+		int current = maestro_current_workers(me->shepherd_id);
+		while ( (active > current)
+			&& (!active>1)  // never throttle the last active worker
+			) {
+		  COMPILER_FENCE;  // is the fence enough of a slowdown to reduce
+                                   // pressure on me->active_workers ???? 
+		  active = me->active_workers + 1;
+		  current = allowed_workers[me->shepherd_id]; // use array don't recompute
+		}
+		MACHINE_FENCE;
+		qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers, 1);
+
 #ifdef QTHREAD_RCRTOOL_STAT
-		    clock_gettime(CLOCK_MONOTONIC, &adaptTimeStop);
-		    time += (adaptTimeStop.tv_sec + adaptTimeStop.tv_nsec * 1e-9) - (adaptTimeStart.tv_sec + adaptTimeStart.tv_nsec * 1e-9);
-		    spin += cnt;
+		clock_gettime(CLOCK_MONOTONIC, &adaptTimeStop);
+		time += (adaptTimeStop.tv_sec + adaptTimeStop.tv_nsec * 1e-9) - (adaptTimeStart.tv_sec + adaptTimeStart.tv_nsec * 1e-9);
 #endif
                 }
 	      }
@@ -715,7 +717,6 @@ qt_run:
       }
 
     if (rcrtoollevel > 2) {
-      //     printf("\t spin count %ld\n", spin);
          printf("\tIdle time (%d) = %10f\n", me_worker->packed_worker_id, time);
     }
  

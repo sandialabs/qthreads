@@ -1948,6 +1948,8 @@ qqloop_step_handle_t *qt_loop_rose_queue_create(int64_t start,
     ret->workers          = 0;
     ret->next             = NULL;
     ret->departed_workers = 0;
+    ret->expected_workers = 0;
+    ret->chunkSize        = 0;
     ret->assignNext       = start;
     ret->assignStart      = start;
     ret->assignStop       = stop;
