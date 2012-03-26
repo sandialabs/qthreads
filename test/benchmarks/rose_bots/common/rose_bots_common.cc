@@ -31,7 +31,7 @@
 #include "bots.h"
 #include "libxomp.h" 
 
-void bots_error(int error,char *message)
+void bots_error(int error,const char *message)
 {
   if (message == ((0L))) {
     switch(error){
@@ -131,11 +131,11 @@ void bots_get_load_average(char *str)
 
 void bots_print_results()
 {
-  char str_name[128UL];
-  char str_parameters[128UL];
-  char str_model[128UL];
-  char str_resources[128UL];
-  char str_result[15UL];
+  //char str_name[128UL];
+  //char str_parameters[128UL];
+  //char str_model[128UL];
+  //char str_resources[128UL];
+  const char *str_result;
   char str_time_program[15UL];
   char str_time_sequential[15UL];
   char str_speed_up[15UL];
@@ -145,51 +145,56 @@ void bots_print_results()
   char str_exec_message[128UL];
   char str_architecture[128UL];
   char str_load_avg[128UL];
-  char str_comp_date[128UL];
-  char str_comp_message[128UL];
-  char str_cc[128UL];
-  char str_cflags[128UL];
-  char str_ld[128UL];
-  char str_ldflags[128UL];
-  char str_cutoff[128UL];
+  //char str_comp_date[128UL];
+  //char str_comp_message[128UL];
+  //char str_cc[128UL];
+  //char str_cflags[128UL];
+  //char str_ld[128UL];
+  //char str_ldflags[128UL];
+  //char str_cutoff[128UL];
 /* compute output strings */
-  sprintf(str_name,"%s",bots_name);
-  sprintf(str_parameters,"%s",bots_parameters);
-  sprintf(str_model,"%s",bots_model);
-  sprintf(str_cutoff,"%s",bots_cutoff);
-  sprintf(str_resources,"%s",bots_resources);
+  //snprintf(str_name,128,"%s",bots_name);
+  //sprintf(str_parameters,"%s",bots_parameters);
+  //sprintf(str_model,"%s",bots_model);
+  //sprintf(str_cutoff,"%s",bots_cutoff);
+  //sprintf(str_resources,"%s",bots_resources);
   switch(bots_result){
     case 0:
 {
-      sprintf(str_result,"n/a");
+    str_result = "n/a";
+      //sprintf(str_result,"n/a");
       break; 
     }
     case 1:
 {
-      sprintf(str_result,"successful");
+    str_result = "successful";
+      //sprintf(str_result,"successful");
       break; 
     }
     case 2:
 {
-      sprintf(str_result,"UNSUCCESSFUL");
+    str_result = "UNSUCCESSFUL";
+      //sprintf(str_result,"UNSUCCESSFUL");
       break; 
     }
     case 3:
 {
-      sprintf(str_result,"Not requested");
+    str_result = "Not requested";
+      //sprintf(str_result,"Not requested");
       break; 
     }
     default:
 {
-      sprintf(str_result,"error");
+    str_result = "error";
+      //sprintf(str_result,"error");
       break; 
     }
   }
   snprintf(str_time_program, 15UL, "%f",bots_time_program);
   if (bots_sequential_flag) 
-    sprintf(str_time_sequential,"%f",bots_time_sequential);
+    snprintf(str_time_sequential,15,"%f",bots_time_sequential);
   else 
-    sprintf(str_time_sequential,"n/a");
+    strncpy(str_time_sequential, "n/a", 15);
   if (bots_sequential_flag) 
     sprintf(str_speed_up,"%3.2f",(bots_time_sequential / bots_time_program));
   else 
@@ -200,12 +205,12 @@ void bots_print_results()
   sprintf(str_exec_message,"%s",bots_exec_message);
   bots_get_architecture(str_architecture);
   bots_get_load_average(str_load_avg);
-  sprintf(str_comp_date,"%s",bots_comp_date);
-  sprintf(str_comp_message,"%s",bots_comp_message);
-  sprintf(str_cc,"%s",bots_cc);
-  sprintf(str_cflags,"%s",bots_cflags);
-  sprintf(str_ld,"%s",bots_ld);
-  sprintf(str_ldflags,"%s",bots_ldflags);
+  //snprintf(str_comp_date,128,"%s",bots_comp_date);
+  //sprintf(str_comp_message,"%s",bots_comp_message);
+  //snprintf(str_cc,128,"%s",bots_cc);
+  //snprintf(str_cflags,128,"%s",bots_cflags);
+  //sprintf(str_ld,"%s",bots_ld);
+  //sprintf(str_ldflags,"%s",bots_ldflags);
   if (bots_print_header) {
     switch(bots_output_format){
       case 0:
@@ -246,12 +251,12 @@ void bots_print_results()
 {
       fprintf(stdout,"\n");
 /*fix*/
-      fprintf(stdout,"Program             = %s\n",str_name);
+      fprintf(stdout,"Program             = %s\n",bots_name);
 /*fix*/
-      fprintf(stdout,"Parameters          = %s\n",str_parameters);
-      fprintf(stdout,"Model               = %s\n",str_model);
-      fprintf(stdout,"Embedded cut-off    = %s\n",str_cutoff);
-      fprintf(stdout,"# of Threads        = %s\n",str_resources);
+      fprintf(stdout,"Parameters          = %s\n",bots_parameters);
+      fprintf(stdout,"Model               = %s\n",bots_model);
+      fprintf(stdout,"Embedded cut-off    = %s\n",bots_cutoff);
+      fprintf(stdout,"# of Threads        = %s\n",bots_resources);
       fprintf(stdout,"Verification        = %s\n",str_result);
       fprintf(stdout,"Time Program        = %s seconds\n",str_time_program);
       if (bots_sequential_flag) {
@@ -266,24 +271,24 @@ void bots_print_results()
       fprintf(stdout,"Execution Message   = %s\n",str_exec_message);
       fprintf(stdout,"Architecture        = %s\n",str_architecture);
       fprintf(stdout,"Load Avg [1:5:15]   = %s\n",str_load_avg);
-      fprintf(stdout,"Compilation Date    = %s\n",str_comp_date);
-      fprintf(stdout,"Compilation Message = %s\n",str_comp_message);
-      fprintf(stdout,"Compiler            = %s\n",str_cc);
-      fprintf(stdout,"Compiler Flags      = %s\n",str_cflags);
-      fprintf(stdout,"Linker              = %s\n",str_ld);
-      fprintf(stdout,"Linker Flags        = %s\n",str_ldflags);
+      fprintf(stdout,"Compilation Date    = %s\n",bots_comp_date);
+      fprintf(stdout,"Compilation Message = %s\n",bots_comp_message);
+      fprintf(stdout,"Compiler            = %s\n",bots_cc);
+      fprintf(stdout,"Compiler Flags      = %s\n",bots_cflags);
+      fprintf(stdout,"Linker              = %s\n",bots_ld);
+      fprintf(stdout,"Linker Flags        = %s\n",bots_ldflags);
       fflush(stdout);
       break; 
     }
     case 2:
 {
-      fprintf(stdout,"%s;%s;%s;%s;%s;%s;",str_name,str_parameters,str_model,str_cutoff,str_resources,str_result);
+      fprintf(stdout,"%s;%s;%s;%s;%s;%s;",bots_name,bots_parameters,bots_model,bots_cutoff,bots_resources,str_result);
       fprintf(stdout,"%s;%s;%s;",str_time_program,str_time_sequential,str_speed_up);
       fprintf(stdout,"%s;%s;",str_number_of_tasks,str_number_of_tasks_per_second);
       fprintf(stdout,"%s;%s;",str_exec_date,str_exec_message);
       fprintf(stdout,"%s;%s;",str_architecture,str_load_avg);
-      fprintf(stdout,"%s;%s;",str_comp_date,str_comp_message);
-      fprintf(stdout,"%s;%s;%s;%s;",str_cc,str_cflags,str_ld,str_ldflags);
+      fprintf(stdout,"%s;%s;",bots_comp_date,bots_comp_message);
+      fprintf(stdout,"%s;%s;%s;%s;",bots_cc,bots_cflags,bots_ld,bots_ldflags);
       fprintf(stdout,"\n");
       break; 
     }
@@ -291,12 +296,12 @@ void bots_print_results()
 {
       fprintf(stdout,"\n");
 /*fix*/
-      fprintf(stdout,"Program             = %s\n",str_name);
+      fprintf(stdout,"Program             = %s\n",bots_name);
 /*fix*/
-      fprintf(stdout,"Parameters          = %s\n",str_parameters);
-      fprintf(stdout,"Model               = %s\n",str_model);
-      fprintf(stdout,"Embedded cut-off    = %s\n",str_cutoff);
-      fprintf(stdout,"# of Threads        = %s\n",str_resources);
+      fprintf(stdout,"Parameters          = %s\n",bots_parameters);
+      fprintf(stdout,"Model               = %s\n",bots_model);
+      fprintf(stdout,"Embedded cut-off    = %s\n",bots_cutoff);
+      fprintf(stdout,"# of Threads        = %s\n",bots_resources);
       fprintf(stdout,"Verification        = %s\n",str_result);
       fprintf(stdout,"Time Program        = %s seconds\n",str_time_program);
       if (bots_sequential_flag) {
@@ -311,7 +316,7 @@ void bots_print_results()
     }
     case 4:
 {
-      fprintf(stdout,"%s;%s;%s;%s;%s;%s;",str_name,str_parameters,str_model,str_cutoff,str_resources,str_result);
+      fprintf(stdout,"%s;%s;%s;%s;%s;%s;",bots_name,bots_parameters,bots_model,bots_cutoff,bots_resources,str_result);
       fprintf(stdout,"%s;%s;%s;",str_time_program,str_time_sequential,str_speed_up);
       fprintf(stdout,"%s;%s;",str_number_of_tasks,str_number_of_tasks_per_second);
       fprintf(stdout,"\n");
