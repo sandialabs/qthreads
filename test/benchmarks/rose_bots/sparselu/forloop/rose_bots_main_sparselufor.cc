@@ -118,7 +118,7 @@ int bots_number_of_tasks = 0;
 #ifndef BOTS_APP_DESC_ARG_SIZE
 #error "Help description for argument size must be specified (#define BOTS_APP_DESC_ARG_SIZE)"
 #endif
-int bots_arg_size = 50;
+unsigned int bots_arg_size = 50;
 #endif
 #ifdef BOTS_APP_USES_ARG_SIZE_1
 #ifndef BOTS_APP_DEF_ARG_SIZE_1
@@ -457,7 +457,7 @@ int main(int argc,char *argv[])
 #endif
 {
     bots_sequential_flag = 1;
-    sparselu_init(&SEQ,("serial"));
+    sparselu_init(&SEQ,"serial");
 #ifdef BOTS_APP_SELF_TIMING
 #else
     bots_t_start = bots_usecs();
@@ -468,7 +468,7 @@ int main(int argc,char *argv[])
     sparselu_fini(SEQ,("serial"));
   }
 #endif
-  sparselu_init(&BENCH,("benchmark"));
+  sparselu_init(&BENCH,"benchmark");
 #ifdef BOTS_APP_SELF_TIMING
 #else
   bots_t_start = bots_usecs();

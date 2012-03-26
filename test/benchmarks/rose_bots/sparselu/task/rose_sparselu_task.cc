@@ -62,8 +62,8 @@ void genmat(float *M[])
   int init_val;
   int i;
   int j;
-  int ii;
-  int jj;
+  unsigned int ii;
+  unsigned int jj;
   float *p;
   init_val = 1325;
 /* generating the structure */
@@ -115,10 +115,10 @@ void genmat(float *M[])
  * print_structure: 
  **********************************************************************/
 
-void print_structure(char *name,float *M[])
+void print_structure(const char *name,float *M[])
 {
-  int ii;
-  int jj;
+  unsigned int ii;
+  unsigned int jj;
 {
     if ((bots_verbose_mode) >= (BOTS_VERBOSE_DEFAULT)) {
       fprintf(stdout,"Structure for matrix %s @ 0x%p\n",name,M);
@@ -239,7 +239,7 @@ void fwd(float *diag,float *col)
         col[(i * bots_arg_size_1) + j] = (col[(i * bots_arg_size_1) + j] - (diag[(i * bots_arg_size_1) + k] * col[(k * bots_arg_size_1) + j]));
 }
 
-void sparselu_init(float ***pBENCH,char *pass)
+void sparselu_init(float ***pBENCH,const char *pass)
 {
    *pBENCH = ((float **)(malloc(((((bots_arg_size * bots_arg_size)) * (sizeof(float *)))))));
   genmat( *pBENCH);
@@ -320,9 +320,9 @@ void sparselu_par_call(float **BENCH)
 
 void sparselu_seq_call(float **BENCH)
 {
-  int ii;
-  int jj;
-  int kk;
+  unsigned int ii;
+  unsigned int jj;
+  unsigned int kk;
   for (kk = 0; kk < bots_arg_size; kk++) {
     lu0(BENCH[(kk * bots_arg_size) + kk]);
     for (jj = (kk + 1); jj < bots_arg_size; jj++) 
@@ -344,15 +344,15 @@ void sparselu_seq_call(float **BENCH)
   }
 }
 
-void sparselu_fini(float **BENCH,char *pass)
+void sparselu_fini(float **BENCH,const char *pass)
 {
   print_structure(pass,BENCH);
 }
 
 int sparselu_check(float **SEQ,float **BENCH)
 {
-  int ii;
-  int jj;
+  unsigned int ii;
+  unsigned int jj;
   int ok = 1;
   for (ii = 0; (ii < bots_arg_size) && (ok); ii++) {
     for (jj = 0; (jj < bots_arg_size) && (ok); jj++) {
@@ -410,9 +410,9 @@ static void OUT__4__1527__(void *__out_argv)
   int *ii = (int *)(((struct OUT__4__1527___data *)__out_argv) -> OUT__4__1527___data::ii_p);
   int *jj = (int *)(((struct OUT__4__1527___data *)__out_argv) -> OUT__4__1527___data::jj_p);
   int *kk = (int *)(((struct OUT__4__1527___data *)__out_argv) -> OUT__4__1527___data::kk_p);
-  for ( *kk = 0;  *kk < bots_arg_size; ( *kk)++) {
+  for ( *kk = 0;  *kk < (int)bots_arg_size; ( *kk)++) {
     lu0(( *BENCH)[( *kk * bots_arg_size) +  *kk]);
-    for ( *jj = ( *kk + 1);  *jj < bots_arg_size; ( *jj)++) 
+    for ( *jj = ( *kk + 1);  *jj < (int)bots_arg_size; ( *jj)++) 
       if (( *BENCH)[( *kk * bots_arg_size) +  *jj] != ((0L))) {
         struct OUT__3__1527___data __out_argv3__1527__;
         __out_argv3__1527__.OUT__3__1527___data::kk =  *kk;
@@ -420,7 +420,7 @@ static void OUT__4__1527__(void *__out_argv)
         __out_argv3__1527__.OUT__3__1527___data::BENCH_p = ((void *)(&( *BENCH)));
         XOMP_task(OUT__3__1527__,&__out_argv3__1527__,0,sizeof(struct OUT__3__1527___data ),4,1,1);
       }
-    for ( *ii = ( *kk + 1);  *ii < bots_arg_size; ( *ii)++) 
+    for ( *ii = ( *kk + 1);  *ii < (int)bots_arg_size; ( *ii)++) 
       if (( *BENCH)[( *ii * bots_arg_size) +  *kk] != ((0L))) {
         struct OUT__2__1527___data __out_argv2__1527__;
         __out_argv2__1527__.OUT__2__1527___data::kk =  *kk;
@@ -429,9 +429,9 @@ static void OUT__4__1527__(void *__out_argv)
         XOMP_task(OUT__2__1527__,&__out_argv2__1527__,0,sizeof(struct OUT__2__1527___data ),4,1,1);
       }
     XOMP_taskwait();
-    for ( *ii = ( *kk + 1);  *ii < bots_arg_size; ( *ii)++) 
+    for ( *ii = ( *kk + 1);  *ii < (int)bots_arg_size; ( *ii)++) 
       if (( *BENCH)[( *ii * bots_arg_size) +  *kk] != ((0L))) 
-        for ( *jj = ( *kk + 1);  *jj < bots_arg_size; ( *jj)++) 
+        for ( *jj = ( *kk + 1);  *jj < (int)bots_arg_size; ( *jj)++) 
           if (( *BENCH)[( *kk * bots_arg_size) +  *jj] != ((0L))) {
             struct OUT__1__1527___data __out_argv1__1527__;
             __out_argv1__1527__.OUT__1__1527___data::kk =  *kk;

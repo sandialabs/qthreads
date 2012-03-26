@@ -36,7 +36,9 @@ static int solutions[] = {(1), (0), (0), (2), (10), (4), (40), (92), (352), (724
 /* 10 */
 };
 #define MAX_SOLUTIONS sizeof(solutions)/sizeof(int)
+#ifdef FORCE_TIED_TASKS
 __thread int mycount = 0;
+#endif
 int total_count;
 /*
  * <a> contains array of <n> queen positions.  Returns 1
@@ -199,7 +201,7 @@ void find_queens(int size)
 
 int verify_queens(int size)
 {
-  if ((size) > ((sizeof(solutions)) / (sizeof(int )))) 
+  if ((size_t)(size) > ((sizeof(solutions)) / (sizeof(int )))) 
     return 0;
   if (total_count == solutions[size - 1]) 
     return 1;

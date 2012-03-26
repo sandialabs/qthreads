@@ -473,16 +473,16 @@ static void OUT__2__1527__(void *__out_argv);
 
 int pairalign(int istart,int iend,int jstart,int jend)
 {
-  int i;
-  int n;
-  int m;
-  int si;
-  int sj;
-  int len1;
-  int len2;
+  //int i;
+  //int n;
+  //int m;
+  //int si;
+  //int sj;
+  //int len1;
+  //int len2;
   int maxres;
-  double gg;
-  double mm_score;
+  //double gg;
+  //double mm_score;
   int *mat_xref;
   int *matptr;
   matptr = gon250mt;

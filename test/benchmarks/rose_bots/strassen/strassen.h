@@ -34,7 +34,7 @@
 #define SizeAtWhichNaiveAlgorithmIsMoreEfficient 16
 
 extern int bots_arg_block;
-extern int bots_arg_size;
+extern unsigned int bots_arg_size;
 
 #if defined(MANUAL_CUTOFF) || defined(IF_CUTOFF)
 extern int bots_cutoff_value;

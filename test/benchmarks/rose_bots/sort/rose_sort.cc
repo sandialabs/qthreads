@@ -461,7 +461,7 @@ void cilksort_par(ELM *low,ELM *tmp,long size)
   ELM *tmpB;
   ELM *tmpC;
   ELM *tmpD;
-  if (size < (bots_app_cutoff_value_1)) {
+  if (size < ((unsigned int)bots_app_cutoff_value_1)) {
 /* quicksort when less than 1024 elements */
     seqquick(low,((low + size) - 1));
     return ;
@@ -557,21 +557,21 @@ void sort_init()
     }
     bots_app_cutoff_value = 2;
   }
-  else if (bots_app_cutoff_value > bots_arg_size) {{
+  else if ((unsigned int)bots_app_cutoff_value > bots_arg_size) {{
       if ((bots_verbose_mode) >= (BOTS_VERBOSE_DEFAULT)) {
         fprintf(stdout,"%s can not be greather than vector size, using %d as a parameter.\n","Sequential Merge cutoff value",bots_arg_size);
       }
     }
     bots_app_cutoff_value = bots_arg_size;
   }
-  if (bots_app_cutoff_value_1 > bots_arg_size) {{
+  if ((unsigned int)bots_app_cutoff_value_1 > bots_arg_size) {{
       if ((bots_verbose_mode) >= (BOTS_VERBOSE_DEFAULT)) {
         fprintf(stdout,"%s can not be greather than vector size, using %d as a parameter.\n","Sequential Quicksort cutoff value",bots_arg_size);
       }
     }
     bots_app_cutoff_value_1 = bots_arg_size;
   }
-  if (bots_app_cutoff_value_2 > bots_arg_size) {{
+  if ((unsigned int)bots_app_cutoff_value_2 > bots_arg_size) {{
       if ((bots_verbose_mode) >= (BOTS_VERBOSE_DEFAULT)) {
         fprintf(stdout,"%s can not be greather than vector size, using %d as a parameter.\n","Sequential Insertion cutoff value",bots_arg_size);
       }
@@ -611,7 +611,7 @@ void sort_par()
 
 int sort_verify()
 {
-  int i;
+  unsigned int i;
   int success = 1;
   for (i = 0; i < bots_arg_size; ++i) 
     if (array[i] != (i)) 

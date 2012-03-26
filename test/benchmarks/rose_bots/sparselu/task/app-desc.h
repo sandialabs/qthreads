@@ -34,8 +34,8 @@
 
 #define BOTS_APP_INIT float **SEQ,**BENCH;
 
-void sparselu_init(float ***pM, char *pass);
-void sparselu_fini(float **M, char *pass);
+void sparselu_init(float ***pM, const char *pass);
+void sparselu_fini(float **M, const char *pass);
 void sparselu_seq_call(float **SEQ);
 void sparselu_par_call(float **BENCH);
 int sparselu_check(float **SEQ, float **BENCH);

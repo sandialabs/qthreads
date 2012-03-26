@@ -118,7 +118,7 @@ int bots_number_of_tasks = 0;
 #ifndef BOTS_APP_DESC_ARG_SIZE
 #error "Help description for argument size must be specified (#define BOTS_APP_DESC_ARG_SIZE)"
 #endif
-int bots_arg_size = ((32 * 1024) * 1024);
+unsigned int bots_arg_size = ((32 * 1024) * 1024);
 #endif
 #ifdef BOTS_APP_USES_ARG_SIZE_1
 #ifndef BOTS_APP_DEF_ARG_SIZE_1
@@ -434,7 +434,7 @@ int main(int argc,char *argv[])
   long bots_t_end;
 #endif
   bots_get_params(argc,argv);
-  int i;
+  unsigned int i;
   COMPLEX *in;
   COMPLEX *out1;
   COMPLEX *out2;

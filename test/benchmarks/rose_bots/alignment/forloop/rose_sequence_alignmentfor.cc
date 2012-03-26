@@ -123,8 +123,8 @@ void alloc_aln(int nseqs)
 
 char *get_seq(char *sname,int *len,char *chartab,FILE *fin)
 {
-  int i;
-  int j;
+  unsigned int i;
+  unsigned int j;
   char c;
   char *seq;
   static char line[(512 + 1)];

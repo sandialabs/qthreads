@@ -355,7 +355,7 @@ void OptimizedStrassenMultiply_seq(REAL *C,REAL *A,REAL *B,unsigned int MatrixSi
   PTR RowIncrementA = ((RowWidthA - QuadrantSize) << 3);
   PTR RowIncrementB = ((RowWidthB - QuadrantSize) << 3);
   PTR RowIncrementC = ((RowWidthC - QuadrantSize) << 3);
-  if (MatrixSize <= (bots_app_cutoff_value)) {
+  if (MatrixSize <= (unsigned)(bots_app_cutoff_value)) {
     MultiplyByDivideAndConquer(C,A,B,MatrixSize,RowWidthC,RowWidthA,RowWidthB,0);
     return ;
   }
@@ -715,7 +715,7 @@ void OptimizedStrassenMultiply_par(REAL *C,REAL *A,REAL *B,unsigned int MatrixSi
   PTR RowIncrementA = ((RowWidthA - QuadrantSize) << 3);
   PTR RowIncrementB = ((RowWidthB - QuadrantSize) << 3);
   PTR RowIncrementC = ((RowWidthC - QuadrantSize) << 3);
-  if (MatrixSize <= (bots_app_cutoff_value)) {
+  if (MatrixSize <= (unsigned)(bots_app_cutoff_value)) {
     MultiplyByDivideAndConquer(C,A,B,MatrixSize,RowWidthC,RowWidthA,RowWidthB,0);
     return ;
   }

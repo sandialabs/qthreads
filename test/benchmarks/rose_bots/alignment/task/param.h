@@ -20,8 +20,8 @@
 
 /* Original code from the Application Kernel Matrix by Cray */
 
-char *amino_acid_order = "ABCDEFGHIKLMNPQRSTVWXYZ";
-char *amino_acid_codes = "ABCDEFGHIKLMNPQRSTUVWXYZ-";
+const char *amino_acid_order = "ABCDEFGHIKLMNPQRSTVWXYZ";
+const char *amino_acid_codes = "ABCDEFGHIKLMNPQRSTUVWXYZ-";
 
 int gon250mt[]={
   24,
