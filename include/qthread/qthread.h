@@ -8,6 +8,10 @@
 
 #include <string.h>                    /* for memcpy() */
 
+#ifndef QTHREAD_NOALIGNCHECK
+#include <stdio.h>                     /* for fprintf() */
+#endif
+
 #ifdef QTHREAD_LOG_BARRIER
 # include <qt_barrier.h>
 #else
