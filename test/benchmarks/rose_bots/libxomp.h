@@ -25,7 +25,7 @@ extern void XOMP_init (int argc, char ** argv);
 // Runtime library termination routine
 extern void XOMP_terminate (int exitcode);
 
-extern void XOMP_parallel_start (void (*func) (void *), void *data, unsigned numThread, int junk, char* fstr);
+extern void XOMP_parallel_start (void (*func) (void *), void *data, unsigned numThread, int junk, const char* fstr);
 extern void XOMP_parallel_end (void);
 
 extern void XOMP_task (void (*) (void *), void *, void (*) (void *, void *),
