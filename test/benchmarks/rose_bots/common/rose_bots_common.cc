@@ -26,10 +26,10 @@
 #include <sys/utsname.h>
 #include <sys/resource.h>
 //#include <sys/loadavg.h> // KBW: commented out for OSX
+#include "libxomp.h" 
 #include "bots_common.h"
 #include "bots_main.h"
 #include "bots.h"
-#include "libxomp.h" 
 
 void bots_error(int error,const char *message)
 {

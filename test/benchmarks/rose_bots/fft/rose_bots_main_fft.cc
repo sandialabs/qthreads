@@ -437,10 +437,10 @@ int main(int argc,char *argv[])
   unsigned int i;
   COMPLEX *in;
   COMPLEX *out1;
-  COMPLEX *out2;
   in = ((COMPLEX *)(malloc((((bots_arg_size) * (sizeof(COMPLEX )))))));
   bots_set_info();
 #ifdef KERNEL_SEQ_CALL
+  COMPLEX *out2;
 #ifdef BOTS_APP_CHECK_USES_SEQ_RESULT
   if ((bots_sequential_flag) || (bots_check_flag)) 
 #else

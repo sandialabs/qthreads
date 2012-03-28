@@ -6,7 +6,8 @@
 GLOBAL_COMMON = common/rose_bots_common.cc
 OUTPUTDIR = $(top_builddir)/src
 LIBS = $(OUTPUTDIR)/libqthread_xomp.la $(OUTPUTDIR)/libqthread.la
-INCLUDES = -I$(top_srcdir)/test/benchmarks/rose_bots/common
+INCLUDES = -I$(top_srcdir)/test/benchmarks/rose_bots/common \
+		   -I$(top_srcdir)/include
 DEFINES=-D_OPENMP -DMANUAL_CUTOFF
 
 AM_CXXFLAGS = @RESTRICT_CXXFLAGS@ $(DEFINES)

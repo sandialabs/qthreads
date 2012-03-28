@@ -90,9 +90,9 @@ LDADD = $(qthreadlib)
 
 if COMPILE_ROSE_EXTENSIONS
 buildall: $(benchmarks)
-	$(MAKE) -C rose_bots_benchmarks buildall
+	$(MAKE) -C rose_bots buildall
 buildextra: $(benchmarks)
-	$(MAKE) -C rose_bots_benchmarks buildextra
+	$(MAKE) -C rose_bots buildextra
 else
 buildall: $(benchmarks)
 buildextra: $(benchmarks)

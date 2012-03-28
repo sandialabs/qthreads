@@ -11,6 +11,8 @@ extern "C" {
 
 #include <stdbool.h>
 
+#include "qthread/omp_defines.h"
+
 //enum omp_rtl_enum {
 //  e_gomp,
 //  e_omni,
