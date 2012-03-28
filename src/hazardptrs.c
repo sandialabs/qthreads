@@ -69,7 +69,7 @@ void INTERNAL hazardous_ptr(unsigned int which,
                 hzptrs = wkr->hazard_ptrs;
             }
         }
-#else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
+#else   /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
         {
             qthread_shepherd_t *shep = qthread_internal_getshep();
             if (shep == NULL) {
@@ -133,14 +133,15 @@ static void hazardous_scan(hazard_freelist_t *hfl)
     tmpfreelist.count = 0;
     /* Stage 1: Collect hazardpointers */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    for (qthread_shepherd_id_t i = 0; i < qthread_num_shepherds(); ++i) {
-        for (qthread_worker_id_t j = 0; j < qlib->nworkerspershep; ++j) {
-            memcpy(plist + (i * qlib->nworkerspershep * HAZARD_PTRS_PER_SHEP) + (j * HAZARD_PTRS_PER_SHEP),
-                   qlib->shepherds[i].workers[j].hazard_ptrs,
-                   sizeof(void *) * HAZARD_PTRS_PER_SHEP);
-        }
-    }
     {
+        qthread_shepherd_id_t i;
+        for (i = 0; i < qthread_num_shepherds(); ++i) {
+            for (qthread_worker_id_t j = 0; j < qlib->nworkerspershep; ++j) {
+                memcpy(plist + (i * qlib->nworkerspershep * HAZARD_PTRS_PER_SHEP) + (j * HAZARD_PTRS_PER_SHEP),
+                       qlib->shepherds[i].workers[j].hazard_ptrs,
+                       sizeof(void *) * HAZARD_PTRS_PER_SHEP);
+            }
+        }
         uintptr_t *hzptr_tmp = hzptr_list;
         while (hzptr_tmp != NULL) {
             memcpy(plist + (i * qlib->nworkerspershep * HAZARD_PTRS_PER_SHEP),
