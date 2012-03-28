@@ -22,17 +22,17 @@ typedef aligned_t qt_sinc_count_t;
 
 struct qt_sinc_s {
     // Termination-detection-related info
-    qt_sinc_count_t  counter;
-    syncvar_t        ready;
+    qt_sinc_count_t counter;
+    syncvar_t       ready;
 
     // Value-related info
-    void            *restrict values;
-    qt_sinc_op_f     op;
-    void            *restrict result;
-    void            *restrict initial_value;
-    size_t           sizeof_value;
-    size_t           sizeof_shep_value_part;
-    size_t           sizeof_shep_count_part;
+    void *restrict values;
+    qt_sinc_op_f   op;
+    void *restrict result;
+    void *restrict initial_value;
+    size_t         sizeof_value;
+    size_t         sizeof_shep_value_part;
+    size_t         sizeof_shep_count_part;
 };
 
 static size_t       num_sheps;
@@ -41,15 +41,15 @@ static size_t       num_wps;
 static unsigned int cacheline;
 
 #ifdef HAVE_MEMALIGN
-#define ALIGNED_ALLOC(val, size, align) (val) = memalign((align), (size))
+# define ALIGNED_ALLOC(val, size, align) (val) = memalign((align), (size))
 #elif defined(HAVE_POSIX_MEMALIGN)
-#define ALIGNED_ALLOC(val, size, align) posix_memalign((void **)&(val), (align), (size))
+# define ALIGNED_ALLOC(val, size, align) posix_memalign((void **) & (val), (align), (size))
 #elif defined(HAVE_WORKING_VALLOC)
-#define ALIGNED_ALLOC(val, size, align) (val) = valloc((size))
+# define ALIGNED_ALLOC(val, size, align) (val) = valloc((size))
 #elif defined(HAVE_PAGE_ALIGNED_MALLOC)
-#define ALIGNED_ALLOC(val, size, align) (val) = malloc((size))
+# define ALIGNED_ALLOC(val, size, align) (val) = malloc((size))
 #else
-#define ALIGNED_ALLOC(val, size, align) (val) = valloc((size)) /* cross your fingers! */
+# define ALIGNED_ALLOC(val, size, align) (val) = valloc((size)) /* cross your fingers! */
 #endif
 
 qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
@@ -58,6 +58,7 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
                           const size_t will_spawn)
 {
     qt_sinc_t *sinc = malloc(sizeof(qt_sinc_t));
+
     assert(sinc);
 
     if (num_sheps == 0) {
@@ -80,10 +81,10 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
         const size_t num_lines              = num_sheps * num_lines_per_shep;
         const size_t sizeof_shep_value_part = num_lines_per_shep * cacheline;
 
-        sinc->initial_value = malloc(2* sizeof_value);
+        sinc->initial_value = malloc(2 * sizeof_value);
         assert(sinc->initial_value);
         memcpy(sinc->initial_value, initial_value, sizeof_value);
-        sinc->result = ((uint8_t*)sinc->initial_value) + sizeof_value;
+        sinc->result = ((uint8_t *)sinc->initial_value) + sizeof_value;
         assert(sinc->result);
 
         sinc->sizeof_shep_value_part = sizeof_shep_value_part;
@@ -111,7 +112,7 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
 
     // Initialize termination detection
     sinc->counter = will_spawn;
-    sinc->ready = 
+    sinc->ready   =
         (sinc->counter != 0) ? SYNCVAR_EMPTY_INITIALIZER : SYNCVAR_INITIALIZER;
 
     return sinc;
@@ -137,7 +138,7 @@ void qt_sinc_reset(qt_sinc_t   *sinc,
 
     // Reset termination detection
     sinc->counter = will_spawn;
-    sinc->ready = SYNCVAR_EMPTY_INITIALIZER;
+    sinc->ready   = SYNCVAR_EMPTY_INITIALIZER;
 }
 
 void qt_sinc_destroy(qt_sinc_t *sinc)
@@ -188,7 +189,7 @@ static void qt_sinc_internal_collate(qt_sinc_t *sinc)
             const size_t shep_offset = s * sizeof_shep_value_part;
             for (size_t w = 0; w < num_wps; ++w) {
                 sinc->op(sinc->result,
-                        (uint8_t *)sinc->values + shep_offset + (w * sizeof_value));
+                         (uint8_t *)sinc->values + shep_offset + (w * sizeof_value));
             }
         }
     }
@@ -197,7 +198,7 @@ static void qt_sinc_internal_collate(qt_sinc_t *sinc)
 }
 
 void qt_sinc_submit(qt_sinc_t *restrict sinc,
-                    void      *restrict value)
+                    void *restrict      value)
 {
     // Update value
     assert(NULL != sinc->values || NULL == value);
@@ -225,7 +226,7 @@ void qt_sinc_submit(qt_sinc_t *restrict sinc,
 }
 
 void qt_sinc_wait(qt_sinc_t *restrict sinc,
-                  void      *restrict target)
+                  void *restrict      target)
 {
     qthread_syncvar_readFF(NULL, &sinc->ready);
 
