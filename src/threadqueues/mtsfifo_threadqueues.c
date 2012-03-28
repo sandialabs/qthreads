@@ -8,10 +8,17 @@
 #endif
 #include <stdlib.h>
 
+#if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
+# if (HAVE_MEMALIGN && HAVE_MALLOC_H)
+#  include <malloc.h>
+# endif
+#endif
+
 /* Internal Headers */
 #include "qthread/qthread.h"
 #include "qt_macros.h"
 #include "qt_visibility.h"
+#include "qt_atomics.h"
 #include "qt_shepherd_innards.h"
 #include "qt_qthread_struct.h"
 #include "qthread_asserts.h"
@@ -53,10 +60,16 @@ static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret)
     *ret = calloc(1, sizeof(qt_threadqueue_node_t));
     return;
 # endif
-    memset(*ret, 0, sizeof(qt_threadqueue_node_t));
+    if (*ret != NULL) {
+        memset(*ret, 0, sizeof(qt_threadqueue_node_t));
+    }
 }                                      /*}}} */
 
-# define FREE_TQNODE(t) free(t)
+static void FREE_TQNODE(void *p)
+{
+    free(p);
+}
+
 void INTERNAL qt_threadqueue_subsystem_init(void) {}
 #else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 qt_threadqueue_pools_t generic_threadqueue_pools;
@@ -71,7 +84,10 @@ static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret)
     }
 }                                      /*}}} */
 
-# define FREE_TQNODE(t) qt_mpool_free(generic_threadqueue_pools.nodes, t)
+static void FREE_TQNODE(void *p)
+{
+    qt_mpool_free(generic_threadqueue_pools.nodes, p);
+}
 
 static void qt_threadqueue_subsystem_shutdown(void)
 {
@@ -93,41 +109,14 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
     return qthread_internal_atomic_read_s(&q->advisory_queuelen, &q->advisory_queuelen_m);
 } /*}}}*/
 
-#define QTHREAD_INITLOCK(l) do { if (pthread_mutex_init(l, NULL) != 0) { return QTHREAD_PTHREAD_ERROR; } } while(0)
-#define QTHREAD_LOCK(l)     qassert(pthread_mutex_lock(l), 0)
-#define QTHREAD_UNLOCK(l)   qassert(pthread_mutex_unlock(l), 0)
-// #define QTHREAD_DESTROYLOCK(l) do { int __ret__ = pthread_mutex_destroy(l); if (__ret__ != 0) fprintf(stderr, "pthread_mutex_destroy(%p) returned %i (%s)\n", l, __ret__, strerror(__ret__)); assert(__ret__ == 0); } while (0)
-#define QTHREAD_DESTROYLOCK(l) qassert(pthread_mutex_destroy(l), 0)
-#define QTHREAD_DESTROYCOND(l) qassert(pthread_cond_destroy(l), 0)
-#define QTHREAD_SIGNAL(l)      qassert(pthread_cond_signal(l), 0)
-#define QTHREAD_CONDWAIT(c, l) qassert(pthread_cond_wait(c, l), 0)
-
 /*****************************************/
 /* functions to manage the thread queues */
 /*****************************************/
 
 // This lock-free algorithm borrowed from
 // http://www.research.ibm.com/people/m/michael/podc-1996.pdf
-
-/* to avoid ABA reinsertion trouble, each pointer in the queue needs to have a
- * monotonically increasing counter associated with it. The counter doesn't
- * need to be huge, just big enough to avoid trouble. We'll
- * just claim 4, to be conservative. Thus, a qt_threadqueue_node_t must be at least
- * 16 bytes. */
-/* Technically, ABA protection is only necessary if there are more than one
- * dequeuer AND if you aren't using hazard pointers. However, this queue is
- * only used in single dequeuer situations. */
-#define NO_ABA_PROTECTION 1 /* only necessary for multiple-dequeuers */
-#if defined(QTHREAD_USE_VALGRIND) || NO_ABA_PROTECTION
-# define QPTR(x)        (x)
-# define QCTR(x)        0
-# define QCOMPOSE(x, y) (x)
-#else
-# define QCTR_MASK (15)
-# define QPTR(x)        ((qt_threadqueue_node_t *)(((uintptr_t)(x)) & ~(uintptr_t)QCTR_MASK))
-# define QCTR(x)        (((uintptr_t)(x)) &QCTR_MASK)
-# define QCOMPOSE(x, y) (void *)(((uintptr_t)QPTR(x)) | ((QCTR(y) + 1) &QCTR_MASK))
-#endif
+// ... and modified to use hazard ptrs according to
+// http://www.research.ibm.com/people/m/michael/ieeetpds-2004.pdf
 
 qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
 {                                      /*{{{ */
@@ -147,8 +136,8 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
         q->fruitless = 0;
 #endif   /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
         ALLOC_TQNODE(((qt_threadqueue_node_t **)&(q->head)));
-        assert(QPTR(q->head) != NULL);
-        if (QPTR(q->head) == NULL) {   // if we're not using asserts, fail nicely
+        assert(q->head != NULL);
+        if (q->head == NULL) {   // if we're not using asserts, fail nicely
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
             QTHREAD_DESTROYLOCK(&q->lock);
             QTHREAD_DESTROYCOND(&q->notempty);
@@ -156,23 +145,23 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
             FREE_THREADQUEUE(q);
             q = NULL;
         }
-        q->tail             = q->head;
-        QPTR(q->tail)->next = NULL;
+        q->tail       = q->head;
+        q->tail->next = NULL;
     }
     return q;
 }                                      /*}}} */
 
 void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 {                                      /*{{{ */
-    while (QPTR(q->head) != QPTR(q->tail)) {
+    while (q->head != q->tail) {
         qt_threadqueue_dequeue(q);
     }
-    assert(QPTR(q->head) == QPTR(q->tail));
+    assert(q->head == q->tail);
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     QTHREAD_DESTROYLOCK(&q->lock);
     QTHREAD_DESTROYCOND(&q->notempty);
 #endif
-    FREE_TQNODE((qt_threadqueue_node_t *)QPTR(q->head));
+    FREE_TQNODE((qt_threadqueue_node_t *)q->head);
     FREE_THREADQUEUE(q);
 }                                      /*}}} */
 
@@ -197,40 +186,43 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
 
     ALLOC_TQNODE(&node);
     assert(node != NULL);
-    assert(QCTR(node) == 0);           // node MUST be aligned
 
     node->value = t;
-    // set to null without disturbing the ctr
-    node->next = (qt_threadqueue_node_t *)(uintptr_t)QCTR(node->next);
+    node->next  = NULL;
 
     while (1) {
         tail = q->tail;
-        next = QPTR(tail)->next;
-        MACHINE_FENCE;
-        if (tail == q->tail) {        // are tail and next consistent?
-            if (QPTR(next) == NULL) { // was tail pointing to the last node?
-                if (qt_cas((void **)&(QPTR(tail)->next),
-                           (void *)next,
-                           QCOMPOSE(node, next)) == next) {
-                    break;             // success!
-                }
-            } else {                   // tail not pointing to last node
-                (void)qt_cas((void **)&(q->tail),
-                             (void *)tail,
-                             QCOMPOSE(next, tail));
-            }
+
+        hazardous_ptr(0, (uintptr_t)tail);
+        if (tail != q->tail) {
+            continue;          // are tail and next consistent?
+        }
+
+        next = tail->next;
+        if (next != NULL) { // tail not pointing to last node
+            (void)qt_cas((void **)&(q->tail),
+                         (void *)tail,
+                         next); // ABA hazard (mitigated by QCOMPOSE)
+            continue;
+        }
+        // tail must be pointing to the last node
+        if (qt_cas((void **)&(tail->next),
+                   (void *)next,
+                   node) == next) {
+            break;                                  // success!
         }
     }
     (void)qt_cas((void **)&(q->tail),
                  (void *)tail,
-                 QCOMPOSE(node, tail));
+                 node);
+
     (void)qthread_incr(&q->advisory_queuelen, 1);
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     if (q->fruitless) {
         QTHREAD_LOCK(&q->lock);
         if (q->fruitless) {
             q->fruitless = 0;
-            QTHREAD_SIGNAL(&q->notempty);
+            QTHREAD_BCAST(&q->notempty);
         }
         QTHREAD_UNLOCK(&q->lock);
     }
@@ -253,30 +245,36 @@ qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
 
     assert(q != NULL);
     while (1) {
-        head     = q->head;
+        head = q->head;
+
+        hazardous_ptr(0, (uintptr_t)head);
+        if (head != q->head) {
+            continue;                               // are head, tail, and next consistent?
+        }
+
         tail     = q->tail;
-        next_ptr = QPTR(QPTR(head)->next);
-        COMPILER_FENCE;
-        if (head == q->head) {              // are head, tail, and next consistent?
-            if (QPTR(head) == QPTR(tail)) { // is queue empty or tail falling behind?
-                if (next_ptr == NULL) {     // is queue empty?
-                    return NULL;
-                }
-                (void)qt_cas((void **)&(q->tail),
-                             (void *)tail,
-                             QCOMPOSE(next_ptr, tail)); // advance tail ptr
-            } else {                                    // no need to deal with tail
-                // read value before CAS, otherwise another dequeue might free the next node
-                p = next_ptr->value;
-                if (qt_cas((void **)&(q->head),
-                           (void *)head,
-                           QCOMPOSE(next_ptr, head)) == head) {
-                    break;             // success!
-                }
-            }
+        next_ptr = head->next;
+
+        hazardous_ptr(1, (uintptr_t)next_ptr);
+
+        if (next_ptr == NULL) {
+            return NULL;                   // queue is empty
+        }
+        if (head == tail) { // tail is falling behind!
+            (void)qt_cas((void **)&(q->tail),
+                         (void *)tail,
+                         next_ptr); // advance tail ptr
+            continue;
+        }
+        // read value before CAS, otherwise another dequeue might free the next node
+        p = next_ptr->value;
+        if (qt_cas((void **)&(q->head),
+                   (void *)head,
+                   next_ptr) == head) {
+            break;             // success!
         }
     }
-    FREE_TQNODE((qt_threadqueue_node_t *)QPTR(head));
+    hazardous_release_node(FREE_TQNODE, head);
     if (p != NULL) {
         Q_PREFETCH(&(p->thread_state));
         (void)qthread_internal_incr_s(&q->advisory_queuelen, &q->advisory_queuelen_m, -1);
@@ -300,45 +298,52 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
 
     assert(q != NULL);
     while (1) {
-        head     = q->head;
+        head = q->head;
+
+        hazardous_ptr(0, (uintptr_t)head);
+        if (head != q->head) {
+            continue;                         // are head, tail, and next consistent?
+        }
+
         tail     = q->tail;
-        next_ptr = QPTR(QPTR(head)->next);
-        MACHINE_FENCE;
-        if (head == q->head) {              // are head, tail, and next consistent?
-            if (QPTR(head) == QPTR(tail)) { // is queue empty or tail falling behind?
-                if (next_ptr == NULL) {     // is queue empty?
+        next_ptr = head->next;
+
+        hazardous_ptr(1, (uintptr_t)next_ptr);
+
+        if (next_ptr == NULL) { // queue is empty
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-                    if (qthread_internal_incr(&q->fruitless, &q->fruitless_m, 1) > 1000) {
-                        QTHREAD_LOCK(&q->lock);
-                        while (q->fruitless > 1000) {
-                            QTHREAD_CONDWAIT(&q->notempty, &q->lock);
-                        }
-                        QTHREAD_UNLOCK(&q->lock);
-                    } else {
+            if (qthread_internal_incr(&q->fruitless, &q->fruitless_m, 1) > 1000) {
+                QTHREAD_LOCK(&q->lock);
+                while (q->fruitless > 1000) {
+                    QTHREAD_CONDWAIT(&q->notempty, &q->lock);
+                }
+                QTHREAD_UNLOCK(&q->lock);
+            } else {
 # ifdef HAVE_PTHREAD_YIELD
-                        pthread_yield();
+                pthread_yield();
 # elif HAVE_SHED_YIELD
-                        sched_yield();
+                sched_yield();
 # endif
-                    }
-#endif              /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
-                    continue;
-                }
-                (void)qt_cas((void **)&(q->tail),
-                             (void *)tail,
-                             QCOMPOSE(next_ptr, tail)); // advance tail ptr
-            } else {                                    // no need to deal with tail
-                // read value before CAS, otherwise another dequeue might free the next node
-                p = next_ptr->value;
-                if (qt_cas((void **)&(q->head),
-                           (void *)head,
-                           QCOMPOSE(next_ptr, head)) == head) {
-                    break;             // success!
-                }
             }
+#else       /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
+            SPINLOCK_BODY();
+#endif              /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
+            continue;
+        }
+        if (head == tail) {     // tail is falling behind
+            (void)qt_cas((void **)&(q->tail),
+                         (void *)tail,
+                         next_ptr);     // advance tail ptr
+        }
+        // read value before CAS, otherwise another dequeue might free the next node
+        p = next_ptr->value;
+        if (qt_cas((void **)&(q->head),
+                   (void *)head,
+                   next_ptr) == head) {
+            break;                     // success!
         }
     }
-    FREE_TQNODE((qt_threadqueue_node_t *)QPTR(head));
+    hazardous_release_node(FREE_TQNODE, head);
     if (p != NULL) {
         (void)qthread_internal_incr_s(&q->advisory_queuelen, &q->advisory_queuelen_m, -1);
     }

@@ -1090,6 +1090,8 @@ int qthread_initialize(void)
     qthread_debug(CORE_DETAILS, "enqueueing mccoy thread\n");
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     pthread_setspecific(shepherd_structs, &(qlib->shepherds[0].workers[0]));
+#else
+    pthread_setspecific(shepherd_structs, &(qlib->shepherds[0])); // for hazardptrs
 #endif
     qt_threadqueue_enqueue(qlib->shepherds[0].ready, qlib->mccoy_thread);
     qassert(getcontext(&(qlib->mccoy_thread->rdata->context)), 0);
