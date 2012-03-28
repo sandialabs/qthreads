@@ -44,20 +44,23 @@ static QINLINE int getpagesize()
 
 #endif
 
+typedef struct threadlocal_cache_s qt_mpool_threadlocal_cache_t;
+
 struct qt_mpool_s {
-    size_t                item_size;
-    size_t                alloc_size;
-    size_t                items_per_alloc;
-    size_t                alignment;
+    size_t                        item_size;
+    size_t                        alloc_size;
+    size_t                        items_per_alloc;
+    size_t                        alignment;
 
-    pthread_key_t         threadlocal_cache;
+    pthread_key_t                 threadlocal_cache;
+    qt_mpool_threadlocal_cache_t *caches;  // for cleanup
 
-    QTHREAD_FASTLOCK_TYPE reuse_lock;
-    void                 *reuse_pool;
+    QTHREAD_FASTLOCK_TYPE         reuse_lock;
+    void                         *reuse_pool;
 
-    QTHREAD_FASTLOCK_TYPE pool_lock;
-    void                **alloc_list;
-    size_t                alloc_list_pos;
+    QTHREAD_FASTLOCK_TYPE         pool_lock;
+    void                        **alloc_list;
+    size_t                        alloc_list_pos;
 };
 
 typedef struct qt_mpool_cache_entry_s {
@@ -66,14 +69,15 @@ typedef struct qt_mpool_cache_entry_s {
     uint8_t                        data[];
 } qt_mpool_cache_t;
 
-typedef struct threadlocal_cache_s {
-    qt_mpool_cache_t *cache;
-    qt_mpool_cache_t *block_tail;
-    size_t            count;
+struct threadlocal_cache_s {
+    qt_mpool_cache_t             *cache;
+    qt_mpool_cache_t             *block_tail;
+    size_t                        count;
 
-    uint8_t          *block;
-    size_t            i;
-} qt_mpool_threadlocal_cache_t;
+    uint8_t                      *block;
+    size_t                        i;
+    qt_mpool_threadlocal_cache_t *next;  // for cleanup
+};
 
 /* local constants */
 static size_t pagesize = 0;
@@ -200,9 +204,9 @@ qt_mpool qt_mpool_create_aligned(size_t item_size,
     pool->reuse_pool      = NULL;
     QTHREAD_FASTLOCK_INIT(pool->reuse_lock);
     QTHREAD_FASTLOCK_INIT(pool->pool_lock);
-    pthread_key_create(&pool->threadlocal_cache, free);
+    pthread_key_create(&pool->threadlocal_cache, NULL);
     /* this assumes that pagesize is a multiple of sizeof(void*) */
-    assert(pagesize % sizeof(void*) == 0);
+    assert(pagesize % sizeof(void *) == 0);
     pool->alloc_list = calloc(1, pagesize);
     qassert_goto((pool->alloc_list != NULL), errexit);
     pool->alloc_list[0]  = NULL;
@@ -228,6 +232,9 @@ void *qt_mpool_alloc(qt_mpool pool)
     if (NULL == tc) {
         tc = calloc(1, sizeof(qt_mpool_threadlocal_cache_t));
         assert(tc);
+        do {
+            tc->next = pool->caches;
+        } while (qthread_cas_ptr(&pool->caches, tc->next, tc) != tc->next);
         pthread_setspecific(pool->threadlocal_cache, tc);
     }
     cache = tc->cache;
@@ -315,6 +322,9 @@ void qt_mpool_free(qt_mpool pool,
     if (NULL == tc) {
         tc = calloc(1, sizeof(qt_mpool_threadlocal_cache_t));
         assert(tc);
+        do {
+            tc->next = pool->caches;
+        } while (qthread_cas_ptr(&pool->caches, tc->next, tc) != tc->next);
         pthread_setspecific(pool->threadlocal_cache, tc);
     }
     cache = tc->cache;
@@ -375,6 +385,11 @@ void qt_mpool_destroy(qt_mpool pool)
         p                = pool->alloc_list;
         pool->alloc_list = pool->alloc_list[pagesize / sizeof(void *) - 1];
         free(p);
+    }
+    while (pool->caches) {
+        qt_mpool_threadlocal_cache_t *freeme = pool->caches;
+        pool->caches = freeme->next;
+        free(freeme);
     }
     pthread_key_delete(pool->threadlocal_cache);
     QTHREAD_FASTLOCK_DESTROY(pool->pool_lock);
