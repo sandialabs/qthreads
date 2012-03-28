@@ -202,10 +202,11 @@ qt_mpool qt_mpool_create_aligned(size_t item_size,
     QTHREAD_FASTLOCK_INIT(pool->pool_lock);
     pthread_key_create(&pool->threadlocal_cache, free);
     /* this assumes that pagesize is a multiple of sizeof(void*) */
+    assert(pagesize % sizeof(void*) == 0);
     pool->alloc_list = calloc(1, pagesize);
     qassert_goto((pool->alloc_list != NULL), errexit);
     pool->alloc_list[0]  = NULL;
-    pool->alloc_list_pos = 1;
+    pool->alloc_list_pos = 0;
     return pool;
 
     qgoto(errexit);
