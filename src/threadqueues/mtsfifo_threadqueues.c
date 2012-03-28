@@ -206,7 +206,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
     while (1) {
         tail = q->tail;
         next = QPTR(tail)->next;
-        COMPILER_FENCE;
+        MACHINE_FENCE;
         if (tail == q->tail) {        // are tail and next consistent?
             if (QPTR(next) == NULL) { // was tail pointing to the last node?
                 if (qt_cas((void **)&(QPTR(tail)->next),
