@@ -299,12 +299,11 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
     qt_threadqueue_node_t *next_ptr;
 
     assert(q != NULL);
-threadqueue_dequeue_restart:
     while (1) {
         head     = q->head;
         tail     = q->tail;
         next_ptr = QPTR(QPTR(head)->next);
-        COMPILER_FENCE;
+        MACHINE_FENCE;
         if (head == q->head) {              // are head, tail, and next consistent?
             if (QPTR(head) == QPTR(tail)) { // is queue empty or tail falling behind?
                 if (next_ptr == NULL) {     // is queue empty?
@@ -323,7 +322,7 @@ threadqueue_dequeue_restart:
 # endif
                     }
 #endif              /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
-                    goto threadqueue_dequeue_restart;
+                    continue;
                 }
                 (void)qt_cas((void **)&(q->tail),
                              (void *)tail,
