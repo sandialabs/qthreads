@@ -152,20 +152,20 @@ AC_ARG_ENABLE([debug],
                for area in $(echo "$enable_debug" | sed 's/,/ /g') ; do
                  case "$area" in
                      affinity) enable_debug_affinity=yes ;;
-                     threadqueues) enable_debug_threadqueues=yes ;;
-                     thread) enable_debug_threads=yes ;;
-                     shepherd) enable_debug_shepherd=yes ;;
+                     threadqueue|threadqueues) enable_debug_threadqueues=yes ;;
+                     thread|threads) enable_debug_threads=yes ;;
+                     shepherd|shepherds) enable_debug_shepherd=yes ;;
                      core) enable_debug_core=yes ;;
-                     team) enable_debug_team=yes ;;
-                     mpool) enable_debug_mpool=yes ;;
-                     syscalls) enable_debug_syscalls=yes ;;
-                     locks) enable_debug_locks=yes ;;
-                     febs) enable_debug_febs=yes ;;
-                     syncvars) enable_debug_syncvars=yes ;;
+                     team|teams) enable_debug_team=yes ;;
+                     mpool|mpools) enable_debug_mpool=yes ;;
+                     syscall|syscalls) enable_debug_syscalls=yes ;;
+                     lock|locks) enable_debug_locks=yes ;;
+                     feb|febs) enable_debug_febs=yes ;;
+                     syncvar|syncvars) enable_debug_syncvars=yes ;;
                      io) enable_debug_io=yes ;;
-                     loops) enable_debug_loops=yes ;;
-                     barrier) enable_debug_barrier=yes ;;
-                     qarray) enable_debug_qarray=yes ;;
+                     loop|loops) enable_debug_loops=yes ;;
+                     barrier|barriers) enable_debug_barrier=yes ;;
+                     qarray|qarrays) enable_debug_qarray=yes ;;
                      rcrtool) enable_debug_rcrtool=yes ;;
                      futurelib) enable_debug_futurelib=yes ;;
                      xomp) enable_debug_xomp=yes ;;
