@@ -32,10 +32,10 @@ int main()
   return (NULL == hwloc_get_whole_distance_matrix_by_depth(topology, 0));
 }]])],
         [AC_DEFINE([QTHREAD_HAVE_HWLOC_DISTS],[1],[Hwloc has distances])])])
-  CPPFLAGS="$hwloc_saved_CPPFLAGS"
-  LDFLAGS="$hwloc_saved_LDFLAGS"
   AS_IF([test "x$qt_allgoodsofar" = xyes],
 	    [AC_DEFINE([QTHREAD_HAVE_HWLOC],[1],[if I can use the hwloc topology interface])
 		 $1],
-		[$2])
+		[CPPFLAGS="$hwloc_saved_CPPFLAGS"
+		 LDFLAGS="$hwloc_saved_LDFLAGS"
+		 $2])
 ])
