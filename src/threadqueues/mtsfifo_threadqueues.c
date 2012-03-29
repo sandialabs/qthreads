@@ -227,6 +227,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
         QTHREAD_UNLOCK(&q->lock);
     }
 #endif
+    hazardous_ptr(0, NULL); // release the ptr (avoid hazardptr resource exhaustion)
 }                                      /*}}} */
 
 void qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,

@@ -109,6 +109,7 @@ int qlfqueue_enqueue(qlfqueue_t *q,
         }
     }
     (void)qthread_cas_ptr((void **)&(q->tail), (void *)tail, node);
+    hazardous_ptr(0, NULL); // release the ptr (avoid hazardptr resource exhaustion)
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
 
