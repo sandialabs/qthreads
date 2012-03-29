@@ -169,7 +169,7 @@ static void hazardous_scan(hazard_freelist_t *hfl)
     qsort(plist, num_hps, sizeof(void *), void_cmp);
     /* Stage 2: free pointers that are not in the set of hazardous pointers */
     for (size_t i = 0; i < FREELIST_DEPTH; ++i) {
-        uintptr_t ptr = (uintptr_t)hfl->freelist[i].ptr;
+        const uintptr_t ptr = (uintptr_t)hfl->freelist[i].ptr;
         if (ptr == 0) { break; }
         /* look for this ptr in the plist */
         if (binary_search((uintptr_t *)plist, ptr, num_hps)) {
