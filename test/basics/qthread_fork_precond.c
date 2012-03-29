@@ -109,11 +109,14 @@ int main(int   argc,
         for (int i = 0; i < NUM_CONSUMERS; i++) qthread_fork_precond(consumer, &v, &rets[i], 1, &v);
         qthread_fork(producer, &v, &rets[NUM_CONSUMERS]);
 
-        for (int i = 0; i < NUM_CONSUMERS; i++) {
+        for (int i = 0; i <= NUM_CONSUMERS; i++) {
             qthread_readFF(&rets[i], &rets[i]);
 
             // Verify return values
-            if (rets[i] != 42) { return 1; }
+            if ((rets[i] != 42) && (i != NUM_CONSUMERS)) {
+                iprintf("Bad return value! Wanted 42, got %u\n", rets[i]);
+                return 1;
+            }
         }
     }
 
@@ -140,7 +143,10 @@ int main(int   argc,
         qthread_readFF(&ret, &ret);
 
         // Verify return value
-        if (ret != 3 * 42) { return 1; }
+        if (ret != 3 * 42) {
+            iprintf("Bad return value! Wanted %u, got %u\n", 3 * 42, ret);
+            return 1;
+        }
     }
 
     iprintf("\n***** Test single consumer, multiple producers (array) *****\n");
@@ -160,7 +166,10 @@ int main(int   argc,
         qthread_readFF(&ret, &ret);
 
         // Verify return value
-        if (ret != NUM_MULTI * 42) { return 1; }
+        if (ret != NUM_MULTI * 42) {
+	    iprintf("Bad return value! Wanted %u, got %u\n", NUM_MULTI * 42, ret);
+	    return 1;
+	}
     }
 
     iprintf("\n***** Test migration: MC/SP with C on 1 and S on 0 *****\n");
@@ -176,11 +185,14 @@ int main(int   argc,
         for (int i = 0; i < NUM_CONSUMERS; i++) qthread_fork_precond_to(consumer, &v, &rets[i], 1, 1, &v);
         qthread_fork_to(producer, &v, &rets[NUM_CONSUMERS], 0);
 
-        for (int i = 0; i < NUM_CONSUMERS; i++) {
+        for (int i = 0; i <= NUM_CONSUMERS; i++) {
             qthread_readFF(&rets[i], &rets[i]);
 
             // Verify return values
-            if (rets[i] != 42) { return 1; }
+            if ((rets[i] != 42) && (i != NUM_CONSUMERS)) {
+                iprintf("Bad return value! Wanted 42, got %u\n", rets[i]);
+                return 1;
+            }
         }
     }
 
@@ -209,7 +221,10 @@ int main(int   argc,
         qthread_readFF(&ret, &ret);
 
         // Verify return value
-        if (ret != 3 * 42) { return 1; }
+        if (ret != 3 * 42) {
+            iprintf("Bad return value! Wanted %u, got %u\n", 3 * 42, ret);
+	    return 1;
+	}
     }
 
     iprintf("\n***** Test migration: SC/MP with C on 1 and S on 0 (array) *****\n");
@@ -231,7 +246,10 @@ int main(int   argc,
         qthread_readFF(&ret, &ret);
 
         // Verify return value
-        if (ret != NUM_MULTI * 42) { return 1; }
+        if (ret != NUM_MULTI * 42) {
+	    iprintf("Bad return value! Wanted %u, got %u\n", NUM_MULTI * 42, ret);
+	    return 1;
+	}
     }
 
     return 0;
