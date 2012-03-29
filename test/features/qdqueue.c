@@ -5,7 +5,7 @@
 #include <qthread/qdqueue.h>
 #include "argparsing.h"
 
-static unsigned int ELEMENT_COUNT = 10000;
+static unsigned int ELEMENT_COUNT = 1000;
 static unsigned int THREAD_COUNT = 128;
 
 static aligned_t queuer(void *arg)

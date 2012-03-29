@@ -6,7 +6,7 @@
 #include <qthread/qt_sinc.h>
 #include "argparsing.h"
 
-static size_t elementcount = 10000;
+static size_t elementcount = 1000;
 static size_t threadcount = 128;
 
 static aligned_t queuer(void *arg)
