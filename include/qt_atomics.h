@@ -186,6 +186,7 @@ extern pthread_mutexattr_t _fastlock_attr;
 
 #ifdef QTHREAD_MUTEX_INCREMENT
 # define QTHREAD_CASLOCK(var)                var; QTHREAD_FASTLOCK_TYPE var ## _caslock
+# define QTHREAD_CASLOCK_STATIC(var)         var; static QTHREAD_FASTLOCK_TYPE var ## _caslock
 # define QTHREAD_CASLOCK_EXPLICIT_DECL(name) QTHREAD_FASTLOCK_TYPE name;
 # define QTHREAD_CASLOCK_EXPLICIT_INIT(name) QTHREAD_FASTLOCK_INIT(name)
 # define QTHREAD_CASLOCK_INIT(var, i)        var = i; QTHREAD_FASTLOCK_INIT(var ## _caslock)
@@ -223,6 +224,7 @@ static QINLINE uintptr_t qt_cas_read_ui(uintptr_t *const       ptr,
 
 #else /* ifdef QTHREAD_MUTEX_INCREMENT */
 # define QTHREAD_CASLOCK(var) (var)
+# define QTHREAD_CASLOCK_STATIC(var) (var)
 # define QTHREAD_CASLOCK_EXPLICIT_DECL(name)
 # define QTHREAD_CASLOCK_EXPLICIT_INIT(name)
 # define QTHREAD_CASLOCK_INIT(var, i) (var) = i

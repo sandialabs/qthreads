@@ -14,19 +14,19 @@
 #include "qthread_innards.h"
 
 static pthread_key_t ts_hazard_ptrs;
-static uintptr_t    *hzptr_list     = NULL;
+
+static uintptr_t    *QTHREAD_CASLOCK(hzptr_list);
 static aligned_t     hzptr_list_len = 0;
 
 static void hazardptr_internal_teardown(void)
 {
     pthread_key_delete(ts_hazard_ptrs);
-    {
-        while (hzptr_list != NULL) {
-            uintptr_t *hzptr_tmp = hzptr_list;
-            hzptr_list = (uintptr_t *)hzptr_tmp[HAZARD_PTRS_PER_SHEP];
-            free(hzptr_tmp);
-        }
+    while (hzptr_list != NULL) {
+        uintptr_t *hzptr_tmp = hzptr_list;
+        hzptr_list = (uintptr_t *)hzptr_tmp[HAZARD_PTRS_PER_SHEP];
+        free(hzptr_tmp);
     }
+    QTHREAD_CASLOCK_DESTROY(hzptr_list);
 }
 
 void INTERNAL initialize_hazardptrs(void)
@@ -45,6 +45,7 @@ void INTERNAL initialize_hazardptrs(void)
     }
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     qassert(pthread_key_create(&ts_hazard_ptrs, NULL), 0);
+    QTHREAD_CASLOCK_INIT(hzptr_list, NULL);
     qthread_internal_cleanup(hazardptr_internal_teardown);
 }
 
@@ -61,8 +62,8 @@ void INTERNAL hazardous_ptr(unsigned int which,
                 hzptrs = calloc(sizeof(uintptr_t), HAZARD_PTRS_PER_SHEP + 1);
                 assert(hzptrs);
                 do {
-                    hzptrs[HAZARD_PTRS_PER_SHEP] = (uintptr_t)hzptr_list;
-                } while (qt_cas((void **)&hzptr_list, hzptrs[HAZARD_PTRS_PER_SHEP], hzptrs)
+                    hzptrs[HAZARD_PTRS_PER_SHEP] = (uintptr_t)QTHREAD_CASLOCK_READ(hzptr_list);
+                } while (QT_CAS(hzptr_list, hzptrs[HAZARD_PTRS_PER_SHEP], hzptrs)
                          != (void *)hzptrs[HAZARD_PTRS_PER_SHEP]);
                 (void)qthread_incr(&hzptr_list_len, 1);
             } else {
@@ -76,8 +77,8 @@ void INTERNAL hazardous_ptr(unsigned int which,
                 hzptrs = calloc(sizeof(uintptr_t), HAZARD_PTRS_PER_SHEP + 1);
                 assert(hzptrs);
                 do {
-                    hzptrs[HAZARD_PTRS_PER_SHEP] = (uintptr_t)hzptr_list;
-                } while (qt_cas(&hzptr_list, hzptrs[HAZARD_PTRS_PER_SHEP], hzptrs)
+                    hzptrs[HAZARD_PTRS_PER_SHEP] = (uintptr_t)QTHREAD_CASLOCK_READ(hzptr_list);
+                } while (QT_CAS(hzptr_list, hzptrs[HAZARD_PTRS_PER_SHEP], hzptrs)
                          != (void *)hzptrs[HAZARD_PTRS_PER_SHEP]);
                 (void)qthread_incr(&hzptr_list_len, 1);
             } else {
@@ -149,7 +150,7 @@ static void hazardous_scan(hazard_freelist_t *hfl)
                     }
                 }
             }
-            uintptr_t *hzptr_tmp = hzptr_list;
+            uintptr_t *hzptr_tmp = QTHREAD_CASLOCK_READ(hzptr_list);
             while (hzptr_tmp != NULL) {
                 memcpy(plist + (i * qlib->nworkerspershep * HAZARD_PTRS_PER_SHEP),
                        hzptr_tmp,
@@ -167,7 +168,7 @@ static void hazardous_scan(hazard_freelist_t *hfl)
             }
         }
         {
-            uintptr_t *hzptr_tmp = hzptr_list;
+            uintptr_t *hzptr_tmp = QTHREAD_CASLOCK_READ(hzptr_list);
             while (hzptr_tmp != NULL) {
                 memcpy(plist + (i * HAZARD_PTRS_PER_SHEP),
                        hzptr_tmp,
