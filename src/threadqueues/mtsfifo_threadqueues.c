@@ -193,7 +193,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
     while (1) {
         tail = q->tail;
 
-        hazardous_ptr(0, (uintptr_t)tail);
+        hazardous_ptr(0, tail);
         if (tail != q->tail) {
             continue;          // are tail and next consistent?
         }
@@ -247,7 +247,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
     while (1) {
         head = q->head;
 
-        hazardous_ptr(0, (uintptr_t)head);
+        hazardous_ptr(0, head);
         if (head != q->head) {
             continue;                               // are head, tail, and next consistent?
         }
@@ -255,7 +255,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
         tail     = q->tail;
         next_ptr = head->next;
 
-        hazardous_ptr(1, (uintptr_t)next_ptr);
+        hazardous_ptr(1, next_ptr);
 
         if (next_ptr == NULL) {
             return NULL;                   // queue is empty
@@ -300,7 +300,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
     while (1) {
         head = q->head;
 
-        hazardous_ptr(0, (uintptr_t)head);
+        hazardous_ptr(0, head);
         if (head != q->head) {
             continue;                         // are head, tail, and next consistent?
         }
@@ -308,7 +308,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
         tail     = q->tail;
         next_ptr = head->next;
 
-        hazardous_ptr(1, (uintptr_t)next_ptr);
+        hazardous_ptr(1, next_ptr);
 
         if (next_ptr == NULL) { // queue is empty
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE

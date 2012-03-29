@@ -40,7 +40,7 @@ qlfqueue_t *qlfqueue_create(void)
                 qlfqueue_node_pool = qpool_create_aligned(sizeof(qlfqueue_node_t), 0);
                 break;
             case 1:
-                while (qlfqueue_node_pool == 1) {
+                while (qlfqueue_node_pool == (void *)1) {
                     SPINLOCK_BODY();
                 }
                 break;
@@ -95,7 +95,7 @@ int qlfqueue_enqueue(qlfqueue_t *q,
     while (1) {
         tail = q->tail;
 
-        hazardous_ptr(0, (uintptr_t)tail);
+        hazardous_ptr(0, tail);
         if (tail != q->tail) { continue; }
 
         next = tail->next;
@@ -128,13 +128,13 @@ void *qlfqueue_dequeue(qlfqueue_t *q)
     while (1) {
         head = q->head;
 
-        hazardous_ptr(0, (uintptr_t)head);
+        hazardous_ptr(0, head);
         if (head != q->head) { continue; }
 
         tail     = q->tail;
         next_ptr = head->next;
 
-        hazardous_ptr(1, (uintptr_t)next_ptr);
+        hazardous_ptr(1, next_ptr);
 
         if (next_ptr == NULL) { return NULL; } /* queue is empty */
         if (head == tail) { /* tail is falling behind! */

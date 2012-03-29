@@ -49,7 +49,7 @@ void INTERNAL initialize_hazardptrs(void)
 }
 
 void INTERNAL hazardous_ptr(unsigned int which,
-                            uintptr_t    ptr)
+                            void        *ptr)
 {
     uintptr_t *hzptrs = pthread_getspecific(ts_hazard_ptrs);
 
@@ -90,7 +90,7 @@ void INTERNAL hazardous_ptr(unsigned int which,
 
     assert(hzptrs);
     assert(which < HAZARD_PTRS_PER_SHEP);
-    hzptrs[which] = ptr;
+    hzptrs[which] = (uintptr_t)ptr;
 }
 
 static int void_cmp(const void *a,
