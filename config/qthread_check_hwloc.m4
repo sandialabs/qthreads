@@ -7,10 +7,19 @@
 # ------------------------------------------------------------------------------
 AC_DEFUN([QTHREAD_CHECK_HWLOC], [
   qt_allgoodsofar=yes
+  AC_ARG_WITH([hwloc],
+              [AS_HELP_STRING([--with-hwloc=[[PATH]]],
+			                  [specify the path to the hwloc library; used for both the library and the include files])],
+			  [qthread_topo=hwloc])
+  hwloc_saved_CPPFLAGS="$CPPFLAGS"
+  hwloc_saved_LDFLAGS="$LDFLAGS"
+  AS_IF([test "x$with_hwloc" != x],
+        [CPPFLAGS="-I$with_hwloc/include $CPPFLAGS"
+		 LDFLAGS="-L$with_hwloc/lib $CPPFLAGS"])
   AC_CHECK_HEADERS([hwloc.h],[],
   				   [qt_allgoodsofar=no])
   AS_IF([test "x$qt_allgoodsofar" = xyes],
-	    [AC_SEARCH_LIBS([hwloc_topology_init], [hwloc], [],
+	    [AC_SEARCH_LIBS([hwloc_topology_init], [hwloc "hwloc -lnuma"], [],
 		                [qt_allgoodsofar=no])])
   AS_IF([test "x$qt_allgoodsofar" = xyes],
         [AC_LINK_IFELSE([AC_LANG_SOURCE([[
@@ -23,6 +32,8 @@ int main()
   return (NULL == hwloc_get_whole_distance_matrix_by_depth(topology, 0));
 }]])],
         [AC_DEFINE([QTHREAD_HAVE_HWLOC_DISTS],[1],[Hwloc has distances])])])
+  CPPFLAGS="$hwloc_saved_CPPFLAGS"
+  LDFLAGS="$hwloc_saved_LDFLAGS"
   AS_IF([test "x$qt_allgoodsofar" = xyes],
 	    [AC_DEFINE([QTHREAD_HAVE_HWLOC],[1],[if I can use the hwloc topology interface])
 		 $1],
