@@ -1687,8 +1687,7 @@ void qthread_finalize(void)
                  (unsigned long)threadcount, (unsigned long)maxeffconcurrentthreads,
                  avg_eff_concurrent_threads);
     print_status("max theoretical concurrency %lu, avg theoretical concurrency %g\n",
-                 (unsigned long)threadcount, (unsigned long)maxconcurrentthreads,
-                 avg_concurrent_threads);
+                 (unsigned long)maxconcurrentthreads, avg_concurrent_threads);
     QTHREAD_FASTLOCK_DESTROY(concurrentthreads_lock);
     QTHREAD_FASTLOCK_DESTROY(effconcurrentthreads_lock);
 #endif
@@ -2652,7 +2651,7 @@ static int qthread_uberfork(qthread_f             f,
 #ifdef QTHREAD_COUNT_THREADS
         QTHREAD_FASTLOCK_LOCK(&concurrentthreads_lock);
         threadcount++;
-        concurrent_threads++;
+        concurrentthreads++;
         if (concurrentthreads > maxconcurrentthreads) {
             maxconcurrentthreads = concurrentthreads;
         }
