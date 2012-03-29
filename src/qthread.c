@@ -109,9 +109,13 @@ struct qt_cleanup_funcs_s {
 static aligned_t             threadcount;
 static aligned_t             maxconcurrentthreads;
 static double                avg_concurrent_threads;
+static aligned_t             maxeffconcurrentthreads;
+static double                avg_eff_concurrent_threads;
 static aligned_t             avg_count;
+static aligned_t             effconcurrentthreads;
 static aligned_t             concurrentthreads;
 static QTHREAD_FASTLOCK_TYPE concurrentthreads_lock;
+static QTHREAD_FASTLOCK_TYPE effconcurrentthreads_lock;
 #endif
 
 /* Internal Prototypes */
@@ -852,12 +856,16 @@ int qthread_initialize(void)
     qthread_debug(CORE_BEHAVIOR, "there will be %u shepherd(s)\n", (unsigned)nshepherds);
 
 #ifdef QTHREAD_COUNT_THREADS
-    threadcount            = 0;
-    maxconcurrentthreads   = 0;
-    concurrentthreads      = 0;
-    avg_concurrent_threads = 0;
-    avg_count              = 0;
+    threadcount                = 0;
+    maxconcurrentthreads       = 0;
+    maxeffconcurrentthreads    = 0;
+    concurrentthreads          = 0;
+    effconcurrentthreads       = 0;
+    avg_concurrent_threads     = 0;
+    avg_eff_concurrent_threads = 0;
+    avg_count                  = 0;
     QTHREAD_FASTLOCK_INIT(concurrentthreads_lock);
+    QTHREAD_FASTLOCK_INIT(effconcurrentthreads_lock);
 #endif
 
 #ifdef CAS_STEAL_PROFILE
@@ -1675,10 +1683,14 @@ void qthread_finalize(void)
 #endif
 
 #ifdef QTHREAD_COUNT_THREADS
-    print_status("spawned %lu threads, max concurrency %lu, avg concurrency %g\n",
+    print_status("spawned %lu threads, max effective concurrency %lu, avg effective concurrency %g\n",
+                 (unsigned long)threadcount, (unsigned long)maxeffconcurrentthreads,
+                 avg_eff_concurrent_threads);
+    print_status("max theoretical concurrency %lu, avg theoretical concurrency %g\n",
                  (unsigned long)threadcount, (unsigned long)maxconcurrentthreads,
                  avg_concurrent_threads);
     QTHREAD_FASTLOCK_DESTROY(concurrentthreads_lock);
+    QTHREAD_FASTLOCK_DESTROY(effconcurrentthreads_lock);
 #endif
 
     qthread_debug(LOCK_DETAILS, "destroy scheduling locks\n");
@@ -2191,16 +2203,15 @@ static void qthread_wrapper(void *ptr)
     assert((size_t)&t > (size_t)t->rdata->stack &&
            (size_t)&t < ((size_t)t->rdata->stack + qlib->qthread_stack_size));
 #ifdef QTHREAD_COUNT_THREADS
-    QTHREAD_FASTLOCK_LOCK(&concurrentthreads_lock);
-    threadcount++;
-    concurrentthreads++;
-    if (concurrentthreads > maxconcurrentthreads) {
-        maxconcurrentthreads = concurrentthreads;
+    QTHREAD_FASTLOCK_LOCK(&effconcurrentthreads_lock);
+    effconcurrentthreads++;
+    if (effconcurrentthreads > maxeffconcurrentthreads) {
+        maxeffconcurrentthreads = effconcurrentthreads;
     }
-    avg_concurrent_threads =
-        (avg_concurrent_threads * (double)(threadcount - 1.0) / threadcount)
-        + ((double)concurrentthreads / threadcount);
-    QTHREAD_FASTLOCK_UNLOCK(&concurrentthreads_lock);
+    avg_eff_concurrent_threads =
+        (avg_eff_concurrent_threads * (double)(threadcount - 1.0) / threadcount)
+        + ((double)effconcurrentthreads / threadcount);
+    QTHREAD_FASTLOCK_UNLOCK(&effconcurrentthreads_lock);
 #endif /* ifdef QTHREAD_COUNT_THREADS */
     if (t->ret) {
         if (t->flags & QTHREAD_RET_IS_SYNCVAR) {
@@ -2247,6 +2258,9 @@ static void qthread_wrapper(void *ptr)
 #endif
 
 #ifdef QTHREAD_COUNT_THREADS
+    QTHREAD_FASTLOCK_LOCK(&effconcurrentthreads_lock);
+    effconcurrentthreads--;
+    QTHREAD_FASTLOCK_UNLOCK(&effconcurrentthreads_lock);
     QTHREAD_FASTLOCK_LOCK(&concurrentthreads_lock);
     concurrentthreads--;
     QTHREAD_FASTLOCK_UNLOCK(&concurrentthreads_lock);
@@ -2635,6 +2649,18 @@ static int qthread_uberfork(qthread_f             f,
     /* Step 5: Prepare the input preconditions (if necessary) */
     if (QTHREAD_LIKELY(!preconds) || (qthread_check_precond(t) == 0)) {
         /* Step 6: Set it going */
+#ifdef QTHREAD_COUNT_THREADS
+        QTHREAD_FASTLOCK_LOCK(&concurrentthreads_lock);
+        threadcount++;
+        concurrent_threads++;
+        if (concurrentthreads > maxconcurrentthreads) {
+            maxconcurrentthreads = concurrentthreads;
+        }
+        avg_concurrent_threads =
+            (avg_concurrent_threads * (double)(threadcount - 1.0) / threadcount)
+            + ((double)concurrentthreads / threadcount);
+        QTHREAD_FASTLOCK_UNLOCK(&concurrentthreads_lock);
+#endif
 #ifdef QTHREAD_USE_SPAWNCACHE
         if (target_shep == NO_SHEPHERD) {
             if (!qt_spawncache_spawn(t)) {
