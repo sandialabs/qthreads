@@ -310,7 +310,8 @@ void XOMP_parallel_start(
     void (*func) (void *),
     void *data,
     unsigned ifClause,
-    unsigned numThread)
+    unsigned numThread,
+    const char *funcName)
 #endif
 {
   // allocate block to hold parallel for loop pointer for any loop directly created within this region
