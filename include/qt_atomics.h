@@ -12,7 +12,16 @@
 # endif
 #endif
 
-#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
+#ifdef QTHREAD_OVERSUBSCRIPTION
+# ifdef HAVE_PTHREAD_YIELD
+# define SPINLOCK_BODY() do { COMPILER_FENCE; pthread_yield(); } while (0)
+# elif HAVE_SCHED_YIELD
+# include <sched.h> /* for sched_yield(); */
+# define SPINLOCK_BODY() do { COMPILER_FENCE; sched_yield(); } while (0)
+# else
+# error Cannot support efficient oversubscription on this platform.
+# endif
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 # define SPINLOCK_BODY() do { COMPILER_FENCE; __asm__ __volatile__ ("pause" ::: "memory"); } while (0)
 #else
@@ -51,7 +60,7 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
 # define QTHREAD_FASTLOCK_DESTROY_PTR(x)
 # define QTHREAD_FASTLOCK_TYPE        qt_spin_exclusive_t
 # define QTHREAD_FASTLOCK_INITIALIZER (qt_spin_exclusive_t) {0, 0 }
-#elif defined(HAVE_PTHREAD_SPIN_INIT)
+#elif defined(HAVE_PTHREAD_SPIN_INIT) && !defined(QTHREAD_OVERSUBSCRIPTION)
 # include <pthread.h>
 # define QTHREAD_FASTLOCK_ATTRVAR
 # define QTHREAD_FASTLOCK_SETUP()        do { } while (0)
@@ -142,7 +151,7 @@ static inline int QTHREAD_TRYLOCK_TRY(qt_spin_trylock_t *x)
     return(qthread_cas(&(x->u), cmp.u, newcmp.u) == cmp.u);
 }
 
-#elif defined(HAVE_PTHREAD_SPIN_INIT)
+#elif defined(HAVE_PTHREAD_SPIN_INIT) && !defined(QTHREAD_OVERSUBSCRIPTION)
 
 # define QTHREAD_TRYLOCK_TYPE pthread_spinlock_t
 # define QTHREAD_TRYLOCK_INIT(x)        pthread_spin_init(&(x), PTHREAD_PROCESS_PRIVATE)
@@ -181,7 +190,7 @@ extern pthread_mutexattr_t _fastlock_attr;
 #define QTHREAD_DESTROYLOCK(l) qassert(pthread_mutex_destroy(l), 0)
 #define QTHREAD_DESTROYCOND(l) qassert(pthread_cond_destroy(l), 0)
 #define QTHREAD_SIGNAL(l)      qassert(pthread_cond_signal(l), 0)
-#define QTHREAD_BCAST(l)      qassert(pthread_cond_broadcast(l), 0)
+#define QTHREAD_BCAST(l)       qassert(pthread_cond_broadcast(l), 0)
 #define QTHREAD_CONDWAIT(c, l) qassert(pthread_cond_wait(c, l), 0)
 
 #ifdef QTHREAD_MUTEX_INCREMENT
@@ -223,7 +232,7 @@ static QINLINE uintptr_t qt_cas_read_ui(uintptr_t *const       ptr,
 }
 
 #else /* ifdef QTHREAD_MUTEX_INCREMENT */
-# define QTHREAD_CASLOCK(var) (var)
+# define QTHREAD_CASLOCK(var)        (var)
 # define QTHREAD_CASLOCK_STATIC(var) (var)
 # define QTHREAD_CASLOCK_EXPLICIT_DECL(name)
 # define QTHREAD_CASLOCK_EXPLICIT_INIT(name)
