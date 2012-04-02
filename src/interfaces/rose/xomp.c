@@ -298,21 +298,12 @@ void XOMP_parallel_wrapper(void * arg)
     XOMP_barrier();
 }
 
-#ifdef QTHREAD_RCRTOOL
 void XOMP_parallel_start(
     void (*func) (void *),
     void *data,
     unsigned ifClause,
     unsigned numThread,
     const char* funcName)
-#else
-void XOMP_parallel_start(
-    void (*func) (void *),
-    void *data,
-    unsigned ifClause,
-    unsigned numThread,
-    const char *funcName)
-#endif
 {
   // allocate block to hold parallel for loop pointer for any loop directly created within this region
   //    --- parallel for loops directly created within other for loops will be handled by passing
