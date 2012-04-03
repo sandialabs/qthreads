@@ -240,7 +240,7 @@ void *qt_mpool_alloc(qt_mpool pool)
         pthread_setspecific(pool->threadlocal_cache, tc);
     }
     cache = tc->cache;
-    qthread_debug(MPOOL_BEHAVIOR, "->cache:%p (bt:%p) cnt:%u tc:bt:%p\n", cache, cache?cache->block_tail:NULL, (unsigned int)tc->count, tc->block_tail);
+    qthread_debug(MPOOL_BEHAVIOR, "->cache:%p (bt:%p) cnt:%u tc:bt:%p\n", cache, cache ? cache->block_tail : NULL, (unsigned int)tc->count, tc->block_tail);
     if (cache) {
         void *ret = (void *)cache;
         qthread_debug(MPOOL_DETAILS, "->...cached count:%zu\n", (size_t)tc->count - 1);
@@ -267,9 +267,9 @@ void *qt_mpool_alloc(qt_mpool pool)
                 cache                   = pool->reuse_pool;
                 pool->reuse_pool        = cache->block_tail->next;
                 cache->block_tail->next = NULL;
+                cnt                     = items_per_alloc;
             }
             QTHREAD_FASTLOCK_UNLOCK(&pool->reuse_lock);
-            cnt = items_per_alloc;
         }
         if (NULL == cache) {
             uint8_t *p;
@@ -332,7 +332,7 @@ void qt_mpool_free(qt_mpool pool,
     }
     cache = tc->cache;
     cnt   = tc->count;
-    qthread_debug(MPOOL_DETAILS, "->cache:%p (bt:%p) cnt:%u tc:bt:%p\n", cache, cache?cache->block_tail:NULL, (unsigned int)cnt, tc->block_tail);
+    qthread_debug(MPOOL_DETAILS, "->cache:%p (bt:%p) cnt:%u tc:bt:%p\n", cache, cache ? cache->block_tail : NULL, (unsigned int)cnt, tc->block_tail);
     if (cache) {
         assert(cnt != 0);
         n->next       = cache;
