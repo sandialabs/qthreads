@@ -141,7 +141,7 @@ static int binary_search(uintptr_t *list,
 static void hazardous_scan(hazard_freelist_t *hfl)
 {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    const size_t num_hps = qthread_num_shepherds() * qthread_num_workers() * HAZARD_PTRS_PER_SHEP;
+    const size_t num_hps = qthread_num_workers() * HAZARD_PTRS_PER_SHEP;
 #else
     const size_t num_hps = qthread_num_shepherds() * HAZARD_PTRS_PER_SHEP;
 #endif
@@ -219,7 +219,8 @@ static void hazardous_scan(hazard_freelist_t *hfl)
             MACHINE_FENCE;
         }
     } while (tmpfreelist.count == freelist_max);
-    memcpy(&hfl->freelist, &tmpfreelist.freelist, tmpfreelist.count * sizeof(hazard_freelist_entry_t));
+    assert(tmpfreelist.count < freelist_max);
+    memcpy(hfl->freelist, tmpfreelist.freelist, tmpfreelist.count * sizeof(hazard_freelist_entry_t));
     hfl->count = tmpfreelist.count;
     free(tmpfreelist.freelist);
     free(plist);
@@ -237,6 +238,7 @@ void INTERNAL hazardous_release_node(void  (*freefunc)(void *),
 
     assert(ptr != NULL);
     assert(freefunc != NULL);
+    assert(hfl->count < freelist_max);
     hfl->freelist[hfl->count].free = freefunc;
     hfl->freelist[hfl->count].ptr  = ptr;
     hfl->count++;
