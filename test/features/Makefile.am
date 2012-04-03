@@ -22,7 +22,8 @@ TESTS = \
 		qpool \
 		qlfqueue \
 		qdqueue \
-		allpairs
+		allpairs \
+		subteams
 
 EXTRA_PROGRAMS = wavefront
 
@@ -99,6 +100,9 @@ log_barrier_DEPENDENCIES = $(qthreadlib)
 
 allpairs_SOURCES = allpairs.c
 allpairs_DEPENDENCIES = $(qthreadlib)
+
+subteams_SOURCES = subteams.c
+subteams_DEPENDENCIES = $(qthreadlib)
 
 cxx_futurelib_SOURCES = cxx_futurelib.cpp
 cxx_futurelib_DEPENDENCIES = $(qthreadlib)

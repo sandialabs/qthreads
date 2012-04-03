@@ -158,7 +158,7 @@ Q_STARTCXX /* */
 
 typedef unsigned int qthread_shepherd_id_t;
 typedef unsigned int qthread_worker_id_t;
-typedef size_t qt_team_id_t;
+typedef size_t       qt_team_id_t;
 
 /* for convenient arguments to qthread_fork */
 typedef aligned_t (*qthread_f)(void *arg);
@@ -242,10 +242,6 @@ int qthread_fork_copyargs(qthread_f   f,
                           const void *arg,
                           size_t      arg_size,
                           aligned_t  *ret);
-int qthread_fork_copyargs_new_subteam(qthread_f   f,
-                                      const void *arg,
-                                      size_t      arg_size,
-                                      aligned_t  *ret);
 int qthread_fork_syncvar_copyargs(qthread_f   f,
                                   const void *arg,
                                   size_t      arg_size,
@@ -329,18 +325,30 @@ qt_team_id_t qt_team_id(void);
 qt_team_id_t qt_team_parent_id(void);
 aligned_t    qt_team_watcher(void *arg);
 aligned_t    qt_team_destroy(void *arg);
-int          qthread_fork_new_team(qthread_f   f,
-                                   const void *arg,
-                                   aligned_t  *ret);
-int          qthread_fork_new_subteam(qthread_f   f,
-                                   const void *arg,
-                                   aligned_t  *ret);
+#ifdef TEAM_PROFILE
+void         qt_team_profile(void);
+#endif
+
+int qthread_fork_new_team(qthread_f   f,
+                          const void *arg,
+                          aligned_t  *ret);
+int qthread_fork_new_subteam(qthread_f   f,
+                             const void *arg,
+                             aligned_t  *ret);
 int qthread_fork_syncvar_new_team(qthread_f   f,
                                   const void *arg,
                                   syncvar_t  *ret);
 int qthread_fork_syncvar_new_subteam(qthread_f   f,
-                                  const void *arg,
-                                  syncvar_t  *ret);
+                                     const void *arg,
+                                     syncvar_t  *ret);
+int qthread_fork_copyargs_new_team(qthread_f   f,
+                                   const void *arg,
+                                   size_t      arg_size,
+                                   aligned_t  *ret);
+int qthread_fork_copyargs_new_subteam(qthread_f   f,
+                                      const void *arg,
+                                      size_t      arg_size,
+                                      aligned_t  *ret);
 
 /****************************************************************************
  * functions to implement FEB locking/unlocking

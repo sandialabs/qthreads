@@ -55,13 +55,14 @@ struct qthread_runtime_data_s {
 };
 
 typedef struct qt_team_s {
+    qt_team_id_t team_id;
+    aligned_t    eureka;
+    aligned_t    watcher_started;
     qt_sinc_t   *sinc;
     qt_sinc_t   *subteams_sinc;
-    qt_sinc_t   *parent_subteams_sinc;
-    qt_team_id_t team_id;
     qt_team_id_t parent_id;
-    aligned_t    eureka;
     aligned_t   *parent_eureka;
+    qt_sinc_t   *parent_subteams_sinc;
     uint_fast8_t flags;
 } qt_team_t;
 

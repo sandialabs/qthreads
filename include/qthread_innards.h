@@ -71,6 +71,25 @@ typedef struct qlib_s {
 #ifdef CAS_STEAL_PROFILE
     uint64_strip_t *cas_steal_profile;
 #endif
+#ifdef TEAM_PROFILE
+    aligned_t team_create;
+    aligned_t team_destroy;
+
+    aligned_t team_subteam_create;
+    aligned_t team_subteam_destroy;
+
+    aligned_t team_sinc_create;
+    aligned_t team_sinc_destroy;
+
+    aligned_t team_subteams_sinc_create;
+    aligned_t team_subteams_sinc_destroy;
+
+    aligned_t team_leader_start;
+    aligned_t team_leader_stop;
+
+    aligned_t team_watcher_start;
+    aligned_t team_watcher_stop;
+#endif
 
     /* assigns a unique thread_id mostly for debugging! */
     aligned_t             max_thread_id;

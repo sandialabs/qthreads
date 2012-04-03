@@ -950,6 +950,27 @@ int qthread_initialize(void)
         }
     }
 #endif
+
+#ifdef TEAM_PROFILE
+    qlib->team_create                = 0;
+    qlib->team_destroy               = 0;
+
+    qlib->team_subteam_create        = 0;
+    qlib->team_subteam_destroy       = 0;
+
+    qlib->team_sinc_create           = 0;
+    qlib->team_sinc_destroy          = 0;
+
+    qlib->team_subteams_sinc_create  = 0;
+    qlib->team_subteams_sinc_destroy = 0;
+
+    qlib->team_leader_start          = 0;
+    qlib->team_leader_stop           = 0;
+
+    qlib->team_watcher_start         = 0;
+    qlib->team_watcher_stop          = 0;
+#endif
+
     qlib->max_thread_id  = 1;
     qlib->max_unique_id  = 1;
     qlib->max_team_id    = 2; /* team 1 is reserved for the default team */
@@ -1406,6 +1427,10 @@ void qthread_finalize(void)
         // want to exit (something bad happened) [my speculation]
     }
 #endif
+#ifdef TEAM_PROFILE
+    qt_team_profile();
+#endif
+
 
     qthread_debug(CORE_CALLS, "began.\n");
 
@@ -1896,63 +1921,114 @@ aligned_t *qthread_retloc(void)
     }
 }                      /*}}} */
 
-// Note: team 1 should never eureka
-#define TEAM_EUREKA_CLEAR(code) (((saligned_t)code) > 1)
-#define TEAM_EUREKA_TRIGGER(code) (((saligned_t)code) < 0)
-#define TEAM_EUREKA_ID(code) (code)
-#define TEAM_EUREKA_EXIT(code) (code)
-#define TEAM_EUREKA_KILL(code) ((saligned_t)(-code))
+#define TEAM_EUREKA_EXIT(team_id) (((saligned_t)team_id) > 1)
+#define TEAM_EUREKA_EUREKA(team_id) (((saligned_t)team_id) < 0)
+#define TEAM_EUREKA_ID(team_id) (team_id)
+#define TEAM_EUREKA_SIGNAL_EXIT(team_id) (team_id)
+#define TEAM_EUREKA_SIGNAL_EUREKA(team_id) ((saligned_t)(-team_id))
 
 aligned_t qt_team_watcher(void *args_)
 {
-    qt_team_t *parent_team = *(qt_team_t **)args_;
-    assert(parent_team);
+    aligned_t code = 0;
 
-    aligned_t *parent_eureka        = &parent_team->eureka;
-    qt_sinc_t *parent_subteams_sinc = parent_team->subteams_sinc;
+    qt_team_t *team = (qt_team_t *)args_;
+    assert(team);
+
+    aligned_t *parent_eureka        = team->parent_eureka;
+    qt_sinc_t *parent_subteams_sinc = team->parent_subteams_sinc;
     assert(parent_eureka);
     assert(parent_subteams_sinc);
 
-    aligned_t code = 0;
+    qthread_fill(&team->watcher_started);
+#ifdef TEAM_PROFILE
+    qthread_incr(&qlib->team_watcher_start, 1);
+#endif
 
-    // 1. spin
-    //    1. block waiting on code from parent e-feb -- leave e-feb full
-    //    2.a if code indicates a team is exiting
-    //        1.a if code indicates this team
-    //            1. empty exit code on parent's e-feb
-    //            2. break out of spin
-    //        1.b otherwise
-    //            2. continue to spin
-    //    2.b else if code indicates parent eureka event
-    //        1. break out of spin
-    // 2.a if clean exit
-    //     1. submit to parent team's subteams sinc
-    //     1. exit watcher
-    // 2.b otherwise
-    //     1. trigger eureka event for this team
-    while (1) {
-        qthread_debug(TEAM_CALLS, "Watcher(team(%u)) was blocked on parent(%u) "
-            "e-feb(%p)\n", (unsigned)qt_team_id(), 
-            (unsigned)parent_team->team_id, parent_eureka);
+    do {
         qthread_readFF(&code, parent_eureka);
-        qthread_debug(TEAM_BEHAVIOR, "Watcher(team(%u)) received code(%s) from "
-            "parent(%u) e-feb(%p)\n", (unsigned)qt_team_id(),
-            (TEAM_EUREKA_CLEAR(code)) ? "clean exit" : "eureka event",
-            (unsigned)parent_team->team_id, parent_eureka);
 
-        if (TEAM_EUREKA_CLEAR(code)) {
+        if (TEAM_EUREKA_EXIT(code)) {
             if (qt_team_id() == TEAM_EUREKA_ID(code)) {
-                qthread_empty(&parent_team->eureka);
-                qt_sinc_submit(parent_subteams_sinc, NULL);
+                // Reset the FEB and exit
+                qthread_empty(parent_eureka);
+                break;
+            } else {
+                // Yield control of the resource while waiting for FEB to be reset
+                qthread_yield();
             }
-            return 0;
-        } else if (TEAM_EUREKA_TRIGGER(code)) {
+        } else if (TEAM_EUREKA_EUREKA(code)) {
             assert("Error: hard-eureka not implemented" && 0);
         } else {
             assert("Error: watcher received code 0 or 1" && 0);
         }
-    }
+    } while (1);
+
+#ifdef TEAM_PROFILE
+            qthread_incr(&qlib->team_watcher_stop, 1);
+#endif
+
+    return 0;
 }
+
+#ifdef TEAM_PROFILE
+void qt_team_profile(void)
+{
+    fprintf(stderr, "\n======== Teams Profile ========\n\n");
+    fprintf(stderr, "Teams:\n");
+    fprintf(stderr, "%8lu create\n",
+            (unsigned long)qlib->team_create);
+    fprintf(stderr, "%8lu destroy\n",
+            (unsigned long)qlib->team_destroy);
+    fprintf(stderr, "%8lu teams were not destroyed\n",
+            (unsigned long)(qlib->team_create - qlib->team_destroy));
+
+    fprintf(stderr, "\nSubteams:\n");
+    fprintf(stderr, "%8lu subteam create\n",
+            (unsigned long)qlib->team_subteam_create);
+    fprintf(stderr, "%8lu subteam destroy\n",
+            (unsigned long)qlib->team_subteam_destroy);
+    fprintf(stderr, "%8lu subteams were not destroyed\n",
+            (unsigned long)(qlib->team_subteam_create -
+                    qlib->team_subteam_destroy));
+
+    fprintf(stderr, "\nSincs:\n");
+    fprintf(stderr, "%8lu sinc_create\n",
+            (unsigned long)qlib->team_sinc_create);
+    fprintf(stderr, "%8lu sinc_destroy\n",
+            (unsigned long)qlib->team_sinc_destroy);
+    fprintf(stderr, "%8lu sincs were not destroyed\n",
+            (unsigned long)(qlib->team_sinc_create -
+                    qlib->team_sinc_destroy));
+
+    fprintf(stderr, "\nSubteams Sincs:\n");
+    fprintf(stderr, "%8lu subteams_sinc_create\n",
+            (unsigned long)qlib->team_subteams_sinc_create);
+    fprintf(stderr, "%8lu subteams_sinc_destroy\n",
+            (unsigned long)qlib->team_subteams_sinc_destroy);
+    fprintf(stderr, "%8lu subteams sncs were not destroyed\n",
+            (unsigned long)(qlib->team_subteams_sinc_create -
+                    qlib->team_subteams_sinc_destroy));
+
+    fprintf(stderr, "\nLeaders:\n");
+    fprintf(stderr, "%8lu leader_start\n",
+            (unsigned long)qlib->team_leader_start);
+    fprintf(stderr, "%8lu leader_stop\n",
+            (unsigned long)qlib->team_leader_stop);
+    fprintf(stderr, "%8lu leaders did not stop\n",
+            (unsigned long)(qlib->team_leader_start -
+                    qlib->team_leader_stop));
+
+    fprintf(stderr, "\nWatchers:\n");
+    fprintf(stderr, "%8lu watcher_start\n",
+            (unsigned long)qlib->team_watcher_start);
+    fprintf(stderr, "%8lu watcher_stop\n",
+            (unsigned long)qlib->team_watcher_stop);
+    fprintf(stderr, "%8lu watchers did not stop\n",
+            (unsigned long)(qlib->team_watcher_start -
+                    qlib->team_watcher_stop));
+    fprintf(stderr, "\n");
+}
+#endif
 
 /* Returns the team id. If there is no team structure associated with the task,
  * it is considered to be in the default team with id 1. */
@@ -2128,54 +2204,58 @@ extern void *qthread_fence2;
 // returns.
 static QINLINE void qthread_internal_teamfinish(qt_team_t *team, uint8_t flags)
 {/*{{{*/
-    // 1.a if not the team watcher
-    //     1. submit to this team's sinc
-    //     2.a if this task is the team leader
-    //         1. block waiting on this team's sinc
-    //         2. destroy this team's sinc
-    //         3.a if this team has a watcher
-    //             1. set clean exit code on parent's e-feb
-    //         4.a if this team has subteams
-    //            1. block waiting on this team's subteams sinc
-    //            2. destroy this team's subteams sinc
-    //         5. free the team structure
     assert(team != NULL);
-    if (!(QTHREAD_TEAM_WATCHER & flags)) {
-        qt_sinc_submit(team->sinc, NULL);
-        if (QTHREAD_TEAM_LEADER & flags) {
-            qthread_debug(TEAM_CALLS, "<leader>(team(%p,id(%u)), flags(%d)\n", team, (unsigned long)team->team_id, flags);
-            qt_sinc_wait(team->sinc, NULL);
-            qt_sinc_destroy(team->sinc);
-            if (team->parent_eureka) {
-                qthread_debug(TEAM_CALLS, "Subteam(%u) triggering parent "
-                    "e-feb(%p) with clean exit code(%u)\n", 
-                    (unsigned)team->team_id, team->parent_eureka,
-                    TEAM_EUREKA_EXIT(team->team_id));
-                qthread_writeEF_const(team->parent_eureka, 
-                    TEAM_EUREKA_EXIT(team->team_id));
-                qthread_debug(TEAM_CALLS, "Subteam(%u) writeEF()\n",
-                    team->team_id);
-                qt_sinc_wait(team->parent_subteams_sinc, NULL);
-            } else {
-                qthread_debug(TEAM_CALLS, 
-                    "Subteam(%u) has no parent eureka\n", team->team_id);
-            }
-            if (team->subteams_sinc) {
-                qthread_debug(TEAM_BEHAVIOR, "Subteam(%u) waiting on its subteams "
-                "sinc\n", (unsigned)team->team_id);
-                qt_sinc_wait(team->subteams_sinc, NULL);
-                qt_sinc_destroy(team->subteams_sinc);
-            }
 
-            qthread_debug(TEAM_BEHAVIOR, "Freeing subteam(%u)\n",
-                (unsigned)team->team_id);
-            FREE_TEAM(team);
-        } else {
-            qthread_debug(TEAM_CALLS, "<other>(team(%p,id(%u)), flags(%d)\n", team, (unsigned long)team->team_id, flags);
-        }
+
+    if (!(QTHREAD_TEAM_LEADER & flags)) {
+        // Regular participant
+        qt_sinc_submit(team->sinc, NULL);
     } else {
-        qthread_debug(TEAM_CALLS, "<watcher>(team(%p,id(%u)), flags(%d)\n", team, (unsigned long)team->team_id, flags);
+        // Leader participant
+
+        // Signal the watcher to exit
+        if (team->parent_eureka) {
+            qthread_writeEF_const(team->parent_eureka, 
+                    TEAM_EUREKA_SIGNAL_EXIT(team->team_id));
+        }
+
+        // Wait on all participants to finish
+        qt_sinc_submit(team->sinc, NULL);
+        qt_sinc_wait(team->sinc, NULL);
+        qt_sinc_destroy(team->sinc);
+        team->sinc = NULL;
+#ifdef TEAM_PROFILE
+        qthread_incr(&qlib->team_sinc_destroy, 1);
+#endif
+
+        // Notify parent that the watcher is done
+        if (team->parent_eureka) {
+            qt_sinc_submit(team->parent_subteams_sinc, NULL);
+        }
+
+        // Wait on all subteams to finish
+        if (team->subteams_sinc) {
+            qt_sinc_wait(team->subteams_sinc, NULL);
+            qt_sinc_destroy(team->subteams_sinc);
+            team->subteams_sinc = NULL;
+#ifdef TEAM_PROFILE
+            qthread_incr(&qlib->team_subteams_sinc_destroy, 1);
+#endif
+        }
+
+#ifdef TEAM_PROFILE
+        if (QTHREAD_NON_TEAM_ID == team->parent_id) {
+            qthread_incr(&qlib->team_destroy, 1);
+        } else {
+            qthread_incr(&qlib->team_subteam_destroy, 1);
+        }
+        qthread_incr(&qlib->team_leader_stop, 1);
+#endif
+
+        FREE_TEAM(team);
     }
+
+    return;
 }/*}}}*/
 
 /* this function runs a thread until it completes or yields */
@@ -2210,6 +2290,17 @@ static void qthread_wrapper(void *ptr)
         + ((double)effconcurrentthreads / threadcount);
     QTHREAD_FASTLOCK_UNLOCK(&effconcurrentthreads_lock);
 #endif /* ifdef QTHREAD_COUNT_THREADS */
+
+    if (NULL != t->team && (t->flags & QTHREAD_TEAM_LEADER)) {
+#ifdef TEAM_PROFILE
+        qthread_incr(&qlib->team_leader_start, 1);
+#endif
+        if (NULL != t->team->parent_eureka) {
+            qthread_fork(qt_team_watcher, t->team, NULL);
+            qthread_readFF(NULL, &t->team->watcher_started);
+        }
+    }
+
     if (t->ret) {
         if (t->flags & QTHREAD_RET_IS_SYNCVAR) {
             /* this should avoid problems with irresponsible return values */
@@ -2508,87 +2599,75 @@ static int qthread_uberfork(qthread_f             f,
     /* Step 3: Allocate & init the structure */
     int team_leader = 0;
 
-    qt_team_t *this_team = NULL;
-    qt_team_t *new_team = NULL;
+    qt_team_t *spawner_team = NULL;
+    qt_team_t *spawnee_team = NULL;
 
     if (me && me->team) { // We know this task has a non-default team
-        this_team = me->team;
+        spawner_team = me->team;
     } else { // We assume it is part of the default team
-        this_team = NULL;
+        spawner_team = NULL;
     }
 
     assert(SAME_TEAM == dteam || NEW_TEAM == dteam || NEW_SUBTEAM == dteam);
     if (dteam == SAME_TEAM) {
         qthread_debug(TEAM_CALLS, "Spawning in this team\n");
-        // Spawn in this team
-        // 1. increment team.sinc, if this is a non-default team; otherwise,
-        //    do nothing -- default team does not maintain a sinc
-        // 2. Set `new_team` to `this_team` so this task is spawned in here
-        if (this_team) {
-            qt_sinc_willspawn(this_team->sinc, 1);
+        if (spawner_team) {
+            qt_sinc_willspawn(spawner_team->sinc, 1);
         }
-        new_team = this_team;
-    } else {
-        // Create a new team
-        // 1. create the new team
-        // 2. set the team-leader flag
-        // 3. if new team is a subteam
-        //    1. create the new team
-        //    2. set the team-leader flag
-        //    3.a if this is a non-default team,
-        //        1. set new team's parent id and e-feb
-        //        2. increment this team's subteam sinc
-        //        3. set new team's reference to parent subteams sinc
-        //        4. create a watcher task for the new subteam, preconditioned
-        //           on this team's e-feb
-        //        5. inject new watcher task
-        //    3.b otherwise
-        //        1. set new team's parent id to the default team
-        //        2. set new team's parent e-feb reference to null
-        new_team          = ALLOC_TEAM(myshep);
-        new_team->sinc = qt_sinc_create(0, NULL, NULL, 1);
-        new_team->subteams_sinc = qt_sinc_create(0, NULL, NULL, 0);
-        new_team->team_id = qthread_internal_incr(&(qlib->max_team_id),
-                                                    &qlib->max_team_id_lock, 1);
-        new_team->parent_id = QTHREAD_NON_TEAM_ID;
-        qthread_empty(&new_team->eureka);
-        new_team->parent_eureka = NULL;
-        new_team->parent_subteams_sinc = NULL;
-        new_team->flags = 0;
+        spawnee_team = spawner_team;
+    } else { // Either a new team or a new subteam
+        spawnee_team = ALLOC_TEAM(myshep);
+        assert(spawnee_team);
 
-        qthread_debug(TEAM_CALLS, "Created team(%u)\n", new_team->team_id);
+        // Initialize new team values
+        spawnee_team->team_id              = qthread_internal_incr(&(qlib->max_team_id),
+                                                     &qlib->max_team_id_lock, 1);
+        spawnee_team->eureka               = QTHREAD_NON_TASK_ID;
+        spawnee_team->watcher_started      = 0;
+        spawnee_team->sinc                 = qt_sinc_create(0, NULL, NULL, 1);
+        spawnee_team->subteams_sinc        = qt_sinc_create(0, NULL, NULL, 0);
+        spawnee_team->parent_id            = QTHREAD_NON_TEAM_ID;
+        spawnee_team->parent_eureka        = NULL;
+        spawnee_team->parent_subteams_sinc = NULL;
+        spawnee_team->flags                = 0;
 
-        team_leader = 1;
+        // Empty new team FEBs
+        qthread_empty(&spawnee_team->eureka);
+        qthread_empty(&spawnee_team->watcher_started);
+
+#ifdef TEAM_PROFILE
+        qthread_incr(&qlib->team_sinc_create, 1);
+        qthread_incr(&qlib->team_subteams_sinc_create, 1);
+#endif
+
         if (dteam == NEW_SUBTEAM) {
-            qthread_debug(TEAM_CALLS, "Setting up team(%u) as a subteam\n",
-                new_team->team_id);
-            if (this_team) {
-                qthread_debug(TEAM_CALLS, "Team(%u) has real parent team(%u)\n",
-                    new_team->team_id, this_team->team_id);
-                new_team->parent_id = this_team->team_id;
-                new_team->parent_eureka = &this_team->eureka;
-                qthread_debug(TEAM_CALLS, "Team(%u) added to team(%u) subteams-sinc\n", new_team->team_id, this_team->team_id);
-                qt_sinc_willspawn(this_team->subteams_sinc, 1);
-                new_team->parent_subteams_sinc = this_team->subteams_sinc;
-                qthread_t *new_watcher = 
-                    qthread_thread_new(qt_team_watcher, &this_team, 
-                        sizeof(qt_team_t *), NULL, new_team, 0);
-                qassert_ret(new_watcher, QTHREAD_MALLOC_ERROR);
-                new_watcher->preconds     = &(new_team->parent_eureka);
-                new_watcher->thread_state = QTHREAD_STATE_NASCENT;
-                new_watcher->npreconds    = 1;
-                new_watcher->flags       |= QTHREAD_TEAM_WATCHER;
-                qthread_check_precond(new_watcher);
+            if (spawner_team) {
+                // Finish initializing new subteam components
+                spawnee_team->parent_id            =  spawner_team->team_id;
+                spawnee_team->parent_eureka        = &spawner_team->eureka;
+                spawnee_team->parent_subteams_sinc =  spawner_team->subteams_sinc;
+
+                // Notify parent team of new subteam
+                qt_sinc_willspawn(spawner_team->subteams_sinc, 1);
             } else { // Parent is the default team
-                qthread_debug(TEAM_CALLS, "Team(%u) has default parent "
-                    "team(1)\n", new_team->team_id);
-                new_team->parent_id = QTHREAD_DEFAULT_TEAM_ID;
-                new_team->parent_eureka = NULL;
-                new_team->parent_subteams_sinc = NULL;
+                // Finish initializing new subteam components
+                spawnee_team->parent_id            = QTHREAD_DEFAULT_TEAM_ID;
+                spawnee_team->parent_eureka        = NULL;
+                spawnee_team->parent_subteams_sinc = NULL;
             }
+#ifdef TEAM_PROFILE
+            qthread_incr(&qlib->team_subteam_create, 1);
+#endif
+#ifdef TEAM_PROFILE
+        } else { // New team
+            qthread_incr(&qlib->team_create, 1);
+#endif
         }
+
+        // Flag the new task as the team leader
+        team_leader = 1;
     }
-    t = qthread_thread_new(f, arg, arg_size, (aligned_t *)ret, new_team, team_leader);
+    t = qthread_thread_new(f, arg, arg_size, (aligned_t *)ret, spawnee_team, team_leader);
     qassert_ret(t, QTHREAD_MALLOC_ERROR);
     if (QTHREAD_UNLIKELY(target_shep != NO_SHEPHERD)) {
         t->target_shepherd = &qlib->shepherds[dest_shep];
@@ -2849,6 +2928,25 @@ int qthread_fork_syncvar_copyargs(qthread_f   f,
                             NULL,
                             NO_SHEPHERD,
                             SAME_TEAM,
+                            0);
+}                      /*}}} */
+
+int qthread_fork_copyargs_new_team(qthread_f   f,
+                                   const void *arg,
+                                   size_t      arg_size,
+                                   aligned_t  *ret)
+{                      /*{{{*/
+    qthread_debug(TEAM_CALLS, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
+    return qthread_uberfork(f,
+                            arg,
+                            arg_size,
+                            ALIGNED_T,
+                            ret,
+                            NO_SYNC,
+                            0,
+                            NULL,
+                            NO_SHEPHERD,
+                            NEW_TEAM,
                             0);
 }                      /*}}} */
 
