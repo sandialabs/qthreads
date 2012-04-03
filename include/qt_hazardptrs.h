@@ -3,7 +3,7 @@
 
 #include "qt_visibility.h"
 
-#define FREELIST_DEPTH       8
+//#define FREELIST_DEPTH       8
 #define HAZARD_PTRS_PER_SHEP 2
 
 typedef struct {
@@ -11,9 +11,15 @@ typedef struct {
     void *ptr;
 } hazard_freelist_entry_t;
 
+/*typedef struct dfreelist_s {
+    hazard_freelist_entry_t entry;
+    struct dfreelist_s *next;
+} hazard_dynfreelist_entry_t;*/
+
 typedef struct {
-    hazard_freelist_entry_t freelist[FREELIST_DEPTH];
-    unsigned int            count;
+    hazard_freelist_entry_t     *freelist;
+    //hazard_dynfreelist_entry_t *dfreelist;
+    unsigned int                count;
 } hazard_freelist_t;
 
 void INTERNAL initialize_hazardptrs(void);
