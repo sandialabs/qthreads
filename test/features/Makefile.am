@@ -38,7 +38,7 @@ endif
 check_PROGRAMS = $(TESTS)
 
 if HAVE_PROG_TIMELIMIT
-TESTS_ENVIRONMENT = @timelimit_path@ -T 30
+TESTS_ENVIRONMENT = @timelimit_path@ -T 2
 endif
 
 INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/test/

@@ -23,7 +23,7 @@ static void par_null_task(size_t start,
 int main(int   argc,
          char *argv[])
 {
-    uint64_t count = 1048576;
+    uint64_t count = 524288; // 1048576;
 
     CHECK_VERBOSE();
 

@@ -18,7 +18,7 @@ check_PROGRAMS = $(TESTS)
 
 if HAVE_PROG_TIMELIMIT
 TESTS_ENVIRONMENT = @timelimit_path@ -T 30
-endif
+endif 
 
 INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/test/
 qthreadlib = $(top_builddir)/src/libqthread.la
