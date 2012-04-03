@@ -17,9 +17,17 @@ static pthread_key_t ts_hazard_ptrs;
 
 static uintptr_t    *QTHREAD_CASLOCK(hzptr_list);
 static aligned_t     hzptr_list_len = 0;
+static unsigned      freelist_max = 0;
+
+static hazard_freelist_entry_t *free_these_freelists = NULL;
 
 static void hazardptr_internal_teardown(void)
 {
+    while (free_these_freelists != NULL) {
+        hazard_freelist_entry_t *tmp = free_these_freelists;
+        free_these_freelists = (hazard_freelist_entry_t*)tmp[freelist_max].ptr;
+        free(tmp);
+    }
     pthread_key_delete(ts_hazard_ptrs);
     while (hzptr_list != NULL) {
         uintptr_t *hzptr_tmp = hzptr_list;
@@ -32,16 +40,26 @@ static void hazardptr_internal_teardown(void)
 void INTERNAL initialize_hazardptrs(void)
 {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    freelist_max = qthread_num_shepherds() * qlib->nworkerspershep + 7;
     for (qthread_shepherd_id_t i = 0; i < qthread_num_shepherds(); ++i) {
         for (qthread_worker_id_t j = 0; j < qlib->nworkerspershep; ++j) {
             memset(qlib->shepherds[i].workers[j].hazard_ptrs, 0, sizeof(uintptr_t) * HAZARD_PTRS_PER_SHEP);
             memset(&qlib->shepherds[i].workers[j].hazard_free_list, 0, sizeof(hazard_freelist_t));
+            qlib->shepherds[i].workers[j].hazard_free_list.freelist = calloc(freelist_max+1, sizeof(hazard_freelist_entry_t));
+            assert(qlib->shepherds[i].workers[j].hazard_free_list.freelist);
+            qlib->shepherds[i].workers[j].hazard_free_list.freelist[freelist_max].ptr = free_these_freelists;
+            free_these_freelists = qlib->shepherds[i].workers[j].hazard_free_list.freelist;
         }
     }
 #else
+    freelist_max = qthread_num_shepherds() + 7;
     for (qthread_shepherd_id_t i = 0; i < qthread_num_shepherds(); ++i) {
         memset(qlib->shepherds[i].hazard_ptrs, 0, sizeof(uintptr_t) * HAZARD_PTRS_PER_SHEP);
         memset(&qlib->shepherds[i].hazard_free_list, 0, sizeof(hazard_freelist_t));
+        qlib->shepherds[i].hazard_free_list.freelist = calloc(freelist_max+1, sizeof(hazard_freelist_entry_t));
+        assert(qlib->shepherds[i].hazard_free_list.freelist);
+        qlib->shepherds[i].hazard_free_list.freelist[freelist_max].ptr = free_these_freelists;
+        free_these_freelists = qlib->shepherds[i].hazard_free_list.freelist;
     }
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     qassert(pthread_key_create(&ts_hazard_ptrs, NULL), 0);
@@ -131,8 +149,9 @@ static void hazardous_scan(hazard_freelist_t *hfl)
     hazard_freelist_t tmpfreelist;
 
     assert(plist);
+    tmpfreelist.freelist = calloc(freelist_max, sizeof(hazard_freelist_entry_t));
+    assert(tmpfreelist.freelist);
     do {
-        tmpfreelist.count = 0;
         /* Stage 1: Collect hazardpointers */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
         {
@@ -179,8 +198,10 @@ static void hazardous_scan(hazard_freelist_t *hfl)
 #endif  /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
         /* Stage 2: free pointers that are not in the set of hazardous pointers */
+        tmpfreelist.count = 0;
         qsort(plist, num_hps, sizeof(void *), void_cmp);
-        for (size_t i = 0; i < FREELIST_DEPTH; ++i) {
+        assert(hfl->count == freelist_max);
+        for (size_t i = 0; i < freelist_max; ++i) {
             const uintptr_t ptr = (uintptr_t)hfl->freelist[i].ptr;
             if (ptr == 0) { break; }
             /* look for this ptr in the plist */
@@ -193,13 +214,14 @@ static void hazardous_scan(hazard_freelist_t *hfl)
                 hfl->freelist[i].free((void *)ptr);
             }
         }
-        if (tmpfreelist.count == 8) {
+        if (tmpfreelist.count == freelist_max) {
             /* This will ONLY happen under *extremely* heavy contention. */
             MACHINE_FENCE;
         }
-    } while (tmpfreelist.count == 8);
+    } while (tmpfreelist.count == freelist_max);
     memcpy(&hfl->freelist, &tmpfreelist.freelist, tmpfreelist.count * sizeof(hazard_freelist_entry_t));
     hfl->count = tmpfreelist.count;
+    free(tmpfreelist.freelist);
     free(plist);
 }
 
@@ -221,7 +243,7 @@ void INTERNAL hazardous_release_node(void  (*freefunc)(void *),
     if (hzptrs != NULL) {
         memset(hzptrs, 0, sizeof(uintptr_t) * HAZARD_PTRS_PER_SHEP);
     }
-    if (hfl->count == FREELIST_DEPTH) {
+    if (hfl->count == freelist_max) {
         hazardous_scan(hfl);
     }
 }
