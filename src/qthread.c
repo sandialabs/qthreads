@@ -1935,9 +1935,7 @@ aligned_t qt_team_watcher(void *args_)
     assert(team);
 
     aligned_t *parent_eureka        = team->parent_eureka;
-    qt_sinc_t *parent_subteams_sinc = team->parent_subteams_sinc;
     assert(parent_eureka);
-    assert(parent_subteams_sinc);
 
     qthread_fill(&team->watcher_started);
 #ifdef TEAM_PROFILE
