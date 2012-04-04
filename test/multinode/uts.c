@@ -29,26 +29,28 @@
 
 int num_locales;
 int here;
+int talk_to_self = 0;
 
 #ifdef COLLECT_STATS
 aligned_t *comm_bins = NULL;
+aligned_t num_messages = 0;
 
 static aligned_t pong_comm(void *args_) {
     aligned_t *remote_comm_bins = (aligned_t *)args_;
 
+    aligned_t num_out = 0;
     fprintf(stderr, "%d ", here);
     for (int i = 0; i < num_locales; i++) {
+        num_out += remote_comm_bins[i];
         fprintf(stderr, "%4lu ", remote_comm_bins[i]);
     }
     fprintf(stderr, "\n");
 
-    return 0;
+    return num_out;
 }
 
 static aligned_t ping_comm(void *args_) {
-    pong_comm(comm_bins);
-
-    return 0;
+    return pong_comm(comm_bins);
 }
 #endif
 
@@ -173,21 +175,22 @@ static aligned_t visit(void *args_)
 
         child.num_children = calc_num_children(&child);
 
+        int source = qthread_multinode_rank();
         int target = rng_rand(child.state.state) % num_locales;
 
-        {
-            int my_id = qthread_multinode_rank();
-            iprintf("%03d : spawning visit on locale %03d\n", my_id, target);
-
+        if (talk_to_self || target != source) {
+            // Spawn `visit` task to a random locale
+            iprintf("%03d : spawning visit on locale %03d\n", source, target);
 #ifdef COLLECT_STATS
             qthread_incr(&(comm_bins[target]), 1);
 #endif
-        }
 
-        // Spawn `visit` task to a random locale
-        qthread_fork_remote(visit, &child, &rets[i], 
-                            target, 
-                            sizeof(node_t));
+            qthread_fork_remote(visit, &child, &rets[i], 
+                                target, 
+                                sizeof(node_t));
+        } else {
+            qthread_fork_copyargs(visit, &child, sizeof(node_t), &rets[i]);
+        }
     }
 
     // Wait for children to finish up, accumulate descendants counts
@@ -328,6 +331,7 @@ int main(int   argc,
     NUMARG(non_leaf_bf, "UTS_NON_LEAF_NUM");
     NUMARG(shift_depth, "UTS_SHIFT_DEPTH");
     NUMARG(num_samples, "UTS_NUM_SAMPLES");
+    NUMARG(talk_to_self, "ALL_COMM");
 
     // Tell Qthreads to initialize multinode support
     setenv("QT_MULTINODE","yes",1);
@@ -374,18 +378,22 @@ int main(int   argc,
     qtimer_destroy(timer);
 
 #ifdef COLLECT_STATS
-    pong_comm(comm_bins);
+    num_messages = pong_comm(comm_bins);
     for (int i = 1; i < num_locales; i++) {
         aligned_t ret;
         qthread_fork_remote(ping_comm, &i, &ret, i, sizeof(int));
-        qthread_readFF(NULL, &ret);
+
+        aligned_t tmp;
+        qthread_readFF(&tmp, &ret);
+        num_messages += tmp;
     }
 
     free(comm_bins);
 #endif
 
 #ifdef PRINT_STATS
-    printf("tree-size %lu\ntree-depth %d\nnum-leaves %llu\nperc-leaves %.2f\n",
+    printf("num-messages %lu\ntree-size %lu\ntree-depth %d\nnum-leaves %llu\nperc-leaves %.2f\n",
+           (unsigned long)num_messages,
            (unsigned long)total_num_nodes,
            (int)tree_height,
            (unsigned long long)num_leaves,
@@ -395,7 +403,8 @@ int main(int   argc,
            total_num_nodes / total_time,
            total_num_nodes / total_time / qthread_num_workers());
 #else
-    printf("Tree size = %lu, tree depth = %d, num leaves = %llu (%.2f%%)\n",
+    printf("Num messages = %lu, Tree size = %lu, tree depth = %d, num leaves = %llu (%.2f%%)\n",
+           (unsigned long)num_messages,
            (unsigned long)total_num_nodes,
            (int)tree_height,
            (unsigned long long)num_leaves,
