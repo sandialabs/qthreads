@@ -36,7 +36,7 @@ aligned_t *comm_bins = NULL;
 static aligned_t pong_comm(void *args_) {
     aligned_t *remote_comm_bins = (aligned_t *)args_;
 
-    fprintf(stderr, "%d: ", here);
+    fprintf(stderr, "%d ", here);
     for (int i = 0; i < num_locales; i++) {
         fprintf(stderr, "%4lu ", remote_comm_bins[i]);
     }
