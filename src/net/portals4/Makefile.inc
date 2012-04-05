@@ -17,3 +17,8 @@ if WANT_MPI_RUNTIME
 libqthread_la_SOURCES += \
 	net/portals4/runtime-mpi.c
 endif
+
+if WANT_PMI_RUNTIME
+libqthread_la_SOURCES += \
+	net/portals4/runtime-pmi.c
+endif

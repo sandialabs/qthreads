@@ -957,10 +957,10 @@ AS_IF([test "$enable_multinode" = "yes"],
        LIBS="$LIBS $portals4_LIBS"
        AC_ARG_WITH([multinode-runtime],
                    [AS_HELP_STRING([--with-multinode-runtime@<:@=OPTION@:>@],[Use OPTION as runtime support, current options
-                                    are shmemrt and mpi @<:@default=shmemrt@:>@])])
+                                    are shmemrt, mpi, and pmi @<:@default=mpi@:>@])])
        AS_IF([test "x$with_multinode_runtime" = "x"],
-             [with_multinode_runtime=shmemrt])
-       dnl (((  make parens from case statement match something
+             [with_multinode_runtime=mpi])
+       dnl ((((  make parens from case statement match something
        case "$with_multinode_runtime" in
            shmemrt)
              AS_IF([test "x$check_portals4_dir" != "x" -a -d "$check_portals4_dir/bin"],
@@ -972,6 +972,12 @@ AS_IF([test "$enable_multinode" = "yes"],
            ;;
            mpi)
            ;;
+	   pmi)
+             ORTE_CHECK_PMI([pmi], [], [AC_MSG_ERROR([PMI runtime requested, PMI not found])])
+	     CPPFLAGS="$CPPFLAGS $pmi_CPPFLAGS"
+             LDFLAGS="$LDFLAGS $pmi_LDFLAGS"
+             LIBS="$LIBS $pmi_LIBS"
+	   ;;
            *) AC_MSG_ERROR([bad value ${with_multinode_runtime} for --with-multinode-runtime]) ;;
        esac],
       [enable_multinode="no"])
@@ -1006,6 +1012,7 @@ AM_CONDITIONAL([HAVE_PROG_TIMELIMIT], [test "x$timelimit_path" != "x"])
 AM_CONDITIONAL([COMPILE_MULTINODE], [test "$enable_multinode" = "yes"])
 AM_CONDITIONAL([WANT_PORTALS_SHMEM_RUNTIME], [test "$with_multinode_runtime" = "shmemrt"])
 AM_CONDITIONAL([WANT_MPI_RUNTIME], [test "$with_multinode_runtime" = "mpi"])
+AM_CONDITIONAL([WANT_PMI_RUNTIME], [test "$with_multinode_runtime" = "pmi"])
 AM_CONDITIONAL([COMPILE_OMP_BENCHMARKS], [test "$have_openmp" = "yes"])
 
 AC_CONFIG_HEADERS([include/config.h include/qthread/common.h])

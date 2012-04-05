@@ -32,7 +32,7 @@ qthread_internal_net_driver_runtime_fini(void)
 
 
 ptl_process_t*
-qthread_internal_net_driver_runtime_get_mapping(void)
+qthread_internal_net_driver_runtime_get_mapping(ptl_handle_ni_t ni_h)
 {
     int size, i;
     ptl_process_t *ret;

@@ -78,12 +78,6 @@ qthread_internal_net_driver_initialize(void)
         return ret;
     }
 
-    desired = qthread_internal_net_driver_runtime_get_mapping();
-    if (NULL == desired) {
-        fprintf(stderr, "internal_net_driver_runtime_get_mapping: %d\n", errno);
-        return -1;
-    }
-
     ni_req_limits.max_entries = 1024;
     ni_req_limits.max_unexpected_headers = 1024;
     ni_req_limits.max_mds = 1024;
@@ -110,6 +104,12 @@ qthread_internal_net_driver_initialize(void)
     if (PTL_OK != ret) {
         fprintf(stderr, "PtlNIInit: %d\n", ret);
         return ret;
+    }
+
+    desired = qthread_internal_net_driver_runtime_get_mapping(ni_h);
+    if (NULL == desired) {
+        fprintf(stderr, "internal_net_driver_runtime_get_mapping: %d\n", errno);
+        return -1;
     }
 
     ret = PtlSetMap(ni_h,

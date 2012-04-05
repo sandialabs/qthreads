@@ -19,34 +19,26 @@
 
 static int rank = 0;
 static int size = 0;
-static ptl_process_t my_id;
 
 int
 qthread_internal_net_driver_runtime_init(void)
 {
     int ret;
-    ptl_handle_ni_t phys_ni_h;
 
     MPI_Initialized(&ret);
     if (!ret) {
-        MPI_Init(NULL, NULL);
+        if (MPI_SUCCESS != MPI_Init(NULL, NULL)) {
+            return 1;
+        }
     }
 
-    MPI_Comm_size(MPI_COMM_WORLD, &size);
-    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    if (MPI_SUCCESS != MPI_Comm_size(MPI_COMM_WORLD, &size)) {
+        return 1;
+    }
 
-    ret = PtlNIInit(PTL_IFACE_DEFAULT,
-                    PTL_NI_NO_MATCHING | PTL_NI_PHYSICAL,
-                    PTL_PID_ANY,
-                    NULL,
-                    NULL,
-                    &phys_ni_h);
-    if (PTL_OK != ret) return 1;
-
-    ret = PtlGetId(phys_ni_h, &my_id);
-    if (PTL_OK != ret) return 1;
-
-    PtlNIFini(phys_ni_h);
+    if (MPI_SUCCESS != MPI_Comm_rank(MPI_COMM_WORLD, &rank)) {
+        return 1;
+    }
 
     return 0;
 }
@@ -56,6 +48,7 @@ int
 qthread_internal_net_driver_runtime_fini(void)
 {
     int ret;
+
     MPI_Finalized(&ret);
     if (!ret) {
         MPI_Finalize();
@@ -66,18 +59,26 @@ qthread_internal_net_driver_runtime_fini(void)
 
 
 ptl_process_t*
-qthread_internal_net_driver_runtime_get_mapping(void)
+qthread_internal_net_driver_runtime_get_mapping(ptl_handle_ni_t ni_h)
 {
-    ptl_process_t *ret;
+    static ptl_process_t *mapping = NULL;
+    ptl_process_t my_id;
+    int ret;
 
-    ret = malloc(sizeof(ptl_process_t) * size);
-    if (NULL == ret) return 0;
+    ret = PtlGetPhysId(ni_h, &my_id);
+    if (ret != PTL_OK) return NULL;
 
-    MPI_Allgather(&my_id, sizeof(my_id), MPI_BYTE,
-                  ret, sizeof(my_id), MPI_BYTE,
-                  MPI_COMM_WORLD);
+    mapping = malloc(sizeof(ptl_process_t) * size);
+    if (!mapping) return NULL;
 
-    return ret;
+    if (MPI_SUCCESS != MPI_Allgather(&my_id, sizeof(my_id), MPI_BYTE,
+                                     mapping, sizeof(my_id), MPI_BYTE,
+                                     MPI_COMM_WORLD)) {
+        free(mapping);
+        mapping = NULL;
+    }
+
+    return mapping;
 }
 
 

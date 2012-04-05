@@ -24,6 +24,7 @@ int main(int argc, char *argv[])
     CHECK_VERBOSE();
 
     setenv("QT_MULTINODE", "yes", 1);
+
     assert(qthread_initialize() == 0);
     assert(qthread_multinode_register(2, say_hello) == 0);
     assert(qthread_multinode_run() == 0);
