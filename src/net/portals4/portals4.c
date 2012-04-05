@@ -28,7 +28,7 @@ struct net_pkt_t {
     size_t len;
 };
 
-static void* progress_function(void *data);
+static void* qt_progress_function(void *data);
 static void exit_handler(int tag, void *start, size_t len);
 static void repost_recv_block(struct recv_block_t*);
 static inline int transmit_packet(struct net_pkt_t *pkt);
@@ -43,7 +43,7 @@ static ptl_handle_eq_t eq_h;
 static ptl_handle_md_t md_h;
 static ptl_handle_me_t overflow_me_h;
 static ptl_pt_index_t data_pt;
-static pthread_t progress_thread;
+static pthread_t qt_progress_thread;
 static qt_mpool mpool;
 static int shutdown_msg = 1;
 
@@ -189,7 +189,7 @@ qthread_internal_net_driver_initialize(void)
     }
     
     /* spawn the management thread */
-    ret = pthread_create(&progress_thread, NULL, progress_function, NULL);
+    ret = pthread_create(&qt_progress_thread, NULL, qt_progress_function, NULL);
     if (0 != ret) {
         fprintf(stderr, "pthread_create: %d\n", ret);
         return ret;
@@ -247,9 +247,8 @@ qthread_internal_net_driver_finalize(void)
     int ret, i;
     struct net_pkt_t *pkt;
     void *dummy;
-    
 
-    /* mark progress thread as time to go away, notify it, and wait */
+    /* mark qt_progress thread as time to go away, notify it, and wait */
     pkt = qt_mpool_alloc(mpool);
     pkt->peer = qthread_internal_net_driver_get_rank();
     pkt->tag = 0;
@@ -262,7 +261,12 @@ qthread_internal_net_driver_finalize(void)
         return ret;
     }
 
-    pthread_join(progress_thread, &dummy);
+    /* shut down the progress thread */
+    ret = pthread_join(qt_progress_thread, &dummy);
+    if (0 != ret) {
+        qthread_debug(MULTINODE_DETAILS, "pthread_join: %d\n", ret);
+        return ret;
+    }
 
     for (i = 0 ; i < num_recv_blocks ; ++i) {
         ret = PtlMEUnlink(recv_blocks[i].me_h);
@@ -271,6 +275,10 @@ qthread_internal_net_driver_finalize(void)
         }
     }
 
+#if 0
+    /* there's a cleanup bug in either this code or Portals4 when
+       messages are in flight (including acks).  Don't clean up for
+       now */
     ret = PtlMEUnlink(overflow_me_h);
     if (PTL_OK != ret) {
         qthread_debug(MULTINODE_DETAILS, "PtlMEUnlink returned %d\n", ret);
@@ -290,6 +298,7 @@ qthread_internal_net_driver_finalize(void)
     if (PTL_OK != ret) {
         qthread_debug(MULTINODE_DETAILS, "PtlEQFree returned %d\n", ret);
     }
+#endif
 
     qthread_internal_net_driver_runtime_fini();
 
@@ -303,7 +312,7 @@ qthread_internal_net_driver_finalize(void)
 
 
 static void*
-progress_function(void *data)
+qt_progress_function(void *data)
 {
     int ret;
     ptl_event_t ev;
