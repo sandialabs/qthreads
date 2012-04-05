@@ -76,8 +76,8 @@ int main(int argc, char *argv[])
     qthread_readFF(NULL, &done);
 
     double total_time = qtimer_secs(timer);
-    iprintf("tot-time %f\n", total_time);
-    iprintf("avg-time %f\n", total_time / total_count);
+    fprintf(stderr, "tot-time %f\n", total_time);
+    fprintf(stderr, "avg-time %f\n", total_time / total_count);
 
     return 0;
 }
