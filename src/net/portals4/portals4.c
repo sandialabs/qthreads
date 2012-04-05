@@ -345,6 +345,12 @@ progress_function(void *data)
                 }
             }
             break;
+        case PTL_EVENT_AUTO_FREE:
+            {
+                struct recv_block_t* block = (struct recv_block_t*) ev.user_ptr;
+                repost_recv_block(block);
+            }
+            break;
         default:
             break;
         }
