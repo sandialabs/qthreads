@@ -21,6 +21,26 @@ static int rank;
 static int next;
 static aligned_t done;
 
+static aligned_t intra_ping(void *arg)
+{
+    int shep = (int)qthread_shep();
+    int next = (shep+1 == size) ? 0 : shep+1;
+
+    iprintf("Ping shep %03d\n", shep);
+
+    if (shep != 0) {
+        qthread_fork_copyargs_to(intra_ping, payload, payload_size, NULL, next);
+    } else if (count != 0) {
+        count -= 1;
+        qthread_fork_copyargs_to(intra_ping, payload, payload_size, NULL, 1);
+    } else {
+        qtimer_stop(timer);
+        qthread_writeF_const(&done, 1);
+    }
+
+    return 0;
+}
+
 static aligned_t ping(void *arg)
 {
     iprintf("Ping %03d\n", rank);
@@ -34,6 +54,16 @@ static aligned_t ping(void *arg)
         qtimer_stop(timer);
         qthread_writeF_const(&done, 1);
     }
+
+    return 0;
+}
+
+static aligned_t intra_node_test(void *arg)
+{
+    qthread_empty(&done);
+    qtimer_start(timer);
+    qthread_fork_copyargs_to(intra_ping, payload, payload_size, NULL, 1);
+    qthread_readFF(NULL, &done);
 
     return 0;
 }
@@ -78,6 +108,21 @@ int main(int argc, char *argv[])
     double total_time = qtimer_secs(timer);
     fprintf(stderr, "tot-time %f\n", total_time);
     fprintf(stderr, "avg-time %f\n", total_time / total_count);
+
+    if (qthread_num_shepherds() > 1) {
+        // Run intra-node test
+        count = total_count / size;
+        int size = (int)qthread_num_shepherds();
+        total_count = count * size;
+
+        aligned_t ret;
+        qthread_fork_to(intra_node_test, NULL, &ret, 0);
+        qthread_readFF(NULL, &ret);
+
+        total_time = qtimer_secs(timer);
+        fprintf(stderr, "intra-tot-time %f\n", total_time);
+        fprintf(stderr, "intra-avg-time %f\n", total_time / total_count);
+    }
 
     return 0;
 }
