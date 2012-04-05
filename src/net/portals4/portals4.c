@@ -127,7 +127,7 @@ qthread_internal_net_driver_initialize(void)
     }
 
     /* create completion EQ/CT and portal table entry */
-    ret = PtlEQAlloc(ni_h, 1024, &eq_h);
+    ret = PtlEQAlloc(ni_h, 1 * 1024 * 1024, &eq_h);
     if (PTL_OK != ret) {
         fprintf(stderr, "PtlEQAlloc: %d\n", ret);
         return ret;
@@ -150,6 +150,7 @@ qthread_internal_net_driver_initialize(void)
     me.min_free = 0;
     me.uid = PTL_UID_ANY;
     me.options = PTL_ME_OP_PUT | 
+        PTL_ME_EVENT_SUCCESS_DISABLE | 
         PTL_ME_UNEXPECTED_HDR_DISABLE;
     me.match_id.rank = PTL_RANK_ANY;
     me.match_bits = 0x0;
@@ -345,7 +346,6 @@ qt_progress_function(void *data)
             } else {
                 struct net_pkt_t *pkt = (struct net_pkt_t*) ev.user_ptr;
                 if (ev.mlength != pkt->len) {
-                    ret = transmit_packet(pkt);
                     if (PTL_OK != ret) {
                         qthread_debug(MULTINODE_CALLS, "transmit packet failed: %d\n", ret);
                     }
@@ -354,7 +354,7 @@ qt_progress_function(void *data)
                 }
             }
             break;
-        case PTL_EVENT_AUTO_FREE:
+        case PTL_EVENT_AUTO_UNLINK:
             {
                 struct recv_block_t* block = (struct recv_block_t*) ev.user_ptr;
                 repost_recv_block(block);
