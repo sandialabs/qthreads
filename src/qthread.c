@@ -2893,6 +2893,25 @@ int qthread_fork_syncvar_copyargs_to(qthread_f             f,
                             0);
 } /*}}}*/
 
+int qthread_fork_copyargs_to(qthread_f             f,
+                             const void           *arg,
+                             size_t                arg_size,
+                             syncvar_t            *ret,
+                             qthread_shepherd_id_t preferred_shep)
+{   /*{{{*/
+    return qthread_uberfork(f,
+                            arg,
+                            arg_size,
+                            ALIGNED_T,
+                            ret,
+                            NO_SYNC,
+                            0,
+                            NULL,
+                            preferred_shep,
+                            SAME_TEAM,
+                            0);
+} /*}}}*/
+
 int qthread_fork_copyargs(qthread_f   f,
                           const void *arg,
                           size_t      arg_size,
