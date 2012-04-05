@@ -11,6 +11,7 @@ general_multinode = \
 	test_init \
 	hello_world \
 	latency \
+	broadcast \
 	ring \
 	uts
 
@@ -43,6 +44,9 @@ hello_world_DEPENDENCIES = $(qthreadlib)
 
 latency_SOURCES = latency.c
 latency_DEPENDENCIES = $(qthreadlib)
+
+broadcast_SOURCES = broadcast.c
+broadcast_DEPENDENCIES = $(qthreadlib)
 
 ring_SOURCES = ring.c
 ring_DEPENDENCIES = $(qthreadlib)
