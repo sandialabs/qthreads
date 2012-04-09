@@ -27,13 +27,14 @@
 
 #define MAXNUMCHILDREN 100
 
-int num_locales;
-int here;
-int talk_to_self = 0;
+static int num_locales;
+static int here;
+static int talk_to_self = 0;
+static double perc_remote = 0.0;
 
 #ifdef COLLECT_STATS
-aligned_t *comm_bins = NULL;
-aligned_t num_messages = 0;
+static aligned_t *comm_bins = NULL;
+static aligned_t num_messages = 0;
 
 static aligned_t pong_comm(void *args_) {
     aligned_t *remote_comm_bins = (aligned_t *)args_;
@@ -175,8 +176,10 @@ static aligned_t visit(void *args_)
 
         child.num_children = calc_num_children(&child);
 
+        int const r = rng_rand(child.state.state); 
+
         int source = qthread_multinode_rank();
-        int target = rng_rand(child.state.state) % num_locales;
+        int target = (r <= 0x7fffffff * perc_remote) ? r % num_locales : source;
 
         if (talk_to_self || target != source) {
             // Spawn `visit` task to a random locale
@@ -332,6 +335,7 @@ int main(int   argc,
     NUMARG(shift_depth, "UTS_SHIFT_DEPTH");
     NUMARG(num_samples, "UTS_NUM_SAMPLES");
     NUMARG(talk_to_self, "ALL_COMM");
+    DBLARG(perc_remote, "PERC_REMOTE");
 
     // Tell Qthreads to initialize multinode support
     setenv("QT_MULTINODE","yes",1);
@@ -392,8 +396,9 @@ int main(int   argc,
 #endif
 
 #ifdef PRINT_STATS
-    printf("num-messages %lu\ntree-size %lu\ntree-depth %d\nnum-leaves %llu\nperc-leaves %.2f\n",
+    printf("num-messages %lu\nperc-remote %f\ntree-size %lu\ntree-depth %d\nnum-leaves %llu\nperc-leaves %.2f\n",
            (unsigned long)num_messages,
+           num_messages/(double)total_num_nodes,
            (unsigned long)total_num_nodes,
            (int)tree_height,
            (unsigned long long)num_leaves,
