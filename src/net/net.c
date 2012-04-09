@@ -76,6 +76,10 @@ static aligned_t fork_helper(void *info)
     qthread_debug(MULTINODE_FUNCTIONS, "[%d] begin fork_helper\n", my_rank);
 
     f   = qt_hash_get(uid_to_ptr_hash, (qt_key_t)(uintptr_t)msg->uid);
+    if (NULL == f) {
+        fprintf(stderr, "action uid %d not registered at destination\n", msg->uid);
+        abort();
+    }
     ret = f(msg->args);
 
     if (0 != msg->return_addr) {
