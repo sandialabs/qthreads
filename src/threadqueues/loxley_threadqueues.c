@@ -275,10 +275,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
 
 int static QINLINE qt_threadqueue_stealable(qthread_t *t)
 {
-    return(t->thread_state != QTHREAD_STATE_YIELDED &&
-           t->thread_state != QTHREAD_STATE_TERM_SHEP &&
-           !(t->flags & QTHREAD_MUST_BE_WORKER_ZERO) &&
-           !(t->flags & QTHREAD_UNSTEALABLE));
+    return(!(t->flags & QTHREAD_UNSTEALABLE));
 }
 
 /* Returns the number of tasks to steal per steal operation (chunk size) */

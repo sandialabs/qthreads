@@ -1105,7 +1105,7 @@ int qthread_initialize(void)
 
 /* the context will have its own stack ptr */
     qlib->mccoy_thread->thread_state = QTHREAD_STATE_YIELDED;                                                  /* avoid re-launching */
-    qlib->mccoy_thread->flags        = QTHREAD_REAL_MCCOY | QTHREAD_UNSTEALABLE | QTHREAD_MUST_BE_WORKER_ZERO; /* i.e. this is THE parent thread */
+    qlib->mccoy_thread->flags        = QTHREAD_REAL_MCCOY | QTHREAD_UNSTEALABLE; /* i.e. this is THE parent thread */
     assert(qlib->mccoy_thread->rdata == NULL);
 
     qlib->mccoy_thread->rdata = malloc(sizeof(struct qthread_runtime_data_s));

@@ -102,7 +102,7 @@ static QINLINE qthread_t* qt_stack_pop(qt_stack_t *stack)
     }
     qthread_t *t = stack->storage[stack->top];
     assert(t != NULL);
-    if ((t->flags & QTHREAD_MUST_BE_WORKER_ZERO) && (qthread_worker(NULL) != 0)) {
+    if ((t->flags & QTHREAD_REAL_MCCOY) && (qthread_worker(NULL) != 0)) {
         return(NULL);
     }
     stack->top = (stack->top - 1 + stack->capacity) % (stack->capacity);

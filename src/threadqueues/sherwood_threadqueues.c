@@ -349,7 +349,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
         if (node) {
             t = node->value;
             FREE_TQNODE(node);
-            if ((t->flags & QTHREAD_MUST_BE_WORKER_ZERO)) { // only needs to be on worker 0 for termination
+            if ((t->flags & QTHREAD_REAL_MCCOY)) { // only needs to be on worker 0 for termination
                 switch(qthread_worker(NULL)) {
                     case NO_WORKER:
                         QTHREAD_TRAP(); // should never happen
