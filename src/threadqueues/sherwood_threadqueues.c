@@ -353,7 +353,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
                 switch(qthread_worker(NULL)) {
                     case NO_WORKER:
                         QTHREAD_TRAP(); // should never happen
-                        t = NULL;
+                        abort();
                         continue; // keep looking
                     case 0:
                         return(t);
