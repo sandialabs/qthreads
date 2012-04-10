@@ -374,7 +374,7 @@ static void qt_loop_step_inner(const size_t         start,
         qwa[threadct].level   = 0;
         qwa[threadct].rets    = rets;
 
-        qthread_syncvar_empty(rets + threadct);
+	//        qthread_syncvar_empty(rets + threadct);
         threadct++;
     }
     threadct = 0;

@@ -295,7 +295,7 @@ void XOMP_parallel_wrapper(void * arg)
 {
     struct XOMP_parallel_wrapper_args * wrapper = arg;
     wrapper->func(wrapper->arg);
-    XOMP_barrier();
+    //    XOMP_barrier();
 }
 
 void XOMP_parallel_start(
