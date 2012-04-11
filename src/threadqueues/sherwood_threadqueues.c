@@ -325,7 +325,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
             QTHREAD_TRYLOCK_LOCK(&q->qlock);
             node = q->tail;
             if (node != NULL) {
-                q->tail = q->tail->prev;
+                q->tail = node->prev;
                 if (q->tail == NULL) {
                     q->head = NULL;
                 } else {
