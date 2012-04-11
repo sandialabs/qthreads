@@ -2275,8 +2275,10 @@ static void qthread_wrapper(void *ptr)
     qthread_debug(THREAD_BEHAVIOR,
                   "tid %u executing f=%p arg=%p...\n",
                   t->thread_id, t->f, t->arg);
-    assert((size_t)&t > (size_t)t->rdata->stack &&
-           (size_t)&t < ((size_t)t->rdata->stack + qlib->qthread_stack_size));
+    if ((t->flags & QTHREAD_NON_BLOCKING) == 0) {
+        assert((size_t)&t > (size_t)t->rdata->stack &&
+               (size_t)&t < ((size_t)t->rdata->stack + qlib->qthread_stack_size));
+    }
 #ifdef QTHREAD_COUNT_THREADS
     QTHREAD_FASTLOCK_LOCK(&effconcurrentthreads_lock);
     effconcurrentthreads++;
@@ -2372,7 +2374,9 @@ static void qthread_wrapper(void *ptr)
 #ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
     MONITOR_ASM_LABEL(qthread_fence2); // add label for HPCToolkit stack unwind
 #endif
-    qthread_back_to_master(t);
+    if ((t->flags & QTHREAD_NON_BLOCKING) == 0) {
+        qthread_back_to_master(t);
+    }
 }                      /*}}} */
 
 #ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
@@ -2395,6 +2399,7 @@ void INTERNAL qthread_exec(qthread_t    *t,
     assert(t != NULL);
     assert(c != NULL);
 
+    if ((t->flags & QTHREAD_NON_BLOCKING) == 0) {
     if (t->thread_state == QTHREAD_STATE_NEW) {
         qthread_debug(SHEPHERD_DETAILS,
                       "t(%p), c(%p): type is QTHREAD_THREAD_NEW!\n",
@@ -2448,6 +2453,15 @@ void INTERNAL qthread_exec(qthread_t    *t,
         qassert(setrlimit(RLIMIT_STACK, &rlp), 0);
     }
 #endif
+    } else {
+#ifdef QTHREAD_MAKECONTEXT_SPLIT
+        unsigned int high = (((uintptr_t)t)>>32) & 0xffffffff;
+        unsigned int low = ((uintptr_t)t)&0xffffffff;
+        qthread_wrapper(high, low);
+#else
+        qthread_wrapper(t);
+#endif
+    }
 
     assert(t != NULL);
     assert(c != NULL);
@@ -2509,8 +2523,9 @@ typedef enum {
     NEW_SUBTEAM
 } desired_team_t;
 
-#define QTHREAD_UBERFORK_FEATURE_MASK_FUTURE 0x1
-#define QTHREAD_UBERFORK_FEATURE_MASK_PARENT 0x2
+#define QTHREAD_UBERFORK_FEATURE_MASK_FUTURE (1<<0)
+#define QTHREAD_UBERFORK_FEATURE_MASK_PARENT (1<<1)
+#define QTHREAD_UBERFORK_FEATURE_MASK_NBLOCK (1<<2)
 
 static int qthread_uberfork(qthread_f             f,
                             const void           *arg,
@@ -2535,7 +2550,7 @@ static int qthread_uberfork(qthread_f             f,
 
     /* Step 1: Check arguments */
     qthread_debug(THREAD_FUNCTIONS,
-                  "f(%p), arg(%p), arg_size(%z), rt(%s), ret(%p), pt(%s), np(%z), pc(%p), ts(%u), %s, %s\n",
+                  "f(%p), arg(%p), arg_size(%z), rt(%s), ret(%p), pt(%s), np(%z), pc(%p), ts(%u), %s, %s, %s\n",
                   f,
                   arg,
                   arg_size,
@@ -2546,7 +2561,8 @@ static int qthread_uberfork(qthread_f             f,
                   preconds,
                   target_shep,
                   (dteam == SAME_TEAM) ? "same_team" : (dteam == NEW_TEAM) ? "new_team" : "new_subteam",
-                  ((feature_flag & QTHREAD_UBERFORK_FEATURE_MASK_FUTURE) ? "future" : "qthread"));
+                  ((feature_flag & QTHREAD_UBERFORK_FEATURE_MASK_FUTURE) ? "future" : "qthread")
+                  ((feature_flag & QTHREAD_UBERFORK_FEATURE_MASK_NBLOCK) ? "non-blocking" : "standard"));
     assert(qlib);
     /* Step 2: Pick a destination */
     if (target_shep != NO_SHEPHERD) {
@@ -2682,6 +2698,9 @@ static int qthread_uberfork(qthread_f             f,
                            * maybe later) akp */
     if (QTHREAD_UNLIKELY(feature_flag & QTHREAD_UBERFORK_FEATURE_MASK_FUTURE)) {
         t->flags |= QTHREAD_FUTURE;
+    }
+    if (feature_flag & QTHREAD_UBERFORK_FEATURE_MASK_NBLOCK) {
+        t->flags |= QTHREAD_NON_BLOCKING;
     }
     qthread_debug(THREAD_BEHAVIOR, "new-tid %u shep %u\n", t->thread_id, target_shep);
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
@@ -2946,6 +2965,24 @@ int qthread_fork_syncvar_copyargs(qthread_f   f,
                             NO_SHEPHERD,
                             SAME_TEAM,
                             0);
+}                      /*}}} */
+
+int qthread_fork_syncvar_copyargs_nblock(qthread_f   f,
+                                  const void *arg,
+                                  size_t      arg_size,
+                                  syncvar_t  *ret)
+{                      /*{{{ */
+    return qthread_uberfork(f,
+                            arg,
+                            arg_size,
+                            SYNCVAR_T,
+                            ret,
+                            NO_SYNC,
+                            0,
+                            NULL,
+                            NO_SHEPHERD,
+                            SAME_TEAM,
+                            QTHREAD_UBERFORK_FEATURE_MASK_NBLOCK);
 }                      /*}}} */
 
 int qthread_fork_copyargs_new_team(qthread_f   f,
@@ -3270,6 +3307,7 @@ int INTERNAL qthread_check_precond(qthread_t *t)
 
 void INTERNAL qthread_back_to_master(qthread_t *t)
 {                      /*{{{ */
+    assert((t->flags & QTHREAD_NON_BLOCKING) == 0);
 #ifdef NEED_RLIMIT
     struct rlimit rlp;
 

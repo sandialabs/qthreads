@@ -144,7 +144,11 @@ static aligned_t visit(void *args_)
 
             child.num_children = calc_num_children(&child);
 
-            qthread_fork_syncvar_copyargs(visit, &child, sizeof(node_t), NULL);
+	    if (child.num_children == 0) {
+		qthread_fork_syncvar_copyargs_nblock(visit, &child, sizeof(node_t), NULL);
+	    } else {
+		qthread_fork_syncvar_copyargs(visit, &child, sizeof(node_t), NULL);
+	    }
         }
 
         // Wait for children to finish up, accumulate descendants counts
