@@ -12,7 +12,7 @@ static size_t rvs_count, rvs_size;
 static aligned_t *aligned_elems = NULL;
 static syncvar_t *syncvar_elems = NULL;
 
-aligned_t aligned_visit(void *args_)
+static aligned_t aligned_visit(void *args_)
 {
     size_t *rvs = (size_t *)args_;
 
@@ -26,7 +26,7 @@ aligned_t aligned_visit(void *args_)
     return 0;
 }
 
-aligned_t syncvar_visit(void *args_)
+static aligned_t syncvar_visit(void *args_)
 {
     size_t *rvs = (size_t *)args_;
 
