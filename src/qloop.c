@@ -359,11 +359,15 @@ static void qt_loop_step_inner(const size_t         start,
     if ((steps * stride) + start < stop) {
         steps++;
     }
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    qthread_steal_disable();
+#endif
     qwa  = (struct qloop_step_wrapper_args *)malloc(sizeof(struct qloop_step_wrapper_args) * steps);
     rets = calloc(steps, sizeof(syncvar_t));
     assert(qwa);
     assert(rets);
     assert(func);
+
     for (i = start; i < stop; i += stride) {
         qwa[threadct].func    = func;
         qwa[threadct].startat = i;
@@ -414,6 +418,9 @@ static void qt_loop_step_inner(const size_t         start,
     for (i = 0; i < steps; i++) {
         qthread_syncvar_readFF(NULL, rets + i);
     }
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    qthread_steal_enable();
+#endif
     free(qwa);
     free(rets);
 }                                      /*}}} */

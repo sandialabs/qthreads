@@ -46,6 +46,7 @@ struct _qt_threadqueue {
     long                   qlength_stealable;                   /* number of stealable tasks on queue - stop steal attempts
                                                                  * that will fail because tasks cannot be moved - 4/1/11 AKP
                                                                  */
+    aligned_t              steal_disable;
 #ifdef STEAL_PROFILE
     aligned_t steal_amount_stolen;
     aligned_t steal_called;
@@ -343,7 +344,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
         }
 
         if ((node == NULL) && (active)) {
-            if (qlib->nshepherds > 1)
+	  if ((qlib->nshepherds > 1) && !q->steal_disable)
                 node = qthread_steal(my_shepherd);
         }
         if (node) {
@@ -515,9 +516,10 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
     } else {
 #ifdef QTHREAD_OMP_AFFINITY /*{{{*/
         if (thief_shepherd->stealing_mode == QTHREAD_STEAL_ON_ALL_IDLE) {
+	  int i;
             for (i = 0; i < qlib->nworkerspershep; i++)
                 if (thief_shepherd->workers[i].current != NULL) {
-                    return;
+                    return NULL;
                 }
             thief_shepherd->stealing_mode = QTHREAD_STEAL_ON_ANY_IDLE;
         }
@@ -626,5 +628,28 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
 
     return (t);
 } /*}}}*/
+
+void INTERNAL qthread_steal_enable()
+{   /*{{{*/
+  qt_threadqueue_t *q;
+  size_t i;
+  size_t numSheps =  qthread_num_shepherds();
+  for (i = 0; i < numSheps; i++){
+    q = qlib->threadqueues[i];
+    q->steal_disable = 0;
+  }
+}   /*}}}*/
+
+
+void INTERNAL qthread_steal_disable()
+{   /*{{{*/
+  qt_threadqueue_t *q;
+  size_t i;
+  size_t numSheps =  qthread_num_shepherds();
+  for (i = 0; i < numSheps; i++){
+    q = qlib->threadqueues[i];
+    q->steal_disable = 1;
+  }
+}   /*}}}*/
 
 /* vim:set expandtab: */

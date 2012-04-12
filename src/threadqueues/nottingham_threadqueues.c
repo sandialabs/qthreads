@@ -60,6 +60,7 @@ struct _qt_threadqueue {
     m128i    flush[1];
     uint32_t empty;
     uint32_t stealing;
+    uint32_t steal_disable;
 } /* qt_threadqueue_t */;
 
 // Forward declarations
@@ -442,7 +443,7 @@ qthread_t static QINLINE *qt_threadqueue_dequeue_helper(qt_threadqueue_t *q)
     q->stealing = 1;
 
     QTHREAD_FASTLOCK_LOCK(&q->spinlock);
-    if (q->stealing) {
+    if ( !(q->steal_disable) && (q->stealing)) {
         t = qthread_steal(q);
     }
     QTHREAD_FASTLOCK_UNLOCK(&q->spinlock);
@@ -857,6 +858,29 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
     rwlock_wrunlock(q->rwlock);
     return (NULL);
 } /*}}}*/
+
+void INTERNAL qthread_steal_enable()
+{   /*{{{*/
+  qt_threadqueue_t *q;
+  size_t i;
+  size_t numSheps =  qthread_num_shepherds();
+  for (i = 0; i < numSheps; i++){
+    q = qlib->threadqueues[i];
+    q->steal_disable = 0;
+  }
+}   /*}}}*/
+
+
+void INTERNAL qthread_steal_disable()
+{   /*{{{*/
+  qt_threadqueue_t *q;
+  size_t i;
+  size_t numSheps =  qthread_num_shepherds();
+  for (i = 0; i < numSheps; i++){
+    q = qlib->threadqueues[i];
+    q->steal_disable = 1;
+  }
+}   /*}}}*/
 
 #if 0 // begin test code, because this function
       // can't go in the test suite as it calls internal functions

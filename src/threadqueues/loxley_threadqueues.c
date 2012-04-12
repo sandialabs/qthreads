@@ -44,6 +44,7 @@ struct _qt_threadqueue {
     QTHREAD_FASTLOCK_TYPE    steallock;
 
     qt_stack_t               shared_stack;
+    size_t                   steal_disable;
 
     /* used for the work stealing queue implementation */
     uint32_t empty;
@@ -229,11 +230,13 @@ qthread_t static QINLINE *qt_threadqueue_dequeue_helper(qt_threadqueue_t *q)
 
     QTHREAD_FASTLOCK_LOCK(&q->steallock);
 
-    if (q->stealing) {
-        t = qthread_steal(q);
-    }
+    if (!(q->steal_disable) && (q->stealing)) { // put steal disable inside lock because using this lock
+                                             // acquire as a backoff to allow quicker enqueues of new work
+                                             // which is done repeatly in the tree startup for parallel loops
+      t = qthread_steal(q);
+     }
     QTHREAD_FASTLOCK_UNLOCK(&q->steallock);
-
+    
     return(t);
 }
 
@@ -465,6 +468,29 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
                                                     void             *value)
 {   /*{{{*/
     return (NULL);
+}   /*}}}*/
+
+void INTERNAL qthread_steal_enable()
+{   /*{{{*/
+  qt_threadqueue_t *q;
+  size_t i;
+  size_t numSheps =  qthread_num_shepherds();
+  for (i = 0; i < numSheps; i++){
+    q = qlib->threadqueues[i];
+    q->steal_disable = 0;
+  }
+}   /*}}}*/
+
+
+void INTERNAL qthread_steal_disable()
+{   /*{{{*/
+  qt_threadqueue_t *q;
+  size_t i;
+  size_t numSheps =  qthread_num_shepherds();
+  for (i = 0; i < numSheps; i++){
+    q = qlib->threadqueues[i];
+    q->steal_disable = 1;
+  }
 }   /*}}}*/
 
 #ifdef STEAL_PROFILE  // should give mechanism to make steal profiling optional
