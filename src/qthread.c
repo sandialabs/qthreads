@@ -2512,32 +2512,42 @@ void qthread_yield_(void)
  *
  * @return int Returns QTHREAD_SUCCESS (0) on success or a non-zero error value.
  */
-typedef enum {
-    ALIGNED_T,
-    SYNCVAR_T,
-    NO_SYNC
-} synctype_t;
-typedef enum {
-    SAME_TEAM,
-    NEW_TEAM,
-    NEW_SUBTEAM
-} desired_team_t;
+enum _uberfork_features {
+    UF_FUTURE,
+    UF_PARENT,
+    UF_NON_BLOCKING,
+    UF_NEW_TEAM,
+    UF_NEW_SUBTEAM,
+    UF_RET_ALIGNED_T,
+    UF_RET_SYNCVAR_T,
+    UF_PC_ALIGNED_T,
+    UF_PC_SYNCVAR_T
+};
 
-#define QTHREAD_UBERFORK_FEATURE_MASK_FUTURE (1<<0)
-#define QTHREAD_UBERFORK_FEATURE_MASK_PARENT (1<<1)
-#define QTHREAD_UBERFORK_FEATURE_MASK_NBLOCK (1<<2)
+#define QTHREAD_UBERFORK_FEATURE_MASK_FUTURE  (1<<UF_FUTURE)
+#define QTHREAD_UBERFORK_FEATURE_MASK_PARENT  (1<<UF_PARENT)
+#define QTHREAD_UBERFORK_FEATURE_MASK_NBLOCK  (1<<UF_NON_BLOCKING)
+
+#define QTHREAD_UBERFORK_FEATURE_MASK_TEAMS   ((1<<UF_NEW_TEAM)|(1<<UF_NEW_SUBTEAM))
+#define QTHREAD_UBERFORK_FEATURE_TEAMS_NEW    (1<<UF_NEW_TEAM)
+#define QTHREAD_UBERFORK_FEATURE_TEAMS_SUB    (1<<UF_NEW_SUBTEAM)
+
+#define QTHREAD_UBERFORK_FEATURE_MASK_RET_SYNC    ((1<<UF_RET_ALIGNED_T)|(1<<UF_RET_SYNCVAR_T))
+#define QTHREAD_UBERFORK_FEATURE_RET_SYNC_ALIGNED (1<<UF_RET_ALIGNED_T)
+#define QTHREAD_UBERFORK_FEATURE_RET_SYNC_SYNCVAR (1<<UF_RET_SYNCVAR_T)
+
+#define QTHREAD_UBERFORK_FEATURE_MASK_PC_SYNC     ((1<<UF_PC_ALIGNED_T)|(1<<UF_PC_SYNCVAR_T))
+#define QTHREAD_UBERFORK_FEATURE_PC_SYNC_ALIGNED  (1<<UF_PC_ALIGNED_T)
+#define QTHREAD_UBERFORK_FEATURE_PC_SYNC_SYNCVAR  (1<<UF_PC_SYNCVAR_T)
 
 static int qthread_uberfork(qthread_f             f,
                             const void           *arg,
                             size_t                arg_size,
-                            synctype_t            ret_type,
                             void                 *ret,
-                            synctype_t            precond_type,
                             size_t                npreconds,
                             void                 *preconds,
                             qthread_shepherd_id_t target_shep,
-                            desired_team_t        dteam,
-                            uint_fast8_t          feature_flag)
+                            uint_fast16_t         feature_flag)
 {   /*{{{*/
     qthread_t            *t;
     qthread_shepherd_t   *myshep = qthread_internal_getshep();
@@ -2554,13 +2564,16 @@ static int qthread_uberfork(qthread_f             f,
                   f,
                   arg,
                   arg_size,
-                  ((ret_type == ALIGNED_T) ? "aligned_t" : ((ret_type == SYNCVAR_T) ? "syncvar_t" : "none")),
+                  ((feature_flag & QTHREAD_UBERFORK_FEATURE_RET_SYNC_ALIGNED) ? "aligned_t" :
+                   (feature_flag & QTHREAD_UBERFORK_FEATURE_RET_SYNC_SYNCVAR) ? "syncvar_t" : "none"),
                   ret,
-                  ((precond_type == ALIGNED_T) ? "aligned_t" : ((precond_type == SYNCVAR_T) ? "syncvar_t" : "none")),
+                  ((feature_flag & QTHREAD_UBERFORK_FEATURE_PC_SYNC_ALIGNED) ? "aligned_t" :
+                   (feature_flag & QTHREAD_UBERFORK_FEATURE_PC_SYNC_SYNCVAR) ? "syncvar_t" : "none"),
                   npreconds,
                   preconds,
                   target_shep,
-                  (dteam == SAME_TEAM) ? "same_team" : (dteam == NEW_TEAM) ? "new_team" : "new_subteam",
+                  ((feature_flag & QTHREAD_UBERFORK_FEATURE_TEAMS_NEW) ? "new_team" :
+                   (feature_flag & QTHREAD_UBERFORK_FEATURE_TEAMS_SUB) ? "sub_team" : "same_team"),
                   ((feature_flag & QTHREAD_UBERFORK_FEATURE_MASK_FUTURE) ? "future" : "qthread"),
                   ((feature_flag & QTHREAD_UBERFORK_FEATURE_MASK_NBLOCK) ? "non-blocking" : "standard"));
     assert(qlib);
@@ -2580,7 +2593,7 @@ static int qthread_uberfork(qthread_f             f,
             // dest_shep = myshep->shepherd_id; // rely on work-stealing
 
             uintptr_t offset = ((uintptr_t) myshep) - ((uintptr_t) &(qlib->shepherds[0]));
-            dest_shep = offset / sizeof(qthread_shepherd_t); 
+            dest_shep = offset / sizeof(qthread_shepherd_t);
         } else {
             dest_shep = 0;
         }
@@ -2602,10 +2615,12 @@ static int qthread_uberfork(qthread_f             f,
         qassert_ret(f != NULL, QTHREAD_BADARGS);
         if (npreconds > 0) {
             qassert_ret(preconds != NULL, QTHREAD_BADARGS);
-            qassert_ret(precond_type != NO_SYNC, QTHREAD_BADARGS);
+            qassert_ret((feature_flag & QTHREAD_UBERFORK_FEATURE_MASK_PC_SYNC) != 0, QTHREAD_BADARGS);
+            // XXX: remove the following assert when preconds support syncvar_t's
+            assert(feature_flag & QTHREAD_UBERFORK_FEATURE_PC_SYNC_ALIGNED);
         } else {
             qassert_ret(preconds == NULL, QTHREAD_BADARGS);
-            qassert_ret(precond_type == NO_SYNC, QTHREAD_BADARGS);
+            qassert_ret((feature_flag & QTHREAD_UBERFORK_FEATURE_MASK_PC_SYNC) == 0, QTHREAD_BADARGS);
         }
 #endif  /* ifdef QTHREAD_DEBUG */
     }
@@ -2622,8 +2637,7 @@ static int qthread_uberfork(qthread_f             f,
         spawner_team = NULL;
     }
 
-    assert(SAME_TEAM == dteam || NEW_TEAM == dteam || NEW_SUBTEAM == dteam);
-    if (dteam == SAME_TEAM) {
+    if ((feature_flag & QTHREAD_UBERFORK_FEATURE_MASK_TEAMS) == 0) {
         qthread_debug(TEAM_CALLS, "Spawning in this team\n");
         if (spawner_team) {
             qt_sinc_willspawn(spawner_team->sinc, 1);
@@ -2654,7 +2668,7 @@ static int qthread_uberfork(qthread_f             f,
         qthread_incr(&qlib->team_subteams_sinc_create, 1);
 #endif
 
-        if (dteam == NEW_SUBTEAM) {
+        if (feature_flag & QTHREAD_UBERFORK_FEATURE_TEAMS_SUB) {
             if (spawner_team) {
                 // Finish initializing new subteam components
                 spawnee_team->parent_id            =  spawner_team->team_id;
@@ -2725,12 +2739,12 @@ static int qthread_uberfork(qthread_f             f,
     /* Step 4: Prepare the return value location (if necessary) */
     if (ret) {
         int test = QTHREAD_SUCCESS;
-        switch(ret_type) {
-            case SYNCVAR_T:
+        switch(feature_flag & QTHREAD_UBERFORK_FEATURE_MASK_RET_SYNC) {
+            case QTHREAD_UBERFORK_FEATURE_RET_SYNC_SYNCVAR:
                 t->flags |= QTHREAD_RET_IS_SYNCVAR;
                 test      = qthread_syncvar_empty((syncvar_t *)ret);
                 break;
-            case ALIGNED_T:
+            case QTHREAD_UBERFORK_FEATURE_RET_SYNC_ALIGNED:
                 test = qthread_empty(ret);
                 break;
             default: abort(); /* this should never happen */
@@ -2773,7 +2787,8 @@ int qthread_fork(qthread_f   f,
                  aligned_t  *ret)
 {   /*{{{*/
     qthread_debug(THREAD_CALLS, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
-    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, SAME_TEAM, 0);
+    return qthread_uberfork(f, arg, 0, ret, 0, NULL, NO_SHEPHERD,
+            QTHREAD_UBERFORK_FEATURE_RET_SYNC_ALIGNED);
 } /*}}}*/
 
 int qthread_fork_new_team(qthread_f   f,
@@ -2781,7 +2796,9 @@ int qthread_fork_new_team(qthread_f   f,
                           aligned_t  *ret)
 {   /*{{{*/
     qthread_debug(THREAD_CALLS, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
-    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, NEW_TEAM, 0);
+    return qthread_uberfork(f, arg, 0, ret, 0, NULL, NO_SHEPHERD,
+            QTHREAD_UBERFORK_FEATURE_TEAMS_NEW |
+            QTHREAD_UBERFORK_FEATURE_RET_SYNC_ALIGNED);
 } /*}}}*/
 
 int qthread_fork_new_subteam(qthread_f   f,
@@ -2790,7 +2807,9 @@ int qthread_fork_new_subteam(qthread_f   f,
 {
     qthread_debug(THREAD_CALLS, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
     qthread_debug(TEAM_CALLS, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
-    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, NO_SYNC, 0, NULL, NO_SHEPHERD, NEW_SUBTEAM, 0);
+    return qthread_uberfork(f, arg, 0, ret, 0, NULL, NO_SHEPHERD,
+            QTHREAD_UBERFORK_FEATURE_TEAMS_SUB |
+            QTHREAD_UBERFORK_FEATURE_RET_SYNC_ALIGNED);
 }
 
 int qthread_fork_copyargs_precond(qthread_f   f,
@@ -2822,7 +2841,9 @@ int qthread_fork_copyargs_precond(qthread_f   f,
     }
     va_end(args);
 
-    return qthread_uberfork(f, arg, arg_size, SYNCVAR_T, ret, ALIGNED_T, npreconds, preconds, NO_SHEPHERD, SAME_TEAM, 0);
+    return qthread_uberfork(f, arg, arg_size, ret, npreconds, preconds, NO_SHEPHERD,
+            QTHREAD_UBERFORK_FEATURE_PC_SYNC_ALIGNED |
+            QTHREAD_UBERFORK_FEATURE_RET_SYNC_SYNCVAR);
 } /*}}}*/
 
 int qthread_fork_precond(qthread_f   f,
@@ -2853,7 +2874,9 @@ int qthread_fork_precond(qthread_f   f,
     }
     va_end(args);
 
-    return qthread_uberfork(f, arg, 0, ALIGNED_T, ret, ALIGNED_T, npreconds, preconds, NO_SHEPHERD, SAME_TEAM, 0);
+    return qthread_uberfork(f, arg, 0, ret, npreconds, preconds, NO_SHEPHERD,
+            QTHREAD_UBERFORK_FEATURE_PC_SYNC_ALIGNED |
+            QTHREAD_UBERFORK_FEATURE_RET_SYNC_ALIGNED);
 } /*}}}*/
 
 int qthread_fork_track_syncvar_copyargs_to(qthread_f             f,
@@ -2865,14 +2888,12 @@ int qthread_fork_track_syncvar_copyargs_to(qthread_f             f,
   return qthread_uberfork(f,
                           arg,
                           arg_size,
-                          SYNCVAR_T,
                           ret,
-                          NO_SYNC,
                           0,
                           NULL,
                           preferred_shep,
-                          SAME_TEAM,
-                          QTHREAD_UBERFORK_FEATURE_MASK_PARENT);
+                          QTHREAD_UBERFORK_FEATURE_MASK_PARENT |
+                          QTHREAD_UBERFORK_FEATURE_RET_SYNC_SYNCVAR);
 } /*}}}*/
 
 int qthread_fork_track_syncvar_copyargs(qthread_f   f,
@@ -2883,14 +2904,12 @@ int qthread_fork_track_syncvar_copyargs(qthread_f   f,
   return qthread_uberfork(f,
                           arg,
                           arg_size,
-                          SYNCVAR_T,
                           ret,
-                          NO_SYNC,
                           0,
                           NULL,
                           NO_SHEPHERD,
-                          SAME_TEAM,
-                          QTHREAD_UBERFORK_FEATURE_MASK_PARENT);
+                          QTHREAD_UBERFORK_FEATURE_MASK_PARENT |
+                          QTHREAD_UBERFORK_FEATURE_RET_SYNC_SYNCVAR);
 }                      /*}}} */
 
 int qthread_fork_syncvar_copyargs_to(qthread_f             f,
@@ -2902,14 +2921,11 @@ int qthread_fork_syncvar_copyargs_to(qthread_f             f,
     return qthread_uberfork(f,
                             arg,
                             arg_size,
-                            SYNCVAR_T,
                             ret,
-                            NO_SYNC,
                             0,
                             NULL,
                             preferred_shep,
-                            SAME_TEAM,
-                            0);
+                            QTHREAD_UBERFORK_FEATURE_RET_SYNC_SYNCVAR);
 } /*}}}*/
 
 int qthread_fork_copyargs_to(qthread_f             f,
@@ -2921,14 +2937,11 @@ int qthread_fork_copyargs_to(qthread_f             f,
     return qthread_uberfork(f,
                             arg,
                             arg_size,
-                            ALIGNED_T,
                             ret,
-                            NO_SYNC,
                             0,
                             NULL,
                             preferred_shep,
-                            SAME_TEAM,
-                            0);
+                            QTHREAD_UBERFORK_FEATURE_RET_SYNC_ALIGNED);
 } /*}}}*/
 
 int qthread_fork_copyargs(qthread_f   f,
@@ -2939,14 +2952,11 @@ int qthread_fork_copyargs(qthread_f   f,
     return qthread_uberfork(f,
                             arg,
                             arg_size,
-                            ALIGNED_T,
                             ret,
-                            NO_SYNC,
                             0,
                             NULL,
                             NO_SHEPHERD,
-                            SAME_TEAM,
-                            0);
+                            QTHREAD_UBERFORK_FEATURE_RET_SYNC_ALIGNED);
 }   /*}}}*/
 
 int qthread_fork_syncvar_copyargs(qthread_f   f,
@@ -2957,14 +2967,11 @@ int qthread_fork_syncvar_copyargs(qthread_f   f,
     return qthread_uberfork(f,
                             arg,
                             arg_size,
-                            SYNCVAR_T,
                             ret,
-                            NO_SYNC,
                             0,
                             NULL,
                             NO_SHEPHERD,
-                            SAME_TEAM,
-                            0);
+                            QTHREAD_UBERFORK_FEATURE_RET_SYNC_SYNCVAR);
 }                      /*}}} */
 
 int qthread_fork_syncvar_copyargs_nblock(qthread_f   f,
@@ -2975,14 +2982,12 @@ int qthread_fork_syncvar_copyargs_nblock(qthread_f   f,
     return qthread_uberfork(f,
                             arg,
                             arg_size,
-                            SYNCVAR_T,
                             ret,
-                            NO_SYNC,
                             0,
                             NULL,
                             NO_SHEPHERD,
-                            SAME_TEAM,
-                            QTHREAD_UBERFORK_FEATURE_MASK_NBLOCK);
+                            QTHREAD_UBERFORK_FEATURE_MASK_NBLOCK |
+                            QTHREAD_UBERFORK_FEATURE_RET_SYNC_SYNCVAR);
 }                      /*}}} */
 
 int qthread_fork_copyargs_new_team(qthread_f   f,
@@ -2994,14 +2999,12 @@ int qthread_fork_copyargs_new_team(qthread_f   f,
     return qthread_uberfork(f,
                             arg,
                             arg_size,
-                            ALIGNED_T,
                             ret,
-                            NO_SYNC,
                             0,
                             NULL,
                             NO_SHEPHERD,
-                            NEW_TEAM,
-                            0);
+                            QTHREAD_UBERFORK_FEATURE_TEAMS_NEW |
+                            QTHREAD_UBERFORK_FEATURE_RET_SYNC_ALIGNED);
 }                      /*}}} */
 
 int qthread_fork_copyargs_new_subteam(qthread_f   f,
@@ -3013,14 +3016,12 @@ int qthread_fork_copyargs_new_subteam(qthread_f   f,
     return qthread_uberfork(f,
                             arg,
                             arg_size,
-                            ALIGNED_T,
                             ret,
-                            NO_SYNC,
                             0,
                             NULL,
                             NO_SHEPHERD,
-                            NEW_SUBTEAM,
-                            0);
+                            QTHREAD_UBERFORK_FEATURE_TEAMS_SUB |
+                            QTHREAD_UBERFORK_FEATURE_RET_SYNC_ALIGNED);
 }                      /*}}} */
 
 int qthread_fork_syncvar(qthread_f   f,
@@ -3030,14 +3031,11 @@ int qthread_fork_syncvar(qthread_f   f,
     return qthread_uberfork(f,
                             arg,
                             0,
-                            SYNCVAR_T,
                             ret,
-                            NO_SYNC,
                             0,
                             NULL,
                             NO_SHEPHERD,
-                            SAME_TEAM,
-                            0);
+                            QTHREAD_UBERFORK_FEATURE_RET_SYNC_SYNCVAR);
 }                      /*}}} */
 
 int qthread_fork_syncvar_new_team(qthread_f   f,
@@ -3047,14 +3045,12 @@ int qthread_fork_syncvar_new_team(qthread_f   f,
     return qthread_uberfork(f,
                             arg,
                             0,
-                            SYNCVAR_T,
                             ret,
-                            NO_SYNC,
                             0,
                             NULL,
                             NO_SHEPHERD,
-                            NEW_TEAM,
-                            0);
+                            QTHREAD_UBERFORK_FEATURE_TEAMS_NEW |
+                            QTHREAD_UBERFORK_FEATURE_RET_SYNC_SYNCVAR);
 }                      /*}}} */
 
 int qthread_fork_syncvar_new_subteam(qthread_f   f,
@@ -3064,14 +3060,12 @@ int qthread_fork_syncvar_new_subteam(qthread_f   f,
     return qthread_uberfork(f,
                             arg,
                             0,
-                            SYNCVAR_T,
                             ret,
-                            NO_SYNC,
                             0,
                             NULL,
                             NO_SHEPHERD,
-                            NEW_SUBTEAM,
-                            0);
+                            QTHREAD_UBERFORK_FEATURE_TEAMS_SUB |
+                            QTHREAD_UBERFORK_FEATURE_RET_SYNC_SYNCVAR);
 }                      /*}}} */
 
 int qthread_fork_to(qthread_f             f,
@@ -3085,14 +3079,11 @@ int qthread_fork_to(qthread_f             f,
     return qthread_uberfork(f,
                             arg,
                             0,
-                            ALIGNED_T,
                             ret,
-                            NO_SYNC,
                             0,
                             NULL,
                             shepherd,
-                            SAME_TEAM,
-                            0);
+                            QTHREAD_UBERFORK_FEATURE_RET_SYNC_ALIGNED);
 } /*}}}*/
 
 int qthread_fork_precond_to(qthread_f             f,
@@ -3130,14 +3121,12 @@ int qthread_fork_precond_to(qthread_f             f,
     return qthread_uberfork(f,
                             arg,
                             0,
-                            ALIGNED_T,
                             ret,
-                            ALIGNED_T,
                             npreconds,
                             preconds,
                             shepherd,
-                            SAME_TEAM,
-                            0);
+                            QTHREAD_UBERFORK_FEATURE_PC_SYNC_ALIGNED |
+                            QTHREAD_UBERFORK_FEATURE_RET_SYNC_ALIGNED);
 }                      /*}}} */
 
 int qthread_fork_syncvar_to(qthread_f             f,
@@ -3151,14 +3140,11 @@ int qthread_fork_syncvar_to(qthread_f             f,
     return qthread_uberfork(f,
                             arg,
                             0,
-                            SYNCVAR_T,
                             ret,
-                            NO_SYNC,
                             0,
                             NULL,
                             s,
-                            SAME_TEAM,
-                            0);
+                            QTHREAD_UBERFORK_FEATURE_RET_SYNC_SYNCVAR);
 } /*}}}*/
 
 int qthread_fork_future_to(qthread_f             f,
@@ -3172,14 +3158,12 @@ int qthread_fork_future_to(qthread_f             f,
     return qthread_uberfork(f,
                             arg,
                             0,
-                            ALIGNED_T,
                             ret,
-                            NO_SYNC,
                             0,
                             NULL,
                             shepherd,
-                            SAME_TEAM,
-                            1);
+                            QTHREAD_UBERFORK_FEATURE_RET_SYNC_ALIGNED |
+                            QTHREAD_UBERFORK_FEATURE_MASK_FUTURE);
 } /*}}}*/
 
 int qthread_fork_syncvar_future_to(qthread_f             f,
@@ -3193,14 +3177,12 @@ int qthread_fork_syncvar_future_to(qthread_f             f,
     return qthread_uberfork(f,
                             arg,
                             0,
-                            SYNCVAR_T,
                             ret,
-                            NO_SYNC,
                             0,
                             NULL,
                             shepherd,
-                            SAME_TEAM,
-                            1);
+                            QTHREAD_UBERFORK_FEATURE_RET_SYNC_SYNCVAR |
+                            QTHREAD_UBERFORK_FEATURE_MASK_FUTURE);
 } /*}}}*/
 
 int qthread_fork_syncvar_future(qthread_f   f,
@@ -3210,14 +3192,12 @@ int qthread_fork_syncvar_future(qthread_f   f,
     return qthread_uberfork(f,
                             arg,
                             0,
-                            SYNCVAR_T,
                             ret,
-                            NO_SYNC,
                             0,
                             NULL,
                             NO_SHEPHERD,
-                            SAME_TEAM,
-                            1);
+                            QTHREAD_UBERFORK_FEATURE_RET_SYNC_SYNCVAR |
+                            QTHREAD_UBERFORK_FEATURE_MASK_FUTURE);
 } /*}}}*/
 
 /*
