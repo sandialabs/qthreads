@@ -2561,7 +2561,7 @@ static int qthread_uberfork(qthread_f             f,
                   preconds,
                   target_shep,
                   (dteam == SAME_TEAM) ? "same_team" : (dteam == NEW_TEAM) ? "new_team" : "new_subteam",
-                  ((feature_flag & QTHREAD_UBERFORK_FEATURE_MASK_FUTURE) ? "future" : "qthread")
+                  ((feature_flag & QTHREAD_UBERFORK_FEATURE_MASK_FUTURE) ? "future" : "qthread"),
                   ((feature_flag & QTHREAD_UBERFORK_FEATURE_MASK_NBLOCK) ? "non-blocking" : "standard"));
     assert(qlib);
     /* Step 2: Pick a destination */
