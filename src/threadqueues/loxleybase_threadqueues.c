@@ -261,11 +261,11 @@ static int qt_threadqueue_steal(qt_threadqueue_t *victim_queue,
 static QINLINE qthread_t* qthread_steal(qt_threadqueue_t *thiefq)
 {   /*{{{*/
     int                    i, amtStolen;
-    extern pthread_key_t   shepherd_structs;
+    extern TLS_DECL(qthread_shepherd_t*,shepherd_structs);
     qthread_shepherd_t    *victim_shepherd;
     qt_threadqueue_t      *victim_queue;
     qthread_worker_t      *worker =
-        (qthread_worker_t *)pthread_getspecific(shepherd_structs);
+        (qthread_worker_t *)TLS_GET(shepherd_structs);
     qthread_shepherd_t    *thief_shepherd =
         (qthread_shepherd_t *)worker->shepherd;
     qthread_t            **nostealbuffer = worker->nostealbuffer;

@@ -393,7 +393,7 @@ static void *qthread_master(void *arg)
     /*******************************************************************************/
     /* Initialize myself                                                           */
     /*******************************************************************************/
-    pthread_setspecific(shepherd_structs, arg);
+    TLS_SET(shepherd_structs, arg);
 #ifdef QTHREAD_USE_SPAWNCACHE
     localqueue = qt_init_local_spawncache();
 #endif
@@ -908,7 +908,7 @@ int qthread_initialize(void)
     }
 
     /* initialize the kernel threads and scheduler */
-    qassert(pthread_key_create(&shepherd_structs, NULL), 0);
+    TLS_INIT(shepherd_structs);
 #ifdef QTHREAD_USE_SPAWNCACHE
     qt_spawncache_init();
 #endif
@@ -1116,9 +1116,9 @@ int qthread_initialize(void)
 
     qthread_debug(CORE_DETAILS, "enqueueing mccoy thread\n");
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    pthread_setspecific(shepherd_structs, &(qlib->shepherds[0].workers[0]));
+    TLS_SET(shepherd_structs, (qthread_shepherd_t*)&(qlib->shepherds[0].workers[0]));
 #else
-    pthread_setspecific(shepherd_structs, &(qlib->shepherds[0])); // for hazardptrs
+    TLS_SET(shepherd_structs, &(qlib->shepherds[0])); // for hazardptrs
 #endif
     qt_threadqueue_enqueue(qlib->shepherds[0].ready, qlib->mccoy_thread);
     qassert(getcontext(&(qlib->mccoy_thread->rdata->context)), 0);
@@ -1757,7 +1757,7 @@ void qthread_finalize(void)
     free(qlib);
     qlib = NULL;
     qthread_debug(CORE_DETAILS, "destroy shepherd thread-local data\n");
-    qassert(pthread_key_delete(shepherd_structs), 0);
+    TLS_DELETE(shepherd_structs);
 
     qthread_debug(CORE_DETAILS, "finished.\n");
     fflush(stdout);
@@ -1765,13 +1765,13 @@ void qthread_finalize(void)
 
 qthread_t *qthread_internal_self(void)
 {                      /*{{{ */
-    extern pthread_key_t IO_task_struct;
+    extern TLS_DECL(qthread_t *, IO_task_struct);
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t *worker = qthread_internal_getworker();
     if (worker == NULL) {
         // this may also be null, but in the slow path, the logic is sound
-        return pthread_getspecific(IO_task_struct);
+        return TLS_GET(IO_task_struct);
     } else {
         return worker->current;
     }
@@ -1780,7 +1780,7 @@ qthread_t *qthread_internal_self(void)
     qthread_shepherd_t *shep = qthread_internal_getshep();
     if (shep == NULL) {
         // this may also be null, but in the slow path, the logic is sound
-        return pthread_getspecific(IO_task_struct);
+        return TLS_GET(IO_task_struct);
     } else {
         return shep->current;
     }
@@ -1897,7 +1897,7 @@ size_t qthread_readstate(const enum introspective_state type)
         case CURRENT_WORKER:
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
             {
-                qthread_worker_t *worker = (qthread_worker_t *)pthread_getspecific(shepherd_structs);
+                qthread_worker_t *worker = (qthread_worker_t *)TLS_GET(shepherd_structs);
 
                 return worker ? (worker->worker_id) : NO_WORKER;
             }

@@ -9,6 +9,7 @@
 #include "qt_atomics.h"
 #include "qt_threadqueues.h"
 #include "qt_hazardptrs.h"
+#include "qt_macros.h"
 
 #ifdef QTHREAD_SHEPHERD_PROFILING
 # include "qthread/qtimer.h"
@@ -125,25 +126,26 @@ struct qthread_shepherd_s {
     uint32_t padding[CACHELINE_WIDTH / sizeof(uint32_t)];
 };
 
-extern pthread_key_t shepherd_structs;
+extern TLS_DECL(qthread_shepherd_t *, shepherd_structs);
+
 static QINLINE qthread_shepherd_t *qthread_internal_getshep(void)
 {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    qthread_worker_t *w = (qthread_worker_t *)pthread_getspecific(shepherd_structs);
+    qthread_worker_t *w = (qthread_worker_t *)TLS_GET(shepherd_structs);
     if (w == NULL) {
         return NULL;
     } else {
         return w->shepherd;
     }
 #else
-    return (qthread_shepherd_t *)pthread_getspecific(shepherd_structs);
+    return (qthread_shepherd_t *)TLS_GET(shepherd_structs);
 #endif
 }
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 static QINLINE qthread_worker_t *qthread_internal_getworker(void)
 {
-    return (qthread_worker_t *)pthread_getspecific(shepherd_structs);
+    return (qthread_worker_t *)TLS_GET(shepherd_structs);
 }
 
 #endif

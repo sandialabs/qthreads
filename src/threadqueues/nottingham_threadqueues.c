@@ -676,10 +676,10 @@ static QINLINE long qthread_steal_chunksize(void)
 static QINLINE qthread_t *qthread_steal(qt_threadqueue_t *thiefq)
 {   /*{{{*/
     int                  i;
-    extern pthread_key_t shepherd_structs;
+    extern TLS_DECL(qthread_shepherd_t*, shepherd_structs);
     qthread_shepherd_t  *victim_shepherd;
     qthread_worker_t    *worker =
-        (qthread_worker_t *)pthread_getspecific(shepherd_structs);
+        (qthread_worker_t *)TLS_GET(shepherd_structs);
     qthread_shepherd_t *thief_shepherd =
         (qthread_shepherd_t *)worker->shepherd;
     qthread_t **nostealbuffer = worker->nostealbuffer;

@@ -10,7 +10,7 @@ INCLUDES = -I$(top_srcdir)/test/benchmarks/rose_bots/common \
 		   -I$(top_srcdir)/include
 DEFINES=-D_OPENMP -DMANUAL_CUTOFF
 
-AM_CXXFLAGS = @RESTRICT_CXXFLAGS@ $(DEFINES)
+AM_CXXFLAGS = $(DEFINES)
 
 BOTS_TESTS = \
 		rose_fft \

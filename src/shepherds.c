@@ -15,9 +15,10 @@
 #include "qthread_innards.h"
 #include "qt_shepherd_innards.h"
 #include "qt_qthread_struct.h"
+#include "qt_macros.h"
 
 /* Shared Globals */
-pthread_key_t shepherd_structs;
+TLS_DECL(qthread_shepherd_t *, shepherd_structs);
 
 int qthread_shep_ok(void)
 {                      /*{{{ */

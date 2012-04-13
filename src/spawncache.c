@@ -17,19 +17,21 @@
 #include "qthread_asserts.h"
 #include "qthread_innards.h"
 #include "qthread/cacheline.h"
+#include "qt_macros.h"
 
 /* Globals */
-pthread_key_t spawn_cache;
+TLS_DECL(qt_threadqueue_private_t*,spawn_cache);
 
 /* Static Functions */
 static void qt_spawncache_shutdown(void)
 {
     qthread_debug(CORE_DETAILS, "destroy thread-local task queue\n");
-    void *freeme = pthread_getspecific(spawn_cache);
+    void *freeme = TLS_GET(spawn_cache);
     free(freeme);
-    qassert(pthread_key_delete(spawn_cache), 0);
+    TLS_DELETE(spawn_cache);
 }
 
+#ifndef TLS
 static void qt_threadqueue_private_destroy(void *q)
 {
     assert(((qt_threadqueue_private_t *)q)->head == NULL &&
@@ -39,11 +41,12 @@ static void qt_threadqueue_private_destroy(void *q)
 
     free(q);
 }
+#endif
 
 /* Internal-only Functions */
 void INTERNAL qt_spawncache_init(void)
 {
-    qassert(pthread_key_create(&spawn_cache, qt_threadqueue_private_destroy), 0);
+    TLS_INIT2(spawn_cache, qt_threadqueue_private_destroy);
     qthread_internal_cleanup(qt_spawncache_shutdown);
 }
 
@@ -63,13 +66,13 @@ qt_threadqueue_private_t INTERNAL *qt_init_local_spawncache(void)
 #endif
     memset(ret, 0, sizeof(qt_threadqueue_private_t));
 
-    pthread_setspecific(spawn_cache, ret);
+    TLS_SET(spawn_cache, ret);
     return (qt_threadqueue_private_t *)ret;
 }
 
 int INTERNAL qt_spawncache_spawn(qthread_t *t)
 {
-    qt_threadqueue_private_t *cache = pthread_getspecific(spawn_cache);
+    qt_threadqueue_private_t *cache = TLS_GET(spawn_cache);
 
     if (cache) {
         return qt_threadqueue_private_enqueue(cache, t);

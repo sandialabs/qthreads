@@ -55,7 +55,7 @@ qt_mpool syscall_job_pool = NULL;
 #endif
 static unsigned long timeout    = 100; // in microseconds
 static int           proxy_exit = 0;
-pthread_key_t        IO_task_struct;
+TLS_DECL(qthread_t *, IO_task_struct);
 
 static void qt_blocking_subsystem_internal_stopwork(void)
 {   /*{{{*/
@@ -112,7 +112,7 @@ void INTERNAL qt_blocking_subsystem_init(void)
     io_worker_count = 0;
     io_worker_max   = qt_internal_get_env_num("MAX_IO_WORKERS", 10, 1);
     timeout         = qt_internal_get_env_num("IO_TIMEOUT", 100, 100);
-    qassert(pthread_key_create(&IO_task_struct, NULL), 0);
+    TLS_INIT(IO_task_struct);
     qassert(pthread_mutex_init(&theQueue.lock, NULL), 0);
     qassert(pthread_cond_init(&theQueue.notempty, NULL), 0);
     /* thread(s) must be stopped *before* shepherds die, to keep them from
@@ -346,12 +346,12 @@ int INTERNAL qt_process_blocking_call(void)
         case USER_DEFINED:
         {
             qt_context_t my_context;
-            qassert(pthread_setspecific(IO_task_struct, item->thread), 0);
+            TLS_SET(IO_task_struct, item->thread);
             getcontext(&my_context);
             qthread_debug(IO_DETAILS, "blocking proxy context is %p (item:%p, thread:%p, rdata:%p)\n", &my_context, item, item->thread, item->thread->rdata);
             qthread_exec(item->thread, &my_context);
             qthread_debug(IO_DETAILS, "proxy back from qthread_exec (item:%p, thread:%p, rdata:%p)\n", item, item->thread, item->thread->rdata);
-            // pthread_setspecific(IO_task_struct, NULL);
+            // TLS_SET(IO_task_struct, NULL);
             break;
         }
     }

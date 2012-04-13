@@ -12,15 +12,16 @@
 #include "futurelib_innards.h"
 #include "qthread_innards.h"
 #include "qt_debug.h"
+#include "qt_macros.h"
 
 /* GLOBAL DATA (copy everywhere) */
-pthread_key_t future_bookkeeping;
-location_t   *future_bookkeeping_array = NULL;
+TLS_DECL(location_t *, future_bookkeeping);
+location_t *future_bookkeeping_array = NULL;
 
 static qthread_shepherd_id_t shep_for_new_futures = 0;
 static QTHREAD_FASTLOCK_TYPE sfnf_lock;
 
-static void blocking_vp_incr(location_t * loc);
+static void blocking_vp_incr(location_t *loc);
 
 /* This function is critical to futurelib, and as such must be as fast as
  * possible.
@@ -30,7 +31,7 @@ static void blocking_vp_incr(location_t * loc);
  * shepherd. */
 static location_t *ft_loc(void)
 {
-    return qthread_isfuture() ? (location_t *)pthread_getspecific(future_bookkeeping) : NULL;
+    return qthread_isfuture() ? (location_t *)TLS_GET(future_bookkeeping) : NULL;
 }
 
 #ifdef CLEANUP
@@ -38,10 +39,10 @@ static location_t *ft_loc(void)
 static aligned_t future_shep_cleanup(qthread_t *me,
                                      void      *arg)
 {
-    location_t *ptr = (location_t *)pthread_getspecific(future_bookkeeping);
+    location_t *ptr = (location_t *)TLS_GET(future_bookkeeping);
 
     if (ptr != NULL) {
-        qassert(pthread_setspecific(future_bookkeeping, NULL), 0);
+        TLS_SET(future_bookkeeping, NULL);
         qassert(pthread_mutex_destroy(&(ptr->vp_count_lock), 0));
         free(ptr);
     }
@@ -61,7 +62,7 @@ static void future_cleanup(void)
     }
     free(rets);
     QTHREAD_FASTLOCK_DESTROY(sfnf_lock);
-    qassert(pthread_key_delete(&future_bookkeeping), 0);
+    TLS_DELETE(future_bookkeeping);
 }
 
 #endif /* ifdef CLEANUP */
@@ -79,7 +80,7 @@ static aligned_t future_shep_init(void *Q_UNUSED arg)
     // vp_count is *always* locked. This establishes the waiting queue.
     qthread_lock(&(ptr->vp_count));
 
-    qassert(pthread_setspecific(future_bookkeeping, ptr), 0);
+    TLS_SET(future_bookkeeping, ptr);
     return 0;
 }
 
@@ -89,7 +90,7 @@ void future_init(int vp_per_loc)
     aligned_t            *rets;
 
     QTHREAD_FASTLOCK_INIT(sfnf_lock);
-    qassert(pthread_key_create(&future_bookkeeping, NULL), 0);
+    TLS_INIT(future_bookkeeping);
     future_bookkeeping_array = (location_t *)calloc(qlib->nshepherds, sizeof(location_t));
     rets                     = (aligned_t *)calloc(qlib->nshepherds, sizeof(aligned_t));
     for (i = 0; i < qlib->nshepherds; i++) {
@@ -151,7 +152,7 @@ void future_fork(qthread_f  fptr,
         return;
     }
 
-    ptr = (location_t *)pthread_getspecific(future_bookkeeping);
+    ptr = (location_t *)TLS_GET(future_bookkeeping);
 
     qthread_debug(FUTURELIB_BEHAVIOR, "Thread %i forking a future\n", (int)qthread_id());
     assert(future_bookkeeping_array != NULL);

@@ -3,8 +3,6 @@
 # Copyright (c)      2008  Sandia Corporation
 #
 
-AM_CXXFLAGS = @RESTRICT_CXXFLAGS@
-
 SUBDIRS = basics features stress
 if COMPILE_MULTINODE
 SUBDIRS += multinode

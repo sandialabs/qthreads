@@ -84,7 +84,7 @@ void qthread_enable_worker(const qthread_worker_id_t w)
 qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *shepherd_id)
 {                                      /*{{{ */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    qthread_worker_t *worker = (qthread_worker_t *)pthread_getspecific(shepherd_structs);
+    qthread_worker_t *worker = (qthread_worker_t *)TLS_GET(shepherd_structs);
 
     if((shepherd_id != NULL) && (worker != NULL)) {
         *shepherd_id = worker->shepherd->shepherd_id;
@@ -103,7 +103,7 @@ qthread_worker_id_t qthread_worker(qthread_shepherd_id_t *shepherd_id)
 qthread_worker_id_t qthread_worker_unique(qthread_shepherd_id_t *shepherd_id)
 {                     /*{{{ */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    qthread_worker_t *worker = (qthread_worker_t *)pthread_getspecific(shepherd_structs);
+    qthread_worker_t *worker = (qthread_worker_t *)TLS_GET(shepherd_structs);
 
     if((shepherd_id != NULL) && (worker != NULL)) {
         *shepherd_id = worker->shepherd->shepherd_id;

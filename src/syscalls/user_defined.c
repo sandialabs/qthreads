@@ -19,7 +19,7 @@
 #include "qt_debug.h"
 #include "qthread_innards.h" /* for qlib */
 
-extern pthread_key_t IO_task_struct;
+extern TLS_DECL(qthread_t *, IO_task_struct);
 
 void qt_blocking_subsystem_begin_blocking_action(void)
 {
@@ -47,7 +47,7 @@ void qt_blocking_subsystem_begin_blocking_action(void)
 
 void qt_blocking_subsystem_end_blocking_action(void)
 {
-    qthread_t *me = pthread_getspecific(IO_task_struct);
+    qthread_t *me = TLS_GET(IO_task_struct);
 
     if ((qlib != NULL) && (me != NULL)) {
         qthread_debug(IO_CALLS, "in qthreads, me=%p\n", me);

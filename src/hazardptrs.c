@@ -13,7 +13,7 @@
 #include "qt_shepherd_innards.h"
 #include "qthread_innards.h"
 
-static pthread_key_t ts_hazard_ptrs;
+static TLS_DECL(uintptr_t *, ts_hazard_ptrs);
 
 static uintptr_t    *QTHREAD_CASLOCK(hzptr_list);
 static aligned_t     hzptr_list_len = 0;
@@ -28,7 +28,7 @@ static void hazardptr_internal_teardown(void)
         free_these_freelists = (hazard_freelist_entry_t*)tmp[freelist_max].ptr;
         free(tmp);
     }
-    pthread_key_delete(ts_hazard_ptrs);
+    TLS_DELETE(ts_hazard_ptrs);
     while (hzptr_list != NULL) {
         uintptr_t *hzptr_tmp = hzptr_list;
         hzptr_list = (uintptr_t *)hzptr_tmp[HAZARD_PTRS_PER_SHEP];
@@ -62,7 +62,7 @@ void INTERNAL initialize_hazardptrs(void)
         free_these_freelists = qlib->shepherds[i].hazard_free_list.freelist;
     }
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-    qassert(pthread_key_create(&ts_hazard_ptrs, NULL), 0);
+    TLS_INIT(ts_hazard_ptrs);
     QTHREAD_CASLOCK_INIT(hzptr_list, NULL);
     qthread_internal_cleanup(hazardptr_internal_teardown);
 }
@@ -70,7 +70,7 @@ void INTERNAL initialize_hazardptrs(void)
 void INTERNAL hazardous_ptr(unsigned int which,
                             void        *ptr)
 {
-    uintptr_t *hzptrs = pthread_getspecific(ts_hazard_ptrs);
+    uintptr_t *hzptrs = TLS_GET(ts_hazard_ptrs);
 
     if (hzptrs == NULL) {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -104,7 +104,7 @@ void INTERNAL hazardous_ptr(unsigned int which,
             }
         }
 #endif  /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-        pthread_setspecific(ts_hazard_ptrs, hzptrs);
+        TLS_SET(ts_hazard_ptrs, hzptrs);
     }
 
     assert(hzptrs);
@@ -234,7 +234,7 @@ void INTERNAL hazardous_release_node(void  (*freefunc)(void *),
 #else
     hazard_freelist_t *hfl = &(qthread_internal_getshep()->hazard_free_list);
 #endif
-    uintptr_t *hzptrs = pthread_getspecific(ts_hazard_ptrs);
+    uintptr_t *hzptrs = TLS_GET(ts_hazard_ptrs);
 
     assert(ptr != NULL);
     assert(freefunc != NULL);

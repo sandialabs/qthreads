@@ -3,8 +3,6 @@
 # Copyright (c)      2012  Sandia Corporation
 #
 
-AM_CXXFLAGS = @RESTRICT_CXXFLAGS@
-
 .PHONY: buildall buildtests buildextra
 
 TESTS = \

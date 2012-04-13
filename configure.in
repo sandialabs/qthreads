@@ -506,14 +506,6 @@ AC_DEFINE_UNQUOTED([QTHREAD_ALIGNMENT_ALIGNED_T], [$align_aligned_t], [alignment
 
 AC_CACHE_SAVE
 
-# Figure out whether the compiler has builtin atomic operations
-AS_IF([test "x$enable_hardware_increments" != xno],
-      [QTHREAD_CHECK_ATOMICS($sizeof_aligned_t)])
-QTHREAD_BUILTIN_EXPECT
-QTHREAD_BUILTIN_TRAP
-QTHREAD_VAMACROS
-QTHREAD_CHECK_BITFIELDS
-
 ## -------------------- ##
 ## Checks for libraries ##
 ## -------------------- ##
@@ -584,16 +576,25 @@ AC_CACHE_SAVE
 ## Check for compiler characteristics ##
 ## ---------------------------------- ##
 # Find out if we need the -restrict flag
-RESTRICT_CXXFLAGS=""
 AS_IF([test "x$qthread_cv_cxx_compiler_type" = "xIntel"],
-      [RESTRICT_CXXFLAGS="-restrict"])
-AC_SUBST([RESTRICT_CXXFLAGS])
+      [CXXFLAGS="-restrict $CXXFLAGS"])
 
 AC_C_CONST
 AC_C_INLINE
 AX_C_RESTRICT
 AC_C_VOLATILE
 AX_OPENMP([have_openmp=yes], [have_openmp=no])
+
+# Check for native TLS support (thread-local-storage)
+AX_TLS
+
+# Figure out whether the compiler has builtin atomic operations
+AS_IF([test "x$enable_hardware_increments" != xno],
+      [QTHREAD_CHECK_ATOMICS($sizeof_aligned_t)])
+QTHREAD_BUILTIN_EXPECT
+QTHREAD_BUILTIN_TRAP
+QTHREAD_VAMACROS
+QTHREAD_CHECK_BITFIELDS
 
 QTHREAD_MALLOC_ATTRIBUTE
 QTHREAD_UNUSED_ATTRIBUTE
