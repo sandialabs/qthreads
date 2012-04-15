@@ -17,12 +17,10 @@ static void aligned_visit(const size_t startat,
                           const size_t stopat,
                           void        *args_)
 {
-    size_t i;
-
     if (startat < NUM_TASKS) {
-        qthread_readFE(NULL, aligned_elems + rvs[i]);
+        qthread_readFE(NULL, aligned_elems + rvs[startat]);
     } else {
-        qthread_writeEF_const(aligned_elems + rvs[i], 42);
+        qthread_writeEF_const(aligned_elems + rvs[startat], 42);
     }
 }
 
@@ -30,12 +28,10 @@ static void syncvar_visit(const size_t startat,
                           const size_t stopat,
                           void        *args_)
 {
-    size_t i;
-
     if (startat < NUM_TASKS) {
-        qthread_syncvar_readFE(NULL, syncvar_elems + rvs[i]);
+        qthread_syncvar_readFE(NULL, syncvar_elems + rvs[startat]);
     } else {
-        qthread_syncvar_writeEF_const(syncvar_elems + rvs[i], 42);
+        qthread_syncvar_writeEF_const(syncvar_elems + rvs[startat], 42);
     }
 }
 
