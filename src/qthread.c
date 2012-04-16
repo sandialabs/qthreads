@@ -2550,13 +2550,19 @@ static int qthread_uberfork(qthread_f             f,
                             uint_fast16_t         feature_flag)
 {   /*{{{*/
     qthread_t            *t;
-    qthread_shepherd_t   *myshep = qthread_internal_getshep();
     qthread_t            *me     = qthread_internal_self(); // note: cannot be myshep->current on multithreaded shepherds
+    qthread_shepherd_t   *myshep;
     qthread_shepherd_id_t dest_shep;
 
 #if defined(QTHREAD_DEBUG) || !defined(QTHREAD_MULTITHREADED_SHEPHERDS)
     const qthread_shepherd_id_t max_sheps = qlib->nshepherds;
 #endif
+
+    if (me) {
+        myshep = me->rdata->shepherd_ptr;
+    } else {
+        myshep = NULL;
+    }
 
     /* Step 1: Check arguments */
     qthread_debug(THREAD_FUNCTIONS,
@@ -2583,17 +2589,7 @@ static int qthread_uberfork(qthread_f             f,
     } else {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
         if (QTHREAD_LIKELY(myshep)) {
-            /* Accessing the field myshep->shepherd_id incurs
-             * false sharing due to a conflict with
-             * an as-yet-to-be-determined field in qthread_shepherd_t
-
-             * In the meantime, use pointer-arithmetic to determine
-             * dest_shep.
-             */
-            // dest_shep = myshep->shepherd_id; // rely on work-stealing
-
-            uintptr_t offset = ((uintptr_t) myshep) - ((uintptr_t) &(qlib->shepherds[0]));
-            dest_shep = offset / sizeof(qthread_shepherd_t);
+            dest_shep = myshep->shepherd_id; // rely on work-stealing
         } else {
             dest_shep = 0;
         }
