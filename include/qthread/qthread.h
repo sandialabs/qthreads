@@ -9,7 +9,7 @@
 #include <string.h>                    /* for memcpy() */
 
 #ifndef QTHREAD_NOALIGNCHECK
-#include <stdio.h>                     /* for fprintf() */
+# include <stdio.h>                    /* for fprintf() */
 #endif
 
 #ifdef QTHREAD_LOG_BARRIER
@@ -158,7 +158,7 @@ Q_STARTCXX /* */
 
 typedef unsigned int qthread_shepherd_id_t;
 typedef unsigned int qthread_worker_id_t;
-typedef size_t       qt_team_id_t;
+typedef size_t qt_team_id_t;
 
 /* for convenient arguments to qthread_fork */
 typedef aligned_t (*qthread_f)(void *arg);
@@ -242,16 +242,16 @@ int qthread_fork_copyargs(qthread_f   f,
                           const void *arg,
                           size_t      arg_size,
                           aligned_t  *ret);
-int qthread_fork_copyargs_to(const qthread_f   f,
-                             const void *const arg,
-                             const size_t      arg_size,
-                             syncvar_t *const  ret,
+int qthread_fork_copyargs_to(const qthread_f             f,
+                             const void *const           arg,
+                             const size_t                arg_size,
+                             syncvar_t *const            ret,
                              const qthread_shepherd_id_t preferred_shep);
 int qthread_fork_syncvar_copyargs(qthread_f   f,
                                   const void *arg,
                                   size_t      arg_size,
                                   syncvar_t  *ret);
-int qthread_fork_syncvar_copyargs_nblock(qthread_f   f,
+int qthread_fork_syncvar_copyargs_simple(qthread_f   f,
                                          const void *arg,
                                          size_t      arg_size,
                                          syncvar_t  *ret);
@@ -261,6 +261,33 @@ int qthread_fork_copyargs_precond(qthread_f   f,
                                   syncvar_t  *ret,
                                   int         npreconds,
                                   ...);
+enum _qthread_features {
+    SPAWN_FUTURE,
+    SPAWN_PARENT,
+    SPAWN_SIMPLE,
+    SPAWN_NEW_TEAM,
+    SPAWN_NEW_SUBTEAM,
+    SPAWN_RET_SYNCVAR_T,
+    SPAWN_PC_SYNCVAR_T,
+    SPAWN_COUNT
+};
+
+# define QTHREAD_SPAWN_FUTURE        (1 << SPAWN_FUTURE)
+# define QTHREAD_SPAWN_PARENT        (1 << SPAWN_PARENT)
+# define QTHREAD_SPAWN_SIMPLE        (1 << SPAWN_SIMPLE)
+# define QTHREAD_SPAWN_NEW_TEAM      (1 << SPAWN_NEW_TEAM)
+# define QTHREAD_SPAWN_NEW_SUBTEAM   (1 << SPAWN_NEW_SUBTEAM)
+# define QTHREAD_SPAWN_RET_SYNCVAR_T (1 << SPAWN_RET_SYNCVAR_T)
+# define QTHREAD_SPAWN_PC_SYNCVAR_T  (1 << SPAWN_PC_SYNCVAR_T)
+
+int qthread_spawn(qthread_f             f,
+                  const void           *arg,
+                  size_t                arg_size,
+                  void                 *ret,
+                  size_t                npreconds,
+                  void                 *preconds,
+                  qthread_shepherd_id_t target_shep,
+                  unsigned int          feature_flag);
 
 /* This is a function to move a thread from one shepherd to another. */
 int qthread_migrate_to(const qthread_shepherd_id_t shepherd);
@@ -270,10 +297,10 @@ int qthread_debuglevel(int);
 
 /* these are accessor functions for use by the qthreads to retrieve information
  * about themselves */
-#define QTHREAD_NULL_TASK_ID    ((unsigned)-1)
-#define QTHREAD_NON_TASK_ID     0
-#define QTHREAD_DEFAULT_TEAM_ID 1
-#define QTHREAD_NON_TEAM_ID     0
+# define QTHREAD_NULL_TASK_ID    ((unsigned)-1)
+# define QTHREAD_NON_TASK_ID     0
+# define QTHREAD_DEFAULT_TEAM_ID 1
+# define QTHREAD_NON_TEAM_ID     0
 unsigned              qthread_id(void);
 unsigned              qthread_barrier_id(void);
 qthread_shepherd_id_t qthread_shep(void);
@@ -334,9 +361,9 @@ qt_team_id_t qt_team_id(void);
 qt_team_id_t qt_team_parent_id(void);
 aligned_t    qt_team_watcher(void *arg);
 aligned_t    qt_team_destroy(void *arg);
-#ifdef TEAM_PROFILE
-void         qt_team_profile(void);
-#endif
+# ifdef TEAM_PROFILE
+void qt_team_profile(void);
+# endif
 
 int qthread_fork_new_team(qthread_f   f,
                           const void *arg,
@@ -492,7 +519,7 @@ static QINLINE float qthread_fincr(float      *operand,
     return qthread_fincr_(operand, incr);
 
 # elif QTHREAD_ATOMIC_CAS && \
-      (!defined(HAVE_GCC_INLINE_ASSEMBLY) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEGX))
+    (!defined(HAVE_GCC_INLINE_ASSEMBLY) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEGX))
     union {
         float    f;
         uint32_t i;
@@ -615,7 +642,7 @@ static QINLINE double qthread_dincr(double      *operand,
     return qthread_dincr_(operand, incr);
 
 # elif QTHREAD_ATOMIC_CAS && \
-      (!defined(HAVE_GCC_INLINE_ASSEMBLY) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEGX))
+    (!defined(HAVE_GCC_INLINE_ASSEMBLY) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEGX))
     union {
         uint64_t i;
         double   d;
@@ -853,7 +880,7 @@ static QINLINE uint32_t qthread_incr32(uint32_t      *operand,
                           "add    %1,%0,%3\n\t"
                           "stwcx. %1,0,%2\n\t"
                           "bne-   A_%=\n\t" /* if it failed, try again */
-                          "isync"         /* make sure it wasn't all a dream */
+                          "isync"           /* make sure it wasn't all a dream */
                           : "=&b"  (retval), "=&r" (incrd)
                           : "r"    (operand), "r" (incr)
                           : "cc", "memory");
@@ -960,7 +987,7 @@ static QINLINE uint64_t qthread_incr64(uint64_t      *operand,
                   "add    %1,%0,%3\n\t"
                   "stdcx. %1,0,%2\n\t"
                   "bne-   A_%=\n\t" /* if it failed, try again */
-                  "isync"         /* make sure it wasn't all a dream */
+                  "isync"           /* make sure it wasn't all a dream */
                   : "=&b"   (retval), "=&r" (incrd)
                   : "r"     (operand), "r" (incr)
                   : "cc", "memory");
