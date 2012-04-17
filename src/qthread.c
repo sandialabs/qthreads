@@ -2519,7 +2519,6 @@ enum _uberfork_features {
     UF_NEW_TEAM,
     UF_NEW_SUBTEAM,
     UF_RET_SYNCVAR_T,
-    UF_PC_ALIGNED_T,
     UF_PC_SYNCVAR_T
 };
 
@@ -2532,9 +2531,6 @@ enum _uberfork_features {
 #define QTHREAD_UBERFORK_FEATURE_TEAMS_SUB    (1<<UF_NEW_SUBTEAM)
 
 #define QTHREAD_UBERFORK_FEATURE_RET_SYNC_SYNCVAR (1<<UF_RET_SYNCVAR_T)
-
-#define QTHREAD_UBERFORK_FEATURE_MASK_PC_SYNC     ((1<<UF_PC_ALIGNED_T)|(1<<UF_PC_SYNCVAR_T))
-#define QTHREAD_UBERFORK_FEATURE_PC_SYNC_ALIGNED  (1<<UF_PC_ALIGNED_T)
 #define QTHREAD_UBERFORK_FEATURE_PC_SYNC_SYNCVAR  (1<<UF_PC_SYNCVAR_T)
 
 static int qthread_uberfork(qthread_f             f,
@@ -2606,12 +2602,11 @@ static int qthread_uberfork(qthread_f             f,
         qassert_ret(f != NULL, QTHREAD_BADARGS);
         if (npreconds > 0) {
             qassert_ret(preconds != NULL, QTHREAD_BADARGS);
-            qassert_ret((feature_flag & QTHREAD_UBERFORK_FEATURE_MASK_PC_SYNC) != 0, QTHREAD_BADARGS);
             // XXX: remove the following assert when preconds support syncvar_t's
-            assert(feature_flag & QTHREAD_UBERFORK_FEATURE_PC_SYNC_ALIGNED);
+            assert((feature_flag & QTHREAD_UBERFORK_FEATURE_PC_SYNC_SYNCVAR) == 0);
         } else {
             qassert_ret(preconds == NULL, QTHREAD_BADARGS);
-            qassert_ret((feature_flag & QTHREAD_UBERFORK_FEATURE_MASK_PC_SYNC) == 0, QTHREAD_BADARGS);
+            assert((feature_flag & QTHREAD_UBERFORK_FEATURE_PC_SYNC_SYNCVAR) == 0);
         }
 #endif  /* ifdef QTHREAD_DEBUG */
     }
@@ -2827,7 +2822,6 @@ int qthread_fork_copyargs_precond(qthread_f   f,
     va_end(args);
 
     return qthread_uberfork(f, arg, arg_size, ret, npreconds, preconds, NO_SHEPHERD,
-            QTHREAD_UBERFORK_FEATURE_PC_SYNC_ALIGNED |
             QTHREAD_UBERFORK_FEATURE_RET_SYNC_SYNCVAR);
 } /*}}}*/
 
@@ -2860,7 +2854,7 @@ int qthread_fork_precond(qthread_f   f,
     va_end(args);
 
     return qthread_uberfork(f, arg, 0, ret, npreconds, preconds, NO_SHEPHERD,
-            QTHREAD_UBERFORK_FEATURE_PC_SYNC_ALIGNED);
+            0);
 } /*}}}*/
 
 int qthread_fork_track_syncvar_copyargs_to(qthread_f             f,
@@ -3107,7 +3101,7 @@ int qthread_fork_precond_to(qthread_f             f,
                             npreconds,
                             preconds,
                             shepherd,
-                            QTHREAD_UBERFORK_FEATURE_PC_SYNC_ALIGNED);
+                            0);
 }                      /*}}} */
 
 int qthread_fork_syncvar_to(qthread_f             f,
