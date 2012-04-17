@@ -57,6 +57,11 @@ mt_benchmarks = \
 				time_eager_future \
 				time_fib \
 				time_fib2
+sc12_benchmarks = \
+	spawn_sequential_qthreads \
+	spawn_parallel_qthreads \
+	fib_qthreads \
+	uts_qthreads
 
 if COMPILE_OMP_BENCHMARKS
 generic_benchmarks += time_threading.omp
@@ -65,6 +70,11 @@ mt_benchmarks += \
 				time_omp_task_spawn \
 				time_omp_eager_future \
 				time_omp_fib
+sc12_benchmarks += \
+	spawn_sequential_omp \
+	spawn_parallel_omp \
+	fib_omp \
+	uts_omp
 endif
 
 benchmarks = \
@@ -73,7 +83,8 @@ benchmarks = \
              $(thesis_benchmarks) \
              $(pmea09_benchmarks) \
              $(mtaap08_benchmarks) \
-	     $(mt_benchmarks)
+	     $(mt_benchmarks) \
+	     $(sc12_benchmarks)
 
 EXTRA_PROGRAMS = $(benchmarks)
 CLEANFILES = $(benchmarks)
@@ -258,6 +269,37 @@ time_omp_fib_SOURCES = mt/time_omp_fib.c
 time_omp_fib_DEPENDENCIES = $(qthreadlib)
 time_omp_fib_CFLAGS = @OPENMP_CFLAGS@
 
+# SC12 Benchmarks
+
+spawn_sequential_qthreads_SOURCES = sc12/spawn_sequential_qthreads.c
+spawn_sequential_qthreads_DEPENDENCIES = $(qthreadlib)
+
+spawn_parallel_qthreads_SOURCES = sc12/spawn_parallel_qthreads.c
+spawn_parallel_qthreads_DEPENDENCIES = $(qthreadlib)
+
+fib_qthreads_SOURCES = sc12/fib_qthreads.c
+fib_qthreads_DEPENDENCIES = $(qthreadlib)
+
+uts_qthreads_SOURCES = sc12/uts_qthreads.c sc12/rng/brg_sha1.c
+uts_qthreads_DEPENDENCIES = $(qthreadlib)
+
 time_omp_eager_future_SOURCES = mt/time_omp_eager_future.c
 time_omp_eager_future_DEPENDENCIES = $(qthreadlib)
 time_omp_eager_future_CFLAGS = @OPENMP_CFLAGS@
+
+spawn_sequential_omp_SOURCES = sc12/spawn_sequential_omp.c
+spawn_sequential_omp_DEPENDENCIES = $(qthreadlib)
+spawn_sequential_omp_CFLAGS = @OPENMP_CFLAGS@
+
+spawn_parallel_omp_SOURCES = sc12/spawn_parallel_omp.c
+spawn_parallel_omp_DEPENDENCIES = $(qthreadlib)
+spawn_parallel_omp_CFLAGS = @OPENMP_CFLAGS@
+
+fib_omp_SOURCES = sc12/fib_omp.c
+fib_omp_DEPENDENCIES = $(qthreadlib)
+fib_omp_CFLAGS = @OPENMP_CFLAGS@
+
+uts_omp_SOURCES = sc12/uts_omp.c sc12/rng/brg_sha1.c
+uts_omp_DEPENDENCIES = $(qthreadlib)
+uts_omp_CFLAGS = @OPENMP_CFLAGS@
+

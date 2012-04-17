@@ -13,16 +13,19 @@
 #include <stdlib.h>
 #include <limits.h> /* for INT_MAX */
 #include <math.h>   /* for floor, log, sin */
+#include <omp.h>
 #include <qthread/qthread.h>
 #include <qthread/qtimer.h>
 #include "argparsing.h"
 
 #define BRG_RNG // Select RNG
-#include "uts/rng/rng.h"
+#include "rng/rng.h"
 
 #define PRINT_STATS 1
 
 #define MAXNUMCHILDREN 100
+
+static size_t nodecount;
 
 typedef enum {
     BIN = 0,
@@ -54,9 +57,6 @@ typedef struct {
     int            height; // Depth of node in the tree
     struct state_t state;  // Local RNG state
     int            num_children;
-    aligned_t     *acc;
-    aligned_t     *dc;
-    aligned_t      expect;
 } node_t;
 
 // Default values
@@ -75,24 +75,24 @@ static uint64_t tree_height = 0;
 static uint64_t num_leaves  = 0;
 
 static double normalize(int n)
-{/*{{{*/
+{
     if (n < 0) {
         printf("*** toProb: rand n = %d out of range\n", n);
     }
 
     return ((n < 0) ? 0.0 : ((double)n) / (double)INT_MAX);
-}/*}}}*/
+}
 
 static int calc_num_children_bin(node_t *parent)
-{/*{{{*/
+{
     int    v = rng_rand(parent->state.state);
     double d = normalize(v);
 
     return (d < non_leaf_prob) ? non_leaf_bf : 0;
-}/*}}}*/
+}
 
 static int calc_num_children(node_t *parent)
-{/*{{{*/
+{
     int num_children = 0;
 
     if (parent->height == 0) { num_children = (int)floor(bf_0); } else { num_children = calc_num_children_bin(parent); }
@@ -113,62 +113,67 @@ static int calc_num_children(node_t *parent)
     }
 
     return num_children;
-}/*}}}*/
+}
+
+#define BIG_STACKS
 
 // Notes:
 // -    Each task receives distinct copy of parent
 // -    Copy of child is shallow, be careful with `state` member
-static aligned_t visit(void *args_)
+static long visit(node_t *parent,
+                  int     num_children)
 {
-    node_t  *parent          = (node_t *)args_;
-    int      parent_height   = parent->height;
-    int      num_children    = parent->num_children;
-    aligned_t expect         = parent->expect;
-    aligned_t num_descendants[num_children];
-    aligned_t sum_descendants = 1;
+    uint64_t num_descendants = 1;
 
-    if (num_children != 0) {
-        node_t     child __attribute__((aligned(8)));
-        aligned_t  donec = 0;
+#ifdef BIG_STACKS
+    uint64_t child_descendants[num_children];
+    node_t   child_nodes[num_children];
+#else
+    uint64_t *child_descendants;
+    node_t   *child_nodes;
 
-        // Spawn children, if any
-        child.height = parent_height + 1;
-        child.dc     = &donec;
-        child.expect = num_children;
+    if (num_children > 0) {
+        child_descendants = calloc(sizeof(uint64_t), num_children);
+        child_nodes       = malloc(sizeof(node_t) * num_children);
+    }
+#endif
 
-        qthread_empty(&donec);
+    // Spawn children, if any
+    for (int i = 0; i < num_children; i++) {
+        node_t *child = &child_nodes[i];
 
-        for (int i = 0; i < num_children; i++) {
-            child.acc    = &num_descendants[i];
+        child->height = parent->height + 1;
 
-            for (int j = 0; j < num_samples; j++) {
-                rng_spawn(parent->state.state, child.state.state, i);
-            }
-
-            child.num_children = calc_num_children(&child);
-
-            qthread_fork_syncvar_copyargs(visit, &child, sizeof(node_t), NULL);
+        for (int j = 0; j < num_samples; j++) {
+            rng_spawn(parent->state.state, child->state.state, i);
         }
 
-        // Wait for children to finish up, accumulate descendants counts
-        qthread_readFF(NULL, &donec);
+        child->num_children = calc_num_children(child);
 
-        for (int i = 0; i < num_children; i++) {
-            sum_descendants += num_descendants[i];
-        }
+#pragma omp task untied firstprivate(i, child) shared(child_descendants)
+        child_descendants[i] = visit(child, child->num_children);
     }
 
-    *parent->acc = sum_descendants;
-    if (qthread_incr(parent->dc, 1) + 1 == expect) {
-        qthread_fill(parent->dc);
+#pragma omp taskwait
+
+// #pragma omp parallel for reduction(+:num_descendants)
+    for (int i = 0; i < num_children; i++) {
+        num_descendants += child_descendants[i];
     }
 
-    return 0;
+#ifndef BIG_STACKS
+    if (num_children > 0) {
+        free(child_descendants);
+        free(child_nodes);
+    }
+#endif
+
+    return num_descendants;
 }
 
 #ifdef PRINT_STATS
 static void print_stats(void)
-{/*{{{*/
+{
     printf("tree-type %d\ntree-type-name %s\n",
            tree_type, type_names[tree_type]);
     printf("root-bf %.1f\nroot-seed %d\n",
@@ -200,17 +205,17 @@ static void print_stats(void)
     }
 
     printf("compute-granularity %d\n", num_samples);
-    printf("num-sheps %d\n", qthread_num_shepherds());
-    printf("num-workers %d\n", qthread_num_workers());
+    printf("num-workers %d\n", omp_get_num_threads());
+    assert(omp_get_num_threads() > 1);
 
     printf("\n");
 
     fflush(stdout);
-}/*}}}*/
+}
 
 #else /* ifdef PRINT_STATS */
 static void print_banner(void)
-{/*{{{*/
+{
     printf("UTS - Unbalanced Tree Search 2.1 (C/Qthreads)\n");
     printf("Tree type:%3d (%s)\n", tree_type, type_names[tree_type]);
     printf("Tree shape parameters:\n");
@@ -246,13 +251,12 @@ static void print_banner(void)
     printf("SHA-1 (state size = %ldB)\n", sizeof(struct state_t));
     printf("Compute granularity: %d\n", num_samples);
     printf("Execution strategy:\n");
-    printf("  Shepherds: %d\n", qthread_num_shepherds());
-    printf("  Workers:   %d\n", qthread_num_workers());
+    printf("  Workers:   %d\n", omp_get_num_threads());
 
     printf("\n");
 
     fflush(stdout);
-}/*}}}*/
+}
 
 #endif /* ifdef PRINT_STATS */
 
@@ -291,13 +295,8 @@ int main(int   argc,
     NUMARG(shift_depth, "UTS_SHIFT_DEPTH");
     NUMARG(num_samples, "UTS_NUM_SAMPLES");
 
-    // If the operator did not attempt to set a stack size, force
-    // a reasonable lower bound
-    if (!getenv("QT_STACK_SIZE") && !getenv("QTHREAD_STACK_SIZE"))
-        setenv("QT_STACK_SIZE", "32768", 0);
-
-    assert(qthread_initialize() == 0);
-
+#pragma omp parallel
+#pragma omp single
 #ifdef PRINT_STATS
     print_stats();
 #else
@@ -311,16 +310,15 @@ int main(int   argc,
     root.height = 0;
     rng_init(root.state.state, root_seed);
     root.num_children = calc_num_children(&root);
-    aligned_t donecount = 0;
-    root.dc = &donecount;
-    qthread_empty(&donecount);
-    aligned_t tot = 0;
-    root.acc = &tot;
-    root.expect = 1;
 
-    qthread_fork_syncvar(visit, &root, NULL);
-    qthread_readFF(NULL, root.dc);
-    total_num_nodes = tot;
+    nodecount = 1;
+    long retval;
+#pragma omp parallel
+#pragma omp single nowait
+#pragma omp task untied
+    retval = visit(&root, root.num_children);
+
+    total_num_nodes = retval;
 
     qtimer_stop(timer);
 
@@ -337,7 +335,7 @@ int main(int   argc,
     printf("exec-time %.3f\ntotal-perf %.0f\npu-perf %.0f\n\n",
            total_time,
            total_num_nodes / total_time,
-           total_num_nodes / total_time / qthread_num_workers());
+           total_num_nodes / total_time / omp_get_num_threads());
 #else
     printf("Tree size = %lu, tree depth = %d, num leaves = %llu (%.2f%%)\n",
            (unsigned long)total_num_nodes,
@@ -348,7 +346,7 @@ int main(int   argc,
            "nodes/sec (%.0f nodes/sec per PE)\n\n",
            total_time,
            total_num_nodes / total_time,
-           total_num_nodes / total_time / qthread_num_workers());
+           total_num_nodes / total_time / omp_get_num_threads());
 #endif /* ifdef PRINT_STATS */
 
     return 0;

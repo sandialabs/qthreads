@@ -5,15 +5,15 @@
 #include <assert.h>
 #include <stdio.h>
 #include <qthread/qthread.h>
-#ifndef SERIAL_FORKING
-# include <qthread/qloop.h>
-#endif
+#include <qthread/qloop.h>
 #include <qthread/qtimer.h>
 #include "argparsing.h"
 
+static aligned_t donecount = 0;
+
 static aligned_t null_task(void *args_)
 {
-    return 42;
+    return qthread_incr(&donecount, 1);
 }
 
 static void par_null_task(size_t start,
@@ -24,8 +24,7 @@ static void par_null_task(size_t start,
 int main(int   argc,
          char *argv[])
 {
-    uint64_t count    = 0;
-    int      par_fork = 0;
+    uint64_t count    = 1048576;
 
     qtimer_t timer;
     double   total_time = 0.0;
@@ -33,33 +32,15 @@ int main(int   argc,
     CHECK_VERBOSE();
 
     NUMARG(count, "MT_COUNT");
-    NUMARG(par_fork, "MT_PAR_FORK");
     assert(0 != count);
 
     assert(qthread_initialize() == 0);
 
-    syncvar_t *rets = NULL;
-    for (uint64_t i = 0; i < count; i++) rets[i] = SYNCVAR_EMPTY_INITIALIZER;
-
     timer = qtimer_create();
 
-    if (par_fork) {
-        qtimer_start(timer);
-        qt_loop_sv(0, count, par_null_task, NULL);
-        qtimer_stop(timer);
-    } else {
-        rets = calloc(count, sizeof(syncvar_t));
-
-        qtimer_start(timer);
-        for (uint64_t i = 0; i < count; i++) {
-            qthread_fork_syncvar(null_task, NULL, &rets[i]);
-        }
-
-        for (uint64_t i = 0; i < count; i++) {
-            qthread_syncvar_readFF(NULL, &rets[i]);
-        }
-        qtimer_stop(timer);
-    }
+    qtimer_start(timer);
+    qt_loop(0, count, par_null_task, NULL);
+    qtimer_stop(timer);
 
     total_time = qtimer_secs(timer);
 
