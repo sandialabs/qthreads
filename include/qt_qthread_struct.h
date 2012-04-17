@@ -17,7 +17,7 @@
 #define QTHREAD_REAL_MCCOY          (1 << 1)
 #define QTHREAD_RET_IS_SYNCVAR      (1 << 2)
 #define QTHREAD_UNSTEALABLE         (1 << 3)
-#define QTHREAD_NON_BLOCKING        (1 << 4)
+#define QTHREAD_SIMPLE              (1 << 4)
 #define QTHREAD_HAS_ARGCOPY         (1 << 5)
 #define QTHREAD_TEAM_LEADER         (1 << 6)
 #define QTHREAD_TEAM_WATCHER        (1 << 7)
