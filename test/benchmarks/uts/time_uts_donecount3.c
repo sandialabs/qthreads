@@ -163,7 +163,7 @@ static aligned_t visit(void *args_)
 	    assert(children[i].num_children < MAXNUMCHILDREN);
 	}
         for (int i = 0; i < num_children; i++) {
-	    qthread_fork_syncvar_copyargs_nblock(visit, children + i, 0, NULL);
+	    qthread_fork_syncvar_copyargs_simple(visit, children + i, 0, NULL);
         }
 
 	return 0; // will come back as a "bottom"
@@ -177,7 +177,7 @@ static aligned_t visit(void *args_)
 		qthread_fill(parent->dc);
 	    } else {
 		assert(parent->p);
-		qthread_fork_syncvar_copyargs_nblock(visit_bottom, parent->p, 0, NULL);
+		qthread_fork_syncvar_copyargs_simple(visit_bottom, parent->p, 0, NULL);
 	    }
 	}
     }
@@ -201,7 +201,7 @@ static aligned_t visit_bottom(void *args_)
 	    qthread_fill(parent->dc);
 	} else {
 	    assert(parent->p);
-	    qthread_fork_syncvar_copyargs_nblock(visit_bottom, parent->p, 0, NULL);
+	    qthread_fork_syncvar_copyargs_simple(visit_bottom, parent->p, 0, NULL);
 	}
     }
     free(parent->d);
