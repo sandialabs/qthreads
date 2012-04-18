@@ -16,11 +16,6 @@ static aligned_t null_task(void *args_)
     return qthread_incr(&donecount, 1);
 }
 
-static void par_null_task(size_t start,
-                          size_t stop,
-                          void  *args_)
-{}
-
 int main(int   argc,
          char *argv[])
 {

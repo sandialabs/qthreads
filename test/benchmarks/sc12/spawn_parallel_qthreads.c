@@ -9,13 +9,6 @@
 #include <qthread/qtimer.h>
 #include "argparsing.h"
 
-static aligned_t donecount = 0;
-
-static aligned_t null_task(void *args_)
-{
-    return qthread_incr(&donecount, 1);
-}
-
 static void par_null_task(size_t start,
                           size_t stop,
                           void  *args_)
