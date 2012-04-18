@@ -2557,7 +2557,7 @@ int qthread_spawn(qthread_f             f,
                   arg_size,
                   ((feature_flag & QTHREAD_SPAWN_RET_SYNCVAR_T) ? "syncvar_t" : "aligned_t"),
                   ret,
-                  ((feature_flag & QTHREAD_SPAWN_PC_SYNCVAR) ? "syncvar_t" : "aligned_t"),
+                  ((feature_flag & QTHREAD_SPAWN_PC_SYNCVAR_T) ? "syncvar_t" : "aligned_t"),
                   npreconds,
                   preconds,
                   target_shep,
@@ -2595,10 +2595,10 @@ int qthread_spawn(qthread_f             f,
         if (npreconds > 0) {
             qassert_ret(preconds != NULL, QTHREAD_BADARGS);
             // XXX: remove the following assert when preconds support syncvar_t's
-            assert((feature_flag & QTHREAD_SPAWN_PC_SYNCVAR) == 0);
+            assert((feature_flag & QTHREAD_SPAWN_PC_SYNCVAR_T) == 0);
         } else {
             qassert_ret(preconds == NULL, QTHREAD_BADARGS);
-            assert((feature_flag & QTHREAD_SPAWN_PC_SYNCVAR) == 0);
+            assert((feature_flag & QTHREAD_SPAWN_PC_SYNCVAR_T) == 0);
         }
 #endif  /* ifdef QTHREAD_DEBUG */
     }
