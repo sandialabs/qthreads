@@ -206,7 +206,7 @@ static void print_stats(void)
 
     printf("compute-granularity %d\n", num_samples);
     printf("num-workers %d\n", omp_get_num_threads());
-    assert(omp_get_num_threads() > 1);
+    assert(omp_get_num_threads() >= 1);
 
     printf("\n");
 
