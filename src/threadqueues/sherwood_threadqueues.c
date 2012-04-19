@@ -329,18 +329,6 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
     while (1) {
         qt_threadqueue_node_t *node = NULL;
 
-        /*{
-            qt_threadqueue_node_t *tmp = q->head;
-            while (tmp) {
-                if (tmp->value->thread_state == QTHREAD_STATE_RUNNING) {
-                    printf("... ...%zu -\n", (size_t)tmp->value->arg);
-                } else {
-                    printf("... ...%zu\n", (size_t)tmp->value->arg);
-                }
-                tmp = tmp->next;
-            }
-            printf("----------------------------\n");
-        }*/
         if (qc && (qc->on_deck != NULL || qc->qlength != 0)) {
             assert(qc->tail == NULL || qc->tail->next == NULL);
             assert(qc->head == NULL || qc->head->prev == NULL);
@@ -379,18 +367,14 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
                 assert(last->next == NULL);
                 assert(first->prev == NULL);
                 QTHREAD_TRYLOCK_LOCK(&q->qlock);
-                /*printf("head = %p, tail = %p, len = %i\n", q->head, q->tail, q->qlength);
-                printf("first = %p, last = %p\n", first, last);*/
                 assert((q->head && q->tail) || (!q->head && !q->tail));
                 assert(q->head != first);
                 assert(q->tail != last);
                 first->prev = q->tail;
                 q->tail     = last;
                 if (q->head == NULL) {
-                    //printf("q->head == NULL\n");
                     q->head = first;
                 } else {
-                    //printf("q->head != NULL\n");
                     first->prev->next = first;
                 }
                 q->qlength           += qc->qlength;
