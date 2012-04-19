@@ -2393,7 +2393,7 @@ static void qthread_wrapper(void *ptr)
     MONITOR_ASM_LABEL(qthread_fence2); // add label for HPCToolkit stack unwind
 #endif
     if ((t->flags & QTHREAD_SIMPLE) == 0) {
-        qthread_back_to_master(t);
+        qthread_back_to_master2(t);
     }
 }                      /*}}} */
 
@@ -3303,6 +3303,33 @@ void INTERNAL qthread_back_to_master(qthread_t *t)
         rlp.rlim_cur = qlib->qthread_stack_size;
         qassert(setrlimit(RLIMIT_STACK, &rlp), 0);
     }
+#endif
+}                      /*}}} */
+
+void INTERNAL qthread_back_to_master2(qthread_t *t)
+{                      /*{{{ */
+    assert((t->flags & QTHREAD_SIMPLE) == 0);
+#ifdef NEED_RLIMIT
+    struct rlimit rlp;
+
+    qthread_debug(SHEPHERD_DETAILS, "t(%p): setting stack size limits for master thread...\n", t);
+    if (!(t->flags & QTHREAD_REAL_MCCOY)) {
+        rlp.rlim_cur = qlib->master_stack_size;
+        rlp.rlim_max = qlib->max_stack_size;
+        qassert(setrlimit(RLIMIT_STACK, &rlp), 0);
+    }
+#endif /* ifdef NEED_RLIMIT */
+       /* now back to your regularly scheduled master thread */
+#ifdef QTHREAD_USE_VALGRIND
+    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&t->rdata->context, sizeof(qt_context_t));
+    VALGRIND_CHECK_MEM_IS_ADDRESSABLE(t->rdata->return_context, sizeof(qt_context_t));
+    VALGRIND_MAKE_MEM_DEFINED(&t->rdata->context, sizeof(qt_context_t));
+    VALGRIND_MAKE_MEM_DEFINED(t->rdata->return_context, sizeof(qt_context_t));
+#endif
+#ifdef HAVE_NATIVE_MAKECONTEXT
+    qassert(setcontext(t->rdata->return_context), 0);
+#else
+    qassert(qt_setmctxt(&t->rdata->return_context->uc_mcontext), 0);
 #endif
 }                      /*}}} */
 

@@ -154,6 +154,7 @@ qthread_shepherd_t INTERNAL *qthread_find_active_shepherd(qthread_shepherd_id_t 
                                                           unsigned int          *d);
 
 void qthread_back_to_master(qthread_t *t);
+void qthread_back_to_master2(qthread_t *t);
 
 #endif // ifndef QT_SHEPHERD_INNARDS_H
 /* vim:set expandtab: */
