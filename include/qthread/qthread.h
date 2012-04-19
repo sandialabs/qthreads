@@ -201,8 +201,9 @@ aligned_t *qthread_task_counter(void);             /* task_counter CAS reference
  * busy-waits or cooperative multitasking. Without this function, threads will
  * only ever allow other threads assigned to the same pthread to execute when
  * they block. */
-# define qthread_yield() do { COMPILER_FENCE; qthread_yield_(); } while (0)
-void qthread_yield_(void);
+# define qthread_yield() do { COMPILER_FENCE; qthread_yield_(0); } while (0)
+# define qthread_yield_near() do { COMPILER_FENCE; qthread_yield_(1); } while (0)
+void qthread_yield_(int);
 
 /* these are the functions for generating a new qthread.
  *

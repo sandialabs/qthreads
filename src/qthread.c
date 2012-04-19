@@ -614,17 +614,14 @@ qt_run:
                                       "id(%u): thread %i yielded near; rescheduling\n",
                                       me->shepherd_id, t->thread_id);
 #ifdef QTHREAD_USE_SPAWNCACHE
-                        if (!qt_spawncache_yield(t)) {
-                            qt_threadqueue_enqueue_yielded(me->ready, t);
-                        }
-#else
+                        if (!qt_spawncache_yield(t))
+#endif
                         {
                             qthread_t *f = qt_threadqueue_dequeue_blocking(threadqueue, NULL,
                                     QTHREAD_CASLOCK_READ_UI(me->active));
                             qt_threadqueue_enqueue(me->ready, t);
                             qt_threadqueue_enqueue(me->ready, f);
                         }
-#endif
                         break;
                     case QTHREAD_STATE_YIELDED: /* reschedule it */
                         t->thread_state = QTHREAD_STATE_RUNNING;
@@ -2491,7 +2488,7 @@ void INTERNAL qthread_exec(qthread_t    *t,
 }                      /*}}} */
 
 /* this function yields thread t to the master kernel thread */
-void qthread_yield_(void)
+void qthread_yield_(int k)
 {                      /*{{{ */
     qthread_t *t = qthread_internal_self();
 
@@ -2499,7 +2496,11 @@ void qthread_yield_(void)
     if (t != NULL) {
         qthread_debug(THREAD_CALLS,
                       "tid %u yielding...\n", t->thread_id);
-        t->thread_state = QTHREAD_STATE_YIELDED;
+        if (k) {
+            t->thread_state = QTHREAD_STATE_YIELDED_NEAR;
+        } else {
+            t->thread_state = QTHREAD_STATE_YIELDED;
+        }
         qthread_back_to_master(t);
         qthread_debug(THREAD_BEHAVIOR, "tid %u resumed.\n",
                       t->thread_id);
