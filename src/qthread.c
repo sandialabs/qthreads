@@ -518,10 +518,11 @@ qt_run:
             assert(t->f != NULL || t->flags & QTHREAD_REAL_MCCOY);
             if (t->rdata == NULL) {
                 alloc_rdata(me, t);
-            }
-            assert(t->rdata->shepherd_ptr != NULL);
-            if (t->rdata->shepherd_ptr != me) {
-                t->rdata->shepherd_ptr = me;
+            } else {
+                assert(t->rdata->shepherd_ptr != NULL);
+                if (t->rdata->shepherd_ptr != me) {
+                    t->rdata->shepherd_ptr = me;
+                }
             }
 
             if ((t->target_shepherd != NULL) && (t->target_shepherd != me) &&
@@ -576,7 +577,9 @@ qt_run:
 #else
                 me->current = t;
 #endif
+#ifdef HAVE_NATIVE_MAKECONTEXT
                 getcontext(&my_context);
+#endif
                 qthread_debug(THREAD_DETAILS, "id(%u): shepherd context is %p, current = %p\n", me->shepherd_id, &my_context);
                 /* note: there's a good argument that the following should
                  * be: (*t->f)(t), however the state management would be
