@@ -6,6 +6,7 @@ typedef enum threadstate {
     QTHREAD_STATE_NEW,                  /* first ready-to-run state */
     QTHREAD_STATE_RUNNING,              /* ready-to-run */
     QTHREAD_STATE_YIELDED,              /* reschedule, otherwise ready-to-run */
+    QTHREAD_STATE_YIELDED_NEAR,         /* reschedule, otherwise ready-to-run */
     QTHREAD_STATE_BLOCKED,              /* waiting for lock */
     QTHREAD_STATE_FEB_BLOCKED,          /* waiting for feb */
     QTHREAD_STATE_PARENT_YIELD,         /* parent is moving into QTHREAD_STATE_PARENT_BLOCKED */

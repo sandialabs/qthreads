@@ -583,10 +583,12 @@ qt_run:
                  * more complex
                  */
                 qthread_exec(t, &my_context);
+#ifdef QTHREAD_DEBUG
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
                 me_worker->current = NULL;
 #else
                 me->current = NULL;
+#endif
 #endif
                 qthread_debug(THREAD_DETAILS, "id(%u): back from qthread_exec, state is %i\n", me->shepherd_id, t->thread_state);
                 /* now clean up, based on the thread's state */
@@ -604,6 +606,25 @@ qt_run:
                     default:
                         qthread_debug(THREAD_DETAILS, "id(%u): thread in state %i; that's illegal!\n", me->shepherd_id, t->thread_state);
                         assert(0);
+                        break;
+
+                    case QTHREAD_STATE_YIELDED_NEAR: /* reschedule it */
+                        t->thread_state = QTHREAD_STATE_RUNNING;
+                        qthread_debug(THREAD_DETAILS | SHEPHERD_DETAILS,
+                                      "id(%u): thread %i yielded near; rescheduling\n",
+                                      me->shepherd_id, t->thread_id);
+#ifdef QTHREAD_USE_SPAWNCACHE
+                        if (!qt_spawncache_spawn(t)) {
+                            qt_threadqueue_enqueue_yielded(me->ready, t);
+                        }
+#else
+                        {
+                            qthread_t *f = qt_threadqueue_dequeue_blocking(threadqueue, NULL,
+                                    QTHREAD_CASLOCK_READ_UI(me->active));
+                            qt_threadqueue_enqueue(me->ready, t);
+                            qt_threadqueue_enqueue(me->ready, f);
+                        }
+#endif
                         break;
                     case QTHREAD_STATE_YIELDED: /* reschedule it */
                         t->thread_state = QTHREAD_STATE_RUNNING;
@@ -2777,12 +2798,11 @@ int qthread_fork_new_team(qthread_f   f,
 int qthread_fork_new_subteam(qthread_f   f,
                              const void *arg,
                              aligned_t  *ret)
-{
-    qthread_debug(THREAD_CALLS, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
-    qthread_debug(TEAM_CALLS, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
+{   /*{{{*/
+    qthread_debug(THREAD_CALLS|TEAM_CALLS, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
     return qthread_spawn(f, arg, 0, ret, 0, NULL, NO_SHEPHERD,
             QTHREAD_SPAWN_NEW_SUBTEAM);
-}
+}   /*}}}*/
 
 int qthread_fork_copyargs_precond(qthread_f   f,
                                   const void *arg,
