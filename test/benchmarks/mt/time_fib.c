@@ -48,26 +48,25 @@ static aligned_t validation[] = {
 
 static aligned_t fib(void *arg_)
 {
-    aligned_t n = *(aligned_t*)arg_;
+    unsigned int n = *(unsigned int*)arg_;
 
-    switch (n) {
-	case 0: return 0;
-	case 1: return 1;
-	case 2: return 1;
+    if (n < 2) {
+	return n;
     }
 
-    aligned_t ret1 = 0, ret2 = 0;
-    aligned_t n1 = n - 1;
-    aligned_t n2 = n - 2;
+    syncvar_t ret1 = SYNCVAR_STATIC_INITIALIZER;
+    syncvar_t ret2 = SYNCVAR_STATIC_INITIALIZER;
+    unsigned int n1 = n - 1;
+    unsigned int n2 = n - 2;
 
-    qthread_fork(fib, &n1, &ret1);
-    qthread_fork(fib, &n2, &ret2);
+    qthread_fork_syncvar(fib, &n1, &ret1);
+    qthread_fork_syncvar(fib, &n2, &ret2);
     qthread_yield_near();
 
-    if (!ret1) qthread_readFF(NULL, &ret1);
-    if (!ret2) qthread_readFF(NULL, &ret2);
+    qthread_syncvar_readFF(NULL, &ret1);
+    qthread_syncvar_readFF(NULL, &ret2);
 
-    return ret1 + ret2;
+    return ret1.u.s.data + ret2.u.s.data;
 }
 
 int main(int   argc,
