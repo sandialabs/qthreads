@@ -55,7 +55,7 @@ static const int enqueue_penalty_max   = 1048576;
 static const int enqueue_penalty_min   = 1;
 static const int enqueue_penalty_limit = 20;
 
-extern TLS_DECL(qthread_shepherd_t*, shepherd_structs);
+extern TLS_DECL(qthread_shepherd_t *, shepherd_structs);
 
 // Forward declarations
 
@@ -83,8 +83,8 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
     posix_memalign((void **)&q, 64, sizeof(qt_threadqueue_t));
 
     if (q != NULL) {
-        q->empty       = 1;
-        q->stealing    = 0;
+        q->empty    = 1;
+        q->stealing = 0;
         qt_stack_create(&(q->shared_stack), 1024);
         QTHREAD_TRYLOCK_INIT(q->trylock);
         QTHREAD_FASTLOCK_INIT(q->steallock);
@@ -127,8 +127,8 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 
 static QINLINE qthread_worker_id_t qt_threadqueue_worker_id(void)
 {
-    qthread_worker_id_t  id;
-    qthread_worker_t    *worker = (qthread_worker_t *)TLS_GET(shepherd_structs);
+    qthread_worker_id_t id;
+    qthread_worker_t   *worker = (qthread_worker_t *)TLS_GET(shepherd_structs);
 
     if (worker == NULL) { return(qlib->nworkerspershep); }
     id = worker->worker_id;
@@ -142,7 +142,14 @@ int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q
 {
     return 0;
 }
-#endif
+
+int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *restrict q,
+                                                    qthread_t *restrict                t)
+{
+    return 0;
+}
+
+#endif /* ifdef QTHREAD_USE_SPAWNCACHE */
 
 /* enqueue at tail */
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
@@ -231,19 +238,19 @@ qthread_t static QINLINE *qt_threadqueue_dequeue_helper(qt_threadqueue_t *q)
     QTHREAD_FASTLOCK_LOCK(&q->steallock);
 
     if (!(q->steal_disable) && (q->stealing)) { // put steal disable inside lock because using this lock
-                                             // acquire as a backoff to allow quicker enqueues of new work
-                                             // which is done repeatly in the tree startup for parallel loops
-      t = qthread_steal(q);
-     }
+                                                // acquire as a backoff to allow quicker enqueues of new work
+                                                // which is done repeatly in the tree startup for parallel loops
+        t = qthread_steal(q);
+    }
     QTHREAD_FASTLOCK_UNLOCK(&q->steallock);
-    
+
     return(t);
 }
 
 /* dequeue at tail, unlike original qthreads implementation */
-qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t *q,
+qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
                                                     qt_threadqueue_private_t *QUNUSED(qc),
-                                                    uint_fast8_t      active)
+                                                    uint_fast8_t              active)
 {   /*{{{*/
     int                     id    = qt_threadqueue_worker_id();
     qt_threadqueue_local_t *local = q->local[id];
@@ -398,10 +405,10 @@ static int qt_threadqueue_steal(qt_threadqueue_t *victim_queue,
  */
 static QINLINE qthread_t *qthread_steal(qt_threadqueue_t *thiefq)
 {   /*{{{*/
-    int                  i, j, amtStolen;
-    qthread_shepherd_t  *victim_shepherd;
-    qt_threadqueue_t    *victim_queue;
-    qthread_worker_t    *worker =
+    int                 i, j, amtStolen;
+    qthread_shepherd_t *victim_shepherd;
+    qt_threadqueue_t   *victim_queue;
+    qthread_worker_t   *worker =
         (qthread_worker_t *)TLS_GET(shepherd_structs);
     qthread_shepherd_t *thief_shepherd =
         (qthread_shepherd_t *)worker->shepherd;
@@ -471,25 +478,26 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
 
 void INTERNAL qthread_steal_enable()
 {   /*{{{*/
-  qt_threadqueue_t *q;
-  size_t i;
-  size_t numSheps =  qthread_num_shepherds();
-  for (i = 0; i < numSheps; i++){
-    q = qlib->threadqueues[i];
-    q->steal_disable = 0;
-  }
-}   /*}}}*/
+    qt_threadqueue_t *q;
+    size_t            i;
+    size_t            numSheps = qthread_num_shepherds();
 
+    for (i = 0; i < numSheps; i++) {
+        q                = qlib->threadqueues[i];
+        q->steal_disable = 0;
+    }
+}   /*}}}*/
 
 void INTERNAL qthread_steal_disable()
 {   /*{{{*/
-  qt_threadqueue_t *q;
-  size_t i;
-  size_t numSheps =  qthread_num_shepherds();
-  for (i = 0; i < numSheps; i++){
-    q = qlib->threadqueues[i];
-    q->steal_disable = 1;
-  }
+    qt_threadqueue_t *q;
+    size_t            i;
+    size_t            numSheps = qthread_num_shepherds();
+
+    for (i = 0; i < numSheps; i++) {
+        q                = qlib->threadqueues[i];
+        q->steal_disable = 1;
+    }
 }   /*}}}*/
 
 #ifdef STEAL_PROFILE  // should give mechanism to make steal profiling optional

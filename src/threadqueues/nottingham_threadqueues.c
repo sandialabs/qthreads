@@ -213,7 +213,14 @@ int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q
 {
     return 0;
 }
-#endif
+
+int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *restrict q,
+                                                    qthread_t *restrict                t)
+{
+    return 0;
+}
+
+#endif /* ifdef QTHREAD_USE_SPAWNCACHE */
 
 /* enqueue at tail */
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
@@ -675,10 +682,11 @@ static QINLINE long qthread_steal_chunksize(void)
  */
 static QINLINE qthread_t *qthread_steal(qt_threadqueue_t *thiefq)
 {   /*{{{*/
-    int                  i;
-    extern TLS_DECL(qthread_shepherd_t*, shepherd_structs);
-    qthread_shepherd_t  *victim_shepherd;
-    qthread_worker_t    *worker =
+    int i;
+
+    extern TLS_DECL(qthread_shepherd_t *, shepherd_structs);
+    qthread_shepherd_t *victim_shepherd;
+    qthread_worker_t   *worker =
         (qthread_worker_t *)TLS_GET(shepherd_structs);
     qthread_shepherd_t *thief_shepherd =
         (qthread_shepherd_t *)worker->shepherd;
@@ -861,25 +869,26 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
 
 void INTERNAL qthread_steal_enable()
 {   /*{{{*/
-  qt_threadqueue_t *q;
-  size_t i;
-  size_t numSheps =  qthread_num_shepherds();
-  for (i = 0; i < numSheps; i++){
-    q = qlib->threadqueues[i];
-    q->steal_disable = 0;
-  }
-}   /*}}}*/
+    qt_threadqueue_t *q;
+    size_t            i;
+    size_t            numSheps = qthread_num_shepherds();
 
+    for (i = 0; i < numSheps; i++) {
+        q                = qlib->threadqueues[i];
+        q->steal_disable = 0;
+    }
+}   /*}}}*/
 
 void INTERNAL qthread_steal_disable()
 {   /*{{{*/
-  qt_threadqueue_t *q;
-  size_t i;
-  size_t numSheps =  qthread_num_shepherds();
-  for (i = 0; i < numSheps; i++){
-    q = qlib->threadqueues[i];
-    q->steal_disable = 1;
-  }
+    qt_threadqueue_t *q;
+    size_t            i;
+    size_t            numSheps = qthread_num_shepherds();
+
+    for (i = 0; i < numSheps; i++) {
+        q                = qlib->threadqueues[i];
+        q->steal_disable = 1;
+    }
 }   /*}}}*/
 
 #if 0 // begin test code, because this function

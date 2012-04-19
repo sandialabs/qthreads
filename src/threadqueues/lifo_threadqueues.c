@@ -111,7 +111,14 @@ int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q
 {
     return 0;
 }
-#endif
+
+int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *restrict q,
+                                                    qthread_t *restrict                t)
+{
+    return 0;
+}
+
+#endif /* ifdef QTHREAD_USE_SPAWNCACHE */
 
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
                                      qthread_t *restrict        t)
