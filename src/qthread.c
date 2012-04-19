@@ -614,7 +614,7 @@ qt_run:
                                       "id(%u): thread %i yielded near; rescheduling\n",
                                       me->shepherd_id, t->thread_id);
 #ifdef QTHREAD_USE_SPAWNCACHE
-                        if (!qt_spawncache_spawn(t)) {
+                        if (!qt_spawncache_yield(t)) {
                             qt_threadqueue_enqueue_yielded(me->ready, t);
                         }
 #else

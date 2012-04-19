@@ -224,16 +224,61 @@ int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q
     node->value     = t;
     node->stealable = qt_threadqueue_isstealable(t);
 
-    // Add to the tail of the `q`
-    node->prev = q->tail;
-    q->tail    = node;
-    if (q->head == NULL) {
-        q->head = node;
+    assert(q->tail == NULL || q->tail->next == NULL);
+    assert(q->head == NULL || q->head->prev == NULL);
+    if (q->on_deck) {
+        qt_threadqueue_node_t *tmp = q->on_deck;
+        // Add to the tail of the `q`
+        tmp->prev = q->tail;
+        q->tail    = tmp;
+        if (q->head == NULL) {
+            q->head = tmp;
+        } else {
+            tmp->prev->next = tmp;
+        }
+        q->qlength++;
+        if (tmp->stealable) { q->qlength_stealable++; }
+        assert(q->tail->next == NULL);
+        assert(q->head->prev == NULL);
+    }
+    q->on_deck = node;
+    return 1;
+} /*}}}*/
+
+int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *restrict q,
+                                                    qthread_t *restrict                t)
+{   /*{{{*/
+    assert(q != NULL &&
+           ((q->head == q->tail && q->qlength < 2) ||
+            (q->head != NULL && q->tail != NULL && q->qlength > 1)));
+    assert(t != NULL);
+
+    qt_threadqueue_node_t *node;
+
+    node = ALLOC_TQNODE();
+    assert(node != NULL);
+
+    //node->next      = NULL;
+    node->prev      = NULL;
+    node->value     = t;
+    node->stealable = qt_threadqueue_isstealable(t);
+
+    assert(q->tail == NULL || q->tail->next == NULL);
+    assert(q->head == NULL || q->head->prev == NULL);
+    // Add to the head of the `q`
+    node->next = q->head;
+    q->head    = node;
+    if (q->tail == NULL) {
+        q->tail = node;
     } else {
-        node->prev->next = node;
+        node->next->prev = node;
     }
     q->qlength++;
     if (node->stealable) { q->qlength_stealable++; }
+
+    assert(q->tail->next == NULL);
+    assert(q->head->prev == NULL);
+
     return 1;
 } /*}}}*/
 
@@ -284,16 +329,39 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
     while (1) {
         qt_threadqueue_node_t *node = NULL;
 
-        if (qc && (qc->qlength != 0)) {
-            if (qc->qlength == 1) {
-                node = qc->head;
+        /*{
+            qt_threadqueue_node_t *tmp = q->head;
+            while (tmp) {
+                if (tmp->value->thread_state == QTHREAD_STATE_RUNNING) {
+                    printf("... ...%zu -\n", (size_t)tmp->value->arg);
+                } else {
+                    printf("... ...%zu\n", (size_t)tmp->value->arg);
+                }
+                tmp = tmp->next;
+            }
+            printf("----------------------------\n");
+        }*/
+        if (qc && (qc->on_deck != NULL || qc->qlength != 0)) {
+            assert(qc->tail == NULL || qc->tail->next == NULL);
+            assert(qc->head == NULL || qc->head->prev == NULL);
+            if (qc->on_deck) {
+                node = qc->on_deck;
+                qc->on_deck = NULL;
+                assert(node->next == NULL);
+                assert(node->prev == NULL);
+            } else if (qc->qlength == 1) {
+                node = qc->tail;
+                assert(node->next == NULL);
+                node->prev = NULL;
+                qc->qlength = qc->qlength_stealable = 0;
+                qc->head    = qc->tail = NULL;
             } else {
                 // Pull off one node for me to do now
-                node = qc->head;
+                node = qc->tail;
 
                 // Fix up cache structure
-                qc->head       = node->next;
-                qc->head->prev = NULL;
+                qc->tail       = node->prev;
+                qc->tail->next = NULL;
 
                 qc->qlength -= 1;
                 if (node->stealable) {
@@ -301,27 +369,39 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
                 }
 
                 // Fix up node structure
-                node->next = NULL;
-                node->prev = NULL; // Obviously, this should already be the case
-
+                assert(node->next == NULL);
+                node->prev = NULL;
+            }
+            if (qc->qlength > 0) {
                 // Push remaining items onto the real queue
                 qt_threadqueue_node_t *first = qc->head;
                 qt_threadqueue_node_t *last  = qc->tail;
+                assert(last->next == NULL);
+                assert(first->prev == NULL);
                 QTHREAD_TRYLOCK_LOCK(&q->qlock);
+                /*printf("head = %p, tail = %p, len = %i\n", q->head, q->tail, q->qlength);
+                printf("first = %p, last = %p\n", first, last);*/
+                assert((q->head && q->tail) || (!q->head && !q->tail));
+                assert(q->head != first);
+                assert(q->tail != last);
                 first->prev = q->tail;
                 q->tail     = last;
                 if (q->head == NULL) {
+                    //printf("q->head == NULL\n");
                     q->head = first;
                 } else {
+                    //printf("q->head != NULL\n");
                     first->prev->next = first;
                 }
                 q->qlength           += qc->qlength;
                 q->qlength_stealable += qc->qlength_stealable;
+                assert(q->tail->next == NULL);
+                assert(q->head->prev == NULL);
                 QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
+                qc->head    = qc->tail = NULL;
+                qc->qlength = qc->qlength_stealable = 0;
             }
 
-            qc->head    = qc->tail = NULL;
-            qc->qlength = qc->qlength_stealable = 0;
         } else if (q->head) {
             QTHREAD_TRYLOCK_LOCK(&q->qlock);
             node = q->tail;

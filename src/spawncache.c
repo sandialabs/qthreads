@@ -81,4 +81,15 @@ int INTERNAL qt_spawncache_spawn(qthread_t *t)
     }
 }
 
+int INTERNAL qt_spawncache_yield(qthread_t *t)
+{
+    qt_threadqueue_private_t *cache = TLS_GET(spawn_cache);
+
+    if (cache) {
+        return qt_threadqueue_private_enqueue_yielded(cache, t);
+    } else {
+        return 0;
+    }
+}
+
 /* vim:set expandtab: */

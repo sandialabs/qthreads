@@ -8,6 +8,7 @@
 typedef struct _qt_threadqueue_node qt_threadqueue_node_t;
 typedef struct _qt_threadqueue_private {
     qt_threadqueue_node_t *head, *tail;
+    qt_threadqueue_node_t *on_deck;
     long                   qlength;
     long                   qlength_stealable;
 } qt_threadqueue_private_t;
@@ -15,6 +16,7 @@ typedef struct _qt_threadqueue_private {
 void INTERNAL                      qt_spawncache_init(void);
 qt_threadqueue_private_t INTERNAL *qt_init_local_spawncache(void);
 int INTERNAL                       qt_spawncache_spawn(qthread_t *t);
+int INTERNAL                       qt_spawncache_yield(qthread_t *t);
 
 #endif // ifndef QT_SPAWNCACHE_H
 /* vim:set expandtab: */
