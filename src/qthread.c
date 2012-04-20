@@ -3330,9 +3330,9 @@ void INTERNAL qthread_back_to_master2(qthread_t *t)
     VALGRIND_MAKE_MEM_DEFINED(t->rdata->return_context, sizeof(qt_context_t));
 #endif
 #ifdef HAVE_NATIVE_MAKECONTEXT
-    qassert(setcontext(t->rdata->return_context), 0);
+    setcontext(t->rdata->return_context);
 #else
-    qassert(qt_setmctxt(&t->rdata->return_context->uc_mcontext), 0);
+    qt_setmctxt(&t->rdata->return_context->uc_mcontext);
 #endif
 }                      /*}}} */
 
