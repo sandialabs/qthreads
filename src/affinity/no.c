@@ -29,13 +29,13 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
 
 qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
 {                                                          /*{{{ */
-#if defined(HAVE_SYSCONF) && defined(_SC_NPROCESSORS_CONF) /* Linux */
+#if defined(HAVE_SYSCONF) && defined(HAVE_SC_NPROCESSORS_CONF) /* Linux */
     long ret = sysconf(_SC_NPROCESSORS_CONF);
     qthread_debug(AFFINITY_CALLS, "based on sysconf(), guessing %i shepherds\n",
                   (int)ret);
     return (ret > 0) ? ret : 1;
 
-#elif defined(HAVE_SYSCTL) && defined(CTL_HW) && defined(HW_NCPU)
+#elif defined(HAVE_SYSCTL) && defined(HAVE_HW_NCPU)
     int      name[2] = { CTL_HW, HW_NCPU };
     uint32_t oldv;
     size_t   oldvlen = sizeof(oldv);

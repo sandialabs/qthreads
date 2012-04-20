@@ -947,6 +947,8 @@ AS_IF([test "x$qthread_implementation" = "xunix"],
              [QTHREAD_CHECK_PLPA([qthread_topo=plpa],
                                  [AS_IF([test "x$qthread_topo" != xno],
                                         [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
+       AS_IF([test "x$qthread_topo" = xno],
+             [QTHREAD_CHECK_LINUX])
        ])
 ])
 
