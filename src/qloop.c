@@ -392,29 +392,16 @@ static void qt_loop_step_inner(const size_t         start,
             threadct++;
         }
     } else {
-        qassert(qthread_fork_syncvar_copyargs_to
+      /*
+	qassert(qthread_fork_syncvar_copyargs_to
                     ((qthread_f)qloop_step_wrapper, qwa, 0, rets, (qthread_shepherd_id_t)0), QTHREAD_SUCCESS);
+      */
+      qloop_step_wrapper(&qwa[0]); // use this thread as the root and start the
+                                   // others inside qloop_step_wrapper
+                                   // saves a timeout in the following loop to
+                                   // get the last thread working on the loop
     }
 
-    /* qloop_step_wrapper now tree forks all of the children rather than having to do all of them here - 4/1/11 AKP */
-    /* need to do something about future forks 4/1/11 AKP */
-    /*
-     *  if (future) {
-     *      future_fork_syncvar_to((qthread_f)qloop_step_wrapper,
-     *                             qwa + threadct,
-     *                             rets + i,
-     *                             (qthread_shepherd_id_t)(threadct % qthread_num_shepherds()));
-     *  } else {
-     *      qassert(qthread_fork_syncvar_copyargs_to((qthread_f)qloop_step_wrapper,
-     *                                               qwa + threadct,
-     *                                               0,
-     *                                               rets + i,
-     *                                               (qthread_shepherd_id_t)threadct),
-     *              QTHREAD_SUCCESS);
-     *  }
-     *  threadct++;
-     * }
-     */
     for (i = 0; i < steps; i++) {
         qthread_syncvar_readFF(NULL, rets + i);
     }
@@ -1934,23 +1921,29 @@ static void qt_naked_parallel_for(void *nakedArg) // This function must match qt
     qt_parallel_qfor(func, startat, stopat, step, argptr);
 } /*}}}*/
 
+static qt_mpool generic_rose_pool = NULL;
+static aligned_t poolUninit = 1;
+
 qqloop_step_handle_t *qt_loop_rose_queue_create(int64_t start,
                                                 int64_t stop,
                                                 int64_t incr)
 {
     qqloop_step_handle_t *ret;
     int                   array_size = 0;
-
 # ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     array_size = qthread_num_workers();
 # else
     array_size = qthread_num_shepherds();
 # endif
-    int malloc_size = sizeof(qqloop_step_handle_t) +   // base size
-                      array_size * sizeof(aligned_t) + // static iteration array size
-                      array_size * sizeof(aligned_t) + // current iteration array size
-                      array_size * sizeof(aligned_t);  // table for current_worker array
-    ret = (qqloop_step_handle_t *)malloc(malloc_size);
+    if (poolUninit) {
+      int malloc_size = sizeof(qqloop_step_handle_t) +   // base size
+	array_size * sizeof(aligned_t) + // static iteration array size
+	array_size * sizeof(aligned_t) + // current iteration array size
+	array_size * sizeof(aligned_t);  // table for current_worker array
+      poolUninit=0;
+      generic_rose_pool = qt_mpool_create(malloc_size);
+    }
+    ret = qt_mpool_alloc(generic_rose_pool);
 
     ret->workers          = 0;
     ret->next             = NULL;
@@ -1979,7 +1972,9 @@ qqloop_step_handle_t *qt_loop_rose_queue_create(int64_t start,
 }
 
 void qt_loop_rose_queue_free(qqloop_step_handle_t *qqloop)
-{}
+{
+  qt_mpool_free(generic_rose_pool,qqloop);
+}
 
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
 /* vim:set expandtab: */
