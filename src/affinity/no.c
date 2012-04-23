@@ -2,6 +2,14 @@
 # include "config.h"
 #endif
 
+#if defined(HAVE_SYSCONF) && defined(HAVE_SC_NPROCESSORS_CONF) /* Linux */
+# include <unistd.h>
+#elif defined(HAVE_SYSCTL) && defined(HAVE_HW_NCPU)
+# include <unistd.h>
+# include <linux/sysctl.h>
+#endif
+
+
 #include "qthread_innards.h"
 #include "qt_affinity.h"
 #include "qt_debug.h"
@@ -45,6 +53,10 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
                       "based on sysctl(), guessing %i shepherds\n",
                       (int)oldv);
         return oldv;
+    } else {
+        qthread_debug(AFFINITY_CALLS,
+                      "sysctl() returned an error, assuming 1 shepherd\n");
+        return 1;
     }
 #endif /* if defined(HAVE_SYSCONF) && defined(_SC_NPROCESSORS_CONF) */
     qthread_debug(AFFINITY_CALLS,
