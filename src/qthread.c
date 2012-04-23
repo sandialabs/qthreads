@@ -2537,16 +2537,6 @@ void qthread_yield_(int k)
  *
  * @return int Returns QTHREAD_SUCCESS (0) on success or a non-zero error value.
  */
-enum _uberfork_features {
-    UF_FUTURE,
-    UF_PARENT,
-    UF_SIMPLE,
-    UF_NEW_TEAM,
-    UF_NEW_SUBTEAM,
-    UF_RET_SYNCVAR_T,
-    UF_PC_SYNCVAR_T
-};
-
 #define QTHREAD_SPAWN_MASK_TEAMS   (QTHREAD_SPAWN_NEW_TEAM|QTHREAD_SPAWN_NEW_SUBTEAM)
 
 int qthread_spawn(qthread_f             f,
@@ -2744,7 +2734,11 @@ int qthread_spawn(qthread_f             f,
         int test = QTHREAD_SUCCESS;
         if (feature_flag & QTHREAD_SPAWN_RET_SYNCVAR_T) {
             t->flags |= QTHREAD_RET_IS_SYNCVAR;
-            test      = qthread_syncvar_empty((syncvar_t *)ret);
+            if (qthread_syncvar_status((syncvar_t *)ret)) {
+                test = qthread_syncvar_empty((syncvar_t *)ret);
+            } else {
+                test = QTHREAD_SUCCESS;
+            }
         } else {
             // QTHREAD_SPAWN_RET_ALIGNED
             test = qthread_empty(ret);
