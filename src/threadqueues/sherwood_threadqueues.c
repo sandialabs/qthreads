@@ -57,6 +57,18 @@ struct _qt_threadqueue {
 static aligned_t steal_disable = 0;
 // static long steal_chunksize = 0;
 
+#ifdef STEAL_PROFILE
+# define STEAL_CALLED(shep)     qthread_incr( & ((shep)->steal_called), 1)
+# define STEAL_ATTEMPTED(shep)  qthread_incr( & ((shep)->steal_attempted), 1)
+# define STEAL_SUCCESSFUL(shep) qthread_incr( & ((shep)->steal_successful), 1)
+# define STEAL_FAILED(shep)     qthread_incr( & ((shep)->steal_failed), 1)
+#else
+# define STEAL_CALLED(shep)     do {} while(0)
+# define STEAL_ATTEMPTED(shep)  do {} while(0)
+# define STEAL_SUCCESSFUL(shep) do {} while(0)
+# define STEAL_FAILED(shep)     do {} while(0)
+#endif
+
 // Forward declarations
 qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h,
                                                              qt_threadqueue_t *v);
@@ -230,7 +242,7 @@ int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q
         qt_threadqueue_node_t *tmp = q->on_deck;
         // Add to the tail of the `q`
         tmp->prev = q->tail;
-        q->tail    = tmp;
+        q->tail   = tmp;
         if (q->head == NULL) {
             q->head = tmp;
         } else {
@@ -258,7 +270,7 @@ int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *re
     node = ALLOC_TQNODE();
     assert(node != NULL);
 
-    //node->next      = NULL;
+    // node->next      = NULL;
     node->prev      = NULL;
     node->value     = t;
     node->stealable = qt_threadqueue_isstealable(t);
@@ -329,18 +341,18 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
     while (1) {
         qt_threadqueue_node_t *node = NULL;
 
-        if (qc && (qc->on_deck != NULL || qc->qlength != 0)) {
+        if (qc && ((qc->on_deck != NULL) || (qc->qlength != 0))) {
             assert(qc->tail == NULL || qc->tail->next == NULL);
             assert(qc->head == NULL || qc->head->prev == NULL);
             if (qc->on_deck) {
-                node = qc->on_deck;
+                node        = qc->on_deck;
                 qc->on_deck = NULL;
                 assert(node->next == NULL);
                 assert(node->prev == NULL);
             } else if (qc->qlength == 1) {
                 node = qc->tail;
                 assert(node->next == NULL);
-                node->prev = NULL;
+                node->prev  = NULL;
                 qc->qlength = qc->qlength_stealable = 0;
                 qc->head    = qc->tail = NULL;
             } else {
@@ -385,7 +397,6 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
                 qc->head    = qc->tail = NULL;
                 qc->qlength = qc->qlength_stealable = 0;
             }
-
         } else if (q->head) {
             QTHREAD_TRYLOCK_LOCK(&q->qlock);
             node = q->tail;
@@ -577,9 +588,7 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
 
     assert(thief_shepherd);
 
-#ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
-    qthread_incr(&thief_shepherd->steal_called, 1);
-#endif
+    STEAL_CALLED(thief_shepherd);
     if (thief_shepherd->stealing) {
         // this means that someone else on this shepherd is already stealing; I will spin on my own queue.
         return NULL;
@@ -598,9 +607,7 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
             return NULL;
         }
     }
-#ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
-    qthread_incr(&thief_shepherd->steal_attempted, 1);
-#endif
+    STEAL_ATTEMPTED(thief_shepherd);
 
     qthread_shepherd_id_t        i               = 0;
     qthread_shepherd_t *const    shepherds       = qlib->shepherds;
@@ -618,16 +625,11 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
                     surplus->prev = NULL;
                     qt_threadqueue_enqueue_multiple(thief_shepherd->ready, surplus);
                 }
-#ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
-                qthread_incr(&thief_shepherd->steal_successful, 1);
-#endif
+                STEAL_SUCCESSFUL(thief_shepherd);
                 break;
+            } else {
+                STEAL_FAILED(thief_shepherd);
             }
-#ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
-            else {
-                qthread_incr(&thief_shepherd->steal_failed, 1);
-            }
-#endif
         }
         if (0 < thief_shepherd->ready->qlength) {  // work at home quit steal attempt
             break;
