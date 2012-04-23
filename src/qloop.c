@@ -100,7 +100,7 @@ static aligned_t qloop_wrapper(struct qloop_wrapper_args *const restrict arg)
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 struct qloop_step_wrapper_args {
     qt_loop_step_f func;
-    size_t         startat, stopat, step, id;
+    size_t         startat, stopat, step, id, rootNum;
     void          *arg;
     size_t         level;
     void          *rets;
@@ -142,17 +142,22 @@ static aligned_t qloop_step_wrapper(struct qloop_step_wrapper_args *const restri
 
     size_t level  = arg->level;
     size_t my_id  = arg->id;
+    if ((level != 0) & (my_id == 0)){
+      my_id = arg->rootNum;
+    }
     size_t new_id = my_id + (1 << level);
     while (new_id <= tot_workers) {       // create some children? (tot_workers zero based)
-        size_t offset = new_id - my_id;   // need how much past current locations
-        (arg + offset)->level = ++level;  // increase depth for created thread
-        qthread_fork_syncvar_copyargs_to((qthread_f)qloop_step_wrapper,
-                                         arg + offset,
-                                         0,
-                                         ((syncvar_t *)arg->rets) + new_id,
-                                         new_id);
-
-        new_id = (1 << level) + my_id;    // level has been incremented
+      if (new_id == arg->rootNum) new_id = 0; // move thread that lands on root to zero --
+                                              //  mantains one per worker
+      size_t offset = new_id - my_id;   // need how much past current locations
+      (arg + offset)->level = ++level;  // increase depth for created thread
+      qthread_fork_syncvar_copyargs_to((qthread_f)qloop_step_wrapper,
+				       arg + offset,
+				       0,
+				       ((syncvar_t *)arg->rets) + new_id,
+				       new_id);
+      
+      new_id = (1 << level) + my_id;    // level has been incremented
     }
 
     // and every one executes their piece
@@ -367,6 +372,7 @@ static void qt_loop_step_inner(const size_t         start,
     assert(qwa);
     assert(rets);
     assert(func);
+    aligned_t rootNum = qthread_barrier_id(); // what thread is the root of the tree?
 
     for (i = start; i < stop; i += stride) {
         qwa[threadct].func    = func;
@@ -377,6 +383,7 @@ static void qt_loop_step_inner(const size_t         start,
         qwa[threadct].id      = threadct;
         qwa[threadct].level   = 0;
         qwa[threadct].rets    = rets;
+        qwa[threadct].rootNum = rootNum;
 
 	//        qthread_syncvar_empty(rets + threadct);
         threadct++;
