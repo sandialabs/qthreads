@@ -73,7 +73,7 @@ typedef struct {
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) ||         \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) ||         \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64) ||   \
-    defined(__tile__))
+    (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO))
 # define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked) do { \
         (addr)->u.w = (unlocked);                            \
 } while (0)
@@ -201,7 +201,7 @@ int qthread_syncvar_status(syncvar_t *const v)
     eflags_t     e = { 0, 0, 0, 0, 0 };
     unsigned int realret;
 
-#ifdef __tile__
+#if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO)
     uint64_t ret = qthread_mwaitc(v, 0xff, INT_MAX, &e);
     qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
     realret = (e.of << 2) | (e.pf << 1) | e.sf;
@@ -232,7 +232,7 @@ int qthread_syncvar_status(syncvar_t *const v)
     realret = v->u.s.state;
     UNLOCK_THIS_UNMODIFIED_SYNCVAR(v, BUILD_UNLOCKED_SYNCVAR(v->u.s.data, v->u.s.state));
     return (realret & 0x2) ? 0 : 1;
-#endif /* __tile__ */
+#endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO) */
 }                                      /*}}} */
 
 static aligned_t qthread_syncvar_blocker_thread(void *arg)
@@ -705,7 +705,7 @@ int INTERNAL qthread_syncvar_readFE_nb(uint64_t *restrict const  dest,
 
 static QINLINE void qthread_syncvar_schedule(qthread_t          *waiter,
                                              qthread_shepherd_t *shep)
-{/*{{{*/
+{   /*{{{*/
     assert(waiter);
     assert(shep);
     waiter->thread_state = QTHREAD_STATE_RUNNING;
@@ -715,9 +715,9 @@ static QINLINE void qthread_syncvar_schedule(qthread_t          *waiter,
 #ifdef QTHREAD_USE_SPAWNCACHE
         if (!qt_spawncache_spawn(waiter))
 #endif
-            qt_threadqueue_enqueue(shep->ready, waiter);
+        qt_threadqueue_enqueue(shep->ready, waiter);
     }
-}/*}}}*/
+} /*}}}*/
 
 static QINLINE void qthread_syncvar_gotlock_empty(qthread_shepherd_t *shep,
                                                   qthread_addrstat_t *m,
