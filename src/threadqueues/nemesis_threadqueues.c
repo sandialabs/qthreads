@@ -177,20 +177,27 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 
 static inline NEMESIS_entry *qt_internal_NEMESIS_dequeue(NEMESIS_queue *q)
 {                                      /*{{{ */
-    NEMESIS_entry *retval = q->head;
+    if (!q->shadow_head) {
+        if (!q->head) {
+            return NULL;
+        }
+        q->shadow_head = q->head;
+        q->head        = NULL;
+    }
+    NEMESIS_entry *retval = q->shadow_head;
 
     if ((retval != NULL) && (retval != (void *)1)) {
         if (retval->next != NULL) {
-            q->head      = retval->next;
-            retval->next = NULL;
+            q->shadow_head = retval->next;
+            retval->next   = NULL;
         } else {
             NEMESIS_entry *old;
-            q->head = NULL;
-            old     = qthread_cas_ptr(&(q->tail), retval, NULL);
+            q->shadow_head = NULL;
+            old            = qthread_cas_ptr(&(q->tail), retval, NULL);
             if (old != retval) {
                 while (retval->next == NULL) SPINLOCK_BODY();
-                q->head      = retval->next;
-                retval->next = NULL;
+                q->shadow_head = retval->next;
+                retval->next   = NULL;
             }
         }
     }
