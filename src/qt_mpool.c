@@ -33,6 +33,7 @@
 #include "qthread_asserts.h"
 #include "qt_debug.h"
 #include "qt_gcd.h"                    /* for qt_lcm() */
+#include "qt_macros.h"
 
 #ifdef HAVE_GETPAGESIZE
 # include <unistd.h>
@@ -46,12 +47,17 @@ static QINLINE int getpagesize()
 
 typedef struct threadlocal_cache_s qt_mpool_threadlocal_cache_t;
 
+static TLS_DECL(qt_mpool_threadlocal_cache_t *, pool_caches);
+static TLS_DECL(uint64_t, pool_cache_max);
+static aligned_t pool_cache_global_max = 0;
+
 struct qt_mpool_s {
     size_t                        item_size;
     size_t                        alloc_size;
     size_t                        items_per_alloc;
     size_t                        alignment;
 
+    size_t                        offset;
     pthread_key_t                 threadlocal_cache;
     qt_mpool_threadlocal_cache_t *caches;  // for cleanup
 
@@ -71,11 +77,9 @@ typedef struct qt_mpool_cache_entry_s {
 
 struct threadlocal_cache_s {
     qt_mpool_cache_t             *cache;
-    qt_mpool_cache_t             *block_tail;
     size_t                        count;
-
     uint8_t                      *block;
-    size_t                        i;
+    unsigned int                  i;
     qt_mpool_threadlocal_cache_t *next;  // for cleanup
 };
 
@@ -212,6 +216,7 @@ qt_mpool qt_mpool_create_aligned(size_t item_size,
     qassert_goto((pool->alloc_list != NULL), errexit);
     pool->alloc_list[0]  = NULL;
     pool->alloc_list_pos = 0;
+    pool->offset         = qthread_incr(&pool_cache_global_max, 1);
     return pool;
 
     qgoto(errexit);
@@ -224,7 +229,6 @@ qt_mpool qt_mpool_create_aligned(size_t item_size,
 void *qt_mpool_alloc(qt_mpool pool)
 {   /*{{{*/
     qt_mpool_threadlocal_cache_t *tc;
-    qt_mpool_cache_t             *cache = NULL;
     size_t                        cnt;
 
     qthread_debug(MPOOL_CALLS, "pool:%p\n", pool);
@@ -232,22 +236,25 @@ void *qt_mpool_alloc(qt_mpool pool)
 
     tc = pthread_getspecific(pool->threadlocal_cache);
     if (NULL == tc) {
-        tc = calloc(1, sizeof(qt_mpool_threadlocal_cache_t));
+        tc = memalign(64, sizeof(qt_mpool_threadlocal_cache_t));
+        // tc = calloc(1, sizeof(qt_mpool_threadlocal_cache_t));
         assert(tc);
+        tc->cache = NULL;
+        tc->count = 0;
+        tc->block = NULL;
+        tc->i     = 0;
         do {
             tc->next = pool->caches;
         } while (qthread_cas_ptr(&pool->caches, tc->next, tc) != tc->next);
         pthread_setspecific(pool->threadlocal_cache, tc);
     }
-    cache = tc->cache;
-    qthread_debug(MPOOL_BEHAVIOR, "->cache:%p (bt:%p) cnt:%u tc:bt:%p\n", cache, cache ? cache->block_tail : NULL, (unsigned int)tc->count, tc->block_tail);
-    if (cache) {
-        void *ret = (void *)cache;
+    qthread_debug(MPOOL_BEHAVIOR, "->cache:%p (bt:%p) cnt:%u\n", cache, cache ? cache->block_tail : NULL, (unsigned int)tc->count);
+    if (tc->cache) {
+        qt_mpool_cache_t *cache = tc->cache;
         qthread_debug(MPOOL_DETAILS, "->...cached count:%zu\n", (size_t)tc->count - 1);
-        tc->cache      = cache->next;
-        tc->block_tail = (cache->next) ? cache->next->block_tail : NULL;
+        tc->cache = cache->next;
         --tc->count;
-        return ret;
+        return cache;
     } else if (tc->block) {
         void *ret = &(tc->block[tc->i * pool->item_size]);
         qthread_debug(MPOOL_DETAILS, "->...block count:%zu\n", (size_t)tc->i);
@@ -256,7 +263,9 @@ void *qt_mpool_alloc(qt_mpool pool)
         }
         return ret;
     } else {
-        const size_t items_per_alloc = pool->items_per_alloc;
+        const size_t      items_per_alloc = pool->items_per_alloc;
+        qt_mpool_cache_t *cache           = NULL;
+
         cnt = tc->count;
         /* cache is empty; need to fill it */
         assert(cnt == 0);
@@ -299,9 +308,8 @@ void *qt_mpool_alloc(qt_mpool pool)
             return p;
         } else {
             qthread_debug(MPOOL_BEHAVIOR, "->...from_global_pool count:%zu\n", (size_t)(cnt - 1));
-            tc->cache      = cache->next;
-            tc->block_tail = cache->block_tail;
-            tc->count      = cnt - 1;
+            tc->cache = cache->next;
+            tc->count = cnt - 1;
             // cache->next       = NULL; // unnecessary
             // cache->block_tail = NULL; // unnecessary
             return cache;
@@ -332,17 +340,15 @@ void qt_mpool_free(qt_mpool pool,
     }
     cache = tc->cache;
     cnt   = tc->count;
-    qthread_debug(MPOOL_DETAILS, "->cache:%p (bt:%p) cnt:%u tc:bt:%p\n", cache, cache ? cache->block_tail : NULL, (unsigned int)cnt, tc->block_tail);
+    qthread_debug(MPOOL_DETAILS, "->cache:%p (bt:%p) cnt:%u\n", cache, cache ? cache->block_tail : NULL, (unsigned int)cnt);
     if (cache) {
         assert(cnt != 0);
         n->next       = cache;
-        n->block_tail = tc->block_tail;
-        assert(cache == NULL || tc->block_tail == cache->block_tail);
+        n->block_tail = cache->block_tail; // cache is likely to be IN cache, so this won't be slow
     } else {
         assert(cnt == 0);
-        n->next        = NULL;
-        n->block_tail  = n;
-        tc->block_tail = n;
+        n->next       = NULL;
+        n->block_tail = n;
     }
     cnt++;
     if (cnt >= (items_per_alloc * 2)) {
@@ -362,8 +368,7 @@ void qt_mpool_free(qt_mpool pool,
         cnt -= items_per_alloc;
     } else if (cnt == items_per_alloc + 1) {
         qthread_debug(MPOOL_BEHAVIOR, "->chop_block\n");
-        n->block_tail  = n;
-        tc->block_tail = n;
+        n->block_tail = n;
     }
     tc->cache = n;
     tc->count = cnt;
