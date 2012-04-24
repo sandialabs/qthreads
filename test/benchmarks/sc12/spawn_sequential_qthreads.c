@@ -35,7 +35,7 @@ int main(int   argc,
 
     qtimer_start(timer);
     for (uint64_t i = 0; i < count; i++) {
-        qthread_fork(null_task, NULL, NULL);
+        qthread_spawn(null_task, NULL, 0, NULL, 0, NULL, NO_SHEPHERD, QTHREAD_SPAWN_SIMPLE);
     }
     do {
         qthread_yield();
