@@ -16,5 +16,7 @@ qt_mpool qt_mpool_create_aligned(size_t       item_size,
                                  const size_t alignment);
 void qt_mpool_destroy(qt_mpool pool);
 
+void qt_mpool_subsystem_init(void);
+
 #endif // ifndef QT_MPOOL_H
 /* vim:set expandtab: */

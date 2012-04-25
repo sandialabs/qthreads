@@ -34,6 +34,7 @@
 #include "qt_debug.h"
 #include "qt_gcd.h"                    /* for qt_lcm() */
 #include "qt_macros.h"
+#include "qthread_innards.h"
 
 #ifdef HAVE_GETPAGESIZE
 # include <unistd.h>
@@ -88,6 +89,17 @@ struct threadlocal_cache_s {
     uint_fast32_t                 i;
     qt_mpool_threadlocal_cache_t *next;  // for cleanup
 };
+
+static void qt_mpool_subsystem_shutdown(void)
+{
+    TLS_DELETE(pool_caches);
+    TLS_DELETE(pool_cache_count);
+}
+
+void qt_mpool_subsystem_init(void)
+{
+    qthread_internal_cleanup_late(qt_mpool_subsystem_shutdown);
+}
 
 /* local constants */
 static size_t pagesize = 0;
@@ -248,6 +260,7 @@ void *qt_mpool_alloc(qt_mpool pool)
     {
         uintptr_t count_caches = (uintptr_t)TLS_GET(pool_cache_count);
         if (count_caches < pool->offset) {
+            /* this realloc'd memory will be leaked */
             qt_mpool_threadlocal_cache_t *newtc = realloc(tc, sizeof(qt_mpool_threadlocal_cache_t) * pool->offset);
             assert(newtc);
             tc = newtc;
@@ -360,6 +373,7 @@ void qt_mpool_free(qt_mpool pool,
     {
         uintptr_t count_caches = (uintptr_t)TLS_GET(pool_cache_count);
         if (count_caches < pool->offset) {
+            /* this realloc'd memory will be leaked */
             qt_mpool_threadlocal_cache_t *newtc = realloc(tc, sizeof(qt_mpool_threadlocal_cache_t) * pool->offset);
             assert(newtc);
             tc = newtc;

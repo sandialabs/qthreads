@@ -845,6 +845,7 @@ int qthread_initialize(void)
     }
 #endif
 
+    qt_mpool_subsystem_init();
     qt_affinity_init(&nshepherds, &nworkerspershep);
 
     if (hw_par != 0) {
