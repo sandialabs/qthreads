@@ -77,9 +77,9 @@ typedef struct qt_mpool_cache_entry_s {
 
 struct threadlocal_cache_s {
     qt_mpool_cache_t             *cache;
-    size_t                        count;
+    uint_fast16_t                 count;
     uint8_t                      *block;
-    unsigned int                  i;
+    uint_fast32_t                 i;
     qt_mpool_threadlocal_cache_t *next;  // for cleanup
 };
 
