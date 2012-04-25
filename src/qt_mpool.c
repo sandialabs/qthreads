@@ -47,9 +47,12 @@ static QINLINE int getpagesize()
 
 typedef struct threadlocal_cache_s qt_mpool_threadlocal_cache_t;
 
+#define GLOBAL_TLS 1
+#ifdef GLOBAL_TLS
 static TLS_DECL(qt_mpool_threadlocal_cache_t *, pool_caches);
-static TLS_DECL(uint64_t, pool_cache_max);
-static aligned_t pool_cache_global_max = 0;
+static TLS_DECL(uintptr_t, pool_cache_count);
+static aligned_t pool_cache_global_max = 1;
+#endif
 
 struct qt_mpool_s {
     size_t                        item_size;
@@ -57,8 +60,11 @@ struct qt_mpool_s {
     size_t                        items_per_alloc;
     size_t                        alignment;
 
+#ifdef GLOBAL_TLS
     size_t                        offset;
+#else
     pthread_key_t                 threadlocal_cache;
+#endif
     qt_mpool_threadlocal_cache_t *caches;  // for cleanup
 
     QTHREAD_FASTLOCK_TYPE         reuse_lock;
@@ -209,14 +215,17 @@ qt_mpool qt_mpool_create_aligned(size_t item_size,
     pool->reuse_pool      = NULL;
     QTHREAD_FASTLOCK_INIT(pool->reuse_lock);
     QTHREAD_FASTLOCK_INIT(pool->pool_lock);
+#ifdef GLOBAL_TLS
+    pool->offset         = qthread_incr(&pool_cache_global_max, 1);
+#else
     pthread_key_create(&pool->threadlocal_cache, NULL);
+#endif
     /* this assumes that pagesize is a multiple of sizeof(void*) */
     assert(pagesize % sizeof(void *) == 0);
     pool->alloc_list = calloc(1, pagesize);
     qassert_goto((pool->alloc_list != NULL), errexit);
     pool->alloc_list[0]  = NULL;
     pool->alloc_list_pos = 0;
-    pool->offset         = qthread_incr(&pool_cache_global_max, 1);
     return pool;
 
     qgoto(errexit);
@@ -234,6 +243,22 @@ void *qt_mpool_alloc(qt_mpool pool)
     qthread_debug(MPOOL_CALLS, "pool:%p\n", pool);
     qassert_ret((pool != NULL), NULL);
 
+#ifdef GLOBAL_TLS
+    tc = TLS_GET(pool_caches);
+    {
+        uintptr_t count_caches = (uintptr_t)TLS_GET(pool_cache_count);
+        if (count_caches < pool->offset) {
+            qt_mpool_threadlocal_cache_t *newtc = realloc(tc, sizeof(qt_mpool_threadlocal_cache_t) * pool->offset);
+            assert(newtc);
+            tc = newtc;
+            memset(newtc + count_caches, 0, sizeof(qt_mpool_threadlocal_cache_t) * (pool->offset - count_caches));
+            count_caches = pool->offset;
+            TLS_SET(pool_caches, newtc);
+            TLS_SET(pool_cache_count, count_caches);
+        }
+    }
+    tc += (pool->offset - 1);
+#else
     tc = pthread_getspecific(pool->threadlocal_cache);
     if (NULL == tc) {
         tc = memalign(64, sizeof(qt_mpool_threadlocal_cache_t));
@@ -248,7 +273,8 @@ void *qt_mpool_alloc(qt_mpool pool)
         } while (qthread_cas_ptr(&pool->caches, tc->next, tc) != tc->next);
         pthread_setspecific(pool->threadlocal_cache, tc);
     }
-    qthread_debug(MPOOL_BEHAVIOR, "->cache:%p (bt:%p) cnt:%u\n", cache, cache ? cache->block_tail : NULL, (unsigned int)tc->count);
+#endif
+    qthread_debug(MPOOL_BEHAVIOR, "->cache:%p (bt:%p) cnt:%u\n", tc->cache, tc->cache ? tc->cache->block_tail : NULL, (unsigned int)tc->count);
     if (tc->cache) {
         qt_mpool_cache_t *cache = tc->cache;
         qthread_debug(MPOOL_DETAILS, "->...cached count:%zu\n", (size_t)tc->count - 1);
@@ -329,6 +355,22 @@ void qt_mpool_free(qt_mpool pool,
     qthread_debug(MPOOL_CALLS, "pool=%p mem=%p\n", pool, mem);
     qassert_retvoid((mem != NULL));
     qassert_retvoid((pool != NULL));
+#ifdef GLOBAL_TLS
+    tc = TLS_GET(pool_caches);
+    {
+        uintptr_t count_caches = (uintptr_t)TLS_GET(pool_cache_count);
+        if (count_caches < pool->offset) {
+            qt_mpool_threadlocal_cache_t *newtc = realloc(tc, sizeof(qt_mpool_threadlocal_cache_t) * pool->offset);
+            assert(newtc);
+            tc = newtc;
+            memset(newtc + count_caches, 0, sizeof(qt_mpool_threadlocal_cache_t) * (pool->offset - count_caches));
+            count_caches = pool->offset;
+            TLS_SET(pool_caches, newtc);
+            TLS_SET(pool_cache_count, count_caches);
+        }
+    }
+    tc += (pool->offset - 1);
+#else
     tc = pthread_getspecific(pool->threadlocal_cache);
     if (NULL == tc) {
         tc = calloc(1, sizeof(qt_mpool_threadlocal_cache_t));
@@ -338,6 +380,7 @@ void qt_mpool_free(qt_mpool pool,
         } while (qthread_cas_ptr(&pool->caches, tc->next, tc) != tc->next);
         pthread_setspecific(pool->threadlocal_cache, tc);
     }
+#endif
     cache = tc->cache;
     cnt   = tc->count;
     qthread_debug(MPOOL_DETAILS, "->cache:%p (bt:%p) cnt:%u\n", cache, cache ? cache->block_tail : NULL, (unsigned int)cnt);
@@ -400,7 +443,9 @@ void qt_mpool_destroy(qt_mpool pool)
         pool->caches = freeme->next;
         free(freeme);
     }
+#ifndef GLOBAL_TLS
     pthread_key_delete(pool->threadlocal_cache);
+#endif
     QTHREAD_FASTLOCK_DESTROY(pool->pool_lock);
     QTHREAD_FASTLOCK_DESTROY(pool->reuse_lock);
     VALGRIND_DESTROY_MEMPOOL(pool);
