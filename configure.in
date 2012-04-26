@@ -592,16 +592,18 @@ AX_C_RESTRICT
 AC_C_VOLATILE
 AS_IF([test "x$enable_third_party_benchmarks" = xyes],
       [AX_OPENMP([have_openmp=yes], [have_openmp=no])
+       AC_CHECK_FUNC([__cilkrts_get_nworkers], [have_cilk=yes], [have_cilk=no])
+       AC_LANG_PUSH([C++])
        AC_CHECK_HEADER([tbb/task.h],
                        [have_tbb=yes],
                        [have_tbb=no])
-       AC_CHECK_FUNC([__cilkrts_get_nworkers], [have_cilk=yes], [have_cilk=no])
        AS_IF([test "x$have_tbb" = xyes],
              [LIBS_saved="$LIBS"
-              AC_SEARCH_LIB([tbb],[main],
-                            [TBB_LIBS="-ltbb"
-                             LIBS="$LIBS_saved"],
-                            [have_tbb=no])])
+              AC_SEARCH_LIBS([tbb],[main],
+                             [TBB_LIBS="-ltbb"
+                              LIBS="$LIBS_saved"],
+                             [have_tbb=no])])
+       AC_LANG_POP([C++])
        ])
 
 # Check for native TLS support (thread-local-storage)
