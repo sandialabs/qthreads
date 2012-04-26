@@ -54,8 +54,8 @@ struct _qt_threadqueue {
 #endif
 } /* qt_threadqueue_t */;
 
-static aligned_t steal_disable = 0;
-// static long steal_chunksize = 0;
+static aligned_t steal_disable   = 0;
+static long      steal_chunksize = 0;
 
 #ifdef STEAL_PROFILE
 # define STEAL_CALLED(shep)     qthread_incr( & ((shep)->steal_called), 1)
@@ -104,7 +104,11 @@ static QINLINE qt_threadqueue_node_t *ALLOC_TQNODE(void)
 }                                      /*}}} */
 
 # define FREE_TQNODE(t) free(t)
-void INTERNAL qt_threadqueue_subsystem_init(void) {}
+void INTERNAL qt_threadqueue_subsystem_init(void)
+{
+    steal_chunksize = qt_internal_get_env_num("STEAL_CHUNK", 0, 0);
+}
+
 #else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 qt_threadqueue_pools_t generic_threadqueue_pools;
 # define ALLOC_THREADQUEUE() (qt_threadqueue_t *)qt_mpool_alloc(generic_threadqueue_pools.queues)
@@ -129,6 +133,7 @@ void INTERNAL qt_threadqueue_subsystem_init(void)
                                                                qthread_cacheline());
     generic_threadqueue_pools.nodes = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t),
                                                               qthread_cacheline());
+    steal_chunksize = qt_internal_get_env_num("STEAL_CHUNK", 0, 0);
     qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
 } /*}}}*/
 
@@ -492,7 +497,13 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h
     qt_threadqueue_node_t *first          = NULL;
     qt_threadqueue_node_t *last           = NULL;
     long                   amtStolen      = 0;
-    long                   desired_stolen = v->qlength_stealable / 2;
+    long                   desired_stolen;
+
+    if (steal_chunksize == 0) {
+        desired_stolen = v->qlength_stealable / 2;
+    } else {
+        desired_stolen = steal_chunksize;
+    }
 
     assert(h != NULL);
     assert(v != NULL);
