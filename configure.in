@@ -334,9 +334,16 @@ AC_ARG_ENABLE([omp_affinity],
               [AS_HELP_STRING([--enable-omp-affinity],
                               [Enable experimental OpenMP affinity extensions (part of ROSE interface). Under development])])
 
-AC_ARG_ENABLE([multithreaded_shepherds],
-              [AS_HELP_STRING([--disable-multithreaded-shepherds],
-                              [Disnable multithreaded shepherds.])])
+dnl deprecated option in favor of --with-scheduler=<foo>
+AC_ARG_ENABLE([multithreaded-shepherds],
+              [],
+              [AC_MSG_WARN([--enable-multithreaded-shepherds deprecated in favor of --with-scheduler])])
+
+AC_ARG_ENABLE([third-party-benchmarks],
+              [AS_HELP_STRING([--enable-third-party-benchmarks],
+                              [Turns on configure options to look for OpenMP,
+                               Cilk, and TBB; used only in building some
+                               external benchmarks])])
 
 AC_ARG_WITH([scheduler],
             [AS_HELP_STRING([--with-scheduler=[[type]]],
@@ -583,7 +590,19 @@ AC_C_CONST
 AC_C_INLINE
 AX_C_RESTRICT
 AC_C_VOLATILE
-AX_OPENMP([have_openmp=yes], [have_openmp=no])
+AS_IF([test "x$enable_third_party_benchmarks" = xyes],
+      [AX_OPENMP([have_openmp=yes], [have_openmp=no])
+       AC_CHECK_HEADER([tbb/task.h],
+                       [have_tbb=yes],
+                       [have_tbb=no])
+       AC_CHECK_FUNC([__cilkrts_get_nworkers], [have_cilk=yes], [have_cilk=no])
+       AS_IF([test "x$have_tbb" = xyes],
+             [LIBS_saved="$LIBS"
+              AC_SEARCH_LIB([tbb],[main],
+                            [TBB_LIBS="-ltbb"
+                             LIBS="$LIBS_saved"],
+                            [have_tbb=no])])
+       ])
 
 # Check for native TLS support (thread-local-storage)
 AX_TLS
@@ -994,6 +1013,7 @@ AC_SUBST(qthread_topo)
 AC_SUBST(with_scheduler)
 AC_SUBST(with_sinc)
 AC_SUBST(OPENMP_CFLAGS)
+AC_SUBST(TBB_LIBS)
 
 AM_CONDITIONAL([ENABLE_CXX_TESTS], [test "x$enable_cxx_tests" != "xno"])
 AM_CONDITIONAL([COMPILE_TARGET_SST], [test "x$qthread_implementation" = "xsst"])
@@ -1008,7 +1028,6 @@ AM_CONDITIONAL([COMPILE_ROSE_EXTENSIONS], [test "x$enable_rose_extensions" = "xy
 AM_CONDITIONAL([COMPILE_RCRTOOL], [test "x$enable_rcrtool" = "xyes"])
 AM_CONDITIONAL([QTHREAD_MULTITHREADED_SHEPHERDS], [test "x$enable_multithreaded_shepherds" = "xyes"])
 AM_CONDITIONAL([COMPILE_CHAPEL_INTERFACE], [test "x$compile_chapel_interface" = "xyes"])
-AM_CONDITIONAL([COMPILE_OPENMP_BENCHMARKS], [test "x$have_openmp" = "xyes"])
 AM_CONDITIONAL([COMPILE_COMPAT_ATOMIC], [test "x$compile_compat_atomic" = "xyes"])
 AM_CONDITIONAL([COMPILE_SPAWNCACHE], [test "x$enable_spawn_cache" = "xyes"])
 AM_CONDITIONAL([HAVE_PROG_TIMELIMIT], [test "x$timelimit_path" != "x"])
@@ -1017,6 +1036,8 @@ AM_CONDITIONAL([WANT_PORTALS_SHMEM_RUNTIME], [test "$with_multinode_runtime" = "
 AM_CONDITIONAL([WANT_MPI_RUNTIME], [test "$with_multinode_runtime" = "mpi"])
 AM_CONDITIONAL([WANT_PMI_RUNTIME], [test "$with_multinode_runtime" = "pmi"])
 AM_CONDITIONAL([COMPILE_OMP_BENCHMARKS], [test "$have_openmp" = "yes"])
+AM_CONDITIONAL([COMPILE_TBB_BENCHMARKS], [test "$have_tbb" = "yes"])
+AM_CONDITIONAL([COMPILE_CILK_BENCHMARKS], [test "$have_cilk" = "yes"])
 
 AC_CONFIG_HEADERS([include/config.h include/qthread/common.h])
 AC_CONFIG_FILES([Makefile
