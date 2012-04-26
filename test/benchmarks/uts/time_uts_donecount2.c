@@ -147,15 +147,16 @@ static aligned_t visit(void *args_)
 
             child.num_children = calc_num_children(&child);
 
-	    if (child.num_children == 0) {
+	    /*if (child.num_children == 0) {
 		qthread_fork_syncvar_copyargs_simple(visit, &child, sizeof(node_t), NULL);
-	    } else {
+	    } else {*/
 		qthread_fork_syncvar_copyargs(visit, &child, sizeof(node_t), NULL);
-	    }
+	    //}
         }
+	qthread_yield_near();
 
         // Wait for children to finish up, accumulate descendants counts
-        qthread_readFF(NULL, &donec);
+        if (donec != expect) qthread_readFF(NULL, &donec);
 
         for (int i = 0; i < num_children; i++) {
             sum_descendants += num_descendants[i];

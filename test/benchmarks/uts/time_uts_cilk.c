@@ -254,10 +254,18 @@ int main(int   argc,
 
     CHECK_VERBOSE();
 
-    NUMARG(tree_type, "UTS_TREE_TYPE");
+    {
+        unsigned long tmp;
+        NUMARG(tmp, "UTS_TREE_TYPE");
+        tree_type = (tree_t)tmp;
+    }
     DBLARG(bf_0, "UTS_BF_0");
     NUMARG(root_seed, "UTS_ROOT_SEED");
-    NUMARG(shape_fn, "UTS_SHAPE_FN");
+    {
+        unsigned long tmp;
+        NUMARG(tmp, "UTS_SHAPE_FN");
+        shape_fn = (shape_t)tmp;
+    }
     NUMARG(tree_depth, "UTS_TREE_DEPTH");
     DBLARG(non_leaf_prob, "UTS_NON_LEAF_PROB");
     NUMARG(non_leaf_bf, "UTS_NON_LEAF_NUM");
