@@ -219,10 +219,10 @@ AC_DEFUN([QTHREAD_CHECK_ASSEMBLY],[
 	    [_QTHREAD_CHECK_IFDEF([__linux__],
 	      [_QTHREAD_CHECK_IFDEF([__PPC__],[qthread_ppc_abi=QTHREAD_PPC_ABI_SYSV])
 	       _QTHREAD_CHECK_IFDEF([__PPC64__],[qthread_ppc_abi=QTHREAD_PPC_ABI_AIX])])])
-      AC_DEFINE([QTHREAD_PPC_ABI_UNKNOWN], [0])
-      AC_DEFINE([QTHREAD_PPC_ABI_DARWIN], [1])
-      AC_DEFINE([QTHREAD_PPC_ABI_SYSV], [2])
-      AC_DEFINE([QTHREAD_PPC_ABI_AIX], [3])
+      AC_DEFINE([QTHREAD_PPC_ABI_UNKNOWN], [0], [Constant for an unknown PPC ABI])
+      AC_DEFINE([QTHREAD_PPC_ABI_DARWIN], [1], [Constant for the Darwin PPC ABI])
+      AC_DEFINE([QTHREAD_PPC_ABI_SYSV], [2], [Constant for the SysV PPC ABI])
+      AC_DEFINE([QTHREAD_PPC_ABI_AIX], [3], [Constant for the AIX PPC ABI])
       AC_DEFINE_UNQUOTED([QTHREAD_PPC_ABI],[$qthread_ppc_abi],[Define to specify the PPC ABI])
       qthread_gcc_inline_assign='"A_%=: li %0,0" : "=&r"(ret)'
     ;;
