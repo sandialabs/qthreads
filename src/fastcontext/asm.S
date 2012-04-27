@@ -31,6 +31,8 @@
 #  define SET _qt_setmctxt
 #  define GET _qt_getmctxt
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
+#  define r(x) r##x
+#  define f(x) f##x
 #  define NEEDPOWER64CONTEXT 1
 #  define SET _qt_setmctxt
 #  define GET _qt_getmctxt
@@ -41,11 +43,9 @@
 #  define SET _qt_setmctxt
 #  define GET _qt_getmctxt
 # else
-#  error What kind of a machine is this?
+#  error What kind of a Mac is this?
 # endif
-#endif
-
-#if defined(__linux__)
+#elif defined(__linux__)
 # if defined(__arm__)
 #  define NEEDARMCONTEXT 1
 #  define SET qt_setmctxt
@@ -67,21 +67,29 @@
 #  define SET qt_setmctxt
 #  define GET qt_getmctxt
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
+#  define r(x) r##x
+#  define f(x) f##x
 #  define NEEDPOWER64CONTEXT 1
 #  define SET qt_setmctxt
 #  define GET qt_getmctxt
-# elif defined (__ppc__) _(LinuxPPC)
-#  define NEEDPOWERCONTEXT 1
-#  define r(x) r##x
-#  define f(x) f##x
-#  define SET qt_setmctxt
-#  define GET qt_getmctxt
-# elif defined (__PPC__) _(BG/P)
-#  define NEEDPOWERCONTEXT 1
-#  define r(x) x
-#  define f(x) x
-#  define SET _qt_setmctxt
-#  define GET _qt_getmctxt
+# elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
+#  if defined (__ppc__) _(LinuxPPC)
+#   define NEEDPOWERCONTEXT 1
+#   define r(x) r##x
+#   define f(x) f##x
+#   define SET qt_setmctxt
+#   define GET qt_getmctxt
+#  elif defined (__PPC__) _(BG/P)
+#   define NEEDPOWERCONTEXT 1
+#   define r(x) x
+#   define f(x) x
+#   define SET _qt_setmctxt
+#   define GET _qt_getmctxt
+#  else
+#   error What kind of a Linux PPC machine is this?
+#  endif
+# else
+#  error What kind of a Linux machine is this?
 # endif
 #endif
 
@@ -669,118 +677,118 @@ SET:
 
 .globl GET
 GET:                            _(/*) xxx: instruction scheduling */)
-        mflr    r0
-        mfcr    r5
-        mfctr   r6
-        mfxer   r7
-        std     r0, 0*8(r3)
-        std     r5, 1*8(r3)
-        std     r6, 2*8(r3)
-        std     r7, 3*8(r3)
+        mflr    r(0)
+        mfcr    r(5)
+        mfctr   r(6)
+        mfxer   r(7)
+        std     r(0), 0*8(r(3))
+        std     r(5), 1*8(r(3))
+        std     r(6), 2*8(r(3))
+        std     r(7), 3*8(r(3))
 
-        std     r1, 4*8(r3)
-        std     r2, 5*8(r3)
-        li      r5, 1                   _(/*) return value for qt_setmctxt */)
-        std     r5, 6*8(r3)
+        std     r(1), 4*8(r(3))
+        std     r(2), 5*8(r(3))
+        li      r(5), 1                   _(/*) return value for qt_setmctxt */)
+        std     r(5), 6*8(r(3))
 
-        _(/*)std   r13, (0+7)*8(r3) not saving r13 because I want thread migration */)
-        std     r14, (1+7)*8(r3)        _(/*) callee-save GPRs */)
-        std     r15, (2+7)*8(r3)        _(/*) xxx: block move */)
-        std     r16, (3+7)*8(r3)
-        std     r17, (4+7)*8(r3)
-        std     r18, (5+7)*8(r3)
-        std     r19, (6+7)*8(r3)
-        std     r20, (7+7)*8(r3)
-        std     r21, (8+7)*8(r3)
-        std     r22, (9+7)*8(r3)
-        std     r23, (10+7)*8(r3)
-        std     r24, (11+7)*8(r3)
-        std     r25, (12+7)*8(r3)
-        std     r26, (13+7)*8(r3)
-        std     r27, (14+7)*8(r3)
-        std     r28, (15+7)*8(r3)
-        std     r29, (16+7)*8(r3)
-        std     r30, (17+7)*8(r3)
-        std     r31, (18+7)*8(r3)
+        _(/*)std   r(13), (0+7)*8(r(3)) not saving r(13) because I want thread migration */)
+        std     r(14), (1+7)*8(r(3))        _(/*) callee-save GPRs */)
+        std     r(15), (2+7)*8(r(3))        _(/*) xxx: block move */)
+        std     r(16), (3+7)*8(r(3))
+        std     r(17), (4+7)*8(r(3))
+        std     r(18), (5+7)*8(r(3))
+        std     r(19), (6+7)*8(r(3))
+        std     r(20), (7+7)*8(r(3))
+        std     r(21), (8+7)*8(r(3))
+        std     r(22), (9+7)*8(r(3))
+        std     r(23), (10+7)*8(r(3))
+        std     r(24), (11+7)*8(r(3))
+        std     r(25), (12+7)*8(r(3))
+        std     r(26), (13+7)*8(r(3))
+        std     r(27), (14+7)*8(r(3))
+        std     r(28), (15+7)*8(r(3))
+        std     r(29), (16+7)*8(r(3))
+        std     r(30), (17+7)*8(r(3))
+        std     r(31), (18+7)*8(r(3))
 
         _(/*) the pad is unnecessary in 64 bit mode ... (minor bug!) */)
 
-        stfd f14, (0+26)*8(r3) _(/*) callee-save FPRs */)
-        stfd f15, (1+26)*8(r3)
-        stfd f16, (2+26)*8(r3)
-        stfd f17, (3+26)*8(r3)
-        stfd f18, (4+26)*8(r3)
-        stfd f19, (5+26)*8(r3)
-        stfd f20, (6+26)*8(r3)
-        stfd f21, (7+26)*8(r3)
-        stfd f22, (8+26)*8(r3)
-        stfd f23, (9+26)*8(r3)
-        stfd f24, (10+26)*8(r3)
-        stfd f25, (11+26)*8(r3)
-        stfd f26, (12+26)*8(r3)
-        stfd f27, (13+26)*8(r3)
-        stfd f28, (14+26)*8(r3)
-        stfd f29, (15+26)*8(r3)
-        stfd f30, (16+26)*8(r3)
-        stfd f31, (17+26)*8(r3)
+        stfd f(14), (0+26)*8(r(3)) _(/*) callee-save FPRs */)
+        stfd f(15), (1+26)*8(r(3))
+        stfd f(16), (2+26)*8(r(3))
+        stfd f(17), (3+26)*8(r(3))
+        stfd f(18), (4+26)*8(r(3))
+        stfd f(19), (5+26)*8(r(3))
+        stfd f(20), (6+26)*8(r(3))
+        stfd f(21), (7+26)*8(r(3))
+        stfd f(22), (8+26)*8(r(3))
+        stfd f(23), (9+26)*8(r(3))
+        stfd f(24), (10+26)*8(r(3))
+        stfd f(25), (11+26)*8(r(3))
+        stfd f(26), (12+26)*8(r(3))
+        stfd f(27), (13+26)*8(r(3))
+        stfd f(28), (14+26)*8(r(3))
+        stfd f(29), (15+26)*8(r(3))
+        stfd f(30), (16+26)*8(r(3))
+        stfd f(31), (17+26)*8(r(3))
 
-        li      r3, 0                   _(/*) return */)
+        li      r(3), 0                   _(/*) return */)
         blr
 
 .globl SET
 SET:
-        _(/*)ld    r13, (0+7)*8(r3) not restoring r13 because I want thread migration */)
-        ld      r14, (1+7)*8(r3)        _(/*) callee-save GPRs */)
-        ld      r15, (2+7)*8(r3)        _(/*) xxx: block move */)
-        ld      r16, (3+7)*8(r3)
-        ld      r17, (4+7)*8(r3)
-        ld      r18, (5+7)*8(r3)
-        ld      r19, (6+7)*8(r3)
-        ld      r20, (7+7)*8(r3)
-        ld      r21, (8+7)*8(r3)
-        ld      r22, (9+7)*8(r3)
-        ld      r23, (10+7)*8(r3)
-        ld      r24, (11+7)*8(r3)
-        ld      r25, (12+7)*8(r3)
-        ld      r26, (13+7)*8(r3)
-        ld      r27, (14+7)*8(r3)
-        ld      r28, (15+7)*8(r3)
-        ld      r29, (16+7)*8(r3)
-        ld      r30, (17+7)*8(r3)
-        ld      r31, (18+7)*8(r3)
+        _(/*)ld    r(13), (0+7)*8(r(3)) not restoring r(13) because I want thread migration */)
+        ld      r(14), (1+7)*8(r(3))        _(/*) callee-save GPRs */)
+        ld      r(15), (2+7)*8(r(3))        _(/*) xxx: block move */)
+        ld      r(16), (3+7)*8(r(3))
+        ld      r(17), (4+7)*8(r(3))
+        ld      r(18), (5+7)*8(r(3))
+        ld      r(19), (6+7)*8(r(3))
+        ld      r(20), (7+7)*8(r(3))
+        ld      r(21), (8+7)*8(r(3))
+        ld      r(22), (9+7)*8(r(3))
+        ld      r(23), (10+7)*8(r(3))
+        ld      r(24), (11+7)*8(r(3))
+        ld      r(25), (12+7)*8(r(3))
+        ld      r(26), (13+7)*8(r(3))
+        ld      r(27), (14+7)*8(r(3))
+        ld      r(28), (15+7)*8(r(3))
+        ld      r(29), (16+7)*8(r(3))
+        ld      r(30), (17+7)*8(r(3))
+        ld      r(31), (18+7)*8(r(3))
 
-        lfd f14, (0+26)*8(r3) _(/*) callee-save FPRs */)
-        lfd f15, (1+26)*8(r3)
-        lfd f16, (2+26)*8(r3)
-        lfd f17, (3+26)*8(r3)
-        lfd f18, (4+26)*8(r3)
-        lfd f19, (5+26)*8(r3)
-        lfd f20, (6+26)*8(r3)
-        lfd f21, (7+26)*8(r3)
-        lfd f22, (8+26)*8(r3)
-        lfd f23, (9+26)*8(r3)
-        lfd f24, (10+26)*8(r3)
-        lfd f25, (11+26)*8(r3)
-        lfd f26, (12+26)*8(r3)
-        lfd f27, (13+26)*8(r3)
-        lfd f28, (14+26)*8(r3)
-        lfd f29, (15+26)*8(r3)
-        lfd f30, (16+26)*8(r3)
-        lfd f31, (17+26)*8(r3)
+        lfd f(14), (0+26)*8(r(3)) _(/*) callee-save FPRs */)
+        lfd f(15), (1+26)*8(r(3))
+        lfd f(16), (2+26)*8(r(3))
+        lfd f(17), (3+26)*8(r(3))
+        lfd f(18), (4+26)*8(r(3))
+        lfd f(19), (5+26)*8(r(3))
+        lfd f(20), (6+26)*8(r(3))
+        lfd f(21), (7+26)*8(r(3))
+        lfd f(22), (8+26)*8(r(3))
+        lfd f(23), (9+26)*8(r(3))
+        lfd f(24), (10+26)*8(r(3))
+        lfd f(25), (11+26)*8(r(3))
+        lfd f(26), (12+26)*8(r(3))
+        lfd f(27), (13+26)*8(r(3))
+        lfd f(28), (14+26)*8(r(3))
+        lfd f(29), (15+26)*8(r(3))
+        lfd f(30), (16+26)*8(r(3))
+        lfd f(31), (17+26)*8(r(3))
 
-        ld      r1, 4*8(r3)
-        ld      r2, 5*8(r3)
+        ld      r(1), 4*8(r(3))
+        ld      r(2), 5*8(r(3))
 
-        ld      r0, 0*8(r3)
-        mtlr    r0
-        ld      r0, 1*8(r3)
-        mtcr    r0                      _(/*) mtcrf 0xFF, r0 */)
-        ld      r0, 2*8(r3)
-        mtctr   r0
-        ld      r0, 3*8(r3)
-        mtxer   r0
+        ld      r(0), 0*8(r(3))
+        mtlr    r(0)
+        ld      r(0), 1*8(r(3))
+        mtcr    r(0)                      _(/*) mtcrf 0xFF, r(0) */)
+        ld      r(0), 2*8(r(3))
+        mtctr   r(0)
+        ld      r(0), 3*8(r(3))
+        mtxer   r(0)
 
-        ld      r3,     6*8(r3)
+        ld      r(3),     6*8(r(3))
         blr
 #endif
 
