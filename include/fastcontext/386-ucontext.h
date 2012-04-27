@@ -9,8 +9,8 @@
 
 #include "qthread-int.h"
 
-#define setcontext(u) qt_setmctxt(&(u)->uc_mcontext)
-#define getcontext(u) qt_getmctxt(&(u)->uc_mcontext)
+#define setcontext(u) qt_setmctxt(&(u)->mc)
+#define getcontext(u) qt_getmctxt(&(u)->mc)
 typedef struct mctxt mctxt_t;
 typedef struct uctxt uctxt_t;
 

@@ -62,19 +62,19 @@ void INTERNAL qt_makectxt(uctxt_t *ucp,
      * registers! */
     for (i = 0; i < argc; i++) {
         switch (i) {
-            case 0: ucp->uc_mcontext.mc_edi = va_arg(argp, uintptr_t); break;
-                /*case 1: ucp->uc_mcontext.mc_esi = va_arg(argp, uintptr_t); break;
-                 * case 2: ucp->uc_mcontext.mc_edx = va_arg(argp, uintptr_t); break;
-                 * case 3: ucp->uc_mcontext.mc_ecx = va_arg(argp, uintptr_t); break;
-                 * case 4: ucp->uc_mcontext.mc_r8 = va_arg(argp, uintptr_t); break;
-                 * case 5: ucp->uc_mcontext.mc_r9 = va_arg(argp, uintptr_t); break;*/
+            case 0: ucp->mc.mc_edi = va_arg(argp, uintptr_t); break;
+                /*case 1: ucp->mc.mc_esi = va_arg(argp, uintptr_t); break;
+                 * case 2: ucp->mc.mc_edx = va_arg(argp, uintptr_t); break;
+                 * case 3: ucp->mc.mc_ecx = va_arg(argp, uintptr_t); break;
+                 * case 4: ucp->mc.mc_r8 = va_arg(argp, uintptr_t); break;
+                 * case 5: ucp->mc.mc_r9 = va_arg(argp, uintptr_t); break;*/
         }
     }
 # endif
 
     *--sp                   = 0; /* return address */
-    ucp->uc_mcontext.mc_eip = (long)func;
-    ucp->uc_mcontext.mc_esp = (long)sp;
+    ucp->mc.mc_eip = (long)func;
+    ucp->mc.mc_esp = (long)sp;
 # ifdef NEEDX86REGISTERARGS
     va_end(argp);
 # endif
@@ -126,7 +126,7 @@ int INTERNAL qt_swapctxt(uctxt_t *oucp,
 # if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) ||    \
         (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) || \
         (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64))
-        Q_PREFETCH((void *)ucp->uc_mcontext.mc_esp, 1, 3);
+        Q_PREFETCH((void *)ucp->mc.mc_esp, 1, 3);
 # endif
         setcontext(ucp);
     }
