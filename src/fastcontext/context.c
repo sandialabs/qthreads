@@ -24,9 +24,12 @@ void INTERNAL qt_makectxt(uctxt_t *ucp,
 
     tos        = (unsigned long *)ucp->uc_stack.ss_sp + ucp->uc_stack.ss_size / sizeof(unsigned long);
     sp         = tos - 16;
-#ifdef __linux__
+#if defined(_CALL_AIX) || \
+    (defined(__linux) && defined(__PPC64__)) /* just in case */
+    /* AIX ABI (used by Linux PPC64), functions are indirect pointers */
     ucp->mc.pc = *(long*)func;
-#else /* __APPLE__ */
+#else
+    /* SYSV ABI (used by MacOS X), functions are direct pointers */
     ucp->mc.pc = (long)func;
 #endif
     ucp->mc.sp = (long)sp;
