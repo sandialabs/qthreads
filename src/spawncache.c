@@ -20,7 +20,7 @@
 #include "qt_macros.h"
 
 /* Globals */
-TLS_DECL(qt_threadqueue_private_t*,spawn_cache);
+TLS_DECL_INIT(qt_threadqueue_private_t*,spawn_cache);
 
 /* Static Functions */
 static void qt_spawncache_shutdown(void)
