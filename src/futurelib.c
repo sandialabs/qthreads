@@ -15,7 +15,7 @@
 #include "qt_macros.h"
 
 /* GLOBAL DATA (copy everywhere) */
-TLS_DECL(location_t *, future_bookkeeping);
+TLS_DECL_INIT(location_t *, future_bookkeeping);
 location_t *future_bookkeeping_array = NULL;
 
 static qthread_shepherd_id_t shep_for_new_futures = 0;

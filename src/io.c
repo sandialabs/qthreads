@@ -55,7 +55,7 @@ qt_mpool syscall_job_pool = NULL;
 #endif
 static unsigned long timeout    = 100; // in microseconds
 static int           proxy_exit = 0;
-TLS_DECL(qthread_t *, IO_task_struct);
+TLS_DECL_INIT(qthread_t *, IO_task_struct);
 
 static void qt_blocking_subsystem_internal_stopwork(void)
 {   /*{{{*/

@@ -50,8 +50,8 @@ typedef struct threadlocal_cache_s qt_mpool_threadlocal_cache_t;
 
 #define GLOBAL_TLS 1
 #ifdef GLOBAL_TLS
-static TLS_DECL(qt_mpool_threadlocal_cache_t *, pool_caches);
-static TLS_DECL(uintptr_t, pool_cache_count);
+static TLS_DECL_INIT(qt_mpool_threadlocal_cache_t *, pool_caches);
+static TLS_DECL_INIT(uintptr_t, pool_cache_count);
 static aligned_t pool_cache_global_max = 1;
 #endif
 

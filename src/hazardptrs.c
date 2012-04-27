@@ -13,7 +13,7 @@
 #include "qt_shepherd_innards.h"
 #include "qthread_innards.h"
 
-static TLS_DECL(uintptr_t *, ts_hazard_ptrs);
+static TLS_DECL_INIT(uintptr_t *, ts_hazard_ptrs);
 
 static uintptr_t    *QTHREAD_CASLOCK(hzptr_list);
 static aligned_t     hzptr_list_len = 0;

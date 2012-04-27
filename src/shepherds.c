@@ -18,7 +18,7 @@
 #include "qt_macros.h"
 
 /* Shared Globals */
-TLS_DECL(qthread_shepherd_t *, shepherd_structs);
+TLS_DECL_INIT(qthread_shepherd_t *, shepherd_structs);
 
 int qthread_shep_ok(void)
 {                      /*{{{ */
