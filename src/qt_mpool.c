@@ -48,7 +48,10 @@ static QINLINE int getpagesize()
 
 typedef struct threadlocal_cache_s qt_mpool_threadlocal_cache_t;
 
+#ifdef TLS
 #define GLOBAL_TLS 1
+#endif
+
 #ifdef GLOBAL_TLS
 static TLS_DECL_INIT(qt_mpool_threadlocal_cache_t *, pool_caches);
 static TLS_DECL_INIT(uintptr_t, pool_cache_count);
@@ -92,8 +95,10 @@ struct threadlocal_cache_s {
 
 static void qt_mpool_subsystem_shutdown(void)
 {
+#ifdef GLOBAL_TLS
     TLS_DELETE(pool_caches);
     TLS_DELETE(pool_cache_count);
+#endif
 }
 
 void qt_mpool_subsystem_init(void)
@@ -259,8 +264,10 @@ void *qt_mpool_alloc(qt_mpool pool)
     tc = TLS_GET(pool_caches);
     {
         uintptr_t count_caches = (uintptr_t)TLS_GET(pool_cache_count);
+        qthread_debug(MPOOL_DETAILS, "-> count_caches = %i, pool->offset = %i\n", (int)count_caches, (int)pool->offset);
         if (count_caches < pool->offset) {
             /* this realloc'd memory will be leaked */
+            qthread_debug(MPOOL_DETAILS, "-> realloc-ing the tc\n");
             qt_mpool_threadlocal_cache_t *newtc = realloc(tc, sizeof(qt_mpool_threadlocal_cache_t) * pool->offset);
             assert(newtc);
             tc = newtc;
@@ -270,11 +277,20 @@ void *qt_mpool_alloc(qt_mpool pool)
             TLS_SET(pool_cache_count, count_caches);
         }
     }
+    assert(tc);
     tc += (pool->offset - 1);
 #else
     tc = pthread_getspecific(pool->threadlocal_cache);
     if (NULL == tc) {
-        tc = memalign(64, sizeof(qt_mpool_threadlocal_cache_t));
+#if defined(HAVE_MEMALIGN)
+        tc = memalign(CACHELINE_WIDTH, sizeof(qt_mpool_threadlocal_cache_t));
+#elif defined(HAVE_POSIX_MEMALIGN)
+        posix_memalign(&(tc), CACHELINE_WIDTH, sizeof(qt_mpool_threadlocal_cache_t));
+#elif defined(HAVE_WORKING_VALLOC)
+        tc = valloc(sizeof(qt_mpool_threadlocal_cache_t));
+#else                                 /* if defined(HAVE_MEMALIGN) */
+        tc = malloc(sizeof(qt_mpool_threadlocal_cache_t)); /* cross your fingers */
+#endif  /* if defined(HAVE_MEMALIGN) */
         // tc = calloc(1, sizeof(qt_mpool_threadlocal_cache_t));
         assert(tc);
         tc->cache = NULL;
@@ -287,7 +303,7 @@ void *qt_mpool_alloc(qt_mpool pool)
         pthread_setspecific(pool->threadlocal_cache, tc);
     }
 #endif
-    qthread_debug(MPOOL_BEHAVIOR, "->cache:%p (bt:%p) cnt:%u\n", tc->cache, tc->cache ? tc->cache->block_tail : NULL, (unsigned int)tc->count);
+    qthread_debug(MPOOL_BEHAVIOR, "->tc:%p cache:%p (bt:%p) cnt:%u\n", tc, tc->cache, tc->cache ? tc->cache->block_tail : NULL, (unsigned int)tc->count);
     if (tc->cache) {
         qt_mpool_cache_t *cache = tc->cache;
         qthread_debug(MPOOL_DETAILS, "->...cached count:%zu\n", (size_t)tc->count - 1);
