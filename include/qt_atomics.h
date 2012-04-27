@@ -432,7 +432,7 @@ static QINLINE aligned_t qthread_internal_incr_mod_(aligned_t             *opera
     register unsigned int compd = compd;        /* they're just tmp variables */
 
     /* the minus in bne- means "this bne is unlikely to be taken" */
-    asm volatile ("1:\n\t"                /* local label */
+    asm volatile ("A_%=:\n\t"             /* local label */
                   "lwarx  %0,0,%3\n\t"    /* load operand */
                   "addi   %2,%0,1\n\t"    /* increment it into incrd */
                   "cmplw  7,%2,%4\n\t"    /* compare incrd to the max */
@@ -440,7 +440,7 @@ static QINLINE aligned_t qthread_internal_incr_mod_(aligned_t             *opera
                   "rlwinm %1,%1,29,1\n\t" /* isolate the result bit */
                   "mullw  %2,%2,%1\n\t"   /* incrd *= compd */
                   "stwcx. %2,0,%3\n\t"    /* *operand = incrd */
-                  "bne-   1b\n\t"         /* if it failed, go to label 1 back */
+                  "bne-   A_%=\n\t"       /* if it failed, go to label 1 back */
                   "isync"                 /* make sure it wasn't all a dream */
 
                   /* = means this operand is write-only (previous value is discarded)

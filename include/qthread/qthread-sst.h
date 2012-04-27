@@ -303,7 +303,7 @@ static QINLINE float qthread_fincr(volatile float *operand, const float incr)
     register float incremented_value;
     register uint32_t scratch_int;
     uint32_t conversion_memory = conversion_memory;
-    __asm__ __volatile__("1:\n\t"
+    __asm__ __volatile__("A_%=:\n\t"
 	    "lwarx  %0,0,%4\n\t"
 	    // convert from int to float
 	    "stw    %0,%2\n\t"
@@ -315,7 +315,7 @@ static QINLINE float qthread_fincr(volatile float *operand, const float incr)
 	    "lwz    %3,%2\n\t"
 	    // store back to original location
 	    "stwcx. %3,0,%4\n\t"
-	    "bne-   1b\n\t"
+	    "bne-   A_%=\n\t"
 	    "isync"
 	    :"=&b" (retval.i),		/* %0 */
 	     "=&f" (incremented_value),	/* %1 */
@@ -420,7 +420,7 @@ static QINLINE double qthread_dincr(volatile double *operand,
 	double d;
     } retval;
     uint64_t conversion_memory = conversion_memory;
-    __asm__ __volatile__("1:\n\t"
+    __asm__ __volatile__("A_%=:\n\t"
 			 "ldarx %0,0,%4\n\t"
 			 /*convert from integer to floating point */
 			 "std   %0,%2\n\t"	// %2 is scratch memory (NOT a register)
@@ -432,7 +432,7 @@ static QINLINE double qthread_dincr(volatile double *operand,
 			 "ld     %3,%2\n\t"
 			 /* store back to original location */
 			 "stdcx. %3,0,%4\n\t"
-			 "bne-   1b\n\t"
+			 "bne-   A_%=\n\t"
 			 "isync"
 			 :"=&b" (retval.i),		/* %0 */
 			  "=&f" (incremented_value),	/* %1 */
@@ -622,10 +622,10 @@ static QINLINE uint32_t qthread_incr32(volatile uint32_t * operand,
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
     uint32_t retval;
     register unsigned int incrd = incrd;	/* no initializing */
-    __asm__ __volatile__("1:\tlwarx  %0,0,%1\n\t"
+    __asm__ __volatile__("A_%=:\tlwarx  %0,0,%1\n\t"
 			 "add    %3,%0,%2\n\t"
 			 "stwcx. %3,0,%1\n\t"
-			 "bne-   1b\n\t"	/* if it failed, try again */
+			 "bne-   A_%=\n\t"	/* if it failed, try again */
 			 "isync"	/* make sure it wasn't all a dream */
 			 :"=&b"  (retval)
 			 :"r"    (operand), "r"(incr), "r"(incrd)
@@ -726,10 +726,10 @@ static QINLINE uint64_t qthread_incr64(volatile uint64_t * operand,
     uint64_t retval;
     register uint64_t incrd = incrd;	/* no initializing */
 
-    asm volatile ("1:\tldarx  %0,0,%1\n\t"
+    asm volatile ("A_%=:\tldarx  %0,0,%1\n\t"
 		  "add    %3,%0,%2\n\t"
 		  "stdcx. %3,0,%1\n\t"
-		  "bne-   1b\n\t"	/* if it failed, try again */
+		  "bne-   A_%=\n\t"	/* if it failed, try again */
 		  "isync"	/* make sure it wasn't all a dream */
 		  :"=&b"   (retval)
 		  :"r"     (operand), "r"(incr), "r"(incrd)
@@ -949,13 +949,13 @@ static QINLINE uint32_t qthread_cas32(volatile uint32_t * operand,
 # if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \
       (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
     register uint32_t result;
-    __asm__ __volatile__ ("1:\n\t"
+    __asm__ __volatile__ ("A_%=:\n\t"
 	    "lwarx  %0,0,%3\n\t"
 	    "cmpw   %0,%1\n\t"
-	    "bne    2f\n\t"
+	    "bne    B_%=\n\t"
 	    "stwcx. %2,0,%3\n\t"
-	    "bne-   1b\n"
-	    "2:"
+	    "bne-   A_%=\n"
+	    "B_%=:"
 	    "isync" /* make sure it wasn't all a dream */
 	    :"=&b" (result)
 	    :"r"(oldval), "r"(newval), "r"(operand)
@@ -1012,13 +1012,13 @@ static QINLINE uint64_t qthread_cas64(volatile uint64_t * operand,
 #if defined(HAVE_GCC_INLINE_ASSEMBLY)
 # if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
     register uint64_t result;
-    __asm__ __volatile__ ("1:\n\t"
+    __asm__ __volatile__ ("A_%=:\n\t"
 	    "ldarx  %0,0,%3\n\t"
 	    "cmpw   %0,%1\n\t"
-	    "bne    2f\n\t"
+	    "bne    B_%=\n\t"
 	    "stdcx. %2,0,%3\n\t"
-	    "bne-   1b\n"
-	    "2:"
+	    "bne-   A_%=\n"
+	    "B_%=:"
 	    "isync" /* make sure it wasn't all a dream */
 	    :"=&b" (result)
 	    :"r"(oldval), "r"(newval), "r"(operand)
