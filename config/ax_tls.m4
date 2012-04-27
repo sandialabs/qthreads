@@ -47,8 +47,16 @@
 #serial 10
 
 AC_DEFUN([AX_TLS], [
+  AC_ARG_ENABLE([native-tls],
+                [AS_HELP_STRING([--disable-native-tls],
+								[Prevent use of compiler-based thread-local
+								storage. This is sometimes necessary when
+								compiler-based thread-local storage does not
+								provide zero-based initialization (something
+								that pthread_key_t *does* provide).])])
   AC_MSG_CHECKING(for thread local storage (TLS) class)
-  AC_CACHE_VAL(ac_cv_tls, [
+  AC_CACHE_VAL([ac_cv_tls], [
+	AS_IF([test "x$enable_native_tls" != xno], [
     ax_tls_keywords="__thread __declspec(thread) none"
     for ax_tls_keyword in $ax_tls_keywords; do
        AS_CASE([$ax_tls_keyword],
@@ -63,7 +71,8 @@ AC_DEFUN([AX_TLS], [
                [],
                [ac_cv_tls=$ax_tls_keyword ; break],
                [ac_cv_tls=none])])
-    done
+    done],
+	[ac_cv_tls=none])
   ])
   AC_MSG_RESULT($ac_cv_tls)
 
