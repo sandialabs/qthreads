@@ -32,14 +32,14 @@
 #  define GET _qt_getmctxt
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
 #  define NEEDPOWER64CONTEXT 1
-#  define SET __qt_setmctxt
-#  define GET __qt_getmctxt
+#  define SET _qt_setmctxt
+#  define GET _qt_getmctxt
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
 #  define r(x) r##x
 #  define f(x) f##x
 #  define NEEDPOWERCONTEXT 1
-#  define SET __qt_setmctxt
-#  define GET __qt_getmctxt
+#  define SET _qt_setmctxt
+#  define GET _qt_getmctxt
 # else
 #  error What kind of a machine is this?
 # endif

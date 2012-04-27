@@ -6,8 +6,8 @@
 
 #include "qt_visibility.h"
 
-#define setcontext(u) _qt_setmctxt(&(u)->mc)
-#define getcontext(u) _qt_getmctxt(&(u)->mc)
+#define setcontext(u) qt_setmctxt(&(u)->mc)
+#define getcontext(u) qt_getmctxt(&(u)->mc)
 typedef struct mctxt mctxt_t;
 typedef struct uctxt uctxt_t;
 /*
@@ -46,6 +46,6 @@ struct uctxt {
 int INTERNAL qt_swapctxt(uctxt_t *,
                 uctxt_t *);
 void INTERNAL qt_makectxt(uctxt_t *, void (*)(void), int, ...);
-int  INTERNAL _qt_getmctxt(mctxt_t *);
-void INTERNAL _qt_setmctxt(mctxt_t *);
+int  INTERNAL qt_getmctxt(mctxt_t *);
+void INTERNAL qt_setmctxt(mctxt_t *);
 /* vim:set expandtab: */

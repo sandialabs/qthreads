@@ -3327,7 +3327,7 @@ void INTERNAL qthread_back_to_master2(qthread_t *t)
 #ifdef HAVE_NATIVE_MAKECONTEXT
     setcontext(t->rdata->return_context);
 #else
-    qt_setmctxt(&t->rdata->return_context->uc_mcontext);
+    qt_setmctxt(&t->rdata->return_context->mc);
 #endif
 }                      /*}}} */
 

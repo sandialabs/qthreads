@@ -39,7 +39,7 @@ struct mctxt {
 };
 
 struct uctxt {
-    mctxt_t uc_mcontext;
+    mctxt_t mc;
     struct {
         uint8_t *ss_sp;
         size_t   ss_size;
