@@ -207,6 +207,23 @@ AC_DEFUN([QTHREAD_CHECK_ASSEMBLY],[
       AS_IF([test "$ac_cv_sizeof_long" = "4"],
             [qthread_cv_asm_arch="POWERPC32"],
             [qthread_cv_asm_arch="POWERPC64"])
+      qthread_ppc_abi="QTHREAD_PPC_ABI_UNKNOWN"
+      _QTHREAD_CHECK_IFDEF([_CALL_AIX],[qthread_ppc_abi=QTHREAD_PPC_ABI_AIX])
+      AS_IF([test "$qthread_ppc_abi" = QTHREAD_PPC_ABI_UNKNOWN],
+	    [_QTHREAD_CHECK_IFDEF([_CALL_DARWIN],[qthread_ppc_abi=QTHREAD_PPC_ABI_DARWIN])])
+      AS_IF([test "$qthread_ppc_abi" = QTHREAD_PPC_ABI_UNKNOWN],
+            [_QTHREAD_CHECK_IFDEF([_CALL_SYSV],[qthread_ppc_abi=QTHREAD_PPC_ABI_SYSV])])
+      AS_IF([test "$qthread_ppc_abi" = QTHREAD_PPC_ABI_UNKNOWN],
+	    [_QTHREAD_CHECK_IFDEF([__APPLE__],[qthread_ppc_abi=QTHREAD_PPC_ABI_DARWIN])])
+      AS_IF([test "$qthread_ppc_abi" = QTHREAD_PPC_ABI_UNKNOWN],
+	    [_QTHREAD_CHECK_IFDEF([__linux__],
+	      [_QTHREAD_CHECK_IFDEF([__PPC__],[qthread_ppc_abi=QTHREAD_PPC_ABI_SYSV])
+	       _QTHREAD_CHECK_IFDEF([__PPC64__],[qthread_ppc_abi=QTHREAD_PPC_ABI_AIX])])])
+      AC_DEFINE([QTHREAD_PPC_ABI_UNKNOWN], [0])
+      AC_DEFINE([QTHREAD_PPC_ABI_DARWIN], [1])
+      AC_DEFINE([QTHREAD_PPC_ABI_SYSV], [2])
+      AC_DEFINE([QTHREAD_PPC_ABI_AIX], [3])
+      AC_DEFINE_UNQUOTED([QTHREAD_PPC_ABI],[$qthread_ppc_abi],[Define to specify the PPC ABI])
       qthread_gcc_inline_assign='"A_%=: li %0,0" : "=&r"(ret)'
     ;;
 

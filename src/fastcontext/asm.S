@@ -67,27 +67,17 @@
 #  define SET qt_setmctxt
 #  define GET qt_getmctxt
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
-#  define r(x) r##x
-#  define f(x) f##x
+#  define r(x) x
+#  define f(x) x
 #  define NEEDPOWER64CONTEXT 1
 #  define SET qt_setmctxt
 #  define GET qt_getmctxt
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-#  if defined (__ppc__) _(LinuxPPC)
-#   define NEEDPOWERCONTEXT 1
-#   define r(x) r##x
-#   define f(x) f##x
-#   define SET qt_setmctxt
-#   define GET qt_getmctxt
-#  elif defined (__PPC__) _(BG/P)
-#   define NEEDPOWERCONTEXT 1
-#   define r(x) x
-#   define f(x) x
-#   define SET _qt_setmctxt
-#   define GET _qt_getmctxt
-#  else
-#   error What kind of a Linux PPC machine is this?
-#  endif
+#  define r(x) x
+#  define f(x) x
+#  define NEEDPOWERCONTEXT 1
+#  define SET qt_setmctxt
+#  define GET qt_getmctxt
 # else
 #  error What kind of a Linux machine is this?
 # endif
