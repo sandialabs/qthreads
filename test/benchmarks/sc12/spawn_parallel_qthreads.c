@@ -41,6 +41,7 @@ int main(int   argc,
 
     timer = qtimer_create();
 
+    qqloop_handle_t *l = NULL;
     switch (loop_style) {
 	case 1:
 	    qtimer_start(timer);
@@ -49,30 +50,30 @@ int main(int   argc,
 	    break;
 	case 2:
 	    qtimer_start(timer);
-	    qt_loop_parallel(0, count, par_null_task2, NULL);
+	    qt_loop_balance(0, count, par_null_task2, NULL);
 	    qtimer_stop(timer);
 	    break;
 	case 3:
 	    qtimer_start(timer);
-	    qqloop_handle_t *l = qt_loop_queue_create(CHUNK, 0, count, 1, par_null_task2, NULL);
+	    l = qt_loop_queue_create(CHUNK, 0, count, 1, par_null_task2, NULL);
 	    qt_loop_queue_run(l);
 	    qtimer_stop(timer);
 	    break;
 	case 4:
 	    qtimer_start(timer);
-	    qqloop_handle_t *l = qt_loop_queue_create(GUIDED, 0, count, 1, par_null_task2, NULL);
+	    l = qt_loop_queue_create(GUIDED, 0, count, 1, par_null_task2, NULL);
 	    qt_loop_queue_run(l);
 	    qtimer_stop(timer);
 	    break;
 	case 5:
 	    qtimer_start(timer);
-	    qqloop_handle_t *l = qt_loop_queue_create(FACTORED, 0, count, 1, par_null_task2, NULL);
+	    l = qt_loop_queue_create(FACTORED, 0, count, 1, par_null_task2, NULL);
 	    qt_loop_queue_run(l);
 	    qtimer_stop(timer);
 	    break;
 	case 6:
 	    qtimer_start(timer);
-	    qqloop_handle_t *l = qt_loop_queue_create(TIMED, 0, count, 1, par_null_task2, NULL);
+	    l = qt_loop_queue_create(TIMED, 0, count, 1, par_null_task2, NULL);
 	    qt_loop_queue_run(l);
 	    qtimer_stop(timer);
 	    break;
