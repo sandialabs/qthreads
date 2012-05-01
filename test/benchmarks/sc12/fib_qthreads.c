@@ -61,7 +61,7 @@ static aligned_t fib(void *arg_)
 
     qthread_fork_syncvar(fib, &n1, &ret1);
     qthread_fork_syncvar(fib, &n2, &ret2);
-    qthread_yield_near();
+    qthread_yield();
 
     qthread_syncvar_readFF(NULL, &ret1);
     qthread_syncvar_readFF(NULL, &ret2);
