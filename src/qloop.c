@@ -27,6 +27,14 @@ typedef enum {
     NO_SYNC
 } synctype_t;
 
+struct qt_loop_wrapper_args {
+    qt_loop_f  func;
+    size_t     startat, stopat, id;
+    void      *arg;
+    synctype_t sync_type;
+    void      *sync;
+};
+
 struct qloop_wrapper_args {
     qt_loop_f  func;
     size_t     startat, stopat, id, level, spawnthreads;
@@ -34,6 +42,13 @@ struct qloop_wrapper_args {
     synctype_t sync_type;
     void      *sync;
 };
+
+static QINLINE void qt_loop_balance_inner(const size_t    start,
+                                          const size_t    stop,
+                                          const qt_loop_f func,
+                                          void           *argptr,
+                                          const int       future,
+                                          synctype_t      sync_type);
 
 static aligned_t qloop_wrapper(struct qloop_wrapper_args *const restrict arg)
 {                                      /*{{{ */
@@ -140,24 +155,26 @@ static aligned_t qloop_step_wrapper(struct qloop_step_wrapper_args *const restri
 # endif
     size_t tot_workers = qthread_num_workers() - 1; // I'm already here
 
-    size_t level  = arg->level;
-    size_t my_id  = arg->id;
-    if ((level != 0) & (my_id == 0)){
-      my_id = arg->rootNum;
+    size_t level = arg->level;
+    size_t my_id = arg->id;
+    if ((level != 0) & (my_id == 0)) {
+        my_id = arg->rootNum;
     }
     size_t new_id = my_id + (1 << level);
     while (new_id <= tot_workers) {       // create some children? (tot_workers zero based)
-      if (new_id == arg->rootNum) new_id = 0; // move thread that lands on root to zero --
-                                              //  mantains one per worker
-      size_t offset = new_id - my_id;   // need how much past current locations
-      (arg + offset)->level = ++level;  // increase depth for created thread
-      qthread_fork_syncvar_copyargs_to((qthread_f)qloop_step_wrapper,
-				       arg + offset,
-				       0,
-				       ((syncvar_t *)arg->rets) + new_id,
-				       new_id);
-      
-      new_id = (1 << level) + my_id;    // level has been incremented
+        if (new_id == arg->rootNum) {
+            new_id = 0;                       // move thread that lands on root to zero --
+        }
+        //  mantains one per worker
+        size_t offset = new_id - my_id;  // need how much past current locations
+        (arg + offset)->level = ++level; // increase depth for created thread
+        qthread_fork_syncvar_copyargs_to((qthread_f)qloop_step_wrapper,
+                                         arg + offset,
+                                         0,
+                                         ((syncvar_t *)arg->rets) + new_id,
+                                         new_id);
+
+        new_id = (1 << level) + my_id;  // level has been incremented
     }
 
     // and every one executes their piece
@@ -178,6 +195,156 @@ int in_qthread_step_fence(void *addr)
 # endif
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
 
+struct qt_loop_spawner_arg {
+    void      *argptr;
+    qt_loop_f  func;
+    synctype_t sync_type;
+    int        future;
+};
+
+static aligned_t qt_loop_wrapper(struct qt_loop_wrapper_args *const restrict arg)
+{
+    arg->func(arg->startat, arg->stopat, arg->arg);
+    switch(arg->sync_type) {
+        default:
+            break;
+        case SINC_T:
+            qt_sinc_submit(arg->sync, NULL);
+            break;
+        case DONECOUNT:
+            qthread_incr((aligned_t *)arg->sync, 1);
+            break;
+    }
+    return 0;
+}
+
+static void qt_loop_spawner(const size_t start,
+                            const size_t stop,
+                            void        *args_)
+{
+    size_t                      i, threadct;
+    size_t                      steps = stop - start;
+    struct qt_loop_wrapper_args qwa;
+    unsigned int                flags     = 0;
+    const synctype_t            sync_type = ((struct qt_loop_spawner_arg *)args_)->sync_type;
+    const qt_loop_f             func      = ((struct qt_loop_spawner_arg *)args_)->func;
+    void *const                 argptr    = ((struct qt_loop_spawner_arg *)args_)->argptr;
+
+    assert(qwa);
+    assert(func);
+
+    union {
+        syncvar_t *syncvar;
+        aligned_t *aligned;
+        qt_sinc_t *sinc;
+        aligned_t  dc;
+    } sync = { NULL };
+    switch (sync_type) {
+        case SYNCVAR_T:
+            sync.syncvar = malloc(steps * sizeof(syncvar_t));
+            assert(sync.syncvar);
+            break;
+        case SINC_T:
+            sync.sinc = qt_sinc_create(0, NULL, NULL, steps);
+            assert(sync.sinc);
+            break;
+        case ALIGNED_T:
+            sync.aligned = malloc(steps * sizeof(aligned_t));
+            assert(sync.aligned);
+            break;
+        case DONECOUNT:
+            sync.dc = 0;
+            break;
+        case NO_SYNC:
+            abort();
+    }
+    if (((struct qt_loop_spawner_arg *)args_)->future) {
+        flags |= QTHREAD_SPAWN_FUTURE;
+    }
+    for (i = start, threadct = 0; i < stop; ++i, ++threadct) {
+        qwa.func      = func;
+        qwa.startat   = i;
+        qwa.stopat    = i + 1;
+        qwa.arg       = argptr;
+        qwa.id        = threadct;
+        qwa.sync_type = sync_type;
+        switch (sync_type) {
+            case SYNCVAR_T:
+                sync.syncvar[threadct] = SYNCVAR_EMPTY_INITIALIZER;
+                qassert(qthread_spawn((qthread_f)qt_loop_wrapper,
+                                      &qwa, sizeof(struct qt_loop_wrapper_args),
+                                      sync.syncvar,
+                                      0, NULL,
+                                      NO_SHEPHERD, flags), QTHREAD_SUCCESS);
+                break;
+            case ALIGNED_T:
+                qthread_empty(&sync.aligned[threadct]);
+                qwa.sync = sync.aligned;
+                qassert(qthread_spawn((qthread_f)qt_loop_wrapper,
+                                      &qwa, sizeof(struct qt_loop_wrapper_args),
+                                      sync.aligned,
+                                      0, NULL,
+                                      NO_SHEPHERD, flags), QTHREAD_SUCCESS);
+            case DONECOUNT:
+                qwa.sync = &sync.dc;
+                qassert(qthread_spawn((qthread_f)qt_loop_wrapper,
+                                      &qwa, sizeof(struct qt_loop_wrapper_args),
+                                      NULL,
+                                      0, NULL,
+                                      NO_SHEPHERD, flags), QTHREAD_SUCCESS);
+                break;
+            case SINC_T:
+                qwa.sync = sync.sinc;
+                qassert(qthread_spawn((qthread_f)qt_loop_wrapper,
+                                      &qwa, sizeof(struct qt_loop_wrapper_args),
+                                      NULL,
+                                      0, NULL,
+                                      NO_SHEPHERD, flags), QTHREAD_SUCCESS);
+                break;
+            case NO_SYNC:
+                abort();
+        }
+    }
+    switch(sync_type) {
+        case SYNCVAR_T:
+            for (i = 0; i < steps; i++) {
+                qthread_syncvar_readFF(NULL, sync.syncvar + i);
+            }
+            free(sync.syncvar);
+            break;
+        case ALIGNED_T:
+            for (i = 0; i < steps; i++) {
+                qthread_readFF(NULL, sync.aligned + i);
+            }
+            free(sync.aligned);
+            break;
+        case SINC_T:
+            qt_sinc_wait(sync.sinc, NULL);
+            qt_sinc_destroy(sync.sinc);
+            break;
+        case DONECOUNT:
+            while (sync.dc != threadct) {
+                qthread_yield();
+            }
+            break;
+        case NO_SYNC:
+            abort();
+    }
+}
+
+static void qt_loop_inner(const size_t     start,
+                          const size_t     stop,
+                          const qt_loop_f  func,
+                          void            *argptr,
+                          int              future,
+                          const synctype_t sync_type)
+{
+    struct qt_loop_spawner_arg a = { argptr, func, sync_type, future };
+
+    qt_loop_balance_inner(start, stop, qt_loop_spawner, &a, future, sync_type);
+}
+
+#if 0
 static void qt_loop_inner(const size_t     start,
                           const size_t     stop,
                           const qt_loop_f  func,
@@ -197,6 +364,7 @@ static void qt_loop_inner(const size_t     start,
         syncvar_t *syncvar;
         aligned_t *aligned;
         qt_sinc_t *sinc;
+        aligned_t  dc;
     } sync = { NULL };
     switch (sync_type) {
         case SYNCVAR_T:
@@ -298,6 +466,8 @@ static void qt_loop_inner(const size_t     start,
     free(qwa);
 }                                      /*}}} */
 
+#endif /* if 0 */
+
 void qt_loop(const size_t    start,
              const size_t    stop,
              const qt_loop_f func,
@@ -364,9 +534,9 @@ static void qt_loop_step_inner(const size_t         start,
     if ((steps * stride) + start < stop) {
         steps++;
     }
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_steal_disable();
-#endif
+# endif
     qwa  = (struct qloop_step_wrapper_args *)malloc(sizeof(struct qloop_step_wrapper_args) * steps);
     rets = calloc(steps, sizeof(syncvar_t));
     assert(qwa);
@@ -385,7 +555,7 @@ static void qt_loop_step_inner(const size_t         start,
         qwa[threadct].rets    = rets;
         qwa[threadct].rootNum = rootNum;
 
-	//        qthread_syncvar_empty(rets + threadct);
+        //        qthread_syncvar_empty(rets + threadct);
         threadct++;
     }
     threadct = 0;
@@ -399,22 +569,22 @@ static void qt_loop_step_inner(const size_t         start,
             threadct++;
         }
     } else {
-      /*
-	qassert(qthread_fork_syncvar_copyargs_to
-                    ((qthread_f)qloop_step_wrapper, qwa, 0, rets, (qthread_shepherd_id_t)0), QTHREAD_SUCCESS);
-      */
-      qloop_step_wrapper(&qwa[0]); // use this thread as the root and start the
-                                   // others inside qloop_step_wrapper
-                                   // saves a timeout in the following loop to
-                                   // get the last thread working on the loop
+        /*
+         * qassert(qthread_fork_syncvar_copyargs_to
+         *            ((qthread_f)qloop_step_wrapper, qwa, 0, rets, (qthread_shepherd_id_t)0), QTHREAD_SUCCESS);
+         */
+        qloop_step_wrapper(&qwa[0]); // use this thread as the root and start the
+                                     // others inside qloop_step_wrapper
+                                     // saves a timeout in the following loop to
+                                     // get the last thread working on the loop
     }
 
     for (i = 0; i < steps; i++) {
         qthread_syncvar_readFF(NULL, rets + i);
     }
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_steal_enable();
-#endif
+# endif
     free(qwa);
     free(rets);
 }                                      /*}}} */
@@ -1928,8 +2098,8 @@ static void qt_naked_parallel_for(void *nakedArg) // This function must match qt
     qt_parallel_qfor(func, startat, stopat, step, argptr);
 } /*}}}*/
 
-static qt_mpool generic_rose_pool = NULL;
-static aligned_t poolUninit = 1;
+static qt_mpool  generic_rose_pool = NULL;
+static aligned_t poolUninit        = 1;
 
 qqloop_step_handle_t *qt_loop_rose_queue_create(int64_t start,
                                                 int64_t stop,
@@ -1937,18 +2107,19 @@ qqloop_step_handle_t *qt_loop_rose_queue_create(int64_t start,
 {
     qqloop_step_handle_t *ret;
     int                   array_size = 0;
+
 # ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     array_size = qthread_num_workers();
 # else
     array_size = qthread_num_shepherds();
 # endif
     if (poolUninit) {
-      int malloc_size = sizeof(qqloop_step_handle_t) +   // base size
-	array_size * sizeof(aligned_t) + // static iteration array size
-	array_size * sizeof(aligned_t) + // current iteration array size
-	array_size * sizeof(aligned_t);  // table for current_worker array
-      poolUninit=0;
-      generic_rose_pool = qt_mpool_create(malloc_size);
+        int malloc_size = sizeof(qqloop_step_handle_t) +   // base size
+                          array_size * sizeof(aligned_t) + // static iteration array size
+                          array_size * sizeof(aligned_t) + // current iteration array size
+                          array_size * sizeof(aligned_t);  // table for current_worker array
+        poolUninit        = 0;
+        generic_rose_pool = qt_mpool_create(malloc_size);
     }
     ret = qt_mpool_alloc(generic_rose_pool);
 
@@ -1980,7 +2151,7 @@ qqloop_step_handle_t *qt_loop_rose_queue_create(int64_t start,
 
 void qt_loop_rose_queue_free(qqloop_step_handle_t *qqloop)
 {
-  qt_mpool_free(generic_rose_pool,qqloop);
+    qt_mpool_free(generic_rose_pool, qqloop);
 }
 
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
