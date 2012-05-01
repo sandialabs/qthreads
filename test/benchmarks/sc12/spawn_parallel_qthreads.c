@@ -22,6 +22,22 @@ static void par_null_task2(size_t start,
     }
 }
 
+static aligned_t donecount = 0;
+
+static aligned_t null_task(void *args_)
+{
+    return qthread_incr(&donecount, 1);
+}
+
+static void par_spawn(size_t start,
+                          size_t stop,
+                          void  *args_)
+{
+    for (size_t i=start; i<stop; ++i) {
+        qthread_spawn(null_task, NULL, 0, NULL, 0, NULL, NO_SHEPHERD, QTHREAD_SPAWN_SIMPLE);
+    }
+}
+
 int main(int   argc,
          char *argv[])
 {
@@ -75,6 +91,14 @@ int main(int   argc,
 	    qtimer_start(timer);
 	    l = qt_loop_queue_create(TIMED, 0, count, 1, par_null_task2, NULL);
 	    qt_loop_queue_run(l);
+	    qtimer_stop(timer);
+	    break;
+	case 7:
+	    qtimer_start(timer);
+	    qt_loop_balance(0, count, par_spawn, NULL);
+	    while (donecount != count) {
+		qthread_yield();
+	    }
 	    qtimer_stop(timer);
 	    break;
     }
