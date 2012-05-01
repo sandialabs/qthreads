@@ -230,7 +230,6 @@ static void qt_loop_spawner(const size_t start,
     const qt_loop_f             func      = ((struct qt_loop_spawner_arg *)args_)->func;
     void *const                 argptr    = ((struct qt_loop_spawner_arg *)args_)->argptr;
 
-    assert(qwa);
     assert(func);
 
     union {
