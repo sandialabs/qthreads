@@ -50,65 +50,6 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
                                           const int       future,
                                           synctype_t      sync_type);
 
-static aligned_t qloop_wrapper_noaffin(struct qloop_wrapper_args *const restrict arg)
-{                                      /*{{{ */
-    /* tree-based spawning (credit: AKP) */
-    size_t           tot_workers = arg->spawnthreads - 1; // -1 because I already exist
-    size_t           level       = arg->level;
-    size_t           my_id       = arg->id;
-    size_t           new_id      = my_id + (1 << level);
-    const synctype_t sync_type   = arg->sync_type;
-    void *const      sync        = arg->sync;
-
-    switch (sync_type) {
-        case SYNCVAR_T:
-            while (new_id <= tot_workers) {      // create some children? (tot_workers zero based)
-                size_t offset = new_id - my_id;  // need how much past current locations
-                (arg + offset)->level = ++level; // increase depth for created thread
-                qthread_fork_syncvar((qthread_f)qloop_wrapper_noaffin,
-                                        arg + offset,
-                                        (syncvar_t *)sync + new_id);
-                new_id = (1 << level) + my_id;         // level has been incremented
-            }
-            break;
-        case ALIGNED_T:
-            while (new_id <= tot_workers) {      // create some children? (tot_workers zero based)
-                size_t offset = new_id - my_id;  // need how much past current locations
-                (arg + offset)->level = ++level; // increase depth for created thread
-                qthread_fork((qthread_f)qloop_wrapper_noaffin,
-                                arg + offset,
-                                (aligned_t *)sync + new_id);
-                new_id = (1 << level) + my_id;         // level has been incremented
-            }
-            break;
-        default:
-            while (new_id <= tot_workers) {      // create some children? (tot_workers zero based)
-                size_t offset = new_id - my_id;  // need how much past current locations
-                (arg + offset)->level = ++level; // increase depth for created thread
-                qthread_fork((qthread_f)qloop_wrapper_noaffin,
-                                        arg + offset,
-                                        NULL);
-                new_id = (1 << level) + my_id;         // level has been incremented
-            }
-    }
-
-    // and now, we execute the function
-    arg->func(arg->startat, arg->stopat, arg->arg);
-
-    switch (sync_type) {
-        default:
-            break;
-        case SINC_T:
-            qt_sinc_submit(sync, NULL);
-            break;
-        case DONECOUNT:
-            qthread_incr((aligned_t *)sync, 1);
-            break;
-    }
-
-    return 0;
-}                                      /*}}} */
-
 static aligned_t qloop_wrapper(struct qloop_wrapper_args *const restrict arg)
 {                                      /*{{{ */
     /* tree-based spawning (credit: AKP) */
@@ -254,7 +195,6 @@ int in_qthread_step_fence(void *addr)
 # endif
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
 
-#if 1
 struct qt_loop_spawner_arg {
     void      *argptr;
     qt_loop_f  func;
@@ -392,119 +332,6 @@ static void qt_loop_inner(const size_t     start,
 
     qt_loop_balance_inner(start, stop, qt_loop_spawner, &a, future, sync_type);
 }
-
-#else
-static void qt_loop_inner(const size_t     start,
-                          const size_t     stop,
-                          const qt_loop_f  func,
-                          void            *argptr,
-                          int              future,
-                          const synctype_t sync_type)
-{                                      /*{{{ */
-    size_t                     i, threadct = 0;
-    size_t                     steps = stop - start;
-    struct qloop_wrapper_args *qwa;
-    unsigned int               flags = 0;
-    aligned_t                  dc;
-    void                      *retptr;
-
-    qwa = (struct qloop_wrapper_args *)malloc(sizeof(struct qloop_wrapper_args) * steps);
-    assert(qwa);
-    assert(func);
-
-    union {
-        syncvar_t *syncvar;
-        aligned_t *aligned;
-        qt_sinc_t *sinc;
-    } sync = { NULL };
-    switch (sync_type) {
-        case SYNCVAR_T:
-            retptr = sync.syncvar = malloc(steps * sizeof(syncvar_t));
-            assert(sync.syncvar);
-            flags |= QTHREAD_SPAWN_RET_SYNCVAR_T;
-            break;
-        case SINC_T:
-            sync.sinc = qt_sinc_create(0, NULL, NULL, steps);
-            assert(sync.sinc);
-            retptr = NULL;
-            break;
-        case ALIGNED_T:
-            retptr = sync.aligned = malloc(steps * sizeof(aligned_t));
-            assert(sync.aligned);
-            break;
-        case DONECOUNT:
-            retptr = NULL;
-            dc = 0;
-            break;
-        default:
-            abort();
-    }
-
-    for (i = start, threadct = 0; i < stop; ++i, ++threadct) {
-        qwa[threadct].func         = func;
-        qwa[threadct].startat      = i;
-        qwa[threadct].stopat       = i + 1;
-        qwa[threadct].arg          = argptr;
-        qwa[threadct].id           = threadct;
-        qwa[threadct].level        = 0;
-        qwa[threadct].spawnthreads = steps;
-        qwa[threadct].sync_type    = sync_type;
-        switch (sync_type) {
-            case SYNCVAR_T:
-                sync.syncvar[threadct] = SYNCVAR_EMPTY_INITIALIZER;
-                qwa[threadct].sync     = sync.syncvar;
-                break;
-            case ALIGNED_T:
-                qthread_empty(&sync.aligned[threadct]);
-                qwa[threadct].sync = sync.aligned;
-                break;
-            case DONECOUNT:
-                qwa[threadct].sync = &dc;
-                break;
-            case SINC_T:
-                qwa[threadct].sync = sync.sinc;
-                break;
-            default:
-                abort();
-        }
-    }
-    if (future) {
-        flags |= QTHREAD_SPAWN_FUTURE;
-    }
-    qassert(qthread_spawn((qthread_f)qloop_wrapper_noaffin,
-                          qwa, 0,
-                          retptr,
-                          0, NULL,
-                          0, flags), QTHREAD_SUCCESS);
-    switch(sync_type) {
-        case SYNCVAR_T:
-            for (i = 0; i < steps; i++) {
-                qthread_syncvar_readFF(NULL, sync.syncvar + i);
-            }
-            free(sync.syncvar);
-            break;
-        case ALIGNED_T:
-            for (i = 0; i < steps; i++) {
-                qthread_readFF(NULL, sync.aligned + i);
-            }
-            free(sync.aligned);
-            break;
-        case SINC_T:
-            qt_sinc_wait(sync.sinc, NULL);
-            qt_sinc_destroy(sync.sinc);
-            break;
-        case DONECOUNT:
-            while (dc != threadct) {
-                qthread_yield();
-            }
-            break;
-        default:
-            abort();
-    }
-    free(qwa);
-}                                      /*}}} */
-
-#endif /* if 0 */
 
 void qt_loop(const size_t    start,
              const size_t    stop,
