@@ -980,7 +980,8 @@ AS_IF([test "$enable_multinode" = "yes"],
        LDFLAGS="$LDFLAGS $portals4_LDFLAGS"
        LIBS="$LIBS $portals4_LIBS"
        AC_ARG_WITH([multinode-runtime],
-                   [AS_HELP_STRING([--with-multinode-runtime@<:@=OPTION@:>@],[Use OPTION as runtime support, current options
+                   [AS_HELP_STRING([--with-multinode-runtime@<:@=OPTION@:>@],
+                                   [Use OPTION as runtime support, current options
                                     are shmemrt, mpi, and pmi @<:@default=mpi@:>@])])
        AS_IF([test "x$with_multinode_runtime" = "x"],
              [with_multinode_runtime=mpi])
