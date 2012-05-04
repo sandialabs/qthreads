@@ -69,6 +69,13 @@ static int orderedLoopCount = 0;
 QTHREAD_FASTLOCK_TYPE critLock;
 syncvar_t XOMP_critical;
 
+static aligned_t barrierIn[2]; // non-preemptive barrier within OpenMP parallel section code
+static aligned_t gateIn[2];    // gate for non-preemptive barrier within OpenMP parallel section code
+static aligned_t *gateCount;   // count of gaten entires for non-preemptive barrier code
+static aligned_t nonpremptiveBarrier = 1; // use special barrier (if anything odd happens - nesting -  don't)
+
+
+
 #ifdef USE_RDTSC
 static uint64_t rdtsc(void);
 #endif
@@ -277,6 +284,12 @@ void XOMP_init(
 
     QTHREAD_FASTLOCK_INIT(critLock);
 
+    barrierIn[0] = qthread_num_workers();
+    barrierIn[1] = qthread_num_workers();
+    gateIn[0] = 1;
+    gateIn[1] = 1;
+    gateCount = (aligned_t *) malloc (sizeof(aligned_t) * barrierIn[0]);
+    
     if (! staticStartCount){
       fprintf(stderr,"XOMP_init build shepherd aux structure malloc failed\n");
     }
@@ -309,6 +322,7 @@ void XOMP_parallel_start(
   //    --- parallel for loops directly created within other for loops will be handled by passing
   //   this value in as part of the XOMP_loop_*_init function
   if (qt_omp_parallel_region_create()) {
+    nonpremptiveBarrier = 0;
     set_inside_xomp_parallel(&xomp_status, TRUE);
   }
 
@@ -326,9 +340,10 @@ void XOMP_parallel_start(
   qthread_shepherd_id_t parallelWidth = qthread_num_shepherds();
 #endif
   int save_thread_cnt = 0;  // double duty - non-zero we changed thread count - value is the old thread count
-  if (!ifClause) { //  if if clause false don't start parallel region
+  if (!ifClause) { //  if clause false don't start parallel region
       // but still need to do the work (serially)
       numThread = 1;
+      nonpremptiveBarrier = 0;
   }
   if ( numThread & (parallelWidth != numThread)) {
     save_thread_cnt = parallelWidth;
@@ -357,6 +372,7 @@ void XOMP_parallel_end(
     rcrtool_log(RCR_APP_STATE_DUMP, XOMP_PARALLEL_END, -1, 0, 0);
 #endif
 
+    set_inside_xomp_parallel(&xomp_status, FALSE);
     qt_omp_parallel_region_destroy();  //  need to free parallel region and all it contains
 
     return;
@@ -715,14 +731,26 @@ static void waitCompletionOutstandingTasks(void)
 
 }
 
-extern int activeParallelLoop;
-
 void XOMP_barrier(void)
 {
     waitCompletionOutstandingTasks(); // wait for outstanding tasks to complete
 
-#ifdef QTHREAD_LOG_BARRIER
+
     size_t myid = qthread_barrier_id();
+    aligned_t gate = (gateCount[myid]++) && 1;
+    aligned_t cnt = qthread_incr(&barrierIn[gate],-1);
+    if (cnt == 1) gateIn[gate] = 0;
+    while (gateIn[gate] && nonpremptiveBarrier) COMPILER_FENCE;
+    cnt = qthread_incr(&barrierIn[gate],1);
+    if (cnt == qthread_num_workers()) {
+      gateIn[gate] = 1;
+    }
+
+    COMPILER_FENCE;
+    if (nonpremptiveBarrier)return;
+
+#ifdef QTHREAD_LOG_BARRIER
+    //    size_t myid = qthread_barrier_id(); -- test
     qt_barrier_enter(qt_thread_barrier(),myid);
 #else
     qt_feb_barrier_enter(qt_thread_barrier());
@@ -799,6 +827,8 @@ void XOMP_task(
   qthread_incr(&taskId,1);
   qthread_debug(LOCK_DETAILS, "me(%p) creating task for shepherd %d\n", me, id%qthread_num_shepherds());
 #endif
+
+  nonpremptiveBarrier = 0; // tasks active don't assume one thread per core in barrier
 
 #ifdef QTHREAD_OMP_AFFINITY
   qthread_t *t = qthread_internal_self();
@@ -894,6 +924,7 @@ void XOMP_loop_ordered_dynamic_init(
 
 void XOMP_loop_ordered_runtime_init(
     void ** loop,
+
     int lower,
     int upper,
     int stride)
@@ -1279,6 +1310,10 @@ void omp_set_num_threads (
     qtar_resize(qt_num_threads_requested);
     if (qt_parallel_region()) qt_thread_barrier_resize(qt_num_threads_requested);
     qt_barrier_resize(qt_num_threads_requested);
+
+    barrierIn[0] = qt_num_threads_requested;
+    barrierIn[1] = qt_num_threads_requested;
+
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_id_t newId = 0;
     for(i=0; i < qt_num_threads_requested; i++) {  // repack id's
