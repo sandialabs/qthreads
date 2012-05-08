@@ -11,9 +11,9 @@ These are ideas for things to do (in no particular order):
 
  5. Qthreads with in/out vectors for cross-node workstealing
 
- 6. Cross-node work spawning and memory access
+ 6. Cross-node memory access? (Is this a good idea?)
 
- 7. Cross-node synchronization
+ 7. Cross-node synchronization (i.e. fill remote FEB)
 
  8. Hierarchical shepherds (need to rename shepherds)
 
@@ -46,6 +46,8 @@ These are ideas for things to do (in no particular order):
 18. Coalesce system calls
 
 19. Implement MAMA malloc?
+
+20. Periodic task system
 
 Things to think about:
 
