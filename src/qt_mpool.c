@@ -321,9 +321,8 @@ void *qt_mpool_alloc(qt_mpool pool)
         const size_t      items_per_alloc = pool->items_per_alloc;
         qt_mpool_cache_t *cache           = NULL;
 
-        cnt = tc->count;
+        cnt = 0;
         /* cache is empty; need to fill it */
-        assert(cnt == 0);
         if (pool->reuse_pool) { // global cache
             qthread_debug(MPOOL_BEHAVIOR, "->...pull from reuse\n");
             QTHREAD_FASTLOCK_LOCK(&pool->reuse_lock);
