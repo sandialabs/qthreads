@@ -74,9 +74,10 @@ int main(int   argc,
 
     // Test creating an empty sinc
     {
-        qt_sinc_t *zero_sinc = qt_sinc_create(0, NULL, NULL, 0);
-        qt_sinc_wait(zero_sinc, NULL);
-        qt_sinc_destroy(zero_sinc);
+        qt_sinc_t zero_sinc;
+	qt_sinc_init(&zero_sinc, 0, NULL, NULL, 0);
+        qt_sinc_wait(&zero_sinc, NULL);
+        qt_sinc_fini(&zero_sinc);
 
         qt_sinc_t *three_sinc = qt_sinc_create(0, NULL, NULL, 0);
         qt_sinc_willspawn(three_sinc, 3);
@@ -87,8 +88,7 @@ int main(int   argc,
         qt_sinc_destroy(three_sinc);
     }
 
-    qt_sinc_t *sinc =
-        qt_sinc_create(0, NULL, NULL, 2);
+    qt_sinc_t *sinc = qt_sinc_create(0, NULL, NULL, 2);
 
     // Spawn additional waits
     aligned_t rets[3];

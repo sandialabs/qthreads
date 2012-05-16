@@ -75,19 +75,19 @@ int main(int   argc,
     NUMARG(depth, "TEST_DEPTH");
 
     my_value_t initial_value = 0;
-    qt_sinc_t *sinc = 
-        qt_sinc_create(sizeof(my_value_t), &initial_value, my_incr, 2);
+    qt_sinc_t sinc;
+    qt_sinc_init(&sinc, sizeof(my_value_t), &initial_value, my_incr, 2);
 
     // Spawn additional waits
     aligned_t rets[3];
     {
-        qthread_fork(wait_on_sinc, sinc, &rets[0]);
-        qthread_fork(wait_on_sinc, sinc, &rets[1]);
-        qthread_fork(wait_on_sinc, sinc, &rets[2]);
+        qthread_fork(wait_on_sinc, &sinc, &rets[0]);
+        qthread_fork(wait_on_sinc, &sinc, &rets[1]);
+        qthread_fork(wait_on_sinc, &sinc, &rets[2]);
     }
 
     {
-        v_args_t args = { depth, sinc };
+        v_args_t args = { depth, &sinc };
 
         // These two spawns covered by qt_sinc_create(...,2)
         qthread_fork_syncvar_copyargs(visit, &args, sizeof(v_args_t), NULL);
@@ -95,18 +95,18 @@ int main(int   argc,
     }
 
     my_value_t x = 0;
-    qt_sinc_wait(sinc, &x);
+    qt_sinc_wait(&sinc, &x);
     for (int i = 0; i < 3; i++)
         qthread_readFF(NULL, &rets[i]);
 
     total += x;
 
     // Reset the sinc
-    qt_sinc_reset(sinc, 2);
+    qt_sinc_reset(&sinc, 2);
 
     // Second use
     {
-        v_args_t args = { depth, sinc };
+        v_args_t args = { depth, &sinc };
 
         // These two spawns covered by qt_sinc_reset(...,2)
         qthread_fork_syncvar_copyargs(visit, &args, sizeof(v_args_t), NULL);
@@ -114,10 +114,10 @@ int main(int   argc,
     }
 
     x = 0;
-    qt_sinc_wait(sinc, &x);
+    qt_sinc_wait(&sinc, &x);
     total += x;
 
-    qt_sinc_destroy(sinc);
+    qt_sinc_fini(&sinc);
 
     if (total == (1UL << (depth+1))) {
         iprintf("SUCCEEDED with total = 2*(2^%lu) = %lu\n", 
