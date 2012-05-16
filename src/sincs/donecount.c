@@ -61,10 +61,10 @@ void qt_sinc_init(qt_sinc_t *restrict  sinc_,
                   qt_sinc_op_f         op,
                   size_t               expect)
 {
-    assert(sinc);
     assert((0 == sizeof_value && NULL == initial_value) ||
            (0 != sizeof_value && NULL != initial_value));
     qt_internal_sinc_t *const restrict sinc = (struct qt_sinc_s *)sinc_;
+    assert(sinc);
 
     if (QTHREAD_EXPECT((num_sheps == 0), 0)) {
         num_sheps   = qthread_readstate(TOTAL_SHEPHERDS);
@@ -112,6 +112,9 @@ void qt_sinc_init(qt_sinc_t *restrict  sinc_,
     } else {
         qthread_fill(&sinc->ready);
     }
+    assert(NULL == sinc->rdata || 
+           ((sinc->rdata->result && sinc->rdata->initial_value) || 
+            (!sinc->rdata->result && !sinc->rdata->initial_value)));
 }
 
 qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
@@ -132,6 +135,8 @@ void qt_sinc_reset(qt_sinc_t   *sinc_,
                    const size_t will_spawn)
 {
     qt_internal_sinc_t *const restrict  sinc  = (qt_internal_sinc_t *)sinc_;
+    assert(sinc && (0 == sinc->counter));
+    
     qt_sinc_reduction_t *const restrict rdata = sinc->rdata;
 
     // Reset values
@@ -160,8 +165,9 @@ void qt_sinc_reset(qt_sinc_t   *sinc_,
 
 void qt_sinc_fini(qt_sinc_t *sinc_)
 {
-    assert(sinc_);
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
+    assert(sinc);
+
     if (sinc->rdata) {
         qt_sinc_reduction_t *const restrict rdata = sinc->rdata;
         assert(rdata->result);
@@ -185,19 +191,25 @@ void qt_sinc_destroy(qt_sinc_t *sinc_)
 void qt_sinc_willspawn(qt_sinc_t *sinc_,
                        size_t     count)
 {
-    assert(sinc_);
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
+    assert(sinc);
+
     if (count != 0) {
         if (qthread_incr(&sinc->counter, count) == 0) {
             qthread_empty(&sinc->ready);
         }
     }
+
+    assert(sinc && (0 < sinc->counter));
+
+    return;
 }
 
 void *qt_sinc_tmpdata(qt_sinc_t *sinc_)
 {
-    assert(sinc_);
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
+    assert(sinc);
+
     if (NULL != sinc->rdata) {
         qt_sinc_reduction_t *const restrict rdata         = sinc->rdata;
         const size_t                        shep_offset   = qthread_shep() * rdata->sizeof_shep_value_part;
@@ -210,10 +222,12 @@ void *qt_sinc_tmpdata(qt_sinc_t *sinc_)
 
 static void qt_sinc_internal_collate(qt_sinc_t *sinc_)
 {
-    assert(sinc_);
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
+    assert(sinc);
+
     if (sinc->rdata) {
         qt_sinc_reduction_t *const restrict rdata = sinc->rdata;
+
         // step 1: collate results
         const size_t sizeof_value           = rdata->sizeof_value;
         const size_t sizeof_shep_value_part = rdata->sizeof_shep_value_part;
@@ -227,6 +241,7 @@ static void qt_sinc_internal_collate(qt_sinc_t *sinc_)
             }
         }
     }
+
     // step 2: release waiters
     qthread_fill(&sinc->ready);
 }
@@ -234,8 +249,9 @@ static void qt_sinc_internal_collate(qt_sinc_t *sinc_)
 void qt_sinc_submit(qt_sinc_t *restrict sinc_,
                     void *restrict      value)
 {
-    assert(sinc_);
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
+    assert(sinc);
+
     if (value) {
         // Update value
         qt_sinc_reduction_t *const restrict rdata = sinc->rdata;
@@ -259,18 +275,26 @@ void qt_sinc_submit(qt_sinc_t *restrict sinc_,
 
     // Update counter
     qt_sinc_count_t count = qthread_incr(&sinc->counter, -1);
+    assert(count > 0);
     if (1 == count) { // This is the final submit
         qt_sinc_internal_collate(sinc_);
     }
+
+    return;
 }
 
 void qt_sinc_wait(qt_sinc_t *restrict sinc_,
                   void *restrict      target)
 {
-    assert(sinc_);
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
+    assert(sinc);
+    assert(NULL == sinc->rdata ||
+           (((NULL != sinc->rdata->values) && (0 < sinc->rdata->sizeof_value) && sinc->rdata->op) || (NULL == target)));
+
     qthread_readFF(NULL, &sinc->ready);
 
+    // XXX: race with many waiters, few cores - first waiter to finish hits `qt_sinc_destroy()`.
+    // XXX: need a count of waiters and barrier to protect access to sinc members.
     if (target) {
         assert(sinc->rdata->sizeof_value > 0);
         memcpy(target, sinc->rdata->result, sinc->rdata->sizeof_value);

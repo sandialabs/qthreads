@@ -20,7 +20,6 @@ static aligned_t hello_new_team(void *arg_) {
 
     iprintf("`hello_new_team` executing in team %lu (w/ parent %lu)\n", 
         (unsigned long)id, (unsigned long)parent_id);
-    assert(id != non_team_id && id != default_team_id);
     assert(parent_id == non_team_id);
 
     return id;
@@ -33,7 +32,6 @@ static aligned_t hello_in_team(void *arg_) {
     iprintf("`hello_in_team` executing in team %lu (w/ parent %lu)\n", 
         (unsigned long)id, (unsigned long)parent_id);
     assert(id != non_team_id);
-    assert(parent_id == non_team_id);
 
     return id;
 }
@@ -44,7 +42,6 @@ static aligned_t hello_new_team_in_team(void *arg_) {
 
     iprintf("`hello_new_team_in_team` executing in team %lu (w/ parent %lu)\n", 
         (unsigned long)id, (unsigned long)parent_id);
-    assert(id != non_team_id && id != default_team_id);
     assert(parent_id == non_team_id);
 
     aligned_t ret;
@@ -60,7 +57,6 @@ static aligned_t hello_new_team_new_team(void *arg_) {
 
     iprintf("`hello_new_team_new_team` executing in team %lu (w/ parent %lu)\n", 
         (unsigned long)id, (unsigned long)parent_id);
-    assert(id != non_team_id && id != default_team_id);
     assert(parent_id == non_team_id);
 
     aligned_t ret;

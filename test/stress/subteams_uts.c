@@ -27,6 +27,7 @@
 static aligned_t donecount;
 static size_t    nodecount;
 static size_t    num_subteams = 0;
+static int       root_context = 0;
 
 typedef enum {
     BIN = 0,
@@ -151,7 +152,18 @@ static aligned_t visit(void *args_)
         qthread_yield();
     }
 
-    qthread_incr(&donecount, 1);
+    if (0 == root_context) {
+        qthread_incr(&donecount, 1);
+    }
+
+    return 0;
+}
+
+static aligned_t run_visit(void *args_)
+{
+    aligned_t ret;
+    qthread_fork_new_subteam(visit, args_, &ret);
+    qthread_readFF(NULL, &ret);
 
     return 0;
 }
@@ -277,6 +289,7 @@ int main(int   argc,
     NUMARG(shift_depth, "UTS_SHIFT_DEPTH");
     NUMARG(num_samples, "UTS_NUM_SAMPLES");
     DBLARG(subteam_prob, "UTS_SUBTEAM_PROB");
+    NUMARG(root_context, "UTS_ROOT_CONTEXT");
 
     assert(qthread_initialize() == 0);
 
@@ -296,12 +309,33 @@ int main(int   argc,
 
     nodecount = 1;
     donecount = 0;
-    qthread_fork(visit, &root, NULL);
-    while (donecount != nodecount) {
-        qthread_yield();
+
+    aligned_t ret;
+    switch (root_context) {
+    case 0: 
+        qthread_fork(visit, &root, &ret);              // Root in default team
+        while (nodecount != donecount) {
+            qthread_yield();
+        }
+        break;
+    case 1:
+        qthread_fork_new_team(visit, &root, &ret);     // Root in non-default team
+        qthread_readFF(NULL, &ret);
+        break;
+    case 2:
+        qthread_fork_new_subteam(visit, &root, &ret);  // Root in subteam of default team
+        qthread_readFF(NULL, &ret);
+        break;
+    case 3:
+        qthread_fork_new_team(run_visit, &root, &ret); // Root in subteam of non-default team
+        qthread_readFF(NULL, &ret);
+        break;
+    default:
+        fprintf(stderr, "Invalid case number: should be in [0,3]\n");
+        return 1;
     }
 
-    total_num_nodes = donecount;
+    total_num_nodes = nodecount;
 
     qtimer_stop(timer);
 
