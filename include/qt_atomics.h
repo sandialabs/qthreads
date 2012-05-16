@@ -14,19 +14,19 @@
 
 #ifdef QTHREAD_OVERSUBSCRIPTION
 # ifdef HAVE_PTHREAD_YIELD
-# define SPINLOCK_BODY() do { COMPILER_FENCE; pthread_yield(); } while (0)
+#  define SPINLOCK_BODY() do { COMPILER_FENCE; pthread_yield(); } while (0)
 # elif HAVE_SCHED_YIELD
-# include <sched.h> /* for sched_yield(); */
-# define SPINLOCK_BODY() do { COMPILER_FENCE; sched_yield(); } while (0)
+#  include <sched.h> /* for sched_yield(); */
+#  define SPINLOCK_BODY() do { COMPILER_FENCE; sched_yield(); } while (0)
 # else
-# error Cannot support efficient oversubscription on this platform.
+#  error Cannot support efficient oversubscription on this platform.
 # endif
 #elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32) || \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 # define SPINLOCK_BODY() do { COMPILER_FENCE; __asm__ __volatile__ ("pause" ::: "memory"); } while (0)
-#else
+#else // ifdef QTHREAD_OVERSUBSCRIPTION
 # define SPINLOCK_BODY() do { COMPILER_FENCE; } while (0)
-#endif
+#endif // ifdef QTHREAD_OVERSUBSCRIPTION
 
 #if defined(__tile__)
 # include <tmc/sync.h>
@@ -52,10 +52,9 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *);
 # define QTHREAD_FASTLOCK_INIT(x)     { (x).enter = 0; (x).exit = 0; }
 # define QTHREAD_FASTLOCK_INIT_PTR(x) { (x)->enter = 0; (x)->exit = 0; }
 # define QTHREAD_FASTLOCK_LOCK(x)     { aligned_t val = qthread_incr(&(x)->enter, 1); \
-                                        MACHINE_FENCE;                                \
                                         while (val != (x)->exit) SPINLOCK_BODY(); /* spin waiting for my turn */ }
-# define QTHREAD_FASTLOCK_UNLOCK(x)   do { qthread_incr(&(x)->exit, 1);  /* allow next guy's turn */ \
-                                           MACHINE_FENCE; } while (0)
+# define QTHREAD_FASTLOCK_UNLOCK(x)   do { COMPILER_FENCE; \
+                                           (x)->exit++; /* allow next guy's turn */ } while (0)
 # define QTHREAD_FASTLOCK_DESTROY(x)
 # define QTHREAD_FASTLOCK_DESTROY_PTR(x)
 # define QTHREAD_FASTLOCK_TYPE        qt_spin_exclusive_t
