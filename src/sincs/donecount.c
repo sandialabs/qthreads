@@ -23,7 +23,7 @@ typedef aligned_t qt_sinc_count_t;
 struct qt_sinc_s {
     // Termination-detection-related info
     qt_sinc_count_t counter;
-    syncvar_t       ready;
+    aligned_t       ready;
 
     // Value-related info
     void *restrict values;
@@ -43,7 +43,7 @@ static unsigned int cacheline;
 #ifdef HAVE_MEMALIGN
 # define ALIGNED_ALLOC(val, size, align) (val) = memalign((align), (size))
 #elif defined(HAVE_POSIX_MEMALIGN)
-# define ALIGNED_ALLOC(val, size, align) posix_memalign((void **) & (val), (align), (size))
+# define ALIGNED_ALLOC(val, size, align) posix_memalign((void **)&(val), (align), (size))
 #elif defined(HAVE_WORKING_VALLOC)
 # define ALIGNED_ALLOC(val, size, align) (val) = valloc((size))
 #elif defined(HAVE_PAGE_ALIGNED_MALLOC)
@@ -51,6 +51,15 @@ static unsigned int cacheline;
 #else
 # define ALIGNED_ALLOC(val, size, align) (val) = valloc((size)) /* cross your fingers! */
 #endif
+
+void qt_sinc_init(qt_sinc_t *restrict  sinc,
+                  size_t               sizeof_value,
+                  const void *restrict initial_value,
+                  qt_sinc_op_f         op,
+                  size_t               expect)
+{
+    assert(sinc);
+}
 
 qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
                           const void  *initial_value,
@@ -112,8 +121,11 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
 
     // Initialize termination detection
     sinc->counter = will_spawn;
-    sinc->ready   =
-        (sinc->counter != 0) ? SYNCVAR_EMPTY_INITIALIZER : SYNCVAR_INITIALIZER;
+    if (sinc->counter != 0) {
+        qthread_empty(&sinc->ready);
+    } else {
+        qthread_fill(&sinc->ready);
+    }
 
     return sinc;
 }
@@ -138,7 +150,11 @@ void qt_sinc_reset(qt_sinc_t   *sinc,
 
     // Reset termination detection
     sinc->counter = will_spawn;
-    sinc->ready   = SYNCVAR_EMPTY_INITIALIZER;
+    if (sinc->counter != 0) {
+        qthread_empty(&sinc->ready);
+    } else {
+        qthread_fill(&sinc->ready);
+    }
 }
 
 void qt_sinc_destroy(qt_sinc_t *sinc)
@@ -162,7 +178,7 @@ void qt_sinc_willspawn(qt_sinc_t *sinc,
 {
     assert(sinc);
     if (qthread_incr(&sinc->counter, count) == 0) {
-        qthread_syncvar_empty(&sinc->ready);
+        qthread_empty(&sinc->ready);
     }
 }
 
@@ -194,7 +210,7 @@ static void qt_sinc_internal_collate(qt_sinc_t *sinc)
         }
     }
     // step 2: release waiters
-    qthread_syncvar_writeF_const(&sinc->ready, 42);
+    qthread_fill(&sinc->ready);
 }
 
 void qt_sinc_submit(qt_sinc_t *restrict sinc,
@@ -228,7 +244,7 @@ void qt_sinc_submit(qt_sinc_t *restrict sinc,
 void qt_sinc_wait(qt_sinc_t *restrict sinc,
                   void *restrict      target)
 {
-    qthread_syncvar_readFF(NULL, &sinc->ready);
+    qthread_readFF(NULL, &sinc->ready);
 
     if (target) {
         assert(sinc->sizeof_value > 0);
