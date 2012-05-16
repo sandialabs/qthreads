@@ -80,7 +80,7 @@ void qt_sinc_init(qt_sinc_t *restrict  sinc_,
         const size_t         num_lines_per_shep     = ceil(sizeof_shep_values * 1.0 / cacheline);
         const size_t         num_lines              = num_sheps * num_lines_per_shep;
         const size_t         sizeof_shep_value_part = num_lines_per_shep * cacheline;
-        qt_sinc_reduction_t *rdata                  = sinc->rdata = malloc(sizeof(qt_sinc_reduction_t));
+        qt_sinc_reduction_t *const restrict rdata                  = sinc->rdata = malloc(sizeof(qt_sinc_reduction_t));
         assert(rdata);
         rdata->op            = op;
         rdata->sizeof_value  = sizeof_value;
@@ -132,7 +132,7 @@ void qt_sinc_reset(qt_sinc_t   *sinc_,
                    const size_t will_spawn)
 {
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
-    qt_sinc_reduction_t *rdata = sinc->rdata;
+    qt_sinc_reduction_t *const restrict rdata = sinc->rdata;
     // Reset values
     if (NULL != rdata) {
         const size_t sizeof_shep_value_part = rdata->sizeof_shep_value_part;
@@ -162,7 +162,7 @@ void qt_sinc_fini(qt_sinc_t *sinc_)
     assert(sinc_);
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
     if (sinc->rdata) {
-        qt_sinc_reduction_t *rdata = sinc->rdata;
+        qt_sinc_reduction_t *const restrict rdata = sinc->rdata;
         assert(rdata->result);
         assert(rdata->initial_value);
         free(rdata->initial_value);
@@ -186,8 +186,10 @@ void qt_sinc_willspawn(qt_sinc_t *sinc_,
 {
     assert(sinc_);
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
-    if (qthread_incr(&sinc->counter, count) == 0) {
-        qthread_empty(&sinc->ready);
+    if (count != 0) {
+        if (qthread_incr(&sinc->counter, count) == 0) {
+            qthread_empty(&sinc->ready);
+        }
     }
 }
 
