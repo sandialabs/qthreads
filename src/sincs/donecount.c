@@ -38,7 +38,7 @@ typedef struct qt_sinc_s {
     qt_sinc_reduction_t *rdata;
 } qt_internal_sinc_t;
 
-static size_t num_sheps;
+static size_t       num_sheps;
 static size_t       num_workers;
 static size_t       num_wps;
 static unsigned int cacheline;
@@ -76,10 +76,10 @@ void qt_sinc_init(qt_sinc_t *restrict  sinc_,
     if (sizeof_value == 0) {
         sinc->rdata = NULL;
     } else {
-        const size_t         sizeof_shep_values     = num_wps * sizeof_value;
-        const size_t         num_lines_per_shep     = ceil(sizeof_shep_values * 1.0 / cacheline);
-        const size_t         num_lines              = num_sheps * num_lines_per_shep;
-        const size_t         sizeof_shep_value_part = num_lines_per_shep * cacheline;
+        const size_t                        sizeof_shep_values     = num_wps * sizeof_value;
+        const size_t                        num_lines_per_shep     = ceil(sizeof_shep_values * 1.0 / cacheline);
+        const size_t                        num_lines              = num_sheps * num_lines_per_shep;
+        const size_t                        sizeof_shep_value_part = num_lines_per_shep * cacheline;
         qt_sinc_reduction_t *const restrict rdata                  = sinc->rdata = malloc(sizeof(qt_sinc_reduction_t));
         assert(rdata);
         rdata->op            = op;
@@ -131,8 +131,9 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
 void qt_sinc_reset(qt_sinc_t   *sinc_,
                    const size_t will_spawn)
 {
-    qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
+    qt_internal_sinc_t *const restrict  sinc  = (qt_internal_sinc_t *)sinc_;
     qt_sinc_reduction_t *const restrict rdata = sinc->rdata;
+
     // Reset values
     if (NULL != rdata) {
         const size_t sizeof_shep_value_part = rdata->sizeof_shep_value_part;
@@ -198,9 +199,9 @@ void *qt_sinc_tmpdata(qt_sinc_t *sinc_)
     assert(sinc_);
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
     if (NULL != sinc->rdata) {
-        qt_sinc_reduction_t *const restrict rdata = sinc->rdata;
-        const size_t shep_offset   = qthread_shep() * rdata->sizeof_shep_value_part;
-        const size_t worker_offset = qthread_readstate(CURRENT_WORKER) * rdata->sizeof_value;
+        qt_sinc_reduction_t *const restrict rdata         = sinc->rdata;
+        const size_t                        shep_offset   = qthread_shep() * rdata->sizeof_shep_value_part;
+        const size_t                        worker_offset = qthread_readstate(CURRENT_WORKER) * rdata->sizeof_value;
         return (uint8_t *)rdata->values + shep_offset + worker_offset;
     } else {
         return NULL;
@@ -222,7 +223,7 @@ static void qt_sinc_internal_collate(qt_sinc_t *sinc_)
             const size_t shep_offset = s * sizeof_shep_value_part;
             for (size_t w = 0; w < num_wps; ++w) {
                 rdata->op(rdata->result,
-                         (uint8_t *)rdata->values + shep_offset + (w * sizeof_value));
+                          (uint8_t *)rdata->values + shep_offset + (w * sizeof_value));
             }
         }
     }
@@ -244,8 +245,8 @@ void qt_sinc_submit(qt_sinc_t *restrict sinc_,
         const size_t sizeof_shep_value_part = rdata->sizeof_shep_value_part;
         const size_t sizeof_value           = rdata->sizeof_value;
 
-        qthread_shepherd_id_t shep_id   = qthread_shep();
-        qthread_worker_id_t   worker_id = qthread_readstate(CURRENT_WORKER);
+        const qthread_shepherd_id_t shep_id   = qthread_shep();
+        const qthread_worker_id_t   worker_id = qthread_readstate(CURRENT_WORKER);
 
         if (NULL != value) {
             const size_t shep_offset   = shep_id * sizeof_shep_value_part;
