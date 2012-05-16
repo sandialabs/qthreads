@@ -183,7 +183,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
                 }
                 local->track = 0;
             }
-            local->bias = local->penalty;
+	    local->bias = local->penalty;
         }
     }
 
@@ -271,7 +271,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
             t        = qt_stack_pop(&q->shared_stack);
             retainer = qt_stack_pop(&q->shared_stack);
             QTHREAD_TRYLOCK_UNLOCK(&q->trylock);
-            if (retainer != NULL) {
+	    if (retainer != NULL) {
                 QTHREAD_FASTLOCK_LOCK(&local->lock);
                 qt_stack_push(&local->stack, retainer);
                 QTHREAD_FASTLOCK_UNLOCK(&local->lock);
@@ -487,7 +487,6 @@ void INTERNAL qthread_steal_enable()
         q->steal_disable = 0;
     }
 }   /*}}}*/
-
 void INTERNAL qthread_steal_disable()
 {   /*{{{*/
     qt_threadqueue_t *q;

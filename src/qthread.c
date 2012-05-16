@@ -433,53 +433,52 @@ static void *qthread_master(void *arg)
 #ifdef QTHREAD_SHEPHERD_PROFILING
         qtimer_start(idle);
 #endif
-        qthread_debug(SHEPHERD_DETAILS, "id(%i): fetching a thread from my queue...\n", me->shepherd_id);
+	qthread_debug(SHEPHERD_DETAILS, "id(%i): fetching a thread from my queue...\n", me->shepherd_id);
 
 #ifdef QTHREAD_RCRTOOL
-        if (rcrtoollevel > 1) {                         // has cache control been turned off by an environment variable?
-            if (me_worker->packed_worker_id != 0) { // never idle shepherd 0 worker 0  -- needs to be active for termination
-	      maestro_allowed_workers();
-	      if (qlib->shepherds[me->shepherd_id].active_workers > maestro_current_workers(me->shepherd_id)) {
-
+	if (rcrtoollevel > 1) {                         // has cache control been turned off by an environment variable?
+	  if (me_worker->packed_worker_id != 0) { // never idle shepherd 0 worker 0  -- needs to be active for termination
+	    maestro_allowed_workers();
+	    if (qlib->shepherds[me->shepherd_id].active_workers > maestro_current_workers(me->shepherd_id)) {
+	      
 #ifdef QTHREAD_RCRTOOL_STAT
-		    clock_gettime(CLOCK_MONOTONIC, &adaptTimeStart);
+	      clock_gettime(CLOCK_MONOTONIC, &adaptTimeStart);
 #endif
-
-		int active = qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers, -1);
-		int current = maestro_current_workers(me->shepherd_id);
-		while ( (active > current)
-			&& (!active>1)  // never throttle the last active worker
-			) {
-		  COMPILER_FENCE;  // is the fence enough of a slowdown to reduce
-                                   // pressure on me->active_workers ???? 
-		  active = me->active_workers + 1;
-		  current = allowed_workers[me->shepherd_id]; // use array don't recompute
-		}
-		MACHINE_FENCE;
-		qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers, 1);
-
-#ifdef QTHREAD_RCRTOOL_STAT
-		clock_gettime(CLOCK_MONOTONIC, &adaptTimeStop);
-		time += (adaptTimeStop.tv_sec + adaptTimeStop.tv_nsec * 1e-9) - (adaptTimeStart.tv_sec + adaptTimeStart.tv_nsec * 1e-9);
-#endif
-                }
+	      int active = qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers, -1);
+	      int current = maestro_current_workers(me->shepherd_id);
+	      while ( (active > current)
+		      && (!active>1)  // never throttle the last active worker
+		      ) {
+		COMPILER_FENCE;  // is the fence enough of a slowdown to reduce
+		// pressure on me->active_workers ???? 
+		active = me->active_workers + 1;
+		current = allowed_workers[me->shepherd_id]; // use array don't recompute
 	      }
-        }
+	      MACHINE_FENCE;
+	      qthread_incr(&qlib->shepherds[me->shepherd_id].active_workers, 1);
+	      
+#ifdef QTHREAD_RCRTOOL_STAT
+	    clock_gettime(CLOCK_MONOTONIC, &adaptTimeStop);
+	    time += (adaptTimeStop.tv_sec + adaptTimeStop.tv_nsec * 1e-9) - (adaptTimeStart.tv_sec + adaptTimeStart.tv_nsec * 1e-9);
+#endif
+	    }
+	  }
+	}
 #endif  /* ifdef QTHREAD_RCRTOOL */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-        while (!QTHREAD_CASLOCK_READ_UI(me_worker->active)) {
-            SPINLOCK_BODY();
-        }
+	while (!QTHREAD_CASLOCK_READ_UI(me_worker->active)) {
+	  SPINLOCK_BODY();
+	}
 #endif
-        t = qt_threadqueue_dequeue_blocking(threadqueue, localqueue, QTHREAD_CASLOCK_READ_UI(me->active));
-        assert(t);
+	t = qt_threadqueue_dequeue_blocking(threadqueue, localqueue, QTHREAD_CASLOCK_READ_UI(me->active));
+	assert(t);
 #ifdef QTHREAD_SHEPHERD_PROFILING
-        qtimer_stop(idle);
-        me->idle_count++;
-        me->idle_time += qtimer_secs(idle);
-        if (me->idle_maxtime < qtimer_secs(idle)) {
-            me->idle_maxtime = qtimer_secs(idle);
-        }
+	qtimer_stop(idle);
+	me->idle_count++;
+	me->idle_time += qtimer_secs(idle);
+	if (me->idle_maxtime < qtimer_secs(idle)) {
+	  me->idle_maxtime = qtimer_secs(idle);
+	}
 #endif
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
