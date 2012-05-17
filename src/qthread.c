@@ -1424,7 +1424,7 @@ void qthread_finalize(void)
     }
 
     // Wait for all team structures to be reclaimed.
-    while (qlib->team_count) SPINLOCK_BODY();
+    while (qlib->team_count) qthread_yield();
 
     qthread_shepherd_t *shep0 = &(qlib->shepherds[0]);
 
