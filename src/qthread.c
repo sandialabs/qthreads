@@ -999,6 +999,7 @@ int qthread_initialize(void)
     qlib->sched_shepherd = 0;
     QTHREAD_FASTLOCK_INIT(qlib->max_thread_id_lock);
     QTHREAD_FASTLOCK_INIT(qlib->max_team_id_lock);
+    QTHREAD_FASTLOCK_INIT(qlib->team_count_lock);
     QTHREAD_FASTLOCK_INIT(qlib->max_unique_id_lock);
     QTHREAD_FASTLOCK_INIT(qlib->sched_shepherd_lock);
     {
