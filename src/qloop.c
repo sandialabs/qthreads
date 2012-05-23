@@ -118,7 +118,7 @@ struct qloop_step_wrapper_args {
     size_t         startat, stopat, step, id, rootNum;
     void          *arg;
     size_t         level;
-    void          *rets;
+    qt_sinc_t     *sinc;
 };
 
 # ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
@@ -168,18 +168,28 @@ static aligned_t qloop_step_wrapper(struct qloop_step_wrapper_args *const restri
         //  mantains one per worker
         size_t offset = new_id - my_id;  // need how much past current locations
         (arg + offset)->level = ++level; // increase depth for created thread
-        qthread_fork_syncvar_copyargs_to((qthread_f)qloop_step_wrapper,
+        qthread_fork_copyargs_to((qthread_f)qloop_step_wrapper,
                                          arg + offset,
                                          0,
-                                         ((syncvar_t *)arg->rets) + new_id,
+                                         NULL,
                                          new_id);
 
         new_id = (1 << level) + my_id;  // level has been incremented
     }
 
     // and every one executes their piece
+# ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
+    MONITOR_ASM_LABEL(qthread_step_fence1); // add label for HPCToolkit unwind
+# endif
+
     arg->func(arg->arg);
 
+# ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
+    MONITOR_ASM_LABEL(qthread_step_fence2); // add label for HPCToolkit unwind
+# endif
+
+    qt_sinc_submit(arg->sinc, NULL);
+	    
 # ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
     MONITOR_ASM_LABEL(qthread_step_fence4); // add label for HPCToolkit unwind
 # endif
@@ -244,7 +254,7 @@ static void qt_loop_spawner(const size_t start,
         case SYNCVAR_T:
             retptr = sync.syncvar = malloc(steps * sizeof(syncvar_t));
             assert(sync.syncvar);
-            flags |= QTHREAD_SPAWN_RET_SYNCVAR_T;
+	    flags |= QTHREAD_SPAWN_RET_SYNCVAR_T;
             break;
         case SINC_T:
             sync.sinc = qt_sinc_create(0, NULL, NULL, steps);
@@ -394,8 +404,6 @@ static void qt_loop_step_inner(const size_t         start,
     size_t                          i, threadct = 0;
     size_t                          steps = (stop - start) / stride;
     struct qloop_step_wrapper_args *qwa;
-    syncvar_t                      *rets;
-
     if ((steps * stride) + start < stop) {
         steps++;
     }
@@ -403,11 +411,12 @@ static void qt_loop_step_inner(const size_t         start,
     qthread_steal_disable();
 # endif
     qwa  = (struct qloop_step_wrapper_args *)malloc(sizeof(struct qloop_step_wrapper_args) * steps);
-    rets = calloc(steps, sizeof(syncvar_t));
     assert(qwa);
-    assert(rets);
     assert(func);
     aligned_t rootNum = qthread_barrier_id(); // what thread is the root of the tree?
+
+    qt_sinc_t *my_sinc = qt_sinc_create(0, NULL, NULL, steps);
+
 
     for (i = start; i < stop; i += stride) {
         qwa[threadct].func    = func;
@@ -417,15 +426,16 @@ static void qt_loop_step_inner(const size_t         start,
         qwa[threadct].arg     = argptr;
         qwa[threadct].id      = threadct;
         qwa[threadct].level   = 0;
-        qwa[threadct].rets    = rets;
+        qwa[threadct].sinc    = my_sinc;
         qwa[threadct].rootNum = rootNum;
 
-        //        qthread_syncvar_empty(rets + threadct);
         threadct++;
     }
     threadct = 0;
-
     if (future) {  // haven't change this yet - use new name - who uses? 4/4/11 AKP
+        fprintf(stderr,"The future is currently unimplemented in qt_loop_step_inner\n");
+        // the following code is the old implementation -- rets is now longer malloced
+	/*
         for (i = start; i < stop; i += stride) {
             qthread_fork_syncvar_future_to((qthread_f)qloop_step_wrapper_future,
                                            qwa + threadct,
@@ -433,25 +443,20 @@ static void qt_loop_step_inner(const size_t         start,
                                            (qthread_shepherd_id_t)(threadct % qthread_num_shepherds()));
             threadct++;
         }
+	*/
     } else {
-        /*
-         * qassert(qthread_fork_syncvar_copyargs_to
-         *            ((qthread_f)qloop_step_wrapper, qwa, 0, rets, (qthread_shepherd_id_t)0), QTHREAD_SUCCESS);
-         */
         qloop_step_wrapper(&qwa[0]); // use this thread as the root and start the
                                      // others inside qloop_step_wrapper
                                      // saves a timeout in the following loop to
                                      // get the last thread working on the loop
     }
 
-    for (i = 0; i < steps; i++) {
-        qthread_syncvar_readFF(NULL, rets + i);
-    }
+    qt_sinc_wait(my_sinc, NULL);
 # ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_steal_enable();
 # endif
     free(qwa);
-    free(rets);
+    qt_sinc_destroy(my_sinc);
 }                                      /*}}} */
 
 #endif /* QTHREAD_USE_ROSE_EXTENSIONS */

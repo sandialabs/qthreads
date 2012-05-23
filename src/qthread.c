@@ -2833,7 +2833,7 @@ int qthread_spawn(qthread_f             f,
     if (ret) {
         int test = QTHREAD_SUCCESS;
         if (feature_flag & QTHREAD_SPAWN_RET_SYNCVAR_T) {
-            t->flags |= QTHREAD_RET_IS_SYNCVAR;
+	    t->flags |= QTHREAD_RET_IS_SYNCVAR;
             if (qthread_syncvar_status((syncvar_t *)ret)) {
                 test = qthread_syncvar_empty((syncvar_t *)ret);
             } else {
@@ -2981,7 +2981,7 @@ int qthread_fork_track_syncvar_copyargs_to(qthread_f             f,
                           NULL,
                           preferred_shep,
                           QTHREAD_SPAWN_PARENT |
-                          QTHREAD_SPAWN_RET_SYNCVAR_T);
+		           QTHREAD_SPAWN_RET_SYNCVAR_T);
 } /*}}}*/
 
 int qthread_fork_track_syncvar_copyargs(qthread_f   f,
@@ -3013,7 +3013,8 @@ int qthread_fork_syncvar_copyargs_to(qthread_f             f,
                             0,
                             NULL,
                             preferred_shep,
-                            QTHREAD_SPAWN_RET_SYNCVAR_T);
+			    QTHREAD_SPAWN_RET_SYNCVAR_T
+);
 } /*}}}*/
 
 int qthread_fork_copyargs_to(qthread_f             f,
