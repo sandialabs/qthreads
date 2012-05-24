@@ -136,15 +136,9 @@ extern void *qthread_step_fence2;
 
 static aligned_t qloop_step_wrapper_future(struct qloop_step_wrapper_args *const restrict arg)
 {                                      /*{{{ */
-# ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
-    MONITOR_ASM_LABEL(qthread_step_fence1); // add label for HPCToolkit unwind
-# endif
 
     arg->func(arg->arg);
 
-# ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
-    MONITOR_ASM_LABEL(qthread_step_fence2); // add label for HPCToolkit unwind
-# endif
     return 0;
 }                                      /*}}} */
 
