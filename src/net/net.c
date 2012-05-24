@@ -76,20 +76,21 @@ static aligned_t fork_helper(void *info)
     qthread_debug(MULTINODE_FUNCTIONS, "[%d] begin fork_helper\n", my_rank);
 
     f   = qt_hash_get(uid_to_ptr_hash, (qt_key_t)(uintptr_t)msg->uid);
-    if (NULL == f) {
+    if (NULL != f) {
+        ret = f(msg->args);
+
+        if (0 != msg->return_addr) {
+            struct return_msg_t ret_msg;
+            ret_msg.return_addr = msg->return_addr;
+            ret_msg.return_val  = ret;
+            qthread_debug(MULTINODE_DETAILS, "[%d] sending return msg 0x%lx, %ld\n",
+                    my_rank, ret_msg.return_addr, ret_msg.return_val);
+            qthread_internal_net_driver_send(msg->origin_node, RETURN_MSG_TAG,
+                    &ret_msg, sizeof(ret_msg));
+        }
+    } else {
         fprintf(stderr, "action uid %d not registered at destination\n", msg->uid);
         abort();
-    }
-    ret = f(msg->args);
-
-    if (0 != msg->return_addr) {
-        struct return_msg_t ret_msg;
-        ret_msg.return_addr = msg->return_addr;
-        ret_msg.return_val  = ret;
-        qthread_debug(MULTINODE_DETAILS, "[%d] sending return msg 0x%lx, %ld\n",
-                      my_rank, ret_msg.return_addr, ret_msg.return_val);
-        qthread_internal_net_driver_send(msg->origin_node, RETURN_MSG_TAG,
-                                         &ret_msg, sizeof(ret_msg));
     }
 
     qthread_debug(MULTINODE_FUNCTIONS, "[%d] end fork_helper\n", my_rank);
@@ -222,12 +223,32 @@ int qthread_multinode_register(uint32_t  uid,
     qthread_debug(MULTINODE_CALLS, "[%d] begin qthread_multinode_register(uid=%d, ptr=0x%lx)\n",
                   my_rank, uid, (unsigned long)f);
 
+    // Check that UID is strictly positive
+    if (0 == uid) {
+        fprintf(stderr, "invalid action id %d: must be > 0", uid);
+        return 1;
+    }
+
+    // Check that UID is not used more than once
+    if (NULL != qt_hash_get(uid_to_ptr_hash, (qt_key_t)(uintptr_t)uid)) {
+        fprintf(stderr, "duplicate registration of action uid %d\n", uid);
+        return 1;
+    }
+
     ret = qt_hash_put(uid_to_ptr_hash, (qt_key_t)(uintptr_t)uid, f);
     if (ret != 1) {
         qthread_debug(MULTINODE_DETAILS, "[%d] uid -> ptr registration failed\n",
                       my_rank);
         return 1;
     }
+
+    // Check that function pointer is not used more than once
+    if (NULL != qt_hash_get(ptr_to_uid_hash, f)) {
+        fprintf(stderr, "duplicate registration of action function 0x%lx\n",
+                (unsigned long)f);
+        return 1;
+    }
+
     ret = qt_hash_put(ptr_to_uid_hash, f, (void *)(uintptr_t)uid);
     if (ret != 1) {
         qthread_debug(MULTINODE_DETAILS, "[%d] ptr -> uid registration failed\n",
@@ -259,6 +280,10 @@ int qthread_fork_remote(qthread_f   f,
 
     if (arg_len < sizeof(msg.args)) {
         msg.uid         = (uint64_t)qt_hash_get(ptr_to_uid_hash, f);
+        if (qt_hash_get(uid_to_ptr_hash, (qt_key_t)(uintptr_t)msg.uid) != f) {
+            fprintf(stderr, "action not registered at source\n");
+            abort();
+        }
         msg.return_addr = (uint64_t)ret;
         msg.origin_node = my_rank;
         msg.arg_len     = arg_len;
