@@ -152,9 +152,9 @@ Q_ENDCXX /* */
 # include <qthread/qthread-sst.h>
 #else
 
-# include <qthread/qt_sinc.h>
-
 Q_STARTCXX /* */
+
+# include <qthread/qt_sinc.h>
 
 typedef unsigned int qthread_shepherd_id_t;
 typedef unsigned int qthread_worker_id_t;
