@@ -1431,10 +1431,6 @@ void API_FUNC qthread_finalize(void)
 
     qthread_shepherd_t *shep0 = &(qlib->shepherds[0]);
 
-#ifndef QTHREAD_NO_ASSERTS
-    qthread_library_initialized = 0;
-    MACHINE_FENCE;
-#endif
 #ifdef QTHREAD_RCRTOOL_STAT
     if (rcrtoollevel > 0) {
         print_status("RCR resource contenton managment limited thread count %d times\n", adaptiveSetHigh);
@@ -1790,6 +1786,11 @@ void API_FUNC qthread_finalize(void)
     qthread_debug(CORE_DETAILS, "destroy shepherd thread-local data\n");
     TLS_DELETE(shepherd_structs);
 
+#ifndef QTHREAD_NO_ASSERTS
+    MACHINE_FENCE;
+    qthread_library_initialized = 0;
+    MACHINE_FENCE;
+#endif
     qthread_debug(CORE_DETAILS, "finished.\n");
     fflush(stdout);
 }                      /*}}} */
