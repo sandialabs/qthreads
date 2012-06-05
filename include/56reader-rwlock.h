@@ -20,9 +20,11 @@
 # define NOINLINE __attribute__((noinline))
 #endif
 
+#define MAX_READERS (128 - sizeof(uint64_t))
+
 struct tlrw_lock {
     uint64_t owner;
-    uint8_t  readers[128 - sizeof(uint64_t)];
+    uint8_t  readers[MAX_READERS];
 };
 
 typedef struct tlrw_lock rwlock_t;
