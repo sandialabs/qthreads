@@ -1059,6 +1059,10 @@ int API_FUNC qthread_initialize(void)
                                                            sizeof(void *));
     qthread_debug(CORE_DETAILS, "qthread task-local size: %u\n", qlib->qthread_tasklocal_size);
 
+#ifndef QTHREAD_NO_ASSERTS
+    qthread_library_initialized = 1;
+    MACHINE_FENCE;
+#endif
 #ifndef UNPOOLED
 /* these are used when qthread_fork() is called from a non-qthread. */
     generic_qthread_pool = qt_mpool_create(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size);
@@ -1096,10 +1100,6 @@ int API_FUNC qthread_initialize(void)
         qthread_debug(SHEPHERD_DETAILS, "shepherd %i set up (%p)\n", i, &qlib->shepherds[i]);
     }
     qthread_debug(SHEPHERD_DETAILS, "done setting up shepherds.\n");
-#ifndef QTHREAD_NO_ASSERTS
-    qthread_library_initialized = 1;
-    MACHINE_FENCE;
-#endif
 
 /* now, transform the current main context into a qthread,
  * and make the main thread a shepherd (shepherd 0).
