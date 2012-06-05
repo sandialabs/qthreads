@@ -3266,7 +3266,7 @@ int API_FUNC qthread_fork_syncvar_to(qthread_f             f,
                          QTHREAD_SPAWN_RET_SYNCVAR_T);
 } /*}}}*/
 
-int API_FUNC qthread_fork_future_to(qthread_f             f,
+int INTERNAL qthread_fork_future_to(qthread_f             f,
                                     const void           *arg,
                                     aligned_t            *ret,
                                     qthread_shepherd_id_t shepherd)
@@ -3284,7 +3284,7 @@ int API_FUNC qthread_fork_future_to(qthread_f             f,
                          QTHREAD_SPAWN_FUTURE);
 } /*}}}*/
 
-int API_FUNC qthread_fork_syncvar_future_to(qthread_f             f,
+int INTERNAL qthread_fork_syncvar_future_to(qthread_f             f,
                                             const void           *arg,
                                             syncvar_t            *ret,
                                             qthread_shepherd_id_t shepherd)
@@ -3303,7 +3303,7 @@ int API_FUNC qthread_fork_syncvar_future_to(qthread_f             f,
                          QTHREAD_SPAWN_FUTURE);
 } /*}}}*/
 
-int API_FUNC qthread_fork_syncvar_future(qthread_f   f,
+int INTERNAL qthread_fork_syncvar_future(qthread_f   f,
                                          const void *arg,
                                          syncvar_t  *ret)
 {   /*{{{*/

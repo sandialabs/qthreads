@@ -18,6 +18,8 @@
 # define MT_LOOP_CHUNK 10000
 #endif
 
+extern int qthread_library_initialized;
+
 #define STRUCT(_structname_, _rtype_)                   struct _structname_ \
     {                                                                       \
         const _rtype_       *array;                                         \
