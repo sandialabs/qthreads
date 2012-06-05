@@ -6,7 +6,7 @@
 SUBDIRS = qthread
 
 noinst_HEADERS = \
-    #56reader-rwlock.h
+    56reader-rwlock.h \
 	fastcontext/taskimpl.h \
 	fastcontext/power-ucontext.h \
 	fastcontext/386-ucontext.h \
