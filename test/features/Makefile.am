@@ -21,7 +21,8 @@ TESTS = \
 		qlfqueue \
 		qdqueue \
 		allpairs \
-		subteams
+		subteams \
+		qt_dictionary
 
 EXTRA_PROGRAMS = wavefront
 
