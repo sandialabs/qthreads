@@ -88,7 +88,7 @@ void API_FUNC qthread_shep_prev_local(qthread_shepherd_id_t *shep)
 
 qthread_shepherd_id_t API_FUNC qthread_shep(void)
 {                      /*{{{ */
-    assert(qthread_library_initialized);
+    /* note that this is supposed to work even if the library is not yet initialized */
     qthread_shepherd_t *ret = qthread_internal_getshep();
 
     if ((qlib == NULL) || (ret == NULL)) {
