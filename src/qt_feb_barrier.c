@@ -12,6 +12,7 @@
 #include <qthread/feb_barrier.h>
 #include <qthread/qthread.h>
 #include "qthread_innards.h"
+#include "qt_visibility.h"
 
 struct qt_feb_barrier_s {
     syncvar_t in_gate;
@@ -38,13 +39,13 @@ static void cleanup_feb_barrier(void)
 
 #endif
 
-void qt_feb_barrier_internal_init(void)
+void INTERNAL qt_feb_barrier_internal_init(void)
 {
     fbp.pool = NULL;
     QTHREAD_CASLOCK_EXPLICIT_INIT(fbp_caslock);
 }
 
-qt_feb_barrier_t *qt_feb_barrier_create(size_t max_threads)
+qt_feb_barrier_t API_FUNC *qt_feb_barrier_create(size_t max_threads)
 {
     qt_feb_barrier_t *b;
 
@@ -71,10 +72,11 @@ qt_feb_barrier_t *qt_feb_barrier_create(size_t max_threads)
     return b;
 }
 
-void qt_feb_barrier_enter(qt_feb_barrier_t *b)
+void API_FUNC qt_feb_barrier_enter(qt_feb_barrier_t *b)
 {
     aligned_t waiters;
 
+    assert(qthread_library_initialized);
     qassert_retvoid(b);
     /* pass through the in_gate */
     qthread_syncvar_readFF(NULL, &b->in_gate);
@@ -98,7 +100,7 @@ void qt_feb_barrier_enter(qt_feb_barrier_t *b)
     }
 }
 
-void qt_feb_barrier_destroy(qt_feb_barrier_t *b)
+void API_FUNC qt_feb_barrier_destroy(qt_feb_barrier_t *b)
 {
 #ifndef UNPOOLED
     assert(fbp.pool != NULL);
@@ -114,14 +116,14 @@ void qt_feb_barrier_destroy(qt_feb_barrier_t *b)
 }
 
 #ifdef QTHREAD_GLOBAL_FEB_BARRIER
-void qt_global_barrier(qthread_t *me)
+void INTERNAL qt_global_barrier(qthread_t *me)
 {
     assert(global_barrier);
     qt_feb_barrier_enter(me, global_barrier);
 }
 
 // allow barrer initization from C
-void qt_global_barrier_init(int size,
+void INTERNAL qt_global_barrier_init(int size,
                             int debug)
 {
     if (global_barrier == NULL) {
@@ -130,7 +132,7 @@ void qt_global_barrier_init(int size,
     }
 }
 
-void qt_global_barrier_destroy(void)
+void INTERNAL qt_global_barrier_destroy(void)
 {
     if (global_barrier) {
         qt_feb_barrier_destroy(global_barrier);

@@ -136,7 +136,6 @@ extern void *qthread_step_fence2;
 
 static aligned_t qloop_step_wrapper_future(struct qloop_step_wrapper_args *const restrict arg)
 {                                      /*{{{ */
-
     arg->func(arg->arg);
 
     return 0;
@@ -163,10 +162,10 @@ static aligned_t qloop_step_wrapper(struct qloop_step_wrapper_args *const restri
         size_t offset = new_id - my_id;  // need how much past current locations
         (arg + offset)->level = ++level; // increase depth for created thread
         qthread_fork_copyargs_to((qthread_f)qloop_step_wrapper,
-                                         arg + offset,
-                                         0,
-                                         NULL,
-                                         new_id);
+                                 arg + offset,
+                                 0,
+                                 NULL,
+                                 new_id);
 
         new_id = (1 << level) + my_id;  // level has been incremented
     }
@@ -183,7 +182,7 @@ static aligned_t qloop_step_wrapper(struct qloop_step_wrapper_args *const restri
 # endif
 
     qt_sinc_submit(arg->sinc, NULL);
-	    
+
 # ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
     MONITOR_ASM_LABEL(qthread_step_fence4); // add label for HPCToolkit unwind
 # endif
@@ -225,7 +224,7 @@ static aligned_t qt_loop_wrapper(struct qt_loop_wrapper_args *const restrict arg
 static void qt_loop_spawner(const size_t start,
                             const size_t stop,
                             void        *args_)
-{
+{   /*{{{*/
     size_t                      i, threadct;
     size_t                      steps = stop - start;
     struct qt_loop_wrapper_args qwa;
@@ -233,7 +232,7 @@ static void qt_loop_spawner(const size_t start,
     const synctype_t            sync_type = ((struct qt_loop_spawner_arg *)args_)->sync_type;
     const qt_loop_f             func      = ((struct qt_loop_spawner_arg *)args_)->func;
     void *const                 argptr    = ((struct qt_loop_spawner_arg *)args_)->argptr;
-    void *                      retptr    = NULL;
+    void                       *retptr    = NULL;
     aligned_t                   dc;
 
     assert(func);
@@ -248,7 +247,7 @@ static void qt_loop_spawner(const size_t start,
         case SYNCVAR_T:
             retptr = sync.syncvar = malloc(steps * sizeof(syncvar_t));
             assert(sync.syncvar);
-	    flags |= QTHREAD_SPAWN_RET_SYNCVAR_T;
+            flags |= QTHREAD_SPAWN_RET_SYNCVAR_T;
             break;
         case SINC_T:
             sync.sinc = qt_sinc_create(0, NULL, NULL, steps);
@@ -277,7 +276,7 @@ static void qt_loop_spawner(const size_t start,
         switch (sync_type) {
             case SYNCVAR_T:
                 sync.syncvar[threadct] = SYNCVAR_EMPTY_INITIALIZER;
-                qwa.sync = sync.syncvar;
+                qwa.sync               = sync.syncvar;
                 break;
             case ALIGNED_T:
                 qthread_empty(&sync.aligned[threadct]);
@@ -323,7 +322,7 @@ static void qt_loop_spawner(const size_t start,
         case NO_SYNC:
             abort();
     }
-}
+} /*}}}*/
 
 static void qt_loop_inner(const size_t     start,
                           const size_t     stop,
@@ -331,58 +330,60 @@ static void qt_loop_inner(const size_t     start,
                           void            *argptr,
                           int              future,
                           const synctype_t sync_type)
-{
+{   /*{{{*/
     struct qt_loop_spawner_arg a = { argptr, func, sync_type, future };
 
-    qt_loop_balance_inner(start, stop, qt_loop_spawner, &a, future, sync_type);
-}
+    assert(qthread_library_initialized);
 
-void qt_loop(const size_t    start,
-             const size_t    stop,
-             const qt_loop_f func,
-             void           *argptr)
+    qt_loop_balance_inner(start, stop, qt_loop_spawner, &a, future, sync_type);
+} /*}}}*/
+
+void API_FUNC qt_loop(const size_t    start,
+                      const size_t    stop,
+                      const qt_loop_f func,
+                      void           *argptr)
 {                                      /*{{{ */
     qt_loop_inner(start, stop, func, argptr, 0, DONECOUNT);
 }                                      /*}}} */
 
-void qt_loop_sv(const size_t    start,
-                const size_t    stop,
-                const qt_loop_f func,
-                void           *argptr)
+void API_FUNC qt_loop_sv(const size_t    start,
+                         const size_t    stop,
+                         const qt_loop_f func,
+                         void           *argptr)
 {                                      /*{{{ */
     qt_loop_inner(start, stop, func, argptr, 0, SYNCVAR_T);
 }                                      /*}}} */
 
-void qt_loop_dc(const size_t    start,
-                const size_t    stop,
-                const qt_loop_f func,
-                void           *argptr)
+void API_FUNC qt_loop_dc(const size_t    start,
+                         const size_t    stop,
+                         const qt_loop_f func,
+                         void           *argptr)
 {                                      /*{{{ */
     qt_loop_inner(start, stop, func, argptr, 0, DONECOUNT);
 }                                      /*}}} */
 
-void qt_loop_aligned(const size_t    start,
-                     const size_t    stop,
-                     const qt_loop_f func,
-                     void           *argptr)
+void API_FUNC qt_loop_aligned(const size_t    start,
+                              const size_t    stop,
+                              const qt_loop_f func,
+                              void           *argptr)
 {                                      /*{{{ */
     qt_loop_inner(start, stop, func, argptr, 0, ALIGNED_T);
 }                                      /*}}} */
 
-void qt_loop_sinc(const size_t    start,
-                  const size_t    stop,
-                  const qt_loop_f func,
-                  void           *argptr)
+void API_FUNC qt_loop_sinc(const size_t    start,
+                           const size_t    stop,
+                           const qt_loop_f func,
+                           void           *argptr)
 {                                      /*{{{ */
     qt_loop_inner(start, stop, func, argptr, 0, SINC_T);
 }                                      /*}}} */
 
 /* So, the idea here is that this is a (braindead) C version of Megan's
  * mt_loop_future. */
-void qt_loop_future(const size_t    start,
-                    const size_t    stop,
-                    const qt_loop_f func,
-                    void           *argptr)
+void API_FUNC qt_loop_future(const size_t    start,
+                             const size_t    stop,
+                             const qt_loop_f func,
+                             void           *argptr)
 {                                      /*{{{ */
     qt_loop_inner(start, stop, func, argptr, 1, SYNCVAR_T);
 }                                      /*}}} */
@@ -398,19 +399,19 @@ static void qt_loop_step_inner(const size_t         start,
     size_t                          i, threadct = 0;
     size_t                          steps = (stop - start) / stride;
     struct qloop_step_wrapper_args *qwa;
+
     if ((steps * stride) + start < stop) {
         steps++;
     }
 # ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_steal_disable();
 # endif
-    qwa  = (struct qloop_step_wrapper_args *)malloc(sizeof(struct qloop_step_wrapper_args) * steps);
+    qwa = (struct qloop_step_wrapper_args *)malloc(sizeof(struct qloop_step_wrapper_args) * steps);
     assert(qwa);
     assert(func);
     aligned_t rootNum = qthread_barrier_id(); // what thread is the root of the tree?
 
     qt_sinc_t *my_sinc = qt_sinc_create(0, NULL, NULL, steps);
-
 
     for (i = start; i < stop; i += stride) {
         qwa[threadct].func    = func;
@@ -427,17 +428,17 @@ static void qt_loop_step_inner(const size_t         start,
     }
     threadct = 0;
     if (future) {  // haven't change this yet - use new name - who uses? 4/4/11 AKP
-        fprintf(stderr,"The future is currently unimplemented in qt_loop_step_inner\n");
+        fprintf(stderr, "The future is currently unimplemented in qt_loop_step_inner\n");
         // the following code is the old implementation -- rets is now longer malloced
-	/*
-        for (i = start; i < stop; i += stride) {
-            qthread_fork_syncvar_future_to((qthread_f)qloop_step_wrapper_future,
-                                           qwa + threadct,
-                                           rets + i,
-                                           (qthread_shepherd_id_t)(threadct % qthread_num_shepherds()));
-            threadct++;
-        }
-	*/
+        /*
+         * for (i = start; i < stop; i += stride) {
+         *  qthread_fork_syncvar_future_to((qthread_f)qloop_step_wrapper_future,
+         *                                 qwa + threadct,
+         *                                 rets + i,
+         *                                 (qthread_shepherd_id_t)(threadct % qthread_num_shepherds()));
+         *  threadct++;
+         * }
+         */
     } else {
         qloop_step_wrapper(&qwa[0]); // use this thread as the root and start the
                                      // others inside qloop_step_wrapper
@@ -481,6 +482,7 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
 
     assert(func);
     assert(qwa);
+    assert(qthread_library_initialized);
 
     union {
         syncvar_t *syncvar;
@@ -592,50 +594,50 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
     free(qwa);
 }                                      /*}}} */
 
-void qt_loop_balance(const size_t    start,
-                     const size_t    stop,
-                     const qt_loop_f func,
-                     void           *argptr)
+void API_FUNC qt_loop_balance(const size_t    start,
+                              const size_t    stop,
+                              const qt_loop_f func,
+                              void           *argptr)
 {                                      /*{{{ */
     qt_loop_balance_inner(start, stop, func, argptr, 0, DONECOUNT);
 }                                      /*}}} */
 
-void qt_loop_balance_sv(const size_t    start,
-                        const size_t    stop,
-                        const qt_loop_f func,
-                        void           *argptr)
+void API_FUNC qt_loop_balance_sv(const size_t    start,
+                                 const size_t    stop,
+                                 const qt_loop_f func,
+                                 void           *argptr)
 {                                      /*{{{ */
     qt_loop_balance_inner(start, stop, func, argptr, 0, SYNCVAR_T);
 }                                      /*}}} */
 
-void qt_loop_balance_dc(const size_t    start,
-                        const size_t    stop,
-                        const qt_loop_f func,
-                        void           *argptr)
+void API_FUNC qt_loop_balance_dc(const size_t    start,
+                                 const size_t    stop,
+                                 const qt_loop_f func,
+                                 void           *argptr)
 {                                      /*{{{ */
     qt_loop_balance_inner(start, stop, func, argptr, 0, DONECOUNT);
 }                                      /*}}} */
 
-void qt_loop_balance_aligned(const size_t    start,
-                             const size_t    stop,
-                             const qt_loop_f func,
-                             void           *argptr)
+void API_FUNC qt_loop_balance_aligned(const size_t    start,
+                                      const size_t    stop,
+                                      const qt_loop_f func,
+                                      void           *argptr)
 {                                      /*{{{ */
     qt_loop_balance_inner(start, stop, func, argptr, 0, ALIGNED_T);
 }                                      /*}}} */
 
-void qt_loop_balance_sinc(const size_t    start,
-                          const size_t    stop,
-                          const qt_loop_f func,
-                          void           *argptr)
+void API_FUNC qt_loop_balance_sinc(const size_t    start,
+                                   const size_t    stop,
+                                   const qt_loop_f func,
+                                   void           *argptr)
 {                                      /*{{{ */
     qt_loop_balance_inner(start, stop, func, argptr, 0, SINC_T);
 }                                      /*}}} */
 
-void qt_loop_balance_future(const size_t    start,
-                            const size_t    stop,
-                            const qt_loop_f func,
-                            void           *argptr)
+void API_FUNC qt_loop_balance_future(const size_t    start,
+                                     const size_t    stop,
+                                     const qt_loop_f func,
+                                     void           *argptr)
 {                                      /*{{{ */
     qt_loop_balance_inner(start, stop, func, argptr, 1, SYNCVAR_T);
 }                                      /*}}} */
@@ -730,6 +732,7 @@ static QINLINE void qt_loopaccum_balance_inner(const size_t     start,
     assert(qwa);
     assert(func);
     assert(acc);
+    assert(qthread_library_initialized);
 
     union {
         syncvar_t *syncvar;
@@ -852,57 +855,57 @@ static QINLINE void qt_loopaccum_balance_inner(const size_t     start,
     free(qwa);
 }                                      /*}}} */
 
-void qt_loopaccum_balance(const size_t     start,
-                          const size_t     stop,
-                          const size_t     size,
-                          void *restrict   out,
-                          const qt_loopr_f func,
-                          void *restrict   argptr,
-                          const qt_accum_f acc)
+void API_FUNC qt_loopaccum_balance(const size_t     start,
+                                   const size_t     stop,
+                                   const size_t     size,
+                                   void *restrict   out,
+                                   const qt_loopr_f func,
+                                   void *restrict   argptr,
+                                   const qt_accum_f acc)
 {                                      /*{{{ */
     qt_loopaccum_balance_inner(start, stop, size, out, func, argptr, acc, 0, SYNCVAR_T);
 }                                      /*}}} */
 
-void qt_loopaccum_balance_sinc(const size_t     start,
-                               const size_t     stop,
-                               const size_t     size,
-                               void *restrict   out,
-                               const qt_loopr_f func,
-                               void *restrict   argptr,
-                               const qt_accum_f acc)
+void API_FUNC qt_loopaccum_balance_sinc(const size_t     start,
+                                        const size_t     stop,
+                                        const size_t     size,
+                                        void *restrict   out,
+                                        const qt_loopr_f func,
+                                        void *restrict   argptr,
+                                        const qt_accum_f acc)
 {                                      /*{{{ */
     qt_loopaccum_balance_inner(start, stop, size, out, func, argptr, acc, 0, SINC_T);
 }                                      /*}}} */
 
-void qt_loopaccum_balance_sv(const size_t     start,
-                             const size_t     stop,
-                             const size_t     size,
-                             void *restrict   out,
-                             const qt_loopr_f func,
-                             void *restrict   argptr,
-                             const qt_accum_f acc)
+void API_FUNC qt_loopaccum_balance_sv(const size_t     start,
+                                      const size_t     stop,
+                                      const size_t     size,
+                                      void *restrict   out,
+                                      const qt_loopr_f func,
+                                      void *restrict   argptr,
+                                      const qt_accum_f acc)
 {                                      /*{{{ */
     qt_loopaccum_balance_inner(start, stop, size, out, func, argptr, acc, 0, SYNCVAR_T);
 }                                      /*}}} */
 
-void qt_loopaccum_balance_dc(const size_t     start,
-                             const size_t     stop,
-                             const size_t     size,
-                             void *restrict   out,
-                             const qt_loopr_f func,
-                             void *restrict   argptr,
-                             const qt_accum_f acc)
+void API_FUNC qt_loopaccum_balance_dc(const size_t     start,
+                                      const size_t     stop,
+                                      const size_t     size,
+                                      void *restrict   out,
+                                      const qt_loopr_f func,
+                                      void *restrict   argptr,
+                                      const qt_accum_f acc)
 {                                      /*{{{ */
     qt_loopaccum_balance_inner(start, stop, size, out, func, argptr, acc, 0, DONECOUNT);
 }                                      /*}}} */
 
-void qt_loopaccum_balance_future(const size_t     start,
-                                 const size_t     stop,
-                                 const size_t     size,
-                                 void *restrict   out,
-                                 const qt_loopr_f func,
-                                 void *restrict   argptr,
-                                 const qt_accum_f acc)
+void API_FUNC qt_loopaccum_balance_future(const size_t     start,
+                                          const size_t     stop,
+                                          const size_t     size,
+                                          void *restrict   out,
+                                          const qt_loopr_f func,
+                                          void *restrict   argptr,
+                                          const qt_accum_f acc)
 {                                      /*{{{ */
     qt_loopaccum_balance_inner(start, stop, size, out, func, argptr, acc, 1, SYNCVAR_T);
 }                                      /*}}} */
@@ -1245,21 +1248,23 @@ qqloop_handle_t *qt_loop_queue_create(const qt_loop_queue_type type,
     }
 } /*}}}*/
 
-void qt_loop_queue_setchunk(qqloop_handle_t *l,
-                            size_t           chunk)
+void API_FUNC qt_loop_queue_setchunk(qqloop_handle_t *l,
+                                     size_t           chunk)
 {   /*{{{*/
+    assert(l->stat.get == qqloop_get_iterations_chunked);
     l->stat.chunksize = chunk;
 } /*}}}*/
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-qqloop_step_handle_t *qt_loop_step_queue_create(const qt_loop_queue_type type,
-                                                const size_t             start,
-                                                const size_t             stop,
-                                                const size_t             incr,
-                                                const qt_loop_step_f     func,
-                                                void *const restrict     argptr)
+qqloop_step_handle_t API_FUNC *qt_loop_step_queue_create(const qt_loop_queue_type type,
+                                                         const size_t             start,
+                                                         const size_t             stop,
+                                                         const size_t             incr,
+                                                         const qt_loop_step_f     func,
+                                                         void *const restrict     argptr)
 {   /*{{{*/
     qassert_ret(func, NULL);
+    assert(qthread_library_initialized);
     {
         qqloop_step_handle_t *const restrict h = malloc(sizeof(qqloop_step_handle_t));
         if (h) {
@@ -1300,9 +1305,10 @@ qqloop_step_handle_t *qt_loop_step_queue_create(const qt_loop_queue_type type,
 
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
 
-void qt_loop_queue_run(qqloop_handle_t *loop)
+void API_FUNC qt_loop_queue_run(qqloop_handle_t *loop)
 {   /*{{{*/
     qassert_retvoid(loop);
+    assert(qthread_library_initialized);
     {
         qthread_shepherd_id_t       i;
         const qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
@@ -1324,9 +1330,10 @@ void qt_loop_queue_run(qqloop_handle_t *loop)
     }
 } /*}}}*/
 
-void qt_loop_queue_run_there(qqloop_handle_t      *loop,
-                             qthread_shepherd_id_t shep)
+void API_FUNC qt_loop_queue_run_there(qqloop_handle_t      *loop,
+                                      qthread_shepherd_id_t shep)
 {   /*{{{*/
+    assert(qthread_library_initialized);
     qassert_retvoid(loop);
     qassert_retvoid(shep < qthread_num_shepherds());
     {
@@ -1348,9 +1355,10 @@ void qt_loop_queue_run_there(qqloop_handle_t      *loop,
 
 /* The easiest way to get shepherds/workers to REJOIN when/if shepherds are
  * re-enabled is to make the user do it. */
-void qt_loop_queue_addworker(qqloop_handle_t            *loop,
-                             const qthread_shepherd_id_t shep)
+void API_FUNC qt_loop_queue_addworker(qqloop_handle_t            *loop,
+                                      const qthread_shepherd_id_t shep)
 {   /*{{{*/
+    assert(qthread_library_initialized);
     qthread_incr(&(loop->stat.activesheps), 1);
     MACHINE_FENCE;
     if (loop->stat.donecount == 0) {
@@ -1360,48 +1368,49 @@ void qt_loop_queue_addworker(qqloop_handle_t            *loop,
     }
 } /*}}}*/
 
-#define PARALLEL_FUNC(category, initials, _op_, type, shorttype)                        \
-    static void qt ## initials ## _febworker(const size_t startat, const size_t stopat, \
-                                             void *restrict arg, void *restrict ret)    \
-    {                                                                                   \
-        size_t i;                                                                       \
-        type   acc;                                                                     \
-        qthread_readFF(NULL, (aligned_t *)(((type *)arg) + startat));                   \
-        acc = ((type *)arg)[startat];                                                   \
-        for (i = startat + 1; i < stopat; i++) {                                        \
-            qthread_readFF(NULL, (aligned_t *)(((type *)arg) + i));                     \
-            acc = _op_(acc, ((type *)arg)[i]);                                          \
-        }                                                                               \
-        *(type *)ret = acc;                                                             \
-    }                                                                                   \
-    static void qt ## initials ## _worker(const size_t startat, const size_t stopat,    \
-                                          void *restrict arg, void *restrict ret)       \
-    {                                                                                   \
-        size_t i;                                                                       \
-        type   acc = ((type *)arg)[startat];                                            \
-        for (i = startat + 1; i < stopat; i++) {                                        \
-            acc = _op_(acc, ((type *)arg)[i]);                                          \
-        }                                                                               \
-        *(type *)ret = acc;                                                             \
-    }                                                                                   \
-    static void qt ## initials ## _acc(void *restrict a, void *restrict b)              \
-    {                                                                                   \
-        *(type *)a = _op_(*(type *)a, *(type *)b);                                      \
-    }                                                                                   \
-    type qt_ ## shorttype ## _ ## category(type * array, size_t length, int checkfeb)   \
-    {                                                                                   \
-        type ret;                                                                       \
-        if (checkfeb) {                                                                 \
-            if (sizeof(type) != sizeof(aligned_t)) { return 0; }                        \
-            qt_loopaccum_balance_inner(0, length, sizeof(type), &ret,                   \
-                                       qt ## initials ## _febworker,                    \
-                                       array, qt ## initials ## _acc, 0, SYNCVAR_T);    \
-        } else {                                                                        \
-            qt_loopaccum_balance_inner(0, length, sizeof(type), &ret,                   \
-                                       qt ## initials ## _worker,                       \
-                                       array, qt ## initials ## _acc, 0, SYNCVAR_T);    \
-        }                                                                               \
-        return ret;                                                                     \
+#define PARALLEL_FUNC(category, initials, _op_, type, shorttype)                               \
+    static void qt ## initials ## _febworker(const size_t startat, const size_t stopat,        \
+                                             void *restrict arg, void *restrict ret)           \
+    {                                                                                          \
+        size_t i;                                                                              \
+        type   acc;                                                                            \
+        qthread_readFF(NULL, (aligned_t *)(((type *)arg) + startat));                          \
+        acc = ((type *)arg)[startat];                                                          \
+        for (i = startat + 1; i < stopat; i++) {                                               \
+            qthread_readFF(NULL, (aligned_t *)(((type *)arg) + i));                            \
+            acc = _op_(acc, ((type *)arg)[i]);                                                 \
+        }                                                                                      \
+        *(type *)ret = acc;                                                                    \
+    }                                                                                          \
+    static void qt ## initials ## _worker(const size_t startat, const size_t stopat,           \
+                                          void *restrict arg, void *restrict ret)              \
+    {                                                                                          \
+        size_t i;                                                                              \
+        type   acc = ((type *)arg)[startat];                                                   \
+        for (i = startat + 1; i < stopat; i++) {                                               \
+            acc = _op_(acc, ((type *)arg)[i]);                                                 \
+        }                                                                                      \
+        *(type *)ret = acc;                                                                    \
+    }                                                                                          \
+    static void qt ## initials ## _acc(void *restrict a, void *restrict b)                     \
+    {                                                                                          \
+        *(type *)a = _op_(*(type *)a, *(type *)b);                                             \
+    }                                                                                          \
+    type API_FUNC qt_ ## shorttype ## _ ## category(type * array, size_t length, int checkfeb) \
+    {                                                                                          \
+        type ret;                                                                              \
+        assert(qthread_library_initialized);                                                   \
+        if (checkfeb) {                                                                        \
+            if (sizeof(type) != sizeof(aligned_t)) { return 0; }                               \
+            qt_loopaccum_balance_inner(0, length, sizeof(type), &ret,                          \
+                                       qt ## initials ## _febworker,                           \
+                                       array, qt ## initials ## _acc, 0, SYNCVAR_T);           \
+        } else {                                                                               \
+            qt_loopaccum_balance_inner(0, length, sizeof(type), &ret,                          \
+                                       qt ## initials ## _worker,                              \
+                                       array, qt ## initials ## _acc, 0, SYNCVAR_T);           \
+        }                                                                                      \
+        return ret;                                                                            \
     }
 
 #define ADD(a, b)  a + b
@@ -1702,7 +1711,7 @@ static aligned_t qt_qsort_inner(const struct qt_qsort_iargs *a)
     return 0;
 }                                      /*}}} */
 
-void qt_qsort(double      *array,
+void API_FUNC qt_qsort(double      *array,
               const size_t length)
 {                                      /*{{{ */
     struct qt_qsort_iargs arg;

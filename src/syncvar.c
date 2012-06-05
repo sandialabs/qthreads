@@ -293,6 +293,7 @@ static int qthread_syncvar_blocker_func(void        *dest,
 int API_FUNC qthread_syncvar_readFF(uint64_t *restrict const  dest,
                                     syncvar_t *restrict const src)
 {                                      /*{{{ */
+    assert(qthread_library_initialized);
     eflags_t   e = { 0, 0, 0, 0, 0 };
     uint64_t   ret;
     qthread_t *me = qthread_internal_self();
@@ -435,6 +436,7 @@ int INTERNAL qthread_syncvar_readFF_nb(uint64_t *restrict const  dest,
 
 int API_FUNC qthread_syncvar_fill(syncvar_t *restrict const addr)
 {                                      /*{{{ */
+    assert(qthread_library_initialized);
     eflags_t            e = { 0, 0, 0, 0, 0 };
     uint64_t            ret;
     qthread_shepherd_t *shep = qthread_internal_getshep();
@@ -485,6 +487,7 @@ int API_FUNC qthread_syncvar_fill(syncvar_t *restrict const addr)
 
 int API_FUNC qthread_syncvar_empty(syncvar_t *restrict const addr)
 {                                      /*{{{ */
+    assert(qthread_library_initialized);
     eflags_t            e = { 0, 0, 0, 0, 0 };
     uint64_t            ret;
     qthread_shepherd_t *shep = qthread_internal_getshep();
@@ -535,6 +538,7 @@ int API_FUNC qthread_syncvar_empty(syncvar_t *restrict const addr)
 int API_FUNC qthread_syncvar_readFE(uint64_t *restrict const  dest,
                                     syncvar_t *restrict const src)
 {                                      /*{{{ */
+    assert(qthread_library_initialized);
     eflags_t   e = { 0, 0, 0, 0, 0 };
     uint64_t   ret;
     const int  lockbin = QTHREAD_CHOOSE_STRIPE(src);
@@ -840,6 +844,7 @@ static QINLINE void qthread_syncvar_gotlock_fill(qthread_shepherd_t *shep,
 int API_FUNC qthread_syncvar_writeF(syncvar_t *restrict const      dest,
                                     const uint64_t *restrict const src)
 {                                      /*{{{ */
+    assert(qthread_library_initialized);
     eflags_t            e    = { 0, 0, 0, 0, 0 };
     uint64_t            ret  = *src;
     qthread_shepherd_t *shep = qthread_internal_getshep();
@@ -884,12 +889,14 @@ int API_FUNC qthread_syncvar_writeF(syncvar_t *restrict const      dest,
 int API_FUNC qthread_syncvar_writeF_const(syncvar_t *restrict const dest,
                                           const uint64_t            src)
 {                                      /*{{{ */
+    assert(qthread_library_initialized);
     return qthread_syncvar_writeF(dest, &src);
 }                                      /*}}} */
 
 int API_FUNC qthread_syncvar_writeEF(syncvar_t *restrict const      dest,
                                      const uint64_t *restrict const src)
 {                                      /*{{{ */
+    assert(qthread_library_initialized);
     eflags_t   e = { 0, 0, 0, 0, 0 };
     uint64_t   ret;
     const int  lockbin = QTHREAD_CHOOSE_STRIPE(dest);
@@ -994,6 +1001,7 @@ locked_empty:
 int API_FUNC qthread_syncvar_writeEF_const(syncvar_t *restrict const dest,
                                            const uint64_t            src)
 {                                      /*{{{ */
+    assert(qthread_library_initialized);
     return qthread_syncvar_writeEF(dest, &src);
 }                                      /*}}} */
 
@@ -1064,6 +1072,7 @@ int INTERNAL qthread_syncvar_writeEF_const_nb(syncvar_t *restrict const dest,
 uint64_t API_FUNC qthread_syncvar_incrF(syncvar_t *restrict const operand,
                                         const uint64_t            inc)
 {                                      /*{{{ */
+    assert(qthread_library_initialized);
     eflags_t   e = { 0, 0, 0, 0, 0 };
     uint64_t   newv;
     qthread_t *me = qthread_internal_self();

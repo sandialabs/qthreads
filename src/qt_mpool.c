@@ -35,6 +35,7 @@
 #include "qt_gcd.h"                    /* for qt_lcm() */
 #include "qt_macros.h"
 #include "qthread_innards.h"
+#include "qt_visibility.h"
 
 #ifdef HAVE_GETPAGESIZE
 # include <unistd.h>
@@ -101,7 +102,7 @@ static void qt_mpool_subsystem_shutdown(void)
 #endif
 }
 
-void qt_mpool_subsystem_init(void)
+void INTERNAL qt_mpool_subsystem_init(void)
 {
     qthread_internal_cleanup_late(qt_mpool_subsystem_shutdown);
 }
@@ -177,7 +178,7 @@ static QINLINE void qt_mpool_internal_aligned_free(void        *freeme,
 // sync means lock-protected
 // item_size is how many bytes to return
 // ...memory is always allocated in multiples of getpagesize()
-qt_mpool qt_mpool_create_aligned(size_t item_size,
+qt_mpool INTERNAL qt_mpool_create_aligned(size_t item_size,
                                  size_t alignment)
 {                                      /*{{{ */
     qt_mpool pool = (qt_mpool)calloc(1, sizeof(struct qt_mpool_s));
@@ -252,7 +253,7 @@ qt_mpool qt_mpool_create_aligned(size_t item_size,
     return NULL;
 }                                      /*}}} */
 
-void *qt_mpool_alloc(qt_mpool pool)
+void INTERNAL *qt_mpool_alloc(qt_mpool pool)
 {   /*{{{*/
     qt_mpool_threadlocal_cache_t *tc;
     size_t                        cnt;
@@ -371,7 +372,7 @@ void *qt_mpool_alloc(qt_mpool pool)
     }
 } /*}}}*/
 
-void qt_mpool_free(qt_mpool pool,
+void INTERNAL qt_mpool_free(qt_mpool pool,
                    void    *mem)
 {   /*{{{*/
     qt_mpool_threadlocal_cache_t *tc;
@@ -448,7 +449,7 @@ void qt_mpool_free(qt_mpool pool,
     VALGRIND_MEMPOOL_FREE(pool, mem);
 } /*}}}*/
 
-void qt_mpool_destroy(qt_mpool pool)
+void INTERNAL qt_mpool_destroy(qt_mpool pool)
 {                                      /*{{{ */
     qthread_debug(MPOOL_CALLS, "pool:%p\n", pool);
     qassert_retvoid((pool != NULL));

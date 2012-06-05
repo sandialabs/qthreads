@@ -20,8 +20,9 @@
 /* Shared Globals */
 TLS_DECL_INIT(qthread_shepherd_t *, shepherd_structs);
 
-int qthread_shep_ok(void)
+int API_FUNC qthread_shep_ok(void)
 {                      /*{{{ */
+    assert(qthread_library_initialized);
     qthread_shepherd_t *ret = qthread_internal_getshep();
 
     if (ret == NULL) {
@@ -31,8 +32,9 @@ int qthread_shep_ok(void)
     }
 }                      /*}}} */
 
-void qthread_shep_next(qthread_shepherd_id_t *shep)
+void API_FUNC qthread_shep_next(qthread_shepherd_id_t *shep)
 {   /*{{{*/
+    assert(qthread_library_initialized);
     /* This will mean something slightly different in a multinode world. */
     qthread_shepherd_id_t cur = *shep;
 
@@ -42,8 +44,9 @@ void qthread_shep_next(qthread_shepherd_id_t *shep)
     *shep = cur;
 } /*}}}*/
 
-void qthread_shep_prev(qthread_shepherd_id_t *shep)
+void API_FUNC qthread_shep_prev(qthread_shepherd_id_t *shep)
 {   /*{{{*/
+    assert(qthread_library_initialized);
     /* This will mean something slightly different in a multinode world. */
     qthread_shepherd_id_t cur = *shep;
 
@@ -56,8 +59,9 @@ void qthread_shep_prev(qthread_shepherd_id_t *shep)
     *shep = cur;
 } /*}}}*/
 
-void qthread_shep_next_local(qthread_shepherd_id_t *shep)
+void API_FUNC qthread_shep_next_local(qthread_shepherd_id_t *shep)
 {   /*{{{*/
+    assert(qthread_library_initialized);
     /* This is node-local */
     qthread_shepherd_id_t cur = *shep;
 
@@ -67,8 +71,9 @@ void qthread_shep_next_local(qthread_shepherd_id_t *shep)
     *shep = cur;
 } /*}}}*/
 
-void qthread_shep_prev_local(qthread_shepherd_id_t *shep)
+void API_FUNC qthread_shep_prev_local(qthread_shepherd_id_t *shep)
 {   /*{{{*/
+    assert(qthread_library_initialized);
     /* This is node-local */
     qthread_shepherd_id_t cur = *shep;
 
@@ -81,8 +86,9 @@ void qthread_shep_prev_local(qthread_shepherd_id_t *shep)
     *shep = cur;
 } /*}}}*/
 
-qthread_shepherd_id_t qthread_shep(void)
+qthread_shepherd_id_t API_FUNC qthread_shep(void)
 {                      /*{{{ */
+    assert(qthread_library_initialized);
     qthread_shepherd_t *ret = qthread_internal_getshep();
 
     if ((qlib == NULL) || (ret == NULL)) {
@@ -93,9 +99,10 @@ qthread_shepherd_id_t qthread_shep(void)
 }                      /*}}} */
 
 /* returns the distance between two shepherds */
-int qthread_distance(const qthread_shepherd_id_t src,
+int API_FUNC qthread_distance(const qthread_shepherd_id_t src,
                      const qthread_shepherd_id_t dest)
 {                      /*{{{ */
+    assert(qthread_library_initialized);
     assert(src < qlib->nshepherds);
     assert(dest < qlib->nshepherds);
     if ((src >= qlib->nshepherds) || (dest >= qlib->nshepherds)) {
@@ -110,8 +117,9 @@ int qthread_distance(const qthread_shepherd_id_t src,
 
 /* returns a list of shepherds, sorted by their distance from this qthread;
  * if NULL, then all sheps are equidistant */
-const qthread_shepherd_id_t *qthread_sorted_sheps(void)
+const qthread_shepherd_id_t API_FUNC *qthread_sorted_sheps(void)
 {                      /*{{{ */
+    assert(qthread_library_initialized);
     qthread_t *t = qthread_internal_self();
 
     if (t == NULL) {
@@ -124,10 +132,11 @@ const qthread_shepherd_id_t *qthread_sorted_sheps(void)
 
 /* returns a list of shepherds, sorted by their distance from the specified shepherd;
  * if NULL, then all sheps are equidistant */
-const qthread_shepherd_id_t *qthread_sorted_sheps_remote(const
+const qthread_shepherd_id_t API_FUNC *qthread_sorted_sheps_remote(const
                                                          qthread_shepherd_id_t
                                                          src)
 {                      /*{{{ */
+    assert(qthread_library_initialized);
     assert(src < qlib->nshepherds);
     if (src >= qlib->nshepherds) {
         return NULL;
@@ -136,13 +145,15 @@ const qthread_shepherd_id_t *qthread_sorted_sheps_remote(const
 }                      /*}}} */
 
 /* returns the number of shepherds actively scheduling work */
-qthread_shepherd_id_t qthread_num_shepherds(void)
+qthread_shepherd_id_t API_FUNC qthread_num_shepherds(void)
 {                      /*{{{ */
+    assert(qthread_library_initialized);
     return (qthread_shepherd_id_t)(qlib->nshepherds_active);
 }                      /*}}} */
 
-int qthread_disable_shepherd(const qthread_shepherd_id_t shep)
+int API_FUNC qthread_disable_shepherd(const qthread_shepherd_id_t shep)
 {                      /*{{{ */
+    assert(qthread_library_initialized);
     qassert_ret((shep < qlib->nshepherds), QTHREAD_BADARGS);
     if (shep == 0) {
         /* currently, the "real mccoy" original thread cannot be migrated
@@ -161,8 +172,9 @@ int qthread_disable_shepherd(const qthread_shepherd_id_t shep)
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
-void qthread_enable_shepherd(const qthread_shepherd_id_t shep)
+void API_FUNC qthread_enable_shepherd(const qthread_shepherd_id_t shep)
 {                      /*{{{ */
+    assert(qthread_library_initialized);
     assert(shep < qlib->nshepherds);
     qthread_debug(SHEPHERD_CALLS, "began on shep(%i)\n", shep);
     qthread_internal_incr(&(qlib->nshepherds_active), &(qlib->nshepherds_active_lock), 1);

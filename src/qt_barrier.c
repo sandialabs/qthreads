@@ -48,15 +48,17 @@ static void qtb_internal_down(qt_barrier_t *b,
 /* global barrier */
 qt_barrier_t *MBar = NULL;
 
-void qt_barrier_resize(size_t size)
+void API_FUNC qt_barrier_resize(size_t size)
 {                                      /*{{{ */
+    assert(qthread_library_initialized);
     qt_barrier_destroy(MBar);
     MBar = NULL;
     qt_global_barrier_init(size, 0);
 }                                      /*}}} */
 
-void qt_barrier_destroy(qt_barrier_t *b)
+void API_FUNC qt_barrier_destroy(qt_barrier_t *b)
 {                                      /*{{{ */
+    assert(qthread_library_initialized);
     assert(b);
     if (b->upLock) {
         free((void *)(b->upLock));
@@ -67,9 +69,9 @@ void qt_barrier_destroy(qt_barrier_t *b)
     free(b);
 }                                      /*}}} */
 
-qt_barrier_t *qt_barrier_create(int              size,
-                                qt_barrier_btype type,
-                                int              debug)
+qt_barrier_t API_FUNC *qt_barrier_create(int              size,
+                                         qt_barrier_btype type,
+                                         int              debug)
 {                                      /*{{{ */
     qt_barrier_t *b = calloc(1, sizeof(qt_barrier_t));
 
@@ -264,8 +266,8 @@ static void qtb_internal_up(qt_barrier_t *b,
 
 // actual barrier entry point
 
-void qt_barrier_enter(qt_barrier_t         *b,
-                      qthread_shepherd_id_t shep)
+void API_FUNC qt_barrier_enter(qt_barrier_t         *b,
+                               qthread_shepherd_id_t shep)
 {                                      /*{{{ */
     // should be dual versions  1) all active threads barrier
     //                          2) all active streams
@@ -283,7 +285,7 @@ void qt_barrier_enter(qt_barrier_t         *b,
 // akp 7/24/09
 #define QT_GLOBAL_LOGBARRIER
 #ifdef QT_GLOBAL_LOGBARRIER
-void qt_global_barrier(void)
+void INTERNAL qt_global_barrier(void)
 {                                      /*{{{ */
 # ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     const qthread_worker_id_t workerid = qthread_worker(NULL);
@@ -295,8 +297,8 @@ void qt_global_barrier(void)
 }                                      /*}}} */
 
 // allow barrer initization from C
-void qt_global_barrier_init(int size,
-                            int debug)
+void INTERNAL qt_global_barrier_init(int size,
+                                     int debug)
 {                                      /*{{{ */
     if (MBar == NULL) {
         MBar = qt_barrier_create(size, REGION_BARRIER, debug);
@@ -304,7 +306,7 @@ void qt_global_barrier_init(int size,
     }
 }                                      /*}}} */
 
-void qt_global_barrier_destroy()
+void INTERNAL qt_global_barrier_destroy()
 {                                      /*{{{ */
     if (MBar) {
         qt_barrier_destroy(MBar);

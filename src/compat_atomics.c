@@ -18,6 +18,8 @@ uint32_t qthread_incr32_(uint32_t     *op,
 
     QTHREAD_LOCK_TIMER_DECLARATION(incr);
 
+    assert(qthread_library_initialized);
+
     QTHREAD_COUNT_THREADS_BINCOUNTER(atomic, stripe);
     QTHREAD_LOCK_UNIQUERECORD(incr, op, qthread_internal_self());
     QTHREAD_LOCK_TIMER_START(incr);
@@ -37,6 +39,8 @@ uint64_t qthread_incr64_(uint64_t     *op,
 
     QTHREAD_LOCK_TIMER_DECLARATION(incr);
 
+    assert(qthread_library_initialized);
+
     QTHREAD_COUNT_THREADS_BINCOUNTER(atomic, stripe);
     QTHREAD_LOCK_UNIQUERECORD(incr, op, qthread_internal_self());
     QTHREAD_LOCK_TIMER_START(incr);
@@ -54,6 +58,8 @@ double qthread_dincr_(double      *op,
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
     double       retval;
 
+    assert(qthread_library_initialized);
+
     QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
     retval = *op;
     *op   += incr;
@@ -66,6 +72,8 @@ float qthread_fincr_(float      *op,
 {                      /*{{{ */
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(op);
     float        retval;
+
+    assert(qthread_library_initialized);
 
     QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
     retval = *op;
@@ -80,6 +88,8 @@ uint32_t qthread_cas32_(uint32_t      *operand,
 {                      /*{{{ */
     uint32_t     retval;
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(operand);
+
+    assert(qthread_library_initialized);
 
     QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
     retval = *operand;
@@ -96,6 +106,8 @@ uint64_t qthread_cas64_(uint64_t      *operand,
 {                      /*{{{ */
     uint64_t     retval;
     unsigned int stripe = QTHREAD_CHOOSE_STRIPE(operand);
+
+    assert(qthread_library_initialized);
 
     QTHREAD_FASTLOCK_LOCK(&(qlib->atomic_locks[stripe]));
     retval = *operand;

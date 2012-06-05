@@ -114,13 +114,15 @@ static void qthread_lock_blocker_func(void        *addr,
  * unless you REALLY know what you're doing!
  */
 
-int qthread_lock(const aligned_t *a)
+int API_FUNC qthread_lock(const aligned_t *a)
 {                      /*{{{ */
     qthread_lock_t *m;
     const int       lockbin = QTHREAD_CHOOSE_STRIPE(a);
     qthread_t      *me      = qthread_internal_self();
 
     QTHREAD_LOCK_TIMER_DECLARATION(aquirelock);
+
+    assert(qthread_library_initialized);
 
     if (!me) {
         qthread_lock_blocker_func((void *)a, LOCK);
@@ -209,12 +211,14 @@ static inline void qthread_lock_schedule(qthread_t          *waiter,
     }
 }
 
-int qthread_unlock(const aligned_t *a)
+int API_FUNC qthread_unlock(const aligned_t *a)
 {                      /*{{{ */
     qthread_lock_t *m;
     qthread_t      *u;
     const int       lockbin = QTHREAD_CHOOSE_STRIPE(a);
     qthread_t      *me      = qthread_internal_self();
+
+    assert(qthread_library_initialized);
 
     if (!me) {
         qthread_lock_blocker_func((void *)a, UNLOCK);

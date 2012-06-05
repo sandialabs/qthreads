@@ -172,6 +172,8 @@ int API_FUNC qthread_feb_status(const aligned_t *addr)
     int                 status  = 1; /* full */
     const int           lockbin = QTHREAD_CHOOSE_STRIPE(addr);
 
+    assert(qthread_library_initialized);
+
     QALIGN(addr, alignedaddr);
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     qt_hash_lock(qlib->FEBs[lockbin]); {
@@ -344,6 +346,8 @@ int API_FUNC qthread_empty(const aligned_t *dest)
     qt_hash             FEBbin;
     qthread_shepherd_t *shep = qthread_internal_getshep();
 
+    assert(qthread_library_initialized);
+
     if (!shep) {
         return qthread_feb_blocker_func((void *)dest, NULL, EMPTY);
     }
@@ -394,6 +398,8 @@ int API_FUNC qthread_fill(const aligned_t *dest)
     const int           lockbin = QTHREAD_CHOOSE_STRIPE(dest);
     qthread_shepherd_t *shep    = qthread_internal_getshep();
 
+    assert(qthread_library_initialized);
+
     if (!shep) {
         return qthread_feb_blocker_func((void *)dest, NULL, FILL);
     }
@@ -435,6 +441,8 @@ int API_FUNC qthread_writeF(aligned_t *restrict const       dest,
     qthread_addrstat_t *m;
     const int           lockbin = QTHREAD_CHOOSE_STRIPE(dest);
     qthread_shepherd_t *shep    = qthread_internal_getshep();
+
+    assert(qthread_library_initialized);
 
     if (!shep) {
         return qthread_feb_blocker_func(dest, (void *)src, WRITEF);
@@ -493,6 +501,8 @@ int API_FUNC qthread_writeEF(aligned_t *restrict const       dest,
     qthread_t          *me      = qthread_internal_self();
 
     QTHREAD_LOCK_TIMER_DECLARATION(febblock);
+
+    assert(qthread_library_initialized);
 
     if (!me) {
         return qthread_feb_blocker_func(dest, (void *)src, WRITEEF);
@@ -642,6 +652,8 @@ int API_FUNC qthread_readFF(aligned_t *restrict const       dest,
 
     QTHREAD_LOCK_TIMER_DECLARATION(febblock);
 
+    assert(qthread_library_initialized);
+
     if (!me) {
         return qthread_feb_blocker_func(dest, (void *)src, READFF);
     }
@@ -779,6 +791,8 @@ int API_FUNC qthread_readFE(aligned_t *restrict const       dest,
     qthread_t          *me      = qthread_internal_self();
 
     QTHREAD_LOCK_TIMER_DECLARATION(febblock);
+
+    assert(qthread_library_initialized);
 
     if (!me) {
         return qthread_feb_blocker_func(dest, (void *)src, READFE);
