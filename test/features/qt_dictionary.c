@@ -105,7 +105,7 @@ int main(int argc, char** argv) {
 	while(NULL != qt_dictionary_iterator_next(it)) {
 		list_entry* le = qt_dictionary_iterator_get(it);
 		no_entries++;
-		iprintf("Pair:(%s,%s)\n",le->key, le->value);
+		iprintf("17. Pair:(%s,%s)\n",le->key, le->value);
 	}
 	assert(no_entries == EXPECTED_ENTRIES);
 	
@@ -118,5 +118,16 @@ int main(int argc, char** argv) {
 	assert(qt_dictionary_iterator_equals(it1, it2));
 	qt_dictionary_iterator_next(it2);
 	assert(!qt_dictionary_iterator_equals(it1, it2));
+
+
+	ret_code2 = qt_dictionary_get(dict, mykey2);
+	iprintf("18. Get exited with code %p\n", ret_code2);
+	assert(ret_code2!=NULL);
+	
+	qt_dictionary_delete(dict, mykey2);
+	ret_code2 = qt_dictionary_get(dict, mykey2);
+	iprintf("19. Get exited with code %p\n", ret_code2);
+	assert(ret_code2==NULL);
+	
 	return 0;
 }
