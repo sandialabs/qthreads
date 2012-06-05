@@ -124,10 +124,16 @@ int main(int argc, char** argv) {
 	iprintf("18. Get exited with code %p\n", ret_code2);
 	assert(ret_code2!=NULL);
 	
-	qt_dictionary_delete(dict, mykey2);
+	void* val = qt_dictionary_delete(dict, mykey2);
+	assert(my_key_equals("newv2", (char*)val));
+	
 	ret_code2 = qt_dictionary_get(dict, mykey2);
 	iprintf("19. Get exited with code %p\n", ret_code2);
 	assert(ret_code2==NULL);
+	
+	val = qt_dictionary_delete(dict, mykey2);
+	iprintf("20. Delete exited with code %p\n", val);
+	assert(val == NULL);
 	
 	return 0;
 }
