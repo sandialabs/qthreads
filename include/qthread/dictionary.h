@@ -11,8 +11,6 @@ extern "C" {
 
 //#define DELETE_SUPPORT
 #define ERROR ((void*)(-1))
-#define NR_BUCKETS (10000)
-
 
 struct tlrw_lock;
 
@@ -22,6 +20,7 @@ typedef int (*hashcode)(void*);
 typedef struct list_entry{
 	void* value;
 	void* key;
+	int hash;
 	struct list_entry* next;
 } list_entry;
 
