@@ -16,6 +16,7 @@
 #include "qt_atomics.h"
 #include "qthread/qthread.h"
 #include "qt_debug.h"
+#include "qt_visibility.h"
 
 struct qt_barrier_s {
     int        count;           // size of barrier
