@@ -1,16 +1,21 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
+
+/* System Headers */
 #include <stdlib.h>
+
+/* Installed Headers */
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
-#include <qt_barrier.h>
-#include <qthread_asserts.h>
-#include <qthread_innards.h>           /* for qthread_debug() */
 #include <qthread/qtimer.h>
 
+/* Internal Headers */
+#include "qthread_innards.h"           /* for qthread_debug() */
+#include "qt_barrier.h"
 #include "qloop_innards.h"
 #include "qthread_expect.h"
+#include "qthread_asserts.h"
 #include "qt_debug.h"
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
