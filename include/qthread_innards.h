@@ -5,8 +5,9 @@
 # include "config.h"
 #endif
 
+/* System Headers */
 #include <math.h>
-
+#include <pthread.h>
 #ifdef QTHREAD_HAVE_HWLOC
 # include <hwloc.h>
 # if (HWLOC_API_VERSION < 0x00010000)
@@ -14,15 +15,14 @@
 # endif
 #endif
 
+/* Internal Headers */
 #include "qt_visibility.h"
 #include "qthread_asserts.h"
 #include "qt_atomics.h"
 #include "qt_context.h"
 #include "qt_qthread_t.h"
 #include "qt_threadqueues.h"
-
-#include <pthread.h>
-#include <qt_hash.h>
+#include "qt_hash.h"
 
 /* this function allows a qthread to retrieve its qthread_t pointer if it has
  * been lost for some reason */
