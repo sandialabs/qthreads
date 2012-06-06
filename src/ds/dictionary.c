@@ -2,10 +2,13 @@
 #include <qthread/dictionary.h>
 #include <assert.h>
 #include <stdio.h>
-#include <qthread/qthread.h>
-#include <qthread_innards.h>
-#include <56reader-rwlock.h>
+#include <limits.h> //using CHAR_BIT
+#include <qthread/qthread.h>  //using CAS64
+#include <qthread_innards.h> //using qthread_worker_unique and qthread_num_workers
+#include <56reader-rwlock.h> //using rwlock_*
 
+#define BKT_POW 13
+#define NO_BUCKETS ( 1 << BKT_POW )
 
 /* Prototype should NOT go in header, we don't want it public*/
 void* qt_dictionary_put_helper(qt_dictionary* dict, void* key, void* value, 
@@ -44,7 +47,7 @@ void* qt_dictionary_put_helper(qt_dictionary* dict, void* key, void* value,
 	}
 #define rwlinit(a) \
 	{ \
-		/* fail instead of silent accepting more readers than we can handle*/ \
+		/* fail instead of silently accepting more readers than we can handle*/ \
 		/* setting the number of workers dynamically to be larger than MAX_READERS*/ \
 		/* is not checked, so don't do it! */ \
 		assert(qthread_num_workers()<MAX_READERS);		\
@@ -65,18 +68,22 @@ void* qt_dictionary_put_helper(qt_dictionary* dict, void* key, void* value,
 #endif			
 
 
+//#define DICT_ABS(v) ((+1 | (v>>(sizeof(int)*CHAR_BIT-1)))*v)
+#define DICT_ABS(v) ((v>0)?v:(-v))
 
+#define GET_BUCKET(hash) ( (DICT_ABS(hash) ) & ((1 << BKT_POW) -1) )
 
 
 
 qt_dictionary* qt_dictionary_create(key_equals eq, hashcode hash) {
+	qthread_initialize();
 	qt_dictionary* ret = (qt_dictionary*) malloc (sizeof(qt_dictionary));
 	ret -> op_equals = eq;
 	ret -> op_hash = hash;
-	ret -> content = (list_entry**) malloc ( NR_BUCKETS * sizeof(list_entry*) );
+	ret -> content = (list_entry**) malloc ( NO_BUCKETS * sizeof(list_entry*) );
 	
 	int i;
-	for (i=0; i< NR_BUCKETS; i++){
+	for (i=0; i< NO_BUCKETS; i++){
 		ret->content[i] = NULL;
 	}
 	
@@ -86,7 +93,7 @@ qt_dictionary* qt_dictionary_create(key_equals eq, hashcode hash) {
 
 void qt_dictionary_destroy(qt_dictionary* d) {
 	int i;
-	for (i=0; i< NR_BUCKETS; i++) {
+	for (i=0; i< NO_BUCKETS; i++) {
 		list_entry* tmp, *top = d -> content[i];
 		while (top != NULL){
 			tmp = top;
@@ -104,26 +111,23 @@ void qt_dictionary_destroy(qt_dictionary* d) {
 
 void* qt_dictionary_put_helper(qt_dictionary* dict, void* key, void* value, 
 			char put_type) {
-	int bucket = ( dict -> op_hash(key) ) ;
-	if(bucket < 0) bucket = -bucket;
-	bucket = bucket % NR_BUCKETS;
+	int hash = dict -> op_hash(key);
 	
-
-	
+	int bucket = GET_BUCKET (hash);
 	
 	list_entry** crt = &(dict -> content[bucket]);
 	assert(!(crt == NULL || dict -> content == NULL));
 	list_entry* walk = *crt, *toadd = NULL;
 	while(1){
 		while(walk != NULL){
-			if(dict -> op_equals(walk -> key, key)){
+			if((walk -> hash == hash) && (dict -> op_equals(walk -> key, key))) {
 				if(toadd != NULL) free(toadd);
 				
 				if(put_type == PUT_ALWAYS){
 					void **crt_val_adr = &(walk -> value);
 					void *crt_val = walk->value;
-					while( (uint64_t)(qthread_cas64( crt_val_adr, \
-										   crt_val, value )) != (uint64_t)crt_val ){
+					while( (qthread_cas_ptr( crt_val_adr, \
+										   crt_val, value )) != crt_val ){
 						//try until succeeding to add
 						crt_val = walk->value;
 					}
@@ -143,8 +147,9 @@ void* qt_dictionary_put_helper(qt_dictionary* dict, void* key, void* value,
 			toadd -> key = key;
 			toadd -> value = value;
 			toadd -> next = NULL;
+			toadd -> hash = hash;
 		}
-		void* code = qthread_cas64( crt, NULL, toadd );
+		void* code = qthread_cas_ptr( crt, NULL, toadd );
 		if(code == NULL) {//succeeded adding
 			runlock(dict -> lock);
 			return value;
@@ -165,13 +170,14 @@ void* qt_dictionary_put_if_absent(qt_dictionary* dict, void* key, void* value) {
 }
 
 void* qt_dictionary_get(qt_dictionary* dict, void* key) {
-	int bucket = ( dict -> op_hash(key) ) % NR_BUCKETS;
+	int hash = dict -> op_hash(key);
+	int bucket = GET_BUCKET (hash);
 	
 	rlock(dict -> lock);
 	
 	list_entry* walk = dict -> content[bucket];
 	while(walk != NULL){
-		if(dict -> op_equals(walk -> key, key)){
+		if ((walk -> hash == hash) && (dict -> op_equals(walk -> key, key))) {
 			runlock(dict -> lock);
 			return walk -> value;
 		}
@@ -184,13 +190,14 @@ void* qt_dictionary_get(qt_dictionary* dict, void* key) {
 
 void* qt_dictionary_delete(qt_dictionary* dict, void* key) {
 	void* to_ret = NULL, *to_free = NULL;
-	int bucket = ( dict -> op_hash(key) ) % NR_BUCKETS;
+	int hash = dict -> op_hash(key);
+	int bucket = GET_BUCKET (hash);
 	
 	wlock(dict -> lock);
 	
 	list_entry* walk = dict -> content[bucket];
 	if(walk == NULL) ;//cannot remove an element not present in hash
-	else if(dict -> op_equals(walk -> key, key)){
+	else if((walk -> hash == hash) && (dict -> op_equals(walk -> key, key))) {
 		//remove list head
 		to_free = walk;
 		to_ret = walk -> value;
@@ -198,7 +205,7 @@ void* qt_dictionary_delete(qt_dictionary* dict, void* key) {
 		free(to_free);
 	}
 	else while(walk -> next != NULL){
-		if(dict -> op_equals(walk -> next-> key, key)){
+		if ((walk -> hash == hash) && (dict -> op_equals(walk -> next -> key, key))) {
 			to_free = walk -> next;
 			to_ret = walk -> next -> value;
 			walk -> next = walk -> next -> next;
@@ -235,7 +242,7 @@ list_entry* qt_dictionary_iterator_next(qt_dictionary_iterator* it) {
 	//First call to next: search for the first non-empty bucket
 	if(it -> bkt == -1){
 		int i;
-		for(i = 0; i < NR_BUCKETS; i++)
+		for(i = 0; i < NO_BUCKETS; i++)
 			if(it->dict->content[i] != NULL){
 				it -> bkt = i;
 				it -> crt = it->dict->content[i];
@@ -254,13 +261,13 @@ list_entry* qt_dictionary_iterator_next(qt_dictionary_iterator* it) {
 		walk = walk -> next;
 		
 		//search all buckets in dictionary
-		while (it -> bkt < NR_BUCKETS){
+		while (it -> bkt < NO_BUCKETS){
 			if(walk != NULL){
 				it -> crt = walk;
 				return it -> crt;
 			}
 			it -> bkt++;
-			if(it -> bkt < NR_BUCKETS)
+			if(it -> bkt < NO_BUCKETS)
 				walk = it -> dict -> content[it -> bkt];
 		}
 		// if dictionary has no more elements return NULL
@@ -285,7 +292,7 @@ qt_dictionary_iterator* qt_dictionary_end(qt_dictionary* dict) {
 		return NULL;
 	qt_dictionary_iterator* it = qt_dictionary_iterator_create(dict);
 	it->crt = NULL;
-	it->bkt = NR_BUCKETS;
+	it->bkt = NO_BUCKETS;
 	it->dict = dict;
 	return it;
 }
@@ -297,7 +304,9 @@ int qt_dictionary_iterator_equals(qt_dictionary_iterator*a, qt_dictionary_iterat
 }
 
 void qt_dictionary_printbuckets(qt_dictionary* dict) {
-	for(int bucket = 0; bucket < NR_BUCKETS; bucket++) {
+	int total = 0;
+	int used_buckets = 0;
+	for(int bucket = 0; bucket < NO_BUCKETS; bucket++) {
 		int no_el = 0;
 		list_entry** crt = &(dict -> content[bucket]);
 		if (crt != NULL && dict -> content != NULL) {
@@ -307,9 +316,15 @@ void qt_dictionary_printbuckets(qt_dictionary* dict) {
 				crt = &(walk -> next);
 				walk = walk -> next;
 			}
-			printf("Bucket %d has %d elements.\n", bucket, no_el);
-			assert(no_el < 2);
+			if (no_el>0) {
+				printf("Bucket %d has %d elements.\n", bucket, no_el);
+				used_buckets++;
+			}
+			total += no_el;
+			
+			//assert(no_el < 2);
 			
 		}
 	}
+	printf("used_buckets = %d; total elements = %d;\n", used_buckets, total);
 }
