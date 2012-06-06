@@ -15,9 +15,6 @@
 #ifdef qassertnot
 # undef qassertnot
 #endif
-# ifdef assert
-#  undef assert
-# endif
 #ifdef qassert_ret
 # undef qassert_ret
 #endif
@@ -34,6 +31,9 @@
 #ifdef QTHREAD_NO_ASSERTS
 # define qassert(op, val)    op
 # define qassertnot(op, val) op
+# ifdef assert
+#  undef assert
+# endif
 # define assert(foo)
 # define qassert_ret(assertion, retval) do { if (!(assertion)) { return retval; } } while (0)
 # define qassert_retvoid(assertion)     do { if (!(assertion)) { return; } } while (0)
