@@ -528,7 +528,7 @@ static QINLINE float qthread_fincr(float      *operand,
     } oldval, newval, res;
 
     do {
-        oldval.f = *operand;
+        oldval.f = *(volatile float*)operand;
         newval.f = oldval.f + incr;
         res.i    = __sync_val_compare_and_swap((uint32_t *)operand, oldval.i, newval.i);
     } while (res.i != oldval.i);       /* if res!=old, the calc is out of date */
@@ -585,7 +585,7 @@ static QINLINE float qthread_fincr(float      *operand,
         * instruction. (See how obviously wrong that is?) For some reason that
         * I haven't been able to figure out, moving the *operand reference
         * inside the loop fixes that problem, even at -O2 optimization. */
-        oldval.f = *operand;
+        oldval.f = *(volatile float*)operand;
         newval.f = oldval.f + incr;
         __asm__ __volatile__
         ("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
@@ -603,7 +603,7 @@ static QINLINE float qthread_fincr(float      *operand,
     } oldval, newval, res;
 
     do {
-        oldval.f = *operand;
+        oldval.f = *(volatile float*)operand;
         newval.f = oldval.f + incr;
         __asm__ __volatile__ ("mov ar.ccv=%0;;" ::"rO" (oldval.i));
         __asm__ __volatile__ ("cmpxchg4.acq %0=[%1],%2,ar.ccv"
@@ -620,7 +620,7 @@ static QINLINE float qthread_fincr(float      *operand,
     } oldval, newval, retval;
 
     do {
-        oldval.f = *operand;
+        oldval.f = *(volatile float*)operand;
         newval.f = oldval.f + incr;
         __asm__ __volatile__ ("lock; cmpxchg %1, (%2)"
                               : "=a" (retval.i) /* store from EAX */
@@ -651,7 +651,7 @@ static QINLINE double qthread_dincr(double      *operand,
     } oldval, newval, res;
 
     do {
-        oldval.d = *operand;
+        oldval.d = *(volatile double*)operand;
         newval.d = oldval.d + incr;
         res.i    = __sync_val_compare_and_swap((uint64_t *)operand, oldval.i, newval.i);
     } while (res.i != oldval.i);       /* if res!=old, the calc is out of date */
@@ -695,7 +695,7 @@ static QINLINE double qthread_dincr(double      *operand,
 #  elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
     double oldval, newval;
 
-    newval = *operand;
+    newval = *(volatile double*)operand;
     do {
         /* this allows the compiler to be as flexible as possible with register
          * assignments */
@@ -733,7 +733,7 @@ static QINLINE double qthread_dincr(double      *operand,
         * instruction. (See how obviously wrong that is?) For some reason that
         * I haven't been able to figure out, moving the *operand reference
         * inside the loop fixes that problem, even at -O2 optimization. */
-        oldval.d = *operand;
+        oldval.d = *(volatile double*)operand;
         newval.d = oldval.d + incr;
         __asm__ __volatile__
         ("membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
@@ -751,7 +751,7 @@ static QINLINE double qthread_dincr(double      *operand,
     } oldval, newval, res;
 
     do {
-        oldval.d = *operand;
+        oldval.d = *(volatile double*)operand;
         newval.d = oldval.d + incr;
         __asm__ __volatile__ ("mov ar.ccv=%0;;" ::"rO" (oldval.i));
         __asm__ __volatile__ ("cmpxchg8.acq %0=[%1],%2,ar.ccv"
@@ -768,7 +768,17 @@ static QINLINE double qthread_dincr(double      *operand,
     } oldval, newval, retval;
 
     do {
-        oldval.d = *operand;
+        /* This volatile cast APPEARS to fix a bug. What happened is that in
+         * some situations, without the volatile cast, the compiler allowed
+         * itself to load *operand TWICE (once to a floating point register,
+         * once to an integer register) for some bizarre reason. That, of
+         * course, is a race condition (the value could change between loads).
+         * That said, there is no guarantee that the use of volatile *fixes*
+         * the issue, since compilers are technically allowed to ignore the
+         * keyword. That said, I can't think of a better solution (I could load
+         * it in assembly myself, but I don't want to pick a floating point
+         * unit to use). */
+        oldval.d = *(volatile double *)operand;
         newval.d = oldval.d + incr;
 #   ifdef __PGI
         __asm__ __volatile__ ("lock; cmpxchgq %1, (%2)\n\t"
@@ -812,7 +822,7 @@ static QINLINE double qthread_dincr(double      *operand,
 #    define QTHREAD_PIC_SUFFIX
 #    define QTHREAD_PIC_REG_4 "b"
 #   endif
-        oldval.d = *operand;
+        oldval.d = *(volatile double*)operand;
         newval.d = oldval.d + incr;
         /* Yeah, this is weird looking, but it really makes sense when you
          * understand the instruction's semantics (which make sense when you
