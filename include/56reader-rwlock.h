@@ -15,6 +15,7 @@
 #include <stdint.h>
 #include <qt_atomics.h>
 #include <assert.h>
+#include <config.h>
 
 #ifndef NOINLINE
 # define NOINLINE __attribute__((noinline))

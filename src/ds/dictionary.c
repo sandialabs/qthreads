@@ -1,10 +1,9 @@
-//#include <qthread.h> // for CAS operations
 #include <qthread/dictionary.h>
 #include <assert.h>
 #include <stdio.h>
 #include <limits.h> //using CHAR_BIT
-#include <qthread/qthread.h>  //using CAS64
-#include <qthread_innards.h> //using qthread_worker_unique and qthread_num_workers
+#include <qthread/qthread.h>  //using CAS_ptr, qthread_worker_unique and qthread_num_workers
+//#include <qthread_innards.h> //using qthread_library_initialized
 #include <56reader-rwlock.h> //using rwlock_*
 
 #define BKT_POW 13
@@ -73,10 +72,14 @@ void* qt_dictionary_put_helper(qt_dictionary* dict, void* key, void* value,
 
 #define GET_BUCKET(hash) ( (DICT_ABS(hash) ) & ((1 << BKT_POW) -1) )
 
-
+#ifndef QTHREAD_NO_ASSERTS
+extern int qthread_library_initialized;
+#endif
 
 qt_dictionary* qt_dictionary_create(key_equals eq, hashcode hash) {
-	qthread_initialize();
+	#ifndef QTHREAD_NO_ASSERTS
+		assert(qthread_library_initialized && "Need to initialize qthreads before using the dictionary");
+	#endif
 	qt_dictionary* ret = (qt_dictionary*) malloc (sizeof(qt_dictionary));
 	ret -> op_equals = eq;
 	ret -> op_hash = hash;

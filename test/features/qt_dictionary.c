@@ -22,6 +22,7 @@ int my_hashcode(void* string) {
 
 int main(int argc, char** argv) {
 	void* ret_code;
+	qthread_initialize();	
 	qt_dictionary* dict = qt_dictionary_create(my_key_equals, my_hashcode);
 	char* mykey1 = "k1";
 	char* myval1 = "v1";
