@@ -1,0 +1,5 @@
+Check you have set env variable QT_INSTALL to your Qthreads installation folder.
+
+Set env variable QT_CNC_INSTALL to your Qthreads-CnC installation folder.
+Example:
+export QT_CNC_INSTALL=/home/asbirle/qthreads/qtCnC
