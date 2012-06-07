@@ -6,7 +6,7 @@
 //#include <qthread_innards.h> //using qthread_library_initialized
 #include <56reader-rwlock.h> //using rwlock_*
 
-#define BKT_POW 13
+#define BKT_POW 9
 #define NO_BUCKETS ( 1 << BKT_POW )
 
 /* Prototype should NOT go in header, we don't want it public*/
@@ -112,17 +112,22 @@ void qt_dictionary_destroy(qt_dictionary* d) {
 #define PUT_ALWAYS 0
 #define PUT_IF_ABSENT 1
 
+#define DICTIONARY_ADD_TO_HEAD
+
+#ifdef DICTIONARY_ADD_TO_HEAD
 void* qt_dictionary_put_helper(qt_dictionary* dict, void* key, void* value, 
 			char put_type) {
 	int hash = dict -> op_hash(key);
 	
 	int bucket = GET_BUCKET (hash);
-	
+
+	rlock(dict -> lock);
 	list_entry** crt = &(dict -> content[bucket]);
 	assert(!(crt == NULL || dict -> content == NULL));
 	list_entry* walk = *crt, *toadd = NULL;
+	list_entry* head = walk, *stop = NULL;
 	while(1){
-		while(walk != NULL){
+		while(walk != stop){
 			if((walk -> hash == hash) && (dict -> op_equals(walk -> key, key))) {
 				if(toadd != NULL) free(toadd);
 				
@@ -135,7 +140,62 @@ void* qt_dictionary_put_helper(qt_dictionary* dict, void* key, void* value,
 						crt_val = walk->value;
 					}
 				}
-				rlock(dict -> lock);
+				runlock(dict -> lock);
+				return walk->value;
+			}
+			walk = walk -> next;
+		}
+		//if new entry not found and not created, create it.
+		if(toadd == NULL){
+			toadd = (list_entry*) malloc (sizeof(list_entry));
+			if(toadd == NULL) {
+				runlock(dict -> lock);
+				return NULL;
+			}
+			toadd -> key = key;
+			toadd -> value = value;
+			toadd -> next = head;
+			toadd -> hash = hash;
+		}
+		void* code = qthread_cas_ptr( crt, head, toadd );
+		if(code == head) {//succeeded adding
+			runlock(dict -> lock);
+			return value;
+		}
+		stop = head;
+		head = *crt;
+		walk = head;
+		toadd -> next = head;
+	}
+	
+	runlock(dict -> lock);
+	return NULL;
+}
+#else
+void* qt_dictionary_put_helper(qt_dictionary* dict, void* key, void* value,
+			char put_type) {
+	int hash = dict -> op_hash(key);
+
+	int bucket = GET_BUCKET (hash);
+
+	rlock(dict -> lock);
+	list_entry** crt = &(dict -> content[bucket]);
+	assert(!(crt == NULL || dict -> content == NULL));
+	list_entry* walk = *crt, *toadd = NULL;
+	while(1){
+		while(walk != NULL){
+			if((walk -> hash == hash) && (dict -> op_equals(walk -> key, key))) {
+				if(toadd != NULL) free(toadd);
+
+				if(put_type == PUT_ALWAYS){
+					void **crt_val_adr = &(walk -> value);
+					void *crt_val = walk->value;
+					while( (qthread_cas_ptr( crt_val_adr, \
+										crt_val, value )) != crt_val ){
+						crt_val = walk->value;
+					}
+				}
+				runlock(dict -> lock);
 				return walk->value;
 			}
 			crt = &(walk -> next);
@@ -153,16 +213,17 @@ void* qt_dictionary_put_helper(qt_dictionary* dict, void* key, void* value,
 			toadd -> hash = hash;
 		}
 		void* code = qthread_cas_ptr( crt, NULL, toadd );
-		if(code == NULL) {//succeeded adding
+		if(code == NULL) {
 			runlock(dict -> lock);
 			return value;
 		}
 		walk = *crt;
 	}
-	
+
 	runlock(dict -> lock);
 	return NULL;
 }
+#endif
 
 void* qt_dictionary_put(qt_dictionary* dict, void* key, void* value) {
 	return qt_dictionary_put_helper(dict, key, value, PUT_ALWAYS);
