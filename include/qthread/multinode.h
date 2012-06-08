@@ -6,6 +6,8 @@
 #include "qt_visibility.h"
 #include "qthread.h"
 
+Q_STARTCXX /* */
+
 int INTERNAL qthread_multinode_initialize(void);
 
 int qthread_multinode_run(void);
@@ -18,5 +20,7 @@ int qthread_fork_remote(qthread_f f,
                         aligned_t *ret,
                         int rank,
                         size_t arg_len);
+
+Q_ENDCXX /* */
 
 #endif
