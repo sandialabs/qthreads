@@ -50,10 +50,6 @@ static QINLINE int getpagesize()
 typedef struct threadlocal_cache_s qt_mpool_threadlocal_cache_t;
 
 #ifdef TLS
-#define GLOBAL_TLS 1
-#endif
-
-#ifdef GLOBAL_TLS
 static TLS_DECL_INIT(qt_mpool_threadlocal_cache_t *, pool_caches);
 static TLS_DECL_INIT(uintptr_t, pool_cache_count);
 static aligned_t pool_cache_global_max = 1;
@@ -65,7 +61,7 @@ struct qt_mpool_s {
     size_t                        items_per_alloc;
     size_t                        alignment;
 
-#ifdef GLOBAL_TLS
+#ifdef TLS
     size_t                        offset;
 #else
     pthread_key_t                 threadlocal_cache;
@@ -96,7 +92,7 @@ struct threadlocal_cache_s {
 
 static void qt_mpool_subsystem_shutdown(void)
 {
-#ifdef GLOBAL_TLS
+#ifdef TLS
     TLS_DELETE(pool_caches);
     TLS_DELETE(pool_cache_count);
 #endif
@@ -233,7 +229,7 @@ qt_mpool INTERNAL qt_mpool_create_aligned(size_t item_size,
     pool->reuse_pool      = NULL;
     QTHREAD_FASTLOCK_INIT(pool->reuse_lock);
     QTHREAD_FASTLOCK_INIT(pool->pool_lock);
-#ifdef GLOBAL_TLS
+#ifdef TLS
     pool->offset         = qthread_incr(&pool_cache_global_max, 1);
 #else
     pthread_key_create(&pool->threadlocal_cache, NULL);
@@ -261,7 +257,7 @@ void INTERNAL *qt_mpool_alloc(qt_mpool pool)
     qthread_debug(MPOOL_CALLS, "pool:%p\n", pool);
     qassert_ret((pool != NULL), NULL);
 
-#ifdef GLOBAL_TLS
+#ifdef TLS
     tc = TLS_GET(pool_caches);
     {
         uintptr_t count_caches = (uintptr_t)TLS_GET(pool_cache_count);
@@ -286,7 +282,7 @@ void INTERNAL *qt_mpool_alloc(qt_mpool pool)
 #if defined(HAVE_MEMALIGN)
         tc = memalign(CACHELINE_WIDTH, sizeof(qt_mpool_threadlocal_cache_t));
 #elif defined(HAVE_POSIX_MEMALIGN)
-        posix_memalign(&(tc), CACHELINE_WIDTH, sizeof(qt_mpool_threadlocal_cache_t));
+        posix_memalign((void**)&(tc), CACHELINE_WIDTH, sizeof(qt_mpool_threadlocal_cache_t));
 #elif defined(HAVE_WORKING_VALLOC)
         tc = valloc(sizeof(qt_mpool_threadlocal_cache_t));
 #else                                 /* if defined(HAVE_MEMALIGN) */
@@ -384,7 +380,7 @@ void INTERNAL qt_mpool_free(qt_mpool pool,
     qthread_debug(MPOOL_CALLS, "pool=%p mem=%p\n", pool, mem);
     qassert_retvoid((mem != NULL));
     qassert_retvoid((pool != NULL));
-#ifdef GLOBAL_TLS
+#ifdef TLS
     tc = TLS_GET(pool_caches);
     {
         uintptr_t count_caches = (uintptr_t)TLS_GET(pool_cache_count);
@@ -473,7 +469,7 @@ void INTERNAL qt_mpool_destroy(qt_mpool pool)
         pool->caches = freeme->next;
         free(freeme);
     }
-#ifndef GLOBAL_TLS
+#ifndef TLS
     pthread_key_delete(pool->threadlocal_cache);
 #endif
     QTHREAD_FASTLOCK_DESTROY(pool->pool_lock);
