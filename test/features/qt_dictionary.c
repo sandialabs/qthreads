@@ -1,3 +1,4 @@
+#include <qthread/qthread.h>
 #include <qthread/dictionary.h>
 #include <assert.h>
 #include <stdio.h>
