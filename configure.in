@@ -607,6 +607,12 @@ AS_IF([test "x$enable_third_party_benchmarks" = xyes],
        ])
 
 # Check for native TLS support (thread-local-storage)
+case "$qthread_cv_c_compiler_type" in
+    Clang)
+      # sadly, Clang does not initialize TLS values correctly
+      enable_native_tls=no
+    ;;
+esac
 AX_TLS
 
 # Figure out whether the compiler has builtin atomic operations
