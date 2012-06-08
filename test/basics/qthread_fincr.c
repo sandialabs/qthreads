@@ -3,7 +3,7 @@
 #include <qthread/qthread.h>
 #include "argparsing.h"
 
-float master[3] = { 0 };
+float master[3] = { 0, 0, 0 };
 
 static aligned_t incr(void *arg)
 {
@@ -45,6 +45,8 @@ int main(int   argc,
         fprintf(stderr, "master[0]:%f master[1]:%f master[2]:%f\n", master[0],
                 master[1], master[2]);
     }
+    assert(master[0] == 0.0);
+    assert(master[2] == 0.0);
     assert(master[1] == 30.0);
     iprintf("30 concurrent threads successfully incremented by 1\n");
     master[1] = 0.0;
