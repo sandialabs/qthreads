@@ -40,11 +40,18 @@ EXTRA_DIST =
 INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/test/
 outputdir = $(top_builddir)/src
 qthreadlib = $(outputdir)/libqthread.la
+utils_rnglib = $(top_builddir)/test/utils/rng/librng.la
 
 LDADD = $(qthreadlib)
 
 buildall: $(multinode)
 buildextra: $(multinode)
+
+$(qthreadlib):
+	$(MAKE) -C $(top_builddir)/src
+
+$(utils_rng_lib):
+	$(MAKE) -C $(top_builddir)/test/utils/rng
 
 test_init_SOURCES = test_init.c
 test_init_DEPENDENCIES = $(qthreadlib)
@@ -61,5 +68,5 @@ broadcast_DEPENDENCIES = $(qthreadlib)
 ring_SOURCES = ring.c
 ring_DEPENDENCIES = $(qthreadlib)
 
-uts_SOURCES = uts.c ../benchmarks/uts/rng/brg_sha1.c
-uts_DEPENDENCIES = $(qthreadlib)
+uts_SOURCES = uts.c
+uts_LDADD = $(LDADD) $(utils_rnglib)

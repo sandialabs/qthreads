@@ -32,8 +32,15 @@ benchmarks:
 
 buildall: buildtests buildextra
 
-clean-local:
-	$(MAKE) -C benchmarks clean
+# Add (disconnected) utils to stuff to clean up
+clean-local: clean-local-utils
+.PHONY: clean-local-utils
+clean-local-utils:
+	$(MAKE) -C utils clean
+distclean-local: distclean-local-utils
+.PHONY: distclean-local-utils
+distclean-local-utils:
+	$(MAKE) -C utils distclean
 
 .PHONY: buildall tests buildtests benchmarks buildextra basictests featuretests stresstests
 

@@ -126,6 +126,7 @@ EXTRA_DIST = \
 INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/test/
 outputdir = $(top_builddir)/src
 qthreadlib = $(outputdir)/libqthread.la
+utils_rnglib = $(top_builddir)/test/utils/rng/librng.la
 
 LDADD = $(qthreadlib)
 
@@ -138,6 +139,12 @@ else
 buildall: $(benchmarks)
 buildextra: $(benchmarks)
 endif
+
+$(qthreadlib):
+	$(MAKE) -C $(top_builddir)/src
+
+$(utils_rnglib):
+	$(MAKE) -C $(top_builddir)/test/utils/rng
 
 time_allpairs_SOURCES = thesis/time_allpairs.c
 time_allpairs_DEPENDENCIES = $(qthreadlib)
@@ -275,39 +282,39 @@ time_qt_loopaccums_SOURCES = generic/time_qt_loopaccums.c
 time_qt_loopaccums_DEPENDENCIES = $(qthreadlib)
 
 if COMPILE_OMP_BENCHMARKS
-time_uts_omp_SOURCES = uts/time_uts_omp.c uts/rng/brg_sha1.c
-time_uts_omp_DEPENDENCIES = $(qthreadlib)
+time_uts_omp_SOURCES = uts/time_uts_omp.c
+time_uts_omp_LDADD = $(LDADD) $(utils_rnglib)
 time_uts_omp_CFLAGS = @OPENMP_CFLAGS@
 endif
 
 if COMPILE_TBB_BENCHMARKS
-time_uts_tbb_SOURCES = uts/time_uts_tbb.cc uts/rng/brg_sha1.c
-time_uts_tbb_DEPENDENCIES = $(qthreadlib)
+time_uts_tbb_SOURCES = uts/time_uts_tbb.cc
+time_uts_tbb_LDADD = $(LDADD) $(utils_rnglib)
 time_uts_tbb_LDFLAGS = @TBB_LIBS@
 endif
 
 if COMPILE_CILK_BENCHMARKS
-time_uts_cilk_SOURCES = uts/time_uts_cilk.c uts/rng/brg_sha1.c
-time_uts_cilk_DEPENDENCIES = $(qthreadlib)
+time_uts_cilk_SOURCES = uts/time_uts_cilk.c
+time_uts_cilk_LDADD = $(LDADD) $(utils_rnglib)
 endif
 
-time_uts_syncvar_SOURCES = uts/time_uts_syncvar.c uts/rng/brg_sha1.c
-time_uts_syncvar_DEPENDENCIES = $(qthreadlib)
+time_uts_syncvar_SOURCES = uts/time_uts_syncvar.c
+time_uts_syncvar_LDADD = $(LDADD) $(utils_rnglib)
 
-time_uts_aligned_SOURCES = uts/time_uts_aligned.c uts/rng/brg_sha1.c
-time_uts_aligned_DEPENDENCIES = $(qthreadlib)
+time_uts_aligned_SOURCES = uts/time_uts_aligned.c
+time_uts_aligned_LDADD = $(LDADD) $(utils_rnglib)
 
-time_uts_sinc_SOURCES = uts/time_uts_sinc.c uts/rng/brg_sha1.c
-time_uts_sinc_DEPENDENCIES = $(qthreadlib)
+time_uts_sinc_SOURCES = uts/time_uts_sinc.c
+time_uts_sinc_LDADD = $(LDADD) $(utils_rnglib)
 
-time_uts_donecount_SOURCES = uts/time_uts_donecount.c uts/rng/brg_sha1.c
-time_uts_donecount_DEPENDENCIES = $(qthreadlib)
+time_uts_donecount_SOURCES = uts/time_uts_donecount.c
+time_uts_donecount_LDADD = $(LDADD) $(utils_rnglib)
 
-time_uts_donecount2_SOURCES = uts/time_uts_donecount2.c uts/rng/brg_sha1.c
-time_uts_donecount2_DEPENDENCIES = $(qthreadlib)
+time_uts_donecount2_SOURCES = uts/time_uts_donecount2.c
+time_uts_donecount2_LDADD = $(LDADD) $(utils_rnglib)
 
-time_uts_donecount3_SOURCES = uts/time_uts_donecount3.c uts/rng/brg_sha1.c
-time_uts_donecount3_DEPENDENCIES = $(qthreadlib)
+time_uts_donecount3_SOURCES = uts/time_uts_donecount3.c
+time_uts_donecount3_LDADD = $(LDADD) $(utils_rnglib)
 
 time_task_spawn_SOURCES = mt/time_task_spawn.c
 time_task_spawn_DEPENDENCIES = $(qthreadlib)
@@ -361,8 +368,8 @@ spawn_parallel_qthreads_DEPENDENCIES = $(qthreadlib)
 fib_qthreads_SOURCES = sc12/fib_qthreads.c
 fib_qthreads_DEPENDENCIES = $(qthreadlib)
 
-uts_qthreads_SOURCES = sc12/uts_qthreads.c sc12/rng/brg_sha1.c
-uts_qthreads_DEPENDENCIES = $(qthreadlib)
+uts_qthreads_SOURCES = sc12/uts_qthreads.c
+uts_qthreads_LDADD = $(LDADD) $(utils_rnglib)
 
 if COMPILE_OMP_BENCHMARKS
 time_omp_eager_future_SOURCES = mt/time_omp_eager_future.c
@@ -382,7 +389,7 @@ fib_omp_DEPENDENCIES = $(qthreadlib)
 fib_omp_CFLAGS = @OPENMP_CFLAGS@
 
 uts_omp_SOURCES = sc12/uts_omp.c sc12/rng/brg_sha1.c
-uts_omp_DEPENDENCIES = $(qthreadlib)
+uts_omp_LDADD = $(LDADD) $(utils_rnglib)
 uts_omp_CFLAGS = @OPENMP_CFLAGS@
 endif
 
@@ -400,7 +407,7 @@ fib_tbb_DEPENDENCIES = $(qthreadlib)
 fib_tbb_LDFLAGS = @TBB_LIBS@
 
 uts_tbb_SOURCES = sc12/uts_tbb.cc sc12/rng/brg_sha1.c
-uts_tbb_DEPENDENCIES = $(qthreadlib)
+uts_tbb_LDADD = $(LDADD) $(utils_rnglib)
 uts_tbb_LDFLAGS = @TBB_LIBS@
 endif
 
@@ -415,5 +422,5 @@ fib_cilk_SOURCES = sc12/fib_cilk.c
 fib_cilk_DEPENDENCIES = $(qthreadlib)
 
 uts_cilk_SOURCES = sc12/uts_cilk.c sc12/rng/brg_sha1.c
-uts_cilk_DEPENDENCIES = $(qthreadlib)
+uts_cilk_LDADD = $(LDADD) $(utils_rnglib)
 endif

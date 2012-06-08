@@ -20,6 +20,7 @@ endif
 
 INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/test/
 qthreadlib = $(top_builddir)/src/libqthread.la
+utils_rnglib = $(top_builddir)/test/utils/rng/librng.la
 
 LDADD = $(qthreadlib)
 
@@ -28,6 +29,12 @@ buildall: $(TESTS)
 buildtests: $(TESTS)
 
 buildextra: $(TESTS)
+
+$(qthreadlib):
+	$(MAKE) -C $(top_builddir)/src
+
+$(utils_rnglib):
+	$(MAKE) -C $(top_builddir)/test/utils/rng
 
 syncvar_prodcons_contended_SOURCES = syncvar_prodcons_contended.c
 syncvar_prodcons_contended_DEPENDENCIES = $(qthreadlib)
@@ -41,5 +48,5 @@ task_spawn_DEPENDENCIES = $(qthreadlib)
 syncvar_stream_SOURCES = syncvar_stream.c
 syncvar_stream_DEPENDENCIES = $(qthreadlib)
 
-subteams_uts_SOURCES = subteams_uts.c ../benchmarks/uts/rng/brg_sha1.c
-subteams_uts_DEPENDENCIES = $(qthreadlib)
+subteams_uts_SOURCES = subteams_uts.c
+subteams_uts_LDADD = $(LDADD) $(utils_rnglib)

@@ -23,7 +23,7 @@
 #include <tbb/parallel_reduce.h>
 
 #define BRG_RNG // Select RNG
-#include "rng/rng.h"
+#include "../../utils/rng/rng.h"
 
 #define PRINT_STATS 1
 

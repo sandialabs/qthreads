@@ -19,7 +19,7 @@
 #include "argparsing.h"
 
 #define BRG_RNG // Select RNG
-#include "uts/rng/rng.h"
+#include "../../utils/rng/rng.h"
 
 #define PRINT_STATS 1
 

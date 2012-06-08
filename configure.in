@@ -1050,6 +1050,8 @@ AC_CONFIG_FILES([Makefile
                  include/Makefile
                  include/qthread/Makefile
                  test/Makefile
+		 test/utils/Makefile
+		 test/utils/rng/Makefile
                  test/basics/Makefile
                  test/features/Makefile
                  test/stress/Makefile
