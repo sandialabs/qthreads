@@ -5,12 +5,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include "qthread/spr.h"
+
 #include "qthread/qthread.h"
 #include "qthread/multinode.h"
+
 #include "qthread_innards.h"
 #include "qt_debug.h"
 #include "qt_atomics.h"
-
 #include "net/net.h"
 
 static int       my_rank;
@@ -139,6 +141,25 @@ static void die_msg_handler(int    tag,
     }
 
     qthread_debug(MULTINODE_FUNCTIONS, "[%d] end die_msg_handler\n", my_rank);
+}
+
+int spr_init(unsigned int flags, qthread_f *regs)
+{
+    qassert(setenv("MULTINODE", "1", 1), 0);
+    qthread_initialize();
+    if (regs) {
+        qthread_f *cur_f = regs;
+        uint32_t tag = 1;
+        while (*cur_f) {
+            qassert(qthread_multinode_register(tag + 1000, *cur_f), QTHREAD_SUCCESS);
+            cur_f = regs + tag;
+            ++tag;
+        }
+    }
+    if (flags & SPR_SPMD) {
+        qthread_multinode_run();
+    }
+    return QTHREAD_SUCCESS;
 }
 
 int qthread_multinode_initialize(void)
