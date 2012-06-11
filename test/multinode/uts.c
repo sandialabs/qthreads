@@ -19,7 +19,7 @@
 #include "argparsing.h"
 
 #define BRG_RNG // Select RNG
-#include "../benchmarks/uts/rng/rng.h"
+#include "../utils/rng/rng.h"
 
 #define COLLECT_STATS 1
 
