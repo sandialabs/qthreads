@@ -157,9 +157,18 @@ int spr_init(unsigned int flags, qthread_f *regs)
         }
     }
     if (flags & SPR_SPMD) {
-        qthread_multinode_run();
+        qthread_multinode_multistart();
     }
     return QTHREAD_SUCCESS;
+}
+
+int spr_fini(unsigned int flags)
+{
+    if (flags & SPR_SPMD) {
+        qthread_multinode_multistop();
+    }
+
+    return 0;
 }
 
 int qthread_multinode_initialize(void)
