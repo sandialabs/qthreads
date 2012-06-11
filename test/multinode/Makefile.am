@@ -13,6 +13,7 @@ general_multinode = \
 	latency \
 	broadcast \
 	ring \
+	spmd \
 	uts
 
 multinode = \
@@ -67,6 +68,9 @@ broadcast_DEPENDENCIES = $(qthreadlib)
 
 ring_SOURCES = ring.c
 ring_DEPENDENCIES = $(qthreadlib)
+
+spmd_SOURCES = spmd.c
+spmd_DEPENDENCIES = $(qthreadlib)
 
 uts_SOURCES = uts.c
 uts_LDADD = $(LDADD) $(utils_rnglib)

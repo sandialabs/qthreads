@@ -224,6 +224,45 @@ int qthread_multinode_run(void)
     return 0;
 }
 
+int qthread_multinode_multistart(void)
+{
+    if (0 == initialized) { return 1; }
+
+    qthread_debug(MULTINODE_CALLS, "[%d] begin qthread_multinode_multistop\n", my_rank);
+
+    qthread_internal_net_driver_barrier();
+
+    qthread_debug(MULTINODE_CALLS, "[%d] end qthread_multinode_multistop\n", my_rank);
+
+    return 0;
+}
+
+int qthread_multinode_multistop(void)
+{
+    aligned_t val;
+
+    qthread_debug(MULTINODE_CALLS, "[%d] begin qthread_multinode_multistop\n", my_rank);
+
+    qthread_internal_net_driver_barrier();
+
+    if (0 != my_rank) {
+        struct die_msg_t msg;
+
+        qthread_readFE(&val, &time_to_die);
+        qthread_debug(MULTINODE_DETAILS, "[%d] time to die\n", my_rank);
+        msg.my_rank = my_rank;
+        qthread_internal_net_driver_send(0, DIE_MSG_TAG, &msg, sizeof(msg));
+        qthread_finalize();
+        exit(0);
+    } else {
+        qthread_finalize();
+    }
+
+    qthread_debug(MULTINODE_CALLS, "[%d] end qthread_multinode_multistop\n", my_rank);
+
+    return 0;
+}
+
 int qthread_multinode_rank(void)
 {
     return my_rank;

@@ -11,6 +11,8 @@ Q_STARTCXX /* */
 int INTERNAL qthread_multinode_initialize(void);
 
 int qthread_multinode_run(void);
+int qthread_multinode_multistart(void);
+int qthread_multinode_multistop(void);
 int qthread_multinode_rank(void);
 int qthread_multinode_size(void);
 int qthread_multinode_register(uint32_t uid, qthread_f f);
