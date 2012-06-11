@@ -70,7 +70,7 @@ static QINLINE void rwlock_wrlock(rwlock_t *l,
     id = id + 1;
 
     uint64_t *readers = (void *)l->readers;
-    while(qthread_cas32(&(l->owner), 0, id) != id) SPINLOCK_BODY();
+    while(qthread_cas(&(l->owner), 0, id) != id) SPINLOCK_BODY();
 
     MACHINE_FENCE;
     for (int i = 0; i < sizeof(l->readers) / sizeof(uint64_t); i++) {
