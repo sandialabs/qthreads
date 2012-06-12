@@ -149,6 +149,7 @@ int spr_init(unsigned int flags,
 {
     qassert(setenv("QT_MULTINODE", "1", 1), 0);
     if (initialized == 1) return SPR_IGN;
+    if (flags & ~(SPR_SPMD)) return SPR_BADARGS;
     initialized_flags = flags;
     qthread_initialize();
     if (regs) {
