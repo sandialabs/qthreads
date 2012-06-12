@@ -10,6 +10,7 @@
 #include "qthread/qthread.h"
 #include "qthread/multinode.h"
 
+#include "qt_multinode_innards.h"
 #include "qthread_innards.h"
 #include "qt_debug.h"
 #include "qt_atomics.h"
