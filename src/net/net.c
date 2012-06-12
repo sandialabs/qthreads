@@ -179,6 +179,16 @@ int spr_fini(void)
     return SPR_OK;
 }
 
+int spr_num_locales(void)
+{
+    return qthread_multinode_size();
+}
+
+int spr_locale_id(void)
+{
+    return qthread_multinode_rank();
+}
+
 int qthread_multinode_initialize(void)
 {
     int ret;

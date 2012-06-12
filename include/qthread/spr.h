@@ -17,6 +17,9 @@ int spr_init(unsigned int flags,
              qthread_f   *regs);
 int spr_fini(void);
 
+int spr_num_locales(void);
+int spr_locale_id(void);
+
 Q_ENDCXX /* */
 
 #endif // ifndef SPR_H
