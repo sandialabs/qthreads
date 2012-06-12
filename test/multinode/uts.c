@@ -350,7 +350,7 @@ int main(int   argc,
 
     // Set `num_locales` on each locale
     num_locales = spr_num_locales();
-    here        = spr_loc();
+    here        = spr_locale_id();
 
 #ifdef COLLECT_STATS
     comm_bins = calloc(num_locales, sizeof(aligned_t));
