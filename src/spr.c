@@ -8,15 +8,21 @@
 #include "qthread/qthread.h"
 
 #include "qthread/multinode.h"
-#include "qt_multinode_innards.h"
 #include "qthread/spr.h"
 
 #include "qthread_innards.h"
+#include "qt_multinode_innards.h"
+#include "qthread_asserts.h"
 #include "qt_debug.h"
 #include "qt_atomics.h"
 #include "net/net.h"
 
 static int initialized_flags = -1;
+
+static void call_fini(void)
+{
+    spr_fini();
+}
 
 int spr_init(unsigned int flags,
              qthread_f   *regs)
@@ -34,6 +40,7 @@ int spr_init(unsigned int flags,
             ++tag;
         }
     }
+    atexit(call_fini);
     if (flags & SPR_SPMD) {
         qthread_multinode_multistart();
     } else {
@@ -49,6 +56,7 @@ int spr_fini(void)
         qthread_multinode_multistop();
     }
 
+    initialized_flags = -1;
     return SPR_OK;
 }
 
