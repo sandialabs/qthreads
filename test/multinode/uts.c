@@ -28,19 +28,21 @@
 
 #define MAXNUMCHILDREN 100
 
-static int num_locales;
-static int here;
-static int talk_to_self = 0;
-static double perc_remote = 0.0;
+static int    num_locales;
+static int    here;
+static int    talk_to_self = 0;
+static double perc_remote  = 0.0;
 
 #ifdef COLLECT_STATS
-static aligned_t *comm_bins = NULL;
-static aligned_t num_messages = 0;
+static aligned_t *comm_bins    = NULL;
+static aligned_t  num_messages = 0;
 
-static aligned_t pong_comm(void *args_) {
+static aligned_t pong_comm(void *args_)
+{
     aligned_t *remote_comm_bins = (aligned_t *)args_;
 
     aligned_t num_out = 0;
+
     iprintf("%d ", here);
     for (int i = 0; i < num_locales; i++) {
         num_out += remote_comm_bins[i];
@@ -51,10 +53,12 @@ static aligned_t pong_comm(void *args_) {
     return num_out;
 }
 
-static aligned_t ping_comm(void *args_) {
+static aligned_t ping_comm(void *args_)
+{
     return pong_comm(comm_bins);
 }
-#endif
+
+#endif /* ifdef COLLECT_STATS */
 
 typedef enum {
     BIN = 0,
@@ -130,13 +134,13 @@ static int calc_num_children(node_t *parent)
         int root_bf = (int)ceil(bf_0);
         if (num_children > root_bf) {
             iprintf("*** Number of children truncated from %d to %d\n",
-                   num_children, root_bf);
+                    num_children, root_bf);
             num_children = root_bf;
         }
-    } else   {
+    } else {
         if (num_children > MAXNUMCHILDREN) {
             iprintf("*** Number of children truncated from %d to %d\n",
-                   num_children, MAXNUMCHILDREN);
+                    num_children, MAXNUMCHILDREN);
             num_children = MAXNUMCHILDREN;
         }
     }
@@ -150,11 +154,12 @@ static int calc_num_children(node_t *parent)
 // -    Copy of child is shallow, be careful with `state` member
 static aligned_t visit(void *args_)
 {
-    node_t   *parent            = (node_t *)args_;
-    int       parent_height     = parent->height;
-    int       num_children      = parent->num_children;
-    uint64_t  num_descendants   = 1;
-    node_t    child;
+    node_t  *parent          = (node_t *)args_;
+    int      parent_height   = parent->height;
+    int      num_children    = parent->num_children;
+    uint64_t num_descendants = 1;
+    node_t   child;
+
 #ifdef BIG_STACKS
     aligned_t rets[num_children];
 #else
@@ -177,19 +182,19 @@ static aligned_t visit(void *args_)
 
         child.num_children = calc_num_children(&child);
 
-        int const r = rng_rand(child.state.state); 
+        int const r = rng_rand(child.state.state);
 
         int target = (r <= 0x7fffffff * perc_remote) ? r % num_locales : here;
 
-        if (talk_to_self || target != here) {
+        if (talk_to_self || (target != here)) {
             // Spawn `visit` task to a random locale
             iprintf("%03d : spawning visit on locale %03d\n", here, target);
 #ifdef COLLECT_STATS
             qthread_incr(&(comm_bins[target]), 1);
 #endif
 
-            qthread_fork_remote(visit, &child, &rets[i], 
-                                target, 
+            qthread_fork_remote(visit, &child, &rets[i],
+                                target,
                                 sizeof(node_t));
         } else {
             qthread_fork_copyargs(visit, &child, sizeof(node_t), &rets[i]);
@@ -214,13 +219,13 @@ static aligned_t visit(void *args_)
 static void print_stats(void)
 {
     iprintf("tree-type %d\ntree-type-name %s\n",
-           tree_type, type_names[tree_type]);
+            tree_type, type_names[tree_type]);
     iprintf("root-bf %.1f\nroot-seed %d\n",
-           bf_0, root_seed);
+            bf_0, root_seed);
 
     if ((tree_type == GEO) || (tree_type == HYBRID)) {
         iprintf("gen_mx %d\nshape-fn %d\nshape-fn-name %s\n",
-               tree_depth, shape_fn, shape_names[shape_fn]);
+                tree_depth, shape_fn, shape_names[shape_fn]);
     }
 
     if ((tree_type == BIN) || (tree_type == HYBRID)) {
@@ -228,19 +233,19 @@ static void print_stats(void)
         int    m  = non_leaf_bf;
         double es = (1.0 / (1.0 - q * m));
         iprintf("q %f\nm %d\nE(n) %f\nE(s) %.2f\n",
-               q, m, q * m, es);
+                q, m, q * m, es);
     }
 
     if (tree_type == HYBRID) {
         iprintf("root-to-depth %d\n",
-               (int)ceil(shift_depth * tree_depth));
+                (int)ceil(shift_depth * tree_depth));
     }
 
     if (tree_type == BALANCED) {
         iprintf("gen_mx %d\n", tree_depth);
         iprintf("expected-num-nodes %llu\nexpected-num-leaves %llu\n",
-               (unsigned long long)((pow(bf_0, tree_depth + 1) - 1.0) / (bf_0 - 1.0)),
-               (unsigned long long)pow(bf_0, tree_depth));
+                (unsigned long long)((pow(bf_0, tree_depth + 1) - 1.0) / (bf_0 - 1.0)),
+                (unsigned long long)pow(bf_0, tree_depth));
     }
 
     iprintf("compute-granularity %d\n", num_samples);
@@ -259,11 +264,11 @@ static void print_banner(void)
     iprintf("Tree type:%3d (%s)\n", tree_type, type_names[tree_type]);
     iprintf("Tree shape parameters:\n");
     iprintf("  root branching factor b_0 = %.1f, root seed = %d\n",
-           bf_0, root_seed);
+            bf_0, root_seed);
 
     if ((tree_type == GEO) || (tree_type == HYBRID)) {
         iprintf("  GEO parameters: gen_mx = %d, shape function = %d (%s)\n",
-               tree_depth, shape_fn, shape_names[shape_fn]);
+                tree_depth, shape_fn, shape_names[shape_fn]);
     }
 
     if ((tree_type == BIN) || (tree_type == HYBRID)) {
@@ -271,19 +276,19 @@ static void print_banner(void)
         int    m  = non_leaf_bf;
         double es = (1.0 / (1.0 - q * m));
         iprintf("  BIN parameters: q = %f, m = %d, E(n) = %f, E(s) = %.2f\n",
-               q, m, q * m, es);
+                q, m, q * m, es);
     }
 
     if (tree_type == HYBRID) {
         iprintf("  HYBRID: GEO from root to depth %d, then BIN\n",
-               (int)ceil(shift_depth * tree_depth));
+                (int)ceil(shift_depth * tree_depth));
     }
 
     if (tree_type == BALANCED) {
         iprintf("  BALANCED parameters: gen_mx = %d\n", tree_depth);
         iprintf("    Expected size: %llu nodes, %llu leaves\n",
-               (unsigned long long)((pow(bf_0, tree_depth + 1) - 1.0) / (bf_0 - 1.0)),
-               (unsigned long long)pow(bf_0, tree_depth));
+                (unsigned long long)((pow(bf_0, tree_depth + 1) - 1.0) / (bf_0 - 1.0)),
+                (unsigned long long)pow(bf_0, tree_depth));
     }
 
     iprintf("Random number generator: ");
@@ -338,14 +343,14 @@ int main(int   argc,
     DBLARG(perc_remote, "PERC_REMOTE");
 
     // Tell Qthreads to initialize multinode support
-    setenv("QT_MULTINODE","yes",1);
+    setenv("QT_MULTINODE", "yes", 1);
 
-    qthread_f functions[4] = {visit, ping_comm, pong_comm, NULL};
+    qthread_f functions[4] = { visit, ping_comm, pong_comm, NULL };
     spr_init(SPR_SPMD, functions);
 
     // Set `num_locales` on each locale
     num_locales = spr_num_locales();
-    here = spr_loc();
+    here        = spr_loc();
 
 #ifdef COLLECT_STATS
     comm_bins = calloc(num_locales, sizeof(aligned_t));
@@ -356,8 +361,8 @@ int main(int   argc,
 
     assert(here == 0);
     if (here != 0) {
-	fprintf(stderr, "Unification failed!!!!!!!!!!!!!!!!!!\n");
-	abort();
+        fprintf(stderr, "Unification failed!!!!!!!!!!!!!!!!!!\n");
+        abort();
     }
 
 #ifdef PRINT_STATS
@@ -396,32 +401,32 @@ int main(int   argc,
     }
 
     free(comm_bins);
-#endif
+#endif /* ifdef COLLECT_STATS */
 
 #ifdef PRINT_STATS
     iprintf("num-messages %lu\nperc-remote %f\ntree-size %lu\ntree-depth %d\nnum-leaves %llu\nperc-leaves %.2f\n",
-           (unsigned long)num_messages,
-           num_messages/(double)total_num_nodes,
-           (unsigned long)total_num_nodes,
-           (int)tree_height,
-           (unsigned long long)num_leaves,
-           num_leaves / (float)total_num_nodes * 100.0);
+            (unsigned long)num_messages,
+            num_messages / (double)total_num_nodes,
+            (unsigned long)total_num_nodes,
+            (int)tree_height,
+            (unsigned long long)num_leaves,
+            num_leaves / (float)total_num_nodes * 100.0);
     iprintf("exec-time %.3f\ntotal-perf %.0f\npu-perf %.0f\n\n",
-           total_time,
-           total_num_nodes / total_time,
-           total_num_nodes / total_time / qthread_num_workers());
-#else
+            total_time,
+            total_num_nodes / total_time,
+            total_num_nodes / total_time / qthread_num_workers());
+#else /* ifdef PRINT_STATS */
     iprintf("Num messages = %lu, Tree size = %lu, tree depth = %d, num leaves = %llu (%.2f%%)\n",
-           (unsigned long)num_messages,
-           (unsigned long)total_num_nodes,
-           (int)tree_height,
-           (unsigned long long)num_leaves,
-           num_leaves / (float)total_num_nodes * 100.0);
+            (unsigned long)num_messages,
+            (unsigned long)total_num_nodes,
+            (int)tree_height,
+            (unsigned long long)num_leaves,
+            num_leaves / (float)total_num_nodes * 100.0);
     iprintf("Wallclock time = %.3f sec, performance = %.0f "
-           "nodes/sec (%.0f nodes/sec per PE)\n\n",
-           total_time,
-           total_num_nodes / total_time,
-           total_num_nodes / total_time / qthread_num_workers());
+            "nodes/sec (%.0f nodes/sec per PE)\n\n",
+            total_time,
+            total_num_nodes / total_time,
+            total_num_nodes / total_time / qthread_num_workers());
 #endif /* ifdef PRINT_STATS */
 
     qthread_finalize();
