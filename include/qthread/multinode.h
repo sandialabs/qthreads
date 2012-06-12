@@ -12,6 +12,8 @@ int qthread_multinode_multistart(void);
 int qthread_multinode_multistop(void);
 int qthread_multinode_rank(void);
 int qthread_multinode_size(void);
+int qthread_multinode_register(uint32_t  tag,
+                               qthread_f f);
 int qthread_fork_remote(qthread_f   f,
                         const void *arg,
                         aligned_t  *ret,
