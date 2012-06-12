@@ -49,5 +49,5 @@ noinst_HEADERS = \
 	futurelib_innards.h
 
 if COMPILE_MULTINODE
-noinst_HEADERS = qt_multinode_innards.h
+noinst_HEADERS += qt_multinode_innards.h
 endif
