@@ -56,14 +56,14 @@ int main(int argc, char *argv[])
 
     NUMARG(count, "COUNT");
 
+    if (size < 2) {
+        printf("Need more than one locale. Skipping test.\n");
+        return 0;
+    }
+
     msgs = count / (size-1);
 
     assert(qthread_multinode_run() == 0);
-
-    if (size < 2) {
-        iprintf("Need more than one locale.\n");
-        return 1;
-    }
 
     NUMARG(payload_size, "SIZE");
     if (payload_size > 0) {
