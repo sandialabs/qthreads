@@ -75,7 +75,7 @@
 #include "qt_internal_feb.h"
 #include "qt_spawncache.h"
 #ifdef QTHREAD_MULTINODE
-# include "qthread/multinode.h"
+# include "qt_multinode_innards.h"
 #endif
 
 #ifdef QTHREAD_RCRTOOL

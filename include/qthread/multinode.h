@@ -3,12 +3,9 @@
 
 #include <stdint.h>
 
-#include "qt_visibility.h"
 #include "qthread.h"
 
 Q_STARTCXX /* */
-
-int INTERNAL qthread_multinode_initialize(void);
 
 int qthread_multinode_run(void);
 int qthread_multinode_multistart(void);

@@ -47,3 +47,7 @@ noinst_HEADERS = \
 	rose_xomp.h \
 	rose_log_arrivaldetector.h \
 	futurelib_innards.h
+
+if COMPILE_MULTINODE
+noinst_HEADERS = qt_multinode_innards.h
+endif
