@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <qthread/qthread.h>
+#include <qthread/spr.h>
 #include <qthread/multinode.h>
 #include "argparsing.h"
 
@@ -26,7 +27,7 @@ int main(int argc, char *argv[])
     qthread_f funcs[2] = {say_hello, NULL};
     assert(spr_init(0, funcs) == SPR_OK);
 
-    int const size = qthread_multinode_size();
+    int const size = spr_num_locales();
     aligned_t rets[size];
 
     for (int i = 0; i < size; i++)
