@@ -43,7 +43,7 @@ static aligned_t pong_comm(void *args_) {
     fprintf(stderr, "%d ", here);
     for (int i = 0; i < num_locales; i++) {
         num_out += remote_comm_bins[i];
-        fprintf(stderr, "%4lu ", remote_comm_bins[i]);
+        fprintf(stderr, "%4lu ", (unsigned long)remote_comm_bins[i]);
     }
     fprintf(stderr, "\n");
 
