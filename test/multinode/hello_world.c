@@ -23,11 +23,8 @@ int main(int argc, char *argv[])
 {
     CHECK_VERBOSE();
 
-    setenv("QT_MULTINODE", "yes", 1);
-
-    assert(qthread_initialize() == 0);
-    assert(qthread_multinode_register(2, say_hello) == 0);
-    assert(qthread_multinode_run() == 0);
+    qthread_f funcs[2] = {say_hello, NULL};
+    assert(spr_init(0, funcs) == SPR_OK);
 
     int const size = qthread_multinode_size();
     aligned_t rets[size];
