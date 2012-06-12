@@ -40,6 +40,8 @@ include interfaces/rose/Makefile.inc
 endif
 
 if COMPILE_MULTINODE
+libqthread_la_SOURCES += spr.c
+
 include net/Makefile.inc
 include net/portals4/Makefile.inc
 endif
