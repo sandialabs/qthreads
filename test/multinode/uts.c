@@ -15,6 +15,7 @@
 #include <math.h>   /* for floor, log, sin */
 #include <qthread/qthread.h>
 #include <qthread/qtimer.h>
+#include <qthread/spr.h>
 #include <qthread/multinode.h>
 #include "argparsing.h"
 
@@ -178,12 +179,11 @@ static aligned_t visit(void *args_)
 
         int const r = rng_rand(child.state.state); 
 
-        int source = qthread_multinode_rank();
-        int target = (r <= 0x7fffffff * perc_remote) ? r % num_locales : source;
+        int target = (r <= 0x7fffffff * perc_remote) ? r % num_locales : here;
 
-        if (talk_to_self || target != source) {
+        if (talk_to_self || target != here) {
             // Spawn `visit` task to a random locale
-            iprintf("%03d : spawning visit on locale %03d\n", source, target);
+            iprintf("%03d : spawning visit on locale %03d\n", here, target);
 #ifdef COLLECT_STATS
             qthread_incr(&(comm_bins[target]), 1);
 #endif
@@ -340,22 +340,25 @@ int main(int   argc,
     // Tell Qthreads to initialize multinode support
     setenv("QT_MULTINODE","yes",1);
 
-    assert(qthread_initialize() == 0);
-    assert(qthread_multinode_register(2, visit) == 0);
-    assert(qthread_multinode_register(3, ping_comm) == 0);
-    assert(qthread_multinode_register(4, pong_comm) == 0);
+    qthread_f functions[4] = {visit, ping_comm, pong_comm, NULL};
+    spr_init(SPR_SPMD, functions);
 
-    // Set `num_locales` on each locale; must call before `run()` or
-    num_locales = qthread_multinode_size();
-    here = qthread_multinode_rank();
+    // Set `num_locales` on each locale
+    num_locales = spr_num_locales();
+    here = spr_loc();
 
 #ifdef COLLECT_STATS
     comm_bins = calloc(num_locales, sizeof(aligned_t));
 #endif
 
-    // Start running the first task on locale `0`; all other locales
-    // stop executing this task here
-    assert(qthread_multinode_run() == 0);
+    // Collapse flow of control down to a single one, Chapel-style
+    spr_unify();
+
+    assert(here == 0);
+    if (here != 0) {
+	fprintf(stderr, "Unification failed!!!!!!!!!!!!!!!!!!\n");
+	abort();
+    }
 
 #ifdef PRINT_STATS
     print_stats();
