@@ -60,6 +60,7 @@ int spr_unify(void)
     if (0 != spr_locale_id()) {
         spr_fini();
     }
+    return SPR_OK;
 }
 
 int spr_num_locales(void)
