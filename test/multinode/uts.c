@@ -429,7 +429,7 @@ int main(int   argc,
             total_num_nodes / total_time / qthread_num_workers());
 #endif /* ifdef PRINT_STATS */
 
-    qthread_finalize();
+    spr_fini();
 
     return 0;
 }
