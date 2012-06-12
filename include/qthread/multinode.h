@@ -12,14 +12,13 @@ int qthread_multinode_multistart(void);
 int qthread_multinode_multistop(void);
 int qthread_multinode_rank(void);
 int qthread_multinode_size(void);
-int qthread_multinode_register(uint32_t uid, qthread_f f);
-
-int qthread_fork_remote(qthread_f f,
+int qthread_fork_remote(qthread_f   f,
                         const void *arg,
-                        aligned_t *ret,
-                        int rank,
-                        size_t arg_len);
+                        aligned_t  *ret,
+                        int         rank,
+                        size_t      arg_len);
 
 Q_ENDCXX /* */
 
-#endif
+#endif // ifndef QTHREAD_QTHREAD_MULTINODE_H
+/* vim:set expandtab: */

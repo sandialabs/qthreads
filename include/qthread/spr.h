@@ -5,11 +5,19 @@
 
 Q_STARTCXX /* */
 
-#define SPR_SPMD (1<<0)
+/* Flags */
+#define SPR_SPMD (1 << 0)
 
-int spr_init(unsigned int flags, qthread_f *regs);
-int spr_fini(unsigned int flags);
+/* Return Values */
+#define SPR_OK      0
+#define SPR_BADARGS -1
+#define SPR_IGN     -2
+
+int spr_init(unsigned int flags,
+             qthread_f   *regs);
+int spr_fini(void);
 
 Q_ENDCXX /* */
 
-#endif
+#endif // ifndef SPR_H
+/* vim:set expandtab: */

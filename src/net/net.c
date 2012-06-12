@@ -19,9 +19,10 @@ static int       my_rank;
 static int       world_size;
 static qt_hash   uid_to_ptr_hash;
 static qt_hash   ptr_to_uid_hash;
-static aligned_t num_ended   = 0;
-static aligned_t time_to_die = 0;
-static int       initialized = 0;
+static aligned_t num_ended         = 0;
+static aligned_t time_to_die       = 0;
+static int       initialized       = 0;
+static int       initialized_flags = 0;
 
 struct fork_msg_t {
     uint64_t return_addr;
@@ -77,7 +78,7 @@ static aligned_t fork_helper(void *info)
 
     qthread_debug(MULTINODE_FUNCTIONS, "[%d] begin fork_helper\n", my_rank);
 
-    f   = qt_hash_get(uid_to_ptr_hash, (qt_key_t)(uintptr_t)msg->uid);
+    f = qt_hash_get(uid_to_ptr_hash, (qt_key_t)(uintptr_t)msg->uid);
     if (NULL != f) {
         ret = f(msg->args);
 
@@ -86,9 +87,9 @@ static aligned_t fork_helper(void *info)
             ret_msg.return_addr = msg->return_addr;
             ret_msg.return_val  = ret;
             qthread_debug(MULTINODE_DETAILS, "[%d] sending return msg 0x%lx, %ld\n",
-                    my_rank, ret_msg.return_addr, ret_msg.return_val);
+                          my_rank, ret_msg.return_addr, ret_msg.return_val);
             qthread_internal_net_driver_send(msg->origin_node, RETURN_MSG_TAG,
-                    &ret_msg, sizeof(ret_msg));
+                                             &ret_msg, sizeof(ret_msg));
         }
     } else {
         fprintf(stderr, "action uid %d not registered at destination\n", msg->uid);
@@ -143,13 +144,16 @@ static void die_msg_handler(int    tag,
     qthread_debug(MULTINODE_FUNCTIONS, "[%d] end die_msg_handler\n", my_rank);
 }
 
-int spr_init(unsigned int flags, qthread_f *regs)
+int spr_init(unsigned int flags,
+             qthread_f   *regs)
 {
     qassert(setenv("QT_MULTINODE", "1", 1), 0);
+    if (initialized == 1) return SPR_IGN;
+    initialized_flags = flags;
     qthread_initialize();
     if (regs) {
         qthread_f *cur_f = regs;
-        uint32_t tag = 1;
+        uint32_t   tag   = 1;
         while (*cur_f) {
             qassert(qthread_multinode_register(tag + 1000, *cur_f), QTHREAD_SUCCESS);
             cur_f = regs + tag;
@@ -158,17 +162,19 @@ int spr_init(unsigned int flags, qthread_f *regs)
     }
     if (flags & SPR_SPMD) {
         qthread_multinode_multistart();
+    } else {
+        qthread_multinode_run();
     }
-    return QTHREAD_SUCCESS;
+    return SPR_OK;
 }
 
-int spr_fini(unsigned int flags)
+int spr_fini(void)
 {
-    if (flags & SPR_SPMD) {
+    if (initialized_flags & SPR_SPMD) {
         qthread_multinode_multistop();
     }
 
-    return 0;
+    return SPR_OK;
 }
 
 int qthread_multinode_initialize(void)
@@ -204,7 +210,7 @@ int qthread_multinode_initialize(void)
 
     qthread_debug(MULTINODE_CALLS, "[%d] end qthread_multinode_initialize\n", my_rank);
 
-    return 0;
+    return QTHREAD_SUCCESS;
 }
 
 int qthread_multinode_run(void)
@@ -230,7 +236,7 @@ int qthread_multinode_run(void)
 
     qthread_debug(MULTINODE_CALLS, "[%d] end qthread_multinode_run\n", my_rank);
 
-    return 0;
+    return QTHREAD_SUCCESS;
 }
 
 int qthread_multinode_multistart(void)
@@ -243,7 +249,7 @@ int qthread_multinode_multistart(void)
 
     qthread_debug(MULTINODE_CALLS, "[%d] end qthread_multinode_multistop\n", my_rank);
 
-    return 0;
+    return QTHREAD_SUCCESS;
 }
 
 int qthread_multinode_multistop(void)
@@ -265,11 +271,12 @@ int qthread_multinode_multistop(void)
         exit(0);
     } else {
         qthread_finalize();
+        initialized = 0;
     }
 
     qthread_debug(MULTINODE_CALLS, "[%d] end qthread_multinode_multistop\n", my_rank);
 
-    return 0;
+    return QTHREAD_SUCCESS;
 }
 
 int qthread_multinode_rank(void)
@@ -348,7 +355,7 @@ int qthread_fork_remote(qthread_f   f,
     }
 
     if (arg_len < sizeof(msg.args)) {
-        msg.uid         = (uint64_t)qt_hash_get(ptr_to_uid_hash, f);
+        msg.uid = (uint64_t)qt_hash_get(ptr_to_uid_hash, f);
         if (qt_hash_get(uid_to_ptr_hash, (qt_key_t)(uintptr_t)msg.uid) != f) {
             fprintf(stderr, "action not registered at source\n");
             abort();
