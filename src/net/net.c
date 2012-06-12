@@ -145,7 +145,7 @@ static void die_msg_handler(int    tag,
 
 int spr_init(unsigned int flags, qthread_f *regs)
 {
-    qassert(setenv("MULTINODE", "1", 1), 0);
+    qassert(setenv("QT_MULTINODE", "1", 1), 0);
     qthread_initialize();
     if (regs) {
         qthread_f *cur_f = regs;
