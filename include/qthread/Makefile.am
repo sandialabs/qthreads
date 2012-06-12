@@ -44,7 +44,9 @@ pkginclude_HEADERS += qthread-sst.h
 endif
 
 if COMPILE_MULTINODE
-pkginclude_HEADERS += multinode.h
+pkginclude_HEADERS += \
+	multinode.h \
+	spr.h
 endif
 
 distclean-local:
