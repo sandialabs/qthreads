@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <qthread/qthread.h>
+#include <qthread/spr.h>
 #include <qthread/multinode.h>
 #include <qthread/qtimer.h>
 #include "argparsing.h"
@@ -42,13 +43,11 @@ static aligned_t ping(void *arg)
 int main(int argc, char *argv[])
 {
     qtimer_t timer;
+    qthread_f funcs[3] = {ping, pong, NULL};
 
     CHECK_VERBOSE();
 
-    setenv("QT_MULTINODE", "yes", 1);
-    assert(qthread_initialize() == 0);
-    assert(qthread_multinode_register(2, ping) == 0);
-    assert(qthread_multinode_register(3, pong) == 0);
+    spr_init(SPR_SPMD, funcs);
 
     size = qthread_multinode_size();
     rank = qthread_multinode_rank();
@@ -63,7 +62,7 @@ int main(int argc, char *argv[])
 
     msgs = count / (size-1);
 
-    assert(qthread_multinode_run() == 0);
+    assert(spr_unify() == 0);
 
     NUMARG(payload_size, "SIZE");
     if (payload_size > 0) {

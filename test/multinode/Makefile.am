@@ -8,8 +8,9 @@
 DIST_SUBDIRS = 
 
 general_multinode = \
-	test_init \
 	hello_world \
+	spr_init \
+	env_qthread_initialize \
 	latency \
 	broadcast \
 	ring \
@@ -54,23 +55,19 @@ $(qthreadlib):
 $(utils_rng_lib):
 	$(MAKE) -C $(top_builddir)/test/utils/rng
 
-test_init_SOURCES = test_init.c
-test_init_DEPENDENCIES = $(qthreadlib)
+spr_init_SOURCES = spr_init.c
+
+env_qthread_initialize_SOURCES = env_qthread_initialize.c
 
 hello_world_SOURCES = hello_world.c
-hello_world_DEPENDENCIES = $(qthreadlib)
 
 latency_SOURCES = latency.c
-latency_DEPENDENCIES = $(qthreadlib)
 
 broadcast_SOURCES = broadcast.c
-broadcast_DEPENDENCIES = $(qthreadlib)
 
 ring_SOURCES = ring.c
-ring_DEPENDENCIES = $(qthreadlib)
 
 spmd_SOURCES = spmd.c
-spmd_DEPENDENCIES = $(qthreadlib)
 
 uts_SOURCES = uts.c
 uts_LDADD = $(LDADD) $(utils_rnglib)

@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <qthread/qthread.h>
+#include <qthread/spr.h>
 #include <qthread/multinode.h>
 #include "argparsing.h"
 
@@ -23,15 +24,11 @@ int main(int argc, char *argv[])
 {
     CHECK_VERBOSE();
 
-    setenv("QT_MULTINODE", "yes", 1);
+    qthread_f funcs[2] = {say_hello, NULL};
+    assert(spr_init(SPR_SPMD, funcs) == SPR_OK);
 
-    assert(qthread_initialize() == 0);
-    assert(qthread_multinode_register(2, say_hello) == 0);
-
-    assert(qthread_multinode_multistart() == 0);
-
-    int const here = qthread_multinode_rank();
-    int const there = (here+1 == qthread_multinode_size()) ? 0 : here+1;
+    int const here = spr_locale_id();
+    int const there = (here+1 == spr_num_locales()) ? 0 : here+1;
 
     iprintf("[%03d] Single Program Multiple Hello!\n", here);
 
@@ -39,7 +36,7 @@ int main(int argc, char *argv[])
     qthread_fork_remote(say_hello, NULL, &ret, there, 0);
     qthread_readFF(NULL, &ret);
 
-    assert(qthread_multinode_multistop() == 0);
+    spr_fini();
 
     return 0;
 }

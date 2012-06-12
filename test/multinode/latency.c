@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <qthread/qthread.h>
+#include <qthread/spr.h>
 #include <qthread/multinode.h>
 #include <qthread/qtimer.h>
 #include "argparsing.h"
@@ -72,21 +73,20 @@ int main(int argc, char *argv[])
 {
     CHECK_VERBOSE();
 
-    setenv("QT_MULTINODE", "yes", 1);
-    assert(qthread_initialize() == 0);
-    assert(qthread_multinode_register(2, ping) == 0);
+    qthread_f funcs[2] = {ping, NULL};
+    assert(spr_init(SPR_SPMD, funcs) == SPR_OK);
 
-    size = qthread_multinode_size();
-    rank = qthread_multinode_rank();
+    size = spr_num_locales();
+    rank = spr_locale_id();
     next = (rank+1 == size) ? 0 : rank+1;
     iprintf("rank %d next %d size %d\n", rank, next, size);
-
-    assert(qthread_multinode_run() == 0);
 
     if (size < 2) {
         printf("Need more than one locale. Skipping test.\n");
         return 0;
     }
+
+    assert(spr_unify() == 0);
 
     NUMARG(count, "COUNT");
     size_t total_count = count * size;
