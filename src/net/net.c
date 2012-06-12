@@ -223,8 +223,6 @@ int qthread_multinode_multistop(void)
 
     qthread_debug(MULTINODE_CALLS, "[%d] begin qthread_multinode_multistop\n", my_rank);
 
-    qthread_internal_net_driver_barrier();
-
     if (0 != my_rank) {
         struct die_msg_t msg;
 
