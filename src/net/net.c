@@ -208,11 +208,11 @@ int qthread_multinode_multistart(void)
 {
     if (0 == initialized) { return 1; }
 
-    qthread_debug(MULTINODE_CALLS, "[%d] begin qthread_multinode_multistop\n", my_rank);
+    qthread_debug(MULTINODE_CALLS, "[%d] begin qthread_multinode_multistart\n", my_rank);
 
     qthread_internal_net_driver_barrier();
 
-    qthread_debug(MULTINODE_CALLS, "[%d] end qthread_multinode_multistop\n", my_rank);
+    qthread_debug(MULTINODE_CALLS, "[%d] end qthread_multinode_multistart\n", my_rank);
 
     return QTHREAD_SUCCESS;
 }
