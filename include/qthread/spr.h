@@ -16,6 +16,7 @@ Q_STARTCXX /* */
 int spr_init(unsigned int flags,
              qthread_f   *regs);
 int spr_fini(void);
+int spr_unify(void);
 
 int spr_num_locales(void);
 int spr_locale_id(void);

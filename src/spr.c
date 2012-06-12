@@ -51,6 +51,15 @@ int spr_fini(void)
     return SPR_OK;
 }
 
+int spr_unify(void)
+{
+	if (initialized_flags & ~(SPR_SPMD)) return SPR_IGN;
+
+    if (0 != spr_locale_id()) {
+		spr_fini();
+	}
+}
+
 int spr_num_locales(void)
 {
     return qthread_multinode_size();
