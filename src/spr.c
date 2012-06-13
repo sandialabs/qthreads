@@ -51,11 +51,16 @@ int spr_init(unsigned int flags,
 
 int spr_fini(void)
 {
+    static int recursion_detection = 0;
+
     if (initialized_flags == -1) { return SPR_NOINIT; }
+    if (recursion_detection) { return SPR_OK; }
+    recursion_detection = 1;
     if (initialized_flags & SPR_SPMD) {
         qthread_multinode_multistop();
     }
 
+    recursion_detection = 0;
     initialized_flags = -1;
     return SPR_OK;
 }
