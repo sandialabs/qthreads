@@ -86,8 +86,8 @@ int main(int argc, char *argv[])
     iprintf("Done.\n");
     qtimer_stop(timer);
 
-    fprintf(stderr, "exec_time %f\n", qtimer_secs(timer));
-    fprintf(stderr, "msg_rate %f\n", (msgs*(size-1))/qtimer_secs(timer));
+    iprintf("exec_time %f\n", qtimer_secs(timer));
+    iprintf("msg_rate %f\n", (msgs*(size-1))/qtimer_secs(timer));
 
     return 0;
 }

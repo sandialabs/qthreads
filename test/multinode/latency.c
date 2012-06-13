@@ -106,8 +106,8 @@ int main(int argc, char *argv[])
     qthread_readFF(NULL, &done);
 
     double total_time = qtimer_secs(timer);
-    fprintf(stderr, "tot-time %f\n", total_time);
-    fprintf(stderr, "avg-time %f\n", total_time / total_count);
+    iprintf("tot-time %f\n", total_time);
+    iprintf("avg-time %f\n", total_time / total_count);
 
     if (qthread_num_shepherds() > 1) {
         // Run intra-node test
@@ -120,8 +120,8 @@ int main(int argc, char *argv[])
         qthread_readFF(NULL, &ret);
 
         total_time = qtimer_secs(timer);
-        fprintf(stderr, "intra-tot-time %f\n", total_time);
-        fprintf(stderr, "intra-avg-time %f\n", total_time / total_count);
+        iprintf("intra-tot-time %f\n", total_time);
+        iprintf("intra-avg-time %f\n", total_time / total_count);
     }
 
     return 0;
