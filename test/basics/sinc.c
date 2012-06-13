@@ -79,6 +79,7 @@ int main(int   argc,
     qt_sinc_init(&sinc, sizeof(my_value_t), &initial_value, my_incr, 2);
 
     // Spawn additional waits
+    iprintf("Spawning multiple waiters...\n");
     aligned_t rets[3];
     {
         qthread_fork(wait_on_sinc, &sinc, &rets[0]);
@@ -86,6 +87,7 @@ int main(int   argc,
         qthread_fork(wait_on_sinc, &sinc, &rets[2]);
     }
 
+    iprintf("Spawning two threads to fill the sinc...\n");
     {
         v_args_t args = { depth, &sinc };
 
@@ -94,6 +96,7 @@ int main(int   argc,
         qthread_fork_syncvar_copyargs(visit, &args, sizeof(v_args_t), NULL);
     }
 
+    iprintf("Waiting for the sinc...\n");
     my_value_t x = 0;
     qt_sinc_wait(&sinc, &x);
     for (int i = 0; i < 3; i++)
