@@ -66,6 +66,8 @@ void qt_sinc_init(qt_sinc_t *restrict  sinc_,
     qt_internal_sinc_t *const restrict sinc = (struct qt_sinc_s *)sinc_;
     assert(sinc);
 
+    assert((((uintptr_t)(&sinc->counter)) & (QTHREAD_ALIGNMENT_ALIGNED_T - 1)) == 0);
+
     if (QTHREAD_EXPECT((num_sheps == 0), 0)) {
         num_sheps   = qthread_readstate(TOTAL_SHEPHERDS);
         num_workers = qthread_readstate(TOTAL_WORKERS);
