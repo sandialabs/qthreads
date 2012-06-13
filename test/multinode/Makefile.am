@@ -25,7 +25,7 @@ multinode = \
 TESTS = $(multinode)
 check_PROGRAMS = $(TESTS)
 
-NP := 1
+NP := 2
 
 if WANT_PORTALS_SHMEM_RUNTIME
 TESTS_ENVIRONMENT = @yod@ -np $(NP) env QT_STACK_SIZE=65536 
@@ -50,10 +50,10 @@ buildall: $(multinode)
 buildextra: $(multinode)
 
 $(qthreadlib):
-	$(MAKE) -C $(top_builddir)/src
+	$(MAKE) -C $(top_builddir)/src libqthread.la
 
-$(utils_rng_lib):
-	$(MAKE) -C $(top_builddir)/test/utils/rng
+$(utils_rnglib):
+	$(MAKE) -C $(top_builddir)/test/utils/rng librng.la
 
 spr_init_SOURCES = spr_init.c
 
