@@ -4,7 +4,7 @@
 typedef void (*qt_sinc_op_f)(void *tgt, void *src);
 typedef struct qt_opaque_sinc_s {
     uint8_t opaque_data[24];
-} qt_sinc_t;
+} Q_ALIGNED ( QTHREAD_ALIGNMENT_ALIGNED_T ) qt_sinc_t;
 
 void qt_sinc_init(qt_sinc_t *restrict  sinc,
                   size_t               sizeof_value,
