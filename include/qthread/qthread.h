@@ -631,6 +631,36 @@ static QINLINE float qthread_fincr(float      *operand,
     } while (retval.i != oldval.i);
     return oldval.f;
 
+#  elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM)
+    union {
+        float    f;
+        uint32_t i;
+    } oldval, newval, retval;
+    register uint32_t scratch_int = scratch_int;
+
+    retval.f = *(volatile float*)operand;
+    do {
+        oldval.f = retval.f;
+        newval.f = oldval.f + incr;
+        __asm__ __volatile__ ("dmb sy\n\t" // memory barrier
+                              "A_%=:\n\t"
+                              "ldrex %4, [%1]\n\t"
+                              "cmp   %4, %2\n\t"
+                              "bne   B_%=\n\t"
+                              "strex %0, %3, [%1]\n\t"
+                              "teq   %0, #0\n\t"
+                              "bne   A_%=\n\t"
+                              "mov   %0, %2\n\t"
+                              "B_%=:\n\t"
+                              "dmb sy\n\t"
+                              :"=%r" (retval.i)   /* 0 */
+                              : "r" (operand),    /* 1 */
+                                "r" (oldval.i),   /* 2 */
+                                "r" (newval.i),   /* 3 */
+                                "r" (scratch_int) /* 4 */
+                              :"cc", "memory");
+    } while (retval.i != oldval.i);
+    return oldval.i;
 #  else // if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
 #   error Unsupported assembly architecture for qthread_fincr
 #  endif // if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
@@ -857,6 +887,45 @@ static QINLINE double qthread_dincr(double      *operand,
     } while (test);                    /* if ZF was cleared, the calculation is out of date */
     return oldval.d;
 
+#  elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM)
+    union {
+	double f;
+	uint64_t i;
+	struct {
+	    uint32_t t,b;
+	} s;
+    } oldval, newval, retval;
+    register uint32_t tmp = tmp;
+
+    retval.f = *(volatile double*)operand;
+    do {
+	oldval.f = retval.f;
+	newval.f = oldval.f + incr;
+	__asm__ __volatile__ ("dmb sy\n\t"
+		              "A_%=:\n\t"
+			      "ldrexd %0, %1, [%2]\n\t"
+			      "cmp    %0, %3\n\t"
+			      "it     eq\n\t"
+			      "cmpeq  %1, %4\n\t"
+			      "bne    B_%=\n\t"
+			      "strexd %7, %5, %6, [%2]\n\t"
+			      "teq    %7, #0\n\t"
+			      "bne    A_%=\n\t"
+			      "mov    %0, %3\n\t"
+			      "mov    %1, %4\n\t"
+			      "B_%=:\n\t"
+			      "dmb sy\n\t"
+		: "=&r" (retval.s.t), /* 0 */
+		  "=&r" (retval.s.b)  /* 1 */
+		: "r" (operand),      /* 2 */
+		  "r" (oldval.s.t),   /* 3 */
+		  "r" (oldval.s.b),   /* 4 */
+		  "r" (newval.s.t),   /* 5 */
+		  "r" (newval.s.b),   /* 6 */
+		  "r" (tmp)          /* 7 */
+		: "cc", "memory");
+    } while (oldval.i != retval.i);
+    return oldval.f;
 #  else // if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)
 #   error Unimplemented assembly architecture for qthread_dincr
 #  endif // if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC64)

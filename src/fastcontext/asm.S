@@ -46,7 +46,7 @@
 #  error What kind of a Mac is this?
 # endif
 #elif defined(__linux__)
-# if defined(__arm__)
+# if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM)
 #  define NEEDARMCONTEXT 1
 #  define SET qt_setmctxt
 #  define GET qt_getmctxt
@@ -783,30 +783,55 @@ SET:
 #endif
 
 #ifdef NEEDARMCONTEXT
+#warning NEEDARMCONTEXT
+#warning GET SET
+/* Register Usage:
+ *
+ * r0/a1       - Argument/result/scratch1
+ * r1/a2       - Argument/result/scratch2
+ * r2/a3       - Argument/scratch3
+ * r3/a4       - Argument/scratch4
+ * r4/v1       - Variable register (1)    CALLEE-SAVED
+ * r5/v2       - Variable register (2)    CALLEE-SAVED
+ * r6/v3       - Variable register (3)    CALLEE-SAVED
+ * r7/v4       - Variable register (4)    CALLEE-SAVED
+ * r8/v5       - Variable register (5)    CALLEE-SAVED
+ * r9/v6/SB/TR - Platform regiter; implementation specific
+ * r10/v7      - Variable register (7)    CALLEE-SAVED
+ * r11/v8      - Variable register (8)    CALLEE-SAVED
+ * r12/IP      - Intra-Procedure-call scratch register
+ * r13/SP      - Stack Pointer            CALLEE-SAVED
+ * r14/LR      - Link Register
+ * r15/PC      - Program Counter
+ */
 .globl GET
+.global GET
+.type GET, %function
 GET:
-        str     r1, [r0,#4]
-        str     r2, [r0,#8]
-        str     r3, [r0,#12]
-        str     r4, [r0,#16]
-        str     r5, [r0,#20]
-        str     r6, [r0,#24]
-        str     r7, [r0,#28]
-        str     r8, [r0,#32]
-        str     r9, [r0,#36]
-        str     r10, [r0,#40]
-        str     r11, [r0,#44]
-        str     r12, [r0,#48]
-        str     r13, [r0,#52]
-        str     r14, [r0,#56]
+        str     r1, [r0,#4]        _(/* ARG 2 */)
+        str     r2, [r0,#8]        _(/* ARG 3 */)
+        str     r3, [r0,#12]       _(/* ARG 4 */)
+        str     r4, [r0,#16]       _(/* var 1 */)
+        str     r5, [r0,#20]       _(/* var 2 */)
+        str     r6, [r0,#24]       _(/* var 3 */)
+        str     r7, [r0,#28]       _(/* var 4 */)
+        str     r8, [r0,#32]       _(/* var 5 */)
+        str     r9, [r0,#36]       _(/* ? SB/TR/v6 ? */)
+        str     r10, [r0,#40]      _(/* var 7 */)
+        str     r11, [r0,#44]      _(/* var 8 */)
+        str     r12, [r0,#48]      _(/* IP */)
+        str     sp, [r0,#52]      _(/* SP */)
+        str     lr, [r0,#56]      _(/* LR */)
         _(/*) store 1 as r0-to-restore */)
         mov     r1, #1
-        str     r1, [r0]
+        str     r1, [r0]           _(/* arg 1 / RET 1 */)
         _(/*) return 0 */)
         mov     r0, #0
-        mov     pc, lr
+		bx      lr
 
 .globl SET
+.global SET
+.type SET, %function
 SET:
         ldr     r1, [r0,#4]
         ldr     r2, [r0,#8]
@@ -823,7 +848,7 @@ SET:
         ldr     r13, [r0,#52]
         ldr     r14, [r0,#56]
         ldr     r0, [r0]
-        mov     pc, lr
+		bx      lr
 #endif
 
 #if defined(__ELF__) && !defined(__SUNPRO_C)

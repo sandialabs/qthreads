@@ -22,14 +22,14 @@ void INTERNAL qt_makectxt(uctxt_t *ucp,
     unsigned long *sp, *tos;
     va_list        arg;
 
-    tos        = (unsigned long *)ucp->uc_stack.ss_sp + ucp->uc_stack.ss_size / sizeof(unsigned long);
-    sp         = tos - 16;
-#if (QTHREAD_PPC_ABI == QTHREAD_PPC_ABI_AIX)
-    ucp->mc.pc = *(long*)func;
-#elif (QTHREAD_PPC_ABI == QTHREAD_PPC_ABI_SYSV) || \
-      (QTHREAD_PPC_ABI == QTHREAD_PPC_ABI_DARWIN)
+    tos = (unsigned long *)ucp->uc_stack.ss_sp + ucp->uc_stack.ss_size / sizeof(unsigned long);
+    sp  = tos - 16;
+# if (QTHREAD_PPC_ABI == QTHREAD_PPC_ABI_AIX)
+    ucp->mc.pc = *(long *)func;
+# elif (QTHREAD_PPC_ABI == QTHREAD_PPC_ABI_SYSV) || \
+    (QTHREAD_PPC_ABI == QTHREAD_PPC_ABI_DARWIN)
     ucp->mc.pc = (long)func;
-#endif
+# endif
     ucp->mc.sp = (long)sp;
     va_start(arg, argc);
     ucp->mc.r3 = va_arg(arg, long);
@@ -52,14 +52,14 @@ void INTERNAL qt_makectxt(uctxt_t *ucp,
 # endif
 
     sp  = (uintptr_t *)(ucp->uc_stack.ss_sp + ucp->uc_stack.ss_size); /* sp = top of stack */
-    sp -= argc;                                                                      /* count down to where 8(%rsp) should be */
-    sp  = (void *)((uintptr_t)sp - (uintptr_t)sp % 16);                              /* 16-align for OS X */
+    sp -= argc;                                                       /* count down to where 8(%rsp) should be */
+    sp  = (void *)((uintptr_t)sp - (uintptr_t)sp % 16);               /* 16-align for OS X */
     /* now copy from my arg list to the function's arglist */
     memmove(sp, &argc + 1, argc * sizeof(uintptr_t));
     /*for (i=0; i<argc; ++i) {
-        uintptr_t tmp = va_arg(argp, uintptr_t);
-        sp[i] = tmp;
-    }*/
+     *  uintptr_t tmp = va_arg(argp, uintptr_t);
+     *  sp[i] = tmp;
+     * }*/
 
 # ifdef NEEDX86REGISTERARGS
     /* HOWEVER, the function may not be expecting to pull from the stack,
@@ -77,7 +77,7 @@ void INTERNAL qt_makectxt(uctxt_t *ucp,
     }
 # endif
 
-    *--sp                   = 0; /* return address */
+    *--sp          = 0;          /* return address */
     ucp->mc.mc_eip = (long)func;
     ucp->mc.mc_esp = (long)sp;
 # ifdef NEEDX86REGISTERARGS
@@ -97,7 +97,7 @@ void INTERNAL qt_makectxt(uctxt_t *ucp,
     int            i;
     va_list        arg;
 
-    tos += ucp->uc_stack.ss_size / sizeof(unsigned long *);
+    tos += ucp->uc_stack.ss_size / sizeof(unsigned long);
     tos -= 1;                                                    // allow space for an incoming lr
     sp   = tos - argc;                                           // allow space for arguments
     sp   = (void *)((unsigned long)sp - (unsigned long)sp % 64); /* 64-align for Tilera */
@@ -114,6 +114,32 @@ void INTERNAL qt_makectxt(uctxt_t *ucp,
     ucp->mc.sp    = (unsigned long)sp;
     ucp->mc.first = 1;
     va_end(arg);
+}
+
+#elif defined(NEEDARMMAKECONTEXT)
+/* This function is entirely copyright Sandia National Laboratories */
+void INTERNAL qt_makectxt(uctxt_t *ucp,
+                          void     (*func)(void),
+                          int      argc,
+                          ...)
+{
+    va_list arg;
+    void  **top_of_stack = ucp->uc_stack.ss_sp;
+    void  **frame_pointer;
+
+    top_of_stack += ucp->uc_stack.ss_size / sizeof(void *);
+    frame_pointer = top_of_stack - argc; // allow space for arguments
+
+    /* now copy from my arg list to the function's arglist */
+    va_start(arg, argc);
+    for (int i = 0; i < argc; i++) {
+        ucp->mc.regs[0] = va_arg(arg, uint32_t);
+    }
+    va_end(arg);
+
+    ucp->mc.regs[14] = (uintptr_t)func;          // LR so that swapcontext returns into it
+    ucp->mc.regs[13] = (uintptr_t)frame_pointer; // SP
+    ucp->mc.first    = 1;
 }
 
 #endif /* ifdef NEEDPOWERMAKECONTEXT */

@@ -32,6 +32,9 @@ case "$host" in
     # Yes, we have these platforms
     qt_host_based_enable_fastcontext=yes
     ;;
+  armv7l-*)
+    qt_host_based_enable_fastcontext=yes
+	;;
   *)
     qt_host_based_enable_fastcontext=no
 	;;

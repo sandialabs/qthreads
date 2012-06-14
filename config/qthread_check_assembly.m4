@@ -1,47 +1,47 @@
-# -*- Autoconf -*-
-#
-# Copyright (c)      2008  Sandia Corporation
-#
-# This macro based heavily on the ompi_check_asm macro found in 
-# Open MPI.  License for the original macro is below
+dnl -*- Autoconf -*-
+dnl
+dnl Copyright (c)      2008  Sandia Corporation
+dnl
+dnl This macro based heavily on the ompi_check_asm macro found in 
+dnl Open MPI.  License for the original macro is below
 
-# Copyright (c) 2004-2007 The Trustees of Indiana University and Indiana
-#                         University Research and Technology
-#                         Corporation.  All rights reserved.
-# Copyright (c) 2004-2007 The University of Tennessee and The University
-#                         of Tennessee Research Foundation.  All rights
-#                         reserved.
-# Copyright (c) 2004-2006 High Performance Computing Center Stuttgart, 
-#                         University of Stuttgart.  All rights reserved.
-# Copyright (c) 2004-2006 The Regents of the University of California.
-#                         All rights reserved.
-# Copyright (c) 2006-2007 Los Alamos National Security, LLC.  All rights
-#                         reserved. 
-# Copyright (c) 2006-2007 Cisco Systems, Inc.  All rights reserved.
-# Copyright (c) 2006-2007 Voltaire, Inc. All rights reserved.
-# Copyright (c) 2006      Sandia National Laboratories. All rights reserved.
-# Copyright (c) 2006-2007 Sun Microsystems, Inc.  All rights reserved.
-#                         Use is subject to license terms.
-# Copyright (c) 2006-2007 The University of Houston. All rights reserved.
-# Copyright (c) 2006      Myricom, Inc.  All rights reserved.
-# Copyright (c) 2007-2008 UT-Battelle, LLC. All rights reserved.
-#
-# $COPYRIGHT$
-#
-# Additional copyrights may follow
-#
-# $HEADER$
-#
-# Redistribution and use in source and binary forms, with or without
-# modification, are permitted provided that the following conditions are
-# met:
-#
-# - Redistributions of source code must retain the above copyright
-#   notice, this list of conditions and the following disclaimer.
-#
-# - Redistributions in binary form must reproduce the above copyright
-#   notice, this list of conditions and the following disclaimer listed
-#   in this license in the documentation and/or other materials
+dnl Copyright (c) 2004-2007 The Trustees of Indiana University and Indiana
+dnl                         University Research and Technology
+dnl                         Corporation.  All rights reserved.
+dnl Copyright (c) 2004-2007 The University of Tennessee and The University
+dnl                         of Tennessee Research Foundation.  All rights
+dnl                         reserved.
+dnl Copyright (c) 2004-2006 High Performance Computing Center Stuttgart, 
+dnl                         University of Stuttgart.  All rights reserved.
+dnl Copyright (c) 2004-2006 The Regents of the University of California.
+dnl                         All rights reserved.
+dnl Copyright (c) 2006-2007 Los Alamos National Security, LLC.  All rights
+dnl                         reserved. 
+dnl Copyright (c) 2006-2007 Cisco Systems, Inc.  All rights reserved.
+dnl Copyright (c) 2006-2007 Voltaire, Inc. All rights reserved.
+dnl Copyright (c) 2006      Sandia National Laboratories. All rights reserved.
+dnl Copyright (c) 2006-2007 Sun Microsystems, Inc.  All rights reserved.
+dnl                         Use is subject to license terms.
+dnl Copyright (c) 2006-2007 The University of Houston. All rights reserved.
+dnl Copyright (c) 2006      Myricom, Inc.  All rights reserved.
+dnl Copyright (c) 2007-2008 UT-Battelle, LLC. All rights reserved.
+dnl
+dnl $COPYRIGHT$
+dnl
+dnl Additional copyrights may follow
+dnl
+dnl $HEADER$
+dnl
+dnl Redistribution and use in source and binary forms, with or without
+dnl modification, are permitted provided that the following conditions are
+dnl met:
+dnl
+dnl - Redistributions of source code must retain the above copyright
+dnl   notice, this list of conditions and the following disclaimer.
+dnl
+dnl - Redistributions in binary form must reproduce the above copyright
+dnl   notice, this list of conditions and the following disclaimer listed
+dnl   in this license in the documentation and/or other materials
 
 
 dnl QTHREAD_TRY_ASSEMBLE(asm-code, [action-if-success], [action-if-fail])
@@ -194,6 +194,11 @@ AC_DEFUN([QTHREAD_CHECK_ASSEMBLY],[
             [qthread_cv_asm_arch="TILE"],
             [qthread_cv_asm_arch="TILEGX"])
 	  qthread_gcc_inline_assign='"movei %0, 5" : "=&r"(ret)'
+	;;
+
+	armv7l-*)
+	  qthread_cv_asm_arch="ARM"
+	  qthread_gcc_inline_assign='"movt %0, #5" : "=&r"(ret)'
 	;;
 
     mips-*|mips64-*)

@@ -29,12 +29,15 @@
 # define NEEDPOWERMAKECONTEXT
 # define NEEDSWAPCONTEXT
 # include "power-ucontext.h"
+#elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_ARM)
+# ifdef HAVE_STDARG_H
+#  include <stdarg.h>
+# endif
+# define NEEDARMMAKECONTEXT
+# define NEEDSWAPCONTEXT
+# include "arm-ucontext.h"
 #else
 # error This platform has no fastcontext support
-#endif
-
-#if 0 && defined(__sun__)
-# include "sparc-ucontext.h"
 #endif
 
 #endif // ifndef TASKIMPL_H
