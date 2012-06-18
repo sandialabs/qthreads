@@ -2,7 +2,7 @@ include $(QT_CNC_INSTALL)/common.mk
 
 QT_INCLUDES=-I. -I$(QT_INSTALL)/include -I$(QT_CNC_INSTALL)
 QT_LIBS=-L$(QT_INSTALL)/lib -lqthread -lpthread -lrt
-QT_ARGS=-std=c++0x -O3 -g
+QT_ARGS=-std=c++0x -O3 -g -Wall
 CC=gcc
 CPP=g++
 

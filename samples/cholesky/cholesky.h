@@ -66,13 +66,14 @@ struct kji_compute
     int execute( const pair & t, cholesky_context & c ) const;
 };
 
+/*
 static void mark( int p, bool * d )
 {
     if( d[p] == false ) {
         d[p] = true;
     }
 }
-
+*/
 
 
 // The context class

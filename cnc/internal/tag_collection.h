@@ -6,7 +6,7 @@ namespace CnC {
     template< typename Tag  >
     template< class ContextTemplate >
     tag_collection< Tag  >::tag_collection( context< ContextTemplate > & context )
-        : prescribedStepCollections(), _context(reinterpret_cast< context_base & >( context )) {
+        : _context(reinterpret_cast< context_base & >( context )), prescribedStepCollections()  {
     }
 	
 	template< typename Tag  >

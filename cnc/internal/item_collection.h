@@ -140,9 +140,13 @@ namespace CnC {
         	delete entry;
         	entry = ret;
             entry->value = new Item(i);
-
-            int err = qthread_writeF(entry->sinc, entry->sinc);
-            
+			#ifdef ASSERTS_ENABLED
+				int err = 
+            #endif
+            qthread_writeF(entry->sinc, entry->sinc);
+            #ifdef ASSERTS_ENABLED
+				assert(err == 0 && "Could not mark item as present!" );
+            #endif
         } 
     }
 

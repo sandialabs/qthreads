@@ -7,6 +7,7 @@
 #include <qthread.h>
 #include <qthread/dictionary.h>
 
+#define ASSERTS_ENABLED
 // TODO: refactor this...
 #define STARTED 1
 #define ENDED 	2

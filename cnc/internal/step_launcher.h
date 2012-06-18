@@ -1,6 +1,8 @@
 #ifndef _QT_CNC_STEP_LAUNCHER_H_
 #define _QT_CNC_STEP_LAUNCHER_H_
 
+#include <assert.h>
+
 namespace CnC {
 
 	//Class launcher_base
@@ -74,8 +76,6 @@ namespace CnC {
 	template< class Tag, class Step, class ContextType >
 	void* step_launcher< Tag, Step, ContextType >::create_step_instance( const Tag & tag ) const {
 		aligned_t t;
-		aligned_t copy;
-		
 		pass_to_step<Tag, Step, ContextType>* pts = new pass_to_step<Tag, Step, ContextType>();
 		
 		pts->ctxt = &_ctxt;
@@ -83,7 +83,13 @@ namespace CnC {
 		pts->sc = &_stepCol;
 		
 		_ctxt.markFork();
-		int ret = qthread_fork(call_step, pts, &t);
+		#ifdef ASSERTS_ENABLED
+			int ret = 
+		#endif
+		qthread_fork(call_step, pts, &t);
+		#ifdef ASSERTS_ENABLED
+			assert(ret == 0 && "Fork failed!");
+		#endif
 		return NULL;
 	}
 } // namespace CnC
