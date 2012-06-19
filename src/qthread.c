@@ -2428,7 +2428,17 @@ static void qthread_wrapper(void *ptr)
     }
 
     if (t->ret) {
-        if (t->flags & QTHREAD_RET_IS_SYNCVAR) {
+        if (t->flags & QTHREAD_RET_IS_SINC) {
+            if (t->flags & QTHREAD_RET_IS_VOID_SINC) {
+                (t->f)(t->arg);
+                if (NULL != t->team) { qthread_internal_teamfinish(t->team, t->flags); }
+                qt_sinc_submit((qt_sinc_t *)t->ret, NULL);
+            } else {
+                aligned_t retval = (t->f)(t->arg);
+                if (NULL != t->team) { qthread_internal_teamfinish(t->team, t->flags); }
+                qt_sinc_submit((qt_sinc_t *)t->ret, &retval);
+            }
+        } else if (t->flags & QTHREAD_RET_IS_SYNCVAR) {
             /* this should avoid problems with irresponsible return values */
             uint64_t retval = INT64TOINT60((t->f)(t->arg));
             if (NULL != t->team) { qthread_internal_teamfinish(t->team, t->flags); }
