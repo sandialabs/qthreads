@@ -167,12 +167,13 @@ int API_FUNC qthread_feb_status(const aligned_t *addr)
 {                      /*{{{ */
     const aligned_t *alignedaddr;
 
+    if (qlib == 0) {
+        return 1;
+    }
 #ifndef SST
     qthread_addrstat_t *m;
     int                 status  = 1; /* full */
     const int           lockbin = QTHREAD_CHOOSE_STRIPE(addr);
-
-    assert(qthread_library_initialized);
 
     QALIGN(addr, alignedaddr);
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
@@ -393,6 +394,9 @@ int API_FUNC qthread_fill(const aligned_t *dest)
 {                      /*{{{ */
     const aligned_t *alignedaddr;
 
+    if (qlib == NULL) {
+        return QTHREAD_SUCCESS;
+    }
 #ifndef SST
     qthread_addrstat_t *m;
     const int           lockbin = QTHREAD_CHOOSE_STRIPE(dest);
