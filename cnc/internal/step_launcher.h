@@ -67,6 +67,7 @@ namespace CnC {
 		pass_to_step<Tag, Step, ContextType>* proper_arg = (pass_to_step<Tag, Step, ContextType>*)arg;
 		const Tag* tag = proper_arg -> tag;
 		const Step crt_step = proper_arg -> sc -> get_step();
+		assert(proper_arg -> ctxt!=NULL && "Unexpected NULL context");
 		int rez = crt_step.execute(*tag, *(proper_arg -> ctxt));
 		proper_arg -> ctxt -> markJoin();
 		
