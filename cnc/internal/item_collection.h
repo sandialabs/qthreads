@@ -8,12 +8,16 @@ namespace CnC {
     template<typename Item  >
 	class entry_t {
 		public:
-			aligned_t* sinc;
+			aligned_t sinc;
 			const Item* value; 
 			
-			entry_t(const Item* pitem , aligned_t* psinc):
-				sinc(psinc),
+			entry_t(const Item* pitem ):
+				sinc(0),
 				value(pitem) {};
+
+			~entry_t() {
+                qthread_fill(&sinc);
+            }
 		
 	};
 
@@ -128,9 +132,7 @@ namespace CnC {
     template< typename Tag, typename Item  >
     void item_collection< Tag, Item >::put( const Tag & t, const Item & i )
     {
-        aligned_t* sinc = (aligned_t*) malloc (sizeof(aligned_t)); //init to full
-    	entry_t<Item>* entry = new entry_t<Item>( new Item(i), sinc ); 
-    	qthread_writeF(entry->sinc, entry->sinc);
+    	entry_t<Item>* entry = new entry_t<Item>( new Item(i)); 
         entry_t<Item>* ret = (entry_t<Item>*) qt_dictionary_put_if_absent(
         										m_itemCollection, 
         										const_cast < Tag* >(new Tag(t)), entry);
@@ -143,26 +145,32 @@ namespace CnC {
 			#ifdef ASSERTS_ENABLED
 				int err = 
             #endif
-            qthread_writeF(entry->sinc, entry->sinc);
+            qthread_fill(&entry->sinc);
             #ifdef ASSERTS_ENABLED
 				assert(err == 0 && "Could not mark item as present!" );
             #endif
         } 
     }
 
-    template< typename Tag, typename Item  >
-    void item_collection< Tag, Item >::get( const Tag & t, Item & i ) const
+    
+	template< typename Tag, typename Item  >
+	void item_collection< Tag, Item >::get( const Tag & t, Item & i ) const
     {
-    	aligned_t* sinc = (aligned_t*) malloc (sizeof(aligned_t)); 
-    	if (*pcnc_status==STARTED)  
-			qthread_readFE(NULL, sinc); //init to empty
-        entry_t<Item>* entry = new entry_t<Item>( NULL, sinc ); 
-        entry_t<Item>* ret = (entry_t<Item>*) qt_dictionary_put_if_absent(m_itemCollection, 
-        									const_cast < Tag* >(new Tag(t)), entry);
-		
-		if (*pcnc_status==STARTED) qthread_readFF(NULL, ret->sinc);
-		i = *(ret->value);
+     	int stat = *pcnc_status;
+        entry_t<Item>* entry = new entry_t<Item>( NULL);
+        assert(entry != NULL);
+        if (stat==STARTED) qthread_empty(&entry->sinc); //init to empty
+        entry_t<Item>* ret = (entry_t<Item>*) qt_dictionary_put_if_absent(m_itemCollection,
+                                                                                const_cast < Tag* >(new Tag(t)), entry);
+        assert(ret != NULL);
+        if (entry != ret) {
+                delete entry;
+        }
+
+	if (stat==STARTED) { qthread_readFF(NULL, &ret->sinc); }
+        i = *(ret->value);
     }
+
 
 	//TODO: implement size
     template< typename Tag, typename Item  >

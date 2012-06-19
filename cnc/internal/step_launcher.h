@@ -67,7 +67,7 @@ namespace CnC {
 		pass_to_step<Tag, Step, ContextType>* proper_arg = (pass_to_step<Tag, Step, ContextType>*)arg;
 		const Tag* tag = proper_arg -> tag;
 		const Step crt_step = proper_arg -> sc -> get_step();
-		assert(proper_arg -> ctxt!=NULL && "Unexpected NULL context");
+		//assert(*(proper_arg -> ctxt)!=NULL && "Unexpected NULL context");
 		int rez = crt_step.execute(*tag, *(proper_arg -> ctxt));
 		proper_arg -> ctxt -> markJoin();
 		
@@ -76,10 +76,9 @@ namespace CnC {
 
 	template< class Tag, class Step, class ContextType >
 	void* step_launcher< Tag, Step, ContextType >::create_step_instance( const Tag & tag ) const {
-		aligned_t t;
 		pass_to_step<Tag, Step, ContextType>* pts = new pass_to_step<Tag, Step, ContextType>();
-		
 		pts->ctxt = &_ctxt;
+		assert(pts->ctxt !=NULL);
 		pts->tag = new Tag(tag);
 		pts->sc = &_stepCol;
 		
@@ -87,7 +86,7 @@ namespace CnC {
 		#ifdef ASSERTS_ENABLED
 			int ret = 
 		#endif
-		qthread_fork(call_step, pts, &t);
+		qthread_fork(call_step, pts, NULL);
 		#ifdef ASSERTS_ENABLED
 			assert(ret == 0 && "Fork failed!");
 		#endif
