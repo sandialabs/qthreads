@@ -19,6 +19,11 @@ int qthread_fork_remote(qthread_f   f,
                         aligned_t  *ret,
                         int         rank,
                         size_t      arg_len);
+int qthread_fork_remote_sinc(qthread_f   f,
+                             const void *arg,
+                             qt_sinc_t  *ret,
+                             int         rank,
+                             size_t      arg_len);
 
 Q_ENDCXX /* */
 
