@@ -27,7 +27,7 @@ struct fork_msg_t {
     uint32_t uid;
     int32_t  origin_node;
     int32_t  arg_len;
-    char     args[44];
+    char     args[FORK_MSG_PAYLOAD];
 };
 
 struct return_msg_t {
@@ -380,7 +380,7 @@ int qthread_fork_remote(qthread_f   f,
         qthread_empty(ret);
     }
 
-    if (arg_len < sizeof(msg.args)) {
+    if (arg_len <= sizeof(msg.args)) {
         msg.uid = (uint64_t)qt_hash_get(ptr_to_uid_hash, f);
         if (qt_hash_get(uid_to_ptr_hash, (qt_key_t)(uintptr_t)msg.uid) != f) {
             fprintf(stderr, "action not registered at source\n");

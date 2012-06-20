@@ -15,6 +15,9 @@ general_multinode = \
 	broadcast \
 	ring \
 	spmd \
+	put \
+	get \
+	spawn \
 	uts
 
 multinode = \
@@ -68,6 +71,12 @@ broadcast_SOURCES = broadcast.c
 ring_SOURCES = ring.c
 
 spmd_SOURCES = spmd.c
+
+put_SOURCES = put.c
+
+get_SOURCES = get.c
+
+spawn_SOURCES = spawn.c
 
 uts_SOURCES = uts.c
 uts_LDADD = $(LDADD) $(utils_rnglib)

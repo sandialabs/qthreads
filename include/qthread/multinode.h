@@ -7,6 +7,8 @@
 
 Q_STARTCXX /* */
 
+#define FORK_MSG_PAYLOAD 44
+
 int qthread_multinode_run(void);
 int qthread_multinode_multistart(void);
 int qthread_multinode_multistop(void);
