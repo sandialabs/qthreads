@@ -103,15 +103,15 @@ void matrix_init (double *A, int n, const char *fname)
             exit(0);
         }
         for (i = 0; i < n; i++) {
-//            for (j = 0; j <= i; j++) {
-            for (j = 0; j < n; j++) {
+            for (j = 0; j <= i; j++) {
+//            for (j = 0; j < n; j++) {
                 if( fscanf(fp, "%lf ", &A[i*n+j]) <= 0) {   
                     fprintf(stderr,"\nMatrix size incorrect %i %i\n", i, j);
                     exit(0);
                 }
-                /*if( i != j ) {
+                if( i != j ) {
                     A[j*n+i] = A[i*n+j];
-                }*/
+                }
             }
         }
         fclose(fp);
