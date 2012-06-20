@@ -268,6 +268,7 @@ void cholesky( double * A, const int n, const int b, const char * oname )
                     }
                     k++;
                 }
+            fprintf(fout, "\n" ); 
             }
         }
         fclose(fout);

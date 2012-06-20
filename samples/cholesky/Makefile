@@ -26,7 +26,7 @@ run$(TEST): $(TARGET)
 
 test$(TEST): $(TARGET)
 	./$(TARGET) 1000 50 -i input/1000.in -o output/1000.out
-	diff --ignore-space-change -q reference_output/1000.out output/1000.out
+	@diff --ignore-space-change -q reference_output/1000.out output/1000.out
 		
 clean:
 	-rm *.o $(TARGET) output/*
