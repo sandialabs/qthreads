@@ -241,11 +241,9 @@ void cholesky( double * A, const int n, const int b, const char * oname )
     qtimer_stop(timer);
     total_time = qtimer_secs(timer);
     
-    qt_dictionary_printbuckets(c.Lkji.m_itemCollection);
-    
     printf("exec-time %.3f\ntotal\n", total_time);
     qtimer_destroy(timer);
-	
+
     //qt_dictionary_printbuckets(c.Lkji.m_itemCollection);
     //printf("The time taken for parallel execution a matrix of size %d x %d : %g sec\n", n, n, (t3-t2).seconds());
     
