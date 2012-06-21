@@ -104,6 +104,7 @@ EXTRA_DIST = \
 			 threadqueues/sherwood_threadqueues.c \
 			 threadqueues/nottingham_threadqueues.c \
 			 sincs/donecount.c \
+			 sincs/donecount_cas.c \
 			 sincs/original.c \
 			 affinity/hwloc.c \
 			 affinity/no.c \
