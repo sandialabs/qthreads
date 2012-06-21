@@ -102,9 +102,7 @@ static inline void qt_hash_internal_create(qt_hash ret,
 /* this function based on http://burtleburtle.net/bob/hash/evahash.html */
 #define rot(x, k) (((x) << (k)) | ((x) >> (32 - (k))))
 static uint64_t qt_hashword(uint64_t key)
-{   /*{{{*/
-    uint32_t a, b, c;
-
+{                       /*{{{*/
     const union {
         uint64_t key;
         uint8_t  b[sizeof(uint64_t)];
@@ -112,8 +110,40 @@ static uint64_t qt_hashword(uint64_t key)
         key
     };
 
-    a  = b = c = 0xdeadbeef + sizeof(uint64_t);
-    c += 47;
+#if (SIZEOF_VOIDP == 8) /* i.e. a 64-bit machine */
+    uint64_t a, b, c;
+
+    a = b = 0x9e3779b97f4a7c13LL;  // the golden ratio
+    c = 0xdeadbeefcafebabeULL + sizeof(uint64_t);
+
+    a += ((uint64_t)k.b[7]) << 56;
+    a += ((uint64_t)k.b[6]) << 48;
+    a += ((uint64_t)k.b[5]) << 40;
+    a += ((uint64_t)k.b[4]) << 32;
+    a += k.b[3] << 24;
+    a += k.b[2] << 16;
+    a += k.b[1] << 8;
+    a += k.b[0];
+
+    a = a - b;  a = a - c;  a = a ^ (c >> 43);
+    b = b - c;  b = b - a;  b = b ^ (a << 9);
+    c = c - a;  c = c - b;  c = c ^ (b >> 8);
+    a = a - b;  a = a - c;  a = a ^ (c >> 38);
+    b = b - c;  b = b - a;  b = b ^ (a << 23);
+    c = c - a;  c = c - b;  c = c ^ (b >> 5);
+    a = a - b;  a = a - c;  a = a ^ (c >> 35);
+    b = b - c;  b = b - a;  b = b ^ (a << 49);
+    c = c - a;  c = c - b;  c = c ^ (b >> 11);
+    a = a - b;  a = a - c;  a = a ^ (c >> 12);
+    b = b - c;  b = b - a;  b = b ^ (a << 18);
+    c = c - a;  c = c - b;  c = c ^ (b >> 22);
+    return c;
+
+#else /* if (SIZEOF_VOIDP == 8) */
+    uint32_t a, b, c;
+
+    a = b = 0x9e3779b9;  // the golden ratio
+    c = 0xdeadbeef + sizeof(uint64_t);
 
     b += k.b[7] << 24;
     b += k.b[6] << 16;
@@ -139,6 +169,7 @@ static uint64_t qt_hashword(uint64_t key)
     c ^= b;
     c -= rot(b, 24);
     return ((uint64_t)c + ((uint64_t)b << 32));
+#endif /* if (SIZEOF_VOIDP == 8) */
 } /*}}}*/
 
 static inline void **qt_hash_internal_find(qt_hash  h,
@@ -151,7 +182,7 @@ static inline void **qt_hash_internal_find(qt_hash  h,
     uint64_t bucket = hashed & mask;
     uint64_t step, quit;
 
-    if (key == KEY_DELETED || key == KEY_NULL) {
+    if ((key == KEY_DELETED) || (key == KEY_NULL)) {
         if (h->has_key[(uintptr_t)key]) {
             return &(h->value[(uintptr_t)key]);
         } else {
@@ -160,7 +191,7 @@ static inline void **qt_hash_internal_find(qt_hash  h,
     }
     for (unsigned i = 0; i < bucketsize; ++i) {
         Q_PREFETCH(&z[bucket + i + 1].key, 0, 1);
-        //Q_PREFETCH(&z[bucket + i + 1].value, 1, 1);
+        // Q_PREFETCH(&z[bucket + i + 1].value, 1, 1);
         const qt_key_t zkey = z[bucket + i].key;
         if (zkey == key) {
             return (void *)&z[bucket + i].value;
@@ -177,7 +208,7 @@ static inline void **qt_hash_internal_find(qt_hash  h,
         bucket = (bucket + step) & mask;
         for (i = 0; i < bucketsize; ++i) {
             Q_PREFETCH(&z[bucket + i + 1].key, 0, 1);
-            //Q_PREFETCH(&z[bucket + i + 1].value, 1, 1);
+            // Q_PREFETCH(&z[bucket + i + 1].value, 1, 1);
             const qt_key_t zkey = z[bucket + i].key;
             if (zkey == key) {
                 return (void *)&z[bucket + i].value;
@@ -329,9 +360,9 @@ int INTERNAL qt_hash_put_locked(qt_hash  h,
     uint64_t    hw, bucket, step;
 
     assert(h);
-    if (key == KEY_DELETED || key == KEY_NULL) {
+    if ((key == KEY_DELETED) || (key == KEY_NULL)) {
         h->has_key[(uintptr_t)key] = 1;
-        h->value[(uintptr_t)key] = value;
+        h->value[(uintptr_t)key]   = value;
         return 1;
     }
 
@@ -431,12 +462,12 @@ int INTERNAL qt_hash_remove_locked(qt_hash        h,
     void      **value;
 
     assert(h);
-    if (key == KEY_DELETED || key == KEY_NULL) {
+    if ((key == KEY_DELETED) || (key == KEY_NULL)) {
         if (h->has_key[(uintptr_t)key] == 0) {
             return 0;
         } else {
             h->has_key[(uintptr_t)key] = 0;
-            h->value[(uintptr_t)key] = NULL;
+            h->value[(uintptr_t)key]   = NULL;
         }
         return 1;
     }
