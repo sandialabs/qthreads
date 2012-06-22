@@ -190,6 +190,9 @@ int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *re
 
 #endif /* ifdef QTHREAD_USE_SPAWNCACHE */
 
+void INTERNAL qthread_steal_enable() {}
+void INTERNAL qthread_steal_disable() {}
+
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
                                      qthread_t *restrict        t)
 {                                      /*{{{ */

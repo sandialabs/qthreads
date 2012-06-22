@@ -30,6 +30,14 @@ struct fork_msg_t {
     char     args[FORK_MSG_PAYLOAD];
 };
 
+struct fork_long_msg_t {
+    uint64_t return_addr;
+    uint32_t uid;
+    int32_t  origin_node;
+    int32_t  arg_len;
+    char     args[];
+};
+
 struct return_msg_t {
     uint64_t return_addr;
     uint64_t return_val;
@@ -40,9 +48,9 @@ struct die_msg_t {
 };
 
 #define SHORT_MSG_TAG       0x1
-#define SHORT_MSG_SINC_TAG  0x2
+#define LONG_MSG_TAG        0x6
 #define RETURN_MSG_TAG      0x4
-#define RETURN_MSG_SINC_TAG 0x5
+#define RETURN_LONG_MSG_TAG 0x7
 #define DIE_MSG_TAG         0x3
 
 static void net_cleanup(void)
@@ -101,24 +109,25 @@ static aligned_t fork_helper(void *info)
     return 0;
 }
 
-static aligned_t fork_sinc_helper(void *info)
+static aligned_t fork_long_helper(void *info)
 {
-    struct fork_msg_t *msg = (struct fork_msg_t *)info;
+    struct fork_long_msg_t *msg = (struct fork_long_msg_t *)info;
+    aligned_t          ret;
     qthread_f          f;
 
     qthread_debug(MULTINODE_FUNCTIONS, "[%d] begin fork_helper\n", my_rank);
 
     f = qt_hash_get(uid_to_ptr_hash, (qt_key_t)(uintptr_t)msg->uid);
     if (NULL != f) {
-        f(msg->args);
+        ret = f(msg->args);
 
         if (0 != msg->return_addr) {
             struct return_msg_t ret_msg;
             ret_msg.return_addr = msg->return_addr;
-            ret_msg.return_val  = 0;
+            ret_msg.return_val  = ret;
             qthread_debug(MULTINODE_DETAILS, "[%d] sending return msg 0x%lx, %ld\n",
                           my_rank, ret_msg.return_addr, ret_msg.return_val);
-            qthread_internal_net_driver_send(msg->origin_node, RETURN_MSG_SINC_TAG,
+            qthread_internal_net_driver_send(msg->origin_node, RETURN_MSG_TAG,
                                              &ret_msg, sizeof(ret_msg));
         }
     } else {
@@ -144,17 +153,15 @@ static void fork_msg_handler(int    tag,
     qthread_debug(MULTINODE_FUNCTIONS, "[%d] end fork_msg_handler\n", my_rank);
 }
 
-static void fork_msg_sinc_handler(int    tag,
+static void fork_long_msg_handler(int    tag,
                                   void  *start,
                                   size_t len)
 {
-    qthread_debug(MULTINODE_FUNCTIONS, "[%d] begin fork_msg_sinc_handler\n", my_rank);
+    qthread_debug(MULTINODE_FUNCTIONS, "[%d] begin fork_long_msg_handler\n", my_rank);
 
-    if (sizeof(struct fork_msg_t) > len) { abort(); }
+    qthread_fork_copyargs(fork_long_helper, start, len, NULL);
 
-    qthread_fork_copyargs(fork_sinc_helper, start, len, NULL);
-
-    qthread_debug(MULTINODE_FUNCTIONS, "[%d] end fork_msg_sinc_handler\n", my_rank);
+    qthread_debug(MULTINODE_FUNCTIONS, "[%d] end fork_long_msg_handler\n", my_rank);
 }
 
 static void return_msg_handler(int    tag,
@@ -172,18 +179,21 @@ static void return_msg_handler(int    tag,
                   my_rank);
 }
 
-static void return_msg_sinc_handler(int    tag,
+static void return_long_msg_handler(int    tag,
                                     void  *start,
                                     size_t len)
 {
     struct return_msg_t *msg = (struct return_msg_t *)start;
 
-    qthread_debug(MULTINODE_FUNCTIONS, "[%d] begin return_msg_sinc_handler 0x%lx, %ld\n",
+    qthread_debug(MULTINODE_FUNCTIONS, "[%d] begin return_long_msg_handler 0x%lx, %ld\n",
                   my_rank, (unsigned long)msg->return_addr, msg->return_val);
 
-    qt_sinc_submit((qt_sinc_t *)msg->return_addr, NULL);
+    qthread_writeF_const((aligned_t *)msg->return_addr, msg->return_val);
 
-    qthread_debug(MULTINODE_FUNCTIONS, "[%d] end return_msg_sinc_handler\n",
+    // TODO: figure out how to free long message. This is only called when there is
+    //       a return value.
+
+    qthread_debug(MULTINODE_FUNCTIONS, "[%d] end return_long_msg_handler\n",
                   my_rank);
 }
 
@@ -215,12 +225,10 @@ int qthread_multinode_initialize(void)
     ptr_to_uid_hash = qt_hash_create(0);
 
     qthread_internal_net_driver_register(SHORT_MSG_TAG, fork_msg_handler);
-    qthread_internal_net_driver_register(SHORT_MSG_SINC_TAG, fork_msg_sinc_handler);
+    qthread_internal_net_driver_register(LONG_MSG_TAG, fork_long_msg_handler);
     qthread_internal_net_driver_register(RETURN_MSG_TAG, return_msg_handler);
-    qthread_internal_net_driver_register(RETURN_MSG_SINC_TAG, return_msg_sinc_handler);
+    qthread_internal_net_driver_register(RETURN_LONG_MSG_TAG, return_long_msg_handler);
     qthread_internal_net_driver_register(DIE_MSG_TAG, die_msg_handler);
-
-    qthread_empty(&time_to_die);
 
     /* initialize the network driver and provie barrier */
     ret = qthread_internal_net_driver_initialize();
@@ -231,6 +239,10 @@ int qthread_multinode_initialize(void)
 
     my_rank    = qthread_internal_net_driver_get_rank();
     world_size = qthread_internal_net_driver_get_size();
+
+    if (0 != my_rank) {
+        qthread_empty(&time_to_die);
+    }
 
     /* make sure we can clean up */
     qthread_internal_cleanup_early(net_cleanup);
@@ -253,7 +265,7 @@ int qthread_multinode_run(void)
     if (0 != my_rank) {
         struct die_msg_t msg;
 
-        qthread_readFE(&val, &time_to_die);
+        qthread_readFF(&val, &time_to_die);
         qthread_debug(MULTINODE_DETAILS, "[%d] time to die\n", my_rank);
         msg.my_rank = my_rank;
         qthread_internal_net_driver_send(0, DIE_MSG_TAG, &msg, sizeof(msg));
@@ -288,15 +300,10 @@ int qthread_multinode_multistop(void)
     if (0 != my_rank) {
         struct die_msg_t msg;
 
-        qthread_readFE(&val, &time_to_die);
+        qthread_readFF(&val, &time_to_die);
         qthread_debug(MULTINODE_DETAILS, "[%d] time to die\n", my_rank);
         msg.my_rank = my_rank;
         qthread_internal_net_driver_send(0, DIE_MSG_TAG, &msg, sizeof(msg));
-        qthread_finalize();
-        exit(0);
-    } else {
-        qthread_finalize();
-        initialized = 0;
     }
 
     qthread_debug(MULTINODE_CALLS, "[%d] end qthread_multinode_multistop\n", my_rank);
@@ -363,28 +370,54 @@ int qthread_multinode_register(uint32_t  uid,
     return 0;
 }
 
+int qthread_multinode_action_uid(qthread_f f,
+                                 uint32_t *uid)
+{
+    int ret = 0;
+
+    if (0 == initialized) { return 1; }
+
+    *uid = (uint64_t)qt_hash_get(ptr_to_uid_hash, f);
+
+    return ret;
+}
+
+int qthread_multinode_action_ptr(uint32_t   uid,
+                                 qthread_f *f)
+{
+    int ret = 0;
+
+    if (0 == initialized) { return 1; }
+
+    *f = qt_hash_get(uid_to_ptr_hash, (qt_key_t)(uintptr_t)uid);
+
+    return ret;
+}
+
 int qthread_fork_remote(qthread_f   f,
                         const void *arg,
                         aligned_t  *ret,
                         int         rank,
                         size_t      arg_len)
 {
-    struct fork_msg_t msg;
-
-    qthread_debug(MULTINODE_CALLS, "[%d] begin qthread_fork_remote(0x%lx, 0x%lx, 0x%lx, %d, %ld)\n",
+    qthread_debug(MULTINODE_CALLS, "[%d] begin f=0x%lx, arg=0x%lx, ret=0x%lx, rank=%d, arg_len=%ld)\n",
                   my_rank, (unsigned long)f, (unsigned long)arg,
                   (unsigned long)ret, rank, arg_len);
+
+    uint64_t const uid = (uint64_t)qt_hash_get(ptr_to_uid_hash, f);
+    if (qt_hash_get(uid_to_ptr_hash, (qt_key_t)(uintptr_t)uid) != f) {
+        fprintf(stderr, "action not registered at source\n");
+        abort();
+    }
 
     if (NULL != ret) {
         qthread_empty(ret);
     }
 
-    if (arg_len <= sizeof(msg.args)) {
-        msg.uid = (uint64_t)qt_hash_get(ptr_to_uid_hash, f);
-        if (qt_hash_get(uid_to_ptr_hash, (qt_key_t)(uintptr_t)msg.uid) != f) {
-            fprintf(stderr, "action not registered at source\n");
-            abort();
-        }
+    if (arg_len <= FORK_MSG_PAYLOAD) {
+        struct fork_msg_t msg;
+
+        msg.uid         = uid;
         msg.return_addr = (uint64_t)ret;
         msg.origin_node = my_rank;
         msg.arg_len     = arg_len;
@@ -392,41 +425,28 @@ int qthread_fork_remote(qthread_f   f,
         qthread_debug(MULTINODE_DETAILS, "[%d] remote fork %d %d 0x%lx %d\n",
                       my_rank, rank, msg.uid, msg.return_addr, msg.arg_len);
         return qthread_internal_net_driver_send(rank, SHORT_MSG_TAG, &msg, sizeof(msg));
+    } else {
+
+        struct fork_long_msg_t * long_msg;
+
+        size_t long_msg_size = sizeof(struct fork_long_msg_t) + arg_len;
+        long_msg = malloc(long_msg_size);
+        assert(NULL != long_msg);
+
+        long_msg->uid         = uid;
+        long_msg->return_addr = (uint64_t)ret;
+        long_msg->origin_node = my_rank;
+        long_msg->arg_len     = arg_len;
+        memcpy(&long_msg->args, arg, arg_len);
+
+        qthread_debug(MULTINODE_DETAILS, "[%d] remote long fork rank=%d uid=%d return_addr=0x%lx arg_len=%d\n",
+                      my_rank, rank, long_msg->uid, long_msg->return_addr, long_msg->arg_len);
+        int const rc = qthread_internal_net_driver_send(rank, LONG_MSG_TAG, long_msg, long_msg_size);
+
+        free(long_msg);
+
+        return rc;
     }
-
-    fprintf(stderr, "long remote fork unsupported\n");
-    abort();
-}
-
-int qthread_fork_remote_sinc(qthread_f   f,
-                             const void *arg,
-                             qt_sinc_t  *ret,
-                             int         rank,
-                             size_t      arg_len)
-{
-    struct fork_msg_t msg;
-
-    qthread_debug(MULTINODE_CALLS, "[%d] begin qthread_fork_remote_sinc(0x%lx, 0x%lx, 0x%lx, %d, %ld)\n",
-                  my_rank, (unsigned long)f, (unsigned long)arg,
-                  (unsigned long)ret, rank, arg_len);
-
-    if (arg_len <= sizeof(msg.args)) {
-        msg.uid = (uint64_t)qt_hash_get(ptr_to_uid_hash, f);
-        if (qt_hash_get(uid_to_ptr_hash, (qt_key_t)(uintptr_t)msg.uid) != f) {
-            fprintf(stderr, "action not registered at source\n");
-            abort();
-        }
-        msg.return_addr = (uint64_t)ret;
-        msg.origin_node = my_rank;
-        msg.arg_len     = arg_len;
-        memcpy(msg.args, arg, arg_len);
-        qthread_debug(MULTINODE_DETAILS, "[%d] remote fork %d %d 0x%lx %d\n",
-                      my_rank, rank, msg.uid, msg.return_addr, msg.arg_len);
-        return qthread_internal_net_driver_send(rank, SHORT_MSG_SINC_TAG, &msg, sizeof(msg));
-    }
-
-    fprintf(stderr, "long remote fork unsupported\n");
-    abort();
 }
 
 /* vim:set expandtab: */

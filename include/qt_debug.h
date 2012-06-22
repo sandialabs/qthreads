@@ -249,6 +249,17 @@ extern enum qthread_debug_levels debuglevel;
 #  define MULTINODE_BEHAVIOR  NO_DEBUG_OUTPUT
 #  define MULTINODE_DETAILS   NO_DEBUG_OUTPUT
 # endif
+# ifdef QTHREAD_DEBUG_CHAPEL
+#  define CHAPEL_CALLS     DEBUG_CALLS
+#  define CHAPEL_FUNCTIONS DEBUG_FUNCTIONS
+#  define CHAPEL_BEHAVIOR  DEBUG_BEHAVIOR
+#  define CHAPEL_DETAILS   DEBUG_DETAILS
+# else
+#  define CHAPEL_CALLS     NO_DEBUG_OUTPUT
+#  define CHAPEL_FUNCTIONS NO_DEBUG_OUTPUT
+#  define CHAPEL_BEHAVIOR  NO_DEBUG_OUTPUT
+#  define CHAPEL_DETAILS   NO_DEBUG_OUTPUT
+# endif
 
 extern QTHREAD_FASTLOCK_TYPE output_lock;
 
@@ -317,8 +328,22 @@ static QINLINE void qthread_debug(int         level,
         while ((ch = *format++)) {
             assert(head < (buf + 1024));
             if (ch == '%') {
+                char ss = '0'; // size specifier
+
                 ch = *format++;
+
+                // Chomp off the size specifier
+                if ('l' == ch || 'L' == ch || 'h' == ch) {
+                    ss = ch;
+                    ch = *format++;
+                }
+
                 switch (ch) {
+                    case 'c':
+                    {
+                        *head++ = ch;
+                        break;
+                    }
                     case 's':
                     {
                         char *str = va_arg(args, char *);
@@ -403,38 +428,73 @@ static QINLINE void qthread_debug(int         level,
                     case 'd':
                     case 'i':
                     {
-                        unsigned int num;
-                        unsigned     base;
+                        if ('l' == ss) {
+                            unsigned long num;
+                            unsigned      base;
 
-                        num  = va_arg(args, unsigned int);
-                        base = (ch == 'x') ? 16 : 10;
-                        if (!num) {
-                            *head++ = '0';
+                            num  = va_arg(args, unsigned long int);
+                            base = (ch == 'x') ? 16 : 10;
+                            if (!num) {
+                                *head++ = '0';
+                            } else {
+                                /* count places */
+                                unsigned  places = 0;
+                                unsigned long tmpnum = num;
+
+                                /* yes, this is dumb, but its guaranteed to take
+                                 * less than 10 iterations on 32-bit numbers and
+                                 * doesn't involve floating point */
+                                while (tmpnum >= base) {
+                                    tmpnum /= base;
+                                    places++;
+                                }
+                                head  += places;
+                                places = 0;
+                                while (num >= base) {
+                                    unsigned long tmp = num % base;
+                                    *(head - places) = (tmp < 10) ? ('0' + tmp) : ('a' + tmp - 10);
+                                    num             /= base;
+                                    places++;
+                                }
+                                num             %= base;
+                                *(head - places) = (num < 10) ? ('0' + num) : ('a' + num - 10);
+                                head++;
+                            }
+                            break;
                         } else {
-                            /* count places */
-                            unsigned  places = 0;
-                            uintptr_t tmpnum = num;
+                            unsigned int num;
+                            unsigned     base;
 
-                            /* yes, this is dumb, but its guaranteed to take
-                             * less than 10 iterations on 32-bit numbers and
-                             * doesn't involve floating point */
-                            while (tmpnum >= base) {
-                                tmpnum /= base;
-                                places++;
+                            num  = va_arg(args, unsigned int);
+                            base = (ch == 'x') ? 16 : 10;
+                            if (!num) {
+                                *head++ = '0';
+                            } else {
+                                /* count places */
+                                unsigned  places = 0;
+                                uintptr_t tmpnum = num;
+
+                                /* yes, this is dumb, but its guaranteed to take
+                                 * less than 10 iterations on 32-bit numbers and
+                                 * doesn't involve floating point */
+                                while (tmpnum >= base) {
+                                    tmpnum /= base;
+                                    places++;
+                                }
+                                head  += places;
+                                places = 0;
+                                while (num >= base) {
+                                    uintptr_t tmp = num % base;
+                                    *(head - places) = (tmp < 10) ? ('0' + tmp) : ('a' + tmp - 10);
+                                    num             /= base;
+                                    places++;
+                                }
+                                num             %= base;
+                                *(head - places) = (num < 10) ? ('0' + num) : ('a' + num - 10);
+                                head++;
                             }
-                            head  += places;
-                            places = 0;
-                            while (num >= base) {
-                                uintptr_t tmp = num % base;
-                                *(head - places) = (tmp < 10) ? ('0' + tmp) : ('a' + tmp - 10);
-                                num             /= base;
-                                places++;
-                            }
-                            num             %= base;
-                            *(head - places) = (num < 10) ? ('0' + num) : ('a' + num - 10);
-                            head++;
+                            break;
                         }
-                        break;
                     }
                     case 'X':
                         *head++ = '0';

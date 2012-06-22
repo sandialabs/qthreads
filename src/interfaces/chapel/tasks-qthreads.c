@@ -10,25 +10,20 @@
 // For SVID definitions (setenv)
 #define _SVID_SOURCE
 
-#ifdef __OPTIMIZE__
-// Turn assert() into a no op if the C compiler defines the macro above.
-# define NDEBUG
-#endif
-
 // XXX: Workaround for problems with "" escaping
 #undef CHPL_TASKS_MODEL_H
 #undef CHPL_THREADS_MODEL_H
 #define CHPL_TASKS_MODEL_H   "tasks-qthreads.h"
 #define CHPL_THREADS_MODEL_H "threads-none.h"
 
-#include "tasks-qthreads.h"
-
 #include "chplrt.h"
 #include "chplsys.h"
+#include "tasks-qthreads.h"
 #include "chpl-tasks.h"
 #include "config.h"   // for chpl_config_get_value()
 #include "error.h"    // for chpl_warning()
 #include "arg.h"      // for blockreport and taskreport
+#include "signal.h"   // for signal
 #include "chplexit.h" // for chpl_exit_any()
 #include <stdio.h>
 #include <stdlib.h> // for setenv()
@@ -37,12 +32,17 @@
 #include <errno.h>
 #include <sys/time.h>
 #include <unistd.h>
+
 #include "qthread/qthread.h"
 #include "qthread/qtimer.h"
 #include "qthread_innards.h" // not strictly necessary (yet)
 #include "qt_internal_feb.h" // for blockreporting
 #include "qt_atomics.h"      /* for SPINLOCK_BODY() */
 #include "qt_envariables.h"
+#include "qt_debug.h"
+#ifdef QTHREAD_MULTINODE
+#include "qthread/spr.h"
+#endif /* QTHREAD_MULTINODE */
 
 #include <pthread.h>
 
@@ -211,6 +211,7 @@ static void SIGINT_handler(int sig)
 
 // Tasks
 
+#ifndef QTHREAD_MULTINODE
 static int       done_initializing = 0;
 static syncvar_t canexit           = SYNCVAR_STATIC_EMPTY_INITIALIZER;
 static int       done_finalizing   = 0;
@@ -228,12 +229,21 @@ static void *initializer(void *junk)
     done_finalizing = 1;
     return NULL;
 }
+#endif /* ! QTHREAD_MULTINODE */
 
 void chpl_task_init(int32_t  numThreadsPerLocale,
                     int32_t  maxThreadsPerLocale,
                     int      numCommTasks,
                     uint64_t callStackSize)
 {
+#ifdef QTHREAD_MULTINODE
+    // Warning: running with SPR drops support for influencing the intra-node
+    // tasking environment setup using the --numThreadsPerLocale and
+    // --callStackSize commandline arguments.
+    if ((0 != numThreadsPerLocale) || (0 != callStackSize)) {
+        chpl_msg(2, "Warning: --numThreadsPerLocale and --callStackSize commandline options not available when running with CHPL_COMM=spr\n");
+    }
+#else
     pthread_t initer;
     char      newenv_sheps[100] = { 0 };
     char      newenv_stack[100] = { 0 };
@@ -298,10 +308,13 @@ void chpl_task_init(int32_t  numThreadsPerLocale,
             perror("Could not register SIGINT handler");
         }
     }
+#endif /* QTHREAD_MULTINODE */
 }
 
 void chpl_task_exit(void)
 {
+#ifdef QTHREAD_MULTINODE
+#else
     if (qthread_shep() == NO_SHEPHERD) {
         /* sometimes, tasking is told to shutdown even though it hasn't been
          * told to start yet */
@@ -312,6 +325,7 @@ void chpl_task_exit(void)
     } else {
         qthread_syncvar_fill(&exit_ret);
     }
+#endif /* QTHREAD_MULTINODE */
 }
 
 static aligned_t chapel_wrapper(void *arg)
@@ -337,13 +351,23 @@ static aligned_t chapel_wrapper(void *arg)
 void chpl_task_callMain(void (*chpl_main)(void))
 {
     const chpl_bool serial_state = false;
+    const chapel_wrapper_args_t wrapper_args = { chpl_main, NULL, NULL, 0, serial_state };
+
+    qthread_debug(CHAPEL_CALLS, "[%d] begin chpl_task_callMain()\n", chpl_localeID);
 
     chpl_task_setSerial(serial_state);
 
-    const chapel_wrapper_args_t wrapper_args = { chpl_main, NULL, NULL, 0, serial_state };
+#ifdef QTHREAD_MULTINODE
+    qthread_debug(CHAPEL_BEHAVIOR, "[%d] calling spr_unify\n", chpl_localeID);
+    int const rc = spr_unify();
+    assert(SPR_OK == rc);
+#endif /* QTHREAD_MULTINODE */
 
     qthread_fork_syncvar(chapel_wrapper, &wrapper_args, &exit_ret);
     qthread_syncvar_readFF(NULL, &exit_ret);
+
+    qthread_debug(CHAPEL_BEHAVIOR, "[%d] main task finished\n", chpl_localeID);
+    qthread_debug(CHAPEL_CALLS, "[%d] end chpl_task_callMain()\n", chpl_localeID);
 }
 
 int chpl_task_createCommTask(chpl_fn_p fn,
