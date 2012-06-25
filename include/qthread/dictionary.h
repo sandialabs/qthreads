@@ -11,34 +11,35 @@ extern "C" {
 
 //#define DELETE_SUPPORT
 #define ERROR ((void*)(-1))
+#define BKT_POW 20
+#define NO_BUCKETS ( 1 << BKT_POW )
 
 struct tlrw_lock;
-
 typedef int (*key_equals)(void*, void*);
 typedef int (*hashcode)(void*);
 
-typedef struct list_entry{
+//#define SHALEV_DICT 
+
+#ifdef SHALEV_DICT
+struct list_entry {
+    void        *value;
+    void		*key;
+    uint64_t     hashed_key;
+    uintptr_t next;
+};
+#else
+struct list_entry{
 	void* value;
 	void* key;
 	int hash;
 	struct list_entry* next;
-} list_entry;
+};
+#endif
 
-typedef struct {
-	key_equals op_equals;
-	hashcode op_hash;
-	list_entry** content;
-	#ifdef DELETE_SUPPORT
-	struct tlrw_lock* lock;
-	#endif
-} qt_dictionary;
 
-typedef struct {
-	qt_dictionary* dict;
-	list_entry* crt;
-	int bkt;
-} qt_dictionary_iterator;
-
+typedef struct list_entry list_entry;
+typedef struct qt_dictionary qt_dictionary;
+typedef struct qt_dictionary_iterator qt_dictionary_iterator;
 
 /*
  * 	Creates a dictionary, with the key comparison function parameter
@@ -166,5 +167,3 @@ void qt_dictionary_printbuckets(qt_dictionary* dict);
 #endif
 
 #endif //QT_DICTIONARY_H
-
-

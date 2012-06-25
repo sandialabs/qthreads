@@ -6,8 +6,20 @@
 //#include <qthread_innards.h> //using qthread_library_initialized
 #include <56reader-rwlock.h> //using rwlock_*
 
-#define BKT_POW 9
-#define NO_BUCKETS ( 1 << BKT_POW )
+struct qt_dictionary{
+	key_equals op_equals;
+	hashcode op_hash;
+	list_entry** content;
+	#ifdef DELETE_SUPPORT
+	struct tlrw_lock* lock;
+	#endif
+};
+
+struct qt_dictionary_iterator{
+	qt_dictionary* dict;
+	list_entry* crt;
+	int bkt;
+};
 
 /* Prototype should NOT go in header, we don't want it public*/
 void* qt_dictionary_put_helper(qt_dictionary* dict, void* key, void* value, 
@@ -284,7 +296,7 @@ void* qt_dictionary_delete(qt_dictionary* dict, void* key) {
 }
 
 qt_dictionary_iterator* qt_dictionary_iterator_create(qt_dictionary* dict) {
-	if(dict -> content == NULL){
+	if(dict == NULL || dict -> content == NULL){
 		return ERROR;
 	}
 	qt_dictionary_iterator* it = (qt_dictionary_iterator*) malloc (sizeof(qt_dictionary_iterator));
