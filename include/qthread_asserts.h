@@ -1,6 +1,6 @@
 /* This does not do the whole file, because assert.h doesn't avoid re-defining itself either */
 #ifndef QTHREAD_ASSERTS_H
-#define QTHREAD_ASSERTS_H
+# define QTHREAD_ASSERTS_H
 #endif
 
 #ifdef HAVE_CONFIG_H
@@ -38,13 +38,18 @@
 # define qassert_ret(assertion, retval) do { if (!(assertion)) { return retval; } } while (0)
 # define qassert_retvoid(assertion)     do { if (!(assertion)) { return; } } while (0)
 # define qassert_goto(assertion, tag)   do { if (!(assertion)) { goto tag; } } while (0)
-# define qgoto(tag)                     tag :
+# define qassert_aligned(variable, alignment)
+# define qgoto(tag) tag :
 #else // ifdef QTHREAD_NO_ASSERTS
-# define qassert(op, val)               assert(op == val)
-# define qassertnot(op, val)            assert(op != val)
-# define qassert_ret(assertion, retval) assert(assertion)
-# define qassert_retvoid(assertion)     assert(assertion)
-# define qassert_goto(assertion, tag)   assert(assertion)
+# define qassert(op, val)                     assert(op == val)
+# define qassertnot(op, val)                  assert(op != val)
+# define qassert_ret(assertion, retval)       assert(assertion)
+# define qassert_retvoid(assertion)           assert(assertion)
+# define qassert_goto(assertion, tag)         assert(assertion)
+# define qassert_aligned(variable, alignment) do {     \
+        void *a = &variable;                           \
+        assert(((uintptr_t)a) & (alignment - 1) == 0); \
+} while (0)
 # define qgoto(tag)
 #endif // ifdef QTHREAD_NO_ASSERTS
 
