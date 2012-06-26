@@ -128,7 +128,6 @@ void INTERNAL qt_makectxt(uctxt_t *ucp,
     void  **frame_pointer;
 
     top_of_stack += ucp->uc_stack.ss_size / sizeof(void *);
-    frame_pointer = top_of_stack - argc; // allow space for arguments
 
     /* now copy from my arg list to the function's arglist */
     va_start(arg, argc);
@@ -138,7 +137,7 @@ void INTERNAL qt_makectxt(uctxt_t *ucp,
     va_end(arg);
 
     ucp->mc.regs[14] = (uintptr_t)func;          // LR so that swapcontext returns into it
-    ucp->mc.regs[13] = (uintptr_t)frame_pointer; // SP
+    ucp->mc.regs[13] = (uintptr_t)top_of_stack; // SP
     ucp->mc.first    = 1;
 }
 
