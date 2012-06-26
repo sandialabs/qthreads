@@ -23,23 +23,23 @@
 static Q_UNUSED int dcmp(const void *a,
                          const void *b)
 {
-    if ((*(double *)a) < (*(double *)b)) {return -1; }
-    if ((*(double *)a) > (*(double *)b)) {return 1; }
+    if ((*(double *)a) < (*(double *)b)) { return -1; }
+    if ((*(double *)a) > (*(double *)b)) { return 1; }
     return 0;
 }
 
 aligned_t *ui_array;
-aligned_t ui_out, ui_sum_authoritative = 0, ui_mult_authoritative =
+aligned_t  ui_out, ui_sum_authoritative = 0, ui_mult_authoritative =
     1, ui_max_authoritative = 0, ui_min_authoritative = UINT_MAX;
-size_t ui_len = 1000000;
+size_t      ui_len          = 1000000;
 saligned_t *i_array;
-saligned_t i_out, i_sum_authoritative = 0, i_mult_authoritative =
+saligned_t  i_out, i_sum_authoritative = 0, i_mult_authoritative =
     1, i_max_authoritative = INT_MIN, i_min_authoritative = INT_MAX;
-size_t i_len = 1000000;
+size_t  i_len              = 1000000;
 double *d_array;
-double d_out, d_sum_authoritative = 0.0, d_mult_authoritative =
+double  d_out, d_sum_authoritative = 0.0, d_mult_authoritative =
     1.0, d_max_authoritative = DBL_MIN, d_min_authoritative = DBL_MAX;
-size_t d_len = 1000000;
+size_t         d_len         = 1000000;
 struct timeval start, stop;
 
 static aligned_t qmain(void *junk)
@@ -49,8 +49,8 @@ static aligned_t qmain(void *junk)
     ui_array = (aligned_t *)calloc(ui_len, sizeof(aligned_t));
     iprintf("generating ui_array...\n");
     for (i = 0; i < ui_len; i++) {
-        ui_array[i] = random();
-        ui_sum_authoritative += ui_array[i];
+        ui_array[i]            = random();
+        ui_sum_authoritative  += ui_array[i];
         ui_mult_authoritative *= ui_array[i];
         if (ui_max_authoritative < ui_array[i]) {
             ui_max_authoritative = ui_array[i];
@@ -111,8 +111,8 @@ static aligned_t qmain(void *junk)
 
     i_array = (saligned_t *)calloc(i_len, sizeof(saligned_t));
     for (i = 0; i < i_len; i++) {
-        i_array[i] = random();
-        i_sum_authoritative += i_array[i];
+        i_array[i]            = random();
+        i_sum_authoritative  += i_array[i];
         i_mult_authoritative *= i_array[i];
         if (i_max_authoritative < i_array[i]) {
             i_max_authoritative = i_array[i];
@@ -141,7 +141,7 @@ static aligned_t qmain(void *junk)
     for (i = 0; i < d_len; i++) {
         d_array[i] = random() / (double)RAND_MAX * 10;
 
-        d_sum_authoritative += d_array[i];
+        d_sum_authoritative  += d_array[i];
         d_mult_authoritative *= d_array[i];
         if (d_max_authoritative < d_array[i]) {
             d_max_authoritative = d_array[i];
@@ -154,9 +154,9 @@ static aligned_t qmain(void *junk)
     d_out = qutil_double_sum(d_array, d_len, 0);
     if (fabs(d_out - d_sum_authoritative) >
         (fabs(d_out + d_sum_authoritative) * FLT_EPSILON)) {
-        printf("unexpectedly large sum delta: %g (EPSILON = %g)\n",
+        printf("unexpectedly large sum delta: %g (EPSILON = %g, %g)\n",
                fabs(d_out - d_sum_authoritative),
-               (fabs(d_out + d_sum_authoritative) * FLT_EPSILON));
+               (fabs(d_out + d_sum_authoritative) * FLT_EPSILON), FLT_EPSILON);
     }
     iprintf(" - qutil_double_sum is correct\n");
     d_out = qutil_double_mult(d_array, d_len, 0);
@@ -168,7 +168,11 @@ static aligned_t qmain(void *junk)
     }
     iprintf(" - qutil_double_mult is correct\n");
     d_out = qutil_double_max(d_array, d_len, 0);
-    assert(d_out == d_max_authoritative);
+    if (fabs(d_out - d_max_authoritative) > (fabs(d_out + d_max_authoritative) * DBL_EPSILON)) {
+        printf("unexpectedly large max delta: %g (EPSILON = %g)\n",
+               fabs(d_out - d_max_authoritative),
+               (fabs(d_out + d_max_authoritative) * DBL_EPSILON));
+    }
     iprintf(" - qutil_double_max is correct\n");
     d_out = qutil_double_min(d_array, d_len, 0);
     assert(d_out == d_min_authoritative);
@@ -188,7 +192,10 @@ static aligned_t qmain(void *junk)
     gettimeofday(&stop, NULL);
     iprintf("done sorting, checking correctness...\n");
     for (i = 0; i < d_len - 1; i++) {
-        if (d_array[i] > d_array[i + 1]) {
+        if (fabs(d_array[i] - d_array[i + 1]) >
+            fabs(d_array[i] + d_array[i + 1]) * FLT_EPSILON) {
+            // equal
+        } else if (d_array[i] > d_array[i + 1]) {
             /*
              * size_t j;
              *
@@ -199,7 +206,7 @@ static aligned_t qmain(void *junk)
              * }
              * printf("\n");
              */
-            printf("out of order at %lu: %f > %f\n", (unsigned long)i,
+            printf("out of order at %lu: %g > %g\n", (unsigned long)i,
                    d_array[i], d_array[i + 1]);
             abort();
         }
@@ -213,11 +220,11 @@ static aligned_t qmain(void *junk)
     return 0;
 }
 
-int main(int argc,
+int main(int   argc,
          char *argv[])
 {
     aligned_t ret;
-    int futurelimit = 2;
+    int       futurelimit = 2;
 
     assert(qthread_initialize() == 0);
 

@@ -17,12 +17,12 @@
 
 struct timeval start, stop;
 
-int main(int argc,
+int main(int   argc,
          char *argv[])
 {
     aligned_t *ui_array;
-    double *d_array;
-    size_t len = 1000000, i;
+    double    *d_array;
+    size_t     len = 1000000, i;
 
     assert(qthread_initialize() == QTHREAD_SUCCESS);
 
@@ -72,7 +72,10 @@ int main(int argc,
     gettimeofday(&stop, NULL);
     iprintf("done sorting, checking correctness...\n");
     for (i = 0; i < len - 1; i++) {
-        if (d_array[i] > d_array[i + 1]) {
+        if (fabs(d_array[i] - d_array[i + 1]) >
+            fabs(d_array[i] + d_array[i + 1]) * FLT_EPSILON) {
+            /* equal */
+        } else if (d_array[i] > d_array[i + 1]) {
             fprintf(stderr, "out of order at %lu: %f > %f\n",
                     (unsigned long)i, d_array[i], d_array[i + 1]);
             abort();
