@@ -68,9 +68,8 @@ Q_STARTCXX /* */
 /* NOTE!!!!!!!!!!!
  * Reads and writes operate on aligned_t-size segments of memory.
  *
- * FEB locking only works on aligned addresses. On 32-bit architectures, this
- * isn't too much of an inconvenience. On 64-bit architectures, it's a pain in
- * the BUTT! This is here to try and help a little bit. */
+ * FEB locking only works on aligned addresses. This is here to try and help a
+ * little bit. */
 #if QTHREAD_SIZEOF_ALIGNED_T == 4
 typedef uint32_t Q_ALIGNED (QTHREAD_ALIGNMENT_ALIGNED_T)      aligned_t;
 typedef uint16_t Q_ALIGNED (QTHREAD_ALIGNMENT_ALIGNED_T / 2) haligned_t;
