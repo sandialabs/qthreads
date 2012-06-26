@@ -17,6 +17,7 @@
 #include "qthread_expect.h"
 #include "qthread_asserts.h"
 #include "qt_debug.h"
+#include "qt_aligned_alloc.h"
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 # include "qt_atomics.h"
@@ -25,7 +26,7 @@
 #include "qthread/qt_sinc.h"
 
 typedef enum {
-    ALIGNED_T,
+    ALIGNED,
     SYNCVAR_T,
     SINC_T,
     DONECOUNT,
@@ -77,7 +78,7 @@ static aligned_t qloop_wrapper(struct qloop_wrapper_args *const restrict arg)
                 new_id = (1 << level) + my_id;         // level has been incremented
             }
             break;
-        case ALIGNED_T:
+        case ALIGNED:
             while (new_id <= tot_workers) {      // create some children? (tot_workers zero based)
                 size_t offset = new_id - my_id;  // need how much past current locations
                 (arg + offset)->level = ++level; // increase depth for created thread
@@ -211,7 +212,7 @@ struct qt_loop_spawner_arg {
 };
 
 static aligned_t qt_loop_wrapper(struct qt_loop_wrapper_args *const restrict arg)
-{
+{   /*{{{*/
     arg->func(arg->startat, arg->stopat, arg->arg);
     switch(arg->sync_type) {
         default:
@@ -224,7 +225,7 @@ static aligned_t qt_loop_wrapper(struct qt_loop_wrapper_args *const restrict arg
             break;
     }
     return 0;
-}
+} /*}}}*/
 
 static void qt_loop_spawner(const size_t start,
                             const size_t stop,
@@ -246,8 +247,7 @@ static void qt_loop_spawner(const size_t start,
         syncvar_t *syncvar;
         aligned_t *aligned;
         qt_sinc_t *sinc;
-        aligned_t  dc;
-    } sync = { NULL };
+    } Q_ALIGNED(QTHREAD_ALIGNMENT_ALIGNED_T) sync = { NULL };
     switch (sync_type) {
         case SYNCVAR_T:
             retptr = sync.syncvar = malloc(steps * sizeof(syncvar_t));
@@ -258,12 +258,13 @@ static void qt_loop_spawner(const size_t start,
             sync.sinc = qt_sinc_create(0, NULL, NULL, steps);
             assert(sync.sinc);
             break;
-        case ALIGNED_T:
-            retptr = sync.aligned = malloc(steps * sizeof(aligned_t));
+        case ALIGNED:
+            retptr = sync.aligned = qthread_internal_aligned_alloc(steps * sizeof(aligned_t), QTHREAD_ALIGNMENT_ALIGNED_T);
             assert(sync.aligned);
             break;
         case DONECOUNT:
             dc = 0;
+            assert((((uintptr_t)&dc) & (QTHREAD_ALIGNMENT_ALIGNED_T - 1)) == 0);
             break;
         case NO_SYNC:
             abort();
@@ -283,11 +284,13 @@ static void qt_loop_spawner(const size_t start,
                 sync.syncvar[threadct] = SYNCVAR_EMPTY_INITIALIZER;
                 qwa.sync               = sync.syncvar;
                 break;
-            case ALIGNED_T:
+            case ALIGNED:
                 qthread_empty(&sync.aligned[threadct]);
                 qwa.sync = sync.aligned;
             case DONECOUNT:
                 qwa.sync = &dc;
+                qassert_aligned(&dc, QTHREAD_ALIGNMENT_ALIGNED_T);
+                qthread_debug(ALWAYS_OUTPUT, "qwa.sync = %p\n", qwa.sync);
                 break;
             case SINC_T:
                 qwa.sync = sync.sinc;
@@ -309,11 +312,11 @@ static void qt_loop_spawner(const size_t start,
             }
             free(sync.syncvar);
             break;
-        case ALIGNED_T:
+        case ALIGNED:
             for (i = 0; i < steps; i++) {
                 qthread_readFF(NULL, sync.aligned + i);
             }
-            free(sync.aligned);
+            qthread_internal_aligned_free(sync.aligned);
             break;
         case SINC_T:
             qt_sinc_wait(sync.sinc, NULL);
@@ -372,7 +375,7 @@ void API_FUNC qt_loop_aligned(const size_t    start,
                               const qt_loop_f func,
                               void           *argptr)
 {                                      /*{{{ */
-    qt_loop_inner(start, stop, func, argptr, 0, ALIGNED_T);
+    qt_loop_inner(start, stop, func, argptr, 0, ALIGNED);
 }                                      /*}}} */
 
 void API_FUNC qt_loop_sinc(const size_t    start,
@@ -493,14 +496,14 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
         syncvar_t *syncvar;
         aligned_t *aligned;
         qt_sinc_t *sinc;
-    } sync = { NULL };
+    } Q_ALIGNED(QTHREAD_ALIGNMENT_ALIGNED_T) sync = { NULL };
     switch(sync_type) {
         case SYNCVAR_T:
             sync.syncvar = malloc(maxworkers * sizeof(syncvar_t));
             assert(sync.syncvar);
             break;
-        case ALIGNED_T:
-            sync.aligned = malloc(maxworkers * sizeof(aligned_t));
+        case ALIGNED:
+            sync.aligned = qthread_internal_aligned_alloc(maxworkers * sizeof(aligned_t), QTHREAD_ALIGNMENT_ALIGNED_T);
             assert(sync.aligned);
             break;
         case SINC_T:
@@ -508,7 +511,8 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
             assert(sync.sinc);
             break;
         case DONECOUNT:
-            sync.aligned = calloc(1, sizeof(aligned_t));
+            sync.aligned               = qthread_internal_aligned_alloc(sizeof(aligned_t), QTHREAD_ALIGNMENT_ALIGNED_T);
+            *(aligned_t *)sync.aligned = 0;
             break;
         case NO_SYNC:
             abort();
@@ -528,7 +532,7 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
                 sync.syncvar[i] = SYNCVAR_EMPTY_INITIALIZER;
                 qwa[i].sync     = sync.syncvar;
                 break;
-            case ALIGNED_T:
+            case ALIGNED:
                 qthread_empty(&sync.aligned[i]);
             case DONECOUNT:
                 qwa[i].sync = sync.aligned;
@@ -550,7 +554,7 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
             case SYNCVAR_T:
                 qassert(qthread_fork_syncvar_to((qthread_f)qloop_wrapper, qwa, sync.syncvar, 0), QTHREAD_SUCCESS);
                 break;
-            case ALIGNED_T:
+            case ALIGNED:
                 qassert(qthread_fork_to((qthread_f)qloop_wrapper, qwa, sync.aligned, 0), QTHREAD_SUCCESS);
                 break;
             default:
@@ -562,7 +566,7 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
             case SYNCVAR_T:
                 qassert(qthread_fork_syncvar_future_to((qthread_f)qloop_wrapper, qwa, sync.syncvar, 0), QTHREAD_SUCCESS);
                 break;
-            case ALIGNED_T:
+            case ALIGNED:
                 qassert(qthread_fork_future_to((qthread_f)qloop_wrapper, qwa, sync.aligned, 0), QTHREAD_SUCCESS);
                 break;
             default:
@@ -577,11 +581,11 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
             }
             free(sync.syncvar);
             break;
-        case ALIGNED_T:
+        case ALIGNED:
             for (i = 0; i < maxworkers; i++) {
                 qthread_readFF(NULL, sync.aligned + i);
             }
-            free(sync.aligned);
+            qthread_internal_aligned_free(sync.aligned);
             break;
         case SINC_T:
             qt_sinc_wait(sync.sinc, NULL);
@@ -591,7 +595,7 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
             while (*sync.aligned != maxworkers) {
                 qthread_yield();
             }
-            free(sync.aligned);
+            qthread_internal_aligned_free(sync.aligned);
             break;
         case NO_SYNC:
             abort();
@@ -628,7 +632,7 @@ void API_FUNC qt_loop_balance_aligned(const size_t    start,
                                       const qt_loop_f func,
                                       void           *argptr)
 {                                      /*{{{ */
-    qt_loop_balance_inner(start, stop, func, argptr, 0, ALIGNED_T);
+    qt_loop_balance_inner(start, stop, func, argptr, 0, ALIGNED);
 }                                      /*}}} */
 
 void API_FUNC qt_loop_balance_sinc(const size_t    start,
@@ -678,7 +682,7 @@ static aligned_t qloopaccum_wrapper(struct qloopaccum_wrapper_args *const restri
                 new_id = (1 << level) + my_id; // level has been incremented
             }
             break;
-        case ALIGNED_T:
+        case ALIGNED:
             while (new_id <= tot_workers) {      // create some children? (tot_workers zero based)
                 size_t offset = new_id - my_id;  // need how much past current locations
                 (arg + offset)->level = ++level; // increase depth for created thread
@@ -743,7 +747,7 @@ static QINLINE void qt_loopaccum_balance_inner(const size_t     start,
         syncvar_t *syncvar;
         aligned_t *aligned;
         qt_sinc_t *sinc;
-    } sync = { NULL };
+    } Q_ALIGNED(QTHREAD_ALIGNMENT_ALIGNED_T) sync = { NULL };
     switch(sync_type) {
         case SYNCVAR_T:
             sync.syncvar = malloc(maxworkers * sizeof(syncvar_t));
@@ -754,9 +758,10 @@ static QINLINE void qt_loopaccum_balance_inner(const size_t     start,
             assert(sync.sinc);
             break;
         case DONECOUNT:
-            sync.aligned = calloc(1, sizeof(aligned_t));
+            sync.aligned               = qthread_internal_aligned_alloc(sizeof(aligned_t), QTHREAD_ALIGNMENT_ALIGNED_T);
+            *(aligned_t *)sync.aligned = 0;
             break;
-        case ALIGNED_T:
+        case ALIGNED:
         case NO_SYNC:
             abort();
     }
@@ -790,7 +795,7 @@ static QINLINE void qt_loopaccum_balance_inner(const size_t     start,
             case DONECOUNT:
                 qwa[i].sync = sync.aligned;
                 break;
-            case ALIGNED_T:
+            case ALIGNED:
             case NO_SYNC:
                 abort();
         }
@@ -805,7 +810,7 @@ static QINLINE void qt_loopaccum_balance_inner(const size_t     start,
             case SYNCVAR_T:
                 qassert(qthread_fork_syncvar_to((qthread_f)qloopaccum_wrapper, qwa, sync.syncvar, 0), QTHREAD_SUCCESS);
                 break;
-            case ALIGNED_T:
+            case ALIGNED:
                 qassert(qthread_fork_to((qthread_f)qloopaccum_wrapper, qwa, sync.aligned, 0), QTHREAD_SUCCESS);
                 break;
             default:
@@ -817,7 +822,7 @@ static QINLINE void qt_loopaccum_balance_inner(const size_t     start,
             case SYNCVAR_T:
                 qassert(qthread_fork_syncvar_future_to((qthread_f)qloopaccum_wrapper, qwa, sync.syncvar, 0), QTHREAD_SUCCESS);
                 break;
-            case ALIGNED_T:
+            case ALIGNED:
                 qassert(qthread_fork_future_to((qthread_f)qloopaccum_wrapper, qwa, sync.aligned, 0), QTHREAD_SUCCESS);
                 break;
             default:
@@ -848,9 +853,9 @@ static QINLINE void qt_loopaccum_balance_inner(const size_t     start,
                     acc(out, realrets + ((i - 1) * size));
                 }
             }
-            free(sync.aligned);
+            qthread_internal_aligned_free(sync.aligned);
             break;
-        case ALIGNED_T:
+        case ALIGNED:
         case NO_SYNC:
             abort();
     }
@@ -1717,7 +1722,7 @@ static aligned_t qt_qsort_inner(const struct qt_qsort_iargs *a)
 }                                      /*}}} */
 
 void API_FUNC qt_qsort(double      *array,
-              const size_t length)
+                       const size_t length)
 {                                      /*{{{ */
     struct qt_qsort_iargs arg;
 
