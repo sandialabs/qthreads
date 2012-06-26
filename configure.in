@@ -816,6 +816,14 @@ case "$with_sinc" in
  *) AC_MSG_ERROR([Unknown sinc option]) ;;
 esac
 
+AS_IF([test "x$with_dict" = "x"],
+      [with_dict="simple"],
+      [])
+case "$with_dict" in
+ simple|shavit) ;;
+ *) AC_MSG_ERROR([Unknown dictionary option | $with_dict |]) ;;
+esac
+
 AS_IF([test "x$enable_omp_affinity" = xyes],
       [AC_DEFINE([QTHREAD_OMP_AFFINITY], [1], [Enable experimental OpenMP affinity extensions. Under development])],
       [enable_omp_affinity="no"])
@@ -1115,6 +1123,7 @@ AS_IF([test "x$enable_hardware_increments" = "xno"],
 echo    "Speed:"
 echo    "          Scheduler: $with_scheduler ($mts_string)"
 echo    "         Sinc Style: $with_sinc"
+echo    "   Dictionary Style: $with_dict"
 echo    "    Lazy Thread IDs: $enable_lazy_threadids"
 echo    "       Pools/caches: $pool_string"
 echo    "            RCRTool: $enable_rcrtool"
