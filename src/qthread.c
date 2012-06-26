@@ -1071,7 +1071,7 @@ int API_FUNC qthread_initialize(void)
         qt_mpool_create_aligned(qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s) +
                                 (2 * getpagesize()), getpagesize());
 # else
-        qt_mpool_create(sizeof(struct qthread_runtime_data_s) + qlib->qthread_stack_size);
+        qt_mpool_create_aligned(sizeof(struct qthread_runtime_data_s) + qlib->qthread_stack_size, 16); // stacks on most platforms must be 16-byte aligned (or less)
 # endif
     generic_team_pool = qt_mpool_create(sizeof(qt_team_t));
 #endif /* ifndef UNPOOLED */
