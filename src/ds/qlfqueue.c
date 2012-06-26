@@ -35,7 +35,7 @@ qlfqueue_t *qlfqueue_create(void)
     qlfqueue_t *q;
 
     if (qlfqueue_node_pool == NULL) {
-        switch ((uintptr_t)qthread_cas_ptr(&qlfqueue_node_pool, NULL, 1)) {
+        switch ((uintptr_t)qthread_cas_ptr(&qlfqueue_node_pool, NULL, (void*)1)) {
             case 0: /* I won, I will allocate */
                 qlfqueue_node_pool = qpool_create_aligned(sizeof(qlfqueue_node_t), 0);
                 break;
