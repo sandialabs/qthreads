@@ -46,8 +46,8 @@
 # define qassert_ret(assertion, retval)       assert(assertion)
 # define qassert_retvoid(assertion)           assert(assertion)
 # define qassert_goto(assertion, tag)         assert(assertion)
-# define qassert_aligned(variable, alignment) do {     \
-        void *a = &variable;                           \
+# define qassert_aligned(variable, alignment) do {       \
+        void *a = &(variable);                           \
         assert((((uintptr_t)a) & (alignment - 1)) == 0); \
 } while (0)
 # define qgoto(tag)
