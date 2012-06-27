@@ -80,7 +80,7 @@ libqthread_la_SOURCES += \
 	workers.c \
 	threadqueues/@with_scheduler@_threadqueues.c \
 	sincs/@with_sinc@.c \
-	ds/dictionary@with_dict@.c \
+	ds/dictionary/dictionary_@with_dict@.c \
 	affinity/@qthread_topo@.c \
 	futurelib.c
 if COMPILE_SPAWNCACHE
