@@ -25,14 +25,11 @@ static QINLINE int getpagesize()
 #include "qthread_asserts.h"
 
 /* local constants */
-static size_t pagesize = 0;
+size_t _pagesize = 0;
 
-size_t INTERNAL qt_getpagesize(void)
+void INTERNAL qthread_internal_alignment_init(void)
 {
-    if (pagesize == 0) {
-        pagesize = getpagesize();
-    }
-    return pagesize;
+    _pagesize = getpagesize();
 }
 
 void INTERNAL *qthread_internal_aligned_alloc(size_t        alloc_size,
@@ -45,14 +42,22 @@ void INTERNAL *qthread_internal_aligned_alloc(size_t        alloc_size,
         case 0:
             ret = malloc(alloc_size);
             break;
+#if defined(HAVE_16ALIGNED_MALLOC)
+        case 16:
+        case 8:
+        case 4:
+        case 2:
+            ret = malloc(alloc_size);
+            break;
+#endif
         default:
 #if defined(HAVE_WORKING_VALLOC)
-            if (alignment == qt_getpagesize()) {
+            if (alignment == pagesize) {
                 ret = valloc(alloc_size);
                 break;
             }
 #elif defined(HAVE_PAGE_ALIGNED_MALLOC)
-            if (alignment == qt_getpagesize()) {
+            if (alignment == pagesize) {
                 ret = malloc(alloc_size);
                 break;
             }
@@ -71,6 +76,7 @@ void INTERNAL *qthread_internal_aligned_alloc(size_t        alloc_size,
             break;
 #endif  /* if defined(HAVE_MEMALIGN) */
     }
+    assert(ret);
     assert(((uintptr_t)ret & (alignment - 1)) == 0);
     return ret;
 }
@@ -83,9 +89,17 @@ void INTERNAL qthread_internal_aligned_free(void         *ptr,
         case 0:
             free(ptr);
             break;
+#if defined(HAVE_16ALIGNED_MALLOC)
+        case 16:
+        case 8:
+        case 4:
+        case 2:
+            free(ptr);
+            break;
+#endif
         default:
 #if defined(HAVE_WORKING_VALLOC) || defined(HAVE_PAGE_ALIGNED_MALLOC)
-            if (alignment == qt_getpagesize()) {
+            if (alignment == pagesize) {
                 free(ptr);
                 break;
             }

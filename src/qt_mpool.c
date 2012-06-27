@@ -7,9 +7,6 @@
 
 #include <stddef.h>                    /* for size_t (according to C89) */
 #include <stdlib.h>                    /* for calloc() and malloc() */
-#if (HAVE_MEMALIGN && HAVE_MALLOC_H)
-# include <malloc.h>                   /* for memalign() */
-#endif
 #include <string.h>
 
 /* External Headers */
@@ -36,16 +33,7 @@
 #include "qt_macros.h"
 #include "qthread_innards.h"
 #include "qt_visibility.h"
-
-#ifdef HAVE_GETPAGESIZE
-# include <unistd.h>
-#else
-static QINLINE int getpagesize()
-{
-    return 4096;
-}
-
-#endif
+#include "qt_aligned_alloc.h"
 
 typedef struct threadlocal_cache_s qt_mpool_threadlocal_cache_t;
 
@@ -56,10 +44,10 @@ static aligned_t pool_cache_global_max = 1;
 #endif
 
 struct qt_mpool_s {
-    size_t                        item_size;
-    size_t                        alloc_size;
-    size_t                        items_per_alloc;
-    size_t                        alignment;
+    size_t item_size;
+    size_t alloc_size;
+    size_t items_per_alloc;
+    size_t alignment;
 
 #ifdef TLS
     size_t                        offset;
@@ -103,79 +91,27 @@ void INTERNAL qt_mpool_subsystem_init(void)
     qthread_internal_cleanup_late(qt_mpool_subsystem_shutdown);
 }
 
-/* local constants */
-static size_t pagesize = 0;
-
 /* local funcs */
 static QINLINE void *qt_mpool_internal_aligned_alloc(size_t alloc_size,
                                                      size_t alignment)
 {                                      /*{{{ */
-    void *ret;
+    void *ret = qthread_internal_aligned_alloc(alloc_size, alignment);
 
-    switch (alignment) {
-        case 0:
-            ret = calloc(1, alloc_size);
-            goto return_clean;
-        case 16:
-        case 8:
-        case 4:
-        case 2:
-#if defined(HAVE_MEMALIGN)
-            ret = memalign(16, alloc_size);
-#elif defined(HAVE_POSIX_MEMALIGN)
-            posix_memalign(&(ret), 16, alloc_size);
-#elif defined(HAVE_WORKING_VALLOC)
-            ret = valloc(alloc_size);
-#elif defined(HAVE_16ALIGNED_MALLOC) || defined(HAVE_PAGE_ALIGNED_MALLOC)
-            ret = malloc(alloc_size);
-#else                                 /* if defined(HAVE_MEMALIGN) */
-            ret = valloc(alloc_size); /* cross your fingers */
-#endif  /* if defined(HAVE_MEMALIGN) */
-            break;
-        default:
-#ifdef HAVE_MEMALIGN
-            ret = memalign(alignment, alloc_size);
-#elif defined(HAVE_POSIX_MEMALIGN)
-            posix_memalign(&(ret), alignment, alloc_size);
-#elif defined(HAVE_WORKING_VALLOC)
-            ret = valloc(alloc_size);
-#elif defined(HAVE_PAGE_ALIGNED_MALLOC)
-            ret = malloc(alloc_size);
-#else
-            ret = valloc(alloc_size);  /* cross your fingers */
-#endif
-    }
-return_clean:
     VALGRIND_MAKE_MEM_NOACCESS(ret, alloc_size);
     return ret;
 }                                      /*}}} */
 
-static QINLINE void qt_mpool_internal_aligned_free(void        *freeme,
-                                                   const size_t alignment)
+static QINLINE void qt_mpool_internal_aligned_free(void  *freeme,
+                                                   size_t alignment)
 {                                      /*{{{ */
-    switch (alignment) {
-        case 0:
-            free(freeme);
-            return;
-
-        default:
-#if defined(HAVE_16_ALIGNED_CALLOC) ||           \
-            defined(HAVE_16_ALIGNED_MALLOC) ||   \
-            defined(HAVE_MEMALIGN) ||            \
-            defined(HAVE_PAGE_ALIGNED_MALLOC) || \
-            defined(HAVE_POSIX_MEMALIGN) ||      \
-            defined(HAVE_WORKING_VALLOC)
-            free(freeme);
-#endif
-            return;
-    }
+    qthread_internal_aligned_free(freeme, alignment);
 }                                      /*}}} */
 
 // sync means lock-protected
 // item_size is how many bytes to return
 // ...memory is always allocated in multiples of getpagesize()
 qt_mpool INTERNAL qt_mpool_create_aligned(size_t item_size,
-                                 size_t alignment)
+                                          size_t alignment)
 {                                      /*{{{ */
     qt_mpool pool = (qt_mpool)calloc(1, sizeof(struct qt_mpool_s));
 
@@ -184,10 +120,6 @@ qt_mpool INTERNAL qt_mpool_create_aligned(size_t item_size,
     qthread_debug(MPOOL_CALLS, "item_size:%u alignment:%u\n", (unsigned)item_size, (unsigned)alignment);
     qassert_ret((pool != NULL), NULL);
     VALGRIND_CREATE_MEMPOOL(pool, 0, 0);
-    if (pagesize == 0) {
-        pagesize = getpagesize();
-    }
-    assert(pagesize > 0);
     /* first, we ensure that item_size is at least sizeof(qt_mpool_cache_t), and also that
      * it is a multiple of sizeof(void*). */
     if (item_size < sizeof(qt_mpool_cache_t)) {
@@ -230,7 +162,7 @@ qt_mpool INTERNAL qt_mpool_create_aligned(size_t item_size,
     QTHREAD_FASTLOCK_INIT(pool->reuse_lock);
     QTHREAD_FASTLOCK_INIT(pool->pool_lock);
 #ifdef TLS
-    pool->offset         = qthread_incr(&pool_cache_global_max, 1);
+    pool->offset = qthread_incr(&pool_cache_global_max, 1);
 #else
     pthread_key_create(&pool->threadlocal_cache, NULL);
 #endif
@@ -276,19 +208,10 @@ void INTERNAL *qt_mpool_alloc(qt_mpool pool)
     }
     assert(tc);
     tc += (pool->offset - 1);
-#else
+#else /* ifdef TLS */
     tc = pthread_getspecific(pool->threadlocal_cache);
     if (NULL == tc) {
-#if defined(HAVE_MEMALIGN)
-        tc = memalign(CACHELINE_WIDTH, sizeof(qt_mpool_threadlocal_cache_t));
-#elif defined(HAVE_POSIX_MEMALIGN)
-        posix_memalign((void**)&(tc), CACHELINE_WIDTH, sizeof(qt_mpool_threadlocal_cache_t));
-#elif defined(HAVE_WORKING_VALLOC)
-        tc = valloc(sizeof(qt_mpool_threadlocal_cache_t));
-#else                                 /* if defined(HAVE_MEMALIGN) */
-        tc = malloc(sizeof(qt_mpool_threadlocal_cache_t)); /* cross your fingers */
-#endif  /* if defined(HAVE_MEMALIGN) */
-        // tc = calloc(1, sizeof(qt_mpool_threadlocal_cache_t));
+        tc = qthread_internal_aligned_alloc(sizeof(qt_mpool_threadlocal_cache_t), CACHELINE_WIDTH);
         assert(tc);
         tc->cache = NULL;
         tc->count = 0;
@@ -299,7 +222,7 @@ void INTERNAL *qt_mpool_alloc(qt_mpool pool)
         } while (qthread_cas_ptr(&pool->caches, tc->next, tc) != tc->next);
         pthread_setspecific(pool->threadlocal_cache, tc);
     }
-#endif
+#endif /* ifdef TLS */
     qthread_debug(MPOOL_BEHAVIOR, "->tc:%p cache:%p (bt:%p) cnt:%u\n", tc, tc->cache, tc->cache ? tc->cache->block_tail : NULL, (unsigned int)tc->count);
     if (tc->cache) {
         qt_mpool_cache_t *cache = tc->cache;
@@ -369,7 +292,7 @@ void INTERNAL *qt_mpool_alloc(qt_mpool pool)
 } /*}}}*/
 
 void INTERNAL qt_mpool_free(qt_mpool pool,
-                   void    *mem)
+                            void    *mem)
 {   /*{{{*/
     qt_mpool_threadlocal_cache_t *tc;
     qt_mpool_cache_t             *cache = NULL;
@@ -396,7 +319,7 @@ void INTERNAL qt_mpool_free(qt_mpool pool,
         }
     }
     tc += (pool->offset - 1);
-#else
+#else /* ifdef TLS */
     tc = pthread_getspecific(pool->threadlocal_cache);
     if (NULL == tc) {
         tc = calloc(1, sizeof(qt_mpool_threadlocal_cache_t));
@@ -406,7 +329,7 @@ void INTERNAL qt_mpool_free(qt_mpool pool,
         } while (qthread_cas_ptr(&pool->caches, tc->next, tc) != tc->next);
         pthread_setspecific(pool->threadlocal_cache, tc);
     }
-#endif
+#endif /* ifdef TLS */
     cache = tc->cache;
     cnt   = tc->count;
     qthread_debug(MPOOL_DETAILS, "->cache:%p (bt:%p) cnt:%u\n", cache, cache ? cache->block_tail : NULL, (unsigned int)cnt);
@@ -467,7 +390,7 @@ void INTERNAL qt_mpool_destroy(qt_mpool pool)
     while (pool->caches) {
         qt_mpool_threadlocal_cache_t *freeme = pool->caches;
         pool->caches = freeme->next;
-        free(freeme);
+        qthread_internal_aligned_free(freeme, CACHELINE_WIDTH);
     }
 #ifndef TLS
     pthread_key_delete(pool->threadlocal_cache);

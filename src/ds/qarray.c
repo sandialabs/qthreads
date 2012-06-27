@@ -4,7 +4,6 @@
 
 /* System Headers */
 #include <stdlib.h>                    /* for calloc() */
-#include <unistd.h>                    /* for getpagesize() */
 #include <sys/types.h>
 #include <sys/mman.h>
 #ifdef QTHREAD_USE_VALGRIND
@@ -25,7 +24,6 @@
 
 static unsigned short pageshift                  = 0;
 static aligned_t     *chunk_distribution_tracker = NULL;
-static size_t         pagesize                   = 0;
 
 /* local funcs */
 /* this function is for DIST *ONLY*; it returns a pointer to the location that
@@ -156,13 +154,12 @@ static qarray *qarray_create_internal(const size_t         count,
     qassert_ret((obj_size > 0), NULL);
 
     if (pageshift == 0) {
-        pagesize = getpagesize() - 1;
-        while (pagesize != 0) {
+        size_t tmp = pagesize;
+        while (tmp != 0) {
             pageshift++;
-            pagesize >>= 1;
+            tmp >>= 1;
         }
     }
-    pagesize = 1 << pageshift;
 
     if (chunk_distribution_tracker == NULL) {
         aligned_t *tmp = calloc(qthread_num_shepherds(), sizeof(aligned_t));

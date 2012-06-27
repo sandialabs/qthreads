@@ -52,7 +52,7 @@ static inline size_t encompassing_power_of_two(size_t k)
 static inline void qt_hash_internal_create(qt_hash ret,
                                            size_t  entries)
 {   /*{{{*/
-    size_t min_entries = 2 * qt_getpagesize() / sizeof(hash_entry);
+    size_t min_entries = 2 * pagesize / sizeof(hash_entry);
 
     /* meta data */
     if (entries % min_entries != 0) {

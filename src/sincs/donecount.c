@@ -6,9 +6,6 @@
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
-#if (HAVE_MEMALIGN && HAVE_MALLOC_H)
-# include <malloc.h>                   /* for memalign() */
-#endif
 
 #include "qthread/qthread.h"
 #include "qthread/cacheline.h"
@@ -16,6 +13,7 @@
 #include "qt_shepherd_innards.h"
 #include "qthread_expect.h"
 #include "qt_visibility.h"
+#include "qt_aligned_alloc.h"
 
 #include "qthread/qt_sinc.h"
 
@@ -42,18 +40,6 @@ static size_t       num_sheps;
 static size_t       num_workers;
 static size_t       num_wps;
 static unsigned int cacheline;
-
-#ifdef HAVE_MEMALIGN
-# define ALIGNED_ALLOC(val, size, align) (val) = memalign((align), (size))
-#elif defined(HAVE_POSIX_MEMALIGN)
-# define ALIGNED_ALLOC(val, size, align) posix_memalign((void **)&(val), (align), (size))
-#elif defined(HAVE_WORKING_VALLOC)
-# define ALIGNED_ALLOC(val, size, align) (val) = valloc((size))
-#elif defined(HAVE_PAGE_ALIGNED_MALLOC)
-# define ALIGNED_ALLOC(val, size, align) (val) = malloc((size))
-#else
-# define ALIGNED_ALLOC(val, size, align) (val) = valloc((size)) /* cross your fingers! */
-#endif
 
 void qt_sinc_init(qt_sinc_t *restrict  sinc_,
                   size_t               sizeof_value,
@@ -94,7 +80,7 @@ void qt_sinc_init(qt_sinc_t *restrict  sinc_,
 
         rdata->sizeof_shep_value_part = sizeof_shep_value_part;
 
-        ALIGNED_ALLOC(rdata->values, num_lines * cacheline, cacheline);
+        rdata->values = qthread_internal_aligned_alloc(num_lines * cacheline, cacheline);
         assert(rdata->values);
 
         // Initialize values
