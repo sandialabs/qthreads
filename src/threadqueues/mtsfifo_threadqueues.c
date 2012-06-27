@@ -8,12 +8,6 @@
 #endif
 #include <stdlib.h>
 
-#if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
-# if (HAVE_MEMALIGN && HAVE_MALLOC_H)
-#  include <malloc.h>
-# endif
-#endif
-
 /* Internal Headers */
 #include "qthread/qthread.h"
 #include "qt_macros.h"
@@ -25,6 +19,9 @@
 #include "qthread_prefetch.h"
 #include "qt_threadqueues.h"
 #include "qthread_innards.h" /* for qthread_internal_cleanup_early() */
+#if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
+# include "qt_aligned_alloc.h"
+#endif
 
 /* Data Structures */
 struct _qt_threadqueue_node {
@@ -51,15 +48,7 @@ struct _qt_threadqueue {
 # define FREE_THREADQUEUE(t) free(t)
 static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret)
 {                                      /*{{{ */
-# ifdef HAVE_MEMALIGN
-    *ret = (qt_threadqueue_node_t *)memalign(16, sizeof(qt_threadqueue_node_t));
-# elif defined(HAVE_POSIX_MEMALIGN)
-    qassert(posix_memalign((void **)ret, 16, sizeof(qt_threadqueue_node_t)),
-            0);
-# else
-    *ret = calloc(1, sizeof(qt_threadqueue_node_t));
-    return;
-# endif
+    *ret = (qt_threadqueue_node_t *)qthread_internal_aligned_alloc(sizeof(qt_threadqueue_node_t), 16);
     if (*ret != NULL) {
         memset(*ret, 0, sizeof(qt_threadqueue_node_t));
     }
@@ -67,7 +56,7 @@ static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret)
 
 static void FREE_TQNODE(void *p)
 {
-    free(p);
+    qthread_internal_aligned_free(p, 16);
 }
 
 void INTERNAL qt_threadqueue_subsystem_init(void) {}

@@ -17,6 +17,9 @@
 #include "qthread_asserts.h"
 #include "qthread_prefetch.h"
 #include "qt_threadqueues.h"
+#if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
+# include "qt_aligned_alloc.h"
+#endif
 
 /* Data Structures */
 struct _qt_threadqueue_node {
@@ -59,19 +62,11 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *l)
 # define FREE_THREADQUEUE(t) free(t)
 static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret)
 {                                      /*{{{ */
-# ifdef HAVE_MEMALIGN
-    *ret = (qt_threadqueue_node_t *)memalign(16, sizeof(qt_threadqueue_node_t));
-# elif defined(HAVE_POSIX_MEMALIGN)
-    qassert(posix_memalign((void **)ret, 16, sizeof(qt_threadqueue_node_t)),
-            0);
-# else
-    *ret = calloc(1, sizeof(qt_threadqueue_node_t));
-    return;
-# endif
+    *ret = (qt_threadqueue_node_t *)qthread_internal_aligned_alloc(sizeof(qt_threadqueue_node_t), 16);
     memset(*ret, 0, sizeof(qt_threadqueue_node_t));
 }                                      /*}}} */
 
-# define FREE_TQNODE(t) free(t)
+# define FREE_TQNODE(t) qthread_internal_aligned_free(t, 16)
 void INTERNAL qt_threadqueue_subsystem_init(void) {}
 #else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 qt_threadqueue_pools_t generic_threadqueue_pools;
