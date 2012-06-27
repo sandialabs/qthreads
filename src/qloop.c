@@ -316,7 +316,7 @@ static void qt_loop_spawner(const size_t start,
             for (i = 0; i < steps; i++) {
                 qthread_readFF(NULL, sync.aligned + i);
             }
-            qthread_internal_aligned_free(sync.aligned);
+            qthread_internal_aligned_free(sync.aligned, QTHREAD_ALIGNMENT_ALIGNED_T);
             break;
         case SINC_T:
             qt_sinc_wait(sync.sinc, NULL);
@@ -585,7 +585,7 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
             for (i = 0; i < maxworkers; i++) {
                 qthread_readFF(NULL, sync.aligned + i);
             }
-            qthread_internal_aligned_free(sync.aligned);
+            qthread_internal_aligned_free(sync.aligned, QTHREAD_ALIGNMENT_ALIGNED_T);
             break;
         case SINC_T:
             qt_sinc_wait(sync.sinc, NULL);
@@ -595,7 +595,7 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
             while (*sync.aligned != maxworkers) {
                 qthread_yield();
             }
-            qthread_internal_aligned_free(sync.aligned);
+            qthread_internal_aligned_free(sync.aligned, QTHREAD_ALIGNMENT_ALIGNED_T);
             break;
         case NO_SYNC:
             abort();
@@ -853,7 +853,7 @@ static QINLINE void qt_loopaccum_balance_inner(const size_t     start,
                     acc(out, realrets + ((i - 1) * size));
                 }
             }
-            qthread_internal_aligned_free(sync.aligned);
+            qthread_internal_aligned_free(sync.aligned, QTHREAD_ALIGNMENT_ALIGNED_T);
             break;
         case ALIGNED:
         case NO_SYNC:

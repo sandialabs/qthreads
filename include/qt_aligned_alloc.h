@@ -2,9 +2,10 @@
 
 #include "qt_visibility.h"
 
-void INTERNAL *qthread_internal_aligned_alloc(size_t         alloc_size,
-                                              unsigned short alignment);
-void INTERNAL qthread_internal_aligned_free(void *ptr);
+void INTERNAL *qthread_internal_aligned_alloc(size_t        alloc_size,
+                                              uint_fast16_t alignment);
+void INTERNAL qthread_internal_aligned_free(void         *ptr,
+                                            uint_fast16_t alignment);
 
 #endif
 /* vim:set expandtab: */

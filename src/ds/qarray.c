@@ -1,19 +1,12 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
+
+/* System Headers */
 #include <stdlib.h>                    /* for calloc() */
 #include <unistd.h>                    /* for getpagesize() */
 #include <sys/types.h>
 #include <sys/mman.h>
-#include <qthread/qarray.h>
-#include "qt_visibility.h"
-#include "qthread_asserts.h"
-#include "qthread_innards.h"           /* for shep_to_node && qthread_debug */
-#include "qt_debug.h"
-#if defined(HAVE_MALLOC_H) && defined(HAVE_MEMALIGN)
-# include <malloc.h>
-#endif
-
 #ifdef QTHREAD_USE_VALGRIND
 # include <valgrind/memcheck.h>
 #else
@@ -21,10 +14,18 @@
 # define VALGRIND_MAKE_MEM_DEFINED(a, b)
 #endif
 
+/* Local Headers */
+#include <qthread/qarray.h>
+#include "qt_visibility.h"
+#include "qthread_asserts.h"
+#include "qthread_innards.h"           /* for shep_to_node && qthread_debug */
+#include "qt_debug.h"
+#include "qt_aligned_alloc.h"
 #include "qt_gcd.h"                    /* for qt_lcm() */
 
 static unsigned short pageshift                  = 0;
 static aligned_t     *chunk_distribution_tracker = NULL;
+static size_t         pagesize                   = 0;
 
 /* local funcs */
 /* this function is for DIST *ONLY*; it returns a pointer to the location that
@@ -147,8 +148,7 @@ static qarray *qarray_create_internal(const size_t         count,
                                       const distribution_t d,
                                       const char           tight,
                                       const int            seg_pages)
-{                                      /*{{{ */
-    size_t  pagesize;
+{                               /*{{{ */
     size_t  segment_count;      /* number of segments allocated */
     qarray *ret = NULL;
 
@@ -357,20 +357,7 @@ static qarray *qarray_create_internal(const size_t         count,
     }
 #else /* ifdef QTHREAD_HAVE_MEM_AFFINITY */
       /* For speed, we want page-aligned memory, if we can get it */
-# ifdef HAVE_WORKING_VALLOC
-    ret->base_ptr = (char *)valloc(segment_count * ret->segment_bytes);
-# elif HAVE_MEMALIGN
-    ret->base_ptr =
-        (char *)memalign(pagesize, segment_count * ret->segment_bytes);
-# elif HAVE_POSIX_MEMALIGN
-    posix_memalign((void **)&(ret->base_ptr), pagesize,
-                   segment_count * ret->segment_bytes);
-# elif HAVE_PAGE_ALIGNED_MALLOC
-    ret->base_ptr = (char *)malloc(segment_count * ret->segment_bytes);
-# else
-    /* just don't free it */
-    ret->base_ptr = (char *)valloc(segment_count * ret->segment_bytes);
-# endif /* ifdef HAVE_WORKING_VALLOC */
+    ret->base_ptr = qthread_internal_aligned_alloc(segment_count * ret->segment_bytes, pagesize);
 #endif  /* ifdef QTHREAD_HAVE_MEM_AFFINITY */
     qassert_goto((ret->base_ptr != NULL), badret_exit);
 
@@ -552,9 +539,8 @@ void qarray_destroy(qarray *a)
     qt_affinity_free(a->base_ptr,
                      a->segment_bytes * (a->count / a->segment_size +
                                          ((a->count % a->segment_size) ? 1 : 0)));
-#elif (HAVE_WORKING_VALLOC || HAVE_MEMALIGN || HAVE_POSIX_MEMALIGN || HAVE_PAGE_ALIGNED_MALLOC)
-    /* avoid freeing base ptr if we had to use a broken valloc */
-    free(a->base_ptr);
+#else
+    qthread_internal_aligned_free(a->base_ptr, pagesize);
 #endif
     free(a);
 }                                      /*}}} */
