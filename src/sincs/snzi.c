@@ -53,18 +53,6 @@ static size_t       num_workers;
 static size_t       num_wps;
 static unsigned int cacheline;
 
-#ifdef HAVE_MEMALIGN
-# define ALIGNED_ALLOC(val, size, align) (val) = memalign((align), (size))
-#elif defined(HAVE_POSIX_MEMALIGN)
-# define ALIGNED_ALLOC(val, size, align) posix_memalign((void **)&(val), (align), (size))
-#elif defined(HAVE_WORKING_VALLOC)
-# define ALIGNED_ALLOC(val, size, align) (val) = valloc((size))
-#elif defined(HAVE_PAGE_ALIGNED_MALLOC)
-# define ALIGNED_ALLOC(val, size, align) (val) = malloc((size))
-#else
-# define ALIGNED_ALLOC(val, size, align) (val) = valloc((size)) /* cross your fingers! */
-#endif
-
 #define SNZI_ASSIGN(a, b) do {   \
         if ((b) == 0) { a = 0; } \
         else { a = (b) + 1; }    \
@@ -107,7 +95,7 @@ void qt_sinc_init(qt_sinc_t *restrict  sinc_,
 
         rdata->sizeof_shep_value_part = sizeof_shep_value_part;
 
-        ALIGNED_ALLOC(rdata->values, num_lines * cacheline, cacheline);
+        rdata->values = qthread_internal_aligned_alloc(num_lines * cacheline, cacheline);
         assert(rdata->values);
 
         // Initialize values
@@ -125,7 +113,7 @@ void qt_sinc_init(qt_sinc_t *restrict  sinc_,
     assert(snzi);
 
     assert(sizeof(qt_sinc_cache_count_t) <= cacheline);
-    ALIGNED_ALLOC(snzi->counts, num_sheps * cacheline, cacheline);
+    snzi_counts = qthread_internal_aligned_alloc(num_sheps * cacheline, cacheline);
     assert(snzi->counts);
     // memset(sinc->counts, 0, num_sheps * cacheline);
     // memset(sinc->counts, 0, QTHREAD_SIZEOF_ALIGNED_T * num_sheps);
@@ -262,14 +250,14 @@ void qt_sinc_fini(qt_sinc_t *sinc_)
     qt_sinc_snzi_t *const restrict snzi = sinc->snzi;
     assert(snzi);
     assert(snzi->counts);
-    free(snzi->counts);
+    qthread_internal_aligned_free(snzi->counts, cacheline);
     if (sinc->rdata) {
         qt_sinc_reduction_t *rdata = sinc->rdata;
         assert(rdata->result);
         assert(rdata->initial_value);
         free(rdata->initial_value);
         assert(rdata->values);
-        free(rdata->values);
+        qthread_internal_aligned_free(rdata->values, cacheline);
     }
 }
 
