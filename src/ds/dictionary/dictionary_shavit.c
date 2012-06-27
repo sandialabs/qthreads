@@ -11,12 +11,13 @@
  *
  * NOTE: I did not implement the Dynamic-Sized Array extension, because I don't
  * expect to support large numbers of entries in the table at the same time,
- * and I'm worried about state creep.
+ * and I'm worried about state creep. All that means is that for extremely
+ * large hash tables, we're less efficient than we could be.
  */
 
 #include <dictionary.h>
-#define MAX_LOAD     4
-//#define USE_HASHWORD 1
+#define MAX_LOAD 4
+// #define USE_HASHWORD 1
 
 #define key_t mykey_t
 
@@ -39,28 +40,28 @@ typedef uintptr_t marked_ptr_t;
 
 size_t hard_max_buckets = NO_BUCKETS;
 
-typedef struct list_entry hash_entry; 
-//So: list_entry* = hash_entry*
-//(other typedef found in dictionary.h)
+typedef struct list_entry hash_entry;
+// So: list_entry* = hash_entry*
+// (other typedef found in dictionary.h)
 
 struct qt_dictionary {
-    marked_ptr_t   *B;  // Buckets
-    volatile size_t count; //Crt number of elements in hash
-    volatile size_t size; //Crt number of buckets (doubling if load per bucket too much)
-    key_equals op_equals;
-	hashcode op_hash;
-}; 
-//So: qt_dictionary* = qt_hash
-//(typedef found in dictionary.h)
+    marked_ptr_t   *B;     // Buckets
+    volatile size_t count; // Crt number of elements in hash
+    volatile size_t size;  // Crt number of buckets (doubling if load per bucket too much)
+    key_equals      op_equals;
+    hashcode        op_hash;
+};
+// So: qt_dictionary* = qt_hash
+// (typedef found in dictionary.h)
 
 /* prototypes */
 static void *qt_lf_list_find(marked_ptr_t  *head,
-							 so_key_t       hashed_key,
+                             so_key_t       hashed_key,
                              qt_key_t       key,
                              marked_ptr_t **prev,
                              marked_ptr_t  *cur,
                              marked_ptr_t  *next,
-                             key_equals 	op_equals);
+                             key_equals     op_equals);
 static void initialize_bucket(qt_hash h,
                               size_t  bucket);
 
@@ -136,11 +137,11 @@ static uint64_t qt_hashword(uint64_t key)
  * If item exists replace it (force insert)
  */
 static void qt_lf_force_list_insert(marked_ptr_t *head,
-									hash_entry   *node,
-									key_equals 	  op_equals)
+                                    hash_entry   *node,
+                                    key_equals    op_equals)
 {
-	so_key_t hashed_key = node->hashed_key;
-	qt_key_t key = node->key;
+    so_key_t hashed_key = node->hashed_key;
+    qt_key_t key        = node->key;
 
     while (1) {
         marked_ptr_t *lprev;
@@ -149,11 +150,11 @@ static void qt_lf_force_list_insert(marked_ptr_t *head,
 
         if (qt_lf_list_find(head, hashed_key, key, &lprev, &cur, &lnext, op_equals) != NULL) {                       // needs to set cur/prev/next
             node->next = CONSTRUCT(0, lnext);
+        } else   {
+            node->next = CONSTRUCT(0, cur);
         }
-        else
-			node->next = CONSTRUCT(0, cur);
         if (qthread_cas(lprev, CONSTRUCT(0, cur), CONSTRUCT(0, node)) == CONSTRUCT(0, cur)) {
-			return;
+            return;
         }
     }
 }
@@ -161,51 +162,52 @@ static void qt_lf_force_list_insert(marked_ptr_t *head,
 /**
  * Insert node "node" in the list starting at position "head".
  * Set "ocur" to be the item with the same key if it exists
- * 	or the item which follows if the node was added successfully.
+ *      or the item which follows if the node was added successfully.
  * Set crt_node to point to the current node with key = "node->key"
- * Return 0 if item existed and 1 if it was inserted 
+ * Return 0 if item existed and 1 if it was inserted
  */
-static int qt_lf_list_insert(marked_ptr_t  *head,
-                             hash_entry    *node,
-                             marked_ptr_t  *ocur,
-							 hash_entry   **crt_node,
-							 key_equals 	op_equals)
+static int qt_lf_list_insert(marked_ptr_t *head,
+                             hash_entry   *node,
+                             marked_ptr_t *ocur,
+                             hash_entry  **crt_node,
+                             key_equals    op_equals)
 {
     so_key_t hashed_key = node->hashed_key;
-	qt_key_t key = node->key;
-	while (1) {
+    qt_key_t key        = node->key;
+
+    while (1) {
         marked_ptr_t *lprev;
         marked_ptr_t  cur;
 
         if (qt_lf_list_find(head, hashed_key, key, &lprev, &cur, NULL, op_equals) != NULL) {                       // needs to set cur/prev
             if (ocur) { *ocur = cur; }
-            if (crt_node) { *crt_node = PTR_OF(cur);}
+            if (crt_node) { *crt_node = PTR_OF(cur); }
             return 0;
         }
         node->next = CONSTRUCT(0, cur);
         if (qthread_cas(lprev, node->next, CONSTRUCT(0, node)) == CONSTRUCT(0, cur)) {
             if (ocur) { *ocur = cur; }
-            if (crt_node) { *crt_node = node;}
+            if (crt_node) { *crt_node = node; }
             return 1;
         }
     }
 }
 
-static int qt_lf_list_delete(marked_ptr_t  *head,
-							 so_key_t 		hashed_key,
-                             qt_key_t 		key,
-                             key_equals 	op_equals)
+static int qt_lf_list_delete(marked_ptr_t *head,
+                             so_key_t      hashed_key,
+                             qt_key_t      key,
+                             key_equals    op_equals)
 {
-	while (1) {
+    while (1) {
         marked_ptr_t *lprev;
         marked_ptr_t  lcur;
         marked_ptr_t  lnext;
-		if (qt_lf_list_find(head, hashed_key, key, &lprev, &lcur, &lnext, op_equals) == NULL) { printf("### inside delete - return 0\n"); return 0; }
+        if (qt_lf_list_find(head, hashed_key, key, &lprev, &lcur, &lnext, op_equals) == NULL) { printf("### inside delete - return 0\n"); return 0; }
         if (qthread_cas(&PTR_OF(lcur)->next, CONSTRUCT(0, lnext), CONSTRUCT(1, lnext)) != CONSTRUCT(0, lnext)) { printf("### inside delete - cas failed continue\n"); continue; }
         if (qthread_cas(lprev, CONSTRUCT(0, lcur), CONSTRUCT(0, lnext)) == CONSTRUCT(0, lcur)) {
             free(PTR_OF(lcur));
         } else {
-			qt_lf_list_find(head, hashed_key, key, NULL, NULL, NULL, op_equals);                       // needs to set cur/prev/next
+            qt_lf_list_find(head, hashed_key, key, NULL, NULL, NULL, op_equals);                                   // needs to set cur/prev/next
         }
         return 1;
     }
@@ -213,11 +215,11 @@ static int qt_lf_list_delete(marked_ptr_t  *head,
 
 static void *qt_lf_list_find(marked_ptr_t  *head,
                              so_key_t       hashed_key,
-                             qt_key_t		key,
+                             qt_key_t       key,
                              marked_ptr_t **oprev,
                              marked_ptr_t  *ocur,
                              marked_ptr_t  *onext,
-                             key_equals 	op_equals)
+                             key_equals     op_equals)
 {
     so_key_t      ckey;
     qt_key_t      okey;
@@ -225,8 +227,8 @@ static void *qt_lf_list_find(marked_ptr_t  *head,
     marked_ptr_t *prev = NULL;
     marked_ptr_t  cur  = UNINITIALIZED;
     marked_ptr_t  next = UNINITIALIZED;
-    
-	//int foundInsertPos = 0;
+
+    // int foundInsertPos = 0;
     while (1) {
         prev = head;
         cur  = *prev;
@@ -245,26 +247,25 @@ static void *qt_lf_list_find(marked_ptr_t  *head,
                 break; // this means someone mucked with the list; start over
             }
             if (!MARK_OF(next)) {  // if next pointer is not marked
-                if (ckey >= hashed_key) { 
-					// if current key > hashed_key, the key isn't in the list; if current key == hashed_key, the key IS in the list
-                    //if (foundInsertPos == 0) {
-                    	if (oprev) { *oprev = prev; }
-                   		if (ocur) { *ocur = cur; }
-                    	if (onext) { *onext = next; }
-                    	//foundInsertPos = 1;
-                    //}
-                    
-                    if(ckey == hashed_key){
-						if(okey != NULL && op_equals(okey, key)){
-							/*
-							if (oprev) { *oprev = prev; }
-                   			if (ocur) { *ocur = cur; }
-                    		if (onext) { *onext = next; }
-							*/
-							return cval;
-						}//else, keep looking
-					}
-					else return NULL;
+                if (ckey >= hashed_key) {
+                    // if current key > hashed_key, the key isn't in the list; if current key == hashed_key, the key IS in the list
+                    // if (foundInsertPos == 0) {
+                    if (oprev) { *oprev = prev; }
+                    if (ocur) { *ocur = cur; }
+                    if (onext) { *onext = next; }
+                    // foundInsertPos = 1;
+                    // }
+
+                    if(ckey == hashed_key) {
+                        if((okey != NULL) && op_equals(okey, key)) {
+                            /*
+                             * if (oprev) { *oprev = prev; }
+                             * if (ocur) { *ocur = cur; }
+                             * if (onext) { *onext = next; }
+                             */
+                            return cval;
+                        }                        // else, keep looking
+                    } else { return NULL; }
                 }
                 // but if current key < hashed_key, the we don't know yet, keep looking
                 prev = &(PTR_OF(cur)->next);
@@ -290,17 +291,17 @@ static inline so_key_t so_dummykey(const key_t key)
     return REVERSE(key);
 }
 
-#define PUT_ALWAYS 0
+#define PUT_ALWAYS    0
 #define PUT_IF_ABSENT 1
 
-//old public method; added last param to distinguish between put and put if absent
-static inline hash_entry* qt_hash_put(qt_hash  h,
-                qt_key_t key,
-                void    *value,
-                int put_choice)
+// old public method; added last param to distinguish between put and put if absent
+static inline hash_entry *qt_hash_put(qt_hash  h,
+                                      qt_key_t key,
+                                      void    *value,
+                                      int      put_choice)
 {
     hash_entry *node = malloc(sizeof(hash_entry)); // XXX: should pull out of a memory pool
-    hash_entry *ret = node;
+    hash_entry *ret  = node;
     size_t      bucket;
     uint64_t    lkey = (uint64_t)(uintptr_t)(h->op_hash(key));
 
@@ -309,25 +310,24 @@ static inline hash_entry* qt_hash_put(qt_hash  h,
 
     assert(node);
     assert((lkey & MSB) == 0);
-    node->hashed_key   = so_regularkey(lkey);
-    node->key = key; //Also store original key!
-    node->value = value;
-    node->next  = UNINITIALIZED;
+    node->hashed_key = so_regularkey(lkey);
+    node->key        = key; // Also store original key!
+    node->value      = value;
+    node->next       = UNINITIALIZED;
 
     if (h->B[bucket] == UNINITIALIZED) {
         initialize_bucket(h, bucket);
     }
-    
-    
+
     if(put_choice == PUT_IF_ABSENT) {
-		if (!qt_lf_list_insert(&(h->B[bucket]), node, NULL, &ret, h->op_equals)) {
-			free(node);
-			return ret->value;
-		}
+        if (!qt_lf_list_insert(&(h->B[bucket]), node, NULL, &ret, h->op_equals)) {
+            free(node);
+            return ret->value;
+        }
+    } else   {
+        qt_lf_force_list_insert(&(h->B[bucket]), node, h->op_equals);
     }
-    else
-		qt_lf_force_list_insert(&(h->B[bucket]), node, h->op_equals);
-		
+
     size_t csize = h->size;
     if (qthread_incr(&h->count, 1) / csize > MAX_LOAD) {
         if (2 * csize <= hard_max_buckets) { // this caps the size of the hash
@@ -337,21 +337,25 @@ static inline hash_entry* qt_hash_put(qt_hash  h,
     return ret->value;
 }
 
-void* qt_dictionary_put(qt_dictionary* dict, void* key, void* value)
+void *qt_dictionary_put(qt_dictionary *dict,
+                        void          *key,
+                        void          *value)
 {
-	return qt_hash_put(dict, key, value, PUT_ALWAYS);
+    return qt_hash_put(dict, key, value, PUT_ALWAYS);
 }
 
-void* qt_dictionary_put_if_absent(qt_dictionary* dict, void* key, void* value)
+void *qt_dictionary_put_if_absent(qt_dictionary *dict,
+                                  void          *key,
+                                  void          *value)
 {
-	return qt_hash_put(dict, key, value, PUT_IF_ABSENT);
+    return qt_hash_put(dict, key, value, PUT_IF_ABSENT);
 }
 
-//old public method
+// old public method
 static inline void *qt_hash_get(qt_hash        h,
-                         const qt_key_t key)
+                                const qt_key_t key)
 {
-	size_t   bucket;
+    size_t   bucket;
     uint64_t lkey = (uint64_t)(uintptr_t)(h->op_hash(key));
 
     HASH_KEY(lkey);
@@ -366,14 +370,15 @@ static inline void *qt_hash_get(qt_hash        h,
     return qt_lf_list_find(&(h->B[bucket]), so_regularkey(lkey), key, NULL, NULL, NULL, h->op_equals);
 }
 
-void* qt_dictionary_get(qt_dictionary* dict, void* key)
+void *qt_dictionary_get(qt_dictionary *dict,
+                        void          *key)
 {
-	return qt_hash_get(dict, key);
+    return qt_hash_get(dict, key);
 }
 
-//old public method
+// old public method
 static inline int qt_hash_remove(qt_hash        h,
-						  const qt_key_t key)
+                                 const qt_key_t key)
 {
     size_t   bucket;
     uint64_t lkey = (uint64_t)(uintptr_t)(h->op_hash(key));
@@ -391,12 +396,13 @@ static inline int qt_hash_remove(qt_hash        h,
     return 1;
 }
 
-void* qt_dictionary_delete(qt_dictionary* dict, void* key)
+void *qt_dictionary_delete(qt_dictionary *dict,
+                           void          *key)
 {
-	void* val = qt_hash_get(dict, key); // TODO : this is inefficient!
-	int ret = qt_hash_remove(dict, key);
-	if(ret) { return val; }
-	else return NULL;
+    void *val = qt_hash_get(dict, key);     // TODO : this is inefficient!
+    int   ret = qt_hash_remove(dict, key);
+
+    if(ret) { return val; } else { return NULL; }
 }
 
 static inline size_t GET_PARENT(uint64_t bucket)
@@ -423,10 +429,10 @@ static void initialize_bucket(qt_hash h,
     }
     hash_entry *dummy = malloc(sizeof(hash_entry)); // XXX: should pull out of a memory pool
     assert(dummy);
-    dummy->hashed_key   = so_dummykey(bucket);
-    dummy->key = NULL;
-    dummy->value = NULL;
-    dummy->next  = UNINITIALIZED;
+    dummy->hashed_key = so_dummykey(bucket);
+    dummy->key        = NULL;
+    dummy->value      = NULL;
+    dummy->next       = UNINITIALIZED;
     if (!qt_lf_list_insert(&(h->B[parent]), dummy, &cur, NULL, h->op_equals)) {
         free(dummy);
         dummy = PTR_OF(cur);
@@ -436,16 +442,18 @@ static void initialize_bucket(qt_hash h,
     }
 }
 
-//old public method
-static inline qt_hash qt_hash_create(key_equals eq, hashcode hash)
+// old public method
+static inline qt_hash qt_hash_create(key_equals eq,
+                                     hashcode   hash)
 {
     qt_hash tmp = malloc(sizeof(qt_dictionary));
-    tmp -> op_equals = eq;
-    tmp -> op_hash = hash;
+
+    tmp->op_equals = eq;
+    tmp->op_hash   = hash;
 
     assert(tmp);
     if (hard_max_buckets == 0) {
-        hard_max_buckets = getpagesize()/sizeof(marked_ptr_t);
+        hard_max_buckets = getpagesize() / sizeof(marked_ptr_t);
     }
     tmp->B = calloc(hard_max_buckets, sizeof(marked_ptr_t));
     assert(tmp->B);
@@ -459,12 +467,13 @@ static inline qt_hash qt_hash_create(key_equals eq, hashcode hash)
     return tmp;
 }
 
-qt_dictionary* qt_dictionary_create(key_equals eq, hashcode hash)
+qt_dictionary *qt_dictionary_create(key_equals eq,
+                                    hashcode   hash)
 {
-	return qt_hash_create(eq, hash);
+    return qt_hash_create(eq, hash);
 }
 
-//old public method
+// old public method
 static inline void qt_hash_destroy(qt_hash h)
 {
     marked_ptr_t cursor;
@@ -482,140 +491,163 @@ static inline void qt_hash_destroy(qt_hash h)
     free(h);
 }
 
-void qt_dictionary_destroy(qt_dictionary* d)
+void qt_dictionary_destroy(qt_dictionary *d)
 {
-	qt_hash_destroy(d);
+    qt_hash_destroy(d);
 }
 
 /*
-void qt_hash_destroy_deallocate(qt_hash                h,
-                                qt_hash_deallocator_fn f)
-{
-    marked_ptr_t cursor;
+ * void qt_hash_destroy_deallocate(qt_hash                h,
+ *                              qt_hash_deallocator_fn f)
+ * {
+ *  marked_ptr_t cursor;
+ *
+ *  assert(h);
+ *  assert(h->B);
+ *  cursor = h->B[0];
+ *  while (PTR_OF(cursor) != NULL) {
+ *      marked_ptr_t tmp = cursor;
+ *      assert(MARK_OF(tmp) == 0);
+ *      cursor = PTR_OF(cursor)->next;
+ *      f(PTR_OF(cursor));
+ *      free(PTR_OF(tmp));
+ *  }
+ *  free(h->B);
+ *  free(h);
+ * }
+ *
+ * size_t qt_hash_count(qt_hash h)
+ * {
+ *  assert(h);
+ *  return h->size;
+ * }
+ *
+ * void qt_hash_callback(qt_hash             h,
+ *                    qt_hash_callback_fn f,
+ *                    void               *arg)
+ * {
+ *  marked_ptr_t cursor;
+ *
+ *  assert(h);
+ *  assert(h->B);
+ *  cursor = h->B[0];
+ *  while (PTR_OF(cursor) != NULL) {
+ *      marked_ptr_t tmp = cursor;
+ *      so_key_t     key = PTR_OF(cursor)->hashed_key;
+ *      assert(MARK_OF(tmp) == 0);
+ *      if (key & 1) {
+ *          f((qt_key_t)(uintptr_t)REVERSE(key ^ 1), PTR_OF(cursor)->value, arg);
+ *      } else {
+ *          // f((qt_key_t)REVERSE(key), PTR_OF(cursor)->value, (void *)1);
+ *      }
+ *      cursor = PTR_OF(cursor)->next;
+ *  }
+ * }
+ */
 
-    assert(h);
-    assert(h->B);
-    cursor = h->B[0];
-    while (PTR_OF(cursor) != NULL) {
-        marked_ptr_t tmp = cursor;
-        assert(MARK_OF(tmp) == 0);
-        cursor = PTR_OF(cursor)->next;
-        f(PTR_OF(cursor));
-        free(PTR_OF(tmp));
-    }
-    free(h->B);
-    free(h);
-}
-
-size_t qt_hash_count(qt_hash h)
-{
-    assert(h);
-    return h->size;
-}
-
-void qt_hash_callback(qt_hash             h,
-                      qt_hash_callback_fn f,
-                      void               *arg)
-{
-    marked_ptr_t cursor;
-
-    assert(h);
-    assert(h->B);
-    cursor = h->B[0];
-    while (PTR_OF(cursor) != NULL) {
-        marked_ptr_t tmp = cursor;
-        so_key_t     key = PTR_OF(cursor)->hashed_key;
-        assert(MARK_OF(tmp) == 0);
-        if (key & 1) {
-            f((qt_key_t)(uintptr_t)REVERSE(key ^ 1), PTR_OF(cursor)->value, arg);
-        } else {
-            // f((qt_key_t)REVERSE(key), PTR_OF(cursor)->value, (void *)1);
-        }
-        cursor = PTR_OF(cursor)->next;
-    }
-}
-*/
-
-struct qt_dictionary_iterator{
-	qt_dictionary* dict;
-	list_entry* crt; //=NULL if iterator is newly created or reached the end; =crt elem otherwise.
-	int bkt; //= -1 if iterator is newly created; =1 otherwise.
+struct qt_dictionary_iterator {
+    qt_dictionary *dict;
+    list_entry    *crt; // =NULL if iterator is newly created or reached the end; =crt elem otherwise.
+    int            bkt; // = -1 if iterator is newly created; =1 otherwise.
 };
 
-qt_dictionary_iterator* qt_dictionary_iterator_create(qt_dictionary* dict) { 
-	if(dict == NULL){
-		return ERROR;
-	}
-	qt_dictionary_iterator* it = (qt_dictionary_iterator*) malloc (sizeof(qt_dictionary_iterator));
-	it -> dict = dict;
-	it -> crt = NULL;
-	it -> bkt = -1;
-	return it; 
+qt_dictionary_iterator *qt_dictionary_iterator_create(qt_dictionary *dict)
+{
+    if(dict == NULL) {
+        return ERROR;
+    }
+    qt_dictionary_iterator *it = (qt_dictionary_iterator *)malloc(sizeof(qt_dictionary_iterator));
+    it->dict = dict;
+    it->crt  = NULL;
+    it->bkt  = -1;
+    return it;
 }
-void qt_dictionary_iterator_destroy(qt_dictionary_iterator* it) {
-	if(it == NULL) return;
-	free(it);
+
+void qt_dictionary_iterator_destroy(qt_dictionary_iterator *it)
+{
+    if(it == NULL) { return; }
+    free(it);
 }
-static list_entry* qt_dictionary_iterator_next_element(qt_dictionary_iterator* it) { 
-	if(it == NULL || it -> dict == NULL){
-		return ERROR;
-	}
-	qt_dictionary* h = it->dict;
-	if(h->count == 0){
-		it->bkt = 1;
-		return NULL;
-	}
-	if(it->bkt == -1){
-		int csize = h->size, bucket;
-		for(bucket=0; bucket<csize; bucket++)
-			if (h->B[bucket] != UNINITIALIZED){
-				it->bkt = 1;
-				it->crt = PTR_OF(h->B[bucket]);
-				return it->crt;
-			}
-	}
-	if(it->crt == UNINITIALIZED)
-		return NULL;
-	it->crt = PTR_OF(it->crt->next);
-	return it->crt;
+
+static list_entry *qt_dictionary_iterator_next_element(qt_dictionary_iterator *it)
+{
+    if((it == NULL) || (it->dict == NULL)) {
+        return ERROR;
+    }
+    qt_dictionary *h = it->dict;
+    if(h->count == 0) {
+        it->bkt = 1;
+        return NULL;
+    }
+    if(it->bkt == -1) {
+        int csize = h->size, bucket;
+        for(bucket = 0; bucket < csize; bucket++)
+            if (h->B[bucket] != UNINITIALIZED) {
+                it->bkt = 1;
+                it->crt = PTR_OF(h->B[bucket]);
+                return it->crt;
+            }
+    }
+    if(it->crt == UNINITIALIZED) {
+        return NULL;
+    }
+    it->crt = PTR_OF(it->crt->next);
+    return it->crt;
 }
-list_entry* qt_dictionary_iterator_next(qt_dictionary_iterator* it) { 
-	list_entry* ret = qt_dictionary_iterator_next_element(it);
-	while(ret != ERROR && ret != NULL && ret -> key == NULL){
-		ret = qt_dictionary_iterator_next_element(it);
-	} 
-	return ret;
+
+list_entry *qt_dictionary_iterator_next(qt_dictionary_iterator *it)
+{
+    list_entry *ret = qt_dictionary_iterator_next_element(it);
+
+    while(ret != ERROR && ret != NULL && ret->key == NULL) {
+        ret = qt_dictionary_iterator_next_element(it);
+    }
+    return ret;
 }
-list_entry* qt_dictionary_iterator_get(const qt_dictionary_iterator* it) { 
-	if(it == NULL || it -> dict == NULL){
-		return ERROR;
-	}
-	qt_dictionary* h = it->dict;
-	if(h->count == 0 || it->crt == UNINITIALIZED)
-		return NULL;
-	return it->crt;
+
+list_entry *qt_dictionary_iterator_get(const qt_dictionary_iterator *it)
+{
+    if((it == NULL) || (it->dict == NULL)) {
+        return ERROR;
+    }
+    qt_dictionary *h = it->dict;
+    if((h->count == 0) || (it->crt == UNINITIALIZED)) {
+        return NULL;
+    }
+    return it->crt;
 }
-qt_dictionary_iterator* qt_dictionary_end(qt_dictionary* dict) { 
-	qt_dictionary_iterator* ret = qt_dictionary_iterator_create(dict);
-	ret -> bkt = 1;
-	return ret; 
+
+qt_dictionary_iterator *qt_dictionary_end(qt_dictionary *dict)
+{
+    qt_dictionary_iterator *ret = qt_dictionary_iterator_create(dict);
+
+    ret->bkt = 1;
+    return ret;
 }
-int qt_dictionary_iterator_equals(qt_dictionary_iterator*a, qt_dictionary_iterator* b) { 
-	if (a == NULL || b == NULL)
-		return a == b;
-	return (a -> crt == b ->crt) && (a -> dict == b -> dict) && (a -> bkt == b -> bkt);
+
+int qt_dictionary_iterator_equals(qt_dictionary_iterator *a,
+                                  qt_dictionary_iterator *b)
+{
+    if ((a == NULL) || (b == NULL)) {
+        return a == b;
+    }
+    return (a->crt == b->crt) && (a->dict == b->dict) && (a->bkt == b->bkt);
 }
-void qt_dictionary_printbuckets(qt_dictionary* dict) { 
-	/*int csize = dict->size, bucket;
-	int used_buckets = 0, total = dict->count;
-	for(bucket=0; bucket<csize-1; bucket++){
-		if (dict->B[bucket] != UNINITIALIZED){
-			list_entry* head = dict->B[bucket];
-			list_entry* tail = dict->B[bucket+1];
-			while(head != tail && head != NULL){
-				...
-			}
-		}
-	}*/
-	printf("allocated_buckets = %d; total elements = %d;\n", (int)dict->size, (int)dict->count);
+
+void qt_dictionary_printbuckets(qt_dictionary *dict)
+{
+    /*int csize = dict->size, bucket;
+     * int used_buckets = 0, total = dict->count;
+     * for(bucket=0; bucket<csize-1; bucket++){
+     *      if (dict->B[bucket] != UNINITIALIZED){
+     *              list_entry* head = dict->B[bucket];
+     *              list_entry* tail = dict->B[bucket+1];
+     *              while(head != tail && head != NULL){
+     *                      ...
+     *              }
+     *      }
+     * }*/
+    printf("allocated_buckets = %d; total elements = %d;\n", (int)dict->size, (int)dict->count);
 }
+
+/* vim:set expandtab: */
