@@ -5,10 +5,6 @@
 /* System Headers */
 #include <pthread.h> /* for pthread_key_*() */
 #include <string.h>  /* for memset() */
-#include <stdlib.h>  /* for malloc() and free(), per C89 */
-#ifdef HAVE_MALLOC_H
-# include <malloc.h> /* for memalign() */
-#endif
 
 /* Internal Headers */
 #include "qt_spawncache.h"
@@ -18,6 +14,7 @@
 #include "qthread_innards.h"
 #include "qthread/cacheline.h"
 #include "qt_macros.h"
+#include "qt_aligned_alloc.h"
 
 /* Globals */
 TLS_DECL_INIT(qt_threadqueue_private_t*,spawn_cache);
@@ -27,7 +24,7 @@ static void qt_spawncache_shutdown(void)
 {
     qthread_debug(CORE_DETAILS, "destroy thread-local task queue\n");
     void *freeme = TLS_GET(spawn_cache);
-    free(freeme);
+    qthread_internal_aligned_free(freeme, qthread_cacheline());
     TLS_DELETE(spawn_cache);
 }
 
@@ -39,7 +36,7 @@ static void qt_threadqueue_private_destroy(void *q)
            ((qt_threadqueue_private_t *)q)->qlength == 0 &&
            ((qt_threadqueue_private_t *)q)->qlength_stealable == 0);
 
-    free(q);
+    qthread_internal_aligned_free(q, qthread_cacheline());
 }
 #endif
 
@@ -52,18 +49,8 @@ void INTERNAL qt_spawncache_init(void)
 
 qt_threadqueue_private_t INTERNAL *qt_init_local_spawncache(void)
 {
-#ifdef HAVE_MEMALIGN
-    void *const ret = memalign(qthread_cacheline(), sizeof(qt_threadqueue_private_t));
-#elif defined(HAVE_POSIX_MEMALIGN)
-    void *ret = NULL;
-    posix_memalign(&(ret), qthread_cacheline(), sizeof(qt_threadqueue_private_t));
-#elif defined(HAVE_WORKING_VALLOC)
-    void *const ret = valloc(sizeof(qt_threadqueue_private_t));
-#elif defined(HAVE_PAGE_ALIGNED_MALLOC)
-    void *const ret = malloc(sizeof(qt_threadqueue_private_t));
-#else
-    void *const ret = valloc(sizeof(qt_threadqueue_private_t));  /* cross your fingers */
-#endif
+    void *const ret = qthread_internal_aligned_alloc(sizeof(qt_threadqueue_private_t), qthread_cacheline());
+    assert(ret);
     memset(ret, 0, sizeof(qt_threadqueue_private_t));
 
     TLS_SET(spawn_cache, ret);
