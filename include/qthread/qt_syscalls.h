@@ -46,7 +46,7 @@ ssize_t qt_write(int         filedes,
 # define connect(s, a, l)      qt_connect((s), (a), (l))
 # define poll(f, n, t)         qt_poll((f), (n), (t))
 # define pread(f, b, n, o)     qt_pread((f), (b), (n), (o))
-# define pwrite(f, b, n, o)    qt_pread((f), (b), (n), (o))
+# define pwrite(f, b, n, o)    qt_pwrite((f), (b), (n), (o))
 # define read(f, b, n)         qt_read((f), (b), (n))
 # define select(n, r, w, e, t) qt_select((n), (r), (w), (e), (t))
 # define system(c)             qt_system((c))
