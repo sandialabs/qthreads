@@ -289,7 +289,7 @@ static void qt_loop_spawner(const size_t start,
                 qwa.sync = sync.aligned;
             case DONECOUNT:
                 qwa.sync = &dc;
-                qassert_aligned(&dc, QTHREAD_ALIGNMENT_ALIGNED_T);
+                qassert_aligned(dc, QTHREAD_ALIGNMENT_ALIGNED_T);
                 qthread_debug(ALWAYS_OUTPUT, "qwa.sync = %p\n", qwa.sync);
                 break;
             case SINC_T:
