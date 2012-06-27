@@ -1529,8 +1529,13 @@ static QINLINE void *qthread_cas_ptr_(void **const addr,
     __sync_val_compare_and_swap((ADDR), (OLDV), (NEWV))
 #  define qthread_cas64(ADDR, OLDV, NEWV) \
     __sync_val_compare_and_swap((ADDR), (OLDV), (NEWV))
-#  define qthread_cas_ptr(ADDR, OLDV, NEWV) \
-    (void *)__sync_val_compare_and_swap((ADDR), (OLDV), (NEWV))
+#  ifdef __INTEL_COMPILER
+#   define qthread_cas_ptr(ADDR, OLDV, NEWV) \
+     (void *)__sync_val_compare_and_swap((ADDR), (uintptr_t)(OLDV), (uintptr_t)(NEWV))
+#  else
+#   define qthread_cas_ptr(ADDR, OLDV, NEWV) \
+     (void *)__sync_val_compare_and_swap((ADDR), (OLDV), (NEWV))
+#  endif
 # else
 #  define qthread_cas(ADDR, OLDV, NEWV) \
     qthread_cas_xx((aligned_t *)(ADDR), (aligned_t)(OLDV), (aligned_t)(NEWV), sizeof(*(ADDR)))
