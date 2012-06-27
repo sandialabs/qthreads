@@ -7,5 +7,6 @@ void INTERNAL *qthread_internal_aligned_alloc(size_t        alloc_size,
 void INTERNAL qthread_internal_aligned_free(void         *ptr,
                                             uint_fast16_t alignment);
 
-#endif
+size_t INTERNAL qt_getpagesize(void);
+#endif // ifndef HAVE_QT_ALIGNED_ALLOC_H
 /* vim:set expandtab: */

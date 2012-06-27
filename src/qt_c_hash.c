@@ -1,27 +1,18 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
+
+/* System Headers */
+#include <stdlib.h>
+
+/* Internal Headers */
 #include "qt_visibility.h"
 #include "qt_hash.h"
 #include "qthread_asserts.h"
 #include "qthread_prefetch.h"
 #include "qt_atomics.h"
 #include "qthread/cacheline.h"
-#include <stdlib.h>
-#include <unistd.h>                    /* for getpagesize() */
-#if (HAVE_MEMALIGN && HAVE_MALLOC_H)
-# include <malloc.h>
-#endif
-
-#ifdef HAVE_GETPAGESIZE
-# include <unistd.h>
-#else
-static QINLINE int getpagesize(void)
-{
-    return 4096;
-}
-
-#endif
+#include "qt_aligned_alloc.h"
 
 #ifndef QT_HASH_CAST
 # define QT_HASH_CAST qt_key_t
@@ -61,7 +52,7 @@ static inline size_t encompassing_power_of_two(size_t k)
 static inline void qt_hash_internal_create(qt_hash ret,
                                            size_t  entries)
 {   /*{{{*/
-    size_t min_entries = 2 * getpagesize() / sizeof(hash_entry);
+    size_t min_entries = 2 * qt_getpagesize() / sizeof(hash_entry);
 
     /* meta data */
     if (entries % min_entries != 0) {
@@ -79,18 +70,8 @@ static inline void qt_hash_internal_create(qt_hash ret,
         ret->shrink_size = entries * 0.030f;
     }
     /* data storage */
-#if defined(HAVE_MEMALIGN)
-    ret->entries = memalign(linesize, sizeof(hash_entry) * entries);
-#elif defined(HAVE_POSIX_MEMALIGN)
-    posix_memalign((void **)&(ret->entries), linesize,
-                   sizeof(hash_entry) * entries);
-#elif defined(HAVE_WORKING_VALLOC)
-    ret->entries = valloc(sizeof(hash_entry) * entries);
-#elif defined(HAVE_PAGE_ALIGNED_MALLOC)
-    ret->entries = malloc(sizeof(hash_entry) * entries);
-#else
-    ret->entries = valloc(sizeof(hash_entry) * entries);        /* cross your fingers */
-#endif
+    ret->entries = qthread_internal_aligned_alloc(sizeof(hash_entry) * entries, linesize);
+    assert(ret->entries);
     if (ret->entries) {
         memset(ret->entries, 0, sizeof(hash_entry) * entries);
     } else {
@@ -251,7 +232,7 @@ void INTERNAL qt_hash_destroy(qt_hash h)
         free((void *)h->lock);
     }
     assert(h->entries);
-    free(h->entries);
+    qthread_internal_aligned_free(h->entries, linesize);
     free(h);
 } /*}}}*/
 

@@ -27,27 +27,32 @@ static QINLINE int getpagesize()
 /* local constants */
 static size_t pagesize = 0;
 
+size_t INTERNAL qt_getpagesize(void)
+{
+    if (pagesize == 0) {
+        pagesize = getpagesize();
+    }
+    return pagesize;
+}
+
 void INTERNAL *qthread_internal_aligned_alloc(size_t        alloc_size,
                                               uint_fast16_t alignment)
 {
     void *ret;
 
     assert(alloc_size > 0);
-    if (pagesize == 0) {
-        pagesize = getpagesize();
-    }
     switch (alignment) {
         case 0:
             ret = malloc(alloc_size);
             break;
         default:
 #if defined(HAVE_WORKING_VALLOC)
-            if (alignment == pagesize) {
+            if (alignment == qt_getpagesize()) {
                 ret = valloc(alloc_size);
                 break;
             }
 #elif defined(HAVE_PAGE_ALIGNED_MALLOC)
-            if (alignment == pagesize) {
+            if (alignment == qt_getpagesize()) {
                 ret = malloc(alloc_size);
                 break;
             }
@@ -80,7 +85,7 @@ void INTERNAL qthread_internal_aligned_free(void         *ptr,
             break;
         default:
 #if defined(HAVE_WORKING_VALLOC) || defined(HAVE_PAGE_ALIGNED_MALLOC)
-            if (alignment == pagesize) {
+            if (alignment == qt_getpagesize()) {
                 free(ptr);
                 break;
             }
