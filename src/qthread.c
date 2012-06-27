@@ -77,6 +77,7 @@
 #ifdef QTHREAD_MULTINODE
 # include "qt_multinode_innards.h"
 #endif
+#include "qt_aligned_alloc.h"
 
 #ifdef QTHREAD_RCRTOOL
 # include "maestro_sched.h"
@@ -961,8 +962,6 @@ int API_FUNC qthread_initialize(void)
 
 #ifdef QTHREAD_GUARD_PAGES
     {
-        size_t pagesize = getpagesize();
-
         /* round stack size to nearest page */
         if (qlib->qthread_stack_size % pagesize) {
             qlib->qthread_stack_size +=
