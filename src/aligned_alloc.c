@@ -23,6 +23,7 @@ static QINLINE int getpagesize()
 #include "qt_visibility.h"
 #include "qt_aligned_alloc.h"
 #include "qthread_asserts.h"
+#include "qt_debug.h"
 
 /* local constants */
 size_t _pagesize = 0;
@@ -68,7 +69,7 @@ void INTERNAL *qthread_internal_aligned_alloc(size_t        alloc_size,
             posix_memalign(&(ret), alignment, alloc_size);
 #else
             {
-                uint8_t *tmp = malloc((size + alignment - 1) + sizeof(void *));
+                uint8_t *tmp = malloc((alloc_size + alignment - 1) + sizeof(void *));
                 if (!tmp) { return NULL; }
                 ret                 = (void *)(((uintptr_t)(tmp + sizeof(void *) + alignment - 1)) & ~(alignment - 1));
                 *((void **)ret - 1) = tmp;
@@ -107,6 +108,7 @@ void INTERNAL qthread_internal_aligned_free(void         *ptr,
 #if defined(HAVE_MEMALIGN) || defined(HAVE_POSIX_MEMALIGN)
             free(ptr);
 #else
+            assert((uintptr_t)*((void **)ptr - 1) > 4096);
             free(*((void **)ptr - 1));
 #endif
     }
