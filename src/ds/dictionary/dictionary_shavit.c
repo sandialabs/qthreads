@@ -1,7 +1,21 @@
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
+/* System Headers */
 #include <stdlib.h> /* for malloc/free/etc */
-#include <unistd.h> /* for getpagesize() */
-#include <assert.h>
-#include <qthread.h> /* for qthread_incr() and qthread_cas() */
+#include <stdio.h> /* for printf() */
+
+/* Qthreads Headers */
+#include <qthread/qthread.h> /* for qthread_incr() and qthread_cas() */
+#include <qthread/qpool.h>
+#include <qthread/dictionary.h>
+
+/* Internal Headers */
+#include "qt_debug.h"
+#include "qt_atomics.h"
+#include "qt_aligned_alloc.h"
+#include "qthread_asserts.h"
 
 /*
  * The hash table in this file is based on the work by Ori Shalev and Nir Shavit
@@ -15,7 +29,6 @@
  * large hash tables, we're less efficient than we could be.
  */
 
-#include <dictionary.h>
 #define MAX_LOAD 4
 // #define USE_HASHWORD 1
 
@@ -38,7 +51,11 @@ typedef uintptr_t marked_ptr_t;
 #define CONSTRUCT(mark, ptr) (PTR_MASK((uintptr_t)ptr) | (mark))
 #define UNINITIALIZED ((marked_ptr_t)0)
 
-size_t hard_max_buckets = NO_BUCKETS;
+/* Internal Globals */
+static size_t hard_max_buckets = NO_BUCKETS;
+
+/* ... pools */
+static qpool *hash_entry_pool = NULL;
 
 typedef struct list_entry hash_entry;
 // So: list_entry* = hash_entry*
@@ -150,7 +167,7 @@ static void qt_lf_force_list_insert(marked_ptr_t *head,
 
         if (qt_lf_list_find(head, hashed_key, key, &lprev, &cur, &lnext, op_equals) != NULL) {                       // needs to set cur/prev/next
             node->next = CONSTRUCT(0, lnext);
-        } else   {
+        } else {
             node->next = CONSTRUCT(0, cur);
         }
         if (qthread_cas(lprev, CONSTRUCT(0, cur), CONSTRUCT(0, node)) == CONSTRUCT(0, cur)) {
@@ -202,8 +219,14 @@ static int qt_lf_list_delete(marked_ptr_t *head,
         marked_ptr_t *lprev;
         marked_ptr_t  lcur;
         marked_ptr_t  lnext;
-        if (qt_lf_list_find(head, hashed_key, key, &lprev, &lcur, &lnext, op_equals) == NULL) { printf("### inside delete - return 0\n"); return 0; }
-        if (qthread_cas(&PTR_OF(lcur)->next, CONSTRUCT(0, lnext), CONSTRUCT(1, lnext)) != CONSTRUCT(0, lnext)) { printf("### inside delete - cas failed continue\n"); continue; }
+        if (qt_lf_list_find(head, hashed_key, key, &lprev, &lcur, &lnext, op_equals) == NULL) {
+            qthread_debug(ALWAYS_PRINT, "### inside delete - return 0\n");
+            return 0;
+        }
+        if (qthread_cas_ptr(&PTR_OF(lcur)->next, CONSTRUCT(0, lnext), CONSTRUCT(1, lnext)) != (void*)CONSTRUCT(0, lnext)) {
+            qthread_debug(ALWAYS_PRINT, "### inside delete - cas failed continue\n");
+            continue;
+        }
         if (qthread_cas(lprev, CONSTRUCT(0, lcur), CONSTRUCT(0, lnext)) == CONSTRUCT(0, lcur)) {
             free(PTR_OF(lcur));
         } else {
@@ -300,7 +323,8 @@ static inline hash_entry *qt_hash_put(qt_hash  h,
                                       void    *value,
                                       int      put_choice)
 {
-    hash_entry *node = malloc(sizeof(hash_entry)); // XXX: should pull out of a memory pool
+    // hash_entry *node = malloc(sizeof(hash_entry)); // XXX: should pull out of a memory pool
+    hash_entry *node = qpool_alloc(hash_entry_pool);
     hash_entry *ret  = node;
     size_t      bucket;
     uint64_t    lkey = (uint64_t)(uintptr_t)(h->op_hash(key));
@@ -324,7 +348,7 @@ static inline hash_entry *qt_hash_put(qt_hash  h,
             free(node);
             return ret->value;
         }
-    } else   {
+    } else {
         qt_lf_force_list_insert(&(h->B[bucket]), node, h->op_equals);
     }
 
@@ -446,14 +470,24 @@ static void initialize_bucket(qt_hash h,
 static inline qt_hash qt_hash_create(key_equals eq,
                                      hashcode   hash)
 {
-    qt_hash tmp = malloc(sizeof(qt_dictionary));
+    qt_hash tmp;
 
+    if (hash_entry_pool == NULL) {
+        if (qthread_cas_ptr(&hash_entry_pool, NULL, (void *)1) == NULL) {
+            hash_entry_pool = qpool_create(sizeof(hash_entry));
+        } else {
+            while (hash_entry_pool == (void*)1) SPINLOCK_BODY();
+        }
+    }
+
+    tmp = malloc(sizeof(qt_dictionary));
+    assert(tmp);
     tmp->op_equals = eq;
     tmp->op_hash   = hash;
 
     assert(tmp);
     if (hard_max_buckets == 0) {
-        hard_max_buckets = getpagesize() / sizeof(marked_ptr_t);
+        hard_max_buckets = pagesize / sizeof(marked_ptr_t);
     }
     tmp->B = calloc(hard_max_buckets, sizeof(marked_ptr_t));
     assert(tmp->B);
