@@ -220,6 +220,7 @@ void INTERNAL *qt_mpool_alloc(qt_mpool pool)
         do {
             tc->next = pool->caches;
         } while (qthread_cas_ptr(&pool->caches, tc->next, tc) != tc->next);
+        qthread_debug(MPOOL_DETAILS, "added %p to caches\n", tc);
         pthread_setspecific(pool->threadlocal_cache, tc);
     }
 #endif /* ifdef TLS */
@@ -322,11 +323,16 @@ void INTERNAL qt_mpool_free(qt_mpool pool,
 #else /* ifdef TLS */
     tc = pthread_getspecific(pool->threadlocal_cache);
     if (NULL == tc) {
-        tc = calloc(1, sizeof(qt_mpool_threadlocal_cache_t));
+        tc = qthread_internal_aligned_alloc(sizeof(qt_mpool_threadlocal_cache_t), CACHELINE_WIDTH);
         assert(tc);
+        tc->cache = NULL;
+        tc->count = 0;
+        tc->block = NULL;
+        tc->i     = 0;
         do {
             tc->next = pool->caches;
         } while (qthread_cas_ptr(&pool->caches, tc->next, tc) != tc->next);
+        qthread_debug(MPOOL_DETAILS, "added %p to caches\n", tc);
         pthread_setspecific(pool->threadlocal_cache, tc);
     }
 #endif /* ifdef TLS */
@@ -387,11 +393,13 @@ void INTERNAL qt_mpool_destroy(qt_mpool pool)
         pool->alloc_list = pool->alloc_list[pagesize / sizeof(void *) - 1];
         free(p);
     }
+    qthread_debug(MPOOL_DETAILS, "begin free TLS caches\n");
     while (pool->caches) {
         qt_mpool_threadlocal_cache_t *freeme = pool->caches;
         pool->caches = freeme->next;
         qthread_internal_aligned_free(freeme, CACHELINE_WIDTH);
     }
+    qthread_debug(MPOOL_DETAILS, "done freeing TLS caches\n");
 #ifndef TLS
     pthread_key_delete(pool->threadlocal_cache);
 #endif
