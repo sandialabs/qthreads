@@ -343,6 +343,7 @@ void *qt_hash_put_helper(qt_dictionary *h,
     e->hashed_key = lkey;
     e->key        = key;
     e->value      = value;
+    e->next       = NULL;  
     hash_entry *crt;
     do {
         if (child_val.e == NULL) {
@@ -713,7 +714,7 @@ list_entry *qt_dictionary_iterator_next(qt_dictionary_iterator *it)
         if(local_e != NULL) {
             for(i = it->spine_index; i < SPINE_LENGTH; i++)
                 if((local_e->elements[i].e != NULL) && !SPINE_PTR_TEST(local_e->elements[i])) {
-                    it->spine_index = i;
+                    it->spine_index = i+1;
                     it->crt         = local_e->elements[i].e;
                     return it->crt;
                 } else if( local_e->elements[i].e != NULL) {}
