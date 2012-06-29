@@ -5,6 +5,8 @@
 /* System Headers */
 #include <stdlib.h> /* for malloc/free/etc */
 #include <stdio.h> /* for printf() */
+#include <unistd.h> /* for getpagesize() */
+#include <assert.h>
 
 /* Qthreads Headers */
 #include <qthread/qthread.h> /* for qthread_incr() and qthread_cas() */
@@ -29,8 +31,10 @@
  * large hash tables, we're less efficient than we could be.
  */
 
+
 #define MAX_LOAD 4
 // #define USE_HASHWORD 1
+
 
 #define key_t mykey_t
 
@@ -46,7 +50,7 @@ typedef uint64_t so_key_t;
 typedef uintptr_t marked_ptr_t;
 
 #define MARK_OF(x)           ((x) & 1)
-#define PTR_MASK(x)          ((x) & ~(marked_ptr_t)1)
+#define PTR_MASK(x)          (((marked_ptr_t)x) & ~(marked_ptr_t)1)
 #define PTR_OF(x)            ((hash_entry *)PTR_MASK(x))
 #define CONSTRUCT(mark, ptr) (PTR_MASK((uintptr_t)ptr) | (mark))
 #define UNINITIALIZED ((marked_ptr_t)0)
@@ -166,9 +170,9 @@ static void qt_lf_force_list_insert(marked_ptr_t *head,
         marked_ptr_t  lnext;
 
         if (qt_lf_list_find(head, hashed_key, key, &lprev, &cur, &lnext, op_equals) != NULL) {                       // needs to set cur/prev/next
-            node->next = CONSTRUCT(0, lnext);
+            node->next = (hash_entry*)CONSTRUCT(0, lnext);
         } else {
-            node->next = CONSTRUCT(0, cur);
+            node->next = (hash_entry*)CONSTRUCT(0, cur);
         }
         if (qthread_cas(lprev, CONSTRUCT(0, cur), CONSTRUCT(0, node)) == CONSTRUCT(0, cur)) {
             return;
@@ -201,7 +205,7 @@ static int qt_lf_list_insert(marked_ptr_t *head,
             if (crt_node) { *crt_node = PTR_OF(cur); }
             return 0;
         }
-        node->next = CONSTRUCT(0, cur);
+        node->next = (hash_entry*)CONSTRUCT(0, cur);
         if (qthread_cas(lprev, node->next, CONSTRUCT(0, node)) == CONSTRUCT(0, cur)) {
             if (ocur) { *ocur = cur; }
             if (crt_node) { *crt_node = node; }
@@ -228,7 +232,7 @@ static int qt_lf_list_delete(marked_ptr_t *head,
             continue;
         }
         if (qthread_cas(lprev, CONSTRUCT(0, lcur), CONSTRUCT(0, lnext)) == CONSTRUCT(0, lcur)) {
-            free(PTR_OF(lcur));
+            qpool_free(hash_entry_pool, PTR_OF(lcur));
         } else {
             qt_lf_list_find(head, hashed_key, key, NULL, NULL, NULL, op_equals);                                   // needs to set cur/prev/next
         }
@@ -262,7 +266,7 @@ static void *qt_lf_list_find(marked_ptr_t  *head,
                 if (onext) { *onext = next; }
                 return 0;
             }
-            next = PTR_OF(cur)->next;
+            next = (marked_ptr_t) (PTR_OF(cur)->next);
             ckey = PTR_OF(cur)->hashed_key;
             cval = PTR_OF(cur)->value;
             okey = PTR_OF(cur)->key;
@@ -291,7 +295,7 @@ static void *qt_lf_list_find(marked_ptr_t  *head,
                     } else { return NULL; }
                 }
                 // but if current key < hashed_key, the we don't know yet, keep looking
-                prev = &(PTR_OF(cur)->next);
+                prev = (marked_ptr_t*) &(PTR_OF(cur)->next);
             } else {
                 if (qthread_cas(prev, CONSTRUCT(0, cur), CONSTRUCT(0, next)) == CONSTRUCT(0, cur)) {
                     free(PTR_OF(cur));
@@ -345,7 +349,7 @@ static inline hash_entry *qt_hash_put(qt_hash  h,
 
     if(put_choice == PUT_IF_ABSENT) {
         if (!qt_lf_list_insert(&(h->B[bucket]), node, NULL, &ret, h->op_equals)) {
-            free(node);
+            qpool_free(hash_entry_pool, node);
             return ret->value;
         }
     } else {
@@ -360,6 +364,7 @@ static inline hash_entry *qt_hash_put(qt_hash  h,
     }
     return ret->value;
 }
+
 
 void *qt_dictionary_put(qt_dictionary *dict,
                         void          *key,
@@ -458,7 +463,7 @@ static void initialize_bucket(qt_hash h,
     dummy->value      = NULL;
     dummy->next       = UNINITIALIZED;
     if (!qt_lf_list_insert(&(h->B[parent]), dummy, &cur, NULL, h->op_equals)) {
-        free(dummy);
+        //free(dummy);
         dummy = PTR_OF(cur);
         while (h->B[bucket] != CONSTRUCT(0, dummy)) ;
     } else {
@@ -518,8 +523,8 @@ static inline void qt_hash_destroy(qt_hash h)
     while (PTR_OF(cursor) != NULL) {
         marked_ptr_t tmp = cursor;
         assert(MARK_OF(tmp) == 0);
-        cursor = PTR_OF(cursor)->next;
-        free(PTR_OF(tmp));
+        cursor = (marked_ptr_t)((PTR_OF(cursor)->next));
+        //free(PTR_OF(tmp));
     }
     free(h->B);
     free(h);
@@ -650,6 +655,8 @@ list_entry *qt_dictionary_iterator_get(const qt_dictionary_iterator *it)
     }
     return it->crt;
 }
+
+
 
 qt_dictionary_iterator *qt_dictionary_end(qt_dictionary *dict)
 {

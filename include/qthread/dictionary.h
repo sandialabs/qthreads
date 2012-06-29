@@ -1,6 +1,6 @@
 #ifndef QT_DICTIONARY_H
 #define QT_DICTIONARY_H
-
+#include <inttypes.h>
 #include <stdlib.h>
 //#include <qthread_innards.h>
 //#include <56reader-rwlock.h>
@@ -18,23 +18,13 @@ struct tlrw_lock;
 typedef int (*key_equals)(void*, void*);
 typedef int (*hashcode)(void*);
 
-//#define SHALEV_DICT 
-
-#ifdef SHALEV_DICT
 struct list_entry {
     void        *value;
     void		*key;
     uint64_t     hashed_key;
-    uintptr_t next;
+    struct list_entry* next;
 };
-#else
-struct list_entry{
-	void* value;
-	void* key;
-	int hash;
-	struct list_entry* next;
-};
-#endif
+
 
 
 typedef struct list_entry list_entry;

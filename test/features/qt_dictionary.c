@@ -11,6 +11,7 @@ int my_key_equals(void* first, void* second);
 int my_hashcode(void* string);
 
 int my_key_equals(void* first, void* second) {
+	iprintf("Comparing %s %s\n", first, second);
 	if( strcmp(first, second) == 0 )
 		return 1;
 	else
@@ -44,7 +45,7 @@ int main(int argc, char** argv) {
 	assert(my_key_equals("v1", (char*)retrieved));
 	
 	ret_code = qt_dictionary_put(dict, mykey2, myval2);
-	iprintf("3. Put exited with code %p\n", ret_code);
+	iprintf("3. Put exited with code %p(%s)\n", ret_code, ret_code);
 	assert(ret_code!=NULL);
 	
 	retrieved = qt_dictionary_get(dict, "k1");
@@ -52,8 +53,10 @@ int main(int argc, char** argv) {
 	assert(my_key_equals("v1", (char*)retrieved));
 	
 	retrieved = qt_dictionary_get(dict, "k2");
+	assert(retrieved);
 	iprintf("5. v2=%s\n", (char*)retrieved);
 	assert(my_key_equals("v2", (char*)retrieved));
+
 	
 	retrieved = qt_dictionary_get(dict, "k3");
 	iprintf("6. null=%s\n", (char*)retrieved);
@@ -107,8 +110,10 @@ int main(int argc, char** argv) {
 	while(NULL != qt_dictionary_iterator_next(it)) {
 		list_entry* le = qt_dictionary_iterator_get(it);
 		no_entries++;
+		assert(le != NULL);
 		iprintf("17. Pair:(%s,%s)\n",le->key, le->value);
 	}
+	printf("Found %d entries\n", no_entries);
 	assert(no_entries == EXPECTED_ENTRIES);
 	
 	// test iterator equality function
@@ -127,6 +132,7 @@ int main(int argc, char** argv) {
 	assert(ret_code2!=NULL);
 	
 	void* val = qt_dictionary_delete(dict, mykey2);
+	assert(val != NULL);
 	assert(my_key_equals("newv2", (char*)val));
 	
 	ret_code2 = qt_dictionary_get(dict, mykey2);

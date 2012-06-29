@@ -140,7 +140,7 @@ void* qt_dictionary_put_helper(qt_dictionary* dict, void* key, void* value,
 	list_entry* head = walk, *stop = NULL;
 	while(1){
 		while(walk != stop){
-			if((walk -> hash == hash) && (dict -> op_equals(walk -> key, key))) {
+			if((walk -> hashed_key == hash) && (dict -> op_equals(walk -> key, key))) {
 				if(toadd != NULL) free(toadd);
 				
 				if(put_type == PUT_ALWAYS){
@@ -167,7 +167,7 @@ void* qt_dictionary_put_helper(qt_dictionary* dict, void* key, void* value,
 			toadd -> key = key;
 			toadd -> value = value;
 			toadd -> next = head;
-			toadd -> hash = hash;
+			toadd -> hashed_key = hash;
 		}
 		void* code = qthread_cas_ptr( crt, head, toadd );
 		if(code == head) {//succeeded adding
@@ -196,7 +196,7 @@ void* qt_dictionary_put_helper(qt_dictionary* dict, void* key, void* value,
 	list_entry* walk = *crt, *toadd = NULL;
 	while(1){
 		while(walk != NULL){
-			if((walk -> hash == hash) && (dict -> op_equals(walk -> key, key))) {
+			if((walk -> hashed_key == hash) && (dict -> op_equals(walk -> key, key))) {
 				if(toadd != NULL) free(toadd);
 
 				if(put_type == PUT_ALWAYS){
@@ -222,7 +222,7 @@ void* qt_dictionary_put_helper(qt_dictionary* dict, void* key, void* value,
 			toadd -> key = key;
 			toadd -> value = value;
 			toadd -> next = NULL;
-			toadd -> hash = hash;
+			toadd -> hashed_key = hash;
 		}
 		void* code = qthread_cas_ptr( crt, NULL, toadd );
 		if(code == NULL) {
@@ -253,7 +253,7 @@ void* qt_dictionary_get(qt_dictionary* dict, void* key) {
 	
 	list_entry* walk = dict -> content[bucket];
 	while(walk != NULL){
-		if ((walk -> hash == hash) && (dict -> op_equals(walk -> key, key))) {
+		if ((walk -> hashed_key == hash) && (dict -> op_equals(walk -> key, key))) {
 			runlock(dict -> lock);
 			return walk -> value;
 		}
@@ -273,7 +273,7 @@ void* qt_dictionary_delete(qt_dictionary* dict, void* key) {
 	
 	list_entry* walk = dict -> content[bucket];
 	if(walk == NULL) ;//cannot remove an element not present in hash
-	else if((walk -> hash == hash) && (dict -> op_equals(walk -> key, key))) {
+	else if((walk -> hashed_key == hash) && (dict -> op_equals(walk -> key, key))) {
 		//remove list head
 		to_free = walk;
 		to_ret = walk -> value;
@@ -281,7 +281,7 @@ void* qt_dictionary_delete(qt_dictionary* dict, void* key) {
 		free(to_free);
 	}
 	else while(walk -> next != NULL){
-		if ((walk -> hash == hash) && (dict -> op_equals(walk -> next -> key, key))) {
+		if ((walk -> hashed_key == hash) && (dict -> op_equals(walk -> next -> key, key))) {
 			to_free = walk -> next;
 			to_ret = walk -> next -> value;
 			walk -> next = walk -> next -> next;

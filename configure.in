@@ -362,7 +362,7 @@ AC_ARG_WITH([sinc],
 AC_ARG_WITH([dict],
             [AS_HELP_STRING([--with-dict=[[type]]],
                             [Specify the dictionary implementation. Options are
-                             'simple' (default) and 'shavit'.])])
+                             'simple' (default), 'trie', and 'shavit'.])])
 
 AC_ARG_ENABLE([hpctoolkit],
               [AS_HELP_STRING([--enable-hpctoolkit-support],
@@ -825,11 +825,8 @@ AS_IF([test "x$with_dict" = "x"],
       [with_dict="simple"],
       [])
 case "$with_dict" in
-  shavit)
-    AC_DEFINE([SHALEV_DICT], [1], [Enable if using the Shalev dictionary implementation.])
-    ;;
-  simple) ;;
-  *) AC_MSG_ERROR([Unknown dictionary option "$with_dict". Use 'shavit' or 'simple'.]) ;;
+  simple|shavit|trie) ;;
+  *) AC_MSG_ERROR([Unknown dictionary option "$with_dict". Use 'shavit', 'trie' or 'simple'.]) ;;
 esac
 
 AS_IF([test "x$enable_omp_affinity" = xyes],
