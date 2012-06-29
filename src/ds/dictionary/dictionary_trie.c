@@ -5,30 +5,27 @@
 #include <stdio.h>
 #include <inttypes.h>
 #include <qthread/dictionary.h>
-#include <qthread/qthread.h> 
+#include <qthread/qthread.h>
 #ifdef EBUG
 # define DEBUG(x) x
 #else
 # define DEBUG(x)
 #endif
 
-#define PUT_ALWAYS 0
+#define PUT_ALWAYS    0
 #define PUT_IF_ABSENT 1
 #define UNINITIALIZED (0)
 /* external types */
 typedef void *qt_key_t;
 typedef struct qt_dictionary *qt_hash;
-//typedef struct qt_hash_s *qt_hash;
+// typedef struct qt_hash_s *qt_hash;
 typedef void (*qt_hash_callback_fn)(const qt_key_t, void *, void *);
 typedef void (*qt_hash_deallocator_fn)(void *);
-
-
 
 #define MARK_OF(x)           ((x) & 1)
 #define PTR_MASK(x)          ((x) & ~(marked_ptr_t)1)
 #define PTR_OF(x)            ((hash_entry *)PTR_MASK(x))
 #define CONSTRUCT(mark, ptr) (PTR_MASK((uintptr_t)ptr) | (mark))
-
 
 /* These are GCC builtins; other compilers may require inline assembly */
 #define CAS(ADDR, OLDV, NEWV) __sync_val_compare_and_swap((ADDR), (OLDV), (NEWV))
@@ -39,14 +36,14 @@ typedef void (*qt_hash_deallocator_fn)(void *);
 #define BASE_SPINE_LENGTH  64
 #define BASE_BUCKET_WIDTH  6
 /*
-typedef struct hash_entry_s {
-    qt_key_t key;
-    void    *value;
-    
-} hash_entry;
-*/
+ * typedef struct hash_entry_s {
+ *  qt_key_t key;
+ *  void    *value;
+ *
+ * } hash_entry;
+ */
 
-typedef struct list_entry hash_entry; 
+typedef struct list_entry hash_entry;
 
 typedef volatile union _spine_element {
     uint64_t             u;
@@ -69,8 +66,8 @@ struct qt_dictionary {
     size_t          maxspines;
     size_t          numspines;
 
-    key_equals op_equals;
-	hashcode op_hash;
+    key_equals      op_equals;
+    hashcode        op_hash;
 };
 
 static void destroy_spine(qt_hash                h,
@@ -79,24 +76,27 @@ static void destroy_spine(qt_hash                h,
 static void destroy_element(hash_entry            *element,
                             qt_hash_deallocator_fn f);
 
-
-static inline qt_hash qt_hash_create(key_equals eq, hashcode hash)
+static inline qt_hash qt_hash_create(key_equals eq,
+                                     hashcode   hash)
 {
     qt_hash tmp = malloc(sizeof(qt_dictionary));
-    tmp -> op_equals = eq;
-    tmp -> op_hash = hash;
+
+    tmp->op_equals = eq;
+    tmp->op_hash   = hash;
 
     assert(tmp);
     tmp->maxspines = getpagesize() / sizeof(spine_element_t *);
-    tmp->spines    = (spine_t**)calloc(tmp->maxspines, sizeof(spine_element_t *));
+    tmp->spines    = (spine_t **)calloc(tmp->maxspines, sizeof(spine_element_t *));
 
     return tmp;
 }
 
-qt_dictionary* qt_dictionary_create(key_equals eq, hashcode hash)
+qt_dictionary *qt_dictionary_create(key_equals eq,
+                                    hashcode   hash)
 {
-	return qt_hash_create(eq, hash);
+    return qt_hash_create(eq, hash);
 }
+
 #define SPINE_PTR_TEST(x)            ((x).u & 1)
 #define SPINE_PTR_COUNT(x)           ((x).s.ctr >> 1)
 #define SPINE_PTR_ID(x)              ((x).s.id)
@@ -150,7 +150,6 @@ static void deallocate_spine(qt_hash h,
     free((void *)(h->spines[id])); // XXX should be to a memory pool
     h->spines[id] = NULL;
     INCR(&h->numspines, -1);
-
 }
 
 static size_t allocate_spine(qt_hash   h,
@@ -194,7 +193,7 @@ static size_t allocate_spine(qt_hash   h,
     return id;
 }
 
-static void destroy_spine(qt_dictionary*                h,
+static void destroy_spine(qt_dictionary         *h,
                           spine_t               *spine,
                           qt_hash_deallocator_fn f)
 {
@@ -245,29 +244,30 @@ void qt_dictionary_destroy(qt_hash h)
     free(h->spines);
     free(h);
 }
+
 /*
-void qt_hash_destroy_deallocate(qt_hash                h,
-                                qt_hash_deallocator_fn f)
-{
-    assert(h);
-    assert(h->spines);
-    for (size_t i = 0; i < BASE_SPINE_LENGTH; ++i) {
-        if (h->base[i].e != NULL) {
-            if (SPINE_PTR_TEST(h->base[i])) { // spine
-                destroy_spine(h, SPINE_PTR(h, h->base[i]), f);
-            } else { // element
-                destroy_element(h->base[i].e, f);
-            }
-        }
-    }
-    for (size_t i = 0; i < h->numspines; ++i) {
-        assert(h->spines[i] != NULL);
-        free((void *)(h->spines[i]));
-    }
-    free(h->spines);
-    free(h);
-}
-*/
+ * void qt_hash_destroy_deallocate(qt_hash                h,
+ *                              qt_hash_deallocator_fn f)
+ * {
+ *  assert(h);
+ *  assert(h->spines);
+ *  for (size_t i = 0; i < BASE_SPINE_LENGTH; ++i) {
+ *      if (h->base[i].e != NULL) {
+ *          if (SPINE_PTR_TEST(h->base[i])) { // spine
+ *              destroy_spine(h, SPINE_PTR(h, h->base[i]), f);
+ *          } else { // element
+ *              destroy_element(h->base[i].e, f);
+ *          }
+ *      }
+ *  }
+ *  for (size_t i = 0; i < h->numspines; ++i) {
+ *      assert(h->spines[i] != NULL);
+ *      free((void *)(h->spines[i]));
+ *  }
+ *  free(h->spines);
+ *  free(h);
+ * }
+ */
 #ifdef USE_HASHWORD
 # define HASH_KEY(key) key = qt_hashword(key)
 /* this function based on http://burtleburtle.net/bob/hash/evahash.html */
@@ -316,17 +316,18 @@ static uint64_t qt_hashword(uint64_t key)
 # define HASH_KEY(key)
 #endif  /* ifdef USE_HASHWORD */
 
-void* qt_hash_put_helper(qt_dictionary*  h,
-                qt_key_t key,
-                void    *value,
-                int put_choice);
+void *qt_hash_put_helper(qt_dictionary *h,
+                         qt_key_t       key,
+                         void          *value,
+                         int            put_choice);
 
-void* qt_hash_put_helper(qt_dictionary*  h,
-                qt_key_t key,
-                void    *value,
-                int put_choice)
+void *qt_hash_put_helper(qt_dictionary *h,
+                         qt_key_t       key,
+                         void          *value,
+                         int            put_choice)
 {
-	uint64_t    lkey = (uint64_t)(uintptr_t)(h->op_hash(key));
+    uint64_t lkey = (uint64_t)(uintptr_t)(h->op_hash(key));
+
     HASH_KEY(lkey);
     assert(h);
 
@@ -339,12 +340,11 @@ void* qt_hash_put_helper(qt_dictionary*  h,
     unsigned         depth     = 0;
 
     assert(e != NULL);
-    e->hashed_key   = lkey;
-    e->key = key;
-    e->value = value;
-	hash_entry* crt;
+    e->hashed_key = lkey;
+    e->key        = key;
+    e->value      = value;
+    hash_entry *crt;
     do {
-
         if (child_val.e == NULL) {
             // place the entry in the hash
             if ((child_val.e = CAS(&(child_id->e), NULL, e)) == NULL) {
@@ -385,7 +385,6 @@ void* qt_hash_put_helper(qt_dictionary*  h,
                         DECREMENT_COUNT(cur_id);
                     }
                     return value;
-                   
                 } else {
                     child_val = cur;
                     deallocate_spine(h, newspine.s.id);
@@ -395,72 +394,72 @@ void* qt_hash_put_helper(qt_dictionary*  h,
 
                 if ((cur.e = CAS(&(child_id->e), child_val.e, newspine.e)) == child_val.e) {
                     INCR(&(h->count), 1);
-					return cur.e->value;
+                    return cur.e->value;
                 } else {
                     child_val = cur;
                     deallocate_spine(h, newspine.s.id);
                 }
             }
         } else {
-			// use the real user-equals operation to differentiate subcases
-			// it is possible that the element is there or it may not be there
-			hash_entry* head;
-			do {
-				head = child_id->e;
-				e->next = head;
-				crt = head;
-				// find the entry, if it is in the list
-				while (crt) {
+            // use the real user-equals operation to differentiate subcases
+            // it is possible that the element is there or it may not be there
+            hash_entry *head;
+            do {
+                head    = child_id->e;
+                e->next = head;
+                crt     = head;
+                // find the entry, if it is in the list
+                while (crt) {
+                    if (h->op_equals(crt->key, key)) {
+                        // already exists
 
-					if (h->op_equals(crt->key , key)) {
+                        if (put_choice != PUT_IF_ABSENT) {
+                            void **crt_val_adr = &(crt->value);
+                            void  *crt_val     = crt->value;
+                            while((qthread_cas_ptr(crt_val_adr, \
+                                                   crt_val, value)) != crt_val ) {
+                                crt_val = crt->value;
+                            }
+                        }
 
-						// already exists
-
-							
-							if (put_choice != PUT_IF_ABSENT) {
-								void **crt_val_adr = &(crt -> value);
-								void *crt_val = crt->value;
-								while( (qthread_cas_ptr( crt_val_adr, \
-											crt_val, value )) != crt_val ){
-									crt_val = crt->value;
-								}
-							}
-							
-							if (cur_id) DECREMENT_COUNT(cur_id);
-							return crt->value;
-						
-					}
-					crt = crt->next;
-				}
-				// and try to insert it at the head of the list;
-				// if the list changed, redu the work
-			} while (qthread_cas_ptr(&(child_id->e), head, e) != head);
-			//printf("IN put: (%s-%s)\n", child_id->e->key, child_id->e->value);
-			//if (e->next !=NULL)
-			//	printf("next key is %s and value %s\n", e->next->key, e->next->value);
-			return e->value;
+                        if (cur_id) { DECREMENT_COUNT(cur_id); }
+                        return crt->value;
+                    }
+                    crt = crt->next;
+                }
+                // and try to insert it at the head of the list;
+                // if the list changed, redu the work
+            } while (qthread_cas_ptr(&(child_id->e), head, e) != head);
+            // printf("IN put: (%s-%s)\n", child_id->e->key, child_id->e->value);
+            // if (e->next !=NULL)
+            //	printf("next key is %s and value %s\n", e->next->key, e->next->value);
+            return e->value;
         }
     } while (1);
 }
 
-void* qt_dictionary_put(qt_dictionary* dict, void* key, void* value)
+void *qt_dictionary_put(qt_dictionary *dict,
+                        void          *key,
+                        void          *value)
 {
-	return qt_hash_put_helper(dict, key, value, PUT_ALWAYS);
+    return qt_hash_put_helper(dict, key, value, PUT_ALWAYS);
 }
 
-void* qt_dictionary_put_if_absent(qt_dictionary* dict, void* key, void* value)
+void *qt_dictionary_put_if_absent(qt_dictionary *dict,
+                                  void          *key,
+                                  void          *value)
 {
-	return qt_hash_put_helper(dict, key, value, PUT_IF_ABSENT);
+    return qt_hash_put_helper(dict, key, value, PUT_IF_ABSENT);
 }
 
+int qt_dictionary_remove(qt_dictionary *h,
+                         const qt_key_t key);
 
-int qt_dictionary_remove(qt_dictionary*        h,
-                   const qt_key_t key);
-
-int qt_dictionary_remove(qt_dictionary*        h,
-                   const qt_key_t key)
+int qt_dictionary_remove(qt_dictionary *h,
+                         const qt_key_t key)
 {
-	uint64_t    lkey = (uint64_t)(uintptr_t)(h->op_hash(key));
+    uint64_t lkey = (uint64_t)(uintptr_t)(h->op_hash(key));
+
     HASH_KEY(lkey);
     HASH_KEY(lkey);
     assert(h);
@@ -486,102 +485,102 @@ int qt_dictionary_remove(qt_dictionary*        h,
             child_id  = &cur_spine->elements[bucket];
             child_val = cur_spine->elements[bucket];
         } else if (child_val.e->hashed_key == lkey) {
-			hash_entry* e = child_id->e;
-			hash_entry** prev = &(child_id->e);
-			do {
-				if (h->op_equals(e->key, key)) {
-					spine_element_t cur;
-					if ((cur.e = CAS( prev, e, e->next)) == e) {
-						free(child_val.e); // XXX should be into a mempool
-							// Second, walk back up the parent pointers, removing empty spines (if any)
-							// cur_id is the current spine pointer's location (if its null, we're in the base spine)
-							while (cur_id) {
-								spine_element_t oldval = *cur_id;
-								spine_element_t newcount;
-								spine_element_t tmp = oldval;
-								uint32_t        count;
+            hash_entry  *e    = child_id->e;
+            hash_entry **prev = &(child_id->e);
+            do {
+                if (h->op_equals(e->key, key)) {
+                    spine_element_t cur;
+                    if ((cur.e = CAS(prev, e, e->next)) == e) {
+                        free(child_val.e);                         // XXX should be into a mempool
+                        // Second, walk back up the parent pointers, removing empty spines (if any)
+                        // cur_id is the current spine pointer's location (if its null, we're in the base spine)
+                        while (cur_id) {
+                            spine_element_t oldval = *cur_id;
+                            spine_element_t newcount;
+                            spine_element_t tmp = oldval;
+                            uint32_t        count;
 
-								do {
-									oldval = tmp;
-									count  = SPINE_PTR_COUNT(oldval) - 1;
-									if (count == 0) {
-										newcount.e = NULL;
-									} else {
-										newcount.s.id  = oldval.s.id;
-										newcount.s.ctr = SPINE_COUNT(count);
-									}
-									tmp.u = CAS(&(cur_id->u), oldval.u, newcount.u);
-								} while (tmp.u != oldval.u);
-								if (count == 0) {
-									spine_t *s = SPINE_PTR(h, oldval);
-									assert(s);
-									cur_id = s->parent;
-									deallocate_spine(h, oldval.s.id);
-								} else {
-									break;
-								}
-							}
-							INCR(&(h->count), -1);
-							return 1;
-						
-					} else {
-					}
-				}
-				prev = &(e->next);
-				e = e->next;
-			} while(e != NULL);
-			return 0;
+                            do {
+                                oldval = tmp;
+                                count  = SPINE_PTR_COUNT(oldval) - 1;
+                                if (count == 0) {
+                                    newcount.e = NULL;
+                                } else {
+                                    newcount.s.id  = oldval.s.id;
+                                    newcount.s.ctr = SPINE_COUNT(count);
+                                }
+                                tmp.u = CAS(&(cur_id->u), oldval.u, newcount.u);
+                            } while (tmp.u != oldval.u);
+                            if (count == 0) {
+                                spine_t *s = SPINE_PTR(h, oldval);
+                                assert(s);
+                                cur_id = s->parent;
+                                deallocate_spine(h, oldval.s.id);
+                            } else {
+                                break;
+                            }
+                        }
+                        INCR(&(h->count), -1);
+                        return 1;
+                    } else {}
+                }
+                prev = &(e->next);
+                e    = e->next;
+            } while(e != NULL);
+            return 0;
         } else {
             return 0;
         }
     } while (1);
 }
 
-void* qt_dictionary_delete(qt_dictionary* dict, void* key)
+void *qt_dictionary_delete(qt_dictionary *dict,
+                           void          *key)
 {
-	void* val = qt_dictionary_get(dict, key); // TODO : this is inefficient!
-	int ret = qt_dictionary_remove(dict, key);
-	if(ret) { return val; }
-	else return NULL;
+    void *val = qt_dictionary_get(dict, key);     // TODO : this is inefficient!
+    int   ret = qt_dictionary_remove(dict, key);
+
+    if(ret) { return val; } else { return NULL; }
 }
 
-void *qt_dictionary_get(qt_dictionary*        h,
-                  const qt_key_t key)
+void *qt_dictionary_get(qt_dictionary *h,
+                        const qt_key_t key)
 {
-	uint64_t    lkey = (uint64_t)(uintptr_t)(h->op_hash(key));
+    uint64_t lkey = (uint64_t)(uintptr_t)(h->op_hash(key));
+
     HASH_KEY(lkey);
     assert(h);
 
-    unsigned         bucket    = BASE_SPINE_BUCKET(lkey);
-    //spine_element_t *child_id  = &(h->base[bucket]);
-    spine_element_t  child_val = h->base[bucket];
-    //spine_element_t *cur_id    = NULL;
-    spine_t         *cur_spine = NULL;
-    unsigned         depth     = 0;
+    unsigned bucket = BASE_SPINE_BUCKET(lkey);
+    // spine_element_t *child_id  = &(h->base[bucket]);
+    spine_element_t child_val = h->base[bucket];
+    // spine_element_t *cur_id    = NULL;
+    spine_t *cur_spine = NULL;
+    unsigned depth     = 0;
 
     do {
         if (child_val.e == NULL) {
             // not found
             return NULL;
         } else if (SPINE_PTR_TEST(child_val)) {
-            //cur_id    = child_id;
+            // cur_id    = child_id;
             cur_spine = SPINE_PTR(h, child_val);
             depth++;
             assert(depth <= 11); // otherwise, something has gone horribly wrong
-            bucket    = SPINE_BUCKET(lkey, depth);
-            //child_id  = &cur_spine->elements[bucket];
+            bucket = SPINE_BUCKET(lkey, depth);
+            // child_id  = &cur_spine->elements[bucket];
             child_val = cur_spine->elements[bucket];
         } else {
             // check that key == element->hashed_key
             if (child_val.e->hashed_key == lkey) {
-				hash_entry* e= child_val.e;
-				while(e) {
-					if (h->op_equals(e->key, key)) {
-						return e->value;
-					}
-					e = e->next;
-				}
-				return NULL;
+                hash_entry *e = child_val.e;
+                while(e) {
+                    if (h->op_equals(e->key, key)) {
+                        return e->value;
+                    }
+                    e = e->next;
+                }
+                return NULL;
             } else {
                 return NULL;
             }
@@ -589,162 +588,169 @@ void *qt_dictionary_get(qt_dictionary*        h,
     } while (1);
 }
 
-size_t qt_dictionary_count(qt_dictionary* h);
+size_t qt_dictionary_count(qt_dictionary *h);
 
-size_t qt_dictionary_count(qt_dictionary* h)
+size_t qt_dictionary_count(qt_dictionary *h)
 {
     assert(h);
     return h->count;
 }
 
 /*
-static void spine_callback(qt_dictionary*             h,
-                           spine_t            *spine,
-                           qt_hash_callback_fn f,
-                           void               *arg,
-                           unsigned            depth)
-{
-    assert(spine);
-    for (size_t i = 0; i < SPINE_LENGTH; ++i) {
-        if (spine->elements[i].e != NULL) {
-            if (SPINE_PTR_TEST(spine->elements[i])) {
-                printf("subspine... (%li)\n", (intptr_t)arg);
-                spine_callback(h,
-                               SPINE_PTR(h, spine->elements[i]),
-                               f,
-#ifdef EBUG
-                               (void *)(intptr_t)SPINE_PTR_COUNT(spine->elements[i]),
-#else
-                               arg,
-#endif
-                               depth + 1);
-            } else {
-                DEBUG(for (size_t j = 0; j < depth; ++j) printf("%li ", (intptr_t)arg); );
-                f(spine->elements[i].e->hashed_key, spine->elements[i].e->value, arg);
-            }
-        }
-    }
-}
-* */
+ * static void spine_callback(qt_dictionary*             h,
+ *                         spine_t            *spine,
+ *                         qt_hash_callback_fn f,
+ *                         void               *arg,
+ *                         unsigned            depth)
+ * {
+ *  assert(spine);
+ *  for (size_t i = 0; i < SPINE_LENGTH; ++i) {
+ *      if (spine->elements[i].e != NULL) {
+ *          if (SPINE_PTR_TEST(spine->elements[i])) {
+ *              printf("subspine... (%li)\n", (intptr_t)arg);
+ *              spine_callback(h,
+ *                             SPINE_PTR(h, spine->elements[i]),
+ *                             f,
+ * #ifdef EBUG
+ *                             (void *)(intptr_t)SPINE_PTR_COUNT(spine->elements[i]),
+ * #else
+ *                             arg,
+ * #endif
+ *                             depth + 1);
+ *          } else {
+ *              DEBUG(for (size_t j = 0; j < depth; ++j) printf("%li ", (intptr_t)arg); );
+ *              f(spine->elements[i].e->hashed_key, spine->elements[i].e->value, arg);
+ *          }
+ *      }
+ *  }
+ * }
+ * */
 /*
-void qt_hash_callback(qt_hash             h,
-                      qt_hash_callback_fn f,
-                      void               *arg)
-{
-    assert(h);
-    assert(f);
+ * void qt_hash_callback(qt_hash             h,
+ *                    qt_hash_callback_fn f,
+ *                    void               *arg)
+ * {
+ *  assert(h);
+ *  assert(f);
+ *
+ *  for (size_t base_bucket = 0; base_bucket < BASE_SPINE_LENGTH; ++base_bucket) {
+ *      if (h->base[base_bucket].e != NULL) {
+ *          if (SPINE_PTR_TEST(h->base[base_bucket])) { // spine
+ *              spine_callback(h,
+ *                             SPINE_PTR(h, h->base[base_bucket]),
+ *                             f,
+ * #ifdef EBUG
+ *                             (void *)(intptr_t)SPINE_PTR_COUNT(h->base[base_bucket]),
+ * #else
+ *                             arg,
+ * #endif
+ *                             1);
+ *          } else { // element
+ *              f(h->base[base_bucket].e->hashed_key, h->base[base_bucket].e->value, arg);
+ *          }
+ *      }
+ *  }
+ *  DEBUG(printf("============\n"));
+ * }
+ */
 
-    for (size_t base_bucket = 0; base_bucket < BASE_SPINE_LENGTH; ++base_bucket) {
-        if (h->base[base_bucket].e != NULL) {
-            if (SPINE_PTR_TEST(h->base[base_bucket])) { // spine
-                spine_callback(h,
-                               SPINE_PTR(h, h->base[base_bucket]),
-                               f,
-#ifdef EBUG
-                               (void *)(intptr_t)SPINE_PTR_COUNT(h->base[base_bucket]),
-#else
-                               arg,
-#endif
-                               1);
-            } else { // element
-                f(h->base[base_bucket].e->hashed_key, h->base[base_bucket].e->value, arg);
-            }
-        }
-    }
-    DEBUG(printf("============\n"));
-}
-*/
-
-struct qt_dictionary_iterator{
-	qt_dictionary* dict;
-	list_entry* crt; //=NULL if iterator is newly created or reached the end; =crt elem otherwise.
-	int bkt; //= -1 if iterator is newly created; =1 otherwise.
-	int spine_index;
-	int base_index;
+struct qt_dictionary_iterator {
+    qt_dictionary *dict;
+    list_entry    *crt; // =NULL if iterator is newly created or reached the end; =crt elem otherwise.
+    int            bkt; // = -1 if iterator is newly created; =1 otherwise.
+    int            spine_index;
+    int            base_index;
 };
 
-qt_dictionary_iterator* qt_dictionary_iterator_create(qt_dictionary* dict) { 
-	if(dict == NULL){
-		return ERROR;
-	}
-	qt_dictionary_iterator* it = (qt_dictionary_iterator*) malloc (sizeof(qt_dictionary_iterator));
-	it -> dict = dict;
-	it -> crt = NULL;
-	it -> bkt = -1;
-	it -> spine_index = 0;
-	it -> base_index = -1;
-	return it; 
+qt_dictionary_iterator *qt_dictionary_iterator_create(qt_dictionary *dict)
+{
+    if(dict == NULL) {
+        return ERROR;
+    }
+    qt_dictionary_iterator *it = (qt_dictionary_iterator *)malloc(sizeof(qt_dictionary_iterator));
+    it->dict        = dict;
+    it->crt         = NULL;
+    it->bkt         = -1;
+    it->spine_index = 0;
+    it->base_index  = -1;
+    return it;
 }
 
-void qt_dictionary_iterator_destroy(qt_dictionary_iterator* it) {
-	if(it == NULL) return;
-	free(it);
+void qt_dictionary_iterator_destroy(qt_dictionary_iterator *it)
+{
+    if(it == NULL) { return; }
+    free(it);
 }
 
-list_entry* qt_dictionary_iterator_next(qt_dictionary_iterator* it) { 
-	if(it == NULL || it -> dict == NULL){
-		return ERROR;
-	}
+list_entry *qt_dictionary_iterator_next(qt_dictionary_iterator *it)
+{
+    if((it == NULL) || (it->dict == NULL)) {
+        return ERROR;
+    }
 
-	if(it->crt != NULL && it->crt-> next != NULL){
-		it->crt = it->crt->next;
-		return it->crt;
-	}
-	it->base_index ++;
-	int i;
-	if(it->base_index < BASE_SPINE_LENGTH){
-		for(i = it->base_index ; i<BASE_SPINE_LENGTH; i++)
-			if(it->dict->base[i].e != NULL && !SPINE_PTR_TEST(it->dict->base[i])){
-				it->base_index = i;
-				it->crt = it->dict->base[i].e;
-				return it->crt;
-			}
-			else {
-				}
-	}
-	
-	// first call
-	if (it->bkt < 0){
-		it->bkt = 0;
-	}
+    if((it->crt != NULL) && (it->crt->next != NULL)) {
+        it->crt = it->crt->next;
+        return it->crt;
+    }
+    it->base_index++;
+    int i;
+    if(it->base_index < BASE_SPINE_LENGTH) {
+        for(i = it->base_index; i < BASE_SPINE_LENGTH; i++)
+            if((it->dict->base[i].e != NULL) && !SPINE_PTR_TEST(it->dict->base[i])) {
+                it->base_index = i;
+                it->crt        = it->dict->base[i].e;
+                return it->crt;
+            } else   {}
+    }
 
-	while (it->bkt < it->dict->maxspines){
-		spine_t* local_e = it->dict->spines[it->bkt];
-		if(local_e != NULL){
-			for(i = it->spine_index; i < SPINE_LENGTH;i++)
-				if( local_e->elements[i].e != NULL && !SPINE_PTR_TEST(local_e->elements[i]) ){
-					it->spine_index = i;
-					it->crt = local_e->elements[i].e;
-					return it->crt;
-				}
-				else if( local_e->elements[i].e != NULL){
-				}
-			it->spine_index = 0;
-		}
-			
-		it->bkt++;
-	}
-	it->crt=NULL;
-	return NULL;
+    // first call
+    if (it->bkt < 0) {
+        it->bkt = 0;
+    }
+
+    while (it->bkt < it->dict->maxspines) {
+        spine_t *local_e = it->dict->spines[it->bkt];
+        if(local_e != NULL) {
+            for(i = it->spine_index; i < SPINE_LENGTH; i++)
+                if((local_e->elements[i].e != NULL) && !SPINE_PTR_TEST(local_e->elements[i])) {
+                    it->spine_index = i;
+                    it->crt         = local_e->elements[i].e;
+                    return it->crt;
+                } else if( local_e->elements[i].e != NULL) {}
+            it->spine_index = 0;
+        }
+
+        it->bkt++;
+    }
+    it->crt = NULL;
+    return NULL;
 }
 
-list_entry* qt_dictionary_iterator_get(const qt_dictionary_iterator* it) { 
-	if(it == NULL || it -> dict == NULL){
-		return ERROR;
-	}
-	return it->crt;
+list_entry *qt_dictionary_iterator_get(const qt_dictionary_iterator *it)
+{
+    if((it == NULL) || (it->dict == NULL)) {
+        return ERROR;
+    }
+    return it->crt;
 }
-qt_dictionary_iterator* qt_dictionary_end(qt_dictionary* dict) { 
-	qt_dictionary_iterator* ret = qt_dictionary_iterator_create(dict);
-	ret->bkt = ret->dict->maxspines;
-	return ret; 
+
+qt_dictionary_iterator *qt_dictionary_end(qt_dictionary *dict)
+{
+    qt_dictionary_iterator *ret = qt_dictionary_iterator_create(dict);
+
+    ret->bkt = ret->dict->maxspines;
+    return ret;
 }
-int qt_dictionary_iterator_equals(qt_dictionary_iterator*a, qt_dictionary_iterator* b) { 
-	if (a == NULL || b == NULL)
-		return a == b;
-	return (a -> crt == b -> crt) && (a -> dict == b -> dict) && (a -> bkt == b -> bkt);
+
+int qt_dictionary_iterator_equals(qt_dictionary_iterator *a,
+                                  qt_dictionary_iterator *b)
+{
+    if ((a == NULL) || (b == NULL)) {
+        return a == b;
+    }
+    return (a->crt == b->crt) && (a->dict == b->dict) && (a->bkt == b->bkt);
 }
-void qt_dictionary_printbuckets(qt_dictionary* dict) { 
-	
-}
+
+void qt_dictionary_printbuckets(qt_dictionary *dict) {}
+
 /* vim:set expandtab: */
