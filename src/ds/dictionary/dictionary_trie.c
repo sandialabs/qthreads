@@ -394,8 +394,8 @@ void *qt_hash_put_helper(qt_dictionary *h,
                 newspine.s.ctr = SPINE_COUNT(1); // contains 1 element (oldval)
 
                 if ((cur.e = CAS(&(child_id->e), child_val.e, newspine.e)) == child_val.e) {
-                    INCR(&(h->count), 1);
-                    return cur.e->value;
+                    //success
+                    continue;
                 } else {
                     child_val = cur;
                     deallocate_spine(h, newspine.s.id);
