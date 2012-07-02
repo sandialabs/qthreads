@@ -6,7 +6,7 @@
 #include <stdarg.h>
 
 #ifndef SST
-# define CHECK_VERBOSE() verbose = (getenv("VERBOSE") != NULL)
+# define CHECK_VERBOSE() verbose = ((getenv("VERBOSE") != NULL) || !(getenv("MAKEFLAGS") && getenv("MAKELEVEL")))
 #else
 # define CHECK_VERBOSE()
 #endif
