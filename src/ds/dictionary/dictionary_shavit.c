@@ -463,7 +463,7 @@ static void initialize_bucket(qt_hash h,
     dummy->value      = NULL;
     dummy->next       = UNINITIALIZED;
     if (!qt_lf_list_insert(&(h->B[parent]), dummy, &cur, NULL, h->op_equals)) {
-        //free(dummy);
+        free(dummy);
         dummy = PTR_OF(cur);
         while (h->B[bucket] != CONSTRUCT(0, dummy)) ;
     } else {
@@ -524,7 +524,7 @@ static inline void qt_hash_destroy(qt_hash h)
         marked_ptr_t tmp = cursor;
         assert(MARK_OF(tmp) == 0);
         cursor = (marked_ptr_t)((PTR_OF(cursor)->next));
-        //free(PTR_OF(tmp));
+        free(PTR_OF(tmp));
     }
     free(h->B);
     free(h);
