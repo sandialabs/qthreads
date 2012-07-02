@@ -107,13 +107,13 @@ AC_ARG_ENABLE([oversubscription],
                                ought to be replaced with something that will
                                call into the OS scheduler.])])
 
-AC_ARG_ENABLE([fullsize-stacks],
-              [AS_HELP_STRING([--enable-fullsize-stacks],
-                              [use 8MB stacks for every thread])])
-
-AC_ARG_ENABLE([very-small-stacks],
-              [AS_HELP_STRING([--enable-very-small-stacks],
-                              [use 2k stacks for every thread (dangerous)])])
+AC_ARG_WITH([default-stack-size],
+            [AS_HELP_STRING([--with-default-stack-size=[[bytes]]],
+                            [Specify the number of bytes to use for stacks, by
+                             default (i.e. when the environment variable
+                             QT_STACK_SIZE is unset). Default: 4096 (4k).
+                             Depending on your OS, standard Pthread threads may
+                             get anywhere from 2MB to 10MB default stacks.])])
 
 AC_ARG_ENABLE([pooled-memory],
               [AS_HELP_STRING([--disable-pooled-memory],
@@ -906,23 +906,19 @@ AS_IF([test "x$enable_hardware_timer" != "xno"],
        AC_MSG_RESULT([$qthread_timer_type])],
       [qthread_timer_type=gettimeofday])
 
-dnl keep in mind, if the stack size is not a multiple of the page size,
-dnl alignment issues may become dicey, depending on the architecture
-AS_IF([test "x$enable_fullsize_stacks" = "xyes"],
-      [qthread_cv_stack_size=8388608],
-      [AS_IF([test "x$enable_very_small_stacks" = "xyes"],
-             [qthread_cv_stack_size=2048],
-             [case "$host" in
-                powerpc-apple-darwin*)
-                  AC_CHECK_SIZEOF([void*])
-                  AS_IF([test "x$ac_cv_sizeof_voidp" = "x8"],
-                        [qthread_cv_stack_size=8192],
-                        [qthread_cv_stack_size=4096])
-                  ;;
-                *)
-                  qthread_cv_stack_size=4096
-                  ;;
-              esac])])
+AS_IF([test "x$with_default_stack_size" != "x"],
+      [qthread_cv_stack_size=$with_default_stack_size],
+      [case "$host" in
+         powerpc-apple-darwin*)
+           AC_CHECK_SIZEOF([void*])
+           AS_IF([test "x$ac_cv_sizeof_voidp" = "x8"],
+                 [qthread_cv_stack_size=8192],
+                 [qthread_cv_stack_size=4096])
+           ;;
+         *)
+           qthread_cv_stack_size=4096
+           ;;
+       esac])
 AC_DEFINE_UNQUOTED([QTHREAD_DEFAULT_STACK_SIZE],[$qthread_cv_stack_size], [What size stacks to use by default])
 
 AS_IF([test "x$enable_thread_count" = "xyes"],
@@ -1082,8 +1078,22 @@ AC_OUTPUT
 
 case "$qthread_cv_stack_size" in
         8388608) stack_string="8MB" ;;
-        2096)    stack_string="2kB" ;;
+        7340032) stack_string="7MB" ;;
+        6291456) stack_string="6MB" ;;
+        5242880) stack_string="5MB" ;;
+        4194304) stack_string="4MB" ;;
+        3145728) stack_string="3MB" ;;
+        2097152) stack_string="2MB" ;;
+        1048576) stack_string="1MB" ;;
+        524288)  stack_string="512kB" ;;
+        262144)  stack_string="256kB" ;;
+        131072)  stack_string="128kB" ;;
+        65536)   stack_string="64kB" ;;
+        32768)   stack_string="32kB" ;;
+        16384)   stack_string="16kB" ;;
+        8192)    stack_string="8kB" ;;
         4096)    stack_string="4kB" ;;
+        2096)    stack_string="2kB" ;;
         *)       stack_string="${qthread_cv_stack_size} bytes" ;;
 esac
 AS_IF([test "x$enable_multinode" = "xyes"],
