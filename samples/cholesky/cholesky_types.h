@@ -65,7 +65,9 @@ public:
     {
         return t[0] + ( t[1] << 6 ) + ( t[2] << 11 );
     }
-    bool equal( const triple & a, const triple & b) const { return a[0] == b[0] && a[1] == b[1] && a[2] == b[2]; }
+    bool equal( const triple & a, const triple & b) const { 
+	return a[0] == b[0] && a[1] == b[1] && a[2] == b[2]; 
+    }
 };
 
 inline std::ostream & cnc_format( std::ostream& os, const triple & t )
@@ -74,16 +76,13 @@ inline std::ostream & cnc_format( std::ostream& os, const triple & t )
     return os;
 }
 
-/*std::ostream& operator<< (std::ostream& stream, triple& tr) {
-	return stream;//cnc_format(stream, tr);
-}*/
-
 template< typename T >
 class Tile
 {
 public:
     Tile( int sz = 0 ) : m_sz( sz ), m_array( NULL )/*, m_full( true )*/
-    { if( sz ) {
+    {
+		if( sz ) {
     		//CnC::serializer::construct_array< T >( m_array, sz*sz );
     		m_array = new T[sz*sz];
     		for(int i=0; i<sz*sz; i++) {
@@ -92,9 +91,6 @@ public:
     	}
     }
     ~Tile() { 
-    	for(int i=0; i<m_sz*m_sz; i++) {
-    			//delete m_array[i];
-    		}
     	delete m_array;
     }
 #define TOI( _i, _j, _s ) ((_j)*(_s)+(_i))
@@ -105,7 +101,6 @@ private:
     Tile & operator=( const Tile< T > & ) { assert( 0 ); return *this; }
     int   m_sz;
     T   * m_array;
-    //    bool  m_full;
 
 };
 

@@ -39,42 +39,38 @@ struct cholesky_context;
 struct S1_compute
 {
     int execute( const int & t, cholesky_context & c ) const;
+    aligned_t** get_dependences(const int & t, cholesky_context & c, int & no ) const;
 };
 
 struct S2_compute
 {
     int execute( const pair & t, cholesky_context & c ) const;
+    aligned_t** get_dependences(const pair & t, cholesky_context & c, int & no ) const;
 };
 
 struct S3_compute
 {
     int execute( const triple & t, cholesky_context & c ) const;
+    aligned_t** get_dependences(const triple & t, cholesky_context & c, int & no ) const;
 };
 
 struct k_compute
 {
     int execute( const int & t, cholesky_context & c ) const;
+    aligned_t** get_dependences(const int & t, cholesky_context & c, int & no ) const;
 };
 
 struct kj_compute
 {
     int execute( const int & t, cholesky_context & c ) const;
+    aligned_t** get_dependences(const int & t, cholesky_context & c, int & no ) const;
 };
 
 struct kji_compute
 {
     int execute( const pair & t, cholesky_context & c ) const;
+    aligned_t** get_dependences(const pair & t, cholesky_context & c, int & no ) const;
 };
-
-/*
-static void mark( int p, bool * d )
-{
-    if( d[p] == false ) {
-        d[p] = true;
-    }
-}
-*/
-
 
 // The context class
 struct cholesky_context : public CnC::context< cholesky_context >

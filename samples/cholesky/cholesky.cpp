@@ -145,9 +145,6 @@ void matrix_write ( double *A, int n, const char *fname )
 
 int main (int argc, char *argv[])
 {
-#ifdef _DIST_
-    CnC::dist_cnc_init< cholesky_context > dc_init;
-#endif
     int n;
     int b;
     const char *fname = NULL;
@@ -157,7 +154,7 @@ int main (int argc, char *argv[])
 
     // Command line: cholesky n b filename [out-file]
     if (argc < 3 || argc > 7) {
-        fprintf(stderr, "Incorrect number of arguments, epxected N BS [-i infile] [-o outfile] [-w mfile]\n");
+        fprintf(stderr, "Incorrect number of arguments, expected N BS [-i infile] [-o outfile] [-w mfile]\n");
         return -1;
     }
     argi = 1;
@@ -167,7 +164,6 @@ int main (int argc, char *argv[])
         if( ! strcmp( argv[argi], "-o" ) ) oname = argv[++argi];
         else if( ! strcmp( argv[argi], "-i" ) ) fname = argv[++argi];
         else if( ! strcmp( argv[argi], "-w" ) ) mname = argv[++argi];
-        //else if( ! strcmp( argv[argi], "-dt" ) ) dt = static_cast< dist_type >( atoi( argv[++argi] ) );
         ++argi;
     }
 

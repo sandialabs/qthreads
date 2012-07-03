@@ -33,13 +33,14 @@
 
 #include <qthread/qtimer.h>
 // TODO: for debugging only
-#include <qthread/dictionary.h>
+//#include <qthread/dictionary.h>
+
+#define CNC_PRECOND
 
 // Compute indices (which are tag values) for tiled Cholesky factorization algorithm.
 int k_compute::execute(const int & t, cholesky_context & c ) const
 {
-	//printf("Executing kcompute with tag %d\n", t);
-    int p = c.p;
+	int p = c.p;
     
     for(int k = 0; k < p; k++) {
         c.control_S1.put(k);
@@ -47,10 +48,14 @@ int k_compute::execute(const int & t, cholesky_context & c ) const
     return CnC::CNC_Success;
 }
 
+aligned_t** k_compute::get_dependences(const int & t, cholesky_context & c, int & no ) const
+{
+	return NULL;
+}
+
 int kj_compute::execute(const int & t, cholesky_context & c ) const
 {    
-	//printf("Executing kjcompute with tag %d\n", t);
-    int p = c.p;
+	int p = c.p;
     const int k = t;
  
     for(int j = k+1; j < p; j++) {  
@@ -59,10 +64,14 @@ int kj_compute::execute(const int & t, cholesky_context & c ) const
     return CnC::CNC_Success;
 }
 
+aligned_t** kj_compute::get_dependences(const int & t, cholesky_context & c, int & no ) const
+{
+	return NULL;
+}
+
 int kji_compute::execute(const pair & t, cholesky_context & c ) const
 {
-	//printf("Executing kjicompute with tag (%d,%d)\n", t.first, t.second);
-    const int k = t.first;
+	const int k = t.first;
     const int j = t.second;
 
     for(int i = k+1; i <= j; i++) {
@@ -71,19 +80,22 @@ int kji_compute::execute(const pair & t, cholesky_context & c ) const
     return CnC::CNC_Success;
 }
 
+aligned_t** kji_compute::get_dependences(const pair & t, cholesky_context & c, int & no ) const
+{
+	return NULL;
+}
+
 // Perform unblocked Cholesky factorization on the input block (item indexed by tag values).
 // Output is a lower triangular matrix.
 int S1_compute::execute(const int & t, cholesky_context & c ) const
 {
-	//printf("Executing s1compute with tag %d\n", t);
-    tile_const_ptr_type A_block;
+	tile_const_ptr_type A_block;
     tile_ptr_type       L_block;
 
     int b = c.b;
     const int k = t;
-
-    c.Lkji.get(triple(k,k,k), A_block); // Get the input tile.
-
+	c.Lkji.get(triple(k,k,k), A_block); // Get the input tile.
+	
     // Allocate memory for the output tile.
     L_block = std::make_shared< tile_type >( b );
     // FIXME this need to be a triangular tile only
@@ -112,16 +124,23 @@ int S1_compute::execute(const int & t, cholesky_context & c ) const
     }
 
     c.Lkji.put(triple(k+1, k, k), L_block);   // Write the output tile at the next time step.
-    
+	
     return CnC::CNC_Success;
+}
+
+aligned_t** S1_compute::get_dependences(const int & t, cholesky_context & c, int & no ) const
+{
+	no = 1;
+	aligned_t** read = (aligned_t**) malloc(no * sizeof(aligned_t*));
+	c.Lkji.wait_on(triple(t,t,t), &read[0]);
+	return read;
 }
 
 // Perform triangular system solve on the input tile. 
 // Input to this step are the input tile and the output tile of the previous step.
 int S2_compute::execute(const pair & t, cholesky_context & c ) const
 {
-	//printf("Executing s2compute with tag (%d,%d)\n", t.first, t.second);
-    tile_const_ptr_type A_block;
+	tile_const_ptr_type A_block;
     tile_const_ptr_type Li_block;
     tile_ptr_type       Lo_block;
     
@@ -130,9 +149,9 @@ int S2_compute::execute(const pair & t, cholesky_context & c ) const
     const int j = t.second;
 
     assert( j != k );
-    c.Lkji.get(triple(k,j,k), A_block); // Get the input tile.
-    c.Lkji.get(triple(k+1, k, k), Li_block);    // Get the 2nd input tile (Output of previous step).
-
+	c.Lkji.get(triple(k,j,k), A_block); // Get the input tile.
+	c.Lkji.get(triple(k+1, k, k), Li_block);    // Get the 2nd input tile (Output of previous step).
+	
     // Allocate memory for the output tile.
     Lo_block = std::make_shared< tile_type >( b );
     
@@ -148,16 +167,27 @@ int S2_compute::execute(const pair & t, cholesky_context & c ) const
     }
     
     c.Lkji.put(triple(k+1, j, k),Lo_block); // Write the output tile at the next time step.
-    
+	
     return CnC::CNC_Success;
 }
+
+aligned_t** S2_compute::get_dependences(const pair & t, cholesky_context & c, int & no ) const
+{
+	const int k = t.first;
+    const int j = t.second;
+	no = 2;
+	aligned_t** read = (aligned_t**) malloc(no * sizeof(aligned_t*));
+	c.Lkji.wait_on(triple(k,j,k), &read[0]);
+	c.Lkji.wait_on(triple(k+1,k,k), &read[1]);
+	return read;
+}
+
 
 // Performs symmetric rank-k update of the submatrix.
 // Input to this step is the given submatrix and the output of the previous step.
 int S3_compute::execute(const triple & t, cholesky_context & c ) const
 {
-	//printf("Executing s3compute with tag (%d,%d,%d)\n", t[0], t[1], t[2]);
-    tile_const_ptr_type A_block;
+	tile_const_ptr_type A_block;
     tile_const_ptr_type L1_block;
     tile_const_ptr_type L2_block;
     double temp;
@@ -168,11 +198,11 @@ int S3_compute::execute(const triple & t, cholesky_context & c ) const
     const int i = t[2];
 
     assert( j != k && i != k );
-    c.Lkji.get(triple(k, j, i), A_block); // Get the input tile.
-    
+	c.Lkji.get(triple(k, j, i), A_block); // Get the input tile.
+	
     if(i==j){   // Diagonal tile.
-        c.Lkji.get(triple(k+1,j,k), L2_block); // In case of a diagonal tile, i=j, hence both the tiles are the same.
-    }
+	    c.Lkji.get(triple(k+1,j,k), L2_block); // In case of a diagonal tile, i=j, hence both the tiles are the same.
+	}
     else{   // Non-diagonal tile.
         c.Lkji.get(triple(k+1,i,k), L2_block); // Get the first tile.
         c.Lkji.get(triple(k+1,j,k), L1_block); // Get the second tile.
@@ -195,8 +225,20 @@ int S3_compute::execute(const triple & t, cholesky_context & c ) const
     }
 
     c.Lkji.put(triple(k+1,j,i),A_block);  // Write the output at the next time step.
-    
     return CnC::CNC_Success;
+}
+
+aligned_t** S3_compute::get_dependences(const triple & t, cholesky_context & c, int & no ) const
+{
+	const int k = t[0];
+    const int j = t[1];
+    const int i = t[2];
+    no = 3;
+	aligned_t** read = (aligned_t**) malloc(no * sizeof(aligned_t*));
+	c.Lkji.wait_on(triple(k,j,i), &read[0]);
+	c.Lkji.wait_on(triple(k+1,i,k), &read[1]);
+	c.Lkji.wait_on(triple(k+1,j,k), &read[2]);
+	return read;
 }
 
 void cholesky( double * A, const int n, const int b, const char * oname )
@@ -232,16 +274,14 @@ void cholesky( double * A, const int n, const int b, const char * oname )
             c.Lkji.put(triple(0,i,j),temp);
         }
     }
-
+    
     // Wait for all steps to finish
-    c.wait();
-    
-    
+    c.wait();  
     
     qtimer_stop(timer);
     total_time = qtimer_secs(timer);
     
-    printf("exec-time %.3f\ntotal\n", total_time);
+    printf("Time(s): %.3f\n", total_time);
     qtimer_destroy(timer);
 
     //qt_dictionary_printbuckets(c.Lkji.m_itemCollection);
