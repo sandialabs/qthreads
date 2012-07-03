@@ -1,3 +1,3 @@
 #!/bin/bash
 
-tar -xzvf cholesky_inputs.tar.gz
+tar -xjvf cholesky_inputs.tar.bz2
