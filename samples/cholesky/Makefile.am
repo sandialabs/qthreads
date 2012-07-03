@@ -15,10 +15,10 @@ noinst_HEADERS = cholesky.h cholesky_types.h
 
 all: $(TESTS)
 
-testblacksholes: runcholesky
+testcholesky: runcholesky
 	diff --ignore-space-change -q reference_output/1000.out output/1000.out
 
 runcholesky: $(TESTS)
 	./cholesky $(ARGS)
 
-EXTRA_DIST = Readme.txt cholesky.cnc optionData.txt
+EXTRA_DIST = cholesky.cnc
