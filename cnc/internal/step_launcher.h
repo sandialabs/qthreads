@@ -3,6 +3,8 @@
 
 #include <assert.h>
 
+//#define CNC_PRECOND
+
 namespace CnC {
 
 	//Class launcher_base
@@ -67,7 +69,7 @@ namespace CnC {
 		pass_to_step<Tag, Step, ContextType>* proper_arg = (pass_to_step<Tag, Step, ContextType>*)arg;
 		const Tag* tag = proper_arg -> tag;
 		const Step crt_step = proper_arg -> sc -> get_step();
-		//assert(*(proper_arg -> ctxt)!=NULL && "Unexpected NULL context");
+		
 		int rez = crt_step.execute(*tag, *(proper_arg -> ctxt));
 		proper_arg -> ctxt -> markJoin();
 		
@@ -83,10 +85,32 @@ namespace CnC {
 		pts->sc = &_stepCol;
 		
 		_ctxt.markFork();
-		#ifdef ASSERTS_ENABLED
-			int ret = 
+		#ifndef CNC_PRECOND
+			#ifdef ASSERTS_ENABLED
+				int ret = 
+			#endif
+			qthread_fork(call_step, pts, NULL);
+		#else
+			#ifdef ASSERTS_ENABLED
+				int ret;
+			#endif
+			int no_of_dependences = -1;
+			aligned_t** list_of_sincs = _stepCol.get_step().get_dependences(tag, _ctxt, no_of_dependences);
+			if(list_of_sincs != NULL){
+				assert(no_of_dependences > 0);
+				#ifdef ASSERTS_ENABLED
+					ret = 
+				#endif
+				qthread_fork_precond(call_step, pts, NULL, (-1)*no_of_dependences, list_of_sincs);
+				free(list_of_sincs); //TODO: Double-check list is not used after getting the aligned_t* from it
+			}
+			else
+				#ifdef ASSERTS_ENABLED
+					ret = 
+				#endif
+				qthread_fork(call_step, pts, NULL);
 		#endif
-		qthread_fork(call_step, pts, NULL);
+		
 		#ifdef ASSERTS_ENABLED
 			assert(ret == 0 && "Fork failed!");
 		#endif

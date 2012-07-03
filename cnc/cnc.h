@@ -96,8 +96,9 @@ namespace CnC {
 			template< class ContextTemplate >
 			item_collection( context< ContextTemplate > & ctxt );
 			~item_collection();
-			void put( const Tag & tag, const Item & item );
+			void put( const Tag & tag, const Item & item, int get_count = 0 );
 			void get( const Tag & tag, Item & item ) const;
+			void wait_on(const Tag &t, aligned_t **i) const;
 			const_iterator begin() const;
 			const_iterator end() const;
 			size_t size();
@@ -112,7 +113,6 @@ namespace CnC {
 		protected:
 			friend class const_iterator;
     };
-    
 	
     template< class ContextTemplate >
     class context : public context_base
