@@ -1,0 +1,65 @@
+#                                               -*- Autoconf -*-
+# Process this file with autoconf to produce a configure script.
+
+AC_PREREQ([2.61])
+AC_INIT([qtCnC],
+		[1.0],
+		[kbwheel@sandia.gov])
+AC_CONFIG_SRCDIR([cnc/cnc.h])
+m4_ifdef([AM_SILENT_RULES],
+		 [m4_define([qt_color_tests], [color-tests])],
+		 [m4_define([qt_color_tests], [])])
+AM_INIT_AUTOMAKE([foreign subdir-objects dist-bzip2 no-define 1.7 ]qt_color_tests)
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
+
+# Check for arguments.
+AC_ARG_WITH([qthreads],
+			[AS_HELP_STRING([--with-qthreads=[[PATH]]],
+							[Specify the install directory of qthreads])])
+
+# Checks for programs.
+AC_PROG_CC
+AC_USE_SYSTEM_EXTENSIONS
+AC_PROG_CXX
+AC_PROG_CPP
+
+AS_IF([test "x$CXX" = "xg++" -a "x$GXX" = x],
+	  [AC_MSG_ERROR([qtCnC requires a C++ compiler!])])
+AS_IF([test "x$enable_picky" = x -a -d "${srcdir}/.svn"],
+	  [echo "--> developer override: enably picky compiler by default"
+	   enable_picky=yes])
+
+# Checks for libraries.
+AC_SEARCH_LIBS([pthread_create], [pthread], [],
+			   [AC_MSG_ERROR([We require a working pthreads implementation. Use --with-pthreads=[[path]] to specify the location of your pthreads installation.])])
+AS_IF([test "x$with_qthreads" != x],
+	  [CPPFLAGS="-I$with_qthreads/include $CPPFLAGS"
+	   LDFLAGS="-L$with_qthreads/lib $LDFLAGS"])
+AC_SEARCH_LIBS([qthread_initialize], [qthread], [],
+			   [AC_MSG_ERROR([We require a working qthreads implementation. Use --with-qthreads=[[path]] to specify the location of your pthreads installation.])])
+AC_SEARCH_LIBS([nanosleep],[rt],[],[AC_MSG_ERROR([Cannot find nanosleep])])
+
+# Checks for header files.
+
+# Checks for typedefs, structures, and compiler characteristics.
+AC_CHECK_HEADER_STDBOOL
+AC_C_INLINE
+AC_TYPE_SIZE_T
+
+# Checks for library functions.
+AC_FUNC_MALLOC
+AC_CHECK_FUNCS([memset])
+
+# Handle misc flags
+AS_IF([test "x$enable_picky" = xyes],
+	  [CXXFLAGS="-Wall $CXXFLAGS"])
+
+AC_CONFIG_HEADERS([config.h])
+AC_CONFIG_FILES([Makefile
+				 cnc/Makefile
+                 samples/Makefile
+                 samples/blackscholes/Makefile
+                 samples/cholesky/Makefile
+                 samples/fib/Makefile
+                 samples/primes/Makefile])
+AC_OUTPUT
