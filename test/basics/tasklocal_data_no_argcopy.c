@@ -127,7 +127,7 @@ int main(int   argc,
         qthread_fork(use_default_space, NULL, &t);
         qthread_readFE(&t, &t);
         qthread_fork(use_allocated_space, NULL, &t);
-        qthread_readFE(&t, &t);
+        qthread_readFF(&t, &t);
     }
 
     return 0;
