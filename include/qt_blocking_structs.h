@@ -34,7 +34,8 @@ typedef struct qthread_addrstat_s {
 #ifdef QTHREAD_LOCK_PROFILING
     qtimer_t              empty_timer;
 #endif
-    unsigned int          full : 1;
+    uint_fast8_t          full;
+    uint_fast8_t          valid;
 } qthread_addrstat_t;
 
 #ifdef UNPOOLED

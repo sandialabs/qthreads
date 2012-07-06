@@ -12,10 +12,11 @@ static QINLINE qthread_addrstat_t *qthread_addrstat_new(qthread_shepherd_t *shep
 
     if (ret != NULL) {
         QTHREAD_FASTLOCK_INIT(ret->lock);
-        ret->full = 1;
-        ret->EFQ  = NULL;
-        ret->FEQ  = NULL;
-        ret->FFQ  = NULL;
+        ret->full  = 1;
+        ret->valid = 1;
+        ret->EFQ   = NULL;
+        ret->FEQ   = NULL;
+        ret->FFQ   = NULL;
         QTHREAD_EMPTY_TIMER_INIT(ret);
     }
     return ret;
@@ -30,6 +31,20 @@ static void qthread_addrstat_delete(qthread_addrstat_t *m)
 #endif
     QTHREAD_FASTLOCK_DESTROY(m->lock);
     FREE_ADDRSTAT(m);
+}                                      /*}}} */
+
+static void qt_hash_print_addrstat(const qt_key_t addr, qthread_addrstat_t *m, void *arg)
+{                                      /*{{{ */
+    printf("addr: %#lx\n", (unsigned long)addr);
+    QTHREAD_FASTLOCK_LOCK(&m->lock);
+    printf("\tEFQ = %p\n"
+           "\tFEQ = %p\n"
+           "\tFFQ = %p\n"
+           "\tfull = %u\n"
+           "\tvalid = %u\n",
+           m->EFQ, m->FEQ, m->FFQ, m->full, m->valid);
+    *(int*)arg += 1;
+    QTHREAD_FASTLOCK_UNLOCK(&m->lock);
 }                                      /*}}} */
 
 #endif // ifndef QT_ADDRSTAT_H

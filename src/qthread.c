@@ -492,7 +492,7 @@ qt_run:
 
         // Process input preconds if this is a nascent thread
         if (t->thread_state == QTHREAD_STATE_NASCENT) {
-            if (qthread_check_precond(t) == 1) { continue; }
+            if (qthread_check_feb_preconds(t) == 1) { continue; }
         }
 
         if (t->thread_state == QTHREAD_STATE_TERM_SHEP) {
@@ -1427,7 +1427,14 @@ void API_FUNC qthread_finalize(void)
     }
 
     // Wait for all team structures to be reclaimed.
-    while (qlib->team_count) qthread_yield();
+    while (qlib->team_count) {
+        //int ct = qlib->team_count;
+        qthread_yield();
+        /*if (ct == qlib->team_count) {
+            fprintf(stderr, "failing to make forward progress!\n");
+            abort();
+        }*/
+    }
 
     qthread_shepherd_t *shep0 = &(qlib->shepherds[0]);
 
@@ -1580,6 +1587,19 @@ void API_FUNC qthread_finalize(void)
 #endif  /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
         QTHREAD_CASLOCK_DESTROY(shep->active);
         qt_threadqueue_free(shep->ready);
+
+#ifdef QTHREAD_DEBUG
+    {
+        int ct = 0;
+    for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
+        qt_hash_callback(qlib->FEBs[i],
+                (qt_hash_callback_fn) qt_hash_print_addrstat, &ct);
+    }
+    if (ct != 0) { printf("ct = %i\n", ct); }
+    while (ct != 0) ;
+    }
+#endif
+
 #ifdef QTHREAD_SHEPHERD_PROFILING
         print_status("Shepherd %i spent %f%% of the time idle, handling %lu threads\n",
                      i,
@@ -2292,6 +2312,7 @@ static QINLINE void qthread_internal_teamfinish(qt_team_t *team,
             team->sinc = NULL;
             qt_sinc_destroy(team->subteams_sinc);
             team->subteams_sinc = NULL;
+            qthread_fill(&team->eureka);
 
             FREE_TEAM(team);
 
@@ -2359,6 +2380,8 @@ static QINLINE void qthread_internal_teamfinish(qt_team_t *team,
                 team->parent_subteams_sinc = NULL;
             }
 
+            qthread_fill(&team->eureka);
+
             FREE_TEAM(team);
 
             qthread_internal_incr(&(qlib->team_count), &qlib->team_count_lock, -1);
@@ -2422,6 +2445,8 @@ static void qthread_wrapper(void *ptr)
         qthread_incr(&qlib->team_leader_start, 1);
 #endif
         if (NULL != t->team->parent_eureka) {
+            // This is a subteam's team-leader
+            qthread_empty(&t->team->watcher_started);
             qthread_fork(qt_team_watcher, t->team, NULL);
             qthread_readFF(NULL, &t->team->watcher_started);
         }
@@ -2777,7 +2802,6 @@ int API_FUNC qthread_spawn(qthread_f             f,
 
         // Empty new team FEBs
         qthread_empty(&new_team->eureka);
-        qthread_empty(&new_team->watcher_started);
 
 #ifdef TEAM_PROFILE
         qthread_incr(&qlib->team_sinc_create, 1);
@@ -2799,7 +2823,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
         new_team->watcher_started = 0;
         new_team->sinc            = qt_sinc_create(0, NULL, NULL, 1);
         assert(new_team->sinc);
-        new_team->subteams_sinc = qt_sinc_create(0, NULL, NULL, 1);
+        new_team->subteams_sinc   = qt_sinc_create(0, NULL, NULL, 1);
         assert(new_team->subteams_sinc);
         new_team->parent_id            = QTHREAD_DEFAULT_TEAM_ID;
         new_team->parent_eureka        = NULL;
@@ -2808,7 +2832,6 @@ int API_FUNC qthread_spawn(qthread_f             f,
 
         // Empty new team FEBs
         qthread_empty(&new_team->eureka);
-        qthread_empty(&new_team->watcher_started);
 
         if (curr_team) {
             new_team->parent_id     = curr_team->team_id;
@@ -2893,7 +2916,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
         }
     }
     /* Step 5: Prepare the input preconditions (if necessary) */
-    if (QTHREAD_LIKELY(!preconds) || (qthread_check_precond(t) == 0)) {
+    if (QTHREAD_LIKELY(!preconds) || (qthread_check_feb_preconds(t) == 0)) {
         /* Step 6: Set it going */
 #ifdef QTHREAD_COUNT_THREADS
         QTHREAD_FASTLOCK_LOCK(&concurrentthreads_lock);
@@ -3327,91 +3350,6 @@ int INTERNAL qthread_fork_syncvar_future(qthread_f   f,
                          NO_SHEPHERD,
                          QTHREAD_SPAWN_RET_SYNCVAR_T |
                          QTHREAD_SPAWN_FUTURE);
-} /*}}}*/
-
-/*
- * This function walks the list of preconditions. When an empty variable is
- * encountered, it enqueues the "nascent" qthread in the associated FFQ. When
- * all preconditions are satisfied, the qthread state is set as "new".
- *
- * This is a modified readFF() that does not suspend the calling thread, but
- * simply enqueues the specified qthread in the FFQ associated with the target.
- */
-int INTERNAL qthread_check_precond(qthread_t *t)
-{   /*{{{*/
-    aligned_t **these_preconds = (aligned_t **)t->preconds;
-
-    // Process input preconds
-    while (t->npreconds > 0) {
-        aligned_t *this_sync = these_preconds[t->npreconds - 1];
-
-        if (1 == qthread_feb_status(this_sync)) {
-            t->npreconds--;
-        } else {
-            // Need to wait on this one, add to appropriate FFQ
-            qthread_addrstat_t *m       = NULL;
-            qthread_addrres_t  *X       = NULL;
-            const int           lockbin = QTHREAD_CHOOSE_STRIPE(this_sync);
-            const aligned_t    *alignedaddr;
-#if !defined(UNPOOLED_ADDRRES) || defined(QTHREAD_LOCK_PROFILING)
-            qthread_shepherd_t *const curshep = qthread_internal_getshep();
-#endif
-
-            QTHREAD_LOCK_UNIQUERECORD2(feb, this_sync, curshep);
-            QALIGN(this_sync, alignedaddr);
-            QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
-            qt_hash_lock(qlib->FEBs[lockbin]);
-            {
-                m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->FEBs[lockbin], (void *)alignedaddr);
-                if (m) {
-                    QTHREAD_FASTLOCK_LOCK(&m->lock);
-                }
-            }
-            qt_hash_unlock(qlib->FEBs[lockbin]);
-            qthread_debug(LOCK_DETAILS, "data structure locked\n");
-            /* now m, if it exists, is locked - if m is NULL, then we're done! */
-            if (m == NULL) {               /* already full! */
-                t->npreconds--;
-            } else if (m->full != 1) {     /* not full... so we must block */
-                X = ALLOC_ADDRRES(curshep);
-                if (X == NULL) {
-                    QTHREAD_FASTLOCK_UNLOCK(&m->lock);
-                    abort();
-                    return 2; // memory allocation failure
-                }
-                X->addr         = NULL;
-                X->waiter       = t;
-                X->next         = m->FFQ;
-                m->FFQ          = X;
-                t->thread_state = QTHREAD_STATE_NASCENT;
-                QTHREAD_FASTLOCK_UNLOCK(&m->lock);
-
-                return 1;
-            } else {
-                // m->full == 1
-                t->npreconds--;
-                QTHREAD_FASTLOCK_UNLOCK(&m->lock);
-            }
-        }
-    }
-
-    // All input preconds are full
-    t->thread_state = QTHREAD_STATE_NEW;
-#ifdef QTHREAD_COUNT_THREADS
-    QTHREAD_FASTLOCK_LOCK(&concurrentthreads_lock);
-    threadcount++;
-    concurrentthreads++;
-    assert(concurrentthreads <= threadcount);
-    if (concurrentthreads > maxconcurrentthreads) {
-        maxconcurrentthreads = concurrentthreads;
-    }
-    avg_concurrent_threads =
-        (avg_concurrent_threads * (double)(threadcount - 1.0) / threadcount)
-        + ((double)concurrentthreads / threadcount);
-    QTHREAD_FASTLOCK_UNLOCK(&concurrentthreads_lock);
-#endif /* ifdef QTHREAD_COUNT_THREADS */
-
-    return 0;
 } /*}}}*/
 
 void INTERNAL qthread_back_to_master(qthread_t *t)

@@ -36,8 +36,11 @@ int main(int   argc,
         qthread_fork(null_task, NULL, NULL);
     }
     do {
-        iprintf("donecount = %i\n", donecount);
+	aligned_t tmp = donecount;
         qthread_yield();
+	if (tmp != donecount) {
+	    iprintf("donecount = %i\n", donecount);
+	}
     } while (donecount != count);
 
     qt_loop(0, count, par_null_task, NULL);

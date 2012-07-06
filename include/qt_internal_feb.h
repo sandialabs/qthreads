@@ -13,6 +13,7 @@ int INTERNAL qthread_readFF_nb(aligned_t *restrict const       dest,
                                const aligned_t *restrict const src);
 int INTERNAL qthread_readFE_nb(aligned_t *restrict const       dest,
                                const aligned_t *restrict const src);
+int INTERNAL qthread_check_feb_preconds(qthread_t *t);
 
 #endif // ifndef QTHREAD_INTERNAL_FEB
 /* vim:set expandtab: */
