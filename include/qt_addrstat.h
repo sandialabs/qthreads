@@ -43,7 +43,8 @@ static void qt_hash_print_addrstat(const qt_key_t addr, qthread_addrstat_t *m, v
            "\tfull = %u\n"
            "\tvalid = %u\n",
            m->EFQ, m->FEQ, m->FFQ, m->full, m->valid);
-    *(int*)arg += 1;
+    if (arg)
+        *(int*)arg += 1;
     QTHREAD_FASTLOCK_UNLOCK(&m->lock);
 }                                      /*}}} */
 
