@@ -241,6 +241,11 @@ static QINLINE void qthread_FEB_remove(void *maddr)
             return;
         }
         QTHREAD_FASTLOCK_LOCK(&m->lock);
+        if (!m->valid) {
+            QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+            qthread_debug(FEB_DETAILS, "address %p is already gone; someone else removed it!\n", maddr);
+            return;
+        }
         if ((m->FEQ == NULL) && (m->EFQ == NULL) && (m->FFQ == NULL) &&
             (m->full == 1)) {
             qthread_debug(FEB_DETAILS, "%p's lists are empty, and status is full: invalidating and removing\n", maddr);
