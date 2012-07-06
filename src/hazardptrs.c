@@ -15,17 +15,17 @@
 
 static TLS_DECL_INIT(uintptr_t *, ts_hazard_ptrs);
 
-static uintptr_t    *QTHREAD_CASLOCK(hzptr_list);
-static aligned_t     hzptr_list_len = 0;
-static unsigned      freelist_max = 0;
+static uintptr_t *QTHREAD_CASLOCK(hzptr_list);
+static aligned_t hzptr_list_len = 0;
+static unsigned  freelist_max   = 0;
 
 static hazard_freelist_entry_t *free_these_freelists = NULL;
 
 static void hazardptr_internal_teardown(void)
-{
+{   /*{{{*/
     while (free_these_freelists != NULL) {
         hazard_freelist_entry_t *tmp = free_these_freelists;
-        free_these_freelists = (hazard_freelist_entry_t*)tmp[freelist_max].ptr;
+        free_these_freelists = (hazard_freelist_entry_t *)tmp[freelist_max].ptr;
         free(tmp);
     }
     TLS_DELETE(ts_hazard_ptrs);
@@ -35,41 +35,41 @@ static void hazardptr_internal_teardown(void)
         free(hzptr_tmp);
     }
     QTHREAD_CASLOCK_DESTROY(hzptr_list);
-}
+} /*}}}*/
 
 void INTERNAL initialize_hazardptrs(void)
-{
+{/*{{{*/
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     freelist_max = qthread_num_shepherds() * qlib->nworkerspershep + 7;
     for (qthread_shepherd_id_t i = 0; i < qthread_num_shepherds(); ++i) {
         for (qthread_worker_id_t j = 0; j < qlib->nworkerspershep; ++j) {
             memset(qlib->shepherds[i].workers[j].hazard_ptrs, 0, sizeof(uintptr_t) * HAZARD_PTRS_PER_SHEP);
             memset(&qlib->shepherds[i].workers[j].hazard_free_list, 0, sizeof(hazard_freelist_t));
-            qlib->shepherds[i].workers[j].hazard_free_list.freelist = calloc(freelist_max+1, sizeof(hazard_freelist_entry_t));
+            qlib->shepherds[i].workers[j].hazard_free_list.freelist = calloc(freelist_max + 1, sizeof(hazard_freelist_entry_t));
             assert(qlib->shepherds[i].workers[j].hazard_free_list.freelist);
             qlib->shepherds[i].workers[j].hazard_free_list.freelist[freelist_max].ptr = free_these_freelists;
-            free_these_freelists = qlib->shepherds[i].workers[j].hazard_free_list.freelist;
+            free_these_freelists                                                      = qlib->shepherds[i].workers[j].hazard_free_list.freelist;
         }
     }
-#else
+#else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     freelist_max = qthread_num_shepherds() + 7;
     for (qthread_shepherd_id_t i = 0; i < qthread_num_shepherds(); ++i) {
         memset(qlib->shepherds[i].hazard_ptrs, 0, sizeof(uintptr_t) * HAZARD_PTRS_PER_SHEP);
         memset(&qlib->shepherds[i].hazard_free_list, 0, sizeof(hazard_freelist_t));
-        qlib->shepherds[i].hazard_free_list.freelist = calloc(freelist_max+1, sizeof(hazard_freelist_entry_t));
+        qlib->shepherds[i].hazard_free_list.freelist = calloc(freelist_max + 1, sizeof(hazard_freelist_entry_t));
         assert(qlib->shepherds[i].hazard_free_list.freelist);
         qlib->shepherds[i].hazard_free_list.freelist[freelist_max].ptr = free_these_freelists;
-        free_these_freelists = qlib->shepherds[i].hazard_free_list.freelist;
+        free_these_freelists                                           = qlib->shepherds[i].hazard_free_list.freelist;
     }
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     TLS_INIT(ts_hazard_ptrs);
     QTHREAD_CASLOCK_INIT(hzptr_list, NULL);
     qthread_internal_cleanup(hazardptr_internal_teardown);
-}
+}/*}}}*/
 
 void INTERNAL hazardous_ptr(unsigned int which,
                             void        *ptr)
-{
+{/*{{{*/
     uintptr_t *hzptrs = TLS_GET(ts_hazard_ptrs);
 
     if (hzptrs == NULL) {
@@ -110,18 +110,18 @@ void INTERNAL hazardous_ptr(unsigned int which,
     assert(hzptrs);
     assert(which < HAZARD_PTRS_PER_SHEP);
     hzptrs[which] = (uintptr_t)ptr;
-}
+}/*}}}*/
 
 static int void_cmp(const void *a,
                     const void *b)
-{
+{/*{{{*/
     return (*(intptr_t *)a) - (*(intptr_t *)b);
-}
+}/*}}}*/
 
 static int binary_search(uintptr_t *list,
                          uintptr_t  findme,
                          size_t     len)
-{
+{/*{{{*/
     size_t max  = len;
     size_t min  = 0;
     size_t curs = max / 2;
@@ -136,10 +136,10 @@ static int binary_search(uintptr_t *list,
         curs = (max + min) / 2;
     }
     return (list[curs] == findme);
-}
+}/*}}}*/
 
 static void hazardous_scan(hazard_freelist_t *hfl)
-{
+{/*{{{*/
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     const size_t num_hps = qthread_num_workers() * HAZARD_PTRS_PER_SHEP;
 #else
@@ -224,11 +224,11 @@ static void hazardous_scan(hazard_freelist_t *hfl)
     hfl->count = tmpfreelist.count;
     free(tmpfreelist.freelist);
     free(plist);
-}
+}/*}}}*/
 
 void INTERNAL hazardous_release_node(void  (*freefunc)(void *),
                                      void *ptr)
-{
+{/*{{{*/
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     hazard_freelist_t *hfl = &(qthread_internal_getworker()->hazard_free_list);
 #else
@@ -248,6 +248,6 @@ void INTERNAL hazardous_release_node(void  (*freefunc)(void *),
     if (hfl->count == freelist_max) {
         hazardous_scan(hfl);
     }
-}
+}/*}}}*/
 
 /* vim:set expandtab: */
