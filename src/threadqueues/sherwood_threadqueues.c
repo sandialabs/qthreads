@@ -329,6 +329,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
 {   /*{{{*/
     qthread_shepherd_t *my_shepherd = qthread_internal_getshep();
     qthread_t          *t;
+    qthread_worker_id_t worker_id = NO_WORKER;
 
     assert(q != NULL);
     assert(my_shepherd);
@@ -411,7 +412,14 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
         }
 
         if ((node == NULL) && my_shepherd->stealing) {
-            while (my_shepherd->stealing) SPINLOCK_BODY();  // no sense contending for the lock
+            if (worker_id == NO_WORKER) {
+                worker_id = qthread_worker(NULL);
+            }
+            if (my_shepherd->shepherd_id == 0 && worker_id == 0) {
+                while (my_shepherd->stealing == 1) SPINLOCK_BODY();  // no sense contending for the lock
+            } else {
+                while (my_shepherd->stealing) SPINLOCK_BODY();  // no sense contending for the lock
+            }
             continue;
         }
 
@@ -429,18 +437,23 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
             t = node->value;
             FREE_TQNODE(node);
             if ((t->flags & QTHREAD_REAL_MCCOY)) { // only needs to be on worker 0 for termination
-                switch(qthread_worker(NULL)) {
+                if (worker_id == NO_WORKER) {
+                  worker_id = qthread_worker(NULL);
+                }
+                switch(worker_id) {
                     case NO_WORKER:
                         QTHREAD_TRAP(); // should never happen
                         abort();
                         continue; // keep looking
                     case 0:
+                        if (my_shepherd->stealing) my_shepherd->stealing = 0;
                         return(t);
 
                     default:
                         /* McCoy thread can only run on worker 0 */
                         qt_threadqueue_enqueue_yielded(q, t);
                         t = NULL;
+                        my_shepherd->stealing = 2;
                         continue; // keep looking
                 }
             } else {
