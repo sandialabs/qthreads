@@ -35,7 +35,6 @@
 // TODO: for debugging only
 //#include <qthread/dictionary.h>
 
-#define CNC_PRECOND
 
 // Compute indices (which are tag values) for tiled Cholesky factorization algorithm.
 int k_compute::execute(const int & t, cholesky_context & c ) const
@@ -97,7 +96,7 @@ int S1_compute::execute(const int & t, cholesky_context & c ) const
 	c.Lkji.get(triple(k,k,k), A_block); // Get the input tile.
 	
     // Allocate memory for the output tile.
-    L_block = std::make_shared< tile_type >( b );
+    L_block = make_shared_tile(b); //std::make_shared< tile_type >( b );
     // FIXME this need to be a triangular tile only
     // for(int i = 0; i < b; i++) {
     //     L_block[i] = (double *) malloc((i+1) * sizeof(double));
@@ -153,7 +152,7 @@ int S2_compute::execute(const pair & t, cholesky_context & c ) const
 	c.Lkji.get(triple(k+1, k, k), Li_block);    // Get the 2nd input tile (Output of previous step).
 	
     // Allocate memory for the output tile.
-    Lo_block = std::make_shared< tile_type >( b );
+    Lo_block = make_shared_tile(b); //std::make_shared< tile_type >( b );
     
     for(int k_b = 0; k_b < b; k_b++) {
         for(int i_b = 0; i_b < b; i_b++) {
@@ -243,7 +242,7 @@ aligned_t** S3_compute::get_dependences(const triple & t, cholesky_context & c, 
 
 void cholesky( double * A, const int n, const int b, const char * oname )
 {
-    tile_ptr_type mat_out;
+    //tile_ptr_type mat_out;
     int p;
     int k;
     FILE *fout;
@@ -263,7 +262,7 @@ void cholesky( double * A, const int n, const int b, const char * oname )
     for(int i = 0; i < p; i++) {
         for(int j = 0; j <= i; j++) {
             // Allocate memory for the tiles.
-            tile_ptr_type temp = std::make_shared< tile_type >( b );
+            tile_ptr_type temp = make_shared_tile(b); //std::make_shared< tile_type >( b );
             // Split the matrix into tiles and write it into the item space at time 0.
             // The tiles are indexed by tile indices (which are tag values).
             for(int A_i = i*b,T_i = 0; T_i < b; A_i++,T_i++) {

@@ -29,7 +29,6 @@
 #include <string.h>
 #include <math.h>
 #include <sys/types.h>
-# include <cnc/cnc.h>
 #include "cholesky_types.h"
 #include "cholesky.h"
 //#include "cholesky_cnc.cpp"

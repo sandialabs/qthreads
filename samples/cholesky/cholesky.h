@@ -27,8 +27,6 @@
 #ifndef cholesky_H_ALREADY_INCLUDED
 #define cholesky_H_ALREADY_INCLUDED
 
-# include <cnc/cnc.h>
-
 #include <memory>
 
 // Forward declaration of the context class (also known as graph)

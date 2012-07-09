@@ -28,6 +28,7 @@
 #ifndef _H_CHOLESKY_TYPES_INCLUDED_H_
 #define _H_CHOLESKY_TYPES_INCLUDED_H_
 
+#define CNC_PRECOND
 
 #include <cnc/cnc.h>
 #include <iostream>
@@ -105,8 +106,15 @@ private:
 };
 
 typedef Tile< double > tile_type;
-typedef std::shared_ptr< const tile_type > tile_const_ptr_type;
-typedef std::shared_ptr< tile_type > tile_ptr_type;
+//typedef std::shared_ptr< const tile_type > tile_const_ptr_type;
+//typedef std::shared_ptr< tile_type > tile_ptr_type;
 
+typedef const tile_type* tile_const_ptr_type;
+typedef       tile_type* tile_ptr_type;
+
+inline tile_type* make_shared_tile(int b){
+       tile_type* ret = new tile_type(b);
+       return ret;
+}
 
 #endif //_H_CHOLESKY_TYPES_INCLUDED_H_
