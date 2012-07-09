@@ -155,12 +155,14 @@ int main(int   argc,
 
         // Initialize values and empty
         aligned_t v[NUM_MULTI];
+	aligned_t *vptr[NUM_MULTI];
         for (int i = 0; i < NUM_MULTI; i++) {
+	    vptr[i] = &v[i];
             v[i] = i + 1;
             qthread_empty(&v[i]);
         }
 
-        qthread_fork_precond(array_consumer, v, &ret, -NUM_MULTI, v);
+        qthread_fork_precond(array_consumer, v, &ret, -NUM_MULTI, vptr);
         for (int i = 0; i < NUM_MULTI; i++) qthread_fork(array_producer, &v[i], NULL);
 
         qthread_readFF(&ret, &ret);
@@ -235,12 +237,14 @@ int main(int   argc,
 
         // Initialize values and empty
         aligned_t v[NUM_MULTI];
+	aligned_t *vptr[NUM_MULTI];
         for (int i = 0; i < NUM_MULTI; i++) {
+	    vptr[i] = &v[i];
             v[i] = i + 1;
             qthread_empty(&v[i]);
         }
 
-        qthread_fork_precond_to(array_consumer, v, &ret, 1, -NUM_MULTI, v);
+        qthread_fork_precond_to(array_consumer, v, &ret, 1, -NUM_MULTI, vptr);
         for (int i = 0; i < NUM_MULTI; i++) qthread_fork_to(array_producer, &v[i], NULL, 0);
 
         qthread_readFF(&ret, &ret);
