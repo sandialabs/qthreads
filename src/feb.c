@@ -1173,6 +1173,17 @@ int INTERNAL qthread_readFE_nb(aligned_t *restrict const       dest,
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
+#ifdef QTHREAD_COUNT_THREADS
+extern aligned_t             threadcount;
+extern aligned_t             maxconcurrentthreads;
+extern double                avg_concurrent_threads;
+extern aligned_t             maxeffconcurrentthreads;
+extern double                avg_eff_concurrent_threads;
+extern aligned_t             effconcurrentthreads;
+extern aligned_t             concurrentthreads;
+extern QTHREAD_FASTLOCK_TYPE concurrentthreads_lock;
+extern QTHREAD_FASTLOCK_TYPE effconcurrentthreads_lock;
+#endif
 /*
  * This function walks the list of preconditions. When an empty variable is
  * encountered, it enqueues the "nascent" qthread in the associated FFQ. When

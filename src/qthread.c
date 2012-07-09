@@ -107,15 +107,15 @@ struct qt_cleanup_funcs_s {
 *qt_cleanup_late_funcs = NULL;
 
 #ifdef QTHREAD_COUNT_THREADS
-static aligned_t             threadcount;
-static aligned_t             maxconcurrentthreads;
-static double                avg_concurrent_threads;
-static aligned_t             maxeffconcurrentthreads;
-static double                avg_eff_concurrent_threads;
-static aligned_t             effconcurrentthreads;
-static aligned_t             concurrentthreads;
-static QTHREAD_FASTLOCK_TYPE concurrentthreads_lock;
-static QTHREAD_FASTLOCK_TYPE effconcurrentthreads_lock;
+aligned_t             threadcount;
+aligned_t             maxconcurrentthreads;
+double                avg_concurrent_threads;
+aligned_t             maxeffconcurrentthreads;
+double                avg_eff_concurrent_threads;
+aligned_t             effconcurrentthreads;
+aligned_t             concurrentthreads;
+QTHREAD_FASTLOCK_TYPE concurrentthreads_lock;
+QTHREAD_FASTLOCK_TYPE effconcurrentthreads_lock;
 #endif
 
 /* Internal Prototypes */
