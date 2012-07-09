@@ -3023,10 +3023,11 @@ int API_FUNC qthread_fork_precond(qthread_f   f,
         npreconds *= -1;
         preconds   = malloc(npreconds * sizeof(aligned_t *));
         assert(preconds != NULL);
-        aligned_t *tmp = va_arg(args, aligned_t *);
-        for (int i = 0; i < npreconds; ++i) {
-            preconds[i] = &tmp[i];
-        }
+        aligned_t **tmp = va_arg(args, aligned_t **);
+        memcpy(preconds, tmp, sizeof(aligned_t*) * npreconds);
+        /*for (int i = 0; i < npreconds; ++i) {
+            preconds[i] = tmp[i];
+        }*/
     }
     va_end(args);
 
@@ -3262,10 +3263,8 @@ int API_FUNC qthread_fork_precond_to(qthread_f             f,
         npreconds *= -1;
         preconds   = malloc(npreconds * sizeof(aligned_t *));
         assert(preconds != NULL);
-        aligned_t *tmp = va_arg(args, aligned_t *);
-        for (int i = 0; i < npreconds; ++i) {
-            preconds[i] = &tmp[i];
-        }
+        aligned_t **tmp = va_arg(args, aligned_t **);
+        memcpy(preconds, tmp, sizeof(aligned_t*) * npreconds);
     }
     va_end(args);
 
