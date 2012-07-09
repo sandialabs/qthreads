@@ -187,15 +187,17 @@ namespace CnC {
 	void item_collection< Tag, Item >::get(const Tag &t,
 										   Item &     i) const
 	{
+		entry_t<Item> *ret;
+	#ifndef CNC_PRECOND
 		int stat = *pcnc_status;
-
 		entry_t<Item> *entry = new entry_t<Item>(NULL);
 		assert(entry != NULL);
 		if (stat == STARTED) {
 			qthread_empty(&entry->sinc);                            // init to empty
 		}
-		entry_t<Item> *ret = (entry_t<Item> *)qt_dictionary_put_if_absent(m_itemCollection,
+		ret = (entry_t<Item> *)qt_dictionary_put_if_absent(m_itemCollection,
 																		  const_cast < Tag * >(new Tag(t)), entry);
+		assert(ret != NULL);
 		assert(ret != NULL);
 		if (entry != ret) {
 			delete entry;
@@ -204,7 +206,11 @@ namespace CnC {
 		if (stat == STARTED) {
 			qthread_readFF(NULL, &ret->sinc);
 		}
-		
+	#else
+		ret = (entry_t<Item> *) qt_dictionary_get(m_itemCollection, const_cast < Tag * >(new Tag(t)));
+		assert (ret != NULL && "item collection entry is null!");
+		assert (ret -> value != NULL && "item collection value is null!");
+	#endif	
 		//This tiny thing seg faults - will need for getcoutn implementation
 		/*
 		aligned_t old_val = qthread_incr(&(ret->count), -1);
@@ -229,6 +235,7 @@ namespace CnC {
 		if (entry != ret) {
 			delete entry;
 		}
+		
 		*i = &ret->sinc;
 	}
 
