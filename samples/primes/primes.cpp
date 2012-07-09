@@ -101,8 +101,6 @@ int main(int argc, char* argv[])
     //Size not implemented yet;
     //number_of_primes = (int)c.m_primes.size() + 1;
 
-
-
 	CnC::item_collection<int, int>::const_iterator cii_b = c.m_primes.begin();
 	CnC::item_collection<int, int>::const_iterator cii_e = c.m_primes.end();
 	int no_primes = 0;

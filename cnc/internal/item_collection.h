@@ -40,7 +40,9 @@ namespace CnC {
 		const_iterator() : m_coll(NULL) {
 			assert(0);
 		}
-		const_iterator(const const_iterator &i) : dict_it(i.dict_it), m_coll(i.m_coll), m_val(i.m_val), no(0) {}
+		const_iterator(const const_iterator &i) :  dict_it(i.dict_it), m_coll(i.m_coll), m_val(i.m_val), no(0) {
+			this->dict_it = qt_dictionary_iterator_copy(i.dict_it);
+		}
 		~const_iterator() // TODO test destructor! How is end() destroyed?
 		{
 			qt_dictionary_iterator_destroy(dict_it);
@@ -66,10 +68,8 @@ namespace CnC {
 		const_iterator &operator++();
 		const_iterator operator++(int)
 		{
-			const_iterator _tmp = *this;
-
 			++(*this);
-			return _tmp;
+			return *this;
 		}
 
 		bool valid() const
@@ -77,6 +77,7 @@ namespace CnC {
 			return m_coll != NULL;
 		}
 
+		
 	private:
 		qt_dictionary_iterator            *dict_it;
 		const item_collection< Tag, Item> *m_coll;
@@ -92,6 +93,7 @@ namespace CnC {
 	{
 		if(!isEnd) {
 			dict_it = qt_dictionary_iterator_create(c->m_itemCollection);
+			assert (dict_it != ERROR);
 		} else {
 			dict_it = qt_dictionary_end(c->m_itemCollection);
 		}
@@ -111,7 +113,8 @@ namespace CnC {
 	typename item_collection< Tag, Item >::const_iterator &item_collection< Tag, Item >::const_iterator
 	::operator++()
 	{
-		qt_dictionary_iterator_next(dict_it);
+		list_entry* ret = qt_dictionary_iterator_next(dict_it);
+		assert (ret != ERROR && "Incrementing the iterator returned an error");
 		no++;
 		return *this;
 	}
@@ -145,18 +148,17 @@ namespace CnC {
 	template< typename Tag, typename Item>
 	typename item_collection< Tag, Item >::const_iterator item_collection< Tag, Item >::begin() const
 	{
-		const_iterator _tmp(this);
-
-		++_tmp;
-		return _tmp;
+		const_iterator *_tmp = new item_collection< Tag, Item >::const_iterator(this, false);
+		++(*_tmp);
+		return *_tmp;
 	}
 
 	template< typename Tag, typename Item >
 	typename item_collection< Tag, Item >::const_iterator item_collection< Tag, Item >::end() const
 	{
-		const_iterator _tmp(this, true);
+		const_iterator *_tmp = new item_collection< Tag, Item >::const_iterator(this, true);
 
-		return _tmp;
+		return *_tmp;
 	}
 
 	template< typename Tag, typename Item  >
