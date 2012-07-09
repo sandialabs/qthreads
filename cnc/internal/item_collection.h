@@ -40,7 +40,7 @@ namespace CnC {
 		const_iterator() : m_coll(NULL) {
 			assert(0);
 		}
-		const_iterator(const const_iterator &i) : m_coll(i.m_coll), m_val(i.m_val), dict_it(i.dict_it), no(0) {}
+		const_iterator(const const_iterator &i) : dict_it(i.dict_it), m_coll(i.m_coll), m_val(i.m_val), no(0) {}
 		~const_iterator() // TODO test destructor! How is end() destroyed?
 		{
 			qt_dictionary_iterator_destroy(dict_it);
@@ -77,11 +77,10 @@ namespace CnC {
 			return m_coll != NULL;
 		}
 
-		value_type m_val;
-
 	private:
 		qt_dictionary_iterator            *dict_it;
 		const item_collection< Tag, Item> *m_coll;
+		value_type                         m_val;
 		int                                no;
 	};
 

@@ -67,9 +67,9 @@ int FindPrimes::execute( int n, my_context & c ) const
 
 int main(int argc, char* argv[])
 {
-    bool verbose = false;
+    //bool verbose = false;
     int n = 0;
-    int number_of_primes = 0;
+    //int number_of_primes = 0;
 
     if (argc >= 2) 
     {
@@ -78,7 +78,7 @@ int main(int argc, char* argv[])
     else if (argc == 3 && 0 == strcmp("-v", argv[1]))
     {
         n = atoi(argv[2]);
-        verbose = true;
+        //verbose = true;
     }
     else
     {
@@ -98,7 +98,8 @@ int main(int argc, char* argv[])
 
     c.wait();
 
-    number_of_primes = (int)c.m_primes.size() + 1;
+    //Size not implemented yet;
+    //number_of_primes = (int)c.m_primes.size() + 1;
 
 
 

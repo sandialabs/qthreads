@@ -77,7 +77,7 @@ int main( int argc, char* argv[] )
     std::cout << "fib (" << n << "): " << res2 << std::endl;
 
 	if (argc>2) {
-		assert( atol(argv[2]) == res2 );
+		assert( (unsigned long)atol(argv[2]) == res2 );
 	}
     return 0;
 }
