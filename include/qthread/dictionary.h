@@ -145,6 +145,11 @@ qt_dictionary_iterator* qt_dictionary_end(qt_dictionary* dict);
 */
 int qt_dictionary_iterator_equals(qt_dictionary_iterator*a, qt_dictionary_iterator* b);
 
+/*
+	Creates a copy of the iteartoor given as parameter.
+	Returns new iterator if successfull and NULL otherwise
+ */
+qt_dictionary_iterator* qt_dictionary_iterator_copy(qt_dictionary_iterator* b);
 
 /*
  * Displays debugging info for dictionary buckets 

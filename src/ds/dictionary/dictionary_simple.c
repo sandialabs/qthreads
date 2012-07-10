@@ -300,6 +300,8 @@ qt_dictionary_iterator* qt_dictionary_iterator_create(qt_dictionary* dict) {
 		return ERROR;
 	}
 	qt_dictionary_iterator* it = (qt_dictionary_iterator*) malloc (sizeof(qt_dictionary_iterator));
+	if(it == NULL)
+		return ERROR; //out of memory
 	it -> dict = dict;
 	it -> bkt = -1;
 	it -> crt = NULL;
@@ -312,7 +314,7 @@ void qt_dictionary_iterator_destroy(qt_dictionary_iterator* it) {
 }
 
 list_entry* qt_dictionary_iterator_next(qt_dictionary_iterator* it) {
-	if(it == NULL || it -> dict -> content == NULL){
+	if(it == NULL || it -> dict == NULL || it -> dict -> content == NULL){
 		return ERROR;
 	}
 	//First call to next: search for the first non-empty bucket
@@ -377,6 +379,17 @@ int qt_dictionary_iterator_equals(qt_dictionary_iterator*a, qt_dictionary_iterat
 	if (a == NULL || b == NULL)
 		return a == b;
 	return (a -> crt == b ->crt) && (a -> dict == b -> dict) && (a -> bkt == b -> bkt);
+}
+
+qt_dictionary_iterator* qt_dictionary_iterator_copy(qt_dictionary_iterator* b) {
+	if(b == NULL)
+		return NULL;
+	qt_dictionary_iterator* ret = qt_dictionary_iterator_create(b -> dict);
+	if(ret == NULL || ret == ERROR)
+		return NULL;
+	ret -> bkt = b -> bkt;
+	ret -> crt = b -> crt;
+	return ret;
 }
 
 void qt_dictionary_printbuckets(qt_dictionary* dict) {
