@@ -50,6 +50,7 @@ namespace CnC {
 		const StepType _step;
 	};
 
+	//context_base
 	class context_base
 	{
 	public:
@@ -69,6 +70,14 @@ namespace CnC {
 	{
 		qt_sinc_submit(sinc, NULL);
 	}
+	
+	//pair_base
+	class pair_base{
+	public:
+		pair_base(){}
+		virtual void decrement(){}
+		pair_base *next;
+	};
 }
 
 #include <cnc/internal/step_launcher.h>
@@ -103,13 +112,14 @@ namespace CnC {
 		class const_iterator;
 		template< class ContextTemplate >item_collection(context< ContextTemplate > &ctxt);
 		~item_collection();
-		void put(const Tag & tag,
-				 const Item &item,
-				 int         get_count = 0);
+		void put(const Tag  & tag,
+				 const Item & item,
+				 int          get_count = -1);
 		void get(const Tag &tag,
 				 Item &     item) const;
 		void wait_on(const Tag & t,
 					 aligned_t **i) const;
+		void decrement(const Tag &tag) const;
 		const_iterator begin() const;
 		const_iterator end() const;
 		size_t         size();
@@ -138,6 +148,23 @@ namespace CnC {
 
 		context(bool);
 	};
+	
+	//item_id_pair
+	template< typename Tag, typename Item >
+	class item_id_pair : public pair_base 
+	{
+	public:
+		item_id_pair(const item_collection<Tag, Item>* ic_arg, Tag t_arg) : 
+			ic(ic_arg), t(t_arg) {}
+		void decrement()
+		{
+			ic -> decrement(t);
+		}
+	private:
+		const item_collection<Tag, Item>* ic;
+		Tag t;
+	};
+	
 } // namespace cnc
 
 #include <cnc/internal/step_collection.h>

@@ -11,19 +11,18 @@ namespace CnC {
 	public:
 		aligned_t   sinc;
 		const Item *value;
-		aligned_t count;
+		int count;
 
-		entry_t(const Item *pitem, int get_count=0) :
+		entry_t(const Item *pitem, int get_count) :
 			sinc(0),
 			value(pitem),
 			count(get_count) {}
 
 		~entry_t()
 		{
-			if(count != 0)
-				printf("Warning! Destructor called on item with get_count=%ld\n", count);
 			qthread_fill(&sinc);
-			delete value; //TODO test this
+			if(value != NULL)
+				delete value; //TODO test this
 		}
 	};
 
@@ -162,10 +161,14 @@ namespace CnC {
 	}
 
 	template< typename Tag, typename Item  >
-	void item_collection< Tag, Item >::put(const Tag & t,
+	void item_collection< Tag, Item >::put(const Tag  & t,
 										   const Item &i,
-										   int get_count)
+										   int        get_count)
 	{
+		assert ((get_count == -1 || get_count > 0) && 
+			"Correct get_count argument is >= 0 (default to -1 for persistent items)");
+		if(get_count == 0)
+			return;
 		entry_t<Item> *entry = new entry_t<Item>(new Item(i), get_count);
 		entry_t<Item> *ret   = (entry_t<Item> *)qt_dictionary_put_if_absent(
 																			m_itemCollection,
@@ -190,9 +193,9 @@ namespace CnC {
 										   Item &     i) const
 	{
 		entry_t<Item> *ret;
-	#ifndef CNC_PRECOND
+	# ifndef CNC_PRECOND_DEBUG 
 		int stat = *pcnc_status;
-		entry_t<Item> *entry = new entry_t<Item>(NULL);
+		entry_t<Item> *entry = new entry_t<Item>(NULL, -1);
 		assert(entry != NULL);
 		if (stat == STARTED) {
 			qthread_empty(&entry->sinc);                            // init to empty
@@ -200,26 +203,28 @@ namespace CnC {
 		ret = (entry_t<Item> *)qt_dictionary_put_if_absent(m_itemCollection,
 																		  const_cast < Tag * >(new Tag(t)), entry);
 		assert(ret != NULL);
-		assert(ret != NULL);
 		if (entry != ret) {
 			delete entry;
 		}
-
+		
 		if (stat == STARTED) {
 			qthread_readFF(NULL, &ret->sinc);
 		}
-	#else
-		ret = (entry_t<Item> *) qt_dictionary_get(m_itemCollection, const_cast < Tag * >(new Tag(t)));
+	# else // Use this case to check precond is called when _all_ dependences are known ahead of time.
+	       // Revert to above case for _partial_ preconditions; Keep above case as default.
+		ret = (entry_t<Item> *) qt_dictionary_get(m_itemCollection, const_cast < Tag * >(&t));
 		assert (ret != NULL && "item collection entry is null!");
 		assert (ret -> value != NULL && "item collection value is null!");
-	#endif	
-		//This tiny thing seg faults - will need for getcoutn implementation
-		/*
-		aligned_t old_val = qthread_incr(&(ret->count), -1);
-		if(old_val == 1)
-			; //can clear memory...some time in the future...since returned value is still needed for a while...
-		*/
-		
+	# endif
+	
+		if(ret -> count > 0 ){
+			printf("Inside something I should not enter! (ic.get: count is %d)\n", ret ->count);
+			item_id_pair<Tag, Item>* toadd = new item_id_pair<Tag, Item>(this, t);
+			void* tld = qthread_get_tasklocal(sizeof(pair_base*));
+			pair_base **p = (pair_base **)tld;
+			toadd -> next = *p;
+			*p = toadd;
+		}
 		i = *(ret->value);
 	}
 
@@ -227,7 +232,7 @@ namespace CnC {
 	void item_collection< Tag, Item >::wait_on(const Tag &t,
 											   aligned_t **i) const
 	{
-		entry_t<Item> *entry = new entry_t<Item>(NULL);
+		entry_t<Item> *entry = new entry_t<Item>(NULL, -1);
 		assert(entry != NULL);
 		qthread_empty(&entry->sinc);                            // init to empty
 		
@@ -239,6 +244,25 @@ namespace CnC {
 		}
 		
 		*i = &ret->sinc;
+	}
+	
+	template< typename Tag, typename Item  >
+	void item_collection< Tag, Item >::decrement(const Tag &t) const
+	{
+		printf("Inside something I should not enter! (ic.decrement)\n");
+		entry_t<Item> *ret = (entry_t<Item> *) qt_dictionary_get(m_itemCollection, const_cast < Tag * >(&t));
+		
+		//TODO: This tiny thing seg faults(cannot incr with neg val?)
+		aligned_t old_val = qthread_incr(&(ret->count), -1);
+		if(old_val == 0){
+				ret = (entry_t<Item> *) qt_dictionary_delete(m_itemCollection, const_cast < Tag * >(&t));
+				assert (ret !=  NULL && "Error when deleting item from dictionary (not found)");
+				if(ret != NULL){
+					//TODO: remove this when cheating, e.g. cholesky reuses items
+					//delete *(ret -> value);
+				}
+				delete(ret);
+		}
 	}
 
 	// TODO: implement size

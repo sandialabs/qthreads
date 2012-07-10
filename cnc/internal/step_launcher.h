@@ -73,7 +73,24 @@ namespace CnC {
 		const Tag                            *tag        = proper_arg->tag;
 		const Step                            crt_step   = proper_arg->sc->get_step();
 
+		void* tld = qthread_get_tasklocal(sizeof(pair_base*));
+		*((pair_base**)tld) = NULL;
+		
+		tld = qthread_get_tasklocal(sizeof(pair_base*));
+		assert ( *((pair_base**)tld) == NULL && "Task local data init to NULL!");
+		
 		int rez = crt_step.execute(*tag, *(proper_arg->ctxt));
+		tld = qthread_get_tasklocal(sizeof(pair_base*));
+		
+		assert ( *((pair_base**)tld) == NULL && "Task local data should still be NULL!");
+
+		pair_base *crt = *((pair_base**)tld), *tmp;
+		while(crt != NULL){
+			tmp = crt;
+			crt -> decrement();
+			crt = crt -> next;
+			free(tmp);
+		}
 		proper_arg->ctxt->markJoin();
 
 		return rez;
