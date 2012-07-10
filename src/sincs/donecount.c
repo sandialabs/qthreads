@@ -2,18 +2,23 @@
 # include "config.h"
 #endif
 
+/* System Headers */
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
 
+/* The API */
 #include "qthread/qthread.h"
+
+/* Internal Headers */
 #include "qthread/cacheline.h"
 #include "qthread_asserts.h"
 #include "qt_shepherd_innards.h"
 #include "qthread_expect.h"
 #include "qt_visibility.h"
 #include "qt_aligned_alloc.h"
+#include "qt_debug.h"
 
 #include "qthread/qt_sinc.h"
 
@@ -96,6 +101,7 @@ void qt_sinc_init(qt_sinc_t *restrict  sinc_,
     }
     sinc->counter = expect;
     if (sinc->counter != 0) {
+        qthread_debug(FEB_DETAILS, "tid %u emptying sinc ready (%p)\n", qthread_id(), &sinc->ready);
         qthread_empty(&sinc->ready);
     } else {
         qthread_fill(&sinc->ready);
@@ -125,6 +131,7 @@ void qt_sinc_reset(qt_sinc_t   *sinc_,
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
 
     assert(sinc && (0 == sinc->counter));
+    assert(qthread_feb_status(&sinc->ready) == 1);
 
     qt_sinc_reduction_t *const restrict rdata = sinc->rdata;
 
@@ -146,9 +153,10 @@ void qt_sinc_reset(qt_sinc_t   *sinc_,
     // Reset termination detection
     sinc->counter = will_spawn;
     if (sinc->counter != 0) {
+        qthread_debug(FEB_DETAILS, "tid %u emptying sinc ready (%p)\n", qthread_id(), &sinc->ready);
         qthread_empty(&sinc->ready);
-    } else {
-        qthread_fill(&sinc->ready);
+    /*} else {
+        qthread_fill(&sinc->ready);*/
     }
 } /*}}}*/
 
@@ -166,6 +174,8 @@ void qt_sinc_fini(qt_sinc_t *sinc_)
         assert(rdata->values);
         qthread_internal_aligned_free(rdata->values, cacheline);
     }
+    qthread_debug(FEB_DETAILS, "tid %u filling sinc ready as part of destruction (%p)\n", qthread_id(), &sinc->ready);
+    qassert(qthread_fill(&sinc->ready), QTHREAD_SUCCESS);
 } /*}}}*/
 
 void qt_sinc_destroy(qt_sinc_t *sinc_)
@@ -187,6 +197,7 @@ void qt_sinc_willspawn(qt_sinc_t *sinc_,
 
     if (count != 0) {
         if (qthread_incr(&sinc->counter, count) == 0) {
+            qthread_debug(FEB_DETAILS, "tid %u emptying sinc ready (%p)\n", qthread_id(), &sinc->ready);
             qthread_empty(&sinc->ready);
         }
     }
