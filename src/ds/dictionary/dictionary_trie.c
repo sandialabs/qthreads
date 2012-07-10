@@ -752,6 +752,21 @@ int qt_dictionary_iterator_equals(qt_dictionary_iterator *a,
     return (a->crt == b->crt) && (a->dict == b->dict) && (a->bkt == b->bkt);
 }
 
+
+qt_dictionary_iterator* qt_dictionary_iterator_copy(qt_dictionary_iterator* b) {
+	if(b == NULL)
+		return NULL;
+	qt_dictionary_iterator* ret = qt_dictionary_iterator_create(b -> dict);
+	if(ret == NULL || ret == ERROR)
+		return NULL;
+	ret -> bkt = b -> bkt;
+	ret -> crt = b -> crt;
+    ret -> spine_index = b -> spine_index;
+    ret -> base_index = b -> base_index;
+	return ret;
+}
+
+
 void qt_dictionary_printbuckets(qt_dictionary *dict) {}
 
 /* vim:set expandtab: */
