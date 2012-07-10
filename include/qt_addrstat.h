@@ -33,20 +33,5 @@ static void qthread_addrstat_delete(qthread_addrstat_t *m)
     FREE_ADDRSTAT(m);
 }                                      /*}}} */
 
-static void qt_hash_print_addrstat(const qt_key_t addr, qthread_addrstat_t *m, void *arg)
-{                                      /*{{{ */
-    printf("addr: %#lx\n", (unsigned long)addr);
-    QTHREAD_FASTLOCK_LOCK(&m->lock);
-    printf("\tEFQ = %p\n"
-           "\tFEQ = %p\n"
-           "\tFFQ = %p\n"
-           "\tfull = %u\n"
-           "\tvalid = %u\n",
-           m->EFQ, m->FEQ, m->FFQ, m->full, m->valid);
-    if (arg)
-        *(int*)arg += 1;
-    QTHREAD_FASTLOCK_UNLOCK(&m->lock);
-}                                      /*}}} */
-
 #endif // ifndef QT_ADDRSTAT_H
 /* vim:set expandtab: */
