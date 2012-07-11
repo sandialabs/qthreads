@@ -114,7 +114,7 @@ int main(int   argc,
 
             // Verify return values
             if ((rets[i] != 42) && (i != NUM_CONSUMERS)) {
-                iprintf("Bad return value! Wanted 42, got %u\n", rets[i]);
+                iprintf("Bad return value! Wanted 42, got %u\n", (unsigned int)rets[i]);
                 return 1;
             }
         }
@@ -144,7 +144,7 @@ int main(int   argc,
 
         // Verify return value
         if (ret != 3 * 42) {
-            iprintf("Bad return value! Wanted %u, got %u\n", 3 * 42, ret);
+            iprintf("Bad return value! Wanted %u, got %u\n", 3 * 42, (unsigned int)ret);
             return 1;
         }
     }
@@ -154,11 +154,11 @@ int main(int   argc,
         aligned_t ret;
 
         // Initialize values and empty
-        aligned_t v[NUM_MULTI];
-	aligned_t *vptr[NUM_MULTI];
+        aligned_t  v[NUM_MULTI];
+        aligned_t *vptr[NUM_MULTI];
         for (int i = 0; i < NUM_MULTI; i++) {
-	    vptr[i] = &v[i];
-            v[i] = i + 1;
+            vptr[i] = &v[i];
+            v[i]    = i + 1;
             qthread_empty(&v[i]);
         }
 
@@ -169,9 +169,9 @@ int main(int   argc,
 
         // Verify return value
         if (ret != NUM_MULTI * 42) {
-	    iprintf("Bad return value! Wanted %u, got %u\n", NUM_MULTI * 42, ret);
-	    return 1;
-	}
+            iprintf("Bad return value! Wanted %u, got %u\n", NUM_MULTI * 42, (unsigned int)ret);
+            return 1;
+        }
     }
 
     iprintf("\n***** Test migration: MC/SP with C on 1 and S on 0 *****\n");
@@ -192,7 +192,7 @@ int main(int   argc,
 
             // Verify return values
             if ((rets[i] != 42) && (i != NUM_CONSUMERS)) {
-                iprintf("Bad return value! Wanted 42, got %u\n", rets[i]);
+                iprintf("Bad return value! Wanted 42, got %u\n", (unsigned int)rets[i]);
                 return 1;
             }
         }
@@ -224,9 +224,9 @@ int main(int   argc,
 
         // Verify return value
         if (ret != 3 * 42) {
-            iprintf("Bad return value! Wanted %u, got %u\n", 3 * 42, ret);
-	    return 1;
-	}
+            iprintf("Bad return value! Wanted %u, got %u\n", 3 * 42, (unsigned int)ret);
+            return 1;
+        }
     }
 
     iprintf("\n***** Test migration: SC/MP with C on 1 and S on 0 (array) *****\n");
@@ -236,11 +236,11 @@ int main(int   argc,
         aligned_t ret;
 
         // Initialize values and empty
-        aligned_t v[NUM_MULTI];
-	aligned_t *vptr[NUM_MULTI];
+        aligned_t  v[NUM_MULTI];
+        aligned_t *vptr[NUM_MULTI];
         for (int i = 0; i < NUM_MULTI; i++) {
-	    vptr[i] = &v[i];
-            v[i] = i + 1;
+            vptr[i] = &v[i];
+            v[i]    = i + 1;
             qthread_empty(&v[i]);
         }
 
@@ -251,9 +251,9 @@ int main(int   argc,
 
         // Verify return value
         if (ret != NUM_MULTI * 42) {
-	    iprintf("Bad return value! Wanted %u, got %u\n", NUM_MULTI * 42, ret);
-	    return 1;
-	}
+            iprintf("Bad return value! Wanted %u, got %u\n", NUM_MULTI * 42, (unsigned int)ret);
+            return 1;
+        }
     }
 
     return 0;

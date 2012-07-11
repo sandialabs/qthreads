@@ -39,7 +39,7 @@ int main(int   argc,
 	aligned_t tmp = donecount;
         qthread_yield();
 	if (tmp != donecount) {
-	    iprintf("donecount = %i\n", donecount);
+	    iprintf("donecount = %u\n", (unsigned int)donecount);
 	}
     } while (donecount != count);
 
