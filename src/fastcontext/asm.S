@@ -494,23 +494,23 @@ SET:
         addi    r15, r1, (13*8)
         ld      r43, r15
         addi    r16, r1, (14*8)
-        ld      r44, r17
-        addi    r18, r1, (15*8)
-        ld      r45, r18
-        addli    r19, r1, (16*8)
-        ld      r46, r19
-        addli    r20, r1, (17*8)
-        ld      r47, r20
-        addli    r21, r1, (18*8)
-        ld      r48, r21
-        addli    r22, r1, (19*8)
-        ld      r49, r22
-        addli    r23, r1, (20*8)
-        ld      r50, r23
-        addli    r24, r1, (21*8)
-        ld      r51, r24
-        addli    r25, r1, (22*8)
-        ld      r52, r25
+        ld      r44, r16
+        addi    r17, r1, (15*8)
+        ld      r45, r17
+        addli    r18, r1, (16*8)
+        ld      r46, r18
+        addli    r19, r1, (17*8)
+        ld      r47, r19
+        addli    r20, r1, (18*8)
+        ld      r48, r20
+        addli    r21, r1, (19*8)
+        ld      r49, r21
+        addli    r22, r1, (20*8)
+        ld      r50, r22
+        addli    r23, r1, (21*8)
+        ld      r51, r23
+        addli    r24, r1, (22*8)
+        ld      r52, r24
         _(/*) fiddle with the stack */)
         addli    r2, r1, (23*8)+(1*8)
         ld      r3, r2
