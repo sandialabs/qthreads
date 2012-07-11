@@ -189,6 +189,7 @@ int S3_compute::execute(const triple & t, cholesky_context & c ) const
 	tile_const_ptr_type A_block;
     tile_const_ptr_type L1_block;
     tile_const_ptr_type L2_block;
+    
     double temp;
     
     int b = c.b;
@@ -198,7 +199,11 @@ int S3_compute::execute(const triple & t, cholesky_context & c ) const
 
     assert( j != k && i != k );
 	c.Lkji.get(triple(k, j, i), A_block); // Get the input tile.
-	
+
+# ifndef DISABLE_GET_COUNTS    
+    tile_const_ptr_type Lo_block = make_shared_tile(b);
+# endif
+
     if(i==j){   // Diagonal tile.
 	    c.Lkji.get(triple(k+1,j,k), L2_block); // In case of a diagonal tile, i=j, hence both the tiles are the same.
 	}
@@ -212,18 +217,29 @@ int S3_compute::execute(const triple & t, cholesky_context & c ) const
             temp = -1 * (*L2_block)( j_b, k_b );
             if(i!=j){
                 for(int i_b = 0; i_b < b; i_b++) {
+					# ifndef DISABLE_GET_COUNTS 
+                    const_cast< tile_type & >(*Lo_block)( i_b, j_b ) = (*A_block)( i_b, j_b ) + (temp * (*L1_block)( i_b, k_b ));
+                    # else
                     const_cast< tile_type & >(*A_block)( i_b, j_b ) = (*A_block)( i_b, j_b ) + (temp * (*L1_block)( i_b, k_b ));
+                    # endif
                 }
             }
             else {
                 for(int i_b = j_b; i_b < b; i_b++) {
+					# ifndef DISABLE_GET_COUNTS 
+                    const_cast< tile_type & >(*Lo_block)( i_b, j_b ) = (*A_block)( i_b, j_b ) + (temp * (*L2_block)( i_b, k_b ));
+                    # else
                     const_cast< tile_type & >(*A_block)( i_b, j_b ) = (*A_block)( i_b, j_b ) + (temp * (*L2_block)( i_b, k_b ));
+                    # endif
                 }
             }
         }
     }
-
-    c.Lkji.put(triple(k+1,j,i),A_block, 1+((k==j)?1:0));  // Write the output at the next time step.
+# ifndef DISABLE_GET_COUNTS 
+    c.Lkji.put(triple(k+1,j,i),Lo_block, 1+((k==j)?1:0));  // Write the output at the next time step.
+# else
+	c.Lkji.put(triple(k+1,j,i),A_block, 1+((k==j)?1:0));  // Write the output at the next time step.
+# endif
     return CnC::CNC_Success;
 }
 
@@ -270,7 +286,7 @@ void cholesky( double * A, const int n, const int b, const char * oname )
                     (*temp)( T_i, T_j ) = A[A_i*n+A_j];
                 }
             }
-            c.Lkji.put(triple(0,i,j),temp);
+            c.Lkji.put(triple(0,i,j),temp, 1);
         }
     }
     
@@ -285,8 +301,9 @@ void cholesky( double * A, const int n, const int b, const char * oname )
 
     //qt_dictionary_printbuckets(c.Lkji.m_itemCollection);
     //printf("The time taken for parallel execution a matrix of size %d x %d : %g sec\n", n, n, (t3-t2).seconds());
-    
-    /*if(oname) {
+ 
+# ifdef DISABLE_GET_COUNTS
+    if(oname) {
         fout = fopen(oname, "w");
         for (int i = 0; i < p; i++) {
             for(int i_b = 0; i_b < b; i_b++) {
@@ -311,7 +328,9 @@ void cholesky( double * A, const int n, const int b, const char * oname )
             }
         }
         fclose(fout);
-    } else */{
+    } else 
+# endif
+    {
         // make sure the result has been computed
         c.Lkji.size();
         for (int i = 0; i < p; i++) {
@@ -322,5 +341,5 @@ void cholesky( double * A, const int n, const int b, const char * oname )
         }
         //TODO: write in A and output in file using these gets (fewer and accuarate wrt to getcounts)
     }
-    
+	printf("Tile destroyed: %d\n", Tile<double>::counter);
 }

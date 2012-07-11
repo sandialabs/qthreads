@@ -82,6 +82,7 @@ template< typename T >
 class Tile
 {
 public:
+	static int counter;
     Tile( int sz = 0 ) : m_sz( sz ), m_array( NULL )/*, m_full( true )*/
     {
 		if( sz ) {
@@ -92,7 +93,8 @@ public:
     		}
     	}
     }
-    ~Tile() { 
+    ~Tile() {
+		counter++;
 		delete m_array;
     }
 #define TOI( _i, _j, _s ) ((_j)*(_s)+(_i))

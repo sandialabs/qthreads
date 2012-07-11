@@ -5,6 +5,19 @@
 # define _QT_CNC_ITEM_COLLECTION_H_
 
 namespace CnC {
+
+	template<typename T>
+	struct IsPointer
+	{
+		typedef NoType  Result;
+	};
+	template<typename T>
+	struct IsPointer<T*>
+	{
+		typedef YesType Result;
+	};
+
+
 	template<typename Item  >
 	class entry_t
 	{
@@ -165,6 +178,9 @@ namespace CnC {
 										   const Item &i,
 										   int        get_count)
 	{
+	# ifdef DISABLE_GET_COUNTS
+		get_count = -1;
+	# endif
 		if(get_count == 0){
 			printf("Produced unused item => not stored\n");
 			return;
@@ -228,8 +244,8 @@ namespace CnC {
 				*p = toadd;
 			}
 		}
-		else if(ret -> count != 1)
-			printf("Item read after graph finished has getcount != 1 ( = %d)\n", ret ->count);
+		//else if(ret -> count != 1)
+			//printf("Item read after graph finished has getcount != 1 ( = %d)\n", ret ->count);
 		
 		i = *(ret->value);
 	}
@@ -264,11 +280,23 @@ namespace CnC {
 				assert (ret !=  NULL && "Error when deleting item from dictionary (not found)");
 				if(ret != NULL){
 					//TODO: remove this when cheating, e.g. cholesky reuses items
+					typename IsPointer<Item>::Result r;
+					Clear(&r, *(ret -> value));
 					//delete *(ret -> value);
 				}
 				delete(ret);
 		}
 	}
+
+	template< typename Tag, typename Item  >
+	void item_collection< Tag, Item >::Clear(YesType*, Item i) const 
+	{
+		delete i;
+	}
+	
+	template< typename Tag, typename Item  >
+	void item_collection< Tag, Item >::Clear(NoType*, Item i) const {}
+
 
 	// TODO: implement size
 	template< typename Tag, typename Item  >

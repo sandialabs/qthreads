@@ -12,6 +12,8 @@
 #define STARTED 1
 #define ENDED   2
 
+//#define DISABLE_GET_COUNTS
+
 template< class T >
 struct cnc_tag_hash_compare {
     size_t hash(const T &x) const
@@ -103,6 +105,8 @@ namespace CnC {
 		std::list< step_launcher_base<Tag> * > prescribedStepCollections;
 	};
 
+	typedef char YesType;
+	typedef char NoType[2];
 	// 3) Item collection
 	template< typename Tag, typename Item >
 	class item_collection
@@ -134,6 +138,9 @@ namespace CnC {
 
 	protected:
 		friend class const_iterator;
+	private:
+		void Clear(YesType*, Item i) const ;
+		void Clear(NoType*, Item i) const ;
 	};
 
 	template< class ContextTemplate >

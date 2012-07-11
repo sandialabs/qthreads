@@ -34,6 +34,8 @@
 //#include "cholesky_cnc.cpp"
 #include <cassert>
 
+template<> int Tile<double>::counter=0;
+
 extern void cholesky( double *A, const int n, const int b, const char * oname );
 
 void posdef_gen( double * A, int n )
