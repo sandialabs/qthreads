@@ -82,7 +82,7 @@ namespace CnC {
 		int rez = crt_step.execute(*tag, *(proper_arg->ctxt));
 		tld = qthread_get_tasklocal(sizeof(pair_base*));
 		
-		assert ( *((pair_base**)tld) == NULL && "Task local data should still be NULL!");
+		//assert ( *((pair_base**)tld) == NULL && "Task local data should still be NULL!");
 
 		pair_base *crt = *((pair_base**)tld), *tmp;
 		while(crt != NULL){
@@ -106,31 +106,31 @@ namespace CnC {
 		pts->sc  = &_stepCol;
 
 		_ctxt.markFork();
-	#ifndef CNC_PRECOND
-	# ifdef ASSERTS_ENABLED
-		int ret =
-	# endif
+	# ifndef CNC_PRECOND
+		# ifdef ASSERTS_ENABLED
+			int ret =
+		# endif
 		qthread_fork(call_step, pts, NULL);
-	#else
-	# ifdef ASSERTS_ENABLED
-		int ret;
-	# endif
+	# else
+		# ifdef ASSERTS_ENABLED
+			int ret;
+		# endif
 		int         no_of_dependences = -1;
 		aligned_t **list_of_sincs     = _stepCol.get_step().get_dependences(tag, _ctxt, no_of_dependences);
 		if(list_of_sincs != NULL) {
 			assert(no_of_dependences > 0);
-	# ifdef ASSERTS_ENABLED
-			ret =
-	# endif
+			# ifdef ASSERTS_ENABLED
+					ret =
+			# endif
 			qthread_fork_precond(call_step, pts, NULL, (-1) * no_of_dependences, list_of_sincs);
 			free(list_of_sincs);                         // TODO: Double-check list is not used after getting the aligned_t* from it
-		} else
-	# ifdef ASSERTS_ENABLED
+		} else 
 		{
-			ret =
-	# endif
+			# ifdef ASSERTS_ENABLED
+				ret =
+			# endif
 			qthread_fork(call_step, pts, NULL);
-			}
+		}
 	#endif // ifndef CNC_PRECOND
 
 	#ifdef ASSERTS_ENABLED

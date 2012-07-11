@@ -29,6 +29,7 @@
 #define _H_CHOLESKY_TYPES_INCLUDED_H_
 
 #define CNC_PRECOND
+#define CNC_PRECOND_DEBUG
 
 #include <cnc/cnc.h>
 #include <iostream>
@@ -92,7 +93,7 @@ public:
     	}
     }
     ~Tile() { 
-    	delete m_array;
+		delete m_array;
     }
 #define TOI( _i, _j, _s ) ((_j)*(_s)+(_i))
     inline T operator()( int i, int j ) const { return m_array[TOI(i,j,m_sz)]; }

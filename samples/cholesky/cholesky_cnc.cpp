@@ -122,7 +122,7 @@ int S1_compute::execute(const int & t, cholesky_context & c ) const
         }
     }
 
-    c.Lkji.put(triple(k+1, k, k), L_block);   // Write the output tile at the next time step.
+    c.Lkji.put(triple(k+1, k, k), L_block, c.p-k);   // Write the output tile at the next time step.
 	
     return CnC::CNC_Success;
 }
@@ -165,7 +165,7 @@ int S2_compute::execute(const pair & t, cholesky_context & c ) const
         }   
     }
     
-    c.Lkji.put(triple(k+1, j, k),Lo_block); // Write the output tile at the next time step.
+    c.Lkji.put(triple(k+1, j, k),Lo_block, c.p-k); // Write the output tile at the next time step.
 	
     return CnC::CNC_Success;
 }
@@ -223,7 +223,7 @@ int S3_compute::execute(const triple & t, cholesky_context & c ) const
         }
     }
 
-    c.Lkji.put(triple(k+1,j,i),A_block);  // Write the output at the next time step.
+    c.Lkji.put(triple(k+1,j,i),A_block, 1+((k==j)?1:0));  // Write the output at the next time step.
     return CnC::CNC_Success;
 }
 
@@ -286,7 +286,7 @@ void cholesky( double * A, const int n, const int b, const char * oname )
     //qt_dictionary_printbuckets(c.Lkji.m_itemCollection);
     //printf("The time taken for parallel execution a matrix of size %d x %d : %g sec\n", n, n, (t3-t2).seconds());
     
-    if(oname) {
+    /*if(oname) {
         fout = fopen(oname, "w");
         for (int i = 0; i < p; i++) {
             for(int i_b = 0; i_b < b; i_b++) {
@@ -311,7 +311,7 @@ void cholesky( double * A, const int n, const int b, const char * oname )
             }
         }
         fclose(fout);
-    } else {
+    } else */{
         // make sure the result has been computed
         c.Lkji.size();
         for (int i = 0; i < p; i++) {
@@ -320,6 +320,7 @@ void cholesky( double * A, const int n, const int b, const char * oname )
                 c.Lkji.get(triple(j+1, i, j), _tmp);
             }
         }
+        //TODO: write in A and output in file using these gets (fewer and accuarate wrt to getcounts)
     }
     
 }

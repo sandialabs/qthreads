@@ -165,10 +165,12 @@ namespace CnC {
 										   const Item &i,
 										   int        get_count)
 	{
-		assert ((get_count == -1 || get_count > 0) && 
-			"Correct get_count argument is >= 0 (default to -1 for persistent items)");
-		if(get_count == 0)
+		if(get_count == 0){
+			printf("Produced unused item => not stored\n");
 			return;
+		}
+		assert ((get_count == -1 || get_count >= 0) && 
+			"Correct get_count argument is >= 0 (default to -1 for persistent items)");
 		entry_t<Item> *entry = new entry_t<Item>(new Item(i), get_count);
 		entry_t<Item> *ret   = (entry_t<Item> *)qt_dictionary_put_if_absent(
 																			m_itemCollection,
@@ -193,8 +195,8 @@ namespace CnC {
 										   Item &     i) const
 	{
 		entry_t<Item> *ret;
-	# ifndef CNC_PRECOND_DEBUG 
 		int stat = *pcnc_status;
+	# ifndef CNC_PRECOND_DEBUG
 		entry_t<Item> *entry = new entry_t<Item>(NULL, -1);
 		assert(entry != NULL);
 		if (stat == STARTED) {
@@ -217,14 +219,18 @@ namespace CnC {
 		assert (ret -> value != NULL && "item collection value is null!");
 	# endif
 	
-		if(ret -> count > 0 ){
-			printf("Inside something I should not enter! (ic.get: count is %d)\n", ret ->count);
-			item_id_pair<Tag, Item>* toadd = new item_id_pair<Tag, Item>(this, t);
-			void* tld = qthread_get_tasklocal(sizeof(pair_base*));
-			pair_base **p = (pair_base **)tld;
-			toadd -> next = *p;
-			*p = toadd;
+		if (stat == STARTED){
+			if(ret -> count > 0 ){
+				item_id_pair<Tag, Item>* toadd = new item_id_pair<Tag, Item>(this, t);
+				void* tld = qthread_get_tasklocal(sizeof(pair_base*));
+				pair_base **p = (pair_base **)tld;
+				toadd -> next = *p;
+				*p = toadd;
+			}
 		}
+		else if(ret -> count != 1)
+			printf("Item read after graph finished has getcount != 1 ( = %d)\n", ret ->count);
+		
 		i = *(ret->value);
 	}
 
@@ -249,12 +255,11 @@ namespace CnC {
 	template< typename Tag, typename Item  >
 	void item_collection< Tag, Item >::decrement(const Tag &t) const
 	{
-		printf("Inside something I should not enter! (ic.decrement)\n");
 		entry_t<Item> *ret = (entry_t<Item> *) qt_dictionary_get(m_itemCollection, const_cast < Tag * >(&t));
 		
 		//TODO: This tiny thing seg faults(cannot incr with neg val?)
 		aligned_t old_val = qthread_incr(&(ret->count), -1);
-		if(old_val == 0){
+		if(old_val == 1){
 				ret = (entry_t<Item> *) qt_dictionary_delete(m_itemCollection, const_cast < Tag * >(&t));
 				assert (ret !=  NULL && "Error when deleting item from dictionary (not found)");
 				if(ret != NULL){
