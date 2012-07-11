@@ -56,8 +56,8 @@
 #  define GET _qt_getmctxt
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEGX)
 #  define NEEDTILEGXCONTEXT 1
-#  define SET _qt_setmctxt
-#  define GET _qt_getmctxt
+#  define SET qt_setmctxt
+#  define GET qt_getmctxt
 # elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA32)
 #  define NEEDX86CONTEXT 1
 #  define SET qt_setmctxt
