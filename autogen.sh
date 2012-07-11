@@ -7,7 +7,7 @@
 echo "Generating configure files..."
 
 # prefer glibtool over libtool
-if type glibtool >/dev/null ; then
+if type glibtool &>/dev/null ; then
 	export LIBTOOL=`type -p glibtool`
 fi
 
