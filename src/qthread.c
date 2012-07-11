@@ -1043,6 +1043,10 @@ int API_FUNC qthread_initialize(void)
         }
     }
     qthread_debug(AFFINITY_DETAILS, "qaffinity = %i\n", qaffinity);
+#ifndef QTHREAD_NO_ASSERTS
+    qthread_library_initialized = 1;
+    MACHINE_FENCE;
+#endif
     {
         int ret = qt_affinity_gendists(qlib->shepherds, nshepherds);
         if (ret != QTHREAD_SUCCESS) {
@@ -1063,10 +1067,6 @@ int API_FUNC qthread_initialize(void)
                                                            sizeof(void *));
     qthread_debug(CORE_DETAILS, "qthread task-local size: %u\n", qlib->qthread_tasklocal_size);
 
-#ifndef QTHREAD_NO_ASSERTS
-    qthread_library_initialized = 1;
-    MACHINE_FENCE;
-#endif
 #ifndef UNPOOLED
 /* these are used when qthread_fork() is called from a non-qthread. */
     generic_qthread_pool = qt_mpool_create(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size);
