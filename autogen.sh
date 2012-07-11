@@ -1,9 +1,15 @@
-#!/bin/sh
+#!/bin/bash
 #
-# Author: Brian W. Barrett <bwbarre@sandia.gov>
+# Authors: Brian W. Barrett <bwbarre@sandia.gov>,
+#          Kyle B. Wheeler <kbwheel@sandia.gov>
 #
 
 echo "Generating configure files..."
+
+# prefer glibtool over libtool
+if type glibtool >/dev/null ; then
+	export LIBTOOL=`type -p glibtool`
+fi
 
 # If this directory isn't removed, the configure script may not have the right
 # dynamically-generated version number
