@@ -635,11 +635,14 @@ qt_run:
                         break;
 
                     case QTHREAD_STATE_FEB_BLOCKED: /* unlock the related FEB address locks, and re-arrange memory to be correct */
-                        qthread_debug(THREAD_DETAILS | LOCK_DETAILS | SHEPHERD_DETAILS,
-                                      "id(%u): thread %i(%p) blocked on FEB\n",
-                                      me->shepherd_id, t->thread_id, t);
-                        t->thread_state = QTHREAD_STATE_BLOCKED;
-                        QTHREAD_FASTLOCK_UNLOCK(&(((qthread_addrstat_t *)(t->rdata->blockedon))->lock));
+                        {
+                            qthread_addrstat_t *m = (qthread_addrstat_t*)(t->rdata->blockedon);
+                            qthread_debug(THREAD_DETAILS | FEB_DETAILS | SHEPHERD_DETAILS,
+                                    "id(%u): thread tid=%i(%p) blocked on FEB (m=%p, EFQ=%p)\n",
+                                    me->shepherd_id, t->thread_id, t, m, m->EFQ);
+                            t->thread_state = QTHREAD_STATE_BLOCKED;
+                            QTHREAD_FASTLOCK_UNLOCK(&(m->lock));
+                        }
                         break;
 
                     case QTHREAD_STATE_BLOCKED: /* put it in the blocked queue */
@@ -690,6 +693,7 @@ qt_run:
                             if (t->flags & QTHREAD_RET_IS_SYNCVAR) {
                                 qassert(qthread_syncvar_fill((syncvar_t *)t->ret), QTHREAD_SUCCESS);
                             } else {
+                                qthread_debug(FEB_DETAILS, "tid %u assassinated, filling retval (%p)\n", t->thread_id, t->ret);
                                 qassert(qthread_fill((aligned_t *)t->ret), QTHREAD_SUCCESS);
                             }
                         }
@@ -1401,6 +1405,65 @@ void INTERNAL qthread_internal_cleanup_early(void (*function)(void))
     qt_cleanup_early_funcs = ng;
 } /*}}}*/
 
+#ifdef QTHREAD_DEBUG
+static void qt_hash_print_addrstat(const qt_key_t addr, qthread_addrstat_t *m, void *arg)
+{                                      /*{{{ */
+    printf("addr: %#lx\n", (unsigned long)addr);
+    QTHREAD_FASTLOCK_LOCK(&m->lock);
+    if (m->EFQ) {
+        qthread_addrres_t *curs = m->EFQ;
+        printf("\tEFQ = ");
+        while (curs) {
+            if (curs->next) {
+                printf("%p(%u), ", curs, curs->waiter->thread_id);
+            } else {
+                printf("%p(%u)\n", curs, curs->waiter->thread_id);
+            }
+            curs = curs->next;
+        }
+    }
+    if (m->FEQ) {
+        qthread_addrres_t *curs = m->FEQ;
+        printf("\tFEQ = ");
+        while (curs) {
+            if (curs->next) {
+                printf("%p(%u), ", curs, curs->waiter->thread_id);
+            } else {
+                printf("%p(%u)\n", curs, curs->waiter->thread_id);
+            }
+            curs = curs->next;
+        }
+    }
+    if (m->FFQ) {
+        qthread_addrres_t *curs = m->FFQ;
+        printf("\tFFQ = ");
+        while (curs) {
+            if (curs->next) {
+                printf("%p(%u), ", curs, curs->waiter->thread_id);
+            } else {
+                printf("%p(%u)\n", curs, curs->waiter->thread_id);
+            }
+            curs = curs->next;
+        }
+    }
+    printf("\tfull = %u\n"
+           "\tvalid = %u\n",
+           m->full, m->valid);
+    if (arg)
+        *(int*)arg += 1;
+    QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+}                                      /*}}} */
+
+static int print_FEBs(int *ct)
+{
+    for (int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
+        qt_hash_callback(qlib->FEBs[i],
+                (qt_hash_callback_fn) qt_hash_print_addrstat, ct);
+    }
+    return 0;
+}
+#endif
+
 void API_FUNC qthread_finalize(void)
 {                      /*{{{ */
     int                   r;
@@ -1428,12 +1491,15 @@ void API_FUNC qthread_finalize(void)
 
     // Wait for all team structures to be reclaimed.
     while (qlib->team_count) {
-        //int ct = qlib->team_count;
+#ifdef QTHREAD_DEBUG
+        int ct = qlib->team_count;
+#endif
         qthread_yield();
-        /*if (ct == qlib->team_count) {
-            fprintf(stderr, "failing to make forward progress!\n");
-            abort();
-        }*/
+#ifdef QTHREAD_DEBUG
+        if (ct != qlib->team_count) {
+            printf("waiting for %u teams...\n", (unsigned int)qlib->team_count);
+        }
+#endif
     }
 
     qthread_shepherd_t *shep0 = &(qlib->shepherds[0]);
@@ -1591,10 +1657,7 @@ void API_FUNC qthread_finalize(void)
 #ifdef QTHREAD_DEBUG
     {
         int ct = 0;
-    for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
-        qt_hash_callback(qlib->FEBs[i],
-                (qt_hash_callback_fn) qt_hash_print_addrstat, &ct);
-    }
+        print_FEBs(&ct);
     if (ct != 0) { printf("ct = %i\n", ct); }
     while (ct != 0) ;
     }
@@ -2008,6 +2071,7 @@ aligned_t API_FUNC *qthread_retloc(void)
 static aligned_t qt_team_watcher(void *args_)
 {   /*{{{*/
     aligned_t code = 0;
+    qt_team_id_t myteam = qt_team_id();
 
     qt_team_t *team = (qt_team_t *)args_;
 
@@ -2016,17 +2080,20 @@ static aligned_t qt_team_watcher(void *args_)
     aligned_t *parent_eureka = team->parent_eureka;
     assert(parent_eureka);
 
+    qthread_debug(FEB_DETAILS, "watcher (tid %u) of team %u filling watcher_started (%p)\n", qthread_id(), myteam, &team->watcher_started);
     qthread_fill(&team->watcher_started);
 #ifdef TEAM_PROFILE
     qthread_incr(&qlib->team_watcher_start, 1);
 #endif
 
     do {
+        qthread_debug(FEB_DETAILS, "team %u's watcher (tid %u) waiting for a eureka or a team exit (%p)\n", myteam, qthread_id(), parent_eureka);
         qthread_readFF(&code, parent_eureka);
 
         if (TEAM_EUREKA_EXIT(code)) {
-            if (qt_team_id() == TEAM_EUREKA_ID(code)) {
+            if (myteam == TEAM_EUREKA_ID(code)) {
                 // Reset the FEB and exit
+                qthread_debug(FEB_DETAILS, "team %u's watcher (tid %u) preparing to exit, emptying parent's eureka (%p)\n", myteam, qthread_id(), parent_eureka);
                 qthread_empty(parent_eureka);
                 break;
             } else {
@@ -2312,6 +2379,7 @@ static QINLINE void qthread_internal_teamfinish(qt_team_t *team,
             team->sinc = NULL;
             qt_sinc_destroy(team->subteams_sinc);
             team->subteams_sinc = NULL;
+            qthread_debug(FEB_DETAILS, "tid %u killing team %u, filling my own eureka (%p)\n", qthread_id(), team->team_id, &team->eureka);
             qthread_fill(&team->eureka);
 
             FREE_TEAM(team);
@@ -2363,6 +2431,7 @@ static QINLINE void qthread_internal_teamfinish(qt_team_t *team,
                 qt_sinc_wait(team->subteams_sinc, NULL);
 
                 // Signal watcher to exit and wait for it
+                qthread_debug(FEB_DETAILS, "tid %u killing team %u signalling team %u's watcher (%p)\n", qthread_id(), team->team_id, team->parent_id, team->parent_eureka);
                 qthread_writeEF_const(team->parent_eureka,
                                       TEAM_EUREKA_SIGNAL_EXIT(team->team_id));
                 qt_sinc_wait(team->sinc, NULL);
@@ -2380,6 +2449,7 @@ static QINLINE void qthread_internal_teamfinish(qt_team_t *team,
                 team->parent_subteams_sinc = NULL;
             }
 
+            qthread_debug(FEB_DETAILS, "tid %u killing team %u, filling my own eureka (%p)\n", qthread_id(), team->team_id, &team->eureka);
             qthread_fill(&team->eureka);
 
             FREE_TEAM(team);
@@ -2446,6 +2516,7 @@ static void qthread_wrapper(void *ptr)
 #endif
         if (NULL != t->team->parent_eureka) {
             // This is a subteam's team-leader
+            qthread_debug(FEB_DETAILS, "tid %u emptying team %u's watcher_started (%p)\n", t->thread_id, t->team->team_id, &t->team->watcher_started);
             qthread_empty(&t->team->watcher_started);
             qthread_fork(qt_team_watcher, t->team, NULL);
             qthread_readFF(NULL, &t->team->watcher_started);
@@ -2471,6 +2542,7 @@ static void qthread_wrapper(void *ptr)
         } else {
             aligned_t retval = (t->f)(t->arg);
             if (NULL != t->team) { qthread_internal_teamfinish(t->team, t->flags); }
+            qthread_debug(FEB_DETAILS, "tid %u filling retval (%p)\n", t->thread_id, t->ret);
             qassert(qthread_writeEF_const((aligned_t *)t->ret, retval), QTHREAD_SUCCESS);
         }
     } else {
@@ -2801,6 +2873,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
         new_team->flags                = 0;
 
         // Empty new team FEBs
+        qthread_debug(FEB_DETAILS, "tid %i emptying NEW team %u's eureka (%p)\n", me?(me->thread_id):-1, new_team->team_id, &new_team->eureka);
         qthread_empty(&new_team->eureka);
 
 #ifdef TEAM_PROFILE
@@ -2831,6 +2904,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
         new_team->flags                = 0;
 
         // Empty new team FEBs
+        qthread_debug(FEB_DETAILS, "tid %i emptying SUB team %u's eureka (%p)\n", me?(me->thread_id):-1, new_team->team_id, &new_team->eureka);
         qthread_empty(&new_team->eureka);
 
         if (curr_team) {
@@ -2908,6 +2982,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
             }
         } else {
             // QTHREAD_SPAWN_RET_ALIGNED
+            qthread_debug(FEB_DETAILS, "tid %i emptying new thread %u's retval (%p)\n", me?(me->thread_id):-1, t->thread_id, ret);
             test = qthread_empty(ret);
         }
         if (QTHREAD_UNLIKELY(test != QTHREAD_SUCCESS)) {
