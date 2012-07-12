@@ -9,6 +9,7 @@
 struct qt_dictionary{
 	key_equals op_equals;
 	hashcode op_hash;
+	tagCleanup op_cleanup; 
 	list_entry** content;
 	#ifdef DELETE_SUPPORT
 	struct tlrw_lock* lock;
@@ -88,13 +89,14 @@ void* qt_dictionary_put_helper(qt_dictionary* dict, void* key, void* value,
 extern int qthread_library_initialized;
 #endif
 
-qt_dictionary* qt_dictionary_create(key_equals eq, hashcode hash) {
+qt_dictionary* qt_dictionary_create(key_equals eq, hashcode hash, tagCleanup cleanup ) {
 	#ifndef QTHREAD_NO_ASSERTS
 		assert(qthread_library_initialized && "Need to initialize qthreads before using the dictionary");
 	#endif
 	qt_dictionary* ret = (qt_dictionary*) malloc (sizeof(qt_dictionary));
 	ret -> op_equals = eq;
 	ret -> op_hash = hash;
+	ret -> op_cleanup = cleanup;
 	ret -> content = (list_entry**) malloc ( NO_BUCKETS * sizeof(list_entry*) );
 	
 	int i;
@@ -265,7 +267,8 @@ void* qt_dictionary_get(qt_dictionary* dict, void* key) {
 }
 
 void* qt_dictionary_delete(qt_dictionary* dict, void* key) {
-	void* to_ret = NULL, *to_free = NULL;
+	void* to_ret = NULL;
+	list_entry *to_free = NULL;
 	int hash = dict -> op_hash(key);
 	int bucket = GET_BUCKET (hash);
 	
@@ -278,6 +281,8 @@ void* qt_dictionary_delete(qt_dictionary* dict, void* key) {
 		to_free = walk;
 		to_ret = walk -> value;
 		dict -> content[bucket] = walk -> next;
+		if (dict->op_cleanup != NULL)
+			dict->op_cleanup(to_free->key);
 		free(to_free);
 	}
 	else while(walk -> next != NULL){
@@ -285,6 +290,8 @@ void* qt_dictionary_delete(qt_dictionary* dict, void* key) {
 			to_free = walk -> next;
 			to_ret = walk -> next -> value;
 			walk -> next = walk -> next -> next;
+			if (dict->op_cleanup != NULL)
+				dict->op_cleanup(to_free->key);
 			free(to_free);
 			break;
 		}

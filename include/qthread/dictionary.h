@@ -17,6 +17,7 @@ extern "C" {
 struct tlrw_lock;
 typedef int (*key_equals)(void*, void*);
 typedef int (*hashcode)(void*);
+typedef void (*tagCleanup)(void*);
 
 struct list_entry {
     void        *value;
@@ -43,7 +44,7 @@ typedef struct qt_dictionary_iterator qt_dictionary_iterator;
  *
  * if my_key_equals (A, B) = 1, then my_hashcode(A) == my_hashcode(B)
  */ 
-qt_dictionary* qt_dictionary_create(key_equals eq, hashcode hash);
+qt_dictionary* qt_dictionary_create(key_equals eq, hashcode hash, tagCleanup cleanup );
 
 /*
 	Destroys the dictionary d

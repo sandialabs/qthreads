@@ -35,7 +35,7 @@ int main(int    argc,
     CHECK_VERBOSE();
 
     qthread_initialize();
-    qt_dictionary *dict   = qt_dictionary_create(my_key_equals, my_hashcode);
+    qt_dictionary *dict   = qt_dictionary_create(my_key_equals, my_hashcode, NULL);
     char          *mykey1 = "k1";
     char          *myval1 = "v1";
 

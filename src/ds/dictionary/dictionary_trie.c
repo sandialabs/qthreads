@@ -68,6 +68,7 @@ struct qt_dictionary {
 
     key_equals      op_equals;
     hashcode        op_hash;
+    tagCleanup      op_cleanup;
 };
 
 static void destroy_spine(qt_hash                h,
@@ -77,13 +78,14 @@ static void destroy_element(hash_entry            *element,
                             qt_hash_deallocator_fn f);
 
 static inline qt_hash qt_hash_create(key_equals eq,
-                                     hashcode   hash)
+                                     hashcode   hash, tagCleanup cleanup)
 {
     qt_hash tmp = malloc(sizeof(qt_dictionary));
 
     tmp->op_equals = eq;
     tmp->op_hash   = hash;
-
+	tmp->op_cleanup = cleanup;
+	
     assert(tmp);
     tmp->maxspines = getpagesize() / sizeof(spine_element_t *);
     tmp->spines    = (spine_t **)calloc(tmp->maxspines, sizeof(spine_element_t *));
@@ -92,9 +94,9 @@ static inline qt_hash qt_hash_create(key_equals eq,
 }
 
 qt_dictionary *qt_dictionary_create(key_equals eq,
-                                    hashcode   hash)
+                                    hashcode   hash, tagCleanup cleanup)
 {
-    return qt_hash_create(eq, hash);
+    return qt_hash_create(eq, hash, cleanup);
 }
 
 #define SPINE_PTR_TEST(x)            ((x).u & 1)
@@ -492,6 +494,8 @@ int qt_dictionary_remove(qt_dictionary *h,
                 if (h->op_equals(e->key, key)) {
                     spine_element_t cur;
                     if ((cur.e = CAS(prev, e, e->next)) == e) {
+						if (h->op_cleanup!=NULL)
+							h->op_cleanup(child_val.e->key);
                         free(child_val.e);                         // XXX should be into a mempool
                         // Second, walk back up the parent pointers, removing empty spines (if any)
                         // cur_id is the current spine pointer's location (if its null, we're in the base spine)

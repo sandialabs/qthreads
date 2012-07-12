@@ -71,6 +71,7 @@ struct qt_dictionary {
     volatile size_t size;  // Crt number of buckets (doubling if load per bucket too much)
     key_equals      op_equals;
     hashcode        op_hash;
+    tagCleanup 		op_cleanup;
 };
 // So: qt_dictionary* = qt_hash
 // (typedef found in dictionary.h)
@@ -217,7 +218,8 @@ static int qt_lf_list_insert(marked_ptr_t *head,
 static int qt_lf_list_delete(marked_ptr_t *head,
                              so_key_t      hashed_key,
                              qt_key_t      key,
-                             key_equals    op_equals)
+                             key_equals    op_equals,
+                             tagCleanup    cleanup)
 {
     while (1) {
         marked_ptr_t *lprev;
@@ -232,6 +234,8 @@ static int qt_lf_list_delete(marked_ptr_t *head,
             continue;
         }
         if (qthread_cas(lprev, CONSTRUCT(0, lcur), CONSTRUCT(0, lnext)) == CONSTRUCT(0, lcur)) {
+			if (cleanup != NULL)
+				cleanup(PTR_OF(lcur)->key);
             qpool_free(hash_entry_pool, PTR_OF(lcur));
         } else {
             qt_lf_list_find(head, hashed_key, key, NULL, NULL, NULL, op_equals);                                   // needs to set cur/prev/next
@@ -418,7 +422,7 @@ static inline int qt_hash_remove(qt_hash        h,
     if (h->B[bucket] == UNINITIALIZED) {
         initialize_bucket(h, bucket);
     }
-    if (!qt_lf_list_delete(&(h->B[bucket]), so_regularkey(lkey), key, h->op_equals)) {
+    if (!qt_lf_list_delete(&(h->B[bucket]), so_regularkey(lkey), key, h->op_equals, h->op_cleanup)) {
         return 0;
     }
     qthread_incr(&h->count, -1);
@@ -473,7 +477,8 @@ static void initialize_bucket(qt_hash h,
 
 // old public method
 static inline qt_hash qt_hash_create(key_equals eq,
-                                     hashcode   hash)
+                                     hashcode   hash,
+                                     tagCleanup cleanup)
 {
     qt_hash tmp;
 
@@ -489,6 +494,7 @@ static inline qt_hash qt_hash_create(key_equals eq,
     assert(tmp);
     tmp->op_equals = eq;
     tmp->op_hash   = hash;
+    tmp->op_cleanup = cleanup;
 
     assert(tmp);
     if (hard_max_buckets == 0) {
@@ -507,9 +513,10 @@ static inline qt_hash qt_hash_create(key_equals eq,
 }
 
 qt_dictionary *qt_dictionary_create(key_equals eq,
-                                    hashcode   hash)
+                                    hashcode   hash,
+                                    tagCleanup cleanup)
 {
-    return qt_hash_create(eq, hash);
+    return qt_hash_create(eq, hash, cleanup);
 }
 
 // old public method
