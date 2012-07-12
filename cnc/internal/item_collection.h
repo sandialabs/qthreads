@@ -135,7 +135,7 @@ namespace CnC {
 	template< typename Tag, typename Item  >
 	template< class ContextTemplate >item_collection< Tag, Item >::item_collection(context< ContextTemplate > &context)
 	{
-		m_itemCollection = qt_dictionary_create(tag_equals, tag_hashcode);
+		m_itemCollection = qt_dictionary_create(tag_equals, tag_hashcode, cleanupTag );
 		pcnc_status      = &(context.cnc_status);
 	}
 
@@ -157,6 +157,34 @@ namespace CnC {
 		return cnc_tag_hash_compare<Tag>().hash(*(Tag *)a);
 	}
 
+	template< typename Tag, typename Item  >
+	void item_collection< Tag, Item >::cleanupTag(void* t) {
+		typename IsPointer<Tag>::Result r;
+		clearTag(&r, *( (Tag*) t) );
+	}
+
+	//Cleanup methods which differentiate between reference types
+	//and primitive types, as only reference types need to be deallocated.
+	// cleanup methods for items
+	template< typename Tag, typename Item  >
+	void item_collection< Tag, Item >::clearItem(YesType*, Item i)
+	{
+		delete i;
+	}
+	
+	template< typename Tag, typename Item  >
+	void item_collection< Tag, Item >::clearItem(NoType*, Item i) {}
+
+	// cleanup methods for tag
+	template< typename Tag, typename Item  >
+	void item_collection< Tag, Item >::clearTag(YesType*, Tag t)
+	{
+		delete t;
+	}
+	
+	template< typename Tag, typename Item  >
+	void item_collection< Tag, Item >::clearTag(NoType*, Tag t) {}
+	
 	template< typename Tag, typename Item>
 	typename item_collection< Tag, Item >::const_iterator item_collection< Tag, Item >::begin() const
 	{
@@ -273,30 +301,18 @@ namespace CnC {
 	{
 		entry_t<Item> *ret = (entry_t<Item> *) qt_dictionary_get(m_itemCollection, const_cast < Tag * >(&t));
 		
-		//TODO: This tiny thing seg faults(cannot incr with neg val?)
 		aligned_t old_val = qthread_incr(&(ret->count), -1);
 		if(old_val == 1){
 				ret = (entry_t<Item> *) qt_dictionary_delete(m_itemCollection, const_cast < Tag * >(&t));
 				assert (ret !=  NULL && "Error when deleting item from dictionary (not found)");
 				if(ret != NULL){
-					//TODO: remove this when cheating, e.g. cholesky reuses items
 					typename IsPointer<Item>::Result r;
-					Clear(&r, *(ret -> value));
+					clearItem(&r, *(ret -> value));
 					//delete *(ret -> value);
 				}
 				delete(ret);
 		}
 	}
-
-	template< typename Tag, typename Item  >
-	void item_collection< Tag, Item >::Clear(YesType*, Item i) const 
-	{
-		delete i;
-	}
-	
-	template< typename Tag, typename Item  >
-	void item_collection< Tag, Item >::Clear(NoType*, Item i) const {}
-
 
 	// TODO: implement size
 	template< typename Tag, typename Item  >

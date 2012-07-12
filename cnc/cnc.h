@@ -139,8 +139,11 @@ namespace CnC {
 	protected:
 		friend class const_iterator;
 	private:
-		void Clear(YesType*, Item i) const ;
-		void Clear(NoType*, Item i) const ;
+		static void clearItem(YesType*, Item i);
+		static void clearItem(NoType*, Item i);
+		static void clearTag(YesType*, Tag i);
+		static void clearTag(NoType*, Tag i);
+		static void cleanupTag(void* t);
 	};
 
 	template< class ContextTemplate >

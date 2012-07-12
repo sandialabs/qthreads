@@ -72,7 +72,7 @@ namespace CnC {
 		pass_to_step<Tag, Step, ContextType> *proper_arg = (pass_to_step<Tag, Step, ContextType> *)arg;
 		const Tag                            *tag        = proper_arg->tag;
 		const Step                            crt_step   = proper_arg->sc->get_step();
-
+		// init task local storage used to store the head of the list of gets for getcounts
 		void* tld = qthread_get_tasklocal(sizeof(pair_base*));
 		*((pair_base**)tld) = NULL;
 		
@@ -80,10 +80,9 @@ namespace CnC {
 		assert ( *((pair_base**)tld) == NULL && "Task local data init to NULL!");
 		
 		int rez = crt_step.execute(*tag, *(proper_arg->ctxt));
+		// decrement the getCounts of the items in the gets list whose head is in the task local storage
 		tld = qthread_get_tasklocal(sizeof(pair_base*));
-		
 		//assert ( *((pair_base**)tld) == NULL && "Task local data should still be NULL!");
-
 		pair_base *crt = *((pair_base**)tld), *tmp;
 		while(crt != NULL){
 			tmp = crt;
@@ -91,8 +90,12 @@ namespace CnC {
 			crt = crt -> next;
 			free(tmp);
 		}
-		proper_arg->ctxt->markJoin();
 
+		
+		
+		proper_arg->ctxt->markJoin();
+		delete proper_arg;
+		
 		return rez;
 	}
 
@@ -136,6 +139,8 @@ namespace CnC {
 	#ifdef ASSERTS_ENABLED
 		assert(ret == 0 && "Fork failed!");
 	#endif
+
+		
 		return NULL;
 	}
 } // namespace CnC
