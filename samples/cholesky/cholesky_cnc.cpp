@@ -96,7 +96,7 @@ int S1_compute::execute(const int & t, cholesky_context & c ) const
 	c.Lkji.get(triple(k,k,k), A_block); // Get the input tile.
 	
     // Allocate memory for the output tile.
-    L_block = make_shared_tile(b); //std::make_shared< tile_type >( b );
+    L_block = std::make_shared< tile_type >( b ); //make_shared_tile(b); //std::make_shared< tile_type >( b );
     // FIXME this need to be a triangular tile only
     // for(int i = 0; i < b; i++) {
     //     L_block[i] = (double *) malloc((i+1) * sizeof(double));
@@ -152,7 +152,7 @@ int S2_compute::execute(const pair & t, cholesky_context & c ) const
 	c.Lkji.get(triple(k+1, k, k), Li_block);    // Get the 2nd input tile (Output of previous step).
 	
     // Allocate memory for the output tile.
-    Lo_block = make_shared_tile(b); //std::make_shared< tile_type >( b );
+    Lo_block = std::make_shared< tile_type >( b ); //make_shared_tile(b); //std::make_shared< tile_type >( b );
     
     for(int k_b = 0; k_b < b; k_b++) {
         for(int i_b = 0; i_b < b; i_b++) {
@@ -201,7 +201,7 @@ int S3_compute::execute(const triple & t, cholesky_context & c ) const
 	c.Lkji.get(triple(k, j, i), A_block); // Get the input tile.
 
 # ifndef DISABLE_GET_COUNTS    
-    tile_const_ptr_type Lo_block = make_shared_tile(b);
+    //tile_const_ptr_type Lo_block = std::make_shared< tile_type >( b );//make_shared_tile(b);
 # endif
 
     if(i==j){   // Diagonal tile.
@@ -217,29 +217,29 @@ int S3_compute::execute(const triple & t, cholesky_context & c ) const
             temp = -1 * (*L2_block)( j_b, k_b );
             if(i!=j){
                 for(int i_b = 0; i_b < b; i_b++) {
-					# ifndef DISABLE_GET_COUNTS 
-                    const_cast< tile_type & >(*Lo_block)( i_b, j_b ) = (*A_block)( i_b, j_b ) + (temp * (*L1_block)( i_b, k_b ));
-                    # else
+					//# ifndef DISABLE_GET_COUNTS 
+                    //const_cast< tile_type & >(*Lo_block)( i_b, j_b ) = (*A_block)( i_b, j_b ) + (temp * (*L1_block)( i_b, k_b ));
+                    //# else
                     const_cast< tile_type & >(*A_block)( i_b, j_b ) = (*A_block)( i_b, j_b ) + (temp * (*L1_block)( i_b, k_b ));
-                    # endif
+                    //# endif
                 }
             }
             else {
                 for(int i_b = j_b; i_b < b; i_b++) {
-					# ifndef DISABLE_GET_COUNTS 
-                    const_cast< tile_type & >(*Lo_block)( i_b, j_b ) = (*A_block)( i_b, j_b ) + (temp * (*L2_block)( i_b, k_b ));
-                    # else
+					//# ifndef DISABLE_GET_COUNTS 
+                    //const_cast< tile_type & >(*Lo_block)( i_b, j_b ) = (*A_block)( i_b, j_b ) + (temp * (*L2_block)( i_b, k_b ));
+                    //# else
                     const_cast< tile_type & >(*A_block)( i_b, j_b ) = (*A_block)( i_b, j_b ) + (temp * (*L2_block)( i_b, k_b ));
-                    # endif
+                    //# endif
                 }
             }
         }
     }
-# ifndef DISABLE_GET_COUNTS 
-    c.Lkji.put(triple(k+1,j,i),Lo_block, 1+((k==j)?1:0));  // Write the output at the next time step.
-# else
+//# ifndef DISABLE_GET_COUNTS 
+    //c.Lkji.put(triple(k+1,j,i),Lo_block, 1+((k==j)?1:0));  // Write the output at the next time step.
+//# else
 	c.Lkji.put(triple(k+1,j,i),A_block, 1+((k==j)?1:0));  // Write the output at the next time step.
-# endif
+//# endif
     return CnC::CNC_Success;
 }
 
@@ -278,7 +278,7 @@ void cholesky( double * A, const int n, const int b, const char * oname )
     for(int i = 0; i < p; i++) {
         for(int j = 0; j <= i; j++) {
             // Allocate memory for the tiles.
-            tile_ptr_type temp = make_shared_tile(b); //std::make_shared< tile_type >( b );
+            tile_ptr_type temp = std::make_shared< tile_type >( b ); //make_shared_tile(b); //std::make_shared< tile_type >( b );
             // Split the matrix into tiles and write it into the item space at time 0.
             // The tiles are indexed by tile indices (which are tag values).
             for(int A_i = i*b,T_i = 0; T_i < b; A_i++,T_i++) {
