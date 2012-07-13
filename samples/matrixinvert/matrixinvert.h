@@ -1,6 +1,8 @@
 #ifndef MatrixInvert_H_ALREADY_INCLUDED
 #define MatrixInvert_H_ALREADY_INCLUDED
 
+//#define CNC_PRECOND
+
 #include <cnc/cnc.h>
 #include <qthread/qtimer.h>
 

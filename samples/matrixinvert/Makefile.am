@@ -6,7 +6,7 @@ AM_CXXFLAGS = -std=gnu++0x
 TESTS = matrixinvert
 check_PROGRAMS = $(TESTS)
 
-ARGS = 1000
+ARGS = 1024
 
 TESTS_ENVIRONMENT = echo $(ARGS) | xargs
 
@@ -18,6 +18,6 @@ all: $(TESTS)
 testmatrixinvert: runmatrixinvert
 
 runmatrixinvert: $(TESTS)
-	./matrixinvert $(ARGS)
+	env QT_STACK_SIZE=200000 ./matrixinvert $(ARGS)
 
 EXTRA_DIST = matrixinvert.cnc

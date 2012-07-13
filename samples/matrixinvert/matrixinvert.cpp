@@ -45,33 +45,28 @@ using namespace CnC;
 class tile_array;
 
 struct tile_tag {
-    int s;
+  
     tile_array *m_array;
     int m_i0, m_i1, m_i2;
     
     tile_tag( tile_array *array, int i0, int i1, int i2 ) :
         m_array(array), m_i0(i0), m_i1(i1), m_i2(i2) {
-		printf("t\n"); s=1;
 		};
 
-    ~tile_tag(){s=0; printf("d\n");}
+    ~tile_tag(){}
     bool operator==( const tile_tag & t ) const {
         return m_array == t.m_array &&
             m_i0 == t.m_i0 && m_i1 == t.m_i1 && m_i2 == t.m_i2;
     }
 };
 
-void help_me_main(const struct tile_tag * arg){
-	printf("Helper printer: first try %p: tag fields are:(%d, %d, %d, %d)\n", arg, arg->s, arg->m_i0, arg->m_i1, arg->m_i2);
-	printf("Helper printer: second try %p: tag fields are:(%d, %p, %d, %d, %d)\n", arg, arg->s, arg->m_array, arg->m_i0, arg->m_i1, arg->m_i2);
-}
+
 
 template <>
 class cnc_tag_hash_compare< tile_tag > {
   public:
     size_t hash(const tile_tag& tt) const
     {
-		printf("Calling hash\n");
 #if defined (linux)
 #if defined (__x86_64__)
         unsigned int h = reinterpret_cast<unsigned long long>(tt.m_array);
@@ -102,7 +97,6 @@ class cnc_tag_hash_compare< tile_tag > {
         
     bool equal(const tile_tag& a, const tile_tag& b) const 
     {
-		printf("Calling equals\n");
 		return a == b; 
 	}
 };
@@ -141,19 +135,16 @@ class tile_array
         m_dim((size + TILESIZE - 1)/TILESIZE), // Size/TILESIZE rounded up
         m_size(size) 
     {
-        printf("a\n");
         m_tiles = new tile[m_dim*m_dim];
     }
     
     ~tile_array()
     {
-        printf("f\n");
         delete[] m_tiles;
     }
 
     tile_array(const tile_array& t)
     {
-        printf("c\n");
         m_size = t.m_size;
         m_dim = t.m_dim;
         m_tiles = new tile[m_dim*m_dim];
@@ -164,7 +155,6 @@ class tile_array
     {
         if (this != &t) 
         {
- 	    printf("e\n");
             delete[] m_tiles;
             m_size = t.m_size;
             m_dim = t.m_dim;
@@ -176,6 +166,7 @@ class tile_array
     }
     
     void dump( double epsilon = 1e-12 ) const {
+		assert(0);
         for (int i = 0; i < m_dim; i++ ) 
         {
             for (int j = 0; j < m_dim; j++ ) 
@@ -242,7 +233,6 @@ class tile_array
                 
                 if (tcount == 0 ) continue;
                 
-                std::cout << "problem in tile(" << i << "," << j << ")" << std::endl;
                 ecount += tcount;
             }
         }
@@ -267,8 +257,7 @@ class tile_array
     // c = this * b
     tile_array multiply(const tile_array &b) const
     {
-		printf("Calling multiply\n");
-        tile_array c(m_size);
+		tile_array c(m_size);
         tile t;
         for (int i = 0; i < m_dim; i++) 
         {
@@ -288,8 +277,7 @@ class tile_array
 
     tile_array inverse()
     {
-		printf("Calling inverse\n");
-        tile_array b = *this;
+		tile_array b = *this;
         int dim = m_dim;
 
         for (int n = 0; n < dim; n++)
@@ -344,8 +332,7 @@ class tile_array
             }
         }
 
-		printf("Inside inverse_cnc, creating tile_array to get results in\n");
-        tile_array b(m_size);
+		tile_array b(m_size);
         for (int i = 0; i < m_dim; i++)
         {
             for (int j = 0; j < m_dim; j++) 
@@ -360,12 +347,10 @@ class tile_array
 
 int compute_inverse::execute( const tile_tag & tag, MatrixInvert_context & c ) const
 {
-    int n = tag.m_i0;
+	int n = tag.m_i0;
     int i = tag.m_i1;
     int j = tag.m_i2;
-	int s = tag.s;
 
-    printf("Calling execute, (free flag %d) tag is (%d %d %d), array pointer is: %p\n", s, n, i, j, tag.m_array);
     tile_tag out_tag( tag.m_array, n+1, i, j );
 
     if (i == n && j == n ) 
@@ -373,8 +358,6 @@ int compute_inverse::execute( const tile_tag & tag, MatrixInvert_context & c ) c
         tile tnn;
         c.m_tiles.get( tag, tnn );
         tile out_nij = tnn.inverse();
-        printf("In execute after calling tile.inverse: printing tile\n");
-        out_nij.printme();
         c.m_tiles.put( out_tag, out_nij, refcount(out_tag) );
     }
     else if ( i == n ) 
@@ -565,10 +548,10 @@ int main(int argc, char *argv[])
     //debug::set_num_threads(1);
     qtimer_start(timer2);
     tile_array out_array2 = in_array.inverse_cnc(c);
+    report_memory();
+	c.wait();
     qtimer_stop(timer2);    
     report_time( out_array2, qtimer_secs(timer2) );
-    report_memory();
-    c.wait();
     
     tile_array test2 = in_array.multiply(out_array2);
     test2.identity_check(1e-6);

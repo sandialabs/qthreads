@@ -57,22 +57,15 @@ public:
     
     tile(const tile& t)
     {
-		printf("Calling copy constructor inside tile, will copy %d, where tilesize is %d\n", sizeof(m_tile), TILESIZE);
-        tiles_created++;
+		tiles_created++;
         memcpy(m_tile, t.m_tile, sizeof(m_tile));
     }
     
-    void printme() const {
-		if(m_tile == NULL)
-			printf("I'm a tile with null inner array\n");
-		else
-			printf("I'm a tile with first element: %lf\n", m_tile[0][0]);
-	}
+
     
     tile& operator=(const tile& t)
     {
-		printf("Calling = inside tile, will copy %d, where tilesize is %d\n", sizeof(m_tile), TILESIZE);
-        if (this != &t)
+		if (this != &t)
         {
             memcpy(m_tile, t.m_tile, sizeof(m_tile));
         }
@@ -152,7 +145,7 @@ public:
             if (fabs(pivot) < MINPIVOT)
             {
                 std::cout <<"Pivot too small! Pivot( " << pivot << ")" << std::endl;
-                b.dump();
+                //b.dump();
                 exit(0);
             }
             
@@ -180,8 +173,6 @@ public:
                 }
             }
         }
-        printf("In tile.inverse: printing tile\n");
-        b.printme();
         return b;
 	}
 
