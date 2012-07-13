@@ -6,6 +6,7 @@
 .PHONY: buildall buildtests buildextra
 
 TESTS = \
+		feb_prodcons_contended \
 		syncvar_prodcons_contended \
 		syncvar_stream \
 		precond_fib \
@@ -35,6 +36,8 @@ $(qthreadlib):
 
 $(utils_rnglib):
 	$(MAKE) -C $(top_builddir)/test/utils/rng librng.la
+
+feb_prodcons_contended_SOURCES = feb_prodcons_contended.c
 
 syncvar_prodcons_contended_SOURCES = syncvar_prodcons_contended.c
 
