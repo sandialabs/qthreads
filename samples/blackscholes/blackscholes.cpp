@@ -229,6 +229,15 @@ fptype BlkSchlsEqEuroNoDiv( fptype sptprice,
 }
 
 //////////////////////////////////////////////////////////////////////////////////////
+aligned_t** Compute::get_dependences(const int & t, blackscholes_context & c, int & no ) const
+{
+	no = 1;
+	aligned_t** read = (aligned_t**) malloc(no * sizeof(aligned_t*));
+	c.opt_data.wait_on(t, &read[0]);
+	return read;
+}
+
+
 
 int Compute::execute(const int & tag, blackscholes_context& c ) const
 {

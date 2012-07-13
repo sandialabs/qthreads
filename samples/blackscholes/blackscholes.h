@@ -27,6 +27,9 @@
 #ifndef blackscholes_H_ALREADY_INCLUDED
 #define blackscholes_H_ALREADY_INCLUDED
 
+#define CNC_PRECOND
+#define CNC_PRECOND_ONLY
+
 #include <cnc/cnc.h>
 #include <vector>
 #include <memory>
@@ -43,7 +46,10 @@ struct blackscholes_context;
 struct Compute
 {
     int execute( const int &, blackscholes_context & ) const;
+    aligned_t** get_dependences(const int & t, blackscholes_context & c, int & no ) const;
 };
+
+
 
 // The context class
 struct blackscholes_context : public CnC::context< blackscholes_context >
