@@ -1,4 +1,4 @@
-SUBDIRS = blackscholes cholesky fib primes
+SUBDIRS = blackscholes cholesky fib primes matrixinvert
 
 .PHONY: build test
 
