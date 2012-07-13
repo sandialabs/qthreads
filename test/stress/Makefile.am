@@ -8,6 +8,7 @@
 TESTS = \
 		feb_prodcons_contended \
 		syncvar_prodcons_contended \
+		feb_stream \
 		syncvar_stream \
 		precond_fib \
 		task_spawn \
@@ -46,6 +47,8 @@ precond_fib_SOURCES = precond_fib.c
 task_spawn_SOURCES = task_spawn.c
 
 syncvar_stream_SOURCES = syncvar_stream.c
+
+feb_stream_SOURCES = feb_stream.c
 
 subteams_uts_SOURCES = subteams_uts.c
 subteams_uts_LDADD = $(LDADD) $(utils_rnglib)
