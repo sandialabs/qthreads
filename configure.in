@@ -55,10 +55,11 @@ AS_IF([test "x$enable_picky" = xyes],
 
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile
-				 cnc/Makefile
+		 cnc/Makefile
                  samples/Makefile
                  samples/blackscholes/Makefile
                  samples/cholesky/Makefile
                  samples/fib/Makefile
-                 samples/primes/Makefile])
+                 samples/primes/Makefile
+		 samples/matrixinvert/Makefile])
 AC_OUTPUT
