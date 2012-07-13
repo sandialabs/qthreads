@@ -240,7 +240,8 @@ namespace CnC {
 	{
 		entry_t<Item> *ret;
 		int stat = *pcnc_status;
-	# ifndef CNC_PRECOND_DEBUG
+		
+	# ifndef CNC_PRECOND_ONLY
 		entry_t<Item> *entry = new entry_t<Item>(NULL, -1);
 		assert(entry != NULL);
 		if (stat == STARTED) {
@@ -264,6 +265,8 @@ namespace CnC {
 	# endif
 	
 		if (stat == STARTED){
+			// record the get as performed to enable decrementing
+			// the getCount of the item after the step is finished
 			if(ret -> count > 0 ){
 				item_id_pair<Tag, Item>* toadd = new item_id_pair<Tag, Item>(this, t);
 				void* tld = qthread_get_tasklocal(sizeof(pair_base*));
