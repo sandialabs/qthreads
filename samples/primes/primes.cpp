@@ -28,6 +28,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+
+#define CNC_PRECOND
+#define CNC_PRECOND_ONLY
+
 #include <cnc/cnc.h>
 
 
@@ -36,6 +40,7 @@ struct my_context;
 struct FindPrimes
 {
     int execute( int n, my_context & c ) const;
+    aligned_t** get_dependences(const int & t, my_context & c, int & no ) const;
 };
 
 
@@ -54,6 +59,10 @@ struct my_context : public CnC::context< my_context >
     }
 };
 
+aligned_t** FindPrimes::get_dependences(const int & t, my_context & c, int & no ) const
+{
+	return NULL;
+}
 
 int FindPrimes::execute( int n, my_context & c ) const
 {
