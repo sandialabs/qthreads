@@ -35,6 +35,10 @@
 #include <assert.h>
 //#include "tbb/tick_count.h"
 //#include "tbb/atomic.h"
+
+//#define DISABLE_GET_COUNTS
+//#define CNC_PRECOND
+
 #include "cnc/cnc.h"
 //#include "cnc/debug.h"
 #include "tile.h"

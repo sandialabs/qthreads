@@ -1,6 +1,8 @@
 #ifndef MatrixInvert_H_ALREADY_INCLUDED
 #define MatrixInvert_H_ALREADY_INCLUDED
 
+
+//#define DISABLE_GET_COUNTS
 //#define CNC_PRECOND
 
 #include <cnc/cnc.h>
