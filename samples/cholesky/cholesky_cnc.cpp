@@ -32,14 +32,11 @@
 #include "cholesky.h"
 
 #include <qthread/qtimer.h>
-// TODO: for debugging only
-//#include <qthread/dictionary.h>
-
 
 // Compute indices (which are tag values) for tiled Cholesky factorization algorithm.
 int k_compute::execute(const int & t, cholesky_context & c ) const
 {
-	int p = c.p;
+    int p = c.p;
     
     for(int k = 0; k < p; k++) {
         c.control_S1.put(k);
@@ -49,12 +46,12 @@ int k_compute::execute(const int & t, cholesky_context & c ) const
 
 aligned_t** k_compute::get_dependences(const int & t, cholesky_context & c, int & no ) const
 {
-	return NULL;
+    return NULL;
 }
 
 int kj_compute::execute(const int & t, cholesky_context & c ) const
 {    
-	int p = c.p;
+    int p = c.p;
     const int k = t;
  
     for(int j = k+1; j < p; j++) {  
@@ -65,12 +62,12 @@ int kj_compute::execute(const int & t, cholesky_context & c ) const
 
 aligned_t** kj_compute::get_dependences(const int & t, cholesky_context & c, int & no ) const
 {
-	return NULL;
+    return NULL;
 }
 
 int kji_compute::execute(const pair & t, cholesky_context & c ) const
 {
-	const int k = t.first;
+    const int k = t.first;
     const int j = t.second;
 
     for(int i = k+1; i <= j; i++) {
@@ -81,22 +78,22 @@ int kji_compute::execute(const pair & t, cholesky_context & c ) const
 
 aligned_t** kji_compute::get_dependences(const pair & t, cholesky_context & c, int & no ) const
 {
-	return NULL;
+    return NULL;
 }
 
 // Perform unblocked Cholesky factorization on the input block (item indexed by tag values).
 // Output is a lower triangular matrix.
 int S1_compute::execute(const int & t, cholesky_context & c ) const
 {
-	tile_const_ptr_type A_block;
+    tile_const_ptr_type A_block;
     tile_ptr_type       L_block;
 
     int b = c.b;
     const int k = t;
-	c.Lkji.get(triple(k,k,k), A_block); // Get the input tile.
+    c.Lkji.get(triple(k,k,k), A_block); // Get the input tile.
 	
     // Allocate memory for the output tile.
-    L_block = std::make_shared< tile_type >( b ); //make_shared_tile(b); //std::make_shared< tile_type >( b );
+    L_block = make_shared_tile(b); //std::make_shared< tile_type >( b );
     // FIXME this need to be a triangular tile only
     // for(int i = 0; i < b; i++) {
     //     L_block[i] = (double *) malloc((i+1) * sizeof(double));
@@ -129,17 +126,17 @@ int S1_compute::execute(const int & t, cholesky_context & c ) const
 
 aligned_t** S1_compute::get_dependences(const int & t, cholesky_context & c, int & no ) const
 {
-	no = 1;
-	aligned_t** read = (aligned_t**) malloc(no * sizeof(aligned_t*));
-	c.Lkji.wait_on(triple(t,t,t), &read[0]);
-	return read;
+    no = 1;
+    aligned_t** read = (aligned_t**) malloc(no * sizeof(aligned_t*));
+    c.Lkji.wait_on(triple(t,t,t), &read[0]);
+    return read;
 }
 
 // Perform triangular system solve on the input tile. 
 // Input to this step are the input tile and the output tile of the previous step.
 int S2_compute::execute(const pair & t, cholesky_context & c ) const
 {
-	tile_const_ptr_type A_block;
+    tile_const_ptr_type A_block;
     tile_const_ptr_type Li_block;
     tile_ptr_type       Lo_block;
     
@@ -148,11 +145,11 @@ int S2_compute::execute(const pair & t, cholesky_context & c ) const
     const int j = t.second;
 
     assert( j != k );
-	c.Lkji.get(triple(k,j,k), A_block); // Get the input tile.
-	c.Lkji.get(triple(k+1, k, k), Li_block);    // Get the 2nd input tile (Output of previous step).
+    c.Lkji.get(triple(k,j,k), A_block); // Get the input tile.
+    c.Lkji.get(triple(k+1, k, k), Li_block);    // Get the 2nd input tile (Output of previous step).
 	
     // Allocate memory for the output tile.
-    Lo_block = std::make_shared< tile_type >( b ); //make_shared_tile(b); //std::make_shared< tile_type >( b );
+    Lo_block = make_shared_tile(b); //std::make_shared< tile_type >( b );
     
     for(int k_b = 0; k_b < b; k_b++) {
         for(int i_b = 0; i_b < b; i_b++) {
@@ -172,13 +169,13 @@ int S2_compute::execute(const pair & t, cholesky_context & c ) const
 
 aligned_t** S2_compute::get_dependences(const pair & t, cholesky_context & c, int & no ) const
 {
-	const int k = t.first;
+    const int k = t.first;
     const int j = t.second;
-	no = 2;
-	aligned_t** read = (aligned_t**) malloc(no * sizeof(aligned_t*));
-	c.Lkji.wait_on(triple(k,j,k), &read[0]);
-	c.Lkji.wait_on(triple(k+1,k,k), &read[1]);
-	return read;
+    no = 2;
+    aligned_t** read = (aligned_t**) malloc(no * sizeof(aligned_t*));
+    c.Lkji.wait_on(triple(k,j,k), &read[0]);
+    c.Lkji.wait_on(triple(k+1,k,k), &read[1]);
+    return read;
 }
 
 
@@ -186,7 +183,7 @@ aligned_t** S2_compute::get_dependences(const pair & t, cholesky_context & c, in
 // Input to this step is the given submatrix and the output of the previous step.
 int S3_compute::execute(const triple & t, cholesky_context & c ) const
 {
-	tile_const_ptr_type A_block;
+    tile_const_ptr_type A_block;
     tile_const_ptr_type L1_block;
     tile_const_ptr_type L2_block;
     
@@ -198,10 +195,10 @@ int S3_compute::execute(const triple & t, cholesky_context & c ) const
     const int i = t[2];
 
     assert( j != k && i != k );
-	c.Lkji.get(triple(k, j, i), A_block); // Get the input tile.
+    c.Lkji.get(triple(k, j, i), A_block); // Get the input tile.
 
-# ifndef DISABLE_GET_COUNTS    
-    //tile_const_ptr_type Lo_block = std::make_shared< tile_type >( b );//make_shared_tile(b);
+# ifndef USE_CHEATING 
+    tile_const_ptr_type Lo_block = make_shared_tile(b);
 # endif
 
     if(i==j){   // Diagonal tile.
@@ -217,48 +214,58 @@ int S3_compute::execute(const triple & t, cholesky_context & c ) const
             temp = -1 * (*L2_block)( j_b, k_b );
             if(i!=j){
                 for(int i_b = 0; i_b < b; i_b++) {
-					//# ifndef DISABLE_GET_COUNTS 
-                    //const_cast< tile_type & >(*Lo_block)( i_b, j_b ) = (*A_block)( i_b, j_b ) + (temp * (*L1_block)( i_b, k_b ));
-                    //# else
+# ifndef USE_CHEATING 
+                    const_cast< tile_type & >(*Lo_block)( i_b, j_b ) = (*A_block)( i_b, j_b ) + (temp * (*L1_block)( i_b, k_b ));
+# else
                     const_cast< tile_type & >(*A_block)( i_b, j_b ) = (*A_block)( i_b, j_b ) + (temp * (*L1_block)( i_b, k_b ));
-                    //# endif
+# endif
                 }
             }
             else {
                 for(int i_b = j_b; i_b < b; i_b++) {
-					//# ifndef DISABLE_GET_COUNTS 
-                    //const_cast< tile_type & >(*Lo_block)( i_b, j_b ) = (*A_block)( i_b, j_b ) + (temp * (*L2_block)( i_b, k_b ));
-                    //# else
+# ifndef USE_CHEATING 
+                    const_cast< tile_type & >(*Lo_block)( i_b, j_b ) = (*A_block)( i_b, j_b ) + (temp * (*L2_block)( i_b, k_b ));
+# else
                     const_cast< tile_type & >(*A_block)( i_b, j_b ) = (*A_block)( i_b, j_b ) + (temp * (*L2_block)( i_b, k_b ));
-                    //# endif
+# endif
                 }
             }
         }
     }
-//# ifndef DISABLE_GET_COUNTS 
-    //c.Lkji.put(triple(k+1,j,i),Lo_block, 1+((k==j)?1:0));  // Write the output at the next time step.
-//# else
-	c.Lkji.put(triple(k+1,j,i),A_block, 1+((k==j)?1:0));  // Write the output at the next time step.
-//# endif
+# ifndef USE_CHEATING
+    c.Lkji.put(triple(k+1,j,i),Lo_block, 1+((k==j)?1:0));  // Write the output at the next time step.
+# else //Cannot have get counts in this case, last argument will be ignored
+    c.Lkji.put(triple(k+1,j,i),A_block, 1+((k==j)?1:0));  // Write the output at the next time step.
+# endif
     return CnC::CNC_Success;
 }
 
 aligned_t** S3_compute::get_dependences(const triple & t, cholesky_context & c, int & no ) const
 {
-	const int k = t[0];
+    const int k = t[0];
     const int j = t[1];
     const int i = t[2];
     no = 3;
-	aligned_t** read = (aligned_t**) malloc(no * sizeof(aligned_t*));
-	c.Lkji.wait_on(triple(k,j,i), &read[0]);
-	c.Lkji.wait_on(triple(k+1,i,k), &read[1]);
-	c.Lkji.wait_on(triple(k+1,j,k), &read[2]);
-	return read;
+    aligned_t** read = (aligned_t**) malloc(no * sizeof(aligned_t*));
+    c.Lkji.wait_on(triple(k,j,i), &read[0]);
+    c.Lkji.wait_on(triple(k+1,i,k), &read[1]);
+    c.Lkji.wait_on(triple(k+1,j,k), &read[2]);
+    return read;
 }
 
 void cholesky( double * A, const int n, const int b, const char * oname )
 {
-    //tile_ptr_type mat_out;
+# ifndef DISABLE_GET_COUNTS
+    # ifdef USE_CHEATING
+	# ifdef __INTEL_COMPILER
+            assert (0 && "Cannot run cholesky with getcounts and cheating when using icc!");
+        # endif
+    # endif 
+# else
+    # ifndef USE_CHEATING 
+        printf("Warning! With no get_counts and no cheating this application can waste a lot of memory (depending on the input size)!\n");
+    #endif
+# endif
     int p;
     int k;
     FILE *fout;
@@ -278,7 +285,7 @@ void cholesky( double * A, const int n, const int b, const char * oname )
     for(int i = 0; i < p; i++) {
         for(int j = 0; j <= i; j++) {
             // Allocate memory for the tiles.
-            tile_ptr_type temp = std::make_shared< tile_type >( b ); //make_shared_tile(b); //std::make_shared< tile_type >( b );
+            tile_ptr_type temp = make_shared_tile(b); //std::make_shared< tile_type >( b );
             // Split the matrix into tiles and write it into the item space at time 0.
             // The tiles are indexed by tile indices (which are tag values).
             for(int A_i = i*b,T_i = 0; T_i < b; A_i++,T_i++) {
@@ -299,10 +306,11 @@ void cholesky( double * A, const int n, const int b, const char * oname )
     printf("Time(s): %.3f\n", total_time);
     qtimer_destroy(timer);
 
+    printf("Tile remaining at end of graph: %d\n", Tile<double>::counter);
     //qt_dictionary_printbuckets(c.Lkji.m_itemCollection);
     //printf("The time taken for parallel execution a matrix of size %d x %d : %g sec\n", n, n, (t3-t2).seconds());
  
-# ifdef DISABLE_GET_COUNTS
+# ifdef USE_CHEATING //Output is in accord with reference file only when cheating, like in the original implementation
     if(oname) {
         fout = fopen(oname, "w");
         for (int i = 0; i < p; i++) {
@@ -341,5 +349,5 @@ void cholesky( double * A, const int n, const int b, const char * oname )
         }
         //TODO: write in A and output in file using these gets (fewer and accuarate wrt to getcounts)
     }
-	printf("Tile destroyed: %d\n", Tile<double>::counter);
+	printf("Tile remaining at end of program: %d\n", Tile<double>::counter);
 }
