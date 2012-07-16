@@ -243,7 +243,7 @@ int Compute::execute(const int & tag, blackscholes_context& c ) const
 {
     option_vector_type opt_vec;
     c.opt_data.get( tag, opt_vec );
-    price_vector_type prices = std::make_shared< std::vector< fptype > >( opt_vec->size() );
+    price_vector_type prices = make_shared_price( opt_vec->size() );
     auto pi = prices->begin();
 
     for( auto i = opt_vec->begin(); i != opt_vec->end(); ++i, ++pi ) {
@@ -305,7 +305,7 @@ int main (int argc, char **argv)
     // How many elements do we have in our hard-coded datafile?
 	int initOptionNum =  ( (sizeof(data_init)) / sizeof(OptionData) );
     int tag = 0;
-    option_vector_type opt_vec = std::make_shared< std::vector< OptionData > >( granularity );
+    option_vector_type opt_vec = make_shared_option( granularity );
     // Repeat that hardcoded file several times:
 	for( int i = 0; i < numOptions; ++i ) {
         int o = i % granularity;
@@ -314,7 +314,7 @@ int main (int argc, char **argv)
             c.opt_data.put( tag, opt_vec );
             c.tags.put( tag );
             ++tag;
-            opt_vec = std::make_shared< std::vector< OptionData > >( granularity );
+            opt_vec = make_shared_option( granularity );
         }
 	}
 

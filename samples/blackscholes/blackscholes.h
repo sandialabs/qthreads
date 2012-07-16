@@ -34,9 +34,28 @@
 #include <vector>
 #include <memory>
 
+# ifdef __INTEL_COMPILER
+typedef std::vector< OptionData >* option_vector_type;
+typedef std::vector< fptype >* price_vector_type;
+
+inline option_vector_type  make_shared_option(int size){
+    return new std::vector< OptionData >( size );
+}
+inline price_vector_type  make_shared_price(int size){
+    return new std::vector< fptype >( size );
+}
+
+# else
 typedef std::shared_ptr< std::vector< OptionData > > option_vector_type;
 typedef std::shared_ptr< std::vector< fptype > > price_vector_type;
 
+inline option_vector_type  make_shared_option(int size){
+    return std::make_shared< std::vector< OptionData > >( size );
+}
+inline price_vector_type  make_shared_price(int size){
+    return std::make_shared< std::vector< fptype > >( size );
+}
+# endif
 
 
 // Forward declaration of the context class (also known as graph)
