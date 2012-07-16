@@ -306,7 +306,6 @@ void cholesky( double * A, const int n, const int b, const char * oname )
     printf("Time(s): %.3f\n", total_time);
     qtimer_destroy(timer);
 
-    printf("Tile remaining at end of graph: %d\n", Tile<double>::counter);
     //qt_dictionary_printbuckets(c.Lkji.m_itemCollection);
     //printf("The time taken for parallel execution a matrix of size %d x %d : %g sec\n", n, n, (t3-t2).seconds());
  
@@ -349,5 +348,5 @@ void cholesky( double * A, const int n, const int b, const char * oname )
         }
         //TODO: write in A and output in file using these gets (fewer and accuarate wrt to getcounts)
     }
-	printf("Tile remaining at end of program: %d\n", Tile<double>::counter);
+	printf("Tile created: %d, tiles destroyed: %d at end of program\n", Tile<double>::created, Tile<double>::destroyed);
 }

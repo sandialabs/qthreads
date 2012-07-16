@@ -34,7 +34,8 @@
 //#include "cholesky_cnc.cpp"
 #include <cassert>
 
-template<> int Tile<double>::counter=0;
+template<> int Tile<double>::created=0;
+template<> int Tile<double>::destroyed=0;
 
 extern void cholesky( double *A, const int n, const int b, const char * oname );
 

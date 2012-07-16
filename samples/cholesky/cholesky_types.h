@@ -30,8 +30,17 @@
 
 #define CNC_PRECOND
 #define CNC_PRECOND_ONLY
+
+//Ideal case:
+//Keep get counts enabled
 //#define DISABLE_GET_COUNTS
+
+//Do not use cheating for icc
+# ifndef __INTEL_COMPILER
 #define USE_CHEATING
+# else
+//Rely on shared_pointer collection for gcc
+# endif
 
 #include <cnc/cnc.h>
 #include <iostream>
@@ -84,9 +93,10 @@ template< typename T >
 class Tile
 {
 public:
-	static int counter;
+	static int created, destroyed;
     Tile( int sz = 0 ) : m_sz( sz ), m_array( NULL )/*, m_full( true )*/
     {
+		created++;
 		if( sz ) {
     		//CnC::serializer::construct_array< T >( m_array, sz*sz );
     		m_array = new T[sz*sz];
@@ -96,7 +106,7 @@ public:
     	}
     }
     ~Tile() {
-		counter++;
+		destroyed++;
 		delete m_array;
     }
 #define TOI( _i, _j, _s ) ((_j)*(_s)+(_i))
