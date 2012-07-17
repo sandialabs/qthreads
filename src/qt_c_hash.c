@@ -156,18 +156,6 @@ static uint64_t qt_hashword(uint64_t key)
 static inline void **qt_hash_internal_find(qt_hash  h,
                                            qt_key_t key)
 {   /*{{{*/
-    assert(h);
-
-    if ((key == KEY_DELETED) || (key == KEY_NULL)) {
-        assert(h->has_key);
-        assert(h->value);
-        if (h->has_key[(uintptr_t)key]) {
-            return &(h->value[(uintptr_t)key]);
-        } else {
-            return NULL;
-        }
-    }
-
     const hash_entry *z      = h->entries;
     const uint64_t    mask   = h->mask;
     const uint64_t    hashed = qt_hashword((uint64_t)(uintptr_t)key);
@@ -175,12 +163,21 @@ static inline void **qt_hash_internal_find(qt_hash  h,
     uint64_t bucket = hashed & mask;
     uint64_t step, quit;
 
+    if ((key == KEY_DELETED) || (key == KEY_NULL)) {
+        if (h->has_key[(uintptr_t)key]) {
+            return &(h->value[(uintptr_t)key]);
+        } else {
+            return NULL;
+        }
+    }
     for (unsigned i = 0; i < bucketsize; ++i) {
         Q_PREFETCH(&z[bucket + i + 1].key, 0, 1);
+        // Q_PREFETCH(&z[bucket + i + 1].value, 1, 1);
         const qt_key_t zkey = z[bucket + i].key;
         if (zkey == key) {
             return (void *)&z[bucket + i].value;
-        } else if (zkey == KEY_NULL) { // not KEY_DELETED, on purpose
+        }
+        if (zkey == KEY_NULL) {
             return NULL;
         }
     }
@@ -188,17 +185,19 @@ static inline void **qt_hash_internal_find(qt_hash  h,
     step = (((hashed >> 16) | (hashed << 16)) & mask) | bucketsize;
     quit = bucket;
     do {
+        unsigned i;
         bucket = (bucket + step) & mask;
-        Q_PREFETCH(&z[(bucket + step + 1) & mask], 0, 1);
-        for (unsigned i = 0; i < bucketsize; ++i) {
+        for (i = 0; i < bucketsize; ++i) {
+            Q_PREFETCH(&z[bucket + i + 1].key, 0, 1);
+            // Q_PREFETCH(&z[bucket + i + 1].value, 1, 1);
             const qt_key_t zkey = z[bucket + i].key;
             if (zkey == key) {
                 return (void *)&z[bucket + i].value;
-            } else if (zkey == KEY_NULL) {
+            }
+            if (zkey == KEY_NULL) {
                 return NULL;
             }
         }
-        step++;
     } while (bucket != quit);
     return NULL;
 } /*}}}*/
@@ -330,49 +329,53 @@ static void brehash(qt_hash h,
     free(d);
 } /*}}}*/
 
-#define PUT_COLLISION 0
-#define PUT_SUCCESS   1
 int INTERNAL qt_hash_put_locked(qt_hash  h,
                                 qt_key_t key,
                                 void    *value)
 {                     /*{{{*/
+    hash_entry *z;    // for speed, to avoid extra ptr dereferences
+    uint64_t    mask; // for speed, to avoid extra ptr dereferences
+    int         done;
+    ssize_t     f;
+    size_t      i;
+    uint64_t    hw, bucket, step;
+
     assert(h);
     if ((key == KEY_DELETED) || (key == KEY_NULL)) {
-        assert(h->has_key);
-        assert(h->value);
         h->has_key[(uintptr_t)key] = 1;
         h->value[(uintptr_t)key]   = value;
-        return PUT_SUCCESS;
+        return 1;
     }
-
-    hash_entry    *z;    // for speed, to avoid extra ptr dereferences
-    uint64_t       mask; // for speed, to avoid extra ptr dereferences
-    ssize_t        f;
-    size_t         i;
-    uint64_t       bucket, step;
-    const uint64_t hw = qt_hashword((uint64_t)(uintptr_t)key);
 
 restart:
     z    = h->entries;
     mask = h->mask;
+    done = 0;
     f    = -1;
 
+    hw     = qt_hashword((uint64_t)(uintptr_t)key);
     bucket = hw & mask;
 
     /* find the key in the bucket
-     * - otherwise insert in the first DELETED or NULL bucket
+     * - otherwise insert in the first DELETED bucket
+     * - otherwise insert in the first NULL bucket
      * - otherwise the bucket is full (i.e. we're not done) */
     for (i = 0; i < bucketsize; ++i) {
-        const qt_key_t zkey = z[bucket + i].key;
-        if (zkey == key) {
-            // z[bucket + i].value = value;
-            return PUT_COLLISION;
-        } else if ((zkey == KEY_DELETED) || (zkey == KEY_NULL)) {
-            f = bucket + i;
-            break;
+        if (z[bucket + i].key == key) {
+            z[bucket + i].value = value;
+            return 1;
+        } else if (z[bucket + i].key == KEY_DELETED) {
+            if (f == -1) {
+                f = bucket + i;
+            }
+        } else if (z[bucket + i].key == KEY_NULL) {
+            if (f == -1) {
+                f = bucket + i;
+            }
+            done = 1;
         }
     }
-    if (f == -1) {
+    if (!done) {
         uint64_t quit = bucket;
         step = (((hw >> 16) | (hw << 16)) & mask) | bucketsize;
         do {
@@ -381,17 +384,21 @@ restart:
                 /* must search the entire cacheline (because otherwise we'd
                  * have to do more movement when deleting things from the
                  * cacheline)... should be cheap, though */
-                const qt_key_t zkey = z[bucket + i].key;
-                if (zkey == key) {
-                    // z[bucket + i].value = value;
-                    return PUT_COLLISION;
-                } else if ((zkey == KEY_DELETED) || (zkey == KEY_NULL)) {
-                    f = bucket + i;
-                    break;
+                if (z[bucket + i].key == key) {
+                    z[bucket + i].value = value;
+                    return 1;
+                } else if (z[bucket + i].key == KEY_DELETED) {
+                    if (f == -1) {
+                        f = bucket + i;
+                    }
+                } else if (z[bucket + i].key == KEY_NULL) {
+                    if (f == -1) {
+                        f = bucket + i;
+                    }
+                    done = 1;
                 }
             }
-            step++;
-        } while (f == -1 && bucket != quit);
+        } while (!done && bucket != quit);
     }
     assert(f != -1);                                         // we MUST have found a place for it (otherwise the hash should have been resized bigger)
     assert(z[f].key == KEY_NULL || z[f].key == KEY_DELETED); // sanity: the spot is empty
@@ -406,14 +413,11 @@ restart:
         }
     } else if (z[f].key == KEY_DELETED) {
         --h->deletes;
-    } else if (z[f].key == key) {
-        /* already in here... */
-        return PUT_COLLISION;
     }
     z[f].key   = key;
     z[f].value = value;
     ++h->population;
-    return PUT_SUCCESS;
+    return 1;
 } /*}}}*/
 
 int INTERNAL qt_hash_remove(qt_hash        h,

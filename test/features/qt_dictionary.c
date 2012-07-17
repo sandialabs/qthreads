@@ -143,7 +143,7 @@ int main(int    argc,
     assert(my_key_equals("newv2", (char *)val));
 
     ret_code2 = qt_dictionary_get(dict, mykey2);
-    iprintf("19. Get exited with code %p\n", ret_code2);
+    printf("19. Get exited with code %p\n", ret_code2);
     assert(ret_code2 == NULL);
 
     val = qt_dictionary_delete(dict, mykey2);
