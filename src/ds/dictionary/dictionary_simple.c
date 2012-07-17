@@ -275,7 +275,6 @@ void* qt_dictionary_delete(qt_dictionary* dict, void* key) {
 	wlock(dict -> lock);
 	
 	list_entry* walk = dict -> content[bucket];
-	list_entry* head = walk;
 	/*
 	if(walk == NULL) assert(0);//cannot remove an element not present in hash
 	else if((walk -> hashed_key == hash) && (dict -> op_equals(walk -> key, key))) {
@@ -301,29 +300,13 @@ void* qt_dictionary_delete(qt_dictionary* dict, void* key) {
 	}
 
 	*/
-	list_entry* prev = NULL;
+
 	while(walk != NULL){
 		if ((walk -> hashed_key == hash) && (dict -> op_equals(walk -> key, key))) {
-
-			if (head == walk) {
-				//deleting list head
-			} else {
-
-				if (walk == head)
-					dict -> content[bucket] = walk -> next;
-				prev->next = walk->next;
-				to_free = walk;
-				to_ret = walk -> value;
-				if (dict->op_cleanup != NULL)
-					dict->op_cleanup(to_free->key);
-				free(to_free);
-
-				
-				runlock(dict -> lock);
-				break;
-			}
+			runlock(dict -> lock);
+			to_ret = walk -> value;
+			break;
 		}
-		prev = walk;
 		walk = walk -> next;
 	}
 
