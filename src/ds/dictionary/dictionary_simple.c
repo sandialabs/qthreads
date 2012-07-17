@@ -316,11 +316,8 @@ void* qt_dictionary_delete(qt_dictionary* dict, void* key) {
 					dict->op_cleanup(to_free->key);
 				free(to_free);
 
-				
-				runlock(dict -> lock);
 				break;
 			}
-		}
 		prev = walk;
 		walk = walk -> next;
 	}
