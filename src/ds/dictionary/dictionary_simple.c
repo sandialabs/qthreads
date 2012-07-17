@@ -305,13 +305,11 @@ void* qt_dictionary_delete(qt_dictionary* dict, void* key) {
 	while(walk != NULL){
 		if ((walk -> hashed_key == hash) && (dict -> op_equals(walk -> key, key))) {
 
-			if (head == walk) {
-				//deleting list head
-			} else {
-
-				if (walk == head)
+				if (walk == head) {
 					dict -> content[bucket] = walk -> next;
-				prev->next = walk->next;
+				} else {
+					prev->next = walk->next;
+				}
 				to_free = walk;
 				to_ret = walk -> value;
 				if (dict->op_cleanup != NULL)
