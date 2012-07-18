@@ -340,21 +340,23 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict const  dest,
             goto locked_full;
         }
         qt_hash_lock(qlib->syncvars[lockbin]);
-        UNLOCK_THIS_MODIFIED_SYNCVAR(src, ret, SYNCFEB_STATE_EMPTY_WITH_WAITERS);
-        qthread_debug(SYNCVAR_DETAILS,
-                      "3 src(%p) = %x (queued waiter waiting for full)\n",
-                      src, (uintptr_t)BUILD_UNLOCKED_SYNCVAR(ret, SYNCFEB_STATE_EMPTY_WITH_WAITERS));
-        m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)src);
-        if (!m) {
-            m = qthread_addrstat_new(me->rdata->shepherd_ptr);
-            assert(m);
+        {
+            UNLOCK_THIS_MODIFIED_SYNCVAR(src, ret, SYNCFEB_STATE_EMPTY_WITH_WAITERS);
+            qthread_debug(SYNCVAR_DETAILS,
+                          "3 src(%p) = %x (queued waiter waiting for full)\n",
+                          src, (uintptr_t)BUILD_UNLOCKED_SYNCVAR(ret, SYNCFEB_STATE_EMPTY_WITH_WAITERS));
+            m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)src);
             if (!m) {
-                qt_hash_unlock(qlib->syncvars[lockbin]);
-                return ENOMEM;
+                m = qthread_addrstat_new(me->rdata->shepherd_ptr);
+                assert(m);
+                if (!m) {
+                    qt_hash_unlock(qlib->syncvars[lockbin]);
+                    return ENOMEM;
+                }
+                qassertnot(qt_hash_put_locked(qlib->syncvars[lockbin], (void *)src, m), 0);
             }
-            qassertnot(qt_hash_put_locked(qlib->syncvars[lockbin], (void *)src, m), 0);
+            QTHREAD_FASTLOCK_LOCK(&(m->lock));
         }
-        QTHREAD_FASTLOCK_LOCK(&(m->lock));
         qt_hash_unlock(qlib->syncvars[lockbin]);
         X = ALLOC_ADDRRES(me->rdata->shepherd_ptr);
         assert(X);
@@ -576,23 +578,25 @@ int API_FUNC qthread_syncvar_readFE(uint64_t *restrict const  dest,
             }
         }
         qt_hash_lock(qlib->syncvars[lockbin]);
-        UNLOCK_THIS_MODIFIED_SYNCVAR(src, ret, SYNCFEB_STATE_EMPTY_WITH_WAITERS);
-        qthread_debug(SYNCVAR_DETAILS,
-                      "3 src(%p) = %x (queued waiter waiting for full)\n",
-                      src, (uintptr_t)BUILD_UNLOCKED_SYNCVAR(ret,
-                                                             SYNCFEB_STATE_EMPTY_WITH_WAITERS));
-        m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin],
-                                                     (void *)src);
-        if (!m) {
-            m = qthread_addrstat_new(me->rdata->shepherd_ptr);
-            assert(m);
+        {
+            UNLOCK_THIS_MODIFIED_SYNCVAR(src, ret, SYNCFEB_STATE_EMPTY_WITH_WAITERS);
+            qthread_debug(SYNCVAR_DETAILS,
+                          "3 src(%p) = %x (queued waiter waiting for full)\n",
+                          src, (uintptr_t)BUILD_UNLOCKED_SYNCVAR(ret,
+                                                                 SYNCFEB_STATE_EMPTY_WITH_WAITERS));
+            m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin],
+                                                         (void *)src);
             if (!m) {
-                qt_hash_unlock(qlib->syncvars[lockbin]);
-                return ENOMEM;
+                m = qthread_addrstat_new(me->rdata->shepherd_ptr);
+                assert(m);
+                if (!m) {
+                    qt_hash_unlock(qlib->syncvars[lockbin]);
+                    return ENOMEM;
+                }
+                qassertnot(qt_hash_put_locked(qlib->syncvars[lockbin], (void *)src, m), 0);
             }
-            qassertnot(qt_hash_put_locked(qlib->syncvars[lockbin], (void *)src, m), 0);
+            QTHREAD_FASTLOCK_LOCK(&(m->lock));
         }
-        QTHREAD_FASTLOCK_LOCK(&(m->lock));
         qt_hash_unlock(qlib->syncvars[lockbin]);
         X = ALLOC_ADDRRES(me->rdata->shepherd_ptr);
         assert(X);
@@ -925,22 +929,24 @@ int API_FUNC qthread_syncvar_writeEF(syncvar_t *restrict const      dest,
         }
         /* lock the hash, then mark the syncvar as "consult-hash" and release it */
         qt_hash_lock(qlib->syncvars[lockbin]);
-        UNLOCK_THIS_MODIFIED_SYNCVAR(dest, ret, SYNCFEB_STATE_FULL_WITH_WAITERS);
-        qthread_debug(SYNCVAR_DETAILS,
-                      "writeEF(c) dest(%p) = %x (queued waiter waiting for empty)\n",
-                      dest, (uintptr_t)BUILD_UNLOCKED_SYNCVAR(ret, SYNCFEB_STATE_FULL_WITH_WAITERS));
-        m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)dest);
-        if (!m) {
-            m = qthread_addrstat_new(me->rdata->shepherd_ptr);
-            assert(m);
+        {
+            UNLOCK_THIS_MODIFIED_SYNCVAR(dest, ret, SYNCFEB_STATE_FULL_WITH_WAITERS);
+            qthread_debug(SYNCVAR_DETAILS,
+                          "writeEF(c) dest(%p) = %x (queued waiter waiting for empty)\n",
+                          dest, (uintptr_t)BUILD_UNLOCKED_SYNCVAR(ret, SYNCFEB_STATE_FULL_WITH_WAITERS));
+            m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)dest);
             if (!m) {
-                qt_hash_unlock(qlib->syncvars[lockbin]);
-                return ENOMEM;
+                m = qthread_addrstat_new(me->rdata->shepherd_ptr);
+                assert(m);
+                if (!m) {
+                    qt_hash_unlock(qlib->syncvars[lockbin]);
+                    return ENOMEM;
+                }
+                qassertnot(qt_hash_put_locked(qlib->syncvars[lockbin], (void *)dest, m), 0);
             }
-            qassertnot(qt_hash_put_locked(qlib->syncvars[lockbin], (void *)dest, m), 0);
+            /* lock the addrstat (already within the hash) and then unlock the hash */
+            QTHREAD_FASTLOCK_LOCK(&(m->lock));
         }
-        /* lock the addrstat (already within the hash) and then unlock the hash */
-        QTHREAD_FASTLOCK_LOCK(&(m->lock));
         qt_hash_unlock(qlib->syncvars[lockbin]);
         X = ALLOC_ADDRRES(me->rdata->shepherd_ptr);
         assert(X);
