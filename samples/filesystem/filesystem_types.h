@@ -25,34 +25,9 @@
 // the possibility of such damage.                                              **
 //********************************************************************************
 
-#ifndef _H_CHOLESKY_TYPES_INCLUDED_H_
-#define _H_CHOLESKY_TYPES_INCLUDED_H_
+#ifndef _H_filesystem_TYPES_INCLUDED_H_
+#define _H_filesystem_TYPES_INCLUDED_H_
 
-#define CNC_PRECOND
-//#define CNC_PRECOND_ONLY
-
-//Ideal case:
-//Keep get counts enabled
-#define DISABLE_GET_COUNTS
-
-//Do not use cheating for icc
-# ifndef __INTEL_COMPILER
-#define USE_CHEATING
-# else
-//Rely on shared_pointer collection for gcc
-# endif
-
-#include <cnc/cnc.h>
-#include <iostream>
-#include <cassert>
-#include <memory>
-//#include <tr1/memory> 
-
-
-//using namespace CnC;
-
-typedef std::pair<int,int> pair;
-// don't use a vector: tags are copied and vector-copy is expensive
 class triple
 {
 public:
@@ -83,59 +58,4 @@ public:
     }
 };
 
-inline std::ostream & cnc_format( std::ostream& os, const triple & t )
-{
-    os << "[ " << t[0] << ", " << t[1] << ", " << t[2] << " ]";
-    return os;
-}
-
-template< typename T >
-class Tile
-{
-public:
-	static int created, destroyed;
-    Tile( int sz = 0 ) : m_sz( sz ), m_array( NULL )/*, m_full( true )*/
-    {
-		created++;
-		if( sz ) {
-    		//CnC::serializer::construct_array< T >( m_array, sz*sz );
-    		m_array = new T[sz*sz];
-    		for(int i=0; i<sz*sz; i++) {
-    			m_array[i] = T();
-    		}
-    	}
-    }
-    ~Tile() {
-		destroyed++;
-		delete m_array;
-    }
-#define TOI( _i, _j, _s ) ((_j)*(_s)+(_i))
-    inline T operator()( int i, int j ) const { return m_array[TOI(i,j,m_sz)]; }
-    inline T & operator()( int i, int j ) { return m_array[TOI(i,j,m_sz)]; }
-private:
-    Tile( const Tile< T > & ) { assert( 0 ); }
-    Tile & operator=( const Tile< T > & ) { assert( 0 ); return *this; }
-    int   m_sz;
-    T   * m_array;
-
-};
-
-typedef Tile< double > tile_type;
-#ifdef __INTEL_COMPILER
-typedef const tile_type* tile_const_ptr_type;
-typedef       tile_type* tile_ptr_type;
-
-inline tile_ptr_type make_shared_tile(int b){
-    tile_type* ret = new tile_type(b);
-    return ret;
-}
-#else
-typedef std::shared_ptr< const tile_type > tile_const_ptr_type;
-typedef std::shared_ptr< tile_type > tile_ptr_type;
-
-inline tile_ptr_type make_shared_tile(int b){
-    return std::make_shared< tile_type >(b);
-}
-#endif
-
-#endif //_H_CHOLESKY_TYPES_INCLUDED_H_
+#endif //_H_filesystem_TYPES_INCLUDED_H_
