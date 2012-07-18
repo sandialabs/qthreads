@@ -60,11 +60,23 @@ static aligned_t validation[] = {
 
 static aligned_t fib_result(void *arg)
 {
-    aligned_t  r0     = ((fr_arg_t *)arg)->fargs[0].result;
-    aligned_t  r1     = ((fr_arg_t *)arg)->fargs[1].result;
     aligned_t *target = ((fr_arg_t *)arg)->target;
+    aligned_t  r0     = ((fr_arg_t *)arg)->fargs[0].result;
 
-    qthread_writeEF_const(target, r0 + r1);
+    r0 += ((fr_arg_t *)arg)->fargs[1].result;
+
+    if (validation[((fr_arg_t *)arg)->fargs[0].n] != ((fr_arg_t *)arg)->fargs[0].result) {
+	fprintf(stdout, "%u:%u(%p) should be %u (0)\n", (unsigned)((fr_arg_t *)arg)->fargs[0].n, (unsigned)((fr_arg_t *)arg)->fargs[0].result, &((fr_arg_t *)arg)->fargs[0].result, (unsigned)validation[((fr_arg_t *)arg)->fargs[0].n]);
+	fflush(stdout);
+	assert(validation[((fr_arg_t *)arg)->fargs[0].n] == ((fr_arg_t *)arg)->fargs[0].result);
+    }
+    if (validation[((fr_arg_t *)arg)->fargs[1].n] != ((fr_arg_t *)arg)->fargs[1].result) {
+	fprintf(stdout, "%u:%u(%p) should be %u (1)\n", (unsigned)((fr_arg_t *)arg)->fargs[1].n, (unsigned)((fr_arg_t *)arg)->fargs[1].result, &((fr_arg_t *)arg)->fargs[1].result, (unsigned)validation[((fr_arg_t *)arg)->fargs[1].n]);
+	fflush(stdout);
+	assert(validation[((fr_arg_t *)arg)->fargs[1].n] == ((fr_arg_t *)arg)->fargs[1].result);
+    }
+
+    qthread_writeEF(target, &r0);
     free(arg);
 
     return 0;
