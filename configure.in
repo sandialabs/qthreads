@@ -61,5 +61,7 @@ AC_CONFIG_FILES([Makefile
                  samples/cholesky/Makefile
                  samples/fib/Makefile
                  samples/primes/Makefile
-		 samples/matrixinvert/Makefile])
+                 samples/routing/Makefile
+            samples/filesystem/Makefile     
+			samples/matrixinvert/Makefile])
 AC_OUTPUT
