@@ -33,19 +33,7 @@
 #include <math.h>
 #include <string.h>
 #include <assert.h>
-//#include "tbb/tick_count.h"
-//#include "tbb/atomic.h"
-
-//#define DISABLE_GET_COUNTS
-#define CNC_PRECOND
-#define CNC_PRECOND_ONLY
-
-#include "cnc/cnc.h"
-//#include "cnc/debug.h"
 #include "tile.h"
-
-using namespace CnC;
-
 
 class tile_array;
 
@@ -65,7 +53,7 @@ struct tile_tag {
     }
 };
 
-
+#include "matrixinvert.h"
 
 template <>
 class cnc_tag_hash_compare< tile_tag > {
@@ -121,7 +109,6 @@ struct MatrixInvert_context;
     void depends( const tile_tag & tt, MatrixInvert_context & c, dependency_consumer & dC ) const;
 };*/
 
-#include "matrixinvert.h"
 
 int refcount( const tile_tag & tt );
 
@@ -337,7 +324,8 @@ class tile_array
             }
         }
 
-		tile_array b(m_size);
+        c.wait();
+        tile_array b(m_size);
         for (int i = 0; i < m_dim; i++)
         {
             for (int j = 0; j < m_dim; j++) 
@@ -451,10 +439,7 @@ aligned_t** compute_inverse::get_dependences(const tile_tag & tt, MatrixInvert_c
         c.m_tiles.wait_on(tile_tag( tt.m_array, n, i, n ), &read[1]);
         c.m_tiles.wait_on(tile_tag( tt.m_array, n+1, n, j ), &read[2]);
     }
-
-
-
-        return read;
+    return read;
 }
 
 /*
@@ -554,7 +539,7 @@ int main(int argc, char *argv[])
     qtimer_start(timer2);
     tile_array out_array2 = in_array.inverse_cnc(c);
     report_memory();
-	c.wait();
+    //c.wait();
     qtimer_stop(timer2);    
     report_time( out_array2, qtimer_secs(timer2) );
     

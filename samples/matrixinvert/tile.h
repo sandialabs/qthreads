@@ -37,8 +37,8 @@
 
 //FIXME
 //Aprox tile sizes since there is no sinchronization
-int tiles_created;
-int tiles_deleted;
+int tiles_created = 0;
+int tiles_deleted = 0;
 
 class tile 
 {
@@ -138,7 +138,8 @@ public:
     tile inverse() const
     {
         tile b = *this;
-
+		double row[TILESIZE];
+		
         for (int n = 0; n < TILESIZE; n++)
         {
             double pivot = b.get(n,n);
@@ -150,7 +151,6 @@ public:
             }
             
             double pivot_inverse = 1/pivot;
-            double row[TILESIZE];
             
             row[n]= pivot_inverse;
             b.set(n,n,pivot_inverse);

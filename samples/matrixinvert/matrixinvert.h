@@ -3,7 +3,8 @@
 
 
 //#define DISABLE_GET_COUNTS
-//#define CNC_PRECOND
+#define CNC_PRECOND
+#define CNC_PRECOND_ONLY
 
 #include <cnc/cnc.h>
 #include <qthread/qtimer.h>
