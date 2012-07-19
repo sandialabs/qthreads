@@ -170,10 +170,39 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
     return q;
 } /*}}}*/
 
+#if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED)
+# define ALLOC_QTHREAD() (qthread_t *)malloc(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size)
+# define FREE_QTHREAD(t) free(t)
+#else
+extern qt_mpool generic_qthread_pool;
+# define ALLOC_QTHREAD() (qthread_t *)qt_mpool_alloc(generic_qthread_pool)
+# define FREE_QTHREAD(t) qt_mpool_free(generic_qthread_pool, t)
+#endif /* if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED) */
+
 void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 {   /*{{{*/
-    while (q->head != q->tail) {
-        qt_threadqueue_dequeue_blocking(q, NULL, 1);
+    if (q->head != q->tail) {
+        qthread_t *t;
+        QTHREAD_TRYLOCK_LOCK(&q->qlock);
+        while (q->head != q->tail) {
+            qt_threadqueue_node_t *node = q->tail;
+            if (node != NULL) {
+                q->tail = node->prev;
+                if (q->tail == NULL) {
+                    q->head = NULL;
+                } else {
+                    q->tail->next = NULL;
+                }
+                t = node->value;
+                FREE_TQNODE(node);
+                FREE_QTHREAD(t);
+            }
+        }
+        assert(q->head == NULL);
+        assert(q->tail == NULL);
+        q->qlength = 0;
+        q->qlength_stealable = 0;
+        QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
     }
     assert(q->head == q->tail);
     QTHREAD_TRYLOCK_DESTROY(q->qlock);
