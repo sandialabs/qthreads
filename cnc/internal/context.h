@@ -16,6 +16,26 @@ namespace CnC {
 		qt_sinc_wait(sinc, NULL);
 		qthread_finalize();
 		cnc_status = ENDED;
+
+		printf("CnC execution finalized:\n");
+		#ifdef CNC_PRECOND
+			printf("\t* preconditions: ON\n");
+			#ifdef CNC_PRECOND_ONLY
+				printf("\t* flexible preconditions: OFF\n");
+			#else
+				printf("\t* preconditions: ON\n");
+			#endif
+		#else
+			printf("\t* preconditions: OFF\n");
+		#endif
+		
+		
+		#ifdef DISABLE_GET_COUNTS
+			printf("\t* getcounts: OFF\n");
+		#else
+			printf("\t* getcounts: ON\n");
+		#endif
+		
 		return 0;
 	}
 } // namespace CnC
