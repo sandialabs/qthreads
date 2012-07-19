@@ -69,6 +69,9 @@ int main(int   argc,
         }
     }
 
+    iprintf("Destroying barrier...\n");
+    qt_feb_barrier_destroy(wait_on_me);
+
     iprintf("Success!\n");
 
     /* this loop shouldn't be necessary... but seems to avoid crashes in rare
