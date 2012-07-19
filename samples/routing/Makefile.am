@@ -4,7 +4,7 @@ AM_CXXFLAGS = -std=gnu++0x
 TESTS = routing
 check_PROGRAMS = $(TESTS)
 
-ARGS = 100 100
+ARGS = 100 10
 TESTS_ENVIRONMENT = echo $(ARGS) | xargs
 
 .PHONY: testrouting runrouting
