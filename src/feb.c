@@ -653,10 +653,10 @@ int API_FUNC qthread_writeEF(aligned_t *restrict const       dest,
 # ifdef LOCK_FREE_FEBS
     do {
         m = qt_hash_get(qlib->FEBs[lockbin], (void *)alignedaddr);
+got_m:
         if (!m) {
             /* currently full, must add to hash to wait */
             m = qthread_addrstat_new(me->rdata->shepherd_ptr);
-got_m:
             if (!m) {
                 //qthread_debug(FEB_DETAILS, "dest=%p, src=%p (tid=%i): MALLOC FAILURE!!!!!!!!!!\n", dest, src, me->thread_id);
                 return QTHREAD_MALLOC_ERROR;
