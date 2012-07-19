@@ -150,7 +150,7 @@ extern int adaptiveSetHigh;
 # define ALLOC_QTHREAD() (qthread_t *)malloc(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size)
 # define FREE_QTHREAD(t) free(t)
 #else
-static qt_mpool generic_qthread_pool = NULL;
+qt_mpool generic_qthread_pool = NULL;
 # define ALLOC_QTHREAD() (qthread_t *)qt_mpool_alloc(generic_qthread_pool)
 # define FREE_QTHREAD(t) qt_mpool_free(generic_qthread_pool, t)
 #endif /* if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED) */
@@ -1454,7 +1454,8 @@ static void qt_hash_print_addrstat(const qt_key_t addr, qthread_addrstat_t *m, v
     QTHREAD_FASTLOCK_UNLOCK(&m->lock);
 }                                      /*}}} */
 
-static int print_FEBs(int *ct)
+int print_FEBs(int *ct);
+int print_FEBs(int *ct)
 {
     for (int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
         qt_hash_callback(qlib->FEBs[i],
