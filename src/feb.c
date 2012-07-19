@@ -1226,7 +1226,9 @@ extern QTHREAD_FASTLOCK_TYPE effconcurrentthreads_lock;
 int INTERNAL qthread_check_feb_preconds(qthread_t *t)
 {   /*{{{*/
     aligned_t **these_preconds = (aligned_t **)t->preconds;
-
+#if !defined(UNPOOLED_ADDRRES) || defined(QTHREAD_LOCK_PROFILING)
+    qthread_shepherd_t *const curshep = qthread_internal_getshep();
+#endif
     QTHREAD_LOCK_TIMER_DECLARATION(febblock);
 
     qthread_debug(FEB_FUNCTIONS, "t=%p, t->tid=%u\n", t, t->thread_id);
@@ -1239,7 +1241,7 @@ int INTERNAL qthread_check_feb_preconds(qthread_t *t)
         const aligned_t    *alignedaddr;
         qthread_addrstat_t *m       = NULL;
 
-        QTHREAD_LOCK_UNIQUERECORD(feb, this_sync, t);
+        QTHREAD_LOCK_UNIQUERECORD2(feb, this_sync, curshep);
         QTHREAD_LOCK_TIMER_START(febblock);
         QALIGN(this_sync, alignedaddr);
         QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
@@ -1275,9 +1277,6 @@ int INTERNAL qthread_check_feb_preconds(qthread_t *t)
             t->npreconds--;
         } else {
             // Need to wait on this one, add to appropriate FFQ
-#if !defined(UNPOOLED_ADDRRES) || defined(QTHREAD_LOCK_PROFILING)
-            qthread_shepherd_t *const curshep = qthread_internal_getshep();
-#endif
             qthread_addrres_t  *X       = NULL;
 
             X = ALLOC_ADDRRES(curshep);
