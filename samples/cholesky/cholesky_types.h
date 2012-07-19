@@ -29,7 +29,7 @@
 #define _H_CHOLESKY_TYPES_INCLUDED_H_
 
 #define CNC_PRECOND
-//#define CNC_PRECOND_ONLY
+#define CNC_PRECOND_ONLY
 
 //Ideal case:
 //Keep get counts enabled

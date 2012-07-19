@@ -1,7 +1,7 @@
 #include "filesystem.h"
 #include <math.h>
 #include <limits.h>
-
+#include <qthread/qtimer.h>
 
 int Concatenate::execute( const triple &t, filesystem_context & c) const
 {
@@ -9,14 +9,14 @@ int Concatenate::execute( const triple &t, filesystem_context & c) const
 	int sourceInodeId1 = t[0];
 	int sourceInodeId2 = t[1];
 	int destinationInodeId = t[2];
-	printf("Concatenate job %d-%d-%d starting...\n", sourceInodeId1, sourceInodeId2, destinationInodeId);
+	//printf("Concatenate job %d-%d-%d starting...\n", sourceInodeId1, sourceInodeId2, destinationInodeId);
 	inode* s1;
 	inode* s2;
 	c.inodes.get(sourceInodeId1, s1);
-	printf("Concatenate job read: %d\n", sourceInodeId1);
+	//printf("Concatenate job read: %d\n", sourceInodeId1);
 	
 	c.inodes.get(sourceInodeId2, s2);
-	printf("Concatenate job read: %d\n", sourceInodeId2);
+	//printf("Concatenate job read: %d\n", sourceInodeId2);
 	
 	inode* d = new inode();
 	block* dindirect = new block();
@@ -37,10 +37,10 @@ int Concatenate::execute( const triple &t, filesystem_context & c) const
 		c.blocks.get(s1->indirect_block, s1indirect);
 		memcpy(dindirect->data, s1indirect->data, c.BLOCK_SIZE);
 		
-		while (crtPos<c.BLOCK_SIZE/sizeof(int) && (data[crtPos] != EMPTY))
+		while (crtPos<c.BLOCK_SIZE/(int)sizeof(int) && (data[crtPos] != EMPTY))
 			crtPos++;
 	} 
-	printf("Used blocks %d\n", used_blocks);
+	//printf("Used blocks %d\n", used_blocks);
 	// concatenate the block numbers in the inode structure of s2
 	for(int i=0; i<DATA_BLOCKS_NO; i++)
 		if (s2->data_blocks[i] != EMPTY) {
@@ -53,14 +53,14 @@ int Concatenate::execute( const triple &t, filesystem_context & c) const
 				d->data_blocks[used_blocks++] = s2->data_blocks[i];
 			}
 		}
-	printf("Used blocks after second concat %d\n", used_blocks);
+	//printf("Used blocks after second concat %d\n", used_blocks);
 	// concatenate the block numbers in the indirect block of s2
 	if (s2->indirect_block != EMPTY) {
 		block* s2indirect;
 		c.blocks.get(s2->indirect_block, s2indirect);
 		int crtS2Pos = 0;
 		int* dataS2 = (int*) s2indirect->data;
-		while (crtS2Pos<c.BLOCK_SIZE/sizeof(int) && (dataS2[crtS2Pos] != EMPTY) && crtPos<c.BLOCK_SIZE/sizeof(int))
+		while (crtS2Pos<c.BLOCK_SIZE/(int)sizeof(int) && (dataS2[crtS2Pos] != EMPTY) && crtPos<c.BLOCK_SIZE/(int)sizeof(int))
 			data[crtPos++] = dataS2[crtS2Pos++];
 	}
 
@@ -73,7 +73,7 @@ int Concatenate::execute( const triple &t, filesystem_context & c) const
 	}
 	
 	c.inodes.put(destinationInodeId, d);
-	printf("Concatenate job %d-%d-%d finished...\n", sourceInodeId1, sourceInodeId2, destinationInodeId);
+	//printf("Concatenate job %d-%d-%d finished...\n", sourceInodeId1, sourceInodeId2, destinationInodeId);
 	
 	return CnC::CNC_Success;
 }
@@ -100,6 +100,11 @@ void addRandomFile(filesystem_context* c, int fileId)
 {
 	inode* file = new inode();
 	int random = rand() % MAX_FILE_LENGTH;
+
+
+	/*comment out this line for random file length*/
+	random = MAX_FILE_LENGTH;
+	
 	int no_direct_blocks = random;
 	file->indirect_block = EMPTY; 
 	if (random>DATA_BLOCKS_NO)  no_direct_blocks = DATA_BLOCKS_NO;
@@ -181,6 +186,13 @@ int main (int argc, char **argv)
 
 	srand(time(NULL));
 
+
+    qtimer_t timer;
+    double   total_time = 0.0;
+    timer = qtimer_create();
+    qtimer_start(timer);
+
+
 	for( int i = 1; i < jobs; i++ ) {
 		c.jobIds.put(triple(i*2, i*2+1, i));   
 	}
@@ -189,9 +201,16 @@ int main (int argc, char **argv)
 
     // Wait for all steps to finish
     c.wait();
+
+	qtimer_stop(timer);
+    total_time = qtimer_secs(timer);
+    printf("Time(s): %.3f\n", total_time);
+    qtimer_destroy(timer);
+
+    /*
 	printf("Jobs finished.\n");
 	for( int i = 1; i < jobs + jobs; i++ )
 		printFile(&c, i);
-	
+	*/
 	return 0;
 }

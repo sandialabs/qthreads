@@ -54,7 +54,7 @@
 
 #include <cstdio>
 #include <math.h>
-
+#include <qthread/qtimer.h>
 #if _WIN32||_WIN64
 #include <windows.h>
 #endif
@@ -306,6 +306,13 @@ int main (int argc, char **argv)
 	int initOptionNum =  ( (sizeof(data_init)) / sizeof(OptionData) );
     int tag = 0;
     option_vector_type opt_vec = make_shared_option( granularity );
+
+
+    qtimer_t timer;
+    double   total_time = 0.0;
+    timer = qtimer_create();
+    qtimer_start(timer);
+
     // Repeat that hardcoded file several times:
 	for( int i = 0; i < numOptions; ++i ) {
         int o = i % granularity;
@@ -320,6 +327,11 @@ int main (int argc, char **argv)
 
     // Wait for all steps to finish
     c.wait();
+	qtimer_stop(timer);
+    total_time = qtimer_secs(timer);
+    
+    printf("Time(s): %.3f\n", total_time);
+    qtimer_destroy(timer);
 
 	return 0;
 }

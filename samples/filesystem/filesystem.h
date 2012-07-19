@@ -2,7 +2,7 @@
 #define filesystem_H_ALREADY_INCLUDED
 
 #define CNC_PRECOND
-#define CNC_PRECOND_ONLY
+//#define CNC_PRECOND_ONLY
 
 #include <cnc/cnc.h>
 #include <vector>
@@ -11,7 +11,7 @@
 #include "filesystem_types.h"
 
 // define the maximum length of randomly generated files, in blocks
-#define MAX_FILE_LENGTH (19)
+#define MAX_FILE_LENGTH (6)
 // define the number entries that can be stored in an inode 
 #define DATA_BLOCKS_NO (9)
 #define EMPTY (-1)
@@ -40,7 +40,8 @@ public:
 
 	block() {
 		data = malloc(BLOCK_SIZE);
-		for(int i=0; i< BLOCK_SIZE/sizeof(int); i++) ((int*)data)[i] = EMPTY;
+		for(int i=0; i< (BLOCK_SIZE/(int)sizeof(int)); i++)
+			((int*)data)[i] = EMPTY;
 	}
 };
 

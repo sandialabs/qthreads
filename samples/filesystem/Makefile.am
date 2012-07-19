@@ -4,7 +4,7 @@ AM_CXXFLAGS = -std=gnu++0x
 TESTS = filesystem
 check_PROGRAMS = $(TESTS)
 
-ARGS = 256
+ARGS = 4 256
 TESTS_ENVIRONMENT = echo $(ARGS) | xargs
 
 .PHONY: testfilesystem runfilesystem

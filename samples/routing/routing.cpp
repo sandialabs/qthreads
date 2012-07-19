@@ -1,6 +1,8 @@
 #include "routing.h"
 #include <math.h>
 #include <limits.h>
+#include <qthread/qtimer.h>
+
 int topo;
 
 int NetworkUpdate::execute( const int &it, routing_context & c) const
@@ -139,6 +141,12 @@ int main (int argc, char **argv)
     // Create an instance of the context class which defines the graph
     routing_context c( nodes, iterations );
 
+    qtimer_t timer;
+    double   total_time = 0.0;
+    timer = qtimer_create();
+    qtimer_start(timer);
+
+
 	int i = 0;
 	int* topology = getInitialTopology(nodes);
 	c.topology.put(i, topology);
@@ -149,7 +157,12 @@ int main (int argc, char **argv)
 
     // Wait for all steps to finish
     c.wait();
-	printf("Topo=%d\n", topo);
 	
+	qtimer_stop(timer);
+    total_time = qtimer_secs(timer);
+    
+    printf("Time(s): %.3f\n", total_time);
+    qtimer_destroy(timer);
+    printf("Topo=%d\n", topo);
 	return 0;
 }

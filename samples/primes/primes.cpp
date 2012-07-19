@@ -33,7 +33,7 @@
 #define CNC_PRECOND_ONLY
 
 #include <cnc/cnc.h>
-
+#include <qthread/qtimer.h>
 
 struct my_context;
 
@@ -97,8 +97,11 @@ int main(int argc, char* argv[])
 
     my_context c;
 
-    printf("Determining primes from 3-%d...",n);
-
+    printf("Determining primes from 3-%d...\n",n);
+	qtimer_t timer;
+    double   total_time = 0.0;
+    timer = qtimer_create();
+    qtimer_start(timer);
 
     for (int number = 3; number < n; number += 2)
         {
@@ -106,6 +109,12 @@ int main(int argc, char* argv[])
         }
 
     c.wait();
+
+	qtimer_stop(timer);
+    total_time = qtimer_secs(timer);
+    
+    printf("Time(s): %.3f\n", total_time);
+    qtimer_destroy(timer);
 
     //Size not implemented yet;
     //number_of_primes = (int)c.m_primes.size() + 1;
