@@ -13,6 +13,7 @@ struct qthread_lock_s {
     qthread_queue_t      *waiting;
     unsigned              owner;
     QTHREAD_FASTLOCK_TYPE lock;
+    int                   valid;
 #ifdef QTHREAD_LOCK_PROFILING
     qtimer_t              hold_timer;
 #endif
