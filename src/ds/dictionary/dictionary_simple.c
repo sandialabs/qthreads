@@ -136,12 +136,12 @@ void* qt_dictionary_put_helper(qt_dictionary* dict, void* key, void* value,
 	int bucket = GET_BUCKET (hash);
 
 	rlock(dict -> lock);
-	list_entry** crt = &(dict -> content[bucket]);
+	list_entry** const crt = &(dict -> content[bucket]);
 	assert(!(crt == NULL || dict -> content == NULL));
 	list_entry* walk = *crt, *toadd = NULL;
 	list_entry* head = walk, *stop = NULL;
 	while(1){
-		while(walk != stop){
+		while(walk != stop && walk != NULL){
 			if((walk -> hashed_key == hash) && (dict -> op_equals(walk -> key, key))) {
 				if(toadd != NULL) free(toadd);
 				
