@@ -29,9 +29,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define CNC_PRECOND
-#define CNC_PRECOND_ONLY
-
 #include <cnc/cnc.h>
 #include <qthread/qtimer.h>
 
