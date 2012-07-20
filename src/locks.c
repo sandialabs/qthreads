@@ -117,9 +117,10 @@ static void qthread_lock_blocker_func(void        *addr,
 int API_FUNC qthread_lock(const aligned_t *a)
 {                      /*{{{ */
     qthread_lock_t *m;
-    const int       lockbin = QTHREAD_CHOOSE_STRIPE(a);
-    qthread_t      *me      = qthread_internal_self();
+    const int       lockbin  = QTHREAD_CHOOSE_STRIPE(a);
+    qthread_t      *me       = qthread_internal_self();
     uint_fast8_t    inserted = 0;
+
 
     QTHREAD_LOCK_TIMER_DECLARATION(aquirelock);
 
@@ -135,6 +136,46 @@ int API_FUNC qthread_lock(const aligned_t *a)
     QTHREAD_LOCK_TIMER_START(aquirelock);
 
     QTHREAD_COUNT_THREADS_BINCOUNTER(locks, lockbin);
+#ifdef LOCK_FREE_FEBS
+    do {
+        m = (qthread_lock_t *)qt_hash_get(qlib->locks[lockbin], (void *)a);
+        if (!m) {
+            /* currently unlocked; need to lock it! */
+            m = ALLOC_LOCK();
+            if (!m) { return QTHREAD_MALLOC_ERROR; }
+            m->waiting = qthread_queue_new();
+            if (!m->waiting) {
+                FREE_LOCK(m);
+                return QTHREAD_MALLOC_ERROR;
+            }
+            QTHREAD_FASTLOCK_INIT(m->lock);
+            QTHREAD_HOLD_TIMER_INIT(m);
+            m->owner = me->thread_id;
+            m->valid = 1;
+            inserted = 1;
+            QTHREAD_FASTLOCK_LOCK(&m->lock);
+            if (!qt_hash_put(qlib->locks[lockbin], (void *)a, m)) {
+                QTHREAD_HOLD_TIMER_DESTROY(m);
+                qthread_queue_free(m->waiting);
+                QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+                QTHREAD_FASTLOCK_DESTROY(m->lock);
+                continue;
+            }
+            break;
+        } else {
+            /* someone else has it locked! */
+            hazardous_ptr(0, m);
+            if (m != qt_hash_get(qlib->locks[lockbin], (void*)a)) continue;
+            if (!m->valid) { continue; }
+            QTHREAD_FASTLOCK_LOCK(&m->lock);
+            if (!m->valid) {
+                QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+                continue;
+            }
+            break;
+        }
+    } while (1);
+#else
     qt_hash_lock(qlib->locks[lockbin]);
     {
         m = (qthread_lock_t *)qt_hash_get_locked(qlib->locks[lockbin], (void *)a);
@@ -160,6 +201,7 @@ int API_FUNC qthread_lock(const aligned_t *a)
         }
     }
     qt_hash_unlock(qlib->locks[lockbin]);
+#endif /* ifdef LOCK_FREE_FEBS */
     assert(m);
     if (inserted) {
         QTHREAD_FASTLOCK_UNLOCK(&m->lock);
@@ -221,6 +263,26 @@ int API_FUNC qthread_unlock(const aligned_t *a)
 
     QTHREAD_COUNT_THREADS_BINCOUNTER(locks, lockbin);
 
+#ifdef LOCK_FREE_FEBS
+    do {
+        qthread_lock_t *m2;
+        m = (qthread_lock_t *)qt_hash_get(qlib->locks[lockbin], (void *)a);
+got_m:
+        if (!m) { /* already unlocked */ return QTHREAD_SUCCESS; }
+        hazardous_ptr(0, m);
+        if (m != (m2 = qt_hash_get(qlib->locks[lockbin], (void *)a))) {
+            m = m2;
+            goto got_m;
+        }
+        if (!m->valid) { continue; }
+        QTHREAD_FASTLOCK_LOCK(&m->lock);
+        if (!m->valid) {
+            QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+            continue;
+        }
+        break;
+    } while (1);
+#else
     qt_hash_lock(qlib->locks[lockbin]);
     {
         m = (qthread_lock_t *)qt_hash_get_locked(qlib->locks[lockbin], (void *)a);
@@ -232,6 +294,7 @@ int API_FUNC qthread_unlock(const aligned_t *a)
         QTHREAD_FASTLOCK_LOCK(&m->lock);
     }
     qt_hash_unlock(qlib->locks[lockbin]);
+#endif
 
     assert(m);
 
@@ -251,6 +314,37 @@ int API_FUNC qthread_unlock(const aligned_t *a)
                       "tid(%u), a(%p): deleting waiting queue\n",
                       me->thread_id, a);
 
+#ifdef LOCK_FREE_FEBS
+        do {
+            qthread_lock_t *m2;
+            m = qt_hash_get(qlib->locks[lockbin], (void *)a);
+got_m_delete:
+            if (!m) { /* already gone */ break; }
+            hazardous_ptr(0, m);
+            if (m != (m2 = qt_hash_get(qlib->locks[lockbin], (void *)a))) {
+                m = m2;
+                goto got_m_delete;
+            }
+            if (!m->valid) { /* already gone */
+                m = NULL;
+                break;
+            }
+            QTHREAD_FASTLOCK_LOCK(&m->lock);
+            if (!m->valid) { /* already gone */
+                QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+                m = NULL;
+                break;
+            }
+            if (m->waiting->head == NULL) {
+                qassertnot(qt_hash_remove(qlib->locks[lockbin], (void *)a), 0);
+                m->valid = 0;
+            } else {
+                QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+                m = NULL;
+            }
+            break;
+        } while (1);
+#else
         qt_hash_lock(qlib->locks[lockbin]);
         {
             m = (qthread_lock_t *)qt_hash_get_locked(qlib->locks[lockbin], (void *)a);
@@ -267,6 +361,7 @@ int API_FUNC qthread_unlock(const aligned_t *a)
             }
         }
         qt_hash_unlock(qlib->locks[lockbin]);
+#endif
 
         if (m) {
             QTHREAD_HOLD_TIMER_DESTROY(m);
