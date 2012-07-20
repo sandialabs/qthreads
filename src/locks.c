@@ -220,14 +220,20 @@ int API_FUNC qthread_unlock(const aligned_t *a)
     qthread_debug(LOCK_BEHAVIOR, "tid(%u), a(%p)\n", me->thread_id, a);
 
     QTHREAD_COUNT_THREADS_BINCOUNTER(locks, lockbin);
+
     qt_hash_lock(qlib->locks[lockbin]);
-    m = (qthread_lock_t *)qt_hash_get_locked(qlib->locks[lockbin], (void *)a);
-    if (m == NULL) {
-        /* unlocking an address that's already unlocked */
-        qt_hash_unlock(qlib->locks[lockbin]);
-        return QTHREAD_SUCCESS;
+    {
+        m = (qthread_lock_t *)qt_hash_get_locked(qlib->locks[lockbin], (void *)a);
+        if (m == NULL) {
+            /* unlocking an address that's already unlocked */
+            qt_hash_unlock(qlib->locks[lockbin]);
+            return QTHREAD_SUCCESS;
+        }
+        QTHREAD_FASTLOCK_LOCK(&m->lock);
     }
-    QTHREAD_FASTLOCK_LOCK(&m->lock);
+    qt_hash_unlock(qlib->locks[lockbin]);
+
+    assert(m);
 
     QTHREAD_HOLD_TIMER_STOP(m, me->rdata->shepherd_ptr);
 
@@ -238,19 +244,39 @@ int API_FUNC qthread_unlock(const aligned_t *a)
     QTHREAD_FASTLOCK_LOCK(&m->waiting->lock);
     u = qthread_dequeue(m->waiting);
     if (u == NULL) {
+        QTHREAD_FASTLOCK_UNLOCK(&m->waiting->lock);
+        QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+
         qthread_debug(LOCK_DETAILS,
                       "tid(%u), a(%p): deleting waiting queue\n",
                       me->thread_id, a);
-        qassertnot(qt_hash_remove_locked(qlib->locks[lockbin], (void *)a), 0);
+
+        qt_hash_lock(qlib->locks[lockbin]);
+        {
+            m = (qthread_lock_t *)qt_hash_get_locked(qlib->locks[lockbin], (void *)a);
+            if (m) {
+                QTHREAD_FASTLOCK_LOCK(&m->lock);
+                QTHREAD_FASTLOCK_LOCK(&m->waiting->lock);
+                if (m->waiting->head == NULL) {
+                    qassertnot(qt_hash_remove_locked(qlib->locks[lockbin], (void *)a), 0);
+                } else {
+                    QTHREAD_FASTLOCK_UNLOCK(&m->waiting->lock);
+                    QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+                    m = NULL;
+                }
+            }
+        }
         qt_hash_unlock(qlib->locks[lockbin]);
-        QTHREAD_HOLD_TIMER_DESTROY(m);
-        QTHREAD_FASTLOCK_UNLOCK(&m->waiting->lock);
-        qthread_queue_free(m->waiting);
-        QTHREAD_FASTLOCK_UNLOCK(&m->lock);
-        QTHREAD_FASTLOCK_DESTROY(m->lock);
-        FREE_LOCK(m);
+
+        if (m) {
+            QTHREAD_HOLD_TIMER_DESTROY(m);
+            QTHREAD_FASTLOCK_UNLOCK(&m->waiting->lock);
+            qthread_queue_free(m->waiting);
+            QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+            QTHREAD_FASTLOCK_DESTROY(m->lock);
+            FREE_LOCK(m);
+        }
     } else {
-        qt_hash_unlock(qlib->locks[lockbin]);
         qthread_debug(LOCK_DETAILS,
                       "tid(%u), a(%p): pulling thread from queue (%p)\n",
                       me->thread_id, a, u);
