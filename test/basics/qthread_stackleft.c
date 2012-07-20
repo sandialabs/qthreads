@@ -70,7 +70,7 @@ int main(int argc,
 
     qthread_lock(&alldone);
 
-    iprintf("Final value of x=%lu\n", (unsigned long)x);
+    iprintf("Final value of x=%lu (expecting %lu)\n", (unsigned long)x, (unsigned long)target);
 
     if (x == target) {
         return 0;
