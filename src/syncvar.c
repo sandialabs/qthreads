@@ -462,9 +462,11 @@ int API_FUNC qthread_syncvar_fill(syncvar_t *restrict const addr)
             e.sf = 0;                  // I'm releasing waiters
             e.pf = 0;                  // I'm going to mark this as full
             qt_hash_lock(qlib->syncvars[lockbin]);
-            m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)addr);
-            assert(m);                 // otherwise there weren't really any waiters
-            QTHREAD_FASTLOCK_LOCK(&(m->lock));
+            {
+                m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)addr);
+                assert(m);                 // otherwise there weren't really any waiters
+                QTHREAD_FASTLOCK_LOCK(&(m->lock));
+            }
             qt_hash_unlock(qlib->syncvars[lockbin]);
             if (m->FEQ) {
                 e.pf = 1;                      // back to being empty
@@ -511,11 +513,13 @@ int API_FUNC qthread_syncvar_empty(syncvar_t *restrict const addr)
             e.sf = 0;                  // released!
             // wanted to mark it empty, but the waiters will fill it
             qt_hash_lock(qlib->syncvars[lockbin]);
-            m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)addr);
-            assert(m);                 // otherwise, there weren't any waiters
-            QTHREAD_FASTLOCK_LOCK(&(m->lock));
-            assert(m->EFQ);                           // otherwise there weren't really any waiters
-            assert(m->FFQ == NULL && m->FEQ == NULL); // someone snuck in!
+            {
+                m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)addr);
+                assert(m);             // otherwise, there weren't any waiters
+                QTHREAD_FASTLOCK_LOCK(&(m->lock));
+                assert(m->EFQ);                           // otherwise there weren't really any waiters
+                assert(m->FFQ == NULL && m->FEQ == NULL); // someone snuck in!
+            }
             qt_hash_unlock(qlib->syncvars[lockbin]);
             if (m->EFQ->next) {
                 e.sf = 1;
@@ -623,11 +627,13 @@ locked_full_waiters:
         e.sf = 0;                      // released!
         // wanted to mark it empty (pf=1), but the waiters will fill it
         qt_hash_lock(qlib->syncvars[lockbin]);
-        m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)src);
-        assert(m);                     // otherwise, there weren't any waiters
-        QTHREAD_FASTLOCK_LOCK(&(m->lock));
-        assert(m->EFQ);                           // otherwise there weren't really any waiters
-        assert(m->FFQ == NULL && m->FEQ == NULL); // someone snuck in!
+        {
+            m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)src);
+            assert(m);                 // otherwise, there weren't any waiters
+            QTHREAD_FASTLOCK_LOCK(&(m->lock));
+            assert(m->EFQ);                           // otherwise there weren't really any waiters
+            assert(m->FFQ == NULL && m->FEQ == NULL); // someone snuck in!
+        }
         qt_hash_unlock(qlib->syncvars[lockbin]);
         if (m->EFQ->next) {            // there will be a waiter still waiting
             e.sf = 1;
@@ -685,11 +691,13 @@ int INTERNAL qthread_syncvar_readFE_nb(uint64_t *restrict const  dest,
         e.sf = 0;                      // released!
         // wanted to mark it empty (pf=1), but the waiters will fill it
         qt_hash_lock(qlib->syncvars[lockbin]);
-        m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)src);
-        assert(m);                     // otherwise, there weren't any waiters
-        QTHREAD_FASTLOCK_LOCK(&(m->lock));
-        assert(m->EFQ);                           // otherwise there weren't really any waiters
-        assert(m->FFQ == NULL && m->FEQ == NULL); // someone snuck in!
+        {
+            m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)src);
+            assert(m);                 // otherwise, there weren't any waiters
+            QTHREAD_FASTLOCK_LOCK(&(m->lock));
+            assert(m->EFQ);                           // otherwise there weren't really any waiters
+            assert(m->FFQ == NULL && m->FEQ == NULL); // someone snuck in!
+        }
         qt_hash_unlock(qlib->syncvars[lockbin]);
         if (m->EFQ->next) {            // there will be a waiter still waiting
             e.sf = 1;
@@ -759,16 +767,18 @@ static QINLINE void qthread_syncvar_gotlock_empty(qthread_shepherd_t *shep,
     if (removeable) {
         const int lockbin = QTHREAD_CHOOSE_STRIPE(maddr);
         qt_hash_lock(qlib->syncvars[lockbin]);
-        m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)maddr);
-        if (m) {
-            QTHREAD_FASTLOCK_LOCK(&(m->lock));
-            if ((m->FEQ == NULL) && (m->EFQ == NULL) && (m->FFQ == NULL)) {
-                qthread_debug(SYNCVAR_DETAILS, "all lists are empty\n");
-                qassertnot(qt_hash_remove_locked(qlib->syncvars[lockbin], (void *)maddr), 0);
-            } else {
-                QTHREAD_FASTLOCK_UNLOCK(&(m->lock));
-                qthread_debug(SYNCVAR_DETAILS, "addr cannot be removed; in use\n");
-                m = NULL;
+        {
+            m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)maddr);
+            if (m) {
+                QTHREAD_FASTLOCK_LOCK(&(m->lock));
+                if ((m->FEQ == NULL) && (m->EFQ == NULL) && (m->FFQ == NULL)) {
+                    qthread_debug(SYNCVAR_DETAILS, "all lists are empty\n");
+                    qassertnot(qt_hash_remove_locked(qlib->syncvars[lockbin], (void *)maddr), 0);
+                } else {
+                    QTHREAD_FASTLOCK_UNLOCK(&(m->lock));
+                    qthread_debug(SYNCVAR_DETAILS, "addr cannot be removed; in use\n");
+                    m = NULL;
+                }
             }
         }
         qt_hash_unlock(qlib->syncvars[lockbin]);
@@ -969,11 +979,13 @@ locked_empty_waiters:
         e.pf = 0;                      // mark full
         e.sf = 0;                      // released!
         qt_hash_lock(qlib->syncvars[lockbin]);
-        m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)dest);
-        assert(m);                     // otherwise there weren't really any waiters
-        QTHREAD_FASTLOCK_LOCK(&(m->lock));
-        assert(m->FFQ || m->FEQ);      // otherwise there weren't really any waiters
-        assert(m->EFQ == NULL);        // someone snuck in!
+        {
+            m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)dest);
+            assert(m);                     // otherwise there weren't really any waiters
+            QTHREAD_FASTLOCK_LOCK(&(m->lock));
+            assert(m->FFQ || m->FEQ);      // otherwise there weren't really any waiters
+            assert(m->EFQ == NULL);        // someone snuck in!
+        }
         qt_hash_unlock(qlib->syncvars[lockbin]);
         if (m->FEQ) {
             e.pf = 1;
@@ -1035,11 +1047,13 @@ int INTERNAL qthread_syncvar_writeEF_nb(syncvar_t *restrict const      dest,
         e.pf = 0;                      // mark full
         e.sf = 0;                      // released!
         qt_hash_lock(qlib->syncvars[lockbin]);
-        m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)dest);
-        assert(m);                     // otherwise there weren't really any waiters
-        QTHREAD_FASTLOCK_LOCK(&(m->lock));
-        assert(m->FFQ || m->FEQ);      // otherwise there weren't really any waiters
-        assert(m->EFQ == NULL);        // someone snuck in!
+        {
+            m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)dest);
+            assert(m);                     // otherwise there weren't really any waiters
+            QTHREAD_FASTLOCK_LOCK(&(m->lock));
+            assert(m->FFQ || m->FEQ);      // otherwise there weren't really any waiters
+            assert(m->EFQ == NULL);        // someone snuck in!
+        }
         qt_hash_unlock(qlib->syncvars[lockbin]);
         if (m->FEQ) {
             e.pf = 1;
@@ -1098,9 +1112,11 @@ uint64_t API_FUNC qthread_syncvar_incrF(syncvar_t *restrict const operand,
         e.sf = 0;                      // I'm releasing waiters
         e.pf = 0;                      // I'm going to mark this as full
         qt_hash_lock(qlib->syncvars[lockbin]);
-        m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)operand);
-        assert(m);                     // otherwise there weren't really any waiters
-        QTHREAD_FASTLOCK_LOCK(&(m->lock));
+        {
+            m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)operand);
+            assert(m);                     // otherwise there weren't really any waiters
+            QTHREAD_FASTLOCK_LOCK(&(m->lock));
+        }
         qt_hash_unlock(qlib->syncvars[lockbin]);
         if (m->FEQ) {
             e.pf = 1;                  // back to being empty
