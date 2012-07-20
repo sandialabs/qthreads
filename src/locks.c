@@ -121,7 +121,6 @@ int API_FUNC qthread_lock(const aligned_t *a)
     qthread_t      *me       = qthread_internal_self();
     uint_fast8_t    inserted = 0;
 
-
     QTHREAD_LOCK_TIMER_DECLARATION(aquirelock);
 
     assert(qthread_library_initialized);
@@ -165,7 +164,7 @@ int API_FUNC qthread_lock(const aligned_t *a)
         } else {
             /* someone else has it locked! */
             hazardous_ptr(0, m);
-            if (m != qt_hash_get(qlib->locks[lockbin], (void*)a)) continue;
+            if (m != qt_hash_get(qlib->locks[lockbin], (void *)a)) { continue; }
             if (!m->valid) { continue; }
             QTHREAD_FASTLOCK_LOCK(&m->lock);
             if (!m->valid) {
@@ -175,7 +174,7 @@ int API_FUNC qthread_lock(const aligned_t *a)
             break;
         }
     } while (1);
-#else
+#else /* ifdef LOCK_FREE_FEBS */
     qt_hash_lock(qlib->locks[lockbin]);
     {
         m = (qthread_lock_t *)qt_hash_get_locked(qlib->locks[lockbin], (void *)a);
@@ -282,7 +281,7 @@ got_m:
         }
         break;
     } while (1);
-#else
+#else /* ifdef LOCK_FREE_FEBS */
     qt_hash_lock(qlib->locks[lockbin]);
     {
         m = (qthread_lock_t *)qt_hash_get_locked(qlib->locks[lockbin], (void *)a);
@@ -294,7 +293,7 @@ got_m:
         QTHREAD_FASTLOCK_LOCK(&m->lock);
     }
     qt_hash_unlock(qlib->locks[lockbin]);
-#endif
+#endif /* ifdef LOCK_FREE_FEBS */
 
     assert(m);
 
@@ -344,7 +343,7 @@ got_m_delete:
             }
             break;
         } while (1);
-#else
+#else /* ifdef LOCK_FREE_FEBS */
         qt_hash_lock(qlib->locks[lockbin]);
         {
             m = (qthread_lock_t *)qt_hash_get_locked(qlib->locks[lockbin], (void *)a);
@@ -361,7 +360,7 @@ got_m_delete:
             }
         }
         qt_hash_unlock(qlib->locks[lockbin]);
-#endif
+#endif /* ifdef LOCK_FREE_FEBS */
 
         if (m) {
             QTHREAD_HOLD_TIMER_DESTROY(m);
