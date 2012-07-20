@@ -23,7 +23,7 @@ namespace CnC {
 			#ifdef CNC_PRECOND_ONLY
 				printf("\t* flexible preconditions: OFF\n");
 			#else
-				printf("\t* preconditions: ON\n");
+				printf("\t* flexible preconditions: ON\n");
 			#endif
 		#else
 			printf("\t* preconditions: OFF\n");
