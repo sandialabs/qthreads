@@ -11,9 +11,7 @@ typedef struct qthread_queue_s qthread_queue_t;
 
 struct qthread_lock_s {
     qthread_queue_t      *waiting;
-#ifdef QTHREAD_DEBUG
     unsigned              owner;
-#endif
     QTHREAD_FASTLOCK_TYPE lock;
 #ifdef QTHREAD_LOCK_PROFILING
     qtimer_t              hold_timer;

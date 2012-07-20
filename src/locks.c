@@ -119,6 +119,7 @@ int API_FUNC qthread_lock(const aligned_t *a)
     qthread_lock_t *m;
     const int       lockbin = QTHREAD_CHOOSE_STRIPE(a);
     qthread_t      *me      = qthread_internal_self();
+    uint_fast8_t    inserted = 0;
 
     QTHREAD_LOCK_TIMER_DECLARATION(aquirelock);
 
@@ -135,47 +136,39 @@ int API_FUNC qthread_lock(const aligned_t *a)
 
     QTHREAD_COUNT_THREADS_BINCOUNTER(locks, lockbin);
     qt_hash_lock(qlib->locks[lockbin]);
-    m = (qthread_lock_t *)qt_hash_get_locked(qlib->locks[lockbin], (void *)a);
-    if (m == NULL) {
-        m = ALLOC_LOCK();
-        if (m == NULL) {
-            qt_hash_unlock(qlib->locks[lockbin]);
-            return QTHREAD_MALLOC_ERROR;
+    {
+        m = (qthread_lock_t *)qt_hash_get_locked(qlib->locks[lockbin], (void *)a);
+        if (!m) {
+            m = ALLOC_LOCK();
+            if (!m) {
+                qt_hash_unlock(qlib->locks[lockbin]);
+                return QTHREAD_MALLOC_ERROR;
+            }
+            m->waiting = qthread_queue_new();
+            if (!m->waiting) {
+                FREE_LOCK(m);
+                return QTHREAD_MALLOC_ERROR;
+            }
+            QTHREAD_FASTLOCK_INIT(m->lock);
+            QTHREAD_HOLD_TIMER_INIT(m);
+            m->owner = me->thread_id;
+            inserted = 1;
+            QTHREAD_FASTLOCK_LOCK(&m->lock);
+            qassertnot(qt_hash_put_locked(qlib->locks[lockbin], (void *)a, m), 0);
+        } else {
+            QTHREAD_FASTLOCK_LOCK(&m->lock);
         }
-
-        assert(me->rdata->shepherd_ptr == qthread_internal_getshep());
-        m->waiting = qthread_queue_new();
-        if (m->waiting == NULL) {
-            FREE_LOCK(m);
-            qt_hash_unlock(qlib->locks[lockbin]);
-            return QTHREAD_MALLOC_ERROR;
-        }
-        QTHREAD_FASTLOCK_INIT(m->lock);
-        QTHREAD_HOLD_TIMER_INIT(m);
-        qassertnot(qt_hash_put_locked(qlib->locks[lockbin], (void *)a, m), 0);
-        /* since we just created it, we own it */
-        QTHREAD_FASTLOCK_LOCK(&m->lock);
-        /* can only unlock the hash after we've locked the address, because
-         * otherwise there's a race condition: the address could be removed
-         * before we have a chance to add ourselves to it */
-        qt_hash_unlock(qlib->locks[lockbin]);
-
-#ifdef QTHREAD_DEBUG
-        m->owner = me->thread_id;
-#endif
+    }
+    qt_hash_unlock(qlib->locks[lockbin]);
+    assert(m);
+    if (inserted) {
         QTHREAD_FASTLOCK_UNLOCK(&m->lock);
         qthread_debug(LOCK_BEHAVIOR,
                       "tid(%u), a(%p): returned (wasn't locked)\n",
                       me->thread_id, a);
     } else {
+        /* someone else has it */
         QTHREAD_WAIT_TIMER_DECLARATION;
-        /* success==failure: because it's in the hash, someone else owns
-         * the lock; dequeue this thread and yield. NOTE: it's up to the
-         * master thread to enqueue this thread and unlock the address
-         */
-        QTHREAD_FASTLOCK_LOCK(&m->lock);
-        /* for an explanation of the lock/unlock ordering here, see above */
-        qt_hash_unlock(qlib->locks[lockbin]);
 
         me->thread_state     = QTHREAD_STATE_BLOCKED;
         me->rdata->blockedon = m;
@@ -261,9 +254,7 @@ int API_FUNC qthread_unlock(const aligned_t *a)
         qthread_debug(LOCK_DETAILS,
                       "tid(%u), a(%p): pulling thread from queue (%p)\n",
                       me->thread_id, a, u);
-#ifdef QTHREAD_DEBUG
         m->owner = u->thread_id;
-#endif
 
         qthread_lock_schedule(u, me->rdata->shepherd_ptr);
 
