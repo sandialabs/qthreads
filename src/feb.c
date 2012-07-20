@@ -219,7 +219,7 @@ int API_FUNC qthread_feb_status(const aligned_t *addr)
  * hash table */
 static QINLINE void qthread_FEB_remove(void *maddr)
 {                      /*{{{ */
-    qthread_addrstat_t *m;
+    qthread_addrstat_t *m, *m2;
     const int           lockbin = QTHREAD_CHOOSE_STRIPE(maddr);
 
     // qthread_debug(ALWAYS_OUTPUT, "Attempting removal of addr %p\n", maddr);
@@ -228,12 +228,16 @@ static QINLINE void qthread_FEB_remove(void *maddr)
 #ifdef LOCK_FREE_FEBS
     do {
         m = qt_hash_get(qlib->FEBs[lockbin], maddr);
+got_m:
         if (!m) {
             qthread_debug(FEB_DETAILS, "maddr=%p: addrstat already gone; someone else removed it!\n", maddr);
             return;
         }
         hazardous_ptr(0, m);
-        if (m != qt_hash_get(qlib->FEBs[lockbin], maddr)) { continue; }
+        if (m != (m2 = qt_hash_get(qlib->FEBs[lockbin], maddr))) {
+            m = m2;
+            goto got_m;
+        }
         if (!m->valid) {
             qthread_debug(FEB_DETAILS, "maddr=%p: addrstat invalid; someone else invalidated it!\n", maddr);
             return;
@@ -579,10 +583,15 @@ int API_FUNC qthread_writeF(aligned_t *restrict const       dest,
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
 # ifdef LOCK_FREE_FEBS
     do {
+        qthread_addrstat_t *m2;
         m = qt_hash_get(qlib->FEBs[lockbin], (void *)alignedaddr);
+got_m:
         if (!m) { /* already full */ break; }
         hazardous_ptr(0, m);
-        if (m != qt_hash_get(qlib->FEBs[lockbin], (void *)alignedaddr)) { continue; }
+        if (m != (m2 = qt_hash_get(qlib->FEBs[lockbin], (void *)alignedaddr))) {
+            m = m2;
+            goto got_m;
+        }
         if (!m->valid) { continue; }
         QTHREAD_FASTLOCK_LOCK(&m->lock);
         if (!m->valid) {
@@ -1034,6 +1043,7 @@ int API_FUNC qthread_readFE(aligned_t *restrict const       dest,
 # ifdef LOCK_FREE_FEBS
     do {
         m = qt_hash_get(qlib->FEBs[lockbin], alignedaddr);
+got_m:
         if (!m) {
             /* currently full; need to set to empty */
             m = qthread_addrstat_new(me->rdata->shepherd_ptr);
@@ -1046,9 +1056,13 @@ int API_FUNC qthread_readFE(aligned_t *restrict const       dest,
             }
             break;
         } else {
+            qthread_addrstat_t *m2;
             /* could be full or not, don't know */
             hazardous_ptr(0, m);
-            if (m != qt_hash_get(qlib->FEBs[lockbin], (void *)alignedaddr)) { continue; }
+            if (m != (m2 = qt_hash_get(qlib->FEBs[lockbin], (void *)alignedaddr))) {
+                m = m2;
+                goto got_m;
+            }
             if (!m->valid) { continue; }
             QTHREAD_FASTLOCK_LOCK(&m->lock);
             if (!m->valid) {
