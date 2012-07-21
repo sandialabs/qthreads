@@ -219,7 +219,7 @@ int API_FUNC qthread_feb_status(const aligned_t *addr)
  * hash table */
 static QINLINE void qthread_FEB_remove(void *maddr)
 {                      /*{{{ */
-    qthread_addrstat_t *m, *m2;
+    qthread_addrstat_t *m;
     const int           lockbin = QTHREAD_CHOOSE_STRIPE(maddr);
 
     // qthread_debug(ALWAYS_OUTPUT, "Attempting removal of addr %p\n", maddr);
@@ -227,6 +227,7 @@ static QINLINE void qthread_FEB_remove(void *maddr)
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
 #ifdef LOCK_FREE_FEBS
     do {
+        qthread_addrstat_t *m2;
         m = qt_hash_get(qlib->FEBs[lockbin], maddr);
 got_m:
         if (!m) {
