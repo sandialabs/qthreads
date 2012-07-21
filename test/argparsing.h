@@ -6,7 +6,14 @@
 #include <stdarg.h>
 
 #ifndef SST
-# define CHECK_VERBOSE() verbose = ((getenv("VERBOSE") != NULL) || !(getenv("MAKEFLAGS") && getenv("MAKELEVEL")))
+# define CHECK_VERBOSE() do {                                        \
+        const char *v = getenv("VERBOSE");                           \
+        if (v == NULL) {                                             \
+            verbose = !(getenv("MAKEFLAGS") && getenv("MAKELEVEL")); \
+        } else {                                                     \
+            verbose = strncmp(v, "0", 2);                            \
+        }                                                            \
+} while (0)
 #else
 # define CHECK_VERBOSE()
 #endif
