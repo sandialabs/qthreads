@@ -226,7 +226,7 @@ static QINLINE void qthread_FEB_remove(void *maddr)
     qthread_debug(FEB_BEHAVIOR, "maddr=%p: attempting removal\n", maddr);
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
 #ifdef LOCK_FREE_FEBS
-    do {
+    {
         qthread_addrstat_t *m2;
         m = qt_hash_get(qlib->FEBs[lockbin], maddr);
 got_m:
@@ -252,15 +252,14 @@ got_m:
         if ((m->FEQ == NULL) && (m->EFQ == NULL) && (m->FFQ == NULL) &&
             (m->full == 1)) {
             qthread_debug(FEB_DETAILS, "maddr=%p: lists are empty, status is full; invalidating and removing (m:%p)\n", maddr, m);
-            qassertnot(qt_hash_remove(qlib->FEBs[lockbin], maddr), 0);
             m->valid = 0;
-            break;
+            qassertnot(qt_hash_remove(qlib->FEBs[lockbin], maddr), 0);
         } else {
             QTHREAD_FASTLOCK_UNLOCK(&(m->lock));
             qthread_debug(FEB_DETAILS, "maddr=%p: addrstat cannot be removed; in use\n", maddr);
             return;
         }
-    } while (1);
+    }
 #else /* ifdef LOCK_FREE_FEBS */
     qt_hash_lock(qlib->FEBs[lockbin]); {
         m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->FEBs[lockbin], maddr);
