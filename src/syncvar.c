@@ -721,7 +721,7 @@ static QINLINE void qthread_syncvar_schedule(qthread_t          *waiter,
 } /*}}}*/
 
 static QINLINE void qthread_syncvar_remove(void *maddr)
-{
+{   /*{{{*/
     const int           lockbin = QTHREAD_CHOOSE_STRIPE(maddr);
     qthread_addrstat_t *m;
 
@@ -780,7 +780,7 @@ got_m:
         QTHREAD_FASTLOCK_UNLOCK(&m->lock);
         qthread_addrstat_delete(m);
     }
-}
+} /*}}}*/
 
 static QINLINE void qthread_syncvar_gotlock_empty(qthread_shepherd_t *shep,
                                                   qthread_addrstat_t *m,
