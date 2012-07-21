@@ -281,7 +281,7 @@ got_m:
     if (m != NULL) {
         QTHREAD_FASTLOCK_UNLOCK(&m->lock);
 #ifdef LOCK_FREE_FEBS
-        // hazardous_release_node((hazardous_free_f)qthread_addrstat_delete, m);
+        hazardous_release_node((hazardous_free_f)qthread_addrstat_delete, m);
 #else
         qthread_addrstat_delete(m);
 #endif

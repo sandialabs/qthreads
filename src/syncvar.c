@@ -27,6 +27,7 @@ static QINLINE void qthread_syncvar_gotlock_empty(qthread_shepherd_t *shep,
                                                   qthread_addrstat_t *m,
                                                   syncvar_t          *maddr,
                                                   const uint64_t      ret);
+static QINLINE void qthread_syncvar_remove(void *maddr);
 
 /* Internal Structs */
 typedef struct {
@@ -359,7 +360,7 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict const  dest,
         X = ALLOC_ADDRRES(me->rdata->shepherd_ptr);
         assert(X);
         if (!X) {
-            qthread_addrstat_delete(m);
+            qthread_syncvar_remove(src);
             return ENOMEM;
         }
         X->addr   = (aligned_t *)dest;
@@ -594,7 +595,7 @@ int API_FUNC qthread_syncvar_readFE(uint64_t *restrict const  dest,
         X = ALLOC_ADDRRES(me->rdata->shepherd_ptr);
         assert(X);
         if (!X) {
-            qthread_addrstat_delete(m);
+            qthread_syncvar_remove(src);
             return ENOMEM;
         }
         X->addr   = (aligned_t *)&ret;
@@ -778,7 +779,11 @@ got_m:
 #endif /* ifdef LOCK_FREE_FEBS */
     if (m != NULL) {
         QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+#ifdef LOCK_FREE_FEBS
+        hazardous_release_node((hazardous_free_f)qthread_addrstat_delete, m);
+#else
         qthread_addrstat_delete(m);
+#endif
     }
 } /*}}}*/
 
