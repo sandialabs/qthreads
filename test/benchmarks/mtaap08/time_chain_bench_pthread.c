@@ -19,7 +19,7 @@ pthread_mutex_t counter_locks[LOCK_COUNT];
 
 static void *qincr(void *arg)
 {
-    aligned_t id = (aligned_t)arg;
+    aligned_t id = (aligned_t)(uintptr_t)arg;
     size_t incrs;
 
     for (incrs = 0; incrs < LOCK_COUNT; incrs++) {

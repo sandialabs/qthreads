@@ -17,7 +17,7 @@ aligned_t counters[LOCK_COUNT] = { 0 };
 
 static aligned_t qincr(void *arg)
 {
-    aligned_t id = (aligned_t)arg;
+    aligned_t id = (aligned_t)(uintptr_t)arg;
     size_t incrs;
 
     for (incrs = 0; incrs < LOCK_COUNT; incrs++) {
