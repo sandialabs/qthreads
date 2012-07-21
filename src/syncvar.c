@@ -339,25 +339,23 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict const  dest,
         if (e.pf == 0) {                         /* it got full! */
             goto locked_full;
         }
-        qt_hash_lock(qlib->syncvars[lockbin]);
-        {
-            UNLOCK_THIS_MODIFIED_SYNCVAR(src, ret, SYNCFEB_STATE_EMPTY_WITH_WAITERS);
-            qthread_debug(SYNCVAR_DETAILS,
-                          "3 src(%p) = %x (queued waiter waiting for full)\n",
-                          src, (uintptr_t)BUILD_UNLOCKED_SYNCVAR(ret, SYNCFEB_STATE_EMPTY_WITH_WAITERS));
-            m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)src);
+        /* Note that locking the hash table is unnecessary because we have
+         * locked the syncvar itself. */
+        qthread_debug(SYNCVAR_DETAILS,
+                      "3 src(%p) = %x (queued waiter waiting for full)\n",
+                      src, (uintptr_t)BUILD_UNLOCKED_SYNCVAR(ret, SYNCFEB_STATE_EMPTY_WITH_WAITERS));
+        m = (qthread_addrstat_t *)qt_hash_get(qlib->syncvars[lockbin], (void *)src);
+        if (!m) {
+            m = qthread_addrstat_new(me->rdata->shepherd_ptr);
+            assert(m);
             if (!m) {
-                m = qthread_addrstat_new(me->rdata->shepherd_ptr);
-                assert(m);
-                if (!m) {
-                    qt_hash_unlock(qlib->syncvars[lockbin]);
-                    return ENOMEM;
-                }
-                qassertnot(qt_hash_put_locked(qlib->syncvars[lockbin], (void *)src, m), 0);
+                qt_hash_unlock(qlib->syncvars[lockbin]);
+                return ENOMEM;
             }
-            QTHREAD_FASTLOCK_LOCK(&(m->lock));
+            qassertnot(qt_hash_put(qlib->syncvars[lockbin], (void *)src, m), 0);
         }
-        qt_hash_unlock(qlib->syncvars[lockbin]);
+        QTHREAD_FASTLOCK_LOCK(&(m->lock));
+        UNLOCK_THIS_MODIFIED_SYNCVAR(src, ret, SYNCFEB_STATE_EMPTY_WITH_WAITERS);
         X = ALLOC_ADDRRES(me->rdata->shepherd_ptr);
         assert(X);
         if (!X) {
@@ -461,13 +459,11 @@ int API_FUNC qthread_syncvar_fill(syncvar_t *restrict const addr)
 
             e.sf = 0;                  // I'm releasing waiters
             e.pf = 0;                  // I'm going to mark this as full
-            qt_hash_lock(qlib->syncvars[lockbin]);
-            {
-                m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)addr);
-                assert(m);                 // otherwise there weren't really any waiters
-                QTHREAD_FASTLOCK_LOCK(&(m->lock));
-            }
-            qt_hash_unlock(qlib->syncvars[lockbin]);
+            /* Note that locking the hash table is unnecessary because we have
+             * locked the syncvar itself. */
+            m = (qthread_addrstat_t *)qt_hash_get(qlib->syncvars[lockbin], (void *)addr);
+            assert(m);                 // otherwise there weren't really any waiters
+            QTHREAD_FASTLOCK_LOCK(&(m->lock));
             if (m->FEQ) {
                 e.pf = 1;                      // back to being empty
                 if (m->FEQ->next) {
@@ -512,15 +508,13 @@ int API_FUNC qthread_syncvar_empty(syncvar_t *restrict const addr)
 
             e.sf = 0;                  // released!
             // wanted to mark it empty, but the waiters will fill it
-            qt_hash_lock(qlib->syncvars[lockbin]);
-            {
-                m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)addr);
-                assert(m);             // otherwise, there weren't any waiters
-                QTHREAD_FASTLOCK_LOCK(&(m->lock));
-                assert(m->EFQ);                           // otherwise there weren't really any waiters
-                assert(m->FFQ == NULL && m->FEQ == NULL); // someone snuck in!
-            }
-            qt_hash_unlock(qlib->syncvars[lockbin]);
+            /* Note that locking the hash table is unnecessary because we have
+             * locked the syncvar itself. */
+            m = (qthread_addrstat_t *)qt_hash_get(qlib->syncvars[lockbin], (void *)addr);
+            assert(m);             // otherwise, there weren't any waiters
+            QTHREAD_FASTLOCK_LOCK(&(m->lock));
+            assert(m->EFQ);                           // otherwise there weren't really any waiters
+            assert(m->FFQ == NULL && m->FEQ == NULL); // someone snuck in!
             if (m->EFQ->next) {
                 e.sf = 1;
             }
@@ -581,27 +575,22 @@ int API_FUNC qthread_syncvar_readFE(uint64_t *restrict const  dest,
                 goto locked_full;
             }
         }
-        qt_hash_lock(qlib->syncvars[lockbin]);
-        {
-            UNLOCK_THIS_MODIFIED_SYNCVAR(src, ret, SYNCFEB_STATE_EMPTY_WITH_WAITERS);
-            qthread_debug(SYNCVAR_DETAILS,
-                          "3 src(%p) = %x (queued waiter waiting for full)\n",
-                          src, (uintptr_t)BUILD_UNLOCKED_SYNCVAR(ret,
-                                                                 SYNCFEB_STATE_EMPTY_WITH_WAITERS));
-            m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin],
-                                                         (void *)src);
+        /* Note that locking the hash table is unnecessary because we have
+         * locked the syncvar itself. */
+        qthread_debug(SYNCVAR_DETAILS, "3 src(%p) = %x (queued waiter waiting for full)\n",
+                      src, (uintptr_t)BUILD_UNLOCKED_SYNCVAR(ret, SYNCFEB_STATE_EMPTY_WITH_WAITERS));
+        m = (qthread_addrstat_t *)qt_hash_get(qlib->syncvars[lockbin], (void *)src);
+        if (!m) {
+            m = qthread_addrstat_new(me->rdata->shepherd_ptr);
+            assert(m);
             if (!m) {
-                m = qthread_addrstat_new(me->rdata->shepherd_ptr);
-                assert(m);
-                if (!m) {
-                    qt_hash_unlock(qlib->syncvars[lockbin]);
-                    return ENOMEM;
-                }
-                qassertnot(qt_hash_put_locked(qlib->syncvars[lockbin], (void *)src, m), 0);
+                qt_hash_unlock(qlib->syncvars[lockbin]);
+                return ENOMEM;
             }
-            QTHREAD_FASTLOCK_LOCK(&(m->lock));
+            qassertnot(qt_hash_put(qlib->syncvars[lockbin], (void *)src, m), 0);
         }
-        qt_hash_unlock(qlib->syncvars[lockbin]);
+        QTHREAD_FASTLOCK_LOCK(&(m->lock));
+        UNLOCK_THIS_MODIFIED_SYNCVAR(src, ret, SYNCFEB_STATE_EMPTY_WITH_WAITERS);
         X = ALLOC_ADDRRES(me->rdata->shepherd_ptr);
         assert(X);
         if (!X) {
@@ -626,16 +615,14 @@ locked_full_waiters:
         assert(e.pf == 0);             // otherwise we should have gotten a timeout
         e.sf = 0;                      // released!
         // wanted to mark it empty (pf=1), but the waiters will fill it
-        qt_hash_lock(qlib->syncvars[lockbin]);
-        {
-            m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)src);
-            assert(m);                 // otherwise, there weren't any waiters
-            QTHREAD_FASTLOCK_LOCK(&(m->lock));
-            assert(m->EFQ);                           // otherwise there weren't really any waiters
-            assert(m->FFQ == NULL && m->FEQ == NULL); // someone snuck in!
-        }
-        qt_hash_unlock(qlib->syncvars[lockbin]);
-        if (m->EFQ->next) {            // there will be a waiter still waiting
+        /* Note that locking the hash table is unnecessary because we have
+         * locked the syncvar itself. */
+        m = (qthread_addrstat_t *)qt_hash_get(qlib->syncvars[lockbin], (void *)src);
+        assert(m);                 // otherwise, there weren't any waiters
+        QTHREAD_FASTLOCK_LOCK(&(m->lock));
+        assert(m->EFQ);                           // otherwise there weren't really any waiters
+        assert(m->FFQ == NULL && m->FEQ == NULL); // someone snuck in!
+        if (m->EFQ->next) {                       // there will be a waiter still waiting
             e.sf = 1;
         }
         qthread_debug(SYNCVAR_DETAILS, "m->FEQ = %p, m->FFQ = %p, m->EFQ = %p\n",
@@ -690,16 +677,14 @@ int INTERNAL qthread_syncvar_readFE_nb(uint64_t *restrict const  dest,
         assert(e.pf == 0);             // otherwise we should have gotten a timeout
         e.sf = 0;                      // released!
         // wanted to mark it empty (pf=1), but the waiters will fill it
-        qt_hash_lock(qlib->syncvars[lockbin]);
-        {
-            m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)src);
-            assert(m);                 // otherwise, there weren't any waiters
-            QTHREAD_FASTLOCK_LOCK(&(m->lock));
-            assert(m->EFQ);                           // otherwise there weren't really any waiters
-            assert(m->FFQ == NULL && m->FEQ == NULL); // someone snuck in!
-        }
-        qt_hash_unlock(qlib->syncvars[lockbin]);
-        if (m->EFQ->next) {            // there will be a waiter still waiting
+        /* Note that locking the hash table is unnecessary because we have
+         * locked the syncvar itself. */
+        m = (qthread_addrstat_t *)qt_hash_get(qlib->syncvars[lockbin], (void *)src);
+        assert(m);                 // otherwise, there weren't any waiters
+        QTHREAD_FASTLOCK_LOCK(&(m->lock));
+        assert(m->EFQ);                           // otherwise there weren't really any waiters
+        assert(m->FFQ == NULL && m->FEQ == NULL); // someone snuck in!
+        if (m->EFQ->next) {                       // there will be a waiter still waiting
             e.sf = 1;
         }
         qthread_debug(SYNCVAR_DETAILS, "m->FEQ = %p, m->FFQ = %p, m->EFQ = %p\n",
@@ -735,6 +720,68 @@ static QINLINE void qthread_syncvar_schedule(qthread_t          *waiter,
     }
 } /*}}}*/
 
+static QINLINE void qthread_syncvar_remove(void *maddr)
+{
+    const int           lockbin = QTHREAD_CHOOSE_STRIPE(maddr);
+    qthread_addrstat_t *m;
+
+    qthread_debug(SYNCVAR_FUNCTIONS, "maddr=%p\n", maddr);
+#ifdef LOCK_FREE_FEBS
+    {
+        qthread_addrstat_t *m2;
+        m = qt_hash_get(qlib->syncvars[lockbin], (void *)maddr);
+got_m:
+        if (!m) {
+            qthread_debug(SYNCVAR_DETAILS, "maddr=%p: addrstat already gone; someone else removed it!\n", maddr);
+            return;
+        }
+        hazardous_ptr(0, m);
+        if (m != (m2 = qt_hash_get(qlib->syncvars[lockbin], (void *)maddr))) {
+            m = m2;
+            goto got_m;
+        }
+        if (!m->valid) {
+            qthread_debug(SYNCVAR_DETAILS, "maddr=%p: addrstat invalid; someone else invalidated it!\n", maddr);
+            return;
+        }
+        QTHREAD_FASTLOCK_LOCK(&m->lock);
+        if (!m->valid) {
+            qthread_debug(SYNCVAR_DETAILS, "maddr=%p: addrstat invalid; someone else invalidated it!\n", maddr);
+            return;
+        }
+        if ((m->FEQ == NULL) && (m->EFQ == NULL) && (m->FFQ == NULL)) {
+            qthread_debug(SYNCVAR_DETAILS, "maddr=%p: all lists are empty\n", maddr);
+            m->valid = 0;
+            qassertnot(qt_hash_remove(qlib->syncvars[lockbin], (void *)maddr), 0);
+        } else {
+            QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+            qthread_debug(SYNCVAR_DETAILS, "maddr=%p: address cannot be removed; in use\n", maddr);
+            return;
+        }
+    }
+    assert(m);
+#else /* ifdef LOCK_FREE_FEBS */
+    qt_hash_lock(qlib->syncvars[lockbin]);
+    m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)maddr);
+    if (m) {
+        QTHREAD_FASTLOCK_LOCK(&(m->lock));
+        if ((m->FEQ == NULL) && (m->EFQ == NULL) && (m->FFQ == NULL)) {
+            qthread_debug(SYNCVAR_DETAILS, "all lists are empty\n");
+            qt_hash_remove_locked(qlib->syncvars[lockbin], (void *)maddr);
+        } else {
+            QTHREAD_FASTLOCK_UNLOCK(&(m->lock));
+            qthread_debug(SYNCVAR_DETAILS, "address cannot be removed; in use\n");
+            m = NULL;
+        }
+    }
+    qt_hash_unlock(qlib->syncvars[lockbin]);
+#endif /* ifdef LOCK_FREE_FEBS */
+    if (m != NULL) {
+        QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+        qthread_addrstat_delete(m);
+    }
+}
+
 static QINLINE void qthread_syncvar_gotlock_empty(qthread_shepherd_t *shep,
                                                   qthread_addrstat_t *m,
                                                   syncvar_t          *maddr,
@@ -765,27 +812,7 @@ static QINLINE void qthread_syncvar_gotlock_empty(qthread_shepherd_t *shep,
     }
     QTHREAD_FASTLOCK_UNLOCK(&m->lock);
     if (removeable) {
-        const int lockbin = QTHREAD_CHOOSE_STRIPE(maddr);
-        qt_hash_lock(qlib->syncvars[lockbin]);
-        {
-            m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)maddr);
-            if (m) {
-                QTHREAD_FASTLOCK_LOCK(&(m->lock));
-                if ((m->FEQ == NULL) && (m->EFQ == NULL) && (m->FFQ == NULL)) {
-                    qthread_debug(SYNCVAR_DETAILS, "all lists are empty\n");
-                    qassertnot(qt_hash_remove_locked(qlib->syncvars[lockbin], (void *)maddr), 0);
-                } else {
-                    QTHREAD_FASTLOCK_UNLOCK(&(m->lock));
-                    qthread_debug(SYNCVAR_DETAILS, "addr cannot be removed; in use\n");
-                    m = NULL;
-                }
-            }
-        }
-        qt_hash_unlock(qlib->syncvars[lockbin]);
-        if (m != NULL) {
-            QTHREAD_FASTLOCK_UNLOCK(&m->lock);
-            qthread_addrstat_delete(m);
-        }
+        qthread_syncvar_remove(maddr);
     }
 }                                      /*}}} */
 
@@ -797,7 +824,7 @@ static QINLINE void qthread_syncvar_gotlock_fill(qthread_shepherd_t *shep,
     qthread_addrres_t *X = NULL;
     int                removeable;
 
-    qthread_debug(SYNCVAR_DETAILS, "m(%p), addr(%p)\n", m, maddr);
+    qthread_debug(SYNCVAR_FUNCTIONS, "m(%p), addr(%p)\n", m, maddr);
     m->full = 1;
     QTHREAD_EMPTY_TIMER_STOP(m);
     /* dequeue all FFQ, do their operation, and schedule them */
@@ -833,25 +860,7 @@ static QINLINE void qthread_syncvar_gotlock_fill(qthread_shepherd_t *shep,
     }
     QTHREAD_FASTLOCK_UNLOCK(&m->lock);
     if (removeable) {
-        const int lockbin = QTHREAD_CHOOSE_STRIPE(maddr);
-        qt_hash_lock(qlib->syncvars[lockbin]);
-        m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)maddr);
-        if (m) {
-            QTHREAD_FASTLOCK_LOCK(&(m->lock));
-            if ((m->FEQ == NULL) && (m->EFQ == NULL) && (m->FFQ == NULL)) {
-                qthread_debug(SYNCVAR_DETAILS, "all lists are empty\n");
-                qt_hash_remove_locked(qlib->syncvars[lockbin], (void *)maddr);
-            } else {
-                QTHREAD_FASTLOCK_UNLOCK(&(m->lock));
-                qthread_debug(SYNCVAR_DETAILS, "address cannot be removed; in use\n");
-                m = NULL;
-            }
-        }
-        qt_hash_unlock(qlib->syncvars[lockbin]);
-        if (m != NULL) {
-            QTHREAD_FASTLOCK_UNLOCK(&m->lock);
-            qthread_addrstat_delete(m);
-        }
+        qthread_syncvar_remove(maddr);
     }
 }                                      /*}}} */
 
@@ -878,11 +887,11 @@ int API_FUNC qthread_syncvar_writeF(syncvar_t *restrict const      dest,
 
         e.sf = 0;                      // I'm releasing waiters
         e.pf = 0;                      // I'm going to mark this as full
-        qt_hash_lock(qlib->syncvars[lockbin]);
-        m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)dest);
+        /* Note that locking the hash table is unnecessary because we have
+         * locked the syncvar itself. */
+        m = (qthread_addrstat_t *)qt_hash_get(qlib->syncvars[lockbin], (void *)dest);
         assert(m);                     // otherwise there weren't really any waiters
         QTHREAD_FASTLOCK_LOCK(&(m->lock));
-        qt_hash_unlock(qlib->syncvars[lockbin]);
         if (m->FEQ) {
             e.pf = 1;                  // back to being empty
             if (m->FEQ->next) {
@@ -937,27 +946,23 @@ int API_FUNC qthread_syncvar_writeEF(syncvar_t *restrict const      dest,
                 goto locked_empty;
             }
         }
-        /* lock the hash, then mark the syncvar as "consult-hash" and release it */
-        qt_hash_lock(qlib->syncvars[lockbin]);
-        {
-            UNLOCK_THIS_MODIFIED_SYNCVAR(dest, ret, SYNCFEB_STATE_FULL_WITH_WAITERS);
-            qthread_debug(SYNCVAR_DETAILS,
-                          "writeEF(c) dest(%p) = %x (queued waiter waiting for empty)\n",
-                          dest, (uintptr_t)BUILD_UNLOCKED_SYNCVAR(ret, SYNCFEB_STATE_FULL_WITH_WAITERS));
-            m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)dest);
+        /* Note that locking the hash table is unnecessary because we have
+         * locked the syncvar itself. */
+        qthread_debug(SYNCVAR_DETAILS, "writeEF(c) dest(%p) = %x (queued waiter waiting for empty)\n",
+                      dest, (uintptr_t)BUILD_UNLOCKED_SYNCVAR(ret, SYNCFEB_STATE_FULL_WITH_WAITERS));
+        m = (qthread_addrstat_t *)qt_hash_get(qlib->syncvars[lockbin], (void *)dest);
+        if (!m) {
+            m = qthread_addrstat_new(me->rdata->shepherd_ptr);
+            assert(m);
             if (!m) {
-                m = qthread_addrstat_new(me->rdata->shepherd_ptr);
-                assert(m);
-                if (!m) {
-                    qt_hash_unlock(qlib->syncvars[lockbin]);
-                    return ENOMEM;
-                }
-                qassertnot(qt_hash_put_locked(qlib->syncvars[lockbin], (void *)dest, m), 0);
+                qt_hash_unlock(qlib->syncvars[lockbin]);
+                return ENOMEM;
             }
-            /* lock the addrstat (already within the hash) and then unlock the hash */
-            QTHREAD_FASTLOCK_LOCK(&(m->lock));
+            qassertnot(qt_hash_put(qlib->syncvars[lockbin], (void *)dest, m), 0);
         }
-        qt_hash_unlock(qlib->syncvars[lockbin]);
+        /* lock the addrstat (already within the hash) and then unlock the syncvar */
+        QTHREAD_FASTLOCK_LOCK(&(m->lock));
+        UNLOCK_THIS_MODIFIED_SYNCVAR(dest, ret, SYNCFEB_STATE_FULL_WITH_WAITERS);
         X = ALLOC_ADDRRES(me->rdata->shepherd_ptr);
         assert(X);
         X->addr   = (aligned_t *)src;
@@ -978,15 +983,13 @@ locked_empty_waiters:
         assert(e.pf == 1);             // otherwise it wasn't really empty
         e.pf = 0;                      // mark full
         e.sf = 0;                      // released!
-        qt_hash_lock(qlib->syncvars[lockbin]);
-        {
-            m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)dest);
-            assert(m);                     // otherwise there weren't really any waiters
-            QTHREAD_FASTLOCK_LOCK(&(m->lock));
-            assert(m->FFQ || m->FEQ);      // otherwise there weren't really any waiters
-            assert(m->EFQ == NULL);        // someone snuck in!
-        }
-        qt_hash_unlock(qlib->syncvars[lockbin]);
+        /* Note that locking the hash table is unnecessary because we have
+         * locked the syncvar itself. */
+        m = (qthread_addrstat_t *)qt_hash_get(qlib->syncvars[lockbin], (void *)dest);
+        assert(m);                     // otherwise there weren't really any waiters
+        QTHREAD_FASTLOCK_LOCK(&(m->lock));
+        assert(m->FFQ || m->FEQ);      // otherwise there weren't really any waiters
+        assert(m->EFQ == NULL);        // someone snuck in!
         if (m->FEQ) {
             e.pf = 1;
             if (m->FEQ->next) {
@@ -1046,15 +1049,13 @@ int INTERNAL qthread_syncvar_writeEF_nb(syncvar_t *restrict const      dest,
         assert(e.pf == 1);             // otherwise it wasn't really empty
         e.pf = 0;                      // mark full
         e.sf = 0;                      // released!
-        qt_hash_lock(qlib->syncvars[lockbin]);
-        {
-            m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)dest);
-            assert(m);                     // otherwise there weren't really any waiters
-            QTHREAD_FASTLOCK_LOCK(&(m->lock));
-            assert(m->FFQ || m->FEQ);      // otherwise there weren't really any waiters
-            assert(m->EFQ == NULL);        // someone snuck in!
-        }
-        qt_hash_unlock(qlib->syncvars[lockbin]);
+        /* Note that locking the hash table is unnecessary because we have
+         * locked the syncvar itself. */
+        m = (qthread_addrstat_t *)qt_hash_get(qlib->syncvars[lockbin], (void *)dest);
+        assert(m);                     // otherwise there weren't really any waiters
+        QTHREAD_FASTLOCK_LOCK(&(m->lock));
+        assert(m->FFQ || m->FEQ);      // otherwise there weren't really any waiters
+        assert(m->EFQ == NULL);        // someone snuck in!
         if (m->FEQ) {
             e.pf = 1;
             if (m->FEQ->next) {
@@ -1111,13 +1112,11 @@ uint64_t API_FUNC qthread_syncvar_incrF(syncvar_t *restrict const operand,
 
         e.sf = 0;                      // I'm releasing waiters
         e.pf = 0;                      // I'm going to mark this as full
-        qt_hash_lock(qlib->syncvars[lockbin]);
-        {
-            m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)operand);
-            assert(m);                     // otherwise there weren't really any waiters
-            QTHREAD_FASTLOCK_LOCK(&(m->lock));
-        }
-        qt_hash_unlock(qlib->syncvars[lockbin]);
+        /* Note that locking the hash table is unnecessary because we have
+         * locked the syncvar itself. */
+        m = (qthread_addrstat_t *)qt_hash_get(qlib->syncvars[lockbin], (void *)operand);
+        assert(m);                     // otherwise there weren't really any waiters
+        QTHREAD_FASTLOCK_LOCK(&(m->lock));
         if (m->FEQ) {
             e.pf = 1;                  // back to being empty
             if (m->FEQ->next) {
