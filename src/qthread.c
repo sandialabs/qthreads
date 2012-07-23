@@ -3113,7 +3113,6 @@ int API_FUNC qthread_fork_precond_simple(qthread_f   f,
         }*/
     }
     va_end(args);
-	printf("Spawning simple precond tasks\n");
     return qthread_spawn(f, arg, 0, ret, npreconds, preconds, NO_SHEPHERD,
                          QTHREAD_SPAWN_SIMPLE );
 } /*}}}*/
