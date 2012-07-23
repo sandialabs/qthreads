@@ -959,10 +959,15 @@ int INTERNAL qthread_readFF_nb(aligned_t *restrict const       dest,
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
 # ifdef LOCK_FREE_FEBS
     do {
+        qthread_addrstat_t *m2;
         m = qt_hash_get(qlib->FEBs[lockbin], (void *)alignedaddr);
+got_m:
         if (!m) { break; }
         hazardous_ptr(0, m);
-        if (m != qt_hash_get(qlib->FEBs[lockbin], (void *)alignedaddr)) { continue; }
+        if (m != (m2 = qt_hash_get(qlib->FEBs[lockbin], (void *)alignedaddr))) {
+            m = m2;
+            goto got_m;
+        }
         if (!m->valid) { continue; }
         QTHREAD_FASTLOCK_LOCK(&m->lock);
         if (!m->valid) {
