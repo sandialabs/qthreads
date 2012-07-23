@@ -16,7 +16,6 @@ libqthread_la_SOURCES = \
 	envariables.c \
 	qalloc.c \
 	qloop.c \
-	qt_c_hash.c \
 	qt_feb_barrier.c \
 	qutil.c \
 	io.c \
@@ -25,6 +24,12 @@ libqthread_la_SOURCES = \
 	hazardptrs.c \
 	aligned_alloc.c \
 	syncvar.c
+
+if COMPILE_LF_HASH
+libqthread_la_SOURCES += qt_lf_hash.c
+else
+libqthread_la_SOURCES += qt_c_hash.c
+endif
 
 include qtimer/Makefile.inc
 include ds/Makefile.inc

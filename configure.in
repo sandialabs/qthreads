@@ -1065,6 +1065,7 @@ AM_CONDITIONAL([WANT_PMI_RUNTIME], [test "$with_multinode_runtime" = "pmi"])
 AM_CONDITIONAL([COMPILE_OMP_BENCHMARKS], [test "$have_openmp" = "yes"])
 AM_CONDITIONAL([COMPILE_TBB_BENCHMARKS], [test "$have_tbb" = "yes"])
 AM_CONDITIONAL([COMPILE_CILK_BENCHMARKS], [test "$have_cilk" = "yes"])
+AM_CONDITIONAL([COMPILE_LF_HASH], [test "x$enable_lf_febs" = "xyes"])
 
 AC_CONFIG_HEADERS([include/config.h include/qthread/common.h])
 AC_CONFIG_FILES([Makefile
