@@ -2,6 +2,7 @@
 #define _QT_CNC_STEP_LAUNCHER_H_
 
 #include <assert.h>
+#include <stdarg.h>
 
 namespace CnC {
 	// Class launcher_base
@@ -66,6 +67,11 @@ namespace CnC {
 	template< class Tag, class Step, class ContextType>step_launcher< Tag, Step, ContextType>::~step_launcher( ) /*TODO*/
 	{                                                                         }
 
+
+	
+
+
+
 	template< class Tag, class Step, class ContextType >
 	aligned_t step_launcher< Tag, Step, ContextType >::call_step(void *arg)
 	{
@@ -115,6 +121,9 @@ namespace CnC {
 		# endif
 		qthread_fork(call_step, pts, NULL);
 	# else
+
+
+	
 		# ifdef ASSERTS_ENABLED
 			int ret;
 		# endif
@@ -125,7 +134,11 @@ namespace CnC {
 			# ifdef ASSERTS_ENABLED
 					ret =
 			# endif
-			qthread_fork_precond(call_step, pts, NULL, (-1) * no_of_dependences, list_of_sincs);
+			#ifdef CNC_PRECOND_ONLY
+				qthread_fork_precond_simple(call_step, pts, NULL, (-1) * no_of_dependences, list_of_sincs);
+			#else // CNC_PRECOND_ONLY
+				qthread_fork_precond(call_step, pts, NULL, (-1) * no_of_dependences, list_of_sincs);
+			#endif // CNC_PRECOND_ONLY
 			free(list_of_sincs);                         // TODO: Double-check list is not used after getting the aligned_t* from it
 		} else 
 		{
