@@ -35,7 +35,7 @@ AC_SEARCH_LIBS([pthread_create], [pthread], [],
 AS_IF([test "x$with_qthreads" != x],
 	  [CPPFLAGS="-I$with_qthreads/include $CPPFLAGS"
 	   LDFLAGS="-L$with_qthreads/lib $LDFLAGS"])
-AC_SEARCH_LIBS([qthread_initialize], [qthread "qthread -lm"], [],
+AC_SEARCH_LIBS([qthread_initialize], [qthread "qthread -lm" "qthread -lhwloc" "qthread -lhwloc -lm"], [],
 			   [AC_MSG_ERROR([We require a working qthreads implementation. Use --with-qthreads=[[path]] to specify the location of your pthreads installation.])])
 AC_SEARCH_LIBS([nanosleep],[rt],[],[AC_MSG_ERROR([Cannot find nanosleep])])
 
