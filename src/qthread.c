@@ -3078,6 +3078,46 @@ int API_FUNC qthread_fork_copyargs_precond(qthread_f   f,
                          QTHREAD_SPAWN_RET_SYNCVAR_T);
 } /*}}}*/
 
+
+
+/*
+* Duplicate code from qthreads function qthread_fork_precond
+* Needed to add the simple function marker.
+* TODO: not happy with code duplication here
+*/
+int API_FUNC qthread_fork_precond_simple(qthread_f   f,
+                                  const void *arg,
+                                  aligned_t  *ret,
+                                  int         npreconds,
+                                  ...)
+{   /*{{{*/
+    // Collect sync info
+    va_list     args;
+    aligned_t **preconds = NULL;
+
+    va_start(args, npreconds);
+    if (npreconds > 0) {
+        preconds = (aligned_t**) malloc(npreconds * sizeof(aligned_t *));
+        assert(preconds != NULL);
+        for (int i = 0; i < npreconds; ++i) {
+            preconds[i] = va_arg(args, aligned_t *);
+        }
+    } else if (npreconds < 0) {
+        npreconds *= -1;
+        preconds   = (aligned_t**) malloc(npreconds * sizeof(aligned_t *));
+        assert(preconds != NULL);
+        aligned_t **tmp = va_arg(args, aligned_t **);
+        memcpy(preconds, tmp, sizeof(aligned_t*) * npreconds);
+        /*for (int i = 0; i < npreconds; ++i) {
+            preconds[i] = tmp[i];
+        }*/
+    }
+    va_end(args);
+	printf("Spawning simple precond tasks\n");
+    return qthread_spawn(f, arg, 0, ret, npreconds, preconds, NO_SHEPHERD,
+                         QTHREAD_SPAWN_SIMPLE );
+} /*}}}*/
+
 int API_FUNC qthread_fork_precond(qthread_f   f,
                                   const void *arg,
                                   aligned_t  *ret,
