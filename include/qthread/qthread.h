@@ -261,6 +261,12 @@ int qthread_fork_copyargs_precond(qthread_f   f,
                                   syncvar_t  *ret,
                                   int         npreconds,
                                   ...);
+int qthread_fork_precond_simple(qthread_f   f,
+                                  const void *arg,
+                                  aligned_t  *ret,
+                                  int         npreconds,
+                                  ...);
+                                  
 enum _qthread_features {
     SPAWN_FUTURE,
     SPAWN_PARENT,
