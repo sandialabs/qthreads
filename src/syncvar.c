@@ -350,7 +350,6 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict const  dest,
             m = qthread_addrstat_new(me->rdata->shepherd_ptr);
             assert(m);
             if (!m) {
-                qt_hash_unlock(qlib->syncvars[lockbin]);
                 return ENOMEM;
             }
             qassertnot(qt_hash_put(qlib->syncvars[lockbin], (void *)src, m), 0);
@@ -585,7 +584,6 @@ int API_FUNC qthread_syncvar_readFE(uint64_t *restrict const  dest,
             m = qthread_addrstat_new(me->rdata->shepherd_ptr);
             assert(m);
             if (!m) {
-                qt_hash_unlock(qlib->syncvars[lockbin]);
                 return ENOMEM;
             }
             qassertnot(qt_hash_put(qlib->syncvars[lockbin], (void *)src, m), 0);
@@ -960,7 +958,6 @@ int API_FUNC qthread_syncvar_writeEF(syncvar_t *restrict const      dest,
             m = qthread_addrstat_new(me->rdata->shepherd_ptr);
             assert(m);
             if (!m) {
-                qt_hash_unlock(qlib->syncvars[lockbin]);
                 return ENOMEM;
             }
             qassertnot(qt_hash_put(qlib->syncvars[lockbin], (void *)dest, m), 0);
