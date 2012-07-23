@@ -281,7 +281,7 @@ void *shep0arg                    = NULL;
 static QINLINE void alloc_rdata(qthread_shepherd_t *me,
                                 qthread_t          *t)
 {   /*{{{*/
-    void                          *stack = ALLOC_STACK();
+    void                          *stack = !(t->flags & QTHREAD_SIMPLE)?ALLOC_STACK():NULL;
     struct qthread_runtime_data_s *rdata;
 
     assert(stack);
