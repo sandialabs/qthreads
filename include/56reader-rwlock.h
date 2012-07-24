@@ -70,10 +70,12 @@ static QINLINE void rwlock_wrlock(rwlock_t *l,
     id = id + 1;
 
     uint64_t *readers = (void *)l->readers;
-    while(qthread_cas(&(l->owner), 0, id) != id) SPINLOCK_BODY();
+    do {
+        while (l->owner != 0) SPINLOCK_BODY();
+    } while(qthread_cas(&(l->owner), 0U, id) != (uint64_t)id);
 
     MACHINE_FENCE;
-    for (int i = 0; i < sizeof(l->readers) / sizeof(uint64_t); i++) {
+    for (size_t i = 0; i < sizeof(l->readers) / sizeof(uint64_t); i++) {
         while (readers[i] != 0) SPINLOCK_BODY();
     }
 }
