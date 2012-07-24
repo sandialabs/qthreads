@@ -238,11 +238,16 @@ static QINLINE void FREE_STACK(void *t)
 #endif  /* if defined(UNPOOLED_STACKS) || defined(UNPOOLED) */
 
 #if defined(UNPOOLED)
-# define ALLOC_TEAM(shep) (qt_team_t *)malloc(sizeof(qt_team_t))
+# define ALLOC_RDATA()    (struct qthread_runtime_data_s*)malloc(sizeof(struct qthread_runtime_data_s));
+# define FREE_RDATA(r)    free(r)
+# define ALLOC_TEAM()     (qt_team_t *)malloc(sizeof(qt_team_t))
 # define FREE_TEAM(t)     free(t)
 #else
+static qt_mpool generic_rdata_pool = NULL;
+# define ALLOC_RDATA()    (struct qthread_runtime_data_s*)qt_mpool_alloc(generic_rdata_pool)
+# define FREE_RDATA(r)    qt_mpool_free(generic_rdata_pool, t)
 static qt_mpool generic_team_pool = NULL;
-# define ALLOC_TEAM(shep) (qt_team_t *)qt_mpool_alloc(generic_team_pool)
+# define ALLOC_TEAM()     (qt_team_t *)qt_mpool_alloc(generic_team_pool)
 # define FREE_TEAM(t)     qt_mpool_free(generic_team_pool, t)
 #endif
 
@@ -278,20 +283,27 @@ void *shep0arg                    = NULL;
 static QINLINE void alloc_rdata(qthread_shepherd_t *me,
                                 qthread_t          *t)
 {   /*{{{*/
-    void                          *stack = !(t->flags & QTHREAD_SIMPLE)?ALLOC_STACK():NULL;
+    void                          *stack = NULL;
     struct qthread_runtime_data_s *rdata;
 
-    assert(stack);
+    if (t->flags & QTHREAD_SIMPLE) {
+        rdata = t->rdata = ALLOC_RDATA();
+    } else {
+        stack = ALLOC_STACK();
+        assert(stack);
 #ifdef QTHREAD_GUARD_PAGES
-    rdata = t->rdata = (struct qthread_runtime_data_s *)(((uint8_t *)stack) + getpagesize() + qlib->qthread_stack_size);
+        rdata = t->rdata = (struct qthread_runtime_data_s *)(((uint8_t *)stack) + getpagesize() + qlib->qthread_stack_size);
 #else
-    rdata = t->rdata = (struct qthread_runtime_data_s *)(((uint8_t *)stack) + qlib->qthread_stack_size);
+        rdata = t->rdata = (struct qthread_runtime_data_s *)(((uint8_t *)stack) + qlib->qthread_stack_size);
 #endif
+    }
     rdata->stack        = stack;
     rdata->shepherd_ptr = me;
     rdata->blockedon.io = NULL;
 #ifdef QTHREAD_USE_VALGRIND
-    rdata->valgrind_stack_id = VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
+    if (stack) {
+        rdata->valgrind_stack_id = VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
+    }
 #endif
 #if defined(QTHREAD_USE_ROSE_EXTENSIONS) && defined(QTHREAD_OMP_AFFINITY)
     rdata->child_affinity = OMP_NO_CHILD_TASK_AFFINITY;
@@ -842,15 +854,24 @@ int API_FUNC qthread_initialize(void)
 
     if (hw_par != 0) {
         if ((hw_par < nshepherds) || (hw_par == 1)) {
+            print_warning("low HWPAR\n");
             nworkerspershep = 1;
             nshepherds      = hw_par;
         } else if (hw_par > (nshepherds * nworkerspershep)) {
+            print_warning("high HWPAR\n");
             nworkerspershep = (hw_par / nshepherds);
             if ((hw_par % nshepherds) != 0) {
                 nworkerspershep++;
             }
+        } else {
+            nworkerspershep = hw_par / nshepherds;
+            if (hw_par % nshepherds > 0) {
+                nworkerspershep ++;
+            }
+            print_warning("corner case HWPAR\n");
         }
     } else {
+        print_warning("resetting HWPAR\n");
         hw_par = nshepherds * nworkerspershep;
     }
 
@@ -2283,7 +2304,13 @@ static QINLINE void qthread_thread_free(qthread_t *t)
         VALGRIND_STACK_DEREGISTER(t->rdata->valgrind_stack_id);
 #endif
         qthread_debug(THREAD_DETAILS, "t(%p): releasing stack %p\n", t, t->rdata->stack);
-        FREE_STACK(t->rdata->stack);
+        if (t->flags & QTHREAD_SIMPLE) {
+            FREE_RDATA(t->rdata);
+        } else {
+            assert(t->rdata->stack);
+            FREE_STACK(t->rdata->stack);
+        }
+
         t->rdata = NULL;
     }
     if (t->flags & QTHREAD_HAS_ARGCOPY) {
@@ -2820,7 +2847,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
         team_leader = 1;
 
         // Allocate new team structure
-        new_team = ALLOC_TEAM(myshep);
+        new_team = ALLOC_TEAM();
         assert(new_team);
 
         // Initialize new team values
@@ -2851,7 +2878,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
         team_leader = 1;
 
         // Allocate new team structure
-        new_team = ALLOC_TEAM(myshep);
+        new_team = ALLOC_TEAM();
         assert(new_team);
 
         // Initialize new team values
