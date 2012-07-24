@@ -218,26 +218,24 @@ static void qdqueue_internal_sortedsheps(qthread_shepherd_id_t shep,
     }
 }                                      /*}}} */
 
-static struct qdsubqueue_s **qdqueue_internal_getneighbors(qthread_shepherd_id_t shep,
-                                                           struct qdsubqueue_s  *Qs,
-                                                           size_t               *numNeighbors,
-                                                           int *Q_UNUSED         distances) /*{{{ */
-{
+static struct qdsubqueue_s **qdqueue_internal_getneighbors(qthread_shepherd_id_t     shep,
+                                                           struct qdsubqueue_s      *Qs,
+                                                           size_t *restrict          numNeighbors,
+                                                           const int *const restrict distances)
+{ /*{{{ */
     struct qdsubqueue_s **ret;
     size_t                i;
-
-#if (defined(HAVE_SYS_LGRP_USER_H) || defined(QTHREAD_HAVE_LIBNUMA))
     /* we define a "neighbor" in terms of distance, because that's all we've
      * got, so, we find the shortest non-me distance (i.e. >10), and anything
      * that's less than 10 away from that is considered one of my neighbors */
     qthread_shepherd_id_t *temp;
     size_t                 j, numN = 0;
 
-# ifdef HAVE_SYS_LGRP_USER_H
-#  define NONME_DIST 5
-# else
-#  define NONME_DIST 10
-# endif
+#ifdef HAVE_SYS_LGRP_USER_H
+# define NONME_DIST 5
+#else
+# define NONME_DIST 10
+#endif
 
     /* find the smallest non-me distance */
     int mindist = INT_MAX;
@@ -283,19 +281,6 @@ static struct qdsubqueue_s **qdqueue_internal_getneighbors(qthread_shepherd_id_t
     }
     free(temp);
     *numNeighbors = numN;
-#else /* if (defined(HAVE_SYS_LGRP_USER_H) || defined(QTHREAD_HAVE_LIBNUMA)) */
-      /* without a valid NUMA library, *ALL* shepherds are "neighbors" */
-    size_t j;
-
-    *numNeighbors = maxsheps - 1;
-    ret           = malloc(*numNeighbors * sizeof(struct qdsubqueue_s *));
-    for (i = j = 0; i < maxsheps; i++) {
-        if (i == shep) {
-            continue;
-        }
-        ret[j++] = &(Qs[i]);
-    }
-#endif /* if (defined(HAVE_SYS_LGRP_USER_H) || defined(QTHREAD_HAVE_LIBNUMA)) */
     return ret;
 }                                      /*}}} */
 

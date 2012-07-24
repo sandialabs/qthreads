@@ -341,9 +341,9 @@ static void drf_qsort(void *const  array,
 static void drf_qsort_dbl(double *const arr,
                           const size_t  elements)
 {   /*{{{*/
-    const size_t MAX = (size_t)log((double)elements) + 5;
-    ssize_t      beg[MAX], end[MAX], i = 0, L, R, swap;
-    double       piv;
+    const ssize_t MAX = (size_t)log((double)elements) + 5;
+    ssize_t       beg[MAX], end[MAX], i = 0, L, R, swap;
+    double        piv;
 
     beg[0] = 0;
     end[0] = elements;
@@ -384,9 +384,9 @@ static void drf_qsort_dbl(double *const arr,
 static void drf_qsort_algt(aligned_t *const arr,
                            const size_t     elements)
 {   /*{{{*/
-    const size_t MAX = (size_t)log((double)elements) + 5;
-    ssize_t      beg[MAX], end[MAX], i = 0, L, R, swap;
-    aligned_t    piv;
+    const ssize_t MAX = (size_t)log((double)elements) + 5;
+    ssize_t       beg[MAX], end[MAX], i = 0, L, R, swap;
+    aligned_t     piv;
 
     beg[0] = 0;
     end[0] = elements;
