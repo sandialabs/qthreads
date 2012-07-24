@@ -72,6 +72,8 @@ int main(int argc,
 
     iprintf("Final value of x=%lu (expecting %lu)\n", (unsigned long)x, (unsigned long)target);
 
+    qthread_unlock(&alldone);
+
     if (x == target) {
         return 0;
     } else {
