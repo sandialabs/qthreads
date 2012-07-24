@@ -429,7 +429,7 @@ int API_FUNC qthread_empty(const aligned_t *dest)
         m = qt_hash_get(FEBbin, (void *)alignedaddr);
         if (!m) {
             /* currently full, and must be added to the hash to empty */
-            m = qthread_addrstat_new(shep);
+            m = qthread_addrstat_new();
             if (!m) { return QTHREAD_MALLOC_ERROR; }
             m->full = 0;
             MACHINE_FENCE;
@@ -463,7 +463,7 @@ int API_FUNC qthread_empty(const aligned_t *dest)
         m = (qthread_addrstat_t *)qt_hash_get_locked(FEBbin, (void *)alignedaddr);
         if (!m) {
             /* currently full, and must be added to the hash to empty */
-            m = qthread_addrstat_new(shep);
+            m = qthread_addrstat_new();
             if (!m) {
                 qt_hash_unlock(FEBbin);
                 return QTHREAD_MALLOC_ERROR;
@@ -665,7 +665,7 @@ int API_FUNC qthread_writeEF(aligned_t *restrict const       dest,
 got_m:
         if (!m) {
             /* currently full, must add to hash to wait */
-            m = qthread_addrstat_new(me->rdata->shepherd_ptr);
+            m = qthread_addrstat_new();
             if (!m) {
                 // qthread_debug(FEB_DETAILS, "dest=%p, src=%p (tid=%i): MALLOC FAILURE!!!!!!!!!!\n", dest, src, me->thread_id);
                 return QTHREAD_MALLOC_ERROR;
@@ -706,7 +706,7 @@ got_m:
     {
         m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->FEBs[lockbin], (void *)alignedaddr);
         if (!m) {
-            m = qthread_addrstat_new(me->rdata->shepherd_ptr);
+            m = qthread_addrstat_new();
             if (!m) {
                 qt_hash_unlock(qlib->FEBs[lockbin]);
                 return QTHREAD_MALLOC_ERROR;
@@ -1051,7 +1051,7 @@ int API_FUNC qthread_readFE(aligned_t *restrict const       dest,
 got_m:
         if (!m) {
             /* currently full; need to set to empty */
-            m = qthread_addrstat_new(me->rdata->shepherd_ptr);
+            m = qthread_addrstat_new();
             if (!m) { return QTHREAD_MALLOC_ERROR; }
             QTHREAD_FASTLOCK_LOCK(&m->lock);
             if (!qt_hash_put(qlib->FEBs[lockbin], alignedaddr, m)) {
@@ -1082,7 +1082,7 @@ got_m:
     {
         m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->FEBs[lockbin], alignedaddr);
         if (!m) {
-            m = qthread_addrstat_new(me->rdata->shepherd_ptr);
+            m = qthread_addrstat_new();
             if (!m) {
                 qt_hash_unlock(qlib->FEBs[lockbin]);
                 return QTHREAD_MALLOC_ERROR;
@@ -1161,7 +1161,7 @@ int INTERNAL qthread_readFE_nb(aligned_t *restrict const       dest,
         m = qt_hash_get(qlib->FEBs[lockbin], alignedaddr);
         if (!m) {
             /* currently full; need to set to empty */
-            m = qthread_addrstat_new(me->rdata->shepherd_ptr);
+            m = qthread_addrstat_new();
             if (!m) { return QTHREAD_MALLOC_ERROR; }
             QTHREAD_FASTLOCK_LOCK(&m->lock);
             if (!qt_hash_put(qlib->FEBs[lockbin], alignedaddr, m)) {
@@ -1188,7 +1188,7 @@ int INTERNAL qthread_readFE_nb(aligned_t *restrict const       dest,
     {
         m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->FEBs[lockbin], alignedaddr);
         if (!m) {
-            m = qthread_addrstat_new(me->rdata->shepherd_ptr);
+            m = qthread_addrstat_new();
             if (!m) {
                 qt_hash_unlock(qlib->FEBs[lockbin]);
                 return QTHREAD_MALLOC_ERROR;

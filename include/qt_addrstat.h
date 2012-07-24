@@ -6,9 +6,9 @@
 /* This allocates a new, initialized addrstat structure, which is used for
  * keeping track of the FEB status of an address. It expects a shepherd pointer
  * to use to find the right memory pool to use. */
-static QINLINE qthread_addrstat_t *qthread_addrstat_new(qthread_shepherd_t *shepherd)
+static QINLINE qthread_addrstat_t *qthread_addrstat_new(void)
 {                                      /*{{{ */
-    qthread_addrstat_t *ret = ALLOC_ADDRSTAT(shepherd);
+    qthread_addrstat_t *ret = ALLOC_ADDRSTAT();
 
     if (ret != NULL) {
         QTHREAD_FASTLOCK_INIT(ret->lock);

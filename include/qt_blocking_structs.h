@@ -63,11 +63,11 @@ typedef struct qthread_addrstat_s {
 #endif
 
 #ifdef UNPOOLED_ADDRSTAT
-# define ALLOC_ADDRSTAT(shep) (qthread_addrstat_t *)calloc(1, sizeof(qthread_addrstat_t))
+# define ALLOC_ADDRSTAT() (qthread_addrstat_t *)calloc(1, sizeof(qthread_addrstat_t))
 # define FREE_ADDRSTAT(t)     free(t)
 #else
 extern qt_mpool generic_addrstat_pool;
-static QINLINE qthread_addrstat_t *ALLOC_ADDRSTAT(qthread_shepherd_t *shep)
+static QINLINE qthread_addrstat_t *ALLOC_ADDRSTAT(void)
 {                                      /*{{{ */
     qthread_addrstat_t *tmp = (qthread_addrstat_t *)qt_mpool_alloc(generic_addrstat_pool);
 
