@@ -381,7 +381,7 @@ got_m:
         QTHREAD_FASTLOCK_LOCK(&(m->lock));
 #endif  /* ifdef LOCK_FREE_FEBS */
         UNLOCK_THIS_MODIFIED_SYNCVAR(src, ret, SYNCFEB_STATE_EMPTY_WITH_WAITERS);
-        X = ALLOC_ADDRRES(me->rdata->shepherd_ptr);
+        X = ALLOC_ADDRRES();
         assert(X);
         if (!X) {
             qthread_syncvar_remove(src);
@@ -632,7 +632,6 @@ int API_FUNC qthread_syncvar_readFE(uint64_t *restrict const  dest,
     assert(me->rdata);
     assert(me->rdata->shepherd_ptr);
     assert(me->rdata->shepherd_ptr->ready);
-    assert(me->rdata->shepherd_ptr->shepherd_id >= 0);
     assert(me->rdata->shepherd_ptr->shepherd_id < qthread_num_shepherds());
 
     qthread_debug(SYNCVAR_BEHAVIOR, "me(%p), dest(%p), src(%p) = %x\n", me, dest,
@@ -696,7 +695,7 @@ got_m:
         QTHREAD_FASTLOCK_LOCK(&(m->lock));
 #endif  /* ifdef LOCK_FREE_FEBS */
         UNLOCK_THIS_MODIFIED_SYNCVAR(src, ret, SYNCFEB_STATE_EMPTY_WITH_WAITERS);
-        X = ALLOC_ADDRRES(me->rdata->shepherd_ptr);
+        X = ALLOC_ADDRRES();
         assert(X);
         if (!X) {
             qthread_syncvar_remove(src);
@@ -792,7 +791,6 @@ int INTERNAL qthread_syncvar_readFE_nb(uint64_t *restrict const  dest,
     assert(me->rdata);
     assert(me->rdata->shepherd_ptr);
     assert(me->rdata->shepherd_ptr->ready);
-    assert(me->rdata->shepherd_ptr->shepherd_id >= 0);
     assert(me->rdata->shepherd_ptr->shepherd_id < qthread_num_shepherds());
 
     qthread_debug(SYNCVAR_BEHAVIOR, "me(%p), dest(%p), src(%p) = %x\n", me, dest,
@@ -1177,7 +1175,7 @@ got_m:
         QTHREAD_FASTLOCK_LOCK(&(m->lock));
 #endif  /* ifdef LOCK_FREE_FEBS */
         UNLOCK_THIS_MODIFIED_SYNCVAR(dest, ret, SYNCFEB_STATE_FULL_WITH_WAITERS);
-        X = ALLOC_ADDRRES(me->rdata->shepherd_ptr);
+        X = ALLOC_ADDRRES();
         assert(X);
         X->addr   = (aligned_t *)src;
         X->waiter = me;

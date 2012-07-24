@@ -722,7 +722,7 @@ got_m:
     /* by this point m is locked */
     if (m->full == 1) {            /* full, thus, we must block */
         QTHREAD_WAIT_TIMER_DECLARATION;
-        X = ALLOC_ADDRRES(me->rdata->shepherd_ptr);
+        X = ALLOC_ADDRRES();
         if (X == NULL) {
             qthread_debug(FEB_DETAILS, "dest=%p, src=%p (tid=%i): MALLOC ERROR!!!!!!!!!!!!!!!!!!!!!!\n", dest, src, me->thread_id);
             QTHREAD_FASTLOCK_UNLOCK(&(m->lock));
@@ -902,7 +902,7 @@ int API_FUNC qthread_readFF(aligned_t *restrict const       dest,
         qthread_debug(FEB_BEHAVIOR, "dest=%p, src=%p (tid=%u): non-blocking success!\n", dest, src, me->thread_id);
     } else if (m->full != 1) {         /* not full... so we must block */
         QTHREAD_WAIT_TIMER_DECLARATION;
-        X = ALLOC_ADDRRES(me->rdata->shepherd_ptr);
+        X = ALLOC_ADDRRES();
         if (X == NULL) {
             QTHREAD_FASTLOCK_UNLOCK(&m->lock);
             return QTHREAD_MALLOC_ERROR;
@@ -1098,7 +1098,7 @@ got_m:
     /* by this point m is locked */
     if (m->full == 0) {            /* empty, thus, we must block */
         QTHREAD_WAIT_TIMER_DECLARATION;
-        qthread_addrres_t *X = ALLOC_ADDRRES(me->rdata->shepherd_ptr);
+        qthread_addrres_t *X = ALLOC_ADDRRES();
 
         if (X == NULL) {
             QTHREAD_FASTLOCK_UNLOCK(&m->lock);
@@ -1246,7 +1246,7 @@ int INTERNAL qthread_check_feb_preconds(qthread_t *t)
 {   /*{{{*/
     aligned_t **these_preconds = (aligned_t **)t->preconds;
 
-#if !defined(UNPOOLED_ADDRRES) || defined(QTHREAD_LOCK_PROFILING)
+#if defined(QTHREAD_LOCK_PROFILING)
     qthread_shepherd_t *const curshep = qthread_internal_getshep();
 #endif
     QTHREAD_LOCK_TIMER_DECLARATION(febblock);
@@ -1299,7 +1299,7 @@ int INTERNAL qthread_check_feb_preconds(qthread_t *t)
             // Need to wait on this one, add to appropriate FFQ
             qthread_addrres_t *X = NULL;
 
-            X = ALLOC_ADDRRES(curshep);
+            X = ALLOC_ADDRRES();
             if (X == NULL) {
                 QTHREAD_FASTLOCK_UNLOCK(&m->lock);
                 abort();

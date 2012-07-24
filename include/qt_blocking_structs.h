@@ -82,11 +82,11 @@ static QINLINE void FREE_ADDRSTAT(qthread_addrstat_t *t)
 #endif // ifdef UNPOOLED_ADDRSTAT
 
 #ifdef UNPOOLED_ADDRRES
-# define ALLOC_ADDRRES(shep) (qthread_addrres_t *)malloc(sizeof(qthread_addrres_t))
+# define ALLOC_ADDRRES() (qthread_addrres_t *)malloc(sizeof(qthread_addrres_t))
 # define FREE_ADDRRES(t)     free(t)
 #else
 extern qt_mpool generic_addrres_pool;
-static QINLINE qthread_addrres_t *ALLOC_ADDRRES(qthread_shepherd_t *shep)
+static QINLINE qthread_addrres_t *ALLOC_ADDRRES(void)
 {                                      /*{{{ */
     qthread_addrres_t *tmp = (qthread_addrres_t *)qt_mpool_alloc(generic_addrres_pool);
 

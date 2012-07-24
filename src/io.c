@@ -42,14 +42,14 @@
 typedef struct {
     qt_blocking_queue_node_t *head;
     qt_blocking_queue_node_t *tail;
-    aligned_t                 length;
+    saligned_t                length;
     pthread_mutex_t           lock;
     pthread_cond_t            notempty;
 } qt_blocking_queue_t;
 
 static qt_blocking_queue_t theQueue;
 static saligned_t          io_worker_count = -1;
-static aligned_t           io_worker_max   = 10;
+static saligned_t          io_worker_max   = 10;
 #if !defined(UNPOOLED)
 qt_mpool syscall_job_pool = NULL;
 #endif

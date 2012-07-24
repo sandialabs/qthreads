@@ -318,6 +318,7 @@ static void hup_handler(int sig)
     qthread_t          *t = s->current;
 #endif
 
+    assert(sig == SIGUSR1);
     t->thread_state = QTHREAD_STATE_ASSASSINATED;
     qthread_back_to_master(t);
 } /*}}}*/
@@ -1444,7 +1445,7 @@ static void qt_hash_print_addrstat(const qt_key_t addr, qthread_addrstat_t *m, v
 int print_FEBs(int *ct);
 int print_FEBs(int *ct)
 {
-    for (int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
+    for (unsigned int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
         qt_hash_callback(qlib->FEBs[i],
                 (qt_hash_callback_fn) qt_hash_print_addrstat, ct);
     }
@@ -1480,7 +1481,7 @@ void API_FUNC qthread_finalize(void)
     // Wait for all team structures to be reclaimed.
     while (qlib->team_count) {
 #ifdef QTHREAD_DEBUG
-        int ct = qlib->team_count;
+        unsigned int ct = qlib->team_count;
 #endif
         qthread_yield();
 #ifdef QTHREAD_DEBUG
@@ -2836,7 +2837,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
         new_team->flags                = 0;
 
         // Empty new team FEBs
-        qthread_debug(FEB_DETAILS, "tid %i emptying NEW team %u's eureka (%p)\n", me?(me->thread_id):-1, new_team->team_id, &new_team->eureka);
+        qthread_debug(FEB_DETAILS, "tid %i emptying NEW team %u's eureka (%p)\n", me?((int)me->thread_id):-1, new_team->team_id, &new_team->eureka);
         qthread_empty(&new_team->eureka);
 
 #ifdef TEAM_PROFILE
@@ -2867,7 +2868,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
         new_team->flags                = 0;
 
         // Empty new team FEBs
-        qthread_debug(FEB_DETAILS, "tid %i emptying SUB team %u's eureka (%p)\n", me?(me->thread_id):-1, new_team->team_id, &new_team->eureka);
+        qthread_debug(FEB_DETAILS, "tid %i emptying SUB team %u's eureka (%p)\n", me?((int)me->thread_id):-1, new_team->team_id, &new_team->eureka);
         qthread_empty(&new_team->eureka);
 
         if (curr_team) {
@@ -2945,7 +2946,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
             }
         } else {
             // QTHREAD_SPAWN_RET_ALIGNED
-            qthread_debug(FEB_DETAILS, "tid %i emptying new thread %u's retval (%p)\n", me?(me->thread_id):-1, t->thread_id, ret);
+            qthread_debug(FEB_DETAILS, "tid %i emptying new thread %u's retval (%p)\n", me?((int)me->thread_id):-1, t->thread_id, ret);
             test = qthread_empty(ret);
         }
         if (QTHREAD_UNLIKELY(test != QTHREAD_SUCCESS)) {
