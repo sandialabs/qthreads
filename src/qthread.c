@@ -68,7 +68,6 @@
 #include "qt_addrstat.h"
 #include "qt_threadqueues.h"
 #include "qt_affinity.h"
-#include "qt_locks.h"
 #include "qt_io.h"
 #include "qt_debug.h"
 #include "qt_envariables.h"
@@ -139,8 +138,6 @@ static QINLINE qthread_t *qthread_thread_new(qthread_f   f,
                                              qt_team_t  *team,
                                              int         team_leader);
 static QINLINE void qthread_thread_free(qthread_t *t);
-static QINLINE void qthread_enqueue(qthread_queue_t *q,
-                                    qthread_t       *t);
 
 #ifdef QTHREAD_RCRTOOL_STAT
 extern int adaptiveSetHigh;
@@ -292,7 +289,7 @@ static QINLINE void alloc_rdata(qthread_shepherd_t *me,
 #endif
     rdata->stack        = stack;
     rdata->shepherd_ptr = me;
-    rdata->blockedon    = NULL;
+    rdata->blockedon.io = NULL;
 #ifdef QTHREAD_USE_VALGRIND
     rdata->valgrind_stack_id = VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
 #endif
@@ -636,21 +633,12 @@ qt_run:
 
                     case QTHREAD_STATE_FEB_BLOCKED: /* unlock the related FEB address locks, and re-arrange memory to be correct */
                         {
-                            qthread_addrstat_t *m = (qthread_addrstat_t*)(t->rdata->blockedon);
+                            qthread_addrstat_t *m = t->rdata->blockedon.addr;
                             qthread_debug(THREAD_DETAILS | FEB_DETAILS | SHEPHERD_DETAILS,
                                     "id(%u): thread tid=%i(%p) blocked on FEB (m=%p, EFQ=%p)\n",
                                     me->shepherd_id, t->thread_id, t, m, m->EFQ);
-                            t->thread_state = QTHREAD_STATE_BLOCKED;
                             QTHREAD_FASTLOCK_UNLOCK(&(m->lock));
                         }
-                        break;
-
-                    case QTHREAD_STATE_BLOCKED: /* put it in the blocked queue */
-                        qthread_debug(THREAD_DETAILS | LOCK_DETAILS | SHEPHERD_DETAILS,
-                                      "id(%u): thread %i blocked on LOCK\n",
-                                      me->shepherd_id, t->thread_id);
-                        qthread_enqueue((qthread_queue_t *)t->rdata->blockedon->waiting, t);
-                        QTHREAD_FASTLOCK_UNLOCK(&(t->rdata->blockedon->lock));
                         break;
 
                     case QTHREAD_STATE_PARENT_YIELD:
@@ -681,7 +669,7 @@ qt_run:
                         qthread_debug(THREAD_DETAILS | IO_DETAILS | SHEPHERD_DETAILS,
                                       "id(%u): thread %i made a syscall\n",
                                       me->shepherd_id, t->thread_id);
-                        qt_blocking_subsystem_enqueue((qt_blocking_queue_node_t *)t->rdata->blockedon);
+                        qt_blocking_subsystem_enqueue(t->rdata->blockedon.io);
                         break;
 
                     case QTHREAD_STATE_ASSASSINATED:
@@ -1080,7 +1068,6 @@ int API_FUNC qthread_initialize(void)
     generic_team_pool = qt_mpool_create(sizeof(qt_team_t));
 #endif /* ifndef UNPOOLED */
     initialize_hazardptrs();
-    qt_lock_subsystem_init();
     qt_feb_subsystem_init();
     qt_threadqueue_subsystem_init();
     qt_blocking_subsystem_init();
@@ -2311,31 +2298,6 @@ static QINLINE void qthread_thread_free(qthread_t *t)
     FREE_QTHREAD(t);
 }                      /*}}} */
 
-static QINLINE void qthread_enqueue(qthread_queue_t *q,
-                                    qthread_t       *t)
-{                      /*{{{ */
-    assert(t != NULL);
-    assert(q != NULL);
-    assert(t->next == NULL);
-
-    qthread_debug(THREAD_FUNCTIONS, "q(%p), t(%p): started\n", q, t);
-
-    QTHREAD_FASTLOCK_LOCK(&q->lock);
-
-    t->next = NULL;
-
-    if (q->head == NULL) {         /* surely then tail is also null; no need to check */
-        q->head = t;
-        q->tail = t;
-    } else {
-        q->tail->next = t;
-        q->tail       = t;
-    }
-
-    qthread_debug(THREAD_DETAILS, "q(%p), t(%p): finished\n", q, t);
-    QTHREAD_FASTLOCK_UNLOCK(&q->lock);
-}                      /*}}} */
-
 #ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
 // in Rose only code -- call function with rose argument list
 // pulled from HPCToolkit externals
@@ -3553,7 +3515,6 @@ int API_FUNC qthread_migrate_to(const qthread_shepherd_id_t shepherd)
         me->target_shepherd  = &(qlib->shepherds[shepherd]);
         me->thread_state     = QTHREAD_STATE_MIGRATING;
         me->flags           |= QTHREAD_UNSTEALABLE;
-        me->rdata->blockedon = (struct qthread_lock_s *)(intptr_t)shepherd;
         qthread_back_to_master(me);
 
         qthread_debug(THREAD_DETAILS,

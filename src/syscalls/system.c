@@ -31,8 +31,8 @@ int qt_system(const char *command)
 
     assert(me->rdata);
 
-    me->rdata->blockedon = (struct qthread_lock_s *)job;
-    me->thread_state     = QTHREAD_STATE_SYSCALL;
+    me->rdata->blockedon.io = job;
+    me->thread_state        = QTHREAD_STATE_SYSCALL;
     qthread_back_to_master(me);
     ret = job->ret;
     FREE_SYSCALLJOB(job);

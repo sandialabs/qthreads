@@ -8,6 +8,7 @@
 #include "qt_context.h"
 #include "qt_shepherd_innards.h"
 #include "qt_threadstate.h"
+#include "qt_blocking_structs.h"
 
 #define ARGCOPY_DEFAULT   1024
 #define TASKLOCAL_DEFAULT 64
@@ -41,8 +42,11 @@ struct qthread_runtime_data_s {
 
     /* a pointer used for passing information back to the shepherd when
      * becoming blocked */
-    struct qthread_lock_s *blockedon;
-    qthread_shepherd_t    *shepherd_ptr; /* the shepherd we run on */
+    union {
+        qthread_addrstat_t       *addr;
+        qt_blocking_queue_node_t *io;
+    } blockedon;
+    qthread_shepherd_t *shepherd_ptr;    /* the shepherd we run on */
 
 #ifdef QTHREAD_USE_VALGRIND
     unsigned int valgrind_stack_id;

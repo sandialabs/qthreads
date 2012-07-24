@@ -7,23 +7,43 @@
 #include "qt_shepherd_innards.h"
 #include "qt_profiling.h"
 
-typedef struct qthread_queue_s qthread_queue_t;
+typedef enum blocking_syscalls {
+    ACCEPT,
+    CONNECT,
+    NANOSLEEP,
+    POLL,
+    READ,
+    PREAD,
+    /*RECV,
+     * RECVFROM,*/
+    SELECT,
+    /*SEND,
+     * SENDTO,*/
+    /*SIGWAIT,*/
+    SLEEP,
+    SYSTEM,
+    USLEEP,
+    WAIT4,
+    WRITE,
+    PWRITE,
+    USER_DEFINED
+} syscall_t;
 
-struct qthread_lock_s {
-    qthread_queue_t      *waiting;
-    unsigned              owner;
-    QTHREAD_FASTLOCK_TYPE lock;
-    int                   valid;
-#ifdef QTHREAD_LOCK_PROFILING
-    qtimer_t              hold_timer;
-#endif
-};
+typedef struct qthread_queue_s qthread_queue_t;
 
 typedef struct qthread_addrres_s {
     aligned_t                *addr; /* ptr to the memory NOT being blocked on */
     qthread_t                *waiter;
     struct qthread_addrres_s *next;
 } qthread_addrres_t;
+
+typedef struct _qt_blocking_queue_node_s {
+    struct _qt_blocking_queue_node_s *next;
+    qthread_t                        *thread;
+    syscall_t                         op;
+    uintptr_t                         args[5];
+    ssize_t                           ret;
+} qt_blocking_queue_node_t;
 
 typedef struct qthread_addrstat_s {
     QTHREAD_FASTLOCK_TYPE lock;

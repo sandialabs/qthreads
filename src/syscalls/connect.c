@@ -35,7 +35,7 @@ int qt_connect(int                    socket,
     job->args[2] = (uintptr_t)address_len;
 
     assert(me->rdata);
-    me->rdata->blockedon = (struct qthread_lock_s *)job;
+    me->rdata->blockedon.io = job;
     me->thread_state     = QTHREAD_STATE_SYSCALL;
     qthread_back_to_master(me);
     ret = job->ret;

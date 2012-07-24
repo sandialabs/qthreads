@@ -318,7 +318,7 @@ static QINLINE void qthread_debug(int         level,
                         if (str == NULL) {
                             qassert(WRITE(2, "(null)", 6), 6);
                         } else {
-                            qassert(WRITE(2, str, strlen(str)), strlen(str));
+                            qassert(WRITE(2, str, strlen(str)), (ssize_t)strlen(str));
                         }
                         break;
                     }

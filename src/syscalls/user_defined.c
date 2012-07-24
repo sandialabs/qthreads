@@ -36,8 +36,8 @@ void qt_blocking_subsystem_begin_blocking_action(void)
 
         assert(me->rdata);
 
-        me->rdata->blockedon = (struct qthread_lock_s *)job;
-        me->thread_state     = QTHREAD_STATE_SYSCALL;
+        me->rdata->blockedon.io = job;
+        me->thread_state        = QTHREAD_STATE_SYSCALL;
         qthread_back_to_master(me);
         /* ...and I wake up in a dedicated pthread! */
     } else {
