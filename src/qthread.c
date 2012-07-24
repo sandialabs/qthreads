@@ -1083,6 +1083,7 @@ int API_FUNC qthread_initialize(void)
 # else
         qt_mpool_create_aligned(sizeof(struct qthread_runtime_data_s) + qlib->qthread_stack_size, 16); // stacks on most platforms must be 16-byte aligned (or less)
 # endif
+    generic_rdata_pool = qt_mpool_create(sizeof(struct qthread_runtime_data_s));
     generic_team_pool = qt_mpool_create(sizeof(qt_team_t));
 #endif /* ifndef UNPOOLED */
     initialize_hazardptrs();
@@ -1863,6 +1864,8 @@ void API_FUNC qthread_finalize(void)
     generic_qthread_pool = NULL;
     qt_mpool_destroy(generic_stack_pool);
     generic_stack_pool = NULL;
+    qt_mpool_destroy(generic_rdata_pool);
+    generic_rdata_pool = NULL;
     qt_mpool_destroy(generic_team_pool);
     generic_team_pool = NULL;
 #endif /* ifndef UNPOOLED */
