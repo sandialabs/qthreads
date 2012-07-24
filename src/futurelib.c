@@ -34,20 +34,6 @@ static location_t *ft_loc(void)
     return qthread_isfuture() ? (location_t *)TLS_GET(future_bookkeeping) : NULL;
 }
 
-#ifdef CLEANUP
-/* this requires that qthreads haven't been finalized yet */
-static aligned_t future_shep_cleanup(qthread_t *me,
-                                     void      *arg)
-{
-    location_t *ptr = (location_t *)TLS_GET(future_bookkeeping);
-
-    if (ptr != NULL) {
-        TLS_SET(future_bookkeeping, NULL);
-        qassert(pthread_mutex_destroy(&(ptr->vp_count_lock), 0));
-        free(ptr);
-    }
-}
-
 static void future_cleanup(void)
 {
     int        i;
@@ -55,7 +41,9 @@ static void future_cleanup(void)
 
     rets = (aligned_t *)calloc(qlib->nshepherds, sizeof(aligned_t));
     for (i = 0; i < qlib->nshepherds; i++) {
-        qthread_fork_to(future_shep_cleanup, NULL, rets + i, i);
+        location_t *ptr = &future_bookkeeping_array[i];
+        qassert(pthread_mutex_destroy(&ptr->vp_count_lock), 0);
+        qassert(qthread_unlock(&ptr->vp_count), QTHREAD_SUCCESS);
     }
     for (i = 0; i < qlib->nshepherds; i++) {
         qthread_readFF(NULL, rets + i);
@@ -64,8 +52,6 @@ static void future_cleanup(void)
     QTHREAD_FASTLOCK_DESTROY(sfnf_lock);
     TLS_DELETE(future_bookkeeping);
 }
-
-#endif /* ifdef CLEANUP */
 
 /* this function is used as a qthread; it is run by each shepherd so that each
  * shepherd will get some thread-local data associated with it. This works
@@ -104,9 +90,7 @@ void future_init(int vp_per_loc)
         qthread_readFF(NULL, rets + i);
     }
     free(rets);
-#ifdef CLEANUP
     atexit(future_cleanup);
-#endif
 }
 
 /* This is the heart and soul of the futurelib. This function has two purposes:
