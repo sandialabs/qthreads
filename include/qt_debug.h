@@ -17,8 +17,8 @@
 # include <stdarg.h>      // for va_start and friends
 
 /* Internal headers */
-# include <qt_locks.h>
-# include <qthread_asserts.h>
+# include "qt_atomics.h"
+# include "qthread_asserts.h"
 
 enum qthread_debug_levels {
     NO_DEBUG_OUTPUT = 0,
