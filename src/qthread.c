@@ -854,11 +854,9 @@ int API_FUNC qthread_initialize(void)
 
     if (hw_par != 0) {
         if ((hw_par < nshepherds) || (hw_par == 1)) {
-            print_warning("low HWPAR\n");
             nworkerspershep = 1;
             nshepherds      = hw_par;
         } else if (hw_par > (nshepherds * nworkerspershep)) {
-            print_warning("high HWPAR\n");
             nworkerspershep = (hw_par / nshepherds);
             if ((hw_par % nshepherds) != 0) {
                 nworkerspershep++;
@@ -868,10 +866,8 @@ int API_FUNC qthread_initialize(void)
             if (hw_par % nshepherds > 0) {
                 nworkerspershep ++;
             }
-            print_warning("corner case HWPAR\n");
         }
     } else {
-        print_warning("resetting HWPAR\n");
         hw_par = nshepherds * nworkerspershep;
     }
 
