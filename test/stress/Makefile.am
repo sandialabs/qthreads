@@ -11,6 +11,7 @@ TESTS = \
 		feb_stream \
 		syncvar_stream \
 		precond_fib \
+		precond_spawn_simple \
 		task_spawn \
 		subteams_uts
 
@@ -43,6 +44,8 @@ feb_prodcons_contended_SOURCES = feb_prodcons_contended.c
 syncvar_prodcons_contended_SOURCES = syncvar_prodcons_contended.c
 
 precond_fib_SOURCES = precond_fib.c
+
+precond_spawn_SOURCES = precond_spawn_simple.c
 
 task_spawn_SOURCES = task_spawn.c
 
