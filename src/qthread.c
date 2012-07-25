@@ -1750,7 +1750,7 @@ void API_FUNC qthread_finalize(void)
 #endif /* ifdef QTHREAD_FEB_PROFILING */
 
     for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
-        qthread_debug(LOCK_DETAILS, "destroying lock infrastructure of shep %i\n", (int)i);
+        qthread_debug(FEB_DETAILS, "destroying feb infrastructure of shep %i\n", (int)i);
         qt_hash_destroy_deallocate(qlib->FEBs[i],
                                    (qt_hash_deallocator_fn)
                                    qthread_addrstat_delete);
@@ -1781,7 +1781,7 @@ void API_FUNC qthread_finalize(void)
         tmp->func();
         free(tmp);
     }
-    qthread_debug(LOCK_DETAILS, "destroy lock infrastructure arrays\n");
+    qthread_debug(FEB_DETAILS, "destroy feb infrastructure arrays\n");
     free(qlib->FEBs);
     free(qlib->syncvars);
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
@@ -1804,7 +1804,7 @@ void API_FUNC qthread_finalize(void)
     QTHREAD_FASTLOCK_DESTROY(effconcurrentthreads_lock);
 #endif
 
-    qthread_debug(LOCK_DETAILS, "destroy scheduling locks\n");
+    qthread_debug(CORE_DETAILS, "destroy scheduling locks\n");
     QTHREAD_FASTLOCK_DESTROY(qlib->max_thread_id_lock);
     QTHREAD_FASTLOCK_DESTROY(qlib->max_team_id_lock);
     QTHREAD_FASTLOCK_DESTROY(qlib->max_unique_id_lock);
