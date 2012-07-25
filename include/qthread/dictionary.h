@@ -7,7 +7,7 @@
 extern "C" {
 #endif
 
-// #define DELETE_SUPPORT
+#define DELETE_SUPPORT
 #define ERROR      ((void *)(-1))
 #define BKT_POW    20
 #define NO_BUCKETS (1 << BKT_POW)
