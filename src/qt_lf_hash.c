@@ -282,7 +282,7 @@ void *qt_hash_get(qt_hash        h,
 int qt_hash_remove(qt_hash        h,
                    const qt_key_t key)
 {
-    size_t   bucket;
+    size_t bucket;
     lkey_t lkey = (uint64_t)(uintptr_t)key;
 
     HASH_KEY(lkey);
@@ -340,7 +340,7 @@ qt_hash qt_hash_create(int needSync)
 
     assert(tmp);
     if (hard_max_buckets == 0) {
-        hard_max_buckets = getpagesize()/sizeof(marked_ptr_t);
+        hard_max_buckets = getpagesize() / sizeof(marked_ptr_t);
     }
     tmp->B = calloc(hard_max_buckets, sizeof(marked_ptr_t));
     assert(tmp->B);
@@ -383,7 +383,9 @@ void qt_hash_destroy_deallocate(qt_hash                h,
         marked_ptr_t tmp = cursor;
         assert(MARK_OF(tmp) == 0);
         cursor = PTR_OF(cursor)->next;
-        f(PTR_OF(cursor));
+        if (PTR_OF(cursor) != NULL) { /* null pointers come from placeholders */
+            f(PTR_OF(cursor));
+        }
         free(PTR_OF(tmp));
     }
     free(h->B);
@@ -406,7 +408,7 @@ void qt_hash_callback(qt_hash             h,
     assert(h->B);
     cursor = h->B[0];
     while (PTR_OF(cursor) != NULL) {
-        so_key_t     key = PTR_OF(cursor)->key;
+        so_key_t key = PTR_OF(cursor)->key;
         assert(MARK_OF(cursor) == 0);
         if (key & 1) {
             f((qt_key_t)(uintptr_t)REVERSE(key ^ 1), PTR_OF(cursor)->value, arg);
@@ -416,3 +418,5 @@ void qt_hash_callback(qt_hash             h,
         cursor = PTR_OF(cursor)->next;
     }
 }
+
+/* vim:set expandtab: */
