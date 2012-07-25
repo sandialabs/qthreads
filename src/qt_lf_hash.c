@@ -27,12 +27,6 @@
 #define MAX_LOAD     4
 #define USE_HASHWORD 1
 
-/* external types */
-typedef const void *qt_key_t;
-typedef struct qt_hash_s *qt_hash;
-typedef void (*qt_hash_callback_fn)(const qt_key_t, void *, void *);
-typedef void (*qt_hash_deallocator_fn)(void *);
-
 /* internal types */
 typedef uint64_t lkey_t;
 typedef uint64_t so_key_t;
