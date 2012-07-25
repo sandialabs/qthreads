@@ -898,6 +898,7 @@ int API_FUNC qthread_readFF(aligned_t *restrict const       dest,
     if (m == NULL) {               /* already full! */
         if (dest && (dest != src)) {
             *(aligned_t *)dest = *(aligned_t *)src;
+            MACHINE_FENCE;
         }
         qthread_debug(FEB_BEHAVIOR, "dest=%p, src=%p (tid=%u): non-blocking success!\n", dest, src, me->thread_id);
     } else if (m->full != 1) {         /* not full... so we must block */
