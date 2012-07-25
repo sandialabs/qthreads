@@ -24,7 +24,7 @@
 #endif
 #include <sys/time.h>
 #include <sys/resource.h>
-#if (defined(QTHREAD_SHEPHERD_PROFILING) || defined(QTHREAD_LOCK_PROFILING))
+#if (defined(QTHREAD_SHEPHERD_PROFILING) || defined(QTHREAD_FEB_PROFILING))
 # include <qthread/qtimer.h>
 #endif
 #include <pthread.h>
@@ -1089,7 +1089,7 @@ int API_FUNC qthread_initialize(void)
         qlib->shepherds[i].ready = qt_threadqueue_new();
         qassert_ret(qlib->shepherds[i].ready, QTHREAD_MALLOC_ERROR);
         qlib->threadqueues[i] = qlib->shepherds[i].ready;
-#ifdef QTHREAD_LOCK_PROFILING
+#ifdef QTHREAD_FEB_PROFILING
 # ifdef QTHREAD_MUTEX_INCREMENT
         qlib->shepherds[i].uniqueincraddrs = qt_hash_create(need_sync);
 # endif
@@ -1671,7 +1671,7 @@ void API_FUNC qthread_finalize(void)
                      shep->idle_time / shep->idle_count,
                      shep->idle_maxtime);
 #endif
-#ifdef QTHREAD_LOCK_PROFILING
+#ifdef QTHREAD_FEB_PROFILING
 # ifdef QTHREAD_MUTEX_INCREMENT
         QTHREAD_ACCUM_MAX(shep0->incr_maxtime, shep->incr_maxtime);
         shep0->incr_time  += shep->incr_time;
@@ -1710,7 +1710,7 @@ void API_FUNC qthread_finalize(void)
         qt_hash_callback(shep->uniquefebaddrs,
                          qthread_unique_collect, shep0->uniquefebaddrs);
         qt_hash_destroy(shep->uniquefebaddrs);
-#endif  /* ifdef QTHREAD_LOCK_PROFILING */
+#endif  /* ifdef QTHREAD_FEB_PROFILING */
     }
     qthread_debug(CORE_DETAILS, "freeing shep0's threadqueue\n");
     qt_threadqueue_free(shep0->ready);
@@ -1723,7 +1723,7 @@ void API_FUNC qthread_finalize(void)
         free(tmp);
     }
 
-#ifdef QTHREAD_LOCK_PROFILING
+#ifdef QTHREAD_FEB_PROFILING
 # ifdef QTHREAD_MUTEX_INCREMENT
     print_status("%llu increments performed (%ld unique), average %g secs, max %g secs\n",
                  (unsigned long long)shep0->incr_count, qt_hash_count(shep0->uniqueincraddrs),
@@ -1747,7 +1747,7 @@ void API_FUNC qthread_finalize(void)
                  (unsigned long long)shep0->empty_count,
                  (shep0->empty_count == 0) ? 0 : (shep0->empty_time /
                                                   shep0->empty_count), shep0->empty_maxtime);
-#endif /* ifdef QTHREAD_LOCK_PROFILING */
+#endif /* ifdef QTHREAD_FEB_PROFILING */
 
     for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
         qthread_debug(LOCK_DETAILS, "destroying lock infrastructure of shep %i\n", (int)i);

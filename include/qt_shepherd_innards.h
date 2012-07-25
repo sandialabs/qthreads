@@ -15,7 +15,7 @@
 # include "qthread/qtimer.h"
 #endif
 
-#ifdef QTHREAD_LOCK_PROFILING
+#ifdef QTHREAD_FEB_PROFILING
 # include "qt_hash.h"
 #endif
 
@@ -94,7 +94,7 @@ struct qthread_shepherd_s {
     size_t   idle_count;        /* how many times the shepherd did a blocking dequeue */
     size_t   num_threads;       /* number of threads handled */
 #endif
-#ifdef QTHREAD_LOCK_PROFILING
+#ifdef QTHREAD_FEB_PROFILING
 # ifdef QTHREAD_MUTEX_INCREMENT
     qt_hash uniqueincraddrs;    /* the unique addresses that are incremented */
     double  incr_maxtime;       /* maximum time spent in a single increment */
@@ -122,7 +122,7 @@ struct qthread_shepherd_s {
     double   empty_maxtime;     /* max time addresses spent empty */
     double   empty_time;        /* total time addresses spent empty */
     size_t   empty_count;       /* num times addresses were empty */
-#endif // ifdef QTHREAD_LOCK_PROFILING
+#endif // ifdef QTHREAD_FEB_PROFILING
     uint32_t padding[CACHELINE_WIDTH / sizeof(uint32_t)];
 };
 

@@ -190,8 +190,8 @@ AC_ARG_ENABLE([profiling],
                                profiling. Available types are: shepherd, lock,
                                steal, cas_steal, threadc, sincs, and teams. Shepherd
                                profiling counts the wall-clock time that each
-                               shepherd spends idle. Lock profiling counts the
-                               time spent aquiring locks. Steal profiling
+                               shepherd spends idle. FEB profiling counts the
+                               time spent waiting for FEB states. Steal profiling
                                counts the amount of workstealing that was done
                                (only applies to multithreaded shepherds).
                                Cas_steal profiling counts how many CAS failures
@@ -206,8 +206,8 @@ AC_ARG_ENABLE([profiling],
                    shepherd)
                      enable_shepherd_profiling=yes
                      ;;
-                   lock)
-                     enable_lock_profiling=yes
+                   feb|FEB)
+                     enable_feb_profiling=yes
                      ;;
                    steal)
                      enable_steal_profiling=yes
@@ -931,9 +931,9 @@ AS_IF([test "x$enable_shepherd_profiling" = "xyes"],
       [AC_DEFINE([QTHREAD_SHEPHERD_PROFILING], [1], [adds code to monitor how much time shepherds spend idle])],
       [enable_shepherd_profiling="no"])
 
-AS_IF([test "x$enable_lock_profiling" = "xyes"],
-      [AC_DEFINE([QTHREAD_LOCK_PROFILING], [1], [adds code to monitor how much time is spent aquiring locks])],
-      [enable_lock_profiling="no"])
+AS_IF([test "x$enable_feb_profiling" = "xyes"],
+      [AC_DEFINE([QTHREAD_FEB_PROFILING], [1], [adds code to monitor how much time is spent waiting for FEB states])],
+      [enable_feb_profiling="no"])
 
 AS_IF([test "x$enable_lazy_threadids" = "xno" -o "x$enable_debug" != "x"],
       [AC_DEFINE([QTHREAD_NONLAZY_THREADIDS], [1], [makes sure every thread gets an id at creation time])

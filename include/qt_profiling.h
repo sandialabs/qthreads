@@ -1,7 +1,7 @@
 #ifndef QT_PROFILING_H
 #define QT_PROFILING_H
 
-#ifdef QTHREAD_LOCK_PROFILING
+#ifdef QTHREAD_FEB_PROFILING
 # include "qthread/qtimer.h"
 # define QTHREAD_ACCUM_MAX(a, b) do { if ((a) < (b)) { a = b; } } while (0)
 # define QTHREAD_WAIT_TIMER_DECLARATION qtimer_t wait_timer = qtimer_create();
@@ -15,9 +15,9 @@
          (ME)->rdata->shepherd_ptr->TYPE ## _time += secs;         \
          (ME)->rdata->shepherd_ptr->TYPE ## _count++;              \
          qtimer_destroy(wait_timer); } while(0)
-# define QTHREAD_LOCK_TIMER_DECLARATION(TYPE) qtimer_t TYPE ## _timer = qtimer_create();
-# define QTHREAD_LOCK_TIMER_START(TYPE)       qtimer_start(TYPE ## _timer)
-# define QTHREAD_LOCK_TIMER_STOP(TYPE, ME)                                        \
+# define QTHREAD_FEB_TIMER_DECLARATION(TYPE) qtimer_t TYPE ## _timer = qtimer_create();
+# define QTHREAD_FEB_TIMER_START(TYPE)       qtimer_start(TYPE ## _timer)
+# define QTHREAD_FEB_TIMER_STOP(TYPE, ME)                                        \
     do { double secs;                                                             \
          qtimer_stop(TYPE ## _timer);                                             \
          secs = qtimer_secs(TYPE ## _timer);                                      \
@@ -49,8 +49,8 @@
              ret->empty_maxtime = secs; }                 \
          ret->empty_time += secs;                         \
          ret->empty_count++; } while (0)
-# define QTHREAD_LOCK_UNIQUERECORD(TYPE, ADDR, ME)    qt_hash_put((ME)->rdata->shepherd_ptr->unique ## TYPE ## addrs, (void *)(ADDR), (void *)(ADDR))
-# define QTHREAD_LOCK_UNIQUERECORD2(TYPE, ADDR, SHEP) qt_hash_put((SHEP)->unique ## TYPE ## addrs, (void *)(ADDR), (void *)(ADDR))
+# define QTHREAD_FEB_UNIQUERECORD(TYPE, ADDR, ME)    qt_hash_put((ME)->rdata->shepherd_ptr->unique ## TYPE ## addrs, (void *)(ADDR), (void *)(ADDR))
+# define QTHREAD_FEB_UNIQUERECORD2(TYPE, ADDR, SHEP) qt_hash_put((SHEP)->unique ## TYPE ## addrs, (void *)(ADDR), (void *)(ADDR))
 static QINLINE void qthread_unique_collect(const qt_key_t key,
                                            void          *value,
                                            void          *id)
@@ -58,13 +58,13 @@ static QINLINE void qthread_unique_collect(const qt_key_t key,
     qt_hash_put_locked((qt_hash)id, key, value);
 } /*}}}*/
 
-#else // ifdef QTHREAD_LOCK_PROFILING
+#else // ifdef QTHREAD_FEB_PROFILING
 # define QTHREAD_WAIT_TIMER_DECLARATION
 # define QTHREAD_WAIT_TIMER_START()        do { } while(0)
 # define QTHREAD_WAIT_TIMER_STOP(ME, TYPE) do { } while(0)
-# define QTHREAD_LOCK_TIMER_DECLARATION(TYPE)
-# define QTHREAD_LOCK_TIMER_START(TYPE)               do { } while(0)
-# define QTHREAD_LOCK_TIMER_STOP(TYPE, ME)            do { } while(0)
+# define QTHREAD_FEB_TIMER_DECLARATION(TYPE)
+# define QTHREAD_FEB_TIMER_START(TYPE)               do { } while(0)
+# define QTHREAD_FEB_TIMER_STOP(TYPE, ME)            do { } while(0)
 # define QTHREAD_HOLD_TIMER_INIT(LOCKSTRUCT_P)        do { } while(0)
 # define QTHREAD_HOLD_TIMER_START(LOCKSTRUCT_P)       do { } while(0)
 # define QTHREAD_HOLD_TIMER_STOP(LOCKSTRUCT_P, SHEP)  do { } while(0)
@@ -72,9 +72,9 @@ static QINLINE void qthread_unique_collect(const qt_key_t key,
 # define QTHREAD_EMPTY_TIMER_INIT(LOCKSTRUCT_P)       do { } while(0)
 # define QTHREAD_EMPTY_TIMER_START(LOCKSTRUCT_P)      do { } while(0)
 # define QTHREAD_EMPTY_TIMER_STOP(LOCKSTRUCT_P)       do { } while(0)
-# define QTHREAD_LOCK_UNIQUERECORD(TYPE, ADDR, ME)    do { } while(0)
-# define QTHREAD_LOCK_UNIQUERECORD2(TYPE, ADDR, SHEP) do { } while(0)
-#endif // ifdef QTHREAD_LOCK_PROFILING
+# define QTHREAD_FEB_UNIQUERECORD(TYPE, ADDR, ME)    do { } while(0)
+# define QTHREAD_FEB_UNIQUERECORD2(TYPE, ADDR, SHEP) do { } while(0)
+#endif // ifdef QTHREAD_FEB_PROFILING
 
 #ifdef QTHREAD_COUNT_THREADS
 # define QTHREAD_COUNT_THREADS_BINCOUNTER(TYPE, BIN) qthread_internal_incr(&qlib->TYPE ## _stripes[(BIN)], &qlib->TYPE ## _stripes_locks[(BIN)], 1)

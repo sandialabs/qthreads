@@ -26,7 +26,7 @@ static QINLINE qthread_addrstat_t *qthread_addrstat_new(void)
  * necessary for things left over when qthread_finalize is called */
 static void qthread_addrstat_delete(qthread_addrstat_t *m)
 {                                      /*{{{ */
-#ifdef QTHREAD_LOCK_PROFILING
+#ifdef QTHREAD_FEB_PROFILING
     qtimer_destroy(m->empty_timer);
 #endif
     QTHREAD_FASTLOCK_DESTROY(m->lock);

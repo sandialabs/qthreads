@@ -50,7 +50,7 @@ typedef struct qthread_addrstat_s {
     qthread_addrres_t    *EFQ;
     qthread_addrres_t    *FEQ;
     qthread_addrres_t    *FFQ;
-#ifdef QTHREAD_LOCK_PROFILING
+#ifdef QTHREAD_FEB_PROFILING
     qtimer_t              empty_timer;
 #endif
     uint_fast8_t          full;
