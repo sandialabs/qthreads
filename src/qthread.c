@@ -904,34 +904,24 @@ int API_FUNC qthread_initialize(void)
 
     /* initialize the FEB-like locking structures */
 #ifdef QTHREAD_COUNT_THREADS
-    qlib->locks_stripes = malloc(sizeof(aligned_t) * QTHREAD_LOCKING_STRIPES);
-    qassert_ret(qlib->locks_stripes, QTHREAD_MALLOC_ERROR);
     qlib->febs_stripes = malloc(sizeof(aligned_t) * QTHREAD_LOCKING_STRIPES);
     qassert_ret(qlib->febs_stripes, QTHREAD_MALLOC_ERROR);
 # ifdef QTHREAD_MUTEX_INCREMENT
-    qlib->locks_stripes_locks = malloc(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
-    qassert_ret(qlib->locks_stripes_locks, QTHREAD_MALLOC_ERROR);
     qlib->febs_stripes_locks = malloc(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
     qassert_ret(qlib->febs_stripes_locks, QTHREAD_MALLOC_ERROR);
 # endif
 #endif /* ifdef QTHREAD_COUNT_THREADS */
-    qlib->locks = malloc(sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
-    qassert_ret(qlib->locks, QTHREAD_MALLOC_ERROR);
     qlib->FEBs = malloc(sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
     qassert_ret(qlib->FEBs, QTHREAD_MALLOC_ERROR);
     qlib->syncvars = malloc(sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
     qassert_ret(qlib->syncvars, QTHREAD_MALLOC_ERROR);
     for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
 #ifdef QTHREAD_COUNT_THREADS
-        qlib->locks_stripes[i] = 0;
         qlib->febs_stripes[i]  = 0;
 # ifdef QTHREAD_MUTEX_INCREMENT
-        QTHREAD_FASTLOCK_INIT(qlib->locks_stripes_locks[i]);
         QTHREAD_FASTLOCK_INIT(qlib->febs_stripes_locks[i]);
 # endif
 #endif
-        qlib->locks[i] = qt_hash_create(need_sync);
-        qassert_ret(qlib->locks[i], QTHREAD_MALLOC_ERROR);
         qlib->FEBs[i] = qt_hash_create(need_sync);
         qassert_ret(qlib->FEBs[i], QTHREAD_MALLOC_ERROR);
         qlib->syncvars[i] = qt_hash_create(need_sync);
@@ -1741,18 +1731,6 @@ void API_FUNC qthread_finalize(void)
                  shep0->incr_maxtime);
     qt_hash_destroy(shep0->uniqueincraddrs);
 # endif
-    print_status("%llu locks aquired (%ld unique), average %g secs, max %g secs\n",
-                 (unsigned long long)shep0->aquirelock_count, qt_hash_count(shep0->uniquelockaddrs),
-                 (shep0->aquirelock_count == 0) ? 0 : (shep0->aquirelock_time /
-                                                       shep0->aquirelock_count), shep0->aquirelock_maxtime);
-    qt_hash_destroy(shep0->uniquelockaddrs);
-    print_status("Blocked on a lock %llu times, average %g secs, max %g secs\n",
-                 (unsigned long long)shep0->lockwait_count,
-                 (shep0->lockwait_count == 0) ? 0 : (shep0->lockwait_time / shep0->lockwait_count),
-                 shep0->lockwait_maxtime);
-    print_status("Locks held an average of %g seconds, max %g seconds\n",
-                 (shep0->aquirelock_count == 0) ? 0 : (shep0->hold_time / shep0->aquirelock_count),
-                 shep0->hold_maxtime);
     print_status("%ld unique addresses used with FEB, blocked %g secs\n",
                  qt_hash_count(shep0->uniquefebaddrs),
                  (shep0->febblock_count == 0) ? 0 : shep0->febblock_time);
@@ -1773,7 +1751,6 @@ void API_FUNC qthread_finalize(void)
 
     for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
         qthread_debug(LOCK_DETAILS, "destroying lock infrastructure of shep %i\n", (int)i);
-        qt_hash_destroy(qlib->locks[i]);
         qt_hash_destroy_deallocate(qlib->FEBs[i],
                                    (qt_hash_deallocator_fn)
                                    qthread_addrstat_delete);
@@ -1785,10 +1762,8 @@ void API_FUNC qthread_finalize(void)
         QTHREAD_FASTLOCK_DESTROY(qlib->atomic_locks[i]);
 #endif
 #ifdef QTHREAD_COUNT_THREADS
-        print_status("bin %i used %u times for locks, %u times for FEBs\n", i,
-                     (unsigned int)qlib->locks_stripes[i], (unsigned int)qlib->febs_stripes[i]);
+        print_status("bin %i used %u times for FEBs\n", i, (unsigned int)qlib->febs_stripes[i]);
 # ifdef QTHREAD_MUTEX_INCREMENT
-        QTHREAD_FASTLOCK_DESTROY(qlib->locks_stripes_locks[i]);
         QTHREAD_FASTLOCK_DESTROY(qlib->febs_stripes_locks[i]);
 # endif
 #endif
@@ -1807,17 +1782,14 @@ void API_FUNC qthread_finalize(void)
         free(tmp);
     }
     qthread_debug(LOCK_DETAILS, "destroy lock infrastructure arrays\n");
-    free(qlib->locks);
     free(qlib->FEBs);
     free(qlib->syncvars);
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
     free((void *)qlib->atomic_locks);
 #endif
 #ifdef QTHREAD_COUNT_THREADS
-    free(qlib->locks_stripes);
     free(qlib->febs_stripes);
 # ifdef QTHREAD_MUTEX_INCREMENT
-    free(qlib->locks_stripes_locks);
     free(qlib->febs_stripes_locks);
 # endif
 #endif

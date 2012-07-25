@@ -123,23 +123,9 @@ typedef struct qlib_s {
     QTHREAD_FASTLOCK_TYPE *atomic_stripes_locks;
 # endif
 #endif
-    /* this is how we manage FEB-type locks
-     * NOTE: this can be a major bottleneck and we should probably create
-     * multiple hashtables to improve performance. The current hashing is a bit
-     * of a hack, but improves the bottleneck a bit
+    /* this is how we manage FEBs
+     * NOTE: this can be a major bottleneck
      */
-    qt_hash               *locks;
-#ifdef QTHREAD_COUNT_THREADS
-    aligned_t             *locks_stripes;
-# ifdef QTHREAD_MUTEX_INCREMENT
-    QTHREAD_FASTLOCK_TYPE *locks_stripes_locks;
-# endif
-#endif
-    /* these are separated out for memory reasons: if you can get away with
-     * simple locks, then you can use a little less memory. Subject to the same
-     * bottleneck concerns as the above hashtable, though these are slightly
-     * better at shrinking their critical section. FEBs have more memory
-     * overhead, though. */
     qt_hash               *FEBs;
 #ifdef QTHREAD_COUNT_THREADS
     aligned_t             *febs_stripes;
