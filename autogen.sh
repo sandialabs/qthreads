@@ -20,8 +20,8 @@ fi
 version=$(awk '{if(NR==1)print$2;else exit}' ./NEWS)
 if [[ ${version%b} != ${version} && $SKIPVGEN != 1 ]] ; then
 	echo "Querying svn to determine revision number..."
-	svn stat -u README
-	rev=$(svn stat -u README 2>/dev/null | awk '/^Status against revision: /{printf "'$version'-%s", $4}')
+	svn stat -u README | tee .autogen_svn_output
+	rev=$(awk '/^Status against revision: /{printf "'$version'-%s", $4}' .autogen_svn_output )
 	if [ "$rev" ] ; then
 		echo -n $rev > .autogen-version
 	else
