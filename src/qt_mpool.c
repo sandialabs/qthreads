@@ -35,6 +35,14 @@
 #include "qt_visibility.h"
 #include "qt_aligned_alloc.h"
 
+#ifdef QTHREAD_MPOOL_SCRIBBLING
+# define ALLOC_SCRIBBLE(ptr, sz) memset((ptr), 0x55, (sz))
+# define FREE_SCRIBBLE(ptr, sz)  memset((ptr), 0x77, (sz))
+#else
+# define ALLOC_SCRIBBLE(ptr, sz)
+# define FREE_SCRIBBLE(ptr, sz)
+#endif
+
 typedef struct threadlocal_cache_s qt_mpool_threadlocal_cache_t;
 
 #ifdef TLS
@@ -230,6 +238,7 @@ void INTERNAL *qt_mpool_alloc(qt_mpool pool)
         qthread_debug(MPOOL_DETAILS, "->...cached count:%zu\n", (size_t)tc->count - 1);
         tc->cache = cache->next;
         --tc->count;
+        ALLOC_SCRIBBLE(cache, pool->item_size);
         return cache;
     } else if (tc->block) {
         void *ret = &(tc->block[tc->i * pool->item_size]);
@@ -237,6 +246,7 @@ void INTERNAL *qt_mpool_alloc(qt_mpool pool)
         if (++tc->i == pool->items_per_alloc) {
             tc->block = NULL;
         }
+        ALLOC_SCRIBBLE(ret, pool->item_size);
         return ret;
     } else {
         const size_t      items_per_alloc = pool->items_per_alloc;
@@ -280,6 +290,7 @@ void INTERNAL *qt_mpool_alloc(qt_mpool pool)
             /* store the block for later allocation */
             tc->block = p;
             tc->i     = 1;
+            ALLOC_SCRIBBLE(p, pool->item_size);
             return p;
         } else {
             qthread_debug(MPOOL_BEHAVIOR, "->...from_global_pool count:%zu\n", (size_t)(cnt - 1));
@@ -287,6 +298,7 @@ void INTERNAL *qt_mpool_alloc(qt_mpool pool)
             tc->count = cnt - 1;
             // cache->next       = NULL; // unnecessary
             // cache->block_tail = NULL; // unnecessary
+            ALLOC_SCRIBBLE(cache, pool->item_size);
             return cache;
         }
     }
@@ -304,6 +316,7 @@ void INTERNAL qt_mpool_free(qt_mpool pool,
     qthread_debug(MPOOL_CALLS, "pool=%p mem=%p\n", pool, mem);
     qassert_retvoid((mem != NULL));
     qassert_retvoid((pool != NULL));
+    FREE_SCRIBBLE(mem, pool->item_size);
 #ifdef TLS
     tc = TLS_GET(pool_caches);
     {
