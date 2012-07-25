@@ -128,7 +128,7 @@ static void class_stuff (int value,
                          OpT op,
                          int times)
 {
-    int results[3];
+    saligned_t results[3];
 
     mt_mfun_loop_returns<ArrayPtr, Val, mt_loop_traits::Par>
         (&op, (int*)results, &OpT::operator(), value, 0, 3);
@@ -137,7 +137,7 @@ static void class_stuff (int value,
      * printf ("[testq] Result = %d\n", results[i]);
      * }*/
 
-    int sum = 0;
+    saligned_t sum = 0;
     mt_mfun_loop_returns<Collect<mt_loop_traits::Add>, Val,
                          mt_loop_traits::Par>
         (&op, sum, &OpT::operator(), value, 0, times);
