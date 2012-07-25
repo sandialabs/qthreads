@@ -380,13 +380,13 @@ void qt_hash_destroy_deallocate(qt_hash                h,
     assert(h->B);
     cursor = h->B[0];
     while (PTR_OF(cursor) != NULL) {
-        marked_ptr_t tmp = cursor;
-        assert(MARK_OF(tmp) == 0);
-        cursor = PTR_OF(cursor)->next;
-        if (PTR_OF(cursor) != NULL) { /* null pointers come from placeholders */
-            f(PTR_OF(cursor));
+        hash_entry *he = PTR_OF(cursor);
+        assert(MARK_OF(cursor) == 0);
+        if (he->value) { /* null pointers come from placeholders */
+            f(he->value);
         }
-        free(PTR_OF(tmp));
+        cursor = he->next;
+        free(he);
     }
     free(h->B);
     free(h);
