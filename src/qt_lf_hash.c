@@ -9,6 +9,8 @@
 /* Internal Headers */
 #include "qthread_asserts.h"
 #include "qthread/qthread.h" /* for qthread_incr() and qthread_cas() */
+#include "qt_mpool.h"
+#include "qthread_innards.h" /* for qthread_intarnal_cleanup_late() */
 
 /* The Internal API */
 #include "qt_hash.h"
@@ -38,7 +40,8 @@ typedef uintptr_t marked_ptr_t;
 #define CONSTRUCT(mark, ptr) (PTR_MASK((uintptr_t)ptr) | (mark))
 #define UNINITIALIZED ((marked_ptr_t)0)
 
-size_t hard_max_buckets = 0;
+size_t   hard_max_buckets = 0;
+qt_mpool hash_entry_pool  = NULL;
 
 typedef struct hash_entry_s {
     so_key_t     key;
@@ -131,7 +134,7 @@ static uint64_t qt_hashword(uint64_t key)
 static int qt_lf_list_insert(marked_ptr_t *head,
                              hash_entry   *node,
                              marked_ptr_t *ocur)
-{
+{   /*{{{*/
     so_key_t key = node->key;
 
     while (1) {
@@ -148,11 +151,11 @@ static int qt_lf_list_insert(marked_ptr_t *head,
             return 1;
         }
     }
-}
+} /*}}}*/
 
 static int qt_lf_list_delete(marked_ptr_t *head,
                              so_key_t      key)
-{
+{   /*{{{*/
     while (1) {
         marked_ptr_t *lprev;
         marked_ptr_t  lcur;
@@ -161,20 +164,20 @@ static int qt_lf_list_delete(marked_ptr_t *head,
         if (qt_lf_list_find(head, key, &lprev, &lcur, &lnext) == NULL) { return 0; }
         if (qthread_cas(&PTR_OF(lcur)->next, CONSTRUCT(0, lnext), CONSTRUCT(1, lnext)) != CONSTRUCT(0, lnext)) { continue; }
         if (qthread_cas(lprev, CONSTRUCT(0, lcur), CONSTRUCT(0, lnext)) == CONSTRUCT(0, lcur)) {
-            free(PTR_OF(lcur));
+            qt_mpool_free(hash_entry_pool, PTR_OF(lcur));
         } else {
             qt_lf_list_find(head, key, NULL, NULL, NULL);                       // needs to set cur/prev/next
         }
         return 1;
     }
-}
+} /*}}}*/
 
 static void *qt_lf_list_find(marked_ptr_t  *head,
                              so_key_t       key,
                              marked_ptr_t **oprev,
                              marked_ptr_t  *ocur,
                              marked_ptr_t  *onext)
-{
+{   /*{{{*/
     so_key_t      ckey;
     void         *cval;
     marked_ptr_t *prev = NULL;
@@ -208,7 +211,7 @@ static void *qt_lf_list_find(marked_ptr_t  *head,
                 prev = &(PTR_OF(cur)->next);
             } else {
                 if (qthread_cas(prev, CONSTRUCT(0, cur), CONSTRUCT(0, next)) == CONSTRUCT(0, cur)) {
-                    free(PTR_OF(cur));
+                    qt_mpool_free(hash_entry_pool, PTR_OF(cur));
                 } else {
                     break;
                 }
@@ -216,7 +219,7 @@ static void *qt_lf_list_find(marked_ptr_t  *head,
             cur = next;
         }
     }
-}
+} /*}}}*/
 
 static inline so_key_t so_regularkey(const lkey_t key)
 {
@@ -228,11 +231,31 @@ static inline so_key_t so_dummykey(const lkey_t key)
     return REVERSE(key);
 }
 
-int qt_hash_put(qt_hash  h,
-                qt_key_t key,
-                void    *value)
+#ifndef UNPOOLED
+static void qt_hash_subsystem_shutdown(void)
 {
-    hash_entry *node = malloc(sizeof(hash_entry)); // XXX: should pull out of a memory pool
+    assert(hash_entry_pool != NULL);
+    qt_mpool_destroy(hash_entry_pool);
+    hash_entry_pool = NULL;
+}
+
+#endif
+
+void INTERNAL qt_hash_initialize_subsystem(void)
+{
+    assert(hash_entry_pool == NULL);
+#ifndef UNPOOLED
+    hash_entry_pool = qt_mpool_create(sizeof(hash_entry));
+    assert(hash_entry_pool != NULL);
+    qthread_internal_cleanup_late(qt_hash_subsystem_shutdown);
+#endif
+}
+
+int INTERNAL qt_hash_put(qt_hash  h,
+                         qt_key_t key,
+                         void    *value)
+{
+    hash_entry *node = qt_mpool_alloc(hash_entry_pool);
     size_t      bucket;
     lkey_t      lkey = (uint64_t)(uintptr_t)key;
 
@@ -249,7 +272,7 @@ int qt_hash_put(qt_hash  h,
         initialize_bucket(h, bucket);
     }
     if (!qt_lf_list_insert(&(h->B[bucket]), node, NULL)) {
-        free(node);
+        qt_mpool_free(hash_entry_pool, node);
         return 0;
     }
     size_t csize = h->size;
@@ -261,8 +284,8 @@ int qt_hash_put(qt_hash  h,
     return 1;
 }
 
-void *qt_hash_get(qt_hash        h,
-                  const qt_key_t key)
+void INTERNAL *qt_hash_get(qt_hash        h,
+                           const qt_key_t key)
 {
     size_t bucket;
     lkey_t lkey = (uint64_t)(uintptr_t)key;
@@ -279,8 +302,8 @@ void *qt_hash_get(qt_hash        h,
     return qt_lf_list_find(&(h->B[bucket]), so_regularkey(lkey), NULL, NULL, NULL);
 }
 
-int qt_hash_remove(qt_hash        h,
-                   const qt_key_t key)
+int INTERNAL qt_hash_remove(qt_hash        h,
+                            const qt_key_t key)
 {
     size_t bucket;
     lkey_t lkey = (uint64_t)(uintptr_t)key;
@@ -320,13 +343,13 @@ static void initialize_bucket(qt_hash h,
     if (h->B[parent] == UNINITIALIZED) {
         initialize_bucket(h, parent);
     }
-    hash_entry *dummy = malloc(sizeof(hash_entry)); // XXX: should pull out of a memory pool
+    hash_entry *dummy = qt_mpool_alloc(hash_entry_pool);
     assert(dummy);
     dummy->key   = so_dummykey((lkey_t)bucket);
     dummy->value = NULL;
     dummy->next  = UNINITIALIZED;
     if (!qt_lf_list_insert(&(h->B[parent]), dummy, &cur)) {
-        free(dummy);
+        qt_mpool_free(hash_entry_pool, dummy);
         dummy = PTR_OF(cur);
         while (h->B[bucket] != CONSTRUCT(0, dummy)) ;
     } else {
@@ -334,7 +357,7 @@ static void initialize_bucket(qt_hash h,
     }
 }
 
-qt_hash qt_hash_create(int needSync)
+qt_hash INTERNAL qt_hash_create(int needSync)
 {
     qt_hash tmp = malloc(sizeof(struct qt_hash_s));
 
@@ -347,14 +370,15 @@ qt_hash qt_hash_create(int needSync)
     tmp->size  = 2;
     tmp->count = 0;
     {
-        hash_entry *dummy = calloc(1, sizeof(hash_entry)); // XXX: should pull out of a memory pool
+        hash_entry *dummy = qt_mpool_alloc(hash_entry_pool);
         assert(dummy);
+        memset(dummy, 0, sizeof(hash_entry));
         tmp->B[0] = CONSTRUCT(0, dummy);
     }
     return tmp;
 }
 
-void qt_hash_destroy(qt_hash h)
+void INTERNAL qt_hash_destroy(qt_hash h)
 {
     marked_ptr_t cursor;
 
@@ -362,17 +386,17 @@ void qt_hash_destroy(qt_hash h)
     assert(h->B);
     cursor = h->B[0];
     while (PTR_OF(cursor) != NULL) {
-        marked_ptr_t tmp = cursor;
-        assert(MARK_OF(tmp) == 0);
+        hash_entry *tmp = PTR_OF(cursor);
+        assert(MARK_OF(cursor) == 0);
         cursor = PTR_OF(cursor)->next;
-        free(PTR_OF(tmp));
+        qt_mpool_free(hash_entry_pool, tmp);
     }
     free(h->B);
     free(h);
 }
 
-void qt_hash_destroy_deallocate(qt_hash                h,
-                                qt_hash_deallocator_fn f)
+void INTERNAL qt_hash_destroy_deallocate(qt_hash                h,
+                                         qt_hash_deallocator_fn f)
 {
     marked_ptr_t cursor;
 
@@ -386,21 +410,21 @@ void qt_hash_destroy_deallocate(qt_hash                h,
             f(he->value);
         }
         cursor = he->next;
-        free(he);
+        qt_mpool_free(hash_entry_pool, he);
     }
     free(h->B);
     free(h);
 }
 
-size_t qt_hash_count(qt_hash h)
+size_t INTERNAL qt_hash_count(qt_hash h)
 {
     assert(h);
     return h->size;
 }
 
-void qt_hash_callback(qt_hash             h,
-                      qt_hash_callback_fn f,
-                      void               *arg)
+void INTERNAL qt_hash_callback(qt_hash             h,
+                               qt_hash_callback_fn f,
+                               void               *arg)
 {
     marked_ptr_t cursor;
 

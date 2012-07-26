@@ -198,15 +198,17 @@ static inline void **qt_hash_internal_find(qt_hash  h,
     return NULL;
 } /*}}}*/
 
+void INTERNAL qt_hash_initialize_subsystem(void)
+{
+    linesize = qthread_cacheline();
+    bucketsize = linesize / sizeof(hash_entry);
+    bucketmask = bucketsize - 1;
+}
+
 qt_hash INTERNAL qt_hash_create(int needSync)
 {   /*{{{*/
     qt_hash ret;
 
-    if (linesize == 0) {
-        linesize   = qthread_cacheline();
-        bucketsize = linesize / sizeof(hash_entry);
-        bucketmask = bucketsize - 1;
-    }
     ret = calloc(1, sizeof(struct qt_hash_s));
     if (ret) {
         if (needSync) {

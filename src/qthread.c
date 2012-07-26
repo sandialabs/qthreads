@@ -851,6 +851,7 @@ int API_FUNC qthread_initialize(void)
     qthread_internal_alignment_init();
     qt_mpool_subsystem_init();
     qt_affinity_init(&nshepherds, &nworkerspershep);
+    qt_hash_initialize_subsystem();
 
     if (hw_par != 0) {
         if ((hw_par < nshepherds) || (hw_par == 1)) {
