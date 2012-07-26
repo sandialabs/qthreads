@@ -27,9 +27,6 @@
 #ifndef blackscholes_H_ALREADY_INCLUDED
 #define blackscholes_H_ALREADY_INCLUDED
 
-#define CNC_PRECOND
-#define CNC_PRECOND_ONLY
-
 #include <cnc/cnc.h>
 #include <vector>
 #include <memory>
