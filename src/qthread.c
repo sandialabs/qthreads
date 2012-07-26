@@ -245,10 +245,10 @@ static QINLINE void FREE_STACK(void *t)
 #else
 static qt_mpool generic_rdata_pool = NULL;
 # define ALLOC_RDATA()    (struct qthread_runtime_data_s*)qt_mpool_alloc(generic_rdata_pool)
-# define FREE_RDATA(r)    qt_mpool_free(generic_rdata_pool, t)
+# define FREE_RDATA(r)    qt_mpool_free(generic_rdata_pool, (r))
 static qt_mpool generic_team_pool = NULL;
 # define ALLOC_TEAM()     (qt_team_t *)qt_mpool_alloc(generic_team_pool)
-# define FREE_TEAM(t)     qt_mpool_free(generic_team_pool, t)
+# define FREE_TEAM(t)     qt_mpool_free(generic_team_pool, (t))
 #endif
 
 /* guaranteed to be between 0 and 128, using the first parts of addr that are
@@ -2275,11 +2275,12 @@ static QINLINE void qthread_thread_free(qthread_t *t)
 #ifdef QTHREAD_USE_VALGRIND
         VALGRIND_STACK_DEREGISTER(t->rdata->valgrind_stack_id);
 #endif
-        qthread_debug(THREAD_DETAILS, "t(%p): releasing stack %p\n", t, t->rdata->stack);
         if (t->flags & QTHREAD_SIMPLE) {
+            qthread_debug(THREAD_DETAILS, "t(%p): releasing rdata %p\n", t, t->rdata);
             FREE_RDATA(t->rdata);
         } else {
             assert(t->rdata->stack);
+            qthread_debug(THREAD_DETAILS, "t(%p): releasing stack %p\n", t, t->rdata->stack);
             FREE_STACK(t->rdata->stack);
         }
 
