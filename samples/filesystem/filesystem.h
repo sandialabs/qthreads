@@ -1,9 +1,6 @@
 #ifndef filesystem_H_ALREADY_INCLUDED
 #define filesystem_H_ALREADY_INCLUDED
 
-#define CNC_PRECOND
-//#define CNC_PRECOND_ONLY
-
 #include <cnc/cnc.h>
 #include <vector>
 #include <memory>
@@ -11,7 +8,7 @@
 #include "filesystem_types.h"
 
 // define the maximum length of randomly generated files, in blocks
-#define MAX_FILE_LENGTH (6)
+#define MAX_FILE_LENGTH (1)
 // define the number entries that can be stored in an inode 
 #define DATA_BLOCKS_NO (9)
 #define EMPTY (-1)
