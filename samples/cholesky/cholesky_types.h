@@ -42,7 +42,7 @@
 //Rely on shared_pointer collection for gcc
 # endif
 
-#define USE_SINGLE_PRECISION
+//#define USE_SINGLE_PRECISION
 
 # ifdef USE_SINGLE_PRECISION
 typedef float chosen_type;
