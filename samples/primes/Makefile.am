@@ -1,7 +1,7 @@
 AM_CPPFLAGS = -I. -I$(top_srcdir)
 AM_CXXFLAGS = -std=gnu++0x
 
-TESTS = primes_opt1 primes_opt2 primes_opt3
+TESTS = primes_opt1 primes_opt2 primes_opt3 primes_opt4
 check_PROGRAMS = $(TESTS)
 
 ARGS = 1000 167
@@ -23,6 +23,9 @@ primes_opt1_SOURCES = primes.cpp
 primes_opt1_CPPFLAGS = -DCNC_PRECOND
 
 primes_opt2_SOURCES = primes.cpp
-primes_opt2_CPPFLAGS = -DCNC_PRECOND -DCNC_PRECOND_ONLY
+primes_opt2_CPPFLAGS = -DCNC_PRECOND -DCNC_PRECOND_ONLY -DCNC_PRECOND_SIMPLE
 
 primes_opt3_SOURCES = primes.cpp
+
+primes_opt4_SOURCES = primes.cpp
+primes_opt4_CPPFLAGS = -DCNC_PRECOND -DCNC_PRECOND_ONLY
