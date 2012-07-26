@@ -16,7 +16,8 @@ AS_IF([test "x$enable_builtin_atomics" != xno],
 				    [AC_MSG_WARN([Disabling builtin atomics on IBM_XL, due to compiler design decision])])
 			  enable_builtin_atomics=no])])
 AS_IF([test "x$enable_builtin_atomics" != xno], [
-AC_CHECK_HEADERS([ia64intrin.h ia32intrin.h])
+  AS_IF([test "x$qthread_cv_c_compiler_type" = xIntel -o "x$qthread_cv_cxx_compiler_type" = xIntel],
+	    [AC_CHECK_HEADERS([ia64intrin.h ia32intrin.h])])
 AC_CACHE_CHECK([whether compiler supports builtin atomic CAS-32],
   [qthread_cv_atomic_CAS32],
   [AC_LINK_IFELSE([AC_LANG_SOURCE([[
