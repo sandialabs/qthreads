@@ -307,10 +307,13 @@ namespace CnC {
 		aligned_t old_val = qthread_incr(&(ret->count), -1);
 		if(old_val == 1){
 				ret = (entry_t<Item> *) qt_dictionary_delete(m_itemCollection, const_cast < Tag * >(&t));
+				if (ret == NULL) 
+					printf("Item tagged %d-%d-%d already collected!\n",((int*)(&t))[0], ((int*)(&t))[1], ((int*)(&t))[2]);
 				assert (ret !=  NULL && "Error when deleting item from dictionary (not found)");
 				if(ret != NULL){
 					typename IsPointer<Item>::Result r;
 					clearItem(&r, *(ret -> value));
+					//printf("Item tagged %d-%d-%d is getting deleted!\n",((int*)(&t))[0], ((int*)(&t))[1], ((int*)(&t))[2]);
 					//delete *(ret -> value);
 				}
 				delete(ret);

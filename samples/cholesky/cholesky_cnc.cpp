@@ -85,6 +85,9 @@ aligned_t** kji_compute::get_dependences(const pair & t, cholesky_context & c, i
 // Output is a lower triangular matrix.
 int S1_compute::execute(const int & t, cholesky_context & c ) const
 {
+# ifdef DEBUG_COUNTERS
+    ((int*)pthread_getspecific(c.key))[0]++;
+# endif
     tile_const_ptr_type A_block;
     tile_ptr_type       L_block;
 
@@ -136,6 +139,9 @@ aligned_t** S1_compute::get_dependences(const int & t, cholesky_context & c, int
 // Input to this step are the input tile and the output tile of the previous step.
 int S2_compute::execute(const pair & t, cholesky_context & c ) const
 {
+# ifdef DEBUG_COUNTERS
+    ((int*)pthread_getspecific(c.key))[1]++;
+# endif
     tile_const_ptr_type A_block;
     tile_const_ptr_type Li_block;
     tile_ptr_type       Lo_block;
@@ -183,11 +189,14 @@ aligned_t** S2_compute::get_dependences(const pair & t, cholesky_context & c, in
 // Input to this step is the given submatrix and the output of the previous step.
 int S3_compute::execute(const triple & t, cholesky_context & c ) const
 {
+# ifdef DEBUG_COUNTERS
+    ((int*)pthread_getspecific(c.key))[2]++;
+# endif
     tile_const_ptr_type A_block;
     tile_const_ptr_type L1_block;
     tile_const_ptr_type L2_block;
     
-    double temp;
+    chosen_type temp;
     
     int b = c.b;
     const int k = t[0];
@@ -253,7 +262,7 @@ aligned_t** S3_compute::get_dependences(const triple & t, cholesky_context & c, 
     return read;
 }
 
-void cholesky( double * A, const int n, const int b, const char * oname )
+void cholesky( chosen_type * A, const int n, const int b, const char * oname )
 {
 # ifndef DISABLE_GET_COUNTS
     # ifdef USE_CHEATING
@@ -348,5 +357,5 @@ void cholesky( double * A, const int n, const int b, const char * oname )
         }
         //TODO: write in A and output in file using these gets (fewer and accuarate wrt to getcounts)
     }
-	printf("Tile created: %d, tiles destroyed: %d at end of program\n", Tile<double>::created, Tile<double>::destroyed);
+	printf("Tile created: %d, tiles destroyed: %d at end of program\n", Tile<chosen_type>::created, Tile<chosen_type>::destroyed);
 }

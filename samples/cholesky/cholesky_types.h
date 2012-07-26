@@ -31,6 +31,9 @@
 #define CNC_PRECOND
 #define CNC_PRECOND_ONLY
 
+//Use for debugging to count the number of each kind of step executed by each thread
+//#define DEBUG_COUNTERS 3
+
 //Ideal case:
 //Keep get counts enabled
 //#define DISABLE_GET_COUNTS
@@ -40,6 +43,14 @@
 #define USE_CHEATING
 # else
 //Rely on shared_pointer collection for gcc
+# endif
+
+#define USE_SINGLE_PRECISION
+
+# ifdef USE_SINGLE_PRECISION
+typedef float chosen_type;
+# else
+typedef double chosen_type;
 # endif
 
 #include <cnc/cnc.h>
@@ -120,7 +131,7 @@ private:
 
 };
 
-typedef Tile< double > tile_type;
+typedef Tile< chosen_type > tile_type;
 #ifdef __INTEL_COMPILER
 typedef const tile_type* tile_const_ptr_type;
 typedef       tile_type* tile_ptr_type;

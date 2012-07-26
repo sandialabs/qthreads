@@ -34,34 +34,34 @@
 //#include "cholesky_cnc.cpp"
 #include <cassert>
 
-template<> int Tile<double>::created=0;
-template<> int Tile<double>::destroyed=0;
+template<> int Tile<chosen_type>::created=0;
+template<> int Tile<chosen_type>::destroyed=0;
 
-extern void cholesky( double *A, const int n, const int b, const char * oname );
+extern void cholesky( chosen_type *A, const int n, const int b, const char * oname );
 
-void posdef_gen( double * A, int n )
+void posdef_gen( chosen_type * A, int n )
 {
 	/* Allocate memory for the matrix and its transpose */
-	double *L;
-	double *LT;
-    double two = 2.0;
-	double one = 1.0;
+	chosen_type *L;
+	chosen_type *LT;
+    chosen_type two = 2.0;
+	chosen_type one = 1.0;
     //	srand( 1 );
 
-	L = (double *) calloc(sizeof(double), n*n);
+	L = (chosen_type *) calloc(sizeof(chosen_type), n*n);
 	assert (L);
 
-	LT = (double *) calloc(sizeof(double), n*n);
+	LT = (chosen_type *) calloc(sizeof(chosen_type), n*n);
 	assert (LT);
 
-    memset( A, 0, sizeof( double ) * n * n );
+    memset( A, 0, sizeof( chosen_type ) * n * n );
 	
 	/* Generate a conditioned matrix and fill it with random numbers */
     for(int j = 0; j < n; j++) {
         for(int k = 0; k <= j; k++) {
 			if(k<j) {
 				// The initial value has to be between [0,1].
-				L[k*n+j] = ( ( (j*k) / ((double)(j+1)) / ((double)(k+2)) * two) - one ) / ((double)n);
+				L[k*n+j] = ( ( (j*k) / ((chosen_type)(j+1)) / ((chosen_type)(k+2)) * two) - one ) / ((chosen_type)n);
 			} else if (k == j) {
 				L[k*n+j] = 1;
             }
@@ -77,10 +77,10 @@ void posdef_gen( double * A, int n )
 		
     //tbb::parallel_for( 0, n, 1, [&]( int i ) {
     for (int i = 0; i < n; i++) {
-            double * _a = &A[i*n];
-            double * _l = &L[i*n];
+            chosen_type * _a = &A[i*n];
+            chosen_type * _l = &L[i*n];
             for (int k = 0; k < n; k++) {
-                double * _lt = &LT[k*n];
+                chosen_type * _lt = &LT[k*n];
                 for (int j = 0; j < n; j++) {
                     _a[j] += _l[k] * _lt[j];
                 }
@@ -92,7 +92,7 @@ void posdef_gen( double * A, int n )
 }
 
 // Read the matrix from the input file
-void matrix_init (double *A, int n, const char *fname)
+void matrix_init (chosen_type *A, int n, const char *fname)
 {
     if( fname ) {
         int i;
@@ -107,9 +107,14 @@ void matrix_init (double *A, int n, const char *fname)
         for (i = 0; i < n; i++) {
             for (j = 0; j <= i; j++) {
 //            for (j = 0; j < n; j++) {
+                //if( fscanf(fp, "%lf ", &A[i*n+j]) <= 0) {   
+# ifdef USE_SINGLE_PRECISION
+                if( fscanf(fp, "%f ", &A[i*n+j]) <= 0) {
+# else
                 if( fscanf(fp, "%lf ", &A[i*n+j]) <= 0) {   
-                    fprintf(stderr,"\nMatrix size incorrect %i %i\n", i, j);
-                    exit(0);
+# endif
+                   fprintf(stderr,"\nMatrix size incorrect %d (%d %d)\n", n, i, j);
+                   exit(0);
                 }
                 if( i != j ) {
                     A[j*n+i] = A[i*n+j];
@@ -123,7 +128,7 @@ void matrix_init (double *A, int n, const char *fname)
 }
 
 // write matrix to file
-void matrix_write ( double *A, int n, const char *fname )
+void matrix_write ( chosen_type *A, int n, const char *fname )
 {
     if( fname ) {
         int i;
@@ -174,7 +179,7 @@ int main (int argc, char *argv[])
         exit(0);
     }
 
-    double * A = new double[n*n];
+    chosen_type * A = new chosen_type[n*n];
 
     matrix_init (A, n, fname);
     if( mname ) matrix_write( A, n, mname );

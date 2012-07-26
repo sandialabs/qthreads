@@ -12,8 +12,6 @@
 #define STARTED 1
 #define ENDED   2
 
-//#define DISABLE_GET_COUNTS
-
 template< class T >
 struct cnc_tag_hash_compare {
     size_t hash(const T &x) const
@@ -154,6 +152,10 @@ namespace CnC {
 		virtual ~context() {}
 		error_type wait();
 		int cnc_status;
+	# ifdef DEBUG_COUNTERS
+                pthread_key_t key;
+	# endif
+
 	private:
 
 		context(bool);
