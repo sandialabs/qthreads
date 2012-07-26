@@ -17,15 +17,26 @@ class inode {
 public:
 	int data_blocks[DATA_BLOCKS_NO];
 	int indirect_block;
-	
+	int length;
 	inode() {
+		//printf("Created inode\n");
 		for(int i=0; i<DATA_BLOCKS_NO; i++) data_blocks[i] = EMPTY;
 		indirect_block = EMPTY;
+		length = 0;
+	}
+
+	inode(int len) {
+		//printf("Created inode\n");
+		for(int i=0; i<DATA_BLOCKS_NO; i++) data_blocks[i] = EMPTY;
+		indirect_block = EMPTY;
+		length = len;
 	}
 	
 	inode( const inode & i) {
+		//printf("Created inode\n");
 		memcpy(this->data_blocks, i.data_blocks, DATA_BLOCKS_NO*sizeof(int));
 		this->indirect_block = i.indirect_block;
+		this->length = i.length;
 	}
 };
 
@@ -36,7 +47,8 @@ public:
 	void* data;
 
 	block() {
-		data = malloc(BLOCK_SIZE);
+		//printf("Allocated block\n");
+		data = malloc(BLOCK_SIZE*sizeof(int));
 		for(int i=0; i< (BLOCK_SIZE/(int)sizeof(int)); i++)
 			((int*)data)[i] = EMPTY;
 	}
@@ -86,6 +98,8 @@ struct filesystem_context : public CnC::context< filesystem_context >
         // Prescriptive relations
         jobIds.prescribes( concatenate, *this );
     }
+
+    block* temp;
 };
 
 #endif // filesystem_H_ALREADY_INCLUDED
