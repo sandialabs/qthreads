@@ -28,9 +28,6 @@
 #ifndef _H_CHOLESKY_TYPES_INCLUDED_H_
 #define _H_CHOLESKY_TYPES_INCLUDED_H_
 
-#define CNC_PRECOND
-#define CNC_PRECOND_ONLY
-
 //Use for debugging to count the number of each kind of step executed by each thread
 //#define DEBUG_COUNTERS 3
 
@@ -40,7 +37,7 @@
 
 //Do not use cheating for icc
 # ifndef __INTEL_COMPILER
-#define USE_CHEATING
+//#define USE_CHEATING
 # else
 //Rely on shared_pointer collection for gcc
 # endif
