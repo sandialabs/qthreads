@@ -543,8 +543,10 @@ int main(int argc, char *argv[])
     qtimer_stop(timer2);    
     report_time( out_array2, qtimer_secs(timer2) );
     
-    tile_array test2 = in_array.multiply(out_array2);
-    test2.identity_check(1e-6);
+//    tile_array test2 = in_array.multiply(out_array2);
+//    int errors = test2.identity_check(1e-6);
+    //std::cout << "errors: " << errors << std::endl;
+    //assert(errors == 0);
     report_memory();
 
     qtimer_destroy(timer1);
