@@ -42,23 +42,24 @@ int tiles_deleted = 0;
 
 class tile 
 {
-    double m_tile[TILESIZE][TILESIZE];  
+    double *m_tile; //[TILESIZE][TILESIZE];  
 public:   
 
-    tile()
+    tile() : m_tile(new double[TILESIZE*TILESIZE])
     {
         tiles_created++;
     }
 
     ~tile()
     {
+	delete[] m_tile;
         tiles_deleted++;
     }
     
-    tile(const tile& t)
+    tile(const tile& t) : m_tile(new double[TILESIZE*TILESIZE])
     {
 		tiles_created++;
-        memcpy(m_tile, t.m_tile, sizeof(m_tile));
+        memcpy(m_tile, t.m_tile, sizeof(double)*TILESIZE*TILESIZE);
     }
     
 
@@ -67,13 +68,13 @@ public:
     {
 		if (this != &t)
         {
-            memcpy(m_tile, t.m_tile, sizeof(m_tile));
+            memcpy(m_tile, t.m_tile, sizeof(double)*TILESIZE*TILESIZE);
         }
         return *this;
     }
     
-    void set(const int i, const int j, double d) { m_tile[i][j] = d; }
-    double get(const int i, const int j) const { return m_tile[i][j]; }
+    void set(const int i, const int j, double d) { m_tile[i*TILESIZE+j] = d; }
+    double get(const int i, const int j) const { return m_tile[i*TILESIZE+j]; }
 
     void dump( double epsilon = MINPIVOT ) const {
         for (int i = 0; i < TILESIZE; i++ ) 
