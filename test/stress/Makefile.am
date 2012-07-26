@@ -11,8 +11,9 @@ TESTS = \
 		feb_stream \
 		syncvar_stream \
 		precond_fib \
-		precond_spawn_simple \
 		task_spawn \
+		test_spawn_simple \
+		precond_spawn_simple \
 		subteams_uts
 
 check_PROGRAMS = $(TESTS)
@@ -48,6 +49,8 @@ precond_fib_SOURCES = precond_fib.c
 precond_spawn_simple_SOURCES = precond_spawn_simple.c
 
 task_spawn_SOURCES = task_spawn.c
+
+test_spawn_simple_SOURCES = test_spawn_simple.c
 
 syncvar_stream_SOURCES = syncvar_stream.c
 

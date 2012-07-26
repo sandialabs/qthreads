@@ -28,7 +28,8 @@ int main(int   argc,
     assert(qthread_initialize() == 0);
 
     for (uint64_t i = 0; i < count; i++) {
-	qthread_fork_precond_simple(null_task, NULL, NULL, 0, NULL);
+	//qthread_fork_precond_simple(null_task, NULL, NULL, 0, NULL);
+	qthread_spawn(null_task, NULL, 0, NULL, 0, NULL, NO_SHEPHERD, QTHREAD_SPAWN_SIMPLE);
     }
     do {
 	aligned_t tmp = donecount;
