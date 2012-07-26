@@ -1,8 +1,13 @@
 svn info
 uname -a
+export QT_STACK_SIZE=$((1024*1024*2))
 
-for i in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 161 17 18 19 20 21 21 23 24 25 26 27 28 29 30
-do
-	/usr/bin/time -v ./filesystem 1024 1048576
-	echo					
+for OPT in {1..3} ; do
+	for SCALE in 1 2 4 8 16 24 32 ; do
+		for i in {1..10} ; do
+			echo OPT = $OPT SCALE = $SCALE i = $i
+			export QT_HWPAR=$SCALE
+			/usr/bin/time -v ./filesystem_opt$OPT $((1<<15)) 1048576
+		done 2>&1  | tee "log-opt$OPT-t$SCALE.txt"
+	done
 done
