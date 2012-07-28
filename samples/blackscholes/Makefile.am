@@ -1,7 +1,7 @@
 AM_CPPFLAGS = -I. -I$(top_srcdir)
 AM_CXXFLAGS = -std=gnu++0x
 
-TESTS = blackscholes_opt1 blackscholes_opt2 blackscholes_opt3
+TESTS = blackscholes_opt1 blackscholes_opt2 blackscholes_opt3 blackscholes_opt4
 check_PROGRAMS = $(TESTS)
 
 ARGS = 100000 100 4
@@ -24,6 +24,9 @@ blackscholes_opt1_SOURCES = blackscholes.cpp
 blackscholes_opt1_CPPFLAGS = -DCNC_PRECOND
 
 blackscholes_opt2_SOURCES = blackscholes.cpp
-blackscholes_opt3_CPPFLAGS = -DCNC_PRECOND -DCNC_PRECOND_ONLY
+blackscholes_opt2_CPPFLAGS = -DCNC_PRECOND -DCNC_PRECOND_ONLY -DCNC_PRECOND_SIMPLE
 
 blackscholes_opt3_SOURCES = blackscholes.cpp
+
+blackscholes_opt4_SOURCES = blackscholes.cpp
+blackscholes_opt4_CPPFLAGS = -DCNC_PRECOND -DCNC_PRECOND_ONLY
