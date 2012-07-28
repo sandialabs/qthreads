@@ -242,6 +242,7 @@ namespace CnC {
 		int stat = *pcnc_status;
 		
 	# ifndef CNC_PRECOND_ONLY
+		// Flexible Preconds, aka, use readFF
 		entry_t<Item> *entry = new entry_t<Item>(NULL, -1);
 		assert(entry != NULL);
 		if (stat == STARTED) {
@@ -259,6 +260,7 @@ namespace CnC {
 		}
 	# else // Use this case to check precond is called when _all_ dependences are known ahead of time.
 	       // Revert to above case for _partial_ preconditions; Keep above case as default.
+	       // ONLY Preconds - aka, do not use readFF
 		ret = (entry_t<Item> *) qt_dictionary_get(m_itemCollection, const_cast < Tag * >(&t));
 		assert (ret != NULL && "item collection entry is null!");
 		assert (ret -> value != NULL && "item collection value is null!");

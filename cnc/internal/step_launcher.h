@@ -135,7 +135,11 @@ namespace CnC {
 					ret =
 			# endif
 			#ifdef CNC_PRECOND_ONLY
+                           #ifdef CNC_PRECOND_SIMPLE
 				qthread_fork_precond_simple(call_step, pts, NULL, (-1) * no_of_dependences, list_of_sincs);
+                           #else
+				qthread_fork_precond(call_step, pts, NULL, (-1) * no_of_dependences, list_of_sincs);
+                           #endif
 			#else // CNC_PRECOND_ONLY
 				qthread_fork_precond(call_step, pts, NULL, (-1) * no_of_dependences, list_of_sincs);
 			#endif // CNC_PRECOND_ONLY

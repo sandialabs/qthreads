@@ -3,7 +3,7 @@ AM_CXXFLAGS = -std=gnu++0x
 
 .PHONY: testcholesky runcholesky
 
-TESTS = cholesky_opt1 cholesky_opt2 cholesky_opt3
+TESTS = cholesky_opt1 cholesky_opt2 cholesky_opt3 cholesky_opt4
 check_PROGRAMS = $(TESTS)
 
 ARGS = 1000 50 -i input/1000.in -o output/1000.out
@@ -26,7 +26,11 @@ cholesky_opt1_SOURCES = cholesky.cpp cholesky_cnc.cpp
 cholesky_opt1_CPPFLAGS = -DCNC_PRECOND
 
 cholesky_opt2_SOURCES = cholesky.cpp cholesky_cnc.cpp
-cholesky_opt2_CPPFLAGS = -DCNC_PRECOND -DCNC_PRECOND_ONLY
+cholesky_opt2_CPPFLAGS = -DCNC_PRECOND -DCNC_PRECOND_ONLY -DCNC_PRECOND_SIMPLE
 
 cholesky_opt3_SOURCES = cholesky.cpp cholesky_cnc.cpp
 cholesky_opt3_CPPFLAGS =
+
+cholesky_opt4_SOURCES = cholesky.cpp cholesky_cnc.cpp
+cholesky_opt4_CPPFLAGS = -DCNC_PRECOND -DCNC_PRECOND_ONLY
+
