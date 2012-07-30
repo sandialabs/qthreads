@@ -388,7 +388,7 @@ fib_omp_SOURCES = sc12/fib_omp.c
 fib_omp_DEPENDENCIES = $(qthreadlib)
 fib_omp_CFLAGS = @OPENMP_CFLAGS@
 
-uts_omp_SOURCES = sc12/uts_omp.c sc12/rng/brg_sha1.c
+uts_omp_SOURCES = sc12/uts_omp.c
 uts_omp_LDADD = $(LDADD) $(utils_rnglib)
 uts_omp_CFLAGS = @OPENMP_CFLAGS@
 endif
@@ -406,7 +406,7 @@ fib_tbb_SOURCES = sc12/fib_tbb.cc
 fib_tbb_DEPENDENCIES = $(qthreadlib)
 fib_tbb_LDFLAGS = @TBB_LIBS@
 
-uts_tbb_SOURCES = sc12/uts_tbb.cc sc12/rng/brg_sha1.c
+uts_tbb_SOURCES = sc12/uts_tbb.cc
 uts_tbb_LDADD = $(LDADD) $(utils_rnglib)
 uts_tbb_LDFLAGS = @TBB_LIBS@
 endif
@@ -421,6 +421,6 @@ spawn_parallel_cilk_DEPENDENCIES = $(qthreadlib)
 fib_cilk_SOURCES = sc12/fib_cilk.c
 fib_cilk_DEPENDENCIES = $(qthreadlib)
 
-uts_cilk_SOURCES = sc12/uts_cilk.c sc12/rng/brg_sha1.c
+uts_cilk_SOURCES = sc12/uts_cilk.c
 uts_cilk_LDADD = $(LDADD) $(utils_rnglib)
 endif
