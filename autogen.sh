@@ -15,7 +15,9 @@ elif type glibtool &>/dev/null ; then
 elif type libtool &>/dev/null ; then
 	export LIBTOOL=`type -p libtool`
 else
+	echo "ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 	echo "I need libtool in order to generate the configure script and makefiles. I couldn't find either libtool or glibtool in your PATH. Perhaps you need to set the LIBTOOL environment variable to point toward a custom installation?"
+	exit -1
 fi
 
 if [ "$AUTOMAKE" ] ; then
@@ -24,7 +26,9 @@ if [ "$AUTOMAKE" ] ; then
 elif type automake &>/dev/null ; then
 	export AUTOMAKE=`type -p automake`
 else
+	echo "ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 	echo "I need automake in order to generate the configure script and makefiles. I couldn't find it in your PATH, though. Perhaps you need to set the AUTOMAKE environment variable to point toward a custom installation?"
+	exit -1
 fi
 
 if [ "$AUTOCONF" ] ; then
@@ -33,7 +37,9 @@ if [ "$AUTOCONF" ] ; then
 elif type autoconf &>/dev/null ; then
 	export AUTOCONF=`type -p autoconf`
 else
+	echo "ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 	echo "I need autoconf in order to generate the configure script and makefiles. I couldn't find it in your PATH, though. Perhaps you need to set the AUTOCONF environment variable to point toward a custom installation?"
+	exit -1
 fi
 
 if [ "$AUTORECONF" ] ; then
@@ -42,7 +48,9 @@ if [ "$AUTORECONF" ] ; then
 elif type autoreconf &>/dev/null ; then
 	export AUTORECONF=`type -p autoreconf`
 else
+	echo "ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 	echo "I need autoreconf in order to generate the configure script and makefiles. I couldn't find it in your PATH, though. Perhaps you need to set the AUTORECONF environment variable to point toward a custom installation?"
+	exit -1
 fi
 
 # If this directory isn't removed, the configure script may not have the right
@@ -70,4 +78,4 @@ $AUTORECONF --install --symlink --warnings=gnu,obsolete,override,portability,no-
   exit 0
 
 echo "It appears that configure file generation failed.  Sorry :(."
-exit 1
+exit -1
