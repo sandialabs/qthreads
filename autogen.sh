@@ -6,9 +6,43 @@
 
 echo "Generating configure files..."
 
-# prefer glibtool over libtool
-if type glibtool &>/dev/null ; then
+if [ "$LIBTOOL" ] ; then
+	# accept anything that's been pre-configured
+	echo Using LIBTOOL=$LIBTOOL
+elif type glibtool &>/dev/null ; then
+	# prefer glibtool over libtool
 	export LIBTOOL=`type -p glibtool`
+elif type libtool &>/dev/null ; then
+	export LIBTOOL=`type -p libtool`
+else
+	echo "I need libtool in order to generate the configure script and makefiles. I couldn't find either libtool or glibtool in your PATH. Perhaps you need to set the LIBTOOL environment variable to point toward a custom installation?"
+fi
+
+if [ "$AUTOMAKE" ] ; then
+	# accept anything that's been pre-configured
+	echo Using AUTOMAKE=$AUTOMAKE
+elif type automake &>/dev/null ; then
+	export AUTOMAKE=`type -p automake`
+else
+	echo "I need automake in order to generate the configure script and makefiles. I couldn't find it in your PATH, though. Perhaps you need to set the AUTOMAKE environment variable to point toward a custom installation?"
+fi
+
+if [ "$AUTOCONF" ] ; then
+	# accept anything that's been pre-configured
+	echo Using AUTOCONF=$AUTOCONF
+elif type autoconf &>/dev/null ; then
+	export AUTOCONF=`type -p autoconf`
+else
+	echo "I need autoconf in order to generate the configure script and makefiles. I couldn't find it in your PATH, though. Perhaps you need to set the AUTOCONF environment variable to point toward a custom installation?"
+fi
+
+if [ "$AUTORECONF" ] ; then
+	# accept anything that's been pre-configured
+	echo Using AUTORECONF=$AUTORECONF
+elif type autoreconf &>/dev/null ; then
+	export AUTORECONF=`type -p autoreconf`
+else
+	echo "I need autoreconf in order to generate the configure script and makefiles. I couldn't find it in your PATH, though. Perhaps you need to set the AUTORECONF environment variable to point toward a custom installation?"
 fi
 
 # If this directory isn't removed, the configure script may not have the right
@@ -31,7 +65,7 @@ else
 	echo $version | tr -d '\012' > .autogen-version
 fi
 
-autoreconf --install --symlink --warnings=gnu,obsolete,override,portability,no-obsolete "$@" && \
+$AUTORECONF --install --symlink --warnings=gnu,obsolete,override,portability,no-obsolete "$@" && \
   echo "Preparing was successful if there were no error messages above." && \
   exit 0
 
