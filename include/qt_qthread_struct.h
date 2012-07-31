@@ -11,7 +11,7 @@
 #include "qt_blocking_structs.h"
 
 #define ARGCOPY_DEFAULT   1024
-#define TASKLOCAL_DEFAULT 64
+#define TASKLOCAL_DEFAULT 8
 
 /* flags (must be different bits) */
 #define QTHREAD_FUTURE           (1 << 0)
