@@ -9,7 +9,6 @@
 # include <linux/sysctl.h>
 #endif
 
-
 #include "qthread_innards.h"
 #include "qt_affinity.h"
 #include "qt_debug.h"
@@ -36,7 +35,7 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
 }                                      /*}}} */
 
 qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
-{                                                          /*{{{ */
+{                                                              /*{{{ */
 #if defined(HAVE_SYSCONF) && defined(HAVE_SC_NPROCESSORS_CONF) /* Linux */
     long ret = sysconf(_SC_NPROCESSORS_CONF);
     qthread_debug(AFFINITY_CALLS, "based on sysconf(), guessing %i shepherds\n",
@@ -109,10 +108,11 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
 {                                      /*{{{ */
     qthread_debug(AFFINITY_CALLS, "start (%p, %i)\n", sheps, (int)nshepherds);
     for (size_t i = 0; i < nshepherds; ++i) {
-        sheps[i].shep_dists      = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
+        sheps[i].shep_dists      = calloc(nshepherds - 1, sizeof(unsigned int));
         sheps[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
         for (size_t j = 0, k = 0; j < nshepherds; ++j) {
             if (j != i) {
+                assert(k < (nshepherds - 1));
                 sheps[i].shep_dists[k]        = 10;
                 sheps[i].sorted_sheplist[k++] = j;
             }
