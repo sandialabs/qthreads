@@ -1144,6 +1144,7 @@ int API_FUNC qthread_initialize(void)
     assert(qlib->mccoy_thread->rdata != NULL);
     qlib->mccoy_thread->rdata->shepherd_ptr = &(qlib->shepherds[0]);
     qlib->mccoy_thread->rdata->stack        = NULL;
+    qlib->mccoy_thread->rdata->tasklocal_size = 0;
 
     qthread_debug(CORE_DETAILS, "enqueueing mccoy thread\n");
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -1825,6 +1826,9 @@ void API_FUNC qthread_finalize(void)
     VALGRIND_STACK_DEREGISTER(qlib->valgrind_masterstack_id);
 #endif
     assert(qlib->mccoy_thread->rdata->stack == NULL);
+    if (qlib->mccoy_thread->rdata->tasklocal_size > 0) {
+        free(*(void**)&qlib->mccoy_thread->data[0]);
+    }
     qthread_debug(CORE_DETAILS, "destroy mccoy thread structure\n");
     free(qlib->mccoy_thread->rdata);
     FREE_QTHREAD(qlib->mccoy_thread);
@@ -1899,13 +1903,24 @@ void API_FUNC *qthread_get_tasklocal(unsigned int size)
 {   /*{{{*/
     qthread_t *f = qthread_internal_self();
 
+    qthread_debug(THREAD_CALLS, "size=%u\n", size);
     if (NULL != f) {
         const unsigned int tl_sz = f->rdata->tasklocal_size;
+        qthread_debug(THREAD_DETAILS, "tasklocal_size=%u, global tasklocal_size=%u\n", tl_sz, qlib->qthread_tasklocal_size);
         if ((0 == tl_sz) && (size <= qlib->qthread_tasklocal_size)) {
             // Use default space
-            return &f->data[qlib->qthread_argcopy_size];
+            if (f->flags & QTHREAD_BIG_STRUCT) {
+                return &f->data[qlib->qthread_argcopy_size];
+            } else {
+                return &f->data;
+            }
         } else {
-            void **data_blob = (void **)&f->data[qlib->qthread_argcopy_size];
+            void **data_blob;
+            if (f->flags & QTHREAD_BIG_STRUCT) {
+                data_blob = (void **)&f->data[qlib->qthread_argcopy_size];
+            } else {
+                data_blob = (void **)&f->data[0];
+            }
             if (0 == tl_sz) {
                 qthread_debug(THREAD_DETAILS, "Allocate space and copy old data\n");
                 void *tmp_data = malloc(size);
@@ -1914,16 +1929,18 @@ void API_FUNC *qthread_get_tasklocal(unsigned int size)
                 memcpy(tmp_data, data_blob, qlib->qthread_tasklocal_size);
                 *data_blob = tmp_data;
 
+                qthread_debug(THREAD_DETAILS, "set tlsize = %u\n", size);
                 f->rdata->tasklocal_size = size;
                 return *data_blob;
             } else if (size <= tl_sz) {
                 qthread_debug(THREAD_DETAILS, "Use alloc'd data blob, no need to resize\n");
                 return *data_blob;
             } else {
-                qthread_debug(THREAD_DETAILS, "Resize alloc'd data blob\n");
+                qthread_debug(THREAD_DETAILS, "Resize alloc'd data blob to %u from %u\n", size, f->rdata->tasklocal_size);
                 *data_blob = realloc(*data_blob, size);
                 assert(NULL != *data_blob);
 
+                qthread_debug(THREAD_DETAILS, "set tlsize = %u\n", size);
                 f->rdata->tasklocal_size = size;
                 return *data_blob;
             }
@@ -1940,6 +1957,7 @@ unsigned API_FUNC qthread_size_tasklocal(void)
     assert(NULL != f);
     assert(NULL != f->rdata);
 
+    qthread_debug(THREAD_DETAILS, "internal tasklocal_size=%u\n", f->rdata->tasklocal_size);
     return f->rdata->tasklocal_size ? f->rdata->tasklocal_size : qlib->qthread_tasklocal_size;
 } /*}}}*/
 
@@ -2287,9 +2305,15 @@ static QINLINE void qthread_thread_free(qthread_t *t)
 
     qthread_debug(THREAD_FUNCTIONS, "t(%p): destroying thread id %i\n", t, t->thread_id);
     if (t->rdata != NULL) {
-        if (t->rdata->tasklocal_size > qlib->qthread_tasklocal_size) {
-            free(*(void **)&t->data[qlib->qthread_argcopy_size]);
-            *(void **)&t->data[qlib->qthread_argcopy_size] = NULL;
+        if (t->rdata->tasklocal_size > 0) {
+            qthread_debug(THREAD_DETAILS, "t(%p,%i): destroying %u bytes of task-local storage\n", t, t->thread_id, t->rdata->tasklocal_size);
+            if (t->flags & QTHREAD_BIG_STRUCT) {
+                free(*(void **)&t->data[qlib->qthread_argcopy_size]);
+                *(void **)&t->data[qlib->qthread_argcopy_size] = NULL;
+            } else {
+                free(*(void **)&t->data[0]);
+                *(void **)&t->data[0] = NULL;
+            }
         }
 #ifdef QTHREAD_USE_VALGRIND
         VALGRIND_STACK_DEREGISTER(t->rdata->valgrind_stack_id);
