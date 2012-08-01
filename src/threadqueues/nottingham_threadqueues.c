@@ -290,7 +290,7 @@ void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t   *q,
     /* save element 0 for the thief */
     for(int i = 1; i < stealcount; i++) {
         qthread_t *t = stealbuffer[i];
-        t->target_shepherd = shep;
+        t->target_shepherd = shep->shepherd_id;
         qt_threadqueue_enqueue(q, t);
     }
 } /*}}}*/

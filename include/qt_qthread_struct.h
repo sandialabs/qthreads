@@ -47,6 +47,7 @@ struct qthread_runtime_data_s {
         qt_blocking_queue_node_t *io;
     } blockedon;
     qthread_shepherd_t *shepherd_ptr;    /* the shepherd we run on */
+    unsigned            tasklocal_size;
 
 #ifdef QTHREAD_USE_VALGRIND
     unsigned int valgrind_stack_id;
@@ -72,33 +73,29 @@ typedef struct qt_team_s {
     uint_fast8_t flags;
 } qt_team_t;
 
+/* Try very VERY hard to keep this under 1 cacheline (64 bytes) */
 struct qthread_s {
-    struct qthread_s *volatile     next;
-
-    unsigned int                   thread_id;
-    enum threadstate               thread_state;
-    uint16_t                       flags;
-    qthread_shepherd_t            *target_shepherd; /* the shepherd we'd rather run on */
-
     qthread_f                      f;               /* the function to call (that defines this thread) */
     void                          *arg;             /* user defined data */
     void                          *ret;             /* user defined retval location */
     struct qthread_runtime_data_s *rdata;
-    unsigned                       tasklocal_size;
 
-    aligned_t                      id;  /* id used in barrier and arrive_first */
-
-    qt_team_t                     *team;  /* reference to task team */
-
+    qt_team_t *team;                     /* reference to task team */
     /* preconditions for data-dependent tasks */
-    unsigned                   npreconds;
-    void                      *preconds;
+    void *preconds;
+
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    qthread_parallel_region_t *currentParallelRegion;     /* parallel region barrier this thread should use */
+    // XXX: I suspect that several of these should be moved into the qthread_runtime_data_s struct
+    aligned_t                  id;                    /* id used in barrier and arrive_first */
+    qthread_parallel_region_t *currentParallelRegion; /* parallel region barrier this thread should use */
     aligned_t                  task_counter;
     struct qthread_s          *parent;                 /* pointer to parent task */
     enum threadstate           prev_thread_state;      /* save the previous thread state */
 #endif
+    unsigned int               thread_id;
+    qthread_shepherd_id_t      target_shepherd;       /* the shepherd we'd rather run on */
+    uint16_t                   flags;
+    uint8_t                    thread_state;
 
     Q_ALIGNED(8) uint8_t data[]; /* this is where we stick argcopy and tasklocal data */
 };

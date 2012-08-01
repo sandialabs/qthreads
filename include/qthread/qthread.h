@@ -155,8 +155,8 @@ Q_STARTCXX /* */
 
 # include <qthread/qt_sinc.h>
 
-typedef unsigned int qthread_shepherd_id_t;
-typedef unsigned int qthread_worker_id_t;
+typedef unsigned short qthread_shepherd_id_t;
+typedef unsigned short qthread_worker_id_t;
 typedef size_t qt_team_id_t;
 
 /* for convenient arguments to qthread_fork */
@@ -308,11 +308,11 @@ int qthread_debuglevel(int);
 # define QTHREAD_DEFAULT_TEAM_ID 1
 # define QTHREAD_NON_TEAM_ID     0
 unsigned              qthread_id(void);
-unsigned              qthread_barrier_id(void);
 qthread_shepherd_id_t qthread_shep(void);
 qthread_worker_id_t   qthread_worker(qthread_shepherd_id_t *s);
 qthread_worker_id_t   qthread_worker_unique(qthread_shepherd_id_t *s);
 # ifdef QTHREAD_USE_ROSE_EXTENSIONS
+unsigned              qthread_barrier_id(void);
 struct qthread_parallel_region_s *qt_parallel_region(void);
 #  ifdef QTHREAD_LOG_BARRIER
 qt_barrier_t *qt_thread_barrier(void);

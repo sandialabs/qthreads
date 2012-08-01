@@ -350,8 +350,10 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t *shep,
             MACHINE_FENCE;
         }
         /* schedule */
-        qthread_debug(FEB_DETAILS, "m(%p), maddr(%p), recursive(%u): dQ one from FFQ (%u releasing tid %u with %u)\n", m, maddr, recursive, qthread_id(), X->waiter->thread_id, *(aligned_t *)maddr);
-        if (QTHREAD_STATE_NASCENT == X->waiter->thread_state) {
+        qthread_t *waiter = X->waiter;
+        qthread_shepherd_id_t waiter_dest = waiter->target_shepherd;
+        qthread_debug(FEB_DETAILS, "m(%p), maddr(%p), recursive(%u): dQ one from FFQ (%u releasing tid %u with %u)\n", m, maddr, recursive, qthread_id(), waiter->thread_id, *(aligned_t *)maddr);
+        if (QTHREAD_STATE_NASCENT == waiter->thread_state) {
             /* Note: the nascent thread is being tossed into a real live ready
              * queue for one big fat reason: the alternative involves
              * potentially locking multiple parts of the FEB hash table, not to
@@ -361,13 +363,13 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t *shep,
              * have this problem. Also, this allows the "work" of checking
              * preconds to be load-balanced by workstealing schedulers, if
              * that's important or useful. */
-            if (X->waiter->target_shepherd == NULL) {
-                qt_threadqueue_enqueue(shep->ready, X->waiter);
+            if (waiter_dest == NO_SHEPHERD) {
+                qt_threadqueue_enqueue(shep->ready, waiter);
             } else {
-                qt_threadqueue_enqueue(X->waiter->target_shepherd->ready, X->waiter);
+                qt_threadqueue_enqueue(qlib->shepherds[waiter_dest].ready, waiter);
             }
         } else {
-            qt_feb_schedule(X->waiter, shep);
+            qt_feb_schedule(waiter, shep);
         }
         FREE_ADDRRES(X);
     }
@@ -1256,8 +1258,8 @@ int INTERNAL qthread_check_feb_preconds(qthread_t *t)
     assert(qthread_library_initialized);
 
     // Process input preconds
-    while (t->npreconds > 0) {
-        aligned_t          *this_sync = these_preconds[t->npreconds - 1];
+    while (these_preconds && (these_preconds[0] != NULL)) {
+        aligned_t          *this_sync = these_preconds[(uintptr_t)these_preconds[0]];
         const int           lockbin   = QTHREAD_CHOOSE_STRIPE(this_sync);
         const aligned_t    *alignedaddr;
         qthread_addrstat_t *m = NULL;
@@ -1292,10 +1294,10 @@ int INTERNAL qthread_check_feb_preconds(qthread_t *t)
 #endif  /* ifdef LOCK_FREE_FEBS */
         qthread_debug(FEB_DETAILS, "precond=%p (tid=%u): data structure locked or null (m=%p, lockbin=%u)\n", this_sync, t->thread_id, m, lockbin);
         if (m == NULL) { /* already full! */
-            t->npreconds--;
+            these_preconds[0] = (aligned_t*)(((uintptr_t)these_preconds[0]) - 1);
         } else if (m->full == 1) {
             QTHREAD_FASTLOCK_UNLOCK(&m->lock);
-            t->npreconds--;
+            these_preconds[0] = (aligned_t*)(((uintptr_t)these_preconds[0]) - 1);
         } else {
             // Need to wait on this one, add to appropriate FFQ
             qthread_addrres_t *X = NULL;
