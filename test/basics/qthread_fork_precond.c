@@ -103,7 +103,7 @@ int main(int   argc,
         aligned_t rets[NUM_CONSUMERS + 1];
 
         // Initialize values and empty
-        aligned_t v = 1;
+        aligned_t v = 69;
         qthread_empty(&v);
 
         for (int i = 0; i < NUM_CONSUMERS; i++) qthread_fork_precond(consumer, &v, &rets[i], 1, &v);
@@ -114,8 +114,8 @@ int main(int   argc,
 
             // Verify return values
             if ((rets[i] != 42) && (i != NUM_CONSUMERS)) {
-                iprintf("Bad return value! Wanted 42, got %u\n", (unsigned int)rets[i]);
-                return 1;
+                iprintf("Bad return value %i! Wanted 42, got %u\n", i, (unsigned int)rets[i]);
+		abort();
             }
         }
     }
@@ -144,7 +144,7 @@ int main(int   argc,
 
         // Verify return value
         if (ret != 3 * 42) {
-            iprintf("Bad return value! Wanted %u, got %u\n", 3 * 42, (unsigned int)ret);
+            iprintf("Bad return value! Hrm. Wanted %u, got %u\n", 3 * 42, (unsigned int)ret);
             return 1;
         }
     }
@@ -181,7 +181,7 @@ int main(int   argc,
         aligned_t rets[NUM_CONSUMERS + 1];
 
         // Initialize values and empty
-        aligned_t v = 1;
+        aligned_t v = 69;
         qthread_empty(&v);
 
         for (int i = 0; i < NUM_CONSUMERS; i++) qthread_fork_precond_to(consumer, &v, &rets[i], 1, 1, &v);
@@ -255,6 +255,8 @@ int main(int   argc,
             return 1;
         }
     }
+
+    iprintf("Success!\n");
 
     return 0;
 }
