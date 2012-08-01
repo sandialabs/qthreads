@@ -74,7 +74,7 @@ void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
 
 #endif
 
-unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
+qthread_worker_id_t INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
     size_t num_procs = 1;
     size_t guess     = 1;
