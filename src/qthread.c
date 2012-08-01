@@ -144,12 +144,17 @@ extern int adaptiveSetHigh;
 #endif
 
 #if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED)
-# define ALLOC_QTHREAD() (qthread_t *)malloc(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size)
-# define FREE_QTHREAD(t) free(t)
+# define ALLOC_QTHREAD()     (qthread_t *)malloc(sizeof(qthread_t) + sizeof(void *) + qlib->qthread_tasklocal_size)
+# define ALLOC_BIG_QTHREAD() (qthread_t *)malloc(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size)
+# define FREE_QTHREAD(t)     free(t)
+# define FREE_BIG_QTHREAD(t) free(t)
 #else
-qt_mpool generic_qthread_pool = NULL;
-# define ALLOC_QTHREAD() (qthread_t *)qt_mpool_alloc(generic_qthread_pool)
-# define FREE_QTHREAD(t) qt_mpool_free(generic_qthread_pool, t)
+qt_mpool generic_qthread_pool     = NULL;
+qt_mpool generic_big_qthread_pool = NULL;
+# define ALLOC_QTHREAD()     (qthread_t *)qt_mpool_alloc(generic_qthread_pool)
+# define ALLOC_BIG_QTHREAD() (qthread_t *)qt_mpool_alloc(generic_big_qthread_pool)
+# define FREE_QTHREAD(t)     qt_mpool_free(generic_qthread_pool, t)
+# define FREE_BIG_QTHREAD(t) qt_mpool_free(generic_big_qthread_pool, t)
 #endif /* if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED) */
 
 #if defined(UNPOOLED_STACKS) || defined(UNPOOLED)
@@ -238,18 +243,18 @@ static QINLINE void FREE_STACK(void *t)
 #endif  /* if defined(UNPOOLED_STACKS) || defined(UNPOOLED) */
 
 #if defined(UNPOOLED)
-# define ALLOC_RDATA()    (struct qthread_runtime_data_s*)malloc(sizeof(struct qthread_runtime_data_s));
-# define FREE_RDATA(r)    free(r)
-# define ALLOC_TEAM()     (qt_team_t *)malloc(sizeof(qt_team_t))
-# define FREE_TEAM(t)     free(t)
+# define ALLOC_RDATA() (struct qthread_runtime_data_s *)malloc(sizeof(struct qthread_runtime_data_s));
+# define FREE_RDATA(r) free(r)
+# define ALLOC_TEAM()  (qt_team_t *)malloc(sizeof(qt_team_t))
+# define FREE_TEAM(t)  free(t)
 #else
 static qt_mpool generic_rdata_pool = NULL;
-# define ALLOC_RDATA()    (struct qthread_runtime_data_s*)qt_mpool_alloc(generic_rdata_pool)
-# define FREE_RDATA(r)    qt_mpool_free(generic_rdata_pool, (r))
+# define ALLOC_RDATA() (struct qthread_runtime_data_s *)qt_mpool_alloc(generic_rdata_pool)
+# define FREE_RDATA(r) qt_mpool_free(generic_rdata_pool, (r))
 static qt_mpool generic_team_pool = NULL;
-# define ALLOC_TEAM()     (qt_team_t *)qt_mpool_alloc(generic_team_pool)
-# define FREE_TEAM(t)     qt_mpool_free(generic_team_pool, (t))
-#endif
+# define ALLOC_TEAM() (qt_team_t *)qt_mpool_alloc(generic_team_pool)
+# define FREE_TEAM(t) qt_mpool_free(generic_team_pool, (t))
+#endif /* if defined(UNPOOLED) */
 
 /* guaranteed to be between 0 and 128, using the first parts of addr that are
  * significant */
@@ -644,14 +649,14 @@ qt_run:
                         break;
 
                     case QTHREAD_STATE_FEB_BLOCKED: /* unlock the related FEB address locks, and re-arrange memory to be correct */
-                        {
-                            qthread_addrstat_t *m = t->rdata->blockedon.addr;
-                            qthread_debug(THREAD_DETAILS | FEB_DETAILS | SHEPHERD_DETAILS,
-                                    "id(%u): thread tid=%i(%p) blocked on FEB (m=%p, EFQ=%p)\n",
-                                    my_id, t->thread_id, t, m, m->EFQ);
-                            QTHREAD_FASTLOCK_UNLOCK(&(m->lock));
-                        }
+                    {
+                        qthread_addrstat_t *m = t->rdata->blockedon.addr;
+                        qthread_debug(THREAD_DETAILS | FEB_DETAILS | SHEPHERD_DETAILS,
+                                      "id(%u): thread tid=%i(%p) blocked on FEB (m=%p, EFQ=%p)\n",
+                                      my_id, t->thread_id, t, m, m->EFQ);
+                        QTHREAD_FASTLOCK_UNLOCK(&(m->lock));
                         break;
+                    }
 
                     case QTHREAD_STATE_PARENT_YIELD:
                         t->thread_state = QTHREAD_STATE_PARENT_BLOCKED;
@@ -864,7 +869,7 @@ int API_FUNC qthread_initialize(void)
         } else {
             nworkerspershep = hw_par / nshepherds;
             if (hw_par % nshepherds > 0) {
-                nworkerspershep ++;
+                nworkerspershep++;
             }
         }
     } else {
@@ -917,7 +922,7 @@ int API_FUNC qthread_initialize(void)
     qassert_ret(qlib->syncvars, QTHREAD_MALLOC_ERROR);
     for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
 #ifdef QTHREAD_COUNT_THREADS
-        qlib->febs_stripes[i]  = 0;
+        qlib->febs_stripes[i] = 0;
 # ifdef QTHREAD_MUTEX_INCREMENT
         QTHREAD_FASTLOCK_INIT(qlib->febs_stripes_locks[i]);
 # endif
@@ -1064,23 +1069,9 @@ int API_FUNC qthread_initialize(void)
     qthread_debug(CORE_DETAILS, "qthread task-local size: %u\n", qlib->qthread_tasklocal_size);
 
 #ifndef UNPOOLED
-/* these are used when qthread_fork() is called from a non-qthread. */
-    printf("qthread_t = %zu bytes + %zu\n", sizeof(qthread_t), qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size);
-    //printf("\tnext = %lu, %lu\n", offsetof(struct qthread_s, next), offsetof(struct qthread_s, next) + sizeof(struct qthread_s *));
-    printf("\tf = %lu, %lu\n", offsetof(struct qthread_s, f), offsetof(struct qthread_s, f) + sizeof(qthread_f));
-    printf("\targ = %lu, %lu\n", offsetof(struct qthread_s, arg), offsetof(struct qthread_s, arg) + sizeof(void *));
-    printf("\tret = %lu, %lu\n", offsetof(struct qthread_s, ret), offsetof(struct qthread_s, ret) + sizeof(void *));
-    printf("\trdata = %lu, %lu\n", offsetof(struct qthread_s, rdata), offsetof(struct qthread_s, rdata) + sizeof(struct qthread_runtime_data_s *));
-    //printf("\tid = %lu, %lu\n", offsetof(struct qthread_s, id), offsetof(struct qthread_s, id) + sizeof(aligned_t));
-    printf("\tteam = %lu, %lu\n", offsetof(struct qthread_s, team), offsetof(struct qthread_s, team) + sizeof(qt_team_t*));
-    printf("\tpreconds = %lu, %lu\n", offsetof(struct qthread_s, preconds), offsetof(struct qthread_s, preconds) + sizeof(void*));
-    printf("\tthread_id = %lu, %lu\n", offsetof(struct qthread_s, thread_id), offsetof(struct qthread_s, thread_id) + sizeof(unsigned int));
-    printf("\ttarget_shepherd = %lu, %lu\n", offsetof(struct qthread_s, target_shepherd), offsetof(struct qthread_s, target_shepherd) + sizeof(qthread_shepherd_id_t));
-    printf("\tflags = %lu, %lu\n", offsetof(struct qthread_s, flags), offsetof(struct qthread_s, flags) + sizeof(uint16_t));
-    printf("\tthread_state = %lu, %lu\n", offsetof(struct qthread_s, thread_state), offsetof(struct qthread_s, thread_state) + sizeof(uint16_t));
-    printf("\tdata = %lu\n", offsetof(struct qthread_s, data));
 
-    generic_qthread_pool = qt_mpool_create(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size);
+    generic_qthread_pool = qt_mpool_create(sizeof(qthread_t) + sizeof(void*) + qlib->qthread_tasklocal_size);
+    generic_big_qthread_pool = qt_mpool_create(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size);
     generic_stack_pool   =
 # ifdef QTHREAD_GUARD_PAGES
         qt_mpool_create_aligned(qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s) +
@@ -1089,7 +1080,7 @@ int API_FUNC qthread_initialize(void)
         qt_mpool_create_aligned(sizeof(struct qthread_runtime_data_s) + qlib->qthread_stack_size, 16); // stacks on most platforms must be 16-byte aligned (or less)
 # endif
     generic_rdata_pool = qt_mpool_create(sizeof(struct qthread_runtime_data_s));
-    generic_team_pool = qt_mpool_create(sizeof(qt_team_t));
+    generic_team_pool  = qt_mpool_create(sizeof(qt_team_t));
 #endif /* ifndef UNPOOLED */
     initialize_hazardptrs();
     qt_feb_subsystem_init();
@@ -1417,7 +1408,9 @@ void INTERNAL qthread_internal_cleanup_early(void (*function)(void))
 } /*}}}*/
 
 #ifdef QTHREAD_DEBUG
-static void qt_hash_print_addrstat(const qt_key_t addr, qthread_addrstat_t *m, void *arg)
+static void qt_hash_print_addrstat(const qt_key_t      addr,
+                                   qthread_addrstat_t *m,
+                                   void               *arg)
 {                                      /*{{{ */
     printf("addr: %#lx\n", (unsigned long)addr);
     QTHREAD_FASTLOCK_LOCK(&m->lock);
@@ -1460,8 +1453,9 @@ static void qt_hash_print_addrstat(const qt_key_t addr, qthread_addrstat_t *m, v
     printf("\tfull = %u\n"
            "\tvalid = %u\n",
            m->full, m->valid);
-    if (arg)
-        *(int*)arg += 1;
+    if (arg) {
+        *(int *)arg += 1;
+    }
     QTHREAD_FASTLOCK_UNLOCK(&m->lock);
 }                                      /*}}} */
 
@@ -1470,11 +1464,12 @@ int print_FEBs(int *ct)
 {
     for (unsigned int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
         qt_hash_callback(qlib->FEBs[i],
-                (qt_hash_callback_fn) qt_hash_print_addrstat, ct);
+                         (qt_hash_callback_fn)qt_hash_print_addrstat, ct);
     }
     return 0;
 }
-#endif
+
+#endif /* ifdef QTHREAD_DEBUG */
 
 void API_FUNC qthread_finalize(void)
 {                      /*{{{ */
@@ -1667,12 +1662,12 @@ void API_FUNC qthread_finalize(void)
         qt_threadqueue_free(shep->ready);
 
 #ifdef QTHREAD_DEBUG
-    {
-        int ct = 0;
-        print_FEBs(&ct);
-    if (ct != 0) { printf("ct = %i\n", ct); }
-    while (ct != 0) ;
-    }
+        {
+            int ct = 0;
+            print_FEBs(&ct);
+            if (ct != 0) { printf("ct = %i\n", ct); }
+            while (ct != 0) ;
+        }
 #endif
 
 #ifdef QTHREAD_SHEPHERD_PROFILING
@@ -1849,6 +1844,8 @@ void API_FUNC qthread_finalize(void)
     qthread_debug(CORE_DETAILS, "destroy global memory pools\n");
     qt_mpool_destroy(generic_qthread_pool);
     generic_qthread_pool = NULL;
+    qt_mpool_destroy(generic_big_qthread_pool);
+    generic_big_qthread_pool = NULL;
     qt_mpool_destroy(generic_stack_pool);
     generic_stack_pool = NULL;
     qt_mpool_destroy(generic_rdata_pool);
@@ -2068,7 +2065,7 @@ aligned_t API_FUNC *qthread_retloc(void)
 
 static aligned_t qt_team_watcher(void *args_)
 {   /*{{{*/
-    aligned_t code = 0;
+    aligned_t    code   = 0;
     qt_team_id_t myteam = qt_team_id();
 
     qt_team_t *team = (qt_team_t *)args_;
@@ -2223,9 +2220,12 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
 {                      /*{{{ */
     qthread_t *t;
 
-    t       = ALLOC_QTHREAD();
+    if ((arg_size > 0) && (arg_size <= qlib->qthread_argcopy_size)) {
+        t = ALLOC_BIG_QTHREAD();
+    } else {
+        t = ALLOC_QTHREAD();
+    }
     qthread_debug(THREAD_DETAILS, "t = %p\n", t);
-    qassert_ret(t, NULL);
 
 #ifdef QTHREAD_NONLAZY_THREADIDS
     /* give the thread an ID number */
@@ -2263,7 +2263,8 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
     t->flags &= ~QTHREAD_HAS_ARGCOPY;
     if (arg_size > 0) {
         if (arg_size <= qlib->qthread_argcopy_size) {
-            t->arg = (void *)(&t->data);
+            t->arg    = (void *)(&t->data);
+            t->flags |= QTHREAD_BIG_STRUCT;
         } else {
             t->arg    = malloc(arg_size);
             t->flags |= QTHREAD_HAS_ARGCOPY;
@@ -2310,7 +2311,11 @@ static QINLINE void qthread_thread_free(qthread_t *t)
         t->arg = NULL;
     }
     qthread_debug(THREAD_DETAILS, "t(%p): releasing thread handle %p\n", t, t);
-    FREE_QTHREAD(t);
+    if (t->flags & QTHREAD_BIG_STRUCT) {
+        FREE_BIG_QTHREAD(t);
+    } else {
+        FREE_QTHREAD(t);
+    }
 }                      /*}}} */
 
 #ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
@@ -2851,7 +2856,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
         new_team->flags                = 0;
 
         // Empty new team FEBs
-        qthread_debug(FEB_DETAILS, "tid %i emptying NEW team %u's eureka (%p)\n", me?((int)me->thread_id):-1, new_team->team_id, &new_team->eureka);
+        qthread_debug(FEB_DETAILS, "tid %i emptying NEW team %u's eureka (%p)\n", me ? ((int)me->thread_id) : -1, new_team->team_id, &new_team->eureka);
         qthread_empty(&new_team->eureka);
 
 #ifdef TEAM_PROFILE
@@ -2874,7 +2879,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
         new_team->watcher_started = 0;
         new_team->sinc            = qt_sinc_create(0, NULL, NULL, 1);
         assert(new_team->sinc);
-        new_team->subteams_sinc   = qt_sinc_create(0, NULL, NULL, 1);
+        new_team->subteams_sinc = qt_sinc_create(0, NULL, NULL, 1);
         assert(new_team->subteams_sinc);
         new_team->parent_id            = QTHREAD_DEFAULT_TEAM_ID;
         new_team->parent_eureka        = NULL;
@@ -2882,7 +2887,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
         new_team->flags                = 0;
 
         // Empty new team FEBs
-        qthread_debug(FEB_DETAILS, "tid %i emptying SUB team %u's eureka (%p)\n", me?((int)me->thread_id):-1, new_team->team_id, &new_team->eureka);
+        qthread_debug(FEB_DETAILS, "tid %i emptying SUB team %u's eureka (%p)\n", me ? ((int)me->thread_id) : -1, new_team->team_id, &new_team->eureka);
         qthread_empty(&new_team->eureka);
 
         if (curr_team) {
@@ -2916,8 +2921,8 @@ int API_FUNC qthread_spawn(qthread_f             f,
     if (QTHREAD_UNLIKELY(npreconds != 0)) {
         t->thread_state = QTHREAD_STATE_NASCENT; // special non-executable state
         t->preconds     = preconds;
-        qthread_debug(THREAD_BEHAVIOR, "npreconds=%u, preconds[0]=%u\n", (unsigned int)npreconds, (unsigned int)(uintptr_t)((aligned_t**)preconds)[0]);
-        assert(((aligned_t**)preconds)[0] == (aligned_t*)(uintptr_t)npreconds);
+        qthread_debug(THREAD_BEHAVIOR, "npreconds=%u, preconds[0]=%u\n", (unsigned int)npreconds, (unsigned int)(uintptr_t)((aligned_t **)preconds)[0]);
+        assert(((aligned_t **)preconds)[0] == (aligned_t *)(uintptr_t)npreconds);
     }
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     t->id = target_shep;  /* used in barrier and arrive_first, NOT the
@@ -2963,7 +2968,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
             }
         } else {
             // QTHREAD_SPAWN_RET_ALIGNED
-            qthread_debug(FEB_DETAILS, "tid %i emptying new thread %u's retval (%p)\n", me?((int)me->thread_id):-1, t->thread_id, ret);
+            qthread_debug(FEB_DETAILS, "tid %i emptying new thread %u's retval (%p)\n", me ? ((int)me->thread_id) : -1, t->thread_id, ret);
             test = qthread_empty(ret);
         }
         if (QTHREAD_UNLIKELY(test != QTHREAD_SUCCESS)) {
@@ -3038,19 +3043,19 @@ int API_FUNC qthread_fork_copyargs_precond(qthread_f   f,
 
     va_start(args, npreconds);
     if (npreconds > 0) {
-        preconds = malloc((npreconds+1) * sizeof(aligned_t *));
+        preconds = malloc((npreconds + 1) * sizeof(aligned_t *));
         assert(preconds != NULL);
-        preconds[0] = (aligned_t*)(uintptr_t)(npreconds);
-        for (int i = 1; i < npreconds+1; ++i) {
+        preconds[0] = (aligned_t *)(uintptr_t)(npreconds);
+        for (int i = 1; i < npreconds + 1; ++i) {
             preconds[i] = va_arg(args, aligned_t *);
         }
     } else if (npreconds < 0) {
         npreconds *= -1;
-        preconds   = malloc((npreconds+1) * sizeof(aligned_t *));
+        preconds   = malloc((npreconds + 1) * sizeof(aligned_t *));
         assert(preconds != NULL);
-        preconds[0] = (aligned_t*)(uintptr_t)npreconds;
-        aligned_t **tmp = va_arg(args, aligned_t **);
-        memcpy(preconds+1, tmp, sizeof(aligned_t*) * npreconds);
+        preconds[0] = (aligned_t *)(uintptr_t)npreconds;
+        aligned_t **tmp = va_arg(args, aligned_t * *);
+        memcpy(preconds + 1, tmp, sizeof(aligned_t *) * npreconds);
     }
     va_end(args);
 
@@ -3058,18 +3063,16 @@ int API_FUNC qthread_fork_copyargs_precond(qthread_f   f,
                          QTHREAD_SPAWN_RET_SYNCVAR_T);
 } /*}}}*/
 
-
-
 /*
-* Duplicate code from qthreads function qthread_fork_precond
-* Needed to add the simple function marker.
-* TODO: not happy with code duplication here
-*/
+ * Duplicate code from qthreads function qthread_fork_precond
+ * Needed to add the simple function marker.
+ * TODO: not happy with code duplication here
+ */
 int API_FUNC qthread_fork_precond_simple(qthread_f   f,
-                                  const void *arg,
-                                  aligned_t  *ret,
-                                  int         npreconds,
-                                  ...)
+                                         const void *arg,
+                                         aligned_t  *ret,
+                                         int         npreconds,
+                                         ...)
 {   /*{{{*/
     // Collect sync info
     va_list     args;
@@ -3077,23 +3080,23 @@ int API_FUNC qthread_fork_precond_simple(qthread_f   f,
 
     va_start(args, npreconds);
     if (npreconds > 0) {
-        preconds = (aligned_t**) malloc((npreconds+1) * sizeof(aligned_t *));
+        preconds = (aligned_t **)malloc((npreconds + 1) * sizeof(aligned_t *));
         assert(preconds != NULL);
-        preconds[0] = (aligned_t*)(uintptr_t)npreconds;
-        for (int i = 1; i < npreconds+1; ++i) {
+        preconds[0] = (aligned_t *)(uintptr_t)npreconds;
+        for (int i = 1; i < npreconds + 1; ++i) {
             preconds[i] = va_arg(args, aligned_t *);
         }
     } else if (npreconds < 0) {
         npreconds *= -1;
-        preconds   = (aligned_t**) malloc((npreconds+1) * sizeof(aligned_t *));
+        preconds   = (aligned_t **)malloc((npreconds + 1) * sizeof(aligned_t *));
         assert(preconds != NULL);
-        preconds[0] = (aligned_t*)(uintptr_t)(npreconds);
-        aligned_t **tmp = va_arg(args, aligned_t **);
-        memcpy(preconds+1, tmp, sizeof(aligned_t*) * npreconds);
+        preconds[0] = (aligned_t *)(uintptr_t)(npreconds);
+        aligned_t **tmp = va_arg(args, aligned_t * *);
+        memcpy(preconds + 1, tmp, sizeof(aligned_t *) * npreconds);
     }
     va_end(args);
     return qthread_spawn(f, arg, 0, ret, npreconds, preconds, NO_SHEPHERD,
-                         QTHREAD_SPAWN_SIMPLE );
+                         QTHREAD_SPAWN_SIMPLE);
 } /*}}}*/
 
 int API_FUNC qthread_fork_precond(qthread_f   f,
@@ -3108,19 +3111,19 @@ int API_FUNC qthread_fork_precond(qthread_f   f,
 
     va_start(args, npreconds);
     if (npreconds > 0) {
-        preconds = malloc((npreconds+1) * sizeof(aligned_t *));
+        preconds = malloc((npreconds + 1) * sizeof(aligned_t *));
         assert(preconds != NULL);
-        preconds[0] = (aligned_t*)(uintptr_t)npreconds;
-        for (int i = 1; i < npreconds+1; ++i) {
+        preconds[0] = (aligned_t *)(uintptr_t)npreconds;
+        for (int i = 1; i < npreconds + 1; ++i) {
             preconds[i] = va_arg(args, aligned_t *);
         }
     } else if (npreconds < 0) {
         npreconds *= -1;
         preconds   = malloc(npreconds * sizeof(aligned_t *));
         assert(preconds != NULL);
-        preconds[0] = (aligned_t*)(uintptr_t)npreconds;
-        aligned_t **tmp = va_arg(args, aligned_t **);
-        memcpy(preconds+1, tmp, sizeof(aligned_t*) * npreconds);
+        preconds[0] = (aligned_t *)(uintptr_t)npreconds;
+        aligned_t **tmp = va_arg(args, aligned_t * *);
+        memcpy(preconds + 1, tmp, sizeof(aligned_t *) * npreconds);
     }
     va_end(args);
 
@@ -3346,19 +3349,19 @@ int API_FUNC qthread_fork_precond_to(qthread_f             f,
 
     va_start(args, npreconds);
     if (npreconds > 0) {
-        preconds = malloc((npreconds+1) * sizeof(aligned_t *));
+        preconds = malloc((npreconds + 1) * sizeof(aligned_t *));
         assert(preconds != NULL);
-        preconds[0] = (aligned_t*)(uintptr_t)npreconds;
-        for (int i = 1; i < npreconds+1; ++i) {
+        preconds[0] = (aligned_t *)(uintptr_t)npreconds;
+        for (int i = 1; i < npreconds + 1; ++i) {
             preconds[i] = va_arg(args, aligned_t *);
         }
     } else if (npreconds < 0) {
         npreconds *= -1;
-        preconds   = malloc((npreconds+1) * sizeof(aligned_t *));
+        preconds   = malloc((npreconds + 1) * sizeof(aligned_t *));
         assert(preconds != NULL);
-        preconds[0] = (aligned_t*)(uintptr_t)npreconds;
-        aligned_t **tmp = va_arg(args, aligned_t **);
-        memcpy(preconds+1, tmp, sizeof(aligned_t*) * npreconds);
+        preconds[0] = (aligned_t *)(uintptr_t)npreconds;
+        aligned_t **tmp = va_arg(args, aligned_t * *);
+        memcpy(preconds + 1, tmp, sizeof(aligned_t *) * npreconds);
     }
     va_end(args);
 
@@ -3529,9 +3532,9 @@ int API_FUNC qthread_migrate_to(const qthread_shepherd_id_t shepherd)
         qthread_debug(THREAD_BEHAVIOR,
                       "tid %u from shep %u to shep %u\n",
                       me->thread_id, me->rdata->shepherd_ptr->shepherd_id, shepherd);
-        me->target_shepherd  = shepherd;
-        me->thread_state     = QTHREAD_STATE_MIGRATING;
-        me->flags           |= QTHREAD_UNSTEALABLE;
+        me->target_shepherd = shepherd;
+        me->thread_state    = QTHREAD_STATE_MIGRATING;
+        me->flags          |= QTHREAD_UNSTEALABLE;
         qthread_back_to_master(me);
 
         qthread_debug(THREAD_DETAILS,
@@ -3722,7 +3725,8 @@ unsigned API_FUNC qthread_barrier_id(void)
     }
     return t ? t->id : QTHREAD_NON_TASK_ID;
 }                      /*}}} */
-#endif
+
+#endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
 
 /* these two functions are helper functions for futurelib
  * (nobody else gets to have 'em!) */
