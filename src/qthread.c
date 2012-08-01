@@ -1070,7 +1070,7 @@ int API_FUNC qthread_initialize(void)
     qthread_debug(CORE_DETAILS, "qthread task-local size: %u\n", qlib->qthread_tasklocal_size);
 
 #ifndef UNPOOLED
-    generic_qthread_pool     = qt_mpool_create(sizeof(qthread_t) + sizeof(void *) + qlib->qthread_tasklocal_size);
+    generic_qthread_pool     = qt_mpool_create_aligned(sizeof(qthread_t) + sizeof(void *) + qlib->qthread_tasklocal_size, qthread_cacheline());
     generic_big_qthread_pool = qt_mpool_create(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size);
     generic_stack_pool       =
 # ifdef QTHREAD_GUARD_PAGES
@@ -3102,6 +3102,7 @@ int API_FUNC qthread_fork_precond_simple(qthread_f   f,
     va_list     args;
     aligned_t **preconds = NULL;
 
+    qthread_debug(THREAD_CALLS, "f=%p, arg=%p, ret=%p, npreconds=%u\n", f, arg, ret, npreconds);
     va_start(args, npreconds);
     if (npreconds > 0) {
         preconds = (aligned_t **)malloc((npreconds + 1) * sizeof(aligned_t *));
