@@ -104,7 +104,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
 #else
         sheps[i].node = i;
 #endif
-        sheps[i].shep_dists      = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
+        sheps[i].shep_dists      = calloc(nshepherds - 1, sizeof(unsigned int));
         sheps[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
         for (size_t j = 0, k = 0; j < nshepherds; ++j) {
             if (j != i) {
