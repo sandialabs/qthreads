@@ -20,6 +20,7 @@
 #include "qt_aligned_alloc.h"
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
+# include <stdio.h>
 # include "qt_atomics.h"
 #endif
 
