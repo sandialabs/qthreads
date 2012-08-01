@@ -302,9 +302,10 @@ static QINLINE void alloc_rdata(qthread_shepherd_t *me,
         rdata = t->rdata = (struct qthread_runtime_data_s *)(((uint8_t *)stack) + qlib->qthread_stack_size);
 #endif
     }
-    rdata->stack        = stack;
-    rdata->shepherd_ptr = me;
-    rdata->blockedon.io = NULL;
+    rdata->tasklocal_size = 0;
+    rdata->stack          = stack;
+    rdata->shepherd_ptr   = me;
+    rdata->blockedon.io   = NULL;
 #ifdef QTHREAD_USE_VALGRIND
     if (stack) {
         rdata->valgrind_stack_id = VALGRIND_STACK_REGISTER(stack, qlib->qthread_stack_size);
@@ -1069,10 +1070,9 @@ int API_FUNC qthread_initialize(void)
     qthread_debug(CORE_DETAILS, "qthread task-local size: %u\n", qlib->qthread_tasklocal_size);
 
 #ifndef UNPOOLED
-
-    generic_qthread_pool = qt_mpool_create(sizeof(qthread_t) + sizeof(void*) + qlib->qthread_tasklocal_size);
+    generic_qthread_pool     = qt_mpool_create(sizeof(qthread_t) + sizeof(void *) + qlib->qthread_tasklocal_size);
     generic_big_qthread_pool = qt_mpool_create(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size);
-    generic_stack_pool   =
+    generic_stack_pool       =
 # ifdef QTHREAD_GUARD_PAGES
         qt_mpool_create_aligned(qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s) +
                                 (2 * getpagesize()), getpagesize());
@@ -3119,7 +3119,7 @@ int API_FUNC qthread_fork_precond(qthread_f   f,
         }
     } else if (npreconds < 0) {
         npreconds *= -1;
-        preconds   = malloc(npreconds * sizeof(aligned_t *));
+        preconds   = malloc((npreconds + 1) * sizeof(aligned_t *));
         assert(preconds != NULL);
         preconds[0] = (aligned_t *)(uintptr_t)npreconds;
         aligned_t **tmp = va_arg(args, aligned_t * *);
