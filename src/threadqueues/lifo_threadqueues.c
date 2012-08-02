@@ -18,6 +18,7 @@
 #include "qt_qthread_struct.h"
 #include "qt_atomics.h"
 #include "qthread_innards.h" /* for qthread_internal_cleanup_early() */
+#include "qt_debug.h"
 
 /* Note: this queue is SAFE to use with multiple de-queuers, with the caveat
  * that if you have multiple dequeuer's, you'll need to solve the ABA problem.
@@ -26,8 +27,13 @@
  */
 
 /* Data Structures */
+typedef struct _qt_threadqueue_node {
+    struct _qt_threadqueue_node *next;
+    qthread_t                   *thread;
+} qt_threadqueue_node_t;
+
 struct _qt_threadqueue {
-    qthread_t *stack;
+    qt_threadqueue_node_t *stack;
     /* the following is for estimating a queue's "busy" level, and is not
      * guaranteed accurate (that would be a race condition) */
     saligned_t      advisory_queuelen;
@@ -42,20 +48,26 @@ struct _qt_threadqueue {
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
 # define ALLOC_THREADQUEUE() (qt_threadqueue_t *)calloc(1, sizeof(qt_threadqueue_t))
 # define FREE_THREADQUEUE(t) free(t)
+# define ALLOC_TQNODE()      (qt_threadqueue_node_t *)calloc(1, sizeof(qt_threadqueue_node_t))
+# define FREE_TQNODE(t)      free(t)
 void INTERNAL qt_threadqueue_subsystem_init(void) {}
 #else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 qt_threadqueue_pools_t generic_threadqueue_pools = { NULL, NULL };
 # define ALLOC_THREADQUEUE() (qt_threadqueue_t *)qt_mpool_alloc(generic_threadqueue_pools.queues)
-# define FREE_THREADQUEUE(t) qt_mpool_alloc(generic_threadqueue_pools.queues)
+# define FREE_THREADQUEUE(t) qt_mpool_free(generic_threadqueue_pools.queues, t)
+# define ALLOC_TQNODE()      (qt_threadqueue_node_t *)qt_mpool_alloc(generic_threadqueue_pools.nodes)
+# define FREE_TQNODE(t)      qt_mpool_free(generic_threadqueue_pools.nodes, t)
 
 static void qt_threadqueue_subsystem_shutdown(void)
 {
     qt_mpool_destroy(generic_threadqueue_pools.queues);
+    qt_mpool_destroy(generic_threadqueue_pools.nodes);
 }
 
 void INTERNAL qt_threadqueue_subsystem_init(void)
 {
     generic_threadqueue_pools.queues = qt_mpool_create(sizeof(qt_threadqueue_t));
+    generic_threadqueue_pools.nodes  = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), sizeof(void *));
     qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
 }
 
@@ -123,16 +135,29 @@ int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *re
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
                                      qthread_t *restrict        t)
 {   /*{{{*/
+    qt_threadqueue_node_t *old, *new;
+    qt_threadqueue_node_t *node;
+
     assert(q);
     assert(t);
-    assert(t->next == NULL);
-    qthread_t *old, *new;
 
+    qthread_debug(THREADQUEUE_CALLS, "q(%p), t(%p->%u)\n", q, t, t->thread_id);
+
+    node = ALLOC_TQNODE();
+    assert(node != NULL);
+    node->thread = t;
+    node->next   = NULL;
+
+    old = q->stack;                    /* should be an atomic read */
     do {
-        old     = q->stack;                /* should be an atomic read */
-        t->next = old;
-        new     = qthread_cas_ptr(&(q->stack), old, t);
-    } while (new != old);
+        node->next = old;
+        new        = qthread_cas_ptr(&(q->stack), old, node);
+        if (new != old) {
+            old = new;
+        } else {
+            break;
+        }
+    } while (1);
     (void)qthread_incr(&(q->advisory_queuelen), 1);
 
     /* awake waiter */
@@ -153,7 +178,7 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
 {   /*{{{*/
     assert(q);
     assert(t);
-    assert(t->next == NULL);
+
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_t *top = qt_threadqueue_dequeue(q);
     qt_threadqueue_enqueue(q, t);
@@ -162,13 +187,20 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
     }
 #else
     /* THIS is not safe for multiple dequeuers */
-    qthread_t *cursor = q->stack;
-    while (cursor && cursor->next) {
-        cursor = cursor->next;
-    }
+    qt_threadqueue_node_t *cursor = q->stack;
     if (cursor) {
+        qt_threadqueue_node_t *node;
+        while (cursor->next) {
+            cursor = cursor->next;
+        }
         assert(cursor->next == NULL);
-        cursor->next = t;
+        /* alloc the node */
+        node = ALLOC_TQNODE();
+        assert(node != NULL);
+        node->thread = t;
+        node->next   = NULL;
+        /* append the node */
+        cursor->next = node;
     } else {
         qt_threadqueue_enqueue(q, t);
     }
@@ -183,11 +215,14 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 
 qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
 {   /*{{{*/
-    qthread_t *retval = q->stack;
+    qt_threadqueue_node_t *retval = q->stack;
 
     if (retval != NULL) {
-        qthread_t *old, *new;
+        qt_threadqueue_node_t *old, *new;
 
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+# error This dequeue function is not safe! retval may be freed before we dereference it to find the next ptr. Need to use hazardptrs.
+#endif
         do {
             old    = retval;
             new    = retval->next;
@@ -195,10 +230,13 @@ qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
         } while (retval != old && retval != NULL);
     }
     if (retval != NULL) {
-        retval->next = NULL;
+        qthread_t *t = retval->thread;
+        FREE_TQNODE(retval);
         (void)qthread_incr(&(q->advisory_queuelen), -1);
+        return t;
+    } else {
+        return NULL;
     }
-    return retval;
 } /*}}}*/
 
 qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
@@ -207,6 +245,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
 {   /*{{{*/
     qthread_t *retval = qt_threadqueue_dequeue(q);
 
+    qthread_debug(THREADQUEUE_CALLS, "q(%p)\n", q);
     if (retval == NULL) {
         while (q->stack == NULL) {
 #ifndef QTHREAD_CONDWAIT_BLOCKING_QUEUE
@@ -216,8 +255,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
             if (qthread_incr(&q->frustration, 1) > 1000) {
                 qassert(pthread_mutex_lock(&q->trigger_lock), 0);
                 if (q->frustration > 1000) {
-                    qassert(pthread_cond_wait
-                                (&q->trigger, &q->trigger_lock), 0);
+                    qassert(pthread_cond_wait(&q->trigger, &q->trigger_lock), 0);
                 }
                 qassert(pthread_mutex_unlock(&q->trigger_lock), 0);
             }
@@ -227,6 +265,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
     }
     assert(retval);
     assert(retval->next == NULL);
+    qthread_debug(THREADQUEUE_BEHAVIOR, "found thread %u (%p); q(%p)\n", retval->thread_id, retval, q);
     return retval;
 } /*}}}*/
 
