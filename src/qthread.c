@@ -49,6 +49,7 @@
 #include "qt_atomics.h"
 #include "qthread_expect.h"
 
+#include "qthread/cacheline.h"
 #include "qthread/futurelib.h"
 #include "qthread_innards.h"
 #include "qthread_prefetch.h"
