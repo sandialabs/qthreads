@@ -1,6 +1,8 @@
 #ifndef QT_BARRIER_H
 #define QT_BARRIER_H
 
+#include "qthread/qthread.h" /* for qthread_shepherd_id_t */
+
 /* these two calls assume that we're using a/the global barrier */
 void qt_global_barrier(void);
 void qt_global_barrier_init(int size, int debug);
