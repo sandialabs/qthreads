@@ -952,7 +952,7 @@ AS_IF([test "x$enable_feb_profiling" = "xyes"],
       [AC_DEFINE([QTHREAD_FEB_PROFILING], [1], [adds code to monitor how much time is spent waiting for FEB states])],
       [enable_feb_profiling="no"])
 
-AS_IF([test "x$enable_lazy_threadids" = "xno" -o "x$enable_debug" != "x"],
+AS_IF([test "x$enable_lazy_threadids" = "xno" -o "x$enable_debug" != "xno"],
       [AC_DEFINE([QTHREAD_NONLAZY_THREADIDS], [1], [makes sure every thread gets an id at creation time])
        enable_lazy_threadids=no],
       [enable_lazy_threadids=yes])
