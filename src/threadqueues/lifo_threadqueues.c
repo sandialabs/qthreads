@@ -27,10 +27,10 @@
  */
 
 /* Data Structures */
-typedef struct _qt_threadqueue_node {
+struct _qt_threadqueue_node {
     struct _qt_threadqueue_node *next;
     qthread_t                   *thread;
-} qt_threadqueue_node_t;
+};
 
 struct _qt_threadqueue {
     qt_threadqueue_node_t *stack;
