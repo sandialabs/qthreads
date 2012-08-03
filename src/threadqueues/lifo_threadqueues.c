@@ -120,15 +120,15 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 #ifdef QTHREAD_USE_SPAWNCACHE
 int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
                                             qthread_t *restrict                t)
-{
+{   /*{{{*/
     return 0;
-}
+} /*}}}*/
 
 int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *restrict q,
                                                     qthread_t *restrict                t)
-{
+{   /*{{{*/
     return 0;
-}
+} /*}}}*/
 
 #endif /* ifdef QTHREAD_USE_SPAWNCACHE */
 
