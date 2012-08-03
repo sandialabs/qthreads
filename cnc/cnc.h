@@ -12,6 +12,10 @@
 #define STARTED 1
 #define ENDED   2
 
+
+
+
+
 template< class T >
 struct cnc_tag_hash_compare {
     size_t hash(const T &x) const
@@ -43,6 +47,7 @@ namespace CnC {
 	class step_collection
 	{
 	public:
+		int id;
 		template< typename ContextTemplate >step_collection(context< ContextTemplate > &ctxt);
 		StepType get_step() const;
 
@@ -54,6 +59,7 @@ namespace CnC {
 	class context_base
 	{
 	public:
+		int id; // incrementing counter that counts the number of collections used in this context
 		inline void markJoin();
 		inline void markFork();
 	protected:
@@ -88,6 +94,7 @@ namespace CnC {
 	class tag_collection
 	{
 	public:
+		int id;
 		typedef Tag tag_type;
 		template< class ContextTemplate >tag_collection(context< ContextTemplate > &ctxt);
 		template< typename Step, typename ContextType >
@@ -110,6 +117,7 @@ namespace CnC {
 	class item_collection
 	{
 	public:
+		int id;
 		typedef Tag tag_ype;
 		class const_iterator;
 		template< class ContextTemplate >item_collection(context< ContextTemplate > &ctxt);

@@ -313,6 +313,7 @@ int main (int argc, char **argv)
     timer = qtimer_create();
     qtimer_start(timer);
 
+	
     // Repeat that hardcoded file several times:
 	for( int i = 0; i < numOptions; ++i ) {
         int o = i % granularity;
@@ -324,6 +325,27 @@ int main (int argc, char **argv)
             opt_vec = make_shared_option( granularity );
         }
 	}
+	
+
+	/*
+	for( int i = 0; i < numOptions; ++i ) {
+        int o = i % granularity;
+        (*opt_vec)[o] = data_init[i % initOptionNum];
+        if( o == granularity - 1 ) {
+            c.opt_data.put( tag, opt_vec );
+            ++tag;
+            opt_vec = make_shared_option( granularity );
+        }
+	}
+	tag = 0;
+	for( int i = 0; i < numOptions; ++i ) {
+        int o = i % granularity;
+        if( o == granularity - 1 ) {
+            c.tags.put( tag );
+            ++tag;
+        }
+	}
+	 */
 
     // Wait for all steps to finish
     c.wait();

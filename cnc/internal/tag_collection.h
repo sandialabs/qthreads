@@ -4,7 +4,9 @@
 namespace CnC {
 	template< typename Tag  >
 	template< class ContextTemplate >tag_collection< Tag  >::tag_collection(context< ContextTemplate > &context)
-		: _context(reinterpret_cast< context_base & >(context)), prescribedStepCollections()  {}
+		: _context(reinterpret_cast< context_base & >(context)), prescribedStepCollections()  {
+			id = context.id++;
+		}
 
 	template< typename Tag  >
 	void tag_collection<Tag >::put(const Tag &t)

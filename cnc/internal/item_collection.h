@@ -37,6 +37,9 @@ namespace CnC {
 			if(value != NULL)
 				delete value; //TODO test this
 		}
+
+		
+
 	};
 
 	// TODO: Currently, in the C++ version of the iterator there is no support for concurrent modifications
@@ -89,6 +92,7 @@ namespace CnC {
 			return m_coll != NULL;
 		}
 
+
 		
 	private:
 		qt_dictionary_iterator            *dict_it;
@@ -137,6 +141,7 @@ namespace CnC {
 	{
 		m_itemCollection = qt_dictionary_create(tag_equals, tag_hashcode, cleanupTag );
 		pcnc_status      = &(context.cnc_status);
+		id = context.id++;
 	}
 
 	template< typename Tag, typename Item  >item_collection< Tag, Item >::~item_collection(){}

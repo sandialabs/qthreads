@@ -276,8 +276,8 @@ void cholesky( chosen_type * A, const int n, const int b, const char * oname )
     #endif
 # endif
     int p;
-    int k;
-    FILE *fout;
+    //int k;
+    //FILE *fout;
 
     p = n/b;
     
@@ -288,6 +288,19 @@ void cholesky( chosen_type * A, const int n, const int b, const char * oname )
     
     // Create an instance of the context class which defines the graph
     cholesky_context c( b, p, n);
+    printf("Ids list is:\n");
+    printf("s1_compute=%d\n", c.sc_s1_compute.id);
+    printf("s2_compute=%d\n", c.sc_s2_compute.id);
+    printf("s3_compute=%d\n", c.sc_s3_compute.id);
+    printf("k_compute=%d\n", c.sc_k_compute.id);
+    printf("kj_compute=%d\n", c.sc_kj_compute.id);
+    printf("kji_compute=%d\n", c.sc_kji_compute.id);
+    
+    printf("Lkji_compute=%d\n", c.Lkji.id);
+    
+	printf("sontrol_S1=%d\n", c.control_S1.id);
+	printf("sontrol_S2=%d\n", c.control_S2.id);
+	printf("sontrol_S3=%d\n", c.control_S3.id);
     
     c.singleton.put(1);
 
