@@ -17,6 +17,7 @@
 #include "qthread_prefetch.h"
 #include "qt_threadqueues.h"
 #include "qt_qthread_struct.h"
+#include "qt_debug.h"
 
 /* This thread queueing uses the NEMESIS lock-free queue protocol from
  * http://www.mcs.anl.gov/~buntinas/papers/ccgrid06-nemesis.pdf
@@ -24,10 +25,10 @@
  * with multiple enqueuers and a single de-queuer. */
 
 /* Data Structures */
-typedef struct {
-    void *next;
-    char  data[];
-} NEMESIS_entry;
+struct _qt_threadqueue_node {
+    struct _qt_threadqueue_node *next;
+    qthread_t                   *thread;
+};
 
 typedef struct {
     /* The First Cacheline */
@@ -57,22 +58,28 @@ struct _qt_threadqueue {
 
 /* Memory Management */
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
-# define ALLOC_THREADQUEUE() (qt_threadqueue_t *)calloc(1, sizeof(qt_threadqueue_t))
+# define ALLOC_THREADQUEUE() (qt_threadqueue_t *)malloc(sizeof(qt_threadqueue_t))
 # define FREE_THREADQUEUE(t) free(t)
+# define ALLOC_TQNODE()      (qt_threadqueue_node_t *)malloc(sizeof(qt_threadqueue_node_t))
+# define FREE_TQNODE(t)      free(t)
 void INTERNAL qt_threadqueue_subsystem_init(void) {}
 #else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 qt_threadqueue_pools_t generic_threadqueue_pools = { NULL, NULL };
 # define ALLOC_THREADQUEUE() (qt_threadqueue_t *)qt_mpool_alloc(generic_threadqueue_pools.queues)
 # define FREE_THREADQUEUE(t) qt_mpool_free(generic_threadqueue_pools.queues, t)
+# define ALLOC_TQNODE()      (qt_threadqueue_node_t *)qt_mpool_alloc(generic_threadqueue_pools.nodes)
+# define FREE_TQNODE(t)      qt_mpool_free(generic_threadqueue_pools.nodes, t)
 
 static void qt_threadqueue_subsystem_shutdown(void)
 {
     qt_mpool_destroy(generic_threadqueue_pools.queues);
+    qt_mpool_destroy(generic_threadqueue_pools.nodes);
 }
 
 void INTERNAL qt_threadqueue_subsystem_init(void)
 {
     generic_threadqueue_pools.queues = qt_mpool_create(sizeof(qt_threadqueue_t));
+    generic_threadqueue_pools.nodes  = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), 8);
     qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
 }
 
@@ -138,13 +145,24 @@ int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *re
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
                                      qthread_t *restrict        t)
 {                                      /*{{{ */
-    assert(t->next == NULL);
-    NEMESIS_entry *prev = qt_internal_atomic_swap_ptr((void **)&(q->q.tail), t);
+    qt_threadqueue_node_t *node, *prev;
+
+    assert(q);
+    assert(t);
+
+    qthread_debug(THREADQUEUE_CALLS, "q(%p), t(%p->%u)\n", q, t, t->thread_id);
+
+    node = ALLOC_TQNODE();
+    assert(node != NULL);
+    node->thread = t;
+    node->next   = NULL;
+
+    prev = qt_internal_atomic_swap_ptr((void **)&(q->q.tail), node);
 
     if (prev == NULL) {
-        q->q.head = t;
+        q->q.head = node;
     } else {
-        prev->next = t;
+        prev->next = node;
     }
     (void)qthread_incr(&(q->advisory_queuelen), 1);
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
@@ -175,8 +193,10 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
     return q->advisory_queuelen;
 }                                      /*}}} */
 
-static inline NEMESIS_entry *qt_internal_NEMESIS_dequeue(NEMESIS_queue *q)
+static inline qt_threadqueue_node_t *qt_internal_NEMESIS_dequeue(NEMESIS_queue *q)
 {                                      /*{{{ */
+    qt_threadqueue_node_t *retval;
+
     if (!q->shadow_head) {
         if (!q->head) {
             return NULL;
@@ -184,14 +204,15 @@ static inline NEMESIS_entry *qt_internal_NEMESIS_dequeue(NEMESIS_queue *q)
         q->shadow_head = q->head;
         q->head        = NULL;
     }
-    NEMESIS_entry *retval = q->shadow_head;
+
+    retval = q->shadow_head;
 
     if ((retval != NULL) && (retval != (void *)1)) {
         if (retval->next != NULL) {
             q->shadow_head = retval->next;
             retval->next   = NULL;
         } else {
-            NEMESIS_entry *old;
+            qt_threadqueue_node_t *old;
             q->shadow_head = NULL;
             old            = qthread_cas_ptr(&(q->tail), retval, NULL);
             if (old != retval) {
@@ -206,22 +227,27 @@ static inline NEMESIS_entry *qt_internal_NEMESIS_dequeue(NEMESIS_queue *q)
 
 qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
 {                                      /*{{{ */
-    NEMESIS_entry *retval = qt_internal_NEMESIS_dequeue(&q->q);
+    qt_threadqueue_node_t *node = qt_internal_NEMESIS_dequeue(&q->q);
 
-    if (retval) {
-        assert(retval->next == NULL);
+    if (node) {
+        qthread_t *retval = node->thread;
+        assert(node->next == NULL);
         (void)qthread_incr(&(q->advisory_queuelen), -1);
+        FREE_TQNODE(node);
+        return retval;
+    } else {
+        return NULL;
     }
-    return (qthread_t *)retval;
 }                                      /*}}} */
 
 qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
                                                     qt_threadqueue_private_t *QUNUSED(qc),
                                                     uint_fast8_t              QUNUSED(active))
 {                                      /*{{{ */
-    NEMESIS_entry *retval = qt_internal_NEMESIS_dequeue(&q->q);
+    qt_threadqueue_node_t *node = qt_internal_NEMESIS_dequeue(&q->q);
+    qthread_t *retval;
 
-    if (retval == NULL) {
+    if (node == NULL) {
         while (q->q.shadow_head == NULL && q->q.head == NULL) {
 #ifndef QTHREAD_CONDWAIT_BLOCKING_QUEUE
             SPINLOCK_BODY();
@@ -236,12 +262,14 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
             }
 #endif      /* ifdef USE_HARD_POLLING */
         }
-        retval = qt_internal_NEMESIS_dequeue(&q->q);
+        node = qt_internal_NEMESIS_dequeue(&q->q);
     }
-    assert(retval);
-    assert(retval->next == NULL);
+    assert(node);
+    assert(node->next == NULL);
     (void)qthread_incr(&(q->advisory_queuelen), -1);
-    return (qthread_t *)retval;
+    retval = node->thread;
+    FREE_TQNODE(node);
+    return retval;
 }                                      /*}}} */
 
 /* vim:set expandtab: */
