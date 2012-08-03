@@ -56,10 +56,14 @@ AC_ARG_ENABLE([inlined-functions],
                                sometimes is useful for analysis of the code in
                                a debugger or some other tool])])
 
-AC_ARG_ENABLE([hardware-increments],
-              [AS_HELP_STRING([--disable-hardware-increments],
-                              [use mutexes to do the internal increments;
-                               compatible with more compilers, but slow.])])
+AC_ARG_ENABLE([hardware-atomics],
+              [AS_HELP_STRING([--disable-hardware-atomics],
+                              [use mutexes to do the internal atomics;
+                               compatible with more compilers and more
+                               platforms, but slow.])])
+AC_ARG_ENABLE([hardware-increments],[],
+              [AS_IF([test "x$enable_hardware_atomics" != x],
+                     [enable_hardware_atomics="$enable_hardware_increments"])])
 
 AC_ARG_ENABLE([hardware-timer],
               [AS_HELP_STRING([--disable-hardware-timer],
@@ -635,7 +639,7 @@ esac
 AX_TLS
 
 # Figure out whether the compiler has builtin atomic operations
-AS_IF([test "x$enable_hardware_increments" != xno],
+AS_IF([test "x$enable_hardware_atomics" != xno],
       [QTHREAD_CHECK_ATOMICS($sizeof_aligned_t)])
 QTHREAD_BUILTIN_EXPECT
 QTHREAD_BUILTIN_TRAP
@@ -652,14 +656,14 @@ QTHREAD_BUILTIN_SYNCHRONIZE
 
 AS_IF([test "x$have_assembly" = "x0" -a "x$qthread_cv_atomic_CAS32" = "xno" -a "x$qthread_cv_atomic_CAS64" = "xno" -a "x$qthread_cv_atomic_incr" = "xno"],
           [AC_MSG_NOTICE(Compiling on a compiler without inline assembly support and without builtin atomics. This will be slow!)
-           AS_IF([test "x$enable_hardware_increments" = x],
+           AS_IF([test "x$enable_hardware_atomics" = x],
                      [AC_MSG_NOTICE(turning on software increments ($have_assembly))
                       enable_hardware_increments=no])
-           AS_IF([test "x$enable_hardware_increments" = "xyes"],
+           AS_IF([test "x$enable_hardware_atomics" = "xyes"],
                      [AC_MSG_ERROR([No assembly available and software increments disabled.])])],
-      [AS_IF([test "x$enable_hardware_increments" = x], [enable_hardware_increments="yes"])])
+      [AS_IF([test "x$enable_hardware_atomics" = x], [enable_hardware_atomics="yes"])])
 
-AS_IF([test "x$enable_hardware_increments" = "xno"],
+AS_IF([test "x$enable_hardware_atomics" = "xno"],
       [compile_compat_atomic=yes
        AC_DEFINE([QTHREAD_MUTEX_INCREMENT], [1], [Use mutexes instead of assembly for atomic increment])])
 AS_IF([test "x$enable_guard_pages" = "xyes"],
@@ -796,14 +800,17 @@ AS_IF([test "x$enable_multithreaded_shepherds" = xyes],
       [enable_multithreaded_shepherds="no"
        EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --disable-multithreaded-shepherds"])
 
-AS_IF([test "x$enable_hardware_increments" = "xno"],
+AS_IF([test "x$enable_hardware_atomics" = "xno"],
       [AS_IF([test "x$enable_multithreaded_shepherds" = "xno"],
              [AS_IF([test "x$with_scheduler" != "xmutexfifo"],
                     [with_scheduler="mutexfifo"
                      AC_MSG_WARN([Forcing scheduler to be mutexfifo, since hardware atomic support is lacking.])])],
              [AS_IF([test "x$with_scheduler" != "xsherwood"],
                     [with_scheduler="sherwood"
-                     AC_MSG_WARN([Forcing scheduler to be sherwood, since hardware atomic support is lacking.])])])],
+                     AC_MSG_WARN([Forcing scheduler to be sherwood, since hardware atomic support is lacking.])])])
+       AS_IF([test "x$enable_lf_febs" = "xyes"],
+             [enable_lf_febs=no
+              AC_MSG_WARN([Forcing FEBs to use lock-based hash table, since hardware atomic support is lacking.])])],
       [AS_IF([test "x$enable_internal_spinlock" = x],
              [AS_IF([test "x$have_pthread_spinlocks" = xyes],
                     [enable_internal_spinlock=no],
@@ -1034,8 +1041,10 @@ AS_IF([test "x$enable_multinode" = "xyes"],
        esac],
       [enable_multinode="no"])
 
-AS_IF([test "x$enable_lf_febs" = "xyes"],
-      [AC_DEFINE([LOCK_FREE_FEBS], [1], [Define to use a lock-free hash table for FEB metadata.])])
+AS_IF([test "x$enable_lf_febs" == "xyes"],
+      [enable_lf_febs=yes
+       AC_DEFINE([LOCK_FREE_FEBS], [1], [Define to use a lock-free hash table for FEB metadata.])],
+      [enable_lf_febs=no])
 
 ## --------------- ##
 ## Output and done ##
@@ -1140,7 +1149,7 @@ AS_IF([test "x$enable_spawn_cache" = "xyes"],
       [AS_IF([test "x$pool_string" != "x"],
              [pool_string="$pool_string, spawns"],
              [pool_string="spawns"])])
-AS_IF([test "x$enable_hardware_increments" = "xno"],
+AS_IF([test "x$enable_hardware_atomics" = "xno"],
       [AS_IF([test "x$ac_cv_func_pthread_spin_init" = "xyes"],
              [incr_string="Spin (software)"],
              [incr_string="Mutex (software)"])],
@@ -1151,6 +1160,9 @@ AS_IF([test "x$enable_hardware_increments" = "xno"],
                     [AS_IF([test "x$qthread_cv_atomic_CAS" = "xyes"],
                            [incr_string="$qthread_cv_asm_arch/Compiler Builtin"],
                            [incr_string="$qthread_cv_asm_arch"])])])])
+AS_IF([test "x$enable_lf_febs" = xno],
+      [feb_string="lock-based hash"],
+      [feb_string="lock-free"])
 echo    "Speed:"
 echo    "          Scheduler: $with_scheduler ($mts_string)"
 echo    "         Sinc Style: $with_sinc"
@@ -1158,6 +1170,6 @@ echo    "   Dictionary Style: $with_dict"
 echo    "    Lazy Thread IDs: $enable_lazy_threadids"
 echo    "       Pools/caches: $pool_string"
 echo    "            RCRTool: $enable_rcrtool"
-echo    "     Increments/CAS: $incr_string"
+echo    "Increments/CAS/FEBs: $incr_string, $feb_string"
 echo ""
 dnl vim:expandtab
