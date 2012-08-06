@@ -510,6 +510,7 @@ qt_run:
 
         // Process input preconditions if this is a NASCENT thread
         if (t->thread_state == QTHREAD_STATE_NASCENT) {
+            assert(0 && "All preconditions should be satisfied before reaching the main scheduling loop");
             if (qthread_check_feb_preconds(t) == 1) { continue; }
         }
 

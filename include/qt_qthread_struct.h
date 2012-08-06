@@ -25,6 +25,7 @@
 #define QTHREAD_TEAM_LEADER      (1 << 7)
 #define QTHREAD_TEAM_WATCHER     (1 << 8)
 #define QTHREAD_BIG_STRUCT       (1 << 9)
+#define QTHREAD_AGGREGABLE       (1 << 10)
 
 /* flags for teams (must be different bits) */
 #define QTHREAD_TEAM_DEAD       (1 << 0)

@@ -57,12 +57,19 @@ qt_threadqueue_private_t INTERNAL *qt_init_local_spawncache(void)
     return (qt_threadqueue_private_t *)ret;
 }
 
+qt_threadqueue_private_t INTERNAL *qt_spawncache_get(){
+    return TLS_GET(spawn_cache);
+}
+
 int INTERNAL qt_spawncache_spawn(qthread_t *t)
 {
     qt_threadqueue_private_t *cache = TLS_GET(spawn_cache);
 
     if (cache) {
-        return qt_threadqueue_private_enqueue(cache, t);
+        int ret = qt_threadqueue_private_enqueue(cache, t);
+        if( !ret)
+            return ret;
+        return ret;
     } else {
         return 0;
     }
