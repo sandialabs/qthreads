@@ -32,7 +32,6 @@ struct _qt_threadqueue_node {
 struct _qt_threadqueue {
     qt_threadqueue_node_t *head;
     qt_threadqueue_node_t *tail;
-    QTHREAD_TRYLOCK_TYPE   qlock;
     long                   qlength;
     long                   qlength_stealable;                   /* number of stealable tasks on queue - stop steal attempts
                                                                  * that will fail because tasks cannot be moved - 4/1/11 AKP
@@ -44,6 +43,8 @@ struct _qt_threadqueue {
     aligned_t steal_failed;
     aligned_t steal_successful;
 #endif
+
+    QTHREAD_TRYLOCK_TYPE   qlock;
 } /* qt_threadqueue_t */;
 
 static aligned_t steal_disable   = 0;
@@ -670,16 +671,17 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
     qthread_shepherd_id_t *const sorted_sheplist = thief_shepherd->sorted_sheplist;
     assert(sorted_sheplist);
 
+    qt_threadqueue_t *myqueue = thief_shepherd->ready;
     while (stolen == NULL) {
-        qthread_shepherd_t *victim_shepherd = &shepherds[sorted_sheplist[i]];
-        if (0 < victim_shepherd->ready->qlength_stealable) {
-            stolen = qt_threadqueue_dequeue_steal(thief_shepherd->ready, victim_shepherd->ready);
+        qt_threadqueue_t *victim_queue = shepherds[sorted_sheplist[i]].ready;
+        if (0 != victim_queue->qlength_stealable) {
+            stolen = qt_threadqueue_dequeue_steal(myqueue, victim_queue);
             if (stolen) {
                 qt_threadqueue_node_t *surplus = stolen->next;
                 if (surplus) {
                     stolen->next  = NULL;
                     surplus->prev = NULL;
-                    qt_threadqueue_enqueue_multiple(thief_shepherd->ready, surplus);
+                    qt_threadqueue_enqueue_multiple(myqueue, surplus);
                 }
                 STEAL_SUCCESSFUL(thief_shepherd);
                 break;
@@ -687,12 +689,23 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
                 STEAL_FAILED(thief_shepherd);
             }
         }
-        if (0 < thief_shepherd->ready->qlength) {  // work at home quit steal attempt
+        if (0 < myqueue->qlength) {  // work at home quit steal attempt
             break;
         }
 
         i++;
         i *= (i < qlib->nshepherds - 1);
+        if (i == 0) {
+#ifdef HAVE_PTHREAD_YIELD
+            pthread_yield();
+#elif defined(HAVE_SCHED_YIELD)
+            sched_yield();
+#else
+            SPINLOCK_BODY();
+#endif
+        } else {
+            SPINLOCK_BODY();
+        }
     }
     thief_shepherd->stealing = 0;
     return stolen;
