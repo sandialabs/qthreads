@@ -123,15 +123,14 @@ typedef union qt_spin_trylock_s {
         haligned_t ticket;
         haligned_t users;
     } s;
-} qt_spin_trylock_t;
+} Q_ALIGNED(QTHREAD_ALIGNMENT_ALIGNED_T) qt_spin_trylock_t;
 
 # define QTHREAD_TRYLOCK_TYPE qt_spin_trylock_t
 # define QTHREAD_TRYLOCK_INIT(x)     { (x).u = 0; }
 # define QTHREAD_TRYLOCK_INIT_PTR(x) { (x)->u = 0; }
 # define QTHREAD_TRYLOCK_LOCK(x)     { uint32_t val = qthread_incr(&(x)->s.users, 1); \
-                                       MACHINE_FENCE;                                 \
                                        while (val != (x)->s.ticket) SPINLOCK_BODY(); /* spin waiting for my turn */ }
-# define QTHREAD_TRYLOCK_UNLOCK(x)   do { MACHINE_FENCE;                                               \
+# define QTHREAD_TRYLOCK_UNLOCK(x)   do { COMPILER_FENCE;                                               \
                                           qthread_incr(&(x)->s.ticket, 1); /* allow next guy's turn */ \
 } while (0)
 # define QTHREAD_TRYLOCK_DESTROY(x)
