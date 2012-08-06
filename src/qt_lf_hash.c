@@ -37,7 +37,7 @@ typedef uintptr_t marked_ptr_t;
 #define MARK_OF(x)           ((x) & 1)
 #define PTR_MASK(x)          ((x) & ~(marked_ptr_t)1)
 #define PTR_OF(x)            ((hash_entry *)PTR_MASK(x))
-#define CONSTRUCT(mark, ptr) (PTR_MASK((uintptr_t)ptr) | (mark))
+#define CONSTRUCT(mark, ptr) (marked_ptr_t)(PTR_MASK((uintptr_t)ptr) | (mark))
 #define UNINITIALIZED ((marked_ptr_t)0)
 
 size_t   hard_max_buckets = 0;
@@ -170,7 +170,7 @@ static int qt_lf_list_delete(marked_ptr_t *head,
         marked_ptr_t  lnext;
 
         if (qt_lf_list_find(head, key, &lprev, &lcur, &lnext) == NULL) { return 0; }
-        if (qthread_cas(&PTR_OF(lcur)->next, CONSTRUCT(0, lnext), CONSTRUCT(1, lnext)) != CONSTRUCT(0, lnext)) { continue; }
+        if (qthread_cas_ptr(&PTR_OF(lcur)->next, CONSTRUCT(0, lnext), CONSTRUCT(1, lnext)) != (void*)CONSTRUCT(0, lnext)) { continue; }
         if (qthread_cas(lprev, CONSTRUCT(0, lcur), CONSTRUCT(0, lnext)) == CONSTRUCT(0, lcur)) {
             FREE_HASH_ENTRY(PTR_OF(lcur));
         } else {
