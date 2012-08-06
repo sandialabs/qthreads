@@ -45,7 +45,7 @@ void INTERNAL qt_makectxt(uctxt_t *ucp,
     uintptr_t *sp;
 
 # ifdef NEEDX86REGISTERARGS
-    int     i;
+    //int     i;
     va_list argp;
 
     va_start(argp, argc);
@@ -55,7 +55,11 @@ void INTERNAL qt_makectxt(uctxt_t *ucp,
     sp -= argc;                                                       /* count down to where 8(%rsp) should be */
     sp  = (void *)((uintptr_t)sp - (uintptr_t)sp % 16);               /* 16-align for OS X */
     /* now copy from my arg list to the function's arglist */
-    memmove(sp, &argc + 1, argc * sizeof(uintptr_t));
+#if 0
+    memcpy(sp, &argc + 1, argc * sizeof(uintptr_t));
+#else
+    *(uintptr_t*)sp = *(uintptr_t*)((&argc)+1);
+#endif
     /*for (i=0; i<argc; ++i) {
      *  uintptr_t tmp = va_arg(argp, uintptr_t);
      *  sp[i] = tmp;
@@ -65,6 +69,8 @@ void INTERNAL qt_makectxt(uctxt_t *ucp,
     /* HOWEVER, the function may not be expecting to pull from the stack,
      * several 64-bit architectures expect that args will be in the correct
      * registers! */
+    ucp->mc.mc_edi = va_arg(argp, uintptr_t);
+#  if 0
     for (i = 0; i < argc; i++) {
         switch (i) {
             case 0: ucp->mc.mc_edi = va_arg(argp, uintptr_t); break;
@@ -75,6 +81,7 @@ void INTERNAL qt_makectxt(uctxt_t *ucp,
                  * case 5: ucp->mc.mc_r9 = va_arg(argp, uintptr_t); break;*/
         }
     }
+#  endif
 # endif
 
     *--sp          = 0;          /* return address */
