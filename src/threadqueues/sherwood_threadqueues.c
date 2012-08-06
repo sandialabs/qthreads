@@ -211,7 +211,7 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 
 static QINLINE int qt_threadqueue_isstealable(qthread_t *t)
 {   /*{{{*/
-    return ((t->flags & QTHREAD_UNSTEALABLE) == 0);
+    return ((t->flags & QTHREAD_UNSTEALABLE) == 0)?1:0;
 } /*}}}*/
 
 /* enqueue at tail */
@@ -239,7 +239,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
         node->prev->next = node;
     }
     q->qlength++;
-    if (node->stealable) { q->qlength_stealable++; }
+    q->qlength_stealable += node->stealable;
     QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
 } /*}}}*/
 
@@ -368,43 +368,52 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
     while (1) {
         qt_threadqueue_node_t *node = NULL;
 
-        if (qc && ((qc->on_deck != NULL) || (qc->qlength != 0))) {
+        if (qc && (qc->on_deck != NULL)) {
             assert(qc->tail == NULL || qc->tail->next == NULL);
             assert(qc->head == NULL || qc->head->prev == NULL);
-            if (qc->on_deck) {
-                node        = qc->on_deck;
-                qc->on_deck = NULL;
-                assert(node->next == NULL);
-                assert(node->prev == NULL);
-            } else if (qc->qlength == 1) {
-                node = qc->tail;
-                assert(node->next == NULL);
-                node->prev  = NULL;
-                qc->qlength = qc->qlength_stealable = 0;
-                qc->head    = qc->tail = NULL;
-            } else {
-                // Pull off one node for me to do now
-                node = qc->tail;
-
-                // Fix up cache structure
-                qc->tail       = node->prev;
-                qc->tail->next = NULL;
-
-                qc->qlength -= 1;
-                if (node->stealable) {
-                    qc->qlength_stealable -= 1;
-                }
-
-                // Fix up node structure
-                assert(node->next == NULL);
-                node->prev = NULL;
-            }
+            node        = qc->on_deck;
+            qc->on_deck = NULL;
+            assert(node->next == NULL);
+            assert(node->prev == NULL);
             if (qc->qlength > 0) {
                 // Push remaining items onto the real queue
                 qt_threadqueue_node_t *first = qc->head;
                 qt_threadqueue_node_t *last  = qc->tail;
                 assert(last->next == NULL);
                 assert(first->prev == NULL);
+                /* Note: I tried doing the this code with a TRY rather than a
+                 * LOCK and performance of UTS suffered (slightly). */
+#if 0
+                if (QTHREAD_TRYLOCK_TRY(&q->qlock)) {
+                    assert((q->head && q->tail) || (!q->head && !q->tail));
+                    assert(q->head != first);
+                    assert(q->tail != last);
+                    first->prev = q->tail;
+                    q->tail     = last;
+                    if (q->head == NULL) {
+                        q->head = first;
+                    } else {
+                        first->prev->next = first;
+                    }
+                    q->qlength           += qc->qlength;
+                    q->qlength_stealable += qc->qlength_stealable;
+                    assert(q->tail->next == NULL);
+                    assert(q->head->prev == NULL);
+                    QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
+                    qc->head    = qc->tail = NULL;
+                    qc->qlength = qc->qlength_stealable = 0;
+                } else {
+                    // Refill on-deck
+                    qc->on_deck = qc->head;
+                    qc->head = qc->head->next;
+                    qc->on_deck->next = NULL;
+                    if (qc->head) {
+                        qc->head->prev = NULL;
+                    }
+                    qc->qlength --;
+                    qc->qlength_stealable -= qc->on_deck->stealable;
+                }
+#else
                 QTHREAD_TRYLOCK_LOCK(&q->qlock);
                 assert((q->head && q->tail) || (!q->head && !q->tail));
                 assert(q->head != first);
@@ -423,6 +432,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
                 QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
                 qc->head    = qc->tail = NULL;
                 qc->qlength = qc->qlength_stealable = 0;
+#endif
             }
         } else if (q->head) {
             QTHREAD_TRYLOCK_LOCK(&q->qlock);
