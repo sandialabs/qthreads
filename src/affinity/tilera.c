@@ -61,7 +61,7 @@ void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
 
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
-unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
+qthread_worker_id_t INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
     return 1;
 }                                      /*}}} */

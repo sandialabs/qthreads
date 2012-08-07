@@ -168,7 +168,7 @@ void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
 
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
-unsigned int INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
+qthread_worker_id_t INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
     unsigned int guess     = 1;
     int          tot_nodes = lgrp_walk(lgrp_root(lgrp_cookie), NULL, NULL, 0);
