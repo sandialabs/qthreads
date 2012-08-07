@@ -6,9 +6,9 @@ OUTPUT=output/1000.out
 TESTS = cholesky_opt1 cholesky_opt2 cholesky_opt3 cholesky_opt4
 check_PROGRAMS = $(TESTS)
 
-ARGS = 1000 50 -i input/1000.in -o output/1000.out
+ARGS = 1000 50 -i $(top_srcdir)/samples/cholesky/input/1000.in -o $(top_srcdir)/samples/cholesky/output/1000.out
 
-TESTS_ENVIRONMENT = echo $(ARGS) | xargs
+TESTS_ENVIRONMENT = rm -rf $(top_srcdir)/samples/cholesky/output/1000.in && echo $(ARGS) | xargs
 
 noinst_HEADERS = cholesky.h cholesky_types.h
 
@@ -24,14 +24,14 @@ runcholesky: $(TESTS)
 EXTRA_DIST = cholesky.cnc
 
 cholesky_opt1_SOURCES = cholesky.cpp cholesky_cnc.cpp
-cholesky_opt1_CPPFLAGS = -DCNC_PRECOND
+cholesky_opt1_CPPFLAGS =  $(AM_CPPFLAGS) -DCNC_PRECOND
 
 cholesky_opt2_SOURCES = cholesky.cpp cholesky_cnc.cpp
-cholesky_opt2_CPPFLAGS = -DCNC_PRECOND -DCNC_PRECOND_ONLY -DCNC_PRECOND_SIMPLE
+cholesky_opt2_CPPFLAGS =  $(AM_CPPFLAGS) -DCNC_PRECOND -DCNC_PRECOND_ONLY -DCNC_PRECOND_SIMPLE
 
 cholesky_opt3_SOURCES = cholesky.cpp cholesky_cnc.cpp
-cholesky_opt3_CPPFLAGS =
+
 
 cholesky_opt4_SOURCES = cholesky.cpp cholesky_cnc.cpp
-cholesky_opt4_CPPFLAGS = -DCNC_PRECOND -DCNC_PRECOND_ONLY
+cholesky_opt4_CPPFLAGS =  $(AM_CPPFLAGS) -DCNC_PRECOND -DCNC_PRECOND_ONLY
 

@@ -101,8 +101,8 @@ void matrix_init (chosen_type *A, int n, const char *fname)
         
         fp = fopen(fname, "r");
         if(fp == NULL) {
-            fprintf(stderr, "\nFile does not exist\n");
-            exit(0);
+            fprintf(stderr, "\nInput file %s does not exist\n", fname);
+            exit(-1);
         }
         for (i = 0; i < n; i++) {
             for (j = 0; j <= i; j++) {

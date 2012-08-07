@@ -21,13 +21,12 @@ runfilesystem: testfilesystem
 EXTRA_DIST = Readme.txt filesystem.cnc
 
 filesystem_opt1_SOURCES = filesystem.cpp
-filesystem_opt1_CPPFLAGS = -DCNC_PRECOND
+filesystem_opt1_CPPFLAGS =  $(AM_CPPFLAGS)  -DCNC_PRECOND
 
 filesystem_opt2_SOURCES = filesystem.cpp
-filesystem_opt2_CPPFLAGS = -DCNC_PRECOND -DCNC_PRECOND_ONLY -DCNC_PRECOND_SIMPLE
+filesystem_opt2_CPPFLAGS =  $(AM_CPPFLAGS) -DCNC_PRECOND -DCNC_PRECOND_ONLY -DCNC_PRECOND_SIMPLE
 
 filesystem_opt3_SOURCES = filesystem.cpp
-filesystem_opt3_CPPFLAGS =
 
 filesystem_opt4_SOURCES = filesystem.cpp
-filesystem_opt4_CPPFLAGS = -DCNC_PRECOND -DCNC_PRECOND_ONLY
+filesystem_opt4_CPPFLAGS =  $(AM_CPPFLAGS) -DCNC_PRECOND -DCNC_PRECOND_ONLY

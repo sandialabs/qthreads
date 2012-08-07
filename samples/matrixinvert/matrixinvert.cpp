@@ -504,17 +504,20 @@ int main(int argc, char *argv[])
 {
     tile_array in_array;
 
-    if (argc == 2 && 0 != atoi(argv[1])) 
+    if ((argc == 3 ||argc ==2) && 0 != atoi(argv[1])) 
     {
         std::cout << "Generating matrix of size " << argv[1] << std::endl;
         in_array.generate_matrix(atoi(argv[1]));
     }
     else 
     {
-        std::cout << "Usage: MatrixInvert dim" << std::endl;
+        std::cout << "Usage: MatrixInvert N b, where:\n- N is matrix dimension \n -b is n optional boolean set to 1 to enable correctness checking" << std::endl;
         return -1;
     }
-
+	int CHECK_OUTPUT = 0;
+	if ((argc==3)&& (atoi(argv[2])==1)) {
+		CHECK_OUTPUT = 1;
+	} 
     report_memory();
    
     qtimer_t timer1, timer2;
@@ -542,11 +545,14 @@ int main(int argc, char *argv[])
     //c.wait();
     qtimer_stop(timer2);    
     report_time( out_array2, qtimer_secs(timer2) );
-    
-//    tile_array test2 = in_array.multiply(out_array2);
-//    int errors = test2.identity_check(1e-6);
-    //std::cout << "errors: " << errors << std::endl;
-    //assert(errors == 0);
+
+
+    if (CHECK_OUTPUT) {
+		tile_array test2 = in_array.multiply(out_array2);
+		int errors = test2.identity_check(1e-6);
+		std::cout << "errors: " << errors << std::endl;
+		assert(errors == 0);
+	}
     report_memory();
 
     qtimer_destroy(timer1);

@@ -8,3 +8,5 @@ pkginclude_internal_HEADERS = internal/context.h \
 
 uninstall-hook:
 	-test -d "$(pkgincludedir)" && $(RM) $(pkgincludedir)
+
+EXTRA_DIST = cnc.h

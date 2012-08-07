@@ -20,12 +20,12 @@ runprimes: $(TESTS)
 EXTRA_DIST = primes.cnc
 
 primes_opt1_SOURCES = primes.cpp
-primes_opt1_CPPFLAGS = -DCNC_PRECOND
+primes_opt1_CPPFLAGS =  $(AM_CPPFLAGS) -DCNC_PRECOND
 
 primes_opt2_SOURCES = primes.cpp
-primes_opt2_CPPFLAGS = -DCNC_PRECOND -DCNC_PRECOND_ONLY -DCNC_PRECOND_SIMPLE
+primes_opt2_CPPFLAGS =  $(AM_CPPFLAGS)  -DCNC_PRECOND -DCNC_PRECOND_ONLY -DCNC_PRECOND_SIMPLE
 
 primes_opt3_SOURCES = primes.cpp
 
 primes_opt4_SOURCES = primes.cpp
-primes_opt4_CPPFLAGS = -DCNC_PRECOND -DCNC_PRECOND_ONLY
+primes_opt4_CPPFLAGS =  $(AM_CPPFLAGS) -DCNC_PRECOND -DCNC_PRECOND_ONLY
