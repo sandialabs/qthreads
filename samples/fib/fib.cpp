@@ -65,7 +65,8 @@ int main( int argc, char* argv[] )
 
     // put tags to initiate evaluation
     for( int i = 0; i <= n; ++i ) ctxt.m_tags.put( i );
-
+	printf("Setting prerun to 0.\n");
+	ctxt.m_tags.flush();
     // wait for completion
     ctxt.wait(); 
 

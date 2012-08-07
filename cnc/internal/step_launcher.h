@@ -4,6 +4,7 @@
 #include <assert.h>
 #include <stdarg.h>
 
+
 namespace CnC {
 	// Class launcher_base
 	template< class Tag >
@@ -13,6 +14,9 @@ namespace CnC {
 		step_launcher_base(context_base &ctxt_base);
 		virtual ~step_launcher_base();
 
+
+		virtual void *flush_buffer() const = 0;
+		virtual void *buffer_step_instance(const Tag &) const = 0;
 		virtual void *create_step_instance(const Tag &) const = 0;
 		context_base &context() const
 		{
@@ -46,15 +50,18 @@ namespace CnC {
 		typedef Step step_type;
 		typedef ContextType ctxt_type;
 		typedef step_collection< Step > step_coll_type;
-
+	
 		step_launcher(context_base &                 ctxt_base,
 					  ContextType &                  ctxt,
 					  const step_collection< Step > &sc);
 		~step_launcher();
+		virtual void *   flush_buffer() const;
+		virtual void *   buffer_step_instance(const Tag &tag) const;
 		virtual void *   create_step_instance(const Tag &tag) const;
 		static aligned_t call_step(void *arg);
 
 	private:
+		std::list<Tag*>* bufferedTags;
 		step_collection< Step > _stepCol;
 		ContextType &           _ctxt;
 	};
@@ -62,7 +69,9 @@ namespace CnC {
 	template< class Tag, class Step, class ContextType >step_launcher< Tag, Step, ContextType >::step_launcher(context_base &                 ctxt_base,
 																											   ContextType &                  ctxt,
 																											   const step_collection< Step > &sc)
-		: step_launcher_base< Tag >(ctxt_base), _stepCol(sc), _ctxt(ctxt) {}
+		: step_launcher_base< Tag >(ctxt_base), _stepCol(sc), _ctxt(ctxt)  {
+			bufferedTags = new std::list<Tag*>();
+		}
 
 	template< class Tag, class Step, class ContextType>step_launcher< Tag, Step, ContextType>::~step_launcher( ) /*TODO*/
 	{                                                                         }
@@ -158,6 +167,27 @@ namespace CnC {
 	#endif
 
 		
+		return NULL;
+	}
+
+	template< class Tag, class Step, class ContextType >
+	void *step_launcher< Tag, Step, ContextType >::buffer_step_instance(const Tag &tag) const
+	{
+		//printf("Buffering....%p %d\n", &bufferedTags, bufferedTags.size());
+		bufferedTags->push_back(new Tag(tag));
+		//printf("Buffered...%p %d\n", &bufferedTags, bufferedTags.size());
+		return NULL;
+	}
+
+	template< class Tag, class Step, class ContextType >
+	void *step_launcher< Tag, Step, ContextType >::flush_buffer() const
+	{
+		typename  std::list<Tag*>::const_iterator i;
+		printf("Flushing step launcher size %d\n", (int)bufferedTags->size());
+		for( i=bufferedTags->begin(); i != bufferedTags->end(); ++i) {
+			printf("Creating step instance...\n");
+			create_step_instance(**i);
+		}
 		return NULL;
 	}
 } // namespace CnC

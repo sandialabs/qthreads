@@ -5,6 +5,7 @@ namespace CnC {
 	template< typename StepType >
 	template< typename ContextTemplate >step_collection< StepType >::step_collection(context< ContextTemplate > &ctxt) : _step(StepType()) {
 		id = ctxt.id++;
+		
 	}
 
 	template< typename StepType >

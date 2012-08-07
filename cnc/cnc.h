@@ -39,6 +39,13 @@ namespace CnC {
 	template< typename Tag > class tag_collection;
 	template< typename Tag, typename Item > class item_collection;
 
+	class tag_collection_base
+	{
+		public:
+		virtual void   flush() = 0;
+	};
+
+	
 	const int CNC_Success = 0;
 	const int CNC_Failure = 1;
 
@@ -59,13 +66,32 @@ namespace CnC {
 	class context_base
 	{
 	public:
+		std::list<tag_collection_base*> tcs;
 		int id; // incrementing counter that counts the number of collections used in this context
+		inline void registerTagCollection(tag_collection_base* tc);
 		inline void markJoin();
 		inline void markFork();
+		context_base(context_base& cb){
+			printf("Calling context base copy constructor\n");
+			id = cb.id;
+			prerun = cb.prerun;
+		}
+		
+		context_base(){
+			printf("Calling context base default constructor\n");
+			prerun = new int;
+			*prerun = 0;
+		}
+		int* prerun;
 	protected:
 		qt_sinc_t *sinc;
 		int        initial_value;
 	};
+
+	void context_base::registerTagCollection(tag_collection_base* tc)
+	{
+		tcs.push_back(tc);
+	}
 
 	void context_base::markFork()
 	{
@@ -89,18 +115,23 @@ namespace CnC {
 #include <cnc/internal/step_launcher.h>
 
 namespace CnC {
+
 	// 2) Tag collection
 	template< typename Tag >
-	class tag_collection
+	class tag_collection : tag_collection_base
 	{
 	public:
+	
 		int id;
 		typedef Tag tag_type;
 		template< class ContextTemplate >tag_collection(context< ContextTemplate > &ctxt);
+		
 		template< typename Step, typename ContextType >
 		int prescribes(const step_collection< Step > &sc,
 					   ContextType &                  ctxt);
+					   
 		void   put(const Tag &t);
+		void   flush();
 		size_t size();
 		bool   empty();
 
@@ -112,6 +143,12 @@ namespace CnC {
 
 	typedef char YesType;
 	typedef char NoType[2];
+
+
+
+
+
+	
 	// 3) Item collection
 	template< typename Tag, typename Item >
 	class item_collection
@@ -157,6 +194,7 @@ namespace CnC {
 	{
 	public:
 		context();
+		context(int);
 		virtual ~context() {}
 		error_type wait();
 		int cnc_status;
@@ -164,10 +202,10 @@ namespace CnC {
                 pthread_key_t key;
 	# endif
 
-	private:
-
-		context(bool);
 	};
+
+
+
 	
 	//item_id_pair
 	template< typename Tag, typename Item >
