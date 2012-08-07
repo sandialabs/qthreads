@@ -29,33 +29,47 @@ void* qt_dictionary_put_helper(qt_dictionary* dict, void* key, void* value,
 
 #ifdef DELETE_SUPPORT
 
+//Handle the case when variable does not exist; 
+//Locks become nops when qthread is no longer initialized
+#ifdef QTHREAD_NO_ASSERTS
+static int qthread_library_initialized=1;
+#endif
+
 #define rlock(a) \
 	{ \
+	    if(qthread_library_initialized == 1){ \
 		int id = qthread_worker_unique(NULL); 		\
 		/* this if protects against crash when using after qthreads was finalized*/ \
 		/* if qthreads is finalized, use sequential semantics */ \
 		if (id<MAX_READERS) 						\
 			rwlock_rdlock(a, id); 					\
+	    } \
 	}	
 
 #define runlock(a) \
 	{ \
+	    if(qthread_library_initialized == 1){ \
 		int id = qthread_worker_unique(NULL);		\
 		if (id<MAX_READERS) 						\
 			rwlock_rdunlock(a, id);					\
+	    } \
 	}		
 #define wlock(a) \
 	{ \
+	    if(qthread_library_initialized == 1){ \
 		int id = qthread_worker_unique(NULL); 		\
 		if (id<MAX_READERS) 						\
 			rwlock_wrlock(a, id); 					\
+	    } \
 	}	
 
 #define wunlock(a) \
 	{ \
+	    if(qthread_library_initialized == 1){ \
 		int id = qthread_worker_unique(NULL);		\
 		if (id<MAX_READERS) 						\
 			rwlock_wrunlock(a);						\
+	    } \
 	}
 #define rwlinit(a) \
 	{ \
