@@ -1,6 +1,6 @@
 AM_CPPFLAGS = -I. -I$(top_srcdir)
 AM_CXXFLAGS = -std=gnu++0x
-
+OUTPUT=output/1000.out
 .PHONY: testcholesky runcholesky
 
 TESTS = cholesky_opt1 cholesky_opt2 cholesky_opt3 cholesky_opt4
@@ -15,10 +15,11 @@ noinst_HEADERS = cholesky.h cholesky_types.h
 all: $(TESTS)
 
 testcholesky: runcholesky
-	diff --ignore-space-change -q reference_output/1000.out output/1000.out
+	diff --ignore-space-change -q reference_output/1000.out $(OUTPUT)
 
 runcholesky: $(TESTS)
-	./cholesky $(ARGS)
+	- rm $(OUTPUT)
+	./cholesky_opt1 $(ARGS)
 
 EXTRA_DIST = cholesky.cnc
 

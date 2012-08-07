@@ -33,11 +33,11 @@
 
 //Ideal case:
 //Keep get counts enabled
-//#define DISABLE_GET_COUNTS
+#define DISABLE_GET_COUNTS
 
 //Do not use cheating for icc
 # ifndef __INTEL_COMPILER
-//#define USE_CHEATING
+#define USE_CHEATING
 # else
 //Rely on shared_pointer collection for gcc
 # endif

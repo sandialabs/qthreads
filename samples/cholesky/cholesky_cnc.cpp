@@ -276,9 +276,10 @@ void cholesky( chosen_type * A, const int n, const int b, const char * oname )
     #endif
 # endif
     int p;
-    //int k;
-    //FILE *fout;
-
+# ifdef DISABLE_GET_COUNTS 
+    int k;
+    FILE *fout;
+#endif
     p = n/b;
     
     qtimer_t timer;
@@ -303,7 +304,6 @@ void cholesky( chosen_type * A, const int n, const int b, const char * oname )
 	printf("sontrol_S3=%d\n", c.control_S3.id);
     
     c.singleton.put(1);
-
     for(int i = 0; i < p; i++) {
         for(int j = 0; j <= i; j++) {
             // Allocate memory for the tiles.
@@ -320,6 +320,15 @@ void cholesky( chosen_type * A, const int n, const int b, const char * oname )
     }
     
     // Wait for all steps to finish
+    printf("Prerun was %d(addr %p)\n", (*c.prerun), c.prerun);
+    
+    
+    //c.singleton.flush();
+    //c.control_S1.flush();
+    //c.control_S2.flush();
+    //c.control_S3.flush();
+
+    printf("Ending prerun\n");
     c.wait();  
     
     qtimer_stop(timer);
@@ -331,7 +340,7 @@ void cholesky( chosen_type * A, const int n, const int b, const char * oname )
     //qt_dictionary_printbuckets(c.Lkji.m_itemCollection);
     //printf("The time taken for parallel execution a matrix of size %d x %d : %g sec\n", n, n, (t3-t2).seconds());
  
-# ifdef USE_CHEATING //Output is in accord with reference file only when cheating, like in the original implementation
+# ifdef DISABLE_GET_COUNTS //Output is in accord with reference file only when not using getcounts
     if(oname) {
         fout = fopen(oname, "w");
         for (int i = 0; i < p; i++) {
