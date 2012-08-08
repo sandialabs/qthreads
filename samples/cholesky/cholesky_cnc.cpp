@@ -343,29 +343,36 @@ void cholesky( chosen_type * A, const int n, const int b, const char * oname )
 # ifdef DISABLE_GET_COUNTS //Output is in accord with reference file only when not using getcounts
     if(oname) {
         fout = fopen(oname, "w");
-        for (int i = 0; i < p; i++) {
-            for(int i_b = 0; i_b < b; i_b++) {
-                k = 1;
-                for (int j = 0; j <= i; j++) {
-                    tile_const_ptr_type _tmp;
-                    
-                    c.Lkji.get(triple(k, i, j), _tmp);
-                    if(i != j) {
-                        for(int j_b = 0; j_b < b; j_b++) {
-                            fprintf(fout, "%lf ", (*_tmp)( i_b, j_b )); 
-                        }
-                    }
-                    else {
-                        for(int j_b = 0; j_b <= i_b; j_b++) {
-                            fprintf(fout, "%lf ", (*_tmp)( i_b, j_b )); 
-                        }
-                    }
-                    k++;
-                }
-            fprintf(fout, "\n" ); 
-            }
-        }
-        fclose(fout);
+        if (fout !=NULL)
+        {
+			for (int i = 0; i < p; i++) {
+				for(int i_b = 0; i_b < b; i_b++) {
+					k = 1;
+					for (int j = 0; j <= i; j++) {
+						tile_const_ptr_type _tmp;
+						
+						c.Lkji.get(triple(k, i, j), _tmp);
+						if(i != j) {
+							for(int j_b = 0; j_b < b; j_b++) {
+								fprintf(fout, "%lf ", (*_tmp)( i_b, j_b )); 
+							}
+						}
+						else {
+							for(int j_b = 0; j_b <= i_b; j_b++) {
+								fprintf(fout, "%lf ", (*_tmp)( i_b, j_b )); 
+							}
+						}
+						k++;
+					}
+				fprintf(fout, "\n" ); 
+				}
+			}
+			fclose(fout);
+		}
+		else
+		{
+			printf("Cannot generate output!\n");
+		}
     } else 
 # endif
     {
