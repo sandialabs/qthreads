@@ -11,6 +11,7 @@ pkginclude_HEADERS = \
 	feb_barrier.h \
 	futurelib.h \
 	macros.h \
+	io.h \
 	qalloc.h \
 	qarray.h \
 	qdqueue.h \

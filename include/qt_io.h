@@ -5,6 +5,7 @@
 
 #include "qt_blocking_structs.h"
 #include "qt_qthread_struct.h"
+#include "qthread/io.h"
 
 #if defined(UNPOOLED)
 # define ALLOC_SYSCALLJOB (qt_blocking_queue_node_t *)malloc(sizeof(qt_blocking_queue_node_t))
@@ -19,9 +20,6 @@ extern qt_mpool syscall_job_pool;
 void qt_blocking_subsystem_init(void);
 int  qt_process_blocking_call(void);
 void qt_blocking_subsystem_enqueue(qt_blocking_queue_node_t *job);
-
-void qt_blocking_subsystem_begin_blocking_action(void);
-void qt_blocking_subsystem_end_blocking_action(void);
 
 #endif // ifndef QT_IO_H
 /* vim:set expandtab: */

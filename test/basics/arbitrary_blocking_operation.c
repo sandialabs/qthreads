@@ -3,10 +3,8 @@
 #include <assert.h>
 #include <unistd.h>
 #include <qthread/qthread.h>
+#include <qthread/io.h>
 #include "argparsing.h"
-
-void qt_blocking_subsystem_begin_blocking_action(void);
-void qt_blocking_subsystem_end_blocking_action(void);
 
 static int foo = 0;
 static int initialized = 0;
