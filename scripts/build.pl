@@ -22,6 +22,7 @@ my %config = (
     nottingham    => '--with-scheduler=nottingham',
     rose          => '--enable-interfaces=rose',
     slowcontext   => '--disable-fastcontext',
+    shavit        => '--with-dict=shavit',
     shep_profile  => '--enable-profiling=shepherd',
     lock_profile  => '--enable-profiling=lock',
     steal_profile => '--enable-profiling=steal',
