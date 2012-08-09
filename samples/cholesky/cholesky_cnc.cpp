@@ -371,7 +371,8 @@ void cholesky( chosen_type * A, const int n, const int b, const char * oname )
 		}
 		else
 		{
-			printf("Cannot generate output!\n");
+		    perror("Creating output file");
+		    fprintf(stderr, "Could not open file '%s'\n", oname);
 		}
     } else 
 # endif

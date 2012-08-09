@@ -15,13 +15,15 @@ m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 # Check for arguments.
 AC_ARG_WITH([qthreads],
 			[AS_HELP_STRING([--with-qthreads=[[PATH]]],
-							[Specify the install directory of qthreads])])
+							[Specify the install directory of qthreads])],
+			[EXTRA_DISTCHECK_OPTIONS="--with-qthreads=$with_qthreads"])
 
 # Checks for programs.
 AC_PROG_CC
 AC_USE_SYSTEM_EXTENSIONS
 AC_PROG_CXX
 AC_PROG_CPP
+AC_PROG_MKDIR_P
 
 AS_IF([test "x$CXX" = "xg++" -a "x$GXX" = x],
 	  [AC_MSG_ERROR([qtCnC requires a C++ compiler!])])
@@ -52,6 +54,8 @@ AC_CHECK_FUNCS([memset])
 # Handle misc flags
 AS_IF([test "x$enable_picky" = xyes],
 	  [CXXFLAGS="-Wall $CXXFLAGS"])
+
+AC_SUBST([EXTRA_DISTCHECK_OPTIONS])
 
 AC_CONFIG_HEADERS([config.h])
 AC_CONFIG_FILES([Makefile

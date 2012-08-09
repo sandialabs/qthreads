@@ -8,3 +8,5 @@ cleansamples:
 testsamples: check
 
 testall: check
+
+DISTCHECK_CONFIGURE_FLAGS = @EXTRA_DISTCHECK_OPTIONS@
