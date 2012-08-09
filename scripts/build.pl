@@ -8,7 +8,6 @@ use Cwd qw/getcwd/;
 # Setup configuration options
 my @default_conf_names = ('default', 'opt', 'dev');
 
-my $qthreads_install = '--with-qthreads=/home/dsbirle/qthreads-install ';
 my %config = (
     default       => ' ',
     opt           => ' CFLAGS="-O3" CXXFLAGS="-O3"',
@@ -31,6 +30,7 @@ my $print_info = 0;
 my $dry_run = 0;
 my $quietly = 0;
 my $need_help = 0;
+my $qthreads_install = '';
 
 if (scalar @ARGV == 0) {
     $need_help = 1;
@@ -64,6 +64,8 @@ if (scalar @ARGV == 0) {
             @check_tests = split(/,/,$1) unless ($1 eq 'all')
         } elsif ($flag eq '--help' || $flag eq '-h') {
             $need_help = 1;
+        } elsif ($flag =~ m/--with-qthreads=(.*)/) {
+            $qthreads_install = $1;
         } else {
             print "Unsupported option '$flag'.\n";
             exit(1);
@@ -200,7 +202,7 @@ sub run_tests {
     print "###\tConfiguring '$conf_name' ...\n" unless $quietly;
     my $configure_log = "$test_dir/build.configure.log";
     my_system("mkdir -p $test_dir") if (not -e $test_dir);
-    my_system("cd $test_dir && $qtcnc_src_dir/configure $qthreads_install $config{$conf_name} 2>&1 | tee $configure_log")
+    my_system("cd $test_dir && $qtcnc_src_dir/configure --with-qthreads=$qthreads_install $config{$conf_name} 2>&1 | tee $configure_log")
         if ($force_configure || not -e "$test_dir/config.log");
     print "### Log: $configure_log\n" unless $quietly;
 
@@ -243,7 +245,6 @@ sub run_tests {
         my @make_test_suites = ('samples/cholesky', 'samples/matrixinvert', 'samples/primes', 'samples/fib' );
         if (scalar @check_tests == 0) { @check_tests = @make_test_suites};
         foreach my $make_test_suite (@check_tests) {
-			print"NEW TEST";
             my $check_command = "cd $test_dir";
             $check_command .= " && make clean > /dev/null" if ($force_clean);
             $check_command .= " && make $make_flags -C $make_test_suite check 2>&1 | tee $results_log";
@@ -265,7 +266,6 @@ sub run_tests {
                 
                 my $digest = qx/grep 'tests passed' $results_log/;
                 
-                print $digest;
                 if ($digest eq '') {
 					my $digestSmall = qx/grep 'test passed' $results_log/;
 					if ($digestSmall eq '') {
@@ -286,7 +286,6 @@ sub run_tests {
                     chomp $digest;
                     $digest =~ /All ([0-9]+) tests passed/;
                     $passing_tests += $1;
-                    print $passing_tests;
                 }
                 print "$digest - $make_test_suite\n" unless $quietly;
             }
