@@ -6,17 +6,33 @@
 
 echo "Generating configure files..."
 
-if [ "$LIBTOOL" ] ; then
+if [ "$LIBTOOLIZE" ] ; then
 	# accept anything that's been pre-configured
-	echo Using LIBTOOL=$LIBTOOL
-elif type glibtool &>/dev/null ; then
-	# prefer glibtool over libtool
-	export LIBTOOL=`type -p glibtool`
-elif type libtool &>/dev/null ; then
-	export LIBTOOL=`type -p libtool`
+	echo Using LIBTOOLIZE=$LIBTOOLIZE
+	ACLOCAL_INCLUDE="${LIBTOOLIZE%/bin/libtoolize}/share/aclocal"
+	if [ -z "$ACLOCAL" ] ; then
+		echo "Since you set LIBTOOLIZE, you probably need to set ACLOCAL so that it knows where to find the libtool .m4 files."
+		echo "I'm going to guess that it should include $ACLOCAL_INCLUDE"
+	fi
+elif type glibtoolize &>/dev/null ; then
+	# prefer glibtoolize over libtoolize
+	export LIBTOOLIZE=`type -p glibtoolize`
+	echo setting LIBTOOLIZE=$LIBTOOLIZE
+elif type libtoolize &>/dev/null ; then
+	export LIBTOOLIZE=`type -p libtoolize`
+	echo setting LIBTOOLIZE=$LIBTOOLIZE
 else
 	echo "ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-	echo "I need libtool in order to generate the configure script and makefiles. I couldn't find either libtool or glibtool in your PATH. Perhaps you need to set the LIBTOOL environment variable to point toward a custom installation?"
+	echo "I need libtoolize in order to generate the configure script and makefiles. I couldn't find either libtoolize or glibtoolize in your PATH. Perhaps you need to set the LIBTOOLIZE environment variable to point toward a custom installation?"
+	exit -1
+fi
+
+libtool_version=( $($LIBTOOLIZE --version) )
+libtool_version=( ${libtool_version[3]//./ } )
+if [ ${libtool_version[0]} -lt 2 ] ; then
+	echo LIBTOOLIZE is too old! Must have a version 2.x or better.
+	echo -n "You have: "
+	$LIBTOOLIZE --version | head -n 1
 	exit -1
 fi
 
@@ -51,6 +67,24 @@ else
 	echo "ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 	echo "I need autoreconf in order to generate the configure script and makefiles. I couldn't find it in your PATH, though. Perhaps you need to set the AUTORECONF environment variable to point toward a custom installation?"
 	exit -1
+fi
+
+if [ "$ACLOCAL" ] ; then
+	# do nothing
+	echo I saw ACLOCAL defined to be $ACLOCAL
+elif type aclocal &>/dev/null ; then
+	export ACLOCAL=`type -P aclocal`
+else
+	echo "ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+	echo "I need aclocal in order to generate the configure script and makefiles. I couldn't find it in your PATH, though. Perhaps you need to set the ACLOCAL environment variable to point toward a custom installation?"
+	exit -1
+fi
+if [ "$ACLOCAL_INCLUDE" ] ; then
+	echo 'Using ACLOCAL="'$ACLOCAL -I$ACLOCAL_INCLUDE'"'
+	export ACLOCAL="$ACLOCAL -I$ACLOCAL_INCLUDE"
+else
+	echo 'Using ACLOCAL="'$ACLOCAL -I$ACLOCAL_INCLUDE'"'
+	export ACLOCAL="$ACLOCAL -I$ACLOCAL_INCLUDE"
 fi
 
 # If this directory isn't removed, the configure script may not have the right
