@@ -8,19 +8,22 @@ echo "Generating configure files..."
 
 if [ "$LIBTOOLIZE" ] ; then
 	# accept anything that's been pre-configured
-	echo Using LIBTOOLIZE=$LIBTOOLIZE
-	ACLOCAL_INCLUDE="${LIBTOOLIZE%/bin/libtoolize}/share/aclocal"
-	if [ -z "$ACLOCAL" ] ; then
-		echo "Since you set LIBTOOLIZE, you probably need to set ACLOCAL so that it knows where to find the libtool .m4 files."
-		echo "I'm going to guess that it should include $ACLOCAL_INCLUDE"
+	echo LIBTOOLIZE=$LIBTOOLIZE
+	if [ -d "${LIBTOOLIZE%/bin/libtoolize}/share/aclocal" ] ; then
+		ACLOCAL_INCLUDE="${LIBTOOLIZE%/bin/libtoolize}/share/aclocal"
+		echo "Since you set LIBTOOLIZE, I'm going to alter ACLOCAL to include the relative aclocal directory in the include-path."
+		echo 'That aclocal directory looks like "'$ACLOCAL_INCLUDE'"'
+	else
+		echo "Since you set LIBTOOLIZE, you probably need to alter ACLOCAL to include the relative aclocal directory in the include-path."
+		echo "I would do it for you, but I can't find a likely candidate".
 	fi
 elif type glibtoolize &>/dev/null ; then
 	# prefer glibtoolize over libtoolize
 	export LIBTOOLIZE=`type -p glibtoolize`
-	echo setting LIBTOOLIZE=$LIBTOOLIZE
+	echo LIBTOOLIZE=$LIBTOOLIZE
 elif type libtoolize &>/dev/null ; then
 	export LIBTOOLIZE=`type -p libtoolize`
-	echo setting LIBTOOLIZE=$LIBTOOLIZE
+	echo LIBTOOLIZE=$LIBTOOLIZE
 else
 	echo "ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
 	echo "I need libtoolize in order to generate the configure script and makefiles. I couldn't find either libtoolize or glibtoolize in your PATH. Perhaps you need to set the LIBTOOLIZE environment variable to point toward a custom installation?"
@@ -80,10 +83,7 @@ else
 	exit -1
 fi
 if [ "$ACLOCAL_INCLUDE" ] ; then
-	echo 'Using ACLOCAL="'$ACLOCAL -I$ACLOCAL_INCLUDE'"'
-	export ACLOCAL="$ACLOCAL -I$ACLOCAL_INCLUDE"
-else
-	echo 'Using ACLOCAL="'$ACLOCAL -I$ACLOCAL_INCLUDE'"'
+	echo 'ACLOCAL="'$ACLOCAL -I$ACLOCAL_INCLUDE'"'
 	export ACLOCAL="$ACLOCAL -I$ACLOCAL_INCLUDE"
 fi
 
