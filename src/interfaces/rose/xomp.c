@@ -335,7 +335,7 @@ void XOMP_parallel_start(
     omp_set_num_threads(numThread);
     parallelWidth = numThread;
   }
-  struct XOMP_parallel_wrapper_args foo = {func, data};
+  //struct XOMP_parallel_wrapper_args foo = {func, data};
   qt_parallel_step(func, parallelWidth, data);
   //  qt_parallel_step(XOMP_parallel_wrapper, parallelWidth, &foo);
 
