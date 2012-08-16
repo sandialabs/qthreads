@@ -213,8 +213,17 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
         if (shep_type_idx != -1) {
             shep_depth = hwloc_get_type_depth(topology, shep_type_options[shep_type_idx]);
             if (shep_depth <= 0) {
-                qthread_debug(AFFINITY_DETAILS, "invalid shepherd type\n");
-                shep_depth = -1;
+                qthread_debug(AFFINITY_DETAILS, "invalid shepherd type (%s), finding another one...\n", typenames[shep_type_idx]);
+                if (shep_type_options[shep_type_idx] == HWLOC_OBJ_CACHE) {
+                    shep_type_idx = 1;
+                }
+                shep_type_idx ++;
+                while (((shep_depth = hwloc_get_type_depth(topology, shep_type_options[shep_type_idx])) <= 0) &&
+                        shep_type_idx < 4) {
+                    qthread_debug(AFFINITY_DETAILS, "invalid shepherd type (%s), finding another one...\n", typenames[shep_type_idx]);
+                    shep_type_idx ++;
+                }
+                assert(shep_depth > 0);
             }
         }
         if (shep_type_idx == -1) {
@@ -263,8 +272,10 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
         }
     }
     if (DEBUG_ONLY(1 ||) wkr_index != -1) {
+        assert(shep_depth >= 0);
         hwloc_const_cpuset_t allowed_cpuset      = hwloc_topology_get_allowed_cpuset(topology);
         hwloc_obj_t          obj                 = hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth, 0);
+        assert(obj);
         unsigned int         workerobjs_per_shep = hwloc_get_nbobjs_inside_cpuset_by_type(topology, obj->allowed_cpuset, wkr_type);
         qthread_debug(AFFINITY_CALLS, "workerobjs = %s, per_shep = %u\n", hwloc_obj_type_string(wkr_type), workerobjs_per_shep);
         assert(workerobjs_per_shep > 0);
@@ -532,6 +543,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     num_extant_objs = hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth);
+    qthread_debug(AFFINITY_DETAILS, "found %u objects at shep_depth %u\n", num_extant_objs, shep_depth);
 
     for (size_t i = 0; i < nshepherds; ++i) {
         sheps[i].node            = i % num_extant_objs;
