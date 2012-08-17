@@ -1,5 +1,5 @@
 
-.PHONY: buildall buildtests buildextra
+.PHONY: buildall buildtests buildextra benchmarks
 
 DIST_SUBDIRS = rose_bots
 
@@ -140,146 +140,106 @@ buildall: $(benchmarks)
 buildextra: $(benchmarks)
 endif
 
+benchmarks: buildextra
+
 $(qthreadlib):
-	$(MAKE) -C $(top_builddir)/src
+	$(MAKE) -C $(top_builddir)/src libqthread.la
 
 $(utils_rnglib):
 	$(MAKE) -C $(top_builddir)/test/utils/rng
 
 time_allpairs_SOURCES = thesis/time_allpairs.c
-time_allpairs_DEPENDENCIES = $(qthreadlib)
 
 time_wavefront_SOURCES = thesis/time_wavefront.c
-time_wavefront_DEPENDENCIES = $(qthreadlib)
 
 time_qutil_qsort_SOURCES = thesis/time_qutil_qsort.c
-time_qutil_qsort_DEPENDENCIES = $(qthreadlib)
 
 time_qarray_SOURCES = pmea09/time_qarray.c
-time_qarray_DEPENDENCIES = $(qthreadlib)
 
 time_qarray_sizes_SOURCES = pmea09/time_qarray_sizes.c
-time_qarray_sizes_DEPENDENCIES = $(qthreadlib)
 
 time_qpool_SOURCES = pmea09/time_qpool.c
-time_qpool_DEPENDENCIES = $(qthreadlib)
 
 time_qlfqueue_SOURCES = pmea09/time_qlfqueue.c
-time_qlfqueue_DEPENDENCIES = $(qthreadlib)
 
 time_qdqueue_SOURCES = pmea09/time_qdqueue.c
-time_qdqueue_DEPENDENCIES = $(qthreadlib)
 
 time_qdqueue_sizes_SOURCES = pmea09/time_qdqueue_sizes.c
-time_qdqueue_sizes_DEPENDENCIES = $(qthreadlib)
 
 if COMPILE_TBB_BENCHMARKS
 time_tbbq_SOURCES = pmea09/time_tbbq.cc
-time_tbbq_DEPENDENCIES = $(qthreadlib)
 time_tbbq_LDFLAGS = @TBB_LIBS@
 
 time_tbbq_sizes_SOURCES = pmea09/time_tbbq_sizes.cc
-time_tbbq_sizes_DEPENDENCIES = $(qthreadlib)
 time_tbbq_sizes_LDFLAGS = @TBB_LIBS@
 endif
 
 time_incr_bench_SOURCES = mtaap08/time_incr_bench.c
-time_incr_bench_DEPENDENCIES = $(qthreadlib)
 
 time_incr_bench_pthread_SOURCES = mtaap08/time_incr_bench_pthread.c
-time_incr_bench_pthread_DEPENDENCIES = $(qthreadlib)
 
 time_lul_bench_SOURCES = mtaap08/time_lul_bench.c
-time_lul_bench_DEPENDENCIES = $(qthreadlib)
 
 time_lul_bench_pthread_SOURCES = mtaap08/time_lul_bench_pthread.c
-time_lul_bench_pthread_DEPENDENCIES = $(qthreadlib)
 
 time_mutex_bench_SOURCES = mtaap08/time_mutex_bench.c
-time_mutex_bench_DEPENDENCIES = $(qthreadlib)
 
 time_mutex_bench_pthread_SOURCES = mtaap08/time_mutex_bench_pthread.c
-time_mutex_bench_pthread_DEPENDENCIES = $(qthreadlib)
 
 time_spin_bench_SOURCES = mtaap08/time_spin_bench.c
-time_spin_bench_DEPENDENCIES = $(qthreadlib)
 
 time_spin_bench_pthread_SOURCES = mtaap08/time_spin_bench_pthread.c
-time_spin_bench_pthread_DEPENDENCIES = $(qthreadlib)
 
 time_chain_bench_SOURCES = mtaap08/time_chain_bench.c
-time_chain_bench_DEPENDENCIES = $(qthreadlib)
 
 time_chain_bench_pthread_SOURCES = mtaap08/time_chain_bench_pthread.c
-time_chain_bench_pthread_DEPENDENCIES = $(qthreadlib)
 
 time_thrcrt_bench_SOURCES = mtaap08/time_thrcrt_bench.c
-time_thrcrt_bench_DEPENDENCIES = $(qthreadlib)
 
 time_thrcrt_bench_pthread_SOURCES = mtaap08/time_thrcrt_bench_pthread.c
-time_thrcrt_bench_pthread_DEPENDENCIES = $(qthreadlib)
 
 time_cncthr_bench_SOURCES = mtaap08/time_cncthr_bench.c
-time_cncthr_bench_DEPENDENCIES = $(qthreadlib)
 
 time_cncthr_bench_pthread_SOURCES = mtaap08/time_cncthr_bench_pthread.c
-time_cncthr_bench_pthread_DEPENDENCIES = $(qthreadlib)
 
 time_gcd_SOURCES = generic/time_gcd.c
 
 time_increments_SOURCES = generic/time_increments.c
-time_increments_DEPENDENCIES = $(qthreadlib)
 
 time_febs_SOURCES = generic/time_febs.c
-time_febs_DEPENDENCIES = $(qthreadlib)
 
 time_febs_graph_test_SOURCES = generic/time_febs_graph_test.c
-time_febs_graph_test_DEPENDENCIES = $(qthreadlib)
 
 time_febs_stream_test_SOURCES = generic/time_febs_stream_test.c
-time_febs_stream_test_DEPENDENCIES = $(qthreadlib)
 
 time_fib_SOURCES = mt/time_fib.c
-time_fib_DEPENDENCIES = $(qthreadlib)
 
 time_fib2_SOURCES = mt/time_fib2.c
-time_fib2_DEPENDENCIES = $(qthreadlib)
 
 time_producerconsumer_SOURCES = generic/time_producerconsumer.c
-time_producerconsumer_DEPENDENCIES = $(qthreadlib)
 
 time_syncvar_producerconsumer_SOURCES = generic/time_syncvar_producerconsumer.c
-time_syncvar_producerconsumer_DEPENDENCIES = $(qthreadlib)
 
 time_threading_SOURCES = generic/time_threading.c
-time_threading_DEPENDENCIES = $(qthreadlib)
 
 if COMPILE_OMP_BENCHMARKS
 time_threading_omp_SOURCES = generic/time_threading.omp.c
-time_threading_omp_DEPENDENCIES = $(qthreadlib)
 time_threading_omp_CFLAGS = @OPENMP_CFLAGS@
 endif
 
 time_stencil_bsp_SOURCES = generic/time_stencil_bsp.c
-time_stencil_bsp_DEPENDENCIES = $(qthreadlib)
 
 time_stencil_feb_SOURCES = generic/time_stencil_feb.c
-time_stencil_feb_DEPENDENCIES = $(qthreadlib)
 
 time_stencil_pre_SOURCES = generic/time_stencil_pre.c
-time_stencil_pre_DEPENDENCIES = $(qthreadlib)
 
 time_halo_swap_all_SOURCES = generic/time_halo_swap_all.c
-time_halo_swap_all_DEPENDENCIES = $(qthreadlib)
 
 time_prodcons_comm_SOURCES = generic/time_prodcons_comm.c
-time_prodcons_comm_DEPENDENCIES = $(qthreadlib)
 
 time_qt_loops_SOURCES = generic/time_qt_loops.c
-time_qt_loops_DEPENDENCIES = $(qthreadlib)
 
 time_qt_loopaccums_SOURCES = generic/time_qt_loopaccums.c
-time_qt_loopaccums_DEPENDENCIES = $(qthreadlib)
 
 if COMPILE_OMP_BENCHMARKS
 time_uts_omp_SOURCES = uts/time_uts_omp.c
@@ -317,75 +277,58 @@ time_uts_donecount3_SOURCES = uts/time_uts_donecount3.c
 time_uts_donecount3_LDADD = $(LDADD) $(utils_rnglib)
 
 time_task_spawn_SOURCES = mt/time_task_spawn.c
-time_task_spawn_DEPENDENCIES = $(qthreadlib)
 
 time_eager_future_SOURCES = mt/time_eager_future.c
-time_eager_future_DEPENDENCIES = $(qthreadlib)
 
 if COMPILE_OMP_BENCHMARKS
 time_omp_task_spawn_SOURCES = mt/time_omp_task_spawn.c
-time_omp_task_spawn_DEPENDENCIES = $(qthreadlib)
 time_omp_task_spawn_CFLAGS = @OPENMP_CFLAGS@
 
 time_omp_fib_SOURCES = mt/time_omp_fib.c
-time_omp_fib_DEPENDENCIES = $(qthreadlib)
 time_omp_fib_CFLAGS = @OPENMP_CFLAGS@
 endif
 
 if COMPILE_TBB_BENCHMARKS
 time_tbb_fib_SOURCES = mt/time_tbb_fib.cc
-time_tbb_fib_DEPENDENCIES = $(qthreadlib)
 time_tbb_fib_LDFLAGS = @TBB_LIBS@
 
 time_tbb_task_spawn_SOURCES = mt/time_tbb_task_spawn.cc
-time_tbb_task_spawn_DEPENDENCIES = $(qthreadlib)
 time_tbb_task_spawn_LDFLAGS = @TBB_LIBS@
 
 time_tbb_eager_future_SOURCES = mt/time_tbb_eager_future.cc
-time_tbb_eager_future_DEPENDENCIES = $(qthreadlib)
 time_tbb_eager_future_LDFLAGS = @TBB_LIBS@
 endif
 
 if COMPILE_CILK_BENCHMARKS
 time_cilk_fib_SOURCES = mt/time_cilk_fib.c
-time_cilk_fib_DEPENDENCIES = $(qthreadlib)
 
 time_cilk_task_spawn_SOURCES = mt/time_cilk_task_spawn.c
-time_cilk_task_spawn_DEPENDENCIES = $(qthreadlib)
 
 time_cilk_eager_future_SOURCES = mt/time_cilk_eager_future.c
-time_cilk_eager_future_DEPENDENCIES = $(qthreadlib)
 endif
 
 # SC12 Benchmarks
 
 spawn_sequential_qthreads_SOURCES = sc12/spawn_sequential_qthreads.c
-spawn_sequential_qthreads_DEPENDENCIES = $(qthreadlib)
 
 spawn_parallel_qthreads_SOURCES = sc12/spawn_parallel_qthreads.c
-spawn_parallel_qthreads_DEPENDENCIES = $(qthreadlib)
 
 fib_qthreads_SOURCES = sc12/fib_qthreads.c
-fib_qthreads_DEPENDENCIES = $(qthreadlib)
 
 uts_qthreads_SOURCES = sc12/uts_qthreads.c
 uts_qthreads_LDADD = $(LDADD) $(utils_rnglib)
 
 if COMPILE_OMP_BENCHMARKS
 time_omp_eager_future_SOURCES = mt/time_omp_eager_future.c
-time_omp_eager_future_DEPENDENCIES = $(qthreadlib)
 time_omp_eager_future_CFLAGS = @OPENMP_CFLAGS@
 
 spawn_sequential_omp_SOURCES = sc12/spawn_sequential_omp.c
-spawn_sequential_omp_DEPENDENCIES = $(qthreadlib)
 spawn_sequential_omp_CFLAGS = @OPENMP_CFLAGS@
 
 spawn_parallel_omp_SOURCES = sc12/spawn_parallel_omp.c
-spawn_parallel_omp_DEPENDENCIES = $(qthreadlib)
 spawn_parallel_omp_CFLAGS = @OPENMP_CFLAGS@
 
 fib_omp_SOURCES = sc12/fib_omp.c
-fib_omp_DEPENDENCIES = $(qthreadlib)
 fib_omp_CFLAGS = @OPENMP_CFLAGS@
 
 uts_omp_SOURCES = sc12/uts_omp.c
@@ -395,15 +338,12 @@ endif
 
 if COMPILE_TBB_BENCHMARKS
 spawn_sequential_tbb_SOURCES = sc12/spawn_sequential_tbb.cc
-spawn_sequential_tbb_DEPENDENCIES = $(qthreadlib)
 spawn_sequential_tbb_LDFLAGS = @TBB_LIBS@
 
 spawn_parallel_tbb_SOURCES = sc12/spawn_parallel_tbb.cc
-spawn_parallel_tbb_DEPENDENCIES = $(qthreadlib)
 spawn_parallel_tbb_LDFLAGS = @TBB_LIBS@
 
 fib_tbb_SOURCES = sc12/fib_tbb.cc
-fib_tbb_DEPENDENCIES = $(qthreadlib)
 fib_tbb_LDFLAGS = @TBB_LIBS@
 
 uts_tbb_SOURCES = sc12/uts_tbb.cc
@@ -413,13 +353,10 @@ endif
 
 if COMPILE_CILK_BENCHMARKS
 spawn_sequential_cilk_SOURCES = sc12/spawn_sequential_cilk.c
-spawn_sequential_cilk_DEPENDENCIES = $(qthreadlib)
 
 spawn_parallel_cilk_SOURCES = sc12/spawn_parallel_cilk.c
-spawn_parallel_cilk_DEPENDENCIES = $(qthreadlib)
 
 fib_cilk_SOURCES = sc12/fib_cilk.c
-fib_cilk_DEPENDENCIES = $(qthreadlib)
 
 uts_cilk_SOURCES = sc12/uts_cilk.c
 uts_cilk_LDADD = $(LDADD) $(utils_rnglib)
