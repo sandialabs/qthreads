@@ -89,7 +89,7 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
 
         if (qsh) {
             for (int ti = 0; ti < numtypes; ++ti) {
-                if (!strncmp(typenames[ti], qsh, strlen(typenames[ti]))) {
+                if (!strncasecmp(typenames[ti], qsh, strlen(typenames[ti]))) {
                     shep_type_idx = ti;
                 }
             }
@@ -101,7 +101,7 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
         qsh = qt_internal_get_env_str("WORKER_UNIT");
         if (qsh) {
             for (int ti = 0; ti < numtypes; ++ti) {
-                if (!strncmp(typenames[ti], qsh, strlen(typenames[ti]))) {
+                if (!strncasecmp(typenames[ti], qsh, strlen(typenames[ti]))) {
                     wkr_index = ti;
                     wkr_type  = shep_type_options[ti];
                 }

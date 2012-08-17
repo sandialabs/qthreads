@@ -298,6 +298,7 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict const  dest,
     eflags_t   e = { 0, 0, 0, 0, 0 };
     uint64_t   ret;
     qthread_t *me = qthread_internal_self();
+    QTHREAD_FEB_TIMER_DECLARATION(febblock);
 
     assert(src);
     qthread_debug(SYNCVAR_CALLS, "me(%p), dest(%p), src(%p) = %x\n", me, dest, src, (uintptr_t)src->u.w);
@@ -305,6 +306,8 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict const  dest,
     if (!me) {
         return qthread_syncvar_blocker_func(dest, src, READFF);
     }
+    QTHREAD_FEB_UNIQUERECORD(feb, src, me);
+    QTHREAD_FEB_TIMER_START(febblock);
 
 #if ((QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64) ||    \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_IA64) ||      \
@@ -340,6 +343,7 @@ int API_FUNC qthread_syncvar_readFF(uint64_t *restrict const  dest,
         if (e.pf == 0) {                         /* it got full! */
             goto locked_full;
         }
+        QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
         qthread_debug(SYNCVAR_DETAILS,
                       "3 src(%p) = %x (queued waiter waiting for full)\n",
                       src, (uintptr_t)BUILD_UNLOCKED_SYNCVAR(ret, SYNCFEB_STATE_EMPTY_WITH_WAITERS));
@@ -371,6 +375,7 @@ got_m:
 #else   /* ifdef LOCK_FREE_FEBS */
         /* Note that locking the hash table is unnecessary because we have
          * locked the syncvar itself. */
+        QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
         m = (qthread_addrstat_t *)qt_hash_get(qlib->syncvars[lockbin], (void *)src);
         if (!m) {
             m = qthread_addrstat_new();
@@ -406,6 +411,7 @@ locked_full:
         UNLOCK_THIS_MODIFIED_SYNCVAR(src, ret, e.sf);
         if (dest) { *dest = ret; }
     }
+    QTHREAD_FEB_TIMER_STOP(febblock, me);
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
 
@@ -482,6 +488,7 @@ int API_FUNC qthread_syncvar_fill(syncvar_t *restrict const addr)
             const int           lockbin = QTHREAD_CHOOSE_STRIPE(addr);
             qthread_addrstat_t *m;
 
+            QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
             e.sf = 0;                  // I'm releasing waiters
             e.pf = 0;                  // I'm going to mark this as full
 #ifdef LOCK_FREE_FEBS
@@ -558,6 +565,7 @@ int API_FUNC qthread_syncvar_empty(syncvar_t *restrict const addr)
             const int           lockbin = QTHREAD_CHOOSE_STRIPE(addr);
             qthread_addrstat_t *m;
 
+            QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
             e.sf = 0;                  // released!
             // wanted to mark it empty, but the waiters will fill it
 #ifdef LOCK_FREE_FEBS
@@ -622,6 +630,7 @@ int API_FUNC qthread_syncvar_readFE(uint64_t *restrict const  dest,
     uint64_t   ret;
     const int  lockbin = QTHREAD_CHOOSE_STRIPE(src);
     qthread_t *me      = qthread_internal_self();
+    QTHREAD_FEB_TIMER_DECLARATION(febblock);
 
     assert(src);
 
@@ -636,6 +645,8 @@ int API_FUNC qthread_syncvar_readFE(uint64_t *restrict const  dest,
 
     qthread_debug(SYNCVAR_BEHAVIOR, "me(%p), dest(%p), src(%p) = %x\n", me, dest,
                   src, (uintptr_t)src->u.w);
+    QTHREAD_FEB_UNIQUERECORD(feb, src, me);
+    QTHREAD_FEB_TIMER_START(febblock);
     ret = qthread_mwaitc(src, SYNCFEB_FULL, INITIAL_TIMEOUT, &e);
     qthread_debug(SYNCVAR_DETAILS, "2 src(%p) = %x\n", src,
                   (uintptr_t)src->u.w);
@@ -655,6 +666,7 @@ int API_FUNC qthread_syncvar_readFE(uint64_t *restrict const  dest,
         }
         qthread_debug(SYNCVAR_DETAILS, "3 src(%p) = %x (queued waiter waiting for full)\n",
                       src, (uintptr_t)BUILD_UNLOCKED_SYNCVAR(ret, SYNCFEB_STATE_EMPTY_WITH_WAITERS));
+        QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
 #ifdef LOCK_FREE_FEBS
         do {
             m = (qthread_addrstat_t *)qt_hash_get(qlib->syncvars[lockbin], (void *)src);
@@ -774,6 +786,7 @@ locked_full:
     if (dest) {
         *dest = ret;
     }
+    QTHREAD_FEB_TIMER_STOP(febblock, me);
     qthread_debug(SYNCVAR_DETAILS, "src(%p) exiting\n", src);
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
@@ -810,6 +823,7 @@ int INTERNAL qthread_syncvar_readFE_nb(uint64_t *restrict const  dest,
 
         assert(e.pf == 0);             // otherwise we should have gotten a timeout
         e.sf = 0;                      // released!
+        QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
         // wanted to mark it empty (pf=1), but the waiters will fill it
 #ifdef LOCK_FREE_FEBS
         do {
@@ -875,7 +889,7 @@ static QINLINE void qthread_syncvar_schedule(qthread_t          *waiter,
         qt_threadqueue_enqueue(waiter->rdata->shepherd_ptr->ready, waiter);
     } else {
 #ifdef QTHREAD_USE_SPAWNCACHE
-        if (!qt_spawncache_spawn(waiter))
+        if (!qt_spawncache_spawn(waiter, shep->ready))
 #endif
         qt_threadqueue_enqueue(shep->ready, waiter);
     }
@@ -1044,12 +1058,14 @@ int API_FUNC qthread_syncvar_writeF(syncvar_t *restrict const      dest,
     if (!shep) {
         return qthread_syncvar_blocker_func(dest, (void *)src, WRITEF);
     }
+    QTHREAD_FEB_UNIQUERECORD2(feb, dest, shep);
     qthread_mwaitc(dest, SYNCFEB_ANY, INT_MAX, &e);
     qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
     if ((e.pf == 1) && (e.sf == 1)) {        /* there are waiters to release */
         const int           lockbin = QTHREAD_CHOOSE_STRIPE(dest);
         qthread_addrstat_t *m;
 
+        QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
         e.sf = 0;                      // I'm releasing waiters
         e.pf = 0;                      // I'm going to mark this as full
 #ifdef LOCK_FREE_FEBS
@@ -1116,6 +1132,7 @@ int API_FUNC qthread_syncvar_writeEF(syncvar_t *restrict const      dest,
     uint64_t   ret;
     const int  lockbin = QTHREAD_CHOOSE_STRIPE(dest);
     qthread_t *me      = qthread_internal_self();
+    QTHREAD_FEB_TIMER_DECLARATION(febblock);
 
     qassert_ret((*src >> 60) == 0, QTHREAD_OVERFLOW);
 
@@ -1123,6 +1140,8 @@ int API_FUNC qthread_syncvar_writeEF(syncvar_t *restrict const      dest,
     if (!me) {
         return qthread_syncvar_blocker_func(dest, (void *)src, WRITEEF);
     }
+    QTHREAD_FEB_UNIQUERECORD(feb, dest, me);
+    QTHREAD_FEB_TIMER_START(febblock);
     ret = qthread_mwaitc(dest, SYNCFEB_EMPTY, INITIAL_TIMEOUT, &e);
     if (e.cf) {                        /* there was a timeout */
         QTHREAD_WAIT_TIMER_DECLARATION;
@@ -1138,6 +1157,7 @@ int API_FUNC qthread_syncvar_writeEF(syncvar_t *restrict const      dest,
                 goto locked_empty;
             }
         }
+        QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
         /* Note that locking the hash table is unnecessary because we have
          * locked the syncvar itself. */
         qthread_debug(SYNCVAR_DETAILS, "writeEF(c) dest(%p) = %x (queued waiter waiting for empty)\n",
@@ -1261,6 +1281,7 @@ locked_empty:
         qthread_debug(SYNCVAR_DETAILS, "writeEF(%p) => %x ...2\n", dest,
                       (uintptr_t)BUILD_UNLOCKED_SYNCVAR(val, SYNCFEB_STATE_FULL_NO_WAITERS));
     }
+    QTHREAD_FEB_TIMER_STOP(febblock, me);
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
 
@@ -1291,6 +1312,7 @@ int INTERNAL qthread_syncvar_writeEF_nb(syncvar_t *restrict const      dest,
     } else if (e.sf == 1) {            /* there are waiters to release! */
         qthread_addrstat_t *m;
 
+        QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
         assert(e.pf == 1);             // otherwise it wasn't really empty
         e.pf = 0;                      // mark full
         e.sf = 0;                      // released!
@@ -1382,6 +1404,7 @@ uint64_t API_FUNC qthread_syncvar_incrF(syncvar_t *restrict const operand,
         const int           lockbin = QTHREAD_CHOOSE_STRIPE(operand);
         qthread_addrstat_t *m;
 
+        QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
         e.sf = 0;                      // I'm releasing waiters
         e.pf = 0;                      // I'm going to mark this as full
 #ifdef LOCK_FREE_FEBS

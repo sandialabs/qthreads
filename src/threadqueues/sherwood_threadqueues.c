@@ -44,7 +44,7 @@ struct _qt_threadqueue {
     aligned_t steal_successful;
 #endif
 
-    QTHREAD_TRYLOCK_TYPE   qlock;
+    QTHREAD_TRYLOCK_TYPE qlock;
 } /* qt_threadqueue_t */;
 
 static aligned_t steal_disable   = 0;
@@ -201,7 +201,7 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
         }
         assert(q->head == NULL);
         assert(q->tail == NULL);
-        q->qlength = 0;
+        q->qlength           = 0;
         q->qlength_stealable = 0;
         QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
     }
@@ -212,7 +212,7 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 
 static QINLINE int qt_threadqueue_isstealable(qthread_t *t)
 {   /*{{{*/
-    return ((t->flags & QTHREAD_UNSTEALABLE) == 0)?1:0;
+    return ((t->flags & QTHREAD_UNSTEALABLE) == 0) ? 1 : 0;
 } /*}}}*/
 
 /* enqueue at tail */
@@ -245,12 +245,13 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
 } /*}}}*/
 
 #ifdef QTHREAD_USE_SPAWNCACHE
-int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
-                                            qthread_t *restrict                t)
-{   /*{{{*/
-    assert(q != NULL &&
-           ((q->head == q->tail && q->qlength < 2) ||
-            (q->head != NULL && q->tail != NULL && q->qlength > 1)));
+int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict c, /* cache */
+                                            qt_threadqueue_t *restrict         q, /* queue */
+                                            qthread_t *restrict                t) /* thread */
+{                                                                                 /*{{{*/
+    assert(c != NULL &&
+           ((c->head == c->tail && c->qlength < 2) ||
+            (c->head != NULL && c->tail != NULL && c->qlength > 1)));
     assert(t != NULL);
 
     qt_threadqueue_node_t *node;
@@ -263,24 +264,51 @@ int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q
     node->value     = t;
     node->stealable = qt_threadqueue_isstealable(t);
 
-    assert(q->tail == NULL || q->tail->next == NULL);
-    assert(q->head == NULL || q->head->prev == NULL);
-    if (q->on_deck) {
-        qt_threadqueue_node_t *tmp = q->on_deck;
-        // Add to the tail of the `q`
-        tmp->prev = q->tail;
-        q->tail   = tmp;
-        if (q->head == NULL) {
-            q->head = tmp;
+    assert(c->tail == NULL || c->tail->next == NULL);
+    assert(c->head == NULL || c->head->prev == NULL);
+    if (c->on_deck) {
+        qt_threadqueue_node_t *tmp = c->on_deck;
+        // Add to the tail of the `c`
+        tmp->prev = c->tail;
+        c->tail   = tmp;
+        if (c->head == NULL) {
+            c->head = tmp;
         } else {
             tmp->prev->next = tmp;
         }
-        q->qlength++;
-        if (tmp->stealable) { q->qlength_stealable++; }
-        assert(q->tail->next == NULL);
-        assert(q->head->prev == NULL);
+        c->qlength++;
+        if (tmp->stealable) { c->qlength_stealable++; }
+        assert(c->tail->next == NULL);
+        assert(c->head->prev == NULL);
     }
-    q->on_deck = node;
+    c->on_deck = node;
+
+#if 0
+    /* it is an idea, but so far does not appear to have any benefit (and a tiny tiny amount of harm, ~0.4%)... */
+    if (q->qlength == 0 && qlib->nworkers_active > 1 && c->qlength > (qlib->nworkers_active << 2)) {
+        qt_threadqueue_node_t *first = c->head;
+        qt_threadqueue_node_t *last  = c->tail;
+        if (QTHREAD_TRYLOCK_TRY(&q->qlock)) {
+            assert((q->head && q->tail) || (!q->head && !q->tail));
+            assert(q->head != first);
+            assert(q->tail != last);
+            first->prev = q->tail;
+            q->tail     = last;
+            if (q->head == NULL) {
+                q->head = first;
+            } else {
+                first->prev->next = first;
+            }
+            q->qlength           += c->qlength;
+            q->qlength_stealable += c->qlength_stealable;
+            assert(q->tail->next == NULL);
+            assert(q->head->prev == NULL);
+            QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
+            c->head    = c->tail = NULL;
+            c->qlength = c->qlength_stealable = 0;
+        }
+    }
+#endif
     return 1;
 } /*}}}*/
 
@@ -405,16 +433,16 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
                     qc->qlength = qc->qlength_stealable = 0;
                 } else {
                     // Refill on-deck
-                    qc->on_deck = qc->head;
-                    qc->head = qc->head->next;
+                    qc->on_deck       = qc->head;
+                    qc->head          = qc->head->next;
                     qc->on_deck->next = NULL;
                     if (qc->head) {
                         qc->head->prev = NULL;
                     }
-                    qc->qlength --;
+                    qc->qlength--;
                     qc->qlength_stealable -= qc->on_deck->stealable;
                 }
-#else
+#else           /* if 0 */
                 QTHREAD_TRYLOCK_LOCK(&q->qlock);
                 assert((q->head && q->tail) || (!q->head && !q->tail));
                 assert(q->head != first);
@@ -431,9 +459,10 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
                 assert(q->tail->next == NULL);
                 assert(q->head->prev == NULL);
                 QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
+                if (steal_disable) { steal_disable = 0; }
                 qc->head    = qc->tail = NULL;
                 qc->qlength = qc->qlength_stealable = 0;
-#endif
+#endif          /* if 0 */
             }
         } else if (q->head) {
             QTHREAD_TRYLOCK_LOCK(&q->qlock);
@@ -455,7 +484,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
             if (worker_id == NO_WORKER) {
                 worker_id = qthread_worker(NULL);
             }
-            if (my_shepherd->shepherd_id == 0 && worker_id == 0) {
+            if ((my_shepherd->shepherd_id == 0) && (worker_id == 0)) {
                 while (my_shepherd->stealing == 1) SPINLOCK_BODY();  // no sense contending for the lock
             } else {
                 while (my_shepherd->stealing) SPINLOCK_BODY();  // no sense contending for the lock
@@ -478,7 +507,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
             FREE_TQNODE(node);
             if ((t->flags & QTHREAD_REAL_MCCOY)) { // only needs to be on worker 0 for termination
                 if (worker_id == NO_WORKER) {
-                  worker_id = qthread_worker(NULL);
+                    worker_id = qthread_worker(NULL);
                 }
                 switch(worker_id) {
                     case NO_WORKER:
@@ -486,7 +515,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
                         abort();
                         continue; // keep looking
                     case 0:
-                        if (my_shepherd->stealing) my_shepherd->stealing = 0;
+                        if (my_shepherd->stealing) { my_shepherd->stealing = 0; }
                         return(t);
 
                     default:
@@ -540,9 +569,9 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h
                                                              qt_threadqueue_t *v)
 {                                      /*{{{ */
     qt_threadqueue_node_t *node;
-    qt_threadqueue_node_t *first          = NULL;
-    qt_threadqueue_node_t *last           = NULL;
-    long                   amtStolen      = 0;
+    qt_threadqueue_node_t *first     = NULL;
+    qt_threadqueue_node_t *last      = NULL;
+    long                   amtStolen = 0;
     long                   desired_stolen;
 
     if (steal_chunksize == 0) {
@@ -689,7 +718,7 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
                 STEAL_FAILED(thief_shepherd);
             }
         }
-        if (0 < myqueue->qlength) {  // work at home quit steal attempt
+        if ((0 < myqueue->qlength) || steal_disable) {  // work at home quit steal attempt
             break;
         }
 
@@ -703,9 +732,8 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
 #else
             SPINLOCK_BODY();
 #endif
-        } else {
-            SPINLOCK_BODY();
         }
+        SPINLOCK_BODY();
     }
     thief_shepherd->stealing = 0;
     return stolen;

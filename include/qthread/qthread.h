@@ -274,6 +274,8 @@ enum _qthread_features {
     SPAWN_NEW_TEAM,
     SPAWN_NEW_SUBTEAM,
     SPAWN_RET_SYNCVAR_T,
+    SPAWN_RET_SINC,
+    SPAWN_RET_SINC_VOID,
     SPAWN_PC_SYNCVAR_T,
     SPAWN_COUNT
 };
@@ -284,6 +286,8 @@ enum _qthread_features {
 # define QTHREAD_SPAWN_NEW_TEAM      (1 << SPAWN_NEW_TEAM)
 # define QTHREAD_SPAWN_NEW_SUBTEAM   (1 << SPAWN_NEW_SUBTEAM)
 # define QTHREAD_SPAWN_RET_SYNCVAR_T (1 << SPAWN_RET_SYNCVAR_T)
+# define QTHREAD_SPAWN_RET_SINC      (1 << SPAWN_RET_SINC)
+# define QTHREAD_SPAWN_RET_SINC_VOID (1 << SPAWN_RET_SINC_VOID)
 # define QTHREAD_SPAWN_PC_SYNCVAR_T  (1 << SPAWN_PC_SYNCVAR_T)
 
 int qthread_spawn(qthread_f             f,

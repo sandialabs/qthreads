@@ -17,7 +17,7 @@
 #include "qt_aligned_alloc.h"
 
 /* Globals */
-TLS_DECL_INIT(qt_threadqueue_private_t*,spawn_cache);
+TLS_DECL_INIT(qt_threadqueue_private_t *, spawn_cache);
 
 /* Static Functions */
 static void qt_spawncache_shutdown(void)
@@ -38,7 +38,8 @@ static void qt_threadqueue_private_destroy(void *q)
 
     qthread_internal_aligned_free(q, qthread_cacheline());
 }
-#endif
+
+#endif /* ifndef TLS */
 
 /* Internal-only Functions */
 void INTERNAL qt_spawncache_init(void)
@@ -50,6 +51,7 @@ void INTERNAL qt_spawncache_init(void)
 qt_threadqueue_private_t INTERNAL *qt_init_local_spawncache(void)
 {
     void *const ret = qthread_internal_aligned_alloc(sizeof(qt_threadqueue_private_t), qthread_cacheline());
+
     assert(ret);
     memset(ret, 0, sizeof(qt_threadqueue_private_t));
 
@@ -57,18 +59,21 @@ qt_threadqueue_private_t INTERNAL *qt_init_local_spawncache(void)
     return (qt_threadqueue_private_t *)ret;
 }
 
-qt_threadqueue_private_t INTERNAL *qt_spawncache_get(){
+qt_threadqueue_private_t INTERNAL *qt_spawncache_get()
+{
     return TLS_GET(spawn_cache);
 }
 
-int INTERNAL qt_spawncache_spawn(qthread_t *t)
+int INTERNAL qt_spawncache_spawn(qthread_t        *t,
+                                 qt_threadqueue_t *q)
 {
     qt_threadqueue_private_t *cache = TLS_GET(spawn_cache);
 
     if (cache) {
-        int ret = qt_threadqueue_private_enqueue(cache, t);
-        if( !ret)
+        int ret = qt_threadqueue_private_enqueue(cache, q, t);
+        if( !ret) {
             return ret;
+        }
         return ret;
     } else {
         return 0;

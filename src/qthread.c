@@ -847,14 +847,6 @@ int API_FUNC qthread_initialize(void)
         }
     }
 
-#if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-    qlib->atomic_locks = malloc(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
-    qassert_ret(qlib->atomic_locks, QTHREAD_MALLOC_ERROR);
-    for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
-        QTHREAD_FASTLOCK_INIT(qlib->atomic_locks[i]);
-    }
-#endif
-
     qthread_internal_alignment_init();
     qt_mpool_subsystem_init();
     qt_affinity_init(&nshepherds, &nworkerspershep);
@@ -890,8 +882,16 @@ int API_FUNC qthread_initialize(void)
     if ((nshepherds == 1) && (nworkerspershep == 1)) {
         need_sync = 0;
     }
-    QTHREAD_LOCKING_STRIPES = 1 << ((unsigned int)(log2(nshepherds * nworkerspershep)) + 1);
+    QTHREAD_LOCKING_STRIPES = 2 << ((unsigned int)(log2(nshepherds * nworkerspershep)) + 1);
     qthread_debug(CORE_BEHAVIOR, "there will be %u shepherd(s)\n", (unsigned)nshepherds);
+
+#if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
+    qlib->atomic_locks = malloc(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
+    qassert_ret(qlib->atomic_locks, QTHREAD_MALLOC_ERROR);
+    for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
+        QTHREAD_FASTLOCK_INIT(qlib->atomic_locks[i]);
+    }
+#endif
 
 #ifdef QTHREAD_COUNT_THREADS
     threadcount                = 1;
@@ -1144,8 +1144,8 @@ int API_FUNC qthread_initialize(void)
     qlib->mccoy_thread->rdata = malloc(sizeof(struct qthread_runtime_data_s));
 
     assert(qlib->mccoy_thread->rdata != NULL);
-    qlib->mccoy_thread->rdata->shepherd_ptr = &(qlib->shepherds[0]);
-    qlib->mccoy_thread->rdata->stack        = NULL;
+    qlib->mccoy_thread->rdata->shepherd_ptr   = &(qlib->shepherds[0]);
+    qlib->mccoy_thread->rdata->stack          = NULL;
     qlib->mccoy_thread->rdata->tasklocal_size = 0;
 
     qthread_debug(CORE_DETAILS, "enqueueing mccoy thread\n");
@@ -1291,6 +1291,7 @@ int API_FUNC qthread_initialize(void)
         }
     }
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
+    qthread_steal_disable();
 
     qthread_debug(CORE_DETAILS, "calling atexit\n");
     atexit(qthread_finalize);
@@ -1829,7 +1830,7 @@ void API_FUNC qthread_finalize(void)
 #endif
     assert(qlib->mccoy_thread->rdata->stack == NULL);
     if (qlib->mccoy_thread->rdata->tasklocal_size > 0) {
-        free(*(void**)&qlib->mccoy_thread->data[0]);
+        free(*(void **)&qlib->mccoy_thread->data[0]);
     }
     qthread_debug(CORE_DETAILS, "destroy mccoy thread structure\n");
     free(qlib->mccoy_thread->rdata);
@@ -2247,55 +2248,63 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
     }
     qthread_debug(THREAD_DETAILS, "t = %p\n", t);
 
+    t->f     = f;
+    t->arg   = (void *)arg;
+    t->ret   = ret;
+    t->rdata = NULL;
+    t->team  = team;
+
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    t->id                    = 0;
+    t->currentParallelRegion = NULL;
+    t->task_counter          = 0;
+    t->parent                = NULL;
+    t->prev_thread_state     = QTHREAD_STATE_ILLEGAL;
+#endif
+
 #ifdef QTHREAD_NONLAZY_THREADIDS
     /* give the thread an ID number */
     t->thread_id =
         qthread_internal_incr(&(qlib->max_thread_id),
                               &qlib->max_thread_id_lock, 1);
-    if (QTHREAD_UNLIKELY(t->thread_id == QTHREAD_NULL_TASK_ID)) {
-        /* yes, this is wrapping around, but... thread_id should be prevented from being NULL */
-        t->thread_id = qthread_internal_incr(&(qlib->max_thread_id),
-                                             &qlib->max_thread_id_lock, 2);
-    } else if (QTHREAD_UNLIKELY(t->thread_id == QTHREAD_NON_TASK_ID)) {
-        /* yes, this is wrapping around, but... thread_id should be prevented from being NON */
-        t->thread_id = qthread_internal_incr(&(qlib->max_thread_id),
-                                             &qlib->max_thread_id_lock, 1);
+    switch (t->thread_id) {
+        case QTHREAD_NULL_TASK_ID:
+            /* yes, this is wrapping around, but... thread_id should be prevented from being NULL */
+            t->thread_id = qthread_internal_incr(&(qlib->max_thread_id),
+                                                 &qlib->max_thread_id_lock, 2);
+            break;
+        case QTHREAD_NON_TASK_ID:
+            /* yes, this is wrapping around, but... thread_id should be prevented from being NON */
+            t->thread_id = qthread_internal_incr(&(qlib->max_thread_id),
+                                                 &qlib->max_thread_id_lock, 1);
+            break;
     }
 #else /* ifdef QTHREAD_NONLAZY_THREADIDS */
     t->thread_id = QTHREAD_NON_TASK_ID;
 #endif /* ifdef QTHREAD_NONLAZY_THREADIDS */
 
-    t->thread_state    = QTHREAD_STATE_NEW;
-    t->flags           = 0;
     t->target_shepherd = NO_SHEPHERD;
-    t->team            = team;
-    t->f               = f;
-    t->arg             = (void *)arg;
-    t->ret             = ret;
-    t->rdata           = NULL;
 
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    t->task_counter      = 0;
-    t->parent            = NULL;
-    t->prev_thread_state = QTHREAD_STATE_ILLEGAL;
-#endif
     // should I use the builtin block for args?
-    t->flags &= ~QTHREAD_HAS_ARGCOPY;
     if (arg_size > 0) {
         if (arg_size <= qlib->qthread_argcopy_size) {
-            t->arg    = (void *)(&t->data);
-            t->flags |= QTHREAD_BIG_STRUCT;
+            t->arg   = (void *)(&t->data);
+            t->flags = QTHREAD_BIG_STRUCT;
         } else {
-            t->arg    = malloc(arg_size);
-            t->flags |= QTHREAD_HAS_ARGCOPY;
+            t->arg   = malloc(arg_size);
+            t->flags = QTHREAD_HAS_ARGCOPY;
         }
         memcpy(t->arg, arg, arg_size);
+    } else {
+        t->flags = 0;
     }
 
     // am I the team leader?
     if (team_leader) {
         t->flags |= QTHREAD_TEAM_LEADER;
     }
+
+    t->thread_state = QTHREAD_STATE_NEW;
 
     qthread_debug(THREAD_DETAILS, "returning\n");
     return t;
@@ -2533,6 +2542,7 @@ static void qthread_wrapper(void *ptr)
     }
 
     if (t->ret) {
+        qthread_debug(THREAD_DETAILS, "tid %u, with flags %u, handling retval\n", t->thread_id, t->flags);
         if (t->flags & QTHREAD_RET_IS_SINC) {
             if (t->flags & QTHREAD_RET_IS_VOID_SINC) {
                 (t->f)(t->arg);
@@ -2716,7 +2726,6 @@ void API_FUNC qthread_yield_(int k)
     assert(qthread_library_initialized);
     qthread_t *t = qthread_internal_self();
 
-    MACHINE_FENCE;
     if (t != NULL) {
         qthread_debug(THREAD_CALLS,
                       "tid %u yielding...\n", t->thread_id);
@@ -2984,24 +2993,37 @@ int API_FUNC qthread_spawn(qthread_f             f,
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
        /* Step 4: Prepare the return value location (if necessary) */
     if (ret) {
-        int test = QTHREAD_SUCCESS;
-        if (feature_flag & QTHREAD_SPAWN_RET_SYNCVAR_T) {
-            t->flags |= QTHREAD_RET_IS_SYNCVAR;
-            if (qthread_syncvar_status((syncvar_t *)ret)) {
-                test = qthread_syncvar_empty((syncvar_t *)ret);
-            } else {
-                test = QTHREAD_SUCCESS;
-            }
-        } else {
-            // QTHREAD_SPAWN_RET_ALIGNED
-            qthread_debug(FEB_DETAILS, "tid %i emptying new thread %u's retval (%p)\n", me ? ((int)me->thread_id) : -1, t->thread_id, ret);
-            test = qthread_empty(ret);
+        int      test     = QTHREAD_SUCCESS;
+        unsigned ret_type = feature_flag & (QTHREAD_SPAWN_RET_SYNCVAR_T |
+                                            QTHREAD_SPAWN_RET_SINC |
+                                            QTHREAD_SPAWN_RET_SINC_VOID);
+        switch (ret_type) {
+            case QTHREAD_SPAWN_RET_SYNCVAR_T:
+                t->flags |= QTHREAD_RET_IS_SYNCVAR;
+                if (qthread_syncvar_status((syncvar_t *)ret)) {
+                    test = qthread_syncvar_empty((syncvar_t *)ret);
+                } else {
+                    test = QTHREAD_SUCCESS;
+                }
+                break;
+            case QTHREAD_SPAWN_RET_SINC:
+                t->flags |= QTHREAD_RET_IS_SINC;
+                break;
+            case QTHREAD_SPAWN_RET_SINC_VOID:
+                t->flags |= QTHREAD_RET_IS_VOID_SINC;
+                break;
+            default:
+                // QTHREAD_SPAWN_RET_ALIGNED
+                qthread_debug(FEB_DETAILS, "tid %i emptying new thread %u's retval (%p)\n", me ? ((int)me->thread_id) : -1, t->thread_id, ret);
+                test = qthread_empty(ret);
+                break;
         }
         if (QTHREAD_UNLIKELY(test != QTHREAD_SUCCESS)) {
             qthread_thread_free(t);
             return test;
         }
     }
+    qthread_debug(THREAD_DETAILS, "tid %i spawning new thread %u with flags %u\n", me ? ((int)me->thread_id) : -1, t->thread_id, t->flags);
     /* Step 5: Prepare the input preconditions (if necessary) */
     if (QTHREAD_LIKELY(!preconds) || (qthread_check_feb_preconds(t) == 0)) {
         /* Step 6: Set it going */
@@ -3020,12 +3042,15 @@ int API_FUNC qthread_spawn(qthread_f             f,
 #endif  /* ifdef QTHREAD_COUNT_THREADS */
 #ifdef QTHREAD_USE_SPAWNCACHE
         if (target_shep == NO_SHEPHERD) {
-            if (!qt_spawncache_spawn(t)) {
+            if (!qt_spawncache_spawn(t, qlib->threadqueues[dest_shep])) {
                 qt_threadqueue_enqueue(qlib->threadqueues[dest_shep], t);
             }
         } else
 #endif
-        qt_threadqueue_enqueue(qlib->threadqueues[dest_shep], t);
+        {
+            qthread_steal_enable();
+            qt_threadqueue_enqueue(qlib->threadqueues[dest_shep], t);
+        }
     }
     return QTHREAD_SUCCESS;
 } /*}}}*/

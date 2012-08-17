@@ -253,6 +253,9 @@ static void qt_loop_spawner(const size_t start,
         case SYNCVAR_T:
             retptr = sync.syncvar = malloc(steps * sizeof(syncvar_t));
             assert(sync.syncvar);
+            for (i = 0; i < (stop - start); ++i) {
+                sync.syncvar[i] = SYNCVAR_EMPTY_INITIALIZER;
+            }
             flags |= QTHREAD_SPAWN_RET_SYNCVAR_T;
             break;
         case SINC_T:
@@ -262,6 +265,9 @@ static void qt_loop_spawner(const size_t start,
         case ALIGNED:
             retptr = sync.aligned = qthread_internal_aligned_alloc(steps * sizeof(aligned_t), QTHREAD_ALIGNMENT_ALIGNED_T);
             assert(sync.aligned);
+            for (i = 0; i < (stop - start); ++i) {
+                qthread_empty(&sync.aligned[i]);
+            }
             break;
         case DONECOUNT:
             dc = 0;
@@ -280,23 +286,11 @@ static void qt_loop_spawner(const size_t start,
         qwa.arg       = argptr;
         qwa.id        = threadct;
         qwa.sync_type = sync_type;
-        switch (sync_type) {
-            case SYNCVAR_T:
-                sync.syncvar[threadct] = SYNCVAR_EMPTY_INITIALIZER;
-                qwa.sync               = sync.syncvar;
-                break;
-            case ALIGNED:
-                qthread_empty(&sync.aligned[threadct]);
-                qwa.sync = sync.aligned;
-            case DONECOUNT:
-                qwa.sync = &dc;
-                qassert_aligned(dc, QTHREAD_ALIGNMENT_ALIGNED_T);
-                break;
-            case SINC_T:
-                qwa.sync = sync.sinc;
-                break;
-            default:
-                abort();
+        if (sync_type == DONECOUNT) {
+            qwa.sync = &dc;
+            qassert_aligned(dc, QTHREAD_ALIGNMENT_ALIGNED_T);
+        } else {
+            qwa.sync = sync.syncvar;
         }
         qassert(qthread_spawn((qthread_f)qt_loop_wrapper,
                               &qwa, sizeof(struct qt_loop_wrapper_args),
@@ -600,6 +594,7 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
         case NO_SYNC:
             abort();
     }
+    qthread_steal_enable();
     free(qwa);
 }                                      /*}}} */
 
