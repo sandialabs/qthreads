@@ -288,21 +288,7 @@ void cholesky( chosen_type * A, const int n, const int b, const char * oname )
     qtimer_start(timer);
     
     // Create an instance of the context class which defines the graph
-    cholesky_context c( b, p, n);
-    printf("Ids list is:\n");
-    printf("s1_compute=%d\n", c.sc_s1_compute.id);
-    printf("s2_compute=%d\n", c.sc_s2_compute.id);
-    printf("s3_compute=%d\n", c.sc_s3_compute.id);
-    printf("k_compute=%d\n", c.sc_k_compute.id);
-    printf("kj_compute=%d\n", c.sc_kj_compute.id);
-    printf("kji_compute=%d\n", c.sc_kji_compute.id);
-    
-    printf("Lkji_compute=%d\n", c.Lkji.id);
-    
-	printf("sontrol_S1=%d\n", c.control_S1.id);
-	printf("sontrol_S2=%d\n", c.control_S2.id);
-	printf("sontrol_S3=%d\n", c.control_S3.id);
-    
+    cholesky_context c( b, p, n);    
     c.singleton.put(1);
     for(int i = 0; i < p; i++) {
         for(int j = 0; j <= i; j++) {
@@ -320,21 +306,18 @@ void cholesky( chosen_type * A, const int n, const int b, const char * oname )
     }
     
     // Wait for all steps to finish
-    printf("Prerun was %d(addr %p)\n", (*c.prerun), c.prerun);
-    
     
     //c.singleton.flush();
     //c.control_S1.flush();
     //c.control_S2.flush();
     //c.control_S3.flush();
 
-    printf("Ending prerun\n");
     c.wait();  
     
     qtimer_stop(timer);
     total_time = qtimer_secs(timer);
     
-    printf("Time(s): %.3f\n", total_time);
+    printf("%.3f\n", total_time);
     qtimer_destroy(timer);
 
     //qt_dictionary_printbuckets(c.Lkji.m_itemCollection);
@@ -387,5 +370,5 @@ void cholesky( chosen_type * A, const int n, const int b, const char * oname )
         }
         //TODO: write in A and output in file using these gets (fewer and accuarate wrt to getcounts)
     }
-	printf("Tile created: %d, tiles destroyed: %d at end of program\n", Tile<chosen_type>::created, Tile<chosen_type>::destroyed);
+    //printf("Tile created: %d, tiles destroyed: %d at end of program\n", Tile<chosen_type>::created, Tile<chosen_type>::destroyed);
 }

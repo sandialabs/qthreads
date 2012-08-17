@@ -104,7 +104,7 @@ public:
 	static int created, destroyed;
     Tile( int sz = 0 ) : m_sz( sz ), m_array( NULL )/*, m_full( true )*/
     {
-		created++;
+		//created++;
 		if( sz ) {
     		//CnC::serializer::construct_array< T >( m_array, sz*sz );
     		m_array = new T[sz*sz];
@@ -114,7 +114,7 @@ public:
     	}
     }
     ~Tile() {
-		destroyed++;
+		//destroyed++;
 		delete m_array;
     }
 #define TOI( _i, _j, _s ) ((_j)*(_s)+(_i))

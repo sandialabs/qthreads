@@ -95,7 +95,7 @@ struct cholesky_context : public CnC::context< cholesky_context >
 
     // The context class constructor
     cholesky_context( int _b = 0, int _p = 0, int _n = 0 )
-        : CnC::context< cholesky_context >(1),
+        : CnC::context< cholesky_context >(),
           
           
           // init step colls

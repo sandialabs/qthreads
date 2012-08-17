@@ -6,11 +6,7 @@ namespace CnC {
 	template< class ContextTemplate >tag_collection< Tag  >::tag_collection(context< ContextTemplate > &context)
 		: _context(reinterpret_cast< context_base & >(context)), prescribedStepCollections()  {
 			id = context.id++;
-			printf("<Tag collection constructor with context parameter> found prerun parameter to be %d. \n", *(context.prerun));
 			_context.prerun = context.prerun;
-			printf("Copy %p\n", _context.prerun);
-			printf("Copy val %d\n", *(_context.prerun));
-
 
 			context.registerTagCollection(this);
 			

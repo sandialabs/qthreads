@@ -72,13 +72,11 @@ namespace CnC {
 		inline void markJoin();
 		inline void markFork();
 		context_base(context_base& cb){
-			printf("Calling context base copy constructor\n");
 			id = cb.id;
 			prerun = cb.prerun;
 		}
 		
 		context_base(){
-			printf("Calling context base default constructor\n");
 			prerun = new int;
 			*prerun = 0;
 		}

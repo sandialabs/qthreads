@@ -28,7 +28,7 @@ namespace CnC {
 		//printf("<Context> default constructor has prerun = %d on %p\n", *prerun, this);
 		prerun = (int*)malloc(sizeof(int));
 		*prerun = -1;
-		printf("prerun should be 1? %d\n", *prerun);
+		//printf("prerun should be 1? %d\n", *prerun);
 		cnc_status = STARTED;
 		qthread_initialize();
 		sinc = qt_sinc_create(0, NULL, NULL, 0);
@@ -46,7 +46,6 @@ namespace CnC {
 		//printf("<Context> default constructor has prerun = %d on %p\n", *prerun, this);
 		//prerun = (int*)malloc(sizeof(int));
 		*prerun = value;
-		printf("prerun(%p) SET should be 1? %d\n", prerun, *prerun);
 		cnc_status = STARTED;
 		qthread_initialize();
 		sinc = qt_sinc_create(0, NULL, NULL, 0);
@@ -61,20 +60,20 @@ namespace CnC {
 	template< class ContextTemplate >
 	error_type context< ContextTemplate >::wait()
 	{
-		printf("=====\nWait found prerun to be %d on %p\n", *prerun, this);
+		//printf("=====\nWait found prerun to be %d on %p\n", *prerun, this);
 		if ((*prerun) == 1)
 		{
-				printf("Prerun phase was: enabled\n");
-				printf("Flushing step collections...\n");
+				//printf("Prerun phase was: enabled\n");
+				//printf("Flushing step collections...\n");
 				typename  std::list<tag_collection_base*>::const_iterator i;
-				printf("Step collections to flush %d\n", (int)tcs.size());
+				//printf("Step collections to flush %d\n", (int)tcs.size());
 				for( i=tcs.begin(); i != tcs.end(); ++i) {
 					//printf("Creating step instance...\n");
 					(**i).flush();
 				}
 		}
 		else
-			printf("Prerun phase was: disabled\n");
+			;//printf("Prerun phase was: disabled\n");
 		*prerun = 0;
 		qt_sinc_wait(sinc, NULL);
 		# ifdef DEBUG_COUNTERS
@@ -86,7 +85,7 @@ namespace CnC {
 
 		qthread_finalize();
 		cnc_status = ENDED;
-
+		/*
 		printf("CnC execution finalized:\n");
 		#ifdef CNC_PRECOND
 			printf("\t* preconditions: ON\n");
@@ -105,7 +104,7 @@ namespace CnC {
 		#else
 			printf("\t* getcounts: ON\n");
 		#endif
-		
+		*/
 		return 0;
 	}
 } // namespace CnC
