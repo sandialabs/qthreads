@@ -56,6 +56,7 @@ static void qt_affinity_internal_hwloc_teardown(void)
 void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
                                qthread_worker_id_t   *nbworkers)
 {                                      /*{{{ */
+    qthread_debug(AFFINITY_CALLS, "nbshepherds:%p:%u nbworkers:%p:%u\n", nbshepherds, *nbshepherds, nbworkers, *nbworkers);
     if (qthread_cas(&initialized, 0, 1) == 0) {
         qassert(hwloc_topology_init(&topology), 0);
         qassert(hwloc_topology_load(topology), 0);
@@ -112,6 +113,7 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
         }
     }
     if (*nbshepherds == 0) {           /* we need to guesstimate */
+        qthread_debug(AFFINITY_DETAILS, "guesstimating number of shepherds...\n");
         /* the goal here is to basically pick the number of domains over which
          * memory access is the same cost (e.g. number of sockets, if all cores on
          * a given socket share top-level cache). This will define the shepherd
@@ -210,7 +212,9 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
         *nbshepherds = guess_num_shepherds();
         *nbworkers   = guess_num_workers_per_shep(*nbshepherds);
     } else {                           /* (*nbshepherds != 0) */
+        qthread_debug(AFFINITY_DETAILS, "nbshepherds nonzero, shep_type_idx = %i\n", shep_type_idx);
         if (shep_type_idx != -1) {
+            qthread_debug(AFFINITY_DETAILS, "finding a shepherd depth...\n");
             shep_depth = hwloc_get_type_depth(topology, shep_type_options[shep_type_idx]);
             if (shep_depth <= 0) {
                 qthread_debug(AFFINITY_DETAILS, "invalid shepherd type (%s), finding another one...\n", typenames[shep_type_idx]);
@@ -417,7 +421,7 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me)
 
     assert(workerobjs_per_shep > 0);
 
-    qthread_debug(AFFINITY_DETAILS,
+    qthread_debug(AFFINITY_CALLS,
                   "shep %i(%i) worker %i [%i], there are %u %s [%i pu]\n",
                   (int)myshep->shepherd_id,
                   (int)myshep->node,
@@ -450,7 +454,7 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me)
                       (unsigned)me->packed_worker_id,
                       (int)shep_pus, (int)myshep->node, (int)me->worker_id, (int)worker_pus, (int)wraparounds, (int)qlib->nworkerspershep, (int)worker_wraparounds, (int)shep_pus);
         ASPRINTF(&str, sub_obj->allowed_cpuset);
-        qthread_debug(AFFINITY_CALLS,
+        qthread_debug(AFFINITY_BEHAVIOR,
                       "binding shep %i worker %i (%i) to PU %i, newPU %i, mask %s\n",
                       (int)myshep->shepherd_id, (int)me->worker_id,
                       (int)me->packed_worker_id,
@@ -557,20 +561,35 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
     } else {
         qthread_debug(AFFINITY_DETAILS, "matrix is %p, type at this depth: %s\n", matrix, hwloc_obj_type_string(HWLOC_OBJ_NODE));
     }
+    size_t node_to_NUMAnode[num_extant_objs];
+    for (size_t i = 0; i < num_extant_objs; ++i) {
+        hwloc_obj_t node_obj = hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth, i);
+        while (node_obj->type > HWLOC_OBJ_NODE) {
+            node_obj = node_obj->parent;
+            assert(node_obj);
+        }
+        node_to_NUMAnode[i] = node_obj->logical_index;
+        qthread_debug(AFFINITY_DETAILS, "obj %i maps to node %i\n", i, node_to_NUMAnode[i]);
+    }
     for (size_t i = 0; i < nshepherds; ++i) {
         for (size_t j = 0, k = 0; j < nshepherds; ++j) {
             if (j != i) {
 # ifdef QTHREAD_HAVE_HWLOC_DISTS
                 if (matrix) {
-                    sheps[i].shep_dists[k] = matrix->latency[sheps[i].node + matrix->nbobjs * sheps[j].node] * 10;
+                    sheps[i].shep_dists[k] = matrix->latency[node_to_NUMAnode[sheps[i].node] + matrix->nbobjs * node_to_NUMAnode[sheps[j].node]] * 10;
+                    qthread_debug(AFFINITY_DETAILS, "distance from %i(%i) to %i(%i) is %i\n",
+                                  (int)i, (int)sheps[i].node,
+                                  (int)j, (int)sheps[j].node,
+                                  (int)(sheps[i].shep_dists[k]));
                 } else {
                     // handle what is fundamentally a bug in old versions of hwloc
                     sheps[i].shep_dists[k] = 10;
+                    qthread_debug(AFFINITY_DETAILS, "pretending distance from %i to %i is %i\n", (int)i, (int)j, (int)(sheps[i].shep_dists[k]));
                 }
 # else
                 sheps[i].shep_dists[k] = 10;
+                qthread_debug(AFFINITY_DETAILS, "pretending distance from %i to %i is %i\n", (int)i, (int)j, (int)(sheps[i].shep_dists[k]));
 # endif         /* ifdef QTHREAD_HAVE_HWLOC_DISTS */
-                qthread_debug(AFFINITY_CALLS, "distance from %i to %i is %i\n", (int)i, (int)j, (int)(sheps[i].shep_dists[k]));
                 sheps[i].sorted_sheplist[k] = j;
                 k++;
             }
