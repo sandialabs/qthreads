@@ -54,19 +54,18 @@ static aligned_t fib(void *arg_)
 	return n;
     }
 
-    syncvar_t ret1 = SYNCVAR_STATIC_INITIALIZER;
-    syncvar_t ret2 = SYNCVAR_STATIC_INITIALIZER;
+    aligned_t ret1 = 0;
+    aligned_t ret2 = 0;
     unsigned int n1 = n - 1;
     unsigned int n2 = n - 2;
 
-    qthread_fork_syncvar(fib, &n1, &ret1);
-    qthread_fork_syncvar(fib, &n2, &ret2);
-    qthread_yield();
+    qthread_fork(fib, &n1, &ret1);
+    qthread_fork(fib, &n2, &ret2);
 
-    qthread_syncvar_readFF(NULL, &ret1);
-    qthread_syncvar_readFF(NULL, &ret2);
+    qthread_readFF(NULL, &ret1);
+    qthread_readFF(NULL, &ret2);
 
-    return ret1.u.s.data + ret2.u.s.data;
+    return ret1 + ret2;
 }
 
 int main(int   argc,
