@@ -151,7 +151,7 @@ static aligned_t visit(void *args_)
         }
 
         // Wait for children to finish up, accumulate descendants counts
-        qthread_readFF(NULL, &donec);
+        if (donec != expect) qthread_readFF(NULL, &donec);
 
         for (int i = 0; i < num_children; i++) {
             sum_descendants += num_descendants[i];
