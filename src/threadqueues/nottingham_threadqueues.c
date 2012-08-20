@@ -208,7 +208,8 @@ static QINLINE void qt_threadqueue_finish(qt_threadqueue_t      *q,
 } /*}}}*/
 
 #ifdef QTHREAD_USE_SPAWNCACHE
-int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
+int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict pq,
+                                            qt_threadqueue_t *restrict         q,
                                             qthread_t *restrict                t)
 {
     return 0;
