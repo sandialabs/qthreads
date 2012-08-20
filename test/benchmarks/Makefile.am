@@ -167,10 +167,10 @@ time_qdqueue_SOURCES = pmea09/time_qdqueue.c
 time_qdqueue_sizes_SOURCES = pmea09/time_qdqueue_sizes.c
 
 if COMPILE_TBB_BENCHMARKS
-time_tbbq_SOURCES = pmea09/time_tbbq.cc
+time_tbbq_SOURCES = pmea09/time_tbbq.cpp
 time_tbbq_LDFLAGS = @TBB_LIBS@
 
-time_tbbq_sizes_SOURCES = pmea09/time_tbbq_sizes.cc
+time_tbbq_sizes_SOURCES = pmea09/time_tbbq_sizes.cpp
 time_tbbq_sizes_LDFLAGS = @TBB_LIBS@
 endif
 

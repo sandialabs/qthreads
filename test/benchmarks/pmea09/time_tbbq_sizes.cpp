@@ -54,7 +54,7 @@ public:
         memset(ref, 1, objsize);
         for (size_t i = begin; i < end; i++) {
             void* j;
-            cq.pop(j);
+            cq.try_pop(j);
             assert(NULL != j);
             if (memcmp(ref, j, objsize)) {
                 fprintf(stderr, "memory was corrupted!\n");
@@ -91,7 +91,7 @@ int main(int argc, char*argv[])
     }
     for (uintptr_t i = 0; i < nElements; i++) {
         void* j;
-        cq.pop(j);
+        cq.try_pop(j);
         assert(i == (uintptr_t)j);
     }
     assert(cq.empty());
