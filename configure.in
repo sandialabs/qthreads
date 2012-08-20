@@ -624,7 +624,7 @@ AS_IF([test "x$enable_third_party_benchmarks" = xyes],
                        [have_tbb=no])
        AS_IF([test "x$have_tbb" = xyes],
              [LIBS_saved="$LIBS"
-              AC_SEARCH_LIBS([tbb],[main],
+              AC_SEARCH_LIBS([TBB_runtime_interface_version],[tbb],
                              [TBB_LIBS="-ltbb"
                               LIBS="$LIBS_saved"],
                              [have_tbb=no])])
