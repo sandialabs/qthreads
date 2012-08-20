@@ -53,7 +53,7 @@ int main(int   argc,
          char *argv[])
 {
     unsigned long threads  = task_scheduler_init::default_num_threads();
-    uint64_t      count    = 0;
+    uint64_t      count    = 1048576;
 
     qtimer_t timer;
     double   total_time = 0.0;

@@ -20,7 +20,7 @@ static aligned_t null_task(void *args_)
 int main(int   argc,
          char *argv[])
 {
-    unsigned long count = 0;
+    unsigned long count = 1048576;
     unsigned long i;
 
     qtimer_t timer;
