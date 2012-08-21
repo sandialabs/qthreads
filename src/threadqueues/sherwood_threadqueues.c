@@ -20,6 +20,7 @@
 #include "qthread_prefetch.h"
 #include "qt_threadqueues.h"
 #include "qt_envariables.h"
+#include "qt_debug.h"
 
 /* Data Structures */
 struct _qt_threadqueue_node {
@@ -89,14 +90,26 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *l)
 
 /* Memory Management */
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
-# define ALLOC_THREADQUEUE() (qt_threadqueue_t *)malloc(sizeof(qt_threadqueue_t))
-# define FREE_THREADQUEUE(t) free(t)
+// # define ALLOC_THREADQUEUE() (qt_threadqueue_t *)malloc(sizeof(qt_threadqueue_t))
+// # define FREE_THREADQUEUE(t) free(t)
+static QINLINE qt_threadqueue_t *ALLOC_THREADQUEUE(void)
+{
+    qt_threadqueue_t *ret = malloc(sizeof(qt_threadqueue_t));
+
+    ALLOC_SCRIBBLE(ret, sizeof(qt_threadqueue_t));
+    return ret;
+}
+
+# define FREE_THREADQUEUE(t) do { FREE_SCRIBBLE(t, sizeof(qt_threadqueue_t)); free(t); } while (0)
 static QINLINE qt_threadqueue_node_t *ALLOC_TQNODE(void)
 {                                      /*{{{ */
-    return (qt_threadqueue_node_t *)calloc(1, sizeof(qt_threadqueue_node_t));
+    qt_threadqueue_node_t *ret = (qt_threadqueue_node_t *)malloc(sizeof(qt_threadqueue_node_t));
+
+    ALLOC_SCRIBBLE(ret, sizeof(qt_threadqueue_node_t));
+    return ret;
 }                                      /*}}} */
 
-# define FREE_TQNODE(t) free(t)
+# define FREE_TQNODE(t) do { FREE_SCRIBBLE(t, sizeof(qt_threadqueue_node_t)); free(t); } while (0)
 void INTERNAL qt_threadqueue_subsystem_init(void)
 {
     steal_chunksize = qt_internal_get_env_num("STEAL_CHUNK", 0, 0);
@@ -172,9 +185,19 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
 } /*}}}*/
 
 #if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED)
-# define ALLOC_QTHREAD() (qthread_t *)malloc(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size)
-# define FREE_QTHREAD(t) free(t)
-#else
+static QINLINE qthread_t *ALLOC_QTHREAD(void)
+{
+    qthread_t *ret = malloc(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size);
+
+    ALLOC_SCRIBBLE(ret, sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size);
+    return ret;
+}
+
+# define FREE_QTHREAD(t) do {                                             \
+        FREE_SCRIBBLE(t, sizeof(qthread_t) + qlib->qthread_argcopy_size + \
+                      qlib->qthread_tasklocal_size);                      \
+        free(t); } while (0)
+#else /* if defined(UNPOOLED_QTHREAD_T) ||./src/threadqueues/nemesis_threadqueues.c defined(UNPOOLED) */
 extern qt_mpool generic_qthread_pool;
 # define ALLOC_QTHREAD() (qthread_t *)qt_mpool_alloc(generic_qthread_pool)
 # define FREE_QTHREAD(t) qt_mpool_free(generic_qthread_pool, t)

@@ -35,14 +35,6 @@
 #include "qt_visibility.h"
 #include "qt_aligned_alloc.h"
 
-#ifdef QTHREAD_MPOOL_SCRIBBLING
-# define ALLOC_SCRIBBLE(ptr, sz) memset((ptr), 0x55, (sz))
-# define FREE_SCRIBBLE(ptr, sz)  memset((ptr), 0x77, (sz))
-#else
-# define ALLOC_SCRIBBLE(ptr, sz)
-# define FREE_SCRIBBLE(ptr, sz)
-#endif
-
 typedef struct threadlocal_cache_s qt_mpool_threadlocal_cache_t;
 
 #ifdef TLS

@@ -1,6 +1,14 @@
 #ifndef QTHREAD_DEBUG_H
 #define QTHREAD_DEBUG_H
 
+#ifdef QTHREAD_MEMORY_SCRIBBLING
+# define ALLOC_SCRIBBLE(ptr, sz) memset((ptr), 0x55, (sz))
+# define FREE_SCRIBBLE(ptr, sz)  memset((ptr), 0x77, (sz))
+#else
+# define ALLOC_SCRIBBLE(ptr, sz) do { } while (0)
+# define FREE_SCRIBBLE(ptr, sz)  do { } while (0)
+#endif
+
 #ifdef QTHREAD_DEBUG
 # define DEBUG_ONLY(x) x
 

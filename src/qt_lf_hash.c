@@ -11,6 +11,7 @@
 #include "qthread/qthread.h" /* for qthread_incr() and qthread_cas() */
 #include "qt_mpool.h"
 #include "qthread_innards.h" /* for qthread_intarnal_cleanup_late() */
+#include "qt_debug.h"
 
 /* The Internal API */
 #include "qt_hash.h"
@@ -43,14 +44,6 @@ typedef uintptr_t marked_ptr_t;
 size_t   hard_max_buckets = 0;
 qt_mpool hash_entry_pool  = NULL;
 
-#ifndef UNPOOLED
-# define ALLOC_HASH_ENTRY() qt_mpool_alloc(hash_entry_pool)
-# define FREE_HASH_ENTRY(t) qt_mpool_free(hash_entry_pool, (t))
-#else
-# define ALLOC_HASH_ENTRY() malloc(sizeof(hash_entry))
-# define FREE_HASH_ENTRY(t) free(t)
-#endif
-
 typedef struct hash_entry_s {
     so_key_t     key;
     void        *value;
@@ -62,6 +55,21 @@ struct qt_hash_s {
     volatile size_t count;
     volatile size_t size;
 };
+
+#ifndef UNPOOLED
+# define ALLOC_HASH_ENTRY() qt_mpool_alloc(hash_entry_pool)
+# define FREE_HASH_ENTRY(t) qt_mpool_free(hash_entry_pool, (t))
+#else
+static QINLINE hash_entry *ALLOC_HASH_ENTRY(void)
+{
+    hash_entry *ret = malloc(sizeof(hash_entry));
+
+    ALLOC_SCRIBBLE(ret, sizeof(hash_entry));
+    return ret;
+}
+
+# define FREE_HASH_ENTRY(t) do { FREE_SCRIBBLE(t, sizeof(hash_entry)); free(t); } while (0)
+#endif /* ifndef UNPOOLED */
 
 /* prototypes */
 static void *qt_lf_list_find(marked_ptr_t  *head,
@@ -170,7 +178,7 @@ static int qt_lf_list_delete(marked_ptr_t *head,
         marked_ptr_t  lnext;
 
         if (qt_lf_list_find(head, key, &lprev, &lcur, &lnext) == NULL) { return 0; }
-        if (qthread_cas_ptr(&PTR_OF(lcur)->next, CONSTRUCT(0, lnext), CONSTRUCT(1, lnext)) != (void*)CONSTRUCT(0, lnext)) { continue; }
+        if (qthread_cas_ptr(&PTR_OF(lcur)->next, CONSTRUCT(0, lnext), CONSTRUCT(1, lnext)) != (void *)CONSTRUCT(0, lnext)) { continue; }
         if (qthread_cas(lprev, CONSTRUCT(0, lcur), CONSTRUCT(0, lnext)) == CONSTRUCT(0, lcur)) {
             FREE_HASH_ENTRY(PTR_OF(lcur));
         } else {
