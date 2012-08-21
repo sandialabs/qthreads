@@ -906,8 +906,8 @@ int API_FUNC qthread_initialize(void)
 #endif
 
 #ifdef CAS_STEAL_PROFILE
-    posix_memalign((void **)&qlib->cas_steal_profile, 64,
-                   sizeof(uint64_strip_t) * nshepherds * nworkerspershep);
+    qlib->cas_steal_profile =
+        qthread_internal_aligned_alloc(sizeof(uint64_strip_t) * nshepherds * nworkerspershep, 64);
 #endif
 
     /* initialize the FEB-like locking structures */
