@@ -249,9 +249,9 @@ qthread_t static QINLINE *qt_threadqueue_dequeue_helper(qt_threadqueue_t *q)
 }
 
 /* dequeue at tail, unlike original qthreads implementation */
-qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
-                                                    qt_threadqueue_private_t *QUNUSED(qc),
-                                                    uint_fast8_t              active)
+qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
+                                            qt_threadqueue_private_t *QUNUSED(qc),
+                                            uint_fast8_t              active)
 {   /*{{{*/
     int                     id    = qt_threadqueue_worker_id();
     qt_threadqueue_local_t *local = q->local[id];

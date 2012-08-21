@@ -283,9 +283,9 @@ int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict c
     }
     c->on_deck = node;
 
-#if 0
+# if 0
     /* it is an idea, but so far does not appear to have any benefit (and a tiny tiny amount of harm, ~0.4%)... */
-    if (q->qlength == 0 && qlib->nworkers_active > 1 && c->qlength > (qlib->nworkers_active << 2)) {
+    if ((q->qlength == 0) && (qlib->nworkers_active > 1) && (c->qlength > (qlib->nworkers_active << 2))) {
         qt_threadqueue_node_t *first = c->head;
         qt_threadqueue_node_t *last  = c->tail;
         if (QTHREAD_TRYLOCK_TRY(&q->qlock)) {
@@ -308,7 +308,7 @@ int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict c
             c->qlength = c->qlength_stealable = 0;
         }
     }
-#endif
+# endif /* if 0 */
     return 1;
 } /*}}}*/
 
@@ -381,9 +381,9 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
 } /*}}}*/
 
 /* dequeue at tail */
-qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
-                                                    qt_threadqueue_private_t *qc,
-                                                    uint_fast8_t              active)
+qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
+                                            qt_threadqueue_private_t *qc,
+                                            uint_fast8_t              active)
 {   /*{{{*/
     qthread_shepherd_t *my_shepherd = qthread_internal_getshep();
     qthread_t          *t;

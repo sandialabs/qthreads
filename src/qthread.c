@@ -489,7 +489,7 @@ static void *qthread_master(void *arg)
             SPINLOCK_BODY();
         }
 #endif
-        t = qt_threadqueue_dequeue_blocking(threadqueue, localqueue, QTHREAD_CASLOCK_READ_UI(me->active));
+        t = qt_scheduler_get_thread(threadqueue, localqueue, QTHREAD_CASLOCK_READ_UI(me->active));
         assert(t);
 #ifdef QTHREAD_SHEPHERD_PROFILING
         qtimer_stop(idle);
@@ -636,8 +636,8 @@ qt_run:
                         if (!qt_spawncache_yield(t))
 #endif
                         {
-                            qthread_t *f = qt_threadqueue_dequeue_blocking(threadqueue, NULL,
-                                                                           QTHREAD_CASLOCK_READ_UI(me->active));
+                            qthread_t *f = qt_scheduler_get_thread(threadqueue, NULL,
+                                                                  QTHREAD_CASLOCK_READ_UI(me->active));
                             qt_threadqueue_enqueue(me->ready, t);
                             qt_threadqueue_enqueue(me->ready, f);
                         }

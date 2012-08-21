@@ -147,7 +147,7 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 {   /*{{{*/
     // mspiegel: is it necessary to drain the queue?
     /* while (q->head != q->tail) {
-     *  qt_threadqueue_dequeue_blocking(q, 1);
+     *  qt_scheduler_get_thread(q, 1);
      * } */
     free((void *)q->base);
     free((void *)q);
@@ -460,9 +460,9 @@ qthread_t static QINLINE *qt_threadqueue_dequeue_helper(qt_threadqueue_t *q)
 }
 
 /* dequeue at tail, unlike original qthreads implementation */
-qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
-                                                    qt_threadqueue_private_t *QUNUSED(qc),
-                                                    uint_fast8_t              active)
+qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
+                                            qt_threadqueue_private_t *QUNUSED(qc),
+                                            uint_fast8_t              active)
 {   /*{{{*/
     qthread_t             *t      = NULL;
     rwlock_t              *rwlock = q->rwlock;
@@ -922,7 +922,7 @@ int qt_threadqueue_test()
     }
 
     printf("Dequeueing task\n");
-    qthread_t *result = qt_threadqueue_dequeue_blocking(threadqueue, 1);
+    qthread_t *result = qt_scheduler_get_thread(threadqueue, 1);
 
     assert(result == task);
 

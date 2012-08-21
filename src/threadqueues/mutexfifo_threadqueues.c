@@ -143,6 +143,30 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
     return q;
 }                                      /*}}} */
 
+static qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q)
+{                                      /*{{{ */
+    qthread_t *p = NULL;
+
+    qt_threadqueue_node_t *node, *new_head;
+
+    assert(q != NULL);
+    QTHREAD_FASTLOCK_LOCK(&q->head_lock);
+    {
+        node     = q->head;
+        new_head = node->next;
+        if (new_head != NULL) {
+            p       = new_head->value;
+            q->head = new_head;
+        }
+    }
+    QTHREAD_FASTLOCK_UNLOCK(&q->head_lock);
+    if (p != NULL) {
+        Q_PREFETCH(&(p->thread_state));
+        (void)qthread_internal_incr_s(&q->advisory_queuelen, &q->advisory_queuelen_m, -1);
+    }
+    return p;
+}                                      /*}}} */
+
 void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 {                                      /*{{{ */
     while (q->head != q->tail) {
@@ -156,7 +180,8 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 }                                      /*}}} */
 
 #ifdef QTHREAD_USE_SPAWNCACHE
-int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
+int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict pq,
+                                            qt_threadqueue_t *restrict         q,
                                             qthread_t *restrict                t)
 {
     return 0;
@@ -193,42 +218,31 @@ void qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
     qt_threadqueue_enqueue(q, t);
 } /*}}}*/
 
-qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
-{                                      /*{{{ */
-    qthread_t *p = NULL;
-
-    qt_threadqueue_node_t *node, *new_head;
-
-    assert(q != NULL);
-    QTHREAD_FASTLOCK_LOCK(&q->head_lock);
-    {
-        node     = q->head;
-        new_head = node->next;
-        if (new_head != NULL) {
-            p       = new_head->value;
-            q->head = new_head;
-        }
-    }
-    QTHREAD_FASTLOCK_UNLOCK(&q->head_lock);
-    if (p != NULL) {
-        Q_PREFETCH(&(p->thread_state));
-        (void)qthread_internal_incr_s(&q->advisory_queuelen, &q->advisory_queuelen_m, -1);
-    }
-    return p;
-}                                      /*}}} */
-
 /* this function is amusing, but the point is to avoid unnecessary bus traffic
  * by allowing idle shepherds to sit for a while while still allowing for
  * low-overhead for busy shepherds. This is a hybrid approach: normally, it
  * functions as a spinlock, but if it spins too much, it waits for a signal */
-qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
-                                                    qt_threadqueue_private_t *QUNUSED(qc),
-                                                    uint_fast8_t              QUNUSED(active))
+qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
+                                            qt_threadqueue_private_t *QUNUSED(qc),
+                                            uint_fast8_t              QUNUSED(active))
 {                                      /*{{{ */
     qthread_t *p = NULL;
 
     while ((p = qt_threadqueue_dequeue(q)) == NULL) {}
     return p;
 }                                      /*}}} */
+
+/* some place-holder functions */
+void INTERNAL qthread_steal_stat(void)
+{}
+
+void INTERNAL qthread_steal_enable(void)
+{}
+
+void INTERNAL qthread_steal_disable(void)
+{}
+
+void INTERNAL qthread_cas_steal_stat(void)
+{}
 
 /* vim:set expandtab: */

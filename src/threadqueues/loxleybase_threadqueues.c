@@ -84,7 +84,8 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 } /*}}}*/
 
 #ifdef QTHREAD_USE_SPAWNCACHE
-int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
+int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict pq,
+                                            qt_threadqueue_t *restrict         q,
                                             qthread_t *restrict                t)
 {
     return 0;
@@ -151,9 +152,9 @@ qthread_t static QINLINE *qt_threadqueue_dequeue_helper(qt_threadqueue_t *q)
 }
 
 /* dequeue at tail, unlike original qthreads implementation */
-qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
-                                                    qt_threadqueue_private_t *QUNUSED(qc),
-                                                    uint_fast8_t              active)
+qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
+                                            qt_threadqueue_private_t *QUNUSED(qc),
+                                            uint_fast8_t              active)
 {   /*{{{*/
     qthread_t *t;
 
@@ -340,5 +341,15 @@ void INTERNAL qthread_steal_stat(void)
 }
 
 #endif  /* ifdef STEAL_PROFILE */
+
+/* some place-holder functions */
+void INTERNAL qthread_steal_enable(void)
+{}
+
+void INTERNAL qthread_steal_disable(void)
+{}
+
+void INTERNAL qthread_cas_steal_stat(void)
+{}
 
 /* vim:set expandtab: */

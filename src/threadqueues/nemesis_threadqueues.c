@@ -116,6 +116,21 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
     return q;
 }                                      /*}}} */
 
+static qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q)
+{                                      /*{{{ */
+    qt_threadqueue_node_t *node = qt_internal_NEMESIS_dequeue(&q->q);
+
+    if (node) {
+        qthread_t *retval = node->thread;
+        assert(node->next == NULL);
+        (void)qthread_incr(&(q->advisory_queuelen), -1);
+        FREE_TQNODE(node);
+        return retval;
+    } else {
+        return NULL;
+    }
+}                                      /*}}} */
+
 void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 {                                      /*{{{ */
     assert(q);
@@ -128,7 +143,8 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 }                                      /*}}} */
 
 #ifdef QTHREAD_USE_SPAWNCACHE
-int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
+int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict pq,
+                                            qt_threadqueue_t *restrict         q,
                                             qthread_t *restrict                t)
 {
     return 0;
@@ -225,27 +241,12 @@ static inline qt_threadqueue_node_t *qt_internal_NEMESIS_dequeue(NEMESIS_queue *
     return retval;
 }                                      /*}}} */
 
-qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
+qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
+                                            qt_threadqueue_private_t *QUNUSED(qc),
+                                            uint_fast8_t              QUNUSED(active))
 {                                      /*{{{ */
     qt_threadqueue_node_t *node = qt_internal_NEMESIS_dequeue(&q->q);
-
-    if (node) {
-        qthread_t *retval = node->thread;
-        assert(node->next == NULL);
-        (void)qthread_incr(&(q->advisory_queuelen), -1);
-        FREE_TQNODE(node);
-        return retval;
-    } else {
-        return NULL;
-    }
-}                                      /*}}} */
-
-qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
-                                                    qt_threadqueue_private_t *QUNUSED(qc),
-                                                    uint_fast8_t              QUNUSED(active))
-{                                      /*{{{ */
-    qt_threadqueue_node_t *node = qt_internal_NEMESIS_dequeue(&q->q);
-    qthread_t *retval;
+    qthread_t             *retval;
 
     if (node == NULL) {
         while (q->q.shadow_head == NULL && q->q.head == NULL) {
@@ -271,5 +272,18 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
     FREE_TQNODE(node);
     return retval;
 }                                      /*}}} */
+
+/* some place-holder functions */
+void INTERNAL qthread_steal_stat(void)
+{}
+
+void INTERNAL qthread_steal_enable(void)
+{}
+
+void INTERNAL qthread_steal_disable(void)
+{}
+
+void INTERNAL qthread_cas_steal_stat(void)
+{}
 
 /* vim:set expandtab: */

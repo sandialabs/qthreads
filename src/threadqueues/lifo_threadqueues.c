@@ -118,7 +118,8 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 } /*}}}*/
 
 #ifdef QTHREAD_USE_SPAWNCACHE
-int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict q,
+int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict pq,
+                                            qt_threadqueue_t *restrict         q,
                                             qthread_t *restrict                t)
 {   /*{{{*/
     return 0;
@@ -213,7 +214,7 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
     return q->advisory_queuelen;
 } /*}}}*/
 
-qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
+static qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q)
 {   /*{{{*/
     qt_threadqueue_node_t *retval = q->stack;
 
@@ -239,9 +240,9 @@ qthread_t INTERNAL *qt_threadqueue_dequeue(qt_threadqueue_t *q)
     }
 } /*}}}*/
 
-qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
-                                                    qt_threadqueue_private_t *QUNUSED(qc),
-                                                    uint_fast8_t              QUNUSED(active))
+qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
+                                            qt_threadqueue_private_t *QUNUSED(qc),
+                                            uint_fast8_t              QUNUSED(active))
 {   /*{{{*/
     qthread_t *retval = qt_threadqueue_dequeue(q);
 
@@ -268,5 +269,18 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_blocking(qt_threadqueue_t         *q,
     qthread_debug(THREADQUEUE_BEHAVIOR, "found thread %u (%p); q(%p)\n", retval->thread_id, retval, q);
     return retval;
 } /*}}}*/
+
+/* some place-holder functions */
+void INTERNAL qthread_steal_stat(void)
+{}
+
+void INTERNAL qthread_steal_enable(void)
+{}
+
+void INTERNAL qthread_steal_disable(void)
+{}
+
+void INTERNAL qthread_cas_steal_stat(void)
+{}
 
 /* vim:set expandtab: */
