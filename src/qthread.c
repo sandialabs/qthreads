@@ -145,11 +145,11 @@ extern int adaptiveSetHigh;
 #endif
 
 #if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED)
-# define ALLOC_QTHREAD()     (qthread_t *)malloc(sizeof(qthread_t) + sizeof(void *) + qlib->qthread_tasklocal_size)
-# define ALLOC_BIG_QTHREAD() (qthread_t *)malloc(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size)
-# define FREE_QTHREAD(t)     free(t)
-# define FREE_BIG_QTHREAD(t) free(t)
-#else
+# define ALLOC_QTHREAD()     (qthread_t *)MALLOC(sizeof(qthread_t) + sizeof(void *) + qlib->qthread_tasklocal_size)
+# define ALLOC_BIG_QTHREAD() (qthread_t *)MALLOC(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size)
+# define FREE_QTHREAD(t)     FREE(t, sizeof(qthread_t) + sizeof(void *) + qlib->qthread_tasklocal_size)
+# define FREE_BIG_QTHREAD(t) FREE(t, sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size)
+#else /* if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED) */
 qt_mpool generic_qthread_pool     = NULL;
 qt_mpool generic_big_qthread_pool = NULL;
 # define ALLOC_QTHREAD()     (qthread_t *)qt_mpool_alloc(generic_qthread_pool)
@@ -168,6 +168,7 @@ static QINLINE void *ALLOC_STACK(void)
     if (tmp == NULL) {
         return NULL;
     }
+    ALLOC_SCRIBBLE(tmp, qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s) + (2 * getpagesize()));
     if (mprotect(tmp, getpagesize(), PROT_NONE) != 0) {
         perror("mprotect in ALLOC_STACK (1)");
     }
@@ -191,12 +192,12 @@ static QINLINE void FREE_STACK(void *t)
                  PROT_READ | PROT_WRITE) != 0) {
         perror("mprotect in FREE_STACK (2)");
     }
-    free(tmp);
+    FREE(tmp);
 }                      /*}}} */
 
 # else /* ifdef QTHREAD_GUARD_PAGES */
-#  define ALLOC_STACK() malloc(qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s))
-#  define FREE_STACK(t) free(t)
+#  define ALLOC_STACK() MALLOC(qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s))
+#  define FREE_STACK(t) FREE(t, qlib->qthread_stack_size) /* XXX: this size seems wrong */
 # endif /* ifdef QTHREAD_GUARD_PAGES */
 #else /* if defined(UNPOOLED_STACKS) || defined(UNPOOLED) */
 static qt_mpool generic_stack_pool = NULL;
@@ -244,10 +245,10 @@ static QINLINE void FREE_STACK(void *t)
 #endif  /* if defined(UNPOOLED_STACKS) || defined(UNPOOLED) */
 
 #if defined(UNPOOLED)
-# define ALLOC_RDATA() (struct qthread_runtime_data_s *)malloc(sizeof(struct qthread_runtime_data_s));
-# define FREE_RDATA(r) free(r)
-# define ALLOC_TEAM()  (qt_team_t *)malloc(sizeof(qt_team_t))
-# define FREE_TEAM(t)  free(t)
+# define ALLOC_RDATA() (struct qthread_runtime_data_s *)MALLOC(sizeof(struct qthread_runtime_data_s));
+# define FREE_RDATA(r) FREE(r, sizeof(struct qthread_runtime_data_s))
+# define ALLOC_TEAM()  (qt_team_t *)MALLOC(sizeof(qt_team_t))
+# define FREE_TEAM(t)  FREE(t, sizeof(qt_team_t))
 #else
 static qt_mpool generic_rdata_pool = NULL;
 # define ALLOC_RDATA() (struct qthread_runtime_data_s *)qt_mpool_alloc(generic_rdata_pool)
@@ -637,7 +638,7 @@ qt_run:
 #endif
                         {
                             qthread_t *f = qt_scheduler_get_thread(threadqueue, NULL,
-                                                                  QTHREAD_CASLOCK_READ_UI(me->active));
+                                                                   QTHREAD_CASLOCK_READ_UI(me->active));
                             qt_threadqueue_enqueue(me->ready, t);
                             qt_threadqueue_enqueue(me->ready, f);
                         }
@@ -824,7 +825,7 @@ int API_FUNC qthread_initialize(void)
         qthread_debug(CORE_DETAILS, "redundant call\n");
         return QTHREAD_SUCCESS;
     }
-    qlib = (qlib_t)malloc(sizeof(struct qlib_s));
+    qlib = (qlib_t)MALLOC(sizeof(struct qlib_s));
     qassert_ret(qlib, QTHREAD_MALLOC_ERROR);
 
     nshepherds = qt_internal_get_env_num("NUM_SHEPHERDS", 0, 0);
@@ -886,7 +887,7 @@ int API_FUNC qthread_initialize(void)
     qthread_debug(CORE_BEHAVIOR, "there will be %u shepherd(s)\n", (unsigned)nshepherds);
 
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-    qlib->atomic_locks = malloc(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
+    qlib->atomic_locks = MALLOC(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
     qassert_ret(qlib->atomic_locks, QTHREAD_MALLOC_ERROR);
     for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
         QTHREAD_FASTLOCK_INIT(qlib->atomic_locks[i]);
@@ -912,16 +913,16 @@ int API_FUNC qthread_initialize(void)
 
     /* initialize the FEB-like locking structures */
 #ifdef QTHREAD_COUNT_THREADS
-    qlib->febs_stripes = malloc(sizeof(aligned_t) * QTHREAD_LOCKING_STRIPES);
+    qlib->febs_stripes = MALLOC(sizeof(aligned_t) * QTHREAD_LOCKING_STRIPES);
     qassert_ret(qlib->febs_stripes, QTHREAD_MALLOC_ERROR);
 # ifdef QTHREAD_MUTEX_INCREMENT
-    qlib->febs_stripes_locks = malloc(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
+    qlib->febs_stripes_locks = MALLOC(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
     qassert_ret(qlib->febs_stripes_locks, QTHREAD_MALLOC_ERROR);
 # endif
 #endif /* ifdef QTHREAD_COUNT_THREADS */
-    qlib->FEBs = malloc(sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
+    qlib->FEBs = MALLOC(sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
     qassert_ret(qlib->FEBs, QTHREAD_MALLOC_ERROR);
-    qlib->syncvars = malloc(sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
+    qlib->syncvars = MALLOC(sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
     qassert_ret(qlib->syncvars, QTHREAD_MALLOC_ERROR);
     for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
 #ifdef QTHREAD_COUNT_THREADS
@@ -1141,7 +1142,7 @@ int API_FUNC qthread_initialize(void)
     qlib->mccoy_thread->flags        = QTHREAD_REAL_MCCOY | QTHREAD_UNSTEALABLE; /* i.e. this is THE parent thread */
     assert(qlib->mccoy_thread->rdata == NULL);
 
-    qlib->mccoy_thread->rdata = malloc(sizeof(struct qthread_runtime_data_s));
+    qlib->mccoy_thread->rdata = MALLOC(sizeof(struct qthread_runtime_data_s));
 
     assert(qlib->mccoy_thread->rdata != NULL);
     qlib->mccoy_thread->rdata->shepherd_ptr   = &(qlib->shepherds[0]);
@@ -1379,7 +1380,7 @@ static QINLINE void qthread_makecontext(qt_context_t *const c,
  * these functions get called *way* AFTER shepherds are torn down */
 void INTERNAL qthread_internal_cleanup_late(void (*function)(void))
 {   /*{{{*/
-    struct qt_cleanup_funcs_s *ng = malloc(sizeof(struct qt_cleanup_funcs_s));
+    struct qt_cleanup_funcs_s *ng = MALLOC(sizeof(struct qt_cleanup_funcs_s));
 
     assert(ng);
     ng->func              = function;
@@ -1391,7 +1392,7 @@ void INTERNAL qthread_internal_cleanup_late(void (*function)(void))
  * these functions get called AFTER shepherds are torn down */
 void INTERNAL qthread_internal_cleanup(void (*function)(void))
 {   /*{{{*/
-    struct qt_cleanup_funcs_s *ng = malloc(sizeof(struct qt_cleanup_funcs_s));
+    struct qt_cleanup_funcs_s *ng = MALLOC(sizeof(struct qt_cleanup_funcs_s));
 
     assert(ng);
     ng->func         = function;
@@ -1403,7 +1404,7 @@ void INTERNAL qthread_internal_cleanup(void (*function)(void))
  * these functions get called BEFORE shepherds are torn down */
 void INTERNAL qthread_internal_cleanup_early(void (*function)(void))
 {   /*{{{*/
-    struct qt_cleanup_funcs_s *ng = malloc(sizeof(struct qt_cleanup_funcs_s));
+    struct qt_cleanup_funcs_s *ng = MALLOC(sizeof(struct qt_cleanup_funcs_s));
 
     assert(ng);
     ng->func               = function;
@@ -1611,7 +1612,7 @@ void API_FUNC qthread_finalize(void)
         struct qt_cleanup_funcs_s *tmp = qt_cleanup_early_funcs;
         qt_cleanup_early_funcs = tmp->next;
         tmp->func();
-        free(tmp);
+        FREE(tmp, sizeof(struct qt_cleanup_funcs_s));
     }
     qthread_debug(CORE_DETAILS, "done calling early cleanup functions\n");
 
@@ -1642,15 +1643,15 @@ void API_FUNC qthread_finalize(void)
                             (int)i, (int)j, r, strerror(r));
                 abort();
             } else {
-                free(shep->workers[j].nostealbuffer);
-                free(shep->workers[j].stealbuffer);
+                FREE(shep->workers[j].nostealbuffer, STEAL_BUFFER_LENGTH * sizeof(qthread_t *));
+                FREE(shep->workers[j].stealbuffer, STEAL_BUFFER_LENGTH * sizeof(qthread_t *));
             }
         }
         if (i == 0) {
-            free(shep0->workers[0].nostealbuffer);
-            free(shep0->workers[0].stealbuffer);
+            FREE(shep0->workers[0].nostealbuffer, STEAL_BUFFER_LENGTH * sizeof(qthread_t *));
+            FREE(shep0->workers[0].stealbuffer, STEAL_BUFFER_LENGTH * sizeof(qthread_t *));
         }
-        free(qlib->shepherds[i].workers);
+        FREE(qlib->shepherds[i].workers, qlib->nworkerspershep * sizeof(qthread_worker_t));
         if (i == 0) { continue; }
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     for (i = 1; i < qlib->nshepherds; i++) {
@@ -1734,7 +1735,7 @@ void API_FUNC qthread_finalize(void)
         struct qt_cleanup_funcs_s *tmp = qt_cleanup_funcs;
         qt_cleanup_funcs = tmp->next;
         tmp->func();
-        free(tmp);
+        FREE(tmp, sizeof(struct qt_cleanup_funcs_s));
     }
 
 #ifdef QTHREAD_FEB_PROFILING
@@ -1793,18 +1794,18 @@ void API_FUNC qthread_finalize(void)
         struct qt_cleanup_funcs_s *tmp = qt_cleanup_late_funcs;
         qt_cleanup_late_funcs = tmp->next;
         tmp->func();
-        free(tmp);
+        FREE(tmp, sizeof(struct qt_cleanup_funcs_s));
     }
     qthread_debug(FEB_DETAILS, "destroy feb infrastructure arrays\n");
-    free(qlib->FEBs);
-    free(qlib->syncvars);
+    FREE(qlib->FEBs, sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
+    FREE(qlib->syncvars, sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-    free((void *)qlib->atomic_locks);
+    FREE((void *)qlib->atomic_locks, sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
 #endif
 #ifdef QTHREAD_COUNT_THREADS
-    free(qlib->febs_stripes);
+    FREE(qlib->febs_stripes, sizeof(aligned_t) * QTHREAD_LOCKING_STRIPES);
 # ifdef QTHREAD_MUTEX_INCREMENT
-    free(qlib->febs_stripes_locks);
+    FREE(qlib->febs_stripes_locks, sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
 # endif
 #endif
 
@@ -1830,20 +1831,20 @@ void API_FUNC qthread_finalize(void)
 #endif
     assert(qlib->mccoy_thread->rdata->stack == NULL);
     if (qlib->mccoy_thread->rdata->tasklocal_size > 0) {
-        free(*(void **)&qlib->mccoy_thread->data[0]);
+        FREE(*(void **)&qlib->mccoy_thread->data[0], qlib->mccoy_thread->rdata->tasklocal_size);
     }
     qthread_debug(CORE_DETAILS, "destroy mccoy thread structure\n");
-    free(qlib->mccoy_thread->rdata);
+    FREE(qlib->mccoy_thread->rdata, sizeof(struct qthread_runtime_data_s));
     FREE_QTHREAD(qlib->mccoy_thread);
     qthread_debug(CORE_DETAILS, "destroy master stack\n");
-    free(qlib->master_stack);
+    FREE(qlib->master_stack, qlib->master_stack_size);
     for (i = 0; i < qlib->nshepherds; ++i) {
         qthread_debug(AFFINITY_DETAILS, "destroy topology information on shep %i\n", (int)i);
         if (qlib->shepherds[i].shep_dists) {
-            free(qlib->shepherds[i].shep_dists);
+            FREE(qlib->shepherds[i].shep_dists, (qlib->nshepherds - 1) * sizeof(unsigned int));
         }
         if (qlib->shepherds[i].sorted_sheplist) {
-            free(qlib->shepherds[i].sorted_sheplist);
+            FREE(qlib->shepherds[i].sorted_sheplist, (qlib->nshepherds - 1) * sizeof(qthread_shepherd_id_t));
         }
     }
 
@@ -1861,10 +1862,10 @@ void API_FUNC qthread_finalize(void)
     generic_team_pool = NULL;
 #endif /* ifndef UNPOOLED */
     qthread_debug(CORE_DETAILS, "destroy global shepherd array\n");
-    free(qlib->shepherds);
-    free(qlib->threadqueues);
+    FREE(qlib->shepherds, qlib->nshepherds * sizeof(qthread_shepherd_t));
+    FREE(qlib->threadqueues, qlib->nshepherds * sizeof(qt_threadqueue_t *));
     qthread_debug(CORE_DETAILS, "destroy global data\n");
-    free(qlib);
+    FREE(qlib, sizeof(struct qlib_s));
     qlib = NULL;
     qthread_debug(CORE_DETAILS, "destroy shepherd thread-local data\n");
     TLS_DELETE(shepherd_structs);
@@ -1926,7 +1927,7 @@ void API_FUNC *qthread_get_tasklocal(unsigned int size)
             }
             if (0 == tl_sz) {
                 qthread_debug(THREAD_DETAILS, "Allocate space and copy old data\n");
-                void *tmp_data = malloc(size);
+                void *tmp_data = MALLOC(size);
                 assert(NULL != tmp_data);
 
                 memcpy(tmp_data, data_blob, qlib->qthread_tasklocal_size);
@@ -2291,7 +2292,7 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
             t->arg   = (void *)(&t->data);
             t->flags = QTHREAD_BIG_STRUCT;
         } else {
-            t->arg   = malloc(arg_size);
+            t->arg   = MALLOC(arg_size);
             t->flags = QTHREAD_HAS_ARGCOPY;
         }
         memcpy(t->arg, arg, arg_size);
@@ -2319,10 +2320,10 @@ static QINLINE void qthread_thread_free(qthread_t *t)
         if (t->rdata->tasklocal_size > 0) {
             qthread_debug(THREAD_DETAILS, "t(%p,%i): destroying %u bytes of task-local storage\n", t, t->thread_id, t->rdata->tasklocal_size);
             if (t->flags & QTHREAD_BIG_STRUCT) {
-                free(*(void **)&t->data[qlib->qthread_argcopy_size]);
+                FREE(*(void **)&t->data[qlib->qthread_argcopy_size], t->rdata->tasklocal_size);
                 *(void **)&t->data[qlib->qthread_argcopy_size] = NULL;
             } else {
-                free(*(void **)&t->data[0]);
+                FREE(*(void **)&t->data[0], t->rdata->tasklocal_size);
                 *(void **)&t->data[0] = NULL;
             }
         }
@@ -2342,7 +2343,7 @@ static QINLINE void qthread_thread_free(qthread_t *t)
     }
     if (t->flags & QTHREAD_HAS_ARGCOPY) {
         assert(&t->data != t->arg);
-        free(t->arg);
+        free(t->arg); // I don't record the size of this anywhere, so I can't scribble it
         t->arg = NULL;
     }
     qthread_debug(THREAD_DETAILS, "t(%p): releasing thread handle %p\n", t, t);
@@ -3094,7 +3095,7 @@ int API_FUNC qthread_fork_copyargs_precond(qthread_f   f,
 
     va_start(args, npreconds);
     if (npreconds > 0) {
-        preconds = malloc((npreconds + 1) * sizeof(aligned_t *));
+        preconds = MALLOC((npreconds + 1) * sizeof(aligned_t *));
         assert(preconds != NULL);
         preconds[0] = (aligned_t *)(uintptr_t)(npreconds);
         for (int i = 1; i < npreconds + 1; ++i) {
@@ -3102,7 +3103,7 @@ int API_FUNC qthread_fork_copyargs_precond(qthread_f   f,
         }
     } else if (npreconds < 0) {
         npreconds *= -1;
-        preconds   = malloc((npreconds + 1) * sizeof(aligned_t *));
+        preconds   = MALLOC((npreconds + 1) * sizeof(aligned_t *));
         assert(preconds != NULL);
         preconds[0] = (aligned_t *)(uintptr_t)npreconds;
         aligned_t **tmp = va_arg(args, aligned_t * *);
@@ -3132,7 +3133,7 @@ int API_FUNC qthread_fork_precond_simple(qthread_f   f,
     qthread_debug(THREAD_CALLS, "f=%p, arg=%p, ret=%p, npreconds=%u\n", f, arg, ret, npreconds);
     va_start(args, npreconds);
     if (npreconds > 0) {
-        preconds = (aligned_t **)malloc((npreconds + 1) * sizeof(aligned_t *));
+        preconds = (aligned_t **)MALLOC((npreconds + 1) * sizeof(aligned_t *));
         assert(preconds != NULL);
         preconds[0] = (aligned_t *)(uintptr_t)npreconds;
         for (int i = 1; i < npreconds + 1; ++i) {
@@ -3140,7 +3141,7 @@ int API_FUNC qthread_fork_precond_simple(qthread_f   f,
         }
     } else if (npreconds < 0) {
         npreconds *= -1;
-        preconds   = (aligned_t **)malloc((npreconds + 1) * sizeof(aligned_t *));
+        preconds   = (aligned_t **)MALLOC((npreconds + 1) * sizeof(aligned_t *));
         assert(preconds != NULL);
         preconds[0] = (aligned_t *)(uintptr_t)(npreconds);
         aligned_t **tmp = va_arg(args, aligned_t * *);
@@ -3163,7 +3164,7 @@ int API_FUNC qthread_fork_precond(qthread_f   f,
 
     va_start(args, npreconds);
     if (npreconds > 0) {
-        preconds = malloc((npreconds + 1) * sizeof(aligned_t *));
+        preconds = MALLOC((npreconds + 1) * sizeof(aligned_t *));
         assert(preconds != NULL);
         preconds[0] = (aligned_t *)(uintptr_t)npreconds;
         for (int i = 1; i < npreconds + 1; ++i) {
@@ -3171,7 +3172,7 @@ int API_FUNC qthread_fork_precond(qthread_f   f,
         }
     } else if (npreconds < 0) {
         npreconds *= -1;
-        preconds   = malloc((npreconds + 1) * sizeof(aligned_t *));
+        preconds   = MALLOC((npreconds + 1) * sizeof(aligned_t *));
         assert(preconds != NULL);
         preconds[0] = (aligned_t *)(uintptr_t)npreconds;
         aligned_t **tmp = va_arg(args, aligned_t * *);
@@ -3401,7 +3402,7 @@ int API_FUNC qthread_fork_precond_to(qthread_f             f,
 
     va_start(args, npreconds);
     if (npreconds > 0) {
-        preconds = malloc((npreconds + 1) * sizeof(aligned_t *));
+        preconds = MALLOC((npreconds + 1) * sizeof(aligned_t *));
         assert(preconds != NULL);
         preconds[0] = (aligned_t *)(uintptr_t)npreconds;
         for (int i = 1; i < npreconds + 1; ++i) {
@@ -3409,7 +3410,7 @@ int API_FUNC qthread_fork_precond_to(qthread_f             f,
         }
     } else if (npreconds < 0) {
         npreconds *= -1;
-        preconds   = malloc((npreconds + 1) * sizeof(aligned_t *));
+        preconds   = MALLOC((npreconds + 1) * sizeof(aligned_t *));
         assert(preconds != NULL);
         preconds[0] = (aligned_t *)(uintptr_t)npreconds;
         aligned_t **tmp = va_arg(args, aligned_t * *);
@@ -3655,7 +3656,7 @@ int qt_omp_parallel_region_create()
 {                      /*{{{ */
     int                        ret = 0;
     int                        workers;
-    qthread_parallel_region_t *pr = malloc(sizeof(qthread_parallel_region_t));
+    qthread_parallel_region_t *pr = MALLOC(sizeof(qthread_parallel_region_t));
 
     qassert_ret(pr, QTHREAD_MALLOC_ERROR);
 
@@ -3687,8 +3688,8 @@ int qt_omp_parallel_region_create()
 
     // Protection against reuse working AKP 1/26/12
     pr->clsSize           = QTHREAD_NUM_LOOP_STRUCT;
-    pr->currentLoopNum    = malloc(sizeof(int) * workers);
-    pr->currentLoopStruct = malloc(sizeof(struct qqloop_step_handle_t *) * pr->clsSize);
+    pr->currentLoopNum    = MALLOC(sizeof(int) * workers);
+    pr->currentLoopStruct = MALLOC(sizeof(struct qqloop_step_handle_t *) * pr->clsSize);
     int i;
     for(i = 0; i < qthread_num_workers(); i++) {
         pr->currentLoopNum[i] = 0;
@@ -3721,7 +3722,7 @@ void qt_omp_parallel_region_destroy()
     }
     myshep->currentParallelRegion = pr->last;
 
-    free(pr);
+    FREE(pr);
 # endif /* if 0 */
 
     qthread_t *t = qthread_internal_self();

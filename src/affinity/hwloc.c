@@ -27,15 +27,15 @@ DEBUG_ONLY(static const char *typename);
 # define ASPRINTF(x, y)      hwloc_cpuset_asprintf((x), (y))
 # define FOREACH_START(x, y) hwloc_cpuset_foreach_begin((x), (y))
 # define FOREACH_END()       hwloc_cpuset_foreach_end()
-# define ALLOC()             hwloc_cpuset_alloc()
-# define FREE(x)             hwloc_cpuset_free(x)
+# define ALLOCBMAP()         hwloc_cpuset_alloc()
+# define FREEBMAP(x)         hwloc_cpuset_free(x)
 #else
 # define WEIGHT(x)           hwloc_bitmap_weight(x)
 # define ASPRINTF(x, y)      hwloc_bitmap_asprintf((x), (y))
 # define FOREACH_START(x, y) hwloc_bitmap_foreach_begin((x), (y))
 # define FOREACH_END()       hwloc_bitmap_foreach_end()
-# define ALLOC()             hwloc_bitmap_alloc()
-# define FREE(x)             hwloc_bitmap_free(x)
+# define ALLOCBMAP()         hwloc_bitmap_alloc()
+# define FREEBMAP(x)         hwloc_bitmap_free(x)
 #endif /* if HWLOC_API_VERSION == 0x00010000 */
 
 qthread_shepherd_id_t guess_num_shepherds(void);
@@ -47,7 +47,7 @@ static void qt_affinity_internal_hwloc_teardown(void)
 {   /*{{{*/
     DEBUG_ONLY(hwloc_topology_check(topology));
     hwloc_set_cpubind(topology, mccoy_thread_bindings, HWLOC_CPUBIND_THREAD);
-    FREE(mccoy_thread_bindings);
+    FREEBMAP(mccoy_thread_bindings);
     qthread_debug(AFFINITY_DETAILS, "destroy hwloc topology handle\n");
     hwloc_topology_destroy(topology);
     initialized = 0;
@@ -68,7 +68,7 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
 
     DEBUG_ONLY(hwloc_topology_check(topology));
     qthread_internal_cleanup(qt_affinity_internal_hwloc_teardown);
-    mccoy_thread_bindings = ALLOC();
+    mccoy_thread_bindings = ALLOCBMAP();
     hwloc_get_cpubind(topology, mccoy_thread_bindings, HWLOC_CPUBIND_THREAD);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     const char  *typenames[] = {
@@ -221,11 +221,11 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
                 if (shep_type_options[shep_type_idx] == HWLOC_OBJ_CACHE) {
                     shep_type_idx = 1;
                 }
-                shep_type_idx ++;
+                shep_type_idx++;
                 while (((shep_depth = hwloc_get_type_depth(topology, shep_type_options[shep_type_idx])) <= 0) &&
-                        shep_type_idx < 4) {
+                       shep_type_idx < 4) {
                     qthread_debug(AFFINITY_DETAILS, "invalid shepherd type (%s), finding another one...\n", typenames[shep_type_idx]);
-                    shep_type_idx ++;
+                    shep_type_idx++;
                 }
                 assert(shep_depth > 0);
             }
@@ -277,10 +277,10 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
     }
     if (DEBUG_ONLY(1 ||) wkr_index != -1) {
         assert(shep_depth >= 0);
-        hwloc_const_cpuset_t allowed_cpuset      = hwloc_topology_get_allowed_cpuset(topology);
-        hwloc_obj_t          obj                 = hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth, 0);
+        hwloc_const_cpuset_t allowed_cpuset = hwloc_topology_get_allowed_cpuset(topology);
+        hwloc_obj_t          obj            = hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth, 0);
         assert(obj);
-        unsigned int         workerobjs_per_shep = hwloc_get_nbobjs_inside_cpuset_by_type(topology, obj->allowed_cpuset, wkr_type);
+        unsigned int workerobjs_per_shep = hwloc_get_nbobjs_inside_cpuset_by_type(topology, obj->allowed_cpuset, wkr_type);
         qthread_debug(AFFINITY_CALLS, "workerobjs = %s, per_shep = %u\n", hwloc_obj_type_string(wkr_type), workerobjs_per_shep);
         assert(workerobjs_per_shep > 0);
         if (workerobjs_per_shep == 0) {
@@ -586,7 +586,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                     sheps[i].shep_dists[k] = 10;
                     qthread_debug(AFFINITY_DETAILS, "pretending distance from %i to %i is %i\n", (int)i, (int)j, (int)(sheps[i].shep_dists[k]));
                 }
-# else
+# else /* ifdef QTHREAD_HAVE_HWLOC_DISTS */
                 sheps[i].shep_dists[k] = 10;
                 qthread_debug(AFFINITY_DETAILS, "pretending distance from %i to %i is %i\n", (int)i, (int)j, (int)(sheps[i].shep_dists[k]));
 # endif         /* ifdef QTHREAD_HAVE_HWLOC_DISTS */
