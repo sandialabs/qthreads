@@ -31,7 +31,7 @@ pid_t qt_wait4(pid_t          pid,
                struct rusage *rusage)
 {
     qthread_t                *me  = qthread_internal_self();
-    qt_blocking_queue_node_t *job = ALLOC_SYSCALLJOB;
+    qt_blocking_queue_node_t *job = ALLOC_SYSCALLJOB();
     pid_t                     ret;
 
     assert(job);

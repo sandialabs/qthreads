@@ -22,7 +22,7 @@ int qt_accept(int                       socket,
               struct sockaddr *restrict address,
               socklen_t *restrict       address_len)
 {
-    qt_blocking_queue_node_t *job = ALLOC_SYSCALLJOB;
+    qt_blocking_queue_node_t *job = ALLOC_SYSCALLJOB();
     int                       ret;
     qthread_t                *me = qthread_internal_self();
 

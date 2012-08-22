@@ -6,6 +6,7 @@
 #include "qt_mpool.h"
 #include "qt_shepherd_innards.h"
 #include "qt_profiling.h"
+#include "qt_debug.h"
 
 typedef enum blocking_syscalls {
     ACCEPT,
@@ -63,27 +64,18 @@ typedef struct qthread_addrstat_s {
 #endif
 
 #ifdef UNPOOLED_ADDRSTAT
-# define ALLOC_ADDRSTAT() (qthread_addrstat_t *)calloc(1, sizeof(qthread_addrstat_t))
-# define FREE_ADDRSTAT(t)     free(t)
+# define ALLOC_ADDRSTAT() (qthread_addrstat_t *)MALLOC(sizeof(qthread_addrstat_t))
+# define FREE_ADDRSTAT(t) FREE(t, sizeof(qthread_addrstat_t))
 #else
 extern qt_mpool generic_addrstat_pool;
-static QINLINE qthread_addrstat_t *ALLOC_ADDRSTAT(void)
-{                                      /*{{{ */
-    qthread_addrstat_t *tmp = (qthread_addrstat_t *)qt_mpool_alloc(generic_addrstat_pool);
-
-    return tmp;
-}                                      /*}}} */
-
-static QINLINE void FREE_ADDRSTAT(qthread_addrstat_t *t)
-{                                      /*{{{ */
-    qt_mpool_free(generic_addrstat_pool, t);
-}                                      /*}}} */
+# define ALLOC_ADDRSTAT() (qthread_addrstat_t *)qt_mpool_alloc(generic_addrstat_pool)
+# define FREE_ADDRSTAT(t) qt_mpool_free(generic_addrstat_pool, t)
 
 #endif // ifdef UNPOOLED_ADDRSTAT
 
 #ifdef UNPOOLED_ADDRRES
-# define ALLOC_ADDRRES() (qthread_addrres_t *)malloc(sizeof(qthread_addrres_t))
-# define FREE_ADDRRES(t)     free(t)
+# define ALLOC_ADDRRES() (qthread_addrres_t *)MALLOC(sizeof(qthread_addrres_t))
+# define FREE_ADDRRES(t) FREE(t, sizeof(qthread_addrres_t))
 #else
 extern qt_mpool generic_addrres_pool;
 static QINLINE qthread_addrres_t *ALLOC_ADDRRES(void)

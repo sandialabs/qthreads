@@ -17,9 +17,7 @@
 #include "qthread_asserts.h"
 #include "qthread_prefetch.h"
 #include "qt_threadqueues.h"
-#if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
-# include "qt_aligned_alloc.h"
-#endif
+#include "qt_debug.h"
 
 /* Data Structures */
 struct _qt_threadqueue_node {
@@ -58,33 +56,17 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *l)
 
 /* Memory Management */
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
-# define ALLOC_THREADQUEUE() (qt_threadqueue_t *)calloc(1, sizeof(qt_threadqueue_t))
-# define FREE_THREADQUEUE(t) free(t)
-static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret)
-{                                      /*{{{ */
-    *ret = (qt_threadqueue_node_t *)qthread_internal_aligned_alloc(sizeof(qt_threadqueue_node_t), 16);
-    memset(*ret, 0, sizeof(qt_threadqueue_node_t));
-}                                      /*}}} */
-
-# define FREE_TQNODE(t) qthread_internal_aligned_free(t, 16)
+# define ALLOC_THREADQUEUE() (qt_threadqueue_t *)MALLOC(sizeof(qt_threadqueue_t))
+# define FREE_THREADQUEUE(t) FREE(t, sizeof(qt_threadqueue_t))
+# define ALLOC_TQNODE()      (qt_threadqueue_node_t *)MALLOC(sizeof(qt_threadqueue_node_t))
+# define FREE_TQNODE(t)      FREE(t, sizeof(qt_threadqueue_node_t))
 void INTERNAL qt_threadqueue_subsystem_init(void) {}
 #else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 qt_threadqueue_pools_t generic_threadqueue_pools;
 # define ALLOC_THREADQUEUE() (qt_threadqueue_t *)qt_mpool_alloc(generic_threadqueue_pools.queues)
-# define FREE_THREADQUEUE(t) qt_mpool_free(generic_threadqueue_pools.queues, t);
-
-static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret)
-{                                      /*{{{ */
-    *ret = (qt_threadqueue_node_t *)qt_mpool_alloc(generic_threadqueue_pools.nodes);
-    if (*ret != NULL) {
-        memset(*ret, 0, sizeof(qt_threadqueue_node_t));
-    }
-}                                      /*}}} */
-
-static QINLINE void FREE_TQNODE(qt_threadqueue_node_t *t)
-{                                      /*{{{ */
-    qt_mpool_free(generic_threadqueue_pools.nodes, t);
-}                                      /*}}} */
+# define FREE_THREADQUEUE(t) qt_mpool_free(generic_threadqueue_pools.queues, t)
+# define ALLOC_TQNODE()      (qt_threadqueue_node_t *)qt_mpool_alloc(generic_threadqueue_pools.nodes)
+# define FREE_TQNODE(t)      qt_mpool_free(generic_threadqueue_pools.nodes, t)
 
 static void qt_threadqueue_subsystem_shutdown(void)
 {
@@ -94,7 +76,7 @@ static void qt_threadqueue_subsystem_shutdown(void)
 
 void INTERNAL qt_threadqueue_subsystem_init(void)
 {
-    generic_threadqueue_pools.nodes  = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), 16);
+    generic_threadqueue_pools.nodes  = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t));
     generic_threadqueue_pools.queues = qt_mpool_create(sizeof(qt_threadqueue_t));
     qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
 }
@@ -127,7 +109,7 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
         QTHREAD_FASTLOCK_INIT(q->head_lock);
         QTHREAD_FASTLOCK_INIT(q->tail_lock);
         QTHREAD_FASTLOCK_INIT(q->advisory_queuelen_m);
-        ALLOC_TQNODE(((qt_threadqueue_node_t **)&(q->head)));
+        q->head = ALLOC_TQNODE();
         assert(q->head != NULL);
         if (q->head == NULL) {
             QTHREAD_FASTLOCK_DESTROY(q->advisory_queuelen_m);
@@ -136,8 +118,9 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
             FREE_THREADQUEUE(q);
             q = NULL;
         } else {
-            q->tail       = q->head;
-            q->head->next = NULL;
+            q->tail        = q->head;
+            q->head->next  = NULL;
+            q->head->value = NULL;
         }
     }
     return q;
@@ -200,7 +183,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
 {                                      /*{{{ */
     qt_threadqueue_node_t *node;
 
-    ALLOC_TQNODE(&node);
+    node = ALLOC_TQNODE();
     assert(node != NULL);
     node->value = t;
     node->next  = NULL;

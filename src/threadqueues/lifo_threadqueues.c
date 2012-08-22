@@ -46,10 +46,10 @@ struct _qt_threadqueue {
 
 /* Memory Management */
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
-# define ALLOC_THREADQUEUE() (qt_threadqueue_t *)calloc(1, sizeof(qt_threadqueue_t))
-# define FREE_THREADQUEUE(t) free(t)
-# define ALLOC_TQNODE()      (qt_threadqueue_node_t *)calloc(1, sizeof(qt_threadqueue_node_t))
-# define FREE_TQNODE(t)      free(t)
+# define ALLOC_THREADQUEUE() (qt_threadqueue_t *)MALLOC(sizeof(qt_threadqueue_t))
+# define FREE_THREADQUEUE(t) FREE(t, sizeof(qt_threadqueue_t))
+# define ALLOC_TQNODE()      (qt_threadqueue_node_t *)MALLOC(sizeof(qt_threadqueue_node_t))
+# define FREE_TQNODE(t)      FREE(t, sizeof(qt_threadqueue_node_t))
 void INTERNAL qt_threadqueue_subsystem_init(void) {}
 #else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 qt_threadqueue_pools_t generic_threadqueue_pools = { NULL, NULL };

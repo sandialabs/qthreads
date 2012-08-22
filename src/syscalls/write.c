@@ -23,7 +23,7 @@ ssize_t qt_write(int         filedes,
                  size_t      nbyte)
 {
     qthread_t                *me  = qthread_internal_self();
-    qt_blocking_queue_node_t *job = ALLOC_SYSCALLJOB;
+    qt_blocking_queue_node_t *job = ALLOC_SYSCALLJOB();
     ssize_t                   ret;
 
     assert(job);

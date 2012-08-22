@@ -58,10 +58,10 @@ struct _qt_threadqueue {
 
 /* Memory Management */
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
-# define ALLOC_THREADQUEUE() (qt_threadqueue_t *)malloc(sizeof(qt_threadqueue_t))
-# define FREE_THREADQUEUE(t) free(t)
-# define ALLOC_TQNODE()      (qt_threadqueue_node_t *)malloc(sizeof(qt_threadqueue_node_t))
-# define FREE_TQNODE(t)      free(t)
+# define ALLOC_THREADQUEUE() (qt_threadqueue_t *)MALLOC(sizeof(qt_threadqueue_t))
+# define FREE_THREADQUEUE(t) FREE(t, sizeof(qt_threadqueue_t))
+# define ALLOC_TQNODE()      (qt_threadqueue_node_t *)MALLOC(sizeof(qt_threadqueue_node_t))
+# define FREE_TQNODE(t)      FREE(t, sizeof(qt_threadqueue_node_t))
 void INTERNAL qt_threadqueue_subsystem_init(void) {}
 #else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 qt_threadqueue_pools_t generic_threadqueue_pools = { NULL, NULL };
@@ -114,6 +114,38 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
 #endif /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
 
     return q;
+}                                      /*}}} */
+
+static inline qt_threadqueue_node_t *qt_internal_NEMESIS_dequeue(NEMESIS_queue *q)
+{                                      /*{{{ */
+    qt_threadqueue_node_t *retval;
+
+    if (!q->shadow_head) {
+        if (!q->head) {
+            return NULL;
+        }
+        q->shadow_head = q->head;
+        q->head        = NULL;
+    }
+
+    retval = q->shadow_head;
+
+    if ((retval != NULL) && (retval != (void *)1)) {
+        if (retval->next != NULL) {
+            q->shadow_head = retval->next;
+            retval->next   = NULL;
+        } else {
+            qt_threadqueue_node_t *old;
+            q->shadow_head = NULL;
+            old            = qthread_cas_ptr(&(q->tail), retval, NULL);
+            if (old != retval) {
+                while (retval->next == NULL) SPINLOCK_BODY();
+                q->shadow_head = retval->next;
+                retval->next   = NULL;
+            }
+        }
+    }
+    return retval;
 }                                      /*}}} */
 
 static qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q)
@@ -207,38 +239,6 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 {                                      /*{{{ */
     assert(q);
     return q->advisory_queuelen;
-}                                      /*}}} */
-
-static inline qt_threadqueue_node_t *qt_internal_NEMESIS_dequeue(NEMESIS_queue *q)
-{                                      /*{{{ */
-    qt_threadqueue_node_t *retval;
-
-    if (!q->shadow_head) {
-        if (!q->head) {
-            return NULL;
-        }
-        q->shadow_head = q->head;
-        q->head        = NULL;
-    }
-
-    retval = q->shadow_head;
-
-    if ((retval != NULL) && (retval != (void *)1)) {
-        if (retval->next != NULL) {
-            q->shadow_head = retval->next;
-            retval->next   = NULL;
-        } else {
-            qt_threadqueue_node_t *old;
-            q->shadow_head = NULL;
-            old            = qthread_cas_ptr(&(q->tail), retval, NULL);
-            if (old != retval) {
-                while (retval->next == NULL) SPINLOCK_BODY();
-                q->shadow_head = retval->next;
-                retval->next   = NULL;
-            }
-        }
-    }
-    return retval;
 }                                      /*}}} */
 
 qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,

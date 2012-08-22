@@ -90,26 +90,10 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *l)
 
 /* Memory Management */
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
-// # define ALLOC_THREADQUEUE() (qt_threadqueue_t *)malloc(sizeof(qt_threadqueue_t))
-// # define FREE_THREADQUEUE(t) free(t)
-static QINLINE qt_threadqueue_t *ALLOC_THREADQUEUE(void)
-{
-    qt_threadqueue_t *ret = malloc(sizeof(qt_threadqueue_t));
-
-    ALLOC_SCRIBBLE(ret, sizeof(qt_threadqueue_t));
-    return ret;
-}
-
-# define FREE_THREADQUEUE(t) do { FREE_SCRIBBLE(t, sizeof(qt_threadqueue_t)); free(t); } while (0)
-static QINLINE qt_threadqueue_node_t *ALLOC_TQNODE(void)
-{                                      /*{{{ */
-    qt_threadqueue_node_t *ret = (qt_threadqueue_node_t *)malloc(sizeof(qt_threadqueue_node_t));
-
-    ALLOC_SCRIBBLE(ret, sizeof(qt_threadqueue_node_t));
-    return ret;
-}                                      /*}}} */
-
-# define FREE_TQNODE(t) do { FREE_SCRIBBLE(t, sizeof(qt_threadqueue_node_t)); free(t); } while (0)
+# define ALLOC_THREADQUEUE() (qt_threadqueue_t *)MALLOC(sizeof(qt_threadqueue_t))
+# define FREE_THREADQUEUE(t) FREE(t, sizeof(qt_threadqueue_t))
+# define ALLOC_TQNODE()      (qt_threadqueue_node_t *)MALLOC(sizeof(qt_threadqueue_node_t))
+# define FREE_TQNODE(t)      FREE(t, sizeof(qt_threadqueue_node_t))
 void INTERNAL qt_threadqueue_subsystem_init(void)
 {
     steal_chunksize = qt_internal_get_env_num("STEAL_CHUNK", 0, 0);

@@ -27,7 +27,7 @@ int qt_select(int                      nfds,
               struct timeval *restrict timeout)
 {
     qthread_t                *me  = qthread_internal_self();
-    qt_blocking_queue_node_t *job = ALLOC_SYSCALLJOB;
+    qt_blocking_queue_node_t *job = ALLOC_SYSCALLJOB();
     int                       ret;
 
     assert(job);

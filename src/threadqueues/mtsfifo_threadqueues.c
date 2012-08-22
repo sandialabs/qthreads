@@ -19,6 +19,7 @@
 #include "qthread_prefetch.h"
 #include "qt_threadqueues.h"
 #include "qthread_innards.h" /* for qthread_internal_cleanup_early() */
+#include "qt_debug.h"
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
 # include "qt_aligned_alloc.h"
 #endif
@@ -44,8 +45,8 @@ struct _qt_threadqueue {
 
 /* Memory Management */
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
-# define ALLOC_THREADQUEUE() (qt_threadqueue_t *)calloc(1, sizeof(qt_threadqueue_t))
-# define FREE_THREADQUEUE(t) free(t)
+# define ALLOC_THREADQUEUE() (qt_threadqueue_t *)MALLOC(sizeof(qt_threadqueue_t))
+# define FREE_THREADQUEUE(t) FREE(t, sizeof(qt_threadqueue_t))
 static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret)
 {                                      /*{{{ */
     *ret = (qt_threadqueue_node_t *)qthread_internal_aligned_alloc(sizeof(qt_threadqueue_node_t), 16);
@@ -56,6 +57,7 @@ static QINLINE void ALLOC_TQNODE(qt_threadqueue_node_t **ret)
 
 static void FREE_TQNODE(void *p)
 {
+    FREE_SCRIBBLE(p, sizeof(qt_threadqueue_node_t));
     qthread_internal_aligned_free(p, 16);
 }
 

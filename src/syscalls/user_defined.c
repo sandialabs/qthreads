@@ -27,7 +27,7 @@ void qt_blocking_subsystem_begin_blocking_action(void)
 
     if ((qlib != NULL) && ((me = qthread_internal_self()) != NULL)) {
         qthread_debug(IO_CALLS, "in qthreads, me=%p\n", me);
-        qt_blocking_queue_node_t *job = ALLOC_SYSCALLJOB;
+        qt_blocking_queue_node_t *job = ALLOC_SYSCALLJOB();
 
         assert(job);
         job->next   = NULL;

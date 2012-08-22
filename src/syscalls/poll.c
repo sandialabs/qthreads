@@ -23,7 +23,7 @@ int qt_poll(struct pollfd fds[],
             int           timeout)
 {
     qthread_t                *me  = qthread_internal_self();
-    qt_blocking_queue_node_t *job = ALLOC_SYSCALLJOB;
+    qt_blocking_queue_node_t *job = ALLOC_SYSCALLJOB();
     int                       ret;
 
     assert(job);
