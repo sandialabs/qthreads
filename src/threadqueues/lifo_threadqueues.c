@@ -106,6 +106,32 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
     return q;
 } /*}}}*/
 
+static qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q)
+{   /*{{{*/
+    qt_threadqueue_node_t *retval = q->stack;
+
+    if (retval != NULL) {
+        qt_threadqueue_node_t *old, *new;
+
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+# error This dequeue function is not safe! retval may be freed before we dereference it to find the next ptr. Need to use hazardptrs.
+#endif
+        do {
+            old    = retval;
+            new    = retval->next;
+            retval = qthread_cas_ptr(&q->stack, old, new);
+        } while (retval != old && retval != NULL);
+    }
+    if (retval != NULL) {
+        qthread_t *t = retval->thread;
+        FREE_TQNODE(retval);
+        (void)qthread_incr(&(q->advisory_queuelen), -1);
+        return t;
+    } else {
+        return NULL;
+    }
+} /*}}}*/
+
 void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 {   /*{{{*/
     assert(q);
@@ -212,32 +238,6 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 {   /*{{{*/
     assert(q);
     return q->advisory_queuelen;
-} /*}}}*/
-
-static qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q)
-{   /*{{{*/
-    qt_threadqueue_node_t *retval = q->stack;
-
-    if (retval != NULL) {
-        qt_threadqueue_node_t *old, *new;
-
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-# error This dequeue function is not safe! retval may be freed before we dereference it to find the next ptr. Need to use hazardptrs.
-#endif
-        do {
-            old    = retval;
-            new    = retval->next;
-            retval = qthread_cas_ptr(&q->stack, old, new);
-        } while (retval != old && retval != NULL);
-    }
-    if (retval != NULL) {
-        qthread_t *t = retval->thread;
-        FREE_TQNODE(retval);
-        (void)qthread_incr(&(q->advisory_queuelen), -1);
-        return t;
-    } else {
-        return NULL;
-    }
 } /*}}}*/
 
 qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
