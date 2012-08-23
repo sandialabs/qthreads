@@ -192,7 +192,7 @@ static QINLINE void FREE_STACK(void *t)
                  PROT_READ | PROT_WRITE) != 0) {
         perror("mprotect in FREE_STACK (2)");
     }
-    FREE(tmp);
+    FREE(tmp, qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s) + (2 * getpagesize()));
 }                      /*}}} */
 
 # else /* ifdef QTHREAD_GUARD_PAGES */
