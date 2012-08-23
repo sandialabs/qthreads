@@ -301,7 +301,7 @@ static void assign_nodes(qthread_shepherd_t *sheps,
     }
     numa_bitmask_free(nmask);
     numa_bitmask_free(cmask);
-    free(cpus_left_per_node);
+    FREE(cpus_left_per_node, num_extant_nodes * sizeof(size_t));
 }                                      /*}}} */
 
 int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,

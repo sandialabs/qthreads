@@ -80,7 +80,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
     cpu_count = tmc_cpus_count(&online_cpus);
     assert(cpu_count > 0);
     /* assign nodes */
-    cpu_array = malloc(sizeof(unsigned int) * cpu_count);
+    cpu_array = MALLOC(sizeof(unsigned int) * cpu_count);
     assert(cpu_array != NULL);
     qassert(tmc_cpus_to_array(&online_cpus, cpu_array, cpu_count), cpu_count);
     offset = 0;
@@ -89,7 +89,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
         offset++;
         offset *= (offset < cpu_count);
     }
-    free(cpu_array);
+    FREE(cpu_array, sizeof(unsigned int) * cpu_count);
     for (qthread_shepherd_id_t i = 0; i < nshepherds; i++) {
         size_t       j, k;
         unsigned int ix, iy;

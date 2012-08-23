@@ -44,7 +44,7 @@ static int lgrp_maxcpus(const lgrp_id_t lgrp,
         return cpu_max;
     } else if (nchildren > 0) {
         int        i;
-        lgrp_id_t *children = malloc(nchildren * sizeof(lgrp_id_t));
+        lgrp_id_t *children = MALLOC(nchildren * sizeof(lgrp_id_t));
 
         nchildren = lgrp_children(lgrp_cookie, lgrp, children, nchildren);
         if (nchildren == -1) {
@@ -54,7 +54,7 @@ static int lgrp_maxcpus(const lgrp_id_t lgrp,
         for (i = 0; i < nchildren; i++) {
             cpu_max = lgrp_maxcpus(children[i], cpu_max);
         }
-        free(children);
+        FREE(children, nchildren * sizeof(lgrp_id_t));
     }
     return cpu_max;
 }                                      /*}}} */
@@ -70,7 +70,7 @@ static int lgrp_walk(const lgrp_id_t lgrp,
     if (ncpus == -1) {
         return cpu_grps;
     } else if (ncpus > 0) {
-        processorid_t *cpuids = malloc((ncpus + 1) * sizeof(processorid_t));
+        processorid_t *cpuids = MALLOC((ncpus + 1) * sizeof(processorid_t));
 
         ncpus =
             lgrp_cpus(lgrp_cookie, lgrp, cpuids, ncpus, LGRP_CONTENT_DIRECT);
@@ -92,7 +92,7 @@ static int lgrp_walk(const lgrp_id_t lgrp,
         return cpu_grps;
     } else if (nchildren > 0) {
         int        i;
-        lgrp_id_t *children = malloc(nchildren * sizeof(lgrp_id_t));
+        lgrp_id_t *children = MALLOC(nchildren * sizeof(lgrp_id_t));
 
         nchildren = lgrp_children(lgrp_cookie, lgrp, children, nchildren);
         if (nchildren == -1) {
@@ -102,7 +102,7 @@ static int lgrp_walk(const lgrp_id_t lgrp,
         for (i = 0; i < nchildren; i++) {
             cpu_grps = lgrp_walk(children[i], cpus, lgrp_ids, cpu_grps);
         }
-        free(children);
+        FREE(children, nchildren * sizeof(lgrp_id_t));
     }
     return cpu_grps;
 }                                      /*}}} */

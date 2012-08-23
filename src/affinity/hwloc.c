@@ -548,6 +548,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     num_extant_objs = hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth);
     qthread_debug(AFFINITY_DETAILS, "found %u objects at shep_depth %u\n", num_extant_objs, shep_depth);
+    assert(num_extant_objs != 0);
 
     for (size_t i = 0; i < nshepherds; ++i) {
         sheps[i].node            = i % num_extant_objs;

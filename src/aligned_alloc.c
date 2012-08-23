@@ -41,14 +41,14 @@ void INTERNAL *qthread_internal_aligned_alloc(size_t        alloc_size,
     assert(alloc_size > 0);
     switch (alignment) {
         case 0:
-            ret = malloc(alloc_size);
+            ret = MALLOC(alloc_size);
             break;
 #if defined(HAVE_16ALIGNED_MALLOC)
         case 16:
         case 8:
         case 4:
         case 2:
-            ret = malloc(alloc_size);
+            ret = MALLOC(alloc_size);
             break;
 #endif
         default:
@@ -59,7 +59,7 @@ void INTERNAL *qthread_internal_aligned_alloc(size_t        alloc_size,
             }
 #elif defined(HAVE_PAGE_ALIGNED_MALLOC)
             if (alignment == pagesize) {
-                ret = malloc(alloc_size);
+                ret = MALLOC(alloc_size);
                 break;
             }
 #endif
@@ -69,7 +69,7 @@ void INTERNAL *qthread_internal_aligned_alloc(size_t        alloc_size,
             posix_memalign(&(ret), alignment, alloc_size);
 #else
             {
-                uint8_t *tmp = malloc((alloc_size + alignment - 1) + sizeof(void *));
+                uint8_t *tmp = MALLOC((alloc_size + alignment - 1) + sizeof(void *));
                 if (!tmp) { return NULL; }
                 ret                 = (void *)(((uintptr_t)(tmp + sizeof(void *) + alignment - 1)) & ~(alignment - 1));
                 *((void **)ret - 1) = tmp;

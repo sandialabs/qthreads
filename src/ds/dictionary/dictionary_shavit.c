@@ -486,7 +486,7 @@ static inline qt_hash qt_hash_create(key_equals eq,
         }
     }
 
-    tmp = malloc(sizeof(qt_dictionary));
+    tmp = MALLOC(sizeof(qt_dictionary));
     assert(tmp);
     tmp->op_equals  = eq;
     tmp->op_hash    = hash;
@@ -530,8 +530,8 @@ static inline void qt_hash_destroy(qt_hash h)
         cursor = (marked_ptr_t)((PTR_OF(cursor)->next));
         qpool_free(hash_entry_pool, PTR_OF(tmp));
     }
-    free(h->B);
-    free(h);
+    FREE(h->B, hard_max_buckets * sizeof(marked_ptr_t));
+    FREE(h, sizeof(qt_hash));
 }
 
 void qt_dictionary_destroy(qt_dictionary *d)
@@ -599,7 +599,7 @@ qt_dictionary_iterator *qt_dictionary_iterator_create(qt_dictionary *dict)
     if(dict == NULL) {
         return ERROR;
     }
-    qt_dictionary_iterator *it = (qt_dictionary_iterator *)malloc(sizeof(qt_dictionary_iterator));
+    qt_dictionary_iterator *it = (qt_dictionary_iterator *)MALLOC(sizeof(qt_dictionary_iterator));
     it->dict = dict;
     it->crt  = NULL;
     it->bkt  = -1;
@@ -609,7 +609,7 @@ qt_dictionary_iterator *qt_dictionary_iterator_create(qt_dictionary *dict)
 void qt_dictionary_iterator_destroy(qt_dictionary_iterator *it)
 {
     if(it == NULL) { return; }
-    free(it);
+    FREE(it, sizeof(qt_dictionary_iterator));
 }
 
 static list_entry *qt_dictionary_iterator_next_element(qt_dictionary_iterator *it)

@@ -62,7 +62,7 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
 void INTERNAL qt_affinity_set(qthread_worker_t *me)
 {                                      /*{{{ */
     plpa_cpu_set_t *cpuset =
-        (plpa_cpu_set_t *)malloc(sizeof(plpa_cpu_set_t));
+        (plpa_cpu_set_t *)MALLOC(sizeof(plpa_cpu_set_t));
 
     PLPA_CPU_ZERO(cpuset);
     PLPA_CPU_SET(me->packed_worker_id, cpuset);
@@ -70,14 +70,14 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me)
         (errno != EINVAL)) {
         perror("plpa setaffinity");
     }
-    free(cpuset);
+    FREE(cpuset, sizeof(plpa_cpu_set_t));
 }                                      /*}}} */
 
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
 {                                      /*{{{ */
     plpa_cpu_set_t *cpuset =
-        (plpa_cpu_set_t *)malloc(sizeof(plpa_cpu_set_t));
+        (plpa_cpu_set_t *)MALLOC(sizeof(plpa_cpu_set_t));
 
     PLPA_CPU_ZERO(cpuset);
     PLPA_CPU_SET(me->node, cpuset);
@@ -85,7 +85,7 @@ void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
         (errno != EINVAL)) {
         perror("plpa setaffinity");
     }
-    free(cpuset);
+    FREE(cpuset, sizeof(plpa_cpu_set_t));
 }                                      /*}}} */
 
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */

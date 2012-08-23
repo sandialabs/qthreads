@@ -1,6 +1,8 @@
 #ifndef QTHREAD_DEBUG_H
 #define QTHREAD_DEBUG_H
 
+#include <stdlib.h> /* for malloc() and friends */
+
 #ifdef QTHREAD_MEMORY_SCRIBBLING
 #include <string.h> /* for memset(), per C90 */
 # define ALLOC_SCRIBBLE(ptr, sz) memset((ptr), 0x55, (sz))

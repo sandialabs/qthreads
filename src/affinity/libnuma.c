@@ -19,13 +19,13 @@ qthread_worker_id_t guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 static void qt_affinity_internal_numa_teardown(void)
 {
     numa_run_on_node_mask(mccoy_bitmask);
-    free(mccoy_bitmask);
+    FREE(mccoy_bitmask, sizeof(nodemask_t));
 }
 
 void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
                                qthread_worker_id_t *nbworkers)
 {                                      /*{{{ */
-    mccoy_bitmask  = malloc(sizeof(nodemask_t));
+    mccoy_bitmask  = MALLOC(sizeof(nodemask_t));
     *mccoy_bitmask = numa_get_run_node_mask();
     qthread_internal_cleanup(qt_affinity_internal_numa_teardown);
     if (*nbshepherds == 0) {
