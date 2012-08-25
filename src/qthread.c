@@ -9,9 +9,6 @@
 #include <stdio.h>
 #include <stdlib.h>            /* for malloc() and abort() */
 #include <stdarg.h>            /* for va_list, va_start() and va_end() */
-#ifdef HAVE_MALLOC_H
-# include <malloc.h>               /* for memalign() */
-#endif
 #include <limits.h>              /* for INT_MAX */
 #include <qthread/qthread-int.h> /* for UINT8_MAX */
 #include <string.h>              /* for memset() */
@@ -946,7 +943,7 @@ int API_FUNC qthread_initialize(void)
     qlib->nworkerspershep   = nworkerspershep;
     qlib->nshepherds_active = nshepherds;
     qlib->shepherds         = (qthread_shepherd_t *)calloc(nshepherds, sizeof(qthread_shepherd_t));
-    qlib->threadqueues      = (qt_threadqueue_t **)calloc(nshepherds, sizeof(qt_threadqueue_t *));
+    qlib->threadqueues      = (qt_threadqueue_t **)MALLOC(nshepherds * sizeof(qt_threadqueue_t *));
     qassert_ret(qlib->shepherds, QTHREAD_MALLOC_ERROR);
 #ifdef QTHREAD_MUTEX_INCREMENT
     QTHREAD_FASTLOCK_INIT(qlib->nshepherds_active_lock);
@@ -1618,6 +1615,11 @@ void API_FUNC qthread_finalize(void)
 
     /* wait for each SPAWNED shepherd to drain it's queue
      * (note: not shepherd 0, because that one wasn't spawned) */
+    /**********************************************************************
+     *                   DO NOT FREE MEMORY YET!
+     **********************************************************************
+     * When some shepherds are still alive, they may be attempting to steal,
+     * and this is a race condition to see if they access free'd memory. */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     for (i = 0; i < qlib->nshepherds; i++) {
         /* With multi-threaded shepherds, do join shepherd 0 workers, but not worker 0 */
@@ -1637,21 +1639,12 @@ void API_FUNC qthread_finalize(void)
                 continue;
             }
 # endif
-            qthread_debug(SHEPHERD_DETAILS, "000\n");
             if ((r = pthread_join(shep->workers[j].worker, NULL)) != 0) {
                 print_error("qthread_finalize: pthread_join() of shep %i worker %i failed (%d, or \"%s\")\n",
                             (int)i, (int)j, r, strerror(r));
                 abort();
-            } else {
-                FREE(shep->workers[j].nostealbuffer, STEAL_BUFFER_LENGTH * sizeof(qthread_t *));
-                FREE(shep->workers[j].stealbuffer, STEAL_BUFFER_LENGTH * sizeof(qthread_t *));
             }
         }
-        if (i == 0) {
-            FREE(shep0->workers[0].nostealbuffer, STEAL_BUFFER_LENGTH * sizeof(qthread_t *));
-            FREE(shep0->workers[0].stealbuffer, STEAL_BUFFER_LENGTH * sizeof(qthread_t *));
-        }
-        FREE(qlib->shepherds[i].workers, qlib->nworkerspershep * sizeof(qthread_worker_t));
         if (i == 0) { continue; }
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     for (i = 1; i < qlib->nshepherds; i++) {
@@ -1662,6 +1655,33 @@ void API_FUNC qthread_finalize(void)
                         (int)i, r, strerror(r));
             abort();
         }
+#endif  /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
+    }
+    /**********************************************************************/
+    qthread_debug(SHEPHERD_BEHAVIOR|CORE_BEHAVIOR, "******* Now running with only ONE thread! *******\n");
+    /**********************************************************************/
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    for (i = 0; i < qlib->nshepherds; i++) {
+        /* With multi-threaded shepherds, do join shepherd 0 workers, but not worker 0 */
+        qthread_worker_id_t j;
+        qthread_shepherd_t *shep = &(qlib->shepherds[i]);
+        qthread_debug(SHEPHERD_DETAILS, "destroying shepherd %i's worker memory \n", (int)i);
+        for (j = 0; j < qlib->nworkerspershep; j++) {
+            if ((i == 0) && (j == 0)) {
+                continue;  /* This leaves out shepherd 0's worker 0 */
+            }
+            FREE(shep->workers[j].nostealbuffer, STEAL_BUFFER_LENGTH * sizeof(qthread_t *));
+            FREE(shep->workers[j].stealbuffer, STEAL_BUFFER_LENGTH * sizeof(qthread_t *));
+        }
+        if (i == 0) {
+            FREE(shep0->workers[0].nostealbuffer, STEAL_BUFFER_LENGTH * sizeof(qthread_t *));
+            FREE(shep0->workers[0].stealbuffer, STEAL_BUFFER_LENGTH * sizeof(qthread_t *));
+        }
+        FREE(qlib->shepherds[i].workers, qlib->nworkerspershep * sizeof(qthread_worker_t));
+        if (i == 0) { continue; }
+#else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
+    for (i = 1; i < qlib->nshepherds; i++) {
+        qthread_shepherd_t *shep = &(qlib->shepherds[i]);
 #endif  /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
         QTHREAD_CASLOCK_DESTROY(shep->active);
         qt_threadqueue_free(shep->ready);
