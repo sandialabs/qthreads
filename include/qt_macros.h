@@ -18,7 +18,7 @@
 # define TLS_SET(name, val)        name = (val)
 # define TLS_INIT(name)
 # define TLS_INIT2(name, func)
-# define TLS_DELETE(name)
+# define TLS_DELETE(name)          name = 0
 #else
 # define TLS_DECL(type, name)      pthread_key_t name
 # define TLS_DECL_INIT(type, name) pthread_key_t name
