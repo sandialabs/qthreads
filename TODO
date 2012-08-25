@@ -1,6 +1,6 @@
 These are ideas for things to do (in no particular order):
 
- 1. Use LockBox mutexes on BlueGene/P
+ 1. Periodic task system
 
  2. Mass thread-kill (e.g. eurekas)
 
@@ -9,41 +9,33 @@ These are ideas for things to do (in no particular order):
 
  4. Qthreads with in/out vectors for cross-node workstealing
 
- 5. Cross-node memory access? (Is this a good idea?)
+ 5. Cross-node synchronization (i.e. fill remote FEB)
 
- 6. Cross-node synchronization (i.e. fill remote FEB)
+ 6. Hierarchical shepherds (need to rename shepherds)
 
- 7. Hierarchical shepherds (need to rename shepherds)
+ 7. 128-bit syncvars
 
- 8. 128-bit syncvars
-
- 9. Change the futurelib spawner to use up existing concurrency limits before
+ 8. Change the futurelib spawner to use up existing concurrency limits before
     blocking
 
-10. Add a qthread_replace(me, func, arg, argsize) function to enable convenient
+ 9. Add a qthread_replace(me, func, arg, argsize) function to enable convenient
     tail-recursion algorithms
 
-11. Make futurelib limits dynamic
+10. Make futurelib limits dynamic
 
-12. Port to XMT (is this even possible???)
+11. Port to XMT (is this even possible???)
 
-13. Rework futures to use preallocated contexts
+12. Rework futures to use preallocated contexts
 
-14. Rework most qutil/qloop functions to deal with deactivated shepherds
+13. Rework most qutil/qloop functions to deal with deactivated shepherds
 
-15. Continuation passing (start with cross-node migration, with the agreement
-    that no pointers will work after a migration)... CAN BE DONE WITH MPI
+14. Continuation passing (put a "spawn_to" in the precondition record)...
 
-	- Can allow for qthread_incr/feb/etc operation IFF we can identify them
-	  ahead of time, and then keep a lookup table of them that sticks with the
-	  thread to identify the "home" so that we can send the necessary messages
-	  to make those operations happen on the right "home" node
+15. Coalesce system calls (is this a good idea?)
 
-16. Coalesce system calls
+16. Implement MAMA malloc?
 
-17. Implement MAMA malloc?
-
-18. Periodic task system
+17. Use LockBox mutexes on BlueGene/P
 
 Things to think about:
 
