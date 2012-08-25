@@ -87,6 +87,7 @@ void qt_sinc_init(qt_sinc_t *restrict  sinc_,
 
         rdata->values = qthread_internal_aligned_alloc(num_lines * cacheline, cacheline);
         assert(rdata->values);
+        ALLOC_SCRIBBLE(rdata->values, num_lines * cacheline * cacheline);
 
         // Initialize values
         for (size_t s = 0; s < num_sheps; s++) {
@@ -116,7 +117,7 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
                           qt_sinc_op_f op,
                           const size_t will_spawn)
 {   /*{{{*/
-    qt_sinc_t *const restrict sinc = malloc(sizeof(qt_sinc_t));
+    qt_sinc_t *const restrict sinc = MALLOC(sizeof(qt_sinc_t));
 
     assert(sinc);
 

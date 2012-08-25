@@ -169,18 +169,8 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
 } /*}}}*/
 
 #if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED)
-static QINLINE qthread_t *ALLOC_QTHREAD(void)
-{
-    qthread_t *ret = malloc(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size);
-
-    ALLOC_SCRIBBLE(ret, sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size);
-    return ret;
-}
-
-# define FREE_QTHREAD(t) do {                                             \
-        FREE_SCRIBBLE(t, sizeof(qthread_t) + qlib->qthread_argcopy_size + \
-                      qlib->qthread_tasklocal_size);                      \
-        free(t); } while (0)
+# define ALLOC_QTHREAD() MALLOC(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size)
+# define FREE_QTHREAD(t) FREE(t, sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size)
 #else /* if defined(UNPOOLED_QTHREAD_T) ||./src/threadqueues/nemesis_threadqueues.c defined(UNPOOLED) */
 extern qt_mpool generic_qthread_pool;
 # define ALLOC_QTHREAD() (qthread_t *)qt_mpool_alloc(generic_qthread_pool)

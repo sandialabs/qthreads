@@ -14,6 +14,7 @@
 #include "qthread_expect.h"
 #include "qt_visibility.h"
 #include "qt_aligned_alloc.h"
+#include "qt_debug.h"
 
 #include "qthread/qt_sinc.h"
 
@@ -66,11 +67,11 @@ void qt_sinc_init(qt_sinc_t *restrict  sinc_,
         const size_t         num_lines_per_shep     = ceil(sizeof_shep_values * 1.0 / cacheline);
         const size_t         num_lines              = num_sheps * num_lines_per_shep;
         const size_t         sizeof_shep_value_part = num_lines_per_shep * cacheline;
-        qt_sinc_reduction_t *rdata                  = sinc->rdata = malloc(sizeof(qt_sinc_reduction_t));
+        qt_sinc_reduction_t *rdata                  = sinc->rdata = MALLOC(sizeof(qt_sinc_reduction_t));
         assert(rdata);
         rdata->op            = op;
         rdata->sizeof_value  = sizeof_value;
-        rdata->initial_value = malloc(2 * sizeof_value);
+        rdata->initial_value = MALLOC(2 * sizeof_value);
         assert(rdata->initial_value);
         memcpy(rdata->initial_value, initial_value, sizeof_value);
         rdata->result = ((uint8_t *)rdata->initial_value) + sizeof_value;
@@ -80,6 +81,7 @@ void qt_sinc_init(qt_sinc_t *restrict  sinc_,
 
         rdata->values = qthread_internal_aligned_alloc(num_lines * cacheline, cacheline);
         assert(rdata->values);
+        ALLOC_SCRIBBLE(rdata->values, num_lines * cacheline, cacheline);
 
         // Initialize values
         for (size_t s = 0; s < num_sheps; s++) {
@@ -105,7 +107,7 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
                           qt_sinc_op_f op,
                           const size_t will_spawn)
 {   /*{{{*/
-    qt_sinc_t *const restrict sinc = malloc(sizeof(qt_sinc_t));
+    qt_sinc_t *const restrict sinc = MALLOC(sizeof(qt_sinc_t));
 
     assert(sinc);
 
@@ -152,7 +154,7 @@ void qt_sinc_fini(qt_sinc_t *sinc_)
         qt_sinc_reduction_t *rdata = sinc->rdata;
         assert(rdata->result);
         assert(rdata->initial_value);
-        free(rdata->initial_value);
+        FREE(rdata->initial_value, rdata->sizeof_value);
         assert(rdata->values);
         qthread_internal_aligned_free(rdata->values, cacheline);
     }
@@ -161,7 +163,7 @@ void qt_sinc_fini(qt_sinc_t *sinc_)
 void qt_sinc_destroy(qt_sinc_t *sinc_)
 {   /*{{{*/
     qt_sinc_fini(sinc_);
-    free(sinc_);
+    FREE(sinc_, sizeof(qt_sinc_t));
 } /*}}}*/
 
 /* Adds a new participant to the sinc.

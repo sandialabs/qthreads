@@ -151,7 +151,7 @@ static aligned_t spawn_wrapper(void *args_)
     spawn_wrapper_args_t const * const args = (spawn_wrapper_args_t *)args_;
 
     /* Set up landing pad for argument payload */
-    void * const f_args = malloc(args->size);
+    void * const f_args = MALLOC(args->size);
     assert(f_args);
     
     /* Get remote argument data */
@@ -161,7 +161,7 @@ static aligned_t spawn_wrapper(void *args_)
     aligned_t ret = (*(args->f))(f_args);
 
     /* Clean up landing pad */
-    free(f_args);
+    FREE(f_args, args->size);
 
     return ret;
 }
@@ -280,7 +280,7 @@ int spr_get_wait(spr_get_handle_t * const hand)
     qt_sinc_wait(sinc, NULL);
     qt_sinc_fini(sinc);
 
-    free(objs);
+    free(objs); // cannot calculate the size for scribbling
 
     return rc;
 }
@@ -355,7 +355,7 @@ int spr_get_nb(void             *dest_addr,
         qt_sinc_t * const sinc = &(hand->sinc);
         qt_sinc_init(sinc, 0, NULL, NULL, num_chunks);
 
-        spr_get_t * const get_objs = malloc(num_chunks * sizeof(spr_get_t));
+        spr_get_t * const get_objs = MALLOC(num_chunks * sizeof(spr_get_t));
         assert(get_objs);
 
         hand->get_objs = get_objs;
