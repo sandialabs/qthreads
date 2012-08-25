@@ -16,6 +16,7 @@
 #include <portals4.h>
 
 #include "runtime.h"
+#include "qt_debug.h" /* for malloc debug wrappers */
 
 static int rank = 0;
 static int size = 0;
@@ -68,13 +69,13 @@ qthread_internal_net_driver_runtime_get_mapping(ptl_handle_ni_t ni_h)
     ret = PtlGetPhysId(ni_h, &my_id);
     if (ret != PTL_OK) return NULL;
 
-    mapping = malloc(sizeof(ptl_process_t) * size);
+    mapping = MALLOC(sizeof(ptl_process_t) * size);
     if (!mapping) return NULL;
 
     if (MPI_SUCCESS != MPI_Allgather(&my_id, sizeof(my_id), MPI_BYTE,
                                      mapping, sizeof(my_id), MPI_BYTE,
                                      MPI_COMM_WORLD)) {
-        free(mapping);
+        FREE(mapping, sizeof(ptl_process_t) * size);
         mapping = NULL;
     }
 

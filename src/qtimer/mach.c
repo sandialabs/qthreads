@@ -9,6 +9,8 @@
 #include "qthread-int.h"
 #include <mach/mach_time.h>
 
+#include "qt_debug.h" /* for malloc debug wrappers */
+
 struct qtimer_s {
     uint64_t start, stop;
 };
@@ -52,7 +54,7 @@ qtimer_t qtimer_create()
 
 void qtimer_destroy(qtimer_t q)
 {
-    free(q);
+    FREE(q, sizeof(struct qtimer_s));
 }
 
 /* vim:set expandtab: */

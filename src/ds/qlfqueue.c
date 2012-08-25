@@ -9,6 +9,7 @@
 #include "qt_hazardptrs.h"
 #include "qt_atomics.h"
 #include "qthread_asserts.h"
+#include "qt_debug.h"                  /* for malloc debug wrappers */
 
 /* queue declarations */
 typedef struct _qlfqueue_node {
@@ -35,7 +36,7 @@ qlfqueue_t *qlfqueue_create(void)
     qlfqueue_t *q;
 
     if (qlfqueue_node_pool == NULL) {
-        switch ((uintptr_t)qthread_cas_ptr(&qlfqueue_node_pool, NULL, (void*)1)) {
+        switch ((uintptr_t)qthread_cas_ptr(&qlfqueue_node_pool, NULL, (void *)1)) {
             case 0: /* I won, I will allocate */
                 qlfqueue_node_pool = qpool_create_aligned(sizeof(qlfqueue_node_t), 0);
                 break;
@@ -48,12 +49,12 @@ qlfqueue_t *qlfqueue_create(void)
     }
     qassert_ret((qlfqueue_node_pool != NULL), NULL);
 
-    q = malloc(sizeof(struct qlfqueue_s));
+    q = MALLOC(sizeof(struct qlfqueue_s));
     if (q != NULL) {
         q->head = (qlfqueue_node_t *)qpool_alloc(qlfqueue_node_pool);
         assert(q->head != NULL);
         if (q->head == NULL) {   /* if we're not using asserts, fail nicely */
-            free(q);
+            FREE(q, sizeof(struct qlfqueue_s));
             return NULL;
         }
         q->tail       = q->head;
@@ -71,7 +72,7 @@ int qlfqueue_destroy(qlfqueue_t *q)
     }
     COMPILER_FENCE;
     qpool_free(qlfqueue_node_pool, (void *)(q->head));
-    free(q);
+    FREE(q, sizeof(struct qlfqueue_s));
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
 

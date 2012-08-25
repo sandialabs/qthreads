@@ -136,7 +136,7 @@ static inline qthread_shepherd_id_t qarray_internal_shepof_ch(const qarray *a,
 static void qarray_free_cdt(void)
 {                                      /*{{{ */
     if (chunk_distribution_tracker != NULL) {
-        free(chunk_distribution_tracker);
+        FREE(chunk_distribution_tracker, qthread_num_shepherds() * sizeof(aligned_t));
         chunk_distribution_tracker = NULL;
     }
 }                                      /*}}} */
@@ -165,7 +165,7 @@ static qarray *qarray_create_internal(const size_t         count,
         aligned_t *tmp = calloc(qthread_num_shepherds(), sizeof(aligned_t));
         qassert_ret((tmp != NULL), NULL);
         if (qthread_cas_ptr(&(chunk_distribution_tracker), NULL, tmp) != NULL) {
-            free(tmp);
+            FREE(tmp, qthread_num_shepherds() * sizeof(aligned_t));
         } else {
             atexit(qarray_free_cdt);
         }
@@ -452,7 +452,7 @@ static qarray *qarray_create_internal(const size_t         count,
         if (ret->base_ptr) {
             free(ret->base_ptr);
         }
-        free(ret);
+        FREE(ret, sizeof(qarray));
     }
     return NULL;
 }                                      /*}}} */
@@ -539,7 +539,7 @@ void qarray_destroy(qarray *a)
 #else
     qthread_internal_aligned_free(a->base_ptr, pagesize);
 #endif
-    free(a);
+    FREE(a, sizeof(qarray));
 }                                      /*}}} */
 
 qthread_shepherd_id_t qarray_shepof(const qarray *a,
@@ -922,7 +922,7 @@ static aligned_t qarray_loopaccum_strider(const struct qarray_accumfunc_wrapper_
         default:                       /* aka NOT the special case */
             break;
     }
-    tmpret = malloc(arg->retsize);
+    tmpret = MALLOC(arg->retsize);
     assert(tmpret);
     while (1) {
         {
@@ -965,7 +965,7 @@ static aligned_t qarray_loopaccum_strider(const struct qarray_accumfunc_wrapper_
     }
 qarray_loop_strider_exit:
     if (tmpret != NULL) {
-        free(tmpret);
+        FREE(tmpret, arg->retsize);
     }
     return 0;
 }                                      /*}}} */
@@ -1114,7 +1114,7 @@ static aligned_t qarray_ilnb_wrapper(void *_args)
     struct qarray_ilnb_args *a = (struct qarray_ilnb_args *)_args;
 
     qarray_iter_loop(a->a, a->startat, a->stopat, a->func, a->arg);
-    free(_args);
+    FREE(_args, sizeof(struct qarray_ilnb_args));
     return 0;
 } /*}}}*/
 
@@ -1125,7 +1125,7 @@ void qarray_iter_loop_nb(qarray      *a,
                          void        *arg,
                          aligned_t   *ret)
 {   /*{{{*/
-    struct qarray_ilnb_args *qargs = malloc(sizeof(struct qarray_ilnb_args));
+    struct qarray_ilnb_args *qargs = MALLOC(sizeof(struct qarray_ilnb_args));
 
     qargs->a       = a;
     qargs->startat = startat;
@@ -1229,10 +1229,10 @@ void qarray_iter_loopaccum(qarray      *a,
             qthread_shepherd_id_t                 stop_shep  = qarray_shepof(a, stopat - 1);
             const size_t                          num_spawns = (stop_shep - start_shep) + 1;
             struct qarray_accumfunc_wrapper_args *qfwa       =
-                malloc(sizeof(struct qarray_accumfunc_wrapper_args) *
+                MALLOC(sizeof(struct qarray_accumfunc_wrapper_args) *
                        num_spawns);
-            char        *rets = malloc(retsize * (num_spawns - 1));
-            aligned_t   *rv   = malloc(sizeof(aligned_t) * num_spawns);
+            char        *rets = MALLOC(retsize * (num_spawns - 1));
+            aligned_t   *rv   = MALLOC(sizeof(aligned_t) * num_spawns);
             unsigned int i;
 
             assert(qfwa);
@@ -1260,6 +1260,9 @@ void qarray_iter_loopaccum(qarray      *a,
                     acc(ret, &rets[i - 1]);
                 }
             }
+            FREE(qfwa, sizeof(struct qarray_accumfunc_wrapper_args) * num_spawns);
+            FREE(rets, retsize * (num_spawns - 1));
+            FREE(rv, sizeof(aligned_t) * num_spawns);
             break;
         }
         default:
@@ -1275,10 +1278,9 @@ void qarray_iter_loopaccum(qarray      *a,
             const qthread_shepherd_id_t maxsheps =
                 qthread_num_shepherds();
             struct qarray_accumfunc_wrapper_args *qfwa =
-                malloc(sizeof(struct qarray_accumfunc_wrapper_args) *
-                       maxsheps);
+                MALLOC(sizeof(struct qarray_accumfunc_wrapper_args) * maxsheps);
             char      *rets = calloc(maxsheps - 1, retsize);
-            aligned_t *rv   = malloc(sizeof(aligned_t) * maxsheps);
+            aligned_t *rv   = MALLOC(sizeof(aligned_t) * maxsheps);
 
             assert(qfwa);
             assert(rets);
@@ -1354,9 +1356,9 @@ void qarray_iter_loopaccum(qarray      *a,
                     }
                 }
             }
-            free(qfwa);
-            free(rets);
-            free(rv);
+            FREE(qfwa, sizeof(struct qarray_accumfunc_wrapper_args) * maxsheps);
+            FREE(rets, retsize * (maxsheps - 1));
+            FREE(rv, sizeof(aligned_t) * maxsheps);
             break;
         }
     }

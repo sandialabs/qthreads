@@ -13,6 +13,7 @@
 #include <unistd.h>
 
 #include "qt_visibility.h"
+#include "qt_debug.h"
 
 #ifndef MT_LOOP_CHUNK
 # define MT_LOOP_CHUNK 10000
@@ -40,7 +41,7 @@ extern int qthread_library_initialized;
         if (args->addlast) {                                                                                \
             qthread_syncvar_readFF(NULL, args->addlast_sentinel);                                           \
             _opmacro_(args->ret, *(args->addlast));                                                         \
-            free(args->backptr);                                                                            \
+            FREE(args->backptr, sizeof(struct _structtype_));                                               \
         }                                                                                                   \
         qthread_syncvar_fill(&(args->ret_sentinel));                                                        \
         return 0;                                                                                           \
@@ -57,7 +58,7 @@ extern int qthread_library_initialized;
         if (args->addlast) {                                                                                \
             qthread_syncvar_readFF(NULL, args->addlast_sentinel);                                           \
             _opmacro_(args->ret, *(args->addlast));                                                         \
-            free(args->backptr);                                                                            \
+            FREE(args->backptr, sizeof(struct _structtype_));                                               \
         }                                                                                                   \
         qthread_syncvar_fill(&(args->ret_sentinel));                                                        \
         return 0;                                                                                           \
@@ -109,7 +110,7 @@ extern int qthread_library_initialized;
         if (waitfor) {                                                                    \
             qthread_syncvar_readFF(NULL, waitfor_sentinel);                               \
             _opmacro_(myret, *waitfor);                                                   \
-            free(bkptr);                                                                  \
+            FREE(bkptr, sizeof(struct _structtype_));                                     \
         }                                                                                 \
         return myret;                                                                     \
     }
@@ -488,8 +489,8 @@ void API_FUNC qutil_mergesort(double *array,
     if (length - (numthreads * chunksize)) {
         numthreads++;
     }
-    rets = malloc(sizeof(aligned_t) * numthreads);
-    args = malloc(sizeof(struct qutil_mergesort_args) * numthreads);
+    rets = MALLOC(sizeof(aligned_t) * numthreads);
+    args = MALLOC(sizeof(struct qutil_mergesort_args) * numthreads);
     for (i = 0; i < numthreads; i++) {
         args[i].array       = array;
         args[i].first_start = i * chunksize;
@@ -503,17 +504,17 @@ void API_FUNC qutil_mergesort(double *array,
     for (i = 0; i < numthreads; i++) {
         qthread_readFF(NULL, rets + i);
     }
-    free(rets);
-    free(args);
+    FREE(rets, sizeof(aligned_t) * numthreads);
+    FREE(args, sizeof(struct qutil_mergesort_args) * numthreads);
     /* prepare scratch memory */
     if (chunksize <= length) {
         numthreads = (length - chunksize) / (2 * chunksize);
         if ((length - chunksize) - (2 * chunksize * numthreads)) {
             numthreads++;
         }
-        rets = malloc(sizeof(aligned_t) * numthreads);
+        rets = MALLOC(sizeof(aligned_t) * numthreads);
         assert(rets);
-        args = malloc(sizeof(struct qutil_mergesort_args) * numthreads);
+        args = MALLOC(sizeof(struct qutil_mergesort_args) * numthreads);
         assert(args);
         numthreads = 0;
     }
@@ -540,8 +541,8 @@ void API_FUNC qutil_mergesort(double *array,
         chunksize *= 2;
     }
     if (rets) {
-        free(rets);
-        free(args);
+        FREE(rets, sizeof(aligned_t) * numthreads);
+        FREE(args, sizeof(struct qutil_mergesort_args) * numthreads);
     }
 } /*}}}*/
 
@@ -678,8 +679,8 @@ static inline qutil_qsort_iprets_t qutil_qsort_inner_partitioner(double      *ar
     struct qutil_qsort_args *args;
     size_t                   i;
 
-    rets = malloc(sizeof(aligned_t) * numthreads);
-    args = malloc(sizeof(struct qutil_qsort_args) * numthreads);
+    rets = MALLOC(sizeof(aligned_t) * numthreads);
+    args = MALLOC(sizeof(struct qutil_qsort_args) * numthreads);
     /* spawn threads to do the partitioning */
     for (i = 0; i < numthreads; i++) {
         args[i].array              = array + (i * MT_CHUNKSIZE);
@@ -704,8 +705,8 @@ static inline qutil_qsort_iprets_t qutil_qsort_inner_partitioner(double      *ar
     for (i = 0; i < numthreads; i++) {
         qthread_readFF(NULL, rets + i);
     }
-    free(args);
-    free(rets);
+    FREE(args, sizeof(struct qutil_qsort_args) * numthreads);
+    FREE(rets, sizeof(aligned_t) * numthreads);
 
     return retval;
 } /*}}}*/
@@ -924,7 +925,7 @@ static inline qutil_qsort_iprets_t qutil_aligned_qsort_inner_partitioner(aligned
                                                                          const size_t    length,
                                                                          const aligned_t pivot)
 {   /*{{{*/
- /* choose the number of threads to use */
+    /* choose the number of threads to use */
     const size_t numthreads =
         length / MT_LOOP_CHUNK + ((length % MT_LOOP_CHUNK) ? 1 : 0);
     /* calculate the megachunk information for determining the array lengths
@@ -940,7 +941,7 @@ static inline qutil_qsort_iprets_t qutil_aligned_qsort_inner_partitioner(aligned
     size_t                           i;
 
     rets = calloc(numthreads, sizeof(syncvar_t));
-    args = malloc(sizeof(struct qutil_aligned_qsort_args) * numthreads);
+    args = MALLOC(sizeof(struct qutil_aligned_qsort_args) * numthreads);
     /* spawn threads to do the partitioning */
     for (i = 0; i < numthreads; i++) {
         args[i].array              = array + (i * MT_CHUNKSIZE);
@@ -967,8 +968,8 @@ static inline qutil_qsort_iprets_t qutil_aligned_qsort_inner_partitioner(aligned
     for (i = 0; i < numthreads; i++) {
         qthread_syncvar_readFF(NULL, rets + i);
     }
-    free(args);
-    free(rets);
+    FREE(args, sizeof(struct qutil_aligned_qsort_args) * numthreads);
+    FREE(rets, numthreads * sizeof(syncvar_t));
 
     return retval;
 } /*}}}*/

@@ -75,7 +75,7 @@ static inline void qt_hash_internal_create(qt_hash ret,
     if (ret->entries) {
         memset(ret->entries, 0, sizeof(hash_entry) * entries);
     } else {
-        free(ret);
+        FREE(ret, sizeof(struct qt_hash_s));
         ret = NULL;
     }
 } /*}}}*/
@@ -212,7 +212,7 @@ qt_hash INTERNAL qt_hash_create(int needSync)
     ret = calloc(1, sizeof(struct qt_hash_s));
     if (ret) {
         if (needSync) {
-            ret->lock = malloc(sizeof(QTHREAD_FASTLOCK_TYPE));
+            ret->lock = MALLOC(sizeof(QTHREAD_FASTLOCK_TYPE));
             QTHREAD_FASTLOCK_INIT_PTR(ret->lock);
         } else {
             ret->lock = NULL;
@@ -227,11 +227,11 @@ void INTERNAL qt_hash_destroy(qt_hash h)
     assert(h);
     if (h->lock) {
         QTHREAD_FASTLOCK_DESTROY_PTR(h->lock);
-        free((void *)h->lock);
+        FREE((void *)h->lock, sizeof(QTHREAD_FASTLOCK_TYPE));
     }
     assert(h->entries);
     qthread_internal_aligned_free(h->entries, linesize);
-    free(h);
+    FREE(h, sizeof(struct qt_hash_s));
 } /*}}}*/
 
 /* This function destroys the hash and applies the given deallocator function
@@ -314,7 +314,8 @@ static void brehash(qt_hash h,
         }
     }
     assert(h->population == d->population);
-    free(h->entries);
+    FREE_SCRIBBLE(h->entries, sizeof(hash_entry) * h->num_entries);
+    qthread_internal_aligned_free(h->entries, linesize);
     h->entries      = d->entries;
     h->mask         = d->mask;
     h->num_entries  = d->num_entries;
@@ -326,7 +327,7 @@ static void brehash(qt_hash h,
     h->value[1]     = d->value[1];
     h->has_key[0]   = d->has_key[0];
     h->has_key[1]   = d->has_key[1];
-    free(d);
+    FREE(d, sizeof(struct qt_hash_s));
 } /*}}}*/
 
 int INTERNAL qt_hash_put_locked(qt_hash  h,

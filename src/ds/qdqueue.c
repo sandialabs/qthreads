@@ -1,7 +1,6 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
-#include <stdlib.h>                    /* for calloc() */
 #include <limits.h>                    /* for INT_MAX, per C89 */
 #include <qthread/qthread.h>
 #include <qthread/qlfqueue.h>
@@ -13,6 +12,7 @@
 #ifdef QTHREAD_HAVE_LIBNUMA
 # include <numa.h>
 #endif
+#include "qt_debug.h" /* for malloc debug wrappers */
 
 struct qdsubqueue_s;
 
@@ -195,7 +195,7 @@ static void qdqueue_internal_sortedsheps(qthread_shepherd_id_t shep,
         }
         lastdist = mindist;
         /* now, create an array of all the sheps that are exactly that far away */
-        thisdist = malloc(count * sizeof(qthread_shepherd_id_t));
+        thisdist = MALLOC(count * sizeof(qthread_shepherd_id_t));
         assert(thisdist);
         for (j = 0, k = 0; j < maxsheps && k < count; j++) {
             if (j == shep) {
@@ -214,15 +214,15 @@ static void qdqueue_internal_sortedsheps(qthread_shepherd_id_t shep,
                 thisdist[k] = thisdist[k + 1];
             }
         }
-        free(thisdist);
+        FREE(thisdist, count * sizeof(qthread_shepherd_id_t));
     }
 }                                      /*}}} */
 
 static struct qdsubqueue_s **qdqueue_internal_getneighbors(qthread_shepherd_id_t     shep,
                                                            struct qdsubqueue_s      *Qs,
                                                            size_t *restrict          numNeighbors,
-                                                           const int *const restrict distances)
-{ /*{{{ */
+                                                           const int *const restrict distances) /*{{{ */
+{
     struct qdsubqueue_s **ret;
     size_t                i;
     /* we define a "neighbor" in terms of distance, because that's all we've
@@ -258,7 +258,7 @@ static struct qdsubqueue_s **qdqueue_internal_getneighbors(qthread_shepherd_id_t
         }
     }
     /* get a list of those neighbors */
-    temp = malloc(numN * sizeof(qthread_shepherd_id_t));
+    temp = MALLOC(numN * sizeof(qthread_shepherd_id_t));
     assert(temp);
     for (i = j = 0; i < maxsheps; i++) {
         if (i == shep) {
@@ -269,7 +269,7 @@ static struct qdsubqueue_s **qdqueue_internal_getneighbors(qthread_shepherd_id_t
         }
     }
     /* and now randomly append them to the list */
-    ret = malloc(numN * sizeof(struct qdsubqueue_s *));
+    ret = MALLOC(numN * sizeof(struct qdsubqueue_s *));
     assert(ret);
     for (i = 0; i < numN; i++) {
         size_t k, randpick = random() % (numN - i);
@@ -279,7 +279,7 @@ static struct qdsubqueue_s **qdqueue_internal_getneighbors(qthread_shepherd_id_t
             temp[k] = temp[k + 1];
         }
     }
-    free(temp);
+    FREE(temp, numN * sizeof(qthread_shepherd_id_t));
     *numNeighbors = numN;
     return ret;
 }                                      /*}}} */
@@ -296,17 +296,18 @@ qdqueue_t *qdqueue_create(void)
     }
     ret = calloc(1, sizeof(struct qdqueue_s));
     qassert_goto((ret != NULL), erralloc_killq);
-    ret->Qs = calloc(maxsheps, sizeof(struct qdsubqueue_s));
+    ret->Qs = MALLOC(maxsheps * sizeof(struct qdsubqueue_s));
 
-    sheparray = malloc(maxsheps * sizeof(int *));
+    sheparray = MALLOC(maxsheps * sizeof(int *));
     qassert_goto((sheparray != NULL), erralloc_killq);
     for (curshep = 0; curshep < maxsheps; curshep++) {
-        sheparray[curshep] = malloc(maxsheps * sizeof(int));
+        sheparray[curshep] = MALLOC(maxsheps * sizeof(int));
         qassert_goto((sheparray[curshep] != NULL), erralloc_killshep);
     }
     qdqueue_internal_gensheparray(sheparray);
     for (curshep = 0; curshep < maxsheps; curshep++) {
         ret->Qs[curshep].theQ             = qlfqueue_create();
+        ret->Qs[curshep].last_consumed    = NULL;
         ret->Qs[curshep].last_ad_issued   = 1;
         ret->Qs[curshep].last_ad_consumed = 1;
         ret->Qs[curshep].allsheps         =
@@ -329,23 +330,23 @@ qdqueue_t *qdqueue_create(void)
         ret->Qs[curshep].ads.first = NULL;
     }
     for (curshep = 0; curshep < maxsheps; curshep++) {
-        free(sheparray[curshep]);
+        FREE(sheparray[curshep], maxsheps * sizeof(int));
     }
-    free(sheparray);
+    FREE(sheparray, maxsheps * sizeof(int *));
 
     return ret;
 
     qgoto(erralloc_killshep);
     for (curshep--; curshep > 0; curshep--) {
-        free(sheparray[curshep]);
+        FREE(sheparray[curshep], maxsheps * sizeof(int));
     }
-    free(sheparray);
+    FREE(sheparray, maxsheps * sizeof(int *));
     qgoto(erralloc_killq);
     if (ret) {
         if (ret->Qs) {
-            free(ret->Qs);
+            FREE(ret->Qs, maxsheps * sizeof(struct qdsubqueue_s));
         }
-        free(ret);
+        FREE(ret, sizeof(struct qdqueue_s));
     }
     return NULL;
 }                                      /*}}} */
@@ -361,17 +362,17 @@ int qdqueue_destroy(qdqueue_t *q)
             qlfqueue_destroy(q->Qs[i].theQ);
         }
         if (q->Qs[i].ads.heap != NULL) {
-            free(q->Qs[i].ads.heap);
+            FREE(q->Qs[i].ads.heap, maxsheps * sizeof(struct qdqueue_adheap_elem_s));
         }
         if (q->Qs[i].neighbors != NULL) {
-            free(q->Qs[i].neighbors);
+            FREE(q->Qs[i].neighbors, q->Qs[i].nNeighbors * sizeof(struct qdsubqueue_s *));
         }
         if (q->Qs[i].allsheps != NULL) {
-            free(q->Qs[i].allsheps);
+            FREE(q->Qs[i].allsheps, (maxsheps - 1) * sizeof(struct qdsubqueue_s *));
         }
     }
-    free(q->Qs);
-    free(q);
+    FREE(q->Qs, maxsheps * sizeof(struct qdsubqueue_s));
+    FREE(q, sizeof(struct qdqueue_s));
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
 

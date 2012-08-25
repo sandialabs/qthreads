@@ -20,6 +20,8 @@
 #endif
 #include <qthread/qthread-int.h> /* for uint64_t */
 
+#include "qt_debug.h" /* for malloc debug wrappers */
+
 struct qtimer_s {
     struct timespec start, stop;
 };
@@ -103,7 +105,7 @@ qtimer_t qtimer_create()
 void qtimer_destroy(qtimer_t q)
 {
     assert(q);
-    free(q);
+    FREE(q, sizeof(struct qtimer_s));
 }
 
 /* vim:set expandtab: */

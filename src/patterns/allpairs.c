@@ -11,6 +11,8 @@
 #include <stdlib.h>                    /* for malloc() */
 #include <stdio.h>                     /* for printf */
 
+#include "qt_debug.h" /* for malloc debug wrappers */
+
 // #define QTHREAD_TRACK_DISTANCES
 #ifdef QTHREAD_TRACK_DISTANCES
 struct cacheline_s {

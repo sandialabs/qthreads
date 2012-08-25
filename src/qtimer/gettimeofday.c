@@ -18,6 +18,8 @@
 # include <stdlib.h>
 #endif
 
+#include "qt_debug.h" /* for malloc debug wrappers */
+
 struct qtimer_s {
     struct timeval start, stop;
 };
@@ -52,7 +54,7 @@ qtimer_t qtimer_create()
 
 void qtimer_destroy(qtimer_t q)
 {
-    free(q);
+    FREE(q, sizeof(struct qtimer_s));
 }
 
 /* vim:set expandtab: */

@@ -22,6 +22,8 @@
 
 #include "runtime.h"
 
+#include "qt_debug.h" /* for malloc debug wrappers */
+
 struct map_t {
     ptl_handle_ni_t handle;
     ptl_process_t *mapping;
@@ -119,7 +121,7 @@ qthread_internal_net_driver_runtime_fini(void)
 
     for (i = 0 ; i < 4 ; ++i) {
         if (NULL != maps[i].mapping) {
-            free(maps[i].mapping);
+            FREE(maps[i].mapping, sizeof(ptl_process_t) * size);
         }
     }
 
@@ -155,19 +157,19 @@ qthread_internal_net_driver_runtime_get_mapping(ptl_handle_ni_t ni_h)
     if (PMI_SUCCESS != PMI_KVS_Get_name_length_max(&max_name_len)) {
         return NULL;
     }
-    name = (char*) malloc(max_name_len);
+    name = (char*) MALLOC(max_name_len);
     if (NULL == name) return NULL;
 
     if (PMI_SUCCESS != PMI_KVS_Get_key_length_max(&max_key_len)) {
         return NULL;
     }
-    key = (char*) malloc(max_key_len);
+    key = (char*) MALLOC(max_key_len);
     if (NULL == key) return NULL;
 
     if (PMI_SUCCESS != PMI_KVS_Get_value_length_max(&max_val_len)) {
         return NULL;
     }
-    val = (char*) malloc(max_val_len);
+    val = (char*) MALLOC(max_val_len);
     if (NULL == val) return NULL;
 
     ret = PtlGetPhysId(ni_h, &my_id);
@@ -207,7 +209,7 @@ qthread_internal_net_driver_runtime_get_mapping(ptl_handle_ni_t ni_h)
     }
 
     /* get everyone's information */
-    map->mapping = malloc(sizeof(ptl_process_t) * size);
+    map->mapping = MALLOC(sizeof(ptl_process_t) * size);
     if (NULL == map->mapping) return NULL;
 
     for (i = 0 ; i < size ; ++i) {

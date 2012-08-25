@@ -369,7 +369,7 @@ qt_dictionary_iterator *qt_dictionary_iterator_create(qt_dictionary *dict)
     if((dict == NULL) || (dict->content == NULL)) {
         return ERROR;
     }
-    qt_dictionary_iterator *it = (qt_dictionary_iterator *)malloc(sizeof(qt_dictionary_iterator));
+    qt_dictionary_iterator *it = (qt_dictionary_iterator *)MALLOC(sizeof(qt_dictionary_iterator));
     if(it == NULL) {
         return ERROR;         // out of memory
     }
@@ -382,7 +382,7 @@ qt_dictionary_iterator *qt_dictionary_iterator_create(qt_dictionary *dict)
 void qt_dictionary_iterator_destroy(qt_dictionary_iterator *it)
 {
     if(it == NULL) { return; }
-    free(it);
+    FREE(it, sizeof(qt_dictionary_iterator));
 }
 
 list_entry *qt_dictionary_iterator_next(qt_dictionary_iterator *it)

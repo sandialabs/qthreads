@@ -6,12 +6,13 @@
 #include "qthread/qthread.h"
 
 /* System Headers */
-#include <stdlib.h>            /* for qsort(), malloc() and abort() */
+#include <stdlib.h>            /* for qsort() and abort() */
 
 /* Internal Headers */
 #include "qt_hazardptrs.h"
 #include "qt_shepherd_innards.h"
 #include "qthread_innards.h"
+#include "qt_debug.h" /* for malloc debug headers */
 
 static TLS_DECL_INIT(uintptr_t *, ts_hazard_ptrs);
 
@@ -26,13 +27,13 @@ static void hazardptr_internal_teardown(void)
     while (free_these_freelists != NULL) {
         hazard_freelist_entry_t *tmp = free_these_freelists;
         free_these_freelists = (hazard_freelist_entry_t *)tmp[freelist_max].ptr;
-        free(tmp);
+        FREE(tmp, (freelist_max + 1) * sizeof(hazard_freelist_entry_t));
     }
     TLS_DELETE(ts_hazard_ptrs);
     while (hzptr_list != NULL) {
         uintptr_t *hzptr_tmp = hzptr_list;
         hzptr_list = (uintptr_t *)hzptr_tmp[HAZARD_PTRS_PER_SHEP];
-        free(hzptr_tmp);
+        FREE(hzptr_tmp, (HAZARD_PTRS_PER_SHEP + 1) * sizeof(uintptr_t));
     }
     QTHREAD_CASLOCK_DESTROY(hzptr_list);
 } /*}}}*/
@@ -145,7 +146,7 @@ static void hazardous_scan(hazard_freelist_t *hfl)
 #else
     const size_t num_hps = qthread_num_shepherds() * HAZARD_PTRS_PER_SHEP;
 #endif
-    void            **plist = malloc(sizeof(void *) * (num_hps + hzptr_list_len));
+    void            **plist = MALLOC(sizeof(void *) * (num_hps + hzptr_list_len));
     hazard_freelist_t tmpfreelist;
 
     assert(plist);
@@ -222,8 +223,8 @@ static void hazardous_scan(hazard_freelist_t *hfl)
     assert(tmpfreelist.count < freelist_max);
     memcpy(hfl->freelist, tmpfreelist.freelist, tmpfreelist.count * sizeof(hazard_freelist_entry_t));
     hfl->count = tmpfreelist.count;
-    free(tmpfreelist.freelist);
-    free(plist);
+    FREE(tmpfreelist.freelist, sizeof(hazard_freelist_entry_t));
+    FREE(plist, sizeof(void *) * (num_hps + hzptr_list_len));
 }/*}}}*/
 
 void INTERNAL hazardous_release_node(void  (*freefunc)(void *),

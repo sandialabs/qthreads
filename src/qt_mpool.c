@@ -113,7 +113,7 @@ static QINLINE void qt_mpool_internal_aligned_free(void  *freeme,
 qt_mpool INTERNAL qt_mpool_create_aligned(size_t item_size,
                                           size_t alignment)
 {                                      /*{{{ */
-    qt_mpool pool = (qt_mpool)calloc(1, sizeof(struct qt_mpool_s));
+    qt_mpool pool = (qt_mpool)MALLOC(sizeof(struct qt_mpool_s));
 
     size_t alloc_size = 0;
 
@@ -168,15 +168,17 @@ qt_mpool INTERNAL qt_mpool_create_aligned(size_t item_size,
 #endif
     /* this assumes that pagesize is a multiple of sizeof(void*) */
     assert(pagesize % sizeof(void *) == 0);
-    pool->alloc_list = calloc(1, pagesize);
+    pool->alloc_list = qthread_internal_aligned_alloc(pagesize, pagesize);
     qassert_goto((pool->alloc_list != NULL), errexit);
-    pool->alloc_list[0]  = NULL;
+    memset(pool->alloc_list, 0, pagesize);
     pool->alloc_list_pos = 0;
+
+    pool->caches = NULL;
     return pool;
 
     qgoto(errexit);
     if (pool) {
-        free(pool);
+        FREE(pool, sizeof(struct qt_mpool_s));
     }
     return NULL;
 }                                      /*}}} */
@@ -270,8 +272,9 @@ void INTERNAL *qt_mpool_alloc(qt_mpool pool)
                    (((uintptr_t)p) & (pool->alignment - 1)) == 0);
             QTHREAD_FASTLOCK_LOCK(&pool->pool_lock);
             if (pool->alloc_list_pos == (pagesize / sizeof(void *) - 1)) {
-                void **tmp = calloc(1, pagesize);
+                void **tmp = qthread_internal_aligned_alloc(pagesize, pagesize);
                 qassert_ret((tmp != NULL), NULL);
+                memset(tmp, 0, pagesize);
                 tmp[pagesize / sizeof(void *) - 1] = pool->alloc_list;
                 pool->alloc_list                   = tmp;
                 pool->alloc_list_pos               = 0;
@@ -396,7 +399,8 @@ void INTERNAL qt_mpool_destroy(qt_mpool pool)
         }
         p                = pool->alloc_list;
         pool->alloc_list = pool->alloc_list[pagesize / sizeof(void *) - 1];
-        free(p);
+        FREE_SCRIBBLE(p, pagesize);
+        qthread_internal_aligned_free(p, pagesize);
     }
     qthread_debug(MPOOL_DETAILS, "begin free TLS caches\n");
     while (pool->caches) {
@@ -411,7 +415,7 @@ void INTERNAL qt_mpool_destroy(qt_mpool pool)
     QTHREAD_FASTLOCK_DESTROY(pool->pool_lock);
     QTHREAD_FASTLOCK_DESTROY(pool->reuse_lock);
     VALGRIND_DESTROY_MEMPOOL(pool);
-    free(pool);
+    FREE(pool, sizeof(struct qt_mpool_s));
 }                                      /*}}} */
 
 /* vim:set expandtab: */

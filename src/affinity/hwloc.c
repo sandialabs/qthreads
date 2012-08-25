@@ -461,7 +461,7 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me)
                       (shep_pus * myshep->node) + ((me->worker_id + (wraparounds * qlib->nworkerspershep)) % shep_pus),
                       (shep_pus * myshep->node) + (((me->worker_id * worker_pus) + (wraparounds * qlib->nworkerspershep) + (worker_wraparounds)) % shep_pus),
                       str);
-        free(str);
+        FREE(str, strlen(str));
     }
 # endif /* ifdef QTHREAD_DEBUG_AFFINITY */
     if (hwloc_set_cpubind(topology, sub_obj->allowed_cpuset, HWLOC_CPUBIND_THREAD)) {
@@ -475,7 +475,7 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me)
         ASPRINTF(&str, sub_obj->allowed_cpuset);
         fprintf(stderr, "Couldn't bind to cpuset %s because %s (%i)\n", str,
                 strerror(i), i);
-        free(str);
+        FREE(str, strlen(str));
     }
 }                                      /*}}} */
 
@@ -515,7 +515,7 @@ void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
                       hwloc_obj_type_string(hwloc_get_depth_type(topology, shep_depth)),
                       me->node,
                       str);
-        free(str);
+        FREE(str, strlen(str));
     }
 # endif /* ifdef QTHREAD_DEBUG_AFFINITY */
     if (hwloc_set_cpubind(topology, obj->allowed_cpuset, HWLOC_CPUBIND_THREAD)) {
@@ -529,7 +529,7 @@ void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
         ASPRINTF(&str, obj->allowed_cpuset);
         fprintf(stderr, "Couldn't bind to cpuset %s because %s (%i)\n", str,
                 strerror(i), i);
-        free(str);
+        FREE(str, strlen(str));
     }
 }                                      /*}}} */
 
@@ -619,7 +619,8 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
     num_extant_objs = hwloc_get_nbobjs_inside_cpuset_by_depth(topology,
                                                               allowed_cpuset,
                                                               shep_depth);
-    cpus_left_per_obj = calloc(num_extant_objs, sizeof(size_t));
+    /* calloc avoids an explicit memset */
+    cpus_left_per_obj = calloc(num_extant_objs * sizeof(size_t));
     /* Count how many PUs are in each obj */
     for (size_t i = 0; i < num_extant_objs; ++i) {
         hwloc_obj_t obj =
@@ -657,7 +658,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
         obj++;
         obj *= (obj < num_extant_objs);
     }
-    free(cpus_left_per_obj);
+    FREE(cpus_left_per_obj, num_extant_objs * sizeof(size_t));
     for (size_t i = 0; i < nshepherds; ++i) {
         sheps[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
         assert(sheps[i].sorted_sheplist);

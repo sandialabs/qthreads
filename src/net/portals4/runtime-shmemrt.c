@@ -16,6 +16,8 @@
 
 #include "runtime.h"
 
+#include "qt_debug.h" /* for malloc debug wrappers */
+
 
 int
 qthread_internal_net_driver_runtime_init(void)
@@ -39,7 +41,7 @@ qthread_internal_net_driver_runtime_get_mapping(ptl_handle_ni_t ni_h)
     struct runtime_proc_t *procs;
 
     size = runtime_get_size();
-    ret = malloc(sizeof(ptl_process_t) * size);
+    ret = MALLOC(sizeof(ptl_process_t) * size);
     if (NULL == ret) return NULL;
 
     runtime_get_nidpid_map(&procs);
@@ -49,7 +51,7 @@ qthread_internal_net_driver_runtime_get_mapping(ptl_handle_ni_t ni_h)
         ret[i].phys.pid = procs[i].pid;
     }
 
-    return ret;    
+    return ret;
 }
 
 

@@ -21,6 +21,8 @@
 # define MMTIMER_FULLNAME "/dev/mmtimer"
 #endif
 
+#include "qt_debug.h" /* for malloc debug wrappers */
+
 static double                  timer_freq_conv;
 static volatile unsigned long *timer_address = NULL;
 static unsigned long          *mmdev_map     = NULL;
@@ -110,7 +112,7 @@ qtimer_t qtimer_create(void)
 
 void qtimer_destroy(qtimer_t q)
 {
-    free(q);
+    FREE(q, sizeof(struct qtimer_s));
 }
 
 /* vim:set expandtab: */

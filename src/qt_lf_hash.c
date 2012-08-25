@@ -60,15 +60,8 @@ struct qt_hash_s {
 # define ALLOC_HASH_ENTRY() qt_mpool_alloc(hash_entry_pool)
 # define FREE_HASH_ENTRY(t) qt_mpool_free(hash_entry_pool, (t))
 #else
-static QINLINE hash_entry *ALLOC_HASH_ENTRY(void)
-{
-    hash_entry *ret = malloc(sizeof(hash_entry));
-
-    ALLOC_SCRIBBLE(ret, sizeof(hash_entry));
-    return ret;
-}
-
-# define FREE_HASH_ENTRY(t) do { FREE_SCRIBBLE(t, sizeof(hash_entry)); free(t); } while (0)
+# define ALLOC_HASH_ENTRY() MALLOC(sizeof(hash_entry))
+# define FREE_HASH_ENTRY(t) FREE(t, sizeof(hash_entry))
 #endif /* ifndef UNPOOLED */
 
 /* prototypes */
@@ -375,7 +368,7 @@ static void initialize_bucket(qt_hash h,
 
 qt_hash INTERNAL qt_hash_create(int needSync)
 {
-    qt_hash tmp = malloc(sizeof(struct qt_hash_s));
+    qt_hash tmp = MALLOC(sizeof(struct qt_hash_s));
 
     assert(tmp);
     if (hard_max_buckets == 0) {
@@ -407,8 +400,8 @@ void INTERNAL qt_hash_destroy(qt_hash h)
         cursor = PTR_OF(cursor)->next;
         FREE_HASH_ENTRY(tmp);
     }
-    free(h->B);
-    free(h);
+    FREE(h->B, hard_max_buckets * sizeof(marked_ptr_t));
+    FREE(h, sizeof(struct qt_hash_s));
 }
 
 void INTERNAL qt_hash_destroy_deallocate(qt_hash                h,
@@ -428,8 +421,8 @@ void INTERNAL qt_hash_destroy_deallocate(qt_hash                h,
         cursor = he->next;
         FREE_HASH_ENTRY(he);
     }
-    free(h->B);
-    free(h);
+    FREE(h->B, hard_max_buckets * sizeof(marked_ptr_t));
+    FREE(h, sizeof(struct qt_hash_s));
 }
 
 size_t INTERNAL qt_hash_count(qt_hash h)

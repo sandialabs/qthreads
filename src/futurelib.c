@@ -48,7 +48,8 @@ static void future_cleanup(void)
     for (i = 0; i < qlib->nshepherds; i++) {
         qthread_readFF(NULL, rets + i);
     }
-    free(rets);
+    FREE(rets, sizeof(aligned_t) * qlib->nshepherds);
+    FREE(future_bookkeeping_array, qlib->nshepherds * sizeof(location_t));
     QTHREAD_FASTLOCK_DESTROY(sfnf_lock);
     TLS_DELETE(future_bookkeeping);
 }
@@ -89,7 +90,7 @@ void future_init(int vp_per_loc)
     for (i = 0; i < qlib->nshepherds; i++) {
         qthread_readFF(NULL, rets + i);
     }
-    free(rets);
+    FREE(rets, qlib->nshepherds * sizeof(aligned_t));
     atexit(future_cleanup);
 }
 

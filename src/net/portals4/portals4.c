@@ -167,10 +167,10 @@ qthread_internal_net_driver_initialize(void)
     }
 
     /* post receive mes */
-    recv_blocks = malloc(sizeof(struct recv_block_t) * num_recv_blocks);
+    recv_blocks = MALLOC(sizeof(struct recv_block_t) * num_recv_blocks);
     if (NULL == recv_blocks) return -1;
     for (i = 0 ; i < num_recv_blocks ; ++i) {
-        recv_blocks[i].start = malloc(size_recv_block);
+        recv_blocks[i].start = MALLOC(size_recv_block);
         if (NULL == recv_blocks[i].start) return -1;
         recv_blocks[i].me_h = PTL_INVALID_HANDLE;
         repost_recv_block(&recv_blocks[i]);

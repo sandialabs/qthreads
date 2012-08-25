@@ -68,7 +68,7 @@ qt_feb_barrier_t API_FUNC *qt_feb_barrier_create(size_t max_threads)
     }
     b = qt_mpool_alloc(fbp.pool);
 #else /* ifndef UNPOOLED */
-    b = malloc(sizeof(struct qt_feb_barrier_s));
+    b = MALLOC(sizeof(struct qt_feb_barrier_s));
 #endif /* ifndef UNPOOLED */
     b->blockers     = 0;
     b->max_blockers = max_threads;
@@ -118,7 +118,7 @@ void API_FUNC qt_feb_barrier_destroy(qt_feb_barrier_t *b)
 #ifndef UNPOOLED
     qt_mpool_free(fbp.pool, b);
 #else
-    free(b);
+    FREE(b, sizeof(struct qt_feb_barrier_s));
 #endif
 }
 

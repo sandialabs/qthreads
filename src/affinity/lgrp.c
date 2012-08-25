@@ -44,11 +44,13 @@ static int lgrp_maxcpus(const lgrp_id_t lgrp,
         return cpu_max;
     } else if (nchildren > 0) {
         int        i;
+        int nchildren_save = nchildren;
         lgrp_id_t *children = MALLOC(nchildren * sizeof(lgrp_id_t));
 
         nchildren = lgrp_children(lgrp_cookie, lgrp, children, nchildren);
         if (nchildren == -1) {
-            free(children);
+            qthread_debug(ALWAYS_OUTPUT, "hardware giving inconsistent answers!\n");
+            abort();
             return cpu_max;
         }
         for (i = 0; i < nchildren; i++) {
@@ -75,7 +77,8 @@ static int lgrp_walk(const lgrp_id_t lgrp,
         ncpus =
             lgrp_cpus(lgrp_cookie, lgrp, cpuids, ncpus, LGRP_CONTENT_DIRECT);
         if (ncpus == -1) {
-            free(cpuids);
+            qthread_debug(ALWAYS_OUTPUT, "hardware giving inconsistent answers!\n");
+            abort();
             return cpu_grps;
         }
         cpuids[ncpus] = -1;
@@ -96,7 +99,8 @@ static int lgrp_walk(const lgrp_id_t lgrp,
 
         nchildren = lgrp_children(lgrp_cookie, lgrp, children, nchildren);
         if (nchildren == -1) {
-            free(children);
+            qthread_debug(ALWAYS_OUTPUT, "hardware giving inconsistent answers!\n");
+            abort();
             return cpu_grps;
         }
         for (i = 0; i < nchildren; i++) {

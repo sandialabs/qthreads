@@ -80,12 +80,12 @@ static void destroy_element(hash_entry            *element,
 static inline qt_hash qt_hash_create(key_equals eq,
                                      hashcode   hash, tagCleanup cleanup)
 {
-    qt_hash tmp = malloc(sizeof(qt_dictionary));
+    qt_hash tmp = MALLOC(sizeof(qt_dictionary));
 
     tmp->op_equals = eq;
     tmp->op_hash   = hash;
-	tmp->op_cleanup = cleanup;
-	
+    tmp->op_cleanup = cleanup;
+
     assert(tmp);
     tmp->maxspines = getpagesize() / sizeof(spine_element_t *);
     tmp->spines    = (spine_t **)calloc(tmp->maxspines, sizeof(spine_element_t *));
@@ -218,7 +218,7 @@ static void destroy_element(hash_entry            *element,
     if (f) {
         f(element->value);
     }
-    free(element);
+    FREE(element, sizeof(hash_entry));
 }
 
 void qt_dictionary_destroy(qt_hash h)
@@ -244,7 +244,7 @@ void qt_dictionary_destroy(qt_hash h)
         }
     }
     free(h->spines);
-    free(h);
+    FREE(h, sizeof(qt_dictionary));
 }
 
 /*
