@@ -13,6 +13,7 @@
 #include "qt_atomics.h"
 #include "qthread/cacheline.h"
 #include "qt_aligned_alloc.h"
+#include "qt_debug.h"
 
 #ifndef QT_HASH_CAST
 # define QT_HASH_CAST qt_key_t
