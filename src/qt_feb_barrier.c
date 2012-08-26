@@ -18,7 +18,7 @@
 #include "qt_mpool.h"
 #include "qthread_innards.h"
 #include "qt_visibility.h"
-
+#include "qt_debug.h"
 #include "qthread_asserts.h"
 
 struct qt_feb_barrier_s {
