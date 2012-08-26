@@ -3,4 +3,7 @@
 # Copyright (c)      2008  Sandia Corporation
 #
 
-SUBDIRS = rng
+DIST_SUBDIRS = rng
+
+clean-local:
+	$(MAKE) -C rng clean
