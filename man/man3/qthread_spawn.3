@@ -109,7 +109,7 @@ before the task is spawned create undefined behavior.
 The seventh argument,
 .IR target_shep ,
 specifies a destination shepherd for the task. The task will only ever execute
-on the specified shepherd unless that shepherd is disabled.
+on the specified shepherd unless that shepherd is disabled. If the task should be able to execute anywhere, use the pre-defined constant NO_SHEPHERD to specify the lack of preference.
 .PP
 The eighth argument,
 .IR feature_flag ,
