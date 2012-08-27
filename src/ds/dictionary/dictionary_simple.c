@@ -5,15 +5,17 @@
 #include <qthread/qthread.h> // using CAS_ptr, qthread_worker_unique and qthread_num_workers
 // #include <qthread_innards.h> //using qthread_library_initialized
 #include <56reader-rwlock.h> // using rwlock_*
+
+#include "qthread_asserts.h"
 #include "qt_debug.h"
 
 struct qt_dictionary {
-    key_equals        op_equals;
-    hashcode          op_hash;
-    tagCleanup        op_cleanup;
-    list_entry      **content;
+    qt_dict_key_equals_f  op_equals;
+    qt_dict_hash_f        op_hash;
+    qt_dict_tag_cleanup_f op_cleanup;
+    list_entry          **content;
 #ifdef DELETE_SUPPORT
-    struct tlrw_lock *lock;
+    struct tlrw_lock     *lock;
 #endif
 };
 
@@ -82,9 +84,9 @@ static int qthread_library_initialized = 1;
         a = (rwlock_t *)MALLOC(sizeof(rwlock_t));                                    \
         rwlock_init(a);                                                              \
     }
-# define rwlfree(a) \
-    {               \
-        FREE(a, sizeof(rwlock_t));    \
+# define rwlfree(a)                \
+    {                              \
+        FREE(a, sizeof(rwlock_t)); \
     }
 #else /* ifdef DELETE_SUPPORT */
 # define rlock(a)
@@ -104,13 +106,11 @@ static int qthread_library_initialized = 1;
 extern int qthread_library_initialized;
 #endif
 
-qt_dictionary *qt_dictionary_create(key_equals eq,
-                                    hashcode   hash,
-                                    tagCleanup cleanup)
+qt_dictionary *qt_dictionary_create(qt_dict_key_equals_f  eq,
+                                    qt_dict_hash_f        hash,
+                                    qt_dict_tag_cleanup_f cleanup)
 {
-#ifndef QTHREAD_NO_ASSERTS
     assert(qthread_library_initialized && "Need to initialize qthreads before using the dictionary");
-#endif
     qt_dictionary *ret = (qt_dictionary *)MALLOC(sizeof(qt_dictionary));
     ret->op_equals  = eq;
     ret->op_hash    = hash;
@@ -399,7 +399,7 @@ list_entry *qt_dictionary_iterator_next(qt_dictionary_iterator *it)
                 it->crt = it->dict->content[i];
                 return it->crt;
             }
-    } else   {
+    } else {
         // start searching for next element starting with the last returned element
         list_entry *walk = it->crt;
         // if item was deleted or there are no more elements in the list, return NULL

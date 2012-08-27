@@ -63,24 +63,24 @@ typedef struct list_entry hash_entry;
 // (other typedef found in dictionary.h)
 
 struct qt_dictionary {
-    marked_ptr_t   *B;     // Buckets
-    volatile size_t count; // Crt number of elements in hash
-    volatile size_t size;  // Crt number of buckets (doubling if load per bucket too much)
-    key_equals      op_equals;
-    hashcode        op_hash;
-    tagCleanup      op_cleanup;
+    marked_ptr_t         *B;     // Buckets
+    volatile size_t       count; // Crt number of elements in hash
+    volatile size_t       size;  // Crt number of buckets (doubling if load per bucket too much)
+    qt_dict_key_equals_f  op_equals;
+    qt_dict_hash_f        op_hash;
+    qt_dict_tag_cleanup_f op_cleanup;
 };
 // So: qt_dictionary* = qt_hash
 // (typedef found in dictionary.h)
 
 /* prototypes */
-static void *qt_lf_list_find(marked_ptr_t  *head,
-                             so_key_t       hashed_key,
-                             qt_key_t       key,
-                             marked_ptr_t **prev,
-                             marked_ptr_t  *cur,
-                             marked_ptr_t  *next,
-                             key_equals     op_equals);
+static void *qt_lf_list_find(marked_ptr_t        *head,
+                             so_key_t             hashed_key,
+                             qt_key_t             key,
+                             marked_ptr_t       **prev,
+                             marked_ptr_t        *cur,
+                             marked_ptr_t        *next,
+                             qt_dict_key_equals_f op_equals);
 static void initialize_bucket(qt_hash h,
                               size_t  bucket);
 
@@ -155,9 +155,9 @@ static uint64_t qt_hashword(uint64_t key)
  * Insert node "node" in the list starting at position "head".
  * If item exists replace it (force insert)
  */
-static void qt_lf_force_list_insert(marked_ptr_t *head,
-                                    hash_entry   *node,
-                                    key_equals    op_equals)
+static void qt_lf_force_list_insert(marked_ptr_t        *head,
+                                    hash_entry          *node,
+                                    qt_dict_key_equals_f op_equals)
 {
     so_key_t hashed_key = node->hashed_key;
     qt_key_t key        = node->key;
@@ -185,11 +185,11 @@ static void qt_lf_force_list_insert(marked_ptr_t *head,
  * Set crt_node to point to the current node with key = "node->key"
  * Return 0 if item existed and 1 if it was inserted
  */
-static int qt_lf_list_insert(marked_ptr_t *head,
-                             hash_entry   *node,
-                             marked_ptr_t *ocur,
-                             hash_entry  **crt_node,
-                             key_equals    op_equals)
+static int qt_lf_list_insert(marked_ptr_t        *head,
+                             hash_entry          *node,
+                             marked_ptr_t        *ocur,
+                             hash_entry         **crt_node,
+                             qt_dict_key_equals_f op_equals)
 {
     so_key_t hashed_key = node->hashed_key;
     qt_key_t key        = node->key;
@@ -212,11 +212,11 @@ static int qt_lf_list_insert(marked_ptr_t *head,
     }
 }
 
-static int qt_lf_list_delete(marked_ptr_t *head,
-                             so_key_t      hashed_key,
-                             qt_key_t      key,
-                             key_equals    op_equals,
-                             tagCleanup    cleanup)
+static int qt_lf_list_delete(marked_ptr_t         *head,
+                             so_key_t              hashed_key,
+                             qt_key_t              key,
+                             qt_dict_key_equals_f  op_equals,
+                             qt_dict_tag_cleanup_f cleanup)
 {
     while (1) {
         marked_ptr_t *lprev;
@@ -242,13 +242,13 @@ static int qt_lf_list_delete(marked_ptr_t *head,
     }
 }
 
-static void *qt_lf_list_find(marked_ptr_t  *head,
-                             so_key_t       hashed_key,
-                             qt_key_t       key,
-                             marked_ptr_t **oprev,
-                             marked_ptr_t  *ocur,
-                             marked_ptr_t  *onext,
-                             key_equals     op_equals)
+static void *qt_lf_list_find(marked_ptr_t        *head,
+                             so_key_t             hashed_key,
+                             qt_key_t             key,
+                             marked_ptr_t       **oprev,
+                             marked_ptr_t        *ocur,
+                             marked_ptr_t        *onext,
+                             qt_dict_key_equals_f op_equals)
 {
     so_key_t      ckey;
     qt_key_t      okey;
@@ -472,9 +472,9 @@ static void initialize_bucket(qt_hash h,
 }
 
 // old public method
-static inline qt_hash qt_hash_create(key_equals eq,
-                                     hashcode   hash,
-                                     tagCleanup cleanup)
+static inline qt_hash qt_hash_create(qt_dict_key_equals_f  eq,
+                                     qt_dict_hash_f        hash,
+                                     qt_dict_tag_cleanup_f cleanup)
 {
     qt_hash tmp;
 
@@ -509,9 +509,9 @@ static inline qt_hash qt_hash_create(key_equals eq,
     return tmp;
 }
 
-qt_dictionary *qt_dictionary_create(key_equals eq,
-                                    hashcode   hash,
-                                    tagCleanup cleanup)
+qt_dictionary *qt_dictionary_create(qt_dict_key_equals_f  eq,
+                                    qt_dict_hash_f        hash,
+                                    qt_dict_tag_cleanup_f cleanup)
 {
     return qt_hash_create(eq, hash, cleanup);
 }

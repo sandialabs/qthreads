@@ -13,9 +13,9 @@ extern "C" {
 #define NO_BUCKETS (1 << BKT_POW)
 
 struct tlrw_lock;
-typedef int (*key_equals)(void *, void *);
-typedef int (*hashcode)(void *);
-typedef void (*tagCleanup)(void *);
+typedef int (*qt_dict_key_equals_f)(void *, void *);
+typedef int (*qt_dict_hash_f)(void *);
+typedef void (*qt_dict_tag_cleanup_f)(void *);
 
 struct list_entry {
     void              *value;
@@ -35,14 +35,14 @@ typedef struct qt_dictionary_iterator qt_dictionary_iterator;
  * the signature of the key comparsion function is: int my_key_equals(void* key1, void* key2)
  *              and it should return 1 ("true") if the keys are equal and 0 otherwise
  *
- * the signature of the hashcode function is: int my_hashcode(void* string)
+ * the signature of the qt_dict_hash_f function is: int my_hashcode(void* string)
  *              and it can return any integer value.
  *
  * if my_key_equals (A, B) = 1, then my_hashcode(A) == my_hashcode(B)
  */
-qt_dictionary *qt_dictionary_create(key_equals eq,
-                                    hashcode   hash,
-                                    tagCleanup cleanup);
+qt_dictionary *qt_dictionary_create(qt_dict_key_equals_f  eq,
+                                    qt_dict_hash_f        hash,
+                                    qt_dict_tag_cleanup_f cleanup);
 
 /*
  *      Destroys the dictionary d

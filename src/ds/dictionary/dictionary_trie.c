@@ -60,15 +60,15 @@ typedef struct _spine_s {
 } spine_t;
 
 struct qt_dictionary {
-    spine_element_t base[BASE_SPINE_LENGTH];
-    spine_t       **spines;
-    size_t          count;
-    size_t          maxspines;
-    size_t          numspines;
+    spine_element_t       base[BASE_SPINE_LENGTH];
+    spine_t             **spines;
+    size_t                count;
+    size_t                maxspines;
+    size_t                numspines;
 
-    key_equals      op_equals;
-    hashcode        op_hash;
-    tagCleanup      op_cleanup;
+    qt_dict_key_equals_f  op_equals;
+    qt_dict_hash_f        op_hash;
+    qt_dict_tag_cleanup_f op_cleanup;
 };
 
 static void destroy_spine(qt_hash                h,
@@ -77,13 +77,14 @@ static void destroy_spine(qt_hash                h,
 static void destroy_element(hash_entry            *element,
                             qt_hash_deallocator_fn f);
 
-static inline qt_hash qt_hash_create(key_equals eq,
-                                     hashcode   hash, tagCleanup cleanup)
+static inline qt_hash qt_hash_create(qt_dict_key_equals_f  eq,
+                                     qt_dict_hash_f        hash,
+                                     qt_dict_tag_cleanup_f cleanup)
 {
     qt_hash tmp = MALLOC(sizeof(qt_dictionary));
 
-    tmp->op_equals = eq;
-    tmp->op_hash   = hash;
+    tmp->op_equals  = eq;
+    tmp->op_hash    = hash;
     tmp->op_cleanup = cleanup;
 
     assert(tmp);
@@ -93,8 +94,9 @@ static inline qt_hash qt_hash_create(key_equals eq,
     return tmp;
 }
 
-qt_dictionary *qt_dictionary_create(key_equals eq,
-                                    hashcode   hash, tagCleanup cleanup)
+qt_dictionary *qt_dictionary_create(qt_dict_key_equals_f  eq,
+                                    qt_dict_hash_f        hash,
+                                    qt_dict_tag_cleanup_f cleanup)
 {
     return qt_hash_create(eq, hash, cleanup);
 }
@@ -345,7 +347,7 @@ void *qt_hash_put_helper(qt_dictionary *h,
     e->hashed_key = lkey;
     e->key        = key;
     e->value      = value;
-    e->next       = NULL;  
+    e->next       = NULL;
     hash_entry *crt;
     do {
         if (child_val.e == NULL) {
@@ -396,7 +398,7 @@ void *qt_hash_put_helper(qt_dictionary *h,
                 newspine.s.ctr = SPINE_COUNT(1); // contains 1 element (oldval)
 
                 if ((cur.e = CAS(&(child_id->e), child_val.e, newspine.e)) == child_val.e) {
-                    //success
+                    // success
                     continue;
                 } else {
                     child_val = cur;
@@ -494,8 +496,9 @@ int qt_dictionary_remove(qt_dictionary *h,
                 if (h->op_equals(e->key, key)) {
                     spine_element_t cur;
                     if ((cur.e = CAS(prev, e, e->next)) == e) {
-						if (h->op_cleanup!=NULL)
-							h->op_cleanup(child_val.e->key);
+                        if (h->op_cleanup != NULL) {
+                            h->op_cleanup(child_val.e->key);
+                        }
                         free(child_val.e);                         // XXX should be into a mempool
                         // Second, walk back up the parent pointers, removing empty spines (if any)
                         // cur_id is the current spine pointer's location (if its null, we're in the base spine)
@@ -718,7 +721,7 @@ list_entry *qt_dictionary_iterator_next(qt_dictionary_iterator *it)
         if(local_e != NULL) {
             for(i = it->spine_index; i < SPINE_LENGTH; i++)
                 if((local_e->elements[i].e != NULL) && !SPINE_PTR_TEST(local_e->elements[i])) {
-                    it->spine_index = i+1;
+                    it->spine_index = i + 1;
                     it->crt         = local_e->elements[i].e;
                     return it->crt;
                 } else if( local_e->elements[i].e != NULL) {}
@@ -756,20 +759,21 @@ int qt_dictionary_iterator_equals(qt_dictionary_iterator *a,
     return (a->crt == b->crt) && (a->dict == b->dict) && (a->bkt == b->bkt);
 }
 
-
-qt_dictionary_iterator* qt_dictionary_iterator_copy(qt_dictionary_iterator* b) {
-	if(b == NULL)
-		return NULL;
-	qt_dictionary_iterator* ret = qt_dictionary_iterator_create(b -> dict);
-	if(ret == NULL || ret == ERROR)
-		return NULL;
-	ret -> bkt = b -> bkt;
-	ret -> crt = b -> crt;
-    ret -> spine_index = b -> spine_index;
-    ret -> base_index = b -> base_index;
-	return ret;
+qt_dictionary_iterator *qt_dictionary_iterator_copy(qt_dictionary_iterator *b)
+{
+    if(b == NULL) {
+        return NULL;
+    }
+    qt_dictionary_iterator *ret = qt_dictionary_iterator_create(b->dict);
+    if((ret == NULL) || (ret == ERROR)) {
+        return NULL;
+    }
+    ret->bkt         = b->bkt;
+    ret->crt         = b->crt;
+    ret->spine_index = b->spine_index;
+    ret->base_index  = b->base_index;
+    return ret;
 }
-
 
 void qt_dictionary_printbuckets(qt_dictionary *dict) {}
 
