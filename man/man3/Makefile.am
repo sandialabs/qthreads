@@ -52,7 +52,9 @@ man_MANS = \
 		   qpool_create_aligned.3 \
 		   qpool_destroy.3 \
 		   qpool_free.3 \
+		   qt_accept.3 \
 		   qt_allpairs.3 \
+		   qt_connect.3 \
 		   qt_double_max.3 \
 		   qt_double_min.3 \
 		   qt_double_prod.3 \
@@ -74,6 +76,11 @@ man_MANS = \
 		   qt_loop_step_future.3 \
 		   qt_loopaccum_balance.3 \
 		   qt_loopaccum_balance_future.3 \
+		   qt_poll.3 \
+		   qt_pread.3 \
+		   qt_pwrite.3 \
+		   qt_read.3 \
+		   qt_select.3 \
 		   qt_sinc_create.3 \
 		   qt_sinc_destroy.3 \
 		   qt_sinc_expect.3 \
@@ -82,10 +89,13 @@ man_MANS = \
 		   qt_sinc_reset.3 \
 		   qt_sinc_submit.3 \
 		   qt_sinc_wait.3 \
+		   qt_system.3 \
 		   qt_uint_max.3 \
 		   qt_uint_min.3 \
 		   qt_uint_prod.3 \
 		   qt_uint_sum.3 \
+		   qt_wait4.3 \
+		   qt_write.3 \
 		   qthread_cacheline.3 \
 		   qthread_cas.3 \
 		   qthread_cas_ptr.3 \
