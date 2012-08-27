@@ -156,8 +156,8 @@ void qt_sinc_reset(qt_sinc_t   *sinc_,
     if (sinc->counter != 0) {
         qthread_debug(FEB_DETAILS, "tid %u emptying sinc ready (%p)\n", qthread_id(), &sinc->ready);
         qthread_empty(&sinc->ready);
-    /*} else {
-        qthread_fill(&sinc->ready);*/
+        /*} else {
+         *  qthread_fill(&sinc->ready);*/
     }
 } /*}}}*/
 
@@ -182,6 +182,7 @@ void qt_sinc_fini(qt_sinc_t *sinc_)
 void qt_sinc_destroy(qt_sinc_t *sinc_)
 {   /*{{{*/
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
+
     qt_sinc_fini(sinc_);
     if (sinc->rdata) {
         FREE(sinc->rdata, sizeof(qt_sinc_reduction_t));
@@ -193,8 +194,8 @@ void qt_sinc_destroy(qt_sinc_t *sinc_)
  * Pre:  sinc was created
  * Post: aggregate count is positive
  */
-void qt_sinc_willspawn(qt_sinc_t *sinc_,
-                       size_t     count)
+void qt_sinc_expect(qt_sinc_t *sinc_,
+                    size_t     count)
 {   /*{{{*/
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
 
@@ -253,8 +254,8 @@ static void qt_sinc_internal_collate(qt_sinc_t *sinc_)
     qthread_fill(&sinc->ready);
 } /*}}}*/
 
-void qt_sinc_submit(qt_sinc_t *restrict sinc_,
-                    void *restrict      value)
+void qt_sinc_submit(qt_sinc_t *restrict  sinc_,
+                    const void *restrict value)
 {   /*{{{*/
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
 

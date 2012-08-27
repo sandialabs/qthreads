@@ -14,7 +14,7 @@ typedef void (*qt_loopr_f)(const size_t   startat,
                            void *restrict arg,
                            void *restrict ret);
 typedef void (*qt_accum_f)(void *restrict a,
-                           void *restrict b);
+                           const void *restrict b);
 
 typedef struct qqloop_handle_s qqloop_handle_t;
 typedef struct qqloop_step_handle_s qqloop_step_handle_t;

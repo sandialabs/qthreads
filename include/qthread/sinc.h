@@ -1,7 +1,7 @@
 #ifndef QT_SINC_H
 #define QT_SINC_H
 
-typedef void (*qt_sinc_op_f)(void *tgt, void *src);
+typedef void (*qt_sinc_op_f)(void *tgt, const void *src);
 typedef struct qt_opaque_sinc_s {
     uint8_t opaque_data[24];
 } Q_ALIGNED (QTHREAD_ALIGNMENT_ALIGNED_T) qt_sinc_t;

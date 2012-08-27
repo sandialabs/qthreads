@@ -278,8 +278,8 @@ void qt_sinc_destroy(qt_sinc_t *sinc)
  * Pre:  sinc was created
  * Post: aggregate count is positive
  */
-void qt_sinc_willspawn(qt_sinc_t *sinc,
-                       size_t     count)
+void qt_sinc_expect(qt_sinc_t *sinc,
+                    size_t     count)
 {
     assert(sinc);
     if (count > 0) {

@@ -274,8 +274,8 @@ void qt_sinc_destroy(qt_sinc_t *sinc_)
  * Pre:  sinc was created
  * Post: aggregate count is positive
  */
-void qt_sinc_willspawn(qt_sinc_t *sinc_,
-                       size_t     count)
+void qt_sinc_expect(qt_sinc_t *sinc_,
+                    size_t     count)
 {
     assert(sinc_);
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;

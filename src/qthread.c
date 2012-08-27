@@ -2887,7 +2887,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
 
         if (curr_team) {
             new_team = curr_team;
-            qt_sinc_willspawn(new_team->sinc, 1);
+            qt_sinc_expect(new_team->sinc, 1);
         }
     } else if (feature_flag & QTHREAD_SPAWN_NEW_TEAM) {
         // Spawn into a new team
@@ -2954,7 +2954,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
             assert(new_team->parent_subteams_sinc);
 
             // Notify the parent of the new subteam
-            qt_sinc_willspawn(new_team->parent_subteams_sinc, 1);
+            qt_sinc_expect(new_team->parent_subteams_sinc, 1);
         }
 
 #ifdef TEAM_PROFILE

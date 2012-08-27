@@ -1403,7 +1403,7 @@ void API_FUNC qt_loop_queue_addworker(qqloop_handle_t            *loop,
         }                                                                                      \
         *(type *)ret = acc;                                                                    \
     }                                                                                          \
-    static void qt ## initials ## _acc(void *restrict a, void *restrict b)                     \
+    static void qt ## initials ## _acc(void *restrict a, const void *restrict b)               \
     {                                                                                          \
         *(type *)a = _op_(*(type *)a, *(type *)b);                                             \
     }                                                                                          \
