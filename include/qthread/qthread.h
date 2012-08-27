@@ -371,7 +371,6 @@ size_t qthread_readstate(const enum introspective_state type);
 /* Task team interface. */
 qt_team_id_t qt_team_id(void);
 qt_team_id_t qt_team_parent_id(void);
-aligned_t    qt_team_destroy(void *arg);
 # ifdef TEAM_PROFILE
 void qt_team_profile(void);
 # endif
