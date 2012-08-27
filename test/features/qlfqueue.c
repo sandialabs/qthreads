@@ -3,7 +3,7 @@
 #include <assert.h>
 #include <qthread/qthread.h>
 #include <qthread/qlfqueue.h>
-#include <qthread/qt_sinc.h>
+#include <qthread/sinc.h>
 #include "argparsing.h"
 
 static size_t elementcount = 1000;

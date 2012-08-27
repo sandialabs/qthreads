@@ -24,7 +24,7 @@
 # include "qt_atomics.h"
 #endif
 
-#include "qthread/qt_sinc.h"
+#include "qthread/sinc.h"
 
 typedef enum {
     ALIGNED,

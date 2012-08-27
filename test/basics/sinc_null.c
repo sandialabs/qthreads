@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <unistd.h>
 #include <qthread/qthread.h>
-#include <qthread/qt_sinc.h>
+#include <qthread/sinc.h>
 #include "argparsing.h"
 
 static aligned_t submit_to_sinc(void *arg_)

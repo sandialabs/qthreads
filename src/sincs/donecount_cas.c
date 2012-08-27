@@ -16,7 +16,7 @@
 #include "qt_aligned_alloc.h"
 #include "qt_debug.h"
 
-#include "qthread/qt_sinc.h"
+#include "qthread/sinc.h"
 
 typedef aligned_t qt_sinc_count_t;
 
