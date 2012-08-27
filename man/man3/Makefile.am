@@ -55,6 +55,19 @@ man_MANS = \
 		   qt_accept.3 \
 		   qt_allpairs.3 \
 		   qt_connect.3 \
+		   qt_dictionary_create.3 \
+		   qt_dictionary_delete.3 \
+		   qt_dictionary_destroy.3 \
+		   qt_dictionary_end.3 \
+		   qt_dictionary_get.3 \
+		   qt_dictionary_iterator_copy.3 \
+		   qt_dictionary_iterator_create.3 \
+		   qt_dictionary_iterator_destroy.3 \
+		   qt_dictionary_iterator_equals.3 \
+		   qt_dictionary_iterator_get.3 \
+		   qt_dictionary_iterator_next.3 \
+		   qt_dictionary_put.3 \
+		   qt_dictionary_put_if_absent.3 \
 		   qt_double_max.3 \
 		   qt_double_min.3 \
 		   qt_double_prod.3 \
