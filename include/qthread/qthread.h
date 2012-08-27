@@ -375,26 +375,18 @@ qt_team_id_t qt_team_parent_id(void);
 void qt_team_profile(void);
 # endif
 
-int qthread_fork_new_team(qthread_f   f,
-                          const void *arg,
-                          aligned_t  *ret);
-int qthread_fork_new_subteam(qthread_f   f,
-                             const void *arg,
-                             aligned_t  *ret);
-int qthread_fork_syncvar_new_team(qthread_f   f,
-                                  const void *arg,
-                                  syncvar_t  *ret);
-int qthread_fork_syncvar_new_subteam(qthread_f   f,
-                                     const void *arg,
-                                     syncvar_t  *ret);
-int qthread_fork_copyargs_new_team(qthread_f   f,
-                                   const void *arg,
-                                   size_t      arg_size,
-                                   aligned_t  *ret);
-int qthread_fork_copyargs_new_subteam(qthread_f   f,
-                                      const void *arg,
-                                      size_t      arg_size,
-                                      aligned_t  *ret);
+#define qthread_fork_new_team(f,a,r) qthread_spawn((f),(a),0,(r),0,NULL,NO_SHEPHERD,\
+        QTHREAD_SPAWN_NEW_TEAM)
+#define qthread_fork_new_subteam(f,a,r) qthread_spawn((f),(a),0,(r),0,NULL,NO_SHEPHERD,\
+        QTHREAD_SPAWN_NEW_SUBTEAM)
+#define qthread_fork_syncvar_new_team(f,a,r) qthread_spawn((f),(a),0,(r),0,NULL,NO_SHEPHERD,\
+        QTHREAD_SPAWN_NEW_TEAM|QTHREAD_SPAWN_RET_SYNCVAR_T)
+#define qthread_fork_syncvar_new_subteam(f,a,r) qthread_spawn((f),(a),0,(r),0,NULL,NO_SHEPHERD,\
+        QTHREAD_SPAWN_NEW_SUBTEAM|QTHREAD_SPAWN_RET_SYNCVAR_T)
+#define qthread_fork_copyargs_new_team(f,a,z,r) qthread_spawn((f),(a),(z),(r),0,NULL,NO_SHEPHERD,\
+        QTHREAD_SPAWN_NEW_TEAM);
+#define qthread_fork_copyargs_new_subteam(f,a,z,r) qthread_spawn((f),(a),(z),(r),0,NULL,NO_SHEPHERD,\
+        QTHREAD_SPAWN_NEW_SUBTEAM);
 
 /****************************************************************************
  * functions to implement FEB locking/unlocking

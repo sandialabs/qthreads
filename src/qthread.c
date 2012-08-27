@@ -3084,24 +3084,6 @@ int API_FUNC qthread_fork(qthread_f   f,
     return qthread_spawn(f, arg, 0, ret, 0, NULL, NO_SHEPHERD, 0);
 } /*}}}*/
 
-int API_FUNC qthread_fork_new_team(qthread_f   f,
-                                   const void *arg,
-                                   aligned_t  *ret)
-{   /*{{{*/
-    qthread_debug(THREAD_CALLS, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
-    return qthread_spawn(f, arg, 0, ret, 0, NULL, NO_SHEPHERD,
-                         QTHREAD_SPAWN_NEW_TEAM);
-} /*}}}*/
-
-int API_FUNC qthread_fork_new_subteam(qthread_f   f,
-                                      const void *arg,
-                                      aligned_t  *ret)
-{   /*{{{*/
-    qthread_debug(THREAD_CALLS | TEAM_CALLS, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
-    return qthread_spawn(f, arg, 0, ret, 0, NULL, NO_SHEPHERD,
-                         QTHREAD_SPAWN_NEW_SUBTEAM);
-}   /*}}}*/
-
 int API_FUNC qthread_fork_copyargs_precond(qthread_f   f,
                                            const void *arg,
                                            size_t      arg_size,
@@ -3315,38 +3297,6 @@ int API_FUNC qthread_fork_syncvar_copyargs_simple(qthread_f   f,
                          QTHREAD_SPAWN_RET_SYNCVAR_T);
 }                      /*}}} */
 
-int API_FUNC qthread_fork_copyargs_new_team(qthread_f   f,
-                                            const void *arg,
-                                            size_t      arg_size,
-                                            aligned_t  *ret)
-{                      /*{{{*/
-    qthread_debug(TEAM_CALLS, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
-    return qthread_spawn(f,
-                         arg,
-                         arg_size,
-                         ret,
-                         0,
-                         NULL,
-                         NO_SHEPHERD,
-                         QTHREAD_SPAWN_NEW_TEAM);
-}                      /*}}} */
-
-int API_FUNC qthread_fork_copyargs_new_subteam(qthread_f   f,
-                                               const void *arg,
-                                               size_t      arg_size,
-                                               aligned_t  *ret)
-{                      /*{{{*/
-    qthread_debug(TEAM_CALLS, "f(%p), arg(%p), ret(%p)\n", f, arg, ret);
-    return qthread_spawn(f,
-                         arg,
-                         arg_size,
-                         ret,
-                         0,
-                         NULL,
-                         NO_SHEPHERD,
-                         QTHREAD_SPAWN_NEW_SUBTEAM);
-}                      /*}}} */
-
 int API_FUNC qthread_fork_syncvar(qthread_f   f,
                                   const void *arg,
                                   syncvar_t  *ret)
@@ -3358,36 +3308,6 @@ int API_FUNC qthread_fork_syncvar(qthread_f   f,
                          0,
                          NULL,
                          NO_SHEPHERD,
-                         QTHREAD_SPAWN_RET_SYNCVAR_T);
-}                      /*}}} */
-
-int API_FUNC qthread_fork_syncvar_new_team(qthread_f   f,
-                                           const void *arg,
-                                           syncvar_t  *ret)
-{                      /*{{{ */
-    return qthread_spawn(f,
-                         arg,
-                         0,
-                         ret,
-                         0,
-                         NULL,
-                         NO_SHEPHERD,
-                         QTHREAD_SPAWN_NEW_TEAM |
-                         QTHREAD_SPAWN_RET_SYNCVAR_T);
-}                      /*}}} */
-
-int API_FUNC qthread_fork_syncvar_new_subteam(qthread_f   f,
-                                              const void *arg,
-                                              syncvar_t  *ret)
-{                      /*{{{ */
-    return qthread_spawn(f,
-                         arg,
-                         0,
-                         ret,
-                         0,
-                         NULL,
-                         NO_SHEPHERD,
-                         QTHREAD_SPAWN_NEW_SUBTEAM |
                          QTHREAD_SPAWN_RET_SYNCVAR_T);
 }                      /*}}} */
 
