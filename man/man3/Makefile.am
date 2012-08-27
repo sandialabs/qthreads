@@ -74,6 +74,14 @@ man_MANS = \
 		   qt_loop_step_future.3 \
 		   qt_loopaccum_balance.3 \
 		   qt_loopaccum_balance_future.3 \
+		   qt_sinc_create.3 \
+		   qt_sinc_destroy.3 \
+		   qt_sinc_expect.3 \
+		   qt_sinc_fini.3 \
+		   qt_sinc_init.3 \
+		   qt_sinc_reset.3 \
+		   qt_sinc_submit.3 \
+		   qt_sinc_wait.3 \
 		   qt_uint_max.3 \
 		   qt_uint_min.3 \
 		   qt_uint_prod.3 \
