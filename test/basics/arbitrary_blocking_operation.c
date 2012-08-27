@@ -12,7 +12,7 @@ static int initialized = 0;
 static aligned_t user_func(void *arg)
 {
     iprintf("\tin user_func function\n");
-    qt_blocking_subsystem_begin_blocking_action();
+    qt_begin_blocking_action();
     iprintf("\t\tinside blocking action\n");
     foo = 1;
     iprintf("\t\tshep=%i\n", (signed)qthread_shep());
@@ -21,7 +21,7 @@ static aligned_t user_func(void *arg)
 	iprintf("\t\tid=%i\n", (signed)qthread_id());
 	assert(qthread_id() != (unsigned int)-1);
     }
-    qt_blocking_subsystem_end_blocking_action();
+    qt_end_blocking_action();
     iprintf("\texiting user_func function\n");
 
     return 0;
