@@ -15,7 +15,7 @@
 #include <math.h>   /* for floor, log, sin */
 #include <qthread/qthread.h>
 #include <qthread/qtimer.h>
-#include <qthread/qt_sinc.h>
+#include <qthread/sinc.h>
 #include "argparsing.h"
 
 #define BRG_RNG // Select RNG
@@ -127,7 +127,7 @@ static aligned_t visit(void *args_)
     int     num_children  = parent->num_children;
     node_t  child;
 
-    qt_sinc_willspawn(sinc, num_children);
+    qt_sinc_expect(sinc, num_children);
 
     // Spawn children, if any
     for (int i = 0; i < num_children; i++) {

@@ -39,7 +39,7 @@ static aligned_t visit(void *arg_)
         /* I'm an internal node. */
         v_args_t args = { arg->depth - 1, arg->sinc };
 
-        qt_sinc_willspawn(arg->sinc, 2);
+        qt_sinc_expect(arg->sinc, 2);
         qthread_fork_syncvar_copyargs(visit, &args, sizeof(v_args_t), NULL);
         qthread_fork_syncvar_copyargs(visit, &args, sizeof(v_args_t), NULL);
 
@@ -48,7 +48,7 @@ static aligned_t visit(void *arg_)
         /* I'm going to spawn leaf nodes. */
         v_args_t args = { arg->depth - 1, arg->sinc };
 
-        qt_sinc_willspawn(arg->sinc, 2);
+        qt_sinc_expect(arg->sinc, 2);
         qthread_fork_syncvar_copyargs(visit, &args, sizeof(v_args_t), NULL);
         qthread_fork_syncvar_copyargs(visit, &args, sizeof(v_args_t), NULL);
 
