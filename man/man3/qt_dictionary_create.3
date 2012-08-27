@@ -18,11 +18,11 @@
 
 .SH DESCRIPTION
 This function creates a dictionary data structure. The dictionary uses the
-.B eq
+.I eq
 function to compare keys, the
-.B hash
+.I hash
 function to convert a key into an integer, and the
-.B cleanup
+.I cleanup
 function to deallocate tags when the dictionary is destroyed.
 .PP
 The prototype of the key comparison function is:
@@ -32,7 +32,7 @@ int eq(void *key1, void *key2);
 .RE
 .PP
 The
-.B eq 
+.I eq 
 function should return one if the keys are equal and zero otherwise. The prototype of the key conversion function is:
 .RS
 .PP
@@ -40,7 +40,7 @@ int hash(void *key);
 .RE
 .PP
 The
-.B hash
+.I hash
 function may return any value. The following property MUST be maintained:
 .RS
 .PP
@@ -54,7 +54,7 @@ void cleanup(void *key);
 .RE
 .PP
 The
-.B cleanup
+.I cleanup
 function is intended to provide a hook to deallocate keys as necessary. The function pointer may be NULL.
 .SH RETURN VALUES
 Returns an initialized qt_dictionary object.

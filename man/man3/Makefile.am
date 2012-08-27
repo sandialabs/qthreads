@@ -152,6 +152,7 @@ man_MANS = \
 		   qthread_size_tasklocal.3 \
 		   qthread_sorted_sheps.3 \
 		   qthread_sorted_sheps_remote.3 \
+		   qthread_spawn.3 \
 		   qthread_stackleft.3 \
 		   qthread_syncvar_empty.3 \
 		   qthread_syncvar_fill.3 \
@@ -164,6 +165,7 @@ man_MANS = \
 		   qthread_syncvar_writeF_const.3 \
 		   qthread_unlock.3 \
 		   qthread_worker.3 \
+		   qthread_worker_unique.3 \
 		   qthread_writeEF.3 \
 		   qthread_writeEF_const.3 \
 		   qthread_writeF.3 \
