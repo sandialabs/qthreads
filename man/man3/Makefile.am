@@ -54,6 +54,7 @@ man_MANS = \
 		   qpool_free.3 \
 		   qt_accept.3 \
 		   qt_allpairs.3 \
+		   qt_begin_blocking_action.3 \
 		   qt_connect.3 \
 		   qt_dictionary_create.3 \
 		   qt_dictionary_delete.3 \
@@ -72,6 +73,7 @@ man_MANS = \
 		   qt_double_min.3 \
 		   qt_double_prod.3 \
 		   qt_double_sum.3 \
+		   qt_end_blocking_action.3 \
 		   qt_int_max.3 \
 		   qt_int_min.3 \
 		   qt_int_prod.3 \
