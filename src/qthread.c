@@ -845,6 +845,14 @@ int API_FUNC qthread_initialize(void)
         }
     }
 
+#if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
+    qlib->atomic_locks = MALLOC(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
+    qassert_ret(qlib->atomic_locks, QTHREAD_MALLOC_ERROR);
+    for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
+        QTHREAD_FASTLOCK_INIT(qlib->atomic_locks[i]);
+    }
+#endif
+
     qthread_internal_alignment_init();
     qt_mpool_subsystem_init();
     qt_affinity_init(&nshepherds, &nworkerspershep);
@@ -882,14 +890,6 @@ int API_FUNC qthread_initialize(void)
     }
     QTHREAD_LOCKING_STRIPES = 2 << ((unsigned int)(log2(nshepherds * nworkerspershep)) + 1);
     qthread_debug(CORE_BEHAVIOR, "there will be %u shepherd(s)\n", (unsigned)nshepherds);
-
-#if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-    qlib->atomic_locks = MALLOC(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
-    qassert_ret(qlib->atomic_locks, QTHREAD_MALLOC_ERROR);
-    for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
-        QTHREAD_FASTLOCK_INIT(qlib->atomic_locks[i]);
-    }
-#endif
 
 #ifdef QTHREAD_COUNT_THREADS
     threadcount                = 1;
