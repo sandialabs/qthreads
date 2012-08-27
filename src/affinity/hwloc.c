@@ -620,7 +620,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                                                               allowed_cpuset,
                                                               shep_depth);
     /* calloc avoids an explicit memset */
-    cpus_left_per_obj = calloc(num_extant_objs * sizeof(size_t));
+    cpus_left_per_obj = calloc(num_extant_objs, sizeof(size_t));
     /* Count how many PUs are in each obj */
     for (size_t i = 0; i < num_extant_objs; ++i) {
         hwloc_obj_t obj =
