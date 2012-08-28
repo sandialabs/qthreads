@@ -117,9 +117,11 @@ man_MANS = \
 		   qthread_debuglevel.3 \
 		   qthread_dincr.3 \
 		   qthread_disable_shepherd.3 \
+		   qthread_disable_worker.3 \
 		   qthread_distance.3 \
 		   qthread_empty.3 \
 		   qthread_enable_shepherd.3 \
+		   qthread_enable_worker.3 \
 		   qthread_feb_barrier_create.3 \
 		   qthread_feb_barrier_destroy.3 \
 		   qthread_feb_barrier_enter.3 \
