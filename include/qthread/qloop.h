@@ -190,84 +190,84 @@ aligned_t qt_uint_min(aligned_t *array,
                       int        checkfeb);
 
 /* These are some utility accumulator functions */
-static Q_UNUSED void qt_dbl_add_acc(void *restrict a,
-                                    void *restrict b)
+static Q_UNUSED void qt_dbl_add_acc(void *restrict       a,
+                                    const void *restrict b)
 {
     *(double *)a += *(double *)b;
 }
 
-static Q_UNUSED void qt_int_add_acc(void *restrict a,
-                                    void *restrict b)
+static Q_UNUSED void qt_int_add_acc(void *restrict       a,
+                                    const void *restrict b)
 {
     *(saligned_t *)a += *(saligned_t *)b;
 }
 
-static Q_UNUSED void qt_uint_add_acc(void *restrict a,
-                                     void *restrict b)
+static Q_UNUSED void qt_uint_add_acc(void *restrict       a,
+                                     const void *restrict b)
 {
     *(aligned_t *)a += *(aligned_t *)b;
 }
 
-static Q_UNUSED void qt_dbl_prod_acc(void *restrict a,
-                                     void *restrict b)
+static Q_UNUSED void qt_dbl_prod_acc(void *restrict       a,
+                                     const void *restrict b)
 {
     *(double *)a *= *(double *)b;
 }
 
-static Q_UNUSED void qt_int_prod_acc(void *restrict a,
-                                     void *restrict b)
+static Q_UNUSED void qt_int_prod_acc(void *restrict       a,
+                                     const void *restrict b)
 {
     *(saligned_t *)a *= *(saligned_t *)b;
 }
 
-static Q_UNUSED void qt_uint_prod_acc(void *restrict a,
-                                      void *restrict b)
+static Q_UNUSED void qt_uint_prod_acc(void *restrict       a,
+                                      const void *restrict b)
 {
     *(aligned_t *)a *= *(aligned_t *)b;
 }
 
-static Q_UNUSED void qt_dbl_max_acc(void *restrict a,
-                                    void *restrict b)
+static Q_UNUSED void qt_dbl_max_acc(void *restrict       a,
+                                    const void *restrict b)
 {
     if (*(double *)b > *(double *)a) {
         *(double *)a = *(double *)b;
     }
 }
 
-static Q_UNUSED void qt_int_max_acc(void *restrict a,
-                                    void *restrict b)
+static Q_UNUSED void qt_int_max_acc(void *restrict       a,
+                                    const void *restrict b)
 {
     if (*(saligned_t *)b > *(saligned_t *)a) {
         *(saligned_t *)a = *(saligned_t *)b;
     }
 }
 
-static Q_UNUSED void qt_uint_max_acc(void *restrict a,
-                                     void *restrict b)
+static Q_UNUSED void qt_uint_max_acc(void *restrict       a,
+                                     const void *restrict b)
 {
     if (*(aligned_t *)b > *(aligned_t *)a) {
         *(aligned_t *)a = *(aligned_t *)b;
     }
 }
 
-static Q_UNUSED void qt_dbl_min_acc(void *restrict a,
-                                    void *restrict b)
+static Q_UNUSED void qt_dbl_min_acc(void *restrict       a,
+                                    const void *restrict b)
 {
     if (*(double *)b < *(double *)a) {
         *(double *)a = *(double *)b;
     }
 }
 
-static Q_UNUSED void qt_int_min_acc(void *restrict a,
-                                    void *restrict b)
+static Q_UNUSED void qt_int_min_acc(void *restrict       a,
+                                    const void *restrict b)
 {
     if (*(saligned_t *)b < *(saligned_t *)a) {
         *(saligned_t *)a = *(saligned_t *)b;
     }
 }
 
-static Q_UNUSED void qt_uint_min_acc(void *restrict a,
-                                     void *restrict b)
+static Q_UNUSED void qt_uint_min_acc(void *restrict       a,
+                                     const void *restrict b)
 {
     if (*(aligned_t *)b < *(aligned_t *)a) {
         *(aligned_t *)a = *(aligned_t *)b;
