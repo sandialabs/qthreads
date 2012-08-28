@@ -93,7 +93,7 @@ namespace CnC {
 
 	void context_base::markFork()
 	{
-		qt_sinc_willspawn(sinc, 1);
+		qt_sinc_expect(sinc, 1);
 	}
 
 	void context_base::markJoin()
