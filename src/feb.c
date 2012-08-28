@@ -681,8 +681,8 @@ int API_FUNC qthread_fill(const aligned_t *dest)
  * 2 - the destination's FEB state gets changed from empty to full
  */
 
-int API_FUNC qthread_writeF(aligned_t *restrict const       dest,
-                            const aligned_t *restrict const src)
+int API_FUNC qthread_writeF(aligned_t *restrict       dest,
+                            const aligned_t *restrict src)
 {                      /*{{{ */
     aligned_t *alignedaddr;
 
@@ -744,8 +744,8 @@ got_m:
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
-int API_FUNC qthread_writeF_const(aligned_t *const dest,
-                                  const aligned_t  src)
+int API_FUNC qthread_writeF_const(aligned_t *dest,
+                                  aligned_t  src)
 {                      /*{{{ */
     return qthread_writeF(dest, &src);
 }                      /*}}} */
@@ -756,8 +756,8 @@ int API_FUNC qthread_writeF_const(aligned_t *const dest,
  * 3 - the destination's FEB state gets changed from empty to full
  */
 
-int API_FUNC qthread_writeEF(aligned_t *restrict const       dest,
-                             const aligned_t *restrict const src)
+int API_FUNC qthread_writeEF(aligned_t *restrict       dest,
+                             const aligned_t *restrict src)
 {                      /*{{{ */
     aligned_t *alignedaddr;
 
@@ -877,14 +877,14 @@ got_m:
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
-int API_FUNC qthread_writeEF_const(aligned_t *const dest,
-                                   const aligned_t  src)
+int API_FUNC qthread_writeEF_const(aligned_t *dest,
+                                   aligned_t  src)
 {                      /*{{{ */
     return qthread_writeEF(dest, &src);
 }                      /*}}} */
 
-int INTERNAL qthread_writeEF_nb(aligned_t *restrict const       dest,
-                                const aligned_t *restrict const src)
+int INTERNAL qthread_writeEF_nb(aligned_t *restrict       dest,
+                                const aligned_t *restrict src)
 {                      /*{{{ */
     aligned_t *alignedaddr;
 
@@ -951,8 +951,8 @@ int INTERNAL qthread_writeEF_nb(aligned_t *restrict const       dest,
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
-int INTERNAL qthread_writeEF_const_nb(aligned_t *const dest,
-                                      const aligned_t  src)
+int INTERNAL qthread_writeEF_const_nb(aligned_t *dest,
+                                      aligned_t  src)
 {                      /*{{{ */
     return qthread_writeEF_nb(dest, &src);
 }                      /*}}} */
@@ -962,8 +962,8 @@ int INTERNAL qthread_writeEF_const_nb(aligned_t *const dest,
  * 2 - data is copied from src to destination
  */
 
-int API_FUNC qthread_readFF(aligned_t *restrict const       dest,
-                            const aligned_t *restrict const src)
+int API_FUNC qthread_readFF(aligned_t *restrict       dest,
+                            const aligned_t *restrict src)
 {                      /*{{{ */
     const aligned_t *alignedaddr;
 
@@ -1053,8 +1053,8 @@ int API_FUNC qthread_readFF(aligned_t *restrict const       dest,
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
-int INTERNAL qthread_readFF_nb(aligned_t *restrict const       dest,
-                               const aligned_t *restrict const src)
+int INTERNAL qthread_readFF_nb(aligned_t *restrict       dest,
+                               const aligned_t *restrict src)
 {                      /*{{{ */
     const aligned_t *alignedaddr;
 
@@ -1135,8 +1135,8 @@ got_m:
  * 3 - the src's FEB bits get changed from full to empty
  */
 
-int API_FUNC qthread_readFE(aligned_t *restrict const       dest,
-                            const aligned_t *restrict const src)
+int API_FUNC qthread_readFE(aligned_t *restrict       dest,
+                            const aligned_t *restrict src)
 {                      /*{{{ */
     const aligned_t *alignedaddr;
 
@@ -1248,8 +1248,8 @@ got_m:
 }                      /*}}} */
 
 /* This is the non-blocking version of the previous one */
-int INTERNAL qthread_readFE_nb(aligned_t *restrict const       dest,
-                               const aligned_t *restrict const src)
+int INTERNAL qthread_readFE_nb(aligned_t *restrict       dest,
+                               const aligned_t *restrict src)
 {                      /*{{{ */
     const aligned_t *alignedaddr;
 

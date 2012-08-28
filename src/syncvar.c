@@ -291,8 +291,8 @@ static int qthread_syncvar_blocker_func(void        *dest,
 #define SYNCFEB_STATE_EMPTY_NO_WAITERS   0x2
 #define SYNCFEB_STATE_EMPTY_WITH_WAITERS 0x3
 
-int API_FUNC qthread_syncvar_readFF(uint64_t *restrict const  dest,
-                                    syncvar_t *restrict const src)
+int API_FUNC qthread_syncvar_readFF(uint64_t *restrict  dest,
+                                    syncvar_t *restrict src)
 {                                      /*{{{ */
     assert(qthread_library_initialized);
     eflags_t   e = { 0, 0, 0, 0, 0 };
@@ -415,8 +415,8 @@ locked_full:
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
 
-int INTERNAL qthread_syncvar_readFF_nb(uint64_t *restrict const  dest,
-                                       syncvar_t *restrict const src)
+int INTERNAL qthread_syncvar_readFF_nb(uint64_t *restrict  dest,
+                                       syncvar_t *restrict src)
 {                                      /*{{{ */
     eflags_t   e = { 0, 0, 0, 0, 0 };
     uint64_t   ret;
@@ -465,7 +465,7 @@ int INTERNAL qthread_syncvar_readFF_nb(uint64_t *restrict const  dest,
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
 
-int API_FUNC qthread_syncvar_fill(syncvar_t *restrict const addr)
+int API_FUNC qthread_syncvar_fill(syncvar_t *restrict addr)
 {                                      /*{{{ */
     assert(qthread_library_initialized);
     eflags_t            e = { 0, 0, 0, 0, 0 };
@@ -544,7 +544,7 @@ got_m:
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
 
-int API_FUNC qthread_syncvar_empty(syncvar_t *restrict const addr)
+int API_FUNC qthread_syncvar_empty(syncvar_t *restrict addr)
 {                                      /*{{{ */
     assert(qthread_library_initialized);
     eflags_t            e = { 0, 0, 0, 0, 0 };
@@ -622,8 +622,8 @@ got_m:
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
 
-int API_FUNC qthread_syncvar_readFE(uint64_t *restrict const  dest,
-                                    syncvar_t *restrict const src)
+int API_FUNC qthread_syncvar_readFE(uint64_t *restrict  dest,
+                                    syncvar_t *restrict src)
 {                                      /*{{{ */
     assert(qthread_library_initialized);
     eflags_t   e = { 0, 0, 0, 0, 0 };
@@ -697,16 +697,16 @@ got_m:
          * locked the syncvar itself. */
         qt_hash_lock(qlib->syncvars[lockbin]);
         {
-        m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)src);
-        if (!m) {
-            m = qthread_addrstat_new();
-            assert(m);
+            m = (qthread_addrstat_t *)qt_hash_get_locked(qlib->syncvars[lockbin], (void *)src);
             if (!m) {
-                return ENOMEM;
+                m = qthread_addrstat_new();
+                assert(m);
+                if (!m) {
+                    return ENOMEM;
+                }
+                qassertnot(qt_hash_put_locked(qlib->syncvars[lockbin], (void *)src, m), 0);
             }
-            qassertnot(qt_hash_put_locked(qlib->syncvars[lockbin], (void *)src, m), 0);
-        }
-        QTHREAD_FASTLOCK_LOCK(&(m->lock));
+            QTHREAD_FASTLOCK_LOCK(&(m->lock));
         }
         qt_hash_unlock(qlib->syncvars[lockbin]);
 #endif  /* ifdef LOCK_FREE_FEBS */
@@ -791,8 +791,8 @@ locked_full:
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
 
-int INTERNAL qthread_syncvar_readFE_nb(uint64_t *restrict const  dest,
-                                       syncvar_t *restrict const src)
+int INTERNAL qthread_syncvar_readFE_nb(uint64_t *restrict  dest,
+                                       syncvar_t *restrict src)
 {                                      /*{{{ */
     eflags_t   e = { 0, 0, 0, 0, 0 };
     uint64_t   ret;
@@ -1043,8 +1043,8 @@ static QINLINE void qthread_syncvar_gotlock_fill(qthread_shepherd_t *shep,
     }
 }                                      /*}}} */
 
-int API_FUNC qthread_syncvar_writeF(syncvar_t *restrict const      dest,
-                                    const uint64_t *restrict const src)
+int API_FUNC qthread_syncvar_writeF(syncvar_t *restrict      dest,
+                                    const uint64_t *restrict src)
 {                                      /*{{{ */
     assert(qthread_library_initialized);
     eflags_t            e    = { 0, 0, 0, 0, 0 };
@@ -1117,15 +1117,15 @@ got_m:
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
 
-int API_FUNC qthread_syncvar_writeF_const(syncvar_t *restrict const dest,
-                                          const uint64_t            src)
+int API_FUNC qthread_syncvar_writeF_const(syncvar_t *restrict dest,
+                                          const uint64_t      src)
 {                                      /*{{{ */
     assert(qthread_library_initialized);
     return qthread_syncvar_writeF(dest, &src);
 }                                      /*}}} */
 
-int API_FUNC qthread_syncvar_writeEF(syncvar_t *restrict const      dest,
-                                     const uint64_t *restrict const src)
+int API_FUNC qthread_syncvar_writeEF(syncvar_t *restrict      dest,
+                                     const uint64_t *restrict src)
 {                                      /*{{{ */
     assert(qthread_library_initialized);
     eflags_t   e = { 0, 0, 0, 0, 0 };
@@ -1285,15 +1285,15 @@ locked_empty:
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
 
-int API_FUNC qthread_syncvar_writeEF_const(syncvar_t *restrict const dest,
-                                           const uint64_t            src)
+int API_FUNC qthread_syncvar_writeEF_const(syncvar_t *restrict dest,
+                                           const uint64_t      src)
 {                                      /*{{{ */
     assert(qthread_library_initialized);
     return qthread_syncvar_writeEF(dest, &src);
 }                                      /*}}} */
 
-int INTERNAL qthread_syncvar_writeEF_nb(syncvar_t *restrict const      dest,
-                                        const uint64_t *restrict const src)
+int INTERNAL qthread_syncvar_writeEF_nb(syncvar_t *restrict      dest,
+                                        const uint64_t *restrict src)
 {                                      /*{{{ */
     eflags_t   e       = { 0, 0, 0, 0, 0 };
     const int  lockbin = QTHREAD_CHOOSE_STRIPE(dest);
@@ -1378,14 +1378,14 @@ got_m:
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
 
-int INTERNAL qthread_syncvar_writeEF_const_nb(syncvar_t *restrict const dest,
-                                              const uint64_t            src)
+int INTERNAL qthread_syncvar_writeEF_const_nb(syncvar_t *restrict dest,
+                                              const uint64_t      src)
 {                                      /*{{{ */
     return qthread_syncvar_writeEF_nb(dest, &src);
 }                                      /*}}} */
 
-uint64_t API_FUNC qthread_syncvar_incrF(syncvar_t *restrict const operand,
-                                        const uint64_t            inc)
+uint64_t API_FUNC qthread_syncvar_incrF(syncvar_t *restrict operand,
+                                        const uint64_t      inc)
 {                                      /*{{{ */
     assert(qthread_library_initialized);
     eflags_t   e = { 0, 0, 0, 0, 0 };
