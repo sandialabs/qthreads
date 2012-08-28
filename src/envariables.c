@@ -13,7 +13,8 @@
 
 static int info = -1;
 
-static const char *qt_internal_envstr(const char *envariable)
+static const char *qt_internal_envstr(const char *envariable,
+                                      const char *dflt)
 {
     char        mod_envariable[100];
     const char *str;
@@ -37,7 +38,11 @@ static const char *qt_internal_envstr(const char *envariable)
         }
     }
     if (info) {
-        printf("[QT|QTHREAD]_%s = (unset)\n", envariable);
+        if (dflt != NULL) {
+            printf("[QT|QTHREAD]_%s = (unset) -> %s\n", envariable, dflt);
+        } else {
+            printf("[QT|QTHREAD]_%s = (unset)\n", envariable);
+        }
     }
     return NULL;
 }
@@ -65,20 +70,29 @@ static inline void check_info(void)
     }
 }
 
-const char INTERNAL *qt_internal_get_env_str(const char *envariable)
+const char INTERNAL *qt_internal_get_env_str(const char *envariable,
+                                             const char *dflt)
 {
     assert(strlen(envariable) < 90);
     check_info();
-    return qt_internal_envstr(envariable);
+    return qt_internal_envstr(envariable, dflt);
 }
 
 unsigned long INTERNAL qt_internal_get_env_num(const char   *envariable,
                                                unsigned long dflt,
                                                unsigned long zerodflt)
 {
-    const char   *str = qt_internal_get_env_str(envariable);
+    const char   *str;
     unsigned long tmp = dflt;
 
+    if (dflt != 0) {
+        char dflt_str[10];
+
+        snprintf(dflt_str, 10, "%lu", dflt);
+        str = qt_internal_get_env_str(envariable, dflt_str);
+    } else {
+        str = qt_internal_get_env_str(envariable, NULL);
+    }
     if (str && *str) {
         char *errptr;
         tmp = strtoul(str, &errptr, 0);

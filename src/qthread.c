@@ -1036,7 +1036,7 @@ int API_FUNC qthread_initialize(void)
 #endif
     }
     {
-        const char *aff = qt_internal_get_env_str("AFFINITY");
+        const char *aff = qt_internal_get_env_str("AFFINITY", "yes");
 
         if (aff && !strncmp(aff, "no", 3)) {
             qaffinity = 0;
@@ -1312,7 +1312,7 @@ int API_FUNC qthread_initialize(void)
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
 
 #ifdef QTHREAD_MULTINODE
-    if (NULL != qt_internal_get_env_str("MULTINODE")) {
+    if (NULL != qt_internal_get_env_str("MULTINODE", NULL)) {
         qthread_multinode_initialize();
     }
 #endif

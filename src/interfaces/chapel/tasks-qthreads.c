@@ -164,17 +164,15 @@ void chpl_task_init(int32_t  numThreadsPerLocale,
     // 3) chpl_numCoresOnThisLocale()
     if (numThreadsPerLocale != 0) {
         snprintf(newenv_sheps, 99, "%i", (int)numThreadsPerLocale);
-        setenv("QT_NUM_SHEPHERDS", newenv_sheps, 1);
-        setenv("QT_NUM_WORKERS_PER_SHEPHERD", "1", 1);
-    } else if (qt_internal_get_env_str("NUM_SHEPHERDS") != NULL) {
-        if (qt_internal_get_env_str("NUM_WORKERS_PER_SHEPHERD") == NULL) {
+        setenv("QT_HWPAR", newenv_sheps, 1);
+    } else if (qt_internal_get_env_str("NUM_SHEPHERDS", NULL) != NULL) {
+        if (qt_internal_get_env_str("NUM_WORKERS_PER_SHEPHERD", NULL) == NULL) {
             setenv("QT_NUM_WORKERS_PER_SHEPHERD", "1", 1);
         }
     } else {
         numThreadsPerLocale = chpl_numCoresOnThisLocale();
         snprintf(newenv_sheps, 99, "%i", (int)numThreadsPerLocale);
-        setenv("QT_NUM_SHEPHERDS", newenv_sheps, 1);
-        setenv("QT_NUM_WORKERS_PER_SHEPHERD", "1", 1);
+        setenv("QT_HWPAR", newenv_sheps, 1);
     }
 
     // Precendence (high-to-low):
@@ -184,7 +182,7 @@ void chpl_task_init(int32_t  numThreadsPerLocale,
     if (callStackSize != 0) {
         snprintf(newenv_stack, 99, "%lu", (unsigned long)callStackSize);
         setenv("QT_STACK_SIZE", newenv_stack, 1);
-    } else if (qt_internal_get_env_str("STACK_SIZE") == NULL) {
+    } else if (qt_internal_get_env_str("STACK_SIZE", NULL) == NULL) {
         callStackSize = 32 * 1024 * sizeof(size_t);
         snprintf(newenv_stack, 99, "%lu", (unsigned long)callStackSize);
         setenv("QT_STACK_SIZE", newenv_stack, 1);
