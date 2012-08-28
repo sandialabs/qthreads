@@ -9,16 +9,16 @@
 .I aligned_t
 .br
 .B qthread_cas
-.RI "(volatile aligned_t *" addr ", const aligned_t " oldval ,
+.RI "(volatile aligned_t *" addr ", aligned_t " oldval ,
 .ti +13
-.RI "const aligned_t " newval );
+.RI "aligned_t " newval );
 .PP
 .I void *
 .br
 .B qthread_cas_ptr
-.RI "(void * volatile * const " addr ", void * const " oldval ,
+.RI "(void * volatile * " addr ", void * " oldval ,
 .ti +17
-.RI "void * const " newval );
+.RI "void * " newval );
 .SH DESCRIPTION
 This function atomically compares the contents of the memory at
 .I addr
