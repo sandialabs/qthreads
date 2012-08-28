@@ -1493,7 +1493,7 @@ static QINLINE aligned_t qthread_cas_xx(aligned_t      *addr,
         default:
             /* This should never happen, so deliberately cause a seg fault
              * for corefile analysis */
-            *(int *)(0) = 0;
+            QTHREAD_TRAP();
     }
     return 0;                          /* compiler check */
 }                                      /*}}} */
