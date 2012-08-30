@@ -1,3 +1,4 @@
+SUBDIRS = mantevo
 
 .PHONY: buildall buildtests buildextra benchmarks
 
@@ -135,9 +136,11 @@ buildall: $(benchmarks)
 	$(MAKE) -C rose_bots buildall
 buildextra: $(benchmarks)
 	$(MAKE) -C rose_bots buildextra
+	$(MAKE) -C mantevo buildextra
 else
 buildall: $(benchmarks)
 buildextra: $(benchmarks)
+	$(MAKE) -C mantevo buildextra
 endif
 
 benchmarks: buildextra

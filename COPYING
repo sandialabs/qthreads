@@ -27,9 +27,9 @@ certain rights in this software.
 * NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 * EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-The qthreads library contains parts of an earlier library (libtask, by Russ
-Cox) that requires the propogation of its copyright information. This sofware
-is in the fastcontext directory, namely the files:
+The qthreads library contains heavily modified parts of an earlier library
+(libtask, by Russ Cox) that requires the propogation of its copyright
+information. This sofware is in the fastcontext directory, namely the files:
 
 	asm.S
 	power-ucontext.h
@@ -37,7 +37,7 @@ is in the fastcontext directory, namely the files:
 	context.c
 	taskimpl.h
 
-However, those files have been extensively modified.
+However, as noted above, those files have been extensively modified, and do not resemble the original very much.
 
 The rest of the qthread library, which will function on any Unix system with
 the makecontext()-family of functions, can stand alone. Those files are simply
@@ -49,6 +49,8 @@ This code is entirely contained in the test/benchmarks/uts/rng directory and is
 used only by the UTS implementation in test/benchmarks/uts. The license for the
 random number generator code is in the LICENSE file in the
 test/benchmarks/uts/rng directory.
+
+The benchmark suite ALSO contains some code from the Sandia Mantevo project, contained in the test/benchmarks/mantevo directory. The licenses for those codes reside in their respective directories. For example, the HPCCG code license is in test/benchmarks/mantevo/hpccg/README.
 
 ~~~~~~~~~~~~~
 
