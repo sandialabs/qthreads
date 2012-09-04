@@ -19,8 +19,8 @@
 #include "net/net.h"
 
 /******************************************************************************
- * Internal SPR remote actions                                                *
- ******************************************************************************/
+* Internal SPR remote actions                                                *
+******************************************************************************/
 
 static aligned_t spawn_wrapper(void *args_);
 static aligned_t spr_get_req(void *args_);
@@ -28,12 +28,13 @@ static aligned_t spr_get_ack(void *args_);
 static aligned_t spr_put_remote(void *args_);
 
 static int const spr_remote_actions_base = 64;
-static qthread_f spr_remote_actions[5] = {
+static qthread_f spr_remote_actions[5]   = {
     spawn_wrapper,
     spr_get_req,
     spr_get_ack,
     spr_put_remote,
-    NULL};
+    NULL
+};
 
 static int initialized_flags = -1;
 
@@ -76,7 +77,7 @@ int spr_fini(void)
     }
 
     recursion_detection = 0;
-    initialized_flags = -1;
+    initialized_flags   = -1;
     return SPR_OK;
 }
 
@@ -130,8 +131,8 @@ int spr_locale_id(void)
 }
 
 /******************************************************************************
- * Remote Spawning                                                            *
- ******************************************************************************/
+* Remote Spawning                                                            *
+******************************************************************************/
 
 typedef struct spawn_wrapper_args_s {
     qthread_f f;
@@ -148,12 +149,13 @@ typedef struct spawn_wrapper_args_s {
  */
 static aligned_t spawn_wrapper(void *args_)
 {
-    spawn_wrapper_args_t const * const args = (spawn_wrapper_args_t *)args_;
+    spawn_wrapper_args_t const *const args = (spawn_wrapper_args_t *)args_;
 
     /* Set up landing pad for argument payload */
-    void * const f_args = MALLOC(args->size);
+    void *const f_args = MALLOC(args->size);
+
     assert(f_args);
-    
+
     /* Get remote argument data */
     spr_get(f_args, args->src_loc, args->src_addr, args->size);
 
@@ -183,20 +185,20 @@ static aligned_t spawn_wrapper(void *args_)
  *
  * @return int Returns SPR_OK on success.
  */
-int spr_spawn(qthread_f  f, 
-              void      *arg, 
+int spr_spawn(qthread_f  f,
+              void      *arg,
               aligned_t *ret,
               int        tgt,
               size_t     arg_len)
 {
-    int const rc = SPR_OK;
+    int const rc   = SPR_OK;
     int const here = spr_locale_id();
 
     if (here != tgt) {
         if (arg_len <= FORK_MSG_PAYLOAD) {
             qthread_fork_remote(f, arg, ret, tgt, arg_len);
         } else {
-            spawn_wrapper_args_t const args = {f, here, arg, arg_len};
+            spawn_wrapper_args_t const args = { f, here, arg, arg_len };
             qthread_fork_remote(spawn_wrapper, &args, ret,
                                 tgt, sizeof(spawn_wrapper_args_t));
         }
@@ -208,8 +210,8 @@ int spr_spawn(qthread_f  f,
 }
 
 /******************************************************************************
- * Data Movement: One-sided Get                                               *
- ******************************************************************************/
+* Data Movement: One-sided Get                                               *
+******************************************************************************/
 
 typedef struct spr_get_req_args_s {
     void    *get_obj;
@@ -218,10 +220,10 @@ typedef struct spr_get_req_args_s {
     uint32_t src;
 } spr_get_req_args_t;
 
-#define SPR_GET_BUF_SIZE (FORK_MSG_PAYLOAD-sizeof(void *))
+#define SPR_GET_BUF_SIZE (FORK_MSG_PAYLOAD - sizeof(void *))
 typedef struct spr_get_ack_args_s {
-    void      *get_obj;
-    char       buf[SPR_GET_BUF_SIZE];
+    void *get_obj;
+    char  buf[SPR_GET_BUF_SIZE];
 } spr_get_ack_args_t;
 
 /**
@@ -232,8 +234,8 @@ static aligned_t spr_get_ack(void *args_)
     aligned_t const rc = SPR_OK;
 
     /* Deconstruct payload: [dest_addr, chunk_size, buffer] */
-    spr_get_t const * const get_obj = (spr_get_t *)(*(void **)args_);
-    uint8_t const * const buf = args_ + sizeof(void *);
+    spr_get_t const *const get_obj = (spr_get_t *)(*(void **)args_);
+    uint8_t const *const   buf     = args_ + sizeof(void *);
 
     memcpy(get_obj->dest_addr, buf, get_obj->size);
     qt_sinc_submit(get_obj->sinc, NULL);
@@ -246,11 +248,12 @@ static aligned_t spr_get_ack(void *args_)
  */
 static aligned_t spr_get_req(void *args_)
 {
-    aligned_t const rc = SPR_OK;
-    spr_get_req_args_t const * const args = (spr_get_req_args_t *)args_;
+    aligned_t const                 rc   = SPR_OK;
+    spr_get_req_args_t const *const args = (spr_get_req_args_t *)args_;
 
     /* Construct payload: [dest_addr, chunk_size, buffer] */
-    uint8_t payload[FORK_MSG_PAYLOAD] = {0};
+    uint8_t payload[FORK_MSG_PAYLOAD] = { 0 };
+
     *(void **)payload = args->get_obj;
     memcpy(payload + sizeof(void *), args->src_addr, args->size);
 
@@ -270,12 +273,12 @@ static aligned_t spr_get_req(void *args_)
  *
  * return int Returns SPR_OK on success.
  */
-int spr_get_wait(spr_get_handle_t * const hand)
+int spr_get_wait(spr_get_handle_t *const hand)
 {
     int const rc = SPR_OK;
 
-    qt_sinc_t * const sinc = &(hand->sinc);
-    spr_get_t * const objs = hand->get_objs;
+    qt_sinc_t *const sinc = &(hand->sinc);
+    spr_get_t *const objs = hand->get_objs;
 
     qt_sinc_wait(sinc, NULL);
     qt_sinc_fini(sinc);
@@ -302,14 +305,19 @@ int spr_get_wait(spr_get_handle_t * const hand)
  *
  * @return int Returns SPR_OK on success.
  */
-int spr_get(void   *dest_addr,
-            int     src_loc,
-            void   *src_addr,
-            size_t  size)
+int spr_get(void  *dest_addr,
+            int    src_loc,
+            void  *src_addr,
+            size_t size)
 {
     spr_get_handle_t hand;
-    spr_get_nb(dest_addr, src_loc, src_addr, size, &hand);
-    spr_get_wait(&hand);
+    int              rc;
+
+    rc = spr_get_nb(dest_addr, src_loc, src_addr, size, &hand);
+    if (rc != SPR_OK) { return rc; }
+
+    rc = spr_get_wait(&hand);
+    return rc;
 }
 
 /**
@@ -338,7 +346,7 @@ int spr_get_nb(void             *dest_addr,
                size_t            size,
                spr_get_handle_t *hand)
 {
-    int const rc = SPR_OK;
+    int const rc   = SPR_OK;
     int const here = spr_locale_id();
 
     assert(dest_addr);
@@ -346,27 +354,27 @@ int spr_get_nb(void             *dest_addr,
     assert(hand);
 
     if (here != src_loc) {
-        size_t const num_chunks = 
-            (size + (SPR_GET_BUF_SIZE-1)) / SPR_GET_BUF_SIZE;
-        size_t const last_chunk_size = 
+        size_t const num_chunks =
+            (size + (SPR_GET_BUF_SIZE - 1)) / SPR_GET_BUF_SIZE;
+        size_t const last_chunk_size =
             size - (SPR_GET_BUF_SIZE * (num_chunks - 1));
         assert(((num_chunks - 1) * SPR_GET_BUF_SIZE) + last_chunk_size == size);
 
-        qt_sinc_t * const sinc = &(hand->sinc);
+        qt_sinc_t *const sinc = &(hand->sinc);
         qt_sinc_init(sinc, 0, NULL, NULL, num_chunks);
 
-        spr_get_t * const get_objs = MALLOC(num_chunks * sizeof(spr_get_t));
+        spr_get_t *const get_objs = MALLOC(num_chunks * sizeof(spr_get_t));
         assert(get_objs);
 
         hand->get_objs = get_objs;
 
         for (int cid = 0; cid < num_chunks; cid++) {
-            void * const chunk_dest_addr = 
+            void *const chunk_dest_addr =
                 ((char *)dest_addr) + (cid * SPR_GET_BUF_SIZE);
-            void * const chunk_src_addr = 
+            void *const chunk_src_addr =
                 ((char *)src_addr) + (cid * SPR_GET_BUF_SIZE);
-            size_t const chunk_size = 
-                (cid < num_chunks-1) ? SPR_GET_BUF_SIZE : last_chunk_size;
+            size_t const chunk_size =
+                (cid < num_chunks - 1) ? SPR_GET_BUF_SIZE : last_chunk_size;
 
             get_objs[cid].sinc      = sinc;
             get_objs[cid].dest_addr = chunk_dest_addr;
@@ -374,9 +382,9 @@ int spr_get_nb(void             *dest_addr,
 
             spr_get_req_args_t req_objs;
             req_objs.get_obj  = &get_objs[cid];
-            req_objs.src_addr =  chunk_src_addr;
-            req_objs.size     =  chunk_size;
-            req_objs.src      =  here;
+            req_objs.src_addr = chunk_src_addr;
+            req_objs.size     = chunk_size;
+            req_objs.src      = here;
 
             qthread_fork_remote(spr_get_req, &req_objs, NULL,
                                 src_loc, sizeof(spr_get_req_args_t));
@@ -389,10 +397,10 @@ int spr_get_nb(void             *dest_addr,
 }
 
 /******************************************************************************
- * Data Movement: One-sided Put                                               *
- ******************************************************************************/
+* Data Movement: One-sided Put                                               *
+******************************************************************************/
 
-#define SPR_PUT_BUF_SIZE (FORK_MSG_PAYLOAD-sizeof(void *)-sizeof(size_t))
+#define SPR_PUT_BUF_SIZE (FORK_MSG_PAYLOAD - sizeof(void *) - sizeof(size_t))
 
 /**
  * Receive portion of memory segment and write to destination.
@@ -402,10 +410,10 @@ static aligned_t spr_put_remote(void *args_)
     aligned_t const rc = SPR_OK;
 
     /* Deconstruct payload: [dest_addr, chunk_size, buffer] */
-    void * const dest_addr = *(void **)args_;
-    size_t const size = *((size_t *)(args_ + sizeof(void *)));
-    char const * const buf = args_ + sizeof(void *) + sizeof(size_t);
-    
+    void *const       dest_addr = *(void **)args_;
+    size_t const      size      = *((size_t *)(args_ + sizeof(void *)));
+    char const *const buf       = args_ + sizeof(void *) + sizeof(size_t);
+
     memcpy(dest_addr, buf, size);
 
     return rc;
@@ -421,14 +429,16 @@ static aligned_t spr_put_remote(void *args_)
  *
  * return int Returns SPR_OK on success.
  */
-int spr_put_wait(spr_put_handle_t * const hand)
+int spr_put_wait(spr_put_handle_t *const hand)
 {
     int const rc = SPR_OK;
 
-    qt_sinc_t * const sinc = &(hand->sinc);
+    qt_sinc_t *const sinc = &(hand->sinc);
 
     qt_sinc_wait(sinc, NULL);
     qt_sinc_fini(sinc);
+
+    return rc;
 }
 
 /**
@@ -456,6 +466,7 @@ int spr_put(int    dest_loc,
     int const rc = SPR_OK;
 
     spr_put_handle_t hand;
+
     spr_put_nb(dest_loc, dest_addr, src_addr, size, &hand);
     spr_put_wait(&hand);
 
@@ -488,41 +499,41 @@ int spr_put_nb(int               dest_loc,
                size_t            size,
                spr_put_handle_t *hand)
 {
-    int const rc = SPR_OK;
+    int const rc   = SPR_OK;
     int const here = spr_locale_id();
 
     if (here != dest_loc) {
         size_t const num_chunks = (size < SPR_PUT_BUF_SIZE) ?
-            1 : (size + (SPR_PUT_BUF_SIZE-1)) / SPR_PUT_BUF_SIZE;
-        size_t const last_chunk_size = 
+                                  1 : (size + (SPR_PUT_BUF_SIZE - 1)) / SPR_PUT_BUF_SIZE;
+        size_t const last_chunk_size =
             size - (SPR_PUT_BUF_SIZE * (num_chunks - 1));
         assert(((num_chunks - 1) * SPR_PUT_BUF_SIZE) + last_chunk_size == size);
 
-        uint8_t args[FORK_MSG_PAYLOAD] = {0};
+        uint8_t args[FORK_MSG_PAYLOAD] = { 0 };
 
         qt_sinc_init(&(hand->sinc), 0, NULL, NULL, num_chunks);
 
         for (int cid = 0; cid < num_chunks; cid++) {
-            void * const chunk_src_addr = 
+            void *const chunk_src_addr =
                 ((char *)src_addr) + (cid * SPR_PUT_BUF_SIZE);
-            void * const chunk_dest_addr = 
+            void *const chunk_dest_addr =
                 ((char *)dest_addr) + (cid * SPR_PUT_BUF_SIZE);
-            size_t const chunk_size = 
-                (cid < num_chunks-1) ? SPR_PUT_BUF_SIZE : last_chunk_size;
+            size_t const chunk_size =
+                (cid < num_chunks - 1) ? SPR_PUT_BUF_SIZE : last_chunk_size;
 
             /* Construct payload: [dest_addr, chunk_size, buffer] */
-            *(void **)args = chunk_dest_addr;
+            *(void **)args                     = chunk_dest_addr;
             *(size_t *)(args + sizeof(void *)) = chunk_size;
-            memcpy(args + (sizeof(void *) + sizeof(size_t)), 
+            memcpy(args + (sizeof(void *) + sizeof(size_t)),
                    chunk_src_addr, chunk_size);
 
-            qthread_fork_remote_sinc(spr_put_remote, &args, &(hand->sinc), 
+            qthread_fork_remote_sinc(spr_put_remote, &args, &(hand->sinc),
                                      dest_loc, FORK_MSG_PAYLOAD);
         }
     } else {
         memcpy(dest_addr, src_addr, size);
     }
-    
+
     return rc;
 }
 
