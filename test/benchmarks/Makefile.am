@@ -2,7 +2,7 @@ SUBDIRS = mantevo
 
 .PHONY: buildall buildtests buildextra benchmarks
 
-DIST_SUBDIRS = rose_bots
+DIST_SUBDIRS = mantevo rose_bots
 
 generic_benchmarks = \
                      time_gcd \

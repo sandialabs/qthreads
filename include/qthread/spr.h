@@ -3,8 +3,6 @@
 
 #include <qthread/qthread.h>
 
-#include "spr_innards.h"
-
 Q_STARTCXX /* */
 
 /* Flags */
@@ -37,10 +35,7 @@ int spr_spawn(qthread_f   f,
  * Data Movement                                                              *
  ******************************************************************************/
 
-typedef struct spr_get_handle_s {
-    qt_sinc_t sinc;
-    spr_get_t * get_objs;
-} spr_get_handle_t;
+typedef struct spr_get_handle_s spr_get_handle_t;
 
 int spr_get(void   *dest_addr,
             int     src_loc,

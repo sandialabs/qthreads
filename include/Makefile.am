@@ -47,6 +47,7 @@ noinst_HEADERS = \
 	qt_visibility.h \
 	rose_xomp.h \
 	rose_log_arrivaldetector.h \
+	spr_innards.h \
 	futurelib_innards.h
 
 if COMPILE_MULTINODE
