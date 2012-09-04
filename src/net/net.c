@@ -18,9 +18,9 @@ static int       my_rank;
 static int       world_size;
 static qt_hash   uid_to_ptr_hash;
 static qt_hash   ptr_to_uid_hash;
-static aligned_t num_ended         = 0;
-static aligned_t time_to_die       = 0;
-static int       initialized       = 0;
+static aligned_t num_ended   = 0;
+static aligned_t time_to_die = 0;
+static int       initialized = 0;
 
 struct fork_msg_t {
     uint64_t return_addr;
@@ -104,7 +104,6 @@ static aligned_t fork_helper(void *info)
 static aligned_t fork_sinc_helper(void *info)
 {
     struct fork_msg_t *msg = (struct fork_msg_t *)info;
-    aligned_t          ret;
     qthread_f          f;
 
     qthread_debug(MULTINODE_FUNCTIONS, "[%d] begin fork_helper\n", my_rank);
