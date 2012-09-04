@@ -6,16 +6,41 @@
 
 echo "Generating configure files..."
 
+if [ "$ACLOCAL" ] ; then
+	# do nothing
+	echo I saw ACLOCAL defined to be $ACLOCAL
+elif type aclocal &>/dev/null ; then
+	export ACLOCAL=`type -P aclocal`
+else
+	echo "ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
+	echo "I need aclocal in order to generate the configure script and makefiles. I couldn't find it in your PATH, though. Perhaps you need to set the ACLOCAL environment variable to point toward a custom installation?"
+	exit -1
+fi
+
 if [ "$LIBTOOLIZE" ] ; then
 	# accept anything that's been pre-configured
 	echo LIBTOOLIZE=$LIBTOOLIZE
-	if [ -d "${LIBTOOLIZE%/bin/libtoolize}/share/aclocal" ] ; then
-		ACLOCAL_INCLUDE="${LIBTOOLIZE%/bin/libtoolize}/share/aclocal"
-		echo "Since you set LIBTOOLIZE, I'm going to alter ACLOCAL to include the relative aclocal directory in the include-path."
-		echo 'That aclocal directory looks like "'$ACLOCAL_INCLUDE'"'
+	if [ "${LIBTOOLIZE}" = "${LIBTOOLIZE#/}" ] ; then
+		libtool_fullpath=$(type -p "${LIBTOOLIZE}" )
 	else
-		echo "Since you set LIBTOOLIZE, you probably need to alter ACLOCAL to include the relative aclocal directory in the include-path."
-		echo "I would do it for you, but I can't find a likely candidate".
+		libtool_fullpath="$LIBTOOLIZE"
+	fi
+	if [ "${ACLOCAL}" = "${ACLOCAL#/}" ] ; then
+		aclocal_fullpath=$(type -p "${ACLOCAL}" )
+	else
+		aclocal_fullpath="$ACLOCAL"
+	fi
+	if [ "${libtool_fullpath%bin/*}" != "${aclocal_fullpath%bin/*}" ] ; then
+		if [ -d "${libtool_fullpath%/bin/*}/share/aclocal" ] ; then
+			ACLOCAL_INCLUDE="${libtool_fullpath%/bin/*}/share/aclocal"
+			echo "Since you set LIBTOOLIZE, I'm going to alter ACLOCAL to include the relative aclocal directory in the include-path."
+			echo 'That aclocal directory looks like "'$ACLOCAL_INCLUDE'"'
+		else
+			echo "Since you set LIBTOOLIZE, you probably need to alter ACLOCAL to include the relative aclocal directory in the include-path."
+			echo "I would do it for you, but I can't find a likely candidate".
+		fi
+	else
+		echo "Since LIBTOOLIZE and ACLOCAL are in the same directory, I'm going to assume they know about each other."
 	fi
 elif type glibtoolize &>/dev/null ; then
 	# prefer glibtoolize over libtoolize
@@ -72,16 +97,6 @@ else
 	exit -1
 fi
 
-if [ "$ACLOCAL" ] ; then
-	# do nothing
-	echo I saw ACLOCAL defined to be $ACLOCAL
-elif type aclocal &>/dev/null ; then
-	export ACLOCAL=`type -P aclocal`
-else
-	echo "ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"
-	echo "I need aclocal in order to generate the configure script and makefiles. I couldn't find it in your PATH, though. Perhaps you need to set the ACLOCAL environment variable to point toward a custom installation?"
-	exit -1
-fi
 if [ "$ACLOCAL_INCLUDE" ] ; then
 	echo 'ACLOCAL="'$ACLOCAL -I$ACLOCAL_INCLUDE'"'
 	export ACLOCAL="$ACLOCAL -I$ACLOCAL_INCLUDE"
