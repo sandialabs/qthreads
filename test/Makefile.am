@@ -18,10 +18,13 @@ basictests:
 featuretests:
 	$(MAKE) -C features buildtests
 
+multinodetests:
+	$(MAKE) -C multinode buildtests
+
 stresstests:
 	$(MAKE) -C stress buildtests
 
-tests: basictests featuretests stresstests
+tests: basictests featuretests stresstests multinodetests
 
 buildtests: tests
 

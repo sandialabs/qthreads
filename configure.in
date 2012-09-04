@@ -1100,13 +1100,12 @@ AC_CONFIG_FILES([Makefile
                  test/utils/rng/Makefile
                  test/basics/Makefile
                  test/features/Makefile
+                 test/multinode/Makefile
                  test/stress/Makefile
                  test/benchmarks/Makefile
                  test/benchmarks/mantevo/Makefile
                  test/benchmarks/mantevo/hpccg/Makefile
                  test/benchmarks/rose_bots/Makefile])
-AS_IF([test "enable_multinode" = "yes"],
-      [AC_CONFIG_FILES([test/multinode/Makefile])])
 AC_OUTPUT
 
 case "$qthread_cv_stack_size" in

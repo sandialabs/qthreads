@@ -3,6 +3,8 @@
 # Copyright (c)      2012  Sandia Corporation
 #
 
+if COMPILE_MULTINODE
+
 .PHONY: buildall buildtests buildextra
 
 DIST_SUBDIRS = 
@@ -51,6 +53,7 @@ LDADD = $(qthreadlib)
 
 buildall: $(multinode)
 buildextra: $(multinode)
+buildtests: $(multinode)
 
 $(qthreadlib):
 	$(MAKE) -C $(top_builddir)/src libqthread.la
@@ -80,3 +83,5 @@ spawn_SOURCES = spawn.c
 
 uts_SOURCES = uts.c
 uts_LDADD = $(LDADD) $(utils_rnglib)
+
+endif
