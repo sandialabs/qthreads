@@ -101,6 +101,11 @@ int main(int   argc,
 	    }
 	    qtimer_stop(timer);
 	    break;
+	case 8:
+	    qtimer_start(timer);
+	    qt_loop_simple(0, count, par_null_task, NULL);
+	    qtimer_stop(timer);
+	    break;
     }
 
     total_time = qtimer_secs(timer);
