@@ -22,16 +22,20 @@ AC_DEFUN([QTHREAD_CHECK_HWLOC], [
 	    [AC_SEARCH_LIBS([hwloc_topology_init], [hwloc "hwloc -lnuma"], [],
 		                [qt_allgoodsofar=no])])
   AS_IF([test "x$qt_allgoodsofar" = xyes],
-        [AC_LINK_IFELSE([AC_LANG_SOURCE([[
+        [AC_MSG_CHECKING([for distance support in hwloc])
+		 AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #include <hwloc.h>
 int main()
 {
   hwloc_topology_t topology;
   hwloc_topology_init(&topology);
   hwloc_topology_load(topology);
-  return (NULL == hwloc_get_whole_distance_matrix_by_depth(topology, 0));
+  return (NULL == hwloc_get_whole_distance_matrix_by_type(topology, 0));
 }]])],
-        [AC_DEFINE([QTHREAD_HAVE_HWLOC_DISTS],[1],[Hwloc has distances])])])
+        [AC_MSG_RESULT(yes)
+		 AC_DEFINE([QTHREAD_HAVE_HWLOC_DISTS],[1],[Hwloc has distances])],
+		[AC_MSG_RESULT(no)])
+		])
   AS_IF([test "x$qt_allgoodsofar" = xyes],
 	    [AC_DEFINE([QTHREAD_HAVE_HWLOC],[1],[if I can use the hwloc topology interface])
 		 $1],
