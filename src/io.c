@@ -144,7 +144,8 @@ int INTERNAL qt_process_blocking_call(void)
                 if (theQueue.head == NULL) {
                     qthread_debug(IO_BEHAVIOR, "------------------------------------- exit()\n");
 #ifdef QTHREAD_DEBUG
-                    qthread_debug(IO_BEHAVIOR, "worker_count post exit is %u\n", (unsigned)qthread_incr(&io_worker_count, -1) - 1);
+                    unsigned ct = qthread_incr(&io_worker_count, -1);
+                    qthread_debug(IO_BEHAVIOR, "worker_count post exit is %u\n", (unsigned)ct - 1);
 #else
                     (void)qthread_incr(&io_worker_count, -1);
 #endif
