@@ -3,11 +3,11 @@
 # Copyright (c)      2012  Sandia Corporation
 #
 
-if COMPILE_MULTINODE
-
 .PHONY: buildall buildtests buildextra
 
 DIST_SUBDIRS = 
+
+if COMPILE_MULTINODE
 
 general_multinode = \
 	hello_world \
