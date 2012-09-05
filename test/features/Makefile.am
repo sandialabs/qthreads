@@ -7,6 +7,7 @@
 
 TESTS = \
 		qt_loop \
+		qt_loop_simple \
 		qt_loop_sinc \
 		qt_loop_balance \
 		qt_loop_balance_sinc \
@@ -56,6 +57,8 @@ $(qthreadlib):
 	$(MAKE) -C $(top_builddir)/src libqthread.la
 
 qt_loop_SOURCES = qt_loop.c
+
+qt_loop_simple_SOURCES = qt_loop_simple.c
 
 qt_loop_sinc_SOURCES = qt_loop_sinc.c
 

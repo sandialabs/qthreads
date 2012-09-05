@@ -47,6 +47,7 @@ struct qloop_wrapper_args {
     size_t     startat, stopat, id, level, spawnthreads;
     void      *arg;
     synctype_t sync_type;
+    unsigned   spawn_flags;
     void      *sync;
 };
 
@@ -72,10 +73,13 @@ static aligned_t qloop_wrapper(struct qloop_wrapper_args *const restrict arg)
             while (new_id <= tot_workers) {      // create some children? (tot_workers zero based)
                 size_t offset = new_id - my_id;  // need how much past current locations
                 (arg + offset)->level = ++level; // increase depth for created thread
-                qthread_fork_syncvar_to((qthread_f)qloop_wrapper,
-                                        arg + offset,
-                                        (syncvar_t *)sync + new_id,
-                                        new_id);
+                qthread_spawn((qthread_f)qloop_wrapper,
+                              arg + offset,
+                              0,
+                              ((syncvar_t *)sync) + new_id,
+                              0, NULL,
+                              new_id,
+                              QTHREAD_SPAWN_RET_SYNCVAR_T | arg->spawn_flags);
                 new_id = (1 << level) + my_id;         // level has been incremented
             }
             break;
@@ -83,10 +87,13 @@ static aligned_t qloop_wrapper(struct qloop_wrapper_args *const restrict arg)
             while (new_id <= tot_workers) {      // create some children? (tot_workers zero based)
                 size_t offset = new_id - my_id;  // need how much past current locations
                 (arg + offset)->level = ++level; // increase depth for created thread
-                qthread_fork_to((qthread_f)qloop_wrapper,
-                                arg + offset,
-                                (aligned_t *)sync + new_id,
-                                new_id);
+                qthread_spawn((qthread_f)qloop_wrapper,
+                              arg + offset,
+                              0,
+                              ((aligned_t *)sync) + new_id,
+                              0, NULL,
+                              new_id,
+                              arg->spawn_flags);
                 new_id = (1 << level) + my_id;         // level has been incremented
             }
             break;
@@ -94,10 +101,13 @@ static aligned_t qloop_wrapper(struct qloop_wrapper_args *const restrict arg)
             while (new_id <= tot_workers) {      // create some children? (tot_workers zero based)
                 size_t offset = new_id - my_id;  // need how much past current locations
                 (arg + offset)->level = ++level; // increase depth for created thread
-                qthread_fork_syncvar_to((qthread_f)qloop_wrapper,
-                                        arg + offset,
-                                        NULL,
-                                        new_id);
+                qthread_spawn((qthread_f)qloop_wrapper,
+                              arg + offset,
+                              0,
+                              NULL,
+                              0, NULL,
+                              new_id,
+                              arg->spawn_flags);
                 new_id = (1 << level) + my_id;         // level has been incremented
             }
     }
@@ -339,55 +349,61 @@ static void qt_loop_inner(const size_t     start,
 
     assert(qthread_library_initialized);
 
-    qt_loop_balance_inner(start, stop, qt_loop_spawner, &a, future, sync_type);
+    qt_loop_balance_inner(start, stop, qt_loop_spawner, &a, (future==2)?0:future, sync_type);
 } /*}}}*/
 
-void API_FUNC qt_loop(const size_t    start,
-                      const size_t    stop,
-                      const qt_loop_f func,
-                      void           *argptr)
+void API_FUNC qt_loop(size_t    start,
+                      size_t    stop,
+                      qt_loop_f func,
+                      void     *argptr)
 {                                      /*{{{ */
     qt_loop_inner(start, stop, func, argptr, 0, DONECOUNT);
 }                                      /*}}} */
 
-void API_FUNC qt_loop_sv(const size_t    start,
-                         const size_t    stop,
-                         const qt_loop_f func,
-                         void           *argptr)
+void API_FUNC qt_loop_simple(size_t    start,
+                             size_t    stop,
+                             qt_loop_f func,
+                             void     *argptr)
+{/*{{{*/
+    qt_loop_inner(start, stop, func, argptr, 2, DONECOUNT);
+}/*}}}*/
+
+void API_FUNC qt_loop_sv(size_t    start,
+                         size_t    stop,
+                         qt_loop_f func,
+                         void     *argptr)
 {                                      /*{{{ */
     qt_loop_inner(start, stop, func, argptr, 0, SYNCVAR_T);
 }                                      /*}}} */
 
-void API_FUNC qt_loop_dc(const size_t    start,
-                         const size_t    stop,
-                         const qt_loop_f func,
-                         void           *argptr)
+void API_FUNC qt_loop_dc(size_t    start,
+                         size_t    stop,
+                         qt_loop_f func,
+                         void     *argptr)
 {                                      /*{{{ */
     qt_loop_inner(start, stop, func, argptr, 0, DONECOUNT);
 }                                      /*}}} */
 
-void API_FUNC qt_loop_aligned(const size_t    start,
-                              const size_t    stop,
-                              const qt_loop_f func,
-                              void           *argptr)
+void API_FUNC qt_loop_aligned(size_t    start,
+                              size_t    stop,
+                              qt_loop_f func,
+                              void     *argptr)
 {                                      /*{{{ */
     qt_loop_inner(start, stop, func, argptr, 0, ALIGNED);
 }                                      /*}}} */
 
-void API_FUNC qt_loop_sinc(const size_t    start,
-                           const size_t    stop,
-                           const qt_loop_f func,
-                           void           *argptr)
+void API_FUNC qt_loop_sinc(size_t    start,
+                           size_t    stop,
+                           qt_loop_f func,
+                           void     *argptr)
 {                                      /*{{{ */
     qt_loop_inner(start, stop, func, argptr, 0, SINC_T);
 }                                      /*}}} */
 
-/* So, the idea here is that this is a (braindead) C version of Megan's
- * mt_loop_future. */
-void API_FUNC qt_loop_future(const size_t    start,
-                             const size_t    stop,
-                             const qt_loop_f func,
-                             void           *argptr)
+void API_FUNC qt_loop_future(size_t    start,
+                             size_t    stop,
+                             qt_loop_f func,
+                             void     *argptr)
 {                                      /*{{{ */
     qt_loop_inner(start, stop, func, argptr, 1, SYNCVAR_T);
 }                                      /*}}} */
@@ -483,6 +499,7 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
     const size_t                     each       = (stop - start) / maxworkers;
     size_t                           extra      = (stop - start) - (each * maxworkers);
     size_t                           iterend    = start;
+    unsigned                         flags      = 0;
 
     assert(func);
     assert(qwa);
@@ -514,12 +531,21 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
         case NO_SYNC:
             abort();
     }
+    switch (future) {
+        case 1:
+            flags = QTHREAD_SPAWN_FUTURE;
+            break;
+        case 2:
+            flags = QTHREAD_SPAWN_SIMPLE;
+            break;
+    }
 
     for (i = 0; i < maxworkers; i++) {
         qwa[i].func         = func;
         qwa[i].arg          = argptr;
         qwa[i].startat      = iterend;
         qwa[i].stopat       = iterend + each;
+        qwa[i].spawn_flags  = flags;
         qwa[i].id           = i;
         qwa[i].level        = 0;
         qwa[i].spawnthreads = maxworkers;
@@ -546,30 +572,49 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
         }
         iterend = qwa[i].stopat;
     }
-    if (!future) {
-        switch(sync_type) {
-            case SYNCVAR_T:
-                qassert(qthread_fork_syncvar_to((qthread_f)qloop_wrapper, qwa, sync.syncvar, 0), QTHREAD_SUCCESS);
-                break;
-            case ALIGNED:
-                qassert(qthread_fork_to((qthread_f)qloop_wrapper, qwa, sync.aligned, 0), QTHREAD_SUCCESS);
-                break;
-            default:
-                qassert(qthread_fork_syncvar_to((qthread_f)qloop_wrapper, qwa, NULL, 0), QTHREAD_SUCCESS);
-                break;
-        }
-    } else {
-        switch(sync_type) {
-            case SYNCVAR_T:
-                qassert(qthread_fork_syncvar_future_to((qthread_f)qloop_wrapper, qwa, sync.syncvar, 0), QTHREAD_SUCCESS);
-                break;
-            case ALIGNED:
-                qassert(qthread_fork_future_to((qthread_f)qloop_wrapper, qwa, sync.aligned, 0), QTHREAD_SUCCESS);
-                break;
-            default:
-                qassert(qthread_fork_syncvar_future_to((qthread_f)qloop_wrapper, qwa, NULL, 0), QTHREAD_SUCCESS);
-                break;
-        }
+    switch (future) {
+        case 0:
+            switch(sync_type) {
+                case SYNCVAR_T:
+                    qassert(qthread_fork_syncvar_to((qthread_f)qloop_wrapper, qwa, sync.syncvar, 0), QTHREAD_SUCCESS);
+                    break;
+                case ALIGNED:
+                    qassert(qthread_fork_to((qthread_f)qloop_wrapper, qwa, sync.aligned, 0), QTHREAD_SUCCESS);
+                    break;
+                default:
+                    qassert(qthread_fork_syncvar_to((qthread_f)qloop_wrapper, qwa, NULL, 0), QTHREAD_SUCCESS);
+                    break;
+            }
+            break;
+        case 1:
+            switch(sync_type) {
+                case SYNCVAR_T:
+                    qassert(qthread_fork_syncvar_future_to((qthread_f)qloop_wrapper, qwa, sync.syncvar, 0), QTHREAD_SUCCESS);
+                    break;
+                case ALIGNED:
+                    qassert(qthread_fork_future_to((qthread_f)qloop_wrapper, qwa, sync.aligned, 0), QTHREAD_SUCCESS);
+                    break;
+                default:
+                    qassert(qthread_fork_syncvar_future_to((qthread_f)qloop_wrapper, qwa, NULL, 0), QTHREAD_SUCCESS);
+                    break;
+            }
+            break;
+        case 2:
+            switch(sync_type) {
+                case SYNCVAR_T:
+                    qassert(qthread_spawn((qthread_f)qloop_wrapper, qwa, 0, sync.syncvar, 0, NULL, 0,
+                                          QTHREAD_SPAWN_SIMPLE | QTHREAD_SPAWN_RET_SYNCVAR_T), QTHREAD_SUCCESS);
+                    break;
+                case ALIGNED:
+                    qassert(qthread_spawn((qthread_f)qloop_wrapper, qwa, 0, sync.syncvar, 0, NULL, 0,
+                                          QTHREAD_SPAWN_SIMPLE), QTHREAD_SUCCESS);
+                    break;
+                default:
+                    qassert(qthread_spawn((qthread_f)qloop_wrapper, qwa, 0, NULL, 0, NULL, 0,
+                                          QTHREAD_SPAWN_SIMPLE), QTHREAD_SUCCESS);
+                    break;
+            }
+            break;
     }
     switch(sync_type) {
         case SYNCVAR_T:

@@ -13,41 +13,45 @@ typedef void (*qt_loopr_f)(const size_t   startat,
                            const size_t   stopat,
                            void *restrict arg,
                            void *restrict ret);
-typedef void (*qt_accum_f)(void *restrict a,
+typedef void (*qt_accum_f)(void *restrict       a,
                            const void *restrict b);
 
 typedef struct qqloop_handle_s qqloop_handle_t;
 typedef struct qqloop_step_handle_s qqloop_step_handle_t;
 
-void qt_loop(const size_t    start,
-             const size_t    stop,
-             const qt_loop_f func,
-             void           *argptr);
-void qt_loop_sv(const size_t    start,
-                const size_t    stop,
-                const qt_loop_f func,
-                void           *argptr);
-void qt_loop_dc(const size_t    start,
-                const size_t    stop,
-                const qt_loop_f func,
-                void           *argptr);
-void qt_loop_aligned(const size_t    start,
-                     const size_t    stop,
-                     const qt_loop_f func,
-                     void           *argptr);
-void qt_loop_sinc(const size_t    start,
-                  const size_t    stop,
-                  const qt_loop_f func,
-                  void           *argptr);
-void qt_loop_step(const size_t         start,
-                  const size_t         stop,
-                  const size_t         stride,
-                  const qt_loop_step_f func,
-                  void                *argptr);
-void qt_loop_future(const size_t    start,
-                    const size_t    stop,
-                    const qt_loop_f func,
-                    void           *argptr);
+void qt_loop(size_t    start,
+             size_t    stop,
+             qt_loop_f func,
+             void     *argptr);
+void qt_loop_simple(size_t    start,
+                    size_t    stop,
+                    qt_loop_f func,
+                    void     *argptr);
+void qt_loop_sv(size_t    start,
+                size_t    stop,
+                qt_loop_f func,
+                void     *argptr);
+void qt_loop_dc(size_t    start,
+                size_t    stop,
+                qt_loop_f func,
+                void     *argptr);
+void qt_loop_aligned(size_t    start,
+                     size_t    stop,
+                     qt_loop_f func,
+                     void     *argptr);
+void qt_loop_sinc(size_t    start,
+                  size_t    stop,
+                  qt_loop_f func,
+                  void     *argptr);
+void qt_loop_step(size_t         start,
+                  size_t         stop,
+                  size_t         stride,
+                  qt_loop_step_f func,
+                  void          *argptr);
+void qt_loop_future(size_t    start,
+                    size_t    stop,
+                    qt_loop_f func,
+                    void     *argptr);
 void qt_loop_step_future(const size_t    start,
                          const size_t    stop,
                          const size_t    stride,
