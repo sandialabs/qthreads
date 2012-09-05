@@ -555,6 +555,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
         sheps[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
         sheps[i].shep_dists      = calloc(nshepherds - 1, sizeof(unsigned int));
     }
+# ifdef QTHREAD_HAVE_HWLOC_DISTS
     const struct hwloc_distances_s *matrix = hwloc_get_whole_distance_matrix_by_type(topology, HWLOC_OBJ_NODE);
     if (matrix) {
         qthread_debug(AFFINITY_DETAILS, "matrix is %p, type at this depth: %s, relative_depth: %u(%s), nbobj: %u\n", matrix, hwloc_obj_type_string(HWLOC_OBJ_NODE), matrix->relative_depth, hwloc_obj_type_string(hwloc_get_depth_type(topology, matrix->relative_depth)), matrix->nbobjs);
@@ -572,6 +573,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
         node_to_NUMAnode[i] = node_obj->logical_index;
         qthread_debug(AFFINITY_DETAILS, "obj %i maps to node %i\n", i, node_to_NUMAnode[i]);
     }
+# endif /* ifdef QTHREAD_HAVE_HWLOC_DISTS */
     for (size_t i = 0; i < nshepherds; ++i) {
         for (size_t j = 0, k = 0; j < nshepherds; ++j) {
             if (j != i) {
@@ -587,7 +589,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                     sheps[i].shep_dists[k] = 10;
                     qthread_debug(AFFINITY_DETAILS, "pretending distance from %i to %i is %i\n", (int)i, (int)j, (int)(sheps[i].shep_dists[k]));
                 }
-# else /* ifdef QTHREAD_HAVE_HWLOC_DISTS */
+# else          /* ifdef QTHREAD_HAVE_HWLOC_DISTS */
                 sheps[i].shep_dists[k] = 10;
                 qthread_debug(AFFINITY_DETAILS, "pretending distance from %i to %i is %i\n", (int)i, (int)j, (int)(sheps[i].shep_dists[k]));
 # endif         /* ifdef QTHREAD_HAVE_HWLOC_DISTS */
