@@ -97,6 +97,20 @@ static aligned_t qloop_wrapper(struct qloop_wrapper_args *const restrict arg)
                 new_id = (1 << level) + my_id;         // level has been incremented
             }
             break;
+        case SINC_T:
+            while (new_id <= tot_workers) {      // create some children? (tot_workers zero based)
+                size_t offset = new_id - my_id;  // need how much past current locations
+                (arg + offset)->level = ++level; // increase depth for created thread
+                qthread_spawn((qthread_f)qloop_wrapper,
+                              arg + offset,
+                              0,
+                              sync,
+                              0, NULL,
+                              new_id,
+                              arg->spawn_flags);
+                new_id = (1 << level) + my_id;         // level has been incremented
+            }
+            break;
         default:
             while (new_id <= tot_workers) {      // create some children? (tot_workers zero based)
                 size_t offset = new_id - my_id;  // need how much past current locations
@@ -117,9 +131,6 @@ static aligned_t qloop_wrapper(struct qloop_wrapper_args *const restrict arg)
 
     switch (sync_type) {
         default:
-            break;
-        case SINC_T:
-            qt_sinc_submit(sync, NULL);
             break;
         case DONECOUNT:
             qthread_incr((aligned_t *)sync, 1);
@@ -516,6 +527,7 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
         case SINC_T:
             sync.sinc = qt_sinc_create(0, NULL, NULL, maxworkers);
             assert(sync.sinc);
+            flags |= QTHREAD_SPAWN_RET_SINC_VOID;
             break;
         case DONECOUNT:
             break;
@@ -567,6 +579,7 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
     switch(sync_type) {
         case SYNCVAR_T:
         case ALIGNED:
+        case SINC_T:
             qassert(qthread_spawn((qthread_f)qloop_wrapper,
                                   qwa, 0,
                                   sync.ptr,
