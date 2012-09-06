@@ -381,7 +381,7 @@ void API_FUNC qt_loop_simple(size_t    start,
                              qt_loop_f func,
                              void     *argptr)
 {   /*{{{*/
-    qt_loop_inner(start, stop, func, argptr, 2, DONECOUNT);
+    qt_loop_inner(start, stop, func, argptr, 2, SINC_T);
 } /*}}}*/
 
 void API_FUNC qt_loop_sv(size_t    start,
