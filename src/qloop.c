@@ -298,8 +298,13 @@ static void qt_loop_spawner(const size_t start,
         case NO_SYNC:
             abort();
     }
-    if (((struct qt_loop_spawner_arg *)args_)->future) {
-        flags |= QTHREAD_SPAWN_FUTURE;
+    switch (((struct qt_loop_spawner_arg *)args_)->future) {
+        case 1:
+            flags |= QTHREAD_SPAWN_FUTURE;
+            break;
+        case 2:
+            flags |= QTHREAD_SPAWN_SIMPLE;
+            break;
     }
     for (i = start, threadct = 0; i < stop; ++i, ++threadct) {
         qwa.func      = func;
@@ -536,9 +541,11 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
     }
     switch (future) {
         case 1:
+            printf("spawning a future\n");
             flags |= QTHREAD_SPAWN_FUTURE;
             break;
         case 2:
+            printf("spawning a simple\n");
             flags |= QTHREAD_SPAWN_SIMPLE;
             break;
     }
