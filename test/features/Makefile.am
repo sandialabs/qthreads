@@ -11,11 +11,11 @@ TESTS = \
 		qt_loop_sinc \
 		qt_loop_balance \
 		qt_loop_balance_sinc \
+		qt_loop_queue \
 		qutil \
 		qutil_qsort \
 		feb_barrier \
 		qloop_utils \
-		qt_loop_queue \
 		qarray \
 		qarray_accum \
 		qpool \
