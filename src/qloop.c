@@ -541,11 +541,9 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
     }
     switch (future) {
         case 1:
-            printf("spawning a future\n");
             flags |= QTHREAD_SPAWN_FUTURE;
             break;
         case 2:
-            printf("spawning a simple\n");
             flags |= QTHREAD_SPAWN_SIMPLE;
             break;
     }
