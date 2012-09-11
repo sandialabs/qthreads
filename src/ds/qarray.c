@@ -1297,7 +1297,7 @@ void qarray_iter_loopaccum(qarray      *a,
                 for (size_t idx = start; idx < stopat; idx += segsize) {
                     qthread_shepherd_id_t shepof = qarray_shepof(a, idx);
                     if (rv[shepof]) {
-                        rv[shepov] = 0;     // mark to spawn
+                        rv[shepof] = 0;     // mark to spawn
                         count_marked++;
                     }
                     if(count_marked == maxsheps) { break; }
