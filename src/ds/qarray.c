@@ -1274,10 +1274,10 @@ void qarray_iter_loopaccum(qarray      *a,
              * which threads to spawn (bizarre way of thinking about it, I
              * know). */
         {
-            qthread_shepherd_id_t       i;
-            const qthread_shepherd_id_t maxsheps =
-                qthread_num_shepherds();
-            struct qarray_accumfunc_wrapper_args *qfwa =
+            qthread_shepherd_id_t                 i;
+            const size_t                          segsize  = a->segment_size;
+            const qthread_shepherd_id_t           maxsheps = qthread_num_shepherds();
+            struct qarray_accumfunc_wrapper_args *qfwa     =
                 MALLOC(sizeof(struct qarray_accumfunc_wrapper_args) * maxsheps);
             char      *rets = calloc(maxsheps - 1, retsize);
             aligned_t *rv   = MALLOC(sizeof(aligned_t) * maxsheps);
@@ -1286,16 +1286,16 @@ void qarray_iter_loopaccum(qarray      *a,
             assert(rets);
             assert(rv);
             qfwa[0].ret = ret;
-            if ((ceil((double)a->count / a->segment_size) /*tot_segs*/ /
-                 maxsheps) > /*range_segs*/ ((stopat - startat) / a->segment_size)) {
+            if ((ceil((double)a->count / segsize) /*tot_segs*/ /
+                 maxsheps) > /*range_segs*/ ((stopat - startat) / segsize)) {
                 /* If we have a small(ish) range, try to figure out which
                  * shepherds need to be spawned to rather than spawning to
                  * everyone */
                 memset(rv, 1, sizeof(aligned_t) * maxsheps);
                 size_t count_marked = 0;
-                size_t start        = (startat / a->segment_size) * a->segment_size;
-                for (i = start; i < stopat; i += a->segment_size) {
-                    qthread_shepherd_id_t shepof = qarray_shepof(a, i);
+                size_t start        = (startat / segsize) * segsize;
+                for (size_t idx = start; idx < stopat; idx += segsize) {
+                    qthread_shepherd_id_t shepof = qarray_shepof(a, idx);
                     if (rv[shepof]) {
                         rv[shepov] = 0;     // mark to spawn
                         count_marked++;
