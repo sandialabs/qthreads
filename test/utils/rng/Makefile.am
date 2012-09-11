@@ -3,7 +3,7 @@
 # Copyright (c)      2008  Sandia Corporation
 #
 
-noinst_LTLIBRARIES = librng.la
+EXTRA_LTLIBRARIES = librng.la
 librng_la_SOURCES = \
 	brg_sha1.c \
 	brg_endian.h \
