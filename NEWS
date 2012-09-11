@@ -32,6 +32,7 @@ Improvements:
  - Hazardptr implementation works under high load
  - Matt Baker's Chapel syncvar idea
  - Add configure-time "oversubscription" mode; avoids spinlocks, uses sched_yield() when necessary
+ - More man pages
 Bugfixes:
  - Fix distance support with hwloc
  - Fix alignment error in C++ futurelib (old bug)
@@ -40,6 +41,7 @@ Bugfixes:
  - Improve floating-point tests
  - Fix fincr/dincr synchronization bug (some compilers created two reads)
  - Fix BOTS benchmark string handling
+ - Fix reinitialization race condition
  - Many minor fixes
 --- 1.7.1 ---
 New Features:

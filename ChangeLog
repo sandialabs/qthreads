@@ -1,3 +1,488 @@
+2012-09-10 17:15  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: remove printfs
+
+2012-09-06 17:00  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: faster qt_loop_simple
+
+2012-09-06 16:26  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: fix qt_loop_simple
+
+2012-09-06 15:10  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: use ret-sinc
+
+2012-09-06 15:01  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c, test/features/Makefile.am: simplify qt_loop
+	  internals with qthread_spawn()
+
+2012-09-05 22:23  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* Makefile.am: include in dist tarball
+
+2012-09-05 22:16  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* README.affinity: promised documentation
+
+2012-09-05 22:00  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/benchmarks/sc12/spawn_parallel_qthreads.c: try out
+	  qt_loop_simple
+
+2012-09-05 21:53  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qloop.h, src/qloop.c, test/features/Makefile.am,
+	  test/features/qt_loop_simple.c: qt_loop_simple
+
+2012-09-05 21:51  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* config/qthread_check_hwloc.m4: more output; check for the
+	  function I actually use
+
+2012-09-05 20:55  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/affinity/hwloc.c: more stuff should be protected by
+	  HWLOC_DISTS ifdef
+
+2012-09-05 20:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/threadqueues/sherwood_threadqueues.c: paranoia
+
+2012-09-05 20:52  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: paranoia toggle
+
+2012-09-05 20:48  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/io.c: fix incr behavior in some slightly broken compilers
+	  (I'm looking at you, clang)
+
+2012-09-05 20:31  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/multinode/Makefile.am: fix non-multinode build
+
+2012-09-04 17:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* autogen.sh: more intelligence vis-a-vis aclocal
+
+2012-09-04 17:21  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/Makefile.am, include/qthread/spr.h,
+	  include/spr_innards.h, test/benchmarks/Makefile.am: more
+	  packaging fixes
+
+2012-09-04 16:56  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* Makefile.am, configure.in, test/Makefile.am,
+	  test/multinode/Makefile.am: fix multinode test building
+
+2012-09-04 16:40  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/net/net.c: fix unused arg warning
+
+2012-09-04 16:25  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/spr.c: uncrustify, and fix compiler warnings
+
+2012-08-30 14:23  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* COPYING, configure.in, test/benchmarks/Makefile.am,
+	  test/benchmarks/mantevo, test/benchmarks/mantevo/Makefile.am,
+	  test/benchmarks/mantevo/hpccg,
+	  test/benchmarks/mantevo/hpccg/HPCCG.cpp,
+	  test/benchmarks/mantevo/hpccg/HPCCG.hpp,
+	  test/benchmarks/mantevo/hpccg/HPC_Sparse_Matrix.hpp,
+	  test/benchmarks/mantevo/hpccg/HPC_sparsemv.cpp,
+	  test/benchmarks/mantevo/hpccg/HPC_sparsemv.hpp,
+	  test/benchmarks/mantevo/hpccg/Makefile.am,
+	  test/benchmarks/mantevo/hpccg/README,
+	  test/benchmarks/mantevo/hpccg/VERSION,
+	  test/benchmarks/mantevo/hpccg/compute_residual.cpp,
+	  test/benchmarks/mantevo/hpccg/compute_residual.hpp,
+	  test/benchmarks/mantevo/hpccg/ddot.cpp,
+	  test/benchmarks/mantevo/hpccg/ddot.hpp,
+	  test/benchmarks/mantevo/hpccg/exchange_externals.cpp,
+	  test/benchmarks/mantevo/hpccg/exchange_externals.hpp,
+	  test/benchmarks/mantevo/hpccg/generate_matrix.cpp,
+	  test/benchmarks/mantevo/hpccg/generate_matrix.hpp,
+	  test/benchmarks/mantevo/hpccg/loop_defines.h,
+	  test/benchmarks/mantevo/hpccg/main.cpp,
+	  test/benchmarks/mantevo/hpccg/make_local_matrix.cpp,
+	  test/benchmarks/mantevo/hpccg/make_local_matrix.hpp,
+	  test/benchmarks/mantevo/hpccg/mytimer.cpp,
+	  test/benchmarks/mantevo/hpccg/mytimer.hpp,
+	  test/benchmarks/mantevo/hpccg/read_HPC_row.cpp,
+	  test/benchmarks/mantevo/hpccg/read_HPC_row.hpp,
+	  test/benchmarks/mantevo/hpccg/waxpby.cpp,
+	  test/benchmarks/mantevo/hpccg/waxpby.hpp: qthread-ized hpccg
+
+2012-08-28 15:32  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: better const handling
+
+2012-08-28 15:30  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/qthread_init.3: update documentation of environment
+	  variables
+
+2012-08-28 15:29  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/qthread_init.3: update documentation of environment
+	  variables
+
+2012-08-28 15:28  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_envariables.h, src/affinity/hwloc.c,
+	  src/envariables.c, src/interfaces/chapel/tasks-qthreads.c,
+	  src/qthread.c: print out default values for environment variables
+
+2012-08-28 14:46  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/qthread_cas.3: clean up const declarations
+
+2012-08-28 14:45  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/qthread_syncvar_writeEF.3,
+	  man/man3/qthread_syncvar_writeF.3, man/man3/qthread_writeEF.3,
+	  man/man3/qthread_writeF.3: clean up const declarations
+
+2012-08-28 14:42  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h, src/feb.c, src/syncvar.c: clean up
+	  useless const declarations
+
+2012-08-28 13:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am, man/man3/qthread_disable_shepherd.3,
+	  man/man3/qthread_disable_worker.3,
+	  man/man3/qthread_enable_worker.3:
+
+2012-08-28 13:41  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: fix error condition trapping so it
+	  won't be optimized out by the compiler
+
+2012-08-28 12:25  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qloop.h, test/basics/sinc.c: fix clang warnings
+
+2012-08-27 22:11  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/basics/sinc.c, test/basics/sinc_null.c,
+	  test/benchmarks/uts/time_uts_sinc.c: new sinc api
+
+2012-08-27 22:09  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qloop.h, include/qthread/sinc.h, src/qloop.c,
+	  src/qthread.c, src/sincs/donecount.c, src/sincs/donecount_cas.c,
+	  src/sincs/original.c, src/sincs/snzi.c: a little sanity
+
+2012-08-27 21:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/qthread_readstate.3, man/man3/qthread_spawn.3: more
+	  constants
+
+2012-08-27 21:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h, src/qthread.c: utility macros, not new
+	  functions
+
+2012-08-27 21:45  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: team destroy???
+
+2012-08-27 21:26  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am, man/man3/qt_dictionary_create.3,
+	  man/man3/qt_dictionary_delete.3,
+	  man/man3/qt_dictionary_destroy.3, man/man3/qt_dictionary_end.3,
+	  man/man3/qt_dictionary_get.3,
+	  man/man3/qt_dictionary_iterator_copy.3,
+	  man/man3/qt_dictionary_iterator_create.3,
+	  man/man3/qt_dictionary_iterator_destroy.3,
+	  man/man3/qt_dictionary_iterator_get.3,
+	  man/man3/qt_dictionary_put.3,
+	  man/man3/qt_dictionary_put_if_absent.3, man/man3/qthread_fork.3,
+	  man/man3/qthread_spawn.3, man/man3/qthread_worker.3,
+	  man/man3/qthread_worker_unique.3: more documentation
+
+2012-08-27 19:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am, man/man3/qpool_free.3,
+	  man/man3/qt_begin_blocking_action.3,
+	  man/man3/qt_end_blocking_action.3: document arbitrary blocking
+	  operations
+
+2012-08-27 19:37  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/io.h, src/syscalls/user_defined.c,
+	  test/basics/arbitrary_blocking_operation.c: rename arbitrary
+	  blocking operation functions to be less obnoxious
+
+2012-08-27 19:33  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/sinc.h:
+
+2012-08-27 19:32  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/dictionary.h,
+	  src/ds/dictionary/dictionary_shavit.c,
+	  src/ds/dictionary/dictionary_simple.c,
+	  src/ds/dictionary/dictionary_trie.c: clean up the api a little
+
+2012-08-27 19:31  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am, man/man3/qt_dictionary_create.3,
+	  man/man3/qt_dictionary_delete.3,
+	  man/man3/qt_dictionary_destroy.3, man/man3/qt_dictionary_end.3,
+	  man/man3/qt_dictionary_get.3,
+	  man/man3/qt_dictionary_iterator_copy.3,
+	  man/man3/qt_dictionary_iterator_create.3,
+	  man/man3/qt_dictionary_iterator_destroy.3,
+	  man/man3/qt_dictionary_iterator_equals.3,
+	  man/man3/qt_dictionary_iterator_get.3,
+	  man/man3/qt_dictionary_iterator_next.3,
+	  man/man3/qt_dictionary_put.3,
+	  man/man3/qt_dictionary_put_if_absent.3,
+	  man/man3/qt_sinc_create.3: document qt_dictionary interface
+
+2012-08-27 17:20  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am, man/man3/qt_accept.3,
+	  man/man3/qt_connect.3, man/man3/qt_poll.3, man/man3/qt_pread.3,
+	  man/man3/qt_pwrite.3, man/man3/qt_read.3, man/man3/qt_select.3,
+	  man/man3/qt_system.3, man/man3/qt_wait4.3, man/man3/qt_write.3:
+	  document syscall wrapper functions
+
+2012-08-27 16:56  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: initialized atomics compatibility layer earlier
+
+2012-08-27 16:35  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* man/man3/Makefile.am, man/man3/qt_sinc_create.3,
+	  man/man3/qt_sinc_destroy.3, man/man3/qt_sinc_expect.3,
+	  man/man3/qt_sinc_fini.3, man/man3/qt_sinc_init.3,
+	  man/man3/qt_sinc_reset.3, man/man3/qt_sinc_submit.3,
+	  man/man3/qt_sinc_wait.3: document sincs
+
+2012-08-27 13:00  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/Makefile.am, include/qthread/qt_sinc.h,
+	  include/qthread/qthread.h, include/qthread/sinc.h, src/qloop.c,
+	  src/sincs/donecount.c, src/sincs/donecount_cas.c,
+	  src/sincs/original.c, src/sincs/snzi.c, test/basics/sinc.c,
+	  test/basics/sinc_null.c, test/features/qlfqueue.c: rename sinc
+	  header; remove extraneous qt_ prefix
+
+2012-08-27 12:54  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/affinity/hwloc.c: fix typo
+
+2012-08-26 14:02  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/utils/Makefile.am, test/utils/rng/Makefile.am: prevent from
+	  being built during `make all`
+
+2012-08-26 14:02  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_feb_barrier.c: fix MALLOC macro problem
+
+2012-08-25 14:39  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* TODO:
+
+2012-08-25 14:06  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, test/Makefile.am: fix `make distcheck`
+
+2012-08-25 13:43  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/sincs/donecount.c, src/sincs/donecount_cas.c, src/spr.c,
+	  src/threadqueues/sherwood_threadqueues.c: more memory scribbling
+
+2012-08-25 13:24  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_c_hash.c: add debug include
+
+2012-08-25 13:19  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/affinity/hwloc.c, src/affinity/lgrp.c,
+	  src/ds/dictionary/dictionary_simple.c,
+	  src/ds/dictionary/dictionary_trie.c, src/ds/qarray.c,
+	  src/ds/qdqueue.c, src/ds/qlfqueue.c, src/ds/qpool.c,
+	  src/futurelib.c, src/hazardptrs.c, src/net/portals4/portals4.c,
+	  src/net/portals4/runtime-mpi.c, src/net/portals4/runtime-pmi.c,
+	  src/net/portals4/runtime-shmemrt.c, src/patterns/allpairs.c,
+	  src/qloop.c, src/qt_c_hash.c, src/qt_feb_barrier.c,
+	  src/qt_lf_hash.c, src/qt_mpool.c, src/qtimer/altix.c,
+	  src/qtimer/gethrtime.c, src/qtimer/gettime.c,
+	  src/qtimer/gettimeofday.c, src/qtimer/mach.c, src/qutil.c,
+	  src/sincs/donecount.c: lots of memory scribbling macros; a few
+	  minor fixes to allocation bugs I discovered along the way
+
+2012-08-25 13:18  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_macros.h: fix TLS delete in the native case by
+	  re-initializing it to zero (fixes reinitialization failure)
+
+2012-08-25 13:17  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: fix a very old race condition that occasionally
+	  made reinitialization fail and/or caused segfault on shutdown
+
+2012-08-24 09:33  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/threadqueues/mutexfifo_threadqueues.c: fix argument count
+
+2012-08-23 11:07  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: fix arguments
+
+2012-08-23 11:04  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_debug.h, src/affinity/hwloc.c, src/affinity/lgrp.c,
+	  src/affinity/libnuma.c, src/affinity/libnumaV2.c,
+	  src/affinity/plpa.c, src/affinity/tilera.c, src/aligned_alloc.c,
+	  src/ds/dictionary/dictionary_shavit.c,
+	  src/ds/dictionary/dictionary_simple.c: more scribbling
+
+2012-08-22 13:56  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_blocking_structs.h, include/qt_io.h,
+	  src/syscalls/accept.c, src/syscalls/connect.c,
+	  src/syscalls/poll.c, src/syscalls/pread.c, src/syscalls/pwrite.c,
+	  src/syscalls/read.c, src/syscalls/select.c,
+	  src/syscalls/system.c, src/syscalls/user_defined.c,
+	  src/syscalls/wait4.c, src/syscalls/write.c,
+	  src/threadqueues/lifo_threadqueues.c,
+	  src/threadqueues/mtsfifo_threadqueues.c,
+	  src/threadqueues/mutexfifo_threadqueues.c,
+	  src/threadqueues/nemesis_threadqueues.c,
+	  src/threadqueues/sherwood_threadqueues.c: even more scribbling
+
+2012-08-22 13:35  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_debug.h, src/affinity/hwloc.c, src/qthread.c: more
+	  scribbling
+
+2012-08-22 13:17  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/threadqueues/lifo_threadqueues.c: fix build error
+
+2012-08-21 22:09  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in, include/qt_debug.h, src/qt_lf_hash.c,
+	  src/qt_mpool.c, src/threadqueues/sherwood_threadqueues.c: make
+	  memory scribbling available in unpooled as well
+
+2012-08-21 19:33  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_threadqueues.h, src/qthread.c,
+	  src/threadqueues/lifo_threadqueues.c,
+	  src/threadqueues/loxley_threadqueues.c,
+	  src/threadqueues/loxleybase_threadqueues.c,
+	  src/threadqueues/mtsfifo_threadqueues.c,
+	  src/threadqueues/mutexfifo_threadqueues.c,
+	  src/threadqueues/nemesis_threadqueues.c,
+	  src/threadqueues/nottingham_threadqueues.c,
+	  src/threadqueues/sherwood_threadqueues.c: updating to new
+	  scheduler api
+
+2012-08-21 19:02  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: use internal aligned allocation
+
+2012-08-21 19:02  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/threadqueues/sherwood_threadqueues.c: standardize steal
+	  profiling output
+
+2012-08-21 17:26  Allan Porterfield <akp@renci.org>
+
+	* src/threadqueues/loxley_threadqueues.c: update interface to new
+	  calling parameters
+
+2012-08-20 16:50  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/benchmarks/Makefile.am,
+	  test/benchmarks/pmea09/time_tbbq.cpp,
+	  test/benchmarks/pmea09/time_tbbq_sizes.cpp: update to current TBB
+	  interface
+
+2012-08-20 16:50  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.in: search for TBB correctly
+
+2012-08-20 16:49  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/benchmarks/sc12/spawn_parallel_cilk.c,
+	  test/benchmarks/sc12/spawn_parallel_tbb.cc,
+	  test/benchmarks/sc12/spawn_sequential_cilk.c,
+	  test/benchmarks/sc12/spawn_sequential_tbb.cc: setting default
+	  thread counts
+
+2012-08-20 14:51  Allan Porterfield <akp@renci.org>
+
+	* src/threadqueues/nottingham_threadqueues.c: change nottingham to
+	  match new spawnqueue calling parameters
+
+2012-08-17 21:19  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/benchmarks/Makefile.am: simplify
+
+2012-08-17 21:14  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/benchmarks/sc12/fib_qthreads.c: turns out, the simpler
+	  version is actually faster
+
+2012-08-17 21:13  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/benchmarks/sc12/uts_qthreads.c: minor optimization
+
+2012-08-17 21:08  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/affinity/hwloc.c: hwloc distance handling was STILL wrong;
+	  fixed
+
+2012-08-17 19:36  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_qthread_struct.h, include/qt_spawncache.h,
+	  include/qt_threadqueues.h, include/qthread/qthread.h,
+	  src/affinity/hwloc.c, src/feb.c, src/qloop.c, src/qthread.c,
+	  src/spawncache.c, src/syncvar.c,
+	  src/threadqueues/sherwood_threadqueues.c: finish sinc retvals,
+	  add the ability to periodically flush the spawncache
+
+2012-08-16 21:41  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/affinity/hwloc.c: add some fallbacks
+
+2012-08-16 18:14  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/interfaces/rose/xomp.c: fix nightly compiler warning
+
+2012-08-16 18:13  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qt_barrier.c: fix compile error
+
+2012-08-15 14:53  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* autogen.sh: fix autogen bug with empty ACLOCAL_INCLUDE
+
+2012-08-14 21:01  alina.g.simion@gmail.com
+
+	* autogen.sh: autogen for older libtool (kyle)
+
+2012-08-12 17:36  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* ChangeLog, NEWS, TODO, config/ChangeLogGen.sh,
+	  scripts/ChangeLogGen.sh: preparing for next version release
+	  (soon-ish)
+
 2012-08-09 19:30  Kyle Wheeler <kbwheel@sandia.gov>
 
 	* scripts/build.pl: shavit
