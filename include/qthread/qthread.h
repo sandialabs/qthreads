@@ -675,7 +675,9 @@ static QINLINE double qthread_dincr(double *operand,
     return qthread_dincr_(operand, incr);
 
 # elif QTHREAD_ATOMIC_CAS && \
-    (!defined(HAVE_GCC_INLINE_ASSEMBLY) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEGX))
+    (!defined(HAVE_GCC_INLINE_ASSEMBLY) || \
+     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEGX) || \
+     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32))
     union {
         uint64_t i;
         double   d;
@@ -724,29 +726,35 @@ static QINLINE double qthread_dincr(double *operand,
     return retval.d;
 
 #  elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_32)
-    double oldval, newval;
+    union {
+        uint64_t i;
+        double   d;
+    } oldval, newval;
 
-    newval = *(volatile double *)operand;
+    newval.d = *(volatile double *)operand;
     do {
         /* this allows the compiler to be as flexible as possible with register
          * assignments */
-        register uint64_t tmp1 = tmp1;
-        register uint64_t tmp2 = tmp2;
+        register uint64_t tmp1;
+        register uint64_t tmp2;
 
-        oldval = newval;
-        newval = oldval + incr;
-        __asm__ __volatile__ ("ldx %0, %1\n\t"
+        oldval.d =  newval.d;
+        newval.d += incr;
+        __asm__ __volatile__ ("ldd %0, %1\n\t"
                               "ldx %4, %2\n\t"
                               "membar #StoreStore|#LoadStore|#StoreLoad|#LoadLoad\n\t"
+                              "sllx %1, 0x20, %1\n\t"
+                              "sllx %2, 0x20, %2\n\t"
                               "casx [%3], %2, %1\n\t"
-                              "stx %1, %0"
+                              "srlx %1, 0x20, %1\n\t"
+                              "std %1, %0"
                               /* h means 64-BIT REGISTER
                                * (probably unnecessary, but why take chances?) */
-                              : "=m"   (newval), "=&h" (tmp1), "=&h" (tmp2)
-                              : "r"    (operand), "m" (oldval)
+                              : "=m"   (newval.i), "=h" (tmp1), "=h" (tmp2)
+                              : "r"    (operand), "m" (oldval.i)
                               : "memory");
-    } while (oldval != newval);
-    return oldval;
+    } while (oldval.i != newval.i);
+    return oldval.d;
 
 #  elif (QTHREAD_ASSEMBLY_ARCH == QTHREAD_SPARCV9_64)
     union {
