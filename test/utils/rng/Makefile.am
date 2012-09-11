@@ -10,3 +10,5 @@ librng_la_SOURCES = \
 	brg_sha1.h \
 	brg_types.h \
 	rng.h
+
+CLEANFILES = $(EXTRA_LTLIBRARIES)
