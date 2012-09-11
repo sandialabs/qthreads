@@ -8,7 +8,7 @@ if COMPILE_MULTINODE
 SUBDIRS += multinode
 endif
 
-DIST_SUBDIRS = $(SUBDIRS) benchmarks
+DIST_SUBDIRS = $(SUBDIRS) multinode benchmarks
 
 EXTRA_PROGRAMS = test_signal
 
