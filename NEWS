@@ -1,4 +1,4 @@
---- 1.8b ---
+--- 1.8 ---
 New Features:
  - Concurrent lock-free hash table (dictionary); three alternate designs
  - New "simple" tasks: reduced context swap overhead, no stack size limit, but cannot block or yield
