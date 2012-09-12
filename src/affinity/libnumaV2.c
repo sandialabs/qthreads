@@ -109,106 +109,34 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me)
     assert(me);
 
     qthread_shepherd_t *const myshep      = me->shepherd;
-    struct bitmask           *shep_cpuset = numa_allocate_cpumask();
-    assert(shep_cpuset);
-    unsigned int maxshepobjs         = guess_num_shepherds();
-    unsigned int workerobjs_per_shep = 0;
 
-    numa_node_to_cpus(myshep->node, shep_cpuset);
-    for (size_t j = 0; j < numa_bitmask_nbytes(shep_cpuset) * 8; j++) {
-        workerobjs_per_shep += numa_bitmask_isbitset(shep_cpuset, j) ? 1 : 0;
+    /* It would be nice if we could do something more specific than
+     * "numa_run_on_node", but because sched_setaffinity() is so dangerous, we
+     * really can't, in good conscience. */
+    qthread_debug(AFFINITY_DETAILS, "calling numa_run_on_node(%i) for worker %i\n", myshep->node, me->packed_worker_id);
+    int ret = numa_run_on_node(myshep->node);
+    if (ret != 0) {
+        qthread_debug(ALWAYS_OUTPUT, "numa_run_on_node() returned an error: %s\n", strerror(errno));
+        abort();
     }
-# ifdef QTHREAD_DEBUG_AFFINITY
-    {
-        char bitmask_str[numa_bitmask_nbytes(shep_cpuset) * 2];
-        for (size_t byte = 0; byte < numa_bitmask_nbytes(shep_cpuset); byte++) {
-            int byte_mask = 0;
-            int cnt       = 0;
-            for (int bit = 0; bit < 8; bit++) {
-                if (numa_bitmask_isbitset(shep_cpuset, (byte * 8) + bit)) {
-                    byte_mask |= 1 << bit;
-                    qthread_debug(AFFINITY_DETAILS, "byte %i, bit %i\n", byte, bit);
-                    cnt++;
-                }
-            }
-            sprintf(&bitmask_str[byte * 2], "%02x", byte_mask);
-        }
-        qthread_debug(AFFINITY_CALLS, "set %i(%i) worker %i [%i], there are %u PUs, shepmask = %s\n",
-                      (int)myshep->shepherd_id,
-                      (int)myshep->node,
-                      (int)me->worker_id,
-                      (int)me->packed_worker_id,
-                      workerobjs_per_shep,
-                      bitmask_str);
-    }
-# endif /* ifdef QTHREAD_DEBUG_AFFINITY */
-
-    unsigned int    shep_pus           = workerobjs_per_shep;
-    unsigned int    worker_pus         = 1;
-    unsigned int    wraparounds        = me->packed_worker_id / (maxshepobjs * qlib->nworkerspershep);
-    unsigned int    worker_wraparounds = me->worker_id / workerobjs_per_shep;
-    struct bitmask *wkr_cpuset         = numa_allocate_cpumask();
-    assert(wkr_cpuset);
-    {
-        size_t cnt_within_shep = ((me->worker_id * worker_pus) +
-                                  (wraparounds * qlib->nworkerspershep) +
-                                  worker_wraparounds) % shep_pus;
-        size_t bit_offset = 0;
-        for (size_t i = 0; i <= cnt_within_shep; i++) {
-            while (numa_bitmask_isbitset(shep_cpuset, bit_offset) == 0) {
-                bit_offset++;
-            }
-        }
-        qthread_debug(AFFINITY_DETAILS, "wkr bit = %i, cnt_within_shep = %i\n", (int)bit_offset, (int)cnt_within_shep);
-        numa_bitmask_setbit(wkr_cpuset, bit_offset);
-    }
-
-# ifdef QTHREAD_DEBUG_AFFINITY
-    {
-        char bitmask_str[numa_bitmask_nbytes(wkr_cpuset) * 2];
-        for (size_t byte = 0; byte < numa_bitmask_nbytes(wkr_cpuset); byte++) {
-            int byte_mask = 0;
-            int cnt       = 0;
-            for (int bit = 0; bit < 8; bit++) {
-                if (numa_bitmask_isbitset(wkr_cpuset, (byte * 8) + bit)) {
-                    byte_mask |= 1 << bit;
-                    cnt++;
-                }
-            }
-            sprintf(&bitmask_str[byte * 2], "%02x", byte_mask);
-        }
-        qthread_debug(AFFINITY_CALLS,
-                      "binding shep %i worker %i (%i) to node %i, PU %i, mask %s\n",
-                      (int)myshep->shepherd_id, (int)me->worker_id,
-                      (int)me->packed_worker_id,
-                      myshep->node,
-                      (shep_pus * myshep->node) + (((me->worker_id * worker_pus) + (wraparounds * qlib->nworkerspershep) + (worker_wraparounds)) % shep_pus),
-                      bitmask_str);
-    }
-# endif /* ifdef QTHREAD_DEBUG_AFFINITY */
-
-    numa_bind(wkr_cpuset);
-    numa_bitmask_free(shep_cpuset);
-    numa_bitmask_free(wkr_cpuset);
+    numa_set_localalloc();
 }                                      /*}}} */
 
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
 {                                      /*{{{ */
-    struct bitmask *cmask       = numa_allocate_cpumask();
-    unsigned int    maxshepobjs = 0;
+    assert(me);
 
-    numa_node_to_cpus(me->node, cmask);
-    for (size_t j = 0; j < numa_bitmask_nbytes(cmask) * 8; j++) {
-        maxshepobjs += numa_bitmask_isbitset(cmask, j) ? 1 : 0;
+    /* It would be nice if we could do something more specific than
+     * "numa_run_on_node", but because sched_setaffinity() is so dangerous, we
+     * really can't, in good conscience. */
+    qthread_debug(AFFINITY_DETAILS, "calling numa_run_on_node(%i) for shep %i\n", me->node, me->shepherd_id);
+    int ret = numa_run_on_node(myshep->node);
+    if (ret != 0) {
+        qthread_debug(ALWAYS_OUTPUT, "numa_run_on_node() returned an error: %s\n", strerror(errno));
+        abort();
     }
-    numa_bind(cmask);
-    qthread_debug(AFFINITY_CALLS, "set %i(%i) worker 0 [%i], there are %u PUs\n",
-                  (int)me->shepherd_id,
-                  (int)me->node,
-                  (int)me->shepherd_id,
-                  maxshepobjs);
-    numa_bitmask_free(cmask);
+    numa_set_localalloc();
 }                                      /*}}} */
 
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
