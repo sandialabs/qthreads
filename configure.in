@@ -1050,15 +1050,12 @@ AS_IF([test "x$enable_multinode" = "xyes"],
        esac],
       [enable_multinode="no"])
 
-AS_IF([test "x$enable_lf_febs" = "xyes"],
-      [AC_DEFINE([LOCK_FREE_FEBS], [1], [Define to use a lock-free hash table for FEB metadata.])],
+AS_IF([test "x$enable_lf_febs" != "xno"],
+      [AS_IF([test "x$enable_hardware_atomics" = "xyes" -a "x$qthread_cv_atomic_CASptr" = "xyes"],
+             [enable_lf_febs=yes
+              AC_DEFINE([LOCK_FREE_FEBS], [1], [Define to use a lock-free hash table for FEB metadata.])],
+             [enable_lf_febs=no])],
       [enable_lf_febs=no])
-dnl AS_IF([test "x$enable_lf_febs" != "xno"],
-dnl       [AS_IF([test "x$enable_hardware_atomics" = "xyes" -a "x$qthread_cv_atomic_CASptr" = "xyes"],
-dnl              [enable_lf_febs=yes
-dnl               AC_DEFINE([LOCK_FREE_FEBS], [1], [Define to use a lock-free hash table for FEB metadata.])],
-dnl              [enable_lf_febs=no])],
-dnl       [enable_lf_febs=no])
 
 ## --------------- ##
 ## Output and done ##
