@@ -18,3 +18,7 @@ cscope.out
 .fuse_*
 .autogen-version
 .autogen_git_output
+*.o
+*.lo
+.libs
+.dirstamp
