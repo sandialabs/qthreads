@@ -54,50 +54,52 @@ static void count(const size_t startat,
     *(multiple_op_t *)ret_ = ret;
 }
 
-static void multi_op(void *restrict a_,
-                     void *restrict b_)
+static void multi_op(void *restrict       a_,
+                     const void *restrict b_)
 {
     multiple_op_t *restrict a = (multiple_op_t *)a_;
     multiple_op_t *restrict b = (multiple_op_t *)b_;
 
-    //printf("a->max = %f, b->max = %f\n", a->max, b->max);
+    // printf("a->max = %f, b->max = %f\n", a->max, b->max);
     a->max = (a->max > b->max) ? a->max : b->max;
-    //printf("a->max = %f\n", a->max);
-    //printf("a->min = %f, b->min = %f\n", a->min, b->min);
+    // printf("a->max = %f\n", a->max);
+    // printf("a->min = %f, b->min = %f\n", a->min, b->min);
     a->min = (a->min > b->min) ? b->min : a->min;
-    //printf("a->min = %f\n", a->min);
-    //printf("a->sum = %f, b->sum = %f\n", a->sum, b->sum);
+    // printf("a->min = %f\n", a->min);
+    // printf("a->sum = %f, b->sum = %f\n", a->sum, b->sum);
     a->sum += b->sum;
-    //printf("a->sum = %f\n", a->sum);
-    //printf("a->prod = %f, b->prod = %f\n", a->prod, b->prod);
+    // printf("a->sum = %f\n", a->sum);
+    // printf("a->prod = %f, b->prod = %f\n", a->prod, b->prod);
     a->prod *= b->prod;
-    //printf("a->prod = %f\n", a->prod);
-    //printf("a->avg = %f, b->avg = %f\n", a->avg, b->avg);
+    // printf("a->prod = %f\n", a->prod);
+    // printf("a->avg = %f, b->avg = %f\n", a->avg, b->avg);
     if (b->cnt > 0) {
-	if (a->cnt > 0) {
-	    a->avg = ((a->avg * a->cnt) / (a->cnt + b->cnt)) + ((b->avg * b->cnt) / (a->cnt + b->cnt));
-	} else {
-	    a->avg = b->avg;
-	}
+        if (a->cnt > 0) {
+            a->avg = ((a->avg * a->cnt) / (a->cnt + b->cnt)) + ((b->avg * b->cnt) / (a->cnt + b->cnt));
+        } else {
+            a->avg = b->avg;
+        }
     }
-    //printf("a->avg = %f\n", a->avg);
-    //printf("a->cnt = %zu, b->cnt = %zu\n", a->cnt, b->cnt);
+    // printf("a->avg = %f\n", a->avg);
+    // printf("a->cnt = %zu, b->cnt = %zu\n", a->cnt, b->cnt);
     a->cnt += b->cnt;
-    //printf("a->cnt = %zu\n", a->cnt);
+    // printf("a->cnt = %zu\n", a->cnt);
 }
 
-static void run_iterations(void                                                   (*loop)(const size_t a,
-                                                                 const size_t     b,
-                                                                 const size_t     sz,
-                                                                 void            *out,
-                                                                 const qt_loopr_f f,
-                                                                 void            *c,
-                                                                 const qt_accum_f acc),
-                           qt_loopr_f                                             func,
-                           qt_accum_f                                             acc,
-                           double                                                 overhead,
-                           const char                                            *type,
-                           const char                                            *name)
+typedef void (*qtloopaccum_f)(const size_t     a,
+                              const size_t     b,
+                              const size_t     sz,
+                              void            *out,
+                              const qt_loopr_f f,
+                              void            *c,
+                              const qt_accum_f acc);
+
+static void run_iterations(qtloopaccum_f loop,
+                           qt_loopr_f    func,
+                           qt_accum_f    acc,
+                           double        overhead,
+                           const char   *type,
+                           const char   *name)
 {
     double        total  = 0;
     int           passed = 0;
@@ -112,18 +114,18 @@ static void run_iterations(void                                                 
         qtimer_start(timer);
         loop(0, numincrs, sizeof(tmp), &tmp, func, NULL, acc);
         qtimer_stop(timer);
-        //printf("max = %f (%f)\n", tmp.max, known_correct.max);
-	passed = (tmp.max == known_correct.max);
-	if (!passed) break;
-        //printf("min = %f (%f)\n", tmp.min, known_correct.min);
-	passed = (tmp.min == known_correct.min);
-	if (!passed) break;
-        //printf("sum = %f (%f)\n", tmp.sum, known_correct.sum);
-        //printf("prd = %f (%f)\n", tmp.prod, known_correct.prod);
-        //printf("avg = %f (%f)\n", tmp.avg, known_correct.avg);
-        //printf("cnt = %zu (%zu)\n", tmp.cnt, known_correct.cnt);
-	passed = (tmp.cnt == known_correct.cnt);
-	if (!passed) break;
+        // printf("max = %f (%f)\n", tmp.max, known_correct.max);
+        passed = (tmp.max == known_correct.max);
+        if (!passed) { break; }
+        // printf("min = %f (%f)\n", tmp.min, known_correct.min);
+        passed = (tmp.min == known_correct.min);
+        if (!passed) { break; }
+        // printf("sum = %f (%f)\n", tmp.sum, known_correct.sum);
+        // printf("prd = %f (%f)\n", tmp.prod, known_correct.prod);
+        // printf("avg = %f (%f)\n", tmp.avg, known_correct.avg);
+        // printf("cnt = %zu (%zu)\n", tmp.cnt, known_correct.cnt);
+        passed = (tmp.cnt == known_correct.cnt);
+        if (!passed) { break; }
         total += qtimer_secs(timer);
         if (!passed) {
             break;

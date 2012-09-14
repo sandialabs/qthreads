@@ -239,7 +239,7 @@ static void print_banner(void)
 #endif /* ifdef PRINT_STATS */
 
 static void my_incr(void *tgt,
-                    void *src)
+                    const void *src)
 {
     *(my_value_t *)tgt += *(my_value_t *)src;
 }
