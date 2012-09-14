@@ -121,7 +121,7 @@ int main(int    argc,
         assert(le != NULL);
         iprintf("17. Pair:(%s,%s)\n", (char *)le->key, (char *)le->value);
     }
-    printf("Found %d entries\n", no_entries);
+    iprintf("Found %d entries\n", no_entries);
     assert(no_entries == EXPECTED_ENTRIES);
 
     // test iterator equality function
