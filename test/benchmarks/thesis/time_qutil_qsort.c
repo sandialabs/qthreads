@@ -27,6 +27,28 @@ static int acmp(const void *a, const void *b)
     return (*(aligned_t *)a - *(aligned_t *)b);
 }
 
+static const char * human_readable(size_t bytes)
+{
+    static char str[50];
+    const char *suffix;
+    double partial;
+    if (bytes >= (1<<30)) {
+	partial = (double)bytes / (double)(1<<30);
+	suffix = "GB";
+    } else if (bytes >= (1<<20)) {
+	partial = (double)bytes / (double)(1<<20);
+	suffix = "MB";
+    } else if (bytes >= (1<<10)) {
+	partial = (double)bytes / (double)(1<<10);
+	suffix = "KB";
+    } else {
+	partial = bytes;
+	suffix = " bytes";
+    }
+    snprintf(str, 50, "%0.1f%s", partial, suffix);
+    return str;
+}
+
 int main(int argc, char *argv[])
 {
     aligned_t *ui_array, *ui_array2;
@@ -41,7 +63,7 @@ int main(int argc, char *argv[])
     qthread_initialize();
 
     CHECK_VERBOSE();
-    printf("%i threads\n", (int)qthread_num_shepherds());
+    printf("%i threads\n", (int)qthread_num_workers());
     NUMARG(len, "TEST_LEN");
     NUMARG(iterations, "TEST_ITERATIONS");
     NUMARG(using_doubles, "TEST_USING_DOUBLES");
@@ -49,6 +71,7 @@ int main(int argc, char *argv[])
 
     if (using_doubles) {
         d_array = calloc(len, sizeof(double));
+	printf("array is %s\n", human_readable(len * sizeof(double)));
         assert(d_array);
         // madvise(d_array,len*sizeof(double), MADV_SEQUENTIAL);
         for (unsigned int i = 0; i < len; i++) {
@@ -86,6 +109,7 @@ int main(int argc, char *argv[])
         free(d_array2);
     } else {
         ui_array = calloc(len, sizeof(aligned_t));
+	printf("array is %s\n", human_readable(len * sizeof(aligned_t)));
         for (unsigned int i = 0; i < len; i++) {
             ui_array[i] = random();
         }
