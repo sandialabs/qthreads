@@ -110,9 +110,9 @@ fi
 
 version=$(awk '{if(NR==1)print$2;else exit}' ./NEWS)
 if [[ ${version%b} != ${version} && $SKIPVGEN != 1 ]] ; then
-	echo -n "Querying git to determine revision's abbreviated hash... "
-	git log -1 --pretty=format:%h | tee .autogen_git_output
-	echo
+	echo "Counting entries in git's log to come up with a revision number..."
+	#git log -1 --pretty=format:%h | tee .autogen_git_output
+	git log | grep '^commit ' | wc -l | awk '{print $1}' | tee .autogen_git_output
 	#svn stat -u README | tee .autogen_svn_output
 	rev=$version-$(cat .autogen_git_output)
 	if [ "$rev" ] ; then
