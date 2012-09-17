@@ -67,7 +67,7 @@ class cnc_tag_hash_compare< tile_tag > {
         unsigned int h = reinterpret_cast<unsigned int>(tt.m_array);
 #endif
 #else
-        unsigned int h = reinterpret_cast<int>(tt.m_array);
+        unsigned int h = reinterpret_cast<unsigned long long>(tt.m_array);
 #endif
         
         unsigned int high = h & 0xf8000000;
