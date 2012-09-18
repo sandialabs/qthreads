@@ -24,6 +24,6 @@ missing
 stamp-h1
 *.o
 *_opt[1234]
-samples/cholesky/output/
+samples/cholesky/output
 samples/fib/fib
 samples/routing/routing
