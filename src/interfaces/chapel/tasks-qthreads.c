@@ -15,6 +15,12 @@
 # define NDEBUG
 #endif
 
+// XXX: Workaround for problems with "" escaping
+#undef CHPL_TASKS_MODEL_H
+#undef CHPL_THREADS_MODEL_H
+#define CHPL_TASKS_MODEL_H "tasks-qthreads.h"
+#define CHPL_THREADS_MODEL_H "threads-none.h"
+
 #include "chplrt.h"
 #include "chplsys.h"
 #include "tasks-qthreads.h"
