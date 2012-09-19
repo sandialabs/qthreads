@@ -109,7 +109,7 @@ if [ -d autom4te.cache ] ; then
 fi
 
 version=$(awk '{if(NR==1)print$2;else exit}' ./NEWS)
-if [[ ${version%b} != ${version} && $SKIPVGEN != 1 ]] ; then
+if [[ ${version%b} != ${version} && type git 2>/dev/null 1>/dev/null && $SKIPVGEN != 1 ]] ; then
 	echo "Counting entries in git's log to come up with a revision number..."
 	#git log -1 --pretty=format:%h | tee .autogen_git_output
     git log --pretty=oneline | wc -l | tee .autogen_git_output
