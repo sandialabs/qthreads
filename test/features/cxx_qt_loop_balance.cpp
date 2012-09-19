@@ -23,7 +23,7 @@ struct test_struct {
 
 void test_func()
 {
-    int *answer = new int[100];
+    int *answer = (int *)malloc(sizeof(int) * 100);
 
     for (int i = 0; i < 100; ++i) answer[i] = 0;
 
@@ -39,7 +39,7 @@ void test_func()
     }
     iprintf("\n");
 
-    delete[] answer;
+    free(answer);
 }
 
 int main(int    argc,
