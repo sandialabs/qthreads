@@ -10,6 +10,15 @@ AC_DEFUN([_QTHREAD_CHECK_IFDEF],
 #endif]])],
     [$2],[$3])])
 
+AC_DEFUN([_QTHREAD_CHECK_IFDEF_EQ],
+ [AC_PREPROC_IFELSE(
+    [AC_LANG_PROGRAM([[]],[[#ifndef $1
+#error $1 not defined
+#elif (($1) != ($2))
+#error $1 does not equal $2
+#endif]])],
+    [$3],[$4])])
+
 # QTHREAD_DETECT_COMPILER_TYPE
 # These #defs are based on the list at http://predef.sourceforge.net/precomp.html
 # ------------------------------------------------------------------
@@ -32,7 +41,15 @@ AC_CACHE_CHECK([what kind of C compiler $CC is],
 
    dnl GCC is one of the most common
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__GNUC__],[qthread_cv_c_compiler_type=GNU])])
+     [_QTHREAD_CHECK_IFDEF([__GNUC__],[
+	    qthread_cv_c_compiler_type=GNU
+		AS_IF([test "x$qthread_cv_c_compiler_type" = "xGNU"],
+			  [_QTHREAD_CHECK_IFDEF_EQ([__GNUC__],[2],[qthread_cv_c_compiler_type=GNU2])])
+		AS_IF([test "x$qthread_cv_c_compiler_type" = "xGNU"],
+			  [_QTHREAD_CHECK_IFDEF_EQ([__GNUC__],[3],[qthread_cv_c_compiler_type=GNU3])])
+		AS_IF([test "x$qthread_cv_c_compiler_type" = "xGNU"],
+			  [_QTHREAD_CHECK_IFDEF_EQ([__GNUC__],[4],[qthread_cv_c_compiler_type=GNU4])])
+	 ])])
 
    dnl A few common compilers (to detect quickly)
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
@@ -176,7 +193,15 @@ AC_CACHE_CHECK([what kind of C++ compiler $CXX is],
 
    dnl GCC is one of the most common
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__GNUC__],[qthread_cv_cxx_compiler_type=GNU])])
+     [_QTHREAD_CHECK_IFDEF([__GNUC__],[
+	    qthread_cv_cxx_compiler_type=GNU
+		AS_IF([test "x$qthread_cv_cxx_compiler_type" = "xGNU"],
+			  [_QTHREAD_CHECK_IFDEF_EQ([__GNUC__],[2],[qthread_cv_cxx_compiler_type=GNU2])])
+		AS_IF([test "x$qthread_cv_cxx_compiler_type" = "xGNU"],
+			  [_QTHREAD_CHECK_IFDEF_EQ([__GNUC__],[3],[qthread_cv_cxx_compiler_type=GNU3])])
+		AS_IF([test "x$qthread_cv_cxx_compiler_type" = "xGNU"],
+			  [_QTHREAD_CHECK_IFDEF_EQ([__GNUC__],[4],[qthread_cv_cxx_compiler_type=GNU4])])
+		])])
 
    dnl A few common compilers (to detect quickly)
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],

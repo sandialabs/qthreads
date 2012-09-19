@@ -447,7 +447,7 @@ AS_IF([test "x$enable_picky" = xyes],
          Clang)
            CFLAGS="-Wall -Wno-strict-aliasing -Wmissing-prototypes -Wstrict-prototypes $CFLAGS"
            ;;
-         GNU|LLVM)
+         GNU*|LLVM)
            CFLAGS="-Wall -Wno-strict-aliasing -Wmissing-prototypes -Wstrict-prototypes $CFLAGS"
            ;;
          Intel)
@@ -470,7 +470,7 @@ AS_IF([test "x$enable_picky" = xyes],
            ;;
        esac
        case "$qthread_cv_cxx_compiler_type" in
-         Clang|GNU|LLVM)
+         Clang|GNU*|LLVM)
            CXXFLAGS="-Wall $CXXFLAGS"
            ;;
          Intel)
