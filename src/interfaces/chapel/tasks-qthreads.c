@@ -18,7 +18,7 @@
 // XXX: Workaround for problems with "" escaping
 #undef CHPL_TASKS_MODEL_H
 #undef CHPL_THREADS_MODEL_H
-#define CHPL_TASKS_MODEL_H "tasks-qthreads.h"
+#define CHPL_TASKS_MODEL_H   "tasks-qthreads.h"
 #define CHPL_THREADS_MODEL_H "threads-none.h"
 
 #include "chplrt.h"
@@ -37,7 +37,7 @@
 #include "qthread/qthread.h"
 #include "qthread/qtimer.h"
 #include "qthread_innards.h" // not strictly necessary (yet)
-#include "qt_atomics.h" /* for SPINLOCK_BODY() */
+#include "qt_atomics.h"      /* for SPINLOCK_BODY() */
 #include "qt_envariables.h"
 
 #include <pthread.h>
@@ -50,7 +50,6 @@ typedef struct {
 
 // Default serial state is used outside of the tasking layer.
 static chpl_bool default_serial_state = true;
-
 static syncvar_t exit_ret             = SYNCVAR_STATIC_EMPTY_INITIALIZER;
 
 void chpl_task_yield(void)
@@ -115,12 +114,11 @@ chpl_bool chpl_sync_isFull(void            *val_ptr,
                            chpl_sync_aux_t *s,
                            chpl_bool        simple_sync_var)
 {
-  if(simple_sync_var)
-  {
-    return qthread_syncvar_status(&(s->signal_full));
-  } else {
-    return s->is_full;
-  }
+    if(simple_sync_var) {
+        return qthread_syncvar_status(&(s->signal_full));
+    } else {
+        return s->is_full;
+    }
 }
 
 void chpl_sync_initAux(chpl_sync_aux_t *s)
@@ -234,7 +232,7 @@ void chpl_task_callMain(void (*chpl_main)(void))
 
     chpl_task_setSerial(serial_state);
 
-    const chapel_wrapper_args_t wrapper_args = { chpl_main, NULL, serial_state};
+    const chapel_wrapper_args_t wrapper_args = { chpl_main, NULL, serial_state };
 
     qthread_fork_syncvar(chapel_wrapper, &wrapper_args, &exit_ret);
     qthread_syncvar_readFF(NULL, &exit_ret);
@@ -272,8 +270,8 @@ void chpl_task_begin(chpl_fn_p        fp,
                      chpl_task_list_p task_list_entry)
 {
     if (!ignore_serial && serial_state) {
-        syncvar_t   ret             = SYNCVAR_STATIC_EMPTY_INITIALIZER;
-        const chapel_wrapper_args_t wrapper_args = { fp, arg, serial_state};
+        syncvar_t                   ret          = SYNCVAR_STATIC_EMPTY_INITIALIZER;
+        const chapel_wrapper_args_t wrapper_args = { fp, arg, serial_state };
         qthread_fork_syncvar_copyargs_to(chapel_wrapper, &wrapper_args,
                                          sizeof(chapel_wrapper_args_t), &ret,
                                          qthread_shep());
@@ -282,8 +280,8 @@ void chpl_task_begin(chpl_fn_p        fp,
         // Will call the real begin statement function. Only purpose of this
         // thread is to wait on that function and coordinate the exiting
         // of the main Chapel thread.
-        const chapel_wrapper_args_t wrapper_args = { fp, arg, serial_state};
-        qthread_fork_syncvar_copyargs(chapel_wrapper, &wrapper_args, 
+        const chapel_wrapper_args_t wrapper_args = { fp, arg, serial_state };
+        qthread_fork_syncvar_copyargs(chapel_wrapper, &wrapper_args,
                                       sizeof(chapel_wrapper_args_t), NULL);
     }
 }

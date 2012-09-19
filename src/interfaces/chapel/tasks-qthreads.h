@@ -1,10 +1,9 @@
 /**************************************************************************
- Copyright 2011 Sandia Corporation. Under the terms of Contract
- DE-AC04-94AL85000, there is a non-exclusive license for use of this work by
- or on behalf of the U.S. Government. Export of this program may require a
- license from the United States Government
+*  Copyright 2011 Sandia Corporation. Under the terms of Contract
+*  DE-AC04-94AL85000, there is a non-exclusive license for use of this work by
+*  or on behalf of the U.S. Government. Export of this program may require a
+*  license from the United States Government
 **************************************************************************/
-
 
 #ifndef _tasks_qthreads_h_
 #define _tasks_qthreads_h_
@@ -13,7 +12,6 @@
 
 #include <qthread.h>
 #include <stdio.h>
-
 
 #define CHPL_COMM_YIELD_TASK_WHILE_POLLING
 void chpl_task_yield(void);
@@ -67,7 +65,6 @@ void chpl_task_yield(void);
 // implementation, see "pthreads" threading.
 //
 
-
 //
 // Type (and default value) used to communicate task identifiers
 // between C code and Chapel code in the runtime.
@@ -75,12 +72,10 @@ void chpl_task_yield(void);
 typedef unsigned int chpl_taskID_t;
 #define chpl_nullTaskID QTHREAD_NULL_TASK_ID
 
-
 //
 // Mutexes
 //
 typedef syncvar_t chpl_mutex_t;
-
 
 //
 // Sync variables
@@ -93,53 +88,56 @@ typedef syncvar_t chpl_mutex_t;
 typedef struct {
     aligned_t lockers_in;
     aligned_t lockers_out;
-    int is_full;
+    int       is_full;
     syncvar_t signal_full;
     syncvar_t signal_empty;
 } chpl_sync_aux_t;
 
-#define chpl_sync_reset(x) qthread_syncvar_empty(&(x)->sync_aux.signal_full)
+static inline void chpl_sync_reset(x)
+{
+    qthread_syncvar_empty(&(x)->sync_aux.signal_full);
+}
 
-#define chpl_read_FE(x) ({  \
-  uint64_t y;               \
-  qthread_syncvar_readFE(&y,&(x)->sync_aux.signal_full);  \
-  y; })
+#define chpl_read_FE(x) ({                                                           \
+                             uint64_t y;                                             \
+                             qthread_syncvar_readFE(&y, &(x)->sync_aux.signal_full); \
+                             y; })
 
-#define chpl_read_FF(x) ({  \
-  uint64_t y;               \
-  qthread_syncvar_readFF(&y,&(x)->sync_aux.signal_full);  \
-  y; })
+#define chpl_read_FF(x) ({                                                           \
+                             uint64_t y;                                             \
+                             qthread_syncvar_readFF(&y, &(x)->sync_aux.signal_full); \
+                             y; })
 
 #define chpl_read_XX(x) ((x)->sync_aux.signal_full.u.s.data)
 
-#define chpl_write_EF(x,y) do { \
-  uint64_t z = (uint64_t)(y); \
-  qthread_syncvar_writeEF(&(x)->sync_aux.signal_full,&z); \
-  } while(0)
+#define chpl_write_EF(x, y) do {                                 \
+        uint64_t z = (uint64_t)(y);                              \
+        qthread_syncvar_writeEF(&(x)->sync_aux.signal_full, &z); \
+} while(0)
 
-#define chpl_write_FF(x,y) do { \
-  uint64_t z,dummy;  \
-  z = (uint64_t)(y); \
-  qthread_syncvar_readFE(&dummy,&(x)->sync_aux.signal_full); \
-  qthread_syncvar_writeF(&(x)->sync_aux.signal_full,&z); \
-  } while(0)
+#define chpl_write_FF(x, y) do {                                    \
+        uint64_t z, dummy;                                          \
+        z = (uint64_t)(y);                                          \
+        qthread_syncvar_readFE(&dummy, &(x)->sync_aux.signal_full); \
+        qthread_syncvar_writeF(&(x)->sync_aux.signal_full, &z);     \
+} while(0)
 
-#define chpl_write_XF(x,y) do {\
-  uint64_t z = (uint64_t)(y); \
-  qthread_syncvar_writeF(&(x)->sync_aux.signal_full,&z);  \
-  } while(0)
+#define chpl_write_XF(x, y) do {                                \
+        uint64_t z = (uint64_t)(y);                             \
+        qthread_syncvar_writeF(&(x)->sync_aux.signal_full, &z); \
+} while(0)
 
 #define chpl_single_reset(x) qthread_syncvar_empty(&(x)->single_aux.signal_full)
 
-#define chpl_single_read_FF(x) ({  \
-  uint64_t y;               \
-  qthread_syncvar_readFF(&y,&(x)->single_aux.signal_full);  \
-  y; })
+#define chpl_single_read_FF(x) ({                                                             \
+                                    uint64_t y;                                               \
+                                    qthread_syncvar_readFF(&y, &(x)->single_aux.signal_full); \
+                                    y; })
 
-#define chpl_single_write_EF(x,y) do { \
-  uint64_t z = (uint64_t)(y); \
-  qthread_syncvar_writeEF(&(x)->single_aux.signal_full,&z); \
-  } while(0)
+#define chpl_single_write_EF(x, y) do {                            \
+        uint64_t z = (uint64_t)(y);                                \
+        qthread_syncvar_writeEF(&(x)->single_aux.signal_full, &z); \
+} while(0)
 
 #define chpl_single_read_XX(x) ((x)->single_aux.signal_full.u.s.data)
 
@@ -157,7 +155,6 @@ typedef struct {
 //
 chpl_bool chpl_pool_is_empty(void);
 
-
 //
 // The remaining declarations are all for callback functions to be
 // provided by the threading layer.
@@ -170,15 +167,13 @@ chpl_bool chpl_pool_is_empty(void);
 void threadlayer_init(void);
 void threadlayer_exit(void);
 
-
 //
 // Mutexes
 //
 /*void qthread_mutex_init(qthread_mutex_p);
-qthread_mutex_p qthread_mutex_new(void);
-void qthread_mutex_lock(qthread_mutex_p);
-void qthread_mutex_unlock(qthread_mutex_p);*/
-
+ * qthread_mutex_p qthread_mutex_new(void);
+ * void qthread_mutex_lock(qthread_mutex_p);
+ * void qthread_mutex_unlock(qthread_mutex_p);*/
 
 //
 // Sync variables
@@ -212,11 +207,10 @@ void qthread_mutex_unlock(qthread_mutex_p);*/
 // chpl_sync_aux_t for the specific threading layer.
 //
 /*chpl_bool threadlayer_sync_suspend(chpl_sync_aux_t *s,
-                                   struct timeval *deadline);
-void threadlayer_sync_awaken(chpl_sync_aux_t *s);
-void threadlayer_sync_init(chpl_sync_aux_t *s);
-void threadlayer_sync_destroy(chpl_sync_aux_t *s);*/
-
+ *                                 struct timeval *deadline);
+ * void threadlayer_sync_awaken(chpl_sync_aux_t *s);
+ * void threadlayer_sync_init(chpl_sync_aux_t *s);
+ * void threadlayer_sync_destroy(chpl_sync_aux_t *s);*/
 
 //
 // Task management
@@ -227,7 +221,6 @@ void threadlayer_sync_destroy(chpl_sync_aux_t *s);*/
 // to allow for specifying such things as stack sizes and/or locations.
 //
 /*int threadlayer_thread_create(threadlayer_threadID_t*, void*(*)(void*), void*);*/
-
 
 //
 // Threadlayer_pool_suspend() is called when a thread finds nothing in
@@ -259,8 +252,7 @@ void threadlayer_sync_destroy(chpl_sync_aux_t *s);*/
 // nonempty.
 //
 /*chpl_bool threadlayer_pool_suspend(chpl_mutex_t*, struct timeval*);
-void threadlayer_pool_awaken(void);*/
-
+ * void threadlayer_pool_awaken(void);*/
 
 //
 // Thread private data
@@ -271,6 +263,7 @@ void threadlayer_pool_awaken(void);*/
 // to each thread, it must make other arrangements to do so.
 //
 /*void  threadlayer_set_thread_private_data(void*);
-void* threadlayer_get_thread_private_data(void);*/
+ * void* threadlayer_get_thread_private_data(void);*/
 
-#endif
+#endif // ifndef _tasks_qthreads_h_
+/* vim:set expandtab: */
