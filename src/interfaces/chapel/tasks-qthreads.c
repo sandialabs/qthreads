@@ -27,6 +27,8 @@
 #include "chpl-tasks.h"
 #include "config.h"   // for chpl_config_get_value()
 #include "error.h"    // for chpl_warning()
+#include "arg.h"      // for blockreport and taskreport
+#include "chplexit.h" // for chpl_exit_any()
 #include <stdio.h>
 #include <stdlib.h> // for setenv()
 #include <assert.h>
@@ -37,15 +39,35 @@
 #include "qthread/qthread.h"
 #include "qthread/qtimer.h"
 #include "qthread_innards.h" // not strictly necessary (yet)
+#include "qt_internal_feb.h" // for blockreporting
 #include "qt_atomics.h"      /* for SPINLOCK_BODY() */
 #include "qt_envariables.h"
 
 #include <pthread.h>
 
+// aka chpl_task_list_p
+struct chpl_task_list {
+    chpl_fn_p        fun;
+    void            *arg;
+    chpl_string      filename;
+    int              lineno;
+    chpl_task_list_p next;
+};
+
+typedef struct task_info_s {
+    chpl_string lock_filename;
+    size_t      lock_lineno;
+    const char *task_filename;
+    size_t      task_lineno;
+    chpl_bool   serial_state;
+} task_info_t;
+
 typedef struct {
-    void     *fn;
-    void     *args;
-    chpl_bool serial_state;
+    void       *fn;
+    void       *args;
+    chpl_string task_filename;
+    int         lineno;
+    chpl_bool   serial_state;
 } chapel_wrapper_args_t;
 
 // Default serial state is used outside of the tasking layer.
@@ -54,7 +76,6 @@ static syncvar_t exit_ret             = SYNCVAR_STATIC_EMPTY_INITIALIZER;
 
 void chpl_task_yield(void)
 {
-    /* fprintf(stdout, "In qthread's yield" );*/
     qthread_yield();
 }
 
@@ -72,10 +93,21 @@ void chpl_sync_unlock(chpl_sync_aux_t *s)
     qthread_incr(&s->lockers_out, 1);
 }
 
+static inline void about_to_block(int32_t     lineno,
+                                  chpl_string filename)
+{
+    task_info_t *data = (task_info_t *)qthread_get_tasklocal(sizeof(task_info_t));
+
+    assert(data);
+    data->lock_lineno   = lineno;
+    data->lock_filename = filename;
+}
+
 void chpl_sync_waitFullAndLock(chpl_sync_aux_t *s,
                                int32_t          lineno,
                                chpl_string      filename)
 {
+    if (blockreport) { about_to_block(lineno, filename); }
     chpl_sync_lock(s);
     while (s->is_full == 0) {
         chpl_sync_unlock(s);
@@ -88,6 +120,7 @@ void chpl_sync_waitEmptyAndLock(chpl_sync_aux_t *s,
                                 int32_t          lineno,
                                 chpl_string      filename)
 {
+    if (blockreport) { about_to_block(lineno, filename); }
     chpl_sync_lock(s);
     while (s->is_full != 0) {
         chpl_sync_unlock(s);
@@ -132,6 +165,46 @@ void chpl_sync_initAux(chpl_sync_aux_t *s)
 
 void chpl_sync_destroyAux(chpl_sync_aux_t *s)
 { }
+
+static void chapel_display_thread(void        *addr,
+                                  qthread_f    f,
+                                  void        *arg,
+                                  void        *retloc,
+                                  unsigned int thread_id,
+                                  void        *tls)
+{
+    task_info_t *rep = (task_info_t *)tls;
+
+    if (rep) {
+        if ((rep->lock_lineno > 0) && rep->lock_filename) {
+            fprintf(stderr, "Waiting at: %s:%d\n", rep->lock_filename, rep->lock_lineno);
+        } else if (rep->lock_lineno == 0) {
+            fprintf(stderr, "Waiting for more work (line 0? how did this happen?)\n");
+        }
+        fflush(stderr);
+    }
+}
+
+static void report_locked_threads(void)
+{
+    qthread_print_FEB_callback(chapel_display_thread);
+}
+
+static void SIGINT_handler(int sig)
+{
+    signal(sig, SIG_IGN);
+
+    if (blockreport) {
+        report_locked_threads();
+    }
+
+    if (taskreport) {
+        fprintf(stderr, "Taskreport is currently unsupported by the qthreads tasking layer.\n");
+        // report_all_tasks();
+    }
+
+    chpl_exit_any(1);
+}
 
 // Tasks
 
@@ -199,6 +272,12 @@ void chpl_task_init(int32_t  numThreadsPerLocale,
 
     pthread_create(&initer, NULL, initializer, NULL);
     while (done_initializing == 0) SPINLOCK_BODY();
+
+    if (blockreport || taskreport) {
+        if (signal(SIGINT, SIGINT_handler) == SIG_ERR) {
+            perror("Could not register SIGINT handler");
+        }
+    }
 }
 
 void chpl_task_exit(void)
@@ -218,8 +297,17 @@ void chpl_task_exit(void)
 static aligned_t chapel_wrapper(void *arg)
 {
     chapel_wrapper_args_t *rarg = arg;
+    task_info_t           *data = (task_info_t *)qthread_get_tasklocal(sizeof(task_info_t));
 
-    chpl_task_setSerial(rarg->serial_state);
+    if (NULL != data) {
+        data->serial_state = rarg->serial_state;
+        data->task_filename = rarg->task_filename;
+        data->task_lineno = rarg->lineno;
+        data->lock_filename = NULL;
+        data->lock_lineno = 0;
+    } else {
+        default_serial_state = rarg->serial_state;
+    }
 
     (*(chpl_fn_p)(rarg->fn))(rarg->args);
 
@@ -232,7 +320,7 @@ void chpl_task_callMain(void (*chpl_main)(void))
 
     chpl_task_setSerial(serial_state);
 
-    const chapel_wrapper_args_t wrapper_args = { chpl_main, NULL, serial_state };
+    const chapel_wrapper_args_t wrapper_args = { chpl_main, NULL, NULL, 0, serial_state };
 
     qthread_fork_syncvar(chapel_wrapper, &wrapper_args, &exit_ret);
     qthread_syncvar_readFF(NULL, &exit_ret);
@@ -254,7 +342,9 @@ void chpl_task_addToTaskList(chpl_fn_int_t     fid,
                              int               lineno,
                              chpl_string       filename)
 {
-    chpl_task_begin(chpl_ftable[fid], arg, false, chpl_task_getSerial(), NULL);
+    struct chpl_task_list tasklist = { chpl_ftable[fid], arg, filename, lineno, NULL };
+
+    chpl_task_begin(chpl_ftable[fid], arg, false, chpl_task_getSerial(), &tasklist);
 }
 
 void chpl_task_processTaskList(chpl_task_list_p task_list) { }
@@ -267,11 +357,16 @@ void chpl_task_begin(chpl_fn_p        fp,
                      void            *arg,
                      chpl_bool        ignore_serial,
                      chpl_bool        serial_state,
-                     chpl_task_list_p task_list_entry)
+                     chpl_task_list_p ltask)
 {
+    chapel_wrapper_args_t wrapper_args = { fp, arg, NULL, 0, serial_state };
+
+    if (ltask) {
+        wrapper_args.task_filename = ltask->filename;
+        wrapper_args.lineno        = ltask->lineno;
+    }
     if (!ignore_serial && serial_state) {
-        syncvar_t                   ret          = SYNCVAR_STATIC_EMPTY_INITIALIZER;
-        const chapel_wrapper_args_t wrapper_args = { fp, arg, serial_state };
+        syncvar_t ret = SYNCVAR_STATIC_EMPTY_INITIALIZER;
         qthread_fork_syncvar_copyargs_to(chapel_wrapper, &wrapper_args,
                                          sizeof(chapel_wrapper_args_t), &ret,
                                          qthread_shep());
@@ -280,7 +375,6 @@ void chpl_task_begin(chpl_fn_p        fp,
         // Will call the real begin statement function. Only purpose of this
         // thread is to wait on that function and coordinate the exiting
         // of the main Chapel thread.
-        const chapel_wrapper_args_t wrapper_args = { fp, arg, serial_state };
         qthread_fork_syncvar_copyargs(chapel_wrapper, &wrapper_args,
                                       sizeof(chapel_wrapper_args_t), NULL);
     }
@@ -296,13 +390,13 @@ void chpl_task_sleep(int secs)
 {
     qtimer_t t = qtimer_create();
 
-    qtimer_start(t); // record begin-timestamp
+    qtimer_start(t);     // record begin-timestamp
     qthread_yield();
-    qtimer_stop(t); // record wake-timestamp
+    qtimer_stop(t);     // record wake-timestamp
 
-    while (qtimer_secs(t) < secs) { // check difference
+    while (qtimer_secs(t) < secs) {     // check difference
         qthread_yield();
-        qtimer_stop(t); // record new wake-timestamp
+        qtimer_stop(t);     // record new wake-timestamp
     }
     qtimer_destroy(t);
 }
@@ -318,10 +412,10 @@ chpl_bool chpl_task_getSerial(void)
 
 void chpl_task_setSerial(chpl_bool state)
 {
-    chpl_bool *data = (chpl_bool *)qthread_get_tasklocal(sizeof(chpl_bool));
+    task_info_t *data = (task_info_t *)qthread_get_tasklocal(sizeof(task_info_t));
 
     if (NULL != data) {
-        *data = state;
+        data->serial_state = state;
     } else {
         default_serial_state = state;
     }

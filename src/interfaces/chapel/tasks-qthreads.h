@@ -93,10 +93,7 @@ typedef struct {
     syncvar_t signal_empty;
 } chpl_sync_aux_t;
 
-static inline void chpl_sync_reset(x)
-{
-    qthread_syncvar_empty(&(x)->sync_aux.signal_full);
-}
+#define chpl_sync_reset(x) qthread_syncvar_empty(&(x)->sync_aux.signal_full)
 
 #define chpl_read_FE(x) ({                                                           \
                              uint64_t y;                                             \
