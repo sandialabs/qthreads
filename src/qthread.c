@@ -7,8 +7,8 @@
 
 /* System Headers */
 #include <stdio.h>
-#include <stdlib.h>            /* for malloc() and abort() */
-#include <stdarg.h>            /* for va_list, va_start() and va_end() */
+#include <stdlib.h>              /* for malloc() and abort() */
+#include <stdarg.h>              /* for va_list, va_start() and va_end() */
 #include <limits.h>              /* for INT_MAX */
 #include <qthread/qthread-int.h> /* for UINT8_MAX */
 #include <string.h>              /* for memset() */
@@ -1409,6 +1409,77 @@ void INTERNAL qthread_internal_cleanup_early(void (*function)(void))
     qt_cleanup_early_funcs = ng;
 } /*}}}*/
 
+static void qt_hash_call_cb(const qt_key_t      addr,
+                            qthread_addrstat_t *m,
+                            void               *arg)
+{
+    QTHREAD_FASTLOCK_LOCK(&m->lock);
+    for (qthread_addrres_t *curs = m->EFQ; curs != NULL; curs = curs->next) {
+        qthread_t *waiter = curs->waiter;
+        void      *tls;
+        if (waiter->rdata->tasklocal_size <= qlib->qthread_tasklocal_size) {
+            if (waiter->flags & QTHREAD_BIG_STRUCT) {
+                tls = &waiter->data[qlib->qthread_argcopy_size];
+            } else {
+                tls = waiter->data;
+            }
+        } else {
+            if (waiter->flags & QTHREAD_BIG_STRUCT) {
+                tls = *(void **)&waiter->data[qlib->qthread_argcopy_size];
+            } else {
+                tls = *(void **)&waiter->data[0];
+            }
+        }
+        ((qt_feb_callback_f)arg)((void *)addr, waiter->f, waiter->arg, waiter->ret, waiter->thread_id, tls);
+        curs = curs->next;
+    }
+    for (qthread_addrres_t *curs = m->FEQ; curs != NULL; curs = curs->next) {
+        qthread_t *waiter = curs->waiter;
+        void      *tls;
+        if (waiter->rdata->tasklocal_size <= qlib->qthread_tasklocal_size) {
+            if (waiter->flags & QTHREAD_BIG_STRUCT) {
+                tls = &waiter->data[qlib->qthread_argcopy_size];
+            } else {
+                tls = waiter->data;
+            }
+        } else {
+            if (waiter->flags & QTHREAD_BIG_STRUCT) {
+                tls = *(void **)&waiter->data[qlib->qthread_argcopy_size];
+            } else {
+                tls = *(void **)&waiter->data[0];
+            }
+        }
+        ((qt_feb_callback_f)arg)((void *)addr, waiter->f, waiter->arg, waiter->ret, waiter->thread_id, tls);
+    }
+    for (qthread_addrres_t *curs = m->FFQ; curs != NULL; curs = curs->next) {
+        qthread_t *waiter = curs->waiter;
+        void      *tls;
+        if (waiter->rdata->tasklocal_size <= qlib->qthread_tasklocal_size) {
+            if (waiter->flags & QTHREAD_BIG_STRUCT) {
+                tls = &waiter->data[qlib->qthread_argcopy_size];
+            } else {
+                tls = waiter->data;
+            }
+        } else {
+            if (waiter->flags & QTHREAD_BIG_STRUCT) {
+                tls = *(void **)&waiter->data[qlib->qthread_argcopy_size];
+            } else {
+                tls = *(void **)&waiter->data[0];
+            }
+        }
+        ((qt_feb_callback_f)arg)((void *)addr, waiter->f, waiter->arg, waiter->ret, waiter->thread_id, tls);
+    }
+    QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+}
+
+void INTERNAL qthread_print_FEB_callback(qt_feb_callback_f cb)
+{
+    for (unsigned int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
+        qt_hash_callback(qlib->FEBs[i],
+                         (qt_hash_callback_fn)qt_hash_call_cb, cb);
+    }
+}
+
 #ifdef QTHREAD_DEBUG
 static void qt_hash_print_addrstat(const qt_key_t      addr,
                                    qthread_addrstat_t *m,
@@ -1658,7 +1729,7 @@ void API_FUNC qthread_finalize(void)
 #endif  /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     }
     /**********************************************************************/
-    qthread_debug(SHEPHERD_BEHAVIOR|CORE_BEHAVIOR, "******* Now running with only ONE thread! *******\n");
+    qthread_debug(SHEPHERD_BEHAVIOR | CORE_BEHAVIOR, "******* Now running with only ONE thread! *******\n");
     /**********************************************************************/
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     for (i = 0; i < qlib->nshepherds; i++) {
