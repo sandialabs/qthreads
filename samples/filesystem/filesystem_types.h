@@ -41,10 +41,6 @@ private:
     int m_arr[3];
 };
 
-
-
-
-
 template <>
 class cnc_tag_hash_compare< triple >
 {
@@ -57,5 +53,78 @@ public:
 	return a[0] == b[0] && a[1] == b[1] && a[2] == b[2]; 
     }
 };
+
+
+/* start: extra types for strict version */
+class triple_epilog
+{
+public:
+    triple_epilog() { m_arr[0] = m_arr[1] = m_arr[2] = 0; }
+    triple_epilog( int a, int b, int c, inode* f, inode* s ) { m_arr[0] = a; m_arr[1] = b; m_arr[2] = c; first = f; second = s; }
+    inline int operator[]( int i )  const { return m_arr[i]; }
+    
+    friend std::ostream& operator<< (std::ostream& stream, triple_epilog& tr);
+	inode* first;
+	inode* second;
+private:
+    int m_arr[3];
+};
+
+
+
+
+
+template <>
+class cnc_tag_hash_compare< triple_epilog >
+{
+public:
+    size_t hash( const triple_epilog & t ) const
+    {
+        return t[0] + ( t[1] << 6 ) + ( t[2] << 11 );
+    }
+    bool equal( const triple_epilog & a, const triple_epilog & b) const { 
+	return a[0] == b[0] && a[1] == b[1] && a[2] == b[2]; 
+    }
+};
+
+class triple_epilog2
+{
+public:
+    triple_epilog2() { m_arr[0] = m_arr[1] = m_arr[2] = 0; s1i = NULL; s2i = NULL; }
+    triple_epilog2( int a, int b, int c, inode* f, inode* s, block* b1, block* b2 ) 
+	{ 
+		m_arr[0] = a; m_arr[1] = b; m_arr[2] = c; 
+		first = f; second = s; 
+		s1i = b1;
+		s2i = b2;
+	}
+    inline int operator[]( int i )  const { return m_arr[i]; }
+    
+    friend std::ostream& operator<< (std::ostream& stream, triple_epilog2& tr);
+	inode* first;
+	inode* second;
+	block* s1i;
+	block* s2i;
+private:
+    int m_arr[3];
+};
+
+
+
+
+
+template <>
+class cnc_tag_hash_compare< triple_epilog2 >
+{
+public:
+    size_t hash( const triple_epilog2 & t ) const
+    {
+        return t[0] + ( t[1] << 6 ) + ( t[2] << 11 );
+    }
+    bool equal( const triple_epilog2 & a, const triple_epilog2 & b) const { 
+	return a[0] == b[0] && a[1] == b[1] && a[2] == b[2]; 
+    }
+};
+/* end extra types for strict versions */
 
 #endif //_H_filesystem_TYPES_INCLUDED_H_

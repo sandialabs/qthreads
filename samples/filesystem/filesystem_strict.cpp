@@ -17,10 +17,208 @@ int Concatenate::execute( const triple &t, filesystem_context & c) const
 	inode* s1;
 	inode* s2;
 	c.inodes.get(sourceInodeId1, s1);
-	//printf("Concatenate job read: %d\n", sourceInodeId1);
-	
 	c.inodes.get(sourceInodeId2, s2);
+	c.jobIds_epilog.put(*new triple_epilog(t[0], t[1], t[2], s1, s2));
+	return CnC::CNC_Success;
+}
+
+aligned_t** Concatenate::get_dependences(const triple & t, filesystem_context & c, int & no ) const
+{
+	no = 2;
+	aligned_t** read = (aligned_t**) malloc(no * sizeof(aligned_t*));
+	c.inodes.wait_on(t[0], &read[0]);
+	c.inodes.wait_on(t[1], &read[1]);
+	return read;
+}
+
+
+/* start: strict preconditions steps */
+int Concatenate_epilog::execute( const triple_epilog &t, filesystem_context & c) const
+{
+	
+	int sourceInodeId1 = t[0];
+	int sourceInodeId2 = t[1];
+	int destinationInodeId = t[2];
+	//printf("Concatenate job %d-%d-%d starting...\n", sourceInodeId1, sourceInodeId2, destinationInodeId);
+	inode* s1;
+	inode* s2;
+	
+	s1 = t.first;
+	s2 = t.second;
 	//printf("Concatenate job read: %d\n", sourceInodeId2);
+	inode* d = new inode(s1->length+s2->length);
+	//printf("new block\n");
+	block* dindirect = new block();
+	if (s1->length+s2->length>9)
+		d->indirect_block =  -2-destinationInodeId; // negative id means it is a indirect block
+	else
+		free(dindirect);
+		
+	int* data = (int*) dindirect->data;
+
+	int newNodeId = 1;
+	block* b = c.temp;
+	int startover = 1;
+	int used_blocks = 0; // current position in inode data_blocks structure
+	for(int i=0; i<d->length; i++) {
+		if (i<DATA_BLOCKS_NO) {
+			if (s1->data_blocks[i] != EMPTY) {
+				c.blocks.get(s1->data_blocks[i], b);
+				
+			}
+		}
+		else {
+		}
+		newNodeId++;
+	}
+	
+	
+	
+	// concatenate block numbers from the inode of s1
+	
+	for(int i=0; i<DATA_BLOCKS_NO; i++)
+		if (s1->data_blocks[i] != EMPTY) {
+			c.blocks.get(s1->data_blocks[i], b);
+			
+		}
+	// concatenate the block numbers in the indirect block of s1
+	int crtPos = 0; // current position in indirect block of the destination
+	block* s1indirect;	
+	if (s1->indirect_block != EMPTY) {
+		
+		c.blocks.get(s1->indirect_block, s1indirect);
+		
+	}
+
+	
+	//printf("Used blocks %d\n", used_blocks);
+	// concatenate the block numbers in the inode structure of s2
+	for(int i=0; i<DATA_BLOCKS_NO; i++)
+		if (s2->data_blocks[i] != EMPTY) {
+			if (used_blocks>=DATA_BLOCKS_NO)
+			{
+				c.blocks.get(s2->data_blocks[i], b);
+			}
+			else
+			{
+				c.blocks.get(s2->data_blocks[i], b);
+			}
+		}
+
+	//printf("Used blocks after second concat %d\n", used_blocks);
+	// concatenate the block numbers in the indirect block of s2
+	block* s2indirect;
+	s2indirect = NULL;	
+	if (s2->indirect_block != EMPTY) {
+		
+		c.blocks.get(s2->indirect_block, s2indirect);
+	}
+
+	c.jobIds_epilog2.put(*new triple_epilog2(t[0], t[1], t[2], t.first, t.second, s1indirect, s2indirect));
+	return CnC::CNC_Success;
+}
+
+aligned_t** Concatenate_epilog::get_dependences(const triple_epilog & t, filesystem_context & c, int & no ) const
+{
+	
+	
+
+
+	int sourceInodeId1 = t[0];
+	int sourceInodeId2 = t[1];
+	int destinationInodeId = t[2];
+	//printf("Concatenate job %d-%d-%d starting...\n", sourceInodeId1, sourceInodeId2, destinationInodeId);
+	inode* s1;
+	inode* s2;
+	
+	s1 = t.first;
+	s2 = t.second;
+	aligned_t** read = (aligned_t**) malloc((s1->length+s2->length+20) * sizeof(aligned_t*));
+	c.inodes.wait_on(t[0], &read[0]);
+	c.inodes.wait_on(t[1], &read[1]);
+
+	
+		
+	no = 2;
+	int newNodeId = 1;
+	block* b = c.temp;
+	int startover = 1;
+	int used_blocks = 2; // current position in inode data_blocks structure
+	for(int i=0; i<no; i++) {
+		if (i<DATA_BLOCKS_NO) {
+			if (s1->data_blocks[i] != EMPTY) {
+				//c.blocks.get(s1->data_blocks[i], b);
+				c.blocks.wait_on(s1->data_blocks[i], &read[i]);	
+				no++;			
+				used_blocks++;
+			}
+		}
+		
+		
+		newNodeId++;
+	}
+	
+	
+	// concatenate block numbers from the inode of s1
+	
+	for(int i=0; i<DATA_BLOCKS_NO; i++)
+		if (s1->data_blocks[i] != EMPTY) {
+			//c.blocks.get(s1->data_blocks[i], b);
+			c.blocks.wait_on(s1->data_blocks[i], &read[used_blocks]);	
+			no++;			
+			used_blocks++;
+		}
+	// concatenate the block numbers in the indirect block of s1
+	int crtPos = 0; // current position in indirect block of the destination
+	if (s1->indirect_block != EMPTY) {
+		block* s1indirect;
+		//c.blocks.get(s1->indirect_block, s1indirect);
+		c.blocks.wait_on(s1->indirect_block, &read[used_blocks++]);				
+		no++;
+	}
+
+	
+	//printf("Used blocks %d\n", used_blocks);
+	// concatenate the block numbers in the inode structure of s2
+	for(int i=0; i<DATA_BLOCKS_NO; i++)
+		if (s2->data_blocks[i] != EMPTY) {
+			if (used_blocks>=DATA_BLOCKS_NO)
+			{
+				//printf("bbb0\n");
+				//c.blocks.get(s2->data_blocks[i], b);
+				c.blocks.wait_on(s2->data_blocks[i], &read[used_blocks++]);	
+				no++;	
+			}
+			else
+			{
+				//c.blocks.get(s2->data_blocks[i], b);
+				c.blocks.wait_on(s2->data_blocks[i], &read[used_blocks++]);		
+				no++;
+			}
+		}
+
+	//printf("Used blocks after second concat %d\n", used_blocks);
+	// concatenate the block numbers in the indirect block of s2
+	if (s2->indirect_block != EMPTY) {
+		//c.blocks.get(s2->indirect_block, s2indirect);
+		c.blocks.wait_on(s2->indirect_block, &read[used_blocks++]);		
+		no++;
+	}
+	return read;
+}
+
+
+int Concatenate_epilog2::execute( const triple_epilog2 &t, filesystem_context & c) const
+{
+	
+	int sourceInodeId1 = t[0];
+	int sourceInodeId2 = t[1];
+	int destinationInodeId = t[2];
+	//printf("Concatenate job %d-%d-%d starting...\n", sourceInodeId1, sourceInodeId2, destinationInodeId);
+	inode* s1;
+	inode* s2;
+	s1 = t.first;
+	s2 = t.second;
 	inode* d = new inode(s1->length+s2->length);
 	//printf("new block\n");
 	block* dindirect = new block();
@@ -124,15 +322,14 @@ int Concatenate::execute( const triple &t, filesystem_context & c) const
 		c.blocks.get(s2->indirect_block, s2indirect);
 		int crtS2Pos = 0;
 		int* dataS2 = (int*) s2indirect->data;
-		while (crtS2Pos<c.BLOCK_SIZE/(int)sizeof(int) && (dataS2[crtS2Pos] != EMPTY) && crtPos<c.BLOCK_SIZE/(int)sizeof(int)) {
+		while (crtS2Pos<c.BLOCK_SIZE/(int)sizeof(int) && (dataS2[crtS2Pos] != EMPTY) && crtPos<c.BLOCK_SIZE/(int)sizeof(int))
 			data[crtPos++] = (1+destinationInodeId)*1000000+startover;
 			//printf("ccc0\n");
-			c.blocks.get(dataS2[crtS2Pos++], b);
+			c.blocks.get(dataS2[crtS2Pos], b);
 			//printf("ccc1\n");
 			//sleep here
 			usleep(usecs);
 			c.blocks.put((1+destinationInodeId)*1000000+startover++, b);
-		}
 	}
 
 	
@@ -147,42 +344,40 @@ int Concatenate::execute( const triple &t, filesystem_context & c) const
 	return CnC::CNC_Success;
 }
 
-aligned_t** Concatenate::get_dependences(const triple & t, filesystem_context & c, int & no ) const
-{
-	no = 2;
-	aligned_t** read = (aligned_t**) malloc(no * sizeof(aligned_t*));
-	c.inodes.wait_on(t[0], &read[0]);
-	c.inodes.wait_on(t[1], &read[1]);
-	return read;
-}
-
-
-/* start: strict preconditions steps */
-int Concatenate_epilog::execute( const triple_epilog &t, filesystem_context & c) const
-{
-	return CnC::CNC_Success;
-}
-
-aligned_t** Concatenate_epilog::get_dependences(const triple_epilog & t, filesystem_context & c, int & no ) const
-{
-	no = 0; 
-	return NULL;
-}
-
-
-int Concatenate_epilog2::execute( const triple_epilog2 &t, filesystem_context & c) const
-{
-	return CnC::CNC_Success;
-}
-
 
 aligned_t** Concatenate_epilog2::get_dependences(const triple_epilog2 & t, filesystem_context & c, int & no ) const
 {
-	no = 0;
-	return NULL;
+	no = 2000; /* TODO: FIX: safe(?) upperbound */
+	aligned_t** read = (aligned_t**) malloc(no * sizeof(aligned_t*));
+	int used_blocks = 0;
+
+
+	int sourceInodeId1 = t[0];
+	int sourceInodeId2 = t[1];
+	int destinationInodeId = t[2];
+	//printf("Concatenate job %d-%d-%d starting...\n", sourceInodeId1, sourceInodeId2, destinationInodeId);
+	
+	if (t.s1i != NULL) {
+		block* s2indirect = t.s1i;
+		int crtS2Pos = 0;
+		int* dataS2 = (int*) s2indirect->data;
+		while (crtS2Pos<c.BLOCK_SIZE/(int)sizeof(int) && (dataS2[crtS2Pos] != EMPTY))
+			//c.blocks.get(dataS2[crtS2Pos++], b);
+			c.blocks.wait_on(dataS2[crtS2Pos++], &read[used_blocks++]);		
+
+	}
+
+	if (t.s2i != NULL) {
+		block* s2indirect = t.s2i;
+		int crtS2Pos = 0;
+		int* dataS2 = (int*) s2indirect->data;
+		while (crtS2Pos<c.BLOCK_SIZE/(int)sizeof(int) && (dataS2[crtS2Pos] != EMPTY))
+			//c.blocks.get(dataS2[crtS2Pos++], b);
+			c.blocks.wait_on(dataS2[crtS2Pos++], &read[used_blocks++]);		
+	}
+	return read;
 }
 /* end: strict preconditions steps */
-
 
 int block::BLOCK_SIZE = 0;
 
