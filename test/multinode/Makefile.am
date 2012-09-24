@@ -30,7 +30,7 @@ multinode = \
 TESTS = $(multinode)
 check_PROGRAMS = $(TESTS)
 
-NP := 2
+NP = 2
 
 if WANT_PORTALS_SHMEM_RUNTIME
 TESTS_ENVIRONMENT = @yod@ -np $(NP) env QT_STACK_SIZE=65536 
