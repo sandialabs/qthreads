@@ -12,6 +12,7 @@
 #include "qt_affinity.h"
 #include "shepcomp.h"
 #include "shufflesheps.h"
+#include "qt_debug.h" // for MALLOC()
 
 qthread_shepherd_id_t guess_num_shepherds(void);
 qthread_worker_id_t   guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds);
