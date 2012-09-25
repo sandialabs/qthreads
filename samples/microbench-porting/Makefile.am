@@ -1,5 +1,5 @@
 AM_CPPFLAGS = -I. -I$(top_srcdir)
-AM_CXXFLAGS = -std=gnu++0x -g
+AM_CXXFLAGS = -std=gnu++0x
 
 .PHONY: testporting runporting
 
