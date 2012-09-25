@@ -117,7 +117,7 @@ if [[ ${version%b} != ${version} ]] && type git &>/dev/null && [[ $SKIPVGEN != 1
 	#git log -1 --pretty=format:%h | tee .autogen_git_output
     git log --pretty=oneline | wc -l | tee .autogen_git_output
 	#svn stat -u README | tee .autogen_svn_output
-	rev=$version-$(cat .autogen_git_output)
+	rev=$version-$(awk '{print $1}' .autogen_git_output)
 	if [ "$rev" ] ; then
 		echo -n $rev > .autogen-version
 	else
