@@ -148,11 +148,6 @@ typedef struct {
 //
 
 //
-// Is the task pool empty?
-//
-chpl_bool chpl_pool_is_empty(void);
-
-//
 // The remaining declarations are all for callback functions to be
 // provided by the threading layer.
 //
@@ -243,10 +238,6 @@ void threadlayer_exit(void);
 // it is not careful.  Certainly the mutex must be unlocked while the
 // routine waits for the task pool to fill or the deadline to pass, or
 // livelock may result.
-//
-// Note the FIFO tasking implementation's chpl_pool_is_empty() function,
-// which the suspend callback can use to tell when the pool becomes
-// nonempty.
 //
 /*chpl_bool threadlayer_pool_suspend(chpl_mutex_t*, struct timeval*);
  * void threadlayer_pool_awaken(void);*/

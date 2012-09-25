@@ -21,9 +21,10 @@
 #define CHPL_TASKS_MODEL_H   "tasks-qthreads.h"
 #define CHPL_THREADS_MODEL_H "threads-none.h"
 
+#include "tasks-qthreads.h"
+
 #include "chplrt.h"
 #include "chplsys.h"
-#include "tasks-qthreads.h"
 #include "chpl-tasks.h"
 #include "config.h"   // for chpl_config_get_value()
 #include "error.h"    // for chpl_warning()
