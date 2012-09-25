@@ -27,7 +27,7 @@
 
 #ifndef _H_filesystem_TYPES_INCLUDED_H_
 #define _H_filesystem_TYPES_INCLUDED_H_
-
+double t;
 class triple
 {
 public:
@@ -126,5 +126,16 @@ public:
     }
 };
 /* end extra types for strict versions */
+
+
+int my_usleep(int i) {
+	
+	for(int i=0; i<100000; i++)
+		t += 1.12*t;
+	//printf("t%d", t);
+	return t;
+}
+
+
 
 #endif //_H_filesystem_TYPES_INCLUDED_H_

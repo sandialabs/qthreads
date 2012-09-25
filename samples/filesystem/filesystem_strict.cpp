@@ -7,6 +7,38 @@
 block b;
 #define usecs (4000)
 
+
+
+void printFile(filesystem_context* c, int fileId)
+{
+	inode* file;
+	c->inodes.get(fileId, file);
+	printf("\nFile name: %d (length=%d)\n", fileId, file->length);
+	printf("   Direct blocks: ");
+	int i = 0;
+	while( (i<DATA_BLOCKS_NO) && (file->data_blocks[i] != EMPTY) )
+	{
+		//printf("(i=%d)\n", i);
+		printf(" %d", file->data_blocks[i]);
+		block* bl;
+		c->blocks.get(file->data_blocks[i], bl);
+		i++;
+	}
+	printf("   Indirect block content: ");
+	if (file->indirect_block != EMPTY)
+	{
+		block* ib;
+		c->blocks.get(file->indirect_block, ib);
+		int* data = (int*)ib->data;
+		int i = 0;
+		while(data[i] != EMPTY) {
+			printf("%d ", data[i]);
+			i++;
+		}
+		
+	}
+}
+
 int Concatenate::execute( const triple &t, filesystem_context & c) const
 {
 	
@@ -35,7 +67,6 @@ aligned_t** Concatenate::get_dependences(const triple & t, filesystem_context & 
 /* start: strict preconditions steps */
 int Concatenate_epilog::execute( const triple_epilog &t, filesystem_context & c) const
 {
-	
 	int sourceInodeId1 = t[0];
 	int sourceInodeId2 = t[1];
 	int destinationInodeId = t[2];
@@ -114,7 +145,9 @@ int Concatenate_epilog::execute( const triple_epilog &t, filesystem_context & c)
 		c.blocks.get(s2->indirect_block, s2indirect);
 	}
 
-	c.jobIds_epilog2.put(*new triple_epilog2(t[0], t[1], t[2], t.first, t.second, s1indirect, s2indirect));
+	c.jobIds_epilog2.put(*new triple_epilog2(t[0], t[1], t[2], t.first, t.second, 
+			s1->length>9?s1indirect:NULL, 
+			s2->length>9?s2indirect:NULL));
 	return CnC::CNC_Success;
 }
 
@@ -210,7 +243,6 @@ aligned_t** Concatenate_epilog::get_dependences(const triple_epilog & t, filesys
 
 int Concatenate_epilog2::execute( const triple_epilog2 &t, filesystem_context & c) const
 {
-	
 	int sourceInodeId1 = t[0];
 	int sourceInodeId2 = t[1];
 	int destinationInodeId = t[2];
@@ -239,7 +271,7 @@ int Concatenate_epilog2::execute( const triple_epilog2 &t, filesystem_context & 
 			if (s1->data_blocks[i] != EMPTY) {
 				c.blocks.get(s1->data_blocks[i], b);
 				//sleep here
-				usleep(usecs);
+				my_usleep(usecs);
 				
 				used_blocks = i+1;
 			}
@@ -254,15 +286,13 @@ int Concatenate_epilog2::execute( const triple_epilog2 &t, filesystem_context & 
 	
 	c.inodes.put(destinationInodeId, d);
 	
-	
-	
 	// concatenate block numbers from the inode of s1
 	
 	for(int i=0; i<DATA_BLOCKS_NO; i++)
 		if (s1->data_blocks[i] != EMPTY) {
 			c.blocks.get(s1->data_blocks[i], b);
 			//sleep here
-			usleep(usecs);
+			my_usleep(usecs);
 			c.blocks.put( (1+destinationInodeId)*1000000+startover++, b);
 			used_blocks = i+1;
 		}
@@ -282,7 +312,7 @@ int Concatenate_epilog2::execute( const triple_epilog2 &t, filesystem_context & 
 			
 			data[crtPos] = (1+destinationInodeId)*1000000+startover;
 			//sleep here
-			usleep(usecs);
+			my_usleep(usecs);
 			c.blocks.put((1+destinationInodeId)*1000000+startover++, b);
 			crtPos++;
 		}
@@ -300,7 +330,7 @@ int Concatenate_epilog2::execute( const triple_epilog2 &t, filesystem_context & 
 				//printf("bbb1\n");
 				data[crtPos++] = (1+destinationInodeId)*1000000+startover;
 				//sleep here
-				usleep(usecs);
+				my_usleep(usecs);
 				c.blocks.put((1+destinationInodeId)*1000000+startover++, b);
 			}
 			else
@@ -310,7 +340,7 @@ int Concatenate_epilog2::execute( const triple_epilog2 &t, filesystem_context & 
 				c.blocks.get(s2->data_blocks[i], b);
 				//printf("eee1\n");
 				//sleep here
-				usleep(usecs);
+				my_usleep(usecs);
 				c.blocks.put((1+destinationInodeId)*1000000+startover++, b);
 			}
 		}
@@ -328,7 +358,7 @@ int Concatenate_epilog2::execute( const triple_epilog2 &t, filesystem_context & 
 			c.blocks.get(dataS2[crtS2Pos], b);
 			//printf("ccc1\n");
 			//sleep here
-			usleep(usecs);
+			my_usleep(usecs);
 			c.blocks.put((1+destinationInodeId)*1000000+startover++, b);
 	}
 
@@ -356,24 +386,27 @@ aligned_t** Concatenate_epilog2::get_dependences(const triple_epilog2 & t, files
 	int sourceInodeId2 = t[1];
 	int destinationInodeId = t[2];
 	//printf("Concatenate job %d-%d-%d starting...\n", sourceInodeId1, sourceInodeId2, destinationInodeId);
-	
+	//printFile(&c, sourceInodeId1);
 	if (t.s1i != NULL) {
 		block* s2indirect = t.s1i;
 		int crtS2Pos = 0;
 		int* dataS2 = (int*) s2indirect->data;
-		while (crtS2Pos<c.BLOCK_SIZE/(int)sizeof(int) && (dataS2[crtS2Pos] != EMPTY))
+		while (crtS2Pos<c.BLOCK_SIZE/(int)sizeof(int) && (dataS2[crtS2Pos] != EMPTY)) {
 			//c.blocks.get(dataS2[crtS2Pos++], b);
+			//printf("Will1 wait on %d(crtS2Pos=%d)\n", dataS2[crtS2Pos], crtS2Pos);
 			c.blocks.wait_on(dataS2[crtS2Pos++], &read[used_blocks++]);		
-
+		}
 	}
 
 	if (t.s2i != NULL) {
 		block* s2indirect = t.s2i;
 		int crtS2Pos = 0;
 		int* dataS2 = (int*) s2indirect->data;
-		while (crtS2Pos<c.BLOCK_SIZE/(int)sizeof(int) && (dataS2[crtS2Pos] != EMPTY))
+		while (crtS2Pos<c.BLOCK_SIZE/(int)sizeof(int) && (dataS2[crtS2Pos] != EMPTY)) {
 			//c.blocks.get(dataS2[crtS2Pos++], b);
-			c.blocks.wait_on(dataS2[crtS2Pos++], &read[used_blocks++]);		
+			//printf("Will2 wait on %d(crtS2Pos=%d)\n", dataS2[crtS2Pos], crtS2Pos);
+			c.blocks.wait_on(dataS2[crtS2Pos++], &read[used_blocks++]);	
+		}	
 	}
 	return read;
 }
@@ -404,6 +437,7 @@ void addRandomFile(filesystem_context* c, int fileId)
 	{
 		file->data_blocks[i] = blockId;
 		block* bl = &b;
+		//printf("Producing %d\n", blockId);
 		c->blocks.put(blockId++, bl);
 	}
 	if (random>DATA_BLOCKS_NO)
@@ -415,41 +449,14 @@ void addRandomFile(filesystem_context* c, int fileId)
 		{
 			data[crt++] = blockId;
 			block* bl = new block();
+			//printf("Producing %d\n", blockId);
 			c->blocks.put(blockId++, bl);
 		}
 	}
 	c->inodes.put(fileId, file);
 }
 
-void printFile(filesystem_context* c, int fileId)
-{
-	inode* file;
-	c->inodes.get(fileId, file);
-	printf("\nFile name: %d (length=%d)\n", fileId, file->length);
-	printf("   Direct blocks: ");
-	int i = 0;
-	while( (i<DATA_BLOCKS_NO) && (file->data_blocks[i] != EMPTY) )
-	{
-		//printf("(i=%d)\n", i);
-		printf(" %d", file->data_blocks[i]);
-		block* bl;
-		c->blocks.get(file->data_blocks[i], bl);
-		i++;
-	}
-	printf("   Indirect block content: ");
-	if (file->indirect_block != EMPTY)
-	{
-		block* ib;
-		c->blocks.get(file->indirect_block, ib);
-		int* data = (int*)ib->data;
-		int i = 0;
-		while(data[i] != EMPTY) {
-			printf("%d ", data[i]);
-			i++;
-		}
-		
-	}
-}
+
 
 int main (int argc, char **argv)
 {

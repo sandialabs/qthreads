@@ -41,7 +41,7 @@ int Concatenate::execute( const triple &t, filesystem_context & c) const
 			if (s1->data_blocks[i] != EMPTY) {
 				c.blocks.get(s1->data_blocks[i], b);
 				//sleep here
-				usleep(usecs);
+				my_usleep(usecs);
 				
 				used_blocks = i+1;
 			}
@@ -64,7 +64,7 @@ int Concatenate::execute( const triple &t, filesystem_context & c) const
 		if (s1->data_blocks[i] != EMPTY) {
 			c.blocks.get(s1->data_blocks[i], b);
 			//sleep here
-			usleep(usecs);
+			my_usleep(usecs);
 			c.blocks.put( (1+destinationInodeId)*1000000+startover++, b);
 			used_blocks = i+1;
 		}
@@ -84,7 +84,7 @@ int Concatenate::execute( const triple &t, filesystem_context & c) const
 			
 			data[crtPos] = (1+destinationInodeId)*1000000+startover;
 			//sleep here
-			usleep(usecs);
+			my_usleep(usecs);
 			c.blocks.put((1+destinationInodeId)*1000000+startover++, b);
 			crtPos++;
 		}
@@ -102,7 +102,7 @@ int Concatenate::execute( const triple &t, filesystem_context & c) const
 				//printf("bbb1\n");
 				data[crtPos++] = (1+destinationInodeId)*1000000+startover;
 				//sleep here
-				usleep(usecs);
+				my_usleep(usecs);
 				c.blocks.put((1+destinationInodeId)*1000000+startover++, b);
 			}
 			else
@@ -112,7 +112,7 @@ int Concatenate::execute( const triple &t, filesystem_context & c) const
 				c.blocks.get(s2->data_blocks[i], b);
 				//printf("eee1\n");
 				//sleep here
-				usleep(usecs);
+				my_usleep(usecs);
 				c.blocks.put((1+destinationInodeId)*1000000+startover++, b);
 			}
 		}
@@ -130,7 +130,7 @@ int Concatenate::execute( const triple &t, filesystem_context & c) const
 			c.blocks.get(dataS2[crtS2Pos++], b);
 			//printf("ccc1\n");
 			//sleep here
-			usleep(usecs);
+			my_usleep(usecs);
 			c.blocks.put((1+destinationInodeId)*1000000+startover++, b);
 		}
 	}
