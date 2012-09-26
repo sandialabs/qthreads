@@ -20,22 +20,28 @@ void qt_makectxt(uctxt_t *, void (*)(void), int, ...);
 int  qt_getmctxt(mctxt_t *);
 void qt_setmctxt(mctxt_t *);
 
-struct mctxt {
-    unsigned long mc_edi;      /* 0: 1st arg (mandatory) */
-    unsigned long mc_ebp;      /* 1: Stack frame pointer (esi) */
-    unsigned long mc_ebx;      /* 2: PIC base register, also general-purp. reg */
 #ifdef __x86_64__
-    unsigned long mc_r12;      /* 3: extra callee-saved registers */
-    unsigned long mc_r13;      /* 4: extra callee-saved registers */
-    unsigned long mc_r14;      /* 5: extra callee-saved registers */
-    unsigned long mc_r15;      /* 6: extra callee-saved registers */
+typedef uint64_t qt_register_t;
 #else
-    unsigned long mc_esi;      /* 3: general-purpose register */
+typedef uint32_t qt_register_t;
 #endif
-    unsigned long mc_xcsr;     /* 7/4: SSE2 control and status word */
-    unsigned long mc_cw;       /* 8/5: x87 control word */
-    unsigned long mc_esp;      /* 9/6: machine state; stack pointer */
-    unsigned long mc_eip;      /* 10/7: function pointer */
+
+struct mctxt {
+    qt_register_t mc_edi;      /* 0: 1st arg (mandatory) */
+    qt_register_t mc_ebp;      /* 1: Stack frame pointer (esi) */
+    qt_register_t mc_ebx;      /* 2: PIC base register, also general-purp. reg */
+#ifdef __x86_64__
+    qt_register_t mc_r12;      /* 3: extra callee-saved registers */
+    qt_register_t mc_r13;      /* 4: extra callee-saved registers */
+    qt_register_t mc_r14;      /* 5: extra callee-saved registers */
+    qt_register_t mc_r15;      /* 6: extra callee-saved registers */
+#else
+    qt_register_t mc_esi;      /* 3: general-purpose register */
+#endif
+    uint32_t mc_xcsr;          /* 7/4: SSE2 control and status word */
+    uint32_t mc_cw;            /* 7+4/4+4: x87 control word */
+    qt_register_t mc_esp;      /* 8/5: machine state; stack pointer */
+    qt_register_t mc_eip;      /* 9/6: function pointer */
 };
 
 struct uctxt {
