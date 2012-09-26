@@ -5,7 +5,7 @@
 #include <unistd.h>
 
 block b;
-#define usecs (4000)
+#define usecs (4000000)
 
 int Concatenate::execute( const triple &t, filesystem_context & c) const
 {
