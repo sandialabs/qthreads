@@ -50,7 +50,19 @@ public:
     		}
     }
     
+    Tile(int f, int s)/*, m_full( true )*/
+    {
+		
+    		m_array = new double[TILE_SIZE*TILE_SIZE];
+    		printf("Allocating %d-%d at %x (in struct %x)\n", f, s, m_array, this);
+    		for(int i=0; i<TILE_SIZE*TILE_SIZE; i++) {
+    			m_array[i] = 0.0;
+    		}
+    }
+    
+    
     ~Tile() {
+    	printf("Deallocationg %x from struct %x\n", m_array, this);
 		delete m_array;
     }
 };
