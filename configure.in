@@ -67,6 +67,7 @@ AC_CONFIG_FILES([Makefile
                  samples/fib/Makefile
                  samples/primes/Makefile
                  samples/routing/Makefile
-            samples/filesystem/Makefile     
+            samples/filesystem/Makefile 
+            samples/reduction/Makefile    
 			samples/matrixinvert/Makefile])
 AC_OUTPUT

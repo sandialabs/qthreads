@@ -1,4 +1,4 @@
-SUBDIRS = blackscholes microbench-porting cholesky fib primes matrixinvert routing filesystem
+SUBDIRS = blackscholes microbench-porting cholesky fib primes matrixinvert routing filesystem reduction
 
 .PHONY: build test
 
