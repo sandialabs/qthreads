@@ -34,8 +34,8 @@ namespace CnC {
 		~entry_t()
 		{
 			qthread_fill(&sinc);
-			if(value != NULL)
-				delete value; //TODO test this
+			//if(value != NULL)
+			//	delete value; //TODO test this
 		}
 
 		
@@ -309,6 +309,8 @@ namespace CnC {
 	template< typename Tag, typename Item  >
 	void item_collection< Tag, Item >::decrement(const Tag &t) const
 	{
+		printf("Decrementing dictionary entry for %d-%d\n", ((int*)(&t))[0], ((int*)(&t))[1] );
+				
 		entry_t<Item> *ret = (entry_t<Item> *) qt_dictionary_get(m_itemCollection, const_cast < Tag * >(&t));
 		
 		aligned_t old_val = qthread_incr(&(ret->count), -1);
@@ -319,12 +321,14 @@ namespace CnC {
 				assert (ret !=  NULL && "Error when deleting item from dictionary (not found)");
 				if(ret != NULL){
 					typename IsPointer<Item>::Result r;
+					printf("Item tagged %d-%d is getting deleted!\n",((int*)(&t))[0], ((int*)(&t))[1] );
 					clearItem(&r, *(ret -> value));
-					//printf("Item tagged %d-%d-%d is getting deleted!\n",((int*)(&t))[0], ((int*)(&t))[1], ((int*)(&t))[2]);
 					//delete *(ret -> value);
 				}
 				delete(ret);
 		}
+		printf("Ending Decrement dictionary entry for %d-%d\n", ((int*)(&t))[0], ((int*)(&t))[1] );
+		
 	}
 
 	// TODO: implement size

@@ -21,8 +21,8 @@ runporting: $(TESTS)
 
 EXTRA_DIST = porting.cnc
 
-porting_opt1_SOURCES = porting_strict.cpp
-porting_opt1_CPPFLAGS =  $(AM_CPPFLAGS) -DCNC_PRECOND -DCNC_PRECOND_ONLY -DCNC_PRECOND_SIMPLE
+porting_opt1_SOURCES = porting.cpp
+porting_opt1_CPPFLAGS =  $(AM_CPPFLAGS) -DCNC_PRECOND 
 
-porting_opt2_SOURCES = porting.cpp
-porting_opt2_CPPFLAGS =  $(AM_CPPFLAGS) -DCNC_PRECOND
+porting_opt2_SOURCES = porting_strict.cpp
+porting_opt2_CPPFLAGS =  $(AM_CPPFLAGS) -DCNC_PRECOND -DCNC_PRECOND_ONLY -DCNC_PRECOND_SIMPLE
