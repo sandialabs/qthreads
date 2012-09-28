@@ -5,9 +5,9 @@ int Update::execute(const pair & t, reduction_context & c ) const
 {
 	Tile* tile = new Tile();
     //printf("Starting update %d-%d...\n", t.first, t.second);
-    printf("Reading %d-%d\n", t.first, t.second);
+    //printf("Reading %d-%d\n", t.first, t.second);
     c.tile_data.get(t, *tile);
-    printf("Producing tile %d of iteration %d\n", t.first, t.second+1);
+    //printf("Producing tile %d of iteration %d\n", t.first, t.second+1);
     my_usleep(1);
     c.tile_data.put(*new pair(t.first, t.second+1), *new Tile(t.first, t.second+1), 2);
     return CnC::CNC_Success;
@@ -17,7 +17,7 @@ aligned_t** Update::get_dependences(const pair & t, reduction_context & c, int &
 {
 	no = 1;
 	aligned_t** read = (aligned_t**)malloc(no*sizeof(int)); 
-	printf("Waiting on %d-%d\n", t.first, t.second);
+	//printf("Waiting on %d-%d\n", t.first, t.second);
     c.tile_data.wait_on(t, &(read[0]));
     return (aligned_t**)read;
 }
@@ -139,13 +139,6 @@ int main (int argc, char **argv)
     total_time = qtimer_secs(timer);
     printf("Time(s): %.3f\n", total_time);
     qtimer_destroy(timer);
-
-    
-	/*
-	for( int i = 1; i < jobs + jobs; i++ )
-		printFile(&c, i);
-	*/
-	printf("Jobs finished.\n");
-	//printFile(&c, 1);
+	
 	return 0;
 }

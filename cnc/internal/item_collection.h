@@ -309,7 +309,7 @@ namespace CnC {
 	template< typename Tag, typename Item  >
 	void item_collection< Tag, Item >::decrement(const Tag &t) const
 	{
-		printf("Decrementing dictionary entry for %d-%d\n", ((int*)(&t))[0], ((int*)(&t))[1] );
+		//printf("Decrementing dictionary entry for %d-%d\n", ((int*)(&t))[0], ((int*)(&t))[1] );
 				
 		entry_t<Item> *ret = (entry_t<Item> *) qt_dictionary_get(m_itemCollection, const_cast < Tag * >(&t));
 		
@@ -321,13 +321,13 @@ namespace CnC {
 				assert (ret !=  NULL && "Error when deleting item from dictionary (not found)");
 				if(ret != NULL){
 					typename IsPointer<Item>::Result r;
-					printf("Item tagged %d-%d is getting deleted!\n",((int*)(&t))[0], ((int*)(&t))[1] );
+					//printf("Item tagged %d-%d is getting deleted!\n",((int*)(&t))[0], ((int*)(&t))[1] );
 					clearItem(&r, *(ret -> value));
 					//delete *(ret -> value);
 				}
 				delete(ret);
 		}
-		printf("Ending Decrement dictionary entry for %d-%d\n", ((int*)(&t))[0], ((int*)(&t))[1] );
+		//printf("Ending Decrement dictionary entry for %d-%d\n", ((int*)(&t))[0], ((int*)(&t))[1] );
 		
 	}
 
