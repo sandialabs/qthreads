@@ -5,10 +5,11 @@ int Update::execute(const pair & t, reduction_context & c ) const
 {
 	Tile* tile = new Tile();
     //printf("Starting update %d-%d...\n", t.first, t.second);
+    printf("Reading %d-%d\n", t.first, t.second);
     c.tile_data.get(t, *tile);
-    //printf("Producing tile %d of iteration %d\n", t.first, t.second+1);
+    printf("Producing tile %d of iteration %d\n", t.first, t.second+1);
     my_usleep(1);
-    c.tile_data.put(*new pair(t.first, t.second+1), *new Tile());
+    c.tile_data.put(*new pair(t.first, t.second+1), *new Tile(t.first, t.second+1), 2);
     return CnC::CNC_Success;
 }
 
@@ -16,6 +17,7 @@ aligned_t** Update::get_dependences(const pair & t, reduction_context & c, int &
 {
 	no = 1;
 	aligned_t** read = (aligned_t**)malloc(no*sizeof(int)); 
+	printf("Waiting on %d-%d\n", t.first, t.second);
     c.tile_data.wait_on(t, &(read[0]));
     return (aligned_t**)read;
 }
@@ -28,11 +30,13 @@ int Reduce::execute(const int & t, reduction_context & c ) const
     #endif
     
     for(int k = 0; k < max; k++) {
-    	Tile crt;
-        c.tile_data.get(pair(k, t), crt);
+    	Tile *crt = new Tile();
+    	
+        c.tile_data.get(pair(k, t), *crt);
         my_usleep(1);
     }
-    //printf("Reduced data %d produced.\n", t);
+    // DO NOT add getcount for this put
+	// because then strict would show memory leaks
     c.reduced_data.put(t, 1);
     return CnC::CNC_Success;
 }
@@ -74,6 +78,7 @@ int NextIter::execute(const int & t, reduction_context & c ) const
     	c.reduce_tags.put(t);
     	c.next_iter_tags.put(t+1);
     	//printf("Prescribed next iteration start (%d)...\n", t+1);
+    	
     	
     	for(int i=0; i<c.NO_TILES; i++)
 			c.update_tags.put(pair(i, t));
@@ -124,7 +129,7 @@ int main (int argc, char **argv)
     qtimer_start(timer);
 
 	for( int i = 0; i < tiles; i++ ) {
-		c.tile_data.put(pair(i, 0), Tile());   
+		c.tile_data.put(*new pair(i, 0), * new Tile(), 2);   
 	}
 	c.next_iter_tags.put(0);
     // Wait for all steps to finish
