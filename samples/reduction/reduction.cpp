@@ -16,7 +16,7 @@ int Update::execute(const pair & t, reduction_context & c ) const
 aligned_t** Update::get_dependences(const pair & t, reduction_context & c, int & no ) const
 {
 	no = 1;
-	aligned_t** read = (aligned_t**)malloc(no*sizeof(int)); 
+	aligned_t** read = (aligned_t**)malloc(no*sizeof(aligned_t*)); 
 	//printf("Waiting on %d-%d\n", t.first, t.second);
     c.tile_data.wait_on(t, &(read[0]));
     return (aligned_t**)read;
@@ -31,8 +31,10 @@ int Reduce::execute(const int & t, reduction_context & c ) const
     
     for(int k = 0; k < max; k++) {
     	Tile *crt = new Tile();
-    	
+    	//printf("Reduce started with input %p\n", crt);
         c.tile_data.get(pair(k, t), *crt);
+        //printf("Reduce ended with input %p\n", crt);
+        
         my_usleep(1);
     }
     // DO NOT add getcount for this put
@@ -47,16 +49,15 @@ aligned_t** Reduce::get_dependences(const int & t, reduction_context & c, int & 
 	aligned_t** read; 
 	#ifdef CNC_PRECOND_ONLY
 		// strict runtime needs to wait on everything	
-		read = (aligned_t**)malloc(no*sizeof(int));
+		read = (aligned_t**)malloc(no*sizeof(aligned_t*));
 	
 		for(int k = 0; k < c.NO_TILES; k++) {
-    		Tile crt;
         	c.tile_data.wait_on(pair(k, t), &(read[k]));
     	}
     #else
     	// flexible runtime can pick and choose
     	no = 1;
-    	read = (aligned_t**)malloc(no*sizeof(int));
+    	read = (aligned_t**)malloc(no*sizeof(aligned_t*));
     	c.tile_data.wait_on(pair(0, t), &(read[0]));
     #endif
     
@@ -93,7 +94,7 @@ aligned_t** NextIter::get_dependences(const int & t, reduction_context & c, int 
     if (t>0) 
     {	
     	no = 1;
-    	int* read = (int*)malloc(1 * sizeof(int));
+    	int* read = (int*)malloc(1 * sizeof(aligned_t*));
     	c.reduced_data.wait_on(t-1, (aligned_t**)&(read[0]));
     	return (aligned_t**)read;	
     }
@@ -129,8 +130,9 @@ int main (int argc, char **argv)
     qtimer_start(timer);
 
 	for( int i = 0; i < tiles; i++ ) {
-		c.tile_data.put(*new pair(i, 0), * new Tile(), 2);   
+		c.tile_data.put(*new pair(i, 0), *new Tile(), 2);   
 	}
+	
 	c.next_iter_tags.put(0);
     // Wait for all steps to finish
     c.wait();

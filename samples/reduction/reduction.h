@@ -35,7 +35,7 @@ public:
     }
 };
 
-
+double* old;
 
 class Tile
 {
@@ -62,7 +62,9 @@ public:
     
     
     ~Tile() {
-    	//printf("Deallocationg %x from struct %x\n", m_array, this);
+    	//printf("Deallocationg %p from struct %p\n", m_array, this);
+    	assert(m_array != old);
+    	old = m_array;
 		delete m_array;
     }
 };
