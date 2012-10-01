@@ -1,7 +1,7 @@
 AM_CPPFLAGS = -I. -I$(top_srcdir)
 AM_CXXFLAGS = -std=gnu++0x
 
-TESTS = primes_opt1 primes_opt2 primes_opt3 primes_opt4
+TESTS = primes_flexible primes_strict_simple primes_eager primes_strict
 check_PROGRAMS = $(TESTS)
 
 ARGS = 1000 167
@@ -19,13 +19,13 @@ runprimes: $(TESTS)
 
 EXTRA_DIST = primes.cnc
 
-primes_opt1_SOURCES = primes.cpp
-primes_opt1_CPPFLAGS =  $(AM_CPPFLAGS) -DCNC_PRECOND
+primes_flexible_SOURCES = primes.cpp
+primes_flexible_CPPFLAGS =  $(AM_CPPFLAGS) -DCNC_PRECOND
 
-primes_opt2_SOURCES = primes.cpp
-primes_opt2_CPPFLAGS =  $(AM_CPPFLAGS)  -DCNC_PRECOND -DCNC_PRECOND_ONLY -DCNC_PRECOND_SIMPLE
+primes_strict_simple_SOURCES = primes.cpp
+primes_strict_simple_CPPFLAGS =  $(AM_CPPFLAGS)  -DCNC_PRECOND -DCNC_PRECOND_ONLY -DCNC_PRECOND_SIMPLE
 
-primes_opt3_SOURCES = primes.cpp
+primes_eager_SOURCES = primes.cpp
 
-primes_opt4_SOURCES = primes.cpp
-primes_opt4_CPPFLAGS =  $(AM_CPPFLAGS) -DCNC_PRECOND -DCNC_PRECOND_ONLY
+primes_strict_SOURCES = primes.cpp
+primes_strict_CPPFLAGS =  $(AM_CPPFLAGS) -DCNC_PRECOND -DCNC_PRECOND_ONLY

@@ -3,7 +3,7 @@ AM_CXXFLAGS = -std=gnu++0x
 
 .PHONY: testporting runporting
 
-TESTS = porting_opt1 porting_opt2
+TESTS = porting_strict porting_flexible
 check_PROGRAMS = $(TESTS)
 
 ARGS = 3 50000 20
@@ -17,12 +17,12 @@ all: $(TESTS)
 testporting: runporting
 
 runporting: $(TESTS)
-	./porting_opt1 $(ARGS)
+	./porting_strict $(ARGS)
 
 EXTRA_DIST = porting.cnc
 
-porting_opt1_SOURCES = porting.cpp
-porting_opt1_CPPFLAGS =  $(AM_CPPFLAGS) -DCNC_PRECOND 
+porting_strict_SOURCES = porting_strict.cpp
+porting_strict_CPPFLAGS =  $(AM_CPPFLAGS) -DCNC_PRECOND -DCNC_PRECOND_ONLY -DCNC_PRECOND_SIMPLE
 
-porting_opt2_SOURCES = porting_strict.cpp
-porting_opt2_CPPFLAGS =  $(AM_CPPFLAGS) -DCNC_PRECOND -DCNC_PRECOND_ONLY -DCNC_PRECOND_SIMPLE
+porting_flexible_SOURCES = porting.cpp
+porting_flexible_CPPFLAGS =  $(AM_CPPFLAGS) -DCNC_PRECOND

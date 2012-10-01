@@ -1,7 +1,7 @@
 AM_CPPFLAGS = -I. -I$(top_srcdir)
 AM_CXXFLAGS = -std=gnu++0x
 
-TESTS = filesystem_opt1 filesystem_opt2 filesystem_opt3 filesystem_opt4
+TESTS = filesystem_flexible filesystem_strict_simple filesystem_eager filesystem_strict
 check_PROGRAMS = $(TESTS)
 
 ARGS = 256
@@ -20,13 +20,13 @@ runfilesystem: testfilesystem
 
 EXTRA_DIST = Readme.txt filesystem.cnc
 
-filesystem_opt1_SOURCES = filesystem.cpp
-filesystem_opt1_CPPFLAGS =  $(AM_CPPFLAGS)  -DCNC_PRECOND
+filesystem_flexible_SOURCES = filesystem.cpp
+filesystem_flexible_CPPFLAGS =  $(AM_CPPFLAGS)  -DCNC_PRECOND
 
-filesystem_opt2_SOURCES = filesystem_strict.cpp
-filesystem_opt2_CPPFLAGS =  $(AM_CPPFLAGS) -DCNC_PRECOND -DCNC_PRECOND_ONLY -DCNC_PRECOND_SIMPLE
+filesystem_strict_simple_SOURCES = filesystem_strict.cpp
+filesystem_strict_simple_CPPFLAGS =  $(AM_CPPFLAGS) -DCNC_PRECOND -DCNC_PRECOND_ONLY -DCNC_PRECOND_SIMPLE
 
-filesystem_opt3_SOURCES = filesystem.cpp
+filesystem_eager_SOURCES = filesystem.cpp
 
-filesystem_opt4_SOURCES = filesystem_strict.cpp
-filesystem_opt4_CPPFLAGS =  $(AM_CPPFLAGS) -DCNC_PRECOND -DCNC_PRECOND_ONLY
+filesystem_strict_SOURCES = filesystem_strict.cpp
+filesystem_strict_CPPFLAGS =  $(AM_CPPFLAGS) -DCNC_PRECOND -DCNC_PRECOND_ONLY
