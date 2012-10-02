@@ -8,6 +8,7 @@ const char INTERNAL *qt_internal_get_env_str(const char *envariable,
 unsigned long INTERNAL qt_internal_get_env_num(const char   *envariable,
                                                unsigned long dflt,
                                                unsigned long zerodflt);
+int INTERNAL qt_internal_unset_envstr(const char *envariable);
 
 #endif // ifndef QT_ENVARIABLES_H
 /* vim:set expandtab: */
