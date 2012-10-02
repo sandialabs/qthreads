@@ -840,7 +840,8 @@ int API_FUNC qthread_initialize(void)
     hw_par = qt_internal_get_env_num("HWPAR", nshepherds * nworkerspershep, nshepherds * nworkerspershep);
     if ((hw_par != 0) && (nshepherds != 0) && (nworkerspershep != 0)) {
         if (hw_par != (nshepherds * nworkerspershep)) {
-            print_warning("Shepherd/worker parallelism directly specified; ignoring HWPAR\n");
+            print_warning("Shepherd/worker parallelism directly specified (%u/%u); ignoring HWPAR (%u)\n",
+                          (unsigned)nshepherds, (unsigned)nworkerspershep, (unsigned)hw_par);
             hw_par = nshepherds * nworkerspershep;
         }
     }
