@@ -236,18 +236,38 @@ void chpl_task_init(int32_t  numThreadsPerLocale,
     char      newenv_sheps[100] = { 0 };
     char      newenv_stack[100] = { 0 };
 
-    // Precendence (high-to-low):
-    // 1) --numThreadsPerLocale option
-    // 2) QTHREAD_NUM_SHEPHERDS
-    // 3) chpl_numCoresOnThisLocale()
-    if (numThreadsPerLocale != 0) {
-        snprintf(newenv_sheps, 99, "%i", (int)numThreadsPerLocale);
-        setenv("QT_HWPAR", newenv_sheps, 1);
-    } else if (qt_internal_get_env_str("NUM_SHEPHERDS", NULL) != NULL) {
-        if (qt_internal_get_env_str("NUM_WORKERS_PER_SHEPHERD", NULL) == NULL) {
-            setenv("QT_NUM_WORKERS_PER_SHEPHERD", "1", 1);
+    // Set up available hardware parallelism
+    if (0 != numThreadsPerLocale || 0 != maxThreadsPerLocale) {
+        // We are assuming the user wants to constrain the hardware
+        // resources used during this run of the application.
+
+        // Unset relevant Qthreads environment variables
+        qt_internal_unset_envstr("HWPAR");
+        qt_internal_unset_envstr("NUM_SHEPHERDS");
+        qt_internal_unset_envstr("NUM_WORKERS_PER_SHEPHERD");
+
+        const int hwpar = (numThreadsPerLocale < maxThreadsPerLocale) ? 
+                           maxThreadsPerLocale : numThreadsPerLocale;
+        if (chpl_numCoresOnThisLocale() >= hwpar) {
+            snprintf(newenv_sheps, 99, "%i", (int)hwpar);
+            setenv("QT_HWPAR", newenv_sheps, 1);
+        } else {
+            // Do not oversubscribe the system, use all available resources.
+            numThreadsPerLocale = chpl_numCoresOnThisLocale();
+            snprintf(newenv_sheps, 99, "%i", (int)numThreadsPerLocale);
+            setenv("QT_HWPAR", newenv_sheps, 1);
+
+            if (2 == verbosity) {
+                printf("QTHREADS: Ignored --{num,max}ThreadsPerLocale=%d to prevent oversubsription of the system.\n", hwpar);
+            }
         }
+    } else if (qt_internal_get_env_str("HWPAR", NULL) ||
+               qt_internal_get_env_str("NUM_SHEPHERDS", NULL) ||
+               qt_internal_get_env_str("NUM_WORKERS_PER_SHEPHERD", NULL)) {
+        // Assume the user wants has manually set the desired Qthreads
+        // environment variables.
     } else {
+        // Default to using all hardware resources.
         numThreadsPerLocale = chpl_numCoresOnThisLocale();
         snprintf(newenv_sheps, 99, "%i", (int)numThreadsPerLocale);
         setenv("QT_HWPAR", newenv_sheps, 1);
