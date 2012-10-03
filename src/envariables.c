@@ -115,6 +115,8 @@ int INTERNAL qt_internal_unset_envstr(const char *envariable)
     char        mod_envariable[100];
     const char *str;
 
+    check_info();
+
     snprintf(mod_envariable, 100, "QT_%s", envariable);
     str = getenv(mod_envariable);
     qthread_debug(CORE_BEHAVIOR, "checking envariable %s\n", envariable);
