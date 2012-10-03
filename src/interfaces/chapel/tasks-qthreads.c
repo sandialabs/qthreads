@@ -239,7 +239,7 @@ void chpl_task_init(int32_t  numThreadsPerLocale,
     char      newenv_stack[100] = { 0 };
 
     // Set up available hardware parallelism
-    if (0 != numThreadsPerLocale || 0 != maxThreadsPerLocale) {
+    if (0 < numThreadsPerLocale) {
         // We are assuming the user wants to constrain the hardware
         // resources used during this run of the application.
 
@@ -248,21 +248,18 @@ void chpl_task_init(int32_t  numThreadsPerLocale,
         qt_internal_unset_envstr("NUM_SHEPHERDS");
         qt_internal_unset_envstr("NUM_WORKERS_PER_SHEPHERD");
 
-        const int hwpar = (numThreadsPerLocale < maxThreadsPerLocale) ? 
-                           maxThreadsPerLocale : numThreadsPerLocale;
-        if (chpl_numCoresOnThisLocale() >= hwpar) {
-            snprintf(newenv_sheps, 99, "%i", (int)hwpar);
-            setenv("QT_HWPAR", newenv_sheps, 1);
-        } else {
+        if (chpl_numCoresOnThisLocale() < numThreadsPerLocale) {
             // Do not oversubscribe the system, use all available resources.
             numThreadsPerLocale = chpl_numCoresOnThisLocale();
-            snprintf(newenv_sheps, 99, "%i", (int)numThreadsPerLocale);
-            setenv("QT_HWPAR", newenv_sheps, 1);
 
             if (2 == verbosity) {
-                printf("QTHREADS: Ignored --{num,max}ThreadsPerLocale=%d to prevent oversubsription of the system.\n", hwpar);
+                printf("QTHREADS: Ignored --numThreadsPerLocale=%d to prevent oversubsription of the system.\n", numThreadsPerLocale);
             }
         }
+
+        // Set environment variable for Qthreads
+        snprintf(newenv_sheps, 99, "%i", (int)numThreadsPerLocale);
+        setenv("QT_HWPAR", newenv_sheps, 1);
     } else if (qt_internal_get_env_str("HWPAR", NULL) ||
                qt_internal_get_env_str("NUM_SHEPHERDS", NULL) ||
                qt_internal_get_env_str("NUM_WORKERS_PER_SHEPHERD", NULL)) {
