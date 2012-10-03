@@ -35,16 +35,20 @@ AC_CACHE_CHECK([what kind of C compiler $CC is],
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__clang__],[qthread_cv_c_compiler_type=Clang])])
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
-     [_QTHREAD_CHECK_IFDEF([__llvm__],[qthread_cv_c_compiler_type=LLVM])])
-   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__CONVEY],[qthread_cv_c_compiler_type=Convey])])
+   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
+     [_QTHREAD_CHECK_IFDEF([__llvm__],[
+	    qthread_cv_c_compiler_type=LLVM
+		_QTHREAD_CHECK_IFDEF_EQ([__APPLE_CC__],[5658],[qthread_cv_c_compiler_type=Apple-LLVM-5658])
+		AS_IF([test "x$qthread_cv_c_compiler_type" = "xLLVM"],
+		      [_QTHREAD_CHECK_IFDEF([__APPLE_CC__],[qthread_cv_c_compiler_type=Apple-LLVM])])
+		])])
 
    dnl GCC is one of the most common
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__GNUC__],[
 	    qthread_cv_c_compiler_type=GNU
-		AS_IF([test "x$qthread_cv_c_compiler_type" = "xGNU"],
-			  [_QTHREAD_CHECK_IFDEF_EQ([__GNUC__],[2],[qthread_cv_c_compiler_type=GNU2])])
+		_QTHREAD_CHECK_IFDEF_EQ([__GNUC__],[2],[qthread_cv_c_compiler_type=GNU2])
 		AS_IF([test "x$qthread_cv_c_compiler_type" = "xGNU"],
 			  [_QTHREAD_CHECK_IFDEF_EQ([__GNUC__],[3],[qthread_cv_c_compiler_type=GNU3])])
 		AS_IF([test "x$qthread_cv_c_compiler_type" = "xGNU"],

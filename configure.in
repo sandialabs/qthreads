@@ -447,7 +447,7 @@ AS_IF([test "x$enable_picky" = xyes],
          Clang)
            CFLAGS="-Wall -Wno-strict-aliasing -Wmissing-prototypes -Wstrict-prototypes $CFLAGS"
            ;;
-         GNU*|LLVM)
+         GNU*|*LLVM*)
            CFLAGS="-Wall -Wno-strict-aliasing -Wmissing-prototypes -Wstrict-prototypes $CFLAGS"
            ;;
          Intel)
@@ -809,6 +809,13 @@ AS_IF([test "x$enable_multithreaded_shepherds" = xyes],
        enable_multithreaded_shepherds="yes"],
       [enable_multithreaded_shepherds="no"
        EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --disable-multithreaded-shepherds"])
+
+AS_IF([test "x$enable_internal_spinlock" = "x"],
+      [case "$qthread_cv_c_compiler_type" in
+       Apple-LLVM-5658)
+         enable_internal_spinlock=no
+       ;;
+       esac])
 
 AS_IF([test "x$enable_hardware_atomics" = "xno"],
       [AS_IF([test "x$enable_multithreaded_shepherds" = "xno"],
