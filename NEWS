@@ -1,4 +1,12 @@
 --- 1.8.1 ---
+Improvements:
+ - Improved integration with Chapel build system
+ - Support for Chapel's blockreport debugging
+ - Cheaper context swap on x86(_64)
+Bugfixes:
+ - Support for libnumaV2 fixed
+ - Build system avoids obsolete macros
+ - Tilera affinity support compiles again (was missing a #include)
 --- 1.8 ---
 New Features:
  - Concurrent lock-free hash table (dictionary); three alternate designs
