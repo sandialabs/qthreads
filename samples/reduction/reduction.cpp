@@ -3,12 +3,15 @@
 
 int Update::execute(const pair & t, reduction_context & c ) const
 {
-	Tile* tile = new Tile();
-    //printf("Starting update %d-%d...\n", t.first, t.second);
+	//printf("Starting update %d-%d...\n", t.first, t.second);
+    
+    Tile* tile = new Tile();
     //printf("Reading %d-%d\n", t.first, t.second);
     c.tile_data.get(t, *tile);
     //printf("Producing tile %d of iteration %d\n", t.first, t.second+1);
     my_usleep(1);
+    //printf("Ending update %d-%d...\n", t.first, t.second);
+    
     c.tile_data.put(*new pair(t.first, t.second+1), *new Tile(t.first, t.second+1), 2);
     return CnC::CNC_Success;
 }
@@ -26,6 +29,7 @@ int Reduce::execute(const int & t, reduction_context & c ) const
 {
     int max = c.NO_TILES/2;
     #ifdef CNC_PRECOND_ONLY
+		//printf("precond_only");
     	max = c.NO_TILES;
     #endif
     
@@ -35,8 +39,10 @@ int Reduce::execute(const int & t, reduction_context & c ) const
         c.tile_data.get(pair(k, t), *crt);
         //printf("Reduce ended with input %p\n", crt);
         
-        my_usleep(1);
+        my_usleep_small(1);
     }
+	
+	c.NO_TILES--;
     // DO NOT add getcount for this put
 	// because then strict would show memory leaks
     c.reduced_data.put(t, 1);
@@ -81,8 +87,10 @@ int NextIter::execute(const int & t, reduction_context & c ) const
     	//printf("Prescribed next iteration start (%d)...\n", t+1);
     	
     	
-    	for(int i=0; i<c.NO_TILES; i++)
+    	for(int i=0; i<c.NO_TILES; i++) {
+			//printf("Prescribing %d-%d.\n", i, t);
 			c.update_tags.put(pair(i, t));
+		}
     }
     
     return CnC::CNC_Success;
@@ -107,12 +115,13 @@ int main (int argc, char **argv)
 
 	if (argc != 4)
 	{
-		printf("Usage:\n\t%s <number of tiles> <tile size> <number of iterations\n", argv[0]);
+		printf("Usage:\n\t%s <number of tiles> <tile size>\n", argv[0]);
 		return 0;
 	}
 	int tiles = atoi(argv[1]);
 	int tile_size = atoi(argv[2]);
-	int no_iter = atoi(argv[3]);
+	int no_iter = tiles;
+
 	if (tiles < 2){
 		    fprintf(stderr, "Number of tiles cannot be less than 2.\n");
 			return -1;

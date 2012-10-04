@@ -13,10 +13,18 @@ int TILE_SIZE = 100;
 
 int t;
 
+int my_usleep_small(int i) {
+	
+	for(int i=0; i<20*10000; i++)
+		t += 1.12*t*t;
+	//printf("t%d", t);
+	return t;
+}
+
 int my_usleep(int i) {
 	
-	for(int i=0; i<2000000; i++)
-		t += 1.12*t;
+	for(int i=0; i<200*10000; i++)
+		t += 1.12*t*t;
 	//printf("t%d", t);
 	return t;
 }
