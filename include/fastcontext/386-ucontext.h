@@ -38,10 +38,10 @@ struct mctxt {
 #else
     qt_register_t mc_esi;      /* 3: general-purpose register */
 #endif
-    uint32_t mc_xcsr;          /* 7/4: SSE2 control and status word */
-    uint32_t mc_cw;            /* 7+4/4+4: x87 control word */
-    qt_register_t mc_esp;      /* 8/5: machine state; stack pointer */
-    qt_register_t mc_eip;      /* 9/6: function pointer */
+    qt_register_t mc_esp;      /* 7/4: machine state; stack pointer */
+    qt_register_t mc_eip;      /* 8/5: function pointer */
+    uint32_t mc_xcsr;          /* 9/6: SSE2 control and status word */
+    uint32_t mc_cw;            /* 9+4/6+4: x87 control word */
 };
 
 struct uctxt {
