@@ -2918,7 +2918,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
 #else
         if (QTHREAD_LIKELY(myshep)) {
             dest_shep               = myshep->sched_shepherd++;
-            myshep->sched_shepherd *= (max_sheps >= (dest_shep + 1));
+            myshep->sched_shepherd *= (max_sheps > (dest_shep + 1));
         } else {
             dest_shep = (qthread_shepherd_id_t)qthread_internal_incr_mod(&qlib->sched_shepherd,
                                                                          max_sheps,
