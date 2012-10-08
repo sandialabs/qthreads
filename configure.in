@@ -937,7 +937,14 @@ AS_IF([test "x$enable_rcrtool_stats" = "xyes"],
       [enable_rcrtool_stats=no])
 
 AS_IF([test "x$enable_hardware_timer" != "xno"],
-      [# Which timer do we want to use
+      [AC_LINK_IFELSE([AC_LANG_SOURCE([[
+#include <unistd.h>
+
+int main() {
+  return sysconf(_SC_CLK_TCK);
+}]])],
+  [AC_DEFINE([HAVE_SC_CLK_TCK], [1], [Define if _SC_CLK_TCK is available.])])
+       dnl Which timer do we want to use
        qthread_timer_type=gettimeofday
        AS_IF([test "x$qthread_timer_type" = "xgettimeofday"],
              [AC_CHECK_FUNC([mach_absolute_time], [qthread_timer_type=mach])])

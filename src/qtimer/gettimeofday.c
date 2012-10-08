@@ -37,6 +37,23 @@ unsigned long qtimer_fastrand(void)
     return (unsigned long)(s.tv_usec);
 }
 
+double qtimer_wtime(void)
+{
+    struct timeval s;
+
+    gettimeofday(&(s), NULL);
+    return s.tv_sec + (s.tv_usec * 1e-6);
+}
+
+double qtimer_res(void)
+{
+#if defined(HAVE_SYSCONF) && defined(HAVE_SC_CLK_TCK)
+    return 1.0 / sysconf(_SC_CLK_TCK);;
+#else
+    return 1e-9;
+#endif
+}
+
 void qtimer_stop(qtimer_t q)
 {
     gettimeofday(&(q->stop), NULL);
