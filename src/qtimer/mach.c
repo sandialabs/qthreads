@@ -7,6 +7,7 @@
 #include "qthread/qtimer.h"
 
 #include <stdlib.h> /* calloc() & free()*/
+#include <unistd.h>
 
 #include "qthread-int.h"
 #include <mach/mach_time.h>
