@@ -110,4 +110,35 @@ unsigned long INTERNAL qt_internal_get_env_num(const char   *envariable,
     return tmp;
 }
 
+int INTERNAL qt_internal_unset_envstr(const char *envariable)
+{
+    char        mod_envariable[100];
+    const char *str;
+
+    check_info();
+
+    snprintf(mod_envariable, 100, "QT_%s", envariable);
+    str = getenv(mod_envariable);
+    qthread_debug(CORE_BEHAVIOR, "checking envariable %s\n", envariable);
+    if (str && *str) {
+        if (info) {
+            printf("%s = %s\n", mod_envariable, str);
+        }
+        return unsetenv(mod_envariable);
+    } else {
+        snprintf(mod_envariable, 100, "QTHREAD_%s", envariable);
+        str = getenv(mod_envariable);
+        if (str && *str) {
+            if (info) {
+                printf("%s = %s\n", mod_envariable, str);
+            }
+            return unsetenv(mod_envariable);
+        }
+    }
+    if (info) {
+        printf("[QT|QTHREAD]_%s = (unset)\n", envariable);
+    }
+    return 0;
+}
+
 /* vim:set expandtab: */

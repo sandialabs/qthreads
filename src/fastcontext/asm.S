@@ -100,11 +100,11 @@ SET:
         movl    (1*4)(%eax), %ebp _(/* restore EBP: Stack frame pointer */)
         movl    (2*4)(%eax), %ebx _(/* restore EBX: PIC base register */)
         movl    (3*4)(%eax), %esi _(/* restore ESI: general 32-bit register */)
-        ldmxcsr (4*4)(%eax)       _(/* restore SSE2 control and status word */)
-        fldcw   (5*4)(%eax)       _(/* restore x87 control word */)
+        ldmxcsr (6*4)(%eax)       _(/* restore SSE2 control and status word */)
+        fldcw   ((6*4)+4)(%eax)       _(/* restore x87 control word */)
 
-        movl    (6*4)(%eax), %esp _(/* set the stack */)
-        movl    (7*4)(%eax), %ecx _(/* get the new PC to jump to */)
+        movl    (4*4)(%eax), %esp _(/* set the stack */)
+        movl    (5*4)(%eax), %ecx _(/* get the new PC to jump to */)
 
         movl    $1,          %eax _(/* return value (allows us to escape the swapcontext loop) */)
         jmp     *%ecx             _(/* jump to the new PC */)
@@ -117,14 +117,14 @@ GET:
         movl    %ebp, (1*4)(%eax) _(/* save EBP: Stack frame pointer */)
         movl    %ebx, (2*4)(%eax) _(/* save EBX: PIC base register */)
         movl    %esi, (3*4)(%eax) _(/* save ESI: general 32-bit register */)
-        stmxcsr       (4*4)(%eax) _(/* save SSE2 control and status word */)
-        fnstcw        (5*4)(%eax) _(/* save x87 control word */)
+        stmxcsr       (6*4)(%eax) _(/* save SSE2 control and status word */)
+        fnstcw        ((6*4)+4)(%eax) _(/* save x87 control word */)
 
         leal    4(%esp), %ecx     _(/* load the stack pointer without the return address */)
-	movl    %ecx, (6*4)(%eax) _(/* save the stack pointer */)
+	movl    %ecx, (4*4)(%eax) _(/* save the stack pointer */)
 
         movl    (%esp), %ecx      _(/* load the current return location, which is stored on the stack */)
-        movl    %ecx, (7*4)(%eax) _(/* store the current return location */)
+        movl    %ecx, (5*4)(%eax) _(/* store the current return location */)
 
         movl    $0,   %eax        _(/*) return value (allows us to escape the swapcontext loop) */)
         ret
@@ -168,11 +168,11 @@ SET:
         movq    (4*8)(%rdi), %r13
         movq    (5*8)(%rdi), %r14
         movq    (6*8)(%rdi), %r15
-        ldmxcsr (7*8)(%rdi)                     _(/*) restore SSE2 control and status word */)
-        fldcw   (8*8)(%rdi)                     _(/*) restore x87 control word */)
-        movq    (9*8)(%rdi), %rsp _(/*) stack pointer */)
-        pushq   (10*8)(%rdi) _(/*) push new $pc onto stack for `ret` */)
-        movq    (0*8)(%rdi), %rdi _(/*) 1st int arg (arg passing) */)
+        ldmxcsr (9*8)(%rdi)                     _(/*) restore SSE2 control and status word */)
+        fldcw   ((9*8)+4)(%rdi)                     _(/*) restore x87 control word */)
+        movq    (7*8)(%rdi), %rsp _(/*) stack pointer */)
+        pushq   (8*8)(%rdi) _(/*) push new $pc onto stack for `ret` */)
+        movq    (0*8)(%rdi), %rdi _(/*) 1st int arg (arg passing); only necessary for first context swap into a new qthread */)
 
         movq    $1,          %rax _(/*) return value (allows us to escape the swapcontext loop) */)
         ret
@@ -190,17 +190,17 @@ GET:
         movq    %r13, (4*8)(%rdi)
         movq    %r14, (5*8)(%rdi)
         movq    %r15, (6*8)(%rdi)
-        stmxcsr           (7*8)(%rdi) _(/*) save SSE2 control and status word */)
-        fnstcw            (8*8)(%rdi) _(/*) save x86 control word */)
+        stmxcsr           (9*8)(%rdi) _(/*) save SSE2 control and status word */)
+        fnstcw            ((9*8)+4)(%rdi) _(/*) save x86 control word */)
 
         _(/* the following is broken into two instructions
            * because we can only dereference one memory op at a time */)
         movq    (%rsp), %rcx
-        movq    %rcx, (10*8)(%rdi)
+        movq    %rcx, (8*8)(%rdi)
 
         _(/*) I don't entirely understand why this is correct */)
         leaq    8(%rsp), %rcx    _(/*) %rsp */)
-        movq    %rcx, (9*8)(%rdi)
+        movq    %rcx, (7*8)(%rdi)
 
         mov             $0, %rax _(/*) set return value - success! */)
         ret

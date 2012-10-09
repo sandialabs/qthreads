@@ -840,7 +840,8 @@ int API_FUNC qthread_initialize(void)
     hw_par = qt_internal_get_env_num("HWPAR", nshepherds * nworkerspershep, nshepherds * nworkerspershep);
     if ((hw_par != 0) && (nshepherds != 0) && (nworkerspershep != 0)) {
         if (hw_par != (nshepherds * nworkerspershep)) {
-            print_warning("Shepherd/worker parallelism directly specified; ignoring HWPAR\n");
+            print_warning("Shepherd/worker parallelism directly specified (%u/%u); ignoring HWPAR (%u)\n",
+                          (unsigned)nshepherds, (unsigned)nworkerspershep, (unsigned)hw_par);
             hw_par = nshepherds * nworkerspershep;
         }
     }
@@ -1077,7 +1078,7 @@ int API_FUNC qthread_initialize(void)
         qt_mpool_create_aligned(qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s) +
                                 (2 * getpagesize()), getpagesize());
 # else
-        qt_mpool_create_aligned(sizeof(struct qthread_runtime_data_s) + qlib->qthread_stack_size, 16); // stacks on most platforms must be 16-byte aligned (or less)
+        qt_mpool_create_aligned(sizeof(struct qthread_runtime_data_s) + qlib->qthread_stack_size, QTHREAD_STACK_ALIGNMENT); // stacks on most platforms must be 16-byte aligned (or less)
 # endif
     generic_rdata_pool = qt_mpool_create(sizeof(struct qthread_runtime_data_s));
     generic_team_pool  = qt_mpool_create(sizeof(qt_team_t));
@@ -1126,7 +1127,7 @@ int API_FUNC qthread_initialize(void)
 
     qthread_debug(CORE_DETAILS, "master_context = %p\n", &(qlib->master_context));
     qthread_debug(CORE_DETAILS, "master_stack_size = %u\n", (unsigned)(qlib->master_stack_size));
-    qlib->master_stack = calloc(1, qlib->master_stack_size);
+    qlib->master_stack = qthread_internal_aligned_alloc(qlib->master_stack_size, QTHREAD_STACK_ALIGNMENT);
     qassert_ret(qlib->master_stack, QTHREAD_MALLOC_ERROR);
     qthread_debug(CORE_DETAILS, "master_stack = %p\n", qlib->master_stack);
 #ifdef QTHREAD_USE_VALGRIND
