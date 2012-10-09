@@ -99,8 +99,8 @@ double qtimer_wtime(void)
 double qtimer_res(void)
 {
     struct timespec s;
-    qassert(clock_getres(CLOCK_MONOTONIC, &ts), 0);
-    return ts.tv_sec + (ts.tv_nsec * 1e-9);
+    qassert(clock_getres(CLOCK_MONOTONIC, &s), 0);
+    return s.tv_sec + (s.tv_nsec * 1e-9);
 }
 
 double qtimer_secs(qtimer_t q)
