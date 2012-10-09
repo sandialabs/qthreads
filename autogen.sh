@@ -58,7 +58,7 @@ fi
 libtool_version=( $($LIBTOOLIZE --version) )
 libtool_version=( ${libtool_version[3]//./ } )
 if [ ${libtool_version[0]} -lt 2 ] ; then
-	if [ ${libtool_version[0]} -eq 1 -a ${libtool_version[0]} -lt 5 ] ; then
+	if [ ${libtool_version[0]} -eq 1 -a ${libtool_version[1]} -lt 5 ] ; then
 		echo "Your version of libtoolize ($LIBTOOLIZE) is too old!"
 		echo "Libtoolize 1.5.22 (and newer) has been tested to work."
 		echo -n "You have: "
