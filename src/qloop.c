@@ -13,6 +13,7 @@
 /* Internal Headers */
 #include "qthread_innards.h"           /* for qthread_debug() */
 #include "qt_barrier.h"
+#include "interfaces/rose/qt_sinc_barrier.h"
 #include "qloop_innards.h"
 #include "qthread_expect.h"
 #include "qthread_asserts.h"
@@ -25,6 +26,10 @@
 #endif
 
 #include "qthread/sinc.h"
+
+#ifdef QTHREAD_RCRTOOL
+int64_t maestro_size(void);
+#endif
 
 typedef enum {
     ALIGNED,
@@ -142,11 +147,12 @@ static aligned_t qloop_wrapper(struct qloop_wrapper_args *const restrict arg)
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 struct qloop_step_wrapper_args {
-    qt_loop_step_f func;
-    size_t         startat, stopat, step, id, rootNum;
-    void          *arg;
-    size_t         level;
-    qt_sinc_t     *sinc;
+    qt_loop_step_f     func;
+    size_t             startat, stopat, step, id, rootNum;
+    void              *arg;
+    size_t             level;
+    qt_sinc_t         *sinc;
+    qt_sinc_barrier_t *barrier;
 };
 
 # ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
@@ -174,7 +180,12 @@ static aligned_t qloop_step_wrapper(struct qloop_step_wrapper_args *const restri
 # ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
     MONITOR_ASM_LABEL(qthread_step_fence3); // add label for HPCToolkit unwind
 # endif
-    size_t tot_workers = qthread_num_workers() - 1; // I'm already here
+
+#ifdef QTHREAD_RCRTOOL
+    size_t tot_workers = maestro_size();
+#else
+    size_t tot_workers = qthread_num_workers(); // I'm already here
+#endif
 
     size_t level = arg->level;
     size_t my_id = arg->id;
@@ -182,7 +193,7 @@ static aligned_t qloop_step_wrapper(struct qloop_step_wrapper_args *const restri
         my_id = arg->rootNum;
     }
     size_t new_id = my_id + (1 << level);
-    while (new_id <= tot_workers) {       // create some children? (tot_workers zero based)
+    while (new_id < tot_workers) {       // create some children? (tot_workers zero based)
         if (new_id == arg->rootNum) {
             new_id = 0;                       // move thread that lands on root to zero --
         }
@@ -449,6 +460,9 @@ static void qt_loop_step_inner(const size_t         start,
 
     qt_sinc_t *my_sinc = qt_sinc_create(0, NULL, NULL, steps);
 
+    qt_sinc_barrier_t* barrier = (qt_sinc_barrier_t *)MALLOC(sizeof(qt_sinc_barrier_t ));
+    qt_sinc_barrier_init(barrier,maestro_size());
+
     for (i = start; i < stop; i += stride) {
         qwa[threadct].func    = func;
         qwa[threadct].startat = i;
@@ -458,6 +472,7 @@ static void qt_loop_step_inner(const size_t         start,
         qwa[threadct].id      = threadct;
         qwa[threadct].level   = 0;
         qwa[threadct].sinc    = my_sinc;
+        qwa[threadct].barrier = barrier;
         qwa[threadct].rootNum = rootNum;
 
         threadct++;

@@ -161,6 +161,32 @@ void qt_sinc_reset(qt_sinc_t   *sinc_,
     }
 } /*}}}*/
 
+//add akp for power throttling
+void qt_sinc_resize(qt_sinc_t   *sinc_,
+                   const size_t diff)
+{   /*{{{*/
+    qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
+
+    assert(sinc && (0 == sinc->counter));
+    assert(qthread_feb_status(&sinc->ready) == 1);
+
+    qt_sinc_reduction_t *const restrict rdata = sinc->rdata;
+
+    // Reset values
+    if (NULL != rdata) {
+      printf("not sure resize is safe when storing values in sinc\n");
+    }
+
+    // Reset termination detection
+    qt_sinc_count_t count = qthread_incr(&sinc->counter, diff);
+
+    if (sinc->counter <= 0) {
+        qthread_fill(&sinc->ready);
+    }
+} /*}}}*/
+// end akp add
+
+
 void qt_sinc_fini(qt_sinc_t *sinc_)
 {   /*{{{*/
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;

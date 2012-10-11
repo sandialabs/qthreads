@@ -17,6 +17,7 @@ libqthread_la_SOURCES = \
 	qalloc.c \
 	qloop.c \
 	qt_feb_barrier.c \
+	qt_sinc_barrier.c \
 	qutil.c \
 	io.c \
 	locks.c \

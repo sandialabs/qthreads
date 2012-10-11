@@ -79,7 +79,13 @@
 #ifdef QTHREAD_RCRTOOL
 # include "maestro_sched.h"
 # include "rcrtool/qt_rcrtool.h"
+
+void resetEnergy(int64_t i);
+
 extern QTHREAD_FASTLOCK_TYPE rcrtool_lock;
+extern int rcrToolContinue;
+extern int powerOff;
+
 #endif
 
 #if !(defined(HAVE_GCC_INLINE_ASSEMBLY) &&              \
@@ -114,6 +120,7 @@ aligned_t             concurrentthreads;
 QTHREAD_FASTLOCK_TYPE concurrentthreads_lock;
 QTHREAD_FASTLOCK_TYPE effconcurrentthreads_lock;
 #endif
+
 
 /* Internal Prototypes */
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
@@ -1206,11 +1213,7 @@ int API_FUNC qthread_initialize(void)
     QTHREAD_FASTLOCK_INIT(rcrtool_lock);
     rcrtoollevel    = qt_internal_get_env_num("RCRTOOL_LEVEL", 0, 0);
     rcrtoolloglevel = qt_internal_get_env_num("RCRTOOL_LOG_LEVEL", 0, 0);
-    if (rcrtoollevel > 0) {
-        qlib->nworkers_active = nshepherds * nworkerspershep - 1;
-    } else {
-        qlib->nworkers_active = nshepherds * nworkerspershep;
-    }
+    qlib->nworkers_active = nshepherds * nworkerspershep;
 # else /* ifdef QTHREAD_RCRTOOL */
     assert(hw_par > 0);
     qlib->nworkers_active = hw_par;
@@ -1543,6 +1546,7 @@ int print_FEBs(int *ct)
 }
 
 #endif /* ifdef QTHREAD_DEBUG */
+int qthread_finalizeRun = 0;
 
 void API_FUNC qthread_finalize(void)
 {                      /*{{{ */
@@ -1550,10 +1554,21 @@ void API_FUNC qthread_finalize(void)
     qthread_shepherd_id_t i;
     qthread_t            *t;
 
+    if (qthread_finalizeRun) return;  // only run once -- exit 0 causes it to run
+    // in exit handler and then during termination.  -- needed in exit handler to 
+    // reset duty cycle when exit actually causes termination
+    qthread_finalizeRun = 1;
+
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t *worker;
 #endif
-
+    int workers = qthread_num_workers();
+#ifdef QTHREAD_RCRTOOL
+    powerOff = 0;
+    for ( i = 0; i < workers; i ++) {
+      resetEnergy(i);
+    }
+#endif
     /* Sanity check */
     if ((qlib == NULL) || (qthread_shep() != 0) || (qthread_worker(NULL) != 0)) {
         /* in essence, qthread_finalize can easily be called by threads
@@ -1624,6 +1639,9 @@ void API_FUNC qthread_finalize(void)
 #endif
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+#ifdef QTHREAD_RCRTOOL
+    rcrToolContinue = 0;
+#endif
     for (i = 0; i < qlib->nshepherds; i++) {
         qthread_worker_id_t j;
         for (j = 0; j < qlib->nworkerspershep; j++) {
@@ -2879,7 +2897,14 @@ int API_FUNC qthread_spawn(qthread_f             f,
 #if defined(QTHREAD_DEBUG) || !defined(QTHREAD_MULTITHREADED_SHEPHERDS)
     const qthread_shepherd_id_t max_sheps = qlib->nshepherds;
 #endif
-
+    qthread_shepherd_id_t save_target = target_shep;
+#ifdef QTHREAD_OMP_AFFINITY
+    if(target_shep == NO_SHEPHERD){
+    if (me->rdata->child_affinity != OMP_NO_CHILD_TASK_AFFINITY){
+      target_shep = me->rdata->child_affinity;
+    }
+    }
+#endif
     if (me) {
         assert(me->rdata);
         myshep = me->rdata->shepherd_ptr;
@@ -3052,7 +3077,9 @@ int API_FUNC qthread_spawn(qthread_f             f,
         assert(((aligned_t **)preconds)[0] == (aligned_t *)(uintptr_t)npreconds);
     }
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    t->id = target_shep;  /* used in barrier and arrive_first, NOT the
+    t->id = save_target;
+      //target_shep;
+      /* used in barrier and arrive_first, NOT the
                            * thread-id may be extraneous in both when parallel
                            * region barriers in place (not will to pull it now
                            * maybe later) akp */
@@ -3844,6 +3871,16 @@ aligned_t *qthread_task_counter(void)
     return &t->task_counter;
 }                      /*}}} */
 
+void qthread_set_affinity(unsigned int shep)
+{                                    /*{{{ */
+#ifdef QTHREAD_OMP_AFFINITY
+    qthread_t *t = qthread_internal_self();
+
+    assert(t);
+    t->rdata->child_affinity = shep;
+#endif
+    return;
+}
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
 
 /* vim:set expandtab: */

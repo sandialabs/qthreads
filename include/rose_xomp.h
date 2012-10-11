@@ -206,6 +206,14 @@ unsigned char XOMP_single(
     void);
 unsigned char XOMP_master(
     void);
+int XOMP_sections_init_next(
+    int);
+int XOMP_sections_next(
+    void); 
+void XOMP_sections_end(
+    void);
+void XOMP_sections_end_nowait(
+    void);
 // flush without variable list
 void XOMP_flush_all(
     void);
