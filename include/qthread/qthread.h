@@ -161,6 +161,7 @@ typedef size_t qt_team_id_t;
 
 /* for convenient arguments to qthread_fork */
 typedef aligned_t (*qthread_f)(void *arg);
+typedef void     (*qthread_agg_f)  (int count, qthread_f *f, void **arg, void **ret, uint16_t flags);
 
 /* use this function to initialize the qthreads environment before spawning any
  * qthreads. The argument to this function used to specify the number of
@@ -170,6 +171,10 @@ typedef aligned_t (*qthread_f)(void *arg);
  * environment variable QTHREAD_NUM_SHEPHERDS. */
 int qthread_init(qthread_shepherd_id_t nshepherds);
 int qthread_initialize(void);
+int qthread_initialize_agg(int(*agg_cost) (int count, qthread_f* f, void **arg), qthread_agg_f agg_f);
+int qthread_default_agg_cost (int count, qthread_f* f, void **arg);
+void qthread_default_agg_f (int count, qthread_f* f, void** arg, void** ret, uint16_t flags);
+void qthread_call_method(qthread_f f, void*arg, void* ret, uint16_t flags);
 
 /* use this function to clean up the qthreads environment after execution of
  * the program is finished. This function will terminate any currently running
@@ -277,6 +282,7 @@ enum _qthread_features {
     SPAWN_RET_SINC,
     SPAWN_RET_SINC_VOID,
     SPAWN_PC_SYNCVAR_T,
+    SPAWN_AGGREGABLE,
     SPAWN_COUNT
 };
 
@@ -289,6 +295,7 @@ enum _qthread_features {
 # define QTHREAD_SPAWN_RET_SINC      (1 << SPAWN_RET_SINC)
 # define QTHREAD_SPAWN_RET_SINC_VOID (1 << SPAWN_RET_SINC_VOID)
 # define QTHREAD_SPAWN_PC_SYNCVAR_T  (1 << SPAWN_PC_SYNCVAR_T)
+# define QTHREAD_SPAWN_AGGREGABLE    (1 << SPAWN_AGGREGABLE)
 
 int qthread_spawn(qthread_f             f,
                   const void           *arg,

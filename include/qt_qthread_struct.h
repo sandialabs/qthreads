@@ -26,6 +26,7 @@
 #define QTHREAD_TEAM_WATCHER     (1 << 8)
 #define QTHREAD_BIG_STRUCT       (1 << 9)
 #define QTHREAD_AGGREGABLE       (1 << 10)
+#define QTHREAD_AGGREGATED       (1 << 11)
 
 /* flags for teams (must be different bits) */
 #define QTHREAD_TEAM_DEAD       (1 << 0)
@@ -95,7 +96,7 @@ struct qthread_s {
     enum threadstate           prev_thread_state;      /* save the previous thread state */
 #endif
     unsigned int               thread_id;
-    qthread_shepherd_id_t      target_shepherd;       /* the shepherd we'd rather run on */
+    qthread_shepherd_id_t      target_shepherd;       /* the shepherd we'd rather run on; set to NO_SHEPHERD unless the thread either migrated or was spawned to a specific destination (aka the programmer expressed a desire for this thread to be somewhere) */
     uint16_t                   flags;
     uint8_t                    thread_state;
 

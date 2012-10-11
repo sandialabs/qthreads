@@ -135,7 +135,9 @@ static QINLINE qthread_t *qthread_thread_new(qthread_f   f,
                                              void       *ret,
                                              qt_team_t  *team,
                                              int         team_leader);
-static QINLINE void qthread_thread_free(qthread_t *t);
+
+/*Make method externally available for the scheduler; to be used when agg tasks*/
+void qthread_thread_free(qthread_t *t);
 
 #ifdef QTHREAD_RCRTOOL_STAT
 extern int adaptiveSetHigh;
@@ -758,6 +760,23 @@ qt_run:
     return NULL;
 }                      /*}}} */
 
+/* By default allow merging of tasks of the same kind
+ * Rely on the limitation put on max number of tasks 
+ * allowed to be aggregated from a queue 
+ * (relative to available work per worker) */
+int qthread_default_agg_cost (int count, qthread_f* f, void **arg){   
+    if(f[count] != f[0])
+        return qlib->max_c+1;
+    return qlib->max_c-1;
+}
+
+void qthread_default_agg_f (int count, qthread_f* f, void** arg, void** ret, uint16_t flags){
+    int i;
+    for(i=count-1; i>=0; i--){
+        qthread_call_method(f[i], arg[i], ret[i], flags);
+    }
+}
+
 int API_FUNC qthread_init(qthread_shepherd_id_t nshepherds)
 {                      /*{{{ */
     char newenv[100];
@@ -784,7 +803,9 @@ int API_FUNC qthread_init(qthread_shepherd_id_t nshepherds)
  * shepherd if no information about the system could be found. Shepherds will
  * attempt to pin themselves to processors using whatever CPU affinity libraries
  * are available.
- *
+ * qthread_initialize_agg is another wrapper, receiving the method that can aggregate tasks.
+ * By default, qthreads provide such a method for spawned tasks marked as AGGREGABLE.
+
  * @name qthread_initialize
  *
  * @synopsis
@@ -1087,6 +1108,9 @@ int API_FUNC qthread_initialize(void)
     qt_threadqueue_subsystem_init();
     qt_blocking_subsystem_init();
 
+/* Set up agg methods*/
+    qlib->agg_cost = qthread_default_agg_cost;
+    qlib->agg_f    = qthread_default_agg_f;
 /* initialize the shepherd structures */
     for (i = 0; i < nshepherds; i++) {
         qthread_debug(SHEPHERD_DETAILS, "setting up shepherd %i (%p)\n", i, &qlib->shepherds[i]);
@@ -2402,7 +2426,7 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
     return t;
 }                      /*}}} */
 
-static QINLINE void qthread_thread_free(qthread_t *t)
+void qthread_thread_free(qthread_t *t)
 {                      /*{{{ */
     assert(t != NULL);
 
