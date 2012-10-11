@@ -10,11 +10,14 @@ AC_CHECK_HEADERS([numa.h],
 				 [libnuma_happy=yes
 				  break],
 				 [libnuma_happy=no])
+QT_OLDLIBS="$LIBS"
 AS_IF([test "x$libnuma_happy" = "xyes"],
-  [AC_SEARCH_LIBS([numa_available],[numa],[libnuma_happy=yes],[libnuma_happy=no])])
+	  [AC_SEARCH_LIBS([numa_available],
+		              [numa],
+					  [libnuma_happy=yes],
+					  [libnuma_happy=no])])
 AS_IF([test "x$libnuma_happy" = "xyes"],
   [AC_MSG_CHECKING(if NUMA is available)
-   QT_OLDLIBS="$LIBS"
    LIBS="$LIBS -lnuma"
    AC_TRY_RUN([
 #include <numa.h>

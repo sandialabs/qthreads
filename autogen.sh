@@ -20,28 +20,6 @@ fi
 if [ "$LIBTOOLIZE" ] ; then
 	# accept anything that's been pre-configured
 	echo LIBTOOLIZE=$LIBTOOLIZE
-	if [ "${LIBTOOLIZE}" = "${LIBTOOLIZE#/}" ] ; then
-		libtool_fullpath=$(type -p "${LIBTOOLIZE}" )
-	else
-		libtool_fullpath="$LIBTOOLIZE"
-	fi
-	if [ "${ACLOCAL}" = "${ACLOCAL#/}" ] ; then
-		aclocal_fullpath=$(type -p "${ACLOCAL}" )
-	else
-		aclocal_fullpath="$ACLOCAL"
-	fi
-	if [ "${libtool_fullpath%bin/*}" != "${aclocal_fullpath%bin/*}" ] ; then
-		if [ -d "${libtool_fullpath%/bin/*}/share/aclocal" ] ; then
-			ACLOCAL_INCLUDE="${libtool_fullpath%/bin/*}/share/aclocal"
-			echo "Since you set LIBTOOLIZE, I'm going to alter ACLOCAL to include the relative aclocal directory in the include-path."
-			echo 'That aclocal directory looks like "'$ACLOCAL_INCLUDE'"'
-		else
-			echo "Since you set LIBTOOLIZE, you probably need to alter ACLOCAL to include the relative aclocal directory in the include-path."
-			echo "I would do it for you, but I can't find a likely candidate".
-		fi
-	else
-		echo "Since LIBTOOLIZE and ACLOCAL are in the same directory, I'm going to assume they know about each other."
-	fi
 elif type glibtoolize &>/dev/null ; then
 	# prefer glibtoolize over libtoolize
 	export LIBTOOLIZE=`type -p glibtoolize`
@@ -58,13 +36,35 @@ fi
 libtool_version=( $($LIBTOOLIZE --version) )
 libtool_version=( ${libtool_version[3]//./ } )
 if [ ${libtool_version[0]} -lt 2 ] ; then
-	if [ ${libtool_version[0]} -eq 1 -a ${libtool_version[0]} -lt 5 ] ; then
+	if [ ${libtool_version[0]} -eq 1 -a ${libtool_version[1]} -lt 5 ] ; then
 		echo "Your version of libtoolize ($LIBTOOLIZE) is too old!"
 		echo "Libtoolize 1.5.22 (and newer) has been tested to work."
 		echo -n "You have: "
 		$LIBTOOLIZE --version | head -n 1
 		exit -1
 	fi
+fi
+
+if [ "${LIBTOOLIZE}" = "${LIBTOOLIZE#/}" ] ; then
+    libtool_fullpath=$(type -p "${LIBTOOLIZE}" )
+else
+    libtool_fullpath="$LIBTOOLIZE"
+fi
+if [ "${ACLOCAL}" = "${ACLOCAL#/}" ] ; then
+    aclocal_fullpath=$(type -p "${ACLOCAL}" )
+else
+    aclocal_fullpath="$ACLOCAL"
+fi
+if [ "${libtool_fullpath%bin/*}" != "${aclocal_fullpath%bin/*}" ] ; then
+    echo "Libtoolize and aclocal are not in the same directory, so I'm guessing ACLOCAL needs to be modified to include libtoolize's directory in its search path."
+    if [ -d "${libtool_fullpath%/bin/*}/share/aclocal" ] ; then
+        ACLOCAL_INCLUDE="${libtool_fullpath%/bin/*}/share/aclocal"
+        echo 'That aclocal directory looks like "'$ACLOCAL_INCLUDE'"'
+    else
+        echo "I would do it for you, but I can't find a likely candidate".
+    fi
+else
+    echo "Since LIBTOOLIZE and ACLOCAL are in the same directory, I'm going to assume they know about each other."
 fi
 
 if [ "$AUTOMAKE" ] ; then

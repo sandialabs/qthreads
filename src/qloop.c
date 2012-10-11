@@ -991,13 +991,16 @@ static Q_UNUSED QINLINE int qqloop_get_iterations_guided(qqloop_iteration_queue_
 
     /* this loop ensure atomicity in figuring out the number of iterations to
      * process */
-    while (ret < iq->stop && ret != ret2) {
-        ret        = iq->start;
-        iterations = (stop - ret) / sheps;
-        if (iterations == 0) {
-            iterations = 1;
+    if (ret != ret2) {
+        while (ret < iq->stop) {
+            ret        = iq->start;
+            iterations = (stop - ret) / sheps;
+            if (iterations == 0) {
+                iterations = 1;
+            }
+            ret2 = qthread_cas(&(iq->start), ret, ret + iterations);
+            if (ret == ret2) break;
         }
-        ret2 = qthread_cas(&(iq->start), ret, ret + iterations);
     }
     if (ret < iq->stop) {
         assert(iterations > 0);

@@ -100,7 +100,7 @@ int main(int argc,
         qtimer_start(t);
         qt_loop_queue_run(loophandle);
         qtimer_stop(t);
-        iprintf("summing-parallel %u uints took %g seconds\n", BIGLEN,
+        iprintf("summing-parallel CHUNK %u uints took %g seconds\n", BIGLEN,
                 qtimer_secs(t));
         iprintf("\tsum was %lu\n", (unsigned long)uitmp);
         assert(uitmp == uisum);
@@ -110,7 +110,7 @@ int main(int argc,
         qtimer_start(t);
         qt_loop_queue_run(loophandle);
         qtimer_stop(t);
-        iprintf("summing-parallel %u uints took %g seconds\n", BIGLEN,
+        iprintf("summing-parallel GUIDED %u uints took %g seconds\n", BIGLEN,
                 qtimer_secs(t));
         iprintf("\tsum was %lu\n", (unsigned long)uitmp);
         assert(uitmp == uisum);
@@ -120,7 +120,7 @@ int main(int argc,
         qtimer_start(t);
         qt_loop_queue_run(loophandle);
         qtimer_stop(t);
-        iprintf("summing-parallel %u uints took %g seconds\n", BIGLEN,
+        iprintf("summing-parallel FACTORED %u uints took %g seconds\n", BIGLEN,
                 qtimer_secs(t));
         iprintf("\tsum was %lu\n", (unsigned long)uitmp);
         assert(uitmp == uisum);
@@ -130,7 +130,7 @@ int main(int argc,
         qtimer_start(t);
         qt_loop_queue_run(loophandle);
         qtimer_stop(t);
-        iprintf("summing-parallel %u uints took %g seconds\n", BIGLEN,
+        iprintf("summing-parallel TIMED %u uints took %g seconds\n", BIGLEN,
                 qtimer_secs(t));
         iprintf("\tsum was %lu\n", (unsigned long)uitmp);
         assert(uitmp == uisum);

@@ -178,9 +178,11 @@ static void chapel_display_thread(void        *addr,
 
     if (rep) {
         if ((rep->lock_lineno > 0) && rep->lock_filename) {
-            fprintf(stderr, "Waiting at: %s:%d\n", rep->lock_filename, rep->lock_lineno);
+            fprintf(stderr, "Waiting at: %s:%d (task %s:%d)\n", rep->lock_filename, rep->lock_lineno, rep->task_filename, rep->task_lineno);
+        } else if (rep->lock_lineno == 0 && rep->lock_filename) {
+            fprintf(stderr, "Waiting for more work (line 0? file:%s) (task %s:%d)\n", rep->lock_filename, rep->task_filename, rep->task_lineno);
         } else if (rep->lock_lineno == 0) {
-            fprintf(stderr, "Waiting for more work (line 0? how did this happen?)\n");
+            fprintf(stderr, "Waiting for dependencies (uninitialized task %s:%d)\n", rep->task_filename, rep->task_lineno);
         }
         fflush(stderr);
     }
@@ -236,18 +238,35 @@ void chpl_task_init(int32_t  numThreadsPerLocale,
     char      newenv_sheps[100] = { 0 };
     char      newenv_stack[100] = { 0 };
 
-    // Precendence (high-to-low):
-    // 1) --numThreadsPerLocale option
-    // 2) QTHREAD_NUM_SHEPHERDS
-    // 3) chpl_numCoresOnThisLocale()
-    if (numThreadsPerLocale != 0) {
+    // Set up available hardware parallelism
+    if (0 < numThreadsPerLocale) {
+        // We are assuming the user wants to constrain the hardware
+        // resources used during this run of the application.
+
+        // Unset relevant Qthreads environment variables
+        qt_internal_unset_envstr("HWPAR");
+        qt_internal_unset_envstr("NUM_SHEPHERDS");
+        qt_internal_unset_envstr("NUM_WORKERS_PER_SHEPHERD");
+
+        if (chpl_numCoresOnThisLocale() < numThreadsPerLocale) {
+            // Do not oversubscribe the system, use all available resources.
+            numThreadsPerLocale = chpl_numCoresOnThisLocale();
+
+            if (2 == verbosity) {
+                printf("QTHREADS: Ignored --numThreadsPerLocale=%d to prevent oversubsription of the system.\n", numThreadsPerLocale);
+            }
+        }
+
+        // Set environment variable for Qthreads
         snprintf(newenv_sheps, 99, "%i", (int)numThreadsPerLocale);
         setenv("QT_HWPAR", newenv_sheps, 1);
-    } else if (qt_internal_get_env_str("NUM_SHEPHERDS", NULL) != NULL) {
-        if (qt_internal_get_env_str("NUM_WORKERS_PER_SHEPHERD", NULL) == NULL) {
-            setenv("QT_NUM_WORKERS_PER_SHEPHERD", "1", 1);
-        }
+    } else if (qt_internal_get_env_str("HWPAR", NULL) ||
+               qt_internal_get_env_str("NUM_SHEPHERDS", NULL) ||
+               qt_internal_get_env_str("NUM_WORKERS_PER_SHEPHERD", NULL)) {
+        // Assume the user wants has manually set the desired Qthreads
+        // environment variables.
     } else {
+        // Default to using all hardware resources.
         numThreadsPerLocale = chpl_numCoresOnThisLocale();
         snprintf(newenv_sheps, 99, "%i", (int)numThreadsPerLocale);
         setenv("QT_HWPAR", newenv_sheps, 1);
