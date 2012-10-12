@@ -23,7 +23,8 @@ TESTS = \
 		qdqueue \
 		allpairs \
 		subteams \
-		qt_dictionary
+		qt_dictionary \
+		eureka
 
 EXTRA_PROGRAMS = wavefront
 
@@ -99,3 +100,5 @@ cxx_qt_loop_SOURCES = cxx_qt_loop.cpp
 cxx_qt_loop_balance_SOURCES = cxx_qt_loop_balance.cpp
 
 wavefront_SOURCES = wavefront.c
+
+eureka_SOURCES = eureka.c

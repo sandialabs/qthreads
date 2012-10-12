@@ -92,6 +92,12 @@ extern QTHREAD_FASTLOCK_TYPE rcrtool_lock;
 # define QTHREAD_MUTEX_INCREMENT 1
 #endif
 
+#define TEAM_EUREKA_EXIT(team_id)          (((saligned_t)team_id) > 1)
+#define TEAM_EUREKA_EUREKA(team_id)        (((saligned_t)team_id) < 0)
+#define TEAM_EUREKA_ID(team_id)            (team_id)
+#define TEAM_EUREKA_SIGNAL_EXIT(team_id)   (team_id)
+#define TEAM_EUREKA_SIGNAL_EUREKA(team_id) ((saligned_t)(-team_id))
+
 /* shared globals (w/ futurelib) */
 qlib_t qlib      = NULL;
 int    qaffinity = 1;
@@ -324,6 +330,10 @@ static int    idleCheckin   = 0;   // added for RCRTOOL level >= 3 stats
 # endif
 #endif
 
+static saligned_t eureka_flag    = -1;
+static aligned_t  eureka_in_barrier = 0;
+static aligned_t  eureka_out_barrier = 0;
+
 static void hup_handler(int sig)
 {   /*{{{*/
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -335,9 +345,46 @@ static void hup_handler(int sig)
     qthread_t          *t = s->current;
 #endif
 
-    assert(sig == SIGUSR1);
-    t->thread_state = QTHREAD_STATE_ASSASSINATED;
-    qthread_back_to_master(t);
+    switch(sig) {
+        case SIGUSR1:
+            t->thread_state = QTHREAD_STATE_ASSASSINATED;
+            qthread_back_to_master2(t);
+            break;
+        case SIGUSR2:
+            if (t->team) {
+                /*if (TEAM_EUREKA_ID(t->team->eureka) == t->team->team_id) {
+                    t->thread_state = QTHREAD_STATE_ASSASSINATED;
+                }*/
+            }
+            /* 3: workers must barrier */
+            {
+                aligned_t tmp = eureka_out_barrier;
+                if (qthread_incr(&eureka_in_barrier, 1)+1 == qlib->nshepherds) {
+                    eureka_in_barrier = 0;
+                    MACHINE_FENCE;
+                    eureka_out_barrier++;
+                } else {
+                    COMPILER_FENCE;
+                    while (tmp == eureka_out_barrier) SPINLOCK_BODY();
+                }
+            }
+            /* 4: worker 0 filters the work queue */
+            if (w->worker_id == 0) {
+                /* filter work queue! */
+            }
+            /* 6: barrier #2 to resume */
+            {
+                aligned_t tmp = eureka_out_barrier;
+                if (qthread_incr(&eureka_in_barrier, 1)+1 == qlib->nshepherds) {
+                    eureka_in_barrier = 0;
+                    MACHINE_FENCE;
+                    eureka_out_barrier++;
+                } else {
+                    COMPILER_FENCE;
+                    while (tmp == eureka_out_barrier) SPINLOCK_BODY();
+                }
+            }
+    }
 } /*}}}*/
 
 #define print_status(format, ...)  printf("QTHREADS: " format, ## __VA_ARGS__)
@@ -416,6 +463,8 @@ static void *qthread_master(void *arg)
     localqueue = qt_init_local_spawncache();
 #endif
     signal(SIGUSR1, hup_handler);
+    signal(SIGUSR2, hup_handler);
+    printf("registered hup_handler\n");
 
     if (qaffinity && (me->node != UINT_MAX)) {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -1159,6 +1208,7 @@ int API_FUNC qthread_initialize(void)
 /* now build the context for the shepherd 0 */
     qthread_debug(CORE_DETAILS, "calling qthread_makecontext\n");
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    qlib->shepherds[0].workers[0].worker = pthread_self();
     qlib->shepherds[0].workers[0].shepherd = &qlib->shepherds[0];
     QTHREAD_CASLOCK_INIT(qlib->shepherds[0].workers[0].active, 1);
     qthread_debug(CORE_DETAILS, "initialized caslock 0,0 %p\n", &qlib->shepherds[0].workers[0].active);
@@ -2171,11 +2221,77 @@ aligned_t API_FUNC *qthread_retloc(void)
     }
 }                      /*}}} */
 
-#define TEAM_EUREKA_EXIT(team_id)          (((saligned_t)team_id) > 1)
-#define TEAM_EUREKA_EUREKA(team_id)        (((saligned_t)team_id) < 0)
-#define TEAM_EUREKA_ID(team_id)            (team_id)
-#define TEAM_EUREKA_SIGNAL_EXIT(team_id)   (team_id)
-#define TEAM_EUREKA_SIGNAL_EUREKA(team_id) ((saligned_t)(-team_id))
+int API_FUNC qt_team_eureka(void)
+{
+    saligned_t        my_wkrid = -1;
+    qthread_worker_t *wkr          = qthread_internal_getworker();
+
+    if (wkr) {
+        my_wkrid = wkr->unique_id;
+    } else {
+        /* calling a eureka from outside qthreads makes no sense */
+        return QTHREAD_NOT_ALLOWED;
+    }
+    /* 1: race to see who wins the eureka */
+    printf("trying to win the eureka contest...\n");
+    do {
+        while (eureka_flag != -1) SPINLOCK_BODY();
+    } while (qthread_cas(&eureka_flag, -1, my_wkrid) != -1);
+    printf("I (%u) won the eureka contest!\n", my_wkrid);
+    MACHINE_FENCE;
+    /* 2: signal all the other workers */
+    /* NOTE: From here until the end of barrier 2, printfs are STRICTLY
+     *    FORBIDDEN. Printf, on many platforms, uses a mutex for one reason or
+     *    another (e.g. to lock the output buffer). If the user code receiving
+     *    the signal got interrupted while holding that lock, attempting a
+     *    printf in this thread will cause deadlock. */
+    qthread_shepherd_t *sheps = qlib->shepherds;
+    for (qthread_shepherd_id_t shep = 0; shep < qlib->nshepherds; shep++) {
+        qthread_worker_t *wkrs = sheps[shep].workers;
+        for (unsigned int wkrid = 0; wkrid < qlib->nworkerspershep; wkrid++) {
+            int ret;
+            if (pthread_equal(wkrs[wkrid].worker, pthread_self())) {
+                continue;
+            }
+            if ((ret = pthread_kill(wkrs[wkrid].worker, SIGUSR2)) != 0) {
+                printf("err=%i: %s\n", ret, strerror(ret));
+                abort();
+            }
+        }
+    }
+    /* 3: workers must barrier */
+    {
+        aligned_t tmp = eureka_out_barrier;
+        if (qthread_incr(&eureka_in_barrier, 1)+1 == qlib->nshepherds) {
+            eureka_in_barrier = 0;
+            MACHINE_FENCE;
+            eureka_out_barrier++;
+        } else {
+            COMPILER_FENCE;
+            while (tmp == eureka_out_barrier) SPINLOCK_BODY();
+        }
+    }
+    /* 4: worker 0 filters the work queue */
+    if (wkr->worker_id == 0) {
+        /* filter work queue! */
+    }
+    /* 5: callback to kill blocked tasks */
+    /* 6: barrier #2 to resume */
+    {
+        aligned_t tmp = eureka_out_barrier;
+        if (qthread_incr(&eureka_in_barrier, 1)+1 == qlib->nshepherds) {
+            eureka_in_barrier = 0;
+            MACHINE_FENCE;
+            eureka_out_barrier++;
+        } else {
+            COMPILER_FENCE;
+            while (tmp == eureka_out_barrier) SPINLOCK_BODY();
+        }
+    }
+    /* 7: release eureka lock */
+    MACHINE_FENCE;
+    eureka_flag = -1;
+}
 
 static aligned_t qt_team_watcher(void *args_)
 {   /*{{{*/
