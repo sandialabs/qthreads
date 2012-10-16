@@ -708,7 +708,7 @@ static void waitCompletionOutstandingTasks(void)
 
 }
 
-//qt_sinc_barrier_t *qt_get_barrier(void);
+qt_sinc_barrier_t *qt_get_barrier(void);  // warning message if left out -- I don't understand why - akp 10/16/12
 
 void XOMP_barrier(void)
 {
