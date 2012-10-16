@@ -36,8 +36,7 @@
 #endif
 
 #include <rose_xomp.h>
-#include <rose_sinc_barrier.h>
-
+#include <qthread/qt_sinc_barrier.h>
 #ifdef QTHREAD_RCRTOOL
 #include "rcrtool/qt_rcrtool.h"
 #include "maestro_sched.h"
@@ -240,7 +239,6 @@ static void set_xomp_dynamic(
 // Runtime library termination routine -- before init used as atexit clenup function
 void XOMP_exit(void)
 {
-  qt_sinc_barrier_destroy(&sinc_barrier);
   return;
 }
 
@@ -288,11 +286,6 @@ void XOMP_init(
 
     QTHREAD_FASTLOCK_INIT(critLock);
 
-#ifdef QTHREAD_RCRTOOL
-    qt_sinc_barrier_init(&sinc_barrier,maestro_size());
-#else
-    qt_sinc_barrier_init(&sinc_barrier,qthread_num_workers());
-#endif
     atexit(XOMP_exit);
     if (! staticStartCount){
       fprintf(stderr,"XOMP_init build shepherd aux structure malloc failed\n");
@@ -737,6 +730,8 @@ static void waitCompletionOutstandingTasks(void)
 
 }
 
+//qt_sinc_barrier_t *qt_get_barrier(void);
+
 void XOMP_barrier(void)
 {
     waitCompletionOutstandingTasks(); // wait for outstanding tasks to complete
@@ -745,7 +740,9 @@ void XOMP_barrier(void)
     size_t myid = qthread_barrier_id();
     qt_barrier_enter(qt_thread_barrier(),myid);
 #else
-    qt_sinc_barrier_enter(&sinc_barrier);
+    // need barrier for this parallel thread
+    qt_sinc_barrier_t *foo =  qt_get_barrier();
+    qt_sinc_barrier_enter(foo);
 #endif
 
 }
@@ -1323,7 +1320,7 @@ void omp_set_num_threads (
     // need to reset the barrier size and the first arrival size (if larger or smaller)
     qtar_resize(qt_num_threads_requested);
 
-    qt_sinc_barrier_change(&sinc_barrier,qt_num_threads_requested);
+    if (sinc_barrier != 0) qt_sinc_barrier_change(sinc_barrier,qt_num_threads_requested);
 
     if (qt_parallel_region()) qt_thread_barrier_resize(qt_num_threads_requested);
     qt_barrier_resize(qt_num_threads_requested);

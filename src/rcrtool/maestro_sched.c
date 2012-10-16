@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include "qthread_innards.h"           // for qthread_num_shepherds/qthread_num_workers
 #include "maestro_sched.h"
-#include <rose_sinc_barrier.h>
+#include <qthread/qt_sinc_barrier.h>
 
 void saveEnergy(int64_t i);
 void resetEnergy(int64_t i);
@@ -19,8 +19,6 @@ volatile int * allowed_workers = NULL;
 int64_t currentThreads = 0;
 int64_t preferredThreads = 0;
 int64_t preferredThreadsPerShep = 0;
-
-qt_sinc_barrier_t sinc_barrier;
 
 static void ms_init(void){
   int i;
@@ -58,14 +56,20 @@ int64_t maestro_size(void){
 
 int powerOff = 0;
 int threadsPowerActivePerSocket;
+int omp_in_parallel(void);
+
+qt_sinc_barrier_t * sinc_barrier = NULL;
 
 int64_t maestro_change_size(void){
   int i;
+  if (omp_in_parallel()) return currentThreads; 
+    // if in nested parallel freeze size because I'm not sure the best way to shrink/expand the barriers
+    // thoughout the nested stack (including sibling regions) akp 10/12/12
   if (!maestro_sched_init) ms_init();
   if (qthread_readstate(ACTIVE_WORKERS) != currentThreads) ms_init();
   if (currentThreads != preferredThreads) {
     printf("\nchange size old %ld  new %ld", currentThreads, preferredThreads);
-    qt_sinc_barrier_change(&sinc_barrier,preferredThreads);
+    qt_sinc_barrier_change(sinc_barrier, preferredThreads);
     int sheps = qthread_num_shepherds();
     for ( i = 0; i < sheps; i ++) {
       allowed_workers[i] = preferredThreadsPerShep;
@@ -102,7 +106,7 @@ void maestro_sched(enum trigger_type type, enum trigger_action action, int val){
       /*
       // drop all to 3/4 -- works better on ldmapper2 test 
       size_t size = (maestro_allowed_workers()*3)/4;
-      qt_sinc_barrier_change(&sinc_barrier,size);
+      qt_sinc_barrier_change(sinc_barrier,size);
       printf("lower thread count\n");
       
       for ( i = 0; i < sheps; i ++) {
@@ -122,7 +126,7 @@ void maestro_sched(enum trigger_type type, enum trigger_action action, int val){
       /*
       break;
       size_t size = maestro_allowed_workers();
-    qt_sinc_barrier_change(&sinc_barrier,size);
+    qt_sinc_barrier_change(sinc_barrier,size);
     printf("raise thread count\n");
       for ( i = 0; i < sheps; i ++) {
 	allowed_workers[i] = size;

@@ -20,14 +20,7 @@
 #include "qt_visibility.h"
 #include "qt_debug.h"
 #include "qthread_asserts.h"
-
-typedef struct qt_sinc_barrier_s {
-  uint64_t count;
-  qt_sinc_t *sinc_1;
-  qt_sinc_t *sinc_2;
-  qt_sinc_t *sinc_3;
-}qt_sinc_barrier_t;
-
+#include "qthread/qt_sinc_barrier.h"
 
 void API_FUNC qt_sinc_barrier_enter(qt_sinc_barrier_t *b);
 void qt_sinc_barrier_init(qt_sinc_barrier_t *restrict  barrier,

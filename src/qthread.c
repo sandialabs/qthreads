@@ -3883,4 +3883,17 @@ void qthread_set_affinity(unsigned int shep)
 }
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
 
+void qt_set_barrier(qt_sinc_barrier_t * bar)
+{                      /*{{{ */
+    qthread_t *me = qthread_internal_self();
+    me->barrier = bar;
+
+}                      /*}}} */
+
+qt_sinc_barrier_t *qt_get_barrier()
+{                      /*{{{ */
+    qthread_t *me = qthread_internal_self();
+    return me->barrier;
+}                      /*}}} */
+
 /* vim:set expandtab: */

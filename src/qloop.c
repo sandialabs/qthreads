@@ -13,7 +13,7 @@
 /* Internal Headers */
 #include "qthread_innards.h"           /* for qthread_debug() */
 #include "qt_barrier.h"
-#include "interfaces/rose/qt_sinc_barrier.h"
+#include "qthread/qt_sinc_barrier.h"
 #include "qloop_innards.h"
 #include "qthread_expect.h"
 #include "qthread_asserts.h"
@@ -214,7 +214,11 @@ static aligned_t qloop_step_wrapper(struct qloop_step_wrapper_args *const restri
     MONITOR_ASM_LABEL(qthread_step_fence1); // add label for HPCToolkit unwind
 # endif
 
+    qthread_worker_id_t w = qthread_worker(NULL);
+    qt_sinc_barrier_t * saveBarrier = qt_get_barrier(); // save barrier in case of nesting
+    qt_set_barrier(arg->barrier); // set barrier for this function
     arg->func(arg->arg);
+    qt_set_barrier(saveBarrier); // reset barrier to original
 
 # ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
     MONITOR_ASM_LABEL(qthread_step_fence2); // add label for HPCToolkit unwind
@@ -503,6 +507,8 @@ static void qt_loop_step_inner(const size_t         start,
 # endif
     FREE(qwa, sizeof(struct qloop_step_wrapper_args) * steps);
     qt_sinc_destroy(my_sinc);
+    qt_sinc_barrier_destroy(barrier); // free internal barrier allocations
+    free(barrier); // free barrier for this loop
 }                                      /*}}} */
 
 #endif /* QTHREAD_USE_ROSE_EXTENSIONS */
