@@ -335,12 +335,21 @@ static qt_team_t *eureka_ptr         = NULL;
 static aligned_t  eureka_in_barrier  = 0;
 static aligned_t  eureka_out_barrier = 0;
 
+static int eureka_filter(qthread_t *t)
+{
+    if (t->team == eureka_ptr) {
+        return 2; // remove, keep going
+    } else {
+        return 0; // ignore, keep going
+    }
+}
+
 static void hup_handler(int sig)
 {   /*{{{*/
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    qthread_worker_t *w = qthread_internal_getworker();
-    // qthread_shepherd_t * s = w->shepherd;
-    qthread_t *t = w->current;
+    qthread_worker_t   *w = qthread_internal_getworker();
+    qthread_shepherd_t *s = w->shepherd;
+    qthread_t          *t = w->current;
 #else
     qthread_shepherd_t *s = qthread_internal_getshep();
     qthread_t          *t = s->current;
@@ -352,8 +361,10 @@ static void hup_handler(int sig)
             qthread_back_to_master2(t);
             break;
         case SIGUSR2:
-            if (t->team == eureka_ptr) {
-                t->thread_state = QTHREAD_STATE_ASSASSINATED;
+            if (t) {
+                if (t->team == eureka_ptr) {
+                    t->thread_state = QTHREAD_STATE_ASSASSINATED;
+                }
             }
             /* 4: entry barrier */
             {
@@ -370,7 +381,7 @@ static void hup_handler(int sig)
             /* 5: worker 0 filters the work queue */
             if (w->worker_id == 0) {
                 /* filter work queue! */
-#warning signal handler does not filter work queue
+                qt_threadqueue_filter(s->ready, eureka_filter);
             }
             /* 5b: filter the spawncache! */
 #warning signal handler does not filter the spawn cache
@@ -386,8 +397,10 @@ static void hup_handler(int sig)
                     while (tmp == eureka_out_barrier) SPINLOCK_BODY();
                 }
             }
-            if (t->thread_state == QTHREAD_STATE_ASSASSINATED) {
-                qthread_back_to_master2(t);
+            if (t) {
+                if (t->thread_state == QTHREAD_STATE_ASSASSINATED) {
+                    qthread_back_to_master2(t);
+                }
             }
     }
 } /*}}}*/
@@ -2280,22 +2293,27 @@ int API_FUNC qt_team_eureka(void)
      *    another (e.g. to lock the output buffer). If the user code receiving
      *    the signal got interrupted while holding that lock, attempting a
      *    printf in this thread will cause deadlock. */
-    qthread_shepherd_t *sheps = qlib->shepherds;
+    qthread_shepherd_t *sheps       = qlib->shepherds;
+    pthread_t           pthreadself = pthread_self();
+    int                 signalcount = 0;
     for (qthread_shepherd_id_t shep = 0; shep < qlib->nshepherds; shep++) {
         qthread_worker_t *wkrs = sheps[shep].workers;
         for (unsigned int wkrid = 0; wkrid < qlib->nworkerspershep; wkrid++) {
             int ret;
-            if (pthread_equal(wkrs[wkrid].worker, pthread_self())) {
+            if (pthread_equal(wkrs[wkrid].worker, pthreadself)) {
                 continue;
             }
+            signalcount++;
             if ((ret = pthread_kill(wkrs[wkrid].worker, SIGUSR2)) != 0) {
                 abort();
             }
         }
     }
+    assert(signalcount == (qlib->nshepherds * qlib->nworkerspershep) - 1);
     /* 4: entry barrier */
     {
         aligned_t tmp = eureka_out_barrier;
+        MACHINE_FENCE;
         if (qthread_incr(&eureka_in_barrier, 1) + 1 == qlib->nshepherds) {
             eureka_in_barrier = 0;
             MACHINE_FENCE;
@@ -2308,7 +2326,7 @@ int API_FUNC qt_team_eureka(void)
     /* 5: worker 0 filters the work queue */
     if (wkr->worker_id == 0) {
         /* filter work queue! */
-#warning eureka does not actually filter the work queue
+        qt_threadqueue_filter(self->rdata->shepherd_ptr->ready, eureka_filter);
     }
     /* 5b: filter the spawncache! */
 #warning eureka does not filter the spawn cache
