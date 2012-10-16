@@ -2,7 +2,9 @@
 # include "config.h"
 #endif
 
-#include <qthread/qtimer.h>
+#include "qthread/qthread.h" /* for aligned_t */
+#include "qt_atomics.h" /* for SPINLOCK_BODY() */
+#include "qthread/qtimer.h"
 
 #include <stdlib.h>                    /* for calloc() */
 #include <sys/types.h>
@@ -23,6 +25,7 @@
 
 #include "qt_debug.h" /* for malloc debug wrappers */
 
+static aligned_t               inited = 0;
 static double                  timer_freq_conv;
 static volatile unsigned long *timer_address = NULL;
 static unsigned long          *mmdev_map     = NULL;
@@ -89,6 +92,16 @@ unsigned long qtimer_fastrand(void)
     return *timer_address;
 }
 
+double qtimer_wtime(void)
+{
+    return ((double)(*timer_address)) * timer_freq_conv;
+}
+
+double qtimer_res(void)
+{
+    return timer_freq_conv;
+}
+
 void qtimer_stop(qtimer_t q)
 {
     q->stop = *timer_address;
@@ -102,8 +115,13 @@ double qtimer_secs(qtimer_t q)
 qtimer_t qtimer_create(void)
 {
     if (NULL == timer_address) {
-        if (0 != qtimer_init()) {
-            return NULL;
+        if (qthread_cas_ptr(&timer_address, NULL, (void*)1) == NULL) {
+            if (0 != qtimer_init()) {
+                timer_address = NULL;
+                return NULL;
+            }
+        } else {
+            while (timer_address == (void *)1) SPINLOCK_BODY();
         }
     }
 

@@ -149,7 +149,7 @@ $(qthreadlib):
 	$(MAKE) -C $(top_builddir)/src libqthread.la
 
 $(utils_rnglib):
-	$(MAKE) -C $(top_builddir)/test/utils/rng
+	$(MAKE) -C $(top_builddir)/test/utils/rng librng.la
 
 time_allpairs_SOURCES = thesis/time_allpairs.c
 

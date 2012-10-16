@@ -178,36 +178,14 @@ static xomp_nest_level_t xomp_get_nested (XOMP_Status *p_status)
 static double XOMP_get_wtime(
     XOMP_Status *p_status)
 {
-// Copied from libgomp/config/posix/time.c included in gcc-4.4.4
-#if defined(CLOCK_REALTIME) || defined(CLOCK_MONOTONIC)
-  struct timespec ts;
-# ifdef CLOCK_MONOTONIC
-  if (clock_gettime (CLOCK_MONOTONIC, &ts) < 0)
-# endif
-    clock_gettime (CLOCK_REALTIME, &ts);
-  return ts.tv_sec + ts.tv_nsec / 1e9;
-#else
-  struct timeval tv;
-  gettimeofday (&tv, NULL);
-  return tv.tv_sec + tv.tv_usec / 1e6;
-#endif
+    return qtimer_wtime();
 }
 
 // get wtick used by omp
 static double XOMP_get_wtick(
     XOMP_Status *p_status)
 {
-// Copied from libgomp/config/posix/time.c included in gcc-4.4.4
-#if defined(CLOCK_REALTIME) || defined(CLOCK_MONOTONIC)
-  struct timespec ts;
-# ifdef CLOCK_MONOTONIC
-  if (clock_getres (CLOCK_MONOTONIC, &ts) < 0)
-# endif
-    clock_getres (CLOCK_REALTIME, &ts);
-  return ts.tv_sec + ts.tv_nsec / 1e9;
-#else
-  return 1.0 / sysconf(_SC_CLK_TCK);
-#endif
+    return qtimer_res();
 }
 
 // Get dynamic scheduler value
