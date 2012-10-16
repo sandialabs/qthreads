@@ -372,6 +372,8 @@ static void hup_handler(int sig)
                 /* filter work queue! */
 #warning signal handler does not filter work queue
             }
+            /* 5b: filter the spawncache! */
+#warning signal handler does not filter the spawn cache
             /* 7: exit barrier */
             {
                 aligned_t tmp = eureka_out_barrier;
@@ -2302,6 +2304,8 @@ int API_FUNC qt_team_eureka(void)
         /* filter work queue! */
 #warning eureka does not actually filter the work queue
     }
+    /* 5b: filter the spawncache! */
+#warning eureka does not filter the spawn cache
     /* 6: callback to kill blocked tasks */
 #warning eureka does not kill blocked tasks
     /* 7: exit barrier */
