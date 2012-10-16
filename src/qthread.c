@@ -92,11 +92,11 @@ extern QTHREAD_FASTLOCK_TYPE rcrtool_lock;
 # define QTHREAD_MUTEX_INCREMENT 1
 #endif
 
-#define TEAM_EUREKA_EXIT(team_id)          (((saligned_t)team_id) > 1)
-#define TEAM_EUREKA_EUREKA(team_id)        (((saligned_t)team_id) < 0)
-#define TEAM_EUREKA_ID(team_id)            (team_id)
-#define TEAM_EUREKA_SIGNAL_EXIT(team_id)   (team_id)
-#define TEAM_EUREKA_SIGNAL_EUREKA(team_id) ((saligned_t)(-team_id))
+#define TEAM_SIGNAL_ISEXIT(team_id)   (((saligned_t)team_id) > 1)
+#define TEAM_SIGNAL_ISEUREKA(team_id) (((saligned_t)team_id) < 0)
+#define TEAM_SIGNAL_SENDERID(team_id) (labs(team_id))
+#define TEAM_SIGNAL_EXIT(team_id)     (team_id)
+#define TEAM_SIGNAL_EUREKA(team_id)   (-1 * (saligned_t)(team_id))
 
 /* shared globals (w/ futurelib) */
 qlib_t qlib      = NULL;
@@ -330,8 +330,9 @@ static int    idleCheckin   = 0;   // added for RCRTOOL level >= 3 stats
 # endif
 #endif
 
-static saligned_t eureka_flag    = -1;
-static aligned_t  eureka_in_barrier = 0;
+static saligned_t eureka_flag        = -1;
+static qt_team_t *eureka_ptr         = NULL;
+static aligned_t  eureka_in_barrier  = 0;
 static aligned_t  eureka_out_barrier = 0;
 
 static void hup_handler(int sig)
@@ -351,15 +352,13 @@ static void hup_handler(int sig)
             qthread_back_to_master2(t);
             break;
         case SIGUSR2:
-            if (t->team) {
-                /*if (TEAM_EUREKA_ID(t->team->eureka) == t->team->team_id) {
-                    t->thread_state = QTHREAD_STATE_ASSASSINATED;
-                }*/
+            if (t->team == eureka_ptr) {
+                t->thread_state = QTHREAD_STATE_ASSASSINATED;
             }
-            /* 3: workers must barrier */
+            /* 4: entry barrier */
             {
                 aligned_t tmp = eureka_out_barrier;
-                if (qthread_incr(&eureka_in_barrier, 1)+1 == qlib->nshepherds) {
+                if (qthread_incr(&eureka_in_barrier, 1) + 1 == qlib->nshepherds) {
                     eureka_in_barrier = 0;
                     MACHINE_FENCE;
                     eureka_out_barrier++;
@@ -368,14 +367,15 @@ static void hup_handler(int sig)
                     while (tmp == eureka_out_barrier) SPINLOCK_BODY();
                 }
             }
-            /* 4: worker 0 filters the work queue */
+            /* 5: worker 0 filters the work queue */
             if (w->worker_id == 0) {
                 /* filter work queue! */
+#warning signal handler does not filter work queue
             }
-            /* 6: barrier #2 to resume */
+            /* 7: exit barrier */
             {
                 aligned_t tmp = eureka_out_barrier;
-                if (qthread_incr(&eureka_in_barrier, 1)+1 == qlib->nshepherds) {
+                if (qthread_incr(&eureka_in_barrier, 1) + 1 == qlib->nshepherds) {
                     eureka_in_barrier = 0;
                     MACHINE_FENCE;
                     eureka_out_barrier++;
@@ -383,6 +383,9 @@ static void hup_handler(int sig)
                     COMPILER_FENCE;
                     while (tmp == eureka_out_barrier) SPINLOCK_BODY();
                 }
+            }
+            if (t->thread_state == QTHREAD_STATE_ASSASSINATED) {
+                qthread_back_to_master2(t);
             }
     }
 } /*}}}*/
@@ -2238,22 +2241,32 @@ aligned_t API_FUNC *qthread_retloc(void)
 int API_FUNC qt_team_eureka(void)
 {
     saligned_t        my_wkrid = -1;
-    qthread_worker_t *wkr          = qthread_internal_getworker();
+    qthread_t        *self     = qthread_internal_self();
+    qthread_worker_t *wkr      = qthread_internal_getworker();
+    qt_team_t        *my_team;
 
-    if (wkr) {
-        my_wkrid = wkr->unique_id;
-    } else {
-        /* calling a eureka from outside qthreads makes no sense */
-        return QTHREAD_NOT_ALLOWED;
-    }
+    qassert_ret(qlib != NULL, QTHREAD_NOT_ALLOWED);
+    qassert_ret(wkr != NULL, QTHREAD_NOT_ALLOWED);
+    qassert_ret(self && self->team, QTHREAD_NOT_ALLOWED);
+    my_team = self->team;
+    /* calling a eureka from outside qthreads makes no sense */
+    my_wkrid = wkr->unique_id;
     /* 1: race to see who wins the eureka */
-    printf("trying to win the eureka contest...\n");
+    printf("trying to win the eureka contest in my team...\n");
+    do {
+        while (my_team->eureka_lock != 0) SPINLOCK_BODY();
+    } while (qthread_cas(&my_team->eureka_lock, 0, 1) != 0);
+    printf("trying to win the global eureka contest...\n");
     do {
         while (eureka_flag != -1) SPINLOCK_BODY();
     } while (qthread_cas(&eureka_flag, -1, my_wkrid) != -1);
     printf("I (%u) won the eureka contest!\n", my_wkrid);
     MACHINE_FENCE;
-    /* 2: signal all the other workers */
+    eureka_ptr = my_team;
+    MACHINE_FENCE;
+    /* 2: writeEF my team's Eureka, to signal all the waiters */
+    qthread_writeEF_const(&my_team->eureka, TEAM_SIGNAL_EUREKA(my_team->team_id));
+    /* 3: broadcast signal to all the other workers */
     /* NOTE: From here until the end of barrier 2, printfs are STRICTLY
      *    FORBIDDEN. Printf, on many platforms, uses a mutex for one reason or
      *    another (e.g. to lock the output buffer). If the user code receiving
@@ -2268,15 +2281,14 @@ int API_FUNC qt_team_eureka(void)
                 continue;
             }
             if ((ret = pthread_kill(wkrs[wkrid].worker, SIGUSR2)) != 0) {
-                printf("err=%i: %s\n", ret, strerror(ret));
                 abort();
             }
         }
     }
-    /* 3: workers must barrier */
+    /* 4: entry barrier */
     {
         aligned_t tmp = eureka_out_barrier;
-        if (qthread_incr(&eureka_in_barrier, 1)+1 == qlib->nshepherds) {
+        if (qthread_incr(&eureka_in_barrier, 1) + 1 == qlib->nshepherds) {
             eureka_in_barrier = 0;
             MACHINE_FENCE;
             eureka_out_barrier++;
@@ -2285,15 +2297,17 @@ int API_FUNC qt_team_eureka(void)
             while (tmp == eureka_out_barrier) SPINLOCK_BODY();
         }
     }
-    /* 4: worker 0 filters the work queue */
+    /* 5: worker 0 filters the work queue */
     if (wkr->worker_id == 0) {
         /* filter work queue! */
+#warning eureka does not actually filter the work queue
     }
-    /* 5: callback to kill blocked tasks */
-    /* 6: barrier #2 to resume */
+    /* 6: callback to kill blocked tasks */
+#warning eureka does not kill blocked tasks
+    /* 7: exit barrier */
     {
         aligned_t tmp = eureka_out_barrier;
-        if (qthread_incr(&eureka_in_barrier, 1)+1 == qlib->nshepherds) {
+        if (qthread_incr(&eureka_in_barrier, 1) + 1 == qlib->nshepherds) {
             eureka_in_barrier = 0;
             MACHINE_FENCE;
             eureka_out_barrier++;
@@ -2302,9 +2316,26 @@ int API_FUNC qt_team_eureka(void)
             while (tmp == eureka_out_barrier) SPINLOCK_BODY();
         }
     }
-    /* 7: release eureka lock */
+    /* 8: release eureka lock */
     MACHINE_FENCE;
-    eureka_flag = -1;
+    eureka_ptr = NULL;
+    MACHINE_FENCE;
+    eureka_flag          = -1;
+    my_team->eureka_lock = 0;
+    /* 9: wait for subteams to die, and reset team (assume team-leader position) */
+    /* 9-step1: assume team-leader position */
+    self->flags |= QTHREAD_TEAM_LEADER;
+    /* 9-step2: reset team data */
+    qt_sinc_reset(my_team->sinc, 1);              // I am the only remaining member (and maybe the waiter)
+    qt_sinc_submit(my_team->subteams_sinc, NULL); // wait for subteams to die (if any)
+    qt_sinc_wait(my_team->subteams_sinc, NULL);
+    qt_sinc_reset(my_team->subteams_sinc, 1); // reset the subteams sinc
+    /* 9-step3: change my retloc */
+    assert(self->ret == NULL || self->ret == my_team->return_loc); // XXX: what should we do if this is not true?
+    self->ret    = my_team->return_loc;
+    self->flags |= QTHREAD_RET_MASK;
+    self->flags ^= QTHREAD_RET_MASK;
+    self->flags |= (my_team->flags & QTHREAD_TEAM_RET_MASK);
 }
 
 static aligned_t qt_team_watcher(void *args_)
@@ -2315,6 +2346,7 @@ static aligned_t qt_team_watcher(void *args_)
     qt_team_t *team = (qt_team_t *)args_;
 
     assert(team);
+    assert(myteam == team->team_id);
 
     aligned_t *parent_eureka = team->parent_eureka;
     assert(parent_eureka);
@@ -2329,8 +2361,8 @@ static aligned_t qt_team_watcher(void *args_)
         qthread_debug(FEB_DETAILS, "team %u's watcher (tid %u) waiting for a eureka or a team exit (%p)\n", myteam, qthread_id(), parent_eureka);
         qthread_readFF(&code, parent_eureka);
 
-        if (TEAM_EUREKA_EXIT(code)) {
-            if (myteam == TEAM_EUREKA_ID(code)) {
+        if (TEAM_SIGNAL_ISEXIT(code)) {
+            if (myteam == TEAM_SIGNAL_SENDERID(code)) {
                 // Reset the FEB and exit
                 qthread_debug(FEB_DETAILS, "team %u's watcher (tid %u) preparing to exit, emptying parent's eureka (%p)\n", myteam, qthread_id(), parent_eureka);
                 qthread_empty(parent_eureka);
@@ -2339,10 +2371,18 @@ static aligned_t qt_team_watcher(void *args_)
                 // Yield control of the resource while waiting for FEB to be reset
                 qthread_yield();
             }
-        } else if (TEAM_EUREKA_EUREKA(code)) {
-            assert("Error: hard-eureka not implemented" && 0);
+        } else if (TEAM_SIGNAL_ISEUREKA(code)) {
+            if (myteam == TEAM_SIGNAL_SENDERID(code)) {
+                // I must survive this eureka: I am the waiter, the Beholder!
+                assert("Error: why was the eureka propogated UPWARD?!?" && 0);
+            } else {
+                // I must propogate this eureka: I am the end of all things, and like a Shoggoth, I will sweep my team evilly free of litter
+                qthread_debug(FEB_DETAILS, "team %u's watcher (tid %u) preparing to destroy its team\n", myteam, qthread_id());
+                qt_team_eureka();
+#warning the watcher must now clean up the team, as it has (oddly) become the team-leader
+            }
         } else {
-            assert("Error: watcher received code 0 or 1" && 0);
+            assert("Error: watcher received code 0 or 1" && 0); // not sure what this means
         }
     } while (1);
 
@@ -2591,8 +2631,8 @@ extern void *qthread_fence2;
 
 // This is called in `qthread_wrapper()` immediately after each team task
 // returns.
-static QINLINE void qthread_internal_teamfinish(qt_team_t *team,
-                                                uint8_t    flags)
+static QINLINE void qthread_internal_teamfinish(qt_team_t   *team,
+                                                uint_fast8_t flags)
 {   /*{{{*/
     assert(team != NULL);
 
@@ -2674,7 +2714,7 @@ static QINLINE void qthread_internal_teamfinish(qt_team_t *team,
                 // Signal watcher to exit and wait for it
                 qthread_debug(FEB_DETAILS, "tid %u killing team %u signalling team %u's watcher (%p)\n", qthread_id(), team->team_id, team->parent_id, team->parent_eureka);
                 qthread_writeEF_const(team->parent_eureka,
-                                      TEAM_EUREKA_SIGNAL_EXIT(team->team_id));
+                                      TEAM_SIGNAL_EXIT(team->team_id));
                 qt_sinc_wait(team->sinc, NULL);
 
                 // Submit to parent team subteams sinc
@@ -3108,6 +3148,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
         // Initialize new team values
         new_team->team_id         = qthread_internal_incr(&(qlib->max_team_id), &qlib->max_team_id_lock, 1);
         new_team->eureka          = QTHREAD_NON_TASK_ID;
+        new_team->eureka_lock     = 0;
         new_team->watcher_started = 0;
         new_team->sinc            = qt_sinc_create(0, NULL, NULL, 1);
         assert(new_team->sinc);
@@ -3116,7 +3157,8 @@ int API_FUNC qthread_spawn(qthread_f             f,
         new_team->parent_id            = QTHREAD_NON_TEAM_ID;
         new_team->parent_eureka        = NULL;
         new_team->parent_subteams_sinc = NULL;
-        new_team->flags                = 0;
+        new_team->return_loc           = ret;
+        new_team->flags                = feature_flag & QTHREAD_RET_MASK;
 
         // Empty new team FEBs
         qthread_debug(FEB_DETAILS, "tid %i emptying NEW team %u's eureka (%p)\n", me ? ((int)me->thread_id) : -1, new_team->team_id, &new_team->eureka);
@@ -3139,6 +3181,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
         // Initialize new team values
         new_team->team_id         = qthread_internal_incr(&(qlib->max_team_id), &qlib->max_team_id_lock, 1);
         new_team->eureka          = QTHREAD_NON_TASK_ID;
+        new_team->eureka_lock     = 0;
         new_team->watcher_started = 0;
         new_team->sinc            = qt_sinc_create(0, NULL, NULL, 1);
         assert(new_team->sinc);
@@ -3147,7 +3190,8 @@ int API_FUNC qthread_spawn(qthread_f             f,
         new_team->parent_id            = QTHREAD_DEFAULT_TEAM_ID;
         new_team->parent_eureka        = NULL;
         new_team->parent_subteams_sinc = NULL;
-        new_team->flags                = 0;
+        new_team->return_loc           = ret;
+        new_team->flags                = feature_flag & QTHREAD_RET_MASK;
 
         // Empty new team FEBs
         qthread_debug(FEB_DETAILS, "tid %i emptying SUB team %u's eureka (%p)\n", me ? ((int)me->thread_id) : -1, new_team->team_id, &new_team->eureka);

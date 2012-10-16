@@ -17,6 +17,8 @@ static aligned_t t  = 1;
 static aligned_t t2 = 1;
 static aligned_t t3 = 1;
 
+aligned_t alive[2];
+
 static void alive_check(const size_t a, const size_t b, void *junk)
 {
     return;
@@ -24,12 +26,15 @@ static void alive_check(const size_t a, const size_t b, void *junk)
 
 static aligned_t waiter(void *arg)
 {
-    iprintf("waiter alive!\n");
-    qthread_yield();
+    const int assigned = (int)(intptr_t)arg;
+    const int id = qthread_id();
+    iprintf("waiter %i alive! id %i wkr %u\n", assigned, id, qthread_readstate(CURRENT_UNIQUE_WORKER));
+    qthread_fill(&alive[assigned]);
+    qthread_flushsc();
     while(t == 1) {
 	COMPILER_FENCE;
     }
-    iprintf("waiter exiting!\n");
+    iprintf("waiter %i exiting! id %i wkr %u\n", assigned, id, qthread_readstate(CURRENT_UNIQUE_WORKER));
 
     return 0;
 }
@@ -37,9 +42,16 @@ static aligned_t waiter(void *arg)
 static aligned_t parent(void *arg)
 {
     iprintf("parent alive!\n");
-    qthread_fork(waiter, NULL, &t3);
-    qthread_fork(waiter, NULL, &t3);
-    qthread_yield();
+    qthread_empty(alive+0);
+    qthread_empty(alive+1);
+    qthread_fork(waiter, (void*)(intptr_t)0, &t3);
+    qthread_fork(waiter, (void*)(intptr_t)1, &t3);
+    iprintf("parent waiting on %p\n", &alive[1]);
+    qthread_readFF(NULL, &alive[1]);
+    iprintf("saw waiter 1 report in\n");
+    iprintf("parent waiting on %p\n", &alive[0]);
+    qthread_readFF(NULL, &alive[0]);
+    iprintf("saw waiter 0 report in\n");
     iprintf("parent about to eureka...\n");
     qt_team_eureka();
     iprintf("parent still alive!\n");
