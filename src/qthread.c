@@ -748,17 +748,7 @@ qt_run:
                         qthread_debug(THREAD_DETAILS | SHEPHERD_DETAILS,
                                       "id(%u): thread %i assassinated\n",
                                       my_id, t->thread_id);
-                        /* need to clean up return value */
-                        if (t->ret) {
-                            if (t->flags & QTHREAD_RET_IS_SYNCVAR) {
-                                qassert(qthread_syncvar_fill((syncvar_t *)t->ret), QTHREAD_SUCCESS);
-                            } else {
-                                qthread_debug(FEB_DETAILS, "tid %u assassinated, filling retval (%p)\n", t->thread_id, t->ret);
-                                qassert(qthread_fill((aligned_t *)t->ret), QTHREAD_SUCCESS);
-                            }
-                        }
-                        /* we can remove the stack etc. */
-                        qthread_thread_free(t);
+                        qthread_internal_assassinate(t);
                         /* now, we're done cleaning, so we can unblock the assassination signal */
                         {
                             sigset_t iset;
@@ -2239,6 +2229,22 @@ aligned_t API_FUNC *qthread_retloc(void)
         return NULL;
     }
 }                      /*}}} */
+
+void INTERNAL qthread_internal_assassinate(qthread_t *t)
+{
+    qthread_debug(THREAD_DETAILS, "thread %i assassinated\n", t->thread_id);
+    /* need to clean up return value */
+    if (t->ret) {
+        if (t->flags & QTHREAD_RET_IS_SYNCVAR) {
+            qassert(qthread_syncvar_fill((syncvar_t *)t->ret), QTHREAD_SUCCESS);
+        } else {
+            qthread_debug(FEB_DETAILS, "tid %u assassinated, filling retval (%p)\n", t->thread_id, t->ret);
+            qassert(qthread_fill((aligned_t *)t->ret), QTHREAD_SUCCESS);
+        }
+    }
+    /* we can remove the stack etc. */
+    qthread_thread_free(t);
+}
 
 int API_FUNC qt_team_eureka(void)
 {
