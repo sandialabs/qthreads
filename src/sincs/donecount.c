@@ -131,8 +131,7 @@ void qt_sinc_reset(qt_sinc_t   *sinc_,
 {   /*{{{*/
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
 
-    assert(sinc && (0 == sinc->counter));
-    assert(qthread_feb_status(&sinc->ready) == 1);
+    assert(sinc);
 
     qt_sinc_reduction_t *const restrict rdata = sinc->rdata;
 
