@@ -27,15 +27,20 @@
 #define QTHREAD_BIG_STRUCT       (1 << 9)
 #define QTHREAD_AGGREGABLE       (1 << 10)
 
+#define QTHREAD_RET_MASK (QTHREAD_RET_IS_SYNCVAR | QTHREAD_RET_IS_SINC)
+
 /* flags for teams (must be different bits) */
-#define QTHREAD_TEAM_DEAD       (1 << 0)
-#define QTHREAD_TEAM_RESERVED_1 (1 << 1)
-#define QTHREAD_TEAM_RESERVED_2 (1 << 2)
-#define QTHREAD_TEAM_RESERVED_3 (1 << 3)
-#define QTHREAD_TEAM_RESERVED_4 (1 << 4)
-#define QTHREAD_TEAM_RESERVED_5 (1 << 5)
-#define QTHREAD_TEAM_RESERVED_6 (1 << 6)
-#define QTHREAD_TEAM_RESERVED_7 (1 << 7)
+#define QTHREAD_TEAM_DEAD             (1 << 0)
+#define QTHREAD_TEAM_RESERVED_1       (1 << 1)
+#define QTHREAD_TEAM_RET_IS_SYNCVAR   (1 << 2)
+#define QTHREAD_TEAM_RET_IS_SINC      (1 << 3)
+#define QTHREAD_TEAM_RET_IS_VOID_SINC ((1 << 3) | (1 << 2))
+#define QTHREAD_TEAM_RESERVED_4       (1 << 4)
+#define QTHREAD_TEAM_RESERVED_5       (1 << 5)
+#define QTHREAD_TEAM_RESERVED_6       (1 << 6)
+#define QTHREAD_TEAM_RESERVED_7       (1 << 7)
+
+#define QTHREAD_TEAM_RET_MASK (QTHREAD_TEAM_RET_IS_SYNCVAR | QTHREAD_TEAM_RET_IS_SINC)
 
 struct qthread_runtime_data_s {
     void         *stack;           /* the thread's stack */
@@ -82,9 +87,9 @@ struct qthread_s {
     void                          *ret;             /* user defined retval location */
     struct qthread_runtime_data_s *rdata;
 
-    qt_team_t *team;                     /* reference to task team */
+    qt_team_t                     *team; /* reference to task team */
     /* preconditions for data-dependent tasks */
-    void *preconds;
+    void                          *preconds;
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     // XXX: I suspect that several of these should be moved into the qthread_runtime_data_s struct
