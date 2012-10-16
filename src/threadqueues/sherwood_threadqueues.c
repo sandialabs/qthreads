@@ -827,12 +827,83 @@ void INTERNAL qthread_steal_stat(void)
 
 #endif  /* ifdef STEAL_PROFILE */
 
+/* walk queue removing all tasks matching this description */
+void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
+                                    qt_threadqueue_filter_f f)
+{
+    qt_threadqueue_node_t *node = NULL;
+    qthread_t             *t    = NULL;
+
+    assert(q != NULL);
+
+    QTHREAD_TRYLOCK_LOCK(&q->qlock);
+    PARANOIA_ONLY(sanity_check_queue(q));
+    if (q->qlength > 0) {
+        qt_threadqueue_node_t **lp = NULL;
+        qt_threadqueue_node_t **rp = NULL;
+
+        rp   = &q->tail;
+        node = q->tail;
+        if (q->head == node) {
+            lp = &q->head;
+        } else {
+            lp = &(node->prev->next);
+        }
+        while (node) {
+            t = (qthread_t *)node->value;
+            switch (f(t)) {
+                case 0: // ignore, move to the next one
+                    rp = &node->prev;
+                    node = node->prev;
+                    if (q->head == node) {
+                        lp = &q->head;
+                    } else {
+                        lp = &(node->prev->next);
+                    }
+                    break;
+                case 1: // ignore, stop looking
+                    node = NULL;
+                    break;
+                case 2: // remove, move to the next one
+                    {
+                        qt_threadqueue_node_t *freeme;
+
+                        *lp = node->next;
+                        *rp = node->prev;
+                        q->qlength--;
+                        q->qlength_stealable -= node->stealable;
+                        freeme = node;
+                        node = node->prev;
+                        qthread_internal_assassinate(t);
+                        if (q->head == node) {
+                            lp = &q->head;
+                        } else {
+                            lp = &(node->prev->next);
+                        }
+                        FREE_TQNODE(freeme);
+                    }
+                    break;
+                case 3: // remove, stop looking
+                    *lp = node->next;
+                    *rp = node->prev;
+                    q->qlength--;
+                    q->qlength_stealable -= node->stealable;
+                    qthread_internal_assassinate(t);
+                    FREE_TQNODE(node);
+                    node                     = NULL;
+                    break;
+            }
+        }
+    }
+    QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
+}
+
 /* walk queue looking for a specific value  -- if found remove it (and start
  * it running)  -- if not return NULL
  */
 qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
                                                     void             *value)
-{   /*{{{*/
+{       /*{{{*/
     qt_threadqueue_node_t *node = NULL;
     qthread_t             *t    = NULL;
 
@@ -854,7 +925,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
                 } else {
                     node->prev->next = node->next;
                 }
-                node->next->prev = node->prev;  // reset back ptr (know we're not tail
+                node->next->prev = node->prev;     // reset back ptr (know we're not tail
                 node->next       = NULL;
                 node->prev       = q->tail;
                 q->tail->next    = node;
@@ -865,16 +936,16 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
     QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
 
     return (t);
-} /*}}}*/
+}     /*}}}*/
 
 void INTERNAL qthread_steal_enable()
-{   /*{{{*/
+{       /*{{{*/
     steal_disable = 0;
-}   /*}}}*/
+}     /*}}}*/
 
 void INTERNAL qthread_steal_disable()
-{   /*{{{*/
+{       /*{{{*/
     steal_disable = 1;
-}   /*}}}*/
+}     /*}}}*/
 
 /* vim:set expandtab: */
