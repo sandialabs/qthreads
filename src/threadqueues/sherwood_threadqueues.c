@@ -591,6 +591,46 @@ void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
     QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
 } /*}}}*/
 
+void INTERNAL qt_threadqueue_enqueue_cache(qt_threadqueue_t *q,
+        qt_threadqueue_private_t *cache)
+{
+    assert(cache->on_deck);
+    assert(cache->head == NULL || cache->qlength);
+
+    qt_threadqueue_node_t *first = cache->on_deck;
+    qt_threadqueue_node_t *last;
+
+    if (cache->qlength) {
+        first->next = cache->head;
+        cache->head->prev = first;
+        last = cache->tail;
+    } else {
+        last = first;
+    }
+    cache->qlength++;
+    cache->qlength_stealable += first->stealable;
+    assert(last->next == NULL);
+    assert(first->prev == NULL);
+    first->next = cache->head;
+    cache->head = NULL;
+    cache->tail = NULL;
+    cache->on_deck = NULL;
+    QTHREAD_TRYLOCK_LOCK(&q->qlock);
+    PARANOIA_ONLY(sanity_check_queue(q));
+    first->prev = q->tail;
+    q->tail = last;
+    if (q->head == NULL) {
+        q->head = first;
+    } else {
+        first->prev->next = first;
+    }
+    q->qlength += cache->qlength;
+    q->qlength_stealable += cache->qlength_stealable;
+    QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
+    cache->qlength = 0;
+    cache->qlength_stealable = 0;
+}
+
 /* dequeue stolen threads at head, skip yielded threads */
 qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h,
                                                              qt_threadqueue_t *v)

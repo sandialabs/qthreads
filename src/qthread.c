@@ -1208,7 +1208,7 @@ int API_FUNC qthread_initialize(void)
 /* now build the context for the shepherd 0 */
     qthread_debug(CORE_DETAILS, "calling qthread_makecontext\n");
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    qlib->shepherds[0].workers[0].worker = pthread_self();
+    qlib->shepherds[0].workers[0].worker   = pthread_self();
     qlib->shepherds[0].workers[0].shepherd = &qlib->shepherds[0];
     QTHREAD_CASLOCK_INIT(qlib->shepherds[0].workers[0].active, 1);
     qthread_debug(CORE_DETAILS, "initialized caslock 0,0 %p\n", &qlib->shepherds[0].workers[0].active);
@@ -2168,6 +2168,9 @@ size_t API_FUNC qthread_readstate(const enum introspective_state type)
             return (size_t)(qlib->nshepherds);
 #endif
 
+        case CURRENT_SHEPHERD:
+            return qthread_shep();
+
         case CURRENT_WORKER:
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
             {
@@ -2177,6 +2180,17 @@ size_t API_FUNC qthread_readstate(const enum introspective_state type)
             }
 #else
             return 0;
+#endif  /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
+
+        case CURRENT_UNIQUE_WORKER:
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+            {
+                qthread_worker_t *worker = (qthread_worker_t *)TLS_GET(shepherd_structs);
+
+                return worker ? (worker->unique_id - 1) : NO_WORKER;
+            }
+#else
+            return qthread_shep();
 #endif  /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
         case CURRENT_TEAM:
@@ -2948,6 +2962,11 @@ void API_FUNC qthread_yield_(int k)
                       t->thread_id);
     }
 }                      /*}}} */
+
+void API_FUNC qthread_flushsc(void)
+{   /*{{{*/
+    qt_spawncache_flush(qlib->threadqueues[qthread_readstate(CURRENT_UNIQUE_WORKER)]);
+} /*}}}*/
 
 /***********************************************
 * FORKING                                     *

@@ -25,6 +25,8 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
                                      qthread_t *restrict        t);
 void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
                                              qthread_t *restrict        t);
+void INTERNAL qt_threadqueue_enqueue_cache(qt_threadqueue_t         *q,
+                                           qt_threadqueue_private_t *cache);
 int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict pq,
                                             qt_threadqueue_t *restrict         q,
                                             qthread_t *restrict                t);

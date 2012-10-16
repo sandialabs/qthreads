@@ -204,6 +204,9 @@ aligned_t *qthread_task_counter(void);             /* task_counter CAS reference
 # define qthread_yield_near() do { COMPILER_FENCE; qthread_yield_(1); } while (0)
 void qthread_yield_(int);
 
+/* this function flushes the spawncache */
+void qthread_flushsc(void);
+
 /* these are the functions for generating a new qthread.
  *
  * Using qthread_fork() and variants:
@@ -362,7 +365,9 @@ enum introspective_state {
     TOTAL_SHEPHERDS,
     ACTIVE_WORKERS,
     TOTAL_WORKERS,
+    CURRENT_SHEPHERD,
     CURRENT_WORKER,
+    CURRENT_UNIQUE_WORKER,
     CURRENT_TEAM,
     PARENT_TEAM
 };
