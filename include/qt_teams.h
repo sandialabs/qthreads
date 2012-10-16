@@ -1,0 +1,7 @@
+#ifndef QT_TEAMS_H
+#define QT_TEAMS_H
+
+#define QT_ASSASSINATE_SIGNAL SIGUSR1
+#define QT_EUREKA_SIGNAL SIGUSR2
+
+#endif

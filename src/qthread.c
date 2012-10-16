@@ -75,6 +75,7 @@
 # include "qt_multinode_innards.h"
 #endif
 #include "qt_aligned_alloc.h"
+#include "qt_teams.h"
 
 #ifdef QTHREAD_RCRTOOL
 # include "maestro_sched.h"
@@ -356,11 +357,11 @@ static void hup_handler(int sig)
 #endif
 
     switch(sig) {
-        case SIGUSR1:
+        case QT_ASSASSINATE_SIGNAL:
             t->thread_state = QTHREAD_STATE_ASSASSINATED;
             qthread_back_to_master2(t);
             break;
-        case SIGUSR2:
+        case QT_EUREKA_SIGNAL:
             if (t) {
                 if (t->team == eureka_ptr) {
                     t->thread_state = QTHREAD_STATE_ASSASSINATED;
@@ -480,8 +481,8 @@ static void *qthread_master(void *arg)
 #ifdef QTHREAD_USE_SPAWNCACHE
     localqueue = qt_init_local_spawncache();
 #endif
-    signal(SIGUSR1, hup_handler);
-    signal(SIGUSR2, hup_handler);
+    signal(QT_ASSASSINATE_SIGNAL, hup_handler);
+    signal(QT_EUREKA_SIGNAL, hup_handler);
     printf("registered hup_handler\n");
 
     if (qaffinity && (me->node != UINT_MAX)) {
@@ -766,7 +767,8 @@ qt_run:
                         {
                             sigset_t iset;
                             qassert(sigemptyset(&iset), 0);
-                            qassert(sigaddset(&iset, SIGUSR1), 0);
+                            qassert(sigaddset(&iset, QT_ASSASSINATE_SIGNAL), 0);
+                            qassert(sigaddset(&iset, QT_EUREKA_SIGNAL), 0);
                             qassert(sigprocmask(SIG_UNBLOCK, &iset, NULL), 0);
                         }
                         break;
@@ -2304,7 +2306,7 @@ int API_FUNC qt_team_eureka(void)
                 continue;
             }
             signalcount++;
-            if ((ret = pthread_kill(wkrs[wkrid].worker, SIGUSR2)) != 0) {
+            if ((ret = pthread_kill(wkrs[wkrid].worker, QT_EUREKA_SIGNAL)) != 0) {
                 abort();
             }
         }
