@@ -465,7 +465,11 @@ static void qt_loop_step_inner(const size_t         start,
     qt_sinc_t *my_sinc = qt_sinc_create(0, NULL, NULL, steps);
 
     qt_sinc_barrier_t* barrier = (qt_sinc_barrier_t *)MALLOC(sizeof(qt_sinc_barrier_t ));
-    qt_sinc_barrier_init(barrier,maestro_size());
+#ifdef QTHREAD_RCRTOOL
+    qt_sinc_barrier_init(barrier, maestro_size());
+#else
+    qt_sinc_barrier_init(barrier, qthread_num_workers());
+#endif
 
     for (i = start; i < stop; i += stride) {
         qwa[threadct].func    = func;
