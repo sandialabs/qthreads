@@ -277,16 +277,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 }                                      /*}}} */
 
 /* some place-holder functions */
-void INTERNAL qthread_steal_stat(void)
-{}
-
-void INTERNAL qthread_steal_enable(void)
-{}
-
-void INTERNAL qthread_steal_disable(void)
-{}
-
-void INTERNAL qthread_cas_steal_stat(void)
-{}
+void INTERNAL qthread_steal_stat(void) {}
+void INTERNAL qthread_cas_steal_stat(void) {}
 
 /* vim:set expandtab: */
