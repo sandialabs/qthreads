@@ -148,7 +148,7 @@ static aligned_t qloop_wrapper(struct qloop_wrapper_args *const restrict arg)
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 struct qloop_step_wrapper_args {
     qt_loop_step_f     func;
-    size_t             startat, stopat, step, id, rootNum;
+  size_t             startat, stopat, step, id, rootNum, maxPar;
     void              *arg;
     size_t             level;
     qt_sinc_t         *sinc;
@@ -182,10 +182,12 @@ static aligned_t qloop_step_wrapper(struct qloop_step_wrapper_args *const restri
 # endif
 
 #ifdef QTHREAD_RCRTOOL
-    size_t tot_workers = maestro_size();
+    size_t tot_workers = maestro_size()-1;  // need zero base count
 #else
     size_t tot_workers = qthread_num_workers(); // I'm already here
 #endif
+
+    if (arg->maxPar < tot_workers) tot_workers = arg->maxPar -1; // if less work than workers adjust accordingly
 
     size_t level = arg->level;
     size_t my_id = arg->id;
@@ -193,7 +195,7 @@ static aligned_t qloop_step_wrapper(struct qloop_step_wrapper_args *const restri
         my_id = arg->rootNum;
     }
     size_t new_id = my_id + (1 << level);
-    while (new_id < tot_workers) {       // create some children? (tot_workers zero based)
+    while (new_id <= tot_workers) {       // create some children? (tot_workers zero based)
         if (new_id == arg->rootNum) {
             new_id = 0;                       // move thread that lands on root to zero --
         }
@@ -457,19 +459,28 @@ static void qt_loop_step_inner(const size_t         start,
 # ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_steal_disable();
 # endif
-    qwa = (struct qloop_step_wrapper_args *)MALLOC(sizeof(struct qloop_step_wrapper_args) * steps);
-    assert(qwa);
-    assert(func);
     aligned_t rootNum = qthread_barrier_id(); // what thread is the root of the tree?
-
-    qt_sinc_t *my_sinc = qt_sinc_create(0, NULL, NULL, steps);
 
     qt_sinc_barrier_t* barrier = (qt_sinc_barrier_t *)MALLOC(sizeof(qt_sinc_barrier_t ));
 #ifdef QTHREAD_RCRTOOL
-    qt_sinc_barrier_init(barrier, maestro_size());
+    int s = maestro_size();   // count here is one based
 #else
-    qt_sinc_barrier_init(barrier, qthread_num_workers());
+    int s = qthread_num_workers();
 #endif
+    int totThreads; 
+    if (steps < s) {   // correct when less work than workers
+      totThreads = steps;
+    }
+    else {
+      totThreads = s;
+    }
+    assert(s);
+    qt_sinc_t *my_sinc = qt_sinc_create(0, NULL, NULL, totThreads);
+    qt_sinc_barrier_init(barrier, totThreads);  // set barrier size -- count down release when returns 1
+
+    qwa = (struct qloop_step_wrapper_args *)MALLOC(sizeof(struct qloop_step_wrapper_args) * steps);
+    assert(qwa);
+    assert(func);
 
     for (i = start; i < stop; i += stride) {
         qwa[threadct].func    = func;
@@ -482,6 +493,7 @@ static void qt_loop_step_inner(const size_t         start,
         qwa[threadct].sinc    = my_sinc;
         qwa[threadct].barrier = barrier;
         qwa[threadct].rootNum = rootNum;
+        qwa[threadct].maxPar  = steps;
 
         threadct++;
     }
