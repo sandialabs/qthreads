@@ -9,6 +9,7 @@
 #include "qt_shepherd_innards.h"
 #include "qt_threadstate.h"
 #include "qt_blocking_structs.h"
+#include "rose_sinc_barrier.h"  /* add to allow nested parallelism barriers -- akp 10/16/12 */
 
 #define ARGCOPY_DEFAULT   1024
 #define TASKLOCAL_DEFAULT 8
@@ -105,6 +106,7 @@ struct qthread_s {
     qthread_shepherd_id_t      target_shepherd;       /* the shepherd we'd rather run on */
     uint16_t                   flags;
     uint8_t                    thread_state;
+    qt_sinc_barrier_t         *barrier;               /* add to allow barriers to be stacked/nested parallelism - akp 10/16/12 */
 
     Q_ALIGNED(8) uint8_t data[]; /* this is where we stick argcopy and tasklocal data */
 };

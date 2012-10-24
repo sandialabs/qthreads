@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
         iprintf("[%03d] small local buffer %p\n", here, buf);
 
         aligned_t ret;
-        spr_spawn(spawnee, buf, &ret, there, buf_size);
+        qthread_fork_remote(spawnee, buf, &ret, there, buf_size);
         qthread_readFF(&ret, &ret);
 
         success = (0 == ret);
@@ -96,7 +96,7 @@ int main(int argc, char *argv[])
         iprintf("[%03d] large local buffer %p\n", here, buf);
 
         aligned_t ret;
-        spr_spawn(spawnee, buf, &ret, there, buf_size);
+        qthread_fork_remote(spawnee, buf, &ret, there, buf_size);
         qthread_readFF(&ret, &ret);
 
         success = (0 == ret);
@@ -121,7 +121,7 @@ int main(int argc, char *argv[])
         iprintf("[%03d] custom local buffer %p\n", here, buf);
 
         aligned_t ret;
-        spr_spawn(spawnee, buf, &ret, there, buf_size);
+        qthread_fork_remote(spawnee, buf, &ret, there, buf_size);
         qthread_readFF(&ret, &ret);
 
         success = (0 == ret);

@@ -19,6 +19,8 @@ returner(void *arg)
 int main(int argc,
          char *argv[])
 {
+    CHECK_VERBOSE();
+
     aligned_t tmp, ret = 0;
     int retval;
     long foobar = 1234567890;

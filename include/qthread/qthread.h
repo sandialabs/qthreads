@@ -153,8 +153,6 @@ Q_ENDCXX /* */
 
 Q_STARTCXX /* */
 
-# include <qthread/sinc.h>
-
 typedef unsigned short qthread_shepherd_id_t;
 typedef unsigned short qthread_worker_id_t;
 typedef size_t qt_team_id_t;

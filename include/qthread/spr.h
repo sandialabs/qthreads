@@ -25,12 +25,6 @@ int spr_unify(void);
 int spr_num_locales(void);
 int spr_locale_id(void);
 
-int spr_spawn(qthread_f   f,
-              void       *arg,
-              aligned_t  *ret,
-              int         tgt,
-              size_t      arg_len);
-
 /******************************************************************************
  * Data Movement                                                              *
  ******************************************************************************/
@@ -49,7 +43,7 @@ int spr_get_nb(void             *dest_addr,
 int spr_get_wait(spr_get_handle_t * const hand);
 
 typedef struct spr_put_handle_s {
-    qt_sinc_t sinc;
+    aligned_t feb;
 } spr_put_handle_t;
 
 int spr_put(int    dest_loc,
@@ -62,6 +56,8 @@ int spr_put_nb(int               dest_loc,
                size_t            size,
                spr_put_handle_t *hand);
 int spr_put_wait(spr_put_handle_t * const hand);
+
+int spr_locale_barrier(void);
 
 Q_ENDCXX /* */
 

@@ -19,7 +19,7 @@ general_multinode = \
 	spmd \
 	put \
 	get \
-	spawn \
+	qthread_fork_remote \
 	uts
 
 multinode = \
@@ -79,7 +79,7 @@ put_SOURCES = put.c
 
 get_SOURCES = get.c
 
-spawn_SOURCES = spawn.c
+qthread_fork_remote_SOURCES = qthread_fork_remote.c
 
 uts_SOURCES = uts.c
 uts_LDADD = $(LDADD) $(utils_rnglib)
