@@ -3,9 +3,9 @@
 #include <inttypes.h>
 #include <stdlib.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif
+#include <qthread/macros.h>
+
+Q_STARTCXX /* */
 
 #define DELETE_SUPPORT
 #define ERROR      ((void *)(-1))
@@ -161,9 +161,7 @@ qt_dictionary_iterator *qt_dictionary_iterator_copy(qt_dictionary_iterator *b);
  */
 void qt_dictionary_printbuckets(qt_dictionary *dict);
 
-#ifdef __cplusplus
-}
-#endif
+Q_ENDCXX /* */
 
 #endif // QT_DICTIONARY_H
 /* vim:set expandtab: */
