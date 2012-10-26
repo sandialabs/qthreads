@@ -5,6 +5,7 @@
 #include <iostream>
 #include <list>
 #include <qthread.h>
+#include <qthread/sinc.h>
 #include <qthread/dictionary.h>
 
 #define ASSERTS_ENABLED
