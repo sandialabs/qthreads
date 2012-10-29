@@ -1,5 +1,8 @@
 #ifndef QT_SINC_H
 #define QT_SINC_H
+#include <qthread/macros.h>
+
+Q_STARTCXX /* */
 
 typedef void (*qt_sinc_op_f)(void *tgt, const void *src);
 typedef struct qt_opaque_sinc_s {
@@ -26,6 +29,8 @@ void  qt_sinc_submit(qt_sinc_t *restrict  sinc,
                      const void *restrict value);
 void qt_sinc_wait(qt_sinc_t *restrict sinc,
                   void *restrict      target);
+
+Q_ENDCXX /* */
 
 #endif // ifndef QT_SINC_H
 /* vim:set expandtab: */

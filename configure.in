@@ -445,8 +445,14 @@ AM_PROG_AS
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
-LT_INIT
+
+dnl This is to provide some backward libtool compatibility.
+dnl The weird formatting is to avoid spurious warnings from libtoolize
+m4_ifdef([LT_INIT],[
+LT_INIT],[
+AC_PROG_LIBTOOL])
 AC_SUBST([LIBTOOL_DEPS])
+
 AM_PROG_CC_C_O
 
 AS_IF([test "x$enable_picky" = xyes],
