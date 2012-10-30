@@ -56,6 +56,7 @@ struct qthread_runtime_data_s {
     } blockedon;
     qthread_shepherd_t *shepherd_ptr;    /* the shepherd we run on */
     unsigned            tasklocal_size;
+    int                 criticalsect; /* critical section depth */
 
 #ifdef QTHREAD_USE_VALGRIND
     unsigned int valgrind_stack_id;

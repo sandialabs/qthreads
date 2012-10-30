@@ -316,6 +316,7 @@ static QINLINE void alloc_rdata(qthread_shepherd_t *me,
 #endif
     }
     rdata->tasklocal_size = 0;
+    rdata->criticalsect   = 0;
     rdata->stack          = stack;
     rdata->shepherd_ptr   = me;
     rdata->blockedon.io   = NULL;
@@ -395,19 +396,31 @@ static void hup_handler(int sig)
 #warning signal handler does not filter the spawn cache
             /* 7: exit barrier */
             {
-                aligned_t tmp = eureka_out_barrier;
-                if (qthread_incr(&eureka_in_barrier, 1) + 1 == qlib->nshepherds) {
-                    eureka_in_barrier = 0;
-                    MACHINE_FENCE;
-                    eureka_out_barrier++;
-                } else {
-                    COMPILER_FENCE;
-                    while (tmp == eureka_out_barrier) SPINLOCK_BODY();
+                int barrier_participation = 1;
+                if (t) {
+                    if (t->thread_state == QTHREAD_STATE_ASSASSINATED) {
+                        if (t->rdata->criticalsect > 0) {
+                            barrier_participation = 0;
+                        }
+                    }
+                }
+                if (barrier_participation == 1) {
+                    aligned_t tmp = eureka_out_barrier;
+                    if (qthread_incr(&eureka_in_barrier, 1) + 1 == qlib->nshepherds) {
+                        eureka_in_barrier = 0;
+                        MACHINE_FENCE;
+                        eureka_out_barrier++;
+                    } else {
+                        COMPILER_FENCE;
+                        while (tmp == eureka_out_barrier) SPINLOCK_BODY();
+                    }
                 }
             }
             if (t) {
                 if (t->thread_state == QTHREAD_STATE_ASSASSINATED) {
-                    qthread_back_to_master2(t);
+                    if (t->rdata->criticalsect == 0) {
+                        qthread_back_to_master2(t);
+                    }
                 }
             }
     }
@@ -2279,6 +2292,39 @@ void INTERNAL qthread_internal_assassinate(qthread_t *t)
     qthread_thread_free(t);
 }
 
+void API_FUNC qt_team_critical_section(qt_team_critical_section_t boundary)
+{
+    assert(qthread_library_initialized);
+    qassert_ret(qlib != NULL, QTHREAD_NOT_ALLOWED);
+
+    qthread_t *self = qthread_internal_self();
+    int critical;
+
+    assert(self);
+    switch(boundary) {
+        case BEGIN:
+            self->rdata->criticalsect ++;
+            break;
+        case END:
+            assert(self->rdata->criticalsect > 0);
+            if (--(self->rdata->criticalsect) == 0 &&
+                self->thread_state == QTHREAD_STATE_ASSASSINATED) {
+                aligned_t tmp = eureka_out_barrier;
+                if (qthread_incr(&eureka_in_barrier, 1) + 1 == qlib->nshepherds) {
+                    eureka_in_barrier = 0;
+                    MACHINE_FENCE;
+                    eureka_out_barrier++;
+                } else {
+                    COMPILER_FENCE;
+                    while (tmp == eureka_out_barrier) SPINLOCK_BODY();
+                }
+                qthread_back_to_master2(self);
+            }
+            break;
+    }
+    MACHINE_FENCE;
+}
+
 int API_FUNC qt_team_eureka(void)
 {
     saligned_t        my_wkrid = -1;
@@ -2286,6 +2332,7 @@ int API_FUNC qt_team_eureka(void)
     qthread_worker_t *wkr      = qthread_internal_getworker();
     qt_team_t        *my_team;
 
+    assert(qthread_library_initialized);
     qassert_ret(qlib != NULL, QTHREAD_NOT_ALLOWED);
     qassert_ret(wkr != NULL, QTHREAD_NOT_ALLOWED);
     qassert_ret(self && self->team, QTHREAD_NOT_ALLOWED);

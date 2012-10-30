@@ -372,8 +372,14 @@ enum introspective_state {
 size_t qthread_readstate(const enum introspective_state type);
 
 /* Task team interface. */
+typedef enum qt_team_critical_section_e {
+    BEGIN,
+    END
+} qt_team_critical_section_t;
+
 qt_team_id_t qt_team_id(void);
 qt_team_id_t qt_team_parent_id(void);
+void qt_team_critical_section(qt_team_critical_section_t boundary);
 int qt_team_eureka(void);
 # ifdef TEAM_PROFILE
 void qt_team_profile(void);

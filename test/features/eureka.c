@@ -67,12 +67,16 @@ static aligned_t live_waiter2(void *arg)
 {
     const int assigned = (int)(intptr_t)arg;
     const int id = qthread_id();
+    qt_team_critical_section(BEGIN);
     iprintf("live_waiter %i alive! id %i wkr %u\n", assigned, id, qthread_readstate(CURRENT_UNIQUE_WORKER));
+    qt_team_critical_section(END);
     while(t == 1) {
 	COMPILER_FENCE;
     }
     qthread_incr(&waiter_count, 1);
+    qt_team_critical_section(BEGIN);
     iprintf("live_waiter %i exiting! id %i wkr %u\n", assigned, id, qthread_readstate(CURRENT_UNIQUE_WORKER));
+    qt_team_critical_section(END);
 
     return 0;
 }
@@ -101,7 +105,7 @@ int main(int   argc,
 {
     int ret = 0;
 
-    ret = qthread_init(2);
+    ret = qthread_init(3);
     if (ret != QTHREAD_SUCCESS) {
 	fprintf(stderr, "initialization error\n");
 	abort();
@@ -114,10 +118,10 @@ int main(int   argc,
 
     qt_loop_balance(0, qthread_num_workers(), alive_check, NULL);
 
-    /*iprintf("Testing a fully-live eureka (all member tasks running)...\n");
+    iprintf("Testing a fully-live eureka (all member tasks running)...\n");
     qthread_fork_new_team(live_parent, NULL, &t2);
     qthread_readFF(NULL, &t2);
-    assert(waiter_count == 0);*/
+    assert(waiter_count == 0);
     t = 1;
 
     iprintf("\n\n***************************************************************\n");
@@ -125,6 +129,7 @@ int main(int   argc,
     qthread_fork_new_team(live_parent2, NULL, &t2);
     qthread_readFF(NULL, &t2);
     assert(waiter_count == 0);
+    t = 1;
 
     iprintf("Success!\n");
 
