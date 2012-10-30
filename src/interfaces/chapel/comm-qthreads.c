@@ -16,6 +16,10 @@
 #define CHPL_TASKS_MODEL_H "tasks-qthreads.h"
 #define CHPL_THREADS_MODEL_H "threads-none.h"
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include "chplrt.h"
 #include "chplsys.h"
 #include "tasks-qthreads.h" // for sync typedefs
@@ -41,6 +45,67 @@
 
 #include "qthread/multinode.h"
 #include "qthread/spr.h"
+
+#ifdef CHAPEL_PROFILE
+# define PROFILE_INCR(counter,count) do { (void)qthread_incr(&counter,count); } while (0)
+
+# define PROFILE_BIN_CNT 18
+# define PROFILE_BIN_INCR(counter,size) \
+    do { \
+        size_t i; \
+        for (i = 0; i < PROFILE_BIN_CNT-1; i++) { \
+            size_t bin_size = 8 << i; \
+            if (size <= bin_size) { \
+                (void)qthread_incr(&counter[i],1); \
+                break; \
+            } \
+        } \
+        if (i == PROFILE_BIN_CNT) { \
+            (void)qthread_incr(&counter[PROFILE_BIN_CNT-1],1); \
+        } \
+    } \
+    while (0)
+# define PROFILE_BIN_PRINT(counter) \
+    do { \
+        for (size_t i = 0; i < PROFILE_BIN_CNT-1; i++) { \
+            fprintf(stderr, "comm put size %lu: %lu\n", 8<<i, counter[i]); \
+        } \
+        fprintf(stderr, "comm put size large: %lu\n", counter[PROFILE_BIN_CNT-1]); \
+    } while (0)
+
+static aligned_t profile_comm_broadcast_private = 0;
+static aligned_t profile_comm_barrier = 0;
+static aligned_t profile_comm_put = 0;
+static aligned_t profile_comm_put_msg_size[PROFILE_BIN_CNT] = {0};
+static aligned_t profile_comm_get = 0;
+static aligned_t profile_comm_get_msg_size[PROFILE_BIN_CNT] = {0};
+static aligned_t profile_comm_fork = 0;
+static aligned_t profile_comm_fork_size[PROFILE_BIN_CNT] = {0};
+static aligned_t profile_comm_fork_nb = 0;
+static aligned_t profile_comm_fork_nb_size[PROFILE_BIN_CNT] = {0};
+static aligned_t profile_comm_fork_fast = 0;
+static aligned_t profile_comm_fork_fast_size[PROFILE_BIN_CNT] = {0};
+
+static void profile_print(void)
+{
+    fprintf(stderr, "comm broadcast_private: %lu\n", (unsigned long)profile_comm_broadcast_private);
+    fprintf(stderr, "comm barrier: %lu\n", (unsigned long)profile_comm_barrier);
+    fprintf(stderr, "comm put: %lu\n", (unsigned long)profile_comm_put);
+    PROFILE_BIN_PRINT(profile_comm_put_msg_size);
+    fprintf(stderr, "comm get: %lu\n", (unsigned long)profile_comm_get);
+    PROFILE_BIN_PRINT(profile_comm_get_msg_size);
+    fprintf(stderr, "comm fork: %lu\n", (unsigned long)profile_comm_fork);
+    PROFILE_BIN_PRINT(profile_comm_fork_size);
+    fprintf(stderr, "comm fork_nb: %lu\n", (unsigned long)profile_comm_fork_nb);
+    PROFILE_BIN_PRINT(profile_comm_fork_nb_size);
+    fprintf(stderr, "comm fork_fast: %lu\n", (unsigned long)profile_comm_fork_fast);
+    PROFILE_BIN_PRINT(profile_comm_fork_fast_size);
+}
+#else /* ! CHAPEL_PROFILE */
+# define PROFILE_INCR(counter,count)
+# define PROFILE_BIN_INCR(counter,size)
+# define PROFILE_BIN_PRINT(counter)
+#endif /* ! CHAPEL_PROFILE */
 
 /* "Segment" information table */
 typedef struct seginfo_s {
@@ -322,6 +387,8 @@ void chpl_comm_broadcast_private(int id, int32_t size, int32_t tid)
     int i;
     bcast_private_args_t *payload;
 
+    PROFILE_INCR(profile_comm_broadcast_private,1);
+
     qthread_debug(CHAPEL_CALLS, "[%d] begin id=%d, size=%d, tid=%d\n", chpl_localeID, id, size, tid);
 
     payload = chpl_mem_allocMany(1, sizeof(bcast_private_args_t) + size, 
@@ -353,6 +420,7 @@ void chpl_comm_broadcast_private(int id, int32_t size, int32_t tid)
 void chpl_comm_barrier(const char *msg)
 {
     qthread_debug(CHAPEL_CALLS, "[%d] begin: %s\n", chpl_localeID, msg);
+    PROFILE_INCR(profile_comm_barrier,1);
 
     spr_locale_barrier();
 
@@ -381,7 +449,11 @@ void chpl_comm_pre_task_exit(int all)
             qthread_debug(CHAPEL_BEHAVIOR, "[%d] initiating locale shutdown\n", chpl_localeID);
         }
     }
-    
+
+#ifdef CHAPEL_PROFILE
+    profile_print();
+#endif /* CHAPEL_PROFILE */
+
     qthread_debug(CHAPEL_BEHAVIOR, "[%d] locale shutting down\n", chpl_localeID);
 
     qthread_debug(CHAPEL_CALLS, "[%d] end all=%d\n", chpl_localeID, all);
@@ -423,6 +495,9 @@ void  chpl_comm_put(void* addr, int32_t locale, void* raddr,
 {
     uint32_t const size = elemSize * len;
 
+    PROFILE_INCR(profile_comm_put,1);
+    PROFILE_BIN_INCR(profile_comm_put_msg_size,elemSize);
+
     qthread_debug(CHAPEL_CALLS, "[%d] begin addr=%p, locale=%d, raddr=%p, elemSize=%d, len=%d\n", chpl_localeID, addr, locale, raddr, elemSize, len);
     qthread_debug(CHAPEL_BEHAVIOR, "[%d] putting from %p to (%d,%p) of size %d\n", chpl_localeID, addr, locale, raddr, size);
 
@@ -449,6 +524,9 @@ void  chpl_comm_get(void *addr, int32_t locale, void* raddr,
 {
     uint32_t const size = elemSize *len;
   
+    PROFILE_INCR(profile_comm_get,1);
+    PROFILE_BIN_INCR(profile_comm_get_msg_size,elemSize);
+
     qthread_debug(CHAPEL_CALLS, "[%d] begin addr=%p, locale=%d, raddr=%p, elemSize=%d, len=%d\n", chpl_localeID, addr, locale, raddr, elemSize, len);
     qthread_debug(CHAPEL_BEHAVIOR, "[%d] getting from (%d,%p) to %p of size %d\n", chpl_localeID, locale, raddr, addr, size);
 
@@ -523,6 +601,9 @@ void chpl_comm_fork(int locale, chpl_fn_int_t fid,
 {
     aligned_t ret;
 
+    PROFILE_INCR(profile_comm_fork,1);
+    PROFILE_BIN_INCR(profile_comm_fork_size,arg_size);
+
     qthread_debug(CHAPEL_CALLS, "[%d] begin locale=%d, fid=%d, arg_size=%d\n", chpl_localeID, locale, fid, arg_size);
 
     qthread_debug(CHAPEL_BEHAVIOR, "[%d] (blocking) forking fn %d with arg-size %d\n", chpl_localeID, fid, arg_size);
@@ -540,6 +621,9 @@ void chpl_comm_fork(int locale, chpl_fn_int_t fid,
 void chpl_comm_fork_nb(int locale, chpl_fn_int_t fid,
                        void *arg, int32_t arg_size, int32_t arg_tid)
 {
+    PROFILE_INCR(profile_comm_fork_nb,1);
+    PROFILE_BIN_INCR(profile_comm_fork_nb_size,arg_size);
+
     qthread_debug(CHAPEL_CALLS, "[%d] begin locale=%d, fid=%d, arg_size=%d\n", chpl_localeID, locale, fid, arg_size);
     qthread_debug(CHAPEL_BEHAVIOR, "[%d] (non-blocking) forking fn %d with arg-size %d\n", chpl_localeID, fid, arg_size);
 
@@ -555,6 +639,9 @@ void chpl_comm_fork_nb(int locale, chpl_fn_int_t fid,
 void chpl_comm_fork_fast(int locale, chpl_fn_int_t fid, void *arg,
                          int32_t arg_size, int32_t arg_tid)
 {
+    PROFILE_INCR(profile_comm_fork_fast,1);
+    PROFILE_BIN_INCR(profile_comm_fork_fast_size,arg_size);
+
     qthread_debug(CHAPEL_CALLS, "[%d] begin locale=%d, fid=%d, arg_size=%d\n", chpl_localeID, locale, fid, arg_size);
     qthread_debug(CHAPEL_BEHAVIOR, "[%d] (fast) forking fn %d with arg-size %d\n", chpl_localeID, fid, arg_size);
 
