@@ -84,8 +84,8 @@
 void resetEnergy(int64_t i);
 
 extern QTHREAD_FASTLOCK_TYPE rcrtool_lock;
-extern int rcrToolContinue;
-extern int powerOff;
+extern int                   rcrToolContinue;
+extern int                   powerOff;
 
 #endif
 
@@ -127,7 +127,6 @@ aligned_t             concurrentthreads;
 QTHREAD_FASTLOCK_TYPE concurrentthreads_lock;
 QTHREAD_FASTLOCK_TYPE effconcurrentthreads_lock;
 #endif
-
 
 /* Internal Prototypes */
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
@@ -392,8 +391,10 @@ static void hup_handler(int sig)
                 /* filter work queue! */
                 qt_threadqueue_filter(s->ready, eureka_filter);
             }
+#ifdef QTHREAD_USE_SPAWNCACHE
             /* 5b: filter the spawncache! */
-#warning signal handler does not filter the spawn cache
+            qt_spawncache_filter(eureka_filter);
+#endif
             /* 7: exit barrier */
             {
                 int barrier_participation = 1;
@@ -1285,8 +1286,8 @@ int API_FUNC qthread_initialize(void)
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 # ifdef QTHREAD_RCRTOOL
     QTHREAD_FASTLOCK_INIT(rcrtool_lock);
-    rcrtoollevel    = qt_internal_get_env_num("RCRTOOL_LEVEL", 0, 0);
-    rcrtoolloglevel = qt_internal_get_env_num("RCRTOOL_LOG_LEVEL", 0, 0);
+    rcrtoollevel          = qt_internal_get_env_num("RCRTOOL_LEVEL", 0, 0);
+    rcrtoolloglevel       = qt_internal_get_env_num("RCRTOOL_LOG_LEVEL", 0, 0);
     qlib->nworkers_active = nshepherds * nworkerspershep;
 # else /* ifdef QTHREAD_RCRTOOL */
     assert(hw_par > 0);
@@ -1628,8 +1629,10 @@ void API_FUNC qthread_finalize(void)
     qthread_shepherd_id_t i;
     qthread_t            *t;
 
-    if (qthread_finalizeRun) return;  // only run once -- exit 0 causes it to run
-    // in exit handler and then during termination.  -- needed in exit handler to 
+    if (qthread_finalizeRun) {
+        return;                       // only run once -- exit 0 causes it to run
+    }
+    // in exit handler and then during termination.  -- needed in exit handler to
     // reset duty cycle when exit actually causes termination
     qthread_finalizeRun = 1;
 
@@ -1639,8 +1642,8 @@ void API_FUNC qthread_finalize(void)
     int workers = qthread_num_workers();
 #ifdef QTHREAD_RCRTOOL
     powerOff = 0;
-    for ( i = 0; i < workers; i ++) {
-      resetEnergy(i);
+    for ( i = 0; i < workers; i++) {
+        resetEnergy(i);
     }
 #endif
     /* Sanity check */
@@ -1713,9 +1716,9 @@ void API_FUNC qthread_finalize(void)
 #endif
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-#ifdef QTHREAD_RCRTOOL
+# ifdef QTHREAD_RCRTOOL
     rcrToolContinue = 0;
-#endif
+# endif
     for (i = 0; i < qlib->nshepherds; i++) {
         qthread_worker_id_t j;
         for (j = 0; j < qlib->nworkerspershep; j++) {
@@ -2298,17 +2301,17 @@ void API_FUNC qt_team_critical_section(qt_team_critical_section_t boundary)
     qassert_ret(qlib != NULL, QTHREAD_NOT_ALLOWED);
 
     qthread_t *self = qthread_internal_self();
-    int critical;
+    int        critical;
 
     assert(self);
     switch(boundary) {
         case BEGIN:
-            self->rdata->criticalsect ++;
+            self->rdata->criticalsect++;
             break;
         case END:
             assert(self->rdata->criticalsect > 0);
-            if (--(self->rdata->criticalsect) == 0 &&
-                self->thread_state == QTHREAD_STATE_ASSASSINATED) {
+            if ((--(self->rdata->criticalsect) == 0) &&
+                (self->thread_state == QTHREAD_STATE_ASSASSINATED)) {
                 aligned_t tmp = eureka_out_barrier;
                 if (qthread_incr(&eureka_in_barrier, 1) + 1 == qlib->nshepherds) {
                     eureka_in_barrier = 0;
@@ -2395,8 +2398,10 @@ int API_FUNC qt_team_eureka(void)
         /* filter work queue! */
         qt_threadqueue_filter(self->rdata->shepherd_ptr->ready, eureka_filter);
     }
+#ifdef QTHREAD_USE_SPAWNCACHE
     /* 5b: filter the spawncache! */
-#warning eureka does not filter the spawn cache
+    qt_spawncache_filter(eureka_filter);
+#endif
     /* 6: callback to kill blocked tasks */
 #warning eureka does not kill blocked tasks
     /* 7: exit barrier */
@@ -3152,10 +3157,10 @@ int API_FUNC qthread_spawn(qthread_f             f,
 #endif
     qthread_shepherd_id_t save_target = target_shep;
 #ifdef QTHREAD_OMP_AFFINITY
-    if(target_shep == NO_SHEPHERD){
-    if (me->rdata->child_affinity != OMP_NO_CHILD_TASK_AFFINITY){
-      target_shep = me->rdata->child_affinity;
-    }
+    if(target_shep == NO_SHEPHERD) {
+        if (me->rdata->child_affinity != OMP_NO_CHILD_TASK_AFFINITY) {
+            target_shep = me->rdata->child_affinity;
+        }
     }
 #endif
     if (me) {
@@ -3335,11 +3340,11 @@ int API_FUNC qthread_spawn(qthread_f             f,
     }
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     t->id = save_target;
-      //target_shep;
-      /* used in barrier and arrive_first, NOT the
-                           * thread-id may be extraneous in both when parallel
-                           * region barriers in place (not will to pull it now
-                           * maybe later) akp */
+    // target_shep;
+    /* used in barrier and arrive_first, NOT the
+     * thread-id may be extraneous in both when parallel
+     * region barriers in place (not will to pull it now
+     * maybe later) akp */
 #endif
     if (QTHREAD_UNLIKELY(feature_flag & QTHREAD_SPAWN_FUTURE)) {
         t->flags |= QTHREAD_FUTURE;
@@ -4130,26 +4135,27 @@ aligned_t *qthread_task_counter(void)
 
 void qthread_set_affinity(unsigned int shep)
 {                                    /*{{{ */
-#ifdef QTHREAD_OMP_AFFINITY
+# ifdef QTHREAD_OMP_AFFINITY
     qthread_t *t = qthread_internal_self();
 
     assert(t);
     t->rdata->child_affinity = shep;
-#endif
-    return;
+# endif
 }
+
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
 
-void qt_set_barrier(qt_sinc_barrier_t * bar)
+void qt_set_barrier(qt_sinc_barrier_t *bar)
 {                      /*{{{ */
     qthread_t *me = qthread_internal_self();
-    me->barrier = bar;
 
+    me->barrier = bar;
 }                      /*}}} */
 
 qt_sinc_barrier_t *qt_get_barrier()
 {                      /*{{{ */
     qthread_t *me = qthread_internal_self();
+
     return me->barrier;
 }                      /*}}} */
 

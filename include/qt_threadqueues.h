@@ -36,6 +36,8 @@ int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict p
                                             qthread_t *restrict                t);
 int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *restrict q,
                                                     qthread_t *restrict                t);
+void INTERNAL qt_threadqueue_private_filter(qt_threadqueue_private_t *restrict c,
+                                            qt_threadqueue_filter_f            filter);
 
 ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q);
 
