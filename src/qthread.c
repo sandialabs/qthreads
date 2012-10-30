@@ -696,7 +696,7 @@ qt_run:
                         qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t);
                         break;
                     default:
-                        qthread_debug(THREAD_DETAILS, "id(%u): thread in state %i; that's illegal!\n", my_id, t->thread_state);
+                        qthread_debug(ALWAYS_OUTPUT, "id(%u): thread in state %i; that's illegal!\n", my_id, t->thread_state);
                         assert(0);
                         break;
 
