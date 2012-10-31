@@ -504,7 +504,6 @@ static void *qthread_master(void *arg)
 #endif
     signal(QT_ASSASSINATE_SIGNAL, hup_handler);
     signal(QT_EUREKA_SIGNAL, hup_handler);
-    printf("registered hup_handler\n");
 
     if (qaffinity && (me->node != UINT_MAX)) {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
