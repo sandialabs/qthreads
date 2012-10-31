@@ -157,6 +157,13 @@ int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *re
     return 0;
 } /*}}}*/
 
+void INTERNAL qt_threadqueue_enqueue_cache(qt_threadqueue_t         *q,
+                                           qt_threadqueue_private_t *cache)
+{}
+
+void INTERNAL qt_threadqueue_private_filter(qt_threadqueue_private_t *restrict c,
+                                            qt_threadqueue_filter_f            f)
+{}
 #endif /* ifdef QTHREAD_USE_SPAWNCACHE */
 
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
@@ -265,10 +272,48 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
         retval = qt_threadqueue_dequeue(q);
     }
     assert(retval);
-    assert(retval->next == NULL);
     qthread_debug(THREADQUEUE_BEHAVIOR, "found thread %u (%p); q(%p)\n", retval->thread_id, retval, q);
     return retval;
 } /*}}}*/
+
+/* walk queue removing all tasks matching this description */
+void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
+                                    qt_threadqueue_filter_f f)
+{
+    qt_threadqueue_node_t *curs, **ptr;
+
+    assert(q != NULL);
+
+    curs = q->stack;
+    ptr  = &q->stack;
+    while (curs) {
+        qthread_t *t = curs->thread;
+        switch (f(t)) {
+            case 0: // ignore, move on
+                ptr  = &curs->next;
+                curs = curs->next;
+                break;
+            case 1: // ignore, stop looking
+                return;
+
+            case 2: // remove, move on
+            {
+                qt_threadqueue_node_t *freeme = curs;
+
+                qthread_internal_assassinate(t);
+                *ptr = curs->next;
+                curs = curs->next;
+                FREE_TQNODE(freeme);
+                break;
+            }
+            case 3: // remove, stop looking;
+                qthread_internal_assassinate(t);
+                *ptr = curs->next;
+                FREE_TQNODE(curs);
+                return;
+        }
+    }
+}
 
 /* some place-holder functions */
 void INTERNAL qthread_steal_stat(void)
