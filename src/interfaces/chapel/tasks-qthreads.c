@@ -432,17 +432,7 @@ chpl_taskID_t chpl_task_getId(void)
 
 void chpl_task_sleep(int secs)
 {
-    qtimer_t t = qtimer_create();
-
-    qtimer_start(t);     // record begin-timestamp
-    qthread_yield();
-    qtimer_stop(t);     // record wake-timestamp
-
-    while (qtimer_secs(t) < secs) {     // check difference
-        qthread_yield();
-        qtimer_stop(t);     // record new wake-timestamp
-    }
-    qtimer_destroy(t);
+    sleep(secs); // goes into the syscall interception system
 }
 
 /* The get- and setSerial() methods assume the beginning of the task-local
