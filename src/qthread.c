@@ -1621,32 +1621,22 @@ int print_FEBs(int *ct)
 }
 
 #endif /* ifdef QTHREAD_DEBUG */
-int qthread_finalizeRun = 0;
 
 void API_FUNC qthread_finalize(void)
 {                      /*{{{ */
     int                   r;
     qthread_shepherd_id_t i;
     qthread_t            *t;
-
-    if (qthread_finalizeRun) {
-        return;                       // only run once -- exit 0 causes it to run
-    }
-    // in exit handler and then during termination.  -- needed in exit handler to
-    // reset duty cycle when exit actually causes termination
-    qthread_finalizeRun = 1;
-
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t *worker;
 #endif
-    int workers = qthread_num_workers();
-#ifdef QTHREAD_RCRTOOL
-    powerOff = 0;
-    for ( i = 0; i < workers; i++) {
-        resetEnergy(i);
-    }
-#endif
-    /* Sanity check */
+
+    /***********************************************************************/
+    /* Sanity check - THIS *MUST* BE THE FIRST CODE RUN IN QTHREAD_FINALIZE
+     *
+     * Those who insert other code before this will discover that bad things
+     * happen, and will be forced to re-invent this code, badly. */
+    /***********************************************************************/
     if ((qlib == NULL) || (qthread_shep() != 0) || (qthread_worker(NULL) != 0)) {
         /* in essence, qthread_finalize can easily be called by threads
          * external to qthreads (via the atexit() setup); if that happens, we
@@ -1660,6 +1650,16 @@ void API_FUNC qthread_finalize(void)
             return;
         }
     }
+    qthread_debug(CORE_CALLS, "began.\n");
+    /***********************************************************************/
+
+    int workers = qthread_num_workers();
+#ifdef QTHREAD_RCRTOOL
+    powerOff = 0;
+    for ( i = 0; i < workers; i++) {
+        resetEnergy(i);
+    }
+#endif
 
     // Wait for all team structures to be reclaimed.
     while (qlib->team_count) {
@@ -1703,12 +1703,6 @@ void API_FUNC qthread_finalize(void)
 #ifdef TEAM_PROFILE
     qt_team_profile();
 #endif
-
-    qthread_debug(CORE_CALLS, "began.\n");
-
-    /* rcm - probably need to put a "turn off the library flag" here, but,
-     * the programmer can ensure that no further threads are forked for now
-     */
 
     /* enqueue the termination thread sentinal */
 #ifdef QTHREAD_SHEPHERD_PROFILING
