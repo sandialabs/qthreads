@@ -1,4 +1,6 @@
 --- 1.8.2b ---
+New Features:
+ - Eurekas within a team
 --- 1.8.1 ---
 Improvements:
  - Improved integration with Chapel build system
