@@ -1555,6 +1555,8 @@ void INTERNAL qthread_print_FEB_callback(qt_feb_callback_f cb)
     for (unsigned int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
         qt_hash_callback(qlib->FEBs[i],
                          (qt_hash_callback_fn)qt_hash_call_cb, cb);
+        qt_hash_callback(qlib->syncvars[i],
+                         (qt_hash_callback_fn)qt_hash_call_cb, cb);
     }
 }
 
@@ -1610,11 +1612,14 @@ static void qt_hash_print_addrstat(const qt_key_t      addr,
     QTHREAD_FASTLOCK_UNLOCK(&m->lock);
 }                                      /*}}} */
 
-int print_FEBs(int *ct);
-int print_FEBs(int *ct)
+static int print_FEBs(int *ct)
 {
     for (unsigned int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
         qt_hash_callback(qlib->FEBs[i],
+                         (qt_hash_callback_fn)qt_hash_print_addrstat, ct);
+    }
+    for (unsigned int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
+        qt_hash_callback(qlib->syncvars[i],
                          (qt_hash_callback_fn)qt_hash_print_addrstat, ct);
     }
     return 0;
@@ -1627,6 +1632,7 @@ void API_FUNC qthread_finalize(void)
     int                   r;
     qthread_shepherd_id_t i;
     qthread_t            *t;
+
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t *worker;
 #endif
