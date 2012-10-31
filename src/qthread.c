@@ -3146,7 +3146,9 @@ void API_FUNC qthread_yield_(int k)
 
 void API_FUNC qthread_flushsc(void)
 {   /*{{{*/
+#ifdef QTHREAD_USING_SPAWNCACHE
     qt_spawncache_flush(qlib->threadqueues[qthread_readstate(CURRENT_UNIQUE_WORKER)]);
+#endif
 } /*}}}*/
 
 /***********************************************
