@@ -591,6 +591,7 @@ void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
     QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
 } /*}}}*/
 
+#ifdef QTHREAD_USE_SPAWNCACHE
 void INTERNAL qt_threadqueue_enqueue_cache(qt_threadqueue_t         *q,
                                            qt_threadqueue_private_t *cache)
 {   /*{{{*/
@@ -630,6 +631,7 @@ void INTERNAL qt_threadqueue_enqueue_cache(qt_threadqueue_t         *q,
     cache->qlength           = 0;
     cache->qlength_stealable = 0;
 } /*}}}*/
+#endif
 
 /* dequeue stolen threads at head, skip yielded threads */
 qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h,
