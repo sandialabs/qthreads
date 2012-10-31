@@ -366,15 +366,15 @@ got_m:
 }                      /*}}} */
 
 static QINLINE void qthread_precond_init(qthread_addrres_t **precond_tasks_p)
-{
-    /*create empty head to avoid later checks/branches; use the waiter to find the tail*/
+{   /*{{{*/
+ /*create empty head to avoid later checks/branches; use the waiter to find the tail*/
     *precond_tasks_p           = ALLOC_ADDRRES();
     (*precond_tasks_p)->waiter = (void *)(*precond_tasks_p);
-}
+} /*}}}*/
 
 static QINLINE void qthread_precond_launch(qthread_shepherd_t *shep,
                                            qthread_addrres_t  *precond_tasks)
-{
+{   /*{{{*/
     qthread_addrres_t *precond_tail = ((qthread_addrres_t *)(precond_tasks->waiter));
 
     if (precond_tasks != precond_tail) {
@@ -393,7 +393,7 @@ static QINLINE void qthread_precond_launch(qthread_shepherd_t *shep,
         } while(precond_head != precond_tail);
         FREE_ADDRRES(precond_free);
     }
-}
+} /*}}}*/
 
 static QINLINE void qthread_gotlock_empty(qthread_shepherd_t *shep,
                                           qthread_addrstat_t *m,
