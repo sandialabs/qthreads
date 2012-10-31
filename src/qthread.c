@@ -2520,7 +2520,7 @@ static aligned_t qt_team_watcher(void *args_)
                 // I must propogate this eureka: I am the end of all things, and like a Shoggoth, I will sweep my team evilly free of litter
                 qthread_debug(FEB_DETAILS, "team %u's watcher (tid %u) preparing to destroy its team\n", myteam, qthread_id());
                 qt_team_eureka();
-#warning the watcher must now clean up the team, as it has (oddly) become the team-leader
+                break;
             }
         } else {
             assert("Error: watcher received code 0 or 1" && 0); // not sure what this means
