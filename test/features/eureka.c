@@ -47,8 +47,8 @@ static aligned_t live_parent(void *arg)
     iprintf("live_parent alive!\n");
     qthread_empty(alive+0);
     qthread_empty(alive+1);
-    qthread_fork(live_waiter, (void*)(intptr_t)0, &t3);
-    qthread_fork(live_waiter, (void*)(intptr_t)1, &t3);
+    qthread_fork_to(live_waiter, (void*)(intptr_t)0, &t3, 1);
+    qthread_fork_to(live_waiter, (void*)(intptr_t)1, &t3, 2);
     iprintf("live_parent waiting on %p\n", &alive[1]);
     qthread_readFF(NULL, &alive[1]);
     iprintf("saw live_waiter 1 report in\n");
@@ -119,7 +119,7 @@ int main(int   argc,
     qt_loop_balance(0, qthread_num_workers(), alive_check, NULL);
 
     iprintf("Testing a fully-live eureka (all member tasks running)...\n");
-    qthread_fork_new_team(live_parent, NULL, &t2);
+    qthread_spawn(live_parent, NULL, 0, &t2, 0, NULL, 0, QTHREAD_SPAWN_NEW_TEAM);
     qthread_readFF(NULL, &t2);
     assert(waiter_count == 0);
     t = 1;
