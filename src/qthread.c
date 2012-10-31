@@ -2328,6 +2328,40 @@ void API_FUNC qt_team_critical_section(qt_team_critical_section_t boundary)
     MACHINE_FENCE;
 }
 
+void INTERNAL qthread_internal_team_eureka_febdeath(const qt_key_t      addr,
+                                                    qthread_addrstat_t *m,
+                                                    void               *arg)
+{
+    QTHREAD_FASTLOCK_LOCK(&m->lock); // should be unnecessary
+    for (int i = 0; i < 3; i++) {
+        qthread_addrres_t *curs, **base;
+        switch (i) {
+            case 0: curs = m->EFQ; base = &m->EFQ; break;
+            case 1: curs = m->FEQ; base = &m->FEQ; break;
+            case 2: curs = m->FFQ; base = &m->FFQ; break;
+        }
+        while (curs) {
+            qthread_t *t = curs->waiter;
+            switch(eureka_filter(t)) {
+                case 0: // ignore, move to the next one
+                    base = &curs->next;
+                    break;
+                case 2: // remove, move to the next one
+                {
+                    qthread_internal_assassinate(t);
+                    *base = curs->next;
+                    FREE_ADDRRES(curs);
+                    break;
+                }
+                default:
+                    QTHREAD_TRAP();
+            }
+            curs = curs->next;
+        }
+    }
+    QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+}
+
 int API_FUNC qt_team_eureka(void)
 {
     saligned_t        my_wkrid = -1;
@@ -2403,7 +2437,14 @@ int API_FUNC qt_team_eureka(void)
     qt_spawncache_filter(eureka_filter);
 #endif
     /* 6: callback to kill blocked tasks */
-#warning eureka does not kill blocked tasks
+    for (unsigned int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
+        qt_hash_callback(qlib->FEBs[i],
+                         (qt_hash_callback_fn)qthread_internal_team_eureka_febdeath,
+                         NULL);
+        qt_hash_callback(qlib->syncvars[i],
+                         (qt_hash_callback_fn)qthread_internal_team_eureka_febdeath,
+                         NULL);
+    }
     /* 7: exit barrier */
     {
         aligned_t tmp = eureka_out_barrier;
