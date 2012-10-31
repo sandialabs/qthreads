@@ -16,6 +16,10 @@
 #define CHPL_TASKS_MODEL_H   "tasks-qthreads.h"
 #define CHPL_THREADS_MODEL_H "threads-none.h"
 
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include "chplrt.h"
 #include "chplsys.h"
 #include "tasks-qthreads.h"
@@ -45,6 +49,61 @@
 #endif /* QTHREAD_MULTINODE */
 
 #include <pthread.h>
+
+#ifdef CHAPEL_PROFILE
+# define PROFILE_INCR(counter,count) do { (void)qthread_incr(&counter,count); } while (0)
+
+/* Tasks */
+static aligned_t profile_task_yield = 0;
+static aligned_t profile_task_addToTaskList = 0;
+static aligned_t profile_task_processTaskList = 0;
+static aligned_t profile_task_executeTasksInList = 0;
+static aligned_t profile_task_freeTaskList = 0;
+static aligned_t profile_task_begin = 0;
+static aligned_t profile_task_getId = 0;
+static aligned_t profile_task_sleep = 0;
+static aligned_t profile_task_getSerial = 0;
+static aligned_t profile_task_setSerial = 0;
+static aligned_t profile_task_getCallStackSize = 0;
+/* Sync */
+static aligned_t profile_sync_lock= 0;
+static aligned_t profile_sync_unlock= 0;
+static aligned_t profile_sync_waitFullAndLock= 0;
+static aligned_t profile_sync_waitEmptyAndLock= 0;
+static aligned_t profile_sync_markAndSignalFull= 0;
+static aligned_t profile_sync_markAndSignalEmpty= 0;
+static aligned_t profile_sync_isFull= 0;
+static aligned_t profile_sync_initAux= 0;
+static aligned_t profile_sync_destroyAux= 0;
+
+static void profile_print(void)
+{
+    /* Tasks */
+    fprintf(stderr, "task yield: %lu\n", (unsigned long)profile_task_yield);
+    fprintf(stderr, "task addToTaskList: %lu\n", (unsigned long)profile_task_addToTaskList);
+    fprintf(stderr, "task processTaskList: %lu\n", (unsigned long)profile_task_processTaskList);
+    fprintf(stderr, "task executeTasksInList: %lu\n", (unsigned long)profile_task_executeTasksInList);
+    fprintf(stderr, "task freeTaskList: %lu\n", (unsigned long)profile_task_freeTaskList);
+    fprintf(stderr, "task begin: %lu\n", (unsigned long)profile_task_begin);
+    fprintf(stderr, "task getId: %lu\n", (unsigned long)profile_task_getId);
+    fprintf(stderr, "task sleep: %lu\n", (unsigned long)profile_task_sleep);
+    fprintf(stderr, "task getSerial: %lu\n", (unsigned long)profile_task_getSerial);
+    fprintf(stderr, "task setSerial: %lu\n", (unsigned long)profile_task_setSerial);
+    fprintf(stderr, "task getCallStackSize: %lu\n", (unsigned long)profile_task_getCallStackSize);
+    /* Sync */
+    fprintf(stderr, "sync lock: %lu\n", (unsigned long)profile_sync_lock);
+    fprintf(stderr, "sync unlock: %lu\n", (unsigned long)profile_sync_unlock);
+    fprintf(stderr, "sync waitFullAndLock: %lu\n", (unsigned long)profile_sync_waitFullAndLock);
+    fprintf(stderr, "sync waitEmptyAndLock: %lu\n", (unsigned long)profile_sync_waitEmptyAndLock);
+    fprintf(stderr, "sync markAndSignalFull: %lu\n", (unsigned long)profile_sync_markAndSignalFull);
+    fprintf(stderr, "sync markAndSignalEmpty: %lu\n", (unsigned long)profile_sync_markAndSignalEmpty);
+    fprintf(stderr, "sync isFull: %lu\n", (unsigned long)profile_sync_isFull);
+    fprintf(stderr, "sync initAux: %lu\n", (unsigned long)profile_sync_initAux);
+    fprintf(stderr, "sync destroyAux: %lu\n", (unsigned long)profile_sync_destroyAux);
+}
+#else
+# define PROFILE_INCR(counter,count)
+#endif /* CHAPEL_PROFILE */
 
 // aka chpl_task_list_p
 struct chpl_task_list {
@@ -77,6 +136,7 @@ static syncvar_t exit_ret             = SYNCVAR_STATIC_EMPTY_INITIALIZER;
 
 void chpl_task_yield(void)
 {
+    PROFILE_INCR(profile_task_yield,1);
     qthread_yield();
 }
 
@@ -85,12 +145,16 @@ void chpl_sync_lock(chpl_sync_aux_t *s)
 {
     aligned_t l;
 
+    PROFILE_INCR(profile_sync_lock, 1);
+
     l = qthread_incr(&s->lockers_in, 1);
     while (l != s->lockers_out) SPINLOCK_BODY();
 }
 
 void chpl_sync_unlock(chpl_sync_aux_t *s)
 {
+    PROFILE_INCR(profile_sync_unlock, 1);
+
     qthread_incr(&s->lockers_out, 1);
 }
 
@@ -108,6 +172,8 @@ void chpl_sync_waitFullAndLock(chpl_sync_aux_t *s,
                                int32_t          lineno,
                                chpl_string      filename)
 {
+    PROFILE_INCR(profile_sync_waitFullAndLock, 1);
+
     if (blockreport) { about_to_block(lineno, filename); }
     chpl_sync_lock(s);
     while (s->is_full == 0) {
@@ -121,6 +187,8 @@ void chpl_sync_waitEmptyAndLock(chpl_sync_aux_t *s,
                                 int32_t          lineno,
                                 chpl_string      filename)
 {
+    PROFILE_INCR(profile_sync_waitEmptyAndLock, 1);
+
     if (blockreport) { about_to_block(lineno, filename); }
     chpl_sync_lock(s);
     while (s->is_full != 0) {
@@ -132,6 +200,8 @@ void chpl_sync_waitEmptyAndLock(chpl_sync_aux_t *s,
 
 void chpl_sync_markAndSignalFull(chpl_sync_aux_t *s)         // and unlock
 {
+    PROFILE_INCR(profile_sync_markAndSignalFull, 1);
+
     qthread_syncvar_fill(&(s->signal_full));
     s->is_full = 1;
     chpl_sync_unlock(s);
@@ -139,6 +209,8 @@ void chpl_sync_markAndSignalFull(chpl_sync_aux_t *s)         // and unlock
 
 void chpl_sync_markAndSignalEmpty(chpl_sync_aux_t *s)         // and unlock
 {
+    PROFILE_INCR(profile_sync_markAndSignalEmpty, 1);
+
     qthread_syncvar_fill(&(s->signal_empty));
     s->is_full = 0;
     chpl_sync_unlock(s);
@@ -148,6 +220,8 @@ chpl_bool chpl_sync_isFull(void            *val_ptr,
                            chpl_sync_aux_t *s,
                            chpl_bool        simple_sync_var)
 {
+    PROFILE_INCR(profile_sync_isFull, 1);
+
     if(simple_sync_var) {
         return qthread_syncvar_status(&(s->signal_full));
     } else {
@@ -157,6 +231,8 @@ chpl_bool chpl_sync_isFull(void            *val_ptr,
 
 void chpl_sync_initAux(chpl_sync_aux_t *s)
 {
+    PROFILE_INCR(profile_sync_initAux, 1);
+
     s->lockers_in   = 0;
     s->lockers_out  = 0;
     s->is_full      = 0;
@@ -165,7 +241,10 @@ void chpl_sync_initAux(chpl_sync_aux_t *s)
 }
 
 void chpl_sync_destroyAux(chpl_sync_aux_t *s)
-{ }
+{
+    PROFILE_INCR(profile_sync_destroyAux, 1);
+}
+
 
 static void chapel_display_thread(void        *addr,
                                   qthread_f    f,
@@ -313,6 +392,10 @@ void chpl_task_init(int32_t  numThreadsPerLocale,
 
 void chpl_task_exit(void)
 {
+#ifdef CHAPEL_PROFILE
+    profile_print();
+#endif /* CHAPEL_PROFILE */
+
 #ifdef QTHREAD_MULTINODE
 #else
     if (qthread_shep() == NO_SHEPHERD) {
@@ -388,14 +471,25 @@ void chpl_task_addToTaskList(chpl_fn_int_t     fid,
 {
     struct chpl_task_list tasklist = { chpl_ftable[fid], arg, filename, lineno, NULL };
 
+    PROFILE_INCR(profile_task_addToTaskList,1);
+
     chpl_task_begin(chpl_ftable[fid], arg, false, chpl_task_getSerial(), &tasklist);
 }
 
-void chpl_task_processTaskList(chpl_task_list_p task_list) { }
+void chpl_task_processTaskList(chpl_task_list_p task_list)
+{
+    PROFILE_INCR(profile_task_processTaskList,1);
+}
 
-void chpl_task_executeTasksInList(chpl_task_list_p task_list) { }
+void chpl_task_executeTasksInList(chpl_task_list_p task_list)
+{
+    PROFILE_INCR(profile_task_executeTasksInList,1);
+}
 
-void chpl_task_freeTaskList(chpl_task_list_p task_list) { }
+void chpl_task_freeTaskList(chpl_task_list_p task_list)
+{
+    PROFILE_INCR(profile_task_freeTaskList,1);
+}
 
 void chpl_task_begin(chpl_fn_p        fp,
                      void            *arg,
@@ -404,6 +498,8 @@ void chpl_task_begin(chpl_fn_p        fp,
                      chpl_task_list_p ltask)
 {
     chapel_wrapper_args_t wrapper_args = { fp, arg, NULL, 0, serial_state };
+
+    PROFILE_INCR(profile_task_begin,1);
 
     if (ltask) {
         wrapper_args.task_filename = ltask->filename;
@@ -427,6 +523,8 @@ void chpl_task_begin(chpl_fn_p        fp,
 // Returns '(unsigned int)-1' if called outside of the tasking layer.
 chpl_taskID_t chpl_task_getId(void)
 {
+    PROFILE_INCR(profile_task_getId,1);
+
     return (chpl_taskID_t)qthread_id();
 }
 
@@ -441,12 +539,16 @@ chpl_bool chpl_task_getSerial(void)
 {
     chpl_bool *state = (chpl_bool *)qthread_get_tasklocal(sizeof(chpl_bool));
 
+    PROFILE_INCR(profile_task_getSerial,1);
+
     return state == NULL ? default_serial_state : *state;
 }
 
 void chpl_task_setSerial(chpl_bool state)
 {
     task_info_t *data = (task_info_t *)qthread_get_tasklocal(sizeof(task_info_t));
+
+    PROFILE_INCR(profile_task_setSerial,1);
 
     if (NULL != data) {
         data->serial_state = state;
@@ -457,6 +559,8 @@ void chpl_task_setSerial(chpl_bool state)
 
 uint64_t chpl_task_getCallStackSize(void)
 {
+    PROFILE_INCR(profile_task_getCallStackSize,1);
+
     return qthread_readstate(STACK_SIZE);
 }
 

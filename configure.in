@@ -207,19 +207,21 @@ AC_ARG_ENABLE([profiling],
               [AS_HELP_STRING([--enable-profiling=[[areas]]],
                               [turn on the specified comma-separated types of
                                profiling. Available types are: shepherd, lock,
-                               steal, cas_steal, threadc, sincs, and teams. Shepherd
-                               profiling counts the wall-clock time that each
-                               shepherd spends idle. FEB profiling counts the
-                               time spent waiting for FEB states. Steal profiling
-                               counts the amount of workstealing that was done
-                               (only applies to multithreaded shepherds).
-                               Cas_steal profiling counts how many CAS failures
-                               happen in nottingham steal operations. Threadc
-                               counts the number of threads spawned and the
-                               number of threads available to run
-                               concurrently. Sincs profiling reports sinc
-                               counter usage data. Teams profiling reports team
-                               counter usage data.])],
+                               steal, cas_steal, threadc, sincs, teams, spr, and
+                               chapel. Shepherd profiling counts the wall-clock 
+                               time that each shepherd spends idle. FEB
+                               profiling counts the time spent waiting for FEB 
+                               states. Steal profiling counts the amount of 
+                               workstealing that was done (only applies to 
+                               multithreaded shepherds). Cas_steal profiling
+                               counts how many CAS failures happen in nottingham
+                               steal operations. Threadc counts the number of
+                               threads spawned and the number of threads
+                               available to run concurrently. Sincs profiling
+                               reports sinc counter usage data. Teams profiling
+                               reports team counter usage data. SPR profiling
+                               reports communication information. Chapel
+                               profiling reports Chapel interface usage.])],
               [for area in $(echo "$enable_profiling" | sed 's/,/ /g') ; do
                  case "$area" in
                    shepherd)
@@ -242,6 +244,13 @@ AC_ARG_ENABLE([profiling],
                      ;;
                    teams)
                      enable_teams_profiling=yes
+                     ;;
+                   spr)
+                     enable_spr_profiling=yes
+                     ;;
+                   chapel)
+                     enable_chapel_profiling=yes
+                     
                  esac
                done],
               [enable_profiling=none])
@@ -857,6 +866,14 @@ AS_IF([test "x$enable_sincs_profiling" = xyes],
 AS_IF([test "x$enable_teams_profiling" = xyes],
       [AC_DEFINE([TEAM_PROFILE], [1], [Support dynamic profile of teams infomation])],
       [enable_teams_profiling="no"])
+
+AS_IF([test "x$enable_spr_profiling" = xyes],
+      [AC_DEFINE([SPR_PROFILE], [1], [Support dynamic profile of SPR infomation])],
+      [enable_spr_profiling="no"])
+
+AS_IF([test "x$enable_chapel_profiling" = xyes],
+      [AC_DEFINE([CHAPEL_PROFILE], [1], [Support dynamic profile of Chapel infomation])],
+      [enable_chapel_profiling="no"])
 
 AS_IF([test "x$enable_cas_steal_profiling" = xyes],
       [AC_DEFINE([CAS_STEAL_PROFILE], [1], [Support dynamic profile of CAS steal infomation])],
