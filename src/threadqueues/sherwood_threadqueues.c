@@ -21,6 +21,7 @@
 #include "qt_threadqueues.h"
 #include "qt_envariables.h"
 #include "qt_debug.h"
+#include "qt_teams.h"
 
 /* Data Structures */
 struct _qt_threadqueue_node {
@@ -413,12 +414,14 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
     qthread_shepherd_t *my_shepherd = qthread_internal_getshep();
     qthread_t          *t;
     qthread_worker_id_t worker_id = NO_WORKER;
+    extern TLS_DECL(uint_fast8_t, eureka_block);
 
     assert(q != NULL);
     assert(my_shepherd);
     assert(my_shepherd->ready == q);
     assert(my_shepherd->sorted_sheplist);
 
+    TLS_SET(eureka_block, 1);
     while (1) {
         qt_threadqueue_node_t *node = NULL;
 
@@ -631,7 +634,8 @@ void INTERNAL qt_threadqueue_enqueue_cache(qt_threadqueue_t         *q,
     cache->qlength           = 0;
     cache->qlength_stealable = 0;
 } /*}}}*/
-#endif
+
+#endif /* ifdef QTHREAD_USE_SPAWNCACHE */
 
 /* dequeue stolen threads at head, skip yielded threads */
 qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h,
@@ -795,12 +799,18 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
         i++;
         i *= (i < qlib->nshepherds - 1);
         if (i == 0) {
+            extern TLS_DECL(uint_fast8_t, eureka_block);
+            extern TLS_DECL(uint_fast8_t, eureka_blocked_flag);
+            if (TLS_GET(eureka_blocked_flag)) {
+                TLS_SET(eureka_blocked_flag, 0);
+                TLS_SET(eureka_block, 0);
+                hup_handler(QT_EUREKA_SIGNAL);
+                TLS_SET(eureka_block, 1);
+            }
 #ifdef HAVE_PTHREAD_YIELD
             pthread_yield();
 #elif defined(HAVE_SCHED_YIELD)
             sched_yield();
-#else
-            SPINLOCK_BODY();
 #endif
         }
         SPINLOCK_BODY();
@@ -832,7 +842,7 @@ void INTERNAL qthread_steal_stat(void)
 #ifdef QTHREAD_USE_SPAWNCACHE
 void INTERNAL qt_threadqueue_private_filter(qt_threadqueue_private_t *restrict c,
                                             qt_threadqueue_filter_f            f)
-{
+{   /*{{{*/
     qt_threadqueue_node_t *node = NULL;
     qthread_t             *t    = NULL;
 
@@ -845,20 +855,21 @@ void INTERNAL qt_threadqueue_private_filter(qt_threadqueue_private_t *restrict c
                 break;
             case 1: // ignore, stop looking
                 return;
+
             case 2: // remove, move to the next one
-                {
-                    qthread_internal_assassinate(n->value);
-                    FREE_TQNODE(n);
-                    c->on_deck = NULL;
-                    break;
-                }
+            {
+                qthread_internal_assassinate(n->value);
+                FREE_TQNODE(n);
+                c->on_deck = NULL;
+                break;
+            }
             case 3:     // remove, stop looking
-                {
-                    qthread_internal_assassinate(n->value);
-                    FREE_TQNODE(n);
-                    c->on_deck = NULL;
-                    goto fixup_on_deck;
-                }
+            {
+                qthread_internal_assassinate(n->value);
+                FREE_TQNODE(n);
+                c->on_deck = NULL;
+                goto fixup_on_deck;
+            }
         }
     }
     if (c->qlength > 0) {
@@ -919,7 +930,7 @@ void INTERNAL qt_threadqueue_private_filter(qt_threadqueue_private_t *restrict c
         }
     }
 fixup_on_deck:
-    if (c->on_deck == NULL && c->tail != NULL) {
+    if ((c->on_deck == NULL) && (c->tail != NULL)) {
         // pull the tail down to the on_deck position
         qt_threadqueue_node_t *n = c->on_deck = c->tail;
         c->tail = n->prev;
@@ -927,17 +938,17 @@ fixup_on_deck:
         if (c->head == n) {
             c->head == NULL;
         }
-        c->qlength --;
+        c->qlength--;
         c->qlength_stealable -= n->stealable;
     }
-}
+} /*}}}*/
 
 #endif /* ifdef QTHREAD_USE_SPAWNCACHE */
 
 /* walk queue removing all tasks matching this description */
 void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                                     qt_threadqueue_filter_f f)
-{
+{   /*{{{*/
     qt_threadqueue_node_t *node = NULL;
     qthread_t             *t    = NULL;
 
@@ -1003,7 +1014,7 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
         }
     }
     QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
-}
+} /*}}}*/
 
 /* walk queue looking for a specific value  -- if found remove it (and start
  * it running)  -- if not return NULL

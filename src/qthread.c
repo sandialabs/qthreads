@@ -355,7 +355,7 @@ static int eureka_filter(qthread_t *t)
     }
 }
 
-static void hup_handler(int sig)
+void hup_handler(int sig)
 {   /*{{{*/
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t   *w = qthread_internal_getworker();
@@ -2383,6 +2383,8 @@ int API_FUNC qt_team_eureka(void)
     qt_team_t        *my_team;
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t *wkr      = qthread_internal_getworker();
+#else
+    qthread_shepherd_t *my_shep = qthread_internal_getshep();
 #endif
 
     assert(qthread_library_initialized);
@@ -2420,14 +2422,13 @@ int API_FUNC qt_team_eureka(void)
      *    the signal got interrupted while holding that lock, attempting a
      *    printf in this thread will cause deadlock. */
     qthread_shepherd_t *sheps       = qlib->shepherds;
-    pthread_t           pthreadself = pthread_self();
     int                 signalcount = 0;
     for (qthread_shepherd_id_t shep = 0; shep < qlib->nshepherds; shep++) {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
         qthread_worker_t *wkrs = sheps[shep].workers;
         for (unsigned int wkrid = 0; wkrid < qlib->nworkerspershep; wkrid++) {
             int ret;
-            if (pthread_equal(wkrs[wkrid].worker, pthreadself)) {
+            if (wkr == &wkrs[wkrid]) {
                 continue;
             }
             signalcount++;
@@ -2437,7 +2438,7 @@ int API_FUNC qt_team_eureka(void)
             }
         }
 #else
-        if (pthread_equal(qlib->shepherds[shep].shepherd, pthreadself)) {
+        if (&qlib->shepherds[shep] == my_shep) {
             continue;
         }
         signalcount++;
