@@ -251,10 +251,13 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                                             qt_threadqueue_private_t *QUNUSED(qc),
                                             uint_fast8_t              QUNUSED(active))
 {   /*{{{*/
+    extern TLS_DECL(uint_fast8_t, eureka_block);
+    TLS_SET(eureka_block, 1);
     qthread_t *retval = qt_threadqueue_dequeue(q);
 
     qthread_debug(THREADQUEUE_CALLS, "q(%p)\n", q);
     if (retval == NULL) {
+        TLS_SET(eureka_block, 0);
         while (q->stack == NULL) {
 #ifndef QTHREAD_CONDWAIT_BLOCKING_QUEUE
             SPINLOCK_BODY();
@@ -269,6 +272,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
             }
 #endif      /* ifdef USE_HARD_POLLING */
         }
+        TLS_SET(eureka_block, 1);
         retval = qt_threadqueue_dequeue(q);
     }
     assert(retval);

@@ -109,6 +109,9 @@ extern int                   powerOff;
 qlib_t qlib      = NULL;
 int    qaffinity = 1;
 QTHREAD_FASTLOCK_ATTRVAR;
+TLS_DECL_INIT(uint_fast8_t, eureka_block);
+TLS_DECL_INIT(uint_fast8_t, eureka_blocked_flag);
+
 
 struct qt_cleanup_funcs_s {
     void                       (*func)(void);
@@ -365,10 +368,16 @@ static void hup_handler(int sig)
 
     switch(sig) {
         case QT_ASSASSINATE_SIGNAL:
+            assert(t);
+            assert(t->rdata);
             t->thread_state = QTHREAD_STATE_ASSASSINATED;
             qthread_back_to_master2(t);
             break;
         case QT_EUREKA_SIGNAL:
+            if (eureka_block) {
+                eureka_blocked_flag = 1;
+                return;
+            }
             if (t) {
                 if (t->team == eureka_ptr) {
                     t->thread_state = QTHREAD_STATE_ASSASSINATED;
@@ -2432,7 +2441,7 @@ int API_FUNC qt_team_eureka(void)
             continue;
         }
         signalcount++;
-        int ret= pthread_kill(qlib->shepherds[shep].shepherd, QT_EUREKA_SIGNAL);
+        int ret = pthread_kill(qlib->shepherds[shep].shepherd, QT_EUREKA_SIGNAL);
         if ((ret != 0) && (ret != ESRCH)) {
             qthread_debug(ALWAYS_OUTPUT, "pthread_kill (shep:%i) failed: %i:%s\n", (int)shep, ret, strerror(ret));
             abort();
@@ -2943,6 +2952,13 @@ static void qthread_wrapper(void *ptr)
     MONITOR_ASM_LABEL(qthread_fence1); // add label for HPCToolkit stack unwind
 #endif
 
+    if (TLS_GET(eureka_blocked_flag)) {
+        TLS_SET(eureka_blocked_flag, 0);
+        TLS_SET(eureka_block, 0);
+        hup_handler(QT_EUREKA_SIGNAL);
+    } else {
+        TLS_SET(eureka_block, 0);
+    }
     qthread_debug(THREAD_BEHAVIOR,
                   "tid %u executing f=%p arg=%p...\n",
                   t->thread_id, t->f, t->arg);
@@ -2975,6 +2991,7 @@ static void qthread_wrapper(void *ptr)
         }
     }
 
+    assert(t->rdata);
     if (t->ret) {
         qthread_debug(THREAD_DETAILS, "tid %u, with flags %u, handling retval\n", t->thread_id, t->flags);
         if (t->flags & QTHREAD_RET_IS_SINC) {
