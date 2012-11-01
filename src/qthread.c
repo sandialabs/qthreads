@@ -2390,15 +2390,15 @@ int API_FUNC qt_team_eureka(void)
     my_wkrid = self->rdata->shepherd_ptr->shepherd_id;
 #endif
     /* 1: race to see who wins the eureka */
-    printf("trying to win the eureka contest in my team...\n");
+    //qthread_debug(0, "trying to win the eureka contest in my team...\n");
     do {
         while (my_team->eureka_lock != 0) SPINLOCK_BODY();
     } while (qthread_cas(&my_team->eureka_lock, 0, 1) != 0);
-    printf("trying to win the global eureka contest...\n");
+    //qthread_debug(0,"trying to win the global eureka contest...\n");
     do {
         while (eureka_flag != -1) SPINLOCK_BODY();
     } while (qthread_cas(&eureka_flag, -1, my_wkrid) != -1);
-    printf("I (%u) won the eureka contest!\n", my_wkrid);
+    //qthread_debug(0,"I (%u) won the eureka contest!\n", my_wkrid);
     MACHINE_FENCE;
     eureka_ptr = my_team;
     MACHINE_FENCE;
