@@ -97,6 +97,7 @@ static aligned_t live_parent2(void *arg)
     iprintf("live_parent still alive!\n");
     COMPILER_FENCE;
     t = 0;
+    iprintf("live_parent exiting!\n");
     return 0;
 }
 
