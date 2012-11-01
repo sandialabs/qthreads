@@ -71,17 +71,17 @@ qt_threadqueue_pools_t generic_threadqueue_pools = { NULL, NULL };
 # define FREE_TQNODE(t)      qt_mpool_free(generic_threadqueue_pools.nodes, t)
 
 static void qt_threadqueue_subsystem_shutdown(void)
-{
+{   /*{{{*/
     qt_mpool_destroy(generic_threadqueue_pools.queues);
     qt_mpool_destroy(generic_threadqueue_pools.nodes);
-}
+} /*}}}*/
 
 void INTERNAL qt_threadqueue_subsystem_init(void)
-{
+{   /*{{{*/
     generic_threadqueue_pools.queues = qt_mpool_create(sizeof(qt_threadqueue_t));
     generic_threadqueue_pools.nodes  = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), 8);
     qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
-}
+} /*}}}*/
 
 #endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 
@@ -178,16 +178,23 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict pq,
                                             qt_threadqueue_t *restrict         q,
                                             qthread_t *restrict                t)
-{
+{   /*{{{*/
     return 0;
-}
+} /*}}}*/
 
 int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *restrict q,
                                                     qthread_t *restrict                t)
-{
+{   /*{{{*/
     return 0;
-}
+} /*}}}*/
 
+void INTERNAL qt_threadqueue_enqueue_cache(qt_threadqueue_t         *q,
+                                           qt_threadqueue_private_t *cache)
+{}
+
+void INTERNAL qt_threadqueue_private_filter(qt_threadqueue_private_t *restrict c,
+                                            qt_threadqueue_filter_f            f)
+{}
 #endif /* ifdef QTHREAD_USE_SPAWNCACHE */
 
 void INTERNAL qthread_steal_enable() {}
@@ -275,6 +282,67 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
     FREE_TQNODE(node);
     return retval;
 }                                      /*}}} */
+
+/* walk queue removing all tasks matching this description */
+void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
+                                    qt_threadqueue_filter_f f)
+{
+    NEMESIS_queue tmp;
+    qt_threadqueue_node_t *curs, *prev;
+
+    assert(q != NULL);
+    qthread_debug(THREADQUEUE_FUNCTIONS, "begin q:%p f:%p", q, f);
+
+    tmp.head = NULL;
+    tmp.tail = NULL;
+    while ((curs = qt_internal_NEMESIS_dequeue(&q->q))) {
+        qthread_t *t = curs->thread;
+        switch (f(t)) {
+            case 0: // ignore, move on
+                prev = qt_internal_atomic_swap_ptr((void **)&(tmp.tail), curs);
+                if (prev == NULL) {
+                    tmp.head = curs;
+                } else {
+                    prev->next = curs;
+                }
+                tmp.advisory_queuelen ++;
+                break;
+            case 1: // ignore, stop looking
+                prev = qt_internal_atomic_swap_ptr((void **)&(tmp.tail), curs);
+                if (prev == NULL) {
+                    tmp.head = curs;
+                } else {
+                    prev->next = curs;
+                }
+                tmp.advisory_queuelen ++;
+                goto pushback;
+            case 2: // remove, move on
+                qthread_internal_assassinate(t);
+                FREE_TQNODE(curs);
+                break;
+            case 3: // remove, stop looking
+                qthread_internal_assassinate(t);
+                FREE_TQNODE(curs);
+                goto pushback;
+        }
+    }
+pushback:
+    /* dequeue the rest of the queue */
+    if (q->q.head) {
+        prev = qt_internal_atomic_swap_ptr((void **)&(tmp.tail), q->q.head);
+        if (prev == NULL) {
+            tmp.head = q->q.head;
+        } else {
+            prev->next = q->q.head;
+        }
+        tmp.advisory_queuelen += q->q.advisory_queuelen;
+        tmp.tail = q->q.tail;
+    }
+    q->q.head = tmp.head;
+    q->q.tail = tmp.tail;
+    q->q.shadow_head = tmp.head;
+    q->q.advisory_queuelen = tmp.advisory_queuelen;
+}
 
 /* some place-holder functions */
 void INTERNAL qthread_steal_stat(void) {}
