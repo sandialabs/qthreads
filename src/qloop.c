@@ -184,7 +184,7 @@ static aligned_t qloop_step_wrapper(struct qloop_step_wrapper_args *const restri
 #ifdef QTHREAD_RCRTOOL
     size_t tot_workers = maestro_size()-1;  // need zero base count
 #else
-    size_t tot_workers = qthread_num_workers(); // I'm already here
+    size_t tot_workers = qthread_num_workers()-1; // I'm already here
 #endif
 
     if (arg->maxPar < tot_workers) tot_workers = arg->maxPar -1; // if less work than workers adjust accordingly
@@ -216,7 +216,6 @@ static aligned_t qloop_step_wrapper(struct qloop_step_wrapper_args *const restri
     MONITOR_ASM_LABEL(qthread_step_fence1); // add label for HPCToolkit unwind
 # endif
 
-    qthread_worker_id_t w = qthread_worker(NULL);
     qt_sinc_barrier_t * saveBarrier = qt_get_barrier(); // save barrier in case of nesting
     qt_set_barrier(arg->barrier); // set barrier for this function
     arg->func(arg->arg);
@@ -225,7 +224,6 @@ static aligned_t qloop_step_wrapper(struct qloop_step_wrapper_args *const restri
 # ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
     MONITOR_ASM_LABEL(qthread_step_fence2); // add label for HPCToolkit unwind
 # endif
-
     qt_sinc_submit(arg->sinc, NULL);
 
 # ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
@@ -511,10 +509,19 @@ static void qt_loop_step_inner(const size_t         start,
          * }
          */
     } else {
-        qloop_step_wrapper(&qwa[0]); // use this thread as the root and start the
+      qthread_fork_copyargs_to((qthread_f)qloop_step_wrapper,
+			       qwa,
+			       0,
+			       NULL,
+			       qthread_barrier_id()
+			       );
+
+      qthread_yield(); // switch to generated thread
+      //        qloop_step_wrapper(&qwa[0]); // use this thread as the root and start the
                                      // others inside qloop_step_wrapper
                                      // saves a timeout in the following loop to
                                      // get the last thread working on the loop
+      // doesn't work if back to master ever returns to this level -- need fork to have context to return to -- akp 10/31/12
     }
 
     qt_sinc_wait(my_sinc, NULL);

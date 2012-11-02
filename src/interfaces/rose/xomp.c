@@ -463,7 +463,6 @@ void xomp_internal_loop_init(
     MACHINE_FENCE;
     lp->ready = loopNum;         // use the loop number to allow other workers to start 
   }
-  //  printf("first %d departed %d myid %d\n", first ,lp->departed_workers,myid);
 
   while (lp->ready != loopNum) SPINLOCK_BODY(); // spin waiting for loop structure to be setup
                                  // ready contains the last value updated -- must match my loop
@@ -698,9 +697,9 @@ static void waitCompletionOutstandingTasks(void)
         }
 
         if (newval != tcount_finished_state) {            
-            // next line will save thred_state in prev_thread_state
+            // next line will save thread_state in prev_thread_state
             qthread_parent_yield_state();
-            // child will have set thred_state to prev_thread_state
+            // child will have set thread_state to prev_thread_state
         }
 
         *task_counter = 0; // reset the waiting bit on the task counter

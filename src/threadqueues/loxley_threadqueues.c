@@ -285,11 +285,15 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 #endif
         qthread_worker_t   *worker = (qthread_worker_t *)TLS_GET(shepherd_structs);
 	if (!worker->active) {
+#ifdef QTHREAD_RCRTOOL
 	  saveEnergy(id);
+#endif
 	  while (!worker->active) {
 	    SPINLOCK_BODY();
 	  }
+#ifdef QTHREAD_RCRTOOL
 	  resetEnergy(id);
+#endif
 	}
         if (!local->stack.empty) {
             QTHREAD_FASTLOCK_LOCK(&local->lock);
@@ -563,4 +567,20 @@ void INTERNAL qthread_steal_stat(void)
 
 #endif  /* ifdef STEAL_PROFILE */
 
+void qt_threadqueue_filter(qt_threadqueue_t       *q,
+                                    qt_threadqueue_filter_f f)
+{
+  printf("filter called");
+}
+
+void qt_threadqueue_private_filter(qt_threadqueue_private_t *restrict c,
+                                            qt_threadqueue_filter_f            f)
+{
+  printf("priv filter called");
+}
+void INTERNAL qt_threadqueue_enqueue_cache(qt_threadqueue_t         *q,
+                                           qt_threadqueue_private_t *cache)
+{
+  printf("enqueue cache called");
+}
 /* vim:set expandtab: */
