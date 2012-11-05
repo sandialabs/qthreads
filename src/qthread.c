@@ -2204,7 +2204,6 @@ void INTERNAL qthread_internal_assassinate(qthread_t *t)
 void API_FUNC qt_team_critical_section(qt_team_critical_section_t boundary)
 {
     assert(qthread_library_initialized);
-    qassert_ret(qlib != NULL, QTHREAD_NOT_ALLOWED);
 
     qthread_t *self = qthread_internal_self();
     int        critical;
