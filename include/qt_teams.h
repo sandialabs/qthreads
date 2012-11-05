@@ -3,6 +3,7 @@
 
 #include "qthread/sinc.h"
 
+#include <signal.h> /* should have SIGUSR1 and SIGUSR2, per P90 */
 #define QT_ASSASSINATE_SIGNAL SIGUSR1
 #define QT_EUREKA_SIGNAL SIGUSR2
 
