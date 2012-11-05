@@ -18,6 +18,7 @@
 #include "qt_threadqueues.h"
 #include "qt_qthread_struct.h"
 #include "qt_debug.h"
+#include "qt_eurekas.h"
 
 /* This thread queueing uses the NEMESIS lock-free queue protocol from
  * http://www.mcs.anl.gov/~buntinas/papers/ccgrid06-nemesis.pdf
@@ -255,10 +256,12 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                                             qt_threadqueue_private_t *QUNUSED(qc),
                                             uint_fast8_t              QUNUSED(active))
 {                                      /*{{{ */
+    qt_eureka_disable();
     qt_threadqueue_node_t *node = qt_internal_NEMESIS_dequeue(&q->q);
     qthread_t             *retval;
 
     if (node == NULL) {
+        qt_eureka_enable();
         while (q->q.shadow_head == NULL && q->q.head == NULL) {
 #ifndef QTHREAD_CONDWAIT_BLOCKING_QUEUE
             SPINLOCK_BODY();
@@ -273,6 +276,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
             }
 #endif      /* ifdef USE_HARD_POLLING */
         }
+        qt_eureka_disable();
         node = qt_internal_NEMESIS_dequeue(&q->q);
     }
     assert(node);
