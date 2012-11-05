@@ -9,6 +9,7 @@
 #include "qt_shepherd_innards.h"
 #include "qt_threadstate.h"
 #include "qt_blocking_structs.h"
+#include "qt_teams.h"
 #include "rose_sinc_barrier.h"  /* add to allow nested parallelism barriers -- akp 10/16/12 */
 
 #define ARGCOPY_DEFAULT   1024
@@ -29,19 +30,6 @@
 #define QTHREAD_AGGREGABLE       (1 << 10)
 
 #define QTHREAD_RET_MASK (QTHREAD_RET_IS_SYNCVAR | QTHREAD_RET_IS_SINC)
-
-/* flags for teams (must be different bits) */
-#define QTHREAD_TEAM_DEAD             (1 << 0)
-#define QTHREAD_TEAM_RESERVED_1       (1 << 1)
-#define QTHREAD_TEAM_RET_IS_SYNCVAR   (1 << 2)
-#define QTHREAD_TEAM_RET_IS_SINC      (1 << 3)
-#define QTHREAD_TEAM_RET_IS_VOID_SINC ((1 << 3) | (1 << 2))
-#define QTHREAD_TEAM_RESERVED_4       (1 << 4)
-#define QTHREAD_TEAM_RESERVED_5       (1 << 5)
-#define QTHREAD_TEAM_RESERVED_6       (1 << 6)
-#define QTHREAD_TEAM_RESERVED_7       (1 << 7)
-
-#define QTHREAD_TEAM_RET_MASK (QTHREAD_TEAM_RET_IS_SYNCVAR | QTHREAD_TEAM_RET_IS_SINC)
 
 struct qthread_runtime_data_s {
     void         *stack;           /* the thread's stack */
@@ -69,20 +57,6 @@ struct qthread_runtime_data_s {
 # endif
 #endif
 };
-
-typedef struct qt_team_s {
-    qt_team_id_t team_id;
-    aligned_t    eureka;
-    aligned_t    eureka_lock;
-    aligned_t    watcher_started;
-    qt_sinc_t   *sinc;
-    qt_sinc_t   *subteams_sinc;
-    qt_team_id_t parent_id;
-    aligned_t   *parent_eureka;
-    qt_sinc_t   *parent_subteams_sinc;
-    void        *return_loc;
-    uint_fast8_t flags;
-} qt_team_t;
 
 /* Try very VERY hard to keep this under 1 cacheline (64 bytes) */
 struct qthread_s {
