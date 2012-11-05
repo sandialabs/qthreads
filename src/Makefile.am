@@ -12,18 +12,19 @@ SUBDIRS =
 noinst_HEADERS = affinity/shufflesheps.h
 
 libqthread_la_SOURCES = \
+	aligned_alloc.c \
 	cacheline.c \
 	envariables.c \
+	eurekas.c \
+	feb.c \
+	hazardptrs.c \
+	io.c \
+	locks.c \
 	qalloc.c \
 	qloop.c \
 	qt_feb_barrier.c \
 	qt_sinc_barrier.c \
 	qutil.c \
-	io.c \
-	locks.c \
-	feb.c \
-	hazardptrs.c \
-	aligned_alloc.c \
 	syncvar.c
 
 if COMPILE_LF_HASH

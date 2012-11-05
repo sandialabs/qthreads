@@ -21,7 +21,7 @@
 #include "qt_threadqueues.h"
 #include "qt_envariables.h"
 #include "qt_debug.h"
-#include "qt_teams.h"
+#include "qt_eurekas.h" /* for qt_eureka_check() */
 
 /* Data Structures */
 struct _qt_threadqueue_node {
@@ -799,14 +799,7 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
         i++;
         i *= (i < qlib->nshepherds - 1);
         if (i == 0) {
-            extern TLS_DECL(uint_fast8_t, eureka_block);
-            extern TLS_DECL(uint_fast8_t, eureka_blocked_flag);
-            if (TLS_GET(eureka_blocked_flag)) {
-                TLS_SET(eureka_blocked_flag, 0);
-                TLS_SET(eureka_block, 0);
-                hup_handler(QT_EUREKA_SIGNAL);
-                TLS_SET(eureka_block, 1);
-            }
+            qt_eureka_check(1);
 #ifdef HAVE_PTHREAD_YIELD
             pthread_yield();
 #elif defined(HAVE_SCHED_YIELD)
