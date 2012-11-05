@@ -344,4 +344,14 @@ void INTERNAL qt_eureka_check(int block)
     }
 }
 
+void INTERNAL qt_eureka_enable(void)
+{
+    TLS_SET(eureka_block, 0);
+}
+
+void INTERNAL qt_eureka_disable(void)
+{
+    TLS_SET(eureka_block, 1);
+}
+
 /* vim:set expandtab: */

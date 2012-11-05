@@ -414,14 +414,13 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
     qthread_shepherd_t *my_shepherd = qthread_internal_getshep();
     qthread_t          *t;
     qthread_worker_id_t worker_id = NO_WORKER;
-    extern TLS_DECL(uint_fast8_t, eureka_block);
 
     assert(q != NULL);
     assert(my_shepherd);
     assert(my_shepherd->ready == q);
     assert(my_shepherd->sorted_sheplist);
 
-    TLS_SET(eureka_block, 1);
+    qt_eureka_disable();
     while (1) {
         qt_threadqueue_node_t *node = NULL;
 

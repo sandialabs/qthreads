@@ -19,6 +19,7 @@
 #include "qt_atomics.h"
 #include "qthread_innards.h" /* for qthread_internal_cleanup_early() */
 #include "qt_debug.h"
+#include "qt_eurekas.h"
 
 /* Note: this queue is SAFE to use with multiple de-queuers, with the caveat
  * that if you have multiple dequeuer's, you'll need to solve the ABA problem.
@@ -251,13 +252,12 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                                             qt_threadqueue_private_t *QUNUSED(qc),
                                             uint_fast8_t              QUNUSED(active))
 {   /*{{{*/
-    extern TLS_DECL(uint_fast8_t, eureka_block);
-    TLS_SET(eureka_block, 1);
+    qt_eureka_disable();
     qthread_t *retval = qt_threadqueue_dequeue(q);
 
     qthread_debug(THREADQUEUE_CALLS, "q(%p)\n", q);
     if (retval == NULL) {
-        TLS_SET(eureka_block, 0);
+        qt_eureka_enable();
         while (q->stack == NULL) {
 #ifndef QTHREAD_CONDWAIT_BLOCKING_QUEUE
             SPINLOCK_BODY();
@@ -272,7 +272,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
             }
 #endif      /* ifdef USE_HARD_POLLING */
         }
-        TLS_SET(eureka_block, 1);
+        qt_eureka_disable();
         retval = qt_threadqueue_dequeue(q);
     }
     assert(retval);

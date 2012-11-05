@@ -18,6 +18,7 @@
 #include "qthread_prefetch.h"
 #include "qt_threadqueues.h"
 #include "qt_debug.h"
+#include "qt_eurekas.h"
 
 /* Data Structures */
 struct _qt_threadqueue_node {
@@ -129,12 +130,11 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
 static qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q)
 {                                      /*{{{ */
     qthread_t *p = NULL;
-    extern TLS_DECL(uint_fast8_t, eureka_block);
 
     qt_threadqueue_node_t *node, *new_head;
 
     assert(q != NULL);
-    TLS_SET(eureka_block, 1);
+    qt_eureka_disable();
     QTHREAD_FASTLOCK_LOCK(&q->head_lock);
     {
         node     = q->head;
@@ -149,7 +149,7 @@ static qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q)
         Q_PREFETCH(&(p->thread_state));
         (void)qthread_internal_incr_s(&q->advisory_queuelen, &q->advisory_queuelen_m, -1);
     } else {
-        TLS_SET(eureka_block, 0);
+        qt_eureka_enable();
     }
     return p;
 }                                      /*}}} */
