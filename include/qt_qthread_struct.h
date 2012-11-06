@@ -45,6 +45,7 @@ struct qthread_runtime_data_s {
     qthread_shepherd_t *shepherd_ptr;    /* the shepherd we run on */
     unsigned            tasklocal_size;
     int                 criticalsect; /* critical section depth */
+    qt_sinc_barrier_t  *barrier;      /* add to allow barriers to be stacked/nested parallelism - akp 10/16/12 */
 
 #ifdef QTHREAD_USE_VALGRIND
     unsigned int valgrind_stack_id;
@@ -81,7 +82,6 @@ struct qthread_s {
     qthread_shepherd_id_t      target_shepherd;       /* the shepherd we'd rather run on */
     uint16_t                   flags;
     uint8_t                    thread_state;
-    qt_sinc_barrier_t         *barrier;               /* add to allow barriers to be stacked/nested parallelism - akp 10/16/12 */
 
     Q_ALIGNED(8) uint8_t data[]; /* this is where we stick argcopy and tasklocal data */
 };

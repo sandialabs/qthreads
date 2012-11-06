@@ -3939,14 +3939,14 @@ void qt_set_barrier(qt_sinc_barrier_t *bar)
 {                      /*{{{ */
     qthread_t *me = qthread_internal_self();
 
-    me->barrier = bar;
+    me->rdata->barrier = bar;
 }                      /*}}} */
 
 qt_sinc_barrier_t *qt_get_barrier()
 {                      /*{{{ */
     qthread_t *me = qthread_internal_self();
 
-    return me->barrier;
+    return me->rdata->barrier;
 }                      /*}}} */
 
 /* vim:set expandtab: */
