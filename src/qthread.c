@@ -373,6 +373,7 @@ static void *qthread_master(void *arg)
     qt_threadqueue_t         *threadqueue;
     qt_threadqueue_private_t *localqueue = NULL;
     qthread_t                *t;
+    qthread_t               **current;
     int                       done = 0;
 
 #ifdef QTHREAD_SHEPHERD_PROFILING
@@ -409,6 +410,12 @@ static void *qthread_master(void *arg)
     localqueue = qt_init_local_spawncache();
 #endif
     qt_eureka_shepherd_init();
+
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+    current = &(me_worker->current);
+#else
+    current = &(me->current);
+#endif
 
     if (qaffinity && (me->node != UINT_MAX)) {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -579,27 +586,16 @@ qt_run:
                 }
 #endif
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-                me_worker->current = t;
-#else
-                me->current = t;
-#endif
+                *current = t;
+
 #ifdef HAVE_NATIVE_MAKECONTEXT
                 getcontext(&my_context);
 #endif
-                qthread_debug(THREAD_DETAILS, "id(%u): shepherd context is %p, current = %p\n", my_id, &my_context);
-                /* note: there's a good argument that the following should
-                 * be: (*t->f)(t), however the state management would be
-                 * more complex
-                 */
+                qthread_debug(THREAD_DETAILS, "id(%u): about to exec thread. shepherd context is %p\n", my_id, &my_context);
                 qthread_exec(t, &my_context);
-#ifdef QTHREAD_DEBUG
-# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-                me_worker->current = NULL;
-# else
-                me->current = NULL;
-# endif
-#endif
+
+                *current = NULL; // necessary for eureka sanity
+
                 qthread_debug(THREAD_DETAILS, "id(%u): back from qthread_exec, state is %i\n", my_id, t->thread_state);
                 /* now clean up, based on the thread's state */
                 switch (t->thread_state) {
