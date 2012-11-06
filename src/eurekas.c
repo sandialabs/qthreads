@@ -95,6 +95,7 @@ static void eureka(void)
     }
     if (t) {
         if (t->thread_state == QTHREAD_STATE_ASSASSINATED) {
+            assert(t->rdata);
             if (t->rdata->criticalsect == 0) {
                 qthread_back_to_master2(t);
             }
