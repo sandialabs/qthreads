@@ -29,6 +29,7 @@
 #endif
 
 #ifdef QTHREAD_NO_ASSERTS
+# define ASSERT_ONLY(x)
 # define qassert(op, val)    op
 # define qassertnot(op, val) op
 # ifdef assert
@@ -41,6 +42,7 @@
 # define qassert_aligned(variable, alignment)
 # define qgoto(tag) tag :
 #else // ifdef QTHREAD_NO_ASSERTS
+# define ASSERT_ONLY(x)                       x
 # define qassert(op, val)                     assert(op == val)
 # define qassertnot(op, val)                  assert(op != val)
 # define qassert_ret(assertion, retval)       assert(assertion)
