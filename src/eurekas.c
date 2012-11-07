@@ -24,6 +24,7 @@ static aligned_t  eureka_out_barrier = 0;
 static int eureka_filter(qthread_t *t)
 {
     if (t->team == eureka_ptr) {
+        tassert((t->flags & QTHREAD_REAL_MCCOY) == 0);
         return 2; // remove, keep going
     } else {
         return 0; // ignore, keep going
@@ -43,6 +44,7 @@ static void eureka(void)
 
     if (t) {
         if (t->team == eureka_ptr) {
+            tassert((t->flags & QTHREAD_REAL_MCCOY) == 0);
             t->thread_state = QTHREAD_STATE_ASSASSINATED;
         }
     }
@@ -95,7 +97,7 @@ static void eureka(void)
     }
     if (t) {
         if (t->thread_state == QTHREAD_STATE_ASSASSINATED) {
-            assert(t->rdata);
+            tassert(t->rdata);
             if (t->rdata->criticalsect == 0) {
                 qthread_back_to_master2(t);
             }
@@ -117,8 +119,9 @@ static void hup_handler(int sig)
             qthread_t          *t = s->current;
 #endif
 
-            assert(t);
-            assert(t->rdata);
+            tassert(t);
+            tassert(t->rdata);
+            tassert((t->flags & QTHREAD_REAL_MCCOY) == 0);
             t->thread_state = QTHREAD_STATE_ASSASSINATED;
             qthread_back_to_master2(t);
             break;
@@ -246,7 +249,7 @@ int API_FUNC qt_team_eureka(void)
             signalcount++;
             if ((ret = pthread_kill(wkrs[wkrid].worker, QT_EUREKA_SIGNAL)) != 0) {
                 qthread_debug(ALWAYS_OUTPUT, "pthread_kill failed: %s\n", strerror(ret));
-                abort();
+                QTHREAD_TRAP(); // cannot be abort, because we're called from a signal handler, and abort makes things go WEIRD
             }
         }
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
@@ -257,11 +260,11 @@ int API_FUNC qt_team_eureka(void)
         int ret = pthread_kill(qlib->shepherds[shep].shepherd, QT_EUREKA_SIGNAL);
         if ((ret != 0) && (ret != ESRCH)) {
             qthread_debug(ALWAYS_OUTPUT, "pthread_kill (shep:%i) failed: %i:%s\n", (int)shep, ret, strerror(ret));
-            abort();
+            QTHREAD_TRAP(); // cannot be abort, because we're called from a signal handler, and abort makes things go WEIRD
         }
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     }
-    assert(signalcount == (qlib->nshepherds * qlib->nworkerspershep) - 1);
+    tassert(signalcount == (qlib->nshepherds * qlib->nworkerspershep) - 1);
     /* 4: entry barrier */
     {
         aligned_t tmp = eureka_out_barrier;
