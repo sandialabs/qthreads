@@ -83,21 +83,21 @@ static aligned_t live_waiter2(void *arg)
 
 static aligned_t live_parent2(void *arg)
 {
-    iprintf("live_parent alive!\n");
+    iprintf("live_parent2 alive! id = %u\n", qthread_id());
     qthread_fork(live_waiter2, (void*)(intptr_t)0, &t3);
     qthread_fork(live_waiter2, (void*)(intptr_t)1, &t3);
     qthread_fork(live_waiter2, (void*)(intptr_t)2, &t3);
     qthread_fork(live_waiter2, (void*)(intptr_t)3, &t3);
     qthread_fork(live_waiter2, (void*)(intptr_t)4, &t3);
     qthread_fork(live_waiter2, (void*)(intptr_t)5, &t3);
-    iprintf("live_parent spawned all tasks\n");
+    iprintf("live_parent2 spawned all tasks\n");
     qthread_flushsc();
-    iprintf("live_parent about to eureka...\n");
+    iprintf("live_parent2 about to eureka...\n");
     qt_team_eureka();
-    iprintf("live_parent still alive!\n");
+    iprintf("live_parent2 still alive!\n");
     COMPILER_FENCE;
     t = 0;
-    iprintf("live_parent exiting!\n");
+    iprintf("live_parent2 exiting!\n");
     return 0;
 }
 
@@ -129,6 +129,7 @@ int main(int   argc,
     iprintf("Testing a partially-live eureka (some member tasks running)...\n");
     qthread_fork_new_team(live_parent2, NULL, &t2);
     qthread_readFF(NULL, &t2);
+    iprintf("main() woke up after live_parent2\n");
     assert(waiter_count == 0);
     t = 1;
 
