@@ -23,6 +23,7 @@
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
 # include "qt_aligned_alloc.h"
 #endif
+#include "qt_eurekas.h"
 
 /* Data Structures */
 struct _qt_threadqueue_node {
@@ -217,6 +218,13 @@ int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *re
     return 0;
 }
 
+void INTERNAL qt_threadqueue_enqueue_cache(qt_threadqueue_t         *q,
+                                           qt_threadqueue_private_t *cache)
+{}
+
+void INTERNAL qt_threadqueue_private_filter(qt_threadqueue_private_t *restrict c,
+                                            qt_threadqueue_filter_f            f)
+{}
 #endif /* ifdef QTHREAD_USE_SPAWNCACHE */
 
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
@@ -228,6 +236,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
 
     assert(t != NULL);
     assert(q != NULL);
+    qthread_debug(THREADQUEUE_CALLS, "q(%p), t(%p:%i): began head:%p tail:%p\n", q, t, t->thread_id, q->head, q->tail);
 
     ALLOC_TQNODE(&node);
     assert(node != NULL);
@@ -236,6 +245,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
     node->next  = NULL;
 
     while (1) {
+        qthread_debug(THREADQUEUE_DETAILS, "q(%p), t(%p:%i): reading q->tail\n", q, t, t->thread_id);
         tail = q->tail;
 
         hazardous_ptr(0, tail);
@@ -260,6 +270,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
     (void)qt_cas((void **)&(q->tail),
                  (void *)tail,
                  node);
+    qthread_debug(THREADQUEUE_DETAILS, "q(%p), t(%p:%i): appended head:%p nextptr:%p tail:%p\n", q, t, t->thread_id, q->head, q->head ? q->head->next : NULL, q->tail);
 
     (void)qthread_incr(&q->advisory_queuelen, 1);
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
@@ -292,6 +303,9 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
     qt_threadqueue_node_t *next_ptr;
 
     assert(q != NULL);
+    qthread_debug(THREADQUEUE_CALLS, "q(%p): began\n", q);
+    qt_eureka_disable();
+    qthread_debug(THREADQUEUE_DETAILS, "q(%p): head=%p next_ptr=%p tail=%p\n", q, q->head, q->head ? q->head->next : NULL, q->tail);
     while (1) {
         head = q->head;
 
@@ -308,23 +322,28 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
         if (next_ptr == NULL) { // queue is empty
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
             if (qthread_internal_incr(&q->fruitless, &q->fruitless_m, 1) > 1000) {
+                qt_eureka_enable();
                 QTHREAD_LOCK(&q->lock);
                 while (q->fruitless > 1000) {
                     QTHREAD_CONDWAIT(&q->notempty, &q->lock);
                 }
                 QTHREAD_UNLOCK(&q->lock);
+                qt_eureka_disable();
             } else {
+                qt_eureka_enable();
 # ifdef HAVE_PTHREAD_YIELD
                 pthread_yield();
 # elif HAVE_SHED_YIELD
                 sched_yield();
 # endif
+                qt_eureka_disable();
             }
 #else       /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
             SPINLOCK_BODY();
 #endif              /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
             continue;
         }
+        qthread_debug(THREADQUEUE_DETAILS, "q(%p): next_ptr = %p\n", q, next_ptr);
         if (head == tail) {     // tail is falling behind
             (void)qt_cas((void **)&(q->tail),
                          (void *)tail,
@@ -338,12 +357,73 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
             break;                     // success!
         }
     }
+    qthread_debug(THREADQUEUE_DETAILS, "q(%p): found a thread! p=%p:%i\n", q, p, p->thread_id);
     hazardous_release_node(FREE_TQNODE, head);
     if (p != NULL) {
         (void)qthread_internal_incr_s(&q->advisory_queuelen, &q->advisory_queuelen_m, -1);
     }
     return p;
 }                                      /*}}} */
+
+/* walk queue removing all tasks matching this description */
+void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
+                                    qt_threadqueue_filter_f f)
+{
+    qt_threadqueue_node_t *curs, **ptr;
+
+    qthread_debug(THREADQUEUE_CALLS, "q(%p), f(%p): began head:%p next:%p tail:%p\n", q, f, q->head, q->head ? q->head->next : NULL, q->tail);
+
+    assert(q != NULL);
+    do {
+        curs = q->head;
+        if (curs == NULL) { return; }
+        hazardous_ptr(0, curs);
+        COMPILER_FENCE;
+    } while (curs != q->head);
+    ptr  = &curs->next;
+    curs = curs->next;
+    hazardous_ptr(1, curs);
+    while (curs) {
+        qthread_t *t = curs->value;
+        switch (f(t)) {
+            case 0: // ignore, move on
+                hazardous_ptr(0, curs);
+                ptr  = &curs->next;
+                curs = curs->next;
+                hazardous_ptr(1, curs);
+                continue;
+            case 1: // ignore, stop looking
+                return;
+
+            case 2: // remove, move on
+            {
+                qt_threadqueue_node_t *freeme = curs;
+
+                qthread_internal_assassinate(t);
+                if (curs->next == NULL) {
+                    /* this is clever: since 'next' is the first field, its
+                     * address is the address of the entire structure */
+                    q->tail = (qt_threadqueue_node_t *)ptr;
+                }
+                *ptr = curs->next;
+                curs = curs->next;
+                hazardous_ptr(1, curs);
+                hazardous_release_node(FREE_TQNODE, freeme);
+            }
+                continue;
+            case 3: // remove, stop looking
+                qthread_internal_assassinate(t);
+                if (curs->next == NULL) {
+                    /* this is clever: since 'next' is the first field, its
+                     * address is the address of the entire structure */
+                    q->tail = (qt_threadqueue_node_t *)ptr;
+                }
+                *ptr = curs->next;
+                hazardous_release_node(FREE_TQNODE, curs);
+                return;
+        }
+    }
+}
 
 /* some place-holder functions */
 void INTERNAL qthread_steal_stat(void)
