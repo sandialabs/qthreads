@@ -2183,7 +2183,10 @@ aligned_t API_FUNC *qthread_retloc(void)
 
 void INTERNAL qthread_internal_assassinate(qthread_t *t)
 {
-    qthread_debug(THREAD_DETAILS, "thread %i assassinated\n", t->thread_id);
+    assert(t);
+    assert((t->flags & QTHREAD_REAL_MCCOY) == 0);
+
+    qthread_debug(THREAD_BEHAVIOR, "thread %i assassinated\n", t->thread_id);
     /* need to clean up return value */
     if (t->ret) {
         if (t->flags & QTHREAD_RET_IS_SYNCVAR) {
