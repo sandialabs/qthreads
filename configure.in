@@ -804,8 +804,8 @@ AS_IF([test "x$with_scheduler" != "x"],
            AS_IF([test "x$enable_multithreaded_shepherds" != "xno"],
                  [enable_multithreaded_shepherds=yes],
                  [AC_MSG_ERROR([The $with_scheduler scheduler requires multithreaded shepherds.])])
-           AS_IF([test "x$qthread_cv_atomic_CAS128" != xyes],
-                 [AC_MSG_ERROR([Nottingham requires a 128-bit CAS.])])
+           AS_IF([test "x$qthread_cv_atomic_CAS128" != "xyes"],
+                 [AC_MSG_ERROR([The $with_scheduler scheduler requires a 128-bit CAS.])])
            ;;
          loxley)
            AS_IF([test "x$enable_multithreaded_shepherds" != "xno"],
