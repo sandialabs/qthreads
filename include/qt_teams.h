@@ -2,10 +2,12 @@
 #define QT_TEAMS_H
 
 #include "qthread/sinc.h"
+#include "qt_visibility.h"
+#include "qt_qthread_t.h"
 
 #include <signal.h> /* should have SIGUSR1 and SIGUSR2, per P90 */
 #define QT_ASSASSINATE_SIGNAL SIGUSR1
-#define QT_EUREKA_SIGNAL SIGUSR2
+#define QT_EUREKA_SIGNAL      SIGUSR2
 
 /* flags for teams (must be different bits) */
 #define QTHREAD_TEAM_DEAD             (1 << 0)
@@ -41,4 +43,13 @@ typedef struct qt_team_s {
     uint_fast8_t flags;
 } qt_team_t;
 
-#endif
+void INTERNAL qt_internal_teams_init(void);
+void INTERNAL qt_internal_teamfinish(qt_team_t   *team,
+                                     uint_fast8_t flags);
+qt_team_t INTERNAL *qt_internal_team_new(void        *ret,
+                                         unsigned int feature_flag,
+                                         qt_team_t   *curr_team,
+                                         qt_team_id_t parent_id);
+void INTERNAL qt_internal_subteam_leader(qthread_t *t);
+#endif // ifndef QT_TEAMS_H
+/* vim:set expandtab: */

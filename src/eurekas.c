@@ -10,6 +10,7 @@
 /* Internal Headers */
 #include "qt_teams.h"
 #include "qt_qthread_struct.h"
+#include "qt_qthread_mgmt.h"
 #include "qthread_innards.h"
 
 TLS_DECL_INIT(uint_fast8_t, eureka_block);
@@ -32,7 +33,7 @@ static int eureka_filter(qthread_t *t)
 }
 
 static void eureka(void)
-{
+{   /*{{{*/
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t   *w = qthread_internal_getworker();
     qthread_shepherd_t *s = w->shepherd;
@@ -103,7 +104,7 @@ static void eureka(void)
             }
         }
     }
-}
+} /*}}}*/
 
 static void hup_handler(int sig)
 {   /*{{{*/
@@ -136,7 +137,7 @@ static void hup_handler(int sig)
 } /*}}}*/
 
 void INTERNAL qt_eureka_end_criticalsect_dead(qthread_t *self)
-{
+{   /*{{{*/
     aligned_t tmp = eureka_out_barrier;
 
     if (qthread_incr(&eureka_in_barrier, 1) + 1 == qlib->nshepherds) {
@@ -148,18 +149,18 @@ void INTERNAL qt_eureka_end_criticalsect_dead(qthread_t *self)
         while (tmp == eureka_out_barrier) SPINLOCK_BODY();
     }
     qthread_back_to_master2(self);
-}
+} /*}}}*/
 
 void INTERNAL qt_eureka_shepherd_init(void)
-{
+{   /*{{{*/
     signal(QT_ASSASSINATE_SIGNAL, hup_handler);
     signal(QT_EUREKA_SIGNAL, hup_handler);
-}
+} /*}}}*/
 
 static void qthread_internal_team_eureka_febdeath(const qt_key_t      addr,
                                                   qthread_addrstat_t *m,
                                                   void               *arg)
-{
+{                                    /*{{{*/
     QTHREAD_FASTLOCK_LOCK(&m->lock); // should be unnecessary
     for (int i = 0; i < 3; i++) {
         qthread_addrres_t *curs, **base;
@@ -188,10 +189,52 @@ static void qthread_internal_team_eureka_febdeath(const qt_key_t      addr,
         }
     }
     QTHREAD_FASTLOCK_UNLOCK(&m->lock);
-}
+} /*}}}*/
+
+void INTERNAL qthread_internal_assassinate(qthread_t *t)
+{   /*{{{*/
+    assert(t);
+    assert((t->flags & QTHREAD_REAL_MCCOY) == 0);
+
+    qthread_debug(THREAD_BEHAVIOR, "thread %i assassinated\n", t->thread_id);
+    /* need to clean up return value */
+    if (t->ret) {
+        if (t->flags & QTHREAD_RET_IS_SYNCVAR) {
+            qassert(qthread_syncvar_fill((syncvar_t *)t->ret), QTHREAD_SUCCESS);
+        } else {
+            qthread_debug(FEB_DETAILS, "tid %u assassinated, filling retval (%p)\n", t->thread_id, t->ret);
+            qassert(qthread_fill((aligned_t *)t->ret), QTHREAD_SUCCESS);
+        }
+    }
+    /* we can remove the stack etc. */
+    qthread_thread_free(t);
+} /*}}}*/
+
+void API_FUNC qt_team_critical_section(qt_team_critical_section_t boundary)
+{   /*{{{*/
+    assert(qthread_library_initialized);
+
+    qthread_t *self = qthread_internal_self();
+    int        critical;
+
+    assert(self);
+    switch(boundary) {
+        case BEGIN:
+            self->rdata->criticalsect++;
+            break;
+        case END:
+            assert(self->rdata->criticalsect > 0);
+            if ((--(self->rdata->criticalsect) == 0) &&
+                (self->thread_state == QTHREAD_STATE_ASSASSINATED)) {
+                qt_eureka_end_criticalsect_dead(self);
+            }
+            break;
+    }
+    MACHINE_FENCE;
+} /*}}}*/
 
 int API_FUNC qt_team_eureka(void)
-{
+{   /*{{{*/
     saligned_t my_wkrid = -1;
     qthread_t *self     = qthread_internal_self();
     qt_team_t *my_team;
@@ -252,7 +295,7 @@ int API_FUNC qt_team_eureka(void)
                 QTHREAD_TRAP(); // cannot be abort, because we're called from a signal handler, and abort makes things go WEIRD
             }
         }
-#else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
+#else   /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
         if (&qlib->shepherds[shep] == my_shep) {
             continue;
         }
@@ -262,7 +305,7 @@ int API_FUNC qt_team_eureka(void)
             qthread_debug(ALWAYS_OUTPUT, "pthread_kill (shep:%i) failed: %i:%s\n", (int)shep, ret, strerror(ret));
             QTHREAD_TRAP(); // cannot be abort, because we're called from a signal handler, and abort makes things go WEIRD
         }
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
+#endif  /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     }
     tassert(signalcount == (qlib->nshepherds * qlib->nworkerspershep) - 1);
     /* 4: entry barrier */
@@ -332,10 +375,10 @@ int API_FUNC qt_team_eureka(void)
     self->flags |= QTHREAD_RET_MASK;
     self->flags ^= QTHREAD_RET_MASK;
     self->flags |= (my_team->flags & QTHREAD_TEAM_RET_MASK);
-}
+} /*}}}*/
 
 void INTERNAL qt_eureka_check(int block)
-{
+{   /*{{{*/
     if (TLS_GET(eureka_blocked_flag)) {
         TLS_SET(eureka_blocked_flag, 0);
         TLS_SET(eureka_block, 0);
@@ -346,16 +389,16 @@ void INTERNAL qt_eureka_check(int block)
     } else if (!block) {
         TLS_SET(eureka_block, 0);
     }
-}
+} /*}}}*/
 
 void INTERNAL qt_eureka_enable(void)
-{
+{   /*{{{*/
     TLS_SET(eureka_block, 0);
-}
+} /*}}}*/
 
 void INTERNAL qt_eureka_disable(void)
-{
+{   /*{{{*/
     TLS_SET(eureka_block, 1);
-}
+} /*}}}*/
 
 /* vim:set expandtab: */

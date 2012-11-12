@@ -25,7 +25,8 @@ libqthread_la_SOURCES = \
 	qt_feb_barrier.c \
 	qt_sinc_barrier.c \
 	qutil.c \
-	syncvar.c
+	syncvar.c \
+	teams.c
 
 if COMPILE_LF_HASH
 libqthread_la_SOURCES += qt_lf_hash.c
