@@ -2674,7 +2674,6 @@ int API_FUNC qthread_spawn(qthread_f             f,
         // Allocate new team structure
         new_team = qt_internal_team_new(ret, feature_flag, curr_team, QTHREAD_DEFAULT_TEAM_ID);
         assert(new_team);
-
     } else {
         // Unsupported spawn option
         assert(0);
@@ -3471,14 +3470,14 @@ int INTERNAL qthread_forCount(int inc)
 }                                    /*}}} */
 
 void qthread_parent_yield_state()
-{
+{   /*{{{*/
     qthread_t *t = qthread_internal_self();
 
     assert(t);
     t->prev_thread_state = t->thread_state;
     t->thread_state      = QTHREAD_STATE_PARENT_YIELD;
     qthread_back_to_master(t);
-}
+} /*}}}*/
 
 aligned_t *qthread_task_counter(void)
 {                      /*{{{ */
