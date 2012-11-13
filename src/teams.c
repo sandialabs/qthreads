@@ -91,7 +91,7 @@ static void qt_internal_teams_destroy(void)
 
 /* Returns the team id. If there is no team structure associated with the task,
  * it is considered to be in the default team with id 1. */
-qt_team_id_t API_FUNC qt_team_id(void)
+unsigned int API_FUNC qt_team_id(void)
 {   /*{{{*/
     if (NULL != qlib) {
         qthread_t *self = qthread_internal_self();
@@ -109,7 +109,7 @@ qt_team_id_t API_FUNC qt_team_id(void)
 /* Returns the parent team id. If there is no team structure associated with
  * the task, it is considered to be in the default team with id, and to have
  * no parent (id 0). */
-qt_team_id_t API_FUNC qt_team_parent_id(void)
+unsigned int API_FUNC qt_team_parent_id(void)
 {   /*{{{*/
     if (NULL != qlib) {
         qthread_t *self = qthread_internal_self();
@@ -318,7 +318,7 @@ void INTERNAL qt_internal_teamfinish(qt_team_t   *team,
 static aligned_t qt_team_watcher(void *args_)
 {   /*{{{*/
     aligned_t    code   = 0;
-    qt_team_id_t myteam = qt_team_id();
+    unsigned int myteam = qt_team_id();
 
     qt_team_t *team = (qt_team_t *)args_;
 
@@ -381,10 +381,10 @@ qt_team_t INTERNAL *qt_internal_newteam(void *const        ret,
     return new_team;
 } /*}}}*/
 
-qt_team_t INTERNAL *qt_internal_team_new(void *const        ret,
-                                         unsigned int const feature_flag,
-                                         qt_team_t *const   curr_team,
-                                         qt_team_id_t const parent_id)
+qt_team_t INTERNAL *qt_internal_team_new(void *restrict      ret,
+                                         unsigned int        feature_flag,
+                                         qt_team_t *restrict curr_team,
+                                         unsigned int        parent_id)
 {   /*{{{*/
     DEBUG_ONLY(qthread_t * me = qthread_internal_self());
 

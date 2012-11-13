@@ -30,13 +30,13 @@
 #define TEAM_SIGNAL_EUREKA(team_id)   (-1 * (saligned_t)(team_id))
 
 typedef struct qt_team_s {
-    qt_team_id_t team_id;
+    unsigned int team_id;
     aligned_t    eureka;
     aligned_t    eureka_lock;
     aligned_t    watcher_started;
     qt_sinc_t   *sinc;
     qt_sinc_t   *subteams_sinc;
-    qt_team_id_t parent_id;
+    unsigned int parent_id;
     aligned_t   *parent_eureka;
     qt_sinc_t   *parent_subteams_sinc;
     void        *return_loc;
@@ -46,10 +46,10 @@ typedef struct qt_team_s {
 void INTERNAL qt_internal_teams_init(void);
 void INTERNAL qt_internal_teamfinish(qt_team_t   *team,
                                      uint_fast8_t flags);
-qt_team_t INTERNAL *qt_internal_team_new(void        *ret,
-                                         unsigned int feature_flag,
-                                         qt_team_t   *curr_team,
-                                         qt_team_id_t parent_id);
+qt_team_t INTERNAL *qt_internal_team_new(void *restrict      ret,
+                                         unsigned int        feature_flag,
+                                         qt_team_t *restrict curr_team,
+                                         unsigned int        parent_id);
 void INTERNAL qt_internal_subteam_leader(qthread_t *t);
 #endif // ifndef QT_TEAMS_H
 /* vim:set expandtab: */

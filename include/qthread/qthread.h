@@ -155,7 +155,6 @@ Q_STARTCXX /* */
 
 typedef unsigned short qthread_shepherd_id_t;
 typedef unsigned short qthread_worker_id_t;
-typedef size_t qt_team_id_t;
 
 /* for convenient arguments to qthread_fork */
 typedef aligned_t (*qthread_f)(void *arg);
@@ -377,8 +376,8 @@ typedef enum qt_team_critical_section_e {
     END
 } qt_team_critical_section_t;
 
-qt_team_id_t qt_team_id(void);
-qt_team_id_t qt_team_parent_id(void);
+unsigned int qt_team_id(void);
+unsigned int qt_team_parent_id(void);
 void qt_team_critical_section(qt_team_critical_section_t boundary);
 int qt_team_eureka(void);
 # ifdef TEAM_PROFILE

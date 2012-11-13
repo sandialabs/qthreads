@@ -11,15 +11,15 @@
 
 #define MAX(a,b) a >= b ? a : b
 
-static const qt_team_id_t non_team_id     = 0;
-static const qt_team_id_t default_team_id = 1;
+static const unsigned int non_team_id     = 0;
+static const unsigned int default_team_id = 1;
 
 static aligned_t ping(void *args_)
 {
     int *distance = (int *)args_;
 
-    qt_team_id_t id = qt_team_id();
-    qt_team_id_t parent_id = qt_team_parent_id();
+    unsigned int id = qt_team_id();
+    unsigned int parent_id = qt_team_parent_id();
 
     iprintf("Ping from %lu to %lu at distance %d\n", (unsigned long)parent_id,
         (unsigned long)id, *distance);
