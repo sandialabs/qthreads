@@ -3,6 +3,7 @@
 
 #include <errno.h>                     /* for ENOMEM */
 
+#include <limits.h>                    /* for UINT_MAX (C89) */
 #include <qthread/qthread-int.h>       /* for uint32_t and uint64_t */
 #include <qthread/common.h>            /* important configuration options */
 
@@ -307,10 +308,11 @@ int qthread_debuglevel(int);
 
 /* these are accessor functions for use by the qthreads to retrieve information
  * about themselves */
-# define QTHREAD_NULL_TASK_ID    ((unsigned)-1)
+# define QTHREAD_NULL_TASK_ID    UINT_MAX
 # define QTHREAD_NON_TASK_ID     0
 # define QTHREAD_DEFAULT_TEAM_ID 1
 # define QTHREAD_NON_TEAM_ID     0
+# define QTHREAD_NULL_TEAM_ID    UINT_MAX
 unsigned              qthread_id(void);
 qthread_shepherd_id_t qthread_shep(void);
 qthread_worker_id_t   qthread_worker(qthread_shepherd_id_t *s);

@@ -14,6 +14,7 @@
 #include "qt_visibility.h"
 #include "qt_mpool.h"
 #include "qthread_innards.h"
+#include "qthread_expect.h"
 
 /* Memory management macros */
 #if defined(UNPOOLED)
@@ -32,7 +33,7 @@ static void qt_team_profile(void);
 #endif
 
 void INTERNAL qt_internal_teams_init(void)
-{
+{   /*{{{*/
 #ifdef TEAM_PROFILE
     qlib->team_create  = 0;
     qlib->team_destroy = 0;
@@ -61,10 +62,10 @@ void INTERNAL qt_internal_teams_init(void)
 #endif
     qthread_internal_cleanup(qt_internal_teams_shutdown);
     qthread_internal_cleanup_late(qt_internal_teams_destroy);
-}
+} /*}}}*/
 
 static void qt_internal_teams_shutdown(void)
-{
+{   /*{{{*/
     // Wait for all team structures to be reclaimed.
     while (qlib->team_count) {
 #ifdef QTHREAD_DEBUG
@@ -80,30 +81,25 @@ static void qt_internal_teams_shutdown(void)
 #ifdef TEAM_PROFILE
     qt_team_profile();
 #endif
-}
+} /*}}}*/
 
 static void qt_internal_teams_destroy(void)
-{
+{   /*{{{*/
     QTHREAD_FASTLOCK_DESTROY(qlib->max_team_id_lock);
     qt_mpool_destroy(generic_team_pool);
     generic_team_pool = NULL;
-}
+} /*}}}*/
 
 /* Returns the team id. If there is no team structure associated with the task,
  * it is considered to be in the default team with id 1. */
 unsigned int API_FUNC qt_team_id(void)
 {   /*{{{*/
-    if (NULL != qlib) {
-        qthread_t *self = qthread_internal_self();
+    assert(qthread_library_initialized);
+    qthread_t *t = qthread_internal_self();
 
-        if ((NULL != self) && (NULL != self->team)) {
-            return self->team->team_id;
-        } else {
-            return 1;
-        }
-    } else {
-        return 1;
-    }
+    qthread_debug(THREAD_CALLS, "tid(%u), team_id(%u)\n", t ? t->thread_id : QTHREAD_NON_TASK_ID,
+                  t ? (t->team ? t->team->team_id : QTHREAD_DEFAULT_TEAM_ID) : QTHREAD_NON_TEAM_ID);
+    return t ? (t->team ? t->team->team_id : QTHREAD_DEFAULT_TEAM_ID) : QTHREAD_NON_TEAM_ID;
 } /*}}}*/
 
 /* Returns the parent team id. If there is no team structure associated with
@@ -404,6 +400,10 @@ qt_team_t INTERNAL *qt_internal_team_new(void *restrict      ret,
     new_team->parent_subteams_sinc = NULL;
     new_team->return_loc           = ret;
     new_team->flags                = feature_flag & QTHREAD_RET_MASK;
+
+    if (QTHREAD_UNLIKELY(new_team->team_id == QTHREAD_NULL_TEAM_ID)) {
+        new_team->team_id = qthread_internal_incr(&(qlib->max_team_id), &qlib->max_team_id_lock, 3);
+    }
 
     // Empty new team FEBs
     qthread_debug(FEB_DETAILS, "tid %i emptying NEW team %u's eureka (%p)\n", me ? ((int)me->thread_id) : -1, new_team->team_id, &new_team->eureka);
