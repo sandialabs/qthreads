@@ -101,6 +101,21 @@ static aligned_t live_parent2(void *arg)
     return 0;
 }
 
+static aligned_t live_parent3(void *arg)
+{
+    iprintf("live_parent3 alive! id = %u\n", qthread_id());
+    qthread_fork(live_waiter2, (void*)(intptr_t)0, &t3);
+    iprintf("live_parent3 spawned all tasks\n");
+    qthread_flushsc();
+    iprintf("live_parent3 about to eureka...\n");
+    qt_team_eureka();
+    iprintf("live_parent3 still alive!\n");
+    COMPILER_FENCE;
+    t = 0;
+    iprintf("live_parent3 exiting!\n");
+    return 0;
+}
+
 int main(int   argc,
          char *argv[])
 {
@@ -126,10 +141,18 @@ int main(int   argc,
     t = 1;
 
     iprintf("\n\n***************************************************************\n");
-    iprintf("Testing a partially-live eureka (some member tasks running)...\n");
+    iprintf("Testing an over-subscribed eureka (some member tasks not running)...\n");
     qthread_fork_new_team(live_parent2, NULL, &t2);
     qthread_readFF(NULL, &t2);
     iprintf("main() woke up after live_parent2\n");
+    assert(waiter_count == 0);
+    t = 1;
+
+    iprintf("\n\n***************************************************************\n");
+    iprintf("Testing a under-subscribed eureka (some workers idle)...\n");
+    qthread_fork_new_team(live_parent3, NULL, &t2);
+    qthread_readFF(NULL, &t2);
+    iprintf("main() woke up after live_parent3\n");
     assert(waiter_count == 0);
     t = 1;
 
