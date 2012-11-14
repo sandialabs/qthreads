@@ -381,7 +381,7 @@ typedef enum qt_team_critical_section_e {
 unsigned int qt_team_id(void);
 unsigned int qt_team_parent_id(void);
 void qt_team_critical_section(qt_team_critical_section_t boundary);
-int qt_team_eureka(void);
+void qt_team_eureka(void);
 # ifdef TEAM_PROFILE
 void qt_team_profile(void);
 # endif

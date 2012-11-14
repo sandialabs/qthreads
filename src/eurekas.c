@@ -233,7 +233,7 @@ void API_FUNC qt_team_critical_section(qt_team_critical_section_t boundary)
     MACHINE_FENCE;
 } /*}}}*/
 
-int API_FUNC qt_team_eureka(void)
+void API_FUNC qt_team_eureka(void)
 {   /*{{{*/
     saligned_t my_wkrid = -1;
     qthread_t *self     = qthread_internal_self();
