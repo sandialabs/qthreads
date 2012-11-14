@@ -366,17 +366,6 @@ static aligned_t qt_team_watcher(void *args_)
     return 0;
 } /*}}}*/
 
-qt_team_t INTERNAL *qt_internal_newteam(void *const        ret,
-                                        unsigned int const feature_flag,
-                                        qt_team_t *const   curr_team)
-{   /*{{{*/
-    // Allocate new team structure
-    qt_team_t *new_team = ALLOC_TEAM();
-
-    assert(new_team);
-    return new_team;
-} /*}}}*/
-
 qt_team_t INTERNAL *qt_internal_team_new(void *restrict      ret,
                                          unsigned int        feature_flag,
                                          qt_team_t *restrict curr_team,
@@ -384,7 +373,9 @@ qt_team_t INTERNAL *qt_internal_team_new(void *restrict      ret,
 {   /*{{{*/
     DEBUG_ONLY(qthread_t * me = qthread_internal_self());
 
-    qt_team_t *new_team = qt_internal_newteam(ret, feature_flag, curr_team);
+    // Allocate new team structure
+    qt_team_t *new_team = ALLOC_TEAM();
+    assert(new_team);
 
     // Initialize new team values
     new_team->team_id         = qthread_internal_incr(&(qlib->max_team_id), &qlib->max_team_id_lock, 1);
