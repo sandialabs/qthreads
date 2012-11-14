@@ -2672,7 +2672,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
         team_leader = 1;
 
         // Allocate new team structure
-        new_team = qt_internal_team_new(ret, feature_flag, curr_team, QTHREAD_DEFAULT_TEAM_ID);
+        new_team = qt_internal_team_new(ret, feature_flag, curr_team, curr_team ? curr_team->team_id : QTHREAD_DEFAULT_TEAM_ID);
         assert(new_team);
     } else {
         // Unsupported spawn option
