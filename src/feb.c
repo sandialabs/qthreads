@@ -94,13 +94,17 @@ void INTERNAL qt_feb_subsystem_init(void)
 static inline void qt_feb_schedule(qthread_t          *waiter,
                                    qthread_shepherd_t *shep)
 {
+    qthread_debug(FEB_DETAILS, "waiter(%p:%i), shep(%p:%i): setting waiter to 'RUNNING'\n", waiter, (int)waiter->thread_id, shep, (int)shep->shepherd_id);
     waiter->thread_state = QTHREAD_STATE_RUNNING;
     if ((waiter->flags & QTHREAD_UNSTEALABLE) && (waiter->rdata->shepherd_ptr != shep)) {
+        qthread_debug(FEB_DETAILS, "waiter(%p:%i), shep(%p:%i): enqueueing waiter in target_shep's ready queue (%p:%i)\n", waiter, (int)waiter->thread_id, shep, (int)shep->shepherd_id, waiter->rdata->shepherd_ptr, waiter->rdata->shepherd_ptr->shepherd_id);
         qt_threadqueue_enqueue(waiter->rdata->shepherd_ptr->ready, waiter);
-    } else {
+    } else
 #ifdef QTHREAD_USE_SPAWNCACHE
-        if (!qt_spawncache_spawn(waiter, shep->ready))
+    if (!qt_spawncache_spawn(waiter, shep->ready))
 #endif
+    {
+        qthread_debug(FEB_DETAILS, "waiter(%p:%i), shep(%p:%i): enqueueing waiter in shep's ready queue\n", waiter, (int)waiter->thread_id, shep, (int)shep->shepherd_id);
         qt_threadqueue_enqueue(shep->ready, waiter);
     }
 }
@@ -366,15 +370,15 @@ got_m:
 }                      /*}}} */
 
 static QINLINE void qthread_precond_init(qthread_addrres_t **precond_tasks_p)
-{
+{   /*{{{*/
     /*create empty head to avoid later checks/branches; use the waiter to find the tail*/
     *precond_tasks_p           = ALLOC_ADDRRES();
     (*precond_tasks_p)->waiter = (void *)(*precond_tasks_p);
-}
+} /*}}}*/
 
 static QINLINE void qthread_precond_launch(qthread_shepherd_t *shep,
                                            qthread_addrres_t  *precond_tasks)
-{
+{   /*{{{*/
     qthread_addrres_t *precond_tail = ((qthread_addrres_t *)(precond_tasks->waiter));
 
     if (precond_tasks != precond_tail) {
@@ -393,7 +397,7 @@ static QINLINE void qthread_precond_launch(qthread_shepherd_t *shep,
         } while(precond_head != precond_tail);
         FREE_ADDRRES(precond_free);
     }
-}
+} /*}}}*/
 
 static QINLINE void qthread_gotlock_empty(qthread_shepherd_t *shep,
                                           qthread_addrstat_t *m,

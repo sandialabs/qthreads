@@ -14,10 +14,19 @@
 
 static aligned_t t  = 0;
 static aligned_t t2 = 1;
+static aligned_t t3 = 0;
+
+static aligned_t waiter_follower(void *arg)
+{
+    iprintf("waiter_follower!\n");
+    qthread_writeF_const(&t3, 1);
+    return 0;
+}
 
 static aligned_t waiter(void *arg)
 {
     iprintf("waiter alive!\n");
+    qthread_fork_to(waiter_follower, NULL, NULL, 1);
     qthread_writeF_const(&t, 1);
     while(t == 1) {
 	COMPILER_FENCE;
@@ -44,6 +53,7 @@ int main(int   argc,
     iprintf("  %i threads total\n", qthread_num_workers());
 
     qthread_empty(&t);
+    qthread_empty(&t3);
 
     qthread_fork_to(waiter, NULL, &t2, 1);
 
@@ -61,7 +71,7 @@ int main(int   argc,
     }
     iprintf("sent signal\n");
 
-    sleep(1);
+    qthread_readFF(NULL, &t3);
     MACHINE_FENCE;
     iprintf("setting t=2\n");
     t = 2;
@@ -73,7 +83,7 @@ int main(int   argc,
         abort();
     }
 
-    iprintf("exiting...\n");
+    iprintf("Success!\n");
 
     return 0;
 }

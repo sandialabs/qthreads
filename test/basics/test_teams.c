@@ -11,12 +11,12 @@
 
 #define MAX(a,b) a >= b ? a : b
 
-static const qt_team_id_t non_team_id     = 0;
-static const qt_team_id_t default_team_id = 1;
+static const unsigned int non_team_id     = 0;
+static const unsigned int default_team_id = 1;
 
 static aligned_t hello_new_team(void *arg_) {
-    qt_team_id_t id = qt_team_id();
-    qt_team_id_t parent_id = qt_team_parent_id();
+    unsigned int id = qt_team_id();
+    unsigned int parent_id = qt_team_parent_id();
 
     iprintf("`hello_new_team` executing in team %lu (w/ parent %lu)\n", 
         (unsigned long)id, (unsigned long)parent_id);
@@ -26,8 +26,8 @@ static aligned_t hello_new_team(void *arg_) {
 }
 
 static aligned_t hello_in_team(void *arg_) {
-    qt_team_id_t id = qt_team_id();
-    qt_team_id_t parent_id = qt_team_parent_id();
+    unsigned int id = qt_team_id();
+    unsigned int parent_id = qt_team_parent_id();
 
     iprintf("`hello_in_team` executing in team %lu (w/ parent %lu)\n", 
         (unsigned long)id, (unsigned long)parent_id);
@@ -37,8 +37,8 @@ static aligned_t hello_in_team(void *arg_) {
 }
 
 static aligned_t hello_new_team_in_team(void *arg_) {
-    qt_team_id_t id = qt_team_id();
-    qt_team_id_t parent_id = qt_team_parent_id();
+    unsigned int id = qt_team_id();
+    unsigned int parent_id = qt_team_parent_id();
 
     iprintf("`hello_new_team_in_team` executing in team %lu (w/ parent %lu)\n", 
         (unsigned long)id, (unsigned long)parent_id);
@@ -52,8 +52,8 @@ static aligned_t hello_new_team_in_team(void *arg_) {
 }
 
 static aligned_t hello_new_team_new_team(void *arg_) {
-    qt_team_id_t id = qt_team_id();
-    qt_team_id_t parent_id = qt_team_parent_id();
+    unsigned int id = qt_team_id();
+    unsigned int parent_id = qt_team_parent_id();
 
     iprintf("`hello_new_team_new_team` executing in team %lu (w/ parent %lu)\n", 
         (unsigned long)id, (unsigned long)parent_id);

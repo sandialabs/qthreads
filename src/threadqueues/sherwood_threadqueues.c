@@ -21,6 +21,7 @@
 #include "qt_threadqueues.h"
 #include "qt_envariables.h"
 #include "qt_debug.h"
+#include "qt_eurekas.h" /* for qt_eureka_check() */
 
 /* Data Structures */
 struct _qt_threadqueue_node {
@@ -694,6 +695,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
     assert(my_shepherd->ready == q);
     assert(my_shepherd->sorted_sheplist);
 
+    qt_eureka_disable();
     while (1) {
         qt_threadqueue_node_t *node = NULL;
         curr_cost = 0; ret_agg_task = 0;
@@ -918,6 +920,49 @@ void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
     QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
 } /*}}}*/
 
+#ifdef QTHREAD_USE_SPAWNCACHE
+void INTERNAL qt_threadqueue_enqueue_cache(qt_threadqueue_t         *q,
+                                           qt_threadqueue_private_t *cache)
+{   /*{{{*/
+    assert(cache->on_deck);
+    assert(cache->head == NULL || cache->qlength);
+
+    qt_threadqueue_node_t *first = cache->on_deck;
+    qt_threadqueue_node_t *last;
+
+    if (cache->qlength) {
+        first->next       = cache->head;
+        cache->head->prev = first;
+        last              = cache->tail;
+    } else {
+        last = first;
+    }
+    cache->qlength++;
+    cache->qlength_stealable += first->stealable;
+    assert(last->next == NULL);
+    assert(first->prev == NULL);
+    first->next    = cache->head;
+    cache->head    = NULL;
+    cache->tail    = NULL;
+    cache->on_deck = NULL;
+    QTHREAD_TRYLOCK_LOCK(&q->qlock);
+    PARANOIA_ONLY(sanity_check_queue(q));
+    first->prev = q->tail;
+    q->tail     = last;
+    if (q->head == NULL) {
+        q->head = first;
+    } else {
+        first->prev->next = first;
+    }
+    q->qlength           += cache->qlength;
+    q->qlength_stealable += cache->qlength_stealable;
+    QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
+    cache->qlength           = 0;
+    cache->qlength_stealable = 0;
+} /*}}}*/
+
+#endif /* ifdef QTHREAD_USE_SPAWNCACHE */
+
 /* dequeue stolen threads at head, skip yielded threads */
 qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h,
                                                              qt_threadqueue_t *v)
@@ -1080,12 +1125,11 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
         i++;
         i *= (i < qlib->nshepherds - 1);
         if (i == 0) {
+            qt_eureka_check(1);
 #ifdef HAVE_PTHREAD_YIELD
             pthread_yield();
 #elif defined(HAVE_SCHED_YIELD)
             sched_yield();
-#else
-            SPINLOCK_BODY();
 #endif
         }
         SPINLOCK_BODY();
@@ -1114,12 +1158,189 @@ void INTERNAL qthread_steal_stat(void)
 
 #endif  /* ifdef STEAL_PROFILE */
 
+#ifdef QTHREAD_USE_SPAWNCACHE
+void INTERNAL qt_threadqueue_private_filter(qt_threadqueue_private_t *restrict c,
+                                            qt_threadqueue_filter_f            f)
+{   /*{{{*/
+    qt_threadqueue_node_t *node = NULL;
+    qthread_t             *t    = NULL;
+
+    assert(c != NULL);
+
+    if (c->on_deck) {
+        qt_threadqueue_node_t *n = c->on_deck;
+        switch(f(n->value)) {
+            case 0: // ignore, move to the next one
+                break;
+            case 1: // ignore, stop looking
+                return;
+
+            case 2: // remove, move to the next one
+            {
+                qthread_internal_assassinate(n->value);
+                FREE_TQNODE(n);
+                c->on_deck = NULL;
+                break;
+            }
+            case 3:     // remove, stop looking
+            {
+                qthread_internal_assassinate(n->value);
+                FREE_TQNODE(n);
+                c->on_deck = NULL;
+                goto fixup_on_deck;
+            }
+        }
+    }
+    if (c->qlength > 0) {
+        qt_threadqueue_node_t **lp = NULL;
+        qt_threadqueue_node_t **rp = NULL;
+
+        rp   = &c->tail;
+        node = c->tail;
+        if (c->head == node) {
+            lp = &c->head;
+        } else {
+            lp = &(node->prev->next);
+        }
+        while (node) {
+            t = (qthread_t *)node->value;
+            switch (f(t)) {
+                case 0: // ignore, move to the next one
+                    rp   = &node->prev;
+                    node = node->prev;
+                    if (c->head == node) {
+                        lp = &c->head;
+                    } else {
+                        lp = &(node->prev->next);
+                    }
+                    break;
+                case 1: // ignore, stop looking
+                    node = NULL;
+                    break;
+                case 2: // remove, move to the next one
+                {
+                    qt_threadqueue_node_t *freeme;
+
+                    *lp = node->next;
+                    *rp = node->prev;
+                    c->qlength--;
+                    c->qlength_stealable -= node->stealable;
+                    freeme                = node;
+                    node                  = node->prev;
+                    qthread_internal_assassinate(t);
+                    if (c->head == node) {
+                        lp = &c->head;
+                    } else {
+                        lp = &(node->prev->next);
+                    }
+                    FREE_TQNODE(freeme);
+                    break;
+                }
+                case 3: // remove, stop looking
+                    *lp = node->next;
+                    *rp = node->prev;
+                    c->qlength--;
+                    c->qlength_stealable -= node->stealable;
+                    qthread_internal_assassinate(t);
+                    FREE_TQNODE(node);
+                    node = NULL;
+                    break;
+            }
+        }
+    }
+fixup_on_deck:
+    if ((c->on_deck == NULL) && (c->tail != NULL)) {
+        // pull the tail down to the on_deck position
+        qt_threadqueue_node_t *n = c->on_deck = c->tail;
+        c->tail = n->prev;
+        n->prev = NULL;
+        if (c->head == n) {
+            c->head == NULL;
+        }
+        c->qlength--;
+        c->qlength_stealable -= n->stealable;
+    }
+} /*}}}*/
+
+#endif /* ifdef QTHREAD_USE_SPAWNCACHE */
+
+/* walk queue removing all tasks matching this description */
+void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
+                                    qt_threadqueue_filter_f f)
+{   /*{{{*/
+    qt_threadqueue_node_t *node = NULL;
+    qthread_t             *t    = NULL;
+
+    assert(q != NULL);
+
+    QTHREAD_TRYLOCK_LOCK(&q->qlock);
+    PARANOIA_ONLY(sanity_check_queue(q));
+    if (q->qlength > 0) {
+        qt_threadqueue_node_t **lp = NULL;
+        qt_threadqueue_node_t **rp = NULL;
+
+        rp   = &q->tail;
+        node = q->tail;
+        if (q->head == node) {
+            lp = &q->head;
+        } else {
+            lp = &(node->prev->next);
+        }
+        while (node) {
+            t = (qthread_t *)node->value;
+            switch (f(t)) {
+                case 0: // ignore, move to the next one
+                    rp   = &node->prev;
+                    node = node->prev;
+                    if (q->head == node) {
+                        lp = &q->head;
+                    } else {
+                        lp = &(node->prev->next);
+                    }
+                    break;
+                case 1: // ignore, stop looking
+                    node = NULL;
+                    break;
+                case 2: // remove, move to the next one
+                {
+                    qt_threadqueue_node_t *freeme;
+
+                    *lp = node->next;
+                    *rp = node->prev;
+                    q->qlength--;
+                    q->qlength_stealable -= node->stealable;
+                    freeme                = node;
+                    node                  = node->prev;
+                    qthread_internal_assassinate(t);
+                    if (q->head == node) {
+                        lp = &q->head;
+                    } else {
+                        lp = &(node->prev->next);
+                    }
+                    FREE_TQNODE(freeme);
+                    break;
+                }
+                case 3: // remove, stop looking
+                    *lp = node->next;
+                    *rp = node->prev;
+                    q->qlength--;
+                    q->qlength_stealable -= node->stealable;
+                    qthread_internal_assassinate(t);
+                    FREE_TQNODE(node);
+                    node = NULL;
+                    break;
+            }
+        }
+    }
+    QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
+} /*}}}*/
+
 /* walk queue looking for a specific value  -- if found remove it (and start
  * it running)  -- if not return NULL
  */
 qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
                                                     void             *value)
-{   /*{{{*/
+{       /*{{{*/
     qt_threadqueue_node_t *node = NULL;
     qthread_t             *t    = NULL;
 
@@ -1141,7 +1362,7 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
                 } else {
                     node->prev->next = node->next;
                 }
-                node->next->prev = node->prev;  // reset back ptr (know we're not tail
+                node->next->prev = node->prev;     // reset back ptr (know we're not tail
                 node->next       = NULL;
                 node->prev       = q->tail;
                 q->tail->next    = node;
@@ -1152,16 +1373,16 @@ qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
     QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
 
     return (t);
-} /*}}}*/
+}     /*}}}*/
 
 void INTERNAL qthread_steal_enable()
-{   /*{{{*/
+{       /*{{{*/
     steal_disable = 0;
-}   /*}}}*/
+}     /*}}}*/
 
 void INTERNAL qthread_steal_disable()
-{   /*{{{*/
+{       /*{{{*/
     steal_disable = 1;
-}   /*}}}*/
+}     /*}}}*/
 
 /* vim:set expandtab: */

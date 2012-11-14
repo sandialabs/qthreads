@@ -18,6 +18,6 @@ enum trigger_action{
 void maestro_sched(enum trigger_type type, enum trigger_action action, int val);
 int maestro_allowed_workers(void);
 int maestro_current_workers(int val);
-
+int64_t maestro_size(void);
 
 #endif

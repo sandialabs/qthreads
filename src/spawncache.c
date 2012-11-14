@@ -91,4 +91,30 @@ int INTERNAL qt_spawncache_yield(qthread_t *t)
     }
 }
 
+void INTERNAL qt_spawncache_filter(qt_threadqueue_filter_f f)
+{
+    qt_threadqueue_private_t *cache = TLS_GET(spawn_cache);
+
+    if (cache)
+        qt_threadqueue_private_filter(cache, f);
+}
+
+
+int INTERNAL qt_spawncache_flush(qt_threadqueue_t *q)
+{
+    qt_threadqueue_private_t *cache = TLS_GET(spawn_cache);
+
+    if (cache) {
+        //printf("attempting to flush cache %p\n", cache);
+        if (cache->on_deck) {
+            //printf("attempting to flush cache %p : %u items\n", cache, cache->qlength + 1);
+            qt_threadqueue_enqueue_cache(q, cache);
+            return 1;
+        }
+        return 0;
+    } else {
+        return 0;
+    }
+}
+
 /* vim:set expandtab: */

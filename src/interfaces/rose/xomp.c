@@ -36,11 +36,14 @@
 #endif
 
 #include <rose_xomp.h>
-
+#include <qthread/qt_sinc_barrier.h>
 #ifdef QTHREAD_RCRTOOL
 #include "rcrtool/qt_rcrtool.h"
 #include "maestro_sched.h"
+int64_t maestro_change_size(void);
 #endif
+
+void qthread_set_affinity(unsigned int shep);
 
 #if defined(__i386__) || defined(__x86_64__)
 #define USE_RDTSC 1
@@ -211,6 +214,12 @@ static void set_xomp_dynamic(
 // END Setup local variables 
 //
 
+// Runtime library termination routine -- before init used as atexit clenup function
+void XOMP_exit(void)
+{
+  return;
+}
+
 //Runtime library initialization routine
 void XOMP_init(
     int argc,
@@ -255,6 +264,7 @@ void XOMP_init(
 
     QTHREAD_FASTLOCK_INIT(critLock);
 
+    atexit(XOMP_exit);
     if (! staticStartCount){
       fprintf(stderr,"XOMP_init build shepherd aux structure malloc failed\n");
     }
@@ -291,18 +301,22 @@ void XOMP_parallel_start(
   }
 
 #ifdef QTHREAD_RCRTOOL
-    //Here we log entering an open MP section into the RCRTool RAT Table.
-    int numberOfThreads = numThread;
-    if (numberOfThreads == 0) numberOfThreads = qthread_num_workers();
-    rcrtool_log(RCR_APP_STATE_DUMP, XOMP_PARALLEL_START, numberOfThreads, (uint64_t) func, funcName);
-#endif
-
+  //Here we log entering an open MP section into the RCRTool RAT Table.
+  int numberOfThreads = numThread;
+  if (numberOfThreads == 0) numberOfThreads = qthread_num_workers();
+  rcrtool_log(RCR_APP_STATE_DUMP, XOMP_PARALLEL_START, numberOfThreads, (uint64_t) func, funcName);
+  
+  qthread_shepherd_id_t parallelWidth = maestro_change_size();
+  
   // allocate and set new feb barrier
+#else
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   qthread_shepherd_id_t parallelWidth = qthread_num_workers();
 #else
   qthread_shepherd_id_t parallelWidth = qthread_num_shepherds();
 #endif
+#endif
+
   int save_thread_cnt = 0;  // double duty - non-zero we changed thread count - value is the old thread count
   if (!ifClause) { //  if clause false don't start parallel region
       // but still need to do the work (serially)
@@ -449,7 +463,6 @@ void xomp_internal_loop_init(
     MACHINE_FENCE;
     lp->ready = loopNum;         // use the loop number to allow other workers to start 
   }
-  //  printf("first %d departed %d myid %d\n", first ,lp->departed_workers,myid);
 
   while (lp->ready != loopNum) SPINLOCK_BODY(); // spin waiting for loop structure to be setup
                                  // ready contains the last value updated -- must match my loop
@@ -684,15 +697,17 @@ static void waitCompletionOutstandingTasks(void)
         }
 
         if (newval != tcount_finished_state) {            
-            // next line will save thred_state in prev_thread_state
+            // next line will save thread_state in prev_thread_state
             qthread_parent_yield_state();
-            // child will have set thred_state to prev_thread_state
+            // child will have set thread_state to prev_thread_state
         }
 
         *task_counter = 0; // reset the waiting bit on the task counter
     }
 
 }
+
+qt_sinc_barrier_t *qt_get_barrier(void);  // warning message if left out -- I don't understand why - akp 10/16/12
 
 void XOMP_barrier(void)
 {
@@ -702,7 +717,9 @@ void XOMP_barrier(void)
     size_t myid = qthread_barrier_id();
     qt_barrier_enter(qt_thread_barrier(),myid);
 #else
-    qt_feb_barrier_enter(qt_thread_barrier());
+    // need barrier for this parallel thread
+    qt_sinc_barrier_t *foo =  qt_get_barrier();
+    qt_sinc_barrier_enter(foo);
 #endif
 
 }
@@ -777,16 +794,7 @@ void XOMP_task(
   qthread_debug(LOCK_DETAILS, "me(%p) creating task for shepherd %d\n", me, id%qthread_num_shepherds());
 #endif
 
-#ifdef QTHREAD_OMP_AFFINITY
-  qthread_t *t = qthread_internal_self();
-  if (t->rdata->child_affinity != OMP_NO_CHILD_TASK_AFFINITY)
-    qthread_fork_track_syncvar_copyargs_to((qthread_f)func, arg, arg_size, NULL, t->rdata->child_affinity);/* NULL return value -- let copyargs assign inside thread structure -- which it allocates*/
-  else {
-    qthread_fork_track_syncvar_copyargs((qthread_f)func, arg, arg_size, NULL); /* NULL return value -- let copyargs assign inside thread structure -- which it allocates*/
-  }
-#else
   qthread_fork_track_syncvar_copyargs((qthread_f)func, arg, arg_size, NULL); /* NULL return value -- let copyargs assign inside thread structure -- which it allocates*/
-#endif
 }
 
 void XOMP_taskwait(
@@ -974,10 +982,14 @@ void XOMP_loop_default(
     long *returnUpper)
 {
   qqloop_step_handle_t *loop = NULL;
+#ifdef QTHREAD_RCRTOOL 
+  aligned_t parallelWidth = maestro_size()-1;
+#else
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   aligned_t parallelWidth = qthread_num_workers();
 #else
   aligned_t parallelWidth = qthread_num_shepherds();
+#endif
 #endif
   aligned_t chunksize ;
   if (stride > 0){ // normal case -- postive stride
@@ -1179,7 +1191,34 @@ bool XOMP_single(
   */  
 }
 
+volatile int totalSections = -1;
+volatile int curSections = 0;
 
+int XOMP_sections_next(void)
+{
+  int ret = qthread_incr(&curSections,1); 
+  if (ret >= totalSections) return -1;
+  else return ret;
+}
+
+int XOMP_sections_init_next( int numSections)
+{
+  totalSections = numSections;
+  return XOMP_sections_next();
+}
+
+void XOMP_sections_end(void)
+{
+  XOMP_barrier();
+  curSections = 0;
+  totalSections = -1;
+  XOMP_barrier();
+}
+
+void XOMP_sections_end_nowait(void)
+{
+  XOMP_sections_end();
+}
 // flush without variable list
 void XOMP_flush_all(
     void)
@@ -1251,10 +1290,15 @@ void omp_set_num_threads (
 #endif
         }
     }
+
+#ifdef QTHREAD_RCRTOOL
   
   if (qt_num_threads_requested != num_active){ 
     // need to reset the barrier size and the first arrival size (if larger or smaller)
     qtar_resize(qt_num_threads_requested);
+
+    if (sinc_barrier != 0) qt_sinc_barrier_change(sinc_barrier,qt_num_threads_requested);
+
     if (qt_parallel_region()) qt_thread_barrier_resize(qt_num_threads_requested);
     qt_barrier_resize(qt_num_threads_requested);
 
@@ -1268,6 +1312,7 @@ void omp_set_num_threads (
     }
 #endif
   }
+#endif
 }
 
 // extern int omp_get_num_threads (void);
@@ -1501,8 +1546,7 @@ void qthread_enable_stealing_on_shep (
 void omp_child_task_affinity (
     unsigned int shep)
 {
-  qthread_t *t = qthread_internal_self();   
-  t->rdata->child_affinity = (qthread_shepherd_id_t) shep;
+  qthread_set_affinity(shep);
 }  
 
 // In the following functions, we just return null if hwloc is not avaiable

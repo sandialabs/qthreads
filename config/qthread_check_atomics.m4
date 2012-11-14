@@ -94,7 +94,8 @@ char blob[sizeof(struct m128)*4];
 intptr_t b2 = (intptr_t)blob;
 struct m128 *one, *two, *three;
 if (b2 & 0xf) { // fix alignment
-b2 += 0xf - (b2 & 0xf);
+b2 += 0xf;
+b2 -= (b2 & 0xf);
 }
 one = (struct m128*)b2;
 two = one+1;

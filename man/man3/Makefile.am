@@ -105,6 +105,10 @@ man_MANS = \
 		   qt_sinc_submit.3 \
 		   qt_sinc_wait.3 \
 		   qt_system.3 \
+		   qt_team_critical_section.3 \
+		   qt_team_eureka.3 \
+		   qt_team_id.3 \
+		   qt_team_parent_id.3 \
 		   qt_uint_max.3 \
 		   qt_uint_min.3 \
 		   qt_uint_prod.3 \

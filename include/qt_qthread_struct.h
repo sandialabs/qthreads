@@ -9,6 +9,8 @@
 #include "qt_shepherd_innards.h"
 #include "qt_threadstate.h"
 #include "qt_blocking_structs.h"
+#include "qt_teams.h"
+#include "rose_sinc_barrier.h"  /* add to allow nested parallelism barriers -- akp 10/16/12 */
 
 #define ARGCOPY_DEFAULT   1024
 #define TASKLOCAL_DEFAULT 8
@@ -28,15 +30,7 @@
 #define QTHREAD_AGGREGABLE       (1 << 10)
 #define QTHREAD_AGGREGATED       (1 << 11)
 
-/* flags for teams (must be different bits) */
-#define QTHREAD_TEAM_DEAD       (1 << 0)
-#define QTHREAD_TEAM_RESERVED_1 (1 << 1)
-#define QTHREAD_TEAM_RESERVED_2 (1 << 2)
-#define QTHREAD_TEAM_RESERVED_3 (1 << 3)
-#define QTHREAD_TEAM_RESERVED_4 (1 << 4)
-#define QTHREAD_TEAM_RESERVED_5 (1 << 5)
-#define QTHREAD_TEAM_RESERVED_6 (1 << 6)
-#define QTHREAD_TEAM_RESERVED_7 (1 << 7)
+#define QTHREAD_RET_MASK (QTHREAD_RET_IS_SYNCVAR | QTHREAD_RET_IS_SINC)
 
 struct qthread_runtime_data_s {
     void         *stack;           /* the thread's stack */
@@ -51,6 +45,8 @@ struct qthread_runtime_data_s {
     } blockedon;
     qthread_shepherd_t *shepherd_ptr;    /* the shepherd we run on */
     unsigned            tasklocal_size;
+    int                 criticalsect; /* critical section depth */
+    qt_sinc_barrier_t  *barrier;      /* add to allow barriers to be stacked/nested parallelism - akp 10/16/12 */
 
 #ifdef QTHREAD_USE_VALGRIND
     unsigned int valgrind_stack_id;
@@ -64,18 +60,6 @@ struct qthread_runtime_data_s {
 #endif
 };
 
-typedef struct qt_team_s {
-    qt_team_id_t team_id;
-    aligned_t    eureka;
-    aligned_t    watcher_started;
-    qt_sinc_t   *sinc;
-    qt_sinc_t   *subteams_sinc;
-    qt_team_id_t parent_id;
-    aligned_t   *parent_eureka;
-    qt_sinc_t   *parent_subteams_sinc;
-    uint_fast8_t flags;
-} qt_team_t;
-
 /* Try very VERY hard to keep this under 1 cacheline (64 bytes) */
 struct qthread_s {
     qthread_f                      f;               /* the function to call (that defines this thread) */
@@ -83,9 +67,9 @@ struct qthread_s {
     void                          *ret;             /* user defined retval location */
     struct qthread_runtime_data_s *rdata;
 
-    qt_team_t *team;                     /* reference to task team */
+    qt_team_t                     *team; /* reference to task team */
     /* preconditions for data-dependent tasks */
-    void *preconds;
+    void                          *preconds;
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     // XXX: I suspect that several of these should be moved into the qthread_runtime_data_s struct

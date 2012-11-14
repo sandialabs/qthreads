@@ -27,6 +27,7 @@ noinst_HEADERS = \
 	qt_context.h \
 	qt_debug.h \
 	qt_envariables.h \
+	qt_eurekas.h \
 	qt_gcd.h \
 	qt_hash.h \
 	qt_hazardptrs.h \
@@ -37,10 +38,12 @@ noinst_HEADERS = \
 	qt_macros.h \
 	qt_mpool.h \
 	qt_profiling.h \
+	qt_qthread_mgmt.h \
 	qt_qthread_struct.h \
 	qt_qthread_t.h \
 	qt_shepherd_innards.h \
 	qt_spawncache.h \
+	qt_teams.h \
 	qt_threadqueues.h \
 	qt_threadstate.h \
 	qt_touch.h \

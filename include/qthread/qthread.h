@@ -3,6 +3,7 @@
 
 #include <errno.h>                     /* for ENOMEM */
 
+#include <limits.h>                    /* for UINT_MAX (C89) */
 #include <qthread/qthread-int.h>       /* for uint32_t and uint64_t */
 #include <qthread/common.h>            /* important configuration options */
 
@@ -153,11 +154,8 @@ Q_ENDCXX /* */
 
 Q_STARTCXX /* */
 
-# include <qthread/sinc.h>
-
 typedef unsigned short qthread_shepherd_id_t;
 typedef unsigned short qthread_worker_id_t;
-typedef size_t qt_team_id_t;
 
 /* for convenient arguments to qthread_fork */
 typedef aligned_t (*qthread_f)(void *arg);
@@ -208,6 +206,9 @@ aligned_t *qthread_task_counter(void);             /* task_counter CAS reference
 # define qthread_yield()      do { COMPILER_FENCE; qthread_yield_(0); } while (0)
 # define qthread_yield_near() do { COMPILER_FENCE; qthread_yield_(1); } while (0)
 void qthread_yield_(int);
+
+/* this function flushes the spawncache */
+void qthread_flushsc(void);
 
 /* these are the functions for generating a new qthread.
  *
@@ -314,10 +315,11 @@ int qthread_debuglevel(int);
 
 /* these are accessor functions for use by the qthreads to retrieve information
  * about themselves */
-# define QTHREAD_NULL_TASK_ID    ((unsigned)-1)
+# define QTHREAD_NULL_TASK_ID    UINT_MAX
 # define QTHREAD_NON_TASK_ID     0
 # define QTHREAD_DEFAULT_TEAM_ID 1
 # define QTHREAD_NON_TEAM_ID     0
+# define QTHREAD_NULL_TEAM_ID    UINT_MAX
 unsigned              qthread_id(void);
 qthread_shepherd_id_t qthread_shep(void);
 qthread_worker_id_t   qthread_worker(qthread_shepherd_id_t *s);
@@ -369,15 +371,24 @@ enum introspective_state {
     TOTAL_SHEPHERDS,
     ACTIVE_WORKERS,
     TOTAL_WORKERS,
+    CURRENT_SHEPHERD,
     CURRENT_WORKER,
+    CURRENT_UNIQUE_WORKER,
     CURRENT_TEAM,
     PARENT_TEAM
 };
 size_t qthread_readstate(const enum introspective_state type);
 
 /* Task team interface. */
-qt_team_id_t qt_team_id(void);
-qt_team_id_t qt_team_parent_id(void);
+typedef enum qt_team_critical_section_e {
+    BEGIN,
+    END
+} qt_team_critical_section_t;
+
+unsigned int qt_team_id(void);
+unsigned int qt_team_parent_id(void);
+void qt_team_critical_section(qt_team_critical_section_t boundary);
+void qt_team_eureka(void);
 # ifdef TEAM_PROFILE
 void qt_team_profile(void);
 # endif

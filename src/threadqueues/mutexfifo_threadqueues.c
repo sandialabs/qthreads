@@ -18,6 +18,7 @@
 #include "qthread_prefetch.h"
 #include "qt_threadqueues.h"
 #include "qt_debug.h"
+#include "qt_eurekas.h"
 
 /* Data Structures */
 struct _qt_threadqueue_node {
@@ -36,24 +37,6 @@ struct _qt_threadqueue {
     saligned_t advisory_queuelen;
 } /* qt_threadqueue_t */;
 
-#if defined(AKP_DEBUG) && AKP_DEBUG
-/* function added to ease debugging and tuning around queue critical sections - 4/1/11 AKP */
-
-void qt_spin_exclusive_lock(qt_spin_exclusive_t *l)
-{
-    uint64_t val = qthread_incr(&l->enter, 1);
-
-    while (val != l->exit) {} // spin waiting for my turn
-}
-
-void qt_spin_exclusive_unlock(qt_spin_exclusive_t *l)
-{
-    qthread_incr(&l->exit, 1); // allow next guy's turn
-}
-
-/* end of added functions - AKP */
-#endif /* if AKP_DEBUG */
-
 /* Memory Management */
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
 # define ALLOC_THREADQUEUE() (qt_threadqueue_t *)MALLOC(sizeof(qt_threadqueue_t))
@@ -69,17 +52,17 @@ qt_threadqueue_pools_t generic_threadqueue_pools;
 # define FREE_TQNODE(t)      qt_mpool_free(generic_threadqueue_pools.nodes, t)
 
 static void qt_threadqueue_subsystem_shutdown(void)
-{
+{   /*{{{*/
     qt_mpool_destroy(generic_threadqueue_pools.nodes);
     qt_mpool_destroy(generic_threadqueue_pools.queues);
-}
+} /*}}}*/
 
 void INTERNAL qt_threadqueue_subsystem_init(void)
-{
+{   /*{{{*/
     generic_threadqueue_pools.nodes  = qt_mpool_create(sizeof(qt_threadqueue_node_t));
     generic_threadqueue_pools.queues = qt_mpool_create(sizeof(qt_threadqueue_t));
     qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
-}
+} /*}}}*/
 
 #endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 
@@ -133,6 +116,7 @@ static qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q)
     qt_threadqueue_node_t *node, *new_head;
 
     assert(q != NULL);
+    qt_eureka_disable();
     QTHREAD_FASTLOCK_LOCK(&q->head_lock);
     {
         node     = q->head;
@@ -146,6 +130,8 @@ static qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q)
     if (p != NULL) {
         Q_PREFETCH(&(p->thread_state));
         (void)qthread_internal_incr_s(&q->advisory_queuelen, &q->advisory_queuelen_m, -1);
+    } else {
+        qt_eureka_enable();
     }
     return p;
 }                                      /*}}} */
@@ -166,16 +152,23 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict pq,
                                             qt_threadqueue_t *restrict         q,
                                             qthread_t *restrict                t)
-{
+{   /*{{{*/
     return 0;
-}
+} /*}}}*/
 
 int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *restrict q,
                                                     qthread_t *restrict                t)
-{
+{   /*{{{*/
     return 0;
-}
+} /*}}}*/
 
+void INTERNAL qt_threadqueue_enqueue_cache(qt_threadqueue_t         *q,
+                                           qt_threadqueue_private_t *cache)
+{}
+
+void INTERNAL qt_threadqueue_private_filter(qt_threadqueue_private_t *restrict c,
+                                            qt_threadqueue_filter_f            f)
+{}
 #endif /* ifdef QTHREAD_USE_SPAWNCACHE */
 
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
@@ -211,9 +204,61 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 {                                      /*{{{ */
     qthread_t *p = NULL;
 
-    while ((p = qt_threadqueue_dequeue(q)) == NULL) {}
+    while ((p = qt_threadqueue_dequeue(q)) == NULL) SPINLOCK_BODY();
     return p;
 }                                      /*}}} */
+
+/* walk queue removing all tasks matching this description */
+void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
+                                    qt_threadqueue_filter_f f)
+{
+    QTHREAD_FASTLOCK_LOCK(&q->head_lock);
+    {
+        qt_threadqueue_node_t  *curs = q->head->next;
+        qt_threadqueue_node_t **ptr  = &q->head->next;
+
+        while (curs) {
+            qthread_t *t = curs->value;
+            switch(f(t)) {
+                case 0: // ignore, move on
+                    ptr  = &curs->next;
+                    curs = curs->next;
+                    break;
+                case 1: // ignore, stop looking
+                    curs = NULL;
+                    continue;
+                case 2: // remove, move on
+                {
+                    qt_threadqueue_node_t *tmp = curs;
+                    qthread_internal_assassinate(t);
+                    if (curs->next == NULL) {
+                        /* this is clever: since 'next' is the first field, its
+                         * address is the address of the entire structure */
+                        q->tail = (qt_threadqueue_node_t *)ptr;
+                    }
+                    *ptr = curs->next;
+                    curs = curs->next;
+                    FREE_TQNODE(tmp);
+                    break;
+                }
+                case 3: // remove, stop looking
+                {
+                    qthread_internal_assassinate(t);
+                    if (curs->next == NULL) {
+                        /* this is clever: since 'next' is the first field, its
+                         * address is the address of the entire structure */
+                        q->tail = (qt_threadqueue_node_t *)ptr;
+                    }
+                    *ptr = curs->next;
+                    FREE_TQNODE(curs);
+                    curs = NULL;
+                    continue;
+                }
+            }
+        }
+    }
+    QTHREAD_FASTLOCK_UNLOCK(&q->head_lock);
+}
 
 /* some place-holder functions */
 void INTERNAL qthread_steal_stat(void)

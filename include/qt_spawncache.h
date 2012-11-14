@@ -18,8 +18,11 @@ typedef struct _qt_threadqueue_private {
 void INTERNAL                      qt_spawncache_init(void);
 qt_threadqueue_private_t INTERNAL *qt_init_local_spawncache(void);
 qt_threadqueue_private_t INTERNAL *qt_spawncache_get(void);
-int INTERNAL                       qt_spawncache_spawn(qthread_t *t, qt_threadqueue_t *q);
 int INTERNAL                       qt_spawncache_yield(qthread_t *t);
+int INTERNAL                       qt_spawncache_flush(qt_threadqueue_t *q);
+void INTERNAL                      qt_spawncache_filter(qt_threadqueue_filter_f f);
+int INTERNAL                       qt_spawncache_spawn(qthread_t        *t,
+                                                       qt_threadqueue_t *q);
 
 #endif // ifndef QT_SPAWNCACHE_H
 /* vim:set expandtab: */

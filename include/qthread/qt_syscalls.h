@@ -7,6 +7,10 @@
 #include <sys/resource.h> /* for struct rusage */
 #include <poll.h>         /* for struct pollfd and nfds_t */
 
+#include <qthread/macros.h>
+
+Q_STARTCXX /* */
+
 int qt_accept(int                       socket,
               struct sockaddr *restrict address,
               socklen_t *restrict       address_len);
@@ -53,6 +57,8 @@ ssize_t qt_write(int         filedes,
 # define wait4(p, s, o, r)     qt_wait4((p), (s), (o), (r))
 # define write(f, b, n)        qt_write((f), (b), (n))
 #endif // ifdef USE_HEADER_SYSCALLS
+
+Q_ENDCXX /* */
 
 #endif // ifndef QT_SYSCALLS_H
 /* vim:set expandtab: */

@@ -158,6 +158,7 @@ AC_ARG_ENABLE([debug],
                                Other available areas are:
                                affinity,
                                barrier,
+                               chapel,
                                core,
                                febs,
                                futurelib,
@@ -175,7 +176,7 @@ AC_ARG_ENABLE([debug],
                                threadqueues,
                                xomp])],
               [AS_IF([test "x$enable_debug" = "xyes"],
-                     [enable_debug="affinity,threadqueues,thread,shepherd,core,team,mpool,syscalls,febs,syncvars,io,loops,barrier,qarray,rcrtool,futurelib,xomp,multinode"])
+                     [enable_debug="affinity,threadqueues,thread,shepherd,core,team,mpool,syscalls,febs,syncvars,io,loops,barrier,qarray,rcrtool,futurelib,xomp,multinode,chapel"])
                for area in $(echo "$enable_debug" | sed 's/,/ /g') ; do
                  case "$area" in
                      affinity) enable_debug_affinity=yes ;;
@@ -196,6 +197,7 @@ AC_ARG_ENABLE([debug],
                      futurelib) enable_debug_futurelib=yes ;;
                      xomp) enable_debug_xomp=yes ;;
                      multinode) enable_debug_multinode=yes ;;
+                     chapel) enable_debug_chapel=yes ;;
                      *) AC_MSG_ERROR([Unrecognized debug category ($area).]) ;;
                  esac
                done],
@@ -205,19 +207,21 @@ AC_ARG_ENABLE([profiling],
               [AS_HELP_STRING([--enable-profiling=[[areas]]],
                               [turn on the specified comma-separated types of
                                profiling. Available types are: shepherd, lock,
-                               steal, cas_steal, threadc, sincs, and teams. Shepherd
-                               profiling counts the wall-clock time that each
-                               shepherd spends idle. FEB profiling counts the
-                               time spent waiting for FEB states. Steal profiling
-                               counts the amount of workstealing that was done
-                               (only applies to multithreaded shepherds).
-                               Cas_steal profiling counts how many CAS failures
-                               happen in nottingham steal operations. Threadc
-                               counts the number of threads spawned and the
-                               number of threads available to run
-                               concurrently. Sincs profiling reports sinc
-                               counter usage data. Teams profiling reports team
-                               counter usage data.])],
+                               steal, cas_steal, threadc, sincs, teams, spr, and
+                               chapel. Shepherd profiling counts the wall-clock 
+                               time that each shepherd spends idle. FEB
+                               profiling counts the time spent waiting for FEB 
+                               states. Steal profiling counts the amount of 
+                               workstealing that was done (only applies to 
+                               multithreaded shepherds). Cas_steal profiling
+                               counts how many CAS failures happen in nottingham
+                               steal operations. Threadc counts the number of
+                               threads spawned and the number of threads
+                               available to run concurrently. Sincs profiling
+                               reports sinc counter usage data. Teams profiling
+                               reports team counter usage data. SPR profiling
+                               reports communication information. Chapel
+                               profiling reports Chapel interface usage.])],
               [for area in $(echo "$enable_profiling" | sed 's/,/ /g') ; do
                  case "$area" in
                    shepherd)
@@ -240,6 +244,13 @@ AC_ARG_ENABLE([profiling],
                      ;;
                    teams)
                      enable_teams_profiling=yes
+                     ;;
+                   spr)
+                     enable_spr_profiling=yes
+                     ;;
+                   chapel)
+                     enable_chapel_profiling=yes
+                     
                  esac
                done],
               [enable_profiling=none])
@@ -443,8 +454,14 @@ AM_PROG_AS
 AC_PROG_INSTALL
 AC_PROG_LN_S
 AC_PROG_MAKE_SET
-LT_INIT
+
+dnl This is to provide some backward libtool compatibility.
+dnl The weird formatting is to avoid spurious warnings from libtoolize
+m4_ifdef([LT_INIT],[
+LT_INIT],[
+AC_PROG_LIBTOOL])
 AC_SUBST([LIBTOOL_DEPS])
+
 AM_PROG_CC_C_O
 
 AS_IF([test "x$enable_picky" = xyes],
@@ -787,8 +804,8 @@ AS_IF([test "x$with_scheduler" != "x"],
            AS_IF([test "x$enable_multithreaded_shepherds" != "xno"],
                  [enable_multithreaded_shepherds=yes],
                  [AC_MSG_ERROR([The $with_scheduler scheduler requires multithreaded shepherds.])])
-           AS_IF([test "x$qthread_cv_atomic_CAS128" != xyes],
-                 [AC_MSG_ERROR([Nottingham requires a 128-bit CAS.])])
+           AS_IF([test "x$qthread_cv_atomic_CAS128" != "xyes"],
+                 [AC_MSG_ERROR([The $with_scheduler scheduler requires a 128-bit CAS.])])
            ;;
          loxley)
            AS_IF([test "x$enable_multithreaded_shepherds" != "xno"],
@@ -849,6 +866,14 @@ AS_IF([test "x$enable_sincs_profiling" = xyes],
 AS_IF([test "x$enable_teams_profiling" = xyes],
       [AC_DEFINE([TEAM_PROFILE], [1], [Support dynamic profile of teams infomation])],
       [enable_teams_profiling="no"])
+
+AS_IF([test "x$enable_spr_profiling" = xyes],
+      [AC_DEFINE([SPR_PROFILE], [1], [Support dynamic profile of SPR infomation])],
+      [enable_spr_profiling="no"])
+
+AS_IF([test "x$enable_chapel_profiling" = xyes],
+      [AC_DEFINE([CHAPEL_PROFILE], [1], [Support dynamic profile of Chapel infomation])],
+      [enable_chapel_profiling="no"])
 
 AS_IF([test "x$enable_cas_steal_profiling" = xyes],
       [AC_DEFINE([CAS_STEAL_PROFILE], [1], [Support dynamic profile of CAS steal infomation])],
@@ -926,6 +951,8 @@ AS_IF([test "x$enable_debug" = x -o "x$enable_debug" = xno],
                       [QTHREAD_DEBUG_XOMP], [prints out xomp debugging information at runtime])
        QT_COND_DEFINE([$enable_debug_multinode],
                       [QTHREAD_DEBUG_MULTINODE], [prints out multinode debugging information at runtime])
+       QT_COND_DEFINE([$enable_debug_chapel],
+                      [QTHREAD_DEBUG_CHAPEL], [prints out chapel interface debugging information at runtime])
        ])
 
 AS_IF([test "x$enable_rcrtool" = "xyes"],

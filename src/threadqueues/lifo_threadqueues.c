@@ -19,6 +19,7 @@
 #include "qt_atomics.h"
 #include "qthread_innards.h" /* for qthread_internal_cleanup_early() */
 #include "qt_debug.h"
+#include "qt_eurekas.h"
 
 /* Note: this queue is SAFE to use with multiple de-queuers, with the caveat
  * that if you have multiple dequeuer's, you'll need to solve the ABA problem.
@@ -157,6 +158,13 @@ int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *re
     return 0;
 } /*}}}*/
 
+void INTERNAL qt_threadqueue_enqueue_cache(qt_threadqueue_t         *q,
+                                           qt_threadqueue_private_t *cache)
+{}
+
+void INTERNAL qt_threadqueue_private_filter(qt_threadqueue_private_t *restrict c,
+                                            qt_threadqueue_filter_f            f)
+{}
 #endif /* ifdef QTHREAD_USE_SPAWNCACHE */
 
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
@@ -244,10 +252,12 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                                             qt_threadqueue_private_t *QUNUSED(qc),
                                             uint_fast8_t              QUNUSED(active))
 {   /*{{{*/
+    qt_eureka_disable();
     qthread_t *retval = qt_threadqueue_dequeue(q);
 
     qthread_debug(THREADQUEUE_CALLS, "q(%p)\n", q);
     if (retval == NULL) {
+        qt_eureka_enable();
         while (q->stack == NULL) {
 #ifndef QTHREAD_CONDWAIT_BLOCKING_QUEUE
             SPINLOCK_BODY();
@@ -262,13 +272,52 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
             }
 #endif      /* ifdef USE_HARD_POLLING */
         }
+        qt_eureka_disable();
         retval = qt_threadqueue_dequeue(q);
     }
     assert(retval);
-    assert(retval->next == NULL);
     qthread_debug(THREADQUEUE_BEHAVIOR, "found thread %u (%p); q(%p)\n", retval->thread_id, retval, q);
     return retval;
 } /*}}}*/
+
+/* walk queue removing all tasks matching this description */
+void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
+                                    qt_threadqueue_filter_f f)
+{
+    qt_threadqueue_node_t *curs, **ptr;
+
+    assert(q != NULL);
+
+    curs = q->stack;
+    ptr  = &q->stack;
+    while (curs) {
+        qthread_t *t = curs->thread;
+        switch (f(t)) {
+            case 0: // ignore, move on
+                ptr  = &curs->next;
+                curs = curs->next;
+                break;
+            case 1: // ignore, stop looking
+                return;
+
+            case 2: // remove, move on
+            {
+                qt_threadqueue_node_t *freeme = curs;
+
+                qthread_internal_assassinate(t);
+                *ptr = curs->next;
+                curs = curs->next;
+                FREE_TQNODE(freeme);
+                break;
+            }
+            case 3: // remove, stop looking;
+                qthread_internal_assassinate(t);
+                *ptr = curs->next;
+                FREE_TQNODE(curs);
+                return;
+        }
+    }
+}
 
 /* some place-holder functions */
 void INTERNAL qthread_steal_stat(void)

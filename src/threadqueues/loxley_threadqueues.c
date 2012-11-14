@@ -19,6 +19,11 @@
 #include "qt_envariables.h"
 #include "qt_threadqueue_stack.h"
 
+#ifdef QTHREAD_RCRTOOL
+void saveEnergy(int64_t i);
+void resetEnergy(int64_t i);
+#endif
+
 #ifdef STEAL_PROFILE
 # define steal_profile_increment(shepherd, field) qthread_incr(&(shepherd->field), 1)
 #else
@@ -248,6 +253,11 @@ qthread_t static QINLINE *qt_threadqueue_dequeue_helper(qt_threadqueue_t *q)
     return(t);
 }
 
+#ifdef QTHREAD_RCRTOOL
+extern int powerOff;
+extern int threadsPowerActivePerSocket;
+#endif
+
 /* dequeue at tail, unlike original qthreads implementation */
 qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                                             qt_threadqueue_private_t *QUNUSED(qc),
@@ -258,11 +268,38 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
     qthread_t              *t     = NULL, *retainer;
 
     for(;;) {
+
+#ifdef QTHREAD_RCRTOOL
+        // This code will only work with Intel SandyBridge (and newer??) systems
+        //   because of the MSR manipulation
+        if ((id >= threadsPowerActivePerSocket) && powerOff) {   
+	  int sheps = qthread_num_shepherds();
+	  //printf("\t\tSlow Thread %d - %d\n",id*sheps+qthread_shep(), id);
+	  saveEnergy(id*sheps+qthread_shep());
+	  while(powerOff) {
+	    SPINLOCK_BODY();
+	  }
+	  resetEnergy(id*sheps+qthread_shep());
+	  //printf("\t\tRelease id - %d\n", id);
+	}
+#endif
+        qthread_worker_t   *worker = (qthread_worker_t *)TLS_GET(shepherd_structs);
+	if (!worker->active) {
+#ifdef QTHREAD_RCRTOOL
+	  saveEnergy(id);
+#endif
+	  while (!worker->active) {
+	    SPINLOCK_BODY();
+	  }
+#ifdef QTHREAD_RCRTOOL
+	  resetEnergy(id);
+#endif
+	}
         if (!local->stack.empty) {
             QTHREAD_FASTLOCK_LOCK(&local->lock);
             t = qt_stack_pop(&local->stack);
             QTHREAD_FASTLOCK_UNLOCK(&local->lock);
-            if (t != NULL) { return(t); }
+              if (t != NULL) { return(t); }
         }
         if (QTHREAD_TRYLOCK_TRY(&q->trylock)) {
             t = qt_stack_pop(&q->shared_stack);
@@ -530,4 +567,20 @@ void INTERNAL qthread_steal_stat(void)
 
 #endif  /* ifdef STEAL_PROFILE */
 
+void qt_threadqueue_filter(qt_threadqueue_t       *q,
+                                    qt_threadqueue_filter_f f)
+{
+  printf("filter called");
+}
+
+void qt_threadqueue_private_filter(qt_threadqueue_private_t *restrict c,
+                                            qt_threadqueue_filter_f            f)
+{
+  printf("priv filter called");
+}
+void INTERNAL qt_threadqueue_enqueue_cache(qt_threadqueue_t         *q,
+                                           qt_threadqueue_private_t *cache)
+{
+  printf("enqueue cache called");
+}
 /* vim:set expandtab: */

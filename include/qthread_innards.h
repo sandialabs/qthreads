@@ -228,5 +228,8 @@ extern int rcrSchedulingOff;
 /* this is a function to check the input preconds for a nascent thread. */
 int INTERNAL qthread_check_precond(qthread_t *t);
 
+/* Unexpected task destruction/cleanup */
+void INTERNAL qthread_internal_assassinate(qthread_t *t);
+
 #endif // ifndef QTHREAD_INNARDS_H
 /* vim:set expandtab: */

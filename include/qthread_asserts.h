@@ -28,7 +28,16 @@
 # undef qgoto
 #endif
 
+/* qassert() is an assert() where some function must be called regardless of
+ * whather sanity assertions are enabled.
+ *
+ * tassert() is an assert() that can be called from a signal handler (and so
+ * causes a segfault or an illegal instruction rather than printing an error
+ * and sending a signal to itself)
+ */
+
 #ifdef QTHREAD_NO_ASSERTS
+# define ASSERT_ONLY(x)
 # define qassert(op, val)    op
 # define qassertnot(op, val) op
 # ifdef assert
@@ -40,7 +49,9 @@
 # define qassert_goto(assertion, tag)   do { if (!(assertion)) { goto tag; } } while (0)
 # define qassert_aligned(variable, alignment)
 # define qgoto(tag) tag :
+# define tassert(foo)
 #else // ifdef QTHREAD_NO_ASSERTS
+# define ASSERT_ONLY(x)                       x
 # define qassert(op, val)                     assert(op == val)
 # define qassertnot(op, val)                  assert(op != val)
 # define qassert_ret(assertion, retval)       assert(assertion)
@@ -51,6 +62,7 @@
         assert((((uintptr_t)a) & (alignment - 1)) == 0); \
 } while (0)
 # define qgoto(tag)
+# define tassert(foo) do { if (!(foo)) { QTHREAD_TRAP(); } } while (0)
 #endif // ifdef QTHREAD_NO_ASSERTS
 
 /* vim:set expandtab: */
