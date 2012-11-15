@@ -1565,6 +1565,8 @@ void API_FUNC qthread_finalize(void)
     }
 #endif
 
+    qt_internal_teams_reclaim();
+
     qthread_shepherd_t *shep0 = &(qlib->shepherds[0]);
 
 #ifdef QTHREAD_RCRTOOL_STAT

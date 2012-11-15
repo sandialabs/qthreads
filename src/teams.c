@@ -64,8 +64,8 @@ void INTERNAL qt_internal_teams_init(void)
     qthread_internal_cleanup_late(qt_internal_teams_destroy);
 } /*}}}*/
 
-static void qt_internal_teams_shutdown(void)
-{   /*{{{*/
+void INTERNAL qt_internal_teams_reclaim(void)
+{
     // Wait for all team structures to be reclaimed.
     while (qlib->team_count) {
 #ifdef QTHREAD_DEBUG
@@ -78,6 +78,10 @@ static void qt_internal_teams_shutdown(void)
         }
 #endif
     }
+}
+
+static void qt_internal_teams_shutdown(void)
+{   /*{{{*/
 #ifdef TEAM_PROFILE
     qt_team_profile();
 #endif

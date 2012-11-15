@@ -44,6 +44,7 @@ typedef struct qt_team_s {
 } qt_team_t;
 
 void INTERNAL qt_internal_teams_init(void);
+void INTERNAL qt_internal_teams_reclaim(void);
 void INTERNAL qt_internal_teamfinish(qt_team_t   *team,
                                      uint_fast8_t flags);
 qt_team_t INTERNAL *qt_internal_team_new(void *restrict      ret,
