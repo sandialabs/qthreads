@@ -246,11 +246,11 @@ void API_FUNC qt_team_eureka(void)
 #endif
 
     assert(qthread_library_initialized);
-    qassert_ret(qlib != NULL, QTHREAD_NOT_ALLOWED);
+    qassert_retvoid(qlib != NULL);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    qassert_ret(wkr != NULL, QTHREAD_NOT_ALLOWED);
+    qassert_retvoid(wkr != NULL);
 #endif
-    qassert_ret(self && self->team, QTHREAD_NOT_ALLOWED);
+    qassert_retvoid(self && self->team);
     my_team = self->team;
     /* calling a eureka from outside qthreads makes no sense */
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
