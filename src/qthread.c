@@ -2296,6 +2296,29 @@ extern void *qthread_fence2;
     __asm__ __volatile__ (# name ":")
 #endif /* ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING */
 
+void qthread_call_method(qthread_f f, void*arg, void* ret, uint16_t flags){
+    if (ret) {
+        if (flags & QTHREAD_RET_IS_SINC) {
+            if (flags & QTHREAD_RET_IS_VOID_SINC) {
+                (f)(arg);
+                qt_sinc_submit((qt_sinc_t *)ret, NULL);
+            } else {
+                aligned_t retval = (f)(arg);
+                qt_sinc_submit((qt_sinc_t *)ret, &retval);
+            }
+        } else if (flags & QTHREAD_RET_IS_SYNCVAR) {
+            /* this should avoid problems with irresponsible return values */
+            uint64_t retval = INT64TOINT60((f)(arg));
+            qassert(qthread_syncvar_writeEF_const((syncvar_t *)ret, retval), QTHREAD_SUCCESS);
+        } else {
+            aligned_t retval = (f)(arg);
+            qassert(qthread_writeEF_const((aligned_t *)ret, retval), QTHREAD_SUCCESS);
+        }
+    }
+    else
+        (f)(arg);
+}
+
 /* this function runs a thread until it completes or yields */
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
 static void qthread_wrapper(unsigned int high,
