@@ -28,7 +28,8 @@ Q_STARTCXX /* */
 typedef unsigned short qthread_shepherd_id_t;	/* doubt we'll run more than 65k shepherds */
 
 /* for convenient arguments to qthread_fork */
-typedef aligned_t(*qthread_f) (void *arg);
+typedef aligned_t(*qthread_f)      (void *arg);
+typedef void     (*qthread_agg_f)  (int count, qthread_f *f, void **arg, void **ret, uint16_t flags);
 
 /* While this function is *required* for UNIX, in a PIM environment, it serves
  * primarily to prove that qthreads are being used (thus the quickPrint call

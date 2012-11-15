@@ -71,6 +71,10 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h
 void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
                                               qt_threadqueue_node_t *first);
 
+qthread_t INTERNAL *qt_init_agg_task(void);
+void INTERNAL qt_keep_adding_agg_task(qthread_t *agg_task, int max_t, int *curr_cost, void *q, int lock);
+void INTERNAL qt_add_first_agg_task(qthread_t *agg_task, int *curr_cost, qt_threadqueue_node_t *node);
+
 #if defined(AKP_DEBUG) && AKP_DEBUG
 /* function added to ease debugging and tuning around queue critical sections - 4/1/11 AKP */
 
@@ -88,6 +92,42 @@ void qt_spin_exclusive_unlock(qt_spin_exclusive_t *l)
 
 /* end of added functions - AKP */
 #endif /* if AKP_DEBUG */
+
+/*FIXME: Cannot use pools for allcations of variable size */
+# define ALLOC_EXTRA(size) malloc(size)
+# define FREE_EXTRA(t)     free(t)
+#define DIV_FACTOR 4
+#define MAX_ABS_AGG 64
+void      **agged_tasks_arg = NULL;
+void      **agged_tasks_ret = NULL;
+qthread_f **agged_tasks_f = NULL;
+
+int total_num_workers;
+int wps;
+
+static void init_agged_tasks(void){
+    int i;
+    total_num_workers = qthread_readstate(TOTAL_WORKERS);
+    wps = total_num_workers/qthread_readstate(TOTAL_SHEPHERDS);
+    //printf("Using total: %d, wps %d\n", total_num_workers, wps);
+    
+    agged_tasks_arg = (void **) ALLOC_EXTRA ( total_num_workers * sizeof(void*) * 3);
+    agged_tasks_ret = agged_tasks_arg + total_num_workers;
+    agged_tasks_f   = (qthread_f**)(agged_tasks_ret + total_num_workers);
+    
+    int dim_per_worker = (sizeof(void*) * 2 + sizeof(qthread_f)) * MAX_ABS_AGG + sizeof(int);
+    char *total_mem = ALLOC_EXTRA(dim_per_worker *total_num_workers);
+    for(i=0; i<total_num_workers; i++){
+        agged_tasks_arg[i] = (void*)(total_mem + dim_per_worker*i); 
+        agged_tasks_ret[i] = (void*)(total_mem + dim_per_worker*i + MAX_ABS_AGG*sizeof(void*)); 
+        agged_tasks_f[i] = (void*)(total_mem + dim_per_worker*i + 2*MAX_ABS_AGG*sizeof(void*)); 
+    }
+}
+
+static void free_agged_tasks(void){
+    FREE_EXTRA(agged_tasks_arg[0]);
+    FREE_EXTRA(agged_tasks_arg);
+}
 
 #ifdef QTHREAD_PARANOIA
 static inline void sanity_check_queue(qt_threadqueue_t *q)
@@ -119,9 +159,15 @@ static inline void sanity_check_queue(qt_threadqueue_t *q)
 # define FREE_THREADQUEUE(t) FREE(t, sizeof(qt_threadqueue_t))
 # define ALLOC_TQNODE()      (qt_threadqueue_node_t *)MALLOC(sizeof(qt_threadqueue_node_t))
 # define FREE_TQNODE(t)      FREE(t, sizeof(qt_threadqueue_node_t))
+static void qt_threadqueue_subsystem_shutdown(void)
+{
+    free_agged_tasks();
+}
 void INTERNAL qt_threadqueue_subsystem_init(void)
 {
+    init_agged_tasks();
     steal_chunksize = qt_internal_get_env_num("STEAL_CHUNK", 0, 0);
+    qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
 }
 
 #else /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
@@ -140,10 +186,12 @@ static void qt_threadqueue_subsystem_shutdown(void)
 {   /*{{{*/
     qt_mpool_destroy(generic_threadqueue_pools.nodes);
     qt_mpool_destroy(generic_threadqueue_pools.queues);
+    free_agged_tasks();
 } /*}}}*/
 
 void INTERNAL qt_threadqueue_subsystem_init(void)
 {   /*{{{*/
+    init_agged_tasks();
     generic_threadqueue_pools.queues = qt_mpool_create_aligned(sizeof(qt_threadqueue_t),
                                                                qthread_cacheline());
     generic_threadqueue_pools.nodes = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t),
@@ -174,7 +222,7 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 } /*}}}*/
 
 /*****************************************/
-/* functions to manage the thread queues */
+/* functionsanage the thread queues */
 /*****************************************/
 
 static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_shepherd);
@@ -218,7 +266,7 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
                 } else {
                     q->tail->next = NULL;
                 }
-                t = node->value;
+          t = node->value;
                 FREE_TQNODE(node);
                 FREE_QTHREAD(t);
             }
@@ -406,14 +454,241 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
     QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
 } /*}}}*/
 
+#define QTHREAD_TASK_IS_AGGREGABLE(f) (0 && \
+              (f & QTHREAD_SIMPLE) && !(f & QTHREAD_HAS_ARGCOPY) && \
+             !(f & QTHREAD_BIG_STRUCT) && \
+             !(f & QTHREAD_FUTURE) && !(f & QTHREAD_REAL_MCCOY)  && \
+             !(f & QTHREAD_AGGREGATED) )
+               //&& (f & QTHREAD_AGGREGABLE) \
+              ) 
+              //(f & QTHREAD_AGGREGABLE)
+
+qthread_t INTERNAL *qt_init_agg_task() //partly a duplicate from qthread.c
+{
+    qthread_t *t = ALLOC_QTHREAD();
+#ifdef QTHREAD_NONLAZY_THREADIDS
+    /* give the thread an ID number */
+    t->thread_id =
+        qthread_internal_incr(&(qlib->max_thread_id),
+                              &qlib->max_thread_id_lock, 1);
+    if (QTHREAD_UNLIKELY(t->thread_id == QTHREAD_NULL_TASK_ID)) {
+        /* yes, this is wrapping around, but... thread_id should be prevented from being NULL */
+        t->thread_id = qthread_internal_incr(&(qlib->max_thread_id),
+                                             &qlib->max_thread_id_lock, 2);
+    } else if (QTHREAD_UNLIKELY(t->thread_id == QTHREAD_NON_TASK_ID)) {
+        /* yes, this is wrapping around, but... thread_id should be prevented from being NON */
+        t->thread_id = qthread_internal_incr(&(qlib->max_thread_id),
+                                             &qlib->max_thread_id_lock, 1);
+    }
+#else /* ifdef QTHREAD_NONLAZY_THREADIDS */
+    t->thread_id = QTHREAD_NON_TASK_ID;
+#endif /* ifdef QTHREAD_NONLAZY_THREADIDS */
+
+    t->thread_state    = QTHREAD_STATE_NEW;
+    t->flags           = 0;
+    t->target_shepherd = NO_SHEPHERD;
+    t->team            = NULL;
+    t->f               = (qthread_f) qlib->agg_f; //changed function pointer type!!!
+    t->arg             = NULL; //set later
+    t->ret             = 0;
+    t->rdata           = NULL;
+    t->preconds         = NULL; //use for list of f and arg
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+    t->task_counter      = 0;
+    t->parent            = NULL;
+    t->prev_thread_state = QTHREAD_STATE_ILLEGAL;
+#endif
+    t->flags &= ~QTHREAD_HAS_ARGCOPY;
+    t->flags |= QTHREAD_SIMPLE; //will remain a simple task if all tasks it batches are simple.
+    t->flags |= QTHREAD_AGGREGATED;
+
+    int loc_id = qthread_worker(NULL);
+    t->arg = agged_tasks_arg[loc_id];
+    t->ret = agged_tasks_ret[loc_id];
+    t->preconds = agged_tasks_f[loc_id];
+    return t;
+}
+
+void INTERNAL qt_keep_adding_agg_task(qthread_t* agg_task, int max_t, int *curr_cost, void *q, int lock){
+    qt_threadqueue_node_t *node = NULL;
+    qthread_t *t = NULL;
+    int count = ((int*)agg_task->preconds)[0];
+    qthread_f *list_of_f = (qthread_f*) ( & (((int*)agg_task->preconds)[1]) );
+    void **list_of_farg = (void**)agg_task->arg;
+    void **list_of_fret = (void**)agg_task->ret;
+    int local_cost = *curr_cost;
+    //never getting more than what was initially allocated!
+
+    qt_threadqueue_node_t **head_addr, *head_l = NULL;
+    qt_threadqueue_node_t **tail_addr, *tail_l = NULL;
+    long *length, *stealable, len_l = 0, ste_l = 0;
+    if(lock){
+        qt_threadqueue_t* public_q = (qt_threadqueue_t*)q;
+        head_addr = &(public_q->head);
+        tail_addr = &(public_q->tail);
+        length    = &(public_q->qlength);
+        assert(*length > 0);
+        stealable = &(public_q->qlength_stealable);
+        int stop_adding = 0;
+        if(count > 0){
+            int local_max_t = (count + *length)/qthread_readstate(TOTAL_WORKERS)/DIV_FACTOR;
+            local_max_t = (local_max_t > MAX_ABS_AGG ? MAX_ABS_AGG : local_max_t); 
+            if(local_max_t < max_t)
+                max_t = local_max_t;
+            if(max_t <= count)
+                stop_adding = 1;
+        }
+
+        if(!stop_adding){ //keep some tasks
+            head_l = *head_addr;
+            tail_l = *tail_addr;
+            if(tail_l != NULL){
+                int max_allowed = max_t - count;
+                while(QTHREAD_TASK_IS_AGGREGABLE(tail_l->value->flags) && (len_l<max_allowed) && tail_l != head_l){
+                    len_l ++;
+                    if (tail_l->stealable) ste_l++;
+                    tail_l = tail_l->prev;
+                }
+            }
+
+            if(tail_l == *tail_addr){ //didn't keep anything
+               assert(len_l == 0 && ste_l == 0);
+               head_l = NULL;
+               tail_l = NULL;
+            }
+            else if(head_l == tail_l){ //kept eveything
+                head_l = *head_addr;
+                tail_l = *tail_addr; 
+                *head_addr = *tail_addr = NULL; //empty q
+                *length = *stealable = 0;
+            }
+            else{ //tail_l is the new q tail, = first task which should remain there
+                //interchange tail_l and real tail using head_l as tmp
+                head_l = tail_l;
+                tail_l = *tail_addr;
+                *tail_addr = head_l;
+                //break links
+                head_l = (*tail_addr)->next;
+                head_l->prev = NULL;
+                (*tail_addr)->next = NULL;
+                *length -= len_l; 
+                assert(*length > 0);
+                *stealable-= ste_l;
+            }
+        }
+        QTHREAD_TRYLOCK_UNLOCK(&public_q->qlock);
+        //work on locally grabbed q from now on
+        head_addr = &head_l;
+        tail_addr = &tail_l;
+        length = &len_l;
+        stealable = &ste_l;
+    }
+    else{
+        qt_threadqueue_private_t* private_q = (qt_threadqueue_private_t*)q;
+        head_addr = &(private_q->head);
+        tail_addr = &(private_q->tail);
+        length    = &(private_q->qlength);
+        stealable = &(private_q->qlength_stealable);
+    }
+
+    uint16_t mask = QTHREAD_RET_IS_SINC | QTHREAD_RET_IS_VOID_SINC | QTHREAD_RET_IS_SYNCVAR;
+    while(*head_addr != NULL){
+        node = *tail_addr;
+        t = node->value;
+        if(!QTHREAD_TASK_IS_AGGREGABLE( t->flags )){
+            //printf("Found non-agg task, stopping\n");
+            break;
+        }
+        
+        if( (t->flags & mask) != (agg_task->flags & mask) )
+        {
+            //printf("Found task with different return value, stopping\n");
+            break;
+        }
+
+        list_of_f[count] = t->f;
+        list_of_farg[count] = t->arg;
+        local_cost = (qlib->agg_cost)(count, list_of_f, list_of_farg);
+        if(local_cost < qlib->max_c){
+            //cost ok => remove task from q;
+            *tail_addr = node->prev;
+            if (*tail_addr == NULL) {
+                *head_addr = NULL;
+            } else {
+                (*tail_addr)->next = NULL;
+            }
+            *length = *length-1;
+            assert(*length >= 0);
+            if (node->stealable) { *stealable = *stealable-1; }
+            //update the other info
+            list_of_fret[count] = t->ret;
+            count++;
+            assert (node->value->rdata == NULL);
+            qthread_thread_free(t);
+            FREE_TQNODE(node);
+         }
+         else
+             break;
+         if(count+1 > max_t){
+             //printf("Have enough tasks agg-ed(%d), stopping\n", count);
+             break;
+         }
+    }
+
+    *curr_cost = local_cost;
+    ((int*)agg_task->preconds)[0] = count;
+
+    if(lock){
+        qt_threadqueue_t* public_q = (qt_threadqueue_t*)q;
+        QTHREAD_TRYLOCK_LOCK(&public_q->qlock);
+        if(head_l != NULL){ //need to put tasks back into q
+            tail_addr = &(public_q->tail);
+            if(*tail_addr == NULL){
+                *tail_addr = tail_l;
+                assert(public_q->head == NULL);
+                public_q->head = head_l;
+            }
+            else{
+                (*tail_addr)->next = head_l;
+                head_l->prev = (*tail_addr);
+                (*tail_addr) = tail_l;
+            }
+            assert(public_q->qlength >= 0);
+            public_q->qlength += len_l;
+            assert(public_q->qlength > 0);
+            public_q->qlength_stealable += ste_l;
+        }
+    }
+}
+
+void INTERNAL qt_add_first_agg_task(qthread_t *agg_task, int *curr_cost, qt_threadqueue_node_t *node)
+{
+    int* count_addr = & ( ((int*)agg_task->preconds)[0] );
+    qthread_f* list_of_f = (qthread_f*)( &(((int*)agg_task->preconds)[1]) );
+    
+    *count_addr = 1;
+    list_of_f[0] = node->value->f;
+    ((void**)(agg_task->arg))[0] = node->value->arg;
+    ((void**)(agg_task->ret))[0] = node->value->ret;
+    //First task added defines the type of ret accepted inside this agg task
+    agg_task->flags |= ( (node->value->flags & QTHREAD_RET_IS_SINC) | \
+                         (node->value->flags & QTHREAD_RET_IS_VOID_SINC) | \
+                         (node->value->flags & QTHREAD_RET_IS_SYNCVAR) );
+    assert (node->value->rdata == NULL);
+    qthread_thread_free(node->value);
+    FREE_TQNODE(node);
+    *curr_cost = (qlib->agg_cost)(1, list_of_f, (void**)agg_task->arg);
+}
+
 /* dequeue at tail */
 qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                                             qt_threadqueue_private_t *qc,
                                             uint_fast8_t              active)
 {   /*{{{*/
     qthread_shepherd_t *my_shepherd = qthread_internal_getshep();
-    qthread_t          *t;
+    qthread_t          *t = qt_init_agg_task(); 
     qthread_worker_id_t worker_id = NO_WORKER;
+    int curr_cost, max_t, ret_agg_task;
 
     assert(q != NULL);
     assert(my_shepherd);
@@ -423,7 +698,8 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
     qt_eureka_disable();
     while (1) {
         qt_threadqueue_node_t *node = NULL;
-
+        curr_cost = 0; ret_agg_task = 0;
+        //printf("Total number of items: %d+%d\n", (qc?(qc->on_deck?(1+qc->qlength):0):0), q->qlength);
         if (qc && (qc->on_deck != NULL)) {
             assert(qc->tail == NULL || qc->tail->next == NULL);
             assert(qc->head == NULL || qc->head->prev == NULL);
@@ -431,6 +707,30 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
             qc->on_deck = NULL;
             assert(node->next == NULL);
             assert(node->prev == NULL);
+            if(QTHREAD_TASK_IS_AGGREGABLE(node->value->flags) && \
+               (max_t = (qc->qlength+1+q->qlength) / qthread_readstate(ACTIVE_WORKERS) / DIV_FACTOR)>1
+              ){
+                max_t = (max_t > MAX_ABS_AGG ? MAX_ABS_AGG : max_t);
+                assert(node->value->thread_state != QTHREAD_STATE_TERM_SHEP);
+                qt_add_first_agg_task(t, &curr_cost, node);
+                node = NULL;
+
+                int* count_addr = & ( ((int*)t->preconds)[0] );
+                qt_keep_adding_agg_task(t, max_t, &curr_cost, qc, 0);
+                if(qc->qlength == 0 && (curr_cost < qlib->max_c && *count_addr < max_t)){
+                    //cache empty and can still add, get more from q
+                    QTHREAD_TRYLOCK_LOCK(&q->qlock);
+                    if(q->head)
+                        qt_keep_adding_agg_task(t, max_t, &curr_cost, q, 1);
+                    QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
+                }
+                else ; //done, spill remaining cache
+                ret_agg_task = 1;
+            }
+            else{ //no agg, spill cache
+                //t = NULL;
+            }
+
             if (qc->qlength > 0) {
                 // Push remaining items onto the real queue
                 qt_threadqueue_node_t *first = qc->head;
@@ -438,7 +738,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                 assert(last->next == NULL);
                 assert(first->prev == NULL);
                 /* Note: I tried doing the this code with a TRY rather than a
-                 * LOCK and performance of UTS suffered (slightly). */
+                 * LOCK and perforance of UTS suffered (slightly). */
 #if 0
                 if (QTHREAD_TRYLOCK_TRY(&q->qlock)) {
                     assert((q->head && q->tail) || (!q->head && !q->tail));
@@ -496,16 +796,42 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
             PARANOIA_ONLY(sanity_check_queue(q));
             node = q->tail;
             if (node != NULL) {
+                assert(q->head);
+                assert(q->qlength > 0);
+
                 q->tail = node->prev;
                 if (q->tail == NULL) {
                     q->head = NULL;
                 } else {
                     q->tail->next = NULL;
                 }
+                if(q->qlength <=0)
+                    printf("q length is %d!!!\n", q->qlength);
+                assert(q->qlength > 0);
                 q->qlength--;
-                if (node->stealable) { q->qlength_stealable--; }
+                assert(q->qlength >= 0);
+                if (node->stealable) { q->qlength_stealable--; } 
+                
+                if(QTHREAD_TASK_IS_AGGREGABLE(node->value->flags) && \
+                   (max_t = (q->qlength) / qthread_readstate(ACTIVE_WORKERS) / DIV_FACTOR)>1
+                   ){ //no point creating an agg task with a single simple task
+                    max_t = (max_t > MAX_ABS_AGG ? MAX_ABS_AGG : max_t);
+                    assert(node->value->thread_state != QTHREAD_STATE_TERM_SHEP);
+                    qt_add_first_agg_task(t, &curr_cost, node);
+                    node = NULL;
+                    if(q->head)
+                        qt_keep_adding_agg_task(t, max_t, &curr_cost, q, 1);
+                    ret_agg_task = 1;
+                }
+                else{ //no agg, free agg task (delay)
+                    //t = NULL;
+                }
             }
             QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
+        }
+
+        if(ret_agg_task){ //use t, node is NULL
+            break;
         }
 
         if ((node == NULL) && my_shepherd->stealing) {
@@ -523,14 +849,15 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
         if ((node == NULL) && (active)) {
             if (qlib->nshepherds > 1) {
                 if (!steal_disable) {
-                    node = qthread_steal(my_shepherd);
+                    node = qthread_steal(my_shepherd); //TODO: same agg behavior when stealing
                 } else {
                     while (NULL == q->head) SPINLOCK_BODY();
                     continue;
-                }
+                } 
             }
         }
         if (node) {
+            qthread_thread_free(t); //free agg task; only reallocate it if mccoy found
             t = node->value;
             FREE_TQNODE(node);
             if ((t->flags & QTHREAD_REAL_MCCOY)) { // only needs to be on worker 0 for termination
@@ -551,7 +878,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                         my_shepherd->stealing = 2; // no stealing
                         MACHINE_FENCE;
                         qt_threadqueue_enqueue_yielded(q, t);
-                        t = NULL;
+                        t = qt_init_agg_task();
                         continue; // keep looking
                 }
             } else {

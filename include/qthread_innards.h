@@ -136,11 +136,20 @@ typedef struct qlib_s {
     /* this is for holding syncvar waiters... similar to the FEBs (perhaps
      * should have the _stripes business as well... maybe later) */
     qt_hash *syncvars;
+
+   /*AGG cost method, call method  and max cost 
+    * defined in qthreads or given by the user at qthread initialization
+    */
+    qthread_agg_f  agg_f; //void(*agg_f)   (int count, qthread_f *f, void **arg, void **ret);
+    int(*agg_cost) (int count, qthread_f *f, void **arg);
+    int max_c;
 } *qlib_t;
 
 #ifndef QTHREAD_SST_PRIMITIVES
 extern qlib_t qlib;
 #endif
+
+void qthread_thread_free(qthread_t* t);
 
 /* These are the internal functions that futurelib should be allowed to get at */
 unsigned int INTERNAL qthread_isfuture(void);
