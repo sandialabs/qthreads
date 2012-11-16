@@ -792,6 +792,18 @@ int API_FUNC qthread_init(qthread_shepherd_id_t nshepherds)
  * @error ENOMEM Not enough memory could be allocated.
  */
 
+int API_FUNC qthread_initialize_agg(int(*agg_cost) (int count, qthread_f* f, void **arg),
+                                    qthread_agg_f agg_f)
+{
+    int r = qthread_initialize();
+
+    if(agg_cost != NULL)
+        qlib->agg_cost = agg_cost;
+    if(agg_f != NULL)
+        qlib->agg_f    = agg_f;
+    return r;
+}
+
 int API_FUNC qthread_initialize(void)
 {                      /*{{{ */
     int                   r;
