@@ -177,8 +177,5 @@ extern int rcrSchedulingOff;
 
 #define QTHREAD_CHOOSE_STRIPE(addr) (((size_t)addr >> 4) & (QTHREAD_LOCKING_STRIPES - 1))
 
-/* this is a function to check the input preconds for a nascent thread. */
-int INTERNAL qthread_check_precond(qthread_t *t);
-
 #endif // ifndef QTHREAD_INNARDS_H
 /* vim:set expandtab: */
