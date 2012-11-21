@@ -251,7 +251,8 @@ static void chapel_display_thread(void        *addr,
                                   void        *arg,
                                   void        *retloc,
                                   unsigned int thread_id,
-                                  void        *tls)
+                                  void        *tls,
+                                  void        *callarg)
 {
     task_info_t *rep = (task_info_t *)tls;
 
@@ -269,7 +270,7 @@ static void chapel_display_thread(void        *addr,
 
 static void report_locked_threads(void)
 {
-    qthread_print_FEB_callback(chapel_display_thread);
+    qthread_feb_callback(chapel_display_thread, NULL);
 }
 
 static void SIGINT_handler(int sig)

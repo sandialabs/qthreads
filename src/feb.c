@@ -21,6 +21,17 @@
 #include "qt_internal_feb.h"
 
 /********************************************************************
+ * Local Variables
+ *********************************************************************/
+qt_hash *FEBs;
+#ifdef QTHREAD_COUNT_THREADS
+aligned_t *febs_stripes;
+# ifdef QTHREAD_MUTEX_INCREMENT
+QTHREAD_FASTLOCK_TYPE *febs_stripes_locks;
+# endif
+#endif
+
+/********************************************************************
  * Local Types
  *********************************************************************/
 typedef enum bt {
@@ -72,6 +83,12 @@ qt_mpool generic_addrres_pool = NULL;
 
 static void qt_feb_subsystem_shutdown(void)
 {
+    for (unsigned i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
+        qt_hash_destroy_deallocate(qlib->FEBs[i],
+                                   (qt_hash_deallocator_fn)
+                                   qthread_addrstat_delete);
+    }
+    FREE(qlib->FEBs, sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
 #if !defined(UNPOOLED_ADDRSTAT) && !defined(UNPOOLED)
     qt_mpool_destroy(generic_addrstat_pool);
     generic_addrstat_pool = NULL;
@@ -82,7 +99,7 @@ static void qt_feb_subsystem_shutdown(void)
 #endif
 }
 
-void INTERNAL qt_feb_subsystem_init(void)
+void INTERNAL qt_feb_subsystem_init(uint_fast8_t need_sync)
 {
 #if !defined(UNPOOLED_ADDRSTAT) && !defined(UNPOOLED)
     generic_addrstat_pool = qt_mpool_create(sizeof(qthread_addrstat_t));
@@ -90,6 +107,18 @@ void INTERNAL qt_feb_subsystem_init(void)
 #if !defined(UNPOOLED_ADDRRES) && !defined(UNPOOLED)
     generic_addrres_pool = qt_mpool_create(sizeof(qthread_addrres_t));
 #endif
+    qlib->FEBs = MALLOC(sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
+    assert(qlib->FEBs);
+    for (unsigned i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
+#ifdef QTHREAD_COUNT_THREADS
+        qlib->febs_stripes[i] = 0;
+# ifdef QTHREAD_MUTEX_INCREMENT
+        QTHREAD_FASTLOCK_INIT(qlib->febs_stripes_locks[i]);
+# endif
+#endif
+        qlib->FEBs[i] = qt_hash_create(need_sync);
+        assert(qlib->FEBs[i]);
+    }
     qthread_internal_cleanup_late(qt_feb_subsystem_shutdown);
 }
 
@@ -1448,6 +1477,54 @@ int INTERNAL qthread_check_feb_preconds(qthread_t *t)
 #endif /* ifdef QTHREAD_COUNT_THREADS */
 
     return 0;
+} /*}}}*/
+
+static void qt_feb_call_cb(const qt_key_t      addr,
+                           qthread_addrstat_t *m,
+                           void               *arg)
+{   /*{{{*/
+    qt_feb_callback_f f     = (qt_feb_callback_f)((void **)arg)[0];
+    void             *f_arg = (qt_feb_callback_f)((void **)arg)[1];
+
+    QTHREAD_FASTLOCK_LOCK(&m->lock);
+    for (int i = 0; i < 3; i++) {
+        qthread_addrres_t *curs, **base;
+        switch (i) {
+            case 0: curs = m->EFQ; base = &m->EFQ; break;
+            case 1: curs = m->FEQ; base = &m->FEQ; break;
+            case 2: curs = m->FFQ; base = &m->FFQ; break;
+        }
+        for (;curs != NULL;curs = curs->next) {
+            qthread_t *waiter = curs->waiter;
+            void      *tls;
+            if (waiter->rdata->tasklocal_size <= qlib->qthread_tasklocal_size) {
+                if (waiter->flags & QTHREAD_BIG_STRUCT) {
+                    tls = &waiter->data[qlib->qthread_argcopy_size];
+                } else {
+                    tls = waiter->data;
+                }
+            } else {
+                if (waiter->flags & QTHREAD_BIG_STRUCT) {
+                    tls = *(void **)&waiter->data[qlib->qthread_argcopy_size];
+                } else {
+                    tls = *(void **)&waiter->data[0];
+                }
+            }
+            f((void *)addr, waiter->f, waiter->arg, waiter->ret, waiter->thread_id, tls, f_arg);
+        }
+    }
+    QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+} /*}}}*/
+
+void INTERNAL qthread_feb_callback(qt_feb_callback_f cb,
+                                   void             *arg)
+{   /*{{{*/
+    void *pass[2] = { cb, arg };
+
+    for (unsigned int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
+        qt_hash_callback(qlib->FEBs[i],
+                         (qt_hash_callback_fn)qt_feb_call_cb, pass);
+    }
 } /*}}}*/
 
 /* vim:set expandtab: */

@@ -929,19 +929,9 @@ int API_FUNC qthread_initialize(void)
     qassert_ret(qlib->febs_stripes_locks, QTHREAD_MALLOC_ERROR);
 # endif
 #endif /* ifdef QTHREAD_COUNT_THREADS */
-    qlib->FEBs = MALLOC(sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
-    qassert_ret(qlib->FEBs, QTHREAD_MALLOC_ERROR);
     qlib->syncvars = MALLOC(sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
     qassert_ret(qlib->syncvars, QTHREAD_MALLOC_ERROR);
     for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
-#ifdef QTHREAD_COUNT_THREADS
-        qlib->febs_stripes[i] = 0;
-# ifdef QTHREAD_MUTEX_INCREMENT
-        QTHREAD_FASTLOCK_INIT(qlib->febs_stripes_locks[i]);
-# endif
-#endif
-        qlib->FEBs[i] = qt_hash_create(need_sync);
-        qassert_ret(qlib->FEBs[i], QTHREAD_MALLOC_ERROR);
         qlib->syncvars[i] = qt_hash_create(need_sync);
         qassert_ret(qlib->syncvars[i], QTHREAD_MALLOC_ERROR);
     }
@@ -1071,7 +1061,7 @@ int API_FUNC qthread_initialize(void)
 #endif /* ifndef UNPOOLED */
     initialize_hazardptrs();
     qt_internal_teams_init();
-    qt_feb_subsystem_init();
+    qt_feb_subsystem_init(need_sync);
     qt_threadqueue_subsystem_init();
     qt_blocking_subsystem_init();
 
@@ -1399,79 +1389,6 @@ void INTERNAL qthread_internal_cleanup_early(void (*function)(void))
     qt_cleanup_early_funcs = ng;
 } /*}}}*/
 
-static void qt_hash_call_cb(const qt_key_t      addr,
-                            qthread_addrstat_t *m,
-                            void               *arg)
-{
-    QTHREAD_FASTLOCK_LOCK(&m->lock);
-    for (qthread_addrres_t *curs = m->EFQ; curs != NULL; curs = curs->next) {
-        qthread_t *waiter = curs->waiter;
-        void      *tls;
-        if (waiter->rdata->tasklocal_size <= qlib->qthread_tasklocal_size) {
-            if (waiter->flags & QTHREAD_BIG_STRUCT) {
-                tls = &waiter->data[qlib->qthread_argcopy_size];
-            } else {
-                tls = waiter->data;
-            }
-        } else {
-            if (waiter->flags & QTHREAD_BIG_STRUCT) {
-                tls = *(void **)&waiter->data[qlib->qthread_argcopy_size];
-            } else {
-                tls = *(void **)&waiter->data[0];
-            }
-        }
-        ((qt_feb_callback_f)arg)((void *)addr, waiter->f, waiter->arg, waiter->ret, waiter->thread_id, tls);
-        curs = curs->next;
-    }
-    for (qthread_addrres_t *curs = m->FEQ; curs != NULL; curs = curs->next) {
-        qthread_t *waiter = curs->waiter;
-        void      *tls;
-        if (waiter->rdata->tasklocal_size <= qlib->qthread_tasklocal_size) {
-            if (waiter->flags & QTHREAD_BIG_STRUCT) {
-                tls = &waiter->data[qlib->qthread_argcopy_size];
-            } else {
-                tls = waiter->data;
-            }
-        } else {
-            if (waiter->flags & QTHREAD_BIG_STRUCT) {
-                tls = *(void **)&waiter->data[qlib->qthread_argcopy_size];
-            } else {
-                tls = *(void **)&waiter->data[0];
-            }
-        }
-        ((qt_feb_callback_f)arg)((void *)addr, waiter->f, waiter->arg, waiter->ret, waiter->thread_id, tls);
-    }
-    for (qthread_addrres_t *curs = m->FFQ; curs != NULL; curs = curs->next) {
-        qthread_t *waiter = curs->waiter;
-        void      *tls;
-        if (waiter->rdata->tasklocal_size <= qlib->qthread_tasklocal_size) {
-            if (waiter->flags & QTHREAD_BIG_STRUCT) {
-                tls = &waiter->data[qlib->qthread_argcopy_size];
-            } else {
-                tls = waiter->data;
-            }
-        } else {
-            if (waiter->flags & QTHREAD_BIG_STRUCT) {
-                tls = *(void **)&waiter->data[qlib->qthread_argcopy_size];
-            } else {
-                tls = *(void **)&waiter->data[0];
-            }
-        }
-        ((qt_feb_callback_f)arg)((void *)addr, waiter->f, waiter->arg, waiter->ret, waiter->thread_id, tls);
-    }
-    QTHREAD_FASTLOCK_UNLOCK(&m->lock);
-}
-
-void INTERNAL qthread_print_FEB_callback(qt_feb_callback_f cb)
-{
-    for (unsigned int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
-        qt_hash_callback(qlib->FEBs[i],
-                         (qt_hash_callback_fn)qt_hash_call_cb, cb);
-        qt_hash_callback(qlib->syncvars[i],
-                         (qt_hash_callback_fn)qt_hash_call_cb, cb);
-    }
-}
-
 #ifdef QTHREAD_DEBUG
 static void qt_hash_print_addrstat(const qt_key_t      addr,
                                    qthread_addrstat_t *m,
@@ -1524,12 +1441,15 @@ static void qt_hash_print_addrstat(const qt_key_t      addr,
     QTHREAD_FASTLOCK_UNLOCK(&m->lock);
 }                                      /*}}} */
 
+static void qt_print_addrstat(void *addr, qthread_f f, void *arg, void *retloc, unsigned int thread_id, void *tls, void *callarg)
+{
+    printf("addr: %#lx thread %u, arg:%p retval:%p\n", (unsigned long)addr, thread_id, arg, retloc);
+    *(int *)callarg += 1;
+}
+
 static int print_FEBs(int *ct)
 {
-    for (unsigned int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
-        qt_hash_callback(qlib->FEBs[i],
-                         (qt_hash_callback_fn)qt_hash_print_addrstat, ct);
-    }
+    qthread_feb_callback(qt_print_addrstat, ct);
     for (unsigned int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
         qt_hash_callback(qlib->syncvars[i],
                          (qt_hash_callback_fn)qt_hash_print_addrstat, ct);
@@ -1850,9 +1770,6 @@ void API_FUNC qthread_finalize(void)
 
     for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
         qthread_debug(FEB_DETAILS, "destroying feb infrastructure of shep %i\n", (int)i);
-        qt_hash_destroy_deallocate(qlib->FEBs[i],
-                                   (qt_hash_deallocator_fn)
-                                   qthread_addrstat_delete);
         qt_hash_destroy_deallocate(qlib->syncvars[i],
                                    (qt_hash_deallocator_fn)
                                    qthread_addrstat_delete);
@@ -1881,7 +1798,6 @@ void API_FUNC qthread_finalize(void)
         FREE(tmp, sizeof(struct qt_cleanup_funcs_s));
     }
     qthread_debug(FEB_DETAILS, "destroy feb infrastructure arrays\n");
-    FREE(qlib->FEBs, sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
     FREE(qlib->syncvars, sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
     FREE((void *)qlib->atomic_locks, sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
