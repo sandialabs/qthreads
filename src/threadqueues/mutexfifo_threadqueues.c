@@ -77,8 +77,6 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 // #define QTHREAD_DESTROYLOCK(l) do { int __ret__ = pthread_mutex_destroy(l); if (__ret__ != 0) fprintf(stderr, "pthread_mutex_destroy(%p) returned %i (%s)\n", l, __ret__, strerror(__ret__)); assert(__ret__ == 0); } while (0)
 #define QTHREAD_DESTROYLOCK(l) qassert(pthread_mutex_destroy(l), 0)
 #define QTHREAD_DESTROYCOND(l) qassert(pthread_cond_destroy(l), 0)
-#define QTHREAD_SIGNAL(l)      qassert(pthread_cond_signal(l), 0)
-#define QTHREAD_CONDWAIT(c, l) qassert(pthread_cond_wait(c, l), 0)
 
 /*****************************************/
 /* functions to manage the thread queues */

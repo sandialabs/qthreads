@@ -120,8 +120,7 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
     assert(q);
     while (qt_threadqueue_dequeue(q)) ;
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-    QTHREAD_DESTROYLOCK(&q->lock);
-    QTHREAD_DESTROYCOND(&q->notempty);
+    QTHREAD_COND_DESTROY(q->trigger);
 #endif
     FREE_THREADQUEUE(q);
 } /*}}}*/

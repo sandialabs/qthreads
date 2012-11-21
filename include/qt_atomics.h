@@ -205,7 +205,6 @@ extern pthread_mutexattr_t _fastlock_attr;
 #define QTHREAD_UNLOCK(l)      qassert(pthread_mutex_unlock(l), 0)
 #define QTHREAD_DESTROYLOCK(l) qassert(pthread_mutex_destroy(l), 0)
 #define QTHREAD_DESTROYCOND(l) qassert(pthread_cond_destroy(l), 0)
-#define QTHREAD_SIGNAL(c)      qassert(pthread_cond_signal(&(c)), 0)
 #define QTHREAD_COND_SIGNAL(c) qassert(pthread_cond_signal(&(c)), 0)
 #define QTHREAD_COND_BCAST(l)  qassert(pthread_cond_broadcast(&(l)), 0)
 #define QTHREAD_COND_DESTROY(c) do { \
