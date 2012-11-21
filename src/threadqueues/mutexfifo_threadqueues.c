@@ -114,7 +114,6 @@ static qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q)
     qt_threadqueue_node_t *node, *new_head;
 
     assert(q != NULL);
-    qt_eureka_disable();
     QTHREAD_FASTLOCK_LOCK(&q->head_lock);
     {
         node     = q->head;
@@ -128,8 +127,6 @@ static qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q)
     if (p != NULL) {
         Q_PREFETCH(&(p->thread_state));
         (void)qthread_internal_incr_s(&q->advisory_queuelen, &q->advisory_queuelen_m, -1);
-    } else {
-        qt_eureka_enable();
     }
     return p;
 }                                      /*}}} */
@@ -202,7 +199,11 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 {                                      /*{{{ */
     qthread_t *p = NULL;
 
-    while ((p = qt_threadqueue_dequeue(q)) == NULL) SPINLOCK_BODY();
+    qt_eureka_disable();
+    while ((p = qt_threadqueue_dequeue(q)) == NULL) {
+        qt_eureka_check(1);
+        SPINLOCK_BODY();
+    }
     return p;
 }                                      /*}}} */
 

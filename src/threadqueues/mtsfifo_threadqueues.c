@@ -308,7 +308,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
         if (next_ptr == NULL) { // queue is empty
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
             if (qthread_internal_incr(&q->fruitless, &q->fruitless_m, 1) > 1000) {
-                qt_eureka_enable();
+                qt_eureka_check(0);
                 QTHREAD_COND_LOCK(q->trigger);
                 while (q->fruitless > 1000) {
                     QTHREAD_COND_WAIT(q->trigger);
@@ -316,7 +316,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                 QTHREAD_COND_UNLOCK(q->trigger);
                 qt_eureka_disable();
             } else {
-                qt_eureka_enable();
+                qt_eureka_check(0);
 # ifdef HAVE_PTHREAD_YIELD
                 pthread_yield();
 # elif HAVE_SHED_YIELD
@@ -325,6 +325,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                 qt_eureka_disable();
             }
 #else       /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
+            qt_eureka_check(1);
             SPINLOCK_BODY();
 #endif              /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
             continue;
