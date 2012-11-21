@@ -29,7 +29,7 @@ libqthread_la_SOURCES = \
 	teams.c
 
 if COMPILE_LF_HASH
-libqthread_la_SOURCES += qt_lf_hash.c
+libqthread_la_SOURCES += lf_hashmap.c
 else
 libqthread_la_SOURCES += qt_c_hash.c
 endif
