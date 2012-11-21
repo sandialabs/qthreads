@@ -3487,15 +3487,6 @@ unsigned API_FUNC qthread_barrier_id(void)
 
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
 
-/* these two functions are helper functions for futurelib
- * (nobody else gets to have 'em!) */
-void INTERNAL qthread_assertnotfuture(void)
-{                      /*{{{ */
-    qthread_t *t = qthread_internal_self();
-
-    t->flags &= ~QTHREAD_FUTURE;
-}                      /*}}} */
-
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 # ifdef __INTEL_COMPILER
 #  pragma warning (disable:1418)

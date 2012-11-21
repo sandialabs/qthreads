@@ -11,7 +11,6 @@ void qthread_future_wrapper(const qthread_f f, const void *arg,
 			    aligned_t * ret);
 int qthread_fork_future_to(const qthread_f f, const void *arg,
 			   aligned_t * ret, qthread_shepherd_id_t shep);
-void qthread_assertnotfuture(qthread_t * t);
 
 void qthread_wrapper(const qthread_f f, const void *arg, aligned_t * ret)
 {
