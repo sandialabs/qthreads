@@ -185,7 +185,6 @@ void future_exit(void)
 {
     DBprintf("Thread %i exit on loc %d\n", (int)qthread_id(), qthread_shep());
     future_yield();
-    qthread_assertnotfuture();
 }
 
 void future_join_all(aligned_t * fta, int ftc)

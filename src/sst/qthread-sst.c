@@ -63,11 +63,6 @@ int qthread_fork_future_to(const qthread_f f, const void *arg,
 					NULL);
 }
 
-void qthread_assertnotfuture(qthread_t * t)
-{
-/* XXX: this does NOTHING! This is a bug! */
-}
-
 unsigned int qthread_isfuture(const qthread_t * t)
 {
     /* XXX: this does NOTHING! This is a bug! */

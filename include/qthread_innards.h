@@ -150,10 +150,6 @@ void qthread_thread_free(qthread_t* t);
 /* These are the internal functions that futurelib should be allowed to get at */
 unsigned int INTERNAL qthread_isfuture(void);
 
-void INTERNAL qthread_assertfuture(qthread_t *t);
-
-void INTERNAL qthread_assertnotfuture(void);
-
 int INTERNAL qthread_fork_future_to(const qthread_f             f,
                                     const void                 *arg,
                                     aligned_t                  *ret,

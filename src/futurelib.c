@@ -13,6 +13,8 @@
 #include "qthread_innards.h"
 #include "qt_debug.h"
 #include "qt_macros.h"
+#include "qt_qthread_struct.h"
+#include "qt_qthread_mgmt.h"
 
 /* GLOBAL DATA (copy everywhere) */
 TLS_DECL_INIT(location_t *, future_bookkeeping);
@@ -249,10 +251,13 @@ static void future_join(aligned_t *ft)
  * terminate, but there's no way for it to become a future again. */
 void future_exit(void)
 {
+    qthread_t *t = qthread_internal_self();
+
     assert(future_bookkeeping_array != NULL);
     qthread_debug(FUTURELIB_BEHAVIOR, "Thread %i exit on loc %d\n", (int)qthread_id(), qthread_shep());
+    assert(t->flags & QTHREAD_FUTURE);
     future_yield();
-    qthread_assertnotfuture();
+    t->flags ^= QTHREAD_FUTURE;
 }
 
 /* a more fun version of future_join */

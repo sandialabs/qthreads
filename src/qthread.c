@@ -3496,11 +3496,6 @@ unsigned int INTERNAL qthread_isfuture(void)
     return t ? (t->flags & QTHREAD_FUTURE) : 0;
 }                      /*}}} */
 
-void INTERNAL qthread_assertfuture(qthread_t *t)
-{                      /*{{{ */
-    t->flags |= QTHREAD_FUTURE;
-}                      /*}}} */
-
 void INTERNAL qthread_assertnotfuture(void)
 {                      /*{{{ */
     qthread_t *t = qthread_internal_self();
