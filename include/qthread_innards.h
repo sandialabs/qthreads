@@ -45,10 +45,10 @@ typedef struct qlib_s {
     QTHREAD_FASTLOCK_TYPE nshepherds_active_lock;
 #endif
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    aligned_t                  nworkers_active;
-#ifdef QTHREAD_MUTEX_INCREMENT
-    QTHREAD_FASTLOCK_TYPE      nworkers_active_lock;
-#endif
+    aligned_t             nworkers_active;
+# ifdef QTHREAD_MUTEX_INCREMENT
+    QTHREAD_FASTLOCK_TYPE nworkers_active_lock;
+# endif
 #endif
     unsigned int               nworkerspershep;
     struct qthread_shepherd_s *shepherds;
@@ -89,7 +89,7 @@ typedef struct qlib_s {
 
     aligned_t team_watcher_start;
     aligned_t team_watcher_stop;
-#endif
+#endif // ifdef TEAM_PROFILE
 
     /* assigns a unique thread_id mostly for debugging! */
     aligned_t             max_thread_id;
@@ -120,11 +120,13 @@ typedef struct qlib_s {
 # endif
 #endif
 
-   /*AGG cost method, call method  and max cost 
-    * defined in qthreads or given by the user at qthread initialization
-    */
-    qthread_agg_f  agg_f; //void(*agg_f)   (int count, qthread_f *f, void **arg, void **ret);
-    int(*agg_cost) (int count, qthread_f *f, void **arg);
+    /*AGG cost method, call method  and max cost
+     * defined in qthreads or given by the user at qthread initialization
+     */
+    qthread_agg_f agg_f;  // void(*agg_f)   (int count, qthread_f *f, void **arg, void **ret);
+    int (*agg_cost)(int        count,
+                    qthread_f *f,
+                    void     **arg);
     int max_c;
 } *qlib_t;
 
@@ -132,8 +134,8 @@ typedef struct qlib_s {
 extern qlib_t qlib;
 #endif
 
-void INTERNAL         qthread_exec(qthread_t    *t,
-                                   qt_context_t *c);
+void INTERNAL qthread_exec(qthread_t    *t,
+                           qt_context_t *c);
 
 #define QTHREAD_NO_NODE ((unsigned int)(-1))
 #ifdef QTHREAD_SST_PRIMITIVES
