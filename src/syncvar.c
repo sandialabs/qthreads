@@ -64,10 +64,13 @@ typedef struct {
 } qthread_syncvar_blocker_t;
 
 /* Internal Variables */
-/* this is for holding syncvar waiters... similar to the FEBs (perhaps
- * should have the _stripes business as well... maybe later) */
 static qt_hash *syncvars;
-
+#ifdef QTHREAD_COUNT_THREADS
+extern aligned_t *febs_stripes;
+# ifdef QTHREAD_MUTEX_INCREMENT
+extern QTHREAD_FASTLOCK_TYPE *febs_stripes_locks;
+# endif
+#endif
 
 /* Internal Macros */
 #define BUILD_UNLOCKED_SYNCVAR(data, state) (((data) << 4) | ((state) << 1))
