@@ -1427,7 +1427,7 @@ static void qt_hash_print_addrstat(const qt_key_t      addr,
     QTHREAD_FASTLOCK_UNLOCK(&m->lock);
 }                                      /*}}} */
 
-static void qt_print_addrstat(void *addr, qthread_f f, void *arg, void *retloc, unsigned int thread_id, void *tls, void *callarg)
+static void qt_print_addrstat(qt_key_t addr, qthread_f f, void *arg, void *retloc, unsigned int thread_id, void *tls, void *callarg)
 {
     printf("addr: %#lx thread %u, arg:%p retval:%p\n", (unsigned long)addr, thread_id, arg, retloc);
     *(int *)callarg += 1;
