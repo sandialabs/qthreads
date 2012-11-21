@@ -31,7 +31,7 @@ libqthread_la_SOURCES = \
 if COMPILE_LF_HASH
 libqthread_la_SOURCES += lf_hashmap.c
 else
-libqthread_la_SOURCES += qt_c_hash.c
+libqthread_la_SOURCES += hashmap.c
 endif
 
 include qtimer/Makefile.inc
