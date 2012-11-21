@@ -23,6 +23,7 @@
 #include "qt_debug.h"
 #include "qt_eurekas.h" /* for qt_eureka_check() */
 #include "qt_expect.h"
+#include "qt_subsystems.h"
 
 /* Data Structures */
 struct _qt_threadqueue_node {

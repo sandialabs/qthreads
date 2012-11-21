@@ -20,6 +20,7 @@
 #include "qt_visibility.h"
 #include "qt_debug.h"
 #include "qt_asserts.h"
+#include "qt_subsystems.h"
 
 struct qt_feb_barrier_s {
     syncvar_t in_gate;

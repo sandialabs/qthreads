@@ -13,6 +13,7 @@
 #include "qt_shepherd_innards.h"
 #include "qthread_innards.h"
 #include "qt_debug.h" /* for malloc debug headers */
+#include "qt_subsystems.h"
 
 static TLS_DECL_INIT(uintptr_t *, ts_hazard_ptrs);
 

@@ -10,12 +10,15 @@
 # include <sys/syscall.h>        /* for SYS_accept and others */
 #endif
 
+/* API Headers */
+#include "qthread/qthread.h"
+#include "qthread/qtimer.h"
+
 /* Internal Headers */
 #include "qt_io.h"
 #include "qt_asserts.h"
 #include "qthread_innards.h" /* for qlib */
-#include "qthread/qthread.h"
-#include "qthread/qtimer.h"
+#include "qt_qthread_mgmt.h"
 
 unsigned int sleep(unsigned int seconds)
 {

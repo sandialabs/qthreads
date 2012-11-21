@@ -15,12 +15,12 @@
 #include "qt_asserts.h"
 #include "qt_prefetch.h"
 #include "qt_threadqueues.h"
-#include "qthread_innards.h" /* for qthread_internal_cleanup_early() */
 #include "qt_debug.h"
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
 # include "qt_aligned_alloc.h"
 #endif
 #include "qt_eurekas.h"
+#include "qt_subsystems.h"
 
 /* Data Structures */
 struct _qt_threadqueue_node {

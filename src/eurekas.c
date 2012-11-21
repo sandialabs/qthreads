@@ -8,6 +8,7 @@
 /* System Headers */
 
 /* Internal Headers */
+#include "qt_eurekas.h"
 #include "qt_teams.h"
 #include "qt_qthread_struct.h"
 #include "qt_qthread_mgmt.h"

@@ -43,6 +43,7 @@ noinst_HEADERS = \
 	qt_qthread_t.h \
 	qt_shepherd_innards.h \
 	qt_spawncache.h \
+	qt_subsystems.h \
 	qt_teams.h \
 	qt_threadqueues.h \
 	qt_threadstate.h \

@@ -18,6 +18,7 @@
 #include "qt_asserts.h"
 #include "qt_debug.h"
 #include "qthread_innards.h" /* for qlib */
+#include "qt_qthread_mgmt.h"
 
 extern TLS_DECL(qthread_t *, IO_task_struct);
 

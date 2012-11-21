@@ -7,11 +7,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* Internal Headers */
+/* API Headers */
 #include "qthread/qthread.h"
+
+/* Internal Headers */
 #include "qt_macros.h"
 #include "qt_visibility.h"
-#include "qthread_innards.h"           /* for qlib (only used in steal_chunksize) */
 #include "qt_shepherd_innards.h"
 #include "qt_qthread_struct.h"
 #include "qt_asserts.h"
@@ -19,6 +20,7 @@
 #include "qt_threadqueues.h"
 #include "qt_debug.h"
 #include "qt_eurekas.h"
+#include "qt_subsystems.h"
 
 /* Data Structures */
 struct _qt_threadqueue_node {

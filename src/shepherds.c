@@ -15,6 +15,7 @@
 #include "qthread_innards.h"
 #include "qt_shepherd_innards.h"
 #include "qt_qthread_struct.h"
+#include "qt_qthread_mgmt.h"
 #include "qt_macros.h"
 
 /* Shared Globals */

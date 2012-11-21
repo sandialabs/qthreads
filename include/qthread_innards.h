@@ -24,10 +24,6 @@
 #include "qt_threadqueues.h"
 #include "qt_hash.h"
 
-/* this function allows a qthread to retrieve its qthread_t pointer if it has
- * been lost for some reason */
-qthread_t *qthread_internal_self(void);
-
 extern unsigned int QTHREAD_LOCKING_STRIPES;
 
 #ifndef QTHREAD_NO_ASSERTS
@@ -212,9 +208,6 @@ int INTERNAL qthread_forCount(int inc);
 
 /* internal initialization functions */
 void INTERNAL qt_feb_barrier_internal_init(void);
-void INTERNAL qthread_internal_cleanup(void (*function)(void));
-void INTERNAL qthread_internal_cleanup_early(void (*function)(void));
-void INTERNAL qthread_internal_cleanup_late(void (*function)(void));
 
 #ifdef QTHREAD_RCRTOOL
 /* allow environment variable to control whether dynamic thread count
@@ -227,9 +220,6 @@ extern int rcrSchedulingOff;
 
 /* this is a function to check the input preconds for a nascent thread. */
 int INTERNAL qthread_check_precond(qthread_t *t);
-
-/* Unexpected task destruction/cleanup */
-void INTERNAL qthread_internal_assassinate(qthread_t *t);
 
 #endif // ifndef QTHREAD_INNARDS_H
 /* vim:set expandtab: */

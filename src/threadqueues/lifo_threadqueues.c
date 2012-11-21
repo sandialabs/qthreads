@@ -15,9 +15,9 @@
 #include "qt_threadqueues.h"
 #include "qt_qthread_struct.h"
 #include "qt_atomics.h"
-#include "qthread_innards.h" /* for qthread_internal_cleanup_early() */
 #include "qt_debug.h"
 #include "qt_eurekas.h"
+#include "qt_subsystems.h"
 
 /* Note: this queue is SAFE to use with multiple de-queuers, with the caveat
  * that if you have multiple dequeuer's, you'll need to solve the ABA problem.

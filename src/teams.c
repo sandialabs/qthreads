@@ -10,11 +10,14 @@
 
 /* Internal Headers */
 #include "qt_teams.h"
+#include "qt_subsystems.h"
 #include "qt_qthread_struct.h"
+#include "qt_qthread_mgmt.h"
 #include "qt_visibility.h"
 #include "qt_mpool.h"
-#include "qthread_innards.h"
+#include "qthread_innards.h" /* for qlib */
 #include "qt_expect.h"
+#include "qt_subsystems.h"
 
 /* Memory management macros */
 #if defined(UNPOOLED)

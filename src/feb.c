@@ -8,10 +8,12 @@
 /* System Headers */
 
 /* Internal Headers */
+#include "qt_subsystems.h"
 #include "qt_hash.h"
 #include "qthread_innards.h"
 #include "qt_profiling.h"
 #include "qt_qthread_struct.h"
+#include "qt_qthread_mgmt.h"
 #include "qt_blocking_structs.h"
 #include "qt_addrstat.h"
 #include "qt_threadqueues.h"
@@ -249,7 +251,7 @@ int API_FUNC qthread_feb_status(const aligned_t *addr)
     const aligned_t *alignedaddr;
 
     qthread_debug(FEB_CALLS, "addr=%p (tid=%u)\n", addr, qthread_id());
-    if (qlib == 0) {
+    if (qlib == NULL) {
         return 1;
     }
 #ifndef SST

@@ -8,17 +8,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* Internal Headers */
+/* API Headers */
 #include "qthread/qthread.h"
+
+/* Internal Headers */
 #include "qt_macros.h"
 #include "qt_visibility.h"
-#include "qthread_innards.h"
 #include "qt_asserts.h"
 #include "qt_prefetch.h"
 #include "qt_threadqueues.h"
 #include "qt_qthread_struct.h"
 #include "qt_debug.h"
 #include "qt_eurekas.h"
+#include "qt_subsystems.h"
 
 /* This thread queueing uses the NEMESIS lock-free queue protocol from
  * http://www.mcs.anl.gov/~buntinas/papers/ccgrid06-nemesis.pdf

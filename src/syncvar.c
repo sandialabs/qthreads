@@ -6,14 +6,18 @@
 #include <limits.h>                    /* for INT_MAX */
 #include <qthread/qthread-int.h>       /* for uint64_t */
 
-/* Internal Headers */
-#include "qt_hash.h"
+/* API Headers */
 #include "qthread/qthread.h"
+
+/* Internal Headers */
+#include "qt_subsystems.h"
+#include "qt_hash.h"
 #include "qthread_innards.h"
 #include "qt_profiling.h"
 #include "qt_blocking_structs.h"
 #include "qt_addrstat.h"
 #include "qt_qthread_struct.h"
+#include "qt_qthread_mgmt.h"
 #include "qt_threadqueues.h"
 #include "qt_debug.h"
 #include "qt_internal_syncvar.h"

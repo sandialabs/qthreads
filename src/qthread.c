@@ -78,6 +78,7 @@
 #include "qt_aligned_alloc.h"
 #include "qt_teams.h"
 #include "qt_eurekas.h"
+#include "qt_subsystems.h"
 
 #ifdef QTHREAD_RCRTOOL
 # include "maestro_sched.h"

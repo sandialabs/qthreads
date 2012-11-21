@@ -34,10 +34,11 @@
 #include "qt_io.h"
 #include "qt_macros.h"
 #include "qt_asserts.h"
-#include "qthread_innards.h"
+#include "qthread_innards.h" /* for qthread_exec() */
 #include "qt_threadqueues.h"
 #include "qt_debug.h"
 #include "qt_envariables.h"
+#include "qt_subsystems.h"
 
 typedef struct {
     qt_blocking_queue_node_t *head;

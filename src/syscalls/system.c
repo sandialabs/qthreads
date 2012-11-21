@@ -16,6 +16,7 @@
 #include "qt_io.h"
 #include "qt_asserts.h"
 #include "qthread_innards.h" /* for qlib */
+#include "qt_qthread_mgmt.h"
 
 int qt_system(const char *command)
 {

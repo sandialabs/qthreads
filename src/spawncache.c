@@ -6,15 +6,17 @@
 #include <pthread.h> /* for pthread_key_*() */
 #include <string.h>  /* for memset() */
 
+/* Public Headers */
+#include "qthread/cacheline.h"
+
 /* Internal Headers */
 #include "qt_spawncache.h"
 #include "qt_visibility.h"
 #include "qt_debug.h"
 #include "qt_asserts.h"
-#include "qthread_innards.h"
-#include "qthread/cacheline.h"
 #include "qt_macros.h"
 #include "qt_aligned_alloc.h"
+#include "qt_subsystems.h"
 
 /* Globals */
 TLS_DECL_INIT(qt_threadqueue_private_t *, spawn_cache);

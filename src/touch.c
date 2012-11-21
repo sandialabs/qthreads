@@ -5,16 +5,16 @@
 /* System Headers */
 
 /* Internal Headers */
-#include "qthread_innards.h" /* for qthread_internal_self() */
+#include "qt_qthread_mgmt.h" /* for qthread_internal_self() */
 #include "qt_shepherd_innards.h"
 #include "qt_threadqueues.h"
 #include "qt_touch.h"
 
 void qthread_run_needed_task(syncvar_t *value)
 {
-    qthread_shepherd_t    *shep   = qthread_internal_getshep();
-    qthread_t             *target = NULL;
-    qthread_t             *orig_t = qthread_internal_self();
+    qthread_shepherd_t *shep   = qthread_internal_getshep();
+    qthread_t          *target = NULL;
+    qthread_t          *orig_t = qthread_internal_self();
 
     //  ucontext_t my_context;
 

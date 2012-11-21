@@ -4,7 +4,8 @@
 
 #include <numa.h>
 
-#include "qthread_innards.h"
+#include "qt_subsystems.h"
+//#include "qthread_innards.h"
 #include "qt_affinity.h"
 #include "qt_debug.h"
 

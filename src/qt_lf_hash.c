@@ -6,12 +6,14 @@
 #include <stdlib.h> /* for malloc/free/etc */
 #include <unistd.h> /* for getpagesize() */
 
+/* Public Headers */
+#include "qthread/qthread.h" /* for qthread_incr() and qthread_cas() */
+
 /* Internal Headers */
 #include "qt_asserts.h"
-#include "qthread/qthread.h" /* for qthread_incr() and qthread_cas() */
 #include "qt_mpool.h"
-#include "qthread_innards.h" /* for qthread_intarnal_cleanup_late() */
 #include "qt_debug.h"
+#include "qt_subsystems.h"
 
 /* The Internal API */
 #include "qt_hash.h"
