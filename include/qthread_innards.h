@@ -146,10 +146,6 @@ extern qlib_t qlib;
 #endif
 
 /* These are the internal functions that futurelib should be allowed to get at */
-int INTERNAL qthread_fork_future_to(const qthread_f             f,
-                                    const void                 *arg,
-                                    aligned_t                  *ret,
-                                    const qthread_shepherd_id_t shepherd);
 void INTERNAL         qthread_exec(qthread_t    *t,
                                    qt_context_t *c);
 

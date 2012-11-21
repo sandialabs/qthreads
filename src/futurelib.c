@@ -159,7 +159,7 @@ void future_fork(qthread_f  fptr,
     qthread_debug(FUTURELIB_DETAILS, "Thread %i decided future will go to %i\n", (int)qthread_id(), rr);
     /* steps 2&3 (slow) */
     blocking_vp_incr(&(future_bookkeeping_array[rr]));
-    qthread_fork_future_to(fptr, arg, retval, rr);
+    qthread_spawn(fptr, arg, 0, retval, 0, NULL, rr, QTHREAD_SPAWN_FUTURE);
 }
 
 void future_fork_to(qthread_f             fptr,
@@ -177,7 +177,7 @@ void future_fork_to(qthread_f             fptr,
     qthread_debug(FUTURELIB_BEHAVIOR, "Thread %i forking a future\n", (int)qthread_id());
     /* steps 2&3 (slow) */
     blocking_vp_incr(&(future_bookkeeping_array[shep]));
-    qthread_fork_future_to(fptr, arg, retval, shep);
+    qthread_spawn(fptr, arg, 0, retval, 0, NULL, shep, QTHREAD_SPAWN_FUTURE);
 }
 
 void future_fork_syncvar_to(qthread_f             fptr,

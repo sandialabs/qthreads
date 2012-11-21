@@ -136,7 +136,13 @@ void future_fork(qthread_f fptr, void *arg, aligned_t * retval)
 void future_fork_to(qthread_f fptr, void *arg, aligned_t * retval, qthread_shepherd_id_t rr)
 {
     blocking_vp_incr(&(future_bookkeeping_array[rr]));
-    qthread_fork_future_to(fptr, arg, retval, rr);
+    if (retval) {
+	PIM_feb_empty(retval);
+    }
+    return PIM_loadAndSpawnToLocaleStack(shep == NO_SHEPHERD ? -1 : shep,
+					(void *)qthread_future_wrapper,
+					(void *)fptr, (void *)arg, retval, NULL,
+					NULL);
 }
 
 /* This function declares that the current function (qthr) no longer
