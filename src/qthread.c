@@ -1754,15 +1754,11 @@ void API_FUNC qthread_finalize(void)
                                                   shep0->empty_count), shep0->empty_maxtime);
 #endif /* ifdef QTHREAD_FEB_PROFILING */
 
-    for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
-        qt_hash_destroy_deallocate(qlib->syncvars[i],
-                                   (qt_hash_deallocator_fn)
-                                   qthread_addrstat_delete);
-
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
+    for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
         QTHREAD_FASTLOCK_DESTROY(qlib->atomic_locks[i]);
-#endif
     }
+#endif
 #ifdef QTHREAD_MUTEX_INCREMENT
     QTHREAD_FASTLOCK_DESTROY(qlib->nshepherds_active_lock);
 # ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -1776,16 +1772,8 @@ void API_FUNC qthread_finalize(void)
         tmp->func();
         FREE(tmp, sizeof(struct qt_cleanup_funcs_s));
     }
-    qthread_debug(FEB_DETAILS, "destroy feb infrastructure arrays\n");
-    FREE(qlib->syncvars, sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
     FREE((void *)qlib->atomic_locks, sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
-#endif
-#ifdef QTHREAD_COUNT_THREADS
-    FREE(qlib->febs_stripes, sizeof(aligned_t) * QTHREAD_LOCKING_STRIPES);
-# ifdef QTHREAD_MUTEX_INCREMENT
-    FREE(qlib->febs_stripes_locks, sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
-# endif
 #endif
 
 #ifdef QTHREAD_COUNT_THREADS

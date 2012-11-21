@@ -84,6 +84,7 @@ qt_mpool generic_addrres_pool = NULL;
 
 static void qt_feb_subsystem_shutdown(void)
 {
+    qthread_debug(FEB_DETAILS, "destroy feb infrastructure arrays\n");
     for (unsigned i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
         qt_hash_destroy_deallocate(FEBs[i],
                                    (qt_hash_deallocator_fn)
@@ -96,6 +97,12 @@ static void qt_feb_subsystem_shutdown(void)
 #endif
     }
     FREE(FEBs, sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
+#ifdef QTHREAD_COUNT_THREADS
+    FREE(qlib->febs_stripes, sizeof(aligned_t) * QTHREAD_LOCKING_STRIPES);
+# ifdef QTHREAD_MUTEX_INCREMENT
+    FREE(qlib->febs_stripes_locks, sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
+# endif
+#endif
 #if !defined(UNPOOLED_ADDRSTAT) && !defined(UNPOOLED)
     qt_mpool_destroy(generic_addrstat_pool);
     generic_addrstat_pool = NULL;

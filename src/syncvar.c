@@ -202,6 +202,17 @@ errexit:
 const syncvar_t SYNCVAR_INITIALIZER       = SYNCVAR_STATIC_INITIALIZER;
 const syncvar_t SYNCVAR_EMPTY_INITIALIZER = SYNCVAR_STATIC_EMPTY_INITIALIZER;
 
+static void qt_syncvar_subsystem_shutdown(void)
+{
+    qthread_debug(SYNCVAR_DETAILS, "destroy syncvar infrastructure arrays\n");
+    for (unsigned i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
+        qt_hash_destroy_deallocate(qlib->syncvars[i],
+                                   (qt_hash_deallocator_fn)
+                                   qthread_addrstat_delete);
+    }
+    FREE(qlib->syncvars, sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
+}
+
 void INTERNAL qt_syncvar_subsystem_init(uint_fast8_t need_sync)
 {
     qlib->syncvars = MALLOC(sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
@@ -210,6 +221,7 @@ void INTERNAL qt_syncvar_subsystem_init(uint_fast8_t need_sync)
         qlib->syncvars[i] = qt_hash_create(need_sync);
         assert(qlib->syncvars[i]);
     }
+    qthread_internal_cleanup_late(qt_syncvar_subsystem_shutdown);
 }
 
 int qthread_syncvar_status(syncvar_t *const v)
