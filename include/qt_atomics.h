@@ -207,7 +207,11 @@ extern pthread_mutexattr_t _fastlock_attr;
 #define QTHREAD_DESTROYCOND(l) qassert(pthread_cond_destroy(l), 0)
 #define QTHREAD_SIGNAL(c)      qassert(pthread_cond_signal(&(c)), 0)
 #define QTHREAD_COND_SIGNAL(c) qassert(pthread_cond_signal(&(c)), 0)
-#define QTHREAD_BCAST(l)       qassert(pthread_cond_broadcast(l), 0)
+#define QTHREAD_COND_BCAST(l)  qassert(pthread_cond_broadcast(&(l)), 0)
+#define QTHREAD_COND_DESTROY(c) do { \
+    qassert(pthread_cond_destroy(&(c)), 0); \
+    qassert(pthread_mutex_destroy(&(c ## _lock)), 0); \
+} while (0)
 #define QTHREAD_COND_WAIT(c) do { \
     struct timespec t; \
     struct timeval n; \

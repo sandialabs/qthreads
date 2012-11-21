@@ -3,9 +3,6 @@
 #endif
 
 /* System Headers */
-#ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-# include <pthread.h>
-#endif
 #include <stdlib.h>
 
 /* Internal Headers */
@@ -36,8 +33,7 @@ struct _qt_threadqueue {
     qt_threadqueue_node_t *tail;
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     aligned_t              fruitless;
-    pthread_mutex_t        lock;
-    pthread_cond_t         notempty;
+    QTHREAD_COND_DECL(trigger);
 #endif                          /* CONDWAIT */
     /* the following is for estimating a queue's "busy" level, and is not
      * guaranteed accurate (that would be a race condition) */
@@ -116,23 +112,14 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
 
     if (q != NULL) {
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-        if (pthread_mutex_init(&q->lock, NULL) != 0) {
-            FREE_THREADQUEUE(q);
-            return NULL;
-        }
-        if (pthread_cond_init(&q->notempty, NULL) != 0) {
-            QTHREAD_DESTROYLOCK(&q->lock);
-            FREE_THREADQUEUE(q);
-            return NULL;
-        }
         q->fruitless = 0;
+        QTHREAD_COND_INIT(q->trigger);
 #endif   /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
         ALLOC_TQNODE(((qt_threadqueue_node_t **)&(q->head)));
         assert(q->head != NULL);
         if (q->head == NULL) {   // if we're not using asserts, fail nicely
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-            QTHREAD_DESTROYLOCK(&q->lock);
-            QTHREAD_DESTROYCOND(&q->notempty);
+            QTHREAD_COND_DESTROY(q->trigger);
 #endif
             FREE_THREADQUEUE(q);
             q = NULL;
@@ -197,8 +184,7 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
     }
     assert(q->head == q->tail);
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-    QTHREAD_DESTROYLOCK(&q->lock);
-    QTHREAD_DESTROYCOND(&q->notempty);
+    QTHREAD_COND_DESTROY(q->trigger);
 #endif
     FREE_TQNODE((qt_threadqueue_node_t *)q->head);
     FREE_THREADQUEUE(q);
@@ -275,12 +261,12 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
     (void)qthread_incr(&q->advisory_queuelen, 1);
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     if (q->fruitless) {
-        QTHREAD_LOCK(&q->lock);
+        QTHREAD_COND_LOCK(q->trigger);
         if (q->fruitless) {
             q->fruitless = 0;
-            QTHREAD_BCAST(&q->notempty);
+            QTHREAD_BCAST(q->trigger);
         }
-        QTHREAD_UNLOCK(&q->lock);
+        QTHREAD_COND_UNLOCK(q->trigger);
     }
 #endif
     hazardous_ptr(0, NULL); // release the ptr (avoid hazardptr resource exhaustion)
@@ -323,11 +309,11 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
             if (qthread_internal_incr(&q->fruitless, &q->fruitless_m, 1) > 1000) {
                 qt_eureka_enable();
-                QTHREAD_LOCK(&q->lock);
+                QTHREAD_COND_LOCK(q->trigger);
                 while (q->fruitless > 1000) {
-                    QTHREAD_CONDWAIT(&q->notempty, &q->lock);
+                    QTHREAD_COND_WAIT(q->trigger);
                 }
-                QTHREAD_UNLOCK(&q->lock);
+                QTHREAD_COND_UNLOCK(q->trigger);
                 qt_eureka_disable();
             } else {
                 qt_eureka_enable();
@@ -368,7 +354,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 /* walk queue removing all tasks matching this description */
 void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                                     qt_threadqueue_filter_f f)
-{
+{   /*{{{*/
     qt_threadqueue_node_t *curs, **ptr;
 
     qthread_debug(THREADQUEUE_CALLS, "q(%p), f(%p): began head:%p next:%p tail:%p\n", q, f, q->head, q->head ? q->head->next : NULL, q->tail);
@@ -423,7 +409,7 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                 return;
         }
     }
-}
+} /*}}}*/
 
 /* some place-holder functions */
 void INTERNAL qthread_steal_stat(void)
