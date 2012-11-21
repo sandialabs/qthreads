@@ -1436,10 +1436,7 @@ static void qt_print_addrstat(void *addr, qthread_f f, void *arg, void *retloc, 
 static int print_FEBs(int *ct)
 {
     qthread_feb_callback(qt_print_addrstat, ct);
-    for (unsigned int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
-        qt_hash_callback(qlib->syncvars[i],
-                         (qt_hash_callback_fn)qt_hash_print_addrstat, ct);
-    }
+    qthread_syncvar_callback(qt_print_addrstat, ct);
     return 0;
 }
 
