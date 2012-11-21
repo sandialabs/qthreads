@@ -155,26 +155,6 @@ void INTERNAL         qthread_exec(qthread_t    *t,
 # define qthread_fork_syncvar_future_to(me, f, arg, ret, shep) qthread_fork_syncvar_to(f, arg, ret, shep)
 #else
 # define qthread_shepherd_count() (qlib->nshepherds)
-int qthread_fork_syncvar_copyargs(const qthread_f   f,
-                                  const void *const arg,
-                                  const size_t      arg_size,
-                                  syncvar_t *const  ret);
-int qthread_fork_syncvar_copyargs_to(const qthread_f   f,
-                                     const void *const arg,
-                                     const size_t      arg_size,
-                                     syncvar_t *const  ret,
-                                     const qthread_shepherd_id_t
-                                     preferred_shep);
-int qthread_fork_track_syncvar_copyargs(const qthread_f   f,
-                                        const void *const arg,
-                                        const size_t      arg_size,
-                                        syncvar_t *const  ret);
-int qthread_fork_track_syncvar_copyargs_to(const qthread_f   f,
-                                           const void *const arg,
-                                           const size_t      arg_size,
-                                           syncvar_t *const  ret,
-                                           const qthread_shepherd_id_t
-                                           preferred_shep);
 #endif // ifdef QTHREAD_SST_PRIMITIVES
 
 /* functions added by akp to handle OpenMP task completion
