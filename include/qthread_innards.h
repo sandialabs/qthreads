@@ -145,7 +145,6 @@ typedef struct qlib_s {
 extern qlib_t qlib;
 #endif
 
-/* These are the internal functions that futurelib should be allowed to get at */
 void INTERNAL         qthread_exec(qthread_t    *t,
                                    qt_context_t *c);
 
