@@ -24,11 +24,11 @@
 /********************************************************************
  * Local Variables
  *********************************************************************/
-qt_hash *FEBs;
+static qt_hash *FEBs;
 #ifdef QTHREAD_COUNT_THREADS
-aligned_t *febs_stripes;
+static aligned_t *febs_stripes;
 # ifdef QTHREAD_MUTEX_INCREMENT
-QTHREAD_FASTLOCK_TYPE *febs_stripes_locks;
+static QTHREAD_FASTLOCK_TYPE *febs_stripes_locks;
 # endif
 #endif
 
