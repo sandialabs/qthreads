@@ -21,6 +21,7 @@
 #include "qt_threadqueues.h"
 #include "qt_debug.h"
 #include "qt_internal_syncvar.h"
+#include "qt_eurekas.h"
 
 /* Internal Prototypes */
 static QINLINE void qthread_syncvar_gotlock_fill(qthread_shepherd_t *shep,
@@ -200,6 +201,16 @@ errexit:
 
 const syncvar_t SYNCVAR_INITIALIZER       = SYNCVAR_STATIC_INITIALIZER;
 const syncvar_t SYNCVAR_EMPTY_INITIALIZER = SYNCVAR_STATIC_EMPTY_INITIALIZER;
+
+void INTERNAL qt_syncvar_subsystem_init(uint_fast8_t need_sync)
+{
+    qlib->syncvars = MALLOC(sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
+    assert(qlib->syncvars);
+    for (unsigned i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
+        qlib->syncvars[i] = qt_hash_create(need_sync);
+        assert(qlib->syncvars[i]);
+    }
+}
 
 int qthread_syncvar_status(syncvar_t *const v)
 {                                      /*{{{ */
@@ -1461,5 +1472,85 @@ got_m:
 
     return newv;
 }                                      /*}}} */
+
+static int qt_syncvar_tf_call_cb(const qt_key_t            addr,
+                                 qthread_t *const restrict waiter,
+                                 void *restrict            tf_arg)
+{   /*{{{*/
+    qt_syncvar_callback_f f     = (qt_syncvar_callback_f)((void **)tf_arg)[0];
+    void                 *f_arg = ((void **)tf_arg)[1];
+    void                 *tls;
+
+    if (waiter->rdata->tasklocal_size <= qlib->qthread_tasklocal_size) {
+        if (waiter->flags & QTHREAD_BIG_STRUCT) {
+            tls = &waiter->data[qlib->qthread_argcopy_size];
+        } else {
+            tls = waiter->data;
+        }
+    } else {
+        if (waiter->flags & QTHREAD_BIG_STRUCT) {
+            tls = *(void **)&waiter->data[qlib->qthread_argcopy_size];
+        } else {
+            tls = *(void **)&waiter->data[0];
+        }
+    }
+    f((void *)addr, waiter->f, waiter->arg, waiter->ret, waiter->thread_id, tls, f_arg);
+    return 0;
+} /*}}}*/
+
+static void qt_syncvar_call_tf(const qt_key_t      addr,
+                               qthread_addrstat_t *m,
+                               void               *arg)
+{   /*{{{*/
+    qt_syncvar_taskfilter_f tf    = (qt_syncvar_taskfilter_f)((void **)arg)[0];
+    void                   *f_arg = ((void **)arg)[1];
+
+    QTHREAD_FASTLOCK_LOCK(&m->lock);
+    for (int i = 0; i < 3; i++) {
+        qthread_addrres_t *curs, **base;
+        switch (i) {
+            case 0: curs = m->EFQ; base = &m->EFQ; break;
+            case 1: curs = m->FEQ; base = &m->FEQ; break;
+            case 2: curs = m->FFQ; base = &m->FFQ; break;
+        }
+        for (; curs != NULL; curs = curs->next) {
+            qthread_t *waiter = curs->waiter;
+            void      *tls;
+            switch(tf(addr, waiter, f_arg)) {
+                case 0: // ignore, move to the next one
+                    base = &curs->next;
+                    break;
+                case 2: // remove, move to the next one
+                {
+                    qthread_internal_assassinate(waiter);
+                    *base = curs->next;
+                    FREE_ADDRRES(curs);
+                    break;
+                }
+                default:
+                    QTHREAD_TRAP();
+            }
+        }
+    }
+    QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+} /*}}}*/
+
+void INTERNAL qthread_syncvar_taskfilter(qt_syncvar_taskfilter_f tf,
+                                         void                   *arg)
+{   /*{{{*/
+    void *pass[2] = { tf, arg };
+
+    for (unsigned int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
+        qt_hash_callback(qlib->syncvars[i], (qt_hash_callback_fn)qt_syncvar_call_tf, pass);
+    }
+} /*}}}*/
+
+void INTERNAL qthread_syncvar_callback(qt_syncvar_callback_f cb,
+                                       void                 *arg)
+{   /*{{{*/
+    void *pass[2] = { cb, arg };
+
+    qthread_syncvar_taskfilter(qt_syncvar_tf_call_cb, pass);
+} /*}}}*/
 
 /* vim:set expandtab: */

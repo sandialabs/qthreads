@@ -84,6 +84,7 @@
 #include "qt_debug.h"
 #include "qt_envariables.h"
 #include "qt_internal_feb.h"
+#include "qt_internal_syncvar.h"
 #include "qt_spawncache.h"
 #ifdef QTHREAD_MULTINODE
 # include "qt_multinode_innards.h"
@@ -920,22 +921,6 @@ int API_FUNC qthread_initialize(void)
         qthread_internal_aligned_alloc(sizeof(uint64_strip_t) * nshepherds * nworkerspershep, 64);
 #endif
 
-    /* initialize the FEB-like locking structures */
-#ifdef QTHREAD_COUNT_THREADS
-    qlib->febs_stripes = MALLOC(sizeof(aligned_t) * QTHREAD_LOCKING_STRIPES);
-    qassert_ret(qlib->febs_stripes, QTHREAD_MALLOC_ERROR);
-# ifdef QTHREAD_MUTEX_INCREMENT
-    qlib->febs_stripes_locks = MALLOC(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
-    qassert_ret(qlib->febs_stripes_locks, QTHREAD_MALLOC_ERROR);
-# endif
-#endif /* ifdef QTHREAD_COUNT_THREADS */
-    qlib->syncvars = MALLOC(sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
-    qassert_ret(qlib->syncvars, QTHREAD_MALLOC_ERROR);
-    for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
-        qlib->syncvars[i] = qt_hash_create(need_sync);
-        qassert_ret(qlib->syncvars[i], QTHREAD_MALLOC_ERROR);
-    }
-
     /* initialize the kernel threads and scheduler */
     TLS_INIT(shepherd_structs);
 #ifdef QTHREAD_USE_SPAWNCACHE
@@ -1062,6 +1047,7 @@ int API_FUNC qthread_initialize(void)
     initialize_hazardptrs();
     qt_internal_teams_init();
     qt_feb_subsystem_init(need_sync);
+    qt_syncvar_subsystem_init(need_sync);
     qt_threadqueue_subsystem_init();
     qt_blocking_subsystem_init();
 
@@ -1769,19 +1755,12 @@ void API_FUNC qthread_finalize(void)
 #endif /* ifdef QTHREAD_FEB_PROFILING */
 
     for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
-        qthread_debug(FEB_DETAILS, "destroying feb infrastructure of shep %i\n", (int)i);
         qt_hash_destroy_deallocate(qlib->syncvars[i],
                                    (qt_hash_deallocator_fn)
                                    qthread_addrstat_delete);
 
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
         QTHREAD_FASTLOCK_DESTROY(qlib->atomic_locks[i]);
-#endif
-#ifdef QTHREAD_COUNT_THREADS
-        print_status("bin %i used %u times for FEBs\n", i, (unsigned int)qlib->febs_stripes[i]);
-# ifdef QTHREAD_MUTEX_INCREMENT
-        QTHREAD_FASTLOCK_DESTROY(qlib->febs_stripes_locks[i]);
-# endif
 #endif
     }
 #ifdef QTHREAD_MUTEX_INCREMENT

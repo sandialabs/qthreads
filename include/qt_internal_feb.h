@@ -1,5 +1,5 @@
-#ifndef QTHREAD_INTERNAL_FEB
-#define QTHREAD_INTERNAL_FEB
+#ifndef QTHREAD_INTERNAL_FEB_H
+#define QTHREAD_INTERNAL_FEB_H
 
 #include "qt_visibility.h"
 
