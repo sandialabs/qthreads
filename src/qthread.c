@@ -3155,25 +3155,6 @@ int API_FUNC qthread_fork_syncvar_to(qthread_f             f,
                          QTHREAD_SPAWN_RET_SYNCVAR_T);
 } /*}}}*/
 
-int INTERNAL qthread_fork_syncvar_future_to(qthread_f             f,
-                                            const void           *arg,
-                                            syncvar_t            *ret,
-                                            qthread_shepherd_id_t shepherd)
-{   /*{{{*/
-    if ((shepherd != NO_SHEPHERD) && (shepherd >= qlib->nshepherds)) {
-        shepherd %= qlib->nshepherds;
-    }
-    return qthread_spawn(f,
-                         arg,
-                         0,
-                         ret,
-                         0,
-                         NULL,
-                         shepherd,
-                         QTHREAD_SPAWN_RET_SYNCVAR_T |
-                         QTHREAD_SPAWN_FUTURE);
-} /*}}}*/
-
 int INTERNAL qthread_fork_syncvar_future(qthread_f   f,
                                          const void *arg,
                                          syncvar_t  *ret)

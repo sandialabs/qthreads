@@ -155,13 +155,6 @@ void INTERNAL         qthread_exec(qthread_t    *t,
 # define qthread_fork_syncvar_future_to(me, f, arg, ret, shep) qthread_fork_syncvar_to(f, arg, ret, shep)
 #else
 # define qthread_shepherd_count() (qlib->nshepherds)
-int INTERNAL qthread_fork_syncvar_future(const qthread_f f,
-                                         const void     *arg,
-                                         syncvar_t      *ret);
-int INTERNAL qthread_fork_syncvar_future_to(const qthread_f             f,
-                                            const void                 *arg,
-                                            syncvar_t                  *ret,
-                                            const qthread_shepherd_id_t shepherd);
 int qthread_fork_syncvar_copyargs(const qthread_f   f,
                                   const void *const arg,
                                   const size_t      arg_size,

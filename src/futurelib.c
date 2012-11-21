@@ -89,7 +89,7 @@ void future_init(int vp_per_loc)
         future_bookkeeping_array[i].vp_max   = vp_per_loc;
         future_bookkeeping_array[i].id       = i;
         qassert(pthread_mutex_init(&(future_bookkeeping_array[i].vp_count_lock), NULL), 0);
-        qthread_fork_to(future_shep_init, NULL, rets + i, i);
+        qthread_spawn(future_shep_init, NULL, 0, rets + i, 0, NULL, i, 0);
     }
     for (i = 0; i < qlib->nshepherds; i++) {
         qthread_readFF(NULL, rets + i);
@@ -170,7 +170,7 @@ void future_fork_to(qthread_f             fptr,
     assert(future_bookkeeping_array != NULL);
     if (future_bookkeeping_array == NULL) {
         /* futures weren't initialized properly... */
-        qthread_fork_to(fptr, arg, retval, shep);
+        qthread_spawn(fptr, arg, 0, retval, 0, NULL, shep, 0);
         return;
     }
 
@@ -188,14 +188,14 @@ void future_fork_syncvar_to(qthread_f             fptr,
     assert(future_bookkeeping_array != NULL);
     if (future_bookkeeping_array == NULL) {
         /* futures weren't initialized properly... */
-        qthread_fork_syncvar_to(fptr, arg, retval, shep);
+        qthread_spawn(fptr, arg, 0, retval, 0, NULL, shep, QTHREAD_SPAWN_RET_SYNCVAR_T);
         return;
     }
 
     qthread_debug(FUTURELIB_BEHAVIOR, "Thread %i forking a future\n", (int)qthread_id());
     /* steps 2&3 (slow) */
     blocking_vp_incr(&(future_bookkeeping_array[shep]));
-    qthread_fork_syncvar_future_to(fptr, arg, retval, shep);
+    qthread_spawn(fptr, arg, 0, retval, 0, NULL, shep, QTHREAD_SPAWN_RET_SYNCVAR_T | QTHREAD_SPAWN_FUTURE);
 }
 
 /* This says: "I do not count toward future resource limits, temporarily." */
