@@ -16,7 +16,7 @@ noinst_HEADERS = \
 	qloop_innards.h \
 	qt_asserts.h \
 	qt_expect.h \
-	qthread_prefetch.h \
+	qt_prefetch.h \
 	qt_addrstat.h \
 	qt_affinity.h \
 	qt_aligned_alloc.h \

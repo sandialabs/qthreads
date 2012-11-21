@@ -17,7 +17,7 @@
 #include "qt_shepherd_innards.h"
 #include "qt_qthread_struct.h"
 #include "qt_asserts.h"
-#include "qthread_prefetch.h"
+#include "qt_prefetch.h"
 #include "qt_threadqueues.h"
 #include "qt_envariables.h"
 

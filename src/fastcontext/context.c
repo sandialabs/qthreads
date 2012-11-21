@@ -11,7 +11,7 @@
 #include "qthread/common.h"
 
 #include "qt_visibility.h"
-#include "qthread_prefetch.h"
+#include "qt_prefetch.h"
 
 #ifdef NEEDPOWERMAKECONTEXT
 void INTERNAL qt_makectxt(uctxt_t *ucp,

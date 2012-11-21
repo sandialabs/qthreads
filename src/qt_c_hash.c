@@ -9,7 +9,7 @@
 #include "qt_visibility.h"
 #include "qt_hash.h"
 #include "qt_asserts.h"
-#include "qthread_prefetch.h"
+#include "qt_prefetch.h"
 #include "qt_atomics.h"
 #include "qthread/cacheline.h"
 #include "qt_aligned_alloc.h"
