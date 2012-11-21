@@ -2920,6 +2920,49 @@ int API_FUNC qthread_fork_precond_simple(qthread_f   f,
                          QTHREAD_SPAWN_SIMPLE);
 } /*}}}*/
 
+
+int API_FUNC qthread_fork_precond_to(qthread_f             f,
+                                     const void           *arg,
+                                     aligned_t            *ret,
+                                     qthread_shepherd_id_t shepherd,
+                                     int                   npreconds,
+                                     ...)
+{                      /*{{{ */
+    // Collect sync info
+    va_list     args;
+    aligned_t **preconds = NULL;
+
+    va_start(args, npreconds);
+    if (npreconds > 0) {
+        preconds = MALLOC((npreconds + 1) * sizeof(aligned_t *));
+        assert(preconds != NULL);
+        preconds[0] = (aligned_t *)(uintptr_t)npreconds;
+        for (int i = 1; i < npreconds + 1; ++i) {
+            preconds[i] = va_arg(args, aligned_t *);
+        }
+    } else if (npreconds < 0) {
+        npreconds *= -1;
+        preconds   = MALLOC((npreconds + 1) * sizeof(aligned_t *));
+        assert(preconds != NULL);
+        preconds[0] = (aligned_t *)(uintptr_t)npreconds;
+        aligned_t **tmp = va_arg(args, aligned_t * *);
+        memcpy(preconds + 1, tmp, sizeof(aligned_t *) * npreconds);
+    }
+    va_end(args);
+
+    if ((shepherd != NO_SHEPHERD) && (shepherd >= qlib->nshepherds)) {
+        shepherd %= qlib->nshepherds;
+    }
+    return qthread_spawn(f,
+                         arg,
+                         0,
+                         ret,
+                         npreconds,
+                         preconds,
+                         shepherd,
+                         0);
+}                      /*}}} */
+
 int API_FUNC qthread_fork_precond(qthread_f   f,
                                   const void *arg,
                                   aligned_t  *ret,
@@ -3062,48 +3105,6 @@ int API_FUNC qthread_fork_to(qthread_f             f,
                          0);
 } /*}}}*/
 
-int API_FUNC qthread_fork_precond_to(qthread_f             f,
-                                     const void           *arg,
-                                     aligned_t            *ret,
-                                     qthread_shepherd_id_t shepherd,
-                                     int                   npreconds,
-                                     ...)
-{                      /*{{{ */
-    // Collect sync info
-    va_list     args;
-    aligned_t **preconds = NULL;
-
-    va_start(args, npreconds);
-    if (npreconds > 0) {
-        preconds = MALLOC((npreconds + 1) * sizeof(aligned_t *));
-        assert(preconds != NULL);
-        preconds[0] = (aligned_t *)(uintptr_t)npreconds;
-        for (int i = 1; i < npreconds + 1; ++i) {
-            preconds[i] = va_arg(args, aligned_t *);
-        }
-    } else if (npreconds < 0) {
-        npreconds *= -1;
-        preconds   = MALLOC((npreconds + 1) * sizeof(aligned_t *));
-        assert(preconds != NULL);
-        preconds[0] = (aligned_t *)(uintptr_t)npreconds;
-        aligned_t **tmp = va_arg(args, aligned_t * *);
-        memcpy(preconds + 1, tmp, sizeof(aligned_t *) * npreconds);
-    }
-    va_end(args);
-
-    if ((shepherd != NO_SHEPHERD) && (shepherd >= qlib->nshepherds)) {
-        shepherd %= qlib->nshepherds;
-    }
-    return qthread_spawn(f,
-                         arg,
-                         0,
-                         ret,
-                         npreconds,
-                         preconds,
-                         shepherd,
-                         0);
-}                      /*}}} */
-
 int API_FUNC qthread_fork_syncvar_to(qthread_f             f,
                                      const void           *arg,
                                      syncvar_t            *ret,
@@ -3120,21 +3121,6 @@ int API_FUNC qthread_fork_syncvar_to(qthread_f             f,
                          NULL,
                          s,
                          QTHREAD_SPAWN_RET_SYNCVAR_T);
-} /*}}}*/
-
-int INTERNAL qthread_fork_syncvar_future(qthread_f   f,
-                                         const void *arg,
-                                         syncvar_t  *ret)
-{   /*{{{*/
-    return qthread_spawn(f,
-                         arg,
-                         0,
-                         ret,
-                         0,
-                         NULL,
-                         NO_SHEPHERD,
-                         QTHREAD_SPAWN_RET_SYNCVAR_T |
-                         QTHREAD_SPAWN_FUTURE);
 } /*}}}*/
 
 void INTERNAL qthread_back_to_master(qthread_t *t)
