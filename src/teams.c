@@ -14,7 +14,7 @@
 #include "qt_visibility.h"
 #include "qt_mpool.h"
 #include "qthread_innards.h"
-#include "qthread_expect.h"
+#include "qt_expect.h"
 
 /* Memory management macros */
 #if defined(UNPOOLED)

@@ -44,7 +44,7 @@
 /* Internal Headers */
 #include "qt_mpool.h"
 #include "qt_atomics.h"
-#include "qthread_expect.h"
+#include "qt_expect.h"
 
 #include "qthread/cacheline.h"
 #include "qthread/futurelib.h"

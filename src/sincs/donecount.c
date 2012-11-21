@@ -16,7 +16,7 @@
 /* Internal Headers */
 #include "qt_asserts.h"
 #include "qt_shepherd_innards.h"
-#include "qthread_expect.h"
+#include "qt_expect.h"
 #include "qt_visibility.h"
 #include "qt_aligned_alloc.h"
 #include "qt_debug.h"

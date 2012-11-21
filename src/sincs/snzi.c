@@ -17,7 +17,7 @@
 #include "qthread/sinc.h"
 #include "qt_asserts.h"
 #include "qt_shepherd_innards.h"
-#include "qthread_expect.h"
+#include "qt_expect.h"
 #include "qt_visibility.h"
 
 typedef aligned_t qt_sinc_count_t;

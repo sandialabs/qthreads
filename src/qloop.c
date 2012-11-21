@@ -15,7 +15,7 @@
 #include "qt_barrier.h"
 #include "qthread/qt_sinc_barrier.h"
 #include "qloop_innards.h"
-#include "qthread_expect.h"
+#include "qt_expect.h"
 #include "qt_asserts.h"
 #include "qt_debug.h"
 #include "qt_aligned_alloc.h"
