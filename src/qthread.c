@@ -2,10 +2,14 @@
 # include "config.h"
 #endif
 
-/* The API */
+/******************************************************/
+/* The API                                            */
+/******************************************************/
 #include "qthread/qthread.h"
 
-/* System Headers */
+/******************************************************/
+/* System Headers                                     */
+/******************************************************/
 #include <stdio.h>
 #include <stdlib.h>              /* for malloc() and abort() */
 #include <stdarg.h>              /* for va_list, va_start() and va_end() */
@@ -21,9 +25,6 @@
 #endif
 #include <sys/time.h>
 #include <sys/resource.h>
-#if (defined(QTHREAD_SHEPHERD_PROFILING) || defined(QTHREAD_FEB_PROFILING))
-# include <qthread/qtimer.h>
-#endif
 #include <pthread.h>
 #ifdef HAVE_SCHED_H
 # include <sched.h>
@@ -41,19 +42,31 @@
 #endif
 #include <signal.h>
 
-/* Internal Headers */
+/******************************************************/
+/* Public Headers                                     */
+/******************************************************/
+#include "qthread/cacheline.h"
+#include "qthread/futurelib.h"
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+# include "qthread/feb_barrier.h"   /* for barrier in parallel region defination */
+#endif
+#if (defined(QTHREAD_SHEPHERD_PROFILING) || defined(QTHREAD_FEB_PROFILING))
+# include <qthread/qtimer.h>
+#endif
+
+/******************************************************/
+/* Internal Headers                                   */
+/******************************************************/
 #include "qt_mpool.h"
 #include "qt_atomics.h"
 #include "qt_expect.h"
 
-#include "qthread/cacheline.h"
-#include "qthread/futurelib.h"
 #include "qthread_innards.h"
 #include "qt_prefetch.h"
 #include "futurelib_innards.h"
+#include "qt_feb_barrier.h"
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 # include "qt_barrier.h"
-# include "qthread/feb_barrier.h"   /* for barrier in parallel region defination */
 # include "qt_arrive_first.h"
 # include "qt_task_counter.h"
 #endif

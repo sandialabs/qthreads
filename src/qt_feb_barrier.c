@@ -9,11 +9,12 @@
 /* System Compatibility Header */
 #include "qthread-int.h"
 
-/* Installed Headers */
-#include <qthread/qthread.h>
-#include <qthread/feb_barrier.h>
+/* Public Headers */
+#include "qthread/qthread.h"
+#include "qthread/feb_barrier.h"
 
 /* Internal Headers */
+#include "qt_feb_barrier.h"
 #include "qt_atomics.h"
 #include "qt_mpool.h"
 #include "qthread_innards.h"
