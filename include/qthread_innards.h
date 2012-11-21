@@ -119,9 +119,6 @@ typedef struct qlib_s {
     QTHREAD_FASTLOCK_TYPE *atomic_stripes_locks;
 # endif
 #endif
-    /* this is for holding syncvar waiters... similar to the FEBs (perhaps
-     * should have the _stripes business as well... maybe later) */
-    qt_hash *syncvars;
 
    /*AGG cost method, call method  and max cost 
     * defined in qthreads or given by the user at qthread initialization
