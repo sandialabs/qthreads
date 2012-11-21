@@ -15,7 +15,7 @@
 #include "qthread/qthread.h"
 #include "qthread/cacheline.h"
 #include "qthread/sinc.h"
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 #include "qt_shepherd_innards.h"
 #include "qthread_expect.h"
 #include "qt_visibility.h"

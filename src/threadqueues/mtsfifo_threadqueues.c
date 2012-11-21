@@ -12,7 +12,7 @@
 #include "qt_atomics.h"
 #include "qt_shepherd_innards.h"
 #include "qt_qthread_struct.h"
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 #include "qthread_prefetch.h"
 #include "qt_threadqueues.h"
 #include "qthread_innards.h" /* for qthread_internal_cleanup_early() */

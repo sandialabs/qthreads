@@ -7,7 +7,7 @@
 #include <unistd.h> /* for getpagesize() */
 
 /* Internal Headers */
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 #include "qthread/qthread.h" /* for qthread_incr() and qthread_cas() */
 #include "qt_mpool.h"
 #include "qthread_innards.h" /* for qthread_intarnal_cleanup_late() */

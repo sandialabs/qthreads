@@ -25,7 +25,7 @@ kern_return_t thread_policy_get(thread_t                thread,
                                 boolean_t              *get_default);
 #endif /* ifdef HAVE_MACH_THREAD_POLICY_H */
 
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 #include "qt_affinity.h"
 #include "shufflesheps.h"
 

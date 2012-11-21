@@ -22,7 +22,7 @@
 
 /* Internal Headers */
 #include "qt_io.h"
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 #include "qthread_innards.h" /* for qlib */
 
 pid_t qt_wait4(pid_t          pid,

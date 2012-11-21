@@ -10,7 +10,7 @@
 /* Internal Headers */
 #include "qt_visibility.h"
 #include "qt_debug.h"
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 #include "qthread_innards.h" /* for qlib */
 #include "qt_shepherd_innards.h"
 // #include "qt_qthread_struct.h"

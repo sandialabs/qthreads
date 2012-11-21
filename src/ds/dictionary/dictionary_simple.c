@@ -6,7 +6,7 @@
 // #include <qthread_innards.h> //using qthread_library_initialized
 #include <56reader-rwlock.h> // using rwlock_*
 
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 #include "qt_debug.h"
 
 struct qt_dictionary {

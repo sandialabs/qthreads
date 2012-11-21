@@ -13,7 +13,7 @@
 #include <qthread/dictionary.h>
 
 /* Internal Headers */
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 #include "qt_debug.h"
 #include "qt_atomics.h"
 #include "qt_aligned_alloc.h"

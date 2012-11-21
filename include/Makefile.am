@@ -14,7 +14,7 @@ noinst_HEADERS = \
 	net/net.h \
 	qthread_innards.h \
 	qloop_innards.h \
-	qthread_asserts.h \
+	qt_asserts.h \
 	qthread_expect.h \
 	qthread_prefetch.h \
 	qt_addrstat.h \

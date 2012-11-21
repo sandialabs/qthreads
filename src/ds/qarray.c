@@ -16,7 +16,7 @@
 /* Local Headers */
 #include <qthread/qarray.h>
 #include "qt_visibility.h"
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 #include "qthread_innards.h"           /* for shep_to_node && qthread_debug */
 #include "qt_debug.h"
 #include "qt_aligned_alloc.h"

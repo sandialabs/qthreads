@@ -39,7 +39,7 @@ static QINLINE void *MALLOC(size_t sz)
 
 /* Internal headers */
 # include "qt_atomics.h"
-# include "qthread_asserts.h"
+# include "qt_asserts.h"
 
 enum qthread_debug_levels {
     NO_DEBUG_OUTPUT = 0,

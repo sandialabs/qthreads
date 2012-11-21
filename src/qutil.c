@@ -1,17 +1,21 @@
 #ifdef HAVE_CONFIG_H
 # include "config.h"
 #endif
-#include <qthread/qutil.h>
-#include <qthread/qthread.h>
-#include <qthread/futurelib.h>
-#include <qthread_asserts.h>           /* for assert() toggling */
-#include <qthread/cacheline.h>
 
+/* System Headers */
 #include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
+/* API Headers */
+#include <qthread/qutil.h>
+#include <qthread/qthread.h>
+#include <qthread/futurelib.h>
+#include <qthread/cacheline.h>
+
+/* Internal Headers */
+#include "qt_asserts.h"           /* for assert() toggling */
 #include "qt_visibility.h"
 #include "qt_debug.h"
 

@@ -12,7 +12,7 @@
 #include <qthread/qloop.h>
 #include "qt_arrive_first.h"
 #include "qt_barrier.h"
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 #include "qloop_innards.h"	       /* for cnbWorkers_ and cnbTimeMin_ */
 
 static qt_arrive_first_t *qt_arrive_first_create(int size, qt_barrier_btype type, int debug);

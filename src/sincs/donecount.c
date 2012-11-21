@@ -10,17 +10,16 @@
 
 /* The API */
 #include "qthread/qthread.h"
+#include "qthread/sinc.h"
+#include "qthread/cacheline.h"
 
 /* Internal Headers */
-#include "qthread/cacheline.h"
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 #include "qt_shepherd_innards.h"
 #include "qthread_expect.h"
 #include "qt_visibility.h"
 #include "qt_aligned_alloc.h"
 #include "qt_debug.h"
-
-#include "qthread/sinc.h"
 
 typedef aligned_t qt_sinc_count_t;
 

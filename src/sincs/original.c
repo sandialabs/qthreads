@@ -2,6 +2,7 @@
 # include "config.h"
 #endif
 
+/* System Headers */
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -10,10 +11,13 @@
 # include <malloc.h>                   /* for memalign() */
 #endif
 
+/* API Headers */
 #include "qthread/qthread.h"
 #include "qthread/cacheline.h"
 #include "qthread/sinc.h"
-#include "qthread_asserts.h"
+
+/* Internal Headers */
+#include "qt_asserts.h"
 #include "qt_shepherd_innards.h"
 #include "qt_visibility.h"
 

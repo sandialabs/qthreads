@@ -19,7 +19,7 @@
 #endif
 #include <string.h>                    /* for memset() */
 #include <errno.h>
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 
 #ifndef PTHREAD_MUTEX_SMALL_ENOUGH
 # warning The pthread_mutex_t structure is either too big or hasn't been checked. If you're compiling by hand, you can probably ignore this warning, or define PTHREAD_MUTEX_SMALL_ENOUGH to make it go away.

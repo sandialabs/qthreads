@@ -5,7 +5,7 @@
 #include <qthread/qthread.h>
 #include <qthread/qlfqueue.h>
 #include <qthread/qdqueue.h>
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 #ifdef HAVE_SYS_LGRP_USER_H
 # include <sys/lgrp_user.h>
 #endif

@@ -8,7 +8,7 @@
 #include <qthread/qpool.h>
 #include "qt_hazardptrs.h"
 #include "qt_atomics.h"
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 #include "qt_debug.h"                  /* for malloc debug wrappers */
 
 /* queue declarations */

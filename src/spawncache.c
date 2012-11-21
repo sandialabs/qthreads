@@ -10,7 +10,7 @@
 #include "qt_spawncache.h"
 #include "qt_visibility.h"
 #include "qt_debug.h"
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 #include "qthread_innards.h"
 #include "qthread/cacheline.h"
 #include "qt_macros.h"

@@ -14,7 +14,7 @@
 
 /* Internal Headers */
 #include "qt_io.h"
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 #include "qthread_innards.h" /* for qlib */
 #include "qthread/qthread.h"
 #include "qthread/qtimer.h"

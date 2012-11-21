@@ -13,7 +13,7 @@
 #include "qt_macros.h"
 #include "qt_visibility.h"
 #include "qthread_innards.h"
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 #include "qthread_prefetch.h"
 #include "qt_threadqueues.h"
 #include "qt_qthread_struct.h"

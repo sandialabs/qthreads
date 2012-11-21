@@ -33,7 +33,7 @@
 /* Internal Headers */
 #include "qt_io.h"
 #include "qt_macros.h"
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 #include "qthread_innards.h"
 #include "qt_threadqueues.h"
 #include "qt_debug.h"
