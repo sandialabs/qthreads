@@ -150,6 +150,7 @@ static QINLINE qthread_worker_t *qthread_internal_getworker(void)
 
 #endif
 
+unsigned int INTERNAL qthread_internal_shep_to_node(const qthread_shepherd_id_t shep);
 qthread_shepherd_t INTERNAL *qthread_find_active_shepherd(qthread_shepherd_id_t *l,
                                                           unsigned int          *d);
 

@@ -150,7 +150,6 @@ int INTERNAL qthread_fork_future_to(const qthread_f             f,
                                     const void                 *arg,
                                     aligned_t                  *ret,
                                     const qthread_shepherd_id_t shepherd);
-unsigned int INTERNAL qthread_internal_shep_to_node(const qthread_shepherd_id_t shep);
 void INTERNAL         qthread_exec(qthread_t    *t,
                                    qt_context_t *c);
 
