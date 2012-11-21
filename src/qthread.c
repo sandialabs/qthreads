@@ -83,8 +83,8 @@
 #include "qt_io.h"
 #include "qt_debug.h"
 #include "qt_envariables.h"
-#include "qt_internal_feb.h"
-#include "qt_internal_syncvar.h"
+#include "qt_feb.h"
+#include "qt_syncvar.h"
 #include "qt_spawncache.h"
 #ifdef QTHREAD_MULTINODE
 # include "qt_multinode_innards.h"

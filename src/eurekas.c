@@ -13,8 +13,8 @@
 #include "qt_qthread_struct.h"
 #include "qt_qthread_mgmt.h"
 #include "qthread_innards.h"
-#include "qt_internal_feb.h"     // for qt_feb_taskfilter()
-#include "qt_internal_syncvar.h" // for qt_syncvar_taskfilter()
+#include "qt_feb.h"     // for qt_feb_taskfilter()
+#include "qt_syncvar.h" // for qt_syncvar_taskfilter()
 
 TLS_DECL_INIT(uint_fast8_t, eureka_block);
 TLS_DECL_INIT(uint_fast8_t, eureka_blocked_flag);

@@ -9,6 +9,9 @@
 /* API Headers */
 #include "qthread/qthread.h"
 
+/* Internal Syncvar API */
+#include "qt_syncvar.h"
+
 /* Internal Headers */
 #include "qt_subsystems.h"
 #include "qt_hash.h"
@@ -20,7 +23,6 @@
 #include "qt_qthread_mgmt.h"
 #include "qt_threadqueues.h"
 #include "qt_debug.h"
-#include "qt_internal_syncvar.h"
 #include "qt_eurekas.h"
 
 /* Internal Prototypes */

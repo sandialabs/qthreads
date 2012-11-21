@@ -7,6 +7,9 @@
 
 /* System Headers */
 
+/* FEB Internal API */
+#include "qt_feb.h"
+
 /* Internal Headers */
 #include "qt_subsystems.h"
 #include "qt_hash.h"
@@ -18,7 +21,6 @@
 #include "qt_addrstat.h"
 #include "qt_threadqueues.h"
 #include "qt_debug.h"
-#include "qt_internal_feb.h"
 #include "qt_eurekas.h" // for qthread_internal_assassinate() (used in taskfilter)
 #include "qt_output_macros.h"
 

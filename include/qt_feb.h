@@ -2,6 +2,8 @@
 #define QTHREAD_INTERNAL_FEB_H
 
 #include "qt_visibility.h"
+#include "qt_hash.h" /* for qt_key_t */
+#include "qt_qthread_t.h"
 
 typedef void (*qt_feb_callback_f)(qt_key_t addr, qthread_f f, void *arg, void *retloc, unsigned int thread_id, void *tls, void *callarg);
 typedef int (*qt_feb_taskfilter_f)(qt_key_t addr, qthread_t *restrict waiter, void *restrict arg);
