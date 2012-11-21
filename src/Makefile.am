@@ -83,7 +83,7 @@ endif
 if COMPILE_TARGET_UNIX
 libqthread_la_SOURCES += \
 	qthread.c \
-	qt_mpool.c \
+	mpool.c \
 	shepherds.c \
 	workers.c \
 	threadqueues/@with_scheduler@_threadqueues.c \
