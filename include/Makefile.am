@@ -38,6 +38,7 @@ noinst_HEADERS = \
 	qt_locks.h \
 	qt_macros.h \
 	qt_mpool.h \
+	qt_output_macros.h \
 	qt_profiling.h \
 	qt_qthread_mgmt.h \
 	qt_qthread_struct.h \

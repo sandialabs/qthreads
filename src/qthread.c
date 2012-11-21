@@ -93,6 +93,7 @@
 #include "qt_teams.h"
 #include "qt_eurekas.h"
 #include "qt_subsystems.h"
+#include "qt_output_macros.h"
 
 #ifdef QTHREAD_RCRTOOL
 # include "maestro_sched.h"
@@ -345,11 +346,6 @@ static double totalIdleTime = 0.0; // added for RCRTOOL level >= 3 stats
 static int    idleCheckin   = 0;   // added for RCRTOOL level >= 3 stats
 # endif
 #endif
-
-#define print_status(format, ...)  printf("QTHREADS: " format, ## __VA_ARGS__)
-#define print_warning(format, ...) fprintf(stderr, "QTHREADS: " format, ## __VA_ARGS__)
-#define print_error(format, ...)   do { fprintf(stderr, "QTHREADS ERROR: " format, ## __VA_ARGS__); \
-                                        fflush(stderr); } while (0)
 
 /* the qthread_master() function is the loop responsible for actually
  * executing the work units
