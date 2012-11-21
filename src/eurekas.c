@@ -13,6 +13,7 @@
 #include "qt_qthread_struct.h"
 #include "qt_qthread_mgmt.h"
 #include "qthread_innards.h"
+#include "qt_internal_feb.h"
 
 TLS_DECL_INIT(uint_fast8_t, eureka_block);
 TLS_DECL_INIT(uint_fast8_t, eureka_blocked_flag);
@@ -158,6 +159,10 @@ void INTERNAL qt_eureka_shepherd_init(void)
     signal(QT_EUREKA_SIGNAL, hup_handler);
 } /*}}}*/
 
+static int qt_eureka_internal_filterfunc(const qt_key_t addr, qthread_t *const restrict t, void *restrict arg)
+{
+    return eureka_filter(t);
+}
 static void qthread_internal_team_eureka_febdeath(const qt_key_t      addr,
                                                   qthread_addrstat_t *m,
                                                   void               *arg)
@@ -247,7 +252,6 @@ void API_FUNC qt_team_eureka(void)
 #endif
 
     assert(qthread_library_initialized);
-    qassert_retvoid(qlib != NULL);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qassert_retvoid(wkr != NULL);
 #endif
@@ -336,10 +340,8 @@ void API_FUNC qt_team_eureka(void)
     qt_spawncache_filter(eureka_filter);
 #endif
     /* 6: callback to kill blocked tasks */
+    qthread_feb_taskfilter(qt_eureka_internal_filterfunc, NULL);
     for (unsigned int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
-        qt_hash_callback(qlib->FEBs[i],
-                         (qt_hash_callback_fn)qthread_internal_team_eureka_febdeath,
-                         NULL);
         qt_hash_callback(qlib->syncvars[i],
                          (qt_hash_callback_fn)qthread_internal_team_eureka_febdeath,
                          NULL);

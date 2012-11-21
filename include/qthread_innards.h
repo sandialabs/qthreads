@@ -119,16 +119,6 @@ typedef struct qlib_s {
     QTHREAD_FASTLOCK_TYPE *atomic_stripes_locks;
 # endif
 #endif
-    /* this is how we manage FEBs
-     * NOTE: this can be a major bottleneck
-     */
-    qt_hash               *FEBs;
-#ifdef QTHREAD_COUNT_THREADS
-    aligned_t             *febs_stripes;
-# ifdef QTHREAD_MUTEX_INCREMENT
-    QTHREAD_FASTLOCK_TYPE *febs_stripes_locks;
-# endif
-#endif
     /* this is for holding syncvar waiters... similar to the FEBs (perhaps
      * should have the _stripes business as well... maybe later) */
     qt_hash *syncvars;

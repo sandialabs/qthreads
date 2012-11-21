@@ -3,7 +3,8 @@
 
 #include "qt_visibility.h"
 
-typedef void (*qt_feb_callback_f)(void *addr, qthread_f f, void *arg, void *retloc, unsigned int thread_id, void *tls, void *callarg);
+typedef void (*qt_feb_callback_f)(qt_key_t addr, qthread_f f, void *arg, void *retloc, unsigned int thread_id, void *tls, void *callarg);
+typedef int (*qt_feb_taskfilter_f)(qt_key_t addr, qthread_t *restrict waiter, void *restrict arg);
 
 void INTERNAL qt_feb_subsystem_init(uint_fast8_t);
 
@@ -19,6 +20,8 @@ int INTERNAL qthread_check_feb_preconds(qthread_t *t);
 
 void INTERNAL qthread_feb_callback(qt_feb_callback_f cb,
                                    void             *arg);
+void INTERNAL qthread_feb_taskfilter(qt_feb_taskfilter_f tf,
+                                     void               *arg);
 
 #endif // ifndef QTHREAD_INTERNAL_FEB
 /* vim:set expandtab: */
