@@ -602,7 +602,6 @@ void INTERNAL qt_keep_adding_agg_task(qthread_t *agg_task,
         stealable = &(private_q->qlength_stealable);
     }
 
-    uint16_t mask = QTHREAD_RET_IS_SINC | QTHREAD_RET_IS_VOID_SINC | QTHREAD_RET_IS_SYNCVAR;
     while(*head_addr != NULL) {
         node = *tail_addr;
         t    = node->value;
@@ -611,7 +610,7 @@ void INTERNAL qt_keep_adding_agg_task(qthread_t *agg_task,
             break;
         }
 
-        if((t->flags & mask) != (agg_task->flags & mask)) {
+        if((t->flags & QTHREAD_RET_MASK) != (agg_task->flags & QTHREAD_RET_MASK)) {
             // printf("Found task with different return value, stopping\n");
             break;
         }
