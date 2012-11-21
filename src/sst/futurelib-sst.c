@@ -47,7 +47,7 @@ static pthread_mutex_t sfnf_lock;
  */
 static inline location_t *ft_loc(void)
 {
-    return qthread_isfuture() ? &(future_bookkeeping_array[qthread_shep(NULL)]) : NULL;
+    return &(future_bookkeeping_array[qthread_shep(NULL)]);
 }
 
 /* this function is used as a qthread; it is run by each shepherd so that each

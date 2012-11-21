@@ -3489,13 +3489,6 @@ unsigned API_FUNC qthread_barrier_id(void)
 
 /* these two functions are helper functions for futurelib
  * (nobody else gets to have 'em!) */
-unsigned int INTERNAL qthread_isfuture(void)
-{                      /*{{{ */
-    qthread_t *t = qthread_internal_self();
-
-    return t ? (t->flags & QTHREAD_FUTURE) : 0;
-}                      /*}}} */
-
 void INTERNAL qthread_assertnotfuture(void)
 {                      /*{{{ */
     qthread_t *t = qthread_internal_self();

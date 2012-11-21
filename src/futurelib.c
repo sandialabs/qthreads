@@ -33,7 +33,9 @@ static void blocking_vp_incr(location_t *loc);
  * shepherd. */
 static location_t *ft_loc(void)
 {
-    return qthread_isfuture() ? (location_t *)TLS_GET(future_bookkeeping) : NULL;
+    qthread_t *t = qthread_internal_self();
+
+    return (t->flags & QTHREAD_FUTURE) ? (location_t *)TLS_GET(future_bookkeeping) : NULL;
 }
 
 static void future_cleanup(void)
