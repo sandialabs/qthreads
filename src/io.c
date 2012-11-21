@@ -387,7 +387,7 @@ void INTERNAL qt_blocking_subsystem_enqueue(qt_blocking_queue_node_t *job)
         }
     } else {
         qthread_debug(IO_DETAILS, "Queue is %u long, there are %u workers\n", (unsigned)theQueue.length, (unsigned)io_worker_count);
-        QTHREAD_SIGNAL(&theQueue.notempty);
+        QTHREAD_COND_SIGNAL(theQueue.notempty);
     }
     QTHREAD_UNLOCK(&theQueue.lock);
     qthread_debug(IO_FUNCTIONS, "exiting, job = %p\n", job);
