@@ -827,10 +827,10 @@ AS_IF([test "x$enable_multithreaded_shepherds" = xyes],
        AC_SEARCH_LIBS([nanosleep],[rt],[],[AC_MSG_ERROR([Cannot find nanosleep])])
        AS_IF([test "x$with_scheduler" = "x"],
              [AC_MSG_ERROR([something broke in the configure script (hit the developer with a 2-by-four)])])
-       EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --enable-multithreaded-shepherds"
+       EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --with-scheduler=sherwood"
        enable_multithreaded_shepherds="yes"],
       [enable_multithreaded_shepherds="no"
-       EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --disable-multithreaded-shepherds"])
+       EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --with-scheduler=nemesis"])
 
 AS_IF([test "x$enable_internal_spinlock" = "x"],
       [case "$qthread_cv_c_compiler_type" in
