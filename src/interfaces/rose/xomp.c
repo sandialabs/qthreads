@@ -38,7 +38,7 @@
 #endif
 
 #include <rose_xomp.h>
-#include <qthread/qt_sinc_barrier.h>
+#include <qthread/sinc_barrier.h>
 #ifdef QTHREAD_RCRTOOL
 #include "rcrtool/qt_rcrtool.h"
 #include "maestro_sched.h"

@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include "qthread_innards.h"           // for qthread_num_shepherds/qthread_num_workers
 #include "maestro_sched.h"
-#include <qthread/qt_sinc_barrier.h>
+#include <qthread/sinc_barrier.h>
 
 void saveEnergy(int64_t i);
 void resetEnergy(int64_t i);

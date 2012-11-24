@@ -20,7 +20,7 @@
 #include "qt_visibility.h"
 #include "qt_debug.h"
 #include "qt_asserts.h"
-#include "qthread/qt_sinc_barrier.h"
+#include "qthread/sinc_barrier.h"
 
 void API_FUNC qt_sinc_barrier_enter(qt_sinc_barrier_t *b);
 void qt_sinc_barrier_init(qt_sinc_barrier_t *restrict  barrier,
