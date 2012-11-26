@@ -18,7 +18,6 @@
 #include "qt_mpool.h"
 #include "qt_visibility.h"
 #include "qt_debug.h"
-#include "qt_asserts.h"
 #include "qthread/sinc_barrier.h"
 
 void API_FUNC qt_sinc_barrier_enter(qt_sinc_barrier_t *b);

@@ -15,6 +15,7 @@
 
 #include "qt_visibility.h"
 #include "qt_subsystems.h"
+#include "qt_asserts.h"
 //#include "qthread_innards.h"
 #include "qt_affinity.h"
 #include "qt_debug.h"

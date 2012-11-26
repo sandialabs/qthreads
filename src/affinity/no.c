@@ -10,6 +10,7 @@
 #endif
 
 #include "qt_affinity.h"
+#include "qt_asserts.h"
 #include "qt_debug.h"
 #include "shufflesheps.h"
 

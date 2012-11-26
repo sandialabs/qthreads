@@ -60,7 +60,7 @@
 #include "qt_mpool.h"
 #include "qt_atomics.h"
 #include "qt_expect.h"
-
+#include "qt_asserts.h"
 #include "qthread_innards.h"
 #include "qt_prefetch.h"
 #include "qt_feb_barrier.h"

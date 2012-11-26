@@ -16,6 +16,7 @@
 #include "qthread_innards.h"
 #include "qt_feb.h"     // for qt_feb_taskfilter()
 #include "qt_syncvar.h" // for qt_syncvar_taskfilter()
+#include "qt_asserts.h"
 
 TLS_DECL_INIT(uint_fast8_t, eureka_block);
 TLS_DECL_INIT(uint_fast8_t, eureka_blocked_flag);

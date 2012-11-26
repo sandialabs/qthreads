@@ -2,7 +2,6 @@
 # include "config.h"
 #endif
 
-#include <assert.h>
 #include <portals4.h>
 #include <pthread.h>
 #include <limits.h>
@@ -15,6 +14,7 @@
 #include "qt_mpool.h"
 #include "qt_debug.h"
 #include "qt_envariables.h"
+#include "qt_asserts.h"
 
 struct recv_block_t {
     void *start;

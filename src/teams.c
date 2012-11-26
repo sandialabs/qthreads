@@ -18,6 +18,7 @@
 #include "qthread_innards.h" /* for qlib */
 #include "qt_initialized.h" // for qthread_library_initialized
 #include "qt_expect.h"
+#include "qt_asserts.h"
 #include "qt_subsystems.h"
 
 /* Memory management macros */

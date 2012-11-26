@@ -15,6 +15,7 @@
 #include "qt_macros.h"
 #include "qt_qthread_struct.h"
 #include "qt_qthread_mgmt.h"
+#include "qt_asserts.h"
 
 /* GLOBAL DATA (copy everywhere) */
 TLS_DECL_INIT(location_t *, future_bookkeeping);

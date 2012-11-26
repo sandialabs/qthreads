@@ -18,6 +18,7 @@
 #include "qt_threadqueues.h"
 #include "qt_envariables.h"
 #include "qt_threadqueue_stack.h"
+#include "qt_asserts.h"
 
 #ifdef QTHREAD_RCRTOOL
 void saveEnergy(int64_t i);

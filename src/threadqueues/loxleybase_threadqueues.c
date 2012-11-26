@@ -17,6 +17,7 @@
 #include "qt_threadqueues.h"
 #include "qt_envariables.h"
 #include "qt_threadqueue_stack.h"
+#include "qt_asserts.h"
 
 #ifdef STEAL_PROFILE
 # define steal_profile_increment(shepherd, field) qthread_incr(&(shepherd->field), 1)

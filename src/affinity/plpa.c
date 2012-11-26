@@ -17,6 +17,7 @@
 #include <plpa.h>
 
 #include "qt_affinity.h"
+#include "qt_asserts.h"
 #include "shufflesheps.h"
 
 qthread_shepherd_id_t guess_num_shepherds(void);

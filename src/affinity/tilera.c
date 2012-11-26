@@ -9,6 +9,7 @@
 #include <stdio.h>
 
 #include "qt_affinity.h"
+#include "qt_asserts.h"
 #include "shepcomp.h"
 #include "shufflesheps.h"
 #include "qt_debug.h" // for MALLOC()
