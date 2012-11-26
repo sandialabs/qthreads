@@ -39,7 +39,6 @@
 
 #include "qthread/qthread.h"
 #include "qthread/qtimer.h"
-#include "qthread_innards.h" // not strictly necessary (yet)
 #include "qt_feb.h" // for blockreporting
 #include "qt_atomics.h"      /* for SPINLOCK_BODY() */
 #include "qt_envariables.h"

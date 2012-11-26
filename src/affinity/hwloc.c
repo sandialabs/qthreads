@@ -5,14 +5,14 @@
 #include <hwloc.h>
 
 #include "qt_subsystems.h"
-#include "qthread_innards.h"
+#include "qt_asserts.h" /* for qassert() */
 #include "qt_affinity.h"
 #include "qt_debug.h"
 #include "qt_envariables.h"
 #include "shufflesheps.h"
 
 static hwloc_topology_t topology;
-static uint32_t         initialized = 0;
+static uint32_t         initialized     = 0;
 
 static int            shep_depth = -1;
 static hwloc_cpuset_t mccoy_thread_bindings;
@@ -408,7 +408,8 @@ qthread_worker_id_t INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t ns
     return ret;
 }                                      /*}}} */
 
-void INTERNAL qt_affinity_set(qthread_worker_t *me)
+void INTERNAL qt_affinity_set(qthread_worker_t *me,
+                              unsigned int      nworkerspershep)
 {                                                                                                /*{{{ */
     DEBUG_ONLY(hwloc_topology_check(topology));
 
@@ -433,13 +434,13 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me)
                   (int)hwloc_get_nbobjs_inside_cpuset_by_type(topology, allowed_cpuset, HWLOC_OBJ_PU));
     unsigned int shep_pus           = hwloc_get_nbobjs_inside_cpuset_by_type(topology, obj->allowed_cpuset, HWLOC_OBJ_PU);
     unsigned int worker_pus         = hwloc_get_nbobjs_inside_cpuset_by_type(topology, worker0->allowed_cpuset, HWLOC_OBJ_PU);
-    unsigned int wraparounds        = me->packed_worker_id / (maxshepobjs * qlib->nworkerspershep);
+    unsigned int wraparounds        = me->packed_worker_id / (maxshepobjs * nworkerspershep);
     unsigned int worker_wraparounds = me->worker_id / workerobjs_per_shep;
     hwloc_obj_t  sub_obj            =
         hwloc_get_obj_inside_cpuset_by_type(topology, obj->allowed_cpuset,
                                             HWLOC_OBJ_PU,
                                             ((me->worker_id * worker_pus) +
-                                             (wraparounds * qlib->nworkerspershep) +
+                                             (wraparounds * nworkerspershep) +
                                              worker_wraparounds) % shep_pus);
 
 # ifdef QTHREAD_DEBUG_AFFINITY
@@ -450,17 +451,17 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me)
                       shep_pus, wraparounds);
         qthread_debug(AFFINITY_DETAILS, "%u: (%i*%i) + ((%i + (%i * %i)) % %i)\n",
                       (unsigned)me->packed_worker_id,
-                      (int)shep_pus, (int)myshep->node, (int)me->worker_id, (int)wraparounds, (int)qlib->nworkerspershep, (int)shep_pus);
+                      (int)shep_pus, (int)myshep->node, (int)me->worker_id, (int)wraparounds, (int)nworkerspershep, (int)shep_pus);
         qthread_debug(AFFINITY_DETAILS, "%u: (%i*%i) + (((%i * %i) + (%i * %i) + %i) % %i)\n",
                       (unsigned)me->packed_worker_id,
-                      (int)shep_pus, (int)myshep->node, (int)me->worker_id, (int)worker_pus, (int)wraparounds, (int)qlib->nworkerspershep, (int)worker_wraparounds, (int)shep_pus);
+                      (int)shep_pus, (int)myshep->node, (int)me->worker_id, (int)worker_pus, (int)wraparounds, (int)nworkerspershep, (int)worker_wraparounds, (int)shep_pus);
         ASPRINTF(&str, sub_obj->allowed_cpuset);
         qthread_debug(AFFINITY_BEHAVIOR,
                       "binding shep %i worker %i (%i) to PU %i, newPU %i, mask %s\n",
                       (int)myshep->shepherd_id, (int)me->worker_id,
                       (int)me->packed_worker_id,
-                      (shep_pus * myshep->node) + ((me->worker_id + (wraparounds * qlib->nworkerspershep)) % shep_pus),
-                      (shep_pus * myshep->node) + (((me->worker_id * worker_pus) + (wraparounds * qlib->nworkerspershep) + (worker_wraparounds)) % shep_pus),
+                      (shep_pus * myshep->node) + ((me->worker_id + (wraparounds * nworkerspershep)) % shep_pus),
+                      (shep_pus * myshep->node) + (((me->worker_id * worker_pus) + (wraparounds * nworkerspershep) + (worker_wraparounds)) % shep_pus),
                       str);
         FREE(str, strlen(str));
     }

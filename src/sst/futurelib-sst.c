@@ -11,7 +11,6 @@
 #include <ppcPimCalls.h>
 
 #include "futurelib_innards.h"
-#include "qthread_innards.h"
 
 #undef DBprintf
 #if 0

@@ -63,7 +63,6 @@
 
 #include "qthread_innards.h"
 #include "qt_prefetch.h"
-#include "futurelib_innards.h"
 #include "qt_feb_barrier.h"
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 # include "qt_barrier.h"
@@ -424,9 +423,9 @@ static void *qthread_master(void *arg)
 
     if (qaffinity && (me->node != UINT_MAX)) {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-        qt_affinity_set(me_worker);
+        qt_affinity_set(me_worker, qlib->nworkerspershep);
 #else
-        qt_affinity_set(me);
+        qt_affinity_set(me, 1);
 #endif
     }
 

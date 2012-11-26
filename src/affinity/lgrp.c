@@ -151,7 +151,7 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
 }                                      /*}}} */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-void INTERNAL qt_affinity_set(qthread_worker_t *me)
+void INTERNAL qt_affinity_set(qthread_worker_t *me, unsigned int Q_UNUSED(nw))
 {                                      /*{{{ */
     /* if this seems wrong, first answer: why should workers have more than socket affinity? */
     qthread_debug(AFFINITY_DETAILS, "set shep %i worker %i to lgrp %i\n",
@@ -164,7 +164,7 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me)
 }                                      /*}}} */
 
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
+void INTERNAL qt_affinity_set(qthread_shepherd_t *me, unsigned int Q_UNUSED(nw))
 {                                      /*{{{ */
     if (lgrp_affinity_set(P_LWPID, P_MYID, me->lgrp, LGRP_AFF_STRONG) != 0) {
         perror("lgrp_affinity_set");

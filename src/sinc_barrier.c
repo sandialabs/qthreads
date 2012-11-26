@@ -16,7 +16,6 @@
 /* Internal Headers */
 #include "qt_atomics.h"
 #include "qt_mpool.h"
-#include "qthread_innards.h"
 #include "qt_visibility.h"
 #include "qt_debug.h"
 #include "qt_asserts.h"

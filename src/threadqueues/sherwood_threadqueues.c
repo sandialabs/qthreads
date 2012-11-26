@@ -13,7 +13,7 @@
 
 /* Internal Headers */
 #include "qt_visibility.h"
-#include "qthread_innards.h"           /* for qlib (only used in steal_chunksize) */
+#include "qthread_innards.h"           /* for qlib */
 #include "qt_shepherd_innards.h"
 #include "qt_qthread_struct.h"
 #include "qt_qthread_mgmt.h"
