@@ -277,10 +277,6 @@ static qt_mpool generic_rdata_pool = NULL;
 # define FREE_RDATA(r) qt_mpool_free(generic_rdata_pool, (r))
 #endif /* if defined(UNPOOLED) */
 
-/* guaranteed to be between 0 and 128, using the first parts of addr that are
- * significant */
-unsigned int QTHREAD_LOCKING_STRIPES = 128;
-
 #ifdef QTHREAD_DEBUG
 enum qthread_debug_levels debuglevel = NO_DEBUG_OUTPUT;
 QTHREAD_FASTLOCK_TYPE     output_lock;
@@ -812,6 +808,7 @@ int API_FUNC qthread_initialize(void)
     qthread_shepherd_id_t nshepherds      = 0;
     qthread_worker_id_t   nworkerspershep = 0;
     size_t                hw_par          = 0;
+    extern unsigned int QTHREAD_LOCKING_STRIPES;
 
     QTHREAD_FASTLOCK_SETUP();
 #ifdef QTHREAD_DEBUG

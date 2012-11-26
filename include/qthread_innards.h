@@ -160,7 +160,5 @@ int INTERNAL qthread_forCount(int inc);
 extern int rcrSchedulingOff;
 #endif
 
-#define QTHREAD_CHOOSE_STRIPE(addr) (((size_t)addr >> 4) & (QTHREAD_LOCKING_STRIPES - 1))
-
 #endif // ifndef QTHREAD_INNARDS_H
 /* vim:set expandtab: */

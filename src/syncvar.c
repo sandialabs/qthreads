@@ -15,6 +15,7 @@
 /* Internal Headers */
 #include "qt_subsystems.h"
 #include "qt_hash.h"
+#include "qt_asserts.h"
 #include "qthread_innards.h"
 #include "qt_profiling.h"
 #include "qt_blocking_structs.h"
@@ -73,9 +74,11 @@ extern aligned_t *febs_stripes;
 extern QTHREAD_FASTLOCK_TYPE *febs_stripes_locks;
 # endif
 #endif
+extern unsigned int QTHREAD_LOCKING_STRIPES;
 
 /* Internal Macros */
 #define BUILD_UNLOCKED_SYNCVAR(data, state) (((data) << 4) | ((state) << 1))
+#define QTHREAD_CHOOSE_STRIPE(addr) (((size_t)addr >> 4) & (QTHREAD_LOCKING_STRIPES - 1))
 
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 # define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked) do { \
@@ -209,6 +212,79 @@ errexit:
     *err = e;
     return 0;
 }                                      /*}}} */
+
+/* this function based on http://burtleburtle.net/bob/hash/evahash.html */
+#define rot(x, k) (((x) << (k)) | ((x) >> (32 - (k))))
+static inline uint64_t qt_hashword(uint64_t key)
+{                       /*{{{*/
+    const union {
+        uint64_t key;
+        uint8_t  b[sizeof(uint64_t)];
+    } k = {
+        key
+    };
+
+#if (SIZEOF_VOIDP == 8) /* i.e. a 64-bit machine */
+    uint64_t a, b, c;
+
+    a = b = 0x9e3779b97f4a7c13LL;  // the golden ratio
+    c = 0xdeadbeefcafebabeULL + sizeof(uint64_t);
+
+    a += ((uint64_t)k.b[7]) << 56;
+    a += ((uint64_t)k.b[6]) << 48;
+    a += ((uint64_t)k.b[5]) << 40;
+    a += ((uint64_t)k.b[4]) << 32;
+    a += k.b[3] << 24;
+    a += k.b[2] << 16;
+    a += k.b[1] << 8;
+    a += k.b[0];
+
+    a = a - b;  a = a - c;  a = a ^ (c >> 43);
+    b = b - c;  b = b - a;  b = b ^ (a << 9);
+    c = c - a;  c = c - b;  c = c ^ (b >> 8);
+    a = a - b;  a = a - c;  a = a ^ (c >> 38);
+    b = b - c;  b = b - a;  b = b ^ (a << 23);
+    c = c - a;  c = c - b;  c = c ^ (b >> 5);
+    a = a - b;  a = a - c;  a = a ^ (c >> 35);
+    b = b - c;  b = b - a;  b = b ^ (a << 49);
+    c = c - a;  c = c - b;  c = c ^ (b >> 11);
+    a = a - b;  a = a - c;  a = a ^ (c >> 12);
+    b = b - c;  b = b - a;  b = b ^ (a << 18);
+    c = c - a;  c = c - b;  c = c ^ (b >> 22);
+    return c;
+
+#else /* if (SIZEOF_VOIDP == 8) */
+    uint32_t a, b, c;
+
+    a = b = 0x9e3779b9;  // the golden ratio
+    c = 0xdeadbeef + sizeof(uint64_t);
+
+    b += k.b[7] << 24;
+    b += k.b[6] << 16;
+    b += k.b[5] << 8;
+    b += k.b[4];
+    a += k.b[3] << 24;
+    a += k.b[2] << 16;
+    a += k.b[1] << 8;
+    a += k.b[0];
+
+    c ^= b;
+    c -= rot(b, 14);
+    a ^= c;
+    a -= rot(c, 11);
+    b ^= a;
+    b -= rot(a, 25);
+    c ^= b;
+    c -= rot(b, 16);
+    a ^= c;
+    a -= rot(c, 4);
+    b ^= a;
+    b -= rot(a, 14);
+    c ^= b;
+    c -= rot(b, 24);
+    return ((uint64_t)c + ((uint64_t)b << 32));
+#endif /* if (SIZEOF_VOIDP == 8) */
+} /*}}}*/
 
 const syncvar_t SYNCVAR_INITIALIZER       = SYNCVAR_STATIC_INITIALIZER;
 const syncvar_t SYNCVAR_EMPTY_INITIALIZER = SYNCVAR_STATIC_EMPTY_INITIALIZER;

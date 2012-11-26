@@ -81,6 +81,10 @@ qt_mpool generic_addrstat_pool = NULL;
 qt_mpool generic_addrres_pool = NULL;
 #endif
 
+/* guaranteed to be between 0 and 128, using the first parts of addr that are
+ * significant */
+unsigned int QTHREAD_LOCKING_STRIPES = 128;
+
 /********************************************************************
  * Functions
  *********************************************************************/
