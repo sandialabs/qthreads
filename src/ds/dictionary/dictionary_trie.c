@@ -1,11 +1,11 @@
 #include <stdlib.h>
-#include <assert.h>
 #include <unistd.h> // for getpagesize()
 #include <string.h> // for memset()
 #include <stdio.h>
 #include <inttypes.h>
 #include <qthread/dictionary.h>
 #include <qthread/qthread.h>
+#include "qt_asserts.h"
 #ifdef EBUG
 # define DEBUG(x) x
 #else

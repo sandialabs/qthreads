@@ -13,16 +13,18 @@
 
 /* Internal Headers */
 #include "qt_visibility.h"
-#include "qthread_innards.h"           /* for qlib (only used in steal_chunksize) */
+#include "qthread_innards.h"           /* for qlib */
 #include "qt_shepherd_innards.h"
 #include "qt_qthread_struct.h"
-#include "qthread_asserts.h"
-#include "qthread_prefetch.h"
+#include "qt_qthread_mgmt.h"
+#include "qt_asserts.h"
+#include "qt_prefetch.h"
 #include "qt_threadqueues.h"
 #include "qt_envariables.h"
 #include "qt_debug.h"
 #include "qt_eurekas.h" /* for qt_eureka_check() */
-#include "qthread_expect.h"
+#include "qt_expect.h"
+#include "qt_subsystems.h"
 
 /* Data Structures */
 struct _qt_threadqueue_node {
@@ -602,7 +604,6 @@ void INTERNAL qt_keep_adding_agg_task(qthread_t *agg_task,
         stealable = &(private_q->qlength_stealable);
     }
 
-    uint16_t mask = QTHREAD_RET_IS_SINC | QTHREAD_RET_IS_VOID_SINC | QTHREAD_RET_IS_SYNCVAR;
     while(*head_addr != NULL) {
         node = *tail_addr;
         t    = node->value;
@@ -611,7 +612,7 @@ void INTERNAL qt_keep_adding_agg_task(qthread_t *agg_task,
             break;
         }
 
-        if((t->flags & mask) != (agg_task->flags & mask)) {
+        if((t->flags & QTHREAD_RET_MASK) != (agg_task->flags & QTHREAD_RET_MASK)) {
             // printf("Found task with different return value, stopping\n");
             break;
         }

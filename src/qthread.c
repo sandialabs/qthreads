@@ -2,10 +2,14 @@
 # include "config.h"
 #endif
 
-/* The API */
+/******************************************************/
+/* The API                                            */
+/******************************************************/
 #include "qthread/qthread.h"
 
-/* System Headers */
+/******************************************************/
+/* System Headers                                     */
+/******************************************************/
 #include <stdio.h>
 #include <stdlib.h>              /* for malloc() and abort() */
 #include <stdarg.h>              /* for va_list, va_start() and va_end() */
@@ -21,9 +25,6 @@
 #endif
 #include <sys/time.h>
 #include <sys/resource.h>
-#if (defined(QTHREAD_SHEPHERD_PROFILING) || defined(QTHREAD_FEB_PROFILING))
-# include <qthread/qtimer.h>
-#endif
 #include <pthread.h>
 #ifdef HAVE_SCHED_H
 # include <sched.h>
@@ -41,19 +42,30 @@
 #endif
 #include <signal.h>
 
-/* Internal Headers */
-#include "qt_mpool.h"
-#include "qt_atomics.h"
-#include "qthread_expect.h"
-
+/******************************************************/
+/* Public Headers                                     */
+/******************************************************/
 #include "qthread/cacheline.h"
 #include "qthread/futurelib.h"
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+# include "qthread/feb_barrier.h"   /* for barrier in parallel region defination */
+#endif
+#if (defined(QTHREAD_SHEPHERD_PROFILING) || defined(QTHREAD_FEB_PROFILING))
+# include <qthread/qtimer.h>
+#endif
+
+/******************************************************/
+/* Internal Headers                                   */
+/******************************************************/
+#include "qt_mpool.h"
+#include "qt_atomics.h"
+#include "qt_expect.h"
+#include "qt_asserts.h"
 #include "qthread_innards.h"
-#include "qthread_prefetch.h"
-#include "futurelib_innards.h"
+#include "qt_prefetch.h"
+#include "qt_feb_barrier.h"
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 # include "qt_barrier.h"
-# include "qthread/feb_barrier.h"   /* for barrier in parallel region defination */
 # include "qt_arrive_first.h"
 # include "qt_task_counter.h"
 #endif
@@ -70,7 +82,8 @@
 #include "qt_io.h"
 #include "qt_debug.h"
 #include "qt_envariables.h"
-#include "qt_internal_feb.h"
+#include "qt_feb.h"
+#include "qt_syncvar.h"
 #include "qt_spawncache.h"
 #ifdef QTHREAD_MULTINODE
 # include "qt_multinode_innards.h"
@@ -78,6 +91,8 @@
 #include "qt_aligned_alloc.h"
 #include "qt_teams.h"
 #include "qt_eurekas.h"
+#include "qt_subsystems.h"
+#include "qt_output_macros.h"
 
 #ifdef QTHREAD_RCRTOOL
 # include "maestro_sched.h"
@@ -261,10 +276,6 @@ static qt_mpool generic_rdata_pool = NULL;
 # define FREE_RDATA(r) qt_mpool_free(generic_rdata_pool, (r))
 #endif /* if defined(UNPOOLED) */
 
-/* guaranteed to be between 0 and 128, using the first parts of addr that are
- * significant */
-unsigned int QTHREAD_LOCKING_STRIPES = 128;
-
 #ifdef QTHREAD_DEBUG
 enum qthread_debug_levels debuglevel = NO_DEBUG_OUTPUT;
 QTHREAD_FASTLOCK_TYPE     output_lock;
@@ -330,11 +341,6 @@ static double totalIdleTime = 0.0; // added for RCRTOOL level >= 3 stats
 static int    idleCheckin   = 0;   // added for RCRTOOL level >= 3 stats
 # endif
 #endif
-
-#define print_status(format, ...)  printf("QTHREADS: " format, ## __VA_ARGS__)
-#define print_warning(format, ...) fprintf(stderr, "QTHREADS: " format, ## __VA_ARGS__)
-#define print_error(format, ...)   do { fprintf(stderr, "QTHREADS ERROR: " format, ## __VA_ARGS__); \
-                                        fflush(stderr); } while (0)
 
 /* the qthread_master() function is the loop responsible for actually
  * executing the work units
@@ -417,9 +423,9 @@ static void *qthread_master(void *arg)
 
     if (qaffinity && (me->node != UINT_MAX)) {
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-        qt_affinity_set(me_worker);
+        qt_affinity_set(me_worker, qlib->nworkerspershep);
 #else
-        qt_affinity_set(me);
+        qt_affinity_set(me, 1);
 #endif
     }
 
@@ -814,6 +820,7 @@ int API_FUNC qthread_initialize(void)
     qthread_shepherd_id_t nshepherds      = 0;
     qthread_worker_id_t   nworkerspershep = 0;
     size_t                hw_par          = 0;
+    extern unsigned int QTHREAD_LOCKING_STRIPES;
 
     QTHREAD_FASTLOCK_SETUP();
 #ifdef QTHREAD_DEBUG
@@ -918,32 +925,6 @@ int API_FUNC qthread_initialize(void)
     qlib->cas_steal_profile =
         qthread_internal_aligned_alloc(sizeof(uint64_strip_t) * nshepherds * nworkerspershep, 64);
 #endif
-
-    /* initialize the FEB-like locking structures */
-#ifdef QTHREAD_COUNT_THREADS
-    qlib->febs_stripes = MALLOC(sizeof(aligned_t) * QTHREAD_LOCKING_STRIPES);
-    qassert_ret(qlib->febs_stripes, QTHREAD_MALLOC_ERROR);
-# ifdef QTHREAD_MUTEX_INCREMENT
-    qlib->febs_stripes_locks = MALLOC(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
-    qassert_ret(qlib->febs_stripes_locks, QTHREAD_MALLOC_ERROR);
-# endif
-#endif /* ifdef QTHREAD_COUNT_THREADS */
-    qlib->FEBs = MALLOC(sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
-    qassert_ret(qlib->FEBs, QTHREAD_MALLOC_ERROR);
-    qlib->syncvars = MALLOC(sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
-    qassert_ret(qlib->syncvars, QTHREAD_MALLOC_ERROR);
-    for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
-#ifdef QTHREAD_COUNT_THREADS
-        qlib->febs_stripes[i] = 0;
-# ifdef QTHREAD_MUTEX_INCREMENT
-        QTHREAD_FASTLOCK_INIT(qlib->febs_stripes_locks[i]);
-# endif
-#endif
-        qlib->FEBs[i] = qt_hash_create(need_sync);
-        qassert_ret(qlib->FEBs[i], QTHREAD_MALLOC_ERROR);
-        qlib->syncvars[i] = qt_hash_create(need_sync);
-        qassert_ret(qlib->syncvars[i], QTHREAD_MALLOC_ERROR);
-    }
 
     /* initialize the kernel threads and scheduler */
     TLS_INIT(shepherd_structs);
@@ -1070,7 +1051,8 @@ int API_FUNC qthread_initialize(void)
 #endif /* ifndef UNPOOLED */
     initialize_hazardptrs();
     qt_internal_teams_init();
-    qt_feb_subsystem_init();
+    qt_feb_subsystem_init(need_sync);
+    qt_syncvar_subsystem_init(need_sync);
     qt_threadqueue_subsystem_init();
     qt_blocking_subsystem_init();
 
@@ -1398,79 +1380,6 @@ void INTERNAL qthread_internal_cleanup_early(void (*function)(void))
     qt_cleanup_early_funcs = ng;
 } /*}}}*/
 
-static void qt_hash_call_cb(const qt_key_t      addr,
-                            qthread_addrstat_t *m,
-                            void               *arg)
-{
-    QTHREAD_FASTLOCK_LOCK(&m->lock);
-    for (qthread_addrres_t *curs = m->EFQ; curs != NULL; curs = curs->next) {
-        qthread_t *waiter = curs->waiter;
-        void      *tls;
-        if (waiter->rdata->tasklocal_size <= qlib->qthread_tasklocal_size) {
-            if (waiter->flags & QTHREAD_BIG_STRUCT) {
-                tls = &waiter->data[qlib->qthread_argcopy_size];
-            } else {
-                tls = waiter->data;
-            }
-        } else {
-            if (waiter->flags & QTHREAD_BIG_STRUCT) {
-                tls = *(void **)&waiter->data[qlib->qthread_argcopy_size];
-            } else {
-                tls = *(void **)&waiter->data[0];
-            }
-        }
-        ((qt_feb_callback_f)arg)((void *)addr, waiter->f, waiter->arg, waiter->ret, waiter->thread_id, tls);
-        curs = curs->next;
-    }
-    for (qthread_addrres_t *curs = m->FEQ; curs != NULL; curs = curs->next) {
-        qthread_t *waiter = curs->waiter;
-        void      *tls;
-        if (waiter->rdata->tasklocal_size <= qlib->qthread_tasklocal_size) {
-            if (waiter->flags & QTHREAD_BIG_STRUCT) {
-                tls = &waiter->data[qlib->qthread_argcopy_size];
-            } else {
-                tls = waiter->data;
-            }
-        } else {
-            if (waiter->flags & QTHREAD_BIG_STRUCT) {
-                tls = *(void **)&waiter->data[qlib->qthread_argcopy_size];
-            } else {
-                tls = *(void **)&waiter->data[0];
-            }
-        }
-        ((qt_feb_callback_f)arg)((void *)addr, waiter->f, waiter->arg, waiter->ret, waiter->thread_id, tls);
-    }
-    for (qthread_addrres_t *curs = m->FFQ; curs != NULL; curs = curs->next) {
-        qthread_t *waiter = curs->waiter;
-        void      *tls;
-        if (waiter->rdata->tasklocal_size <= qlib->qthread_tasklocal_size) {
-            if (waiter->flags & QTHREAD_BIG_STRUCT) {
-                tls = &waiter->data[qlib->qthread_argcopy_size];
-            } else {
-                tls = waiter->data;
-            }
-        } else {
-            if (waiter->flags & QTHREAD_BIG_STRUCT) {
-                tls = *(void **)&waiter->data[qlib->qthread_argcopy_size];
-            } else {
-                tls = *(void **)&waiter->data[0];
-            }
-        }
-        ((qt_feb_callback_f)arg)((void *)addr, waiter->f, waiter->arg, waiter->ret, waiter->thread_id, tls);
-    }
-    QTHREAD_FASTLOCK_UNLOCK(&m->lock);
-}
-
-void INTERNAL qthread_print_FEB_callback(qt_feb_callback_f cb)
-{
-    for (unsigned int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
-        qt_hash_callback(qlib->FEBs[i],
-                         (qt_hash_callback_fn)qt_hash_call_cb, cb);
-        qt_hash_callback(qlib->syncvars[i],
-                         (qt_hash_callback_fn)qt_hash_call_cb, cb);
-    }
-}
-
 #ifdef QTHREAD_DEBUG
 static void qt_hash_print_addrstat(const qt_key_t      addr,
                                    qthread_addrstat_t *m,
@@ -1523,16 +1432,16 @@ static void qt_hash_print_addrstat(const qt_key_t      addr,
     QTHREAD_FASTLOCK_UNLOCK(&m->lock);
 }                                      /*}}} */
 
+static void qt_print_addrstat(qt_key_t addr, qthread_f f, void *arg, void *retloc, unsigned int thread_id, void *tls, void *callarg)
+{
+    printf("addr: %#lx thread %u, arg:%p retval:%p\n", (unsigned long)addr, thread_id, arg, retloc);
+    *(int *)callarg += 1;
+}
+
 static int print_FEBs(int *ct)
 {
-    for (unsigned int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
-        qt_hash_callback(qlib->FEBs[i],
-                         (qt_hash_callback_fn)qt_hash_print_addrstat, ct);
-    }
-    for (unsigned int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
-        qt_hash_callback(qlib->syncvars[i],
-                         (qt_hash_callback_fn)qt_hash_print_addrstat, ct);
-    }
+    qthread_feb_callback(qt_print_addrstat, ct);
+    qthread_syncvar_callback(qt_print_addrstat, ct);
     return 0;
 }
 
@@ -1847,25 +1756,12 @@ void API_FUNC qthread_finalize(void)
                                                   shep0->empty_count), shep0->empty_maxtime);
 #endif /* ifdef QTHREAD_FEB_PROFILING */
 
-    for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
-        qthread_debug(FEB_DETAILS, "destroying feb infrastructure of shep %i\n", (int)i);
-        qt_hash_destroy_deallocate(qlib->FEBs[i],
-                                   (qt_hash_deallocator_fn)
-                                   qthread_addrstat_delete);
-        qt_hash_destroy_deallocate(qlib->syncvars[i],
-                                   (qt_hash_deallocator_fn)
-                                   qthread_addrstat_delete);
-
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
+    extern unsigned int QTHREAD_LOCKING_STRIPES;
+    for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
         QTHREAD_FASTLOCK_DESTROY(qlib->atomic_locks[i]);
-#endif
-#ifdef QTHREAD_COUNT_THREADS
-        print_status("bin %i used %u times for FEBs\n", i, (unsigned int)qlib->febs_stripes[i]);
-# ifdef QTHREAD_MUTEX_INCREMENT
-        QTHREAD_FASTLOCK_DESTROY(qlib->febs_stripes_locks[i]);
-# endif
-#endif
     }
+#endif
 #ifdef QTHREAD_MUTEX_INCREMENT
     QTHREAD_FASTLOCK_DESTROY(qlib->nshepherds_active_lock);
 # ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -1879,17 +1775,8 @@ void API_FUNC qthread_finalize(void)
         tmp->func();
         FREE(tmp, sizeof(struct qt_cleanup_funcs_s));
     }
-    qthread_debug(FEB_DETAILS, "destroy feb infrastructure arrays\n");
-    FREE(qlib->FEBs, sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
-    FREE(qlib->syncvars, sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
     FREE((void *)qlib->atomic_locks, sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
-#endif
-#ifdef QTHREAD_COUNT_THREADS
-    FREE(qlib->febs_stripes, sizeof(aligned_t) * QTHREAD_LOCKING_STRIPES);
-# ifdef QTHREAD_MUTEX_INCREMENT
-    FREE(qlib->febs_stripes_locks, sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
-# endif
 #endif
 
 #ifdef QTHREAD_COUNT_THREADS
@@ -2941,6 +2828,49 @@ int API_FUNC qthread_fork_precond_simple(qthread_f   f,
                          QTHREAD_SPAWN_SIMPLE);
 } /*}}}*/
 
+
+int API_FUNC qthread_fork_precond_to(qthread_f             f,
+                                     const void           *arg,
+                                     aligned_t            *ret,
+                                     qthread_shepherd_id_t shepherd,
+                                     int                   npreconds,
+                                     ...)
+{                      /*{{{ */
+    // Collect sync info
+    va_list     args;
+    aligned_t **preconds = NULL;
+
+    va_start(args, npreconds);
+    if (npreconds > 0) {
+        preconds = MALLOC((npreconds + 1) * sizeof(aligned_t *));
+        assert(preconds != NULL);
+        preconds[0] = (aligned_t *)(uintptr_t)npreconds;
+        for (int i = 1; i < npreconds + 1; ++i) {
+            preconds[i] = va_arg(args, aligned_t *);
+        }
+    } else if (npreconds < 0) {
+        npreconds *= -1;
+        preconds   = MALLOC((npreconds + 1) * sizeof(aligned_t *));
+        assert(preconds != NULL);
+        preconds[0] = (aligned_t *)(uintptr_t)npreconds;
+        aligned_t **tmp = va_arg(args, aligned_t * *);
+        memcpy(preconds + 1, tmp, sizeof(aligned_t *) * npreconds);
+    }
+    va_end(args);
+
+    if ((shepherd != NO_SHEPHERD) && (shepherd >= qlib->nshepherds)) {
+        shepherd %= qlib->nshepherds;
+    }
+    return qthread_spawn(f,
+                         arg,
+                         0,
+                         ret,
+                         npreconds,
+                         preconds,
+                         shepherd,
+                         0);
+}                      /*}}} */
+
 int API_FUNC qthread_fork_precond(qthread_f   f,
                                   const void *arg,
                                   aligned_t  *ret,
@@ -2971,39 +2901,6 @@ int API_FUNC qthread_fork_precond(qthread_f   f,
 
     return qthread_spawn(f, arg, 0, ret, npreconds, preconds, NO_SHEPHERD, 0);
 } /*}}}*/
-
-int API_FUNC qthread_fork_track_syncvar_copyargs_to(qthread_f             f,
-                                                    const void           *arg,
-                                                    size_t                arg_size,
-                                                    syncvar_t            *ret,
-                                                    qthread_shepherd_id_t preferred_shep)
-{   /*{{{*/
-    return qthread_spawn(f,
-                         arg,
-                         arg_size,
-                         ret,
-                         0,
-                         NULL,
-                         preferred_shep,
-                         QTHREAD_SPAWN_PARENT |
-                         QTHREAD_SPAWN_RET_SYNCVAR_T);
-} /*}}}*/
-
-int API_FUNC qthread_fork_track_syncvar_copyargs(qthread_f   f,
-                                                 const void *arg,
-                                                 size_t      arg_size,
-                                                 syncvar_t  *ret)
-{                      /*{{{ */
-    return qthread_spawn(f,
-                         arg,
-                         arg_size,
-                         ret,
-                         0,
-                         NULL,
-                         NO_SHEPHERD,
-                         QTHREAD_SPAWN_PARENT |
-                         QTHREAD_SPAWN_RET_SYNCVAR_T);
-}                      /*}}} */
 
 int API_FUNC qthread_fork_syncvar_copyargs_to(qthread_f             f,
                                               const void           *arg,
@@ -3116,48 +3013,6 @@ int API_FUNC qthread_fork_to(qthread_f             f,
                          0);
 } /*}}}*/
 
-int API_FUNC qthread_fork_precond_to(qthread_f             f,
-                                     const void           *arg,
-                                     aligned_t            *ret,
-                                     qthread_shepherd_id_t shepherd,
-                                     int                   npreconds,
-                                     ...)
-{                      /*{{{ */
-    // Collect sync info
-    va_list     args;
-    aligned_t **preconds = NULL;
-
-    va_start(args, npreconds);
-    if (npreconds > 0) {
-        preconds = MALLOC((npreconds + 1) * sizeof(aligned_t *));
-        assert(preconds != NULL);
-        preconds[0] = (aligned_t *)(uintptr_t)npreconds;
-        for (int i = 1; i < npreconds + 1; ++i) {
-            preconds[i] = va_arg(args, aligned_t *);
-        }
-    } else if (npreconds < 0) {
-        npreconds *= -1;
-        preconds   = MALLOC((npreconds + 1) * sizeof(aligned_t *));
-        assert(preconds != NULL);
-        preconds[0] = (aligned_t *)(uintptr_t)npreconds;
-        aligned_t **tmp = va_arg(args, aligned_t * *);
-        memcpy(preconds + 1, tmp, sizeof(aligned_t *) * npreconds);
-    }
-    va_end(args);
-
-    if ((shepherd != NO_SHEPHERD) && (shepherd >= qlib->nshepherds)) {
-        shepherd %= qlib->nshepherds;
-    }
-    return qthread_spawn(f,
-                         arg,
-                         0,
-                         ret,
-                         npreconds,
-                         preconds,
-                         shepherd,
-                         0);
-}                      /*}}} */
-
 int API_FUNC qthread_fork_syncvar_to(qthread_f             f,
                                      const void           *arg,
                                      syncvar_t            *ret,
@@ -3174,58 +3029,6 @@ int API_FUNC qthread_fork_syncvar_to(qthread_f             f,
                          NULL,
                          s,
                          QTHREAD_SPAWN_RET_SYNCVAR_T);
-} /*}}}*/
-
-int INTERNAL qthread_fork_future_to(qthread_f             f,
-                                    const void           *arg,
-                                    aligned_t            *ret,
-                                    qthread_shepherd_id_t shepherd)
-{   /*{{{*/
-    if ((shepherd != NO_SHEPHERD) && (shepherd >= qlib->nshepherds)) {
-        shepherd %= qlib->nshepherds;
-    }
-    return qthread_spawn(f,
-                         arg,
-                         0,
-                         ret,
-                         0,
-                         NULL,
-                         shepherd,
-                         QTHREAD_SPAWN_FUTURE);
-} /*}}}*/
-
-int INTERNAL qthread_fork_syncvar_future_to(qthread_f             f,
-                                            const void           *arg,
-                                            syncvar_t            *ret,
-                                            qthread_shepherd_id_t shepherd)
-{   /*{{{*/
-    if ((shepherd != NO_SHEPHERD) && (shepherd >= qlib->nshepherds)) {
-        shepherd %= qlib->nshepherds;
-    }
-    return qthread_spawn(f,
-                         arg,
-                         0,
-                         ret,
-                         0,
-                         NULL,
-                         shepherd,
-                         QTHREAD_SPAWN_RET_SYNCVAR_T |
-                         QTHREAD_SPAWN_FUTURE);
-} /*}}}*/
-
-int INTERNAL qthread_fork_syncvar_future(qthread_f   f,
-                                         const void *arg,
-                                         syncvar_t  *ret)
-{   /*{{{*/
-    return qthread_spawn(f,
-                         arg,
-                         0,
-                         ret,
-                         0,
-                         NULL,
-                         NO_SHEPHERD,
-                         QTHREAD_SPAWN_RET_SYNCVAR_T |
-                         QTHREAD_SPAWN_FUTURE);
 } /*}}}*/
 
 void INTERNAL qthread_back_to_master(qthread_t *t)
@@ -3507,27 +3310,6 @@ unsigned API_FUNC qthread_barrier_id(void)
 }                      /*}}} */
 
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
-
-/* these two functions are helper functions for futurelib
- * (nobody else gets to have 'em!) */
-unsigned int INTERNAL qthread_isfuture(void)
-{                      /*{{{ */
-    qthread_t *t = qthread_internal_self();
-
-    return t ? (t->flags & QTHREAD_FUTURE) : 0;
-}                      /*}}} */
-
-void INTERNAL qthread_assertfuture(qthread_t *t)
-{                      /*{{{ */
-    t->flags |= QTHREAD_FUTURE;
-}                      /*}}} */
-
-void INTERNAL qthread_assertnotfuture(void)
-{                      /*{{{ */
-    qthread_t *t = qthread_internal_self();
-
-    t->flags &= ~QTHREAD_FUTURE;
-}                      /*}}} */
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 # ifdef __INTEL_COMPILER

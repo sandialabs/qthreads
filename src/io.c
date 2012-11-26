@@ -33,11 +33,12 @@
 /* Internal Headers */
 #include "qt_io.h"
 #include "qt_macros.h"
-#include "qthread_asserts.h"
-#include "qthread_innards.h"
+#include "qt_asserts.h"
+#include "qthread_innards.h" /* for qthread_exec() */
 #include "qt_threadqueues.h"
 #include "qt_debug.h"
 #include "qt_envariables.h"
+#include "qt_subsystems.h"
 
 typedef struct {
     qt_blocking_queue_node_t *head;
@@ -387,7 +388,7 @@ void INTERNAL qt_blocking_subsystem_enqueue(qt_blocking_queue_node_t *job)
         }
     } else {
         qthread_debug(IO_DETAILS, "Queue is %u long, there are %u workers\n", (unsigned)theQueue.length, (unsigned)io_worker_count);
-        QTHREAD_SIGNAL(&theQueue.notempty);
+        QTHREAD_COND_SIGNAL(theQueue.notempty);
     }
     QTHREAD_UNLOCK(&theQueue.lock);
     qthread_debug(IO_FUNCTIONS, "exiting, job = %p\n", job);

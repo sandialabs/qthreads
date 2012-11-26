@@ -17,22 +17,12 @@
 
 /* Internal Headers */
 #include "qt_visibility.h"
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 #include "qt_atomics.h"
 #include "qt_context.h"
 #include "qt_qthread_t.h"
 #include "qt_threadqueues.h"
 #include "qt_hash.h"
-
-/* this function allows a qthread to retrieve its qthread_t pointer if it has
- * been lost for some reason */
-qthread_t *qthread_internal_self(void);
-
-extern unsigned int QTHREAD_LOCKING_STRIPES;
-
-#ifndef QTHREAD_NO_ASSERTS
-extern int qthread_library_initialized;
-#endif
 
 #ifdef CAS_STEAL_PROFILE
 // stripe this array across a cache line
@@ -49,10 +39,10 @@ typedef struct qlib_s {
     QTHREAD_FASTLOCK_TYPE nshepherds_active_lock;
 #endif
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    aligned_t                  nworkers_active;
-#ifdef QTHREAD_MUTEX_INCREMENT
-    QTHREAD_FASTLOCK_TYPE      nworkers_active_lock;
-#endif
+    aligned_t             nworkers_active;
+# ifdef QTHREAD_MUTEX_INCREMENT
+    QTHREAD_FASTLOCK_TYPE nworkers_active_lock;
+# endif
 #endif
     unsigned int               nworkerspershep;
     struct qthread_shepherd_s *shepherds;
@@ -93,7 +83,7 @@ typedef struct qlib_s {
 
     aligned_t team_watcher_start;
     aligned_t team_watcher_stop;
-#endif
+#endif // ifdef TEAM_PROFILE
 
     /* assigns a unique thread_id mostly for debugging! */
     aligned_t             max_thread_id;
@@ -123,25 +113,14 @@ typedef struct qlib_s {
     QTHREAD_FASTLOCK_TYPE *atomic_stripes_locks;
 # endif
 #endif
-    /* this is how we manage FEBs
-     * NOTE: this can be a major bottleneck
-     */
-    qt_hash               *FEBs;
-#ifdef QTHREAD_COUNT_THREADS
-    aligned_t             *febs_stripes;
-# ifdef QTHREAD_MUTEX_INCREMENT
-    QTHREAD_FASTLOCK_TYPE *febs_stripes_locks;
-# endif
-#endif
-    /* this is for holding syncvar waiters... similar to the FEBs (perhaps
-     * should have the _stripes business as well... maybe later) */
-    qt_hash *syncvars;
 
-   /*AGG cost method, call method  and max cost 
-    * defined in qthreads or given by the user at qthread initialization
-    */
-    qthread_agg_f  agg_f; //void(*agg_f)   (int count, qthread_f *f, void **arg, void **ret);
-    int(*agg_cost) (int count, qthread_f *f, void **arg);
+    /*AGG cost method, call method  and max cost
+     * defined in qthreads or given by the user at qthread initialization
+     */
+    qthread_agg_f agg_f;  // void(*agg_f)   (int count, qthread_f *f, void **arg, void **ret);
+    int (*agg_cost)(int        count,
+                    qthread_f *f,
+                    void     **arg);
     int max_c;
 } *qlib_t;
 
@@ -149,72 +128,15 @@ typedef struct qlib_s {
 extern qlib_t qlib;
 #endif
 
-void qthread_thread_free(qthread_t* t);
+void INTERNAL qthread_exec(qthread_t    *t,
+                           qt_context_t *c);
 
-/* These are the internal functions that futurelib should be allowed to get at */
-unsigned int INTERNAL qthread_isfuture(void);
-
-void INTERNAL qthread_assertfuture(qthread_t *t);
-
-void INTERNAL qthread_assertnotfuture(void);
-
-int INTERNAL qthread_fork_future_to(const qthread_f             f,
-                                    const void                 *arg,
-                                    aligned_t                  *ret,
-                                    const qthread_shepherd_id_t shepherd);
-unsigned int INTERNAL qthread_internal_shep_to_node(const qthread_shepherd_id_t shep);
-void INTERNAL         qthread_exec(qthread_t    *t,
-                                   qt_context_t *c);
-
-#define QTHREAD_NO_NODE ((unsigned int)(-1))
 #ifdef QTHREAD_SST_PRIMITIVES
 # define qthread_shepherd_count()                              PIM_readSpecial(PIM_CMD_LOC_COUNT)
 # define qthread_fork_syncvar_future_to(me, f, arg, ret, shep) qthread_fork_syncvar_to(f, arg, ret, shep)
 #else
 # define qthread_shepherd_count() (qlib->nshepherds)
-int INTERNAL qthread_fork_syncvar_future(const qthread_f f,
-                                         const void     *arg,
-                                         syncvar_t      *ret);
-int INTERNAL qthread_fork_syncvar_future_to(const qthread_f             f,
-                                            const void                 *arg,
-                                            syncvar_t                  *ret,
-                                            const qthread_shepherd_id_t shepherd);
-int qthread_fork_syncvar_copyargs(const qthread_f   f,
-                                  const void *const arg,
-                                  const size_t      arg_size,
-                                  syncvar_t *const  ret);
-int qthread_fork_syncvar_copyargs_to(const qthread_f   f,
-                                     const void *const arg,
-                                     const size_t      arg_size,
-                                     syncvar_t *const  ret,
-                                     const qthread_shepherd_id_t
-                                     preferred_shep);
-int qthread_fork_track_syncvar_copyargs(const qthread_f   f,
-                                        const void *const arg,
-                                        const size_t      arg_size,
-                                        syncvar_t *const  ret);
-int qthread_fork_track_syncvar_copyargs_to(const qthread_f   f,
-                                           const void *const arg,
-                                           const size_t      arg_size,
-                                           syncvar_t *const  ret,
-                                           const qthread_shepherd_id_t
-                                           preferred_shep);
 #endif // ifdef QTHREAD_SST_PRIMITIVES
-
-/* functions added by akp to handle OpenMP task completion
- */
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-extern int __qthreads_temp;
-void INTERNAL qthread_reset_forCount(void);
-
-int INTERNAL qthread_forCount(int inc);
-#endif // ifdef QTHREAD_USE_ROSE_EXTENSIONS
-
-/* internal initialization functions */
-void INTERNAL qt_feb_barrier_internal_init(void);
-void INTERNAL qthread_internal_cleanup(void (*function)(void));
-void INTERNAL qthread_internal_cleanup_early(void (*function)(void));
-void INTERNAL qthread_internal_cleanup_late(void (*function)(void));
 
 #ifdef QTHREAD_RCRTOOL
 /* allow environment variable to control whether dynamic thread count
@@ -222,14 +144,6 @@ void INTERNAL qthread_internal_cleanup_late(void (*function)(void));
  */
 extern int rcrSchedulingOff;
 #endif
-
-#define QTHREAD_CHOOSE_STRIPE(addr) (((size_t)addr >> 4) & (QTHREAD_LOCKING_STRIPES - 1))
-
-/* this is a function to check the input preconds for a nascent thread. */
-int INTERNAL qthread_check_precond(qthread_t *t);
-
-/* Unexpected task destruction/cleanup */
-void INTERNAL qthread_internal_assassinate(qthread_t *t);
 
 #endif // ifndef QTHREAD_INNARDS_H
 /* vim:set expandtab: */

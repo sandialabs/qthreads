@@ -4,7 +4,8 @@
 
 #include <numa.h>
 
-#include "qthread_innards.h"
+#include "qt_subsystems.h"
+#include "qt_asserts.h"
 #include "qt_affinity.h"
 #include "qt_debug.h"
 
@@ -132,7 +133,7 @@ static qthread_shepherd_id_t guess_num_shepherds(void)
 }                                      /*}}} */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-void INTERNAL qt_affinity_set(qthread_worker_t *me)
+void INTERNAL qt_affinity_set(qthread_worker_t *me, unsigned int Q_UNUSED(nw))
 {                                      /*{{{ */
     if (numa_run_on_node(me->shepherd->node) != 0) {
         numa_error("setting thread affinity");
@@ -141,7 +142,7 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me)
 }                                      /*}}} */
 
 #else
-void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
+void INTERNAL qt_affinity_set(qthread_shepherd_t *me, unsigned int Q_UNUSED(nw))
 {                                      /*{{{ */
     if (numa_run_on_node(me->node) != 0) {
         numa_error("setting thread affinity");

@@ -17,6 +17,7 @@
 #include <plpa.h>
 
 #include "qt_affinity.h"
+#include "qt_asserts.h"
 #include "shufflesheps.h"
 
 qthread_shepherd_id_t guess_num_shepherds(void);
@@ -59,7 +60,7 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
 }                                      /*}}} */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-void INTERNAL qt_affinity_set(qthread_worker_t *me)
+void INTERNAL qt_affinity_set(qthread_worker_t *me, unsigned int Q_UNUSED(nw))
 {                                      /*{{{ */
     plpa_cpu_set_t *cpuset =
         (plpa_cpu_set_t *)MALLOC(sizeof(plpa_cpu_set_t));
@@ -74,7 +75,7 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me)
 }                                      /*}}} */
 
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
+void INTERNAL qt_affinity_set(qthread_shepherd_t *me, unsigned int Q_UNUSED(nw))
 {                                      /*{{{ */
     plpa_cpu_set_t *cpuset =
         (plpa_cpu_set_t *)MALLOC(sizeof(plpa_cpu_set_t));

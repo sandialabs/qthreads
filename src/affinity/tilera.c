@@ -8,8 +8,8 @@
 
 #include <stdio.h>
 
-#include "qthread_innards.h"
 #include "qt_affinity.h"
+#include "qt_asserts.h"
 #include "shepcomp.h"
 #include "shufflesheps.h"
 #include "qt_debug.h" // for MALLOC()
@@ -43,7 +43,7 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
 }                                      /*}}} */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-void INTERNAL qt_affinity_set(qthread_worker_t *me)
+void INTERNAL qt_affinity_set(qthread_worker_t *me, unsigned int Q_UNUSED(nw))
 {                                      /*{{{ */
     if (tmc_cpus_set_my_cpu(me->packed_worker_id) < 0) {
         perror("tmc_cpus_set_my_affinity() failed");
@@ -52,7 +52,7 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me)
 }                                      /*}}} */
 
 #else
-void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
+void INTERNAL qt_affinity_set(qthread_shepherd_t *me, unsigned int Q_UNUSED(nw))
 {                                      /*{{{ */
     if (tmc_cpus_set_my_cpu(me->node) < 0) {
         perror("tmc_cpus_set_my_affinity() failed");

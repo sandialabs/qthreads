@@ -22,7 +22,7 @@ static QINLINE int getpagesize()
 /* Internal Headers */
 #include "qt_visibility.h"
 #include "qt_aligned_alloc.h"
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 #include "qt_debug.h"
 
 /* local constants */

@@ -17,8 +17,9 @@
 
 /* Internal Headers */
 #include "qt_io.h"
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 #include "qthread_innards.h" /* for qlib */
+#include "qt_qthread_mgmt.h"
 
 int qt_select(int                      nfds,
               fd_set *restrict         readfds,

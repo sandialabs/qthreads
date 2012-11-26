@@ -4,8 +4,12 @@
 
 #include <qthread/qthread.h>
 
-#include <qthread_innards.h>
-#include <qt_profiling.h>
+#include "qt_asserts.h"
+#include "qthread_innards.h"
+#include "qt_profiling.h"
+
+extern unsigned int QTHREAD_LOCKING_STRIPES;
+#define QTHREAD_CHOOSE_STRIPE(addr) (((size_t)addr >> 4) & (QTHREAD_LOCKING_STRIPES - 1))
 
 #if defined(QTHREAD_MUTEX_INCREMENT) ||             \
     (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32) || \

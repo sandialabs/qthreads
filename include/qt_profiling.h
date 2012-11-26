@@ -77,7 +77,7 @@ static QINLINE void qthread_unique_collect(const qt_key_t key,
 #endif // ifdef QTHREAD_FEB_PROFILING
 
 #ifdef QTHREAD_COUNT_THREADS
-# define QTHREAD_COUNT_THREADS_BINCOUNTER(TYPE, BIN) qthread_internal_incr(&qlib->TYPE ## _stripes[(BIN)], &qlib->TYPE ## _stripes_locks[(BIN)], 1)
+# define QTHREAD_COUNT_THREADS_BINCOUNTER(TYPE, BIN) qthread_internal_incr(&TYPE ## _stripes[(BIN)], &TYPE ## _stripes_locks[(BIN)], 1)
 #else
 # define QTHREAD_COUNT_THREADS_BINCOUNTER(TYPE, BIN) do { } while(0)
 #endif

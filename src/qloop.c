@@ -9,20 +9,21 @@
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
 #include <qthread/qtimer.h>
+#include <qthread/sinc_barrier.h>
 
 /* Internal Headers */
-#include "qthread_innards.h"           /* for qthread_debug() */
 #include "qt_barrier.h"
-#include "qthread/qt_sinc_barrier.h"
+#include "qt_initialized.h" // for qthread_library_initialized
 #include "qloop_innards.h"
-#include "qthread_expect.h"
-#include "qthread_asserts.h"
+#include "qt_expect.h"
+#include "qt_asserts.h"
 #include "qt_debug.h"
 #include "qt_aligned_alloc.h"
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 # include <stdio.h>
 # include "qt_atomics.h"
+# include "qt_threadqueues.h" // for qthread_steal_disable
 #endif
 
 #include "qthread/sinc.h"
@@ -1986,11 +1987,7 @@ static void qt_parallel_qfor(const qt_loop_step_f func,
     qqloop_step_handle_t *qqhandle = NULL;
     int                   forCount = qthread_forCount(1); // my loop count
 
-# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    cnbWorkers = qthread_num_shepherds() * qlib->nworkerspershep;
-# else
-    cnbWorkers = qthread_num_shepherds();
-# endif
+    cnbWorkers = qthread_num_workers();
     cnbTimeMin = 1.0;
 
     QTHREAD_FASTLOCK_LOCK(&forLock);                                                             // KBW: XXX: need to find a way to avoid locking

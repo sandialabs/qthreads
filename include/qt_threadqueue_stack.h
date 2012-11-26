@@ -1,7 +1,7 @@
 #ifndef _QT_THREADQUEUE_STACK_H_
 #define _QT_THREADQUEUE_STACK_H_
 
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 
 /***
  *

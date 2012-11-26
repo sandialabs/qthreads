@@ -28,6 +28,8 @@
 typedef struct qthread_shepherd_s qthread_shepherd_t;
 #endif
 
+#define QTHREAD_NO_NODE ((unsigned int)(-1))
+
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 
 # define STEAL_BUFFER_LENGTH 128
@@ -150,6 +152,7 @@ static QINLINE qthread_worker_t *qthread_internal_getworker(void)
 
 #endif
 
+unsigned int INTERNAL qthread_internal_shep_to_node(const qthread_shepherd_id_t shep);
 qthread_shepherd_t INTERNAL *qthread_find_active_shepherd(qthread_shepherd_id_t *l,
                                                           unsigned int          *d);
 

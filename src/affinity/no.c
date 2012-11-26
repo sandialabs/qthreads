@@ -9,8 +9,8 @@
 # include <linux/sysctl.h>
 #endif
 
-#include "qthread_innards.h"
 #include "qt_affinity.h"
+#include "qt_asserts.h"
 #include "qt_debug.h"
 #include "shufflesheps.h"
 
@@ -64,11 +64,11 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
 }                                      /*}}} */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-void INTERNAL qt_affinity_set(qthread_worker_t *me)
+void INTERNAL qt_affinity_set(qthread_worker_t *me, unsigned int Q_UNUSED(nw))
 {}
 
 #else
-void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
+void INTERNAL qt_affinity_set(qthread_shepherd_t *me, unsigned int Q_UNUSED(nw))
 {}
 
 #endif

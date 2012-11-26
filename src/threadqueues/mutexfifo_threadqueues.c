@@ -7,18 +7,20 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* Internal Headers */
+/* API Headers */
 #include "qthread/qthread.h"
+
+/* Internal Headers */
 #include "qt_macros.h"
 #include "qt_visibility.h"
-#include "qthread_innards.h"           /* for qlib (only used in steal_chunksize) */
 #include "qt_shepherd_innards.h"
 #include "qt_qthread_struct.h"
-#include "qthread_asserts.h"
-#include "qthread_prefetch.h"
+#include "qt_asserts.h"
+#include "qt_prefetch.h"
 #include "qt_threadqueues.h"
 #include "qt_debug.h"
 #include "qt_eurekas.h"
+#include "qt_subsystems.h"
 
 /* Data Structures */
 struct _qt_threadqueue_node {
@@ -77,8 +79,6 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 // #define QTHREAD_DESTROYLOCK(l) do { int __ret__ = pthread_mutex_destroy(l); if (__ret__ != 0) fprintf(stderr, "pthread_mutex_destroy(%p) returned %i (%s)\n", l, __ret__, strerror(__ret__)); assert(__ret__ == 0); } while (0)
 #define QTHREAD_DESTROYLOCK(l) qassert(pthread_mutex_destroy(l), 0)
 #define QTHREAD_DESTROYCOND(l) qassert(pthread_cond_destroy(l), 0)
-#define QTHREAD_SIGNAL(l)      qassert(pthread_cond_signal(l), 0)
-#define QTHREAD_CONDWAIT(c, l) qassert(pthread_cond_wait(c, l), 0)
 
 /*****************************************/
 /* functions to manage the thread queues */
@@ -116,7 +116,6 @@ static qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q)
     qt_threadqueue_node_t *node, *new_head;
 
     assert(q != NULL);
-    qt_eureka_disable();
     QTHREAD_FASTLOCK_LOCK(&q->head_lock);
     {
         node     = q->head;
@@ -130,8 +129,6 @@ static qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q)
     if (p != NULL) {
         Q_PREFETCH(&(p->thread_state));
         (void)qthread_internal_incr_s(&q->advisory_queuelen, &q->advisory_queuelen_m, -1);
-    } else {
-        qt_eureka_enable();
     }
     return p;
 }                                      /*}}} */
@@ -204,7 +201,11 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 {                                      /*{{{ */
     qthread_t *p = NULL;
 
-    while ((p = qt_threadqueue_dequeue(q)) == NULL) SPINLOCK_BODY();
+    qt_eureka_disable();
+    while ((p = qt_threadqueue_dequeue(q)) == NULL) {
+        qt_eureka_check(1);
+        SPINLOCK_BODY();
+    }
     return p;
 }                                      /*}}} */
 

@@ -8,17 +8,19 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-/* Internal Headers */
+/* API Headers */
 #include "qthread/qthread.h"
+
+/* Internal Headers */
 #include "qt_macros.h"
 #include "qt_visibility.h"
-#include "qthread_innards.h"
-#include "qthread_asserts.h"
-#include "qthread_prefetch.h"
+#include "qt_asserts.h"
+#include "qt_prefetch.h"
 #include "qt_threadqueues.h"
 #include "qt_qthread_struct.h"
 #include "qt_debug.h"
 #include "qt_eurekas.h"
+#include "qt_subsystems.h"
 
 /* This thread queueing uses the NEMESIS lock-free queue protocol from
  * http://www.mcs.anl.gov/~buntinas/papers/ccgrid06-nemesis.pdf
@@ -52,8 +54,7 @@ struct _qt_threadqueue {
     saligned_t      advisory_queuelen;
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     uint32_t        frustration;
-    pthread_cond_t  trigger;
-    pthread_mutex_t trigger_lock;
+    QTHREAD_COND_DECL(trigger);
 #endif
 } /* qt_threadqueue_t */;
 
@@ -98,20 +99,7 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
     q->advisory_queuelen = 0;
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     q->frustration = 0;
-    {
-        pthread_mutexattr_t ma;
-        qassert(pthread_mutexattr_init(&ma), 0);
-        qassert(pthread_mutexattr_setpshared(&ma, PTHREAD_PROCESS_PRIVATE), 0);
-        qassert(pthread_mutex_init(&q->trigger_lock, &ma), 0);
-        qassert(pthread_mutexattr_destroy(&ma), 0);
-    }
-    {
-        pthread_condattr_t ca;
-        qassert(pthread_condattr_init(&ca), 0);
-        qassert(pthread_condattr_setpshared(&ca, PTHREAD_PROCESS_PRIVATE), 0);
-        qassert(pthread_cond_init(&q->trigger, &ca), 0);
-        qassert(pthread_condattr_destroy(&ca), 0);
-    }
+    QTHREAD_COND_INIT(q->trigger);
 #endif /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
 
     return q;
@@ -169,8 +157,7 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
     assert(q);
     while (qt_threadqueue_dequeue(q)) ;
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-    QTHREAD_DESTROYLOCK(&q->trigger_lock);
-    QTHREAD_DESTROYCOND(&q->trigger);
+    QTHREAD_COND_DESTROY(q->trigger);
 #endif
     FREE_THREADQUEUE(q);
 }                                      /*}}} */
@@ -230,12 +217,12 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
      * to before the enqueue operations. */
     MACHINE_FENCE;
     if (q->frustration) {
-        qassert(pthread_mutex_lock(&q->trigger_lock), 0);
+        QTHREAD_COND_LOCK(q->trigger);
         if (q->frustration) {
             q->frustration = 0;
-            qassert(pthread_cond_signal(&q->trigger), 0);
+            QTHREAD_COND_SIGNAL(q->trigger);
         }
-        qassert(pthread_mutex_unlock(&q->trigger_lock), 0);
+        QTHREAD_COND_UNLOCK(q->trigger);
     }
 #endif /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
 }                                      /*}}} */
@@ -267,12 +254,11 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
             SPINLOCK_BODY();
 #else
             if (qthread_incr(&q->frustration, 1) > 1000) {
-                qassert(pthread_mutex_lock(&q->trigger_lock), 0);
+                QTHREAD_COND_LOCK(q->trigger);
                 if (q->frustration > 1000) {
-                    qassert(pthread_cond_wait(&q->trigger, &q->trigger_lock),
-                            0);
+                    QTHREAD_COND_WAIT(q->trigger);
                 }
-                qassert(pthread_mutex_unlock(&q->trigger_lock), 0);
+                QTHREAD_COND_UNLOCK(q->trigger);
             }
 #endif      /* ifdef USE_HARD_POLLING */
         }

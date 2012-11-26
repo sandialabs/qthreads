@@ -21,7 +21,9 @@
 #include "qt_arrive_first.h"           // for qt_global_arrive_first
 #include "qthread/qloop.h"	       // for qt_loop_f
 #include "qt_debug.h"	               // for qthread_debug()
-#include "qthread_innards.h"           // for qthread_internal_self()
+#include "qt_qthread_mgmt.h"           // for qthread_internal_self()
+#include "qt_spawn_macros.h"           // for qthread_fork_* convenience functions
+#include "qt_asserts.h"                // for assert() handling
 #include "qt_shepherd_innards.h"       // for qthread_shepherd_t
 #include "qloop_innards.h"	       // for qqloop_handle_t
 #include "qt_qthread_struct.h"	       // for qthread_t
@@ -36,7 +38,7 @@
 #endif
 
 #include <rose_xomp.h>
-#include <qthread/qt_sinc_barrier.h>
+#include <qthread/sinc_barrier.h>
 #ifdef QTHREAD_RCRTOOL
 #include "rcrtool/qt_rcrtool.h"
 #include "maestro_sched.h"

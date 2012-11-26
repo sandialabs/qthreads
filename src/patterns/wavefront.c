@@ -6,7 +6,7 @@
 #include <stdlib.h>                    /* for malloc */
 #include <math.h>
 
-#include <qthread_asserts.h>
+#include "qt_asserts.h"
 
 #include <qthread/qthread.h>
 #include <qthread/qdqueue.h>

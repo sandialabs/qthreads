@@ -182,14 +182,44 @@ extern pthread_mutexattr_t _fastlock_attr;
 
 #endif // if defined(__tile__)
 
+#include <pthread.h>
+#define QTHREAD_COND_DECL(c)   pthread_cond_t c; pthread_mutex_t c ## _lock
+#define QTHREAD_COND_INIT(c) do { \
+    { \
+	pthread_mutexattr_t tmp_attr; \
+	qassert(pthread_mutexattr_init(&tmp_attr), 0); \
+	qassert(pthread_mutexattr_setpshared(&tmp_attr, PTHREAD_PROCESS_PRIVATE), 0); \
+	qassert(pthread_mutex_init(&(c ## _lock), &tmp_attr), 0); \
+	qassert(pthread_mutexattr_destroy(&tmp_attr), 0); \
+    } { \
+	pthread_condattr_t tmp_attr; \
+	qassert(pthread_condattr_setpshared(&tmp_attr, PTHREAD_PROCESS_PRIVATE), 0); \
+	qassert(pthread_cond_init(&(c), &tmp_attr), 0); \
+	qassert(pthread_condattr_destroy(&tmp_attr), 0); \
+    } \
+} while (0)
+#define QTHREAD_COND_LOCK(c)   qassert(pthread_mutex_lock(&(c ## _lock)), 0)
+#define QTHREAD_COND_UNLOCK(c) qassert(pthread_mutex_unlock(&(c ## _lock)), 0)
 #define QTHREAD_INITLOCK(l)    do { if (pthread_mutex_init(l, NULL) != 0) { return QTHREAD_PTHREAD_ERROR; } } while(0)
 #define QTHREAD_LOCK(l)        qassert(pthread_mutex_lock(l), 0)
 #define QTHREAD_UNLOCK(l)      qassert(pthread_mutex_unlock(l), 0)
 #define QTHREAD_DESTROYLOCK(l) qassert(pthread_mutex_destroy(l), 0)
 #define QTHREAD_DESTROYCOND(l) qassert(pthread_cond_destroy(l), 0)
-#define QTHREAD_SIGNAL(l)      qassert(pthread_cond_signal(l), 0)
-#define QTHREAD_BCAST(l)       qassert(pthread_cond_broadcast(l), 0)
-#define QTHREAD_CONDWAIT(c, l) qassert(pthread_cond_wait(c, l), 0)
+#define QTHREAD_COND_SIGNAL(c) qassert(pthread_cond_signal(&(c)), 0)
+#define QTHREAD_COND_BCAST(l)  qassert(pthread_cond_broadcast(&(l)), 0)
+#define QTHREAD_COND_DESTROY(c) do { \
+    qassert(pthread_cond_destroy(&(c)), 0); \
+    qassert(pthread_mutex_destroy(&(c ## _lock)), 0); \
+} while (0)
+#define QTHREAD_COND_WAIT(c) do { \
+    struct timespec t; \
+    struct timeval n; \
+    gettimeofday(&n, NULL); \
+    t.tv_nsec = (n.tv_usec * 1000) + 500000000; \
+    t.tv_sec = n.tv_sec + ((t.tv_nsec >= 1000000000)?1:0); \
+    t.tv_nsec -= ((t.tv_nsec >= 1000000000)?1000000000:0); \
+    qassert(pthread_cond_timedwait(&(c), &(c ## _lock), &t), 0); \
+} while (0)
 
 #ifdef QTHREAD_MUTEX_INCREMENT
 # define QTHREAD_CASLOCK(var)                var; QTHREAD_FASTLOCK_TYPE var ## _caslock

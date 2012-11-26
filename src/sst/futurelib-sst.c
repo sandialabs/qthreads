@@ -11,7 +11,6 @@
 #include <ppcPimCalls.h>
 
 #include "futurelib_innards.h"
-#include "qthread_innards.h"
 
 #undef DBprintf
 #if 0
@@ -47,7 +46,7 @@ static pthread_mutex_t sfnf_lock;
  */
 static inline location_t *ft_loc(void)
 {
-    return qthread_isfuture() ? &(future_bookkeeping_array[qthread_shep(NULL)]) : NULL;
+    return &(future_bookkeeping_array[qthread_shep(NULL)]);
 }
 
 /* this function is used as a qthread; it is run by each shepherd so that each
@@ -136,7 +135,13 @@ void future_fork(qthread_f fptr, void *arg, aligned_t * retval)
 void future_fork_to(qthread_f fptr, void *arg, aligned_t * retval, qthread_shepherd_id_t rr)
 {
     blocking_vp_incr(&(future_bookkeeping_array[rr]));
-    qthread_fork_future_to(fptr, arg, retval, rr);
+    if (retval) {
+	PIM_feb_empty(retval);
+    }
+    return PIM_loadAndSpawnToLocaleStack(shep == NO_SHEPHERD ? -1 : shep,
+					(void *)qthread_future_wrapper,
+					(void *)fptr, (void *)arg, retval, NULL,
+					NULL);
 }
 
 /* This function declares that the current function (qthr) no longer
@@ -185,7 +190,6 @@ void future_exit(void)
 {
     DBprintf("Thread %i exit on loc %d\n", (int)qthread_id(), qthread_shep());
     future_yield();
-    qthread_assertnotfuture();
 }
 
 void future_join_all(aligned_t * fta, int ftc)

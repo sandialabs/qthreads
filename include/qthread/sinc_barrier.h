@@ -13,9 +13,9 @@ typedef struct qt_sinc_barrier_s {
     qt_sinc_t *sinc_3;
 } qt_sinc_barrier_t;
 
-void API_FUNC qt_sinc_barrier_enter(qt_sinc_barrier_t *b);
-void          qt_sinc_barrier_init(qt_sinc_barrier_t *restrict barrier,
-                                   size_t                      expect);
+void qt_sinc_barrier_enter(qt_sinc_barrier_t *b);
+void qt_sinc_barrier_init(qt_sinc_barrier_t *restrict barrier,
+                          size_t                      expect);
 void qt_sinc_barrier_destroy(qt_sinc_barrier_t *restrict barrier);
 void qt_sinc_barrier_change(qt_sinc_barrier_t *restrict barrier,
                             size_t                      expect);

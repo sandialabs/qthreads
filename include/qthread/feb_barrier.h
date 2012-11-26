@@ -1,5 +1,5 @@
-#ifndef QT_FEB_BARRIER_H
-#define QT_FEB_BARRIER_H
+#ifndef QTHREAD_FEB_BARRIER_H
+#define QTHREAD_FEB_BARRIER_H
 
 #include <qthread/macros.h>
 

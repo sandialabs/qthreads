@@ -22,16 +22,16 @@ libqthread_la_SOURCES = \
 	locks.c \
 	qalloc.c \
 	qloop.c \
-	qt_feb_barrier.c \
-	qt_sinc_barrier.c \
+	feb_barrier.c \
+	sinc_barrier.c \
 	qutil.c \
 	syncvar.c \
 	teams.c
 
 if COMPILE_LF_HASH
-libqthread_la_SOURCES += qt_lf_hash.c
+libqthread_la_SOURCES += lf_hashmap.c
 else
-libqthread_la_SOURCES += qt_c_hash.c
+libqthread_la_SOURCES += hashmap.c
 endif
 
 include qtimer/Makefile.inc
@@ -83,7 +83,7 @@ endif
 if COMPILE_TARGET_UNIX
 libqthread_la_SOURCES += \
 	qthread.c \
-	qt_mpool.c \
+	mpool.c \
 	shepherds.c \
 	workers.c \
 	threadqueues/@with_scheduler@_threadqueues.c \

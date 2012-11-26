@@ -5,7 +5,7 @@
 /* Internal Headers */
 #include "qthread/qpool.h"
 #include "qt_mpool.h"
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 #ifdef UNPOOLED
 #include "qt_debug.h" /* for malloc() debug wrappers */
 #endif

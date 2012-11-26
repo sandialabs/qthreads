@@ -13,6 +13,9 @@
 #include "qthread_innards.h"
 #include "qt_debug.h"
 #include "qt_macros.h"
+#include "qt_qthread_struct.h"
+#include "qt_qthread_mgmt.h"
+#include "qt_asserts.h"
 
 /* GLOBAL DATA (copy everywhere) */
 TLS_DECL_INIT(location_t *, future_bookkeeping);
@@ -31,7 +34,9 @@ static void blocking_vp_incr(location_t *loc);
  * shepherd. */
 static location_t *ft_loc(void)
 {
-    return qthread_isfuture() ? (location_t *)TLS_GET(future_bookkeeping) : NULL;
+    qthread_t *t = qthread_internal_self();
+
+    return (t->flags & QTHREAD_FUTURE) ? (location_t *)TLS_GET(future_bookkeeping) : NULL;
 }
 
 static void future_cleanup(void)
@@ -85,7 +90,7 @@ void future_init(int vp_per_loc)
         future_bookkeeping_array[i].vp_max   = vp_per_loc;
         future_bookkeeping_array[i].id       = i;
         qassert(pthread_mutex_init(&(future_bookkeeping_array[i].vp_count_lock), NULL), 0);
-        qthread_fork_to(future_shep_init, NULL, rets + i, i);
+        qthread_spawn(future_shep_init, NULL, 0, rets + i, 0, NULL, i, 0);
     }
     for (i = 0; i < qlib->nshepherds; i++) {
         qthread_readFF(NULL, rets + i);
@@ -155,7 +160,7 @@ void future_fork(qthread_f  fptr,
     qthread_debug(FUTURELIB_DETAILS, "Thread %i decided future will go to %i\n", (int)qthread_id(), rr);
     /* steps 2&3 (slow) */
     blocking_vp_incr(&(future_bookkeeping_array[rr]));
-    qthread_fork_future_to(fptr, arg, retval, rr);
+    qthread_spawn(fptr, arg, 0, retval, 0, NULL, rr, QTHREAD_SPAWN_FUTURE);
 }
 
 void future_fork_to(qthread_f             fptr,
@@ -166,14 +171,14 @@ void future_fork_to(qthread_f             fptr,
     assert(future_bookkeeping_array != NULL);
     if (future_bookkeeping_array == NULL) {
         /* futures weren't initialized properly... */
-        qthread_fork_to(fptr, arg, retval, shep);
+        qthread_spawn(fptr, arg, 0, retval, 0, NULL, shep, 0);
         return;
     }
 
     qthread_debug(FUTURELIB_BEHAVIOR, "Thread %i forking a future\n", (int)qthread_id());
     /* steps 2&3 (slow) */
     blocking_vp_incr(&(future_bookkeeping_array[shep]));
-    qthread_fork_future_to(fptr, arg, retval, shep);
+    qthread_spawn(fptr, arg, 0, retval, 0, NULL, shep, QTHREAD_SPAWN_FUTURE);
 }
 
 void future_fork_syncvar_to(qthread_f             fptr,
@@ -184,14 +189,14 @@ void future_fork_syncvar_to(qthread_f             fptr,
     assert(future_bookkeeping_array != NULL);
     if (future_bookkeeping_array == NULL) {
         /* futures weren't initialized properly... */
-        qthread_fork_syncvar_to(fptr, arg, retval, shep);
+        qthread_spawn(fptr, arg, 0, retval, 0, NULL, shep, QTHREAD_SPAWN_RET_SYNCVAR_T);
         return;
     }
 
     qthread_debug(FUTURELIB_BEHAVIOR, "Thread %i forking a future\n", (int)qthread_id());
     /* steps 2&3 (slow) */
     blocking_vp_incr(&(future_bookkeeping_array[shep]));
-    qthread_fork_syncvar_future_to(fptr, arg, retval, shep);
+    qthread_spawn(fptr, arg, 0, retval, 0, NULL, shep, QTHREAD_SPAWN_RET_SYNCVAR_T | QTHREAD_SPAWN_FUTURE);
 }
 
 /* This says: "I do not count toward future resource limits, temporarily." */
@@ -249,10 +254,13 @@ static void future_join(aligned_t *ft)
  * terminate, but there's no way for it to become a future again. */
 void future_exit(void)
 {
+    qthread_t *t = qthread_internal_self();
+
     assert(future_bookkeeping_array != NULL);
     qthread_debug(FUTURELIB_BEHAVIOR, "Thread %i exit on loc %d\n", (int)qthread_id(), qthread_shep());
+    assert(t->flags & QTHREAD_FUTURE);
     future_yield();
-    qthread_assertnotfuture();
+    t->flags ^= QTHREAD_FUTURE;
 }
 
 /* a more fun version of future_join */

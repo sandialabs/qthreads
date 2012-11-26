@@ -5,7 +5,7 @@
 #include <qthread/qthread.h>
 #include <qthread/qdqueue.h>
 
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 
 #include <unistd.h>                    /* for getpagesize() */
 #include <stdlib.h>                    /* for malloc() */

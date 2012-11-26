@@ -25,7 +25,7 @@ kern_return_t thread_policy_get(thread_t                thread,
                                 boolean_t              *get_default);
 #endif /* ifdef HAVE_MACH_THREAD_POLICY_H */
 
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 #include "qt_affinity.h"
 #include "shufflesheps.h"
 
@@ -67,7 +67,7 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
 }                                      /*}}} */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-void INTERNAL qt_affinity_set(qthread_worker_t *me)
+void INTERNAL qt_affinity_set(qthread_worker_t *me, unsigned int Q_UNUSED(nw))
 {                                      /*{{{ */
 # ifndef SST
     mach_msg_type_number_t        Count = THREAD_AFFINITY_POLICY_COUNT;
@@ -87,7 +87,7 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me)
 }                                      /*}}} */
 
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
+void INTERNAL qt_affinity_set(qthread_shepherd_t *me, unsigned int Q_UNUSED(nw))
 {                                      /*{{{ */
 # ifndef SST
     mach_msg_type_number_t        Count = THREAD_AFFINITY_POLICY_COUNT;

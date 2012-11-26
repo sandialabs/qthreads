@@ -9,17 +9,19 @@
 /* System Compatibility Header */
 #include "qthread-int.h"
 
-/* Installed Headers */
-#include <qthread/qthread.h>
-#include <qthread/feb_barrier.h>
+/* Public Headers */
+#include "qthread/qthread.h"
+#include "qthread/feb_barrier.h"
 
 /* Internal Headers */
+#include "qt_feb_barrier.h"
 #include "qt_atomics.h"
 #include "qt_mpool.h"
-#include "qthread_innards.h"
 #include "qt_visibility.h"
+#include "qt_initialized.h" // for qthread_library_initialized
 #include "qt_debug.h"
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
+#include "qt_subsystems.h"
 
 struct qt_feb_barrier_s {
     syncvar_t in_gate;

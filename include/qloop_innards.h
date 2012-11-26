@@ -89,6 +89,8 @@ struct qqloop_step_handle_s {
 };
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
+#include "qt_visibility.h"
+
 int qloop_internal_computeNextBlock(qqloop_step_handle_t *loop);
 
 double *cnbTimeMin_(void);
@@ -98,6 +100,13 @@ qqloop_step_handle_t *qt_loop_rose_queue_create(int64_t start,
                                                 int64_t stop,
                                                 int64_t incr);
 void qt_loop_rose_queue_free(qqloop_step_handle_t *);
+
+/* functions added by akp to handle OpenMP task completion
+ */
+extern int __qthreads_temp;
+void INTERNAL qthread_reset_forCount(void);
+
+int INTERNAL qthread_forCount(int inc);
 
 #endif /* QTHREAD_USE_ROSE_EXTENSIONS */
 

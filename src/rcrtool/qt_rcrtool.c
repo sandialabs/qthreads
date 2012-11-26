@@ -2,10 +2,15 @@
 #include "config.h"
 #endif
 
-#include <qthread/qthread.h>           // for syncvar_t
-#include "qthread_asserts.h"
-#include "qt_atomics.h"
+/* System Headers */
 #include <err.h>
+
+/* API Headers */
+#include <qthread/qthread.h>           // for syncvar_t
+
+/* Internal Headers */
+#include "qt_asserts.h"
+#include "qt_atomics.h"
 #include "common_rcrtool.h"
 #include "qt_rcrtool.h"
 #include "stdio.h"

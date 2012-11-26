@@ -38,7 +38,6 @@
 #include <unistd.h>
 #include "qthread/qthread.h"
 #include "qthread/qtimer.h"
-#include "qthread_innards.h" // not strictly necessary (yet)
 #include "qt_atomics.h" /* for SPINLOCK_BODY() */
 #include "qt_envariables.h"
 #include "qt_debug.h"

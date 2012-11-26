@@ -3,7 +3,7 @@
 #endif
 
 #include <qthread/qtimer.h>
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 
 #if TIME_WITH_SYS_TIME
 # include <sys/time.h>

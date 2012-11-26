@@ -12,12 +12,14 @@
 # include <sys/syscall.h>        /* for SYS_accept and others */
 #endif
 
-/* Internal Headers */
-#include "qt_io.h"
-#include "qthread_asserts.h"
-#include "qthread_innards.h" /* for qlib */
+/* API Headers */
 #include "qthread/qthread.h"
 #include "qthread/qtimer.h"
+
+/* Internal Headers */
+#include "qt_io.h"
+#include "qthread_innards.h" /* for qlib */
+#include "qt_qthread_mgmt.h"
 
 int nanosleep(const struct timespec *rqtp,
               struct timespec       *rmtp)

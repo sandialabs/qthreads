@@ -11,10 +11,9 @@
 #include "spr_innards.h"
 #include "qthread/spr.h"
 
-#include "qthread_innards.h"
 #include "qt_multinode_innards.h"
 #include "spr_innards.h"
-#include "qthread_asserts.h"
+#include "qt_asserts.h"
 #include "qt_debug.h"
 #include "qt_atomics.h"
 #include "net/net.h"

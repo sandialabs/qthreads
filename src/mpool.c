@@ -26,14 +26,14 @@
 #include <qthread/qthread-int.h>       /* for uintptr_t */
 #include "qt_mpool.h"
 #include "qt_atomics.h"
-#include "qthread_expect.h"
-#include "qthread_asserts.h"
+#include "qt_expect.h"
+#include "qt_asserts.h"
 #include "qt_debug.h"
 #include "qt_gcd.h"                    /* for qt_lcm() */
 #include "qt_macros.h"
-#include "qthread_innards.h"
 #include "qt_visibility.h"
 #include "qt_aligned_alloc.h"
+#include "qt_subsystems.h"
 
 typedef struct threadlocal_cache_s qt_mpool_threadlocal_cache_t;
 
