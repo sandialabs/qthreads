@@ -40,6 +40,7 @@
 #include "qthread/qthread.h"
 #include "qthread/qtimer.h"
 #include "qt_feb.h" // for blockreporting
+#include "qt_syncvar.h" // for blockreporting
 #include "qt_hash.h" /* for qt_key_t */
 #include "qt_atomics.h"      /* for SPINLOCK_BODY() */
 #include "qt_envariables.h"
