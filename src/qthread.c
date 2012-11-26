@@ -1744,6 +1744,7 @@ void API_FUNC qthread_finalize(void)
 #endif /* ifdef QTHREAD_FEB_PROFILING */
 
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
+    extern unsigned int QTHREAD_LOCKING_STRIPES;
     for (i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
         QTHREAD_FASTLOCK_DESTROY(qlib->atomic_locks[i]);
     }
