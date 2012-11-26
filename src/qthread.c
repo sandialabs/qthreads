@@ -793,14 +793,15 @@ int API_FUNC qthread_init(qthread_shepherd_id_t nshepherds)
  */
 
 int API_FUNC qthread_initialize_agg(int(*agg_cost) (int count, qthread_f* f, void **arg),
-                                    qthread_agg_f agg_f)
+                                    qthread_agg_f agg_f, int max_c)
 {
     int r = qthread_initialize();
-
     if(agg_cost != NULL)
         qlib->agg_cost = agg_cost;
     if(agg_f != NULL)
         qlib->agg_f    = agg_f;
+    if(max_c >=0)
+        qlib->max_c = max_c;
     return r;
 }
 
@@ -2310,7 +2311,7 @@ extern void *qthread_fence2;
     __asm__ __volatile__ (# name ":")
 #endif /* ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING */
 
-void qthread_call_method(qthread_f f, void*arg, void* ret, uint16_t flags){
+void API_FUNC qthread_call_method(qthread_f f, void*arg, void* ret, uint16_t flags){
     if (ret) {
         if (flags & QTHREAD_RET_IS_SINC) {
             if (flags & QTHREAD_RET_IS_VOID_SINC) {
@@ -2380,7 +2381,16 @@ static void qthread_wrapper(void *ptr)
     }
 
     assert(t->rdata);
-    if (t->ret) {
+    if(t->flags & QTHREAD_AGGREGATED){
+        int count = ((int*)t->preconds)[0];
+        qthread_f *list_of_f = (qthread_f*) ( & (((int*)t->preconds)[1]) );
+        qthread_agg_f agg_f = (qthread_agg_f) ( t->f ) ;
+        agg_f(count, list_of_f, (void**)t->arg, (void**)t->ret, t->flags);
+        if (NULL != t->team) { qt_internal_teamfinish(t->team, t->flags); }
+        //TODO: How to handle ret sinc flags? 
+        //Temp solution: use qthread_call_method and pass task flags to the agg function.
+    }
+    else if (t->ret) {
         qthread_debug(THREAD_DETAILS, "tid %u, with flags %u, handling retval\n", t->thread_id, t->flags);
         if (t->flags & QTHREAD_RET_IS_SINC) {
             if (t->flags & QTHREAD_RET_IS_VOID_SINC) {
