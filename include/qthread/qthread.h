@@ -257,6 +257,11 @@ int qthread_fork_syncvar_copyargs(qthread_f   f,
                                   const void *arg,
                                   size_t      arg_size,
                                   syncvar_t  *ret);
+int qthread_fork_syncvar_copyargs_to(qthread_f             f,
+                                     const void           *arg,
+                                     size_t                arg_size,
+                                     syncvar_t            *ret,
+                                     qthread_shepherd_id_t preferred_shep);
 int qthread_fork_syncvar_copyargs_simple(qthread_f   f,
                                          const void *arg,
                                          size_t      arg_size,
