@@ -11,7 +11,6 @@
 #include <qthread/qtimer.h>
 
 /* Internal Headers */
-#include "qthread_innards.h"           /* for qthread_debug() */
 #include "qt_barrier.h"
 #include "qthread/sinc_barrier.h"
 #include "qloop_innards.h"
