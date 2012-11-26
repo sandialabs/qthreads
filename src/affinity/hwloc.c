@@ -12,7 +12,7 @@
 #include "shufflesheps.h"
 
 static hwloc_topology_t topology;
-static uint32_t         initialized     = 0;
+static uint32_t         initialized = 0;
 
 static int            shep_depth = -1;
 static hwloc_cpuset_t mccoy_thread_bindings;
@@ -482,7 +482,8 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me,
 }                                      /*}}} */
 
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-void INTERNAL qt_affinity_set(qthread_shepherd_t *me)
+void INTERNAL qt_affinity_set(qthread_shepherd_t *me,
+                              unsigned int        Q_UNUSED(nworkerspershep))
 {                                                                                      /*{{{ */
     DEBUG_ONLY(hwloc_topology_check(topology));
 
