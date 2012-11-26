@@ -138,15 +138,6 @@ void INTERNAL qthread_exec(qthread_t    *t,
 # define qthread_shepherd_count() (qlib->nshepherds)
 #endif // ifdef QTHREAD_SST_PRIMITIVES
 
-/* functions added by akp to handle OpenMP task completion
- */
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-extern int __qthreads_temp;
-void INTERNAL qthread_reset_forCount(void);
-
-int INTERNAL qthread_forCount(int inc);
-#endif // ifdef QTHREAD_USE_ROSE_EXTENSIONS
-
 #ifdef QTHREAD_RCRTOOL
 /* allow environment variable to control whether dynamic thread count
  *  adjustment active - akp 5/26/11

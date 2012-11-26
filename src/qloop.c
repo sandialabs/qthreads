@@ -23,6 +23,7 @@
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 # include <stdio.h>
 # include "qt_atomics.h"
+# include "qt_threadqueues.h" // for qthread_steal_disable
 #endif
 
 #include "qthread/sinc.h"
@@ -1986,11 +1987,7 @@ static void qt_parallel_qfor(const qt_loop_step_f func,
     qqloop_step_handle_t *qqhandle = NULL;
     int                   forCount = qthread_forCount(1); // my loop count
 
-# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    cnbWorkers = qthread_num_shepherds() * qlib->nworkerspershep;
-# else
-    cnbWorkers = qthread_num_shepherds();
-# endif
+    cnbWorkers = qthread_num_workers();
     cnbTimeMin = 1.0;
 
     QTHREAD_FASTLOCK_LOCK(&forLock);                                                             // KBW: XXX: need to find a way to avoid locking
