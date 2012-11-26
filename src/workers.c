@@ -12,6 +12,7 @@
 #include "qt_debug.h"
 #include "qt_asserts.h"
 #include "qthread_innards.h" /* for qlib */
+#include "qt_initialized.h" // for qthread_library_initialized
 #include "qt_shepherd_innards.h"
 // #include "qt_qthread_struct.h"
 

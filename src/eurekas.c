@@ -12,6 +12,7 @@
 #include "qt_teams.h"
 #include "qt_qthread_struct.h"
 #include "qt_qthread_mgmt.h"
+#include "qt_initialized.h" // for qthread_library_initialized
 #include "qthread_innards.h"
 #include "qt_feb.h"     // for qt_feb_taskfilter()
 #include "qt_syncvar.h" // for qt_syncvar_taskfilter()

@@ -24,12 +24,6 @@
 #include "qt_threadqueues.h"
 #include "qt_hash.h"
 
-extern unsigned int QTHREAD_LOCKING_STRIPES;
-
-#ifndef QTHREAD_NO_ASSERTS
-extern int qthread_library_initialized;
-#endif
-
 #ifdef CAS_STEAL_PROFILE
 // stripe this array across a cache line
 # define CAS_STEAL_PROFILE_LENGTH (CACHELINE_WIDTH / sizeof(uint64_t))

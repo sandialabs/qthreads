@@ -18,6 +18,7 @@
 #include "qt_atomics.h"
 #include "qt_mpool.h"
 #include "qt_visibility.h"
+#include "qt_initialized.h" // for qthread_library_initialized
 #include "qt_debug.h"
 #include "qt_asserts.h"
 #include "qt_subsystems.h"

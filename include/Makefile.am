@@ -32,6 +32,7 @@ noinst_HEADERS = \
 	qt_gcd.h \
 	qt_hash.h \
 	qt_hazardptrs.h \
+	qt_initialized.h \
 	qt_io.h \
 	qt_feb.h \
 	qt_syncvar.h \
