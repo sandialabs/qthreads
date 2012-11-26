@@ -21,6 +21,7 @@ AC_DEFUN([_QTHREAD_CHECK_IFDEF_EQ],
 
 # QTHREAD_DETECT_COMPILER_TYPE
 # These #defs are based on the list at http://predef.sourceforge.net/precomp.html
+# Moved at some point to http://sourceforge.net/p/predef/wiki/Compilers
 # ------------------------------------------------------------------
 AC_DEFUN([QTHREAD_DETECT_COMPILER_TYPE], [
 AC_CACHE_CHECK([what kind of C compiler $CC is],
@@ -75,7 +76,11 @@ AC_CACHE_CHECK([what kind of C compiler $CC is],
 
    dnl Now detect the rarer ones
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
+     [_QTHREAD_CHECK_IFDEF([_ACC_],[qthread_cv_c_compiler_type=ACC])])
+   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__CMB__],[qthread_cv_c_compiler_type=AltiumMicroBlaze])])
+   AS_IF([test "x$qthread_cv_c_compiler_type" == x],
+     [_QTHREAD_CHECK_IFDEF([__CHC__],[qthread_cv_c_compiler_type=AltiumCtoHardware])])
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__ACK__],[qthread_cv_c_compiler_type=AmsterdamCompilerKit])])
    AS_IF([test "x$qthread_cv_c_compiler_type" == x],
@@ -240,6 +245,8 @@ AC_CACHE_CHECK([what kind of C++ compiler $CXX is],
      [_QTHREAD_CHECK_IFDEF([__SYSC__],[qthread_cv_cxx_compiler_type=Dignus])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__DJGPP__],[qthread_cv_cxx_compiler_type=DJGPP])])
+   AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
+     [_QTHREAD_CHECK_IFDEF([__FCC_VERSION],[qthread_cv_cxx_compiler_type=Fujitsu])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
      [_QTHREAD_CHECK_IFDEF([__ghs__],[qthread_cv_cxx_compiler_type=GreenHill])])
    AS_IF([test "x$qthread_cv_cxx_compiler_type" == x],
