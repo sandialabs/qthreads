@@ -9,10 +9,10 @@
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
 #include <qthread/qtimer.h>
+#include <qthread/sinc_barrier.h>
 
 /* Internal Headers */
 #include "qt_barrier.h"
-#include "qthread/sinc_barrier.h"
 #include "qloop_innards.h"
 #include "qt_expect.h"
 #include "qt_asserts.h"
