@@ -13,7 +13,8 @@
 /* Internal Headers */
 #include "qt_subsystems.h"
 #include "qt_hash.h"
-#include "qthread_innards.h"
+#include "qt_asserts.h"
+#include "qthread_innards.h" /* for qlib */
 #include "qt_profiling.h"
 #include "qt_qthread_struct.h"
 #include "qt_qthread_mgmt.h"
