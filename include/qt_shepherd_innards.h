@@ -28,6 +28,8 @@
 typedef struct qthread_shepherd_s qthread_shepherd_t;
 #endif
 
+#define QTHREAD_NO_NODE ((unsigned int)(-1))
+
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 
 # define STEAL_BUFFER_LENGTH 128

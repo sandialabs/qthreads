@@ -137,7 +137,6 @@ extern qlib_t qlib;
 void INTERNAL qthread_exec(qthread_t    *t,
                            qt_context_t *c);
 
-#define QTHREAD_NO_NODE ((unsigned int)(-1))
 #ifdef QTHREAD_SST_PRIMITIVES
 # define qthread_shepherd_count()                              PIM_readSpecial(PIM_CMD_LOC_COUNT)
 # define qthread_fork_syncvar_future_to(me, f, arg, ret, shep) qthread_fork_syncvar_to(f, arg, ret, shep)
