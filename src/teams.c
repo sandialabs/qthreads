@@ -271,17 +271,19 @@ void INTERNAL qt_internal_teamfinish(qt_team_t   *team,
                 qt_sinc_submit(team->sinc, NULL);
                 qt_sinc_submit(team->sinc, NULL);
                 qt_sinc_wait(team->sinc, NULL);
-                qt_sinc_reset(team->sinc, 1);
 
                 // Wait for all participants on team subteams sinc
                 qt_sinc_submit(team->subteams_sinc, NULL);
                 qt_sinc_wait(team->subteams_sinc, NULL);
 
-                // Signal watcher to exit and wait for it
-                qthread_debug(FEB_DETAILS, "tid %u killing team %u signalling team %u's watcher (%p)\n", qthread_id(), team->team_id, team->parent_id, team->parent_eureka);
-                qthread_writeEF_const(team->parent_eureka,
-                                      TEAM_SIGNAL_EXIT(team->team_id));
-                qt_sinc_wait(team->sinc, NULL);
+                if (team->watcher_started == 0) {
+                    // Signal watcher to exit and wait for it
+                    qt_sinc_reset(team->sinc, 1);
+                    qthread_debug(FEB_DETAILS, "tid %u killing team %u signalling team %u's watcher (%p)\n", qthread_id(), team->team_id, team->parent_id, team->parent_eureka);
+                    qthread_writeEF_const(team->parent_eureka,
+                            TEAM_SIGNAL_EXIT(team->team_id));
+                    qt_sinc_wait(team->sinc, NULL);
+                }
 
                 // Submit to parent team subteams sinc
                 qt_sinc_submit(team->parent_subteams_sinc, NULL);
@@ -363,6 +365,8 @@ static aligned_t qt_team_watcher(void *args_)
                 // I must propogate this eureka: I am the end of all things, and like a Shoggoth, I will sweep my team evilly free of litter
                 qthread_debug(FEB_DETAILS, "team %u's watcher (tid %u) preparing to destroy its team\n", myteam, qthread_id());
                 qt_team_eureka();
+                team->watcher_started = 1; // signal that the watcher doesn't need to be killed
+                qthread_empty(parent_eureka);
                 break;
             }
         } else {
