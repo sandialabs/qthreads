@@ -336,6 +336,7 @@ int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict c
 
     qt_threadqueue_node_t *node;
 
+    qthread_debug(THREADQUEUE_CALLS, "c(%p), q(%p), t(%p:%u)\n", c, q, t, t->thread_id);
     node = ALLOC_TQNODE();
     assert(node != NULL);
 
@@ -1295,6 +1296,10 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
     qthread_t             *t    = NULL;
 
     assert(q != NULL);
+    /* For reference:
+     *
+     * dequeue (and filtering) starts at the tail and proceeds to follow the prev ptrs until the head is reached.
+     */
 
     QTHREAD_TRYLOCK_LOCK(&q->qlock);
     PARANOIA_ONLY(sanity_check_queue(q));
@@ -1315,10 +1320,12 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                 case 0: // ignore, move to the next one
                     rp   = &node->prev;
                     node = node->prev;
-                    if (q->head == node) {
-                        lp = &q->head;
-                    } else {
-                        lp = &(node->prev->next);
+                    if (node) {
+                        if (q->head == node) {
+                            lp = &q->head;
+                        } else {
+                            lp = &(node->prev->next);
+                        }
                     }
                     break;
                 case 1: // ignore, stop looking
