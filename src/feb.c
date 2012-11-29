@@ -1585,7 +1585,7 @@ void INTERNAL qthread_feb_taskfilter(qt_feb_taskfilter_f tf,
     }
 } /*}}}*/
 
-void INTERNAL qthread_feb_callback(qt_feb_callback_f cb,
+void API_FUNC qthread_feb_callback(qt_feb_callback_f cb,
                                    void             *arg)
 {   /*{{{*/
     void *pass[2] = { cb, arg };

@@ -20,7 +20,7 @@ int INTERNAL qthread_readFE_nb(aligned_t *restrict const       dest,
                                const aligned_t *restrict const src);
 int INTERNAL qthread_check_feb_preconds(qthread_t *t);
 
-void INTERNAL qthread_feb_callback(qt_feb_callback_f cb,
+void API_FUNC qthread_feb_callback(qt_feb_callback_f cb,
                                    void             *arg);
 void INTERNAL qthread_feb_taskfilter(qt_feb_taskfilter_f tf,
                                      void               *arg);
