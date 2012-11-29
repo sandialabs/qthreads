@@ -282,7 +282,9 @@ QTHREAD_FASTLOCK_TYPE     output_lock;
 
 int API_FUNC qthread_debuglevel(int d)
 {
-    if (d >= 0) { debuglevel = (enum qthread_debug_levels)d; }
+    if (d >= 0) {
+        debuglevel = (enum qthread_debug_levels)((1 << d) - 1);
+    }
     return (int)debuglevel;
 }
 
