@@ -257,11 +257,6 @@ int qthread_fork_syncvar_copyargs(qthread_f   f,
                                   const void *arg,
                                   size_t      arg_size,
                                   syncvar_t  *ret);
-int qthread_fork_syncvar_copyargs_to(qthread_f             f,
-                                     const void           *arg,
-                                     size_t                arg_size,
-                                     syncvar_t            *ret,
-                                     qthread_shepherd_id_t preferred_shep);
 int qthread_fork_syncvar_copyargs_simple(qthread_f   f,
                                          const void *arg,
                                          size_t      arg_size,
@@ -410,6 +405,7 @@ void qt_team_profile(void);
                                                                      QTHREAD_SPAWN_NEW_TEAM)
 # define qthread_fork_copyargs_new_subteam(f, a, z, r) qthread_spawn((f), (a), (z), (r), 0, NULL, NO_SHEPHERD, \
                                                                      QTHREAD_SPAWN_NEW_SUBTEAM)
+# define qthread_fork_syncvar_copyargs_to(f,a,z,r,p)   qthread_spawn((f), (a), (z), (r), 0, NULL, (p), QTHREAD_SPAWN_RET_SYNCVAR_T)
 
 /****************************************************************************
  * functions to implement FEB locking/unlocking
