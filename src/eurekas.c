@@ -133,8 +133,8 @@ static void hup_handler(int sig)
             break;
         }
         case QT_EUREKA_SIGNAL:
-            if (eureka_block) {
-                eureka_blocked_flag = 1;
+            if (TLS_GET(eureka_block)) {
+                TLS_SET(eureka_blocked_flag, 1);
                 return;
             }
             eureka();
