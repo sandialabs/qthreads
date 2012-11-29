@@ -924,6 +924,7 @@ got_m:
         QTHREAD_WAIT_TIMER_START();
         qthread_back_to_master(me);
         QTHREAD_WAIT_TIMER_STOP(me, febwait);
+        qt_eureka_check(0);
         qthread_debug(FEB_BEHAVIOR, "dest=%p, src=%p (tid=%i): succeeded after waiting\n", dest, src, me->thread_id);
     } else {
         if (dest && (dest != src)) {
@@ -1100,6 +1101,7 @@ int API_FUNC qthread_readFF(aligned_t *restrict       dest,
         QTHREAD_WAIT_TIMER_START();
         qthread_back_to_master(me);
         QTHREAD_WAIT_TIMER_STOP(me, febwait);
+        qt_eureka_check(0);
         qthread_debug(FEB_BEHAVIOR, "dest=%p, src=%p (tid=%u): succeeded after waiting\n", dest, src, me->thread_id);
     } else {                   /* exists AND is empty... weird, but that's life */
         if (dest && (dest != src)) {
@@ -1294,6 +1296,7 @@ got_m:
         QTHREAD_WAIT_TIMER_START();
         qthread_back_to_master(me);
         QTHREAD_WAIT_TIMER_STOP(me, febwait);
+        qt_eureka_check(0);
         qthread_debug(FEB_BEHAVIOR, "tid %u succeeded on %p=%p after waiting\n", me->thread_id, dest, src);
     } else {                   /* full, thus IT IS OURS! MUAHAHAHA! */
         if (dest && (dest != src)) {

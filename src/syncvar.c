@@ -517,6 +517,7 @@ got_m:
         QTHREAD_WAIT_TIMER_START();
         qthread_back_to_master(me);
         QTHREAD_WAIT_TIMER_STOP(me, febwait);
+        qt_eureka_check(0);
         qthread_debug(SYNCVAR_DETAILS, "src(%p) woke up\n", src);
     } else {
         qthread_debug(SYNCVAR_DETAILS, "locked/full on the first try; word=%x, state = %x, ret=%x\n", (unsigned int)src->u.w, (int)src->u.s.state, (int)ret);
@@ -842,6 +843,7 @@ got_m:
         QTHREAD_WAIT_TIMER_START();
         qthread_back_to_master(me);
         QTHREAD_WAIT_TIMER_STOP(me, febwait);
+        qt_eureka_check(0);
         qthread_debug(SYNCVAR_DETAILS, "src(%p) woke up\n", src);
     } else if (e.sf == 1) {            /* waiters! */
         qthread_addrstat_t *m;
@@ -1328,6 +1330,7 @@ got_m:
         QTHREAD_WAIT_TIMER_START();
         qthread_back_to_master(me);
         QTHREAD_WAIT_TIMER_STOP(me, febwait);
+        qt_eureka_check(0);
         qthread_debug(SYNCVAR_DETAILS, "writeEF(%p) woke up\n", dest);
     } else if (e.sf == 1) {            /* there are waiters to release! */
         qthread_addrstat_t *m;
