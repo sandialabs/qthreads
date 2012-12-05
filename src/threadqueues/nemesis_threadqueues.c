@@ -107,8 +107,6 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
 
 static inline qt_threadqueue_node_t *qt_internal_NEMESIS_dequeue(NEMESIS_queue *q)
 {                                      /*{{{ */
-    qt_threadqueue_node_t *retval;
-
     if (!q->shadow_head) {
         if (!q->head) {
             return NULL;
@@ -117,7 +115,7 @@ static inline qt_threadqueue_node_t *qt_internal_NEMESIS_dequeue(NEMESIS_queue *
         q->head        = NULL;
     }
 
-    retval = q->shadow_head;
+    qt_threadqueue_node_t *const retval = (void *volatile)(q->shadow_head);
 
     if ((retval != NULL) && (retval != (void *)1)) {
         if (retval->next != NULL) {
@@ -136,6 +134,32 @@ static inline qt_threadqueue_node_t *qt_internal_NEMESIS_dequeue(NEMESIS_queue *
     }
     return retval;
 }                                      /*}}} */
+
+static inline qt_threadqueue_node_t *qt_internal_NEMESIS_dequeue_st(NEMESIS_queue *q)
+{                                      /*{{{ */
+    if (!q->shadow_head) {
+        if (!q->head) {
+            return NULL;
+        }
+        q->shadow_head = q->head;
+        q->head        = NULL;
+    }
+
+    qt_threadqueue_node_t *const retval = (void *volatile)(q->shadow_head);
+
+    if ((retval != NULL) && (retval != (void *)1)) {
+        if (retval->next != NULL) {
+            q->shadow_head = retval->next;
+            retval->next   = NULL;
+        } else {
+            qt_threadqueue_node_t *old;
+            q->shadow_head = NULL;
+            q->tail = NULL;
+        }
+    }
+    return retval;
+}                                      /*}}} */
+
 
 static qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q)
 {                                      /*{{{ */
@@ -285,7 +309,7 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
 
     tmp.head = NULL;
     tmp.tail = NULL;
-    while ((curs = qt_internal_NEMESIS_dequeue(&q->q))) {
+    while ((curs = qt_internal_NEMESIS_dequeue_st(&q->q))) {
         qthread_t *t = curs->thread;
         switch (f(t)) {
             case 0: // ignore, move on
