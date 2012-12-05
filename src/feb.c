@@ -515,7 +515,7 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t *shep,
 {                      /*{{{ */
     qthread_addrres_t *X = NULL;
 
-    qthread_debug(FEB_FUNCTIONS, "m(%p), addr(%p), recursive(%u)\n", m, maddr, recursive);
+    qthread_debug(FEB_FUNCTIONS, "shep(%u), m(%p), addr(%p), recursive(%u)\n", shep->shepherd_id, m, maddr, recursive);
     assert(m);
     m->full = 1;
     QTHREAD_EMPTY_TIMER_STOP(m);
@@ -534,7 +534,7 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t *shep,
         }
         /* schedule */
         qthread_t *waiter = X->waiter;
-        qthread_debug(FEB_DETAILS, "m(%p), maddr(%p), recursive(%u): dQ one from FFQ (%u releasing tid %u with %u)\n", m, maddr, recursive, qthread_id(), waiter->thread_id, *(aligned_t *)maddr);
+        qthread_debug(FEB_DETAILS, "shep(%u), m(%p), maddr(%p), recursive(%u): dQ one from FFQ (%u releasing tid %u with %u)\n", shep->shepherd_id, m, maddr, recursive, qthread_id(), waiter->thread_id, *(aligned_t *)maddr);
         if (QTHREAD_STATE_NASCENT == waiter->thread_state) {
             /* Note: the nascent thread is being tossed into a real live ready
              * queue for one big fat reason: the alternative involves
