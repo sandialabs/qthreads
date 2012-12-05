@@ -165,9 +165,9 @@ void INTERNAL qt_eureka_shepherd_init(void)
 static int qt_eureka_internal_filterfunc(const qt_key_t            addr,
                                          qthread_t *const restrict t,
                                          void *restrict            arg)
-{
+{   /*{{{*/
     return eureka_filter(t);
-}
+} /*}}}*/
 
 void INTERNAL qthread_internal_assassinate(qthread_t *t)
 {   /*{{{*/
@@ -338,8 +338,8 @@ void API_FUNC qt_team_eureka(void)
     /* 9-step1: assume team-leader position */
     self->flags |= QTHREAD_TEAM_LEADER;
     /* 9-step2: reset team data */
-    if (my_team->parent_id != QTHREAD_DEFAULT_TEAM_ID &&
-            my_team->parent_id != QTHREAD_NON_TEAM_ID) {
+    if ((my_team->parent_id != QTHREAD_DEFAULT_TEAM_ID) &&
+        (my_team->parent_id != QTHREAD_NON_TEAM_ID)) {
         qt_sinc_reset(my_team->sinc, 2);              // I, and the waiter, are the only remaining members
     } else {
         qt_sinc_reset(my_team->sinc, 1);              // I am the only remaining member
