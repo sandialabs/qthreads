@@ -55,6 +55,8 @@ static aligned_t live_parent(void *arg)
     iprintf("live_parent waiting on %p\n", &alive[0]);
     qthread_readFF(NULL, &alive[0]);
     iprintf("live_parent saw live_waiter 0 report in\n");
+    qthread_feb_status(&alive[0]); // guarantee the other task is not still in the lock
+    qthread_feb_status(&alive[1]); // guarantee the other task is not still in the lock
     iprintf("live_parent about to eureka...\n");
     qt_team_eureka();
     iprintf("live_parent still alive!\n");
@@ -107,7 +109,7 @@ static aligned_t live_parent3(void *arg)
     qthread_fork(live_waiter2, (void*)(intptr_t)0, &t3);
     iprintf("live_parent3 spawned all tasks\n");
     qthread_flushsc();
-    sleep(1);
+    sleep(1); // XXX: why is this here?
     iprintf("live_parent3 about to eureka...\n");
     qt_team_eureka();
     iprintf("live_parent3 still alive!\n");
@@ -148,6 +150,8 @@ static aligned_t parent_eureka(void *arg)
     iprintf("parent_eureka waiting on %p\n", &alive[1]);
     qthread_readFF(NULL, &alive[1]);
     iprintf("parent_eureka saw child 1 report in\n");
+    qthread_feb_status(&alive[0]); // guarantee the other task is not still in the lock
+    qthread_feb_status(&alive[1]); // guarantee the other task is not still in the lock
     iprintf("parent_eureka about to eureka...\n");
     qt_team_eureka();
     iprintf("parent_eureka still alive!\n");
@@ -198,7 +202,10 @@ int main(int   argc,
 
     iprintf("\n\n***************************************************************\n");
     iprintf("Testing a parent-team eureka (subteam tasks must die)...\n");
-    qthread_fork_new_team(parent_eureka, NULL, &t2);
+    /* Ordinarily, spawning to specific shepherds would be unnecessary, but in
+     * this case, I'm doing it to ensure that the situation I intend to test
+     * actually happens. */
+    qthread_fork_new_team_to(parent_eureka, NULL, &t2, 0);
     qthread_readFF(NULL, &t2);
     iprintf("main() woke up after parent_eureka\n");
     assert(waiter_count == 0);
