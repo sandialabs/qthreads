@@ -108,7 +108,6 @@ static aligned_t live_parent3(void *arg)
     qthread_fork(live_waiter2, (void*)(intptr_t)0, NULL);
     iprintf("live_parent3 spawned all tasks\n");
     qthread_flushsc();
-    sleep(1); // XXX: why is this here?
     iprintf("live_parent3 about to eureka...\n");
     qt_team_eureka();
     iprintf("live_parent3 still alive!\n");
