@@ -373,16 +373,16 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
     while (curs) {
         qthread_t *t = curs->value;
         switch (f(t)) {
-            case 0: // ignore, move on
+            case IGNORE_AND_CONTINUE: // ignore, move on
                 hazardous_ptr(0, curs);
                 ptr  = &curs->next;
                 curs = curs->next;
                 hazardous_ptr(1, curs);
                 continue;
-            case 1: // ignore, stop looking
+            case IGNORE_AND_STOP: // ignore, stop looking
                 return;
 
-            case 2: // remove, move on
+            case REMOVE_AND_CONTINUE: // remove, move on
             {
                 qt_threadqueue_node_t *freeme = curs;
 
@@ -398,7 +398,7 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                 hazardous_release_node(FREE_TQNODE, freeme);
             }
                 continue;
-            case 3: // remove, stop looking
+            case REMOVE_AND_STOP: // remove, stop looking
                 qthread_internal_assassinate(t);
                 if (curs->next == NULL) {
                     /* this is clever: since 'next' is the first field, its

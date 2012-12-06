@@ -1576,9 +1576,9 @@ got_m:
     return newv;
 }                                      /*}}} */
 
-static int qt_syncvar_tf_call_cb(const qt_key_t            addr,
-                                 qthread_t *const restrict waiter,
-                                 void *restrict            tf_arg)
+static filter_code qt_syncvar_tf_call_cb(const qt_key_t            addr,
+                                         qthread_t *const restrict waiter,
+                                         void *restrict            tf_arg)
 {   /*{{{*/
     qt_syncvar_callback_f f     = (qt_syncvar_callback_f)((void **)tf_arg)[0];
     void                 *f_arg = ((void **)tf_arg)[1];
@@ -1598,7 +1598,7 @@ static int qt_syncvar_tf_call_cb(const qt_key_t            addr,
         }
     }
     f((void *)addr, waiter->f, waiter->arg, waiter->ret, waiter->thread_id, tls, f_arg);
-    return 0;
+    return IGNORE_AND_CONTINUE;
 } /*}}}*/
 
 static void qt_syncvar_call_tf(const qt_key_t      addr,

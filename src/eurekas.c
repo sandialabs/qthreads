@@ -27,15 +27,15 @@ static qt_team_t *eureka_ptr         = NULL;
 static aligned_t  eureka_in_barrier  = 0;
 static aligned_t  eureka_out_barrier = 0;
 
-static int eureka_filter(qthread_t *t)
-{
+static filter_code eureka_filter(qthread_t *t)
+{   /*{{{*/
     if (t->team == eureka_ptr) {
         tassert((t->flags & QTHREAD_REAL_MCCOY) == 0);
-        return 2; // remove, keep going
+        return REMOVE_AND_CONTINUE; // remove, keep going
     } else {
-        return 0; // ignore, keep going
+        return IGNORE_AND_CONTINUE; // ignore, keep going
     }
-}
+} /*}}}*/
 
 static void eureka(void)
 {   /*{{{*/
@@ -162,9 +162,9 @@ void INTERNAL qt_eureka_shepherd_init(void)
     signal(QT_EUREKA_SIGNAL, hup_handler);
 } /*}}}*/
 
-static int qt_eureka_internal_filterfunc(const qt_key_t            addr,
-                                         qthread_t *const restrict t,
-                                         void *restrict            arg)
+static filter_code qt_eureka_internal_filterfunc(const qt_key_t            addr,
+                                                 qthread_t *const restrict t,
+                                                 void *restrict            arg)
 {   /*{{{*/
     return eureka_filter(t);
 } /*}}}*/

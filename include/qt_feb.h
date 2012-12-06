@@ -4,9 +4,18 @@
 #include "qt_visibility.h"
 #include "qt_hash.h" /* for qt_key_t */
 #include "qt_qthread_t.h"
+#include "qt_filters.h" /* for filter_code */
 
-typedef void (*qt_feb_callback_f)(qt_key_t addr, qthread_f f, void *arg, void *retloc, unsigned int thread_id, void *tls, void *callarg);
-typedef int (*qt_feb_taskfilter_f)(qt_key_t addr, qthread_t *restrict waiter, void *restrict arg);
+typedef void (*qt_feb_callback_f)(qt_key_t     addr,
+                                  qthread_f    f,
+                                  void        *arg,
+                                  void        *retloc,
+                                  unsigned int thread_id,
+                                  void        *tls,
+                                  void        *callarg);
+typedef filter_code (*qt_feb_taskfilter_f)(qt_key_t            addr,
+                                           qthread_t *restrict waiter,
+                                           void *restrict      arg);
 
 void INTERNAL qt_feb_subsystem_init(uint_fast8_t);
 

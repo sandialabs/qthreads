@@ -1513,9 +1513,9 @@ int INTERNAL qthread_check_feb_preconds(qthread_t *t)
     return 0;
 } /*}}}*/
 
-static int qt_feb_tf_call_cb(const qt_key_t            addr,
-                             qthread_t *const restrict waiter,
-                             void *restrict            tf_arg)
+static filter_code qt_feb_tf_call_cb(const qt_key_t            addr,
+                                     qthread_t *const restrict waiter,
+                                     void *restrict            tf_arg)
 {   /*{{{*/
     qt_feb_callback_f f     = (qt_feb_callback_f)((void **)tf_arg)[0];
     void             *f_arg = ((void **)tf_arg)[1];
@@ -1535,7 +1535,7 @@ static int qt_feb_tf_call_cb(const qt_key_t            addr,
         }
     }
     f((void *)addr, waiter->f, waiter->arg, waiter->ret, waiter->thread_id, tls, f_arg);
-    return 0;
+    return IGNORE_AND_CONTINUE;
 } /*}}}*/
 
 static void qt_feb_call_tf(const qt_key_t      addr,
@@ -1557,10 +1557,10 @@ static void qt_feb_call_tf(const qt_key_t      addr,
             qthread_t *waiter = curs->waiter;
             void      *tls;
             switch(tf(addr, waiter, f_arg)) {
-                case 0: // ignore, move to the next one
+                case IGNORE_AND_CONTINUE: // ignore, move to the next one
                     base = &curs->next;
                     break;
-                case 2: // remove, move to the next one
+                case REMOVE_AND_CONTINUE: // remove, move to the next one
                 {
                     qthread_internal_assassinate(waiter);
                     *base = curs->next;

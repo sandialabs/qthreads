@@ -1194,19 +1194,19 @@ void INTERNAL qt_threadqueue_private_filter(qt_threadqueue_private_t *restrict c
     if (c->on_deck) {
         qt_threadqueue_node_t *n = c->on_deck;
         switch(f(n->value)) {
-            case 0: // ignore, move to the next one
+            case IGNORE_AND_CONTINUE: // ignore, move to the next one
                 break;
-            case 1: // ignore, stop looking
+            case IGNORE_AND_STOP: // ignore, stop looking
                 return;
 
-            case 2: // remove, move to the next one
+            case REMOVE_AND_CONTINUE: // remove, move to the next one
             {
                 qthread_internal_assassinate(n->value);
                 FREE_TQNODE(n);
                 c->on_deck = NULL;
                 break;
             }
-            case 3:     // remove, stop looking
+            case REMOVE_AND_STOP:     // remove, stop looking
             {
                 qthread_internal_assassinate(n->value);
                 FREE_TQNODE(n);
@@ -1317,7 +1317,7 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
         while (node) {
             t = (qthread_t *)node->value;
             switch (f(t)) {
-                case 0: // ignore, move to the next one
+                case IGNORE_AND_CONTINUE: // ignore, move to the next one
                     rp   = &node->prev;
                     node = node->prev;
                     if (node) {
@@ -1328,10 +1328,10 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                         }
                     }
                     break;
-                case 1: // ignore, stop looking
+                case IGNORE_AND_STOP: // ignore, stop looking
                     node = NULL;
                     break;
-                case 2: // remove, move to the next one
+                case REMOVE_AND_CONTINUE: // remove, move to the next one
                 {
                     qt_threadqueue_node_t *freeme;
 
@@ -1350,7 +1350,7 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                     FREE_TQNODE(freeme);
                     break;
                 }
-                case 3: // remove, stop looking
+                case REMOVE_AND_STOP: // remove, stop looking
                     *lp = node->next;
                     *rp = node->prev;
                     q->qlength--;

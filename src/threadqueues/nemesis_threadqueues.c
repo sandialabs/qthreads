@@ -51,9 +51,9 @@ struct _qt_threadqueue {
     NEMESIS_queue q;
     /* the following is for estimating a queue's "busy" level, and is not
      * guaranteed accurate (that would be a race condition) */
-    saligned_t      advisory_queuelen;
+    saligned_t advisory_queuelen;
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-    uint32_t        frustration;
+    uint32_t   frustration;
     QTHREAD_COND_DECL(trigger);
 #endif
 } /* qt_threadqueue_t */;
@@ -154,12 +154,11 @@ static inline qt_threadqueue_node_t *qt_internal_NEMESIS_dequeue_st(NEMESIS_queu
         } else {
             qt_threadqueue_node_t *old;
             q->shadow_head = NULL;
-            q->tail = NULL;
+            q->tail        = NULL;
         }
     }
     return retval;
 }                                      /*}}} */
-
 
 static qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q)
 {                                      /*{{{ */
@@ -301,7 +300,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                                     qt_threadqueue_filter_f f)
 {
-    NEMESIS_queue tmp;
+    NEMESIS_queue          tmp;
     qt_threadqueue_node_t *curs, *prev;
 
     assert(q != NULL);
@@ -312,29 +311,29 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
     while ((curs = qt_internal_NEMESIS_dequeue_st(&q->q))) {
         qthread_t *t = curs->thread;
         switch (f(t)) {
-            case 0: // ignore, move on
+            case IGNORE_AND_CONTINUE: // ignore, move on
                 prev = qt_internal_atomic_swap_ptr((void **)&(tmp.tail), curs);
                 if (prev == NULL) {
                     tmp.head = curs;
                 } else {
                     prev->next = curs;
                 }
-                tmp.advisory_queuelen ++;
+                tmp.advisory_queuelen++;
                 break;
-            case 1: // ignore, stop looking
+            case IGNORE_AND_STOP: // ignore, stop looking
                 prev = qt_internal_atomic_swap_ptr((void **)&(tmp.tail), curs);
                 if (prev == NULL) {
                     tmp.head = curs;
                 } else {
                     prev->next = curs;
                 }
-                tmp.advisory_queuelen ++;
+                tmp.advisory_queuelen++;
                 goto pushback;
-            case 2: // remove, move on
+            case REMOVE_AND_CONTINUE: // remove, move on
                 qthread_internal_assassinate(t);
                 FREE_TQNODE(curs);
                 break;
-            case 3: // remove, stop looking
+            case REMOVE_AND_STOP: // remove, stop looking
                 qthread_internal_assassinate(t);
                 FREE_TQNODE(curs);
                 goto pushback;
@@ -350,11 +349,11 @@ pushback:
             prev->next = q->q.head;
         }
         tmp.advisory_queuelen += q->q.advisory_queuelen;
-        tmp.tail = q->q.tail;
+        tmp.tail               = q->q.tail;
     }
-    q->q.head = tmp.head;
-    q->q.tail = tmp.tail;
-    q->q.shadow_head = tmp.head;
+    q->q.head              = tmp.head;
+    q->q.tail              = tmp.tail;
+    q->q.shadow_head       = tmp.head;
     q->q.advisory_queuelen = tmp.advisory_queuelen;
 }
 
