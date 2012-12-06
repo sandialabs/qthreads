@@ -17,6 +17,7 @@
 #include "qt_atomics.h"
 #include "qt_subsystems.h"
 #include "net/net.h"
+#include "qt_hash.h" /* for qt_hash */
 #include "qt_asserts.h"
 
 static int       my_rank;
