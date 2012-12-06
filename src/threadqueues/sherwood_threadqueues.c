@@ -749,7 +749,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
             } else {   // no agg, spill cache
                        // t = NULL;
             }
-#endif
+#endif /* ifdef QTHREAD_TASK_AGGREGATION */
 
             if (qc->qlength > 0) {
                 // Push remaining items onto the real queue
@@ -843,7 +843,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                 } else {   // no agg, free agg task (delay)
                            // t = NULL;
                 }
-#endif
+#endif /* ifdef QTHREAD_TASK_AGGREGATION */
             }
             QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
         }

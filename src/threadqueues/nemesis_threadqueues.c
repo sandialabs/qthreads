@@ -299,7 +299,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 /* walk queue removing all tasks matching this description */
 void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                                     qt_threadqueue_filter_f f)
-{
+{   /*{{{*/
     NEMESIS_queue          tmp;
     qt_threadqueue_node_t *curs, *prev;
 
@@ -355,7 +355,7 @@ pushback:
     q->q.tail              = tmp.tail;
     q->q.shadow_head       = tmp.head;
     q->q.advisory_queuelen = tmp.advisory_queuelen;
-}
+} /*}}}*/
 
 /* some place-holder functions */
 void INTERNAL qthread_steal_stat(void) {}

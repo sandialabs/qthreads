@@ -212,7 +212,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 /* walk queue removing all tasks matching this description */
 void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                                     qt_threadqueue_filter_f f)
-{
+{   /*{{{*/
     QTHREAD_FASTLOCK_LOCK(&q->head_lock);
     {
         qt_threadqueue_node_t  *curs = q->head->next;
@@ -259,7 +259,7 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
         }
     }
     QTHREAD_FASTLOCK_UNLOCK(&q->head_lock);
-}
+} /*}}}*/
 
 /* some place-holder functions */
 void INTERNAL qthread_steal_stat(void)

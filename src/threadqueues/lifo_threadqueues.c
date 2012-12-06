@@ -264,7 +264,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 /* walk queue removing all tasks matching this description */
 void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                                     qt_threadqueue_filter_f f)
-{
+{   /*{{{*/
     qt_threadqueue_node_t *curs, **ptr;
 
     assert(q != NULL);
@@ -298,7 +298,7 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                 return;
         }
     }
-}
+} /*}}}*/
 
 /* some place-holder functions */
 void INTERNAL qthread_steal_stat(void)

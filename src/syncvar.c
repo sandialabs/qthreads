@@ -79,7 +79,7 @@ extern unsigned int QTHREAD_LOCKING_STRIPES;
 
 /* Internal Macros */
 #define BUILD_UNLOCKED_SYNCVAR(data, state) (((data) << 4) | ((state) << 1))
-#define QTHREAD_CHOOSE_STRIPE(addr) (((size_t)addr >> 4) & (QTHREAD_LOCKING_STRIPES - 1))
+#define QTHREAD_CHOOSE_STRIPE(addr)         (((size_t)addr >> 4) & (QTHREAD_LOCKING_STRIPES - 1))
 
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 # define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked) do { \
