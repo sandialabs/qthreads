@@ -336,6 +336,7 @@ int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict c
 
     qt_threadqueue_node_t *node;
 
+    qthread_debug(THREADQUEUE_CALLS, "c(%p), q(%p), t(%p:%u)\n", c, q, t, t->thread_id);
     node = ALLOC_TQNODE();
     assert(node != NULL);
 
@@ -749,7 +750,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
             } else {   // no agg, spill cache
                        // t = NULL;
             }
-#endif
+#endif /* ifdef QTHREAD_TASK_AGGREGATION */
 
             if (qc->qlength > 0) {
                 // Push remaining items onto the real queue
@@ -843,7 +844,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                 } else {   // no agg, free agg task (delay)
                            // t = NULL;
                 }
-#endif
+#endif /* ifdef QTHREAD_TASK_AGGREGATION */
             }
             QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
         }
@@ -1194,19 +1195,19 @@ void INTERNAL qt_threadqueue_private_filter(qt_threadqueue_private_t *restrict c
     if (c->on_deck) {
         qt_threadqueue_node_t *n = c->on_deck;
         switch(f(n->value)) {
-            case 0: // ignore, move to the next one
+            case IGNORE_AND_CONTINUE: // ignore, move to the next one
                 break;
-            case 1: // ignore, stop looking
+            case IGNORE_AND_STOP: // ignore, stop looking
                 return;
 
-            case 2: // remove, move to the next one
+            case REMOVE_AND_CONTINUE: // remove, move to the next one
             {
                 qthread_internal_assassinate(n->value);
                 FREE_TQNODE(n);
                 c->on_deck = NULL;
                 break;
             }
-            case 3:     // remove, stop looking
+            case REMOVE_AND_STOP:     // remove, stop looking
             {
                 qthread_internal_assassinate(n->value);
                 FREE_TQNODE(n);
@@ -1296,6 +1297,10 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
     qthread_t             *t    = NULL;
 
     assert(q != NULL);
+    /* For reference:
+     *
+     * dequeue (and filtering) starts at the tail and proceeds to follow the prev ptrs until the head is reached.
+     */
 
     QTHREAD_TRYLOCK_LOCK(&q->qlock);
     PARANOIA_ONLY(sanity_check_queue(q));
@@ -1313,19 +1318,21 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
         while (node) {
             t = (qthread_t *)node->value;
             switch (f(t)) {
-                case 0: // ignore, move to the next one
+                case IGNORE_AND_CONTINUE: // ignore, move to the next one
                     rp   = &node->prev;
                     node = node->prev;
-                    if (q->head == node) {
-                        lp = &q->head;
-                    } else {
-                        lp = &(node->prev->next);
+                    if (node) {
+                        if (q->head == node) {
+                            lp = &q->head;
+                        } else {
+                            lp = &(node->prev->next);
+                        }
                     }
                     break;
-                case 1: // ignore, stop looking
+                case IGNORE_AND_STOP: // ignore, stop looking
                     node = NULL;
                     break;
-                case 2: // remove, move to the next one
+                case REMOVE_AND_CONTINUE: // remove, move to the next one
                 {
                     qt_threadqueue_node_t *freeme;
 
@@ -1344,7 +1351,7 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                     FREE_TQNODE(freeme);
                     break;
                 }
-                case 3: // remove, stop looking
+                case REMOVE_AND_STOP: // remove, stop looking
                     *lp = node->next;
                     *rp = node->prev;
                     q->qlength--;

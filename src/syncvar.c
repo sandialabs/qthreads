@@ -79,7 +79,7 @@ extern unsigned int QTHREAD_LOCKING_STRIPES;
 
 /* Internal Macros */
 #define BUILD_UNLOCKED_SYNCVAR(data, state) (((data) << 4) | ((state) << 1))
-#define QTHREAD_CHOOSE_STRIPE(addr) (((size_t)addr >> 4) & (QTHREAD_LOCKING_STRIPES - 1))
+#define QTHREAD_CHOOSE_STRIPE(addr)         (((size_t)addr >> 4) & (QTHREAD_LOCKING_STRIPES - 1))
 
 #if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_AMD64)
 # define UNLOCK_THIS_UNMODIFIED_SYNCVAR(addr, unlocked) do { \
@@ -517,6 +517,7 @@ got_m:
         QTHREAD_WAIT_TIMER_START();
         qthread_back_to_master(me);
         QTHREAD_WAIT_TIMER_STOP(me, febwait);
+        qt_eureka_check(0);
         qthread_debug(SYNCVAR_DETAILS, "src(%p) woke up\n", src);
     } else {
         qthread_debug(SYNCVAR_DETAILS, "locked/full on the first try; word=%x, state = %x, ret=%x\n", (unsigned int)src->u.w, (int)src->u.s.state, (int)ret);
@@ -842,6 +843,7 @@ got_m:
         QTHREAD_WAIT_TIMER_START();
         qthread_back_to_master(me);
         QTHREAD_WAIT_TIMER_STOP(me, febwait);
+        qt_eureka_check(0);
         qthread_debug(SYNCVAR_DETAILS, "src(%p) woke up\n", src);
     } else if (e.sf == 1) {            /* waiters! */
         qthread_addrstat_t *m;
@@ -1328,6 +1330,7 @@ got_m:
         QTHREAD_WAIT_TIMER_START();
         qthread_back_to_master(me);
         QTHREAD_WAIT_TIMER_STOP(me, febwait);
+        qt_eureka_check(0);
         qthread_debug(SYNCVAR_DETAILS, "writeEF(%p) woke up\n", dest);
     } else if (e.sf == 1) {            /* there are waiters to release! */
         qthread_addrstat_t *m;
@@ -1573,9 +1576,9 @@ got_m:
     return newv;
 }                                      /*}}} */
 
-static int qt_syncvar_tf_call_cb(const qt_key_t            addr,
-                                 qthread_t *const restrict waiter,
-                                 void *restrict            tf_arg)
+static filter_code qt_syncvar_tf_call_cb(const qt_key_t            addr,
+                                         qthread_t *const restrict waiter,
+                                         void *restrict            tf_arg)
 {   /*{{{*/
     qt_syncvar_callback_f f     = (qt_syncvar_callback_f)((void **)tf_arg)[0];
     void                 *f_arg = ((void **)tf_arg)[1];
@@ -1595,7 +1598,7 @@ static int qt_syncvar_tf_call_cb(const qt_key_t            addr,
         }
     }
     f((void *)addr, waiter->f, waiter->arg, waiter->ret, waiter->thread_id, tls, f_arg);
-    return 0;
+    return IGNORE_AND_CONTINUE;
 } /*}}}*/
 
 static void qt_syncvar_call_tf(const qt_key_t      addr,
@@ -1645,7 +1648,7 @@ void INTERNAL qthread_syncvar_taskfilter(qt_syncvar_taskfilter_f tf,
     }
 } /*}}}*/
 
-void INTERNAL qthread_syncvar_callback(qt_syncvar_callback_f cb,
+void API_FUNC qthread_syncvar_callback(qt_syncvar_callback_f cb,
                                        void                 *arg)
 {   /*{{{*/
     void *pass[2] = { cb, arg };

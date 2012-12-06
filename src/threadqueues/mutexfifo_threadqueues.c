@@ -212,7 +212,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 /* walk queue removing all tasks matching this description */
 void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                                     qt_threadqueue_filter_f f)
-{
+{   /*{{{*/
     QTHREAD_FASTLOCK_LOCK(&q->head_lock);
     {
         qt_threadqueue_node_t  *curs = q->head->next;
@@ -221,14 +221,14 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
         while (curs) {
             qthread_t *t = curs->value;
             switch(f(t)) {
-                case 0: // ignore, move on
+                case IGNORE_AND_CONTINUE: // ignore, move on
                     ptr  = &curs->next;
                     curs = curs->next;
                     break;
-                case 1: // ignore, stop looking
+                case IGNORE_AND_STOP: // ignore, stop looking
                     curs = NULL;
                     continue;
-                case 2: // remove, move on
+                case REMOVE_AND_CONTINUE: // remove, move on
                 {
                     qt_threadqueue_node_t *tmp = curs;
                     qthread_internal_assassinate(t);
@@ -242,7 +242,7 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                     FREE_TQNODE(tmp);
                     break;
                 }
-                case 3: // remove, stop looking
+                case REMOVE_AND_STOP: // remove, stop looking
                 {
                     qthread_internal_assassinate(t);
                     if (curs->next == NULL) {
@@ -259,7 +259,7 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
         }
     }
     QTHREAD_FASTLOCK_UNLOCK(&q->head_lock);
-}
+} /*}}}*/
 
 /* some place-holder functions */
 void INTERNAL qthread_steal_stat(void)

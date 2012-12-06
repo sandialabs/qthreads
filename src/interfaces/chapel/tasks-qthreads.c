@@ -40,6 +40,8 @@
 #include "qthread/qthread.h"
 #include "qthread/qtimer.h"
 #include "qt_feb.h" // for blockreporting
+#include "qt_syncvar.h" // for blockreporting
+#include "qt_hash.h" /* for qt_key_t */
 #include "qt_atomics.h"      /* for SPINLOCK_BODY() */
 #include "qt_envariables.h"
 #include "qt_debug.h"
@@ -245,7 +247,7 @@ void chpl_sync_destroyAux(chpl_sync_aux_t *s)
 }
 
 
-static void chapel_display_thread(void        *addr,
+static void chapel_display_thread(qt_key_t     addr,
                                   qthread_f    f,
                                   void        *arg,
                                   void        *retloc,

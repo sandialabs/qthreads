@@ -15,7 +15,7 @@
 #include "qt_hash.h"
 #include "qt_asserts.h"
 #include "qthread_innards.h" /* for qlib */
-#include "qt_initialized.h" // for qthread_library_initialized
+#include "qt_initialized.h"  // for qthread_library_initialized
 #include "qt_profiling.h"
 #include "qt_qthread_struct.h"
 #include "qt_qthread_mgmt.h"
@@ -515,7 +515,7 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t *shep,
 {                      /*{{{ */
     qthread_addrres_t *X = NULL;
 
-    qthread_debug(FEB_FUNCTIONS, "m(%p), addr(%p), recursive(%u)\n", m, maddr, recursive);
+    qthread_debug(FEB_FUNCTIONS, "shep(%u), m(%p), addr(%p), recursive(%u)\n", shep->shepherd_id, m, maddr, recursive);
     assert(m);
     m->full = 1;
     QTHREAD_EMPTY_TIMER_STOP(m);
@@ -534,7 +534,7 @@ static QINLINE void qthread_gotlock_fill(qthread_shepherd_t *shep,
         }
         /* schedule */
         qthread_t *waiter = X->waiter;
-        qthread_debug(FEB_DETAILS, "m(%p), maddr(%p), recursive(%u): dQ one from FFQ (%u releasing tid %u with %u)\n", m, maddr, recursive, qthread_id(), waiter->thread_id, *(aligned_t *)maddr);
+        qthread_debug(FEB_DETAILS, "shep(%u), m(%p), maddr(%p), recursive(%u): dQ one from FFQ (%u releasing tid %u with %u)\n", shep->shepherd_id, m, maddr, recursive, qthread_id(), waiter->thread_id, *(aligned_t *)maddr);
         if (QTHREAD_STATE_NASCENT == waiter->thread_state) {
             /* Note: the nascent thread is being tossed into a real live ready
              * queue for one big fat reason: the alternative involves
@@ -924,6 +924,7 @@ got_m:
         QTHREAD_WAIT_TIMER_START();
         qthread_back_to_master(me);
         QTHREAD_WAIT_TIMER_STOP(me, febwait);
+        qt_eureka_check(0);
         qthread_debug(FEB_BEHAVIOR, "dest=%p, src=%p (tid=%i): succeeded after waiting\n", dest, src, me->thread_id);
     } else {
         if (dest && (dest != src)) {
@@ -1100,6 +1101,7 @@ int API_FUNC qthread_readFF(aligned_t *restrict       dest,
         QTHREAD_WAIT_TIMER_START();
         qthread_back_to_master(me);
         QTHREAD_WAIT_TIMER_STOP(me, febwait);
+        qt_eureka_check(0);
         qthread_debug(FEB_BEHAVIOR, "dest=%p, src=%p (tid=%u): succeeded after waiting\n", dest, src, me->thread_id);
     } else {                   /* exists AND is empty... weird, but that's life */
         if (dest && (dest != src)) {
@@ -1294,6 +1296,7 @@ got_m:
         QTHREAD_WAIT_TIMER_START();
         qthread_back_to_master(me);
         QTHREAD_WAIT_TIMER_STOP(me, febwait);
+        qt_eureka_check(0);
         qthread_debug(FEB_BEHAVIOR, "tid %u succeeded on %p=%p after waiting\n", me->thread_id, dest, src);
     } else {                   /* full, thus IT IS OURS! MUAHAHAHA! */
         if (dest && (dest != src)) {
@@ -1510,9 +1513,9 @@ int INTERNAL qthread_check_feb_preconds(qthread_t *t)
     return 0;
 } /*}}}*/
 
-static int qt_feb_tf_call_cb(const qt_key_t            addr,
-                             qthread_t *const restrict waiter,
-                             void *restrict            tf_arg)
+static filter_code qt_feb_tf_call_cb(const qt_key_t            addr,
+                                     qthread_t *const restrict waiter,
+                                     void *restrict            tf_arg)
 {   /*{{{*/
     qt_feb_callback_f f     = (qt_feb_callback_f)((void **)tf_arg)[0];
     void             *f_arg = ((void **)tf_arg)[1];
@@ -1532,7 +1535,7 @@ static int qt_feb_tf_call_cb(const qt_key_t            addr,
         }
     }
     f((void *)addr, waiter->f, waiter->arg, waiter->ret, waiter->thread_id, tls, f_arg);
-    return 0;
+    return IGNORE_AND_CONTINUE;
 } /*}}}*/
 
 static void qt_feb_call_tf(const qt_key_t      addr,
@@ -1554,10 +1557,10 @@ static void qt_feb_call_tf(const qt_key_t      addr,
             qthread_t *waiter = curs->waiter;
             void      *tls;
             switch(tf(addr, waiter, f_arg)) {
-                case 0: // ignore, move to the next one
+                case IGNORE_AND_CONTINUE: // ignore, move to the next one
                     base = &curs->next;
                     break;
-                case 2: // remove, move to the next one
+                case REMOVE_AND_CONTINUE: // remove, move to the next one
                 {
                     qthread_internal_assassinate(waiter);
                     *base = curs->next;
@@ -1582,7 +1585,7 @@ void INTERNAL qthread_feb_taskfilter(qt_feb_taskfilter_f tf,
     }
 } /*}}}*/
 
-void INTERNAL qthread_feb_callback(qt_feb_callback_f cb,
+void API_FUNC qthread_feb_callback(qt_feb_callback_f cb,
                                    void             *arg)
 {   /*{{{*/
     void *pass[2] = { cb, arg };

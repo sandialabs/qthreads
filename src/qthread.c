@@ -282,7 +282,9 @@ QTHREAD_FASTLOCK_TYPE     output_lock;
 
 int API_FUNC qthread_debuglevel(int d)
 {
-    if (d >= 0) { debuglevel = (enum qthread_debug_levels)d; }
+    if (d >= 0) {
+        debuglevel = (enum qthread_debug_levels)((1 << d) - 1);
+    }
     return (int)debuglevel;
 }
 
@@ -2478,7 +2480,7 @@ void API_FUNC qthread_yield_(int k)
 
 void API_FUNC qthread_flushsc(void)
 {   /*{{{*/
-#ifdef QTHREAD_USING_SPAWNCACHE
+#ifdef QTHREAD_USE_SPAWNCACHE
     qt_spawncache_flush(qlib->threadqueues[qthread_readstate(CURRENT_UNIQUE_WORKER)]);
 #endif
 } /*}}}*/
@@ -2900,23 +2902,6 @@ int API_FUNC qthread_fork_precond(qthread_f   f,
     va_end(args);
 
     return qthread_spawn(f, arg, 0, ret, npreconds, preconds, NO_SHEPHERD, 0);
-} /*}}}*/
-
-int API_FUNC qthread_fork_syncvar_copyargs_to(qthread_f             f,
-                                              const void           *arg,
-                                              size_t                arg_size,
-                                              syncvar_t            *ret,
-                                              qthread_shepherd_id_t preferred_shep)
-{   /*{{{*/
-    return qthread_spawn(f,
-                         arg,
-                         arg_size,
-                         ret,
-                         0,
-                         NULL,
-                         preferred_shep,
-                         QTHREAD_SPAWN_RET_SYNCVAR_T
-                         );
 } /*}}}*/
 
 int API_FUNC qthread_fork_copyargs_to(qthread_f             f,

@@ -35,9 +35,9 @@ struct _qt_threadqueue {
     qt_threadqueue_node_t *stack;
     /* the following is for estimating a queue's "busy" level, and is not
      * guaranteed accurate (that would be a race condition) */
-    saligned_t      advisory_queuelen;
+    saligned_t advisory_queuelen;
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
-    uint32_t        frustration;
+    uint32_t   frustration;
     QTHREAD_COND_DECL(trigger)
 #endif
 } /* qt_threadqueue_t */;
@@ -264,7 +264,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 /* walk queue removing all tasks matching this description */
 void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                                     qt_threadqueue_filter_f f)
-{
+{   /*{{{*/
     qt_threadqueue_node_t *curs, **ptr;
 
     assert(q != NULL);
@@ -274,14 +274,14 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
     while (curs) {
         qthread_t *t = curs->thread;
         switch (f(t)) {
-            case 0: // ignore, move on
+            case IGNORE_AND_CONTINUE: // ignore, move on
                 ptr  = &curs->next;
                 curs = curs->next;
                 break;
-            case 1: // ignore, stop looking
+            case IGNORE_AND_STOP: // ignore, stop looking
                 return;
 
-            case 2: // remove, move on
+            case REMOVE_AND_CONTINUE: // remove, move on
             {
                 qt_threadqueue_node_t *freeme = curs;
 
@@ -291,14 +291,14 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                 FREE_TQNODE(freeme);
                 break;
             }
-            case 3: // remove, stop looking;
+            case REMOVE_AND_STOP: // remove, stop looking;
                 qthread_internal_assassinate(t);
                 *ptr = curs->next;
                 FREE_TQNODE(curs);
                 return;
         }
     }
-}
+} /*}}}*/
 
 /* some place-holder functions */
 void INTERNAL qthread_steal_stat(void)

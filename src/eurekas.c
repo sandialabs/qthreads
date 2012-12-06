@@ -27,15 +27,15 @@ static qt_team_t *eureka_ptr         = NULL;
 static aligned_t  eureka_in_barrier  = 0;
 static aligned_t  eureka_out_barrier = 0;
 
-static int eureka_filter(qthread_t *t)
-{
+static filter_code eureka_filter(qthread_t *t)
+{   /*{{{*/
     if (t->team == eureka_ptr) {
         tassert((t->flags & QTHREAD_REAL_MCCOY) == 0);
-        return 2; // remove, keep going
+        return REMOVE_AND_CONTINUE; // remove, keep going
     } else {
-        return 0; // ignore, keep going
+        return IGNORE_AND_CONTINUE; // ignore, keep going
     }
-}
+} /*}}}*/
 
 static void eureka(void)
 {   /*{{{*/
@@ -133,8 +133,8 @@ static void hup_handler(int sig)
             break;
         }
         case QT_EUREKA_SIGNAL:
-            if (eureka_block) {
-                eureka_blocked_flag = 1;
+            if (TLS_GET(eureka_block)) {
+                TLS_SET(eureka_blocked_flag, 1);
                 return;
             }
             eureka();
@@ -162,12 +162,12 @@ void INTERNAL qt_eureka_shepherd_init(void)
     signal(QT_EUREKA_SIGNAL, hup_handler);
 } /*}}}*/
 
-static int qt_eureka_internal_filterfunc(const qt_key_t            addr,
-                                         qthread_t *const restrict t,
-                                         void *restrict            arg)
-{
+static filter_code qt_eureka_internal_filterfunc(const qt_key_t            addr,
+                                                 qthread_t *const restrict t,
+                                                 void *restrict            arg)
+{   /*{{{*/
     return eureka_filter(t);
-}
+} /*}}}*/
 
 void INTERNAL qthread_internal_assassinate(qthread_t *t)
 {   /*{{{*/
@@ -249,6 +249,7 @@ void API_FUNC qt_team_eureka(void)
     eureka_ptr = my_team;
     MACHINE_FENCE;
     /* 2: writeEF my team's Eureka, to signal all the waiters */
+    qthread_debug(TEAM_DETAILS, "setting my team's (%u) eureka batsignal (%p) to %u\n", my_team->team_id, &my_team->eureka, TEAM_SIGNAL_EUREKA(my_team->team_id));
     qthread_writeEF_const(&my_team->eureka, TEAM_SIGNAL_EUREKA(my_team->team_id));
     /* 3: broadcast signal to all the other workers */
     /* NOTE: From here until the end of barrier 2, printfs are STRICTLY
@@ -330,14 +331,21 @@ void API_FUNC qt_team_eureka(void)
     MACHINE_FENCE;
     eureka_ptr = NULL;
     MACHINE_FENCE;
+    qthread_debug(TEAM_DETAILS, "releasing eureka!\n");
     eureka_flag          = -1;
     my_team->eureka_lock = 0;
     /* 9: wait for subteams to die, and reset team (assume team-leader position) */
     /* 9-step1: assume team-leader position */
     self->flags |= QTHREAD_TEAM_LEADER;
     /* 9-step2: reset team data */
-    qt_sinc_reset(my_team->sinc, 1);              // I am the only remaining member (and maybe the waiter)
+    if ((my_team->parent_id != QTHREAD_DEFAULT_TEAM_ID) &&
+        (my_team->parent_id != QTHREAD_NON_TEAM_ID)) {
+        qt_sinc_reset(my_team->sinc, 2);              // I, and the waiter, are the only remaining members
+    } else {
+        qt_sinc_reset(my_team->sinc, 1);              // I am the only remaining member
+    }
     qt_sinc_submit(my_team->subteams_sinc, NULL); // wait for subteams to die (if any)
+    qthread_debug(TEAM_DETAILS, "wait for subteams to die... %p\n", &my_team->subteams_sinc);
     qt_sinc_wait(my_team->subteams_sinc, NULL);
     qt_sinc_reset(my_team->subteams_sinc, 1); // reset the subteams sinc
     /* 9-step3: change my retloc */
@@ -346,6 +354,7 @@ void API_FUNC qt_team_eureka(void)
     self->flags |= QTHREAD_RET_MASK;
     self->flags ^= QTHREAD_RET_MASK;
     self->flags |= (my_team->flags & QTHREAD_TEAM_RET_MASK);
+    qthread_debug(TEAM_DETAILS, "returning from eureka!\n");
 } /*}}}*/
 
 void INTERNAL qt_eureka_check(int block)

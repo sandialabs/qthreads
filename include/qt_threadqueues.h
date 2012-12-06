@@ -7,8 +7,9 @@
 #include "qt_visibility.h"
 #include "qt_qthread_t.h" /* for qthread_t */
 #include "qt_mpool.h"
+#include "qt_filters.h"
 
-typedef int (*qt_threadqueue_filter_f)(qthread_t *);
+typedef filter_code (*qt_threadqueue_filter_f)(qthread_t *);
 
 typedef struct _qt_threadqueue qt_threadqueue_t;
 typedef struct _qt_threadqueue_pools {
