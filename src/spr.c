@@ -132,8 +132,9 @@ int spr_locale_id(void)
 int spr_get_wait(spr_get_handle_t *const hand)
 {
     int const rc = SPR_OK;
+    struct spr_get_handle_s *h = (struct spr_get_handle_s *)hand;
 
-    qthread_readFF(&hand->feb, &hand->feb);
+    qthread_readFF(&h->feb, &h->feb);
 
     return rc;
 }
@@ -164,7 +165,7 @@ int spr_get(void *restrict       dest_addr,
 
     qthread_debug(MULTINODE_CALLS, "[%d] begin spr_get(%d, %p, %p, %d)\n", spr_locale_id(), src_loc, src_addr, dest_addr, size);
 
-    spr_get_handle_t hand;
+    struct spr_get_handle_s hand;
     qthread_empty(&hand.feb);
 
     spr_get_nb(dest_addr, src_loc, src_addr, size, &hand);
@@ -203,14 +204,15 @@ int spr_get_nb(void *restrict             dest_addr,
 {
     int       rc   = SPR_OK;
     int const here = spr_locale_id();
+    struct spr_get_handle_s *h = (struct spr_get_handle_s *)hand;
 
-    qthread_debug(MULTINODE_CALLS, "[%d] begin spr_get_nb(%d, %p, %p, %d, %p)\n", spr_locale_id(), src_loc, src_addr, dest_addr, size, hand);
+    qthread_debug(MULTINODE_CALLS, "[%d] begin spr_get_nb(%d, %p, %p, %d, %p)\n", spr_locale_id(), src_loc, src_addr, dest_addr, size, h);
 
     assert(dest_addr);
     assert(src_addr);
-    assert(hand);
+    assert(h);
 
-    rc = qthread_internal_net_driver_get(dest_addr, src_loc, src_addr, size, &hand->feb);
+    rc = qthread_internal_net_driver_get(dest_addr, src_loc, src_addr, size, &h->feb);
 
     qthread_debug(MULTINODE_CALLS, "[%d] end spr_get_nb(%d, %p, %p, %d)\n", spr_locale_id(), src_loc, src_addr, dest_addr, size);
 
@@ -234,8 +236,9 @@ int spr_get_nb(void *restrict             dest_addr,
 int spr_put_wait(spr_put_handle_t *const hand)
 {
     int const rc = SPR_OK;
+    struct spr_put_handle_s *h = (struct spr_put_handle_s *)hand;
 
-    qthread_readFF(&hand->feb, &hand->feb);
+    qthread_readFF(&h->feb, &h->feb);
 
     return rc;
 }
@@ -266,7 +269,7 @@ int spr_put(int                  dest_loc,
 
     qthread_debug(MULTINODE_CALLS, "[%d] begin spr_put(%d, %p, %p, %d)\n", spr_locale_id(), dest_loc, dest_addr, src_addr, size);
 
-    spr_put_handle_t hand;
+    struct spr_put_handle_s hand;
     qthread_empty(&hand.feb);
 
     spr_put_nb(dest_loc, dest_addr, src_addr, size, &hand);
@@ -305,10 +308,11 @@ int spr_put_nb(int                        dest_loc,
 {
     int       rc   = SPR_OK;
     int const here = spr_locale_id();
+    struct spr_put_handle_s *h = (struct spr_put_handle_s *)hand;
 
     qthread_debug(MULTINODE_CALLS, "[%d] begin spr_put_nb(%d, %p, %p, %d)\n", spr_locale_id(), dest_loc, dest_addr, src_addr, size);
 
-    rc = qthread_internal_net_driver_put(dest_loc, dest_addr, src_addr, size, &hand->feb);
+    rc = qthread_internal_net_driver_put(dest_loc, dest_addr, src_addr, size, &h->feb);
 
     qthread_debug(MULTINODE_CALLS, "[%d] end spr_put_nb(%d, %p, %p, %d)\n", spr_locale_id(), dest_loc, dest_addr, src_addr, size);
 

@@ -16,6 +16,10 @@ typedef struct spr_get_s {
     int32_t    size;
 } spr_get_t;
 
+struct spr_put_handle_s {
+    aligned_t feb;
+};
+
 struct spr_get_handle_s {
     aligned_t feb;
 };

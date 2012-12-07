@@ -29,7 +29,9 @@ int spr_locale_id(void);
 * Data Movement                                                              *
 ******************************************************************************/
 
-typedef struct spr_get_handle_s spr_get_handle_t;
+typedef struct {
+    uint8_t opaque_data[8];
+} Q_ALIGNED(QTHREAD_ALIGNMENT_ALIGNED_T) spr_get_handle_t;
 
 int spr_get(void *restrict       dest_addr,
             int                  src_loc,
@@ -43,8 +45,8 @@ int spr_get_nb(void *restrict             dest_addr,
 int spr_get_wait(spr_get_handle_t *const hand);
 
 typedef struct spr_put_handle_s {
-    aligned_t feb;
-} spr_put_handle_t;
+    uint8_t opaque_data[8];
+} Q_ALIGNED(QTHREAD_ALIGNMENT_ALIGNED_T) spr_put_handle_t;
 
 int spr_put(int                  dest_loc,
             void *restrict       dest_addr,
