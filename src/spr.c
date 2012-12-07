@@ -272,8 +272,8 @@ int spr_put(int                  dest_loc,
     struct spr_put_handle_s hand;
     qthread_empty(&hand.feb);
 
-    spr_put_nb(dest_loc, dest_addr, src_addr, size, (spr_get_handle_t *)&hand);
-    spr_put_wait((spr_get_handle_t *)&hand);
+    spr_put_nb(dest_loc, dest_addr, src_addr, size, (spr_put_handle_t *)&hand);
+    spr_put_wait((spr_put_handle_t *)&hand);
 
     qthread_debug(MULTINODE_CALLS, "[%d] end spr_put(%d, %p, %p, %d)\n", spr_locale_id(), dest_loc, dest_addr, src_addr, size);
 
