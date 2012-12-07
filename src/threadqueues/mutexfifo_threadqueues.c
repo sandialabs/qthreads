@@ -127,7 +127,7 @@ static qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q)
     }
     QTHREAD_FASTLOCK_UNLOCK(&q->head_lock);
     if (p != NULL) {
-        Q_PREFETCH(&(p->thread_state));
+        Q_PREFETCH(p);
         (void)qthread_internal_incr_s(&q->advisory_queuelen, &q->advisory_queuelen_m, -1);
     }
     return p;
