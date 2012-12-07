@@ -131,8 +131,8 @@ int spr_locale_id(void)
  */
 int spr_get_wait(spr_get_handle_t *const hand)
 {
-    int const rc = SPR_OK;
-    struct spr_get_handle_s *h = (struct spr_get_handle_s *)hand;
+    int const                rc = SPR_OK;
+    struct spr_get_handle_s *h  = (struct spr_get_handle_s *)hand;
 
     qthread_readFF(&h->feb, &h->feb);
 
@@ -168,8 +168,8 @@ int spr_get(void *restrict       dest_addr,
     struct spr_get_handle_s hand;
     qthread_empty(&hand.feb);
 
-    spr_get_nb(dest_addr, src_loc, src_addr, size, &hand);
-    spr_get_wait(&hand);
+    spr_get_nb(dest_addr, src_loc, src_addr, size, (spr_get_handle_t *)&hand);
+    spr_get_wait((spr_get_handle_t *)&hand);
 
     qthread_debug(MULTINODE_CALLS, "[%d] end spr_get(%d, %p, %p, %d)\n", spr_locale_id(), src_loc, src_addr, dest_addr, size);
 
@@ -202,9 +202,9 @@ int spr_get_nb(void *restrict             dest_addr,
                size_t                     size,
                spr_get_handle_t *restrict hand)
 {
-    int       rc   = SPR_OK;
-    int const here = spr_locale_id();
-    struct spr_get_handle_s *h = (struct spr_get_handle_s *)hand;
+    int                      rc   = SPR_OK;
+    int const                here = spr_locale_id();
+    struct spr_get_handle_s *h    = (struct spr_get_handle_s *)hand;
 
     qthread_debug(MULTINODE_CALLS, "[%d] begin spr_get_nb(%d, %p, %p, %d, %p)\n", spr_locale_id(), src_loc, src_addr, dest_addr, size, h);
 
@@ -235,8 +235,8 @@ int spr_get_nb(void *restrict             dest_addr,
  */
 int spr_put_wait(spr_put_handle_t *const hand)
 {
-    int const rc = SPR_OK;
-    struct spr_put_handle_s *h = (struct spr_put_handle_s *)hand;
+    int const                rc = SPR_OK;
+    struct spr_put_handle_s *h  = (struct spr_put_handle_s *)hand;
 
     qthread_readFF(&h->feb, &h->feb);
 
@@ -272,8 +272,8 @@ int spr_put(int                  dest_loc,
     struct spr_put_handle_s hand;
     qthread_empty(&hand.feb);
 
-    spr_put_nb(dest_loc, dest_addr, src_addr, size, &hand);
-    spr_put_wait(&hand);
+    spr_put_nb(dest_loc, dest_addr, src_addr, size, (spr_get_handle_t *)&hand);
+    spr_put_wait((spr_get_handle_t *)&hand);
 
     qthread_debug(MULTINODE_CALLS, "[%d] end spr_put(%d, %p, %p, %d)\n", spr_locale_id(), dest_loc, dest_addr, src_addr, size);
 
@@ -306,9 +306,9 @@ int spr_put_nb(int                        dest_loc,
                size_t                     size,
                spr_put_handle_t *restrict hand)
 {
-    int       rc   = SPR_OK;
-    int const here = spr_locale_id();
-    struct spr_put_handle_s *h = (struct spr_put_handle_s *)hand;
+    int                      rc   = SPR_OK;
+    int const                here = spr_locale_id();
+    struct spr_put_handle_s *h    = (struct spr_put_handle_s *)hand;
 
     qthread_debug(MULTINODE_CALLS, "[%d] begin spr_put_nb(%d, %p, %p, %d)\n", spr_locale_id(), dest_loc, dest_addr, src_addr, size);
 

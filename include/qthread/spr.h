@@ -44,7 +44,7 @@ int spr_get_nb(void *restrict             dest_addr,
                spr_get_handle_t *restrict hand);
 int spr_get_wait(spr_get_handle_t *const hand);
 
-typedef struct spr_put_handle_s {
+typedef struct {
     uint8_t opaque_data[8];
 } Q_ALIGNED(QTHREAD_ALIGNMENT_ALIGNED_T) spr_put_handle_t;
 
