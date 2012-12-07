@@ -17,35 +17,37 @@
 #include "qt_asserts.h"
 
 struct recv_block_t {
-    void *start;
+    void           *start;
     ptl_handle_me_t me_h;
 };
 
 struct net_pkt_t {
-    int peer;
-    int tag;
-    void *start;
+    int    peer;
+    int    tag;
+    void  *start;
     size_t len;
 };
 
-static void* qt_progress_function(void *data);
-static void exit_handler(int tag, void *start, size_t len);
-static void repost_recv_block(struct recv_block_t*);
+static void *qt_progress_function(void *data);
+static void  exit_handler(int    tag,
+                          void  *start,
+                          size_t len);
+static void       repost_recv_block(struct recv_block_t *);
 static inline int transmit_packet(struct net_pkt_t *pkt);
 
 static qthread_internal_net_driver_handler handlers[256];
-static struct recv_block_t *recv_blocks = NULL;
-static int num_recv_blocks = 0;
-static int size_recv_block = 0;
-static int max_msg_size = 0;
-static ptl_handle_ni_t ni_h;
-static ptl_handle_eq_t eq_h;
-static ptl_handle_md_t md_h;
-static ptl_handle_me_t overflow_me_h;
-static ptl_pt_index_t data_pt;
-static pthread_t qt_progress_thread;
-static qt_mpool mpool;
-static int shutdown_msg = 1;
+static struct recv_block_t                *recv_blocks     = NULL;
+static int                                 num_recv_blocks = 0;
+static int                                 size_recv_block = 0;
+static int                                 max_msg_size    = 0;
+static ptl_handle_ni_t                     ni_h;
+static ptl_handle_eq_t                     eq_h;
+static ptl_handle_md_t                     md_h;
+static ptl_handle_me_t                     overflow_me_h;
+static ptl_pt_index_t                      data_pt;
+static pthread_t                           qt_progress_thread;
+static qt_mpool                            mpool;
+static int                                 shutdown_msg = 1;
 
 /* No-matching NI for one-sided comm. */
 static ptl_handle_ni_t nm_ni_h;
@@ -54,32 +56,31 @@ static ptl_handle_md_t nm_md_h;
 static ptl_handle_le_t nm_le_h;
 static ptl_pt_index_t  nm_data_pt;
 
-static inline int
-qthread_internal_net_driver_initialize_matching(void)
+static inline int qthread_internal_net_driver_initialize_matching(void)
 {
-    int ret, i;
-    ptl_process_t *desired = NULL;
-    ptl_uid_t uid = PTL_UID_ANY;
+    int             ret, i;
+    ptl_process_t  *desired = NULL;
+    ptl_uid_t       uid     = PTL_UID_ANY;
     ptl_ni_limits_t ni_limits, ni_req_limits;
-    ptl_md_t md;
-    ptl_me_t me;
+    ptl_md_t        md;
+    ptl_me_t        me;
 
-    ni_req_limits.max_entries = 1024;
+    ni_req_limits.max_entries            = 1024;
     ni_req_limits.max_unexpected_headers = 1024;
-    ni_req_limits.max_mds = 1024;
-    ni_req_limits.max_eqs = 1024;
-    ni_req_limits.max_cts = 1024;
-    ni_req_limits.max_pt_index = 64;
-    ni_req_limits.max_iovecs = 1024;
-    ni_req_limits.max_list_size = 1024;
-    ni_req_limits.max_triggered_ops = 1024;
-    ni_req_limits.max_msg_size = LONG_MAX;
-    ni_req_limits.max_atomic_size = 512;
-    ni_req_limits.max_fetch_atomic_size = 512;
-    ni_req_limits.max_waw_ordered_size = 512;
-    ni_req_limits.max_war_ordered_size = 512;
-    ni_req_limits.max_volatile_size = 512;
-    ni_req_limits.features = 0;
+    ni_req_limits.max_mds                = 1024;
+    ni_req_limits.max_eqs                = 1024;
+    ni_req_limits.max_cts                = 1024;
+    ni_req_limits.max_pt_index           = 64;
+    ni_req_limits.max_iovecs             = 1024;
+    ni_req_limits.max_list_size          = 1024;
+    ni_req_limits.max_triggered_ops      = 1024;
+    ni_req_limits.max_msg_size           = LONG_MAX;
+    ni_req_limits.max_atomic_size        = 512;
+    ni_req_limits.max_fetch_atomic_size  = 512;
+    ni_req_limits.max_waw_ordered_size   = 512;
+    ni_req_limits.max_war_ordered_size   = 512;
+    ni_req_limits.max_volatile_size      = 512;
+    ni_req_limits.features               = 0;
 
     ret = PtlNIInit(PTL_IFACE_DEFAULT,
                     PTL_NI_MATCHING | PTL_NI_LOGICAL,
@@ -101,7 +102,7 @@ qthread_internal_net_driver_initialize_matching(void)
     ret = PtlSetMap(ni_h,
                     qthread_internal_net_driver_get_size(),
                     desired);
-    if (PTL_OK != ret && PTL_IGNORED != ret) {
+    if ((PTL_OK != ret) && (PTL_IGNORED != ret)) {
         fprintf(stderr, "PtlSetMap: %d\n", ret);
         return ret;
     }
@@ -130,23 +131,23 @@ qthread_internal_net_driver_initialize_matching(void)
     }
 
     /* post truncating me */
-    me.start = NULL;
-    me.length = 0;
+    me.start     = NULL;
+    me.length    = 0;
     me.ct_handle = PTL_CT_NONE;
-    me.min_free = 0;
-    me.uid = PTL_UID_ANY;
-    me.options = PTL_ME_OP_PUT | 
-        PTL_ME_EVENT_SUCCESS_DISABLE | 
-        PTL_ME_UNEXPECTED_HDR_DISABLE;
+    me.min_free  = 0;
+    me.uid       = PTL_UID_ANY;
+    me.options   = PTL_ME_OP_PUT |
+                   PTL_ME_EVENT_SUCCESS_DISABLE |
+                   PTL_ME_UNEXPECTED_HDR_DISABLE;
     me.match_id.rank = PTL_RANK_ANY;
-    me.match_bits = 0x0;
-    me.ignore_bits = ~(0x0ULL);
-    ret = PtlMEAppend(ni_h,
-                      data_pt,
-                      &me,
-                      PTL_OVERFLOW_LIST,
-                      NULL,
-                      &overflow_me_h);
+    me.match_bits    = 0x0;
+    me.ignore_bits   = ~(0x0ULL);
+    ret              = PtlMEAppend(ni_h,
+                                   data_pt,
+                                   &me,
+                                   PTL_OVERFLOW_LIST,
+                                   NULL,
+                                   &overflow_me_h);
     if (PTL_OK != ret) {
         fprintf(stderr, "PtlMEAppend: %d\n", ret);
         return ret;
@@ -154,58 +155,57 @@ qthread_internal_net_driver_initialize_matching(void)
 
     /* post receive mes */
     recv_blocks = MALLOC(sizeof(struct recv_block_t) * num_recv_blocks);
-    if (NULL == recv_blocks) return -1;
-    for (i = 0 ; i < num_recv_blocks ; ++i) {
+    if (NULL == recv_blocks) { return -1; }
+    for (i = 0; i < num_recv_blocks; ++i) {
         recv_blocks[i].start = MALLOC(size_recv_block);
-        if (NULL == recv_blocks[i].start) return -1;
+        if (NULL == recv_blocks[i].start) { return -1; }
         recv_blocks[i].me_h = PTL_INVALID_HANDLE;
         repost_recv_block(&recv_blocks[i]);
     }
 
-    md.start = 0;
-    md.length = SIZE_MAX;
-    md.options = PTL_MD_UNORDERED;
+    md.start     = 0;
+    md.length    = SIZE_MAX;
+    md.options   = PTL_MD_UNORDERED;
     md.eq_handle = eq_h;
     md.ct_handle = PTL_CT_NONE;
-    ret = PtlMDBind(ni_h,
-                    &md,
-                    &md_h);
+    ret          = PtlMDBind(ni_h,
+                             &md,
+                             &md_h);
     if (PTL_OK != ret) {
         fprintf(stderr, "PtlMDBind: %d\n", ret);
         return ret;
     }
-    
+
     handlers[0] = exit_handler;
 
     return ret;
 }
 
-static inline int
-qthread_internal_net_driver_initialize_no_matching(void)
+static inline int qthread_internal_net_driver_initialize_no_matching(void)
 {
-    int ret, i;
-    ptl_process_t *desired = NULL;
-    ptl_uid_t uid = PTL_UID_ANY;
+    int             ret, i;
+    ptl_process_t  *desired = NULL;
+    ptl_uid_t       uid     = PTL_UID_ANY;
     ptl_ni_limits_t ni_limits, ni_req_limits;
-    ptl_md_t md;
-    ptl_le_t le;
+    ptl_md_t        md;
+    ptl_le_t        le;
 
-    ni_req_limits.max_entries = 1024;
+    ni_req_limits.max_entries            = 1024;
     ni_req_limits.max_unexpected_headers = 1024;
-    ni_req_limits.max_mds = 1024;
-    ni_req_limits.max_eqs = 1024;
-    ni_req_limits.max_cts = 1024;
-    ni_req_limits.max_pt_index = 64;
-    ni_req_limits.max_iovecs = 1024;
-    ni_req_limits.max_list_size = 1024;
-    ni_req_limits.max_triggered_ops = 1024;
-    ni_req_limits.max_msg_size = LONG_MAX;
-    ni_req_limits.max_atomic_size = 512;
-    ni_req_limits.max_fetch_atomic_size = 512;
-    ni_req_limits.max_waw_ordered_size = 512;
-    ni_req_limits.max_war_ordered_size = 512;
-    ni_req_limits.max_volatile_size = 512;
-    ni_req_limits.features = 0;
+    ni_req_limits.max_mds                = 1024;
+    ni_req_limits.max_eqs                = 1024;
+    ni_req_limits.max_cts                = 1024;
+    ni_req_limits.max_pt_index           = 64;
+    ni_req_limits.max_iovecs             = 1024;
+    ni_req_limits.max_list_size          = 1024;
+    ni_req_limits.max_triggered_ops      = 1024;
+    ni_req_limits.max_msg_size           = LONG_MAX;
+    ni_req_limits.max_atomic_size        = 512;
+    ni_req_limits.max_fetch_atomic_size  = 512;
+    ni_req_limits.max_waw_ordered_size   = 512;
+    ni_req_limits.max_war_ordered_size   = 512;
+    ni_req_limits.max_volatile_size      = 512;
+    ni_req_limits.features               = 0;
 
     ret = PtlNIInit(PTL_IFACE_DEFAULT,
                     PTL_NI_NO_MATCHING | PTL_NI_LOGICAL,
@@ -227,7 +227,7 @@ qthread_internal_net_driver_initialize_no_matching(void)
     ret = PtlSetMap(nm_ni_h,
                     qthread_internal_net_driver_get_size(),
                     desired);
-    if (PTL_OK != ret && PTL_IGNORED != ret) {
+    if ((PTL_OK != ret) && (PTL_IGNORED != ret)) {
         fprintf(stderr, "PtlSetMap: %d\n", ret);
         return ret;
     }
@@ -272,9 +272,9 @@ qthread_internal_net_driver_initialize_no_matching(void)
         return ret;
     }
 
-    md.start = 0;
-    md.length = SIZE_MAX;
-    md.options = PTL_MD_UNORDERED;
+    md.start     = 0;
+    md.length    = SIZE_MAX;
+    md.options   = PTL_MD_UNORDERED;
     md.eq_handle = nm_eq_h;
 
     ret = PtlCTAlloc(nm_ni_h, &md.ct_handle);
@@ -290,12 +290,11 @@ qthread_internal_net_driver_initialize_no_matching(void)
         fprintf(stderr, "PtlMDBind: %d\n", ret);
         return ret;
     }
-    
+
     return ret;
 }
 
-int
-qthread_internal_net_driver_initialize(void)
+int qthread_internal_net_driver_initialize(void)
 {
     int ret;
 
@@ -303,7 +302,7 @@ qthread_internal_net_driver_initialize(void)
 
     num_recv_blocks = qt_internal_get_env_num("PORTALS_RECV_BLOCKS", 3, 3);
     size_recv_block = qt_internal_get_env_num("PORTALS_RECV_BLOCK_SIZE", 1024 * 1024, 1024 * 1024);
-    max_msg_size = qt_internal_get_env_num("PORTALS_MAX_MSG_SIZE", 4096, 4096);
+    max_msg_size    = qt_internal_get_env_num("PORTALS_MAX_MSG_SIZE", 4096, 4096);
 
     mpool = qt_mpool_create(sizeof(struct net_pkt_t));
 
@@ -333,35 +332,34 @@ qthread_internal_net_driver_initialize(void)
     /* finish up */
     qthread_internal_net_driver_runtime_barrier();
 
-    qthread_debug(MULTINODE_CALLS, "end internal_net_driver_initialize\n" );
+    qthread_debug(MULTINODE_CALLS, "end internal_net_driver_initialize\n");
 
     return 0;
 }
 
-
-int
-qthread_internal_net_driver_send(int peer, int tag, 
-                                 void *start, size_t len)
+int qthread_internal_net_driver_send(int    peer,
+                                     int    tag,
+                                     void  *start,
+                                     size_t len)
 {
     struct net_pkt_t *pkt;
 
-    if (tag <= 0 || tag >= 256) { return -1; }
+    if ((tag <= 0) || (tag >= 256)) { return -1; }
 
-    pkt = qt_mpool_alloc(mpool);
-    pkt->peer = peer;
-    pkt->tag = tag;
+    pkt        = qt_mpool_alloc(mpool);
+    pkt->peer  = peer;
+    pkt->tag   = tag;
     pkt->start = start;
-    pkt->len = len;
+    pkt->len   = len;
 
     return transmit_packet(pkt);
 }
 
-int
-qthread_internal_net_driver_put(int        peer,
-                                void      *dest_addr,
-                                void      *src_addr,
-                                size_t     size,
-                                aligned_t *feb)
+int qthread_internal_net_driver_put(int                  peer,
+                                    void *restrict       dest_addr,
+                                    const void *restrict src_addr,
+                                    size_t               size,
+                                    aligned_t *restrict  feb)
 {
     aligned_t ret = 0;
 
@@ -371,67 +369,62 @@ qthread_internal_net_driver_put(int        peer,
     ret = PtlPut(nm_md_h, (ptl_size_t)src_addr, size, PTL_ACK_REQ,
                  dest, 20, 0, (ptl_size_t)dest_addr, feb, 0);
     if (PTL_OK != ret) {
-        fprintf(stderr, "PtlPut failed: %d\n", ret);
+        fprintf(stderr, "PtlPut failed: %d\n", (int)ret);
 
-        return ret;
+        return (int)ret;
     }
 
-    return ret;
+    return (int)ret;
 }
 
-int
-qthread_internal_net_driver_get(void      *dest_addr,
-                                int        peer,
-                                void      *src_addr,
-                                size_t     size,
-                                aligned_t *feb)
+int qthread_internal_net_driver_get(void *restrict       dest_addr,
+                                    int                  peer,
+                                    const void *restrict src_addr,
+                                    size_t               size,
+                                    aligned_t *restrict  feb)
 {
     aligned_t ret = 0;
 
     ptl_ct_event_t ctc;
     ptl_process_t  dest = { .rank = peer };
 
-    ret = PtlGet(nm_md_h, (ptl_size_t)dest_addr, size, 
+    ret = PtlGet(nm_md_h, (ptl_size_t)dest_addr, size,
                  dest, 20, 0, (ptl_size_t)src_addr, feb);
     if (PTL_OK != ret) {
-        fprintf(stderr, "PtlGet failed: %d\n", ret);
+        fprintf(stderr, "PtlGet failed: %d\n", (int)ret);
 
-        return ret;
+        return (int)ret;
     }
 
-    return ret;
+    return (int)ret;
 }
 
-int
-qthread_internal_net_driver_register(int tag, 
-                                     qthread_internal_net_driver_handler handler)
+int qthread_internal_net_driver_register(int                                 tag,
+                                         qthread_internal_net_driver_handler handler)
 {
-    if (tag <= 0 || tag >= 256) { return -1; }
+    if ((tag <= 0) || (tag >= 256)) { return -1; }
     handlers[tag] = handler;
     return 0;
 }
 
-int
-qthread_internal_net_driver_barrier(void)
+int qthread_internal_net_driver_barrier(void)
 {
     qthread_internal_net_driver_runtime_barrier();
     return 0;
 }
 
-
-int
-qthread_internal_net_driver_finalize(void)
+int qthread_internal_net_driver_finalize(void)
 {
-    int ret, i;
+    int               ret, i;
     struct net_pkt_t *pkt;
-    void *dummy;
+    void             *dummy;
 
     /* mark qt_progress thread as time to go away, notify it, and wait */
-    pkt = qt_mpool_alloc(mpool);
-    pkt->peer = qthread_internal_net_driver_get_rank();
-    pkt->tag = 0;
+    pkt        = qt_mpool_alloc(mpool);
+    pkt->peer  = qthread_internal_net_driver_get_rank();
+    pkt->tag   = 0;
     pkt->start = &shutdown_msg;
-    pkt->len = sizeof(shutdown_msg);
+    pkt->len   = sizeof(shutdown_msg);
 
     ret = transmit_packet(pkt);
     if (0 != ret) {
@@ -446,7 +439,7 @@ qthread_internal_net_driver_finalize(void)
         return ret;
     }
 
-    for (i = 0 ; i < num_recv_blocks ; ++i) {
+    for (i = 0; i < num_recv_blocks; ++i) {
         ret = PtlMEUnlink(recv_blocks[i].me_h);
         if (PTL_OK != ret) {
             qthread_debug(MULTINODE_DETAILS, "PtlMEUnlink returned %d\n", ret);
@@ -455,8 +448,8 @@ qthread_internal_net_driver_finalize(void)
 
 #if 0
     /* there's a cleanup bug in either this code or Portals4 when
-       messages are in flight (including acks).  Don't clean up for
-       now */
+     * messages are in flight (including acks).  Don't clean up for
+     * now */
     ret = PtlMEUnlink(overflow_me_h);
     if (PTL_OK != ret) {
         qthread_debug(MULTINODE_DETAILS, "PtlMEUnlink returned %d\n", ret);
@@ -476,7 +469,7 @@ qthread_internal_net_driver_finalize(void)
     if (PTL_OK != ret) {
         qthread_debug(MULTINODE_DETAILS, "PtlEQFree returned %d\n", ret);
     }
-#endif
+#endif /* if 0 */
 
     qthread_internal_net_driver_runtime_fini();
 
@@ -489,88 +482,85 @@ qthread_internal_net_driver_finalize(void)
     return 0;
 }
 
-
-static void*
-qt_progress_function(void *data)
+static void *qt_progress_function(void *data)
 {
-    int ret;
+    int         ret;
     ptl_event_t ev;
 
     qthread_debug(MULTINODE_CALLS, "begin progress function\n");
     while (1) {
         ret = PtlEQGet(eq_h, &ev);
-        if (PTL_OK == ret || PTL_EQ_DROPPED == ret) {
+        if ((PTL_OK == ret) || (PTL_EQ_DROPPED == ret)) {
             switch (ev.type) {
-            case PTL_EVENT_PUT:
-                assert(ev.mlength == ev.rlength);
-                if (NULL == handlers[ev.hdr_data]) {
-                    qthread_debug(MULTINODE_CALLS, "Got message with unregistered tag %ld, ignoring\n", 
-                            (long unsigned)ev.hdr_data);
-                } else {
-                    handlers[ev.hdr_data](ev.hdr_data, ev.start, ev.mlength);
-                }
-                break;
-            case PTL_EVENT_SEND:
-                if (PTL_NI_OK != ev.ni_fail_type) {
-                    qthread_debug(MULTINODE_CALLS, "SEND event with fail type %d\n", ev.ni_fail_type);
-                }
-                break;
-            case PTL_EVENT_ACK:
-                if (PTL_NI_OK != ev.ni_fail_type) {
-                    qthread_debug(MULTINODE_CALLS, "SEND event with fail type %d\n", ev.ni_fail_type);
-                } else {
-                    struct net_pkt_t *pkt = (struct net_pkt_t*) ev.user_ptr;
-                    if (ev.mlength != pkt->len) {
-                        if (PTL_OK != ret) {
-                            qthread_debug(MULTINODE_CALLS, "transmit packet failed: %d\n", ret);
-                        }
+                case PTL_EVENT_PUT:
+                    assert(ev.mlength == ev.rlength);
+                    if (NULL == handlers[ev.hdr_data]) {
+                        qthread_debug(MULTINODE_CALLS, "Got message with unregistered tag %ld, ignoring\n",
+                                      (long unsigned)ev.hdr_data);
                     } else {
-                        qt_mpool_free(mpool, pkt);
+                        handlers[ev.hdr_data](ev.hdr_data, ev.start, ev.mlength);
                     }
-                }
-                break;
-            case PTL_EVENT_AUTO_UNLINK:
+                    break;
+                case PTL_EVENT_SEND:
+                    if (PTL_NI_OK != ev.ni_fail_type) {
+                        qthread_debug(MULTINODE_CALLS, "SEND event with fail type %d\n", ev.ni_fail_type);
+                    }
+                    break;
+                case PTL_EVENT_ACK:
+                    if (PTL_NI_OK != ev.ni_fail_type) {
+                        qthread_debug(MULTINODE_CALLS, "SEND event with fail type %d\n", ev.ni_fail_type);
+                    } else {
+                        struct net_pkt_t *pkt = (struct net_pkt_t *)ev.user_ptr;
+                        if (ev.mlength != pkt->len) {
+                            if (PTL_OK != ret) {
+                                qthread_debug(MULTINODE_CALLS, "transmit packet failed: %d\n", ret);
+                            }
+                        } else {
+                            qt_mpool_free(mpool, pkt);
+                        }
+                    }
+                    break;
+                case PTL_EVENT_AUTO_UNLINK:
                 {
-                    struct recv_block_t* block = (struct recv_block_t*) ev.user_ptr;
+                    struct recv_block_t *block = (struct recv_block_t *)ev.user_ptr;
                     repost_recv_block(block);
+                    break;
                 }
-                break;
-            default:
-                break;
+                default:
+                    break;
             }
         }
 
         /* Non-matching interface */
         ret = PtlEQGet(nm_eq_h, &ev);
-        if (PTL_OK == ret || PTL_EQ_DROPPED == ret) {
+        if ((PTL_OK == ret) || (PTL_EQ_DROPPED == ret)) {
             switch (ev.type) {
-            case PTL_EVENT_REPLY:
-                /* Get complete at initiator. */
-                if (ev.user_ptr) {
-                    qthread_writeF_const((aligned_t *)ev.user_ptr, PTL_OK);
-                    fflush(stderr);
-                }
-                break;
-            case PTL_EVENT_ACK:
-                /* Put at remote is complete. */
-                if (ev.user_ptr) {
-                    qthread_writeF_const((aligned_t *)ev.user_ptr, PTL_OK);
-                }
-                break;
-            case PTL_EVENT_SEND:
-                /* Put or atomic operation completed at initiator, local buffer
-                   may be reused, but remote operation not necessarily
-                   complete. */
-                break;
-            default:
-                if (ev.user_ptr) {
-                    qthread_writeEF_const((aligned_t *)ev.user_ptr, PTL_OK);
-                }
-                break;
-                break;
+                case PTL_EVENT_REPLY:
+                    /* Get complete at initiator. */
+                    if (ev.user_ptr) {
+                        qthread_writeF_const((aligned_t *)ev.user_ptr, PTL_OK);
+                        fflush(stderr);
+                    }
+                    break;
+                case PTL_EVENT_ACK:
+                    /* Put at remote is complete. */
+                    if (ev.user_ptr) {
+                        qthread_writeF_const((aligned_t *)ev.user_ptr, PTL_OK);
+                    }
+                    break;
+                case PTL_EVENT_SEND:
+                    /* Put or atomic operation completed at initiator, local buffer
+                     * may be reused, but remote operation not necessarily
+                     * complete. */
+                    break;
+                default:
+                    if (ev.user_ptr) {
+                        qthread_writeEF_const((aligned_t *)ev.user_ptr, PTL_OK);
+                    }
+                    break;
+                    break;
             }
-        } else if (PTL_EQ_EMPTY == ret) {
-        } else {
+        } else if (PTL_EQ_EMPTY == ret) {} else {
             fprintf(stderr, "Error getting event off of non-matching NI: %d\n", ret);
             abort();
         }
@@ -578,33 +568,31 @@ qt_progress_function(void *data)
     return NULL;
 }
 
-
-static void
-exit_handler(int tag, void *start, size_t len)
+static void exit_handler(int    tag,
+                         void  *start,
+                         size_t len)
 {
     qthread_debug(MULTINODE_CALLS, "end progress function\n");
     pthread_exit(NULL);
 }
 
-
-static void
-repost_recv_block(struct recv_block_t* block)
+static void repost_recv_block(struct recv_block_t *block)
 {
     ptl_me_t me;
-    int ret;
+    int      ret;
 
-    me.start = block->start;
-    me.length = size_recv_block;
+    me.start     = block->start;
+    me.length    = size_recv_block;
     me.ct_handle = PTL_CT_NONE;
-    me.min_free = max_msg_size;
-    me.uid = PTL_UID_ANY;
-    me.options = PTL_ME_OP_PUT | 
-        PTL_ME_MANAGE_LOCAL | 
-        PTL_ME_NO_TRUNCATE | 
-        PTL_ME_MAY_ALIGN;
+    me.min_free  = max_msg_size;
+    me.uid       = PTL_UID_ANY;
+    me.options   = PTL_ME_OP_PUT |
+                   PTL_ME_MANAGE_LOCAL |
+                   PTL_ME_NO_TRUNCATE |
+                   PTL_ME_MAY_ALIGN;
     me.match_id.rank = PTL_RANK_ANY;
-    me.match_bits = 0;
-    me.ignore_bits = ~(0ULL);
+    me.match_bits    = 0;
+    me.ignore_bits   = ~(0ULL);
 
     ret = PtlMEAppend(ni_h,
                       data_pt,
@@ -612,26 +600,25 @@ repost_recv_block(struct recv_block_t* block)
                       PTL_PRIORITY_LIST,
                       block,
                       &block->me_h);
-    if (PTL_OK != ret) abort();
+    if (PTL_OK != ret) { abort(); }
 }
 
-static inline int
-transmit_packet(struct net_pkt_t *pkt)
+static inline int transmit_packet(struct net_pkt_t *pkt)
 {
-    int ret;
+    int           ret;
     ptl_process_t peer;
 
     peer.rank = pkt->peer;
-    ret = PtlPut(md_h,
-                 (ptl_size_t) pkt->start,
-                 pkt->len,
-                 PTL_ACK_REQ,
-                 peer,
-                 data_pt,
-                 0,
-                 0,
-                 pkt,
-                 pkt->tag);
+    ret       = PtlPut(md_h,
+                       (ptl_size_t)pkt->start,
+                       pkt->len,
+                       PTL_ACK_REQ,
+                       peer,
+                       data_pt,
+                       0,
+                       0,
+                       pkt,
+                       pkt->tag);
     if (PTL_OK != ret) {
         qthread_debug(MULTINODE_CALLS, "PtlPut failed: %d\n", ret);
     }
@@ -639,3 +626,4 @@ transmit_packet(struct net_pkt_t *pkt)
     return ret;
 }
 
+/* vim:set expandtab: */
