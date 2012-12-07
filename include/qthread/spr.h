@@ -26,36 +26,36 @@ int spr_num_locales(void);
 int spr_locale_id(void);
 
 /******************************************************************************
- * Data Movement                                                              *
- ******************************************************************************/
+* Data Movement                                                              *
+******************************************************************************/
 
 typedef struct spr_get_handle_s spr_get_handle_t;
 
-int spr_get(void   *dest_addr,
-            int     src_loc,
-            void   *src_addr,
-            size_t  size);
-int spr_get_nb(void             *dest_addr,
-               int               src_loc,
-               void             *src_addr,
-               size_t            size,
-               spr_get_handle_t *hand);
-int spr_get_wait(spr_get_handle_t * const hand);
+int spr_get(void *restrict       dest_addr,
+            int                  src_loc,
+            const void *restrict src_addr,
+            size_t               size);
+int spr_get_nb(void *restrict             dest_addr,
+               int                        src_loc,
+               const void *restrict       src_addr,
+               size_t                     size,
+               spr_get_handle_t *restrict hand);
+int spr_get_wait(spr_get_handle_t *const hand);
 
 typedef struct spr_put_handle_s {
     aligned_t feb;
 } spr_put_handle_t;
 
-int spr_put(int    dest_loc,
-            void  *dest_addr,
-            void  *src_addr,
-            size_t size);
-int spr_put_nb(int               dest_loc,
-               void             *dest_addr,
-               void             *src_addr,
-               size_t            size,
-               spr_put_handle_t *hand);
-int spr_put_wait(spr_put_handle_t * const hand);
+int spr_put(int                  dest_loc,
+            void *restrict       dest_addr,
+            const void *restrict src_addr,
+            size_t               size);
+int spr_put_nb(int                        dest_loc,
+               void *restrict             dest_addr,
+               const void *restrict       src_addr,
+               size_t                     size,
+               spr_put_handle_t *restrict hand);
+int spr_put_wait(spr_put_handle_t *const hand);
 
 int spr_locale_barrier(void);
 

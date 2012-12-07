@@ -116,8 +116,8 @@ int spr_locale_id(void)
 }
 
 /******************************************************************************
- * Data Movement: One-sided Get                                               *
- ******************************************************************************/
+* Data Movement: One-sided Get                                               *
+******************************************************************************/
 
 /**
  * Wait for the get operation to complete fully.
@@ -155,10 +155,10 @@ int spr_get_wait(spr_get_handle_t *const hand)
  *
  * @return int Returns SPR_OK on success.
  */
-int spr_get(void  *dest_addr,
-            int    src_loc,
-            void  *src_addr,
-            size_t size)
+int spr_get(void *restrict       dest_addr,
+            int                  src_loc,
+            const void *restrict src_addr,
+            size_t               size)
 {
     int rc = SPR_OK;
 
@@ -195,13 +195,13 @@ int spr_get(void  *dest_addr,
  *
  * @return int Returns SPR_OK on success.
  */
-int spr_get_nb(void             *dest_addr,
-               int               src_loc,
-               void             *src_addr,
-               size_t            size,
-               spr_get_handle_t *hand)
+int spr_get_nb(void *restrict             dest_addr,
+               int                        src_loc,
+               const void *restrict       src_addr,
+               size_t                     size,
+               spr_get_handle_t *restrict hand)
 {
-    int rc = SPR_OK;
+    int       rc   = SPR_OK;
     int const here = spr_locale_id();
 
     qthread_debug(MULTINODE_CALLS, "[%d] begin spr_get_nb(%d, %p, %p, %d, %p)\n", spr_locale_id(), src_loc, src_addr, dest_addr, size, hand);
@@ -257,10 +257,10 @@ int spr_put_wait(spr_put_handle_t *const hand)
  *
  * @return int Returns SPR_OK on success.
  */
-int spr_put(int    dest_loc,
-            void  *dest_addr,
-            void  *src_addr,
-            size_t size)
+int spr_put(int                  dest_loc,
+            void *restrict       dest_addr,
+            const void *restrict src_addr,
+            size_t               size)
 {
     int rc = SPR_OK;
 
@@ -297,13 +297,13 @@ int spr_put(int    dest_loc,
  *
  * @return int Returns SPR_OK on success.
  */
-int spr_put_nb(int               dest_loc,
-               void             *dest_addr,
-               void             *src_addr,
-               size_t            size,
-               spr_put_handle_t *hand)
+int spr_put_nb(int                        dest_loc,
+               void *restrict             dest_addr,
+               const void *restrict       src_addr,
+               size_t                     size,
+               spr_put_handle_t *restrict hand)
 {
-    int rc = SPR_OK;
+    int       rc   = SPR_OK;
     int const here = spr_locale_id();
 
     qthread_debug(MULTINODE_CALLS, "[%d] begin spr_put_nb(%d, %p, %p, %d)\n", spr_locale_id(), dest_loc, dest_addr, src_addr, size);
@@ -316,10 +316,11 @@ int spr_put_nb(int               dest_loc,
 }
 
 /******************************************************************************
- * Locale-level Collectives: Barrier                                          *
- ******************************************************************************/
+* Locale-level Collectives: Barrier                                          *
+******************************************************************************/
 
-int spr_locale_barrier(void) {
+int spr_locale_barrier(void)
+{
     int rc = SPR_OK;
 
     rc = qthread_internal_net_driver_barrier();
