@@ -411,7 +411,7 @@ qthread_worker_id_t INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t ns
 void INTERNAL qt_affinity_set(qthread_worker_t *me,
                               unsigned int      nworkerspershep)
 {                                                                                                /*{{{ */
-    DEBUG_ONLY(hwloc_topology_check(topology));
+    ASSERT_ONLY(hwloc_topology_check(topology));
 
     const hwloc_const_cpuset_t allowed_cpuset = hwloc_topology_get_allowed_cpuset(topology);           // where am I allowed to run?
     qthread_shepherd_t *const  myshep         = me->shepherd;
