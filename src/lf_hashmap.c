@@ -444,8 +444,7 @@ void INTERNAL qt_hash_callback(qt_hash             h,
     cursor = h->B[0];
     while (PTR_OF(cursor) != NULL) {
         so_key_t key = PTR_OF(cursor)->key;
-        assert(MARK_OF(cursor) == 0);
-        if (key & 1) {
+        if (MARK_OF(key)) {
             f((qt_key_t)(uintptr_t)REVERSE(key ^ 1), PTR_OF(cursor)->value, arg);
         } else {
             // f((qt_key_t)REVERSE(key), PTR_OF(cursor)->value, (void *)1);
