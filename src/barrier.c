@@ -17,7 +17,7 @@
 #include "qthread/qthread.h"
 #include "qt_debug.h"
 #include "qt_visibility.h"
-#include "qthread_innards.h" /* for qthread_library_initialized */
+#include "qt_initialized.h" /* for qthread_library_initialized */
 
 struct qt_barrier_s {
     int        count;           // size of barrier

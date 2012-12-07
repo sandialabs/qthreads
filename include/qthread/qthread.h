@@ -169,7 +169,7 @@ typedef void     (*qthread_agg_f)  (int count, qthread_f *f, void **arg, void **
  * environment variable QTHREAD_NUM_SHEPHERDS. */
 int qthread_init(qthread_shepherd_id_t nshepherds);
 int qthread_initialize(void);
-int qthread_initialize_agg(int(*agg_cost) (int count, qthread_f* f, void **arg), qthread_agg_f agg_f);
+int qthread_initialize_agg(int(*agg_cost) (int count, qthread_f* f, void **arg), qthread_agg_f agg_f, int max_cost);
 int qthread_default_agg_cost (int count, qthread_f* f, void **arg);
 void qthread_default_agg_f (int count, qthread_f* f, void** arg, void** ret, uint16_t flags);
 void qthread_call_method(qthread_f f, void*arg, void* ret, uint16_t flags);

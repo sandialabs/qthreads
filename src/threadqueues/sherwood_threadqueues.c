@@ -75,7 +75,7 @@ void INTERNAL qt_threadqueue_enqueue_multiple(qt_threadqueue_t      *q,
                                               qt_threadqueue_node_t *first);
 
 qthread_t INTERNAL *qt_init_agg_task(void);
-void INTERNAL       qt_keep_adding_agg_task(qthread_t *agg_task,
+int INTERNAL       qt_keep_adding_agg_task(qthread_t *agg_task,
                                             int        max_t,
                                             int       *curr_cost,
                                             void      *q,
@@ -518,7 +518,7 @@ qthread_t INTERNAL *qt_init_agg_task() // partly a duplicate from qthread.c
     return t;
 }
 
-void INTERNAL qt_keep_adding_agg_task(qthread_t *agg_task,
+int INTERNAL qt_keep_adding_agg_task(qthread_t *agg_task,
                                       int        max_t,
                                       int       *curr_cost,
                                       void      *q,
@@ -670,6 +670,7 @@ void INTERNAL qt_keep_adding_agg_task(qthread_t *agg_task,
             public_q->qlength_stealable += ste_l;
         }
     }
+    return count;
 }
 
 void INTERNAL qt_add_first_agg_task(qthread_t             *agg_task,
@@ -735,12 +736,12 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                 node = NULL;
 
                 int *count_addr = &(((int *)t->preconds)[0]);
-                qt_keep_adding_agg_task(t, max_t, &curr_cost, qc, 0);
+                int lcount = qt_keep_adding_agg_task(t, max_t, &curr_cost, qc, 0);
                 if((qc->qlength == 0) && ((curr_cost < qlib->max_c) && (*count_addr < max_t))) {
                     // cache empty and can still add, get more from q
                     QTHREAD_TRYLOCK_LOCK(&q->qlock);
                     if(q->head) {
-                        qt_keep_adding_agg_task(t, max_t, &curr_cost, q, 1);
+                        lcount=qt_keep_adding_agg_task(t, max_t, &curr_cost, q, 1);
                     }
                     QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
                 } else {   // done, spill remaining cache
@@ -837,7 +838,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                     qt_add_first_agg_task(t, &curr_cost, node);
                     node = NULL;
                     if(q->head) {
-                        qt_keep_adding_agg_task(t, max_t, &curr_cost, q, 1);
+                        int lcount=qt_keep_adding_agg_task(t, max_t, &curr_cost, q, 1);
                     }
                     ret_agg_task = 1;
                 } else {   // no agg, free agg task (delay)
