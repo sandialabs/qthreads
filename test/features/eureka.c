@@ -14,6 +14,7 @@
 
 static aligned_t t  = 1;
 static aligned_t t2 = 1;
+static aligned_t t3 = 1;
 
 static aligned_t waiter_count = 0;
 
@@ -46,8 +47,8 @@ static aligned_t live_parent(void *arg)
     iprintf("live_parent alive!\n");
     qthread_empty(alive+0);
     qthread_empty(alive+1);
-    qthread_fork_to(live_waiter, (void*)(intptr_t)0, NULL, 1);
-    qthread_fork_to(live_waiter, (void*)(intptr_t)1, NULL, 2);
+    qthread_fork_to(live_waiter, (void*)(intptr_t)0, &t3, 1);
+    qthread_fork_to(live_waiter, (void*)(intptr_t)1, &t3, 2);
     iprintf("live_parent waiting on %p\n", &alive[1]);
     qthread_readFF(NULL, &alive[1]);
     iprintf("live_parent saw live_waiter 1 report in\n");
@@ -85,12 +86,12 @@ static aligned_t live_waiter2(void *arg)
 static aligned_t live_parent2(void *arg)
 {
     iprintf("live_parent2 alive! id = %u\n", qthread_id());
-    qthread_fork(live_waiter2, (void*)(intptr_t)0, NULL);
-    qthread_fork(live_waiter2, (void*)(intptr_t)1, NULL);
-    qthread_fork(live_waiter2, (void*)(intptr_t)2, NULL);
-    qthread_fork(live_waiter2, (void*)(intptr_t)3, NULL);
-    qthread_fork(live_waiter2, (void*)(intptr_t)4, NULL);
-    qthread_fork(live_waiter2, (void*)(intptr_t)5, NULL);
+    qthread_fork(live_waiter2, (void*)(intptr_t)0, &t3);
+    qthread_fork(live_waiter2, (void*)(intptr_t)1, &t3);
+    qthread_fork(live_waiter2, (void*)(intptr_t)2, &t3);
+    qthread_fork(live_waiter2, (void*)(intptr_t)3, &t3);
+    qthread_fork(live_waiter2, (void*)(intptr_t)4, &t3);
+    qthread_fork(live_waiter2, (void*)(intptr_t)5, &t3);
     iprintf("live_parent2 spawned all tasks\n");
     qthread_flushsc();
     iprintf("live_parent2 about to eureka...\n");
@@ -105,7 +106,7 @@ static aligned_t live_parent2(void *arg)
 static aligned_t live_parent3(void *arg)
 {
     iprintf("live_parent3 alive! id = %u\n", qthread_id());
-    qthread_fork(live_waiter2, (void*)(intptr_t)0, NULL);
+    qthread_fork(live_waiter2, (void*)(intptr_t)0, &t3);
     iprintf("live_parent3 spawned all tasks\n");
     qthread_flushsc();
     iprintf("live_parent3 about to eureka...\n");
@@ -122,7 +123,7 @@ static aligned_t live_parent_waiter(void *arg)
     const int assigned = (int)(intptr_t)arg;
     const int id = qthread_id();
 
-    qthread_fork_to(live_waiter, (void*)(intptr_t)1, NULL, 2);
+    qthread_fork_to(live_waiter, (void*)(intptr_t)1, &t3, 2);
     iprintf("live_parent_waiter %i alive! id %i wkr %u team %u\n", assigned, id, qthread_readstate(CURRENT_UNIQUE_WORKER), qt_team_id());
     qthread_fill(&alive[assigned]);
     qthread_flushsc();
@@ -141,7 +142,7 @@ static aligned_t parent_eureka(void *arg)
     iprintf("parent_eureka alive! id = %u teamid = %u\n", qthread_id(), qt_team_id());
     qthread_empty(alive+0);
     qthread_empty(alive+1);
-    qthread_spawn(live_parent_waiter, (void*)(intptr_t)0, 0, NULL, 0, NULL, 1, QTHREAD_SPAWN_NEW_SUBTEAM);
+    qthread_spawn(live_parent_waiter, (void*)(intptr_t)0, 0, NULL, 0, &t3, 1, QTHREAD_SPAWN_NEW_SUBTEAM);
     iprintf("parent_eureka waiting on %p\n", &alive[0]);
     qthread_readFF(NULL, &alive[0]);
     iprintf("parent_eureka saw child 0 report in\n");
@@ -177,7 +178,7 @@ int main(int   argc,
     qt_loop_balance(0, qthread_num_workers(), alive_check, NULL);
 
     iprintf("Testing a fully-live eureka (all member tasks running)...\n");
-    qthread_spawn(live_parent, NULL, 0, &t2, 0, NULL, 0, QTHREAD_SPAWN_NEW_TEAM);
+    qthread_spawn(live_parent, NULL, 0, &t2, 0, &t3, 0, QTHREAD_SPAWN_NEW_TEAM);
     qthread_readFF(NULL, &t2);
     assert(waiter_count == 0);
     t = 1;
