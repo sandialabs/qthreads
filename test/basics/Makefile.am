@@ -13,6 +13,7 @@ TESTS = \
 		reinitialization \
 		qthread_cas \
 		qthread_cacheline \
+		qthread_readstate \
 		qthread_id \
 		qthread_incr qthread_fincr qthread_dincr \
 		qthread_stackleft \
