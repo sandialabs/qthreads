@@ -17,9 +17,9 @@ int qthread_multinode_size(void);
 
 int qthread_multinode_register(uint32_t  tag,
                                qthread_f f);
-int qthread_multinode_action_uid(qthread_f f, 
+int qthread_multinode_action_uid(qthread_f f,
                                  uint32_t *tag);
-int qthread_multinode_action_ptr(uint32_t   tag, 
+int qthread_multinode_action_ptr(uint32_t   tag,
                                  qthread_f *ptr);
 
 int qthread_fork_remote(qthread_f   f,
