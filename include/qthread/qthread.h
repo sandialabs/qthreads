@@ -367,6 +367,7 @@ qthread_worker_id_t   qthread_num_workers(void); /* how many kernel-level thread
 enum introspective_state {
     STACK_SIZE,
     BUSYNESS,
+    NODE_BUSYNESS,
     ACTIVE_SHEPHERDS,
     TOTAL_SHEPHERDS,
     ACTIVE_WORKERS,

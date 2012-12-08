@@ -1973,6 +1973,14 @@ size_t API_FUNC qthread_readstate(const enum introspective_state type)
                 return qt_threadqueue_advisory_queuelen(shep->ready);
             }
         }
+        case NODE_BUSYNESS:
+        {
+            size_t sum = 0;
+            for (qthread_shepherd_id_t s=0; s < qlib->nshepherds; s++) {
+                sum += qt_threadqueue_advisory_queuelen(qlib->shepherds[s].ready);
+            }
+            return sum;
+        }
         case ACTIVE_SHEPHERDS:
             return (size_t)(qlib->nshepherds_active);
 
