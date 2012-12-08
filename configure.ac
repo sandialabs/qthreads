@@ -849,8 +849,7 @@ AS_IF([test "x$enable_hardware_atomics" = "xno"],
                     [with_scheduler="sherwood"
                      AC_MSG_WARN([Forcing scheduler to be sherwood, since hardware atomic support is lacking.])])])
        AS_IF([test "x$enable_lf_febs" = "xyes"],
-             [enable_lf_febs=no
-              AC_MSG_WARN([Forcing FEBs to use lock-based hash table, since hardware atomic support is lacking.])])],
+             [AC_MSG_ERROR([FEBs cannot use a lock-free hash table, because hardware atomic support is lacking.])])],
       [AS_IF([test "x$enable_internal_spinlock" = x],
              [enable_internal_spinlock=yes])
        AS_IF([test "x$enable_internal_spinlock" = xyes],
@@ -1104,11 +1103,8 @@ AS_IF([test "x$enable_multinode" = "xyes"],
        esac],
       [enable_multinode="no"])
 
-AS_IF([test "x$enable_lf_febs" != "xno"],
-      [AS_IF([test "x$enable_hardware_atomics" = "xyes" -a "x$qthread_cv_atomic_CASptr" = "xyes"],
-             [enable_lf_febs=yes
-              AC_DEFINE([LOCK_FREE_FEBS], [1], [Define to use a lock-free hash table for FEB metadata.])],
-             [enable_lf_febs=no])],
+AS_IF([test "x$enable_lf_febs" == "xyes"],
+      [AC_DEFINE([LOCK_FREE_FEBS], [1], [Define to use a lock-free hash table for FEB metadata.])],
       [enable_lf_febs=no])
 
 ## --------------- ##
