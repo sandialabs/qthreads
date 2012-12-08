@@ -1981,6 +1981,22 @@ size_t API_FUNC qthread_readstate(const enum introspective_state type)
             }
             return sum;
         }
+        case WORKER_OCCUPATION:
+        {
+            size_t count = 0;
+            const qthread_shepherd_t *sheps = qlib->shepherds;
+            for (qthread_shepherd_id_t s=0; s<qlib->nshepherds; s++) {
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+                const qthread_worker_t *wkrs = sheps[s].workers;
+                for (qthread_worker_id_t w=0; w<qlib->nworkerspershep; w++) {
+                    count += (wkrs[w].current != NULL);
+                }
+#else
+                count += (sheps[s].current != NULL);
+#endif
+            }
+            return count;
+        }
         case ACTIVE_SHEPHERDS:
             return (size_t)(qlib->nshepherds_active);
 
