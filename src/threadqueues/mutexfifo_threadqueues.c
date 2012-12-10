@@ -92,6 +92,7 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
         QTHREAD_FASTLOCK_INIT(q->head_lock);
         QTHREAD_FASTLOCK_INIT(q->tail_lock);
         QTHREAD_FASTLOCK_INIT(q->advisory_queuelen_m);
+        q->advisory_queuelen = 0;
         q->head = ALLOC_TQNODE();
         assert(q->head != NULL);
         if (q->head == NULL) {
@@ -183,6 +184,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
         q->tail       = node;
     }
     QTHREAD_FASTLOCK_UNLOCK(&q->tail_lock);
+    (void)qthread_internal_incr_s(&q->advisory_queuelen, &q->advisory_queuelen_m, 1);
 }                                      /*}}} */
 
 void qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
