@@ -1973,6 +1973,7 @@ size_t API_FUNC qthread_readstate(const enum introspective_state type)
             if (shep == NULL) {
                 return (size_t)(-1);
             } else {
+                qthread_debug(CORE_DETAILS, "shep %u: queuelen: %u\n", (unsigned)shep->shepherd_id, qt_threadqueue_advisory_queuelen(shep->ready));
                 return qt_threadqueue_advisory_queuelen(shep->ready) + 1;
             }
         }
@@ -1981,13 +1982,16 @@ size_t API_FUNC qthread_readstate(const enum introspective_state type)
             size_t sum = 0;
             const qthread_shepherd_t *sheps = qlib->shepherds;
             for (qthread_shepherd_id_t s=0; s < qlib->nshepherds; s++) {
+                qthread_debug(CORE_DETAILS, "shep %u busyness %u\n", (unsigned)s, (unsigned)qt_threadqueue_advisory_queuelen(sheps[s].ready));
                 sum += qt_threadqueue_advisory_queuelen(sheps[s].ready);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
                 const qthread_worker_t *wkrs = sheps[s].workers;
                 for (qthread_worker_id_t w=0; w<qlib->nworkerspershep; w++) {
+                    qthread_debug(CORE_DETAILS, "shep %u wkr %u current %p\n", (unsigned)s, (unsigned)w, wkrs[w].current);
                     sum += (wkrs[w].current != NULL);
                 }
 #else
+                qthread_debug(CORE_DETAILS, "shep %u current %p\n", (unsigned)s, sheps[s].current);
                 sum += (sheps[s].current != NULL);
 #endif
             }

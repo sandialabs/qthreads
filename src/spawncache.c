@@ -107,9 +107,9 @@ int INTERNAL qt_spawncache_flush(qt_threadqueue_t *q)
     qt_threadqueue_private_t *cache = TLS_GET(spawn_cache);
 
     if (cache) {
-        //printf("attempting to flush cache %p\n", cache);
+        qthread_debug(THREADQUEUE_BEHAVIOR, "attempting to flush cache %p\n", cache);
         if (cache->on_deck) {
-            //printf("attempting to flush cache %p : %u items\n", cache, cache->qlength + 1);
+            qthread_debug(THREADQUEUE_DETAILS, "attempting to flush cache %p into queue %p : %u items\n", cache, q, cache->qlength + 1);
             qt_threadqueue_enqueue_cache(q, cache);
             return 1;
         }
