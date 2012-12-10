@@ -17,7 +17,7 @@
 
 aligned_t spinner(void *arg)
 {
-    while (*(aligned_t*)arg == 0) qthread_yield();
+    while (*(aligned_t*)arg == 0) ;
     return 1;
 }
 
@@ -47,7 +47,9 @@ int main(int   argc,
 	qthread_flushsc();
 	TEST_OPTION(BUSYNESS, >=, 1);
 	TEST_OPTION(BUSYNESS, <=, 2);
-	TEST_OPTION(NODE_BUSYNESS, ==, 2);
+	/* This is <= instead of == because spinner might be dequeued but not
+	 * yet executing */
+	TEST_OPTION(NODE_BUSYNESS, <=, 2);
 	TEST_OPTION(WORKER_OCCUPATION, >=, 1);
 	TEST_OPTION(WORKER_OCCUPATION, <=, 2);
 	r = 1;
