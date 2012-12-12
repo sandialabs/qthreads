@@ -13,6 +13,8 @@
 # ifndef OMP_H
 #  define OMP_H
 
+#include <stdint.h>
+
 void    omp_set_nested(int val);
 void    omp_set_num_threads(int);
 int     omp_get_num_threads(void);
