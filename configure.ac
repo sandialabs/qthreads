@@ -1162,6 +1162,7 @@ AC_CONFIG_FILES([Makefile
                  test/benchmarks/mantevo/Makefile
                  test/benchmarks/mantevo/hpccg/Makefile
                  test/benchmarks/mantevo/hpccg_openmp/Makefile
+                 test/benchmarks/rose_lulesh/Makefile
                  test/benchmarks/rose_bots/Makefile])
 AC_OUTPUT
 
