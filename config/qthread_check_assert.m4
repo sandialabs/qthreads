@@ -34,7 +34,8 @@ int main(int argc, char *argv[])
 }]])],
         [],
 		[qt_allgoodsofar=no],
-		[])
+		[dnl assume assert works
+		 qt_allgoodsofar=yes])
 		AC_MSG_RESULT([$qt_allgoodsofar])])
   AS_IF([test "x$qt_allgoodsofar" = xyes],
 	    [$1],
