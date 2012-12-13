@@ -28,7 +28,7 @@
 #include <memory.h>
 #include <alloca.h>
 #include "bots.h"
-#include <omp.h>
+//#include <omp.h>
 /* Checking information */
 #include "libxomp.h" 
 static int solutions[] = {(1), (0), (0), (2), (10), (4), (40), (92), (352), (724), (2680), (14200), (73712), (365596)

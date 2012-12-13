@@ -18,7 +18,8 @@
 /*  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA            */
 /**********************************************************************************************/
 
-#include <omp.h>
+#ifdef _OPENMP
+#include <qthread/omp_defines.h>
 
 #define MODEL OMP-TASKS
 
@@ -28,4 +29,4 @@
 #define BOTS_MODEL_DESC "OpenMP (using tasks)"
 #endif
 
-
+#endif
