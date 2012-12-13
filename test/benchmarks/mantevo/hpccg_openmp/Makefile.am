@@ -11,7 +11,7 @@ AM_CPPFLAGS = -I$(top_srcdir)/include
 qthreadlib = $(top_builddir)/src/libqthread.la
 xomplib = $(top_builddir)/src/libqthread_xomp.la
 
-LDADD = $(qthreadlib) $(xomplib)
+LDADD = $(xomplib) $(qthreadlib)
 
 $(qthreadlib):
 	$(MAKE) -C $(top_builddir)/src libqthread.la
