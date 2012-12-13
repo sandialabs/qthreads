@@ -63,7 +63,7 @@ void read_HPC_row(char *data_file,HPC_Sparse_Matrix **A,double **x,double **b,do
     exit(1);
   }
   fscanf(in_file,"%d",&total_nrow);
-  fscanf(in_file,"%d",&total_nnz);
+  fscanf(in_file,"%lld",&total_nnz);
 #ifdef USING_MPI
 // Number of MPI processes, My process ID
 #else
