@@ -1,14 +1,19 @@
-SUBDIRS = hpccg
+SUBDIRS = hpccg hpccg_openmp
 
 .PHONY: buildall buildextra benchmarks
 
 benchmarks: buildextra
 buildall: buildextra
 
-mantevo_benchmarks = hpccg
+mantevo_benchmarks = hpccg/hpccg hpccg_openmp/hpccg
 
-buildextra:
-	$(MAKE) -C hpccg hpccg
+buildextra: $(mantevo_benchmarks)
+
+hpccg/hpccg:
+	$(MAKE) -C hpccg buildall
+
+hpccg_openmp/hpccg:
+	$(MAKE) -C hpccg_openmp buildall
 
 INCLUDES = -I$(top_srcdir)/include
 qthreadlib = $(top_builddir)/src/libqthread.la
