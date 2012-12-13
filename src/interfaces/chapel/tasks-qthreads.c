@@ -570,17 +570,12 @@ uint64_t chpl_task_getCallStackSize(void)
 // XXX: Should probably reflect all shepherds
 uint32_t chpl_task_getNumQueuedTasks(void)
 {
-    return qthread_readstate(BUSYNESS);
+    return qthread_readstate(NODE_BUSYNESS);
 }
 
 uint32_t chpl_task_getNumRunningTasks(void)
 {
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    return (uint32_t)qthread_num_workers();
-
-#else
-    return (uint32_t)qthread_num_shepherds();
-#endif
+    return qthread_readstate(WORKER_OCCUPATION);
 }                                                         /* 1, i.e. this one */
 
 // XXX: not sure what the correct value should be here!

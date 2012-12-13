@@ -21,6 +21,8 @@ typedef struct omp_lock_t {
     void * _lk;
 } omp_lock_t;
 
+#include <stdint.h>
+
 void    omp_set_nested(int val);
 void    omp_set_num_threads(int x);
 int     omp_get_num_threads(void);

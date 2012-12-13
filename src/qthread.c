@@ -950,16 +950,6 @@ int API_FUNC qthread_initialize(void)
                                                        QTHREAD_DEFAULT_STACK_SIZE,
                                                        QTHREAD_DEFAULT_STACK_SIZE);
     qthread_debug(CORE_DETAILS, "qthread stack size: %u\n", qlib->qthread_stack_size);
-    if (print_info) {
-        print_status("Using %u byte stack size.\n", qlib->qthread_stack_size);
-    }
-
-#ifdef QTHREAD_RCRTOOL_STAT
-    if (rcrtoollevel > 0) {
-        idleCheckin = (nshepherds * nworkerspershep) - 1; // don't wait for RCR thread
-    }
-#endif
-
 #ifdef QTHREAD_GUARD_PAGES
     {
         /* round stack size to nearest page */
@@ -967,6 +957,15 @@ int API_FUNC qthread_initialize(void)
             qlib->qthread_stack_size +=
                 pagesize - (qlib->qthread_stack_size % pagesize);
         }
+    }
+#endif
+    if (print_info) {
+        print_status("Using %u byte stack size.\n", qlib->qthread_stack_size);
+    }
+
+#ifdef QTHREAD_RCRTOOL_STAT
+    if (rcrtoollevel > 0) {
+        idleCheckin = (nshepherds * nworkerspershep) - 1; // don't wait for RCR thread
     }
 #endif
 

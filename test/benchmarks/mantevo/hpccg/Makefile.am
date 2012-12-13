@@ -7,7 +7,7 @@ buildextra: hpccg
 EXTRA_PROGRAMS = hpccg
 
 
-INCLUDES = -I$(top_srcdir)/include
+AM_CPPFLAGS = -I$(top_srcdir)/include
 qthreadlib = $(top_builddir)/src/libqthread.la
 
 LDADD = $(qthreadlib)
@@ -26,5 +26,5 @@ hpccg_SOURCES = HPCCG.cpp \
 				mytimer.cpp \
 				read_HPC_row.cpp \
 				waxpby.cpp
-hpccg_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -DUSING_QTHREADS
+hpccg_CPPFLAGS = $(AM_CPPFLAGS) $(CPPFLAGS) -DUSING_QTHREADS -DWALL
 
