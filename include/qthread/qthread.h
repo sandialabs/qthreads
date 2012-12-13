@@ -13,12 +13,6 @@
 # include <stdio.h>                    /* for fprintf() */
 #endif
 
-#ifdef QTHREAD_LOG_BARRIER
-# include <qt_barrier.h>
-#else
-# include <qthread/feb_barrier.h>
-#endif
-
 #ifdef QTHREAD_NEEDS_IA64INTRIN
 # ifdef HAVE_IA64INTRIN_H
 #  include <ia64intrin.h>
@@ -124,27 +118,6 @@ extern const syncvar_t SYNCVAR_EMPTY_INITIALIZER;
 #define DBL64TODBL60(in, out) do { memcpy(&(out), &(in), 8); out >>= 4; } while (0)
 #define DBL60TODBL64(in, out) do { in <<= 4; memcpy(&(out), &(in), 8); } while(0)
 
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-
-struct qthread_parallel_region_s {
-    struct qthread_parallel_region_s *last;
-    void                             *forLoop;  // current loop really qqloop_step_handle_t * -- void to save include ordering problems
-    void                             *loopList; // really list of qqloop_step_handle_t * -- void to save include ordering problems
-# ifdef QTHREAD_LOG_BARRIER
-    qt_barrier_t                     *barrier;
-# else
-    qt_feb_barrier_t                 *barrier;
-# endif
-    int                              *currentLoopNum;     // really an array of values (number workers long)
-                                                          //   which Loop current active
-    int                               clsSize;            // size of following array
-    void                            **currentLoopStruct;  // really an array of pointers to loop
-                                                          //    structures for use by omp
-};
-typedef struct qthread_parallel_region_s qthread_parallel_region_t;
-
-#endif // ifdef QTHREAD_USE_ROSE_EXTENSIONS
-
 #define SYNCVAR_STATIC_INITIALIZER { { 0 } }
 Q_ENDCXX /* */
 
@@ -192,6 +165,29 @@ void qthread_enable_shepherd(qthread_shepherd_id_t shep);
 int  qthread_disable_worker(qthread_worker_id_t worker);
 void qthread_enable_worker(qthread_worker_id_t worker);
 # ifdef QTHREAD_USE_ROSE_EXTENSIONS
+#ifdef QTHREAD_LOG_BARRIER
+# include <qt_barrier.h>
+#else
+# include <qthread/feb_barrier.h>
+#endif
+
+struct qthread_parallel_region_s {
+    struct qthread_parallel_region_s *last;
+    void                             *forLoop;  // current loop really qqloop_step_handle_t * -- void to save include ordering problems
+    void                             *loopList; // really list of qqloop_step_handle_t * -- void to save include ordering problems
+# ifdef QTHREAD_LOG_BARRIER
+    qt_barrier_t                     *barrier;
+# else
+    qt_feb_barrier_t                 *barrier;
+# endif
+    int                              *currentLoopNum;     // really an array of values (number workers long)
+                                                          //   which Loop current active
+    int                               clsSize;            // size of following array
+    void                            **currentLoopStruct;  // really an array of pointers to loop
+                                                          //    structures for use by omp
+};
+typedef struct qthread_parallel_region_s qthread_parallel_region_t;
+
 void qthread_pack_workerid(const qthread_worker_id_t worker,
                            const qthread_worker_id_t newId);
 void       qthread_parent_yield_state(void);       /* save thread state enum and then set PARENT_YIELD */

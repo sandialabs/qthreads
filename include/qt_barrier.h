@@ -1,8 +1,6 @@
 #ifndef QT_BARRIER_H
 #define QT_BARRIER_H
 
-#include "qthread/qthread.h" /* for qthread_shepherd_id_t */
-
 /* these two calls assume that we're using a/the global barrier */
 void qt_global_barrier(void);
 void qt_global_barrier_init(int size, int debug);
@@ -23,6 +21,8 @@ typedef enum dumpType
 } qt_barrier_dtype;
 
 typedef struct qt_barrier_s qt_barrier_t;
+
+#include "qthread/qthread.h" /* for qthread_shepherd_id_t */
 /*
 typedef unsigned int qthread_shepherd_id_t; // potentially included in qthread.c -- need this from
                                             // qthread.h but too early to include whole file
