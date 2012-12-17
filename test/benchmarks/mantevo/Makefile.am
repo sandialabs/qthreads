@@ -1,11 +1,17 @@
-SUBDIRS = hpccg hpccg_openmp
+SUBDIRS = hpccg
+
+DIST_SUBDIRS = $(SUBDIRS) hpccg_openmp
 
 .PHONY: buildall buildextra benchmarks
 
 benchmarks: buildextra
 buildall: buildextra
 
-mantevo_benchmarks = hpccg/hpccg hpccg_openmp/hpccg
+mantevo_benchmarks = hpccg/hpccg
+
+if COMPILE_ROSE_EXTENSIONS
+mantevo_benchmarks += hpccg_openmp/hpccg
+endif
 
 buildextra: $(mantevo_benchmarks)
 
