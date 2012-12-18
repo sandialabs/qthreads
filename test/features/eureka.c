@@ -29,10 +29,14 @@ static aligned_t live_waiter(void *arg)
 {
     const int assigned = (int)(intptr_t)arg;
     const int id = qthread_id();
+    qt_team_critical_section(BEGIN);
     iprintf("live_waiter %i alive! id %i wkr %u team %u\n", assigned, id, qthread_readstate(CURRENT_UNIQUE_WORKER), qt_team_id());
+    qt_team_critical_section(END);
     qthread_fill(&alive[assigned]);
     qthread_flushsc();
+    qt_team_critical_section(BEGIN);
     iprintf("live_waiter filled %p\n", &alive[assigned]);
+    qt_team_critical_section(END);
     while(t == 1) {
 	COMPILER_FENCE;
     }
@@ -70,14 +74,14 @@ static aligned_t live_waiter2(void *arg)
     const int assigned = (int)(intptr_t)arg;
     const int id = qthread_id();
     qt_team_critical_section(BEGIN);
-    iprintf("live_waiter %i alive! id %i wkr %u\n", assigned, id, qthread_readstate(CURRENT_UNIQUE_WORKER));
+    iprintf("live_waiter2 %i alive! id %i wkr %u\n", assigned, id, qthread_readstate(CURRENT_UNIQUE_WORKER));
     qt_team_critical_section(END);
     while(t == 1) {
 	COMPILER_FENCE;
     }
     qthread_incr(&waiter_count, 1);
     qt_team_critical_section(BEGIN);
-    iprintf("live_waiter %i exiting! id %i wkr %u\n", assigned, id, qthread_readstate(CURRENT_UNIQUE_WORKER));
+    iprintf("live_waiter2 %i exiting! id %i wkr %u\n", assigned, id, qthread_readstate(CURRENT_UNIQUE_WORKER));
     qt_team_critical_section(END);
 
     return 0;
@@ -127,7 +131,9 @@ static aligned_t live_parent_waiter(void *arg)
     iprintf("live_parent_waiter %i alive! id %i wkr %u team %u\n", assigned, id, qthread_readstate(CURRENT_UNIQUE_WORKER), qt_team_id());
     qthread_fill(&alive[assigned]);
     qthread_flushsc();
+    qt_team_critical_section(BEGIN);
     iprintf("live_parent_waiter filled %p\n", &alive[assigned]);
+    qt_team_critical_section(END);
     while(t == 1) {
 	COMPILER_FENCE;
     }
