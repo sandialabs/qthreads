@@ -2692,6 +2692,8 @@ int API_FUNC qthread_spawn(qthread_f             f,
         t->preconds     = preconds;
         qthread_debug(THREAD_BEHAVIOR, "npreconds=%u, preconds[0]=%u\n", (unsigned int)npreconds, (unsigned int)(uintptr_t)((aligned_t **)preconds)[0]);
         assert(((aligned_t **)preconds)[0] == (aligned_t *)(uintptr_t)npreconds);
+    } else {
+        t->preconds = NULL;
     }
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     t->id = save_target;
