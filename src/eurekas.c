@@ -18,8 +18,8 @@
 #include "qt_syncvar.h" // for qt_syncvar_taskfilter()
 #include "qt_asserts.h"
 
-TLS_DECL_INIT(uint_fast8_t, eureka_block);
-TLS_DECL_INIT(uint_fast8_t, eureka_blocked_flag);
+TLS_DECL(uint_fast8_t, eureka_block);
+TLS_DECL(uint_fast8_t, eureka_blocked_flag);
 
 /* Static Variables */
 static saligned_t eureka_flag        = -1;
@@ -156,10 +156,13 @@ void INTERNAL qt_eureka_end_criticalsect_dead(qthread_t *self)
     qthread_back_to_master2(self);
 } /*}}}*/
 
-void INTERNAL qt_eureka_shepherd_init(void)
+void INTERNAL qt_eureka_worker_init(void)
 {   /*{{{*/
     signal(QT_ASSASSINATE_SIGNAL, hup_handler);
     signal(QT_EUREKA_SIGNAL, hup_handler);
+    /* Yes, these could have default values, but because of lazy TLS allocation, these MUST be set manually */
+    TLS_SET(eureka_block, 0);
+    TLS_SET(eureka_blocked_flag, 0);
 } /*}}}*/
 
 static filter_code qt_eureka_internal_filterfunc(const qt_key_t            addr,

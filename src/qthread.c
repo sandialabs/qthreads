@@ -415,7 +415,7 @@ static void *qthread_master(void *arg)
 #ifdef QTHREAD_USE_SPAWNCACHE
     localqueue = qt_init_local_spawncache();
 #endif
-    qt_eureka_shepherd_init();
+    qt_eureka_worker_init();
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     current = &(me_worker->current);
