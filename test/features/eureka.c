@@ -171,7 +171,7 @@ int main(int   argc,
     int ret = 0;
     char stack_size[20];
 
-    snprintf(stack_size, 20, "%lu", 4096*2); // XXX: The root cause of this is hard to track down
+    snprintf(stack_size, 20, "%u", 4096*2); // XXX: The root cause of this is hard to track down
     setenv("QT_STACK_SIZE", stack_size, 1);
     ret = qthread_init(3);
     if (ret != QTHREAD_SUCCESS) {
