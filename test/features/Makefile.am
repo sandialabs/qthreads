@@ -20,6 +20,7 @@ TESTS = \
 		qarray_accum \
 		qpool \
 		qlfqueue \
+		qswsrqueue \
 		qdqueue \
 		allpairs \
 		subteams \
@@ -84,6 +85,8 @@ qarray_SOURCES = qarray.c
 qarray_accum_SOURCES = qarray_accum.c
 
 qlfqueue_SOURCES = qlfqueue.c
+
+qswsrqueue_SOURCES = qswsrqueue.c
 
 qdqueue_SOURCES = qdqueue.c
 

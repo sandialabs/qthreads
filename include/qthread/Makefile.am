@@ -16,6 +16,7 @@ pkginclude_HEADERS = \
 	qarray.h \
 	qdqueue.h \
 	qlfqueue.h \
+	qswsrqueue.h \
 	qloop.h \
 	qloop.hpp \
 	qpool.h \
