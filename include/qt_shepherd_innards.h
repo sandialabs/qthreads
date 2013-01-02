@@ -88,7 +88,6 @@ struct qthread_shepherd_s {
     size_t steal_elected;
     size_t steal_attempted;
     size_t steal_failed;
-    size_t steal_successful;
 #endif
 #ifdef QTHREAD_SHEPHERD_PROFILING
     qtimer_t total_time;        /* how much time the shepherd spent running */
