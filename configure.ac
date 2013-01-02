@@ -224,10 +224,10 @@ AC_ARG_ENABLE([profiling],
                                profiling reports Chapel interface usage.])],
               [for area in $(echo "$enable_profiling" | sed 's/,/ /g') ; do
                  case "$area" in
-                   shepherd)
+                   shepherd|shepherds)
                      enable_shepherd_profiling=yes
                      ;;
-                   feb|FEB)
+                   feb|FEB|febs|FEBs)
                      enable_feb_profiling=yes
                      ;;
                    steal)
@@ -236,13 +236,13 @@ AC_ARG_ENABLE([profiling],
                    cas_steal|cas-steal)
                      enable_cas_steal_profiling=yes
                      ;;
-                   threadc)
+                   threadc|tc)
                      enable_thread_count=yes
                      ;;
-                   sincs)
+                   sincs|sinc)
                      enable_sincs_profiling=yes
                      ;;
-                   teams)
+                   teams|team)
                      enable_teams_profiling=yes
                      ;;
                    spr)
@@ -250,7 +250,10 @@ AC_ARG_ENABLE([profiling],
                      ;;
                    chapel)
                      enable_chapel_profiling=yes
-                     
+                     ;;
+                   *)
+                     AC_MSG_ERROR([Unsupported profiling option ($area), supported options are: shepherd, feb, steal, cas_steal, threadc, sincs, teams, spr, chapel])
+                     ;;
                  esac
                done],
               [enable_profiling=none])
