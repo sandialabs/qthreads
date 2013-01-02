@@ -807,7 +807,6 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                 assert(q->tail->next == NULL);
                 assert(q->head->prev == NULL);
                 QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
-                if (steal_disable) { steal_disable = 0; }
                 qc->head    = qc->tail = NULL;
                 qc->qlength = qc->qlength_stealable = 0;
 #endif          /* if 0 */

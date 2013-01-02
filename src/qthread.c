@@ -1261,7 +1261,6 @@ int API_FUNC qthread_initialize(void)
         }
     }
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-    qthread_steal_disable();
 
     qthread_debug(CORE_DETAILS, "calling atexit\n");
     atexit(qthread_finalize);
