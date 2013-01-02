@@ -11,9 +11,13 @@ SUBDIRS += hpccg_openmp
 mantevo_benchmarks += hpccg_openmp/hpccg
 endif
 
-buildextra: $(mantevo_benchmarks)
 benchmarks: buildextra
 buildall: buildextra
+
+buildextra:
+	for DIR in $(SUBDIRS) ; do \
+		$(MAKE) -C $$DIR $$DIR ; \
+	done
 
 hpccg/hpccg:
 	$(MAKE) -C hpccg buildall
