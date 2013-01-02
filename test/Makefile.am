@@ -47,3 +47,7 @@ LDADD = $(qthreadlib)
 
 test_signal_SOURCES = test_signal.c
 test_signal_DEPENDENCIES = $(qthreadlib)
+
+clean-local:
+	$(MAKE) -C multinode clean
+	$(MAKE) -C benchmarks clean
