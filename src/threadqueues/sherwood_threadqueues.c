@@ -1169,7 +1169,7 @@ void INTERNAL qthread_steal_stat(void)
     assert(qlib);
     for (i = 0; i < qlib->nshepherds; i++) {
         fprintf(stdout,
-                "QTHREADS: shepherd %d - steals called:%ld elected:%ld attempted:%ld(failed:%ld successful:%ld tasks-stolen:%ld)\n",
+                "QTHREADS: shepherd %d - steals called:%ld elected:%ld attempted:%ld(failed:%ld successful:%ld) tasks-stolen:%ld\n",
                 qlib->shepherds[i].shepherd_id,
                 qlib->shepherds[i].steal_called,
                 qlib->shepherds[i].steal_elected,
