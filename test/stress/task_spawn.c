@@ -39,11 +39,13 @@ int main(int   argc,
 	aligned_t tmp = donecount;
         qthread_yield();
 	if (tmp != donecount) {
-	    iprintf("donecount = %u\n", (unsigned int)donecount);
+	    iprintf("donecount = %u, tmp = %u\n", (unsigned int)donecount, (unsigned)tmp);
 	}
     } while (donecount != count);
+    iprintf("manually spawned and sync'd %u threads\n", (unsigned)count);
 
     qt_loop(0, count, par_null_task, NULL);
+    iprintf("automatically spawned and sync'd %u threads\n", (unsigned)count);
 
     return 0;
 }
