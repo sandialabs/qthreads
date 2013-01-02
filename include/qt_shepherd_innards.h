@@ -85,6 +85,7 @@ struct qthread_shepherd_s {
 #endif
 #ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
     size_t steal_called;
+    size_t steal_elected;
     size_t steal_attempted;
     size_t steal_failed;
     size_t steal_successful;
