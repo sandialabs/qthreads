@@ -2482,6 +2482,8 @@ void INTERNAL qthread_exec(qthread_t    *t,
         }
 #endif
     } else {
+        assert(t->thread_state == QTHREAD_STATE_NEW);
+        t->thread_state = QTHREAD_STATE_RUNNING;
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
         unsigned int high = (((uintptr_t)t) >> 32) & 0xffffffff;
         unsigned int low  = ((uintptr_t)t) & 0xffffffff;
