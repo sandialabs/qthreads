@@ -135,8 +135,8 @@ static void qtb_internal_initialize_fixed(qt_barrier_t *b,
     //    b->downLock = calloc(b->allocatedSize, sizeof(int64_t));
 
     for (size_t i = 0; i < b->activeSize; i++) {
-        qthread_syncvar_empty(&b->upLock[i]);
-        qthread_syncvar_empty(&b->downLock[i]);
+        b->upLock[i] = SYNCVAR_STATIC_EMPTY_INITIALIZER;
+        b->downLock[i] = SYNCVAR_STATIC_EMPTY_INITIALIZER;
     }
 }                                      /*}}} */
 
