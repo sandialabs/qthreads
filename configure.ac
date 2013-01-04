@@ -748,7 +748,7 @@ AS_IF([test "x$enable_oversubscription" = "xyes"],
       [AC_DEFINE([QTHREAD_OVERSUBSCRIPTION], [1], [call into the OS scheduler when possible])
        enable_condwait_queue=yes
        enable_internal_spinlock=no
-       AC_CHECK_FUNCS([pthread_yield sched_yield])])
+       AC_CHECK_FUNCS([sched_yield])])
 
 AS_IF([test "x$enable_condwait_queue" = "x"],
       [case "$host" in
