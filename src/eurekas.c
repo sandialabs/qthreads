@@ -161,6 +161,8 @@ void INTERNAL qt_eureka_worker_init(void)
     signal(QT_ASSASSINATE_SIGNAL, hup_handler);
     signal(QT_EUREKA_SIGNAL, hup_handler);
     /* Yes, these could have default values, but because of lazy TLS allocation, these MUST be set manually */
+    TLS_INIT(eureka_block);
+    TLS_INIT(eureka_blocked_flag);
     TLS_SET(eureka_block, 0);
     TLS_SET(eureka_blocked_flag, 0);
 #if 0 // This is commented out because sigaltstack() does not appear to work with pthreads reliably
