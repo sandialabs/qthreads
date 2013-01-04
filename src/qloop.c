@@ -12,7 +12,6 @@
 #include <qthread/sinc_barrier.h>
 
 /* Internal Headers */
-#include "qt_barrier.h"
 #include "qt_initialized.h" // for qthread_library_initialized
 #include "qloop_innards.h"
 #include "qt_expect.h"
@@ -291,7 +290,7 @@ static void qt_loop_spawner(const size_t start,
             retptr = sync.syncvar = MALLOC(steps * sizeof(syncvar_t));
             assert(sync.syncvar);
             for (i = 0; i < (stop - start); ++i) {
-                sync.syncvar[i] = SYNCVAR_STATIC_EMPTY_INITIALIZER;
+                sync.syncvar[i] = SYNCVAR_EMPTY_INITIALIZER;
             }
             flags |= QTHREAD_SPAWN_RET_SYNCVAR_T;
             break;
@@ -606,7 +605,7 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
         qwa[i].sync_type    = sync_type;
         switch (sync_type) {
             case SYNCVAR_T:
-                sync.syncvar[i] = SYNCVAR_STATIC_EMPTY_INITIALIZER;
+                sync.syncvar[i] = SYNCVAR_EMPTY_INITIALIZER;
                 qwa[i].sync     = sync.syncvar;
                 break;
             case ALIGNED:
@@ -868,7 +867,7 @@ static QINLINE void qt_loopaccum_balance_inner(const size_t     start,
         qwa[i].sync_type    = sync_type;
         switch(sync_type) {
             case SYNCVAR_T:
-                sync.syncvar[i] = SYNCVAR_STATIC_EMPTY_INITIALIZER;
+                sync.syncvar[i] = SYNCVAR_EMPTY_INITIALIZER;
                 qwa[i].sync     = sync.syncvar;
                 break;
             case SINC_T:
@@ -1779,7 +1778,7 @@ static aligned_t qt_qsort_inner(const struct qt_qsort_iargs *a)
             /* now, spawn the next two iterations */
             {
                 struct qt_qsort_iargs na[2];
-                syncvar_t             rets[2] = { SYNCVAR_STATIC_INITIALIZER, SYNCVAR_STATIC_INITIALIZER };
+                syncvar_t             rets[2] = { SYNCVAR_INITIALIZER, SYNCVAR_INITIALIZER };
                 na[0].array  = array;
                 na[0].length = rightwall;
                 na[1].array  = array + rightwall;
@@ -1825,6 +1824,7 @@ void API_FUNC qt_qsort(double      *array,
  *    easier dynamic parallel load balancing
  *    facilitates nested loop handling by allowing shepherd additions after initial loop construction
  */
+#include "qt_barrier.h"
 
 static int activeParallel     = 0;
 int        activeParallelLoop = 0;
