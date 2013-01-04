@@ -287,9 +287,6 @@ static inline uint64_t qt_hashword(uint64_t key)
 #endif /* if (SIZEOF_VOIDP == 8) */
 } /*}}}*/
 
-const syncvar_t SYNCVAR_INITIALIZER       = SYNCVAR_STATIC_INITIALIZER;
-const syncvar_t SYNCVAR_EMPTY_INITIALIZER = SYNCVAR_STATIC_EMPTY_INITIALIZER;
-
 static void qt_syncvar_subsystem_shutdown(void)
 {
     qthread_debug(SYNCVAR_DETAILS, "destroy syncvar infrastructure arrays\n");

@@ -107,18 +107,16 @@ typedef struct _syncvar_s {
     } u;
 } syncvar_t;
 
-#define SYNCVAR_STATIC_INITIALIZER       { { 0 } }
-#define SYNCVAR_STATIC_EMPTY_INITIALIZER { .u.s = { .data = 0, .state = 2, .lock = 0 } }
-#define SYNCVAR_STATIC_INITIALIZE_TO(value)       { .u.s = { .data = value, .state = 0, .lock = 0 } }
-#define SYNCVAR_STATIC_EMPTY_INITIALIZE_TO(value) { .u.s = { .data = value, .state = 2, .lock = 0 } }
-extern const syncvar_t SYNCVAR_INITIALIZER;
-extern const syncvar_t SYNCVAR_EMPTY_INITIALIZER;
+#define SYNCVAR_STATIC_INITIALIZER       ((syncvar_t){ { 0 } })
+#define SYNCVAR_STATIC_EMPTY_INITIALIZER ((syncvar_t){ .u.s = { .data = 0, .state = 2, .lock = 0 } })
+#define SYNCVAR_STATIC_INITIALIZE_TO(value)       ((syncvar_t){ .u.s = { .data = value, .state = 0, .lock = 0 } })
+#define SYNCVAR_STATIC_EMPTY_INITIALIZE_TO(value) ((syncvar_t){ .u.s = { .data = value, .state = 2, .lock = 0 } })
 #define INT64TOINT60(x)       ((uint64_t)((x) & (uint64_t)0xfffffffffffffffULL))
 #define INT60TOINT64(x)       ((int64_t)(((x) & (uint64_t)0x800000000000000ULL) ? ((x) | (uint64_t)0xf800000000000000ULL) : (x)))
 #define DBL64TODBL60(in, out) do { memcpy(&(out), &(in), 8); out >>= 4; } while (0)
 #define DBL60TODBL64(in, out) do { in <<= 4; memcpy(&(out), &(in), 8); } while(0)
 
-#define SYNCVAR_STATIC_INITIALIZER { { 0 } }
+#define SYNCVAR_STATIC_INITIALIZER ((syncvar_t){ { 0 } })
 Q_ENDCXX /* */
 
 #ifdef QTHREAD_SST_PRIMITIVES

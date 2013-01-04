@@ -291,7 +291,7 @@ static void qt_loop_spawner(const size_t start,
             retptr = sync.syncvar = MALLOC(steps * sizeof(syncvar_t));
             assert(sync.syncvar);
             for (i = 0; i < (stop - start); ++i) {
-                sync.syncvar[i] = SYNCVAR_EMPTY_INITIALIZER;
+                sync.syncvar[i] = SYNCVAR_STATIC_EMPTY_INITIALIZER;
             }
             flags |= QTHREAD_SPAWN_RET_SYNCVAR_T;
             break;
@@ -606,7 +606,7 @@ static QINLINE void qt_loop_balance_inner(const size_t    start,
         qwa[i].sync_type    = sync_type;
         switch (sync_type) {
             case SYNCVAR_T:
-                sync.syncvar[i] = SYNCVAR_EMPTY_INITIALIZER;
+                sync.syncvar[i] = SYNCVAR_STATIC_EMPTY_INITIALIZER;
                 qwa[i].sync     = sync.syncvar;
                 break;
             case ALIGNED:
@@ -868,7 +868,7 @@ static QINLINE void qt_loopaccum_balance_inner(const size_t     start,
         qwa[i].sync_type    = sync_type;
         switch(sync_type) {
             case SYNCVAR_T:
-                sync.syncvar[i] = SYNCVAR_EMPTY_INITIALIZER;
+                sync.syncvar[i] = SYNCVAR_STATIC_EMPTY_INITIALIZER;
                 qwa[i].sync     = sync.syncvar;
                 break;
             case SINC_T:
