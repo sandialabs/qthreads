@@ -360,12 +360,13 @@ AC_ARG_ENABLE([rose-extensions],
               [EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --enable-interfaces=rose"])
 
 AC_ARG_ENABLE([rose-log-barrier],
-              [AS_HELP_STRING([--enable-rose-log-barrier],
-                              [Enable logrithmic barrier (replaces FEB version) dealing with the XOMP interface.])])
+              [],
+              [AC_MSG_WARN([Deprecated option; use --with-barrier=log])
+               with_barrier="log"])
 AC_ARG_ENABLE([log-barrier],
               [],
-              [AC_MSG_WARN([Deprecated option; use --enable-rose-log-barrier])])
-rose_log_barrier="$enable_log_barrier"
+              [AC_MSG_WARN([Deprecated option; use --with-barrier=log])
+               with_barrier="log"])
 
 AC_ARG_ENABLE([omp_affinity],
               [AS_HELP_STRING([--enable-omp-affinity],
@@ -400,6 +401,9 @@ AC_ARG_WITH([dict],
             [AS_HELP_STRING([--with-dict=[[type]]],
                             [Specify the dictionary implementation. Options are
                              'simple' (default), 'trie', and 'shavit'.])])
+AC_ARG_WITH([barrier],
+            [AS_HELP_STRING([--with-barrier=[[type]]],
+                            [Specify the barrier implementation. Options are 'feb' (default) and 'log'.])])
 
 AC_ARG_ENABLE([hpctoolkit],
               [AS_HELP_STRING([--enable-hpctoolkit-support],
@@ -779,11 +783,6 @@ AS_IF([test "x$enable_rose_extensions" = xyes],
 AS_IF([test "x$enable_hpctoolkit_support" = xyes],
       [AC_DEFINE([QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING], [1], [Support HPCToolkit stack unwinding])])
 
-AS_IF([test "x$enable_rose_log_barrier" = xyes],
-      [AC_DEFINE([QTHREAD_LOG_BARRIER], [1], [Define to use Logrithmic barrier inside XOMP support])
-       barrier_type=log],
-      [barrier_type=feb])
-
 AS_IF([test "x$enable_aligncheck" = "xyes"],
       [],
       [AC_DEFINE([QTHREAD_NOALIGNCHECK], [1], [Do not check the alignment of synchronization addresses])
@@ -894,6 +893,13 @@ AS_IF([test "x$with_sinc" = "x"],
 case "$with_sinc" in
  donecount|donecount_cas|snzi|original) ;;
  *) AC_MSG_ERROR([Unknown sinc option]) ;;
+esac
+
+AS_IF([test "x$with_barrier" = "x"],
+      [with_barrier="feb"])
+case "$with_barrier" in
+    feb|log|sinc) ;;
+    *) AC_MSG_ERROR([Unknown barrier implementation: "$with_barrier". Use 'feb' or 'log'.]) ;;
 esac
 
 AS_IF([test "x$with_dict" = "x"],
@@ -1124,7 +1130,7 @@ AC_SUBST(qthread_topo)
 AC_SUBST(with_scheduler)
 AC_SUBST(with_sinc)
 AC_SUBST(with_dict)
-AC_SUBST(barrier_type)
+AC_SUBST(with_barrier)
 AC_SUBST(OPENMP_CFLAGS)
 AC_SUBST(TBB_LIBS)
 AC_SUBST(CHPL_OPTS)
@@ -1242,6 +1248,7 @@ AS_IF([test "x$enable_lf_febs" = xno],
 echo    "Speed:"
 echo    "          Scheduler: $with_scheduler ($mts_string)"
 echo    "         Sinc Style: $with_sinc"
+echo    "      Barrier Style: $with_barrier"
 echo    "   Dictionary Style: $with_dict"
 echo    "    Lazy Thread IDs: $enable_lazy_threadids"
 echo    "       Pools/caches: $pool_string"
