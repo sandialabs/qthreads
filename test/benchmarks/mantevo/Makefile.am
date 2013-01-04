@@ -25,7 +25,7 @@ hpccg/hpccg:
 hpccg_openmp/hpccg:
 	$(MAKE) -C hpccg_openmp buildall
 
-INCLUDES = -I$(top_srcdir)/include
+AM_CPPFLAGS = -I$(top_srcdir)/include
 qthreadlib = $(top_builddir)/src/libqthread.la
 
 LDADD = $(qthreadlib)

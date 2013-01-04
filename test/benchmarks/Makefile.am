@@ -124,7 +124,7 @@ EXTRA_DIST = \
 			 pmea09/time_tbbq_sizes.cpp
 
 
-INCLUDES = -I$(top_srcdir)/include -I$(top_srcdir)/test/
+AM_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/test/
 outputdir = $(top_builddir)/src
 qthreadlib = $(outputdir)/libqthread.la
 utils_rnglib = $(top_builddir)/test/utils/rng/librng.la

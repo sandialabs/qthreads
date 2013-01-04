@@ -39,7 +39,7 @@ buildall: buildtests buildextra
 
 noinst_HEADERS = argparsing.h
 
-INCLUDES = -I$(top_srcdir)/include
+AM_CPPFLAGS = -I$(top_srcdir)/include
 outputdir = $(top_builddir)/src
 qthreadlib = $(outputdir)/libqthread.la
 
