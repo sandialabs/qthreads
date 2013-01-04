@@ -116,6 +116,13 @@ void API_FUNC qt_barrier_enter(qt_barrier_t *b)
     }
 }
 
+void API_FUNC qt_barrier_resize(qt_barrier_t *restrict b,
+                                size_t                 new_size)
+{
+    assert(b->blockers == 0);
+    b->max_blockers = new_size;
+}
+
 void API_FUNC qt_barrier_destroy(qt_barrier_t *b)
 {
 #ifndef UNPOOLED
@@ -156,9 +163,7 @@ void INTERNAL qt_global_barrier_destroy(void)
 
 void INTERNAL qt_global_barrier_resize(size_t size)
 {
-    qt_barrier_destroy(global_barrier);
-    global_barrier = NULL;
-    qt_global_barrier_init(size, 0);
+    qt_barrier_resize(global_barrier, size);
 }
 
 /* vim:set expandtab: */
