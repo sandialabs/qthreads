@@ -1279,7 +1279,7 @@ fixup_on_deck:
         c->tail = n->prev;
         n->prev = NULL;
         if (c->head == n) {
-            c->head == NULL;
+            c->head = NULL;
         }
         c->qlength--;
         c->qlength_stealable -= n->stealable;
