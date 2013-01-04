@@ -5,12 +5,13 @@
 # include "config.h"
 #endif
 
+#include "qthread/barrier.h"
+
 #include "qt_context.h"
 #include "qt_shepherd_innards.h"
 #include "qt_threadstate.h"
 #include "qt_blocking_structs.h"
 #include "qt_teams.h"
-#include "rose_sinc_barrier.h"  /* add to allow nested parallelism barriers -- akp 10/16/12 */
 
 #define ARGCOPY_DEFAULT   1024
 #define TASKLOCAL_DEFAULT 8
@@ -50,13 +51,13 @@ struct qthread_runtime_data_s {
     qthread_shepherd_t *shepherd_ptr;    /* the shepherd we run on */
     unsigned            tasklocal_size;
     int                 criticalsect; /* critical section depth */
-    qt_sinc_barrier_t  *barrier;      /* add to allow barriers to be stacked/nested parallelism - akp 10/16/12 */
+    qt_barrier_t       *barrier;      /* add to allow barriers to be stacked/nested parallelism - akp 10/16/12 */
 
 #ifdef QTHREAD_USE_VALGRIND
     unsigned int valgrind_stack_id;
 #endif
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-    int forCount;                                /* added akp */
+    int forCount;                     /* added akp */
 # ifdef QTHREAD_OMP_AFFINITY
     /* affinity for children created by this task */
     qthread_shepherd_id_t child_affinity;
@@ -84,8 +85,8 @@ struct qthread_s {
     enum threadstate           prev_thread_state;      /* save the previous thread state */
 #endif
     unsigned int               thread_id;
-    qthread_shepherd_id_t      target_shepherd;       /* the shepherd we'd rather run on; set to NO_SHEPHERD unless the thread either migrated or was spawned to a specific destination (aka the programmer expressed a desire for this thread to be somewhere) */
-    uint16_t                   flags; /* may not need all bits */
+    qthread_shepherd_id_t      target_shepherd; /* the shepherd we'd rather run on; set to NO_SHEPHERD unless the thread either migrated or was spawned to a specific destination (aka the programmer expressed a desire for this thread to be somewhere) */
+    uint16_t                   flags;           /* may not need all bits */
     uint8_t                    thread_state : 4;
 
     Q_ALIGNED(8) uint8_t data[]; /* this is where we stick argcopy and tasklocal data */

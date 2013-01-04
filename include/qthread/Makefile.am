@@ -8,7 +8,6 @@ pkginclude_HEADERS = \
 	allpairs.h \
 	cacheline.h \
 	dictionary.h \
-	feb_barrier.h \
 	futurelib.h \
 	macros.h \
 	io.h \
@@ -21,7 +20,6 @@ pkginclude_HEADERS = \
 	qloop.hpp \
 	qpool.h \
 	sinc.h \
-	sinc_barrier.h \
 	qt_syscalls.h \
 	qthread.h \
 	qthread.hpp \

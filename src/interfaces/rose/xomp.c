@@ -30,7 +30,6 @@
 #include "qt_touch.h"		       // for qthread_run_needed_task()
 #include "qt_task_counter.h"
 #include <qthread/qthread.h>           // for syncvar_t
-#include <qthread/feb_barrier.h>
 #include <qthread/omp_defines.h>       // Wrappered OMP functions from omp.h
 #include <qt_atomics.h>       // Wrappered OMP functions from omp.h
 #ifdef QTHREAD_OMP_AFFINITY
@@ -38,7 +37,6 @@
 #endif
 
 #include <rose_xomp.h>
-#include <qthread/sinc_barrier.h>
 #ifdef QTHREAD_RCRTOOL
 #include "rcrtool/qt_rcrtool.h"
 #include "maestro_sched.h"
@@ -709,20 +707,12 @@ static void waitCompletionOutstandingTasks(void)
 
 }
 
-qt_sinc_barrier_t *qt_get_barrier(void);  // warning message if left out -- I don't understand why - akp 10/16/12
-
 void XOMP_barrier(void)
 {
     waitCompletionOutstandingTasks(); // wait for outstanding tasks to complete
 
     size_t myid = qthread_barrier_id();
     qt_barrier_enter_id(qt_thread_barrier(), myid);
-/*
-    // need barrier for this parallel thread
-    qt_sinc_barrier_t *foo =  qt_get_barrier();
-    qt_sinc_barrier_enter(foo);
-*/
-
 }
 void XOMP_atomic_start(
     void)
@@ -1301,7 +1291,7 @@ void omp_set_num_threads (
     if (sinc_barrier != 0) qt_sinc_barrier_change(sinc_barrier,qt_num_threads_requested);
 
     if (qt_parallel_region()) qt_thread_barrier_resize(qt_num_threads_requested);
-    qt_barrier_resize(qt_num_threads_requested);
+    qt_global_barrier_resize(qt_num_threads_requested);
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_id_t newId = 0;

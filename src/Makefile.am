@@ -23,7 +23,6 @@ libqthread_la_SOURCES = \
 	qalloc.c \
 	qloop.c \
 	barrier/@with_barrier@.c \
-	barrier/sinc.c \
 	qutil.c \
 	syncvar.c \
 	teams.c

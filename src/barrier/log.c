@@ -61,12 +61,14 @@ qt_barrier_t *MBar = NULL;
 void INTERNAL qt_barrier_internal_init(void)
 { }
 
-void API_FUNC qt_barrier_resize(size_t size)
+void API_FUNC qt_barrier_resize(qt_barrier_t *b, size_t size)
 {                                      /*{{{ */
     assert(qthread_library_initialized);
-    qt_barrier_destroy(MBar);
+    printf("resize not implemented\n");
+    abort();
+    /*qt_barrier_destroy(MBar);
     MBar = NULL;
-    qt_global_barrier_init(size, 0);
+    qt_global_barrier_init(size, 0);*/
 }                                      /*}}} */
 
 void API_FUNC qt_barrier_destroy(qt_barrier_t *b)
@@ -308,7 +310,7 @@ void INTERNAL qt_global_barrier(void)
 }                                      /*}}} */
 
 // allow barrer initization from C
-void INTERNAL qt_global_barrier_init(int size,
+void INTERNAL qt_global_barrier_init(size_t size,
                                      int debug)
 {                                      /*{{{ */
     if (MBar == NULL) {
@@ -323,6 +325,13 @@ void INTERNAL qt_global_barrier_destroy(void)
         qt_barrier_destroy(MBar);
         MBar = NULL;
     }
+}                                      /*}}} */
+
+void qt_global_barrier_resize(size_t size)
+{                                      /*{{{ */
+    qt_barrier_destroy(MBar);
+    MBar = NULL;
+    qt_global_barrier_init(size, 0);
 }                                      /*}}} */
 
 #endif /* ifdef QT_GLOBAL_LOGBARRIER */

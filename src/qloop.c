@@ -9,7 +9,7 @@
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
 #include <qthread/qtimer.h>
-#include <qthread/sinc_barrier.h>
+#include <qthread/barrier.h>
 
 /* Internal Headers */
 #include "qt_initialized.h" // for qthread_library_initialized
@@ -18,6 +18,7 @@
 #include "qt_asserts.h"
 #include "qt_debug.h"
 #include "qt_aligned_alloc.h"
+#include "qt_barrier.h"
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 # include <stdio.h>
@@ -147,12 +148,12 @@ static aligned_t qloop_wrapper(struct qloop_wrapper_args *const restrict arg)
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 struct qloop_step_wrapper_args {
-    qt_loop_step_f     func;
-  size_t             startat, stopat, step, id, rootNum, maxPar;
-    void              *arg;
-    size_t             level;
-    qt_sinc_t         *sinc;
-    qt_sinc_barrier_t *barrier;
+    qt_loop_step_f func;
+    size_t         startat, stopat, step, id, rootNum, maxPar;
+    void          *arg;
+    size_t         level;
+    qt_sinc_t     *sinc;
+    qt_barrier_t  *barrier;
 };
 
 # ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
@@ -181,14 +182,15 @@ static aligned_t qloop_step_wrapper(struct qloop_step_wrapper_args *const restri
     MONITOR_ASM_LABEL(qthread_step_fence3); // add label for HPCToolkit unwind
 # endif
 
-#ifdef QTHREAD_RCRTOOL
-    size_t tot_workers = maestro_size()-1;  // need zero base count
-#else
-    size_t tot_workers = qthread_num_workers()-1; // I'm already here
-#endif
+# ifdef QTHREAD_RCRTOOL
+    size_t tot_workers = maestro_size() - 1;  // need zero base count
+# else
+    size_t tot_workers = qthread_num_workers() - 1; // I'm already here
+# endif
 
-    if (arg->maxPar < tot_workers) tot_workers = arg->maxPar -1; // if less work than workers adjust accordingly
-
+    if (arg->maxPar < tot_workers) {
+        tot_workers = arg->maxPar - 1;                           // if less work than workers adjust accordingly
+    }
     size_t level = arg->level;
     size_t my_id = arg->id;
     if ((level != 0) & (my_id == 0)) {
@@ -216,8 +218,8 @@ static aligned_t qloop_step_wrapper(struct qloop_step_wrapper_args *const restri
     MONITOR_ASM_LABEL(qthread_step_fence1); // add label for HPCToolkit unwind
 # endif
 
-    qt_sinc_barrier_t * saveBarrier = qt_get_barrier(); // save barrier in case of nesting
-    qt_set_barrier(arg->barrier); // set barrier for this function
+    qt_barrier_t *saveBarrier = qt_get_barrier(); // save barrier in case of nesting
+    qt_set_barrier(arg->barrier);                 // set barrier for this function
     arg->func(arg->arg);
     qt_set_barrier(saveBarrier); // reset barrier to original
 
@@ -459,22 +461,20 @@ static void qt_loop_step_inner(const size_t         start,
 # endif
     aligned_t rootNum = qthread_barrier_id(); // what thread is the root of the tree?
 
-    qt_sinc_barrier_t* barrier = (qt_sinc_barrier_t *)MALLOC(sizeof(qt_sinc_barrier_t ));
-#ifdef QTHREAD_RCRTOOL
+# ifdef QTHREAD_RCRTOOL
     int s = maestro_size();   // count here is one based
-#else
+# else
     int s = qthread_num_workers();
-#endif
-    int totThreads; 
+# endif
+    int totThreads;
     if (steps < s) {   // correct when less work than workers
-      totThreads = steps;
-    }
-    else {
-      totThreads = s;
+        totThreads = steps;
+    } else {
+        totThreads = s;
     }
     assert(s);
-    qt_sinc_t *my_sinc = qt_sinc_create(0, NULL, NULL, totThreads);
-    qt_sinc_barrier_init(barrier, totThreads);  // set barrier size -- count down release when returns 1
+    qt_sinc_t    *my_sinc = qt_sinc_create(0, NULL, NULL, totThreads);
+    qt_barrier_t *barrier = qt_barrier_create(totThreads, REGION_BARRIER);  // set barrier size -- count down release when returns 1
 
     qwa = (struct qloop_step_wrapper_args *)MALLOC(sizeof(struct qloop_step_wrapper_args) * steps);
     assert(qwa);
@@ -509,19 +509,19 @@ static void qt_loop_step_inner(const size_t         start,
          * }
          */
     } else {
-      qthread_fork_copyargs_to((qthread_f)qloop_step_wrapper,
-			       qwa,
-			       0,
-			       NULL,
-			       qthread_barrier_id()
-			       );
+        qthread_fork_copyargs_to((qthread_f)qloop_step_wrapper,
+                                 qwa,
+                                 0,
+                                 NULL,
+                                 qthread_barrier_id()
+                                 );
 
-      qthread_yield(); // switch to generated thread
-      //        qloop_step_wrapper(&qwa[0]); // use this thread as the root and start the
-                                     // others inside qloop_step_wrapper
-                                     // saves a timeout in the following loop to
-                                     // get the last thread working on the loop
-      // doesn't work if back to master ever returns to this level -- need fork to have context to return to -- akp 10/31/12
+        qthread_yield(); // switch to generated thread
+        //        qloop_step_wrapper(&qwa[0]); // use this thread as the root and start the
+        // others inside qloop_step_wrapper
+        // saves a timeout in the following loop to
+        // get the last thread working on the loop
+        // doesn't work if back to master ever returns to this level -- need fork to have context to return to -- akp 10/31/12
     }
 
     qt_sinc_wait(my_sinc, NULL);
@@ -530,9 +530,8 @@ static void qt_loop_step_inner(const size_t         start,
 # endif
     FREE(qwa, sizeof(struct qloop_step_wrapper_args) * steps);
     qt_sinc_destroy(my_sinc);
-    qt_sinc_barrier_destroy(barrier); // free internal barrier allocations
-    free(barrier); // free barrier for this loop
-}                                      /*}}} */
+    qt_barrier_destroy(barrier); // free internal barrier allocations
+}                                /*}}} */
 
 #endif /* QTHREAD_USE_ROSE_EXTENSIONS */
 
@@ -1043,7 +1042,7 @@ static Q_UNUSED QINLINE int qqloop_get_iterations_guided(qqloop_iteration_queue_
                 iterations = 1;
             }
             ret2 = qthread_cas(&(iq->start), ret, ret + iterations);
-            if (ret == ret2) break;
+            if (ret == ret2) { break; }
         }
     }
     if (ret < iq->stop) {
@@ -1824,7 +1823,7 @@ void API_FUNC qt_qsort(double      *array,
  *    easier dynamic parallel load balancing
  *    facilitates nested loop handling by allowing shepherd additions after initial loop construction
  */
-#include "qt_barrier.h"
+# include "qt_barrier.h"
 
 static int activeParallel     = 0;
 int        activeParallelLoop = 0;

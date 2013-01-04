@@ -137,8 +137,8 @@ void INTERNAL qt_global_barrier(void)
     qt_barrier_enter(global_barrier);
 }
 
-void INTERNAL qt_global_barrier_init(int size,
-                                     int debug)
+void INTERNAL qt_global_barrier_init(size_t size,
+                                     int    debug)
 {
     if (global_barrier == NULL) {
         global_barrier = qt_barrier_create(size, 0);
@@ -153,4 +153,12 @@ void INTERNAL qt_global_barrier_destroy(void)
         global_barrier = NULL;
     }
 }
+
+void INTERNAL qt_global_barrier_resize(size_t size)
+{
+    qt_barrier_destroy(global_barrier);
+    global_barrier = NULL;
+    qt_global_barrier_init(size, 0);
+}
+
 /* vim:set expandtab: */

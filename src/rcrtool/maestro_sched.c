@@ -6,7 +6,6 @@
 #include <stdio.h>
 #include "qthread_innards.h"           // for qthread_num_shepherds/qthread_num_workers
 #include "maestro_sched.h"
-#include <qthread/sinc_barrier.h>
 
 void saveEnergy(int64_t i);
 void resetEnergy(int64_t i);
@@ -57,7 +56,7 @@ int powerOff = 0;
 int threadsPowerActivePerSocket;
 int omp_in_parallel(void);
 
-qt_sinc_barrier_t * sinc_barrier = NULL;
+qt_barrier_t * sinc_barrier = NULL;
 
 int64_t maestro_change_size(void){
   int i;
@@ -67,8 +66,8 @@ int64_t maestro_change_size(void){
   if (!maestro_sched_init) ms_init();
   if (currentThreads != preferredThreads) {
     // printf("\nchange size old %ld  new %ld\n", currentThreads, preferredThreads);
-    qt_sinc_barrier_t *currentBarrier =  qt_get_barrier();
-    if (currentBarrier) qt_sinc_barrier_change(currentBarrier, preferredThreads);
+    qt_barrier_t *currentBarrier =  qt_get_barrier();
+    if (currentBarrier) qt_barrier_resize(currentBarrier, preferredThreads);
     int sheps = qthread_num_shepherds();
     for ( i = 0; i < sheps; i ++) {
       allowed_workers[i] = preferredThreadsPerShep;

@@ -47,12 +47,10 @@
 /******************************************************/
 #include "qthread/cacheline.h"
 #include "qthread/futurelib.h"
-#ifdef QTHREAD_USE_ROSE_EXTENSIONS
-# include "qthread/feb_barrier.h"   /* for barrier in parallel region defination */
-#endif
 #if (defined(QTHREAD_SHEPHERD_PROFILING) || defined(QTHREAD_FEB_PROFILING))
-# include <qthread/qtimer.h>
+# include "qthread/qtimer.h"
 #endif
+#include "qthread/barrier.h"
 
 /******************************************************/
 /* Internal Headers                                   */
@@ -3359,14 +3357,14 @@ void qthread_set_affinity(unsigned int shep)
 
 #endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
 
-void qt_set_barrier(qt_sinc_barrier_t *bar)
+void qt_set_barrier(qt_barrier_t *bar)
 {                      /*{{{ */
     qthread_t *me = qthread_internal_self();
 
     me->rdata->barrier = bar;
 }                      /*}}} */
 
-qt_sinc_barrier_t *qt_get_barrier()
+qt_barrier_t *qt_get_barrier()
 {                      /*{{{ */
     qthread_t *me = qthread_internal_self();
 
