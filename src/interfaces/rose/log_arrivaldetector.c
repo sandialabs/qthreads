@@ -10,8 +10,8 @@
 #include "qt_debug.h"	               // for qthread_debug()
 
 #include <qthread/qloop.h>
+#include <qthread/barrier.h>
 #include "qt_arrive_first.h"
-#include "qt_barrier.h"
 #include "qt_asserts.h"
 #include "qloop_innards.h"	       /* for cnbWorkers_ and cnbTimeMin_ */
 
@@ -213,13 +213,9 @@ int64_t qt_global_arrive_first(
 {				       /*{{{ */
     int64_t t;
     t = qt_arrive_first_enter(MArrFirst, shep);
-#ifdef QTHREAD_LOG_BARRIER
     size_t myid = qthread_barrier_id();
-    qt_barrier_enter(qt_thread_barrier(),myid);
-#else
-    qt_feb_barrier_enter(qt_thread_barrier());
-#endif
-      return t;
+    qt_barrier_enter_id(qt_thread_barrier(),myid);
+    return t;
 }				       /*}}} */
 
 
@@ -230,11 +226,7 @@ void qt_global_arrive_first_init(
 {				       /*{{{ */
 
     if (MArrFirst == NULL) {
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 	*cnbWorkers_() = qthread_num_workers();
-#else
-	*cnbWorkers_() = qthread_num_shepherds();
-#endif
 	*cnbTimeMin_() = 1.0;
 	MArrFirst = qt_arrive_first_create(size, REGION_BARRIER, debug);
 	assert(MArrFirst);

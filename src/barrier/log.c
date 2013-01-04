@@ -7,10 +7,18 @@
 // full/empty implementation, but orginal developement predated it's inclusion
 // here and had no available F/E implementation - 12/17/09 akp
 
+/* System Headers */
 #include <stdlib.h>
-#include "qthread-int.h"
 #include <stdio.h>
 
+/* System Compatibility Header */
+#include "qthread-int.h"
+
+/* Public Headers */
+#include "qthread/qthread.h"
+#include "qthread/barrier.h"
+
+/* Internal Headers */
 #include "qt_barrier.h"
 #include "qt_asserts.h"
 #include "qt_atomics.h"
@@ -50,6 +58,9 @@ static void qtb_internal_down(qt_barrier_t *b,
 /* global barrier */
 qt_barrier_t *MBar = NULL;
 
+void INTERNAL qt_barrier_internal_init(void)
+{ }
+
 void API_FUNC qt_barrier_resize(size_t size)
 {                                      /*{{{ */
     assert(qthread_library_initialized);
@@ -71,9 +82,8 @@ void API_FUNC qt_barrier_destroy(qt_barrier_t *b)
     free(b);
 }                                      /*}}} */
 
-qt_barrier_t API_FUNC *qt_barrier_create(int              size,
-                                         qt_barrier_btype type,
-                                         int              debug)
+qt_barrier_t API_FUNC *qt_barrier_create(size_t           size,
+                                         qt_barrier_btype type)
 {                                      /*{{{ */
     qt_barrier_t *b = calloc(1, sizeof(qt_barrier_t));
 
@@ -84,10 +94,10 @@ qt_barrier_t API_FUNC *qt_barrier_create(int              size,
         assert(type == REGION_BARRIER);
         switch (type) {
             case REGION_BARRIER:
-                qtb_internal_initialize_fixed(b, size, debug);
+                qtb_internal_initialize_fixed(b, size, 0);
                 break;
             default:
-                qtb_internal_initialize_variable(b, size, debug);
+                qtb_internal_initialize_variable(b, size, 0);
                 break;
         }
     }
@@ -135,14 +145,14 @@ static void qtb_internal_initialize_fixed(qt_barrier_t *b,
     //    b->downLock = calloc(b->allocatedSize, sizeof(int64_t));
 
     for (size_t i = 0; i < b->activeSize; i++) {
-        b->upLock[i] = SYNCVAR_STATIC_EMPTY_INITIALIZER;
-        b->downLock[i] = SYNCVAR_STATIC_EMPTY_INITIALIZER;
+        b->upLock[i] = SYNCVAR_EMPTY_INITIALIZER;
+        b->downLock[i] = SYNCVAR_EMPTY_INITIALIZER;
     }
 }                                      /*}}} */
 
 // dump function for debugging -  print barrier array contents
-void qt_barrier_dump(qt_barrier_t *b,
-                     enum dumpType dt)
+void qt_barrier_dump(qt_barrier_t    *b,
+                     qt_barrier_dtype dt)
 {                                      /*{{{ */
     size_t       i, j;
     const size_t activeSize = b->activeSize;
@@ -268,8 +278,13 @@ static void qtb_internal_up(qt_barrier_t *b,
 
 // actual barrier entry point
 
-void API_FUNC qt_barrier_enter(qt_barrier_t         *b,
-                               qthread_shepherd_id_t shep)
+void API_FUNC qt_barrier_enter(qt_barrier_t *b)
+{                                      /*{{{ */
+    qt_barrier_enter_id(b, qthread_worker(NULL));
+}                                      /*}}} */
+
+void API_FUNC qt_barrier_enter_id(qt_barrier_t *b,
+                                  size_t        id)
 {                                      /*{{{ */
     // should be dual versions  1) all active threads barrier
     //                          2) all active streams
@@ -280,7 +295,7 @@ void API_FUNC qt_barrier_enter(qt_barrier_t         *b,
     //    int64_t val = b->upLock[shep] + 1;
 
     if (b->activeSize <= 1) { return; }
-    qtb_internal_up(b, shep, val, 0);
+    qtb_internal_up(b, id, val, 0);
 }                                      /*}}} */
 
 // used indirectly by omp barrier calls (initially - others I hope)
@@ -289,13 +304,7 @@ void API_FUNC qt_barrier_enter(qt_barrier_t         *b,
 #ifdef QT_GLOBAL_LOGBARRIER
 void INTERNAL qt_global_barrier(void)
 {                                      /*{{{ */
-# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-    const qthread_worker_id_t workerid = qthread_worker(NULL);
-    qt_barrier_enter(MBar, workerid);
-# else
-    const qthread_shepherd_id_t shep = qthread_shep();
-    qt_barrier_enter(MBar, shep);
-# endif
+    qt_barrier_enter(MBar);
 }                                      /*}}} */
 
 // allow barrer initization from C
@@ -303,7 +312,7 @@ void INTERNAL qt_global_barrier_init(int size,
                                      int debug)
 {                                      /*{{{ */
     if (MBar == NULL) {
-        MBar = qt_barrier_create(size, REGION_BARRIER, debug);
+        MBar = qt_barrier_create(size, REGION_BARRIER);
         assert(MBar);
     }
 }                                      /*}}} */

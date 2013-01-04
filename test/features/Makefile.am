@@ -34,9 +34,6 @@ TESTS += cxx_futurelib \
 		 cxx_qt_loop \
 		 cxx_qt_loop_balance
 endif
-if COMPILE_ROSE_EXTENSIONS
-TESTS += log_barrier
-endif
 
 check_PROGRAMS = $(TESTS)
 
@@ -89,8 +86,6 @@ qlfqueue_SOURCES = qlfqueue.c
 qswsrqueue_SOURCES = qswsrqueue.c
 
 qdqueue_SOURCES = qdqueue.c
-
-log_barrier_SOURCES = log_barrier.c
 
 allpairs_SOURCES = allpairs.c
 

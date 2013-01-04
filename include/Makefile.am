@@ -28,7 +28,6 @@ noinst_HEADERS = \
 	qt_debug.h \
 	qt_envariables.h \
 	qt_eurekas.h \
-	qt_feb_barrier.h \
 	qt_filters.h \
 	qt_gcd.h \
 	qt_hash.h \

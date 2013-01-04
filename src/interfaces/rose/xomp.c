@@ -717,7 +717,7 @@ void XOMP_barrier(void)
 
 #ifdef QTHREAD_LOG_BARRIER
     size_t myid = qthread_barrier_id();
-    qt_barrier_enter(qt_thread_barrier(),myid);
+    qt_barrier_enter_id(qt_thread_barrier(),myid);
 #else
     // need barrier for this parallel thread
     qt_sinc_barrier_t *foo =  qt_get_barrier();

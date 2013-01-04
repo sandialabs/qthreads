@@ -63,9 +63,8 @@
 #include "qt_asserts.h"
 #include "qthread_innards.h"
 #include "qt_prefetch.h"
-#include "qt_feb_barrier.h"
+#include "qt_barrier.h"
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
-# include "qt_barrier.h"
 # include "qt_arrive_first.h"
 # include "qt_task_counter.h"
 #endif
@@ -1266,7 +1265,7 @@ int API_FUNC qthread_initialize(void)
     atexit(qthread_finalize);
 
     qthread_debug(CORE_DETAILS, "calling component init functions\n");
-    qt_feb_barrier_internal_init();
+    qt_barrier_internal_init();
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 # ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 #  ifdef QTHREAD_RCRTOOL
@@ -3158,21 +3157,13 @@ int API_FUNC qthread_migrate_to(const qthread_shepherd_id_t shepherd)
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 /* These are just accessor functions */
-# ifdef QTHREAD_LOG_BARRIER
 qt_barrier_t *qt_thread_barrier()            // get barrier active for this thread
-# else
-qt_feb_barrier_t * qt_thread_barrier()            // get barrier active for this thread
-# endif
 {                      /*{{{ */
     return qt_parallel_region()->barrier;
 }                      /*}}} */
 # ifdef QTHREAD_USE_ROSE_EXTENSIONS
 /* These are just accessor functions */
-#  ifdef QTHREAD_LOG_BARRIER
 qt_barrier_t *qt_thread_barrier_resize(size_t size)  // resize barrier for current parallel region
-#  else
-qt_feb_barrier_t * qt_thread_barrier_resize(size_t size) // resize barrier for current parallel region
-#  endif
 {                      /*{{{ */
 #  ifdef QTHREAD_LOG_BARRIER
     qt_barrier_destroy(qt_parallel_region()->barrier);
@@ -3219,11 +3210,7 @@ int qt_omp_parallel_region_create()
 
     workers = qthread_num_workers();
 
-# ifdef QTHREAD_LOG_BARRIER
     qt_barrier_t *gb = qt_barrier_create(workers, REGION_BARRIER, 0); // allocate barrier for region (shepherds)
-# else
-    qt_feb_barrier_t *gb = qt_feb_barrier_create(workers); // allocate barrier for region (sheperds)
-# endif /* ifdef QTHREAD_LOG_BARRIER */
 
     qthread_t *t = qthread_internal_self();
     if (t->currentParallelRegion != NULL) { // we have nested parallelism
@@ -3271,11 +3258,7 @@ void qt_omp_parallel_region_destroy()
     qt_free_loop(pr->loopList);
 
     if (pr->barrier) {
-#  ifdef QTHREAD_LOG_BARRIER
         qt_barrier_destroy(pr->barrier);
-#  else
-        qt_feb_barrier_destroy(pr->barrier);
-#  endif
     }
     myshep->currentParallelRegion = pr->last;
 

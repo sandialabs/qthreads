@@ -362,6 +362,10 @@ AC_ARG_ENABLE([rose-extensions],
 AC_ARG_ENABLE([rose-log-barrier],
               [AS_HELP_STRING([--enable-rose-log-barrier],
                               [Enable logrithmic barrier (replaces FEB version) dealing with the XOMP interface.])])
+AC_ARG_ENABLE([log-barrier],
+              [],
+              [AC_MSG_WARN([Deprecated option; use --enable-rose-log-barrier])])
+rose_log_barrier="$enable_log_barrier"
 
 AC_ARG_ENABLE([omp_affinity],
               [AS_HELP_STRING([--enable-omp-affinity],
@@ -775,8 +779,10 @@ AS_IF([test "x$enable_rose_extensions" = xyes],
 AS_IF([test "x$enable_hpctoolkit_support" = xyes],
       [AC_DEFINE([QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING], [1], [Support HPCToolkit stack unwinding])])
 
-AS_IF([test "x$enable_log_barrier" = xyes],
-      [AC_DEFINE([QTHREAD_LOG_BARRIER], [1], [Define to use Logrithmic barrier inside XOMP support])])
+AS_IF([test "x$enable_rose_log_barrier" = xyes],
+      [AC_DEFINE([QTHREAD_LOG_BARRIER], [1], [Define to use Logrithmic barrier inside XOMP support])
+       barrier_type=log],
+      [barrier_type=feb])
 
 AS_IF([test "x$enable_aligncheck" = "xyes"],
       [],
@@ -1118,6 +1124,7 @@ AC_SUBST(qthread_topo)
 AC_SUBST(with_scheduler)
 AC_SUBST(with_sinc)
 AC_SUBST(with_dict)
+AC_SUBST(barrier_type)
 AC_SUBST(OPENMP_CFLAGS)
 AC_SUBST(TBB_LIBS)
 AC_SUBST(CHPL_OPTS)
@@ -1142,9 +1149,9 @@ AM_CONDITIONAL([COMPILE_MULTINODE], [test "$enable_multinode" = "yes"])
 AM_CONDITIONAL([WANT_PORTALS_SHMEM_RUNTIME], [test "$with_multinode_runtime" = "shmemrt"])
 AM_CONDITIONAL([WANT_MPI_RUNTIME], [test "$with_multinode_runtime" = "mpi"])
 AM_CONDITIONAL([WANT_PMI_RUNTIME], [test "$with_multinode_runtime" = "pmi"])
-AM_CONDITIONAL([COMPILE_OMP_BENCHMARKS], [test "$have_openmp" = "yes"])
-AM_CONDITIONAL([COMPILE_TBB_BENCHMARKS], [test "$have_tbb" = "yes"])
-AM_CONDITIONAL([COMPILE_CILK_BENCHMARKS], [test "$have_cilk" = "yes"])
+AM_CONDITIONAL([COMPILE_OMP_BENCHMARKS], [test "x$have_openmp" = "xyes"])
+AM_CONDITIONAL([COMPILE_TBB_BENCHMARKS], [test "x$have_tbb" = "xyes"])
+AM_CONDITIONAL([COMPILE_CILK_BENCHMARKS], [test "x$have_cilk" = "xyes"])
 AM_CONDITIONAL([COMPILE_LF_HASH], [test "x$enable_lf_febs" = "xyes"])
 
 AC_CONFIG_HEADERS([include/config.h include/qthread/common.h])

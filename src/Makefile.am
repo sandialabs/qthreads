@@ -22,8 +22,8 @@ libqthread_la_SOURCES = \
 	locks.c \
 	qalloc.c \
 	qloop.c \
-	feb_barrier.c \
-	sinc_barrier.c \
+	barrier/@barrier_type@.c \
+	barrier/sinc.c \
 	qutil.c \
 	syncvar.c \
 	teams.c
@@ -69,7 +69,7 @@ endif
 #   and reset the revision and age numbers to 0
 # - If you support all the same functions (just bugfixes or whatnot), increment
 #   the revision number
-libqthread_la_LDFLAGS = -version-info 15:0:0 -no-undefined
+libqthread_la_LDFLAGS = -version-info 16:0:1 -no-undefined
 
 libqthread_la_LIBADD =
 libqthread_la_DEPENDENCIES =
