@@ -107,16 +107,20 @@ typedef struct _syncvar_s {
     } u;
 } syncvar_t;
 
-#define SYNCVAR_STATIC_INITIALIZER       ((syncvar_t){ { 0 } })
-#define SYNCVAR_STATIC_EMPTY_INITIALIZER ((syncvar_t){ .u.s = { .data = 0, .state = 2, .lock = 0 } })
-#define SYNCVAR_STATIC_INITIALIZE_TO(value)       ((syncvar_t){ .u.s = { .data = value, .state = 0, .lock = 0 } })
-#define SYNCVAR_STATIC_EMPTY_INITIALIZE_TO(value) ((syncvar_t){ .u.s = { .data = value, .state = 2, .lock = 0 } })
+#define SYNCVAR_STATIC_INITIALIZER                { { 0 } }
+#define SYNCVAR_STATIC_EMPTY_INITIALIZER          { .u.s = { .data = 0, .state = 2, .lock = 0 } }
+#define SYNCVAR_STATIC_INITIALIZE_TO(value)       { .u.s = { .data = value, .state = 0, .lock = 0 } }
+#define SYNCVAR_STATIC_EMPTY_INITIALIZE_TO(value) { .u.s = { .data = value, .state = 2, .lock = 0 } }
+#define SYNCVAR_INITIALIZER                ((syncvar_t)SYNCVAR_STATIC_INITIALIZER)
+#define SYNCVAR_EMPTY_INITIALIZER          ((syncvar_t)SYNCVAR_STATIC_EMPTY_INITIALIZER)
+#define SYNCVAR_INITIALIZE_TO(value)       ((syncvar_t)SYNCVAR_STATIC_INITIALIZE_TO(value))
+#define SYNCVAR_EMPTY_INITIALIZE_TO(value) ((syncvar_t)SYNCVAR_STATIC_EMPTY_INITIALIZE_TO(value))
+
 #define INT64TOINT60(x)       ((uint64_t)((x) & (uint64_t)0xfffffffffffffffULL))
 #define INT60TOINT64(x)       ((int64_t)(((x) & (uint64_t)0x800000000000000ULL) ? ((x) | (uint64_t)0xf800000000000000ULL) : (x)))
 #define DBL64TODBL60(in, out) do { memcpy(&(out), &(in), 8); out >>= 4; } while (0)
 #define DBL60TODBL64(in, out) do { in <<= 4; memcpy(&(out), &(in), 8); } while(0)
 
-#define SYNCVAR_STATIC_INITIALIZER ((syncvar_t){ { 0 } })
 Q_ENDCXX /* */
 
 #ifdef QTHREAD_SST_PRIMITIVES
@@ -127,6 +131,24 @@ Q_STARTCXX /* */
 
 typedef unsigned short qthread_shepherd_id_t;
 typedef unsigned short qthread_worker_id_t;
+
+#ifdef QTHREAD_USE_ROSE_EXTENSIONS
+# include <qthread/barrier.h>
+
+struct qthread_parallel_region_s {
+    struct qthread_parallel_region_s *last;
+    void                             *forLoop;  // current loop really qqloop_step_handle_t * -- void to save include ordering problems
+    void                             *loopList; // really list of qqloop_step_handle_t * -- void to save include ordering problems
+    qt_barrier_t                     *barrier;
+    int                              *currentLoopNum;     // really an array of values (number workers long)
+                                                          //   which Loop current active
+    int                               clsSize;            // size of following array
+    void                            **currentLoopStruct;  // really an array of pointers to loop
+                                                          //    structures for use by omp
+};
+typedef struct qthread_parallel_region_s qthread_parallel_region_t;
+
+#endif // ifdef QTHREAD_USE_ROSE_EXTENSIONS
 
 /* for convenient arguments to qthread_fork */
 typedef aligned_t (*qthread_f)(void *arg);
@@ -162,35 +184,6 @@ void qthread_enable_shepherd(qthread_shepherd_id_t shep);
 /* add calls to allow workers in addition to shepherds to be disabled and renumber */
 int  qthread_disable_worker(qthread_worker_id_t worker);
 void qthread_enable_worker(qthread_worker_id_t worker);
-# ifdef QTHREAD_USE_ROSE_EXTENSIONS
-#ifdef QTHREAD_LOG_BARRIER
-# include <qt_barrier.h>
-#else
-# include <qthread/feb_barrier.h>
-#endif
-
-struct qthread_parallel_region_s {
-    struct qthread_parallel_region_s *last;
-    void                             *forLoop;  // current loop really qqloop_step_handle_t * -- void to save include ordering problems
-    void                             *loopList; // really list of qqloop_step_handle_t * -- void to save include ordering problems
-# ifdef QTHREAD_LOG_BARRIER
-    qt_barrier_t                     *barrier;
-# else
-    qt_feb_barrier_t                 *barrier;
-# endif
-    int                              *currentLoopNum;     // really an array of values (number workers long)
-                                                          //   which Loop current active
-    int                               clsSize;            // size of following array
-    void                            **currentLoopStruct;  // really an array of pointers to loop
-                                                          //    structures for use by omp
-};
-typedef struct qthread_parallel_region_s qthread_parallel_region_t;
-
-void qthread_pack_workerid(const qthread_worker_id_t worker,
-                           const qthread_worker_id_t newId);
-void       qthread_parent_yield_state(void);       /* save thread state enum and then set PARENT_YIELD */
-aligned_t *qthread_task_counter(void);             /* task_counter CAS reference */
-# endif
 
 /* this function allows a qthread to specifically give up control of the
  * processor even though it has not blocked. This is useful for things like
@@ -321,13 +314,8 @@ qthread_worker_id_t   qthread_worker_unique(qthread_shepherd_id_t *s);
 # ifdef QTHREAD_USE_ROSE_EXTENSIONS
 unsigned                          qthread_barrier_id(void);
 struct qthread_parallel_region_s *qt_parallel_region(void);
-#  ifdef QTHREAD_LOG_BARRIER
 qt_barrier_t *qt_thread_barrier(void);
 qt_barrier_t *qt_thread_barrier_resize(size_t size);
-#  else
-qt_feb_barrier_t *qt_thread_barrier(void);
-qt_feb_barrier_t *qt_thread_barrier_resize(size_t size);
-#  endif
 void *qt_next_loop(void *loop);
 int   qt_omp_parallel_region_create(void);
 void  qt_omp_parallel_region_destroy(void);
