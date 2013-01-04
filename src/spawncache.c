@@ -26,19 +26,23 @@ static void qt_spawncache_shutdown(void)
 {
     qthread_debug(CORE_DETAILS, "destroy thread-local task queue\n");
     void *freeme = TLS_GET(spawn_cache);
-    qthread_internal_aligned_free(freeme, qthread_cacheline());
+    if (freeme) {
+        qthread_internal_aligned_free(freeme, qthread_cacheline());
+    }
     TLS_DELETE(spawn_cache);
 }
 
 #ifndef TLS
 static void qt_threadqueue_private_destroy(void *q)
 {
-    assert(((qt_threadqueue_private_t *)q)->head == NULL &&
-           ((qt_threadqueue_private_t *)q)->tail == NULL &&
-           ((qt_threadqueue_private_t *)q)->qlength == 0 &&
-           ((qt_threadqueue_private_t *)q)->qlength_stealable == 0);
+    if (q) {
+        assert(((qt_threadqueue_private_t *)q)->head == NULL &&
+               ((qt_threadqueue_private_t *)q)->tail == NULL &&
+               ((qt_threadqueue_private_t *)q)->qlength == 0 &&
+               ((qt_threadqueue_private_t *)q)->qlength_stealable == 0);
 
-    qthread_internal_aligned_free(q, qthread_cacheline());
+        qthread_internal_aligned_free(q, qthread_cacheline());
+    }
 }
 
 #endif /* ifndef TLS */
@@ -97,10 +101,10 @@ void INTERNAL qt_spawncache_filter(qt_threadqueue_filter_f f)
 {
     qt_threadqueue_private_t *cache = TLS_GET(spawn_cache);
 
-    if (cache)
+    if (cache) {
         qt_threadqueue_private_filter(cache, f);
+    }
 }
-
 
 int INTERNAL qt_spawncache_flush(qt_threadqueue_t *q)
 {
