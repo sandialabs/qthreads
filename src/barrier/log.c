@@ -317,7 +317,7 @@ void INTERNAL qt_global_barrier_init(int size,
     }
 }                                      /*}}} */
 
-void INTERNAL qt_global_barrier_destroy()
+void INTERNAL qt_global_barrier_destroy(void)
 {                                      /*{{{ */
     if (MBar) {
         qt_barrier_destroy(MBar);

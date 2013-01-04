@@ -35,7 +35,8 @@ static union {
     void    *vp;
 } fbp;
 QTHREAD_CASLOCK_EXPLICIT_DECL(fbp_caslock)
-static Q_UNUSED qt_barrier_t * global_barrier = NULL;
+
+static qt_barrier_t * global_barrier = NULL;
 
 #ifndef UNPOOLED
 static void cleanup_barrier(void)
@@ -130,19 +131,17 @@ void API_FUNC qt_barrier_destroy(qt_barrier_t *b)
 #endif
 }
 
-#ifdef QTHREAD_GLOBAL_FEB_BARRIER
-void INTERNAL qt_global_barrier(qthread_t *me)
+void INTERNAL qt_global_barrier(void)
 {
     assert(global_barrier);
-    qt_barrier_enter(me, global_barrier);
+    qt_barrier_enter(global_barrier);
 }
 
-// allow barrer initization from C
 void INTERNAL qt_global_barrier_init(int size,
                                      int debug)
 {
     if (global_barrier == NULL) {
-        global_barrier = qt_barrier_create(NULL, size);
+        global_barrier = qt_barrier_create(size, 0);
         assert(global_barrier);
     }
 }
@@ -154,6 +153,4 @@ void INTERNAL qt_global_barrier_destroy(void)
         global_barrier = NULL;
     }
 }
-
-#endif /* ifdef QTHREAD_GLOBAL_FEB_BARRIER */
 /* vim:set expandtab: */

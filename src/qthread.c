@@ -3165,13 +3165,13 @@ qt_barrier_t *qt_thread_barrier()            // get barrier active for this thre
 /* These are just accessor functions */
 qt_barrier_t *qt_thread_barrier_resize(size_t size)  // resize barrier for current parallel region
 {                      /*{{{ */
-#  ifdef QTHREAD_LOG_BARRIER
+//#  ifdef QTHREAD_LOG_BARRIER
     qt_barrier_destroy(qt_parallel_region()->barrier);
-    qt_parallel_region()->barrier = qt_barrier_create(size, REGION_BARRIER, 0);
-#  else
+    qt_parallel_region()->barrier = qt_barrier_create(size, REGION_BARRIER);
+/*#  else
     qt_feb_barrier_destroy(qt_parallel_region()->barrier);
     qt_parallel_region()->barrier = qt_feb_barrier_create(size);
-#  endif /* ifdef QTHREAD_LOG_BARRIER */
+#  endif*/ /* ifdef QTHREAD_LOG_BARRIER */
     return qt_parallel_region()->barrier;
 }                      /*}}} */
 # endif /* ifdef QTHREAD_USE_ROSE_EXTENSIONS */
@@ -3210,7 +3210,7 @@ int qt_omp_parallel_region_create()
 
     workers = qthread_num_workers();
 
-    qt_barrier_t *gb = qt_barrier_create(workers, REGION_BARRIER, 0); // allocate barrier for region (shepherds)
+    qt_barrier_t *gb = qt_barrier_create(workers, REGION_BARRIER); // allocate barrier for region (shepherds)
 
     qthread_t *t = qthread_internal_self();
     if (t->currentParallelRegion != NULL) { // we have nested parallelism
