@@ -64,7 +64,7 @@ typename T::acctype qt_loopaccum_balance(size_t start,
         const T& obj)
 {
     typename T::acctype accumulate(T::identity);
-    qt_loopaccum_balance(start, stop, sizeof(typename T::acctype), &accumulate, qloop_accum_cpp_wrapper<T>, &(const_cast<T&>(obj)), &(T::accumulate));
+    qt_loopaccum_balance(start, stop, sizeof(typename T::acctype), &accumulate, qloop_accum_cpp_wrapper<T>, &(const_cast<T&>(obj)), (qt_accum_f)(T::accumulate));
     return accumulate;
 }
 

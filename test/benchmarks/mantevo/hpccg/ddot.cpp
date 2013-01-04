@@ -55,15 +55,7 @@ public: ddot_square(const double *const X) :
         for (size_t i = startat + 1; i < stopat; i++) {
             sum += x[i] * x[i];
         }
-        union {
-            double   d;
-            uint64_t u;
-        } tmp1, tmp2;
-        tmp1.d = tmp2.d = ret;
-        do {
-            tmp1.d += sum;
-            tmp1.u  = qthread_cas((uint64_t *)&ret, tmp2.u, tmp1.u);
-        } while (tmp1.u != tmp2.u);
+        qthread_dincr(&ret, sum);
     }
 
     double ret;
@@ -84,15 +76,7 @@ public: ddot_mult(const double *const X,
         for (size_t i = startat + 1; i < stopat; i++) {
             sum += x[i] * y[i];
         }
-        union {
-            double   d;
-            uint64_t u;
-        } tmp1, tmp2;
-        tmp1.d = tmp2.d = ret;
-        do {
-            tmp1.d += sum;
-            tmp1.u  = qthread_cas((uint64_t *)&ret, tmp2.u, tmp1.u);
-        } while (tmp1.u != tmp2.u);
+        qthread_dincr(&ret, sum);
     }
 
     double ret;

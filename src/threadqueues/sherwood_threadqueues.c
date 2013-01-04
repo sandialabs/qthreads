@@ -43,10 +43,6 @@ struct _qt_threadqueue {
                                                                  */
 #ifdef STEAL_PROFILE
     aligned_t steal_amount_stolen;
-    aligned_t steal_called;
-    aligned_t steal_attempted;
-    aligned_t steal_failed;
-    aligned_t steal_successful;
 #endif
 
     QTHREAD_TRYLOCK_TYPE qlock;
@@ -57,14 +53,18 @@ static long      steal_chunksize = 0;
 
 #ifdef STEAL_PROFILE
 # define STEAL_CALLED(shep)     qthread_incr( & ((shep)->steal_called), 1)
+# define STEAL_ELECTED(shep)    qthread_incr( & ((shep)->steal_elected), 1)
 # define STEAL_ATTEMPTED(shep)  qthread_incr( & ((shep)->steal_attempted), 1)
-# define STEAL_SUCCESSFUL(shep) qthread_incr( & ((shep)->steal_successful), 1)
+# define STEAL_SUCCESSFUL(shep) do {} while (0)
 # define STEAL_FAILED(shep)     qthread_incr( & ((shep)->steal_failed), 1)
+# define STEAL_AMOUNT(q, ct)    qthread_incr( &((q)->steal_amount_stolen), ct)
 #else
 # define STEAL_CALLED(shep)     do {} while(0)
+# define STEAL_ELECTED(shep)    do {} while(0)
 # define STEAL_ATTEMPTED(shep)  do {} while(0)
 # define STEAL_SUCCESSFUL(shep) do {} while(0)
 # define STEAL_FAILED(shep)     do {} while(0)
+# define STEAL_AMOUNT(q, ct)    do {} while(0)
 #endif
 
 // Forward declarations
@@ -752,8 +752,8 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
             }
 #endif /* ifdef QTHREAD_TASK_AGGREGATION */
 
+            qthread_debug(THREADQUEUE_DETAILS, "q(%p), qc(%p), active(%u): qc->qlen(%u) Push remaining items onto the real queue\n", q, qc, active, qc->qlength);
             if (qc->qlength > 0) {
-                // Push remaining items onto the real queue
                 qt_threadqueue_node_t *first = qc->head;
                 qt_threadqueue_node_t *last  = qc->tail;
                 assert(last->next == NULL);
@@ -807,7 +807,6 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                 assert(q->tail->next == NULL);
                 assert(q->head->prev == NULL);
                 QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
-                if (steal_disable) { steal_disable = 0; }
                 qc->head    = qc->tail = NULL;
                 qc->qlength = qc->qlength_stealable = 0;
 #endif          /* if 0 */
@@ -1083,9 +1082,7 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h
         break;
     }
     QTHREAD_TRYLOCK_UNLOCK(&v->qlock);
-#ifdef STEAL_PROFILE                   // should give mechanism to make steal profiling optional
-    qthread_incr(&v->steal_amount_stolen, amtStolen);
-#endif
+    STEAL_AMOUNT(v, amtStolen);
 
     return (first);
 }                                      /*}}} */
@@ -1118,7 +1115,7 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
             return NULL;
         }
     }
-    STEAL_ATTEMPTED(thief_shepherd);
+    STEAL_ELECTED(thief_shepherd);
 
     qthread_shepherd_id_t        i               = 0;
     qthread_shepherd_t *const    shepherds       = qlib->shepherds;
@@ -1129,6 +1126,7 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
     while (stolen == NULL) {
         qt_threadqueue_t *victim_queue = shepherds[sorted_sheplist[i]].ready;
         if (0 != victim_queue->qlength_stealable) {
+            STEAL_ATTEMPTED(thief_shepherd);
             stolen = qt_threadqueue_dequeue_steal(myqueue, victim_queue);
             if (stolen) {
                 qt_threadqueue_node_t *surplus = stolen->next;
@@ -1171,12 +1169,13 @@ void INTERNAL qthread_steal_stat(void)
     assert(qlib);
     for (i = 0; i < qlib->nshepherds; i++) {
         fprintf(stdout,
-                "QTHREADS: shepherd %d - steals called %ld attempted %ld failed %ld successful %ld work stolen %ld\n",
+                "QTHREADS: shepherd %d - steals called:%ld elected:%ld attempted:%ld(failed:%ld successful:%ld) tasks-stolen:%ld\n",
                 qlib->shepherds[i].shepherd_id,
                 qlib->shepherds[i].steal_called,
+                qlib->shepherds[i].steal_elected,
                 qlib->shepherds[i].steal_attempted,
                 qlib->shepherds[i].steal_failed,
-                qlib->shepherds[i].steal_successful,
+                qlib->shepherds[i].steal_attempted - qlib->shepherds[i].steal_failed,
                 qlib->shepherds[i].ready->steal_amount_stolen);
     }
 } /*}}}*/

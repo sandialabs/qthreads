@@ -5,7 +5,7 @@ buildall: hpccg
 buildextra: hpccg
 
 EXTRA_PROGRAMS = hpccg
-
+CLEANFILES = hpccg
 
 AM_CPPFLAGS = -I$(top_srcdir)/include
 qthreadlib = $(top_builddir)/src/libqthread.la

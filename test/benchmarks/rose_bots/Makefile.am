@@ -28,6 +28,7 @@ buildall: $(BOTS_TESTS)
 buildextra: $(BOTS_TESTS)
 
 EXTRA_PROGRAMS = $(BOTS_TESTS)
+CLEANFILES = $(BOTS_TESTS)
 
 rose_fib_SOURCES = $(GLOBAL_COMMON) \
 				   fib/rose_bots_main_fib.cc \

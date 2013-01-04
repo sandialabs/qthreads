@@ -415,7 +415,7 @@ static void *qthread_master(void *arg)
 #ifdef QTHREAD_USE_SPAWNCACHE
     localqueue = qt_init_local_spawncache();
 #endif
-    qt_eureka_shepherd_init();
+    qt_eureka_worker_init();
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     current = &(me_worker->current);
@@ -1261,7 +1261,6 @@ int API_FUNC qthread_initialize(void)
         }
     }
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-    qthread_steal_disable();
 
     qthread_debug(CORE_DETAILS, "calling atexit\n");
     atexit(qthread_finalize);
@@ -2482,6 +2481,8 @@ void INTERNAL qthread_exec(qthread_t    *t,
         }
 #endif
     } else {
+        assert(t->thread_state == QTHREAD_STATE_NEW);
+        t->thread_state = QTHREAD_STATE_RUNNING;
 #ifdef QTHREAD_MAKECONTEXT_SPLIT
         unsigned int high = (((uintptr_t)t) >> 32) & 0xffffffff;
         unsigned int low  = ((uintptr_t)t) & 0xffffffff;
@@ -2692,6 +2693,8 @@ int API_FUNC qthread_spawn(qthread_f             f,
         t->preconds     = preconds;
         qthread_debug(THREAD_BEHAVIOR, "npreconds=%u, preconds[0]=%u\n", (unsigned int)npreconds, (unsigned int)(uintptr_t)((aligned_t **)preconds)[0]);
         assert(((aligned_t **)preconds)[0] == (aligned_t *)(uintptr_t)npreconds);
+    } else {
+        t->preconds = NULL;
     }
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     t->id = save_target;

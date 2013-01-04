@@ -2,7 +2,7 @@ SUBDIRS = mantevo
 
 .PHONY: buildall buildtests buildextra benchmarks
 
-DIST_SUBDIRS = mantevo rose_bots
+DIST_SUBDIRS = mantevo rose_bots rose_lulesh
 
 generic_benchmarks = \
                      time_gcd \
@@ -134,11 +134,15 @@ LDADD = $(qthreadlib)
 if COMPILE_ROSE_EXTENSIONS
 buildall: $(benchmarks)
 	$(MAKE) -C rose_bots buildall
+	$(MAKE) -C rose_lulesh buildall
+	$(MAKE) -C mantevo buildall
 buildextra: $(benchmarks)
 	$(MAKE) -C rose_bots buildextra
+	$(MAKE) -C rose_lulesh buildextra
 	$(MAKE) -C mantevo buildextra
 else
 buildall: $(benchmarks)
+	$(MAKE) -C mantevo buildall
 buildextra: $(benchmarks)
 	$(MAKE) -C mantevo buildextra
 endif

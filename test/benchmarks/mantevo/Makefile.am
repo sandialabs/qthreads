@@ -1,13 +1,23 @@
-SUBDIRS = hpccg hpccg_openmp
+SUBDIRS = hpccg
+
+DIST_SUBDIRS = $(SUBDIRS) hpccg_openmp
 
 .PHONY: buildall buildextra benchmarks
+
+mantevo_benchmarks = hpccg/hpccg
+
+if COMPILE_ROSE_EXTENSIONS
+SUBDIRS += hpccg_openmp
+mantevo_benchmarks += hpccg_openmp/hpccg
+endif
 
 benchmarks: buildextra
 buildall: buildextra
 
-mantevo_benchmarks = hpccg/hpccg hpccg_openmp/hpccg
-
-buildextra: $(mantevo_benchmarks)
+buildextra:
+	for DIR in $(SUBDIRS) ; do \
+		$(MAKE) -C $$DIR $$DIR ; \
+	done
 
 hpccg/hpccg:
 	$(MAKE) -C hpccg buildall
@@ -22,3 +32,8 @@ LDADD = $(qthreadlib)
 
 $(qthreadlib):
 	$(MAKE) -C $(top_builddir)/src libqthread.la
+
+clean-local:
+	for DIR in $(SUBDIRS) ; do \
+	$(MAKE) -C $$DIR clean ; \
+	done

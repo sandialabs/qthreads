@@ -100,6 +100,7 @@ int main(int   argc,
         qthread_init(tcount);
     } else {
         qthread_initialize();
+        tcount = qthread_readstate(ACTIVE_WORKERS);
     }
 #endif
 

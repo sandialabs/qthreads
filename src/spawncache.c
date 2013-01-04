@@ -52,13 +52,13 @@ void INTERNAL qt_spawncache_init(void)
 
 qt_threadqueue_private_t INTERNAL *qt_init_local_spawncache(void)
 {
-    void *const ret = qthread_internal_aligned_alloc(sizeof(qt_threadqueue_private_t), qthread_cacheline());
+    qt_threadqueue_private_t *const ret = qthread_internal_aligned_alloc(sizeof(qt_threadqueue_private_t), qthread_cacheline());
 
     assert(ret);
     memset(ret, 0, sizeof(qt_threadqueue_private_t));
 
     TLS_SET(spawn_cache, ret);
-    return (qt_threadqueue_private_t *)ret;
+    return ret;
 }
 
 qt_threadqueue_private_t INTERNAL *qt_spawncache_get()

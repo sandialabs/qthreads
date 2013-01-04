@@ -8,4 +8,5 @@ libqthread_la_SOURCES += \
 			 ds/qarray.c \
 			 ds/qdqueue.c \
 			 ds/qlfqueue.c \
+			 ds/qswsrqueue.c \
 			 ds/qpool.c 
