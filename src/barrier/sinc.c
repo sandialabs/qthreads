@@ -68,9 +68,23 @@ void API_FUNC qt_barrier_resize(qt_barrier_t *restrict barrier,
 }
 
 void API_FUNC qt_barrier_enter_id(qt_barrier_t *barrier,
-                                  size_t             id)
+                                  size_t        id)
 {
-    qt_barrier_enter(barrier);
+    qt_sinc_submit(barrier->sinc_1, NULL);
+    qt_sinc_wait(barrier->sinc_1, NULL);
+    if (id == 0) {
+        qt_sinc_reset(barrier->sinc_3, barrier->count); // should be only 1 reset not all
+    }
+    qt_sinc_submit(barrier->sinc_2, NULL);
+    qt_sinc_wait(barrier->sinc_2, NULL);
+    if (id == 0) {
+        qt_sinc_reset(barrier->sinc_1, barrier->count); // should be only 1 reset not all
+    }
+    qt_sinc_submit(barrier->sinc_3, NULL);
+    qt_sinc_wait(barrier->sinc_3, NULL);
+    if (id == 0) {
+        qt_sinc_reset(barrier->sinc_2, barrier->count); // should be only 1 reset not all
+    }
 }
 
 // feels like care with the reset should allow this to be done with only 2 not 3 sincs
