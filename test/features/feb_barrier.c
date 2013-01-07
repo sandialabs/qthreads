@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include <assert.h>
 #include <unistd.h>
+#include <float.h> /* for DBL_MAX, per C89 */
 #include <qthread/qthread.h>
 #include <qthread/barrier.h>
 #include <qthread/qtimer.h>
@@ -31,6 +32,8 @@ int main(int   argc,
     qtimer_t     t;
     unsigned int iter, iterations = 10;
     double       total_time = 0.0;
+    double       max_time   = 0.0;
+    double       min_time   = DBL_MAX;
 
     assert(qthread_initialize() == 0);
     t = qtimer_create();
@@ -42,32 +45,42 @@ int main(int   argc,
     initme = (aligned_t *)calloc(threads, sizeof(aligned_t));
     assert(initme);
 
-    rets = (aligned_t *)malloc(iterations * threads * sizeof(aligned_t));
+    rets = (aligned_t *)malloc(threads * sizeof(aligned_t));
     assert(rets);
 
     iprintf("creating the barrier for %zu threads\n", threads);
     wait_on_me = qt_barrier_create(threads, REGION_BARRIER);    // all my spawnees plus me
     assert(wait_on_me);
 
-    for (iter = 0; iter < iterations; iter++) {
+    for (iter = 0; iter <= iterations; ++iter) {
         // iprintf("%i: forking the threads\n", iter);
-        for (i = 1; i < threads; i++) {
+        for (i = 1; i < threads; ++i) {
             void *args[2] = { wait_on_me, (void *)(uintptr_t)i };
             qthread_spawn(barrier_thread, args, sizeof(args),
-                          rets + (iter * threads) + i,
+                          rets + i,
                           0, NULL, i, 0);
         }
-        qthread_flushsc();
         // iprintf("%i: done forking the threads, entering the barrier\n", iter);
         qtimer_start(t);
         qt_barrier_enter_id(wait_on_me, 0);
         qtimer_stop(t);
-        // iprintf("%i: main thread exited barrier in %f seconds\n", iter, qtimer_secs(t));
-        total_time += qtimer_secs(t);
+        if (iter > 0) {
+            double tmp = qtimer_secs(t);
+            iprintf("%i: main thread exited barrier in %f seconds (%u)\n", iter, tmp, initme_idx);
+            total_time += tmp;
+            if (max_time < tmp) {
+                max_time = tmp;
+            }
+            if (min_time > tmp) {
+                min_time = tmp;
+            }
+        }
 
+        assert(initme_idx == threads);
         initme_idx = 1;
 
-        for (i = 1; i < threads; i++) {
+        for (i = 1; i < threads; ++i) {
+            qthread_readFF(NULL, rets + i);
             if (initme[i] != iter + 1) {
                 iprintf("initme[%i] = %i (should be %i)\n", (int)i,
                         (int)initme[i], iter + 1);
@@ -76,21 +89,18 @@ int main(int   argc,
         }
     }
 
+    iprintf("Max barrier time:     %f secs\n", max_time);
     iprintf("Average barrier time: %f secs\n", total_time / iterations);
+    iprintf("Min barrier time:     %f secs\n", min_time);
 
     iprintf("Destroying barrier...\n");
     qt_barrier_destroy(wait_on_me);
 
+    free(rets);
+    free(initme);
+
     iprintf("Success!\n");
 
-    /* this loop shouldn't be necessary... but seems to avoid crashes in rare
-     * cases (in other words there must a race condition in qthread_finalize()
-     * if there are outstanding threads out there) */
-    for (i = 0; i < threads * iterations; i++) {
-        aligned_t tmp = 1;
-        qthread_readFF(&tmp, rets + i);
-        assert(tmp == 0);
-    }
     return 0;
 }
 
