@@ -9,7 +9,7 @@
 
 #define DEBUG 1
 #ifdef DEBUG
-#include <qthread/feb_barrier.h>
+#include <qthread/barrier.h>
 #endif
 
 #include "argparsing.h"
@@ -73,7 +73,7 @@ typedef struct stencil_s {
 /*}}}*/
 
 #ifdef DEBUG
-static qt_feb_barrier_t *debug_barrier;
+static qt_barrier_t *debug_barrier;
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -419,7 +419,7 @@ static aligned_t update_point_corner(void *arg_)
     }
 
 #ifdef DEBUG
-    qt_feb_barrier_enter(debug_barrier);
+    qt_barrier_enter(debug_barrier);
 #endif
     return 0;
 }
@@ -609,7 +609,7 @@ static aligned_t update_point_edge_loop(void *arg_)
     }
 
 #ifdef DEBUG
-    qt_feb_barrier_enter(debug_barrier);
+    qt_barrier_enter(debug_barrier);
 #endif
 
     return 0;
@@ -773,7 +773,7 @@ static aligned_t send_block(void *arg_) {
     }
 
 #ifdef DEBUG
-    qt_feb_barrier_enter(debug_barrier);
+    qt_barrier_enter(debug_barrier);
 #endif
     return 0;
 }
@@ -980,7 +980,7 @@ static void begin(const size_t start, const size_t stop, void *arg_)
     //}
 
 #ifdef DEBUG
-    qt_feb_barrier_enter(debug_barrier);
+    qt_barrier_enter(debug_barrier);
     if (part_lid == 0) {
         print_status(arg, 0 % 2);
         print_status(arg, 1 % 2);
@@ -1209,10 +1209,11 @@ int main(int argc, char *argv[])
         num_sends +
         num_corners +
         num_edges);
-    debug_barrier = qt_feb_barrier_create(
+    debug_barrier = qt_barrier_create(
         num_sends +
         num_corners +
-        num_edges);
+        num_edges,
+	REGION_BARRIER);
 #endif
 
     // Start off computation on each partition
@@ -1223,7 +1224,7 @@ int main(int argc, char *argv[])
     }
 
 #ifdef DEBUG
-qt_feb_barrier_destroy(debug_barrier);
+qt_barrier_destroy(debug_barrier);
 #endif
 
     // Print timing info

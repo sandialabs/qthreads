@@ -5,7 +5,7 @@
 
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
-#include <qthread/feb_barrier.h>
+#include <qthread/barrier.h>
 #include <qthread/qtimer.h>
 
 #include "argparsing.h"
@@ -36,7 +36,7 @@ typedef struct stencil {
     size_t N;
     size_t M;
     aligned_t **stage[NUM_STAGES];
-    qt_feb_barrier_t *barrier;
+    qt_barrier_t *barrier;
 } stencil_t;
 
 typedef struct update_args {
@@ -153,7 +153,7 @@ static aligned_t update(void *arg)
 #endif
     }
     else
-        qt_feb_barrier_enter(points->barrier);
+        qt_barrier_enter(points->barrier);
 
     return 0;
 }
@@ -239,7 +239,7 @@ int main(int argc, char *argv[])
 
     // Create barrier to synchronize on completion of calculations
     qtimer_start(exec_timer);
-    points.barrier = qt_feb_barrier_create(n*m+1);
+    points.barrier = qt_barrier_create(n*m+1, REGION_BARRIER);
 
     // Spawn tasks to start calculating updates at each point
     update_args_t args = {&points, -1, -1, 1, 1};
@@ -252,7 +252,7 @@ int main(int argc, char *argv[])
     }
 
     // Wait for calculations to finish
-    qt_feb_barrier_enter(points.barrier);
+    qt_barrier_enter(points.barrier);
     qtimer_stop(exec_timer);
 
     // Print timing info
@@ -275,7 +275,7 @@ int main(int argc, char *argv[])
         print_stage(&points, final);
     }
 
-    qt_feb_barrier_destroy(points.barrier);
+    qt_barrier_destroy(points.barrier);
     qtimer_destroy(alloc_timer);
     qtimer_destroy(init_timer);
     qtimer_destroy(exec_timer);
