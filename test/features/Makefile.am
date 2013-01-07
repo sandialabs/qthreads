@@ -14,7 +14,7 @@ TESTS = \
 		qt_loop_queue \
 		qutil \
 		qutil_qsort \
-		feb_barrier \
+		barrier \
 		qloop_utils \
 		qarray \
 		qarray_accum \
@@ -69,7 +69,7 @@ qutil_SOURCES = qutil.c
 
 qutil_qsort_SOURCES = qutil_qsort.c
 
-feb_barrier_SOURCES = feb_barrier.c
+barrier_SOURCES = barrier.c
 
 qloop_utils_SOURCES = qloop_utils.c
 
