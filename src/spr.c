@@ -207,10 +207,11 @@ int spr_get_nb(void *restrict             dest_addr,
     struct spr_get_handle_s *h    = (struct spr_get_handle_s *)hand;
 
     qthread_debug(MULTINODE_CALLS, "[%d] begin spr_get_nb(%d, %p, %p, %d, %p)\n", spr_locale_id(), src_loc, src_addr, dest_addr, size, h);
-
+    assert(src_loc < qthread_multinode_size());
+    assert(size > 0);
     assert(dest_addr);
     assert(src_addr);
-    assert(h);
+    assert(hand);
 
     rc = qthread_internal_net_driver_get(dest_addr, src_loc, src_addr, size, &h->feb);
 
@@ -311,6 +312,11 @@ int spr_put_nb(int                        dest_loc,
     struct spr_put_handle_s *h    = (struct spr_put_handle_s *)hand;
 
     qthread_debug(MULTINODE_CALLS, "[%d] begin spr_put_nb(%d, %p, %p, %d)\n", spr_locale_id(), dest_loc, dest_addr, src_addr, size);
+    assert(dest_loc < qthread_multinode_size());
+    assert(size > 0);
+    assert(dest_addr);
+    assert(src_addr);
+    assert(hand);
 
     rc = qthread_internal_net_driver_put(dest_loc, dest_addr, src_addr, size, &h->feb);
 
