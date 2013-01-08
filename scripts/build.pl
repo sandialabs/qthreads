@@ -24,7 +24,7 @@ my %config = (
     slowcontext   => '--disable-fastcontext',
     shavit        => '--with-dict=shavit',
     shep_profile  => '--enable-profiling=shepherd',
-    lock_profile  => '--enable-profiling=lock',
+    lock_profile  => '--enable-profiling=feb',
     steal_profile => '--enable-profiling=steal',
     tc_profile    => '--enable-profiling=threadc',
     hi_st         => '--disable-hardware-atomics --disable-multithreaded-shepherds',
