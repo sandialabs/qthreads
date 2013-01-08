@@ -227,7 +227,7 @@ AC_ARG_ENABLE([profiling],
                    shepherd|shepherds)
                      enable_shepherd_profiling=yes
                      ;;
-                   feb|FEB|febs|FEBs)
+                   feb|FEB|febs|FEBs|lock|locks)
                      enable_feb_profiling=yes
                      ;;
                    steal)
