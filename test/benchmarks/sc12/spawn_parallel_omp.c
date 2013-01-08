@@ -8,7 +8,10 @@
 
 #include <qthread/qthread.h>
 #include <qthread/qtimer.h>
+
+#define SILENT_ARGPARSING
 #include "argparsing.h"
+#include "log.h"
 
 static aligned_t null_task(void *args_)
 {
@@ -49,10 +52,8 @@ int main(int   argc,
 
     qtimer_destroy(timer);
 
-    printf("%lu %lu %f\n",
-           threads,
-           (unsigned long)count,
-           total_time);
+    LOG_SPAWN_PARALLEL_YAML(count, total_time)
+    LOG_ENV_OMP_YAML(threads)
 
     return 0;
 }

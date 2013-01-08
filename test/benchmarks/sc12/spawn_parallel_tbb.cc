@@ -7,7 +7,10 @@
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
 #include <qthread/qtimer.h>
+
+#define SILENT_ARGPARSING
 #include "argparsing.h"
+#include "log.h"
 
 #include <tbb/task.h>
 #include <tbb/task_scheduler_init.h>
@@ -92,10 +95,9 @@ int main(int   argc,
 
     qtimer_destroy(timer);
 
-    printf("%lu %lu %f\n",
-           (unsigned long)threads,
-           (unsigned long)count,
-           total_time);
+
+    LOG_SPAWN_PARALLEL_YAML(count, total_time)
+    LOG_ENV_TBB_YAML(threads)
 
     return 0;
 }

@@ -2,7 +2,10 @@
 #include <assert.h>                    /* for assert() */
 #include <qthread/qthread.h>
 #include <qthread/qtimer.h>
+
+#define SILENT_ARGPARSING
 #include "argparsing.h"
+#include "log.h"
 
 #include "tbb/task.h"
 #include <tbb/task_scheduler_init.h>
@@ -106,11 +109,8 @@ int main(int   argc,
     }
 
     if (validation[n] == ret) {
-        fprintf(stdout, "%d %lu %lu %f\n",
-                threads,
-                (unsigned long)n,
-                (unsigned long)ret,
-                qtimer_secs(timer));
+        LOG_FIB_YAML(n, ret, qtimer_secs(timer))
+        LOG_ENV_TBB_YAML(threads)
     } else {
         iprintf("Fail %lu (== %lu) in %f sec\n",
                 (unsigned long)ret,

@@ -4,7 +4,10 @@
 #include <cilk/cilk_api.h>
 #include <qthread/qthread.h>
 #include <qthread/qtimer.h>
+
+#define SILENT_ARGPARSING
 #include "argparsing.h"
+#include "log.h"
 
 static aligned_t validation[] = {
     0,        // 0
@@ -85,7 +88,8 @@ int main(int   argc,
     qtimer_stop(timer);
 
     if (validation[n] == ret) {
-        fprintf(stdout, "%d %lu %lu %f\n", __cilkrts_get_nworkers(), (unsigned long)n, (unsigned long)ret, qtimer_secs(timer));
+        LOG_FIB_YAML(n, ret, qtimer_secs(timer));
+        LOG_ENV_CILK_YAML()
     } else {
         iprintf("Fail %lu (== %lu) in %f sec\n", (unsigned long)ret, (unsigned long)validation[n], qtimer_secs(timer));
     }
