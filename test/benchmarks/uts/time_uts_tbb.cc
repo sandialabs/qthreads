@@ -39,7 +39,7 @@ typedef enum {
     HYBRID,
     BALANCED
 } tree_t;
-static char *type_names[] = {
+static const char *type_names[] = {
     "Binomial",
     "Geometric",
     "Hybrid",
@@ -52,7 +52,7 @@ typedef enum {
     CYCLIC,
     FIXED
 } shape_t;
-static char *shape_names[] = {
+static const char *shape_names[] = {
     "Linear decrease",
     "Exponential decrease",
     "Cyclic",
