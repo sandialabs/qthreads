@@ -3,7 +3,10 @@
 #include <omp.h>
 #include <qthread/qthread.h>
 #include <qthread/qtimer.h>
+
+#define SILENT_ARGPARSING
 #include "argparsing.h"
+#include "log.h"
 
 static aligned_t validation[] = {
     0,        // 0
@@ -92,7 +95,8 @@ int main(int   argc,
     }
 
     if (validation[n] == ret) {
-        fprintf(stdout, "%d %lu %lu %f\n", threads, (unsigned long)n, (unsigned long)ret, qtimer_secs(timer));
+        LOG_FIB_YAML(n, ret, qtimer_secs(timer))
+        LOG_ENV_OMP_YAML(threads)
     } else {
         iprintf("Fail %lu (== %lu) in %f sec\n", (unsigned long)ret, (unsigned long)validation[n], qtimer_secs(timer));
     }

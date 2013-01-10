@@ -7,7 +7,10 @@
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
 #include <qthread/qtimer.h>
+
+#define SILENT_ARGPARSING
 #include "argparsing.h"
+#include "log.h"
 
 static void par_null_task(size_t start,
                           size_t stop,
@@ -112,10 +115,9 @@ int main(int   argc,
 
     qtimer_destroy(timer);
 
-    printf("%lu %lu %f\n",
-           (unsigned long)qthread_num_workers(),
-           (unsigned long)count,
-           total_time);
+    LOG_SPAWN_PARALLEL_YAML(count, total_time)
+    LOG_ENV_QTHREADS_YAML()
+    printf("Loop style: %lu\n", loop_style);
 
     return 0;
 }

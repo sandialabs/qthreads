@@ -7,7 +7,10 @@
 #include <qthread/qthread.h>
 #include <qthread/qloop.h>
 #include <qthread/qtimer.h>
+
+#define SILENT_ARGPARSING
 #include "argparsing.h"
+#include "log.h"
 
 static aligned_t donecount = 0;
 
@@ -46,10 +49,8 @@ int main(int   argc,
 
     qtimer_destroy(timer);
 
-    printf("%lu %lu %f\n",
-           (unsigned long)qthread_num_workers(),
-           (unsigned long)count,
-           total_time);
+    LOG_SPAWN_SEQUENTIAL_YAML(count, total_time)
+    LOG_ENV_QTHREADS_YAML()
 
     return 0;
 }

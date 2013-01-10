@@ -19,7 +19,10 @@
 #include <pthread.h>
 #include <qthread/qthread.h>
 #include <qthread/qtimer.h>
+
+#define SILENT_ARGPARSING
 #include "argparsing.h"
+#include "log.h"
 
 #define BRG_RNG // Select RNG
 #include "../../utils/rng/rng.h"
@@ -160,40 +163,7 @@ static long visit(node_t parent)
 #ifdef PRINT_STATS
 static void print_stats(void)
 {
-    printf("tree-type %d\ntree-type-name %s\n",
-           tree_type, type_names[tree_type]);
-    printf("root-bf %.1f\nroot-seed %d\n",
-           bf_0, root_seed);
-
-    if ((tree_type == GEO) || (tree_type == HYBRID)) {
-        printf("gen_mx %d\nshape-fn %d\nshape-fn-name %s\n",
-               tree_depth, shape_fn, shape_names[shape_fn]);
-    }
-
-    if ((tree_type == BIN) || (tree_type == HYBRID)) {
-        double q  = non_leaf_prob;
-        int    m  = non_leaf_bf;
-        double es = (1.0 / (1.0 - q * m));
-        printf("q %f\nm %d\nE(n) %f\nE(s) %.2f\n",
-               q, m, q * m, es);
-    }
-
-    if (tree_type == HYBRID) {
-        printf("root-to-depth %d\n",
-               (int)ceil(shift_depth * tree_depth));
-    }
-
-    if (tree_type == BALANCED) {
-        printf("gen_mx %d\n", tree_depth);
-        printf("expected-num-nodes %llu\nexpected-num-leaves %llu\n",
-               (unsigned long long)((pow(bf_0, tree_depth + 1) - 1.0) / (bf_0 - 1.0)),
-               (unsigned long long)pow(bf_0, tree_depth));
-    }
-
-    printf("compute-granularity %d\n", num_samples);
-    printf("num-workers %d\n", __cilkrts_get_nworkers());
-
-    printf("\n");
+    LOG_UTS_PARAMS_YAML()
 
     fflush(stdout);
 }
@@ -255,14 +225,14 @@ int main(int   argc,
     CHECK_VERBOSE();
 
     {
-        unsigned long tmp;
+        unsigned long tmp = 0;
         NUMARG(tmp, "UTS_TREE_TYPE");
         tree_type = (tree_t)tmp;
     }
     DBLARG(bf_0, "UTS_BF_0");
     NUMARG(root_seed, "UTS_ROOT_SEED");
     {
-        unsigned long tmp;
+        unsigned long tmp = 0;
         NUMARG(tmp, "UTS_SHAPE_FN");
         shape_fn = (shape_t)tmp;
     }
@@ -303,15 +273,8 @@ int main(int   argc,
     qtimer_destroy(timer);
 
 #ifdef PRINT_STATS
-    printf("tree-size %lu\ntree-depth %d\nnum-leaves %llu\nperc-leaves %.2f\n",
-           (unsigned long)total_num_nodes,
-           (int)tree_height,
-           (unsigned long long)num_leaves,
-           num_leaves / (float)total_num_nodes * 100.0);
-    printf("exec-time %.3f\ntotal-perf %.0f\npu-perf %.0f\n\n",
-           total_time,
-           total_num_nodes / total_time,
-           total_num_nodes / total_time / __cilkrts_get_nworkers());
+    LOG_UTS_RESULTS_YAML(total_num_nodes, total_time)
+    LOG_ENV_CILK_YAML()
 #else
     printf("Tree size = %lu, tree depth = %d, num leaves = %llu (%.2f%%)\n",
            (unsigned long)total_num_nodes,

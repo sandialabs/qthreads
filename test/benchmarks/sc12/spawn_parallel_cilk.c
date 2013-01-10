@@ -8,7 +8,10 @@
 #include <cilk/cilk_api.h>
 #include <qthread/qthread.h>
 #include <qthread/qtimer.h>
+
+#define SILENT_ARGPARSING
 #include "argparsing.h"
+#include "log.h"
 
 // static aligned_t donecount = 0;
 
@@ -43,10 +46,8 @@ int main(int   argc,
 
     qtimer_destroy(timer);
 
-    printf("%lu %lu %f\n",
-           (unsigned long)__cilkrts_get_nworkers(),
-           (unsigned long)count,
-           total_time);
+    LOG_SPAWN_PARALLEL_YAML(count, total_time)
+    LOG_ENV_CILK_YAML()
 
     return 0;
 }
