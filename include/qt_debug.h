@@ -543,10 +543,18 @@ static QINLINE void qthread_debug(int         level,
                 *head++ = ch;
             }
         }
-        /* XXX: not checking for extra long values of head */
-        qassert(WRITE(2, buf, head - buf), head - buf);
+        assert(head > buf);
+        {
+            char *curs = buf;
+            int ret = WRITE(2, curs, head - curs);
+            assert(ret >= 0);
+            while (ret > 0 && (curs+ret) != head) {
+                curs += ret;
+                assert(head > curs);
+                ret = WRITE(2, curs, head - curs);
+            }
+        }
         va_end(args);
-        /*fflush(stderr); */
 
         QTHREAD_FASTLOCK_UNLOCK(&output_lock);
     }
