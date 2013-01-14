@@ -273,6 +273,36 @@ static qt_mpool generic_rdata_pool = NULL;
 # define FREE_RDATA(r) qt_mpool_free(generic_rdata_pool, (r))
 #endif /* if defined(UNPOOLED) */
 
+#ifdef NEED_RLIMIT
+# define RLIMIT_TO_NORMAL(thr) do {                                              \
+        qthread_debug(THREAD_DETAILS,                                            \
+                      "t(%p:%u): setting stack size limits back to normal...\n", \
+                      (thr), (thr)->thread_id);                                  \
+        if (!((thr)->flags & QTHREAD_REAL_MCCOY)) {                              \
+            struct rlimit rlp;                                                   \
+            rlp.rlim_cur = qlib->master_stack_size;                              \
+            rlp.rlim_max = qlib->max_stack_size;                                 \
+            qassert(setrlimit(RLIMIT_STACK, &rlp), 0);                           \
+        }                                                                        \
+} while (0)
+# define RLIMIT_TO_TASK(thr)   do {                                                                         \
+        struct rlimit rlp;                                                                                  \
+        qthread_debug(THREAD_DETAILS,                                                                       \
+                      "t(%p:%u): setting stack size limits... hopefully we don't currently exceed them!\n", \
+                      (thr), (thr)->thread_id);                                                             \
+        if ((thr)->flags & QTHREAD_REAL_MCCOY) {                                                            \
+            rlp.rlim_cur = qlib->master_stack_size;                                                         \
+        } else {                                                                                            \
+            rlp.rlim_cur = qlib->qthread_stack_size;                                                        \
+        }                                                                                                   \
+        rlp.rlim_max = qlib->max_stack_size;                                                                \
+        qassert(setrlimit(RLIMIT_STACK, &rlp), 0);                                                          \
+} while (0)
+#else /* ifdef NEED_RLIMIT */
+# define RLIMIT_TO_NORMAL(thr) do { } while(0)
+# define RLIMIT_TO_TASK(thr)   do { } while(0)
+#endif /* ifdef NEED_RLIMIT */
+
 #ifdef QTHREAD_DEBUG
 enum qthread_debug_levels debuglevel = NO_DEBUG_OUTPUT;
 QTHREAD_FASTLOCK_TYPE     output_lock;
@@ -2416,10 +2446,6 @@ int in_qthread_fence(void *addr)
 void INTERNAL qthread_exec(qthread_t    *t,
                            qt_context_t *c)
 {                      /*{{{ */
-#ifdef NEED_RLIMIT
-    struct rlimit rlp;
-#endif
-
     assert(t != NULL);
     assert(c != NULL);
 
@@ -2431,7 +2457,8 @@ void INTERNAL qthread_exec(qthread_t    *t,
             t->thread_state = QTHREAD_STATE_RUNNING;
 
             qassert(getcontext(&t->rdata->context), 0); /* puts the current context into t->rdata->context */
-            qthread_makecontext(&t->rdata->context, t->rdata->stack, qlib->qthread_stack_size,
+            qthread_makecontext(&t->rdata->context,
+                                t->rdata->stack, qlib->qthread_stack_size,
                                 (void (*)(void))qthread_wrapper, t, c);
 #ifdef HAVE_NATIVE_MAKECONTEXT
         } else {
@@ -2441,18 +2468,7 @@ void INTERNAL qthread_exec(qthread_t    *t,
 
         t->rdata->return_context = c;
 
-#ifdef NEED_RLIMIT
-        qthread_debug(SHEPHERD_DETAILS,
-                      "t(%p): setting stack size limits... hopefully we don't currently exceed them!\n",
-                      t);
-        if (t->flags & QTHREAD_REAL_MCCOY) {
-            rlp.rlim_cur = qlib->master_stack_size;
-        } else {
-            rlp.rlim_cur = qlib->qthread_stack_size;
-        }
-        rlp.rlim_max = qlib->max_stack_size;
-        qassert(setrlimit(RLIMIT_STACK, &rlp), 0);
-#endif  /* ifdef NEED_RLIMIT */
+        RLIMIT_TO_TASK(t);
 
         qthread_debug(SHEPHERD_DETAILS,
                       "t(%p): executing swapcontext(%p, %p)...\n", t, t->rdata->return_context, &t->rdata->context);
@@ -2468,15 +2484,7 @@ void INTERNAL qthread_exec(qthread_t    *t,
 #else
         qassert(qt_swapctxt(t->rdata->return_context, &t->rdata->context), 0);
 #endif
-#ifdef NEED_RLIMIT
-        qthread_debug(SHEPHERD_DETAILS,
-                      "t(%p): setting stack size limits back to normal...\n",
-                      t);
-        if (!(t->flags & QTHREAD_REAL_MCCOY)) {
-            rlp.rlim_cur = qlib->master_stack_size;
-            qassert(setrlimit(RLIMIT_STACK, &rlp), 0);
-        }
-#endif
+        RLIMIT_TO_NORMAL(t);
     } else {
         assert(t->thread_state == QTHREAD_STATE_NEW);
         t->thread_state = QTHREAD_STATE_RUNNING;
@@ -3058,17 +3066,8 @@ int API_FUNC qthread_fork_syncvar_to(qthread_f             f,
 void INTERNAL qthread_back_to_master(qthread_t *t)
 {                      /*{{{ */
     assert((t->flags & QTHREAD_SIMPLE) == 0);
-#ifdef NEED_RLIMIT
-    struct rlimit rlp;
-
-    qthread_debug(SHEPHERD_DETAILS, "t(%p): setting stack size limits for master thread...\n", t);
-    if (!(t->flags & QTHREAD_REAL_MCCOY)) {
-        rlp.rlim_cur = qlib->master_stack_size;
-        rlp.rlim_max = qlib->max_stack_size;
-        qassert(setrlimit(RLIMIT_STACK, &rlp), 0);
-    }
-#endif /* ifdef NEED_RLIMIT */
-       /* now back to your regularly scheduled master thread */
+    RLIMIT_TO_NORMAL(t);
+    /* now back to your regularly scheduled master thread */
 #ifdef QTHREAD_USE_VALGRIND
     VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&t->rdata->context, sizeof(qt_context_t));
     VALGRIND_CHECK_MEM_IS_ADDRESSABLE(t->rdata->return_context, sizeof(qt_context_t));
@@ -3080,29 +3079,14 @@ void INTERNAL qthread_back_to_master(qthread_t *t)
 #else
     qassert(qt_swapctxt(&t->rdata->context, t->rdata->return_context), 0);
 #endif
-#ifdef NEED_RLIMIT
-    qthread_debug(SHEPHERD_DETAILS, "t(%p): setting stack size limits back to qthread size...\n", t);
-    if (!(t->flags & QTHREAD_REAL_MCCOY)) {
-        rlp.rlim_cur = qlib->qthread_stack_size;
-        qassert(setrlimit(RLIMIT_STACK, &rlp), 0);
-    }
-#endif
+    RLIMIT_TO_TASK(t);
 }                      /*}}} */
 
 void INTERNAL qthread_back_to_master2(qthread_t *t)
 {                      /*{{{ */
     assert((t->flags & QTHREAD_SIMPLE) == 0);
-#ifdef NEED_RLIMIT
-    struct rlimit rlp;
-
-    qthread_debug(SHEPHERD_DETAILS, "t(%p): setting stack size limits for master thread...\n", t);
-    if (!(t->flags & QTHREAD_REAL_MCCOY)) {
-        rlp.rlim_cur = qlib->master_stack_size;
-        rlp.rlim_max = qlib->max_stack_size;
-        qassert(setrlimit(RLIMIT_STACK, &rlp), 0);
-    }
-#endif /* ifdef NEED_RLIMIT */
-       /* now back to your regularly scheduled master thread */
+    RLIMIT_TO_NORMAL(t);
+    /* now back to your regularly scheduled master thread */
 #ifdef QTHREAD_USE_VALGRIND
     VALGRIND_CHECK_MEM_IS_ADDRESSABLE(&t->rdata->context, sizeof(qt_context_t));
     VALGRIND_CHECK_MEM_IS_ADDRESSABLE(t->rdata->return_context, sizeof(qt_context_t));
