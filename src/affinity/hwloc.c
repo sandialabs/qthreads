@@ -98,6 +98,7 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
             }
             if (shep_type_idx == -1) {
                 fprintf(stderr, "unparsable shepherd boundary (%s)\n", qsh);
+                exit(EXIT_FAILURE);
             }
         }
 
@@ -111,6 +112,7 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
             }
             if (wkr_index == -1) {
                 fprintf(stderr, "unparsable worker unit (%s)\n", qsh);
+                exit(EXIT_FAILURE);
             }
         }
     }
