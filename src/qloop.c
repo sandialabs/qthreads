@@ -279,6 +279,7 @@ static void qt_loop_spawner(const size_t start,
     void *const                 argptr    = ((struct qt_loop_spawner_arg *)args_)->argptr;
     void                       *retptr    = NULL;
     aligned_t                   dc;
+    int yieldarg = 2;
 
     assert(func);
 
@@ -321,6 +322,7 @@ static void qt_loop_spawner(const size_t start,
             break;
         case 2:
             flags |= QTHREAD_SPAWN_SIMPLE;
+            yieldarg=0;
             break;
     }
     for (i = start, threadct = 0; i < stop; ++i, ++threadct) {
@@ -341,7 +343,7 @@ static void qt_loop_spawner(const size_t start,
                               retptr,
                               0, NULL,
                               NO_SHEPHERD, flags), QTHREAD_SUCCESS);
-        qthread_yield();
+        qthread_yield_(yieldarg);
     }
     switch(sync_type) {
         case SYNCVAR_T:

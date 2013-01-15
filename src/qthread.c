@@ -2304,6 +2304,25 @@ static void qthread_wrapper(void *ptr)
     MONITOR_ASM_LABEL(qthread_fence1); // add label for HPCToolkit stack unwind
 #endif
 
+    if (t->thread_state == QTHREAD_STATE_YIELDED) {
+        /* This means that I've direct-swapped, and need to clean up a little. */
+        qthread_t *tmp = t->rdata->blockedon.thread;
+        t->thread_state = QTHREAD_STATE_RUNNING;
+        qthread_debug(THREAD_DETAILS | SHEPHERD_DETAILS,
+                      "thread %i yielded; rescheduling\n", t->thread_id);
+        assert(t->rdata);
+        assert(t->rdata->shepherd_ptr);
+        assert(t->rdata->shepherd_ptr->ready);
+#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+        qthread_worker_t *me_worker = (qthread_worker_t*)TLS_GET(shepherd_structs);
+        me_worker->current = tmp;
+#else
+        t->rdata->shepherd_ptr->current = tmp;
+#endif
+        qt_threadqueue_enqueue_yielded(t->rdata->shepherd_ptr->ready, t);
+        t = tmp;
+    }
+
     qt_eureka_check(0);
     qthread_debug(THREAD_BEHAVIOR,
                   "tid %u executing f=%p arg=%p...\n",
@@ -2512,10 +2531,47 @@ void API_FUNC qthread_yield_(int k)
     if (t != NULL) {
         qthread_debug(THREAD_CALLS,
                       "tid %u yielding...\n", t->thread_id);
-        if (k) {
-            t->thread_state = QTHREAD_STATE_YIELDED_NEAR;
-        } else {
-            t->thread_state = QTHREAD_STATE_YIELDED;
+        switch (k) {
+            case 1: // Yield-near
+                t->thread_state = QTHREAD_STATE_YIELDED_NEAR;
+                break;
+            case 2: // direct-yield
+                {
+                    qt_threadqueue_private_t *pq = qt_spawncache_get();
+                    if (pq->on_deck) {
+                        qthread_t *nt = qt_threadqueue_private_dequeue(pq);
+                        assert(nt);
+                        assert(nt->thread_state == QTHREAD_STATE_NEW);
+                        if ((nt->flags & QTHREAD_SIMPLE) != 0) {
+                            qt_spawncache_spawn(nt, t->rdata->shepherd_ptr->ready);
+                            goto basic_yield;
+                        }
+                        /* Initialize nt's rdata */
+                        alloc_rdata(t->rdata->shepherd_ptr, nt);
+                        nt->thread_state = QTHREAD_STATE_RUNNING;
+                        qthread_makecontext(&nt->rdata->context, nt->rdata->stack, qlib->qthread_stack_size, (void(*)(void))qthread_wrapper, nt, t->rdata->return_context);
+                        nt->rdata->return_context = t->rdata->return_context;
+                        /* Prepare t to be processed by qthread_wrapper */
+                        t->thread_state = QTHREAD_STATE_YIELDED;
+                        t->rdata->blockedon.thread = nt;
+                        RLIMIT_TO_TASK(t);
+                        /* SWAP! */
+                        qthread_debug(SHEPHERD_DETAILS,
+                                "t(%p): executing swapcontext(%p, %p)...\n", t, &t->rdata->context, &nt->rdata->context);
+#ifdef HAVE_NATIVE_MAKECONTEXT
+                        qassert(swapcontext(&t->rdata->context, &nt->rdata->context), 0);
+#else
+                        qassert(qt_swapctxt(&t->rdata->context, &nt->rdata->context), 0);
+#endif
+                        qthread_debug(THREAD_BEHAVIOR, "tid %u resumed.\n", t->thread_id);
+                        RLIMIT_TO_NORMAL(t);
+                        return;
+                    }
+                }
+            case 0: // general yield
+basic_yield:
+                t->thread_state = QTHREAD_STATE_YIELDED;
+                break;
         }
         qthread_back_to_master(t);
         qthread_debug(THREAD_BEHAVIOR, "tid %u resumed.\n",

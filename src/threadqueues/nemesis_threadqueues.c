@@ -39,7 +39,7 @@ typedef struct {
     void   *tail;
     uint8_t pad1[CACHELINE_WIDTH - (2 * sizeof(void *))];
     /* The Second Cacheline */
-    void   *shadow_head;
+    void *shadow_head;
     /* the following is for estimating a queue's "busy" level, and is not
      * guaranteed accurate (that would be a race condition) */
     saligned_t advisory_queuelen;
@@ -84,7 +84,6 @@ void INTERNAL qt_threadqueue_subsystem_init(void)
     generic_threadqueue_pools.nodes  = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), 8);
     qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
 } /*}}}*/
-
 #endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 
 /* Thankfully, NEMESIS does not suffer from the ABA problem. */
@@ -186,6 +185,11 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 }                                      /*}}} */
 
 #ifdef QTHREAD_USE_SPAWNCACHE
+qthread_t INTERNAL *qt_threadqueue_private_dequeue(qt_threadqueue_private_t *c)
+{   /*{{{*/
+    return NULL;
+} /*}}}*/
+
 int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict pq,
                                             qt_threadqueue_t *restrict         q,
                                             qthread_t *restrict                t)
