@@ -15,8 +15,12 @@
 #include <sys/time.h>                  // for gettimeofday()
 #include <string.h>                    // for strcmp
 
+/* Installed Headers */
 #include "qthread/qthread.h"
 #include "qthread/qtimer.h"
+#include "qthread/omp_defines.h"       // Wrappered OMP functions from omp.h
+
+/* Internal Headers */
 #include "qt_barrier.h"	               // for qt_global_barrier
 #include "qt_arrive_first.h"           // for qt_global_arrive_first
 #include "qthread/qloop.h"	       // for qt_loop_f
@@ -29,9 +33,8 @@
 #include "qt_qthread_struct.h"	       // for qthread_t
 #include "qt_touch.h"		       // for qthread_run_needed_task()
 #include "qt_task_counter.h"
-#include <qthread/qthread.h>           // for syncvar_t
-#include <qthread/omp_defines.h>       // Wrappered OMP functions from omp.h
-#include <qt_atomics.h>       // Wrappered OMP functions from omp.h
+#include "qt_atomics.h"       // Wrappered OMP functions from omp.h
+#include "rose_extensions.h"           // for additional core functions specifically to support ROSE and OpenMP
 #ifdef QTHREAD_OMP_AFFINITY
 #include <omp_affinity.h>	       // Headers for OMP affinity functions
 #endif

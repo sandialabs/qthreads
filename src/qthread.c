@@ -3311,7 +3311,7 @@ int INTERNAL qthread_forCount(int inc)
     return (t->rdata->forCount += inc);
 }                                    /*}}} */
 
-void qthread_parent_yield_state()
+void qthread_parent_yield_state(void)
 {   /*{{{*/
     qthread_t *t = qthread_internal_self();
 
