@@ -627,6 +627,7 @@ qt_run:
                 qthread_debug(THREAD_DETAILS, "id(%u): about to exec thread. shepherd context is %p\n", my_id, &my_context);
                 qthread_exec(t, &my_context);
 
+                t = *current; // necessary for direct-swap sanity
                 *current = NULL; // necessary for eureka sanity
 
                 qthread_debug(THREAD_DETAILS, "id(%u): back from qthread_exec, state is %i\n", my_id, t->thread_state);
@@ -2306,21 +2307,24 @@ static void qthread_wrapper(void *ptr)
 
     if (t->thread_state == QTHREAD_STATE_YIELDED) {
         /* This means that I've direct-swapped, and need to clean up a little. */
-        qthread_t *tmp = t->rdata->blockedon.thread;
+        qthread_t *prev_t = t->rdata->blockedon.thread;
         t->thread_state = QTHREAD_STATE_RUNNING;
         qthread_debug(THREAD_DETAILS | SHEPHERD_DETAILS,
                       "thread %i yielded; rescheduling\n", t->thread_id);
+        assert(prev_t->rdata);
+        assert(prev_t->rdata->shepherd_ptr);
+        assert(prev_t->rdata->shepherd_ptr->ready);
         assert(t->rdata);
         assert(t->rdata->shepherd_ptr);
         assert(t->rdata->shepherd_ptr->ready);
+        assert(prev_t->thread_state == QTHREAD_STATE_RUNNING);
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
         qthread_worker_t *me_worker = (qthread_worker_t*)TLS_GET(shepherd_structs);
-        me_worker->current = tmp;
+        me_worker->current = t;
 #else
-        t->rdata->shepherd_ptr->current = tmp;
+        t->rdata->shepherd_ptr->current = t;
 #endif
-        qt_threadqueue_enqueue_yielded(t->rdata->shepherd_ptr->ready, t);
-        t = tmp;
+        qt_threadqueue_enqueue_yielded(t->rdata->shepherd_ptr->ready, prev_t);
     }
 
     qt_eureka_check(0);
@@ -2547,12 +2551,10 @@ void API_FUNC qthread_yield_(int k)
                         }
                         /* Initialize nt's rdata */
                         alloc_rdata(t->rdata->shepherd_ptr, nt);
-                        nt->thread_state = QTHREAD_STATE_RUNNING;
+                        nt->thread_state = QTHREAD_STATE_YIELDED; // special indicator state for qthread_wrapper()
+                        nt->rdata->blockedon.thread = t;
                         qthread_makecontext(&nt->rdata->context, nt->rdata->stack, qlib->qthread_stack_size, (void(*)(void))qthread_wrapper, nt, t->rdata->return_context);
                         nt->rdata->return_context = t->rdata->return_context;
-                        /* Prepare t to be processed by qthread_wrapper */
-                        t->thread_state = QTHREAD_STATE_YIELDED;
-                        t->rdata->blockedon.thread = nt;
                         RLIMIT_TO_TASK(t);
                         /* SWAP! */
                         qthread_debug(SHEPHERD_DETAILS,
