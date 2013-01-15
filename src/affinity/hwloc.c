@@ -440,14 +440,14 @@ guess_my_weight:
         wkr_depth = hwloc_get_type_depth(topology, HWLOC_OBJ_PU);
         qthread_debug(AFFINITY_BEHAVIOR, "guessing number of workers based on shepherd \"WEIGHT\"\n");
 
-        const size_t max_socket = hwloc_get_nbobjs_by_depth(topology, shep_depth);
+        const size_t max_idx = hwloc_get_nbobjs_by_depth(topology, shep_depth);
 
-        for (size_t socket = 0; socket < nshepherds && socket < max_socket; ++socket) {
-            hwloc_obj_t  obj    = hwloc_get_obj_by_depth(topology, shep_depth, socket);
+        for (size_t idx = 0; idx < nshepherds && idx < max_idx; ++idx) {
+            hwloc_obj_t  obj    = hwloc_get_obj_by_depth(topology, shep_depth, idx);
             unsigned int weight = WEIGHT(obj->allowed_cpuset);
-            qthread_debug(AFFINITY_DETAILS, "%s %u has %u weight\n", typename, (unsigned int)socket, weight);
+            qthread_debug(AFFINITY_DETAILS, "%s %u has %u weight\n", hwloc_obj_type_string(hwloc_get_depth_type(topology, shep_depth)), (unsigned int)idx, weight);
             total += weight;
-            if ((socket == 0) || (ret < weight)) {
+            if ((idx == 0) || (ret < weight)) {
                 ret = weight;
             }
         }
