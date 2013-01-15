@@ -2541,8 +2541,7 @@ void API_FUNC qthread_yield_(int k)
                     if (pq->on_deck) {
                         qthread_t *nt = qt_threadqueue_private_dequeue(pq);
                         assert(nt);
-                        assert(nt->thread_state == QTHREAD_STATE_NEW);
-                        if ((nt->flags & QTHREAD_SIMPLE) != 0) {
+                        if (((nt->flags & QTHREAD_SIMPLE) != 0) || (nt->thread_state != QTHREAD_STATE_NEW)) {
                             qt_spawncache_spawn(nt, t->rdata->shepherd_ptr->ready);
                             goto basic_yield;
                         }
