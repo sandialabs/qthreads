@@ -87,7 +87,7 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
         HWLOC_OBJ_CACHE, HWLOC_OBJ_CACHE, HWLOC_OBJ_CACHE, HWLOC_OBJ_CACHE
     };
     {
-        const char *qsh = qt_internal_get_env_str("SHEPHERD_BOUNDARY", "L3cache");
+        const char *qsh = qt_internal_get_env_str("SHEPHERD_BOUNDARY", "node");
 
         if (qsh) {
             for (int ti = 0; ti < numtypes; ++ti) {
