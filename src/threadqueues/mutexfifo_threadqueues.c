@@ -65,7 +65,6 @@ void INTERNAL qt_threadqueue_subsystem_init(void)
     generic_threadqueue_pools.queues = qt_mpool_create(sizeof(qt_threadqueue_t));
     qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
 } /*}}}*/
-
 #endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 
 ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
@@ -93,7 +92,7 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
         QTHREAD_FASTLOCK_INIT(q->tail_lock);
         QTHREAD_FASTLOCK_INIT(q->advisory_queuelen_m);
         q->advisory_queuelen = 0;
-        q->head = ALLOC_TQNODE();
+        q->head              = ALLOC_TQNODE();
         assert(q->head != NULL);
         if (q->head == NULL) {
             QTHREAD_FASTLOCK_DESTROY(q->advisory_queuelen_m);
@@ -147,6 +146,11 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 }                                      /*}}} */
 
 #ifdef QTHREAD_USE_SPAWNCACHE
+qthread_t INTERNAL *qt_threadqueue_private_dequeue(qt_threadqueue_private_t *c)
+{   /*{{{*/
+    return NULL;
+} /*}}}*/
+
 int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict pq,
                                             qt_threadqueue_t *restrict         q,
                                             qthread_t *restrict                t)

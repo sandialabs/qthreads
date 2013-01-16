@@ -37,8 +37,9 @@ int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict p
                                             qthread_t *restrict                t);
 int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *restrict q,
                                                     qthread_t *restrict                t);
-void INTERNAL qt_threadqueue_private_filter(qt_threadqueue_private_t *restrict c,
-                                            qt_threadqueue_filter_f            filter);
+qthread_t INTERNAL *qt_threadqueue_private_dequeue(qt_threadqueue_private_t *c);
+void INTERNAL       qt_threadqueue_private_filter(qt_threadqueue_private_t *restrict c,
+                                                  qt_threadqueue_filter_f            filter);
 
 ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q);
 
@@ -55,6 +56,5 @@ void INTERNAL qthread_cas_steal_stat(void);
 qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
                                                     void             *value);
 #endif // ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-
 #endif // ifndef QT_THREADQUEUES_H
 /* vim:set expandtab: */

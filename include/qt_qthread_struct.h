@@ -43,10 +43,11 @@ struct qthread_runtime_data_s {
     qt_context_t *return_context;  /* context of parent shepherd */
 
     /* a pointer used for passing information back to the shepherd when
-     * becoming blocked */
+     * context swapping */
     union {
         qthread_addrstat_t       *addr;
         qt_blocking_queue_node_t *io;
+        qthread_t                *thread;
     } blockedon;
     qthread_shepherd_t *shepherd_ptr;    /* the shepherd we run on */
     unsigned            tasklocal_size;

@@ -52,7 +52,7 @@
 # define tassert(foo)
 #else // ifdef QTHREAD_NO_ASSERTS
 # define ASSERT_ONLY(x)                       x
-# define qassert(op, val)                     assert(op == val)
+# define qassert(op, val)                     assert((op) == (val))
 # define qassertnot(op, val)                  assert(op != val)
 # define qassert_ret(assertion, retval)       assert(assertion)
 # define qassert_retvoid(assertion)           assert(assertion)

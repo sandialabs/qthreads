@@ -68,7 +68,6 @@ void INTERNAL qt_threadqueue_subsystem_init(void)
     generic_threadqueue_pools.nodes  = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t), sizeof(void *));
     qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
 }
-
 #endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 
 /* Thankfully, a basic LIFO stack does not suffer from the ABA problem. */
@@ -126,6 +125,11 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 } /*}}}*/
 
 #ifdef QTHREAD_USE_SPAWNCACHE
+qthread_t INTERNAL *qt_threadqueue_private_dequeue(qt_threadqueue_private_t *c)
+{   /*{{{*/
+    return NULL;
+} /*}}}*/
+
 int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict pq,
                                             qt_threadqueue_t *restrict         q,
                                             qthread_t *restrict                t)

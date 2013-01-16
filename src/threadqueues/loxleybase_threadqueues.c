@@ -85,6 +85,11 @@ ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
 } /*}}}*/
 
 #ifdef QTHREAD_USE_SPAWNCACHE
+qthread_t INTERNAL *qt_threadqueue_private_dequeue(qt_threadqueue_private_t *c)
+{
+    return NULL;
+}
+
 int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict pq,
                                             qt_threadqueue_t *restrict         q,
                                             qthread_t *restrict                t)
