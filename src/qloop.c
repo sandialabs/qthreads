@@ -10,6 +10,7 @@
 #include <qthread/qloop.h>
 #include <qthread/qtimer.h>
 #include <qthread/barrier.h>
+#include <qthread/sinc.h>
 
 /* Internal Headers */
 #include "qt_initialized.h" // for qthread_library_initialized
@@ -25,8 +26,6 @@
 # include "qt_atomics.h"
 # include "qt_threadqueues.h" // for qthread_steal_disable
 #endif
-
-#include "qthread/sinc.h"
 
 #ifdef QTHREAD_RCRTOOL
 int64_t maestro_size(void);
@@ -279,7 +278,7 @@ static void qt_loop_spawner(const size_t start,
     void *const                 argptr    = ((struct qt_loop_spawner_arg *)args_)->argptr;
     void                       *retptr    = NULL;
     aligned_t                   dc;
-    int yieldarg = 2;
+    int                         yieldarg = 2;
 
     assert(func);
 
@@ -321,8 +320,8 @@ static void qt_loop_spawner(const size_t start,
             flags |= QTHREAD_SPAWN_FUTURE;
             break;
         case 2:
-            flags |= QTHREAD_SPAWN_SIMPLE;
-            yieldarg=0;
+            flags   |= QTHREAD_SPAWN_SIMPLE;
+            yieldarg = 0;
             break;
     }
     for (i = start, threadct = 0; i < stop; ++i, ++threadct) {
