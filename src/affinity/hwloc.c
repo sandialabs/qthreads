@@ -216,7 +216,7 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
         *nbshepherds = guess_num_shepherds();
         *nbworkers   = guess_num_workers_per_shep(*nbshepherds);
     } else {                           /* (*nbshepherds != 0) */
-        qthread_debug(AFFINITY_DETAILS, "nbshepherds nonzero, shep_type_idx = %i\n", shep_type_idx);
+        qthread_debug(AFFINITY_DETAILS, "nbshepherds nonzero (%u), shep_type_idx = %i\n", *nbshepherds, shep_type_idx);
         if (shep_type_idx != -1) {
             qthread_debug(AFFINITY_DETAILS, "finding a shepherd depth...\n");
             shep_depth = hwloc_get_type_depth(topology, shep_type_options[shep_type_idx]);
@@ -275,8 +275,12 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
                    }
                    )
         qthread_debug(AFFINITY_CALLS, "Using depth %d (%s) for %d shepherds\n", shep_depth, typename, *nbshepherds);
-        if (*nbworkers == 0) {
-            *nbworkers = guess_num_workers_per_shep(*nbshepherds);
+        qthread_debug(AFFINITY_DETAILS, "workers = %u\n", *nbworkers);
+        {
+            qthread_worker_id_t tmp = guess_num_workers_per_shep(*nbshepherds);
+            if (*nbworkers == 0) {
+                *nbworkers = tmp;
+            }
         }
     }
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
