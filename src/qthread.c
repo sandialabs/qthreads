@@ -2540,6 +2540,7 @@ void API_FUNC qthread_yield_(int k)
                 t->thread_state = QTHREAD_STATE_YIELDED_NEAR;
                 break;
             case 2: // direct-yield
+#ifdef QTHREAD_USE_SPAWNCACHE
                 {
                     qt_threadqueue_private_t *pq = qt_spawncache_get();
                     if (pq->on_deck) {
@@ -2569,6 +2570,7 @@ void API_FUNC qthread_yield_(int k)
                         return;
                     }
                 }
+#endif
             case 0: // general yield
 basic_yield:
                 t->thread_state = QTHREAD_STATE_YIELDED;
