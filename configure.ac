@@ -405,6 +405,11 @@ AC_ARG_WITH([barrier],
             [AS_HELP_STRING([--with-barrier=[[type]]],
                             [Specify the barrier implementation. Options are 'feb' (default), 'sinc', 'array', and 'log'.])])
 
+AC_ARG_WITH([multinode-runtime],
+                   [AS_HELP_STRING([--with-multinode-runtime@<:@=OPTION@:>@],
+                                   [Use OPTION as runtime support, current options
+                                    are shmemrt, mpi, and pmi @<:@default=mpi@:>@])])
+
 AC_ARG_ENABLE([hpctoolkit],
               [AS_HELP_STRING([--enable-hpctoolkit-support],
                               [Enable modifications so that HPCToolkit can unwind Qthreads threads.])])
@@ -441,6 +446,26 @@ AC_ARG_ENABLE([multinode],
 
 AC_CACHE_SAVE
 #}}}
+
+AS_IF([test "x$enable_multinode" = "xyes"], 
+      [AS_IF([test "x$with_multinode_runtime" = "x"],
+             [with_multinode_runtime=mpi])
+       dnl ((((  make parens from case statement match something
+       case "$with_multinode_runtime" in
+           mpi)
+           AC_PATH_PROG([MPICC],[mpicc mpic])
+           AC_PATH_PROGS([MPICXX],[mpic++ mpicxx mpiCC])
+           AS_IF([test "x$MPICC" != "x"],
+                 [CC="$MPICC"])
+           AS_IF([test "x$MPICXX" != "x"],
+                 [CXX="$MPICXX"])
+           ;;
+           pmi)
+	       ;;
+           *) AC_MSG_ERROR([bad value ${with_multinode_runtime} for --with-multinode-runtime]) ;;
+       esac],
+      [enable_multinode="no"
+       with_multinode_runtime=""])
 
 ## ------------------- ##
 ## Checks for programs ##
@@ -1090,12 +1115,6 @@ AS_IF([test "x$enable_multinode" = "xyes"],
        CPPFLAGS="$CPPFLAGS $portals4_CPPFLAGS"
        LDFLAGS="$LDFLAGS $portals4_LDFLAGS"
        LIBS="$LIBS $portals4_LIBS"
-       AC_ARG_WITH([multinode-runtime],
-                   [AS_HELP_STRING([--with-multinode-runtime@<:@=OPTION@:>@],
-                                   [Use OPTION as runtime support, current options
-                                    are shmemrt, mpi, and pmi @<:@default=mpi@:>@])])
-       AS_IF([test "x$with_multinode_runtime" = "x"],
-             [with_multinode_runtime=mpi])
        dnl ((((  make parens from case statement match something
        case "$with_multinode_runtime" in
            shmemrt)
@@ -1115,8 +1134,7 @@ AS_IF([test "x$enable_multinode" = "xyes"],
              LIBS="$LIBS $pmi_LIBS"
 	   ;;
            *) AC_MSG_ERROR([bad value ${with_multinode_runtime} for --with-multinode-runtime]) ;;
-       esac],
-      [enable_multinode="no"])
+       esac])
 
 AS_IF([test "x$enable_lf_febs" == "xyes"],
       [AC_DEFINE([LOCK_FREE_FEBS], [1], [Define to use a lock-free hash table for FEB metadata.])],
