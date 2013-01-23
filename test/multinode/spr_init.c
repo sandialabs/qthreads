@@ -24,6 +24,8 @@ int main(int   argc,
     long      foobar   = 1234567890;
     qthread_f funcs[2] = { returner, NULL };
 
+    CHECK_VERBOSE();
+
     retval = spr_init(SPR_SPMD, funcs);
     if (retval != SPR_OK) {
         fprintf(stderr, "(%03d) spr_init returned %d\n", 0, retval);
