@@ -444,6 +444,9 @@ AC_ARG_ENABLE([multinode],
           [AS_HELP_STRING([--enable-multinode],
                               [Enable experimental support for multi-node qthreads applications])])
 
+AC_ARG_VAR([MPICC], [Path to the MPI C compiler-wrapper.])
+AC_ARG_VAR([MPICXX], [Path to the MPI C++ compiler-wrapper.])
+
 AC_CACHE_SAVE
 #}}}
 
@@ -453,14 +456,16 @@ AS_IF([test "x$enable_multinode" = "xyes"],
        dnl ((((  make parens from case statement match something
        case "$with_multinode_runtime" in
            mpi)
-           AC_PATH_PROGS([MPICC],[mpicc mpic])
+           AS_IF([test "x$MPICC" = "x"],
+                 [AC_PATH_PROGS([MPICC],[mpicc mpic])])
            AS_IF([test "x$MPICC" != "x"],
                  [CC="$MPICC"],
-                 [AC_MSG_ERROR([Cannot find mpicc or mpic.])])
-           AC_PATH_PROGS([MPICXX],[mpic++ mpicxx mpiCC])
+                 [AC_MSG_ERROR([Cannot find an MPI C compiler wrapper.])])
+           AS_IF([test "x$MPICXX" = "x"],
+                 [AC_PATH_PROGS([MPICXX],[mpic++ mpicxx mpiCC])])
            AS_IF([test "x$MPICXX" != "x"],
                  [CXX="$MPICXX"],
-                 [AC_MSG_ERROR([Cannot find mpic++, mpicxx, or mpiCC.])])
+                 [AC_MSG_ERROR([Cannot find an MPI C++ compiler wrapper.])])
            ;;
            pmi)
 	       ;;
