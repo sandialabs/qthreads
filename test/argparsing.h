@@ -86,6 +86,7 @@ static int verbose = 0;
 #endif
 
 #if defined(SILENT_ARGPARSING)
+# warning Silencing iprintf() output.
 # define iprintf(...)
 #elif defined(__tile__) || defined(__CYGWIN32__)
 # define iprintf printf
