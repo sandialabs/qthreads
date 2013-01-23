@@ -310,6 +310,8 @@ int qthread_multinode_multistop(void)
         qthread_debug(MULTINODE_DETAILS, "[%d] time to die\n", my_rank);
         msg.my_rank = my_rank;
         qthread_internal_net_driver_send(0, DIE_MSG_TAG, &msg, sizeof(msg));
+
+        exit(0); // triggers atexit(net_cleanup)
     }
 
     qthread_debug(MULTINODE_CALLS, "[%d] end qthread_multinode_multistop\n", my_rank);
