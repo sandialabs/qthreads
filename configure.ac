@@ -453,12 +453,14 @@ AS_IF([test "x$enable_multinode" = "xyes"],
        dnl ((((  make parens from case statement match something
        case "$with_multinode_runtime" in
            mpi)
-           AC_PATH_PROG([MPICC],[mpicc mpic])
-           AC_PATH_PROGS([MPICXX],[mpic++ mpicxx mpiCC])
+           AC_PATH_PROGS([MPICC],[mpicc mpic])
            AS_IF([test "x$MPICC" != "x"],
-                 [CC="$MPICC"])
+                 [CC="$MPICC"],
+                 [AC_MSG_ERROR([Cannot find mpicc or mpic.])])
+           AC_PATH_PROGS([MPICXX],[mpic++ mpicxx mpiCC])
            AS_IF([test "x$MPICXX" != "x"],
-                 [CXX="$MPICXX"])
+                 [CXX="$MPICXX"],
+                 [AC_MSG_ERROR([Cannot find mpic++, mpicxx, or mpiCC.])])
            ;;
            pmi)
 	       ;;
