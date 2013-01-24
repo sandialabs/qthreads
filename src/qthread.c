@@ -1155,7 +1155,6 @@ int API_FUNC qthread_initialize(void)
 #endif
     qt_threadqueue_enqueue(qlib->shepherds[0].ready, qlib->mccoy_thread);
     qassert(getcontext(&(qlib->mccoy_thread->rdata->context)), 0);
-    qassert(getcontext(&(qlib->master_context)), 0);
 /* now build the context for the shepherd 0 */
     qthread_debug(CORE_DETAILS, "calling qthread_makecontext\n");
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
@@ -1334,6 +1333,8 @@ static QINLINE void qthread_makecontext(qt_context_t *const c,
     const unsigned int high = ((uintptr_t)arg) >> 32;
     const unsigned int low  = ((uintptr_t)arg) & 0xffffffff;
 #endif
+
+    qassert(getcontext(c), 0); /* initialization required by makecontext API */
 
     /* Several other libraries that do this reserve a few words on either end
      * of the stack for some reason. To avoid problems, I'll also do this (even
@@ -2479,7 +2480,6 @@ void INTERNAL qthread_exec(qthread_t    *t,
                           t, c);
             t->thread_state = QTHREAD_STATE_RUNNING;
 
-            qassert(getcontext(&t->rdata->context), 0); /* puts the current context into t->rdata->context */
             qthread_makecontext(&t->rdata->context,
                                 t->rdata->stack, qlib->qthread_stack_size,
                                 (void (*)(void))qthread_wrapper, t, c);
