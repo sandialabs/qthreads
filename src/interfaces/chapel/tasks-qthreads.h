@@ -13,6 +13,8 @@
 #include <qthread.h>
 #include <stdio.h>
 
+#include "chpltypes.h" // for chpl_bool
+
 #define CHPL_COMM_YIELD_TASK_WHILE_POLLING
 void chpl_task_yield(void);
 
