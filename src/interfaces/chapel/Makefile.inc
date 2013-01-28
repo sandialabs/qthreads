@@ -14,7 +14,7 @@ libqthread_chpl_la_SOURCES += \
 	interfaces/chapel/comm-qthreads.c
 endif
 
-libqthread_chpl_la_CFLAGS = @CHPL_OPTS@ -I$(top_srcdir)/include -I$(top_srcdir)/include/qthread -I$(top_srcdir)/src/interfaces/chapel
+libqthread_chpl_la_CFLAGS = -I@CHPL_HOME@/runtime/include -I$(top_srcdir)/include -I$(top_srcdir)/include/qthread -I$(top_srcdir)/src/interfaces/chapel
 
 include_HEADERS = \
 	interfaces/chapel/tasks-qthreads.h
