@@ -166,8 +166,8 @@ void INTERNAL qt_eureka_worker_init(void)
     TLS_SET(eureka_block, 0);
     TLS_SET(eureka_blocked_flag, 0);
 #if 0 // This is commented out because sigaltstack() does not appear to work with pthreads reliably
-    /* Now, make the signal stack independent of the current task... */
-    stack_t ss = {MALLOC(SIGSTKSZ), 0, SIGSTKSZ};
+      /* Now, make the signal stack independent of the current task... */
+    stack_t ss = { MALLOC(SIGSTKSZ), 0, SIGSTKSZ };
     printf("sigstksz = %zu\n", SIGSTKSZ);
     assert(ss.ss_sp != NULL);
     sigaltstack(&ss, NULL);
