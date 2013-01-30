@@ -206,7 +206,6 @@ void API_FUNC qt_team_critical_section(qt_team_critical_section_t boundary)
     assert(qthread_library_initialized);
 
     qthread_t *self = qthread_internal_self();
-    int        critical;
 
     assert(self);
     switch(boundary) {
@@ -215,13 +214,15 @@ void API_FUNC qt_team_critical_section(qt_team_critical_section_t boundary)
             break;
         case END:
             assert(self->rdata->criticalsect > 0);
-            if ((--(self->rdata->criticalsect) == 0) &&
-                (self->thread_state == QTHREAD_STATE_ASSASSINATED)) {
-                qt_eureka_end_criticalsect_dead(self);
+            if (--(self->rdata->criticalsect) == 0) {
+                if (self->thread_state == QTHREAD_STATE_ASSASSINATED) {
+                    qt_eureka_end_criticalsect_dead(self);
+                } else {
+                    qt_eureka_check(0);
+                }
             }
             break;
     }
-    MACHINE_FENCE;
 } /*}}}*/
 
 void API_FUNC qt_team_eureka(void)
