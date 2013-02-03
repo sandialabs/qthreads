@@ -275,7 +275,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
     qthread_t             *retval;
 
     if (node == NULL) {
-        qt_eureka_enable();
+        qt_eureka_check(0);
         while (q->q.shadow_head == NULL && q->q.head == NULL) {
 #ifndef QTHREAD_CONDWAIT_BLOCKING_QUEUE
             SPINLOCK_BODY();

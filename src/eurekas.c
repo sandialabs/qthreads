@@ -374,6 +374,7 @@ void API_FUNC qt_team_eureka(void)
 void INTERNAL qt_eureka_check(int block)
 {   /*{{{*/
     if (TLS_GET(eureka_blocked_flag)) {
+clear_flag:
         TLS_SET(eureka_blocked_flag, 0);
         TLS_SET(eureka_block, 0);
         hup_handler(QT_EUREKA_SIGNAL);
@@ -383,11 +384,9 @@ void INTERNAL qt_eureka_check(int block)
     } else if (!block) {
         TLS_SET(eureka_block, 0);
     }
-} /*}}}*/
-
-void INTERNAL qt_eureka_enable(void)
-{   /*{{{*/
-    TLS_SET(eureka_block, 0);
+    if (TLS_GET(eureka_blocked_flag)) {
+        goto clear_flag;
+    }
 } /*}}}*/
 
 void INTERNAL qt_eureka_disable(void)

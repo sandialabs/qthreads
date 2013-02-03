@@ -10,7 +10,6 @@ void INTERNAL qthread_internal_assassinate(qthread_t *t);
 void INTERNAL qt_eureka_worker_init(void);
 void INTERNAL qt_eureka_end_criticalsect_dead(qthread_t *self);
 void INTERNAL qt_eureka_check(int block);
-void INTERNAL qt_eureka_enable(void);
 void INTERNAL qt_eureka_disable(void);
 
 #endif
