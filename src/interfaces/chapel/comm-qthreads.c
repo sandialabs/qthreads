@@ -22,11 +22,13 @@
 
 #include "chplrt.h"
 #include "chplsys.h"
-#include "tasks-qthreads.h" // for sync typedefs
 #include "chpl-mem.h"
+#include "tasks-qthreads.h" // for sync typedefs
+#include "arg.h" // for chpl_specify_locales_error()
 #include "chplsys.h"
 #include "comm-qthreads.h"
 #include "chpl-tasks.h"
+#include "chplcgfns.h" // for chpl_ftable()
 #include "config.h"   // for chpl_config_get_value()
 #include "error.h"    // for chpl_warning()
 #include <stdio.h>
