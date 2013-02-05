@@ -20,7 +20,7 @@ my %config = (
     mutexfifo     => '--with-scheduler=mutexfifo',
     mtsfifo       => '--with-scheduler=mtsfifo',
     nottingham    => '--with-scheduler=nottingham',
-    rose          => '--enable-interfaces=rose --enable-timer-progs --enable-rose-extensions --enable-hpctoolkit-support --enable-multithreaded-shepherds --with-topology=hwloc --with-scheduler=loxley --disable-lf-febs',
+    rose          => '--enable-interfaces=rose --enable-timer-progs --enable-rose-extensions --enable-hpctoolkit-support --enable-multithreaded-shepherds --with-topology=hwloc --disable-lf-febs',
     slowcontext   => '--disable-fastcontext',
     shavit        => '--with-dict=shavit',
     shep_profile  => '--enable-profiling=shepherd',
