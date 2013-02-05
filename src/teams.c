@@ -95,11 +95,13 @@ static void qt_internal_teams_shutdown(void)
 
 static void qt_internal_teams_destroy(void)
 {   /*{{{*/
+    qthread_debug(CORE_CALLS, "begin\n");
     QTHREAD_FASTLOCK_DESTROY(qlib->max_team_id_lock);
 #ifndef UNPOOLED
     qt_mpool_destroy(generic_team_pool);
     generic_team_pool = NULL;
 #endif
+    qthread_debug(CORE_CALLS, "end\n");
 } /*}}}*/
 
 /* Returns the team id. If there is no team structure associated with the task,
