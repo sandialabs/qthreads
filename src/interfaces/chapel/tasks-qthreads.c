@@ -18,6 +18,7 @@
 #include "chplsys.h"
 #include "tasks-qthreads.h"
 #include "chpl-tasks.h"
+#include "chpl-comm.h" // for chpl_localeID
 #include "chplcgfns.h" // for chpl_ftable()
 #include "config.h"   // for chpl_config_get_value()
 #include "error.h"    // for chpl_warning()
