@@ -99,6 +99,7 @@ unsigned int QTHREAD_LOCKING_STRIPES = 128;
 
 static void qt_feb_subsystem_shutdown(void)
 {
+    qthread_debug(CORE_CALLS, "begin\n");
     qthread_debug(FEB_DETAILS, "destroy feb infrastructure arrays\n");
     for (unsigned i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
         qt_hash_destroy_deallocate(FEBs[i],
@@ -126,6 +127,8 @@ static void qt_feb_subsystem_shutdown(void)
     qt_mpool_destroy(generic_addrres_pool);
     generic_addrres_pool = NULL;
 #endif
+
+    qthread_debug(CORE_CALLS, "end\n");
 }
 
 void INTERNAL qt_feb_subsystem_init(uint_fast8_t need_sync)

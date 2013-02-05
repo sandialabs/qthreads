@@ -433,7 +433,9 @@ int qthread_internal_net_driver_finalize(void)
     }
 
     /* shut down the progress thread */
+    qthread_debug(MULTINODE_DETAILS, "begin waiting on progress thread\n", ret);
     ret = pthread_join(qt_progress_thread, &dummy);
+    qthread_debug(MULTINODE_DETAILS, "end waiting on progress thread\n", ret);
     if (0 != ret) {
         qthread_debug(MULTINODE_DETAILS, "pthread_join: %d\n", ret);
         return ret;
@@ -473,11 +475,17 @@ int qthread_internal_net_driver_finalize(void)
 
     qthread_internal_net_driver_runtime_fini();
 
+    qthread_debug(MULTINODE_DETAILS, "begin finalizing Portals4\n", ret);
+
     PtlNIFini(ni_h);
     PtlNIFini(nm_ni_h);
     PtlFini();
 
+    qthread_debug(MULTINODE_DETAILS, "end finalizing Portals4\n", ret);
+
+    qthread_debug(MULTINODE_DETAILS, "begin destroying memory pool\n", ret);
     qt_mpool_destroy(mpool);
+    qthread_debug(MULTINODE_DETAILS, "end destroying memory pool\n", ret);
 
     return 0;
 }
