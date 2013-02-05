@@ -165,6 +165,28 @@ static aligned_t parent_eureka(void *arg)
     return 0;
 }
 
+aligned_t return_one(void *arg)
+{
+    return 1;
+}
+
+void clear_workers(void)
+{
+    iprintf("Checking that all workers are now clear again...\n");
+    {
+	aligned_t rets[3] = {0,0,0};
+	for (int i=0; i<3; ++i) {
+	    qthread_fork_to(return_one, NULL, &rets[i], i);
+	}
+	for (int i=0; i<3; ++i) {
+	    aligned_t test;
+	    qthread_readFF(&test, &rets[i]);
+	    assert(test == 1);
+	}
+    }
+    iprintf("...clear!\n");
+}
+
 int main(int   argc,
          char *argv[])
 {
@@ -186,11 +208,14 @@ int main(int   argc,
 
     qt_loop_balance(0, qthread_num_workers(), alive_check, NULL);
 
+    iprintf("\n***************************************************************\n");
     iprintf("Testing a fully-live eureka (all member tasks running)...\n");
     qthread_spawn(live_parent, NULL, 0, &t2, 0, &t3, 0, QTHREAD_SPAWN_NEW_TEAM);
     qthread_readFF(NULL, &t2);
     assert(waiter_count == 0);
     t = 1;
+
+    clear_workers();
 
     iprintf("\n\n***************************************************************\n");
     iprintf("Testing an over-subscribed eureka (some member tasks not running)...\n");
@@ -200,13 +225,17 @@ int main(int   argc,
     assert(waiter_count == 0);
     t = 1;
 
+    clear_workers();
+
     iprintf("\n\n***************************************************************\n");
     iprintf("Testing a under-subscribed eureka (some workers idle)...\n");
     qthread_fork_new_team(live_parent3, NULL, &t2);
     qthread_readFF(NULL, &t2);
-    iprintf("main() woke up after live_parent3\n");
+    iprintf("main() woke up after live_parent3 (%u waiters survived)\n", waiter_count);
     assert(waiter_count == 0);
     t = 1;
+
+    clear_workers();
 
     iprintf("\n\n***************************************************************\n");
     iprintf("Testing a parent-team eureka (subteam tasks must die)...\n");
@@ -218,6 +247,8 @@ int main(int   argc,
     iprintf("main() woke up after parent_eureka\n");
     assert(waiter_count == 0);
     t = 1;
+
+    clear_workers();
 
     iprintf("Success!\n");
 
