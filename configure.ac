@@ -512,7 +512,7 @@ AS_IF([test "x$enable_picky" = xyes],
          Clang)
            CFLAGS="-Wall -Wno-strict-aliasing -Wmissing-prototypes -Wstrict-prototypes $CFLAGS"
            ;;
-         GNU*|*LLVM*)
+         Apple-GNU*|GNU*|*LLVM*)
            CFLAGS="-Wall -Wno-strict-aliasing -Wmissing-prototypes -Wstrict-prototypes $CFLAGS"
            ;;
          Intel)
@@ -558,6 +558,19 @@ AS_IF([test "x$enable_picky" = xyes],
            ;;
          esac])
 
+QTHREAD_CHECK_ASSEMBLY([have_assembly=1], [have_assembly=0])
+case "$qthread_cv_asm_arch" in
+    POWERPC32|SPARCV9_32)
+    compile_compat_atomic=yes
+    ;;
+esac
+case "$qthread_cv_asm_arch" in
+    POWERPC*)
+    AS_IF([test "x$qthread_cv_c_compiler_type" = "xApple-GNU4.0"],
+          [AC_MSG_ERROR([The Apple GCC 4.0 compiler on PPC does not sufficiently support memory barriers to be safe. Please use a newer compiler (the Apple GCC 4.2 compiler seems to work just fine).])])
+    ;;
+esac
+
 AC_CACHE_SAVE
 
 # Figure out if we're targeting SST or Unix implementation.  Will add
@@ -573,12 +586,6 @@ AC_TYPE_PID_T
 
 AC_CHECK_SIZEOF([int])
 AC_CHECK_SIZEOF([void*])
-QTHREAD_CHECK_ASSEMBLY([have_assembly=1], [have_assembly=0])
-case "$qthread_cv_asm_arch" in
-    POWERPC32|SPARCV9_32)
-    compile_compat_atomic=yes
-    ;;
-esac
 
 # Default behavior:
 #   sizeof(aligned_t)    = 8 (unless POWERPC32, then 4)
