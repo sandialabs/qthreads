@@ -56,6 +56,18 @@ AC_CACHE_CHECK([what kind of C compiler $CC is],
 			  [_QTHREAD_CHECK_IFDEF_EQ([__GNUC__],[3],[qthread_cv_c_compiler_type=GNU3])])
 		AS_IF([test "x$qthread_cv_c_compiler_type" = "xGNU"],
 			  [_QTHREAD_CHECK_IFDEF_EQ([__GNUC__],[4],[qthread_cv_c_compiler_type=GNU4])])
+		AS_IF([test "x$qthread_cv_c_compiler_type" != "xGNU"],
+		      [_QTHREAD_CHECK_IFDEF_EQ([__GNUC_MINOR__],[0],[qthread_cv_c_compiler_type="${qthread_cv_c_compiler_type}.0"])
+		       _QTHREAD_CHECK_IFDEF_EQ([__GNUC_MINOR__],[1],[qthread_cv_c_compiler_type="${qthread_cv_c_compiler_type}.1"])
+		       _QTHREAD_CHECK_IFDEF_EQ([__GNUC_MINOR__],[2],[qthread_cv_c_compiler_type="${qthread_cv_c_compiler_type}.2"])
+		       _QTHREAD_CHECK_IFDEF_EQ([__GNUC_MINOR__],[3],[qthread_cv_c_compiler_type="${qthread_cv_c_compiler_type}.3"])
+		       _QTHREAD_CHECK_IFDEF_EQ([__GNUC_MINOR__],[4],[qthread_cv_c_compiler_type="${qthread_cv_c_compiler_type}.4"])
+		       _QTHREAD_CHECK_IFDEF_EQ([__GNUC_MINOR__],[5],[qthread_cv_c_compiler_type="${qthread_cv_c_compiler_type}.5"])
+		       _QTHREAD_CHECK_IFDEF_EQ([__GNUC_MINOR__],[6],[qthread_cv_c_compiler_type="${qthread_cv_c_compiler_type}.6"])
+		       _QTHREAD_CHECK_IFDEF_EQ([__GNUC_MINOR__],[7],[qthread_cv_c_compiler_type="${qthread_cv_c_compiler_type}.7"])
+		       _QTHREAD_CHECK_IFDEF_EQ([__GNUC_MINOR__],[8],[qthread_cv_c_compiler_type="${qthread_cv_c_compiler_type}.8"])
+			   _QTHREAD_CHECK_IFDEF([__APPLE_CC__],[qthread_cv_c_compiler_type="Apple-${qthread_cv_c_compiler_type}"])
+			  ])
 	 ])])
 
    dnl A few common compilers (to detect quickly)
