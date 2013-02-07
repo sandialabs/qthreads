@@ -45,11 +45,11 @@ static size_t       num_workers;
 static size_t       num_wps;
 static unsigned int cacheline;
 
-void qt_sinc_init(qt_sinc_t *restrict  sinc_,
-                  size_t               sizeof_value,
-                  const void *restrict initial_value,
-                  qt_sinc_op_f         op,
-                  size_t               expect)
+void API_FUNC qt_sinc_init(qt_sinc_t *restrict  sinc_,
+                           size_t               sizeof_value,
+                           const void *restrict initial_value,
+                           qt_sinc_op_f         op,
+                           size_t               expect)
 {   /*{{{*/
     assert((0 == sizeof_value && NULL == initial_value) ||
            (0 != sizeof_value && NULL != initial_value));
@@ -111,10 +111,10 @@ void qt_sinc_init(qt_sinc_t *restrict  sinc_,
             (!sinc->rdata->result && !sinc->rdata->initial_value)));
 } /*}}}*/
 
-qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
-                          const void  *initial_value,
-                          qt_sinc_op_f op,
-                          const size_t will_spawn)
+qt_sinc_t API_FUNC *qt_sinc_create(const size_t sizeof_value,
+                                   const void  *initial_value,
+                                   qt_sinc_op_f op,
+                                   const size_t will_spawn)
 {   /*{{{*/
     qt_sinc_t *const restrict sinc = MALLOC(sizeof(qt_sinc_t));
 
@@ -125,8 +125,8 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
     return sinc;
 } /*}}}*/
 
-void qt_sinc_reset(qt_sinc_t   *sinc_,
-                   const size_t will_spawn)
+void API_FUNC qt_sinc_reset(qt_sinc_t   *sinc_,
+                            const size_t will_spawn)
 {   /*{{{*/
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
 
@@ -159,9 +159,9 @@ void qt_sinc_reset(qt_sinc_t   *sinc_,
     }
 } /*}}}*/
 
-//add akp for power throttling
-void qt_sinc_resize(qt_sinc_t   *sinc_,
-                   const size_t diff)
+// add akp for power throttling
+void API_FUNC qt_sinc_resize(qt_sinc_t   *sinc_,
+                             const size_t diff)
 {   /*{{{*/
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
 
@@ -172,7 +172,7 @@ void qt_sinc_resize(qt_sinc_t   *sinc_,
 
     // Reset values
     if (NULL != rdata) {
-      printf("not sure resize is safe when storing values in sinc\n");
+        printf("not sure resize is safe when storing values in sinc\n");
     }
 
     // Reset termination detection
@@ -182,10 +182,10 @@ void qt_sinc_resize(qt_sinc_t   *sinc_,
         qthread_fill(&sinc->ready);
     }
 } /*}}}*/
+
 // end akp add
 
-
-void qt_sinc_fini(qt_sinc_t *sinc_)
+void API_FUNC qt_sinc_fini(qt_sinc_t *sinc_)
 {   /*{{{*/
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
 
@@ -205,7 +205,7 @@ void qt_sinc_fini(qt_sinc_t *sinc_)
     qassert(qthread_fill(&sinc->ready), QTHREAD_SUCCESS);
 } /*}}}*/
 
-void qt_sinc_destroy(qt_sinc_t *sinc_)
+void API_FUNC qt_sinc_destroy(qt_sinc_t *sinc_)
 {   /*{{{*/
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
 
@@ -220,8 +220,8 @@ void qt_sinc_destroy(qt_sinc_t *sinc_)
  * Pre:  sinc was created
  * Post: aggregate count is positive
  */
-void qt_sinc_expect(qt_sinc_t *sinc_,
-                    size_t     count)
+void API_FUNC qt_sinc_expect(qt_sinc_t *sinc_,
+                             size_t     count)
 {   /*{{{*/
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
 
@@ -280,8 +280,8 @@ static void qt_sinc_internal_collate(qt_sinc_t *sinc_)
     qthread_fill(&sinc->ready);
 } /*}}}*/
 
-void qt_sinc_submit(qt_sinc_t *restrict  sinc_,
-                    const void *restrict value)
+void API_FUNC qt_sinc_submit(qt_sinc_t *restrict  sinc_,
+                             const void *restrict value)
 {   /*{{{*/
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
 
@@ -316,8 +316,8 @@ void qt_sinc_submit(qt_sinc_t *restrict  sinc_,
     }
 } /*}}}*/
 
-void qt_sinc_wait(qt_sinc_t *restrict sinc_,
-                  void *restrict      target)
+void API_FUNC qt_sinc_wait(qt_sinc_t *restrict sinc_,
+                           void *restrict      target)
 {   /*{{{*/
     qt_internal_sinc_t *const restrict sinc = (qt_internal_sinc_t *)sinc_;
 
