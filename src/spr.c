@@ -18,11 +18,23 @@
 #include "qt_atomics.h"
 #include "net/net.h"
 
+#include "qthread/barrier.h"
+
 /******************************************************************************
 * Internal SPR remote actions                                                *
 ******************************************************************************/
 
 static int initialized_flags = -1;
+static int spr_initialized = 0;
+
+static aligned_t spr_locale_barrier_op(void *arg_);
+static qthread_f
+spr_remote_functions[2] = {
+    spr_locale_barrier_op,
+    NULL};
+
+// Locale barrier
+static qt_barrier_t * locale_barrier = NULL;
 
 static void call_fini(void)
 {
@@ -41,9 +53,18 @@ int spr_init(unsigned int flags,
     // Initialize Qthreads on this locale
     qthread_initialize();
 
+    // Register actions
+    spr_register_actions(spr_remote_functions, 0, spr_internals_base);
     if (regs) {
         spr_register_actions(regs, 0, spr_init_base);
     }
+
+    if (0 == spr_locale_id()) {
+        // Create locale barrier
+        locale_barrier = qt_barrier_create(spr_num_locales(), REGION_BARRIER);
+    }
+
+    spr_initialized = 1;
 
     atexit(call_fini);
     if (flags & SPR_SPMD) {
@@ -61,6 +82,12 @@ int spr_fini(void)
     if (initialized_flags == -1) { return SPR_NOINIT; }
     if (recursion_detection) { return SPR_OK; }
     recursion_detection = 1;
+
+    // Destroy locale barrier
+    if (NULL != locale_barrier) {
+        qt_barrier_destroy(locale_barrier);
+    }
+
     if (initialized_flags & SPR_SPMD) {
         qthread_multinode_multistop();
     }
@@ -333,11 +360,45 @@ int spr_put_nb(int                        dest_loc,
 * Locale-level Collectives: Barrier                                          *
 ******************************************************************************/
 
+aligned_t spr_locale_barrier_op(void *arg_)
+{
+    aligned_t result = 0;
+
+    qthread_debug(MULTINODE_CALLS, "[%d] enter task-level barrier.\n", spr_locale_id());
+
+    assert(NULL != locale_barrier); // Must run on L0
+    qt_barrier_enter(locale_barrier);
+
+    qthread_debug(MULTINODE_CALLS, "[%d] exit task-level barrier.\n", spr_locale_id());
+    
+    return result;
+}
+
 int spr_locale_barrier(void)
 {
     int rc = SPR_OK;
 
-    rc = qthread_internal_net_driver_barrier();
+    if (0 == spr_initialized) {
+        // Perform (thread-level) barrier using the network driver runtime
+        qthread_debug(MULTINODE_BEHAVIOR, "[%d] enter network driver runtime  barrier.\n", spr_locale_id());
+
+        rc = qthread_internal_net_driver_barrier();
+
+        qthread_debug(MULTINODE_BEHAVIOR, "[%d] exit network driver runtime  barrier.\n", spr_locale_id());
+    } else {
+        // Perform task-level barrier
+        qthread_debug(MULTINODE_BEHAVIOR, "[%d] enter task-level barrier.\n", spr_locale_id());
+
+        aligned_t ret;
+        qthread_fork_remote(spr_locale_barrier_op,
+                            NULL, // arg
+                            &ret,
+                            0,    // rank
+                            0);   // arg_len
+        qthread_readFF(&ret, &ret);
+
+        qthread_debug(MULTINODE_BEHAVIOR, "[%d] exit task-level barrier.\n", spr_locale_id());
+    }
 
     return rc;
 }
