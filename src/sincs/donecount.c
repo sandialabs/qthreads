@@ -198,6 +198,8 @@ void qt_sinc_fini(qt_sinc_t *sinc_)
         FREE(rdata->initial_value, 2 * rdata->sizeof_value);
         assert(rdata->values);
         qthread_internal_aligned_free(rdata->values, cacheline);
+        FREE(rdata, sizeof(qt_sinc_reduction_t));
+        sinc->rdata = NULL;
     }
     qthread_debug(FEB_DETAILS, "tid %u filling sinc ready as part of destruction (%p)\n", qthread_id(), &sinc->ready);
     qassert(qthread_fill(&sinc->ready), QTHREAD_SUCCESS);
