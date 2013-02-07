@@ -486,9 +486,13 @@ void chpl_task_callMain(void (*chpl_main)(void))
 int chpl_task_createCommTask(chpl_fn_p fn,
                              void     *arg)
 {
+#ifndef QTHREAD_MULTINODE
     pthread_t polling_thread;
 
     return pthread_create(&polling_thread, NULL, (void *(*)(void *))fn, arg);
+#else
+    return 0;
+#endif
 }
 
 void chpl_task_addToTaskList(chpl_fn_int_t     fid,
