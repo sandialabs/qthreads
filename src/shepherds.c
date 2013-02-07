@@ -113,13 +113,7 @@ int API_FUNC qthread_distance(const qthread_shepherd_id_t src,
     if (qlib->shepherds[src].shep_dists == NULL) {
         return 0;
     } else {
-        if (dest > src) {
-            return qlib->shepherds[src].shep_dists[dest-1];
-        } else if (dest == src) {
-            return 0;
-        } else {
-            return qlib->shepherds[src].shep_dists[dest];
-        }
+        return qlib->shepherds[src].shep_dists[dest];
     }
 }                      /*}}} */
 
