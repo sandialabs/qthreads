@@ -134,14 +134,15 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
 {                                      /*{{{ */
     /* there is no native way to detect distances, so unfortunately we must assume that they're all equidistant */
     for (size_t i = 0; i < nshepherds; ++i) {
-        sheps[i].shep_dists      = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
         sheps[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
+        sheps[i].shep_dists      = calloc(nshepherds, sizeof(qthread_shepherd_id_t));
         for (size_t j = 0, k = 0; j < nshepherds; ++j) {
             if (j != i) {
-                sheps[i].shep_dists[k]        = 10;
+                sheps[i].shep_dists[j]        = 10;
                 sheps[i].sorted_sheplist[k++] = j;
             }
         }
+        // no need to sort; they're all equidistant
         shuffle_sheps(sheps[i].sorted_sheplist, nshepherds - 1);
     }
     return QTHREAD_SUCCESS;

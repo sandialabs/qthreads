@@ -43,7 +43,8 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
 }                                      /*}}} */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-void INTERNAL qt_affinity_set(qthread_worker_t *me, unsigned int Q_UNUSED(nw))
+void INTERNAL qt_affinity_set(qthread_worker_t *me,
+                              unsigned int      Q_UNUSED(nw))
 {                                      /*{{{ */
     if (tmc_cpus_set_my_cpu(me->packed_worker_id) < 0) {
         perror("tmc_cpus_set_my_affinity() failed");
@@ -52,7 +53,8 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me, unsigned int Q_UNUSED(nw))
 }                                      /*}}} */
 
 #else
-void INTERNAL qt_affinity_set(qthread_shepherd_t *me, unsigned int Q_UNUSED(nw))
+void INTERNAL qt_affinity_set(qthread_shepherd_t *me,
+                              unsigned int        Q_UNUSED(nw))
 {                                      /*{{{ */
     if (tmc_cpus_set_my_cpu(me->node) < 0) {
         perror("tmc_cpus_set_my_affinity() failed");
@@ -94,8 +96,10 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
     for (qthread_shepherd_id_t i = 0; i < nshepherds; i++) {
         size_t       j, k;
         unsigned int ix, iy;
-        sheps[i].shep_dists = calloc(nshepherds, sizeof(unsigned int));
+        sheps[i].shep_dists      = calloc(nshepherds, sizeof(unsigned int));
+        sheps[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
         assert(sheps[i].shep_dists);
+        assert(sheps[i].sorted_sheplist);
         tmc_cpus_grid_cpu_to_tile(sheps[i].node, &ix, &iy);
         for (j = 0; j < nshepherds; j++) {
             unsigned int jx, jy;
@@ -103,51 +107,12 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
             sheps[i].shep_dists[j] =
                 abs((int)ix - (int)jx) + abs((int)iy - (int)jy);
         }
-        sheps[i].sorted_sheplist =
-            calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
-        assert(sheps[i].sorted_sheplist);
         for (j = k = 0; j < nshepherds; j++) {
             if (j != i) {
                 sheps[i].sorted_sheplist[k++] = j;
             }
         }
-#if defined(HAVE_QSORT_R)
-# if defined(QTHREAD_QSORT_BSD)
-        assert(sheps[i].sorted_sheplist);
-        qsort_r(sheps[i].sorted_sheplist, nshepherds - 1,
-                sizeof(qthread_shepherd_id_t), (void *)(intptr_t)i,
-                &qthread_internal_shepcomp);
-# elif defined(QTHREAD_QSORT_GLIBC)
-        assert(sheps[i].sorted_sheplist);
-        qsort_r(sheps[i].sorted_sheplist, nshepherds - 1,
-                sizeof(qthread_shepherd_id_t), &qthread_internal_shepcomp,
-                (void *)(intptr_t)i);
-# else
-#  error BAD QSORT
-# endif /* if defined(QTHREAD_QSORT_BSD) */
-#else /* if defined(HAVE_QSORT_R) */
-        shepcomp_src = (qthread_shepherd_id_t)i;
-        qsort(sheps[i].sorted_sheplist, nshepherds - 1,
-              sizeof(qthread_shepherd_id_t), qthread_internal_shepcomp);
-#endif  /* if defined(HAVE_QSORT_R) && defined(QTHREAD_QSORT_BSD) */
-        {
-            int    prev_dist = qthread_distance(i, sheps[i].sorted_sheplist[0]);
-            size_t count     = 1;
-            for (size_t j = 1; j < nshepherds - 1; ++j) {
-                if (qthread_distance(i, sheps[i].sorted_sheplist[j]) == prev_dist) {
-                    count++;
-                } else {
-                    if (count > 1) {
-                        shuffle_sheps(sheps[i].sorted_sheplist + (j - count), count);
-                    }
-                    count     = 1;
-                    prev_dist = qthread_distance(i, sheps[i].sorted_sheplist[j]);
-                }
-            }
-            if (count > 1) {
-                shuffle_sheps(sheps[i].sorted_sheplist + (nshepherds - 1 - count), count);
-            }
-        }
+        sort_sheps(sheps[i].shep_dists, sheps[i].sorted_sheplist, nshepherds);
     }
     return QTHREAD_SUCCESS;
 }                                      /*}}} */

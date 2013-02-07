@@ -618,7 +618,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
     for (size_t i = 0; i < nshepherds; ++i) {
         sheps[i].node            = i % num_extant_objs;
         sheps[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
-        sheps[i].shep_dists      = calloc(nshepherds - 1, sizeof(unsigned int));
+        sheps[i].shep_dists      = calloc(nshepherds, sizeof(unsigned int));
     }
 # ifdef QTHREAD_HAVE_HWLOC_DISTS
     const struct hwloc_distances_s *matrix = hwloc_get_whole_distance_matrix_by_type(topology, HWLOC_OBJ_NODE);
@@ -644,25 +644,26 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
             if (j != i) {
 # ifdef QTHREAD_HAVE_HWLOC_DISTS
                 if (matrix) {
-                    sheps[i].shep_dists[k] = matrix->latency[node_to_NUMAnode[sheps[i].node] + matrix->nbobjs * node_to_NUMAnode[sheps[j].node]] * 10;
+                    sheps[i].shep_dists[j] = matrix->latency[node_to_NUMAnode[sheps[i].node] + matrix->nbobjs * node_to_NUMAnode[sheps[j].node]] * 10;
                     qthread_debug(AFFINITY_DETAILS, "distance from %i(%i) to %i(%i) is %i\n",
                                   (int)i, (int)sheps[i].node,
                                   (int)j, (int)sheps[j].node,
-                                  (int)(sheps[i].shep_dists[k]));
+                                  (int)(sheps[i].shep_dists[j]));
                 } else {
                     // handle what is fundamentally a bug in old versions of hwloc
-                    sheps[i].shep_dists[k] = 10;
-                    qthread_debug(AFFINITY_DETAILS, "pretending distance from %i to %i is %i\n", (int)i, (int)j, (int)(sheps[i].shep_dists[k]));
+                    sheps[i].shep_dists[j] = 10;
+                    qthread_debug(AFFINITY_DETAILS, "pretending distance from %i to %i is %i\n", (int)i, (int)j, (int)(sheps[i].shep_dists[j]));
                 }
 # else          /* ifdef QTHREAD_HAVE_HWLOC_DISTS */
-                sheps[i].shep_dists[k] = 10;
-                qthread_debug(AFFINITY_DETAILS, "pretending distance from %i to %i is %i\n", (int)i, (int)j, (int)(sheps[i].shep_dists[k]));
+                sheps[i].shep_dists[j] = 10;
+                qthread_debug(AFFINITY_DETAILS, "pretending distance from %i to %i is %i\n", (int)i, (int)j, (int)(sheps[i].shep_dists[j]));
 # endif         /* ifdef QTHREAD_HAVE_HWLOC_DISTS */
-                sheps[i].sorted_sheplist[k] = j;
-                k++;
+                sheps[i].sorted_sheplist[k++] = j;
             }
         }
-        shuffle_sheps(sheps[i].sorted_sheplist, nshepherds - 1);
+        if (nshepherds > 1) {
+            sort_sheps(sheps[i].shep_dists, sheps[i].sorted_sheplist, nshepherds);
+        }
     }
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
       /* Find the number of bigger-than-PU objects in the CPU set */

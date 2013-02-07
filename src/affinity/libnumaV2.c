@@ -247,7 +247,9 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
         const unsigned int node_i = sheps[i].node;
         size_t             j, k;
         sheps[i].shep_dists = calloc(nshepherds, sizeof(unsigned int));
+        sheps[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
         assert(sheps[i].shep_dists);
+        assert(sheps[i].sorted_sheplist);
         for (j = 0; j < nshepherds; j++) {
             const unsigned int node_j = sheps[j].node;
 
@@ -262,50 +264,13 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                 }
             }
         }
-        sheps[i].sorted_sheplist =
-            calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
-        assert(sheps[i].sorted_sheplist);
         k = 0;
         for (j = 0; j < nshepherds; j++) {
             if (j != i) {
                 sheps[i].sorted_sheplist[k++] = j;
             }
         }
-# if defined(HAVE_QSORT_R) && defined(QTHREAD_QSORT_BSD)
-        assert(sheps[i].sorted_sheplist);
-        qsort_r(sheps[i].sorted_sheplist, nshepherds - 1,
-                sizeof(qthread_shepherd_id_t), (void *)(intptr_t)i,
-                &qthread_internal_shepcomp);
-# elif defined(HAVE_QSORT_R) && defined(QTHREAD_QSORT_GLIBC)
-        /* what moron in the linux community decided to implement BSD's
-         * qsort_r with the arguments reversed??? */
-        assert(sheps[i].sorted_sheplist);
-        qsort_r(sheps[i].sorted_sheplist, nshepherds - 1,
-                sizeof(qthread_shepherd_id_t), &qthread_internal_shepcomp,
-                (void *)(intptr_t)i);
-# else  /* if defined(HAVE_QSORT_R) && defined(QTHREAD_QSORT_BSD) */
-        shepcomp_src = (qthread_shepherd_id_t)i;
-        qsort(sheps[i].sorted_sheplist, nshepherds - 1,
-              sizeof(qthread_shepherd_id_t), qthread_internal_shepcomp);
-# endif /* if defined(HAVE_QSORT_R) && defined(QTHREAD_QSORT_BSD) */
-        {
-            int    prev_dist = qthread_distance(i, sheps[i].sorted_sheplist[0]);
-            size_t count     = 1;
-            for (size_t j = 1; j < nshepherds - 1; ++j) {
-                if (qthread_distance(i, sheps[i].sorted_sheplist[j]) == prev_dist) {
-                    count++;
-                } else {
-                    if (count > 1) {
-                        shuffle_sheps(sheps[i].sorted_sheplist + (j - count), count);
-                    }
-                    count     = 1;
-                    prev_dist = qthread_distance(i, sheps[i].sorted_sheplist[j]);
-                }
-            }
-            if (count > 1) {
-                shuffle_sheps(sheps[i].sorted_sheplist + (nshepherds - 1 - count), count);
-            }
-        }
+        sort_sheps(sheps[i].shep_dists, sheps[i].sorted_sheplist, nshepherds);
     }
 #endif /* ifdef HAVE_NUMA_DISTANCE */
     return QTHREAD_SUCCESS;

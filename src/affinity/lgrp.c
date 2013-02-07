@@ -290,45 +290,14 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
     for (qthread_shepherd_id_t i = 0; i < nshepherds; i++) {
         size_t j, k = 0;
 
-        sheps[i].sorted_sheplist =
-            calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
+        sheps[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
         assert(sheps[i].sorted_sheplist);
         for (j = 0; j < nshepherds; j++) {
             if (j != i) {
                 sheps[i].sorted_sheplist[k++] = j;
             }
         }
-#if defined(HAVE_QSORT_R) && !defined(__linux__)
-        qsort_r(sheps[i].sorted_sheplist, nshepherds - 1,
-                sizeof(qthread_shepherd_id_t), (void *)(intptr_t)i,
-                &qthread_internal_shepcomp);
-#elif defined(HAVE_QSORT_R)
-        qsort_r(sheps[i].sorted_sheplist, nshepherds - 1,
-                sizeof(qthread_shepherd_id_t), &qthread_internal_shepcomp,
-                (void *)(intptr_t)i);
-#else
-        shepcomp_src = (qthread_shepherd_id_t)i;
-        qsort(sheps[i].sorted_sheplist, nshepherds - 1,
-              sizeof(qthread_shepherd_id_t), qthread_internal_shepcomp);
-#endif  /* if defined(HAVE_QSORT_R) && !defined(__linux__) */
-        {
-            int prev_dist = qthread_distance(i, sheps[i].sorted_sheplist[0]);
-            size_t count = 1;
-            for (size_t j = 1; j < nshepherds-1; ++j) {
-                if (qthread_distance(i, sheps[i].sorted_sheplist[j]) == prev_dist) {
-                    count++;
-                } else {
-                    if (count > 1) {
-                        shuffle_sheps(sheps[i].sorted_sheplist + (j - count), count);
-                    }
-                    count = 1;
-		    prev_dist = qthread_distance(i, sheps[i].sorted_sheplist[j]);
-                }
-            }
-	    if (count > 1) {
-		shuffle_sheps(sheps[i].sorted_sheplist + (nshepherds - 1 - count), count);
-	    }
-        }
+        sort_sheps(sheps[i].shep_dists, sheps[i].sorted_sheplist, nshepherds);
     }
     if (cpus) {
         for (int i = 0; i < lgrp_count_grps; i++) {
