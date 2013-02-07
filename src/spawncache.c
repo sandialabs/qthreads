@@ -20,37 +20,26 @@
 
 /* Globals */
 TLS_DECL_INIT(qt_threadqueue_private_t *, spawn_cache);
+static qt_threadqueue_private_t *free_these = NULL;
 
 /* Static Functions */
 static void qt_spawncache_shutdown(void)
 {
     qthread_debug(CORE_DETAILS, "destroy thread-local task queue\n");
-    void *freeme = TLS_GET(spawn_cache);
-    if (freeme) {
+    TLS_SET(spawn_cache, NULL);
+    qt_threadqueue_private_t *freeme = free_these;
+    while (freeme != NULL) {
+        free_these = free_these->next;
         qthread_internal_aligned_free(freeme, qthread_cacheline());
+        freeme = free_these;
     }
     TLS_DELETE(spawn_cache);
 }
 
-#ifndef TLS
-static void qt_threadqueue_private_destroy(void *q)
-{
-    if (q) {
-        assert(((qt_threadqueue_private_t *)q)->head == NULL &&
-               ((qt_threadqueue_private_t *)q)->tail == NULL &&
-               ((qt_threadqueue_private_t *)q)->qlength == 0 &&
-               ((qt_threadqueue_private_t *)q)->qlength_stealable == 0);
-
-        qthread_internal_aligned_free(q, qthread_cacheline());
-    }
-}
-
-#endif /* ifndef TLS */
-
 /* Internal-only Functions */
 void INTERNAL qt_spawncache_init(void)
 {
-    TLS_INIT2(spawn_cache, qt_threadqueue_private_destroy);
+    TLS_INIT(spawn_cache);
     qthread_internal_cleanup(qt_spawncache_shutdown);
 }
 
@@ -60,6 +49,11 @@ qt_threadqueue_private_t INTERNAL *qt_init_local_spawncache(void)
 
     assert(ret);
     memset(ret, 0, sizeof(qt_threadqueue_private_t));
+
+    /* Add this spawncache to the list of things to be freed during shutdown */
+    do {
+        ret->next = free_these;
+    } while (qthread_cas_ptr(&free_these, ret->next, ret) != ret->next);
 
     TLS_SET(spawn_cache, ret);
     return ret;

@@ -7,10 +7,11 @@
 /* Internal Structures */
 typedef struct _qt_threadqueue_node qt_threadqueue_node_t;
 typedef struct _qt_threadqueue_private {
-    qt_threadqueue_node_t *head, *tail;
-    qt_threadqueue_node_t *on_deck;
-    long                   qlength;
-    long                   qlength_stealable;
+    qt_threadqueue_node_t          *head, *tail;
+    qt_threadqueue_node_t          *on_deck;
+    long                            qlength;
+    long                            qlength_stealable;
+    struct _qt_threadqueue_private *next;
 } qt_threadqueue_private_t;
 
 #include "qt_threadqueues.h"
