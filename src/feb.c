@@ -1519,6 +1519,8 @@ int INTERNAL qthread_check_feb_preconds(qthread_t *t)
 
     // All input preconds are full
     t->thread_state = QTHREAD_STATE_NEW;
+    free(t->preconds);
+    t->preconds = NULL;
 #ifdef QTHREAD_COUNT_THREADS
     QTHREAD_FASTLOCK_LOCK(&concurrentthreads_lock);
     threadcount++;
