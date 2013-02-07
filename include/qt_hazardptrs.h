@@ -6,7 +6,7 @@
 #define HAZARD_PTRS_PER_SHEP 2
 
 typedef struct {
-    void (*free)(void *);
+    void (*freefunc)(void *);
     void *ptr;
 } hazard_freelist_entry_t;
 

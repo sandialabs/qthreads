@@ -214,7 +214,7 @@ static void hazardous_scan(hazard_freelist_t *hfl)
                 tmpfreelist.count++;
             } else {
                 /* not found, therefore, we can free it */
-                hfl->freelist[i].free((void *)ptr);
+                hfl->freelist[i].freefunc((void *)ptr);
             }
         }
         if (tmpfreelist.count == freelist_max) {
@@ -242,7 +242,7 @@ void INTERNAL hazardous_release_node(void  (*freefunc)(void *),
     assert(ptr != NULL);
     assert(freefunc != NULL);
     assert(hfl->count < freelist_max);
-    hfl->freelist[hfl->count].free = freefunc;
+    hfl->freelist[hfl->count].freefunc = freefunc;
     hfl->freelist[hfl->count].ptr  = ptr;
     hfl->count++;
     if (hzptrs != NULL) {
