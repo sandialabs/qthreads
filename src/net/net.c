@@ -222,7 +222,7 @@ int qthread_multinode_initialize(void)
 {
     int ret;
 
-    qthread_debug(MULTINODE_CALLS, "[%d] begin qthread_multinode_initialize\n", my_rank);
+    qthread_debug(MULTINODE_CALLS, "begin qthread_multinode_initialize\n");
 
     /* initialize structures */
     initialized     = 1;
