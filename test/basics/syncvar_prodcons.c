@@ -75,8 +75,8 @@ int main(int argc,
     iprintf("x's status became: %s (want empty (and nowait))\n",
             qthread_syncvar_status(&x) ? "full" : "empty");
     assert(qthread_syncvar_status(&x) == 0);
-    qthread_fork(consumer, NULL, NULL);
-    qthread_fork(producer, NULL, &t);
+    qthread_fork(consumer, NULL, &t);
+    qthread_fork(producer, NULL, NULL);
     qthread_readFF(NULL, &t);
     iprintf("shouldn't be blocking on x (current status: %s)\n",
             qthread_syncvar_status(&x) ? "full" : "empty");
