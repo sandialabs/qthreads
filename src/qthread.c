@@ -902,7 +902,6 @@ int API_FUNC qthread_initialize(void)
 #endif
 
     qthread_internal_alignment_init();
-    qt_mpool_subsystem_init();
     qt_affinity_init(&nshepherds, &nworkerspershep);
     qt_hash_initialize_subsystem();
 
@@ -973,6 +972,8 @@ int API_FUNC qthread_initialize(void)
     QTHREAD_FASTLOCK_INIT(qlib->nworkers_active_lock);
 # endif
 #endif
+
+    qt_mpool_subsystem_init();
 
     qlib->qthread_stack_size = qt_internal_get_env_num("STACK_SIZE",
                                                        QTHREAD_DEFAULT_STACK_SIZE,
