@@ -95,6 +95,7 @@ int main(int   argc,
 
     iprintf("Destroying barrier...\n");
     qt_barrier_destroy(wait_on_me);
+    qtimer_destroy(t);
 
     free(rets);
     free(initme);
