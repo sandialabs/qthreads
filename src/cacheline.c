@@ -9,6 +9,8 @@
 # include <stdio.h>
 #endif
 
+#include "duma.h"
+
 enum vendor {AMD, Intel, Unknown};
 static int cacheline_bytes = 0;
 

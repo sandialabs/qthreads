@@ -20,6 +20,7 @@
 #include "qt_expect.h"
 #include "qt_asserts.h"
 #include "qt_subsystems.h"
+#include "qt_debug.h"
 
 /* Memory management macros */
 #if defined(UNPOOLED)
