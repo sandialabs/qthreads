@@ -33,8 +33,12 @@ int spr_init(unsigned int flags,
              qthread_f   *regs)
 {
     qassert(setenv("QT_MULTINODE", "1", 1), 0);
+
+    // Validate flags
     if (flags & ~(SPR_SPMD)) { return SPR_BADARGS; }
     initialized_flags = flags;
+
+    // Initialize Qthreads on this locale
     qthread_initialize();
 
     if (regs) {
