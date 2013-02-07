@@ -459,6 +459,7 @@ static QINLINE void qthread_precond_launch(qthread_shepherd_t *shep,
         } while(precond_head != precond_tail);
         FREE_ADDRRES(precond_free);
     }
+    FREE_ADDRRES(precond_tasks);
 } /*}}}*/
 
 static QINLINE void qthread_gotlock_empty(qthread_shepherd_t *shep,
