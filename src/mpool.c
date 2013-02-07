@@ -41,6 +41,7 @@ typedef struct threadlocal_cache_s qt_mpool_threadlocal_cache_t;
 static TLS_DECL_INIT(qt_mpool_threadlocal_cache_t *, pool_caches);
 static TLS_DECL_INIT(uintptr_t, pool_cache_count);
 static aligned_t pool_cache_global_max = 1;
+static qt_mpool_threadlocal_cache_t **pool_cache_array = NULL;
 #endif
 
 struct qt_mpool_s {
@@ -78,17 +79,26 @@ struct threadlocal_cache_s {
     qt_mpool_threadlocal_cache_t *next;  // for cleanup
 };
 
+#ifdef TLS
 static void qt_mpool_subsystem_shutdown(void)
 {
-#ifdef TLS
     TLS_DELETE(pool_caches);
     TLS_DELETE(pool_cache_count);
-#endif
+    for (int i=0; i < qthread_readstate(TOTAL_WORKERS); ++i) {
+        if (pool_cache_array[i]) {
+            free(pool_cache_array[i]);
+        }
+    }
+    FREE(pool_cache_array, sizeof(void*) * qthread_readstate(TOTAL_WORKERS));
 }
+#endif
 
 void INTERNAL qt_mpool_subsystem_init(void)
 {
+#ifdef TLS
+    pool_cache_array = calloc(sizeof(void*), qthread_readstate(TOTAL_WORKERS));
     qthread_internal_cleanup_late(qt_mpool_subsystem_shutdown);
+#endif
 }
 
 /* local funcs */
@@ -197,14 +207,25 @@ void INTERNAL *qt_mpool_alloc(qt_mpool pool)
         uintptr_t count_caches = (uintptr_t)TLS_GET(pool_cache_count);
         qthread_debug(MPOOL_DETAILS, "-> count_caches = %i, pool->offset = %i\n", (int)count_caches, (int)pool->offset);
         if (count_caches < pool->offset) {
+            qthread_worker_id_t wkr = qthread_readstate(CURRENT_UNIQUE_WORKER);
+            ASSERT_ONLY(if (wkr != NO_WORKER) {
+                    assert(pool_cache_array[wkr] == tc);
+                    })
             /* this realloc'd memory will be leaked */
-            qthread_debug(MPOOL_DETAILS, "-> realloc-ing the tc\n");
+            qthread_debug(MPOOL_DETAILS, "%u -> realloc-ing the tc (%p)\n", wkr, tc);
             qt_mpool_threadlocal_cache_t *newtc = realloc(tc, sizeof(qt_mpool_threadlocal_cache_t) * pool->offset);
+            qthread_debug(MPOOL_DETAILS, "%u ->     new tc (%p)\n", wkr, newtc);
             assert(newtc);
-            tc = newtc;
-            memset(newtc + count_caches, 0, sizeof(qt_mpool_threadlocal_cache_t) * (pool->offset - count_caches));
+            if (tc != newtc) {
+                if (tc != NULL) { free(tc); }
+                tc = newtc;
+                TLS_SET(pool_caches, newtc);
+                if (wkr != NO_WORKER) {
+                    pool_cache_array[wkr] = newtc;
+                }
+            }
+            memset(tc + count_caches, 0, sizeof(qt_mpool_threadlocal_cache_t) * (pool->offset - count_caches));
             count_caches = pool->offset;
-            TLS_SET(pool_caches, newtc);
             TLS_SET(pool_cache_count, count_caches);
         }
     }
@@ -316,14 +337,27 @@ void INTERNAL qt_mpool_free(qt_mpool pool,
     tc = TLS_GET(pool_caches);
     {
         uintptr_t count_caches = (uintptr_t)TLS_GET(pool_cache_count);
+        qthread_debug(MPOOL_DETAILS, "-> count_caches = %i, pool->offset = %i\n", (int)count_caches, (int)pool->offset);
         if (count_caches < pool->offset) {
+            qthread_worker_id_t wkr = qthread_readstate(CURRENT_UNIQUE_WORKER);
+            ASSERT_ONLY(if (wkr != NO_WORKER) {
+                    assert(pool_cache_array[wkr] == tc);
+                    })
             /* this realloc'd memory will be leaked */
+            qthread_debug(MPOOL_DETAILS, "%u -> realloc-ing the tc (%p)\n", wkr, tc);
             qt_mpool_threadlocal_cache_t *newtc = realloc(tc, sizeof(qt_mpool_threadlocal_cache_t) * pool->offset);
+            qthread_debug(MPOOL_DETAILS, "%u ->     new tc (%p)\n", wkr, newtc);
             assert(newtc);
-            tc = newtc;
-            memset(newtc + count_caches, 0, sizeof(qt_mpool_threadlocal_cache_t) * (pool->offset - count_caches));
+            if (tc != newtc) {
+                if (tc != NULL) { free(tc); }
+                tc = newtc;
+                TLS_SET(pool_caches, newtc);
+                if (wkr != NO_WORKER) {
+                    pool_cache_array[wkr] = newtc;
+                }
+            }
+            memset(tc + count_caches, 0, sizeof(qt_mpool_threadlocal_cache_t) * (pool->offset - count_caches));
             count_caches = pool->offset;
-            TLS_SET(pool_caches, newtc);
             TLS_SET(pool_cache_count, count_caches);
         }
     }
