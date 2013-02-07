@@ -102,7 +102,7 @@ qthread_shepherd_id_t API_FUNC qthread_shep(void)
 
 /* returns the distance between two shepherds */
 int API_FUNC qthread_distance(const qthread_shepherd_id_t src,
-                     const qthread_shepherd_id_t dest)
+                              const qthread_shepherd_id_t dest)
 {                      /*{{{ */
     assert(qthread_library_initialized);
     assert(src < qlib->nshepherds);
@@ -140,9 +140,7 @@ const qthread_shepherd_id_t API_FUNC *qthread_sorted_sheps(void)
 
 /* returns a list of shepherds, sorted by their distance from the specified shepherd;
  * if NULL, then all sheps are equidistant */
-const qthread_shepherd_id_t API_FUNC *qthread_sorted_sheps_remote(const
-                                                         qthread_shepherd_id_t
-                                                         src)
+const qthread_shepherd_id_t API_FUNC *qthread_sorted_sheps_remote(const qthread_shepherd_id_t src)
 {                      /*{{{ */
     assert(qthread_library_initialized);
     assert(src < qlib->nshepherds);
@@ -251,6 +249,7 @@ qthread_shepherd_t INTERNAL *qthread_find_active_shepherd(qthread_shepherd_id_t 
          */
         qthread_shepherd_id_t alt;
         saligned_t            busyness;
+        unsigned int          target_dist;
 
         while (target < (nsheps - 1) && QTHREAD_CASLOCK_READ_UI(sheps[l[target]].active) == 0) {
             target++;
@@ -258,20 +257,22 @@ qthread_shepherd_t INTERNAL *qthread_find_active_shepherd(qthread_shepherd_id_t 
         if (target >= (nsheps - 1)) {
             return NULL;
         }
+        target_dist = d[l[target]];
         qthread_debug(SHEPHERD_FUNCTIONS,
-                      "l(%p): nearest active shepherd (%i) is %i away\n",
-                      l, (int)l[target], (int)d[l[target]]);
+                      "l(%p): nearest active shepherd (%i) is %u away\n",
+                      l, (int)l[target], target_dist);
         busyness = qt_threadqueue_advisory_queuelen(sheps[l[target]].ready);
-        for (alt = target + 1; alt < (nsheps - 1) && d[l[alt]] == d[l[target]];
+        for (alt = target + 1; alt < (nsheps - 1) && d[l[alt]] == target_dist;
              alt++) {
             saligned_t shep_busy_level = qt_threadqueue_advisory_queuelen(sheps[l[alt]].ready);
             if ((shep_busy_level < busyness) ||
                 ((shep_busy_level == busyness) && (random() % 2 == 0))) {
                 qthread_debug(SHEPHERD_FUNCTIONS,
                               "l(%p): shep %i is the least busy (%i) so far\n",
-                              l, (int)d[l[alt]], shep_busy_level);
-                busyness = shep_busy_level;
-                target   = alt;
+                              l, l[alt], shep_busy_level);
+                busyness    = shep_busy_level;
+                target      = alt;
+                target_dist = d[l[alt]];
             }
         }
         qthread_debug(SHEPHERD_FUNCTIONS, "l(%p): found target %i\n", l, (int)target);
