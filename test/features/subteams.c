@@ -235,5 +235,7 @@ int main(int argc, char *argv[])
                 qtimer_secs(timer));
     }
 
+    qtimer_destroy(timer);
+
     return 0;
 }
