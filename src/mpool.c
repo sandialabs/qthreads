@@ -217,7 +217,6 @@ void INTERNAL *qt_mpool_alloc(qt_mpool pool)
             qthread_debug(MPOOL_DETAILS, "%u ->     new tc (%p)\n", wkr, newtc);
             assert(newtc);
             if (tc != newtc) {
-                if (tc != NULL) { free(tc); }
                 tc = newtc;
                 TLS_SET(pool_caches, newtc);
                 if (wkr != NO_WORKER) {
@@ -349,7 +348,6 @@ void INTERNAL qt_mpool_free(qt_mpool pool,
             qthread_debug(MPOOL_DETAILS, "%u ->     new tc (%p)\n", wkr, newtc);
             assert(newtc);
             if (tc != newtc) {
-                if (tc != NULL) { free(tc); }
                 tc = newtc;
                 TLS_SET(pool_caches, newtc);
                 if (wkr != NO_WORKER) {
