@@ -10,6 +10,7 @@
 #include "qt_atomics.h"
 #include "qt_asserts.h"
 #include "qt_debug.h"                  /* for malloc debug wrappers */
+#include "qt_subsystems.h"             /* for qthread_internal_cleanup_late() */
 
 /* queue declarations */
 typedef struct _qlfqueue_node {
@@ -23,6 +24,12 @@ struct qlfqueue_s {             /* typedef'd to qlfqueue_t */
 };
 
 static qpool *qlfqueue_node_pool = NULL;
+
+static void qlfqueue_internal_cleanup(void)
+{
+    assert(qlfqueue_node_pool);
+    qpool_destroy(qlfqueue_node_pool);
+}
 
 /*
  * This lock-free algorithm borrowed from
@@ -39,6 +46,7 @@ qlfqueue_t *qlfqueue_create(void)
         switch ((uintptr_t)qthread_cas_ptr(&qlfqueue_node_pool, NULL, (void *)1)) {
             case 0: /* I won, I will allocate */
                 qlfqueue_node_pool = qpool_create_aligned(sizeof(qlfqueue_node_t), 0);
+                qthread_internal_cleanup_late(qlfqueue_internal_cleanup);
                 break;
             case 1:
                 while (qlfqueue_node_pool == (void *)1) {
