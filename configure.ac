@@ -50,6 +50,10 @@ AC_ARG_ENABLE([picky],
               [AS_HELP_STRING([--enable-picky],
                               [turns on extra compiler warnings (for developers of qthreads)])])
 
+AC_ARG_ENABLE([debugging],
+              [AS_HELP_STRING([--enable-debugging],
+                              [turns off optimization and turns on debug flags])])
+
 AC_ARG_ENABLE([inlined-functions],
               [AS_HELP_STRING([--disable-inlined-functions],
                               [prevent functions from being inlined; this
@@ -477,6 +481,18 @@ AS_IF([test "x$enable_multinode" = "xyes"],
 ## ------------------- ##
 ## Checks for programs ##
 ## ------------------- ##
+dnl Test for this *before* AC_PROG_CC, to avoid getting the default CFLAGS
+AS_IF([test "x$enable_debugging" = xyes],
+      [case "$qthread_cv_c_compiler_type" in dnl (
+         *)
+           CFLAGS="$CFLAGS -O0 -g"
+           ;;
+       esac
+       case "$qthread_cv_cxx_compiler_type" in dnl (
+         *)
+           CXXFLAGS="$CXXFLAGS -O0 -g"
+           ;;
+       esac])
 AC_PROG_CC
 dnl We use system extensions.  This includes setting _GNU_SOURCE
 AC_USE_SYSTEM_EXTENSIONS
@@ -508,7 +524,7 @@ AC_SUBST([LIBTOOL_DEPS])
 AM_PROG_CC_C_O
 
 AS_IF([test "x$enable_picky" = xyes],
-      [case "$qthread_cv_c_compiler_type" in
+      [case "$qthread_cv_c_compiler_type" in dnl ((((((((
          Clang)
            CFLAGS="-Wall -Wno-strict-aliasing -Wmissing-prototypes -Wstrict-prototypes $CFLAGS"
            ;;
@@ -534,7 +550,7 @@ AS_IF([test "x$enable_picky" = xyes],
            CFLAGS="-Wall $CFLAGS"
            ;;
        esac
-       case "$qthread_cv_cxx_compiler_type" in
+       case "$qthread_cv_cxx_compiler_type" in dnl (((((((
          Clang|GNU*|LLVM)
            CXXFLAGS="-Wall $CXXFLAGS"
            ;;
