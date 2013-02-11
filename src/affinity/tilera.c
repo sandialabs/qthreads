@@ -112,7 +112,9 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                 sheps[i].sorted_sheplist[k++] = j;
             }
         }
-        sort_sheps(sheps[i].shep_dists, sheps[i].sorted_sheplist, nshepherds);
+        if (nshepherds > 1) {
+            sort_sheps(sheps[i].shep_dists, sheps[i].sorted_sheplist, nshepherds);
+        }
     }
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
