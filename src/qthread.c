@@ -2524,7 +2524,7 @@ void INTERNAL qthread_exec(qthread_t    *t,
     assert(t != NULL);
     assert(c != NULL);
 
-    qthread_debug(SHEPHERD_DETAILS, "t(%p): finished, t->thread_state = %i\n", t, t->thread_state);
+    qthread_debug(SHEPHERD_DETAILS, "t(%p): finished, t->thread_state = %i\n", t, (int)t->thread_state);
 }                      /*}}} */
 
 /* this function yields thread t to the master kernel thread */
