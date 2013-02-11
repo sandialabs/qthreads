@@ -123,6 +123,7 @@ int main(int    argc,
     }
     iprintf("Found %d entries\n", no_entries);
     assert(no_entries == EXPECTED_ENTRIES);
+    qt_dictionary_iterator_destroy(it);
 
     // test iterator equality function
     qt_dictionary_iterator *it1 = qt_dictionary_iterator_create(dict);
@@ -149,6 +150,10 @@ int main(int    argc,
     val = qt_dictionary_delete(dict, mykey2);
     iprintf("20. Delete exited with code %p\n", val);
     assert(val == NULL);
+
+    qt_dictionary_iterator_destroy(it1);
+    qt_dictionary_iterator_destroy(it2);
+    qt_dictionary_destroy(dict);
 
     return 0;
 }
