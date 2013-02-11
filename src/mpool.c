@@ -207,14 +207,13 @@ static qt_mpool_threadlocal_cache_t *qt_mpool_internal_getcache(qt_mpool pool)
         if (count_caches < pool->offset) {
 # if !defined(QTHREAD_NO_ASSERTS) || defined(QTHREAD_DEBUG)
             qthread_worker_id_t wkr = qthread_readstate(CURRENT_UNIQUE_WORKER);
-#  ifdef __APPLE__
-            /* I don't fully understand why this is necessary. I *suspect* that on thread 0, the
-             * initialization routine isn't happening properly, so pool_caches gets a bogus
-             * value. However, that makes no sense to me. */
+            /* I don't fully understand why this is necessary. I *suspect* that
+             * on thread 0, the initialization routine isn't happening
+             * properly, so pool_caches gets a bogus value. However, that makes
+             * no sense to me. */
             if ((wkr == 0) && (pool_cache_array[0] == NULL) && (tc != NULL)) {
                 tc = NULL;
             }
-#  endif
 # endif
             ASSERT_ONLY(if (wkr != NO_WORKER) {
                             assert(pool_cache_array[wkr] == tc);
