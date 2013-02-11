@@ -124,7 +124,7 @@ static aligned_t qt_ap_worker(struct qt_ap_wargs *restrict args)
                     }
                 }
             }
-            free(wu);
+            FREE(wu, sizeof(struct qt_ap_workunit));
         }
     }
     return 0;
@@ -146,7 +146,7 @@ static void qt_ap_genwork2(const size_t           startat,
                            const qarray *Q_UNUSED a,
                            struct qt_ap_gargs2   *gargs)
 {
-    struct qt_ap_workunit *workunit = malloc(sizeof(struct qt_ap_workunit));
+    struct qt_ap_workunit *workunit = MALLOC(sizeof(struct qt_ap_workunit));
 
     const qthread_shepherd_id_t shep     = gargs->shep;
     const qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
@@ -278,7 +278,7 @@ static void qt_allpairs_internal(const qarray             *array1,
                 // printf("optimal [%i][%i]:%i from %i\n", (int)s, (int)d, (int)dist, equiv_cnt);
             }
         }
-        free(equivs);
+        FREE(equivs, sizeof(qthread_shepherd_id_t));
     }
 #endif /* ifdef QTHREAD_USE_HALFWAYARRAY */
 
@@ -306,7 +306,7 @@ static void qt_allpairs_internal(const qarray             *array1,
     printf("total distances: %lu/%lu (%lu steals, %lu penalty)\n",
            (unsigned long)(distances[0].i), (unsigned long)mindistances,
            (unsigned long)stolen_work, (unsigned long)stealing_penalty);
-    free(distances);
+    FREE(distances, sizeof(struct cacheline_s));
 #endif
 }
 
