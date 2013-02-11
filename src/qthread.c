@@ -1801,17 +1801,6 @@ void API_FUNC qthread_finalize(void)
     QTHREAD_FASTLOCK_DESTROY(qlib->nworkers_active_lock);
 # endif
 #endif
-    qthread_debug(CORE_DETAILS, "calling late cleanup functions\n");
-    while (qt_cleanup_late_funcs != NULL) {
-        struct qt_cleanup_funcs_s *tmp = qt_cleanup_late_funcs;
-        qt_cleanup_late_funcs = tmp->next;
-        tmp->func();
-        FREE(tmp, sizeof(struct qt_cleanup_funcs_s));
-    }
-#if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
-    FREE((void *)qlib->atomic_locks, sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
-#endif
-
 #ifdef QTHREAD_COUNT_THREADS
     print_status("spawned %lu threads, max realized concurrency %lu, avg realized concurrency %g\n",
                  (unsigned long)threadcount, (unsigned long)maxeffconcurrentthreads,
@@ -1840,6 +1829,17 @@ void API_FUNC qthread_finalize(void)
     FREE_QTHREAD(qlib->mccoy_thread);
     qthread_debug(CORE_DETAILS, "destroy master stack\n");
     FREE(qlib->master_stack, qlib->master_stack_size);
+    qthread_debug(CORE_DETAILS, "calling late cleanup functions\n");
+    while (qt_cleanup_late_funcs != NULL) {
+        struct qt_cleanup_funcs_s *tmp = qt_cleanup_late_funcs;
+        qt_cleanup_late_funcs = tmp->next;
+        tmp->func();
+        FREE(tmp, sizeof(struct qt_cleanup_funcs_s));
+    }
+#if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
+    FREE((void *)qlib->atomic_locks, sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
+#endif
+
     for (i = 0; i < qlib->nshepherds; ++i) {
         qthread_debug(AFFINITY_DETAILS, "destroy topology information on shep %i\n", (int)i);
         if (qlib->shepherds[i].shep_dists) {

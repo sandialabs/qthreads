@@ -17,6 +17,7 @@
 #include "qt_macros.h"
 #include "qt_aligned_alloc.h"
 #include "qt_subsystems.h"
+#include "qt_atomics.h"
 
 /* Globals */
 TLS_DECL_INIT(qt_threadqueue_private_t *, spawn_cache);

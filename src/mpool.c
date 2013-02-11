@@ -40,8 +40,8 @@ typedef struct threadlocal_cache_s qt_mpool_threadlocal_cache_t;
 #ifdef TLS
 static TLS_DECL_INIT(qt_mpool_threadlocal_cache_t *, pool_caches);
 static TLS_DECL_INIT(uintptr_t, pool_cache_count);
-static aligned_t pool_cache_global_max = 1;
-static qt_mpool_threadlocal_cache_t **pool_cache_array = NULL;
+static aligned_t                      pool_cache_global_max = 1;
+static qt_mpool_threadlocal_cache_t **pool_cache_array      = NULL;
 #endif
 
 struct qt_mpool_s {
@@ -84,19 +84,21 @@ static void qt_mpool_subsystem_shutdown(void)
 {
     TLS_DELETE(pool_caches);
     TLS_DELETE(pool_cache_count);
-    for (int i=0; i < qthread_readstate(TOTAL_WORKERS); ++i) {
+    for (int i = 0; i < qthread_readstate(TOTAL_WORKERS); ++i) {
         if (pool_cache_array[i]) {
             free(pool_cache_array[i]);
         }
     }
-    FREE(pool_cache_array, sizeof(void*) * qthread_readstate(TOTAL_WORKERS));
+    FREE(pool_cache_array, sizeof(void *) * qthread_readstate(TOTAL_WORKERS));
 }
-#endif
+#endif /* ifdef TLS */
 
 void INTERNAL qt_mpool_subsystem_init(void)
 {
 #ifdef TLS
-    pool_cache_array = calloc(sizeof(void*), qthread_readstate(TOTAL_WORKERS));
+    assert(TLS_GET(pool_caches) == NULL);
+    assert(TLS_GET(pool_cache_count) == 0);
+    pool_cache_array = calloc(sizeof(void *), qthread_readstate(TOTAL_WORKERS));
     qthread_internal_cleanup_late(qt_mpool_subsystem_shutdown);
 #endif
 }
@@ -193,13 +195,9 @@ qt_mpool INTERNAL qt_mpool_create_aligned(size_t item_size,
     return NULL;
 }                                      /*}}} */
 
-void INTERNAL *qt_mpool_alloc(qt_mpool pool)
-{   /*{{{*/
+static qt_mpool_threadlocal_cache_t *qt_mpool_internal_getcache(qt_mpool pool)
+{
     qt_mpool_threadlocal_cache_t *tc;
-    size_t                        cnt;
-
-    qthread_debug(MPOOL_CALLS, "pool:%p\n", pool);
-    qassert_ret((pool != NULL), NULL);
 
 #ifdef TLS
     tc = TLS_GET(pool_caches);
@@ -207,17 +205,28 @@ void INTERNAL *qt_mpool_alloc(qt_mpool pool)
         uintptr_t count_caches = (uintptr_t)TLS_GET(pool_cache_count);
         qthread_debug(MPOOL_DETAILS, "-> count_caches = %i, pool->offset = %i\n", (int)count_caches, (int)pool->offset);
         if (count_caches < pool->offset) {
+# if !defined(QTHREAD_NO_ASSERTS) || defined(QTHREAD_DEBUG)
             qthread_worker_id_t wkr = qthread_readstate(CURRENT_UNIQUE_WORKER);
+#  ifdef __APPLE__
+            /* I don't fully understand why this is necessary. I *suspect* that on thread 0, the
+             * initialization routine isn't happening properly, so pool_caches gets a bogus
+             * value. However, that makes no sense to me. */
+            if ((wkr == 0) && (pool_cache_array[0] == NULL) && (tc != NULL)) {
+                tc = NULL;
+            }
+#  endif
+# endif
             ASSERT_ONLY(if (wkr != NO_WORKER) {
-                    assert(pool_cache_array[wkr] == tc);
-                    })
+                            assert(pool_cache_array[wkr] == tc);
+                        }
+                        )
             /* this realloc'd memory will be leaked */
             qthread_debug(MPOOL_DETAILS, "%u -> realloc-ing the tc (%p)\n", wkr, tc);
             qt_mpool_threadlocal_cache_t *newtc = realloc(tc, sizeof(qt_mpool_threadlocal_cache_t) * pool->offset);
             qthread_debug(MPOOL_DETAILS, "%u ->     new tc (%p)\n", wkr, newtc);
             assert(newtc);
             if (tc != newtc) {
-                if (tc != NULL) { free(tc); }
+                qthread_worker_id_t wkr = qthread_readstate(CURRENT_UNIQUE_WORKER);
                 tc = newtc;
                 TLS_SET(pool_caches, newtc);
                 if (wkr != NO_WORKER) {
@@ -247,6 +256,18 @@ void INTERNAL *qt_mpool_alloc(qt_mpool pool)
         pthread_setspecific(pool->threadlocal_cache, tc);
     }
 #endif /* ifdef TLS */
+    return tc;
+}
+
+void INTERNAL *qt_mpool_alloc(qt_mpool pool)
+{   /*{{{*/
+    qt_mpool_threadlocal_cache_t *tc;
+    size_t                        cnt;
+
+    qthread_debug(MPOOL_CALLS, "pool:%p\n", pool);
+    qassert_ret((pool != NULL), NULL);
+
+    tc = qt_mpool_internal_getcache(pool);
     qthread_debug(MPOOL_BEHAVIOR, "->tc:%p cache:%p (bt:%p) cnt:%u\n", tc, tc->cache, tc->cache ? tc->cache->block_tail : NULL, (unsigned int)tc->count);
     if (tc->cache) {
         qt_mpool_cache_t *cache = tc->cache;
@@ -333,51 +354,7 @@ void INTERNAL qt_mpool_free(qt_mpool pool,
     qassert_retvoid((mem != NULL));
     qassert_retvoid((pool != NULL));
     FREE_SCRIBBLE(mem, pool->item_size);
-#ifdef TLS
-    tc = TLS_GET(pool_caches);
-    {
-        uintptr_t count_caches = (uintptr_t)TLS_GET(pool_cache_count);
-        qthread_debug(MPOOL_DETAILS, "-> count_caches = %i, pool->offset = %i\n", (int)count_caches, (int)pool->offset);
-        if (count_caches < pool->offset) {
-            qthread_worker_id_t wkr = qthread_readstate(CURRENT_UNIQUE_WORKER);
-            ASSERT_ONLY(if (wkr != NO_WORKER) {
-                    assert(pool_cache_array[wkr] == tc);
-                    })
-            /* this realloc'd memory will be leaked */
-            qthread_debug(MPOOL_DETAILS, "%u -> realloc-ing the tc (%p)\n", wkr, tc);
-            qt_mpool_threadlocal_cache_t *newtc = realloc(tc, sizeof(qt_mpool_threadlocal_cache_t) * pool->offset);
-            qthread_debug(MPOOL_DETAILS, "%u ->     new tc (%p)\n", wkr, newtc);
-            assert(newtc);
-            if (tc != newtc) {
-                if (tc != NULL) { free(tc); }
-                tc = newtc;
-                TLS_SET(pool_caches, newtc);
-                if (wkr != NO_WORKER) {
-                    pool_cache_array[wkr] = newtc;
-                }
-            }
-            memset(tc + count_caches, 0, sizeof(qt_mpool_threadlocal_cache_t) * (pool->offset - count_caches));
-            count_caches = pool->offset;
-            TLS_SET(pool_cache_count, count_caches);
-        }
-    }
-    tc += (pool->offset - 1);
-#else /* ifdef TLS */
-    tc = pthread_getspecific(pool->threadlocal_cache);
-    if (NULL == tc) {
-        tc = qthread_internal_aligned_alloc(sizeof(qt_mpool_threadlocal_cache_t), CACHELINE_WIDTH);
-        assert(tc);
-        tc->cache = NULL;
-        tc->count = 0;
-        tc->block = NULL;
-        tc->i     = 0;
-        do {
-            tc->next = pool->caches;
-        } while (qthread_cas_ptr(&pool->caches, tc->next, tc) != tc->next);
-        qthread_debug(MPOOL_DETAILS, "added %p to caches\n", tc);
-        pthread_setspecific(pool->threadlocal_cache, tc);
-    }
-#endif /* ifdef TLS */
+    tc    = qt_mpool_internal_getcache(pool);
     cache = tc->cache;
     cnt   = tc->count;
     qthread_debug(MPOOL_DETAILS, "->cache:%p (bt:%p) cnt:%u\n", cache, cache ? cache->block_tail : NULL, (unsigned int)cnt);
