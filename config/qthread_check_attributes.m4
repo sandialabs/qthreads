@@ -123,7 +123,8 @@ AC_CACHE_CHECK([support for __sync_synchronize],
 		     AMD64)
 			   case "$host" in
 			     mic-*)
-				   mdefstr='do { unsigned int eax_ptr, ebx_ptr, ecx_ptr, edx_ptr; int op = 0; __asm__ __volatile__ ("cpuid" : "=a" (eax_ptr), "=b" (ebx_ptr), "=c" (ecx_ptr), "=d" (edx_ptr) : "a" (op) : "memory"); } while(0)'
+				   dnl mdefstr='do { unsigned int eax_ptr, ebx_ptr, ecx_ptr, edx_ptr; int op = 0; __asm__ __volatile__ ("cpuid" : "=a" (eax_ptr), "=b" (ebx_ptr), "=c" (ecx_ptr), "=d" (edx_ptr) : "a" (op) : "memory"); } while(0)'
+				   mdefstr='__asm__ __volatile__ ("lock; addl $0,0(%%esp)" ::: "memory")'
 				   ;;
 				 *)
                        mdefstr='__asm__ __volatile__ ("mfence":::"memory")'
