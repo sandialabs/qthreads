@@ -373,9 +373,6 @@ unsigned int qt_team_id(void);
 unsigned int qt_team_parent_id(void);
 void qt_team_critical_section(qt_team_critical_section_t boundary);
 void qt_team_eureka(void);
-# ifdef TEAM_PROFILE
-void qt_team_profile(void);
-# endif
 
 # define qthread_fork_new_team(f, a, r)                qthread_spawn((f), (a), 0, (r), 0, NULL, NO_SHEPHERD, \
                                                                      QTHREAD_SPAWN_NEW_TEAM)
