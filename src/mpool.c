@@ -35,6 +35,11 @@
 #include "qt_aligned_alloc.h"
 #include "qt_subsystems.h"
 
+/* Seems SLIGHTLY faster without TLS, and a whole lot safer and cleaner */
+#ifdef TLS
+# undef TLS
+#endif
+
 typedef struct threadlocal_cache_s qt_mpool_threadlocal_cache_t;
 
 #ifdef TLS
@@ -82,6 +87,7 @@ struct threadlocal_cache_s {
 #ifdef TLS
 static void qt_mpool_subsystem_shutdown(void)
 {
+    qthread_debug(MPOOL_FUNCTIONS, "deleting pool_caches\n");
     TLS_DELETE(pool_caches);
     TLS_DELETE(pool_cache_count);
     for (int i = 0; i < qthread_readstate(TOTAL_WORKERS); ++i) {
@@ -212,6 +218,7 @@ static qt_mpool_threadlocal_cache_t *qt_mpool_internal_getcache(qt_mpool pool)
              * properly, so pool_caches gets a bogus value. However, that makes
              * no sense to me. */
             if ((wkr == 0) && (pool_cache_array[0] == NULL) && (tc != NULL)) {
+                qthread_debug(MPOOL_DETAILS, "%u -> resetting tc to NULL (was %p)\n", wkr, tc);
                 tc = NULL;
             }
 # endif
@@ -219,7 +226,6 @@ static qt_mpool_threadlocal_cache_t *qt_mpool_internal_getcache(qt_mpool pool)
                             assert(pool_cache_array[wkr] == tc);
                         }
                         )
-            /* this realloc'd memory will be leaked */
             qthread_debug(MPOOL_DETAILS, "%u -> realloc-ing the tc (%p)\n", wkr, tc);
             qt_mpool_threadlocal_cache_t *newtc = realloc(tc, sizeof(qt_mpool_threadlocal_cache_t) * pool->offset);
             qthread_debug(MPOOL_DETAILS, "%u ->     new tc (%p)\n", wkr, newtc);
@@ -230,11 +236,31 @@ static qt_mpool_threadlocal_cache_t *qt_mpool_internal_getcache(qt_mpool pool)
                 TLS_SET(pool_caches, newtc);
                 if (wkr != NO_WORKER) {
                     pool_cache_array[wkr] = newtc;
+                    qthread_debug(MPOOL_DETAILS, "setting pool_cache_array[%u] -> %p\n", wkr, pool_cache_array[wkr]);
+                } else {
+                    qthread_debug(MPOOL_DETAILS, "leaking memory (%p)\n", newtc);
                 }
             }
             memset(tc + count_caches, 0, sizeof(qt_mpool_threadlocal_cache_t) * (pool->offset - count_caches));
             count_caches = pool->offset;
             TLS_SET(pool_cache_count, count_caches);
+        } else if (tc == NULL) {
+            qthread_debug(MPOOL_DETAILS, "tc was NULL despite count_caches being big enough!?! (%p)\n", tc);
+# if !defined(QTHREAD_NO_ASSERTS)
+            qthread_worker_id_t wkr = qthread_readstate(CURRENT_UNIQUE_WORKER);
+            /* I don't fully understand why this is necessary. I *suspect* that
+             * on thread 0, the initialization routine isn't happening
+             * properly, so pool_caches gets a bogus value. However, that makes
+             * no sense to me. */
+            if ((wkr == 0) && (pool_cache_array[0] == NULL) && (tc != NULL)) {
+                qthread_debug(MPOOL_DETAILS, "%u -> resetting tc to NULL (was %p)\n", wkr, tc);
+                tc = NULL;
+            }
+            if (wkr != NO_WORKER) {
+                qthread_debug(MPOOL_DETAILS, "pool_cache_array[%u] -> %p\n", wkr, pool_cache_array[wkr]);
+                assert(pool_cache_array[wkr] == tc);
+            }
+# endif
         }
     }
     assert(tc);
