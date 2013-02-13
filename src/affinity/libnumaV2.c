@@ -105,11 +105,12 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
 }                                      /*}}} */
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-void INTERNAL qt_affinity_set(qthread_worker_t *me, unsigned int Q_UNUSED(nw))
+void INTERNAL qt_affinity_set(qthread_worker_t *me,
+                              unsigned int      Q_UNUSED(nw))
 {                                      /*{{{ */
     assert(me);
 
-    qthread_shepherd_t *const myshep      = me->shepherd;
+    qthread_shepherd_t *const myshep = me->shepherd;
 
     /* It would be nice if we could do something more specific than
      * "numa_run_on_node", but because sched_setaffinity() is so dangerous, we
@@ -124,7 +125,8 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me, unsigned int Q_UNUSED(nw))
 }                                      /*}}} */
 
 #else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-void INTERNAL qt_affinity_set(qthread_shepherd_t *me, unsigned int Q_UNUSED(nw))
+void INTERNAL qt_affinity_set(qthread_shepherd_t *me,
+                              unsigned int        Q_UNUSED(nw))
 {                                      /*{{{ */
     assert(me);
 
@@ -139,7 +141,6 @@ void INTERNAL qt_affinity_set(qthread_shepherd_t *me, unsigned int Q_UNUSED(nw))
     }
     numa_set_localalloc();
 }                                      /*}}} */
-
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
 qthread_worker_id_t INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
@@ -248,7 +249,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
     for (unsigned int i = 0; i < nshepherds; i++) {
         const unsigned int node_i = sheps[i].node;
         size_t             j, k;
-        sheps[i].shep_dists = calloc(nshepherds, sizeof(unsigned int));
+        sheps[i].shep_dists      = calloc(nshepherds, sizeof(unsigned int));
         sheps[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
         assert(sheps[i].shep_dists);
         assert(sheps[i].sorted_sheplist);
