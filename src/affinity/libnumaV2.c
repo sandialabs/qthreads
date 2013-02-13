@@ -236,11 +236,13 @@ static void assign_nodes(qthread_shepherd_t *sheps,
 int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                                   qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
+    qthread_debug(AFFINITY_FUNCTIONS, "sheps:%p, nsheps:%u\n", sheps, nshepherds);
     if (numa_available() == -1) {
         return QTHREAD_THIRD_PARTY_ERROR;
     }
     assign_nodes(sheps, nshepherds);
 #ifdef HAVE_NUMA_DISTANCE
+    qthread_debug(AFFINITY_DETAILS, "querying distances...\n");
     /* truly ancient versions of libnuma (in the changelog, this is
      * considered "pre-history") do not have numa_distance() */
     for (unsigned int i = 0; i < nshepherds; i++) {
@@ -263,6 +265,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                     sheps[i].shep_dists[j] = 20;
                 }
             }
+            qthread_debug(AFFINITY_DETAILS, "shep %u to shep %u distance: %u\n", i, j, sheps[i].shep_dists[j]);
         }
         k = 0;
         for (j = 0; j < nshepherds; j++) {
