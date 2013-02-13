@@ -59,11 +59,11 @@ struct qthread_runtime_data_s {
 #endif
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     int forCount;                     /* added akp */
+#endif
 # ifdef QTHREAD_OMP_AFFINITY
     /* affinity for children created by this task */
     qthread_shepherd_id_t child_affinity;
 # endif
-#endif
 };
 
 /* Try very VERY hard to keep this under 1 cacheline (64 bytes) */

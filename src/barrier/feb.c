@@ -138,13 +138,13 @@ void API_FUNC qt_barrier_destroy(qt_barrier_t *b)
 #endif
 }
 
-void INTERNAL qt_global_barrier(void)
+void qt_global_barrier(void)
 {
     assert(global_barrier);
     qt_barrier_enter(global_barrier);
 }
 
-void INTERNAL qt_global_barrier_init(size_t size,
+void qt_global_barrier_init(size_t size,
                                      int    debug)
 {
     if (global_barrier == NULL) {
@@ -153,7 +153,7 @@ void INTERNAL qt_global_barrier_init(size_t size,
     }
 }
 
-void INTERNAL qt_global_barrier_destroy(void)
+void qt_global_barrier_destroy(void)
 {
     if (global_barrier) {
         qt_barrier_destroy(global_barrier);
@@ -161,7 +161,7 @@ void INTERNAL qt_global_barrier_destroy(void)
     }
 }
 
-void INTERNAL qt_global_barrier_resize(size_t size)
+void qt_global_barrier_resize(size_t size)
 {
     qt_barrier_resize(global_barrier, size);
 }

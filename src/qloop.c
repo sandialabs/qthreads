@@ -202,7 +202,7 @@ static aligned_t qloop_step_wrapper(struct qloop_step_wrapper_args *const restri
         }
         //  mantains one per worker
         size_t offset = new_id - my_id;  // need how much past current locations
-        (arg + offset)->level = ++level; // increase depth for created thread
+        (arg + offset)->level = ++level; // increase depth for reated thread
         qthread_fork_copyargs_to((qthread_f)qloop_step_wrapper,
                                  arg + offset,
                                  0,
@@ -468,8 +468,8 @@ static void qt_loop_step_inner(const size_t         start,
     int s = qthread_num_workers();
 # endif
     int totThreads;
-    if (steps < s) {   // correct when less work than workers
-        totThreads = steps;
+    if (steps+1 < s) {   // correct when less work than workers
+        totThreads = steps+1;
     } else {
         totThreads = s;
     }
@@ -477,11 +477,11 @@ static void qt_loop_step_inner(const size_t         start,
     qt_sinc_t    *my_sinc = qt_sinc_create(0, NULL, NULL, totThreads);
     qt_barrier_t *barrier = qt_barrier_create(totThreads, REGION_BARRIER);  // set barrier size -- count down release when returns 1
 
-    qwa = (struct qloop_step_wrapper_args *)MALLOC(sizeof(struct qloop_step_wrapper_args) * steps);
+    qwa = (struct qloop_step_wrapper_args *)MALLOC(sizeof(struct qloop_step_wrapper_args) * (steps+1));
     assert(qwa);
     assert(func);
 
-    for (i = start; i < stop; i += stride) {
+    for (i = start; i <= stop; i += stride) {
         qwa[threadct].func    = func;
         qwa[threadct].startat = i;
         qwa[threadct].stopat  = i + 1;
