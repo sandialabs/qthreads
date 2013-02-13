@@ -3,6 +3,8 @@
 
 #include <stdlib.h> // for rand()
 
+#include "qt_debug.h"
+
 static void shuffle_sheps(qthread_shepherd_id_t *s,
                           size_t                 len)
 {   /*{{{*/
@@ -21,13 +23,14 @@ static void sort_sheps(unsigned int *restrict          dists,
 {   /*{{{*/
     assert(num > 1);
     size_t                 s_max    = num - 1;
-    unsigned int           mindist  = UINT_MAX;
     qthread_shepherd_id_t *tmp      = calloc(sizeof(qthread_shepherd_id_t), (num - 1));
     size_t                 tmp_base = 0;
     size_t                 tmp_max  = 0;
 
+    qthread_debug(AFFINITY_FUNCTIONS, "dists:%p, s:%p, num:%u .. s_max:%u\n", dists, s, (unsigned int)num, s_max);
     while (s_max > 0) {
-        size_t i, k;
+        size_t       i, k;
+        unsigned int mindist = UINT_MAX;
         for (i = 0; i < s_max; ++i) { // find the minimum distance of the remaining sheps
             if (mindist > dists[s[i]]) {
                 mindist = dists[s[i]];
@@ -38,7 +41,9 @@ static void sort_sheps(unsigned int *restrict          dists,
                 tmp[tmp_max++] = s[i];
             }
         }
-        shuffle_sheps(tmp + tmp_base, tmp_max);
+        if (tmp_max - tmp_base > 1) {
+            shuffle_sheps(tmp + tmp_base, tmp_max);
+        }
         tmp_base = tmp_max;
         for (i = k = 0; i < s_max; ++i) { // compress s
             assert(dists[s[i]] >= mindist);
@@ -62,6 +67,5 @@ static void sort_sheps(unsigned int *restrict          dists,
     memcpy(s, tmp, sizeof(qthread_shepherd_id_t) * (num - 1));
     free(tmp);
 } /*}}}*/
-
 #endif // ifndef QTHREAD_SRC_SHUFFLE_SHEPS_H
 /* vim:set expandtab: */
