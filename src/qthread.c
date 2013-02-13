@@ -2573,7 +2573,9 @@ void API_FUNC qthread_yield_(int k)
                 }
 #endif
             case 0: // general yield
+#ifdef QTHREAD_USE_SPAWNCACHE
 basic_yield:
+#endif
                 t->thread_state = QTHREAD_STATE_YIELDED;
                 break;
         }
