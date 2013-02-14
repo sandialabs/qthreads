@@ -86,7 +86,7 @@ void API_FUNC qt_sinc_init(qt_sinc_t *restrict  sinc_,
 
         rdata->values = qthread_internal_aligned_alloc(num_lines * cacheline, cacheline);
         assert(rdata->values);
-        ALLOC_SCRIBBLE(rdata->values, num_lines * cacheline * cacheline);
+        ALLOC_SCRIBBLE(rdata->values, num_lines * cacheline);
 
         // Initialize values
         for (size_t s = 0; s < num_sheps; s++) {
