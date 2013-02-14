@@ -6,6 +6,7 @@
 include_HEADERS = qthread.h
 pkginclude_HEADERS = \
 	allpairs.h \
+	barrier.h \
 	cacheline.h \
 	dictionary.h \
 	futurelib.h \
