@@ -19,6 +19,7 @@
 #include "qt_mpool.h"
 #include "qt_visibility.h"
 #include "qt_debug.h"
+#include "qt_asserts.h"
 
 /* The Datatype */
 struct qt_barrier_s {
@@ -27,6 +28,8 @@ struct qt_barrier_s {
     qt_sinc_t *sinc_2;
     qt_sinc_t *sinc_3;
 };
+
+static qt_barrier_t * global_barrier = NULL;
 
 void INTERNAL qt_barrier_internal_init(void)
 { }
@@ -105,5 +108,35 @@ void API_FUNC qt_barrier_enter(qt_barrier_t *barrier)
 void API_FUNC qt_barrier_dump(qt_barrier_t    *b,
                               qt_barrier_dtype dt)
 {}
+
+
+
+void qt_global_barrier(void)
+{
+    assert(global_barrier);
+    qt_barrier_enter(global_barrier);
+}
+
+void qt_global_barrier_init(size_t size,
+                                     int    debug)
+{
+    if (global_barrier == NULL) {
+        global_barrier = qt_barrier_create(size, 0);
+        assert(global_barrier);
+    }
+}
+
+void qt_global_barrier_destroy(void)
+{
+    if (global_barrier) {
+        qt_barrier_destroy(global_barrier);
+        global_barrier = NULL;
+    }
+}
+
+void qt_global_barrier_resize(size_t size)
+{
+    qt_barrier_resize(global_barrier, size);
+}
 
 /* vim:set expandtab: */

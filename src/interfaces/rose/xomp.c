@@ -15,12 +15,8 @@
 #include <sys/time.h>                  // for gettimeofday()
 #include <string.h>                    // for strcmp
 
-/* Installed Headers */
 #include "qthread/qthread.h"
 #include "qthread/qtimer.h"
-#include "qthread/omp_defines.h"       // Wrappered OMP functions from omp.h
-
-/* Internal Headers */
 #include "qt_barrier.h"	               // for qt_global_barrier
 #include "qt_arrive_first.h"           // for qt_global_arrive_first
 #include "qthread/qloop.h"	       // for qt_loop_f
@@ -33,13 +29,18 @@
 #include "qt_qthread_struct.h"	       // for qthread_t
 #include "qt_touch.h"		       // for qthread_run_needed_task()
 #include "qt_task_counter.h"
-#include "qt_atomics.h"       // Wrappered OMP functions from omp.h
-#include "rose_extensions.h"           // for additional core functions specifically to support ROSE and OpenMP
+#include <qthread/qthread.h>           // for syncvar_t
+#include <qt_barrier.h>
+#include <qthread/omp_defines.h>       // Wrappered OMP functions from omp.h
+#include <qt_atomics.h>                // 
+#include <qthread_innards.h>           // for qlib
 #ifdef QTHREAD_OMP_AFFINITY
 #include <omp_affinity.h>	       // Headers for OMP affinity functions
 #endif
 
 #include <rose_xomp.h>
+#include <rose_extensions.h>
+#include <rose_sinc_barrier.h>
 #ifdef QTHREAD_RCRTOOL
 #include "rcrtool/qt_rcrtool.h"
 #include "maestro_sched.h"
@@ -309,7 +310,9 @@ void XOMP_parallel_start(
   if (numberOfThreads == 0) numberOfThreads = qthread_num_workers();
   rcrtool_log(RCR_APP_STATE_DUMP, XOMP_PARALLEL_START, numberOfThreads, (uint64_t) func, funcName);
   
-  qthread_shepherd_id_t parallelWidth = maestro_change_size();
+  qthread_shepherd_id_t parallelWidth ;
+  if (rcrtoollevel <= 1) parallelWidth = qthread_num_workers()-1;
+  else parallelWidth = maestro_change_size();
   
   // allocate and set new feb barrier
 #else
@@ -331,6 +334,7 @@ void XOMP_parallel_start(
     parallelWidth = numThread;
   }
   //struct XOMP_parallel_wrapper_args foo = {func, data};
+  //  printf("parallel width %d\n",parallelWidth);
   qt_parallel_step(func, parallelWidth, data);
   //  qt_parallel_step(XOMP_parallel_wrapper, parallelWidth, &foo);
 
@@ -714,8 +718,15 @@ void XOMP_barrier(void)
 {
     waitCompletionOutstandingTasks(); // wait for outstanding tasks to complete
 
+#ifdef QTHREAD_LOG_BARRIER
     size_t myid = qthread_barrier_id();
-    qt_barrier_enter_id(qt_thread_barrier(), myid);
+    qt_barrier_enter(qt_thread_barrier(),myid);
+#else
+    // need barrier for this parallel thread
+    qt_barrier_t *foo =  qt_get_barrier();
+    qt_barrier_enter(foo);
+#endif
+
 }
 void XOMP_atomic_start(
     void)
@@ -987,7 +998,15 @@ void XOMP_loop_default(
 #endif
   aligned_t chunksize ;
   if (stride > 0){ // normal case -- postive stride
-    if (upper >= lower) chunksize = ((upper-lower)/(stride*parallelWidth))+1;
+    if (upper >= lower) {
+      int num = upper-lower;
+      int den = stride*parallelWidth;
+      if (den == 0) den=1;
+      chunksize = num/den;
+      if (num%den){  // does it fit an even number of times
+	chunksize++; //if remainder add one to chunksize
+      }
+    }
     else chunksize = 1; //loop is not going to iterate so fixed default ok
   }
   else {  // handle negative stride
@@ -1291,10 +1310,10 @@ void omp_set_num_threads (
     // need to reset the barrier size and the first arrival size (if larger or smaller)
     qtar_resize(qt_num_threads_requested);
 
-    if (sinc_barrier != 0) qt_sinc_barrier_change(sinc_barrier,qt_num_threads_requested);
+    //    if (sinc_barrier != 0) qt_sinc_barrier_change(sinc_barrier,qt_num_threads_requested);
 
     if (qt_parallel_region()) qt_thread_barrier_resize(qt_num_threads_requested);
-    qt_global_barrier_resize(qt_num_threads_requested);
+    qt_barrier_resize(qt_thread_barrier(), qt_num_threads_requested);
 
 #ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_id_t newId = 0;

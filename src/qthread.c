@@ -1519,7 +1519,7 @@ void API_FUNC qthread_finalize(void)
 #ifdef QTHREAD_RCRTOOL
     powerOff = 0;
     for ( i = 0; i < workers; i++) {
-        resetEnergy(i);
+      if (rcrtoollevel > 1) resetEnergy(i);
     }
 #endif
 
@@ -2579,7 +2579,9 @@ void API_FUNC qthread_yield_(int k)
                 }
 #endif
             case 0: // general yield
+#ifdef QTHREAD_USE_SPAWNCACHE
 basic_yield:
+#endif
                 t->thread_state = QTHREAD_STATE_YIELDED;
                 break;
         }
