@@ -7,13 +7,13 @@
 #include <stdlib.h>		       // for calloc()
 #include <stdio.h>		       // for perror()
 
-#include "qt_debug.h"	               // for qthread_debug()
-
 #include <qthread/qloop.h>
 #include <qthread/barrier.h>
 #include "qt_arrive_first.h"
 #include "qt_asserts.h"
 #include "qloop_innards.h"	       /* for cnbWorkers_ and cnbTimeMin_ */
+#include "qt_subsystems.h"             /* for qthread_internal_cleanup() */
+#include "qt_debug.h"	               // for qthread_debug()
 
 static qt_arrive_first_t *qt_arrive_first_create(int size, qt_barrier_btype type, int debug);
 static void qt_arrive_first_destroy(qt_arrive_first_t * b);
@@ -230,6 +230,7 @@ void qt_global_arrive_first_init(
 	*cnbTimeMin_() = 1.0;
 	MArrFirst = qt_arrive_first_create(size, REGION_BARRIER, debug);
 	assert(MArrFirst);
+	qthread_internal_cleanup(qt_global_arrive_first_destroy);
     }
 }				       /*}}} */
 
