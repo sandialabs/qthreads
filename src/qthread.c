@@ -1513,7 +1513,7 @@ void API_FUNC qthread_finalize(void)
 #ifdef QTHREAD_RCRTOOL
     powerOff = 0;
     for ( i = 0; i < workers; i++) {
-        resetEnergy(i);
+      if (rcrtoollevel > 1) resetEnergy(i);
     }
 #endif
 
