@@ -1335,6 +1335,12 @@ static QINLINE void qthread_makecontext(qt_context_t *const c,
     const unsigned int low  = ((uintptr_t)arg) & 0xffffffff;
 #endif
 
+    assert(c != NULL);
+    assert(stack != NULL);
+    assert(func != NULL);
+    assert(arg != NULL);
+    assert(returnc != NULL);
+
     qassert(getcontext(c), 0); /* initialization required by makecontext API */
 
     /* Several other libraries that do this reserve a few words on either end

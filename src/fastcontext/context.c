@@ -12,6 +12,7 @@
 
 #include "qt_visibility.h"
 #include "qt_prefetch.h"
+#include "qt_asserts.h"
 
 #ifdef NEEDPOWERMAKECONTEXT
 void INTERNAL qt_makectxt(uctxt_t *ucp,
@@ -51,6 +52,7 @@ void INTERNAL qt_makectxt(uctxt_t *ucp,
     va_start(argp, argc);
 # endif
 
+    assert((uintptr_t)(ucp->uc_stack.ss_sp) > 1024);
     sp  = (uintptr_t *)(ucp->uc_stack.ss_sp + ucp->uc_stack.ss_size); /* sp = top of stack */
     sp -= argc;                                                       /* count down to where 8(%rsp) should be */
     sp  = (void *)((uintptr_t)sp - (uintptr_t)sp % 16);               /* 16-align for OS X */
