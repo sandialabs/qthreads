@@ -328,8 +328,8 @@ void API_FUNC qt_team_eureka(void)
     qt_spawncache_filter(eureka_filter);
 #endif
     /* 6: callback to kill blocked tasks */
-    qthread_feb_taskfilter(qt_eureka_internal_filterfunc, NULL);
-    qthread_syncvar_taskfilter(qt_eureka_internal_filterfunc, NULL);
+    qthread_feb_taskfilter_serial(qt_eureka_internal_filterfunc, NULL);
+    qthread_syncvar_taskfilter_serial(qt_eureka_internal_filterfunc, NULL);
     /* 7: exit barrier */
     {
         aligned_t tmp = eureka_out_barrier;

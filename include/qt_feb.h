@@ -33,6 +33,7 @@ void API_FUNC qthread_feb_callback(qt_feb_callback_f cb,
                                    void             *arg);
 void INTERNAL qthread_feb_taskfilter(qt_feb_taskfilter_f tf,
                                      void               *arg);
-
+void INTERNAL qthread_feb_taskfilter_serial(qt_feb_taskfilter_f tf,
+                                            void               *arg);
 #endif // ifndef QTHREAD_INTERNAL_FEB
 /* vim:set expandtab: */

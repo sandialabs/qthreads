@@ -1603,9 +1603,12 @@ static void qt_syncvar_call_tf(const qt_key_t      addr,
                                void               *arg)
 {   /*{{{*/
     qt_syncvar_taskfilter_f tf    = (qt_syncvar_taskfilter_f)((void **)arg)[0];
-    void                   *f_arg = ((void **)arg)[1];
+    void *const             f_arg = ((void **)arg)[1];
+    const uintptr_t         sync  = (uintptr_t)(((void **)arg)[2]);
 
-    QTHREAD_FASTLOCK_LOCK(&m->lock);
+    if (sync) {
+        QTHREAD_FASTLOCK_LOCK(&m->lock);
+    }
     for (int i = 0; i < 3; i++) {
         qthread_addrres_t *curs, **base;
         switch (i) {
@@ -1632,13 +1635,25 @@ static void qt_syncvar_call_tf(const qt_key_t      addr,
             }
         }
     }
-    QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+    if (sync) {
+        QTHREAD_FASTLOCK_UNLOCK(&m->lock);
+    }
+} /*}}}*/
+
+void INTERNAL qthread_syncvar_taskfilter_serial(qt_syncvar_taskfilter_f tf,
+                                                void                   *arg)
+{   /*{{{*/
+    void *pass[3] = { tf, arg, NULL };
+
+    for (unsigned int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
+        qt_hash_callback(syncvars[i], (qt_hash_callback_fn)qt_syncvar_call_tf, pass);
+    }
 } /*}}}*/
 
 void INTERNAL qthread_syncvar_taskfilter(qt_syncvar_taskfilter_f tf,
                                          void                   *arg)
 {   /*{{{*/
-    void *pass[2] = { tf, arg };
+    void *pass[3] = { tf, arg, (void *)(uintptr_t)1 };
 
     for (unsigned int i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
         qt_hash_callback(syncvars[i], (qt_hash_callback_fn)qt_syncvar_call_tf, pass);
