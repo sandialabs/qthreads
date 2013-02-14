@@ -42,7 +42,7 @@ typedef struct {
     void *shadow_head;
     /* the following is for estimating a queue's "busy" level, and is not
      * guaranteed accurate (that would be a race condition) */
-    saligned_t advisory_queuelen;
+    saligned_t nemesis_advisory_queuelen;
     uint8_t    pad2[CACHELINE_WIDTH - sizeof(void *) - sizeof(saligned_t)];
 }
 NEMESIS_queue Q_ALIGNED (CACHELINE_WIDTH);
@@ -96,6 +96,7 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
 
     q->q.shadow_head     = q->q.head = q->q.tail = NULL;
     q->advisory_queuelen = 0;
+    q->q.nemesis_advisory_queuelen = 0; // redundant
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     q->frustration = 0;
     QTHREAD_COND_INIT(q->trigger);
@@ -156,6 +157,7 @@ static inline qt_threadqueue_node_t *qt_internal_NEMESIS_dequeue_st(NEMESIS_queu
             q->tail        = NULL;
         }
     }
+    qthread_debug(ALWAYS_OUTPUT, "nemesis head:%p tail:%p shadow_head:%p\n", q->head, q->tail, q->shadow_head);
     return retval;
 }                                      /*}}} */
 
@@ -177,7 +179,18 @@ static qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q)
 void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 {                                      /*{{{ */
     assert(q);
-    while (qt_threadqueue_dequeue(q)) ;
+    while (1) {
+        qt_threadqueue_node_t *node = qt_internal_NEMESIS_dequeue_st(&q->q);
+        if (node) {
+            qthread_t *retval = node->thread;
+            assert(node->next == NULL);
+            (void)qthread_incr(&(q->advisory_queuelen), -1);
+            FREE_TQNODE(node);
+            // XXX: leaks the retval
+        } else {
+            break;
+        }
+    }
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     QTHREAD_COND_DESTROY(q->trigger);
 #endif
@@ -308,10 +321,13 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
     qt_threadqueue_node_t *curs, *prev;
 
     assert(q != NULL);
-    qthread_debug(THREADQUEUE_FUNCTIONS, "begin q:%p f:%p", q, f);
+    qthread_debug(ALWAYS_OUTPUT|THREADQUEUE_FUNCTIONS, "begin q:%p f:%p", q, f);
 
     tmp.head = NULL;
     tmp.tail = NULL;
+    tmp.shadow_head = NULL;
+    tmp.nemesis_advisory_queuelen = 0;
+    qthread_debug(ALWAYS_OUTPUT, "q(%p)->q {head:%p tail:%p} q->advisory_queuelen:%u\n", q, q->q.head, q->q.tail, q->advisory_queuelen);
     while ((curs = qt_internal_NEMESIS_dequeue_st(&q->q))) {
         qthread_t *t = curs->thread;
         switch (f(t)) {
@@ -322,7 +338,7 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                 } else {
                     prev->next = curs;
                 }
-                tmp.advisory_queuelen++;
+                tmp.nemesis_advisory_queuelen++;
                 break;
             case IGNORE_AND_STOP: // ignore, stop looking
                 prev = qt_internal_atomic_swap_ptr((void **)&(tmp.tail), curs);
@@ -331,7 +347,7 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                 } else {
                     prev->next = curs;
                 }
-                tmp.advisory_queuelen++;
+                tmp.nemesis_advisory_queuelen++;
                 goto pushback;
             case REMOVE_AND_CONTINUE: // remove, move on
                 qthread_internal_assassinate(t);
@@ -352,13 +368,13 @@ pushback:
         } else {
             prev->next = q->q.head;
         }
-        tmp.advisory_queuelen += q->q.advisory_queuelen;
+        tmp.nemesis_advisory_queuelen += q->advisory_queuelen;
         tmp.tail               = q->q.tail;
     }
-    q->q.head              = tmp.head;
-    q->q.tail              = tmp.tail;
-    q->q.shadow_head       = tmp.head;
-    q->q.advisory_queuelen = tmp.advisory_queuelen;
+    q->q.head            = tmp.head;
+    q->q.tail            = tmp.tail;
+    q->q.shadow_head     = tmp.head;
+    q->advisory_queuelen = tmp.nemesis_advisory_queuelen;
 } /*}}}*/
 
 /* some place-holder functions */
