@@ -45,7 +45,7 @@ if [ ${libtool_version[0]} -lt 2 ] ; then
 			$LIBTOOLIZE --version | head -n 1
 			exit -1
 		elif [ ${libtool_version[1]} -lt 9 ] ; then
-			echo "You have an awfully old version of libtool."
+			echo "You have an awfully old version of libtool. ("`$LIBTOOLIZE --version`")"
 			echo "We prefer to use LT_INIT, which came out with libtool 1.9b,"
 			echo "way back in 2004. Maybe you should consider upgrading."
 		fi
