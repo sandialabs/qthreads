@@ -1,6 +1,32 @@
---- 1.8.2b ---
+--- 1.9b ---
 New Features:
  - Eurekas within a team
+ - Manual spawn cache flushing (qthread_flushsc())
+ - Preliminary Chapel SPR support
+ - Unified task-barrier APIs
+Improvements:
+ - Direct context swapping in "direct-yield", used in qt_loop()
+ - Better Chapel integration
+ - Cleaned up Chapel multinode compilation
+ - Detect and work around Apple compiler bugs
+ - Qtimer OMP compatibility
+ - Can reset a sinc with outstanding submits
+ - Compatibility with older libtool versions
+ - Reorganized code to make it easier for new developers to understand
+ - Better TLS handling
+ - Add the ability to query more runtime state (e.g. WORKER_OCCUPATION); fleshes out Chapel support
+ - Add HPCCG benchmarks (both pure and via ROSE)
+ - Add LULESH benchmark (via ROSE)
+ - Better handling of MPI runtime (for multinode)
+ - Support for MPICC and MPICXX environment variables (for multinode)
+ - Better topology handling
+Bugfixes:
+ - Fix 32-bit fastcontext (broken in 1.8.1)
+ - Fix handling of QT_WORKER_UNIT and QT_SHEPHERD_BOUNDARY that are caches (hwloc-only)
+ - Properly initialize worker information when QT_NUM_SHEPHERDS has been specified (hwloc-only)
+ - OMP barrier nesting improved
+ - Correct detection of CMPXCHG16B
+ - A bunch of minor bugfixes
 --- 1.8.1 ---
 Improvements:
  - Improved integration with Chapel build system
