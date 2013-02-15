@@ -95,8 +95,8 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
 
     qassert_ret(q != NULL, NULL);
 
-    q->q.shadow_head     = q->q.head = q->q.tail = NULL;
-    q->advisory_queuelen = 0;
+    q->q.shadow_head               = q->q.head = q->q.tail = NULL;
+    q->advisory_queuelen           = 0;
     q->q.nemesis_advisory_queuelen = 0; // redundant
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     q->frustration = 0;
@@ -322,11 +322,11 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
     qt_threadqueue_node_t *curs, *prev;
 
     assert(q != NULL);
-    qthread_debug(ALWAYS_OUTPUT|THREADQUEUE_FUNCTIONS, "begin q:%p f:%p", q, f);
+    qthread_debug(ALWAYS_OUTPUT | THREADQUEUE_FUNCTIONS, "begin q:%p f:%p", q, f);
 
-    tmp.head = NULL;
-    tmp.tail = NULL;
-    tmp.shadow_head = NULL;
+    tmp.head                      = NULL;
+    tmp.tail                      = NULL;
+    tmp.shadow_head               = NULL;
     tmp.nemesis_advisory_queuelen = 0;
     qthread_debug(ALWAYS_OUTPUT, "q(%p)->q {head:%p tail:%p} q->advisory_queuelen:%u\n", q, q->q.head, q->q.tail, q->advisory_queuelen);
     while ((curs = qt_internal_NEMESIS_dequeue_st(&q->q))) {
@@ -370,7 +370,7 @@ pushback:
             prev->next = q->q.head;
         }
         tmp.nemesis_advisory_queuelen += q->advisory_queuelen;
-        tmp.tail               = q->q.tail;
+        tmp.tail                       = q->q.tail;
     }
     q->q.head            = tmp.head;
     q->q.tail            = tmp.tail;
