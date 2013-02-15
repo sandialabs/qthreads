@@ -10,8 +10,6 @@ endif
 
 DIST_SUBDIRS = $(SUBDIRS) multinode benchmarks
 
-EXTRA_PROGRAMS = test_signal
-
 basictests:
 	$(MAKE) -C basics buildtests
 
@@ -44,10 +42,3 @@ outputdir = $(top_builddir)/src
 qthreadlib = $(outputdir)/libqthread.la
 
 LDADD = $(qthreadlib)
-
-test_signal_SOURCES = test_signal.c
-test_signal_DEPENDENCIES = $(qthreadlib)
-
-clean-local:
-	$(MAKE) -C multinode clean
-	$(MAKE) -C benchmarks clean

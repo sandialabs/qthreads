@@ -32,8 +32,3 @@ LDADD = $(qthreadlib)
 
 $(qthreadlib):
 	$(MAKE) -C $(top_builddir)/src libqthread.la
-
-clean-local:
-	for DIR in $(SUBDIRS) ; do \
-	$(MAKE) -C $$DIR clean ; \
-	done
