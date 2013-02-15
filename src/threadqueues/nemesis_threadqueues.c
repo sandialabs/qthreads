@@ -21,6 +21,7 @@
 #include "qt_debug.h"
 #include "qt_eurekas.h"
 #include "qt_subsystems.h"
+#include "qt_qthread_mgmt.h"             /* for qthread_thread_free() */
 
 /* This thread queueing uses the NEMESIS lock-free queue protocol from
  * http://www.mcs.anl.gov/~buntinas/papers/ccgrid06-nemesis.pdf
@@ -186,7 +187,7 @@ void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
             assert(node->next == NULL);
             (void)qthread_incr(&(q->advisory_queuelen), -1);
             FREE_TQNODE(node);
-            // XXX: leaks the retval
+            qthread_thread_free(retval);
         } else {
             break;
         }
