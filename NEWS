@@ -1,4 +1,4 @@
---- 1.9b ---
+--- 1.9 ---
 New Features:
  - Eurekas within a team
  - Manual spawn cache flushing (qthread_flushsc())
