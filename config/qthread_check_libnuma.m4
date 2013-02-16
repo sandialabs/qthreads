@@ -38,6 +38,16 @@ AS_IF([test "x$libnuma_happy" = "xyes"],
   AC_CHECK_FUNC([numa_allocate_nodemask],
     [AC_DEFINE([QTHREAD_LIBNUMA_V2],[1],[if libnuma provides numa_allocate_nodemask])])
   AC_CHECK_FUNCS([numa_num_configured_cpus numa_num_thread_cpus numa_bitmask_nbytes numa_distance])
+  AS_IF([test "x$ac_cv_func_numa_distance" = "xyes"],
+        [AC_TRY_RUN([
+#include <numa.h>
+int main() { return (numa_distance(0,0) >= 0); }
+         ],
+		 [numa_distance_happy=yes],
+		 [numa_distance_happy=no],
+		 [numa_distance_happy=yes])])
+  AS_IF([test "x$numa_distance_happy" = "xyes"],
+      [AC_DEFINE([QTHREAD_NUMA_DISTANCE_WORKING],[1],[if libnuma's numa_distance() function works])])
   ])
   
 AS_IF([test "x$libnuma_happy" = "xyes"],
