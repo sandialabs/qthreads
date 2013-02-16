@@ -136,20 +136,38 @@ static qthread_shepherd_id_t guess_num_shepherds(void)
 void INTERNAL qt_affinity_set(qthread_worker_t *me,
                               unsigned int      Q_UNUSED(nw))
 {                                      /*{{{ */
-    if (numa_run_on_node(me->shepherd->node) != 0) {
+    assert(me);
+
+    qthread_shepherd_t *const myshep = me->shepherd;
+
+    /* It would be nice if we could do something more specific than
+     * "numa_run_on_node", but because sched_etaffinity() is so dangerous, we
+     * really can't, in good conscience. */
+    qthread_debug(AFFINITY_FUNCTIONS, "calling numa_run_on_node(%i) for worker %i\n", myshep->node, me->packed_worker_id);
+    int ret = numa_run_on_node(myshep->node);
+    if (ret != 0) {
         numa_error("setting thread affinity");
+	abort();
     }
-    numa_set_preferred(me->shepherd->node);
+    numa_set_localalloc();
 }                                      /*}}} */
 
 #else
 void INTERNAL qt_affinity_set(qthread_shepherd_t *me,
                               unsigned int        Q_UNUSED(nw))
 {                                      /*{{{ */
-    if (numa_run_on_node(me->node) != 0) {
+    assert(me);
+
+    /* It would be nice if we could do something more specific than
+     * "numa_run_on_node", but because sched_etaffinity() is so dangerous, we
+     * really can't, in good conscience. */
+    qthread_debug(AFFINITY_FUNCTIONS, "calling numa_run_on_node(%i) for worker %i\n", me->node, me->shepherd_id);
+    int ret = numa_run_on_node(me->node);
+    if (ret != 0) {
         numa_error("setting thread affinity");
+	abort();
     }
-    numa_set_preferred(me->node);
+    numa_set_localalloc();
 }                                      /*}}} */
 
 #endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
@@ -159,7 +177,7 @@ qthread_worker_id_t INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t ns
     size_t       cpu_count = 1;
     unsigned int guess     = 1;
 
-    qthread_debug(AFFINITY_DETAILS, "guessing workers for %i shepherds\n",
+    qthread_debug(AFFINITY_CALLS, "guessing workers for %i shepherds\n",
                   (int)nshepherds);
 #ifdef HAVE_NUMA_NUM_THREAD_CPUS
     /* note: not numa_num_configured_cpus(), just in case an
@@ -194,30 +212,37 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
     const size_t num_extant_nodes = numa_max_node() + 1;
     nodemask_t   bmask;
 
+    qthread_debug(AFFINITY_FUNCTIONS, "sheps(%p), nshepherds(%u), num_extant_nodes:%u\n", sheps, nshepherds, (unsigned)num_extant_nodes);
     if (numa_available() == -1) {
         return QTHREAD_THIRD_PARTY_ERROR;
     }
     nodemask_zero(&bmask);
     /* assign nodes */
+    qthread_debug(AFFINITY_DETAILS, "assign nodes...\n");
     for (size_t i = 0; i < nshepherds; ++i) {
         sheps[i].node = i % num_extant_nodes;
+	qthread_debug(AFFINITY_DETAILS, "set bit %u in bmask\n", i % num_extant_nodes);
         nodemask_set(&bmask, i % num_extant_nodes);
     }
+    qthread_debug(AFFINITY_DETAILS, "numa_set_interleave_mask\n");
     numa_set_interleave_mask(&bmask);
-#ifdef HAVE_NUMA_DISTANCE
+#ifdef QTHREAD_NUMA_DISTANCE_WORKING
+    qthread_debug(AFFINITY_DETAILS, "querying distances...\n");
     /* truly ancient versions of libnuma (in the changelog, this is
      * considered "pre-history") do not have numa_distance() */
     for (qthread_shepherd_id_t i = 0; i < nshepherds; i++) {
+	qthread_debug(AFFINITY_DETAILS, "i = %u < %u...\n", i, nshepherds);
         const unsigned int node_i = sheps[i].node;
         size_t             j, k;
         sheps[i].shep_dists      = calloc(nshepherds, sizeof(unsigned int));
         sheps[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
+	qthread_debug(AFFINITY_DETAILS, "allocs %p %p\n", sheps[i].shep_dists, sheps[i].sorted_sheplist);
         assert(sheps[i].shep_dists);
         assert(sheps[i].sorted_sheplist);
         for (j = 0; j < nshepherds; j++) {
             const unsigned int node_j = sheps[j].node;
 
-            if ((node_i != QTHREAD_NO_NODE) && (node_j != QTHREAD_NO_NODE)) {
+            if ((node_i != QTHREAD_NO_NODE) && (node_j != QTHREAD_NO_NODE) && (node_i != node_j)) {
                 sheps[i].shep_dists[j] = numa_distance(node_i, node_j);
             } else {
                 /* XXX too arbitrary */
@@ -227,6 +252,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                     sheps[i].shep_dists[j] = 20;
                 }
             }
+	    qthread_debug(AFFINITY_DETAILS, "shep %u to shep %u distance: %u\n", i, j, sheps[i].shep_dists[j]);
         }
         k = 0;
         for (j = 0; j < nshepherds; j++) {
@@ -238,7 +264,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
 	    sort_sheps(sheps[i].shep_dists, sheps[i].sorted_sheplist, nshepherds);
 	}
     }
-#endif /* ifdef HAVE_NUMA_DISTANCE */
+#endif /* ifdef QTHREAD_NUMA_DISTANCE_WORKING */
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
 
