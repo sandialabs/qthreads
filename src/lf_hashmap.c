@@ -245,9 +245,13 @@ static inline so_key_t so_dummykey(const lkey_t key)
 #ifndef UNPOOLED
 static void qt_hash_subsystem_shutdown(void)
 {
+    qthread_debug(CORE_CALLS, "begin\n");
+
     assert(hash_entry_pool != NULL);
     qt_mpool_destroy(hash_entry_pool);
     hash_entry_pool = NULL;
+
+    qthread_debug(CORE_CALLS, "end\n");
 }
 
 #endif

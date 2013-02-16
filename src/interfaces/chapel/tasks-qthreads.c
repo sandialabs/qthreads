@@ -18,6 +18,7 @@
 #include "chplsys.h"
 #include "tasks-qthreads.h"
 #include "chpl-tasks.h"
+#include "chpl-comm.h" // for chpl_localeID
 #include "chplcgfns.h" // for chpl_ftable()
 #include "config.h"   // for chpl_config_get_value()
 #include "error.h"    // for chpl_warning()
@@ -485,9 +486,13 @@ void chpl_task_callMain(void (*chpl_main)(void))
 int chpl_task_createCommTask(chpl_fn_p fn,
                              void     *arg)
 {
+#ifndef QTHREAD_MULTINODE
     pthread_t polling_thread;
 
     return pthread_create(&polling_thread, NULL, (void *(*)(void *))fn, arg);
+#else
+    return 0;
+#endif
 }
 
 void chpl_task_addToTaskList(chpl_fn_int_t     fid,

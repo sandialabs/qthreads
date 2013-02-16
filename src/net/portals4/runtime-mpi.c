@@ -50,10 +50,14 @@ qthread_internal_net_driver_runtime_fini(void)
 {
     int ret;
 
+    qthread_debug(MULTINODE_DETAILS, "begin call to MPI_Finalize(d)\n", ret);
+
     MPI_Finalized(&ret);
     if (!ret) {
         MPI_Finalize();
     }
+
+    qthread_debug(MULTINODE_DETAILS, "end call to MPI_Finalize(d)\n", ret);
 
     return 0;
 }

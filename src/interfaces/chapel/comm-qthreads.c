@@ -22,11 +22,13 @@
 
 #include "chplrt.h"
 #include "chplsys.h"
-#include "tasks-qthreads.h" // for sync typedefs
 #include "chpl-mem.h"
+#include "tasks-qthreads.h" // for sync typedefs
+#include "arg.h" // for chpl_specify_locales_error()
 #include "chplsys.h"
 #include "comm-qthreads.h"
 #include "chpl-tasks.h"
+#include "chplcgfns.h" // for chpl_ftable()
 #include "config.h"   // for chpl_config_get_value()
 #include "error.h"    // for chpl_warning()
 #include <stdio.h>
@@ -212,6 +214,20 @@ int32_t chpl_comm_getMaxThreads(void)
 void chpl_comm_init(int *argc_p, char ***argv_p)
 {
     qthread_debug(CHAPEL_CALLS, "[%d] begin\n", chpl_localeID);
+
+    // Set stack size >= 8 pages (lower bound derived from experience)
+    unsigned long const default_stack_size = 32768;
+    unsigned long const stack_size = 
+        qt_internal_get_env_num("STACK_SIZE",
+                                default_stack_size,
+                                default_stack_size);
+    char stack_size_str[100] = {0};
+    if (default_stack_size > stack_size) {
+        snprintf(stack_size_str, 99, "%lu", default_stack_size);
+    } else {
+        snprintf(stack_size_str, 99, "%lu", stack_size);
+    }
+    setenv("QT_STACK_SIZE", stack_size_str, 1);
 
     /* Initialize SPR:                              *
      * - All locales participate in initialization. */

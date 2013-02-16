@@ -289,6 +289,7 @@ static inline uint64_t qt_hashword(uint64_t key)
 
 static void qt_syncvar_subsystem_shutdown(void)
 {
+    qthread_debug(CORE_CALLS, "begin\n");
     qthread_debug(SYNCVAR_DETAILS, "destroy syncvar infrastructure arrays\n");
     for (unsigned i = 0; i < QTHREAD_LOCKING_STRIPES; i++) {
         qt_hash_destroy_deallocate(syncvars[i],
@@ -296,6 +297,7 @@ static void qt_syncvar_subsystem_shutdown(void)
                                    qthread_addrstat_delete);
     }
     FREE(syncvars, sizeof(qt_hash) * QTHREAD_LOCKING_STRIPES);
+    qthread_debug(CORE_CALLS, "end\n");
 }
 
 void INTERNAL qt_syncvar_subsystem_init(uint_fast8_t need_sync)
