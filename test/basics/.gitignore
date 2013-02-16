@@ -14,6 +14,7 @@ qthread_fork_precond
 qthread_id
 qthread_incr
 qthread_migrate_to
+qthread_readstate
 qthread_stackleft
 qtimer
 read
