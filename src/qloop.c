@@ -1319,6 +1319,9 @@ qqloop_handle_t *qt_loop_queue_create(const qt_loop_queue_type type,
             h->stat.func        = func;
             h->stat.arg         = argptr;
             h->stat.chunksize   = (stop - start) / qthread_num_shepherds() / 10; // completely arbitrary
+            if (h->stat.chunksize == 0) {
+                h->stat.chunksize = 1;
+            }
             switch(type) {
                 case FACTORED:
                     h->stat.get = qqloop_get_iterations_factored; break;
