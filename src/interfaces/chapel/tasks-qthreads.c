@@ -144,6 +144,8 @@ static inline chapel_tls_t * chapel_get_tasklocal(void)
     return tls;
 }
 
+// FIXME: this is the same as chapel_get_tasklocal() except that it does
+//        not have the assertion.
 static inline chapel_tls_t * chapel_get_tasklocal_possibly_from_non_task(void)
 {
     chapel_tls_t * tls = 
@@ -596,8 +598,12 @@ c_subloc_t chpl_task_getSubLoc(void)
 
 void chpl_task_setSubLoc(c_subloc_t target_id)
 {
-    chapel_tls_t * data = chapel_get_tasklocal();
-    data->sublocale_id = target_id;
+    // FIXME: this method attempts to access task-local data, even though
+    // it is called from outside of a task.
+    chapel_tls_t * data = chapel_get_tasklocal_possibly_from_non_task();
+    if (NULL != data) {
+        data->sublocale_id = target_id;
+    }
 }
 
 uint64_t chpl_task_getCallStackSize(void)
