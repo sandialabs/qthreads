@@ -155,7 +155,9 @@ static inline qt_threadqueue_node_t *qt_internal_NEMESIS_dequeue_st(NEMESIS_queu
         } else {
             qt_threadqueue_node_t *old;
             q->shadow_head = NULL;
-            q->tail        = NULL;
+            if (q->tail == retval) {
+                q->tail = NULL;
+            }
         }
     }
     qthread_debug(ALWAYS_OUTPUT, "nemesis head:%p tail:%p shadow_head:%p\n", q->head, q->tail, q->shadow_head);
