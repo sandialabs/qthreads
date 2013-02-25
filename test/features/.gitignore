@@ -1,14 +1,16 @@
 allpairs
+barrier
 cxx_futurelib
 cxx_qt_loop
 cxx_qt_loop_balance
-feb_barrier
+eureka
 qarray
 qarray_accum
 qdqueue
 qlfqueue
 qloop_utils
 qpool
+qswsrqueue
 qt_dictionary
 qt_loop
 qt_loop_balance
@@ -19,5 +21,3 @@ qt_loop_sinc
 qutil
 qutil_qsort
 subteams
-eureka
-qswsrqueue
