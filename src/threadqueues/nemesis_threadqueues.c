@@ -160,7 +160,7 @@ static inline qt_threadqueue_node_t *qt_internal_NEMESIS_dequeue_st(NEMESIS_queu
             }
         }
     }
-    qthread_debug(ALWAYS_OUTPUT, "nemesis head:%p tail:%p shadow_head:%p\n", q->head, q->tail, q->shadow_head);
+    qthread_debug(THREADQUEUE_DETAILS, "nemesis q:%p head:%p tail:%p shadow_head:%p\n", q, q->head, q->tail, q->shadow_head);
     return retval;
 }                                      /*}}} */
 
@@ -231,6 +231,49 @@ void INTERNAL qt_threadqueue_private_filter(qt_threadqueue_private_t *restrict c
 void INTERNAL qthread_steal_enable() {}
 void INTERNAL qthread_steal_disable() {}
 
+#ifdef QTHREAD_PARANOIA
+static void sanity_check_tq(NEMESIS_queue *q)
+{   /*{{{*/
+    qt_threadqueue_node_t *curs;
+
+    assert(q);
+    /*if (q->head != NULL) {
+     *  assert(q->tail != NULL);
+     * }*/
+    if (q->shadow_head) {
+        assert(q->head != q->shadow_head);
+    }
+    if (q->tail != NULL) {
+        if (q->head == NULL) {
+            assert(q->shadow_head != NULL);
+        }
+    }
+    if ((q->head != NULL) || (q->tail != NULL)) {
+        if (q->shadow_head) {
+            curs = q->shadow_head;
+            assert(curs->thread);
+            assert(curs->thread != (void *)0x7777777777777777);
+            while (curs->next) {
+                curs = curs->next;
+                assert(curs->thread);
+                assert(curs->thread != (void *)0x7777777777777777);
+            }
+        }
+        if (q->head) {
+            curs = q->head;
+            assert(curs->thread);
+            assert(curs->thread != (void *)0x7777777777777777);
+            while (curs->next) {
+                curs = curs->next;
+                assert(curs->thread);
+                assert(curs->thread != (void *)0x7777777777777777);
+            }
+        }
+    }
+} /*}}}*/
+
+#endif /* ifdef QTHREAD_PARANOIA */
+
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
                                      qthread_t *restrict        t)
 {                                      /*{{{ */
@@ -239,6 +282,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
     assert(q);
     assert(t);
 
+    PARANOIA(sanity_check_tq(&q->q));
     qthread_debug(THREADQUEUE_CALLS, "q(%p), t(%p->%u)\n", q, t, t->thread_id);
 
     node = ALLOC_TQNODE();
@@ -253,6 +297,7 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
     } else {
         prev->next = node;
     }
+    PARANOIA(sanity_check_tq(&q->q));
     (void)qthread_incr(&(q->advisory_queuelen), 1);
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
     /* awake waiter */
@@ -287,9 +332,13 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                                             uint_fast8_t              QUNUSED(active))
 {                                      /*{{{ */
     qt_eureka_disable();
+    qthread_debug(THREADQUEUE_DETAILS, "q(%p)->q {head:%p tail:%p sh:%p} q->advisory_queuelen:%u\n", q, q->q.head, q->q.tail, q->q.shadow_head, q->advisory_queuelen);
+    PARANOIA(sanity_check_tq(&q->q));
     qt_threadqueue_node_t *node = qt_internal_NEMESIS_dequeue(&q->q);
     qthread_t             *retval;
 
+    qthread_debug(THREADQUEUE_DETAILS, "q(%p)->q {head:%p tail:%p sh:%p} q->advisory_queuelen:%u\n", q, q->q.head, q->q.tail, q->q.shadow_head, q->advisory_queuelen);
+    PARANOIA(sanity_check_tq(&q->q));
     if (node == NULL) {
         qt_eureka_check(0);
         while (q->q.shadow_head == NULL && q->q.head == NULL) {
@@ -313,6 +362,8 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
     (void)qthread_incr(&(q->advisory_queuelen), -1);
     retval = node->thread;
     FREE_TQNODE(node);
+    qthread_debug(THREADQUEUE_DETAILS, "q(%p)->q {head:%p tail:%p sh:%p} q->advisory_queuelen:%u\n", q, q->q.head, q->q.tail, q->q.shadow_head, q->advisory_queuelen);
+    PARANOIA(sanity_check_tq(&q->q));
     return retval;
 }                                      /*}}} */
 
@@ -324,15 +375,19 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
     qt_threadqueue_node_t *curs, *prev;
 
     assert(q != NULL);
-    qthread_debug(ALWAYS_OUTPUT | THREADQUEUE_FUNCTIONS, "begin q:%p f:%p", q, f);
+    qthread_debug(THREADQUEUE_FUNCTIONS, "begin q:%p f:%p\n", q, f);
 
     tmp.head                      = NULL;
     tmp.tail                      = NULL;
     tmp.shadow_head               = NULL;
     tmp.nemesis_advisory_queuelen = 0;
-    qthread_debug(ALWAYS_OUTPUT, "q(%p)->q {head:%p tail:%p} q->advisory_queuelen:%u\n", q, q->q.head, q->q.tail, q->advisory_queuelen);
+    qthread_debug(THREADQUEUE_DETAILS, "q(%p)->q {head:%p tail:%p} q->advisory_queuelen:%u\n", q, q->q.head, q->q.tail, q->advisory_queuelen);
+    PARANOIA(sanity_check_tq(&q->q));
     while ((curs = qt_internal_NEMESIS_dequeue_st(&q->q))) {
         qthread_t *t = curs->thread;
+        qthread_debug(THREADQUEUE_DETAILS, "q(%p)->q {head:%p tail:%p} q->advisory_queuelen:%u\n", q, q->q.head, q->q.tail, q->advisory_queuelen);
+        PARANOIA(sanity_check_tq(&tmp));
+        PARANOIA(sanity_check_tq(&q->q));
         switch (f(t)) {
             case IGNORE_AND_CONTINUE: // ignore, move on
                 prev = qt_internal_atomic_swap_ptr((void **)&(tmp.tail), curs);
@@ -364,6 +419,9 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
     }
 pushback:
     /* dequeue the rest of the queue */
+    qthread_debug(THREADQUEUE_DETAILS, "q(%p)->q {head:%p tail:%p} q->advisory_queuelen:%u\n", q, q->q.head, q->q.tail, q->advisory_queuelen);
+    qthread_debug(THREADQUEUE_DETAILS, "tmp {head:%p tail:%p} tmp->advisory_queuelen:%u\n", tmp.head, tmp.tail, tmp.nemesis_advisory_queuelen);
+    PARANOIA(sanity_check_tq(&tmp));
     if (q->q.head) {
         prev = qt_internal_atomic_swap_ptr((void **)&(tmp.tail), q->q.head);
         if (prev == NULL) {
@@ -378,6 +436,8 @@ pushback:
     q->q.tail            = tmp.tail;
     q->q.shadow_head     = NULL;
     q->advisory_queuelen = tmp.nemesis_advisory_queuelen;
+    qthread_debug(THREADQUEUE_DETAILS, "q(%p)->q {head:%p tail:%p} q->advisory_queuelen:%u\n", q, q->q.head, q->q.tail, q->advisory_queuelen);
+    PARANOIA(sanity_check_tq(&q->q));
 } /*}}}*/
 
 /* some place-holder functions */
