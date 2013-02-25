@@ -374,7 +374,7 @@ pushback:
     }
     q->q.head            = tmp.head;
     q->q.tail            = tmp.tail;
-    q->q.shadow_head     = tmp.head;
+    q->q.shadow_head     = NULL;
     q->advisory_queuelen = tmp.nemesis_advisory_queuelen;
 } /*}}}*/
 
