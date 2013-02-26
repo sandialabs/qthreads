@@ -42,7 +42,7 @@ static void sort_sheps(unsigned int *restrict          dists,
             }
         }
         if (tmp_max - tmp_base > 1) {
-            shuffle_sheps(tmp + tmp_base, tmp_max);
+            shuffle_sheps(tmp + tmp_base, tmp_max - tmp_base);
         }
         tmp_base = tmp_max;
         for (i = k = 0; i < s_max; ++i) { // compress s
