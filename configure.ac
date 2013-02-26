@@ -961,7 +961,7 @@ case "$with_barrier" in
 esac
 
 AS_IF([test "x$with_dict" = "x"],
-      [with_dict="simple"],
+      [with_dict="shavit"],
       [])
 case "$with_dict" in
   simple|shavit|trie) ;;
