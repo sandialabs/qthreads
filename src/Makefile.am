@@ -27,6 +27,8 @@ libqthread_la_SOURCES = \
 	syncvar.c \
 	teams.c
 
+EXTRA_DIST = 
+
 if COMPILE_LF_HASH
 libqthread_la_SOURCES += lf_hashmap.c
 else
@@ -87,7 +89,6 @@ libqthread_la_SOURCES += \
 	workers.c \
 	threadqueues/@with_scheduler@_threadqueues.c \
 	sincs/@with_sinc@.c \
-	ds/dictionary/dictionary_@with_dict@.c \
 	affinity/@qthread_topo@.c \
 	futurelib.c
 if COMPILE_SPAWNCACHE
@@ -105,7 +106,7 @@ if QTHREAD_NEED_OWN_MAKECONTEXT
 include fastcontext/Makefile.inc
 endif
 
-EXTRA_DIST = \
+EXTRA_DIST += \
 			 threadqueues/lifo_threadqueues.c \
 			 threadqueues/nemesis_threadqueues.c \
 			 threadqueues/mutexfifo_threadqueues.c \
@@ -115,6 +116,10 @@ EXTRA_DIST = \
 			 sincs/donecount.c \
 			 sincs/donecount_cas.c \
 			 sincs/original.c \
+			 barrier/feb.c \
+			 barrier/array.c \
+			 barrier/log.c \
+			 barrier/sinc.c \
 			 affinity/hwloc.c \
 			 affinity/no.c \
 			 affinity/libnuma.c \
