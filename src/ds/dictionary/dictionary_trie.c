@@ -39,9 +39,14 @@ typedef void (*qt_hash_deallocator_fn)(void *);
 #define PTR_OF(x)            ((hash_entry *)PTR_MASK(x))
 #define CONSTRUCT(mark, ptr) (PTR_MASK((uintptr_t)ptr) | (mark))
 
+#ifndef QTHREAD_VERSION
 /* These are GCC builtins; other compilers may require inline assembly */
-#define CAS(ADDR, OLDV, NEWV) __sync_val_compare_and_swap((ADDR), (OLDV), (NEWV))
-#define INCR(ADDR, INCVAL)    __sync_fetch_and_add((ADDR), (INCVAL))
+# define CAS(ADDR, OLDV, NEWV) __sync_val_compare_and_swap((ADDR), (OLDV), (NEWV))
+# define INCR(ADDR, INCVAL)    __sync_fetch_and_add((ADDR), (INCVAL))
+#else
+# define CAS(ADDR, OLDV, NEWV) qthread_cas((ADDR), (OLDV), (NEWV))
+# define INCR(ADDR, INCVAL)    qthread_incr((ADDR), (INCVAL))
+#endif
 
 #define SPINE_LENGTH       32
 #define SPINE_BUCKET_WIDTH 5
