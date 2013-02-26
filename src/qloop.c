@@ -630,6 +630,7 @@ static QINLINE void qt_loop_balance_inner(const size_t       start,
         case SYNCVAR_T:
         case ALIGNED:
         case SINC_T:
+        case DONECOUNT:
             qassert(qthread_spawn((qthread_f)qloop_wrapper,
                                   qwa, 0,
                                   sync.ptr,
@@ -682,6 +683,14 @@ void API_FUNC qt_loop_balance(const size_t    start,
 {                                      /*{{{ */
     qt_loop_balance_inner(start, stop, func, argptr, 0, DONECOUNT);
 }                                      /*}}} */
+
+void API_FUNC qt_loop_balance_simple(const size_t    start,
+                                     const size_t    stop,
+                                     const qt_loop_f func,
+                                     void           *argptr)
+{   /*{{{*/
+    qt_loop_balance_inner(start, stop, func, argptr, QT_LOOP_BALANCE_SIMPLE, DONECOUNT);
+} /*}}}*/
 
 void API_FUNC qt_loop_balance_sv(const size_t    start,
                                  const size_t    stop,

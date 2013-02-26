@@ -15,16 +15,25 @@
 .PP
 .I void
 .br
+.B qt_loop_balance_simple
+.RI "(const size_t " start ", const size_t " stop ,
+.ti +24
+.RI "const qt_loop_f " func ", void *" argptr );
+.PP
+.I void
+.br
 .B qt_loop_balance_future
 .RI "(const size_t " start ", const size_t " stop ,
 .ti +24
 .RI "const qt_loop_f " func ", void *" argptr );
 .SH DESCRIPTION
-This function provides a simple C implementation of a threaded loop. Rather than using a predictable number of threads, however, the number of threads generated depends directly upon the number of shepherds available. The difference between
+These functions provide a simple C implementation of a threaded loop. Rather than using a fixed number of threads, however, the number of threads generated depends directly upon the number of shepherds available. The difference between
 .BR qt_loop_balance ()
 and
 .BR qt_loop_balance_future ()
-is that the former uses qthreads and the latter uses futures.
+is that the former uses qthreads and the latter uses futures. The
+.BR qt_loop_balance_simple ()
+variant uses simple qthreads, which cannot block or yield, but receive full-size stacks and execute as function-calls from the worker threads, thereby avoiding most context-swap overheads.
 .PP
 One qthread (or future) is spawned for each shepherd. The set of values of
 .I i
@@ -68,4 +77,5 @@ will not return until all of the qthreads (or futures) it spawned have exited.
 .BR qt_loop (3),
 .BR qt_loop_future (3),
 .BR qt_loopaccum_balance (3),
-.BR qt_loopaccum_balance_future (3)
+.BR qt_loopaccum_balance_future (3),
+.BR qthread_spawn (3)

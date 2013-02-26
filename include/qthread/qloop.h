@@ -61,6 +61,10 @@ void qt_loop_balance(const size_t    start,
                      const size_t    stop,
                      const qt_loop_f func,
                      void           *argptr);
+void qt_loop_balance_simple(const size_t    start,
+                            const size_t    stop,
+                            const qt_loop_f func,
+                            void           *argptr);
 void qt_loop_balance_sv(const size_t    start,
                         const size_t    stop,
                         const qt_loop_f func,
