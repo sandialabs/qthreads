@@ -482,14 +482,16 @@ AS_IF([test "x$enable_multinode" = "xyes"],
 ## Checks for programs ##
 ## ------------------- ##
 dnl Test for this *before* AC_PROG_CC, to avoid getting the default CFLAGS
+dnl However, that means we don't know a ton about this machine or this compiler
+dnl yet, so we may have to reset it later.
 AS_IF([test "x$enable_debugging" = xyes],
-      [case "$qthread_cv_c_compiler_type" in dnl (
+      [case "$build_cpu" in dnl (
+         sparc)
+           CFLAGS="$CFLAGS -O0 -g3"
+           CXXFLAGS="$CXXFLAGS -O0 -g3"
+           ;;
          *)
            CFLAGS="$CFLAGS -O0 -g"
-           ;;
-       esac
-       case "$qthread_cv_cxx_compiler_type" in dnl (
-         *)
            CXXFLAGS="$CXXFLAGS -O0 -g"
            ;;
        esac])
