@@ -1,11 +1,21 @@
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
+/* System Headers */
 #include <stdlib.h>
 #include <unistd.h> // for getpagesize()
 #include <string.h> // for memset()
 #include <stdio.h>
 #include <inttypes.h>
+
+/* Installed Headers */
 #include <qthread/dictionary.h>
 #include <qthread/qthread.h>
+
+/* Internal Headers */
 #include "qt_asserts.h"
+#include "qt_debug.h"
 #ifdef EBUG
 # define DEBUG(x) x
 #else
@@ -19,7 +29,9 @@
 typedef void *qt_key_t;
 typedef struct qt_dictionary *qt_hash;
 // typedef struct qt_hash_s *qt_hash;
-typedef void (*qt_hash_callback_fn)(const qt_key_t, void *, void *);
+typedef void (*qt_hash_callback_fn)(const qt_key_t,
+                                    void *,
+                                    void *);
 typedef void (*qt_hash_deallocator_fn)(void *);
 
 #define MARK_OF(x)           ((x) & 1)
@@ -45,12 +57,12 @@ typedef void (*qt_hash_deallocator_fn)(void *);
 
 typedef struct list_entry hash_entry;
 
-typedef volatile union _spine_element {
-    uint64_t             u;
-    hash_entry *volatile e;
-    volatile struct {
-        volatile uint32_t ctr;
-        volatile uint32_t id;
+typedef union _spine_element {
+    uint64_t    u;
+    hash_entry *e;
+    struct {
+        uint32_t ctr;
+        uint32_t id;
     } s;
 } spine_element_t;
 
