@@ -10,6 +10,7 @@ TESTS = \
 		qt_loop_simple \
 		qt_loop_sinc \
 		qt_loop_balance \
+		qt_loop_balance_simple \
 		qt_loop_balance_sinc \
 		qt_loop_queue \
 		qutil \
