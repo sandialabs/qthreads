@@ -31,7 +31,11 @@
  */
 
 #define MAX_LOAD     4
-#define USE_HASHWORD 1
+//#define USE_HASHWORD 1
+
+#ifdef USE_HASHWORD
+# include <qthread/hash.h>
+#endif
 
 #define key_t mykey_t
 
@@ -104,51 +108,9 @@ static void initialize_bucket(qt_hash h,
 #endif /* if 0 */
 
 #ifdef USE_HASHWORD
-# define HASH_KEY(key) key = qt_hashword(key)
-/* this function based on http://burtleburtle.net/bob/hash/evahash.html */
-# define rot(x, k) (((x) << (k)) | ((x) >> (32 - (k))))
-static uint64_t qt_hashword(uint64_t key)
-{   /*{{{*/
-    uint32_t a, b, c;
-
-    const union {
-        uint64_t key;
-        uint8_t  b[sizeof(uint64_t)];
-    } k = {
-        key
-    };
-
-    a  = b = c = 0x32533d0c + sizeof(uint64_t); // an arbitrary value, randomly selected
-    c += 47;
-
-    b += k.b[7] << 24;
-    b += k.b[6] << 16;
-    b += k.b[5] << 8;
-    b += k.b[4];
-    a += k.b[3] << 24;
-    a += k.b[2] << 16;
-    a += k.b[1] << 8;
-    a += k.b[0];
-
-    c ^= b;
-    c -= rot(b, 14);
-    a ^= c;
-    a -= rot(c, 11);
-    b ^= a;
-    b -= rot(a, 25);
-    c ^= b;
-    c -= rot(b, 16);
-    a ^= c;
-    a -= rot(c, 4);
-    b ^= a;
-    b -= rot(a, 14);
-    c ^= b;
-    c -= rot(b, 24);
-    return ((uint64_t)c + (((uint64_t)b) << 32)) & (~MSB);
-} /*}}}*/
-
+# define HASH_KEY(key) key = (qt_hash64(key) & (~MSB))
 #else /* ifdef USE_HASHWORD */
-# define HASH_KEY(key)
+# define HASH_KEY(key) key &= (~MSB)
 #endif /* ifdef USE_HASHWORD */
 
 /**
