@@ -1,9 +1,11 @@
-#include <qthread/qthread.h>
-#include <qthread/dictionary.h>
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
 #include "argparsing.h"
+
+#include <qthread/qthread.h>
+#include <qthread/dictionary.h>
+#include <qthread/hash.h>
 
 #define EXPECTED_ENTRIES 4
 
@@ -14,17 +16,13 @@ int my_hashcode(void *string);
 int my_key_equals(void *first,
                   void *second)
 {
-    iprintf("Comparing %s %s\n", (char *)first, (char *)second);
-    if( strcmp(first, second) == 0 ) {
-        return 1;
-    } else {
-        return 0;
-    }
+    //iprintf("Comparing %s %s\n", (char *)first, (char *)second);
+    return !strcmp(first, second);
 }
 
 int my_hashcode(void *string)
 {
-    return ((char *)string)[0];
+    return qt_hash_bytes(string, strlen((char*)string), GOLDEN_RATIO);
 }
 
 int main(int    argc,
@@ -47,40 +45,40 @@ int main(int    argc,
     // first, tests for a single bucket:
 
     ret_code = qt_dictionary_put(dict, mykey1, myval1);
-    iprintf("1. Put exited with code %p\n", ret_code);
+    iprintf(" 1. Put exited with code %p\n", ret_code);
     assert(ret_code != NULL);
 
     void *retrieved = qt_dictionary_get(dict, "k1");
-    iprintf("2. v1=%s\n", (char *)retrieved);
+    iprintf(" 2. v1=%s\n", (char *)retrieved);
     assert(my_key_equals("v1", (char *)retrieved));
 
     ret_code = qt_dictionary_put(dict, mykey2, myval2);
-    iprintf("3. Put exited with code %p(%s)\n", ret_code, (char *)ret_code);
+    iprintf(" 3. Put exited with code %p(%s)\n", ret_code, (char *)ret_code);
     assert(ret_code != NULL);
 
     retrieved = qt_dictionary_get(dict, "k1");
-    iprintf("4. v1=%s\n", (char *)retrieved);
+    iprintf(" 4. v1=%s\n", (char *)retrieved);
     assert(my_key_equals("v1", (char *)retrieved));
 
     retrieved = qt_dictionary_get(dict, "k2");
     assert(retrieved);
-    iprintf("5. v2=%s\n", (char *)retrieved);
+    iprintf(" 5. v2=%s\n", (char *)retrieved);
     assert(my_key_equals("v2", (char *)retrieved));
 
     retrieved = qt_dictionary_get(dict, "k3");
-    iprintf("6. null=%s\n", (char *)retrieved);
+    iprintf(" 6. null=%s\n", (char *)retrieved);
     assert(retrieved == NULL);
 
     retrieved = qt_dictionary_get(dict, "k2");
-    iprintf("7. v2=%s\n", (char *)retrieved);
+    iprintf(" 7. v2=%s\n", (char *)retrieved);
     assert(my_key_equals("v2", (char *)retrieved));
 
     void *ret_code2 = qt_dictionary_put(dict, mykey2, "newv2");
-    iprintf("8. Put exited with code %p\n", ret_code2);
+    iprintf(" 8. Put exited with code %p\n", ret_code2);
     assert(ret_code2 != NULL);
 
     retrieved = qt_dictionary_get(dict, "k2");
-    iprintf("9. newv2=%s\n", (char *)retrieved);
+    iprintf(" 9. newv2=%s\n", (char *)retrieved);
     assert(my_key_equals("newv2", (char *)retrieved));
 
     ret_code = qt_dictionary_put_if_absent(dict, mykey2, "updatev2");
