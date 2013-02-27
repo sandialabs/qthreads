@@ -10,8 +10,9 @@ pkginclude_HEADERS = \
 	cacheline.h \
 	dictionary.h \
 	futurelib.h \
-	macros.h \
+	hash.h \
 	io.h \
+	macros.h \
 	qalloc.h \
 	qarray.h \
 	qdqueue.h \

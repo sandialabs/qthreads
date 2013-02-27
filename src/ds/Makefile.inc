@@ -9,7 +9,8 @@ libqthread_la_SOURCES += \
 			 ds/qdqueue.c \
 			 ds/qlfqueue.c \
 			 ds/qswsrqueue.c \
-			 ds/qpool.c 
+			 ds/qpool.c \
+			 ds/dictionary/hash.c
 
 if COMPILE_TARGET_UNIX
 libqthread_la_SOURCES += ds/dictionary/dictionary_@with_dict@.c
