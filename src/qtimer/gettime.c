@@ -36,9 +36,12 @@ void qtimer_start(qtimer_t q)
 unsigned long qtimer_fastrand(void)
 {
     struct timespec s;
+    static volatile aligned_t state = GOLDEN_RATIO;
+    volatile aligned_t tmp; // this volatile is to prevent the compiler from optimizing tmp out of existence
 
     qassert(clock_gettime(CLOCK_MONOTONIC, &(s)), 0);
-    return qt_hash64(s.tv_nsec);
+    state = tmp = qt_hash_bytes(&s.tv_nsec, sizeof(s.tv_nsec), state);
+    return tmp;
 }
 
 void qtimer_stop(qtimer_t q)

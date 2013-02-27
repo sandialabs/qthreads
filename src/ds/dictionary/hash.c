@@ -111,12 +111,13 @@ uint64_t API_FUNC qt_hash64(uint64_t key)
 } while(0)
 #endif /* define mix() */
 
-aligned_t API_FUNC qt_hash_bytes(uint8_t  *k,     // key_ptr
+aligned_t API_FUNC qt_hash_bytes(void     *key_ptr,
                                  size_t    bytes,
                                  aligned_t state)
 {
-    register aligned_t a, b, c; /* internal state */
+    register aligned_t a, b, c;   /* internal state */
     size_t             len = bytes;
+    const uint8_t     *k   = key_ptr;
 
     /* set up the internal state */
     a = b = GOLDEN_RATIO;

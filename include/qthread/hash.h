@@ -13,11 +13,11 @@ Q_STARTCXX /* */
 # define GOLDEN_RATIO 0x9e3779b97f4a7c13LL
 #endif
 
-uint64_t qt_hash64(uint64_t key);
-aligned_t qt_hash_bytes(uint8_t  *k,     // key_ptr
+uint64_t  qt_hash64(uint64_t key);
+aligned_t qt_hash_bytes(void     *key_ptr,
                         size_t    bytes,
                         aligned_t state);
 
 Q_ENDCXX /* */
-
-#endif
+#endif // ifndef QTHREAD_HASH_H
+/* vim:set expandtab: */
