@@ -189,7 +189,7 @@ static size_t allocate_spine(qt_hash   h,
         memcpy(spines, h->spines, sizeof(spine_t *) * maxspines);
         tmp = CAS(&h->spines, oldspines, spines);
         if (tmp != oldspines) { // someone else added more spines
-            free(spines);
+            FREE(spines, maxspines * 2 * sizeof(spine_t *));
         } else {
             INCR(&h->maxspines, maxspines);
         }
@@ -256,12 +256,12 @@ void qt_dictionary_destroy(qt_hash h)
         for (size_t i = 0; i < h->maxspines; ++i) {
             if (h->spines[i] != NULL) {
                 h->numspines--;
-                free((void *)(h->spines[i]));
+                free((void *)(h->spines[i])); // XXX should be into a memory pool
                 if (h->numspines == 0) { break; }
             }
         }
     }
-    free(h->spines);
+    FREE(h->spines, h->maxspines * sizeof(spine_element_t *));
     FREE(h, sizeof(qt_dictionary));
 }
 
@@ -649,7 +649,7 @@ qt_dictionary_iterator *qt_dictionary_iterator_create(qt_dictionary *dict)
     if(dict == NULL) {
         return ERROR;
     }
-    qt_dictionary_iterator *it = (qt_dictionary_iterator *)malloc(sizeof(qt_dictionary_iterator));
+    qt_dictionary_iterator *it = (qt_dictionary_iterator *)MALLOC(sizeof(qt_dictionary_iterator));
     it->dict        = dict;
     it->crt         = NULL;
     it->bkt         = -1;
@@ -661,7 +661,7 @@ qt_dictionary_iterator *qt_dictionary_iterator_create(qt_dictionary *dict)
 void qt_dictionary_iterator_destroy(qt_dictionary_iterator *it)
 {
     if(it == NULL) { return; }
-    free(it);
+    FREE(it, sizeof(qt_dictionary_iterator));
 }
 
 list_entry *qt_dictionary_iterator_next(qt_dictionary_iterator *it)
