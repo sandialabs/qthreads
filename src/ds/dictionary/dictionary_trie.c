@@ -32,7 +32,6 @@ typedef struct qt_dictionary *qt_hash;
 typedef void (*qt_hash_callback_fn)(const qt_key_t,
                                     void *,
                                     void *);
-typedef void (*qt_hash_deallocator_fn)(void *);
 
 #define MARK_OF(x)           ((x) & 1)
 #define PTR_MASK(x)          ((x) & ~(marked_ptr_t)1)
@@ -77,26 +76,26 @@ typedef struct _spine_s {
 } spine_t;
 
 struct qt_dictionary {
-    spine_element_t       base[BASE_SPINE_LENGTH];
-    spine_t             **spines;
-    size_t                count;
-    size_t                maxspines;
-    size_t                numspines;
+    spine_element_t      base[BASE_SPINE_LENGTH];
+    spine_t            **spines;
+    size_t               count;
+    size_t               maxspines;
+    size_t               numspines;
 
-    qt_dict_key_equals_f  op_equals;
-    qt_dict_hash_f        op_hash;
-    qt_dict_tag_cleanup_f op_cleanup;
+    qt_dict_key_equals_f op_equals;
+    qt_dict_hash_f       op_hash;
+    qt_dict_cleanup_f    op_cleanup;
 };
 
-static void destroy_spine(qt_hash                h,
-                          spine_t               *spine,
-                          qt_hash_deallocator_fn f);
-static void destroy_element(hash_entry            *element,
-                            qt_hash_deallocator_fn f);
+static void destroy_spine(qt_hash           h,
+                          spine_t          *spine,
+                          qt_dict_cleanup_f f);
+static void destroy_element(hash_entry       *element,
+                            qt_dict_cleanup_f f);
 
-static inline qt_hash qt_hash_create(qt_dict_key_equals_f  eq,
-                                     qt_dict_hash_f        hash,
-                                     qt_dict_tag_cleanup_f cleanup)
+static inline qt_hash qt_hash_create(qt_dict_key_equals_f eq,
+                                     qt_dict_hash_f       hash,
+                                     qt_dict_cleanup_f    cleanup)
 {
     qt_hash tmp = MALLOC(sizeof(qt_dictionary));
 
@@ -111,9 +110,9 @@ static inline qt_hash qt_hash_create(qt_dict_key_equals_f  eq,
     return tmp;
 }
 
-qt_dictionary *qt_dictionary_create(qt_dict_key_equals_f  eq,
-                                    qt_dict_hash_f        hash,
-                                    qt_dict_tag_cleanup_f cleanup)
+qt_dictionary *qt_dictionary_create(qt_dict_key_equals_f eq,
+                                    qt_dict_hash_f       hash,
+                                    qt_dict_cleanup_f    cleanup)
 {
     return qt_hash_create(eq, hash, cleanup);
 }
@@ -214,9 +213,9 @@ static size_t allocate_spine(qt_hash   h,
     return id;
 }
 
-static void destroy_spine(qt_dictionary         *h,
-                          spine_t               *spine,
-                          qt_hash_deallocator_fn f)
+static void destroy_spine(qt_dictionary    *h,
+                          spine_t          *spine,
+                          qt_dict_cleanup_f f)
 {
     assert(spine);
     for (size_t i = 0; i < SPINE_LENGTH; ++i) {
@@ -230,12 +229,12 @@ static void destroy_spine(qt_dictionary         *h,
     }
 }
 
-static void destroy_element(hash_entry            *element,
-                            qt_hash_deallocator_fn f)
+static void destroy_element(hash_entry       *element,
+                            qt_dict_cleanup_f f)
 {
     assert(element);
     if (f) {
-        f(element->value);
+        f(element->key, element->value);
     }
     FREE(element, sizeof(hash_entry));
 }
@@ -247,9 +246,9 @@ void qt_dictionary_destroy(qt_hash h)
     for (size_t i = 0; i < BASE_SPINE_LENGTH; ++i) {
         if (h->base[i].e != NULL) {
             if (SPINE_PTR_TEST(h->base[i])) { // spine
-                destroy_spine(h, SPINE_PTR(h, h->base[i]), NULL);
+                destroy_spine(h, SPINE_PTR(h, h->base[i]), h->op_cleanup);
             } else { // element
-                destroy_element(h->base[i].e, NULL);
+                destroy_element(h->base[i].e, h->op_cleanup);
             }
         }
     }
@@ -472,7 +471,7 @@ int qt_dictionary_remove(qt_dictionary *h,
                     spine_element_t cur;
                     if ((cur.e = CAS(prev, e, e->next)) == e) {
                         if (h->op_cleanup != NULL) {
-                            h->op_cleanup(child_val.e->key);
+                            h->op_cleanup(child_val.e->key, NULL);
                         }
                         free(child_val.e);                         // XXX should be into a mempool
                         // Second, walk back up the parent pointers, removing empty spines (if any)

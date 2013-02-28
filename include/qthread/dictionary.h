@@ -13,9 +13,11 @@ Q_STARTCXX /* */
 #define NO_BUCKETS (1 << BKT_POW)
 
 struct tlrw_lock;
-typedef int (*qt_dict_key_equals_f)(void *, void *);
+typedef int (*qt_dict_key_equals_f)(void *,
+                                    void *);
 typedef int (*qt_dict_hash_f)(void *);
-typedef void (*qt_dict_tag_cleanup_f)(void *);
+typedef void (*qt_dict_cleanup_f)(void *,
+                                  void *);
 
 struct list_entry {
     void              *value;
@@ -40,9 +42,9 @@ typedef struct qt_dictionary_iterator qt_dictionary_iterator;
  *
  * if my_key_equals (A, B) = 1, then my_hashcode(A) == my_hashcode(B)
  */
-qt_dictionary *qt_dictionary_create(qt_dict_key_equals_f  eq,
-                                    qt_dict_hash_f        hash,
-                                    qt_dict_tag_cleanup_f cleanup);
+qt_dictionary *qt_dictionary_create(qt_dict_key_equals_f eq,
+                                    qt_dict_hash_f       hash,
+                                    qt_dict_cleanup_f    cleanup);
 
 /*
  *      Destroys the dictionary d
@@ -162,6 +164,5 @@ qt_dictionary_iterator *qt_dictionary_iterator_copy(qt_dictionary_iterator *b);
 void qt_dictionary_printbuckets(qt_dictionary *dict);
 
 Q_ENDCXX /* */
-
 #endif // QT_DICTIONARY_H
 /* vim:set expandtab: */

@@ -30,8 +30,8 @@
  * large hash tables, we're less efficient than we could be.
  */
 
-#define MAX_LOAD     4
-//#define USE_HASHWORD 1
+#define MAX_LOAD 4
+// #define USE_HASHWORD 1
 
 #ifdef USE_HASHWORD
 # include <qthread/hash.h>
@@ -42,7 +42,9 @@
 /* external types */
 typedef void *qt_key_t;
 typedef struct qt_dictionary *qt_hash;
-typedef void (*qt_hash_callback_fn)(const qt_key_t, void *, void *);
+typedef void (*qt_hash_callback_fn)(const qt_key_t,
+                                    void *,
+                                    void *);
 typedef void (*qt_hash_deallocator_fn)(void *);
 
 /* internal types */
@@ -67,12 +69,12 @@ typedef struct list_entry hash_entry;
 // (other typedef found in dictionary.h)
 
 struct qt_dictionary {
-    marked_ptr_t         *B;     // Buckets
-    volatile size_t       count; // Crt number of elements in hash
-    volatile size_t       size;  // Crt number of buckets (doubling if load per bucket too much)
-    qt_dict_key_equals_f  op_equals;
-    qt_dict_hash_f        op_hash;
-    qt_dict_tag_cleanup_f op_cleanup;
+    marked_ptr_t        *B;      // Buckets
+    volatile size_t      count;  // Crt number of elements in hash
+    volatile size_t      size;   // Crt number of buckets (doubling if load per bucket too much)
+    qt_dict_key_equals_f op_equals;
+    qt_dict_hash_f       op_hash;
+    qt_dict_cleanup_f    op_cleanup;
 };
 // So: qt_dictionary* = qt_hash
 // (typedef found in dictionary.h)
@@ -174,11 +176,11 @@ static int qt_lf_list_insert(marked_ptr_t        *head,
     }
 }
 
-static int qt_lf_list_delete(marked_ptr_t         *head,
-                             so_key_t              hashed_key,
-                             qt_key_t              key,
-                             qt_dict_key_equals_f  op_equals,
-                             qt_dict_tag_cleanup_f cleanup)
+static int qt_lf_list_delete(marked_ptr_t        *head,
+                             so_key_t             hashed_key,
+                             qt_key_t             key,
+                             qt_dict_key_equals_f op_equals,
+                             qt_dict_cleanup_f    cleanup)
 {
     while (1) {
         marked_ptr_t *lprev;
@@ -194,7 +196,7 @@ static int qt_lf_list_delete(marked_ptr_t         *head,
         }
         if (qthread_cas(lprev, CONSTRUCT(0, lcur), CONSTRUCT(0, lnext)) == CONSTRUCT(0, lcur)) {
             if (cleanup != NULL) {
-                cleanup(PTR_OF(lcur)->key);
+                cleanup(PTR_OF(lcur)->key, NULL);
             }
             qpool_free(hash_entry_pool, PTR_OF(lcur));
         } else {
@@ -434,9 +436,9 @@ static void initialize_bucket(qt_hash h,
 }
 
 // old public method
-static inline qt_hash qt_hash_create(qt_dict_key_equals_f  eq,
-                                     qt_dict_hash_f        hash,
-                                     qt_dict_tag_cleanup_f cleanup)
+static inline qt_hash qt_hash_create(qt_dict_key_equals_f eq,
+                                     qt_dict_hash_f       hash,
+                                     qt_dict_cleanup_f    cleanup)
 {
     qt_hash tmp;
 
@@ -471,9 +473,9 @@ static inline qt_hash qt_hash_create(qt_dict_key_equals_f  eq,
     return tmp;
 }
 
-qt_dictionary *qt_dictionary_create(qt_dict_key_equals_f  eq,
-                                    qt_dict_hash_f        hash,
-                                    qt_dict_tag_cleanup_f cleanup)
+qt_dictionary *qt_dictionary_create(qt_dict_key_equals_f eq,
+                                    qt_dict_hash_f       hash,
+                                    qt_dict_cleanup_f    cleanup)
 {
     return qt_hash_create(eq, hash, cleanup);
 }
@@ -490,6 +492,9 @@ static inline void qt_hash_destroy(qt_hash h)
         marked_ptr_t tmp = cursor;
         assert(MARK_OF(tmp) == 0);
         cursor = (marked_ptr_t)((PTR_OF(cursor)->next));
+        if (h->op_cleanup) {
+            h->op_cleanup(PTR_OF(cursor)->key, PTR_OF(cursor)->value);
+        }
         qpool_free(hash_entry_pool, PTR_OF(tmp));
     }
     FREE(h->B, hard_max_buckets * sizeof(marked_ptr_t));

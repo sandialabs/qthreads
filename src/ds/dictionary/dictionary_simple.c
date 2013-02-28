@@ -9,12 +9,12 @@
 #include "qt_debug.h"
 
 struct qt_dictionary {
-    qt_dict_key_equals_f  op_equals;
-    qt_dict_hash_f        op_hash;
-    qt_dict_tag_cleanup_f op_cleanup;
-    list_entry          **content;
+    qt_dict_key_equals_f op_equals;
+    qt_dict_hash_f       op_hash;
+    qt_dict_cleanup_f    op_cleanup;
+    list_entry         **content;
 #ifdef DELETE_SUPPORT
-    struct tlrw_lock     *lock;
+    struct tlrw_lock    *lock;
 #endif
 };
 
@@ -105,9 +105,9 @@ static int qthread_library_initialized = 1;
 extern int qthread_library_initialized;
 #endif
 
-qt_dictionary *qt_dictionary_create(qt_dict_key_equals_f  eq,
-                                    qt_dict_hash_f        hash,
-                                    qt_dict_tag_cleanup_f cleanup)
+qt_dictionary *qt_dictionary_create(qt_dict_key_equals_f eq,
+                                    qt_dict_hash_f       hash,
+                                    qt_dict_cleanup_f    cleanup)
 {
     assert(qthread_library_initialized && "Need to initialize qthreads before using the dictionary");
     qt_dictionary *ret = (qt_dictionary *)MALLOC(sizeof(qt_dictionary));
@@ -263,7 +263,6 @@ void *qt_dictionary_put_helper(qt_dictionary *dict,
     runlock(dict->lock);
     return NULL;
 }
-
 #endif /* ifdef DICTIONARY_ADD_TO_HEAD */
 
 void *qt_dictionary_put(qt_dictionary *dict,
@@ -349,7 +348,7 @@ void *qt_dictionary_delete(qt_dictionary *dict,
             to_free = walk;
             to_ret  = walk->value;
             if (dict->op_cleanup != NULL) {
-                dict->op_cleanup(to_free->key);
+                dict->op_cleanup(to_free->key, NULL);
             }
             FREE(to_free, sizeof(list_entry));
 
