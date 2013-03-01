@@ -16,9 +16,7 @@
 #include <limits.h>              /* for INT_MAX */
 #include <qthread/qthread-int.h> /* for UINT8_MAX */
 #include <string.h>              /* for memset() */
-#ifdef QTHREAD_GUARD_PAGES
-# include <unistd.h>           /* for getpagesize() */
-#endif
+#include <unistd.h>              /* for getpagesize() */
 #if !HAVE_MEMCPY
 # define memcpy(d, s, n)  bcopy((s), (d), (n))
 # define memmove(d, s, n) bcopy((s), (d), (n))
@@ -32,10 +30,8 @@
 #ifdef QTHREAD_USE_VALGRIND
 # include <valgrind/memcheck.h>
 #endif
-#ifdef QTHREAD_GUARD_PAGES
-# include <sys/types.h>
-# include <sys/mman.h>
-#endif
+#include <sys/types.h>
+#include <sys/mman.h>
 #include <errno.h>
 #ifdef SST
 # include <ppcPimCalls.h>
@@ -225,7 +221,7 @@ static QINLINE void FREE_STACK(void *t)
         }
         FREE(tmp, qlib->qthread_stack_size + sizeof(struct qthread_runtime_data_s) + (2 * getpagesize()));
     } else {
-        FREE(t, qlib->qthread_stack_size) /* XXX: this size seems wrong */
+        FREE(t, qlib->qthread_stack_size); /* XXX: this size seems wrong */
     }
 }                      /*}}} */
 
