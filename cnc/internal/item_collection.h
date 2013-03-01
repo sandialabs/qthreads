@@ -163,7 +163,7 @@ namespace CnC {
 	}
 
 	template< typename Tag, typename Item  >
-	void item_collection< Tag, Item >::cleanupTag(void* t) {
+	void item_collection< Tag, Item >::cleanupTag(void* t, void* v) {
 		typename IsPointer<Tag>::Result r;
 		clearTag(&r, *( (Tag*) t) );
 	}

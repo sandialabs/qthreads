@@ -185,7 +185,7 @@ namespace CnC {
 		static void clearItem(NoType*, Item i);
 		static void clearTag(YesType*, Tag i);
 		static void clearTag(NoType*, Tag i);
-		static void cleanupTag(void* t);
+		static void cleanupTag(void* t, void* v);
 	};
 
 	template< class ContextTemplate >
