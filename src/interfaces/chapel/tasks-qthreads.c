@@ -367,12 +367,12 @@ void chpl_task_init(int32_t  numThreadsPerLocale,
         qt_internal_unset_envstr("NUM_WORKERS_PER_SHEPHERD");
 
         if (chpl_numCoresOnThisLocale() < numThreadsPerLocale) {
-            // Do not oversubscribe the system, use all available resources.
-            numThreadsPerLocale = chpl_numCoresOnThisLocale();
-
             if (2 == verbosity) {
                 printf("QTHREADS: Ignored --numThreadsPerLocale=%d to prevent oversubsription of the system.\n", numThreadsPerLocale);
             }
+
+            // Do not oversubscribe the system, use all available resources.
+            numThreadsPerLocale = chpl_numCoresOnThisLocale();
         }
 
         // Set environment variable for Qthreads
