@@ -134,6 +134,9 @@ void qt_dictionary_destroy(qt_dictionary *d)
         while (top != NULL) {
             tmp = top;
             top = top->next;
+            if (h->op_cleanup) {
+                h->op_cleanup(tmp->key, tmp->value);
+            }
             FREE(tmp, sizeof(list_entry));
         }
     }

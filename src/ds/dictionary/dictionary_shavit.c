@@ -493,7 +493,7 @@ static inline void qt_hash_destroy(qt_hash h)
         assert(MARK_OF(tmp) == 0);
         cursor = (marked_ptr_t)((PTR_OF(cursor)->next));
         if (h->op_cleanup) {
-            h->op_cleanup(PTR_OF(cursor)->key, PTR_OF(cursor)->value);
+            h->op_cleanup(PTR_OF(tmp)->key, PTR_OF(tmp)->value);
         }
         qpool_free(hash_entry_pool, PTR_OF(tmp));
     }
