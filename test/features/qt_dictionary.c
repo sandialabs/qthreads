@@ -25,6 +25,11 @@ int my_hashcode(void *string)
     return qt_hash_bytes(string, strlen((char*)string), GOLDEN_RATIO);
 }
 
+void my_destructor(void *key, void *val)
+{
+    iprintf("\tdeleting value key=%p (%s), val=%p (%s)\n", key, key, val, val);
+}
+
 int main(int    argc,
          char **argv)
 {
@@ -33,7 +38,7 @@ int main(int    argc,
     CHECK_VERBOSE();
 
     qthread_initialize();
-    qt_dictionary *dict   = qt_dictionary_create(my_key_equals, my_hashcode, NULL);
+    qt_dictionary *dict   = qt_dictionary_create(my_key_equals, my_hashcode, my_destructor);
     char          *mykey1 = "k1";
     char          *myval1 = "v1";
 
@@ -134,7 +139,7 @@ int main(int    argc,
     assert(!qt_dictionary_iterator_equals(it1, it2));
 
     ret_code2 = qt_dictionary_get(dict, mykey2);
-    iprintf("18. Get exited with code %p\n", ret_code2);
+    iprintf("18. Get exited with code %p (%s)\n", ret_code2, ret_code2);
     assert(ret_code2 != NULL);
 
     void *val = qt_dictionary_delete(dict, mykey2);
