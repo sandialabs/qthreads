@@ -51,10 +51,8 @@ void INTERNAL qthread_steal_enable(void);
 void INTERNAL qthread_steal_disable(void);
 void INTERNAL qthread_cas_steal_stat(void);
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 /* Functions for work stealing functionality */
 qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
                                                     void             *value);
-#endif // ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 #endif // ifndef QT_THREADQUEUES_H
 /* vim:set expandtab: */

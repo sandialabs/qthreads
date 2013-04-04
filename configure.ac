@@ -391,10 +391,10 @@ AC_ARG_WITH([scheduler],
             [AS_HELP_STRING([--with-scheduler=[[type]]],
                             [Specify the scheduler. Options when using
                              single-threaded shepherds are: nemesis (default),
-                             lifo, mutexfifo, and mtsfifo. Options when using
-                             multi-threaded shepherds are: sherwood (default),
-                             nottingham, and loxley. Details on these options
-                             are in the SCHEDULING file.])])
+                             lifo, mdlifo, mutexfifo, and mtsfifo. Options 
+                             when using multi-threaded shepherds are: sherwood 
+                             (default), nottingham, and loxley. Details on 
+                             these options are in the SCHEDULING file.])])
 
 AC_ARG_WITH([sinc],
             [AS_HELP_STRING([--with-sinc=[[type]]],
@@ -854,17 +854,16 @@ AS_IF([test "x$with_scheduler" != "x"],
                  [with_scheduler="sherwood"
                   enable_multithreaded_shepherds="yes"])
            ;;
-         nemesis|lifo|mutexfifo|mtsfifo)
-           # all valid single-threaded options that require no additional configuration
-           AS_IF([test "x$enable_multithreaded_shepherds" != "xyes"],
-                 [enable_multithreaded_shepherds=no],
-                 [AC_MSG_ERROR([The $with_scheduler scheduler is incompatible with multithreaded shepherds.])])
-           ;;
-         sherwood)
+         sherwood|nemesis|lifo|mutexfifo|mtsfifo)
            # all valid multithreaded options that require no additional configuration
            AS_IF([test "x$enable_multithreaded_shepherds" != "xno"],
                  [enable_multithreaded_shepherds=yes],
                  [AC_MSG_ERROR([The $with_scheduler scheduler requires multithreaded shepherds.])])
+           ;;
+         mdlifo)
+           [with_scheduler=lifo]
+           [using_mdlifo=yes]
+           AC_DEFINE([QTHREAD_LIFO_MULTI_DEQUEUER], [1], [Enable multiple-dequeuer support for lifo scheduler])
            ;;
          nottingham)
            AS_IF([test "x$enable_multithreaded_shepherds" != "xno"],
@@ -1296,6 +1295,9 @@ AS_IF([test "x$enable_hardware_atomics" = "xno"],
 AS_IF([test "x$enable_lf_febs" = xno],
       [feb_string="lock-based hash"],
       [feb_string="lock-free"])
+AS_IF([test "x$using_mdlifo" = "xyes"],
+      [with_scheduler=mdlifo],
+      [])
 echo    "Speed:"
 echo    "          Scheduler: $with_scheduler ($mts_string)"
 echo    "         Sinc Style: $with_sinc"

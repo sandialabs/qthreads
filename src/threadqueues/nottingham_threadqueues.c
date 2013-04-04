@@ -959,4 +959,18 @@ int qt_threadqueue_test()
 // end test code
 #endif /* if 0 */
 
+qthread_shepherd_id_t INTERNAL qt_threadqueue_choose_dest(qthread_shepherd_t * curr_shep)
+{
+    if (curr_shep) {
+        return curr_shep->shepherd_id;
+    } else {
+        return (qthread_shepherd_id_t)0;
+    }
+}
+
+qthread_worker_id_t INTERNAL qt_threadqueue_max_wps(void)
+{
+    return -1;
+}
+
 /* vim:set expandtab: */

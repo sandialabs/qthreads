@@ -71,6 +71,7 @@
 #include "qt_blocking_structs.h"
 #include "qt_addrstat.h"
 #include "qt_threadqueues.h"
+#include "qt_threadqueue_scheduler.h"
 #include "qt_affinity.h"
 #include "qt_io.h"
 #include "qt_debug.h"
@@ -945,6 +946,12 @@ int API_FUNC qthread_initialize(void)
         print_status("Using %i Workers per Shepherd\n", (int)nworkerspershep);
 #endif
     }
+
+    if (qt_threadqueue_max_wps() < nworkerspershep) {
+        print_error("attempted to use %i workers per sheperd, which exceeds maximum number (%d) for this scheduler.\n", (int)nworkerspershep, (int)qt_threadqueue_max_wps());
+        exit(EXIT_FAILURE);
+    }
+
 
     if ((nshepherds == 1) && (nworkerspershep == 1)) {
         need_sync = 0;
@@ -2689,22 +2696,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
     if (target_shep != NO_SHEPHERD) {
         dest_shep = target_shep % qlib->nshepherds;
     } else {
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-        if (QTHREAD_LIKELY(myshep)) {
-            dest_shep = myshep->shepherd_id; // rely on work-stealing
-        } else {
-            dest_shep = 0;
-        }
-#else
-        if (QTHREAD_LIKELY(myshep)) {
-            dest_shep               = myshep->sched_shepherd++;
-            myshep->sched_shepherd *= (max_sheps > (dest_shep + 1));
-        } else {
-            dest_shep = (qthread_shepherd_id_t)qthread_internal_incr_mod(&qlib->sched_shepherd,
-                                                                         max_sheps,
-                                                                         &qlib->sched_shepherd_lock);
-        }
-#endif  /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
+        dest_shep = qt_threadqueue_choose_dest(myshep);
 #ifdef QTHREAD_DEBUG
         // debug moved until after destination shepherd is picked for multithreaded shepherds
         // check to make sure destination shepherd is in range (not target_shep which is

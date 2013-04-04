@@ -12,6 +12,7 @@
 #include "qthread/qthread.h"
 
 /* Internal Headers */
+#include "qthread_innards.h"           /* for qlib */
 #include "qt_macros.h"
 #include "qt_visibility.h"
 #include "qt_asserts.h"
@@ -274,6 +275,24 @@ static void sanity_check_tq(NEMESIS_queue *q)
 
 #endif /* ifdef QTHREAD_PARANOIA */
 
+qthread_shepherd_id_t INTERNAL qt_threadqueue_choose_dest(qthread_shepherd_t * curr_shep)
+{
+    qthread_shepherd_id_t dest_shep_id = 0;
+
+    if (curr_shep) {
+        dest_shep_id               = curr_shep->sched_shepherd++;
+        curr_shep->sched_shepherd *= (qlib->nshepherds > (dest_shep_id + 1));
+    } else {
+        dest_shep_id = 
+            (qthread_shepherd_id_t)qthread_internal_incr_mod(
+                &qlib->sched_shepherd,
+                qlib->nshepherds,
+                &qlib->sched_shepherd_lock);
+    }
+
+    return dest_shep_id;
+}
+
 void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
                                      qthread_t *restrict        t)
 {                                      /*{{{ */
@@ -443,5 +462,16 @@ pushback:
 /* some place-holder functions */
 void INTERNAL qthread_steal_stat(void) {}
 void INTERNAL qthread_cas_steal_stat(void) {}
+
+qthread_t INTERNAL * qt_threadqueue_dequeue_specific(qt_threadqueue_t * q,
+                                                     void             * value)
+{
+    return NULL;
+}
+
+qthread_worker_id_t INTERNAL qt_threadqueue_max_wps(void)
+{
+    return 1;
+}
 
 /* vim:set expandtab: */
