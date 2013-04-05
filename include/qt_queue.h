@@ -2,42 +2,43 @@
 #define QT_QUEUE_H
 
 #include "qt_qthread_t.h"
+#include "qt_visibility.h"
 
 /* This queue uses the NEMESIS lock-free queue protocol from
  * http://www.mcs.anl.gov/~buntinas/papers/ccgrid06-nemesis.pdf
  */
 
-struct qthread_queue_node_s {
+typedef struct qthread_queue_node_s {
     struct qthread_queue_node_s *next;
     qthread_t                   *thread;
-};
+} qthread_queue_node_t;
 
 typedef struct qthread_queue_NEMESIS_s {
     /* The First Cacheline */
-    void   *head;
-    void   *tail;
-    uint8_t pad1[CACHELINE_WIDTH - (2 * sizeof(void *))];
+    void     *head;
+    void     *tail;
+    uint8_t   pad1[CACHELINE_WIDTH - (2 * sizeof(void *))];
     /* The Second Cacheline */
-    void   *shadow_head;
+    void     *shadow_head;
     aligned_t length;
-    uint8_t pad2[CACHELINE_WIDTH - sizeof(void *) - sizeof(aligned_t)];
+    uint8_t   pad2[CACHELINE_WIDTH - sizeof(void *) - sizeof(aligned_t)];
 } qthread_queue_NEMESIS_t;
 
-typedef struct qthread_queue_none_s {
+typedef struct qthread_queue_nosync_s {
     void *head;
     void *tail;
-} qthread_queue_none_t;
+} qthread_queue_nosync_t;
 
 typedef struct qthread_queue_capped_s {
     qthread_t **members;
-    aligned_t membercount;
-    aligned_t maxmembers;
+    aligned_t   membercount;
+    aligned_t   maxmembers;
 } qthread_queue_capped_t;
 
 enum qthread_queue_synctype {
-    NONE,
-    NEMESIS, /* multi-join, emptying is user's synch */
-    MTS, /* multi-join, multi-empty (UNIMPLEMENTED) */
+    NOSYNC,
+    NEMESIS,        /* multi-join, emptying is user's synch */
+    MTS,            /* multi-join, multi-empty (UNIMPLEMENTED) */
     NEMESIS_LENGTH, /* multi-join, w/ atomic length */
     CAPPED
 };
@@ -45,11 +46,24 @@ enum qthread_queue_synctype {
 struct qthread_queue_s {
     enum qthread_queue_synctype type;
     union {
+        qthread_queue_nosync_t  nosync;
         qthread_queue_NEMESIS_t nemesis;
-        qthread_queue_none_t none;
-        qthread_queue_capped_t capped;
+        qthread_queue_capped_t  capped;
     } q;
 };
+
+void INTERNAL qthread_queue_subsystem_init(void);
+void INTERNAL qthread_queue_internal_enqueue(qthread_queue_t q,
+                                             qthread_t      *t);
+void INTERNAL qthread_queue_internal_nosync_enqueue(qthread_queue_nosync_t *q,
+                                                    qthread_t              *t);
+qthread_t INTERNAL *qthread_queue_internal_nosync_dequeue(qthread_queue_nosync_t *q);
+void INTERNAL       qthread_queue_internal_NEMESIS_enqueue(qthread_queue_NEMESIS_t *q,
+                                                           qthread_t               *t);
+qthread_t INTERNAL *qthread_queue_internal_NEMESIS_dequeue(qthread_queue_NEMESIS_t *q);
+void INTERNAL       qthread_queue_internal_capped_enqueue(qthread_queue_capped_t *q,
+                                                          qthread_t              *t);
+qthread_t INTERNAL *qthread_queue_internal_capped_dequeue(qthread_queue_capped_t *q);
 
 #endif // ifndef QT_QUEUE_H
 /* vim:set expandtab: */

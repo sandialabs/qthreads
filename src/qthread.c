@@ -75,6 +75,7 @@
 #include "qt_io.h"
 #include "qt_debug.h"
 #include "qt_envariables.h"
+#include "qt_queue.h"
 #include "qt_feb.h"
 #include "qt_syncvar.h"
 #include "qt_spawncache.h"
@@ -686,6 +687,16 @@ qt_run:
                         qt_threadqueue_enqueue_yielded(me->ready, t);
                         break;
 
+                    case QTHREAD_STATE_QUEUE:
+                        {
+                            qthread_queue_t q = t->rdata->blockedon.queue;
+                            qthread_debug(THREAD_DETAILS | SHEPHERD_DETAILS,
+                                    "id(%u): thread tid=%i(%p) entering user queue (q=%p, type=%u)\n",
+                                    my_id, t->thread_id, t, q, q->type);
+                            assert(q);
+                            qthread_queue_internal_enqueue(q, t);
+                            break;
+                        }
                     case QTHREAD_STATE_FEB_BLOCKED: /* unlock the related FEB address locks, and re-arrange memory to be correct */
                     {
                         qthread_addrstat_t *m = t->rdata->blockedon.addr;
@@ -1089,6 +1100,7 @@ int API_FUNC qthread_initialize(void)
 #endif /* ifndef UNPOOLED */
     initialize_hazardptrs();
     qt_internal_teams_init();
+    qthread_queue_subsystem_init();
     qt_feb_subsystem_init(need_sync);
     qt_syncvar_subsystem_init(need_sync);
     qt_threadqueue_subsystem_init();
