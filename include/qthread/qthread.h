@@ -374,21 +374,37 @@ unsigned int qt_team_parent_id(void);
 void qt_team_critical_section(qt_team_critical_section_t boundary);
 void qt_team_eureka(void);
 
-# define qthread_fork_new_team(f, a, r)                qthread_spawn((f), (a), 0, (r), 0, NULL, NO_SHEPHERD, \
-                                                                     QTHREAD_SPAWN_NEW_TEAM)
-# define qthread_fork_new_subteam(f, a, r)             qthread_spawn((f), (a), 0, (r), 0, NULL, NO_SHEPHERD, \
-                                                                     QTHREAD_SPAWN_NEW_SUBTEAM)
-# define qthread_fork_new_team_to(f, a, r, p)          qthread_spawn((f), (a), 0, (r), 0, NULL, (p), \
-                                                                     QTHREAD_SPAWN_NEW_TEAM)
-# define qthread_fork_syncvar_new_team(f, a, r)        qthread_spawn((f), (a), 0, (r), 0, NULL, NO_SHEPHERD, \
-                                                                     QTHREAD_SPAWN_NEW_TEAM | QTHREAD_SPAWN_RET_SYNCVAR_T)
-# define qthread_fork_syncvar_new_subteam(f, a, r)     qthread_spawn((f), (a), 0, (r), 0, NULL, NO_SHEPHERD, \
-                                                                     QTHREAD_SPAWN_NEW_SUBTEAM | QTHREAD_SPAWN_RET_SYNCVAR_T)
-# define qthread_fork_copyargs_new_team(f, a, z, r)    qthread_spawn((f), (a), (z), (r), 0, NULL, NO_SHEPHERD, \
-                                                                     QTHREAD_SPAWN_NEW_TEAM)
-# define qthread_fork_copyargs_new_subteam(f, a, z, r) qthread_spawn((f), (a), (z), (r), 0, NULL, NO_SHEPHERD, \
-                                                                     QTHREAD_SPAWN_NEW_SUBTEAM)
-# define qthread_fork_syncvar_copyargs_to(f,a,z,r,p)   qthread_spawn((f), (a), (z), (r), 0, NULL, (p), QTHREAD_SPAWN_RET_SYNCVAR_T)
+# define qthread_fork_new_team(f, a, r) \
+    qthread_spawn((f), (a), 0, (r), 0, NULL, NO_SHEPHERD, QTHREAD_SPAWN_NEW_TEAM)
+# define qthread_fork_new_subteam(f, a, r) \
+    qthread_spawn((f), (a), 0, (r), 0, NULL, NO_SHEPHERD, QTHREAD_SPAWN_NEW_SUBTEAM)
+# define qthread_fork_new_team_to(f, a, r, p) \
+    qthread_spawn((f), (a), 0, (r), 0, NULL, (p), QTHREAD_SPAWN_NEW_TEAM)
+# define qthread_fork_syncvar_new_team(f, a, r) \
+    qthread_spawn((f), (a), 0, (r), 0, NULL, NO_SHEPHERD, QTHREAD_SPAWN_NEW_TEAM | QTHREAD_SPAWN_RET_SYNCVAR_T)
+# define qthread_fork_syncvar_new_subteam(f, a, r) \
+    qthread_spawn((f), (a), 0, (r), 0, NULL, NO_SHEPHERD, QTHREAD_SPAWN_NEW_SUBTEAM | QTHREAD_SPAWN_RET_SYNCVAR_T)
+# define qthread_fork_copyargs_new_team(f, a, z, r) \
+    qthread_spawn((f), (a), (z), (r), 0, NULL, NO_SHEPHERD, QTHREAD_SPAWN_NEW_TEAM)
+# define qthread_fork_copyargs_new_subteam(f, a, z, r) \
+    qthread_spawn((f), (a), (z), (r), 0, NULL, NO_SHEPHERD, QTHREAD_SPAWN_NEW_SUBTEAM)
+# define qthread_fork_syncvar_copyargs_to(f,a,z,r,p) \
+    qthread_spawn((f), (a), (z), (r), 0, NULL, (p), QTHREAD_SPAWN_RET_SYNCVAR_T)
+
+struct qthread_queue_s;
+typedef struct qthread_queue_s *qthread_queue_t;
+
+#define QTHREAD_QUEUE_NO_SYNCH          (1<<0)
+#define QTHREAD_QUEUE_MULTI_JOIN        (1<<1)
+#define QTHREAD_QUEUE_MULTI_JOIN_LENGTH (1<<2)
+#define QTHREAD_QUEUE_CAPPED            (1<<3)
+
+qthread_queue_t qthread_queue_create(uint8_t flags,
+                                     size_t  length);
+int qthread_queue_join(qthread_queue_t q);
+int qthread_queue_release_one(qthread_queue_t q);
+int qthread_queue_release_all(qthread_queue_t q);
+int qthread_queue_destroy(qthread_queue_t q);
 
 /****************************************************************************
  * functions to implement FEB locking/unlocking

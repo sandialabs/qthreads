@@ -22,6 +22,7 @@ libqthread_la_SOURCES = \
 	locks.c \
 	qalloc.c \
 	qloop.c \
+	queue.c \
 	barrier/@with_barrier@.c \
 	qutil.c \
 	syncvar.c \
