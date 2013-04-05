@@ -3,6 +3,8 @@
 #endif
 
 #include "qthread/qthread.h"
+
+#include "qt_mpool.h"
 #include "qt_asserts.h"
 #include "qt_debug.h"
 #include "qt_threadstate.h"
@@ -52,6 +54,7 @@ qthread_queue_t API_FUNC qthread_queue_create(uint8_t flags,
         q->type                 = CAPPED;
         q->q.capped.maxmembers  = (aligned_t)length;
         q->q.capped.membercount = 0;
+        q->q.capped.busy        = 0;
         q->q.capped.members     = MALLOC(sizeof(qthread_t *) * length);
         assert(q->q.capped.members);
     } else {
@@ -173,6 +176,7 @@ int API_FUNC qthread_queue_release_all(qthread_queue_t q)
             const size_t membercount  = q->q.capped.membercount;
             qthread_t  **members_copy = MALLOC(sizeof(qthread_t *) * membercount);
             assert(members_copy);
+            while (q->q.capped.busy != 0) SPINLOCK_BODY();
             memcpy(members_copy, q->q.capped.members, sizeof(qthread_t *) * membercount);
             memset(q->q.capped.members, 0, sizeof(qthread_t *) * membercount);
             if (membercount == q->q.capped.maxmembers) {
@@ -224,14 +228,14 @@ void INTERNAL qthread_queue_internal_nosync_enqueue(qthread_queue_nosync_t *q,
 qthread_t INTERNAL *qthread_queue_internal_nosync_dequeue(qthread_queue_nosync_t *q)
 {
     qthread_queue_node_t *node;
-    qthread_t *t = NULL;
+    qthread_t            *t = NULL;
 
     assert(q);
 
     node = q->head;
     if (node) {
         q->head = node->next;
-        t = node->thread;
+        t       = node->thread;
         FREE_TQNODE(node);
     }
     return t;
@@ -289,12 +293,32 @@ qthread_t INTERNAL *qthread_queue_internal_NEMESIS_dequeue(qthread_queue_NEMESIS
 void INTERNAL qthread_queue_internal_capped_enqueue(qthread_queue_capped_t *q,
                                                     qthread_t              *t)
 {
-    abort();
+    aligned_t offset;
+
+    assert(q);
+    assert(t);
+
+    if (q->membercount >= q->maxmembers) { return; }
+    qthread_incr(&q->busy, 1);
+    offset = qthread_incr(&q->membercount, 1);
+    qassert_retvoid(offset >= q->maxmembers);
+    q->members[offset] = t;
+    qthread_incr(&q->busy, -1);
 }
 
 qthread_t INTERNAL *qthread_queue_internal_capped_dequeue(qthread_queue_capped_t *q)
 {
-    abort();
+    assert(q);
+    qthread_t *t = NULL;
+    size_t     i = 0;
+    while (q->busy != 0) SPINLOCK_BODY();
+    for (; i < q->membercount && q->members[i] == NULL; i++) ;
+    if (i < q->membercount) {
+        assert(q->members[i]);
+        t             = q->members[i];
+        q->members[i] = NULL;
+    }
+    return t;
 }
 
 /* vim:set expandtab: */

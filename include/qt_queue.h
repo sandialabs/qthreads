@@ -33,6 +33,7 @@ typedef struct qthread_queue_capped_s {
     qthread_t **members;
     aligned_t   membercount;
     aligned_t   maxmembers;
+    aligned_t   busy; /* a flag to say whether someone is busy modifying this datastructure */
 } qthread_queue_capped_t;
 
 enum qthread_queue_synctype {
