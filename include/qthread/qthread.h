@@ -400,8 +400,9 @@ typedef struct qthread_queue_s *qthread_queue_t;
 #define QTHREAD_QUEUE_CAPPED            (1<<3)
 
 qthread_queue_t qthread_queue_create(uint8_t flags,
-                                     size_t  length);
+                                     aligned_t length);
 int qthread_queue_join(qthread_queue_t q);
+aligned_t qthread_queue_length(qthread_queue_t q);
 int qthread_queue_release_one(qthread_queue_t q);
 int qthread_queue_release_all(qthread_queue_t q);
 int qthread_queue_destroy(qthread_queue_t q);

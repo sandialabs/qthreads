@@ -63,6 +63,19 @@ qthread_queue_t API_FUNC qthread_queue_create(uint8_t flags,
     return q;
 }
 
+aligned_t API_FUNC qthread_queue_length(qthread_queue_t q)
+{
+    assert(q);
+    switch(q->type) {
+        case NEMESIS_LENGTH:
+            return q->q.nemesis.length;
+        case CAPPED:
+            return q->q.capped.membercount;
+        default:
+            return 0;
+    }
+}
+
 int API_FUNC qthread_queue_join(qthread_queue_t q)
 {
     assert(q);
