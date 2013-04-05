@@ -12,6 +12,7 @@
 #include "qt_threadstate.h"
 #include "qt_blocking_structs.h"
 #include "qt_teams.h"
+#include "qt_queue.h"
 
 #define ARGCOPY_DEFAULT   1024
 #define TASKLOCAL_DEFAULT 8
@@ -48,6 +49,7 @@ struct qthread_runtime_data_s {
         qthread_addrstat_t       *addr;
         qt_blocking_queue_node_t *io;
         qthread_t                *thread;
+        qthread_queue_t           queue;
     } blockedon;
     qthread_shepherd_t *shepherd_ptr;    /* the shepherd we run on */
     unsigned            tasklocal_size;
