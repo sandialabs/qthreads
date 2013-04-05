@@ -25,8 +25,8 @@ typedef struct qthread_queue_NEMESIS_s {
 } qthread_queue_NEMESIS_t;
 
 typedef struct qthread_queue_nosync_s {
-    void *head;
-    void *tail;
+    qthread_queue_node_t *head;
+    qthread_queue_node_t *tail;
 } qthread_queue_nosync_t;
 
 typedef struct qthread_queue_capped_s {

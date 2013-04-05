@@ -205,12 +205,36 @@ int API_FUNC qthread_queue_destroy(qthread_queue_t q)
 void INTERNAL qthread_queue_internal_nosync_enqueue(qthread_queue_nosync_t *q,
                                                     qthread_t              *t)
 {
-    abort();
+    qthread_queue_node_t *node = ALLOC_TQNODE();
+
+    assert(node);
+    assert(q);
+    assert(t);
+
+    node->thread = t;
+    node->next   = NULL;
+    if (q->tail == NULL) {
+        q->head = node;
+    } else {
+        q->tail->next = node;
+    }
+    q->tail = node;
 }
 
 qthread_t INTERNAL *qthread_queue_internal_nosync_dequeue(qthread_queue_nosync_t *q)
 {
-    abort();
+    qthread_queue_node_t *node;
+    qthread_t *t = NULL;
+
+    assert(q);
+
+    node = q->head;
+    if (node) {
+        q->head = node->next;
+        t = node->thread;
+        FREE_TQNODE(node);
+    }
+    return t;
 }
 
 void INTERNAL qthread_queue_internal_NEMESIS_enqueue(qthread_queue_NEMESIS_t *q,
