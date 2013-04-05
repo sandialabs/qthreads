@@ -19,8 +19,8 @@ typedef struct qthread_queue_NEMESIS_s {
     void     *tail;
     uint8_t   pad1[CACHELINE_WIDTH - (2 * sizeof(void *))];
     /* The Second Cacheline */
-    void     *shadow_head;
     aligned_t length;
+    void     *shadow_head;
     uint8_t   pad2[CACHELINE_WIDTH - sizeof(void *) - sizeof(aligned_t)];
 } qthread_queue_NEMESIS_t;
 
