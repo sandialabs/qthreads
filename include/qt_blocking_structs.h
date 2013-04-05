@@ -30,8 +30,6 @@ typedef enum blocking_syscalls {
     USER_DEFINED
 } syscall_t;
 
-typedef struct qthread_queue_s qthread_queue_t;
-
 typedef struct qthread_addrres_s {
     aligned_t                *addr; /* ptr to the memory NOT being blocked on */
     qthread_t                *waiter;
