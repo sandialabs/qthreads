@@ -2868,7 +2868,6 @@ int API_FUNC qthread_spawn(qthread_f             f,
         } else
 #endif
         {
-            qthread_steal_enable();
             qt_threadqueue_enqueue(qlib->threadqueues[dest_shep], t);
         }
     }
