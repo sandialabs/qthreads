@@ -20,6 +20,7 @@ TESTS = \
 		qthread_migrate_to \
 		qthread_disable_shepherd \
 		qtimer \
+		queue \
 		qthread_fork_precond \
 		qalloc \
 		arbitrary_blocking_operation \
@@ -83,6 +84,8 @@ qthread_migrate_to_SOURCES = qthread_migrate_to.c
 qthread_disable_shepherd_SOURCES = qthread_disable_shepherd.c
 
 qtimer_SOURCES = qtimer.c
+
+queue_SOURCES = queue.c
 
 qthread_fork_precond_SOURCES = qthread_fork_precond.c
 
