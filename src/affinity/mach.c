@@ -66,10 +66,9 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
     return nshepherds;
 }                                      /*}}} */
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 void INTERNAL qt_affinity_set(qthread_worker_t *me, unsigned int Q_UNUSED(nw))
 {                                      /*{{{ */
-# ifndef SST
+#ifndef SST
     mach_msg_type_number_t        Count = THREAD_AFFINITY_POLICY_COUNT;
     thread_affinity_policy_data_t mask[THREAD_AFFINITY_POLICY_COUNT];
 
@@ -83,46 +82,8 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me, unsigned int Q_UNUSED(nw))
             Count) != KERN_SUCCESS) {
         fprintf(stderr, "ERROR! Cannot SET affinity for some reason\n");
     }
-# endif /* ifndef SST */
+#endif /* ifndef SST */
 }                                      /*}}} */
-
-#else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-void INTERNAL qt_affinity_set(qthread_shepherd_t *me, unsigned int Q_UNUSED(nw))
-{                                      /*{{{ */
-# ifndef SST
-    mach_msg_type_number_t        Count = THREAD_AFFINITY_POLICY_COUNT;
-    thread_affinity_policy_data_t mask[THREAD_AFFINITY_POLICY_COUNT];
-
-    /*
-     * boolean_t GetDefault = 0;
-     * if (thread_policy_get(mach_thread_self(),
-     * THREAD_AFFINITY_POLICY,
-     * (thread_policy_t)&mask,
-     * &Count,
-     * &GetDefault) != KERN_SUCCESS) {
-     * printf("ERROR! Cannot get affinity for some reason\n");
-     * }
-     * printf("THREAD_AFFINITY_POLICY: krc=%#x default=%d\n",
-     * krc, GetDefault);
-     * printf("\tcount=%i\n", Count);
-     * for (int i=0; i<Count; i++) {
-     * printf("\t\taffinity_tag=%d (%#x)\n",
-     * mask[i].affinity_tag, mask[i].affinity_tag);
-     * } */
-    memset(mask, 0,
-           sizeof(thread_affinity_policy_data_t) *
-           THREAD_AFFINITY_POLICY_COUNT);
-    mask[0].affinity_tag = me->shepherd_id + 1;
-    Count                = 1;
-    if (thread_policy_set
-            (mach_thread_self(), THREAD_AFFINITY_POLICY, (thread_policy_t)&mask,
-            Count) != KERN_SUCCESS) {
-        fprintf(stderr, "ERROR! Cannot SET affinity for some reason\n");
-    }
-# endif /* ifndef SST */
-}                                      /*}}} */
-
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
 qthread_worker_id_t INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */

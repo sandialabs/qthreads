@@ -42,7 +42,6 @@ static void hazardptr_internal_teardown(void)
 
 void INTERNAL initialize_hazardptrs(void)
 {/*{{{*/
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     freelist_max = qthread_num_shepherds() * qlib->nworkerspershep + 7;
     for (qthread_shepherd_id_t i = 0; i < qthread_num_shepherds(); ++i) {
         for (qthread_worker_id_t j = 0; j < qlib->nworkerspershep; ++j) {
@@ -54,17 +53,6 @@ void INTERNAL initialize_hazardptrs(void)
             free_these_freelists                                                      = qlib->shepherds[i].workers[j].hazard_free_list.freelist;
         }
     }
-#else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-    freelist_max = qthread_num_shepherds() + 7;
-    for (qthread_shepherd_id_t i = 0; i < qthread_num_shepherds(); ++i) {
-        memset(qlib->shepherds[i].hazard_ptrs, 0, sizeof(uintptr_t) * HAZARD_PTRS_PER_SHEP);
-        memset(&qlib->shepherds[i].hazard_free_list, 0, sizeof(hazard_freelist_t));
-        qlib->shepherds[i].hazard_free_list.freelist = calloc(freelist_max + 1, sizeof(hazard_freelist_entry_t));
-        assert(qlib->shepherds[i].hazard_free_list.freelist);
-        qlib->shepherds[i].hazard_free_list.freelist[freelist_max].ptr = free_these_freelists;
-        free_these_freelists                                           = qlib->shepherds[i].hazard_free_list.freelist;
-    }
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     TLS_INIT(ts_hazard_ptrs);
     QTHREAD_CASLOCK_INIT(hzptr_list, NULL);
     qthread_internal_cleanup(hazardptr_internal_teardown);
@@ -76,7 +64,6 @@ void INTERNAL hazardous_ptr(unsigned int which,
     uintptr_t *hzptrs = TLS_GET(ts_hazard_ptrs);
 
     if (hzptrs == NULL) {
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
         {
             qthread_worker_t *wkr = qthread_internal_getworker();
             if (wkr == NULL) {
@@ -91,22 +78,6 @@ void INTERNAL hazardous_ptr(unsigned int which,
                 hzptrs = wkr->hazard_ptrs;
             }
         }
-#else   /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-        {
-            qthread_shepherd_t *shep = qthread_internal_getshep();
-            if (shep == NULL) {
-                hzptrs = calloc(sizeof(uintptr_t), HAZARD_PTRS_PER_SHEP + 1);
-                assert(hzptrs);
-                do {
-                    hzptrs[HAZARD_PTRS_PER_SHEP] = (uintptr_t)QTHREAD_CASLOCK_READ(hzptr_list);
-                } while (QT_CAS(hzptr_list, hzptrs[HAZARD_PTRS_PER_SHEP], hzptrs)
-                         != (void *)hzptrs[HAZARD_PTRS_PER_SHEP]);
-                (void)qthread_incr(&hzptr_list_len, 1);
-            } else {
-                hzptrs = shep->hazard_ptrs;
-            }
-        }
-#endif  /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
         TLS_SET(ts_hazard_ptrs, hzptrs);
     }
 
@@ -143,11 +114,7 @@ static int binary_search(uintptr_t *list,
 
 static void hazardous_scan(hazard_freelist_t *hfl)
 {/*{{{*/
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     const size_t num_hps = qthread_num_workers() * HAZARD_PTRS_PER_SHEP;
-#else
-    const size_t num_hps = qthread_num_shepherds() * HAZARD_PTRS_PER_SHEP;
-#endif
     void            **plist = MALLOC(sizeof(void *) * (num_hps + hzptr_list_len));
     hazard_freelist_t tmpfreelist;
 
@@ -156,7 +123,6 @@ static void hazardous_scan(hazard_freelist_t *hfl)
     assert(tmpfreelist.freelist);
     do {
         /* Stage 1: Collect hazardpointers */
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
         {
             qthread_shepherd_id_t i;
             for (i = 0; i < qthread_num_shepherds(); ++i) {
@@ -180,25 +146,6 @@ static void hazardous_scan(hazard_freelist_t *hfl)
                 hzptr_tmp = (uintptr_t *)hzptr_tmp[HAZARD_PTRS_PER_SHEP];
             }
         }
-#else   /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-        qthread_shepherd_id_t i;
-        for (i = 0; i < qthread_num_shepherds(); ++i) {
-            if (&(qlib->shepherds[i].hazard_free_list) != hfl) {
-                memcpy(plist + (i * HAZARD_PTRS_PER_SHEP), qlib->shepherds[i].hazard_ptrs, sizeof(void *) * HAZARD_PTRS_PER_SHEP);
-            } else {
-                memset(plist + (i * HAZARD_PTRS_PER_SHEP), 0, sizeof(void *) * HAZARD_PTRS_PER_SHEP);
-            }
-        }
-        {
-            uintptr_t *hzptr_tmp = QTHREAD_CASLOCK_READ(hzptr_list);
-            while (hzptr_tmp != NULL) {
-                memcpy(plist + (i * HAZARD_PTRS_PER_SHEP),
-                       hzptr_tmp,
-                       sizeof(uintptr_t) * HAZARD_PTRS_PER_SHEP);
-                hzptr_tmp = (uintptr_t *)hzptr_tmp[HAZARD_PTRS_PER_SHEP];
-            }
-        }
-#endif  /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
         /* Stage 2: free pointers that are not in the set of hazardous pointers */
         tmpfreelist.count = 0;
@@ -232,11 +179,7 @@ static void hazardous_scan(hazard_freelist_t *hfl)
 void INTERNAL hazardous_release_node(void  (*freefunc)(void *),
                                      void *ptr)
 {/*{{{*/
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     hazard_freelist_t *hfl = &(qthread_internal_getworker()->hazard_free_list);
-#else
-    hazard_freelist_t *hfl = &(qthread_internal_getshep()->hazard_free_list);
-#endif
     uintptr_t *hzptrs = TLS_GET(ts_hazard_ptrs);
 
     assert(ptr != NULL);

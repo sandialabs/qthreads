@@ -56,9 +56,7 @@ int main(int argc,
     CHECK_VERBOSE();
 
     iprintf("%i shepherds...\n", qthread_num_shepherds());
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     iprintf("  %i threads total\n", qthread_num_workers());
-#endif
     iprintf("Initial value of x: %lu\n", (unsigned long)x);
 
     ret = qthread_fork(consumer, NULL, NULL);

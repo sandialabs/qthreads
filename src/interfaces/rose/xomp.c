@@ -316,11 +316,7 @@ void XOMP_parallel_start(
   
   // allocate and set new feb barrier
 #else
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   qthread_shepherd_id_t parallelWidth = qthread_num_workers();
-#else
-  qthread_shepherd_id_t parallelWidth = qthread_num_shepherds();
-#endif
 #endif
 
   int save_thread_cnt = 0;  // double duty - non-zero we changed thread count - value is the old thread count
@@ -414,11 +410,7 @@ void xomp_internal_loop_init(
   qthread_parallel_region_t *pr = qt_parallel_region();
 
   // get barrier id
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   qthread_worker_id_t myid = qthread_barrier_id();
-#else
-  qthread_shepherd_id_t myid = qthread_barrier_id();
-#endif
 
   // in parallel region look up loop number with id
 
@@ -483,13 +475,8 @@ void xomp_internal_loop_init(
 void xomp_internal_set_ordered_iter(qqloop_step_handle_t *loop, int lower) {
   if (loop == NULL) return; // loop is completed (and destroyed) we just need to
                             // complete -- no more work
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   qthread_worker_id_t myid = qthread_barrier_id();
   aligned_t *iter = ((aligned_t*)&loop->work_array) + qthread_num_workers() + myid;
-#else
-  qthread_shepherd_id_t myid = qthread_shep();
-  aligned_t *iter = ((aligned_t*)&loop->work_array) + qthread_num_shepherds() + myid;
-#endif
   *iter = lower; // insert lower bound
 }
 
@@ -793,12 +780,6 @@ void XOMP_task(
     bool if_clause,
     unsigned untied)
 {
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-#else
-  qthread_incr(&taskId,1);
-  qthread_debug(LOCK_DETAILS, "me(%p) creating task for shepherd %d\n", me, id%qthread_num_shepherds());
-#endif
-
   qthread_fork_track_syncvar_copyargs((qthread_f)func, arg, arg_size, NULL); /* NULL return value -- let copyargs assign inside thread structure -- which it allocates*/
 }
 
@@ -920,13 +901,8 @@ void XOMP_ordered_start(
   fprintf(stderr,"Ordered start is busted at the moment\n");
   return;
   qqloop_step_handle_t * loop = NULL;
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   qthread_worker_id_t myid = qthread_barrier_id();
   aligned_t *iter = ((aligned_t*)&loop->work_array) + qthread_num_workers() + myid;
-#else
-  qthread_shepherd_id_t myid = qthread_shep();
-  aligned_t *iter = ((aligned_t*)&loop->work_array) + qthread_num_shepherds() + myid;
-#endif
 
   while (orderedLoopCount != *iter) SPINLOCK_BODY(); // spin until my turn
   *iter += loop->assignStep;
@@ -949,11 +925,7 @@ bool XOMP_loop_static_start(
 {
   qqloop_step_handle_t *loop = (qqloop_step_handle_t *)lp;
   aligned_t myid = qthread_barrier_id();
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   aligned_t parallelWidth = qthread_num_workers();
-#else
-  aligned_t parallelWidth = qthread_num_shepherds();
-#endif
 
   if (!loop){
     return 0;
@@ -990,11 +962,7 @@ void XOMP_loop_default(
 #ifdef QTHREAD_RCRTOOL 
   aligned_t parallelWidth = maestro_size()-1;
 #else
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   aligned_t parallelWidth = qthread_num_workers();
-#else
-  aligned_t parallelWidth = qthread_num_shepherds();
-#endif
 #endif
   aligned_t chunksize ;
   if (stride > 0){ // normal case -- postive stride
@@ -1175,11 +1143,7 @@ void XOMP_critical_end(
 bool XOMP_master(
     void)
 {
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   int myid = qthread_barrier_id();
-#else
-  int myid = qthread_shep();
-#endif
   if (myid == 0) return 1;
   else return 0;
 }
@@ -1190,11 +1154,7 @@ bool XOMP_single(
 {
   return XOMP_master();  // forces thread 0 no barrier
   /*                     // any thread barrier to make sure its cleaned before next use
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   int myid = qthread_barrier_id();
-#else
-  int myid = qthread_shep();
-#endif
   if (qt_global_arrive_first(myid)){ 
     return 1;
   }
@@ -1256,12 +1216,8 @@ void omp_set_num_threads (
     int omp_num_threads_requested)
 {
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   qthread_worker_id_t workerid = qthread_worker(NULL);
   qthread_shepherd_id_t num_active = qthread_num_workers();
-#else
-  qthread_shepherd_id_t num_active = qthread_num_shepherds();
-#endif
   qthread_shepherd_id_t i, qt_num_threads_requested;
 
   qt_num_threads_requested = (qthread_shepherd_id_t) omp_num_threads_requested;
@@ -1275,32 +1231,22 @@ void omp_set_num_threads (
     {
       for(i=num_active; i < qt_num_threads_requested; i++)
         {
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
           qthread_enable_worker(i);
-#else
-          qthread_enable_shepherd(i);
-#endif
         }
     }
   else if (qt_num_threads_requested < num_active)
     {
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
       if ((workerid <= num_active) && (workerid>=qt_num_threads_requested))
       	{
 	  qt_num_threads_requested--;
 	}
-#endif
       for(i=num_active-1; i >= qt_num_threads_requested; i--)
         {
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
           if (workerid != i){
 	    qthread_disable_worker(i);
 	    qthread_pack_workerid(i,-1);
 	    //	    if(workerid == i) yield_thread();
 	  }
-#else
-          qthread_disable_shepherd(i);
-#endif
         }
     }
 
@@ -1315,7 +1261,6 @@ void omp_set_num_threads (
     if (qt_parallel_region()) qt_thread_barrier_resize(qt_num_threads_requested);
     qt_barrier_resize(qt_thread_barrier(), qt_num_threads_requested);
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_id_t newId = 0;
     for(i=0; i < qt_num_threads_requested; i++) {  // repack id's
       qthread_pack_workerid(i,newId++);
@@ -1323,7 +1268,6 @@ void omp_set_num_threads (
     if (workerid >= qt_num_threads_requested) { // carefull about edge conditions
       qthread_pack_workerid(workerid,newId++);
     }
-#endif
   }
 #endif
 }
@@ -1332,11 +1276,7 @@ void omp_set_num_threads (
 int omp_get_num_threads (
     void)
 {
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   qthread_worker_id_t num = qthread_num_workers();
-#else
-  qthread_shepherd_id_t num = qthread_num_shepherds();
-#endif
   return (int) num;
 }
 
@@ -1344,11 +1284,7 @@ int omp_get_num_threads (
 int omp_get_max_threads (
     void)
 {
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   qthread_worker_id_t num = qthread_num_workers();
-#else
-  qthread_shepherd_id_t num = qthread_num_shepherds();
-#endif
   return (int) num;
 }
 

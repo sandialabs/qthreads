@@ -29,12 +29,7 @@ typedef struct qthread_shepherd_s qthread_shepherd_t;
 
 void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
                                qthread_worker_id_t   *nbworkers);
-void INTERNAL qt_affinity_set(
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-                              qthread_worker_t * me,
-#else
-                              qthread_shepherd_t * me,
-#endif
+void INTERNAL qt_affinity_set(qthread_worker_t * me,
                               unsigned int nworkerspershep);
 int qt_affinity_gendists(qthread_shepherd_t   *sheps,
                          qthread_shepherd_id_t nshepherds);

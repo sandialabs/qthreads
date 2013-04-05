@@ -888,8 +888,7 @@ AS_IF([test "x$with_scheduler" != "x"],
              [with_scheduler="nemesis"])])
 
 AS_IF([test "x$enable_multithreaded_shepherds" = xyes],
-      [AC_DEFINE([QTHREAD_MULTITHREADED_SHEPHERDS], [1], [Support multithreaded shepherds])
-       AC_SEARCH_LIBS([nanosleep],[rt],[],[AC_MSG_ERROR([Cannot find nanosleep])])
+      [AC_SEARCH_LIBS([nanosleep],[rt],[],[AC_MSG_ERROR([Cannot find nanosleep])])
        AS_IF([test "x$with_scheduler" = "x"],
              [AC_MSG_ERROR([something broke in the configure script (hit the developer with a 2-by-four)])])
        EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --with-scheduler=sherwood"
@@ -1196,7 +1195,6 @@ AM_CONDITIONAL([QTHREAD_TIMER_TYPE_ALTIX], [test "x$qthread_timer_type" = "xalti
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIMEOFDAY], [test "x$qthread_timer_type" = "xgettimeofday"])
 AM_CONDITIONAL([COMPILE_ROSE_EXTENSIONS], [test "x$enable_rose_extensions" = "xyes"])
 AM_CONDITIONAL([COMPILE_RCRTOOL], [test "x$enable_rcrtool" = "xyes"])
-AM_CONDITIONAL([QTHREAD_MULTITHREADED_SHEPHERDS], [test "x$enable_multithreaded_shepherds" = "xyes"])
 AM_CONDITIONAL([COMPILE_CHAPEL_INTERFACE], [test "x$compile_chapel_interface" = "xyes"])
 AM_CONDITIONAL([COMPILE_COMPAT_ATOMIC], [test "x$compile_compat_atomic" = "xyes"])
 AM_CONDITIONAL([COMPILE_SPAWNCACHE], [test "x$enable_spawn_cache" = "xyes"])

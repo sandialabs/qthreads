@@ -68,34 +68,11 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
 
     if (numa_available() != 1) {
         qthread_debug(AFFINITY_FUNCTIONS, "numa_available != 1\n");
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
         /* this is (probably) correct if/when we have multithreaded shepherds,
          * ... BUT ONLY IF ALL NODES HAVE CPUS!!!!!! */
         nshepherds = numa_max_node() + 1;
         qthread_debug(AFFINITY_DETAILS, "numa_max_node() returned %i\n",
                       nshepherds);
-#else
-# ifdef HAVE_NUMA_NUM_THREAD_CPUS
-        /* note: not numa_num_configured_cpus(), just in case an
-         * artificial limit has been imposed. */
-        nshepherds = numa_num_thread_cpus();
-        qthread_debug(AFFINITY_DETAILS, "numa_num_thread_cpus returned %i\n",
-                      nshepherds);
-# elif defined(HAVE_NUMA_BITMASK_NBYTES)
-        nshepherds = 0;
-        for (size_t b = 0; b < numa_bitmask_nbytes(numa_all_cpus_ptr) * 8;
-             b++) {
-            nshepherds += numa_bitmask_isbitset(numa_all_cpus_ptr, b);
-        }
-        qthread_debug(AFFINITY_DETAILS,
-                      "after checking through the all_cpus_ptr, I counted %i cpus\n",
-                      nshepherds);
-# else  /* ifdef HAVE_NUMA_NUM_THREAD_CPUS */
-        nshepherds = numa_max_node() + 1;
-        qthread_debug(AFFINITY_DETAILS, "numa_max_node() returned %i\n",
-                      nshepherds);
-# endif /* ifdef HAVE_NUMA_NUM_THREAD_CPUS */
-#endif  /* MULTITHREADED */
     }
     if (nshepherds <= 0) {
         nshepherds = 1;
@@ -104,7 +81,6 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
     return nshepherds;
 }                                      /*}}} */
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 void INTERNAL qt_affinity_set(qthread_worker_t *me,
                               unsigned int      Q_UNUSED(nw))
 {                                      /*{{{ */
@@ -123,25 +99,6 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me,
     }
     numa_set_localalloc();
 }                                      /*}}} */
-
-#else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-void INTERNAL qt_affinity_set(qthread_shepherd_t *me,
-                              unsigned int        Q_UNUSED(nw))
-{                                      /*{{{ */
-    assert(me);
-
-    /* It would be nice if we could do something more specific than
-     * "numa_run_on_node", but because sched_setaffinity() is so dangerous, we
-     * really can't, in good conscience. */
-    qthread_debug(AFFINITY_DETAILS, "calling numa_run_on_node(%i) for shep %i\n", me->node, me->shepherd_id);
-    int ret = numa_run_on_node(myshep->node);
-    if (ret != 0) {
-        qthread_debug(ALWAYS_OUTPUT, "numa_run_on_node() returned an error: %s\n", strerror(errno));
-        abort();
-    }
-    numa_set_localalloc();
-}                                      /*}}} */
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
 qthread_worker_id_t INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */

@@ -23,16 +23,12 @@ static void ms_init(void){
   int i;
   maestro_sched_init = 1;
   int sheps = qthread_num_shepherds();
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   int workers = qthread_num_workers();
   int activeWorkers = qthread_readstate(ACTIVE_WORKERS);
   if (workers > activeWorkers) workers = activeWorkers;
   int parallelWidth = workers/sheps;
   // even to max count if threads will be uneven on shepherds
   if ((parallelWidth * sheps) != workers) parallelWidth += 1;
-#else
-  int parallelWidth = 1;  // so hardwire width to 1
-#endif
 
   allowed_workers = (int*) malloc(sheps*sizeof(int));
   for ( i = 0; i < sheps; i ++) {
@@ -116,14 +112,10 @@ int maestro_allowed_workers() {
 
   if (!maestro_sched_init) ms_init();
   int sheps = qthread_num_shepherds();
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
   int workers = qthread_num_workers();
   int parallelWidth = workers/sheps;
   // even to max count if threads will be uneven on shepherds
   if ((parallelWidth * sheps) != workers) parallelWidth += 1;
-#else
-  int parallelWidth = 1;  // so hardwire width to 1
-#endif
   return parallelWidth;
 }
 
