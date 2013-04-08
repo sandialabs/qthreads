@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 /* Internal Headers */
+#include "qthread_innards.h"           /* for qlib */
 #include "qthread/qthread.h"
 #include "qt_macros.h"
 #include "qt_visibility.h"
@@ -95,7 +96,7 @@ static qthread_t *qt_threadqueue_dequeue(qt_threadqueue_t *q)
     if (retval != NULL) {
         qt_threadqueue_node_t *old, *new;
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+#ifdef QTHREAD_LIFO_MULTI_DEQUEUER
 # error This dequeue function is not safe! retval may be freed before we dereference it to find the next ptr. Need to use hazardptrs.
 #endif
         do {
@@ -199,7 +200,7 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
     assert(q);
     assert(t);
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+#ifdef QTHREAD_LIFO_MULTI_DEQUEUER
     qthread_t *top = qt_threadqueue_dequeue(q);
     qt_threadqueue_enqueue(q, t);
     if (top) {
@@ -224,7 +225,7 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
     } else {
         qt_threadqueue_enqueue(q, t);
     }
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
+#endif /* ifdef QTHREAD_LIFO_MULTI_DEQUEUER */
 } /*}}}*/
 
 ssize_t INTERNAL qt_threadqueue_advisory_queuelen(qt_threadqueue_t *q)
@@ -316,5 +317,38 @@ void INTERNAL qthread_steal_disable(void)
 
 void INTERNAL qthread_cas_steal_stat(void)
 {}
+
+qthread_shepherd_id_t INTERNAL qt_threadqueue_choose_dest(qthread_shepherd_t * curr_shep)
+{
+    qthread_shepherd_id_t dest_shep_id = 0;
+
+    if (curr_shep) {
+        dest_shep_id               = curr_shep->sched_shepherd++;
+        curr_shep->sched_shepherd *= (qlib->nshepherds > (dest_shep_id + 1));
+    } else {
+        dest_shep_id = 
+            (qthread_shepherd_id_t)qthread_internal_incr_mod(
+                &qlib->sched_shepherd,
+                qlib->nshepherds,
+                &qlib->sched_shepherd_lock);
+    }
+
+    return dest_shep_id;
+}
+
+qthread_t INTERNAL * qt_threadqueue_dequeue_specific(qt_threadqueue_t * q,
+                                                     void             * value)
+{
+    return NULL;
+}
+
+qthread_worker_id_t INTERNAL qt_threadqueue_max_wps(void)
+{
+#ifdef QTHREAD_LIFO_MULTI_DEQUEUER
+    return -1;
+#else
+    return 1;
+#endif
+}
 
 /* vim:set expandtab: */

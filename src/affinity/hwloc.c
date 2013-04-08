@@ -17,7 +17,6 @@ static uint32_t         initialized = 0;
 static int            shep_depth = -1;
 static hwloc_cpuset_t mccoy_thread_bindings;
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 static hwloc_obj_type_t wkr_type  = HWLOC_OBJ_PU;
 static int              wkr_index = -1;
 static int              wkr_depth = -1;
@@ -27,7 +26,6 @@ const char  *typenames[] = {
     "L4cache"
 };
 const size_t numtypes = sizeof(typenames) / sizeof(char *);
-#endif
 
 #if HWLOC_API_VERSION == 0x00010000
 # define WEIGHT(x)           hwloc_cpuset_weight(x)
@@ -46,9 +44,7 @@ const size_t numtypes = sizeof(typenames) / sizeof(char *);
 #endif /* if HWLOC_API_VERSION == 0x00010000 */
 
 qthread_shepherd_id_t guess_num_shepherds(void);
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 qthread_worker_id_t guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds);
-#endif
 
 static unsigned int num_usable_by_depth(unsigned int depth)
 {
@@ -120,7 +116,6 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
     mccoy_thread_bindings = ALLOCBMAP();
     hwloc_get_cpubind(topology, mccoy_thread_bindings, HWLOC_CPUBIND_THREAD);
     hwloc_const_cpuset_t allowed_cpuset = hwloc_topology_get_allowed_cpuset(topology);
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     int shep_type_idx = -1;
     /* BEWARE: L*cache must be consecutive of ascending levels, as the index
      * below is used to compare to the cache level */
@@ -325,17 +320,6 @@ restart_loop:
             }
         }
     }
-#else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-    if (*nbshepherds == 0) {
-        *nbshepherds = guess_num_shepherds();
-    }
-    shep_depth = hwloc_get_type_depth(topology, HWLOC_OBJ_PU);
-    qthread_debug(AFFINITY_CALLS, "Using depth %d (%s) for %d shepherds\n", shep_depth,
-                  hwloc_obj_type_string(hwloc_get_depth_type(topology, shep_depth)), *nbshepherds);
-    if (*nbworkers == 0) {
-        *nbworkers = 1;
-    }
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 }                                      /*}}} */
 
 #ifdef QTHREAD_HAVE_MEM_AFFINITY
@@ -390,7 +374,6 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
 
     DEBUG_ONLY(hwloc_topology_check(topology));
     hwloc_const_cpuset_t allowed_cpuset = hwloc_topology_get_allowed_cpuset(topology);
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     ret = num_usable_by_depth(shep_depth);
     qthread_debug(AFFINITY_BEHAVIOR, "of %u %s's, only %u %s viable\n",
             hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth),
@@ -399,20 +382,12 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
     qthread_debug(AFFINITY_FUNCTIONS, "guessing %u shepherds (nbobjs_by_depth, depth: %u=%s)\n",
                   (unsigned int)ret, shep_depth,
                   hwloc_obj_type_string(hwloc_get_depth_type(topology, shep_depth)));
-#else
-    /* the goal here is to pick the number of independent processing units
-     * (i.e. cores) */
-    ret = hwloc_get_nbobjs_inside_cpuset_by_type(topology, allowed_cpuset, HWLOC_OBJ_PU);
-    qthread_debug(AFFINITY_FUNCTIONS, "guessing %u shepherds (nbobjs_by_type, HWLOC_OBJ_PU)\n",
-                  (unsigned int)ret);
-#endif
     if (ret == 0) {
         ret = 1;
     }
     return ret;
 }                                      /*}}} */
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 qthread_worker_id_t INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
     qthread_worker_id_t ret   = 0;
@@ -559,7 +534,7 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me,
                                              (wraparounds * nworkerspershep) +
                                              worker_wraparounds) % shep_pus);
 
-# ifdef QTHREAD_DEBUG_AFFINITY
+#ifdef QTHREAD_DEBUG_AFFINITY
     {
         char *str;
         qthread_debug(AFFINITY_DETAILS, "%u: shep_pus=%u, wraparounds=%u\n",
@@ -581,78 +556,21 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me,
                       str);
         FREE(str, strlen(str));
     }
-# endif /* ifdef QTHREAD_DEBUG_AFFINITY */
+#endif /* ifdef QTHREAD_DEBUG_AFFINITY */
     if (hwloc_set_cpubind(topology, sub_obj->allowed_cpuset, HWLOC_CPUBIND_THREAD)) {
         char *str;
         int   i = errno;
-# ifdef __APPLE__
+#ifdef __APPLE__
         if (i == ENOSYS) {
             return;
         }
-# endif
+#endif
         ASPRINTF(&str, sub_obj->allowed_cpuset);
         fprintf(stderr, "Couldn't bind to cpuset %s because %s (%i)\n", str,
                 strerror(i), i);
         FREE(str, strlen(str));
     }
 }                                      /*}}} */
-
-#else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-void INTERNAL qt_affinity_set(qthread_shepherd_t *me,
-                              unsigned int        Q_UNUSED(nworkerspershep))
-{                                                                                      /*{{{ */
-    DEBUG_ONLY(hwloc_topology_check(topology));
-
-    hwloc_const_cpuset_t allowed_cpuset = hwloc_topology_get_allowed_cpuset(topology); // where am I allowed to run?
-    hwloc_obj_t          obj            = hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset,
-                                                                               shep_depth, me->node);
-
-# ifdef QTHREAD_DEBUG
-    unsigned int maxshepobjs = hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth);
-# endif
-    // unsigned int weight      = WEIGHT(obj->allowed_cpuset);
-    // unsigned int wraparounds = me->shepherd_id / maxshepobjs;
-
-    assert(hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth) >= 1);
-
-    qthread_debug(AFFINITY_CALLS,
-                  "shep %i(%i) worker 0 [%i], there are %u %s [%i pu]\n",
-                  (int)me->shepherd_id,
-                  (int)me->node,
-                  (int)me->shepherd_id,
-                  maxshepobjs,
-                  hwloc_obj_type_string(hwloc_get_depth_type(topology, shep_depth)),
-                  (int)hwloc_get_nbobjs_inside_cpuset_by_type(topology, allowed_cpuset, HWLOC_OBJ_PU));
-# ifdef QTHREAD_DEBUG_AFFINITY
-    {
-        char *str;
-        ASPRINTF(&str, obj->allowed_cpuset);
-        qthread_debug(AFFINITY_DETAILS,
-                      "binding shep %i worker 0 (%i) to %s %i, mask %s\n",
-                      (int)me->shepherd_id,
-                      (int)me->shepherd_id,
-                      hwloc_obj_type_string(hwloc_get_depth_type(topology, shep_depth)),
-                      me->node,
-                      str);
-        FREE(str, strlen(str));
-    }
-# endif /* ifdef QTHREAD_DEBUG_AFFINITY */
-    if (hwloc_set_cpubind(topology, obj->allowed_cpuset, HWLOC_CPUBIND_THREAD)) {
-        char *str;
-        int   i = errno;
-# ifdef __APPLE__
-        if (i == ENOSYS) {
-            return;
-        }
-# endif
-        ASPRINTF(&str, obj->allowed_cpuset);
-        fprintf(stderr, "Couldn't bind to cpuset %s because %s (%i)\n", str,
-                strerror(i), i);
-        FREE(str, strlen(str));
-    }
-}                                      /*}}} */
-
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
 int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                                   qthread_shepherd_id_t nshepherds)
@@ -664,7 +582,6 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
 
     qthread_debug(AFFINITY_CALLS, "generating distances for %i sheps (%p)\n", (int)nshepherds, sheps);
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     num_extant_objs = hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth);
     qthread_debug(AFFINITY_DETAILS, "found %u objects at shep_depth %u\n", num_extant_objs, shep_depth);
     assert(num_extant_objs != 0);
@@ -674,7 +591,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
         sheps[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
         sheps[i].shep_dists      = calloc(nshepherds, sizeof(unsigned int));
     }
-# ifdef QTHREAD_HAVE_HWLOC_DISTS
+#ifdef QTHREAD_HAVE_HWLOC_DISTS
     const struct hwloc_distances_s *matrix = hwloc_get_whole_distance_matrix_by_type(topology, HWLOC_OBJ_NODE);
     if (matrix) {
         qthread_debug(AFFINITY_DETAILS, "matrix is %p, type at this depth: %s, relative_depth: %u(%s), nbobj: %u\n", matrix, hwloc_obj_type_string(HWLOC_OBJ_NODE), matrix->relative_depth, hwloc_obj_type_string(hwloc_get_depth_type(topology, matrix->relative_depth)), matrix->nbobjs);
@@ -692,11 +609,11 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
         node_to_NUMAnode[i] = node_obj->logical_index;
         qthread_debug(AFFINITY_DETAILS, "obj %i maps to node %i\n", i, node_to_NUMAnode[i]);
     }
-# endif /* ifdef QTHREAD_HAVE_HWLOC_DISTS */
+#endif /* ifdef QTHREAD_HAVE_HWLOC_DISTS */
     for (size_t i = 0; i < nshepherds; ++i) {
         for (size_t j = 0, k = 0; j < nshepherds; ++j) {
             if (j != i) {
-# ifdef QTHREAD_HAVE_HWLOC_DISTS
+#ifdef QTHREAD_HAVE_HWLOC_DISTS
                 if (matrix) {
                     sheps[i].shep_dists[j] = matrix->latency[node_to_NUMAnode[sheps[i].node] + matrix->nbobjs * node_to_NUMAnode[sheps[j].node]] * 10;
                     qthread_debug(AFFINITY_DETAILS, "distance from %i(%i) to %i(%i) is %i\n",
@@ -708,10 +625,10 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                     sheps[i].shep_dists[j] = 10;
                     qthread_debug(AFFINITY_DETAILS, "pretending distance from %i to %i is %i\n", (int)i, (int)j, (int)(sheps[i].shep_dists[j]));
                 }
-# else          /* ifdef QTHREAD_HAVE_HWLOC_DISTS */
+#else          /* ifdef QTHREAD_HAVE_HWLOC_DISTS */
                 sheps[i].shep_dists[j] = 10;
                 qthread_debug(AFFINITY_DETAILS, "pretending distance from %i to %i is %i\n", (int)i, (int)j, (int)(sheps[i].shep_dists[j]));
-# endif         /* ifdef QTHREAD_HAVE_HWLOC_DISTS */
+#endif         /* ifdef QTHREAD_HAVE_HWLOC_DISTS */
                 sheps[i].sorted_sheplist[k++] = j;
             }
         }
@@ -719,83 +636,6 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
             sort_sheps(sheps[i].shep_dists, sheps[i].sorted_sheplist, nshepherds);
         }
     }
-#else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-      /* Find the number of bigger-than-PU objects in the CPU set */
-    assert(hwloc_get_nbobjs_inside_cpuset_by_type
-               (topology, allowed_cpuset, HWLOC_OBJ_PU) >= 1);
-    size_t *cpus_left_per_obj;  // handle heterogeneous core counts
-    int     over_subscribing = 0;
-    shep_depth = hwloc_get_type_depth(topology, HWLOC_OBJ_PU);
-    do {
-        qthread_debug(AFFINITY_DETAILS, "#objs at shep_depth %i is: %i\n",
-                      shep_depth,
-                      hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth));
-        if (hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth) <= nshepherds) {
-            // shep_depth++;
-            break;
-        } else {
-            shep_depth--;
-        }
-    } while (1);
-    qthread_debug(AFFINITY_BEHAVIOR, "top shep_depth is %i\n", shep_depth);
-    num_extant_objs = hwloc_get_nbobjs_inside_cpuset_by_depth(topology,
-                                                              allowed_cpuset,
-                                                              shep_depth);
-    /* calloc avoids an explicit memset */
-    cpus_left_per_obj = calloc(num_extant_objs, sizeof(size_t));
-    /* Count how many PUs are in each obj */
-    for (size_t i = 0; i < num_extant_objs; ++i) {
-        hwloc_obj_t obj =
-            hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset,
-                                                 shep_depth, i);
-        /* count how many PUs in this obj */
-        cpus_left_per_obj[i] = hwloc_get_nbobjs_inside_cpuset_by_type(topology,
-                                                                      obj->allowed_cpuset,
-                                                                      HWLOC_OBJ_PU);
-        qthread_debug(AFFINITY_DETAILS, "count[%i] = %i\n", (int)i, (int)cpus_left_per_obj[i]);
-    }
-    /* assign nodes by iterating over cpus_left_per_node array (which is of
-     * size num_extant_nodes rather than of size nodes_i_can_use) */
-    unsigned int obj = 0;
-    for (size_t i = 0; i < nshepherds; ++i) {
-        switch (over_subscribing) {
-            case 0:
-            {
-                unsigned int count = 0;
-                while (count < num_extant_objs && cpus_left_per_obj[obj] == 0) {
-                    obj++;
-                    obj *= (obj < num_extant_objs);
-                    count++;
-                }
-                if (count < num_extant_objs) {
-                    cpus_left_per_obj[obj]--;
-                    break;
-                }
-            }
-                over_subscribing = 1;
-        }
-        qthread_debug(AFFINITY_DETAILS, "setting shep %i to numa obj %i\n", (int)i,
-                      (int)obj);
-        sheps[i].node = obj;
-        obj++;
-        obj *= (obj < num_extant_objs);
-    }
-    FREE(cpus_left_per_obj, num_extant_objs * sizeof(size_t));
-    for (size_t i = 0; i < nshepherds; ++i) {
-        sheps[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
-        assert(sheps[i].sorted_sheplist);
-        sheps[i].shep_dists = calloc(nshepherds, sizeof(unsigned int));
-        for (size_t j = 0, k = 0; j < nshepherds; ++j) {
-            if (j != i) {
-                sheps[i].shep_dists[j]        = 10;
-                sheps[i].sorted_sheplist[k++] = j;
-            }
-        }
-        if (nshepherds > 1) {
-            sort_sheps(sheps[i].shep_dists, sheps[i].sorted_sheplist, nshepherds);
-        }
-    }
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
        /* there does not seem to be a way to extract distances... <sigh> */
     return QTHREAD_SUCCESS;
 }                                      /*}}} */

@@ -38,12 +38,10 @@ typedef struct qlib_s {
 #ifdef QTHREAD_MUTEX_INCREMENT
     QTHREAD_FASTLOCK_TYPE nshepherds_active_lock;
 #endif
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     aligned_t             nworkers_active;
 # ifdef QTHREAD_MUTEX_INCREMENT
     QTHREAD_FASTLOCK_TYPE nworkers_active_lock;
 # endif
-#endif
     unsigned int               nworkerspershep;
     struct qthread_shepherd_s *shepherds;
     qt_threadqueue_t         **threadqueues;

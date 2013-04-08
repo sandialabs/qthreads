@@ -91,12 +91,10 @@ libqthread_la_SOURCES += \
 	threadqueues/@with_scheduler@_threadqueues.c \
 	sincs/@with_sinc@.c \
 	affinity/@qthread_topo@.c \
-	futurelib.c
+	futurelib.c \
+	touch.c
 if COMPILE_SPAWNCACHE
 libqthread_la_SOURCES += spawncache.c
-endif
-if QTHREAD_MULTITHREADED_SHEPHERDS
-libqthread_la_SOURCES += touch.c
 endif
 if COMPILE_COMPAT_ATOMIC
 libqthread_la_SOURCES += compat_atomics.c

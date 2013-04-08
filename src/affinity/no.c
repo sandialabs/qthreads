@@ -63,15 +63,8 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
     return 1;
 }                                      /*}}} */
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 void INTERNAL qt_affinity_set(qthread_worker_t *me, unsigned int Q_UNUSED(nw))
 {}
-
-#else
-void INTERNAL qt_affinity_set(qthread_shepherd_t *me, unsigned int Q_UNUSED(nw))
-{}
-
-#endif
 
 qthread_worker_id_t INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */

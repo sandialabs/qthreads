@@ -30,8 +30,6 @@ typedef struct qthread_shepherd_s qthread_shepherd_t;
 
 #define QTHREAD_NO_NODE ((unsigned int)(-1))
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-
 # define STEAL_BUFFER_LENGTH 128
 
 struct qthread_worker_s {
@@ -49,15 +47,11 @@ struct qthread_worker_s {
 };
 typedef struct qthread_worker_s qthread_worker_t;
 
-#endif // ifdef QTHREAD_MULTITHREADED_SHEPHERDS
-
 /* The Shepherd Struct */
 struct qthread_shepherd_s {
     pthread_t             shepherd;
     qthread_shepherd_id_t shepherd_id;  /* whoami */
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t     *workers;  // dymanic length qlib->nworkerspershep
-#endif
     qthread_t            *current;
     qt_threadqueue_t     *ready;
     /* round robin scheduler - can probably be smarter */
@@ -68,20 +62,14 @@ struct qthread_shepherd_s {
 #ifdef QTHREAD_HAVE_LGRP
     unsigned int          lgrp;
 #endif
-#ifndef QTHREAD_MULTITHREADED_SHEPHERDS                       // needs to be "per pthread"
-    uintptr_t              hazard_ptrs[HAZARD_PTRS_PER_SHEP]; /* hazard pointers (see http://portal.acm.org/citation.cfm?id=987524.987595) */
-    hazard_freelist_t      hazard_free_list;
-#endif
     unsigned int          *shep_dists;
     qthread_shepherd_id_t *sorted_sheplist;
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     unsigned int           stealing; /* True when a worker is in the steal (attempt) process OR if stealing disabled*/
-# ifdef QTHREAD_OMP_AFFINITY
+#ifdef QTHREAD_OMP_AFFINITY
     unsigned int           stealing_mode; /* Specifies when a shepherd may steal */
-# endif
-# ifdef QTHREAD_RCRTOOL
+#endif
+#ifdef QTHREAD_RCRTOOL
     volatile unsigned int active_workers;
-# endif
 #endif
 #ifdef STEAL_PROFILE // should give mechanism to make steal profiling optional
     size_t steal_called;
@@ -132,25 +120,18 @@ extern TLS_DECL(qthread_shepherd_t *, shepherd_structs);
 
 static QINLINE qthread_shepherd_t *qthread_internal_getshep(void)
 {
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t *w = (qthread_worker_t *)TLS_GET(shepherd_structs);
     if (w == NULL) {
         return NULL;
     } else {
         return w->shepherd;
     }
-#else
-    return (qthread_shepherd_t *)TLS_GET(shepherd_structs);
-#endif
 }
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 static QINLINE qthread_worker_t *qthread_internal_getworker(void)
 {
     return (qthread_worker_t *)TLS_GET(shepherd_structs);
 }
-
-#endif
 
 unsigned int INTERNAL qthread_internal_shep_to_node(const qthread_shepherd_id_t shep);
 qthread_shepherd_t INTERNAL *qthread_find_active_shepherd(qthread_shepherd_id_t *l,

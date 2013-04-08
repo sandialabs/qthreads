@@ -137,13 +137,7 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
 {                                      /*{{{ */
     qthread_shepherd_id_t guess = 1;
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     guess = lgrp_walk(lgrp_root(lgrp_cookie), NULL, NULL, 0);
-#else
-    guess =
-        lgrp_cpus(lgrp_cookie, lgrp_root(lgrp_cookie), NULL, 0,
-                  LGRP_CONTENT_ALL);
-#endif
     if (guess <= 0) {
         guess = 1;
     }
@@ -151,7 +145,6 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
     return guess;
 }                                      /*}}} */
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 void INTERNAL qt_affinity_set(qthread_worker_t *me, unsigned int Q_UNUSED(nw))
 {                                      /*{{{ */
     /* if this seems wrong, first answer: why should workers have more than socket affinity? */
@@ -163,16 +156,6 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me, unsigned int Q_UNUSED(nw))
         perror("lgrp_affinity_set");
     }
 }                                      /*}}} */
-
-#else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-void INTERNAL qt_affinity_set(qthread_shepherd_t *me, unsigned int Q_UNUSED(nw))
-{                                      /*{{{ */
-    if (lgrp_affinity_set(P_LWPID, P_MYID, me->lgrp, LGRP_AFF_STRONG) != 0) {
-        perror("lgrp_affinity_set");
-    }
-}                                      /*}}} */
-
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 
 qthread_worker_id_t INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */

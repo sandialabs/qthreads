@@ -31,18 +31,11 @@ char RCRAppName[RCR_APP_NAME_MAX_SIZE];
 ShepWorkerInfo swinfo;
 
 void *rcrtoolDaemon(void* arg) {
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t   *me_worker = (qthread_worker_t *)(swinfo.worker);
     qthread_shepherd_t *me        = (qthread_shepherd_t *)me_worker->shepherd;
     if (swinfo.qaffinity && (me->node != -1)) {
       qt_affinity_set(me_worker,swinfo.nworkerspershep);
     }
-#else
-    qthread_shepherd_t *me = (qthread_shepherd_t *)arg;
-    if (swinfo.qaffinity && (me->node != -1)) {
-      qt_affinity_set(me,swinfo.nworkerspershep);
-    }
-#endif
     doWork(swinfo.nshepherds, swinfo.nworkerspershep);
     return 0;
 }

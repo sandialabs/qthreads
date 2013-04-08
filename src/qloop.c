@@ -456,9 +456,7 @@ static void qt_loop_step_inner(const size_t         start,
     if ((steps * stride) + start < stop) {
         steps++;
     }
-# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_steal_disable();
-# endif
     aligned_t rootNum = qthread_barrier_id(); // what thread is the root of the tree?
 
 # ifdef QTHREAD_RCRTOOL
@@ -525,9 +523,7 @@ static void qt_loop_step_inner(const size_t         start,
     }
 
     qt_sinc_wait(my_sinc, NULL);
-# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_steal_enable();
-# endif
     FREE(qwa, sizeof(struct qloop_step_wrapper_args) * steps);
     qt_sinc_destroy(my_sinc);
     qt_barrier_destroy(barrier); // free internal barrier allocations
@@ -2080,11 +2076,7 @@ qqloop_step_handle_t *qt_loop_rose_queue_create(int64_t start,
     qqloop_step_handle_t *ret;
     int                   array_size = 0;
 
-# ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     array_size = qthread_num_workers();
-# else
-    array_size = qthread_num_shepherds();
-# endif
     if (poolUninit) {
         int malloc_size = sizeof(qqloop_step_handle_t) +   // base size
                           array_size * sizeof(aligned_t) + // static iteration array size

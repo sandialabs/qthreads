@@ -32,7 +32,7 @@ void API_FUNC qthread_pack_workerid(const qthread_worker_id_t w,
 int API_FUNC qthread_disable_worker(const qthread_worker_id_t w)
 {   /*{{{*/
     assert(qthread_library_initialized);
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+
     unsigned int shep   = w % qlib->nshepherds;
     unsigned int worker = w / qlib->nshepherds;
 
@@ -57,16 +57,12 @@ int API_FUNC qthread_disable_worker(const qthread_worker_id_t w)
     if (worker == 0) { qthread_disable_shepherd(shep); }
 
     return QTHREAD_SUCCESS;
-
-#else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-    return qthread_disable_shepherd(w);
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 }   /*}}}*/
 
 void API_FUNC qthread_enable_worker(const qthread_worker_id_t w)
 {                      /*{{{ */
     assert(qthread_library_initialized);
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+
     unsigned int shep   = w % qlib->nshepherds;
     unsigned int worker = w / qlib->nshepherds;
 
@@ -78,49 +74,30 @@ void API_FUNC qthread_enable_worker(const qthread_worker_id_t w)
         qthread_internal_incr(&(qlib->nworkers_active), &(qlib->nworkers_active_lock), 1);
         (void)QT_CAS(qlib->shepherds[shep].workers[worker].active, 0, 1);
     }
-#else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-    qthread_enable_shepherd(w);
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 }                      /*}}} */
 
 qthread_worker_id_t API_FUNC qthread_worker(qthread_shepherd_id_t *shepherd_id)
 {                                      /*{{{ */
     assert(qthread_library_initialized);
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+
     qthread_worker_t *worker = (qthread_worker_t *)TLS_GET(shepherd_structs);
 
     if((shepherd_id != NULL) && (worker != NULL)) {
         *shepherd_id = worker->shepherd->shepherd_id;
     }
     return worker ? (worker->packed_worker_id) : NO_WORKER;
-
-#else
-    qthread_shepherd_id_t id = qthread_shep();
-    if (shepherd_id != NULL) {
-        *shepherd_id = id;
-    }
-    return id;
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 }                                      /*}}} */
 
 qthread_worker_id_t API_FUNC qthread_worker_unique(qthread_shepherd_id_t *shepherd_id)
 {                     /*{{{ */
     assert(qthread_library_initialized);
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
+
     qthread_worker_t *worker = (qthread_worker_t *)TLS_GET(shepherd_structs);
 
     if((shepherd_id != NULL) && (worker != NULL)) {
         *shepherd_id = worker->shepherd->shepherd_id;
     }
     return worker ? (worker->unique_id) : NO_WORKER;
-
-#else
-    qthread_shepherd_id_t id = qthread_shep();
-    if (shepherd_id != NULL) {
-        *shepherd_id = id;
-    }
-    return id;
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
 }                      /*}}} */
 
 /* returns the number of workers actively scheduling work */

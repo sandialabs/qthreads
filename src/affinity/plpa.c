@@ -59,7 +59,6 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
     return nshepherds;
 }                                      /*}}} */
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
 void INTERNAL qt_affinity_set(qthread_worker_t *me, unsigned int Q_UNUSED(nw))
 {                                      /*{{{ */
     plpa_cpu_set_t *cpuset =
@@ -74,23 +73,6 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me, unsigned int Q_UNUSED(nw))
     FREE(cpuset, sizeof(plpa_cpu_set_t));
 }                                      /*}}} */
 
-#else /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-void INTERNAL qt_affinity_set(qthread_shepherd_t *me, unsigned int Q_UNUSED(nw))
-{                                      /*{{{ */
-    plpa_cpu_set_t *cpuset =
-        (plpa_cpu_set_t *)MALLOC(sizeof(plpa_cpu_set_t));
-
-    PLPA_CPU_ZERO(cpuset);
-    PLPA_CPU_SET(me->node, cpuset);
-    if ((plpa_sched_setaffinity(0, sizeof(plpa_cpu_set_t), cpuset) < 0) &&
-        (errno != EINVAL)) {
-        perror("plpa setaffinity");
-    }
-    FREE(cpuset, sizeof(plpa_cpu_set_t));
-}                                      /*}}} */
-
-#endif /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-
 qthread_worker_id_t INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
 {                                      /*{{{ */
     return 1;
@@ -100,11 +82,7 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                                   qthread_shepherd_id_t nshepherds)
 {   /*{{{*/
     for (size_t i = 0; i < nshepherds; ++i) {
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
         sheps[i].node = i * qlib->nworkerspershep;
-#else
-        sheps[i].node = i;
-#endif
         sheps[i].shep_dists      = calloc(nshepherds, sizeof(unsigned int));
         sheps[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
         for (size_t j = 0, k = 0; j < nshepherds; ++j) {

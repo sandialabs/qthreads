@@ -40,14 +40,9 @@ static filter_code eureka_filter(qthread_t *t)
 
 static void eureka(void)
 {   /*{{{*/
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t   *w = qthread_internal_getworker();
     qthread_shepherd_t *s = w->shepherd;
     qthread_t          *t = w->current;
-#else
-    qthread_shepherd_t *s = qthread_internal_getshep();
-    qthread_t          *t = s->current;
-#endif
 
     if (t) {
         if (t->team == eureka_ptr) {
@@ -67,15 +62,11 @@ static void eureka(void)
             while (tmp == eureka_out_barrier) SPINLOCK_BODY();
         }
     }
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     /* 5: worker 0 filters the work queue */
     if (w->worker_id == 0) {
         /* filter work queue! */
         qt_threadqueue_filter(s->ready, eureka_filter);
     }
-#else
-    qt_threadqueue_filter(s->ready, eureka_filter);
-#endif
 #ifdef QTHREAD_USE_SPAWNCACHE
     /* 5b: filter the spawncache! */
     qt_spawncache_filter(eureka_filter);
@@ -117,14 +108,9 @@ static void hup_handler(int sig)
     switch(sig) {
         case QT_ASSASSINATE_SIGNAL:
         {
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
             qthread_worker_t   *w = qthread_internal_getworker();
             qthread_shepherd_t *s = w->shepherd;
             qthread_t          *t = w->current;
-#else
-            qthread_shepherd_t *s = qthread_internal_getshep();
-            qthread_t          *t = s->current;
-#endif
 
             tassert(t);
             tassert(t->rdata);
@@ -232,24 +218,14 @@ void API_FUNC qt_team_eureka(void)
     qthread_t *self     = qthread_internal_self();
     qt_team_t *my_team;
 
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qthread_worker_t *wkr = qthread_internal_getworker();
-#else
-    qthread_shepherd_t *my_shep = qthread_internal_getshep();
-#endif
 
     assert(qthread_library_initialized);
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     qassert_retvoid(wkr != NULL);
-#endif
     qassert_retvoid(self && self->team);
     my_team = self->team;
     /* calling a eureka from outside qthreads makes no sense */
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     my_wkrid = wkr->unique_id;
-#else
-    my_wkrid = self->rdata->shepherd_ptr->shepherd_id;
-#endif
     /* 1: race to see who wins the eureka */
     // qthread_debug(0, "trying to win the eureka contest in my team...\n");
     do {
@@ -275,7 +251,6 @@ void API_FUNC qt_team_eureka(void)
     qthread_shepherd_t *sheps       = qlib->shepherds;
     int                 signalcount = 0;
     for (qthread_shepherd_id_t shep = 0; shep < qlib->nshepherds; shep++) {
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
         qthread_worker_t *wkrs = sheps[shep].workers;
         for (unsigned int wkrid = 0; wkrid < qlib->nworkerspershep; wkrid++) {
             int ret;
@@ -288,17 +263,6 @@ void API_FUNC qt_team_eureka(void)
                 QTHREAD_TRAP(); // cannot be abort, because we're called from a signal handler, and abort makes things go WEIRD
             }
         }
-#else   /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
-        if (&qlib->shepherds[shep] == my_shep) {
-            continue;
-        }
-        signalcount++;
-        int ret = pthread_kill(qlib->shepherds[shep].shepherd, QT_EUREKA_SIGNAL);
-        if ((ret != 0) && (ret != ESRCH)) {
-            qthread_debug(ALWAYS_OUTPUT, "pthread_kill (shep:%i) failed: %i:%s\n", (int)shep, ret, strerror(ret));
-            QTHREAD_TRAP(); // cannot be abort, because we're called from a signal handler, and abort makes things go WEIRD
-        }
-#endif  /* ifdef QTHREAD_MULTITHREADED_SHEPHERDS */
     }
     tassert(signalcount == (qlib->nshepherds * qlib->nworkerspershep) - 1);
     /* 4: entry barrier */
@@ -315,14 +279,10 @@ void API_FUNC qt_team_eureka(void)
         }
     }
     /* 5: worker 0 filters the work queue */
-#ifdef QTHREAD_MULTITHREADED_SHEPHERDS
     if (wkr->worker_id == 0) {
         /* filter work queue! */
         qt_threadqueue_filter(self->rdata->shepherd_ptr->ready, eureka_filter);
     }
-#else
-    qt_threadqueue_filter(self->rdata->shepherd_ptr->ready, eureka_filter);
-#endif
 #ifdef QTHREAD_USE_SPAWNCACHE
     /* 5b: filter the spawncache! */
     qt_spawncache_filter(eureka_filter);
