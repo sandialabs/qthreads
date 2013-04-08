@@ -1256,11 +1256,10 @@ void omp_set_num_threads (
     // need to reset the barrier size and the first arrival size (if larger or smaller)
     qtar_resize(qt_num_threads_requested);
 
-    //    if (sinc_barrier != 0) qt_sinc_barrier_change(sinc_barrier,qt_num_threads_requested);
-
-    if (qt_parallel_region()) qt_thread_barrier_resize(qt_num_threads_requested);
-    qt_barrier_resize(qt_thread_barrier(), qt_num_threads_requested);
-
+    if (qt_parallel_region()){
+      qt_thread_barrier_resize(qt_num_threads_requested);
+      qt_barrier_resize(qt_thread_barrier(), qt_num_threads_requested);
+    }
     qthread_worker_id_t newId = 0;
     for(i=0; i < qt_num_threads_requested; i++) {  // repack id's
       qthread_pack_workerid(i,newId++);
