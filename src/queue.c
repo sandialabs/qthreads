@@ -40,8 +40,8 @@ void INTERNAL qthread_queue_subsystem_init(void)
 
 #endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
 
-qthread_queue_t API_FUNC qthread_queue_create(uint8_t flags,
-                                              size_t  length)
+qthread_queue_t API_FUNC qthread_queue_create(uint8_t   flags,
+                                              aligned_t length)
 {
     qthread_queue_t q = calloc(1, sizeof(struct qthread_queue_s));
 
