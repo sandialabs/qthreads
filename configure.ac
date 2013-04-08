@@ -216,16 +216,15 @@ AC_ARG_ENABLE([profiling],
                                time that each shepherd spends idle. FEB
                                profiling counts the time spent waiting for FEB 
                                states. Steal profiling counts the amount of 
-                               workstealing that was done (only applies to 
-                               multithreaded shepherds). Cas_steal profiling
-                               counts how many CAS failures happen in nottingham
-                               steal operations. Threadc counts the number of
-                               threads spawned and the number of threads
-                               available to run concurrently. Sincs profiling
-                               reports sinc counter usage data. Teams profiling
-                               reports team counter usage data. SPR profiling
-                               reports communication information. Chapel
-                               profiling reports Chapel interface usage.])],
+                               workstealing that was done. Cas_steal profiling 
+                               counts how many CAS failures happen in 
+                               nottingham steal operations. Threadc counts the 
+                               number of threads spawned and the number of 
+                               threads available to run concurrently. Sincs 
+                               profiling reports sinc counter usage data. Teams
+                               profiling reports team counter usage data. SPR
+                               profiling reports communication information. 
+                               Chapel profiling reports Chapel interface usage.])],
               [for area in $(echo "$enable_profiling" | sed 's/,/ /g') ; do
                  case "$area" in
                    shepherd|shepherds)
@@ -375,11 +374,6 @@ AC_ARG_ENABLE([log-barrier],
 AC_ARG_ENABLE([omp_affinity],
               [AS_HELP_STRING([--enable-omp-affinity],
                               [Enable experimental OpenMP affinity extensions (part of ROSE interface). Under development])])
-
-dnl deprecated option in favor of --with-scheduler=<foo>
-AC_ARG_ENABLE([multithreaded-shepherds],
-              [],
-              [AC_MSG_WARN([--enable-multithreaded-shepherds deprecated in favor of --with-scheduler])])
 
 AC_ARG_ENABLE([third-party-benchmarks],
               [AS_HELP_STRING([--enable-third-party-benchmarks],
@@ -644,6 +638,9 @@ AS_IF([test "x$enable_internal_spinlock" != xno],
                       [have_pthread_spinlocks=no])])
 QTHREAD_PTHREAD_PROCESS_PRIVATE
 
+AC_SEARCH_LIBS([nanosleep],[rt],[],
+               [AC_MSG_ERROR([Cannot find nanosleep])])
+
 AS_IF([test "x$qthread_implementation" = "xsst"],
           [AC_DEFINE([QTHREAD_SST_PRIMITIVES],[1],[Define to use the SST primitives])
            enable_pooled_memory="no"
@@ -832,10 +829,7 @@ AS_IF([test "x$enable_rose_extensions" = xyes],
        AS_IF([test "x$with_scheduler" = "x"],
              [with_scheduler="sherwood"])
        AS_IF([test "x$with_scheduler" != "xsherwood" -a "x$with_scheduler" != "xnottingham" -a "x$with_scheduler" != "xloxley"],
-             [AC_MSG_ERROR([ROSE XOMP implementation *REQUIRES* the sherwood, nottingham, or loxley schedulers.])])
-       AS_IF([test "x$enable_multithreaded_shepherds" != "x" -a "x$enable_multithreaded_shepherds" != "xyes"],
-             [AC_MSG_ERROR([ROSE XOMP implementation *REQUIRES* multithreaded shepherds.])],
-             [enable_multithreaded_shepherds="yes"])])
+             [AC_MSG_ERROR([ROSE XOMP implementation *REQUIRES* the sherwood, nottingham, or loxley schedulers.])])])
 
 AS_IF([test "x$enable_hpctoolkit_support" = xyes],
       [AC_DEFINE([QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING], [1], [Support HPCToolkit stack unwinding])])
@@ -849,16 +843,10 @@ AS_IF([test "x$enable_aligncheck" = "xyes"],
 AS_IF([test "x$with_scheduler" != "x"],
       [case "$with_scheduler" in
          default)
-           AS_IF([test "x$enable_multithreaded_shepherds" = "xno"],
-                 [with_scheduler="nemesis"],
-                 [with_scheduler="sherwood"
-                  enable_multithreaded_shepherds="yes"])
+           [with_scheduler="sherwood"]
            ;;
-         sherwood|nemesis|lifo|mutexfifo|mtsfifo)
-           # all valid multithreaded options that require no additional configuration
-           AS_IF([test "x$enable_multithreaded_shepherds" != "xno"],
-                 [enable_multithreaded_shepherds=yes],
-                 [AC_MSG_ERROR([The $with_scheduler scheduler requires multithreaded shepherds.])])
+         sherwood|loxley|nemesis|lifo|mutexfifo|mtsfifo)
+           # all valid options that require no additional configuration
            ;;
          mdlifo)
            [with_scheduler=lifo]
@@ -866,35 +854,16 @@ AS_IF([test "x$with_scheduler" != "x"],
            AC_DEFINE([QTHREAD_LIFO_MULTI_DEQUEUER], [1], [Enable multiple-dequeuer support for lifo scheduler])
            ;;
          nottingham)
-           AS_IF([test "x$enable_multithreaded_shepherds" != "xno"],
-                 [enable_multithreaded_shepherds=yes],
-                 [AC_MSG_ERROR([The $with_scheduler scheduler requires multithreaded shepherds.])])
            AS_IF([test "x$qthread_cv_atomic_CAS128" != "xyes"],
                  [AC_MSG_ERROR([The $with_scheduler scheduler requires a 128-bit CAS.])])
-           ;;
-         loxley)
-           AS_IF([test "x$enable_multithreaded_shepherds" != "xno"],
-                 [enable_multithreaded_shepherds=yes],
-                 [AC_MSG_ERROR([The $with_scheduler scheduler requires multithreaded shepherds.])])
            ;;
          *)
            AC_MSG_ERROR([Unknown scheduler option])
            ;;
        esac
        EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --with-scheduler=$with_scheduler"],
-      [AS_IF([test "x$enable_multithreaded_shepherds" != "xno"],
-             [with_scheduler="sherwood"
-              enable_multithreaded_shepherds="yes"],
-             [with_scheduler="nemesis"])])
-
-AS_IF([test "x$enable_multithreaded_shepherds" = xyes],
-      [AC_SEARCH_LIBS([nanosleep],[rt],[],[AC_MSG_ERROR([Cannot find nanosleep])])
-       AS_IF([test "x$with_scheduler" = "x"],
-             [AC_MSG_ERROR([something broke in the configure script (hit the developer with a 2-by-four)])])
-       EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --with-scheduler=sherwood"
-       enable_multithreaded_shepherds="yes"],
-      [enable_multithreaded_shepherds="no"
-       EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --with-scheduler=nemesis"])
+      [with_scheduler="sherwood"])
+EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --with-scheduler=sherwood"
 
 AS_IF([test "x$enable_internal_spinlock" = "x"],
       [case "$qthread_cv_c_compiler_type" in
@@ -904,16 +873,13 @@ AS_IF([test "x$enable_internal_spinlock" = "x"],
        ;;
        esac])
 
+
 AS_IF([test "x$enable_hardware_atomics" = "xno"],
-      [AS_IF([test "x$enable_multithreaded_shepherds" = "xno"],
-             [AS_IF([test "x$with_scheduler" != "xmutexfifo"],
-                    [with_scheduler="mutexfifo"
-                     AC_MSG_WARN([Forcing scheduler to be mutexfifo, since hardware atomic support is lacking.])])],
-             [AS_IF([test "x$with_scheduler" != "xsherwood"],
-                    [with_scheduler="sherwood"
-                     AC_MSG_WARN([Forcing scheduler to be sherwood, since hardware atomic support is lacking.])])])
-       AS_IF([test "x$enable_lf_febs" = "xyes"],
-             [AC_MSG_ERROR([FEBs cannot use a lock-free hash table, because hardware atomic support is lacking.])])],
+      [AS_IF([test "x$with_scheduler" != "xsherwood"],
+             [with_scheduler="sherwood"
+              AC_MSG_WARN([Forcing scheduler to be sherwood, since hardware atomic support is lacking.])])
+       AS_IF([test "x$enable_lf_fegs" = "xyes"],
+             [AC_MSG_ERROR([FEBs cannot use a lock-free hash table, since hardware atomic support is lacking.])])],
       [AS_IF([test "x$enable_internal_spinlock" = x],
              [enable_internal_spinlock=yes])
        AS_IF([test "x$enable_internal_spinlock" = xyes],
@@ -1269,9 +1235,6 @@ echo    "          Profiling: $enable_profiling"
 echo    "   Debugging Output: $enable_debug"
 echo    "        Guard Pages: $enable_guard_pages"
 echo    ""
-AS_IF([test "x$enable_multithreaded_shepherds" = "xyes"],
-      [mts_string="multiworker shepherds"],
-      [mts_string="single worker shepherds"])
 AS_IF([test "x$enable_pooled_memory" = "xyes"],
       [pool_string="memory"],
       [pool_string=""])
@@ -1297,7 +1260,7 @@ AS_IF([test "x$using_mdlifo" = "xyes"],
       [with_scheduler=mdlifo],
       [])
 echo    "Speed:"
-echo    "          Scheduler: $with_scheduler ($mts_string)"
+echo    "          Scheduler: $with_scheduler"
 echo    "         Sinc Style: $with_sinc"
 echo    "      Barrier Style: $with_barrier"
 echo    "   Dictionary Style: $with_dict"
