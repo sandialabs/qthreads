@@ -872,20 +872,21 @@ int API_FUNC qthread_initialize(void)
     qlib = (qlib_t)MALLOC(sizeof(struct qlib_s));
     qassert_ret(qlib, QTHREAD_MALLOC_ERROR);
 
+    /* Collect common affinity environment variables */
     nshepherds = qt_internal_get_env_num("NUM_SHEPHERDS", 0, 0);
     nworkerspershep = qt_internal_get_env_num("NUM_WORKERS_PER_SHEPHERD", 0, 0);
-    if (nworkerspershep > 0) {
-        if (nshepherds == 0) {
-            print_warning("Number of shepherds not specified - number of workers may be ignored\n");
-        }
-    }
+    hw_par = qt_internal_get_env_num("HWPAR", nshepherds * nworkerspershep, 
+                                     nshepherds * nworkerspershep);
 
-    hw_par = qt_internal_get_env_num("HWPAR", nshepherds * nworkerspershep, nshepherds * nworkerspershep);
-    if ((hw_par != 0) && (nshepherds != 0) && (nworkerspershep != 0)) {
-        if (hw_par != (nshepherds * nworkerspershep)) {
-            print_warning("Shepherd/worker parallelism directly specified (%u/%u); ignoring HWPAR (%u)\n",
-                          (unsigned)nshepherds, (unsigned)nworkerspershep, (unsigned)hw_par);
-            hw_par = nshepherds * nworkerspershep;
+    /* Process common affinity environment variables */
+    if (0 < nworkerspershep && 0 == nshepherds) {
+        /* Late-bound shep count will have precedence over user-specified WPS */
+        print_warning("Number of shepherds not specified - number of workers may be ignored\n");
+    }
+    if (0 != hw_par && 0 != nshepherds && 0 != nworkerspershep) {
+        if ((nshepherds * nworkerspershep) != hw_par) {
+            /* Sheps and WPS counts have precedence over user-specified HWPAR */
+            print_warning("Shepherd/worker parallelism directly specified (%u/%u); ignoring HWPAR (%u)\n", (unsigned)nshepherds, (unsigned)nworkerspershep, (unsigned)hw_par);
         }
     }
 
@@ -901,6 +902,7 @@ int API_FUNC qthread_initialize(void)
     qt_affinity_init(&nshepherds, &nworkerspershep);
     qt_hash_initialize_subsystem();
 
+    /* Adjust logical topology */
     if (hw_par != 0) {
         if ((hw_par < nshepherds) || (hw_par == 1)) {
             nworkerspershep = 1;
