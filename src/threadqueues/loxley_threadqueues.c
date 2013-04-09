@@ -599,9 +599,12 @@ qthread_shepherd_id_t INTERNAL qt_threadqueue_choose_dest(qthread_shepherd_t * c
     }
 }
 
-qthread_worker_id_t INTERNAL qt_threadqueue_max_wps(void)
+size_t INTERNAL qt_threadqueue_policy(const enum threadqueue_policy policy)
 {
-    return -1;
+    switch (policy) {
+        default:
+            return THREADQUEUE_POLICY_UNSUPPORTED;
+    }
 }
 
 /* vim:set expandtab: */

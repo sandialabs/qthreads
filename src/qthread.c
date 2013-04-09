@@ -926,11 +926,11 @@ int API_FUNC qthread_initialize(void)
         print_status("Using %i Workers per Shepherd\n", (int)nworkerspershep);
     }
 
-    if (qt_threadqueue_max_wps() < nworkerspershep) {
-        print_error("attempted to use %i workers per sheperd, which exceeds maximum number (%d) for this scheduler.\n", (int)nworkerspershep, (int)qt_threadqueue_max_wps());
+    if (THREADQUEUE_POLICY_TRUE == qt_threadqueue_policy(SINGLE_WORKER) 
+        && 1 != nworkerspershep) {
+        print_error("attempted to use %i workers per sheperd with scheduler that only supports 1 worker per shepherd.\n", (int)nworkerspershep);
         exit(EXIT_FAILURE);
     }
-
 
     if ((nshepherds == 1) && (nworkerspershep == 1)) {
         need_sync = 0;

@@ -342,13 +342,14 @@ qthread_t INTERNAL * qt_threadqueue_dequeue_specific(qt_threadqueue_t * q,
     return NULL;
 }
 
-qthread_worker_id_t INTERNAL qt_threadqueue_max_wps(void)
+size_t INTERNAL qt_threadqueue_policy(const enum threadqueue_policy policy)
 {
-#ifdef QTHREAD_LIFO_MULTI_DEQUEUER
-    return -1;
-#else
-    return 1;
-#endif
+    switch (policy) {
+        case SINGLE_WORKER:
+            return THREADQUEUE_POLICY_TRUE;
+        default:
+            return THREADQUEUE_POLICY_UNSUPPORTED;
+    }
 }
 
 /* vim:set expandtab: */

@@ -54,5 +54,13 @@ void INTERNAL qthread_cas_steal_stat(void);
 /* Functions for work stealing functionality */
 qthread_t INTERNAL *qt_threadqueue_dequeue_specific(qt_threadqueue_t *q,
                                                     void             *value);
+enum threadqueue_policy {
+    THREADQUEUE_POLICY_FALSE = 0,
+    THREADQUEUE_POLICY_TRUE  = 1,
+    THREADQUEUE_POLICY_UNSUPPORTED = 2,
+    SINGLE_WORKER
+};
+size_t qt_threadqueue_policy(const enum threadqueue_policy policy);
+
 #endif // ifndef QT_THREADQUEUES_H
 /* vim:set expandtab: */
