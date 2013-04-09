@@ -27,6 +27,10 @@ typedef struct qthread_shepherd_s qthread_shepherd_t;
 # define MEM_AFFINITY_ONLY(x)
 #endif
 
+void INTERNAL qt_topology_init(qthread_shepherd_id_t * nshepherds,
+                               qthread_worker_id_t   * nworkerspershep,
+                               size_t                * hw_par);
+
 void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
                                qthread_worker_id_t   *nbworkers);
 void INTERNAL qt_affinity_set(qthread_worker_t * me,

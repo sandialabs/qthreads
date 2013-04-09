@@ -855,6 +855,8 @@ int API_FUNC qthread_initialize(void)
     size_t                hw_par          = 0;
     extern unsigned int QTHREAD_LOCKING_STRIPES;
 
+    print_info = qt_internal_get_env_num("INFO", 0, 1);
+
     QTHREAD_FASTLOCK_SETUP();
 #ifdef QTHREAD_DEBUG
     QTHREAD_FASTLOCK_INIT(output_lock);
@@ -872,24 +874,6 @@ int API_FUNC qthread_initialize(void)
     qlib = (qlib_t)MALLOC(sizeof(struct qlib_s));
     qassert_ret(qlib, QTHREAD_MALLOC_ERROR);
 
-    /* Collect common affinity environment variables */
-    nshepherds = qt_internal_get_env_num("NUM_SHEPHERDS", 0, 0);
-    nworkerspershep = qt_internal_get_env_num("NUM_WORKERS_PER_SHEPHERD", 0, 0);
-    hw_par = qt_internal_get_env_num("HWPAR", nshepherds * nworkerspershep, 
-                                     nshepherds * nworkerspershep);
-
-    /* Process common affinity environment variables */
-    if (0 < nworkerspershep && 0 == nshepherds) {
-        /* Late-bound shep count will have precedence over user-specified WPS */
-        print_warning("Number of shepherds not specified - number of workers may be ignored\n");
-    }
-    if (0 != hw_par && 0 != nshepherds && 0 != nworkerspershep) {
-        if ((nshepherds * nworkerspershep) != hw_par) {
-            /* Sheps and WPS counts have precedence over user-specified HWPAR */
-            print_warning("Shepherd/worker parallelism directly specified (%u/%u); ignoring HWPAR (%u)\n", (unsigned)nshepherds, (unsigned)nworkerspershep, (unsigned)hw_par);
-        }
-    }
-
 #if defined(QTHREAD_MUTEX_INCREMENT) || (QTHREAD_ASSEMBLY_ARCH == QTHREAD_POWERPC32)
     qlib->atomic_locks = MALLOC(sizeof(QTHREAD_FASTLOCK_TYPE) * QTHREAD_LOCKING_STRIPES);
     qassert_ret(qlib->atomic_locks, QTHREAD_MALLOC_ERROR);
@@ -899,40 +883,11 @@ int API_FUNC qthread_initialize(void)
 #endif
 
     qthread_internal_alignment_init();
-    qt_affinity_init(&nshepherds, &nworkerspershep);
     qt_hash_initialize_subsystem();
 
-    /* Adjust logical topology */
-    if (hw_par != 0) {
-        if ((hw_par < nshepherds) || (hw_par == 1)) {
-            nworkerspershep = 1;
-            nshepherds      = hw_par;
-        } else if (hw_par > (nshepherds * nworkerspershep)) {
-            nworkerspershep = (hw_par / nshepherds);
-            if ((hw_par % nshepherds) != 0) {
-                nworkerspershep++;
-            }
-        } else {
-            nworkerspershep = hw_par / nshepherds;
-            if (hw_par % nshepherds > 0) {
-                nworkerspershep++;
-            }
-        }
-    } else {
-        hw_par = nshepherds * nworkerspershep;
-    }
-
-    print_info = qt_internal_get_env_num("INFO", 0, 1);
-    if (print_info) {
-        print_status("Using %i Shepherds\n", (int)nshepherds);
-        print_status("Using %i Workers per Shepherd\n", (int)nworkerspershep);
-    }
-
-    if (THREADQUEUE_POLICY_TRUE == qt_threadqueue_policy(SINGLE_WORKER) 
-        && 1 != nworkerspershep) {
-        print_error("attempted to use %i workers per sheperd with scheduler that only supports 1 worker per shepherd.\n", (int)nworkerspershep);
-        exit(EXIT_FAILURE);
-    }
+    qt_topology_init(&nshepherds,
+                     &nworkerspershep,
+                     &hw_par);
 
     if ((nshepherds == 1) && (nworkerspershep == 1)) {
         need_sync = 0;

@@ -109,6 +109,7 @@ EXTRA_DIST += \
 			 barrier/array.c \
 			 barrier/log.c \
 			 barrier/sinc.c \
+			 affinity/common.c \
 			 affinity/hwloc.c \
 			 affinity/no.c \
 			 affinity/libnuma.c \
