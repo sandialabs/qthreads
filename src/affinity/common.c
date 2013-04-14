@@ -25,7 +25,7 @@ void INTERNAL qt_topology_init(qthread_shepherd_id_t * nshepherds,
     /* Collect common environment variables */
     num_sheps   = qt_internal_get_env_num("NUM_SHEPHERDS", 0, 0);
     num_wps     = qt_internal_get_env_num("NUM_WORKERS_PER_SHEPHERD", 0, 0);
-    num_workers = qt_internal_get_env_num("HWPAR", num_sheps * num_wps, 
+    num_workers = qt_internal_get_env_num("HWPAR", num_sheps * num_wps,
                                           num_sheps * num_wps);
 
     /* Process common environment variables */
@@ -34,32 +34,18 @@ void INTERNAL qt_topology_init(qthread_shepherd_id_t * nshepherds,
             num_wps = 1;
         } else if (1 < num_wps) {
             /* Disregard WPS hint for single-threaded schedulers. */
-            print_warning("Disregarding request for %d workers per shepherd specified, scheduler only supports 1.\n");
+            print_warning("Disregarding request for %d workers per shepherd specified, scheduler only supports 1.\n", num_wps);
             num_wps = 1;
         }
-    }
-    if (0 < num_wps && 0 == num_sheps) {
-        /* Late-bound shep count will have precedence over user-specified WPS */
-        print_warning("Number of shepherds not specified - number of workers may be ignored\n");
-    }
-    //if (0 != num_workers && 0 != num_sheps && 0 != num_wps) {
-    //    if ((num_sheps * num_wps) != num_workers) {
-    //        /* Sheps and WPS counts have precedence over user-specified HWPAR */
-    //        print_warning("Shepherd/worker parallelism directly specified (%u/%u); ignoring HWPAR (%u)\n", (unsigned)num_sheps, (unsigned)num_wps, (unsigned)num_workers);
-    //    }
-    //}
-
-    if (print_info) {
-        print_status("Using %i Shepherds\n", (int)num_sheps);
-        print_status("Using %i Workers per Shepherd\n", (int)num_wps);
+    } else {
+        if (0 < num_wps && 0 == num_sheps) {
+            /* Late-bound shep count will have precedence over user-specified
+             * WPS */
+            print_warning("Number of shepherds not specified - number of workers may be ignored\n");
+        }
     }
 
     qt_affinity_init(&num_sheps, &num_wps, &num_workers);
-
-    if (print_info) {
-        print_status("Using %i Shepherds\n", (int)num_sheps);
-        print_status("Using %i Workers per Shepherd\n", (int)num_wps);
-    }
 
     /* Adjust logical topology */
     if (num_workers != 0) {
@@ -86,9 +72,9 @@ void INTERNAL qt_topology_init(qthread_shepherd_id_t * nshepherds,
         print_status("Using %i Workers per Shepherd\n", (int)num_wps);
     }
 
-    if (THREADQUEUE_POLICY_TRUE == qt_threadqueue_policy(SINGLE_WORKER) 
+    if (THREADQUEUE_POLICY_TRUE == qt_threadqueue_policy(SINGLE_WORKER)
         && 1 != num_wps) {
-        print_error("attempted to use %i workers per sheperd with scheduler that only supports 1 worker per shepherd.\n", (int)num_wps);
+        print_error("attempted to use %i workers per shepherd with scheduler that only supports 1 worker per shepherd.\n", (int)num_wps);
         exit(EXIT_FAILURE);
     }
 

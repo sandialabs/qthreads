@@ -33,7 +33,8 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void);
 qthread_worker_id_t INTERNAL   guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds);
 
 void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
-                               qthread_worker_id_t   *nbworkers)
+                               qthread_worker_id_t   *nbworkers,
+                               size_t                *hw_par)
 {                                      /*{{{ */
     if (*nbshepherds == 0) {
         *nbshepherds = guess_num_shepherds();

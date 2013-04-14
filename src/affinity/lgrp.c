@@ -119,7 +119,8 @@ static void qt_affinity_internal_lgrp_teardown(void)
 }
 
 void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
-                               qthread_worker_id_t   *nbworkers)
+                               qthread_worker_id_t   *nbworkers,
+                               size_t                *hw_par)
 {                                      /*{{{ */
     lgrp_cookie                = lgrp_init(LGRP_VIEW_OS);
     mccoy_thread_home          = lgrp_home(P_LWPID, P_MYID);

@@ -24,7 +24,8 @@ static void qt_affinity_internal_numa_teardown(void)
 }
 
 void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
-                               qthread_worker_id_t   *nbworkers)
+                               qthread_worker_id_t   *nbworkers,
+                               size_t                *hw_par)
 {                                      /*{{{ */
     mccoy_bitmask  = MALLOC(sizeof(nodemask_t));
     *mccoy_bitmask = numa_get_run_node_mask();
