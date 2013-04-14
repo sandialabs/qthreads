@@ -99,7 +99,8 @@ static void qt_affinity_internal_hwloc_teardown(void)
 } /*}}}*/
 
 void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
-                               qthread_worker_id_t   *nbworkers)
+                               qthread_worker_id_t   *nbworkers,
+                               size_t                *hw_par)
 {                                      /*{{{ */
     qthread_debug(AFFINITY_CALLS, "nbshepherds:%p:%u nbworkers:%p:%u\n", nbshepherds, *nbshepherds, nbworkers, *nbworkers);
     if (qthread_cas(&initialized, 0, 1) == 0) {

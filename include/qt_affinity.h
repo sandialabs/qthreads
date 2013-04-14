@@ -32,7 +32,8 @@ void INTERNAL qt_topology_init(qthread_shepherd_id_t * nshepherds,
                                size_t                * hw_par);
 
 void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
-                               qthread_worker_id_t   *nbworkers);
+                               qthread_worker_id_t   *nbworkers,
+                               size_t                *hw_par);
 void INTERNAL qt_affinity_set(qthread_worker_t * me,
                               unsigned int nworkerspershep);
 int qt_affinity_gendists(qthread_shepherd_t   *sheps,
