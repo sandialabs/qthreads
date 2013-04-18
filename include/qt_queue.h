@@ -4,7 +4,7 @@
 #include "qt_qthread_t.h"
 #include "qt_visibility.h"
 
-/* This queue uses the NEMESIS lock-free queue protocol from
+/* This queue can use the NEMESIS lock-free queue protocol from
  * http://www.mcs.anl.gov/~buntinas/papers/ccgrid06-nemesis.pdf
  */
 

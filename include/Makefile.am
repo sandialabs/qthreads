@@ -43,12 +43,14 @@ noinst_HEADERS = \
 	qt_qthread_mgmt.h \
 	qt_qthread_struct.h \
 	qt_qthread_t.h \
+	qt_queue.h \
 	qt_shepherd_innards.h \
 	qt_spawn_macros.h \
 	qt_spawncache.h \
 	qt_subsystems.h \
 	qt_teams.h \
 	qt_threadqueues.h \
+	qt_threadqueue_scheduler.h \
 	qt_threadstate.h \
 	qt_touch.h \
 	qt_visibility.h \
