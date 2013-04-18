@@ -1,41 +1,51 @@
-These are ideas for things to do (in no particular order):
+# Release Candidate 1.10:
 
- 1. Periodic task system
+- Unify the multithreaded shepherd and single-threaded shepherd code paths.
 
- 2. Direct thread swapping, esp. for sinc's or other synchronization operations
-    where the next thread to execute is obvious.
+- Refactor topology and affinity support.
 
- 3. Qthreads with in/out vectors for cross-node workstealing
+- Make eureka support a configuration option; mark as _experimental_ until race conditions are cleaned up.
 
- 4. Cross-node synchronization (i.e. fill remote FEB)
+- Remove defunct SST support.
 
- 5. Hierarchical shepherds (need to rename shepherds)
+- Remove futurelib.
 
- 6. 128-bit syncvars
+Tentative release date: Sep 2013.
 
- 7. Change the futurelib spawner to use up existing concurrency limits before
-    blocking
+# General things to do (in no particular order):
 
- 8. Add a qthread_replace(me, func, arg, argsize) function to enable convenient
-    tail-recursion algorithms
+- Periodic task system
 
- 9. Make futurelib limits dynamic
+- Direct thread swapping, esp. for sinc's or other synchronization operations where the next thread to execute is obvious.
 
-10. Rework futures to use preallocated contexts
+- Qthreads with in/out vectors for cross-node workstealing
 
-11. Rework most qutil/qloop functions to deal with deactivated shepherds
+- Cross-node synchronization (i.e. fill remote FEB)
 
-12. Continuation passing (put a "spawn_to" in the precondition record)...
+- Hierarchical shepherds (need to rename shepherds)
 
-13. Coalesce system calls (is this a good idea?)
+- 128-bit syncvars
 
-14. Implement MAMA malloc?
+- Change the futurelib spawner to use up existing concurrency limits before blocking
 
-15. Use LockBox mutexes on BlueGene/P
+- Add a qthread_replace(me, func, arg, argsize) function to enable convenient tail-recursion algorithms
 
-Things to think about:
+- Make futurelib limits dynamic
 
- 1. Non-executing shepherds to allow for memory locales without associated
- 	computing resources.
+- Rework futures to use preallocated contexts
 
- 2. Port to XMT (is this even possible???)
+- Rework most qutil/qloop functions to deal with deactivated shepherds
+
+- Continuation passing (put a "spawn_to" in the precondition record)...
+
+- Coalesce system calls (is this a good idea?)
+
+- Implement MAMA malloc?
+
+- Use LockBox mutexes on BlueGene/P
+
+# General things to think about:
+
+- Non-executing shepherds to allow for memory locales without associated computing resources.
+
+- Port to XMT (is this even possible???)
