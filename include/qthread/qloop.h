@@ -4,7 +4,7 @@
 #include <qthread/qthread.h>
 
 Q_STARTCXX                             /* */
-/* for convenient arguments to qt_loop_future */
+/* for convenient arguments to qt_loop */
 typedef void (*qt_loop_f)(const size_t startat,
                           const size_t stopat,
                           void        *arg);
@@ -48,15 +48,6 @@ void qt_loop_step(size_t         start,
                   size_t         stride,
                   qt_loop_step_f func,
                   void          *argptr);
-void qt_loop_future(size_t    start,
-                    size_t    stop,
-                    qt_loop_f func,
-                    void     *argptr);
-void qt_loop_step_future(const size_t    start,
-                         const size_t    stop,
-                         const size_t    stride,
-                         const qt_loop_f func,
-                         void           *argptr);
 void qt_loop_balance(const size_t    start,
                      const size_t    stop,
                      const qt_loop_f func,
@@ -81,10 +72,6 @@ void qt_loop_balance_sinc(const size_t    start,
                           const size_t    stop,
                           const qt_loop_f func,
                           void           *argptr);
-void qt_loop_balance_future(const size_t    start,
-                            const size_t    stop,
-                            const qt_loop_f func,
-                            void           *argptr);
 void qt_loopaccum_balance(const size_t     start,
                           const size_t     stop,
                           const size_t     size,
@@ -113,13 +100,6 @@ void qt_loopaccum_balance_dc(const size_t     start,
                              const qt_loopr_f func,
                              void *restrict   argptr,
                              const qt_accum_f acc);
-void qt_loopaccum_balance_future(const size_t     start,
-                                 const size_t     stop,
-                                 const size_t     size,
-                                 void *restrict   out,
-                                 const qt_loopr_f func,
-                                 void *restrict   argptr,
-                                 const qt_accum_f acc);
 
 typedef enum {CHUNK, GUIDED, FACTORED, TIMED} qt_loop_queue_type;
 qqloop_handle_t *qt_loop_queue_create(const qt_loop_queue_type type,

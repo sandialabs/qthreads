@@ -168,13 +168,6 @@ extern void *qthread_step_fence2;
     __asm__ __volatile__ (# name ":")
 # endif /* ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING */
 
-static aligned_t qloop_step_wrapper_future(struct qloop_step_wrapper_args *const restrict arg)
-{                                      /*{{{ */
-    arg->func(arg->arg);
-
-    return 0;
-}                                      /*}}} */
-
 static aligned_t qloop_step_wrapper(struct qloop_step_wrapper_args *const restrict arg)
 {                                      /*{{{ */
 # ifdef QTHREAD_ALLOW_HPCTOOLKIT_STACK_UNWINDING
@@ -245,7 +238,7 @@ struct qt_loop_spawner_arg {
     void      *argptr;
     qt_loop_f  func;
     synctype_t sync_type;
-    int        future;
+    uint8_t    flags;
 };
 
 static aligned_t qt_loop_wrapper(struct qt_loop_wrapper_args *const restrict arg)
@@ -263,6 +256,8 @@ static aligned_t qt_loop_wrapper(struct qt_loop_wrapper_args *const restrict arg
     }
     return 0;
 } /*}}}*/
+
+#define QT_LOOP_SPAWNER_SIMPLE (1<<0)
 
 static void qt_loop_spawner(const size_t start,
                             const size_t stop,
@@ -314,11 +309,8 @@ static void qt_loop_spawner(const size_t start,
         case NO_SYNC:
             abort();
     }
-    switch (((struct qt_loop_spawner_arg *)args_)->future) {
-        case 1:
-            flags |= QTHREAD_SPAWN_FUTURE;
-            break;
-        case 2:
+    switch (((struct qt_loop_spawner_arg *)args_)->flags) {
+        case QT_LOOP_SPAWNER_SIMPLE:
             flags   |= QTHREAD_SPAWN_SIMPLE;
             yieldarg = 0;
             break;
@@ -375,14 +367,15 @@ static void qt_loop_inner(const size_t     start,
                           const size_t     stop,
                           const qt_loop_f  func,
                           void            *argptr,
-                          int              future,
+                          uint8_t          flags,
                           const synctype_t sync_type)
 {   /*{{{*/
-    struct qt_loop_spawner_arg a = { argptr, func, sync_type, future };
+    struct qt_loop_spawner_arg a = { argptr, func, sync_type, flags};
 
     assert(qthread_library_initialized);
+    flags &= ~(uint8_t)QT_LOOP_SPAWNER_SIMPLE;
 
-    qt_loop_balance_inner(start, stop, qt_loop_spawner, &a, (future == 2) ? 0 : future, sync_type);
+    qt_loop_balance_inner(start, stop, qt_loop_spawner, &a, flags, sync_type);
 } /*}}}*/
 
 void API_FUNC qt_loop(size_t    start,
@@ -433,21 +426,12 @@ void API_FUNC qt_loop_sinc(size_t    start,
     qt_loop_inner(start, stop, func, argptr, 0, SINC_T);
 }                                      /*}}} */
 
-void API_FUNC qt_loop_future(size_t    start,
-                             size_t    stop,
-                             qt_loop_f func,
-                             void     *argptr)
-{                                      /*{{{ */
-    qt_loop_inner(start, stop, func, argptr, 1, SYNCVAR_T);
-}                                      /*}}} */
-
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 static void qt_loop_step_inner(const size_t         start,
                                const size_t         stop,
                                const size_t         stride,
                                const qt_loop_step_f func,
-                               void                *argptr,
-                               int                  future)
+                               void                *argptr)
 {                                      /*{{{ */
     size_t                          i, threadct = 0;
     size_t                          steps = (stop - start) / stride;
@@ -494,27 +478,14 @@ static void qt_loop_step_inner(const size_t         start,
         threadct++;
     }
     threadct = 0;
-    if (future) {  // haven't change this yet - use new name - who uses? 4/4/11 AKP
-        fprintf(stderr, "The future is currently unimplemented in qt_loop_step_inner\n");
-        // the following code is the old implementation -- rets is now longer malloced
-        /*
-         * for (i = start; i < stop; i += stride) {
-         *  qthread_fork_syncvar_future_to((qthread_f)qloop_step_wrapper_future,
-         *                                 qwa + threadct,
-         *                                 rets + i,
-         *                                 (qthread_shepherd_id_t)(threadct % qthread_num_shepherds()));
-         *  threadct++;
-         * }
-         */
-    } else {
-        qthread_fork_copyargs_to((qthread_f)qloop_step_wrapper,
-                                 qwa,
-                                 0,
-                                 NULL,
-                                 qthread_barrier_id()
-                                 );
+    qthread_fork_copyargs_to((qthread_f)qloop_step_wrapper,
+                             qwa,
+                             0,
+                             NULL,
+                             qthread_barrier_id()
+                             );
 
-        qthread_yield(); // switch to generated thread
+    qthread_yield(); // switch to generated thread
         //        qloop_step_wrapper(&qwa[0]); // use this thread as the root and start the
         // others inside qloop_step_wrapper
         // saves a timeout in the following loop to
@@ -1512,9 +1483,9 @@ PARALLEL_FUNC(min, dmin, MIN, double, double)
  * Of course, in terms of giving each processor a contiguous chunk to work on,
  * that's what qt_loop_balance() does. The really interesting bit is to
  * "register" address ranges with the library, and then have it decide where to
- * spawn threads (& futures) based on the array you've handed it. HOWEVER, this
- * can't be quite so generic, unfortunately, because we don't know what memory
- * we're working with (the qt_loop_balance interface is too generic).
+ * spawn threads based on the array you've handed it. HOWEVER, this can't be
+ * quite so generic, unfortunately, because we don't know what memory we're
+ * working with (the qt_loop_balance interface is too generic).
  *
  * The more I think about that, though, the more I'm convinced that it's almost
  * impossible to make particularly generic, because an *arbitrary* function may
@@ -1681,7 +1652,6 @@ static qt_qsort_iprets_t qt_qsort_inner_partitioner(double      *array,
             args[i].length = length - megachunk_size + chunksize;
         }
         /* qt_qsort_partition(args+i); */
-        /* future_fork((qthread_f)qt_qsort_partition, args+i, rets+i); */
         qthread_fork_syncvar((qthread_f)qt_qsort_partition, args + i, rets + i);
     }
     for (i = 0; i < numthreads; i++) {
@@ -1766,12 +1736,10 @@ static aligned_t qt_qsort_inner(const struct qt_qsort_iargs *a)
                 na[1].array  = array + rightwall;
                 na[1].length = len - rightwall;
                 if (na[0].length > 0) {
-                    /* future_fork((qthread_f)qt_qsort_inner, na, rets); */
                     /* qt_qsort_inner(na); */
                     qthread_fork_syncvar((qthread_f)qt_qsort_inner, na, rets);
                 }
                 if ((na[1].length > 0) && (len > rightwall)) {
-                    /* future_fork((qthread_f)qt_qsort_inner, na+1, rets+1); */
                     /* qt_qsort_inner(na+1); */
                     qthread_fork_syncvar((qthread_f)qt_qsort_inner, na + 1, rets + 1);
                 }
@@ -1827,7 +1795,7 @@ void qt_parallel_step(const qt_loop_step_f func,
                       void                *argptr)
 {   /*{{{*/
     activeParallel = 1;
-    qt_loop_step_inner(0, threads, 1, func, argptr, 0);
+    qt_loop_step_inner(0, threads, 1, func, argptr);
     activeParallel = 0;
 } /*}}}*/
 
@@ -2016,7 +1984,7 @@ void qt_parallel_for(const qt_loop_step_f func,
                                                             // for loop we are wrapping
         activeParallel = 1;
         qt_loop_step_inner(0, qthread_num_shepherds(), 1,
-                           qt_naked_parallel_for, nakedArg, 0);
+                           qt_naked_parallel_for, nakedArg);
         activeParallel = 0;
     } else {
         qt_parallel_qfor(func, startat, stopat, incr, argptr);
