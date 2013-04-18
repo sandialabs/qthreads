@@ -1,7 +1,6 @@
 .TH qt_loop_balance 3 "APRIL 2011" libqthread "libqthread"
 .SH NAME
-.BR qt_loopaccum_balance ,
-.B qt_loopaccum_balance_future
+.B qt_loopaccum_balance
 \- a slightly intelligent implementation of a threaded loop that returns values
 .SH SYNOPSIS
 .B #include <qthread/qloop.h>
@@ -16,29 +15,13 @@
 .RI "const qt_loopr_f " func ", void *" argptr ,
 .ti +22
 .RI "const qt_accum_f " acc );
-.PP
-.I void
-.br
-.B qt_loopaccum_balance_future
-.RI "(const size_t " start ", const size_t " stop ,
-.ti +29
-.RI "const size_t " size ", void *" out ,
-.ti +29
-.RI "const qt_loopr_f " func ", void *" argptr ,
-.ti +29
-.RI "const qt_accum_f " acc );
 .SH DESCRIPTION
 This function provides a simple C implementation of a threaded accumulating
-loop. Rather than using a predictable number of threads, however, the number of
-threads generated depends directly upon the number of shepherds available. The
-difference between
-.BR qt_loopaccum_balance ()
-and
-.BR qt_loopaccum_balance_future ()
-is that the former uses qthreads and the latter uses futures. The idea with the
-accumulation is that they can be used to collect values from multiple threads.
-For example, if there is a running tally of outputs, or if the maximum return
-value must be retained, this is a way to do it.
+loop. Rather than using a pre-set number of qthreads, however, the number of
+qthreads generated depends directly upon the number of shepherds available. The
+idea with the accumulation is that they can be used to collect values from
+multiple threads. For example, if there is a running tally of outputs, or if
+the maximum return value must be retained, this is a way to do it.
 .PP
 These function can be thought of as akin to (but not replicating exactly) the
 following code:
@@ -64,10 +47,10 @@ ret);
 }
 .RE
 .PP
-One qthread (or future) is spawned for each shepherd. The set of values of
+One qthread is spawned for each shepherd. The set of values of
 .I i
 (iterations) is divided evenly among the shepherds, and each qthread
-(or future) is assigned a set of iterations to perform.
+ is assigned a set of iterations to perform.
 .PP
 The
 .I func
@@ -111,9 +94,7 @@ are determined by the library, and tell the function what range of
 .I i
 values (iterations) it is responsible for.
 .BR qt_loop_balance ()
-and
-.BR qt_loop_balance_future ()
-will not return until all of the qthreads (or futures) it spawned have exited.
+will not return until all of the qthreads it spawned have exited.
 .PP
 The
 .I acc
@@ -177,7 +158,7 @@ size_t length)
 .RS
 double ret;
 .br
-.B qt_loopaccum_balance_future
+.B qt_loopaccum_balance
 (0, length, sizeof(double),
 .ti +29
 &ret, qtds_worker, array,
@@ -189,7 +170,7 @@ return ret;
 }
 .PP
 There are two function arguments to the
-.BR qt_loopaccum_balance_future ()
+.BR qt_loopaccum_balance ()
 call,
 .I qtds_worker
 (as the
@@ -237,6 +218,4 @@ sum += (double *)array[i];
 }
 .SH SEE ALSO
 .BR qt_loop (3),
-.BR qt_loop_future (3),
-.BR qt_loop_balance (3),
-.BR qt_loop_balance_future (3)
+.BR qt_loop_balance (3)

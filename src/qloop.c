@@ -845,9 +845,6 @@ static QINLINE void qt_loopaccum_balance_inner(const size_t       start,
             abort();
     }
     switch (flags) {
-        case QT_LOOP_BALANCE_FUTURE:
-            spawn_flags |= QTHREAD_SPAWN_FUTURE;
-            break;
         case QT_LOOP_BALANCE_SIMPLE:
             spawn_flags |= QTHREAD_SPAWN_SIMPLE;
             break;
@@ -988,17 +985,6 @@ void API_FUNC qt_loopaccum_balance_dc(const size_t     start,
                                       const qt_accum_f acc)
 {                                      /*{{{ */
     qt_loopaccum_balance_inner(start, stop, size, out, func, argptr, acc, 0, DONECOUNT);
-}                                      /*}}} */
-
-void API_FUNC qt_loopaccum_balance_future(const size_t     start,
-                                          const size_t     stop,
-                                          const size_t     size,
-                                          void *restrict   out,
-                                          const qt_loopr_f func,
-                                          void *restrict   argptr,
-                                          const qt_accum_f acc)
-{                                      /*{{{ */
-    qt_loopaccum_balance_inner(start, stop, size, out, func, argptr, acc, QT_LOOP_BALANCE_FUTURE, DONECOUNT);
 }                                      /*}}} */
 
 /* Now, the easy option for qt_loop_balance() is... effective, but has a major

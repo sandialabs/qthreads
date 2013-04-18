@@ -91,7 +91,6 @@ man_MANS = \
 		   qt_loop_step.3 \
 		   qt_loop_step_future.3 \
 		   qt_loopaccum_balance.3 \
-		   qt_loopaccum_balance_future.3 \
 		   qt_poll.3 \
 		   qt_pread.3 \
 		   qt_pwrite.3 \
