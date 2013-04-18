@@ -6,8 +6,7 @@
 #include <stdarg.h>
 #include <string.h> /* for strncmp() */
 
-#ifndef SST
-# define CHECK_VERBOSE() do {                                        \
+#define CHECK_VERBOSE() do {                                         \
         const char *v = getenv("VERBOSE");                           \
         if (v == NULL) {                                             \
             verbose = !(getenv("MAKEFLAGS") && getenv("MAKELEVEL")); \
@@ -15,9 +14,6 @@
             verbose = strncmp(v, "0", 2);                            \
         }                                                            \
 } while (0)
-#else
-# define CHECK_VERBOSE()
-#endif
 
 #define NUMARG(var, name) do {                                     \
         char *str;                                                 \
@@ -79,11 +75,7 @@
         iprintf("]\n");                                                          \
 } while (0)
 
-#ifdef SST
-static int verbose = 1;
-#else
 static int verbose = 0;
-#endif
 
 #if defined(SILENT_ARGPARSING)
 # warning Silencing iprintf() output.

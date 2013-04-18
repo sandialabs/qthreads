@@ -323,14 +323,12 @@ int main(int   argc,
     assert(t);
     qtimer_start(t);
     qtimer_stop(t);
-#ifndef SST                            /* SST can do this blazingly fast */
     if (qtimer_secs(t) == 0) {
         fprintf(stderr, "qtimer_secs(t) reported zero length time.\n");
     } else if (qtimer_secs(t) < 0) {
         fprintf(stderr, "qtimer_secs(t) thinks time went backwards (%g).\n",
                 qtimer_secs(t));
     }
-#endif /* ifndef SST */
     iprintf("time to find self and assert it: %g secs\n", qtimer_secs(t));
 
     qtimer_start(t);

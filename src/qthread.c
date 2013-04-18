@@ -33,9 +33,6 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <errno.h>
-#ifdef SST
-# include <ppcPimCalls.h>
-#endif
 #include <signal.h>
 
 /******************************************************/
@@ -863,9 +860,6 @@ int API_FUNC qthread_initialize(void)
     QTHREAD_FASTLOCK_INIT(output_lock);
     {
         unsigned long dl = qt_internal_get_env_num("DEBUG_LEVEL", 0, 0);
-# ifdef SST
-        dl = 7;
-# endif
         debuglevel = (enum qthread_debug_levels)((1 << dl) - 1);
     }
 #endif /* ifdef QTHREAD_DEBUG */

@@ -33,15 +33,15 @@ typedef struct uint64_strip_s {
 #endif
 
 typedef struct qlib_s {
-    unsigned int          nshepherds;
-    aligned_t             nshepherds_active;
+    unsigned int               nshepherds;
+    aligned_t                  nshepherds_active;
 #ifdef QTHREAD_MUTEX_INCREMENT
-    QTHREAD_FASTLOCK_TYPE nshepherds_active_lock;
+    QTHREAD_FASTLOCK_TYPE      nshepherds_active_lock;
 #endif
-    aligned_t             nworkers_active;
-# ifdef QTHREAD_MUTEX_INCREMENT
-    QTHREAD_FASTLOCK_TYPE nworkers_active_lock;
-# endif
+    aligned_t                  nworkers_active;
+#ifdef QTHREAD_MUTEX_INCREMENT
+    QTHREAD_FASTLOCK_TYPE      nworkers_active_lock;
+#endif
     unsigned int               nworkerspershep;
     struct qthread_shepherd_s *shepherds;
     qt_threadqueue_t         **threadqueues;
@@ -122,19 +122,10 @@ typedef struct qlib_s {
     int max_c;
 } *qlib_t;
 
-#ifndef QTHREAD_SST_PRIMITIVES
 extern qlib_t qlib;
-#endif
 
 void INTERNAL qthread_exec(qthread_t    *t,
                            qt_context_t *c);
-
-#ifdef QTHREAD_SST_PRIMITIVES
-# define qthread_shepherd_count()                              PIM_readSpecial(PIM_CMD_LOC_COUNT)
-# define qthread_fork_syncvar_future_to(me, f, arg, ret, shep) qthread_fork_syncvar_to(f, arg, ret, shep)
-#else
-# define qthread_shepherd_count() (qlib->nshepherds)
-#endif // ifdef QTHREAD_SST_PRIMITIVES
 
 #ifdef QTHREAD_RCRTOOL
 /* allow environment variable to control whether dynamic thread count

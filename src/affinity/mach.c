@@ -68,7 +68,6 @@ qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
 
 void INTERNAL qt_affinity_set(qthread_worker_t *me, unsigned int Q_UNUSED(nw))
 {                                      /*{{{ */
-#ifndef SST
     mach_msg_type_number_t        Count = THREAD_AFFINITY_POLICY_COUNT;
     thread_affinity_policy_data_t mask[THREAD_AFFINITY_POLICY_COUNT];
 
@@ -82,7 +81,6 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me, unsigned int Q_UNUSED(nw))
             Count) != KERN_SUCCESS) {
         fprintf(stderr, "ERROR! Cannot SET affinity for some reason\n");
     }
-#endif /* ifndef SST */
 }                                      /*}}} */
 
 qthread_worker_id_t INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)

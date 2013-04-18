@@ -170,19 +170,3 @@ kernel. The tile-monitor command I use is this:
 	tile-monitor --net <tilera> --hvx ucache_hash=all --
 
 Good luck!
-
-************************************************
-NOTE FOR SST USERS
-make check doesn't work (surprise!)
-
-Also, here's the way you probably need to configure it (yes, it's convoluted
-and some of the settings might be autodetectable... but we're leaving this open
-for the glorious day when SST gets its own cross-platform compiling
-environment):
-
-	./configure --build=powerpc-apple-darwin8.11.0 \
-			    --host=powerpc-sst-darwin8.11.0 \
-				CC=gcc-3.3 CXX=g++-3.3 \
-				--enable-static --disable-shared \
-				--with-sst=/path/to/PIMTools \
-				--with-sst-std-libs=/path/to/allStatLibs

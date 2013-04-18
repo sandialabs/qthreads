@@ -253,14 +253,13 @@ int API_FUNC qthread_feb_status(const aligned_t *addr)
     if (qlib == NULL) {
         return 1;
     }
-#ifndef SST
     qthread_addrstat_t *m;
     int                 status  = 1; /* full */
     const int           lockbin = QTHREAD_CHOOSE_STRIPE2(addr);
 
     QALIGN(addr, alignedaddr);
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
-# ifdef LOCK_FREE_FEBS
+#ifdef LOCK_FREE_FEBS
     do {
         m = qt_hash_get(FEBs[lockbin], (void *)alignedaddr);
         if (!m) { break; }
@@ -276,7 +275,7 @@ int API_FUNC qthread_feb_status(const aligned_t *addr)
         QTHREAD_FASTLOCK_UNLOCK(&m->lock);
         break;
     } while (1);
-# else /* ifdef LOCK_FREE_FEBS */
+#else  /* ifdef LOCK_FREE_FEBS */
     qt_hash_lock(FEBs[lockbin]); {
         m = (qthread_addrstat_t *)qt_hash_get_locked(FEBs[lockbin],
                                                      (void *)alignedaddr);
@@ -287,14 +286,9 @@ int API_FUNC qthread_feb_status(const aligned_t *addr)
         }
     }
     qt_hash_unlock(FEBs[lockbin]);
-# endif /* ifdef LOCK_FREE_FEBS */
+#endif  /* ifdef LOCK_FREE_FEBS */
     qthread_debug(FEB_BEHAVIOR, "addr %p is %i\n", addr, status);
     return status;
-
-#else /* ifndef SST */
-    QALIGN(addr, alignedaddr);
-    return PIM_feb_is_full((void *)alignedaddr);
-#endif /* ifndef SST */
 }                      /*}}} */
 
 /* this function removes the FEB data structure for the address maddr from the
@@ -548,7 +542,6 @@ int API_FUNC qthread_empty(const aligned_t *dest)
 {                      /*{{{ */
     const aligned_t *alignedaddr;
 
-#ifndef SST
     qthread_addrstat_t *m;
     qt_hash             FEBbin;
     qthread_shepherd_t *shep = qthread_internal_getshep();
@@ -566,7 +559,7 @@ int API_FUNC qthread_empty(const aligned_t *dest)
 
         QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
     }
-# ifdef LOCK_FREE_FEBS
+#ifdef LOCK_FREE_FEBS
     do {
         m = qt_hash_get(FEBbin, (void *)alignedaddr);
         if (!m) {
@@ -599,7 +592,7 @@ int API_FUNC qthread_empty(const aligned_t *dest)
             break;
         }
     } while (1);
-# else /* ifdef LOCK_FREE_FEBS */
+#else  /* ifdef LOCK_FREE_FEBS */
     qt_hash_lock(FEBbin);
     {                      /* BEGIN CRITICAL SECTION */
         m = (qthread_addrstat_t *)qt_hash_get_locked(FEBbin, (void *)alignedaddr);
@@ -623,16 +616,12 @@ int API_FUNC qthread_empty(const aligned_t *dest)
         }
     }                      /* END CRITICAL SECTION */
     qt_hash_unlock(FEBbin);
-# endif /* ifdef LOCK_FREE_FEBS */
+#endif  /* ifdef LOCK_FREE_FEBS */
     if (m) {
         qthread_debug(FEB_BEHAVIOR, "dest=%p (tid=%i): waking waiters\n", dest, qthread_id());
         qthread_gotlock_empty(shep, m, (void *)alignedaddr);
     }
     qthread_debug(FEB_BEHAVIOR, "dest=%p (tid=%i): success\n", dest, qthread_id());
-#else /* ifndef SST */
-    QALIGN(dest, alignedaddr);
-    PIM_feb_empty((void *)alignedaddr);
-#endif /* ifndef SST */
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
@@ -643,7 +632,6 @@ int API_FUNC qthread_fill(const aligned_t *dest)
     if (qlib == NULL) {
         return QTHREAD_SUCCESS;
     }
-#ifndef SST
     qthread_addrstat_t *m;
     const int           lockbin = QTHREAD_CHOOSE_STRIPE2(dest);
     qthread_shepherd_t *shep    = qthread_internal_getshep();
@@ -657,7 +645,7 @@ int API_FUNC qthread_fill(const aligned_t *dest)
     QALIGN(dest, alignedaddr);
     /* lock hash */
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
-# ifdef LOCK_FREE_FEBS
+#ifdef LOCK_FREE_FEBS
     do {
         m = qt_hash_get(FEBs[lockbin], (void *)alignedaddr);
         if (!m) {
@@ -674,7 +662,7 @@ int API_FUNC qthread_fill(const aligned_t *dest)
         }
         break;
     } while (1);
-# else /* ifdef LOCK_FREE_FEBS */
+#else  /* ifdef LOCK_FREE_FEBS */
     qt_hash_lock(FEBs[lockbin]);
     {                      /* BEGIN CRITICAL SECTION */
         m = (qthread_addrstat_t *)qt_hash_get_locked(FEBs[lockbin], (void *)alignedaddr);
@@ -683,7 +671,7 @@ int API_FUNC qthread_fill(const aligned_t *dest)
         }
     }                              /* END CRITICAL SECTION */
     qt_hash_unlock(FEBs[lockbin]); /* unlock hash */
-# endif /* ifdef LOCK_FREE_FEBS */
+#endif  /* ifdef LOCK_FREE_FEBS */
     if (m) {
         /* if dest wasn't in the hash, it was already full. Since it was,
          * we need to fill it. */
@@ -691,10 +679,6 @@ int API_FUNC qthread_fill(const aligned_t *dest)
         qthread_gotlock_fill(shep, m, (void *)alignedaddr);
     }
     qthread_debug(FEB_DETAILS, "dest=%p (tid=%i): success\n", dest, qthread_id());
-#else /* ifndef SST */
-    QALIGN(dest, alignedaddr);
-    PIM_feb_fill((unsigned int *)alignedaddr);
-#endif /* ifndef SST */
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
@@ -709,7 +693,6 @@ int API_FUNC qthread_writeF(aligned_t *restrict       dest,
     aligned_t *alignedaddr;
 
     qthread_debug(FEB_CALLS, "dest=%p, src=%p\n", dest, src);
-#ifndef SST
     qthread_addrstat_t *m;
     const int           lockbin = QTHREAD_CHOOSE_STRIPE2(dest);
     qthread_shepherd_t *shep    = qthread_internal_getshep();
@@ -723,7 +706,7 @@ int API_FUNC qthread_writeF(aligned_t *restrict       dest,
     QALIGN(dest, alignedaddr);
     QTHREAD_FEB_UNIQUERECORD2(feb, dest, shep);
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
-# ifdef LOCK_FREE_FEBS
+#ifdef LOCK_FREE_FEBS
     do {
         qthread_addrstat_t *m2;
         m = qt_hash_get(FEBs[lockbin], (void *)alignedaddr);
@@ -742,7 +725,7 @@ got_m:
         }
         break;
     } while (1);
-# else /* ifdef LOCK_FREE_FEBS */
+#else  /* ifdef LOCK_FREE_FEBS */
     qt_hash_lock(FEBs[lockbin]); {    /* lock hash */
         m = (qthread_addrstat_t *)qt_hash_get_locked(FEBs[lockbin], (void *)alignedaddr);
         if (m) {
@@ -750,7 +733,7 @@ got_m:
         }
     }
     qt_hash_unlock(FEBs[lockbin]);    /* unlock hash */
-# endif /* ifdef LOCK_FREE_FEBS */
+#endif  /* ifdef LOCK_FREE_FEBS */
     /* we have the lock on m, so... */
     if (dest && (dest != src)) {
         memcpy(dest, src, sizeof(aligned_t));
@@ -759,10 +742,6 @@ got_m:
     if (m) {
         qthread_gotlock_fill(shep, m, alignedaddr);
     }
-#else /* ifndef SST */
-    QALIGN(dest, alignedaddr);
-    PIM_feb_empty((void *)alignedaddr);
-#endif /* ifndef SST */
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
@@ -783,7 +762,6 @@ int API_FUNC qthread_writeEF(aligned_t *restrict       dest,
 {                      /*{{{ */
     aligned_t *alignedaddr;
 
-#ifndef SST
     qthread_addrstat_t *m;
     qthread_addrres_t  *X       = NULL;
     const int           lockbin = QTHREAD_CHOOSE_STRIPE2(dest);
@@ -801,7 +779,7 @@ int API_FUNC qthread_writeEF(aligned_t *restrict       dest,
     QTHREAD_FEB_TIMER_START(febblock);
     QALIGN(dest, alignedaddr);
     QTHREAD_COUNT_THREADS_BINCOUNTER(febs, lockbin);
-# ifdef LOCK_FREE_FEBS
+#ifdef LOCK_FREE_FEBS
     do {
         m = qt_hash_get(FEBs[lockbin], (void *)alignedaddr);
 got_m:
@@ -843,7 +821,7 @@ got_m:
             break;
         }
     } while(1);
-# else /* ifdef LOCK_FREE_FEBS */
+#else  /* ifdef LOCK_FREE_FEBS */
     qt_hash_lock(FEBs[lockbin]);
     {
         m = (qthread_addrstat_t *)qt_hash_get_locked(FEBs[lockbin], (void *)alignedaddr);
@@ -858,7 +836,7 @@ got_m:
         QTHREAD_FASTLOCK_LOCK(&(m->lock));
     }
     qt_hash_unlock(FEBs[lockbin]);
-# endif /* ifdef LOCK_FREE_FEBS */
+#endif  /* ifdef LOCK_FREE_FEBS */
     assert(m);
     qthread_debug(FEB_DETAILS, "dest=%p, src=%p (tid=%i): data structure locked, m(%p)->full = %i\n", dest, src, me->thread_id, m, m->full);
     /* by this point m is locked */
@@ -891,12 +869,6 @@ got_m:
         qthread_gotlock_fill(me->rdata->shepherd_ptr, m, alignedaddr);
     }
     QTHREAD_FEB_TIMER_STOP(febblock, me);
-#else /* ifndef SST */
-    QALIGN(dest, alignedaddr);
-    while (PIM_feb_try_writeef(alignedaddr, src) == 1) {
-        qthread_yield(me);
-    }
-#endif /* ifndef SST */
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
@@ -912,7 +884,6 @@ int INTERNAL qthread_writeEF_nb(aligned_t *restrict       dest,
     aligned_t *alignedaddr;
 
     qthread_debug(FEB_CALLS, "dest=%p, src=%p\n", dest, src);
-#ifndef SST
     qthread_addrstat_t *m;
     const int           lockbin = QTHREAD_CHOOSE_STRIPE2(dest);
     qthread_t          *me      = qthread_internal_self();
@@ -965,12 +936,6 @@ int INTERNAL qthread_writeEF_nb(aligned_t *restrict       dest,
         qthread_debug(FEB_BEHAVIOR, "tid %u succeeded on %p=%p\n", me->thread_id, dest, src);
         qthread_gotlock_fill(me->rdata->shepherd_ptr, m, alignedaddr);
     }
-#else /* ifndef SST */
-    QALIGN(dest, alignedaddr);
-    while (PIM_feb_try_writeef(alignedaddr, src) == 1) {
-        return QTHREAD_OPFAIL;
-    }
-#endif /* ifndef SST */
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
@@ -990,7 +955,6 @@ int API_FUNC qthread_readFF(aligned_t *restrict       dest,
 {                      /*{{{ */
     const aligned_t *alignedaddr;
 
-#ifndef SST
     qthread_addrstat_t *m       = NULL;
     qthread_addrres_t  *X       = NULL;
     const int           lockbin = QTHREAD_CHOOSE_STRIPE2(src);
@@ -1068,12 +1032,6 @@ int API_FUNC qthread_readFF(aligned_t *restrict       dest,
         QTHREAD_FASTLOCK_UNLOCK(&m->lock);
     }
     QTHREAD_FEB_TIMER_STOP(febblock, me);
-#else /* ifndef SST */
-    QALIGN(src, alignedaddr);
-    while (PIM_feb_try_readff(dest, alignedaddr) == 1) {
-        qthread_yield(me);
-    }
-#endif /* ifndef SST */
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
@@ -1083,7 +1041,6 @@ int INTERNAL qthread_readFF_nb(aligned_t *restrict       dest,
     const aligned_t *alignedaddr;
 
     qthread_debug(FEB_CALLS, "dest=%p, src=%p\n", dest, src);
-#ifndef SST
     qthread_addrstat_t *m       = NULL;
     const int           lockbin = QTHREAD_CHOOSE_STRIPE2(src);
     qthread_t          *me      = qthread_internal_self();
@@ -1144,12 +1101,6 @@ got_m:
         qthread_debug(FEB_BEHAVIOR, "tid %u succeeded on %p=%p\n", me->thread_id, dest, src);
         QTHREAD_FASTLOCK_UNLOCK(&m->lock);
     }
-#else /* ifndef SST */
-    QALIGN(src, alignedaddr);
-    while (PIM_feb_try_readff(dest, alignedaddr) == 1) {
-        return QTHREAD_OPFAIL;
-    }
-#endif /* ifndef SST */
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
@@ -1164,7 +1115,6 @@ int API_FUNC qthread_readFE(aligned_t *restrict       dest,
 {                      /*{{{ */
     const aligned_t *alignedaddr;
 
-#ifndef SST
     qthread_addrstat_t *m;
     const int           lockbin = QTHREAD_CHOOSE_STRIPE2(src);
     qthread_t          *me      = qthread_internal_self();
@@ -1263,12 +1213,6 @@ got_m:
         qthread_gotlock_empty(me->rdata->shepherd_ptr, m, (void *)alignedaddr);
     }
     QTHREAD_FEB_TIMER_STOP(febblock, me);
-#else /* ifndef SST */
-    QALIGN(src, alignedaddr);
-    while (PIM_feb_try_readfe(dest, alignedaddr) == 1) {
-        qthread_yield(me);
-    }
-#endif /* ifndef SST */
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
@@ -1279,7 +1223,6 @@ int INTERNAL qthread_readFE_nb(aligned_t *restrict       dest,
     const aligned_t *alignedaddr;
 
     qthread_debug(FEB_CALLS, "dest=%p, src=%p\n", dest, src);
-#ifndef SST
     qthread_addrstat_t *m;
     const int           lockbin = QTHREAD_CHOOSE_STRIPE2(src);
     qthread_t          *me      = qthread_internal_self();
@@ -1348,12 +1291,6 @@ int INTERNAL qthread_readFE_nb(aligned_t *restrict       dest,
         qthread_debug(FEB_BEHAVIOR, "tid %u succeeded on %p=%p\n", me->thread_id, dest, src);
         qthread_gotlock_empty(me->rdata->shepherd_ptr, m, (void *)alignedaddr);
     }
-#else /* ifndef SST */
-    QALIGN(src, alignedaddr);
-    if (PIM_feb_try_readfe(dest, alignedaddr) == 1) {
-        return QTHREAD_OPFAIL;
-    }
-#endif /* ifndef SST */
     return QTHREAD_SUCCESS;
 }                      /*}}} */
 
