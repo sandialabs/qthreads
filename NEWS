@@ -1,4 +1,10 @@
---- 1.9.1b ---
+--- 1.10b ---
+New Features:
+Improvements:
+ - Unified (and simplified) internal handling of multi-threaded vs single-threaded scheduling regimes
+ - Removed defunct SST support, to avoid confusing people
+ - Removed futurelib
+Bugfixes:
 --- 1.9 ---
 New Features:
  - Eurekas within a team
