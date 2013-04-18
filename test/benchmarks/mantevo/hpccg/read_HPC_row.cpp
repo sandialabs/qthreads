@@ -50,6 +50,7 @@ void read_HPC_row(char *data_file, HPC_Sparse_Matrix **A,
 {
   FILE *in_file ;
 
+  int ret;
   int i,j/*, max_nnz_in_row*/;
   int total_nrow;
   long long total_nnz;
@@ -72,8 +73,9 @@ void read_HPC_row(char *data_file, HPC_Sparse_Matrix **A,
       exit(1);
     }
 
-  fscanf(in_file,"%d",&total_nrow);
-  fscanf(in_file,"%lld",&total_nnz);
+  ret = fscanf(in_file,"%d",&total_nrow);
+  ret += fscanf(in_file,"%lld",&total_nnz);
+  assert(ret == 2);
 #ifdef USING_MPI
   int size, rank; // Number of MPI processes, My process ID
   MPI_Comm_size(MPI_COMM_WORLD, &size);
@@ -112,7 +114,8 @@ void read_HPC_row(char *data_file, HPC_Sparse_Matrix **A,
 
   for (i=0; i<total_nrow; i++)
     {
-      fscanf(in_file, "%d",lp); /* row #, nnz in row */
+      ret = fscanf(in_file, "%d",lp); /* row #, nnz in row */
+      assert(ret == 1);
       if (start_row <=i && i <= stop_row) // See if nnz for row should be added
 	{
 	  local_nnz += l;
@@ -140,21 +143,26 @@ void read_HPC_row(char *data_file, HPC_Sparse_Matrix **A,
   for (i=0; i<total_nrow; i++)
     {
       int cur_nnz;
-      fscanf(in_file, "%d",&cur_nnz);
+      ret = fscanf(in_file, "%d",&cur_nnz);
+      assert(ret == 1);
       if (start_row <=i && i <= stop_row) // See if nnz for row should be added
 	{
 	  if (debug) cout << "Process "<<rank
 			  <<" of "<<size<<" getting row "<<i<<endl;
 	  for (j=0; j<cur_nnz; j++) 
 	    {
-	      fscanf(in_file, "%lf %d",vp,lp);
+	      ret = fscanf(in_file, "%lf %d",vp,lp);
+              assert(ret == 2);
 	      ptr_to_vals_in_row[cur_local_row][j] = v;
 	      ptr_to_inds_in_row[cur_local_row][j] = l;
 	    }
 	      cur_local_row++;
 	}
       else
-	for (j=0; j<cur_nnz; j++) fscanf(in_file, "%lf %d",vp,lp);
+	for (j=0; j<cur_nnz; j++) {
+            ret = fscanf(in_file, "%lf %d",vp,lp);
+            assert(ret == 2);
+        }
     }
 
   
@@ -166,14 +174,17 @@ void read_HPC_row(char *data_file, HPC_Sparse_Matrix **A,
 	{
 	  if (debug) cout << "Process "<<rank<<" of "
                        <<size<<" getting RHS "<<i<<endl;
-	  fscanf(in_file, "%lf %lf %lf",&xt, &bt, &xxt);
+	  ret = fscanf(in_file, "%lf %lf %lf",&xt, &bt, &xxt);
+          assert(ret == 3);
 	  (*x)[cur_local_row] = xt;
 	  (*b)[cur_local_row] = bt;
 	  (*xexact)[cur_local_row] = xxt;
 	  cur_local_row++;
 	}
-      else
-	fscanf(in_file, "%lf %lf %lf",vp, vp, vp); // or thrown away
+      else {
+	ret = fscanf(in_file, "%lf %lf %lf",vp, vp, vp); // or thrown away
+        assert(ret == 3);
+      }
     }
 
   fclose(in_file);
