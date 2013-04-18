@@ -14,38 +14,30 @@ Tentative release date: Sep 2013.
 
 # General things to do (in no particular order):
 
-- Periodic task system
+- Rework most qutil/qloop functions to deal with deactivated shepherds.
 
-- Direct thread swapping, esp. for sinc's or other synchronization operations where the next thread to execute is obvious.
+- Implement periodic task system.
 
-- Qthreads with in/out vectors for cross-node workstealing
+- Implement direct thread swapping, esp. for sinc's or other synchronization operations where the next thread to execute is obvious.
 
-- Cross-node synchronization (i.e. fill remote FEB)
+- Add a `qthread_replace(me, func, arg, argsize)` function to enable convenient tail-recursion algorithms.
 
-- Hierarchical shepherds (need to rename shepherds)
+- Implement Qthreads with in/out vectors for cross-node workstealing.
 
-- 128-bit syncvars
+- Implement 128-bit syncvars.
 
-- Change the futurelib spawner to use up existing concurrency limits before blocking
+- Implement cross-node synchronization (i.e. fill remote FEB).
 
-- Add a qthread_replace(me, func, arg, argsize) function to enable convenient tail-recursion algorithms
+- Implement hierarchical shepherds (need to rename shepherds).
 
-- Make futurelib limits dynamic
-
-- Rework futures to use preallocated contexts
-
-- Rework most qutil/qloop functions to deal with deactivated shepherds
-
-- Continuation passing (put a "spawn_to" in the precondition record)...
-
-- Coalesce system calls (is this a good idea?)
-
-- Implement MAMA malloc?
-
-- Use LockBox mutexes on BlueGene/P
+- Add support for "spawn_to" information in the precondition record.
 
 # General things to think about:
 
+- Implementing MAMA malloc.
+
+- Coalescing system calls.
+
 - Non-executing shepherds to allow for memory locales without associated computing resources.
 
-- Port to XMT (is this even possible???)
+- Porting to XMT.
