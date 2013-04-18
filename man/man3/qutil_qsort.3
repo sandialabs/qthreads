@@ -42,13 +42,6 @@ merge. As a result, the merge phases are rather computationally intensive.
 (This sort exists primarily as a proof of concept rather than as a useful
 alternative.)
 .PP
-The parallelism in these sorts is NOT limited by the futurelib resource
-restrictions, because of the divide-and-conquer trees in both. Future
-implementations may use the futurelib if and when futurelib is reimplemented to
-allow forward progress without exceeding memory restrictions (significantly)
-even when there are an extremely large number of futures attempting to spawn
-new futures.
-.PP
 The result of the sort is an array in increasing order.
 .SH SEE ALSO
 .BR qutil_double_sum (3),

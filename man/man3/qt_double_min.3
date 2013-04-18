@@ -27,8 +27,7 @@ These functions take as input an
 of
 .I length
 numbers and will return the minimum value within those numbers. This value is
-computed in parallel by dividing the iterations evenly among the shepherds,
-using futures to restrict the parallelism to the available limits.
+computed in parallel by dividing the iterations evenly among the shepherds.
 .PP
 If
 .I checkfeb
@@ -52,8 +51,5 @@ entries of
 .BR qt_int_sum (3),
 .BR qt_int_max (3),
 .BR qt_loop (3),
-.BR qt_loop_future (3),
 .BR qt_loop_balance (3),
-.BR qt_loop_balance_future (3),
-.BR qt_loopaccum_balance (3),
-.BR qt_loopaccum_balance_future (3)
+.BR qt_loopaccum_balance (3)
