@@ -11,7 +11,6 @@
 /* API Headers */
 #include <qthread/qutil.h>
 #include <qthread/qthread.h>
-#include <qthread/futurelib.h>
 #include <qthread/cacheline.h>
 
 /* Internal Headers */
@@ -703,7 +702,6 @@ static inline qutil_qsort_iprets_t qutil_qsort_inner_partitioner(double      *ar
             args[i].length = length - megachunk_size + MT_CHUNKSIZE;
         }
         /* qutil_qsort_partition(args+i); */
-        /* future_fork((qthread_f)qutil_qsort_partition, args+i, rets+i); */
         qthread_fork((qthread_f)qutil_qsort_partition, args + i, rets + i);
     }
     for (i = 0; i < numthreads; i++) {
@@ -786,13 +784,11 @@ static inline aligned_t qutil_qsort_inner(struct qutil_qsort_iargs *a)
             na[1].length = a->length - rightwall;
             if (na[0].length > 0) {
                 rets[0] = 0;
-                /* future_fork((qthread_f)qutil_qsort_inner, na, rets); */
                 /* qutil_qsort_inner(na); */
                 qthread_fork((qthread_f)qutil_qsort_inner, na, rets);
             }
             if ((na[1].length > 0) && (a->length > rightwall)) {
                 rets[1] = 0;
-                /* future_fork((qthread_f)qutil_qsort_inner, na+1, rets+1); */
                 /* qutil_qsort_inner(na+1); */
                 qthread_fork((qthread_f)qutil_qsort_inner, na + 1, rets + 1);
             }
@@ -964,7 +960,6 @@ static inline qutil_qsort_iprets_t qutil_aligned_qsort_inner_partitioner(aligned
             args[i].length = length - megachunk_size + MT_CHUNKSIZE;
         }
         /* qutil_aligned_qsort_partition(args+i); */
-        /* future_fork((qthread_f)qutil_aligned_qsort_partition, args+i, rets+i); */
         qthread_fork_syncvar((qthread_f)qutil_aligned_qsort_partition,
                              args + i,
                              rets + i);
@@ -1053,14 +1048,12 @@ static inline aligned_t qutil_aligned_qsort_inner(struct qutil_aligned_qsort_iar
             na[1].length = a->length - rightwall;
             if (na[0].length > 0) {
                 rets[0] = 0;
-                /* future_fork((qthread_f)qutil_aligned_qsort_inner, na, rets); */
                 /* qutil_aligned_qsort_inner(na); */
                 qthread_fork((qthread_f)qutil_aligned_qsort_inner, &na[0],
                              &rets[0]);
             }
             if ((na[1].length > 0) && (a->length > rightwall)) {
                 rets[1] = 0;
-                /* future_fork((qthread_f)qutil_aligned_qsort_inner, na+1, rets+1); */
                 /* qutil_aligned_qsort_inner(na+1); */
                 qthread_fork((qthread_f)qutil_aligned_qsort_inner, &na[1],
                              &rets[1]);
