@@ -80,7 +80,6 @@ man_MANS = \
 		   qt_int_sum.3 \
 		   qt_loop.3 \
 		   qt_loop_balance.3 \
-		   qt_loop_balance_future.3 \
 		   qt_loop_balance_simple.3 \
 		   qt_loop_future.3 \
 		   qt_loop_queue_addworker.3 \

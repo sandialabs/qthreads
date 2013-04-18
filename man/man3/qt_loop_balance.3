@@ -1,7 +1,6 @@
 .TH qt_loop_balance 3 "APRIL 2011" libqthread "libqthread"
 .SH NAME
-.BR qt_loop_balance ,
-.B qt_loop_balance_future
+.B qt_loop_balance
 \- a slightly intelligent implementation of a threaded loop
 .SH SYNOPSIS
 .B #include <qthread/qloop.h>
@@ -19,25 +18,15 @@
 .RI "(const size_t " start ", const size_t " stop ,
 .ti +24
 .RI "const qt_loop_f " func ", void *" argptr );
-.PP
-.I void
-.br
-.B qt_loop_balance_future
-.RI "(const size_t " start ", const size_t " stop ,
-.ti +24
-.RI "const qt_loop_f " func ", void *" argptr );
 .SH DESCRIPTION
-These functions provide a simple C implementation of a threaded loop. Rather than using a fixed number of threads, however, the number of threads generated depends directly upon the number of shepherds available. The difference between
-.BR qt_loop_balance ()
-and
-.BR qt_loop_balance_future ()
-is that the former uses qthreads and the latter uses futures. The
+These functions provide a simple C implementation of a threaded loop. Rather than using a fixed number of threads, however, the number of threads generated depends directly upon the number of shepherds available. The
 .BR qt_loop_balance_simple ()
 variant uses simple qthreads, which cannot block or yield, but receive full-size stacks and execute as function-calls from the worker threads, thereby avoiding most context-swap overheads.
 .PP
-One qthread (or future) is spawned for each shepherd. The set of values of
+One qthread is spawned for each shepherd. The set of values of
 .I i
-(iterations) is divided evenly among the shepherds, and each qthread (or future) is assigned a set of iterations to perform.
+(iterations) is divided evenly among the shepherds, and each qthread is
+assigned a set of iterations to perform.
 .PP
 The
 .I func
@@ -70,12 +59,8 @@ are determined by the library, and tell the function what range of
 .I i
 values (iterations) it is responsible for.
 .BR qt_loop_balance ()
-and
-.BR qt_loop_balance_future ()
-will not return until all of the qthreads (or futures) it spawned have exited.
+will not return until all of the qthreads it spawned have exited.
 .SH SEE ALSO
 .BR qt_loop (3),
-.BR qt_loop_future (3),
 .BR qt_loopaccum_balance (3),
-.BR qt_loopaccum_balance_future (3),
 .BR qthread_spawn (3)

@@ -530,8 +530,7 @@ static void qt_loop_step_inner(const size_t         start,
 }                                /*}}} */
 #endif /* QTHREAD_USE_ROSE_EXTENSIONS */
 
-#define QT_LOOP_BALANCE_FUTURE (1 << 0)
-#define QT_LOOP_BALANCE_SIMPLE (1 << 1)
+#define QT_LOOP_BALANCE_SIMPLE (1 << 0)
 
 static QINLINE void qt_loop_balance_inner(const size_t       start,
                                           const size_t       stop,
@@ -581,9 +580,6 @@ static QINLINE void qt_loop_balance_inner(const size_t       start,
             abort();
     }
     switch (flags) {
-        case QT_LOOP_BALANCE_FUTURE:
-            internal_flags |= QTHREAD_SPAWN_FUTURE;
-            break;
         case QT_LOOP_BALANCE_SIMPLE:
             internal_flags |= QTHREAD_SPAWN_SIMPLE;
             break;
@@ -718,14 +714,6 @@ void API_FUNC qt_loop_balance_sinc(const size_t    start,
                                    void           *argptr)
 {                                      /*{{{ */
     qt_loop_balance_inner(start, stop, func, argptr, 0, SINC_T);
-}                                      /*}}} */
-
-void API_FUNC qt_loop_balance_future(const size_t    start,
-                                     const size_t    stop,
-                                     const qt_loop_f func,
-                                     void           *argptr)
-{                                      /*{{{ */
-    qt_loop_balance_inner(start, stop, func, argptr, QT_LOOP_BALANCE_FUTURE, DONECOUNT);
 }                                      /*}}} */
 
 struct qloopaccum_wrapper_args {
