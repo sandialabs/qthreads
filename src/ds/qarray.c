@@ -6,7 +6,6 @@
 #include <stdlib.h>                    /* for calloc() */
 #include <sys/types.h>
 #include <sys/mman.h>
-#include <math.h>                     /* for ceil() */
 #ifdef QTHREAD_USE_VALGRIND
 # include <valgrind/memcheck.h>
 #else
@@ -24,6 +23,7 @@
 #include "qt_debug.h"
 #include "qt_aligned_alloc.h"
 #include "qt_gcd.h"                    /* for qt_lcm() */
+#include "qt_int_ceil.h"
 
 static unsigned short pageshift                  = 0;
 static aligned_t     *chunk_distribution_tracker = NULL;
@@ -1289,7 +1289,7 @@ void qarray_iter_loopaccum(qarray      *a,
             assert(rets);
             assert(rv);
             qfwa[0].ret = ret;
-            if ((ceil((double)a->count / segsize) /*tot_segs*/ /
+            if ((QT_CEIL_RATIO(a->count, segsize) /*tot_segs*/ /
                  maxsheps) > /*range_segs*/ ((stopat - startat) / segsize)) {
                 /* If we have a small(ish) range, try to figure out which
                  * shepherds need to be spawned to rather than spawning to

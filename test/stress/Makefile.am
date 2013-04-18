@@ -13,8 +13,11 @@ TESTS = \
 		precond_fib \
 		task_spawn \
 		test_spawn_simple \
-		precond_spawn_simple \
-		subteams_uts
+		precond_spawn_simple
+
+if HAVE_LIBM
+TESTS += subteams_uts
+endif
 
 check_PROGRAMS = $(TESTS)
 
@@ -56,5 +59,7 @@ syncvar_stream_SOURCES = syncvar_stream.c
 
 feb_stream_SOURCES = feb_stream.c
 
+if HAVE_LIBM
 subteams_uts_SOURCES = subteams_uts.c
-subteams_uts_LDADD = $(LDADD) $(utils_rnglib)
+subteams_uts_LDADD = $(LDADD) -lm $(utils_rnglib)
+endif

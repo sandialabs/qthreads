@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-#include <math.h>
 
 /* The API */
 #include "qthread/qthread.h"
@@ -20,6 +19,7 @@
 #include "qt_visibility.h"
 #include "qt_aligned_alloc.h"
 #include "qt_debug.h"
+#include "qt_int_ceil.h"
 
 typedef aligned_t qt_sinc_count_t;
 
@@ -69,7 +69,7 @@ void API_FUNC qt_sinc_init(qt_sinc_t *restrict  sinc_,
         sinc->rdata = NULL;
     } else {
         const size_t                        sizeof_shep_values     = num_wps * sizeof_value;
-        const size_t                        num_lines_per_shep     = ceil(sizeof_shep_values * 1.0 / cacheline);
+        const size_t                        num_lines_per_shep     = QT_CEIL_RATIO(sizeof_shep_values, cacheline);
         const size_t                        num_lines              = num_sheps * num_lines_per_shep;
         const size_t                        sizeof_shep_value_part = num_lines_per_shep * cacheline;
         qt_sinc_reduction_t *const restrict rdata                  = sinc->rdata = MALLOC(sizeof(qt_sinc_reduction_t));

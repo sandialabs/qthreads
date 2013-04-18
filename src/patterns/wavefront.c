@@ -4,14 +4,14 @@
 
 #include <stdio.h>
 #include <stdlib.h>                    /* for malloc */
-#include <math.h>
-
-#include "qt_asserts.h"
 
 #include <qthread/qthread.h>
 #include <qthread/qdqueue.h>
 #include <qthread/wavefront.h>
 #include <qthread/qpool.h>
+
+#include "qt_asserts.h"
+#include "qt_int_ceil.h"
 
 static qpool *workunit_pool = NULL;
 
@@ -225,14 +225,13 @@ qt_wavefront_lattice *qt_wavefront(qarray *restrict const vertical,
         wargs.L      = L;
         L->unit_size = vertical->unit_size;
         if (vertical->count > vertical->segment_size) {
-            L->slats.num = (size_t)ceil((double)vertical->count /
-                                        (double)vertical->segment_size) + 1;
+            L->slats.num = QT_CEIL_RATIO(vertical->count, vertical->segment_size) + 1;
         } else {
             L->slats.num = 2;
         }
         if (horizontal->count > horizontal->segment_size) {
-            L->struts.num = 2 + (size_t)ceil((double)(horizontal->count - horizontal->segment_size) /
-                                             (double)(horizontal->segment_size - 1));
+            L->struts.num = 2 + QT_CEIL_RATIO((horizontal->count - horizontal->segment_size),
+                                              (horizontal->segment_size - 1));
         } else {
             L->struts.num = 2;
         }

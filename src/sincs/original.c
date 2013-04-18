@@ -6,7 +6,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
-#include <math.h>
 #if (HAVE_MEMALIGN && HAVE_MALLOC_H)
 # include <malloc.h>                   /* for memalign() */
 #endif
@@ -20,6 +19,7 @@
 #include "qt_asserts.h"
 #include "qt_shepherd_innards.h"
 #include "qt_visibility.h"
+#include "qt_int_ceil.h"
 
 typedef saligned_t qt_sinc_count_t;
 
@@ -76,7 +76,7 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
     // Allocate values array
     if (NULL != initial_value) {
         const size_t sizeof_shep_values     = num_wps * sizeof_value;
-        const size_t num_lines_per_shep     = ceil(sizeof_shep_values * 1.0 / cacheline);
+        const size_t num_lines_per_shep     = QT_CEIL_RATIO(sizeof_shep_values, cacheline);
         const size_t num_lines              = num_sheps * num_lines_per_shep;
         const size_t sizeof_shep_value_part = num_lines_per_shep * cacheline;
 
@@ -111,7 +111,7 @@ qt_sinc_t *qt_sinc_create(const size_t sizeof_value,
 
     // Allocate counts array
     const size_t sizeof_shep_counts     = num_wps * QTHREAD_SIZEOF_ALIGNED_T;
-    const size_t num_lines_per_shep     = ceil(sizeof_shep_counts * 1.0 / cacheline);
+    const size_t num_lines_per_shep     = QT_CEIL_RATIO(sizeof_shep_counts, cacheline);
     const size_t sizeof_shep_count_part = (num_lines_per_shep * cacheline) / QTHREAD_SIZEOF_ALIGNED_T;
     const size_t num_count_array_lines  = num_sheps * num_lines_per_shep;
 

@@ -14,12 +14,11 @@
 #ifdef HAVE_INTTYPES_H
 # include <inttypes.h>                 /* for funky print statements */
 #endif
-#ifdef HAVE_MATH_H
-# include <math.h>                     /* for ceil() and floor() */
-#endif
 #include <string.h>                    /* for memset() */
 #include <errno.h>
+
 #include "qt_asserts.h"
+#include "qt_int_ceil.h"
 
 #ifndef PTHREAD_MUTEX_SMALL_ENOUGH
 # warning The pthread_mutex_t structure is either too big or hasn't been checked. If you're compiling by hand, you can probably ignore this warning, or define PTHREAD_MUTEX_SMALL_ENOUGH to make it go away.
@@ -288,7 +287,7 @@ void *qalloc_makedynmap(const off_t  filesize,
         mi->stream_locks = (pthread_mutex_t *)(mi->bigblocks + streams);
         mi->bitmap_lock  = (pthread_mutex_t *)(mi->stream_locks + streams);
         mi->bitmap       = (unsigned char *)(mi->bitmap_lock + 1);
-        mi->bitmaplength = (size_t)ceil((filesize / 2048) / 8.0);
+        mi->bitmaplength = QT_CEIL_RATIO((filesize/2048), 8);
         mi->base         = ((char *)(mi->bitmap)) + mi->bitmaplength;
         /* initialize the streams */
         i = 0;
@@ -319,7 +318,7 @@ void *qalloc_makedynmap(const off_t  filesize,
         m->stream_locks = (pthread_mutex_t *)(m->bigblocks + streams);
         m->bitmap_lock  = (pthread_mutex_t *)(m->stream_locks + streams);
         m->bitmap       = (unsigned char *)(m->bitmap_lock + 1);
-        m->bitmaplength = (size_t)(ceil(floor(filesize / 2048.0) / 8.0));
+        m->bitmaplength = QT_CEIL_RATIO((filesize/2048), 8);
         m->base         = ((char *)(m->bitmap)) + m->bitmaplength;
 
         m->next  = dynmmaps;
@@ -730,7 +729,7 @@ void *qalloc_dynmalloc(struct dynmapinfo_s *m,
         QALLOC_UNLOCK(&sb->lock);
     } else {
         /* a BIG allocation */
-        size_t             offset, blocks = (size_t)ceil(size / 2048.0);
+        size_t             offset, blocks = QT_CEIL_RATIO(size, 2048);
         bigblock_header_t *bbh = NULL;
 
         /* lock the bitmap */

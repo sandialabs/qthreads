@@ -17,7 +17,7 @@ generic_benchmarks = \
                      time_stencil_feb \
                      time_stencil_pre \
                      time_halo_swap_all \
-					 time_prodcons_comm \
+                     time_prodcons_comm \
                      time_qt_loops \
                      time_qt_loopaccums
 thesis_benchmarks = \
@@ -47,81 +47,90 @@ mtaap08_benchmarks = \
                      time_cncthr_bench \
                      time_cncthr_bench_pthread
 uts_benchmarks = \
-				 time_uts_syncvar \
-				 time_uts_aligned \
-				 time_uts_sinc \
-				 time_uts_donecount \
-				 time_uts_donecount2 \
-				 time_uts_donecount3
+                 time_uts_syncvar \
+                 time_uts_aligned \
+                 time_uts_sinc \
+                 time_uts_donecount \
+                 time_uts_donecount2 \
+                 time_uts_donecount3
 mt_benchmarks = \
-				time_task_spawn \
-				time_eager_future \
-				time_fib \
-				time_fib2
+                time_task_spawn \
+                time_eager_future \
+                time_fib \
+                time_fib2
 sc12_benchmarks = \
-	spawn_sequential_qthreads \
-	spawn_parallel_qthreads \
-	fib_qthreads \
-	uts_qthreads
+                  spawn_sequential_qthreads \
+                  spawn_parallel_qthreads \
+                  fib_qthreads
+
+if HAVE_LIBM
+sc12_benchmarks += uts_qthreads
+endif
 
 if COMPILE_OMP_BENCHMARKS
 generic_benchmarks += time_threading.omp
 uts_benchmarks += time_uts_omp
 mt_benchmarks += \
-				time_omp_task_spawn \
-				time_omp_eager_future \
-				time_omp_fib
+                 time_omp_task_spawn \
+                 time_omp_eager_future \
+                 time_omp_fib
 sc12_benchmarks += \
-	spawn_sequential_omp \
-	spawn_parallel_omp \
-	fib_omp \
-	uts_omp
+                   spawn_sequential_omp \
+                   spawn_parallel_omp \
+                   fib_omp
+if HAVE_LIBM
+sc12_benchmarks += uts_omp
+endif
 endif
 
 if COMPILE_TBB_BENCHMARKS
 uts_benchmarks += time_uts_tbb
 pmea09_benchmarks += \
-					time_tbbq \
-					time_tbbq_sizes
+                     time_tbbq \
+                     time_tbbq_sizes
 mt_benchmarks += \
-				 time_tbb_eager_future \
-				 time_tbb_fib \
-				 time_tbb_task_spawn
+                 time_tbb_eager_future \
+                 time_tbb_fib \
+                 time_tbb_task_spawn
 sc12_benchmarks += \
-		   spawn_sequential_tbb \
-		   spawn_parallel_tbb \
-		   fib_tbb \
-		   uts_tbb
+                   spawn_sequential_tbb \
+                   spawn_parallel_tbb \
+                   fib_tbb
+if HAVE_LIBM
+sc12_benchmarks += uts_tbb
+endif
 endif
 
 if COMPILE_CILK_BENCHMARKS
 uts_benchmarks += time_uts_cilk
 mt_benchmarks += \
-				 time_cilk_eager_future \
-				 time_cilk_fib \
-				 time_cilk_task_spawn
+                 time_cilk_eager_future \
+                 time_cilk_fib \
+                 time_cilk_task_spawn
 sc12_benchmarks += \
-		   spawn_sequential_cilk \
-		   spawn_parallel_cilk \
-		   fib_cilk \
-		   uts_cilk
+                   spawn_sequential_cilk \
+                   spawn_parallel_cilk \
+                   fib_cilk
+if HAVE_LIBM
+sc12_benchmarks += uts_cilk
+endif
 endif
 
 benchmarks = \
              $(generic_benchmarks) \
-			 $(uts_benchmarks) \
+             $(uts_benchmarks) \
              $(thesis_benchmarks) \
              $(pmea09_benchmarks) \
              $(mtaap08_benchmarks) \
-	     $(mt_benchmarks) \
-	     $(sc12_benchmarks)
+             $(mt_benchmarks) \
+             $(sc12_benchmarks)
 
 EXTRA_PROGRAMS = $(benchmarks)
 CLEANFILES = $(benchmarks)
 
 EXTRA_DIST = \
-			 pmea09/time_tbbq.cpp \
-			 pmea09/time_tbbq_sizes.cpp
+             pmea09/time_tbbq.cpp \
+             pmea09/time_tbbq_sizes.cpp
 
 
 AM_CPPFLAGS = -I$(top_srcdir)/include -I$(top_srcdir)/test/
@@ -322,8 +331,10 @@ spawn_parallel_qthreads_SOURCES = sc12/spawn_parallel_qthreads.c
 
 fib_qthreads_SOURCES = sc12/fib_qthreads.c
 
+if HAVE_LIBM
 uts_qthreads_SOURCES = sc12/uts_qthreads.c
-uts_qthreads_LDADD = $(LDADD) $(utils_rnglib)
+uts_qthreads_LDADD = $(LDADD) -lm $(utils_rnglib)
+endif
 
 if COMPILE_OMP_BENCHMARKS
 time_omp_eager_future_SOURCES = mt/time_omp_eager_future.c
@@ -338,9 +349,11 @@ spawn_parallel_omp_CFLAGS = @OPENMP_CFLAGS@
 fib_omp_SOURCES = sc12/fib_omp.c
 fib_omp_CFLAGS = @OPENMP_CFLAGS@
 
+if HAVE_LIBM
 uts_omp_SOURCES = sc12/uts_omp.c
-uts_omp_LDADD = $(LDADD) $(utils_rnglib)
+uts_omp_LDADD = $(LDADD) -lm $(utils_rnglib)
 uts_omp_CFLAGS = @OPENMP_CFLAGS@
+endif
 endif
 
 if COMPILE_TBB_BENCHMARKS
@@ -353,9 +366,11 @@ spawn_parallel_tbb_LDFLAGS = @TBB_LIBS@
 fib_tbb_SOURCES = sc12/fib_tbb.cc
 fib_tbb_LDFLAGS = @TBB_LIBS@
 
+if HAVE_LIBM
 uts_tbb_SOURCES = sc12/uts_tbb.cc
-uts_tbb_LDADD = $(LDADD) $(utils_rnglib)
+uts_tbb_LDADD = $(LDADD) -lm $(utils_rnglib)
 uts_tbb_LDFLAGS = @TBB_LIBS@
+endif
 endif
 
 if COMPILE_CILK_BENCHMARKS
@@ -365,6 +380,10 @@ spawn_parallel_cilk_SOURCES = sc12/spawn_parallel_cilk.c
 
 fib_cilk_SOURCES = sc12/fib_cilk.c
 
+if HAVE_LIBM
 uts_cilk_SOURCES = sc12/uts_cilk.c
-uts_cilk_LDADD = $(LDADD) $(utils_rnglib)
+uts_cilk_LDADD = $(LDADD) -lm $(utils_rnglib)
 endif
+endif
+
+# vim: set expandtab
