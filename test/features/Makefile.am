@@ -31,8 +31,7 @@ TESTS = \
 EXTRA_PROGRAMS = wavefront
 
 if ENABLE_CXX_TESTS
-TESTS += cxx_futurelib \
-		 cxx_qt_loop \
+TESTS += cxx_qt_loop \
 		 cxx_qt_loop_balance
 endif
 
@@ -91,8 +90,6 @@ qdqueue_SOURCES = qdqueue.c
 allpairs_SOURCES = allpairs.c
 
 subteams_SOURCES = subteams.c
-
-cxx_futurelib_SOURCES = cxx_futurelib.cpp
 
 cxx_qt_loop_SOURCES = cxx_qt_loop.cpp
 

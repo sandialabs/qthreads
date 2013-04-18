@@ -42,7 +42,6 @@
 /* Public Headers                                     */
 /******************************************************/
 #include "qthread/cacheline.h"
-#include "qthread/futurelib.h"
 #if (defined(QTHREAD_SHEPHERD_PROFILING) || defined(QTHREAD_FEB_PROFILING))
 # include "qthread/qtimer.h"
 #endif
@@ -111,7 +110,7 @@ extern int                   powerOff;
 # define QTHREAD_MUTEX_INCREMENT 1
 #endif
 
-/* shared globals (w/ futurelib) */
+/* Shared Globals */
 qlib_t qlib      = NULL;
 int    qaffinity = 1;
 QTHREAD_FASTLOCK_ATTRVAR;
@@ -2326,9 +2325,6 @@ static void qthread_wrapper(void *ptr)
     concurrentthreads--;
     QTHREAD_FASTLOCK_UNLOCK(&concurrentthreads_lock);
 #endif
-    if (t->flags & QTHREAD_FUTURE) {
-        future_exit();
-    }
     /* theoretically, we could rely on the uc_link pointer to bring us back to
      * the parent shepherd. HOWEVER, this doesn't work in lots of situations,
      * so we do it manually. A brief list of situations:
@@ -2549,7 +2545,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
 
     /* Step 1: Check arguments */
     qthread_debug(THREAD_CALLS,
-                  "f(%p), arg(%p), arg_size(%z), rt(%s), ret(%p), pt(%s), np(%z), pc(%p), ts(%u), %s, %s, %s\n",
+                  "f(%p), arg(%p), arg_size(%z), rt(%s), ret(%p), pt(%s), np(%z), pc(%p), ts(%u), %s, %s\n",
                   f,
                   arg,
                   arg_size,
@@ -2561,7 +2557,6 @@ int API_FUNC qthread_spawn(qthread_f             f,
                   target_shep,
                   ((feature_flag & QTHREAD_SPAWN_NEW_TEAM) ? "new_team" :
                    (feature_flag & QTHREAD_SPAWN_NEW_SUBTEAM) ? "sub_team" : "same_team"),
-                  ((feature_flag & QTHREAD_SPAWN_FUTURE) ? "future" : "qthread"),
                   ((feature_flag & QTHREAD_SPAWN_SIMPLE) ? "simple" : "full"));
     assert(qlib);
     /* Step 2: Pick a destination */
@@ -2649,9 +2644,6 @@ int API_FUNC qthread_spawn(qthread_f             f,
      * region barriers in place (not will to pull it now
      * maybe later) akp */
 #endif
-    if (QTHREAD_UNLIKELY(feature_flag & QTHREAD_SPAWN_FUTURE)) {
-        t->flags |= QTHREAD_FUTURE;
-    }
     if (feature_flag & QTHREAD_SPAWN_SIMPLE) {
         t->flags |= QTHREAD_SIMPLE;
     }

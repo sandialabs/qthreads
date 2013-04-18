@@ -4,12 +4,6 @@
 #
 
 man_MANS = \
-		   future_acquire.3 \
-		   future_exit.3 \
-		   future_fork.3 \
-		   future_init.3 \
-		   future_join_all.3 \
-		   future_yield.3 \
 		   qalloc_checkpoint.3 \
 		   qalloc_cleanup.3 \
 		   qalloc_dynfree.3 \

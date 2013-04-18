@@ -9,7 +9,6 @@
 #include <sys/time.h>
 #include <time.h>
 #include <qthread/qthread.h>
-#include <qthread/futurelib.h>
 #include <qthread/qloop.h>
 #include "argparsing.h"
 
@@ -25,7 +24,6 @@ int main(int argc,
     assert(qthread_initialize() == QTHREAD_SUCCESS);
     CHECK_VERBOSE();
     NUMARG(BIGLEN, "BIGLEN");
-    future_init(128);
 
     {
         aligned_t *uia, uitmp, uisum = 0, uiprod = 1, uimax = 0, uimin =

@@ -56,8 +56,7 @@ noinst_HEADERS = \
 	rose_log_arrivaldetector.h \
 	rose_sinc_barrier.h \
 	rose_xomp.h \
-	spr_innards.h \
-	futurelib_innards.h
+	spr_innards.h
 
 if COMPILE_MULTINODE
 noinst_HEADERS += qt_multinode_innards.h

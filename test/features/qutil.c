@@ -12,7 +12,6 @@
 #include <time.h>                      /* for gettimeofday() */
 
 #include <qthread/qthread.h>
-#include <qthread/futurelib.h>
 #include <qthread/qutil.h>
 #include "argparsing.h"
 
@@ -63,14 +62,6 @@ static aligned_t qmain(void *junk)
     ui_out = qutil_uint_sum(ui_array, ui_len, 0);
     assert(ui_out == ui_sum_authoritative);
     iprintf(" - qutil_uint_sum is correct\n");
-    /* testing with FEB just for full coverage; if it's good for uints, it's
-     * good for everyone else */
-    if (sizeof(aligned_t) <= sizeof(unsigned int)) {
-        iprintf("   (aligned_t <= unsigned int)\n");
-        ui_out = qutil_uint_sum(ui_array, ui_len, 1);
-        assert(ui_out == ui_sum_authoritative);
-        iprintf(" - qutil_uint_sum with futures is correct\n");
-    }
     ui_out = qutil_uint_mult(ui_array, ui_len, 0);
     assert(ui_out == ui_mult_authoritative);
     iprintf(" - qutil_uint_mult is correct\n");
@@ -224,17 +215,14 @@ int main(int   argc,
          char *argv[])
 {
     aligned_t ret;
-    int       futurelimit = 2;
 
     assert(qthread_initialize() == 0);
 
     CHECK_VERBOSE();
-    NUMARG(futurelimit, "TEST_FUTURE_LIMIT");
     NUMARG(d_len, "TEST_LEN");
     NUMARG(i_len, "TEST_LEN");
     NUMARG(ui_len, "TEST_LEN");
 
-    future_init(futurelimit);
     assert(qthread_fork(qmain, NULL, &ret) == 0);
     qthread_readFF(NULL, &ret);
     return 0;

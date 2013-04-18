@@ -9,7 +9,6 @@ pkginclude_HEADERS = \
 	barrier.h \
 	cacheline.h \
 	dictionary.h \
-	futurelib.h \
 	hash.h \
 	io.h \
 	macros.h \

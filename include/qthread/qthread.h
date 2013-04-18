@@ -261,7 +261,6 @@ int qthread_fork_precond_simple(qthread_f   f,
                                 ...);
 
 enum _qthread_features {
-    SPAWN_FUTURE,
     SPAWN_PARENT,
     SPAWN_SIMPLE,
     SPAWN_NEW_TEAM,
@@ -274,7 +273,6 @@ enum _qthread_features {
     SPAWN_COUNT
 };
 
-# define QTHREAD_SPAWN_FUTURE        (1 << SPAWN_FUTURE)
 # define QTHREAD_SPAWN_PARENT        (1 << SPAWN_PARENT)
 # define QTHREAD_SPAWN_SIMPLE        (1 << SPAWN_SIMPLE)
 # define QTHREAD_SPAWN_NEW_TEAM      (1 << SPAWN_NEW_TEAM)

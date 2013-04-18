@@ -77,9 +77,7 @@ libqthread_la_LIBADD =
 libqthread_la_DEPENDENCIES =
 
 if COMPILE_TARGET_SST
-libqthread_la_SOURCES += \
-	sst/qthread-sst.c \
-	sst/futurelib-sst.c
+libqthread_la_SOURCES += sst/qthread-sst.c
 endif
 
 if COMPILE_TARGET_UNIX
@@ -91,7 +89,6 @@ libqthread_la_SOURCES += \
 	threadqueues/@with_scheduler@_threadqueues.c \
 	sincs/@with_sinc@.c \
 	affinity/@qthread_topo@.c \
-	futurelib.c \
 	touch.c
 if COMPILE_SPAWNCACHE
 libqthread_la_SOURCES += spawncache.c
