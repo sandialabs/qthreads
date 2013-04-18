@@ -3,9 +3,8 @@
 # Copyright (c)      2008  Sandia Corporation
 #
 
-AM_CPPFLAGS = $(SST_INCLUDE) -I$(top_srcdir)/include
-AM_CCASFLAGS = $(SST_INCLUDE) -I$(top_srcdir)/include -I$(top_builddir)/include -DHAVE_CONFIG_H
-AM_LDFLAGS = $(SST_LIBS)
+AM_CPPFLAGS = -I$(top_srcdir)/include
+AM_CCASFLAGS = -I$(top_srcdir)/include -I$(top_builddir)/include -DHAVE_CONFIG_H
 
 lib_LTLIBRARIES = libqthread.la
 SUBDIRS =
@@ -26,6 +25,14 @@ libqthread_la_SOURCES = \
 	barrier/@with_barrier@.c \
 	qutil.c \
 	syncvar.c \
+	qthread.c \
+	mpool.c \
+	shepherds.c \
+	workers.c \
+	threadqueues/@with_scheduler@_threadqueues.c \
+	sincs/@with_sinc@.c \
+	affinity/@qthread_topo@.c \
+	touch.c \
 	teams.c
 
 EXTRA_DIST = 
@@ -34,6 +41,14 @@ if COMPILE_LF_HASH
 libqthread_la_SOURCES += lf_hashmap.c
 else
 libqthread_la_SOURCES += hashmap.c
+endif
+
+if COMPILE_SPAWNCACHE
+libqthread_la_SOURCES += spawncache.c
+endif
+
+if COMPILE_COMPAT_ATOMIC
+libqthread_la_SOURCES += compat_atomics.c
 endif
 
 include qtimer/Makefile.inc
@@ -71,32 +86,10 @@ endif
 #   and reset the revision and age numbers to 0
 # - If you support all the same functions (just bugfixes or whatnot), increment
 #   the revision number
-libqthread_la_LDFLAGS = -version-info 18:0:0 -no-undefined
+libqthread_la_LDFLAGS = -version-info 19:0:0 -no-undefined
 
 libqthread_la_LIBADD =
 libqthread_la_DEPENDENCIES =
-
-if COMPILE_TARGET_SST
-libqthread_la_SOURCES += sst/qthread-sst.c
-endif
-
-if COMPILE_TARGET_UNIX
-libqthread_la_SOURCES += \
-	qthread.c \
-	mpool.c \
-	shepherds.c \
-	workers.c \
-	threadqueues/@with_scheduler@_threadqueues.c \
-	sincs/@with_sinc@.c \
-	affinity/@qthread_topo@.c \
-	touch.c
-if COMPILE_SPAWNCACHE
-libqthread_la_SOURCES += spawncache.c
-endif
-if COMPILE_COMPAT_ATOMIC
-libqthread_la_SOURCES += compat_atomics.c
-endif
-endif
 
 if QTHREAD_NEED_OWN_MAKECONTEXT
 include fastcontext/Makefile.inc

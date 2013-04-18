@@ -585,10 +585,6 @@ esac
 
 AC_CACHE_SAVE
 
-# Figure out if we're targeting SST or Unix implementation.  Will add
-# MTA here when the time comes.
-QTHREAD_CHECK_SST([qthread_implementation="sst"], [qthread_implementation="unix"])
-
 ## --------------- ##
 ## Check for types ##
 ## --------------- ##
@@ -640,15 +636,8 @@ QTHREAD_PTHREAD_PROCESS_PRIVATE
 
 AC_SEARCH_LIBS([nanosleep],[rt],[],
                [AC_MSG_ERROR([Cannot find nanosleep])])
-
-AS_IF([test "x$qthread_implementation" = "xsst"],
-          [AC_DEFINE([QTHREAD_SST_PRIMITIVES],[1],[Define to use the SST primitives])
-           enable_pooled_memory="no"
-           LDFLAGS="$LDFLAGS $SST_LIBS"
-           AC_SEARCH_LIBS([ceil],[m_ppc],[],[AC_MSG_ERROR([Cannot find ceil()])])])
-AS_IF([test "x$qthread_implementation" = "xunix"],
-          [AC_SEARCH_LIBS([ceil],[m],[],[AC_MSG_ERROR([Cannot find ceil()])])
-           AC_SEARCH_LIBS([accept], [xnet "socket -lnsl"])])
+AC_SEARCH_LIBS([ceil],[m],[],[AC_MSG_ERROR([Cannot find ceil()])])
+AC_SEARCH_LIBS([accept], [xnet "socket -lnsl"])
 
 AS_IF([test "x$enable_pooled_memory" = "xno"],
       [AC_DEFINE([UNPOOLED], [1], [prevents most uses of memory pools])],
@@ -795,9 +784,7 @@ AC_CACHE_SAVE
 ## ------------------------- ##
 
 # Figure out if we need makecontext
-AS_IF([test "x$qthread_implementation" = "xunix"],
-      [QTHREAD_PICK_CONTEXT_TYPE(qthread_makecontext_type)],
-      [qthread_makecontext_type="none"])
+QTHREAD_PICK_CONTEXT_TYPE(qthread_makecontext_type)
 
 AS_IF([test "x$with_gcd" = "xshift"],
       [AC_DEFINE([QTHREAD_SHIFT_GCD],[1],[use a shift-based gcd algorithm])])
@@ -1068,11 +1055,10 @@ AS_IF([test "x$enable_header_syscall_interception" == xyes],
 AC_CACHE_SAVE
 
 ## External libraries that help on some architectures
-AS_IF([test "x$qthread_topo" != xno],[
-AS_IF([test "x$qthread_topo" = "xnone_specified"],
-      [qthread_topo=no])
-AS_IF([test "x$qthread_implementation" = "xunix"],
-      [# First, check for hwloc, since it gives me the most portable/flexible/reliable/detailed information.
+AS_IF([test "x$qthread_topo" != xno],
+      [AS_IF([test "x$qthread_topo" = "xnone_specified"],
+             [qthread_topo=no])
+       # First, check for hwloc, since it gives me the most portable/flexible/reliable/detailed information.
        AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xhwloc],
              [QTHREAD_CHECK_HWLOC([qthread_topo=hwloc],
                                   [AS_IF([test "x$qthread_topo" != xno],
@@ -1102,7 +1088,6 @@ AS_IF([test "x$qthread_implementation" = "xunix"],
                                  [AS_IF([test "x$qthread_topo" != xno],
                                         [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
        ])
-])
 AS_IF([test "x$qthread_topo" = xno],
       [QTHREAD_CHECK_LINUX])
 
@@ -1151,8 +1136,6 @@ AC_SUBST(TBB_LIBS)
 AC_SUBST(CHPL_OPTS)
 
 AM_CONDITIONAL([ENABLE_CXX_TESTS], [test "x$enable_cxx_tests" != "xno"])
-AM_CONDITIONAL([COMPILE_TARGET_SST], [test "x$qthread_implementation" = "xsst"])
-AM_CONDITIONAL([COMPILE_TARGET_UNIX], [test "x$qthread_implementation" = "xunix"])
 AM_CONDITIONAL([QTHREAD_NEED_OWN_MAKECONTEXT], [test "x$qthread_makecontext_type" = "xown"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIME], [test "x$qthread_timer_type" = "xclock_gettime"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_MACH], [test "x$qthread_timer_type" = "xmach"])

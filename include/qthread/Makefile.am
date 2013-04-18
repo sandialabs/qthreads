@@ -41,10 +41,6 @@ nodist_pkginclude_HEADERS = \
 noinst_HEADERS = \
 	omp_defines.h
 
-if COMPILE_TARGET_SST
-pkginclude_HEADERS += qthread-sst.h
-endif
-
 if COMPILE_MULTINODE
 pkginclude_HEADERS += \
 	multinode.h \
