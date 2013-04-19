@@ -13,7 +13,7 @@ AC_PREREQ(2.59)
 ## ---------------------------------- ##
 AC_INIT([qthread],
         [m4_esyscmd([config/version-gen])],
-        [kbwheel@sandia.gov])
+        [dstark@sandia.gov])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_MACRO_DIR([config])
 AC_CONFIG_SRCDIR([src/qthread.c])
