@@ -3,7 +3,6 @@
 #endif
 
 /* System Headers */
-#include <math.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
@@ -17,6 +16,7 @@
 #include "qt_asserts.h"           /* for assert() toggling */
 #include "qt_visibility.h"
 #include "qt_debug.h"
+#include "qt_int_log.h"
 
 #ifndef MT_LOOP_CHUNK
 # define MT_LOOP_CHUNK 10000
@@ -345,7 +345,7 @@ static void drf_qsort(void *const  array,
 static void drf_qsort_dbl(double *const arr,
                           const size_t  elements)
 {   /*{{{*/
-    const ssize_t MAX = (size_t)log((double)elements) + 5;
+    const ssize_t MAX = QT_INT_LOG(elements) + 5;
     ssize_t       beg[MAX], end[MAX], i = 0, L, R, swap;
     double        piv;
 
@@ -388,7 +388,7 @@ static void drf_qsort_dbl(double *const arr,
 static void drf_qsort_algt(aligned_t *const arr,
                            const size_t     elements)
 {   /*{{{*/
-    const ssize_t MAX = (size_t)log((double)elements) + 5;
+    const ssize_t MAX = QT_INT_LOG(elements) + 5;
     ssize_t       beg[MAX], end[MAX], i = 0, L, R, swap;
     aligned_t     piv;
 
