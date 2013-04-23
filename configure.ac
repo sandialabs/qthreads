@@ -636,9 +636,7 @@ QTHREAD_PTHREAD_PROCESS_PRIVATE
 
 AC_SEARCH_LIBS([nanosleep],[rt],[],
                [AC_MSG_ERROR([Cannot find nanosleep])])
-AC_CHECK_LIB([m], [ceil],
-             [AC_DEFINE([HAVE_LIBM], [1], [Have math library])],
-             [AC_MSG_WARN([Cannot find ceil(); some tests and benchmarks will not be compiled.])])
+AC_SEARCH_LIBS([ceil],[m],[AC_DEFINE([HAVE_LIBM], [1], [Have math library])],[AC_MSG_ERROR([Cannot find ceil(); some tests and benchmarks will not be compiled.])])
 AC_SEARCH_LIBS([accept], [xnet "socket -lnsl"])
 
 AS_IF([test "x$enable_pooled_memory" = "xno"],
