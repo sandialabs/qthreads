@@ -491,7 +491,6 @@ static void qt_loop_step_inner(const size_t         start,
         // saves a timeout in the following loop to
         // get the last thread working on the loop
         // doesn't work if back to master ever returns to this level -- need fork to have context to return to -- akp 10/31/12
-    }
 
     qt_sinc_wait(my_sinc, NULL);
     qthread_steal_enable();
