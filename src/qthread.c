@@ -84,6 +84,7 @@
 #include "qt_eurekas.h"
 #include "qt_subsystems.h"
 #include "qt_output_macros.h"
+#include "qt_int_log.h"
 
 #ifdef QTHREAD_RCRTOOL
 # include "maestro_sched.h"
@@ -892,7 +893,7 @@ int API_FUNC qthread_initialize(void)
     if ((nshepherds == 1) && (nworkerspershep == 1)) {
         need_sync = 0;
     }
-    QTHREAD_LOCKING_STRIPES = 2 << ((unsigned int)(log2(nshepherds * nworkerspershep)) + 1);
+    QTHREAD_LOCKING_STRIPES = 2 << (QT_INT_LOG(nshepherds * nworkerspershep) + 1);
     qthread_debug(CORE_BEHAVIOR, "there will be %u shepherd(s)\n", (unsigned)nshepherds);
 
 #ifdef QTHREAD_COUNT_THREADS
