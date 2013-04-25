@@ -16,7 +16,7 @@ buildall: buildextra
 
 buildextra:
 	for DIR in $(SUBDIRS) ; do \
-		$(MAKE) -C $$DIR $$DIR ; \
+		$(MAKE) -C $$DIR buildall ; \
 	done
 
 hpccg/hpccg:
