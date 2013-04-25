@@ -49,6 +49,7 @@ void read_HPC_row(char *data_file,HPC_Sparse_Matrix **A,double **x,double **b,do
   int total_nrow;
   long long total_nnz;
   int l;
+  int ret;
   int *lp = &l;
   double v;
   double *vp = &v;
@@ -62,8 +63,8 @@ void read_HPC_row(char *data_file,HPC_Sparse_Matrix **A,double **x,double **b,do
     printf("Error: Cannot open file: %s\n",data_file);
     exit(1);
   }
-  fscanf(in_file,"%d",&total_nrow);
-  fscanf(in_file,"%lld",&total_nnz);
+  ret = fscanf(in_file,"%d",&total_nrow);
+  ret = fscanf(in_file,"%lld",&total_nnz);
 #ifdef USING_MPI
 // Number of MPI processes, My process ID
 #else
@@ -96,7 +97,7 @@ void read_HPC_row(char *data_file,HPC_Sparse_Matrix **A,double **x,double **b,do
   int cur_local_row = 0;
   for (i = 0; i < total_nrow; i++) {
 /* row #, nnz in row */
-    fscanf(in_file,"%d",lp);
+    ret = fscanf(in_file,"%d",lp);
 // See if nnz for row should be added
     if ((start_row <= i) && (i <= stop_row)) {
       local_nnz += l;
@@ -119,13 +120,13 @@ void read_HPC_row(char *data_file,HPC_Sparse_Matrix **A,double **x,double **b,do
   cur_local_row = 0;
   for (i = 0; i < total_nrow; i++) {
     int cur_nnz;
-    fscanf(in_file,"%d",&cur_nnz);
+    ret = fscanf(in_file,"%d",&cur_nnz);
 // See if nnz for row should be added
     if ((start_row <= i) && (i <= stop_row)) {
       if (debug) 
         (((( *((&std::cout))<<"Process ") << rank<<" of ") << size<<" getting row ") << i) << std::endl;
       for (j = 0; j < cur_nnz; j++) {
-        fscanf(in_file,"%lf %d",vp,lp);
+        ret = fscanf(in_file,"%lf %d",vp,lp);
         ptr_to_vals_in_row[cur_local_row][j] = v;
         ptr_to_inds_in_row[cur_local_row][j] = l;
       }
@@ -133,7 +134,7 @@ void read_HPC_row(char *data_file,HPC_Sparse_Matrix **A,double **x,double **b,do
     }
     else 
       for (j = 0; j < cur_nnz; j++) 
-        fscanf(in_file,"%lf %d",vp,lp);
+        ret = fscanf(in_file,"%lf %d",vp,lp);
   }
   cur_local_row = 0;
   double xt;
@@ -144,7 +145,7 @@ void read_HPC_row(char *data_file,HPC_Sparse_Matrix **A,double **x,double **b,do
     if ((start_row <= i) && (i <= stop_row)) {
       if (debug) 
         (((( *((&std::cout))<<"Process ") << rank<<" of ") << size<<" getting RHS ") << i) << std::endl;
-      fscanf(in_file,"%lf %lf %lf",&xt,&bt,&xxt);
+      ret = fscanf(in_file,"%lf %lf %lf",&xt,&bt,&xxt);
       ( *x)[cur_local_row] = xt;
       ( *b)[cur_local_row] = bt;
       ( *xexact)[cur_local_row] = xxt;
@@ -152,7 +153,7 @@ void read_HPC_row(char *data_file,HPC_Sparse_Matrix **A,double **x,double **b,do
     }
     else 
 // or thrown away
-      fscanf(in_file,"%lf %lf %lf",vp,vp,vp);
+      ret = fscanf(in_file,"%lf %lf %lf",vp,vp,vp);
   }
   fclose(in_file);
   if (debug) 
