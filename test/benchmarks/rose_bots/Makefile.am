@@ -6,6 +6,7 @@
 GLOBAL_COMMON = common/rose_bots_common.cc
 OUTPUTDIR = $(top_builddir)/src
 LIBS = $(OUTPUTDIR)/libqthread_xomp.la $(OUTPUTDIR)/libqthread.la
+AM_LFLAGS = -lm
 AM_CPPFLAGS = -I$(top_srcdir)/test/benchmarks/rose_bots/common \
 		      -I$(top_srcdir)/include
 DEFINES=-D_OPENMP -DMANUAL_CUTOFF
@@ -13,7 +14,6 @@ DEFINES=-D_OPENMP -DMANUAL_CUTOFF
 AM_CXXFLAGS = $(DEFINES)
 
 BOTS_TESTS = \
-		rose_fft \
 		rose_fib \
 		rose_nqueens \
 		rose_sort \
@@ -23,6 +23,10 @@ BOTS_TESTS = \
 		rose_health \
 		rose_alignment_task \
 		rose_alignment_forloop
+
+if HAVE_LIBM
+BOTS_TESTS += rose_fft
+endif
 
 buildall: $(BOTS_TESTS)
 buildextra: $(BOTS_TESTS)

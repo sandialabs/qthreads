@@ -22,8 +22,11 @@ generic_benchmarks = \
                      time_qt_loopaccums
 thesis_benchmarks = \
                     time_allpairs \
-                    time_wavefront \
-                    time_qutil_qsort
+                    time_wavefront
+if HAVE_LIBM
+thesis_benchmarks += time_qutil_qsort
+endif
+
 pmea09_benchmarks = \
                     time_qarray \
                     time_qarray_sizes \
@@ -141,6 +144,7 @@ utils_rnglib = $(top_builddir)/test/utils/rng/librng.la
 LDADD = $(qthreadlib)
 
 if COMPILE_ROSE_EXTENSIONS
+if HAVE_LIBM
 buildall: $(benchmarks)
 	$(MAKE) -C rose_bots buildall
 	$(MAKE) -C rose_lulesh buildall
@@ -149,6 +153,12 @@ buildextra: $(benchmarks)
 	$(MAKE) -C rose_bots buildextra
 	$(MAKE) -C rose_lulesh buildextra
 	$(MAKE) -C mantevo buildextra
+else
+buildall: $(benchmarks)
+	$(MAKE) -C mantevo buildall
+buildextra: $(benchmarks)
+	$(MAKE) -C mantevo buildextra
+endif
 else
 buildall: $(benchmarks)
 	$(MAKE) -C mantevo buildall
@@ -168,7 +178,10 @@ time_allpairs_SOURCES = thesis/time_allpairs.c
 
 time_wavefront_SOURCES = thesis/time_wavefront.c
 
+if HAVE_LIBM
 time_qutil_qsort_SOURCES = thesis/time_qutil_qsort.c
+time_qutil_qsort_LDADD = -lm $(qthreadlib)
+endif
 
 time_qarray_SOURCES = pmea09/time_qarray.c
 
@@ -257,40 +270,42 @@ time_qt_loops_SOURCES = generic/time_qt_loops.c
 
 time_qt_loopaccums_SOURCES = generic/time_qt_loopaccums.c
 
+if HAVE_LIBM
 if COMPILE_OMP_BENCHMARKS
 time_uts_omp_SOURCES = uts/time_uts_omp.c
-time_uts_omp_LDADD = $(LDADD) $(utils_rnglib)
+time_uts_omp_LDADD = $(LDADD) -lm $(utils_rnglib)
 time_uts_omp_CFLAGS = @OPENMP_CFLAGS@
 endif
 
 if COMPILE_TBB_BENCHMARKS
 time_uts_tbb_SOURCES = uts/time_uts_tbb.cc
-time_uts_tbb_LDADD = $(LDADD) $(utils_rnglib)
+time_uts_tbb_LDADD = $(LDADD) -lm $(utils_rnglib)
 time_uts_tbb_LDFLAGS = @TBB_LIBS@
 endif
 
 if COMPILE_CILK_BENCHMARKS
 time_uts_cilk_SOURCES = uts/time_uts_cilk.c
-time_uts_cilk_LDADD = $(LDADD) $(utils_rnglib)
+time_uts_cilk_LDADD = $(LDADD) -lm $(utils_rnglib)
 endif
 
 time_uts_syncvar_SOURCES = uts/time_uts_syncvar.c
-time_uts_syncvar_LDADD = $(LDADD) $(utils_rnglib)
+time_uts_syncvar_LDADD = $(LDADD) -lm $(utils_rnglib)
 
 time_uts_aligned_SOURCES = uts/time_uts_aligned.c
-time_uts_aligned_LDADD = $(LDADD) $(utils_rnglib)
+time_uts_aligned_LDADD = $(LDADD) -lm $(utils_rnglib)
 
 time_uts_sinc_SOURCES = uts/time_uts_sinc.c
-time_uts_sinc_LDADD = $(LDADD) $(utils_rnglib)
+time_uts_sinc_LDADD = $(LDADD) -lm $(utils_rnglib)
 
 time_uts_donecount_SOURCES = uts/time_uts_donecount.c
-time_uts_donecount_LDADD = $(LDADD) $(utils_rnglib)
+time_uts_donecount_LDADD = $(LDADD) -lm $(utils_rnglib)
 
 time_uts_donecount2_SOURCES = uts/time_uts_donecount2.c
-time_uts_donecount2_LDADD = $(LDADD) $(utils_rnglib)
+time_uts_donecount2_LDADD = $(LDADD) -lm $(utils_rnglib)
 
 time_uts_donecount3_SOURCES = uts/time_uts_donecount3.c
-time_uts_donecount3_LDADD = $(LDADD) $(utils_rnglib)
+time_uts_donecount3_LDADD = $(LDADD) -lm $(utils_rnglib)
+endif
 
 time_task_spawn_SOURCES = mt/time_task_spawn.c
 
