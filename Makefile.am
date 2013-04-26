@@ -54,3 +54,4 @@ benchmarks:
 buildall:
 	$(MAKE) -C src
 	$(MAKE) -C test buildall
+
