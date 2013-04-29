@@ -19,7 +19,8 @@ general_multinode = \
 	spmd \
 	put \
 	get \
-	qthread_fork_remote
+	qthread_fork_remote \
+	in_edges
 
 if HAVE_LIBM
 general_multinode += uts
@@ -88,5 +89,8 @@ if HAVE_LIBM
 uts_SOURCES = uts.c
 uts_LDADD = $(LDADD) -lm $(utils_rnglib)
 endif
+
+in_edges_SOURCES = in_edges.c
+in_edges_LDADD = $(LDADD) $(utils_rnglib)
 
 endif
