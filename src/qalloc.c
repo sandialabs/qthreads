@@ -287,7 +287,7 @@ void *qalloc_makedynmap(const off_t  filesize,
         mi->stream_locks = (pthread_mutex_t *)(mi->bigblocks + streams);
         mi->bitmap_lock  = (pthread_mutex_t *)(mi->stream_locks + streams);
         mi->bitmap       = (unsigned char *)(mi->bitmap_lock + 1);
-        mi->bitmaplength = QT_CEIL_RATIO((filesize/2048), 8);
+        mi->bitmaplength = QT_CEIL_DIV8(filesize/2048);
         mi->base         = ((char *)(mi->bitmap)) + mi->bitmaplength;
         /* initialize the streams */
         i = 0;
@@ -318,7 +318,7 @@ void *qalloc_makedynmap(const off_t  filesize,
         m->stream_locks = (pthread_mutex_t *)(m->bigblocks + streams);
         m->bitmap_lock  = (pthread_mutex_t *)(m->stream_locks + streams);
         m->bitmap       = (unsigned char *)(m->bitmap_lock + 1);
-        m->bitmaplength = QT_CEIL_RATIO((filesize/2048), 8);
+        m->bitmaplength = QT_CEIL_DIV8(filesize/2048);
         m->base         = ((char *)(m->bitmap)) + m->bitmaplength;
 
         m->next  = dynmmaps;
@@ -729,7 +729,7 @@ void *qalloc_dynmalloc(struct dynmapinfo_s *m,
         QALLOC_UNLOCK(&sb->lock);
     } else {
         /* a BIG allocation */
-        size_t             offset, blocks = QT_CEIL_RATIO(size, 2048);
+        size_t             offset, blocks = QT_CEIL_POW2(size, 11);
         bigblock_header_t *bbh = NULL;
 
         /* lock the bitmap */
