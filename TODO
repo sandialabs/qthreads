@@ -34,6 +34,8 @@ Tentative release date: Sep 2013.
 
 # General things to think about:
 
+- Refactor code base to provide a proper `qthread.hpp` for including in C++ applications, in place of the (clever) C++ support in `qthread.h`.
+
 - Implementing MAMA malloc.
 
 - Coalescing system calls.
