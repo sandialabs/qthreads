@@ -1594,7 +1594,9 @@ Q_ENDCXX /* */
 # endif
 
 #else  /* ifdef __cplusplus */
+extern "C++" {
 # include <qthread/qthread.hpp>
+}
 #endif  /* __cplusplus */
 
 #endif /* _QTHREAD_H_ */
