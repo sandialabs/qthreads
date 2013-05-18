@@ -70,8 +70,8 @@ typedef struct list_entry hash_entry;
 
 struct qt_dictionary {
     marked_ptr_t        *B;      // Buckets
-    volatile size_t      count;  // Crt number of elements in hash
-    volatile size_t      size;   // Crt number of buckets (doubling if load per bucket too much)
+    size_t               count;  // Crt number of elements in hash
+    size_t               size;   // Crt number of buckets (doubling if load per bucket too much)
     qt_dict_key_equals_f op_equals;
     qt_dict_hash_f       op_hash;
     qt_dict_cleanup_f    op_cleanup;
