@@ -17,6 +17,7 @@ qthread_migrate_to
 qthread_readstate
 qthread_stackleft
 qtimer
+queue
 read
 reinitialization
 sinc
@@ -27,3 +28,4 @@ tasklocal_data_no_argcopy
 tasklocal_data_no_default
 test_subteams
 test_teams
+*.core
