@@ -970,7 +970,7 @@ static Q_UNUSED QINLINE int qqloop_get_iterations_guided(qqloop_iteration_queue_
     const saligned_t            stop       = iq->stop;
     const qthread_shepherd_id_t sheps      = sa->activesheps;
 
-    if (qthread_num_shepherds() == 1) {
+    if (qthread_num_workers() == 1) {
         if (ret < iq->stop) {
             range->startat = iq->start;
             range->stopat  = iq->stop;
@@ -1223,7 +1223,7 @@ static aligned_t qqloop_wrapper(const struct qqloop_wrapper_args *arg)
     int                         safeexit = 1;
 
     assert(get_iters != NULL);
-    if ((qthread_shep() == shep) && get_iters(iq, stat, &range)) {
+    if (get_iters(iq, stat, &range)) {
         assert(range.startat != range.stopat);
         do {
             if (iq->type == TIMED) {
@@ -1233,7 +1233,7 @@ static aligned_t qqloop_wrapper(const struct qqloop_wrapper_args *arg)
             if (iq->type == TIMED) {
                 qtimer_stop(iq->type_specific_data.timed.timers[shep]);
             }
-            if (!qthread_shep_ok() || (qthread_shep() != shep)) {
+            if (!qthread_shep_ok()) {
                 /* my shepherd has been disabled while I was running */
                 qthread_debug(LOOP_DETAILS, "my shepherd (%i) has been disabled!\n", (int)shep);
                 safeexit = 0;
@@ -1259,7 +1259,7 @@ qqloop_handle_t *qt_loop_queue_create(const qt_loop_queue_type type,
     {
         qqloop_handle_t *const restrict h = MALLOC(sizeof(qqloop_handle_t));
         if (h) {
-            const qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
+            const qthread_shepherd_id_t maxsheps = qthread_num_workers();
             qthread_shepherd_id_t       i;
 
             h->qwa              = MALLOC(sizeof(struct qqloop_wrapper_args) * maxsheps);
@@ -1268,7 +1268,7 @@ qqloop_handle_t *qt_loop_queue_create(const qt_loop_queue_type type,
             h->stat.iq          = qqloop_create_iq(start, stop, incr, type);
             h->stat.func        = func;
             h->stat.arg         = argptr;
-            h->stat.chunksize   = (stop - start) / qthread_num_shepherds() / 10; // completely arbitrary
+            h->stat.chunksize   = (stop - start) / qthread_num_workers() / 10; // completely arbitrary
             if (h->stat.chunksize == 0) {
                 h->stat.chunksize = 1;
             }
@@ -1353,7 +1353,7 @@ void API_FUNC qt_loop_queue_run(qqloop_handle_t *loop)
     assert(qthread_library_initialized);
     {
         qthread_shepherd_id_t       i;
-        const qthread_shepherd_id_t maxsheps = qthread_num_shepherds();
+        const qthread_shepherd_id_t maxsheps = qthread_num_workers();
         aligned_t *const            dc       = &(loop->stat.donecount);
         aligned_t *const            as       = &(loop->stat.activesheps);
 
