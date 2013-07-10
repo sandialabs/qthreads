@@ -1021,7 +1021,7 @@ static QINLINE int qqloop_get_iterations_factored(qqloop_iteration_queue_t *cons
     saligned_t                  phase      = iq->type_specific_data.phase;
     const qthread_shepherd_id_t sheps      = sa->activesheps;
 
-    if (qthread_num_shepherds() == 1) {
+    if (qthread_num_workers() == 1) {
         if (ret < iq->stop) {
             range->startat = iq->start;
             range->stopat  = iq->stop;
@@ -1165,7 +1165,7 @@ static QINLINE qqloop_iteration_queue_t *qqloop_create_iq(const size_t          
             break;
         case TIMED:
         {
-            const qthread_shepherd_id_t max = qthread_num_shepherds();
+            const qthread_shepherd_id_t max = qthread_num_workers();
             qthread_shepherd_id_t       i;
             qtimer_t                   *timers = MALLOC(sizeof(qtimer_t) * max);
             assert(timers);
@@ -1189,7 +1189,7 @@ static QINLINE void qqloop_destroy_iq(qqloop_iteration_queue_t *iq)
     switch (iq->type) {
         case TIMED:
         {
-            const qthread_shepherd_id_t max = qthread_num_shepherds();
+            const qthread_shepherd_id_t max = qthread_num_workers();
             if (iq->type_specific_data.timed.timers) {
                 qthread_shepherd_id_t i;
                 for (i = 0; i < max; i++) {
