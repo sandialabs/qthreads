@@ -1,10 +1,10 @@
 # Release Candidate 1.10:
 
-- Unify the multithreaded shepherd and single-threaded shepherd code paths.
-
 - Refactor topology and affinity support.
 
 - Make eureka support a configuration option; mark as _experimental_ until race conditions are cleaned up.
+
+- Unify the multithreaded shepherd and single-threaded shepherd code paths. (DONE)
 
 - Remove defunct SST support. (DONE)
 
