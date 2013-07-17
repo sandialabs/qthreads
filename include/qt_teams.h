@@ -5,9 +5,11 @@
 #include "qt_visibility.h"
 #include "qt_qthread_t.h"
 
+#ifdef QTHREAD_USE_EUREKAS
 #include <signal.h> /* should have SIGUSR1 and SIGUSR2, per P90 */
 #define QT_ASSASSINATE_SIGNAL SIGUSR1
 #define QT_EUREKA_SIGNAL      SIGUSR2
+#endif /* QTHREAD_USE_EUREKAS */
 
 /* flags for teams (must be different bits) */
 #define QTHREAD_TEAM_DEAD             (1 << 0)
@@ -30,14 +32,14 @@
 #define TEAM_SIGNAL_EUREKA(team_id)   (-1 * (saligned_t)(team_id))
 
 typedef struct qt_team_s {
-    unsigned int team_id;
     aligned_t    eureka;
     aligned_t    eureka_lock;
+    aligned_t   *parent_eureka;
+    unsigned int team_id;
     aligned_t    watcher_started;
     qt_sinc_t   *sinc;
     qt_sinc_t   *subteams_sinc;
     unsigned int parent_id;
-    aligned_t   *parent_eureka;
     qt_sinc_t   *parent_subteams_sinc;
     void        *return_loc;
     uint_fast8_t flags;

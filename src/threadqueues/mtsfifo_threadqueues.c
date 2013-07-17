@@ -20,7 +20,9 @@
 #if defined(UNPOOLED_QUEUES) || defined(UNPOOLED)
 # include "qt_aligned_alloc.h"
 #endif
+#ifdef QTHREAD_USE_EUREKAS
 #include "qt_eurekas.h"
+#endif /* QTHREAD_USE_EUREKAS */
 #include "qt_subsystems.h"
 
 /* Data Structures */
@@ -296,7 +298,9 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 
     assert(q != NULL);
     qthread_debug(THREADQUEUE_CALLS, "q(%p): began\n", q);
+#ifdef QTHREAD_USE_EUREKAS
     qt_eureka_disable();
+#endif /* QTHREAD_USE_EUREKAS */
     qthread_debug(THREADQUEUE_DETAILS, "q(%p): head=%p next_ptr=%p tail=%p\n", q, q->head, q->head ? q->head->next : NULL, q->tail);
     while (1) {
         head = q->head;
@@ -314,24 +318,34 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
         if (next_ptr == NULL) { // queue is empty
 #ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE
             if (qthread_internal_incr(&q->fruitless, &q->fruitless_m, 1) > 1000) {
+# ifdef QTHREAD_USE_EUREKAS
                 qt_eureka_check(0);
+# endif /* QTHREAD_USE_EUREKAS */
                 QTHREAD_COND_LOCK(q->trigger);
                 while (q->fruitless > 1000) {
                     QTHREAD_COND_WAIT(q->trigger);
                 }
                 QTHREAD_COND_UNLOCK(q->trigger);
+# ifdef QTHREAD_USE_EUREKAS
                 qt_eureka_disable();
+# endif /* QTHREAD_USE_EUREKAS */
             } else {
+# ifdef QTHREAD_USE_EUREKAS
                 qt_eureka_check(0);
+# endif /* QTHREAD_USE_EUREKAS */
 # ifdef HAVE_PTHREAD_YIELD
                 pthread_yield();
 # elif HAVE_SHED_YIELD
                 sched_yield();
 # endif
+# ifdef QTHREAD_USE_EUREKAS
                 qt_eureka_disable();
+# endif /* QTHREAD_USE_EUREKAS */
             }
 #else       /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
+# ifdef QTHREAD_USE_EUREKAS
             qt_eureka_check(1);
+# endif /* QTHREAD_USE_EUREKAS */
             SPINLOCK_BODY();
 #endif              /* ifdef QTHREAD_CONDWAIT_BLOCKING_QUEUE */
             continue;
@@ -392,7 +406,9 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
             {
                 qt_threadqueue_node_t *freeme = curs;
 
+#ifdef QTHREAD_USE_EUREKAS
                 qthread_internal_assassinate(t);
+#endif /* QTHREAD_USE_EUREKAS */
                 if (curs->next == NULL) {
                     /* this is clever: since 'next' is the first field, its
                      * address is the address of the entire structure */
@@ -405,7 +421,9 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
             }
                 continue;
             case REMOVE_AND_STOP: // remove, stop looking
+#ifdef QTHREAD_USE_EUREKAS
                 qthread_internal_assassinate(t);
+#endif /* QTHREAD_USE_EUREKAS */
                 if (curs->next == NULL) {
                     /* this is clever: since 'next' is the first field, its
                      * address is the address of the entire structure */

@@ -25,8 +25,11 @@ TESTS = \
 		qdqueue \
 		allpairs \
 		subteams \
-		qt_dictionary \
-		eureka
+		qt_dictionary
+
+if COMPILE_EUREKAS
+TESTS += eureka
+endif
 
 EXTRA_PROGRAMS = wavefront
 

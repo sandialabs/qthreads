@@ -20,7 +20,9 @@
 #include "qt_threadqueues.h"
 #include "qt_qthread_struct.h"
 #include "qt_debug.h"
+#ifdef QTHREAD_USE_EUREKAS
 #include "qt_eurekas.h"
+#endif /* QTHREAD_USE_EUREKAS */
 #include "qt_subsystems.h"
 #include "qt_qthread_mgmt.h"             /* for qthread_thread_free() */
 
@@ -350,7 +352,9 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                                             qt_threadqueue_private_t *QUNUSED(qc),
                                             uint_fast8_t              QUNUSED(active))
 {                                      /*{{{ */
+#ifdef QTHREAD_USE_EUREKAS
     qt_eureka_disable();
+#endif /* QTHREAD_USE_EUREKAS */
     qthread_debug(THREADQUEUE_DETAILS, "q(%p)->q {head:%p tail:%p sh:%p} q->advisory_queuelen:%u\n", q, q->q.head, q->q.tail, q->q.shadow_head, q->advisory_queuelen);
     PARANOIA(sanity_check_tq(&q->q));
     qt_threadqueue_node_t *node = qt_internal_NEMESIS_dequeue(&q->q);
@@ -359,7 +363,9 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
     qthread_debug(THREADQUEUE_DETAILS, "q(%p)->q {head:%p tail:%p sh:%p} q->advisory_queuelen:%u\n", q, q->q.head, q->q.tail, q->q.shadow_head, q->advisory_queuelen);
     PARANOIA(sanity_check_tq(&q->q));
     if (node == NULL) {
+#ifdef QTHREAD_USE_EUREKAS
         qt_eureka_check(0);
+#endif /* QTHREAD_USE_EUREKAS */
         while (q->q.shadow_head == NULL && q->q.head == NULL) {
 #ifndef QTHREAD_CONDWAIT_BLOCKING_QUEUE
             SPINLOCK_BODY();
@@ -373,7 +379,9 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
             }
 #endif      /* ifdef USE_HARD_POLLING */
         }
+#ifdef QTHREAD_USE_EUREKAS
         qt_eureka_disable();
+#endif /* QTHREAD_USE_EUREKAS */
         node = qt_internal_NEMESIS_dequeue(&q->q);
     }
     assert(node);
@@ -427,11 +435,15 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                 tmp.nemesis_advisory_queuelen++;
                 goto pushback;
             case REMOVE_AND_CONTINUE: // remove, move on
+#ifdef QTHREAD_USE_EUREKAS
                 qthread_internal_assassinate(t);
+#endif /* QTHREAD_USE_EUREKAS */
                 FREE_TQNODE(curs);
                 break;
             case REMOVE_AND_STOP: // remove, stop looking
+#ifdef QTHREAD_USE_EUREKAS
                 qthread_internal_assassinate(t);
+#endif /* QTHREAD_USE_EUREKAS */
                 FREE_TQNODE(curs);
                 goto pushback;
         }

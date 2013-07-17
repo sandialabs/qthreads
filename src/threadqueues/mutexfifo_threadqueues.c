@@ -20,7 +20,9 @@
 #include "qt_prefetch.h"
 #include "qt_threadqueues.h"
 #include "qt_debug.h"
+#ifdef QTHREAD_USE_EUREKAS
 #include "qt_eurekas.h"
+#endif /* QTHREAD_USE_EUREKAS */
 #include "qt_subsystems.h"
 
 /* Data Structures */
@@ -208,9 +210,13 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 {                                      /*{{{ */
     qthread_t *p = NULL;
 
+#ifdef QTHREAD_USE_EUREKAS
     qt_eureka_disable();
+#endif /* QTHREAD_USE_EUREKAS */
     while ((p = qt_threadqueue_dequeue(q)) == NULL) {
+#ifdef QTHREAD_USE_EUREKAS
         qt_eureka_check(1);
+#endif /* QTHREAD_USE_EUREKAS */
         SPINLOCK_BODY();
     }
     return p;
@@ -238,7 +244,9 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                 case REMOVE_AND_CONTINUE: // remove, move on
                 {
                     qt_threadqueue_node_t *tmp = curs;
+#ifdef QTHREAD_USE_EUREKAS
                     qthread_internal_assassinate(t);
+#endif /* QTHREAD_USE_EUREKAS */
                     if (curs->next == NULL) {
                         /* this is clever: since 'next' is the first field, its
                          * address is the address of the entire structure */
@@ -251,7 +259,9 @@ void INTERNAL qt_threadqueue_filter(qt_threadqueue_t       *q,
                 }
                 case REMOVE_AND_STOP: // remove, stop looking
                 {
+#ifdef QTHREAD_USE_EUREKAS
                     qthread_internal_assassinate(t);
+#endif /* QTHREAD_USE_EUREKAS */
                     if (curs->next == NULL) {
                         /* this is clever: since 'next' is the first field, its
                          * address is the address of the entire structure */

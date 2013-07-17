@@ -81,7 +81,9 @@
 #endif
 #include "qt_aligned_alloc.h"
 #include "qt_teams.h"
-#include "qt_eurekas.h"
+#ifdef QTHREAD_USE_EUREKAS
+# include "qt_eurekas.h"
+#endif /* QTHREAD_USE_EUREKAS */
 #include "qt_subsystems.h"
 #include "qt_output_macros.h"
 #include "qt_int_log.h"
@@ -451,7 +453,9 @@ static void *qthread_master(void *arg)
 #ifdef QTHREAD_USE_SPAWNCACHE
     localqueue = qt_init_local_spawncache();
 #endif
+#ifdef QTHREAD_USE_EUREKAS
     qt_eureka_worker_init();
+#endif /* QTHREAD_USE_EUREKAS */
 
     current = &(me_worker->current);
 
@@ -627,7 +631,9 @@ qt_run:
                 qthread_exec(t, &my_context);
 
                 t = *current; // necessary for direct-swap sanity
+#ifdef QTHREAD_USE_EUREKAS
                 *current = NULL; // necessary for eureka sanity
+#endif /* QTHREAD_USE_EUREKAS */
 
                 qthread_debug(THREAD_DETAILS, "id(%u): back from qthread_exec, state is %i\n", my_id, t->thread_state);
                 /* now clean up, based on the thread's state */
@@ -721,7 +727,7 @@ qt_run:
                                       my_id, t->thread_id);
                         qt_blocking_subsystem_enqueue(t->rdata->blockedon.io);
                         break;
-
+#ifdef QTHREAD_USE_EUREKAS
                     case QTHREAD_STATE_ASSASSINATED:
                         qthread_debug(THREAD_DETAILS | SHEPHERD_DETAILS,
                                       "id(%u): thread %i assassinated\n",
@@ -736,7 +742,7 @@ qt_run:
                             qassert(sigprocmask(SIG_UNBLOCK, &iset, NULL), 0);
                         }
                         break;
-
+#endif /* QTHREAD_USE_EUREKAS */
                     case QTHREAD_STATE_TERMINATED:
                         qthread_debug(THREAD_DETAILS | SHEPHERD_DETAILS,
                                       "id(%u): thread %i terminated\n",
@@ -2175,7 +2181,9 @@ static void qthread_wrapper(void *ptr)
         qt_threadqueue_enqueue_yielded(t->rdata->shepherd_ptr->ready, prev_t);
     }
 
+#ifdef QTHREAD_USE_EUREKAS
     qt_eureka_check(0);
+#endif /* QTHREAD_USE_EUREKAS */
     qthread_debug(THREAD_BEHAVIOR,
                   "tid %u executing f=%p arg=%p...\n",
                   t->thread_id, t->f, t->arg);

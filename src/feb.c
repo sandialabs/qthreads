@@ -26,7 +26,9 @@
 #include "qt_addrstat.h"
 #include "qt_threadqueues.h"
 #include "qt_debug.h"
+#ifdef QTHREAD_USE_EUREKAS
 #include "qt_eurekas.h" // for qthread_internal_assassinate() (used in taskfilter)
+#endif /* QTHREAD_USE_EUREKAS */
 #include "qt_output_macros.h"
 
 /********************************************************************
@@ -858,7 +860,9 @@ got_m:
         QTHREAD_WAIT_TIMER_START();
         qthread_back_to_master(me);
         QTHREAD_WAIT_TIMER_STOP(me, febwait);
+#ifdef QTHREAD_USE_EUREKAS
         qt_eureka_check(0);
+#endif /* QTHREAD_USE_EUREKAS */
         qthread_debug(FEB_BEHAVIOR, "dest=%p, src=%p (tid=%i): succeeded after waiting\n", dest, src, me->thread_id);
     } else {
         if (dest && (dest != src)) {
@@ -1021,7 +1025,9 @@ int API_FUNC qthread_readFF(aligned_t *restrict       dest,
         QTHREAD_WAIT_TIMER_START();
         qthread_back_to_master(me);
         QTHREAD_WAIT_TIMER_STOP(me, febwait);
+#ifdef QTHREAD_USE_EUREKAS
         qt_eureka_check(0);
+#endif /* QTHREAD_USE_EUREKAS */
         qthread_debug(FEB_BEHAVIOR, "dest=%p, src=%p (tid=%u): succeeded after waiting\n", dest, src, me->thread_id);
     } else {                   /* exists AND is empty... weird, but that's life */
         if (dest && (dest != src)) {
@@ -1202,7 +1208,9 @@ got_m:
         QTHREAD_WAIT_TIMER_START();
         qthread_back_to_master(me);
         QTHREAD_WAIT_TIMER_STOP(me, febwait);
+#ifdef QTHREAD_USE_EUREKAS
         qt_eureka_check(0);
+#endif /* QTHREAD_USE_EUREKAS */
         qthread_debug(FEB_BEHAVIOR, "tid %u succeeded on %p=%p after waiting\n", me->thread_id, dest, src);
     } else {                   /* full, thus IT IS OURS! MUAHAHAHA! */
         if (dest && (dest != src)) {
@@ -1460,7 +1468,9 @@ static void qt_feb_call_tf(const qt_key_t      addr,
                     break;
                 case REMOVE_AND_CONTINUE: // remove, move to the next one
                 {
+#ifdef QTHREAD_USE_EUREKAS
                     qthread_internal_assassinate(waiter);
+#endif /* QTHREAD_USE_EUREKAS */
                     *base = curs->next;
                     FREE_ADDRRES(curs);
                     break;

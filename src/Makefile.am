@@ -14,7 +14,6 @@ libqthread_la_SOURCES = \
 	aligned_alloc.c \
 	cacheline.c \
 	envariables.c \
-	eurekas.c \
 	feb.c \
 	hazardptrs.c \
 	io.c \
@@ -46,6 +45,10 @@ endif
 
 if COMPILE_SPAWNCACHE
 libqthread_la_SOURCES += spawncache.c
+endif
+
+if COMPILE_EUREKAS
+libqthread_la_SOURCES += eurekas.c
 endif
 
 if COMPILE_COMPAT_ATOMIC

@@ -27,7 +27,6 @@ noinst_HEADERS = \
 	qt_context.h \
 	qt_debug.h \
 	qt_envariables.h \
-	qt_eurekas.h \
 	qt_filters.h \
 	qt_gcd.h \
 	qt_hash.h \
@@ -61,6 +60,10 @@ noinst_HEADERS = \
 	rose_sinc_barrier.h \
 	rose_xomp.h \
 	spr_innards.h
+
+if COMPILE_EUREKAS
+noinst_HEADERS += qt_eurekas.h
+endif
 
 if COMPILE_MULTINODE
 noinst_HEADERS += qt_multinode_innards.h

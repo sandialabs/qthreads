@@ -212,8 +212,8 @@ void INTERNAL qt_internal_teamfinish(qt_team_t   *team,
             // 1.1. This task is a team leader
             assert(team->sinc);
             assert(team->subteams_sinc);
-            assert(NULL == team->parent_eureka);
             assert(NULL == team->parent_subteams_sinc);
+            assert(NULL == team->parent_eureka);
 
             // Wait for all participants on team sinc after submitting to
             // team sinc for the leader
@@ -367,7 +367,9 @@ static aligned_t qt_team_watcher(void *args_)
             } else {
                 // I must propogate this eureka: I am the end of all things, and like a Shoggoth, I will sweep my team evilly free of litter
                 qthread_debug(FEB_DETAILS, "team %u's watcher (tid %u) preparing to destroy its team\n", myteam, qthread_id());
+#ifdef QTHREAD_USE_EUREKAS
                 qt_team_eureka();
+#endif /* QTHREAD_USE_EUREKAS */
                 team->watcher_started = 1; // signal that the watcher doesn't need to be killed
                 qthread_empty(parent_eureka);
                 break;

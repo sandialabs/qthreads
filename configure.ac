@@ -147,6 +147,10 @@ AC_ARG_ENABLE([spawn-cache],
               [AS_HELP_STRING([--disable-spawn-cache],
                               [prevents qthreads from using a worker-specific cache of spawns])])
 
+AC_ARG_ENABLE([eurekas],
+              [AS_HELP_STRING([--enable-eurekas],
+                              [supports handling of eureka events])])
+
 AC_ARG_ENABLE([internal-spinlock],
               [AS_HELP_STRING([--disable-internal-spinlock],
                               [avoid using the internal spinlock])])
@@ -650,6 +654,11 @@ AS_IF([test "x$enable_spawn_cache" != "xno"],
       [AC_DEFINE([QTHREAD_USE_SPAWNCACHE],[1],[Define to use worker-specific spawn cache])
        enable_spawn_cache=yes])
 
+AS_IF([test "x$enable_eurekas" = "xyes"],
+      [AC_DEFINE([QTHREAD_USE_EUREKAS],[1],[Define to use eurekas])
+       enable_eurekas=yes],
+       [enable_eurekas=no])
+
 AC_CACHE_SAVE
 
 ## ----------------------- ##
@@ -1148,6 +1157,7 @@ AM_CONDITIONAL([COMPILE_RCRTOOL], [test "x$enable_rcrtool" = "xyes"])
 AM_CONDITIONAL([COMPILE_CHAPEL_INTERFACE], [test "x$compile_chapel_interface" = "xyes"])
 AM_CONDITIONAL([COMPILE_COMPAT_ATOMIC], [test "x$compile_compat_atomic" = "xyes"])
 AM_CONDITIONAL([COMPILE_SPAWNCACHE], [test "x$enable_spawn_cache" = "xyes"])
+AM_CONDITIONAL([COMPILE_EUREKAS], [test "x$enable_eurekas" = "xyes"])
 AM_CONDITIONAL([HAVE_PROG_TIMELIMIT], [test "x$timelimit_path" != "x"])
 AM_CONDITIONAL([COMPILE_MULTINODE], [test "$enable_multinode" = "yes"])
 AM_CONDITIONAL([WANT_PORTALS_SHMEM_RUNTIME], [test "$with_multinode_runtime" = "shmemrt"])
@@ -1254,6 +1264,9 @@ echo    "    Lazy Thread IDs: $enable_lazy_threadids"
 echo    "       Pools/caches: $pool_string"
 echo    "            RCRTool: $enable_rcrtool"
 echo    "Increments/CAS/FEBs: $incr_string, $feb_string"
+echo ""
+echo    "Miscellany:"
+echo    "      Eureka Events: $enable_eurekas"
 echo ""
 
 AS_IF([test "x$apple_llvm_5658_warning" = "xyes"],
