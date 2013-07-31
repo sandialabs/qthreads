@@ -1264,7 +1264,7 @@ qqloop_handle_t *qt_loop_queue_create(const qt_loop_queue_type type,
 
             h->qwa              = MALLOC(sizeof(struct qqloop_wrapper_args) * maxsheps);
             h->stat.donecount   = 0;
-            h->stat.activesheps = maxsheps;
+            h->stat.activesheps = 0;
             h->stat.iq          = qqloop_create_iq(start, stop, incr, type);
             h->stat.func        = func;
             h->stat.arg         = argptr;
@@ -1316,7 +1316,7 @@ qqloop_step_handle_t API_FUNC *qt_loop_step_queue_create(const qt_loop_queue_typ
 
             h->qwa              = MALLOC(sizeof(struct qqloop_wrapper_args) * maxsheps);
             h->stat.donecount   = 0;
-            h->stat.activesheps = maxsheps;
+            h->stat.activesheps = 0;
             h->stat.iq          = qqloop_create_iq(start, stop, incr, type);
             h->stat.func        = func;
             h->stat.arg         = argptr;
@@ -1353,10 +1353,11 @@ void API_FUNC qt_loop_queue_run(qqloop_handle_t *loop)
     assert(qthread_library_initialized);
     {
         qthread_shepherd_id_t       i;
-        const qthread_shepherd_id_t maxswkrs = qthread_num_workers();
+        const qthread_shepherd_id_t maxwkrs  = qthread_num_workers();
         aligned_t *const            dc       = &(loop->stat.donecount);
         aligned_t *const            as       = &(loop->stat.activesheps);
 
+        loop->stat.activesheps = maxwkrs;
         for (i = 0; i < maxwkrs; i++) {
             qthread_fork_to((qthread_f)qqloop_wrapper, loop->qwa + i, NULL, i);
         }
@@ -1367,7 +1368,7 @@ void API_FUNC qt_loop_queue_run(qqloop_handle_t *loop)
             qthread_yield();
         }
         qqloop_destroy_iq(loop->stat.iq);
-        FREE(loop->qwa, sizeof(struct qqloop_wrapper_args) * maxsheps);
+        FREE(loop->qwa, sizeof(struct qqloop_wrapper_args) * maxwkrs);
         FREE(loop, sizeof(qqloop_handle_t));
     }
 } /*}}}*/
@@ -1380,8 +1381,10 @@ void API_FUNC qt_loop_queue_run_there(qqloop_handle_t      *loop,
     qassert_retvoid(shep < qthread_num_shepherds());
     {
         aligned_t *const dc = &(loop->stat.donecount);
-        aligned_t *const as = &(loop->stat.activesheps);
+        alignedt *const as = &(loop->stat.activesheps);
 
+        qthread_incr(as, 1);
+        MACHINE_FENCE;
         qthread_fork_to((qthread_f)qqloop_wrapper, loop->qwa + shep, NULL, shep);
         /* turning this into a spinlock :P
          * I *would* do readFF, except shepherds can join and leave
