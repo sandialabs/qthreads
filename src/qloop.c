@@ -1353,11 +1353,11 @@ void API_FUNC qt_loop_queue_run(qqloop_handle_t *loop)
     assert(qthread_library_initialized);
     {
         qthread_shepherd_id_t       i;
-        const qthread_shepherd_id_t maxsheps = qthread_num_workers();
+        const qthread_shepherd_id_t maxswkrs = qthread_num_workers();
         aligned_t *const            dc       = &(loop->stat.donecount);
         aligned_t *const            as       = &(loop->stat.activesheps);
 
-        for (i = 0; i < maxsheps; i++) {
+        for (i = 0; i < maxwkrs; i++) {
             qthread_fork_to((qthread_f)qqloop_wrapper, loop->qwa + i, NULL, i);
         }
         /* turning this into a spinlock :P
