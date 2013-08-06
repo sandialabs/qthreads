@@ -1381,7 +1381,7 @@ void API_FUNC qt_loop_queue_run_there(qqloop_handle_t      *loop,
     qassert_retvoid(shep < qthread_num_shepherds());
     {
         aligned_t *const dc = &(loop->stat.donecount);
-        alignedt *const as = &(loop->stat.activesheps);
+        aligned_t *const as = &(loop->stat.activesheps);
 
         qthread_incr(as, 1);
         MACHINE_FENCE;
