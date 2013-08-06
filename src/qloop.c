@@ -510,7 +510,7 @@ static QINLINE void qt_loop_balance_inner(const size_t       start,
                                           synctype_t         sync_type)
 {                                      /*{{{ */
     qthread_shepherd_id_t            i;
-    const qthread_shepherd_id_t      maxworkers     = qthread_num_workers();
+    const qthread_shepherd_id_t      maxworkers     = ((stop - start) > qthread_num_workers())? qthread_num_workers() : (stop - start);
     struct qloop_wrapper_args *const qwa            = (struct qloop_wrapper_args *)MALLOC(sizeof(struct qloop_wrapper_args) * maxworkers);
     const size_t                     each           = (stop - start) / maxworkers;
     size_t                           extra          = (stop - start) - (each * maxworkers);
