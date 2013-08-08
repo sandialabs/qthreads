@@ -154,7 +154,6 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
     }
     qthread_debug(AFFINITY_DETAILS, "numa_set_interleave_mask\n");
     numa_set_interleave_mask(&bmask);
-#ifdef QTHREAD_NUMA_DISTANCE_WORKING
     qthread_debug(AFFINITY_DETAILS, "querying distances...\n");
     /* truly ancient versions of libnuma (in the changelog, this is
      * considered "pre-history") do not have numa_distance() */
@@ -170,16 +169,20 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
         for (j = 0; j < nshepherds; j++) {
             const unsigned int node_j = sheps[j].node;
 
+#if QTHREAD_NUMA_DISTANCE_WORKING
             if ((node_i != QTHREAD_NO_NODE) && (node_j != QTHREAD_NO_NODE) && (node_i != node_j)) {
                 sheps[i].shep_dists[j] = numa_distance(node_i, node_j);
             } else {
+#endif
                 /* XXX too arbitrary */
                 if (i == j) {
                     sheps[i].shep_dists[j] = 0;
                 } else {
                     sheps[i].shep_dists[j] = 20;
                 }
+#if QTHREAD_NUMA_DISTANCE_WORKING
             }
+#endif
 	    qthread_debug(AFFINITY_DETAILS, "shep %u to shep %u distance: %u\n", i, j, sheps[i].shep_dists[j]);
         }
         k = 0;
@@ -192,7 +195,6 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
 	    sort_sheps(sheps[i].shep_dists, sheps[i].sorted_sheplist, nshepherds);
 	}
     }
-#endif /* ifdef QTHREAD_NUMA_DISTANCE_WORKING */
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
 
