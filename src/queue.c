@@ -105,6 +105,25 @@ void INTERNAL qthread_queue_internal_enqueue(qthread_queue_t q,
     }
 }
 
+static void qthread_queue_internal_launch(qthread_t          *t,
+                                          qthread_shepherd_t *cur_shep)
+{
+    assert(t);
+    assert(cur_shep);
+    t->thread_state = QTHREAD_STATE_RUNNING;
+    if ((t->flags & QTHREAD_UNSTEALABLE) && (t->rdata->shepherd_ptr != cur_shep)) {
+        qthread_debug(FEB_DETAILS, "qthread(%p:%i) enqueueing in target_shep's ready queue (%p:%i)\n", t, (int)t->thread_id, t->rdata->shepherd_ptr, (int)t->rdata->shepherd_ptr->shepherd_id);
+        qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t);
+    } else
+#ifdef QTHREAD_USE_SPAWNCACHE
+    if (!qt_spawncache_spawn(t, cur_shep->ready))
+#endif
+    {
+        qthread_debug(FEB_DETAILS, "qthread(%p:%i) enqueueing in cur_shep's ready queue (%p:%i)\n", t, (int)t->thread_id, cur_shep, (int)cur_shep->shepherd_id);
+        qt_threadqueue_enqueue(cur_shep->ready, t);
+    }
+}
+
 int API_FUNC qthread_queue_release_one(qthread_queue_t q)
 {
     assert(q);
@@ -125,34 +144,10 @@ int API_FUNC qthread_queue_release_one(qthread_queue_t q)
             break;
     }
     qthread_shepherd_id_t destination = t->target_shepherd;
-#ifdef QTHREAD_USE_SPAWNCACHE
     if (destination == NO_SHEPHERD) {
-        if (!qt_spawncache_spawn(t, qlib->threadqueues[destination])) {
-            qt_threadqueue_enqueue(qlib->threadqueues[destination], t);
-        }
-    } else
-#endif
-    {
-        qt_threadqueue_enqueue(qlib->threadqueues[destination], t);
-    }
-}
-
-static void qthread_queue_internal_launch(qthread_t          *t,
-                                          qthread_shepherd_t *cur_shep)
-{
-    assert(t);
-    assert(cur_shep);
-    t->thread_state = QTHREAD_STATE_RUNNING;
-    if ((t->flags & QTHREAD_UNSTEALABLE) && (t->rdata->shepherd_ptr != cur_shep)) {
-        qthread_debug(FEB_DETAILS, "qthread(%p:%i) enqueueing in target_shep's ready queue (%p:%i)\n", t, (int)t->thread_id, t->rdata->shepherd_ptr, (int)t->rdata->shepherd_ptr->shepherd_id);
-        qt_threadqueue_enqueue(t->rdata->shepherd_ptr->ready, t);
-    } else
-#ifdef QTHREAD_USE_SPAWNCACHE
-    if (!qt_spawncache_spawn(t, cur_shep->ready))
-#endif
-    {
-        qthread_debug(FEB_DETAILS, "qthread(%p:%i) enqueueing in cur_shep's ready queue (%p:%i)\n", t, (int)t->thread_id, cur_shep, (int)cur_shep->shepherd_id);
-        qt_threadqueue_enqueue(cur_shep->ready, t);
+        qthread_queue_internal_launch(t, qthread_internal_getshep());
+    } else {
+        qthread_queue_internal_launch(t, qlib->threadqueues[destination]);
     }
 }
 
