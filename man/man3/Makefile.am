@@ -140,6 +140,12 @@ man_MANS = \
 		   qthread_migrate_to.3 \
 		   qthread_num_shepherds.3 \
 		   qthread_num_workers.3 \
+		   qthread_queue_create.3 \
+		   qthread_queue_destroy.3 \
+		   qthread_queue_join.3 \
+		   qthread_queue_length.3 \
+		   qthread_queue_release_all.3 \
+		   qthread_queue_release_one.3 \
 		   qthread_readFE.3 \
 		   qthread_readFF.3 \
 		   qthread_readstate.3 \
