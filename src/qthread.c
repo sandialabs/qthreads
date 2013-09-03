@@ -631,6 +631,7 @@ qt_run:
                 qthread_exec(t, &my_context);
 
                 t = *current; // necessary for direct-swap sanity
+                *current = NULL; // neessary for "queue sanity"
 #ifdef QTHREAD_USE_EUREKAS
                 *current = NULL; // necessary for eureka sanity
 #endif /* QTHREAD_USE_EUREKAS */
