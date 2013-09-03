@@ -147,7 +147,7 @@ int API_FUNC qthread_queue_release_one(qthread_queue_t q)
     if (destination == NO_SHEPHERD) {
         qthread_queue_internal_launch(t, qthread_internal_getshep());
     } else {
-        qthread_queue_internal_launch(t, qlib->threadqueues[destination]);
+        qthread_queue_internal_launch(t, &qlib->shepherds[destination]);
     }
 }
 
