@@ -224,6 +224,7 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
         node->next   = NULL;
         /* append the node */
         cursor->next = node;
+        (void)qthread_incr(&(q->advisory_queuelen), 1);
     } else {
         qt_threadqueue_enqueue(q, t);
     }
