@@ -6,7 +6,7 @@ use warnings;
 use Cwd qw/getcwd/;
 
 # Setup configuration options
-my @default_conf_names = ('compat', 'unpooled', 'opt', 'nemesis', 'lifo', 'mutexfifo', 'nottingham', 'rose', 'slowcontext', 'shep_profile', 'lock_profile', 'steal_profile', 'tc_profile', 'hi_st', 'hi_mt', 'dev');
+my @default_conf_names = ('compat', 'unpooled', 'opt', 'nemesis', 'lifo', 'mutexfifo', 'rose', 'slowcontext', 'shep_profile', 'lock_profile', 'steal_profile', 'tc_profile', 'hi_st', 'hi_mt', 'dev');
 
 my %config = (
     default       => '',
