@@ -1,14 +1,6 @@
-# Release Candidate 1.10:
+# Release Candidate 1.11:
 
-- Make eureka support a configuration option; mark as _experimental_ until race conditions are cleaned up. (DONE)
-
-- Unify the multithreaded shepherd and single-threaded shepherd code paths. (DONE)
-
-- Remove defunct SST support. (DONE)
-
-- Remove futurelib. (DONE)
-
-Tentative release date: Sep 2013.
+Tentative release date: Mar 2014.
 
 # General things to do (in no particular order):
 
