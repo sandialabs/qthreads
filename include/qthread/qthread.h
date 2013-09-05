@@ -51,7 +51,7 @@
 #define NO_SHEPHERD    ((qthread_shepherd_id_t)-1)
 #define NO_WORKER      ((qthread_worker_id_t)-1)
 
-#define QTHREAD_VERSION 1009001
+#define QTHREAD_VERSION 1010000
 
 #include <qthread/macros.h>
 
