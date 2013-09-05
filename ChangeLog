@@ -1,3 +1,779 @@
+2013-09-03  Dylan Stark <dstark@sandia.gov>
+
+	* NEWS: Updates NEWS.
+
+2013-09-04  Dylan Stark <dstark@sandia.gov>
+
+	* src/interfaces/chapel/Makefile.inc,
+	src/interfaces/chapel/comm-qthreads.c,
+	src/interfaces/chapel/tasks-qthreads.c: Patches Chapel interface.  This was provided by Brad Chamberlain on behalf of the Chapel Team.
+	It comprises a series of changes to support the ongoing hierarchical
+	locales refactoring.
+
+2013-09-03  Dylan Stark <dstark@sandia.gov>
+
+	* TODO: Removes old to-do items, adds section for RC 1.11.
+
+2013-09-03  Dylan Stark <dylan.stark@gmail.com>
+
+	* src/threadqueues/lifo_threadqueues.c: Fixes advisory length for
+	lifo scheduler.  - One path through qt_threadqueue_enqueue_yielded() was not
+	  incrementing `advisory_queuelen`.
+
+2013-09-03  Dylan Stark <dylan.stark@gmail.com>
+
+	* scripts/build.pl: Removes `nottingham` config. from default set.
+
+2013-09-03  Dylan Stark <dylan.stark@gmail.com>
+
+	* src/qthread.c: Fixes problem with `test/basics/queue`.  - Current task pointer needs to be explicitly cleared so that
+	  busyness check in test returns appropriate value.
+
+2013-09-03  Dylan Stark <dylan.stark@gmail.com>
+
+	* src/queue.c: Fixes qthread_queue_release_one().  - Call to qthread_queue_internal_launch() was passing pointer to a   thread queue, instead of a shepherd.
+
+2013-08-16  Kyle Wheeler <kwheeler@micron.com>
+
+	* man/man3/Makefile.am, man/man3/qthread_queue_create.3,
+	man/man3/qthread_queue_destroy.3, man/man3/qthread_queue_join.3,
+	man/man3/qthread_queue_length.3,
+	man/man3/qthread_queue_release_all.3,
+	man/man3/qthread_queue_release_one.3: document qthread_queue_*
+	functions
+
+2013-08-08  Kyle Wheeler <kwheeler@micron.com>
+
+	* src/queue.c: fix queue_release_one to correctly set task state
+
+2013-08-08  Kyle Wheeler <kwheeler@micron.com>
+
+	* src/affinity/libnuma.c: fix execution in the absence of
+	numa_distance()
+
+2013-08-06  Kyle Wheeler <kwheeler@micron.com>
+
+	* src/qloop.c: uncrutification
+
+2013-08-06  Kyle Wheeler <kwheeler@micron.com>
+
+	* src/qloop.c: fix boundary condition bug/inefficiency that Alina
+	noticed
+
+2013-08-06  Kyle Wheeler <kwheeler@micron.com>
+
+	* src/qloop.c: fix typo
+
+2013-07-31  Kyle Wheeler <kwheeler@micron.com>
+
+	* src/qloop.c: ideas
+
+2013-07-31  Kyle Wheeler <kwheeler@micron.com>
+
+	* src/qloop.c: use a more sensible variable name
+
+2013-07-29  solivi <solivi@sandia.gov>
+
+	* man/man3/qthread_lock.3: fixed man entry for qthread_unlock to be
+	consistent with actual behavior
+
+2013-07-26  solivi <solivi@sandia.gov>
+
+	* src/affinity/hwloc_v2.c: changed hwloc_v2 to default to core
+	worker binding instead of PU to avoid scheduling on adjacent
+	hyperthreads (will need to override this default on MIC)
+
+2013-07-17  Dylan Stark <dstark@sandia.gov>
+
+	* TODO: Marks to-do item as done.
+
+2013-07-17  Dylan Stark <dstark@sandia.gov>
+
+	* configure.ac, include/Makefile.am, include/qt_teams.h,
+	include/qthread/qthread.h, src/Makefile.am, src/feb.c,
+	src/qthread.c, src/syncvar.c, src/teams.c,
+	src/threadqueues/lifo_threadqueues.c,
+	src/threadqueues/mtsfifo_threadqueues.c,
+	src/threadqueues/mutexfifo_threadqueues.c,
+	src/threadqueues/nemesis_threadqueues.c,
+	src/threadqueues/sherwood_threadqueues.c, test/features/Makefile.am: 
+	Adds configuration option for eureka event support.  Use `--enable-eurekas` to build with support for eureka events;
+	eureka support is disabled by default.
+
+2013-07-12  Dylan Stark <dstark@sandia.gov>
+
+	* TODO: Removes affinity to-do item.
+
+2013-07-12  Dylan Stark <dstark@sandia.gov>
+
+	* TODO: Marks unified multithreaded shepherds item as done.
+
+2013-07-10  Dylan Stark <dstark@sandia.gov>
+
+	* src/qloop.c: Cleans up dynamic loop patch.  Missed a few checks for number of workers.
+
+2013-07-09  Dylan Stark <dstark@sandia.gov>
+
+	* src/qloop.c: Fixes dynamic loops.  Dynamic loops now parallelize based on number of workers, not number
+	of shepherds.
+
+2013-05-18  Kyle Wheeler <kbwheel@gmail.com>
+
+	* test/basics/.gitignore, test/features/.gitignore: updated ignores
+
+2013-05-18  Kyle Wheeler <kwheeler@micron.com>
+
+	* src/ds/dictionary/dictionary_shavit.c: avoid a few warnings and
+	remove superfluous "volatile"
+
+2013-05-13  Dylan Stark <dylan.stark@gmail.com>
+
+	* TODO: Adds a todo to think about how to better handle inclusion in
+	C++ applications.
+
+2013-05-13  Dylan Stark <dylan.stark@gmail.com>
+
+	* include/qthread/qthread.h: Fixes extern bug.  Patch from Michael Ferguson:     "... includes Chapel stuff in an extern "C" {     } block.  Then the qthreads.h header cleverly detects a C++
+	    compiler and then includes some C++ stuff.... which causes
+	    errors if it's within the extern "C" block. So, a patch to qthreads
+	    adds extern "C++" before including the C++ aspects of qthreads."
+
+2013-05-06  Dylan Stark <dstark@sandia.gov>
+
+	* src/qthread.c: Makes sure status only printed when user requests
+	info.  Thanks to Greg Titus for the patch.
+
+2013-05-01  Kyle Wheeler <kwheeler@micron.com>
+
+	* include/qt_int_ceil.h, src/qalloc.c: faster CEIL for powers of 2
+
+2013-04-29  Dylan Stark <dylan.stark@gmail.com>
+
+	* test/multinode/Makefile.am, test/multinode/in_edges.c: Adds
+	"in-edges" test code.
+
+2013-04-26  Dylan Stark <dylan.stark@gmail.com>
+
+	* Makefile.am, configure.ac, test/basics/Makefile.am,
+	test/features/Makefile.am, test/stress/Makefile.am: Hacks the build
+	system to pass single-worker scheduler tests.  This is required to get the nightly tests to pass for single-worker
+	schedulers. The tests are failing because the affinity layers
+	attempt to use more than one worker per shepherd and an error
+	condition is hit when the Qthreads detects that the threadqueue and
+	system topology are not compatible.  The right way to do this is to update all of the affinity layer
+	implementations recognize when there is a constraint that only one
+	worker is supported per shepherd.
+
+2013-04-25  Kyle Wheeler <kwheeler@micron.com>
+
+	* test/benchmarks/Makefile.am,
+	test/benchmarks/rose_bots/Makefile.am,
+	test/benchmarks/rose_lulesh/Makefile.am: more LIBM handling
+
+2013-04-25  Kyle Wheeler <kwheeler@micron.com>
+
+	* test/benchmarks/mantevo/Makefile.am: fix building hpccg benchmarks
+	via buildextra target
+
+2013-04-25  Kyle Wheeler <kwheeler@micron.com>
+
+	* test/benchmarks/mantevo/hpccg_rose/rose_read_HPC_row.cpp: remove
+	compiler warnings
+
+2013-04-25  Kyle Wheeler <kwheeler@micron.com>
+
+	* src/qthread.c: use integer-based log2
+
+2013-04-25  Allan Porterfield <akp@bronto.europa.renci.org>
+
+	* src/qloop.c: fix last commit
+
+2013-04-18  Dylan Stark <dstark@sandia.gov>
+
+	* configure.ac: Switches bug reporting target.
+
+2013-04-23  Kyle Wheeler <kwheeler@micron.com>
+
+	* include/Makefile.am, include/qt_int_log.h, src/qutil.c: avoid
+	floating-point logarithm for integers; use an integer-based
+	implementation
+
+2013-04-23  Kyle Wheeler <kwheeler@micron.com>
+
+	* include/qt_int_ceil.h: simpler/faster
+
+2013-04-23  Dylan Stark <dylan.stark@gmail.com>
+
+	* configure.ac: Reverts libm detection.  Conversion to `AC_CHECK_LIB()` was causing libm to not be linked in.
+
+2013-04-14  Dylan Stark <dylan.stark@gmail.com>
+
+	* configure.ac, src/Makefile.am, src/affinity/common.c,
+	src/affinity/hwloc_v2.c, src/affinity/lgrp.c,
+	src/affinity/libnuma.c, src/affinity/libnumaV2.c,
+	src/affinity/mach.c, src/affinity/no.c, src/affinity/plpa.c,
+	src/affinity/tilera.c: Adds heavily modified version of hwloc layer.
+
+2013-04-09  Dylan Stark <dylan.stark@gmail.com>
+
+	* src/Makefile.am: Collects common affinity layer code.
+
+2013-04-14  Dylan Stark <dylan.stark@gmail.com>
+
+	* include/qt_affinity.h: Adds method descriptions for affinity layer
+	interface.
+
+2013-04-14  Dylan Stark <dylan.stark@gmail.com>
+
+	* include/qt_affinity.h, src/affinity/hwloc.c: Adds hw_par argument
+	to qt_affinity_init().
+
+2013-04-09  Dylan Stark <dylan.stark@gmail.com>
+
+	* include/qt_affinity.h, src/Makefile.am, src/affinity/common.c,
+	src/qthread.c: Collects common affinity layer code.
+
+2013-04-09  Dylan Stark <dylan.stark@gmail.com>
+
+	* src/qthread.c: Cleans up topology pre- and post-processing.
+
+2013-04-09  Dylan Stark <dylan.stark@gmail.com>
+
+	* include/qt_threadqueue_scheduler.h, include/qt_threadqueues.h,
+	src/qthread.c, src/threadqueues/lifo_threadqueues.c,
+	src/threadqueues/loxley_threadqueues.c,
+	src/threadqueues/mtsfifo_threadqueues.c,
+	src/threadqueues/mutexfifo_threadqueues.c,
+	src/threadqueues/nemesis_threadqueues.c,
+	src/threadqueues/nottingham_threadqueues.c,
+	src/threadqueues/sherwood_threadqueues.c: Starts threadqueue policy
+	interface; removes qt_threadqueue_max_wps().
+
+2013-04-18  Kyle Wheeler <kwheeler@micron.com>
+
+	* configure.ac, include/Makefile.am, include/qt_int_ceil.h,
+	src/ds/qarray.c, src/patterns/wavefront.c, src/qalloc.c,
+	src/sincs/donecount.c, src/sincs/donecount_cas.c,
+	src/sincs/original.c, src/sincs/snzi.c,
+	test/benchmarks/Makefile.am, test/multinode/Makefile.am,
+	test/stress/Makefile.am: avoid requiring floating-point ceil, and
+	use optimizable integer math instead when possible
+
+2013-04-18  Kyle Wheeler <kwheeler@micron.com>
+
+	* include/Makefile.am, include/qt_queue.h: fix make distcheck
+
+2013-04-18  Kyle Wheeler <kwheeler@micron.com>
+
+	* NEWS, TODO: record what I've been up to
+
+2013-04-18  Kyle Wheeler <kwheeler@micron.com>
+
+	* README, config/qthread_check_bitfield_order.m4,
+	include/qthread/common.h.in, include/qthread/qthread.h,
+	include/qthread_innards.h, src/affinity/mach.c, src/feb.c,
+	src/qthread.c, test/argparsing.h, test/basics/qtimer.c: remove all
+	reference to SST (e.g. ifdefs)
+
+2013-04-18  Kyle Wheeler <kwheeler@micron.com>
+
+	* config/qthread_check_sst.m4, configure.ac,
+	include/qthread/Makefile.am, include/qthread/qthread-sst.h,
+	src/Makefile.am, src/ds/Makefile.inc, src/sst/qthread-sst.c: remove
+	detection of SST, and the basic defunct SST support code
+
+2013-04-18  Kyle Wheeler <kwheeler@micron.com>
+
+	* test/benchmarks/mantevo/hpccg/read_HPC_row.cpp: fix hpccg compiler
+	warnings
+
+2013-04-18  Kyle Wheeler <kwheeler@micron.com>
+
+	* include/Makefile.am, include/futurelib_innards.h,
+	include/qthread/Makefile.am, include/qthread/futurelib.h,
+	include/qthread/loop.hpp, include/qthread/loop_iter.hpp,
+	include/qthread/loop_templates.hpp, include/qthread/qthread.h,
+	man/man3/Makefile.am, man/man3/future_acquire.3,
+	man/man3/future_exit.3, man/man3/future_fork.3,
+	man/man3/future_init.3, man/man3/future_join_all.3,
+	man/man3/future_yield.3, man/man3/qthread_spawn.3, src/Makefile.am,
+	src/futurelib.c, src/qthread.c, src/sst/futurelib-sst.c,
+	test/features/Makefile.am, test/features/cxx_futurelib.cpp,
+	test/features/qloop_utils.c, test/features/qutil.c: remove futurelib
+
+2013-04-18  Kyle Wheeler <kwheeler@micron.com>
+
+	* include/qthread/qloop.h, man/man3/Makefile.am,
+	man/man3/qt_loop_future.3, man/man3/qt_loop_step_future.3,
+	src/qloop.c: remove qt_loop_future and qt_loop_step_future (should
+	be the last of the qloop future stuff)
+
+2013-04-18  Kyle Wheeler <kwheeler@micron.com>
+
+	* man/man3/Makefile.am, man/man3/qt_loop_balance.3,
+	man/man3/qt_loop_balance_future.3, src/qloop.c: remove
+	qt_loop_balance_future
+
+2013-04-18  Kyle Wheeler <kwheeler@micron.com>
+
+	* man/man3/qt_loop.3, man/man3/qt_loop_queue_create.3: remove
+	references to future functions in SEE ALSO section
+
+2013-04-18  Kyle Wheeler <kwheeler@micron.com>
+
+	* src/qutil.c: remove futurelib.h include, and remove commented-out
+	calls to future_fork
+
+2013-04-18  Kyle Wheeler <kwheeler@micron.com>
+
+	* man/man3/qt_double_max.3, man/man3/qt_double_min.3,
+	man/man3/qt_double_prod.3, man/man3/qt_double_sum.3,
+	man/man3/qutil_double_max.3, man/man3/qutil_double_min.3,
+	man/man3/qutil_double_mult.3, man/man3/qutil_double_sum.3,
+	man/man3/qutil_qsort.3: update documentation to be accurate (we no
+	longer use futures)
+
+2013-04-18  Kyle Wheeler <kwheeler@micron.com>
+
+	* man/man3/Makefile.am, man/man3/qt_loopaccum_balance.3,
+	man/man3/qt_loopaccum_balance_future.3, src/qloop.c: remove
+	qt_loopaccum_balance_future
+
+2013-04-17  Dylan Stark <dstark@sandia.gov>
+
+	* TODO: Cleans up old TODOs.
+
+2013-04-17  Dylan Stark <dstark@sandia.gov>
+
+	* TODO: Adds preliminary RC 1.10 todos.
+
+2013-04-08  Dylan Stark <dylan.stark@gmail.com>
+
+	* src/queue.c: Cleans up type conflict.
+
+2013-04-08  Dylan Stark <dylan.stark@gmail.com>
+
+	* : commit d8c97c1c64f99a506b4b6f671db470ac74397ed9 Author: Allan
+	Porterfield <akp@bronto.europa.renci.org> Date:   Mon Apr 8 10:35:41
+	2013 -0400
+
+2013-04-08  Allan Porterfield <akp@bronto.europa.renci.org>
+
+	* : commit ad3241bddf97172a27a9551e0cee8964e8db8b34 Author: Allan
+	Porterfield <akp@bronto.europa.renci.org> Date:   Mon Apr 8 09:59:50
+	2013 -0400
+
+2013-04-05  Dylan Stark <dstark@sandia.gov>
+
+	* configure.ac: Removes (previously deprecated)
+	--enable-multithreaded-shepherds configuration option.
+
+2013-04-05  Dylan Stark <dstark@sandia.gov>
+
+	* scripts/build.pl: Replaces usage of
+	--enable-multithreaded-shepherds with appropriate --with-scheduler=
+	setting.
+
+2013-04-05  Kyle Wheeler <kwheeler@micron.com>
+
+	* test/basics/Makefile.am, test/basics/queue.c: unit-test for queue
+	subsystem (only tests MULTI_JOIN_LENGTH)
+
+2013-04-05  Kyle Wheeler <kwheeler@micron.com>
+
+	* include/qthread/qthread.h, src/queue.c: add function to read queue
+	length (for supported queue types)
+
+2013-04-05  Kyle Wheeler <kwheeler@micron.com>
+
+	* include/qt_queue.h, src/queue.c: capped implementation for
+	qthread_queue subsystem
+
+2013-04-05  Kyle Wheeler <kwheeler@micron.com>
+
+	* include/qt_queue.h, src/queue.c: nosync implementation for
+	qthread_queue subsystem
+
+2013-04-05  Kyle Wheeler <kwheeler@micron.com>
+
+	* include/qt_queue.h: nemesis length shouldnt impose additional
+	alignment requirements, otherwise things have the potential to get
+	weird unexpectedly; just put the length at the beginning of the
+	cacheline and be done
+
+2013-04-05  Kyle Wheeler <kwheeler@micron.com>
+
+	* include/qt_queue.h, src/qthread.c, src/queue.c: basic
+	(NEMESIS-only) implementation of qthread_queue operations
+
+2013-04-05  Dylan Stark <dstark@sandia.gov>
+
+	* include/qt_threadqueue_scheduler.h: Adds new header file.
+
+2013-04-05  Kyle Wheeler <kwheeler@micron.com>
+
+	* include/qt_threadstate.h: new threadstate for enqueueing into a
+	user-specified queue
+
+2013-04-05  Kyle Wheeler <kwheeler@micron.com>
+
+	* include/qt_qthread_struct.h: make a queue pointer passable in the
+	rdata
+
+2013-04-05  Kyle Wheeler <kwheeler@micron.com>
+
+	* src/qthread.c: remove unconditional stealing enable
+
+2013-04-05  Dylan Stark <dstark@sandia.gov>
+
+	* configure.ac, include/qt_affinity.h,
+	include/qt_shepherd_innards.h, include/qthread_innards.h,
+	src/Makefile.am, src/affinity/hwloc.c, src/affinity/lgrp.c,
+	src/affinity/libnuma.c, src/affinity/libnumaV2.c,
+	src/affinity/mach.c, src/affinity/no.c, src/affinity/plpa.c,
+	src/affinity/tilera.c, src/eurekas.c, src/hazardptrs.c,
+	src/interfaces/chapel/tasks-qthreads.c, src/interfaces/rose/xomp.c,
+	src/qloop.c, src/qthread.c, src/rcrtool/maestro_sched.c,
+	src/rcrtool/qt_rcrtool.c, src/workers.c,
+	test/basics/aligned_prodcons.c: Removes
+	non-QTHREAD_MULTITHREADED_SHEPHERDS code.
+
+2013-04-04  Dylan Stark <dstark@sandia.gov>
+
+	* configure.ac, include/qt_threadqueues.h, src/qthread.c,
+	src/threadqueues/lifo_threadqueues.c,
+	src/threadqueues/loxley_threadqueues.c,
+	src/threadqueues/mtsfifo_threadqueues.c,
+	src/threadqueues/mutexfifo_threadqueues.c,
+	src/threadqueues/nemesis_threadqueues.c,
+	src/threadqueues/nottingham_threadqueues.c,
+	src/threadqueues/sherwood_threadqueues.c: Updates all schedulers to
+	--enable-multithreaded-shepherds.  Includes moving some scheduling logic out of Qthreads internals
+	(`qt_threadqueue_choose_dest()`) and adding support to allow the
+	affinity layer to query the threadqueue for the max number of
+	workers per shepherd.
+
+2013-04-05  Kyle Wheeler <kwheeler@micron.com>
+
+	* include/qt_queue.h, include/qthread/qthread.h, src/Makefile.am,
+	src/queue.c: framework for qthread_queue system (renamed "tasklist",
+	since we dont call them tasks)
+
+2013-04-04  Kyle Wheeler <kwheeler@micron.com>
+
+	* include/Makefile.am, include/qt_blocking_structs.h,
+	include/qt_locks.h: remove vestigial qt_locks references and
+	qthread_queue_t definition
+
+2013-03-05  Kyle Wheeler <kwheeler@micron.com>
+
+	* test/features/qt_dictionary.c: be verbose about destructor
+	behavior
+
+2013-03-05  Kyle Wheeler <kwheeler@micron.com>
+
+	* src/ds/dictionary/dictionary_simple.c: fix typo
+
+2013-03-05  Kyle Wheeler <kwheeler@micron.com>
+
+	* src/ds/dictionary/dictionary_shavit.c: do not call the destructor
+	on placeholder values
+
+2013-03-05  Kyle Wheeler <kwheeler@micron.com>
+
+	* src/ds/dictionary/dictionary_shavit.c,
+	src/ds/dictionary/dictionary_simple.c,
+	test/benchmarks/mantevo/hpccg_rose/hpccg_openmp: Fix the bug
+	reported by Daniel B
+
+2013-03-04  Dylan Stark <dstark@sandia.gov>
+
+	* src/interfaces/chapel/tasks-qthreads.c: Prints debug message
+	before updating value.
+
+2013-03-01  Kyle <kbwheel@gmail.com>
+
+	* src/qthread.c: minor issues from GUARD_PAGES patch (why did this
+	compile before?)
+
+2013-02-28  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/ds/dictionary/dictionary_trie.c: use memory scribbling more
+
+2013-02-28  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/dictionary.h, src/Makefile.am,
+	src/ds/dictionary/dictionary_shavit.c,
+	src/ds/dictionary/dictionary_simple.c,
+	src/ds/dictionary/dictionary_trie.c: make the dictionary cleanup
+	function clean up values as well as tags
+
+2013-02-28  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qthread.c: when guard-pages are enabled, use QT_GUARD_PAGES to
+	turn them OFF at runtime (still default to on)
+
+2013-02-28  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_envariables.h, src/envariables.c: a special function
+	for getting boolean values from the environment
+
+2013-02-27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/hash.h, src/ds/dictionary/hash.c,
+	src/qtimer/gettime.c: use void* instead of uint8_t* for the
+	interface to the qt_hash_bytes() function
+
+2013-02-27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/features/qt_dictionary.c: use better hash function
+
+2013-02-27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/ds/dictionary/dictionary_shavit.c,
+	src/ds/dictionary/dictionary_trie.c, src/feb.c, src/hashmap.c,
+	src/lf_hashmap.c, src/qtimer/gettime.c, src/syncvar.c: use the
+	common qt_hash64 function, rather than re-define Burtle's hash all
+	the time
+
+2013-02-27  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/Makefile.am, include/qthread/hash.h,
+	src/Makefile.am, src/ds/Makefile.inc, src/ds/dictionary/hash.c: 
+	publicly visible hash functions (for utility purposes)
+
+2013-02-26  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/ds/dictionary/dictionary_trie.c: use Qthreads functions, for
+	portability
+
+2013-02-26  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/ds/dictionary/dictionary_trie.c: makes trie compile again
+
+2013-02-26  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.ac: change the default dictionary
+
+2013-02-26  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* NEWS: version bump for trunk to 1.9.1b
+
+2013-02-26  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/Makefile.am, src/ds/Makefile.inc: distribute all the barrier
+	and dictionary options with the tarball
+
+2013-02-26  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/features/Makefile.am, test/features/qt_loop_balance_simple.c: 
+	test qt_loop_balance_simple
+
+2013-02-26  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qloop.h, include/qthread/qloop.hpp,
+	man/man3/Makefile.am, man/man3/qt_loop_balance.3,
+	man/man3/qt_loop_balance_simple.3, src/qloop.c: 
+	qt_loop_balance_simple(), also allow donecount-synchronized
+	qt_loop_balance to use futures and simple tasks
+
+2013-02-26  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/qloop.c: explicit flags argument to qt_loop_balance_inner
+
+2013-02-26  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.ac: properly set debug flags for sparc
+
+2013-02-26  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* : commit ec748111534bee9acf788d34b323c6072cfbdb75 Author: Kyle
+	Wheeler <kbwheel@sandia.gov> Date:   Tue Feb 26 09:02:15 2013 -0700
+
+2013-02-25  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* configure.ac, test/benchmarks/mantevo/Makefile.am: finish moving
+	hpccg_rose
+
+2013-02-25  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* : commit 8760980e5687e851723e0b3d9d40ede3f2a35c40 Author: Kyle
+	Wheeler <kbwheel@sandia.gov> Date:   Mon Feb 25 14:04:09 2013 -0700
+
+2013-02-25  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qt_asserts.h: paranoia helper
+
+2013-02-25  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/threadqueues/nemesis_threadqueues.c: fix single-threaded
+	dequeue logic
+
+2013-02-25  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* src/threadqueues/nemesis_threadqueues.c: one-line fix to nemesis
+	eureka bug (obvious, in retrospect)
+
+2013-02-25  Dylan Stark <dylan.stark@gmail.com>
+
+	* src/interfaces/chapel/tasks-qthreads.c: Adds another catch for
+	using TLS when unavailable.
+
+2013-02-25  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* test/benchmarks/mantevo/hpccg_openmp/HPCCG.hpp,
+	test/benchmarks/mantevo/hpccg_openmp/HPC_Sparse_Matrix.hpp,
+	test/benchmarks/mantevo/hpccg_openmp/HPC_sparsemv.hpp,
+	test/benchmarks/mantevo/hpccg_openmp/Makefile.am,
+	test/benchmarks/mantevo/hpccg_openmp/compute_residual.hpp,
+	test/benchmarks/mantevo/hpccg_openmp/ddot.hpp,
+	test/benchmarks/mantevo/hpccg_openmp/exchange_externals.hpp,
+	test/benchmarks/mantevo/hpccg_openmp/generate_matrix.hpp,
+	test/benchmarks/mantevo/hpccg_openmp/hpccg_openmp,
+	test/benchmarks/mantevo/hpccg_openmp/libxomp.h,
+	test/benchmarks/mantevo/hpccg_openmp/make_local_matrix.hpp,
+	test/benchmarks/mantevo/hpccg_openmp/mytimer.cpp,
+	test/benchmarks/mantevo/hpccg_openmp/mytimer.hpp,
+	test/benchmarks/mantevo/hpccg_openmp/read_HPC_row.hpp,
+	test/benchmarks/mantevo/hpccg_openmp/rose_HPCCG.cpp,
+	test/benchmarks/mantevo/hpccg_openmp/rose_HPC_sparsemv.cpp,
+	test/benchmarks/mantevo/hpccg_openmp/rose_compute_residual.cpp,
+	test/benchmarks/mantevo/hpccg_openmp/rose_ddot.cpp,
+	test/benchmarks/mantevo/hpccg_openmp/rose_generate_matrix.cpp,
+	test/benchmarks/mantevo/hpccg_openmp/rose_main.cpp,
+	test/benchmarks/mantevo/hpccg_openmp/rose_read_HPC_row.cpp,
+	test/benchmarks/mantevo/hpccg_openmp/rose_waxpby.cpp,
+	test/benchmarks/mantevo/hpccg_openmp/waxpby.hpp,
+	test/benchmarks/mantevo/hpccg_rose/HPCCG.hpp,
+	test/benchmarks/mantevo/hpccg_rose/HPC_Sparse_Matrix.hpp,
+	test/benchmarks/mantevo/hpccg_rose/HPC_sparsemv.hpp,
+	test/benchmarks/mantevo/hpccg_rose/Makefile.am,
+	test/benchmarks/mantevo/hpccg_rose/compute_residual.hpp,
+	test/benchmarks/mantevo/hpccg_rose/ddot.hpp,
+	test/benchmarks/mantevo/hpccg_rose/exchange_externals.hpp,
+	test/benchmarks/mantevo/hpccg_rose/generate_matrix.hpp,
+	test/benchmarks/mantevo/hpccg_rose/hpccg_openmp,
+	test/benchmarks/mantevo/hpccg_rose/libxomp.h,
+	test/benchmarks/mantevo/hpccg_rose/make_local_matrix.hpp,
+	test/benchmarks/mantevo/hpccg_rose/mytimer.cpp,
+	test/benchmarks/mantevo/hpccg_rose/mytimer.hpp,
+	test/benchmarks/mantevo/hpccg_rose/read_HPC_row.hpp,
+	test/benchmarks/mantevo/hpccg_rose/rose_HPCCG.cpp,
+	test/benchmarks/mantevo/hpccg_rose/rose_HPC_sparsemv.cpp,
+	test/benchmarks/mantevo/hpccg_rose/rose_compute_residual.cpp,
+	test/benchmarks/mantevo/hpccg_rose/rose_ddot.cpp,
+	test/benchmarks/mantevo/hpccg_rose/rose_generate_matrix.cpp,
+	test/benchmarks/mantevo/hpccg_rose/rose_main.cpp,
+	test/benchmarks/mantevo/hpccg_rose/rose_read_HPC_row.cpp,
+	test/benchmarks/mantevo/hpccg_rose/rose_waxpby.cpp,
+	test/benchmarks/mantevo/hpccg_rose/waxpby.hpp: more appropriate
+	benchmark name
+
+2013-02-25  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* : commit f5433beca1c4396558f0a43f247a2b211725ebd9 Author: Kyle
+	Wheeler <kbwheel@sandia.gov> Date:   Tue Feb 19 21:46:46 2013 -0700
+
+2013-02-16  Emily Wheeler <kyle-envariable@memoryhole.net>
+
+	* configure.ac: move the Apple compiler warning somewhere where it
+	is more visible
+
+2013-02-16  Emily Wheeler <kyle-envariable@memoryhole.net>
+
+	* test/basics/.gitignore, test/features/.gitignore: ignore renamed
+	tests
+
+2013-02-15  Kyle Wheeler <kyle-envariable@memoryhole.net>
+
+	* src/affinity/hwloc.c: handle objects without PUs in a more
+	graceful manner (this matters when NUMAnodes are PCI nodes with no
+	PUs); also, use allowed_cpuset more extensively
+
+2013-02-15  Kyle Wheeler <kyle-envariable@memoryhole.net>
+
+	* src/affinity/libnuma.c: defensive programming (may still crash...
+	but the library is so old, what do you expect?)
+
+2013-02-15  Kyle Wheeler <kyle-envariable@memoryhole.net>
+
+	* config/qthread_check_libnuma.m4: check for a working version of
+	numa_distance(); apparently not all versions work, some just
+	segfault
+
+2013-02-07  Dylan Stark <dylan.stark@gmail.com>
+
+	* src/spr.c: Adds task-level barrier for SPR.
+
+2013-02-07  Dylan Stark <dylan.stark@gmail.com>
+
+	* src/net/net.c: Removes use of my_rank before it is initialized.
+
+2013-02-07  Dylan Stark <dylan.stark@gmail.com>
+
+	* src/spr.c: Adds comments.
+
+2013-02-07  Dylan Stark <dylan.stark@gmail.com>
+
+	* src/interfaces/chapel/tasks-qthreads.c: Disables progress thread
+	spawning when using SPR.
+
+2013-02-07  Dylan Stark <dylan.stark@gmail.com>
+
+	* src/interfaces/chapel/comm-qthreads-locales.c: Adds separate
+	compilation unit for launcher support.
+
+2013-02-07  Dylan Stark <dylan.stark@gmail.com>
+
+	* src/interfaces/chapel/Makefile.inc: Builds separate
+	libqthread_chpl_locales to support launcher.
+
+2013-02-05  Dylan Stark <dylan.stark@gmail.com>
+
+	* src/interfaces/chapel/comm-qthreads.c: Establishes lower bound on
+	stack size.
+
+2013-02-05  Dylan Stark <dylan.stark@gmail.com>
+
+	* src/feb.c, src/lf_hashmap.c, src/net/portals4/portals4.c,
+	src/net/portals4/runtime-mpi.c, src/syncvar.c, src/teams.c: Adds
+	debug details.
+
+2013-02-05  Dylan Stark <dylan.stark@gmail.com>
+
+	* src/interfaces/chapel/tasks-qthreads.c: Adds comm header to access
+	chpl_localID.
+
+2013-02-04  Dylan Stark <dylan.stark@gmail.com>
+
+	* src/interfaces/chapel/comm-qthreads.c: Includes arg.h and
+	chplcgfns.h.
+
+2013-02-04  Dylan Stark <dylan.stark@gmail.com>
+
+	* src/interfaces/chapel/Makefile.inc: Adds the mem implementation to
+	the include path.
+
+2013-02-15  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* include/qthread/qthread.h: version bump
+
+2013-02-15  Kyle Wheeler <kyle-envariable@memoryhole.net>
+
+	* autogen.sh: succinct version
+
+2013-02-15  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* autogen.sh: show the version
+
+2013-02-15  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* ChangeLog, NEWS: preparing for 1.9 release
+
+2013-02-15  Kyle Wheeler <kbwheel@sandia.gov>
+
+	* uncrustified
+
 2013-02-14 17:01  Kyle Wheeler <kbwheel@sandia.gov>
 
 	* test/Makefile.am, test/benchmarks/mantevo/Makefile.am,
