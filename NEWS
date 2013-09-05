@@ -1,10 +1,20 @@
---- 1.10b ---
+--- 1.10 ---
 New Features:
+ - Task queue subsystem
+ - Task-level barrier for SPR
+ - Environment option to toggle use of guard pages
 Improvements:
+ - Fixed loop constructs to use all workers
  - Unified (and simplified) internal handling of multi-threaded vs single-threaded scheduling regimes
  - Removed defunct SST support, to avoid confusing people
  - Removed futurelib
+ - Cleans up affinity subsytem interface and hwloc implementation
+ - Added support for Chapel launcher.
+ - Added configuration option to enable eureka support; marked as _experimental_
+ - Added support for improved compatibility with DUMA tool
 Bugfixes:
+ - Fix various memory leaks associated with spawncache, sincs, preconds, timers.
+ - Fix SPR put/get handle bug.
 --- 1.9 ---
 New Features:
  - Eurekas within a team
