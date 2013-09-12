@@ -1,5 +1,7 @@
 # Release Candidate 1.11:
 
+- Rework Chapel FEB support to use new task-queue system.
+
 Tentative release date: Mar 2014.
 
 # General things to do (in no particular order):
