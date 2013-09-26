@@ -45,7 +45,7 @@ static const char *qt_internal_envstr(const char *envariable,
             printf("[QT|QTHREAD]_%s = (unset)\n", envariable);
         }
     }
-    return NULL;
+    return dflt;
 }
 
 static inline void check_info(void)
@@ -86,14 +86,9 @@ unsigned long INTERNAL qt_internal_get_env_num(const char   *envariable,
     const char   *str;
     unsigned long tmp = dflt;
 
-    if (dflt != 0) {
-        char dflt_str[10];
-
-        snprintf(dflt_str, 10, "%lu", dflt);
-        str = qt_internal_get_env_str(envariable, dflt_str);
-    } else {
-        str = qt_internal_get_env_str(envariable, NULL);
-    }
+    char dflt_str[10];
+    snprintf(dflt_str, 10, "%lu", dflt);
+    str = qt_internal_get_env_str(envariable, dflt_str);
     if (str && *str) {
         char *errptr;
         tmp = strtoul(str, &errptr, 0);
