@@ -9,556 +9,539 @@
 #include "qt_affinity.h"
 #include "qt_debug.h"
 #include "qt_envariables.h"
+#include "qt_output_macros.h"
 #include "shufflesheps.h"
 
-static hwloc_topology_t topology;
+static hwloc_topology_t sys_topo;
 static uint32_t         initialized = 0;
 
-static int            shep_depth = -1;
 static hwloc_cpuset_t mccoy_thread_bindings;
 
-static hwloc_obj_type_t wkr_type  = HWLOC_OBJ_PU;
+static unsigned int qt_topology_output_level = 2;
+
+typedef struct {
+    int                   uid;
+    qthread_shepherd_id_t shep_id;
+    qthread_worker_id_t   worker_id;
+    hwloc_obj_t           bind_obj;
+} topo_worker_t;
+
+typedef struct {
+    /* Shepherd mapping info */
+    int         num_sheps;
+    int         shep_level;
+    hwloc_obj_t shep_obj;
+
+    /* Worker mapping info */
+    int         num_workers;
+    int         worker_level;
+    hwloc_obj_t worker_obj;
+
+    /* linear mapping */
+    topo_worker_t * worker_map;
+
+    int num_wps;
+} qt_topology_t;
+
+static qt_topology_t qt_topo;
+
+static void initialize_qt_topo(void)
+{
+    qt_topo.num_sheps    = -1;
+    qt_topo.shep_level   = -1;
+    qt_topo.shep_obj     = NULL;
+    qt_topo.num_workers  = -1;
+    qt_topo.worker_level = -1;
+    qt_topo.worker_obj   = NULL;
+    qt_topo.num_wps      = -1;
+    qt_topo.worker_map   = NULL;
+}
+
+#define HIERARCHY_NAME_LEN 128
+static hwloc_obj_type_t * topo_types;
+static char            (* topo_type_names)[HIERARCHY_NAME_LEN];
+static int                num_types;
+
+static void print_system_view(hwloc_topology_t sys_topo)
+{
+    char str[128];
+    hwloc_obj_t obj = NULL;
+    hwloc_const_cpuset_t allowed_cpuset =
+        hwloc_topology_get_allowed_cpuset(sys_topo);
+
+    obj = hwloc_get_obj_inside_cpuset_by_depth(sys_topo, allowed_cpuset, 0, 0);
+    while (NULL != obj) {
+        int const depth = obj->depth;
+        int const arity = obj->arity;
+        int const num_objs =
+            hwloc_get_nbobjs_inside_cpuset_by_depth(
+                sys_topo, allowed_cpuset, depth);
+
+        hwloc_obj_snprintf(str, sizeof(str), sys_topo, obj, "#", 0);
+
+        printf("TOPO: depth: %d\n", depth);
+        printf("TOPO:\tarity: %d\n", arity);
+        printf("TOPO:\tnum_objs: %d\n", num_objs);
+        printf("TOPO:\ttype: %s\n", str);
+
+        obj = obj->first_child;
+    }
+
+    int const num_cores =
+        hwloc_get_nbobjs_inside_cpuset_by_type(
+            sys_topo, allowed_cpuset, HWLOC_OBJ_CORE);
+
+    printf("TOPO: number of available COREs: %d\n", num_cores);
+    
+    int const num_pus =
+        hwloc_get_nbobjs_inside_cpuset_by_type(
+            sys_topo, allowed_cpuset, HWLOC_OBJ_PU);
+
+    printf("TOPO: number of available PUs: %d\n", num_pus);
+}
+
+static void print_logical_view(void)
+{
+    char shep_level[128];
+    char worker_level[128];
+    char str[128];
+
+    printf("QT_TOPO: shep_level: %d\n", qt_topo.shep_level);
+    if (NULL != qt_topo.shep_obj) {
+        hwloc_obj_type_snprintf(shep_level, sizeof(shep_level), qt_topo.shep_obj, 0);
+        printf("QT_TOPO: shep type: %s\n", shep_level);
+    }
+
+    printf("QT_TOPO: worker_level: %d\n", qt_topo.worker_level);
+    if (NULL != qt_topo.worker_obj) {
+        hwloc_obj_type_snprintf(worker_level, sizeof(worker_level), qt_topo.worker_obj, 0);
+        printf("QT_TOPO: worker type: %s\n", worker_level);
+    }
+
+    printf("QT_TOPO: #(sheps): %d\n", qt_topo.num_sheps);
+    printf("QT_TOPO: #(workers): %d\n", qt_topo.num_workers);
+    printf("QT_TOPO: #(wps): %d\n", qt_topo.num_wps);
+
+    for (int i = 0; i < qt_topo.num_workers; i++) {
+        hwloc_obj_snprintf(str, 1, sys_topo, qt_topo.worker_map[i].bind_obj, "#", 0);
+        printf("%d(%d,%d,%s)\n", qt_topo.worker_map[i].uid, qt_topo.worker_map[i].shep_id, qt_topo.worker_map[i].worker_id, str);
+    }
+}
+
+static void fini_type_options(void)
+{
+    qthread_debug(AFFINITY_CALLS, "destroying type options\n");
+
+    free(topo_types);
+    free(topo_type_names);
+}
+
+static void init_type_options(void)
+{
+    qthread_debug(AFFINITY_CALLS, "creating type options\n");
+
+    hwloc_const_cpuset_t allowed_cpuset =
+        hwloc_topology_get_allowed_cpuset(sys_topo);
+    hwloc_obj_t obj =
+        hwloc_get_obj_inside_cpuset_by_depth(
+            sys_topo, allowed_cpuset, 0, 0);
+
+    /* Walk down tree */
+    while (NULL != obj) {
+        num_types += 1;
+
+        obj = obj->first_child;
+    }
+
+    topo_types = malloc(num_types * sizeof(hwloc_obj_type_t));
+    topo_type_names = malloc(num_types * HIERARCHY_NAME_LEN * sizeof(char));
+    assert(NULL != topo_types);
+    assert(NULL != topo_type_names);
+
+    /* Walk up tree */
+    obj = hwloc_get_obj_inside_cpuset_by_depth(sys_topo, allowed_cpuset,
+                                               num_types-1, 0);
+    int cache_level = 1;
+    int type_id = num_types-1;
+    while (NULL != obj) {
+        topo_types[type_id] = obj->type;
+
+        if (0 == hwloc_compare_types(HWLOC_OBJ_CACHE, obj->type)) {
+            snprintf(topo_type_names[type_id], 8, "L%dcache", cache_level);
+            cache_level += 1;
+        } else {
+            strncpy(topo_type_names[type_id],
+                    hwloc_obj_type_string(obj->type),
+                    HIERARCHY_NAME_LEN);
+        }
+
+        type_id -= 1;
+        obj = obj->parent;
+    }
+}
+
+static void print_type_options(void)
+{
+    printf("type_options: {%s", topo_type_names[0]);
+    for (int i = 1; i < num_types; i++) {
+        printf(", %s", topo_type_names[i]);
+    }
+    printf("}\n");
+}
+
+static hwloc_obj_type_t wkr_type  = HWLOC_OBJ_CORE;
 static int              wkr_index = -1;
 static int              wkr_depth = -1;
-DEBUG_ONLY(static const char *typename);
-const char  *typenames[] = {
-    "node", "cache", "socket", "core", "pu", "L1cache", "L2cache", "L3cache",
-    "L4cache"
-};
-const size_t numtypes = sizeof(typenames) / sizeof(char *);
 
-#if HWLOC_API_VERSION == 0x00010000
-# define WEIGHT(x)           hwloc_cpuset_weight(x)
-# define ASPRINTF(x, y)      hwloc_cpuset_asprintf((x), (y))
-# define FOREACH_START(x, y) hwloc_cpuset_foreach_begin((x), (y))
-# define FOREACH_END()       hwloc_cpuset_foreach_end()
-# define ALLOCBMAP()         hwloc_cpuset_alloc()
-# define FREEBMAP(x)         hwloc_cpuset_free(x)
-#else
-# define WEIGHT(x)           hwloc_bitmap_weight(x)
-# define ASPRINTF(x, y)      hwloc_bitmap_asprintf((x), (y))
-# define FOREACH_START(x, y) hwloc_bitmap_foreach_begin((x), (y))
-# define FOREACH_END()       hwloc_bitmap_foreach_end()
-# define ALLOCBMAP()         hwloc_bitmap_alloc()
-# define FREEBMAP(x)         hwloc_bitmap_free(x)
-#endif /* if HWLOC_API_VERSION == 0x00010000 */
-
-qthread_shepherd_id_t guess_num_shepherds(void);
-qthread_worker_id_t guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds);
-
-static unsigned int num_usable_by_depth(unsigned int depth)
-{
-    hwloc_const_cpuset_t allowed_cpuset = hwloc_topology_get_allowed_cpuset(topology);
-    int max = hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, depth);
-    unsigned int ret = 0;
-    qthread_debug(AFFINITY_DETAILS, "max = %i\n", max);
-    for (int i=0; i<max; ++i) {
-        hwloc_obj_t obj = hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset, depth, i);
-        if (obj == NULL) {
-            qthread_debug(AFFINITY_DETAILS, "obj %i of this type is NULL!!!\n", i);
-            continue;
-        }
-        if (hwloc_get_nbobjs_inside_cpuset_by_type(topology, obj->allowed_cpuset, HWLOC_OBJ_PU) == 0) {
-            qthread_debug(AFFINITY_DETAILS, "obj %i of this type has no PUs!!!\n", i);
-            continue;
-        }
-        ret ++;
-    }
-    return ret;
-}
-
-static unsigned int num_usable_by_type(hwloc_obj_type_t tp)
-{
-    hwloc_const_cpuset_t allowed_cpuset = hwloc_topology_get_allowed_cpuset(topology);
-    int max = hwloc_get_nbobjs_inside_cpuset_by_type(topology, allowed_cpuset, tp);
-    unsigned int ret = 0;
-    qthread_debug(AFFINITY_DETAILS, "max = %i\n", max);
-    for (int i=0; i<max; ++i) {
-        hwloc_obj_t obj = hwloc_get_obj_inside_cpuset_by_type(topology, allowed_cpuset, tp, i);
-        if (obj == NULL) {
-            qthread_debug(AFFINITY_DETAILS, "obj %i of this type is NULL!!!\n", i);
-            continue;
-        }
-        if (hwloc_get_nbobjs_inside_cpuset_by_type(topology, obj->allowed_cpuset, HWLOC_OBJ_PU) == 0) {
-            qthread_debug(AFFINITY_DETAILS, "obj %i of this type has no PUs!!!\n", i);
-            continue;
-        }
-        ret ++;
-    }
-    return ret;
-}
+#if HWLOC_API_VERSION < 0x00010100
+# define hwloc_bitmap_weight        hwloc_cpuset_weight
+# define hwloc_bitmap_asprintf      hwloc_cpuset_asprintf
+# define hwloc_bitmap_foreach_begin hwloc_cpuset_foreach_begin
+# define hwloc_bitmap_foreach_end   hwloc_cpuset_foreach_end
+# define hwloc_bitmap_alloc         hwloc_cpuset_alloc
+# define hwloc_bitmap_free          hwloc_cpuset_free
+#endif /* if HWLOC_API_VERSION < 0x00010100 */
 
 static void qt_affinity_internal_hwloc_teardown(void)
 {   /*{{{*/
-    DEBUG_ONLY(hwloc_topology_check(topology));
-    hwloc_set_cpubind(topology, mccoy_thread_bindings, HWLOC_CPUBIND_THREAD);
-    FREEBMAP(mccoy_thread_bindings);
-    qthread_debug(AFFINITY_DETAILS, "destroy hwloc topology handle\n");
-    hwloc_topology_destroy(topology);
+    DEBUG_ONLY(hwloc_topology_check(sys_topo));
+
+    fini_type_options();
+
+    /* Reestablish mccoy thread bindings */
+    hwloc_set_cpubind(sys_topo, mccoy_thread_bindings, HWLOC_CPUBIND_THREAD);
+    hwloc_bitmap_free(mccoy_thread_bindings);
+
+    free(qt_topo.worker_map);
+    hwloc_topology_destroy(sys_topo);
     initialized = 0;
 } /*}}}*/
 
+/*
+ * User hints:
+ * - QT_TOPO_OUTPUT_LEVEL: The amount of topology information to print. Level
+ *                         '2' will print a synopsis of the topology reported
+ *                         by hwloc. Currently only level '2' is used.
+ * - QT_SHEPHERD_BOUNDARY: The level in the hierarchy to associate with
+ *                         shepherds.
+ * - QT_WORKER_UNIT:       The level in the hierarchy to use for binding
+ *                         workers.
+ *                         The worker will be bound to the set of COREs under this
+ *                         level.
+ */
 void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
                                qthread_worker_id_t   *nbworkers,
                                size_t                *hw_par)
 {                                      /*{{{ */
-    qthread_debug(AFFINITY_CALLS, "nbshepherds:%p:%u nbworkers:%p:%u\n", nbshepherds, *nbshepherds, nbworkers, *nbworkers);
+    qthread_debug(AFFINITY_CALLS, "nbshepherds=%u, nbworkers=%u, hw_par=%u\n", *nbshepherds, *nbworkers, *hw_par);
+
+    /* Collect user hints */
+    qthread_shepherd_id_t num_sheps_hint   = *nbshepherds;
+    qthread_worker_id_t   num_wps_hint     = *nbworkers;
+    size_t                num_workers_hint = *hw_par;
+
+    /* Set up logical sys_topo */
+    initialize_qt_topo();
+
+    /* Initialize hwloc setup */
     if (qthread_cas(&initialized, 0, 1) == 0) {
-        qassert(hwloc_topology_init(&topology), 0);
-        qassert(hwloc_topology_load(topology), 0);
+        qassert(hwloc_topology_init(&sys_topo), 0);
+        hwloc_topology_set_synthetic(sys_topo, "node:1 sock:2 cache:1 core:2 pu:2");
+        qassert(hwloc_topology_load(sys_topo), 0);
         MACHINE_FENCE;
         initialized = 2;
     } else {
         while (initialized == 1) SPINLOCK_BODY();
     }
-
-    DEBUG_ONLY(hwloc_topology_check(topology));
+    DEBUG_ONLY(hwloc_topology_check(sys_topo));
     qthread_internal_cleanup(qt_affinity_internal_hwloc_teardown);
-    mccoy_thread_bindings = ALLOCBMAP();
-    hwloc_get_cpubind(topology, mccoy_thread_bindings, HWLOC_CPUBIND_THREAD);
-    hwloc_const_cpuset_t allowed_cpuset = hwloc_topology_get_allowed_cpuset(topology);
-    int shep_type_idx = -1;
-    /* BEWARE: L*cache must be consecutive of ascending levels, as the index
-     * below is used to compare to the cache level */
-    const size_t     shepindexofL1cache  = 5;
-    hwloc_obj_type_t shep_type_options[] = {
-        HWLOC_OBJ_NODE, HWLOC_OBJ_CACHE, HWLOC_OBJ_SOCKET, HWLOC_OBJ_CORE,
-        HWLOC_OBJ_PU,
-        HWLOC_OBJ_CACHE, HWLOC_OBJ_CACHE, HWLOC_OBJ_CACHE, HWLOC_OBJ_CACHE
-    };
-    {
-        const char *qsh = qt_internal_get_env_str("SHEPHERD_BOUNDARY", "node");
 
-        if (qsh) {
-            for (int ti = 0; ti < numtypes; ++ti) {
-                if (!strncasecmp(typenames[ti], qsh, strlen(typenames[ti]))) {
-                    shep_type_idx = ti;
-                }
-            }
-            if (shep_type_idx == -1) {
-                fprintf(stderr, "unparsable shepherd boundary (%s)\n", qsh);
-                exit(EXIT_FAILURE);
-            }
-        }
+    /* Record mccoy thread bindings so we can reestablish during finalization */
+    mccoy_thread_bindings = hwloc_bitmap_alloc();
+    hwloc_get_cpubind(sys_topo, mccoy_thread_bindings, HWLOC_CPUBIND_THREAD);
 
-        qsh = qt_internal_get_env_str("WORKER_UNIT", "pu");
-        if (qsh) {
-            for (int ti = 0; ti < numtypes; ++ti) {
-                if (!strncasecmp(typenames[ti], qsh, strlen(typenames[ti]))) {
-                    wkr_index = ti;
-                    wkr_type  = shep_type_options[ti];
-                }
-            }
-            if (wkr_index == -1) {
-                fprintf(stderr, "unparsable worker unit (%s)\n", qsh);
-                exit(EXIT_FAILURE);
-            }
+    hwloc_const_cpuset_t allowed_cpuset =
+        hwloc_topology_get_allowed_cpuset(sys_topo);
+
+    /* Process boundary and unit environment variables */
+    int shep_type_id   = -1;
+    int worker_type_id = -1;
+    int num_worker_objs = -1;
+
+    /* Build up sys_topo options */
+    init_type_options();
+
+    /* Collect environment variables */
+    qt_topology_output_level =
+        qt_internal_get_env_num("TOPO_OUTPUT_LEVEL", 2, 2);
+   
+    /* Assign shepherd type/boundary */
+    const char *qsh = qt_internal_get_env_str("SHEPHERD_BOUNDARY", "Socket");
+    for (int ti = 0; ti < num_types; ++ti) {
+        if (!strncasecmp(topo_type_names[ti], qsh,
+                         strlen(topo_type_names[ti]))) {
+            shep_type_id = ti;
         }
     }
-    if (*nbshepherds == 0) {           /* we need to guesstimate */
-        qthread_debug(AFFINITY_DETAILS, "guesstimating number of shepherds...\n");
-        /* the goal here is to basically pick the number of domains over which
-         * memory access is the same cost (e.g. number of sockets, if all cores on
-         * a given socket share top-level cache). This will define the shepherd
-         * boundary, unless the user has specified a shepherd boundary */
-        if (shep_type_idx == -1) {
-            do {
-restart_loop:
-                shep_type_idx++;
-                shep_depth = hwloc_get_type_depth(topology, shep_type_options[shep_type_idx]);
-                qthread_debug(AFFINITY_DETAILS, "depth of type %i (%s) = %d\n", shep_type_idx,
-                              hwloc_obj_type_string(shep_type_options[shep_type_idx]), shep_depth);
-                if (shep_type_idx == 3) {
+    if (shep_type_id == -1) {
+        fprintf(stderr, "unparsable shepherd boundary (%s)\n", qsh);
+        print_type_options();
+        exit(EXIT_FAILURE);
+    }
+
+    /* Assign worker type */
+    qsh = qt_internal_get_env_str("WORKER_UNIT", "PU");
+    for (int ti = 0; ti < num_types; ++ti) {
+        if (!strncasecmp(topo_type_names[ti], qsh,
+                         strlen(topo_type_names[ti]))) {
+            worker_type_id = ti;
+        }
+    }
+    if (worker_type_id == -1) {
+        fprintf(stderr, "unparsable worker unit (%s)\n", qsh);
+        print_type_options();
+        exit(EXIT_FAILURE);
+    }
+
+    /* Print system view */
+    if (2 == qt_topology_output_level) {
+        print_system_view(sys_topo);
+        print_type_options();
+    }
+
+    /**************************************************************************/
+
+    qthread_debug(AFFINITY_DETAILS, "HINTS: max-sheps: %d\n", num_sheps_hint);
+    qthread_debug(AFFINITY_DETAILS, "HINTS: max-wps: %d\n", num_wps_hint);
+    qthread_debug(AFFINITY_DETAILS, "HINTS: max-workers: %d\n", num_workers_hint);
+    qthread_debug(AFFINITY_DETAILS, "HINTS: shep-boundary: %d\n", shep_type_id);
+    qthread_debug(AFFINITY_DETAILS, "HINTS: worker-unit: %d\n", worker_type_id);
+
+    /* Process worker object  */
+    hwloc_obj_t worker_obj =
+        hwloc_get_obj_inside_cpuset_by_type(
+            sys_topo, allowed_cpuset, topo_types[worker_type_id], 0);
+
+    if (NULL == worker_obj) {
+        print_error("failed to locate worker unit object\n");
+        exit(EXIT_FAILURE);
+    }
+
+    /* Calculate number of these objects */
+    num_worker_objs =
+        hwloc_get_nbobjs_inside_cpuset_by_type(
+            sys_topo, allowed_cpuset, topo_types[worker_type_id]);
+
+    qthread_debug(AFFINITY_DETAILS, "found %d %s unit obj(s)\n", num_worker_objs, topo_type_names[worker_type_id]);
+    
+    /* Update logical sys_topo info */
+    qt_topo.worker_obj = worker_obj;
+    qt_topo.worker_level = worker_obj->depth;
+
+    /* Process shephard boundary */
+    hwloc_obj_t shep_obj =
+        hwloc_get_obj_inside_cpuset_by_type(
+            sys_topo, allowed_cpuset, topo_types[shep_type_id], 0);
+    if (NULL == shep_obj) {
+        print_error("failed to locate shepherd boundary object\n");
+        exit(EXIT_FAILURE);
+    }
+
+    /* Calculate number of these objects */
+    int const num_shep_objs =
+        hwloc_get_nbobjs_inside_cpuset_by_type(
+            sys_topo, allowed_cpuset, topo_types[shep_type_id]);
+
+    qthread_debug(AFFINITY_DETAILS, "found %d %s shep obj(s)\n", num_shep_objs, topo_type_names[shep_type_id]);
+
+    /* Calculate number of workers within boundary: this is max num-wps */
+    int const num_shep_workers = num_worker_objs / num_shep_objs;
+
+    /* Update logical sys_topo info */
+    qt_topo.shep_obj = shep_obj;
+    qt_topo.shep_level = shep_obj->depth;
+
+    /* Update hints */
+    if (0 == num_sheps_hint || num_shep_objs < num_sheps_hint) {
+        qthread_debug(AFFINITY_DETAILS, "%s shep obj => max-sheps=%d\n", topo_type_names[shep_type_id], num_shep_objs);
+        num_sheps_hint = num_shep_objs;
+    }
+    if (0 == num_wps_hint || num_shep_workers < num_wps_hint) {
+        qthread_debug(AFFINITY_DETAILS, "%s shep obj => max-wps=%d\n", topo_type_names[shep_type_id], num_shep_workers);
+        num_wps_hint = num_shep_workers;
+    }
+
+    if (NULL == qt_topo.shep_obj) {
+        /* Have only unit, must find boundary */
+
+        /* Policy:
+         * - If have num-sheps and num-wps hints, then select first shared level
+         *   that accomodates both values.
+         * - If have only num-wps hint, then select first shared level that
+         *   accomodates that values.
+         * - If have only num-sheps hint, then select first shared level that
+         *   accomodates that values.
+         * - Otherwise select first shared level at or above the unit level. */
+
+        /* Policy: select the first shared level at or above the unit with
+         *         at least num-wps shared COREs (if requested) and at most
+         *         num-sheps boundary objects (if requested); num-wps should
+         *         take precedence over num-sheps */
+        hwloc_obj_t shep_obj = qt_topo.worker_obj;
+
+        /* Walk up tree counting shared COREs */
+        int shared = 1;
+        while (NULL != shep_obj->parent) {
+            shared *= (shep_obj->arity == 0) ? 1 : shep_obj->arity;
+
+            if (0 != num_sheps_hint && 0 != num_wps_hint) {
+                /* Have both num-sheps and num-wps hints */
+                int num_shep_objs =
+                    hwloc_get_nbobjs_inside_cpuset_by_depth(
+                        sys_topo, allowed_cpuset, shep_obj->depth);
+                if (num_shep_objs == num_sheps_hint && shared >= num_wps_hint) {
+                    /* Choose this level */
                     break;
                 }
-                qthread_debug(AFFINITY_DETAILS, "num objs of type %i = %d\n",
-                              shep_type_idx,
-                              hwloc_get_nbobjs_inside_cpuset_by_type(topology, allowed_cpuset,
-                                                       shep_type_options[shep_type_idx]));
-                if ((shep_type_idx == 0) &&
-                    (hwloc_get_nbobjs_inside_cpuset_by_type(topology, allowed_cpuset,
-                                              shep_type_options[0]) == 1)) {
-                    qthread_debug(AFFINITY_DETAILS,
-                                  "only one node; assuming multiple shepherds\n");
-                    continue;
+            } else if (0 != num_sheps_hint) {
+                /* Have only num-sheps hint */
+                int num_shep_objs =
+                    hwloc_get_nbobjs_inside_cpuset_by_depth(
+                        sys_topo, allowed_cpuset, shep_obj->depth);
+                if (num_shep_objs == num_sheps_hint) {
+                    /* Choose this level */
+                    break;
                 }
-                /* check to make sure that all of these things have PUs */
-                
-            } while (shep_depth == HWLOC_TYPE_DEPTH_UNKNOWN ||
-                     shep_depth == HWLOC_TYPE_DEPTH_MULTIPLE);
-
-            assert(hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth) > 0);
-        } else {
-            shep_depth = hwloc_get_type_depth(topology, shep_type_options[shep_type_idx]);
-            qthread_debug(AFFINITY_DETAILS, "depth of type %i (%s) = %d\n",
-                          shep_type_idx,
-                          hwloc_obj_type_string(shep_type_options[shep_type_idx]),
-                          shep_depth);
-        }
-        DEBUG_ONLY(typename = typenames[shep_type_idx]);
-        if ((shep_depth == HWLOC_TYPE_DEPTH_UNKNOWN) ||
-            (shep_depth == HWLOC_TYPE_DEPTH_MULTIPLE)) {
-            if ((shep_type_idx > 0) &&
-                (shep_type_options[shep_type_idx] == HWLOC_OBJ_CACHE)) {
-                /* caches are almost always weird; so if the user asked for them, just give best effort */
-                unsigned int maxdepth = hwloc_topology_get_depth(topology);
-                unsigned int curdepth;
-                unsigned int cacdepth = maxdepth;
-                unsigned int level    = 0;
-                qthread_debug(AFFINITY_DETAILS, "Trying to identify caches...\n");
-                /* look backward from the PU to be able to identify cache level */
-                for (curdepth = maxdepth; curdepth > 0; --curdepth) {
-                    unsigned int     realdepth = curdepth - 1;
-                    hwloc_obj_type_t t         = hwloc_get_depth_type(topology, realdepth);
-                    if (t == HWLOC_OBJ_CACHE) {
-                        level++;
-                        qthread_debug(AFFINITY_DETAILS,
-                                      "L%u at depth %u (nbobjs is %u)\n",
-                                      level, realdepth, num_usable_by_depth(realdepth));
-                        /* default choice (1): pick the outermost layer of cache */
-                        /* if user requested L-specific cache, then count & compare */
-                        /* L1 is _not_ the same as 'pu' _if_ we have hyperthreading */
-                        /* BEWARE: ugly compare between depth & shep_type_idx */
-                        if ((shep_type_idx == 1) ||
-                            (level ==
-                             (shep_type_idx - (shepindexofL1cache - 1)))) {
-                            cacdepth = realdepth;
-                        }
-                    }
+            } else if (0 != num_wps_hint) {
+                /* Have only num-wps hint */
+                if (shared >= num_wps_hint) {
+                    /* Choose this level */
+                    break;
                 }
-                if (cacdepth == maxdepth) {
-                    qthread_debug(AFFINITY_DETAILS,
-                                  "%s not found... nbobjs_by_type HWLOC_OBJ_PU is %u\n",
-                                  typenames[shep_type_idx],
-                                  (unsigned int)
-                                  hwloc_get_nbobjs_inside_cpuset_by_type(topology, allowed_cpuset,
-                                                           HWLOC_OBJ_PU));
-                    shep_depth = hwloc_get_type_depth(topology, HWLOC_OBJ_PU);
-                    DEBUG_ONLY(typename = "pu");
-                } else {
-                    shep_depth = cacdepth;
-                }
-                qthread_debug(AFFINITY_DETAILS, "final shep_depth: %i (%s)\n",
-                              shep_depth, typename);
             } else {
-                qthread_debug(AFFINITY_DETAILS,
-                              "topology too weird... nbobjs_by_type HWLOC_OBJ_PU is %u\n",
-                              (unsigned int)hwloc_get_nbobjs_inside_cpuset_by_type(topology,
-                                                allowed_cpuset, HWLOC_OBJ_PU));
-                shep_depth = hwloc_get_type_depth(topology, HWLOC_OBJ_PU);
-                DEBUG_ONLY(typename = "pu");
-            }
-        }
-        qthread_debug(AFFINITY_FUNCTIONS, "final shep_depth: %i (%s)\n", shep_depth,
-                      typename);
-        *nbshepherds = guess_num_shepherds();
-        *nbworkers   = guess_num_workers_per_shep(*nbshepherds);
-    } else {                           /* (*nbshepherds != 0) */
-        qthread_debug(AFFINITY_DETAILS, "nbshepherds nonzero (%u), shep_type_idx = %i\n", *nbshepherds, shep_type_idx);
-        if (shep_type_idx != -1) {
-            qthread_debug(AFFINITY_DETAILS, "finding a shepherd depth...\n");
-            shep_depth = hwloc_get_type_depth(topology, shep_type_options[shep_type_idx]);
-            if (shep_depth <= 0) {
-                qthread_debug(AFFINITY_DETAILS, "invalid shepherd type (%s), finding another one...\n", typenames[shep_type_idx]);
-                if (shep_type_options[shep_type_idx] == HWLOC_OBJ_CACHE) {
-                    shep_type_idx = 1;
-                }
-                shep_type_idx++;
-                while (((shep_depth = hwloc_get_type_depth(topology, shep_type_options[shep_type_idx])) <= 0) &&
-                       shep_type_idx < 4) {
-                    qthread_debug(AFFINITY_DETAILS, "invalid shepherd type (%s), finding another one...\n", typenames[shep_type_idx]);
-                    shep_type_idx++;
-                }
-                assert(shep_depth > 0);
-            }
-        }
-        if (shep_type_idx == -1) {
-            /* first, look for an exact match in width and find the proper depth */
-            unsigned int maxdepth = hwloc_topology_get_depth(topology);
-            unsigned int realdepth;
-            unsigned int fl_depth = -1; // first depth with #objs larger than nbsheps
-            qthread_debug(AFFINITY_DETAILS,
-                          "Trying to identify which level to use for width = %d\n",
-                          *nbshepherds);
-            for (realdepth = 0; realdepth < maxdepth && shep_depth == -1; ++realdepth) {
-                unsigned int num = num_usable_by_depth(realdepth);
-                qthread_debug(AFFINITY_DETAILS, "%s at depth %u (nbobjs is %u%s)\n",
-                              hwloc_obj_type_string(hwloc_get_depth_type(topology, realdepth)), realdepth, num, (num == HWLOC_TYPE_DEPTH_UNKNOWN) ? " (unknown)" : ((num == HWLOC_TYPE_DEPTH_MULTIPLE) ? " (multiple)" : ""));
-                if (num == *nbshepherds) {
-                    shep_depth = realdepth;
-                    DEBUG_ONLY(typename = hwloc_obj_type_string(hwloc_get_depth_type(topology, realdepth)));
-                } else if ((num > *nbshepherds) && (fl_depth == -1)) {
-                    fl_depth = realdepth;
+                /* No hints */
+                if (shep_obj->depth <= qt_topo.worker_obj->depth && 1<shared) {
+                    /* Choose this level */
+                    break;
                 }
             }
-            /* second, if we failed, try an approximate match... */
-            /* should we use the last _smaller_, or the first _larger_ ? */
-            /* first option means overlapping but we can use all the cores */
-            /* second option means no overlapping, but cores will go unused */
-            if ((shep_depth == -1) && (fl_depth != -1)) {
-                /* first larger then */
-                shep_depth = fl_depth;
-                DEBUG_ONLY(typename = hwloc_obj_type_string(hwloc_get_depth_type(topology, fl_depth)));
-                qthread_debug(AFFINITY_DETAILS, "first larger depth is %i, %s\n", fl_depth, typename);
-            }
-            /* third, if we use such a large value that *nothing* is larger, fall back to PU */
-            if (shep_depth == -1) {
-                qthread_debug(AFFINITY_DETAILS, "shep_depth == -1\n");
-                shep_depth = hwloc_get_type_depth(topology, HWLOC_OBJ_PU);
-                DEBUG_ONLY(typename = "pu");
-            }
+
+            shep_obj = shep_obj->parent;
         }
-        DEBUG_ONLY(if (typename == NULL) {
-                       typename = hwloc_obj_type_string(hwloc_get_depth_type(topology, shep_depth));
-                   }
-                   )
-        qthread_debug(AFFINITY_CALLS, "Using depth %d (%s) for %d shepherds\n", shep_depth, typename, *nbshepherds);
-        qthread_debug(AFFINITY_DETAILS, "workers = %u\n", *nbworkers);
-        {
-            qthread_worker_id_t tmp = guess_num_workers_per_shep(*nbshepherds);
-            if (*nbworkers == 0) {
-                *nbworkers = tmp;
-            }
-        }
+
+        /* Update logical sys_topo info */
+        qt_topo.shep_obj = shep_obj;
+        qt_topo.shep_level = shep_obj->depth;
+
+        qthread_debug(AFFINITY_DETAILS, "chose %s shep obj\n", topo_type_names[qt_topo.shep_level]);
+
+        /* Update hints */
     }
-}                                      /*}}} */
 
-#ifdef QTHREAD_HAVE_MEM_AFFINITY
-void INTERNAL qt_affinity_mem_tonode(void  *addr,
-                                     size_t bytes,
-                                     int    node)
-{                                      /*{{{ */
-    hwloc_nodeset_t nodeset = hwloc_bitmap_alloc();
-
-    DEBUG_ONLY(hwloc_topology_check(topology));
-    hwloc_bitmap_set(nodeset, node);
-    hwloc_set_area_membind_nodeset(topology, addr, bytes, nodeset,
-                                   HWLOC_MEMBIND_BIND,
-                                   HWLOC_MEMBIND_NOCPUBIND);
-    hwloc_bitmap_free(nodeset);
-}                                      /*}}} */
-
-void INTERNAL *qt_affinity_alloc(size_t bytes)
-{                                      /*{{{ */
-    DEBUG_ONLY(hwloc_topology_check(topology));
-    return hwloc_alloc(topology, bytes);
-}                                      /*}}} */
-
-void INTERNAL *qt_affinity_alloc_onnode(size_t bytes,
-                                        int    node)
-{                                      /*{{{ */
-    void           *ret;
-    hwloc_nodeset_t nodeset;
-
-    DEBUG_ONLY(hwloc_topology_check(topology));
-    nodeset = hwloc_bitmap_alloc();
-    hwloc_bitmap_set(nodeset, node);
-    ret = hwloc_alloc_membind_nodeset(topology, bytes, nodeset,
-                                      HWLOC_MEMBIND_BIND,
-                                      HWLOC_MEMBIND_NOCPUBIND);
-    hwloc_bitmap_free(nodeset);
-    return ret;
-}                                      /*}}} */
-
-void INTERNAL qt_affinity_free(void  *ptr,
-                               size_t bytes)
-{                                      /*{{{ */
-    DEBUG_ONLY(hwloc_topology_check(topology));
-    hwloc_free(topology, ptr, bytes);
-}                                      /*}}} */
-
-#endif /* ifdef QTHREAD_HAVE_MEM_AFFINITY */
-
-qthread_shepherd_id_t INTERNAL guess_num_shepherds(void)
-{                                      /*{{{ */
-    qthread_shepherd_id_t ret = 1;
-
-    DEBUG_ONLY(hwloc_topology_check(topology));
-    hwloc_const_cpuset_t allowed_cpuset = hwloc_topology_get_allowed_cpuset(topology);
-    ret = num_usable_by_depth(shep_depth);
-    qthread_debug(AFFINITY_BEHAVIOR, "of %u %s's, only %u %s viable\n",
-            hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth),
-            hwloc_obj_type_string(hwloc_get_depth_type(topology, shep_depth)),
-            ret, (ret!=1)?"are":"is");
-    qthread_debug(AFFINITY_FUNCTIONS, "guessing %u shepherds (nbobjs_by_depth, depth: %u=%s)\n",
-                  (unsigned int)ret, shep_depth,
-                  hwloc_obj_type_string(hwloc_get_depth_type(topology, shep_depth)));
-    if (ret == 0) {
-        ret = 1;
+    /* Sanity-check that boundary and units are reasonable */
+    assert(NULL != qt_topo.shep_obj && NULL != qt_topo.worker_obj);
+    if (qt_topo.shep_level > qt_topo.worker_level) {
+        print_warning("shepherd boundary smaller than worker unit\n");
     }
-    return ret;
-}                                      /*}}} */
 
-qthread_worker_id_t INTERNAL guess_num_workers_per_shep(qthread_shepherd_id_t nshepherds)
-{                                      /*{{{ */
-    qthread_worker_id_t ret   = 0;
-    size_t              total = 0;
+    /**************************************************************************/
 
-    DEBUG_ONLY(hwloc_topology_check(topology));
-    hwloc_const_cpuset_t allowed_cpuset = hwloc_topology_get_allowed_cpuset(topology);
+    /* Establish num-sheps and num-wps */
+    if (0 == num_sheps_hint && 0 == num_wps_hint) {
+        /* No sys_topo hints */
+        qt_topo.num_sheps =
+            hwloc_get_nbobjs_inside_cpuset_by_depth(
+                sys_topo, allowed_cpuset, qt_topo.shep_obj->depth);
+        qt_topo.num_wps = num_worker_objs / qt_topo.num_sheps;
+    } else if (0 == num_wps_hint) {
+        /* Only sheps hint given */
+        int num_sheps_objs =
+            hwloc_get_nbobjs_inside_cpuset_by_depth(
+                sys_topo, allowed_cpuset, qt_topo.shep_obj->depth);
 
-    if (wkr_index != -1) {
-        qthread_debug(AFFINITY_BEHAVIOR, "guessing number of workers based on worker type\n");
-        assert(shep_depth >= 0);
-
-        hwloc_obj_t          obj            = hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth, 0);
-        int                  workerobjs_per_shep;
-
-        if (hwloc_compare_types(wkr_type, HWLOC_OBJ_CACHE) == 0) {
-            qthread_debug(AFFINITY_DETAILS, "worker type is a cache; must handle specially...\n");
-            wkr_depth = hwloc_get_type_depth(topology, HWLOC_OBJ_PU);
-            qthread_debug(AFFINITY_DETAILS, "PU wkr_depth = %u\n", wkr_depth);
-            for (int wkridx = 5; wkridx <= wkr_index; wkridx++) {
-                hwloc_obj_t tmp;
-                qthread_debug(AFFINITY_DETAILS, "wkridx=%i wkr_index=%i\n", wkridx, wkr_index);
-                do {
-                    wkr_depth--;
-                    tmp = hwloc_get_obj_inside_cpuset_by_depth(topology, obj->allowed_cpuset, wkr_depth, 0);
-                    qthread_debug(AFFINITY_DETAILS, "wkr_depth %i, type = %s %i\n", wkr_depth, hwloc_obj_type_string(tmp->type), hwloc_compare_types(tmp->type, HWLOC_OBJ_CACHE));
-                } while (hwloc_compare_types(tmp->type, HWLOC_OBJ_CACHE) > 0);
-                if (hwloc_compare_types(tmp->type, HWLOC_OBJ_CACHE) != 0) {
-                    fprintf(stderr, "QTHREADS: worker unit (%s) does not exist on this machine.\n", typenames[wkr_index]);
-                    assert(hwloc_compare_types(tmp->type, HWLOC_OBJ_CACHE) == 0);
-                    goto guess_my_weight;
-                }
-            }
-            qthread_debug(AFFINITY_DETAILS, "found the desired level of cache!!!\n");
-            assert(wkr_depth >= shep_depth);
-            workerobjs_per_shep = hwloc_get_nbobjs_inside_cpuset_by_depth(topology, obj->allowed_cpuset, wkr_depth);
-            qthread_debug(AFFINITY_CALLS, "workerobjs type = %s, per_shep = %u\n", hwloc_obj_type_string(wkr_type), workerobjs_per_shep);
-            switch (workerobjs_per_shep) {
-                case 0:
-                    fprintf(stderr, "QTHREADS: worker unit (%s) does not exist on this machine.\n", typenames[wkr_index]);
-                    assert(workerobjs_per_shep > 0);
-                    goto guess_my_weight;
-                case -1:
-                    fprintf(stderr, "QTHREADS: worker unit (%s) is not unique on this machine.\n", typenames[wkr_index]);
-                    assert(workerobjs_per_shep > 0);
-                    goto guess_my_weight;
-            }
+        if (num_sheps_hint <= num_sheps_objs) {
+            qt_topo.num_sheps = num_sheps_hint;
         } else {
-            qthread_debug(AFFINITY_DETAILS, "worker type is NOT a cache...\n");
-            workerobjs_per_shep = hwloc_get_nbobjs_inside_cpuset_by_type(topology, obj->allowed_cpuset, wkr_type);
-            qthread_debug(AFFINITY_CALLS, "workerobjs = %s, per_shep = %u\n", hwloc_obj_type_string(wkr_type), workerobjs_per_shep);
-            switch (workerobjs_per_shep) {
-                case 0:
-                    fprintf(stderr, "QTHREADS: worker unit (%s) does not exist on this machine.\n", typenames[wkr_index]);
-                    assert(workerobjs_per_shep > 0);
-                    goto guess_my_weight;
-                case -1:
-                    fprintf(stderr, "QTHREADS: worker unit (%s) is not unique on this machine.\n", typenames[wkr_index]);
-                    assert(workerobjs_per_shep > 0);
-                    goto guess_my_weight;
-            }
-            wkr_depth = hwloc_get_type_depth(topology, wkr_type);
-            qthread_debug(AFFINITY_DETAILS, "wkr_depth = %u\n", wkr_depth);
-            assert(wkr_depth >= shep_depth);
+            print_warning("disregarding num-sheps hint (%d) in favor of maximum number of objects at shepherd boundary level (%d)\n", num_sheps_hint, num_sheps_objs);
+            qt_topo.num_sheps = num_sheps_objs;
         }
-        if (wkr_depth < shep_depth) {
-            fprintf(stderr, "worker unit (%s) is not lower in hierarchy than shepherd (%s)\n",
-                    hwloc_obj_type_string(wkr_type),
-                    hwloc_obj_type_string(hwloc_get_depth_type(topology, shep_depth)));
-            wkr_type  = HWLOC_OBJ_PU;
-            wkr_index = -1;
-            assert(wkr_depth >= shep_depth);
-            goto guess_my_weight;
-        }
-        ret = workerobjs_per_shep;
+        qt_topo.num_wps = num_worker_objs / qt_topo.num_sheps;
+    } else if (0 == num_sheps_hint) {
+        /* Only WPS hint given */
+        qt_topo.num_sheps =
+            hwloc_get_nbobjs_inside_cpuset_by_depth(
+                sys_topo, allowed_cpuset, qt_topo.shep_obj->depth);
+        qt_topo.num_wps = num_wps_hint;
     } else {
-guess_my_weight:
-        wkr_depth = hwloc_get_type_depth(topology, HWLOC_OBJ_PU);
-        qthread_debug(AFFINITY_BEHAVIOR, "guessing number of workers based on shepherd \"WEIGHT\", wkr_depth = %u\n", wkr_depth);
+        /* Both hints */
+        qt_topo.num_sheps = num_sheps_hint;
+        qt_topo.num_wps   = num_wps_hint;
+    }
 
-        const size_t max_idx = hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth);
-
-        for (size_t idx = 0; idx < nshepherds && idx < max_idx; ++idx) {
-            hwloc_obj_t  obj    = hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth, idx);
-            unsigned int weight = WEIGHT(obj->allowed_cpuset);
-            qthread_debug(AFFINITY_DETAILS, "%s %u has %u weight\n", hwloc_obj_type_string(hwloc_get_depth_type(topology, shep_depth)), (unsigned int)idx, weight);
-            total += weight;
-            if ((idx == 0) || (ret < weight)) {
-                ret = weight;
-            }
+    /* Establish num-workers */
+    if (0 != num_workers_hint) {
+        /* Adjust num-wps count to account for requested num-workers */
+        if ((num_workers_hint / num_sheps_hint) > num_wps_hint) {
+            print_error("invalid HWPAR, too many workers, tried to set (%d,%d,%d)\n",
+                num_workers_hint, num_sheps_hint, num_wps_hint);
+            exit(EXIT_FAILURE);
         }
-        if (ret * nshepherds > total) {
-            qthread_debug(AFFINITY_DETAILS, "ret(%u) * nshepherds(%u) > total(%u)\n", ret, nshepherds, total);
-            ret = total / nshepherds;
+        if (0 != num_workers_hint % num_sheps_hint) {
+            print_error("invalid HWPAR, odd workers\n");
+            exit(EXIT_FAILURE);
+        }
+        qt_topo.num_workers = num_workers_hint;
+        qt_topo.num_wps = num_workers_hint / qt_topo.num_sheps;
+    } else {
+        qt_topo.num_workers = qt_topo.num_sheps * qt_topo.num_wps;
+    }
+
+    /* Construct worker map */
+    qt_topo.worker_map = malloc(qt_topo.num_workers * sizeof(topo_worker_t));
+    assert(qt_topo.worker_map);
+
+    for (int i = 0; i < qt_topo.num_sheps; i++) {
+        for (int j = 0; j < qt_topo.num_wps; j++) {
+            int uid = (i * qt_topo.num_wps) + j;
+            qt_topo.worker_map[uid].uid       = uid;
+            qt_topo.worker_map[uid].shep_id   = i;
+            qt_topo.worker_map[uid].worker_id = j;
+            printf("Adding uid %d\n", uid);
+            /* Set binding location */
+            hwloc_obj_t shep_obj =
+                hwloc_get_obj_inside_cpuset_by_depth(
+                    sys_topo, allowed_cpuset, qt_topo.shep_level, i);
+            hwloc_obj_t worker_obj =
+                hwloc_get_obj_inside_cpuset_by_type(
+                    sys_topo, shep_obj->allowed_cpuset, topo_types[worker_type_id], j);
+            if (!worker_obj) printf("Error, tried to allocate more workers than objects exist\n");
+            qt_topo.worker_map[uid].bind_obj = worker_obj;
         }
     }
-    if (ret == 0) {
-        qthread_debug(AFFINITY_DETAILS, "ret == 0; assuming at least 1\n");
-        ret = 1;
+
+    /* Print logical sys_topo */
+    if (2 == qt_topology_output_level) {
+        print_logical_view();
     }
-    qthread_debug(AFFINITY_FUNCTIONS, "guessed %i workers apiece for %i sheps\n", (int)ret, (int)nshepherds);
-    return ret;
+
+    /* Set "outputs" */
+    *nbshepherds = qt_topo.num_sheps;
+    *nbworkers   = qt_topo.num_wps;
+
+    wkr_type     = qt_topo.worker_obj->type;
+    wkr_depth    = qt_topo.worker_level;
+
+    return;
 }                                      /*}}} */
 
 void INTERNAL qt_affinity_set(qthread_worker_t *me,
                               unsigned int      nworkerspershep)
-{                                                                                                /*{{{ */
-    ASSERT_ONLY(hwloc_topology_check(topology));
+{   /*{{{ */
+    ASSERT_ONLY(hwloc_topology_check(sys_topo));
 
-    const hwloc_const_cpuset_t allowed_cpuset = hwloc_topology_get_allowed_cpuset(topology);           // where am I allowed to run?
-    qthread_shepherd_t *const  myshep         = me->shepherd;
-    unsigned int               maxshepobjs    = hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth);
-    hwloc_obj_t                obj            = hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset,
-                                                                                     shep_depth, myshep->node);
-    qthread_debug(AFFINITY_DETAILS, "node = %u\n", myshep->node);
-    assert(wkr_depth >= 0);
-            qthread_debug(AFFINITY_DETAILS, "wkr_depth = %u\n", wkr_depth);
-            qthread_debug(AFFINITY_DETAILS, "num_wkrs = %u\n", hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, wkr_depth));
-            qthread_debug(AFFINITY_DETAILS, "num_wkrs = %u\n", hwloc_get_nbobjs_inside_cpuset_by_depth(topology, obj->allowed_cpuset, wkr_depth));
-    hwloc_obj_t  worker0             = hwloc_get_obj_inside_cpuset_by_depth(topology, obj->allowed_cpuset, wkr_depth, 0);
-    unsigned int workerobjs_per_shep = hwloc_get_nbobjs_inside_cpuset_by_depth(topology, obj->allowed_cpuset, wkr_depth);
-
-    assert(workerobjs_per_shep > 0);
-    assert(worker0);
-
-    qthread_debug(AFFINITY_CALLS,
-                  "shep %i(%i) worker %i [%i], there are %u %s [%i pu]\n",
-                  (int)myshep->shepherd_id,
-                  (int)myshep->node,
-                  (int)me->worker_id,
-                  (int)me->packed_worker_id,
-                  maxshepobjs,
-                  hwloc_obj_type_string(hwloc_get_depth_type(topology, shep_depth)),
-                  (int)hwloc_get_nbobjs_inside_cpuset_by_type(topology, allowed_cpuset, HWLOC_OBJ_PU));
-    int shep_pus = hwloc_get_nbobjs_inside_cpuset_by_type(topology, obj->allowed_cpuset, HWLOC_OBJ_PU);
-    assert(shep_pus > 0);
-    unsigned int worker_pus         = hwloc_get_nbobjs_inside_cpuset_by_type(topology, worker0->allowed_cpuset, HWLOC_OBJ_PU);
-    unsigned int wraparounds        = me->packed_worker_id / (maxshepobjs * nworkerspershep);
-    unsigned int worker_wraparounds = me->worker_id / workerobjs_per_shep;
-    hwloc_obj_t  sub_obj            =
-        hwloc_get_obj_inside_cpuset_by_type(topology, obj->allowed_cpuset,
-                                            HWLOC_OBJ_PU,
-                                            ((me->worker_id * worker_pus) +
-                                             (wraparounds * nworkerspershep) +
-                                             worker_wraparounds) % shep_pus);
-
-#ifdef QTHREAD_DEBUG_AFFINITY
-    {
-        char *str;
-        qthread_debug(AFFINITY_DETAILS, "%u: shep_pus=%u, wraparounds=%u\n",
-                      (unsigned)me->packed_worker_id,
-                      shep_pus, wraparounds);
-        qthread_debug(AFFINITY_DETAILS, "%u: (%i*%i) + ((%i + (%i * %i)) % %i)\n",
-                      (unsigned)me->packed_worker_id,
-                      (int)shep_pus, (int)myshep->node, (int)me->worker_id, (int)wraparounds, (int)nworkerspershep, (int)shep_pus);
-        qthread_debug(AFFINITY_DETAILS, "%u: (%i*%i) + (((%i * %i) + (%i * %i) + %i) % %i)\n",
-                      (unsigned)me->packed_worker_id,
-                      (int)shep_pus, (int)myshep->node, (int)me->worker_id, (int)worker_pus, (int)wraparounds, (int)nworkerspershep, (int)worker_wraparounds, (int)shep_pus);
-        ASPRINTF(&str, sub_obj->allowed_cpuset);
-        qthread_debug(AFFINITY_BEHAVIOR,
-                      "binding shep %i worker %i (%i) to PU %i, newPU %i, mask %s\n",
-                      (int)myshep->shepherd_id, (int)me->worker_id,
-                      (int)me->packed_worker_id,
-                      (shep_pus * myshep->node) + ((me->worker_id + (wraparounds * nworkerspershep)) % shep_pus),
-                      (shep_pus * myshep->node) + (((me->worker_id * worker_pus) + (wraparounds * nworkerspershep) + (worker_wraparounds)) % shep_pus),
-                      str);
-        FREE(str, strlen(str));
-    }
-#endif /* ifdef QTHREAD_DEBUG_AFFINITY */
-    if (hwloc_set_cpubind(topology, sub_obj->allowed_cpuset, HWLOC_CPUBIND_THREAD)) {
+    hwloc_obj_t target_obj = qt_topo.worker_map[me->unique_id - 1].bind_obj;
+    if (hwloc_set_cpubind(sys_topo, target_obj->allowed_cpuset,
+                          HWLOC_CPUBIND_THREAD)) {
         char *str;
         int   i = errno;
 #ifdef __APPLE__
@@ -566,7 +549,7 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me,
             return;
         }
 #endif
-        ASPRINTF(&str, sub_obj->allowed_cpuset);
+        hwloc_bitmap_asprintf(&str, target_obj->allowed_cpuset);
         fprintf(stderr, "Couldn't bind to cpuset %s because %s (%i)\n", str,
                 strerror(i), i);
         FREE(str, strlen(str));
@@ -575,34 +558,35 @@ void INTERNAL qt_affinity_set(qthread_worker_t *me,
 
 int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                                   qthread_shepherd_id_t nshepherds)
-{                                                                                      /*{{{ */
-    DEBUG_ONLY(hwloc_topology_check(topology));
+{   /*{{{ */
+    qthread_debug(AFFINITY_CALLS, "generating distances for %i sheps (%p)\n", (int)qt_topo.num_sheps, sheps);
 
-    hwloc_const_cpuset_t allowed_cpuset = hwloc_topology_get_allowed_cpuset(topology); // where am I allowed to run?
-    size_t               num_extant_objs;
-
-    qthread_debug(AFFINITY_CALLS, "generating distances for %i sheps (%p)\n", (int)nshepherds, sheps);
-
-    num_extant_objs = hwloc_get_nbobjs_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth);
-    qthread_debug(AFFINITY_DETAILS, "found %u objects at shep_depth %u\n", num_extant_objs, shep_depth);
-    assert(num_extant_objs != 0);
-
-    for (size_t i = 0; i < nshepherds; ++i) {
-        sheps[i].node            = i % num_extant_objs;
-        sheps[i].sorted_sheplist = calloc(nshepherds - 1, sizeof(qthread_shepherd_id_t));
-        sheps[i].shep_dists      = calloc(nshepherds, sizeof(unsigned int));
+    for (size_t i = 0; i < qt_topo.num_sheps; i++) {
+        sheps[i].node            = i % qt_topo.num_sheps;
+        sheps[i].sorted_sheplist = calloc(qt_topo.num_sheps - 1,
+                                          sizeof(qthread_shepherd_id_t));
+        sheps[i].shep_dists      = calloc(qt_topo.num_sheps,
+                                          sizeof(unsigned int));
     }
+
 #ifdef QTHREAD_HAVE_HWLOC_DISTS
-    const struct hwloc_distances_s *matrix = hwloc_get_whole_distance_matrix_by_type(topology, HWLOC_OBJ_NODE);
+    hwloc_const_cpuset_t allowed_cpuset =
+        hwloc_topology_get_allowed_cpuset(sys_topo);
+    /* XXX: should this really find the obj closest to the shep level that
+     *      has a distance matrix? */
+    const struct hwloc_distances_s * matrix =
+        hwloc_get_whole_distance_matrix_by_type(
+            sys_topo, HWLOC_OBJ_NODE);
+
     if (matrix) {
-        qthread_debug(AFFINITY_DETAILS, "matrix is %p, type at this depth: %s, relative_depth: %u(%s), nbobj: %u\n", matrix, hwloc_obj_type_string(HWLOC_OBJ_NODE), matrix->relative_depth, hwloc_obj_type_string(hwloc_get_depth_type(topology, matrix->relative_depth)), matrix->nbobjs);
+        qthread_debug(AFFINITY_DETAILS, "matrix is %p, type at this depth: %s, relative_depth: %u(%s), nbobj: %u\n", matrix, hwloc_obj_type_string(qt_topo.shep_obj->type), matrix->relative_depth, hwloc_obj_type_string(hwloc_get_depth_type(sys_topo, matrix->relative_depth)), matrix->nbobjs);
         assert(matrix->latency);
     } else {
         qthread_debug(AFFINITY_DETAILS, "matrix is %p, type at this depth: %s\n", matrix, hwloc_obj_type_string(HWLOC_OBJ_NODE));
     }
-    size_t node_to_NUMAnode[num_extant_objs];
-    for (size_t i = 0; i < num_extant_objs; ++i) {
-        hwloc_obj_t node_obj = hwloc_get_obj_inside_cpuset_by_depth(topology, allowed_cpuset, shep_depth, i);
+    size_t node_to_NUMAnode[qt_topo.num_sheps];
+    for (size_t i = 0; i < qt_topo.num_sheps; ++i) {
+        hwloc_obj_t node_obj = hwloc_get_obj_inside_cpuset_by_depth(sys_topo, allowed_cpuset, qt_topo.shep_level, i);
         while (node_obj->type > HWLOC_OBJ_NODE) {
             node_obj = node_obj->parent;
             assert(node_obj);
@@ -611,8 +595,9 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
         qthread_debug(AFFINITY_DETAILS, "obj %i maps to node %i\n", i, node_to_NUMAnode[i]);
     }
 #endif /* ifdef QTHREAD_HAVE_HWLOC_DISTS */
-    for (size_t i = 0; i < nshepherds; ++i) {
-        for (size_t j = 0, k = 0; j < nshepherds; ++j) {
+
+    for (size_t i = 0; i < qt_topo.num_sheps; ++i) {
+        for (size_t j = 0, k = 0; j < qt_topo.num_sheps; ++j) {
             if (j != i) {
 #ifdef QTHREAD_HAVE_HWLOC_DISTS
                 if (matrix) {
@@ -633,12 +618,59 @@ int INTERNAL qt_affinity_gendists(qthread_shepherd_t   *sheps,
                 sheps[i].sorted_sheplist[k++] = j;
             }
         }
-        if (nshepherds > 1) {
-            sort_sheps(sheps[i].shep_dists, sheps[i].sorted_sheplist, nshepherds);
+        if (qt_topo.num_sheps > 1) {
+            sort_sheps(sheps[i].shep_dists, sheps[i].sorted_sheplist,
+                       qt_topo.num_sheps);
         }
     }
-       /* there does not seem to be a way to extract distances... <sigh> */
+    /* there does not seem to be a way to extract distances... <sigh> */
     return QTHREAD_SUCCESS;
 }                                      /*}}} */
+
+#ifdef QTHREAD_HAVE_MEM_AFFINITY
+void INTERNAL qt_affinity_mem_tonode(void  *addr,
+                                     size_t bytes,
+                                     int    node)
+{                                      /*{{{ */
+    hwloc_nodeset_t nodeset = hwloc_bitmap_alloc();
+
+    DEBUG_ONLY(hwloc_topology_check(sys_topo));
+    hwloc_bitmap_set(nodeset, node);
+    hwloc_set_area_membind_nodeset(sys_topo, addr, bytes, nodeset,
+                                   HWLOC_MEMBIND_BIND,
+                                   HWLOC_MEMBIND_NOCPUBIND);
+    hwloc_bitmap_free(nodeset);
+}                                      /*}}} */
+
+void INTERNAL *qt_affinity_alloc(size_t bytes)
+{                                      /*{{{ */
+    DEBUG_ONLY(hwloc_topology_check(sys_topo));
+    return hwloc_alloc(sys_topo, bytes);
+}                                      /*}}} */
+
+void INTERNAL *qt_affinity_alloc_onnode(size_t bytes,
+                                        int    node)
+{                                      /*{{{ */
+    void           *ret;
+    hwloc_nodeset_t nodeset;
+
+    DEBUG_ONLY(hwloc_topology_check(sys_topo));
+    nodeset = hwloc_bitmap_alloc();
+    hwloc_bitmap_set(nodeset, node);
+    ret = hwloc_alloc_membind_nodeset(sys_topo, bytes, nodeset,
+                                      HWLOC_MEMBIND_BIND,
+                                      HWLOC_MEMBIND_NOCPUBIND);
+    hwloc_bitmap_free(nodeset);
+    return ret;
+}                                      /*}}} */
+
+void INTERNAL qt_affinity_free(void  *ptr,
+                               size_t bytes)
+{                                      /*{{{ */
+    DEBUG_ONLY(hwloc_topology_check(sys_topo));
+    hwloc_free(sys_topo, ptr, bytes);
+}                                      /*}}} */
+
+#endif /* ifdef QTHREAD_HAVE_MEM_AFFINITY */
 
 /* vim:set expandtab: */
