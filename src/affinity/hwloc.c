@@ -17,7 +17,7 @@ static uint32_t         initialized = 0;
 
 static hwloc_cpuset_t mccoy_thread_bindings;
 
-static unsigned int qt_topology_output_level = 2;
+static unsigned int qt_topology_output_level = 0;
 
 typedef struct {
     int                   uid;
@@ -123,8 +123,8 @@ static void print_logical_view(void)
     printf("QT_TOPO: #(wps): %d\n", qt_topo.num_wps);
 
     for (int i = 0; i < qt_topo.num_workers; i++) {
-        hwloc_obj_snprintf(str, 1, sys_topo, qt_topo.worker_map[i].bind_obj, "#", 0);
-        printf("%d(%d,%d,%s)\n", qt_topo.worker_map[i].uid, qt_topo.worker_map[i].shep_id, qt_topo.worker_map[i].worker_id, str);
+        hwloc_obj_snprintf(str, sizeof(str), sys_topo, qt_topo.worker_map[i].bind_obj, "#", 0);
+        printf("Worker %d on shepherd %d with local id %d and at location %s\n", qt_topo.worker_map[i].uid, qt_topo.worker_map[i].shep_id, qt_topo.worker_map[i].worker_id, str);
     }
 }
 
@@ -273,10 +273,10 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
 
     /* Collect environment variables */
     qt_topology_output_level =
-        qt_internal_get_env_num("TOPO_OUTPUT_LEVEL", 2, 2);
+        qt_internal_get_env_num("TOPO_OUTPUT_LEVEL", 0, 0);
    
     /* Assign shepherd type/boundary */
-    const char *qsh = qt_internal_get_env_str("SHEPHERD_BOUNDARY", "Socket");
+    const char *qsh = qt_internal_get_env_str("SHEPHERD_BOUNDARY", "PU");
     for (int ti = 0; ti < num_types; ++ti) {
         if (!strncasecmp(topo_type_names[ti], qsh,
                          strlen(topo_type_names[ti]))) {
@@ -506,15 +506,12 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
             qt_topo.worker_map[uid].uid       = uid;
             qt_topo.worker_map[uid].shep_id   = i;
             qt_topo.worker_map[uid].worker_id = j;
-            printf("Adding uid %d\n", uid);
-            /* Set binding location */
             hwloc_obj_t shep_obj =
                 hwloc_get_obj_inside_cpuset_by_depth(
                     sys_topo, allowed_cpuset, qt_topo.shep_level, i);
             hwloc_obj_t worker_obj =
                 hwloc_get_obj_inside_cpuset_by_type(
                     sys_topo, shep_obj->allowed_cpuset, topo_types[worker_type_id], j);
-            if (!worker_obj) printf("Error, tried to allocate more workers than objects exist\n");
             qt_topo.worker_map[uid].bind_obj = worker_obj;
         }
     }
