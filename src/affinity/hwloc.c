@@ -12,6 +12,8 @@
 #include "qt_output_macros.h"
 #include "shufflesheps.h"
 
+#define INFER 0x1000
+
 static hwloc_topology_t sys_topo;
 static uint32_t         initialized = 0;
 
@@ -276,17 +278,22 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
         qt_internal_get_env_num("TOPO_OUTPUT_LEVEL", 0, 0);
    
     /* Assign shepherd type/boundary */
-    const char *qsh = qt_internal_get_env_str("SHEPHERD_BOUNDARY", "PU");
-    for (int ti = 0; ti < num_types; ++ti) {
-        if (!strncasecmp(topo_type_names[ti], qsh,
-                         strlen(topo_type_names[ti]))) {
-            shep_type_id = ti;
+    const char *qsh = qt_internal_get_env_str("SHEPHERD_BOUNDARY", "INFER");
+    if (strncasecmp("INFER", qsh, strlen("INFER"))){
+        for (int ti = 0; ti < num_types; ++ti) {
+            if (!strncasecmp(topo_type_names[ti], qsh,
+                             strlen(topo_type_names[ti]))) {
+                shep_type_id = ti;
+            }
         }
-    }
-    if (shep_type_id == -1) {
-        fprintf(stderr, "unparsable shepherd boundary (%s)\n", qsh);
-        print_type_options();
-        exit(EXIT_FAILURE);
+        if (shep_type_id == -1) {
+            fprintf(stderr, "unparsable shepherd boundary (%s)\n", qsh);
+            print_type_options();
+            exit(EXIT_FAILURE);
+        }
+    } else {
+        printf("Setting shepherd boundary to infer \n");
+        shep_type_id = INFER;
     }
 
     /* Assign worker type */
@@ -339,39 +346,14 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
     qt_topo.worker_level = worker_obj->depth;
 
     /* Process shephard boundary */
-    hwloc_obj_t shep_obj =
-        hwloc_get_obj_inside_cpuset_by_type(
-            sys_topo, allowed_cpuset, topo_types[shep_type_id], 0);
-    if (NULL == shep_obj) {
-        print_error("failed to locate shepherd boundary object\n");
-        exit(EXIT_FAILURE);
-    }
-
-    /* Calculate number of these objects */
-    int const num_shep_objs =
-        hwloc_get_nbobjs_inside_cpuset_by_type(
-            sys_topo, allowed_cpuset, topo_types[shep_type_id]);
-
-    qthread_debug(AFFINITY_DETAILS, "found %d %s shep obj(s)\n", num_shep_objs, topo_type_names[shep_type_id]);
-
-    /* Calculate number of workers within boundary: this is max num-wps */
-    int const num_shep_workers = num_worker_objs / num_shep_objs;
-
-    /* Update logical sys_topo info */
-    qt_topo.shep_obj = shep_obj;
-    qt_topo.shep_level = shep_obj->depth;
-
-    /* Update hints */
-    if (0 == num_sheps_hint || num_shep_objs < num_sheps_hint) {
-        qthread_debug(AFFINITY_DETAILS, "%s shep obj => max-sheps=%d\n", topo_type_names[shep_type_id], num_shep_objs);
-        num_sheps_hint = num_shep_objs;
-    }
-    if (0 == num_wps_hint || num_shep_workers < num_wps_hint) {
-        qthread_debug(AFFINITY_DETAILS, "%s shep obj => max-wps=%d\n", topo_type_names[shep_type_id], num_shep_workers);
-        num_wps_hint = num_shep_workers;
-    }
-
-    if (NULL == qt_topo.shep_obj) {
+    if (shep_type_id != INFER) {
+        /* Process shepherd object with given type */
+        hwloc_obj_t shep_obj =
+            hwloc_get_obj_inside_cpuset_by_type(
+                sys_topo, allowed_cpuset, topo_types[shep_type_id], 0);
+        qt_topo.shep_obj = shep_obj;
+        qt_topo.shep_level = shep_obj->depth;
+    } else {
         /* Have only unit, must find boundary */
 
         /* Policy:
@@ -432,10 +414,34 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
         /* Update logical sys_topo info */
         qt_topo.shep_obj = shep_obj;
         qt_topo.shep_level = shep_obj->depth;
+        shep_type_id = shep_obj->depth;
 
         qthread_debug(AFFINITY_DETAILS, "chose %s shep obj\n", topo_type_names[qt_topo.shep_level]);
+    }
 
-        /* Update hints */
+    if (NULL == qt_topo.shep_obj) {
+        print_error("failed to locate shepherd boundary object\n");
+        exit(EXIT_FAILURE);
+    }
+
+    /* Calculate number of these objects */
+    int const num_shep_objs =
+        hwloc_get_nbobjs_inside_cpuset_by_type(
+            sys_topo, allowed_cpuset, topo_types[shep_type_id]);
+
+    qthread_debug(AFFINITY_DETAILS, "found %d %s shep obj(s)\n", num_shep_objs, topo_type_names[shep_type_id]);
+
+    /* Calculate number of workers within boundary: this is max num-wps */
+    int const num_shep_workers = num_worker_objs / num_shep_objs;
+
+    /* Update hints */
+    if (0 == num_sheps_hint || num_shep_objs < num_sheps_hint) {
+        qthread_debug(AFFINITY_DETAILS, "%s shep obj => max-sheps=%d\n", topo_type_names[shep_type_id], num_shep_objs);
+        num_sheps_hint = num_shep_objs;
+    }
+    if (0 == num_wps_hint || num_shep_workers < num_wps_hint) {
+        qthread_debug(AFFINITY_DETAILS, "%s shep obj => max-wps=%d\n", topo_type_names[shep_type_id], num_shep_workers);
+        num_wps_hint = num_shep_workers;
     }
 
     /* Sanity-check that boundary and units are reasonable */
