@@ -292,7 +292,6 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
             exit(EXIT_FAILURE);
         }
     } else {
-        printf("Setting shepherd boundary to infer \n");
         shep_type_id = INFER;
     }
 
