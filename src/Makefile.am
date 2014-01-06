@@ -116,7 +116,7 @@ EXTRA_DIST += \
 			 affinity/common.c \
 			 affinity/hwloc.c \
 			 affinity/hwloc_v2.c \
-			 affinity/no.c \
+			 affinity/sys.c \
 			 affinity/libnuma.c \
 			 affinity/libnumaV2.c \
 			 affinity/mach.c \
