@@ -258,6 +258,10 @@ static struct qdsubqueue_s **qdqueue_internal_getneighbors(qthread_shepherd_id_t
         }
     }
     /* get a list of those neighbors */
+    if (numN == 0) {
+        *numNeighbors = 0;
+        return NULL;
+    }
     temp = MALLOC(numN * sizeof(qthread_shepherd_id_t));
     assert(temp);
     for (i = j = 0; i < maxsheps; i++) {
@@ -310,8 +314,12 @@ qdqueue_t *qdqueue_create(void)
         ret->Qs[curshep].last_consumed    = NULL;
         ret->Qs[curshep].last_ad_issued   = 1;
         ret->Qs[curshep].last_ad_consumed = 1;
-        ret->Qs[curshep].allsheps         =
-            calloc((maxsheps - 1), sizeof(struct qdsubqueue_s *));
+        if (maxsheps == 1) {
+            ret->Qs[curshep].allsheps     = NULL;
+        } else {
+            ret->Qs[curshep].allsheps     =
+                calloc((maxsheps - 1), sizeof(struct qdsubqueue_s *));
+        }
         /* yes, I could get this information from qthreads, but I'm adding a
          * little bit of randomnes to the list when the distances are equal */
         qdqueue_internal_sortedsheps(curshep, ret->Qs[curshep].allsheps,
