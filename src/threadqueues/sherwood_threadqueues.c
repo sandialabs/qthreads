@@ -563,7 +563,7 @@ int INTERNAL qt_keep_adding_agg_task(qthread_t *agg_task,
             tail_l = *tail_addr;
             if(tail_l != NULL) {
                 int max_allowed = max_t - count;
-                while(QTHREAD_TASK_IS_AGGREGABLE(tail_l->value->flags) && (len_l < max_allowed) && tail_l != head_l) {
+                while((len_l < max_allowed) && QTHREAD_TASK_IS_AGGREGABLE(tail_l->value->flags) && tail_l != head_l) {
                     len_l++;
                     if (tail_l->stealable) { ste_l++; }
                     tail_l = tail_l->prev;
