@@ -1178,7 +1178,6 @@ int API_FUNC qthread_syncvar_writeEF(syncvar_t *restrict      dest,
 {                                      /*{{{ */
     assert(qthread_library_initialized);
     eflags_t   e = { 0, 0, 0, 0, 0 };
-    uint64_t   ret;
     const int  lockbin = QTHREAD_CHOOSE_STRIPE(dest);
     qthread_t *me      = qthread_internal_self();
     QTHREAD_FEB_TIMER_DECLARATION(febblock);
@@ -1191,13 +1190,13 @@ int API_FUNC qthread_syncvar_writeEF(syncvar_t *restrict      dest,
     }
     QTHREAD_FEB_UNIQUERECORD(feb, dest, me);
     QTHREAD_FEB_TIMER_START(febblock);
-    ret = qthread_mwaitc(dest, SYNCFEB_EMPTY, INITIAL_TIMEOUT, &e);
+    (void)qthread_mwaitc(dest, SYNCFEB_EMPTY, INITIAL_TIMEOUT, &e);
     if (e.cf) {                        /* there was a timeout */
         QTHREAD_WAIT_TIMER_DECLARATION;
         qthread_addrstat_t *m;
         qthread_addrres_t  *X;
 
-        ret = qthread_mwaitc(dest, SYNCFEB_ANY, INT_MAX, &e);
+        uint64_t ret = qthread_mwaitc(dest, SYNCFEB_ANY, INT_MAX, &e);
         qassert_ret(e.cf == 0, QTHREAD_TIMEOUT); /* there better not have been a timeout */
         if (e.pf == 1) {                         /* it got empty! */
             if (e.sf == 1) {                     /* not just empty, but with waiters! */
