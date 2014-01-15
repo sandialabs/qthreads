@@ -1435,10 +1435,9 @@ void API_FUNC qthread_finalize(void)
     qthread_debug(CORE_CALLS, "began.\n");
     /***********************************************************************/
 
-    int workers = qthread_num_workers();
 #ifdef QTHREAD_RCRTOOL
     powerOff = 0;
-    for ( i = 0; i < workers; i++) {
+    for ( i = 0; i < qlib->nworkers_active; i++) {
       if (rcrtoollevel > 1) resetEnergy(i);
     }
 #endif
