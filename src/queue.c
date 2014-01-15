@@ -295,10 +295,12 @@ qthread_t INTERNAL *qthread_queue_internal_NEMESIS_dequeue(qthread_queue_NEMESIS
                 dequeued->next = NULL;
             }
         }
+        qthread_t *retval = dequeued->thread;
+        FREE_TQNODE(dequeued);
+        return retval;
+    } else {
+        return NULL;
     }
-    qthread_t *retval = dequeued->thread;
-    FREE_TQNODE(dequeued);
-    return retval;
 }
 
 void INTERNAL qthread_queue_internal_capped_enqueue(qthread_queue_capped_t *q,
