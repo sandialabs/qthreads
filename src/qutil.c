@@ -520,30 +520,28 @@ void API_FUNC qutil_mergesort(double *array,
         args = MALLOC(sizeof(struct qutil_mergesort_args) * numthreads);
         assert(args);
         numthreads = 0;
-    }
-    /* now, commence with the merging */
-    while (chunksize <= length) {
-        i          = 0;
-        numthreads = 0;
-        while (i < length - chunksize) {
-            args[numthreads].array        = array;
-            args[numthreads].first_start  = i;
-            args[numthreads].first_stop   = i + chunksize - 1;
-            args[numthreads].second_start = i + chunksize;
-            args[numthreads].second_stop  =
-                ((i + 2 * chunksize - 1) <
-                 (length - 1)) ? (i + 2 * chunksize - 1) : (length - 1);
-            qthread_fork((qthread_f)qutil_mergesort_inner, args + numthreads,
-                         rets + numthreads);
-            i += 2 * chunksize;
-            numthreads++;
+        /* now, commence with the merging */
+        while (chunksize <= length) {
+            i          = 0;
+            numthreads = 0;
+            while (i < length - chunksize) {
+                args[numthreads].array        = array;
+                args[numthreads].first_start  = i;
+                args[numthreads].first_stop   = i + chunksize - 1;
+                args[numthreads].second_start = i + chunksize;
+                args[numthreads].second_stop  =
+                    ((i + 2 * chunksize - 1) <
+                     (length - 1)) ? (i + 2 * chunksize - 1) : (length - 1);
+                qthread_fork((qthread_f)qutil_mergesort_inner, args + numthreads,
+                        rets + numthreads);
+                i += 2 * chunksize;
+                numthreads++;
+            }
+            for (i = 0; i < numthreads; i++) {
+                qthread_readFF(NULL, rets + i);
+            }
+            chunksize *= 2;
         }
-        for (i = 0; i < numthreads; i++) {
-            qthread_readFF(NULL, rets + i);
-        }
-        chunksize *= 2;
-    }
-    if (rets) {
         FREE(rets, sizeof(aligned_t) * numthreads);
         FREE(args, sizeof(struct qutil_mergesort_args) * numthreads);
     }
