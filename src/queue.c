@@ -195,6 +195,7 @@ int API_FUNC qthread_queue_release_all(qthread_queue_t q)
             for (size_t c = 0; c < q->q.capped.membercount; c++) {
                 if (members_copy[c] != NULL) { qthread_queue_internal_launch(members_copy[c], shep); }
             }
+            free(members_copy);
             break;
         }
     }
