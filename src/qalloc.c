@@ -207,7 +207,6 @@ void *qalloc_makestatmap(const off_t  filesize,
         mi->next         = mmaps;
         mmaps            = mi;
         /* initialize the streams */
-        i = 0;
         for (i = 0; i < streams; ++i) {
             ptr[3 + i] = (void *)(base + (itemsize * i));
             strms[i]   = (void **)(base + (itemsize * i));
@@ -290,7 +289,6 @@ void *qalloc_makedynmap(const off_t  filesize,
         mi->bitmaplength = QT_CEIL_DIV8(filesize/2048);
         mi->base         = ((char *)(mi->bitmap)) + mi->bitmaplength;
         /* initialize the streams */
-        i = 0;
         for (i = 0; i < streams; ++i) {
             mi->smallblocks[i] = NULL; /* the smallblock pointer */
             mi->bigblocks[i]   = NULL; /* the bigblock pointer */
