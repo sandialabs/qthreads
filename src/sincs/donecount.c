@@ -178,7 +178,7 @@ void API_FUNC qt_sinc_resize(qt_sinc_t   *sinc_,
     // Reset termination detection
     qt_sinc_count_t count = qthread_incr(&sinc->counter, diff);
 
-    if (sinc->counter <= 0) {
+    if (count + diff <= 0) {
         qthread_fill(&sinc->ready);
     }
 } /*}}}*/
