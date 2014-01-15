@@ -142,6 +142,8 @@ int API_FUNC qthread_queue_release_one(qthread_queue_t q)
         case CAPPED:
             t = qthread_queue_internal_capped_dequeue(&q->q.capped);
             break;
+        default:
+            abort();
     }
     qthread_shepherd_id_t destination = t->target_shepherd;
     if (destination == NO_SHEPHERD) {
