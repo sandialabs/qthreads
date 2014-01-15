@@ -529,9 +529,9 @@ int INTERNAL qt_keep_adding_agg_task(qthread_t *agg_task,
     qt_threadqueue_node_t *node         = NULL;
     qthread_t             *t            = NULL;
     int                    count        = ((int *)agg_task->preconds)[0];
-    qthread_f             *list_of_f    = (qthread_f *)(&(((int *)agg_task->preconds)[1]));
-    void                 **list_of_farg = (void **)agg_task->arg;
-    void                 **list_of_fret = (void **)agg_task->ret;
+    qthread_f             *list_of_f    /*= (qthread_f *)(&(((int *)agg_task->preconds)[1]))*/;
+    void                 **list_of_farg /*= (void **)agg_task->arg*/;
+    void                 **list_of_fret /*= (void **)agg_task->ret*/;
     int                    local_cost   = *curr_cost;
     // never getting more than what was initially allocated!
 
