@@ -167,6 +167,7 @@ static void qdqueue_internal_sortedsheps(qthread_shepherd_id_t shep,
 {                                      /*{{{ */
     qthread_shepherd_id_t i;
     int                   lastdist = INT_MIN, maxdist = 0;
+    assert(distances);
 
     for (i = 0; i < maxsheps; i++) {
         if (maxdist <= distances[i]) {
@@ -195,6 +196,7 @@ static void qdqueue_internal_sortedsheps(qthread_shepherd_id_t shep,
         }
         lastdist = mindist;
         /* now, create an array of all the sheps that are exactly that far away */
+        assert(count > 0);
         thisdist = MALLOC(count * sizeof(qthread_shepherd_id_t));
         assert(thisdist);
         for (j = 0, k = 0; j < maxsheps && k < count; j++) {
@@ -205,6 +207,7 @@ static void qdqueue_internal_sortedsheps(qthread_shepherd_id_t shep,
                 thisdist[k++] = j;
             }
         }
+        assert(k == count - 1);
         /* and now randomly append them to the all array */
         for (j = 0; j < count; j++) {
             size_t randpick = random() % (count - j);
@@ -298,6 +301,7 @@ qdqueue_t *qdqueue_create(void)
     if (maxsheps == 0) {
         maxsheps = qthread_num_shepherds();
     }
+    assert(maxsheps > 0);
     ret = calloc(1, sizeof(struct qdqueue_s));
     qassert_goto((ret != NULL), erralloc_killq);
     ret->Qs = MALLOC(maxsheps * sizeof(struct qdsubqueue_s));

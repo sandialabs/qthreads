@@ -356,6 +356,7 @@ int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict c
         if (c->head == NULL) {
             c->head = tmp;
         } else {
+            assert(tmp && tmp->prev);
             tmp->prev->next = tmp;
         }
         c->qlength++;
@@ -420,6 +421,7 @@ int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *re
     if (q->tail == NULL) {
         q->tail = node;
     } else {
+        assert(node && node->next);
         node->next->prev = node;
     }
     q->qlength++;

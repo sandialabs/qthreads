@@ -673,6 +673,7 @@ static inline qutil_qsort_iprets_t qutil_qsort_inner_partitioner(double      *ar
     /* calculate the megachunk information for determining the array lengths
      * each thread will be fed. */
     const size_t megachunk_size = MT_CHUNKSIZE * numthreads;
+    assert(megachunk_size != 0);
     /* just used as a boolean test */
     const size_t extra_chunks = length % megachunk_size;
 
@@ -931,6 +932,7 @@ static inline qutil_qsort_iprets_t qutil_aligned_qsort_inner_partitioner(aligned
     /* calculate the megachunk information for determining the array lengths
      * each thread will be fed. */
     const size_t megachunk_size = MT_CHUNKSIZE * numthreads;
+    assert(megachunk_size != 0);
     /* just used as a boolean test */
     const size_t extra_chunks = length % megachunk_size;
 

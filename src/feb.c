@@ -456,6 +456,7 @@ static QINLINE void qthread_gotlock_fill_inner(qthread_shepherd_t *shep,
     qthread_debug(FEB_FUNCTIONS, "shep(%u), m(%p), addr(%p), recursive(%u)\n", shep->shepherd_id, m, maddr, recursive);
     assert(m);
     assert(precond_tasks);
+    assert(maddr);
     m->full = 1;
     QTHREAD_EMPTY_TIMER_STOP(m);
     /* dequeue all FFQ, do their operation, and schedule them */
