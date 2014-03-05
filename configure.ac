@@ -341,8 +341,8 @@ AC_ARG_ENABLE([condwait-queue],
 AC_ARG_ENABLE([interfaces],
               [AS_HELP_STRING([--enable-interfaces=[[list]]],
                               [Comma separated list of compiler interfaces to
-                               support. Available interfaces include chapel and
-                               rose.])],
+                               support. Available interfaces include chapel,
+                               rose, and mpiq.])],
               [for iface in $(echo "$enable_interfaces" | sed 's/,/ /g') ; do
                  case "$iface" in
                    chapel)
@@ -350,6 +350,9 @@ AC_ARG_ENABLE([interfaces],
                      ;;
                    rose)
                      enable_rose_extensions=yes
+                     ;;
+                   mpiq)
+                     enable_mpiq_extensions=yes
                      ;;
                    *)
                      AC_MSG_ERROR([Unsupported interface ($iface) selected.])
@@ -1157,6 +1160,7 @@ AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIMEOFDAY], [test "x$qthread_timer_type" =
 AM_CONDITIONAL([COMPILE_ROSE_EXTENSIONS], [test "x$enable_rose_extensions" = "xyes"])
 AM_CONDITIONAL([COMPILE_RCRTOOL], [test "x$enable_rcrtool" = "xyes"])
 AM_CONDITIONAL([COMPILE_CHAPEL_INTERFACE], [test "x$compile_chapel_interface" = "xyes"])
+AM_CONDITIONAL([COMPILE_MPIQ_INTERFACE], [test "x$compile_mpiq_interface" = "xyes"])
 AM_CONDITIONAL([COMPILE_COMPAT_ATOMIC], [test "x$compile_compat_atomic" = "xyes"])
 AM_CONDITIONAL([COMPILE_SPAWNCACHE], [test "x$enable_spawn_cache" = "xyes"])
 AM_CONDITIONAL([COMPILE_EUREKAS], [test "x$enable_eurekas" = "xyes"])
