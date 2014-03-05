@@ -330,6 +330,31 @@ AC_ARG_ENABLE([condwait-queue],
                                interfere with each other). Default enabled on
                                sparc/solaris, but default disabled elsewhere.])])
 
+AC_ARG_ENABLE([interfaces],
+              [AS_HELP_STRING([--enable-interfaces=[[list]]],
+                              [Comma separated list of compiler interfaces to
+                               support. Available interfaces include chapel,
+                               rose, and mpiq.])],
+              [for iface in $(echo "$enable_interfaces" | sed 's/,/ /g') ; do
+                 case "$iface" in
+                   chapel)
+                     compile_chapel_interface=yes
+                     ;;
+                   mpiq)
+                     enable_mpiq_extensions=yes
+                     ;;
+                   *)
+                     AC_MSG_ERROR([Unsupported interface ($iface) selected.])
+                     ;;
+                 esac
+               done
+               EXTRA_DISTCHECK_OPTIONS="$EXTRA_DISTCHECK_OPTIONS --enable-interfaces=$enable_interfaces"])
+
+AC_ARG_ENABLE([log-barrier],
+              [],
+              [AC_MSG_WARN([Deprecated option; use --with-barrier=log])
+               with_barrier="log"])
+
 AC_ARG_ENABLE([third-party-benchmarks],
               [AS_HELP_STRING([--enable-third-party-benchmarks],
                               [Turns on configure options to look for OpenMP,
@@ -1052,6 +1077,8 @@ AM_CONDITIONAL([QTHREAD_TIMER_TYPE_MACH], [test "x$qthread_timer_type" = "xmach"
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETHRTIME], [test "x$qthread_timer_type" = "xgethrtime"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_ALTIX], [test "x$qthread_timer_type" = "xaltix"])
 AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIMEOFDAY], [test "x$qthread_timer_type" = "xgettimeofday"])
+AM_CONDITIONAL([COMPILE_CHAPEL_INTERFACE], [test "x$compile_chapel_interface" = "xyes"])
+AM_CONDITIONAL([COMPILE_MPIQ_INTERFACE], [test "x$compile_mpiq_interface" = "xyes"])
 AM_CONDITIONAL([COMPILE_COMPAT_ATOMIC], [test "x$compile_compat_atomic" = "xyes"])
 AM_CONDITIONAL([COMPILE_SPAWNCACHE], [test "x$enable_spawn_cache" = "xyes"])
 AM_CONDITIONAL([COMPILE_EUREKAS], [test "x$enable_eurekas" = "xyes"])
