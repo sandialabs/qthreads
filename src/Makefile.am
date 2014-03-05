@@ -62,6 +62,10 @@ include ds/Makefile.inc
 include patterns/Makefile.inc
 include syscalls/Makefile.inc
 
+if COMPILE_MPIQ_INTERFACE
+include interfaces/mpiq/Makefile.inc
+endif
+
 if COMPILE_MULTINODE
 libqthread_la_SOURCES += spr.c
 
