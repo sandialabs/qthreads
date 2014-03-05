@@ -352,7 +352,7 @@ AC_ARG_ENABLE([interfaces],
                      enable_rose_extensions=yes
                      ;;
                    mpiq)
-                     enable_mpiq_extensions=yes
+                     compile_mpiq_interface=yes
                      ;;
                    *)
                      AC_MSG_ERROR([Unsupported interface ($iface) selected.])

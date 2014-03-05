@@ -69,6 +69,10 @@ if COMPILE_ROSE_EXTENSIONS
 include interfaces/rose/Makefile.inc
 endif
 
+if COMPILE_MPIQ_INTERFACE
+include interfaces/mpiq/Makefile.inc
+endif
+
 if COMPILE_MULTINODE
 libqthread_la_SOURCES += spr.c
 
