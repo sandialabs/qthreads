@@ -89,3 +89,66 @@ int MPIQ_Finalize(void)
 
     return rc;
 }
+
+int MPIQ_Comm_dup(MPI_Comm comm, MPI_Comm *newcomm)
+{
+    int rc;
+
+    rc = MPI_Comm_dup(comm, newcomm);
+
+    return rc;
+}
+
+int MPIQ_Errhandler_set(MPI_Comm comm, MPI_Errhandler errhandler)
+{
+    int rc;
+
+    rc = MPI_Errhandler_set(comm, errhandler);
+
+    return rc;
+}
+
+int MPIQ_Comm_rank(MPI_Comm comm, int *rank)
+{
+    int rc;
+
+    rc = MPI_Comm_rank(comm, rank);
+
+    return rc;
+}
+
+int MPIQ_Comm_size(MPI_Comm comm, int *size)
+{
+    int rc;
+
+    rc = MPI_Comm_size(comm, size);
+
+    return rc;
+}
+
+int MPIQ_Barrier(MPI_Comm comm)
+{
+    int rc;
+
+    rc = MPI_Barrier(comm);
+
+    return rc;
+}
+
+int MPIQ_Bcast(void *buffer, int count, MPI_Datatype datatype, int root, MPI_Comm comm)
+{
+    int rc;
+
+    rc = MPI_Bcast(buffer, count, datatype, root, comm);
+
+    return rc;
+}
+
+int MPIQ_Abort(MPI_Comm comm, int errorcode)
+{
+    int rc;
+
+    rc = MPI_Abort(comm, errorcode);
+
+    return rc;
+}
