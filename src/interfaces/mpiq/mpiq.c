@@ -152,3 +152,28 @@ int MPIQ_Abort(MPI_Comm comm, int errorcode)
 
     return rc;
 }
+
+int MPIQ_Irecv(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request)
+{
+    int rc;
+
+    rc = MPI_Irecv(buf, count, datatype, source, tag, comm, request);
+
+    return rc;
+}
+
+int MPIQ_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm)
+{
+    int rc;
+
+    rc = MPI_Send(buf, count, datatype, dest, tag, comm);
+
+    return rc;
+}
+
+int MPIQ_Waitany(int count, MPI_Request array_of_requests[], int *indx, MPI_Status *status)
+{
+    int rc;
+
+    rc = MPI_Waitany(count, array_of_requests, indx, status);
+}
