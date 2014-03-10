@@ -153,6 +153,15 @@ int MPIQ_Abort(MPI_Comm comm, int errorcode)
     return rc;
 }
 
+int MPIQ_Isend(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request)
+{
+    int rc;
+
+    rc = MPI_Isend(buf, count, datatype, dest, tag, comm, request);
+
+    return rc;
+}
+
 int MPIQ_Irecv(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request)
 {
     int rc;
@@ -171,9 +180,38 @@ int MPIQ_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MP
     return rc;
 }
 
+int MPIQ_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Status *status)
+{
+    int rc;
+
+    rc = MPI_Recv(buf, count, datatype, source, tag, comm, status);
+
+    return rc;
+}
+
 int MPIQ_Waitany(int count, MPI_Request array_of_requests[], int *indx, MPI_Status *status)
 {
     int rc;
 
     rc = MPI_Waitany(count, array_of_requests, indx, status);
+    
+    return rc;
+}
+
+int MPIQ_Allreduce(void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm)
+{
+    int rc;
+
+    rc = MPI_Allreduce(sendbuf, recvbuf, count, datatype, op, comm);
+
+    return rc;
+}
+
+int MPIQ_Gather(void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm)
+{
+    int rc;
+
+    rc = MPI_Gather(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, root, comm);
+
+    return rc;
 }
