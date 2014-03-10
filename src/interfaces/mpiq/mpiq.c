@@ -80,3 +80,12 @@ int MPIQ_Init_thread(int * argc, char *** argv, int required, int * provided)
 
     return rc;
 }
+
+int MPIQ_Finalize(void)
+{
+    int rc;
+
+    rc = MPI_Finalize();
+
+    return rc;
+}
