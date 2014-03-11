@@ -7,7 +7,20 @@
  * MPIQ Custom Interface
  */
 
-int mpiq_policy(uint64_t policy_flags);
+enum policy_flags_e {
+    ID_POLICY_THREAD_SINGLE = 0,
+    ID_POLICY_THREAD_FUNNELED,
+    ID_POLICY_THREAD_SERIALIZED,
+    ID_POLICY_THREAD_MULTIPLE,
+    ID_POLICY_COUNT
+};
+
+#define  FLAG_POLICY_THREAD_SINGLE     (1 << ID_POLICY_THREAD_SINGLE)
+#define  FLAG_POLICY_THREAD_FUNNELED   (1 << ID_POLICY_THREAD_FUNNELED)
+#define  FLAG_POLICY_THREAD_SERIALIZED (1 << ID_POLICY_THREAD_SERIALIZED)
+#define  FLAG_POLICY_THREAD_MULTIPLE   (1 << ID_POLICY_THREAD_MULTIPLE)
+
+int mpiq_policy(uint64_t const policy_flags);
 
 /*
  * MPI Wrappers
