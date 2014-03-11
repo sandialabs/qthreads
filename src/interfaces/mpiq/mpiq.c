@@ -7,9 +7,29 @@
 
 #include "mpiq.h"
 
-int mpiq_policy(uint64_t policy_flags)
+static int use_choices           = 0;
+static int thread_support_choice = 0;
+
+int mpiq_policy(uint64_t const policy_flags)
 {
     int rc = 0;
+
+    use_choices = 1;
+
+    /* Set MPI thread support policy */
+    if (FLAG_POLICY_THREAD_SINGLE & policy_flags) {
+        thread_support_choice = ID_POLICY_THREAD_SINGLE;
+        fprintf(stderr, "Info: using THREAD_SINGLE policy\n");
+    } else if (FLAG_POLICY_THREAD_FUNNELED & policy_flags) {
+        thread_support_choice = ID_POLICY_THREAD_FUNNELED;
+        fprintf(stderr, "Info: using THREAD_FUNNELED policy\n");
+    } else if (FLAG_POLICY_THREAD_SERIALIZED & policy_flags) {
+        thread_support_choice = ID_POLICY_THREAD_SERIALIZED;
+        fprintf(stderr, "Info: using THREAD_SERIALIZED policy\n");
+    } else if (FLAG_POLICY_THREAD_MULTIPLE & policy_flags) {
+        thread_support_choice = ID_POLICY_THREAD_MULTIPLE;
+        fprintf(stderr, "Info: using THREAD_MULTIPLE policy\n");
+    }
 
     return rc;
 }
@@ -30,8 +50,12 @@ static inline int mpiq_qthread_initialize(void)
 int MPIQ_Init(int * argc, char *** argv)
 {
     int rc = 0;
-    int const required = MPI_THREAD_SINGLE;
+    int required = MPI_THREAD_SINGLE;
     int provided;
+
+    if (use_choices) {
+        required = thread_support_choice;
+    }
 
     rc = MPIQ_Init_thread(argc, argv, required, &provided);
     if (provided != required) {
@@ -45,6 +69,11 @@ int MPIQ_Init(int * argc, char *** argv)
 int MPIQ_Init_thread(int * argc, char *** argv, int required, int * provided)
 {
     int rc = 0;
+
+    if (use_choices && (thread_support_choice != required)) {
+        fprintf(stderr, "Error: thread support policy does not match request (%d!=%d)\n", thread_support_choice, required);
+        abort();
+    }
 
     rc = MPI_Init_thread(argc, argv, required, provided);
     if (MPI_SUCCESS != rc) {
