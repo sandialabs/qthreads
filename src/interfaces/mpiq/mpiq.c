@@ -7,6 +7,13 @@
 
 #include "mpiq.h"
 
+int mpiq_policy(uint64_t policy_flags)
+{
+    int rc = 0;
+
+    return rc;
+}
+
 static inline int mpiq_qthread_initialize(void)
 {
     int rc;
