@@ -34,19 +34,6 @@ int mpiq_policy(uint64_t const policy_flags)
     return rc;
 }
 
-static inline int mpiq_qthread_initialize(void)
-{
-    int rc;
-
-    rc = qthread_initialize();
-    if (QTHREAD_SUCCESS != rc) {
-        fprintf(stderr, "Error: failed to initialize Qthreads (rc=%d)\n", rc);
-        abort();
-    }
-
-    return rc;
-}
-
 int MPIQ_Init(int * argc, char *** argv)
 {
     int rc = 0;
