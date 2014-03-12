@@ -40,6 +40,7 @@ int MPIQ_Isend(void *buf, int count, MPI_Datatype datatype, int dest, int tag, M
 int MPIQ_Irecv(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Request *request);
 int MPIQ_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm);
 int MPIQ_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Status *status);
+int MPIQ_Wait(MPI_Request *request, MPI_Status *status);
 int MPIQ_Waitany(int count, MPI_Request array_of_requests[], int *indx, MPI_Status *status);
 int MPIQ_Allreduce(void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm);
 int MPIQ_Gather(void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm);
