@@ -212,6 +212,15 @@ int MPIQ_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag, 
     return rc;
 }
 
+int MPIQ_Wait(MPI_Request *request, MPI_Status *status)
+{
+    int rc;
+
+    rc = MPI_Wait(request, status);
+
+    return rc;
+}
+
 int MPIQ_Waitany(int count, MPI_Request array_of_requests[], int *indx, MPI_Status *status)
 {
     int rc;
