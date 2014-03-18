@@ -230,6 +230,15 @@ int MPIQ_Waitany(int count, MPI_Request array_of_requests[], int *indx, MPI_Stat
     return rc;
 }
 
+int MPIQ_Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[])
+{
+    int rc;
+
+    rc = MPI_Waitall(count, array_of_requests, array_of_statuses);
+
+    return rc;
+}
+
 int MPIQ_Allreduce(void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm)
 {
     int rc;
