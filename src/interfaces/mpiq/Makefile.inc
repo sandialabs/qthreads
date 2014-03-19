@@ -6,6 +6,8 @@
 
 lib_LTLIBRARIES += libqthread_mpiq.la
 
-libqthread_mpiq_la_SOURCES = interfaces/mpiq/mpiq.c
+libqthread_mpiq_la_SOURCES = \
+	interfaces/mpiq/mpiq.c \
+	envariables.c
 
 include_HEADERS = interfaces/mpiq/mpiq.h
