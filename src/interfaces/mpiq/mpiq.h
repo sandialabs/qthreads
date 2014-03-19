@@ -45,5 +45,6 @@ int MPIQ_Waitany(int count, MPI_Request array_of_requests[], int *indx, MPI_Stat
 int MPIQ_Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]);
 int MPIQ_Allreduce(void *sendbuf, void *recvbuf, int count, MPI_Datatype datatype, MPI_Op op, MPI_Comm comm);
 int MPIQ_Gather(void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvbuf, int recvcount, MPI_Datatype recvtype, int root, MPI_Comm comm);
+double MPIQ_Wtime(void);
 
 #endif
