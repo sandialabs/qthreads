@@ -4,6 +4,7 @@
 #include <mpi.h>
 
 #include "qthread/qthread.h"
+#include "qthread/qtimer.h"
 #include "qt_envariables.h"
 #include "qt_asserts.h"
 
@@ -331,4 +332,9 @@ int MPIQ_Gather(void *sendbuf, int sendcount, MPI_Datatype sendtype, void *recvb
     rc = MPI_Gather(sendbuf, sendcount, sendtype, recvbuf, recvcount, recvtype, root, comm);
 
     return rc;
+}
+
+double MPIQ_Wtime(void)
+{
+    return qtimer_wtime();
 }
