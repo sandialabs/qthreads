@@ -4,6 +4,7 @@
 #include <mpi.h>
 
 #include "qthread/qthread.h"
+#include "qt_envariables.h"
 
 #include "mpiq.h"
 
@@ -37,11 +38,31 @@ int mpiq_policy(uint64_t const policy_flags)
 int MPIQ_Init(int * argc, char *** argv)
 {
     int rc = 0;
-    int required = MPI_THREAD_SINGLE;
+    int required;
     int provided;
 
-    if (use_choices) {
+    /* Choose thread support level. */
+    const char * required_str = qt_internal_get_env_str("MPIQ_THREAD_SUPPORT", NULL);
+    if (NULL != required_str) {
+        /* Use setting in env. */
+        if (0 == strcmp(required_str, "MPI_THREAD_SINGLE")) {
+            required = MPI_THREAD_SINGLE;
+        } else if (0 == strcmp(required_str, "MPI_THREAD_FUNNELED")) {
+            required = MPI_THREAD_FUNNELED;
+        } else if (0 == strcmp(required_str, "MPI_THREAD_SERIALIZED")) {
+            required = MPI_THREAD_SERIALIZED;
+        } else if (0 == strcmp(required_str, "MPI_THREAD_MULTIPLE")) {
+            required = MPI_THREAD_MULTIPLE;
+        } else {
+            fprintf(stderr, "Error: unsupported thread level (MPIQ_THREAD_SUPORT=%s)\n", required_str);
+            abort();
+        }
+    } else if (use_choices) {
+        /* Use policy choice if nothing specified in env. */
         required = thread_support_choice;
+    } else {
+        /* Default to single. */
+        required = MPI_THREAD_SINGLE;
     }
 
     rc = MPIQ_Init_thread(argc, argv, required, &provided);
