@@ -64,7 +64,13 @@ void INTERNAL qt_topology_init(qthread_shepherd_id_t * nshepherds,
             }
         }
     } else {
-        num_workers = num_sheps * num_wps;
+        if (THREADQUEUE_POLICY_TRUE == qt_threadqueue_policy(SINGLE_WORKER)) {
+            num_workers = num_sheps * num_wps;
+            num_sheps = num_workers;
+            num_wps = 1;
+        } else {
+            num_workers = num_sheps * num_wps;
+        }
     }
 
     if (print_info) {
