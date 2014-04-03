@@ -122,6 +122,20 @@ int MPIQ_Init_thread(int * argc, char *** argv, int required, int * provided)
         fprintf(stderr, "Warning: thread support below required level (%d < %d)\n", *provided, required);
     }
 
+    /* Check level of the request */
+    const char * hint_str = qt_internal_get_env_str("MPIQ_THREAD_REQUEST_LEVEL", NULL);
+    if (NULL == hint_str) {
+        /* Assume request is a hint */
+    } else if (0 == strcmp(hint_str, "HINT")) {
+        fprintf(stderr, "Info: using thread request level %s\n", hint_str);
+    } else if (0 == strcmp(hint_str, "REQUIREMENT")) {
+        /* Ignore provided level and just act like it provided the required level */
+        fprintf(stderr, "Info: using thread request level %s\n", hint_str);
+        *provided = required;
+    } else {
+        fprintf(stderr, "Warning: unsupported thread request level (MPIQ_THREAD_REQUEST_LEVEL=%s)\n", hint_str);
+    }
+
     switch (*provided) {
     case MPI_THREAD_SINGLE:
         fprintf(stderr, "Info: using MPI_THREAD_SINGLE\n");
