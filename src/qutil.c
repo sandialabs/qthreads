@@ -519,7 +519,6 @@ void API_FUNC qutil_mergesort(double *array,
         assert(rets);
         args = MALLOC(sizeof(struct qutil_mergesort_args) * numthreads);
         assert(args);
-        numthreads = 0;
         /* now, commence with the merging */
         while (chunksize <= length) {
             i          = 0;
