@@ -226,6 +226,14 @@ int qthread_fork_to(qthread_f             f,
                     const void           *arg,
                     aligned_t            *ret,
                     qthread_shepherd_id_t shepherd);
+
+#ifdef QTHREAD_LOCAL_PRIORITY
+int qthread_fork_to_local_priority(qthread_f             f,
+                                   const void           *arg,
+                                   aligned_t            *ret,
+                                   qthread_shepherd_id_t shepherd);
+#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
+
 int qthread_fork_precond_to(qthread_f             f,
                             const void           *arg,
                             aligned_t            *ret,
@@ -275,7 +283,8 @@ enum _qthread_features {
     SPAWN_RET_SINC_VOID,
     SPAWN_PC_SYNCVAR_T,
     SPAWN_AGGREGABLE,
-    SPAWN_COUNT
+    SPAWN_COUNT,
+    SPAWN_LOCAL_PRIORITY
 };
 
 #define QTHREAD_SPAWN_PARENT        (1 << SPAWN_PARENT)
@@ -287,6 +296,7 @@ enum _qthread_features {
 #define QTHREAD_SPAWN_RET_SINC_VOID (1 << SPAWN_RET_SINC_VOID)
 #define QTHREAD_SPAWN_PC_SYNCVAR_T  (1 << SPAWN_PC_SYNCVAR_T)
 #define QTHREAD_SPAWN_AGGREGABLE    (1 << SPAWN_AGGREGABLE)
+#define QTHREAD_SPAWN_LOCAL_PRIORITY (1 << SPAWN_LOCAL_PRIORITY)
 
 int qthread_spawn(qthread_f             f,
                   const void           *arg,

@@ -698,6 +698,9 @@ void INTERNAL qt_add_first_agg_task(qthread_t             *agg_task,
 
 /* dequeue at tail */
 qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
+#ifdef QTHREAD_LOCAL_PRIORITY
+                                            qt_threadqueue_t         *lpq,
+#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
                                             qt_threadqueue_private_t *qc,
                                             uint_fast8_t              active)
 {   /*{{{*/
@@ -757,6 +760,31 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 #endif      /* ifdef QTHREAD_TASK_AGGREGATION */
 
             qthread_debug(THREADQUEUE_DETAILS, "q(%p), qc(%p), active(%u): qc->qlen(%u) Push remaining items onto the real queue\n", q, qc, active, qc->qlength);
+
+#ifdef QTHREAD_LOCAL_PRIORITY
+            /* First check local priority queue */
+            if (lpq->head) {
+                QTHREAD_TRYLOCK_LOCK(&lpq->qlock);
+                PARANOIA_ONLY(sanity_check_queue(lpq));
+                node = lpq->tail;
+                if (node != NULL) {
+                    assert(lpq->head);
+                    assert(lpq->qlength > 0);
+                    
+                    lpq->tail = node->prev;
+                    if (lpq->tail == NULL) {
+                        lpq->head = NULL;
+                    } else {
+                        lpq->tail->next = NULL;
+                    }
+                    assert(lpq->qlength > 0);
+                    lpq->qlength--;
+                    lpq->qlength_stealable -= node->stealable;
+                }
+                QTHREAD_TRYLOCK_UNLOCK(&lpq->qlock);
+            }
+            else
+#endif /* ifdef QTHREAD_LOCAL_PRIORITY */ 
             if (qc->qlength > 0) {
                 qt_threadqueue_node_t *first = qc->head;
                 qt_threadqueue_node_t *last  = qc->tail;
