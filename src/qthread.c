@@ -415,6 +415,9 @@ static void *qthread_master(void *arg)
     qthread_shepherd_id_t     my_id = me->shepherd_id;
     qt_context_t              my_context;
     qt_threadqueue_t         *threadqueue;
+#ifdef QTHREAD_LOCAL_PRIORITY
+    qt_threadqueue_t         *localpriorityqueue;
+#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
     qt_threadqueue_private_t *localqueue = NULL;
     qthread_t                *t;
     qthread_t               **current;
