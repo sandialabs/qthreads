@@ -725,6 +725,32 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 #ifdef QTHREAD_TASK_AGGREGATION
         curr_cost = 0; ret_agg_task = 0;
 #endif
+
+#ifdef QTHREAD_LOCAL_PRIORITY
+            /* First check local priority queue */
+        if (lpq->head) {
+            QTHREAD_TRYLOCK_LOCK(&lpq->qlock);
+            PARANOIA_ONLY(sanity_check_queue(lpq));
+            node = lpq->tail;
+            if (node != NULL) {
+                assert(lpq->head);
+                assert(lpq->qlength > 0);
+
+                lpq->tail = node->prev;
+                if (lpq->tail == NULL) {
+                    lpq->head = NULL;
+                } else {
+                    lpq->tail->next = NULL;
+                }
+                assert(lpq->qlength > 0);
+                lpq->qlength--;
+                lpq->qlength_stealable -= node->stealable;
+            }
+            QTHREAD_TRYLOCK_UNLOCK(&lpq->qlock);
+        }
+        else
+#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
+
         // printf("Total number of items: %d+%d\n", (qc?(qc->on_deck?(1+qc->qlength):0):0), q->qlength);
         if (qc && (qc->on_deck != NULL)) {
             assert(qc->tail == NULL || qc->tail->next == NULL);
@@ -761,30 +787,6 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 
             qthread_debug(THREADQUEUE_DETAILS, "q(%p), qc(%p), active(%u): qc->qlen(%u) Push remaining items onto the real queue\n", q, qc, active, qc->qlength);
 
-#ifdef QTHREAD_LOCAL_PRIORITY
-            /* First check local priority queue */
-            if (lpq->head) {
-                QTHREAD_TRYLOCK_LOCK(&lpq->qlock);
-                PARANOIA_ONLY(sanity_check_queue(lpq));
-                node = lpq->tail;
-                if (node != NULL) {
-                    assert(lpq->head);
-                    assert(lpq->qlength > 0);
-                    
-                    lpq->tail = node->prev;
-                    if (lpq->tail == NULL) {
-                        lpq->head = NULL;
-                    } else {
-                        lpq->tail->next = NULL;
-                    }
-                    assert(lpq->qlength > 0);
-                    lpq->qlength--;
-                    lpq->qlength_stealable -= node->stealable;
-                }
-                QTHREAD_TRYLOCK_UNLOCK(&lpq->qlock);
-            }
-            else
-#endif /* ifdef QTHREAD_LOCAL_PRIORITY */ 
             if (qc->qlength > 0) {
                 qt_threadqueue_node_t *first = qc->head;
                 qt_threadqueue_node_t *last  = qc->tail;
