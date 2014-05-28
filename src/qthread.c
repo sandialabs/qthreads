@@ -1607,7 +1607,7 @@ void API_FUNC qthread_finalize(void)
         QTHREAD_CASLOCK_DESTROY(shep->active);
         qt_threadqueue_free(shep->ready);
 #ifdef QTHREAD_LOCAL_PRIORITY
-        qt_threadqueue_free(shep->ready);
+        qt_threadqueue_free(shep->local_priority_queue);
 #endif /* ifdef QTHREAD_LOCAL_PRIORITY */
 
 #ifdef QTHREAD_DEBUG
