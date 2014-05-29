@@ -324,6 +324,7 @@ unsigned              qthread_id(void);
 qthread_shepherd_id_t qthread_shep(void);
 qthread_worker_id_t   qthread_worker(qthread_shepherd_id_t *s);
 qthread_worker_id_t   qthread_worker_unique(qthread_shepherd_id_t *s);
+qthread_worker_id_t   qthread_worker_local(qthread_shepherd_id_t *s);
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
 unsigned                          qthread_barrier_id(void);
 struct qthread_parallel_region_s *qt_parallel_region(void);
@@ -358,6 +359,7 @@ const qthread_shepherd_id_t *qthread_sorted_sheps_remote(const
 /* returns the number of actively-scheduling shepherds */
 qthread_shepherd_id_t qthread_num_shepherds(void);
 qthread_worker_id_t   qthread_num_workers(void); /* how many kernel-level threads are running */
+qthread_worker_id_t   qthread_num_workers_local(qthread_shepherd_id_t shepherd_id);
 /* queries the current state */
 enum introspective_state {
     STACK_SIZE,
