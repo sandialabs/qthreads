@@ -640,7 +640,7 @@ QTHREAD_PTHREAD_PROCESS_PRIVATE
 
 AC_SEARCH_LIBS([nanosleep],[rt],[],
                [AC_MSG_ERROR([Cannot find nanosleep])])
-AC_SEARCH_LIBS([ceil],[m],[AC_DEFINE([HAVE_LIBM], [1], [Have math library])],[AC_MSG_ERROR([Cannot find ceil(); some tests and benchmarks will not be compiled.])])
+AC_SEARCH_LIBS([ceil],[m],[AC_DEFINE([HAVE_LIBM], [1], [Have math library])][have_libm=yes],[AC_MSG_ERROR([Cannot find ceil(); some tests and benchmarks will not be compiled.])])
 AC_SEARCH_LIBS([accept], [xnet "socket -lnsl"])
 
 AS_IF([test "x$enable_pooled_memory" = "xno"],
@@ -1170,7 +1170,7 @@ AM_CONDITIONAL([COMPILE_OMP_BENCHMARKS], [test "x$have_openmp" = "xyes"])
 AM_CONDITIONAL([COMPILE_TBB_BENCHMARKS], [test "x$have_tbb" = "xyes"])
 AM_CONDITIONAL([COMPILE_CILK_BENCHMARKS], [test "x$have_cilk" = "xyes"])
 AM_CONDITIONAL([COMPILE_LF_HASH], [test "x$enable_lf_febs" = "xyes"])
-AM_CONDITIONAL([HAVE_LIBM], [test "x$ac_cv_lib_m_ceil" = "xyes"])
+AM_CONDITIONAL([HAVE_LIBM], [test "x$have_libm" = "xyes"])
 
 AC_CONFIG_HEADERS([include/config.h include/qthread/common.h])
 AC_CONFIG_FILES([Makefile
