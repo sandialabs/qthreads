@@ -13,9 +13,15 @@
 static int use_choices           = 0;
 static int thread_support_choice = 0;
 
+static int size_;
+static int rank_;
+
+/**
+ * - Always call `qthread_migrate_to()` so that `QTHREAD_UNSTEALABLE` task attr. is set.
+ */
 static inline void funnel_task(void)
 {
-    if (ID_POLICY_THREAD_FUNNELED == thread_support_choice && 0 != qthread_readstate(CURRENT_SHEPHERD)) {
+    if (ID_POLICY_THREAD_FUNNELED == thread_support_choice) {
         qassert(qthread_migrate_to(0), QTHREAD_SUCCESS);
 
         //int rc = qthread_migrate_to(0);
@@ -27,6 +33,18 @@ static inline void funnel_task(void)
         //    fprintf(stderr, "... migrated: failed; on shep: %lu\n", qthread_readstate(CURRENT_SHEPHERD));
         //}
     }
+}
+
+/**
+ * - Yield or suspend task until request is satisfied
+ */
+static inline void wait_on_request(MPI_Request * request, int flag, MPI_Status * status) {
+    do {
+        MPI_Test(request, &flag, status);
+        if (0 == flag) {
+            qthread_yield();
+        }
+    } while (0 == flag);
 }
 
 int mpiq_policy(uint64_t const policy_flags)
@@ -175,6 +193,9 @@ int MPIQ_Init_thread(int * argc, char *** argv, int required, int * provided)
         abort();
     }
 
+    MPI_Comm_size(MPI_COMM_WORLD, &size_);
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank_);
+
     return rc;
 }
 
@@ -210,20 +231,18 @@ int MPIQ_Errhandler_set(MPI_Comm comm, MPI_Errhandler errhandler)
 
 int MPIQ_Comm_rank(MPI_Comm comm, int *rank)
 {
-    int rc;
+    int rc = 0;
 
-    funnel_task();
-    rc = MPI_Comm_rank(comm, rank);
+    *rank = rank_;
 
     return rc;
 }
 
 int MPIQ_Comm_size(MPI_Comm comm, int *size)
 {
-    int rc;
+    int rc = 0;
 
-    funnel_task();
-    rc = MPI_Comm_size(comm, size);
+    *size = size_;
 
     return rc;
 }
@@ -258,6 +277,9 @@ int MPIQ_Abort(MPI_Comm comm, int errorcode)
     return rc;
 }
 
+/**
+ * - Request object managed by caller
+ */
 int MPIQ_Isend(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm, MPI_Request *request)
 {
     int rc;
@@ -281,9 +303,21 @@ int MPIQ_Irecv(void *buf, int count, MPI_Datatype datatype, int source, int tag,
 int MPIQ_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm)
 {
     int rc;
+    int flag = 0;
+
+    MPI_Request request;
+    MPI_Status  status;
+
+    fprintf(stderr, "[%03d] _Send(dest:%d, tag:%d) start\n", rank_, dest, tag);
 
     funnel_task();
-    rc = MPI_Send(buf, count, datatype, dest, tag, comm);
+
+    MPIQ_Isend(buf, count, datatype, dest, tag, comm, &request);
+    wait_on_request(&request, flag, &status);
+
+    rc = 0; // TODO: set return code
+
+    fprintf(stderr, "[%03d] _Send(dest:%d, tag:%d) stop\n", rank_, dest, tag);
 
     return rc;
 }
@@ -291,9 +325,21 @@ int MPIQ_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MP
 int MPIQ_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Status *status)
 {
     int rc;
+    int flag = 0;
+
+    MPI_Request request;
+    MPI_Status  local_status;
+
+    fprintf(stderr, "[%03d] _Recv(source:%d, tag:%d) start\n", rank_, source, tag);
 
     funnel_task();
-    rc = MPI_Recv(buf, count, datatype, source, tag, comm, status);
+
+    MPIQ_Irecv(buf, count, datatype, source, tag, comm, &request);
+    wait_on_request(&request, flag, &local_status);
+
+    rc = 0; // TODO: set return code
+
+    fprintf(stderr, "[%03d] _Recv(source:%d, tag:%d) stop\n", rank_, source, tag);
 
     return rc;
 }
