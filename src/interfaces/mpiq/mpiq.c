@@ -38,7 +38,9 @@ static inline void funnel_task(void)
 /**
  * - Yield or suspend task until request is satisfied
  */
-static inline void wait_on_request(MPI_Request * request, int flag, MPI_Status * status) {
+static inline void wait_on_request(MPI_Request * request, MPI_Status * status) {
+    int flag;
+
     do {
         MPI_Test(request, &flag, status);
         if (0 == flag) {
@@ -303,7 +305,6 @@ int MPIQ_Irecv(void *buf, int count, MPI_Datatype datatype, int source, int tag,
 int MPIQ_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MPI_Comm comm)
 {
     int rc;
-    int flag = 0;
 
     MPI_Request request;
     MPI_Status  status;
@@ -313,7 +314,7 @@ int MPIQ_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MP
     funnel_task();
 
     MPIQ_Isend(buf, count, datatype, dest, tag, comm, &request);
-    wait_on_request(&request, flag, &status);
+    wait_on_request(&request, &status);
 
     rc = 0; // TODO: set return code
 
@@ -325,7 +326,6 @@ int MPIQ_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MP
 int MPIQ_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag, MPI_Comm comm, MPI_Status *status)
 {
     int rc;
-    int flag = 0;
 
     MPI_Request request;
     MPI_Status  local_status;
@@ -335,7 +335,7 @@ int MPIQ_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag, 
     funnel_task();
 
     MPIQ_Irecv(buf, count, datatype, source, tag, comm, &request);
-    wait_on_request(&request, flag, &local_status);
+    wait_on_request(&request, &local_status);
 
     rc = 0; // TODO: set return code
 
