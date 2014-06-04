@@ -36,13 +36,41 @@ static inline void funnel_task(void)
 }
 
 /**
- * - Yield or suspend task until request is satisfied
+ * - Yield or suspend task until a specific request is satisfied
  */
 static inline void wait_on_request(MPI_Request * request, MPI_Status * status) {
     int flag;
 
     do {
         MPI_Test(request, &flag, status);
+        if (0 == flag) {
+            qthread_yield();
+        }
+    } while (0 == flag);
+}
+
+/**
+ * - Yield or suspend task until one from a list of requests is satisfied
+ */
+static inline void wait_on_any_request(int count, MPI_Request array_of_requests[], int * index, MPI_Status * status) {
+    int flag;
+
+    do {
+        MPI_Testany(count, array_of_requests, index, &flag, status);
+        if (0 == flag) {
+            qthread_yield();
+        }
+    } while (0 == flag);
+}
+
+/**
+ * - Yield or suspend task until all from a list of requests is satisfied
+ */
+static inline void wait_on_all_requests(int count, MPI_Request array_of_requests[], MPI_Status array_of_statuses[]) {
+    int flag;
+
+    do {
+        MPI_Testall(count, array_of_requests, &flag, array_of_statuses);
         if (0 == flag) {
             qthread_yield();
         }
@@ -309,16 +337,12 @@ int MPIQ_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MP
     MPI_Request request;
     MPI_Status  status;
 
-    fprintf(stderr, "[%03d] _Send(dest:%d, tag:%d) start\n", rank_, dest, tag);
-
     funnel_task();
 
     MPIQ_Isend(buf, count, datatype, dest, tag, comm, &request);
     wait_on_request(&request, &status);
 
     rc = 0; // TODO: set return code
-
-    fprintf(stderr, "[%03d] _Send(dest:%d, tag:%d) stop\n", rank_, dest, tag);
 
     return rc;
 }
@@ -330,16 +354,12 @@ int MPIQ_Recv(void *buf, int count, MPI_Datatype datatype, int source, int tag, 
     MPI_Request request;
     MPI_Status  local_status;
 
-    fprintf(stderr, "[%03d] _Recv(source:%d, tag:%d) start\n", rank_, source, tag);
-
     funnel_task();
 
     MPIQ_Irecv(buf, count, datatype, source, tag, comm, &request);
     wait_on_request(&request, &local_status);
 
     rc = 0; // TODO: set return code
-
-    fprintf(stderr, "[%03d] _Recv(source:%d, tag:%d) stop\n", rank_, source, tag);
 
     return rc;
 }
@@ -349,17 +369,21 @@ int MPIQ_Wait(MPI_Request *request, MPI_Status *status)
     int rc;
 
     funnel_task();
-    rc = MPI_Wait(request, status);
+
+    wait_on_request(request, status);
+    rc = 0; // TODO: set return code
 
     return rc;
 }
 
-int MPIQ_Waitany(int count, MPI_Request array_of_requests[], int *indx, MPI_Status *status)
+int MPIQ_Waitany(int count, MPI_Request array_of_requests[], int *index, MPI_Status *status)
 {
     int rc;
 
     funnel_task();
-    rc = MPI_Waitany(count, array_of_requests, indx, status);
+
+    wait_on_any_request(count, array_of_requests, index, status);
+    rc = 0; // TODO: set return code
     
     return rc;
 }
@@ -369,7 +393,9 @@ int MPIQ_Waitall(int count, MPI_Request array_of_requests[], MPI_Status array_of
     int rc;
 
     funnel_task();
-    rc = MPI_Waitall(count, array_of_requests, array_of_statuses);
+    
+    wait_on_all_requests(count, array_of_requests, array_of_statuses);
+    rc = 0; // TODO: set return code
 
     return rc;
 }
