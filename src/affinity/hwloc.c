@@ -115,6 +115,19 @@ void INTERNAL qt_affinity_init(qthread_shepherd_id_t *nbshepherds,
 
     DEBUG_ONLY(hwloc_topology_check(topology));
     qthread_internal_cleanup(qt_affinity_internal_hwloc_teardown);
+    /* Restrict topology to process cpuset */
+    {
+        hwloc_cpuset_t my_process_cpuset = ALLOCBMAP();
+        hwloc_get_cpubind(topology, my_process_cpuset, HWLOC_CPUBIND_PROCESS);
+        hwloc_topology_restrict(topology, my_process_cpuset, 0);
+
+        char * str;
+        hwloc_bitmap_asprintf(&str, my_process_cpuset);
+        fprintf(stderr, "QT_AFFINITY: process cpuset: %s\n", str);
+        
+        free(str);
+        hwloc_bitmap_free(my_process_cpuset);
+    }
     mccoy_thread_bindings = ALLOCBMAP();
     hwloc_get_cpubind(topology, mccoy_thread_bindings, HWLOC_CPUBIND_THREAD);
     hwloc_const_cpuset_t allowed_cpuset = hwloc_topology_get_allowed_cpuset(topology);
