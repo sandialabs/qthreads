@@ -277,6 +277,16 @@ int MPIQ_Comm_size(MPI_Comm comm, int *size)
     return rc;
 }
 
+int MPIQ_Comm_get_attr(MPI_Comm comm, int comm_keyval, void * attribute_val, int * flag)
+{
+    int rc;
+
+    funnel_task();
+    rc = MPI_Comm_get_attr(comm, comm_keyval, attribute_val, flag);
+
+    return rc;
+}
+
 int MPIQ_Barrier(MPI_Comm comm)
 {
     int rc;
