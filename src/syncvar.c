@@ -279,6 +279,19 @@ int qthread_syncvar_status(syncvar_t *const v)
 #endif /* if (QTHREAD_ASSEMBLY_ARCH == QTHREAD_TILEPRO) */
 }                                      /*}}} */
 
+static aligned_t qthread_syncvar_nonblocker_thread(void *arg)
+{                                      /*{{{ */
+    qthread_syncvar_blocker_t *const restrict a = (qthread_syncvar_blocker_t *)arg;
+
+    switch (a->type) {
+        case WRITEF: a->retval     = qthread_syncvar_writeF(a->a, a->b); break;
+        case FILL: a->retval       = qthread_syncvar_fill(a->a); break;
+        case EMPTY: a->retval      = qthread_syncvar_empty(a->a); break;
+        default: return 1;
+    }
+    return 0;
+}                                      /*}}} */
+
 static aligned_t qthread_syncvar_blocker_thread(void *arg)
 {                                      /*{{{ */
     qthread_syncvar_blocker_t *const restrict a = (qthread_syncvar_blocker_t *)arg;
@@ -298,6 +311,16 @@ static aligned_t qthread_syncvar_blocker_thread(void *arg)
     pthread_mutex_unlock(&(a->lock));
     return 0;
 }                                      /*}}} */
+
+static int qthread_syncvar_nonblocker_func(void        *dest,
+                                        void        *src,
+                                        blocker_type t)
+{   /*{{{*/
+    qthread_syncvar_blocker_t args = { PTHREAD_MUTEX_INITIALIZER, dest, src, t, QTHREAD_SUCCESS };
+
+    qthread_fork(qthread_syncvar_nonblocker_thread, &args, NULL);
+    return args.retval;
+} /*}}}*/
 
 static int qthread_syncvar_blocker_func(void        *dest,
                                         void        *src,
@@ -523,7 +546,7 @@ int API_FUNC qthread_syncvar_fill(syncvar_t *restrict addr)
     qthread_debug(SYNCVAR_BEHAVIOR, "shep(%p), addr(%p) = %x\n", shep, addr,
                   (uintptr_t)addr->u.w);
     if (!shep) {
-        return qthread_syncvar_blocker_func(addr, NULL, FILL);
+        return qthread_syncvar_nonblocker_func(addr, NULL, FILL);
     }
     ret = qthread_mwaitc(addr, SYNCFEB_ANY, INT_MAX, &e);
     qthread_debug(SYNCVAR_DETAILS, "shep(%p), addr(%p) = %x (b)\n", shep, addr,
@@ -601,7 +624,7 @@ int API_FUNC qthread_syncvar_empty(syncvar_t *restrict addr)
 
     qthread_debug(SYNCVAR_DETAILS, "shep(%p), addr(%p) = %x\n", shep, addr, (uintptr_t)addr->u.w);
     if (!shep) {
-        return qthread_syncvar_blocker_func(addr, NULL, EMPTY);
+        return qthread_syncvar_nonblocker_func(addr, NULL, EMPTY);
     }
     ret = qthread_mwaitc(addr, SYNCFEB_ANY, INT_MAX, &e);
     qthread_debug(SYNCVAR_DETAILS, "shep(%p), addr(%p) = %x (b)\n", shep, addr, (uintptr_t)addr->u.w);
@@ -1105,7 +1128,7 @@ int API_FUNC qthread_syncvar_writeF(syncvar_t *restrict      dest,
     qthread_debug(SYNCVAR_BEHAVIOR, "shep(%p), dest(%p) = %x, src(%p) = %x\n", shep,
                   dest, (unsigned long)dest->u.w, src, *src);
     if (!shep) {
-        return qthread_syncvar_blocker_func(dest, (void *)src, WRITEF);
+        return qthread_syncvar_nonblocker_func(dest, (void *)src, WRITEF);
     }
     QTHREAD_FEB_UNIQUERECORD2(feb, dest, shep);
     qthread_mwaitc(dest, SYNCFEB_ANY, INT_MAX, &e);
