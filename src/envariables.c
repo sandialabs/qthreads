@@ -111,6 +111,38 @@ unsigned long INTERNAL qt_internal_get_env_num(const char   *envariable,
     return tmp;
 }
 
+double INTERNAL qt_internal_get_env_double(const char   *envariable,
+                                           double    dflt,
+                                           double    zerodflt)
+{
+    const char   *str;
+    double tmp = dflt;
+
+    if (dflt != 0) {
+        char dflt_str[10];
+
+        snprintf(dflt_str, 10, "%f", dflt);
+        str = qt_internal_get_env_str(envariable, dflt_str);
+    } else {
+        str = qt_internal_get_env_str(envariable, NULL);
+    }
+    if (str && *str) {
+        char *errptr;
+        tmp = strtod(str, &errptr);
+        if (*errptr != 0) {
+            fprintf(stderr, "unparsable %s (%s)\n", envariable, str);
+            tmp = dflt;
+        }
+        if (tmp == 0) {
+            qthread_debug(CORE_DETAILS, "since envariable %s is 0, choosing default: %f\n", envariable, zerodflt);
+            tmp = zerodflt;
+        } else {
+            qthread_debug(CORE_DETAILS, "envariable %s parsed as %f\n", envariable, tmp);
+        }
+    }
+    return tmp;
+}
+
 unsigned char INTERNAL qt_internal_get_env_bool(const char   *envariable,
                                                 unsigned char dflt)
 {

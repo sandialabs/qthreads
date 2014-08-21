@@ -228,7 +228,8 @@ AC_ARG_ENABLE([profiling],
                                profiling reports sinc counter usage data. Teams
                                profiling reports team counter usage data. SPR
                                profiling reports communication information. 
-                               Chapel profiling reports Chapel interface usage.])],
+                               Chapel profiling reports Chapel interface usage.
+                               MPIQ profiling reports on MPIQ interface usage.])],
               [for area in $(echo "$enable_profiling" | sed 's/,/ /g') ; do
                  case "$area" in
                    shepherd|shepherds)
@@ -258,8 +259,11 @@ AC_ARG_ENABLE([profiling],
                    chapel)
                      enable_chapel_profiling=yes
                      ;;
+                   mpiq)
+                     enable_mpiq_profiling=yes
+                     ;;
                    *)
-                     AC_MSG_ERROR([Unsupported profiling option ($area), supported options are: shepherd, feb, steal, cas_steal, threadc, sincs, teams, spr, chapel])
+                     AC_MSG_ERROR([Unsupported profiling option ($area), supported options are: shepherd, feb, steal, cas_steal, threadc, sincs, teams, spr, chapel, mpiq])
                      ;;
                  esac
                done],
@@ -903,6 +907,10 @@ AS_IF([test "x$enable_spr_profiling" = xyes],
 AS_IF([test "x$enable_chapel_profiling" = xyes],
       [AC_DEFINE([CHAPEL_PROFILE], [1], [Support dynamic profile of Chapel infomation])],
       [enable_chapel_profiling="no"])
+
+AS_IF([test "x$enable_mpiq_profiling" = xyes],
+      [AC_DEFINE([MPIQ_PROFILE], [1], [Support dynamic profile of MPIQ interface information])],
+      [enable_mpiq_profiling="no"])
 
 AS_IF([test "x$enable_cas_steal_profiling" = xyes],
       [AC_DEFINE([CAS_STEAL_PROFILE], [1], [Support dynamic profile of CAS steal infomation])],
