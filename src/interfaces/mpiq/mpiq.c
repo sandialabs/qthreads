@@ -1,3 +1,7 @@
+#ifdef HAVE_CONFIG_H
+# include "config.h"
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -15,6 +19,23 @@ static int thread_support_choice = 0;
 
 static int size_;
 static int rank_;
+
+#ifdef MPIQ_PROFILE
+#define NUM_LAST_SEND_BINS 1024
+static size_t last_send_cnt  = 0;
+static size_t last_send_bins[NUM_LAST_SEND_BINS];
+static double last_send_ub   = 0.0;
+static double last_send_time = 0.0;
+static double last_send_dist = 0.0;
+static double last_send_sum  = 0.0;
+static double last_send_min  = 0.0;
+static double last_send_max  = 0.0;
+static double last_send_avg  = 0.0;
+static size_t burst_cnt      = 0;
+static size_t burst_size     = 0;
+static size_t burst_max      = 0;
+static double burst_threshold= 0.0;
+#endif /* MPIQ_PROFILE */
 
 /**
  * - Always call `qthread_migrate_to()` so that `QTHREAD_UNSTEALABLE` task attr. is set.
@@ -115,6 +136,25 @@ int MPIQ_Init(int * argc, char *** argv)
 int MPIQ_Init_thread(int * argc, char *** argv, int required, int * provided)
 {
     int rc = 0;
+
+#ifdef MPIQ_PROFILE
+    {
+        /* XXX: this is a hack to set proper conversion value for `mach`
+         * timer layer*/
+        qtimer_t q = qtimer_create();
+        qtimer_start(q);
+        qtimer_destroy(q);
+
+        last_send_time = qtimer_wtime();
+
+        last_send_ub = qt_internal_get_env_double("MPIQ_SMOOTH_HIST_UB", 1, 1);
+        for (int i = 0; i < NUM_LAST_SEND_BINS; i++) {
+            last_send_bins[i] = 0;
+        }
+
+        burst_threshold = qt_internal_get_env_double("MPIQ_BURST_THRESHOLD", 600, 600);
+    }
+#endif /* MPIQ_PROFILE */
 
     /* Choose thread support level; precedence:
      * 1. environment variable
@@ -233,6 +273,25 @@ int MPIQ_Finalize(void)
 {
     int rc;
 
+#ifdef MPIQ_PROFILE
+    {
+        last_send_avg = last_send_sum / last_send_cnt;
+
+        fprintf(stderr, "[%03d] last_send_{cnt,min,avg,max}: %lu %f %f %f\n", rank_, last_send_cnt, last_send_min, last_send_avg, last_send_max);
+
+        for (int i = 0; i < NUM_LAST_SEND_BINS-1; i++) {
+            if (0 != last_send_bins[i]) {
+                fprintf(stderr, "last_send_bins {rank,bin,lb,ub,cnt}: %d %d %f %f %lu\n", rank_, i, (i/1024.0)*last_send_ub, ((i+1)/1024.0)*last_send_ub, last_send_bins[i]);
+            }
+        }
+        if (0 != last_send_bins[NUM_LAST_SEND_BINS-1]) {
+            fprintf(stderr, "last_send_bins {rank,bin,lb,ub,cnt}: %d %d %f NA %lu\n", rank_, NUM_LAST_SEND_BINS-1, ((NUM_LAST_SEND_BINS-1) / 1024.0) * last_send_ub, last_send_bins[NUM_LAST_SEND_BINS-1]);
+        }
+
+        fprintf(stderr, "burst_cnt {rank,cnt,max}: %d %lu %lu\n", rank_, burst_cnt, burst_max);
+    }
+#endif /* MPIQ_PROFILE */
+
     funnel_task();
     rc = MPI_Finalize();
 
@@ -348,6 +407,46 @@ int MPIQ_Send(void *buf, int count, MPI_Datatype datatype, int dest, int tag, MP
     MPI_Status  status;
 
     funnel_task();
+
+#ifdef MPIQ_PROFILE
+    {
+        /* Note: these ops should be protected when using multiple comm. resources. */
+        double const curr_time            = qtimer_wtime();
+        double const time_since_last_send = curr_time - last_send_time;
+
+        int    const bin_id   = (time_since_last_send / last_send_ub) * (NUM_LAST_SEND_BINS-1);
+        if (bin_id >= NUM_LAST_SEND_BINS) {
+            last_send_bins[NUM_LAST_SEND_BINS-1] += 1;
+        } else {
+            last_send_bins[bin_id] += 1;
+        }
+
+        last_send_sum += time_since_last_send;
+
+        if (time_since_last_send < last_send_min) {
+            last_send_min = time_since_last_send;
+        } else if (time_since_last_send > last_send_max) {
+            last_send_max = time_since_last_send;
+        }
+
+        if (time_since_last_send > burst_threshold) {
+            // Starting a new burst
+            if (burst_max < burst_size) {
+                burst_max = burst_size;
+            }
+
+            burst_cnt += 1;
+            burst_size = 1;
+        } else {
+            // Within a burst
+            burst_size += 1;
+        }
+
+        last_send_dist = time_since_last_send;
+        last_send_time = curr_time;
+        last_send_cnt += 1;
+    }
+#endif /* MPIQ_PROFILE */
 
     MPIQ_Isend(buf, count, datatype, dest, tag, comm, &request);
     wait_on_request(&request, &status);
