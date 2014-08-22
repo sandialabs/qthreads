@@ -288,7 +288,7 @@ int MPIQ_Finalize(void)
             fprintf(stderr, "last_send_bins {rank,bin,lb,ub,cnt}: %d %d %f NA %lu\n", rank_, NUM_LAST_SEND_BINS-1, ((NUM_LAST_SEND_BINS-1) / 1024.0) * last_send_ub, last_send_bins[NUM_LAST_SEND_BINS-1]);
         }
 
-        fprintf(stderr, "burst_cnt {rank,cnt,max}: %d %lu %lu\n", rank_, burst_cnt, burst_max);
+        fprintf(stderr, "burst {rank,threshold,cnt,max}: %d %f %lu %lu\n", rank_, burst_threshold, burst_cnt, burst_max);
     }
 #endif /* MPIQ_PROFILE */
 
