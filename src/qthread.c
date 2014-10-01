@@ -84,6 +84,7 @@
 #include "qt_subsystems.h"
 #include "qt_output_macros.h"
 #include "qt_int_log.h"
+#include "qt_yield.h"
 
 
 #if !(defined(HAVE_GCC_INLINE_ASSEMBLY) &&              \
@@ -2297,8 +2298,10 @@ void INTERNAL qthread_exec(qthread_t    *t,
     qthread_debug(SHEPHERD_DETAILS, "t(%p): finished, t->thread_state = %i\n", t, (int)t->thread_state);
 }                      /*}}} */
 
-/* this function yields thread t to the master kernel thread */
-void API_FUNC qthread_yield_(int k)
+/**
+ * Yield calling qthread.
+ */
+void API_FUNC qthread_yield_(uint32_t flags)
 {                      /*{{{ */
     assert(qthread_library_initialized);
     qthread_t *t = qthread_internal_self();
@@ -2306,14 +2309,14 @@ void API_FUNC qthread_yield_(int k)
     if (t != NULL) {
         qthread_debug(THREAD_CALLS,
                       "tid %u yielding...\n", t->thread_id);
-        switch (k) {
-            case 1: // Yield-near
+        switch (flags) {
+            case QTHREAD_YIELD_NEAR:
                 t->thread_state = QTHREAD_STATE_YIELDED_NEAR;
 #ifdef QTHREAD_PERFORMANCE
                 QTPERF_QTHREAD_ENTER_STATE(t->rdata->performance_data, QTHREAD_STATE_YIELDED_NEAR);
 #endif /*  ifdef QTHREAD_PERFORMANCE */
                 break;
-            case 2: // direct-yield
+            case QTHREAD_YIELD_DIRECT:
 #ifdef QTHREAD_USE_SPAWNCACHE
                 {
                     qt_threadqueue_private_t *pq = qt_spawncache_get();
@@ -2348,7 +2351,7 @@ void API_FUNC qthread_yield_(int k)
                     }
                 }
 #endif
-            case 0: // general yield
+            case QTHREAD_YIELD_FAR: // general yield
 #ifdef QTHREAD_USE_SPAWNCACHE
 basic_yield:
 #endif
