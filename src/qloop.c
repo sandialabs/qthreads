@@ -20,6 +20,7 @@
 #include "qt_debug.h"
 #include "qt_alloc.h"
 #include "qt_barrier.h"
+#include "qt_yield.h"
 
 
 
@@ -176,7 +177,7 @@ static void qt_loop_spawner(const size_t start,
     void *const                 argptr    = ((struct qt_loop_spawner_arg *)args_)->argptr;
     void                       *retptr    = NULL;
     aligned_t                   dc;
-    int                         yieldarg  = 2;
+    int                         yieldarg  = QTHREAD_YIELD_FAR;
 
     assert(func);
 
@@ -216,7 +217,7 @@ static void qt_loop_spawner(const size_t start,
     switch (((struct qt_loop_spawner_arg *)args_)->flags) {
         case QT_LOOP_SPAWNER_SIMPLE:
             flags   |= QTHREAD_SPAWN_SIMPLE;
-            yieldarg = 0;
+            yieldarg = QTHREAD_YIELD_NEAR;
             break;
     }
     for (i = start, threadct = 0; i < stop; ++i, ++threadct) {
