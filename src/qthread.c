@@ -2343,9 +2343,9 @@ void API_FUNC qthread_yield_(uint32_t flags)
                                 "t(%p): executing swapcontext(%p, %p)...\n", t, &t->rdata->context, &nt->rdata->context);
                         QTPERF_WORKER_ENTER_STATE(qthread_internal_getworker()->performance_data, WKR_SHEPHERD);
 #ifdef HAVE_NATIVE_MAKECONTEXT
-                        qassert(swapcontext(&t->rdata->context, &nt->rdata->context), 0);
+                qassert(swapcontext(&t->rdata->context, &nt->rdata->context), 0);
 #else
-                        qassert(qt_swapctxt(&t->rdata->context, &nt->rdata->context), 0);
+                qassert(qt_swapctxt(&t->rdata->context, &nt->rdata->context), 0);
 #endif
                         qthread_debug(THREAD_BEHAVIOR, "tid %u resumed.\n", t->thread_id);
                         RLIMIT_TO_NORMAL(t);
@@ -2354,7 +2354,7 @@ void API_FUNC qthread_yield_(uint32_t flags)
                     }
                 }
 #endif
-            case QTHREAD_YIELD_FAR: // general yield
+        } else if (QTHREAD_YIELD_FAR & flags) {
 #ifdef QTHREAD_USE_SPAWNCACHE
 basic_yield:
 #endif
@@ -2364,6 +2364,7 @@ basic_yield:
 #endif /*  ifdef QTHREAD_PERFORMANCE */
                 break;
         }
+
         qthread_back_to_master(t);
         qthread_debug(THREAD_BEHAVIOR, "tid %u resumed.\n",
                       t->thread_id);
