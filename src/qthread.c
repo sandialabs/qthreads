@@ -2391,6 +2391,13 @@ void API_FUNC qthread_yield_(uint32_t flags)
         qthread_debug(THREAD_CALLS,
                       "tid %u yielding...\n", t->thread_id);
 
+        /* set steal condition */
+        if (QTHREAD_YIELD_STEALABLE & flags) {
+            t->flags &= ~QTHREAD_UNSTEALABLE;
+        } else if (QTHREAD_YIELD_UNSTEALABLE & flags) {
+            t->flags |= QTHREAD_UNSTEALABLE;
+        }
+
         /* Set yield condition */
         if (QTHREAD_YIELD_NEAR & flags) {
             t->thread_state = QTHREAD_STATE_YIELDED_NEAR;
