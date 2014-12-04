@@ -488,6 +488,7 @@ static void *qthread_master(void *arg)
     threadqueue = me->ready;
 #ifdef QTHREAD_LOCAL_PRIORITY
     localpriorityqueue = me->local_priority_queue;
+    assert(localpriorityqueue);
 #endif /* ifdef QTHREAD_LOCAL_PRIORITY */
     assert(threadqueue);
 

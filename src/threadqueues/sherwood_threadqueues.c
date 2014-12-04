@@ -1156,6 +1156,10 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
     assert(sorted_sheplist);
 
     qt_threadqueue_t *myqueue = thief_shepherd->ready;
+
+#ifdef QTHREAD_LOCAL_PRIORITY
+    qt_threadqueue_t *mypriorityqueue = thief_shepherd->local_priority_queue;
+#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
     while (stolen == NULL) {
         qt_threadqueue_t *victim_queue = shepherds[sorted_sheplist[i]].ready;
         if (0 != victim_queue->qlength_stealable) {
@@ -1174,6 +1178,12 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
                 STEAL_FAILED(thief_shepherd);
             }
         }
+#ifdef QTHREAD_LOCAL_PRIORITY
+        if ((0 < mypriorityqueue->qlength)){
+          break;
+        }
+#endif /* ifdef QTHREAD_LOCAL_PRIORITY */
+       
         if ((0 < myqueue->qlength) || steal_disable) {  // work at home quit steal attempt
             break;
         }
