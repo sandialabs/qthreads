@@ -83,6 +83,7 @@ int API_FUNC qthread_queue_join(qthread_queue_t q)
     me->thread_state           = QTHREAD_STATE_QUEUE;
     me->rdata->blockedon.queue = q;
     qthread_back_to_master(me);
+    return QTHREAD_SUCCESS;
 }
 
 void INTERNAL qthread_queue_internal_enqueue(qthread_queue_t q,
@@ -102,6 +103,8 @@ void INTERNAL qthread_queue_internal_enqueue(qthread_queue_t q,
         case CAPPED:
             qthread_queue_internal_capped_enqueue(&q->q.capped, t);
             break;
+        case MTS:
+            QTHREAD_TRAP();
     }
 }
 
@@ -143,7 +146,7 @@ int API_FUNC qthread_queue_release_one(qthread_queue_t q)
             t = qthread_queue_internal_capped_dequeue(&q->q.capped);
             break;
         default:
-            abort();
+            QTHREAD_TRAP();
     }
     qthread_shepherd_id_t destination = t->target_shepherd;
     if (destination == NO_SHEPHERD) {
@@ -151,6 +154,7 @@ int API_FUNC qthread_queue_release_one(qthread_queue_t q)
     } else {
         qthread_queue_internal_launch(t, &qlib->shepherds[destination]);
     }
+    return QTHREAD_SUCCESS;
 }
 
 int API_FUNC qthread_queue_release_all(qthread_queue_t q)
@@ -198,7 +202,10 @@ int API_FUNC qthread_queue_release_all(qthread_queue_t q)
             free(members_copy);
             break;
         }
+        default:
+            QTHREAD_TRAP();
     }
+    return QTHREAD_SUCCESS;
 }
 
 int API_FUNC qthread_queue_destroy(qthread_queue_t q)
@@ -212,6 +219,8 @@ int API_FUNC qthread_queue_destroy(qthread_queue_t q)
         case CAPPED:
             FREE(q->q.capped.members, sizeof(qthread_t *) * q->q.capped.maxmembers);
             break;
+        default:
+            QTHREAD_TRAP();
     }
     FREE(q, sizeof(struct qthread_queue_s));
     return QTHREAD_SUCCESS;
