@@ -24,7 +24,7 @@
 int nanosleep(const struct timespec *rqtp,
               struct timespec       *rmtp)
 {
-    if ((qlib != NULL) && (qthread_internal_self() != NULL)) {
+    if (qt_blockable()) {
         qtimer_t t       = qtimer_create();
         double   seconds = rqtp->tv_sec + (rqtp->tv_nsec * 1e-9);
 
