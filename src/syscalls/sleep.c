@@ -22,7 +22,7 @@
 
 unsigned int sleep(unsigned int seconds)
 {
-    if ((qlib != NULL) && (qthread_internal_self() != NULL)) {
+    if (qt_blockable()) {
         qtimer_t t = qtimer_create();
         qtimer_start(t);
         do {
