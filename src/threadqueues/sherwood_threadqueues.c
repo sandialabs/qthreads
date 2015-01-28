@@ -33,6 +33,9 @@ struct _qt_threadqueue_node {
     struct _qt_threadqueue_node *next;
     struct _qt_threadqueue_node *prev;
     uintptr_t                    stealable;
+#ifdef CLONED_TASKS
+    aligned_t                    clone_count;
+#endif
     qthread_t                   *value;
 } /* qt_threadqueue_node_t */;
 
@@ -412,7 +415,6 @@ int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *re
     node->prev      = NULL;
     node->value     = t;
     node->stealable = qt_threadqueue_isstealable(t);
-
     assert(q->tail == NULL || q->tail->next == NULL);
     assert(q->head == NULL || q->head->prev == NULL);
     // Add to the head of the `q`
@@ -435,8 +437,20 @@ int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *re
 #endif /* ifdef QTHREAD_USE_SPAWNCACHE */
 
 /* yielded threads enqueue at head */
+#ifdef CLONED_TASKS
 void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
-                                             qthread_t *restrict        t)
+                                             qthread_t *restrict        t){
+  return qt_threadqueue_enqueue_yielded_cloneable(q,t,0);
+}
+
+void INTERNAL qt_threadqueue_enqueue_yielded_cloneable(qt_threadqueue_t *restrict q,
+                                                      qthread_t *restrict        t,
+                                                      aligned_t                clone_count
+                                                    )
+#else
+void INTERNAL qt_threadqueue_enqueue_yielded_cloneable(qt_threadqueue_t *restrict q,
+                                                       qthread_t *restrict        t)
+#endif
 {   /*{{{*/
     qt_threadqueue_node_t *node;
 
@@ -445,6 +459,9 @@ void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
 
     node->value     = t;
     node->stealable = qt_threadqueue_isstealable(t);
+#ifdef CLONED_TASKS
+    node->clone_count = clone_count;
+#endif
 
     assert(q != NULL);
     assert(t != NULL);
@@ -733,6 +750,10 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
             PARANOIA_ONLY(sanity_check_queue(lpq));
             node = lpq->tail;
             if (node != NULL) {
+#ifdef CLONED_TASKS
+              node->clone_count --;
+              if(node->clone_count == -1){
+#endif /* CLONED_TASKS */
                 assert(lpq->head);
                 assert(lpq->qlength > 0);
 
@@ -745,6 +766,11 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                 assert(lpq->qlength > 0);
                 lpq->qlength--;
                 lpq->qlength_stealable -= node->stealable;
+#ifdef CLONED_TASKS
+              } 
+              // TODO: We only have one copy of task, need a duplicate_task
+              // function
+#endif /* CLONED_TASKS */
             }
             QTHREAD_TRYLOCK_UNLOCK(&lpq->qlock);
         }
@@ -915,6 +941,10 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
             qthread_thread_free(t); // free agg task; only reallocate it if mccoy found
 #endif
             t = node->value;
+#ifdef CLONED_TASKS
+            // need to free if popped
+            if (node->clone_count == -1)
+#endif
             FREE_TQNODE(node);
             if ((t->flags & QTHREAD_REAL_MCCOY)) { // only needs to be on worker 0 for termination
                 if (worker_id == NO_WORKER) {
