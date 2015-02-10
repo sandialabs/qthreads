@@ -153,6 +153,7 @@ static QINLINE void qthread_makecontext(qt_context_t *const c,
                                         void                (*func)(void),
                                         const void *const   arg,
                                         qt_context_t *const returnc);
+
 static QINLINE qthread_t *qthread_thread_new(qthread_f   f,
                                              const void *arg,
                                              size_t      arg_size,
@@ -2017,6 +2018,7 @@ aligned_t API_FUNC *qthread_retloc(void)
     }
 }                      /*}}} */
 
+  
 /************************************************************/
 /* functions to manage thread stack allocation/deallocation */
 /************************************************************/
