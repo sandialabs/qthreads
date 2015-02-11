@@ -207,7 +207,7 @@ static void qdqueue_internal_sortedsheps(qthread_shepherd_id_t shep,
                 thisdist[k++] = j;
             }
         }
-        assert(k == count - 1);
+        assert(k == count);
         /* and now randomly append them to the all array */
         for (j = 0; j < count; j++) {
             size_t randpick = random() % (count - j);
