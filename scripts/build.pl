@@ -33,9 +33,9 @@ my %config = (
     debug         => 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-debug --enable-static --disable-shared',
     hwloc         => '--with-topology=hwloc',
     sinc_stats    => '--enable-profiling=sincs',
+    oversubscription => '--enable-oversubscription',
+    guard_pages => '--enable-guard-pages',
     chapel_default => '--enable-static --disable-shared --enable-condwait-queue --disable-spawn-cache --with-scheduler=nemesis',
-    chapel_oversubscription => '--enable-oversubscription',
-    chapel_guard_pages => '--enable-guard-pages',
 );
 
 my @summaries;
