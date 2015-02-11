@@ -33,7 +33,6 @@ my %config = (
     debug         => 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-debug --enable-static --disable-shared',
     hwloc         => '--with-topology=hwloc',
     sinc_stats    => '--enable-profiling=sincs',
-    spr_shmemrt_debug => 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-debug=multinode --enable-static --disable-shared --enable-multinode --with-multinode-runtime=shmemrt --with-portals4=/home/dstark/projects/portals4/builds/minimal',
 );
 
 my @summaries;
