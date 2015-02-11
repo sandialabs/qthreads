@@ -33,7 +33,9 @@ my %config = (
     debug         => 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-debug --enable-static --disable-shared',
     hwloc         => '--with-topology=hwloc',
     sinc_stats    => '--enable-profiling=sincs',
-    spr_shmemrt_debug => 'CFLAGS="-g -O0" CXXFLAGS="-g -O0" --enable-debug=multinode --enable-static --disable-shared --enable-multinode --with-multinode-runtime=shmemrt --with-portals4=/home/dstark/projects/portals4/builds/minimal',
+    oversubscription => '--enable-oversubscription',
+    guard_pages => '--enable-guard-pages',
+    chapel_default => '--enable-static --disable-shared --enable-condwait-queue --disable-spawn-cache --with-scheduler=nemesis',
 );
 
 my @summaries;
@@ -286,6 +288,10 @@ sub run_tests {
 
                 # Display filtered results
                 my $digest = qx/grep 'tests passed' $results_log/;
+                my $digest_msg = '';
+                if ($digest eq '') {
+                    $digest = qx/grep '# PASS:' $results_log/;
+                }
                 if ($digest eq '') {
                     $digest = qx/grep 'tests failed' $results_log/; chomp($digest);
                     $digest =~ /([0-9]+) of ([0-9]+) tests failed/;
@@ -296,13 +302,22 @@ sub run_tests {
                     foreach my $test (split(/\n/, $fails)) {
                         $failcounts{$test} ++;
                     }
-                    $digest .= " ($fail_list)";
+                    $digest_msg = $failing_tests . ' tests failed';
+                    $digest_msg .= " ($fail_list)";
                 } else {
                     chomp $digest;
-                    $digest =~ /All ([0-9]+) tests passed/;
-                    $passing_tests += $1;
+                    $digest = qx/grep 'All .* tests passed' $results_log/;
+                    if ($digest eq '') {
+                        $digest = qx/grep 'TOTAL:' $results_log/;
+                        $digest =~ /TOTAL: ([0-9]+)/;
+                        $passing_tests += $1;
+                    } else {
+                        $digest =~ /All ([0-9]+) tests passed/;
+                        $passing_tests += $1;
+                    }
+                    $digest_msg = $passing_tests . ' tests passed';
                 }
-                print "$digest - $make_test_suite\n" unless $quietly;
+                print "$digest_msg - $make_test_suite\n" unless $quietly;
             }
         }
         print "$banner\n" unless $quietly;
