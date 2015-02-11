@@ -15,7 +15,7 @@ AC_DEFUN([QTHREAD_CHECK_HWLOC], [
   hwloc_saved_LDFLAGS="$LDFLAGS"
   AS_IF([test "x$with_hwloc" != x],
         [CPPFLAGS="-I$with_hwloc/include $CPPFLAGS"
-		 LDFLAGS="-L$with_hwloc/lib $CPPFLAGS"])
+		 LDFLAGS="-L$with_hwloc/lib $LDFLAGS"])
   AC_CHECK_HEADERS([hwloc.h],[],
   				   [qt_allgoodsofar=no])
   AS_IF([test "x$qt_allgoodsofar" = xyes],
