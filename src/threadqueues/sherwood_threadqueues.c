@@ -789,7 +789,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                 t = qthread_thread_copy(node->value);
                 copied = 1;
               } else {
-                t = node->value;
+                copied = 0;
               }
 #endif /* CLONED_TASKS */
             }
@@ -926,6 +926,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                 } else {   // no agg, free agg task (delay)
                            // t = NULL;
                 }
+                copied = 0;
 #endif          /* ifdef QTHREAD_TASK_AGGREGATION */
             }
             QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
