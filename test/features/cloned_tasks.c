@@ -5,7 +5,7 @@
 
 static aligned_t hello_world(void *arg)
 {
-    printf("Hello World! This is thread %i, running on shepherd %i, worker %i\n", qthread_id(), qthread_shep(), qthread_worker(NULL));
+    printf("Hello World! This is task %i, running on shepherd %i, worker %i\n", qthread_id(), qthread_shep(), qthread_worker(NULL));
     return 0;
 }
 

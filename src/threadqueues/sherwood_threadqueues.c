@@ -457,7 +457,7 @@ void INTERNAL qt_threadqueue_enqueue_yielded_cloneable(qt_threadqueue_t *restric
                                                       aligned_t                clone_count
                                                     )
 #else
-void INTERNAL qt_threadqueue_enqueue_yielded_cloneable(qt_threadqueue_t *restrict q,
+void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
                                                        qthread_t *restrict        t)
 #endif
 {   /*{{{*/
@@ -732,6 +732,7 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 {   /*{{{*/
     qthread_shepherd_t *my_shepherd = qthread_internal_getshep();
     qthread_t          *t = NULL;
+    int copied = 0;
     qthread_worker_id_t worker_id = NO_WORKER;
     int                 curr_cost, max_t, ret_agg_task;
 
@@ -786,6 +787,9 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                         node->value->ret,
                         qthread_worker(NULL));*/
                 t = qthread_thread_copy(node->value);
+                copied = 1;
+              } else {
+                t = node->value;
               }
 #endif /* CLONED_TASKS */
             }
@@ -895,7 +899,9 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
             if (node != NULL) {
                 assert(q->head);
                 assert(q->qlength > 0);
-
+#ifdef CLONED_TASKS
+                node->clone_count = -1;
+#endif
                 q->tail = node->prev;
                 if (q->tail == NULL) {
                     q->head = NULL;
@@ -955,15 +961,20 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
         }
         if (node) {
 #ifdef QTHREAD_TASK_AGGREGATION
-            qthread_thread_free(t); // free agg task; only reallocate it if mccoy found
+          qthread_thread_free(t); // free agg task; only reallocate it if mccoy found
 #endif
-        if (!t)
+#ifdef CLONED_TASKS
+              // need to free if popped
+          if (!copied)
+#endif
             t = node->value;
 #ifdef CLONED_TASKS
-            // need to free if popped
-        if (node->clone_count == -1)
+          if (node->clone_count == -1){
 #endif
             FREE_TQNODE(node);
+#ifdef CLONED_TASKS
+          }
+#endif
             if ((t->flags & QTHREAD_REAL_MCCOY)) { // only needs to be on worker 0 for termination
                 if (worker_id == NO_WORKER) {
                     worker_id = qthread_worker(NULL);
@@ -987,10 +998,11 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 #endif
                         continue; // keep looking
                 }
-            } else {
-                break;
             }
+        else {
+          break;
         }
+      }
     }
     return (t);
 } /*}}}*/
