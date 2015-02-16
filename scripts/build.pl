@@ -46,6 +46,7 @@ my @check_tests;
 my @user_configs;
 my $qt_src_dir = '';
 my $qt_bld_dir = '';
+my $qt_install_dir = '';
 my $repeat = 1;
 my $make_flags = '';
 my $force_configure = 0;
@@ -69,6 +70,8 @@ if (scalar @ARGV == 0) {
             $qt_src_dir = $1;
         } elsif ($flag =~ m/--build-dir=(.*)/) {
             $qt_bld_dir = $1;
+        } elsif ($flag =~ m/--install-dir=(.*)/) {
+            $qt_install_dir = $1;
         } elsif ($flag =~ m/--repeat=(.*)/) {
             $repeat = int($1);
         } elsif ($flag =~ m/--make-flags=(.*)/) {
@@ -124,6 +127,7 @@ if ($need_help) {
     print "\t                        'stress'. The default is to run all three.\n";
     print "\t--source-dir=<dir>      absolute path to Qthreads source.\n";
     print "\t--build-dir=<dir>       absolute path to target build directory.\n";
+    print "\t--install-dir=<dir>     absolute path to target installation directory.\n";
     print "\t--repeat=<n>            run `make check` <n> times per configuration.\n";
     print "\t--make-flags=<options>  options to pass to make (e.g. '-j 4').\n";
     print "\t--force-configure       run `configure` again.\n";
@@ -185,11 +189,24 @@ if ($qt_bld_dir eq '') {
     exit(1);
 }
 
+if ($qt_install_dir eq '') {
+} elsif (not $qt_install_dir =~ m/^\//) {
+    print "Specify full path for installation dir '$qt_install_dir'\n";
+    exit(1);
+} else {
+    foreach my $name (@conf_names) {
+        $config{$name} = join(' ', "--prefix=$qt_install_dir/$name");
+    }
+}
+
 # Optionally print information about the configuration
 if ($print_info) {
     print "Configurations:   @conf_names\n";
     print "Source directory: $qt_src_dir\n";
     print "Build directory:  $qt_bld_dir\n";
+}
+if (not $qt_install_dir eq '') {
+    print "Install directory: $qt_install_dir\n";
 }
 
 # Run the test configurations
@@ -212,7 +229,7 @@ exit(0);
 sub run_tests {
     my $conf_name = $_[0];
     my $test_dir = "$qt_bld_dir/$conf_name";
-
+    
     print "\n### Test: $conf_name\n" unless $quietly;
     print "### Build directory: $test_dir\n" unless $quietly;
 
@@ -226,6 +243,9 @@ sub run_tests {
     print "###\tConfiguring '$conf_name' ...\n" unless $quietly;
     my $configure_log = "$test_dir/build.configure.log";
     my_system("mkdir -p $test_dir") if (not -e $test_dir);
+    if (not $qt_install_dir eq '') {
+        my_system("mkdir -p $qt_install_dir/$conf_name") if (not -e "$qt_install_dir/$conf_name");
+    }
     my_system("cd $test_dir && $qt_src_dir/configure $config{$conf_name} 2>&1 | tee $configure_log")
         if ($force_configure || not -e "$test_dir/config.log");
     print "### Log: $configure_log\n" unless $quietly;
@@ -236,6 +256,10 @@ sub run_tests {
     my $build_command = "cd $test_dir";
     $build_command .= " && make clean > /dev/null" if ($force_clean);
     $build_command .= " && make $make_flags 2>&1 | tee $build_log";
+    if (not $qt_install_dir eq '') {
+        print "###\tInstalling '$conf_name' ...\n" unless $quietly;
+        $build_command .= " && make $make_flags install 2>&1 | tee $build_log";
+    }
     my_system($build_command);
     if (not $dry_run) {
         my $build_warnings = qx/awk '\/warning:\/' $build_log/;
@@ -251,7 +275,6 @@ sub run_tests {
         }
     }
 
-    
     # Build testsuite
     my %failcounts;
     my $failing_tests = 0;
