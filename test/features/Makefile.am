@@ -8,6 +8,8 @@
 TESTS = \
 		qt_loop \
 		qt_loop_simple \
+		warp \
+		cloned_tasks \
 		qt_loop_sinc \
 		qt_loop_balance \
 		qt_loop_balance_simple \
