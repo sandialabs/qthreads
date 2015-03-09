@@ -40,9 +40,9 @@ extern qt_mpool generic_qthread_pool;
 
 static QINLINE qthread_t *qthread_thread_copy(qthread_t* t)
 {
-  qthread_t *tnew;
-  tnew = ALLOC_QTHREAD();
+  qthread_t *tnew = ALLOC_QTHREAD();
   memcpy(tnew, t, sizeof(qthread_t));
+  return tnew;
 }
 
 /* Data Structures */

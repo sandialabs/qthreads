@@ -31,9 +31,9 @@ array rand_array(int size){
 
 static aligned_t array_add_warp(void *argv)
 {
-  warp_arg* arg = (warp_arg*) argv;
+  volatile warp_arg* arg = (warp_arg*) argv;
   __sync_fetch_and_sub(&arg->begin_semaphore, 1); 
-  while (arg->begin_semaphore > 0) { __asm__("pause;"); }
+  while (arg->begin_semaphore > 0) { __asm__("pause; "); }
   
   qthread_shepherd_id_t shep = qthread_shep();
   int id = qthread_worker_local(&shep);
