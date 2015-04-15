@@ -966,15 +966,12 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 #endif
 #ifdef CLONED_TASKS
               // need to free if popped
-          if (!copied)
-#endif
+          if (!copied) {
             t = node->value;
-#ifdef CLONED_TASKS
-          if (node->clone_count == -1){
-#endif
             FREE_TQNODE(node);
-#ifdef CLONED_TASKS
           }
+#else
+          FREE_TQNODE(node);
 #endif
             if ((t->flags & QTHREAD_REAL_MCCOY)) { // only needs to be on worker 0 for termination
                 if (worker_id == NO_WORKER) {
