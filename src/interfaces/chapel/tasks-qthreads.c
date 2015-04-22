@@ -17,32 +17,34 @@
 #include "chplrt.h"
 #include "chplsys.h"
 #include "tasks-qthreads.h"
-#include "chplcgfns.h" // for chpl_ftable()
-#include "chpl-comm.h" // for chpl_localeID
-#include "chpl-locale-model.h" // for sublocale information
-#include "chpl-mem.h"  // for chpl_malloc(), etc.
+#include "chplcgfns.h"
+#include "chpl-comm.h"
+#include "chpl-locale-model.h"
 #include "chpl-tasks.h"
-#include "config.h"   // for chpl_config_get_value()
-#include "error.h"    // for chpl_warning()
-#include "arg.h"      // for blockreport and taskreport
-#include "signal.h"   // for signal
-#include "chplexit.h" // for chpl_exit_any()
+#include "config.h"
+#include "error.h"
+#include "arg.h"
+#include "signal.h"
+#include "chplexit.h"
 #include <stdio.h>
-#include <stdlib.h> // for setenv()
+#include <stdlib.h>
 #include <assert.h>
 #include <inttypes.h>
 #include <errno.h>
 #include <sys/time.h>
 #include <unistd.h>
+#include <sched.h>
 
 #include "qthread/qthread.h"
 #include "qthread/qtimer.h"
-#include "qt_feb.h" // for blockreporting
-#include "qt_syncvar.h" // for blockreporting
-#include "qt_hash.h" /* for qt_key_t */
-#include "qt_atomics.h"      /* for SPINLOCK_BODY() */
+#include "qt_feb.h"
+#include "qt_syncvar.h"
+#include "qt_hash.h"
+#include "qt_atomics.h"
+#include "qt_shepherd_innards.h"
 #include "qt_envariables.h"
 #include "qt_debug.h"
+
 #ifdef QTHREAD_MULTINODE
 #include "qthread/spr.h"
 #endif /* QTHREAD_MULTINODE */
@@ -104,77 +106,90 @@ static void profile_print(void)
 # define PROFILE_INCR(counter,count)
 #endif /* CHAPEL_PROFILE */
 
+#ifndef QTHREAD_MULTINODE
+volatile int chpl_qthread_done_initializing;
+#endif
+
+// Make qt env sizes uniform. Same as qt, but they use the literal everywhere
+#define QT_ENV_S 100
+
 // aka chpl_task_list_p
 struct chpl_task_list {
     chpl_fn_p        fun;
     void            *arg;
-    chpl_string      filename;
+    c_string         filename;
     int              lineno;
     chpl_task_list_p next;
 };
 
-typedef struct {
-    void                     *fn;
-    void                     *args;
-    chpl_string              task_filename;
-    int                      lineno;
-    chpl_task_private_data_t chpl_data;
-} chapel_wrapper_args_t;
+pthread_t chpl_qthread_process_pthread;
+pthread_t chpl_qthread_comm_pthread;
 
-// Structure of task-local storage
-typedef struct chapel_tls_s {
-    /* Task private data: serial state, locale ID, etc. */
-    chpl_task_private_data_t chpl_data;
-    /* Reports */
-    chpl_string lock_filename;
-    size_t      lock_lineno;
-    const char *task_filename;
-    size_t      task_lineno;
-} chapel_tls_t;
+chpl_qthread_tls_t chpl_qthread_process_tls = {
+    PRV_DATA_IMPL_VAL(c_sublocid_any_val, false),
+    NULL, 0, NULL, 0 };
 
-// Wrap qthread_get_tasklocal() and assert that it is always available.
-static inline chapel_tls_t * chapel_get_tasklocal(void)
-{
-    chapel_tls_t * tls = 
-        (chapel_tls_t *)qthread_get_tasklocal(sizeof(chapel_tls_t));
+chpl_qthread_tls_t chpl_qthread_comm_task_tls = {
+    PRV_DATA_IMPL_VAL(c_sublocid_any_val, false),
+    NULL, 0, NULL, 0 };
+ 
+ //
+ 
+//
+// structs chpl_task_prvDataImpl_t, chpl_qthread_wrapper_args_t and
+// chpl_qthread_tls_t have been moved to tasks-qthreads.h
+//
 
-    assert(tls);
+//
+// chpl_qthread_get_tasklocal() is in tasks-qthreads.h
+//
 
-    return tls;
-}
+static syncvar_t exit_ret = SYNCVAR_STATIC_EMPTY_INITIALIZER;
 
-// FIXME: this is the same as chapel_get_tasklocal() except that it does
-//        not have the assertion.
-static inline chapel_tls_t * chapel_get_tasklocal_possibly_from_non_task(void)
-{
-    chapel_tls_t * tls = 
-        (chapel_tls_t *)qthread_get_tasklocal(sizeof(chapel_tls_t));
-
-    return tls;
-}
-
-// Default locale id.
-static c_localeid_t const default_locale_id = 0;
-
-// Default serial state is used outside of the tasking layer.
-static chpl_bool default_serial_state = true;
-static syncvar_t exit_ret             = SYNCVAR_STATIC_EMPTY_INITIALIZER;
+static volatile chpl_bool canCountRunningTasks = false;
 
 void chpl_task_yield(void)
 {
     PROFILE_INCR(profile_task_yield,1);
-    qthread_yield();
+    if (qthread_shep() == NO_SHEPHERD) {
+        sched_yield();
+    } else {
+        qthread_yield();
+    }
 }
 
 // Sync variables
 void chpl_sync_lock(chpl_sync_aux_t *s)
 {
     aligned_t l;
+    chpl_bool uncontested_lock = true;
 
     PROFILE_INCR(profile_sync_lock, 1);
 
+    //
+    // To prevent starvation due to never switching away from a task that is
+    // spinning while doing readXX() on a sync variable, yield if this sync var
+    // has a "lot" of uncontested locks. Note that the uncontested locks do not
+    // have to be consecutive. Also note that the number of uncontested locks
+    // is a lossy counter. Currently a "lot" is defined as ~100 uncontested
+    // locks, with care taken to not yield on the first uncontested lock.
+    //
+    // If real qthreads sync vars were used, it's possible this wouldn't be
+    // needed.
+    //
+
     l = qthread_incr(&s->lockers_in, 1);
-    while (l != s->lockers_out) SPINLOCK_BODY();
+
+    while (l != s->lockers_out) {
+        uncontested_lock = false;
+        qthread_yield();
+    }
+
+    if (uncontested_lock) {
+        if ((++s->uncontested_locks & 0x5F) == 0) {
+            qthread_yield();
+        }
+    }
 }
 
 void chpl_sync_unlock(chpl_sync_aux_t *s)
@@ -184,10 +199,10 @@ void chpl_sync_unlock(chpl_sync_aux_t *s)
     qthread_incr(&s->lockers_out, 1);
 }
 
-static inline void about_to_block(int32_t     lineno,
-                                  chpl_string filename)
+static inline void about_to_block(int32_t  lineno,
+                                  c_string filename)
 {
-    chapel_tls_t * data = chapel_get_tasklocal();
+    chpl_qthread_tls_t * data = chpl_qthread_get_tasklocal();
     assert(data);
 
     data->lock_lineno   = lineno;
@@ -196,7 +211,7 @@ static inline void about_to_block(int32_t     lineno,
 
 void chpl_sync_waitFullAndLock(chpl_sync_aux_t *s,
                                int32_t          lineno,
-                               chpl_string      filename)
+                               c_string         filename)
 {
     PROFILE_INCR(profile_sync_waitFullAndLock, 1);
 
@@ -211,7 +226,7 @@ void chpl_sync_waitFullAndLock(chpl_sync_aux_t *s,
 
 void chpl_sync_waitEmptyAndLock(chpl_sync_aux_t *s,
                                 int32_t          lineno,
-                                chpl_string      filename)
+                                c_string         filename)
 {
     PROFILE_INCR(profile_sync_waitEmptyAndLock, 1);
 
@@ -243,16 +258,11 @@ void chpl_sync_markAndSignalEmpty(chpl_sync_aux_t *s)         // and unlock
 }
 
 chpl_bool chpl_sync_isFull(void            *val_ptr,
-                           chpl_sync_aux_t *s,
-                           chpl_bool        simple_sync_var)
+                           chpl_sync_aux_t *s)
 {
     PROFILE_INCR(profile_sync_isFull, 1);
 
-    if(simple_sync_var) {
-        return qthread_syncvar_status(&(s->signal_full));
-    } else {
-        return s->is_full;
-    }
+    return s->is_full;
 }
 
 void chpl_sync_initAux(chpl_sync_aux_t *s)
@@ -271,7 +281,6 @@ void chpl_sync_destroyAux(chpl_sync_aux_t *s)
     PROFILE_INCR(profile_sync_destroyAux, 1);
 }
 
-
 static void chapel_display_thread(qt_key_t     addr,
                                   qthread_f    f,
                                   void        *arg,
@@ -280,15 +289,15 @@ static void chapel_display_thread(qt_key_t     addr,
                                   void        *tls,
                                   void        *callarg)
 {
-    chapel_tls_t *rep = (chapel_tls_t *)tls;
+    chpl_qthread_tls_t *rep = (chpl_qthread_tls_t *)tls;
 
     if (rep) {
         if ((rep->lock_lineno > 0) && rep->lock_filename) {
-            fprintf(stderr, "Waiting at: %s:%d (task %s:%d)\n", rep->lock_filename, rep->lock_lineno, rep->task_filename, rep->task_lineno);
+            fprintf(stderr, "Waiting at: %s:%zu (task %s:%zu)\n", rep->lock_filename, rep->lock_lineno, rep->task_filename, rep->task_lineno);
         } else if (rep->lock_lineno == 0 && rep->lock_filename) {
-            fprintf(stderr, "Waiting for more work (line 0? file:%s) (task %s:%d)\n", rep->lock_filename, rep->task_filename, rep->task_lineno);
+            fprintf(stderr, "Waiting for more work (line 0? file:%s) (task %s:%zu)\n", rep->lock_filename, rep->task_filename, rep->task_lineno);
         } else if (rep->lock_lineno == 0) {
-            fprintf(stderr, "Waiting for dependencies (uninitialized task %s:%d)\n", rep->task_filename, rep->task_lineno);
+            fprintf(stderr, "Waiting for dependencies (uninitialized task %s:%zu)\n", rep->task_filename, rep->task_lineno);
         }
         fflush(stderr);
     }
@@ -319,15 +328,14 @@ static void SIGINT_handler(int sig)
 // Tasks
 
 #ifndef QTHREAD_MULTINODE
-static int       done_initializing = 0;
-static syncvar_t canexit           = SYNCVAR_STATIC_EMPTY_INITIALIZER;
-static int       done_finalizing   = 0;
+static syncvar_t canexit            = SYNCVAR_STATIC_EMPTY_INITIALIZER;
+static volatile int done_finalizing = 0;
 
 static void *initializer(void *junk)
 {
     qthread_initialize();
     MACHINE_FENCE;
-    done_initializing = 1;
+    chpl_qthread_done_initializing = 1;
 
     qthread_syncvar_readFF(NULL, &canexit);
 
@@ -338,71 +346,245 @@ static void *initializer(void *junk)
 }
 #endif /* ! QTHREAD_MULTINODE */
 
-void chpl_task_init(void)
-{
+// Helper function to set a qthreads env var. This is meant to mirror setenv
+// functionality, but qthreads has two environment variables for every setting:
+// a QT_ and a QTHREAD_ version. We often forget to think about both so this
+// wraps the overriding logic. In verbose mode it prints out if we overrode
+// values, or if we were prevented from setting values because they existed
+// (and override was 0.)
+static void chpl_qt_setenv(char* var, char* val, int32_t override) {
+    char      qt_env[QT_ENV_S]  = { 0 };
+    char      qthread_env[QT_ENV_S] = { 0 };
+    char      *qt_val;
+    char      *qthread_val;
+    chpl_bool eitherSet = false;
+
+    strncpy(qt_env, "QT_", sizeof(qt_env));
+    strncat(qt_env, var, sizeof(qt_env) - 1);
+
+    strncpy(qthread_env, "QTHREAD_", sizeof(qthread_env));
+    strncat(qthread_env, var, sizeof(qthread_env) - 1);
+
+    qt_val = getenv(qt_env);
+    qthread_val = getenv(qthread_env);
+    eitherSet = (qt_val != NULL || qthread_val != NULL);
+
+    if (override || !eitherSet) {
+        if (verbosity >= 2 && override && eitherSet) {
+            printf("QTHREADS: Overriding the value of %s and %s "
+                   "with %s\n", qt_env, qthread_env, val);
+        }
+        (void) setenv(qt_env, val, 1);
+        (void) setenv(qthread_env, val, 1);
+    } else if (verbosity >= 2) {
+        char* set_env = NULL;
+        char* set_val = NULL;
+        if (qt_val != NULL) {
+            set_env = qt_env;
+            set_val = qt_val;
+        } else {
+            set_env = qthread_env;
+            set_val = qthread_val;
+        }
+        printf("QTHREADS: Not setting %s to %s because %s is set to %s and "
+               "overriding was not requested\n", qt_env, val, set_env, set_val);
+    }
+}
+
+// Determine the number of workers based on environment settings. If a user set
+// HWPAR, they are saying they want to use HWPAR many workers, but let the
+// runtime figure out the details. If they explicitly set NUM_SHEPHERDS and/or
+// NUM_WORKERS_PER_SHEPHERD then they must have specific reasons for doing so.
+// Returns 0 if no Qthreads env vars related to the number of threads were set,
+// what HWPAR was set to if it was set, or -1 if NUM_SHEP and/or NUM_WPS were
+// set since we can't figure out before Qthreads init what this will actually
+// turn into without duplicating Qthreads logic (-1 is a sentinel for don't
+// adjust the values, and give them as is to Qthreads.)
+static int32_t chpl_qt_getenv_num_workers() {
+    int32_t  hwpar;
+    int32_t  num_wps;
+    int32_t  num_sheps;
+
+    hwpar = qt_internal_get_env_num("HWPAR", 0, 0);
+    num_wps = qt_internal_get_env_num("NUM_WORKERS_PER_SHEPHERD", 0, 0);
+    num_sheps = qt_internal_get_env_num("NUM_SHEPHERDS", 0, 0);
+
+    if (hwpar) {
+        return hwpar;
+    } else if (num_wps || num_sheps) {
+        return -1;
+    }
+
+    return 0;
+}
+
+
+// Sets up and returns the amount of hardware parallelism to use, limited to
+// maxThreads. Returns -1 if we did not setup parallelism because a user
+// explicitly requested a specific layout from qthreads.
+static int32_t setupAvailableParallelism(int32_t maxThreads) {
     int32_t   numThreadsPerLocale;
-    uint64_t  callStackSize;
-    pthread_t initer;
-    char      newenv_sheps[100] = { 0 };
-    char      newenv_stack[100] = { 0 };
+    int32_t   qtEnvThreads;
+    int32_t   hwpar;
+    char      newenv_workers[QT_ENV_S] = { 0 };
 
-    // Set up available hardware parallelism
-    if ((numThreadsPerLocale = chpl_task_getenvNumThreadsPerLocale()) == 0)
-        numThreadsPerLocale = chpl_comm_getMaxThreads();
-    if (0 < numThreadsPerLocale) {
-        // We are assuming the user wants to constrain the hardware
-        // resources used during this run of the application.
+    // Experience has shown that Qthreads generally performs best with
+    // num_workers = numCores (and thus worker_unit = core) but if the user has
+    // explicitly requested more threads through the chapel or Qthread env
+    // vars, we override the default.
+    numThreadsPerLocale = chpl_task_getenvNumThreadsPerLocale();
+    qtEnvThreads = chpl_qt_getenv_num_workers();
+    hwpar = 0;
 
-        // Unset relevant Qthreads environment variables
+    // User set chapel level env var (CHPL_RT_NUM_THREADS_PER_LOCALE)
+    // This is limited to the number of logical CPUs on the node.
+    if (numThreadsPerLocale != 0) {
+        int32_t numPUsPerLocale;
+
+        hwpar = numThreadsPerLocale;
+
+        numPUsPerLocale = chpl_getNumLogicalCpus(true);
+        if (0 < numPUsPerLocale && numPUsPerLocale < hwpar) {
+            if (verbosity >= 2) {
+                printf("QTHREADS: Reduced numThreadsPerLocale=%d to %d "
+                       "to prevent oversubscription of the system.\n",
+                       hwpar, numPUsPerLocale);
+            }
+
+            // Do not oversubscribe the system, use all available resources.
+            hwpar = numPUsPerLocale;
+        }
+    }
+    // User set qthreads level env var
+    // (HWPAR or (NUM_SHEPHERDS and NUM_WORKERS_PER_SHEPHERD))
+    else if (qtEnvThreads != 0) {
+        hwpar = qtEnvThreads;
+    }
+    // User did not set chapel or qthreads vars -- our default
+    else {
+        hwpar = chpl_getNumPhysicalCpus(true);
+    }
+
+    // hwpar will only be <= 0 if the user set QT_NUM_SHEPHERDS and/or
+    // QT_NUM_WORKERS_PER_SHEPHERD in which case we assume as "expert" user and
+    // don't impose any thread limits or set worker_unit.
+    if (hwpar > 0) {
+        // Limit the parallelism to the maximum imposed by the comm layer.
+        if (0 < maxThreads && maxThreads < hwpar) {
+            hwpar = maxThreads;
+        }
+
+        // If there is more parallelism requested than the number of cores, set the
+        // worker unit to pu, otherwise core.
+        if (hwpar > chpl_getNumPhysicalCpus(true)) {
+          chpl_qt_setenv("WORKER_UNIT", "pu", 0);
+        } else {
+          chpl_qt_setenv("WORKER_UNIT", "core", 0);
+        }
+
+        // Unset relevant Qthreads environment variables.
         qt_internal_unset_envstr("HWPAR");
         qt_internal_unset_envstr("NUM_SHEPHERDS");
         qt_internal_unset_envstr("NUM_WORKERS_PER_SHEPHERD");
 
-        if (chpl_numCoresOnThisLocale() < numThreadsPerLocale) {
-            if (2 == verbosity) {
-                printf("QTHREADS: Ignored --numThreadsPerLocale=%d to prevent oversubsription of the system.\n", numThreadsPerLocale);
-            }
-
-            // Do not oversubscribe the system, use all available resources.
-            numThreadsPerLocale = chpl_numCoresOnThisLocale();
+        snprintf(newenv_workers, sizeof(newenv_workers), "%i", (int)hwpar);
+        if (THREADQUEUE_POLICY_TRUE == qt_threadqueue_policy(SINGLE_WORKER)) {
+            chpl_qt_setenv("NUM_SHEPHERDS", newenv_workers, 1);
+            chpl_qt_setenv("NUM_WORKERS_PER_SHEPHERD", "1", 1);
+        } else {
+            chpl_qt_setenv("HWPAR", newenv_workers, 1);
         }
+    }
+    return hwpar;
+}
 
-        // Set environment variable for Qthreads
-        snprintf(newenv_sheps, 99, "%i", (int)numThreadsPerLocale);
-        setenv("QT_HWPAR", newenv_sheps, 1);
-    } else if (qt_internal_get_env_str("HWPAR", NULL) ||
-               qt_internal_get_env_str("NUM_SHEPHERDS", NULL) ||
-               qt_internal_get_env_str("NUM_WORKERS_PER_SHEPHERD", NULL)) {
-        // Assume the user wants has manually set the desired Qthreads
-        // environment variables.
-    } else {
-        // Default to using all hardware resources.
-        numThreadsPerLocale = chpl_numCoresOnThisLocale();
-        snprintf(newenv_sheps, 99, "%i", (int)numThreadsPerLocale);
-        setenv("QT_HWPAR", newenv_sheps, 1);
+static void setupCallStacks(int32_t hwpar) {
+    size_t callStackSize;
+
+    // If the user compiled with no stack checks (either explicitly or
+    // implicitly) turn off qthread guard pages. TODO there should also be a
+    // chpl level env var backing this at runtime (can be the same var.)
+    // Also turn off guard pages if the heap page size isn't the same as
+    // the system page size, because when that's the case we can reliably
+    // make the guard pages un-referenceable.  (This typically arises when
+    // the heap is on hugepages, as is often the case on Cray systems.)
+    //
+    // Note that we won't override an explicit setting of QT_GUARD_PAGES
+    // in the former case, but we do in the latter case.
+    if (CHPL_STACK_CHECKS == 0) {
+        chpl_qt_setenv("GUARD_PAGES", "false", 0);
+    }
+    else if (chpl_getHeapPageSize() != chpl_getSysPageSize()) {
+        chpl_qt_setenv("GUARD_PAGES", "false", 1);
     }
 
-    // Precendence (high-to-low):
-    // 1) CHPL_RT_CALL_STACK_SIZE
+    // Precedence (high-to-low):
+    // 1) Chapel environment (CHPL_RT_CALL_STACK_SIZE)
     // 2) QTHREAD_STACK_SIZE
     // 3) Chapel default
-    callStackSize = chpl_task_getenvCallStackSize();
-    if (callStackSize != 0) {
-        snprintf(newenv_stack, 99, "%lu", (unsigned long)callStackSize);
-        setenv("QT_STACK_SIZE", getenv("CHPL_RT_CALL_STACK_SIZE"), 1);
-    } else if (qt_internal_get_env_str("STACK_SIZE", NULL) == NULL) {
-        uint64_t callStackSize = 32 * 1024 * sizeof(size_t);
-        snprintf(newenv_stack, 99, "%lu", (unsigned long)callStackSize);
-        setenv("QT_STACK_SIZE", newenv_stack, 1);
-    }
+    if ((callStackSize = chpl_task_getEnvCallStackSize()) > 0 ||
+        (qt_internal_get_env_num("STACK_SIZE", 0, 0) == 0 &&
+         (callStackSize = chpl_task_getDefaultCallStackSize()) > 0)) {
+        char newenv_stack[QT_ENV_S];
+        snprintf(newenv_stack, sizeof(newenv_stack), "%zu", callStackSize);
+        chpl_qt_setenv("STACK_SIZE", newenv_stack, 1);
 
-    // Turn on informative Qthreads setting messages with Chapel's verbose flag
-    if (verbosity == 2) {
-        setenv("QT_INFO", "1", 1);
-    }
+        // Qthreads sets up memory pools expecting the item_size to be small.
+        // Stacks are allocated in this manner too, but our default stack size
+        // is quite large, so we limit the max memory allocated for a pool. We
+        // default to a multiple of callStackSize and hwpar, with the thought
+        // that available memory is generally proportional to the amount of
+        // parallelism. For some architectures, this isn't true so we set a max
+        // upper bound. And if the callStackSize is small, we don't want to
+        // limit all qthreads pool allocations to a small value, so we have a
+        // lower bound as well. Note that qthread stacks are slightly larger
+        // than specified to store a book keeping structure and possibly guard
+        // pages, so we thrown an extra MB.
+        if (hwpar > 0) {
+            const size_t oneMB = 1024 * 1024;
+            const size_t allocSizeLowerBound =  33 * oneMB;
+            const size_t allocSizeUpperBound = 513 * oneMB;
+            size_t maxPoolAllocSize;
+            char newenv_alloc[QT_ENV_S];
 
+            maxPoolAllocSize = 2 * hwpar * callStackSize + oneMB;
+            if (maxPoolAllocSize < allocSizeLowerBound) {
+                maxPoolAllocSize = allocSizeLowerBound;
+            } else if (maxPoolAllocSize > allocSizeUpperBound) {
+                maxPoolAllocSize = allocSizeUpperBound;
+            }
+            snprintf(newenv_alloc, sizeof(newenv_alloc), "%zu", maxPoolAllocSize);
+            chpl_qt_setenv("MAX_POOL_ALLOC_SIZE", newenv_alloc, 0);
+        }
+    }
+}
+
+void chpl_task_init(void)
+{
+    int32_t   commMaxThreads;
+    int32_t   hwpar;
+    pthread_t initer;
+
+    chpl_qthread_process_pthread = pthread_self();
+
+    commMaxThreads = chpl_comm_getMaxThreads();
+
+    // Setup hardware parallelism, the stack size, and stack guards
+    hwpar = setupAvailableParallelism(commMaxThreads);
+    setupCallStacks(hwpar);
+
+    if (verbosity >= 2) { chpl_qt_setenv("INFO", "1", 0); }
+
+    // Initialize qthreads
     pthread_create(&initer, NULL, initializer, NULL);
-    while (done_initializing == 0) SPINLOCK_BODY();
+    while (chpl_qthread_done_initializing == 0) SPINLOCK_BODY();
+
+    // Now that Qthreads is up and running, do a sanity check and make sure
+    // that the number of workers is less than any comm layer limit. This is
+    // mainly need for the case where a user set QT_NUM_SHEPHERDS and/or
+    // QT_NUM_WORKERS_PER_SHEPHERD in which case we don't impose any limits on
+    // the number of threads qthreads creates beforehand
+    assert(0 == commMaxThreads || qthread_num_workers() < commMaxThreads);
 
     if (blockreport || taskreport) {
         if (signal(SIGINT, SIGINT_handler) == SIG_ERR) {
@@ -422,7 +604,7 @@ void chpl_task_exit(void)
     if (qthread_shep() == NO_SHEPHERD) {
         /* sometimes, tasking is told to shutdown even though it hasn't been
          * told to start yet */
-        if (done_initializing == 1) {
+        if (chpl_qthread_done_initializing == 1) {
             qthread_syncvar_fill(&canexit);
             while (done_finalizing == 0) SPINLOCK_BODY();
         }
@@ -434,8 +616,8 @@ void chpl_task_exit(void)
 
 static aligned_t chapel_wrapper(void *arg)
 {
-    chapel_wrapper_args_t *rarg = arg;
-    chapel_tls_t * data = chapel_get_tasklocal();
+    chpl_qthread_wrapper_args_t *rarg = arg;
+    chpl_qthread_tls_t * data = chpl_qthread_get_tasklocal();
 
     data->task_filename = rarg->task_filename;
     data->task_lineno = rarg->lineno;
@@ -443,7 +625,15 @@ static aligned_t chapel_wrapper(void *arg)
     data->lock_filename = NULL;
     data->lock_lineno = 0;
 
+    if (rarg->countRunning) {
+        chpl_taskRunningCntInc(0, NULL);
+    }
+
     (*(chpl_fn_p)(rarg->fn))(rarg->args);
+
+    if (rarg->countRunning) {
+        chpl_taskRunningCntDec(0, NULL);
+    }
 
     return 0;
 }
@@ -454,19 +644,14 @@ static aligned_t chapel_wrapper(void *arg)
 // not use methods that require task context (e.g., task-local storage).
 void chpl_task_callMain(void (*chpl_main)(void))
 {
-    const chpl_bool initial_serial_state = false;
-    const c_localeid_t initial_locale_id = default_locale_id;
-    const chapel_wrapper_args_t wrapper_args = 
-        {chpl_main, NULL, NULL, 0,
-         {initial_serial_state, initial_locale_id, NULL,
-          chpl_malloc, chpl_calloc, chpl_realloc, chpl_free}};
+    const chpl_qthread_wrapper_args_t wrapper_args = 
+        {chpl_main, NULL, NULL, 0, false,
+         PRV_DATA_IMPL_VAL(c_sublocid_any_val, false) };
 
-    qthread_debug(CHAPEL_CALLS, "[%d] begin chpl_task_callMain()\n", chpl_localeID);
-
-    default_serial_state = initial_serial_state;
+    qthread_debug(CHAPEL_CALLS, "[%d] begin chpl_task_callMain()\n", chpl_nodeID);
 
 #ifdef QTHREAD_MULTINODE
-    qthread_debug(CHAPEL_BEHAVIOR, "[%d] calling spr_unify\n", chpl_localeID);
+    qthread_debug(CHAPEL_BEHAVIOR, "[%d] calling spr_unify\n", chpl_nodeID);
     int const rc = spr_unify();
     assert(SPR_OK == rc);
 #endif /* QTHREAD_MULTINODE */
@@ -474,17 +659,27 @@ void chpl_task_callMain(void (*chpl_main)(void))
     qthread_fork_syncvar(chapel_wrapper, &wrapper_args, &exit_ret);
     qthread_syncvar_readFF(NULL, &exit_ret);
 
-    qthread_debug(CHAPEL_BEHAVIOR, "[%d] main task finished\n", chpl_localeID);
-    qthread_debug(CHAPEL_CALLS, "[%d] end chpl_task_callMain()\n", chpl_localeID);
+    qthread_debug(CHAPEL_BEHAVIOR, "[%d] main task finished\n", chpl_nodeID);
+    qthread_debug(CHAPEL_CALLS, "[%d] end chpl_task_callMain()\n", chpl_nodeID);
+}
+
+void chpl_task_stdModulesInitialized(void)
+{
+    //
+    // It's not safe to call the module code to count the main task as
+    // running until after the modules have been initialized.  That's
+    // when this function is called, so now count the main task.
+    //
+    canCountRunningTasks = true;
+    chpl_taskRunningCntInc(0, NULL);
 }
 
 int chpl_task_createCommTask(chpl_fn_p fn,
                              void     *arg)
 {
 #ifndef QTHREAD_MULTINODE
-    pthread_t polling_thread;
-
-    return pthread_create(&polling_thread, NULL, (void *(*)(void *))fn, arg);
+    return pthread_create(&chpl_qthread_comm_pthread,
+                          NULL, (void *(*)(void *))fn, arg);
 #else
     return 0;
 #endif
@@ -492,36 +687,32 @@ int chpl_task_createCommTask(chpl_fn_p fn,
 
 void chpl_task_addToTaskList(chpl_fn_int_t     fid,
                              void             *arg,
-                             c_sublocid_t      subLoc,
+                             c_sublocid_t      subloc,
                              chpl_task_list_p *task_list,
                              int32_t           task_list_locale,
                              chpl_bool         is_begin_stmt,
                              int               lineno,
-                             chpl_string       filename)
+                             c_string          filename)
 {
-    qthread_shepherd_id_t const here_shep_id = qthread_shep();
-    chpl_task_private_data_t *parent_chpl_data = chpl_task_getPrivateData();
-    chpl_bool serial_state = parent_chpl_data->serial_state;
-    chapel_wrapper_args_t wrapper_args = 
-        {chpl_ftable[fid], arg, filename, lineno, *parent_chpl_data};
+    chpl_bool serial_state = chpl_task_getSerial();
+    chpl_qthread_wrapper_args_t wrapper_args =
+        {chpl_ftable[fid], arg, filename, lineno, false,
+         PRV_DATA_IMPL_VAL(subloc, serial_state) };
+
+    assert(subloc != c_sublocid_none);
 
     PROFILE_INCR(profile_task_addToTaskList,1);
 
     if (serial_state) {
-        syncvar_t ret = SYNCVAR_STATIC_EMPTY_INITIALIZER;
-        qthread_fork_syncvar_copyargs_to(chapel_wrapper, &wrapper_args,
-                                         sizeof(chapel_wrapper_args_t), &ret,
-                                         here_shep_id);
-        qthread_syncvar_readFF(NULL, &ret);
-    } else if (subLoc == c_sublocid_any) {
-        qthread_fork_syncvar_copyargs(chapel_wrapper, &wrapper_args,
-                                      sizeof(chapel_wrapper_args_t), NULL);
+        // call the function directly.
+        (chpl_ftable[fid])(arg);
+    } else if (subloc == c_sublocid_any) {
+        qthread_fork_copyargs(chapel_wrapper, &wrapper_args,
+                              sizeof(chpl_qthread_wrapper_args_t), NULL);
     } else {
-        if (subLoc == c_sublocid_curr)
-            subLoc = (c_sublocid_t) here_shep_id;
-        qthread_fork_syncvar_copyargs_to(chapel_wrapper, &wrapper_args,
-                                         sizeof(chapel_wrapper_args_t), NULL,
-                                         (qthread_shepherd_id_t) subLoc);
+        qthread_fork_copyargs_to(chapel_wrapper, &wrapper_args,
+                                 sizeof(chpl_qthread_wrapper_args_t), NULL,
+                                 (qthread_shepherd_id_t) subloc);
     }
 }
 
@@ -542,63 +733,42 @@ void chpl_task_freeTaskList(chpl_task_list_p task_list)
 
 void chpl_task_startMovedTask(chpl_fn_p      fp,
                               void          *arg,
-                              c_sublocid_t   subLoc,
+                              c_sublocid_t   subloc,
                               chpl_taskID_t  id,
                               chpl_bool      serial_state)
 {
-    assert(subLoc != c_sublocid_curr);
+    assert(subloc != c_sublocid_none);
     assert(id == chpl_nullTaskID);
 
-    chapel_wrapper_args_t wrapper_args = 
-        {fp, arg, NULL, 0, *chpl_task_getPrivateData()};
-    wrapper_args.chpl_data.serial_state = serial_state;
+    chpl_qthread_wrapper_args_t wrapper_args = 
+        {fp, arg, NULL, 0, canCountRunningTasks,
+         PRV_DATA_IMPL_VAL(subloc, serial_state) };
+
 
     PROFILE_INCR(profile_task_startMovedTask,1);
 
-#if 1
-    // We are timing out when the subLoc is passed as 0 (zero).  Can
-    // we not time share tasks on a single shepherd?  Perhaps we can
-    // only time share as many tasks on a shepherd as that shepherd
-    // has workers?  For now, force the subLoc to be "any".
-    subLoc = c_sublocid_any;
-#endif
-    if (subLoc == c_sublocid_any) {
-        qthread_fork_syncvar_copyargs(chapel_wrapper, &wrapper_args,
-                                      sizeof(chapel_wrapper_args_t), NULL);
+    if (subloc == c_sublocid_any) {
+        qthread_fork_copyargs(chapel_wrapper, &wrapper_args,
+                              sizeof(chpl_qthread_wrapper_args_t), NULL);
     } else {
-        qthread_fork_syncvar_copyargs_to(chapel_wrapper, &wrapper_args,
-                                         sizeof(chapel_wrapper_args_t), NULL,
-                                         (qthread_shepherd_id_t) subLoc);
+        qthread_fork_copyargs_to(chapel_wrapper, &wrapper_args,
+                                 sizeof(chpl_qthread_wrapper_args_t), NULL,
+                                 (qthread_shepherd_id_t) subloc);
     }
 }
 
-c_sublocid_t chpl_task_getSubLoc(void)
-{
-    return (c_sublocid_t) qthread_shep();
-}
+//
+// chpl_task_getSubloc() is in tasks-qthreads.h
+//
 
-void chpl_task_setSubLoc(c_sublocid_t subLoc)
-{
-    qthread_shepherd_id_t curr_shep;
+//
+// chpl_task_setSubloc() is in tasks-qthreads.h
+//
 
-    // Only change sublocales if the caller asked for a particular one,
-    // which is not the current one, and we're a (movable) task.
-    //
-    // Note: It's likely that this won't work in all cases where we need
-    //       it.  In particular, we envision needing to move execution
-    //       from sublocale to sublocale while initializing the memory
-    //       layer, in order to get the NUMA domain affinity right for
-    //       the subparts of the heap.  But this will be happening well
-    //       before tasking init and in any case would be done from the
-    //       main thread of execution, which doesn't have a shepherd.
-    //       The code below wouldn't work in that situation.
-    if (subLoc != c_sublocid_any &&
-        subLoc != c_sublocid_curr &&
-        (curr_shep = qthread_shep()) != NO_SHEPHERD &&
-        (qthread_shepherd_id_t) subLoc != curr_shep) {
-        qthread_migrate_to((qthread_shepherd_id_t) subLoc);
-    }
-}
+//
+// chpl_task_getRequestedSubloc() is in tasks-qthreads.h
+//
+
 
 // Returns '(unsigned int)-1' if called outside of the tasking layer.
 chpl_taskID_t chpl_task_getId(void)
@@ -610,98 +780,56 @@ chpl_taskID_t chpl_task_getId(void)
 
 void chpl_task_sleep(int secs)
 {
-    sleep(secs); // goes into the syscall interception system
-}
-
-chpl_task_private_data_t* chpl_task_getPrivateData(void)
-{
-    // FIXME: this method attempts to access task-local data, even though
-    // it is called from outside of a task.
-    static chpl_task_private_data_t non_task_chpl_data =
-        { .serial_state = true,
-          .localeID = 0,
-          .here = NULL,
-          .alloc = chpl_malloc,
-          .calloc = chpl_calloc,
-          .realloc = chpl_realloc,
-          .free = chpl_free
-        };
-    chapel_tls_t * data = chapel_get_tasklocal_possibly_from_non_task();
-    return (NULL==data) ? &non_task_chpl_data : &data->chpl_data;
+    if (qthread_shep() == NO_SHEPHERD) {
+        sleep(secs);
+    } else {
+        qtimer_t t = qtimer_create();
+        qtimer_start(t);
+        do {
+            qthread_yield();
+            qtimer_stop(t);
+        } while (qtimer_secs(t) < secs);
+    }
 }
 
 /* The get- and setSerial() methods assume the beginning of the task-local
  * data segment holds a chpl_bool denoting the serial state. */
 chpl_bool chpl_task_getSerial(void)
 {
-    chapel_tls_t * data = chapel_get_tasklocal();
+    chpl_qthread_tls_t * data = chpl_qthread_get_tasklocal();
 
     PROFILE_INCR(profile_task_getSerial,1);
 
-    return data->chpl_data.serial_state;
+    return data->chpl_data.prvdata.serial_state;
 }
 
 void chpl_task_setSerial(chpl_bool state)
 {
-    chapel_tls_t * data = chapel_get_tasklocal();
-    data->chpl_data.serial_state = state;
+    chpl_qthread_tls_t * data = chpl_qthread_get_tasklocal();
+    data->chpl_data.prvdata.serial_state = state;
 
     PROFILE_INCR(profile_task_setSerial,1);
 }
 
-void * chpl_task_getHere(void)
-{
-    // FIXME: this method attempts to access task-local data, even though
-    // it is called from outside of a task.
-    chapel_tls_t * data = chapel_get_tasklocal_possibly_from_non_task();
-    return (NULL==data) ? NULL : data->chpl_data.here;
+uint32_t chpl_task_getMaxPar(void) {
+    //
+    // We assume here that the caller (in the LocaleModel module code)
+    // is interested in the number of workers on the whole node, and
+    // will decide itself how much parallelism to create across and
+    // within sublocales, if there are any.
+    //
+    return (uint32_t) qthread_num_workers();
 }
 
-void chpl_task_setHere(void * new_here)
+c_sublocid_t chpl_task_getNumSublocales(void)
 {
-    // FIXME: this method attempts to access task-local data, even though
-    // it is called from outside of a task.
-    chapel_tls_t * data = chapel_get_tasklocal_possibly_from_non_task();
-    if (NULL != data) {
-        data->chpl_data.here = new_here;
-    }
-}
-
-c_localeid_t chpl_task_getLocaleID(void)
-{
-    // FIXME: this method attempts to access task-local data, even though
-    // it is called from outside of a task.
-    chapel_tls_t * data = chapel_get_tasklocal_possibly_from_non_task();
-    return (NULL==data) ? 0 : data->chpl_data.localeID;
-}
-
-void chpl_task_setLocaleID(c_localeid_t new_localeID)
-{
-    // FIXME: this method attempts to access task-local data, even though
-    // it is called from outside of a task.
-    chapel_tls_t * data = chapel_get_tasklocal_possibly_from_non_task();
-    if (NULL != data) {
-        data->chpl_data.localeID = new_localeID;
-    }
-}
-
-c_sublocid_t chpl_task_getNumSubLocales(void)
-{
-    c_sublocid_t num_sublocs = (c_sublocid_t) qthread_num_shepherds();
-
     // FIXME: What we really want here is the number of NUMA
     // sublocales we are supporting.  For now we use the number of
     // shepherds as a proxy for that.
-#ifdef CHPL_LOCALE_MODEL_NUM_SUBLOCALES
-    return ((num_sublocs < CHPL_LOCALE_MODEL_NUM_SUBLOCALES)
-            ? num_sublocs
-            : CHPL_LOCALE_MODEL_NUM_SUBLOCALES);
-#else
-    return (c_sublocid_t) ((num_sublocs < 2) ? 0 : num_sublocs);
-#endif
+    return (c_sublocid_t) qthread_num_shepherds();
 }
 
-uint64_t chpl_task_getCallStackSize(void)
+size_t chpl_task_getCallStackSize(void)
 {
     PROFILE_INCR(profile_task_getCallStackSize,1);
 
@@ -716,13 +844,15 @@ uint32_t chpl_task_getNumQueuedTasks(void)
 
 uint32_t chpl_task_getNumRunningTasks(void)
 {
-    return qthread_readstate(WORKER_OCCUPATION);
-}                                                         /* 1, i.e. this one */
+    chpl_internal_error("chpl_task_getNumRunningTasks() called");
+    return 1;
+}
 
-// XXX: not sure what the correct value should be here!
 int32_t chpl_task_getNumBlockedTasks(void)
 {
-    return -1;
+    // This isn't accurate, but in the absence of better information
+    // it's the best we can do.
+    return 0;
 }
 
 // Threads
