@@ -2030,7 +2030,6 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
                                              int             team_leader)
 {                      /*{{{ */
     qthread_t *t;
-
     if ((arg_size > 0) && (arg_size <= qlib->qthread_argcopy_size)) {
         t = ALLOC_BIG_QTHREAD();
     } else {
@@ -2043,6 +2042,10 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
     t->ret   = ret;
     t->rdata = NULL;
     t->team  = team;
+
+#ifdef CLONED_TASKS
+    t->clone_start_count = 0;
+#endif
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     t->id                    = 0;
@@ -2641,7 +2644,9 @@ int API_FUNC qthread_spawn(qthread_f             f,
 
     t = qthread_thread_new(f, arg, arg_size, (aligned_t *)ret, new_team, team_leader);
     qassert_ret(t, QTHREAD_MALLOC_ERROR);
-
+#ifdef CLONED_TASKS
+    t->clone_start_count = clone_count;
+#endif
     if (QTHREAD_UNLIKELY(target_shep != NO_SHEPHERD)) {
         t->target_shepherd = dest_shep;
         t->flags          |= QTHREAD_UNSTEALABLE;
@@ -2744,12 +2749,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
         {
 #ifdef QTHREAD_LOCAL_PRIORITY
             if (feature_flag & QTHREAD_SPAWN_LOCAL_PRIORITY)
-#ifdef CLONED_TASKS
-              qt_threadqueue_enqueue_yielded_cloneable(qlib->local_priority_queues[dest_shep], t, clone_count);
-#else 
               qt_threadqueue_enqueue_yielded(qlib->local_priority_queues[dest_shep], t);
-#endif /* ifdef CLONED_TASKS */
-                //qt_threadqueue_enqueue(qlib->local_priority_queues[dest_shep], t);
             else
 #endif /* ifdef QTHREAD_LOCAL_PRIORITY */
                 qt_threadqueue_enqueue(qlib->threadqueues[dest_shep], t);
