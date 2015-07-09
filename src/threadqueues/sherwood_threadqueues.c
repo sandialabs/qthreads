@@ -970,8 +970,8 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 
                     default:
                         /* McCoy thread can only run on worker 0 */
-                        my_shepherd->stealing = 2; // no stealing
-                        MACHINE_FENCE;
+                        //my_shepherd->stealing = 0; // no stealing
+                        //MACHINE_FENCE;
                         qt_threadqueue_enqueue_yielded(q, t);
 #ifdef QTHREAD_TASK_AGGREGATION
                         t = qt_init_agg_task();
