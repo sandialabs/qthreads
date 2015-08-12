@@ -8,6 +8,9 @@ const char INTERNAL *qt_internal_get_env_str(const char *envariable,
 unsigned long INTERNAL qt_internal_get_env_num(const char   *envariable,
                                                unsigned long dflt,
                                                unsigned long zerodflt);
+double INTERNAL qt_internal_get_env_double(const char   *envariable,
+                                           double         dflt,
+                                           double         zerodflt);
 unsigned char INTERNAL qt_internal_get_env_bool(const char   *envariable,
                                                 unsigned char dflt);
 int INTERNAL qt_internal_unset_envstr(const char *envariable);

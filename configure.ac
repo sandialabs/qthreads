@@ -228,7 +228,8 @@ AC_ARG_ENABLE([profiling],
                                profiling reports sinc counter usage data. Teams
                                profiling reports team counter usage data. SPR
                                profiling reports communication information. 
-                               Chapel profiling reports Chapel interface usage.])],
+                               Chapel profiling reports Chapel interface usage.
+                               MPIQ profiling reports on MPIQ interface usage.])],
               [for area in $(echo "$enable_profiling" | sed 's/,/ /g') ; do
                  case "$area" in
                    shepherd|shepherds)
@@ -258,8 +259,11 @@ AC_ARG_ENABLE([profiling],
                    chapel)
                      enable_chapel_profiling=yes
                      ;;
+                   mpiq)
+                     enable_mpiq_profiling=yes
+                     ;;
                    *)
-                     AC_MSG_ERROR([Unsupported profiling option ($area), supported options are: shepherd, feb, steal, cas_steal, threadc, sincs, teams, spr, chapel])
+                     AC_MSG_ERROR([Unsupported profiling option ($area), supported options are: shepherd, feb, steal, cas_steal, threadc, sincs, teams, spr, chapel, mpiq])
                      ;;
                  esac
                done],
@@ -341,8 +345,8 @@ AC_ARG_ENABLE([condwait-queue],
 AC_ARG_ENABLE([interfaces],
               [AS_HELP_STRING([--enable-interfaces=[[list]]],
                               [Comma separated list of compiler interfaces to
-                               support. Available interfaces include chapel and
-                               rose.])],
+                               support. Available interfaces include chapel,
+                               rose, and mpiq.])],
               [for iface in $(echo "$enable_interfaces" | sed 's/,/ /g') ; do
                  case "$iface" in
                    chapel)
@@ -350,6 +354,9 @@ AC_ARG_ENABLE([interfaces],
                      ;;
                    rose)
                      enable_rose_extensions=yes
+                     ;;
+                   mpiq)
+                     compile_mpiq_interface=yes
                      ;;
                    *)
                      AC_MSG_ERROR([Unsupported interface ($iface) selected.])
@@ -901,6 +908,10 @@ AS_IF([test "x$enable_chapel_profiling" = xyes],
       [AC_DEFINE([CHAPEL_PROFILE], [1], [Support dynamic profile of Chapel infomation])],
       [enable_chapel_profiling="no"])
 
+AS_IF([test "x$enable_mpiq_profiling" = xyes],
+      [AC_DEFINE([MPIQ_PROFILE], [1], [Support dynamic profile of MPIQ interface information])],
+      [enable_mpiq_profiling="no"])
+
 AS_IF([test "x$enable_cas_steal_profiling" = xyes],
       [AC_DEFINE([CAS_STEAL_PROFILE], [1], [Support dynamic profile of CAS steal infomation])],
       [enable_cas_steal_profiling="no"])
@@ -1157,6 +1168,7 @@ AM_CONDITIONAL([QTHREAD_TIMER_TYPE_GETTIMEOFDAY], [test "x$qthread_timer_type" =
 AM_CONDITIONAL([COMPILE_ROSE_EXTENSIONS], [test "x$enable_rose_extensions" = "xyes"])
 AM_CONDITIONAL([COMPILE_RCRTOOL], [test "x$enable_rcrtool" = "xyes"])
 AM_CONDITIONAL([COMPILE_CHAPEL_INTERFACE], [test "x$compile_chapel_interface" = "xyes"])
+AM_CONDITIONAL([COMPILE_MPIQ_INTERFACE], [test "x$compile_mpiq_interface" = "xyes"])
 AM_CONDITIONAL([COMPILE_COMPAT_ATOMIC], [test "x$compile_compat_atomic" = "xyes"])
 AM_CONDITIONAL([COMPILE_SPAWNCACHE], [test "x$enable_spawn_cache" = "xyes"])
 AM_CONDITIONAL([COMPILE_EUREKAS], [test "x$enable_eurekas" = "xyes"])
