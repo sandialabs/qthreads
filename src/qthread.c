@@ -87,6 +87,7 @@
 #include "qt_subsystems.h"
 #include "qt_output_macros.h"
 #include "qt_int_log.h"
+#include "qt_yield.h"
 
 #ifdef QTHREAD_RCRTOOL
 # include "maestro_sched.h"
@@ -2409,8 +2410,10 @@ void INTERNAL qthread_exec(qthread_t    *t,
     qthread_debug(SHEPHERD_DETAILS, "t(%p): finished, t->thread_state = %i\n", t, (int)t->thread_state);
 }                      /*}}} */
 
-/* this function yields thread t to the master kernel thread */
-void API_FUNC qthread_yield_(int k)
+/**
+ * Yield calling qthread.
+ */
+void API_FUNC qthread_yield_(uint32_t flags)
 {                      /*{{{ */
     assert(qthread_library_initialized);
     qthread_t *t = qthread_internal_self();
@@ -2418,49 +2421,54 @@ void API_FUNC qthread_yield_(int k)
     if (t != NULL) {
         qthread_debug(THREAD_CALLS,
                       "tid %u yielding...\n", t->thread_id);
-        switch (k) {
-            case 1: // Yield-near
-                t->thread_state = QTHREAD_STATE_YIELDED_NEAR;
-                break;
-            case 2: // direct-yield
+
+        /* set steal condition */
+        if (QTHREAD_YIELD_STEALABLE & flags) {
+            t->flags &= ~QTHREAD_UNSTEALABLE;
+        } else if (QTHREAD_YIELD_UNSTEALABLE & flags) {
+            t->flags |= QTHREAD_UNSTEALABLE;
+        }
+
+        /* Set yield condition */
+        if (QTHREAD_YIELD_NEAR & flags) {
+            t->thread_state = QTHREAD_STATE_YIELDED_NEAR;
+        } else if (QTHREAD_YIELD_DIRECT & flags) {
 #ifdef QTHREAD_USE_SPAWNCACHE
-                {
-                    qt_threadqueue_private_t *pq = qt_spawncache_get();
-                    if (pq->on_deck) {
-                        qthread_t *nt = qt_threadqueue_private_dequeue(pq);
-                        assert(nt);
-                        if (((nt->flags & QTHREAD_SIMPLE) != 0) || (nt->thread_state != QTHREAD_STATE_NEW)) {
-                            qt_spawncache_spawn(nt, t->rdata->shepherd_ptr->ready);
-                            goto basic_yield;
-                        }
-                        /* Initialize nt's rdata */
-                        alloc_rdata(t->rdata->shepherd_ptr, nt);
-                        nt->thread_state = QTHREAD_STATE_YIELDED; // special indicator state for qthread_wrapper()
-                        nt->rdata->blockedon.thread = t;
-                        qthread_makecontext(&nt->rdata->context, nt->rdata->stack, qlib->qthread_stack_size, (void(*)(void))qthread_wrapper, nt, t->rdata->return_context);
-                        nt->rdata->return_context = t->rdata->return_context;
-                        RLIMIT_TO_TASK(t);
-                        /* SWAP! */
-                        qthread_debug(SHEPHERD_DETAILS,
-                                "t(%p): executing swapcontext(%p, %p)...\n", t, &t->rdata->context, &nt->rdata->context);
-#ifdef HAVE_NATIVE_MAKECONTEXT
-                        qassert(swapcontext(&t->rdata->context, &nt->rdata->context), 0);
-#else
-                        qassert(qt_swapctxt(&t->rdata->context, &nt->rdata->context), 0);
-#endif
-                        qthread_debug(THREAD_BEHAVIOR, "tid %u resumed.\n", t->thread_id);
-                        RLIMIT_TO_NORMAL(t);
-                        return;
-                    }
+            qt_threadqueue_private_t *pq = qt_spawncache_get();
+            if (pq->on_deck) {
+                qthread_t *nt = qt_threadqueue_private_dequeue(pq);
+                assert(nt);
+                if (((nt->flags & QTHREAD_SIMPLE) != 0) || (nt->thread_state != QTHREAD_STATE_NEW)) {
+                    qt_spawncache_spawn(nt, t->rdata->shepherd_ptr->ready);
+                    goto basic_yield;
                 }
+                /* Initialize nt's rdata */
+                alloc_rdata(t->rdata->shepherd_ptr, nt);
+                nt->thread_state = QTHREAD_STATE_YIELDED; // special indicator state for qthread_wrapper()
+                nt->rdata->blockedon.thread = t;
+                qthread_makecontext(&nt->rdata->context, nt->rdata->stack, qlib->qthread_stack_size, (void(*)(void))qthread_wrapper, nt, t->rdata->return_context);
+                nt->rdata->return_context = t->rdata->return_context;
+                RLIMIT_TO_TASK(t);
+                /* SWAP! */
+                qthread_debug(SHEPHERD_DETAILS,
+                        "t(%p): executing swapcontext(%p, %p)...\n", t, &t->rdata->context, &nt->rdata->context);
+#ifdef HAVE_NATIVE_MAKECONTEXT
+                qassert(swapcontext(&t->rdata->context, &nt->rdata->context), 0);
+#else
+                qassert(qt_swapctxt(&t->rdata->context, &nt->rdata->context), 0);
 #endif
-            case 0: // general yield
+                qthread_debug(THREAD_BEHAVIOR, "tid %u resumed.\n", t->thread_id);
+                RLIMIT_TO_NORMAL(t);
+                return;
+            }
+#endif
+        } else if (QTHREAD_YIELD_FAR & flags) {
 #ifdef QTHREAD_USE_SPAWNCACHE
 basic_yield:
 #endif
-                t->thread_state = QTHREAD_STATE_YIELDED;
-                break;
+            t->thread_state = QTHREAD_STATE_YIELDED;
         }
+
         qthread_back_to_master(t);
         qthread_debug(THREAD_BEHAVIOR, "tid %u resumed.\n",
                       t->thread_id);

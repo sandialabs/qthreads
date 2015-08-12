@@ -6,6 +6,7 @@
 #include <limits.h>                    /* for UINT_MAX (C89) */
 #include <qthread/qthread-int.h>       /* for uint32_t and uint64_t */
 #include <qthread/common.h>            /* important configuration options */
+#include <qt_yield.h>
 
 #include <string.h>                    /* for memcpy() */
 
@@ -195,9 +196,9 @@ void qthread_enable_worker(qthread_worker_id_t worker);
  * busy-waits or cooperative multitasking. Without this function, threads will
  * only ever allow other threads assigned to the same pthread to execute when
  * they block. */
-#define qthread_yield()      do { COMPILER_FENCE; qthread_yield_(0); } while (0)
-#define qthread_yield_near() do { COMPILER_FENCE; qthread_yield_(1); } while (0)
-void qthread_yield_(int);
+#define qthread_yield()      do { COMPILER_FENCE; qthread_yield_(QTHREAD_YIELD_FAR); } while (0)
+#define qthread_yield_near() do { COMPILER_FENCE; qthread_yield_(QTHREAD_YIELD_NEAR); } while (0)
+void qthread_yield_(uint32_t);
 
 /* this function flushes the spawncache */
 void qthread_flushsc(void);
