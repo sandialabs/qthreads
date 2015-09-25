@@ -153,6 +153,7 @@ static QINLINE void qthread_makecontext(qt_context_t *const c,
                                         void                (*func)(void),
                                         const void *const   arg,
                                         qt_context_t *const returnc);
+
 static QINLINE qthread_t *qthread_thread_new(qthread_f   f,
                                              const void *arg,
                                              size_t      arg_size,
@@ -2017,6 +2018,7 @@ aligned_t API_FUNC *qthread_retloc(void)
     }
 }                      /*}}} */
 
+  
 /************************************************************/
 /* functions to manage thread stack allocation/deallocation */
 /************************************************************/
@@ -2028,7 +2030,6 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
                                              int             team_leader)
 {                      /*{{{ */
     qthread_t *t;
-
     if ((arg_size > 0) && (arg_size <= qlib->qthread_argcopy_size)) {
         t = ALLOC_BIG_QTHREAD();
     } else {
@@ -2041,6 +2042,10 @@ static QINLINE qthread_t *qthread_thread_new(const qthread_f f,
     t->ret   = ret;
     t->rdata = NULL;
     t->team  = team;
+
+#ifdef CLONED_TASKS
+    t->clone_start_count = 0;
+#endif
 
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     t->id                    = 0;
@@ -2503,6 +2508,7 @@ void API_FUNC qthread_flushsc(void)
  */
 #define QTHREAD_SPAWN_MASK_TEAMS (QTHREAD_SPAWN_NEW_TEAM | QTHREAD_SPAWN_NEW_SUBTEAM)
 
+#ifdef CLONED_TASKS
 int API_FUNC qthread_spawn(qthread_f             f,
                            const void           *arg,
                            size_t                arg_size,
@@ -2511,6 +2517,28 @@ int API_FUNC qthread_spawn(qthread_f             f,
                            void                 *preconds,
                            qthread_shepherd_id_t target_shep,
                            unsigned int          feature_flag)
+{
+  return qthread_spawn_cloneable(f, arg, arg_size, ret, npreconds, preconds, target_shep, feature_flag, 0);
+}
+int API_FUNC qthread_spawn_cloneable(qthread_f             f,
+                                     const void           *arg,
+                                     size_t                arg_size,
+                                     void                 *ret,
+                                     size_t                npreconds,
+                                     void                 *preconds,
+                                     qthread_shepherd_id_t target_shep,
+                                     unsigned int          feature_flag,
+                                     aligned_t             clone_count)
+#else 
+int API_FUNC qthread_spawn(qthread_f             f,
+                           const void           *arg,
+                           size_t                arg_size,
+                           void                 *ret,
+                           size_t                npreconds,
+                           void                 *preconds,
+                           qthread_shepherd_id_t target_shep,
+                           unsigned int          feature_flag)
+#endif
 {   /*{{{*/
     assert(qthread_library_initialized);
     qthread_t            *t;
@@ -2616,7 +2644,9 @@ int API_FUNC qthread_spawn(qthread_f             f,
 
     t = qthread_thread_new(f, arg, arg_size, (aligned_t *)ret, new_team, team_leader);
     qassert_ret(t, QTHREAD_MALLOC_ERROR);
-
+#ifdef CLONED_TASKS
+    t->clone_start_count = clone_count;
+#endif
     if (QTHREAD_UNLIKELY(target_shep != NO_SHEPHERD)) {
         t->target_shepherd = dest_shep;
         t->flags          |= QTHREAD_UNSTEALABLE;
@@ -2719,7 +2749,7 @@ int API_FUNC qthread_spawn(qthread_f             f,
         {
 #ifdef QTHREAD_LOCAL_PRIORITY
             if (feature_flag & QTHREAD_SPAWN_LOCAL_PRIORITY)
-                qt_threadqueue_enqueue(qlib->local_priority_queues[dest_shep], t);
+              qt_threadqueue_enqueue_yielded(qlib->local_priority_queues[dest_shep], t);
             else
 #endif /* ifdef QTHREAD_LOCAL_PRIORITY */
                 qt_threadqueue_enqueue(qlib->threadqueues[dest_shep], t);
@@ -2976,22 +3006,54 @@ int API_FUNC qthread_fork_to(qthread_f             f,
 } /*}}}*/
 
 #ifdef QTHREAD_LOCAL_PRIORITY
+#ifdef CLONED_TASKS
 int API_FUNC qthread_fork_to_local_priority(qthread_f             f,
                                             const void           *arg,
                                             aligned_t            *ret,
-                                            qthread_shepherd_id_t shepherd)
+                                            qthread_shepherd_id_t shepherd
+                                           )
+{
+  return qthread_fork_clones_to_local_priority(f,arg,ret,shepherd,0);
+}
+
+int API_FUNC qthread_fork_clones_to_local_priority(qthread_f             f,
+                                            const void           *arg,
+                                            aligned_t            *ret,
+                                            qthread_shepherd_id_t shepherd,
+                                            aligned_t         clone_count
+                                           )
+#else
+int API_FUNC qthread_fork_to_local_priority(qthread_f             f,
+                                            const void           *arg,
+                                            aligned_t            *ret,
+                                            qthread_shepherd_id_t shepherd
+                                           )
+#endif /*CLONED_TASKS*/
 {   /*{{{*/
     if ((shepherd != NO_SHEPHERD) && (shepherd >= qlib->nshepherds)) {
         shepherd %= qlib->nshepherds;
     }
-    return qthread_spawn(f,
+#ifdef CLONED_TASKS
+    return qthread_spawn_cloneable(f,
                          arg,
                          0,
                          ret,
                          0,
                          NULL,
                          shepherd,
-                         QTHREAD_SPAWN_LOCAL_PRIORITY);
+                         QTHREAD_SPAWN_LOCAL_PRIORITY,
+                         clone_count);
+#else 
+    return qthread_spawn_cloneable(f,
+                         arg,
+                         0,
+                         ret,
+                         0,
+                         NULL,
+                         shepherd,
+                         QTHREAD_SPAWN_LOCAL_PRIORITY
+                         );
+#endif /* CLONED_TASKS */
 } /*}}}*/
 #endif /* ifdef QTHREAD_LOCAL_PRIORITY */
 

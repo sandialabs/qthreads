@@ -78,14 +78,16 @@ struct qthread_s {
     qt_team_t                     *team; /* reference to task team */
     /* preconditions for data-dependent tasks */
     void                          *preconds;
-
+#ifdef CLONED_TASKS
+    uint32_t                   clone_start_count;
+#endif
 #ifdef QTHREAD_USE_ROSE_EXTENSIONS
     // XXX: I suspect that several of these should be moved into the qthread_runtime_data_s struct
     aligned_t                  id;                    /* id used in barrier and arrive_first */
     qthread_parallel_region_t *currentParallelRegion; /* parallel region barrier this thread should use */
-    aligned_t                  task_counter;
     struct qthread_s          *parent;                 /* pointer to parent task */
     enum threadstate           prev_thread_state;      /* save the previous thread state */
+    aligned_t                  task_counter;
 #endif
     unsigned int               thread_id;
     qthread_shepherd_id_t      target_shepherd; /* the shepherd we'd rather run on; set to NO_SHEPHERD unless the thread either migrated or was spawned to a specific destination (aka the programmer expressed a desire for this thread to be somewhere) */

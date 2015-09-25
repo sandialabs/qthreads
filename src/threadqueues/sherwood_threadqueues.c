@@ -28,6 +28,23 @@
 #include "qt_expect.h"
 #include "qt_subsystems.h"
 
+
+#if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED)
+# define ALLOC_QTHREAD() MALLOC(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size)
+# define FREE_QTHREAD(t) FREE(t, sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size)
+#else /* if defined(UNPOOLED_QTHREAD_T) ||./src/threadqueues/nemesis_threadqueues.c defined(UNPOOLED) */
+extern qt_mpool generic_qthread_pool;
+# define ALLOC_QTHREAD() (qthread_t *)qt_mpool_alloc(generic_qthread_pool)
+# define FREE_QTHREAD(t) qt_mpool_free(generic_qthread_pool, t)
+#endif /* if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED) */
+
+static QINLINE qthread_t *qthread_thread_copy(qthread_t* t)
+{
+  qthread_t *tnew = ALLOC_QTHREAD();
+  memcpy(tnew, t, sizeof(qthread_t));
+  return tnew;
+}
+
 /* Data Structures */
 struct _qt_threadqueue_node {
     struct _qt_threadqueue_node *next;
@@ -82,6 +99,7 @@ int INTERNAL        qt_keep_adding_agg_task(qthread_t *agg_task,
                                             int       *curr_cost,
                                             void      *q,
                                             int        lock);
+
 void INTERNAL qt_add_first_agg_task(qthread_t             *agg_task,
                                     int                   *curr_cost,
                                     qt_threadqueue_node_t *node);
@@ -250,15 +268,6 @@ qt_threadqueue_t INTERNAL *qt_threadqueue_new(void)
     return q;
 } /*}}}*/
 
-#if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED)
-# define ALLOC_QTHREAD() MALLOC(sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size)
-# define FREE_QTHREAD(t) FREE(t, sizeof(qthread_t) + qlib->qthread_argcopy_size + qlib->qthread_tasklocal_size)
-#else /* if defined(UNPOOLED_QTHREAD_T) ||./src/threadqueues/nemesis_threadqueues.c defined(UNPOOLED) */
-extern qt_mpool generic_qthread_pool;
-# define ALLOC_QTHREAD() (qthread_t *)qt_mpool_alloc(generic_qthread_pool)
-# define FREE_QTHREAD(t) qt_mpool_free(generic_qthread_pool, t)
-#endif /* if defined(UNPOOLED_QTHREAD_T) || defined(UNPOOLED) */
-
 void INTERNAL qt_threadqueue_free(qt_threadqueue_t *q)
 {   /*{{{*/
     if (q->head != q->tail) {
@@ -412,7 +421,6 @@ int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *re
     node->prev      = NULL;
     node->value     = t;
     node->stealable = qt_threadqueue_isstealable(t);
-
     assert(q->tail == NULL || q->tail->next == NULL);
     assert(q->head == NULL || q->head->prev == NULL);
     // Add to the head of the `q`
@@ -436,7 +444,7 @@ int INTERNAL qt_threadqueue_private_enqueue_yielded(qt_threadqueue_private_t *re
 
 /* yielded threads enqueue at head */
 void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
-                                             qthread_t *restrict        t)
+                                                       qthread_t *restrict        t)
 {   /*{{{*/
     qt_threadqueue_node_t *node;
 
@@ -705,7 +713,8 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                                             uint_fast8_t              active)
 {   /*{{{*/
     qthread_shepherd_t *my_shepherd = qthread_internal_getshep();
-    qthread_t          *t;
+    qthread_t          *t = NULL;
+    int cloned = 0;
     qthread_worker_id_t worker_id = NO_WORKER;
     int                 curr_cost, max_t, ret_agg_task;
 
@@ -728,12 +737,15 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 
 #ifdef QTHREAD_LOCAL_PRIORITY
             /* First check local priority queue */
-        if (lpq->head) {
+        if (lpq->tail) {
             QTHREAD_TRYLOCK_LOCK(&lpq->qlock);
             PARANOIA_ONLY(sanity_check_queue(lpq));
             node = lpq->tail;
             if (node != NULL) {
-                assert(lpq->head);
+#ifdef CLONED_TASKS
+              if(node->value->clone_start_count == 0){
+#endif /* CLONED_TASKS */
+                assert(lpq->tail);
                 assert(lpq->qlength > 0);
 
                 lpq->tail = node->prev;
@@ -745,6 +757,14 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                 assert(lpq->qlength > 0);
                 lpq->qlength--;
                 lpq->qlength_stealable -= node->stealable;
+#ifdef CLONED_TASKS
+                cloned = 0;
+              } else {
+                node->value->clone_start_count --;
+                t = qthread_thread_copy(node->value);
+                cloned = 1;
+              }
+#endif /* CLONED_TASKS */
             }
             QTHREAD_TRYLOCK_UNLOCK(&lpq->qlock);
         }
@@ -850,9 +870,11 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
             PARANOIA_ONLY(sanity_check_queue(q));
             node = q->tail;
             if (node != NULL) {
+#ifdef CLONED_TASKS
+              if(node->value->clone_start_count == 0){
+#endif /* CLONED_TASKS */
                 assert(q->head);
                 assert(q->qlength > 0);
-
                 q->tail = node->prev;
                 if (q->tail == NULL) {
                     q->head = NULL;
@@ -878,6 +900,15 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
                            // t = NULL;
                 }
 #endif          /* ifdef QTHREAD_TASK_AGGREGATION */
+#ifdef CLONED_TASKS
+                cloned = 0;
+              }
+              else {
+                node->value->clone_start_count --;
+                t = qthread_thread_copy(node->value);
+                cloned = 1;
+              }
+#endif
             }
             QTHREAD_TRYLOCK_UNLOCK(&q->qlock);
         }
@@ -912,10 +943,18 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
         }
         if (node) {
 #ifdef QTHREAD_TASK_AGGREGATION
-            qthread_thread_free(t); // free agg task; only reallocate it if mccoy found
+          qthread_thread_free(t); // free agg task; only reallocate it if mccoy found
 #endif
+#ifdef CLONED_TASKS
+          // need to free if popped
+          if (!cloned) {
             t = node->value;
             FREE_TQNODE(node);
+          }
+#else
+          t = node->value;
+          FREE_TQNODE(node);
+#endif
             if ((t->flags & QTHREAD_REAL_MCCOY)) { // only needs to be on worker 0 for termination
                 if (worker_id == NO_WORKER) {
                     worker_id = qthread_worker(NULL);
@@ -931,18 +970,19 @@ qthread_t INTERNAL *qt_scheduler_get_thread(qt_threadqueue_t         *q,
 
                     default:
                         /* McCoy thread can only run on worker 0 */
-                        my_shepherd->stealing = 2; // no stealing
-                        MACHINE_FENCE;
+                        //my_shepherd->stealing = 0; // no stealing
+                        //MACHINE_FENCE;
                         qt_threadqueue_enqueue_yielded(q, t);
 #ifdef QTHREAD_TASK_AGGREGATION
                         t = qt_init_agg_task();
 #endif
                         continue; // keep looking
                 }
-            } else {
-                break;
             }
+        else {
+          break;
         }
+      }
     }
     return (t);
 } /*}}}*/

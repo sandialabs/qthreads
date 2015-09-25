@@ -8,6 +8,7 @@
 #include "qt_qthread_t.h" /* for qthread_t */
 #include "qt_mpool.h"
 #include "qt_filters.h"
+#include "qthread/qthread.h"
 
 typedef filter_code (*qt_threadqueue_filter_f)(qthread_t *);
 
@@ -30,6 +31,11 @@ void INTERNAL qt_threadqueue_enqueue(qt_threadqueue_t *restrict q,
                                      qthread_t *restrict        t);
 void INTERNAL qt_threadqueue_enqueue_yielded(qt_threadqueue_t *restrict q,
                                              qthread_t *restrict        t);
+#ifdef CLONED_TASKS
+void INTERNAL qt_threadqueue_enqueue_yielded_cloneable(qt_threadqueue_t *restrict q,
+                                             qthread_t *restrict        t,
+                                             aligned_t          clone_count);
+#endif
 void INTERNAL qt_threadqueue_enqueue_cache(qt_threadqueue_t         *q,
                                            qt_threadqueue_private_t *cache);
 int INTERNAL qt_threadqueue_private_enqueue(qt_threadqueue_private_t *restrict pq,

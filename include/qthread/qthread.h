@@ -232,6 +232,13 @@ int qthread_fork_to_local_priority(qthread_f             f,
                                    const void           *arg,
                                    aligned_t            *ret,
                                    qthread_shepherd_id_t shepherd);
+#ifdef CLONED_TASKS
+int qthread_fork_clones_to_local_priority(qthread_f             f,
+                                   const void           *arg,
+                                   aligned_t            *ret,
+                                   qthread_shepherd_id_t shepherd,
+                                   aligned_t            clone_count);
+#endif /* CLONED_TASKS */
 #endif /* ifdef QTHREAD_LOCAL_PRIORITY */
 
 int qthread_fork_precond_to(qthread_f             f,
@@ -297,7 +304,17 @@ enum _qthread_features {
 #define QTHREAD_SPAWN_PC_SYNCVAR_T  (1 << SPAWN_PC_SYNCVAR_T)
 #define QTHREAD_SPAWN_AGGREGABLE    (1 << SPAWN_AGGREGABLE)
 #define QTHREAD_SPAWN_LOCAL_PRIORITY (1 << SPAWN_LOCAL_PRIORITY)
-
+#ifdef CLONED_TASKS
+int qthread_spawn_cloneable(qthread_f             f,
+                  const void           *arg,
+                  size_t                arg_size,
+                  void                 *ret,
+                  size_t                npreconds,
+                  void                 *preconds,
+                  qthread_shepherd_id_t target_shep,
+                  unsigned int          feature_flag,
+                  aligned_t             clone_count);
+#endif
 int qthread_spawn(qthread_f             f,
                   const void           *arg,
                   size_t                arg_size,
