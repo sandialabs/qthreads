@@ -1,0 +1,2 @@
+language: c
+script: sh autogen && ./configure && make && make check
