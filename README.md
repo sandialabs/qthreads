@@ -1,6 +1,7 @@
 [![Build Status](https://travis-ci.org/Qthreads/qthreads.svg?branch=master)](https://travis-ci.org/Qthreads/qthreads)
 
-% QTHREADS!
+QTHREADS!
+=========
 
 The qthreads API is designed to make using large numbers of threads convenient
 and easy. The API maps well to both MTA-style threading and PIM-style
@@ -22,8 +23,7 @@ and do not generally migrate.
 The API includes utility functions for making threaded loops, sorting, and
 similar operations convenient.
 
-Performance
-===========
+##Performance
 
 On a machine with approximately 2GB of RAM, this library was able to spawn and
 handle 350,000 qthreads. With some modifications (mostly in stack-size), it was
@@ -42,8 +42,7 @@ For information on how to use qthread or qalloc, there is A LOT of information
 in the header files (qthread.h and qalloc.h), but the primary documentation is
 man pages.
 
-FUTURELIB DOCUMENTATION (the 10-minute version)
-===============================================
+##FUTURELIB DOCUMENTATION (the 10-minute version)
 
 The most important functions in futurelib that a person is going to use are
 mt_loop and mt_loop_returns. The mt_loop function is for parallel iterations
@@ -128,17 +127,18 @@ For example, Collect<mt_loop_traits::Add> is rougly equivalent to the following 
     retval += function(args);
   }
 
-*******************************************************
+******************************************************
 
-NOTE FOR PGI USERS
+##NOTE FOR PGI USERS
 pgcc needs the -c9x flag in order to correctly process variadic macros (which
 are used in qthread.c) and the PRIuMAX format definitions (used in qalloc.c).
 Use the CFLAGS variable to add this flag. Note that pgcc's support for the full
 C90/C99 standards is lousy, so most C90/C99 features that COULD be used are
 avoided.
 
-*******************************************************
-NOTE FOR IBM XL USERS
+******************************************************
+
+##NOTE FOR IBM XL USERS
 make check will probably fail with the error:
 
 xlc++: 1501-210 command option t contains an incorrect subargument
@@ -154,17 +154,15 @@ it would work just fine.
 
 *******************************************************
 
-NOTE FOR IBM BLUEGENE/P GCC USERS
-=================================
+##NOTE FOR IBM BLUEGENE/P GCC USERS
 Old versions of GCC do not handle builtin atomics correctly on this platform.
 The non-existence of `__sync_fetch_and_add()` cannot be reliably detected, so to
 use those compilers, you probably need to configure with
 `--disable-internal-spinlock`.
 
-******************************************************
+*******************************************************
 
-NOTE FOR TILERA USERS
-=====================
+##NOTE FOR TILERA USERS
 The Tilera cache coherency protocols, as of the TileGX boards, appear to be
 somewhat buggy for large multithreaded programs. And by buggy I mean they cause
 kernel panics (at least, I haven't been able to demonstrate data corruption
