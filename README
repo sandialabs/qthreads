@@ -1,3 +1,5 @@
+[![Build Status](https://travis-ci.org/Qthreads/qthreads.svg?branch=master)](https://travis-ci.org/Qthreads/qthreads)
+
 QTHREADS!
 
 The qthreads API is designed to make using large numbers of threads convenient
