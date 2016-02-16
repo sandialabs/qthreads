@@ -17,6 +17,7 @@ libqthread_la_SOURCES = \
 	feb.c \
 	hazardptrs.c \
 	io.c \
+	performance.c \
 	locks.c \
 	qalloc.c \
 	qloop.c \

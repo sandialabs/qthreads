@@ -2,6 +2,10 @@
 #define QT_PERFORMANCE_H
 #include<stddef.h>
 
+#ifndef PERFDBG
+#  define PERFDBUG 0
+#endif
+
 typedef unsigned char bool;
 typedef size_t qtperfid_t;
 typedef unsigned long long qtperfcounter_t;
@@ -41,6 +45,7 @@ typedef struct qtperf_iterator_s {
 
 qtstategroup_t* qtperf_create_state_group(size_t num_states, const char** state_names);
 qtperfdata_t* qtperf_create_perfdata(qtstategroup_t* state_group);
+qttimestamp_t qtperf_now(void);
 void qtperf_start(void);
 void qtperf_stop(void);
 void qtperf_free_data(void);
@@ -50,5 +55,24 @@ void qtperf_iter_begin(qtperf_iterator_t** iter);
 qtperfdata_t* qtperf_iter_next(qtperf_iterator_t** iter);
 qtperfdata_t* qtperf_iter_deref(qtperf_iterator_t* iter);
 qtperf_iterator_t* qtperf_iter_end(void);
+
+#ifdef QTPERF_TESTING
+#include<stdarg.h>
+#include<stddef.h>
+#include<setjmp.h>
+#include<string.h>
+#include<cmocka.h>
+#include<ctype.h>
+bool qtp_validate_names(const char** names, size_t count);
+bool qtp_validate_state_group(qtstategroup_t*);
+bool qtp_validate_perfdata(qtperfdata_t*);
+bool qtp_validate_perf_list(void);
+bool qtp_validate_group_list(void);
+// This function checks the data structures used by qtperf to ensure
+// that they are consistent. You should be able to call it at any
+// time, as long as another call into qtperf is not running
+// concurrently.
+bool qtperf_check_invariants(void);
+#endif
 
 #endif
