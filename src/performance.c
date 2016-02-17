@@ -1,7 +1,9 @@
 #include<qthread/performance.h>
+#include<qthread/logging.h>
 #include<string.h>
 #include<strings.h>
 #include<stdlib.h>
+#include<time.h>
 
 #ifdef QTHREAD_PERFORMANCE
 
@@ -95,6 +97,14 @@ void qtperf_free_perf_list(){
   }
 }
 
+qttimestamp_t qtperf_now(){
+  qttimestamp_t time=0;
+  struct timespec ts;
+  clock_gettime(CLOCK_MONOTONIC_RAW, &ts);
+  time = ts.tv_sec * 1000000 + ts.tv_nsec/1000;
+  return time;
+}
+
 void qtperf_start(){
   _collecting = 1;
 }
@@ -110,11 +120,26 @@ void qtperf_free_data(){
 
 const char* qtperf_state_name(qtstategroup_t* group, qtperfid_t state){
   if(state >= group->num_states){
-    return "ERROR - STATE NAME OUT OF BOUNDS FOR GROUP";
+    logargs(LOGERR, "ERROR - STATE NUMBER %lu OUT OF BOUNDS FOR GROUP", state);
+    return "ERROR";
   } else if(group->state_names == NULL){
-    return "ERROR - GROUP DOES NOT HAVE STATE NAMES DEFINED";
+    log(LOGERR, "ERROR - GROUP DOES NOT HAVE STATE NAMES DEFINED");
+    return "ERROR";
   }
   return group->state_names[state];
+}
+
+void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state){
+  qttimestamp_t now = qtperf_now();
+  if(state >= data->state_group->num_states) {
+    logargs(LOGERR,"State number %lu is out of bounds!", state);
+    return;
+  }
+  if(data->current_state != QTPERF_INVALID_STATE) {
+    data->perf_counters[data->current_state] += now - data->time_entered;
+  }
+  data->time_entered= now;
+  data->current_state = state;
 }
 
 void qtperf_iter_begin(qtperf_iterator_t**iter){
