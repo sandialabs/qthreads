@@ -7,8 +7,6 @@
 
 #ifdef QTHREAD_PERFORMANCE
 
-#define QTDBG 1
-
 qtperf_perf_list_t* _counters=NULL;
 qtperf_perf_list_t** _next_counter = NULL;
 qtperf_group_list_t* _groups=NULL;
@@ -23,7 +21,7 @@ void qtperf_free_perf_list(void);
 
 qtstategroup_t* qtperf_create_state_group(size_t num_states, const char** state_names) {
   qtperf_group_list_t* current = NULL;
-  qtlog(QTDBG, "create_state_group");
+  qtlog(PERFDBG, "create_state_group");
   if(_next_group == NULL){
     _next_group = &_groups;
   }
@@ -40,13 +38,13 @@ qtstategroup_t* qtperf_create_state_group(size_t num_states, const char** state_
       current->group.state_names[i] = strdup(state_names[i]);
     }
   }
-  qtlog(QTDBG, "create_state_group done");
+  qtlog(PERFDBG, "create_state_group done");
   return &current->group;
 }
 
 /* INTERNAL - free allocated memory from a stategroup structure */
 void qtperf_free_state_group(qtstategroup_t* group) {
-  qtlog(QTDBG,"free_state_group");
+  qtlog(PERFDBG,"free_state_group");
   if(group->state_names != NULL){
     size_t i=0;
     for(i=0; i<group->num_states; i++){
@@ -56,26 +54,26 @@ void qtperf_free_state_group(qtstategroup_t* group) {
     free(group->state_names);
     group->state_names = NULL;
   }
-  qtlog(QTDBG,"free_state_group done");
+  qtlog(PERFDBG,"free_state_group done");
 }
 /* Free the entire list of state groups */
 void qtperf_free_group_list(){
   qtperf_group_list_t* next=NULL;
-  qtlog(QTDBG,"free_group_list");
+  qtlog(PERFDBG,"free_group_list");
   while(_groups != NULL){
     next = _groups->next;
     qtperf_free_state_group(&_groups->group);
     _groups->next = NULL;
     _groups = next;
   }
-  qtlog(QTDBG,"free_group_list done");
+  qtlog(PERFDBG,"free_group_list done");
 }
 
 
 
 qtperfdata_t* qtperf_create_perfdata(qtstategroup_t* state_group) {
   qtperf_perf_list_t* current=NULL;
-  qtlog(QTDBG,"create_perfdata");
+  qtlog(PERFDBG,"create_perfdata");
   if(_next_counter == NULL){
     _next_counter = &_counters;
   }
@@ -90,28 +88,28 @@ qtperfdata_t* qtperf_create_perfdata(qtstategroup_t* state_group) {
   current->performance_data.time_entered=0;
   current->performance_data.state_group = state_group;
   current->performance_data.num_states = state_group->num_states;
-  qtlog(QTDBG,"create_perfdata done");
+  qtlog(PERFDBG,"create_perfdata done");
   return &current->performance_data;
 }
 
 void qtperf_free_perfdata(qtperfdata_t* perfdata) {
-  qtlogargs(QTDBG,"free_perfdata perfdata=%p", perfdata);
+  qtlogargs(PERFDBG,"free_perfdata perfdata=%p", perfdata);
   free(perfdata->perf_counters);
   perfdata->perf_counters = NULL;
   perfdata->state_group = NULL;
-  qtlog(QTDBG,"free_perfdata done");
+  qtlog(PERFDBG,"free_perfdata done");
 }
 
 void qtperf_free_perf_list(){
   qtperf_perf_list_t* next = NULL;
-  qtlog(QTDBG,"free_perf_list");
+  qtlog(PERFDBG,"free_perf_list");
   while(_counters != NULL){
     next = _counters->next;
     qtperf_free_perfdata(&_counters->performance_data);
     _counters->next = NULL;
     _counters = next;
   }
-  qtlog(QTDBG,"free_perf_list done");
+  qtlog(PERFDBG,"free_perf_list done");
 }
 
 qttimestamp_t qtperf_now(){
@@ -196,7 +194,7 @@ qtperf_iterator_t* qtperf_iter_end(){
 bool qtp_validate_names(const char** names, size_t count){
   size_t i=0;
   bool valid = 1;
-  qtlog(QTDBG,"validate_names");
+  qtlog(PERFDBG,"validate_names");
   for(i=0; i<count; i++){
     size_t len=0;
     bool printable=1;
@@ -207,25 +205,25 @@ bool qtp_validate_names(const char** names, size_t count){
     assert_true(printable && len < MAX_NAME_LENGTH && len > 0 && names[i][len] == '\0');
   }
   
-  qtlog(QTDBG,"validate_names done");
+  qtlog(PERFDBG,"validate_names done");
   return valid;
 }
 
 bool qtp_validate_state_group(qtstategroup_t* group){
   bool valid = group->num_states > 0;
   bool valid_names = 1;
-  qtlog(QTDBG,"validate_state_group");
+  qtlog(PERFDBG,"validate_state_group");
   valid_names = qtp_validate_names((const char**)group->state_names, group->num_states);
   assert_true(group->num_states > 0);
   valid = valid && ((group->state_names == NULL) || valid_names);
   assert_true((group->state_names == NULL) || valid_names);
-  qtlog(QTDBG,"validate_perfdata done");
+  qtlog(PERFDBG,"validate_perfdata done");
   return valid;
 }
 
 bool qtp_validate_perfdata(qtperfdata_t* data){
   bool valid = 1;
-  qtlogargs(QTDBG,"validate_perfdata data=%p",data);
+  qtlogargs(PERFDBG,"validate_perfdata data=%p",data);
   assert_true(data != NULL);
   assert_true(data->state_group != NULL);
   valid = data != NULL && data->state_group != NULL;
@@ -238,14 +236,14 @@ bool qtp_validate_perfdata(qtperfdata_t* data){
                     || (data->current_state != QTPERF_INVALID_STATE && data->time_entered > 0));
   assert_true((data->current_state == QTPERF_INVALID_STATE && data->time_entered==0)
               || (data->current_state != QTPERF_INVALID_STATE && data->time_entered > 0));
-  qtlog(QTDBG,"validate_perfdata done");
+  qtlog(PERFDBG,"validate_perfdata done");
   return valid;
 }
 
 bool qtp_validate_perf_list(void){
   qtperf_perf_list_t* current = _counters;
   bool valid=1;
-  qtlogargs(QTDBG,"validate_perf_list counters=%p", _counters);
+  qtlogargs(PERFDBG,"validate_perf_list counters=%p", _counters);
   if(current == NULL){
     assert_true(_next_counter == &_counters || _next_counter == NULL);
     valid = valid && (_next_counter == &_counters || _next_counter == NULL);
@@ -258,7 +256,7 @@ bool qtp_validate_perf_list(void){
     }
     current = current->next;
   }
-  qtlog(QTDBG,"validate_perf_list done");
+  qtlog(PERFDBG,"validate_perf_list done");
   return valid;
 }
 //qtperf_perf_list_t* _counters=NULL;
@@ -270,7 +268,7 @@ bool qtp_validate_perf_list(void){
 bool qtp_validate_group_list(void){
   qtperf_group_list_t* current = _groups;
   bool valid=1;
-  qtlog(QTDBG,"validate_group_list");
+  qtlog(PERFDBG,"validate_group_list");
   if(current == NULL){
     assert_true(_next_group == &_groups || _next_group == NULL);
     valid = valid && (_next_group==&_groups || _next_group == NULL);
@@ -283,14 +281,14 @@ bool qtp_validate_group_list(void){
     }
     current = current->next;
   }
-  qtlog(QTDBG,"validate_group_list done");
+  qtlog(PERFDBG,"validate_group_list done");
   return valid;
 }
 
 bool qtperf_check_invariants(void) {
-  qtlog(QTDBG,"check_invariants");
+  qtlog(PERFDBG,"check_invariants");
   assert_true(_collecting == 0 || _collecting == 1);
-  qtlog(QTDBG,"check_invariants done");
+  qtlog(PERFDBG,"check_invariants done");
   return (_collecting == 0 || _collecting == 1) && qtp_validate_perf_list() && qtp_validate_group_list();
 }
 
