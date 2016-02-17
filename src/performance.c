@@ -7,6 +7,8 @@
 
 #ifdef QTHREAD_PERFORMANCE
 
+#define QTDBG 1
+
 qtperf_perf_list_t* _counters=NULL;
 qtperf_perf_list_t** _next_counter = NULL;
 qtperf_group_list_t* _groups=NULL;
@@ -35,6 +37,7 @@ qtstategroup_t* qtperf_create_state_group(size_t num_states, const char** state_
     current->group.state_names = malloc(sizeof(char*)*num_states);
     for(i=0; i<num_states; i++){
       current->group.state_names[i] = strdup(state_names[i]);
+      qtlogargs(QTDBG, "Added state name: %s (%lu)", current->group.state_names[i], i);
     }
   }
   return &current->group;
@@ -174,14 +177,19 @@ qtperf_iterator_t* qtperf_iter_end(){
 bool qtp_validate_names(const char** names, size_t count){
   size_t i=0;
   bool valid = 1;
+  qtlogargs(QTDBG, "count=%lu", count);
   for(i=0; i<count; i++){
     size_t len=0;
     bool printable=1;
     for(len=0; names[i][len] != '\0' && len < MAX_NAME_LENGTH; len++){
       printable = printable && isprint(names[i][len]);
     }
-    valid &= printable && len < MAX_NAME_LENGTH && len > 0 && names[i][len-1] == '\0';
-    assert_true(printable && len < MAX_NAME_LENGTH && len > 0 && names[i][len-1] == '\0');
+    if(!printable){
+      qtlogargs(QTDBG, "Statename not printable: %s (%lu)", names[i], i);
+    }
+    //qtlogargs(QTDBG, "statename len: %lu", len);
+    valid &= printable && len < MAX_NAME_LENGTH && len > 0 && names[i][len] == '\0';
+    assert_true(printable && len < MAX_NAME_LENGTH && len > 0 && names[i][len] == '\0');
   }
   return valid;
 }
@@ -221,6 +229,7 @@ bool qtp_validate_perf_list(void){
       assert_true(_next_counter == &current->next);
       valid = valid && _next_counter == &current->next;
     }
+    current = current->next;
   }
   return valid;
 }
@@ -243,6 +252,7 @@ bool qtp_validate_group_list(void){
       assert_true(_next_group == &current->next);
       valid = valid && _next_group== &current->next;
     }
+    current = current->next;
   }
   return valid;
 }
