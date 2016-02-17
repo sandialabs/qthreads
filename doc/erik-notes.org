@@ -40,8 +40,6 @@
    This is an attempt to provide the same functionality as futurelib,
    but with a strictly C interface (no templates).
 
-* Brian's Cell 662-418-0503
-  
 * Implementation plan
 ** Expand thread state enum
    The thread state enum should be expanded to include information
