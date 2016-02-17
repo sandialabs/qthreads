@@ -3,7 +3,7 @@
 #include<stddef.h>
 
 #ifndef PERFDBG
-#  define PERFDBG 0
+#  define PERFDBUG 0
 #endif
 
 typedef unsigned char bool;
