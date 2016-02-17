@@ -52,4 +52,23 @@ qtperfdata_t* qtperf_iter_next(qtperf_iterator_t** iter);
 qtperfdata_t* qtperf_iter_deref(qtperf_iterator_t* iter);
 qtperf_iterator_t* qtperf_iter_end(void);
 
+#ifdef QTPERF_TESTING
+#include<stdarg.h>
+#include<stddef.h>
+#include<setjmp.h>
+#include<string.h>
+#include<cmocka.h>
+#include<ctype.h>
+bool qtp_validate_names(const char** names, size_t count);
+bool qtp_validate_state_group(qtstategroup_t*);
+bool qtp_validate_perfdata(qtperfdata_t*);
+bool qtp_validate_perf_list(void);
+bool qtp_validate_group_list(void);
+// This function checks the data structures used by qtperf to ensure
+// that they are consistent. You should be able to call it at any
+// time, as long as another call into qtperf is not running
+// concurrently.
+bool qtperf_check_invariants(void);
+#endif
+
 #endif
