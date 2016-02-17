@@ -2,6 +2,10 @@
 #define QT_PERFORMANCE_H
 #include<stddef.h>
 
+#ifndef PERFDBG
+#  define PERFDBG 0
+#endif
+
 typedef unsigned char bool;
 typedef size_t qtperfid_t;
 typedef unsigned long long qtperfcounter_t;
