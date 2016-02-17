@@ -120,10 +120,10 @@ void qtperf_free_data(){
 
 const char* qtperf_state_name(qtstategroup_t* group, qtperfid_t state){
   if(state >= group->num_states){
-    logargs(LOGERR, "ERROR - STATE NUMBER %lu OUT OF BOUNDS FOR GROUP", state);
+    qtlogargs(LOGERR, "ERROR - STATE NUMBER %lu OUT OF BOUNDS FOR GROUP", state);
     return "ERROR";
   } else if(group->state_names == NULL){
-    log(LOGERR, "ERROR - GROUP DOES NOT HAVE STATE NAMES DEFINED");
+    qtlog(LOGERR, "ERROR - GROUP DOES NOT HAVE STATE NAMES DEFINED");
     return "ERROR";
   }
   return group->state_names[state];
@@ -132,7 +132,7 @@ const char* qtperf_state_name(qtstategroup_t* group, qtperfid_t state){
 void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state){
   qttimestamp_t now = qtperf_now();
   if(state >= data->state_group->num_states) {
-    logargs(LOGERR,"State number %lu is out of bounds!", state);
+    qtlogargs(LOGERR,"State number %lu is out of bounds!", state);
     return;
   }
   if(data->current_state != QTPERF_INVALID_STATE) {
@@ -167,5 +167,91 @@ qtperfdata_t* qtperf_iter_next(qtperf_iterator_t** iter){
 qtperf_iterator_t* qtperf_iter_end(){
   return NULL;
 }
+
+#ifdef QTPERF_TESTING
+
+#define MAX_NAME_LENGTH 128
+bool qtp_validate_names(const char** names, size_t count){
+  size_t i=0;
+  bool valid = 1;
+  for(i=0; i<count; i++){
+    size_t len=0;
+    bool printable=1;
+    for(len=0; names[i][len] != '\0' && len < MAX_NAME_LENGTH; len++){
+      printable = printable && isprint(names[i][len]);
+    }
+    valid &= printable && len < MAX_NAME_LENGTH && len > 0 && names[i][len-1] == '\0';
+    assert_true(printable && len < MAX_NAME_LENGTH && len > 0 && names[i][len-1] == '\0');
+  }
+  return valid;
+}
+
+bool qtp_validate_state_group(qtstategroup_t* group){
+  bool valid = group->num_states > 0;
+  bool valid_names = qtp_validate_names((const char**)group->state_names, group->num_states);
+  assert_true(group->num_states > 0);
+  valid = valid && ((group->state_names == NULL) || valid_names);
+  assert_true((group->state_names == NULL) || valid_names);
+  return valid;
+}
+
+bool qtp_validate_perfdata(qtperfdata_t* data){
+  bool valid = qtp_validate_state_group(data->state_group);
+  valid = valid && (data->num_states > 0);
+  assert_true(data->num_states > 0);
+  valid = valid && data->perf_counters != NULL;
+  assert_true(data->perf_counters != NULL);
+  valid = valid && ((data->current_state == QTPERF_INVALID_STATE && data->time_entered==0)
+                    || (data->current_state != QTPERF_INVALID_STATE && data->time_entered > 0));
+  assert_true((data->current_state == QTPERF_INVALID_STATE && data->time_entered==0)
+              || (data->current_state != QTPERF_INVALID_STATE && data->time_entered > 0));
+  return valid;
+}
+
+bool qtp_validate_perf_list(void){
+  qtperf_perf_list_t* current = _counters;
+  bool valid=1;
+  if(current == NULL){
+    assert_true(_next_counter == &_counters || _next_counter == NULL);
+    valid = valid && (_next_counter == &_counters || _next_counter == NULL);
+  }
+  while(current != NULL) {
+    valid = valid && qtp_validate_perfdata(&current->performance_data);
+    if(current->next == NULL){
+      assert_true(_next_counter == &current->next);
+      valid = valid && _next_counter == &current->next;
+    }
+  }
+  return valid;
+}
+//qtperf_perf_list_t* _counters=NULL;
+//qtperf_perf_list_t** _next_counter = NULL;
+//qtperf_group_list_t* _groups=NULL;
+//qtperf_group_list_t** _next_group=NULL;
+//bool _collecting=0;
+
+bool qtp_validate_group_list(void){
+  qtperf_group_list_t* current = _groups;
+  bool valid=1;
+  if(current == NULL){
+    assert_true(_next_group == &_groups || _next_group == NULL);
+    valid = valid && (_next_group==&_groups || _next_group == NULL);
+  }
+  while(current != NULL){
+    valid = valid & qtp_validate_state_group(&current->group);
+    if(current->next == NULL){
+      assert_true(_next_group == &current->next);
+      valid = valid && _next_group== &current->next;
+    }
+  }
+  return valid;
+}
+
+bool qtperf_check_invariants(void) {
+  assert_true(_collecting == 0 || _collecting == 1);
+  return (_collecting == 0 || _collecting == 1) && qtp_validate_perf_list() && qtp_validate_group_list();
+}
+
+#endif
 
 #endif // ifdef QTHREAD_PERFORMANCE

@@ -1,0 +1,1729 @@
+
+* QThreads
+** Basic thread control
+   Anonymous threads, can't be accessed from other threads except
+   through return value.
+
+*** Shepherds
+    lightweight threads are organized under "shepherds" which I think
+    are approximately equivalent to locales for chapel (i.e. the place
+    where the thread and its data live).
+
+*** Synchronization and locking
+    Provides both mutex and full/empty bit locking primitives. Don't
+    use them together on the same data, as there may be interactions
+    and the result is undefined.
+
+    Unix implementation of FEB is via a hash table that holds "full"
+    addresses and is guarded by a mutex lock (so it's still basically
+    a global lock, eliminating the benefits of the lock-free FEB
+    semantics). The table is striped into 32 parts through, so with
+    luck up to 32 simultaneous accesses are possible without
+    contention.
+
+** commands for resource-limit-aware threads (*Futures*)
+   You can tell qthreads that it should never make more than some
+   arbitrary number of threads, as a simple way to protect against
+   running out of memory or other resources. Threads that respect
+   these limits are called *futures*.
+
+   Operations are analogous to the basic thread operations, except
+   that they block until the resources are available to continue if
+   everything's used up. For example, forking a new thread when there
+   are already the max count of threads will block until one of the
+   existing threads returns.
+** c++ threaded loops interface (futurelib)
+   This is a templated interface to qthread futures intended to
+   simplify various looping scenarios by providing a higher level
+   abstraction.
+** c threaded loops interface
+   This is an attempt to provide the same functionality as futurelib,
+   but with a strictly C interface (no templates).
+
+* Brian's Cell 662-418-0503
+  
+* Implementation plan
+** Expand thread state enum
+   The thread state enum should be expanded to include information
+   about exactly what kind of operation is causing suspension. It
+   currently indicates feb blocks, yields, parent yields, etc. It
+   should also indicate whether the IO blocks are due to read or write
+   operations. We need to look at the portals and chapel runtimes to
+   see how to instrument for their communications models as well. It
+   would be good to have that information included as part of the
+   performance sampling.
+** Sampling from the shepherd
+   in qthread.c:485 we have the main loop of the shepherd. The
+   shepherd calls into the scheduler to implement a waiting thread
+   queue, but otherwise the actual thread activation happens in the
+   shepherd.
+
+   This implementation will use the shepherd to sample from the
+   thread_state values of all threads every n shepherd ticks (one tick
+   equals one iteration of the shepherd workhorse loop). For each
+   thread, a counter will be incremented corresponding to the thread
+   state it's in when sampled by the shepherd.
+
+   The data gathering will continue until a *sample period* is
+   expired, which will be expressed again in shepherd ticks (or it
+   could be in seconds alternatively). This should typically be
+   thousands of times slower than the actual sampling. When this
+   happens, the current totals for all thread state counters will be
+   saved to a new sample, and the counters will be reset. At the end
+   of the run, the data is provided in the form of a list of saved
+   samples that contains the counts for each thread state for each
+   thread during each interval.
+** Handling thread moves
+   Threads can be shifted around between shepherds in qthreads. The
+   thread_id field remains constant regardless of which shepherd it's
+   on though, so we can use this to reassemble a history of a thread's
+   progress. Each shepherd should therefore collect history of all of
+   the threads it currently controls at any given time. When a thread
+   is moved away from the shepherd, it simply stops sampling that
+   thread_id.  At the end of the run, all shepherds return their
+   thread_id/time samples for reassembly into a complete history for
+   each thread. Aggregating this, we can also get some insight into
+   how the shepherd itself effects thread performance.
+** Data field
+   The thread state sampling will be sufficient to tell us how much
+   time each thread is spending in various yielded states versus
+   actually running. However, we may want more detail about what the
+   thread is actually attempting to do at these times. To support
+   this, we can add a machine word data field to the thread state
+   object that is settable by the user. The user would then set this
+   field to be some value that corresponds to a particular action the
+   thread is taking. This data will be recorded along with the state
+   samples by basically looking at the data*state as the actual thread
+   state (so there will be multiple "states" for each thread_state
+   value, one for each data value that is encountered in that state).
+
+   This means the data should be used like a tag, and not as an
+   arbitrary computed value. In other words, it should take on only a
+   small number of possible values, otherwise the state space will
+   explode.
+** Skip active threads
+   For this implementation, it should be possible to just skip active
+   threads entirely for the sampling process. The shepherd will
+   maintain a counter indicating the number of samples that *could*
+   have been taken, but it will only sample threads that are currently
+   stopped for some reason. At the end of the sampling interval, it
+   will write out the total possible samples along with the actual
+   sampled values for the threads. To compute the number of samples
+   that would have been active, just subtract all of the blocked
+   samples from the total possible. 
+
+   Doing this allows us to only touch threads that aren't currently
+   running, which *should* be the minority at any given time. That
+   means we're saving quite a bit of work on the sampling without
+   losing any information.
+
+   If we later add in the data field, we will lose this optimization
+   if we decide to include the data sample for active threads
+   (probably would be desirable for user-level profiling of code).
+** Sampling from the scheduler instead of the shepherd
+   If we use the [[skip active threads]] optimization, it would make sense
+   to push the sampling operation down into the scheduler. This is
+   because the scheduler already has a list of all suspended threads
+   handy, and it knows how to traverse the list. The scheduler API
+   should therefore add a "sample" method, which takes a pointer to an
+   array of thread state samples keyed by thread id, and increments
+   the appropriate counter for each suspended thread. This method
+   would be called by the shepherd according to the sampling schedule
+   configured by the user.
+
+* Instrumentation API 0.2
+  The instrumentation API allows the user to select a subset of
+  threads for performance tracking. During the run, qthreads will keep
+  track of every state change for the tracked threads, and also every
+  blocking operation, in detail.
+
+  Each blocking operation has three phases that are tracked:
+  1. request to start
+  2. start to finish
+  3. finish to awaken
+
+  Every piece of timing data in the system is collected using the same
+  basic formula: total_time += (stop_time - start_time). The
+  total_time member is the final reported statistic. The start and
+  stop times are recorded just before and just after each tracked
+  event or state change happens. When the stop time is known, the
+  total time is updated immediately.
+
+  For example, when doing a read operation:
+#+BEGIN_SRC c++
+  //Starting in worker thread
+  request_to_start__start = timestamp();
+  //this event is picked up and actually started by blocking io pool
+  request_to_start__end = timestamp();
+  request_to_start__total += request_to_start__end - request_to_start__start;
+  start_to_finish__start = request_to_start__end;
+  //io operation starts and gets blocked, then when it finishes later:
+  start_to_finish__stop = timestamp();
+  start_to_finish__total += start_to_finish__stop - start_to_finish__start;
+  finish_to_reawaken__start = start_to_finish__stop;// thread is now queued
+  // later the scheduler picks this thread up again, then:
+  finish_to_reawaken__stop = timestamp();
+  finish_to_reawaken__total += finish_to_reawaken__stop - finish_to_reawaken__start;
+#+END_SRC
+
+** Data storage
+   Data will be stored in a single flat array of perf data
+   structures. The structures will have u64 counters for each
+   performance counter that's being tracked. 
+
+   Each thread will keep its respective index in this array as a data
+   member in its runtime_state structure. When the array needs to be
+   resized, the system will lock all access to the performance data,
+   reallocate the array with twice the capacity, copy the old data
+   over, and resume. There is no need to update the threads'
+   runtime_state because the index is relative to the master array
+   pointer.
+
+   The array should not need to be locked for normal operation because
+   only one thread at a time will be accessing the performance data
+   for a given thread id. 
+
+** qthread_fork_instrumented
+   This forks a new thread and marks it as a thread to be tracked for
+   performance data. 
+
+** qthread_performance_data
+   This returns the performance data structure. This function should
+   be called only when you know that other threads will not be
+   accessing the peformance data (i.e. when all tracked threads have
+   exited).
+   
+* 9/23/2015
+** Locality issues
+   Question was whether we should look at integrating chapel's locales
+   with qthreads' shepherds. Answer is that there is probably
+   somethign being done there already in a private repo, and it's
+   called Binders. It allows external code to swap in its own
+   funcitonality to replace the qthreads locality controls.
+** Sync vars
+   Question was whether and how to integrate chapel's sync vars with
+   qthreads. Answer is that we dont' know yet, but an approach similar
+   to binders from above would probably be good.
+
+** Instrumentation
+   We want to be able to measure timing information reliably and with
+   minimal overhead from a running system. In particular, we want to
+   measure active, idle, and blocked for comms timing for each thread.
+
+   A proposal from Ryan Grant and/or Steven Olivier is to have a
+   separate thread running that polls to see what threads are
+   doing. This would indicate a statistical sampling approach with a
+   fairly predictable overhead, but the comms involved with sampling
+   non-local threads might confound the measurement to some extent.
+
+   I think I want to propose that we add a bit of code to the
+   scheduler for each locale/shepherd that directly tracks its own
+   timing information into a memory buffer as timestamps for
+   start/stop information, then at the end all of the shepherds report
+   back and the data is merged to yield an exact model of what
+   happened. This would allow us to control the sampling rate to a
+   finer degree and would probably induce less overhead on the running
+   system.
+** Communications
+   Question was whether and how chapel/qthreads/portals should
+   integrate or share communication management in the running
+   sytem. Tentative answer is that it needs to be pluggable, so that
+   different external systems can use their own comms if they want to,
+   but qthreads can support an internal one as well.
+
+*** Reorganizing code
+    Propose to split qthreads into several libraries with well-defined
+    APIs to communicate between them. Libraries proposed so far are:
+*** Basic thread management
+    This is the basic qthreads/futurelib stuff for starting, stopping,
+    and creating higher-level loops.
+*** Communication
+    Everybody wants to own communication, so it would be good if this
+    was a separate library that could be replaced with one of
+    equivalent functionality in order to implement different
+    communication models transparently.
+*** Scheduling
+    Scheduling really needs to be split off for sure. This is one of
+    the hot research areas, and it should be possible to spin up a new
+    scheduler so long as it implements a basic interface to the rest
+    of qthreads.
+*** Synchronization
+    chapel and qthreads both implement FEB semantics for sync, as well
+    as regular mutex. We would like to be able to plug in different
+    systems to qthreads to implement these functions, without
+    incurring too much overhead in terms of cross-module (dynamic)
+    function calls.
+** Immediate priority task: instrumentation
+   I'm going to investigate how to add timing instrumentation to the
+   code, with an eye toward how we should be restructuring the
+   codebase as a result of our efforts to support better separation of
+   concerns, pluggability, and instrumentation in general. The main
+   purpose of this week's effort is to become much more familiar with
+   the codebase.
+   
+   I'll be looking at the sherwood (sp?) default scheduler for this
+   work. There may be another scheduler under development already to
+   replace it, but the hope is that work done on the current one will
+   transfer easily to the new one.
+
+* 9/29/2015
+** Plan of attack
+   This code is hard to penetrate. I need some way to filter out the
+   irrelevant stuff to get to the important details quickly. Ideal
+   situation would be running the code in a debugger, finding the
+   functions that are called when a thread communicates or when its
+   execution state changes, and instrumenting them right there.
+
+   How can I find those events in a large unknown codebase though...
+
+** Grepping for 'block'
+*** feb.c 
+    intersting looking stuff that implements the full/empty bit
+    semantics. This is probably a good place to start looking for
+    communication overhead, because the threads will be blocking
+    waiting for information from other threads in the form of a
+    full/empty bit flag.
+
+*** io.c 
+    function called qt_process_blocking_call which looks like it's
+    probably interesting, given the IO context implied by the
+    filename.
+
+*** net/portals4/portals4.c
+    Look for references to recv_block_t, might give entry points for
+    communications overhead measurement within portals. Possibly,
+    follow the call chain up to see where the comms originate and
+    instrument at those points to compare other comm libs.
+
+*** qthread.c
+    look at rdata->blockedon.io. This looks like a pointer to some
+    kind of io resolution structure, and refs to this might yield good
+    places for comm overhead instrumentation.
+
+*** syncvar.c
+    full of references to blocking, not surprising given the filename.
+
+** Grep for 'yield'
+*** ds/qarray.c, qloop.c
+    lots of references to qthread_yield(), probably working up from
+    there will give places where I can instrument for timing.
+
+*** qthread.c
+    look into QTHREAD_STATE_YIELDED, QTHREAD_STATE_YIELDED_NEAR. These
+    look like control values for a state machine that is used to
+    schedule the reawakening of threads.
+
+    This looks like a state machine implementation based just on the
+    grep output, which makes me think it would be a great location in
+    which to implement sampling instrumentation (i.e. every time
+    period, loop through all threads and count up the instances of
+    each state). This would give a pretty good idea of performance,
+    but would not indicate where specific bottlenecks are.
+
+*** syscalls/sleep.c syscalls/usleep.c syscalls/nanosleep.c
+    Reimplementations of the unix syscalls for sleep? Looks like these
+    are designed to cooperatively yield and resume after the time has
+    elapsed. Not likely to be too important for instrumentation, but
+    maybe a non-intrusive place to get feet wet implementing timing
+    infrastructure.
+
+*** threadqueues/sherwood_threadqueues.c
+    controls how yielded threads are resumed. This is probably a good
+    spot for specific timing information for this scheduler. Look into
+    how these functions are called to find more general locations to
+    annotate.
+
+** Grep for 'mutex'
+   The other style of sync in qthreads is standard mutex-based stuff,
+   so this might yield something relevant.
+
+*** interfaces/chapel/tasks-qthreads.h
+    calls to qthread_mutex_lock and qthread_mutex_unlock. Those
+    functions would be good locations for timing of wait interference.
+
+
+** Possible approaches
+*** Direct function instrumentation
+**** Record every state change
+   In this approach, we'd identify locations where the thread's state
+   changes between running, blocked, etc and take a timestamp at the
+   start and end of each interval. Advantage here is granularity, big
+   disadvantage is huge overhead of data collection and analysis
+   (there are going to be a *lot* of state changes).
+
+**** Running state timers
+   We could simply keep a running total for each state, which would be
+   expressed as a fraction of total time for each thread. This would
+   be simple and fast, requiring minimal storage overhead per
+   thread. The downside here is loss of granularity, as all we'd have
+   at the end would be overall statistics, much like what the unix
+   time program provides.
+
+**** Chunked aggregate timing
+    Here we'd do the running state timers, but we'd configure it to
+    record the current value and store it every given interval
+    (e.g. once per second, record the current proportions and reset
+    them). This would increase granularity quite a bit, and would
+    induce a controllable growth in data collection. Could be a decent
+    option, depending on what they want to know.
+
+*** Indirect sampling
+   Here, instead of directly measuring time deltas between state
+   changes, we would have a sampler process that queries the threads
+   to determine what state they're in at that moment, then sum the
+   samples to get a statistical view of the proportion of time each
+   thread spent in each state during the sample window. This could be
+   done in a chunked way as with direct instrumentation in order to
+   increase time granularity.
+
+   Controlling variables here would be sample frequency (how long
+   between samples) and aggregation period (for how long do we sum
+   samples before recording the result and resetting counters?).
+
+   This would probably be the simplest style of instrumentation to
+   implement. All we would have to do is create a process that
+   periodically runs through the threads and counts up the instances
+   of each state (blocked, active, dead, etc). Very few changes to the
+   codebase would be required for this.
+
+   One option here would be to add a special performance state field,
+   with attached data field. Then we could have the stats collector
+   gather stats for each combination of performance state/data value,
+   or just record data values for each performance state. This would
+   allow us to sample at quite a bit better granularity with a pretty
+   minimal change to the code (could be ifdef'd out unless performance
+   counters are turned on). Perf state would provide more detail about
+   what state the thread is actually in (i.e. *why* it's yielded), and
+   the data field could provide something like a funciton pointer or
+   other identifying element in case we want to track specific values
+   for some subset of samples.
+
+** Proposed solution
+   Add a single field to the thread state that's used for higher
+   detail tracking of the current state of the thread. This would have
+   state values for things like active, io_read, io_write, sleep, and
+   any other values we can think of to sample. In addition, an
+   optional data field will be added to the structure that will
+   provide context to the state. This context will be settable by the
+   user of the library so that internal calls can be grouped by the
+   context, and later analyzed accordingly.
+
+   Performance data will be gathered by means of statistical sampling
+   with two intervals, one to determine the frequency of individual
+   samples, and the other to determine the amount of time to aggregate
+   counters before recording a "final sample" and resetting
+   counters. The data provided will then be a sequential set of "final
+   samples" that give a statistical view of what the process was doing
+   at any given time.
+
+   This approach allows us to introduce predictable overhead to the
+   process, and to control the amount of data that must be collected
+   for later analysis. It could be as little as one sum per
+   performance counter per thread, or as much as a direct record of
+   all samples for all threads (very impractical for almost all
+   scenarios).
+
+   The shepherd process will be responsible for doing the sampling, so
+   that no communication overhead is incurred by the instrumentation
+   system while the application is running. At the end, the sheperds
+   will combine their respective data to generate a final report that
+   includes all threads on all shepherds for the duration of the run.
+* 9/30/2015
+** Implementation idea - only count queued threads
+   There should be no need to sample threads that are actually active,
+   which would hopefully be the majority of threads at any given
+   time. By running through the thread queue of blocked or otherwised
+   stopped threads only, and assuming that any thread not in that
+   queue must be active, it should be possible to cut the amount of
+   sampling work down by quite a bit.
+
+** qthread.c: 485 Workhorse Loop
+   This looks like the place where the action needs to be for stats
+   collection. This is the master loop for the shepherd process, which
+   seems to be where the thread management all occurs. I would expect
+   to see this thing driving the schedulers and other code related to
+   suspending and resuming threads.
+   
+** Scheduler
+   The shepherd is responsible for actually controlling the execution
+   of the threads. It appears that the scheduler just maintains a
+   queue, which is used by the shepherd to pick which thread to
+   activate next.
+
+** XXX Problem with plan
+   Threads can be moved between shepherds. The stats handling system
+   will have to be able to handle this gracefully without inducing
+   additional communication overhead.
+
+   The thread_id of a thread remains constant across shepherd changes,
+   so if we just have each shepherd record samples for each thread_id
+   they currently own, then merge all of the results at the end, this
+   should be okay.
+* 10/6/2015
+  Today I'm going to try to build a tiny app using qthreads that I can
+  use to test my instrumentation extensions. This will serve two
+  purposes, first, to get me more familiar with the qthreads API, and
+  second, to give me a basis for performance testing that's easy to
+  tweak.
+  
+  playing with examples from the test directory has yielded some
+  insights:
+** Something is weird about thread ids
+   Either the shepherd doesn't actually see all of the threads, or
+   many of the examples don't set the thread id. In most examples, the
+   only thread that ever gets sampled by the shepherd is id 0.
+
+   This is not universally true, but seems to be the case for almost
+   all of the tests.
+
+** No thread ever sampled while active
+   I don't know if it's because of the extremely short run time of
+   each thread or if there's some other explanation, but there has
+   never yet been a thread sampled whose state was
+   QTHREAD_STATE_RUNNING.
+
+   Looking at the shepherd more closely, I note that the running state
+   is never mentioned in the switch statement, so apparently the
+   scheduler will omit threads from the selection that are happily
+   running (makes sense). So, I need to do my sampling in the
+   scheduler rather than in the shepherd.
+
+** Sampling the threadqueue
+   in qthread.c:505 the threadqueue is initialized. This is a linked
+   list of qt_threadqueue_node_t structs, each of which has a next and
+   prev member. I believe that traversing this list during each sample
+   period will yield the data I'm looking for at this point.
+
+   The only question is whether sampling like this will end up
+   outperforming taking a direct log of state changes. I *think* it
+   will, because the overhead of sampling is basically n *
+   sample_rate, where n is number of threads. If I do a direct log, it
+   will be n * state_change_rate, which I think will be higher than
+   sample_rate in almost all cases. There are compute intensive tasks
+   that might have a multitude of threads that never block though, in
+   which case this assumption will be false.
+
+   In order to do direct sampling, I would need to instrument all
+   functions in qthread that can cause a thread to block, so that they
+   trigger a state change tracker. When the state change tracker is
+   triggered, it will have to sample the clock, add the time
+   difference between the last sample and the current sample to the
+   total for the current state, replace the current sample timestamp,
+   and update the current state. If that is done every time the state
+   changes, we should end up with an accurate view of how much time
+   was spent in each state for the life of the thread. If most threads
+   rarely block, this will be a big improvement over sampling. If
+   threads block frequently, this will be less efficient.
+* 10/7/2015
+  Phone number 505-294-5233
+
+** Three pots of money
+    NW guys are looking at rewriting to make better use of task parallel
+    systems. Decision by 2019. Infinite money. My work fits here.
+
+    DOE office of science "express project". limited money. Probably fits here too
+
+    wholesale memories WFO - specific to do with chapel. $70-80k. My
+    work might map to this because it's directly useful to chapel.
+
+    PMF stuff: Contributing to ATDM, Oscar, WFO (SPP = strategic
+    partnership program).
+
+** what kind of instrumentation
+   want logging style data of task switches.
+
+   Probably need to talk to Steven about instrumentation questions.
+   George also.
+
+
+** Strategy going forward
+   It sounds like they want to have more metadata regarding which
+   tasks are running in which workers, and in general who is spawning
+   whom. This kind of data really needs to be logged rather than
+   sampled.
+
+   However, I think the thread state sampling could be added to this
+   as an option with little extra effort, with the result that we
+   would have insight into what's happening *inside* the threads as
+   well as what's happening *between* them.
+
+* Followup thoughts on log-style performance counters
+  I think that log-based performance tracking could be done almost as
+  efficiently as sample-based, if a few techniques are employed.
+** Aggregate high-thoughput data streams
+   We can't afford to log and record a timestamp for every thread
+   state transition. The overhead for that would be extreme. However,
+   we could aggregate time spent in each state by keeping a running
+   total in a set of counters on a per-thread basis. Here's how I'd do
+   it:
+
+   Each thread has an array of time delta values. Initially they are
+   all zero. Each thread also has a timestamp value to indicate what
+   the last timestamp was. Upon each state transition of the thread
+   from current_state to next_state, a timestamp will be taken. The
+   previous timestamp value is subtracted from the new timestamp, and
+   the resulting time delta is added to the current_state time
+   counter. The thread's state is then set to next_state, and the
+   timestamp is set to the new timestamp.
+
+   In the event that a transition is lost, a catch-all time delta slot
+   can be used. This situation is detectable by noting that the
+   thread's current state is not equal to its last sampled state. When
+   that happens, the time delta will be recorded as usual, but added
+   to the unknown_state time slot.
+
+   The resource consumption of this will be:
+   theta(n t) cpu, where n = threads, t = average state trans per thread
+   theta(n) memory, where n = threads
+
+** Record a log of all fork and join operations
+   Every time a thread is forked, record the parent id and the child
+   id with a timestamp. Record a timestamp every time a thread is
+   terminated.
+
+   resource consumption of this will be:
+   theta(f) cpu, f = number of forks
+   theta(n) memory, n=number of threads
+
+** Instrumenting FEBs
+   The FEB semantics could be directly instrumented if an atomic
+   increment counter could be added to the access procedure. When
+   writing to fill the FEB, the counter would be incremented. When
+   reading to empty it, the current value would be recorded. That
+   allows us to know what piece of data was sent where. When reading
+   without emptying, we still know which piece of data was read.
+
+** Visualization
+*** one-pixel trace
+    Draw the task tree as a horizontal stack of parallel traces. When a
+    task forks, it splits into two traces, with the new one taking a
+    color related to the parent's task.
+    
+*** treemap view
+    Draw a voronoi treemap of the task tree. Each leaf in the treemap
+    is a task, and the task is subdivided into relative proportions of
+    time spent in each state. Tasks are sized according to their total
+    proportion of time spent compared with other tasks under the same
+    parent. Parents are sized according to their own time plus all
+    child tasks.
+    
+*** Charts
+    Interactive way to graph expressions against other expressions in
+    1, 2, and 3 dimensions.
+
+*** Bacon tree
+    Each task is a strip of bacon, with stripes whose widths
+    correspond to amount of time spent in various states during each
+    sample interval. Tasks are the leaves on a tree whose structure
+    reflects the parent/child task relationship from the forking
+    operations. Time runs from top to bottom, and tasks are placed and
+    sized so that they start and stop at the appropriate times
+    relative to each other (so you can see what was happening in
+    parallel).
+
+    Might be possible to highlight inter-thread communication here by
+    drawing some kind of bridge between tasks that are
+    communicating. This would have to be done by tracking which FEB
+    they are writing and reading and then joining the tasks by FEB
+    address. This would require an atomic counter increment for each
+    FEB so that we could correctly sequence and attribute reads and
+    writes, otherwise the parallellism will make it impossible to
+    really see who got what when.
+
+* Features for the rewrite
+  These are features that I think we need to support. They may already
+  be supported in the existing code, but I didn't find them after a
+  brief search.
+
+** Debugging support
+   We need to have a thread-safe output function for debugging that
+   has nice features.
+
+** Reentrant thread spawning
+   It would be really nice to support having worker threads spawn more
+   worker threads. As it is, it's only possible for the master thread
+   to spawn workers, which complicates the logic of unknown-sized
+   computations significantly because it requires a lot of
+   inter-thread communication about jobs that are cropping up. Being
+   able to do this directly from where the job is discovered would be
+   a big win for simplicity.
+
+   The main things preventing this currently are the issues of stack
+   allocation and exclusion on the shared state in the scheduling
+   system. In order to make it possible to spawn new threads from
+   anywhere, we would need to make a special interface to spawn from
+   another worker that basically just posts a request, which is then
+   fulfilled by another dedicated thread that implements the proper
+   exclusion controls on shared state, and that has control over the
+   stack space pool.
+
+* Requirements!
+** inside qthread library
+*** start/stop times for individual tasks
+    Need to calculate total_time
+*** Three categories for time: active, idle, overhead
+    overhead = time spent on scheduling etc.
+*** Adjustable level of detail
+    Want to be able to look at library-wide or per-task numbers.
+
+*** Data should be held in memory
+    don't want to print to terminal or log to file.
+** Record true comm times for MPIQ/tpod
+   MPIQ moves all tasks that need to communicate to a single queue and
+   issues MPI requests from that.
+
+*** Need to measure the actual time it takes for a comm task to complete
+    The goal is to compare the real communication time with the time
+    that a thread spends waiting in the scheduler. This measures the
+    overhead that the scheduler imposes on communications, not the
+    overhead that the communications imposes on execution.
+
+    Current implementation doesn't do this because it only measures
+    the time the task started and the time it was *observed* to
+    complete. This isn't the actual communication task time because
+    the qthreads task will be put back into the queue to be
+    rescheduled later and can only notice the completion when the task
+    is scheduled again.
+
+    Suggested solution is to make a separate thread that polls MPI
+    constantly to observe the request completion. The request ID
+    should match up with the one from MPIQ when the comm task is
+    rescheduled in the future and it can be delivered at that time. By
+    matching up the request id from MPIQ with the one we get when the
+    thread is rescheduled we can pull up the actual communication time
+    to compare it with the time the thread spent waiting in the
+    scheduler.
+* Reading list
+  Read up on Intel Phi processor.
+  Kyle Wheeler
+  
+** Look at gem5 simulator for randomization work
+* Notes 10-13 talk
+  It would be nice to have intsrumentation hooks to make it easy for
+  researchers to use the instrumentation primitives in their own ways. 
+
+  We should try to export a testing framework to support researchers
+  using our code testing their own code more effectively. 
+
+  Instrumentation is key for debugging, and debugging these things is
+  hard. Any support we can give for that would be very handy.
+
+  TPOD is a primary use case for the instrumentation hooks. He wants
+  to know total time spent in every thread state, including the reason
+  the thread is in the state (i.e. waiting on network, waiting on
+  disk, waiting for timer, waiting for sync var, etc). Measuring the
+  deltas between the theoretically optimal restart time for threads
+  and the actual restart time as a result of the scheduler is also
+  desired, so as to get a more accurate picture of the performance
+  impacts of the scheduling algorithm and implementation.
+
+  We want to split this codebase up into modular pieces that have
+  well-defined interfaces, so that it's easy for people to swap in
+  other components to provide portions of the total service. Modules
+  as of right now seem to include shepherds, schedulers,
+  communications, looping primitives, instrumentation, testing,
+  debugging. Ideally we won't have to use ifdefs in the code. We want
+  to instead have a design that lets the components be mixed and match
+  at run time during program startup.
+
+* Next steps 2015-10-20 - preprocessing source files
+  I'm going to try to get the preprocessor output and clean it up so
+  that I can understand what the actual code that's running is doing.
+
+  The definition of the qt_threadqueue_t struct is local to
+  threadqueues/sherwood_threadqueue.c, which means I'll have to
+  implement a thread state sampling function as part of the
+  threadqueue component instead of the shepherd (the shepherd can't
+  access the struct's members, which is necessary for enumerating
+  threads).
+
+  I'm going to look at the I/O functions to see if I can find the
+  point at which the thread is notified of its data being ready and
+  figure out how to instrument the communication times from there.
+
+** Useful preprocessor command (line counting at least)
+#+BEGIN_SRC sh:
+   cpp -P -fpreprocessed $f 
+#+END_SRC
+
+   will give you the output of the preprocessor, but without expanding
+   macros or processing includes. this is great for line counting,
+   because it strips out everything that's not executable code.
+
+   Basic method is from here: [[http://stackoverflow.com/questions/1714530/how-can-i-delete-all-comments-from-a-c-source-file][HOw can I delete all comments from a C source file?]]
+
+   There's a note later in the answer stream about how to get this to
+   create compileable code. You have to "hide" the defines from the
+   preprocessor so that they look like wonky includes, then put them
+   back afterward:
+
+#+BEGIN_SRC sh:
+   perl -wpe 's/^\s*#define/#include#define/' your-file.c \
+   | cpp -P - -fpreprocessed \
+   | perl -wpe 's/#include#define/#include/
+#+END_SRC
+
+* 2015-10-21 - notes on blocking IO operations
+  In src/io.c:127 find the function ~qt_process_blocking_call()~
+
+  This looks like the meat of the system they have for dispatching
+  blocking operations to worker threads (pthread workers, not
+  qthreads).
+
+  Initial impression is that they spawn pthreads to serve as IO
+  workers (see io.c:106 ~qt_blocking_subsystem_init~). These threads
+  pick up delayed IO job requests from a queue, process them, and set
+  the return value. 
+
+  ~qt_blocking_queue_t * theQueue~ is a global variable holding a
+  linked list of pending blocking operations. Each element of the list
+  is a job (~qt_blocking_queue_node_t~).
+
+  The file qt_blocking_structs.h contains definitions of the
+  structures used in the blocking queue.
+
+** How blocking IO works in qthreads
+  Syscalls are delayed by making a struct that has the syscall desired
+  as an enumeration and the arguments to the syscall as an array of up
+  to five ~uintptr_t~. The return value is a ~ssize_t~. In order to
+  make a blocking call, a new ~qt_blocking_queue_node_t~ is created,
+  the ~op~ member is initialized to the desired operation enumerant,
+  the args for the call are cast to ~uintptr_t~ and inserted into the
+  ~args~ array, and the whole structure is inserted into ~theQueue~
+  for processing by the blocking call worker thread pool.
+
+  At some future point (starting at io.c:180), the call is dequeued,
+  executed, and the result is stored in the ~ret~ field of the
+  ~qt_blocking_queue_node_t~ struct. The thread is re-enqueued at
+  io.c:361 with a call to ~qt_threadqueue_enqueue~.
+
+  Here's the rundown of executing blocking IO in qthreads:
+  1. The thread calls a syscall that's been wrapped (See files in
+     src/syscalls/*.c for implemented wrappers).
+  2. The wrapper creates a job object and forwards its args into the
+     object.
+  3. The wrapper calls ~qthread_back_to_master~ (qthread.c:3035),
+     which swaps the thread's stack limits back to those of the main
+     thread then initiates a context switch (~qt_swapctxt~). The task
+     doing the blocking call is now suspended, and the shepherd task
+     resumes from where it left off when this task was started.
+  4. The master thread then resumes and the shepherd gets the blocked
+     task from the scheduler, sees that it's waiting for IO, and calls
+     ~qthread_blocking_subsystem_enqueue~, which puts the job object
+     into ~theQueue~ defined at io.c:51.
+  5. The blocking subsystem has pthread workers that take pending IO
+     tasks, execute them, and return the appropriate return codes. One
+     of these picks up the task and runs it. (io.c:180) Arguments,
+     including pointers, are copied into the syscall's argument list.
+  6. The return value is stored back in the io job object.
+  7. After the task runs, the blocking subsystem re-enqueues the
+     thread using ~qt_threadqueue_enqueue~, after which it's back to
+     the races as a normally-scheduled thread.
+       
+
+  Instrumenting this, there are a few points of interest:
+  * Time spent waiting for the blocking operation queue: The blocking
+    operation is not immediately started. It would be useful to
+    measure how long is spent waiting for it to start after it's been
+    enqueued.
+  * Time spent waiting for the actual operation to complete: After the
+    operation actually starts, we should measure the time required for
+    the operation to complete. This will be the *actual* time spent
+    waiting for IO.
+  * Time spent waiting for the scheduler to restart the task: After
+    the operation has completed, there is a time spent waiting for the
+    task to be restarted by the scheduler.
+
+  Summing all of those gives the total cost for blocking
+  operations. Breaking out the bits regarding different phases of the
+  operations gives us insight into the costs imposed by the
+  implementation of the scheduler and blocking op API.
+
+** Use clock_gettime(CLOCK_MONOTONIC_RAW,&ts) for time measurement
+   Using ~RDTSC~ exposes me to issues with switching cores (namely,
+   the counter is not synchronized between cores), which in the case
+   of blocking IO is almost guaranteed to be problematic. ~gettimeofday~
+   is susceptible to issues from the clock being messed with via
+   e.g. NTP. ~clock_gettime(CLOCK_MONOTONIC_RAW,&ts)~ will not have either
+   of theses problems, and thus is the preferred method for measuring
+   IO overhead.
+
+   ~RDTSC~ is good for measuring compute-bound things without IO
+   because it's extremely high resolution, so this conclusion only
+   applies to IO-bound performance measurement.
+   
+** Unresolved questions
+*** Syscall vs. libc?
+   They went to a lot of trouble to provide alternative
+   implementations for each of the system calls using the syscall
+   function rather than the libc wrapper. I'm not sure what the point
+   of that was, perhaps there's some performance impact? Maybe there's
+   some concern about missing or incompatible c-library
+   implementations?
+
+*** Is it reasonable to assume all processors are identical?
+    If the system qthreads is running on top of has different types of
+    processors included, it may be valuable to record some information
+    about that along with the performance data, so that the impact of
+    running on the alternate processor is measurable. This seems
+    unlikely, but I guess it's possible to have a bunch of different
+    X86 processors in different machines whose properties vary working
+    with each other.
+
+*** What is QTHREAD_REAL_MCCOY all about?
+    This changes the behavior of the stack limits. If the flag is set,
+    it appears that the thread stack is always set to
+    ~qlib->master_stack_size~ and if it isn't, the stack is sometimes
+    set to ~qlib->qthread_stack_size~. What is this about? See the
+    ~RLIMIT_TO_NORMAL~ and ~RLIMIT_TO_TASK~ macro definitions in
+    qthread.c:292.
+
+*** Why does qt_read et. al. call FREE_SYSCALLJOB?
+    I think there's a double-free bug in the io job handling system,
+    although it's possible that the macro redefinition of ~free~ has a
+    check to protect against it (I haven't looked). If not, then the
+    blocking subsystem frees the job first at io.c:362, and then the
+    system call wrapper frees it again at the end of the qt_<syscall>
+    wrapper function.
+
+    Initially this looked like a crazy bug that would prevent all IO
+    jobs from running, but that's because I missed a line guarded by a
+    couple of ifdefs at qthread.c:3049 (where ~qt_swapctxt~ is called).
+
+** How to implement instrumentation for this
+*** Assumptions
+    * all processors are identical, and therefore I don't need to
+      record anything about which processor a thread is running on at
+      any given time.
+    * A thread is the same thing as a task, and work stealing just
+      means moving threads/tasks between shepherds
+    * A thread will never change states while it is waiting for
+      blocking IO.
+
+*** Implementation
+   I want to be able to get performance data for each thread, as well
+   as be able to aggregate it over subsets or even the entire run. I
+   therefore need to associate the IO tasks to the threads that are
+   spawning them, which is complicated by the issue that the blocking
+   IO task struct doesn't own the thread object, so it's probably not
+   safe to write data to it.
+
+   I think what I'll do is record the job's timing information inside
+   the job structure along with the return value, so that when the
+   task is reawakened by the scheduler/shepherd, it can update its IO
+   wait information by reading the data out of the same struct where
+   its return value information is stored.
+
+   Each task will have a set of monotonically increasing time counters
+   that indicates how long it spends in each of the defined states. In
+   addition to the standard states, the thread's counters will have
+   values for time spent waiting for an IO worker to pick up a job,
+   time spent in the actual IO operation, and time spent waiting for
+   reawakening by the scheduler. I assume that there are no thread
+   state changes while the thread is waiting for IO.
+
+   Each thread will also have a value added to its runtime state that
+   keeps track of the clock time when the state was entered. Every
+   time the thread's state changes, this time is subtracted from the
+   current clock time and the difference is added to the counter
+   associated with the thread's current state (before the state is
+   changed). The new clock time value is then used for the next
+   state's start time.
+   
+   At the end of the run, each thread will have a total elapsed time
+   recorded for every state it could be in, as well as the total
+   elapsed time spent in the three different flavors of IO waiting
+   described above.
+
+* 2015-10-22 - implementing IO instrumentation
+  Continuing from above, I also need to be able to break out the data
+  by IO operation type. I can use the same trick as I used for the
+  thread states since the io operation codes are an enumeration. For
+  user defined syscalls this won't work because there's no upper bound
+  on the syscall number. For now, I'll just lump all user defined
+  syscalls into a single bin.
+
+  Perhaps I can provide an additional array to save a limited number
+  of user-defined syscall identifiers as well. This would basically
+  just be an array of timing data structs, where the struct would
+  include a field for the identifier. I'd search through the array
+  each time (linear, but should be a small array so it'll be ok) and
+  then update the appropriate struct, or add a new one if the ID
+  doesn't exist. If the array is full, I'll spill the data into a
+  catch-all for "other user-defined ids."
+
+  Instead of putting ifdefs in the main code I'm going to put stub
+  functions to an instrumentation API, and I'll ifdef out the body of
+  the functions. The compiler should optimize out the calls to the
+  thunks if the instrumentation is turned off, and it will keep the
+  code cleaner.
+
+** all assignments to thread_state
+   ~egrep "thread_state +=[^=]" -nr *~
+
+   Will return all assignments to the thread_state member. I need to
+   go to each of these locations and add a qt_time_state_swap call so
+   that the time in each state can be accurately tracked.
+
+   I think I'm going to make a function that does the thread state
+   switch and put it in qt_thread.h (static inline). That way I can
+   attach other actions to it easily, like recording timing
+   information.
+
+   replace all assignments of thread_state with the function call:
+
+   ~sed -i 's/\([^ ][^ ]*\)->thread_state *= *\([^=;][^=;]*\);/qt_qthread_set_state(\1,\2);/g' *~
+
+   Everything compiled. wow.
+
+   Now, I haven't initialized any of the counters in the structs yet,
+   it doesn't look like there's a clean way to do that. I think I'm
+   going to end up writing another inline function to allocate the
+   structs and initialize them.
+* 2015-10-27 - checking implementation
+  Today I'm going to try to get the data out of the instrumentation
+  primitives I added, to see if I have anything meaninful coming
+  out. I will probably need to make a custom test application that
+  talks over the network to my other computer in order to get
+  measurable communication delays. I'm going to poke around in the
+  tests directory to see if there's anything I can use in there.
+
+  In order to get the data out for now, I'm going to just have each
+  thread print its data when it terminates (when it's state is changed
+  to QTHREAD_TERMINATED). This event will be easy to catch because I
+  wrapped the state change calls with a function earlier. I think this
+  will probably be the location where I store thread data as well,
+  when the real data gathering implementation is done.
+
+  Speaking of data gathering, I'm not sure yet how I'll do that in
+  practical terms. Ideally, I'd have each shepherd aggregate all of
+  its data for each thread by thread_id, then at the end of the
+  program they would all ship the data to a central node where it
+  would be merged together (since the same thread may have run on
+  multiple shepherds during execution). This will require some
+  communication, and I'm not sure yet how I want to do it. If we had a
+  communication API defined it would be a simple matter to just use
+  it, but we don't.
+
+  I'll probably designate the initial shepherd id as the global
+  aggregator and have it listen on a socket for thread completion
+  data. The other shepherds will then send their results on that
+  socket when they finish.
+
+** Note: I need to be able to tell when the program is finished
+   In order to reliably gather the thread performance data at the end
+   of the run, I need to be able to tell when a computation is
+   finished. In particular, I need to be able to see when a shepherd
+   will no longer receive any additional tasks *from that shepherd* so
+   that I can trigger the event to send off the task data. Since the
+   current implementation only sends threads to other shepherds with
+   the same shared memory space, this is kind of an empty issue for
+   now, but it's going to matter when threads can travel over the
+   network.
+
+** Note: threads will need to have persistent state on each shepherd
+   Right now, the thread's performance data travels with the thread
+   when it's shipped between shepherds (it's just shared memory). This
+   means that I don't need to worry about the task aggregation over
+   the network for now, but it's going to be a problem in the future
+   and needs to be designed into the system from the start if it's
+   going to be usable.
+
+** Current Instrumentation Status (Erik Lee, 10/27/2015)
+   I've implemented a basic instrumentation setup for measuring two
+   kinds of performance data in qthreads. First, it keeps track of
+   time elapsed in each of the possible thread states (defined in
+   ~include/qt_threadstate.h~). Second, it takes detailed measurements
+   for each stage of blocking IO execution:
+
+   * *From request to enqueue:* At the time of the IO request (made from the
+     thread itself), an operation is enqueued to be handled later by a
+     pool of blocking IO worker threads that actually make the system
+     calls. The time between making the request and having the
+     operation actually put into the queue is measured.
+   * *From enqueue to execution:* The time spent waiting in the blocking IO
+     queue for a worker to take up the task is measured.
+   * *Actual IO syscall time:* The time required for the actual IO
+     operation to return from when it was started, is measured.
+   * *From completion to thread reactivation:* After the IO operation
+     is complete, the thread is ready to resume. The time between
+     actual IO completion and resumption of the thread is measured.
+
+   All timing data is measured by taking a timestamp before and after
+   the relevant event, then taking the difference. Currently, the data
+   for all events of the same type is aggregated by adding up each of
+   the deltas. Timestamps are taken with
+   ~clock_gettime(CLOCK_MONOTONIC_RAW)~ to avoid issues with clock
+   changes due to NTP or administrator actions, and to ensure
+   consistent values regardless of which processor core the thread is
+   executing on (RDTSC can return different values for the same
+   instant if run on different CPUs or cores).
+
+   Each blocking IO operation type (as defined in
+   ~qt_blocking_structs.h:14~) is aggregated separately, so the time
+   spent in each type of syscall can be measured independently
+   (i.e. you can see how much time was spent waiting for ~connect~ vs
+   how much was spent waiting for ~read~).
+
+   I'll be testing this implementation today to see what kind of data
+   it actually generates. 
+
+   My next task is to detect the end of the computation and use that
+   to trigger an aggregration operation for all of the shepherds,
+   where each thread's data is collected and merged to generate a
+   final performance data report. Currently, the implementation will
+   make use of the shared memory implmentation of thread movement (so
+   that there is only one actual copy of thread performance data, and
+   each shepherd just updates it when it's under that shepherd's
+   control). Eventually we will support transferring thread state
+   across a network connection. At that point, we can either ship the
+   performance data along with the thread to the new shepherd and pay
+   for the additional communication overhead while the computation is
+   running, or we can fragment the performance data for the thread so
+   that each shepherd just keeps track of the performance data of the
+   thread *on that shepherd*. In the latter case, the thread data will
+   become fragmented and have to be reassembled at the end of the run
+   in order to get a complete picture, but the communication overhead
+   of performance monitoring will be reduced during the actual
+   computation.
+
+   The implementation as it currently stands could be modified fairly
+   easily to support detailed event tracing, as long as we can afford
+   the memory requirements of event logging. This would give us a
+   timeline for some thread or operation of interest, depending on how
+   the tracing is triggered on and off.
+
+** Plan for tomorrow (implement IO performance test)
+   I got it compiling and running, and I'm getting data out. Now I
+   need a test program that actually has IO operations.
+
+   I'm going to modify one of the simple tests in the basics directory
+   so that it implements a parallel recursive file line counter. It
+   will be done in two parts: the drivers, and the counters. The root
+   of the tree will be a driver, and the task of a driver is to
+   enumerate a directory and spawn a new driver for each subdirectory,
+   and a new line counter for each .c file. The line counters will
+   communicate their results to the drivers using FEB protected sync
+   vars, and the drivers will aggregate their data using TCP network
+   connections to each other (each driver will send its results to its
+   direct parent, who will forward them up the chain when all of its
+   child threads are done). This should be plenty of IO operations to
+   catalog, and it should be inefficient enough to be able to get some
+   actual data out on the costs of various overheads in the IO
+   scheduling system.
+* 2015-11-03 - malloc failures
+  I wrote my test, and it works when there's only one thread allowed
+  to spawn. However, in the case where I allow multiple threads, it
+  dies with a NULL access on the result of malloc. I know that my
+  system is not running out of memory, so my current suspicion is that
+  the threads can't spawn child threads because their heap space has
+  been restricted as part of the thread spawn process (i.e. the heap
+  space is not synchronized between threads, and each thread's heap is
+  tiny).
+
+  My original algorithm was to recursively traverse the directory tree
+  and spawn new threads to either count the lines in each file
+  encountered, or spawn new threads to enumerate each directory. This
+  algorithm is failing because the threads that are recursively
+  forking other threads are crashing with malloc failures.
+
+  From this I'm concluding that threads are not first class, in that
+  they cannot spawn other threads reliably due to severe heap
+  constraints.
+
+  Therefore, I'm going to redesign my IO test so that it works with a
+  static pool of workers.
+** New design
+   main will allocate a pre-set number of worker threads. These
+   threads will wait on a global FEB for job postings. The job
+   postings will be in the form of a structure that includes a
+   function pointer and enough data to construct the arguments
+   necessary for the function call. 
+
+   There will be two functions that can be called in a thread:
+   count_directory and count_file. count_directory will post new jobs
+   to the thread job queue, and count_file will count the lines in a
+   file and post results.
+
+*** Returning results
+    One thread will be dedicated to summing values from the worker
+    threads. Each thread that counts lines will write a value to a FEB
+    that the totaler thread reads. The totaler reads this value and
+    adds it to the running total. When all jobs are complete, the main
+    thread will kill the totaler thread and take its computed value
+    (from a global variable).
+
+    Directory counters will not return a value in this scheme.
+
+*** Detecting completion
+    Each job will increment a counter when it starts, and decrement it
+    when it finishes. When the counter returns to zero and the pending
+    job FEB is empty, the program is done and the result can be
+    returned.
+* 2015-11-04 - threads should be able to spawn more threads safely
+  It is extremely inconvenient to have to manage the spawning of all
+  threads from a single master thread. When we redesign this thing, it
+  should be possible to safely spawn more threads from anywhere,
+  including from within worker threads. 
+
+  I've been working on a file system line counter that descends into
+  directories recursively. The initial solution used a simple system
+  where the directory scanner would spawn another directory scanner
+  thread for each subdirectory it encountered, and a line counter
+  thread for each file it encountered. This was easy to manage and
+  well-suited to the problem.
+
+  However, because the threads aren't able to spawn other threads, I
+  had to redesign it so that there's a master thread that pre-spawns a
+  fixed number of workers, and the workers have to communicate with
+  the master via locks and FEBs in order to get more jobs
+  scheduled. This has become a nightmare of layers of mutexes and is
+  generally painful compared to the simpler solution of allowing
+  threads to spawn more threads. I now have to manage a pending job
+  queue, and synchronize access to it between the directory scanners
+  (which post new jobs), the totaler (which catches line counter jobs
+  and records their results), and the jobber (which allocates one of
+  the fixed threads to each job requested by the directory
+  scanners). The complexity of the problem exploded because I couldn't
+  make the decision to launch a new thread from the point where the
+  information was available, and instead had to communicate it to some
+  other thread.
+
+** Update
+   I got the FEB locking to work somewhat better finally. There are
+   still rare deadlocks, and the program segfaults sometimes for
+   unknown reasons, but I was able to get a worker queue going to
+   start getting some performance data finally.
+
+   The segfault is so far hard to trace down. It looks like it's
+   probably a stack overflow somewhere, because gdb gets totally lost
+   and is unable to backtrace anything. It doesn't seem to happen when
+   running under rr, probably because of the slowdown induced by the
+   recording. I'm going to try to get an instance of the crash
+   recorded though because that would really make it easier to find.
+** Debugging qthreads
+   Debugging in qthreads is really hard. We need to cook up some way
+   to make it play nicely with gdb and other debugging tools. gdb only
+   sees the shepherds, not the lightweight threads, and that makes it
+   pretty tough to track down things like deadlocks.
+* 2015-11-18 - debugging test app
+  The test app I'm working on seems to crash with a segfault at
+  inconsistent points in the program's execution. This might indicate
+  a race condition or mutual exclusion problem, although there aren't
+  any pointers being manipulated by the threads so I don't think
+  mutual exclusion should cause a segfault in this case.
+
+  The crash happens the same way whether I use instrumented or stock
+  qthreads, so that leads me to believe it's caused by the test app
+  itself.
+
+** Is it the printing functions?
+   The crashing behavior changed significantly when I changed the way
+   the debug messages are printed. This makes me wonder if I'm having
+   a race condition on the print functions, which is entirely possible
+   because of global state...
+   
+   I'm going to disable all printing and see if the crash stops...
+
+   That didn't work. I have written a much simpler test now, trying to
+   isolate the cause of the crash. The new test just spawns a thread
+   for each file given on the command line, counts the lines, and
+   returns the line count. The results are summed by the main thread
+   and the result is printed, then it exits. This test still crashes
+   with the same symptoms as the more complex test, so it should be
+   easier to debug.
+
+** finally recorded a crash
+   I recorded a crash with rr, or the simple version of the
+   code. Hopefully this will yield some insight into what's making it
+   crash.
+
+   Observation: It crashes more reliably when parsing through a
+   directory of files that have not been loaded recently (so they're
+   not in any caches). This might indicate that there's a race
+   condition on the actual read operations that leads to the error
+   when simultaneously reading multiple files.
+
+* 2015-11-24 - debugging again (resolved, possibly)
+  *Resolution* - the code seems to just work after switching to the
+  atdm github repo, so I'm thinking that it was something to do with
+  the old qthreads code. I don't have any evidence beyond the lack of
+  new crashes to support that conjecture, but that's good enough for
+  me for now.
+
+** ATDM source tree
+   I decided to go ahead and merge my stuff in with the latest on ATDM
+   repo. The ATDM code doesn't build currently, it has an undefined
+   symbol ~qt_affinity_get_unique_id~.
+   
+   It seems that the build is not compiling a necessary source file,
+   namely src/affinity/libaff.c, which defines the above symbol. I
+   tried enabling the only configure option that mentions affinity but
+   it didn't make any difference.
+
+   Need to figure out how to add the file to the build.
+
+   Added libaff.c and libaff.lo to each place in src/Makefile.in where
+   qthread.c and qthread.lo show up respectively. Now it tries to
+   compile it but complains about not having ~#include <hwloc.h>~.
+
+   Installed hwloc and libhwloc-dev (ubuntu packages). Now I have
+   multiple definitions of some other affinity-related
+   functions. Apparently there are different versions of the affinity
+   component that get selected during the build process.
+
+   I ended up pasting the definition of ~qt_affinity_get_unique_id~
+   from src/affinity/libaff.c into src/affinity/common.c. This is
+   probably not the right thing to do, but it got the code compiling
+   on my system so I'm going to leave it like that for now.
+
+** ATDM doesn't crash
+   The ATDM repo doesn't crash when I run my code. This makes me think
+   that there was a problem in qthreads that was fixed in the atdm
+   repo, and that my code wasn't at fault after all. Now I'm going to
+   work on porting my instrumentation over to the ATDM repo.
+
+** Porting to ATDM repo
+*** Lessons from first version
+    I need to use a debug output function that is mutex controlled so
+    as to avoid crashes from that source.
+
+    The library should provide an API for retrieving thread
+    performance data, and for registering threads to be tracked or
+    non-tracked. 
+
+    The IO functions in qthreads may not be sufficient to meet our
+    communication monitoring goals. I will need to have a way to hook
+    in more monitoring points depending on what external libraries are
+    included to support communication.
+
+*** Plan for 0.2
+    Initially, all threads will be performance monitored just for
+    simplicity if the performance monitoring code is compiled in.
+
+    The thread performance data will be held in a dynamically-sized
+    array. The only data held in the thread structure will be the
+    index of the thread's struct in the array. This way the array can
+    be dynamically reallocated without having to update backreferences
+    anywhere. Each time the array's capacity is exceeded, it will
+    double in size and copy the existing data over so as to get
+    amortized constant time access.
+
+    At the end of the run, an API function will be provided to access
+    the performance data structure for analysis.
+
+    The method of counting time seems to be working well (total +=
+    (stop - start) for each operation and state). I will continue this
+    approach.
+
+* 2015-12-01 - implementing v0.2
+  today I'm implementing the measurement code for version 0.2 of the
+  instrumentation system. I'll be avoiding output this time to prevent
+  crashes.
+
+  I'm going to start with just simple state time tracking to make sure
+  I can catch all of the state transitions. I'll use an inline
+  function that modifies the current thread state and updates the
+  performance counters as a side-effect of all state transitions in
+  the code, as I did before.
+
+  Inline is too much of a hassle for now, I'm just going to make it a
+  plain function. Hopefully the overhead of a call won't be significant.
+** current status
+   I got the state change timing working, at least to a first order of
+   testing. I'm working on getting the IO timing working. Currently
+   there is an initializaiton problem somewhere that causes the read
+   operation to get a faulty value for PERF_REQUESTED, which gives bad
+   numbers for the transition from request to start of
+   operation. Likely the problem is in instrumetation.c, probably
+   either in the syscall_update_internal function or in the
+   alloc_instrumentation_data function.
+* 2015-12-02 - Weird rescheduling behavior on IO threads
+  When a thread requests blocking io, it's state is set to
+  QTHREAD_STATE_SYSCALL as expected, and an IO worker is scheduled to
+  fulfill the IO request asynchronously.
+
+  The thread is reawakened before the IO is complete though (see
+  output trace). This causes the timing measurement to get screwed up
+  because I'm using the thread's reawaken event to decide when the
+  scheduler has put the thread back in business after completing the
+  IO. What's weird is that it seems like it's restarting the
+  requesting thread before the IO is complete, consistently. You can
+  see this in the timestamps in the output trace.
+
+  There are no additional state transitions between when the thread is
+  set to running and when the IO says it's complete, and yet the
+  thread reliably doesn't actually start executing until the IO is
+  complete.
+
+  I'm wondering now if the scheduler is using the *same* thread that
+  did the request to perform the IO operation, or if it's actually
+  spawning a new IO worker after all. If it's using the same thread
+  that did the request, then this behavior woudl make sense.
+
+** output trace
+  Thread 1 QTHREAD_STATE_NASCENT -> QTHREAD_STATE_NEW
+  Thread 1 QTHREAD_STATE_NEW -> QTHREAD_STATE_YIELDED
+  Thread 2 QTHREAD_STATE_NASCENT -> QTHREAD_STATE_NEW
+  Thread 1 QTHREAD_STATE_YIELDED -> QTHREAD_STATE_FEB_BLOCKED
+  Thread 2 QTHREAD_STATE_NEW -> QTHREAD_STATE_RUNNING
+  read_outer
+  Thread 2 QTHREAD_STATE_RUNNING -> QTHREAD_STATE_SYSCALL
+  syscall update: READ(0) @ 2571207799
+  syscall update: READ(3) @ 2571207807
+  Thread 2 QTHREAD_STATE_SYSCALL -> QTHREAD_STATE_RUNNING
+  syscall update: READ(1) @ 2571207872
+  syscall update: READ(2) @ 2571207899
+  read outer done
+  read_inner
+  Thread 2 QTHREAD_STATE_RUNNING -> QTHREAD_STATE_SYSCALL
+  syscall update: READ(0) @ 2571207955
+  syscall update: READ(3) @ 2571207961
+  READ: 2571207955, 2571207872, 2571207899, 2571207961
+  Thread 2 QTHREAD_STATE_SYSCALL -> QTHREAD_STATE_RUNNING
+  syscall update: READ(1) @ 2571207994
+  syscall update: READ(2) @ 2571208009
+  read_inner
+  Thread 2 QTHREAD_STATE_RUNNING -> QTHREAD_STATE_SYSCALL
+  syscall update: READ(0) @ 2571208036
+  syscall update: READ(3) @ 2571208042
+  READ: 2571208036, 2571207994, 2571208009, 2571208042
+  Thread 2 QTHREAD_STATE_SYSCALL -> QTHREAD_STATE_RUNNING
+  syscall update: READ(1) @ 2571208071
+  syscall update: READ(2) @ 2571208085
+  read_inner
+  Thread 2 QTHREAD_STATE_RUNNING -> QTHREAD_STATE_SYSCALL
+  syscall update: READ(0) @ 2571208112
+  syscall update: READ(3) @ 2571208118
+  READ: 2571208112, 2571208071, 2571208085, 2571208118
+  Thread 2 QTHREAD_STATE_SYSCALL -> QTHREAD_STATE_RUNNING
+  syscall update: READ(1) @ 2571208146
+  syscall update: READ(2) @ 2571208156
+  Thread 1 QTHREAD_STATE_FEB_BLOCKED -> QTHREAD_STATE_RUNNING
+  Thread 2 QTHREAD_STATE_RUNNING -> QTHREAD_STATE_TERMINATED
+  Performance data results:
+  thread 1 (start: 2571207723, finish: 0)
+     QTHREAD_STATE_YIELDED: 1
+     QTHREAD_STATE_FEB_BLOCKED: 445
+  Blocking IO times:
+  thread 2 (start: 2571207744, finish: 2571208186)
+     QTHREAD_STATE_RUNNING: 361
+     QTHREAD_STATE_SYSCALL: 81
+  Blocking IO times:
+     READ: rts = 18446744073709551450
+     READ: stf = 56
+     READ: ftr = 128
+  Total lines: 34
+** Resolution (possible)
+   It looks like qthreads wants to show the thread as "running" even
+   when it's technically blocked on IO. There's probably a reason for
+   this, so I need to find alternative means to detect when the thread
+   resumes.
+   
+   Looking at previous notes, I think the answer is going to be just
+   to watch for the thread to be reactivated by the scheduler. I'll
+   put a hook in qthread.c where the threads are awakened, and check
+   to see if the thread being awakened was suspended due to a system
+   call. If so, I'll complete the system call then by flagging that
+   point as the PERF_REAWAKEN event.
+** TASK: look into optional compile time/run time switching using macros   
+   We would like to have a event-dispatch style of extension setup for
+   the core code, but we don't want to pay for the overhead with
+   dynamic function calls. Can it be done? Can we decide at compile
+   time whether we want the event hooks to be statically compiled or
+   dynmaically dispatched? Don't know yet.
+
+** New bug
+   Segmentation fault under (at least) two circumstances:
+   1. Measuring lines in files that are not cached (have not been read
+      by any process since boot)
+   2. Measuring lines in a very large file.
+
+* 2015-12-09 - Resolved cause of bug
+  The bug from last time is something inside of qthreads, not in my
+  instrumentation code. That means I can put off analyzing it for a
+  while.
+
+  I added instrumentation to the remaining syscall IO intercepts. I
+  need to make some tests for them to make sure it's all working as
+  planned, but I'm fairly confident in them for now (enough to turn
+  attention to the next big problem, which is figuring out how to
+  untangle qthread.c).
+
+  My goal for cleaning up the code on this project is to basically
+  make it internally consistent with some kind of well-defined APIs
+  for a few things.
+
+** Debugging
+   Currently it's pretty hard to debug this library and applications
+   that use it (at least for me so far). It would be very helpful if
+   there were some hooks defined that I could use to get notifications
+   of various things happening so that I could get more useful debug
+   traces. This will also be very helpful when adding extensions to
+   the library.
+** Instrumenting code
+   Obviously instrumentation is a big need here. The API I have right
+   now is simple and works for the cases it covers, but I think it
+   needs to be extensible so as to make it easy to add instrumentation
+   for external code (like communications libraries, for
+   example). This probably means that I need to add a user data
+   container to the performance data, and some functions for making it
+   easy to perform safe updates to it from outside. 
+
+   I could make a system where a user can define sets of new states,
+   and a set of phases for each state within a set. I would then have
+   a function to call that switches the state, and another function to
+   call that switches the phase within the state. Timing data would be
+   accumulated as with the current implementation. 
+
+   The functions would need to return some kind of handle so that the
+   external code can specify which set of states is being updated.
+
+#+BEGIN_SRC c
+  typedef void* perf_handle_t;
+  
+  // This function sets up performance tracking for a new set of states
+  // with names given by the names member. Future state transitions will
+  // be tracked by index, not name, but the indices will correspond to
+  // the positions of the states in the names array (so if
+  // names[0]=="start", then you should have an enum such that the first
+  // entry is START).
+  perf_handle_t define_state_set(const char** names, size_t length);
+  
+  // You can optionally define a set of phases within each state of a
+  // given state set. This lets you do things like track total time in
+  // all IO states, and also within the IO states track how much time
+  // was spent waiting for access versus actually performing the IO
+  // versus being rescheduled. Each state in the state_set will have the
+  // same set of phases, and the name to index correspondence works like
+  // it does in define_state_set.
+  //
+  // All states set their phase to zero upon entry, so make the zeroth
+  // element of the array correspond to your start phase.
+  void define_phase_set(perf_handle_t state_set, const char** names, size_t nphases);
+  
+  // Record a state transition for the current thread within the given
+  // state set. The current time will be sampled, and the difference
+  // between the last sample and the current sample will be added to the
+  // thread's current state before updating to the state given in
+  // new_state. The thread pointer is retrieved automatically from the
+  // qthreads library, so this function needs to be called from *within
+  // the thread that's being measured*.
+  void transition_state(perf_handle_t state_set,  size_t new_state);
+  
+  // This function records a transition to a new phase within the
+  // current state. The timing data works just like it does for
+  // transition_state, except that it's recorded for phases
+  // instead. When the thread's state (not phase) is transitioned, the
+  // difference between the start of the current phase and the current
+  // time will be added to the current phase's timer (i.e. the
+  // transition of a *state* marks the end of the progression through
+  // *phases*). When a state is entered that has phases, its current
+  // phase is automatically set to the first one in the set (i.e. zero).
+  void transition_phase(perf_handle_t state_set, size_t new_phase);
+#+END_SRC
+
+** Adding extensions
+  This is the big unknown at this point. The current way extensions
+  are added is by sprinkling ifdef code all over the place throughout
+  the library, which is a nightmare for ongoing maintenance and
+  testing. I would not be at all surprised to find that many of the
+  extensions currently in the library don't actually work because the
+  library has changed around them and their maintainers have left.
+
+  We really need to come up with a simple way to add these extensions
+  that's powerful enough to support the kinds of things that are
+  already being done, but is also hygienic enough to allow for testing
+  and updating.
+
+** Requests from meeting
+   We had a meeting to go over what I've done so far with
+   instrumentation. They seem to like it so far and have a few
+   requests for additional/alternative functionality:
+*** Option to instrument workers rather than qthreads
+    qthreads are jobs, and there are typically a *lot* more of them
+    than there are actual running threads (workers). They would like
+    to be able to measure how well-utilized the workers are, instead
+    of how much time the threads are in each thread state. The
+    important states for a worker would probably be idle (unassigned),
+    working, and blocked (worker thread is blocked waiting for
+    something, not just the qthread). Blocked is going to be tricky
+    without some kind of external signaling about when a blocking
+    operation is about to start.
+*** Aggregating measurement over threads
+    When instrumenting qthreads (as opposed to workers) they want to
+    be able to group them together into a single performance
+    measurement structure in order to reduce the impact of
+    instrumentation on the running system. Often, the threads will all
+    be working on functionally identical problems, just with different
+    data, so doing this kind of aggregation makes sense.
+*** Tracking of association between workers and qthreads
+    They want to know which worker spawns a thread, and which workers
+    execute the thread. The purpose here is to see what the runtime
+    system is doing with the threads.
+
+* 2016-01-06 - Instrumenting workers
+  Workers have a qthread_t* member called "current" which holds the
+  current qthread that the worker is executing.
+
+  ~worker->current~ is assigned in these places:
+  qthread.c:667 (filled with qthread value)
+  qthread.c:2294 (filled with qthread value)
+  qthread.c:676 (NULL)
+  qthread.c:678 (NULL)
+
+  Immediately after the assignment on 667, a thread context is
+  retrieved and ~qthread_exec~ is called on the worker with the
+  context. ~qthread_exec~ calls ~qt_swapctxt~, which makes the executing
+  thread (worker) to pick up the continuation of the argument
+  thread. ~RLIMIT_TO_TASK~ might be a good place to add
+  instrumentation, along with ~RLIMIT_TO_NORMAL~ as they seem to be
+  on the actual boundaries between worker running and system running.
+
+  ~RLIMIT_TO_TASK~ is called in qthread.c lines 
+  * 2460 (~qthread_exec~)
+  * 2525 (~qthread_yield~)
+  * 3115 (~qthread_back_to_master~) this one is surprising, I would
+    expect it to not go back to a task context if it's returning to
+    the master thread for new scheduling.
+  
+  ~RLIMIT_TO_NORMAL~ is called on lines 
+  * 2476 (~qthread_exec~) 
+  * 2535 (~qthread_yield~)
+  * 3102 (~qthread_back_to_master~)
+  * 3121 (~qthread_back_to_master2~)
+    
+  The issue with ~RLIMIT_TO_TASK~ being called at the end of
+  ~qthread_back_to_master~ actually makes sense because there's a call
+  to ~qt_swapctxt~ in between them. So what happens is this:
+  1. ~qthread_back_to_master~ is called
+  2. ~RLIMIT_TO_NORMAL~ sets the stack size to something appropriate
+     for the shepherd.
+  3. ~qt_swapctxt~ resumes the shepherd thread, suspending the qthread.
+  4. later, the qthread is reawakened and picks up right after the
+     call to ~qt_swapctxt~, which means that the rlimits need to be
+     adjusted again to be a task.
+
+  The real mystery is why this doesn't happen at the end of
+  ~qthread_back_to_master2~
+  
+** Plan of attack
+   I want to revamp the general instrumentation infrastructure so that
+   it can be extended to measure user-defined states. Perhaps I can
+   work it out so that the same system could be used to instrument
+   qthreads, workers, and user states using a single, simple API. I'd
+   move the instrumentation data out of the threads structures and
+   into its own space, and then reference everything by a two-part
+   address (type,id). The first two types would be qthread and worker,
+   and then beyond that the user could define types as desired.
+   
+   Once you get into the particular unit you're keeping track of
+   (e.g. a thread), you can define a set of states to be tracked. The
+   instrumentation API then provides a function ~enter_state~ which
+   tracks when state changes are made and does the final reporting.
+
+   Handling aggregation would require additional functionality in
+   order to support interleaved state transitions that don't have
+   their own independent timers attached. For example, there might be
+   ten threads that can go in and out of the same state at any time,
+   and what you want to know is the total time spent in that state
+   aggregated over *all* threads. You can't just provide the type and
+   group id of the thread group to the ~enter_state~ call because the
+   threads would interfere with each other. I need a way to identify
+   which underyling instance of the state machine is actually being
+   transitioned. I could do this by providing an alternative
+   ~enter_state~ method that returns a value that the user would then
+   pass back in for the next invocation to ~enter_state~.
+   ~enter_state~ could just return the current time and state as a
+   tuple, which would then be deleted when the state changes
+   again. That way the user just has to make space to store a single
+   pointer for each item that's being aggregated over in order to get
+   accurate timing for all states.
+* 2016-02-15 - False starts
+  The above plan has had a number of false starts over this month. I
+  need to refine and simplify it in order to get something rolled out
+  quickly. This is my new plan:
+** Build simple instrumentation API
+   This should support only state transitions, no phases, and should
+   rely on the user to keep track of the mapping between execution
+   unit and data pointer. The pointer for perf data will be kept in
+   the worker structure or the qthread rdata structure. The API should
+   basically allow the user to define collections of states, map an ID
+   to a state collection, make state transitions, and extract the
+   data.
+*** Functions
+**** qtperfid_t qtperf_create_state_group(size_t num_states, const char** state_names)
+     <<qtperf_create_state_group>> Defines a new state group with
+     num_states possible states and names optionally defined by
+     state_names. state_names can be NULL.
+**** qtperfdata_t* qtperf_create_perfdata(qtperfid_t state_group)
+     <<qtperf_create_perfdata>> Returns a new (dynamically allocated)
+     performance data structure pointer. Store this pointer for use in
+     future calls to [[qtperf_enter_state]].
+**** void qtperf_start()
+     <<qtperf_start>> Start recording performance data. State
+     transitions made while stopped will not result in data
+     collection. This can be called multiple times, as can
+     qtperf_stop, in order to target instrumentation to certain parts
+     of the code as needed.
+**** void qtperf_stop()
+     <<qtperf_stop>> Stop recording perfomance data. See [[qtperf_start]]
+**** void qtperf_free_data()
+     <<qtperf_free_data>> Free the performance data structures. This
+     must be the /last/ call made to the performance system, otherwise
+     you will have undefined behavior.
+**** const char* qtperf_state_name(qtperfid_t state_id)
+     <<qtperf_state_name>> Returns the state name associated with the
+     given state id. This will return NULL if you have not defined
+     state names. State names are defined using
+     [[qtperf_create_state_group]]
+**** void qtperf_enter_state(qtperfdata_t* data, qtperfid_t state)
+     <<qtperf_enter_state>> Enter the given state. You must provide
+     the pointer to the appropriate logging structure. This will
+     record the elapsed time in the previous state before making the
+     transition. There is no function to mark leaving a state, you
+     must always transition /to/ a new state. If the state id provided
+     is out of bounds, an error will be logged and execution will
+     continue as if the call was not made (so the previous state's
+     counter will continue to grow).
+**** qtperfdata_t* qtperf_iter_begin(qtperf_iterator_t** iter)
+     <<qtperf_iter_begin>> Initializes an opaque struct that you can
+     use to iterate through the performance data. use [[qtperf_iter_next]]
+     to proceed through the data, and [[qtperf_iter_deref]] to get the
+     data from behind the iterator. Declare your own iterator on the
+     stack, then declare a pointer to it. Pass in the address of that
+     pointer. This is a bit clunky but it avoids the need for dynamic
+     allocation.
+**** qtperfdata_t* qtperf_iter_deref(qtperf_iterator_t* iter)
+     <<qtperf_iter_deref>> Returns the performance data that's
+     currently under the iterator. Returns NULL if the iterator is
+     [[qtperf_iter_end]].
+**** qtperfdata_t* qtperf_iter_next(qtperf_iterator_t** iter)
+     <<qtperf_iter_next>> Move the iterator to the next item. If the
+     iterator was valid, return the performance data structure. If the
+     iterator was alread [[qtperf_iter_end]] return NULL. The iterator
+     pointer is changed /in place/, hence the double indirection.
+**** qtperf_iterator_t* qtperf_iter_end()
+     <<qtperf_iter_end>> Return the statically defined end iterator
+     pointer. This is currently just NULL, but for future-proof code
+     you should use ~iter != qtperf_iter_end()~ to test for loop
+     completion (alternatively, you can just look at the return value
+     of [[qtperf_iter_next]] to determine when to stop).
+** Instrument the workers
+   Add the perfdata pointer to the worker struct, and put calls to the
+   perf system in at the locations noted above under [[2016-01-06 -
+   Instrumenting workers]].
+** Instrument the qthreads
+   Add the perfdata pointer to the qthread struct and put calls in the
+   same places as the original implemention.
+** Create end-user API
+   Add functions to generate a mapping between
+   (qthread_id,state_group_id) tuples and the appropriate perfdata
+   structure so that users won't have to keep track of per-thread
+   global data.
+* 2016-02-15 (2) - Switching back to qthreads main
+  After talking with Brian and Andrew, it looks like we're going to
+  switch back to qthreads main repo and merge in the stuff that's
+  needed from atdm. I'm going to port my stuff over to that repo again
+  and develop off of that trunk so that when they get the new cmake
+  build system working it'll be easy to merge.
