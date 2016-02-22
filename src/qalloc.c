@@ -297,6 +297,8 @@ void *qalloc_makedynmap(const off_t  filesize,
         /* initialize the use bitmap */
         memset(mi->bitmap, 0, mi->bitmaplength);
         qassert(pthread_mutex_init(mi->bitmap_lock, NULL), 0);
+        mi->next = dynmmaps;
+        dynmmaps = mi;
         return mi;
     } else if (set != ret) {
         /* asked for it somewhere that it didn't appear */
