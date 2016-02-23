@@ -16,9 +16,9 @@
 // time. To use this, make preprocessor definitions of the different
 // error groups you want to have available and set them to either 0 or
 // 1 according to what you want to see.
-#define qtlogargs(group, s, args...) do {                                 \
+#define qtlogargs(group, s, ...) do {                                 \
     if(group) {                                                         \
-      printf("(" #group ") " __FILE__ ":" STRING(__LINE__) ": " s "\n", args); \
+      printf("(" #group ") " __FILE__ ":" STRING(__LINE__) ": " s "\n", __VA_ARGS__); \
     }                                                                   \
   } while(0)
 
