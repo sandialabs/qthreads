@@ -184,7 +184,8 @@ qtperf_iterator_t* qtperf_iter_end(){
 bool qtp_validate_names(const char** names, size_t count){
   size_t i=0;
   bool valid = 1;
-  for(i=0; i<count; i++){
+
+  for(i=0; names != NULL && i<count; i++){
     size_t len=0;
     bool printable=1;
     for(len=0; names[i][len] != '\0' && len < MAX_NAME_LENGTH; len++){
@@ -193,6 +194,8 @@ bool qtp_validate_names(const char** names, size_t count){
     valid &= printable && len < MAX_NAME_LENGTH && len > 0 && names[i][len] == '\0';
     assert_true(printable && len < MAX_NAME_LENGTH && len > 0 && names[i][len] == '\0');
   }
+
+  assert_true(names == NULL || valid);
   
   return valid;
 }
