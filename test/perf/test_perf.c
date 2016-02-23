@@ -181,6 +181,14 @@ static void test_fake_concurrent(void** state){
     checked_transition(threads[i%NumThreads], qtperf_now()%numstates[i%3]);
     spin(500);
   }
+  for(i=0; i<NumThreads; i++){
+    qtperfcounter_t total_time=0;
+    size_t j=0;
+    for(j=0; j<numstates[i%3]; j++){
+      total_time += threads[i]->perf_counters[j];
+    }
+    assert_true(total_time > 0);
+  }
   qtperf_stop();
   assert_true(qtperf_check_invariants());
   qtperf_free_data();

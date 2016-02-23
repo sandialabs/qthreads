@@ -43,6 +43,8 @@ typedef struct qtperf_iterator_s {
   qtperf_perf_list_t* current;
 } qtperf_iterator_t;
 
+void qtperf_instrument_workers();
+void qtperf_instrument_qthreads();
 qtstategroup_t* qtperf_create_state_group(size_t num_states, const char** state_names);
 qtperfdata_t* qtperf_create_perfdata(qtstategroup_t* state_group);
 qttimestamp_t qtperf_now(void);
