@@ -43,8 +43,28 @@ typedef struct qtperf_iterator_s {
   qtperf_perf_list_t* current;
 } qtperf_iterator_t;
 
-void qtperf_instrument_workers();
-void qtperf_instrument_qthreads();
+
+//--------------- WORKER INSTRUMENTATION ---------------------------- 
+typedef enum {
+  WKR_INIT,
+  WKR_QTHREAD_ACTIVE,
+  WKR_SHEPHERD,
+  WKR_IDLE,
+  WKR_BLOCKED,
+  WKR_NUM_STATES
+} worker_state_t;
+
+extern bool _collect_workers;
+extern qtstategroup_t* _workers_group;
+
+//--------------- QTHREAD INSTRUMENTATION ---------------------------- 
+extern bool _collect_qthreads;
+extern qtstategroup_t* _qthreads_group;
+
+
+//---------------- PERFORMANCE API ----------------------------------- 
+void qtperf_set_instrument_workers(bool);
+void qtperf_set_instrument_qthreads(bool);
 qtstategroup_t* qtperf_create_state_group(size_t num_states, const char** state_names);
 qtperfdata_t* qtperf_create_perfdata(qtstategroup_t* state_group);
 qttimestamp_t qtperf_now(void);
