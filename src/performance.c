@@ -13,9 +13,9 @@ qtperf_group_list_t* _groups=NULL;
 qtperf_group_list_t** _next_group=NULL;
 bool _collecting=0;
 
-void qtperf_free_state_group(qtstategroup_t*);
+void qtperf_free_state_group_internals(qtstategroup_t*);
 void qtperf_free_group_list(void);
-void qtperf_free_perfdata(qtperfdata_t*);
+void qtperf_free_perfdata_internals(qtperfdata_t*);
 void qtperf_free_perf_list(void);
 
 
@@ -177,6 +177,40 @@ qtperfdata_t* qtperf_iter_next(qtperf_iterator_t** iter){
 qtperf_iterator_t* qtperf_iter_end(){
   return NULL;
 }
+
+
+/* This section is for the instrumentation of workers */
+
+static const char* worker_state_names[]={
+  "WKR_INIT",
+  "WKR_QTHREAD_ACTIVE",
+  "WKR_SHEPHERD",
+  "WKR_IDLE",
+  "WKR_BLOCKED",
+  "WKR_NUM_STATES"
+};
+
+bool _collect_workers=0;
+qtstategroup_t* _worker_group=NULL;
+bool _collect_qthreads=0;
+qtstategroup_t* _qthreads_group=NULL;
+
+// need to set a flag that's visible to other files that can be used
+// to control whether samples are recorded for worker state
+// transitions. For now I'll see if I can use an inline function
+// definition from performance.h
+void qtperf_set_instrument_workers(bool yes_no){
+  _collect_workers = yes_no;
+  // TODO: add code to instrument existing workers. As it stands, this
+  // only affects workers spawned *after* this call, which means that
+  // you have to call this function before qthread_initialize();
+
+  // initialize the state group for worker data collection
+  if(yes_no && _worker_group == NULL){
+    _worker_group = qtperf_create_state_group(WKR_NUM_STATES, worker_state_names);
+  }
+}
+
 
 #ifdef QTPERF_TESTING
 
