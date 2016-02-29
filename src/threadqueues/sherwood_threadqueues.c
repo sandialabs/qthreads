@@ -52,6 +52,9 @@ struct _qt_threadqueue {
 
 static aligned_t steal_disable   = 0;
 static long      steal_chunksize = 0;
+// Ratio for amount to steal, denominator. e.g. steal_ratio = 2 means half of a
+// queue is stolen. Default is 2
+static long      steal_ratio = 2;
 
 #ifdef STEAL_PROFILE
 # define STEAL_CALLED(shep)     qthread_incr( & ((shep)->steal_called), 1)
@@ -176,6 +179,8 @@ void INTERNAL qt_threadqueue_subsystem_init(void)
 {
     init_agged_tasks();
     steal_chunksize = qt_internal_get_env_num("STEAL_CHUNK", 0, 0);
+    // Determines how 
+    steal_ratio = qt_internal_get_env_num("STEAL_RATIO", 2, 0);
     qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
 }
 
@@ -206,6 +211,7 @@ void INTERNAL qt_threadqueue_subsystem_init(void)
     generic_threadqueue_pools.nodes = qt_mpool_create_aligned(sizeof(qt_threadqueue_node_t),
                                                               qthread_cacheline());
     steal_chunksize = qt_internal_get_env_num("STEAL_CHUNK", 0, 0);
+    steal_ratio = qt_internal_get_env_num("STEAL_RATIO", 2, 0);
     qthread_internal_cleanup(qt_threadqueue_subsystem_shutdown);
 } /*}}}*/
 #endif /* if defined(UNPOOLED_QUEUES) || defined(UNPOOLED) */
@@ -1031,7 +1037,7 @@ qt_threadqueue_node_t INTERNAL *qt_threadqueue_dequeue_steal(qt_threadqueue_t *h
     long                   desired_stolen;
 
     if (steal_chunksize == 0) {
-        desired_stolen = v->qlength_stealable / 2;
+        desired_stolen = v->qlength_stealable / steal_ratio;
     } else {
         desired_stolen = steal_chunksize;
     }
@@ -1130,6 +1136,9 @@ static QINLINE qt_threadqueue_node_t *qthread_steal(qthread_shepherd_t *thief_sh
     assert(thief_shepherd);
 
     STEAL_CALLED(thief_shepherd);
+    if (steal_ratio == 0) {
+        return NULL;
+    }
     if (thief_shepherd->stealing) {
         // this means that someone else on this shepherd is already stealing; I will spin on my own queue.
         return NULL;
