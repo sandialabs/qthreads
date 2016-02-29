@@ -1069,9 +1069,8 @@ AS_IF([test "x$qthread_topo" != xno],
              [qthread_topo=no])
        # First, check for hwloc, since it gives me the most portable/flexible/reliable/detailed information.
        AS_IF([test "x$qthread_topo" = xno -o "x$qthread_topo" = xbinders -o "x$qthread_topo" = xhwloc -o "x$qthread_topo" = xhwloc_v2],
-             [QTHREAD_CHECK_HWLOC([AS_IF([test "x$qthread_topo" != xhwloc -a
-             "x$qthread_topo" != xhwloc_v2 -a "x$qthread_topo" != xbinders],
-                                         [qthread_topo=hwloc])],
+             [QTHREAD_CHECK_HWLOC([AS_IF([test "x$qthread_topo" != xhwloc -a "x$qthread_topo" != xhwloc_v2 -a "x$qthread_topo" != xbinders],
+                                         [qthread_topo=binders])],
                                   [AS_IF([test "x$qthread_topo" != xno],
                                          [AC_MSG_ERROR([Specified topology library ($qthread_topo) does not work.])])])])
        # Second, check for the ones that will give me distance information
